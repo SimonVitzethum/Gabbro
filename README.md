@@ -10,7 +10,8 @@ dieses Ordners:**
 | | Zusage | Status |
 |---|---|---|
 | **1** | **Speichersicherheit** — kein Zugriff ausserhalb, kein Gebrauch nach Freigabe, kein Alias, der eine Zusicherung bricht | **Gabbro beweist es selbst**, mit seinem Prüfer — unter benannten **Hardware-Annahmen** und unter Vertrauen in Prüfer und Absenkung |
-| **2** | **Rennfreiheit** — Datenrennen **und** Protokollrennen | **später, aber JETZT einzuplanen.** Nachträglich ist es nicht einzubauen, s. [`VOLLDECKUNG.md`](VOLLDECKUNG.md) |
+| **2** | **Rennfreiheit** — Datenrennen **und** Protokollrennen | **später, aber JETZT einzuplanen.** Nachträglich ist es nicht einzubauen, s. [`VOLLDECKUNG.md`](VOLLDECKUNG.md) §3d |
+| **1b** | **Unsicherer Bootcode läuft nach dem Boot nie wieder** | **beweisbar, zweistufig**: eine **lineare** Marke (nicht kopierbar — das kann Rust nicht) *und* der `.boot`-Abschnitt wird im selben Zug abgebildet. Falsifizierbar: eine Sonde dorthin muss faulten. §3e |
 | **3** | **Funktionale Korrektheit (Gold)** | **Gabbro beweist sie NICHT — es macht sie billig.** Wie, steht in [`VOLLDECKUNG.md`](VOLLDECKUNG.md) §3c und ist der Kern der These |
 
 > **Zusage 1 gilt nur relativ.** „Speichersicher" heisst für einen Kernel notwendigerweise

@@ -272,6 +272,65 @@ sind, steht das in **jeder Signatur**, die geteilten Zustand anfasst. Nachträgl
 jede dieser Signaturen ändert sich. Das ist dieselbe Lehre wie „ein Umbau, der einen neuen Zustand
 einführt, muss jede Stelle mitnehmen, die über Zustände urteilt" — dort waren es 61 Aufrufstellen.
 
+---
+
+## 3e. Unsicherer Bootcode — mit BEWEIS, dass er danach nie wieder läuft
+
+Ein Kernel braucht ihn: rohe Physadressen, bevor die MMU steht; Multiboot-Strukturen; die
+Kern-Übergabe. Die Forderung ist nicht „möglichst wenig `unsafe`", sondern **„`unsafe`, aber
+nachweislich abgelaufen"** — und das ist strikt stärker als alles, was Rust heute kann.
+
+**Es fällt aus M2 heraus, ohne neuen Mechanismus:**
+
+```gabbro
+linear ghost type Bootphase              -- genau EINE Instanz, beim Eintritt erzeugt
+
+roh fn phys_schreiben(p: Pa, w: u64) benoetigt &Bootphase
+roh fn mb_info_lesen(p: Pa) -> Info      benoetigt &Bootphase
+
+fn boot_ende(t: Bootphase)               -- VERBRAUCHT die Marke; es gibt keine zweite
+    entfernt code<boot>                  -- ... und bildet .boot im selben Zug ab
+```
+
+**Zwei Ebenen, und die zweite ist der eigentliche Gewinn:**
+
+| | Aussage | wie |
+|---|---|---|
+| **statisch** | keine `roh`-Funktion ist nach `boot_ende` aufrufbar | die Marke ist **linear**, nicht affin — sie lässt sich nicht kopieren und nicht wiederherstellen. **Genau das kann Rust nicht** (affin) und Verus' `tracked` auch nicht |
+| **strukturell** | der Code ist danach **nicht mehr da** | `boot_ende` verbraucht die Marke **und** bildet den `boot`-Codeabschnitt ab — ein Ereignis, nicht zwei. Ein wilder Sprung dorthin faultet |
+| **prüfbar** | die Behauptung ist falsifizierbar | Sonde nach dem Boot auf eine `.boot`-Adresse: **muss** faulten. Das ist `falsifier`, und ohne ihn wäre „ist weg" eine Behauptung |
+
+**Dass es beide Ebenen sind, ist der Punkt.** Nur statisch hiesse „kein Aufrufer" — und das eigene
+Register kennt die Gegenprobe: **Falle 47**, ein Abschalter für eine Sicherheitseigenschaft wird
+gesetzt und nie zurückgenommen. Eine Eigenschaft, die daran hängt, dass niemand eine Funktion ruft,
+ist eine Bitte. Eine, deren Code **abgebildet** ist, ist eine Zusicherung.
+
+- [ ] **Aus der Basisrate ist dieser Punkt NICHT abgeleitet** — er kommt aus der Anforderung. Die
+      100 Fallen enthalten keine Instanz „Boot-`unsafe` später benutzt"; die nächstverwandte ist
+      Falle 47. **Das gehört gesagt**, sonst sieht eine geforderte Eigenschaft aus wie eine
+      gemessene.
+
+---
+
+## 3f. Was Kernel-Logik AUSSERDEM verlangt — und wo das Vertrauen sich sammelt
+
+„Alle Kernel-Logik ausdrückbar" ist eine Vollständigkeitsforderung, und sie hat eine Liste. M1–M4
+decken sie **nicht** allein.
+
+| Was | Antwort | ehrlich dazu |
+|---|---|---|
+| **Absichtliche Nichtterminierung** (Leerlauf-, Hauptschleife) | `divergent fn` — **ausgesprochen**, nie versehentlich | M4 verlangt sonst ein Abstiegsmass; die Ausnahme muss benannt sein, nicht erschlichen |
+| **Unterbrechbarkeit** | eine **Wirkung**: `unterbrechbar` / `maskiert`. Ein Handler ist kein Aufruf — er kann zwischen zwei beliebigen Anweisungen laufen | fällt aus M2, wenn die IRQ-Maske ein linearer Beleg ist. Falle 93 (Guard über den Rumpf) ist genau das |
+| **Kontextwechsel** | Sprachprimitiv `wechsle(von: &mut Kontext, zu: &Kontext)` mit Vertrag über den Maschinenzustand | Stapelwechsel ist in **keiner** strukturierten Sprache ausdrückbar. Das ist der `state`-Übergang auf Maschinenebene — und er wird **emittiert**, nicht geschrieben |
+| **Privilegierte Befehle** (`mov cr3`, `wbinvd`, `sti`, `invlpg`, `tlbi`) | eine **Axiomschicht**: je Befehl ein erklärter Effekt auf das Maschinenmodell | **Hier sammelt sich das Vertrauen, und es ist irreduzibel.** Jedes Axiom ist ein `assume` — mit `falsifier`, wo einer fahrbar ist |
+| **Code als Daten** (der Lader) | `code`-Raum ist nur über ein **Prüftor** erreichbar (Signatur, Layout) | Caprock macht das bereits; neu ist, dass der Weg dorthin der **einzige** ist |
+| **Sprungtabellen** (Syscall-Verteiler) | Funktionszeiger mit vollständiger Signatur, Tabelle erschöpfend (D2) | — |
+| **Ausrichtung und Layout** | Teil des Typs, nicht des Übersetzers | — |
+
+> **Die ehrliche Summe: M1–M4 + Axiomschicht + drei Primitive** (`divergent`, `wechsle`, Prüftor).
+> Die Axiomschicht ist die grösste unbewiesene Fläche der ganzen Sprache — grösser als der
+> Übersetzer —, und sie ist **zählbar**: eine Ratsche über der Menge der Axiome, die nur fallen darf.
+
 ### Was NICHT herausfällt — und darum ehrlich danebensteht
 
 | | |
@@ -343,6 +402,35 @@ Differenztest zwischen ihnen.** Nie ein grosser Schnitt. Und die Abnahmereihe bl
 
 ---
 
+## 5b. Das Abnahmekriterium: Caprock vollständig in Gabbro, Suite grün
+
+**Die Forderung ist falsifizierbar, und das ist ihr Wert.** Nicht „es fühlt sich besser an",
+sondern: der Gabbro-gebaute Kernel besteht **die vorhandene Abnahmereihe** — 14 Punkte, x86 in
+fünf RAM-Grössen, Lade-Suite, aarch64-Bau **und** -Suite, Host-Tests, Kerngrenze, Wächter.
+
+**Aber die Suite allein reicht nicht, und das ist gemessen, nicht befürchtet:**
+
+> Über die Behebungen von **D8, D9 und D10** hinweg blieb die Signatur der x86-Suite
+> **byte-identisch** (`e419003d625f`, 500 Läufe je Stand). Drei echte Kernfehler, und die Suite hat
+> keinen davon ausgelöst. **„Alle Tests grün" ist für einen Rewrite deshalb ein notwendiges und
+> kein hinreichendes Kriterium.**
+
+Daraus folgt die Abnahme in **drei** Teilen, nicht einem:
+
+| | Kriterium |
+|---|---|
+| **A** | die 14-Punkte-Abnahme grün, in allen RAM-Grössen und auf beiden Architekturen |
+| **B** | **Differenztest gegen die Rust-Fassung**, Modul für Modul: gleiche Eingaben, gleiche Ausgaben, gleiche Absagecodes. Das ist der Teil, der D8/D9/D10 gefangen hätte |
+| **C** | die **Wiederholungsmessung** hält: `RUNS`-Signaturvergleich mit Quervergleich zwischen den Strömen — und ein Nullbefund braucht seine Stichprobengrösse, nicht bloss ein grünes Feld |
+
+**Die Reihenfolge ist erzwungen, nicht gewählt:** modulweise, beide Fassungen gleichzeitig lebendig.
+Ein grosser Schnitt schaltet für seine Dauer genau die Reihe ab, die jeden der 100 Einträge gefunden
+hat — Abbruchbedingung 4.
+
+- [ ] **Die Prüfsuite selbst ist der letzte Umzug, nicht der erste.** Sie ist 15,7 % des Codes und
+      besteht aus `check`-Zusagen; sie bleibt in Rust, bis die Gabbro-Fassung **gegen sie** bewiesen
+      ist. Wer sein Messgerät zuerst umbaut, misst den Umbau mit dem Umbau.
+
 ## 6. Die Kosten, ehrlich
 
 **Der Übersetzer.** Die sieben Konstrukte waren „ein Erzeuger von Wochen". Stufe 0–6 sind die
@@ -366,6 +454,10 @@ Nur der Rest rechtfertigt eine Sprache.
 2. **Rust + Verus + Loom decken eine Stufe bereits ab.** Dann wird diese Stufe nicht gebaut.
 3. **Das Spezifikationsverhältnis nach Protokoll 0b verfehlt seine Schwellen** (2 : 1 bester,
    5 : 1 schlechtester Fall).
-4. **Die Umstellung erzwingt einen grossen Schnitt.** Ein Vorhaben, das die Abnahmereihe abschaltet,
+4. **Eine Kernel-Logik lässt sich nicht ausdrücken, ohne die Axiomschicht zu vergrössern.** Die
+   Ratsche über den Axiomen darf nur fallen. Wächst sie, um ein Sprachdefizit zu decken, ist die
+   Zusage „speichersicher unter A1…An" jedes Mal etwas weniger wert — und niemand merkt es, weil
+   die Zusage formal weiter gilt.
+5. **Die Umstellung erzwingt einen grossen Schnitt.** Ein Vorhaben, das die Abnahmereihe abschaltet,
    um sich selbst zu bauen, hat keinen Prüfer mehr — und dieses Projekt hat gemessen, was dann
    passiert: zehn Tage rot, ohne dass es jemand sah.
