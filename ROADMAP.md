@@ -32,11 +32,25 @@ Fehler dieser Klasse sind pro Jahr wirklich entstanden** — auszählbar aus `do
       Daseinsberechtigung streichen. Das ist dann in Phase 0 so zu protokollieren, statt als
       Freispruch gelesen zu werden.
 
-**Kennzahl C (nur falls das Kernel-Fernziel verfolgt wird): was bietet Gabbro über Low\* hinaus?**
+**Kennzahl B2: der Zuschnitt hängt am Kostenmodell — beide Fragen sind EINE.**
 
-- [ ] Low\*/F\* liefert seit Jahren verifizierten, schnellen Systemcode mit C-Ausgang (HACL\*,
-      EverCrypt). Ohne eine **belegbare** Antwort — Ergonomie, SMT ohne F\*-Kette, direktes
-      `no_std`-C — ist der Kernel-Zweig eine Neuauflage. Ein Absatz reicht, aber er muss stehen.
+- [ ] Eine vollständige Invariantenprüfung ist naiv **O(n · Kettenlänge)** über 80 256 Slots;
+      `colors.rs` gilt heute mit **42 Ticks** als Schuldposten. Also: **offline** (Diagnostik, kein
+      Schutz) oder **inkrementell** — und inkrementell setzt voraus, dass der Prüfer das **Delta**
+      kennt, das **nur der Mutator** kennt. **Wer Invarianten im heissen Pfad will, hat (c) schon
+      gewählt.** Diese Ableitung gehört in die Entscheidung, nicht daneben.
+
+**Kennzahl C (nur falls das Kernel-Fernziel verfolgt wird): was bietet Gabbro über
+Rust-heute und Verus hinaus?** — **nicht** über Low\*; das ist der übernächste Gegner.
+
+- [ ] **Rust, heute**: ein Newtype ohne `Drop`/`Copy` mit versiegeltem Konsumpfad erzwingt für
+      diese eine Ressource lineares Verhalten zu **null Sprachkosten** — so ist `Parked` gebaut,
+      und es hat eine fünfte Stelle gefunden, die das Gegenlesen übersah.
+- [ ] **Verus**: Beweise direkt auf Rust, SMT **ohne** F\*-Kette, keine C-Extraktion nötig —
+      **zwei der drei geforderten Belege bei einem vorhandenen Werkzeug**, und lineare
+      Ghost-Permissions für Ressourcen-Invarianten.
+- [ ] **Verus an `Parked` ausprobieren, bevor der Zweig ein Entwurf wird.** Phase-0-Logik für den
+      Zweig: *der nächste Verwandte ist gebaut, der Ordner nicht.*
 
 ---
 
@@ -144,6 +158,14 @@ Das ist die schärfste denkbare Abnahme, weil die Antwort schon feststeht:
 ---
 
 ## Später, ausdrücklich nicht jetzt
+
+* **DER KERNEL-ZWEIG.** Er steht hier aus einem Strukturgrund, nicht aus Zurückhaltung: er ist der
+  einzige Teil, der das ausgesprochene „keine Allzwecksprache" aufweicht, **und zugleich der, der
+  am weitesten von einer Kennzahl entfernt ist**. Die Disziplin dieses Ordners besteht darin, dass
+  jede Phase eine Zahl liefert — der Zweig hat keine.
+  **Sein Tor:** eine belegte Antwort auf Kennzahl C. Ohne sie wird nichts gebaut.
+  *Sonst ist er der Weg, auf dem ein Formaterzeuger unbemerkt zur Sprachfamilie wird, während A4
+  und die A3-Folgeposten warten.*
 
 * **Aufzählungen mit `exhaustive`** — nützlich, aber die kleinste Ersparnis.
 * **Seitentabellen-Beschreiber.** Verlockend (das fehlende `US` auf der Zwischenebene wäre nicht

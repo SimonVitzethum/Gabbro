@@ -67,11 +67,24 @@ Kernelcode. Die eigenen Fundstellen zeigen es:
 
 **Damit hängt Phase 4 an einer Frage, die der Sprachentwurf nirgends beantwortet:**
 
-| | Gabbro erzeugt … | Folge |
-|---|---|---|
-| **(a)** | nur den Prüfer | billig und ehrlich — aber der Nutzen ist „`audit_cdt` ohne seine Fehler". **Laufzeitprüfung, nicht Konstruktion.** S1a und S1b fallen als Abnahmekriterien weg, und damit die schärfste Rechtfertigung von Phase 4 |
-| **(b)** | Prüfer + Zugriffshelfer | Bereichssicherheit beim Lesen, Mutation bleibt von Hand |
-| **(c)** | Prüfer + Zugriff + **Mutation** (`insert`/`remove`/`revoke`) | das erzeugte C **besitzt** die Datenstruktur, der Kernel ruft hinein. Ein massiver Schnittstelleneingriff — unter dem Kern-Lock, mit Latenzbudget. **Der Aufwand steht in keiner Phase.** |
+| | Gabbro erzeugt … | Folge | **wo die Invariante laufen kann** |
+|---|---|---|---|
+| **(a)** | nur den Prüfer | billig und ehrlich — aber der Nutzen ist „`audit_cdt` ohne seine Fehler". **Laufzeitprüfung, nicht Konstruktion.** S1a und S1b fallen als Abnahmekriterien weg, und damit die schärfste Rechtfertigung von Phase 4 | **nur offline/idle** — Diagnostik, kein Schutz |
+| **(b)** | Prüfer + Zugriffshelfer | Bereichssicherheit beim Lesen, Mutation bleibt von Hand | ebenfalls nur offline |
+| **(c)** | Prüfer + Zugriff + **Mutation** (`insert`/`remove`/`revoke`) | das erzeugte C **besitzt** die Datenstruktur, der Kernel ruft hinein. Ein massiver Schnittstelleneingriff — unter dem Kern-Lock, mit Latenzbudget. **Der Aufwand steht in keiner Phase.** | **inkrementell möglich** — und nur hier |
+
+**Das Kostenmodell entscheidet den Zuschnitt mit; es ist kein unabhängiger offener Punkt.**
+Eine vollständige Prüfung von `kind_zeigt_zurueck` ist naiv **O(n · Kettenlänge)** über
+80 256 Slots. `colors.rs` hält heute **42 Ticks** unter einer Sperre und gilt deshalb als
+Schuldposten — eine Ordnung darüber ist in keinem heissen Pfad denkbar. Es bleiben zwei Auswege:
+
+* **offline/idle prüfen** — dann ist es **Diagnostik, kein Schutz**. Legitim, aber eine *andere*
+  Behauptung als die im ersten Entwurf.
+* **inkrementell prüfen** — nur, was eine Mutation berührt hat. Das setzt voraus, dass der Prüfer
+  das **Delta** kennt, und das Delta kennt **nur der Mutator**.
+
+> **Damit gilt: wer Invarianten im heissen Pfad will, hat den Zuschnitt (c) bereits gewählt — ob
+> er es aufgeschrieben hat oder nicht.**
 
 - [ ] **Diese Entscheidung gehört VOR Phase 0**, nicht nach Phase 3. Denn sie ändert, was Phase 0
       überhaupt töten kann: **EverParse macht ausschliesslich die `format`-Hälfte.** Liegt der
@@ -283,10 +296,9 @@ aber GPT und FAT, und FAT hat **Ketten**, virtio-Ringe haben **Producer/Consumer
       Antwort darauf ist bei der ersten Änderung eine Baustelle.
 - [ ] **Die Roundtrip-Eigenschaft** `lesen(schreiben(x)) == x` gehört in den Differenztest. Ein
       Schreiber, der eine ungültige Struktur ausgeben kann, entwertet den Leser.
-- [ ] **Ein Kostenmodell für Invarianten.** `kind_zeigt_zurueck` im Beispiel ist naiv
-      **O(n · Kettenlänge)** über 80 256 Slots. Unter dem Kern-Lock ist das kein Audit mehr,
-      sondern ein Ausfall — vgl. `colors.rs` mit **42 Ticks** gehaltener Sperre. Jede Invariante
-      braucht eine **Kostenangabe** und eine Aussage, wo sie laufen darf.
+- [ ] **Kostenangabe je Invariante** — sie steht jetzt beim Zuschnitt oben, weil sie ihn
+      **mitentscheidet**. Was hier bleibt: jede einzelne Invariante braucht ihre Zahl und die
+      Aussage, wo sie laufen darf.
 
 ## Das Fernziel: ein Kernel in Gabbro — und was es mit der These macht
 
@@ -309,13 +321,44 @@ Dann ist der Formaterzeuger ein Sonderfall des allgemeinen Mechanismus statt ein
 Warnung — gemessen: SPARK meldet dort „leak **proved**", Rust nur `#[must_use]`.
 
 **Der Preis ist ehrlich zu nennen:** das ist nicht mehr ein Erzeuger von Wochen, sondern die
-ATS-/Low\*-Klasse von Aufwand. Und die Frage, die dann jede Phase beantworten muss, lautet nicht
-mehr „schlägt Gabbro Handschrift", sondern **„was bietet Gabbro über Low\* hinaus?"** —
-Kandidaten: Ergonomie, SMT-Automatisierung ohne F\*-Werkzeugkette, direkter `no_std`-C-Ausgang.
-Ohne eine belegbare Antwort darauf ist der Kernel-Zweig eine Neuauflage.
+ATS-/Low\*-Klasse von Aufwand.
 
-- [ ] **Entscheiden, bevor gebaut wird: ein Kern mit zwei Bibliotheken, oder zwei Projekte.**
-      Beides ist vertretbar; unentschieden ist es die teuerste Variante.
+### Und der Vergleichsgegner war falsch gewählt
+
+Die erste Fassung mass den Zweig an **Low\***. Für die Behauptung „`Parked` wäre ein **Typ** statt
+einer abschaltbaren Warnung" sind aber **zwei billigere Gegner** näher, und gegen die ist der
+Mehrwert zu belegen:
+
+* **Rust, heute, in Caprock.** Ein Newtype ohne `Drop`, ohne `Copy`, mit versiegeltem Konsumpfad
+  erzwingt für **diese eine Ressource** lineares Verhalten zu **null Sprachkosten**. Das ist keine
+  vollständige Linearität — Rust ist affin, Wegwerfen bleibt möglich, `#[must_use]` ist nur eine
+  Warnung —, aber `mem::forget`-Disziplin plus ein Konsum-Token, das der **einzige** Weg aus dem
+  Zustand ist, deckt den `Parked`-Fall konkret ab. **Genau so ist `Parked` gebaut**, und es hat
+  eine fünfte Stelle gefunden, die das Gegenlesen übersah.
+* **Verus.** Steht in der Verwandtschaftstabelle unten und wird dort mit „beweist, was jemand
+  modelliert hat" abgetan — **für den Kernel-Zweig kehrt sich das um**: Beweise direkt auf Rust,
+  SMT **ohne** F\*-Kette, keine C-Extraktion nötig, solange der Kernel Rust bleibt. Das sind
+  **zwei der drei** geforderten Belege bei einem **vorhandenen** Werkzeug. Und Verus kann
+  Ressourcen-Invarianten über lineare Ghost-Permissions ausdrücken.
+
+- [ ] **Verus an `Parked` ausprobieren, bevor der Zweig ein eigener Entwurf wird.** Das ist die
+      Phase-0-Logik für den Zweig: *der nächste Verwandte ist gebaut, der Ordner nicht.*
+
+### Der Zweig gehört unter „Später" — und zwar aus einem Strukturgrund
+
+**Er ist der verführerischste Teil dieses Ordners**: der einzige, der das ausgesprochene „keine
+Allzwecksprache, kein Kernel darin" aufweicht — und zugleich der, der **am weitesten von einer
+Kennzahl entfernt** ist. Die Disziplin dieses Ordners besteht darin, dass **jede Phase eine Zahl
+liefert**. Der Zweig hat keine.
+
+**Solange er keine hat, steht er formal unter „Später, ausdrücklich nicht jetzt", mit eigenem
+Tor.** Sonst ist er der Weg, auf dem ein Formaterzeuger unbemerkt zur Sprachfamilie wird, während
+A4 und die A3-Folgeposten warten.
+
+- [ ] **Sein Tor:** eine belegte Antwort auf „was über **Rust-heute** und **Verus** hinaus?" —
+      nicht über Low\*, das ist der übernächste Gegner. Ohne diese Antwort wird nichts gebaut.
+- [ ] Erst danach: **ein Kern mit zwei Bibliotheken, oder zwei Projekte.** Beides ist vertretbar;
+      unentschieden ist es die teuerste Variante.
 
 ## Was Gabbro **nicht** löst
 
