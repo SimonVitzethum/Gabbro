@@ -1,0 +1,96 @@
+# Basalt — offene Punkte
+
+Nur **noch nicht Erledigtes**. Reihenfolge innerhalb eines Abschnitts = Priorität.
+`[~]` = teilweise, Rest benannt.
+
+**Stand 2026-08-13: es ist noch keine Zeile Code geschrieben.** Alles hier ist offen; nichts
+davon ist eine Erfolgsmeldung.
+
+---
+
+## Vor allem anderen
+
+- [ ] **EverParse prüfen, bevor hier irgendetwas gebaut wird.** Es erzeugt verifizierte Parser aus
+      Beschreibern und ist im Windows-Netzwerkstapel im Einsatz — also gebaut, während Basalt drei
+      Dateien sind. Drei Fragen entscheiden: `no_std`-taugliches C? **Benannte** Absagen oder ein
+      gemeinsamer Formfehler? Wie schwer wiegt die F\*-Abhängigkeit im Bauweg?
+      **Trägt es, ist dieser Ordner erledigt — und das wäre das beste Ergebnis.**
+      *(Dieses Projekt hat einmal einen halben Tag an eine Lücke verloren, die es nicht gab.)*
+
+- [ ] **Den Maßstab zuerst messen, nicht danach.** Manifest-Leser von Hand in C, Zyklen je Aufruf
+      (Median, ruhige Maschine) und `.text`. Ohne diese Zahl ist jede spätere Aussage über
+      Leistung ein Gefühl.
+
+---
+
+## Sprachentwurf — was noch nicht entschieden ist
+
+- [ ] **Wie werden Felder variabler Länge ausgedrückt?** Ein `len`-Feld, das eine folgende Reihe
+      begrenzt, ist der häufigste Fall (Manifest-Einträge, virtio-Ketten) — und die Stelle, an der
+      Regel 1 (Totalität) und Regel 2 (Versatz gegen Länge) sich berühren. Der Entwurf im README
+      zeigt nur feste Breiten.
+- [ ] **Verschachtelte Formate mit eigenem Versionskopf** — trägt der äußere die Absage des
+      inneren weiter, oder hat jeder seine eigene? Zwei Fehlercodes für dieselbe Ursache sind so
+      schlecht wie einer für zwei Ursachen.
+- [ ] **`where` über mehrere Felder** (`entry_len == sizeof(Self)` geht; `hash != 0 || flags & 1`
+      ist offen). Je mehr das kann, desto näher rückt es an eine Allzwecksprache — und damit an
+      die Spezifikationslast, der Basalt ausweichen soll. **Die Grenze gehört ausgesprochen.**
+- [ ] **Schreibrichtung**: Erzeugt Basalt auch Schreiber, und gilt für sie dieselbe Absage-Regel?
+      Ein Schreiber, der eine ungültige Struktur ausgeben kann, entwertet den Leser.
+- [ ] **Fehlercode-Vergabe**: fortlaufend vom Erzeuger, oder im Beschreiber genannt? Fortlaufend
+      ist bequem und bricht bei jeder Umsortierung die ABI.
+
+---
+
+## Übersetzer
+
+- [ ] Sicheres Rust, `#![forbid(unsafe_code)]`, **benannte** Abhängigkeitsliste — dieselbe Regel,
+      die Caprock für seine Handler-Module durchsetzt. Ein Erzeuger, der ausbrechen kann, macht
+      die Eigenschaft seines Erzeugnisses wertlos.
+- [ ] **Ein Wächter, der die Regel hält**, nicht nur ein Vorsatz — mit Sprechprobe in beide
+      Richtungen und einer Ratsche als **Menge von Namen**, nicht als Zahl.
+- [ ] **Differenztest gegen den handgeschriebenen Leser**: dieselben Bytes rein, dasselbe Urteil
+      raus — über zufällige **und** über bösartig gewählte Eingaben (Länge 0, Länge 1 unter dem
+      Kopf, Versionsfeld = 0xFFFF_FFFF, reserviertes Byte gesetzt).
+- [ ] **Eine Mutationsprobe je Spracheigenschaft.** Ein Erzeuger, der nur den gesunden Zustand
+      kennt, belegt nichts — dieselbe Disziplin wie bei jedem Caprock-Wächter.
+
+---
+
+## Leistung
+
+- [ ] **Bereichsprüfungen müssen im `-O2`-Ergebnis verschwinden.** Nachlesen im Assembler, nicht
+      hoffen. Wenn nicht: warum nicht, und ist es der Formulierung anzulasten oder LLVM?
+- [ ] **`restrict` aus dem Beschreiber ableiten**, wo Nichtüberlappung strukturell folgt — nicht
+      als Zusage des Aufrufers.
+- [ ] **Geradlinig statt schleifend** bei konstanter Länge (32-Byte-Hash kopieren, nicht zählen).
+- [ ] **Jedes erzeugte Format bringt seine Messzeile mit.** Ohne Gegenzahl ist „schnell" ein
+      Gefühl.
+
+---
+
+## Was noch niemand geprüft hat
+
+- [ ] **Wie groß ist die erzeugte `.text` gegenüber der handgeschriebenen?** Ein Erzeuger, der
+      dreimal so viel Code produziert, kostet i-Cache — und in einem Kernel ist das eine echte
+      Größe.
+- [ ] **Trägt der Ansatz bei virtio-Deskriptorringen?** Dort sind Felder **gerätesichtbar** und
+      ändern sich nebenläufig — Basalt beschreibt Daten, nicht Abläufe. Möglicherweise ist das
+      die Grenze der Domäne, und dann gehört sie ins README.
+- [ ] **Was passiert bei einem Formatfehler im Beschreiber selbst?** Basalt beweist, dass der
+      Leser dem Beschreiber entspricht — nicht, dass der Beschreiber der Wirklichkeit entspricht.
+      Ein Gegenmittel wäre ein **Falsifikator** je Format (eine echte Byte-Folge aus der Praxis,
+      die gelesen werden **muss**), nach dem Vorbild der Caprock-Identitätsgründe.
+
+---
+
+## Bewusst NICHT auf dieser Liste
+
+Damit später niemand denkt, es sei vergessen worden:
+
+* **Allzweck-Konstrukte** (Funktionen, Schleifen, Arithmetik über Feldern). Sobald Basalt rechnen
+  kann, kehrt die Spezifikationslast zurück, der es ausweicht.
+* **Nebenläufigkeit.** Auch SPARK kann „der Aufrufer hält den Spinlock" nicht ausdrücken.
+* **Rust-Ausgabe.** Erst wenn C trägt — zwei Ziele verdoppeln die Prüffläche.
+* **Seitentabellen-Beschreiber.** Verlockend, aber Hardwarevertrag: ein falscher Beschreiber
+  erzeugt einen beweisbar korrekten falschen Kernel.
