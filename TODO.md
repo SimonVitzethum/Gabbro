@@ -1,4 +1,4 @@
-# Basalt — offene Punkte
+# Gabbro — offene Punkte
 
 Nur **noch nicht Erledigtes**. Reihenfolge innerhalb eines Abschnitts = Priorität.
 `[~]` = teilweise, Rest benannt.
@@ -11,7 +11,7 @@ davon ist eine Erfolgsmeldung.
 ## Vor allem anderen
 
 - [ ] **EverParse prüfen, bevor hier irgendetwas gebaut wird.** Es erzeugt verifizierte Parser aus
-      Beschreibern und ist im Windows-Netzwerkstapel im Einsatz — also gebaut, während Basalt drei
+      Beschreibern und ist im Windows-Netzwerkstapel im Einsatz — also gebaut, während Gabbro drei
       Dateien sind. Drei Fragen entscheiden: `no_std`-taugliches C? **Benannte** Absagen oder ein
       gemeinsamer Formfehler? Wie schwer wiegt die F\*-Abhängigkeit im Bauweg?
       **Trägt es, ist dieser Ordner erledigt — und das wäre das beste Ergebnis.**
@@ -34,8 +34,8 @@ davon ist eine Erfolgsmeldung.
       schlecht wie einer für zwei Ursachen.
 - [ ] **`where` über mehrere Felder** (`entry_len == sizeof(Self)` geht; `hash != 0 || flags & 1`
       ist offen). Je mehr das kann, desto näher rückt es an eine Allzwecksprache — und damit an
-      die Spezifikationslast, der Basalt ausweichen soll. **Die Grenze gehört ausgesprochen.**
-- [ ] **Schreibrichtung**: Erzeugt Basalt auch Schreiber, und gilt für sie dieselbe Absage-Regel?
+      die Spezifikationslast, der Gabbro ausweichen soll. **Die Grenze gehört ausgesprochen.**
+- [ ] **Schreibrichtung**: Erzeugt Gabbro auch Schreiber, und gilt für sie dieselbe Absage-Regel?
       Ein Schreiber, der eine ungültige Struktur ausgeben kann, entwertet den Leser.
 - [ ] **Fehlercode-Vergabe**: fortlaufend vom Erzeuger, oder im Beschreiber genannt? Fortlaufend
       ist bequem und bricht bei jeder Umsortierung die ABI.
@@ -75,9 +75,9 @@ davon ist eine Erfolgsmeldung.
       dreimal so viel Code produziert, kostet i-Cache — und in einem Kernel ist das eine echte
       Größe.
 - [ ] **Trägt der Ansatz bei virtio-Deskriptorringen?** Dort sind Felder **gerätesichtbar** und
-      ändern sich nebenläufig — Basalt beschreibt Daten, nicht Abläufe. Möglicherweise ist das
+      ändern sich nebenläufig — Gabbro beschreibt Daten, nicht Abläufe. Möglicherweise ist das
       die Grenze der Domäne, und dann gehört sie ins README.
-- [ ] **Was passiert bei einem Formatfehler im Beschreiber selbst?** Basalt beweist, dass der
+- [ ] **Was passiert bei einem Formatfehler im Beschreiber selbst?** Gabbro beweist, dass der
       Leser dem Beschreiber entspricht — nicht, dass der Beschreiber der Wirklichkeit entspricht.
       Ein Gegenmittel wäre ein **Falsifikator** je Format (eine echte Byte-Folge aus der Praxis,
       die gelesen werden **muss**), nach dem Vorbild der Caprock-Identitätsgründe.
@@ -88,7 +88,7 @@ davon ist eine Erfolgsmeldung.
 
 Damit später niemand denkt, es sei vergessen worden:
 
-* **Allzweck-Konstrukte** (Funktionen, Schleifen, Arithmetik über Feldern). Sobald Basalt rechnen
+* **Allzweck-Konstrukte** (Funktionen, Schleifen, Arithmetik über Feldern). Sobald Gabbro rechnen
   kann, kehrt die Spezifikationslast zurück, der es ausweicht.
 * **Nebenläufigkeit.** Auch SPARK kann „der Aufrufer hält den Spinlock" nicht ausdrücken.
 * **Rust-Ausgabe.** Erst wenn C trägt — zwei Ziele verdoppeln die Prüffläche.

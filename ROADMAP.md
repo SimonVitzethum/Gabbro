@@ -1,4 +1,4 @@
-# Basalt — Fahrplan
+# Gabbro — Fahrplan
 
 **Jede Phase liefert eine ZAHL, und die Zahl entscheidet über die nächste.** Nicht der Vorsatz.
 Wer eine Phase ohne ihre Kennzahl abschließt, hat sie nicht abgeschlossen.
@@ -12,7 +12,7 @@ Stand: 2026-08-13. **Phase 0 hat noch nicht begonnen.**
 **Kennzahl:** eine Ja/Nein-Antwort mit Beleg, nicht mit Eindruck.
 
 **EverParse** (Microsoft Research, F\*) erzeugt verifizierte Parser aus Beschreibern und wird im
-Windows-Netzwerkstapel eingesetzt. Es ist der nächste Verwandte, und es ist gebaut, während Basalt
+Windows-Netzwerkstapel eingesetzt. Es ist der nächste Verwandte, und es ist gebaut, während Gabbro
 ein Ordner mit drei Dateien ist.
 
 - [ ] EverParse an **einem echten Caprock-Format** ausprobieren — dem Manifest-Eintrag, weil er
@@ -21,7 +21,7 @@ ein Ordner mit drei Dateien ist.
       ein gemeinsamer Formfehler? Wie groß ist die Werkzeugkette (F\*-Abhängigkeit im Bauweg)?
 - [ ] **Trägt es, ist dieser Ordner erledigt** — und das wäre das beste Ergebnis. Trägt es nicht,
       steht in `TODO.md`, an welchem der drei Punkte es scheiterte, und *das* ist die
-      Daseinsberechtigung von Basalt.
+      Daseinsberechtigung von Gabbro.
 
 > Diese Phase steht zuerst, weil dieses Projekt einmal einen halben Tag an eine Lücke verloren hat,
 > die es nicht gab (`Kani` deckte `sync` längst ab, nur die CI beschrieb sich falsch).
@@ -35,7 +35,7 @@ ein Ordner mit drei Dateien ist.
 Bevor irgendetwas erzeugt wird, muss feststehen, wogegen gemessen wird.
 
 - [ ] Den Manifest-Leser in C von Hand schreiben, so wie ein guter Systemprogrammierer ihn
-      schriebe — mit allen Prüfungen, die Basalt später erzwingen soll.
+      schriebe — mit allen Prüfungen, die Gabbro später erzwingen soll.
 - [ ] Zyklen je Aufruf messen (Median, ruhige Maschine, TSC), dazu `.text`.
 - [ ] **Diese Zahl ist der Maßstab für alles Weitere.** Ein Erzeuger, der 30 % langsamer ist,
       ist gescheitert, auch wenn sein Erzeugnis bewiesen ist — die Alternative wäre dann
@@ -59,7 +59,7 @@ Umfang bewusst winzig: **nur `format`**, keine Tabellen, keine Aufzählungen.
       Urteil raus, über zufällige und über bösartig gewählte Eingaben.
 
 **Tor:** Ist der erzeugte Code langsamer als die Referenz **und** die Ursache nicht behebbar,
-endet Basalt hier. Das wäre ein Ergebnis, kein Scheitern.
+endet Gabbro hier. Das wäre ein Ergebnis, kein Scheitern.
 
 ---
 
@@ -124,7 +124,7 @@ Das ist die schärfste denkbare Abnahme, weil die Antwort schon feststeht:
 
 ## Die Abbruchbedingungen — hier, damit sie nicht verhandelt werden
 
-Basalt endet, wenn **eines** davon eintritt:
+Gabbro endet, wenn **eines** davon eintritt:
 
 1. **EverParse trägt** (Phase 0).
 2. **Der erzeugte Code ist dauerhaft langsamer** als die handgeschriebene Referenz und die Ursache

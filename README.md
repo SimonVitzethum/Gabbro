@@ -1,4 +1,4 @@
-# Basalt
+# Gabbro
 
 Eine **enge** Sprache für Formate und Tabellen, die nach **C** übersetzt und deren erzeugter Code
 **per Konstruktion** beweisbar ist. Übersetzer in **sicherem Rust** (`forbid(unsafe_code)`).
@@ -10,17 +10,25 @@ Bericht. Was gemessen ist, steht als gemessen da; alles andere ist ausdrücklich
 
 ## Warum der Name
 
-Caprock ist die harte Deckschicht über weicherem Gestein — und sie besteht oft buchstäblich aus
-**Basalt**. Basalt kühlt in regelmäßigen Säulen aus: dieselbe Struktur, viele Male, ohne dass
-jemand sie einzeln entwirft. Genau das ist der Anspruch dieser Sprache.
+**Gabbro ist der plutonische Zwilling des Basalts**: dieselbe Zusammensetzung, aber langsam
+abgekühlt — deshalb grosse, regelmässige Kristalle statt feinem Gefüge. Genau das tut ein
+verifizierender Erzeuger: derselbe Stoff wie handgeschriebener Code, nur langsam und absichtlich
+auskristallisiert.
 
-Das Wort ist in Deutsch und Englisch identisch und mit keiner verbreiteten Sprache belegt.
+Das Wort ist in Deutsch und Englisch identisch. Es passt zu Caprock (beides magmatisch), und
+anders als *Basalt* — der erste Vorschlag — ist es nach heutigem Stand nicht von einem Übersetzer
+belegt.
+
+- [ ] **Nachprüfen, nicht glauben.** Von dieser Maschine aus ist die Namensfreiheit nicht zu
+      belegen; „ich habe nichts gefunden" ist ein Nullbefund ohne Grösse. Vor der ersten
+      Veröffentlichung gehört eine Suche über Paketregister (crates.io, PyPI, npm), GitHub und
+      Sprachlisten — mitsamt dem, was gefunden wurde.
 
 ---
 
-## Was Basalt ist — und was ausdrücklich nicht
+## Was Gabbro ist — und was ausdrücklich nicht
 
-**Basalt beschreibt Formate und Tabellen und erzeugt daraus Leser, Schreiber und Prüfer.**
+**Gabbro beschreibt Formate und Tabellen und erzeugt daraus Leser, Schreiber und Prüfer.**
 Es ist **keine** Allzwecksprache. Kein Kernel wird darin geschrieben, kein Treiber, kein Dienst.
 
 Der Grund ist eine Erfahrung, keine Vorliebe: **funktionale Korrektheit (»Gold«) ist teuer, weil
@@ -59,7 +67,7 @@ keine Beweispflicht, sondern eine Eigenschaft der Grammatik.
 
 ### 2. Keine Zeiger — nur Versätze, und jeder gegen eine Länge im Geltungsbereich
 
-Ein Versatz ohne die Länge, gegen die er gilt, ist in Basalt nicht schreibbar. Die Bereichsprüfung
+Ein Versatz ohne die Länge, gegen die er gilt, ist in Gabbro nicht schreibbar. Die Bereichsprüfung
 entsteht nicht durch Sorgfalt, sondern weil es keine andere Formulierung gibt.
 
 > *Fundstelle:* `audit_cdt` prüft `parent` gegen `nslots`, liest dann aber `first_child` und die
@@ -93,7 +101,7 @@ treffen.
 
 ### Ein Format
 
-```basalt
+```gabbro
 format ManifestEintrag @version 3 endian little {
     program_id  : u32
     entry_len   : u32   where == sizeof(Self)
@@ -114,10 +122,10 @@ format GeraeteSelektor endian little {
 
 Erzeugt wird daraus:
 
-* `basalt_manifest_lesen(const uint8_t *p, size_t n, ManifestEintrag *out) -> BasaltErr`
-* `basalt_manifest_schreiben(const ManifestEintrag *in, uint8_t *p, size_t n) -> BasaltErr`
-* je Abweisungsgrund ein eigener Code (`BASALT_VERSION_FREMD`, `BASALT_RESERVIERT_GESETZT`,
-  `BASALT_ZU_KURZ`, `BASALT_FELD_AUSSERHALB`)
+* `gabbro_manifest_lesen(const uint8_t *p, size_t n, ManifestEintrag *out) -> GabbroErr`
+* `gabbro_manifest_schreiben(const ManifestEintrag *in, uint8_t *p, size_t n) -> GabbroErr`
+* je Abweisungsgrund ein eigener Code (`GABBRO_VERSION_FREMD`, `GABBRO_RESERVIERT_GESETZT`,
+  `GABBRO_ZU_KURZ`, `GABBRO_FELD_AUSSERHALB`)
 * eine C-`struct` mit **festen** Breiten, kein Padding-Vertrauen
 
 `where`-Klauseln sind Teil des Formats, nicht ein nachgelagerter Test: der Leser gibt eine Absage
@@ -125,7 +133,7 @@ zurück, wenn sie nicht gelten — er liefert **niemals** eine Struktur, die sie
 
 ### Eine Tabelle mit Invarianten
 
-```basalt
+```gabbro
 table CapSpace {
     kapazitaet : const 80256
 
@@ -148,7 +156,7 @@ table CapSpace {
 }
 ```
 
-Daraus entstehen der Prüfer (`basalt_capspace_audit`), die Zugriffshelfer und — das ist der Punkt —
+Daraus entstehen der Prüfer (`gabbro_capspace_audit`), die Zugriffshelfer und — das ist der Punkt —
 die **Bereichsprüfung an jeder Indizierung, ohne dass jemand sie schreibt**.
 
 `wrapping` ist ausdrücklich zu schreiben. Ein Umlauf, den niemand ausgesprochen hat, ist ein
@@ -160,7 +168,7 @@ Fehler; einer, der ausgesprochen ist, ist ein Entwurf.
 
 ### Eine Aufzählung mit Absagen
 
-```basalt
+```gabbro
 reason MangelGrund {
     Keiner            = 0  "keine Ressource -- der Fehlschlag lag nicht an einem Vorrat"
     KernelStack       = 2  "EL0-Kernel-Stack"
@@ -178,7 +186,7 @@ reason MangelGrund {
 
 ## Warum C als Ziel
 
-* **Zwei Verbraucher ohne Umweg**: Rust bindet C über FFI, SPARK ebenso — Basalt-Erzeugnisse
+* **Zwei Verbraucher ohne Umweg**: Rust bindet C über FFI, SPARK ebenso — Gabbro-Erzeugnisse
   passen in beide möglichen Zukünfte dieses Kernels.
 * **Binärverifikation existiert als Weg**: seL4 beweist den *übersetzten* Code gegen das C. Über
   Zig oder direkt LLVM-IR gäbe es diesen Präzedenzfall nicht.
@@ -211,21 +219,21 @@ voll durchschlägt. Beim *Erzeugnis* liegt es umgekehrt — und dort steht am En
 
 ---
 
-## Was Basalt **nicht** löst
+## Was Gabbro **nicht** löst
 
 Diese Liste steht hier, damit sie nicht später als Enttäuschung entdeckt wird.
 
-* **Falsche Formate.** Basalt beweist, dass der Leser dem Beschreiber entspricht — nicht, dass der
+* **Falsche Formate.** Gabbro beweist, dass der Leser dem Beschreiber entspricht — nicht, dass der
   Beschreiber der Wirklichkeit entspricht. Wer die Bytereihenfolge falsch aufschreibt, bekommt
   einen beweisbar korrekten falschen Leser.
 * **Hardware-Zusagen.** Dass eine IOMMU-Einheit `TE=1` ehrt, steht in keinem Formalismus.
-* **Nebenläufigkeit.** Basalt beschreibt Daten, nicht Abläufe. Wer den Beschreiber unter einer
+* **Nebenläufigkeit.** Gabbro beschreibt Daten, nicht Abläufe. Wer den Beschreiber unter einer
   Sperre liest, muss das weiterhin selbst wissen — auch SPARK kann »der Aufrufer hält den
   Spinlock« nicht ausdrücken.
 * **Die Klasse Fehler, die diese Woche wehtat.** Ein fehlendes `US`-Bit auf der Zwischenebene,
   ein Index über den Slot statt über die Identität, eine Wachseite, die einen Farbstreifen
   sprengt: **Fehler über Bedeutung, nicht über Form.** Gefunden hat die alle die Messdisziplin,
-  und daran ändert Basalt nichts.
+  und daran ändert Gabbro nichts.
 
 ---
 
@@ -236,9 +244,9 @@ Diese Liste steht hier, damit sie nicht später als Enttäuschung entdeckt wird.
 | **F\*/Low\*** | Gold, extrahiert nach C, in HACL\* ausgeliefert | Allzwecksprache — die Spezifikationslast bleibt |
 | **Kaitai Struct** | Formate deklarativ, viele Zielsprachen | keine Beweise, keine Absage-Disziplin, kein `no_std`-C |
 | **P4, Nail, EverParse** | verifizierte Parser aus Beschreibern | **EverParse ist der nächste Verwandte** und ernsthaft zu prüfen, bevor hier eine Zeile entsteht |
-| **Verus / GNATprove** | Beweise auf vorhandenem Code | beweisen, was jemand modelliert hat — Basalt erzeugt, was niemand modellieren muss |
+| **Verus / GNATprove** | Beweise auf vorhandenem Code | beweisen, was jemand modelliert hat — Gabbro erzeugt, was niemand modellieren muss |
 
-**Vor dem ersten Übersetzerlauf gehört EverParse gelesen und gemessen.** Wenn es trägt, ist Basalt
+**Vor dem ersten Übersetzerlauf gehört EverParse gelesen und gemessen.** Wenn es trägt, ist Gabbro
 überflüssig, und das wäre das beste Ergebnis dieses Ordners.
 
 ---
