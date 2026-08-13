@@ -39,7 +39,7 @@ andere ist ausdrücklich Absicht.
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`ROADMAP.md`](ROADMAP.md) | Phasen mit **Entscheidungstoren**: jede Phase liefert eine Zahl, die über die nächste entscheidet — samt Abbruchbedingungen |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
-| [`VOLLDECKUNG.md`](VOLLDECKUNG.md) | **der Plan für die anderen 91 %** — eine **sehr enge** Sprache, ungefähr C-mächtig: **vier Mechanismen, zwei Deklarationsregeln**, alles Weitere als Bibliothek. **Verlässt den Zuschnitt, den dieses README verteidigt** |
+| [`VOLLDECKUNG.md`](VOLLDECKUNG.md) | **der Sprachkern und der Plan für ganz Caprock** — vier Mechanismen, zwei Deklarationsregeln, alles Weitere als Bibliothek. **Seit dem 2026-08-13 die Hauptrichtung**; was darunter in diesem README steht, ist die frühere enge Fassung und gilt als **Rückfallzuschnitt**, falls die Tore dort fallen |
 | [`fallen-klassifikation.tsv`](fallen-klassifikation.tsv) | die 100 bezahlten Fallen, einzeln klassifiziert; `./zaehle-fallen.sh` leitet die Zahlen ab |
 
 ---
@@ -287,7 +287,8 @@ das einzige, was einen stimmig abgeschwächten Erzeuger fängt.**
 | **F\*/Low\*** | Gold, extrahiert nach C, in HACL\* ausgeliefert | Allzwecksprache — die Spezifikationslast bleibt |
 | **Kaitai Struct** | Formate deklarativ, viele Zielsprachen | keine Beweise, keine Absage-Disziplin, kein `no_std`-C |
 | **P4, Nail, EverParse** | verifizierte Parser aus Beschreibern | **EverParse ist der nächste Verwandte** und ernsthaft zu prüfen, bevor hier eine Zeile entsteht |
-| **Verus / GNATprove** | Beweise auf vorhandenem Code | beweisen, was jemand modelliert hat — und **an genau dieser Abwertung hat sich die eigene Messung gerächt**, s. unten |
+| **Verus** | Beweise auf vorhandenem Rust, `no_std`, Geisterwerte ohne Laufzeitkosten | **gemessen 2026-08-13: es kann mehr, als hier stand** — S1a/S1b für 0 Zeilen, „der Aufrufer hält den Lock" als Bedingung. Was **fehlt**: echte Linearität (`tracked` ist affin), also die Bootphasen-Marke und die Leckprüfung |
+| **GNATprove/SPARK** | jede Indizierung und Arithmetik als Pflicht, **automatische** Leckprüfung | keine Ausdrucksform für „der Aufrufer hält den Lock"; dynamische Strukturen schwach |
 
 **Vor dem ersten Übersetzerlauf gehört EverParse gelesen und gemessen.** Wenn es trägt, ist Gabbro
 überflüssig, und das wäre das beste Ergebnis dieses Ordners.

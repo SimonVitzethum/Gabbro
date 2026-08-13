@@ -159,26 +159,22 @@ Das ist die schärfste denkbare Abnahme, weil die Antwort schon feststeht:
 
 ## Später, ausdrücklich nicht jetzt
 
-* **DER KERNEL-ZWEIG.** Er steht hier aus einem Strukturgrund, nicht aus Zurückhaltung: er ist der
-  einzige Teil, der das ausgesprochene „keine Allzwecksprache" aufweicht, **und zugleich der, der
-  am weitesten von einer Kennzahl entfernt ist**. Die Disziplin dieses Ordners besteht darin, dass
-  jede Phase eine Zahl liefert — der Zweig hat keine.
-  **Sein Tor:** eine belegte Antwort auf Kennzahl C. Ohne sie wird nichts gebaut.
-  *Sonst ist er der Weg, auf dem ein Formaterzeuger unbemerkt zur Sprachfamilie wird, während A4
-  und die A3-Folgeposten warten.*
+* **~~DER KERNEL-ZWEIG~~ — ÜBERHOLT am 2026-08-13, und die Zahl, die ihn hier festhielt, ist
+  gefahren.** Er stand hier, weil er als einziger „keine Allzwecksprache" aufweichte und am
+  weitesten von einer Kennzahl entfernt war. **Sein Tor ist gefahren und er hat es nicht
+  bestanden:** Verus drückt „der Aufrufer hält den Lock" heute aus. *Trotzdem* ist der Zweig auf
+  Anforderung die **Hauptrichtung** geworden — s. [`VOLLDECKUNG.md`](VOLLDECKUNG.md).
+  **Damit ist die Zusage „keine Allzwecksprache" aufgegeben**, ausdrücklich und nicht nebenbei;
+  die Abbruchbedingungen dort sind ihr Ersatz.
 
 * **Aufzählungen mit `exhaustive`** — nützlich, aber die kleinste Ersparnis.
 * **Seitentabellen-Beschreiber.** Verlockend (das fehlende `US` auf der Zwischenebene wäre nicht
   formulierbar gewesen), aber Seitentabellen sind Hardwareverträge; ein falscher Beschreiber
   erzeugt einen beweisbar korrekten falschen Kernel.
-* **Rust-Ausgabe neben C.** Erst, wenn C trägt. Zwei Ziele verdoppeln die Prüffläche — **und sie
-  erzeugen eine Entsprechungspflicht**: bewiesen in Rust, ausgeliefert in C, dass beide dasselbe
-  tun, ist unbewiesen. Das ist genau die Lücke, die seL4 mit Binärverifikation schliesst.
-  **Konflikt, der zu entscheiden ist:** der nächstliegende Beweiser (Verus) will Rust, das
-  Auslieferungsziel ist C. Ein Beweiser über dem C (Frama-C/WP) vermeidet die zweite Emission und
-  bringt dafür ACSL-Spezifikationslast — beides greift 0b an, in verschiedene Richtungen.
-* **Ada-Ausgabe / GNATprove.** Kam einmal als dritter Beweisweg in einem Nebensatz vor und steht
-  sonst in keinem Dokument dieses Ordners. **Gestrichen**, bis jemand einen Grund nennt.
+* **~~Rust-Ausgabe~~, ~~Ada-Ausgabe~~ — beide GESTRICHEN am 2026-08-13.** Sie waren nur nötig,
+  solange ein *fremder* Beweiser den Beweis führen sollte. **Ausgabe ist C + Inline-Assembler,
+  genau eine**; der Beweis liegt auf der Quelle. Damit entfällt die Entsprechungspflicht („bewiesen
+  in Rust, ausgeliefert in C"), die hier vorher als offener Konflikt stand.
 * **Binärverifikation** (seL4-Art, erzeugtes C gegen Maschinencode). Der Weg existiert, aber er
   ist ein eigenes Projekt.
 
@@ -191,7 +187,9 @@ Gabbro endet, wenn **eines** davon eintritt:
 0. **Die Basisrate ist zu klein** (Phase −1) — zu wenige Formate, zu wenige Fehler dieser Klasse.
    Diese Bedingung steht zuerst, weil sie am billigsten zu prüfen ist und am ehesten zutrifft.
 0b. **Das Spezifikationsverhältnis verfehlt sein Ziel deutlich** — *Zeilen Spezifikation je Zeile
-   Code*, Ziel **≤ 1 : 1**, seL4 als Vergleich **20 : 1**. **Ohne das Protokoll darunter liefert
+   Code*, seL4 als Vergleich **20 : 1**. Ziel **≤ 1 : 1 für `format`**, **etwa 5 : 1 für
+   Kernelcode** (dort bleibt die abstrakte Spezifikation als Boden, Herleitung in
+   `VOLLDECKUNG.md` §3c). **Ohne das Protokoll darunter liefert
    diese Bedingung die Wunschzahl**, und zwar ohne dass jemand schummelt.
 1. **EverParse trägt** (Phase 0) — **aber nur, wenn der Schnitt bei `table` auf (a) gefallen ist.**
    Bei (b)/(c) deckt EverParse die Frage gar nicht ab, und ein grünes Phase-0-Ergebnis wäre kein
@@ -232,10 +230,10 @@ die *Aufgabe* messen, nicht die Ausführlichkeit des Werkzeugs.
 Korrektheit gemessen wurde, gehört neben die Zahl — die 20 : 1 von seL4 ist eine Zahl für die
 **stärkste** Stufe. Ein Verhältnis ohne Stufe vergleicht über eine Kluft.
 
-**5. Der Beweisweg muss vorher entschieden sein** (`README`, „Warum C"). Frama-C/WP über erzeugtem C
-bringt ACSL-Last **in den Zähler**; Verus über einer Rust-Ausgabe bringt eine zweite Emission und
-damit eine Entsprechungspflicht. Die Wahl verändert die Kennzahl unmittelbar — sie ist keine
-Umsetzungsfrage.
+**5. Der Beweisweg IST entschieden** (2026-08-13): Gabbro prüft selbst, Ausgabe ist C + iasm, kein
+nachgelagerter Beweiser. Damit fällt die ACSL-Last aus dem Zähler und die Entsprechungspflicht weg.
+**Was stattdessen in den Zähler gehört:** `spec fn`-Zeilen und die Verfeinerungsannotationen — und
+das ist bei einem Kernel der Boden, der die 1 : 1 unerreichbar macht (§3c dort).
 
 **Auslösung:** Liegt der beste Fall über 2 : 1 **oder** der schlechteste über 5 : 1, ist Gabbro ein
 Erzeuger mit Beiwerk. Diese zwei Zahlen stehen hier, damit sie nicht später gewählt werden.

@@ -130,14 +130,19 @@ Damit später niemand denkt, es sei vergessen worden:
 * **Die SPARK-Übernahmeleiter nachprüfen** (Stone/Bronze/Silber/Gold/Platinum und was jede Stufe
   bedeutet). Sie trägt in `README` und `DESIGN.md` ein Argument und ist aus dem Gedächtnis zitiert;
   von dieser Maschine aus war keine Dokumentation greifbar.
-* **Für den Kernel-Zweig: der TAL-Teil hat keinen nachgelagerten Beweiser.** Verus beweist keine
-  Inline-Assembler-Semantik, Frama-C/WP erst recht nicht; ein TAL-Typsystem im Erzeuger prüft sich
-  selbst. Die haltbare Aussage ist „vertrauenswürdige Fläche schrumpft von 153 Stellen auf eine",
-  nicht „geprüft". Offen: ob das reicht, um das Tor zu rechtfertigen.
+* **Der Assembler-Anteil ist jetzt die AXIOMSCHICHT, und sie ist der grösste unbewiesene Posten**
+  — grösser als der Übersetzer. Je privilegiertem Befehl ein erklärter Effekt auf das
+  Maschinenmodell, jedes Axiom ein `assume` mit `falsifier`, wo einer fahrbar ist. Offen: die
+  Ratsche über der Axiommenge und die Frage, wie viele Axiome ein x86- und ein aarch64-Kernel
+  wirklich braucht. **Solange die Zahl fehlt, ist „speichersicher unter A1…An" eine Form ohne
+  Inhalt.**
 
-* **Rust-Ausgabe.** Erst wenn C trägt — zwei Ziele verdoppeln die Prüffläche, **und die zweite
+* **~~Rust-Ausgabe~~ — GESTRICHEN 2026-08-13.** Ausgabe ist C + Inline-Assembler, genau eine; der
+  Beweis liegt auf der Quelle. Die frühere Begründung steht als Beleg hier stehen: *„Erst wenn C
+  trägt — zwei Ziele verdoppeln die Prüffläche, **und die zweite
   Emission ist nicht nur Aufwand, sondern eine unbewiesene Entsprechung** (bewiesen in Rust,
   ausgeliefert in C). Die Reihenfolge „C zuerst" stammt aus der alten These; unter der neuen ist
-  sie zu prüfen, weil der nächstliegende Beweiser Verus ist und Rust will. S. `ROADMAP.md`.
+  sie zu prüfen, weil der nächstliegende Beweiser Verus ist und Rust will."* — genau diese
+  Prüfung hat stattgefunden, und die Antwort war: gar kein fremder Beweiser.
 * **Seitentabellen-Beschreiber.** Verlockend, aber Hardwarevertrag: ein falscher Beschreiber
   erzeugt einen beweisbar korrekten falschen Kernel.

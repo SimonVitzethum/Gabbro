@@ -1,7 +1,14 @@
 # Gabbro — die Konstrukte
 
-**Diese Datei ist die Quelle für den Sprachentwurf.** Der `README` nennt Zweck, These und
-Abbruchbedingungen; die Syntaxbeispiele dort sind Auszüge und stehen hier vollständig.
+**Diese Datei ist die Quelle für die BIBLIOTHEKSSCHICHT.** Sie beschreibt `format`, `table` und
+die übrigen Deklarationsformen — das, was ein Anwender schreibt.
+
+> **Achtung, Rollenwechsel (2026-08-13).** Als diese Datei entstand, *war* sie der ganze
+> Sprachentwurf: ein enger Formaterzeuger, ausdrücklich ohne Kernel. Seither ist der Kern eine
+> **Systemsprache** mit vier Mechanismen ([`VOLLDECKUNG.md`](VOLLDECKUNG.md) §3), und die sieben
+> Konstrukte hier sind **Bibliotheken darüber**, keine Sprache daneben. Wo unten „die Linie" steht,
+> ist die Linie **dieser Schicht** gemeint — die Linie der Sprache ist gewandert, und das steht
+> dort.
 
 Stand 2026-08-13. **Nichts davon ist übersetzt worden.** Was gemessen ist, steht als gemessen da.
 
@@ -9,12 +16,14 @@ Stand 2026-08-13. **Nichts davon ist übersetzt worden.** Was gemessen ist, steh
 
 ## Das Ziel, mit Geltungsbereich
 
-> **Gabbro beweist nicht — es erzeugt Programme, deren Beweis billig ist.**
+> **Diese Schicht beweist nicht — sie erzeugt Programme, deren Beweis billig ist.**
 > **Wie billig, hängt davon ab, WAS bewiesen werden soll — und das ist bei `format` etwas anderes
 > als überall sonst.**
 
-Der Beweis wird von einem vorhandenen Beweiser geführt; welcher, ist **offen und nicht gratis**
-(s. `README`, „Warum C"). Gabbros Beitrag ist, dass **jedes Konstrukt seinen Vertrag mitbringt**.
+**Nicht zu verwechseln mit dem Kern:** der *Sprachkern* beweist sehr wohl — Speichersicherheit,
+und später Rennfreiheit (`README`, Zusagen 1/1b/2). Diese Schicht erzeugt Deklarationen darüber und
+führt keinen eigenen Beweis. Gabbros Beitrag hier ist, dass **jedes Konstrukt seinen Vertrag
+mitbringt**.
 
 ### Was jedes Konstrukt einem nachgelagerten Beweiser tatsächlich einbringt
 
@@ -39,7 +48,9 @@ Nummer drei.
 ### Die Kennzahl — und warum sie ohne Protokoll die Wunschzahl liefert
 
 Die belastbare Grösse ist *Zeilen Spezifikation je Zeile Code*: **seL4 rund 20 : 1**, HACL\*
-vergleichbar, **Gabbros Ziel ≤ 1 : 1**.
+vergleichbar, **Ziel dieser Schicht ≤ 1 : 1** — für `format`, wo der Beschreiber die vollständige
+Spezifikation *ist*. **Für Kernelcode liegt das Ziel bei etwa 5 : 1**, weil dort die abstrakte
+Spezifikation als Boden bleibt; Herleitung in [`VOLLDECKUNG.md`](VOLLDECKUNG.md) §3c.
 
 **Nur ist die 20 : 1 eine Zahl für volle funktionale Korrektheit** (in SPARKs Übernahmeleiter:
 *Platinum*), während oben steht, dass Gabbro ausserhalb von `format` etwas Schwächeres liefert. Ein
@@ -268,13 +279,22 @@ Manifestfeld, das nie eingelöst wird und am Tag der Einlösung lauter falsche W
 
 ---
 
-## Die Linie: sieben Konstrukte, mehr nicht
+## Die Linie DIESER SCHICHT: sieben Konstrukte, mehr nicht
 
 `format` · `table` · `traverse` · `state` · Arithmetik-Vorbedingung · `assume`/`falsifier` ·
 Wirkungen.
 
-**Keine allgemeinen Vor-/Nachbedingungen, keine Quantoren über Rechenausdrücke.** Wer die braucht,
-braucht Verus oder F\* — das zu sagen ist ehrlicher als eine halbe Beweissprache.
+**In der Bibliotheksschicht: keine allgemeinen Vor-/Nachbedingungen, keine Quantoren über
+Rechenausdrücke.**
+
+> **DIE LINIE DER SPRACHE IST GEWANDERT — und der Widerspruch gehört ausgesprochen, nicht
+> weggeschrieben.** Der Kern hat seit dem 2026-08-13 **Verträge über deklarierte Prädikate** und
+> `spec fn`/`impl fn` mit erzeugter Verfeinerungspflicht; ohne sie ist „Bedingung über
+> Registergrenzen" (Falle 1/2) nicht formulierbar und ein Gold-Beweis nicht billig.
+> **Damit ist eingetreten, was hier als der unbequeme Ausgang stand:** *dann ist Gabbro der
+> Beweisassistent mit Syntax, dem es ausweichen wollte.* Es ist eine **Entscheidung**, keine
+> Entdeckung — und der Preis dafür steht in `VOLLDECKUNG.md` §6. **Allgemeine Quantoren über
+> Rechenausdrücke bleiben weiterhin draussen.**
 
 ### Und die Linie bricht voraussichtlich an `revoke`
 
@@ -283,7 +303,7 @@ braucht Verus oder F\* — das zu sagen ist ehrlicher als eine halbe Beweissprac
 die Kettenendlichkeit noch gelten, ist eine Aussage über **Baumform** — strukturelle Induktion,
 also genau die ausgeschlossenen Quantoren.
 
-- [ ] **`revoke` in diesen sieben Konstrukten auf Papier ausdrücken — der billigste nächste
-      Schritt des Ordners, vor jeder anderen Entscheidung.** Geht es nicht, bleibt entweder die
-      **gefährlichste** Mutation ausserhalb der Garantie, oder die Linie wandert — und dann ist
-      Gabbro der Beweisassistent mit Syntax, dem es ausweichen wollte.
+- [ ] **`revoke` in diesen sieben Konstrukten auf Papier ausdrücken.** Der Test hat seinen
+      *Ausgang* verloren — die Linie ist ohnehin gewandert — und behält seinen **Wert**: er sagt,
+      ob die Bibliotheksschicht die gefährlichste Mutation trägt oder ob `revoke` in den Kern
+      hinuntermuss. Das ist die Frage, die den Zuschnitt (c) entscheidet.

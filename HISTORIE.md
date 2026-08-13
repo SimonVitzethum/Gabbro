@@ -46,6 +46,9 @@ schwächer formuliert, ohne schwächer zu **werden**.
 
 | **Zwanzig Konstrukte** | die erste Fassung von `VOLLDECKUNG.md` führte je Fehlerklasse ein Schlüsselwort — `device`, `lock`, `atomic`, `barrier`, `bitfeld`, `einheit`, `menge`, `recht`, `platzierung`, … | **das ist ein Katalog, keine Sprache**, und er wächst mit jedem Fund. Die naheliegende Ableitung aus einer Fallenliste ist der falsche Schluss. Es sind **vier Mechanismen** (Bereichstypen · lineare, auch geisterhafte Werte · Adressräume mit Rechten · kein ungeprüfter Index) und **zwei Deklarationsregeln**; die zwanzig fallen daraus als Bibliothek heraus. Die schönste Ableitung ist `check`: eine **lineare Pflicht**, kein Prüf-Schlüsselwort |
 
+| **Ü2 ist ZURÜCKGEKEHRT** | „Gold billig machen" stand als widerlegt in dieser Datei | **und steht seit dem 2026-08-13 wieder im `README`** — das gehört hierher, sonst sieht eine stillschweigend zurückgenommene Korrektur wie eine nie gemachte aus. Der Unterschied zur widerlegten Fassung ist zweifach: es gibt jetzt einen **Mechanismus** (Invarianten an der Struktur · syntaxgesteuerte Absenkung · `spec`/`impl` in einer Sprache, `VOLLDECKUNG.md` §3c) und ein **gesenktes Ziel** (5 : 1 für Kernelcode statt 1 : 1). **Eine Behauptung darf zurückkehren — aber nur mit Mechanismus und mit Zahl** |
+| **„keine Allzwecksprache"** | stand als Zusage im `README` und in `ROADMAP.md` | **aufgegeben am 2026-08-13**, auf Anforderung und ausdrücklich. Der Ersatz sind die fünf Abbruchbedingungen in `VOLLDECKUNG.md` — eine aufgegebene Zusage ohne Ersatz wäre nur ein vergessener Satz |
+
 ---
 
 ## Die Form, die sich wiederholt
