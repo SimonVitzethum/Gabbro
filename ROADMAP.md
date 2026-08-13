@@ -183,6 +183,10 @@ Gabbro endet, wenn **eines** davon eintritt:
 
 0. **Die Basisrate ist zu klein** (Phase −1) — zu wenige Formate, zu wenige Fehler dieser Klasse.
    Diese Bedingung steht zuerst, weil sie am billigsten zu prüfen ist und am ehesten zutrifft.
+0b. **Das Spezifikationsverhältnis verfehlt sein Ziel deutlich.** Gabbros These ist
+   *Zeilen Spezifikation je Zeile Code ≤ 1 : 1* (seL4: 20 : 1). Am ersten erzeugten Modul zu
+   messen, gegen einen handgeschriebenen Beweis desselben Moduls. Liegt Gabbro bei 5 : 1, ist es
+   ein Erzeuger mit Beiwerk und keine Antwort auf die Gold-Frage.
 1. **EverParse trägt** (Phase 0) — **aber nur, wenn der Schnitt bei `table` auf (a) gefallen ist.**
    Bei (b)/(c) deckt EverParse die Frage gar nicht ab, und ein grünes Phase-0-Ergebnis wäre kein
    Freispruch.

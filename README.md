@@ -1,7 +1,22 @@
 # Gabbro
 
-Eine Sprache für Formate, Tabellen — und, als ausgesprochenes Fernziel, für Kernelcode selbst.
-Ziel ist **C**. Übersetzer in **sicherem Rust** (`forbid(unsafe_code)`).
+**Das Ziel in einem Satz: Programme zu schreiben, deren GOLD-Beweis billig ist.**
+
+Nicht: eine Sprache, die beweist. Sondern eine, in der **jedes Konstrukt seinen Vertrag mitbringt**
+— Bereich, Fortschritt, Wirkungsraum, Vorbedingung, Zustandsübergang, Hardware-Annahme. Wer sie
+schreibt, hat die Spezifikation **schon geschrieben**; der Beweis wird danach von einem vorhandenen
+Beweiser geführt (Verus, GNATprove, oder einer über dem erzeugten C).
+
+Eine Sprache für Formate, Tabellen — und, als ausgesprochenes Fernziel mit eigenem Tor, für
+Kernelcode. Ziel ist **C**. Übersetzer in **sicherem Rust** (`forbid(unsafe_code)`).
+
+**Die Kennzahl, ohne die „leicht beweisbar" ein Schlagwort ist**, ist *Zeilen Spezifikation je
+Zeile Code*: seL4 liegt bei rund **20 : 1**, HACL\* in derselben Grössenordnung. **Gabbros Ziel
+ist ≤ 1 : 1** — der Beschreiber *ist* die Spezifikation. Verfehlt es das deutlich, ist die These
+widerlegt, und das steht in den Abbruchbedingungen.
+
+> **Die Konstrukte stehen vollständig in [`DESIGN.md`](DESIGN.md)** — das ist die Quelle. Was
+> unten folgt, sind Zweck, Regeln, Grenzen und Abbruchbedingungen.
 
 > **BERICHTIGUNG, und sie steht bewusst in Zeile 3.** Die erste Fassung schrieb hier „per
 > Konstruktion **beweisbar**". Das war eine Überschreibung: **Gabbro beweist nichts.** Es erzeugt
@@ -503,7 +518,8 @@ Diese Liste steht hier, damit sie nicht später als Enttäuschung entdeckt wird.
 
 | Datei | Inhalt |
 |---|---|
-| `README.md` | dies — Zweck, Regeln, Syntaxentwurf |
+| `README.md` | dies — Zweck, These, Regeln, Grenzen, Abbruchbedingungen |
+| `DESIGN.md` | **die Quelle für die Konstrukte**: `format`, `table`, `traverse`, `state`, Arithmetik-Vorbedingung, `assume`/`falsifier`, Wirkungen — samt der Linie und ihrem voraussichtlichen Bruch an `revoke` |
 | `TODO.md` | **ausschließlich Offenes** |
 | `ROADMAP.md` | Phasen mit **Entscheidungstoren**: jede Phase liefert eine Zahl, die über die nächste entscheidet |
 
