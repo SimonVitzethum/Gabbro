@@ -557,3 +557,86 @@ Anhängsel des Formaterzeugers, sondern ein zweites Projekt — und die Kernthes
 - [ ] **Vor dem Tor des Zweigs zu entscheiden:** Wird das eine Sprache mit zwei Bibliotheken, oder
       zwei Sprachen? Unentschieden ist die teuerste Variante — und diese Liste ist das Argument
       dafür, dass die Entscheidung nicht vertagt werden kann, weil sie die Grössenordnung ändert.
+
+---
+
+# Hardware-Annahmen als Sprachkonstrukt — mit Falsifikator
+
+Kein Formalismus deckt „die VT-d-Einheit ehrt `TE=1`". Aber die Annahme lässt sich **benennen**
+statt sie zu verschweigen, und — das ist der Punkt — **testbar** machen:
+
+```gabbro
+assume vtd_te_wirkt
+    "Setzen von GCMD.TE schaltet die Uebersetzung scharf; ein DMA-Zugriff ohne
+     Kontexteintrag wird danach als Fault gemeldet und nicht durchgelassen."
+    falsifier probe_vtd_te      -- eine SONDE, die FEHLSCHLAEGT, wenn die Annahme nicht gilt
+```
+
+Das ist keine neue Idee, sondern das Muster, das Caprock bei den Identitätsgründen erfunden hat:
+**ein Wächter prüft die EXISTENZ eines Grundes, nie seine WAHRHEIT** — deshalb tragen die Gründe
+dort einen Falsifikator, und deshalb muss der Falsifikator selbst prüfen, dass sein Anker
+existiert, sonst liest er ins Leere.
+
+**Was es kauft:** Annahmen werden **zählbar** — eine Ratsche über der Menge der Annahmen, die nur
+fallen darf (wie `IDENTITY_DEBTS`), und ein Lauf, der jede Annahme einmal falsifizieren *versucht*.
+Ein Beweis, dessen Annahmenmenge niemand kennt, ist ein Beweis ohne Reichweite.
+
+**Was es NICHT kauft, und das gehört danebengeschrieben:**
+
+* **Eine bestandene Sonde ist eine Stichprobe, kein Beweis.** Sie prüft *diese* Maschine, *diese*
+  Konfiguration, *diesen* Augenblick. **CPU-Errata sind genau Annahmen, die fast immer halten** —
+  dieselbe Klasse wie „0 Treffer in 114 Läufen".
+* **Nicht jede Annahme ist sondierbar.** `pprobe` meldet unter KVM grundsätzlich `SKIP`. Eine
+  Annahme ohne fahrbaren Falsifikator muss als solche gekennzeichnet sein — sonst sieht sie aus
+  wie eine geprüfte.
+* **Der Falsifikator kann selbst falsch sein.** Er ist Code wie jeder andere und braucht seine
+  eigene Sprechprobe: *kann er überhaupt fehlschlagen?*
+
+- [ ] **Drei Klassen unterscheiden, nicht zwei:** falsifiziert (Sonde lief und hielt) ·
+      **nicht falsifizierbar** (keine Sonde möglich, mit Grund) · **nicht gefahren**. Die dritte
+      darf nie wie die erste aussehen.
+
+---
+
+# Der Verus-Vergleich, an der eigenen Messung geprüft
+
+Der naheliegende Schluss lautet: *SPARK fand zwei Fehler, die Verus nicht fand — also bringt eine
+eigene Sprache etwas.* **Die eigene Messung stützt das nicht.**
+
+Der Gewinn kam **nicht** aus Adas Sprachvermögen, sondern aus einer **Voreinstellung**: GNATprove
+behandelt **jede** Indizierung und **jede** Arithmetik als Beweispflicht. Verus beweist, was
+jemand **modelliert** hat — und gemessen steht `refcount` im Verus-Modell als `nat`, kann über
+`refcount -= 1` also **nicht einmal die Frage stellen**. Dieselben 15 Stellen sind mit Verus
+**am echten Code** erreichbar.
+
+**Die starke Fassung des Arguments bleibt trotzdem stehen, und sie ist prüfbar:**
+
+> **Vorgabe schlägt Fähigkeit.** Eine Sprache, in der „alles muss bewiesen werden" die
+> **Voreinstellung** ist, erzeugt andere Ergebnisse als eine, in der man es anschaltet — auch wenn
+> beide es können.
+
+- [ ] **Das ist messbar, statt Ansichtssache zu bleiben:** Verus **am echten Cap-Space** laufen
+      lassen, mit dem Anspruch „jede Indizierung, jede Arithmetik". Findet es die 15 Stellen,
+      war es die Vorgabe — und Gabbros Beitrag schrumpft auf Ergonomie. Findet es sie nicht, ist
+      das die **erste harte Evidenz** für eine eigene Sprache.
+
+**Und zu „leichter Weg zu Gold":** billig wird Gold durch die **enge Domäne**, nicht durch die
+Sprache. Für `format`/`table` gilt der Satz. **Für einen Kernel gilt er in keiner Sprache** — auch
+nicht in Gabbro, und das ist der Grund, warum der Kernel-Zweig sein eigenes Tor hat.
+
+---
+
+# Das Tor des Kernel-Zweigs — jetzt mit einem fahrbaren Versuch
+
+Der Zweig hatte bisher **keine Kennzahl**. Er bekommt eine, und sie ist billig:
+
+> **Nimm den schwersten Einzelposten — „der Aufrufer hält den Lock" — und versuche ihn HEUTE in
+> Verus auszudrücken.** Ein Nachmittag.
+>
+> * **Kann Verus es**, verliert der Zweig seine Hauptbegründung — **das billigste Nein, das dieser
+>   Ordner bekommen kann.**
+> * **Kann Verus es nicht**, ist das die **erste echte Evidenz für Kennzahl C**.
+
+Dieselbe Logik wie Phase 0 gegen EverParse, nur für den Zweig: *der nächste Verwandte ist gebaut,
+der Ordner nicht.* Und schärfer als der `revoke`-Papiertest, weil es die Frage entscheidet, die
+den **grösseren** Aufwand trägt.
