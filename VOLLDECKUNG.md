@@ -245,6 +245,57 @@ sondern dass es die **drei Sprachen zu einer macht** und die Verfeinerungspflich
       Zusage 1 (Speichersicherheit) und 2 (Rennfreiheit). Das wäre **immer noch** mehr als heutiges
       Rust — aber es wäre nicht *„macht seL4-Beweise leicht"*.
 
+### Was < 1 : 1 verlangen würde — und wo es gemessen möglich ist
+
+**Die eigene Zählregel entscheidet die Frage, und sie steht schon fest:** der Nenner ist die
+**handgeschriebene Referenz**, nicht die Ausgabe (Protokoll 0b, damit ein geschwätziger Erzeuger
+sich das Verhältnis nicht schönerzeugt). Daraus folgt unmittelbar:
+
+> **< 1 : 1 heisst: die Gabbro-Quelle SAMT ihrer Beweisannotationen ist KÜRZER als das
+> handgeschriebene Rust, das dieselbe Arbeit tut.**
+
+Das ist keine Beweisfrage mehr, sondern eine **Knappheitsfrage** — und damit entscheidbar, ohne
+eine Zeile zu übersetzen. Vier Bedingungen, und die erste trägt alles:
+
+**1. Der beschriebene Anteil muss überwiegen.** Eine Deklaration ist kürzer als die Schleife, die
+sie ersetzt; ein Algorithmus ist es nicht — dort *ist* die Beschreibung der Algorithmus, und die
+Annotationen kommen obendrauf. Gemessen an Caprock:
+
+| | Zeilen | |
+|---|---|---|
+| Formate (`part`, `fat`, `checkpoint`) | 1 976 | rein beschreibend |
+| Tabelle mit Invarianten (`space.rs`) | 1 105 | beschreibend in Zuschnitt (c) |
+| Prüf-/Berichtsgerüst | 10 471 | `check`-Zusagen |
+| **Untergrenze** | **13 552** | **20,3 %** |
+| IOMMU/IRTE/DMAR/SMMU | 4 457 | teils algorithmisch |
+| Seitentabellen (`mmu` x86+arm) | 2 791 | teils algorithmisch |
+| **Obergrenze** | **20 800** | **31,2 %** |
+| **algorithmischer Rest** | **45 851** | **68,8 %** |
+
+**Damit ist die Antwort für Caprock als Ganzes: nein.** Bei rund 69 % algorithmischem Anteil, der
+mit Annotationen **über** 1 : 1 liegt, kann das gewichtete Mittel nicht darunter fallen — es sei
+denn, die beschriebenen 31 % lägen extrem tief (Grössenordnung 0,05), und dann trüge die Rechnung
+ein einzelner Posten.
+
+**Für einzelne Module ist es erreichbar, und zwar deutlich.** `vtd.rs` sind 1 448 Zeilen; eine
+`device`-Beschreibung derselben Einheit ist eine Grössenordnung kleiner. Dort ist **0,1 : 1**
+plausibel — und das ist der Ort, an dem sich der Übersetzer zuerst rechnet.
+
+**2. Die Annotation muss aus der Deklaration FOLGEN, nicht danebenstehen.** Wer `device` schreibt
+*und* Invarianten *und* Beweishinweise, hat drei Zähler statt einem. Die Bedingung ist scharf:
+**die Deklaration IST die Annotation.**
+
+**3. Die Absenkung muss so flach sein, dass keine Verfeinerungslemmata nötig sind.** Sonst wächst
+der Zähler genau dort, wo M-Gold-2 ihn senken soll.
+
+**4. Wiederverwendbare Spezifikationstheorien** (Fähigkeitssystem, Seitentabellen) helfen dem
+**zweiten** Projekt, nicht dem ersten. Das gehört gesagt, weil es sonst als Ersparnis mitgezählt
+wird, die es beim einzigen vorhandenen Kernel nicht gibt.
+
+- [ ] **Die billigste Prüfung dieser ganzen Rechnung: `vtd.rs` als `device`-Block auf Papier.**
+      1 448 Zeilen gegen die Beschreibung, ohne Übersetzer. Liegt sie nicht mindestens um Faktor 5
+      darunter, ist die Knappheitsthese widerlegt — und mit ihr < 1 : 1 an jeder Stelle.
+
 ---
 
 ## 3d. Rennfreiheit — jetzt einzuplanen, sonst nie
@@ -338,6 +389,41 @@ decken sie **nicht** allein.
 | **Verträge** (`requires`/`ensures` über deklarierte Prädikate) | nötig für Falle 1/2 (Bedingung über Registergrenzen). Damit ist die Linie gewandert, wie `README.md` vorhergesagt hat — und **allgemeine Quantoren über Rechenausdrücke bleiben trotzdem draussen** |
 | **Der Eintritt (Assembler)** | M1–M4 sagen nichts über Registerabdrücke. **Neu seit der Zielsetzung „C + iasm": er ist Teil der AUSGABE**, also aus einer Beschreibung emittiert statt je Fundstelle geschrieben — vertrauenswürdige Fläche **eine Emissionsstelle statt 161**. Bewiesen ist er weiterhin nicht, und er tötet **0** bezahlte Fallen |
 | **Fortschritt** (Aushungern, D8) | kein Mechanismus adressiert ihn |
+
+## 3g. Was Gabbro wie SPARK könnte — und was besser
+
+Beides ist gemessen, nicht geschätzt: zwei SPARK-Experimente am Cap-Space und am Scheduler, dazu
+das Verus-Tor vom 2026-08-13.
+
+### Wie SPARK — und M1/M2 liefern es strukturell
+
+| SPARK-Stärke | in Gabbro |
+|---|---|
+| **Jede Indizierung, jede Arithmetik ist Pflicht** — der Grund, aus dem S1a/S1b fielen | **M1**: Bereichstypen. Es ist keine Voreinstellung, die jemand umlegen kann, sondern der Typ |
+| `Global`/`Depends` — **63 von 63** Datenabhängigkeiten bewiesen | **M2**: Wirkungen sind geisterhafte Fähigkeiten im Parameter |
+| **Abdeckungsratsche** (34 von 34 unter `SPARK_Mode => On`, kein `Off`) | die Ratsche über der **Axiommenge** — dieselbe Mechanik, anderer Gegenstand |
+
+### Besser als SPARK — fünf Punkte, jeder an einer gemessenen Schwäche
+
+| | SPARK heute | Gabbro |
+|---|---|---|
+| **Linearität ohne Allokation** | „leak **proved**" ist SPARKs stärkster Einzelpunkt — **hängt aber an einer Allokation** (gemessen, und der Preis steht in Caprocks Register) | **M2**: geisterhafte lineare Werte, vor der Codeerzeugung gelöscht. **Kein Byte, keine Halde** — an Verus gemessen. Strikt besser auf SPARKs eigenem Feld |
+| **„Der Aufrufer hält den Lock"** | **keine Ausdrucksform** — bleibt ein Kommentar | **M2**: linearer Geisterbeleg. Verus kann es heute, was zeigt, dass es geht |
+| **Adressräume, MMIO-Rechte** | vier Volatilitätsvarianten, aber kein `write_only`-Register, kein Adressraum, keine Barrierendomäne | **M3** — und damit vier bezahlte Fallen (1, 2, 4, 5) unformulierbar |
+| **Terminierung** | Silber verlangt sie **nicht** | **M4**: Pflicht. Genau die Lücke I5, die im eigenen Verus-Modell offen war |
+| **Bootphase mit Ablaufbeweis** | gibt es nicht | **M2 + M3**, zweistufig, falsifizierbar (§3e) |
+
+Dazu der Unterschied, der keine Sprachfrage ist: **SPARK prüft vorhandenen Code, Gabbro erzeugt
+ihn** — deshalb fällt die Invariantenerhaltung einmal je Operation an statt je Aufrufstelle (§3c).
+
+### Schlechter als SPARK — und das entscheidet die Praxis
+
+* **Reife.** GNATprove ist über Jahrzehnte automatisiert und industriell zugelassen (DO-178C).
+  Gabbro hat nichts davon, und der Verus-Lauf hat gezeigt, wie teuer Unreife wird: vier Abstürze,
+  eine versiegelte Schnittstelle, fehlende Spezifikationen für Iterator-Adapter.
+* **SPARKs Leckprüfung feuert von selbst.** Gabbros muss es erst zeigen — „geht im Prinzip" ist
+  bei einem Prüfer die schwächste aller Aussagen.
+* **Ein einziger Datenpunkt je Behauptung.** Zwei Experimente sind keine Erhebung.
 
 ## 4. Was auch dann nicht besser wird — 28 %
 
