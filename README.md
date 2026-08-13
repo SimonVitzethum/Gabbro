@@ -22,7 +22,20 @@ Die Unterscheidung ist die ganze Ehrlichkeit dieses Ordners.
 > Seitentabellen. Deshalb ist die Annahmenmenge **Teil des Satzes**: das Erzeugnis trägt
 > „**speichersicher unter A1…An**", maschinenlesbar.
 
-## Die Kennzahl, an der alles hängt
+## Das Kriterium — und es ist eine ART, keine MENGE
+
+> **Wer ein Gabbro-Programm beweist, beweist die LOGIK seines Programms — und sonst nichts.**
+> Alles Übrige fällt durch Konstruktion.
+
+**Eine Pflicht ist Klempnerei, wenn ihre Aussage nur die Maschine erwähnt** (Index im Bereich, kein
+Überlauf, kein Alias, Rahmen, Sperrordnung, kein Datenrennen, Verfeinerung). **Sie ist Logik, wenn
+sie die Sache erwähnt** („der Baum bleibt ein Baum", „die Nachricht kam beim richtigen Thread an").
+
+**Abbruch ist damit nicht mehr eine Zahl, sondern:** *es bleibt eine **benannte** Klempnerei-Pflicht,
+die von Hand zu erledigen ist.* Das ist **auf Papier je Konstrukt prüfbar** — ungleich billiger als
+eine Zahl, die einen Übersetzer braucht. Ganz in [`KRITERIUM.md`](KRITERIUM.md).
+
+## Die Kennzahl — ab jetzt Diagnose, nicht Ziel
 
 *Zeilen Spezifikation je Zeile **Gabbro**-Code* — Spezifikation ist, **was keine Laufzeitwirkung
 hat**; alles, was im erzeugten C ankommt, ist Code.
@@ -31,18 +44,17 @@ hat**; alles, was im erzeugten C ankommt, ist Code.
 |---|---|
 | seL4 (Isabelle über C) | **20 : 1** — davon rund **0,5 : 1 abstrakte Spezifikation**, **19,5 : 1 Beweis** |
 | **Boden** (nimmt keine Sprache weg) | **≈ 0,5 : 1** |
-| **ZIEL** | **0,5 : 1 — der Boden.** Das heisst nicht „wenig Beweis", sondern **kein handgeschriebener Beweis**: geschrieben wird die abstrakte Spezifikation, sonst nichts |
-| **Abbruch** (etwas ganz anderes) | **> 3 : 1** — dort ist der Beweis wieder der dominierende Posten, und die Prämisse „billig" ist widerlegt |
+| **Richtwert** | **0,5 : 1** — der Boden. **Aber selbst 2 : 1 ist gut, wenn die gezählten Zeilen Logik sind**, und 0,5 : 1 wäre ein Misserfolg, wenn Bereichsprüfungen darin stecken |
+| **gemessen** | `delete_leaf` **3,6–6 : 1**, `Endpoint::call` **1,8–2,3 : 1** (ausgeschrieben) — **beide noch nicht nach Logik/Klempnerei aufgeschlüsselt, und ohne diese Aufteilung kein Messwert** |
 
 **Das Ziel ist bewusst der theoretische Boden, nicht ein erreichbarer Kompromiss.** Damit misst die
 Kennzahl den **Abstand** statt zu urteilen: jede Zehntelstelle über 0,5 ist ein benennbarer
 Beweisposten, der noch von Hand geschrieben wird. Eine Zahl, die man treffen kann, sagt „bestanden";
 eine Zahl am Boden sagt, **was noch fehlt**.
 
-**Die Rechnung ist unbarmherzig:** braucht auch nur 5 % des Kernels handgeschriebene funktionale
-Beweise zu 5 : 1, sind das allein +0,25. Daraus folgt der ganze Entwurfsauftrag — Invarianten an der
-Struktur statt an der Schleife, algorithmische Rümpfe als Traversierungen, und der Rest
-verschwindend klein. Herleitung und Messprotokoll in [`PLAN.md`](PLAN.md).
+**Die Zahl ist ein Stellvertreter, und Stellvertreter sind hier eine bezahlte Falle** — deshalb
+steht sie hinter dem Kriterium, nicht davor. Herleitung und Messprotokoll in [`PLAN.md`](PLAN.md);
+ohne Aufschlüsselung nach Logik/Klempnerei ist eine Zahl ab jetzt kein Messwert.
 
 Stand: 2026-08-13. **Nichts davon ist gebaut.** Was gemessen ist, steht als gemessen da; alles
 andere ist ausdrücklich Absicht.
@@ -59,6 +71,7 @@ andere ist ausdrücklich Absicht.
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`KRITERIUM.md`](KRITERIUM.md) | **das Kriterium**: nur Logik beweisen, sonst nichts — die Trennlinie, was sie mit den Messungen macht, und die neue Abbruchbedingung |
 | [`MINIMALSPEZIFIKATION.md`](MINIMALSPEZIFIKATION.md) | **die Umkehrung der Frage.** Alle 18 „geht nicht"-Befunde in „was muss minimal dastehen" umgewandelt, mit Absenkung nach C. **Sechs fallen auf denselben Mechanismus** |
 | [`P0-4-GEGENPROBE.md`](P0-4-GEGENPROBE.md) | **Entwurf gegen Prüfer.** Der Anti-Katalog-Test bestanden (3 Wörter statt 12) — und ein Loch in der **Messvorschrift**: eine Kennzahl aus ungeprüften Zusagen belohnt **falsche** Zusagen, weil sie kurz sind |
 | [`P0-2-3-DEVICE-UND-SPACE.md`](P0-2-3-DEVICE-UND-SPACE.md) | **beide Tore gefallen** — `device` deckt 21 % von `vtd.rs` und ist dort 2× knapper, nicht 15×; und **65,1 % des Kernels brauchen handgeschriebene Spezifikation, nicht 10 %** |

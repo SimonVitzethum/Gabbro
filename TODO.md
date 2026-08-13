@@ -57,6 +57,18 @@
 
 ---
 
+## Aus dem Kriterium ([`KRITERIUM.md`](KRITERIUM.md))
+
+- [ ] **Beide Messungen nach Logik/Klempnerei aufschlüsseln** — `delete_leaf` (3,6–6 : 1) und
+      `Endpoint::call` (1,8–2,3 : 1). **Ohne diese Aufteilung ist eine Zahl kein Messwert.**
+      Das ist der nächste Papierschritt.
+- [ ] **Zwei Klempnerei-Pflichten stehen heute schon offen** und sind je eine Widerlegung des
+      Kriteriums an ihrer Stelle: `self.queues[p]` nach `31 - leading_zeros()`
+      (`caprock-sched/src/lib.rs:1996`) braucht die Datenstruktur-Invariante; und **jedes
+      Verfeinerungslemma**, falls die Absenkung nicht flach genug ist.
+- [ ] **Die Trennlinie an einem Grenzfall streiten.** „Nennt nur die Maschine" ist scharf genug für
+      die heutigen Fälle — der erste Streitfall gehört in `KRITERIUM.md`, nicht in eine Fussnote.
+
 ## Aus der Umkehrung der Frage ([`MINIMALSPEZIFIKATION.md`](MINIMALSPEZIFIKATION.md))
 
 - [ ] **Die achtzehn Umwandlungen sind Behauptungen über Absenkbarkeit, keine Belege.** Jede braucht

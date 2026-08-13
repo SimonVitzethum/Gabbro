@@ -61,6 +61,8 @@ schwächer formuliert, ohne schwächer zu **werden**.
 | **Die Zählregel, zweite Fassung** | „was ein **Mensch** schreibt" | lässt bei einem KI-Koautor eine Lücke — und **einen Umweg: eine Makroschicht Quelltext erzeugen zu lassen, der dann als geschrieben zählt.** Belastbar ist **Quelle gegen Abgeleitetes**: am Artefakt entscheidbar, ohne Aussage darüber, wer getippt hat |
 | **Die Zählregel, erste Fassung** | „Spezifikation ist, was keine Laufzeitwirkung hat" | erzeugter Geistercode hat keine — er hätte **in den Zähler** gezählt, und damit hätte der Gold-Mechanismus die Kennzahl verschlechtert, je besser er wirkt. Richtig: **was ein MENSCH schreibt** und gelöscht wird |
 
+| **0,5 : 1 als Ziel** | die Zahl war das Ziel, an dem alles hing | **sie ist ein Stellvertreter.** Das Kriterium ist eine **Art**, keine Menge: nur Logik beweisen, sonst nichts. Selbst 2 : 1 ist gut, wenn die Zeilen Logik sind; 0,5 : 1 wäre ein Misserfolg mit handgeschriebenen Bereichsprüfungen. Dieselbe Klasse wie „ein Prüfer, der ein einzelnes Byte liest" — **die Grösse war messbar, die Eigenschaft war es nicht** |
+
 ---
 
 ## Die Trajektorie — das Muster über den Einzelfehlern
