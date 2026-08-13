@@ -38,7 +38,7 @@ andere ist ausdrücklich Absicht.
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`ROADMAP.md`](ROADMAP.md) | Phasen mit **Entscheidungstoren**: jede Phase liefert eine Zahl, die über die nächste entscheidet — samt Abbruchbedingungen |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
-| [`VOLLDECKUNG.md`](VOLLDECKUNG.md) | **der Plan für die anderen 91 %** — Allzwecksprache, sechs Stufen, jede aus der Basisrate abgeleitet. **Verlässt den Zuschnitt, den dieses README verteidigt** |
+| [`VOLLDECKUNG.md`](VOLLDECKUNG.md) | **der Plan für die anderen 91 %** — eine **sehr enge** Sprache, ungefähr C-mächtig: **vier Mechanismen, zwei Deklarationsregeln**, alles Weitere als Bibliothek. **Verlässt den Zuschnitt, den dieses README verteidigt** |
 | [`fallen-klassifikation.tsv`](fallen-klassifikation.tsv) | die 100 bezahlten Fallen, einzeln klassifiziert; `./zaehle-fallen.sh` leitet die Zahlen ab |
 
 ---

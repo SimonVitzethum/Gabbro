@@ -11,6 +11,11 @@ ausweichen wollte.*
 Die Messung dazu steht und wird nicht schöngeredet: die sieben Konstrukte decken heute **≤ 9 %** von
 Caprock, hart **4,6 %**. Dieses Dokument plant die übrigen **91 %**.
 
+> **Die Form ist eine SEHR ENGE Sprache, ungefähr so ausdrucksstark wie C** — nicht ein Katalog aus
+> einem Schlüsselwort je Fehlerklasse. Die erste Fassung dieses Dokuments war genau das (zwanzig
+> Konstrukte) und ist in §2 berichtigt. **Vier Mechanismen, zwei Deklarationsregeln**; alles andere
+> fällt als Bibliothek heraus.
+
 Stand 2026-08-13. **Nichts davon ist gebaut.**
 
 ---
@@ -59,179 +64,131 @@ Nachbau von Vorhandenem.
 
 ---
 
-## 2. Der Kern (Stufe 0) — was „beliebige Programme" verlangt
+## 2. BERICHTIGUNG: die erste Fassung war eine Merkmalsliste, keine Sprache
 
-`format`/`table` sind Bibliotheken **über** diesem Kern, keine zweite Sprache daneben.
+Sie führte **zwanzig** Konstrukte — `device`, `lock`, `atomic`, `barrier`, `bitfeld`, `einheit`,
+`menge`, `recht`, `platzierung`, `grundmenge`, `ableitung`, `stellentyp`, `absage`, `region`,
+`linear`, `wirkung`, `state`, `arithmetik`, `check` … — eines je Fehlerklasse. Das ist die
+naheliegende Ableitung aus einer Fallenliste und der falsche Schluss: **eine Sprache, die für jeden
+bezahlten Fehler ein Schlüsselwort bekommt, ist ein Katalog.** Sie wächst mit jedem Fund, und
+niemand kann sie mehr im Kopf halten.
 
-| Element | Entscheidung |
-|---|---|
-| **Typen** | algebraische Datentypen, feste Breiten, kein Wirtslayout. Generizität monomorphisiert |
-| **Linearität** | **linear** (muss verbraucht werden) und **affin** (darf weggeworfen werden) als getrennte Qualifizierer. Rust ist nur affin — genau daran hängt Falle 45 |
-| **Regionen** | jeder Zeiger trägt seine Region; Regionen sind geschachtelt, kein Zeiger überlebt seine Region |
-| **Wirkungen** | jede Funktion nennt ihre Wirkungen (lesen/schreiben, Sperren, IRQ-Zustand, Allokation, Ein-/Ausgabe). Voreinstellung: **keine** |
-| **Terminierung** | `traverse` ist die Voreinstellung. Für den allgemeinen Fall `loop … variant e` mit **ausgesprochenem** Abstiegsmass — die Ausnahme ist benannt, nicht verboten |
-| **Speicher** | Arenen mit Lebensdauer, kein freier `malloc`, keine Halde im Kern. Ein Programm ohne Arena ist allokationsfrei — beweisbar, nicht behauptet |
-| **Fehler** | `reason` mit `exhaustive`, kein Auffangzweig, kein `panic` als Sprachmittel |
-| **Übersetzer** | bleibt **sicheres Rust**, `forbid(unsafe_code)`. Kein Selbst-Hosting — ein Erzeuger, der sich selbst übersetzt, verliert seinen unabhängigen Prüfer |
+Gefragt ist das Gegenteil: **eine sehr enge Sprache, ungefähr so ausdrucksstark wie C**, aus deren
+wenigen Mechanismen die zwanzig als **Bibliothek oder Deklaration** herausfallen.
 
-**Was das nicht ist:** kein GC, keine Ausnahmen, keine Vererbung, keine Reflexion, kein dynamisches
-Laden. „Beliebige Programme" heisst hier *beliebige Systemprogramme*.
+> **Gabbro = C ohne seine Löcher, plus zwei Dinge.**
+> Die zwei sind **Bereichstypen** und **lineare Werte (auch geisterhafte)**. Alles andere ist eine
+> **Einschränkung** von C, keine Erweiterung.
 
 ---
 
-## 3. Die Stufen — jede mit Fundstellen, Syntax und getöteten Fallen
+## 3. Der Kern — vier Mechanismen und zwei Deklarationsregeln
 
-Jede Stufe nennt: **wie viele Fundstellen** sie in Caprock adressiert, **welche bezahlten Fallen**
-sie unformulierbar macht, und **was sie nicht kauft**. Eine Stufe ohne getötete Falle ist eine
-Stufe ohne Evidenz und wird nicht gebaut.
+### M1 — Bereichstypen
 
-### Stufe 1 — Nebenläufigkeit · **2 231 `Ordering::` + 406 Sperrnahmen**
-
-Der grösste Einzelposten, und der einzige, bei dem Rust **und** SPARK **und** Verus gleichermassen
-schwach sind.
+Ganzzahlen tragen ihren **Wertebereich**, und jede Operation muss darin bleiben. Das ist Adas
+Trick, und **genau er** hat S1a/S1b gefunden — nicht „Ada ist sicherer".
 
 ```gabbro
-lock CAPS schuetzt { slots, cdt, gen_counter }
-    ordnung  2                       -- Sperrordnung: nur absteigend nehmen
-    maskiert irqs                     -- die WIRKUNG des Haltens steht am Lock
-
-fn delete_leaf(s: SlotIdx) -> Result
-    requires held(CAPS)               -- ohne Guard-Weitergabe ausdrueckbar
-    wirkung  { schreibt CAPS.slots }
-    haelt_hoechstens 200 zyklen       -- Sperrhaltedauer ist eine Groesse, keine Gewohnheit
-
-atomic COLOR_DONE : bool
-    veroeffentlicht { color_report }   -- die NUTZLAST steht am Atomic, nicht im Kopf
-    release/acquire
+type SlotIdx  = u32 in 0 .. NSLOTS-1
+type Refcount = u32 in 0 .. u32'max
+type Zyklen   = u64 in 1 .. u64'max      -- Null ist ein Befund, kein Messwert
 ```
 
-| Regel des Übersetzers | tötet |
-|---|---|
-| Sperren nur in absteigender `ordnung` — sonst Übersetzungsfehler | **41** (`match lock() { None => lock() }`, Selbst-Deadlock) |
-| Ein Guard, dessen Lebensdauer einen Rumpf überspannt, ist ein Fehler; `haelt_hoechstens` ist Pflicht | **93** (`while let`-Guard, Krypto unter maskierten IRQs) |
-| `veroeffentlicht` ist Pflicht an jedem Atomic; die Nutzlast ist Teil des Modells | **33** (Loom sah die Nutzlast nicht, weil sie im `UnsafeCell` lag) |
-| `maskiert irqs` propagiert als Wirkung durch jeden Aufrufer | **37** (lokale IRQ-Sperre als Fenster über eine globale Grösse) |
+### M2 — Lineare Werte, auch geisterhafte
 
-**Was es nicht kauft:** Fortschritt (Freiheit von Aushungern) und Ablaufreihenfolge. Ein
-deadlockfreies Programm kann trotzdem verhungern lassen — D8 wäre nicht getötet.
-
-### Stufe 2 — Geräte und MMIO · **125 `volatile` + die halbe HAL (13 518 Zeilen)**
-
-`format` für den Draht, `device` für das Register. Die Analogie trägt, weil beide dasselbe Problem
-haben: fremdbestimmtes Layout mit Bedingungen.
+Ein linearer Wert **muss** verbraucht werden; ein geisterhafter existiert nur im Beweis und wird
+vor der Codeerzeugung gelöscht (**kein Byte, keine Halde** — an Verus gemessen).
 
 ```gabbro
-device Vtd at mmio {
-    reg GCMD : u32 @0x18
-        klasse write_only          -- KEIN Read-Modify-Write moeglich
-        felder { TE @31, SRTP @30, IRE @25 }
-    reg GSTS : u32 @0x1c  klasse read_only
-    reg CAP  : u64 @0x08  klasse read_only
-
-    uebergang te_scharf { GCMD.TE: 0 -> 1 }
-        requires GSTS.RTPS == 1
-        wirkung { dsb sy }         -- Barrierendomaene am Geraet, nicht "arch-neutral"
-}
-
-device Smmu at mmio {
-    reg STE.S1STALLD : bit
-        requires IDR0.STALL_MODEL == 0b10     -- Bedingung UEBER Register hinweg
-}
+linear       type Parked                 -- muss zugelassen werden
+linear ghost type Hält(CAPS)             -- Sperrbeleg, kostenlos
+linear ghost type Pflicht(check)         -- eine unerfuellte Pruefzusage
 ```
 
-| Regel | tötet |
-|---|---|
-| `klasse write_only` — ein Lesen zum Zurückschreiben ist nicht formulierbar | **4** (x86 `GCMD` ist kein RMW) |
-| `uebergang` nennt die erlaubten Bitwechsel; alles andere existiert nicht | **5** (x2APIC `EN`+`EXTD` in einem Schritt) |
-| `requires` über Registergrenzen | **1** (`STE.S1STALLD` ohne `IDR0.STALL_MODEL`), **2** (CD ohne `R`) |
-| Registerbreite im Typ, kein impliziter Abschnitt | **11** (`CR3` per 32-Bit-Schreibzugriff) |
-| Eigentum je Feld: `used` gehört dem Gerät | **35** (nur den Treiberteil der Virtqueue genullt) |
-| Barrieren tragen ihre Domäne | **8** (`fence(SeqCst)` ist auf aarch64 `dmb ish`) |
+### M3 — Adressräume und Zugriffsrechte am Zeiger
 
-**Was es nicht kauft:** dass der Beschreiber stimmt. Ein falsches Registerhandbuch ergibt einen
-makellosen falschen Treiber — Falle 7 und 3 bleiben `assume`-Sache.
-
-### Stufe 3 — Eigentum und Adressachsen · **403 Rohzeiger + 482 `unsafe`**
+Ein Zeiger trägt **wohin** er zeigt und **was** man damit darf. C hat das als Erweiterung; hier
+ist es die Voreinstellung.
 
 ```gabbro
-linear type Parked           -- MUSS verbraucht werden; kein Wegwerfen, kein Kopieren
-linear type Endowment
-fn admit(p: Parked) -> Tid   -- der einzige Verbraucher
-
-einheit Pa   basis u64       -- getrennte Achsen, Arithmetik nur innerhalb
-einheit Iova basis u64
-einheit Farben               -- MASK_BITS ist KEINE Farbanzahl
+ptr<mmio, write_only>   gcmd            -- ein Lesen zum Zurueckschreiben ist nicht schreibbar
+ptr<dma,  read_write>   puffer
+ptr<code, execute@ring3> sonde
 ```
 
-| Regel | tötet |
-|---|---|
-| `linear` ist echt: kein `forget`, kein `Copy`, kein stiller Verlust | **45** (rustc prüft Herstellbarkeit, nicht Nicht-Weitergabe), **50** |
-| Jeder Abweispfad muss lineare Werte verbrauchen | **96** (neuer Abweispfad erbt die Aufräumpflicht nicht), **15** (Endowment-Liste beim Austausch) |
-| Regionen: ein Puffer gehört genau einem Besitzer | **40** (Treiberpuffer gehört dem letzten Client), **12** (geteilte Seitenverzeichnisse) |
-| `einheit` — Arithmetik über Achsen hinweg ist nicht typisierbar | **10** (`MASK_BITS`), **58** (ein Parameter, zwei Bedeutungen) |
-| Ein Stapel ist kein Slot | **28** (`sc_donee`, geschachtelte Spenden) |
+Barrieren gehören zum Adressraum, nicht zur Architektur — `dsb sy` gegen `dmb ish` ist keine
+Stilfrage mehr, sondern folgt aus `mmio` gegen `normal`.
 
-**Was es nicht kauft:** die Wahl der Achsen. Falle 59 (VA-Fenster in GiB 0) ist eine
-Entwurfsentscheidung, kein Typfehler.
+### M4 — Kein ungeprüfter Index, keine unbegrenzte Schleife
 
-### Stufe 4 — Platzierung, Bau und Architektur · **W-Klasse, aber zwei Fallen**
+Indizieren geht nur mit einem Beleg der Zugehörigkeit; jede Schleife nennt ihr Abstiegsmass.
+`traverse` ist die bequeme Schreibweise dafür, kein eigener Mechanismus.
 
-```gabbro
-fn ring3_sonde() platziert .user_text arch x86_64 { … }
-image caprock { sektionen aus kernel.ld  genau_einmal }
-```
+### D1/D2 — die zwei Deklarationsregeln
 
-Tötet **72** (Ring-3-Code in `.text`, faultet an der eigenen Einsprungadresse — zweimal passiert)
-und macht **81** (doppeltes `-T` durch Cargo-Vererbung) strukturell unmöglich, weil der
-Sektionsvertrag im Programm steht und nicht in der Umgebung. **Der Rest der W-Klasse (16 von 18)
-bleibt.**
+* **Undurchsichtige Neutypen ohne implizite Umwandlung.** `Pa`, `Iova`, `Farben`, `MaskenBits`
+  sind verschiedene Typen — C's `typedef` ist durchsichtig, das ist das Loch.
+* **Vollständige Layouts, kein Auffangzweig.** Jedes Bit eines Wortes ist benannt, jede Aufzählung
+  ist erschöpfend.
 
-### Stufe 5 — Der Eintritt (TAL) · **161 `asm!`-Stellen, davon 20–30 im Betrieb aktiv**
+### Was C hat und bleibt
 
-Eintrittsfunktionen mit erklärtem Registerabdruck, registergebundene Werte, eigene
-Aufrufkonvention, `transition` (`iretq`/`eret`) als typisierter Übergang in einen gespeicherten
-Maschinenzustand — dasselbe Konstrukt wie `state`, eine Ebene tiefer.
-
-> **Diese Stufe hat keinen nachgelagerten Beweiser, und das bleibt so.** Verus kann keine
-> Inline-Assembler-Semantik, Frama-C/WP über erzeugtem C erst recht nicht, und ein TAL-Typsystem im
-> Erzeuger **prüft sich selbst**. Die haltbare Aussage ist: die vertrauenswürdige **Fläche**
-> schrumpft von 161 Fundstellen auf eine Emissionsstelle. Reduktion, nicht Beseitigung.
-
-**Getötete bezahlte Fallen: keine.** Diese Stufe steht ohne Evidenz aus der Basisrate da — sie ist
-notwendig, damit ein Kernel überhaupt entsteht, aber sie ist **kein** Argument für die Sprache.
-
-### Stufe 6 — `check`: die Messdisziplin als Konstrukt · **33 Fallen, 15,7 % des Codes**
-
-Die eigentliche Neuheit. Ein Prüfer ist heute gewöhnlicher Code, und **jede** der 33 Fallen ist ein
-Prüfer, der etwas anderes prüfte, als draufstand.
-
-```gabbro
-check epfull
-    aussage     "ein Ueberlauf der Endpoint-Warteschlange ist BENANNT"
-    misst       ep.rejected_send, ep.rejected_recv
-    gattert     abnahme                       -- PFLICHT
-    sprechprobe { 5 Sonden gegen 4 Plaetze }  -- kann diese Zeile ueberhaupt fallen?
-    untergrenze rejected_send >= 1            -- Null ist ein Befund, kein Messwert
-    gegenprobe  "TidQueue::enqueue ignoriert die Kapazitaet"
-        erwartet genau_ein_konjunkt_offen
-```
-
-Die Regeln sind keine Empfehlungen, sondern Übersetzungsfehler:
-
-| Regel | tötet |
-|---|---|
-| Ein `check`, der in **keiner** Gatterliste steht, ist ein Fehler | **17** (Urteil entsteht erst im Bericht), und das `all_done()`-Loch 21 gegen 24 |
-| **`sprechprobe` ist Pflicht** — ohne sie übersetzt der `check` nicht | **25**, **66**, **97** („ein leerer Lauf ist kein Testergebnis") |
-| Eine gemessene Grösse, die der **gemessene Pfad selbst schreibt**, ist ein Fehler | **79**, **90** (die Marke, die der Pfad in seiner ersten Zeile löscht) |
-| Einseitige Schwelle ohne `untergrenze` ist ein Fehler | **83** (`NOSEL_TEXT == 0` meldete PASS) |
-| `misst` bindet an die Grösse; Nachrechnen ist nicht formulierbar | **21**, **70**, **78** (ein Byte statt 512) |
-| `gegenprobe` muss **genau ein** Konjunkt öffnen | **71** (eine Mutation, die zwei Dinge kaputtmacht) |
-| Nullbefunde tragen ihre Stichprobengrösse im Typ | **64**, **65** (0,99982²³⁰⁰ ≈ 66 %) |
-
-**Was es nicht kauft:** ob die *Aussage* die richtige ist. Falle 91 (ein Prädikat, das
-stellvertretend liest) fällt in die B-Klasse und bleibt.
+Funktionen, Zeiger, `struct`, feste Breiten, Kontrollfluss, Funktionszeiger, explizite Umwandlung
+zwischen **verträglichen** Typen. **Was wegfällt:** implizite Umwandlung, `void*`, Zeigerarithmetik
+ohne Grundlage, `goto`, Auffangzweige, `union` als Umdeutung (das kann M3), Präprozessor.
 
 ---
+
+## 3b. Die zwanzig fallen heraus — als Bibliothek, nicht als Syntax
+
+**Das ist der Test der Reduktion.** Bleibt eine Zeile ohne Ableitung, fehlt ein Mechanismus.
+
+| vormals „Konstrukt" | folgt aus | wie |
+|---|---|---|
+| `einheit` (Pa/Iova/Farben) | **D1** | undurchsichtiger Neutyp |
+| `arithmetik` (S1b) | **M1** | `Refcount` verlässt seinen Bereich nicht |
+| `absage`, `grundmenge` | **D2** | erschöpfende Aufzählung, kein Auffangzweig |
+| `bitfeld` (Marke auf Bit 63) | **D2** | vollständiges Layout — das Zahlenfeld ist belegt |
+| `menge` statt Kardinalzahl | Bibliothek | ein Feldtyp über M1 |
+| `ableitung` | `const`-Auswertung | hat C auch, nur ohne Prüfung |
+| `stellentyp` (Konstruktor je Stelle) | **M2** + Modulgrenze | undurchsichtig, ein Erzeuger |
+| `recht` (lesen ≠ schreiben) | **M3** | zwei Zeigerrechte, nicht eine Zeile mit zwei Richtungen |
+| `device`, Registerklassen | **M3** + **D2** | `mmio` + `write_only` + vollständiges Layout |
+| `barrier`-Domäne | **M3** | folgt aus dem Adressraum |
+| `platzierung` (`.user_text`) | **M3** | `code`-Raum mit `execute@ring3` |
+| `region`, Eigentum | **M2** | ein linearer Block ist seine Region |
+| `linear` (`Parked`) | **M2** | der Mechanismus selbst |
+| `state` (Typzustand, x2APIC) | **M2** | linearer Wert, dessen Typ den Zustand trägt |
+| `lock` / `held(L)` | **M2** | `linear ghost Hält(L)` — an Verus **gemessen**, dass das trägt |
+| Sperr**ordnung** ⇒ Deadlockfreiheit | **M2 + M1** | die Stufe ist ein Bereichstyp, Nehmen verlangt echt kleinere Stufe |
+| `atomic`-Veröffentlichung | **M2** | `release` gibt einen Geisterbeleg ab, `acquire` nimmt ihn |
+| `wirkung` (Global/Depends) | **M2** | Wirkungen **sind** geisterhafte Fähigkeiten im Parameter |
+| `traverse` (S1a) | **M4** | Schreibweise, kein Mechanismus |
+| `format` / `table` | Bibliothek | Deklarationen über M1/M3/D2 |
+| **`check`** | **M2** | **s. u. — die schönste Ableitung** |
+
+### `check` ist keine Sonderform, sondern eine lineare Pflicht
+
+Das Konstrukt mit den 33 getöteten Fallen braucht **kein eigenes Schlüsselwort**:
+
+* Ein `check` erzeugt ein `linear ghost Pflicht`. **Wer sie nicht verbraucht, übersetzt nicht** —
+  das ist wörtlich „ein `check`, der in keiner Gatterliste steht, ist ein Fehler" (Falle 17, und
+  das `all_done()`-Loch 21 gegen 24), und es fällt aus M2 heraus statt aus einer Sonderregel.
+* Die **Sprechprobe** ist eine zweite Pflicht, die nur ein *fehlgeschlagener* Lauf verbraucht.
+* Die **Untergrenze** ist M1: eine gemessene Grösse mit `in 1 ..` kann nicht null melden.
+* „Der gemessene Pfad schreibt die Grösse selbst" ist ein **Schreibrecht** — M3.
+
+**Damit bleibt die These dieses Ordners bestehen und wird kleiner:** das Wertvollste ist nicht ein
+Prüf-Schlüsselwort, sondern dass **Prüfzusagen dieselben linearen Werte sind wie Ressourcen.**
+
+### Was NICHT herausfällt — und darum ehrlich danebensteht
+
+| | |
+|---|---|
+| **Verträge** (`requires`/`ensures` über deklarierte Prädikate) | nötig für Falle 1/2 (Bedingung über Registergrenzen). Damit ist die Linie gewandert, wie `README.md` vorhergesagt hat — und **allgemeine Quantoren über Rechenausdrücke bleiben trotzdem draussen** |
+| **Der Eintritt (Assembler)** | M1–M4 sagen nichts über Registerabdrücke. Bleibt aussen, ohne Beweiser, und tötet **0** bezahlte Fallen |
+| **Fortschritt** (Aushungern, D8) | kein Mechanismus adressiert ihn |
 
 ## 4. Was auch dann nicht besser wird — 28 %
 
@@ -247,23 +204,24 @@ jeder Stufe.**
 
 ---
 
-## 4b. AUSGELÖST 2026-08-13: Abbruchbedingung 2 hat für Stufe 1 gegriffen
+## 4b. AUSGELÖST 2026-08-13: Abbruchbedingung 2 hat für M2 gegriffen
 
 Die Gegenrechnung „was können Rust + Verus + Loom heute schon?" ist für den schwersten Posten
 gefahren, und sie ist **gegen** diesen Plan ausgegangen.
 
 | Stufe | gemessener Stand gegen Verus/Rust heute |
 |---|---|
-| **1 — Nebenläufigkeit** | **Kopfbegründung gefallen.** „Der Aufrufer hält den Lock" ist in Verus ein `tracked`-Zeuge: richtiger Kern `verified`, fremder Kern Beweisfehler, selbstgebauter Beleg Typfehler — `no_std`, ohne Byte im Erzeugnis. **Ungemessen bleiben** Sperrordnung ⇒ Deadlockfreiheit und `haelt_hoechstens`; Falle 41 und 93 sind damit noch nicht vergeben |
-| **3 — Linearität/Arithmetik** | **Arithmetik und Indexgrenzen: gefallen.** Verus findet S1a und S1b am echten Code für **0 Zeilen** (ein Schalter). **Linearität: halb** — `tracked` ist affin, eine Leckprüfung kostet eine hingeschriebene Bilanz. Rusts `Parked` liefert die andere Hälfte zu null Kosten |
-| **2 — `device`** | **ungemessen — und der Gegner ist gar nicht Verus.** Typisierte Registerzugriffe (`tock-registers`, `svd2rust`-Art) sind eine **Rust-Bibliothek**. Die Frage ist nicht „kann eine Sprache das", sondern „was fehlt der Bibliothek": Übergänge über Bits, Bedingungen über Registergrenzen, Barrierendomäne im Typ |
-| **4 — Platzierung** | **ungemessen**, und `#[link_section]` gibt es. Die Lücke ist, dass niemand es **prüft** — das kann eine Lint |
-| **5 — Eintritt (TAL)** | tötet **0** bezahlte Fallen und hat nirgends einen Beweiser |
-| **6 — `check`** | **kein Gegner gefunden.** Weder Rust noch SPARK noch Verus noch Loom sagt etwas über Sprechprobe, Gatterung, Untergrenze oder isolierende Gegenprobe |
+| **M2 am Sperrbeleg** | **Kopfbegründung gefallen.** „Der Aufrufer hält den Lock" ist in Verus ein `tracked`-Zeuge: richtiger Kern `verified`, fremder Kern Beweisfehler, selbstgebauter Beleg Typfehler — `no_std`, ohne Byte im Erzeugnis. **Ungemessen bleiben** Sperrordnung ⇒ Deadlockfreiheit und `haelt_hoechstens`; Falle 41 und 93 sind damit noch nicht vergeben |
+| **M1 + M2 (Arithmetik/Linearität)** | **Arithmetik und Indexgrenzen: gefallen.** Verus findet S1a und S1b am echten Code für **0 Zeilen** (ein Schalter). **Linearität: halb** — `tracked` ist affin, eine Leckprüfung kostet eine hingeschriebene Bilanz. Rusts `Parked` liefert die andere Hälfte zu null Kosten |
+| **M3 (`device`)** | **ungemessen — und der Gegner ist gar nicht Verus.** Typisierte Registerzugriffe (`tock-registers`, `svd2rust`-Art) sind eine **Rust-Bibliothek**. Die Frage ist nicht „kann eine Sprache das", sondern „was fehlt der Bibliothek": Übergänge über Bits, Bedingungen über Registergrenzen, Barrierendomäne im Typ |
+| **M3 (Platzierung)** | **ungemessen**, und `#[link_section]` gibt es. Die Lücke ist, dass niemand es **prüft** — das kann eine Lint |
+| **Eintritt (TAL)** | tötet **0** bezahlte Fallen und hat nirgends einen Beweiser |
+| **`check` über M2** | **kein Gegner gefunden.** Weder Rust noch SPARK noch Verus noch Loom sagt etwas über Sprechprobe, Gatterung, Untergrenze oder isolierende Gegenprobe |
 
-> **Die ehrliche Bilanz dieses Plans nach der ersten Gegenrechnung: er schrumpft auf Stufe 6 —
-> plus die Reste von Stufe 1 und 2, deren Gegner eine Rust-Bibliothek ist und keine Sprache.**
-> Und Stufe 6 braucht **keine Sprache**: V−1 baut sie als Makrobibliothek.
+> **Die ehrliche Bilanz nach der ersten Gegenrechnung: übrig bleiben die lineare Prüfpflicht
+> (`check` über M2), die Sperrordnung und M3 — und M3s Gegner ist eine Rust-Bibliothek, keine
+> Sprache.** Die lineare Prüfpflicht braucht als *Wirkung* keine Sprache: V−1 baut sie als
+> Makrobibliothek. Was sie als *Mechanismus* braucht, ist echte Linearität — und die hat Rust nicht.
 
 Damit ist die Reihenfolge nicht mehr „V−1 zuerst, weil billig", sondern **„V−1, weil alles andere
 gerade seinen Gegner gefunden hat".**

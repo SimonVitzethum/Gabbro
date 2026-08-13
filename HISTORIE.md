@@ -44,6 +44,8 @@ schwächer formuliert, ohne schwächer zu **werden**.
 
 | **„weder SPARK noch Rust"** | „der Aufrufer hält den Lock" galt als **grösster Einzelposten** und als Ausdruckslücke aller vorhandenen Werkzeuge | **gemessen 2026-08-13: Verus kann es**, als `tracked`-Zeuge, `no_std`, ohne Byte im Erzeugnis. Der Satz war wahr für SPARK und Rust und wurde stillschweigend auf „alle" erweitert — und **Verus stand in der Verwandtschaftstabelle mit „beweist, was jemand modelliert hat" abgetan.** Wer den nächsten Verwandten abwertet, statt ihn zu fahren, behält seine Begründung länger, als sie hält |
 
+| **Zwanzig Konstrukte** | die erste Fassung von `VOLLDECKUNG.md` führte je Fehlerklasse ein Schlüsselwort — `device`, `lock`, `atomic`, `barrier`, `bitfeld`, `einheit`, `menge`, `recht`, `platzierung`, … | **das ist ein Katalog, keine Sprache**, und er wächst mit jedem Fund. Die naheliegende Ableitung aus einer Fallenliste ist der falsche Schluss. Es sind **vier Mechanismen** (Bereichstypen · lineare, auch geisterhafte Werte · Adressräume mit Rechten · kein ungeprüfter Index) und **zwei Deklarationsregeln**; die zwanzig fallen daraus als Bibliothek heraus. Die schönste Ableitung ist `check`: eine **lineare Pflicht**, kein Prüf-Schlüsselwort |
+
 ---
 
 ## Die Form, die sich wiederholt
