@@ -91,6 +91,27 @@ Damit später niemand denkt, es sei vergessen worden:
 * **Allzweck-Konstrukte** (Funktionen, Schleifen, Arithmetik über Feldern). Sobald Gabbro rechnen
   kann, kehrt die Spezifikationslast zurück, der es ausweicht.
 * **Nebenläufigkeit.** Auch SPARK kann „der Aufrufer hält den Spinlock" nicht ausdrücken.
-* **Rust-Ausgabe.** Erst wenn C trägt — zwei Ziele verdoppeln die Prüffläche.
+* **Der Geltungsbereich der Beweisbarkeit steht jetzt in `DESIGN.md` als Tabelle** — offen ist die
+  Gegenprobe: **ein Konstrukt suchen, dessen Zeile zu stark ist.** Die Tabelle ist neu und hat
+  dieselbe Vorgeschichte wie die zwei Überschreibungen in `HISTORIE.md`.
+* **Mutationsprobe auf der ANNOTATIONSEMISSION**, nicht nur auf der Codeemission. Ein Erzeuger, der
+  abgeschwächte Verträge ausgibt, erzeugt einen grünen Beweis über eine schwächere Aussage. Der
+  stimmig abgeschwächte Fall (Code **und** Vertrag) wird von **keinem** Beweis gefangen — nur vom
+  Differenztest gegen die Handschrift. Das ist dessen benannte Aufgabe.
+* **Annahmenmenge ins Erzeugnis emittieren** („bewiesen unter A1…An"), als **Menge von Namen** mit
+  Klasse, nicht als Zahl. Ein Beweis, dessen Annahmenmenge der Verbraucher nicht kennt, hat keine
+  Reichweite.
+* **Die SPARK-Übernahmeleiter nachprüfen** (Stone/Bronze/Silber/Gold/Platinum und was jede Stufe
+  bedeutet). Sie trägt in `README` und `DESIGN.md` ein Argument und ist aus dem Gedächtnis zitiert;
+  von dieser Maschine aus war keine Dokumentation greifbar.
+* **Für den Kernel-Zweig: der TAL-Teil hat keinen nachgelagerten Beweiser.** Verus beweist keine
+  Inline-Assembler-Semantik, Frama-C/WP erst recht nicht; ein TAL-Typsystem im Erzeuger prüft sich
+  selbst. Die haltbare Aussage ist „vertrauenswürdige Fläche schrumpft von 153 Stellen auf eine",
+  nicht „geprüft". Offen: ob das reicht, um das Tor zu rechtfertigen.
+
+* **Rust-Ausgabe.** Erst wenn C trägt — zwei Ziele verdoppeln die Prüffläche, **und die zweite
+  Emission ist nicht nur Aufwand, sondern eine unbewiesene Entsprechung** (bewiesen in Rust,
+  ausgeliefert in C). Die Reihenfolge „C zuerst" stammt aus der alten These; unter der neuen ist
+  sie zu prüfen, weil der nächstliegende Beweiser Verus ist und Rust will. S. `ROADMAP.md`.
 * **Seitentabellen-Beschreiber.** Verlockend, aber Hardwarevertrag: ein falscher Beschreiber
   erzeugt einen beweisbar korrekten falschen Kernel.

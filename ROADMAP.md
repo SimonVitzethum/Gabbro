@@ -171,7 +171,14 @@ Das ist die schärfste denkbare Abnahme, weil die Antwort schon feststeht:
 * **Seitentabellen-Beschreiber.** Verlockend (das fehlende `US` auf der Zwischenebene wäre nicht
   formulierbar gewesen), aber Seitentabellen sind Hardwareverträge; ein falscher Beschreiber
   erzeugt einen beweisbar korrekten falschen Kernel.
-* **Rust-Ausgabe neben C.** Erst, wenn C trägt. Zwei Ziele verdoppeln die Prüffläche.
+* **Rust-Ausgabe neben C.** Erst, wenn C trägt. Zwei Ziele verdoppeln die Prüffläche — **und sie
+  erzeugen eine Entsprechungspflicht**: bewiesen in Rust, ausgeliefert in C, dass beide dasselbe
+  tun, ist unbewiesen. Das ist genau die Lücke, die seL4 mit Binärverifikation schliesst.
+  **Konflikt, der zu entscheiden ist:** der nächstliegende Beweiser (Verus) will Rust, das
+  Auslieferungsziel ist C. Ein Beweiser über dem C (Frama-C/WP) vermeidet die zweite Emission und
+  bringt dafür ACSL-Spezifikationslast — beides greift 0b an, in verschiedene Richtungen.
+* **Ada-Ausgabe / GNATprove.** Kam einmal als dritter Beweisweg in einem Nebensatz vor und steht
+  sonst in keinem Dokument dieses Ordners. **Gestrichen**, bis jemand einen Grund nennt.
 * **Binärverifikation** (seL4-Art, erzeugtes C gegen Maschinencode). Der Weg existiert, aber er
   ist ein eigenes Projekt.
 
@@ -183,10 +190,9 @@ Gabbro endet, wenn **eines** davon eintritt:
 
 0. **Die Basisrate ist zu klein** (Phase −1) — zu wenige Formate, zu wenige Fehler dieser Klasse.
    Diese Bedingung steht zuerst, weil sie am billigsten zu prüfen ist und am ehesten zutrifft.
-0b. **Das Spezifikationsverhältnis verfehlt sein Ziel deutlich.** Gabbros These ist
-   *Zeilen Spezifikation je Zeile Code ≤ 1 : 1* (seL4: 20 : 1). Am ersten erzeugten Modul zu
-   messen, gegen einen handgeschriebenen Beweis desselben Moduls. Liegt Gabbro bei 5 : 1, ist es
-   ein Erzeuger mit Beiwerk und keine Antwort auf die Gold-Frage.
+0b. **Das Spezifikationsverhältnis verfehlt sein Ziel deutlich** — *Zeilen Spezifikation je Zeile
+   Code*, Ziel **≤ 1 : 1**, seL4 als Vergleich **20 : 1**. **Ohne das Protokoll darunter liefert
+   diese Bedingung die Wunschzahl**, und zwar ohne dass jemand schummelt.
 1. **EverParse trägt** (Phase 0) — **aber nur, wenn der Schnitt bei `table` auf (a) gefallen ist.**
    Bei (b)/(c) deckt EverParse die Frage gar nicht ab, und ein grünes Phase-0-Ergebnis wäre kein
    Freispruch.
@@ -195,3 +201,41 @@ Gabbro endet, wenn **eines** davon eintritt:
 3. **Der erzeugte Prüfer findet die drei bekannten Fehler nicht** (Phase 4).
 
 Ein Ordner, der seine eigenen Abbruchbedingungen nicht nennt, wird nie beendet — nur vergessen.
+
+---
+
+## Das Messprotokoll zu 0b — vorab, weil es sonst die Wunschzahl liefert
+
+Die Regeln stehen hier **vor** der Messung, aus demselben Grund, aus dem die IPC-Schwelle von
+2000 Zyklen vorab feststeht: eine Schwelle, die man nach dem Ergebnis wählt, ist keine.
+
+**1. Zwei Module, beide berichtet — die Wahl entscheidet sonst das Ergebnis.**
+
+| | Modul | erwartet |
+|---|---|---|
+| **bester Fall** | der **Manifest-Leser** (`format`) | nahe am Ziel — hier *ist* der Beschreiber die Spezifikation |
+| **schlechtester Fall** | ein **(c)-Mutationsmodul** am Cap-Space | deutlich darüber — Schleifeninvarianten, Ghost-Code, Hilfslemmata |
+
+**Nur den ersten zu berichten ist die Manipulation**, und sie braucht keine Absicht: man misst das
+Modul, das fertig ist.
+
+**2. Zählregel für den Zähler — Beweiscode IST Spezifikation.** Was der nachgelagerte Beweiser
+zusätzlich braucht, zählt mit: **Schleifeninvarianten, Ghost-Code, Hilfslemmata, `assert`-Ketten,
+ACSL-Annotationen**. Wer nur den Gabbro-Beschreiber zählt, misst die halbe Last — und genau die
+Hälfte, die bei (c) explodiert.
+
+**3. Zählregel für den Nenner — die HANDGESCHRIEBENE Referenz, nicht die Ausgabe.** Sonst
+verbessert ein geschwätziger Erzeuger das Verhältnis, indem er mehr Code erzeugt. Der Nenner soll
+die *Aufgabe* messen, nicht die Ausführlichkeit des Werkzeugs.
+
+**4. Die Stufe steht dabei.** Ob Sicherheitshülle, deklarierte Invarianten oder funktionale
+Korrektheit gemessen wurde, gehört neben die Zahl — die 20 : 1 von seL4 ist eine Zahl für die
+**stärkste** Stufe. Ein Verhältnis ohne Stufe vergleicht über eine Kluft.
+
+**5. Der Beweisweg muss vorher entschieden sein** (`README`, „Warum C"). Frama-C/WP über erzeugtem C
+bringt ACSL-Last **in den Zähler**; Verus über einer Rust-Ausgabe bringt eine zweite Emission und
+damit eine Entsprechungspflicht. Die Wahl verändert die Kennzahl unmittelbar — sie ist keine
+Umsetzungsfrage.
+
+**Auslösung:** Liegt der beste Fall über 2 : 1 **oder** der schlechteste über 5 : 1, ist Gabbro ein
+Erzeuger mit Beiwerk. Diese zwei Zahlen stehen hier, damit sie nicht später gewählt werden.

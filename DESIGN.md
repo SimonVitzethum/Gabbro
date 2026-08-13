@@ -7,30 +7,70 @@ Stand 2026-08-13. **Nichts davon ist übersetzt worden.** Was gemessen ist, steh
 
 ---
 
-## Das Ziel, in einem Satz
+## Das Ziel, mit Geltungsbereich
 
-> **Gabbro beweist nicht — es erzeugt Programme, deren Gold-Beweis billig ist.**
+> **Gabbro beweist nicht — es erzeugt Programme, deren Beweis billig ist.**
+> **Wie billig, hängt davon ab, WAS bewiesen werden soll — und das ist bei `format` etwas anderes
+> als überall sonst.**
 
-Der Beweis wird von einem vorhandenen Beweiser geführt (Verus auf Rust-Ausgabe, GNATprove auf
-Ada-Ausgabe, oder ein Beweiser über dem erzeugten C). Gabbros Beitrag ist, dass **jedes Konstrukt
-seinen Vertrag mitbringt** — Bereich, Fortschritt, Wirkungsraum, Vorbedingung, Übergang. Wer sie
-schreibt, hat die Spezifikation schon geschrieben.
+Der Beweis wird von einem vorhandenen Beweiser geführt; welcher, ist **offen und nicht gratis**
+(s. `README`, „Warum C"). Gabbros Beitrag ist, dass **jedes Konstrukt seinen Vertrag mitbringt**.
 
-### Die Kennzahl, an der das zu messen ist
+### Was jedes Konstrukt einem nachgelagerten Beweiser tatsächlich einbringt
 
-Gold ist teuer, weil die **Spezifikation** teuer ist. Die belastbare Grösse dafür ist
-**Zeilen Spezifikation je Zeile Code**:
+**Diese Tabelle ist der Geltungsbereich.** Fehlt sie, wandert der Anspruch von selbst nach oben —
+das ist genau die Bewegung, die in `HISTORIE.md` neunmal steht.
 
-| | Verhältnis |
+| Konstrukt | was daraus beweisbar wird | was **nicht** |
+|---|---|---|
+| **`format`** | **die vollständige funktionale Spezifikation** des Lesers/Schreibers | dass der Beschreiber der Wirklichkeit entspricht |
+| `traverse` | Bereichssicherheit (S1a unformulierbar), Terminierung, Zyklusfreiheit, Rahmen | **der Rumpf.** `{ if it == s { found } }` ist Code — dass er das Richtige *sucht*, steht in keinem Vertrag |
+| `table`-Invarianten | die **deklarierten** Invarianten, an den deklarierten Stellen | alles, was niemand deklariert hat |
+| `state` | die **deklarierten** Übergänge; nicht deklarierte sind nicht formulierbar | dass die Menge der Übergänge die richtige ist |
+| Arithmetik-Vorbedingung | Abwesenheit von stillem Über-/Unterlauf (S1b) | dass der Zähler das Richtige zählt |
+| Wirkungen | Rahmenbedingung: was **nicht** angefasst wird | was mit dem Angefassten geschieht |
+| `assume`/`falsifier` | **nichts** — es benennt die **Reichweite** des Beweises | die Wahrheit der Annahme |
+
+**Die Summe:** für `format` ist funktionale Korrektheit erreichbar, überall sonst eine
+**Sicherheitshülle plus die deklarierten Invarianten**. Das ist deutlich mehr als heutiges Rust und
+deutlich weniger als seL4 — und **beides gehört in denselben Satz**, sonst entsteht Überschreibung
+Nummer drei.
+
+### Die Kennzahl — und warum sie ohne Protokoll die Wunschzahl liefert
+
+Die belastbare Grösse ist *Zeilen Spezifikation je Zeile Code*: **seL4 rund 20 : 1**, HACL\*
+vergleichbar, **Gabbros Ziel ≤ 1 : 1**.
+
+**Nur ist die 20 : 1 eine Zahl für volle funktionale Korrektheit** (in SPARKs Übernahmeleiter:
+*Platinum*), während oben steht, dass Gabbro ausserhalb von `format` etwas Schwächeres liefert. Ein
+Verhältnis ohne genannte Stufe vergleicht über die Kluft.
+
+**Und die Zahl ist doppelt manipulierbar, in beide Richtungen:**
+
+* **über die Modulwahl** — am Manifest-Leser glänzt sie, an einem (c)-Mutationsmodul nicht;
+* **über den Nenner** — ein geschwätziger Erzeuger verbessert das Verhältnis, indem er **mehr Code**
+  erzeugt. Der Nenner muss deshalb die **handgeschriebene Referenz** sein, nicht die Ausgabe.
+
+Das Messprotokoll steht als Abbruchbedingung 0b in `ROADMAP.md` und gehört **vor** die Messung.
+
+---
+
+## Der Erzeuger emittiert auch die ANNOTATIONEN — und das ist ein eigener Kanal
+
+In dieser Architektur gibt der unverifizierte Erzeuger nicht nur Code aus, sondern auch die
+Verträge, die der Beweiser prüft. Ein Erzeuger, der versehentlich **abgeschwächte** Verträge
+emittiert, liefert einen **grünen Beweis über eine schwächere Aussage** — wörtlich „ein Beweis, der
+die Wunschform beweist".
+
+| Mutation im Erzeuger | wer fängt sie |
 |---|---|
-| seL4 (Isabelle über C) | rund **20 : 1** |
-| HACL\* (F\* über Low\*) | vergleichbare Grössenordnung |
-| **Gabbro — Ziel** | **≤ 1 : 1** — der Beschreiber **ist** die Spezifikation |
+| **Code** abgeschwächt, Vertrag bleibt | der nachgelagerte **Beweis** fällt |
+| **Vertrag** abgeschwächt, Code bleibt | Beweis bleibt grün — nur eine **Mutationsprobe auf der Annotationsemission** |
+| **beide** stimmig abgeschwächt | **kein Beweis** — nur der **Differenztest gegen die Handschrift** |
 
-- [ ] **Ohne eine gemessene Zahl ist „leicht beweisbar" ein Schlagwort.** Das Verhältnis ist
-      am ersten erzeugten Modul zu messen, gegen einen handgeschriebenen Beweis desselben Moduls.
-      Verfehlt Gabbro das Ziel deutlich, ist die These widerlegt — und das gehört in die
-      Abbruchbedingungen.
+**Jedes Konstrukt unten muss deshalb zweierlei mitbringen:** seine Emission *und* die Mutation, die
+zeigt, dass die Emission gattert. Ein Konstrukt ohne diese Mutation ist eine grüne Zeile, die nichts
+gattert — dieselbe Klasse wie ein Negativtest über einer Funktion, die niemand ruft.
 
 ---
 
@@ -174,6 +214,26 @@ Beweis, dessen Annahmenmenge niemand kennt, ist ein Beweis ohne Reichweite.
 - [ ] Der Falsifikator ist Code wie jeder andere und braucht seine **eigene Sprechprobe**:
       *kann er überhaupt fehlschlagen?*
 
+### Die Annahmenmenge gehört INS ERZEUGNIS, nicht nur in die Quelle
+
+„Zählbar und ratschenfähig" lebt bisher nur dort, wo der Beschreiber liegt. **Der Verbraucher des
+Beweises kennt dessen Reichweite damit nicht.** Also emittiert der Übersetzer sie mit — maschinen-
+lesbar, neben dem C:
+
+```
+bewiesen unter: vtd_te_wirkt (falsifiziert 2026-08-13)
+                x2apic_zweischritt (nicht falsifizierbar: kein x2APIC unter qemu64)
+                smmu_stall_model (NICHT GEFAHREN)
+```
+
+Zwei Bedingungen, beide aus bezahlten Fehlern:
+
+* **Eine Menge von Namen, keine Zahl.** Eine Ratsche über einer Kardinalzahl greift gegen Zuwachs,
+  nicht gegen **Austausch** — und Austausch fühlt sich beim Umbauen wie Fortschritt an. Genau so
+  ging `IDENTITY_DEBTS` einmal daneben.
+* **Die Klasse steht dabei.** Eine nicht gefahrene Annahme darf im Erzeugnis nicht aussehen wie eine
+  falsifizierte; das ist die dritte Klasse von oben, eine Ebene weiter nach aussen getragen.
+
 ---
 
 ## 7. Wirkungen (`Global`/`Depends`-Form)
@@ -183,6 +243,28 @@ im Caprock-Scheduler wurden mit SPARKs `Depends` **63 von 63** Datenabhängigkei
 „der Rust-Code liest überall genau einmal in eine Kopie" ging von *gelesen* zu *bewiesen*.
 **Die Übertragbarkeit auf Gabbro ist damit angenommen, nicht gemessen** — SPARK prüft vorhandenen
 Code, Gabbro erzeugt ihn.
+
+---
+
+## Anhang: `reason` — Regel 3, syntaktisch
+
+Kein achtes Konstrukt, sondern „abweisen, nie deuten" in Schreibweise. Es steht hier, weil die
+Domänentabelle „Aufzählung mit Absage" als eigenes Muster führt.
+
+```gabbro
+reason MangelGrund {
+    Keiner        = 0  "keine Ressource -- der Fehlschlag lag nicht an einem Vorrat"
+    KernelStack   = 2  "EL0-Kernel-Stack"
+    Seitentabelle = 6  "Speicher fuer eine Seitentabelle"
+    GuardTabelle  = 13 "aufgeteilte Seitentabelle fuer die Guard-Page"
+
+    exhaustive                 -- kein `_ => unbekannt`
+}
+```
+
+`exhaustive` heisst: der erzeugte C-`switch` hat **keinen** `default`, und ein neuer Wert bricht die
+Übersetzung. Eine Aufzählung mit Auffangzweig sammelt ungeprüfte Werte an — dieselbe Falle wie ein
+Manifestfeld, das nie eingelöst wird und am Tag der Einlösung lauter falsche Werte trägt.
 
 ---
 

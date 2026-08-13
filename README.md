@@ -1,33 +1,43 @@
 # Gabbro
 
-**Das Ziel in einem Satz: Programme zu schreiben, deren GOLD-Beweis billig ist.**
+**Eine Sprache, in der jedes Konstrukt seinen Vertrag mitbringt** — Bereich, Fortschritt,
+Wirkungsraum, Vorbedingung, Zustandsübergang, Hardware-Annahme. Wer sie schreibt, hat einen Teil der
+Spezifikation schon geschrieben. Der Beweis wird danach von einem **vorhandenen** Beweiser geführt;
+Gabbro selbst beweist nichts.
 
-Nicht: eine Sprache, die beweist. Sondern eine, in der **jedes Konstrukt seinen Vertrag mitbringt**
-— Bereich, Fortschritt, Wirkungsraum, Vorbedingung, Zustandsübergang, Hardware-Annahme. Wer sie
-schreibt, hat die Spezifikation **schon geschrieben**; der Beweis wird danach von einem vorhandenen
-Beweiser geführt (Verus, GNATprove, oder einer über dem erzeugten C).
+**Welcher Teil — das ist die ganze Frage, und sie hat zwei verschiedene Antworten:**
 
-Eine Sprache für Formate, Tabellen — und, als ausgesprochenes Fernziel mit eigenem Tor, für
-Kernelcode. Ziel ist **C**. Übersetzer in **sicherem Rust** (`forbid(unsafe_code)`).
+| Für … | ist erreichbar | weil |
+|---|---|---|
+| **`format`** | **funktionale Korrektheit** — die These „billig zu beweisen" ist hier verteidigbar | der Beschreiber **ist** die vollständige Spezifikation: das Format *ist*, was der Leser tun muss |
+| **alles andere** (`table`, `traverse`, `state`, Kernelcode) | **Sicherheitshülle + deklarierte Invarianten** | Bereich, Terminierung, Rahmen, Überlauffreiheit, erlaubte Übergänge — **nicht**, dass der Rumpf das Richtige tut |
 
-**Die Kennzahl, ohne die „leicht beweisbar" ein Schlagwort ist**, ist *Zeilen Spezifikation je
-Zeile Code*: seL4 liegt bei rund **20 : 1**, HACL\* in derselben Grössenordnung. **Gabbros Ziel
-ist ≤ 1 : 1** — der Beschreiber *ist* die Spezifikation. Verfehlt es das deutlich, ist die These
-widerlegt, und das steht in den Abbruchbedingungen.
+> Der Traversierungskörper `{ if it == s { found } }` ist **Code**. Dass er das Richtige *sucht*,
+> steht in keinem Vertrag — und die Linie schliesst allgemeine Nachbedingungen ausdrücklich aus.
+> Das ist keine Lücke im Entwurf, sondern sein Preis; es gehört nur hingeschrieben.
 
-> **Die Konstrukte stehen vollständig in [`DESIGN.md`](DESIGN.md)** — das ist die Quelle. Was
-> unten folgt, sind Zweck, Regeln, Grenzen und Abbruchbedingungen.
+Eine Sprache für Formate, Tabellen — und, als ausgesprochenes Fernziel **mit eigenem Tor**, für
+Kernelcode. Ausgabe: **C**. Übersetzer in **sicherem Rust** (`forbid(unsafe_code)`).
 
-> **BERICHTIGUNG, und sie steht bewusst vor allem Weiteren.** Die erste Fassung schrieb oben „per
-> Konstruktion **beweisbar**". Das war eine Überschreibung: **Gabbro beweist nichts.** Es erzeugt
-> nach Regeln, und die Korrektheit des Erzeugnisses hängt an einem **unverifizierten Übersetzer**.
-> EverParse beweist seine Parser tatsächlich, in F\*. Gabbro liefert *„korrekt unter Vertrauen in
-> den Erzeuger, plus Differenztest"* — ein legitimer Handel, derselbe wie bei jedem Übersetzer,
-> aber er ist zu benennen und nicht zu verschweigen. Der Satz „ein Beweis, der die Wunschform
-> beweist, ist schlechter als keiner" gilt auch für Wörter in Überschriften.
+> **Zwei Berichtigungen stehen bewusst vor allem Weiteren**, und die zweite ist die lehrreichere:
+> „per Konstruktion **beweisbar**" war eine Überschreibung — und „Programme, deren **GOLD**-Beweis
+> billig ist" war die **nächste**, eine Stufe leiser, entstanden beim Berichtigen der ersten. Der
+> Fehler wanderte vom Verb zum Objekt. Beide samt Lehre in [`HISTORIE.md`](HISTORIE.md).
 
-Stand dieser Notiz: 2026-08-13. Nichts davon ist gebaut — das hier ist der Entwurf, nicht ein
-Bericht. Was gemessen ist, steht als gemessen da; alles andere ist ausdrücklich Absicht.
+Stand: 2026-08-13. **Nichts davon ist gebaut.** Was gemessen ist, steht als gemessen da; alles
+andere ist ausdrücklich Absicht.
+
+---
+
+## Wo was steht
+
+| Datei | Inhalt |
+|---|---|
+| `README.md` | dies — Zweck, Geltungsbereich, Regeln, Grenzen |
+| [`DESIGN.md`](DESIGN.md) | **die Quelle für die Konstrukte** und für das, was jedes einzelne einem Beweiser einbringt |
+| [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
+| [`ROADMAP.md`](ROADMAP.md) | Phasen mit **Entscheidungstoren**: jede Phase liefert eine Zahl, die über die nächste entscheidet — samt Abbruchbedingungen |
+| [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
 
 ---
 
@@ -35,37 +45,39 @@ Bericht. Was gemessen ist, steht als gemessen da; alles andere ist ausdrücklich
 
 **Gabbro ist der plutonische Zwilling des Basalts**: dieselbe Zusammensetzung, aber langsam
 abgekühlt — deshalb grosse, regelmässige Kristalle statt feinem Gefüge. Genau das tut ein
-verifizierender Erzeuger: derselbe Stoff wie handgeschriebener Code, nur langsam und absichtlich
-auskristallisiert.
-
-Das Wort ist in Deutsch und Englisch identisch. Es passt zu Caprock (beides magmatisch), und
-anders als *Basalt* — der erste Vorschlag — ist es nach heutigem Stand nicht von einem Übersetzer
-belegt.
+erzeugendes Werkzeug: derselbe Stoff wie handgeschriebener Code, nur langsam und absichtlich
+auskristallisiert. Das Wort ist in Deutsch und Englisch identisch und passt zu Caprock (beides
+magmatisch); *Basalt*, der erste Vorschlag, ist bereits von einem Übersetzer belegt.
 
 - [ ] **Nachprüfen, nicht glauben.** Von dieser Maschine aus ist die Namensfreiheit nicht zu
       belegen; „ich habe nichts gefunden" ist ein Nullbefund ohne Grösse. Vor der ersten
-      Veröffentlichung gehört eine Suche über Paketregister (crates.io, PyPI, npm), GitHub und
+      Veröffentlichung eine Suche über Paketregister (crates.io, PyPI, npm), GitHub und
       Sprachlisten — mitsamt dem, was gefunden wurde.
 
 ---
 
-## Was Gabbro ist — und was ausdrücklich nicht
+## Das Wort „Gold" trägt zwei Bedeutungen, und der Vergleich lief über die Kluft
 
-**Gabbro beschreibt Formate und Tabellen und erzeugt daraus Leser, Schreiber und Prüfer.**
-Es ist **keine** Allzwecksprache. Kein Kernel wird darin geschrieben, kein Treiber, kein Dienst.
+Die Kennzahl dieses Ordners ist *Zeilen Spezifikation je Zeile Code*: **seL4 rund 20 : 1**
+(Isabelle über C), HACL\* in derselben Grössenordnung.
 
-Der Grund ist eine Erfahrung, keine Vorliebe: **funktionale Korrektheit (»Gold«) ist teuer, weil
-die Spezifikation teuer ist** — bei seL4 rund 200 000 Zeilen Isabelle auf 10 000 Zeilen C, ein
-Verhältnis von 20:1. Keine Sprachgestaltung nimmt einem das ab, solange die Domäne offen ist.
+**Nur ist das eine Zahl für volle funktionale Korrektheit.** In AdaCores Übernahmeleiter für SPARK
+heisst diese Stufe **Platinum**; *Gold* steht dort eine Sprosse tiefer für „zentrale
+Integritätseigenschaften", und *Silber* für Abwesenheit von Laufzeitfehlern. Was die sieben
+Konstrukte liefern, liegt zwischen **Silber und Gold in diesem Sinn** — und wurde mit einer
+**Platinum**-Zahl verglichen.
 
-**Für eine enge Domäne kippt die Rechnung**, weil die Invarianten im *Sprachentwurf* stecken statt
-in einer Spezifikation je Funktion. Der Beschreiber **ist** die Spezifikation. Man beweist nicht,
-dass der Parser dem Format entspricht — man erzeugt ihn daraus.
+- [ ] **Die Leiter nachprüfen, nicht aus dem Gedächtnis zitieren.** Von dieser Maschine aus ist
+      keine SPARK-Dokumentation greifbar; die Zuordnung der fünf Stufen ist aus der Erinnerung und
+      trägt so kein Argument.
 
-### Der Riss: `format` und `table` sind NICHT dieselbe Kategorie
+**Die Folge ist keine Wortklauberei, sondern eine Messvorschrift:** solange nicht dasteht, *welche
+Stufe* gemessen wird, liefert jedes Verhältnis die Zahl, die man haben wollte. Das Protokoll dafür
+steht in [`ROADMAP.md`](ROADMAP.md) als Abbruchbedingung 0b.
 
-Die erste Fassung behandelte beide gleich. Das ist falsch, und der Unterschied entscheidet über
-den Wert des ganzen Ordners.
+---
+
+## Der Riss: `format` und `table` sind NICHT dieselbe Kategorie
 
 **Ein Formatleser ist eine reine Funktion an einer Grenze**: Bytes rein, Struktur oder benannte
 Absage raus. Dort ist „per Konstruktion" ein sauberer Begriff — der erzeugte Code ist der
@@ -98,15 +110,14 @@ Schuldposten — eine Ordnung darüber ist in keinem heissen Pfad denkbar. Es bl
 * **inkrementell prüfen** — nur, was eine Mutation berührt hat. Das setzt voraus, dass der Prüfer
   das **Delta** kennt, und das Delta kennt **nur der Mutator**.
 
-> **Damit gilt: wer Invarianten im heissen Pfad will, hat den Zuschnitt (c) bereits gewählt — ob
-> er es aufgeschrieben hat oder nicht.**
+> **Wer Invarianten im heissen Pfad will, hat den Zuschnitt (c) bereits gewählt — ob er es
+> aufgeschrieben hat oder nicht.**
 
-- [ ] **Diese Entscheidung gehört VOR Phase 0**, nicht nach Phase 3. Denn sie ändert, was Phase 0
-      überhaupt töten kann: **EverParse macht ausschliesslich die `format`-Hälfte.** Liegt der
-      eigentliche Wert bei `table` — und dafür spricht viel, denn verifizierte Drahtparser sind
-      ein gelöstes Problem, erzeugte Invarianten-Infrastruktur für kernelinterne Tabellen nicht —,
-      dann kann EverParse Gabbro **gar nicht erledigen**, sondern nur die halbe
-      Daseinsberechtigung streichen.
+- [ ] **Diese Entscheidung gehört VOR Phase 0.** Denn sie ändert, was Phase 0 überhaupt töten kann:
+      **EverParse macht ausschliesslich die `format`-Hälfte.** Liegt der eigentliche Wert bei
+      `table` — und dafür spricht viel, denn verifizierte Drahtparser sind ein gelöstes Problem,
+      erzeugte Invarianten-Infrastruktur für kernelinterne Tabellen nicht —, dann kann EverParse
+      Gabbro **gar nicht erledigen**, sondern nur die halbe Daseinsberechtigung streichen.
 
 ### Die Domäne, aus echten Fundstellen
 
@@ -123,8 +134,7 @@ ungezählt.** Er widerspricht der Messdisziplin, auf die sich dieser Ordner beru
       wirklich? Wie oft ändern sie sich? **Wie viele Fehler dieser Klasse sind pro Jahr
       tatsächlich entstanden** (aus `done.md` auszählbar)? Bei rund sechs stabilen Formaten ist
       einmaliges sorgfältiges Handschreiben plus Differenz-Fuzzing gegen ein Zweitmodell
-      wahrscheinlich **billiger** als ein Übersetzer, den man baut *und wartet* — parallel zu A4,
-      Z24 und den A3-Folgeposten.
+      wahrscheinlich **billiger** als ein Übersetzer, den man baut *und wartet*.
       **Fällt die Zählung klein aus, ist das ehrlichste Ergebnis dieses Ordners nicht
       „EverParse trägt", sondern „die Falle ist zu selten für eine Sprache".**
 
@@ -132,139 +142,41 @@ ungezählt.** Er widerspricht der Messdisziplin, auf die sich dieser Ordner beru
 
 ## Die vier Entwurfsregeln
 
-Jede ist als Antwort auf einen bezahlten Fehler formuliert.
+Jede ist als Antwort auf einen bezahlten Fehler formuliert. Die Konstrukte selbst stehen in
+[`DESIGN.md`](DESIGN.md); hier stehen die Regeln und ihre Fundstellen.
 
-### 1. Total per Konstruktion
+### 1. Total per Konstruktion — und „endlich" ist das SCHWÄCHSTE Versprechen
 
-Es gibt **keine unbegrenzte Schleife**. Jede Iteration läuft über eine Länge, die entweder eine
-Konstante ist oder ein Feld, das **vorher** gelesen und geprüft wurde. Terminierung ist damit
-keine Beweispflicht, sondern eine Eigenschaft der Grammatik.
+Es gibt **keine unbegrenzte Schleife**, sondern nur Traversierungen mit `over`/`by`/`touches`.
 
 > *Fundstelle:* `migration_candidate` läuft eine Kette `while i != NIL` **ohne Schrittgrenze**,
 > während der Prüfer über derselben Kette eine führt. Unter dem Kern-Lock ist ein Zyklus dort ein
 > stehender Kern.
 
-#### Nachschärfung: „endlich" ist das SCHWÄCHSTE Versprechen
+Terminierung allein kauft wenig: eine Schleife mit Schrittgrenze **terminiert** und kann trotzdem
+ausserhalb der Tabelle indizieren — genau das ist **S1a**. Die Schrittgrenze aus B-5.5 schützt gegen
+**Zyklen**, nicht gegen einen Index **ausserhalb**.
 
-Terminierung allein kauft wenig. Eine Schleife mit Schrittgrenze **terminiert** und kann trotzdem
-ausserhalb der Tabelle indizieren — genau das ist **S1a**: die Schrittgrenze aus B-5.5 schützt
-gegen **Zyklen**, nicht gegen einen Index **ausserhalb** der Tabelle.
+### 2. Keine Zeiger — nur Versätze, jeder gegen eine Länge im Geltungsbereich
 
-**Statt `while` mit Schranke gibt es deshalb nur TRAVERSIERUNGEN, und jede nennt drei Dinge:**
-
-| | was es nennt | welche Fehlerklasse es tötet |
-|---|---|---|
-| **Bereich** (`over`) | die Menge, über die gelaufen wird — `over slots`, `over chain(first_child, next_sibling) in slots` | **S1a**: ein Index ausserhalb der Menge ist **nicht formulierbar**, nicht bloss geprüft |
-| **Fortschritt** (`by`) | was streng abnimmt — die Restmenge, ein Zähler, ein Rang | Terminierung; **und Zyklen**, wenn der Fortschritt „noch nicht besucht" ist |
-| **Wirkungsraum** (`touches`) | was gelesen und was geschrieben werden darf | fremde Schreibzugriffe; `restrict` **an den Parametergrenzen** der erzeugten Funktionen |
-
-> **`restrict` ist enger, als die Zeile klingt.** Es trägt an den **Parametergrenzen** erzeugter
-> Funktionen. **Innerhalb** eines Traversierungskörpers, der im Zuschnitt (c) beliebige Slots
-> anfasst, sagt es nichts. Das ist mit der Grenze „beisst nur in (c)" konsistent — aber die
-> Tabellenzeile klang allgemeiner, als sie ist.
-
-#### `by unbesucht` hat ein eigenes Kostenmodell — und Regel 3 erzwingt die teure Fassung
-
-Dieselbe Fehlerklasse wie bei den Invarianten, eine Ebene tiefer, und sie war im ersten Entwurf
-wieder unbenannt.
-
-„Die Restmenge nimmt streng ab" setzt voraus, dass jemand die **besuchte Menge führt**. Über
-80 256 Slots heisst das entweder eine **Bitmap** (~10 KB — *wo lebt die?* Stack unter dem
-Kern-Lock, statisch, je Kern?) mit **O(n)-Löschung vor jedem Lauf**, oder **Generationsstempel je
-Slot**, die den Slot verbreitern.
-
-**Und der Preis ist nicht optional:** Regel 3 („abweisen, nie deuten") **erzwingt** `unbesucht`
-gegenüber der billigen Alternative. Ein blosser Schrittzähler terminiert nur — ein Zyklus würde
-dann **stillschweigend abgeschnitten** statt als benannte Absage `Zyklus` gemeldet, und das wäre
-Deutung. **Die Sprache zwingt also in die teure Variante, ohne dass der Beschreiber den Preis
-nennt.**
-
-- [ ] **Kostenangabe an `by unbesucht` selbst**, genau wie bei den Invarianten: *welche Struktur,
-      wer setzt sie zurück, was kostet der Reset* — und ob sie unter dem Kern-Lock leben darf.
-
-```gabbro
-traverse geschwister of p
-    over  chain(first_child, next_sibling) in slots
-    by    unbesucht                    -- die Restmenge nimmt streng ab
-    touches read slots                 -- schreibt nichts
-{
-    if it == s { found }
-}
-```
-
-Der erzeugte Code kann `it` gar nicht als rohe Zahl behandeln — es ist ein Element des genannten
-Bereichs. **Die Bereichsprüfung entfällt nicht, sie wird unnötig.**
-
-### Dieselbe Form für alles andere, was heute still schiefgehen kann
-
-**Arithmetik:** `refcount -= 1` gibt es nicht. Es gibt `decrement refcount requires refcount > 0`
-— oder ausgesprochenes `wrapping`. Damit ist **S1b** unformulierbar statt hinterher auffindbar.
-
-**Zustandsübergänge:** ein `state`-Konstrukt nennt die **erlaubten** Übergänge. Das Fenster aus
-**I9** (`used = false` bei `refcount = 1`) wäre dann kein Zufall der Reihenfolge, sondern ein
-nicht existierender Übergang.
-
-**Wirkungen:** jede Operation nennt, was sie anfasst — SPARKs `Global`/`Depends`. Dafür gibt es
-**eine Messung am Mechanismus**: im Scheduler wurden damit **63 von 63** Datenabhängigkeiten
-bewiesen, und „der Rust-Code liest überall genau einmal in eine Kopie" ging von *gelesen* zu
-*bewiesen*. **Die Übertragbarkeit auf Gabbros `touches` ist damit aber nicht gemessen, sondern
-angenommen** — SPARK prüft vorhandenen Code, Gabbro erzeugt ihn. Der frühere Satz „kein Entwurf,
-sondern gemessen" war eine halbe Stufe zu stark.
-
-### Wo diese Idee aufhört zu tragen — zwei Grenzen
-
-**Erstens: sie beisst nur im Zuschnitt (c).** Ein Wirkungsraum an einer Traversierung, die der
-Kernel **nicht aufruft**, kauft nichts. Solange die Mutation handgeschrieben bleibt, ist auch die
-schärfste Schleifenform nur eine Empfehlung — dieselbe Ableitung wie beim Kostenmodell.
-
-**Zweitens: jede Vorgabe verengt.** Eine Sprache, die nur Traversierungen kennt, kann Dinge nicht
-ausdrücken, die eine freie Schleife brauchen. Und je mehr Konstrukte ihren Vertrag mittragen,
-desto näher rückt Gabbro an einen **Beweisassistenten mit Syntax** — und damit an die
-Spezifikationslast, der es ausweichen soll. **Die Linie gehört ausgesprochen:**
-
-- [ ] **Wo hört es auf?** Vorschlag zur Entscheidung: Bereich, Fortschritt, Wirkungsraum,
-      Arithmetik-Vorbedingung und Zustandsübergänge — **mehr nicht**. Keine allgemeinen
-      Vor-/Nachbedingungen, keine Quantoren über Rechenausdrücke. Wer die braucht, braucht Verus
-      oder F\*, und das ist eine ehrlichere Antwort als eine halbe Beweissprache.
-
-#### **Die Linie bricht nicht an `insert` — sie bricht an `revoke`. Und das ist auf Papier prüfbar.**
-
-`decrement refcount requires refcount > 0` ist eine **arithmetische Vorbedingung auf einem Feld**;
-die trägt die Linie. Die Korrektheitsbedingung von `revoke` ist dagegen **strukturell**: ein
-Teilbaum verschwindet, und dass danach `kind_zeigt_zurueck` **und** die Kettenendlichkeit noch
-gelten, ist eine Aussage über **Baumform** — strukturelle Induktion, also genau die „Quantoren
-über Rechenausdrücke", die die Linie ausschliesst.
-
-**Die ehrliche Vorhersage: `insert` und `remove` passen in die fünf Konstrukte, `revoke` nicht.**
-Dann gibt es zwei Ausgänge, und beide sind unbequem:
-
-* **`revoke` bleibt handgeschrieben** — dann steht die **gefährlichste** Mutation ausserhalb der
-  Garantie, und die Wertfrage von Zuschnitt (c) stellt sich neu.
-* **Die Linie wandert** — dann ist Gabbro der Beweisassistent mit Syntax, dem es ausweichen wollte.
-
-- [ ] **DER BILLIGSTE NÄCHSTE SCHRITT DES GANZEN ORDNERS: `revoke` in den fünf Konstrukten auf
-      Papier ausdrücken — vor jeder anderen Entscheidung.** Kostet einen Abend und entscheidet,
-      ob Zuschnitt (c) überhaupt hält, was Phase 4 von ihm verlangt. Er steht damit **vor**
-      Phase −1, weil er billiger ist als das Auszählen der Basisrate und eine schärfere Frage
-      beantwortet.
-
-### 2. Keine Zeiger — nur Versätze, und jeder gegen eine Länge im Geltungsbereich
-
-Ein Versatz ohne die Länge, gegen die er gilt, ist in Gabbro nicht schreibbar. Die Bereichsprüfung
-entsteht nicht durch Sorgfalt, sondern weil es keine andere Formulierung gibt.
+Ein Versatz ohne die Länge, gegen die er gilt, ist nicht schreibbar. Die Bereichsprüfung entsteht
+nicht durch Sorgfalt, sondern weil es keine andere Formulierung gibt.
 
 > *Fundstelle:* `audit_cdt` prüft `parent` gegen `nslots`, liest dann aber `first_child` und die
-> Geschwisterkette **ungeprüft**. Mit `panic = "abort"` reißt der Prüfer den Knoten mit — bei
+> Geschwisterkette **ungeprüft**. Mit `panic = "abort"` reisst der Prüfer den Knoten mit — bei
 > genau der Anomalie, die er melden soll.
 
 ### 3. Abweisen, nie deuten
 
-Eine unbekannte Version, ein gesetztes reserviertes Feld, eine krumme Länge: **benannte Absage**.
-Es gibt keine Vorgabe, kein Aufrunden, kein »wird schon passen«. Der erzeugte Code hat für jeden
-Abweisungsgrund einen eigenen Code — nicht einen gemeinsamen Formfehler.
+Eine unbekannte Version, ein gesetztes reserviertes Feld, eine krumme Länge: **benannte Absage**,
+je Grund ein eigener Code — nicht ein gemeinsamer Formfehler.
 
 > *Fundstelle:* Eine Prüfung las **ein Byte** des Kernel-Hashes statt 512 Byte zu vergleichen:
 > Falsch-Alarm bei 1 von 256 Bauten, **blind bei 255 von 256** echten Überschreibungen.
+
+**Diese Regel hat einen Preis, und er steht bei `by unbesucht`:** ein blosser Schrittzähler würde
+einen Zyklus **stillschweigend abschneiden** statt ihn als Absage zu melden — das wäre Deutung. Die
+Sprache zwingt damit in die teure Fassung (Bitmap oder Generationsstempel), s. `DESIGN.md`.
 
 ### 4. Feste Breiten, ausgesprochene Bytereihenfolge
 
@@ -273,230 +185,87 @@ Beschreiber.
 
 > *Fundstelle:* `MASK_BITS` war nicht die Farbanzahl — auf x86 (256 Farben) zufällig richtig, auf
 > aarch64 (16) falsch. Bei 16 Farben bekam Streifen 0 **alle** Farben und die übrigen keine, und
-> weil leere Mengen sich nicht schneiden, meldete der Selbsttest »disjunkt«.
+> weil leere Mengen sich nicht schneiden, meldete der Selbsttest „disjunkt".
 
 ---
 
-## Syntax — der Entwurf
+## Warum C — und warum das die Beweisfrage nicht beantwortet
 
-Nichts davon ist übersetzt worden. Die Beispiele sind so gewählt, dass sie echte Caprock-Formate
-treffen.
-
-### Ein Format
-
-```gabbro
-format ManifestEintrag @version 3 endian little {
-    program_id  : u32
-    entry_len   : u32   where == sizeof(Self)
-    iface       : u32
-    domain      : u8    in { Trusted = 0, Hardware = 1, User = 2 }
-    _pad        : [u8; 3]  reserved          -- muss 0 sein, sonst Absage
-    code_hash   : [u8; 32]
-    selector    : GeraeteSelektor
-}
-
-format GeraeteSelektor endian little {
-    vendor : u16
-    device : u16
-    class  : u8
-    _pad   : [u8; 3] reserved
-}
-```
-
-Erzeugt wird daraus:
-
-* `gabbro_manifest_lesen(const uint8_t *p, size_t n, ManifestEintrag *out) -> GabbroErr`
-* `gabbro_manifest_schreiben(const ManifestEintrag *in, uint8_t *p, size_t n) -> GabbroErr`
-* je Abweisungsgrund ein eigener Code (`GABBRO_VERSION_FREMD`, `GABBRO_RESERVIERT_GESETZT`,
-  `GABBRO_ZU_KURZ`, `GABBRO_FELD_AUSSERHALB`)
-* eine C-`struct` mit **festen** Breiten, kein Padding-Vertrauen
-
-`where`-Klauseln sind Teil des Formats, nicht ein nachgelagerter Test: der Leser gibt eine Absage
-zurück, wenn sie nicht gelten — er liefert **niemals** eine Struktur, die sie verletzt.
-
-### Eine Tabelle mit Invarianten
-
-```gabbro
-table CapSpace {
-    kapazitaet : const 80256
-
-    slot {
-        used   : bool
-        object : index into objects        -- Bereichsprüfung erzwungen
-        parent : option index into slot    -- Option, kein Sentinel
-        first_child, next_sibling : option index into slot
-        gen    : u32  wrapping             -- Umlauf ist ABSICHT, s. u.
-    }
-
-    invariant kind_kette_endlich:
-        chain(first_child, next_sibling) bounded by kapazitaet
-
-    invariant kind_zeigt_zurueck:
-        forall s where s.parent = Some(p) => s in chain(p.first_child, next_sibling)
-
-    invariant refcount_stimmt:
-        forall o: o.refcount == count(s where s.object == o)
-}
-```
-
-Daraus entstehen der Prüfer (`gabbro_capspace_audit`), die Zugriffshelfer und — das ist der Punkt —
-die **Bereichsprüfung an jeder Indizierung, ohne dass jemand sie schreibt**.
-
-`wrapping` ist ausdrücklich zu schreiben. Ein Umlauf, den niemand ausgesprochen hat, ist ein
-Fehler; einer, der ausgesprochen ist, ist ein Entwurf.
-
-> *Fundstelle:* `refcount -= 1` ohne Bedingung, und `overflow-checks` ist im Release nicht gesetzt
-> — also kein Absturz, sondern **stiller Umlauf auf `0xFFFF_FFFF`**: Objekt nie finalisiert,
-> Region nie freigegeben.
-
-### Eine Aufzählung mit Absagen
-
-```gabbro
-reason MangelGrund {
-    Keiner            = 0  "keine Ressource -- der Fehlschlag lag nicht an einem Vorrat"
-    KernelStack       = 2  "EL0-Kernel-Stack"
-    Seitentabelle     = 6  "Speicher fuer eine Seitentabelle"
-    GuardTabelle      = 13 "aufgeteilte Seitentabelle fuer die Guard-Page"
-
-    exhaustive                 -- kein `_ => unbekannt`
-}
-```
-
-`exhaustive` heißt: der erzeugte C-`switch` hat keinen `default`, und ein neuer Wert bricht die
-Übersetzung. Eine Aufzählung mit Auffangzweig sammelt ungeprüfte Werte an.
-
----
-
-## Warum C als Ziel
-
-* **Zwei Verbraucher ohne Umweg**: Rust bindet C über FFI, SPARK ebenso — Gabbro-Erzeugnisse
-  passen in beide möglichen Zukünfte dieses Kernels.
-* **Binärverifikation existiert als Weg**: seL4 beweist den *übersetzten* Code gegen das C. Über
-  Zig oder direkt LLVM-IR gäbe es diesen Präzedenzfall nicht.
+* **Zwei Verbraucher ohne Umweg**: Rust bindet C über FFI, SPARK ebenso.
+* **Binärverifikation existiert als Weg**: seL4 beweist den *übersetzten* Code gegen das C.
 * **Vorhersagbarer Codegen** — geradliniger Code, keine Halde, keine versteckte Kontrolle.
+
+**Nur: „der Beweis wird von einem vorhandenen Beweiser geführt" nennt bisher drei Wege in einem
+Nebensatz, und die drei sind nicht gleich teuer.** Das war eine Drift zwischen Kopf und Rumpf —
+`TODO.md` sagt „Rust-Ausgabe erst, wenn C trägt", Ada kommt sonst nirgends vor.
+
+| Weg | was er kostet |
+|---|---|
+| **Frama-C/WP über dem erzeugten C** | der ehrlichste, weil kein zweites Erzeugnis — aber **ACSL bringt eigene Spezifikationslast mit**, und die zählt in den Zähler. Der schwerste Fall, bisher mit einem „oder" überspielt |
+| **Verus über Rust-Ausgabe** | der nächstliegende Beweiser der nahen Zukunft — aber dann gibt es **zwei Ausgaben**, bewiesen wird die eine, ausgeliefert die andere |
+| **GNATprove über Ada-Ausgabe** | steht in keinem anderen Dokument dieses Ordners und ist bis auf Weiteres **gestrichen** |
+
+> **Zwei Ausgaben erzeugen eine Entsprechungspflicht, die niemand einlöst.** Bewiesen in Rust,
+> ausgeliefert in C — dass beide Emissionen dasselbe tun, ist unbewiesen. Genau diese Lücke schliesst
+> seL4 mit Binärverifikation, und sie ist nicht gratis.
+
+- [ ] **Der Beweisweg gehört VOR die Messung von 0b entschieden**, weil er bestimmt, was im Zähler
+      steht. Die drei sind nicht unabhängig von der Kennzahl — ACSL erhöht sie unmittelbar.
 
 ### Leistung ist ein Entwurfsziel, kein Nachgedanke
 
-* **Keine Allokation.** Der erzeugte Leser arbeitet auf `(ptr, len)` und schreibt in eine
-  vom Aufrufer gestellte Struktur.
-* **Bereichsprüfungen, die der Übersetzer entfernen kann.** Weil jeder Versatz gegen eine Länge
-  im Geltungsbereich steht, sieht LLVM den Beweis und streicht die Prüfung — nicht der Mensch.
-* **`restrict`, wo der Beschreiber Nichtüberlappung zeigt.** Aus der Struktur, nicht als Zusage.
-* **Geradlinig statt schleifend**, wo die Länge konstant ist: ein 32-Byte-Hash wird kopiert, nicht
-  gezählt.
-* **Messbar, nicht behauptet**: jedes erzeugte Format bringt eine Messzeile mit (Zyklen je
-  Aufruf, gegen eine handgeschriebene Referenz). Ohne die Gegenzahl ist »schnell« ein Gefühl.
+* **Keine Allokation** — `(ptr, len)` rein, Struktur des Aufrufers raus.
+* **Bereichsprüfungen, die der Übersetzer entfernen kann**, weil jeder Versatz gegen eine Länge im
+  Geltungsbereich steht: LLVM sieht den Beweis und streicht die Prüfung, nicht der Mensch.
+* **`restrict` an den Parametergrenzen**, aus der Struktur statt als Zusage.
+* **Geradlinig statt schleifend**, wo die Länge konstant ist.
+* **Messbar, nicht behauptet**: jedes erzeugte Format bringt eine Messzeile mit (Zyklen je Aufruf,
+  gegen eine handgeschriebene Referenz). Ohne die Gegenzahl ist „schnell" ein Gefühl.
 
 ---
 
-## Der Übersetzer
+## Der Übersetzer — und der neue Kanal für den Wunschform-Beweis
 
-**In sicherem Rust**, `#![forbid(unsafe_code)]`, ohne Abhängigkeiten außerhalb einer benannten
-Liste. Das ist dieselbe Regel, die Caprock für seine Handler-Module durchsetzt — ein Erzeuger, der
-selbst ausbrechen kann, macht die Eigenschaft seines Erzeugnisses wertlos.
+**In sicherem Rust**, `#![forbid(unsafe_code)]`, ohne Abhängigkeiten ausserhalb einer benannten
+Liste — dieselbe Regel, die Caprock für seine Handler-Module durchsetzt. Ein Erzeuger, der selbst
+ausbrechen kann, macht die Eigenschaft seines Erzeugnisses wertlos.
 
-SPARK wäre die Alternative und ist **verworfen**, aus einem gemessenen Grund: der Übersetzer ist
-ein Textwerkzeug mit Halde und Zeichenketten; SPARKs Stärke (Bereichs- und Überlaufbeweise auf
-festen Daten) zahlt sich dort kaum aus, während seine Schwäche (dynamische Datenstrukturen)
-voll durchschlägt. Beim *Erzeugnis* liegt es umgekehrt — und dort steht am Ende C.
+SPARK wäre die Alternative und ist **verworfen**: der Übersetzer ist ein Textwerkzeug mit Halde und
+Zeichenketten; SPARKs Stärke zahlt sich dort kaum aus, seine Schwäche schlägt voll durch. Beim
+*Erzeugnis* liegt es umgekehrt.
+
+> **Der unverifizierte Erzeuger emittiert in dieser Architektur nicht nur Code, sondern auch die
+> ANNOTATIONEN, die der Beweiser prüft.** Ein Erzeuger, der versehentlich abgeschwächte Verträge
+> ausgibt, produziert einen **grünen Beweis über eine schwächere Aussage** — wörtlich
+> „ein Beweis, der die Wunschform beweist". Das ist ein Kanal, den es bei einem reinen Codeerzeuger
+> nicht gibt.
+
+Das Gegenmittel steht schon im Werkzeugkasten und muss nur **auf die Annotationen gerichtet**
+werden. Die Aufteilung ist scharf, und der dritte Fall ist der, der zählt:
+
+| Mutation im Erzeuger | wer fängt sie |
+|---|---|
+| **Code** abgeschwächt, Vertrag bleibt | der nachgelagerte **Beweis** fällt |
+| **Vertrag** abgeschwächt, Code bleibt | der Beweis bleibt grün — nur eine **Mutationsprobe auf der Annotationsemission** fängt es |
+| **beide** stimmig abgeschwächt | **kein Beweis der Welt** — der Code erfüllt seinen (schwächeren) Vertrag. Nur der **Differenztest gegen die handgeschriebene Referenz** sieht es |
+
+Damit hat der Differenztest eine benannte Aufgabe statt der Rolle eines allgemeinen Netzes: **er ist
+das einzige, was einen stimmig abgeschwächten Erzeuger fängt.**
 
 ---
-
-## Was im Entwurf noch fehlt
-
-Der Syntaxteil oben zeigt **ausschliesslich Strukturen fester Grösse** — die Domänentabelle nennt
-aber GPT und FAT, und FAT hat **Ketten**, virtio-Ringe haben **Producer/Consumer-Indizes**.
-
-- [ ] **Variable Längen** sind die harten 20 % jedes Parser-Erzeugers. Die Totalitätsregel deckt
-      sie im Prinzip ab (eine Länge, die vorher gelesen und geprüft wurde) — **eine Syntax dafür
-      gibt es nicht.**
-- [ ] **Versionsevolution.** Im Beispiel steht `@version 3`. Liest der Erzeuger auch v2 —
-      **Absage oder Migration?** Beides ist vertretbar, keins ist entschieden, und ein Format ohne
-      Antwort darauf ist bei der ersten Änderung eine Baustelle.
-- [ ] **Die Roundtrip-Eigenschaft** `lesen(schreiben(x)) == x` gehört in den Differenztest. Ein
-      Schreiber, der eine ungültige Struktur ausgeben kann, entwertet den Leser.
-- [ ] **Kostenangabe je Invariante** — sie steht jetzt beim Zuschnitt oben, weil sie ihn
-      **mitentscheidet**. Was hier bleibt: jede einzelne Invariante braucht ihre Zahl und die
-      Aussage, wo sie laufen darf.
-
-## Das Fernziel: ein Kernel in Gabbro — und was es mit der These macht
-
-Gewünscht ist ausdrücklich, dass man darin am Ende einen **sicheren und schnellen Kernel**
-schreiben kann, und dass die **Syntax dafür schwer sein darf**.
-
-**Das ist eine andere These als die oben, und der Widerspruch gehört ausgesprochen:** die
-Rechnung, die Gabbro billig macht, ist die **geschlossene Domäne**. Eine Sprache, in der man einen
-Kernel schreibt, hat keine geschlossene Domäne — die Spezifikationslast kehrt zurück, und man
-steht im Gebiet von **F\*/Low\***, das dort seit Jahren ausgeliefert wird (HACL\*, EverCrypt).
-
-**Es gibt einen Entwurf, der beides trägt**, und er hängt an dem Zugeständnis „die Syntax darf
-schwer sein":
-
-> **Ein kleiner Kern mit linearen/affinen Typen, Regionen und Totalität als Vorgabe** — und
-> `format`/`table` sind **Bibliotheken darüber**, keine zweite Sprache daneben.
-
-Dann ist der Formaterzeuger ein Sonderfall des allgemeinen Mechanismus statt eines Anhängsels, und
-`Parked` („dieser Wert muss verbraucht werden") wäre ein **Typ** statt einer abschaltbaren
-Warnung — gemessen: SPARK meldet dort „leak **proved**", Rust nur `#[must_use]`.
-
-**Der Preis ist ehrlich zu nennen:** das ist nicht mehr ein Erzeuger von Wochen, sondern die
-ATS-/Low\*-Klasse von Aufwand.
-
-### Und der Vergleichsgegner war falsch gewählt
-
-Die erste Fassung mass den Zweig an **Low\***. Für die Behauptung „`Parked` wäre ein **Typ** statt
-einer abschaltbaren Warnung" sind aber **zwei billigere Gegner** näher, und gegen die ist der
-Mehrwert zu belegen:
-
-* **Rust, heute, in Caprock.** Ein Newtype ohne `Drop`, ohne `Copy`, mit versiegeltem Konsumpfad
-  erzwingt für **diese eine Ressource** lineares Verhalten zu **null Sprachkosten**. Das ist keine
-  vollständige Linearität — Rust ist affin, Wegwerfen bleibt möglich, `#[must_use]` ist nur eine
-  Warnung —, aber `mem::forget`-Disziplin plus ein Konsum-Token, das der **einzige** Weg aus dem
-  Zustand ist, deckt den `Parked`-Fall konkret ab. **Genau so ist `Parked` gebaut**, und es hat
-  eine fünfte Stelle gefunden, die das Gegenlesen übersah.
-  **Diese Evidenz zählt GEGEN den Kernel-Zweig, nicht für ihn:** Rust-heute hat den Fehler
-  gefunden, **ohne dass es Gabbro gab**. Wer sie als Argument für eine neue Sprache anführt, führt
-  den Erfolg der Baseline als Grund an, sie zu ersetzen.
-* **Verus.** Steht in der Verwandtschaftstabelle unten und wird dort mit „beweist, was jemand
-  modelliert hat" abgetan — **für den Kernel-Zweig kehrt sich das um**: Beweise direkt auf Rust,
-  SMT **ohne** F\*-Kette, keine C-Extraktion nötig, solange der Kernel Rust bleibt. Das sind
-  **zwei der drei** geforderten Belege bei einem **vorhandenen** Werkzeug. Und Verus kann
-  Ressourcen-Invarianten über lineare Ghost-Permissions ausdrücken.
-
-- [ ] **Verus an `Parked` ausprobieren, bevor der Zweig ein eigener Entwurf wird.** Das ist die
-      Phase-0-Logik für den Zweig: *der nächste Verwandte ist gebaut, der Ordner nicht.*
-
-### Der Zweig gehört unter „Später" — und zwar aus einem Strukturgrund
-
-**Er ist der verführerischste Teil dieses Ordners**: der einzige, der das ausgesprochene „keine
-Allzwecksprache, kein Kernel darin" aufweicht — und zugleich der, der **am weitesten von einer
-Kennzahl entfernt** ist. Die Disziplin dieses Ordners besteht darin, dass **jede Phase eine Zahl
-liefert**. Der Zweig hat keine.
-
-**Solange er keine hat, steht er formal unter „Später, ausdrücklich nicht jetzt", mit eigenem
-Tor.** Sonst ist er der Weg, auf dem ein Formaterzeuger unbemerkt zur Sprachfamilie wird, während
-A4 und die A3-Folgeposten warten.
-
-- [ ] **Sein Tor:** eine belegte Antwort auf „was über **Rust-heute** und **Verus** hinaus?" —
-      nicht über Low\*, das ist der übernächste Gegner. Ohne diese Antwort wird nichts gebaut.
-- [ ] Erst danach: **ein Kern mit zwei Bibliotheken, oder zwei Projekte.** Beides ist vertretbar;
-      unentschieden ist es die teuerste Variante.
 
 ## Was Gabbro **nicht** löst
 
-Diese Liste steht hier, damit sie nicht später als Enttäuschung entdeckt wird.
-
-* **Falsche Formate.** Gabbro beweist, dass der Leser dem Beschreiber entspricht — nicht, dass der
-  Beschreiber der Wirklichkeit entspricht. Wer die Bytereihenfolge falsch aufschreibt, bekommt
-  einen beweisbar korrekten falschen Leser.
-* **Hardware-Zusagen.** Dass eine IOMMU-Einheit `TE=1` ehrt, steht in keinem Formalismus.
-* **Nebenläufigkeit.** Gabbro beschreibt Daten, nicht Abläufe. Wer den Beschreiber unter einer
-  Sperre liest, muss das weiterhin selbst wissen — auch SPARK kann »der Aufrufer hält den
-  Spinlock« nicht ausdrücken.
-* **Die Klasse Fehler, die diese Woche wehtat.** Ein fehlendes `US`-Bit auf der Zwischenebene,
-  ein Index über den Slot statt über die Identität, eine Wachseite, die einen Farbstreifen
-  sprengt: **Fehler über Bedeutung, nicht über Form.** Gefunden hat die alle die Messdisziplin,
-  und daran ändert Gabbro nichts.
+* **Falsche Formate.** Gabbro zeigt, dass der Leser dem Beschreiber entspricht — nicht, dass der
+  Beschreiber der Wirklichkeit entspricht. Wer die Bytereihenfolge falsch aufschreibt, bekommt einen
+  makellosen falschen Leser.
+* **Hardware-Zusagen.** `assume`/`falsifier` **benennt** sie und macht sie zählbar; es macht sie
+  nicht wahr. Eine bestandene Sonde ist eine Stichprobe.
+* **Nebenläufigkeit.** Gabbro beschreibt Daten, nicht Abläufe. „Der Aufrufer hält den Spinlock" kann
+  auch SPARK nicht ausdrücken — es ist der grösste Einzelposten des Kernel-Zweigs und dessen Tor.
+* **Die Klasse Fehler, die diese Woche wehtat.** Ein fehlendes `US`-Bit auf der Zwischenebene, ein
+  Index über den Slot statt über die Identität, eine Wachseite, die einen Farbstreifen sprengt:
+  **Fehler über Bedeutung, nicht über Form.** Gefunden hat die alle die Messdisziplin.
 
 ---
 
@@ -507,152 +276,105 @@ Diese Liste steht hier, damit sie nicht später als Enttäuschung entdeckt wird.
 | **F\*/Low\*** | Gold, extrahiert nach C, in HACL\* ausgeliefert | Allzwecksprache — die Spezifikationslast bleibt |
 | **Kaitai Struct** | Formate deklarativ, viele Zielsprachen | keine Beweise, keine Absage-Disziplin, kein `no_std`-C |
 | **P4, Nail, EverParse** | verifizierte Parser aus Beschreibern | **EverParse ist der nächste Verwandte** und ernsthaft zu prüfen, bevor hier eine Zeile entsteht |
-| **Verus / GNATprove** | Beweise auf vorhandenem Code | beweisen, was jemand modelliert hat — Gabbro erzeugt, was niemand modellieren muss |
+| **Verus / GNATprove** | Beweise auf vorhandenem Code | beweisen, was jemand modelliert hat — und **an genau dieser Abwertung hat sich die eigene Messung gerächt**, s. unten |
 
 **Vor dem ersten Übersetzerlauf gehört EverParse gelesen und gemessen.** Wenn es trägt, ist Gabbro
 überflüssig, und das wäre das beste Ergebnis dieses Ordners.
 
----
-
-## Wo was steht
-
-| Datei | Inhalt |
-|---|---|
-| `README.md` | dies — Zweck, These, Regeln, Grenzen, Abbruchbedingungen |
-| `DESIGN.md` | **die Quelle für die Konstrukte**: `format`, `table`, `traverse`, `state`, Arithmetik-Vorbedingung, `assume`/`falsifier`, Wirkungen — samt der Linie und ihrem voraussichtlichen Bruch an `revoke` |
-| `TODO.md` | **ausschließlich Offenes** |
-| `ROADMAP.md` | Phasen mit **Entscheidungstoren**: jede Phase liefert eine Zahl, die über die nächste entscheidet |
-
----
-
-# Was fehlt für einen KOMPLETTEN Kernel — und für Syscalls ohne Assembler
-
-Die Frage gehört beantwortet, bevor der Kernel-Zweig sein Tor bekommt, weil die Antwort seine
-Grössenordnung bestimmt. Sie steht hier als **Liste**, nicht als Zusage.
-
-## Syscalls ohne Assembler — was die Sprache dafür können muss
-
-Der Eintritt ist heute Assembler aus **einem** Grund: die CPU übergibt die Kontrolle in einem
-Maschinenzustand, den keine Hochsprache zusichert. Register müssen gerettet werden, **bevor**
-irgendein übersetzter Prolog läuft. Ohne Assembler braucht es vier Dinge im Sprachkern:
-
-1. **Eintrittsfunktionen mit erklärtem Registerabdruck** — „diese Funktion beginnt im Zustand X
-   und darf Register Y nicht anfassen, bevor Z geschehen ist". (Rust: `naked_asm!`,
-   Zig: `callconv(.Naked)` — beide reichen den Assembler nur durch.)
-2. **Registergebundene Werte** — „diese Grösse *ist* `rdi`", damit der Übersetzer nichts spillen
-   muss, um sie zu benennen.
-3. **Eine eigene Aufrufkonvention** — die Interrupt-Frame-ABI, nicht die der Plattform.
-4. **`iretq`/`eret` als Sprachkonstrukt**: ein **typisierter Übergang in einen gespeicherten
-   Kontext**. Bemerkenswert — das ist kein neues Konzept, sondern der `state`-Übergang von oben,
-   angewandt auf den Maschinenzustand.
-
-Das ist die Klasse **typisierter Assemblersprachen** (TAL) und keine Erfindung.
-
-> **Aber es entfernt das Vertrauen nicht, es VERLAGERT es.** Die Instruktionsfolge muss weiterhin
-> jemand erzeugen — dann der Übersetzer statt der Mensch. Der Gewinn ist trotzdem echt und derselbe
-> wie bei der Axiomschicht, eine Ebene tiefer: **eine Implementierung, einmal geprüft, statt 153
-> Fundstellen, die nie jemand einzeln prüft.** Wer „ohne Assembler" als „ohne unbewiesene Fläche"
-> liest, hat die Verlagerung mit einer Beseitigung verwechselt.
-
-## Was darüber hinaus fehlt, gemessen an Caprock
-
-| Was | warum es nicht nebenbei geht |
-|---|---|
-| **Nebenläufigkeit** | Atomics, Barrieren — und die Eigenschaft „der Aufrufer hält den Lock", die **weder SPARK noch Rust** ausdrücken kann. Gabbro bräuchte Regionen + Fähigkeiten im Typsystem. Der grösste Einzelposten |
-| **Volatile/MMIO** | vier Geschmacksrichtungen wie in SPARK (`Async_Readers`/`Writers`, `Effective_Reads`/`Writes`). Machbar, aber Sprachkern |
-| **Zwei Adressachsen** | `Pa` und `Iova` getrennt, Arithmetik darauf — `index into` verallgemeinert dorthin, ist aber nicht dasselbe |
-| **Bau und ABI** | Multiboot-Kopf, Sektionen, Ausrichtung, ELF32-Abstieg. Kein Sprachthema, muss aber existieren — und hat diese Woche einen halben Tag gekostet |
-| **Kein Laufzeitsystem** | kein Allokator, kein Panik-Apparat, kein Abwickeln |
-| **FFI** | für HACL\*/EverCrypt — und jede FFI-Grenze **bricht die Garantie** |
-| **Beobachtbarkeit** | dieses Projekt lebt von Berichtszeilen. Eine Sprache, in der Formatierung teuer oder unmöglich ist, ist hier unbrauchbar |
-
-**Die ehrliche Summe: das ist eine Allzweck-Systemsprache.** Damit ist der Kernel-Zweig kein
-Anhängsel des Formaterzeugers, sondern ein zweites Projekt — und die Kernthese dieses Ordners
-(geschlossene Domäne ⇒ Spezifikation billig) gilt für ihn **nicht**.
-
-- [ ] **Vor dem Tor des Zweigs zu entscheiden:** Wird das eine Sprache mit zwei Bibliotheken, oder
-      zwei Sprachen? Unentschieden ist die teuerste Variante — und diese Liste ist das Argument
-      dafür, dass die Entscheidung nicht vertagt werden kann, weil sie die Grössenordnung ändert.
-
----
-
-# Hardware-Annahmen als Sprachkonstrukt — mit Falsifikator
-
-Kein Formalismus deckt „die VT-d-Einheit ehrt `TE=1`". Aber die Annahme lässt sich **benennen**
-statt sie zu verschweigen, und — das ist der Punkt — **testbar** machen:
-
-```gabbro
-assume vtd_te_wirkt
-    "Setzen von GCMD.TE schaltet die Uebersetzung scharf; ein DMA-Zugriff ohne
-     Kontexteintrag wird danach als Fault gemeldet und nicht durchgelassen."
-    falsifier probe_vtd_te      -- eine SONDE, die FEHLSCHLAEGT, wenn die Annahme nicht gilt
-```
-
-Das ist keine neue Idee, sondern das Muster, das Caprock bei den Identitätsgründen erfunden hat:
-**ein Wächter prüft die EXISTENZ eines Grundes, nie seine WAHRHEIT** — deshalb tragen die Gründe
-dort einen Falsifikator, und deshalb muss der Falsifikator selbst prüfen, dass sein Anker
-existiert, sonst liest er ins Leere.
-
-**Was es kauft:** Annahmen werden **zählbar** — eine Ratsche über der Menge der Annahmen, die nur
-fallen darf (wie `IDENTITY_DEBTS`), und ein Lauf, der jede Annahme einmal falsifizieren *versucht*.
-Ein Beweis, dessen Annahmenmenge niemand kennt, ist ein Beweis ohne Reichweite.
-
-**Was es NICHT kauft, und das gehört danebengeschrieben:**
-
-* **Eine bestandene Sonde ist eine Stichprobe, kein Beweis.** Sie prüft *diese* Maschine, *diese*
-  Konfiguration, *diesen* Augenblick. **CPU-Errata sind genau Annahmen, die fast immer halten** —
-  dieselbe Klasse wie „0 Treffer in 114 Läufen".
-* **Nicht jede Annahme ist sondierbar.** `pprobe` meldet unter KVM grundsätzlich `SKIP`. Eine
-  Annahme ohne fahrbaren Falsifikator muss als solche gekennzeichnet sein — sonst sieht sie aus
-  wie eine geprüfte.
-* **Der Falsifikator kann selbst falsch sein.** Er ist Code wie jeder andere und braucht seine
-  eigene Sprechprobe: *kann er überhaupt fehlschlagen?*
-
-- [ ] **Drei Klassen unterscheiden, nicht zwei:** falsifiziert (Sonde lief und hielt) ·
-      **nicht falsifizierbar** (keine Sonde möglich, mit Grund) · **nicht gefahren**. Die dritte
-      darf nie wie die erste aussehen.
-
----
-
-# Der Verus-Vergleich, an der eigenen Messung geprüft
+### Der Verus-Vergleich, an der eigenen Messung geprüft
 
 Der naheliegende Schluss lautet: *SPARK fand zwei Fehler, die Verus nicht fand — also bringt eine
 eigene Sprache etwas.* **Die eigene Messung stützt das nicht.**
 
 Der Gewinn kam **nicht** aus Adas Sprachvermögen, sondern aus einer **Voreinstellung**: GNATprove
-behandelt **jede** Indizierung und **jede** Arithmetik als Beweispflicht. Verus beweist, was
-jemand **modelliert** hat — und gemessen steht `refcount` im Verus-Modell als `nat`, kann über
-`refcount -= 1` also **nicht einmal die Frage stellen**. Dieselben 15 Stellen sind mit Verus
-**am echten Code** erreichbar.
+behandelt **jede** Indizierung und **jede** Arithmetik als Beweispflicht. Verus beweist, was jemand
+**modelliert** hat — und gemessen steht `refcount` im Verus-Modell als `nat`, kann über
+`refcount -= 1` also **nicht einmal die Frage stellen**. Dieselben 15 Stellen sind mit Verus **am
+echten Code** erreichbar.
 
-**Die starke Fassung des Arguments bleibt trotzdem stehen, und sie ist prüfbar:**
+**Die starke Fassung bleibt stehen, und sie ist prüfbar:**
 
 > **Vorgabe schlägt Fähigkeit.** Eine Sprache, in der „alles muss bewiesen werden" die
 > **Voreinstellung** ist, erzeugt andere Ergebnisse als eine, in der man es anschaltet — auch wenn
 > beide es können.
 
-- [ ] **Das ist messbar, statt Ansichtssache zu bleiben:** Verus **am echten Cap-Space** laufen
-      lassen, mit dem Anspruch „jede Indizierung, jede Arithmetik". Findet es die 15 Stellen,
-      war es die Vorgabe — und Gabbros Beitrag schrumpft auf Ergonomie. Findet es sie nicht, ist
-      das die **erste harte Evidenz** für eine eigene Sprache.
-
-**Und zu „leichter Weg zu Gold":** billig wird Gold durch die **enge Domäne**, nicht durch die
-Sprache. Für `format`/`table` gilt der Satz. **Für einen Kernel gilt er in keiner Sprache** — auch
-nicht in Gabbro, und das ist der Grund, warum der Kernel-Zweig sein eigenes Tor hat.
+- [ ] **Messbar statt Ansichtssache:** Verus **am echten Cap-Space**, mit dem Anspruch „jede
+      Indizierung, jede Arithmetik". Findet es die 15 Stellen, war es die Vorgabe — und Gabbros
+      Beitrag schrumpft auf Ergonomie. Findet es sie nicht, ist das die **erste harte Evidenz**.
 
 ---
 
-# Das Tor des Kernel-Zweigs — jetzt mit einem fahrbaren Versuch
+## Das Fernziel: ein Kernel in Gabbro
 
-Der Zweig hatte bisher **keine Kennzahl**. Er bekommt eine, und sie ist billig:
+Gewünscht ist ausdrücklich, dass man darin am Ende einen **sicheren und schnellen Kernel** schreiben
+kann, und dass die **Syntax dafür schwer sein darf**.
+
+**Das ist eine andere These als die oben, und der Widerspruch gehört ausgesprochen:** die Rechnung,
+die Gabbro billig macht, ist die **geschlossene Domäne**. Eine Sprache, in der man einen Kernel
+schreibt, hat keine — die Spezifikationslast kehrt zurück, und man steht im Gebiet von
+**F\*/Low\***.
+
+Es gibt einen Entwurf, der beides trägt, und er hängt am Zugeständnis „die Syntax darf schwer sein":
+
+> **Ein kleiner Kern mit linearen/affinen Typen, Regionen und Totalität als Vorgabe** — und
+> `format`/`table` sind **Bibliotheken darüber**, keine zweite Sprache daneben.
+
+**Der Preis ist ehrlich zu nennen:** das ist nicht mehr ein Erzeuger von Wochen, sondern die
+ATS-/Low\*-Klasse von Aufwand. Und `Parked` taugt **nicht** als Argument dafür — es zählt dagegen,
+s. [`HISTORIE.md`](HISTORIE.md).
+
+### Was für einen KOMPLETTEN Kernel fehlt
+
+| Was | warum es nicht nebenbei geht |
+|---|---|
+| **Nebenläufigkeit** | Atomics, Barrieren — und „der Aufrufer hält den Lock", das **weder SPARK noch Rust** ausdrücken kann. Regionen + Fähigkeiten im Typsystem. Der grösste Einzelposten |
+| **Volatile/MMIO** | vier Geschmacksrichtungen wie in SPARK (`Async_Readers`/`Writers`, `Effective_Reads`/`Writes`). Machbar, aber Sprachkern |
+| **Zwei Adressachsen** | `Pa` und `Iova` getrennt, Arithmetik darauf — `index into` verallgemeinert dorthin, ist aber nicht dasselbe |
+| **Bau und ABI** | Multiboot-Kopf, Sektionen, Ausrichtung, ELF32-Abstieg. Kein Sprachthema, muss aber existieren — und hat eine Woche einen halben Tag gekostet |
+| **Kein Laufzeitsystem** | kein Allokator, kein Panik-Apparat, kein Abwickeln |
+| **FFI** | für HACL\*/EverCrypt — und jede FFI-Grenze **bricht die Garantie** |
+| **Beobachtbarkeit** | dieses Projekt lebt von Berichtszeilen. Eine Sprache, in der Formatierung teuer ist, ist hier unbrauchbar |
+
+**Die ehrliche Summe: das ist eine Allzweck-Systemsprache** — ein zweites Projekt, und die Kernthese
+(geschlossene Domäne ⇒ Spezifikation billig) gilt für ihn **nicht**.
+
+### Syscalls ohne Assembler — das Vorzeigebeispiel hat die schwächste Deckung
+
+Der Eintritt ist heute Assembler aus **einem** Grund: die CPU übergibt die Kontrolle in einem
+Maschinenzustand, den keine Hochsprache zusichert. Ohne Assembler braucht es vier Dinge im
+Sprachkern: Eintrittsfunktionen mit **erklärtem Registerabdruck**; **registergebundene Werte**; eine
+**eigene Aufrufkonvention** (die Interrupt-Frame-ABI); und **`iretq`/`eret` als Sprachkonstrukt** —
+ein typisierter Übergang in einen gespeicherten Kontext, also der `state`-Übergang, angewandt auf
+den Maschinenzustand. Das ist die Klasse **typisierter Assemblersprachen** (TAL) und keine Erfindung.
+
+> **Es entfernt das Vertrauen nicht, es VERLAGERT es** — die Instruktionsfolge erzeugt dann der
+> Übersetzer statt der Mensch. Der Gewinn ist trotzdem echt: **eine Implementierung statt 153
+> Fundstellen, die nie jemand einzeln prüft.**
+
+**Und hier steht das stärkste Wort an der Stelle mit der schwächsten Deckung** — dieselbe Form wie
+die zwei Überschreibungen in `HISTORIE.md`, deshalb ausdrücklich:
+
+* „Eine Implementierung, **einmal geprüft**" trägt nur, wenn „geprüft" einen **Prüfer** hat.
+* **Der nachgelagerte Beweiser reicht dorthin nicht.** Verus beweist keine Inline-Assembler-Semantik
+  und keine Registerabdrücke; Frama-C/WP über erzeugtem C erst recht nicht.
+* Ein TAL-Typsystem wäre der Prüfer — dann prüft **Gabbro sich selbst**, und der Erzeuger ist
+  unverifiziert. Zirkulär, solange niemand ihn verifiziert.
+
+**Die haltbare Fassung ist deshalb schwächer und immer noch ein Gewinn:** die vertrauenswürdige
+Fläche **schrumpft** von 153 Fundstellen auf eine Emissionsstelle. Das ist eine Reduktion, keine
+Beseitigung, und sie hat **keinen nachgelagerten Beweiser**.
+
+### Das Tor des Zweigs — mit einem fahrbaren Versuch
+
+Der Zweig war **am weitesten von einer Kennzahl entfernt** und steht deshalb unter „Später,
+ausdrücklich nicht jetzt". Er bekommt eine, und sie ist billig:
 
 > **Nimm den schwersten Einzelposten — „der Aufrufer hält den Lock" — und versuche ihn HEUTE in
 > Verus auszudrücken.** Ein Nachmittag.
 >
 > * **Kann Verus es**, verliert der Zweig seine Hauptbegründung — **das billigste Nein, das dieser
 >   Ordner bekommen kann.**
-> * **Kann Verus es nicht**, ist das die **erste echte Evidenz für Kennzahl C**.
+> * **Kann Verus es nicht**, ist das die **erste echte Evidenz**.
 
 Dieselbe Logik wie Phase 0 gegen EverParse, nur für den Zweig: *der nächste Verwandte ist gebaut,
-der Ordner nicht.* Und schärfer als der `revoke`-Papiertest, weil es die Frage entscheidet, die
-den **grösseren** Aufwand trägt.
+der Ordner nicht.*
