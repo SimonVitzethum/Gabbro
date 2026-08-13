@@ -9,6 +9,34 @@ Punkte stehen am Ende benannt statt weggelassen.
 
 ---
 
+## Stand — gemessen, nicht geschaetzt (2026-08-13)
+
+**Die Deklarationsschicht ist skizziert, die Ausdrucks- und Anweisungssprache existiert nicht.**
+
+| | |
+|---|---|
+| definierte EBNF-Regeln | **40** |
+| benutzt, aber **nie definiert** | **21** |
+| davon lexikalische Kleinigkeiten (`digit`, `hexdigit`, `char`, `newline`) | 4 |
+| **davon tragend** | **17** — darunter **`expr`, `pred`, `block`, `place`, `ifstmt`, `matchstmt`, `params`, `variants`, `constdecl`, `slotdecl`** |
+
+> **`expr` und `pred` sind keine Luecken unter anderen.** Eine Beweissprache *ist* ihre
+> Praedikatsprache; solange `pred` undefiniert ist, ist die Frage „wo wandert die Linie" nicht
+> einmal stellbar. Dasselbe fuer `expr`: ohne sie steht nirgends, was ein Bereichstyp (M1) beim
+> Rechnen eigentlich pruefen muss.
+
+**Was daneben liegt und NICHT eingearbeitet ist:** ein Gegenentwurf von 1 882 Zeilen (14 Codebloecke,
+10 EBNF-Bloecke) samt Pruefbericht. Er entscheidet die sieben offenen Fragen unten und besteht den
+Anti-Katalog-Prueftein (**3 neue Woerter statt 12**) — **laesst aber `device` unberuehrt**, und
+genau dort sitzen drei belegte Funde (nur Einzelbits, keine Laufzeitoffsets, Falle 4 nicht
+getoetet). **Eingearbeitet wird er erst, wenn diese drei beantwortet sind.**
+
+Dazu 18 Umwandlungen in [`MINIMALSPEZIFIKATION.md`](MINIMALSPEZIFIKATION.md), die **Formen
+vorschlagen** (`retry`/`bounded`/`on_exceeded`, `offset_into`, `tagged`, `old`, `breaking`,
+`publishes`, Bitbereiche) — **keine davon steht bisher in dieser Datei.**
+
+---
+
 ## Fünf Entscheidungen, die alles andere festlegen
 
 | | Entscheidung | Grund |
@@ -42,6 +70,12 @@ einen Eintrag hier.
 ```
 
 ---
+
+> **Was jede Regel dieser Grammatik zu leisten hat** ([`KRITERIUM.md`](KRITERIUM.md)): sie muss
+> eine **Klempnerei**-Pflicht durch Konstruktion erledigen — Index, Ueberlauf, Alias, Rahmen,
+> Sperre, Rennen, Verfeinerung. Bleibt eine davon beim Programmierer haengen, ist das an dieser
+> Stelle **eine Widerlegung**, kein Schoenheitsfehler. Was **Logik** ist, schreibt der Programmierer
+> ohnehin — in jeder Sprache.
 
 > **Schreibregel fuer diese Dateien, und sie ist keine Kosmetik:** `Backticks` bezeichnen
 > **heutige Gabbro-Syntax**. Ein abgeschaffter Name steht *kursiv in Anfuehrungszeichen* -- er **ist**

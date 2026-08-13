@@ -1,6 +1,11 @@
 # Gabbro — der Plan
 
-**Ein Plan, ein Ziel: ein Kernel in Gabbro, verifiziert bei 0,5 : 1.**
+**Ein Plan, ein Ziel: ein Kernel in Gabbro, bei dem man NUR DIE LOGIK beweist.**
+
+> **Das Ziel ist eine Art, keine Menge** ([`KRITERIUM.md`](KRITERIUM.md)). Alles, was nur die
+> Maschine erwaehnt — Index, Ueberlauf, Alias, Rahmen, Sperre, Rennen, Verfeinerung —, faellt durch
+> Konstruktion. Was die Sache erwaehnt, schreibt der Programmierer. **Die Kennzahl 0,5 : 1 bleibt
+> als Diagnose; selbst 2 : 1 ist gut, wenn die Zeilen Logik sind.**
 
 Was hier nicht steht, gibt es nicht. Frühere Fassungen führten einen engen Formaterzeuger als
 Rückfall und den Kernel als Zweig „für später“ — beides ist gestrichen. Der Formaterzeuger ist die
@@ -10,7 +15,11 @@ Stand 2026-08-13. **Nichts davon ist gebaut.**
 
 ---
 
-## Das Ziel ist der BODEN — und deshalb misst es den Abstand, statt zu urteilen
+## Der Richtwert 0,5 : 1 — der Boden, und er misst den Abstand statt zu urteilen
+
+> **Nachgeordnet seit dem 2026-08-13.** Was hier folgt, ist die Herleitung des Richtwerts. Das
+> **Kriterium** steht darueber und in [`KRITERIUM.md`](KRITERIUM.md): *nur Logik beweisen, sonst
+> nichts.* Wer beides verwechselt, misst wieder einen Stellvertreter.
 
 Die 20 : 1 von seL4 zerfallen in rund **0,5 : 1 abstrakte Spezifikation** und **19,5 : 1 Beweis**.
 Nur der erste Posten ist unantastbar.

@@ -4,6 +4,11 @@
 Ausgabe: C + Inline-Assembler. Zweck und Kennzahl im [`README`](README.md), der Weg in
 [`PLAN.md`](PLAN.md).
 
+> **Wozu jeder Mechanismus da ist** ([`KRITERIUM.md`](KRITERIUM.md)): **M1–M4 und D1/D2 erledigen
+> KLEMPNEREI** — Index, Ueberlauf, Alias, Rahmen, Sperre, Rennen. **Sie erledigen keine Logik, und
+> sollen es nicht.** Ein Mechanismus, der eine Klempnerei-Pflicht beim Programmierer laesst, ist an
+> dieser Stelle unvollstaendig.
+
 > **Gabbro = C ohne seine Löcher, plus zwei Dinge.** Die zwei sind **Bereichstypen** und **lineare
 > Werte (auch geisterhafte)**. Alles andere ist eine **Einschränkung** von C, keine Erweiterung.
 
