@@ -43,6 +43,20 @@
 
 ---
 
+## Syntax — offene Entscheidungen (Einzelheiten in [`SYNTAX.md`](SYNTAX.md))
+
+- [ ] **Variable Längen in `format`** — die harten 20 %, keine Schreibweise vorhanden.
+- [ ] **Versionsevolution:** Absage oder Migration?
+- [ ] **Generizität** — ohne sie braucht jede Tabelle ihren eigenen `traverse`; mit ihr die Frage,
+      wie Verträge parametrisiert werden.
+- [ ] **Die Sperrordnung fehlt in der Syntax.** `locks CAPS` nennt die Sperre, nicht die **Stufe**.
+- [ ] **Der Vorrat an Quantoren in `spec fn` ist unentschieden — und genau dort wandert die Linie**,
+      wenn niemand aufpasst.
+- [ ] **Fehlerfortpflanzung:** ohne `?` wird jeder Aufruf drei Zeilen, mit `?` gibt es verborgenen
+      Kontrollfluss. Beides widerspricht einer Entwurfsregel.
+- [ ] **Schlüsselwortsprache** steht auf Englisch, weil das der Bestand ist. Preis: Bruch mit dem
+      deutschen Fliesstext. Reversibel (eine Tabelle im Lexer).
+
 ## Entwurf — offene Entscheidungen
 
 - [ ] **Variable Längen** — die harten 20 % jedes Parser-Erzeugers. Eine Syntax dafür gibt es nicht.

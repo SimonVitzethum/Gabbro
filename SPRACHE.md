@@ -7,6 +7,9 @@ Ausgabe: C + Inline-Assembler. Zweck und Kennzahl im [`README`](README.md), der 
 > **Gabbro = C ohne seine Löcher, plus zwei Dinge.** Die zwei sind **Bereichstypen** und **lineare
 > Werte (auch geisterhafte)**. Alles andere ist eine **Einschränkung** von C, keine Erweiterung.
 
+**Die Schreibweise jedes Konstrukts steht in [`SYNTAX.md`](SYNTAX.md)** — hier stehen die
+Mechanismen und ihre Begründung.
+
 Stand 2026-08-13. **Nichts davon ist übersetzt worden.**
 
 ---
@@ -20,7 +23,7 @@ Trick, und **genau er** hat S1a/S1b gefunden — nicht „Ada ist sicherer".
 
 ```gabbro
 type SlotIdx  = u32 in 0 .. NSLOTS-1
-type Refcount = u32 in 0 .. u32'max
+type Refcount = u32 in 0 .. u32::max
 type Zyklen   = u64 in 1 .. u64'max      -- Null ist ein Befund, kein Messwert
 ```
 
@@ -30,9 +33,9 @@ Ein linearer Wert **muss** verbraucht werden; ein geisterhafter existiert nur im
 vor der Codeerzeugung gelöscht (**kein Byte, keine Halde** — an Verus gemessen).
 
 ```gabbro
-linear       type Parked                 -- muss zugelassen werden
-linear ghost type Hält(CAPS)             -- Sperrbeleg, kostenlos
-linear ghost type Pflicht(check)         -- eine unerfuellte Pruefzusage
+linear type Parked                 -- muss zugelassen werden
+linear ghost type Held(CAPS)             -- Sperrbeleg, kostenlos
+linear ghost type Duty(check)         -- eine unerfuellte Pruefzusage
 ```
 
 ### M3 — Adressräume und Zugriffsrechte am Zeiger
@@ -41,9 +44,9 @@ Ein Zeiger trägt **wohin** er zeigt und **was** man damit darf. C hat das als E
 ist es die Voreinstellung.
 
 ```gabbro
-ptr<mmio, write_only>   gcmd            -- ein Lesen zum Zurueckschreiben ist nicht schreibbar
-ptr<dma,  read_write>   puffer
-ptr<code, execute@ring3> sonde
+ptr<mmio, w>  gcmd            -- ein Lesen zum Zurueckschreiben ist nicht schreibbar
+ptr<dma,  rw> puffer
+ptr<code, x@ring3> sonde
 ```
 
 Barrieren gehören zum Adressraum, nicht zur Architektur — `dsb sy` gegen `dmb ish` ist keine
@@ -178,13 +181,13 @@ nachweislich abgelaufen"** — und das ist strikt stärker als alles, was Rust h
 **Es fällt aus M2 heraus, ohne neuen Mechanismus:**
 
 ```gabbro
-linear ghost type Bootphase              -- genau EINE Instanz, beim Eintritt erzeugt
+linear ghost type BootPhase              -- genau EINE Instanz, beim Eintritt erzeugt
 
-roh fn phys_schreiben(p: Pa, w: u64) benoetigt &Bootphase
-roh fn mb_info_lesen(p: Pa) -> Info      benoetigt &Bootphase
+raw fn phys_write(p: Pa, w: u64) requires &BootPhase
+raw fn mb_info_read(p: Pa) -> Info      requires &BootPhase
 
-fn boot_ende(t: Bootphase)               -- VERBRAUCHT die Marke; es gibt keine zweite
-    entfernt code<boot>                  -- ... und bildet .boot im selben Zug ab
+fn boot_end(t: BootPhase)               -- VERBRAUCHT die Marke; es gibt keine zweite
+    effects { drops code<boot> }                  -- ... und bildet .boot im selben Zug ab
 ```
 
 **Zwei Ebenen, und die zweite ist der eigentliche Gewinn:**
@@ -353,7 +356,7 @@ table CapSpace {
         gen    : u32  wrapping        -- Umlauf ist AUSGESPROCHEN, s. Konstrukt 5
     }
 
-    invariant kind_zeigt_zurueck cost O(n * kette) laeuft offline:
+    invariant kind_zeigt_zurueck cost O(n * kette) runs offline:
         forall s where s.parent = Some(p) => s in chain(p.first_child, next_sibling)
 }
 ```
@@ -374,8 +377,8 @@ trotzdem ausserhalb der Tabelle indizieren. Genau das ist **S1a**.
 ```gabbro
 traverse geschwister of p
     over  chain(first_child, next_sibling) in slots
-    by    unbesucht                  -- Kosten: s. u.
-    touches read slots
+    by    unvisited                  -- Kosten: s. u.
+    touches reads slots
 { if it == s { found } }
 ```
 
@@ -407,14 +410,18 @@ statt auf Felder. Das ist der Grund, warum „Syscalls ohne Assembler" kein Frem
 
 ### 5. Arithmetik mit Vorbedingung
 
-`refcount -= 1` gibt es nicht. Es gibt:
+`refcount -= 1` braucht **kein eigenes Konstrukt** — das ist beim Aufschreiben der Grammatik
+aufgefallen und hat den Wortschatz um ein Wort verkleinert. **M1 erledigt es:**
 
 ```gabbro
-decrement refcount requires refcount > 0        -- oder: wrapping
+type Refcount = u32 in 0 .. u32::max;    -- und dann genuegt:
+c.objects[obj].refcount -= 1;            -- unter 0 ist NICHT TYPISIERBAR
 ```
 
-Damit ist **S1b** unformulierbar statt hinterher auffindbar. **Ein Umlauf, den niemand
-ausgesprochen hat, ist ein Fehler; einer, der ausgesprochen ist, ein Entwurf** — genau der
+Der Bereichstyp **ist** die Vorbedingung; ein Unterlauf verlässt ihn und ist damit nicht
+typisierbar. Ein früher hier stehendes `decrement … requires …` war ein Schlüsselwort für etwas,
+das M1 schon kann. **S1b ist unformulierbar statt hinterher auffindbar. Ein Umlauf, den niemand
+ausgesprochen hat, ist ein Fehler; einer, der `wrapping` trägt, ein Entwurf** — genau der
 Unterschied zwischen S1b und den Generationen, auf deren absichtlichem Umlauf `resolve` ruht.
 
 ---

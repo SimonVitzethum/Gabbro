@@ -54,7 +54,8 @@ andere ist ausdrücklich Absicht.
 | Datei | Inhalt |
 |---|---|
 | `README.md` | dies — Zweck, Zusagen, Kennzahl, Stand, Einstieg |
-| [`SPRACHE.md`](SPRACHE.md) | **die Sprache**: vier Mechanismen, zwei Deklarationsregeln, Bootphase, Rennfreiheit, Kernel-Vollständigkeit — und die Bibliotheksschicht darüber |
+| [`SYNTAX.md`](SYNTAX.md) | **die Schreibweise**: Grammatik, geschlossener Wortschatz, fünf Entscheidungen, was es absichtlich nicht gibt |
+| [`SPRACHE.md`](SPRACHE.md) | **die Mechanismen**: vier Mechanismen, zwei Deklarationsregeln, Bootphase, Rennfreiheit, Kernel-Vollständigkeit — und die Bibliotheksschicht darüber |
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
