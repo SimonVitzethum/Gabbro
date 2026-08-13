@@ -30,16 +30,23 @@ eine Verbesserung wäre. Eine Sprache samt Übersetzer zu bauen, um den Beweis v
 gewählt, nicht hergeleitet** — sie steht hier, damit sie nicht später gewählt wird.
 
 Die Rechnung zeigt, wie schnell der Abstand wächst: braucht **5 %** des Kernels handgeschriebene
-funktionale Beweise zu 5 : 1, sind das allein **+0,25** — also 0,75 statt 0,5. Bei 10 % sind es
-1,0. **Das ist kein Durchfallen, sondern die Messlatte für B3 unten:** jeder Rumpf, der sich nicht
-als Traversierung schreiben lässt, kostet sichtbar und beziffert.
+funktionale Beweise zu 5 : 1, sind das allein **+0,25** — also 0,75 statt 0,5. Bei 10 % sind es 1,0,
+bei **25 %** rund **1,75**.
+
+> **DIE 10 %-ANNAHME WIDERSPRICHT DER EIGENEN MESSUNG, und sie trägt die ganze bedingte
+> Ja-Antwort.** Gemessen sind **45 851 Zeilen algorithmischer Rest (68,8 %)**; die eigene Liste der
+> Nicht-auf-null-Posten (IPC-Fastpath, Scheduler, `revoke`) plus **872 `Ordering::`-Fundstellen
+> allein in `threads/mod.rs`** sagt: **in einem MIKROkernel ist der algorithmische Kern nicht ein
+> Zehntel, er IST der Kernel.** Liegt der Anteil bei 25–30 %, steht das Mittel jenseits von 1,5.
+> **Das ist die am wenigsten gestützte Zahl des Ordners**, und sie wird nicht durch `revoke`
+> entschieden — s. P0.4.
 
 **Daraus drei Bedingungen — sie sind der eigentliche Entwurfsauftrag:**
 
 | | Bedingung | wenn sie fällt |
 |---|---|---|
 | **B1** | **Invarianten leben an der Struktur, nicht an der Schleife.** Erhält die *erzeugte* Mutation die Invariante, braucht die Schleife keine eigene | jede Schleife bekommt eine handgeschriebene Invariante — der grösste Einzelposten kehrt zurück |
-| **B2** | **Algorithmische Rümpfe bestehen aus Traversierungen**, deren Verträge aus `over`/`by`/`touches` kommen — der Löser bekommt die Invariante geschenkt | Beweishinweise je Rumpf |
+| **B2** | **Algorithmische Rümpfe bestehen aus Traversierungen.** ~~Der Löser bekommt die Invariante geschenkt~~ — **das war Überschreibung Nr. 3**: geschenkt bekommt er die **Sicherheitshülle** (Bereich, Terminierung, Rahmen). **Funktionale** Schleifeninvarianten — Teilsummen, Sortiertheit, Baumform mitten in der Mutation — schreibt weiterhin jemand hin; das ist die gesamte Verus-/Dafny-Erfahrung. Was hilft, sind **Konstrukte, deren Nachbedingung ihre Abbruchbedingung IST** (s. `by consuming` in [`P0-1-REVOKE.md`](P0-1-REVOKE.md)) — und die gibt es je Fall oder nicht | Beweishinweise je Rumpf |
 | **B3** | **Was sich so nicht schreiben lässt, muss verschwindend klein sein.** Kandidaten: IPC-Fastpath, `revoke`, die Warteschlangenchirurgie des Schedulers | jeder dieser Rümpfe kostet 5 : 1 auf seinem Anteil |
 
 **Deshalb ist P0.1 (`revoke` auf Papier) nicht ein Tor unter vielen, sondern DAS Tor.** Braucht
@@ -260,8 +267,14 @@ eine Bereichsangabe, ein `device`-Block, ein `over`/`by` sind Spezifikation *und
 als Code zählt, bekommt eine glänzende Zahl ohne Aussage; wer sie als Spezifikation zählt, eine
 schlechte.
 
-> **Regel: Spezifikation ist, was KEINE Laufzeitwirkung hat** — was der Übersetzer vor der
-> Codeerzeugung löscht. Alles, was im erzeugten C ankommt, ist Code.
+> **Regel: Spezifikation ist, was ein MENSCH SCHREIBT und was der Übersetzer vor der Codeerzeugung
+> löscht.** Alles, was im erzeugten C ankommt, ist Code. **Erzeugter Geistercode ist weder — er ist
+> Ausgabe.**
+
+> **BERICHTIGT am 2026-08-13 durch [`P0-1-REVOKE.md`](P0-1-REVOKE.md).** Die erste Fassung sagte
+> nur „keine Laufzeitwirkung". Damit hätte die erzeugte Geistertheorie, die Zuschnitt (c) braucht,
+> **in den Zähler** gezählt: **der Gold-Mechanismus hätte die Kennzahl verschlechtert, je besser er
+> wirkt.** Dieselbe Klasse wie „ein Zähler, der VERSUCHE zählt". Gefunden hat es der Papiertest.
 
 Sie ist die einzige, die sich nicht durch Umschichten von Text gewinnen lässt:
 

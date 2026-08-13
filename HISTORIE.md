@@ -56,6 +56,37 @@ schwächer formuliert, ohne schwächer zu **werden**.
 | **Ziel mit Schwelle verwechselt** | 0,5 : 1 stand als **Auslösung** („darüber ist die These widerlegt“) | es ist das **Ziel** — der theoretische Boden. Eine Schwelle sagt „bestanden“, ein Ziel am Boden sagt **was noch fehlt**: jede Zehntelstelle darüber ist ein benennbarer, noch handgeschriebener Beweisposten. Abgebrochen wird bei **> 3 : 1**, wo der Beweis wieder dominiert |
 | **0,8 : 1 als Vorhersage** | rechnete mit 10 % des Kernels zu 5 : 1 | **unvereinbar mit dem Ziel 0,5 : 1**, das der Boden ist. 0,5 : 1 heisst **kein handgeschriebener Beweis** — schon 5 % zu 5 : 1 wären +0,25 |
 
+| **B2: „der Löser bekommt die Invariante geschenkt"** | stand als Bedingung für 0,5 : 1 | **Überschreibung Nr. 3.** Geschenkt ist die **Sicherheitshülle**; funktionale Schleifeninvarianten schreibt weiterhin jemand hin. Wahr für die Hülle, stillschweigend auf Gold erweitert — **exakt die Form, die diese Datei als Muster führt**, und diesmal trug sie das Kennzahlziel |
+| **Die Zählregel** | „Spezifikation ist, was keine Laufzeitwirkung hat" | erzeugter Geistercode hat keine — er hätte **in den Zähler** gezählt, und damit hätte der Gold-Mechanismus die Kennzahl verschlechtert, je besser er wirkt. Richtig: **was ein MENSCH schreibt** und gelöscht wird |
+
+---
+
+## Die Trajektorie — das Muster über den Einzelfehlern
+
+**Jedes gefallene Tor hat dieser Ordner durch Neugründung überlebt**, und das harte Tor ist dabei
+hinter den Übersetzer gewandert:
+
+| Tor | Ausgang | Antwort |
+|---|---|---|
+| EverParse | deckt nur die `format`-Hälfte | **umgangen** |
+| Basisrate / Deckung | ≤ 9 % gemessen | nicht „zu klein", sondern **Plan für die anderen 91 %** |
+| Verus × 2 | **beide gefallen** | nicht Ende, sondern **Vereinigung zu einer Sprache** |
+| Rückfallzuschnitt | war die billige, verteidigbare Fassung | **gestrichen**, damit die teure die einzige ist |
+
+Das Argument dafür — *„ein Ordner mit einem Rückfall hat kein Tor"* — ist scharf und **schneidet in
+beide Richtungen**. Der alte Satz „der Weg, auf dem ein Formaterzeuger unbemerkt zur Sprachfamilie
+wird" ist eingetreten: **nicht unbemerkt, sondern bemerkt, dokumentiert — und trotzdem.**
+
+Die harte Marke ist jetzt `> 3 : 1`, **gewählt statt hergeleitet** und messbar erst, wenn ein
+Übersetzer existiert. Die drei billigen Tore davor waren durch drei Umbauten hindurch benannt und
+**ungefahren**, während an einem Tag rund 2000 Zeilen Entwurfstext entstanden. **Der
+Korrekturkreislauf lief schneller als der Messkreislauf** — „measure before building", auf der
+Meta-Ebene invertiert.
+
+**Gegenmassnahme, seit dem 2026-08-13:** P0.1 ist gefahren ([`P0-1-REVOKE.md`](P0-1-REVOKE.md)) und
+hat sofort einen Fehler in der Zählregel gefunden, den drei Umbauten Gegenlesen nicht fanden. **Kein
+weiterer Entwurfstext vor P0.2 und P0.3.**
+
 ---
 
 ## Die Form, die sich wiederholt

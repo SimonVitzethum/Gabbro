@@ -7,9 +7,16 @@
 
 ## P0 — Papier, keine Zeile Code. Jeder Punkt kann die These töten
 
-- [ ] **`revoke` in den Konstrukten ausdrücken.** Entscheidet Zuschnitt (c) **und** die Kennzahl:
-      bleibt `revoke` handgeschrieben, kehrt die Invariantenerhaltung als Beweisposten zurück und
-      0,5 : 1 an diesem Tag verloren ist. **Der billigste Punkt des ganzen Ordners.**
+- [x] **`revoke` in den Konstrukten ausdrücken — GEFAHREN 2026-08-13**, Ergebnis in
+      [`P0-1-REVOKE.md`](P0-1-REVOKE.md): **bedingt ja**, und die Bedingung ist ein fehlendes
+      Konstrukt (`by consuming`, verbrauchende Traversierung). Nebenbefund wichtiger als das
+      Ergebnis: **die Zählregel war kaputt.**
+- [ ] **`by consuming` in [`SYNTAX.md`](SYNTAX.md) aufnehmen** — samt der Geistertheorie, die es
+      verlangt, und der offenen Frage, welche `over`-Mengen lineare Zeugen liefern können.
+- [ ] **P0.4 (NEU): derselbe Papiertest am IPC-Fastpath.** `revoke` fällt heraus, weil seine
+      Nachbedingung eine Aussage über **Zugehörigkeit** ist — und Zugehörigkeit trägt ein linearer
+      Zeuge. Der Fastpath hat eine Nachbedingung über **Werten**. **Er entscheidet die
+      10 %-Annahme, nicht `revoke`.**
 - [ ] **`vtd.rs` (1 448 Zeilen) als `device`-Block hinschreiben.** Tor: Faktor ≥ 5 kleiner. Sonst
       ist die Knappheitsthese widerlegt.
 - [ ] **`space.rs` zweimal hinschreiben** — als Gabbro-Quelle und mit dem, was ein Beweiser darüber
@@ -93,10 +100,11 @@
 
 ## Nachzuprüfen, weil aus dem Gedächtnis zitiert
 
-- [ ] **Die seL4-Aufteilung** (rund 0,5 : 1 abstrakte Spezifikation, 19,5 : 1 Beweis). Sie trägt die
-      ganze Kennzahl-Herleitung.
-- [ ] **Die SPARK-Übernahmeleiter** (Stone/Bronze/Silber/Gold/Platinum und was jede Stufe bedeutet).
-      Sie trägt das Argument, dass „Gold" zwei Bedeutungen hat.
+- [x] **Die seL4-Aufteilung — BESTÄTIGT:** abstrakte Spezifikation ~4 900 Zeilen Isabelle gegen
+      ~8 700 Zeilen C (**≈ 0,56 : 1**), ausführbare Spezifikation ~13 000, Beweise im `l4v`-Repo
+      ~200 000. Die Herleitung des Bodens hält.
+- [x] **Die SPARK-Übernahmeleiter — BESTÄTIGT:** volle funktionale Korrektheit ist **Platinum**,
+      Gold sind Integritätseigenschaften plus Schlüsselinvarianten.
 - [ ] **Die Namensfreiheit „Gabbro"** über Paketregister, GitHub und Sprachlisten — mitsamt dem,
       was gefunden wurde. „Ich habe nichts gefunden" ist ein Nullbefund ohne Grösse.
 

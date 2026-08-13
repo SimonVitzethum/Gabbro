@@ -59,6 +59,7 @@ andere ist ausdrücklich Absicht.
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`P0-1-REVOKE.md`](P0-1-REVOKE.md) | **das erste gefahrene Papiertor.** `revoke` ist ausdrückbar — mit einem Konstrukt, das fehlte; und es hat einen Fehler in der Zählregel gefunden |
 | `pruefe-syntax.sh` | hält alle Beispiele gegen die geschlossene Wortliste, mit Sprechprobe |
 | [`fallen-klassifikation.tsv`](fallen-klassifikation.tsv) | die 100 bezahlten Caprock-Fallen, einzeln klassifiziert; `./zaehle-fallen.sh` leitet die Zahlen ab |
 
@@ -213,7 +214,7 @@ Frage steht offen und ist die teuerste des Ordners.**
 [`PLAN.md`](PLAN.md) — acht Phasen, jede mit einem Tor. Die ersten drei kosten
 **keinen Übersetzer** und können die These jeweils töten:
 
-1. **`revoke` auf Papier** in den Konstrukten. **Das ist nicht ein Tor unter vielen, sondern DAS
-   Tor:** braucht `revoke` einen handgeschriebenen Beweis, ist 0,5 : 1 an diesem Tag verloren.
+1. ~~**`revoke` auf Papier**~~ — **gefahren 2026-08-13**, [`P0-1-REVOKE.md`](P0-1-REVOKE.md):
+   bedingt bestanden, Bedingung ist ein fehlendes Konstrukt. **Kein weiterer Entwurfstext vor 2.**
 2. **`vtd.rs` als `device`-Block auf Papier** — 1 448 Zeilen gegen die Beschreibung.
 3. **`check` als Rust-Makrobibliothek**, rückwirkend gegen die 33 Messdisziplin-Fallen gehalten.
