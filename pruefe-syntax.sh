@@ -19,9 +19,21 @@ pruefe() {                      # $1..: Dateien
   return $rc
 }
 
+# F19: bis 2026-08-13 sah der Waechter NUR Codebloecke -- und behauptete trotzdem
+# "keine zweite Schluesselwortsprache". `wechsle` stand derweil in SPRACHE.md:300, in PROSA.
+# Ein Pruefer, der mehr behauptet, als sein Muster trifft, ist ein falsches Gruen.
+# HISTORIE.md ist ausgenommen: sie DOKUMENTIERT die alten Woerter, das ist ihr Zweck.
+prosa() { grep -vh '^\s*```' "$@" | grep -oE '`[a-zA-Z_ ]+`' ; }
+pruefe_prosa() {
+  local t
+  t=$(prosa "$@" | grep -nE "$ALTDEUTSCH") && { echo "  ALTDEUTSCH IN PROSA:"; echo "$t"; return 1; }
+  return 0
+}
+
 echo "== Beispiele gegen SYNTAX.md =="
-if pruefe SPRACHE.md SYNTAX.md PLAN.md README.md; then
-  echo "  keine verbotene Form, keine zweite Schluesselwortsprache"
+if pruefe SPRACHE.md SYNTAX.md PLAN.md README.md && \
+   pruefe_prosa SPRACHE.md SYNTAX.md PLAN.md README.md TODO.md P0-1-REVOKE.md; then
+  echo "  keine verbotene Form in Beispielen, keine zweite Schluesselwortsprache in Prosa"
 else
   echo "== SYNTAX: FEHLER =="; exit 1
 fi
@@ -39,5 +51,10 @@ done
 # ... und bei einem sauberen Block NICHT fallen
 printf '```gabbro\ntraverse siblings of p over chain(a,b) in slots by unvisited { }\n```\n' > "$tmp/ok.md"
 pruefe "$tmp/ok.md" >/dev/null || { echo "SPRECHPROBE GESCHEITERT: sauberer Block fiel durch"; exit 1; }
-echo "Sprechprobe: $n Gifte gefangen, sauberer Block durchgelassen."
+# Sprechprobe fuer den PROSA-Zweig -- er ist neu und darf nicht stumm sein.
+printf 'Das Primitiv heisst `wechsle` und ist alt.\n' > "$tmp/p.md"
+pruefe_prosa "$tmp/p.md" >/dev/null && { echo "SPRECHPROBE GESCHEITERT: Prosa-Zweig ist stumm"; exit 1; }
+printf 'Das Primitiv heisst `switch_to`.\n' > "$tmp/pok.md"
+pruefe_prosa "$tmp/pok.md" >/dev/null || { echo "SPRECHPROBE GESCHEITERT: saubere Prosa fiel durch"; exit 1; }
+echo "Sprechprobe: $n Gifte in Beispielen gefangen, Prosa-Zweig spricht, Sauberes durchgelassen."
 echo "== SYNTAX: ALL PASS =="

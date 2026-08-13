@@ -59,6 +59,7 @@ andere ist ausdrücklich Absicht.
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`P0-2-3-DEVICE-UND-SPACE.md`](P0-2-3-DEVICE-UND-SPACE.md) | **beide Tore gefallen** — `device` deckt 21 % von `vtd.rs` und ist dort 2× knapper, nicht 15×; und **65,1 % des Kernels brauchen handgeschriebene Spezifikation, nicht 10 %** |
 | [`P0-1-REVOKE.md`](P0-1-REVOKE.md) | **das erste gefahrene Papiertor.** `revoke` ist ausdrückbar — mit einem Konstrukt, das fehlte; und es hat einen Fehler in der Zählregel gefunden |
 | `pruefe-syntax.sh` | hält alle Beispiele gegen die geschlossene Wortliste, mit Sprechprobe |
 | [`fallen-klassifikation.tsv`](fallen-klassifikation.tsv) | die 100 bezahlten Caprock-Fallen, einzeln klassifiziert; `./zaehle-fallen.sh` leitet die Zahlen ab |
@@ -216,5 +217,7 @@ Frage steht offen und ist die teuerste des Ordners.**
 
 1. ~~**`revoke` auf Papier**~~ — **gefahren 2026-08-13**, [`P0-1-REVOKE.md`](P0-1-REVOKE.md):
    bedingt bestanden, Bedingung ist ein fehlendes Konstrukt. **Kein weiterer Entwurfstext vor 2.**
-2. **`vtd.rs` als `device`-Block auf Papier** — 1 448 Zeilen gegen die Beschreibung.
-3. **`check` als Rust-Makrobibliothek**, rückwirkend gegen die 33 Messdisziplin-Fallen gehalten.
+2. ~~**`vtd.rs` als `device`-Block**~~ — **gefahren, GEFALLEN**: Faktor 2,0 auf dem gedeckten Teil.
+3. ~~**`space.rs` zweimal**~~ — **gefahren, über der Abbruchmarke**: 3,6–6 : 1 ausgeschrieben.
+4. **`check` als Rust-Makrobibliothek**, rückwirkend gegen die 33 Messdisziplin-Fallen gehalten —
+   **der einzige Posten, der die Messungen von heute überlebt hat.**

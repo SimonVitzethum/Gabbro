@@ -80,7 +80,7 @@ ohne Grundlage, `goto`, Auffangzweige, `union` als Umdeutung (das kann M3), Prä
 
 | vormals „Konstrukt" | folgt aus | wie |
 |---|---|---|
-| `einheit` (Pa/Iova/Farben) | **D1** | undurchsichtiger Neutyp |
+| vormals *„einheit“* (Pa/Iova/Farben) | **D1** | undurchsichtiger Neutyp |
 | `arithmetik` (S1b) | **M1** | `Refcount` verlässt seinen Bereich nicht |
 | `absage`, `grundmenge` | **D2** | erschöpfende Aufzählung, kein Auffangzweig |
 | `bitfeld` (Marke auf Bit 63) | **D2** | vollständiges Layout — das Zahlenfeld ist belegt |
@@ -97,7 +97,7 @@ ohne Grundlage, `goto`, Auffangzweige, `union` als Umdeutung (das kann M3), Prä
 | `lock` / `held(L)` | **M2** | `linear ghost Hält(L)` — an Verus **gemessen**, dass das trägt |
 | Sperr**ordnung** ⇒ Deadlockfreiheit | **M2 + M1** | die Stufe ist ein Bereichstyp, Nehmen verlangt echt kleinere Stufe |
 | `atomic`-Veröffentlichung | **M2** | `release` gibt einen Geisterbeleg ab, `acquire` nimmt ihn |
-| `wirkung` (Global/Depends) | **M2** | Wirkungen **sind** geisterhafte Fähigkeiten im Parameter |
+| vormals *„wirkung“* (Global/Depends) | **M2** | Wirkungen **sind** geisterhafte Fähigkeiten im Parameter |
 | `traverse` (S1a) | **M4** | Schreibweise, kein Mechanismus |
 | `format` / `table` | Bibliothek | Deklarationen über M1/M3/D2 |
 | **`check`** | **M2** | **s. u. — die schönste Ableitung** |
@@ -249,7 +249,7 @@ decken sie **nicht** allein.
 | Was | Antwort | ehrlich dazu |
 |---|---|---|
 | **Absichtliche Nichtterminierung** (Leerlauf-, Hauptschleife) | `divergent fn` — **ausgesprochen**, nie versehentlich | M4 verlangt sonst ein Abstiegsmass; die Ausnahme muss benannt sein, nicht erschlichen |
-| **Unterbrechbarkeit** | eine **Wirkung**: `unterbrechbar` / `maskiert`. Ein Handler ist kein Aufruf — er kann zwischen zwei beliebigen Anweisungen laufen | fällt aus M2, wenn die IRQ-Maske ein linearer Beleg ist. Falle 93 (Guard über den Rumpf) ist genau das |
+| **Unterbrechbarkeit** | eine **Wirkung**: `masks irqs` bzw. deren Abwesenheit. Ein Handler ist kein Aufruf — er kann zwischen zwei beliebigen Anweisungen laufen | fällt aus M2, wenn die IRQ-Maske ein linearer Beleg ist. Falle 93 (Guard über den Rumpf) ist genau das |
 | **Kontextwechsel** | Sprachprimitiv `switch_to(from: &mut Context, to: &Context)` mit Vertrag über den Maschinenzustand | Stapelwechsel ist in **keiner** strukturierten Sprache ausdrückbar. Das ist der `state`-Übergang auf Maschinenebene — und er wird **emittiert**, nicht geschrieben |
 | **Privilegierte Befehle** (`mov cr3`, `wbinvd`, `sti`, `invlpg`, `tlbi`) | eine **Axiomschicht**: je Befehl ein erklärter Effekt auf das Maschinenmodell | **Hier sammelt sich das Vertrauen, und es ist irreduzibel.** Jedes Axiom ist ein `assume` — mit `falsifier`, wo einer fahrbar ist |
 | **Code als Daten** (der Lader) | `code`-Raum ist nur über ein **Prüftor** erreichbar (Signatur, Layout) | Caprock macht das bereits; neu ist, dass der Weg dorthin der **einzige** ist |
@@ -297,7 +297,7 @@ die zwei Überschreibungen in `HISTORIE.md`, deshalb ausdrücklich:
 Fläche **schrumpft** von 153 Fundstellen auf eine Emissionsstelle. Das ist eine Reduktion, keine
 Beseitigung, und sie hat **keinen nachgelagerten Beweiser**.
 
-> **Die ehrliche Summe: M1–M4 + Axiomschicht + drei Primitive** (`divergent`, `wechsle`, Prüftor).
+> **Die ehrliche Summe: M1–M4 + Axiomschicht + drei Primitive** (`divergent`, `switch_to`, Prüftor).
 > Die Axiomschicht ist die grösste unbewiesene Fläche der ganzen Sprache — grösser als der
 > Übersetzer —, und sie ist **zählbar**: eine Ratsche über der Menge der Axiome, die nur fallen darf.
 
@@ -361,7 +361,7 @@ table CapSpace {
 }
 ```
 
-**`cost` und `laeuft` sind Pflicht, nicht Schmuck.** Eine Invariante ohne Kostenangabe ist
+**`cost` und `runs` sind Pflicht, nicht Schmuck.** Eine Invariante ohne Kostenangabe ist
 unter dem Kern-Lock kein Audit, sondern ein Ausfall — `colors.rs` hält heute **42 Ticks** und gilt
 deshalb als Schuldposten. Und **inkrementelle** Prüfung setzt voraus, dass der Prüfer das Delta
 kennt, das **nur der Mutator** kennt: **wer Invarianten im heissen Pfad will, hat Zuschnitt (c)

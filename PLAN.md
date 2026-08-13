@@ -151,7 +151,7 @@ Aufgeschlüsselt nach Konstrukt sieht die Verteilung so aus:
 | `linear` (echte Linearität) | 5 |
 | `device` (Registerbeschreiber) | 5 |
 | `assume`/`falsifier` | 3 |
-| `lock`, `region`, `wirkung`, `einheit`, `grundmenge`, `absage`, `ableitung`, `stellentyp`, `arithmetik` | je 2 |
+| vormals *„lock, region, wirkung, einheit, grundmenge, absage, ableitung, stellentyp, arithmetik“* | je 2 |
 | `state`, `atomic`, `barrier`, `bitfeld`, `platzierung`, `menge`, `recht` | je 1 |
 
 > **Das wertvollste Konstrukt einer Gabbro-Vollversion ist keine Typsystem-Eigenschaft.**
@@ -487,7 +487,7 @@ Zusammen ein bis zwei Tage, kein Code. **Das ist der billigste Punkt des ganzen 
 
 ### P0.1 — `revoke` in den Konstrukten ausdrücken
 
-`decrement requires` ist eine Vorbedingung **auf einem Feld**. Die Korrektheitsbedingung von
+Das (inzwischen gestrichene) *„decrement requires“* war eine Vorbedingung **auf einem Feld**. Die Korrektheitsbedingung von
 `revoke` ist **strukturell**: ein Teilbaum verschwindet, und dass danach `kind_zeigt_zurueck` und
 die Kettenendlichkeit noch gelten, ist eine Aussage über Baumform.
 

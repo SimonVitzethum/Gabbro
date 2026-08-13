@@ -13,7 +13,7 @@ Punkte stehen am Ende benannt statt weggelassen.
 
 | | Entscheidung | Grund |
 |---|---|---|
-| **E1** | **Englische Schlüsselwörter, deutscher Fliesstext, freie Bezeichner** | genau Caprocks eigene Praxis. Vorher standen beide Sprachen gemischt in den Beispielen — `wirkung` neben `touches`. Der Wortschatz ist eine **geschlossene Tabelle** (unten), ein Tausch kostet den Lexer und sonst nichts |
+| **E1** | **Englische Schlüsselwörter, deutscher Fliesstext, freie Bezeichner** | genau Caprocks eigene Praxis. Vorher standen beide Sprachen gemischt in den Beispielen — *„wirkung“* neben `touches`. Der Wortschatz ist eine **geschlossene Tabelle** (unten), ein Tausch kostet den Lexer und sonst nichts |
 | **E2** | **Anweisungsorientiert, geschweifte Klammern, Zuweisung ist KEIN Ausdruck** | `if (x = y)` ist nicht schreibbar. Vorhersagbare Absenkung nach C verlangt, dass Auswertungsreihenfolge sichtbar ist |
 | **E3** | **Nichts ist implizit** — keine Umwandlung, keine Kopie eines linearen Werts, kein Auffangzweig, kein Standardwert | jede der vier Klassen hat eine bezahlte Falle in `fallen-klassifikation.tsv` |
 | **E4** | **Verträge stehen VOR dem Rumpf, in fester Reihenfolge**: `requires` · `ensures` · `maintains` · `effects` · `costs` | eine feste Reihenfolge macht Fehlen sichtbar. Ein Werkzeug, das sortieren muss, kann nicht sagen „hier fehlt `effects`" |
@@ -40,6 +40,13 @@ einen Eintrag hier.
              index into option chain wrapping unfalsifiable
   Eingebaut  sizeof forall exists never bool Self
 ```
+
+---
+
+> **Schreibregel fuer diese Dateien, und sie ist keine Kosmetik:** `Backticks` bezeichnen
+> **heutige Gabbro-Syntax**. Ein abgeschaffter Name steht *kursiv in Anfuehrungszeichen* -- er **ist**
+> keine Syntax mehr. Der Waechter prueft genau das; ohne die Regel braeuchte er eine Ausnahmeliste,
+> und die waechst still.
 
 ---
 
@@ -332,7 +339,7 @@ sind ein Riss, und der entsteht beim nächsten Beispiel von selbst.
 
 **Sprechprobe in beide Richtungen:** vier Gifte müssen fallen, ein sauberer Block muss durchkommen.
 
-> **Beim ersten Lauf hat er zwei echte Fehler gefunden** — ein `erhaelt` aus der Zeit vor E1, das
+> **Beim ersten Lauf hat er zwei echte Fehler gefunden** — ein *„erhaelt“* aus der Zeit vor E1, das
 > das Gegenlesen übersehen hatte, und ein Sprachprimitiv, das `switch` hiess, also **wie ein
 > ausdrücklich verbotenes Wort**. Dazu einen Fehlalarm auf einem Kommentar, der die verbotene Form
 > erklärt; seither streicht der Wächter Kommentare, bevor er prüft.
