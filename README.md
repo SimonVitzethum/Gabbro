@@ -38,6 +38,8 @@ andere ist ausdrücklich Absicht.
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`ROADMAP.md`](ROADMAP.md) | Phasen mit **Entscheidungstoren**: jede Phase liefert eine Zahl, die über die nächste entscheidet — samt Abbruchbedingungen |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`VOLLDECKUNG.md`](VOLLDECKUNG.md) | **der Plan für die anderen 91 %** — Allzwecksprache, sechs Stufen, jede aus der Basisrate abgeleitet. **Verlässt den Zuschnitt, den dieses README verteidigt** |
+| [`fallen-klassifikation.tsv`](fallen-klassifikation.tsv) | die 100 bezahlten Fallen, einzeln klassifiziert; `./zaehle-fallen.sh` leitet die Zahlen ab |
 
 ---
 
@@ -407,6 +409,28 @@ die zwei Überschreibungen in `HISTORIE.md`, deshalb ausdrücklich:
 **Die haltbare Fassung ist deshalb schwächer und immer noch ein Gewinn:** die vertrauenswürdige
 Fläche **schrumpft** von 153 Fundstellen auf eine Emissionsstelle. Das ist eine Reduktion, keine
 Beseitigung, und sie hat **keinen nachgelagerten Beweiser**.
+
+### Der Plan für den Zweig steht — und sein wertvollstes Konstrukt ist keins von hier
+
+[`VOLLDECKUNG.md`](VOLLDECKUNG.md) plant die Vollsprache aus der **Basisrate** statt aus Wünschen:
+die 100 bezahlten Fallen, einzeln klassifiziert. Das Ergebnis stellt die Reihenfolge um.
+
+| Klasse | Anteil |
+|---|---|
+| **S** — eine Sprache macht es unformulierbar | 36 % |
+| **M** — Messdisziplin (der Prüfer war das Problem) | 36 % |
+| **W** — Werkzeug/Bau/Prozess — keine Sprache hilft | 18 % |
+| **B** — Bedeutung — keine Sprache hilft je | 10 % |
+
+**Die Obergrenze für den Sprachanteil ist damit 72 %, nicht 100 %.** Und das mit Abstand stärkste
+Einzelkonstrukt ist **`check`** — die Messdisziplin dieses Projekts als Sprachkonstrukt, mit **33**
+getöteten Fallen gegen 5 für das nächstbeste. Es ist zugleich das einzige ohne Vorbild in Rust,
+SPARK, Verus, F\* oder ATS — und es adressiert die 15,7 % Prüfgerüst, über die keine dieser Sprachen
+etwas sagt.
+
+**Die billigste Prüfung dieses ganzen Zweigs ist deshalb `check` OHNE Sprache:** als
+Rust-Makrobibliothek, rückwirkend gegen die 33 Fallen gehalten. Fängt sie weniger als fünf davon,
+fällt die einzige originelle Begründung — s. Abbruchbedingung 1 dort.
 
 ### Das Tor des Zweigs — mit einem fahrbaren Versuch
 

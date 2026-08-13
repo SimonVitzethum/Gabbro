@@ -1,0 +1,108 @@
+#	Quelle: CLAUDE.md, Abschnitt "Fallen, die dieses Projekt bereits bezahlt hat", Stand 2026-08-13.
+#	100 Eintraege, in Dateireihenfolge nummeriert. Klassifikation ist ein URTEIL und je Zeile bestreitbar.
+#	Klasse: S = eine Sprachkonstruktion macht es unformulierbar
+#	        M = Messdisziplin (Kandidat fuer das check-Konstrukt, Stufe 6)
+#	        W = Werkzeug/Prozess/Bau -- keine Sprache hilft
+#	        B = Bedeutung -- der Beschreiber war falsch; keine Sprache hilft je
+#	Konstrukt: welches (geplante) Konstrukt es toeten wuerde, "-" wenn keins
+Nr	Klasse	Konstrukt	Kurztext
+1	S	device	SMMUv3 STE.S1STALLD nur bei IDR0.STALL_MODEL==0b10
+2	S	device	SMMUv3 CD braucht A und R; ohne R ist die Queue strukturell leer
+3	M	assume	QEMU-virtio umgeht die SMMU ohne VIRTIO_F_ACCESS_PLATFORM
+4	S	device	x86 GCMD ist kein Read-Modify-Write
+5	S	device+state	x2APIC EN und EXTD in einem Schreibvorgang ist verboten
+6	W	-	cpuid im heissen Pfad ist unter KVM ein VM-Exit
+7	M	assume	Faerbung wirkt nur auf Blech
+8	S	barrier	fence(SeqCst) wird dmb ish; Device-Memory braucht dsb sy
+9	M	check	ein Test, der Speicher belegt, kippt baseline-empfindliche Tests
+10	S	einheit	MASK_BITS ist nicht die Farbanzahl
+11	S	device	CR3 per 32-Bit-Schreibzugriff ist ein abgeschnittener Zeiger
+12	S	region	geteilte Seitenverzeichnisse vertragen keine PD-spezifischen Eintraege
+13	M	check	ein Geraet, das nur schreibt, belegt nur das Schreiben
+14	M	check	ein Schreiber, der sein eigenes Ergebnis bestaetigt
+15	S	linear	wer eine Fassung ersetzt, muss ihr ALLES geben (Endowment-Liste)
+16	B	-	Rollen, die sich melden, brauchen getrennte Ablagen
+17	M	check	ein Urteil in all_done() darf nicht erst im Bericht entstehen
+18	W	-	ein Test, der nirgends laeuft, ist kein Test
+19	B	-	wer eine Schleife begrenzt, pruefe zuerst WELCHE
+20	W	-	eine Beschriftung, die neben der Sache herlaeuft
+21	M	check	ein Pruefer, der die Groesse NACHRECHNET statt sie zu lesen
+22	M	check	was auf q35 nicht vorkommt, ist ungeprueft, nicht abwesend
+23	B	-	eine flaechige Identitaetskarte macht jeden verirrten Zeiger gueltig
+24	S	absage	if cap {..} ohne else verwirft still (D11)
+25	M	check	ein Beweis, der die Wunschform beweist
+26	M	check	eine Iterationszahl ist eine Programmeigenschaft, eine Zeitmessung nicht
+27	S	grundmenge	ein Bit, das zwei Gruende traegt (D9)
+28	S	linear	ein Zeiger auf DEN Empfaenger einer Spende, sobald Spenden schachteln
+29	B	-	die naheliegende Fassung eines Waechters kann schlimmer sein
+30	W	-	ein Waechter, der nach seiner Behebung weiterschreit
+31	W	-	ein Gate im Format des falschen Servers
+32	W	-	eine Datei in .git/info/exclude sieht versioniert aus
+33	S	atomic	ein Nebenlaeufigkeitsbeweis ohne verfolgte Zellen prueft nur die Atomics
+34	M	check	eine Suite, die einmal laeuft, misst nicht
+35	S	device	nur den Treiberteil einer Virtqueue zu nullen reicht nicht
+36	W	-	zwei Suiten, die dasselbe Geraet verschieden aufsetzen
+37	S	wirkung	eine lokale IRQ-Sperre ist kein Fenster ueber eine geteilte Groesse
+38	M	check	zwei Zahlen aus derselben Hand sind keine zwei Quellen
+39	M	check	ein reproduzierbarer Wert belegt nicht, dass er geerbt wurde
+40	S	region	der Puffer eines Treibers gehoert dem LETZTEN Client
+41	S	lock	match lock() { None => lock() } ist ein Selbst-Deadlock
+42	M	check	ein Zaehler, der VERSUCHE zaehlt, misst nicht die WIRKUNG
+43	B	-	der Lader meldet seinen eigenen Speicher als frei
+44	M	check	ein Ausstiegskriterium, das Wiederholbarkeit verlangt
+45	S	linear	rustc prueft HERSTELLBARKEIT, nicht NICHT-WEITERGABE
+46	W	-	ein Muster, das nur die uebliche Formatierung trifft
+47	W	-	ein Abschalter fuer eine Sicherheitseigenschaft
+48	M	check	ein Loch im Pruefer beschaedigt die GRUEN-Bilanz
+49	W	-	ein Sammler darf nur $? lesen
+50	S	linear	ein Zeuge braucht keinen Vorfahren
+51	S	menge	eine Kardinalzahl, wo eine Menge gemeint ist
+52	W	-	ein Sammler, der Erfolge als Ausfaelle ablegt
+53	S	stellentyp	ein waehlbarer Grund ist ein Warnschild, keine Struktur
+54	M	check	eine Messung, die bei der Effektgroesse nicht trennen kann
+55	M	assume	ein Waechter prueft die EXISTENZ eines Grundes, nie seine WAHRHEIT
+56	S	stellentyp	eine Liste im Pruefskript ist eine Textflaeche
+57	W	-	ein Fehlschlag ohne Protokoll ist ein verlorener Fehlschlag
+58	S	einheit	ein Parameter, der zwei Bedeutungen traegt (spawn_user)
+59	B	-	ein User-VA-Fenster gehoert dorthin, wo der Kernel nie identisch zugreift
+60	M	check	eine Messung an einem kaputten Aufbau ist keine Messung
+61	M	check	eine Klassifikation nur gegen die Hauptsuite prueft die Haelfte
+62	B	-	unten zuerst war ein Zufall der Groessenrelation
+63	S	state	ein Thread, der lauffaehig ist, bevor er seine Autoritaet hat (D0)
+64	M	check	ich habe das noch nie gesehen ist ein Nullbefund ohne Groesse
+65	M	check	eine Messung, deren wahrscheinlichstes Ergebnis nichts ist
+66	M	check	eine Sprechprobe gehoert an den GEPRUEFTEN PFAD
+67	M	check	ein Waechter, der die GELEGENHEIT zaehlt, schlaegt einen der Treffer zaehlt
+68	M	check	eine Untergrenze, die einspringt, macht den Messausfall unsichtbar
+69	B	-	die naheliegende Fassung einer Behebung nimmt den Fehler mit
+70	M	check	ein Pruefer, der die falsche GROESSE liest
+71	M	check	eine Mutation, die zwei Dinge zugleich kaputtmacht
+72	S	platzierung	Ring-3-Code gehoert in .user_text
+73	S	arithmetik	wrapping_sub auf einer Zeitdifferenz
+74	W	-	echo | grep -q unter pipefail meldet nicht gefunden
+75	B	-	eine Ablage je ROLLE ist eine zu wenig
+76	S	grundmenge	ein Wecker, der seinen Grund nicht nennt (Z24)
+77	M	check	wer zwei Groessen zugleich aendert, darf nicht der bequemeren die Schuld geben
+78	M	check	ein Pruefer, der ein einzelnes BYTE liest
+79	M	check	WER MISST SETZT DIE MARKE
+80	S	ableitung	eine Zahl, die ein Mensch parallel zur Wahrheit fuehrt
+81	W	-	Cargo mischt .cargo/config.toml aus jedem Vorfahrenverzeichnis
+82	W	-	cargo build laeuft durch ist kein Beleg
+83	M	check	Null ist ein Befund, kein Messwert
+84	S	arithmetik	eine Seite, die nichts tut, macht eine Zusicherung unerfuellbar (C9e)
+85	S	absage	None aus einem Allokator heisst kein Platz, auch wenn geht nicht
+86	M	check	ein Fehlschlag VOR dem if let faerbt die Felder dahinter null
+87	W	-	arch-neutraler Code ruft eine HAL-Funktion, die es nur auf x86 gibt
+88	M	check	ein Kriterium, das die geprueft Sache nicht erreichen KANN
+89	M	check	eine Skalierungskurve ohne Lebendigkeitsbeweis zaehlt Leichen
+90	M	check	eine Marke, die der geprueft Pfad in seiner ersten Zeile loescht
+91	B	-	ein Praedikat, das die Groesse nur STELLVERTRETEND liest
+92	S	ableitung	ein abgeleiteter Nenner neben handgefuehrten Summanden
+93	S	lock	der Guard eines while-let lebt ueber den Rumpf, lock maskiert IRQs
+94	S	bitfeld	eine Statusmarke im obersten Bit kollidiert mit dem Zahlenfeld
+95	S	wirkung	wer einen tiefen Pfad verschiebt, verschiebt wo laufe ich
+96	S	linear	ein neuer Abweispfad erbt die Aufraeumpflicht des alten nicht
+97	M	check	ein Negativtest kann eine Eigenschaft absichern, die niemand benutzt
+98	S	recht	Lesen und Schreiben sind nicht dieselbe Autoritaet
+99	W	-	zwei Suiten, die denselben Schluessel verschieden aufsetzen
+100	W	-	wer nach ERREICHBARKEIT priorisiert statt nach VORGESCHICHTE

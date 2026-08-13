@@ -91,6 +91,14 @@ Damit später niemand denkt, es sei vergessen worden:
 * **Allzweck-Konstrukte** (Funktionen, Schleifen, Arithmetik über Feldern). Sobald Gabbro rechnen
   kann, kehrt die Spezifikationslast zurück, der es ausweicht.
 * **Nebenläufigkeit.** Auch SPARK kann „der Aufrufer hält den Spinlock" nicht ausdrücken.
+* **V−1: `check` als Rust-MAKROBIBLIOTHEK, ohne Sprache** — der billigste Test des ganzen
+  Vollsprachen-Zweigs. Rückwirkend gegen die 33 M-Fallen halten, jede mit Mutation. **Fängt sie
+  weniger als 5, fällt die einzige Begründung, die Gabbro allein gehört.** Steht vor jeder
+  Übersetzerarbeit — und ist auch dann nützlich, wenn Gabbro nie entsteht.
+* **Für jede Stufe die Gegenrechnung führen: was können Rust + Verus + Loom heute schon?** `Parked`
+  hat Rust gefunden, die abgeschwächte Ordnung fand Loom, Ressourcen-Invarianten kann Verus über
+  lineare Ghost-Permissions. Nur der Rest rechtfertigt eine Sprache. Ohne diese Rechnung je Stufe
+  ist `VOLLDECKUNG.md` ein Plan gegen einen Gegner, den niemand gemessen hat.
 * **Die Deckungsquote ist gemessen (2026-08-13): ≤ 9 % von 66 651 Zeilen Caprock**, hart 4,6 %,
   bei Zuschnitt (a) noch 3,0 %. Damit hat der Kernel-Zweig erstmals eine Zahl — und sie sagt Nein
   zum Wort *Rewrite*. **Offen ist die Umkehrung, die die nützlichere Frage ist:** lohnt ein
