@@ -323,6 +323,50 @@ Es gibt einen Entwurf, der beides trägt, und er hängt am Zugeständnis „die 
 ATS-/Low\*-Klasse von Aufwand. Und `Parked` taugt **nicht** als Argument dafür — es zählt dagegen,
 s. [`HISTORIE.md`](HISTORIE.md).
 
+### Die Deckungsquote — gemessen, 2026-08-13
+
+Bisher stand hier eine **Liste** dessen, was fehlt. Eine Liste hat keine Grössenordnung. Gemessen
+über `kernel/src`, `crates/*/src` und `programs` (Rust, ohne Leerzeilen): **66 651 Zeilen.**
+
+| | Zeilen | Anteil |
+|---|---|---|
+| **`format` — hart** (`caprock-part` 462, `caprock-fat` 652, `checkpoint.rs` 862) | 1 976 | 3,0 % |
+| **`table` — hart** (`space.rs`, Cap-Space + CDT) | 1 105 | 1,7 % |
+| **zusammen, hart** | **3 081** | **4,6 %** |
+| grosszügig dazu: ELF-/Manifestteil des Laders, DTB, ABI, ACPI-`dmar`, virtio-Deskriptoren | ~2 900 | |
+| **Obergrenze, grosszügig gerechnet** | **~6 000** | **≤ 9 %** |
+
+**Und die `table`-Hälfte zählt nur im Zuschnitt (c)**, der nicht entschieden ist. Bei (a) sinkt die
+harte Quote auf **3,0 %**.
+
+Was strukturell **ausserhalb** der sieben Konstrukte liegt, im selben Baum gezählt:
+
+| | Fundstellen |
+|---|---|
+| `Ordering::` (Atomics) | **2 231** |
+| `unsafe {` | 482 |
+| Rohzeiger `*const`/`*mut` | 403 |
+| Sperrnahmen `.lock()`/`.read()`/`.write()` | 406 |
+| `asm!`/`naked_asm!`/`global_asm!` | 161 |
+| `read_volatile`/`write_volatile` | 125 |
+
+**Die 2 231 Atomics sind die Antwort auf die Frage**, und sie decken sich mit dem, was die Liste
+unten schon als grössten Einzelposten führte: 872 davon stehen allein in `threads/mod.rs`. Eine
+Sprache, die „der Aufrufer hält den Lock" nicht ausdrücken kann, deckt den Kern des Kernels nicht —
+nicht schlecht, sondern **gar nicht**.
+
+> **Ein Rewrite ist damit nicht knapp verfehlt, sondern um eine Grössenordnung entfernt.** Für das,
+> wofür Gabbro entworfen ist, deckt es ≤ 9 % — und das ist kein Einwand gegen die Sprache, sondern
+> die Bestätigung ihres Zuschnitts. Es ist ein Einwand gegen das Wort *Rewrite*.
+
+### Und die 15,7 %, über die Gabbro gar nichts sagt
+
+`bringup.rs`, `fuzz.rs`, `selftest.rs`, `dmatests.rs` und die drei `*mark.rs`: **10 471 Zeilen,
+15,7 %** — Berichts-, Mess- und Selbsttestgerüst. **Das ist der Teil, der die Fehler gefunden hat**,
+und er ist mehr als dreimal so gross wie alles, was die sieben Konstrukte hart decken.
+
+Wer einen Rewrite erwägt, rechnet gegen die falsche Grösse, solange dieser Posten nicht danebensteht.
+
 ### Was für einen KOMPLETTEN Kernel fehlt
 
 | Was | warum es nicht nebenbei geht |

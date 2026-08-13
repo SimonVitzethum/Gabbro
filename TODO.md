@@ -91,6 +91,16 @@ Damit später niemand denkt, es sei vergessen worden:
 * **Allzweck-Konstrukte** (Funktionen, Schleifen, Arithmetik über Feldern). Sobald Gabbro rechnen
   kann, kehrt die Spezifikationslast zurück, der es ausweicht.
 * **Nebenläufigkeit.** Auch SPARK kann „der Aufrufer hält den Spinlock" nicht ausdrücken.
+* **Die Deckungsquote ist gemessen (2026-08-13): ≤ 9 % von 66 651 Zeilen Caprock**, hart 4,6 %,
+  bei Zuschnitt (a) noch 3,0 %. Damit hat der Kernel-Zweig erstmals eine Zahl — und sie sagt Nein
+  zum Wort *Rewrite*. **Offen ist die Umkehrung, die die nützlichere Frage ist:** lohnt ein
+  Übersetzer für genau diese 3 081 Zeilen? Das ist Phase −1 (Basisrate), jetzt mit einem Nenner.
+* **Die drei Fehler prüfen, die Gabbro WIRKLICH getötet hätte** — statt der Liste dessen, was
+  fehlt. Kandidaten: **D0** (lauffähig vor `bind_pd` — ein `state`-Übergang, den es nicht gäbe),
+  **S1a/S1b** (`traverse`/Arithmetik-Vorbedingung), **C9e** (5 Seiten in einen 4-Farben-Streifen —
+  eine Breitenvorbedingung). Gegenprobe zu jedem: hätte **Rust-heute oder Verus** es auch gefunden?
+  Bei D0 lautet die Antwort vermutlich ja (`Parked` hat es strukturell erledigt) — dann zählt es
+  wie `Parked` **gegen** den Zweig.
 * **Der Geltungsbereich der Beweisbarkeit steht jetzt in `DESIGN.md` als Tabelle** — offen ist die
   Gegenprobe: **ein Konstrukt suchen, dessen Zeile zu stark ist.** Die Tabelle ist neu und hat
   dieselbe Vorgeschichte wie die zwei Überschreibungen in `HISTORIE.md`.
