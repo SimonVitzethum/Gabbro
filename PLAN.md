@@ -267,14 +267,17 @@ eine Bereichsangabe, ein `device`-Block, ein `over`/`by` sind Spezifikation *und
 als Code zählt, bekommt eine glänzende Zahl ohne Aussage; wer sie als Spezifikation zählt, eine
 schlechte.
 
-> **Regel: Spezifikation ist, was ein MENSCH SCHREIBT und was der Übersetzer vor der Codeerzeugung
-> löscht.** Alles, was im erzeugten C ankommt, ist Code. **Erzeugter Geistercode ist weder — er ist
-> Ausgabe.**
+> **Regel: Spezifikation ist, was in der GABBRO-QUELLE steht und vor der Codeerzeugung gelöscht
+> wird.** Alles, was im erzeugten C ankommt, ist Code. **Was der Übersetzer ableitet, ist Ausgabe —
+> und zählt in keinem der beiden Töpfe.**
 
-> **BERICHTIGT am 2026-08-13 durch [`P0-1-REVOKE.md`](P0-1-REVOKE.md).** Die erste Fassung sagte
-> nur „keine Laufzeitwirkung". Damit hätte die erzeugte Geistertheorie, die Zuschnitt (c) braucht,
-> **in den Zähler** gezählt: **der Gold-Mechanismus hätte die Kennzahl verschlechtert, je besser er
-> wirkt.** Dieselbe Klasse wie „ein Zähler, der VERSUCHE zählt". Gefunden hat es der Papiertest.
+> **ZWEIMAL BERICHTIGT am 2026-08-13.** Fassung 1 sagte nur „keine Laufzeitwirkung" — damit hätte
+> die erzeugte Geistertheorie **in den Zähler** gezählt und **der Gold-Mechanismus die Kennzahl
+> verschlechtert, je besser er wirkt** (gefunden von [`P0-1-REVOKE.md`](P0-1-REVOKE.md)).
+> Fassung 2 sagte „was ein **Mensch** schreibt" — das lässt in einem Projekt mit KI-Koautor eine
+> Lücke und, schlimmer, **einen Umweg: eine Makroschicht Quelltext erzeugen zu lassen, der dann als
+> geschrieben zählt.** Die belastbare Fassung ist **Quelle gegen Abgeleitetes** — sie ist am
+> Artefakt entscheidbar und braucht keine Aussage darüber, wer getippt hat.
 
 Sie ist die einzige, die sich nicht durch Umschichten von Text gewinnen lässt:
 

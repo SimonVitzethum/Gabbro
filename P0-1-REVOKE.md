@@ -59,9 +59,19 @@ ihn verbrauchen. Wer ihn nicht verbraucht, übersetzt nicht — M2, ohne Sonderr
 
 | Pflicht | wie sie fällt |
 |---|---|
-| **T** | die Menge ist durch `NSLOTS` beschränkt (M1) und schrumpft je Runde um mindestens eins, weil ein linearer Zeuge verbraucht wird. **Kein Variant, kein Lemma** |
-| **N** | die Schleife endet, wenn die Menge leer ist — die Nachbedingung **ist** die Abbruchbedingung, nicht eine zusätzliche Aussage |
+| **T** | die Menge ist durch `NSLOTS` beschränkt (M1) und schrumpft je Runde um mindestens eins, weil ein linearer Zeuge verbraucht wird. **Kein Variant je Programm — das Lemma fällt EINMAL im Erzeuger an** |
+| **N** | die Schleife endet, wenn die Menge leer ist. **Aber**: „Zeugenmenge leer ⇒ keine Abkömmlinge" ist eine Entsprechung, die unter **jeder** Mutation halten muss — **das IST die Schleifeninvariante**, verschoben in die erzeugte Geistertheorie |
 | **I** | `delete_leaf` ist eine **erzeugte** Operation des `table`-Konstrukts (Zuschnitt (c)). Der Erzeuger zeigt **einmal**, dass das Aushängen eines Blattes `child_points_back` und Kettenendlichkeit erhält — über der Deklaration, nicht je Aufrufstelle |
+
+> **BERICHTIGUNG, und sie betrifft die Formulierung aller drei Zeilen.** Die erste Fassung schrieb
+> bei **T** „kein Variant, kein Lemma" und bei **I** korrekt „der Erzeuger zeigt einmal" —
+> **dieselbe Aussage, eine Formulierung ehrlich, die andere nicht.** Es ist **Amortisierung, keine
+> Beseitigung**: je Programm null, **je Konstrukt nicht null**. Als absolute Aussage wäre „kein
+> Lemma" Überschreibung Nr. 4 gewesen, in genau der Form, die `HISTORIE.md` führt.
+>
+> **Die Folge ist architektonisch:** die **Geistertheorie-Schablone wird die vertrauenskritischste
+> Komponente der Sprache** — dort lebt die strukturelle Induktion, und geprüft wird sie vom
+> **unverifizierten** Gabbro-Kern. Sie steht damit neben der Axiomschicht, nicht darunter.
 
 **Und ein vierter Posten fällt weg, der im echten Code Zeilen kostet:** der Zweig „Teilbaum ist
 nicht baumförmig" wird **unerreichbar**. `subtree(s)` ist nur definiert, wenn die Invariante gilt;
@@ -70,14 +80,61 @@ alles Folgen davon, dass die Invariante im Rust-Code **nicht** getragen wird.
 
 ---
 
+## Das Loch in Versuch 3: der Zeuge trägt ZUGEHÖRIGKEIT, `delete_leaf` braucht BLATTHEIT
+
+`it : linear Member(subtree(s))` sagt **„war im Teilbaum"**. Löschen darf man einen Slot aber nur,
+wenn er **jetzt** ein Blatt ist — sonst verwaisen seine Kinder. Und Blattheit **ändert sich mit
+jeder Löschung**.
+
+**Ein linearer Zeuge, der beim Aufbau der Geistertheorie entsteht, kann eine mutierende Eigenschaft
+nicht in die Zukunft tragen.** Der Rust-Code hat sein `descend_to_leaf` **in** der Schleife aus
+genau diesem Grund; die Skizze oben hat es stillschweigend fallen lassen. `{ delete_leaf(it); }`
+typisiert so **nicht**.
+
+---
+
+## P0.1b — der vierte Versuch: woher kommt die Ordnung, und wer erhält sie?
+
+**Zwei Auswege, und nur einer trägt.**
+
+### (B) `delete_leaf` bekommt eine Blattheits-Vorbedingung — VERWORFEN
+
+Dann braucht es einen **zweiten** Zeugen, und ihn herzustellen ist der Abstieg — also eine
+Traversierung **im Rumpf**, über dieselbe mutierende Struktur. **Das Verschränkungsproblem aus
+Versuch 1 kehrt eine Ebene tiefer wieder.**
+
+### (A) Die Zeugen kommen in POST-ORDER — trägt, mit einer scharfen Bedingung
+
+In der Nachordnung eines Waldes gilt: **wenn der `k`-te Zeuge an der Reihe ist, sind alle seine
+Abkömmlinge die `k-1` vorherigen — also schon verbraucht.** Er *ist* in diesem Augenblick ein Blatt.
+
+| | |
+|---|---|
+| **Bedingung** | der Rumpf darf die Menge **ausschliesslich durch Verbrauch** verändern. Jede andere Schreibung auf `slots` zerstört die Ordnung. `touches` muss das ausdrücken können — heute kann es nur „schreibt `slots`", was zu grob ist |
+| **Kosten zur Laufzeit** | **keine zusätzlichen.** Die Nachordnung ist Geist; das Erzeugnis steigt weiterhin je Runde zum linken Blatt ab — **exakt der vorhandene Rust-Code.** `by consuming` senkt sich also auf `descend_to_leaf` + `delete_leaf` ab |
+| **Kosten im Beweis** | das Lemma *„in Nachordnung ist das `k`-te Element ein Blatt, nachdem die ersten `k-1` entfernt wurden"* — **strukturelle Induktion über den Baum** |
+
+> **Damit steht die ursprüngliche Vorhersage wieder da, nur an einer anderen Stelle.** `PLAN.md`
+> sagte: die Korrektheitsbedingung von `revoke` ist strukturell, also Induktion. **Sie ist nicht
+> verschwunden — sie ist in die Geistertheorie-Schablone gewandert**, wo sie einmal statt je
+> Programm anfällt. Das ist der (c)-Handel, und er ist real; er ist nur kein Zauber.
+
+- [ ] **`touches` ist zu grob.** Es braucht eine Form für „verändert die Menge **nur** durch
+      Verbrauch" — sonst hängt die Ordnung an einer Zusage statt an einer Bedingung. **Das ist ein
+      Syntaxposten, der aus diesem Test stammt und vor der Kanonisierung entschieden sein muss.**
+
+---
+
 ## Das Ergebnis, in drei Sätzen
 
 1. **`revoke` ist ausdrückbar — aber nicht in den Konstrukten, die `SYNTAX.md` heute nennt.**
-   Es fehlt genau eines: **die verbrauchende Traversierung**.
-2. **Mit ihr sind T, N und I durch Konstruktion erledigt.** Kein Variant, kein Lemma, kein
-   Schleifeninvariant von Hand — für **diesen** Rumpf.
-3. **Sie ist nicht gratis:** `over subtree(s)` muss lineare Zugehörigkeitszeugen liefern. Die kommen
-   aus einer **erzeugten Geistertheorie** je deklarierter Struktur.
+   Es fehlt genau eines: **die verbrauchende Traversierung**, und sie braucht **Post-Ordnung** plus
+   eine `touches`-Form, die es noch nicht gibt.
+2. **Mit ihr fallen T, N und I je PROGRAMM auf null** — nicht auf null überhaupt. Sie fallen
+   **einmal im Erzeuger** an, als strukturelle Induktion in der Geistertheorie-Schablone.
+3. **Der Preis ist Vertrauen, nicht Laufzeit:** zur Laufzeit senkt sich das Konstrukt auf den
+   vorhandenen Rust-Algorithmus ab. Aber die **Schablone wird die vertrauenskritischste Komponente
+   der Sprache**, geprüft vom unverifizierten Kern.
 
 ---
 

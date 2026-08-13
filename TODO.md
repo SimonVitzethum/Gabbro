@@ -11,8 +11,15 @@
       [`P0-1-REVOKE.md`](P0-1-REVOKE.md): **bedingt ja**, und die Bedingung ist ein fehlendes
       Konstrukt (`by consuming`, verbrauchende Traversierung). Nebenbefund wichtiger als das
       Ergebnis: **die Zählregel war kaputt.**
-- [ ] **`by consuming` in [`SYNTAX.md`](SYNTAX.md) aufnehmen** — samt der Geistertheorie, die es
-      verlangt, und der offenen Frage, welche `over`-Mengen lineare Zeugen liefern können.
+- [x] **P0.1b — Zeugenordnung: GEFAHREN.** Der Zeuge trägt Zugehörigkeit, `delete_leaf` braucht
+      **Blattheit**, und die ist zeitabhängig. Trägt nur über **Post-Ordnung**, und die verlangt,
+      dass der Rumpf die Menge **ausschliesslich durch Verbrauch** verändert.
+- [ ] **`touches` ist zu grob** — es braucht eine Form für „verändert die Menge nur durch
+      Verbrauch". Ohne sie hängt die Ordnung an einer Zusage statt an einer Bedingung.
+- [ ] **`by consuming` in [`SYNTAX.md`](SYNTAX.md) aufnehmen — ERST NACH P0.2 UND P0.3.**
+      Nach eigener Regel: ein Konstrukt aus einem Testtag verträgt einen zweiten, bevor es Grammatik
+      wird. Die Selbstbindung „kein Entwurfstext vor P0.2/P0.3" galt auch für diesen Posten und
+      hätte ihn beinahe vorgezogen.
 - [ ] **P0.4 (NEU): derselbe Papiertest am IPC-Fastpath.** `revoke` fällt heraus, weil seine
       Nachbedingung eine Aussage über **Zugehörigkeit** ist — und Zugehörigkeit trägt ein linearer
       Zeuge. Der Fastpath hat eine Nachbedingung über **Werten**. **Er entscheidet die

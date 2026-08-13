@@ -57,7 +57,9 @@ schwächer formuliert, ohne schwächer zu **werden**.
 | **0,8 : 1 als Vorhersage** | rechnete mit 10 % des Kernels zu 5 : 1 | **unvereinbar mit dem Ziel 0,5 : 1**, das der Boden ist. 0,5 : 1 heisst **kein handgeschriebener Beweis** — schon 5 % zu 5 : 1 wären +0,25 |
 
 | **B2: „der Löser bekommt die Invariante geschenkt"** | stand als Bedingung für 0,5 : 1 | **Überschreibung Nr. 3.** Geschenkt ist die **Sicherheitshülle**; funktionale Schleifeninvarianten schreibt weiterhin jemand hin. Wahr für die Hülle, stillschweigend auf Gold erweitert — **exakt die Form, die diese Datei als Muster führt**, und diesmal trug sie das Kennzahlziel |
-| **Die Zählregel** | „Spezifikation ist, was keine Laufzeitwirkung hat" | erzeugter Geistercode hat keine — er hätte **in den Zähler** gezählt, und damit hätte der Gold-Mechanismus die Kennzahl verschlechtert, je besser er wirkt. Richtig: **was ein MENSCH schreibt** und gelöscht wird |
+| **„kein Variant, kein Lemma"** | stand im Ergebnis von P0.1 für Pflicht **T**, während dieselbe Sache bei **I** korrekt als „der Erzeuger zeigt einmal" formuliert war | **wäre Überschreibung Nr. 4 gewesen — abgefangen, bevor sie sich fortpflanzte.** Es ist **Amortisierung, keine Beseitigung**: je Programm null, je Konstrukt nicht null. „Fällt heraus" heisst überall „fällt einmal im Erzeuger an" |
+| **Die Zählregel, zweite Fassung** | „was ein **Mensch** schreibt" | lässt bei einem KI-Koautor eine Lücke — und **einen Umweg: eine Makroschicht Quelltext erzeugen zu lassen, der dann als geschrieben zählt.** Belastbar ist **Quelle gegen Abgeleitetes**: am Artefakt entscheidbar, ohne Aussage darüber, wer getippt hat |
+| **Die Zählregel, erste Fassung** | „Spezifikation ist, was keine Laufzeitwirkung hat" | erzeugter Geistercode hat keine — er hätte **in den Zähler** gezählt, und damit hätte der Gold-Mechanismus die Kennzahl verschlechtert, je besser er wirkt. Richtig: **was ein MENSCH schreibt** und gelöscht wird |
 
 ---
 
