@@ -57,6 +57,17 @@
 
 ---
 
+## Aus der Umkehrung der Frage ([`MINIMALSPEZIFIKATION.md`](MINIMALSPEZIFIKATION.md))
+
+- [ ] **Die achtzehn Umwandlungen sind Behauptungen über Absenkbarkeit, keine Belege.** Jede braucht
+      ihre C-Absenkung hingeschrieben — vor der Kanonisierung in [`SYNTAX.md`](SYNTAX.md).
+- [ ] **`retry` mit `bounded`/`progress`/`on_exceeded` ist der Ersatz für „unbegrenztes Warten".**
+      Offen: reicht eine Zahl, oder braucht es zwei Schranken (Versuche **und** Ticks)?
+- [ ] **Nr. 14 verlangt eine `publishes`-Klausel an 2 231 Stellen.** Ob das trägt, entscheidet keine
+      Papierübung — das ist der grösste Einzelposten der ganzen Umstellung.
+- [ ] **`breaking I { … }` legalisiert eine Invariantenverletzung.** Der Preis ist Sichtbarkeit
+      statt Verstecken; ob das reicht, ist unentschieden.
+
 ## Syntax — offene Entscheidungen (Einzelheiten in [`SYNTAX.md`](SYNTAX.md))
 
 - [ ] **Variable Längen in `format`** — die harten 20 %, keine Schreibweise vorhanden.
