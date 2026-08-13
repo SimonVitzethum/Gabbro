@@ -288,7 +288,21 @@ Sie ist die einzige, die sich nicht durch Umschichten von Text gewinnen lässt:
 | `linear ghost`-Werte, Sperrbelege | gewöhnliche Funktionsrümpfe |
 | `touches`, Verfeinerungsannotationen | Bereichs**prüfungen**, die stehen bleiben |
 
-**Zwei Wege, sie trotzdem zu schönen** — beide gehören in das Protokoll:
+> **DIE GRÖSSTE LÜCKE DER VORSCHRIFT, gefunden am 2026-08-13 durch
+> [`P0-4-GEGENPROBE.md`](P0-4-GEGENPROBE.md):** eine Kennzahl aus **ungeprüften Zusagen belohnt
+> falsche Zusagen — sie sind kurz.** Belegt an einem `ensures`, das nicht bloss unbewiesen, sondern
+> **falsch** ist und trotzdem im Zähler stand; an einer benannten Eigenschaft, die an **keine**
+> Nachbedingung gebunden war; und an einem `effects`, dem eine Sperre fehlte.
+>
+> **Ohne Gültigkeitsprüfung ist jede gemessene Zahl eine Untergrenze mit BENANNTER
+> Fehlerrichtung.** Drei Regeln, ohne die nicht gemessen wird: (1) jedes gezählte `ensures` wird
+> gegen den echten Code gehalten; (2) eine benannte, aber an keine Nachbedingung gebundene
+> Eigenschaft zählt **nicht**; (3) `effects` wird gegen die tatsächlichen Zugriffe geprüft.
+>
+> **Und `effects` fail-open ist dasselbe Loch von der anderen Seite:** eine weggelassene Wirkung
+> ist **zugleich die stärkste Zusage und die kürzeste Spezifikation**.
+
+**Zwei weitere Wege, sie zu schönen** — beide gehören ebenfalls in das Protokoll:
 * **Prüfen statt beweisen.** Wer eine Eigenschaft zur Laufzeit prüft, statt sie zu beweisen,
   verschiebt Zeilen von oben nach unten. Das ist kein Betrug — es ist ein **anderes Programm**,
   langsamer, und genau das wird ausgeliefert. Die Zahl bleibt ehrlich, wenn die Laufzeitmessung
@@ -536,6 +550,12 @@ Typprüfer über einer minimalen Sprache. Noch kein C.
 
 > **Tor:** S1a und S1b sind **nicht formulierbar**, und zwar mit **0 Zeilen** Annotation. Braucht es
 > welche, ist Gabbro an dieser Stelle nur ein umständlicheres Verus.
+>
+> **BERICHTIGT 2026-08-13:** „0 Zeilen" ist keine Entscheidbarkeits-, sondern eine **Heuristikfrage**.
+> **M1 heisst „Bereichstyp" und ist ein Löser** — nachgeprüft an `caprock-sched/src/lib.rs:1996`:
+> `31 - bitmap.leading_zeros()` braucht flusssensitive Folgerung, und `self.queues[p]` eine Zeile
+> darunter zusätzlich die **Datenstruktur-Invariante**. Das Tor bleibt, aber es misst die Stärke
+> einer Folgerung, nicht die Form eines Typs.
 
 Zusätzlich hier zu zeigen, weil es der einzige Mechanismus ohne vorhandenes Werkzeug ist:
 
