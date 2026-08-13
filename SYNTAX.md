@@ -300,7 +300,7 @@ daraus, nicht aus Sonderregeln:**
 raw fn phys_write(p: Pa, w: u64) requires &BootPhase effects { writes phys };
 fn boot_end(t: BootPhase) effects { drops code<boot> };
 
-prim fn switch(from: ptr<normal,rw> Context, to: ptr<normal,r> Context) -> never;
+prim fn switch_to(from: ptr<normal,rw> Context, to: ptr<normal,r> Context) -> never;
 prim fn resume(k: ptr<normal,r> Context) -> never;   -- iretq / eret
 divergent fn idle_loop() effects { diverges };
 
@@ -321,6 +321,21 @@ geliehenen `BootPhase` aufrufbar.
 Umwandlung · `void*` · Zeigerarithmetik ohne Grundlage · Auffangzweig (`_ =>`) · Ausnahmen ·
 Vererbung · Reflexion · GC · Gleitkomma im Kern · Zuweisung als Ausdruck · Vorwärtsdeklaration ·
 Selbst-Hosting.
+
+---
+
+## Der Wächter — `./pruefe-syntax.sh`
+
+Er hält **alle** Beispiele in `SPRACHE.md`, `SYNTAX.md`, `PLAN.md` und `README.md` gegen zwei Listen:
+die absichtlich fehlenden Formen und die **alte deutsche Schlüsselwortsprache**. Zwei Oberflächen
+sind ein Riss, und der entsteht beim nächsten Beispiel von selbst.
+
+**Sprechprobe in beide Richtungen:** vier Gifte müssen fallen, ein sauberer Block muss durchkommen.
+
+> **Beim ersten Lauf hat er zwei echte Fehler gefunden** — ein `erhaelt` aus der Zeit vor E1, das
+> das Gegenlesen übersehen hatte, und ein Sprachprimitiv, das `switch` hiess, also **wie ein
+> ausdrücklich verbotenes Wort**. Dazu einen Fehlalarm auf einem Kommentar, der die verbotene Form
+> erklärt; seither streicht der Wächter Kommentare, bevor er prüft.
 
 ---
 

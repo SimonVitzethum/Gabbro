@@ -221,11 +221,11 @@ seL4 zahlt an **jeder Naht** zwischen Isabelle, Haskell und C. Gabbro hat zwei E
 Naht:
 
 ```gabbro
-spec fn cdt_wohlgeformt(c: CapSpace) -> bool      -- mathematisch, nicht ausfuehrbar,
-    = forall s: c.eltern_kette(s) endet in Wurzel  -- keine Ressourcengrenzen
+spec fn cdt_wellformed(c: CapSpace) -> bool      -- mathematisch, nicht ausfuehrbar,
+    = forall s: c.parent_chain(s) ends_at Root;    -- keine Ressourcengrenzen
 
 impl fn delete_leaf(c: &mut CapSpace, s: SlotIdx)
-    erhaelt cdt_wohlgeformt                        -- die Verfeinerungspflicht wird ERZEUGT
+    maintains cdt_wellformed                       -- die Verfeinerungspflicht wird ERZEUGT
 ```
 
 **Das ist die eigentliche Antwort auf „macht seL4-Beweise leicht":** nicht, dass Gabbro beweist,
