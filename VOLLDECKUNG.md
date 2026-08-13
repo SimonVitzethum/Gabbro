@@ -182,12 +182,102 @@ Das Konstrukt mit den 33 getöteten Fallen braucht **kein eigenes Schlüsselwort
 **Damit bleibt die These dieses Ordners bestehen und wird kleiner:** das Wertvollste ist nicht ein
 Prüf-Schlüsselwort, sondern dass **Prüfzusagen dieselben linearen Werte sind wie Ressourcen.**
 
+---
+
+## 3c. Wie ein GOLD-Beweis billig wird — der Kern der These
+
+Gold heisst funktionale Korrektheit, und **Gabbro beweist sie nicht.** Die Frage ist, wo seL4s
+**20 : 1** hingehen und welchen Teil davon eine Sprache wegnehmen kann. Drei Posten, und nur der
+erste ist unantastbar:
+
+| Posten | wer ihn trägt | nimmt eine Sprache ihn weg? |
+|---|---|---|
+| **Die abstrakte Spezifikation** — *was* soll der Kernel tun | der Mensch | **nein, nie.** Das ist die Aussage selbst |
+| **Invariantenerhaltung** — jede Mutation erhält jede Invariante | der Beweis, und das ist der grösste Posten | **ja** |
+| **Verfeinerung** — abstrakt → ausführbar → C, über drei Sprachen (Isabelle/Haskell/C) mit einer Naht an jeder Grenze | der Beweis | **grösstenteils** |
+
+### M-Gold-1 — Invarianten an der Struktur, Mutationen erzeugt
+
+Der Invariantenposten ist gross, **weil jede handgeschriebene Mutation gegen jede Invariante
+gezeigt werden muss.** Wird die Mutation aus Struktur + Invariante **erzeugt**, fällt der Beweis
+**einmal je Operation im Erzeuger** an statt einmal je Aufrufstelle.
+
+**Das ist der Zuschnitt (c) — und er hat damit erstmals einen Grund jenseits der Ergonomie.**
+Die alte Notiz „der Aufwand steht in keiner Phase" gilt weiter; neu ist, dass die Alternative
+(handgeschriebene Mutation) den teuersten Posten des Gold-Beweises **behält**.
+
+### M-Gold-2 — syntaxgesteuerte, NICHT optimierende Absenkung
+
+Die Verfeinerung Quelle → C ist billig, wenn die Absenkung **flach und strukturerhaltend** ist.
+Das ist Low\*s Anordnung, und es ist der Grund, warum „nicht optimierend" hier eine **Bedingung**
+ist und keine Einschränkung.
+
+**Der Preis steht daneben:** Optimierung findet danach statt, im C-Übersetzer, und die ist dann
+**nicht** Teil der Zusage. Wer Leistung *und* eine flache Verfeinerung will, verschiebt das
+Vertrauen zu LLVM — dieselbe Grenze, an der seL4 die Binärverifikation ansetzt.
+
+### M-Gold-3 — Spezifikation und Implementierung in DERSELBEN Sprache
+
+seL4 zahlt an **jeder Naht** zwischen Isabelle, Haskell und C. Gabbro hat zwei Ebenen und keine
+Naht:
+
+```gabbro
+spec fn cdt_wohlgeformt(c: CapSpace) -> bool      -- mathematisch, nicht ausfuehrbar,
+    = forall s: c.eltern_kette(s) endet in Wurzel  -- keine Ressourcengrenzen
+
+impl fn delete_leaf(c: &mut CapSpace, s: SlotIdx)
+    erhaelt cdt_wohlgeformt                        -- die Verfeinerungspflicht wird ERZEUGT
+```
+
+**Das ist die eigentliche Antwort auf „macht seL4-Beweise leicht":** nicht, dass Gabbro beweist,
+sondern dass es die **drei Sprachen zu einer macht** und die Verfeinerungspflicht selbst aufstellt.
+
+### Die Vorhersage — und sie korrigiert das eigene Ziel nach unten
+
+**≤ 1 : 1 war für `format` gesetzt**, wo der Beschreiber die vollständige Spezifikation *ist*.
+**Für einen Kernel ist der Boden die abstrakte Spezifikation**, und die nimmt niemand weg.
+
+> **Ehrliche Vorhersage: 20 : 1 → etwa 5 : 1, nicht 1 : 1.**
+> Und **5 : 1 ist genau die Auslöseschwelle**, die im Protokoll 0b für den schlechtesten Fall
+> steht — sie war dort geraten und hat jetzt eine Herleitung.
+
+- [ ] **Verfehlt Gabbro auch 5 : 1 deutlich, ist die Gold-These widerlegt**, und übrig bleiben
+      Zusage 1 (Speichersicherheit) und 2 (Rennfreiheit). Das wäre **immer noch** mehr als heutiges
+      Rust — aber es wäre nicht *„macht seL4-Beweise leicht"*.
+
+---
+
+## 3d. Rennfreiheit — jetzt einzuplanen, sonst nie
+
+**Datenrennen fallen aus M2 + M3 heraus** (Eigentum und Zugriffsrechte). Das ist der gelöste Teil,
+und Rust kann ihn heute.
+
+**Protokollrennen nicht — und die sind die teuren.** Der Beleg steht im eigenen Register:
+
+> **D0 war KEIN Datenrennen.** `spawn()` reihte ein, `bind_pd()` kam danach; jeder Zugriff war
+> ordentlich synchronisiert, kein Rust-`unsafe`, kein fehlender Atomic. Der Fehler war, dass ein
+> Thread **erreichbar** wurde, bevor er Autorität hatte. Rate **0,018 %**, zehn Tage Suche, und
+> **jeder** Datenrennen-Prüfer der Welt hätte geschwiegen.
+
+| Klasse | Beispiel aus dem Register | fällt aus |
+|---|---|---|
+| **Datenrennen** | ungeschützter gemeinsamer Zugriff | M2 + M3 — gelöst, auch in Rust |
+| **Sichtbarkeit vor Fertigstellung** | **D0** (lauffähig vor `bind_pd`) | **M2**, wenn die Phase ein **linearer Wert** ist: `Parked` → `admit`. Genau so wurde D0 auch tatsächlich behoben |
+| **Verlorenes Wecken** | **Z24** (ein Bit für vier Gründe) | **M2**: der Wecker verbraucht **genau seinen** Grund; eingereiht wird nur bei leerer Menge |
+| **Veröffentlichung ohne Nutzlast** | Loom sah die Nutzlast nicht (Falle 33) | **M2**: `release` gibt einen Geisterbeleg ab, `acquire` nimmt ihn |
+| **Fortschritt / Aushungern** | **D8** (erschöpfter Thread) | **gar nicht.** Kein Mechanismus adressiert Lebendigkeit — das gehört ausgesprochen |
+
+**Warum es jetzt in den Entwurf muss und nicht später:** wenn Phasen und Sperrbelege lineare Werte
+sind, steht das in **jeder Signatur**, die geteilten Zustand anfasst. Nachträglich eingeführt heisst:
+jede dieser Signaturen ändert sich. Das ist dieselbe Lehre wie „ein Umbau, der einen neuen Zustand
+einführt, muss jede Stelle mitnehmen, die über Zustände urteilt" — dort waren es 61 Aufrufstellen.
+
 ### Was NICHT herausfällt — und darum ehrlich danebensteht
 
 | | |
 |---|---|
 | **Verträge** (`requires`/`ensures` über deklarierte Prädikate) | nötig für Falle 1/2 (Bedingung über Registergrenzen). Damit ist die Linie gewandert, wie `README.md` vorhergesagt hat — und **allgemeine Quantoren über Rechenausdrücke bleiben trotzdem draussen** |
-| **Der Eintritt (Assembler)** | M1–M4 sagen nichts über Registerabdrücke. Bleibt aussen, ohne Beweiser, und tötet **0** bezahlte Fallen |
+| **Der Eintritt (Assembler)** | M1–M4 sagen nichts über Registerabdrücke. **Neu seit der Zielsetzung „C + iasm": er ist Teil der AUSGABE**, also aus einer Beschreibung emittiert statt je Fundstelle geschrieben — vertrauenswürdige Fläche **eine Emissionsstelle statt 161**. Bewiesen ist er weiterhin nicht, und er tötet **0** bezahlte Fallen |
 | **Fortschritt** (Aushungern, D8) | kein Mechanismus adressiert ihn |
 
 ## 4. Was auch dann nicht besser wird — 28 %

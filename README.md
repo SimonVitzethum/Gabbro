@@ -1,23 +1,23 @@
 # Gabbro
 
-**Eine Sprache, in der jedes Konstrukt seinen Vertrag mitbringt** — Bereich, Fortschritt,
-Wirkungsraum, Vorbedingung, Zustandsübergang, Hardware-Annahme. Wer sie schreibt, hat einen Teil der
-Spezifikation schon geschrieben. Der Beweis wird danach von einem **vorhandenen** Beweiser geführt;
-Gabbro selbst beweist nichts.
+**Eine eigene Sprache, die seL4-Beweise leicht macht.** Ziel der Ausgabe ist **C + Inline-Assembler**
+— damit ist jede Zielumgebung erreichbar, ohne dass die Sprache sich an C's Ausdrucksmittel binden
+müsste. Übersetzer in **sicherem Rust** (`forbid(unsafe_code)`).
 
-**Welcher Teil — das ist die ganze Frage, und sie hat zwei verschiedene Antworten:**
+**Drei Zusagen, drei verschiedene Stärken — und die Unterscheidung ist die ganze Ehrlichkeit
+dieses Ordners:**
 
-| Für … | ist erreichbar | weil |
+| | Zusage | Status |
 |---|---|---|
-| **`format`** | **funktionale Korrektheit** — die These „billig zu beweisen" ist hier verteidigbar | der Beschreiber **ist** die vollständige Spezifikation: das Format *ist*, was der Leser tun muss |
-| **alles andere** (`table`, `traverse`, `state`, Kernelcode) | **Sicherheitshülle + deklarierte Invarianten** | Bereich, Terminierung, Rahmen, Überlauffreiheit, erlaubte Übergänge — **nicht**, dass der Rumpf das Richtige tut |
+| **1** | **Speichersicherheit** — kein Zugriff ausserhalb, kein Gebrauch nach Freigabe, kein Alias, der eine Zusicherung bricht | **Gabbro beweist es selbst**, mit seinem Prüfer — unter benannten **Hardware-Annahmen** und unter Vertrauen in Prüfer und Absenkung |
+| **2** | **Rennfreiheit** — Datenrennen **und** Protokollrennen | **später, aber JETZT einzuplanen.** Nachträglich ist es nicht einzubauen, s. [`VOLLDECKUNG.md`](VOLLDECKUNG.md) |
+| **3** | **Funktionale Korrektheit (Gold)** | **Gabbro beweist sie NICHT — es macht sie billig.** Wie, steht in [`VOLLDECKUNG.md`](VOLLDECKUNG.md) §3c und ist der Kern der These |
 
-> Der Traversierungskörper `{ if it == s { found } }` ist **Code**. Dass er das Richtige *sucht*,
-> steht in keinem Vertrag — und die Linie schliesst allgemeine Nachbedingungen ausdrücklich aus.
-> Das ist keine Lücke im Entwurf, sondern sein Preis; es gehört nur hingeschrieben.
-
-Eine Sprache für Formate, Tabellen — und, als ausgesprochenes Fernziel **mit eigenem Tor**, für
-Kernelcode. Ausgabe: **C**. Übersetzer in **sicherem Rust** (`forbid(unsafe_code)`).
+> **Zusage 1 gilt nur relativ.** „Speichersicher" heisst für einen Kernel notwendigerweise
+> *speichersicher, WENN die MMU tut, was ihr Modell sagt* — der Kernel schreibt seine eigenen
+> Seitentabellen. Deshalb ist die Annahmenmenge **Teil des Satzes**, nicht eine Fussnote:
+> das Erzeugnis trägt „**speichersicher unter A1…An**", maschinenlesbar. `assume`/`falsifier`
+> ist damit tragend und nicht Beiwerk.
 
 > **Zwei Berichtigungen stehen bewusst vor allem Weiteren**, und die zweite ist die lehrreichere:
 > „per Konstruktion **beweisbar**" war eine Überschreibung — und „Programme, deren **GOLD**-Beweis
@@ -191,28 +191,36 @@ Beschreiber.
 
 ---
 
-## Warum C — und warum das die Beweisfrage nicht beantwortet
+## Warum C + Inline-Assembler als Ziel — und wie das ein Problem auflöst
 
 * **Zwei Verbraucher ohne Umweg**: Rust bindet C über FFI, SPARK ebenso.
 * **Binärverifikation existiert als Weg**: seL4 beweist den *übersetzten* Code gegen das C.
 * **Vorhersagbarer Codegen** — geradliniger Code, keine Halde, keine versteckte Kontrolle.
 
-**Nur: „der Beweis wird von einem vorhandenen Beweiser geführt" nennt bisher drei Wege in einem
-Nebensatz, und die drei sind nicht gleich teuer.** Das war eine Drift zwischen Kopf und Rumpf —
-`TODO.md` sagt „Rust-Ausgabe erst, wenn C trägt", Ada kommt sonst nirgends vor.
+**Und der Inline-Assembler ist keine Schwäche des Ziels, sondern die Bedingung dafür, dass es
+EINES bleibt.** Der Eintrittspfad (`iretq`/`eret`, Registerabdruck) ist in C nicht ausdrückbar; ohne
+`iasm` bräuchte es eine zweite Ausgabe für genau ihn.
 
-| Weg | was er kostet |
+### Damit löst sich die Entsprechungspflicht auf, die hier vorher stand
+
+Die frühere Fassung nannte **drei** Beweiswege (Frama-C über dem C, Verus über einer Rust-Ausgabe,
+GNATprove über Ada) und handelte sich damit ein Problem ein: **zwei Ausgaben, bewiesen wird die eine,
+ausgeliefert die andere** — eine unbewiesene Entsprechung, genau die Lücke, die seL4 mit
+Binärverifikation schliesst.
+
+**Mit „Gabbro prüft selbst, Ausgabe ist C + iasm" gibt es nur EINE Ausgabe.** Der Beweis liegt auf
+der **Quelle**, das C ist Codeerzeugung. Das ist die Low\*-Anordnung, und sie ist billiger.
+
+Das Vertrauen verschwindet dabei nicht, es **wandert an eine benannte Stelle**:
+
+| | |
 |---|---|
-| **Frama-C/WP über dem erzeugten C** | der ehrlichste, weil kein zweites Erzeugnis — aber **ACSL bringt eigene Spezifikationslast mit**, und die zählt in den Zähler. Der schwerste Fall, bisher mit einem „oder" überspielt |
-| **Verus über Rust-Ausgabe** | der nächstliegende Beweiser der nahen Zukunft — aber dann gibt es **zwei Ausgaben**, bewiesen wird die eine, ausgeliefert die andere |
-| **GNATprove über Ada-Ausgabe** | steht in keinem anderen Dokument dieses Ordners und ist bis auf Weiteres **gestrichen** |
+| **Der Prüfer** | Gabbros Typprüfer ist selbst unverifiziert. „Bewiesen" heisst „bewiesen unter Vertrauen in ihn" — wie bei jedem Typsystem, und es gehört gesagt |
+| **Die Absenkung** | sie muss **syntaxgesteuert und nicht optimierend** sein, sonst ist die Entsprechung Quelle↔C wieder eine offene Frage. Das ist zugleich die Bedingung dafür, dass ein Gold-Beweis billig wird (§3c) |
+| **Der `iasm`-Anteil** | wird aus einer **Beschreibung** emittiert, nicht je Fundstelle geschrieben. Vertrauenswürdige Fläche: **eine Emissionsstelle statt 161** |
 
-> **Zwei Ausgaben erzeugen eine Entsprechungspflicht, die niemand einlöst.** Bewiesen in Rust,
-> ausgeliefert in C — dass beide Emissionen dasselbe tun, ist unbewiesen. Genau diese Lücke schliesst
-> seL4 mit Binärverifikation, und sie ist nicht gratis.
-
-- [ ] **Der Beweisweg gehört VOR die Messung von 0b entschieden**, weil er bestimmt, was im Zähler
-      steht. Die drei sind nicht unabhängig von der Kennzahl — ACSL erhöht sie unmittelbar.
+- [ ] **Ada/GNATprove ist gestrichen** — es kam einmal in einem Nebensatz vor und in keinem anderen
+      Dokument. Rust-Ausgabe ebenso: sie war nur nötig, solange Verus den Beweis führen sollte.
 
 ### Leistung ist ein Entwurfsziel, kein Nachgedanke
 
