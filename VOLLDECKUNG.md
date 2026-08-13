@@ -38,6 +38,71 @@ bezahlt hat". Jeder Eintrag ist einzeln klassifiziert in
 **Damit ist die Obergrenze für den Sprachanteil 72 %, nicht 100 %.** 28 der 100 Fallen wären auch in
 einer perfekten Sprache genauso passiert.
 
+### Die Domäne, aus echten Fundstellen
+
+| Muster | wo es in Caprock vorkommt |
+|---|---|
+| Drahtformat mit Versionskopf | Manifest, Checkpoint, Sidecar, virtio-Deskriptoren, GPT, FAT |
+| Tabelle mit Invarianten | Cap-Space + CDT, Seitentabellen, IRTE, DMAR |
+| Aufzählung mit Absage | Fehlercodes, `MANGEL_*`, `LocalReason` |
+
+„Fünfmal dasselbe Muster von Hand ist fünfmal dieselbe Falle" — **und genau dieser Satz ist
+ungezählt.** Er widerspricht der Messdisziplin, auf die sich dieser Ordner beruft.
+
+- [ ] **Die Basisrate zählen, bevor irgendetwas gebaut wird.** Wie viele Formate hat Caprock
+      wirklich? Wie oft ändern sie sich? **Wie viele Fehler dieser Klasse sind pro Jahr
+      tatsächlich entstanden** (aus `done.md` auszählbar)? Bei rund sechs stabilen Formaten ist
+      einmaliges sorgfältiges Handschreiben plus Differenz-Fuzzing gegen ein Zweitmodell
+      wahrscheinlich **billiger** als ein Übersetzer, den man baut *und wartet*.
+      **Fällt die Zählung klein aus, ist das ehrlichste Ergebnis dieses Ordners nicht
+      „EverParse trägt", sondern „die Falle ist zu selten für eine Sprache".**
+
+---
+
+### Was die BIBLIOTHEKSSCHICHT allein deckt — gemessen, 2026-08-13
+
+Bisher stand hier eine **Liste** dessen, was fehlt. Eine Liste hat keine Grössenordnung. Gemessen
+über `kernel/src`, `crates/*/src` und `programs` (Rust, ohne Leerzeilen): **66 651 Zeilen.**
+
+| | Zeilen | Anteil |
+|---|---|---|
+| **`format` — hart** (`caprock-part` 462, `caprock-fat` 652, `checkpoint.rs` 862) | 1 976 | 3,0 % |
+| **`table` — hart** (`space.rs`, Cap-Space + CDT) | 1 105 | 1,7 % |
+| **zusammen, hart** | **3 081** | **4,6 %** |
+| grosszügig dazu: ELF-/Manifestteil des Laders, DTB, ABI, ACPI-`dmar`, virtio-Deskriptoren | ~2 900 | |
+| **Obergrenze, grosszügig gerechnet** | **~6 000** | **≤ 9 %** |
+
+**Und die `table`-Hälfte zählt nur im Zuschnitt (c)**, der nicht entschieden ist. Bei (a) sinkt die
+harte Quote auf **3,0 %**.
+
+Was strukturell **ausserhalb** der sieben Konstrukte liegt, im selben Baum gezählt:
+
+| | Fundstellen |
+|---|---|
+| `Ordering::` (Atomics) | **2 231** |
+| `unsafe {` | 482 |
+| Rohzeiger `*const`/`*mut` | 403 |
+| Sperrnahmen `.lock()`/`.read()`/`.write()` | 406 |
+| `asm!`/`naked_asm!`/`global_asm!` | 161 |
+| `read_volatile`/`write_volatile` | 125 |
+
+**Die 2 231 Atomics sind die Antwort auf die Frage**, und sie decken sich mit dem, was die Liste
+unten schon als grössten Einzelposten führte: 872 davon stehen allein in `threads/mod.rs`. Eine
+Sprache, die „der Aufrufer hält den Lock" nicht ausdrücken kann, deckt den Kern des Kernels nicht —
+nicht schlecht, sondern **gar nicht**.
+
+> **Ein Rewrite ist damit nicht knapp verfehlt, sondern um eine Grössenordnung entfernt.** Für das,
+> wofür Gabbro entworfen ist, deckt es ≤ 9 % — und das ist kein Einwand gegen die Sprache, sondern
+> die Bestätigung ihres Zuschnitts. Es ist ein Einwand gegen das Wort *Rewrite*.
+
+### Und die 15,7 %, über die Gabbro gar nichts sagt
+
+`bringup.rs`, `fuzz.rs`, `selftest.rs`, `dmatests.rs` und die drei `*mark.rs`: **10 471 Zeilen,
+15,7 %** — Berichts-, Mess- und Selbsttestgerüst. **Das ist der Teil, der die Fehler gefunden hat**,
+und er ist mehr als dreimal so gross wie alles, was die sieben Konstrukte hart decken.
+
+Wer einen Rewrite erwägt, rechnet gegen die falsche Grösse, solange dieser Posten nicht danebensteht.
+
 ### Der Befund, der den Plan umstellt
 
 Aufgeschlüsselt nach Konstrukt sieht die Verteilung so aus:
@@ -168,6 +233,58 @@ ohne Grundlage, `goto`, Auffangzweige, `union` als Umdeutung (das kann M3), Prä
 | `format` / `table` | Bibliothek | Deklarationen über M1/M3/D2 |
 | **`check`** | **M2** | **s. u. — die schönste Ableitung** |
 
+### Die vier alten Entwurfsregeln — sie sind jetzt ABLEITUNGEN, keine Regeln
+
+Regel 1 ist **M4**, Regel 2 ist **M1 + M4**, Regel 3 ist **D2**, Regel 4 ist **D1 + D2**. Sie
+stehen hier weiter, weil ihre **Fundstellen** die Evidenz sind — jede ist ein bezahlter Fehler.
+
+Jede ist als Antwort auf einen bezahlten Fehler formuliert. Die Konstrukte selbst stehen in
+[`DESIGN.md`](DESIGN.md); hier stehen die Regeln und ihre Fundstellen.
+
+### 1. Total per Konstruktion — und „endlich" ist das SCHWÄCHSTE Versprechen
+
+Es gibt **keine unbegrenzte Schleife**, sondern nur Traversierungen mit `over`/`by`/`touches`.
+
+> *Fundstelle:* `migration_candidate` läuft eine Kette `while i != NIL` **ohne Schrittgrenze**,
+> während der Prüfer über derselben Kette eine führt. Unter dem Kern-Lock ist ein Zyklus dort ein
+> stehender Kern.
+
+Terminierung allein kauft wenig: eine Schleife mit Schrittgrenze **terminiert** und kann trotzdem
+ausserhalb der Tabelle indizieren — genau das ist **S1a**. Die Schrittgrenze aus B-5.5 schützt gegen
+**Zyklen**, nicht gegen einen Index **ausserhalb**.
+
+### 2. Keine Zeiger — nur Versätze, jeder gegen eine Länge im Geltungsbereich
+
+Ein Versatz ohne die Länge, gegen die er gilt, ist nicht schreibbar. Die Bereichsprüfung entsteht
+nicht durch Sorgfalt, sondern weil es keine andere Formulierung gibt.
+
+> *Fundstelle:* `audit_cdt` prüft `parent` gegen `nslots`, liest dann aber `first_child` und die
+> Geschwisterkette **ungeprüft**. Mit `panic = "abort"` reisst der Prüfer den Knoten mit — bei
+> genau der Anomalie, die er melden soll.
+
+### 3. Abweisen, nie deuten
+
+Eine unbekannte Version, ein gesetztes reserviertes Feld, eine krumme Länge: **benannte Absage**,
+je Grund ein eigener Code — nicht ein gemeinsamer Formfehler.
+
+> *Fundstelle:* Eine Prüfung las **ein Byte** des Kernel-Hashes statt 512 Byte zu vergleichen:
+> Falsch-Alarm bei 1 von 256 Bauten, **blind bei 255 von 256** echten Überschreibungen.
+
+**Diese Regel hat einen Preis, und er steht bei `by unbesucht`:** ein blosser Schrittzähler würde
+einen Zyklus **stillschweigend abschneiden** statt ihn als Absage zu melden — das wäre Deutung. Die
+Sprache zwingt damit in die teure Fassung (Bitmap oder Generationsstempel), s. `DESIGN.md`.
+
+### 4. Feste Breiten, ausgesprochene Bytereihenfolge
+
+Kein `usize`, kein Wirtslayout, kein `#[repr]`-Vertrauen. Was auf dem Draht steht, steht im
+Beschreiber.
+
+> *Fundstelle:* `MASK_BITS` war nicht die Farbanzahl — auf x86 (256 Farben) zufällig richtig, auf
+> aarch64 (16) falsch. Bei 16 Farben bekam Streifen 0 **alle** Farben und die übrigen keine, und
+> weil leere Mengen sich nicht schneiden, meldete der Selbsttest „disjunkt".
+
+---
+
 ### `check` ist keine Sonderform, sondern eine lineare Pflicht
 
 Das Konstrukt mit den 33 getöteten Fallen braucht **kein eigenes Schlüsselwort**:
@@ -195,6 +312,27 @@ erste ist unantastbar:
 | **Die abstrakte Spezifikation** — *was* soll der Kernel tun | der Mensch | **nein, nie.** Das ist die Aussage selbst |
 | **Invariantenerhaltung** — jede Mutation erhält jede Invariante | der Beweis, und das ist der grösste Posten | **ja** |
 | **Verfeinerung** — abstrakt → ausführbar → C, über drei Sprachen (Isabelle/Haskell/C) mit einer Naht an jeder Grenze | der Beweis | **grösstenteils** |
+
+### Das Wort „Gold" trägt zwei Bedeutungen
+
+Die Kennzahl dieses Ordners ist *Zeilen Spezifikation je Zeile Code*: **seL4 rund 20 : 1**
+(Isabelle über C), HACL\* in derselben Grössenordnung.
+
+**Nur ist das eine Zahl für volle funktionale Korrektheit.** In AdaCores Übernahmeleiter für SPARK
+heisst diese Stufe **Platinum**; *Gold* steht dort eine Sprosse tiefer für „zentrale
+Integritätseigenschaften", und *Silber* für Abwesenheit von Laufzeitfehlern. Was die sieben
+Konstrukte liefern, liegt zwischen **Silber und Gold in diesem Sinn** — und wurde mit einer
+**Platinum**-Zahl verglichen.
+
+- [ ] **Die Leiter nachprüfen, nicht aus dem Gedächtnis zitieren.** Von dieser Maschine aus ist
+      keine SPARK-Dokumentation greifbar; die Zuordnung der fünf Stufen ist aus der Erinnerung und
+      trägt so kein Argument.
+
+**Die Folge ist keine Wortklauberei, sondern eine Messvorschrift:** solange nicht dasteht, *welche
+Stufe* gemessen wird, liefert jedes Verhältnis die Zahl, die man haben wollte. Das Protokoll dafür
+steht in [`ROADMAP.md`](ROADMAP.md) als Abbruchbedingung 0b.
+
+---
 
 ### M-Gold-1 — Invarianten an der Struktur, Mutationen erzeugt
 
@@ -334,6 +472,52 @@ der ist unentschieden.
       und mit dem, was ein Beweiser darüber hinaus bräuchte. `space.rs` ist der richtige Fall, weil
       es beides enthält: beschreibende Struktur **und** algorithmisches `revoke`.
 
+## 3c-bis. Der Zuschnitt (a)/(b)/(c) — er entscheidet die KENNZAHL, nicht nur den Nutzen
+
+> **Neu gewichtet:** solange die Mutation handgeschrieben bleibt, kehrt die Invariantenerhaltung
+> als Beweisposten zurück — und mit ihr fällt die 0,8 : 1-Vorhersage. Der Zuschnitt ist damit
+> keine Nutzenfrage mehr, sondern die **Voraussetzung der Kennzahl**.
+
+**Ein Formatleser ist eine reine Funktion an einer Grenze**: Bytes rein, Struktur oder benannte
+Absage raus. Dort ist „per Konstruktion" ein sauberer Begriff — der erzeugte Code ist der
+**einzige**, der die Bytes anfasst.
+
+**Eine Tabelle wie der Cap-Space ist MUTIERTER ZUSTAND**, und die Mutation macht handgeschriebener
+Kernelcode. Die eigenen Fundstellen zeigen es:
+
+* `refcount -= 1` ohne Bedingung lebt im **Mutations**code, nicht im Prüfer. Ein erzeugter
+  `gabbro_capspace_audit` fände den stillen Umlauf **hinterher** — das ist ein besserer
+  `audit_cdt`, keine Unformulierbarkeit.
+* S1a ist nur dann unformulierbar, wenn **der Traversierungscode selbst erzeugt** ist *und* der
+  Kernel gezwungen wird, ihn zu benutzen.
+
+**Damit hängt Phase 4 an einer Frage, die der Sprachentwurf nirgends beantwortet:**
+
+| | Gabbro erzeugt … | Folge | **wo die Invariante laufen kann** |
+|---|---|---|---|
+| **(a)** | nur den Prüfer | billig und ehrlich — aber der Nutzen ist „`audit_cdt` ohne seine Fehler". **Laufzeitprüfung, nicht Konstruktion.** S1a und S1b fallen als Abnahmekriterien weg, und damit die schärfste Rechtfertigung von Phase 4 | **nur offline/idle** — Diagnostik, kein Schutz |
+| **(b)** | Prüfer + Zugriffshelfer | Bereichssicherheit beim Lesen, Mutation bleibt von Hand | ebenfalls nur offline |
+| **(c)** | Prüfer + Zugriff + **Mutation** (`insert`/`remove`/`revoke`) | das erzeugte C **besitzt** die Datenstruktur, der Kernel ruft hinein. Ein massiver Schnittstelleneingriff — unter dem Kern-Lock, mit Latenzbudget. **Der Aufwand steht in keiner Phase.** | **inkrementell möglich** — und nur hier |
+
+**Das Kostenmodell entscheidet den Zuschnitt mit; es ist kein unabhängiger offener Punkt.**
+Eine vollständige Prüfung von `kind_zeigt_zurueck` ist naiv **O(n · Kettenlänge)** über
+80 256 Slots. `colors.rs` hält heute **42 Ticks** unter einer Sperre und gilt deshalb als
+Schuldposten — eine Ordnung darüber ist in keinem heissen Pfad denkbar. Es bleiben zwei Auswege:
+
+* **offline/idle prüfen** — dann ist es **Diagnostik, kein Schutz**. Legitim, aber eine *andere*
+  Behauptung als die im ersten Entwurf.
+* **inkrementell prüfen** — nur, was eine Mutation berührt hat. Das setzt voraus, dass der Prüfer
+  das **Delta** kennt, und das Delta kennt **nur der Mutator**.
+
+> **Wer Invarianten im heissen Pfad will, hat den Zuschnitt (c) bereits gewählt — ob er es
+> aufgeschrieben hat oder nicht.**
+
+- [ ] **Diese Entscheidung gehört VOR Phase 0.** Denn sie ändert, was Phase 0 überhaupt töten kann:
+      **EverParse macht ausschliesslich die `format`-Hälfte.** Liegt der eigentliche Wert bei
+      `table` — und dafür spricht viel, denn verifizierte Drahtparser sind ein gelöstes Problem,
+      erzeugte Invarianten-Infrastruktur für kernelinterne Tabellen nicht —, dann kann EverParse
+      Gabbro **gar nicht erledigen**, sondern nur die halbe Daseinsberechtigung streichen.
+
 ---
 
 ## 3d. Rennfreiheit — jetzt einzuplanen, sonst nie
@@ -415,6 +599,47 @@ decken sie **nicht** allein.
 | **Code als Daten** (der Lader) | `code`-Raum ist nur über ein **Prüftor** erreichbar (Signatur, Layout) | Caprock macht das bereits; neu ist, dass der Weg dorthin der **einzige** ist |
 | **Sprungtabellen** (Syscall-Verteiler) | Funktionszeiger mit vollständiger Signatur, Tabelle erschöpfend (D2) | — |
 | **Ausrichtung und Layout** | Teil des Typs, nicht des Übersetzers | — |
+
+#### Ergänzend: die Posten, die M1–M4 gar nicht berühren
+
+| Was | warum es nicht nebenbei geht |
+|---|---|
+| **Nebenläufigkeit** | Atomics, Barrieren — und „der Aufrufer hält den Lock", das **weder SPARK noch Rust** ausdrücken kann. Regionen + Fähigkeiten im Typsystem. Der grösste Einzelposten |
+| **Volatile/MMIO** | vier Geschmacksrichtungen wie in SPARK (`Async_Readers`/`Writers`, `Effective_Reads`/`Writes`). Machbar, aber Sprachkern |
+| **Zwei Adressachsen** | `Pa` und `Iova` getrennt, Arithmetik darauf — `index into` verallgemeinert dorthin, ist aber nicht dasselbe |
+| **Bau und ABI** | Multiboot-Kopf, Sektionen, Ausrichtung, ELF32-Abstieg. Kein Sprachthema, muss aber existieren — und hat eine Woche einen halben Tag gekostet |
+| **Kein Laufzeitsystem** | kein Allokator, kein Panik-Apparat, kein Abwickeln |
+| **FFI** | für HACL\*/EverCrypt — und jede FFI-Grenze **bricht die Garantie** |
+| **Beobachtbarkeit** | dieses Projekt lebt von Berichtszeilen. Eine Sprache, in der Formatierung teuer ist, ist hier unbrauchbar |
+
+**Die ehrliche Summe: das ist eine Allzweck-Systemsprache** — ein zweites Projekt, und die Kernthese
+(geschlossene Domäne ⇒ Spezifikation billig) gilt für ihn **nicht**.
+
+### Syscalls ohne Assembler — das Vorzeigebeispiel hat die schwächste Deckung
+
+Der Eintritt ist heute Assembler aus **einem** Grund: die CPU übergibt die Kontrolle in einem
+Maschinenzustand, den keine Hochsprache zusichert. Ohne Assembler braucht es vier Dinge im
+Sprachkern: Eintrittsfunktionen mit **erklärtem Registerabdruck**; **registergebundene Werte**; eine
+**eigene Aufrufkonvention** (die Interrupt-Frame-ABI); und **`iretq`/`eret` als Sprachkonstrukt** —
+ein typisierter Übergang in einen gespeicherten Kontext, also der `state`-Übergang, angewandt auf
+den Maschinenzustand. Das ist die Klasse **typisierter Assemblersprachen** (TAL) und keine Erfindung.
+
+> **Es entfernt das Vertrauen nicht, es VERLAGERT es** — die Instruktionsfolge erzeugt dann der
+> Übersetzer statt der Mensch. Der Gewinn ist trotzdem echt: **eine Implementierung statt 153
+> Fundstellen, die nie jemand einzeln prüft.**
+
+**Und hier steht das stärkste Wort an der Stelle mit der schwächsten Deckung** — dieselbe Form wie
+die zwei Überschreibungen in `HISTORIE.md`, deshalb ausdrücklich:
+
+* „Eine Implementierung, **einmal geprüft**" trägt nur, wenn „geprüft" einen **Prüfer** hat.
+* **Der nachgelagerte Beweiser reicht dorthin nicht.** Verus beweist keine Inline-Assembler-Semantik
+  und keine Registerabdrücke; Frama-C/WP über erzeugtem C erst recht nicht.
+* Ein TAL-Typsystem wäre der Prüfer — dann prüft **Gabbro sich selbst**, und der Erzeuger ist
+  unverifiziert. Zirkulär, solange niemand ihn verifiziert.
+
+**Die haltbare Fassung ist deshalb schwächer und immer noch ein Gewinn:** die vertrauenswürdige
+Fläche **schrumpft** von 153 Fundstellen auf eine Emissionsstelle. Das ist eine Reduktion, keine
+Beseitigung, und sie hat **keinen nachgelagerten Beweiser**.
 
 > **Die ehrliche Summe: M1–M4 + Axiomschicht + drei Primitive** (`divergent`, `wechsle`, Prüftor).
 > Die Axiomschicht ist die grösste unbewiesene Fläche der ganzen Sprache — grösser als der
