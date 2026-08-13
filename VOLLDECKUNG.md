@@ -247,6 +247,27 @@ jeder Stufe.**
 
 ---
 
+## 4b. AUSGELÖST 2026-08-13: Abbruchbedingung 2 hat für Stufe 1 gegriffen
+
+Die Gegenrechnung „was können Rust + Verus + Loom heute schon?" ist für den schwersten Posten
+gefahren, und sie ist **gegen** diesen Plan ausgegangen.
+
+| Stufe | gemessener Stand gegen Verus/Rust heute |
+|---|---|
+| **1 — Nebenläufigkeit** | **Kopfbegründung gefallen.** „Der Aufrufer hält den Lock" ist in Verus ein `tracked`-Zeuge: richtiger Kern `verified`, fremder Kern Beweisfehler, selbstgebauter Beleg Typfehler — `no_std`, ohne Byte im Erzeugnis. **Ungemessen bleiben** Sperrordnung ⇒ Deadlockfreiheit und `haelt_hoechstens`; Falle 41 und 93 sind damit noch nicht vergeben |
+| **3 — Linearität/Arithmetik** | **Arithmetik und Indexgrenzen: gefallen.** Verus findet S1a und S1b am echten Code für **0 Zeilen** (ein Schalter). **Linearität: halb** — `tracked` ist affin, eine Leckprüfung kostet eine hingeschriebene Bilanz. Rusts `Parked` liefert die andere Hälfte zu null Kosten |
+| **2 — `device`** | **ungemessen — und der Gegner ist gar nicht Verus.** Typisierte Registerzugriffe (`tock-registers`, `svd2rust`-Art) sind eine **Rust-Bibliothek**. Die Frage ist nicht „kann eine Sprache das", sondern „was fehlt der Bibliothek": Übergänge über Bits, Bedingungen über Registergrenzen, Barrierendomäne im Typ |
+| **4 — Platzierung** | **ungemessen**, und `#[link_section]` gibt es. Die Lücke ist, dass niemand es **prüft** — das kann eine Lint |
+| **5 — Eintritt (TAL)** | tötet **0** bezahlte Fallen und hat nirgends einen Beweiser |
+| **6 — `check`** | **kein Gegner gefunden.** Weder Rust noch SPARK noch Verus noch Loom sagt etwas über Sprechprobe, Gatterung, Untergrenze oder isolierende Gegenprobe |
+
+> **Die ehrliche Bilanz dieses Plans nach der ersten Gegenrechnung: er schrumpft auf Stufe 6 —
+> plus die Reste von Stufe 1 und 2, deren Gegner eine Rust-Bibliothek ist und keine Sprache.**
+> Und Stufe 6 braucht **keine Sprache**: V−1 baut sie als Makrobibliothek.
+
+Damit ist die Reihenfolge nicht mehr „V−1 zuerst, weil billig", sondern **„V−1, weil alles andere
+gerade seinen Gegner gefunden hat".**
+
 ## 5. Der Plan, mit Toren
 
 Jede Phase liefert eine Zahl, die über die nächste entscheidet. Ohne Zahl kein Weiterbau.

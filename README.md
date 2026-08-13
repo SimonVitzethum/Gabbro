@@ -300,9 +300,20 @@ echten Code** erreichbar.
 > **Voreinstellung** ist, erzeugt andere Ergebnisse als eine, in der man es anschaltet — auch wenn
 > beide es können.
 
-- [ ] **Messbar statt Ansichtssache:** Verus **am echten Cap-Space**, mit dem Anspruch „jede
-      Indizierung, jede Arithmetik". Findet es die 15 Stellen, war es die Vorgabe — und Gabbros
-      Beitrag schrumpft auf Ergonomie. Findet es sie nicht, ist das die **erste harte Evidenz**.
+#### GEFAHREN 2026-08-13 — und es fiel gegen den Ordner
+
+Verus **am echten Cap-Space**, mit `#[verifier::verify]` auf der `mod`-Zeile: **es findet S1a und
+S1b**, an denselben Zeilen, mit **unverändertem Funktionsrumpf**.
+
+| | |
+|---|---|
+| Pflichten **aufwerfen** | **0 Zeilen je Zeile Code** — ein Schalter. Delta über die ganze Datei: 24 Zeilen, davon 21 Attribute und 3 `derive` |
+| Pflichten **entlasten** (an `delete_leaf`) | 12 Zeilen auf 19 — danach bleibt **genau eine** offen: S1b |
+| Trennschärfe | an S1a wird `self.slots[p]` **entlastet**, nur `self.slots[ci]` gemeldet |
+
+**Damit ist die Vorgabe-These bestätigt und Gabbros Beitrag an dieser Stelle auf Ergonomie
+geschrumpft** — wie es hier vorab stand. Das ist der Ausgang, den dieser Ordner sich selbst
+zugemutet hat.
 
 ---
 
@@ -438,11 +449,30 @@ Der Zweig war **am weitesten von einer Kennzahl entfernt** und steht deshalb unt
 ausdrücklich nicht jetzt". Er bekommt eine, und sie ist billig:
 
 > **Nimm den schwersten Einzelposten — „der Aufrufer hält den Lock" — und versuche ihn HEUTE in
-> Verus auszudrücken.** Ein Nachmittag.
+> Verus auszudrücken.**
 >
 > * **Kann Verus es**, verliert der Zweig seine Hauptbegründung — **das billigste Nein, das dieser
 >   Ordner bekommen kann.**
-> * **Kann Verus es nicht**, ist das die **erste echte Evidenz**.
 
-Dieselbe Logik wie Phase 0 gegen EverParse, nur für den Zweig: *der nächste Verwandte ist gebaut,
-der Ordner nicht.*
+### GEFAHREN 2026-08-13: **Verus kann es. Der Zweig hat sein Tor nicht bestanden.**
+
+Nachgebaut an `record_user_kstack` — ein `tracked`-Zeuge mit privatem Feld, `lock()` als einzige
+Quelle. **Drei Aufrufer, drei verschiedene Ausgänge:** richtiger Kern `verified`, **fremder** Kern
+`precondition not satisfied`, selbstgebauter Beleg `constructor for an opaque datatype`. Unter
+`#![no_std]`, und `tracked`/`ghost` wird vor der Codeerzeugung gelöscht — **kein Byte, keine Halde.**
+
+Der schwerste Einzelposten der Kernel-Liste — in SPARK ohne Ausdrucksform, in Rust ein Kommentar —
+ist in Verus **heute eine Bedingung.** Damit ist die Hauptbegründung des Zweigs weg, und zwar für
+den Preis eines Nachmittags statt einer Sprache. **Das billigste Nein, das dieser Ordner bekommen
+konnte, ist eingetreten.**
+
+**Was überlebt, und es ist wenig:** `tracked` ist **affin, nicht linear** — wer den Zeugen
+fallenlässt, kommt durch (2 verified, 0 errors). Eine automatische Leckprüfung wie SPARKs „leak
+proved" gibt es nicht; mit einer Ghost-Bilanz geht es, aber als Pflicht durch jede Signatur statt
+als Schalter. **Das ist der ganze verbliebene Vorsprung** — und `Parked` in Rust-heute liefert die
+andere Hälfte zu null Kosten.
+
+**Was im Weg steht, ist Werkzeugreife, nicht Ausdruckskraft:** vier reproduzierte Verus-Abstürze,
+eine versiegelte vstd-Schnittstelle, fehlende Iterator-Spezifikationen (6 Funktionen von `space.rs`
+unerreichbar), unverifizierbare `derive`s. **Das bezahlt man mit Beiträgen an Verus, nicht mit einer
+Sprache.**

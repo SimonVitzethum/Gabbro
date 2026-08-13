@@ -42,6 +42,8 @@ schwächer formuliert, ohne schwächer zu **werden**.
 | **Der SPARK-Fund** | „SPARK fand zwei Fehler, die Verus nicht fand ⇒ eine eigene Sprache bringt etwas" | der Gewinn kam aus einer **Voreinstellung**, nicht aus Adas Sprachvermögen. `refcount` steht im Verus-Modell als `nat` und kann die Frage **nicht einmal stellen**. Übrig bleibt die prüfbare Fassung: *Vorgabe schlägt Fähigkeit* |
 | **„steht bewusst in Zeile 3"** | eine Ortsangabe im Fliesstext | veraltet beim ersten Einschub darüber. Aussagen über die **Reihenfolge** halten, Zeilennummern nicht |
 
+| **„weder SPARK noch Rust"** | „der Aufrufer hält den Lock" galt als **grösster Einzelposten** und als Ausdruckslücke aller vorhandenen Werkzeuge | **gemessen 2026-08-13: Verus kann es**, als `tracked`-Zeuge, `no_std`, ohne Byte im Erzeugnis. Der Satz war wahr für SPARK und Rust und wurde stillschweigend auf „alle" erweitert — und **Verus stand in der Verwandtschaftstabelle mit „beweist, was jemand modelliert hat" abgetan.** Wer den nächsten Verwandten abwertet, statt ihn zu fahren, behält seine Begründung länger, als sie hält |
+
 ---
 
 ## Die Form, die sich wiederholt

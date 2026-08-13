@@ -95,7 +95,15 @@ Damit später niemand denkt, es sei vergessen worden:
   Vollsprachen-Zweigs. Rückwirkend gegen die 33 M-Fallen halten, jede mit Mutation. **Fängt sie
   weniger als 5, fällt die einzige Begründung, die Gabbro allein gehört.** Steht vor jeder
   Übersetzerarbeit — und ist auch dann nützlich, wenn Gabbro nie entsteht.
-* **Für jede Stufe die Gegenrechnung führen: was können Rust + Verus + Loom heute schon?** `Parked`
+* **GEFAHREN für Stufe 1 und 3 (2026-08-13): beide Kennzahlen fielen gegen den Zweig.** Verus
+  findet S1a/S1b am echten Code für 0 Zeilen, und „der Aufrufer hält den Lock" ist dort eine
+  Bedingung. Offen bleibt nur: **Sperrordnung ⇒ Deadlockfreiheit** (Falle 41) und
+  **`haelt_hoechstens`** (Falle 93) — beides in Verus **nicht** gemessen, und beides ist das, was von
+  Stufe 1 übrig ist.
+* **Stufe 2 gegen die richtige Grundlinie messen: NICHT Verus, sondern `tock-registers`/`svd2rust`.**
+  Typisierte Registerzugriffe sind eine Rust-Bibliothek. Die Frage ist, was ihr fehlt — Übergänge
+  über Bits, Bedingungen über Registergrenzen, Barrierendomäne im Typ.
+* **Für jede weitere Stufe die Gegenrechnung führen: was können Rust + Verus + Loom heute schon?** `Parked`
   hat Rust gefunden, die abgeschwächte Ordnung fand Loom, Ressourcen-Invarianten kann Verus über
   lineare Ghost-Permissions. Nur der Rest rechtfertigt eine Sprache. Ohne diese Rechnung je Stufe
   ist `VOLLDECKUNG.md` ein Plan gegen einen Gegner, den niemand gemessen hat.
