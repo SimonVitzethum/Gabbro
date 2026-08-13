@@ -1,7 +1,15 @@
 # Gabbro
 
-Eine **enge** Sprache für Formate und Tabellen, die nach **C** übersetzt und deren erzeugter Code
-**per Konstruktion** beweisbar ist. Übersetzer in **sicherem Rust** (`forbid(unsafe_code)`).
+Eine Sprache für Formate, Tabellen — und, als ausgesprochenes Fernziel, für Kernelcode selbst.
+Ziel ist **C**. Übersetzer in **sicherem Rust** (`forbid(unsafe_code)`).
+
+> **BERICHTIGUNG, und sie steht bewusst in Zeile 3.** Die erste Fassung schrieb hier „per
+> Konstruktion **beweisbar**". Das war eine Überschreibung: **Gabbro beweist nichts.** Es erzeugt
+> nach Regeln, und die Korrektheit des Erzeugnisses hängt an einem **unverifizierten Übersetzer**.
+> EverParse beweist seine Parser tatsächlich, in F\*. Gabbro liefert *„korrekt unter Vertrauen in
+> den Erzeuger, plus Differenztest"* — ein legitimer Handel, derselbe wie bei jedem Übersetzer,
+> aber er ist zu benennen und nicht zu verschweigen. Der Satz „ein Beweis, der die Wunschform
+> beweist, ist schlechter als keiner" gilt auch für Wörter in Überschriften.
 
 Stand dieser Notiz: 2026-08-13. Nichts davon ist gebaut — das hier ist der Entwurf, nicht ein
 Bericht. Was gemessen ist, steht als gemessen da; alles andere ist ausdrücklich Absicht.
@@ -39,6 +47,39 @@ Verhältnis von 20:1. Keine Sprachgestaltung nimmt einem das ab, solange die Dom
 in einer Spezifikation je Funktion. Der Beschreiber **ist** die Spezifikation. Man beweist nicht,
 dass der Parser dem Format entspricht — man erzeugt ihn daraus.
 
+### Der Riss: `format` und `table` sind NICHT dieselbe Kategorie
+
+Die erste Fassung behandelte beide gleich. Das ist falsch, und der Unterschied entscheidet über
+den Wert des ganzen Ordners.
+
+**Ein Formatleser ist eine reine Funktion an einer Grenze**: Bytes rein, Struktur oder benannte
+Absage raus. Dort ist „per Konstruktion" ein sauberer Begriff — der erzeugte Code ist der
+**einzige**, der die Bytes anfasst.
+
+**Eine Tabelle wie der Cap-Space ist MUTIERTER ZUSTAND**, und die Mutation macht handgeschriebener
+Kernelcode. Die eigenen Fundstellen zeigen es:
+
+* `refcount -= 1` ohne Bedingung lebt im **Mutations**code, nicht im Prüfer. Ein erzeugter
+  `gabbro_capspace_audit` fände den stillen Umlauf **hinterher** — das ist ein besserer
+  `audit_cdt`, keine Unformulierbarkeit.
+* S1a ist nur dann unformulierbar, wenn **der Traversierungscode selbst erzeugt** ist *und* der
+  Kernel gezwungen wird, ihn zu benutzen.
+
+**Damit hängt Phase 4 an einer Frage, die der Sprachentwurf nirgends beantwortet:**
+
+| | Gabbro erzeugt … | Folge |
+|---|---|---|
+| **(a)** | nur den Prüfer | billig und ehrlich — aber der Nutzen ist „`audit_cdt` ohne seine Fehler". **Laufzeitprüfung, nicht Konstruktion.** S1a und S1b fallen als Abnahmekriterien weg, und damit die schärfste Rechtfertigung von Phase 4 |
+| **(b)** | Prüfer + Zugriffshelfer | Bereichssicherheit beim Lesen, Mutation bleibt von Hand |
+| **(c)** | Prüfer + Zugriff + **Mutation** (`insert`/`remove`/`revoke`) | das erzeugte C **besitzt** die Datenstruktur, der Kernel ruft hinein. Ein massiver Schnittstelleneingriff — unter dem Kern-Lock, mit Latenzbudget. **Der Aufwand steht in keiner Phase.** |
+
+- [ ] **Diese Entscheidung gehört VOR Phase 0**, nicht nach Phase 3. Denn sie ändert, was Phase 0
+      überhaupt töten kann: **EverParse macht ausschliesslich die `format`-Hälfte.** Liegt der
+      eigentliche Wert bei `table` — und dafür spricht viel, denn verifizierte Drahtparser sind
+      ein gelöstes Problem, erzeugte Invarianten-Infrastruktur für kernelinterne Tabellen nicht —,
+      dann kann EverParse Gabbro **gar nicht erledigen**, sondern nur die halbe
+      Daseinsberechtigung streichen.
+
 ### Die Domäne, aus echten Fundstellen
 
 | Muster | wo es in Caprock vorkommt |
@@ -47,7 +88,17 @@ dass der Parser dem Format entspricht — man erzeugt ihn daraus.
 | Tabelle mit Invarianten | Cap-Space + CDT, Seitentabellen, IRTE, DMAR |
 | Aufzählung mit Absage | Fehlercodes, `MANGEL_*`, `LocalReason` |
 
-Fünfmal dasselbe Muster von Hand ist fünfmal dieselbe Falle.
+„Fünfmal dasselbe Muster von Hand ist fünfmal dieselbe Falle" — **und genau dieser Satz ist
+ungezählt.** Er widerspricht der Messdisziplin, auf die sich dieser Ordner beruft.
+
+- [ ] **Die Basisrate zählen, bevor irgendetwas gebaut wird.** Wie viele Formate hat Caprock
+      wirklich? Wie oft ändern sie sich? **Wie viele Fehler dieser Klasse sind pro Jahr
+      tatsächlich entstanden** (aus `done.md` auszählbar)? Bei rund sechs stabilen Formaten ist
+      einmaliges sorgfältiges Handschreiben plus Differenz-Fuzzing gegen ein Zweitmodell
+      wahrscheinlich **billiger** als ein Übersetzer, den man baut *und wartet* — parallel zu A4,
+      Z24 und den A3-Folgeposten.
+      **Fällt die Zählung klein aus, ist das ehrlichste Ergebnis dieses Ordners nicht
+      „EverParse trägt", sondern „die Falle ist zu selten für eine Sprache".**
 
 ---
 
@@ -218,6 +269,53 @@ festen Daten) zahlt sich dort kaum aus, während seine Schwäche (dynamische Dat
 voll durchschlägt. Beim *Erzeugnis* liegt es umgekehrt — und dort steht am Ende C.
 
 ---
+
+## Was im Entwurf noch fehlt
+
+Der Syntaxteil oben zeigt **ausschliesslich Strukturen fester Grösse** — die Domänentabelle nennt
+aber GPT und FAT, und FAT hat **Ketten**, virtio-Ringe haben **Producer/Consumer-Indizes**.
+
+- [ ] **Variable Längen** sind die harten 20 % jedes Parser-Erzeugers. Die Totalitätsregel deckt
+      sie im Prinzip ab (eine Länge, die vorher gelesen und geprüft wurde) — **eine Syntax dafür
+      gibt es nicht.**
+- [ ] **Versionsevolution.** Im Beispiel steht `@version 3`. Liest der Erzeuger auch v2 —
+      **Absage oder Migration?** Beides ist vertretbar, keins ist entschieden, und ein Format ohne
+      Antwort darauf ist bei der ersten Änderung eine Baustelle.
+- [ ] **Die Roundtrip-Eigenschaft** `lesen(schreiben(x)) == x` gehört in den Differenztest. Ein
+      Schreiber, der eine ungültige Struktur ausgeben kann, entwertet den Leser.
+- [ ] **Ein Kostenmodell für Invarianten.** `kind_zeigt_zurueck` im Beispiel ist naiv
+      **O(n · Kettenlänge)** über 80 256 Slots. Unter dem Kern-Lock ist das kein Audit mehr,
+      sondern ein Ausfall — vgl. `colors.rs` mit **42 Ticks** gehaltener Sperre. Jede Invariante
+      braucht eine **Kostenangabe** und eine Aussage, wo sie laufen darf.
+
+## Das Fernziel: ein Kernel in Gabbro — und was es mit der These macht
+
+Gewünscht ist ausdrücklich, dass man darin am Ende einen **sicheren und schnellen Kernel**
+schreiben kann, und dass die **Syntax dafür schwer sein darf**.
+
+**Das ist eine andere These als die oben, und der Widerspruch gehört ausgesprochen:** die
+Rechnung, die Gabbro billig macht, ist die **geschlossene Domäne**. Eine Sprache, in der man einen
+Kernel schreibt, hat keine geschlossene Domäne — die Spezifikationslast kehrt zurück, und man
+steht im Gebiet von **F\*/Low\***, das dort seit Jahren ausgeliefert wird (HACL\*, EverCrypt).
+
+**Es gibt einen Entwurf, der beides trägt**, und er hängt an dem Zugeständnis „die Syntax darf
+schwer sein":
+
+> **Ein kleiner Kern mit linearen/affinen Typen, Regionen und Totalität als Vorgabe** — und
+> `format`/`table` sind **Bibliotheken darüber**, keine zweite Sprache daneben.
+
+Dann ist der Formaterzeuger ein Sonderfall des allgemeinen Mechanismus statt eines Anhängsels, und
+`Parked` („dieser Wert muss verbraucht werden") wäre ein **Typ** statt einer abschaltbaren
+Warnung — gemessen: SPARK meldet dort „leak **proved**", Rust nur `#[must_use]`.
+
+**Der Preis ist ehrlich zu nennen:** das ist nicht mehr ein Erzeuger von Wochen, sondern die
+ATS-/Low\*-Klasse von Aufwand. Und die Frage, die dann jede Phase beantworten muss, lautet nicht
+mehr „schlägt Gabbro Handschrift", sondern **„was bietet Gabbro über Low\* hinaus?"** —
+Kandidaten: Ergonomie, SMT-Automatisierung ohne F\*-Werkzeugkette, direkter `no_std`-C-Ausgang.
+Ohne eine belegbare Antwort darauf ist der Kernel-Zweig eine Neuauflage.
+
+- [ ] **Entscheiden, bevor gebaut wird: ein Kern mit zwei Bibliotheken, oder zwei Projekte.**
+      Beides ist vertretbar; unentschieden ist es die teuerste Variante.
 
 ## Was Gabbro **nicht** löst
 

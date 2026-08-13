@@ -7,6 +7,39 @@ Stand: 2026-08-13. **Phase 0 hat noch nicht begonnen.**
 
 ---
 
+## Phase −1 — Die zwei Fragen, die VOR Phase 0 stehen
+
+Sie stehen hier, weil Phase 0 sonst die falsche Frage tötet.
+
+**Kennzahl A: die Basisrate.** Wie viele Formate hat Caprock, wie oft ändern sie sich, **wie viele
+Fehler dieser Klasse sind pro Jahr wirklich entstanden** — auszählbar aus `done.md`.
+
+- [ ] Zählen, nicht schätzen. „Fünfmal dieselbe Falle" ist bisher **ungezählt** und widerspricht
+      der Disziplin, auf die dieser Ordner sich beruft.
+- [ ] **Tor:** Fällt die Zahl klein aus (etwa sechs stabile Formate, wenige Fehler), ist das
+      ehrlichste Ergebnis **„die Falle ist zu selten für eine Sprache"** — und der Ordner endet
+      hier, mit einem Beleg statt mit einem Gefühl.
+
+**Kennzahl B: der Schnitt bei `table`.** Erzeugt Gabbro (a) nur den Prüfer, (b) auch Zugriff,
+(c) auch **Mutation**?
+
+- [ ] Entscheiden **und aufschreiben**. Bei (a) fallen S1a und S1b als Abnahmekriterien weg, und
+      Phase 4 verliert ihre schärfste Rechtfertigung. Bei (c) besitzt das erzeugte C die
+      Datenstruktur — ein Schnittstelleneingriff unter dem Kern-Lock, dessen Aufwand **in keiner
+      Phase steht** und geschätzt werden muss, bevor er zugesagt wird.
+- [ ] **Und die Folge für Phase 0:** EverParse deckt **ausschliesslich `format`** ab. Liegt der
+      Wert bei `table`, kann Phase 0 Gabbro **nicht** erledigen — nur die halbe
+      Daseinsberechtigung streichen. Das ist dann in Phase 0 so zu protokollieren, statt als
+      Freispruch gelesen zu werden.
+
+**Kennzahl C (nur falls das Kernel-Fernziel verfolgt wird): was bietet Gabbro über Low\* hinaus?**
+
+- [ ] Low\*/F\* liefert seit Jahren verifizierten, schnellen Systemcode mit C-Ausgang (HACL\*,
+      EverCrypt). Ohne eine **belegbare** Antwort — Ergonomie, SMT ohne F\*-Kette, direktes
+      `no_std`-C — ist der Kernel-Zweig eine Neuauflage. Ein Absatz reicht, aber er muss stehen.
+
+---
+
 ## Phase 0 — Die Vorfrage: gibt es das schon?
 
 **Kennzahl:** eine Ja/Nein-Antwort mit Beleg, nicht mit Eindruck.
@@ -126,7 +159,11 @@ Das ist die schärfste denkbare Abnahme, weil die Antwort schon feststeht:
 
 Gabbro endet, wenn **eines** davon eintritt:
 
-1. **EverParse trägt** (Phase 0).
+0. **Die Basisrate ist zu klein** (Phase −1) — zu wenige Formate, zu wenige Fehler dieser Klasse.
+   Diese Bedingung steht zuerst, weil sie am billigsten zu prüfen ist und am ehesten zutrifft.
+1. **EverParse trägt** (Phase 0) — **aber nur, wenn der Schnitt bei `table` auf (a) gefallen ist.**
+   Bei (b)/(c) deckt EverParse die Frage gar nicht ab, und ein grünes Phase-0-Ergebnis wäre kein
+   Freispruch.
 2. **Der erzeugte Code ist dauerhaft langsamer** als die handgeschriebene Referenz und die Ursache
    ist nicht behebbar (Phase 2).
 3. **Der erzeugte Prüfer findet die drei bekannten Fehler nicht** (Phase 4).
