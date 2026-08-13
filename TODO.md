@@ -1,7 +1,7 @@
 # Gabbro — offene Punkte
 
 **Ausschliesslich Offenes.** Erledigtes steht in den Entwurfsdateien, Widerlegtes in
-[`HISTORIE.md`](HISTORIE.md). Die Reihenfolge folgt [`ROADMAP.md`](ROADMAP.md).
+[`HISTORIE.md`](HISTORIE.md). Die Reihenfolge folgt [`PLAN.md`](PLAN.md).
 
 ---
 
@@ -9,7 +9,7 @@
 
 - [ ] **`revoke` in den Konstrukten ausdrücken.** Entscheidet Zuschnitt (c) **und** die Kennzahl:
       bleibt `revoke` handgeschrieben, kehrt die Invariantenerhaltung als Beweisposten zurück und
-      die 0,8 : 1-Vorhersage fällt. **Der billigste Punkt des ganzen Ordners.**
+      0,5 : 1 an diesem Tag verloren ist. **Der billigste Punkt des ganzen Ordners.**
 - [ ] **`vtd.rs` (1 448 Zeilen) als `device`-Block hinschreiben.** Tor: Faktor ≥ 5 kleiner. Sonst
       ist die Knappheitsthese widerlegt.
 - [ ] **`space.rs` zweimal hinschreiben** — als Gabbro-Quelle und mit dem, was ein Beweiser darüber
@@ -45,8 +45,6 @@
 
 ## Entwurf — offene Entscheidungen
 
-- [ ] **Zuschnitt (a)/(b)/(c) beim `table`-Konstrukt.** Hängt an `revoke` (P0) und entscheidet die
-      Kennzahl mit.
 - [ ] **Variable Längen** — die harten 20 % jedes Parser-Erzeugers. Eine Syntax dafür gibt es nicht.
 - [ ] **Versionsevolution.** Liest ein `@version 3`-Leser auch v2 — **Absage oder Migration**?
       Beides vertretbar, keins entschieden.
@@ -57,6 +55,11 @@
       **Solange die Zahl fehlt, ist „speichersicher unter A1…An" eine Form ohne Inhalt.**
 - [ ] **Fortschritt/Aushungern** (Caprocks D8) fällt unter **keinen** Mechanismus. Offen, ob das
       so bleibt oder ob es einen sechsten braucht.
+- [ ] **B3 beziffern: welche Rümpfe lassen sich NICHT als Traversierung schreiben?** IPC-Fastpath,
+      `revoke`, Warteschlangenchirurgie des Schedulers sind die Kandidaten. **Jeder von ihnen kostet
+      5 : 1 auf seinem Anteil** — 5 % des Kernels sind +0,25 auf die Kennzahl, 10 % sind +0,5.
+      Das ist die Zahl, die früh gebraucht wird und die niemand hat: sie sagt, **wie weit vom Boden
+      entfernt** der Entwurf landet.
 
 ---
 
@@ -68,7 +71,7 @@
 - [ ] **Annahmenmenge ins Erzeugnis emittieren** („bewiesen unter A1…An"), als **Menge von Namen**
       mit Klasse, nicht als Zahl. Eine Ratsche über einer Kardinalzahl greift nicht gegen Austausch.
 - [ ] **Jeder Falsifikator braucht seine eigene Sprechprobe:** *kann er überhaupt fehlschlagen?*
-- [ ] **Der Geltungsbereich in `DESIGN.md` ist neu — Gegenprobe fahren:** ein Konstrukt suchen,
+- [ ] **Der Geltungsbereich in [`SPRACHE.md`](SPRACHE.md) ist neu — Gegenprobe fahren:** ein Konstrukt suchen,
       dessen Zeile zu stark ist. Die Tabelle hat dieselbe Vorgeschichte wie die zwei
       Überschreibungen in `HISTORIE.md`.
 

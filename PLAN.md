@@ -1,22 +1,53 @@
-# Gabbro für ganz Caprock — und für beliebige Programme
+# Gabbro — der Plan
 
-**Was hier geplant wird, und was es kostet, steht vor dem Plan.**
+**Ein Plan, ein Ziel: ein Kernel in Gabbro, verifiziert bei 0,5 : 1.**
 
-Dieses Dokument verlässt den Zuschnitt, den `README.md` verteidigt. Es plant eine
-**Allzweck-Systemsprache**. Damit fällt die Rechnung, die Gabbro billig machte — die geschlossene
-Domäne —, und die Spezifikationslast kehrt zurück. **Die Linie wandert**, und `README.md` hat genau
-das als den unbequemen Ausgang vorhergesagt: *dann ist Gabbro der Beweisassistent mit Syntax, dem es
-ausweichen wollte.*
-
-Die Messung dazu steht und wird nicht schöngeredet: die sieben Konstrukte decken heute **≤ 9 %** von
-Caprock, hart **4,6 %**. Dieses Dokument plant die übrigen **91 %**.
-
-> **Die Form ist eine SEHR ENGE Sprache, ungefähr so ausdrucksstark wie C** — nicht ein Katalog aus
-> einem Schlüsselwort je Fehlerklasse. Die erste Fassung dieses Dokuments war genau das (zwanzig
-> Konstrukte) und ist in §2 berichtigt. **Vier Mechanismen, zwei Deklarationsregeln**; alles andere
-> fällt als Bibliothek heraus.
+Was hier nicht steht, gibt es nicht. Frühere Fassungen führten einen engen Formaterzeuger als
+Rückfall und den Kernel als Zweig „für später“ — beides ist gestrichen. Der Formaterzeuger ist die
+Bibliotheksschicht der Sprache ([`SPRACHE.md`](SPRACHE.md)), kein eigener Weg.
 
 Stand 2026-08-13. **Nichts davon ist gebaut.**
+
+---
+
+## Das Ziel ist der BODEN — und deshalb misst es den Abstand, statt zu urteilen
+
+Die 20 : 1 von seL4 zerfallen in rund **0,5 : 1 abstrakte Spezifikation** und **19,5 : 1 Beweis**.
+Nur der erste Posten ist unantastbar.
+
+> **0,5 : 1 heisst deshalb nicht „wenig Beweis“, sondern: KEIN HANDGESCHRIEBENER BEWEIS.**
+> Geschrieben wird die abstrakte Spezifikation — und sonst nichts.
+
+**Das ist ein ZIEL, keine Schwelle.** Der Unterschied ist nicht kosmetisch: eine Schwelle, die man
+treffen kann, sagt am Ende nur „bestanden“. Ein Ziel am theoretischen Boden macht die Kennzahl
+**diagnostisch** — jede Zehntelstelle darüber ist ein **benennbarer Beweisposten, der noch von Hand
+geschrieben wird**, und damit ein Arbeitsauftrag statt eines Urteils.
+
+**Der Abbruch ist eine ganz andere Marke: > 3 : 1.** Dort ist der Beweis wieder der dominierende
+Posten, und die Prämisse „billig“ ist widerlegt — selbst wenn 3 : 1 gegenüber seL4s 20 : 1 noch
+eine Verbesserung wäre. Eine Sprache samt Übersetzer zu bauen, um den Beweis von *dominant* auf
+*dominant* zu bringen, lohnt nicht; Verus gibt einen guten Teil davon umsonst. **Die Zahl 3 ist
+gewählt, nicht hergeleitet** — sie steht hier, damit sie nicht später gewählt wird.
+
+Die Rechnung zeigt, wie schnell der Abstand wächst: braucht **5 %** des Kernels handgeschriebene
+funktionale Beweise zu 5 : 1, sind das allein **+0,25** — also 0,75 statt 0,5. Bei 10 % sind es
+1,0. **Das ist kein Durchfallen, sondern die Messlatte für B3 unten:** jeder Rumpf, der sich nicht
+als Traversierung schreiben lässt, kostet sichtbar und beziffert.
+
+**Daraus drei Bedingungen — sie sind der eigentliche Entwurfsauftrag:**
+
+| | Bedingung | wenn sie fällt |
+|---|---|---|
+| **B1** | **Invarianten leben an der Struktur, nicht an der Schleife.** Erhält die *erzeugte* Mutation die Invariante, braucht die Schleife keine eigene | jede Schleife bekommt eine handgeschriebene Invariante — der grösste Einzelposten kehrt zurück |
+| **B2** | **Algorithmische Rümpfe bestehen aus Traversierungen**, deren Verträge aus `over`/`by`/`touches` kommen — der Löser bekommt die Invariante geschenkt | Beweishinweise je Rumpf |
+| **B3** | **Was sich so nicht schreiben lässt, muss verschwindend klein sein.** Kandidaten: IPC-Fastpath, `revoke`, die Warteschlangenchirurgie des Schedulers | jeder dieser Rümpfe kostet 5 : 1 auf seinem Anteil |
+
+**Deshalb ist P0.1 (`revoke` auf Papier) nicht ein Tor unter vielen, sondern DAS Tor.** Braucht
+`revoke` einen handgeschriebenen Beweis, ist 0,5 : 1 an diesem Tag verloren — unabhängig von allem
+anderen.
+
+- [ ] **Die seL4-Aufteilung nachprüfen.** Sie trägt diese ganze Herleitung und ist aus dem
+      Gedächtnis zitiert.
 
 ---
 
@@ -129,176 +160,6 @@ Nachbau von Vorhandenem.
 
 ---
 
-## 2. BERICHTIGUNG: die erste Fassung war eine Merkmalsliste, keine Sprache
-
-Sie führte **zwanzig** Konstrukte — `device`, `lock`, `atomic`, `barrier`, `bitfeld`, `einheit`,
-`menge`, `recht`, `platzierung`, `grundmenge`, `ableitung`, `stellentyp`, `absage`, `region`,
-`linear`, `wirkung`, `state`, `arithmetik`, `check` … — eines je Fehlerklasse. Das ist die
-naheliegende Ableitung aus einer Fallenliste und der falsche Schluss: **eine Sprache, die für jeden
-bezahlten Fehler ein Schlüsselwort bekommt, ist ein Katalog.** Sie wächst mit jedem Fund, und
-niemand kann sie mehr im Kopf halten.
-
-Gefragt ist das Gegenteil: **eine sehr enge Sprache, ungefähr so ausdrucksstark wie C**, aus deren
-wenigen Mechanismen die zwanzig als **Bibliothek oder Deklaration** herausfallen.
-
-> **Gabbro = C ohne seine Löcher, plus zwei Dinge.**
-> Die zwei sind **Bereichstypen** und **lineare Werte (auch geisterhafte)**. Alles andere ist eine
-> **Einschränkung** von C, keine Erweiterung.
-
----
-
-## 3. Der Kern — vier Mechanismen und zwei Deklarationsregeln
-
-### M1 — Bereichstypen
-
-Ganzzahlen tragen ihren **Wertebereich**, und jede Operation muss darin bleiben. Das ist Adas
-Trick, und **genau er** hat S1a/S1b gefunden — nicht „Ada ist sicherer".
-
-```gabbro
-type SlotIdx  = u32 in 0 .. NSLOTS-1
-type Refcount = u32 in 0 .. u32'max
-type Zyklen   = u64 in 1 .. u64'max      -- Null ist ein Befund, kein Messwert
-```
-
-### M2 — Lineare Werte, auch geisterhafte
-
-Ein linearer Wert **muss** verbraucht werden; ein geisterhafter existiert nur im Beweis und wird
-vor der Codeerzeugung gelöscht (**kein Byte, keine Halde** — an Verus gemessen).
-
-```gabbro
-linear       type Parked                 -- muss zugelassen werden
-linear ghost type Hält(CAPS)             -- Sperrbeleg, kostenlos
-linear ghost type Pflicht(check)         -- eine unerfuellte Pruefzusage
-```
-
-### M3 — Adressräume und Zugriffsrechte am Zeiger
-
-Ein Zeiger trägt **wohin** er zeigt und **was** man damit darf. C hat das als Erweiterung; hier
-ist es die Voreinstellung.
-
-```gabbro
-ptr<mmio, write_only>   gcmd            -- ein Lesen zum Zurueckschreiben ist nicht schreibbar
-ptr<dma,  read_write>   puffer
-ptr<code, execute@ring3> sonde
-```
-
-Barrieren gehören zum Adressraum, nicht zur Architektur — `dsb sy` gegen `dmb ish` ist keine
-Stilfrage mehr, sondern folgt aus `mmio` gegen `normal`.
-
-### M4 — Kein ungeprüfter Index, keine unbegrenzte Schleife
-
-Indizieren geht nur mit einem Beleg der Zugehörigkeit; jede Schleife nennt ihr Abstiegsmass.
-`traverse` ist die bequeme Schreibweise dafür, kein eigener Mechanismus.
-
-### D1/D2 — die zwei Deklarationsregeln
-
-* **Undurchsichtige Neutypen ohne implizite Umwandlung.** `Pa`, `Iova`, `Farben`, `MaskenBits`
-  sind verschiedene Typen — C's `typedef` ist durchsichtig, das ist das Loch.
-* **Vollständige Layouts, kein Auffangzweig.** Jedes Bit eines Wortes ist benannt, jede Aufzählung
-  ist erschöpfend.
-
-### Was C hat und bleibt
-
-Funktionen, Zeiger, `struct`, feste Breiten, Kontrollfluss, Funktionszeiger, explizite Umwandlung
-zwischen **verträglichen** Typen. **Was wegfällt:** implizite Umwandlung, `void*`, Zeigerarithmetik
-ohne Grundlage, `goto`, Auffangzweige, `union` als Umdeutung (das kann M3), Präprozessor.
-
----
-
-## 3b. Die zwanzig fallen heraus — als Bibliothek, nicht als Syntax
-
-**Das ist der Test der Reduktion.** Bleibt eine Zeile ohne Ableitung, fehlt ein Mechanismus.
-
-| vormals „Konstrukt" | folgt aus | wie |
-|---|---|---|
-| `einheit` (Pa/Iova/Farben) | **D1** | undurchsichtiger Neutyp |
-| `arithmetik` (S1b) | **M1** | `Refcount` verlässt seinen Bereich nicht |
-| `absage`, `grundmenge` | **D2** | erschöpfende Aufzählung, kein Auffangzweig |
-| `bitfeld` (Marke auf Bit 63) | **D2** | vollständiges Layout — das Zahlenfeld ist belegt |
-| `menge` statt Kardinalzahl | Bibliothek | ein Feldtyp über M1 |
-| `ableitung` | `const`-Auswertung | hat C auch, nur ohne Prüfung |
-| `stellentyp` (Konstruktor je Stelle) | **M2** + Modulgrenze | undurchsichtig, ein Erzeuger |
-| `recht` (lesen ≠ schreiben) | **M3** | zwei Zeigerrechte, nicht eine Zeile mit zwei Richtungen |
-| `device`, Registerklassen | **M3** + **D2** | `mmio` + `write_only` + vollständiges Layout |
-| `barrier`-Domäne | **M3** | folgt aus dem Adressraum |
-| `platzierung` (`.user_text`) | **M3** | `code`-Raum mit `execute@ring3` |
-| `region`, Eigentum | **M2** | ein linearer Block ist seine Region |
-| `linear` (`Parked`) | **M2** | der Mechanismus selbst |
-| `state` (Typzustand, x2APIC) | **M2** | linearer Wert, dessen Typ den Zustand trägt |
-| `lock` / `held(L)` | **M2** | `linear ghost Hält(L)` — an Verus **gemessen**, dass das trägt |
-| Sperr**ordnung** ⇒ Deadlockfreiheit | **M2 + M1** | die Stufe ist ein Bereichstyp, Nehmen verlangt echt kleinere Stufe |
-| `atomic`-Veröffentlichung | **M2** | `release` gibt einen Geisterbeleg ab, `acquire` nimmt ihn |
-| `wirkung` (Global/Depends) | **M2** | Wirkungen **sind** geisterhafte Fähigkeiten im Parameter |
-| `traverse` (S1a) | **M4** | Schreibweise, kein Mechanismus |
-| `format` / `table` | Bibliothek | Deklarationen über M1/M3/D2 |
-| **`check`** | **M2** | **s. u. — die schönste Ableitung** |
-
-### Die vier alten Entwurfsregeln — sie sind jetzt ABLEITUNGEN, keine Regeln
-
-Regel 1 ist **M4**, Regel 2 ist **M1 + M4**, Regel 3 ist **D2**, Regel 4 ist **D1 + D2**. Sie
-stehen hier weiter, weil ihre **Fundstellen** die Evidenz sind — jede ist ein bezahlter Fehler.
-
-Jede ist als Antwort auf einen bezahlten Fehler formuliert. Die Konstrukte selbst stehen in
-[`DESIGN.md`](DESIGN.md); hier stehen die Regeln und ihre Fundstellen.
-
-### 1. Total per Konstruktion — und „endlich" ist das SCHWÄCHSTE Versprechen
-
-Es gibt **keine unbegrenzte Schleife**, sondern nur Traversierungen mit `over`/`by`/`touches`.
-
-> *Fundstelle:* `migration_candidate` läuft eine Kette `while i != NIL` **ohne Schrittgrenze**,
-> während der Prüfer über derselben Kette eine führt. Unter dem Kern-Lock ist ein Zyklus dort ein
-> stehender Kern.
-
-Terminierung allein kauft wenig: eine Schleife mit Schrittgrenze **terminiert** und kann trotzdem
-ausserhalb der Tabelle indizieren — genau das ist **S1a**. Die Schrittgrenze aus B-5.5 schützt gegen
-**Zyklen**, nicht gegen einen Index **ausserhalb**.
-
-### 2. Keine Zeiger — nur Versätze, jeder gegen eine Länge im Geltungsbereich
-
-Ein Versatz ohne die Länge, gegen die er gilt, ist nicht schreibbar. Die Bereichsprüfung entsteht
-nicht durch Sorgfalt, sondern weil es keine andere Formulierung gibt.
-
-> *Fundstelle:* `audit_cdt` prüft `parent` gegen `nslots`, liest dann aber `first_child` und die
-> Geschwisterkette **ungeprüft**. Mit `panic = "abort"` reisst der Prüfer den Knoten mit — bei
-> genau der Anomalie, die er melden soll.
-
-### 3. Abweisen, nie deuten
-
-Eine unbekannte Version, ein gesetztes reserviertes Feld, eine krumme Länge: **benannte Absage**,
-je Grund ein eigener Code — nicht ein gemeinsamer Formfehler.
-
-> *Fundstelle:* Eine Prüfung las **ein Byte** des Kernel-Hashes statt 512 Byte zu vergleichen:
-> Falsch-Alarm bei 1 von 256 Bauten, **blind bei 255 von 256** echten Überschreibungen.
-
-**Diese Regel hat einen Preis, und er steht bei `by unbesucht`:** ein blosser Schrittzähler würde
-einen Zyklus **stillschweigend abschneiden** statt ihn als Absage zu melden — das wäre Deutung. Die
-Sprache zwingt damit in die teure Fassung (Bitmap oder Generationsstempel), s. `DESIGN.md`.
-
-### 4. Feste Breiten, ausgesprochene Bytereihenfolge
-
-Kein `usize`, kein Wirtslayout, kein `#[repr]`-Vertrauen. Was auf dem Draht steht, steht im
-Beschreiber.
-
-> *Fundstelle:* `MASK_BITS` war nicht die Farbanzahl — auf x86 (256 Farben) zufällig richtig, auf
-> aarch64 (16) falsch. Bei 16 Farben bekam Streifen 0 **alle** Farben und die übrigen keine, und
-> weil leere Mengen sich nicht schneiden, meldete der Selbsttest „disjunkt".
-
----
-
-### `check` ist keine Sonderform, sondern eine lineare Pflicht
-
-Das Konstrukt mit den 33 getöteten Fallen braucht **kein eigenes Schlüsselwort**:
-
-* Ein `check` erzeugt ein `linear ghost Pflicht`. **Wer sie nicht verbraucht, übersetzt nicht** —
-  das ist wörtlich „ein `check`, der in keiner Gatterliste steht, ist ein Fehler" (Falle 17, und
-  das `all_done()`-Loch 21 gegen 24), und es fällt aus M2 heraus statt aus einer Sonderregel.
-* Die **Sprechprobe** ist eine zweite Pflicht, die nur ein *fehlgeschlagener* Lauf verbraucht.
-* Die **Untergrenze** ist M1: eine gemessene Grösse mit `in 1 ..` kann nicht null melden.
-* „Der gemessene Pfad schreibt die Grösse selbst" ist ein **Schreibrecht** — M3.
-
-**Damit bleibt die These dieses Ordners bestehen und wird kleiner:** das Wertvollste ist nicht ein
-Prüf-Schlüsselwort, sondern dass **Prüfzusagen dieselben linearen Werte sind wie Ressourcen.**
-
 ---
 
 ## 3c. Wie ein GOLD-Beweis billig wird — der Kern der These
@@ -330,7 +191,7 @@ Konstrukte liefern, liegt zwischen **Silber und Gold in diesem Sinn** — und wu
 
 **Die Folge ist keine Wortklauberei, sondern eine Messvorschrift:** solange nicht dasteht, *welche
 Stufe* gemessen wird, liefert jedes Verhältnis die Zahl, die man haben wollte. Das Protokoll dafür
-steht in [`ROADMAP.md`](ROADMAP.md) als Abbruchbedingung 0b.
+steht in [`PLAN.md`](PLAN.md) als Messprotokoll.
 
 ---
 
@@ -472,11 +333,14 @@ der ist unentschieden.
       und mit dem, was ein Beweiser darüber hinaus bräuchte. `space.rs` ist der richtige Fall, weil
       es beides enthält: beschreibende Struktur **und** algorithmisches `revoke`.
 
-## 3c-bis. Der Zuschnitt (a)/(b)/(c) — er entscheidet die KENNZAHL, nicht nur den Nutzen
+---
 
-> **Neu gewichtet:** solange die Mutation handgeschrieben bleibt, kehrt die Invariantenerhaltung
-> als Beweisposten zurück — und mit ihr fällt die 0,8 : 1-Vorhersage. Der Zuschnitt ist damit
-> keine Nutzenfrage mehr, sondern die **Voraussetzung der Kennzahl**.
+## Der Zuschnitt ist ENTSCHIEDEN: (c)
+
+**Er war lange offen. Mit dem Ziel 0,5 : 1 ist er es nicht mehr:** bleibt die Mutation
+handgeschrieben, muss jemand zeigen, dass sie **jede** Invariante erhält — bei seL4 der grösste
+Beweisposten überhaupt. **(c) ist damit keine Option, sondern eine Voraussetzung.** Was unten folgt,
+ist die Herleitung; die Entscheidung ist gefallen.
 
 **Ein Formatleser ist eine reine Funktion an einer Grenze**: Bytes rein, Struktur oder benannte
 Absage raus. Dort ist „per Konstruktion" ein sauberer Begriff — der erzeugte Code ist der
@@ -520,140 +384,9 @@ Schuldposten — eine Ordnung darüber ist in keinem heissen Pfad denkbar. Es bl
 
 ---
 
-## 3d. Rennfreiheit — jetzt einzuplanen, sonst nie
-
-**Datenrennen fallen aus M2 + M3 heraus** (Eigentum und Zugriffsrechte). Das ist der gelöste Teil,
-und Rust kann ihn heute.
-
-**Protokollrennen nicht — und die sind die teuren.** Der Beleg steht im eigenen Register:
-
-> **D0 war KEIN Datenrennen.** `spawn()` reihte ein, `bind_pd()` kam danach; jeder Zugriff war
-> ordentlich synchronisiert, kein Rust-`unsafe`, kein fehlender Atomic. Der Fehler war, dass ein
-> Thread **erreichbar** wurde, bevor er Autorität hatte. Rate **0,018 %**, zehn Tage Suche, und
-> **jeder** Datenrennen-Prüfer der Welt hätte geschwiegen.
-
-| Klasse | Beispiel aus dem Register | fällt aus |
-|---|---|---|
-| **Datenrennen** | ungeschützter gemeinsamer Zugriff | M2 + M3 — gelöst, auch in Rust |
-| **Sichtbarkeit vor Fertigstellung** | **D0** (lauffähig vor `bind_pd`) | **M2**, wenn die Phase ein **linearer Wert** ist: `Parked` → `admit`. Genau so wurde D0 auch tatsächlich behoben |
-| **Verlorenes Wecken** | **Z24** (ein Bit für vier Gründe) | **M2**: der Wecker verbraucht **genau seinen** Grund; eingereiht wird nur bei leerer Menge |
-| **Veröffentlichung ohne Nutzlast** | Loom sah die Nutzlast nicht (Falle 33) | **M2**: `release` gibt einen Geisterbeleg ab, `acquire` nimmt ihn |
-| **Fortschritt / Aushungern** | **D8** (erschöpfter Thread) | **gar nicht.** Kein Mechanismus adressiert Lebendigkeit — das gehört ausgesprochen |
-
-**Warum es jetzt in den Entwurf muss und nicht später:** wenn Phasen und Sperrbelege lineare Werte
-sind, steht das in **jeder Signatur**, die geteilten Zustand anfasst. Nachträglich eingeführt heisst:
-jede dieser Signaturen ändert sich. Das ist dieselbe Lehre wie „ein Umbau, der einen neuen Zustand
-einführt, muss jede Stelle mitnehmen, die über Zustände urteilt" — dort waren es 61 Aufrufstellen.
-
 ---
 
-## 3e. Unsicherer Bootcode — mit BEWEIS, dass er danach nie wieder läuft
-
-Ein Kernel braucht ihn: rohe Physadressen, bevor die MMU steht; Multiboot-Strukturen; die
-Kern-Übergabe. Die Forderung ist nicht „möglichst wenig `unsafe`", sondern **„`unsafe`, aber
-nachweislich abgelaufen"** — und das ist strikt stärker als alles, was Rust heute kann.
-
-**Es fällt aus M2 heraus, ohne neuen Mechanismus:**
-
-```gabbro
-linear ghost type Bootphase              -- genau EINE Instanz, beim Eintritt erzeugt
-
-roh fn phys_schreiben(p: Pa, w: u64) benoetigt &Bootphase
-roh fn mb_info_lesen(p: Pa) -> Info      benoetigt &Bootphase
-
-fn boot_ende(t: Bootphase)               -- VERBRAUCHT die Marke; es gibt keine zweite
-    entfernt code<boot>                  -- ... und bildet .boot im selben Zug ab
-```
-
-**Zwei Ebenen, und die zweite ist der eigentliche Gewinn:**
-
-| | Aussage | wie |
-|---|---|---|
-| **statisch** | keine `roh`-Funktion ist nach `boot_ende` aufrufbar | die Marke ist **linear**, nicht affin — sie lässt sich nicht kopieren und nicht wiederherstellen. **Genau das kann Rust nicht** (affin) und Verus' `tracked` auch nicht |
-| **strukturell** | der Code ist danach **nicht mehr da** | `boot_ende` verbraucht die Marke **und** bildet den `boot`-Codeabschnitt ab — ein Ereignis, nicht zwei. Ein wilder Sprung dorthin faultet |
-| **prüfbar** | die Behauptung ist falsifizierbar | Sonde nach dem Boot auf eine `.boot`-Adresse: **muss** faulten. Das ist `falsifier`, und ohne ihn wäre „ist weg" eine Behauptung |
-
-**Dass es beide Ebenen sind, ist der Punkt.** Nur statisch hiesse „kein Aufrufer" — und das eigene
-Register kennt die Gegenprobe: **Falle 47**, ein Abschalter für eine Sicherheitseigenschaft wird
-gesetzt und nie zurückgenommen. Eine Eigenschaft, die daran hängt, dass niemand eine Funktion ruft,
-ist eine Bitte. Eine, deren Code **abgebildet** ist, ist eine Zusicherung.
-
-- [ ] **Aus der Basisrate ist dieser Punkt NICHT abgeleitet** — er kommt aus der Anforderung. Die
-      100 Fallen enthalten keine Instanz „Boot-`unsafe` später benutzt"; die nächstverwandte ist
-      Falle 47. **Das gehört gesagt**, sonst sieht eine geforderte Eigenschaft aus wie eine
-      gemessene.
-
----
-
-## 3f. Was Kernel-Logik AUSSERDEM verlangt — und wo das Vertrauen sich sammelt
-
-„Alle Kernel-Logik ausdrückbar" ist eine Vollständigkeitsforderung, und sie hat eine Liste. M1–M4
-decken sie **nicht** allein.
-
-| Was | Antwort | ehrlich dazu |
-|---|---|---|
-| **Absichtliche Nichtterminierung** (Leerlauf-, Hauptschleife) | `divergent fn` — **ausgesprochen**, nie versehentlich | M4 verlangt sonst ein Abstiegsmass; die Ausnahme muss benannt sein, nicht erschlichen |
-| **Unterbrechbarkeit** | eine **Wirkung**: `unterbrechbar` / `maskiert`. Ein Handler ist kein Aufruf — er kann zwischen zwei beliebigen Anweisungen laufen | fällt aus M2, wenn die IRQ-Maske ein linearer Beleg ist. Falle 93 (Guard über den Rumpf) ist genau das |
-| **Kontextwechsel** | Sprachprimitiv `wechsle(von: &mut Kontext, zu: &Kontext)` mit Vertrag über den Maschinenzustand | Stapelwechsel ist in **keiner** strukturierten Sprache ausdrückbar. Das ist der `state`-Übergang auf Maschinenebene — und er wird **emittiert**, nicht geschrieben |
-| **Privilegierte Befehle** (`mov cr3`, `wbinvd`, `sti`, `invlpg`, `tlbi`) | eine **Axiomschicht**: je Befehl ein erklärter Effekt auf das Maschinenmodell | **Hier sammelt sich das Vertrauen, und es ist irreduzibel.** Jedes Axiom ist ein `assume` — mit `falsifier`, wo einer fahrbar ist |
-| **Code als Daten** (der Lader) | `code`-Raum ist nur über ein **Prüftor** erreichbar (Signatur, Layout) | Caprock macht das bereits; neu ist, dass der Weg dorthin der **einzige** ist |
-| **Sprungtabellen** (Syscall-Verteiler) | Funktionszeiger mit vollständiger Signatur, Tabelle erschöpfend (D2) | — |
-| **Ausrichtung und Layout** | Teil des Typs, nicht des Übersetzers | — |
-
-#### Ergänzend: die Posten, die M1–M4 gar nicht berühren
-
-| Was | warum es nicht nebenbei geht |
-|---|---|
-| **Nebenläufigkeit** | Atomics, Barrieren — und „der Aufrufer hält den Lock", das **weder SPARK noch Rust** ausdrücken kann. Regionen + Fähigkeiten im Typsystem. Der grösste Einzelposten |
-| **Volatile/MMIO** | vier Geschmacksrichtungen wie in SPARK (`Async_Readers`/`Writers`, `Effective_Reads`/`Writes`). Machbar, aber Sprachkern |
-| **Zwei Adressachsen** | `Pa` und `Iova` getrennt, Arithmetik darauf — `index into` verallgemeinert dorthin, ist aber nicht dasselbe |
-| **Bau und ABI** | Multiboot-Kopf, Sektionen, Ausrichtung, ELF32-Abstieg. Kein Sprachthema, muss aber existieren — und hat eine Woche einen halben Tag gekostet |
-| **Kein Laufzeitsystem** | kein Allokator, kein Panik-Apparat, kein Abwickeln |
-| **FFI** | für HACL\*/EverCrypt — und jede FFI-Grenze **bricht die Garantie** |
-| **Beobachtbarkeit** | dieses Projekt lebt von Berichtszeilen. Eine Sprache, in der Formatierung teuer ist, ist hier unbrauchbar |
-
-**Die ehrliche Summe: das ist eine Allzweck-Systemsprache** — ein zweites Projekt, und die Kernthese
-(geschlossene Domäne ⇒ Spezifikation billig) gilt für ihn **nicht**.
-
-### Syscalls ohne Assembler — das Vorzeigebeispiel hat die schwächste Deckung
-
-Der Eintritt ist heute Assembler aus **einem** Grund: die CPU übergibt die Kontrolle in einem
-Maschinenzustand, den keine Hochsprache zusichert. Ohne Assembler braucht es vier Dinge im
-Sprachkern: Eintrittsfunktionen mit **erklärtem Registerabdruck**; **registergebundene Werte**; eine
-**eigene Aufrufkonvention** (die Interrupt-Frame-ABI); und **`iretq`/`eret` als Sprachkonstrukt** —
-ein typisierter Übergang in einen gespeicherten Kontext, also der `state`-Übergang, angewandt auf
-den Maschinenzustand. Das ist die Klasse **typisierter Assemblersprachen** (TAL) und keine Erfindung.
-
-> **Es entfernt das Vertrauen nicht, es VERLAGERT es** — die Instruktionsfolge erzeugt dann der
-> Übersetzer statt der Mensch. Der Gewinn ist trotzdem echt: **eine Implementierung statt 153
-> Fundstellen, die nie jemand einzeln prüft.**
-
-**Und hier steht das stärkste Wort an der Stelle mit der schwächsten Deckung** — dieselbe Form wie
-die zwei Überschreibungen in `HISTORIE.md`, deshalb ausdrücklich:
-
-* „Eine Implementierung, **einmal geprüft**" trägt nur, wenn „geprüft" einen **Prüfer** hat.
-* **Der nachgelagerte Beweiser reicht dorthin nicht.** Verus beweist keine Inline-Assembler-Semantik
-  und keine Registerabdrücke; Frama-C/WP über erzeugtem C erst recht nicht.
-* Ein TAL-Typsystem wäre der Prüfer — dann prüft **Gabbro sich selbst**, und der Erzeuger ist
-  unverifiziert. Zirkulär, solange niemand ihn verifiziert.
-
-**Die haltbare Fassung ist deshalb schwächer und immer noch ein Gewinn:** die vertrauenswürdige
-Fläche **schrumpft** von 153 Fundstellen auf eine Emissionsstelle. Das ist eine Reduktion, keine
-Beseitigung, und sie hat **keinen nachgelagerten Beweiser**.
-
-> **Die ehrliche Summe: M1–M4 + Axiomschicht + drei Primitive** (`divergent`, `wechsle`, Prüftor).
-> Die Axiomschicht ist die grösste unbewiesene Fläche der ganzen Sprache — grösser als der
-> Übersetzer —, und sie ist **zählbar**: eine Ratsche über der Menge der Axiome, die nur fallen darf.
-
-### Was NICHT herausfällt — und darum ehrlich danebensteht
-
-| | |
-|---|---|
-| **Verträge** (`requires`/`ensures` über deklarierte Prädikate) | nötig für Falle 1/2 (Bedingung über Registergrenzen). Damit ist die Linie gewandert, wie `README.md` vorhergesagt hat — und **allgemeine Quantoren über Rechenausdrücke bleiben trotzdem draussen** |
-| **Der Eintritt (Assembler)** | M1–M4 sagen nichts über Registerabdrücke. **Neu seit der Zielsetzung „C + iasm": er ist Teil der AUSGABE**, also aus einer Beschreibung emittiert statt je Fundstelle geschrieben — vertrauenswürdige Fläche **eine Emissionsstelle statt 161**. Bewiesen ist er weiterhin nicht, und er tötet **0** bezahlte Fallen |
-| **Fortschritt** (Aushungern, D8) | kein Mechanismus adressiert ihn |
-
-## 3g. Was Gabbro wie SPARK könnte — und was besser
+## Was Gabbro wie SPARK könnte — und was besser
 
 Beides ist gemessen, nicht geschätzt: zwei SPARK-Experimente am Cap-Space und am Scheduler, dazu
 das Verus-Tor vom 2026-08-13.
@@ -688,6 +421,8 @@ ihn** — deshalb fällt die Invariantenerhaltung einmal je Operation an statt j
   bei einem Prüfer die schwächste aller Aussagen.
 * **Ein einziger Datenpunkt je Behauptung.** Zwei Experimente sind keine Erhebung.
 
+---
+
 ## 4. Was auch dann nicht besser wird — 28 %
 
 | | | Beispiel |
@@ -702,7 +437,9 @@ jeder Stufe.**
 
 ---
 
-## 4b. AUSGELÖST 2026-08-13: Abbruchbedingung 2 hat für M2 gegriffen
+---
+
+## AUSGELÖST 2026-08-13: Abbruchbedingung 2 hat für M2 gegriffen
 
 Die Gegenrechnung „was können Rust + Verus + Loom heute schon?" ist für den schwersten Posten
 gefahren, und sie ist **gegen** diesen Plan ausgegangen.
@@ -724,34 +461,226 @@ gefahren, und sie ist **gegen** diesen Plan ausgegangen.
 Damit ist die Reihenfolge nicht mehr „V−1 zuerst, weil billig", sondern **„V−1, weil alles andere
 gerade seinen Gegner gefunden hat".**
 
-## 5. Der Plan, mit Toren
+---
 
-Jede Phase liefert eine Zahl, die über die nächste entscheidet. Ohne Zahl kein Weiterbau.
+# Der Weg — acht Phasen, jede mit einem Tor
 
-| Phase | Inhalt | **Tor** |
-|---|---|---|
-| **V−1** | **`check` allein, als Rust-Makrobibliothek** — ohne eigene Sprache, ohne Übersetzer | Es rüstet die 33 Fallen in Caprock nach. **Fangen die Regeln mindestens 5 davon rückwirkend** (mit Mutation belegt), ist die These getragen. Fangen sie 0–1, ist `check` Ergonomie |
-| **V0** | Stufe 0 + Stufe 6 als echte Sprache, ein Modul erzeugt | Spezifikationsverhältnis nach dem Protokoll 0b **an zwei Modulen**, beide berichtet |
-| **V1** | Stufe 1 (Nebenläufigkeit) | `caprock-sync` + der Cap-Space-Lock übersetzt, **Loom-Beweise gehen durch**, Sperrordnung fängt eine eingebaute Verletzung |
-| **V2** | Stufe 2 (`device`) | `vtd.rs` (1 448 Zeilen) übersetzt, **die DMA-Suite bleibt grün**, und vier Mutationen (Fallen 1, 2, 4, 5) übersetzen **nicht** |
-| **V3** | Stufe 3 (Linearität/Regionen) | `Parked` und die Endowment-Kette; Mutation zu Falle 96 übersetzt nicht |
-| **V4** | Stufe 4+5, Eintritt | ein Syscall-Eintritt ohne `asm!`, gemessen gegen die heutige Zyklenzahl |
-| **V5** | Umstellung nach Strangler-Muster | s. u. |
+## P0 — Papier. Drei Fragen, jede kann die These töten
 
-### Die Umstellung nimmt zuerst das Werkzeug auseinander, das die Fehler findet
+Zusammen ein bis zwei Tage, kein Code. **Das ist der billigste Punkt des ganzen Vorhabens.**
 
-**Das ist das grösste Risiko des ganzen Vorhabens, und es folgt aus der eigenen Messung.** 15,7 %
-von Caprock sind Prüfgerüst; ein Rewrite fasst genau das zuerst an — und für die Dauer der
-Umstellung läuft die Abnahmereihe nicht, also die Disziplin, die **jeden** der 100 Einträge oben
-gefunden hat.
+### P0.1 — `revoke` in den Konstrukten ausdrücken
 
-Daraus folgt die einzige vertretbare Form: **Modul für Modul, beide Fassungen gleichzeitig lebendig,
-Differenztest zwischen ihnen.** Nie ein grosser Schnitt. Und die Abnahmereihe bleibt in Rust, bis
-`check` in Gabbro sie **nachweislich** ersetzt — nicht umgekehrt.
+`decrement requires` ist eine Vorbedingung **auf einem Feld**. Die Korrektheitsbedingung von
+`revoke` ist **strukturell**: ein Teilbaum verschwindet, und dass danach `kind_zeigt_zurueck` und
+die Kettenendlichkeit noch gelten, ist eine Aussage über Baumform.
+
+> **Tor:** Geht es, ist Zuschnitt (c) tragfähig und die 0,8 : 1-Vorhersage hält ihre riskanteste
+> Annahme. Geht es nicht, bleibt die **gefährlichste** Mutation handgeschrieben — dann kehrt die
+> Invariantenerhaltung als Beweisposten zurück, **und die Kennzahl fällt mit ihr**.
+
+### P0.2 — `vtd.rs` als `device`-Block
+
+1 448 Zeilen Rust gegen eine Beschreibung derselben Einheit.
+
+> **Tor:** Faktor ≥ 5 kleiner. Sonst ist die Knappheitsthese widerlegt, und mit ihr der
+> Deklarationsgewinn an jeder Stelle.
+
+### P0.3 — `space.rs` zweimal hinschreiben
+
+Als Gabbro-Quelle **und** mit dem, was ein Beweiser darüber hinaus bräuchte. Der richtige Fall, weil
+er beides enthält: beschreibende Struktur **und** algorithmisches `revoke`.
+
+> **Tor:** die erste echte Zahl für die Kennzahl, nach dem Protokoll unten. Über 2 : 1 ⇒ Abbruch.
+
+- [ ] **Dazu, unabhängig und ebenfalls Papier: die Basisrate zählen.** Wie viele Formate hat Caprock
+      wirklich, wie oft ändern sie sich, wie viele Fehler dieser Klasse sind pro Jahr entstanden
+      (aus `done.md` auszählbar)? Fällt sie klein aus, ist das ehrlichste Ergebnis nicht „es geht",
+      sondern „die Falle ist zu selten für eine Sprache".
 
 ---
 
-## 5b. Das Abnahmekriterium: Caprock vollständig in Gabbro, Suite grün
+## P1 — `check` als Rust-Makrobibliothek, ohne Sprache
+
+Das einzige Konstrukt ohne Vorbild, und es braucht **keinen Übersetzer**. Rückwirkend gegen die 33
+Messdisziplin-Fallen gehalten, jede mit Mutation.
+
+> **Tor:** **≥ 5 der 33** rückwirkend gefangen, mit Mutation belegt. Darunter ist `check` Ergonomie
+> — und mit ihm fällt die einzige Begründung, die Gabbro allein gehört.
+
+**Nützlich auch dann, wenn Gabbro nie entsteht.** Das ist der Grund, warum diese Phase vor allen
+anderen steht.
+
+---
+
+## P2 — Der Kern als PRÜFER, ohne Codeerzeugung
+
+M1 (Bereichstypen) + M2 (lineare, auch geisterhafte Werte) + M4 (kein ungeprüfter Index) als
+Typprüfer über einer minimalen Sprache. Noch kein C.
+
+> **Tor:** S1a und S1b sind **nicht formulierbar**, und zwar mit **0 Zeilen** Annotation. Braucht es
+> welche, ist Gabbro an dieser Stelle nur ein umständlicheres Verus.
+
+Zusätzlich hier zu zeigen, weil es der einzige Mechanismus ohne vorhandenes Werkzeug ist:
+
+> **Tor 2:** die **Bootphasen-Marke** trägt — eine `roh`-Funktion nach `boot_ende` übersetzt nicht,
+> und ein Versuch, die Marke zu kopieren oder herzustellen, ebenso wenig.
+
+---
+
+## P3 — Absenkung nach C, syntaxgesteuert
+
+Ein Modul durch bis zum C, nicht optimierend, plus Differenztest gegen die Rust-Fassung.
+
+> **Tor:** Differenztest grün (gleiche Eingaben, gleiche Ausgaben, gleiche **Absagecodes**) **und**
+> Zyklen je Aufruf gegen die handgeschriebene Referenz gemessen. „Dauerhaft langsamer und die
+> Ursache nicht behebbar" ist eine Abbruchbedingung.
+
+---
+
+## P4 — M3 und `device`
+
+Adressräume und Zugriffsrechte am Zeiger; `vtd.rs` übersetzt.
+
+> **Tor:** die DMA-Suite bleibt grün, **und vier Mutationen übersetzen NICHT** — die bezahlten
+> Fallen 1 (`STE.S1STALLD`), 2 (CD ohne `R`), 4 (`GCMD` als RMW), 5 (x2APIC `EN`+`EXTD`).
+
+---
+
+## P5 — Axiomschicht und Eintritt
+
+Je privilegiertem Befehl ein erklärter Effekt; ein Syscall-Eintritt ohne handgeschriebenen
+Assembler.
+
+> **Tor:** die Axiommenge ist **aufgezählt und beziffert** (Ratsche, darf nur fallen), jedes Axiom
+> hat einen `falsifier` oder einen benannten Grund, warum keiner fahrbar ist. **Ohne die Zahl ist
+> „speichersicher unter A1…An" eine Form ohne Inhalt.**
+
+---
+
+## P6 — `spec fn` / `impl fn` und die erzeugte Verfeinerungspflicht
+
+Der Gold-Mechanismus.
+
+> **Tor:** die Kennzahl an **zwei** Modulen gemessen, beide berichtet (bester und schlechtester
+> Fall) — **samt Aufschlüsselung, welcher Posten den Abstand zu 0,5 : 1 erzeugt.** Eine Zahl ohne
+> diese Aufschlüsselung ist wertlos, weil sie keinen Arbeitsauftrag enthält. Abbruch erst > 3 : 1.
+
+---
+
+## P7 — Rennfreiheit
+
+Datenrennen aus M2/M3; **Protokollrennen** über lineare Phasen.
+
+> **Tor:** die **D0-Form** ist nicht formulierbar — ein Thread, der lauffähig wird, bevor er seine
+> Autorität hat, übersetzt nicht. Das ist der Fall, den jeder Datenrennen-Prüfer der Welt
+> durchgelassen hätte.
+
+---
+
+## P8 — Umstellung nach Strangler-Muster
+
+Modul für Modul, **beide Fassungen gleichzeitig lebendig**, Differenztest dazwischen. Nie ein
+grosser Schnitt.
+
+> **Abnahme, dreiteilig:** (A) die 14-Punkte-Reihe grün, beide Architekturen, alle RAM-Grössen ·
+> (B) Differenztest gegen die Rust-Fassung, Modul für Modul · (C) Wiederholungsmessung mit
+> Quervergleich, Nullbefunde mit Stichprobengrösse.
+>
+> **(B) ist nicht optional:** über die Behebungen von D8, D9 und D10 hinweg blieb die x86-Signatur
+> **byte-identisch** (500 Läufe je Stand). Drei echte Kernfehler, keiner ausgelöst.
+
+**Die Prüfsuite ist der LETZTE Umzug, nicht der erste.** Sie ist 15,7 % des Codes und besteht aus
+`check`-Zusagen; sie bleibt in Rust, bis die Gabbro-Fassung **gegen sie** bewiesen ist. Wer sein
+Messgerät zuerst umbaut, misst den Umbau mit dem Umbau.
+
+---
+
+## Später, ausdrücklich nicht jetzt
+
+* **Binärverifikation** (seL4-Art, erzeugtes C gegen Maschinencode). Der Weg existiert, ist aber ein
+  eigenes Projekt — und er ist der einzige, der die Absenkung aus der Vertrauensbasis nimmt.
+* **Wiederverwendbare Spezifikationstheorien** (Fähigkeitssystem, Seitentabellen). Sie helfen dem
+  **zweiten** Projekt, nicht dem ersten — deshalb dürfen sie in keiner Kostenrechnung mitgezählt
+  werden, solange es nur einen Kernel gibt.
+* **~~Rust-Ausgabe~~, ~~Ada-Ausgabe~~** — gestrichen am 2026-08-13. Sie waren nur nötig, solange ein
+  *fremder* Beweiser den Beweis führen sollte.
+* **Seitentabellen-Beschreiber.** Verlockend (das fehlende `US` auf der Zwischenebene wäre nicht
+  formulierbar gewesen), aber Seitentabellen sind Hardwareverträge; ein falscher Beschreiber erzeugt
+  einen beweisbar korrekten falschen Kernel.
+
+---
+
+## Die Abbruchbedingungen — hier, damit sie nicht verhandelt werden
+
+Gabbro endet, wenn **eines** davon eintritt:
+
+1. **Die Basisrate ist zu klein** (P0) — zu wenige Formate, zu wenige Fehler dieser Klasse.
+2. **`check` fängt rückwirkend weniger als 5 der 33 Fallen** (P1). Dann fällt die einzige
+   Begründung, die Gabbro allein gehört.
+3. **Rust + Verus + Loom decken einen Mechanismus bereits ab.** Für M2 am Sperrbeleg und für M1
+   ist das am 2026-08-13 **eingetreten**; übrig bleibt echte Linearität. Tritt es für die auch ein,
+   ist der Kern leer.
+4. **Die Kennzahl liegt über 3 : 1** (P6). *Nicht* „sie verfehlt 0,5 : 1“ — das ist das **Ziel**,
+   an dem der Abstand gemessen wird, keine Schwelle. Abgebrochen wird erst, wenn der Beweis wieder
+   der dominierende Posten ist.
+5. **Der erzeugte Code ist dauerhaft langsamer** als die handgeschriebene Referenz und die Ursache
+   ist nicht behebbar (P3).
+6. **Eine Kernel-Logik lässt sich nur ausdrücken, indem die Axiomschicht wächst.** Die Ratsche darf
+   nur fallen. Wächst sie, um ein Sprachdefizit zu decken, wird „speichersicher unter A1…An" jedes
+   Mal etwas weniger wert — und niemand merkt es, weil die Zusage formal weiter gilt.
+7. **Die Umstellung erzwingt einen grossen Schnitt** (P8). Ein Vorhaben, das die Abnahmereihe
+   abschaltet, um sich selbst zu bauen, hat keinen Prüfer mehr — und dieses Projekt hat gemessen,
+   was dann passiert: zehn Tage rot, ohne dass es jemand sah.
+
+Ein Ordner, der seine eigenen Abbruchbedingungen nicht nennt, wird nie beendet — nur vergessen.
+
+---
+
+## Das Messprotokoll zur Kennzahl — vorab, weil es sonst die Wunschzahl liefert
+
+Die Regeln stehen hier **vor** der Messung, aus demselben Grund, aus dem die IPC-Schwelle von
+2000 Zyklen vorab feststeht: eine Schwelle, die man nach dem Ergebnis wählt, ist keine.
+
+**1. Zwei Module, beide berichtet — die Wahl entscheidet sonst das Ergebnis.**
+
+| | Modul | erwartet |
+|---|---|---|
+| **bester Fall** | der **Manifest-Leser** (`format`) | nahe am Ziel — hier *ist* der Beschreiber die Spezifikation |
+| **schlechtester Fall** | ein **(c)-Mutationsmodul** am Cap-Space | deutlich darüber — Schleifeninvarianten, Ghost-Code, Hilfslemmata |
+
+**Nur den ersten zu berichten ist die Manipulation**, und sie braucht keine Absicht: man misst das
+Modul, das fertig ist.
+
+**2. Zählregel für den Zähler — Beweiscode IST Spezifikation.** Was der nachgelagerte Beweiser
+zusätzlich braucht, zählt mit: **Schleifeninvarianten, Ghost-Code, Hilfslemmata, `assert`-Ketten,
+ACSL-Annotationen**. Wer nur den Gabbro-Beschreiber zählt, misst die halbe Last — und genau die
+Hälfte, die bei (c) explodiert.
+
+**3. Zählregel für den Nenner — GABBRO-CODE.** Nicht die handgeschriebene Rust-Referenz: gemessen
+wird, ob ein **in Gabbro geschriebener** Kernel billig zu verifizieren ist; Rust kommt darin nicht
+vor. **Die Trennlinie ist die Laufzeitwirkung:** was der Übersetzer vor der Codeerzeugung löscht,
+ist Spezifikation; was im erzeugten C ankommt, ist Code. Gezählt wird in **Anweisungen**, nicht in
+Zeilen — sonst gewinnt geschwätziger Code. Und wer eine Eigenschaft zur Laufzeit **prüft** statt
+sie zu beweisen, verschiebt Zeilen nach unten: erlaubt, aber die Laufzeitmessung gehört daneben.
+
+**4. Die Stufe steht dabei.** Ob Sicherheitshülle, deklarierte Invarianten oder funktionale
+Korrektheit gemessen wurde, gehört neben die Zahl — die 20 : 1 von seL4 ist eine Zahl für die
+**stärkste** Stufe. Ein Verhältnis ohne Stufe vergleicht über eine Kluft.
+
+**5. Der Beweisweg IST entschieden** (2026-08-13): Gabbro prüft selbst, Ausgabe ist C + iasm, kein
+nachgelagerter Beweiser. Damit fällt die ACSL-Last aus dem Zähler und die Entsprechungspflicht weg.
+**Was stattdessen in den Zähler gehört:** `spec fn`-Zeilen und die Verfeinerungsannotationen — und
+das ist bei einem Kernel der Boden, der die 1 : 1 unerreichbar macht (§3c dort).
+
+**Ziel und Abbruch sind zwei verschiedene Dinge, und die Verwechslung war ein eigener Fehler:**
+**Ziel ist 0,5 : 1**, der theoretische Boden — er wird nicht „bestanden“, sondern der **Abstand**
+dazu wird aufgeschlüsselt. **Abgebrochen** wird bei **> 3 : 1**, wo der Beweis wieder dominiert.
+Die 3 ist gewählt, nicht hergeleitet; sie steht vorab, damit sie nicht später gewählt wird.
+
+---
+
+## Das Abnahmekriterium: Caprock vollständig in Gabbro, Suite grün
 
 **Die Forderung ist falsifizierbar, und das ist ihr Wert.** Nicht „es fühlt sich besser an",
 sondern: der Gabbro-gebaute Kernel besteht **die vorhandene Abnahmereihe** — 14 Punkte, x86 in
@@ -780,6 +709,8 @@ hat — Abbruchbedingung 4.
       besteht aus `check`-Zusagen; sie bleibt in Rust, bis die Gabbro-Fassung **gegen sie** bewiesen
       ist. Wer sein Messgerät zuerst umbaut, misst den Umbau mit dem Umbau.
 
+---
+
 ## 6. Die Kosten, ehrlich
 
 **Der Übersetzer.** Die sieben Konstrukte waren „ein Erzeuger von Wochen". Stufe 0–6 sind die
@@ -795,18 +726,3 @@ dass jedes umgestellte Modul seinen Differenztest mitbringt.
 lineare Ghost-Permissions. Loom fand die abgeschwächte Ordnung, sobald die Zelle im Modell war.
 **Für jede Stufe gehört beantwortet: was kann Rust+Verus+Loom heute schon, und was bleibt übrig?**
 Nur der Rest rechtfertigt eine Sprache.
-
-## 7. Abbruchbedingungen dieses Zweigs
-
-1. **V−1 fängt weniger als 5 der 33 Fallen rückwirkend.** Dann ist `check` — das einzige Konstrukt
-   ohne Vorbild — Ergonomie, und mit ihm fällt die einzige originelle Begründung.
-2. **Rust + Verus + Loom decken eine Stufe bereits ab.** Dann wird diese Stufe nicht gebaut.
-3. **Das Spezifikationsverhältnis nach Protokoll 0b verfehlt seine Schwellen** (2 : 1 bester,
-   5 : 1 schlechtester Fall).
-4. **Eine Kernel-Logik lässt sich nicht ausdrücken, ohne die Axiomschicht zu vergrössern.** Die
-   Ratsche über den Axiomen darf nur fallen. Wächst sie, um ein Sprachdefizit zu decken, ist die
-   Zusage „speichersicher unter A1…An" jedes Mal etwas weniger wert — und niemand merkt es, weil
-   die Zusage formal weiter gilt.
-5. **Die Umstellung erzwingt einen grossen Schnitt.** Ein Vorhaben, das die Abnahmereihe abschaltet,
-   um sich selbst zu bauen, hat keinen Prüfer mehr — und dieses Projekt hat gemessen, was dann
-   passiert: zehn Tage rot, ohne dass es jemand sah.

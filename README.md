@@ -31,11 +31,18 @@ hat**; alles, was im erzeugten C ankommt, ist Code.
 |---|---|
 | seL4 (Isabelle über C) | **20 : 1** — davon rund **0,5 : 1 abstrakte Spezifikation**, **19,5 : 1 Beweis** |
 | **Boden** (nimmt keine Sprache weg) | **≈ 0,5 : 1** |
-| **Vorhersage** | **≈ 0,8 : 1** — Herleitung in [`VOLLDECKUNG.md`](VOLLDECKUNG.md) §3c |
-| **Auslösung** (These widerlegt) | bester Fall > **1 : 1**, schlechtester > **2 : 1** |
+| **ZIEL** | **0,5 : 1 — der Boden.** Das heisst nicht „wenig Beweis", sondern **kein handgeschriebener Beweis**: geschrieben wird die abstrakte Spezifikation, sonst nichts |
+| **Abbruch** (etwas ganz anderes) | **> 3 : 1** — dort ist der Beweis wieder der dominierende Posten, und die Prämisse „billig" ist widerlegt |
 
-Das Messprotokoll steht **vor** der Messung in [`ROADMAP.md`](ROADMAP.md), samt der Regel, wie
-Konstrukte gezählt werden, die Spezifikation **und** Programm sind.
+**Das Ziel ist bewusst der theoretische Boden, nicht ein erreichbarer Kompromiss.** Damit misst die
+Kennzahl den **Abstand** statt zu urteilen: jede Zehntelstelle über 0,5 ist ein benennbarer
+Beweisposten, der noch von Hand geschrieben wird. Eine Zahl, die man treffen kann, sagt „bestanden";
+eine Zahl am Boden sagt, **was noch fehlt**.
+
+**Die Rechnung ist unbarmherzig:** braucht auch nur 5 % des Kernels handgeschriebene funktionale
+Beweise zu 5 : 1, sind das allein +0,25. Daraus folgt der ganze Entwurfsauftrag — Invarianten an der
+Struktur statt an der Schleife, algorithmische Rümpfe als Traversierungen, und der Rest
+verschwindend klein. Herleitung und Messprotokoll in [`PLAN.md`](PLAN.md).
 
 Stand: 2026-08-13. **Nichts davon ist gebaut.** Was gemessen ist, steht als gemessen da; alles
 andere ist ausdrücklich Absicht.
@@ -47,9 +54,8 @@ andere ist ausdrücklich Absicht.
 | Datei | Inhalt |
 |---|---|
 | `README.md` | dies — Zweck, Zusagen, Kennzahl, Stand, Einstieg |
-| [`VOLLDECKUNG.md`](VOLLDECKUNG.md) | **der Sprachentwurf**: vier Mechanismen, zwei Deklarationsregeln, der Gold-Mechanismus, Rennfreiheit, Bootphase, Abnahme |
-| [`DESIGN.md`](DESIGN.md) | die **Bibliotheksschicht**: `format`, `table`, `traverse`, … — was ein Anwender schreibt |
-| [`ROADMAP.md`](ROADMAP.md) | **ein** Plan, mit Toren; jede Phase liefert eine Zahl. Dazu Messprotokoll und Abbruchbedingungen |
+| [`SPRACHE.md`](SPRACHE.md) | **die Sprache**: vier Mechanismen, zwei Deklarationsregeln, Bootphase, Rennfreiheit, Kernel-Vollständigkeit — und die Bibliotheksschicht darüber |
+| [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
 | [`fallen-klassifikation.tsv`](fallen-klassifikation.tsv) | die 100 bezahlten Caprock-Fallen, einzeln klassifiziert; `./zaehle-fallen.sh` leitet die Zahlen ab |
@@ -86,7 +92,7 @@ andere ist ausdrücklich Absicht.
 * **15,7 % von Caprock sind Prüf- und Berichtsgerüst** — der Teil, der die Fehler gefunden hat, und
   keine dieser Sprachen sagt etwas darüber.
 
-**Daraus die Reihenfolge in [`ROADMAP.md`](ROADMAP.md):** zuerst Papier, dann `check` **ohne
+**Daraus die Reihenfolge in [`PLAN.md`](PLAN.md):** zuerst Papier, dann `check` **ohne
 Sprache**, dann der Kern. Nichts davon kostet einen Übersetzer, und jedes kann die These töten.
 
 ---
@@ -202,9 +208,10 @@ Frage steht offen und ist die teuerste des Ordners.**
 
 ## Wie es weitergeht
 
-[`ROADMAP.md`](ROADMAP.md) — ein Plan, acht Phasen, jede mit einem Tor. Die ersten drei kosten
+[`PLAN.md`](PLAN.md) — acht Phasen, jede mit einem Tor. Die ersten drei kosten
 **keinen Übersetzer** und können die These jeweils töten:
 
-1. **`revoke` auf Papier** in den Konstrukten — entscheidet den Zuschnitt **und** die Kennzahl.
+1. **`revoke` auf Papier** in den Konstrukten. **Das ist nicht ein Tor unter vielen, sondern DAS
+   Tor:** braucht `revoke` einen handgeschriebenen Beweis, ist 0,5 : 1 an diesem Tag verloren.
 2. **`vtd.rs` als `device`-Block auf Papier** — 1 448 Zeilen gegen die Beschreibung.
 3. **`check` als Rust-Makrobibliothek**, rückwirkend gegen die 33 Messdisziplin-Fallen gehalten.
