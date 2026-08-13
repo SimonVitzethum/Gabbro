@@ -141,7 +141,31 @@ gegen **Zyklen**, nicht gegen einen Index **ausserhalb** der Tabelle.
 |---|---|---|
 | **Bereich** (`over`) | die Menge, über die gelaufen wird — `over slots`, `over chain(first_child, next_sibling) in slots` | **S1a**: ein Index ausserhalb der Menge ist **nicht formulierbar**, nicht bloss geprüft |
 | **Fortschritt** (`by`) | was streng abnimmt — die Restmenge, ein Zähler, ein Rang | Terminierung; **und Zyklen**, wenn der Fortschritt „noch nicht besucht" ist |
-| **Wirkungsraum** (`touches`) | was gelesen und was geschrieben werden darf | fremde Schreibzugriffe; Grundlage für `restrict` im erzeugten C |
+| **Wirkungsraum** (`touches`) | was gelesen und was geschrieben werden darf | fremde Schreibzugriffe; `restrict` **an den Parametergrenzen** der erzeugten Funktionen |
+
+> **`restrict` ist enger, als die Zeile klingt.** Es trägt an den **Parametergrenzen** erzeugter
+> Funktionen. **Innerhalb** eines Traversierungskörpers, der im Zuschnitt (c) beliebige Slots
+> anfasst, sagt es nichts. Das ist mit der Grenze „beisst nur in (c)" konsistent — aber die
+> Tabellenzeile klang allgemeiner, als sie ist.
+
+#### `by unbesucht` hat ein eigenes Kostenmodell — und Regel 3 erzwingt die teure Fassung
+
+Dieselbe Fehlerklasse wie bei den Invarianten, eine Ebene tiefer, und sie war im ersten Entwurf
+wieder unbenannt.
+
+„Die Restmenge nimmt streng ab" setzt voraus, dass jemand die **besuchte Menge führt**. Über
+80 256 Slots heisst das entweder eine **Bitmap** (~10 KB — *wo lebt die?* Stack unter dem
+Kern-Lock, statisch, je Kern?) mit **O(n)-Löschung vor jedem Lauf**, oder **Generationsstempel je
+Slot**, die den Slot verbreitern.
+
+**Und der Preis ist nicht optional:** Regel 3 („abweisen, nie deuten") **erzwingt** `unbesucht`
+gegenüber der billigen Alternative. Ein blosser Schrittzähler terminiert nur — ein Zyklus würde
+dann **stillschweigend abgeschnitten** statt als benannte Absage `Zyklus` gemeldet, und das wäre
+Deutung. **Die Sprache zwingt also in die teure Variante, ohne dass der Beschreiber den Preis
+nennt.**
+
+- [ ] **Kostenangabe an `by unbesucht` selbst**, genau wie bei den Invarianten: *welche Struktur,
+      wer setzt sie zurück, was kostet der Reset* — und ob sie unter dem Kern-Lock leben darf.
 
 ```gabbro
 traverse geschwister of p
@@ -165,10 +189,12 @@ Bereichs. **Die Bereichsprüfung entfällt nicht, sie wird unnötig.**
 **I9** (`used = false` bei `refcount = 1`) wäre dann kein Zufall der Reihenfolge, sondern ein
 nicht existierender Übergang.
 
-**Wirkungen:** jede Operation nennt, was sie anfasst — SPARKs `Global`/`Depends`. Das ist **kein
-Entwurf, sondern gemessen**: im Scheduler wurden damit **63 von 63** Datenabhängigkeiten bewiesen,
-und die Aussage „der Rust-Code liest überall genau einmal in eine Kopie" wurde von *gelesen* zu
-*bewiesen*.
+**Wirkungen:** jede Operation nennt, was sie anfasst — SPARKs `Global`/`Depends`. Dafür gibt es
+**eine Messung am Mechanismus**: im Scheduler wurden damit **63 von 63** Datenabhängigkeiten
+bewiesen, und „der Rust-Code liest überall genau einmal in eine Kopie" ging von *gelesen* zu
+*bewiesen*. **Die Übertragbarkeit auf Gabbros `touches` ist damit aber nicht gemessen, sondern
+angenommen** — SPARK prüft vorhandenen Code, Gabbro erzeugt ihn. Der frühere Satz „kein Entwurf,
+sondern gemessen" war eine halbe Stufe zu stark.
 
 ### Wo diese Idee aufhört zu tragen — zwei Grenzen
 
@@ -185,6 +211,27 @@ Spezifikationslast, der es ausweichen soll. **Die Linie gehört ausgesprochen:**
       Arithmetik-Vorbedingung und Zustandsübergänge — **mehr nicht**. Keine allgemeinen
       Vor-/Nachbedingungen, keine Quantoren über Rechenausdrücke. Wer die braucht, braucht Verus
       oder F\*, und das ist eine ehrlichere Antwort als eine halbe Beweissprache.
+
+#### **Die Linie bricht nicht an `insert` — sie bricht an `revoke`. Und das ist auf Papier prüfbar.**
+
+`decrement refcount requires refcount > 0` ist eine **arithmetische Vorbedingung auf einem Feld**;
+die trägt die Linie. Die Korrektheitsbedingung von `revoke` ist dagegen **strukturell**: ein
+Teilbaum verschwindet, und dass danach `kind_zeigt_zurueck` **und** die Kettenendlichkeit noch
+gelten, ist eine Aussage über **Baumform** — strukturelle Induktion, also genau die „Quantoren
+über Rechenausdrücke", die die Linie ausschliesst.
+
+**Die ehrliche Vorhersage: `insert` und `remove` passen in die fünf Konstrukte, `revoke` nicht.**
+Dann gibt es zwei Ausgänge, und beide sind unbequem:
+
+* **`revoke` bleibt handgeschrieben** — dann steht die **gefährlichste** Mutation ausserhalb der
+  Garantie, und die Wertfrage von Zuschnitt (c) stellt sich neu.
+* **Die Linie wandert** — dann ist Gabbro der Beweisassistent mit Syntax, dem es ausweichen wollte.
+
+- [ ] **DER BILLIGSTE NÄCHSTE SCHRITT DES GANZEN ORDNERS: `revoke` in den fünf Konstrukten auf
+      Papier ausdrücken — vor jeder anderen Entscheidung.** Kostet einen Abend und entscheidet,
+      ob Zuschnitt (c) überhaupt hält, was Phase 4 von ihm verlangt. Er steht damit **vor**
+      Phase −1, weil er billiger ist als das Auszählen der Basisrate und eine schärfere Frage
+      beantwortet.
 
 ### 2. Keine Zeiger — nur Versätze, und jeder gegen eine Länge im Geltungsbereich
 
@@ -392,6 +439,9 @@ Mehrwert zu belegen:
   Warnung —, aber `mem::forget`-Disziplin plus ein Konsum-Token, das der **einzige** Weg aus dem
   Zustand ist, deckt den `Parked`-Fall konkret ab. **Genau so ist `Parked` gebaut**, und es hat
   eine fünfte Stelle gefunden, die das Gegenlesen übersah.
+  **Diese Evidenz zählt GEGEN den Kernel-Zweig, nicht für ihn:** Rust-heute hat den Fehler
+  gefunden, **ohne dass es Gabbro gab**. Wer sie als Argument für eine neue Sprache anführt, führt
+  den Erfolg der Baseline als Grund an, sie zu ersetzen.
 * **Verus.** Steht in der Verwandtschaftstabelle unten und wird dort mit „beweist, was jemand
   modelliert hat" abgetan — **für den Kernel-Zweig kehrt sich das um**: Beweise direkt auf Rust,
   SMT **ohne** F\*-Kette, keine C-Extraktion nötig, solange der Kernel Rust bleibt. Das sind
@@ -456,3 +506,54 @@ Diese Liste steht hier, damit sie nicht später als Enttäuschung entdeckt wird.
 | `README.md` | dies — Zweck, Regeln, Syntaxentwurf |
 | `TODO.md` | **ausschließlich Offenes** |
 | `ROADMAP.md` | Phasen mit **Entscheidungstoren**: jede Phase liefert eine Zahl, die über die nächste entscheidet |
+
+---
+
+# Was fehlt für einen KOMPLETTEN Kernel — und für Syscalls ohne Assembler
+
+Die Frage gehört beantwortet, bevor der Kernel-Zweig sein Tor bekommt, weil die Antwort seine
+Grössenordnung bestimmt. Sie steht hier als **Liste**, nicht als Zusage.
+
+## Syscalls ohne Assembler — was die Sprache dafür können muss
+
+Der Eintritt ist heute Assembler aus **einem** Grund: die CPU übergibt die Kontrolle in einem
+Maschinenzustand, den keine Hochsprache zusichert. Register müssen gerettet werden, **bevor**
+irgendein übersetzter Prolog läuft. Ohne Assembler braucht es vier Dinge im Sprachkern:
+
+1. **Eintrittsfunktionen mit erklärtem Registerabdruck** — „diese Funktion beginnt im Zustand X
+   und darf Register Y nicht anfassen, bevor Z geschehen ist". (Rust: `naked_asm!`,
+   Zig: `callconv(.Naked)` — beide reichen den Assembler nur durch.)
+2. **Registergebundene Werte** — „diese Grösse *ist* `rdi`", damit der Übersetzer nichts spillen
+   muss, um sie zu benennen.
+3. **Eine eigene Aufrufkonvention** — die Interrupt-Frame-ABI, nicht die der Plattform.
+4. **`iretq`/`eret` als Sprachkonstrukt**: ein **typisierter Übergang in einen gespeicherten
+   Kontext**. Bemerkenswert — das ist kein neues Konzept, sondern der `state`-Übergang von oben,
+   angewandt auf den Maschinenzustand.
+
+Das ist die Klasse **typisierter Assemblersprachen** (TAL) und keine Erfindung.
+
+> **Aber es entfernt das Vertrauen nicht, es VERLAGERT es.** Die Instruktionsfolge muss weiterhin
+> jemand erzeugen — dann der Übersetzer statt der Mensch. Der Gewinn ist trotzdem echt und derselbe
+> wie bei der Axiomschicht, eine Ebene tiefer: **eine Implementierung, einmal geprüft, statt 153
+> Fundstellen, die nie jemand einzeln prüft.** Wer „ohne Assembler" als „ohne unbewiesene Fläche"
+> liest, hat die Verlagerung mit einer Beseitigung verwechselt.
+
+## Was darüber hinaus fehlt, gemessen an Caprock
+
+| Was | warum es nicht nebenbei geht |
+|---|---|
+| **Nebenläufigkeit** | Atomics, Barrieren — und die Eigenschaft „der Aufrufer hält den Lock", die **weder SPARK noch Rust** ausdrücken kann. Gabbro bräuchte Regionen + Fähigkeiten im Typsystem. Der grösste Einzelposten |
+| **Volatile/MMIO** | vier Geschmacksrichtungen wie in SPARK (`Async_Readers`/`Writers`, `Effective_Reads`/`Writes`). Machbar, aber Sprachkern |
+| **Zwei Adressachsen** | `Pa` und `Iova` getrennt, Arithmetik darauf — `index into` verallgemeinert dorthin, ist aber nicht dasselbe |
+| **Bau und ABI** | Multiboot-Kopf, Sektionen, Ausrichtung, ELF32-Abstieg. Kein Sprachthema, muss aber existieren — und hat diese Woche einen halben Tag gekostet |
+| **Kein Laufzeitsystem** | kein Allokator, kein Panik-Apparat, kein Abwickeln |
+| **FFI** | für HACL\*/EverCrypt — und jede FFI-Grenze **bricht die Garantie** |
+| **Beobachtbarkeit** | dieses Projekt lebt von Berichtszeilen. Eine Sprache, in der Formatierung teuer oder unmöglich ist, ist hier unbrauchbar |
+
+**Die ehrliche Summe: das ist eine Allzweck-Systemsprache.** Damit ist der Kernel-Zweig kein
+Anhängsel des Formaterzeugers, sondern ein zweites Projekt — und die Kernthese dieses Ordners
+(geschlossene Domäne ⇒ Spezifikation billig) gilt für ihn **nicht**.
+
+- [ ] **Vor dem Tor des Zweigs zu entscheiden:** Wird das eine Sprache mit zwei Bibliotheken, oder
+      zwei Sprachen? Unentschieden ist die teuerste Variante — und diese Liste ist das Argument
+      dafür, dass die Entscheidung nicht vertagt werden kann, weil sie die Grössenordnung ändert.
