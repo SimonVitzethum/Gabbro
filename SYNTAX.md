@@ -200,9 +200,10 @@ es ein **Uebersetzungsfehler**, keine Laufzeitpruefung.
 **Division und Rest verlangen einen Nenner, dessen Bereich die Null ausschliesst.**
 `%` und `/` durch `u32 in 0..n` sind nicht schreibbar; durch `u32 in 1..n` schon.
 
-> **Die Grenze von M1 ist benannt, nicht verschwiegen.** `31 - x.leading_zeros()` braucht eine
-> **flusssensitive** Folgerung — der Bereich haengt an einer vorher geprueften Bedingung. M1 ist an
-> dieser Stelle ein **Loeser**, keine Typregel. Wo er nicht durchkommt, verlangt Gabbro eine
+> **Die Grenze von M1 ist benannt und seit dem 2026-08-14 GEMESSEN.** `31 - x.leading_zeros()`
+> braucht eine **flusssensitive** Folgerung. **Aber nur eine Regel, nicht allgemeine Inferenz:**
+> *eine geprüfte Bedingung verengt den Bereich der geprüften Groesse im Zweig danach.* Vier
+> Fundstellen im ganzen Baum, alle dieselbe Redewendung. Wo er nicht durchkommt, verlangt Gabbro eine
 > **Einengung** statt eines Beweises: `narrow x to 1..u32::max else { … }` — eine Anweisung mit
 > benanntem Ausgang, keine Beweiszeile. **Sie zaehlt als Klempnerei und muss klein bleiben; wenn
 > sie das nicht tut, ist das eine Widerlegung** (s. offene Punkte).
@@ -550,10 +551,13 @@ benutzerdefinierte Quantorendomaenen · Rekursion in `spec fn` · handgeschriebe
 
 ## Offene Punkte — benannt, nicht weggelassen
 
-- [ ] **`narrow` ist der Notausgang von M1 und damit der gefaehrlichste Posten.** Er verwandelt eine
-      Beweispflicht in eine Laufzeitpruefung mit benanntem Ausgang. **Kommt er haeufig vor, ist das
-      Kriterium verletzt** — Klempnerei bliebe beim Programmierer, nur in anderer Form.
-      **Zu messen: wie oft er in einem echten Modul noetig ist.**
+- [x] **`narrow` — GEMESSEN 2026-08-14** ([`NARROW-GEMESSEN.md`](NARROW-GEMESSEN.md)): die
+      flusssensitive Klasse sind **4 Fundstellen in 65 001 Zeilen**, alle dieselbe Redewendung
+      (Bitposition aus einem Wort), alle hinter einer Nullpruefung. **M1 braucht genau eine
+      Flussregel** — eine geprüfte Bedingung verengt den Bereich im Zweig danach —, nicht
+      allgemeine Inferenz. Mit einem eingebauten `highest_bit(x: u64 in 1..) -> u32 in 0..63` sind
+      alle vier ohne `narrow` schreibbar. **`narrow` bleibt Notausgang, nicht Regelfall.**
+      *Offen: die 69 Subtraktionen sind ungemessen und die einzige Klasse, die das kippen kann.*
 - [ ] **Sieben Quantorendomaenen ohne Notausgang.** Faellt eine Kernel-Eigenschaft heraus, ist sie
       **gar nicht** formulierbar. Der Preis ist unbeziffert.
 - [ ] **`publishes` waere an 2 231 Atomic-Stellen faellig.** Ob das traegt, entscheidet keine
