@@ -187,9 +187,9 @@ Gabbro endet, wenn **eines** davon eintritt:
 0. **Die Basisrate ist zu klein** (Phase −1) — zu wenige Formate, zu wenige Fehler dieser Klasse.
    Diese Bedingung steht zuerst, weil sie am billigsten zu prüfen ist und am ehesten zutrifft.
 0b. **Das Spezifikationsverhältnis verfehlt sein Ziel deutlich** — *Zeilen Spezifikation je Zeile
-   Code*, seL4 als Vergleich **20 : 1**. Ziel **≤ 1 : 1 für `format`**, **etwa 5 : 1 für
-   Kernelcode** (dort bleibt die abstrakte Spezifikation als Boden, Herleitung in
-   `VOLLDECKUNG.md` §3c). **Ohne das Protokoll darunter liefert
+   Code*, seL4 als Vergleich **20 : 1** — davon rund **0,5 : 1 abstrakte Spezifikation** und
+   **19,5 : 1 Beweis**. Der Boden ist die Spezifikation, nicht 5 : 1. Ziel **≤ 1 : 1**, Vorhersage
+   **0,8 : 1**, Auslösung bei **2 : 1** (Herleitung in `VOLLDECKUNG.md` §3c). **Ohne das Protokoll darunter liefert
    diese Bedingung die Wunschzahl**, und zwar ohne dass jemand schummelt.
 1. **EverParse trägt** (Phase 0) — **aber nur, wenn der Schnitt bei `table` auf (a) gefallen ist.**
    Bei (b)/(c) deckt EverParse die Frage gar nicht ab, und ein grünes Phase-0-Ergebnis wäre kein
@@ -222,9 +222,12 @@ zusätzlich braucht, zählt mit: **Schleifeninvarianten, Ghost-Code, Hilfslemmat
 ACSL-Annotationen**. Wer nur den Gabbro-Beschreiber zählt, misst die halbe Last — und genau die
 Hälfte, die bei (c) explodiert.
 
-**3. Zählregel für den Nenner — die HANDGESCHRIEBENE Referenz, nicht die Ausgabe.** Sonst
-verbessert ein geschwätziger Erzeuger das Verhältnis, indem er mehr Code erzeugt. Der Nenner soll
-die *Aufgabe* messen, nicht die Ausführlichkeit des Werkzeugs.
+**3. Zählregel für den Nenner — GABBRO-CODE.** Nicht die handgeschriebene Rust-Referenz: gemessen
+wird, ob ein **in Gabbro geschriebener** Kernel billig zu verifizieren ist; Rust kommt darin nicht
+vor. **Die Trennlinie ist die Laufzeitwirkung:** was der Übersetzer vor der Codeerzeugung löscht,
+ist Spezifikation; was im erzeugten C ankommt, ist Code. Gezählt wird in **Anweisungen**, nicht in
+Zeilen — sonst gewinnt geschwätziger Code. Und wer eine Eigenschaft zur Laufzeit **prüft** statt
+sie zu beweisen, verschiebt Zeilen nach unten: erlaubt, aber die Laufzeitmessung gehört daneben.
 
 **4. Die Stufe steht dabei.** Ob Sicherheitshülle, deklarierte Invarianten oder funktionale
 Korrektheit gemessen wurde, gehört neben die Zahl — die 20 : 1 von seL4 ist eine Zahl für die
@@ -235,5 +238,7 @@ nachgelagerter Beweiser. Damit fällt die ACSL-Last aus dem Zähler und die Ents
 **Was stattdessen in den Zähler gehört:** `spec fn`-Zeilen und die Verfeinerungsannotationen — und
 das ist bei einem Kernel der Boden, der die 1 : 1 unerreichbar macht (§3c dort).
 
-**Auslösung:** Liegt der beste Fall über 2 : 1 **oder** der schlechteste über 5 : 1, ist Gabbro ein
-Erzeuger mit Beiwerk. Diese zwei Zahlen stehen hier, damit sie nicht später gewählt werden.
+**Auslösung:** Liegt der beste Fall über 1 : 1 **oder** der schlechteste über 2 : 1, ist die
+Gold-These widerlegt. Diese zwei Zahlen stehen hier, damit sie nicht später gewählt werden — und sie
+sind **schärfer** als die früheren (2 : 1 / 5 : 1), weil der Boden jetzt hergeleitet ist statt
+geraten.

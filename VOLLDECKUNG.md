@@ -237,64 +237,102 @@ sondern dass es die **drei Sprachen zu einer macht** und die Verfeinerungspflich
 **≤ 1 : 1 war für `format` gesetzt**, wo der Beschreiber die vollständige Spezifikation *ist*.
 **Für einen Kernel ist der Boden die abstrakte Spezifikation**, und die nimmt niemand weg.
 
-> **Ehrliche Vorhersage: 20 : 1 → etwa 5 : 1, nicht 1 : 1.**
-> Und **5 : 1 ist genau die Auslöseschwelle**, die im Protokoll 0b für den schlechtesten Fall
-> steht — sie war dort geraten und hat jetzt eine Herleitung.
+> **Ehrliche Vorhersage: 20 : 1 → etwa 0,8 : 1** — Herleitung unten. Eine frühere Fassung sagte
+> hier **5 : 1**; sie behandelte den Beweisaufwand als unteilbar und maß gegen den falschen Nenner.
 
-- [ ] **Verfehlt Gabbro auch 5 : 1 deutlich, ist die Gold-These widerlegt**, und übrig bleiben
+- [ ] **Verfehlt Gabbro 2 : 1 deutlich, ist die Gold-These widerlegt**, und übrig bleiben
       Zusage 1 (Speichersicherheit) und 2 (Rennfreiheit). Das wäre **immer noch** mehr als heutiges
       Rust — aber es wäre nicht *„macht seL4-Beweise leicht"*.
 
-### Was < 1 : 1 verlangen würde — und wo es gemessen möglich ist
+### Was < 1 : 1 verlangen würde
 
-**Die eigene Zählregel entscheidet die Frage, und sie steht schon fest:** der Nenner ist die
-**handgeschriebene Referenz**, nicht die Ausgabe (Protokoll 0b, damit ein geschwätziger Erzeuger
-sich das Verhältnis nicht schönerzeugt). Daraus folgt unmittelbar:
+> **BERICHTIGUNG (2026-08-13, wenige Stunden nach der ersten Fassung).** Hier stand eine Rechnung
+> mit dem **falschen Nenner**: Spezifikationszeilen gegen die *handgeschriebene Rust-Referenz*.
+> Rust ist hier irrelevant — es geht um einen Kernel, der **in Gabbro geschrieben** und dann
+> verifiziert wird. Der Nenner ist **Gabbro-Code**. Die falsche Fassung kam zu „für Caprock als
+> Ganzes: nein"; mit dem richtigen Nenner lautet die Antwort **bedingt ja**, und die Bedingung ist
+> benennbar. *(Die frühere Fassung hatte eine eigene Berechtigung — als Frage „lohnt der Umstieg",
+> nicht als Frage „ist der Beweis billig". Zwei Fragen, ein Bruch.)*
 
-> **< 1 : 1 heisst: die Gabbro-Quelle SAMT ihrer Beweisannotationen ist KÜRZER als das
-> handgeschriebene Rust, das dieselbe Arbeit tut.**
+### Die Zählregel muss zuerst stehen, sonst misst sie nichts
 
-Das ist keine Beweisfrage mehr, sondern eine **Knappheitsfrage** — und damit entscheidbar, ohne
-eine Zeile zu übersetzen. Vier Bedingungen, und die erste trägt alles:
+**Das eigentliche Problem dieser Kennzahl in Gabbro:** viele Konstrukte sind **beides** —
+eine Bereichsangabe, ein `device`-Block, ein `over`/`by` sind Spezifikation *und* Programm. Wer sie
+als Code zählt, bekommt eine glänzende Zahl ohne Aussage; wer sie als Spezifikation zählt, eine
+schlechte.
 
-**1. Der beschriebene Anteil muss überwiegen.** Eine Deklaration ist kürzer als die Schleife, die
-sie ersetzt; ein Algorithmus ist es nicht — dort *ist* die Beschreibung der Algorithmus, und die
-Annotationen kommen obendrauf. Gemessen an Caprock:
+> **Regel: Spezifikation ist, was KEINE Laufzeitwirkung hat** — was der Übersetzer vor der
+> Codeerzeugung löscht. Alles, was im erzeugten C ankommt, ist Code.
 
-| | Zeilen | |
+Sie ist die einzige, die sich nicht durch Umschichten von Text gewinnen lässt:
+
+| zählt als **Spezifikation** (gelöscht) | zählt als **Code** (im C) |
+|---|---|
+| `spec fn`, Invarianten, `requires`/`ensures` | `device`-Blöcke (sie erzeugen die Zugriffe) |
+| Schleifeninvarianten, Abstiegsmasse | `format`-Beschreiber (sie erzeugen Leser/Schreiber) |
+| `linear ghost`-Werte, Sperrbelege | gewöhnliche Funktionsrümpfe |
+| `touches`, Verfeinerungsannotationen | Bereichs**prüfungen**, die stehen bleiben |
+
+**Zwei Wege, sie trotzdem zu schönen** — beide gehören in das Protokoll:
+* **Prüfen statt beweisen.** Wer eine Eigenschaft zur Laufzeit prüft, statt sie zu beweisen,
+  verschiebt Zeilen von oben nach unten. Das ist kein Betrug — es ist ein **anderes Programm**,
+  langsamer, und genau das wird ausgeliefert. Die Zahl bleibt ehrlich, wenn die Laufzeitmessung
+  danebensteht.
+* **Geschwätziger Code.** Deshalb wird in **Anweisungen** gezählt, nicht in Zeilen.
+
+### Der Boden ist nicht 5 : 1 — er ist die abstrakte Spezifikation, und die ist klein
+
+Die 20 : 1 von seL4 sind **kein einzelner Posten**. Aufgeteilt (Zahlen aus dem Gedächtnis,
+Grössenordnung, s. offener Punkt):
+
+| | ungefähr | nimmt Gabbro es weg? |
 |---|---|---|
-| Formate (`part`, `fat`, `checkpoint`) | 1 976 | rein beschreibend |
-| Tabelle mit Invarianten (`space.rs`) | 1 105 | beschreibend in Zuschnitt (c) |
-| Prüf-/Berichtsgerüst | 10 471 | `check`-Zusagen |
-| **Untergrenze** | **13 552** | **20,3 %** |
-| IOMMU/IRTE/DMAR/SMMU | 4 457 | teils algorithmisch |
-| Seitentabellen (`mmu` x86+arm) | 2 791 | teils algorithmisch |
-| **Obergrenze** | **20 800** | **31,2 %** |
-| **algorithmischer Rest** | **45 851** | **68,8 %** |
+| **abstrakte Spezifikation** — *was* der Kernel tut | rund **0,5 : 1** | **nein, nie** |
+| **Beweis** — dass der Code sie erfüllt | rund **19,5 : 1** | **darum geht es** |
 
-**Damit ist die Antwort für Caprock als Ganzes: nein.** Bei rund 69 % algorithmischem Anteil, der
-mit Annotationen **über** 1 : 1 liegt, kann das gewichtete Mittel nicht darunter fallen — es sei
-denn, die beschriebenen 31 % lägen extrem tief (Grössenordnung 0,05), und dann trüge die Rechnung
-ein einzelner Posten.
+**Damit ist der Boden ≈ 0,5 : 1 und nicht 5 : 1.** Meine frühere 5 : 1-Vorhersage stammt aus
+derselben Verwechslung wie der Nenner: sie behandelte den Beweisaufwand als unteilbar.
 
-**Für einzelne Module ist es erreichbar, und zwar deutlich.** `vtd.rs` sind 1 448 Zeilen; eine
-`device`-Beschreibung derselben Einheit ist eine Grössenordnung kleiner. Dort ist **0,1 : 1**
-plausibel — und das ist der Ort, an dem sich der Übersetzer zuerst rechnet.
+- [ ] **Die seL4-Aufteilung nachprüfen**, nicht aus dem Gedächtnis zitieren. Sie trägt hier ein
+      Argument. Von dieser Maschine aus ist keine Quelle greifbar.
 
-**2. Die Annotation muss aus der Deklaration FOLGEN, nicht danebenstehen.** Wer `device` schreibt
-*und* Invarianten *und* Beweishinweise, hat drei Zähler statt einem. Die Bedingung ist scharf:
-**die Deklaration IST die Annotation.**
+### Was auf null muss — und was nicht kann
 
-**3. Die Absenkung muss so flach sein, dass keine Verfeinerungslemmata nötig sind.** Sonst wächst
-der Zähler genau dort, wo M-Gold-2 ihn senken soll.
+| Beweisposten | in Gabbro | Zeilen |
+|---|---|---|
+| Speichersicherheit, Bereichs- und Überlauffreiheit | **M1 + M4**, im Typ | **0** |
+| Rahmenbedingungen, Nichteinmischung | **M2**, Wirkungen als Fähigkeiten | **0** |
+| Datenrennen, Sperrdisziplin, Protokollphasen | **M2** | **0** |
+| **Invariantenerhaltung** — der grösste Posten bei seL4 | Mutationen aus Struktur + Invariante **erzeugt** (Zuschnitt (c)) | **nahe 0** |
+| **Verfeinerung Code ↔ Spezifikation** | syntaxgesteuerte Absenkung, `spec`/`impl` in **einer** Sprache | **nahe 0** |
+| **Funktionale Korrektheit algorithmischer Rümpfe** | IPC-Fastpath, Scheduler, `revoke` | **NICHT null — hier bleibt echte Arbeit** |
 
-**4. Wiederverwendbare Spezifikationstheorien** (Fähigkeitssystem, Seitentabellen) helfen dem
-**zweiten** Projekt, nicht dem ersten. Das gehört gesagt, weil es sonst als Ersparnis mitgezählt
-wird, die es beim einzigen vorhandenen Kernel nicht gibt.
+> **< 1 : 1 ist erreichbar, wenn die ersten fünf Posten wirklich auf null gehen** — dann bleibt die
+> abstrakte Spezifikation (≈ 0,5) plus die funktionalen Beweise für den sicherheitskritischen Kern.
 
-- [ ] **Die billigste Prüfung dieser ganzen Rechnung: `vtd.rs` als `device`-Block auf Papier.**
-      1 448 Zeilen gegen die Beschreibung, ohne Übersetzer. Liegt sie nicht mindestens um Faktor 5
-      darunter, ist die Knappheitsthese widerlegt — und mit ihr < 1 : 1 an jeder Stelle.
+**Die Überschlagsrechnung, mit ausgesprochenen Annahmen:** braucht etwa ein Zehntel des Kernels
+funktionale Korrektheit (Fähigkeitssystem, IPC, die Autoritätsteile des Schedulers — in Caprock
+grob 5–8 kZeilen von 66,7 k) und kostet dieser Teil 5 : 1, während der Rest nur seine
+Spezifikation trägt (≈ 0,3), dann liegt das Mittel bei etwa **0,8 : 1**.
+
+**Das ist eine Rechnung, keine Messung**, und sie hängt an drei Annahmen, die alle falsch sein
+können: der Anteil, der Faktor 5, und dass die ersten fünf Posten tatsächlich null werden. **Die
+dritte ist die riskanteste** — „nahe 0" bei Invariantenerhaltung setzt Zuschnitt (c) voraus, und
+der ist unentschieden.
+
+### Die drei Bedingungen, ohne die es nicht geht
+
+1. **Die Deklaration IST die Annotation.** Wer `device` schreibt *und* Invarianten *und*
+   Beweishinweise, hat drei Zähler statt einem.
+2. **Die Absenkung muss flach bleiben.** Jedes Verfeinerungslemma ist eine Zeile im Zähler, und
+   sie wachsen schnell.
+3. **`revoke` muss in den Konstrukten ausdrückbar sein** — sonst bleibt die gefährlichste Mutation
+   handgeschrieben, und mit ihr kehrt die Invariantenerhaltung als Beweisposten zurück. Der
+   Papiertest entscheidet damit nicht nur den Zuschnitt, sondern **die Kennzahl**.
+
+- [ ] **Die billigste Prüfung, ohne Übersetzer: EIN Modul zweimal auf Papier** — als Gabbro-Quelle
+      und mit dem, was ein Beweiser darüber hinaus bräuchte. `space.rs` ist der richtige Fall, weil
+      es beides enthält: beschreibende Struktur **und** algorithmisches `revoke`.
 
 ---
 
