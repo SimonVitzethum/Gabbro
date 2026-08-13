@@ -129,6 +129,63 @@ keine Beweispflicht, sondern eine Eigenschaft der Grammatik.
 > während der Prüfer über derselben Kette eine führt. Unter dem Kern-Lock ist ein Zyklus dort ein
 > stehender Kern.
 
+#### Nachschärfung: „endlich" ist das SCHWÄCHSTE Versprechen
+
+Terminierung allein kauft wenig. Eine Schleife mit Schrittgrenze **terminiert** und kann trotzdem
+ausserhalb der Tabelle indizieren — genau das ist **S1a**: die Schrittgrenze aus B-5.5 schützt
+gegen **Zyklen**, nicht gegen einen Index **ausserhalb** der Tabelle.
+
+**Statt `while` mit Schranke gibt es deshalb nur TRAVERSIERUNGEN, und jede nennt drei Dinge:**
+
+| | was es nennt | welche Fehlerklasse es tötet |
+|---|---|---|
+| **Bereich** (`over`) | die Menge, über die gelaufen wird — `over slots`, `over chain(first_child, next_sibling) in slots` | **S1a**: ein Index ausserhalb der Menge ist **nicht formulierbar**, nicht bloss geprüft |
+| **Fortschritt** (`by`) | was streng abnimmt — die Restmenge, ein Zähler, ein Rang | Terminierung; **und Zyklen**, wenn der Fortschritt „noch nicht besucht" ist |
+| **Wirkungsraum** (`touches`) | was gelesen und was geschrieben werden darf | fremde Schreibzugriffe; Grundlage für `restrict` im erzeugten C |
+
+```gabbro
+traverse geschwister of p
+    over  chain(first_child, next_sibling) in slots
+    by    unbesucht                    -- die Restmenge nimmt streng ab
+    touches read slots                 -- schreibt nichts
+{
+    if it == s { found }
+}
+```
+
+Der erzeugte Code kann `it` gar nicht als rohe Zahl behandeln — es ist ein Element des genannten
+Bereichs. **Die Bereichsprüfung entfällt nicht, sie wird unnötig.**
+
+### Dieselbe Form für alles andere, was heute still schiefgehen kann
+
+**Arithmetik:** `refcount -= 1` gibt es nicht. Es gibt `decrement refcount requires refcount > 0`
+— oder ausgesprochenes `wrapping`. Damit ist **S1b** unformulierbar statt hinterher auffindbar.
+
+**Zustandsübergänge:** ein `state`-Konstrukt nennt die **erlaubten** Übergänge. Das Fenster aus
+**I9** (`used = false` bei `refcount = 1`) wäre dann kein Zufall der Reihenfolge, sondern ein
+nicht existierender Übergang.
+
+**Wirkungen:** jede Operation nennt, was sie anfasst — SPARKs `Global`/`Depends`. Das ist **kein
+Entwurf, sondern gemessen**: im Scheduler wurden damit **63 von 63** Datenabhängigkeiten bewiesen,
+und die Aussage „der Rust-Code liest überall genau einmal in eine Kopie" wurde von *gelesen* zu
+*bewiesen*.
+
+### Wo diese Idee aufhört zu tragen — zwei Grenzen
+
+**Erstens: sie beisst nur im Zuschnitt (c).** Ein Wirkungsraum an einer Traversierung, die der
+Kernel **nicht aufruft**, kauft nichts. Solange die Mutation handgeschrieben bleibt, ist auch die
+schärfste Schleifenform nur eine Empfehlung — dieselbe Ableitung wie beim Kostenmodell.
+
+**Zweitens: jede Vorgabe verengt.** Eine Sprache, die nur Traversierungen kennt, kann Dinge nicht
+ausdrücken, die eine freie Schleife brauchen. Und je mehr Konstrukte ihren Vertrag mittragen,
+desto näher rückt Gabbro an einen **Beweisassistenten mit Syntax** — und damit an die
+Spezifikationslast, der es ausweichen soll. **Die Linie gehört ausgesprochen:**
+
+- [ ] **Wo hört es auf?** Vorschlag zur Entscheidung: Bereich, Fortschritt, Wirkungsraum,
+      Arithmetik-Vorbedingung und Zustandsübergänge — **mehr nicht**. Keine allgemeinen
+      Vor-/Nachbedingungen, keine Quantoren über Rechenausdrücke. Wer die braucht, braucht Verus
+      oder F\*, und das ist eine ehrlichere Antwort als eine halbe Beweissprache.
+
 ### 2. Keine Zeiger — nur Versätze, und jeder gegen eine Länge im Geltungsbereich
 
 Ein Versatz ohne die Länge, gegen die er gilt, ist in Gabbro nicht schreibbar. Die Bereichsprüfung
