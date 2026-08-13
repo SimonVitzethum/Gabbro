@@ -38,6 +38,23 @@ else
   echo "== SYNTAX: FEHLER =="; exit 1
 fi
 
+# --- Ist die Grammatik GESCHLOSSEN? Ein benutztes, nie definiertes Nichtterminal
+# --- ist ein Loch, das beim Lesen nicht auffaellt: die EBNF sieht vollstaendig aus.
+ebnf_geschlossen() {
+  python3 - "$1" <<'PY'
+import re, sys, pathlib
+d = pathlib.Path(sys.argv[1]).read_text()
+e = "\n".join(re.findall(r'```ebnf\n(.*?)```', d, re.S))
+defs = set(re.findall(r'^\s*([a-z][a-z0-9_]*)\s*=', e, re.M))
+b = re.sub(r'\(\*.*?\*\)', '', re.sub(r'^\s*[a-z][a-z0-9_]*\s*=', '', e, flags=re.M), flags=re.S)
+b = re.sub(r'"[^"]*"', '', b); b = re.sub(r'\?.*?\?', '', b, flags=re.S)
+offen = sorted(set(re.findall(r'\b([a-z][a-z0-9_]*)\b', b)) - defs)
+print(f"  EBNF: {len(defs)} Regeln definiert, {len(offen)} offen" + (": " + ", ".join(offen) if offen else ""))
+sys.exit(1 if offen else 0)
+PY
+}
+if ! ebnf_geschlossen SYNTAX.md; then echo "== SYNTAX: FEHLER (Grammatik nicht geschlossen) =="; exit 1; fi
+
 # --- Sprechprobe: der Pruefer MUSS bei jeder Verletzung fallen ---
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 n=0
@@ -56,5 +73,10 @@ printf 'Das Primitiv heisst `wechsle` und ist alt.\n' > "$tmp/p.md"
 pruefe_prosa "$tmp/p.md" >/dev/null && { echo "SPRECHPROBE GESCHEITERT: Prosa-Zweig ist stumm"; exit 1; }
 printf 'Das Primitiv heisst `switch_to`.\n' > "$tmp/pok.md"
 pruefe_prosa "$tmp/pok.md" >/dev/null || { echo "SPRECHPROBE GESCHEITERT: saubere Prosa fiel durch"; exit 1; }
+# Sprechprobe fuer den EBNF-Zweig
+printf '```ebnf\na = b ;\n```\n' > "$tmp/e.md"
+ebnf_geschlossen "$tmp/e.md" >/dev/null && { echo "SPRECHPROBE GESCHEITERT: EBNF-Zweig ist stumm"; exit 1; }
+printf '```ebnf\na = "x" ;\n```\n' > "$tmp/eok.md"
+ebnf_geschlossen "$tmp/eok.md" >/dev/null || { echo "SPRECHPROBE GESCHEITERT: geschlossene EBNF fiel durch"; exit 1; }
 echo "Sprechprobe: $n Gifte in Beispielen gefangen, Prosa-Zweig spricht, Sauberes durchgelassen."
 echo "== SYNTAX: ALL PASS =="

@@ -76,7 +76,7 @@ andere ist ausdrücklich Absicht.
 | [`P0-4-GEGENPROBE.md`](P0-4-GEGENPROBE.md) | **Entwurf gegen Prüfer.** Der Anti-Katalog-Test bestanden (3 Wörter statt 12) — und ein Loch in der **Messvorschrift**: eine Kennzahl aus ungeprüften Zusagen belohnt **falsche** Zusagen, weil sie kurz sind |
 | [`P0-2-3-DEVICE-UND-SPACE.md`](P0-2-3-DEVICE-UND-SPACE.md) | **beide Tore gefallen** — `device` deckt 21 % von `vtd.rs` und ist dort 2× knapper, nicht 15×; und **65,1 % des Kernels brauchen handgeschriebene Spezifikation, nicht 10 %** |
 | [`P0-1-REVOKE.md`](P0-1-REVOKE.md) | **das erste gefahrene Papiertor.** `revoke` ist ausdrückbar — mit einem Konstrukt, das fehlte; und es hat einen Fehler in der Zählregel gefunden |
-| `pruefe-syntax.sh` | hält alle Beispiele gegen die geschlossene Wortliste, mit Sprechprobe |
+| `pruefe-syntax.sh` | hält die Beispiele gegen die Wortliste, die Prosa gegen die alte Schlüsselwortsprache **und die Grammatik auf Geschlossenheit** — drei Sprechproben |
 | [`fallen-klassifikation.tsv`](fallen-klassifikation.tsv) | die 100 bezahlten Caprock-Fallen, einzeln klassifiziert; `./zaehle-fallen.sh` leitet die Zahlen ab |
 
 > **Berichtigungen stehen bewusst vor allem Weiteren.** Zwei Überschreibungen („per Konstruktion

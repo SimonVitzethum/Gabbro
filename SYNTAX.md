@@ -1,288 +1,476 @@
 # Gabbro — die Syntax
 
-**Diese Datei ist die Quelle für die Oberfläche.** [`SPRACHE.md`](SPRACHE.md) sagt, *welche
-Mechanismen* es gibt und warum; hier steht, *wie man sie hinschreibt*. Was hier nicht steht, ist
-nicht schreibbar.
+**Die Quelle fuer die Oberflaeche.** [`SPRACHE.md`](SPRACHE.md) sagt, welche Mechanismen es gibt
+und warum; [`KRITERIUM.md`](KRITERIUM.md), wozu sie da sind; hier steht, wie man sie hinschreibt.
+Was hier nicht steht, ist nicht schreibbar.
 
-Stand 2026-08-13. **Kein Übersetzer liest das.** Die Grammatik ist ein Entwurf, und die offenen
-Punkte stehen am Ende benannt statt weggelassen.
+Stand 2026-08-13, zweite Fassung. **Kein Uebersetzer liest das.**
 
----
-
-## Stand — gemessen, nicht geschaetzt (2026-08-13)
-
-**Die Deklarationsschicht ist skizziert, die Ausdrucks- und Anweisungssprache existiert nicht.**
-
-| | |
-|---|---|
-| definierte EBNF-Regeln | **40** |
-| benutzt, aber **nie definiert** | **21** |
-| davon lexikalische Kleinigkeiten (`digit`, `hexdigit`, `char`, `newline`) | 4 |
-| **davon tragend** | **17** — darunter **`expr`, `pred`, `block`, `place`, `ifstmt`, `matchstmt`, `params`, `variants`, `constdecl`, `slotdecl`** |
-
-> **`expr` und `pred` sind keine Luecken unter anderen.** Eine Beweissprache *ist* ihre
-> Praedikatsprache; solange `pred` undefiniert ist, ist die Frage „wo wandert die Linie" nicht
-> einmal stellbar. Dasselbe fuer `expr`: ohne sie steht nirgends, was ein Bereichstyp (M1) beim
-> Rechnen eigentlich pruefen muss.
-
-**Was daneben liegt und NICHT eingearbeitet ist:** ein Gegenentwurf von 1 882 Zeilen (14 Codebloecke,
-10 EBNF-Bloecke) samt Pruefbericht. Er entscheidet die sieben offenen Fragen unten und besteht den
-Anti-Katalog-Prueftein (**3 neue Woerter statt 12**) — **laesst aber `device` unberuehrt**, und
-genau dort sitzen drei belegte Funde (nur Einzelbits, keine Laufzeitoffsets, Falle 4 nicht
-getoetet). **Eingearbeitet wird er erst, wenn diese drei beantwortet sind.**
-
-Dazu 18 Umwandlungen in [`MINIMALSPEZIFIKATION.md`](MINIMALSPEZIFIKATION.md), die **Formen
-vorschlagen** (`retry`/`bounded`/`on_exceeded`, `offset_into`, `tagged`, `old`, `breaking`,
-`publishes`, Bitbereiche) — **keine davon steht bisher in dieser Datei.**
+> **Was jede Regel dieser Grammatik zu leisten hat:** eine **Klempnerei**-Pflicht durch Konstruktion
+> erledigen — Index, Ueberlauf, Alias, Rahmen, Sperre, Rennen, Verfeinerung. Bleibt eine davon beim
+> Programmierer haengen, ist das an dieser Stelle **eine Widerlegung**, kein Schoenheitsfehler.
+> **Logik** schreibt der Programmierer ohnehin, in jeder Sprache.
 
 ---
 
-## Fünf Entscheidungen, die alles andere festlegen
+## Stand — gemessen
+
+| | erste Fassung | **diese** |
+|---|---|---|
+| definierte EBNF-Regeln | 40 | **100** |
+| benutzt, aber nie definiert | 21 (17 tragend) | **0** |
+| offene Entwurfsfragen | 7 | **9, benannt am Ende** |
+| **Wächter** | — | `pruefe-syntax.sh` prüft die Grammatik jetzt auf **Geschlossenheit**, mit Sprechprobe |
+
+Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `ifstmt`, `matchstmt`,
+`params`, `variants` — sind geschlossen. **`pred` ist dabei die wichtigste**: eine Beweissprache
+*ist* ihre Praedikatsprache, und erst mit ihr laesst sich sagen, wo die Linie liegt.
+
+---
+
+## Fuenf Entscheidungen, die alles andere festlegen
 
 | | Entscheidung | Grund |
 |---|---|---|
-| **E1** | **Englische Schlüsselwörter, deutscher Fliesstext, freie Bezeichner** | genau Caprocks eigene Praxis. Vorher standen beide Sprachen gemischt in den Beispielen — *„wirkung“* neben `touches`. Der Wortschatz ist eine **geschlossene Tabelle** (unten), ein Tausch kostet den Lexer und sonst nichts |
-| **E2** | **Anweisungsorientiert, geschweifte Klammern, Zuweisung ist KEIN Ausdruck** | `if (x = y)` ist nicht schreibbar. Vorhersagbare Absenkung nach C verlangt, dass Auswertungsreihenfolge sichtbar ist |
-| **E3** | **Nichts ist implizit** — keine Umwandlung, keine Kopie eines linearen Werts, kein Auffangzweig, kein Standardwert | jede der vier Klassen hat eine bezahlte Falle in `fallen-klassifikation.tsv` |
-| **E4** | **Verträge stehen VOR dem Rumpf, in fester Reihenfolge**: `requires` · `ensures` · `maintains` · `effects` · `costs` | eine feste Reihenfolge macht Fehlen sichtbar. Ein Werkzeug, das sortieren muss, kann nicht sagen „hier fehlt `effects`" |
-| **E5** | **Jede Deklaration ist an genau einer Stelle vollständig.** Keine Vorwärtsdeklaration, kein Präprozessor, kein `include` | „zwei Zahlen aus derselben Hand sind keine zwei Quellen" |
+| **E1** | **Englische Schluesselwoerter, deutscher Fliesstext, freie Bezeichner** | Caprocks eigene Praxis. Der Wortschatz ist eine **geschlossene Tabelle**; ein Tausch kostet den Lexer |
+| **E2** | **Anweisungsorientiert, Zuweisung ist KEIN Ausdruck** | `if (x = y)` ist nicht schreibbar; die Auswertungsreihenfolge bleibt sichtbar |
+| **E3** | **Nichts ist implizit** — keine Umwandlung, keine Kopie eines linearen Werts, kein Auffangzweig, kein Standardwert | jede der vier Klassen hat eine bezahlte Falle |
+| **E4** | **Vertraege stehen VOR dem Rumpf, in fester Reihenfolge** | ein Werkzeug, das sortieren muss, kann nicht sagen „hier fehlt `effects`" |
+| **E5** | **Jede Deklaration ist an genau einer Stelle vollstaendig** | kein Praeprozessor, keine Vorwaertsdeklaration |
+
+> **Schreibregel fuer diese Dateien:** `Backticks` bezeichnen **heutige Gabbro-Syntax**. Ein
+> abgeschaffter Name steht *kursiv in Anfuehrungszeichen* — er **ist** keine Syntax mehr.
 
 ---
 
-## Wortschatz — die geschlossene Tabelle
-
-**Alles andere ist ein Bezeichner.** Ein neues Schlüsselwort ist eine Sprachänderung und braucht
-einen Eintrag hier.
+## Wortschatz — geschlossen
 
 ```
-  Struktur   module pub use type opaque linear ghost const fn spec impl raw
-             divergent prim section arch
-  Verträge   requires ensures maintains effects costs where in exhaustive
-  Wirkungen  reads writes locks masks allocs diverges
-  Ablauf     if else match loop variant traverse over by touches return
-  Werte      let mut true false
-  Zeiger     ptr normal mmio dma code boot r w rw x
+  Struktur   module pub use type opaque linear ghost tagged const static fn
+             spec impl raw divergent prim section arch when
+  Vertraege  requires ensures maintains breaking effects costs where in
+             exhaustive old
+  Wirkungen  reads writes locks masks allocs consumes publishes diverges pure
+  Ablauf     if else match loop traverse over by touches retry forever
+             bounded progress on_exceeded per_pass return let mut
+  Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
-             class fields assume falsifier axiom check claim measures gates
-             can_fail floor counterprobe endian reserved cost runs
-             index into option chain wrapping unfalsifiable
-  Eingebaut  sizeof forall exists never bool Self
+             class fields bank assume falsifier unfalsifiable axiom
+             check claim measures gates can_fail floor counterprobe
+             endian reserved cost runs offset_into index into option chain
+             wrapping consuming atomic acquire release seq
+  Eingebaut  sizeof lenof forall exists never bool true false Self
 ```
 
----
-
-> **Was jede Regel dieser Grammatik zu leisten hat** ([`KRITERIUM.md`](KRITERIUM.md)): sie muss
-> eine **Klempnerei**-Pflicht durch Konstruktion erledigen — Index, Ueberlauf, Alias, Rahmen,
-> Sperre, Rennen, Verfeinerung. Bleibt eine davon beim Programmierer haengen, ist das an dieser
-> Stelle **eine Widerlegung**, kein Schoenheitsfehler. Was **Logik** ist, schreibt der Programmierer
-> ohnehin — in jeder Sprache.
-
-> **Schreibregel fuer diese Dateien, und sie ist keine Kosmetik:** `Backticks` bezeichnen
-> **heutige Gabbro-Syntax**. Ein abgeschaffter Name steht *kursiv in Anfuehrungszeichen* -- er **ist**
-> keine Syntax mehr. Der Waechter prueft genau das; ohne die Regel braeuchte er eine Ausnahmeliste,
-> und die waechst still.
+**Alles andere ist ein Bezeichner.** Ein neues Wort ist eine Sprachaenderung und braucht einen
+Eintrag hier.
 
 ---
 
 ## Lexik
 
 ```ebnf
-ident     = (letter | "_") { letter | digit | "_" } ;      (* Umlaute erlaubt *)
-letter    = "a".."z" | "A".."Z" | "ä" | "ö" | "ü" | "Ä" | "Ö" | "Ü" | "ß" ;
-int       = dec | hex | bin ;
-dec       = digit { digit | "_" } ;
-hex       = "0x" hexdigit { hexdigit | "_" } ;
-bin       = "0b" ("0"|"1") { "0" | "1" | "_" } ;
-string    = '"' { char } '"' ;                              (* nur in Verträgen und Absagen *)
-comment   = "--" { char } newline ;                         (* nur Zeilenkommentar *)
+ident      = ( letter | "_" ) { letter | digit | "_" } ;
+letter     = "a" … "z" | "A" … "Z" | "ä" | "ö" | "ü" | "Ä" | "Ö" | "Ü" | "ß" ;
+digit      = "0" … "9" ;
+hexdigit   = digit | "a" … "f" | "A" … "F" ;
+int        = dec | hex | bin ;
+dec        = digit { digit | "_" } ;
+hex        = "0x" hexdigit { hexdigit | "_" } ;
+bin        = "0b" ( "0" | "1" ) { "0" | "1" | "_" } ;
+string     = quote { char } quote ;
+char       = ? jedes Zeichen ausser quote und newline ? ;
+quote      = ? das Zeichen U+0022 ? ;
+newline    = ? Zeilenende ? ;
+comment    = "--" { char } newline ;
+path       = ident { "::" ident } ;
+identlist  = ident { "," ident } ;
 ```
 
-**Kein Gleitkomma im Kern**, keine Zeichenketten-Arithmetik, keine Formatierung im Sprachkern —
-Berichtstexte sind `string`-Literale in `check` und `reason`, sonst nirgends.
+**Kein Gleitkomma im Kern.** Zeichenketten nur in `claim`, `reason`, `assume` und `section`.
 
 ---
 
-> **Ein Wort ist beim Aufschreiben WEGGEFALLEN.** Der Entwurf führte `decrement x requires x > 0`
-> als eigenes Konstrukt für die Arithmetik-Vorbedingung. Mit M1 ist es überflüssig: `Refcount` hat
-> einen Bereich, `-= 1` unter 0 verlässt ihn und ist **nicht typisierbar**. Ein Schlüsselwort für
-> etwas, das der Typ schon kann, ist Ballast — **das ist der Ertrag davon, eine Grammatik
-> hinzuschreiben statt Konstrukte aufzuzählen.**
-
----
-
-## 1. Typen — M1 und D1
+## 1. Programm, Module, Konstanten
 
 ```ebnf
-typedecl  = [ "pub" ] [ "opaque" ] [ "linear" [ "ghost" ] ] "type" ident
-            [ "(" ident ")" ]                  (* Parameter, z. B. Held(CAPS) *)
-            [ "=" typeexpr ] ";" ;
+program    = { item } ;
+item       = moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
+           | format | table | reason | state | device | assume | axiom | check ;
+moduledecl = [ "pub" ] "module" path "{" { item } "}" ;
+usedecl    = [ "pub" ] "use" path ";" ;
+constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constexpr ";" ;
+constexpr  = expr ;                    (* zur Uebersetzungszeit auswertbar; kein Aufruf einer
+                                          Funktion mit effects, kein place auf mut *)
+staticdecl = [ "pub" ] "static" [ "mut" ] ident ":" typeexpr "=" expr
+             [ "section" string ] ";" ;
+```
 
-typeexpr  = intty | ident | array | ptrty | structty | fnptr ;
-intty     = ("u8"|"u16"|"u32"|"u64"|"i8"|"i16"|"i32"|"i64") [ "in" range ] ;
-range     = expr ".." expr | expr "..<" expr ;
-array     = "[" typeexpr ";" expr "]" ;
-structty  = "{" { ident ":" typeexpr [ "@" expr ] "," } "}" ;   (* @ = Bitlage/Versatz *)
-fnptr     = "fn" "(" [ typelist ] ")" [ "->" typeexpr ] ;
+**`when`** an jedem `item` ersetzt die bedingte Uebersetzung (335 `cfg`-Stellen in Caprock):
+
+```ebnf
+item       = [ "when" constexpr ] ( … ) ;
+```
+
+Es senkt sich auf `#if` ab und ist **konstant auswertbar** — kein Praeprozessor, keine Textersetzung.
+
+---
+
+## 2. Typen — M1, D1, D2
+
+```ebnf
+typedecl   = [ "pub" ] [ "opaque" ] [ "linear" [ "ghost" ] ] [ "tagged" ]
+             "type" ident [ "(" params ")" ] [ "=" typeexpr ] ";" ;
+typeexpr   = intty | boolty | path | array | ptrty | structty | fnptr | variants ;
+intty      = ( "u8"|"u16"|"u32"|"u64"|"i8"|"i16"|"i32"|"i64" ) [ "in" range ] ;
+boolty     = "bool" ;
+range      = expr ".." expr | expr "..<" expr ;
+array      = "[" typeexpr ";" constexpr "]" ;
+structty   = "{" { field } "}" ;
+field      = ident ":" typeexpr [ "@" bitpos ] [ "where" pred ] [ "reserved" ] "," ;
+bitpos     = int | "[" int ":" int "]" ;
+variants   = "{" ident [ "(" typeexpr ")" ] { "," ident [ "(" typeexpr ")" ] } "}" ;
+fnptr      = "fn" "(" [ typelist ] ")" [ "->" typeexpr ] ;
+typelist   = typeexpr { "," typeexpr } ;
+params     = ident ":" typeexpr { "," ident ":" typeexpr } ;
 ```
 
 ```gabbro
-opaque type Pa   = u64;            -- D1: keine implizite Umwandlung nach Iova
+opaque type Pa   = u64;
 opaque type Iova = u64;
-opaque type Colors = u16;          -- MASK_BITS ist KEINE Farbanzahl
-
-type SlotIdx  = u32 in 0 ..< NSLOTS;      -- M1: jede Operation bleibt im Bereich
+type SlotIdx  = u32 in 0 ..< NSLOTS;
 type Refcount = u32 in 0 .. 0xFFFF_FFFF;
-type Cycles   = u64 in 1 .. u64::max;     -- Null ist ein Befund, kein Messwert
+type Cycles   = u64 in 1 .. u64::max;
 
-linear type Parked;                        -- muss verbraucht werden
-linear ghost type Held(CAPS);              -- Sperrbeleg, kostenlos
-linear ghost type BootPhase;               -- genau eine Instanz
-linear ghost type Duty(check);             -- eine unerfuellte Pruefzusage
+tagged type ObjectKind = { Untyped(Region), Endpoint(EpId), Frame(Pa), Cnode(SlotIdx) };
+
+linear type Parked;
+linear type Uninstalled(ObjectId);
+linear ghost type Held(Lock);
+linear ghost type BootPhase;
+linear ghost type MayWrite(ThreadId, Pa);
+linear ghost type Duty(check);
 ```
 
-> **`opaque` ohne `=` ist ein Typ ohne Darstellung** — nur als Wert weiterreichbar. Das ist die
-> Form für `Parked`: kein öffentlicher Weg an die `ThreadId`.
+**`tagged`** ist der Summentyp (13 `ObjectKind`-Varianten in Caprock) und senkt sich auf eine
+C-Union mit Marke ab. **`bitpos` als Bereich** deckt die 13 Mehrbitfelder in `vtd.rs` (F5).
 
 ---
 
-## 2. Zeiger — M3
+## 3. Zeiger und Adressraeume — M3
 
 ```ebnf
 ptrty  = "ptr" "<" space "," rights ">" typeexpr ;
 space  = "normal" | "mmio" | "dma" | "code" | "boot" | ident ;
-rights = "r" | "w" | "rw" | "x" | rights "@" ident ;     (* @ring3 usw. *)
+rights = right { "+" right } ;
+right  = "r" | "w" | "rw" | "x" | "own" [ "@" ident ] ;
 ```
 
-```gabbro
-let gcmd : ptr<mmio, w>  u32   = ...;    -- Lesen ist NICHT typisierbar (Falle 4)
-let buf  : ptr<dma,  rw> [u8; 4096] = ...;
-fn probe() section ".user_text" arch x86_64 { ... }   -- Falle 72
-```
-
-**Barrieren gehören zum Raum, nicht zur Architektur:** ein Schreibzugriff auf `mmio` zieht die
-Barriere des Raums; `normal` zieht die schwächere. `dmb ish` gegen `dsb sy` ist damit keine
-Stilfrage mehr (Falle 8).
+`own` ist das Eigentumsrecht: wer es haelt, darf freigeben — damit ist `Finalized` ohne
+Lebenszeiten ausdrueckbar. Die Barriere folgt aus dem **Raum**, nicht aus der Architektur.
 
 ---
 
-## 3. Funktionen und Verträge — E4
+## 4. Ausdruecke — `expr`
+
+```ebnf
+expr       = orexpr ;
+orexpr     = andexpr { "||" andexpr } ;
+andexpr    = cmpexpr { "&&" cmpexpr } ;
+cmpexpr    = bitexpr [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) bitexpr ] ;
+bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" ) addexpr } ;
+addexpr    = mulexpr { ( "+" | "-" ) mulexpr } ;
+mulexpr    = unary { ( "*" | "/" | "%" ) unary } ;
+unary      = [ "!" | "-" ] primary ;
+primary    = int | "true" | "false" | place | call | cast | paren | builtin ;
+paren      = "(" expr ")" ;
+call       = path "(" [ arglist ] ")" ;
+arglist    = expr { "," expr } ;
+cast       = path "(" expr ")" ;                  (* nur zwischen vertraeglichen Typen *)
+builtin    = ( "sizeof" | "lenof" ) "(" ( typeexpr | place ) ")" ;
+place      = ident { placesuffix } ;
+placesuffix= "." ident | "[" expr "]" | "->" ident ;
+placelist  = place { "," place } ;
+```
+
+**M1 wirkt hier und nirgends sonst:** jede Operation muss im Bereich ihres Ergebnistyps bleiben.
+`a + b` mit `a, b : u32 in 0..1000` hat den Typ `u32 in 0..2000`; passt der nicht in das Ziel, ist
+es ein **Uebersetzungsfehler**, keine Laufzeitpruefung.
+
+**Division und Rest verlangen einen Nenner, dessen Bereich die Null ausschliesst.**
+`%` und `/` durch `u32 in 0..n` sind nicht schreibbar; durch `u32 in 1..n` schon.
+
+> **Die Grenze von M1 ist benannt, nicht verschwiegen.** `31 - x.leading_zeros()` braucht eine
+> **flusssensitive** Folgerung — der Bereich haengt an einer vorher geprueften Bedingung. M1 ist an
+> dieser Stelle ein **Loeser**, keine Typregel. Wo er nicht durchkommt, verlangt Gabbro eine
+> **Einengung** statt eines Beweises: `narrow x to 1..u32::max else { … }` — eine Anweisung mit
+> benanntem Ausgang, keine Beweiszeile. **Sie zaehlt als Klempnerei und muss klein bleiben; wenn
+> sie das nicht tut, ist das eine Widerlegung** (s. offene Punkte).
+
+---
+
+## 5. Praedikate — `pred`. **Hier liegt die Linie**
+
+```ebnf
+pred       = orpred ;
+orpred     = andpred { "||" andpred } ;
+andpred    = notpred { "&&" notpred } ;
+notpred    = [ "!" ] atompred [ "=>" pred ] ;
+atompred   = cmpexpr | quant | member | reach | "(" pred ")" ;
+quant      = ( "forall" | "exists" ) ident "in" domain ":" pred ;
+domain     = "slots" "of" place                  (* die Slots einer Tabelle *)
+           | "chain" "(" ident "," ident ")" "in" place
+           | "descendants" "of" place
+           | "queue" place
+           | "fields" "of" path
+           | "elems" "of" place
+           | "threads" ;
+member     = expr "in" domain ;
+reach      = place "reaches" place "via" ident ;
+predlist   = pred { "," pred } ;
+```
+
+**Sieben Domaenen, geschlossen. Schachtelung hoechstens zwei.** `old(place)` ist in `ensures`
+erlaubt und sonst nicht.
+
+> **Das ist die Linie, und sie ist hier zum ersten Mal aufschreibbar.** Es gibt **keine
+> benutzerdefinierten Quantorendomaenen, keine Rekursion in `spec fn`, keine handgeschriebenen
+> Lemmata**. Wer mehr braucht, braucht Verus oder F\*.
+>
+> **Der Preis ist unbeziffert und vermutlich der groesste des ganzen Entwurfs:** es gibt keinen
+> Notausgang. Faellt eine Kernel-Eigenschaft aus den sieben Domaenen heraus, ist sie **nicht
+> formulierbar** — nicht „teuer", sondern **gar nicht**.
+
+---
+
+## 6. Funktionen und Vertraege — E4
 
 ```ebnf
 fndecl   = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" ]
            "fn" ident "(" [ params ] ")" [ "->" typeexpr ]
            [ "requires"  predlist ]
            [ "ensures"   predlist ]
-           [ "maintains" identlist ]        (* Invarianten, die erhalten bleiben *)
+           [ "maintains" identlist ]
            [ "effects"   "{" efflist "}" ]
-           [ "costs"     "<=" expr unit ]
-           [ "section" string ] [ "arch" ident ]
+           [ "costs"     "<=" expr ident ]
+           [ "section" string ] [ "arch" ident ] [ "when" constexpr ]
            ( block | ";" ) ;
-
 efflist  = eff { "," eff } ;
-eff      = "reads" path | "writes" path | "locks" ident | "masks" ident
-         | "allocs" ident | "diverges" ;
+eff      = "reads" place | "writes" place | "locks" place | "masks" ident
+         | "allocs" ident | "consumes" place | "publishes" place | "diverges"
+         | "pure" ;
 ```
 
-```gabbro
-fn delete_leaf(c: ptr<normal, rw> CapSpace, s: SlotIdx) -> Result
-    requires  held(CAPS), c.slots[s].used
-    ensures   !c.slots[s].used
-    maintains cdt_wellformed, refcount_matches
-    effects   { writes c.slots, writes c.objects, locks CAPS }
-    costs     <= 200 cycles
-{ ... }
-```
-
-**`effects` ist Pflicht, wenn eine Funktion irgendetwas anfasst.** Voreinstellung ist die leere
-Menge — eine Funktion ohne `effects` ist rein.
-
-### `spec` und `impl` — der Gold-Mechanismus
+> **`effects` ist NICHT fail-open.** Eine Funktion **ohne** `effects` ist ein Uebersetzungsfehler;
+> wer nichts anfasst, schreibt `effects { pure }`. Die frueher moegliche Auslassung war zugleich
+> **die staerkste Zusage und die kuerzeste Spezifikation** — der Anreiz stand gegen die
+> Vollstaendigkeit.
 
 ```gabbro
 spec fn cdt_wellformed(c: CapSpace) -> bool =
-    forall s in c.slots: c.parent_chain(s) ends_at Root;
+    forall s in slots of c: c.parent_chain(s) reaches Root via parent;
 
-impl fn delete_leaf(...) maintains cdt_wellformed { ... }
+impl fn delete_leaf(c: ptr<normal, rw> CapSpace, s: SlotIdx) -> Result
+    requires  Held(CAPS), c.slots[s].used, !exists k in slots of c: k.parent == s
+    ensures   !c.slots[s].used, old(c.objects[o].refcount) == c.objects[o].refcount + 1
+    maintains cdt_wellformed, refcount_matches
+    effects   { writes c.slots, writes c.objects, locks CAPS }
+    costs     <= 200 cycles
+{ … }
 ```
 
-`spec fn` ist **nicht ausführbar**, hat keine `effects`, keine Kosten und keine Bereichsgrenzen —
-sie ist Mathematik. `impl fn` trägt die **erzeugte** Verfeinerungspflicht gegen sie.
+**`breaking`** benennt den Bereich, in dem eine Invariante ruht — drei Fundstellen in Caprock:
+
+```ebnf
+breakstmt = "breaking" identlist block ;
+```
+
+Sie muss am Ende des Blocks wiederhergestellt sein; der Bereich ist **sichtbar statt versteckt**.
 
 ---
 
-## 4. Ablauf — M4
+## 7. Anweisungen
 
 ```ebnf
-stmt      = letstmt | assign | ifstmt | matchstmt | traverse | loopstmt
-          | "return" [ expr ] ";" | exprstmt ;
-letstmt   = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";" ;
-assign    = place "=" expr ";" ;                  (* E2: kein Ausdruck *)
-traverse  = "traverse" ident [ "of" expr ]
-            "over"  setexpr
-            "by"    measure
-            [ "touches" efflist ]
-            block ;
-setexpr   = ident | "chain" "(" ident "," ident ")" "in" ident | range ;
-measure   = "unvisited" | "decreasing" expr ;
-loopstmt  = "loop" block "variant" expr ;         (* die BENANNTE Ausnahme *)
+block      = "{" { stmt } "}" ;
+stmt       = letstmt | assign | ifstmt | matchstmt | loopform | breakstmt
+           | narrowstmt | "return" [ expr ] ";" | exprstmt ;
+letstmt    = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
+           | "let" ident "=" call "else" "(" ident ")" block ;
+assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;
+exprstmt   = call ";" ;
+ifstmt     = "if" expr block { "else" "if" expr block } [ "else" block ] ;
+matchstmt  = "match" expr "{" { ident [ "(" ident ")" ] "=>" block } "}" ;
+narrowstmt = "narrow" place "to" range "else" block ;
 ```
 
+**`match` ist erschoepfend** — es gibt keinen Auffangzweig; eine neue Variante bricht die
+Uebersetzung. **Fehlerfortpflanzung** ist `let … else (e) { … }`: kein verborgener Kontrollfluss,
+der `else`-Zweig muss divergieren oder zurueckkehren.
+
+---
+
+## 8. Schleifen — **drei Formen, und unendlich ist eine davon**
+
+**Die Regel ist nicht „jede Schleife endet", sondern: was eine Schleife tun darf, steht dabei.**
+
+```ebnf
+loopform   = traverse | retry | forever ;
+
+traverse   = "traverse" ident [ "of" expr ]
+             "over"  domain
+             "by"    ( "unvisited" | "consuming" | "decreasing" expr )
+             [ "touches" efflist ]
+             block ;
+
+retry      = "retry" [ "until" pred ]
+             "bounded"     expr ident
+             [ "progress"  ident ]
+             "on_exceeded" ident
+             [ "effects" "{" efflist "}" ]
+             block ;
+
+forever    = "forever"
+             "per_pass"  "bounded" expr ident
+             "effects"   "{" efflist "}"
+             [ "progress" ident ]
+             block ;
+```
+
+| Form | endet? | was die Klempnerei erledigt |
+|---|---|---|
+| **`traverse`** | ja, durch die Menge | Bereich **und** Terminierung; `by consuming` zusaetzlich die Blattheit ueber die Ordnung der Domaene |
+| **`retry`** | ja, durch `bounded` | Terminierung als **Zahl**; der Ueberlauf ist **benannt** (`on_exceeded`), nicht gedeutet |
+| **`forever`** | **nein — und das ist erlaubt** | jeder **Durchgang** ist begrenzt, der **Rahmen** steht in `effects` |
+
 ```gabbro
-traverse siblings of p
-    over    chain(first_child, next_sibling) in slots
-    by      unvisited                 -- toetet Zyklen, nicht nur Nichtterminierung
-    touches reads slots
-{
-    if it == s { return Found; }
+forever
+    per_pass bounded 4096 cycles
+    effects  { reads READY, writes CURRENT, locks SCHEDS }
+    progress timer_tick_arrives
+{ … }
+```
+
+> **Das ist der enge Rahmen.** Eine Leerlaufschleife, die Hauptschleife eines Servers, ein
+> Spinlock — sie sollen ewig laufen. Was **nicht** erlaubt ist: ein Durchgang, der selbst
+> unbegrenzt ist, oder eine Schleife, die anfasst, was nicht in ihrem Rahmen steht.
+> **`per_pass` und `effects` sind Pflicht; `forever` ohne sie uebersetzt nicht.**
+>
+> **`progress` nennt, WER sie beendet** — eine Annahme ueber die Umgebung, mit Falsifikator. Der
+> Watchdog **ist** der Falsifikator. Damit ist eine Warteschleife nicht „unbeweisbar", sondern
+> **beweisbar unter einer benannten, falsifizierbaren Annahme**.
+
+---
+
+## 9. Tabellen, Traversierungen, Formate
+
+```ebnf
+table      = "table" ident "{" { constdecl | slotdecl | invariant } "}" ;
+slotdecl   = "slot" "{" { ident ":" slottype "," } "}" ;
+slottype   = typeexpr | "index" "into" ident | "option" "index" "into" ident
+           | intty "wrapping" ;
+invariant  = "invariant" ident "cost" costexpr "runs" ( "online" | "offline" )
+             ":" pred ";" ;
+costexpr   = "O" "(" expr ")" ;
+
+format     = "format" ident [ "@version" int ] [ "endian" ( "little" | "big" ) ]
+             "{" { field } "}" ;
+```
+
+**Variable Laengen und Versaetze** — damit ist ELF ein `format`:
+
+```gabbro
+format Elf64 endian little {
+    e_phoff     : u64 offset_into Self where e_phoff + e_phentsize * e_phnum <= lenof(Self),
+    e_phentsize : u16 in 56 .. 56,
+    e_phnum     : u16 in 0 .. 65535,
 }
 ```
 
-**`it` ist das Laufelement und ein Element von `over`** — keine Zahl. Ein Index ausserhalb der
-Menge ist damit nicht formulierbar (S1a). **Es gibt kein `while`, kein `for`, kein `goto`.**
+`offset_into Self` bindet den Versatz an die Pufferlaenge; die `where`-Klausel ist die **einzige**
+Zusatzangabe und senkt sich auf eine Bereichspruefung ab.
 
----
-
-## 5. Die Bibliotheksschicht
+**`reason`** ist Regel 3 in Schreibweise, **`state`** nennt die erlaubten Uebergaenge eines Wertes:
 
 ```ebnf
-format  = "format" ident [ "@version" int ] [ "endian" ("little"|"big") ] "{" field* "}" ;
-field   = ident ":" typeexpr [ "where" pred ] [ "in" "{" variants "}" ] [ "reserved" ] ;
-
-table   = "table" ident "{" { constdecl | slotdecl | invariant } "}" ;
-invariant = "invariant" ident "cost" bigO "runs" ("online"|"offline") ":" pred ;
-
 reason  = "reason" ident "{" { ident "=" int string } [ "exhaustive" ] "}" ;
-
 state   = "state" ident "{" { transition } "}" ;
-transition = "transition" ident "{" place ":" expr "->" expr "}"
-             [ "requires" pred ] [ "effects" "{" efflist "}" ] ;
-
-device  = "device" ident "at" space "{" { regdecl | transition } "}" ;
-regdecl = "reg" ident ":" intty "@" expr
-          "class" ("r"|"w"|"rw"|"w1c"|"rc")
-          [ "fields" "{" { ident "@" int "," } "}" ]
-          [ "requires" pred ] ;
 ```
 
-```gabbro
-device Vtd at mmio {
-    reg GCMD : u32 @0x18 class w  fields { TE @31, SRTP @30, IRE @25 }
-    reg GSTS : u32 @0x1c class r
-    transition arm_te { GCMD.TE: 0 -> 1 } requires GSTS.RTPS == 1
-}
-device Smmu at mmio {
-    reg STE_S1STALLD : u32 @0x00 class rw requires IDR0.STALL_MODEL == 0b10
-}
-```
+`state` und `device`s `transition` sind **dasselbe Konstrukt auf zwei Ebenen**: einmal ueber
+Feldern, einmal ueber Registerbits. `resume` (`iretq`/`eret`) ist der Uebergang auf der dritten —
+ueber dem Maschinenzustand.
 
 ---
 
-## 6. Annahmen und Axiome
+## 10. Geraete — und Falle 4
 
 ```ebnf
-assume = "assume" ident string [ "falsifier" ident | "unfalsifiable" string ] ";" ;
+device  = "device" ident [ "(" params ")" ] "at" space "{" { regdecl | bank | transition } "}" ;
+bank    = "bank" ident "at" expr "stride" expr "count" expr "{" { regdecl } "}" ;
+regdecl = "reg" ident ":" intty "@" expr
+          "class" ( "r" | "w" | "rw" | "w1c" | "rc" )
+          [ "fields" "{" { ident "@" bitpos "," } "}" ]
+          [ "requires" pred ] ;
+transition = "transition" ident "{" place ":" expr "->" expr "}"
+             [ "keeping" placelist ]
+             [ "requires" pred ] [ "effects" "{" efflist "}" ] ;
+```
+
+```gabbro
+device Vtd(base: Pa) at mmio {
+    reg GCMD : u32 @0x18 class w fields { TE @31, SRTP @30, IRE @25 }
+    reg GSTS : u32 @0x1c class r  fields { TES @31, RTPS @30 }
+    reg CAP  : u64 @0x08 class r  fields { FRO @[33:24], ND @[2:0] }
+
+    bank FRR at CAP.FRO * 16 stride 16 count 256 { reg FR : u64 @0x8 class rw }
+
+    transition arm_te { GCMD.TE: 0 -> 1 }
+        keeping  GSTS.TES, GSTS.RTPS
+        requires GSTS.RTPS == 1
+        effects  { writes GCMD }
+}
+```
+
+> **`keeping` toetet Falle 4, und `class w` allein tat es nicht.** Die Falle ist nicht „GCMD lesen",
+> sondern **„beim Schreiben die Zustandsbits nicht mitschreiben"**. `keeping` nennt die Bits, die
+> das geschriebene Wort **mitfuehren** muss; ihre Quelle ist ein lesbares Register. Ein `store`,
+> der sie fallenlaesst, ist damit **nicht schreibbar** — und ein Lesen von `GCMD` bleibt weiterhin
+> untypisierbar.
+>
+> **`bank`** deckt Register an laufzeitberechneter Basis (F6): `FRR` bei `CAP.FRO*16`. Der Index
+> ist M1-beschraenkt durch `count`.
+
+---
+
+## 11. Nebenlaeufigkeit
+
+```ebnf
+atomicdecl = [ "pub" ] "atomic" ident ":" typeexpr
+             [ "publishes" placelist ] [ "acquire" | "release" | "seq" ] ";" ;
+lockdecl   = "lock" ident "protects" "{" placelist "}"
+             "rank" constexpr [ "masks" ident ] ";" ;
+lockstmt   = "locks" place block ;
+```
+
+```gabbro
+lock CAPS protects { slots, cdt } rank 2 masks irqs;
+atomic COLOR_DONE : bool publishes { color_report } release;
+```
+
+**`publishes` ist Pflicht an jedem Atomic** — die Nutzlast ist Teil des Modells, nicht des
+Kommentars. **`rank`** gibt die Sperrordnung; Nehmen verlangt echt kleineren Rang. Ein `locks`-Block
+gibt am Ende frei; wer kopieren-und-freigeben will, tut es **innerhalb** und nimmt danach neu.
+
+---
+
+## 12. Hardwareannahmen und Axiome — **tragend, nicht Beiwerk**
+
+```ebnf
+assume = "assume" ident string
+         ( "falsifier" ident | "unfalsifiable" string ) ";" ;
 axiom  = "axiom" ident "(" [ params ] ")" "effects" "{" efflist "}"
-         [ "falsifier" ident | "unfalsifiable" string ] ";" ;
+         ( "falsifier" ident | "unfalsifiable" string ) ";" ;
 ```
 
 ```gabbro
@@ -290,15 +478,29 @@ assume vtd_te_effective
     "GCMD.TE schaltet die Uebersetzung scharf; DMA ohne Kontexteintrag faultet."
     falsifier probe_vtd_te;
 
+assume x2apic_two_step
+    "EN und EXTD in einem Schreibvorgang ist ein verbotener Uebergang."
+    unfalsifiable "qemu64 hat kein x2APIC";
+
 axiom write_cr3(p: Pa) effects { writes tlb, writes active_table } falsifier probe_cr3;
 ```
 
-**`unfalsifiable` verlangt einen Grund als Zeichenkette** — die dritte Klasse („nicht gefahren")
-gibt es syntaktisch nicht: sie ist die **Abwesenheit** beider Angaben und ein Übersetzungsfehler.
+**Drei Klassen, und die dritte gibt es syntaktisch nicht:** *falsifiziert* (Sonde lief und hielt),
+*nicht falsifizierbar* (**mit Grund als Zeichenkette**), *nicht gefahren* — das ist die
+**Abwesenheit beider Angaben** und ein **Uebersetzungsfehler**. Eine nicht gefahrene Annahme darf
+nie wie eine falsifizierte aussehen.
+
+**Die Annahmenmenge wird ins Erzeugnis emittiert** („bewiesen unter A1…An"), als **Menge von Namen
+mit Klasse**, nicht als Zahl — eine Ratsche ueber einer Kardinalzahl greift nicht gegen Austausch.
+
+> **Damit ist die Zusage relativ, und das steht im Artefakt statt in einer Fussnote:**
+> *speichersicher unter A1…An.* Ein Beweis, dessen Annahmenmenge der Verbraucher nicht kennt, hat
+> keine Reichweite. **Die Axiomschicht ist die groesste unbewiesene Flaeche der Sprache** — groesser
+> als der Uebersetzer — und deshalb zaehlbar und ratschenfaehig.
 
 ---
 
-## 7. `check` — die lineare Prüfpflicht
+## 13. `check` — die lineare Pruefpflicht
 
 ```ebnf
 check = "check" ident "{"
@@ -311,90 +513,58 @@ check = "check" ident "{"
         "}" ;
 ```
 
-```gabbro
-check epfull {
-    claim        "ein Ueberlauf der Endpoint-Warteschlange ist BENANNT"
-    measures     ep.rejected_send, ep.rejected_recv
-    gates        acceptance
-    can_fail     { five_probes_against_four_slots(); }
-    floor        ep.rejected_send >= 1
-    counterprobe "TidQueue::enqueue ignoriert die Kapazitaet"
-                 expects exactly_one_conjunct_open
-}
-```
+Der Uebersetzer erzeugt ein `linear ghost Duty(ident)`. **Vier Uebersetzungsfehler fallen aus
+M1/M2/M3, nicht aus Sonderregeln:** `gates` fehlt → die Pflicht wird nie verbraucht;
+`can_fail` fehlt → dito; eine Groesse unter `measures`, die der **gemessene Pfad** schreibt →
+Schreibrecht; einseitige Schwelle ohne `floor` → die Groesse hat keinen Bereich.
 
-Der Übersetzer erzeugt daraus ein `linear ghost Duty(epfull)`. **Vier Übersetzungsfehler fallen
-daraus, nicht aus Sonderregeln:**
-
-| Fehler | Grund |
-|---|---|
-| `gates` fehlt oder nennt keine erreichte Liste | die `Duty` wird nie verbraucht — M2 |
-| `can_fail` fehlt | dito, zweite Pflicht |
-| eine Grösse unter `measures` wird vom **gemessenen Pfad** geschrieben | Schreibrecht — M3 |
-| einseitige Schwelle ohne `floor` | die gemessene Grösse hat keinen Bereich — M1 |
+**Die `measures`-Liste IST die Berichtszeile** — daraus entsteht die Formatierung, ohne dass
+Formatierung im Sprachkern existiert.
 
 ---
 
-## 8. Bootphase, Maschinenzustand, Module
+## 14. Bootphase, Maschinenzustand, Assembler
 
 ```gabbro
-raw fn phys_write(p: Pa, w: u64) requires &BootPhase effects { writes phys };
-fn boot_end(t: BootPhase) effects { drops code<boot> };
+raw fn phys_write(p: Pa, w: u64) requires BootPhase effects { writes phys };
+fn boot_end(t: BootPhase) effects { consumes t, writes code_map };
 
 prim fn switch_to(from: ptr<normal,rw> Context, to: ptr<normal,r> Context) -> never;
-prim fn resume(k: ptr<normal,r> Context) -> never;   -- iretq / eret
-divergent fn idle_loop() effects { diverges };
-
-module kernel::caps {
-    pub use crate::addr::Pa;
-    pub fn resolve(...) -> ... { }
-}
+prim fn resume(k: ptr<normal,r> Context) -> never;
+divergent fn idle() effects { diverges };
 ```
 
-**`raw`** ist das einzige Wort, hinter dem M1/M3/M4 nicht gelten — und es ist **nur** mit einem
-geliehenen `BootPhase` aufrufbar.
+`boot_end` verbraucht die **lineare** Marke **und** bildet `code<boot>` ab — ein Ereignis. Eine
+Sonde dorthin muss danach faulten; das ist der Falsifikator.
 
 ---
 
-## Was es ABSICHTLICH nicht gibt
+## Was es absichtlich nicht gibt
 
-`while` · `for` · `goto` · `union` als Umdeutung (das kann `ptr<space>`) · Präprozessor · implizite
-Umwandlung · `void*` · Zeigerarithmetik ohne Grundlage · Auffangzweig (`_ =>`) · Ausnahmen ·
-Vererbung · Reflexion · GC · Gleitkomma im Kern · Zuweisung als Ausdruck · Vorwärtsdeklaration ·
-Selbst-Hosting.
-
----
-
-## Der Wächter — `./pruefe-syntax.sh`
-
-Er hält **alle** Beispiele in `SPRACHE.md`, `SYNTAX.md`, `PLAN.md` und `README.md` gegen zwei Listen:
-die absichtlich fehlenden Formen und die **alte deutsche Schlüsselwortsprache**. Zwei Oberflächen
-sind ein Riss, und der entsteht beim nächsten Beispiel von selbst.
-
-**Sprechprobe in beide Richtungen:** vier Gifte müssen fallen, ein sauberer Block muss durchkommen.
-
-> **Beim ersten Lauf hat er zwei echte Fehler gefunden** — ein *„erhaelt“* aus der Zeit vor E1, das
-> das Gegenlesen übersehen hatte, und ein Sprachprimitiv, das `switch` hiess, also **wie ein
-> ausdrücklich verbotenes Wort**. Dazu einen Fehlalarm auf einem Kommentar, der die verbotene Form
-> erklärt; seither streicht der Wächter Kommentare, bevor er prüft.
+`while` · `for` · `goto` · `union` als Umdeutung · Praeprozessor · implizite Umwandlung · `void*` ·
+Zeigerarithmetik ohne Grundlage · Auffangzweig · Ausnahmen · Vererbung · Reflexion · GC ·
+Gleitkomma im Kern · Zuweisung als Ausdruck · Vorwaertsdeklaration · Selbst-Hosting ·
+benutzerdefinierte Quantorendomaenen · Rekursion in `spec fn` · handgeschriebene Lemmata.
 
 ---
 
-## Offene Syntaxfragen — benannt, nicht weggelassen
+## Offene Punkte — benannt, nicht weggelassen
 
-- [ ] **Variable Längen in `format`.** Die harten 20 % jedes Parser-Erzeugers; die Totalitätsregel
-      deckt sie im Prinzip (eine vorher gelesene, geprüfte Länge), **eine Schreibweise gibt es
-      nicht**.
-- [ ] **Versionsevolution.** `@version 3` — liest der Leser auch v2? **Absage oder Migration?**
-- [ ] **Generizität.** Ohne sie braucht jede Tabelle ihren eigenen `traverse`. Mit ihr:
-      monomorphisieren, aber wie werden Verträge parametrisiert?
-- [ ] **Die Schreibweise der Sperrordnung.** `locks CAPS` nennt die Sperre, nicht die **Stufe** —
-      die Ordnung ist im Entwurf ein Bereichstyp, in der Syntax fehlt sie.
-- [ ] **`spec fn`-Sprache.** `forall … in … :` ist hier gesetzt, aber der Vorrat an Quantoren und
-      mathematischen Funktionen ist unentschieden — **und genau dort wandert die Linie**, wenn man
-      nicht aufpasst.
-- [ ] **Fehlerfortpflanzung.** `Result` steht in den Beispielen, ein `?`-Operator ist nicht
-      entschieden. Ohne ihn wird jeder Aufruf drei Zeilen; mit ihm gibt es verborgenen Kontrollfluss.
-- [ ] **Schlüsselwortsprache.** E1 setzt Englisch, weil das der Bestand ist (`traverse`, `over`,
-      `by`, `touches`, `format`, `table`, `state`, `check`, `assume`). Der Preis ist der Bruch mit
-      dem deutschen Fliesstext. **Reversibel: eine Tabelle im Lexer.**
+- [ ] **`narrow` ist der Notausgang von M1 und damit der gefaehrlichste Posten.** Er verwandelt eine
+      Beweispflicht in eine Laufzeitpruefung mit benanntem Ausgang. **Kommt er haeufig vor, ist das
+      Kriterium verletzt** — Klempnerei bliebe beim Programmierer, nur in anderer Form.
+      **Zu messen: wie oft er in einem echten Modul noetig ist.**
+- [ ] **Sieben Quantorendomaenen ohne Notausgang.** Faellt eine Kernel-Eigenschaft heraus, ist sie
+      **gar nicht** formulierbar. Der Preis ist unbeziffert.
+- [ ] **`publishes` waere an 2 231 Atomic-Stellen faellig.** Ob das traegt, entscheidet keine
+      Papieruebung.
+- [ ] **`breaking` legalisiert eine Invariantenverletzung.** Der Preis ist Sichtbarkeit statt
+      Verstecken; ob das reicht, ist unentschieden.
+- [ ] **Generizitaet fehlt.** Ohne sie braucht jede Tabelle ihren eigenen `traverse`; mit ihr ist
+      die Monomorphisierung die **erste nicht-flache Absenkung** und greift M-Gold-2 an.
+- [ ] **Versionsevolution** (`@version`): Absage oder Migration, unentschieden.
+- [ ] **`costs <= n cycles`** ist deklariert und **nicht durchgesetzt** — woher kaeme die Zahl?
+- [ ] **Die 18 Absenkungen aus [`MINIMALSPEZIFIKATION.md`](MINIMALSPEZIFIKATION.md) sind
+      Behauptungen.** Keine ist hingeschrieben.
+- [ ] **Der Gegenentwurf (1 882 Zeilen) ist weiterhin nicht eingearbeitet.** Diese Fassung nimmt
+      seine Befunde auf, nicht seinen Text.
