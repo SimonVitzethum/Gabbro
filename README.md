@@ -18,7 +18,7 @@ widerlegt, und das steht in den Abbruchbedingungen.
 > **Die Konstrukte stehen vollständig in [`DESIGN.md`](DESIGN.md)** — das ist die Quelle. Was
 > unten folgt, sind Zweck, Regeln, Grenzen und Abbruchbedingungen.
 
-> **BERICHTIGUNG, und sie steht bewusst in Zeile 3.** Die erste Fassung schrieb hier „per
+> **BERICHTIGUNG, und sie steht bewusst vor allem Weiteren.** Die erste Fassung schrieb oben „per
 > Konstruktion **beweisbar**". Das war eine Überschreibung: **Gabbro beweist nichts.** Es erzeugt
 > nach Regeln, und die Korrektheit des Erzeugnisses hängt an einem **unverifizierten Übersetzer**.
 > EverParse beweist seine Parser tatsächlich, in F\*. Gabbro liefert *„korrekt unter Vertrauen in
