@@ -256,11 +256,17 @@ MUTATIONEN = [
         "umgebung.rs",
         "    pub fn funktion(&self, von: &str, pfad: &Pfad) -> Option<&Signatur> {\n"
         "        self.suche(&self.funktionen, von, &pfad.text())",
+        # **Deterministisch**: die HashMap-Reihenfolge ist es nicht, und eine Mutation, die
+        # mal den richtigen und mal den falschen Eintrag trifft, ueberlebt zufaellig.
+        # Sortiert und der letzte Treffer -- so faellt die Wahl immer gleich aus.
         "    pub fn funktion(&self, von: &str, pfad: &Pfad) -> Option<&Signatur> {\n"
         "        let _ = von;\n"
-        "        return self\n            .funktionen\n            .iter()\n"
-        "            .find(|(k, _)| kurzname(k) == kurzname(&pfad.text()))\n"
-        "            .map(|(_, v)| v);\n"
+        "        let kurz = kurzname(&pfad.text()).to_string();\n"
+        "        let mut treffer: Vec<&String> = self\n"
+        "            .funktionen\n            .keys()\n"
+        "            .filter(|k| kurzname(k) == kurz)\n            .collect();\n"
+        "        treffer.sort();\n"
+        "        return treffer.last().and_then(|k| self.funktionen.get(*k));\n"
         "        #[allow(unreachable_code)]\n"
         "        self.suche(&self.funktionen, von, &pfad.text())",
         "U11 -- Signaturen werden wieder nach blankem Namen aufgeloest",
