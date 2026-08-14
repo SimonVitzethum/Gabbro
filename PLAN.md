@@ -2,7 +2,7 @@
 
 **Ein Plan, ein Ziel: ein Kernel in Gabbro, bei dem man NUR DIE LOGIK beweist.**
 
-> **Das Ziel ist eine Art, keine Menge** ([`KRITERIUM.md`](KRITERIUM.md)). Alles, was nur die
+> **Das Ziel ist eine Art, keine Menge** ([`BEWEIS.md`](BEWEIS.md)). Alles, was nur die
 > Maschine erwaehnt — Index, Ueberlauf, Alias, Rahmen, Sperre, Rennen, Verfeinerung —, faellt durch
 > Konstruktion. Was die Sache erwaehnt, schreibt der Programmierer. **Die Kennzahl 0,5 : 1 bleibt
 > als Diagnose; selbst 2 : 1 ist gut, wenn die Zeilen Logik sind.**
@@ -18,7 +18,7 @@ Stand 2026-08-13. **Nichts davon ist gebaut.**
 ## Der Richtwert 0,5 : 1 — der Boden, und er misst den Abstand statt zu urteilen
 
 > **Nachgeordnet seit dem 2026-08-13.** Was hier folgt, ist die Herleitung des Richtwerts. Das
-> **Kriterium** steht darueber und in [`KRITERIUM.md`](KRITERIUM.md): *nur Logik beweisen, sonst
+> **Kriterium** steht darueber und in [`BEWEIS.md`](BEWEIS.md): *nur Logik beweisen, sonst
 > nichts.* Wer beides verwechselt, misst wieder einen Stellvertreter.
 
 Die 20 : 1 von seL4 zerfallen in rund **0,5 : 1 abstrakte Spezifikation** und **19,5 : 1 Beweis**.
@@ -55,7 +55,7 @@ bei **25 %** rund **1,75**.
 | | Bedingung | wenn sie fällt |
 |---|---|---|
 | **B1** | **Invarianten leben an der Struktur, nicht an der Schleife.** Erhält die *erzeugte* Mutation die Invariante, braucht die Schleife keine eigene | jede Schleife bekommt eine handgeschriebene Invariante — der grösste Einzelposten kehrt zurück |
-| **B2** | **Algorithmische Rümpfe bestehen aus Traversierungen.** ~~Der Löser bekommt die Invariante geschenkt~~ — **das war Überschreibung Nr. 3**: geschenkt bekommt er die **Sicherheitshülle** (Bereich, Terminierung, Rahmen). **Funktionale** Schleifeninvarianten — Teilsummen, Sortiertheit, Baumform mitten in der Mutation — schreibt weiterhin jemand hin; das ist die gesamte Verus-/Dafny-Erfahrung. Was hilft, sind **Konstrukte, deren Nachbedingung ihre Abbruchbedingung IST** (s. `by consuming` in [`P0-1-REVOKE.md`](P0-1-REVOKE.md)) — und die gibt es je Fall oder nicht | Beweishinweise je Rumpf |
+| **B2** | **Algorithmische Rümpfe bestehen aus Traversierungen.** ~~Der Löser bekommt die Invariante geschenkt~~ — **das war Überschreibung Nr. 3**: geschenkt bekommt er die **Sicherheitshülle** (Bereich, Terminierung, Rahmen). **Funktionale** Schleifeninvarianten — Teilsummen, Sortiertheit, Baumform mitten in der Mutation — schreibt weiterhin jemand hin; das ist die gesamte Verus-/Dafny-Erfahrung. Was hilft, sind **Konstrukte, deren Nachbedingung ihre Abbruchbedingung IST** (s. `by consuming` in [`MESSUNGEN.md`](MESSUNGEN.md)) — und die gibt es je Fall oder nicht | Beweishinweise je Rumpf |
 | **B3** | **Was sich so nicht schreiben lässt, muss verschwindend klein sein.** Kandidaten: IPC-Fastpath, `revoke`, die Warteschlangenchirurgie des Schedulers | jeder dieser Rümpfe kostet 5 : 1 auf seinem Anteil |
 
 **Deshalb ist P0.1 (`revoke` auf Papier) nicht ein Tor unter vielen, sondern DAS Tor.** Braucht
@@ -282,7 +282,7 @@ schlechte.
 
 > **ZWEIMAL BERICHTIGT am 2026-08-13.** Fassung 1 sagte nur „keine Laufzeitwirkung" — damit hätte
 > die erzeugte Geistertheorie **in den Zähler** gezählt und **der Gold-Mechanismus die Kennzahl
-> verschlechtert, je besser er wirkt** (gefunden von [`P0-1-REVOKE.md`](P0-1-REVOKE.md)).
+> verschlechtert, je besser er wirkt** (gefunden von [`MESSUNGEN.md`](MESSUNGEN.md)).
 > Fassung 2 sagte „was ein **Mensch** schreibt" — das lässt in einem Projekt mit KI-Koautor eine
 > Lücke und, schlimmer, **einen Umweg: eine Makroschicht Quelltext erzeugen zu lassen, der dann als
 > geschrieben zählt.** Die belastbare Fassung ist **Quelle gegen Abgeleitetes** — sie ist am
@@ -298,7 +298,7 @@ Sie ist die einzige, die sich nicht durch Umschichten von Text gewinnen lässt:
 | `touches`, Verfeinerungsannotationen | Bereichs**prüfungen**, die stehen bleiben |
 
 > **DIE GRÖSSTE LÜCKE DER VORSCHRIFT, gefunden am 2026-08-13 durch
-> [`P0-4-GEGENPROBE.md`](P0-4-GEGENPROBE.md):** eine Kennzahl aus **ungeprüften Zusagen belohnt
+> [`MESSUNGEN.md`](MESSUNGEN.md):** eine Kennzahl aus **ungeprüften Zusagen belohnt
 > falsche Zusagen — sie sind kurz.** Belegt an einem `ensures`, das nicht bloss unbewiesen, sondern
 > **falsch** ist und trotzdem im Zähler stand; an einer benannten Eigenschaft, die an **keine**
 > Nachbedingung gebunden war; und an einem `effects`, dem eine Sperre fehlte.
@@ -771,3 +771,114 @@ dass jedes umgestellte Modul seinen Differenztest mitbringt.
 lineare Ghost-Permissions. Loom fand die abgeschwächte Ordnung, sobald die Zelle im Modell war.
 **Für jede Stufe gehört beantwortet: was kann Rust+Verus+Loom heute schon, und was bleibt übrig?**
 Nur der Rest rechtfertigt eine Sprache.
+
+
+---
+
+# Die Ziellinie
+
+## FERTIG — wann Plan und Syntax stehen
+
+**Diese Datei existiert, weil dieser Ordner ein Muster hat.** `HISTORIE.md` fuehrt es: **jedes
+gefallene Tor wurde durch Neugruendung ueberlebt**, und das harte Tor wanderte dabei hinter den
+Uebersetzer. Ein autonomer Lauf ohne benannte Ziellinie ist dasselbe Muster mit mehr Durchsatz.
+
+**Hier steht die Ziellinie, vorab, und sie ist mechanisch pruefbar, wo das geht.**
+
+> **Seit dem 2026-08-14 gibt es einen schaerferen Plan mit denselben Eigenschaften:**
+> [`SPRACHE.md`](SPRACHE.md) §6 — **P0 bis P7, jede Stufe mit zweiseitigem Tor, und die
+> Reihenfolgeregel „keine Prueferzeile vor Tor P1"**. Er ersetzt diese Datei nicht, er macht sie
+> konkret: A1 ist P1, A4 ist P0.
+
+> **Der Lauf bricht nicht ab.** Was frueher Abbruch war, ist seit dem 2026-08-14 **Eskalation** —
+> s. Abschnitt C. Abgebrochen wird nur bei **bewiesener** Unmoeglichkeit, und wie die aussaehe,
+> steht dort ebenfalls, damit der Grund nicht leer ist.
+
+---
+
+### Das Ziel, gegen das geprueft wird
+
+> **Eine Sprache, in der man Kernel, Treiber und Programme DIREKT schreibt — Hardwarezugriff ueber
+> Hardwareannahmen — und die alles fuer einen Gold-Beweis liefert AUSSER dem Logikbeweis selbst.**
+
+---
+
+### A — Die Syntax steht, wenn alle acht Punkte zutreffen
+
+| | Bedingung | pruefbar durch | Stand |
+|---|---|---|---|
+| **A1** | Die Grammatik ist **geschlossen**: kein benutztes, nie definiertes Nichtterminal | `./pruefe-syntax.sh` | **erfuellt** (100 Regeln, 0 offen) |
+| **A2** | Alle offenen Punkte sind **entschieden oder gemessen** | Auszaehlen | **erfuellt** — `SPRACHE.md` §18 entscheidet F1–F9; was bleibt, sind Messungen |
+| **A3** | **Jeder Caprock-Bereich hat ein Urteil** — ausdrueckbar / braucht Konstrukt X / nicht ausdrueckbar —, **je mit einem ausgeschriebenen Fragment als Beleg** | `FRAGMENTE.md` | **6 von 10** — Scheduler, MMU, Lader, Parser/Checkpoint fehlen |
+| **A4** | Der **Logik/Klempnerei-Split** ist an mindestens fuenf Fragmenten gemessen, und **keine Klempnerei-Pflicht bleibt unbenannt haengen** | `BEWEIS.md` | **nie gemessen** |
+| **A5** | Ein **Treiber** ist vollstaendig ausgeschrieben | `FRAGMENTE.md` | **erfuellt, mit Befund** |
+| **A6** | Ein **Userspace-Programm** ist vollstaendig ausgeschrieben | `FRAGMENTE.md` | **passt NICHT** — `forever` hatte keinen Ausgang; seit heute `leaves`/`leave` |
+| **A7** | Das **Pruefgeruest** ist ausgeschrieben | `FRAGMENTE.md` | **erfuellt, mit Befund** |
+| **A8** | **Jedes Konstrukt hat seine C-Absenkung hingeschrieben**, nicht behauptet | je Regel | 18 Behauptungen offen |
+
+#### Die Bereiche zu A3
+
+`caprock-cap` (Tabelle+CDT) · `caprock-sched` (Warteschlangen) · IPC/`threads` (Nebenlaeufigkeit,
+872 `Ordering::`) · `mmu` (Hardwarevertrag+Algorithmus) · IOMMU (`vtd`/`irte`/`dmar`/`smmu`) ·
+`caprock-virtio` (Ringe, Geraeteeigentum) · Parser (`part`/`fat`/`checkpoint`) · Lader (Code als
+Daten) · Pruefgeruest · `programs/` (Userspace).
+
+---
+
+### B — Der Plan steht, wenn
+
+| | Bedingung | Stand |
+|---|---|---|
+| **B1** | Jede Phase hat ein **Tor**, und solange es ohne Uebersetzer pruefbar ist, ist es das | erfuellt |
+| **B2** | Die Abbruchbedingungen stehen auf dem **Kriterium**, nicht auf einer Zahl | erfuellt |
+| **B3** | Die Phasen sind **mit den gemessenen Ergebnissen konsistent** — kein Tor, das eine Messung schon widerlegt hat | zu pruefen nach jedem Ergebnis |
+| **B4** | Es gibt **keinen zweiten Weg** und keinen Rueckfallzuschnitt | erfuellt |
+
+---
+
+### C — ESKALATION statt Abbruch
+
+**Entschieden am 2026-08-14: der Lauf bricht nicht ab.** Abgebrochen wird **nur bei bewiesener
+Unmoeglichkeit** — und ein Befund „geht nicht" ist keine. Er ist eine **Entwurfsaufgabe**, genau wie
+in [`SPRACHE.md`](SPRACHE.md): nicht *„geht das?"*, sondern *„was muss
+minimal dastehen, damit es geht?"*
+
+| Lage | **frueher: Abbruch** | **jetzt: Eskalation** |
+|---|---|---|
+| Eine **Klempnerei-Pflicht bleibt haengen** und kein Konstrukt nimmt sie ab | Lauf endet | **das Konstrukt wird entworfen**, das sie abnimmt — mit minimaler Angabe und C-Absenkung. Gelingt das nicht, wird die **Unmoeglichkeit hingeschrieben**, nicht die Arbeit beendet |
+| Ein Punkt aus **A** ist dreimal angefasst und nicht geschlossen | Lauf endet | er wird **benannter Blocker** und bekommt eine eigene, gezielte Runde statt weiterer Nebenbei-Versuche |
+| Zwei Runden erzeugen **mehr Entwurf als Messung** | Lauf endet | **die Zahl wird berichtet, nicht befolgt** — s. unten |
+
+#### Was von Abbruchgrund 2 bleibt: die Zahl, ohne die Wirkung
+
+Der Zaehler wird **weitergefuehrt und in jeder Runde genannt**: neue Zeilen in `SYNTAX.md`,
+`SPRACHE.md`, `PLAN.md` gegen neue Zeilen in Ergebnisdateien. **Er stoppt nichts mehr, aber er bleibt
+sichtbar** — ein Signal, das man abschaltet, ist beim naechsten Mal nicht da, und genau diese Klasse
+fuehrt `HISTORIE.md` als Falle 30 („ein Waechter, der nach seiner Behebung weiterschreit, wird
+abgeschaltet"). Hier ist die Loesung, ihn vom Urteil zu **entkoppeln**, statt ihn zu entfernen.
+
+#### Was „bewiesen unmoeglich" heissen wuerde
+
+Damit der einzige verbliebene Abbruchgrund nicht leer ist, steht hier, wie er aussaehe. **Zwei
+Formen, und nur diese:**
+
+1. **Eine geforderte Eigenschaft ist nicht entscheidbar** und auch nicht durch eine benannte
+   Annahme ersetzbar. *Beispiel der Form:* allgemeine Lebendigkeit („dieser Thread laeuft
+   irgendwann") ueber unbeschraenkten Abläufen — kein Typsystem entscheidet das, und ein
+   `progress assume` ersetzt es nur, wenn sich ein Falsifikator bauen laesst.
+2. **Zwei geforderte Eigenschaften widersprechen einander.** *Der heute schon bekannte Kandidat:*
+   **Generizitaet verlangt Monomorphisierung, und die ist die erste nicht-flache Absenkung** —
+   sie greift M-Gold-2 („syntaxgesteuert, nicht optimierend") an. Beides zugleich zu wollen ist
+   moeglicherweise widerspruechlich; **das ist zu zeigen, nicht zu vermuten.**
+
+**Beides muss hingeschrieben werden, mit dem Argument.** „Ich sehe keinen Weg" ist kein Beweis —
+das waere ein Nullbefund ohne Groesse, und die Falle steht im Register.
+
+### D — Was NICHT als Fertigstellung zaehlt
+
+* **Ein Uebersetzer.** Er steht als P3 im Plan, hinter fuenf Toren. Diese Datei beschreibt Papier.
+* **Eine schoene Zahl.** Das Kriterium ist eine Art, keine Menge (`BEWEIS.md`).
+* **„Alle Konstrukte vorhanden".** Ein Konstrukt ohne ausgeschriebenes Fragment und ohne
+  C-Absenkung ist eine Behauptung.
+* **Ein gruener Waechter.** `pruefe-syntax.sh` prueft Geschlossenheit und Wortschatz — **nicht**,
+  ob echter Code hineinpasst. Er hat selbst schon ein falsches Gruen geliefert.

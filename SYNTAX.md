@@ -1,7 +1,7 @@
 # Gabbro — die Syntax
 
 **Die Quelle fuer die Oberflaeche.** [`SPRACHE.md`](SPRACHE.md) sagt, welche Mechanismen es gibt
-und warum; [`KRITERIUM.md`](KRITERIUM.md), wozu sie da sind; hier steht, wie man sie hinschreibt.
+und warum; [`BEWEIS.md`](BEWEIS.md), wozu sie da sind; hier steht, wie man sie hinschreibt.
 Was hier nicht steht, ist nicht schreibbar.
 
 Stand 2026-08-13, zweite Fassung. **Kein Uebersetzer liest das.**
@@ -310,7 +310,7 @@ erlaubt und sonst nicht.
 > Beweisschritt, kein Beweiskoerper, keine rekursive `spec fn`. **Der Grund, warum sie genannt und
 > nicht geraten wird, ist Vorhersagbarkeit:** ein Uebersetzer, der das Schema waehlt, macht
 > „uebersetzt es" von Loeserglueck abhaengig — und M1 bis M4 sind Typen, keine Loeser.
-> Ganz in [`INDUKTION.md`](INDUKTION.md).
+> Ganz in [`SPRACHE.md`](SPRACHE.md).
 >
 > **Der Preis ist unbeziffert und vermutlich der groesste des ganzen Entwurfs:** es gibt keinen
 > Notausgang. Faellt eine Kernel-Eigenschaft aus den sieben Domaenen heraus, ist sie **nicht
@@ -656,7 +656,7 @@ benutzerdefinierte Quantorendomaenen · Rekursion in `spec fn` · handgeschriebe
 
 ## Offene Punkte — Stand 2026-08-14, nach der Festlegung
 
-**Die neun Entwurfsfragen sind in [`FESTLEGUNG.md`](FESTLEGUNG.md) §18 entschieden (F1–F9).**
+**Die neun Entwurfsfragen sind in [`SPRACHE.md`](SPRACHE.md) §18 entschieden (F1–F9).**
 Was hier steht, ist, was danach **noch offen** ist — und das sind Messungen, keine Entwuerfe.
 
 ### Die eine Messung, an der die Festlegung haengt
@@ -679,9 +679,9 @@ Was hier steht, ist, was danach **noch offen** ist — und das sind Messungen, k
 
 ### Was auch nach der Festlegung nicht gedeckt ist — benannt, nicht vergessen
 
-- [ ] **Die Naht CPU ↔ Geraet** hat kein mechanisiertes Vorbild ([`MODELL.md`](MODELL.md)).
+- [ ] **Die Naht CPU ↔ Geraet** hat kein mechanisiertes Vorbild ([`BEWEIS.md`](BEWEIS.md)).
 - [ ] **Der `iasm`-Eintrittspfad hat keinen nachgelagerten Beweiser** — das Vertrauen schrumpft von
       161 Fundstellen auf eine Stelle, es verschwindet nicht.
 - [ ] **Lebendigkeit und Fortschritt** faellt unter keinen Mechanismus.
 - [ ] **Die Geistertheorie-Schablonen sind die vertrauenskritischste Flaeche** und gehoeren einmal
-      nach Isabelle ([`BEWEISER.md`](BEWEISER.md), Stufe 1).
+      nach Isabelle ([`BEWEIS.md`](BEWEIS.md), Stufe 1).

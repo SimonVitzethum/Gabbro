@@ -1,9 +1,9 @@
 # Gabbro — offene Punkte
 
-> **Seit [`FESTLEGUNG.md`](FESTLEGUNG.md) (2026-08-14) sind die neun Entwurfsfragen entschieden.**
+> **Seit [`SPRACHE.md`](SPRACHE.md) (2026-08-14) sind die neun Entwurfsfragen entschieden.**
 > Was hier steht, ist ueberwiegend **Messung**, nicht Entwurf.
 
-- [ ] **P0 IST TEILWEISE GEFAHREN** ([`P0-GEFAHREN.md`](P0-GEFAHREN.md), 2026-08-14). Ergebnis:
+- [ ] **P0 IST TEILWEISE GEFAHREN** ([`MESSUNGEN.md`](MESSUNGEN.md), 2026-08-14). Ergebnis:
       **Ordering-Stichprobe bestanden, 36/36, kein vierter Ausgang.** `19 → 0` ist
       **nicht entscheidbar**, weil **fuenf der elf Klassen nur im Scratchpad liegen** — das ist ein
       Befund ueber das **Protokoll**, nicht ueber die Sprache, und woertlich Falle 80.
@@ -34,7 +34,7 @@
       hat ein Axiom oder ein Konstrukt, jede Zeile einen Befehl**; die Mode-Leiter als Sprechprobe
       (vertauschtes `write_cr0(PG)` **muss** brechen); die vorberechneten Boot-Tabellen byteidentisch
       gegen das, was das heutige Trampolin zur Laufzeit baut.
-- [ ] **P2–P7** aus [`ERGAENZUNG2.md`](ERGAENZUNG2.md) §6 — Lexer/Parser, M1+V1–V3, M2 samt
+- [ ] **P2–P7** aus [`SPRACHE.md`](SPRACHE.md) §6 — Lexer/Parser, M1+V1–V3, M2 samt
       Schablone, C-Emission, Paarungs-Pass mit Litmus-Sonden, ein Caprock-Modul end-to-end.
       **Jede Stufe verbraucht das Ergebnis der vorigen, wie eine `Duty`.**
 
@@ -46,7 +46,7 @@
 ## P0 — Papier, keine Zeile Code. Jeder Punkt kann die These töten
 
 - [x] **`revoke` in den Konstrukten ausdrücken — GEFAHREN 2026-08-13**, Ergebnis in
-      [`P0-1-REVOKE.md`](P0-1-REVOKE.md): **bedingt ja**, und die Bedingung ist ein fehlendes
+      [`MESSUNGEN.md`](MESSUNGEN.md): **bedingt ja**, und die Bedingung ist ein fehlendes
       Konstrukt (`by consuming`, verbrauchende Traversierung). Nebenbefund wichtiger als das
       Ergebnis: **die Zählregel war kaputt.**
 - [x] **P0.1b — Zeugenordnung: GEFAHREN.** Der Zeuge trägt Zugehörigkeit, `delete_leaf` braucht
@@ -109,7 +109,7 @@
 - [ ] **Wohlfundiertheit hängt an einer Invariante, die man beweisen will.** Die Deklaration muss
       nennen, welche — und das Mass (Zahl der Abkömmlinge) ist Voraussetzung, nicht Ergebnis.
 
-## Aus dem Kriterium ([`KRITERIUM.md`](KRITERIUM.md))
+## Aus dem Kriterium ([`BEWEIS.md`](BEWEIS.md))
 
 - [ ] **Beide Messungen nach Logik/Klempnerei aufschlüsseln** — `delete_leaf` (3,6–6 : 1) und
       `Endpoint::call` (1,8–2,3 : 1). **Ohne diese Aufteilung ist eine Zahl kein Messwert.**
@@ -119,9 +119,9 @@
       (`caprock-sched/src/lib.rs:1996`) braucht die Datenstruktur-Invariante; und **jedes
       Verfeinerungslemma**, falls die Absenkung nicht flach genug ist.
 - [ ] **Die Trennlinie an einem Grenzfall streiten.** „Nennt nur die Maschine" ist scharf genug für
-      die heutigen Fälle — der erste Streitfall gehört in `KRITERIUM.md`, nicht in eine Fussnote.
+      die heutigen Fälle — der erste Streitfall gehört in `BEWEIS.md`, nicht in eine Fussnote.
 
-## Aus der Umkehrung der Frage ([`MINIMALSPEZIFIKATION.md`](MINIMALSPEZIFIKATION.md))
+## Aus der Umkehrung der Frage ([`SPRACHE.md`](SPRACHE.md))
 
 - [ ] **Die achtzehn Umwandlungen sind Behauptungen über Absenkbarkeit, keine Belege.** Jede braucht
       ihre C-Absenkung hingeschrieben — vor der Kanonisierung in [`SYNTAX.md`](SYNTAX.md).

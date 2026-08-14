@@ -91,7 +91,7 @@ Die harte Marke ist jetzt `> 3 : 1`, **gewählt statt hergeleitet** und messbar 
 Korrekturkreislauf lief schneller als der Messkreislauf** — „measure before building", auf der
 Meta-Ebene invertiert.
 
-**Gegenmassnahme, seit dem 2026-08-13:** P0.1 ist gefahren ([`P0-1-REVOKE.md`](P0-1-REVOKE.md)) und
+**Gegenmassnahme, seit dem 2026-08-13:** P0.1 ist gefahren ([`MESSUNGEN.md`](MESSUNGEN.md)) und
 hat sofort einen Fehler in der Zählregel gefunden, den drei Umbauten Gegenlesen nicht fanden. **Kein
 weiterer Entwurfstext vor P0.2 und P0.3.**
 
