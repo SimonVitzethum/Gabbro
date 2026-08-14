@@ -100,8 +100,20 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 gelesen faellt der Grossteil der 31 Fragmentbefunde heraus (`PLAN.md` §A, Neusortierung) —
 uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
 
-- [ ] **A1 — `own` linear: der Aliasposten, und der einzige, der einen FUENFTEN Mechanismus
-      erzwingen kann.** `SYNTAX.md`:10 zaehlt „Alias" unter dem, was durch Konstruktion faellt;
+- [ ] **A1 — GEFAHREN, gruen auf die Mechanismusfrage; der URSPRUNG fehlt.** Die Leihe
+      traegt die Kette (`revoke`s `traverse` haelt, weil `effects` die `own`-Zeiger nicht
+      unter `consumes` nennt — kein neues Wort noetig, kein fuenfter Mechanismus). **Aber sie
+      hat keinen Anfang:** `lock L protects { … }` nennt Plaetze, `locks` hat keinen Binder,
+      `static mut` ist nicht linear, und **Gabbro hat keinen Adressoperator**. Ein `device`
+      hat eine Erzeugungsform, eine `table` nicht. **Das gehoert vor jede Zeile M2-Pass.**
+- [ ] **A2 — GEFAHREN: dynamische Aufrufe werden verboten, `fnptr` braucht keinen Vertrag.**
+      Die zwei dynamisch benutzten Traits haben je EINE Implementierung. **Neu und
+      unentschieden: 89 Verschluesse** (`dyn FnMut`/`Fn`) — Gabbro hat keine, und was daraus
+      wird (einbetten, Zeiger plus Kontext, Verbot), steht nirgends.
+- [ ] **A4 — `costs` an einer REKURSIVEN Funktion bleibt eine Annahme.** Ein Aufruf zaehlt
+      die *deklarierten* Kosten des Gerufenen; bei einem Zyklus rechnet niemand nach. Das ist
+      die Absicht von §7 — es heisst aber, dass die Terminierung dort an einer Zusage haengt.
+- [ ] **~~A1 (urspruenglich)~~ — der Aliasposten.** `SYNTAX.md`:10 zaehlt „Alias" unter dem, was durch Konstruktion faellt;
       **der Mechanismus dafuer ist nicht auffindbar.** Nichts verbietet zwei
       `ptr<normal,rw>`-Parameter auf dasselbe Objekt, und `restrict` wird aus `effects`
       *erzeugt* — die Rahmenaussage ruht auf einer Zusage statt auf einer Bedingung.
@@ -110,15 +122,21 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
       die Bootphase. **Papiertest an F1 und F3, keine Zeile Code davor** — und die Stelle, an
       der er scheitert, wenn er scheitert, ist `revoke`s `traverse`-Rumpf: ein linearer Wert
       ist nach dem ersten Durchgang verbraucht.
-- [ ] **A2 — dynamische Aufrufe zaehlen (ein `grep`).** `fnptr` traegt keinen Vertrag («B9»),
+- [ ] **~~A2 (urspruenglich)~~ — dynamische Aufrufe zaehlen.** `fnptr` traegt keinen Vertrag («B9»),
       also ist die Rahmenaussage an jedem Aufruf durch einen Zeiger leer. **≤ 10 und alle durch
       `match` ersetzbar → verbieten** (kein neues Konstrukt); sonst braucht `fnptr` einen
       Vertrag. **Eine Stunde, und sie kann ein Konstrukt einsparen.**
-- [ ] **A3 — `table … count N`.** Eine Tabelle nennt ihre Slotzahl nicht; `index into T` hat
+- [ ] **~~A3~~ — GEFAHREN und GEBAUT.** `index into T` erbt die Schranke; der Indextyp wird
+      erzeugt statt geschrieben. Nebenbefund: `index into` war nur `slottype`, nicht
+      `typeexpr` — die halbe Aenderung waere nichts wert gewesen. Auch zu.
+      *(urspruenglich:)* `table … count N`. Eine Tabelle nennt ihre Slotzahl nicht; `index into T` hat
       keine Obergrenze aus der Deklaration, und M4 ruht dort auf einer Konvention. Eine Zeile
       Grammatik, der Indextyp wird erzeugt statt geschrieben. **Vor A4** — Traversierungskosten
       brauchen eine Domaenenschranke.
-- [ ] **A4 — das Kostenmodell (Pass 9).** `costs`, `held`, `per_pass`, `bounded` sind heute
+- [ ] **~~A4~~ — GEBAUT (Pass 9).** Das Tor fiel zweimal in beide Richtungen: erst rechnete
+      der Pass zu viel (vier Primitiven, nicht sechs), dann waren drei deklarierte Zahlen
+      geraten — darunter eine Traversierung, die statt 4 096 ops **831 488** kostet.
+      *(urspruenglich:)* das Kostenmodell (Pass 9). `costs`, `held`, `per_pass`, `bounded` sind heute
       Deklarationen, die niemand nachrechnet: **`retry` behauptet Terminierung, es prueft sie
       nicht.** Modell steht (`SPRACHE.md` §7), Tor ist zweiseitig gegen die deklarierten Zahlen
       der Fragmente — passt es nicht, ist zu sagen, **welche Seite falsch ist.**

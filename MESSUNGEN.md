@@ -1562,3 +1562,103 @@ nirgends. Ohne die Mutationsprobe waere es beide Male unbemerkt geblieben.*
 
 **Stand danach: 3 von 9 Paessen ganz gebaut, 1 teilweise, 5 offen.** 50 Tests, 32
 Giftdateien, fuenf Waechter gruen.
+
+
+---
+
+# A1 bis A4 gefahren — vier Tore, und drei fielen anders aus als geplant
+
+**2026-08-14.** Der Plan (`PLAN.md` §A) setzte vier Posten mit zweiseitigen Toren. Alle vier
+sind gefahren.
+
+## A1 — `own` linear: **GRUEN auf die Mechanismusfrage**
+
+Papiertest an F1, wie das Tor es verlangte, **ohne eine Zeile Pruefercode davor**.
+
+**Die Stelle, an der es scheitern musste, traegt:** `revoke`s `traverse`-Rumpf ruft
+`blatt_loeschen` mit zwei `own`-Zeigern. Ein linearer Wert waere nach dem ersten Durchgang
+verbraucht — **er wird geliehen**, weil die Wirkungsliste ihn nicht unter `consumes` nennt.
+Und diese Unterscheidung braucht **kein neues Wort**: `eff` fuehrt `consumes` bereits, und
+`boot_end(t) effects { consumes t }` gegen `raw fn … requires BootPhase` macht sie schon.
+
+> **Kein fuenfter Mechanismus.** Trennung faellt aus M2, wie die Ableitungstabelle in §3b es
+> immer behauptet hat — die Grammatik muss es nur sagen.
+
+**Aber die zweite Haelfte deckt Schaerferes auf, als das Tor gefragt hat.** Die Leihe traegt
+die *Kette*; sie hat keinen **Ursprung**. `lock KAPPEN protects { eintraege }` nennt
+**Plaetze**, keinen linearen Wert; `lockstmt = "locks" place block` hat **keinen Binder**;
+`static mut` ist nicht linear; und **Gabbro hat keinen Adressoperator**, also kann niemand
+einen Zeiger auf globalen Zustand bilden. Ein `device` hat eine Erzeugungsform
+(`device Vtd(basis : Pa) at mmio`), eine `table` **hat keine**.
+
+> **Damit steht die Kette auf einem Parameter, der aus dem Nichts kommt** — und das ist ein
+> Befund, den keiner der 31 nennt. Er gehoert vor jede Zeile M2-Pass.
+
+## A2 — Dynamische Aufrufe: **das Tor faellt auf „verbieten"**
+
+67 `dyn`-Stellen im Kern. Aber die Aufschluesselung entscheidet:
+
+| Trait | dynamische Stellen | **Implementierungen** |
+|---|---|---|
+| `SchedOps` | 10 | **1** (`KernelSched`) |
+| `Park` | 9 | **1** (`Sicht<'_>`) |
+| `DmaEnforcer` | 0 | 2 (benutzt schon statische Dispatch) |
+| `FnMut`/`Fn` | 89 | — (**Verschluesse**, s. u.) |
+
+**Die beiden Traits, die dynamisch benutzt werden, haben je EINE Implementierung.** Das ist
+keine Polymorphie, sondern eine Schichtgrenze — der Aufruf ist statisch bekannt, und in
+Gabbro verschwindet das Trait-Objekt.
+
+> **`fnptr` braucht keinen Vertrag.** Der Posten aus «B9» faellt weg, und die Verbotsliste
+> waechst statt der Grammatik.
+
+**Der Rest ist eine Frage, die der Plan nicht vorgesehen hat: 89 Verschluesse.** Gabbro hat
+gar keine — weder `dyn FnMut` noch `impl FnMut`. Was daraus wird (einbetten, Zeiger plus
+Kontext, oder Verbot), ist **unentschieden und neu**.
+
+## A3 — `table … count N`: **gebaut, und ein Befund aus sich selbst**
+
+Der Indextyp wird jetzt **erzeugt**: `index into T` erbt die Schranke aus `T`s `count`, und
+M4 bekommt seine Zahl zum ersten Mal aus der Sprache statt aus der Konvention, dass jemand
+`type SlotIdx = u32 in 0 ..< NSLOTS` passend danebenschreibt.
+
+**Beim Bauen fiel auf, dass die halbe Aenderung nichts wert gewesen waere:** `index into` war
+nur `slottype`, nicht `typeexpr` — der erzeugte Typ liess sich **in keiner Signatur nennen**,
+also haette daneben doch wieder ein handgeschriebener Typ gestanden. Auch das ist zu
+(`indexty` als `typeexpr`; `slottype` wird dadurch kuerzer statt laenger).
+
+## A4 — Das Kostenmodell: **das Tor fiel ZWEIMAL, in beide Richtungen**
+
+**Erst war die Implementierung falsch.** Sie berechnete `if`, `return` und das Laden von
+Konstanten mit — §7 nennt aber genau **vier** Primitiven. Nach der Berichtigung hielten die
+deklarierten Zahlen von `08-bereiche.gab` (4, 8, 8) **exakt**. *Die Deklarationen waren
+richtig, der Rechner nicht.*
+
+**Dann waren die Deklarationen falsch**, an drei anderen Stellen:
+
+| | deklariert | gerechnet | warum |
+|---|---|---|---|
+| `einsammeln` | 4 096 | **831 488** | Traversierung ueber die ganze Tabelle: NSLOTS × (200 + 3) |
+| `scharfschalten` | 64 | **1 032** | enthaelt einen `retry … bounded 1024 ops` |
+| `faellige_wecken` | 4 096 | **5 120** | NFAEDEN × 5 |
+
+Alle drei hatte ich geraten. **Das ist die Sorte Zahl, gegen die dieser Ordner sein
+Messprotokoll geschrieben hat** — sie sah plausibel aus und war nie gerechnet.
+
+**Der wertvollste Befund ist `K002`:** `04-schleifen.gab` hielt `PLANER` ueber einer vollen
+Traversierung — **3 072 ops gegen `held <= 300`**. Und die Antwort ist *nicht*, `held` zu
+erhoehen: **die Sperre gehoert IN den Durchgang.** An dieser Zahl haengt die Latenzaussage
+jeder Wartestelle (§9.3), und ohne Pass 9 war sie eine Behauptung.
+
+## Was A1–A4 zusammen bewegt haben
+
+| | vorher | nachher |
+|---|---|---|
+| Paesse ganz gebaut | 3 von 9 | **4 von 9** (+ costs), 1 teilweise |
+| Giftdateien | 32 | **36** |
+| Mutationen gefangen | 27 von 27 | **32 von 32** |
+| Waechter | 5 | 5 |
+
+**Und drei Befunde, die es vor A1–A4 nicht gab:** der fehlende **Ursprung** der Eigentumskette
+(A1), die **89 Verschluesse** ohne Form in der Sprache (A2), und `costs` an einer **rekursiven**
+Funktion, das eine Annahme bleibt statt einer Rechnung (A4, im Passkopf benannt).

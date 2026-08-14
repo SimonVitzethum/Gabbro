@@ -15,11 +15,12 @@ Blattheit, Publikation, Verfeinerung — trägt die Sprache. Die **Logik** („d
 Baum") schreibt der Programmierer, in jeder Sprache. Gold im seL4-Sinn ist damit **ausserhalb
 des Ziels**, nicht aufgeschoben.
 
-**Der Weg dorthin sind vier Posten** ([`PLAN.md`](PLAN.md) §A), und einer davon ist heute nicht
-gelöst, sondern gestreift: **„kein Alias" steht als Pflicht da, und der Mechanismus dafür ist
-nicht auffindbar.** Der Vorschlag — `own` macht den Zeiger linear — steht als Papiertest mit
-zweiseitigem Tor an erster Stelle, weil er als einziger einen **fünften Mechanismus** erzwingen
-kann. Und der Gegner für einen fünften hiesse dann Rusts Ausleihprüfer, der ihn liefert.
+**Der Weg dorthin sind vier Posten** ([`PLAN.md`](PLAN.md) §A). **Alle vier sind gefahren**
+([`MESSUNGEN.md`](MESSUNGEN.md)) — und der wichtigste ging gut aus: *„kein Alias"* fällt aus
+**M2**, wenn `own` den Zeiger linear macht; ein **fünfter Mechanismus ist nicht nötig**, und die
+Leihe braucht kein neues Wort. **Was der Papiertest stattdessen fand, ist der Ursprung:** die
+Eigentumskette hat keinen Anfang, weil Gabbro keinen Adressoperator hat und eine `table` — anders
+als ein `device` — keine Erzeugungsform. Das steht jetzt vor jeder Zeile M2-Pass.
 
 ## Drei Zusagen, drei verschiedene Stärken
 
@@ -72,9 +73,10 @@ steht sie hinter dem Kriterium, nicht davor. Herleitung und Messprotokoll in [`P
 ohne Aufschlüsselung nach Logik/Klempnerei ist eine Zahl ab jetzt kein Messwert.
 
 Stand: 2026-08-14. **Gebaut sind P2 und P3: Lexer, Wortschatz, Parser über die vollständige EBNF,
-dazu vier der neun Prüfpässe — drei ganz (Namen, M1+V1–V3, Schleifen), einer teilweise**
-(`effects` prüft Schreiben und `locks` gegen den Rumpf, Lesen und Aufrufwirkungen nicht;
-`gabbro paesse` druckt aus, was durchkommt).
+dazu fünf der neun Prüfpässe — drei ganz (Namen, M1+V1–V3, Schleifen), zwei teilweise**
+(`effects` prüft Schreiben und `locks` gegen den Rumpf, nicht Lesen und nicht
+Aufrufwirkungen; `costs` rechnet Rümpfe und `held` nach, aber an einer **rekursiven**
+Funktion bleibt die Zusage eine Annahme. `gabbro paesse` druckt beides aus).
 *Nicht gebaut: D1/D2, M2, M3, die Paarung, die Kosten, die C-Emission.* Der Lauf gegen die eigenen
 Fragmente **fällt: 1 von 6**. Eine Gegenprüfung fand **16 Dateien, die mit `0 Fehler` durchkamen
 und fallen mussten** — zehn dieser Löcher sind zu, jedes mit einer Giftdatei, die es festhält
@@ -107,12 +109,13 @@ er sagt das selbst.
 
 **Und seit dem 2026-08-14 `crates/` — der Übersetzer selbst**, drei Kisten in sicherem Rust:
 `gabbro-syntax` (Lexik, Wortschatz, Grammatik), `gabbro-check` (die neun Prüfpässe in fester
-Reihenfolge, vier davon gebaut — drei ganz, einer teilweise), `gabbro-cli` (`gabbro`). Vier Befehle, und der wichtigste ist
+Reihenfolge, fünf davon gebaut — drei ganz, zwei teilweise), `gabbro-cli` (`gabbro`). Vier Befehle, und der wichtigste ist
 `gabbro paesse`: er sagt, **was dieser Übersetzer nicht prüft**.
 
 ```
 cargo test                                  -- 50 Sprechproben, je in beide Richtungen
-./mutiere-pruefer.py                        -- beschaedigt je eine Regel: 27 von 27 gefangen
+./mutiere-pruefer.py                        -- beschaedigt je eine Regel: 32 von 32 gefangen
+./pruefe-todo.py                            -- haelt die Aufgabenliste gegen sich selbst
 cargo run --bin gabbro -- paesse            -- die Passliste, gebaut UND offen
 cargo run --bin gabbro -- pruefe beispiele/*.gab   -- mit Deckungszahl je Datei
 cargo run --bin gabbro -- fragmente FRAGMENTE.md   -- Tor P2, gemessen
@@ -122,9 +125,9 @@ cargo run --bin gabbro -- annahmen datei.gab       -- „bewiesen unter A1…An"
 **Dazu `beispiele/` — die Sprache in acht Dateien**, jede gegen den Übersetzer gehalten:
 `table` mit Invarianten · `device` mit Übergängen · `format` mit ELF · die drei Schleifenformen ·
 Nebenläufigkeit mit `publishes`/`awaits` · Annahmen und `check` · `entry`/`boot`/`walk` ·
-und **`08-bereiche.gab`, an dem M1 und V1–V3 hängen**. Daneben `beispiele/gift/` — 25 Dateien,
+und **`08-bereiche.gab`, an dem M1 und V1–V3 hängen**. Daneben `beispiele/gift/` — 36 Dateien,
 die **fallen müssen**, jede mit dem Code, mit dem sie fällt — zehn davon sind Dateien, die einmal
-durchkamen. Ein Korpus ohne Gegenprobe belohnt einen stummen Prüfer.
+durchkamen, und drei kommen aus dem Kostenpass. Ein Korpus ohne Gegenprobe belohnt einen stummen Prüfer.
 
 > **Am 2026-08-14 von 24 auf 9 Dateien zusammengezogen.** Der Ordner war chronologisch gewachsen —
 > „Festlegung", dann drei „Ergaenzungen". **Das war falsch abgelegt: die Ergaenzungen sind zentrale
