@@ -122,8 +122,9 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
       Deklarationen, die niemand nachrechnet: **`retry` behauptet Terminierung, es prueft sie
       nicht.** Modell steht (`SPRACHE.md` §7), Tor ist zweiseitig gegen die deklarierten Zahlen
       der Fragmente — passt es nicht, ist zu sagen, **welche Seite falsch ist.**
-- [ ] **A5 — Abnahme:** Fragmente mit dem Uebersetzer neu, `narrow`-Vollzaehlung ueber
-      Gabbro-Quelltext (**erst dann ist die Latte ≤ 24 echt entscheidbar**), und die vier nie
+- [ ] **A5 — Abnahme:** Fragmente mit dem Uebersetzer neu, die Zaehlung ueber
+      **Gabbro-Quelltext** statt ueber Rust (**erst dann ist die Latte ≤ 24 echt
+      entscheidbar** — s. den Bericht der ungueltigen Messung weiter unten), und die vier nie
       ausgeschriebenen Bereiche.
 
 ## Aus der Gegenpruefung (2026-08-14) — was noch offen ist
