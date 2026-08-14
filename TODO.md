@@ -1,5 +1,14 @@
 # Gabbro — offene Punkte
 
+> **Abgeglichen 2026-08-14.** Diese Datei fuehrt **ausschliesslich Offenes**; Erledigtes steht
+> in den Entwurfsdateien, Widerlegtes in [`HISTORIE.md`](HISTORIE.md), Gemessenes in
+> [`MESSUNGEN.md`](MESSUNGEN.md). Der Abgleich am 2026-08-14 fand die Datei **in acht Punkten
+> unwahr ueber sich selbst** — acht erledigte Eintraege, sechs Aussagen, die der Ordner
+> ueberholt hatte, drei doppelt gefuehrte Themen, zwei kollidierende Etikettensysteme und
+> stehengebliebene Zahlen aus P1. **Eine Liste, die nicht stimmt, kostet mehr als keine:**
+> sie sagt an jeder Stelle „das ist noch offen", und der Leser glaubt es.
+> Was der Abgleich einzeln gefunden hat, steht am Ende unter *Abgleich*.
+
 ## Leistung — zwei Posten, beide vor dem ersten Benchmark
 
 - [ ] **Die Schrankenpruefung amortisieren:** `bounded N ops` muss nicht je Durchgang geprueft
@@ -23,7 +32,11 @@
 3. **Die vier fehlenden Bereichsfragmente** (Scheduler, MMU, Lader, Parser) — und sie sind
    **zugleich das Messgeraet fuer die Konvergenzwette**: neue Konstrukte je Fragment muessen fallen.
 
-**Keine Prueferzeile vor dem Ergebnis von 2.**
+> **~~Keine Prueferzeile vor dem Ergebnis von 2.~~ — VERLETZT am 2026-08-14, auf Ansage.**
+> Der Uebersetzer wurde vor dem Ergebnis von 2 angefangen. Die Regel bleibt hier stehen,
+> durchgestrichen statt geloescht: was sie verhindern sollte, ist eingetreten — P2 und P3
+> koennen die These nicht mehr *vor* dem Uebersetzerbau toeten. Was der Bau eingebracht hat,
+> steht in [`MESSUNGEN.md`](MESSUNGEN.md); was er gekostet hat, steht hier.
 
 ## Was fehlt, um Caprock VOLLSTAENDIG in Gabbro zu schreiben (Stand 2026-08-14)
 
@@ -42,11 +55,10 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       Pflichten sind damit **nicht gegen die Sprache pruefbar**.
 - [ ] **`programs/` brach 4 von 4** — aber die Messung ist **aelter als die Konstrukte**, die es
       betreffen (`leaves`, `transition publishes`). Ungeprueft, ob es heute traegt.
-- [ ] **Die `narrow`-Vollzaehlung**, besonders der Schnitt, bei dem Pruefung und Verwendung in
-      **verschiedenen Funktionen** liegen.
 
-**Und getrennt davon, weil es nicht die Ausdruckskraft betrifft:** es gibt **keinen Uebersetzer**
-(P2–P7), die **C-Formentabelle** (40–60 Eintraege) ist ungeschrieben, und die
+**Und getrennt davon, weil es nicht die Ausdruckskraft betrifft:** der Uebersetzer steht bis
+**P3** (Lexer, Parser, vier von neun Paessen — zwei davon nur teilweise, s. `gabbro paesse`);
+**P4–P7 fehlen**, die **C-Formentabelle** (40–60 Eintraege) ist ungeschrieben, und die
 **Beweisschablonen** sind benannt, nicht entworfen.
 
 > **Seit [`SPRACHE.md`](SPRACHE.md) (2026-08-14) sind die neun Entwurfsfragen entschieden.**
@@ -57,11 +69,10 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       **nicht entscheidbar**, weil **fuenf der elf Klassen nur im Scratchpad liegen** — das ist ein
       Befund ueber das **Protokoll**, nicht ueber die Sprache, und woertlich Falle 80.
       `narrow` ≤ 24 ist offen, nur die Formpruefung war fahrbar.
-- [ ] **DER NAECHSTE SCHRITT IST KEINE ZEILE RUST: die fuenf Scratchpad-Klassen mit Fundstellen ins
-      Repo**, dann Teil 1 wiederholen. Vorher bleibt das Tor unentscheidbar.
-- [ ] **Die `narrow`-Vollzaehlung** mit robusterem Muster — **und gezielt nach dem Schnitt suchen,
-      bei dem Pruefung und Verwendung in VERSCHIEDENEN Funktionen liegen.** V-Fakten sterben an der
-      Funktionsgrenze; ob dieser Fall vorkommt, entscheidet, ob `requires a >= b` als Vertrag reicht.
+- [ ] **Die fuenf Scratchpad-Klassen mit Fundstellen ins Repo**, dann Teil 1 wiederholen.
+      Vorher bleibt das `19 → 0`-Tor unentscheidbar. *(Der Satz hiess bis zum 2026-08-14
+      „DER NAECHSTE SCHRITT IST KEINE ZEILE RUST" — er ist ueberholt, nicht erfuellt: die
+      Rustzeilen kamen zuerst. Der Posten selbst ist unveraendert offen.)*
 - [ ] **Eager-FP je Architektur oder global entscheiden.** Berichtigt: auf **x86 ist es eager**
       (`system.rs:1215`, mit genau der CVE-Begruendung der Ergaenzung); **lazy ist der
       aarch64-Pfad**. Das Dekret trifft also die andere Architektur, wo das Argument nicht in
@@ -75,10 +86,6 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       **Ordering-Stichprobe** (≥ 30 der 2 231 Fundstellen, geschichtet nach Datei) — jede ist
       Paarung, Zaehler oder benannter `seq`-Fall, **ein vierter Ausgang widerlegt die Paarung**;
       dazu die **`narrow`-Zaehlung ≤ 24**. Abnahme ist nicht Zustimmung.
-- [x] **P1 — Grammatikvereinigung: GEFAHREN 2026-08-14.** Festlegung + beide Ergaenzungen sind in
-      der EBNF: **117 Regeln, 0 offen, jede von `program` erreichbar, 187 Terminale gegen 187
-      Wortschatzwoerter**, beide Waechter gruen. *Die Reihenfolgeregel „keine Pruefzeile vor Tor P1"
-      ist damit eingehalten.*
 - [ ] **Abnahme der dritten Ergaenzung** (§6): Katalog gegen Zaehlung — **jeder gezaehlte Befehl
       hat ein Axiom oder ein Konstrukt, jede Zeile einen Befehl**; die Mode-Leiter als Sprechprobe
       (vertauschtes `write_cr0(PG)` **muss** brechen); die vorberechneten Boot-Tabellen byteidentisch
@@ -86,20 +93,6 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 - [ ] **P4–P7** aus [`SPRACHE.md`](SPRACHE.md) §6 — M2 samt Schablone, C-Emission,
       Paarungs-Pass mit Litmus-Sonden, ein Caprock-Modul end-to-end.
       **Jede Stufe verbraucht das Ergebnis der vorigen, wie eine `Duty`.**
-- [x] **P3 — M1 + V1–V3: GEFAHREN 2026-08-14** ([`MESSUNGEN.md`](MESSUNGEN.md)). Bereichstypen,
-      Konstantenauswertung, die drei Flussregeln, dazu `beispiele/` (8 saubere Dateien,
-      871 Zeilen) und `beispiele/gift/` (**25 Dateien**, jede mit ihrem Code).
-      Der Pass faellt an Befund «B29» (`FRAGMENTE.md:248`, Rust-Original
-      `space.rs:1067`) — *ein bestandener Regressionstest auf den Fall, der ihn motiviert
-      hat, nicht mehr* (berichtigt, s. [`MESSUNGEN.md`](MESSUNGEN.md)). Deckung ueber dem
-      Beispielkorpus **91 %** — und **Deckung heisst „hat einen Typ", nicht „wurde
-      geprueft"**.
-- [x] **P2 — Lexer und Parser: TEIL 1 GEFAHREN 2026-08-14** ([`MESSUNGEN.md`](MESSUNGEN.md)).
-      Der Uebersetzer steht in `crates/` (sicheres Rust, `forbid(unsafe_code)` mit Sprechprobe,
-      keine fremde Abhaengigkeit), die 121 EBNF-Regeln sind implementiert, drei der neun
-      Pruefpaesse sind gebaut. **Das Tor faellt: 1 von 6 Fragmenten parst, 8 von 32
-      Uebersetzungseinheiten im ganzen Ordner.** *Die Reihenfolgeregel „keine Prueferzeile vor
-      dem Ergebnis von 2" ist damit verletzt — auf Ansage, und der Preis steht in der Messung.*
 
 ## Aus der Gegenpruefung (2026-08-14) — was noch offen ist
 
@@ -112,12 +105,15 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       (Anwesenheit, `pure` allein, `diverges`); `effects { pure }` ueber einer Funktion, die
       schreibt, kommt durch. Pass 8 steht als `Teilgebaut`. **Der Rumpfabgleich ist der Pass,
       den `SPRACHE.md` §7 eigentlich meint.**
-- [ ] **Es fehlt die Testart, die Loecher findet.** 48 Proben, beide Richtungen, alle gruen —
-      und sechzehn Ueberlaeufe kamen durch. Was fehlt, ist ein Test, dessen Fehlschlag
-      *„ein echter Ueberlauf wurde uebersehen"* bedeutet. Der Giftkorpus (15 → 25) sammelt
-      nur, was **eine** Gegenpruefung fand; die naechste findet anderes.
-      **Kandidat: eine Mutationsprobe auf den Pruefer selbst** — dieselbe Forderung, die der
-      Ordner an die Annotationsemission stellt.
+- [ ] **Die Mutationsprobe deckt heute den Pruefer, nicht die Emission.**
+      `./mutiere-pruefer.py` beschaedigt je eine Regel des Pruefers und sieht nach, ob eine
+      Probe faellt — **24 von 24 gefangen** (2026-08-14). Was noch fehlt, ist dieselbe Probe
+      auf der **Annotationsemission** (s. *Pruefer und Erzeuger*): dort entsteht der
+      Wunschform-Beweis, und dort gibt es noch nichts zu beschaedigen, weil noch nichts
+      emittiert wird.
+      * **Die Mutationen sind von Hand geschrieben** — 24 Stueck, je eine Regel. Ein
+        Erzeuger, der alle Operatoren und Bedingungen des Pruefers systematisch verdreht,
+        faende mehr. **Die 100 % sind eine Aussage ueber diese 24, nicht ueber den Pruefer.**
 - [ ] **`cast` ist aus der Grammatik nie eindeutig ableitbar** (`cast = path "(" expr ")"`
       ist echte Teilmenge von `call`), und der Erreichbarkeitswaechter sieht das nicht, weil
       er auf Nichtterminalebene arbeitet. **G9.**
@@ -175,7 +171,8 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       ([`MESSUNGEN.md`](MESSUNGEN.md)). `zaehle-narrow.py` findet 513 Bereichspflichten im
       Baum und klassiert 168 nach N — **die Zahl wird nicht berichtet**, weil eine
       Handstichprobe in 3 von 5 Faellen einen Fehler des Zaehlers zeigt, alle in dieselbe
-      Richtung. **Die Latte „≤ 24" bleibt offen.**
+      **Die Latte „≤ 24" ist nach jeder von vier gefahrenen Lesarten VERFEHLT** (N = 150,
+      168, 177, 317 gegen eine Latte von 24) — die Zahl ist ungenau, das Urteil nicht.
       * **Der methodische Befund trifft das eigene Protokoll:** seine Sprechprobe verlangte
         Trefferquote an **drei** bekannten Stellen und konnte damit die **Genauigkeit an 513**
         nicht abnehmen. *Eine Handstichprobe mit Umfang und Fehlerschranke gehoert ins
@@ -188,43 +185,32 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 - [ ] **Zwei Fragmente sind veraltet, nicht falsch:** F4 schreibt `QueueSetup(q : Virtq)`
       (`typedecl` verlangt `typelist`, nicht `params` — der Kommentar «B3» ist gegen die zweite
       Fassung geschrieben), F6 setzt ein Semikolon hinter `let … else { … }`.
-- [ ] **Sechs der neun Paesse fehlen** — D1/D2, M1+V1–V3, M3, M2, Paarung, costs. `gabbro paesse`
-      fuehrt sie samt dem, was mit jedem ungeprueft bleibt. **Der naechste ist M1+V1–V3 (P3),
-      und er ist der groesste.**
+- [ ] **Fuenf der neun Paesse fehlen ganz** (D1/D2, M3, M2, Paarung, costs), **zwei sind nur
+      teilweise gebaut** (M1 ohne Modulaufloesung, `effects` ohne Rumpfabgleich).
+      `gabbro paesse` fuehrt beide Klassen samt dem, was mit jeder durchkommt.
+      **Der naechste ganze ist M3 oder D1/D2 — vorher aber die zwei Teilstuecke**, weil ein
+      halb gebauter Pass eine Zusage macht, die er nicht haelt.
 
-**Ausschliesslich Offenes.** Erledigtes steht in den Entwurfsdateien, Widerlegtes in
-[`HISTORIE.md`](HISTORIE.md). Die Reihenfolge folgt [`PLAN.md`](PLAN.md).
+**Ausschliesslich Offenes** — und seit dem 2026-08-14 stimmt das wieder. Die Reihenfolge folgt
+[`PLAN.md`](PLAN.md); die Etiketten P0…P7 gehoeren dem Prueferplan in
+[`SPRACHE.md`](SPRACHE.md) §6 und werden hier nicht zweitvergeben.
 
 ---
 
-## P0 — Papier, keine Zeile Code. Jeder Punkt kann die These töten
+## Papierschritte — keine Zeile Code. Jeder Punkt kann die These töten
 
-- [x] **`revoke` in den Konstrukten ausdrücken — GEFAHREN 2026-08-13**, Ergebnis in
-      [`MESSUNGEN.md`](MESSUNGEN.md): **bedingt ja**, und die Bedingung ist ein fehlendes
-      Konstrukt (`by consuming`, verbrauchende Traversierung). Nebenbefund wichtiger als das
-      Ergebnis: **die Zählregel war kaputt.**
-- [x] **P0.1b — Zeugenordnung: GEFAHREN.** Der Zeuge trägt Zugehörigkeit, `delete_leaf` braucht
-      **Blattheit**, und die ist zeitabhängig. Trägt nur über **Post-Ordnung**, und die verlangt,
-      dass der Rumpf die Menge **ausschliesslich durch Verbrauch** verändert.
+> **Umbenannt 2026-08-14.** Diese Ueberschrift hiess „P0", die naechste „P1" — und
+> [`SPRACHE.md`](SPRACHE.md) §6 vergibt P0…P7 an den **Prueferplan**, wo P1 die
+> Grammatikvereinigung ist und nicht `check`. **Zwei Etikettensysteme mit denselben Namen
+> in derselben Datei**; dieselbe Fehlerklasse wie die G-Kollision weiter oben.
+
 - [ ] **`touches` ist zu grob** — es braucht eine Form für „verändert die Menge nur durch
       Verbrauch". Ohne sie hängt die Ordnung an einer Zusage statt an einer Bedingung.
-- [ ] **`by consuming` in [`SYNTAX.md`](SYNTAX.md) aufnehmen — ERST NACH P0.2 UND P0.3.**
-      Nach eigener Regel: ein Konstrukt aus einem Testtag verträgt einen zweiten, bevor es Grammatik
-      wird. Die Selbstbindung „kein Entwurfstext vor P0.2/P0.3" galt auch für diesen Posten und
-      hätte ihn beinahe vorgezogen.
-- [ ] **P0.4 (NEU): derselbe Papiertest am IPC-Fastpath.** `revoke` fällt heraus, weil seine
-      Nachbedingung eine Aussage über **Zugehörigkeit** ist — und Zugehörigkeit trägt ein linearer
-      Zeuge. Der Fastpath hat eine Nachbedingung über **Werten**. **Er entscheidet die
-      10 %-Annahme, nicht `revoke`.**
-- [ ] **`vtd.rs` (1 448 Zeilen) als `device`-Block hinschreiben.** Tor: Faktor ≥ 5 kleiner. Sonst
-      ist die Knappheitsthese widerlegt.
-- [ ] **`space.rs` zweimal hinschreiben** — als Gabbro-Quelle und mit dem, was ein Beweiser darüber
-      hinaus bräuchte. Die erste echte Zahl für die Kennzahl.
 - [ ] **Die Basisrate zählen.** Wie viele Formate hat Caprock wirklich, wie oft ändern sie sich,
       wie viele Fehler dieser Klasse pro Jahr (aus `done.md` auszählbar)? Fällt sie klein aus, ist
       das ehrlichste Ergebnis „die Falle ist zu selten für eine Sprache".
 
-## P1 — `check` ohne Sprache
+## `check` ohne Sprache
 
 - [ ] **`check` als Rust-Makrobibliothek**, rückwirkend gegen die 33 Messdisziplin-Fallen, jede mit
       Mutation. Tor: **≥ 5 gefangen**. Nützlich auch dann, wenn Gabbro nie entsteht.
@@ -240,7 +226,9 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       wäre ein Beitrag an Verus (linear statt affin). Das ist die teuerste offene Frage des Ordners.
 - [ ] **ATS ist der nächste Verwandte für den Kern und ungeprüft** — lineare Typen plus Beweise,
       kompiliert nach C. Dieselbe Logik wie das Verus-Tor: *der nächste Verwandte ist gebaut, der
-      Ordner nicht.* Vor P2 zu fahren.
+      Ordner nicht.* **Sollte vor P2 gefahren werden; P2 lief zuerst.** Damit ist der Vergleich
+      nicht hinfaellig, sondern nur teurer: er misst jetzt gegen etwas Gebautes statt gegen
+      einen Entwurf.
 - [ ] **Für jeden weiteren Mechanismus die Gegenrechnung führen.** M2 am Sperrbeleg und M1 sind am
       2026-08-13 gegen den Ordner ausgegangen. **M3 ist gegen die richtige Grundlinie zu messen:
       nicht Verus, sondern `tock-registers`/`svd2rust`** — typisierte Registerzugriffe sind eine
@@ -251,9 +239,6 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 
 ## Induktion — eingetragen, und die eine Zahl fehlt
 
-- [x] **`by induction over <domain>` steht in der Grammatik** (2026-08-14): **ein** neues Wort
-      (`over` wiederverwendet), zwei Produktionen, an `fndecl` und an `invariant`. Kein Lemma,
-      kein Beweisschritt, keine rekursive `spec fn` — das Schema wird **genannt**, nicht geraten.
 - [ ] **Die Zahl, die alles entscheidet:** wieviele der **17 gemessenen Logik-Pflichten** brauchen
       `by induction over`, wieviele kommen ohne aus, **wieviele brauchen rekursive `spec fn` oder
       Lemmata**? Ein einziger Fall in der letzten Spalte setzt die Decke tiefer. **Dieselbe Messung
@@ -288,8 +273,10 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 
 ## Syntax — offene Entscheidungen (Einzelheiten in [`SYNTAX.md`](SYNTAX.md))
 
-- [ ] **Variable Längen in `format`** — die harten 20 %, keine Schreibweise vorhanden.
-- [ ] **Versionsevolution:** Absage oder Migration?
+- [ ] **Variable Längen in `format`** — die harten 20 % jedes Parser-Erzeugers, keine
+      Schreibweise vorhanden.
+- [ ] **Versionsevolution:** liest ein `@version 3`-Leser auch v2 — **Absage oder Migration**?
+      Beides vertretbar, keins entschieden.
 - [ ] **Generizität** — ohne sie braucht jede Tabelle ihren eigenen `traverse`; mit ihr die Frage,
       wie Verträge parametrisiert werden.
 - [ ] **Die Sperrordnung fehlt in der Syntax.** `locks CAPS` nennt die Sperre, nicht die **Stufe**.
@@ -302,9 +289,6 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 
 ## Entwurf — offene Entscheidungen
 
-- [ ] **Variable Längen** — die harten 20 % jedes Parser-Erzeugers. Eine Syntax dafür gibt es nicht.
-- [ ] **Versionsevolution.** Liest ein `@version 3`-Leser auch v2 — **Absage oder Migration**?
-      Beides vertretbar, keins entschieden.
 - [ ] **Roundtrip** `lesen(schreiben(x)) == x` gehört in den Differenztest.
 - [ ] **Kostenangabe je Invariante** und an `by unbesucht`: welche Struktur, wer setzt sie zurück,
       was kostet der Reset, darf sie unter dem Lock leben.
@@ -336,11 +320,6 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 
 ## Nachzuprüfen, weil aus dem Gedächtnis zitiert
 
-- [x] **Die seL4-Aufteilung — BESTÄTIGT:** abstrakte Spezifikation ~4 900 Zeilen Isabelle gegen
-      ~8 700 Zeilen C (**≈ 0,56 : 1**), ausführbare Spezifikation ~13 000, Beweise im `l4v`-Repo
-      ~200 000. Die Herleitung des Bodens hält.
-- [x] **Die SPARK-Übernahmeleiter — BESTÄTIGT:** volle funktionale Korrektheit ist **Platinum**,
-      Gold sind Integritätseigenschaften plus Schlüsselinvarianten.
 - [ ] **Die Namensfreiheit „Gabbro"** über Paketregister, GitHub und Sprachlisten — mitsamt dem,
       was gefunden wurde. „Ich habe nichts gefunden" ist ein Nullbefund ohne Grösse.
 
@@ -352,3 +331,58 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       Eigenes Projekt.
 - [ ] **Wiederverwendbare Spezifikationstheorien** — helfen dem **zweiten** Projekt. Dürfen in
       keiner Kostenrechnung mitgezählt werden, solange es einen Kernel gibt.
+
+
+---
+
+## Abgleich — was der 2026-08-14 an dieser Datei fand
+
+**Die Frage war, ob diese Liste ueberhaupt noch sinnvoll ist.** Antwort: der **Inhalt** ja,
+die **Buchfuehrung** nein. Acht Klassen von Befunden, alle mechanisch nachweisbar:
+
+| | Befund | erledigt |
+|---|---|---|
+| **1** | **Acht `[x]`-Eintraege** in einer Datei, deren Schlusssatz „ausschliesslich Offenes" lautet | herausgenommen; jeder ist anderswo verzeichnet (s. u.) |
+| **2** | **„es gibt keinen Uebersetzer (P2–P7)"** — es gibt einen bis P3 | berichtigt |
+| **3** | **Zwei Reihenfolgeregeln standen als geltend da, obwohl sie verletzt sind** („keine Prueferzeile vor 2", „keine Zeile Rust") | durchgestrichen mit Datum, nicht geloescht |
+| **4** | **„Sechs der neun Paesse fehlen"** — es sind fuenf ganz und zwei halb | berichtigt |
+| **5** | **Stehengebliebene Zahlen aus P1**: 117 Regeln, 187 Terminale (heute 121 / 189) | mit dem Eintrag herausgenommen |
+| **6** | **Drei Themen doppelt** — `narrow` dreimal, *Variable Laengen* und *Versionsevolution* je zweimal | zusammengezogen |
+| **7** | **Zwei Etikettensysteme mit denselben Namen**: die Ueberschriften „P0"/„P1" gegen den Prueferplan P0…P7, wo P1 die Grammatikvereinigung ist | umbenannt |
+| **8** | **Vier erledigte Posten als offen gefuehrt**: `by consuming` (steht seit `SYNTAX.md`:416 in der Grammatik), `vtd.rs` und `space.rs` (beide gefahren, s. `MESSUNGEN.md` P0.2/P0.3), P0.4 (gefahren, `MESSUNGEN.md`) | herausgenommen |
+
+**Und einer, der mir gehoert:** die Berichtigung *„die Latte ≤ 24 ist verfehlt, nicht offen"*
+habe ich am selben Tag als erledigt gemeldet — in `MESSUNGEN.md` war sie es, **hier nicht**.
+Die Ersetzung traf das Anfuehrungszeichen nicht und lief still ins Leere. *Eine Berichtigung,
+die man meldet, ohne sie nachzusehen, ist dieselbe Bewegung wie eine Zahl, die man behauptet,
+ohne sie zu messen.*
+
+### Was das ueber die Form dieser Datei sagt
+
+Sie ist **chronologisch gewachsen** — jeder Tag haengte unten an, und niemand ging zurueck.
+Genau die Vorgeschichte, aus der der Ordner am 2026-08-14 seine 24 Dateien auf 9 zusammenzog.
+**Die naechste Frage ist deshalb keine Aufraeumfrage, sondern eine Rollenfrage:**
+
+- [ ] **Braucht diese Datei einen Schnitt nach ROLLE statt nach Datum?** Heute mischt sie vier
+      Sorten: *Entwurfsfragen* (unentschieden, brauchen ein Urteil), *Messungen* (brauchen
+      einen Lauf), *Pruefermaengel* (brauchen Code) und *Nachzupruefendes* (brauchen eine
+      Quelle). Eine Liste, in der ein halber Tag Papier neben einem Teilprojekt steht, sortiert
+      nicht mehr — und eine Liste, die nicht sortiert, wird nicht gelesen.
+- [ ] **Und die Buchfuehrung braucht einen Waechter.** Die acht Befunde oben sind **saemtlich
+      maschinell pruefbar**: `[x]` in einer Datei, die „ausschliesslich Offenes" behauptet ·
+      Zahlen gegen `pruefe-syntax.sh` · doppelte Themen · Etiketten gegen den Prueferplan.
+      **Dieser Ordner haelt seine Grammatik mit zwei Waechtern und seinen Pruefer mit einer
+      Mutationsprobe — seine Aufgabenliste mit gar nichts.**
+
+### Wo die herausgenommenen Punkte verzeichnet sind
+
+| Punkt | Fundstelle |
+|---|---|
+| P1 — Grammatikvereinigung | [`SPRACHE.md`](SPRACHE.md) §6 (Prueferplan), Waechter `pruefe-syntax.sh` |
+| P2 — Lexer und Parser | [`MESSUNGEN.md`](MESSUNGEN.md), Abschnitt *P2* |
+| P3 — M1 + V1–V3 | [`MESSUNGEN.md`](MESSUNGEN.md), Abschnitt *P3* |
+| `revoke` auf Papier | [`MESSUNGEN.md`](MESSUNGEN.md), *P0.1* |
+| P0.1b — Zeugenordnung | [`SPRACHE.md`](SPRACHE.md) §9.2 |
+| `by induction over` | [`SYNTAX.md`](SYNTAX.md) §5, [`SPRACHE.md`](SPRACHE.md) Teil V |
+| seL4-Aufteilung, SPARK-Leiter | [`PLAN.md`](PLAN.md) |
+| `vtd.rs`, `space.rs`, P0.4 | [`MESSUNGEN.md`](MESSUNGEN.md), *P0.2/P0.3* und *P0.4* |
