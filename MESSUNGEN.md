@@ -1236,3 +1236,82 @@ Und getrennt davon, ohne Latte, weil niemand sie vorab setzen konnte:
 |---|---|
 | **F = 0** | V-Fakten sterben nie an der Funktionsgrenze; `requires` als Vertrag ist unnoetig. |
 | **F > 0** | **Jede dieser Stellen braucht `requires a >= b` am Gerufenen** — und damit ist die Frage aus [`TODO.md`](TODO.md) beantwortet, nicht vermutet. |
+
+---
+
+# Die `narrow`-Vollzaehlung — GEFAHREN und **UNGUELTIG**, mit Grund
+
+**2026-08-14.** Das Protokoll steht oben, in zwei Commits vor dieser Zeile. Der Klassierer
+`zaehle-narrow.py` ist gebaut, geeicht und gefahren. **Sein Ergebnis darf nicht benutzt
+werden**, und der Grund ist wichtiger als jede Zahl, die er ausgibt.
+
+## Was der Zaehler ausgibt — und warum es keine Messung ist
+
+Ueber 114 Dateien und 71 061 Zeilen (`kernel/`, `crates/`, `programs/`) findet er
+**513 Bereichspflichten** (Subtraktion, Division, Rest) und klassiert sie:
+
+| K | V1 | V2 | V3 | F | **N** |
+|---|---|---|---|---|---|
+| 269 | 20 | 16 | 0 | 40 | **168** |
+
+**168 gegen eine Latte von 24 waere eine Widerlegung.** Sie wird hier **nicht** berichtet,
+weil eine Handstichprobe zeigt, dass die Zahl die Blindheit des Zaehlers misst, nicht die
+Sprache.
+
+## Die Eichung — vier benannte Defekte, alle VOR der Zaehlung repariert
+
+| | Defekt | Wirkung |
+|---|---|---|
+| **1** | `pd as usize - 1` — der Cast zerschnitt den Operanden zu `usize` | jede Pruefung auf `pd` unauffindbar |
+| **2** | Verschlussparameter (`\|a: u64, b: u64\|`) galten nicht als Parameter | jede Stelle in einem Verschluss faelschlich N statt F |
+| **3** | saettigende Redewendungen (`len - frei.min(len)`) | durch Konstruktion sicher, gezaehlt als N |
+| **4** | **`if c < 2 { return None; }` etabliert danach `c >= 2`** | die haeufigste Form im Baum; **derselbe Regelzusatz, den der Uebersetzer als `endet_immer` fuehrt** — ein Zaehler, der sie nicht kennt, misst eine ANDERE SPRACHE als der Pruefer |
+
+Nach allen vieren fiel N von 208 auf 168. **Jede Reparatur bewegte die Zahl in die bequeme
+Richtung** — und genau deshalb steht hier jede einzeln.
+
+## Die Handstichprobe, die das Verfahren toetet
+
+Fuenf N-Stellen ausserhalb des Bringup-Codes, von Hand nachgesehen:
+
+| Fundstelle | Zaehler | von Hand | |
+|---|---|---|---|
+| `caprock-hal/src/x86_64/acpi.rs:101` | N | **N** | `(root.len() - 36) / entry_size` ohne Pruefung — ein echter Befund |
+| `kernel/src/system.rs:446` | N | **N** | `base - PAGE` ohne Pruefung |
+| `caprock-mem/src/color.rs:131` | N | **K** | `(1u64 << per) - 1` kann nicht unterlaufen; der Zaehler rechnet den Bereich von `1 << per` nicht aus |
+| `kernel/src/loader.rs:685` | N | **V1** | `(v != 0).then(\|\| … v - 1)` — die Pruefung steht in einer Booleschen Kette, nicht in einem `if` |
+| `kernel/src/system.rs:4088` | N | **F** | `n - aus_datei` mit dokumentierter Vorbedingung; in Gabbro ein `requires`, kein `narrow` |
+
+**Drei von fuenf falsch, alle in dieselbe Richtung: zu viel N.** Eine Fehlerrate dieser
+Groesse macht 168 zu einer Zahl ueber den Zaehler.
+
+## Der Befund ist METHODISCH, und er trifft mein eigenes Protokoll
+
+> **Die Sprechprobe des Protokolls war zu schwach.** Sie verlangte, dass der Klassierer
+> **drei bekannte Fundstellen findet** — das ist eine Aussage ueber **Trefferquote an drei
+> Stellen**, nicht ueber **Genauigkeit an 513**. Der Zaehler bestand sie und lag trotzdem
+> in 60 % der Stichprobe falsch.
+>
+> **Eine Sprechprobe ueber drei Faellen kann keinen Klassierer ueber 513 abnehmen.** Das ist
+> derselbe Fehler wie die zweimal bezahlte blinde Stelle in `pruefe-syntax.sh`: ein Pruefer,
+> der eine Richtung prueft und ueber die andere schweigt. **Wer das naechste Mal ein
+> Messgeraet baut, setzt die Handstichprobe INS PROTOKOLL — mit Umfang und Fehlerschranke,
+> vorab.**
+
+## Was die Zaehlung fahrbar machen wuerde
+
+Die drei Reparaturen, die noch fehlen, sind keine Regexe mehr: **Bereichsrechnung ueber
+`1 << x`**, **Boolesche Ketten statt `if`**, **dokumentierte Vorbedingungen als `F`**. Das
+ist zusammen genau **M1 mit V1–V3, angewandt auf Rust** — also der Pass, der in
+`crates/gabbro-check/src/m1.rs` schon steht, nur fuer die falsche Sprache.
+
+**Daraus folgt die Reihenfolge, und sie verbindet die beiden Messungen dieses Tages:**
+
+> **Die `narrow`-Zaehlung ist erst fahrbar, wenn Caprock-Bereiche in Gabbro vorliegen —
+> dann zaehlt der Uebersetzer selbst, mit derselben Regelmenge, die er prueft.** Und dafuer
+> muessen zuerst die Fragmente parsen (heute **1 von 6**, Tor P2). Die Latte „≤ 24" bleibt
+> also offen, und zwar **nicht aus Nachlaessigkeit, sondern weil das Messgeraet dafuer der
+> Uebersetzer ist und der Korpus ihm noch fehlt.**
+
+**Was ausdruecklich NICHT gemessen ist:** die Zahl der `narrow`-Stellen. Wer sie zitiert,
+zitiert einen ungeeichten Zaehler.
