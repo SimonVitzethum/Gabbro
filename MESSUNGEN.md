@@ -22,9 +22,23 @@ einzige Beleg dafuer, dass „vorab" mehr ist als eine Behauptung ueber die Reih
 
 | Spalte | Entscheidungsregel |
 |---|---|
-| **K — durch Konstruktion** | Die Aussage der Pflicht **erwaehnt nur die Maschine**, ODER sie ist eine **deklarierte Invariante**, deren Erhaltung der Erzeuger einmal ueber der Deklaration zeigt. **Ein Mensch schreibt nichts.** |
+| **K — durch Konstruktion** | Die Aussage der Pflicht **erwaehnt nur die Maschine**, ODER sie ist eine **deklarierte Invariante**, deren Erhaltung der Erzeuger einmal ueber der Deklaration zeigt. **Ein Mensch schreibt nichts.** — **Bedingung, mechanisch zu pruefen (s. u.).** |
 | **A — Abstiegsaussage** | Die Pflicht laesst sich schreiben als *„fuer alle x in ⟨**deklarierter** Domaene⟩: P(x)"*, und P(x) folgt aus P auf den **echt kleineren** Elementen **plus genau einer deklarierten Schrittzusage**. |
 | **W — Wertaussage** | Alles Uebrige: das Argument betrifft **Werte, die ein Rumpf rechnet** und die keine Deklaration festlegt. |
+
+### Die Bedingung an K, und sie ist mechanisch statt kippbar
+
+**„Der Erzeuger zeigt es einmal" gilt nur, wenn ALLE Mutationen des Traegers erzeugte Operationen
+sind.** Eine einzige Handmutation — ein `breaking`-Block, ein Schreibpfad ausserhalb der
+`ops`-Liste — und die Erhaltung ist **Menschenarbeit**, also **A oder W**.
+
+**Je Pflicht ist das eine mechanische Frage: sind alle Schreibstellen des Traegers erzeugt?**
+Die Kippregel wuerde den Fall im Zweifel fangen; **mechanisch pruefbar schlaegt kippbar**, weil es
+nicht von der Sorgfalt beim Zaehlen abhaengt.
+
+> **Nebenertrag, gratis:** dieselbe Pruefung liefert die **Liste der `breaking`-Stellen** — genau
+> den Posten L3 aus der Restliste (*„`breaking`-Wiederherstellungen ohne erzeugte
+> Schlussoperation"*).
 
 ## Die Kippregel — sie kippt IMMER nach W
 
@@ -33,6 +47,10 @@ einzige Beleg dafuer, dass „vorab" mehr ist als eine Behauptung ueber die Reih
    deklariert), ist es **W**.
 3. **Braucht die Induktion eine verstaerkte Hypothese**, ist es **W** — Verstaerkung ist
    Menschenarbeit und genau der Schritt, den ein Loeser raten muesste.
+3b. **„Genau eine deklarierte Schrittzusage" heisst JE ABSTIEG, nicht je Eigenschaft.** Eine
+   Pflicht, deren Beweis **zwei Abstiege mit je einer Zusage komponiert**, bleibt **A**. Eine, deren
+   **einzelner Induktionsschritt zwei Zusagen gleichzeitig** braucht, faellt nach **W**.
+   *Diese Lesart steht hier, weil an genau dieser Stelle der erste Streitfall entstehen wird.*
 4. **Nicht geteilt, nicht gerundet.** Eine Pflicht zaehlt ganz, in einer Spalte.
 
 ## Aufzeichnung, je Pflicht
@@ -52,6 +70,34 @@ nach W gedrueckt. Ein Regelwerk, das jeden Fall entscheidet, hat keine Kante.
 | **W ≤ 8 von 17** | Die Decke **traegt**, und die harten Schrittzusagen sind das **staerkste Stueck der Sprache** |
 
 **Beide Ausgaenge sind gute Ergebnisse — genau weil sie hier stehen, bevor gezaehlt wird.**
+
+## Die GEWICHTE — vorab, sonst wandert der Ueberschlag nach Belieben
+
+**„Der 0,8 : 1-Ueberschlag wandert" ist ohne Gewichte keine Aussage.** Wohin er wandert, haengt am
+**Zeilenanteil**, den die W-Pflichten tragen — und der **IPC-Fastpath wiegt anders als eine
+Randpruefung**. Werden die Anteile erst **nach** der Zaehlung bestimmt, ist die Versuchung
+strukturell, W-Pflichten klein zu wiegen.
+
+**Reihenfolge, verbindlich:**
+
+1. die 17 Pflichten mit `Datei:Zeile` auffinden (sonst ungueltig, s. u.);
+2. **je Pflicht den Zeilenumfang des betroffenen Rumpfs messen** — **vor** dem ersten Blick auf die
+   Spalten;
+3. **dann** klassifizieren.
+
+**Die Formel, festgeschrieben:**
+
+```
+F        = Zeilen der zehn Fragmentruempfe (Rust-Original, ohne Leerzeilen)
+W_zeilen = Zeilen der Ruempfe, deren Pflicht als W gebucht ist
+w        = W_zeilen / F                     -- Anteil IN DER STICHPROBE
+Ueberschlag = w * 5,0  +  (1 - w) * 0,3
+```
+
+> **Der Vorbehalt gehoert in dieselbe Zeile, nicht in eine Fussnote:** die zehn Fragmente sind
+> **keine Zufallsstichprobe** — sie wurden nach **Breite** gewaehlt. Die Hochrechnung von `w` auf
+> den ganzen Kernel traegt diese Verzerrung, und ihre **Richtung ist unbekannt**. Der Ueberschlag
+> ist damit eine **Einsetzung mit benannter Unsicherheit**, keine Messung des Kernels.
 
 ## Was die Messung UNGUELTIG macht (nicht bloss unguenstig)
 
