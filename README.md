@@ -71,6 +71,7 @@ andere ist ausdrücklich Absicht.
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`LOGIK-KLEMPNEREI.md`](LOGIK-KLEMPNEREI.md) | **das Kriterium, erstmals gemessen — und es fällt**: 74 Pflichten, **19 bleiben beim Programmierer hängen (33 %)**, `programs/` bricht 4 von 4 |
 | [`FERTIG.md`](FERTIG.md) | **die Ziellinie, vorab**: acht Bedingungen für die Syntax, vier für den Plan — und **drei Eskalationsgründe** — abgebrochen wird nur bei *bewiesener* Unmöglichkeit |
 | [`NARROW-GEMESSEN.md`](NARROW-GEMESSEN.md) | **der gefährlichste offene Punkt, gemessen** — die flusssensitive Klasse sind **4 Stellen in 65 001 Zeilen**, und die erwartete Auswahlverzerrung trat nicht ein |
 | [`KRITERIUM.md`](KRITERIUM.md) | **das Kriterium**: nur Logik beweisen, sonst nichts — die Trennlinie, was sie mit den Messungen macht, und die neue Abbruchbedingung |

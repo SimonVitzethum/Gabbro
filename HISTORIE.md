@@ -63,6 +63,8 @@ schwächer formuliert, ohne schwächer zu **werden**.
 
 | **0,5 : 1 als Ziel** | die Zahl war das Ziel, an dem alles hing | **sie ist ein Stellvertreter.** Das Kriterium ist eine **Art**, keine Menge: nur Logik beweisen, sonst nichts. Selbst 2 : 1 ist gut, wenn die Zeilen Logik sind; 0,5 : 1 wäre ein Misserfolg mit handgeschriebenen Bereichsprüfungen. Dieselbe Klasse wie „ein Prüfer, der ein einzelnes Byte liest" — **die Grösse war messbar, die Eigenschaft war es nicht** |
 
+| **„M1 braucht genau eine Flussregel"** | aus 4 gemessenen `leading_zeros`-Stellen abgeleitet | **die Stichprobe schloss die harte Form strukturell aus.** Alle vier sind **einstellig**; die Gegenmessung fand **54 relationale** Fälle (`if a >= b { a - b }`), die ein Intervalltyp nicht tragen kann. **Das Hausmuster, angewandt auf mich** — ein Satz, der wahr wäre, hätte ich den Geltungsbereich nicht erweitert |
+
 ---
 
 ## Die Trajektorie — das Muster über den Einzelfehlern

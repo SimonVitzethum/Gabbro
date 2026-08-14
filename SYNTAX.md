@@ -551,7 +551,7 @@ benutzerdefinierte Quantorendomaenen · Rekursion in `spec fn` · handgeschriebe
 
 ## Offene Punkte — benannt, nicht weggelassen
 
-- [x] **`narrow` — GEMESSEN 2026-08-14** ([`NARROW-GEMESSEN.md`](NARROW-GEMESSEN.md)): die
+- [ ] **`narrow` — ERGEBNIS ZURUECKGENOMMEN 2026-08-14**, s. [`LOGIK-KLEMPNEREI.md`](LOGIK-KLEMPNEREI.md): 54 **relationale** Faelle (`if a >= b { a - b }`), die ein Intervalltyp nicht tragen kann. Meine Stichprobe enthielt null davon. *Die alte Fassung:* **`narrow` — gemessen 2026-08-14** ([`NARROW-GEMESSEN.md`](NARROW-GEMESSEN.md)): die
       flusssensitive Klasse sind **4 Fundstellen in 65 001 Zeilen**, alle dieselbe Redewendung
       (Bitposition aus einem Wort), alle hinter einer Nullpruefung. **M1 braucht genau eine
       Flussregel** — eine geprüfte Bedingung verengt den Bereich im Zweig danach —, nicht
