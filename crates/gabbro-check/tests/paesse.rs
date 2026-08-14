@@ -299,3 +299,34 @@ fn jeder_gebaute_pass_kann_fallen() {
         );
     }
 }
+
+// -- Die dritte Zaehlspalte ---------------------------------------------------------------
+
+/// **Die Schablonenliste ist die Ratsche, die die Schablonen bisher nicht hatten.**
+/// Wortschatz und Axiomschicht haben ihre; die Erzeuger-Schablonen wuchsen monoton und
+/// unbeziffert -- genau wie die Axiomschicht vor ihrer Auszaehlung.
+#[test]
+fn jede_schablone_nennt_ihre_pflicht() {
+    use gabbro_check::schablonen::{ungedeckt, SCHABLONEN};
+    assert!(
+        SCHABLONEN.len() >= 12,
+        "die Liste ist unvollstaendig -- jede erzeugte Form schuldet einen Eintrag"
+    );
+    for s in SCHABLONEN {
+        assert!(
+            s.pflicht.len() > 40,
+            "`{}` nennt keine Pflicht -- ein Eintrag ohne den Satz, was genau EINMAL gezeigt \
+             werden muss, ist ein Name und keine Buchung",
+            s.name
+        );
+        assert!(!s.fundstelle.is_empty(), "`{}` ohne Fundstelle", s.name);
+        assert!(!s.konstrukt.is_empty(), "`{}` ohne Konstrukt", s.name);
+    }
+    // Solange keine bewiesen ist, muss die Zahl das sagen -- eine Liste, die aussieht wie
+    // Deckung, waere schlimmer als keine.
+    assert_eq!(
+        ungedeckt(),
+        SCHABLONEN.len(),
+        "wenn eine Schablone nach Isabelle gebracht wurde, gehoert das hierher UND in BEWEIS.md"
+    );
+}

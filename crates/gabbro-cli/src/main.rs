@@ -20,6 +20,10 @@ fn main() -> std::process::ExitCode {
         "pruefe" => befehl_pruefe(rest),
         "fragmente" => fragmente::befehl(rest),
         "annahmen" => befehl_annahmen(rest),
+        "schablonen" => {
+            print!("{}", gabbro_check::schablonen::zeige());
+            std::process::ExitCode::SUCCESS
+        }
         "paesse" => {
             befehl_paesse();
             std::process::ExitCode::SUCCESS
@@ -44,6 +48,7 @@ fn hilfe() {
   gabbro fragmente  <datei.md>…     jeden ```gabbro-Block einer Markdown-Datei, einzeln
   gabbro annahmen   <datei.gab>…    das Annahmenmanifest: bewiesen unter A1…An
   gabbro paesse                     die Passliste -- gebaut UND offen
+  gabbro schablonen                 die Erzeuger-Schablonen: die dritte Zaehlspalte
 
 Rueckgabe: 0 wenn kein Fehler, 1 bei Fehlern, 2 bei falschem Aufruf."
     );
