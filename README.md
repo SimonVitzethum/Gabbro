@@ -71,6 +71,7 @@ andere ist ausdrücklich Absicht.
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`INDUKTION.md`](INDUKTION.md) | **was Induktion bräuchte und was sie kostet** — drei Stufen; die erste kostet **eine Zeile je Pflicht** und behält die Sprache. **Der Preis ist nicht die Zeilenzahl, sondern die Vorhersagbarkeit** |
 | [`BEWEISER.md`](BEWEISER.md) | **L3 und L4 entschieden — und die Decke benannt**: Gold im seL4-Sinn ist auf diesem Weg nicht erreichbar. Drei Arten Pflichten statt einer, Zertifikatsprüfer statt Löser im Vertrauen |
 | [`MODELL.md`](MODELL.md) | **L1 und L2 entworfen**: 106 Axiome (~130 Namen), RC11 ohne SC — und **die 20 arch-neutralen Axiomfamilien stehen schon im Baum**, ohne so zu heissen |
 | [`FRAGMENTE.md`](FRAGMENTE.md) | **sechs Caprock-Bereiche in Gabbro ausgeschrieben**, mit Herkunft und Urteil: 0 passen unverändert, 4 mit Befund, **2 gar nicht** — 31 Befunde, davon 7 in der Grammatik selbst |
