@@ -62,6 +62,11 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
 | **E4** | **Vertraege stehen VOR dem Rumpf, in fester Reihenfolge** | ein Werkzeug, das sortieren muss, kann nicht sagen „hier fehlt `effects`" |
 | **E5** | **Jede Deklaration ist an genau einer Stelle vollstaendig** | kein Praeprozessor, keine Vorwaertsdeklaration |
 
+> **`obligation` ist KEIN Quellwort.** Die Festlegung zaehlt es unter ihren dreizehn neuen
+> Woertern; es steht aber im **Pflichtenmanifest**, also im **Erzeugnis**. Der Wortschatz hier ist
+> der der **Quelle** — das Manifest hat sein eigenes Format, und beides zu vermischen waere
+> derselbe Riss wie zwei Schluesselwortsprachen. **Zwoelf neue Quellwoerter, nicht dreizehn.**
+
 > **Schreibregel fuer diese Dateien:** `Backticks` bezeichnen **heutige Gabbro-Syntax**. Ein
 > abgeschaffter Name steht *kursiv in Anfuehrungszeichen* — er **ist** keine Syntax mehr.
 
@@ -71,13 +76,13 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
-             spec impl raw divergent prim section arch when
+             spec impl raw divergent prim extern section arch when
   Vertraege  requires ensures maintains breaking effects costs where in
              exhaustive old narrow to induction
   Wirkungen  reads writes locks masks allocs consumes publishes diverges pure
   Ablauf     if else match traverse over by touches retry forever until
              bounded progress on_exceeded per_pass return let mut
-             unvisited consuming decreasing leave leaves ops result
+             unvisited consuming decreasing leave leaves next ops result
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
              class fields bank at stride count mirrors from
@@ -85,10 +90,12 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
              offset_into index into option chain wrapping
-             atomic acquire release seq relaxed nothing
+             atomic acquire release seq relaxed nothing accumulates merge
+             max min add or and held protects rank
+             embeds scale walk levels node down leaf mappings
   Domaenen   slots of chain descendants queue elems fields threads reaches via
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 bool never w1c rc
-  Eingebaut  sizeof lenof forall exists true false Self
+  Eingebaut  sizeof lenof aligned forall exists true false Self
 ```
 
 **Alles andere ist ein Bezeichner.** Ein neues Wort ist eine Sprachaenderung und braucht einen
@@ -127,7 +134,9 @@ program    = { item } ;
 item       = [ "when" constexpr ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | reason | state | device | assume | axiom | check
-             | atomicdecl | lockdecl ) ;
+             | atomicdecl | lockdecl | accdecl | walkdecl ) ;
+accdecl    = "accumulates" ident ":" typeexpr
+             "merge" ( "max" | "min" | "add" | "or" | "and" ) ";" ;
 moduledecl = [ "pub" ] "module" path "{" { item } "}" ;
 usedecl    = [ "pub" ] "use" path ";" ;
 constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constexpr ";" ;
@@ -156,8 +165,10 @@ boolty     = "bool" ;
 range      = expr ".." expr | expr "..<" expr ;
 array      = "[" typeexpr ";" constexpr "]" ;
 structty   = "{" { field } "}" ;
-field      = ident ":" typeexpr [ "@" bitpos ] [ "offset_into" ident ]
+field      = ident ":" fieldty [ "@" bitpos ] [ "offset_into" ident ]
              [ "where" pred ] [ "reserved" ] "," ;
+fieldty    = typeexpr
+           | typeexpr "embeds" "[" int ":" int "]" [ "scale" constexpr ] ;
 bitpos     = int | "[" int ":" int "]" ;
 variants   = "{" ident [ "(" typeexpr ")" ] { "," ident [ "(" typeexpr ")" ] } "}" ;
 fnptr      = "fn" "(" [ typelist ] ")" [ "->" typeexpr ] ;
@@ -218,7 +229,8 @@ paren      = "(" expr ")" ;
 call       = path "(" [ arglist ] ")" ;
 arglist    = expr { "," expr } ;
 cast       = path "(" expr ")" ;                  (* nur zwischen vertraeglichen Typen *)
-builtin    = ( "sizeof" | "lenof" ) "(" ( typeexpr | place ) ")" ;
+builtin    = ( "sizeof" | "lenof" ) "(" ( typeexpr | place ) ")"
+           | "aligned" "(" expr "," constexpr ")" ;
 oldexpr    = "old" "(" place ")" ;                 (* AUSDRUCK, nicht Praedikat; nur in ensures *)
 place      = ident { placesuffix } ;
 placesuffix= "." ident | "[" expr "]" | "->" ident ;
@@ -257,7 +269,8 @@ domain     = "slots" "of" place                  (* die Slots einer Tabelle *)
            | "queue" place
            | "fields" "of" path
            | "elems" "of" place
-           | "threads" ;
+           | "threads"
+           | "mappings" "of" place ;             (* erzeugt aus einer walk-Deklaration *)
 member     = expr "in" domain ;
 reach      = place "reaches" place "via" ident ;
 predlist   = pred { "," pred } ;
@@ -286,7 +299,7 @@ erlaubt und sonst nicht.
 ## 6. Funktionen und Vertraege — E4
 
 ```ebnf
-fndecl   = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" ]
+fndecl   = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
            "fn" ident "(" [ params ] ")" [ "->" typeexpr ]
            [ "requires"  predlist ]
            [ "ensures"   predlist ]
@@ -344,8 +357,10 @@ Sie muss am Ende des Blocks wiederhergestellt sein; der Bereich ist **sichtbar s
 ```ebnf
 block      = "{" { stmt } "}" ;
 stmt       = letstmt | assign | ifstmt | matchstmt | loopform | breakstmt
-           | narrowstmt | lockstmt | leavestmt | "return" [ expr ] ";" | exprstmt ;
+           | narrowstmt | lockstmt | leavestmt | nextstmt | publishstmt
+           | "return" [ expr ] ";" | exprstmt ;
 leavestmt  = "leave" ident ";" ;
+nextstmt   = "next" ident ";" ;
 letstmt    = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
            | "let" ident "=" call "else" "(" ident ")" block ;
 assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;
@@ -383,6 +398,7 @@ retry      = "retry" [ ident ] [ "until" pred ]
 
 forever    = "forever" [ ident ]
              "per_pass"  "bounded" expr "ops"
+             "on_exceeded" ident
              "effects"   "{" efflist "}"
              [ "progress" ident ]
              [ "leaves"   identlist ]
@@ -417,7 +433,14 @@ forever
 ## 9. Tabellen, Traversierungen, Formate
 
 ```ebnf
-table      = "table" ident "{" { constdecl | slotdecl | invariant } "}" ;
+table      = "table" ident "{" { constdecl | slotdecl | invariant | opdecl } "}" ;
+opdecl     = "ops" identlist ";" ;
+walkdecl   = "walk" ident "levels" constexpr "{"
+               "node" ":" array ","
+               "down" ":" ident "when" pred ","
+               "leaf" ":" pred ","
+               { invariant }
+             "}" ;
 slotdecl   = "slot" "{" { ident ":" slottype "," } "}" ;
 slottype   = typeexpr | "index" "into" ident | "option" "index" "into" ident
            | intty "wrapping" ;
@@ -500,11 +523,11 @@ device Vtd(base: Pa) at mmio {
 ## 11. Nebenlaeufigkeit
 
 ```ebnf
-atomicdecl = [ "pub" ] "atomic" ident ":" typeexpr
-             ( "publishes" placelist | "publishes" "nothing" )
-             [ "acquire" | "release" | "seq" | "relaxed" ] ";" ;
+atomicdecl  = [ "pub" ] "atomic" ident ":" typeexpr
+              [ "acquire" | "release" | "seq" | "relaxed" ] ";" ;
+publishstmt = place "=" expr "publishes" ( placelist | "nothing" ) ";" ;
 lockdecl   = "lock" ident "protects" "{" placelist "}"
-             "rank" constexpr [ "masks" ident ] ";" ;
+             "rank" constexpr [ "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
 lockstmt   = "locks" place block ;
 ```
 
