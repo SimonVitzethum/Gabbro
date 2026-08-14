@@ -129,3 +129,49 @@ zusaetzlich einer, den die Vorbilder nicht geloest, sondern **umgangen** haben.
 - [ ] **Der billigste Schritt dagegen ist L3, und er ist eine Entscheidung, keine Arbeit:** wohin
       gehen die Logik-Pflichten? Solange das offen ist, ist jede weitere Grammatikregel eine Zeile
       fuer einen Empfaenger, den es nicht gibt.
+
+
+---
+
+## Was die Luecken KOSTEN — die Rechnung, zusammengezogen (2026-08-14)
+
+**Die Frage ist nicht, ob es Luecken gibt, sondern in welcher Waehrung sie bezahlt werden.** Es
+gibt genau zwei, und der Unterschied ist der ganze Entwurf:
+
+| Waehrung | heisst | Beispiel |
+|---|---|---|
+| **Reichweite** | der Satz gilt **relativ zu benannten Annahmen**. Man weiss, was man bewiesen hat, und woran es haengt | „speichersicher **unter A1…An**" |
+| **Gueltigkeit** | man weiss **nicht**, was man bewiesen hat, weil die Annahme unbenannt ist | ein `unsafe`-Block mit einem Kommentar |
+
+> **Gabbros Entwurf besteht im Kern darin, jede Luecke von der zweiten Waehrung in die erste zu
+> ueberfuehren.** Deshalb steht die Annahmenmenge **im Erzeugnis** und nicht in einer Fussnote.
+
+### Die vier Luecken, einzeln beziffert
+
+| Luecke | kostet | Zahl |
+|---|---|---|
+| **Axiomschicht** | Reichweite | **~130 Namen** fuer zwei Architekturen (A1–A25 gezaehlt, plus MSRs, CPUID-Blaetter, Geraeteannahmen). **Ratsche: darf nur fallen** — und `port` hat sie gerade um **70 Fundstellen** entlastet |
+| **Speichermodell** | Reichweite | **2 Annahmen** (`c11_release_acquire_x86`/`_aarch64`), je mit Litmus-Falsifikator (MP/SB/LB) |
+| **Vertrauensbasis der Werkzeuge** | Reichweite | **4 Posten**: Pruefer, Absenkung, **eine** `iasm`-Emissionsstelle, N Geistertheorie-Schablonen. Alle benannt, keiner geschaetzt |
+| **Naht CPU ↔ Geraet** | Reichweite, **aber ohne Vorbild** | die Geraeteseite ist `assume` + Sonde, die **Verbindung** hat kein mechanisiertes Modell. Fuer die MMU gibt es Vorarbeit, fuer DMA nicht |
+| **Lebendigkeit (D8)** | Reichweite | jede Fortschrittsaussage ist ein `progress`-**assume** mit Falsifikator (der Watchdog). **96 Endlosschleifen** gemessen; wieviele eine Fortschrittsaussage brauchen, ist ungezaehlt |
+| **Funktionale Korrektheit ausserhalb der Struktur-Induktion** | **unbekannt** | **das ist die einzige Luecke ohne Zahl** — und genau sie ist die offene Messung |
+
+### Der Satz, den ein fertiger Caprock-Beweis am Ende traegt
+
+```
+speichersicher    unter A1…An            n ≈ 130, gemessen, ratschenfaehig
+rennfrei          unter c11_*            2, mit Litmus-Sonden
+funktional offen  an O1…Ok               k UNBEKANNT
+```
+
+> **Die Kosten aller Luecken zusammen sind: `n` ist gross, aber gezaehlt und fallend — und `k` ist
+> ungezaehlt.** Das ist die ganze Rechnung. **`k` zu kennen, ist der billigste Schritt, der den
+> Ordner noch bewegt**, und er ist derselbe wie der Falsifikator der L3-Entscheidung: **die 17
+> gemessenen Logik-Pflichten einordnen** in *durch Konstruktion · durch erzeugtes Induktionsschema ·
+> von Hand*.
+
+**Was die dritte Spalte kostet, laesst sich vorab sagen:** ein Rumpf, der von Hand bewiesen werden
+muss, kostet nach der eigenen Messung **5 : 1** auf seinem Anteil. Bei 5 % des Kernels sind das
++0,25 auf die Kennzahl, bei 10 % +0,5. **Ein einziger unerwarteter Fall dort ist deshalb teurer als
+alle 130 Axiome zusammen** — die kosten Reichweite, er kostet Arbeit.
