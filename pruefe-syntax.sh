@@ -31,8 +31,8 @@ pruefe_prosa() {
 }
 
 echo "== Beispiele gegen SYNTAX.md =="
-if pruefe SPRACHE.md SYNTAX.md PLAN.md README.md && \
-   pruefe_prosa SPRACHE.md SYNTAX.md PLAN.md README.md TODO.md P0-1-REVOKE.md; then
+if pruefe SPRACHE.md SYNTAX.md PLAN.md README.md FRAGMENTE.md && \
+   pruefe_prosa SPRACHE.md SYNTAX.md PLAN.md README.md TODO.md P0-1-REVOKE.md FRAGMENTE.md; then
   echo "  keine verbotene Form in Beispielen, keine zweite Schluesselwortsprache in Prosa"
 else
   echo "== SYNTAX: FEHLER =="; exit 1

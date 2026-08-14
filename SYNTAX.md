@@ -17,10 +17,26 @@ Stand 2026-08-13, zweite Fassung. **Kein Uebersetzer liest das.**
 
 | | erste Fassung | **diese** |
 |---|---|---|
-| definierte EBNF-Regeln | 40 | **100** |
+| definierte EBNF-Regeln | 40 | **104** |
 | benutzt, aber nie definiert | 21 (17 tragend) | **0** |
 | offene Entwurfsfragen | 7 | **9, benannt am Ende** |
 | **Wächter** | — | `pruefe-syntax.sh` prüft **Geschlossenheit der Regeln UND Deckung der Terminale durch den Wortschatz**, je mit Sprechprobe |
+
+> **DRITTE blinde Stelle, dieselbe Familie — und sie kostete drei Grammatikfehler, die die Sprache
+> unbrauchbar machten.** Der Wächter prüfte, dass jede **benutzte** Regel definiert ist, **nicht ob
+> jede definierte Regel erreichbar ist**. Gefunden von einem Fragmentprüfer, nachgerüstet als
+> Erreichbarkeitslauf von `program` aus. Er fand sofort:
+> **`atomicdecl`, `lockdecl`, `lockstmt` waren definiert und von `program` aus nie erreichbar** —
+> also **kein Atomic, keine Sperre, kein kritischer Abschnitt** in der ganzen Sprache, während
+> alle sechs Fragmente sie benutzen. Und eine **doppelte `item`-Produktion**, bei der die zweite
+> die erste verdeckte.
+>
+> Dazu zwei Fehler, die kein Wächter sah, weil sie *innerhalb* gültiger Grammatik lagen:
+> **`old(x)` hing unter `atompred` statt unter `primary`** — es konnte als Prädikat für sich
+> stehen, aber in **keinem Ausdruck** vorkommen, also nie neben `==`. **Die Differenzaussage, die
+> dieses Projekt als Kernlehre führt, war nicht schreibbar** — und das eigene `delete_leaf`-Beispiel
+> gab eine an. Und **`fndecl` liess nur `block | ";"`**, womit **keine einzige `spec fn`
+> schreibbar** war.
 
 > **Der Wächter hatte eine zweite blinde Stelle, und sie war dieselbe wie die erste.** Er prüfte
 > die **Nichtterminale** auf Geschlossenheit und behauptete daneben einen „geschlossenen
@@ -61,7 +77,7 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
   Wirkungen  reads writes locks masks allocs consumes publishes diverges pure
   Ablauf     if else match traverse over by touches retry forever until
              bounded progress on_exceeded per_pass return let mut
-             unvisited consuming decreasing
+             unvisited consuming decreasing leave leaves ops result
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
              class fields bank at stride count mirrors from
@@ -108,8 +124,10 @@ identlist  = ident { "," ident } ;
 
 ```ebnf
 program    = { item } ;
-item       = moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
-           | format | table | reason | state | device | assume | axiom | check ;
+item       = [ "when" constexpr ]
+             ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
+             | format | table | reason | state | device | assume | axiom | check
+             | atomicdecl | lockdecl ) ;
 moduledecl = [ "pub" ] "module" path "{" { item } "}" ;
 usedecl    = [ "pub" ] "use" path ";" ;
 constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constexpr ";" ;
@@ -119,11 +137,8 @@ staticdecl = [ "pub" ] "static" [ "mut" ] ident ":" typeexpr "=" expr
              [ "section" string ] ";" ;
 ```
 
-**`when`** an jedem `item` ersetzt die bedingte Uebersetzung (335 `cfg`-Stellen in Caprock):
-
-```ebnf
-item       = [ "when" constexpr ] ( … ) ;
-```
+**`when`** steht an jedem `item` (oben in der Produktion) und ersetzt die bedingte Uebersetzung
+(335 `cfg`-Stellen in Caprock).
 
 Es senkt sich auf `#if` ab und ist **konstant auswertbar** — kein Praeprozessor, keine Textersetzung.
 
@@ -133,7 +148,7 @@ Es senkt sich auf `#if` ab und ist **konstant auswertbar** — kein Praeprozesso
 
 ```ebnf
 typedecl   = [ "pub" ] [ "opaque" ] [ "linear" [ "ghost" ] ] [ "tagged" ]
-             "type" ident [ "(" params ")" ] [ "=" typeexpr ] ";" ;
+             "type" ident [ "(" typelist ")" ] [ "=" typeexpr ] ";" ;
 typeexpr   = intty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants ;
 nevertype  = "never" ;                             (* Rueckgabetyp von prim/divergent *)
 intty      = ( "u8"|"u16"|"u32"|"u64"|"i8"|"i16"|"i32"|"i64" ) [ "in" range ] ;
@@ -197,12 +212,14 @@ bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" ) addexpr } ;
 addexpr    = mulexpr { ( "+" | "-" ) mulexpr } ;
 mulexpr    = unary { ( "*" | "/" | "%" ) unary } ;
 unary      = [ "!" | "-" ] primary ;
-primary    = int | "true" | "false" | place | call | cast | paren | builtin ;
+primary    = int | "true" | "false" | place | call | cast | paren | builtin
+           | oldexpr | "result" ;
 paren      = "(" expr ")" ;
 call       = path "(" [ arglist ] ")" ;
 arglist    = expr { "," expr } ;
 cast       = path "(" expr ")" ;                  (* nur zwischen vertraeglichen Typen *)
 builtin    = ( "sizeof" | "lenof" ) "(" ( typeexpr | place ) ")" ;
+oldexpr    = "old" "(" place ")" ;                 (* AUSDRUCK, nicht Praedikat; nur in ensures *)
 place      = ident { placesuffix } ;
 placesuffix= "." ident | "[" expr "]" | "->" ident ;
 placelist  = place { "," place } ;
@@ -232,8 +249,7 @@ pred       = orpred ;
 orpred     = andpred { "||" andpred } ;
 andpred    = notpred { "&&" notpred } ;
 notpred    = [ "!" ] atompred [ "=>" pred ] ;
-atompred   = cmpexpr | quant | member | reach | oldexpr | "(" pred ")" ;
-oldexpr    = "old" "(" place ")" ;                 (* nur in ensures *)
+atompred   = cmpexpr | quant | member | reach | "(" pred ")" ;
 quant      = ( "forall" | "exists" ) ident "in" domain ":" pred ;
 domain     = "slots" "of" place                  (* die Slots einer Tabelle *)
            | "chain" "(" ident "," ident ")" "in" place
@@ -269,9 +285,9 @@ fndecl   = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" ]
            [ "ensures"   predlist ]
            [ "maintains" identlist ]
            [ "effects"   "{" efflist "}" ]
-           [ "costs"     "<=" expr ident ]
+           [ "costs"     "<=" expr "ops" ]
            [ "section" string ] [ "arch" ident ] [ "when" constexpr ]
-           ( block | ";" ) ;
+           ( block | "=" pred ";" | ";" ) ;      (* "=" pred: nur fuer spec fn *)
 efflist  = eff { "," eff } ;
 eff      = "reads" place | "writes" place | "locks" place | "masks" ident
          | "allocs" ident | "consumes" place | "publishes" place | "diverges"
@@ -292,7 +308,7 @@ impl fn delete_leaf(c: ptr<normal, rw> CapSpace, s: SlotIdx) -> Result
     ensures   !c.slots[s].used, old(c.objects[o].refcount) == c.objects[o].refcount + 1
     maintains cdt_wellformed, refcount_matches
     effects   { writes c.slots, writes c.objects, locks CAPS }
-    costs     <= 200 cycles
+    costs     <= 200 ops
 { … }
 ```
 
@@ -311,7 +327,8 @@ Sie muss am Ende des Blocks wiederhergestellt sein; der Bereich ist **sichtbar s
 ```ebnf
 block      = "{" { stmt } "}" ;
 stmt       = letstmt | assign | ifstmt | matchstmt | loopform | breakstmt
-           | narrowstmt | "return" [ expr ] ";" | exprstmt ;
+           | narrowstmt | lockstmt | leavestmt | "return" [ expr ] ";" | exprstmt ;
+leavestmt  = "leave" ident ";" ;
 letstmt    = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
            | "let" ident "=" call "else" "(" ident ")" block ;
 assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;
@@ -340,17 +357,18 @@ traverse   = "traverse" ident [ "of" expr ]
              [ "touches" efflist ]
              block ;
 
-retry      = "retry" [ "until" pred ]
-             "bounded"     expr ident
+retry      = "retry" [ ident ] [ "until" pred ]
+             "bounded"     expr "ops"
              [ "progress"  ident ]
              "on_exceeded" ident
              [ "effects" "{" efflist "}" ]
              block ;
 
-forever    = "forever"
-             "per_pass"  "bounded" expr ident
+forever    = "forever" [ ident ]
+             "per_pass"  "bounded" expr "ops"
              "effects"   "{" efflist "}"
              [ "progress" ident ]
+             [ "leaves"   identlist ]
              block ;
 ```
 

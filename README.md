@@ -71,6 +71,7 @@ andere ist ausdrücklich Absicht.
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`FRAGMENTE.md`](FRAGMENTE.md) | **sechs Caprock-Bereiche in Gabbro ausgeschrieben**, mit Herkunft und Urteil: 0 passen unverändert, 4 mit Befund, **2 gar nicht** — 31 Befunde, davon 7 in der Grammatik selbst |
 | [`GOLD-LUECKE.md`](GOLD-LUECKE.md) | **was für Gold fehlt, ausser Logik und Ausdruckskraft** — sechs Posten, vier davon je ein Teilprojekt: **Maschinenmodell, Speichermodell, Beweiser, Anfang** |
 | [`LOGIK-KLEMPNEREI.md`](LOGIK-KLEMPNEREI.md) | **das Kriterium, erstmals gemessen — und es fällt**: 74 Pflichten, **19 bleiben beim Programmierer hängen (33 %)**, `programs/` bricht 4 von 4 |
 | [`FERTIG.md`](FERTIG.md) | **die Ziellinie, vorab**: acht Bedingungen für die Syntax, vier für den Plan — und **drei Eskalationsgründe** — abgebrochen wird nur bei *bewiesener* Unmöglichkeit |

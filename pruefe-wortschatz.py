@@ -18,6 +18,23 @@ ebnf = "\n".join(re.findall(r"```ebnf\n(.*?)```", d, re.S))
 # Ein-Zeichen-Terminale stammen aus Zeichenbereichen ("a" … "z") und sind keine Woerter.
 term = {t for t in re.findall(r'"([a-z_][a-z0-9_]*)"', ebnf) if len(t) > 1}
 
+# Erreichbarkeit: eine definierte, aber von `program` aus nie erreichte Regel ist ein
+# stiller Toter -- der Geschlossenheitspruefer sieht sie nicht, weil er die Gegenrichtung prueft.
+prod = {}
+for k, v in re.findall(r"^\s*([a-z][a-z0-9_]*)\s*=(.*?);\s*$", ebnf, re.M | re.S):
+    prod.setdefault(k, "")            # mehrere Definitionen VEREINIGEN -- dict() nahm die letzte,
+    prod[k] += " " + v                # und genau daran fiel `item` zweimal auf
+erreicht, rand = set(), ["program"]
+while rand:
+    r = rand.pop()
+    if r in erreicht or r not in prod: continue
+    erreicht.add(r)
+    rand += re.findall(r"\b([a-z][a-z0-9_]+)\b", re.sub(r'"[^"]*"', '', prod[r]))
+LEX = {"comment"}   # lexikalisch, steht nicht in der Grammatik
+tot_regel = sorted(set(prod) - erreicht - LEX)
+if tot_regel:
+    print(f"    UNERREICHBAR VON program ({len(tot_regel)}): " + ", ".join(tot_regel))
+
 fehlt = sorted(term - vok)          # in der Grammatik, nicht im Wortschatz
 tot   = sorted(vok - term)          # im Wortschatz, nirgends in der Grammatik
 
@@ -26,4 +43,4 @@ if fehlt:
     print(f"    NICHT IN DER TABELLE ({len(fehlt)}): " + ", ".join(fehlt))
 if tot:
     print(f"    TOTE WOERTER ({len(tot)}): " + ", ".join(tot))
-sys.exit(1 if (fehlt or tot) else 0)
+sys.exit(1 if (fehlt or tot or tot_regel) else 0)

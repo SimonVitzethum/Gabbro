@@ -25,11 +25,11 @@ Uebersetzer. Ein autonomer Lauf ohne benannte Ziellinie ist dasselbe Muster mit 
 |---|---|---|---|
 | **A1** | Die Grammatik ist **geschlossen**: kein benutztes, nie definiertes Nichtterminal | `./pruefe-syntax.sh` | **erfuellt** (100 Regeln, 0 offen) |
 | **A2** | Alle offenen Punkte am Ende von `SYNTAX.md` sind **entschieden oder gemessen** — nicht „spaeter" | Auszaehlen | **1 von 9** (`narrow`, gemessen) |
-| **A3** | **Jeder Caprock-Bereich hat ein Urteil** — ausdrueckbar / braucht Konstrukt X / nicht ausdrueckbar —, **je mit einem ausgeschriebenen Fragment als Beleg** | Liste unten | offen |
+| **A3** | **Jeder Caprock-Bereich hat ein Urteil** — ausdrueckbar / braucht Konstrukt X / nicht ausdrueckbar —, **je mit einem ausgeschriebenen Fragment als Beleg** | `FRAGMENTE.md` | **6 von 10** — Scheduler, MMU, Lader, Parser/Checkpoint fehlen |
 | **A4** | Der **Logik/Klempnerei-Split** ist an mindestens fuenf Fragmenten gemessen, und **keine Klempnerei-Pflicht bleibt unbenannt haengen** | `KRITERIUM.md` | **nie gemessen** |
-| **A5** | Ein **Treiber** ist vollstaendig ausgeschrieben: Geraeteregister, Ringe, Geraeteeigentum, Barrieren, Annahmen | Fragment | offen |
-| **A6** | Ein **Userspace-Programm** ist vollstaendig ausgeschrieben | Fragment | offen |
-| **A7** | Das **Pruefgeruest** (15,7 % des Codes) ist ausgeschrieben — `check` traegt es oder nicht | Fragment | offen |
+| **A5** | Ein **Treiber** ist vollstaendig ausgeschrieben | `FRAGMENTE.md` | **erfuellt, mit Befund** |
+| **A6** | Ein **Userspace-Programm** ist vollstaendig ausgeschrieben | `FRAGMENTE.md` | **passt NICHT** — `forever` hatte keinen Ausgang; seit heute `leaves`/`leave` |
+| **A7** | Das **Pruefgeruest** ist ausgeschrieben | `FRAGMENTE.md` | **erfuellt, mit Befund** |
 | **A8** | **Jedes Konstrukt hat seine C-Absenkung hingeschrieben**, nicht behauptet | je Regel | 18 Behauptungen offen |
 
 ### Die Bereiche zu A3
