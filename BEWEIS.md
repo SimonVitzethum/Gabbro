@@ -804,10 +804,31 @@ Entwurf mit einer Vorstellung.
 |---|---|---|---|
 | **1** | **Maschinenmodell** | ein eigenes Modell in Isabelle: Register, Speicher, MMU; nicht Modelliertes ist **axiomatisiert** | die **Axiomschicht**, ~130 Namen fuer zwei Architekturen, **ratschenfaehig** und im Erzeugnis. `port` hat sie gerade um 70 Fundstellen entlastet |
 | **2** | **C-Semantik** | ein **C-Parser** samt Formalisierung eines C-Ausschnitts (Simpl/AutoCorres) — ein Teilprojekt fuer sich | **nichts Gleichwertiges.** Gabbro ersetzt es durch „eine Emission, syntaxgesteuert, nicht optimierend" — **und diese Entsprechung ist behauptet**, nicht formalisiert |
-| **3** | **Die Annahmenliste** | ausdruecklich gefuehrt: Assembler unbewiesen, Bootcode zunaechst aussen vor, Hardware wie modelliert, DMA eingeschraenkt, **verifizierte Konfiguration einkernig** | **das Pflichtenmanifest** — dieselbe Sache, aber **maschinenlesbar, mit Klassen und Ratsche ueber Namen**. Hier ist Gabbro nicht schlechter, sondern schaerfer |
+| **3** | **Die Annahmenliste** | ausdruecklich gefuehrt: Assembler unbewiesen, Bootcode zunaechst aussen vor, Hardware wie modelliert, DMA eingeschraenkt, **verifizierte Konfiguration einkernig** | **das Pflichtenmanifest** — dieselbe Sache, aber maschinenlesbar, mit Klassen und Ratsche ueber Namen. **Schaerfer im ENTWURF**: seL4s Liste existiert als Artefakt, Gabbros als Spezifikation (§15) — emittiert wird sie heute nicht |
 | **4** | **Binaerverifikation** | Uebersetzungsvalidierung C ⟶ Maschinencode (graph-refine/SydTV), damit der Uebersetzer nicht der Riss ist. **Assembler und volatile sind ausgenommen** | **steht unter „Spaeter"**, ist aber **ermoeglicht** — derselbe Zeugnispruefer liefert benannten C-Ausschnitt und erhaltene Funktionsgrenzen. **Nur laege der ganze `device`-Zweig ausserhalb** |
-| **5** | **Eigenschaften ueber der Korrektheit** | Integritaet, Vertraulichkeit, Autoritaetsbeschraenkung — **eigene Saetze mit eigenen Spezifikationen** | nicht adressiert. Gabbro liefert die Huelle, **nicht die Sicherheitsaussage darueber** |
+| **5** | **Eigenschaften ueber der Korrektheit** | Integritaet, Vertraulichkeit, Autoritaetsbeschraenkung — **eigene Saetze mit eigenen Spezifikationen**; gemessen **+23,5 %** ueber der Korrektheit (`proof/infoflow` + `proof/access-control`, s. [`MESSUNGEN.md`](MESSUNGEN.md)) | **der Satz nicht, eine pruefbare Naeherung schon** — s. u. |
 | **6** | **Der Unterhalt** | **der Posten, den niemand mitzaehlt** — s. u. |
+
+---
+
+### Posten 5 hat einen Boden — der Satz ist unerreichbar, eine Naeherung nicht
+
+**Nichtinterferenz ist eine Hypereigenschaft ueber Ablauf*paaren*.** Gewoehnliche
+Hoare-Logik und Verfeinerung koennen sie **strukturell nicht ausdruecken**; sie kann deshalb
+**niemals aus M1–M4 kommen**, egal wie weit man sie baut. Das ist die kategorische Aussage,
+und sie bleibt.
+
+**Aber sie ist kein Totalausfall.** Aus vorhandenen Regeln faellt eine **syntaktische
+Flussdisziplin** als **Ueberapproximation**: `effects` nennt, was gelesen und geschrieben
+wird, und M3 trennt die Adressraeume — **was nicht in der Effektmenge steht, wird vom
+erzeugten Code nicht gelesen.** Das ist pruefbar, es ist heute halb gebaut (der Rumpfabgleich
+prueft Schreiben und `locks`, nicht Lesen), und es ist der Unterschied zwischen
+
+> *„unerreichbar"* und *„der **Satz** ist unerreichbar, eine **pruefbare Naeherung** existiert."*
+
+**Was die Naeherung nicht deckt, gehoert danebengeschrieben:** Zeitverhalten, Scheduling,
+indirekte Fluesse ueber Kontrollfluss und Belegungszustand. Eine Ueberapproximation, die
+diese Liste nicht mitfuehrt, ist wieder eine Zusage statt einer Bedingung.
 
 ---
 
@@ -853,8 +874,14 @@ Tagen.
    geprueft ist. Gabbros Pruefer ist **unverifiziertes Rust**, und alles haengt an ihm.
 3. **Keine Sicherheitsaussagen.** Integritaet und Informationsfluss sind bei seL4 **eigene
    Saetze**; Gabbro liefert sie nicht und behauptet es auch nicht.
-4. **Reife.** seL4s Kette ist gefahren, mehrfach, auf echter Hardware. Gabbro hat keine Zeile
-   Uebersetzer.
+4. **Reife.** seL4s Kette ist gefahren, mehrfach, auf echter Hardware.
+   **Gabbro hat seit dem 2026-08-14 Uebersetzer- und Pruefercode** (Lexer, Parser ueber die
+   vollstaendige EBNF, fuenf von neun Paessen) — **und der ist unter Bruch der eigenen
+   Reihenfolgeregel entstanden.** „Keine Prueferzeile vor dem Ergebnis von Messung 2" galt und
+   gilt; Messung 2 ist nicht gefahren. Der Bruch geschah **auf Ansage, nicht still**, und steht
+   als Bruch in [`HISTORIE.md`](HISTORIE.md) und in [`MESSUNGEN.md`](MESSUNGEN.md).
+   *Diese Zeile fuehrt den Regelstatus mit, weil die Tatsache allein sie glattziehen wuerde —
+   und das ist die Fehlerklasse aus Commit `5904cae`.*
 
 ---
 

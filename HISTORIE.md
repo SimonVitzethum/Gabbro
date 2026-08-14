@@ -29,6 +29,38 @@ schwächer formuliert, ohne schwächer zu **werden**.
 
 ---
 
+## Die gebrochene Reihenfolgeregel — 2026-08-14, auf Ansage, und hier gebucht
+
+**Die Regel stand doppelt und in Grossbuchstaben:** *„Keine Prüferzeile vor dem Ergebnis von
+Messung 2"* ([`PLAN.md`](PLAN.md), [`TODO.md`](TODO.md)) und *„DER NÄCHSTE SCHRITT IST KEINE
+ZEILE RUST"*. **Messung 2 ist bis heute nicht gefahren** — sie ist blockiert, weil fünf der elf
+Klempnerei-Klassen nur im Scratchpad liegen.
+
+**Am 2026-08-14 ist trotzdem ein Übersetzer entstanden:** Lexer, Parser über die vollständige
+EBNF, fünf von neun Prüfpässen, dazu Beispiel- und Giftkorpus. **Das ist echter Prüfercode,
+keine Werkzeugschicht** — die Wächter (`pruefe-syntax.sh`, `pruefe-wortschatz.py`,
+`zaehle-fallen.sh`) waren nie gesperrt, der Übersetzer war es.
+
+| | |
+|---|---|
+| **Was es war** | **Bruch**, nicht Änderung. Die Regel gilt unverändert weiter |
+| **Wodurch** | auf ausdrückliche Ansage, nicht still |
+| **Wo es steht** | [`MESSUNGEN.md`](MESSUNGEN.md) P2, im ersten Absatz; [`TODO.md`](TODO.md); und ab jetzt hier |
+| **Was es gekostet hat** | **P2 und P3 können die These nicht mehr *vor* dem Übersetzerbau töten.** Die Reihenfolge war so gebaut, dass jede Stufe das Ergebnis der vorigen verbraucht — diese Kette ist an einer Stelle durchtrennt |
+| **Was es eingebracht hat** | die Messungen in [`MESSUNGEN.md`](MESSUNGEN.md) ab P2: 1 von 6 Fragmenten, elf Grammatikbefunde, die Wortschatzkollision, 16 gefundene Unsoundness-Löcher, die Kostenzahlen |
+
+**Die Lehre ist nicht „der Bruch war falsch"** — er war eine Entscheidung mit Ertrag, und der
+Ertrag steht gemessen da. **Die Lehre ist, wo er gebucht wurde:** er stand als Absatz *in der
+Messung, die von ihm profitierte*, und nirgends sonst. Eine gebrochene Regel gehört dorthin,
+wo man sie sucht, wenn man dem Ordner misstraut — und das ist diese Datei.
+
+> **Und die Form, in der es beinahe verschwunden wäre:** in [`BEWEIS.md`](BEWEIS.md) stand noch
+> *„Gabbro hat keine Zeile Übersetzer"*. Der Satz ist falsch geworden, und ihn **auf den neuen
+> Stand zu ziehen** wäre die bequeme Bewegung gewesen — die Behauptung glattziehen statt den
+> Baum befunden. Das ist wörtlich die Klasse aus Commit `5904cae` („die vorige Commit-Nachricht
+> beschrieb drei Änderungen, die nicht ausgeführt wurden"). Die Stelle führt jetzt **den
+> Regelstatus mit, nicht nur die Tatsache**.
+
 ## Die übrigen, kürzer
 
 | Was | Fassung, die fiel | was stattdessen gilt |

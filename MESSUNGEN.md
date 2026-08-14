@@ -1711,3 +1711,56 @@ sonst geliehen.** Kein fuenfter Mechanismus, kein neues Wort, keine Grammatikaen
 > anderen fuenf Fragmente genauso, und es ist ein Grund mehr, sie nachzuziehen.
 
 **Damit ist der letzte Entwurfsposten vor dem M2-Pass weg.** Was fehlt, ist nur noch der Pass.
+
+
+---
+
+# Die 200 000 ausgezaehlt — die Zahl, auf der Gabbros ganze These ruht
+
+**2026-08-14, gemessen statt geschaetzt.** `l4v` bei `f4940273` (2026-08-08), flacher Klon,
+Zeilen in `*.thy`. **Eine Architektur (ARM)**, damit die Zahlen vergleichbar sind: der Baum
+traegt heute fuenf, und ein Gesamtzaehler ueber `proof/` (861 309) misst die Architekturzahl
+mit statt den Beweisaufwand.
+
+| Posten | Verzeichnis | Zeilen | Anteil |
+|---|---|---|---|
+| **Invariantenerhaltung** ueber dem abstrakten Modell | `proof/invariant-abstract` (neutral + ARM) | **76 873** | **32,1 %** |
+| **Verfeinerung** abstrakt → ausfuehrbar | `proof/refine` | **95 915** | **40,1 %** |
+| **Verfeinerung** ausfuehrbar → C | `proof/crefine` | **66 670** | **27,8 %** |
+| **funktionale Korrektheit, ARM** | | **239 458** | 100 % |
+
+Dazu, **oben drauf und getrennt**:
+
+| | | |
+|---|---|---|
+| Sicherheitssaetze (Posten 5) | `proof/infoflow` + `proof/access-control` | **56 323** = **+23,5 %** |
+| C-Semantik (Posten 2) | `tools/c-parser` | 86 891 |
+| Binaerverifikation (Posten 4) | `tools/asmrefine` | 10 651 |
+| abstrakte Spezifikation | `spec/abstract` (neutral + ARM) | 10 280 |
+| ausfuehrbare Spezifikation | `spec/design` | 7 695 |
+
+> **Die bestaetigte Zahl haelt.** `TODO.md` fuehrt „Beweise im `l4v`-Repo ~200 000" als
+> nachgeprueft; gemessen sind es **239 458 fuer die funktionale Korrektheit einer
+> Architektur**. Groessenordnung und Zuschnitt stimmen — die Zahl war richtig, sie war nur
+> **unaufgeschluesselt**, und die Aufschluesselung ist das, woran Gabbros These haengt.
+
+## Was die Aufteilung fuer Gabbro sagt — und sie sagt drei verschiedene Dinge
+
+**Gabbros Argument lautet: die Verfeinerung faellt weg, weil Spezifikation und Implementierung
+dieselbe Sprache sind.** Das sind **67,9 %**. Aber die drei Drittel verhalten sich verschieden:
+
+| | Anteil | was Gabbro damit macht |
+|---|---|---|
+| **abstrakt → ausfuehrbar** | **40,1 %** | **faellt strukturell weg.** Eine Schicht statt zwei — das ist die Low\*-Anordnung und der belastbarste Teil der These |
+| **ausfuehrbar → C** | **27,8 %** | **wird nicht wegbewiesen, sondern wegvertraut.** Die flache Absenkung ist eine Zusage; `BEWEIS.md` bucht `restrict` und `volatile` als Vertrauen. Zurueckholbar nur ueber Posten 4 — und **das Werkzeug dafuer ist klein** (10 651 Zeilen), der Beweis nicht |
+| **Invariantenerhaltung** | **32,1 %** | **faellt NICHT mit den Schichten.** Amortisierbar ueber `table … ops`, aber **nur wo alle Mutationen erzeugt sind** — die K-Bedingung des Messprotokolls. Wieviele Traeger das erfuellen, ist **nie gezaehlt worden** |
+| **Sicherheitssaetze** | **+23,5 %** | **gar nicht adressiert** (Posten 5) |
+
+> **Damit ist „die 19,5 : 1 nimmt Gabbro weg" auf eine pruefbare Form gebracht:**
+> **40 % strukturell, 28 % ins Vertrauen verschoben, 32 % bleiben als Invariantenarbeit** —
+> und die 32 % sind genau der Posten, dessen Amortisation an einer Bedingung haengt, die
+> niemand gemessen hat.
+
+**Die Kennzahl-Vorhersage aendert sich damit nicht, ihre Begruendung schon:** wer 0,5 : 1
+erwartet, erwartet, dass die 32 % vollstaendig amortisieren **und** die 28 % vertrauenswuerdig
+sind. Beides ist heute unbelegt.
