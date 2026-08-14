@@ -626,58 +626,34 @@ benutzerdefinierte Quantorendomaenen · Rekursion in `spec fn` · handgeschriebe
 
 ---
 
-## Offene Punkte — Stand 2026-08-14, nach zwei Messrunden
+## Offene Punkte — Stand 2026-08-14, nach der Festlegung
 
-### Entschieden, mit Zahl
+**Die neun Entwurfsfragen sind in [`FESTLEGUNG.md`](FESTLEGUNG.md) §18 entschieden (F1–F9).**
+Was hier steht, ist, was danach **noch offen** ist — und das sind Messungen, keine Entwuerfe.
 
-- [x] **Generizitaet** — **16 von 62** Vorkommen sind echt polymorph, **alles** auf `Slab`/`SpinLock`;
-      **0 von 6** Traits polymorph. Beide Konstrukte existieren bereits. **Damit entfaellt der
-      Widerspruch zu M-Gold-2** (Monomorphisierung als erste nicht-flache Absenkung) — er trat nie ein.
-- [x] **Versionsevolution** — **0 von 11** Formatwechseln in Caprock waren Migrationen. **Absage**
-      ist die Vorgabe, Migration entfaellt.
-- [x] **`costs`** — **Zyklen entfallen**, `costs` zaehlt **Operationen**. D10 woertlich: „eine
-      Iterationszahl ist eine Eigenschaft des Programms, eine Zeitmessung nicht."
+### Die eine Messung, an der die Festlegung haengt
 
-### Offen, und nach Schwere
+- [ ] **Die 74-Pflichten-Messung gegen diese Fassung wiederholen: haengende Klempnerei 19 → 0.**
+      Das ist die **Abnahme** der Festlegung, nicht ihre Zustimmung. Bleibt eine haengen, ist sie
+      an dieser Stelle widerlegt — mit Klasse und Fundstelle.
 
-- [ ] **Wieviele der 17 gemessenen Logik-Pflichten braeuchten `by induction over`?** Wieviele
-      kaemen ohne aus, wieviele braeuchten rekursive `spec fn` oder gar Lemmata?
-      **Ein einziger Fall in der letzten Spalte setzt die Decke wieder tiefer** — und es ist
-      dieselbe Messung, die als Falsifikator der L3-Entscheidung ansteht.
-- [ ] **19 haengende Klempnerei-Pflichten in 11 Klassen** ([`LOGIK-KLEMPNEREI.md`](LOGIK-KLEMPNEREI.md)).
-      **Das ist der Hauptposten.** Nach der Entscheidung vom 2026-08-14 ist fuer jede das Konstrukt
-      zu entwerfen, das sie abnimmt.
-- [ ] **54 relationale Vorbedingungen** (`if a >= b { a - b }`) — eine Beziehung zwischen **zwei**
-      Variablen, die ein Intervalltyp nicht tragen kann. **Der groesste Einzelposten**, und er hat
-      mein `narrow`-Ergebnis zurueckgenommen.
-- [ ] **Ein PTE ist zugleich Zeiger UND Bitfeld** — dafuer gibt es kein Konstrukt, und **daraus**
-      folgt die fehlende achte Quantorendomaene (W^X ueber zwei Ebenen, `mmu.rs:1283`, im Kernel
-      gefahren). **Die Wurzel, nicht die Domaene, ist zu entwerfen.**
-- [ ] **`per_pass` ist ein Ritual.** Es braucht **`on_exceeded` wie `retry`** (heute fehlt es —
-      D11 woertlich) und eine Antwort auf: **zaehlt Sperrwartezeit mit?** Zaehlt sie, ist die
-      Klausel fuer jede sperrende Schleife unerfuellbar; zaehlt sie nicht, sagt sie nichts.
-- [ ] **`publishes` sitzt an der Deklaration, die Nutzlast entsteht am Store.** Selbstbezuegliche
-      Faelle (`FP_OWNER[core]`) sind nicht schreibbar, und die sicherheitskritischste
-      Veroeffentlichung im Baum ist **gar kein Atomic**, sondern ein volatiler Store an ein Geraet.
-- [ ] **`accumulates max` widerspricht sich selbst** — die Absenkung ist eine **unbegrenzte
-      CAS-Schleife**, also emittiert der Uebersetzer, was die Sprache verbietet. **Erster Kandidat
-      fuer „zwei geforderte Eigenschaften widersprechen einander"** — zu zeigen, nicht zu vermuten.
-- [ ] **`break`/`continue` gibt es nicht**, und die Liste „Was es absichtlich nicht gibt" nennt sie
-      nicht. Vermutlich versehentlich; es trifft die Serverhauptschleife.
-- [ ] **`breaking` legalisiert eine Invariantenverletzung.** Preis ist Sichtbarkeit statt
-      Verstecken; ob das reicht, ist unentschieden.
-- [ ] **Ein Streitfall der Trennlinie:** `depleted_count -= 1` ist Klempnerei, faellt aber **nur
-      ueber eine Invariante, die Logik ist**. Vorschlag: dritte Klasse **„Klempnerei, getragen von
-      Logik"** — sonst wird „faellt durch Konstruktion" zur bequemen Buchung.
+### Vier Messlatten, alle vorab gesetzt
 
-### Nicht Grammatik, sondern Beleg — und deshalb der eigentliche Rueckstand
+- [ ] **`narrow`-Zaehlung am Baum: ≤ 24 Fundstellen.** Wachsen sie darueber, ist die Regelmenge
+      V1–V3 zu klein — **und *das* ist die Widerlegung, nicht ein weiteres Regelwachstum in Stille.**
+- [ ] **Wieviele der 17 gemessenen Logik-Pflichten brauchen `by induction over`**, wieviele kommen
+      ohne aus, **wieviele braeuchten rekursive `spec fn` oder Lemmata**? Ein einziger Fall in der
+      letzten Spalte setzt die Decke tiefer.
+- [ ] **Kostenwahrheit je uebersetztem Modul** (Festlegung §14.2): erzeugtes C gegen
+      handgeschriebenes im Differenz-Benchmark.
+- [ ] **Die zehn Fragmente auf diese Syntax ziehen**, Waechter gruen. Sechs liegen in
+      [`FRAGMENTE.md`](FRAGMENTE.md) und sind gegen die **zweite** Fassung geschrieben.
 
-- [ ] **Kein einziges ausgeschriebenes Fragment liegt im Ordner.** Beide Agenten haben welche
-      geschrieben; sie stehen im Scratchpad. **A3, A5, A6 und A7 aus [`FERTIG.md`](FERTIG.md) sind
-      damit bei null** — Treiber, Userspace, Pruefgeruest, und ein Urteil je Caprock-Bereich.
-- [ ] **Die 18 C-Absenkungen aus [`MINIMALSPEZIFIKATION.md`](MINIMALSPEZIFIKATION.md) sind
-      Behauptungen** (A8). Eine ist inzwischen widerlegt gewesen: `offset_into` stand im Wortschatz
-      und in keiner Produktion.
-- [ ] **Die 15 Regeln des Gegenentwurfs sind nur zum Teil eingearbeitet** — `mirrors`,
-      `publishes nothing`, `relaxed`, `old`, `offset_into`, `never`. Die uebrigen neun liegen im
-      Scratchpad.
+### Was auch nach der Festlegung nicht gedeckt ist — benannt, nicht vergessen
+
+- [ ] **Die Naht CPU ↔ Geraet** hat kein mechanisiertes Vorbild ([`MODELL.md`](MODELL.md)).
+- [ ] **Der `iasm`-Eintrittspfad hat keinen nachgelagerten Beweiser** — das Vertrauen schrumpft von
+      161 Fundstellen auf eine Stelle, es verschwindet nicht.
+- [ ] **Lebendigkeit und Fortschritt** faellt unter keinen Mechanismus.
+- [ ] **Die Geistertheorie-Schablonen sind die vertrauenskritischste Flaeche** und gehoeren einmal
+      nach Isabelle ([`BEWEISER.md`](BEWEISER.md), Stufe 1).

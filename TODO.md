@@ -1,5 +1,12 @@
 # Gabbro — offene Punkte
 
+> **Seit [`FESTLEGUNG.md`](FESTLEGUNG.md) (2026-08-14) sind die neun Entwurfsfragen entschieden.**
+> Was hier steht, ist ueberwiegend **Messung**, nicht Entwurf.
+
+- [ ] **DIE ABNAHME DER FESTLEGUNG: die 74-Pflichten-Messung wiederholen, haengende Klempnerei
+      19 → 0.** Abnahme ist nicht Zustimmung. Bleibt eine haengen, ist die Festlegung an dieser
+      Stelle widerlegt — mit Klasse und Fundstelle.
+
 **Ausschliesslich Offenes.** Erledigtes steht in den Entwurfsdateien, Widerlegtes in
 [`HISTORIE.md`](HISTORIE.md). Die Reihenfolge folgt [`PLAN.md`](PLAN.md).
 

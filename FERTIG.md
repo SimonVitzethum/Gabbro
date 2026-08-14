@@ -24,7 +24,7 @@ Uebersetzer. Ein autonomer Lauf ohne benannte Ziellinie ist dasselbe Muster mit 
 | | Bedingung | pruefbar durch | Stand |
 |---|---|---|---|
 | **A1** | Die Grammatik ist **geschlossen**: kein benutztes, nie definiertes Nichtterminal | `./pruefe-syntax.sh` | **erfuellt** (100 Regeln, 0 offen) |
-| **A2** | Alle offenen Punkte am Ende von `SYNTAX.md` sind **entschieden oder gemessen** — nicht „spaeter" | Auszaehlen | **1 von 9** (`narrow`, gemessen) |
+| **A2** | Alle offenen Punkte sind **entschieden oder gemessen** | Auszaehlen | **erfuellt** — `FESTLEGUNG.md` §18 entscheidet F1–F9; was bleibt, sind Messungen |
 | **A3** | **Jeder Caprock-Bereich hat ein Urteil** — ausdrueckbar / braucht Konstrukt X / nicht ausdrueckbar —, **je mit einem ausgeschriebenen Fragment als Beleg** | `FRAGMENTE.md` | **6 von 10** — Scheduler, MMU, Lader, Parser/Checkpoint fehlen |
 | **A4** | Der **Logik/Klempnerei-Split** ist an mindestens fuenf Fragmenten gemessen, und **keine Klempnerei-Pflicht bleibt unbenannt haengen** | `KRITERIUM.md` | **nie gemessen** |
 | **A5** | Ein **Treiber** ist vollstaendig ausgeschrieben | `FRAGMENTE.md` | **erfuellt, mit Befund** |
