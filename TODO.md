@@ -89,15 +89,51 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 - [x] **P3 — M1 + V1–V3: GEFAHREN 2026-08-14** ([`MESSUNGEN.md`](MESSUNGEN.md)). Bereichstypen,
       Konstantenauswertung, die drei Flussregeln, dazu `beispiele/` (8 saubere Dateien,
       871 Zeilen) und `beispiele/gift/` (15 Dateien, jede mit ihrem Code).
-      **Der Beleg ist nicht der Testlauf: der Pass hat Befund «B29» an `space.rs:248`
-      unabhaengig wiedergefunden** — dieselbe Zeile, die im August von Hand eingetragen wurde.
-      Deckung ueber dem Beispielkorpus: **91 %**, und die Zahl steht neben jedem Lauf.
+      Der Pass faellt an Befund «B29** (`FRAGMENTE.md:248`, Rust-Original
+      `space.rs:1067`) — *ein bestandener Regressionstest auf den Fall, der ihn motiviert
+      hat, nicht mehr* (berichtigt, s. [`MESSUNGEN.md`](MESSUNGEN.md)). Deckung ueber dem
+      Beispielkorpus **91 %** — und **Deckung heisst „hat einen Typ", nicht „wurde
+      geprueft"**.
 - [x] **P2 — Lexer und Parser: TEIL 1 GEFAHREN 2026-08-14** ([`MESSUNGEN.md`](MESSUNGEN.md)).
       Der Uebersetzer steht in `crates/` (sicheres Rust, `forbid(unsafe_code)` mit Sprechprobe,
       keine fremde Abhaengigkeit), die 121 EBNF-Regeln sind implementiert, drei der neun
       Pruefpaesse sind gebaut. **Das Tor faellt: 1 von 6 Fragmenten parst, 8 von 32
       Uebersetzungseinheiten im ganzen Ordner.** *Die Reihenfolgeregel „keine Prueferzeile vor
       dem Ergebnis von 2" ist damit verletzt — auf Ansage, und der Preis steht in der Messung.*
+
+## Aus der Gegenpruefung (2026-08-14) — was noch offen ist
+
+- [ ] **Modulaufloesung fehlt, und M1 loest trotzdem auf.** Signaturen, Typen und Konstanten
+      sind nach **blankem Namen** verschluesselt; ein gleichnamiges `fn` oder `type` in einem
+      anderen Modul verdeckt die Deklaration und **loescht die Bereichspruefung
+      stillschweigend**. Pass 3 steht deshalb als `Teilgebaut` in der Liste.
+      **Das ist der naechste Pflichtposten am Pruefer**, vor jedem neuen Pass.
+- [ ] **Der `effects`-Pass sieht nie einen Rumpf.** Geprueft wird die Deklaration
+      (Anwesenheit, `pure` allein, `diverges`); `effects { pure }` ueber einer Funktion, die
+      schreibt, kommt durch. Pass 8 steht als `Teilgebaut`. **Der Rumpfabgleich ist der Pass,
+      den `SPRACHE.md` §7 eigentlich meint.**
+- [ ] **Es fehlt die Testart, die Loecher findet.** 48 Proben, beide Richtungen, alle gruen —
+      und sechzehn Ueberlaeufe kamen durch. Was fehlt, ist ein Test, dessen Fehlschlag
+      *„ein echter Ueberlauf wurde uebersehen"* bedeutet. Der Giftkorpus (15 → 25) sammelt
+      nur, was **eine** Gegenpruefung fand; die naechste findet anderes.
+      **Kandidat: eine Mutationsprobe auf den Pruefer selbst** — dieselbe Forderung, die der
+      Ordner an die Annotationsemission stellt.
+- [ ] **`cast` ist aus der Grammatik nie eindeutig ableitbar** (`cast = path "(" expr ")"`
+      ist echte Teilmenge von `call`), und der Erreichbarkeitswaechter sieht das nicht, weil
+      er auf Nichtterminalebene arbeitet. **G9.**
+- [ ] **Das `forever`-Beispiel in [`SYNTAX.md`](SYNTAX.md) §8 parst nicht** — es schreibt
+      `bounded 4096 cycles` statt `ops` und laesst das pflichtige `on_exceeded` weg. **G10.**
+- [ ] **`SYNTAX.md` §5 sagt „Sieben Domaenen, geschlossen"** und zaehlt acht auf. **G11.**
+- [ ] **Die Etiketten G1–G8 kollidieren** mit einer aelteren Messung in
+      [`MESSUNGEN.md`](MESSUNGEN.md), die G1/G2/G3/G5 fuer etwas anderes vergibt.
+- [ ] **Der Parser ist an sechs Stellen laxer als die EBNF**: `pub` an 13 Item-Arten, die es
+      nicht fuehren · Wortschatzwoerter als Namen nach `::`, in `reaches … via` und in
+      `chain(a,b)` (drei Stellen, die der eigene Dateikopf **nicht** freistellt) · `mut` und
+      Typannotation an `let … else` · `exhaustive` und `mirrors` an beliebiger Stelle ·
+      `reg … fields` ohne Schlusskomma, waehrend `slotdecl` es erzwingt · `type T = { };`
+      wird zum leeren **Summen**typ statt zum leeren Verbund.
+      **Und an einer Stelle strenger:** `pub const` im `table`-Rumpf faellt, obwohl es
+      ableitbar ist.
 
 ## Aus P2 — was der Parser gefunden hat und was jetzt zu entscheiden ist
 
