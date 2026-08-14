@@ -15,7 +15,7 @@ Die Unterscheidung ist die ganze Ehrlichkeit dieses Ordners.
 | **1** | **Speichersicherheit** — kein Zugriff ausserhalb, kein Gebrauch nach Freigabe, kein Alias, der eine Zusicherung bricht | **Gabbro beweist es selbst** — unter benannten **Hardware-Annahmen** und unter Vertrauen in Prüfer und Absenkung |
 | **1b** | **Unsicherer Bootcode läuft nach dem Boot nie wieder** | **beweisbar, zweistufig**: eine **lineare** Marke (nicht kopierbar — das kann Rust nicht) *und* der `.boot`-Abschnitt wird im selben Zug abgebildet. Falsifizierbar: eine Sonde dorthin muss faulten |
 | **2** | **Rennfreiheit** — Datenrennen **und** Protokollrennen | **später, aber JETZT eingeplant.** Nachträglich ändert sich jede Signatur, die geteilten Zustand anfasst |
-| **3** | **Funktionale Korrektheit (Gold)** | **Gabbro beweist sie NICHT — es macht sie billig.** Und zwischen „gute Beweispflichten" und Gold liegt **nicht die letzte Meile, sondern der Weg**: Maschinenmodell, Speichermodell, Beweiser und Anfang fehlen ganz ([`GOLD-LUECKE.md`](GOLD-LUECKE.md)) |
+| **3** | **Funktionale Korrektheit (Gold)** | **Auf diesem Weg NICHT erreichbar — und das ist seit dem 2026-08-14 gemessen, nicht vermutet** ([`BEWEISER.md`](BEWEISER.md)). Die sieben Quantorendomänen fallen **nicht** in eine entscheidbare Theorie; kein SMT-Löser führt Induktion; programm-spezifische Induktion ist ausgeschlossen. **Die Decke ist: Sicherheitshülle plus deklarierte Invarianten aus einer endlichen Schablonenbibliothek** |
 
 > **Zusage 1 gilt nur relativ.** „Speichersicher" heisst für einen Kernel notwendigerweise
 > *speichersicher, WENN die MMU tut, was ihr Modell sagt* — der Kernel schreibt seine eigenen
@@ -71,6 +71,7 @@ andere ist ausdrücklich Absicht.
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`BEWEISER.md`](BEWEISER.md) | **L3 und L4 entschieden — und die Decke benannt**: Gold im seL4-Sinn ist auf diesem Weg nicht erreichbar. Drei Arten Pflichten statt einer, Zertifikatsprüfer statt Löser im Vertrauen |
 | [`MODELL.md`](MODELL.md) | **L1 und L2 entworfen**: 106 Axiome (~130 Namen), RC11 ohne SC — und **die 20 arch-neutralen Axiomfamilien stehen schon im Baum**, ohne so zu heissen |
 | [`FRAGMENTE.md`](FRAGMENTE.md) | **sechs Caprock-Bereiche in Gabbro ausgeschrieben**, mit Herkunft und Urteil: 0 passen unverändert, 4 mit Befund, **2 gar nicht** — 31 Befunde, davon 7 in der Grammatik selbst |
 | [`GOLD-LUECKE.md`](GOLD-LUECKE.md) | **was für Gold fehlt, ausser Logik und Ausdruckskraft** — sechs Posten, vier davon je ein Teilprojekt: **Maschinenmodell, Speichermodell, Beweiser, Anfang** |

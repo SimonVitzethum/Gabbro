@@ -51,7 +51,9 @@ nebenlaeufig: **2 231 `Ordering::`-Fundstellen**, davon 872 in einer einzigen Da
 
 ---
 
-## L3 — Ein BEWEISER. Gabbro erzeugt Pflichten und erfuellt keine
+## L3 — **ENTSCHIEDEN 2026-08-14** ([`BEWEISER.md`](BEWEISER.md)): drei Arten Pflichten, Schablonen nach Isabelle, Programmpflichten ueber einen **Zertifikatspruefer**. **Und die Decke: Gold im seL4-Sinn ist auf diesem Weg nicht erreichbar**
+
+### Die urspruengliche Fassung der Luecke
 
 Der Typpruefer erledigt **Klempnerei**. Die **Logik**-Pflichten — `ensures`, `maintains`,
 `invariant` — erzeugt Gabbro und **niemand entlaedt sie**.
@@ -65,7 +67,9 @@ Frueher stand dafuer „ein vorhandener Beweiser" (Verus/GNATprove/Frama-C). **M
 
 ---
 
-## L4 — Die Entsprechung Gabbro ↔ C ist BEHAUPTET
+## L4 — **ENTSCHIEDEN 2026-08-14**: es sind **drei** Absenkungen, nicht eine; Deckungszeugnis je Lauf; und der unbenannte Riss ist **welches C** ([`BEWEISER.md`](BEWEISER.md))
+
+### Die urspruengliche Fassung der Luecke
 
 „Syntaxgesteuert und nicht optimierend" ist die Bedingung, unter der die Verfeinerung billig wird.
 **Nichts prueft sie.** Der Beweis liegt auf der Quelle, ausgeliefert wird das C — dass beide
