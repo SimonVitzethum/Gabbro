@@ -873,3 +873,71 @@ Posten 1 ist zur Haelfte da.**
       wird die Absenkung von einer Zusage zu einer pruefbaren Aussage? Das steht in
       [`BEWEIS.md`](BEWEIS.md) als L4 und ist der einzige Posten, an dem Gabbro **strukturell**
       hinter seL4 zurueckliegt statt nur an Reife.
+
+
+---
+
+# Die Leistung des erzeugten C — was gemessen ist (nichts) und was folgt
+
+**2026-08-14.** Der Ordner hat dazu eine **Tabelle mit Behauptungen** (Festlegung §14.2) und
+**keine Messung**. Hier steht, was daraus folgt, getrennt nach Richtung — und der Posten, den die
+Tabelle **nicht** nennt.
+
+## Wo es schneller sein sollte als der heutige Rust-Kernel
+
+| | Grund | Zahl |
+|---|---|---|
+| **Bereichspruefungen** | Rust prueft **jede** Indizierung, ausser LLVM kann sie wegoptimieren. **Caprock umgeht das nirgends** — nachgezaehlt: **0** `get_unchecked`, **0** `unreachable_unchecked`, **0** `assert_unchecked`. Gabbro **beweist** und emittiert **keine** | **1 398** variable Indizierungen im Baum |
+| **`accumulates`** | Zelle je Kern plus Merge beim Lesen statt CAS-Schleife | gemessen an `sync:572–592` **strikt besser als das Original**, das dort zusaetzlich eine hingenommene Rennstelle hat |
+| **`transition`/`mirrors`** | **ein** Store mit konstanter Maske statt Lesen-Aendern-Schreiben | je Geraeteuebergang |
+| **Geister, Vertraege, `check`** | verschwinden vor der Codeerzeugung; `check` uebersetzt nur unter `when TESTBUILD` | **0 Bytes** |
+
+## Wo es gleich sein sollte
+
+Bereichstypen → nackter C-Typ · `tagged`+`match` → Union mit Marke, `switch` · `traverse` → `for`
+ohne Bound-Checks · `format`-Leser → Zugriffe **nach einer** Laengenpruefung · `lock`/`locks` → die
+vorhandene Primitive.
+
+## Wo es LANGSAMER sein wird — und die Tabelle nennt es nicht
+
+### 1. Die Schleifenschranken kosten einen Zaehler, den es vorher nicht gab
+
+`retry`/`forever` verlangen `bounded N ops`. **Eine Warteschleife, die heute ohne Zaehler spinnt,
+bekommt einen** — Inkrement und Vergleich je Durchgang. Bei einer umkaempften Sperre ist das
+messbar. Gemessen: **96 `spin_loop`-Hinweise** im Baum, **2** rohe `loop {` allein in
+`caprock-sync`.
+
+- [ ] **Abhilfe, entwerfbar und noch nicht entworfen:** die Schranke muss nicht **je Durchgang**
+      geprueft werden. Ist sie eine **Watchdog**-Schranke (und das ist sie, denn `progress` traegt
+      die Terminierung), genuegt eine Pruefung **alle 2^k Durchgaenge** — Kosten fallen auf
+      ~1/2^k, die Zusage bleibt „bricht nach hoechstens N + 2^k". **Das gehoert entschieden, bevor
+      der erste Benchmark laeuft**, sonst misst er ein Konstrukt, das niemand so bauen wuerde.
+
+### 2. `restrict` ist jetzt standardmaessig AUS
+
+Der UB-Transfer wird nur bezahlt, wo der Differenz-Benchmark ihn verlangt. **Der Preis dafuer ist
+konservativerer C-Code an genau den Stellen**, wo Handschrift `restrict` gesetzt haette — und das
+sind die kopierenden Pfade, also die heissen.
+
+### 3. Der strukturelle Posten: **flach absenken und schnell sein stehen in Spannung**
+
+**„Syntaxgesteuert, nicht optimierend" ist die Bedingung, unter der die Verfeinerung billig wird**
+(M-Gold-2) — und sie heisst: **der Emittent restrukturiert nicht.** Wo ein Mensch eine Schleife
+verschmolzen, eine Berechnung hochgezogen oder eine Staerke reduziert haette, emittiert Gabbro die
+naive Form und **verlaesst sich auf den C-Uebersetzer**.
+
+> **Der Ordner hat diese Spannung bisher nur auf der Korrektheitsseite bepreist.** Auf der
+> Leistungsseite ist sie ungepreist: **die Absenkung ist eine Wette darauf, dass LLVM/GCC die
+> Form, die Gabbro erzeugt, gut behandelt.** Ob das stimmt, weiss niemand — es haengt an der
+> Formentabelle, die noch nicht geschrieben ist.
+
+## Was es entscheidet — und es ist nicht diese Datei
+
+**Der Differenz-Benchmark je Modul** (P3/P5-Tor): erzeugtes C gegen handgeschriebenes, Ausloesung
+bei „erzeugt langsamer als Handschrift plus Messrauschen". **Bis dahin ist jede Zahl hier eine
+Erwartung.**
+
+**Die ehrliche Zusammenfassung in einem Satz:** *In den Zaehl- und Zugriffspfaden sollte das
+erzeugte C schneller sein als der heutige Rust-Kernel, weil 1 398 Bereichspruefungen entfallen; in
+den Wartepfaden zunaechst langsamer, bis die Schrankenpruefung amortisiert ist; und ueber alles
+haengt eine ungepreiste Wette auf den C-Uebersetzer.*

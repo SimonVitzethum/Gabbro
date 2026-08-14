@@ -1,5 +1,16 @@
 # Gabbro — offene Punkte
 
+## Leistung — zwei Posten, beide vor dem ersten Benchmark
+
+- [ ] **Die Schrankenpruefung amortisieren:** `bounded N ops` muss nicht je Durchgang geprueft
+      werden. `progress` traegt die Terminierung, die Schranke ist ein **Watchdog** — eine Pruefung
+      **alle 2^k Durchgaenge** senkt die Kosten auf ~1/2^k, die Zusage wird „bricht nach hoechstens
+      N + 2^k". **Vor dem ersten Benchmark entscheiden**, sonst misst er ein Konstrukt, das niemand
+      so bauen wuerde.
+- [ ] **Die Spannung flach-absenken gegen schnell ist ungepreist.** Der Ordner hat sie nur auf der
+      Korrektheitsseite bezahlt; auf der Leistungsseite ist die Absenkung eine **Wette auf den
+      C-Uebersetzer**, und sie haengt an der ungeschriebenen Formentabelle.
+
 ## Die Reihenfolge, billig zuerst — drei Dokumente laufen auf EINE fehlende Zahl zu
 
 1. **Die fuenf Scratchpad-Klassen ins Repo.** Sie entsperren das 19→0-Tor, das sonst
