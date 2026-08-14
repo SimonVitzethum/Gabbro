@@ -211,10 +211,14 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "gruppe.ops",
         konstrukt: "Gruppen-ops ueber mehreren Tabellen (Kandidat, aus «B13»)",
         pflicht: "Die Verbindungs-Invariante der Gruppe bleibt unter jeder Gruppenoperation \
-                  erhalten — **und zwar unter dem deklarierten Sperrabdruck der Operation**, \
-                  nicht sequenziell. Auf einem Mehrkerner ist das die eigentliche Pflicht.",
+                  erhalten -- und zwar unter dem deklarierten Sperrabdruck der Operation, \
+                  nicht sequenziell. Auf einem Mehrkerner ist das die eigentliche Pflicht. \
+                  **Diese Schablone hat als einzige eine VORLAGE statt eines leeren Blatts**: \
+                  Verification/capability-system/proofs/cap_space.rs fuehrt cap_inv als EINE \
+                  spec fn ueber den Klauseln 1-7 und beweist je Operation die Erhaltung ALLER \
+                  zugleich -- die Schablone haette das zu ERZEUGEN statt zu erfinden.",
         stand: Stand::Entworfen,
-        fundstelle: "TODO.md, Gruppen-Pruefsatz",
+        fundstelle: "MESSUNGEN.md, Papiertest CapSpace/CDT, 2026-08-14",
     },
 ];
 

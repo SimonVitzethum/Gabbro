@@ -141,25 +141,48 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
         Prueffall fuer `locks ordered` — billiger als das ganze Scheduler-Fragment**, und der
         Scheduler tritt danach mit einem **getesteten** statt einem vermuteten Sperrkonstrukt an.
 
-## Kandidatenkonstrukt `locks ordered` — und es muss WIDERLEGBAR bleiben
+## Aus dem Papiertest vom 2026-08-14 — ein toter und zwei lebendige Kandidaten
 
-- [ ] **`locks ordered (a, b) { … }` als dritter Ausgang fuer adressgeordnetes Sperren.**
-      Zwei Sperren derselben Klasse zugleich zu halten waere **nur** in dieser Form
-      schreibbar; die Erzeuger-Schablone sortiert nach Adresse und nimmt in dieser Reihenfolge,
-      beide `Held`-Zeugen entstehen im Block. **Das Deadlock-Argument ist syntaktisch
-      entscheidbar, ohne Loeser:** innerhalb einer Klasse laufen alle Mehrfachnahmen durch die
-      geordnete Form (Totalordnung ueber Adressen, kein Zyklus), zwischen Klassen gelten die
-      statischen Raenge — dieselbe Zweiteilung, die der Rang schon hat, eine Ebene feiner.
-      * **Der Preis ist benannt:** beide Nahmen muessen **lexikalisch gemeinsam** stehen. Zwei
-        Sperren derselben Klasse, an verschiedenen Stellen zu verschiedenen Zeiten genommen,
-        bleiben verboten.
-      * **DIE PRUEFZEILE, und sie muss das Konstrukt TOETEN koennen:** steht im echten
-        Scheduler-Code **jede** Mehrfachnahme lexikalisch gemeinsam? **Jede Fundstelle, wo sie
-        es nicht tut, ist ein Gegenbeispiel** und gehoert als solches ins Fragment — *vor* dem
-        Wort in die Grammatik. Das ist die `by consuming`-Lehre in der Reihenfolge, in der sie
-        beim zweiten Mal billiger ist: erst der Papiertest gegen den Baum, dann die Syntax.
-      * **Kein Entwurfstext vor dem Fragment**, und das Fragment steht im **dritten** Schritt
-        der Reihenfolge oben — es ueberholt die zwei billigeren Messungen nicht.
+> **Ein Kandidat ist am 2026-08-14 gestorben und steht deshalb NICHT mehr hier:**
+> `locks ordered` — null Prueffaelle im Baum. Der Nachruf steht in
+> [HISTORIE.md](HISTORIE.md), die Messung in [MESSUNGEN.md](MESSUNGEN.md).
+> *Diese Datei fuehrt ausschliesslich Offenes; ein gestorbenes Konstrukt ist kein erledigter
+> Punkt, sondern ein Bruch mit der eigenen Absicht — und der gehoert in die Historie.*
+
+- [ ] **L-A — `locks shared`: die Sprache kennt keine geteilte Sperrnahme, und das trifft den
+      meistgelaufenen Pfad des Kernels.** `lock`/`locks` und `Held` sind exklusiv gedacht; die
+      heisseste Sperre ist ein **Reader-Writer**-Lock (`static CAPS: RwSpinLock<Caps>`), und
+      die Cap-Aufloesung nimmt sie **geteilt** — **33 `read()`-Stellen gegen 44 `write()`**.
+      Ohne das Konstrukt ist dieser Pfad **nicht schreibbar**.
+      * **Die Form ist mechanisch pruefbar:** `Held` geteilt heisst *liest die geschuetzten
+        Plaetze, schreibt sie nicht* — und das haelt der Wirkungspass gegen die Effektmenge
+        des Blocks, mit derselben Mechanik wie `E006`.
+      * **Voraussetzung fuer die Gruppen-`ops`:** ohne sie koennen die ihren echten
+        Sperrabdruck (Mutation exklusiv, Aufloesung geteilt) gar nicht deklarieren.
+      * **KONSTRUKTLUECKE ERSTER ORDNUNG, und sie stand auf keiner Liste.**
+- [ ] **L-B — `ghost Stale(T)`: Uebergabe mit Neuvalidierung. Kandidat, kein Beschluss.**
+      Das Muster, das Doppelnahme **ersetzt**: unter Sperre A waehlen, freigeben, unter B
+      fortsetzen, Befund neu pruefen. Die ehrliche Fassung ist **kein Atomizitaetsversprechen,
+      sondern ein Zwang**: ein Wert ueber einer Sperrgrenze verliert seine Fakten (*das tut die
+      Sprache schon*) **und** die Fortsetzung muss die tragende Bedingung erneut pruefen.
+      **Hinter das Scheduler-Fragment — dort liegt seine Messstrecke.**
+- [ ] **N2 — die Ordering-Vollzaehlung braucht eine Spalte „Ordnungsteilnehmer".** `FP_OWNER`
+      ist ein Atomic, das **ausdruecklich Teil der Deadlock-Herleitung** ist. Welche Atomics
+      das sind, entscheidet, ob sie in die Paarung oder in die Sperrordnung gehoeren.
+- [ ] **N3 — `held` braucht einen Zweig fuer Leser-Schreiber-Sperren.** `held <= K ops` ist
+      fuer **exklusive** Halter gedacht; auf der geteilten Seite ist die Rechengroesse die
+      **Writer-Wartezeit unter Leserdruck**, nicht die Haltezeit eines Lesers. **Der Kostenpass
+      rechnet heute nur den exklusiven Fall** — und die Latenzformel aus §9.3 mit ihm.
+
+## An CAPROCK, nicht an Gabbro
+
+- [ ] **N1 — die zwei dokumentierten Sperrordnungen in `system.rs` widersprechen sich.**
+      Kopf (`:11–13`): `… → SCHEDS[*] (R2) → Heap.inner (R3) → MEM (R4, innerster)`, dazu
+      *„`MEM` haelt nie einen weiteren Lock"*. Gegen `:723`: *„`CAPS` < {`EPS[i]`, `NTFNS[i]`,
+      `MEM`} < `SCHEDS[*]` < `FP_STATES`"*. **Entweder ist MEM Blatt oder es hat SCHEDS unter
+      sich — beides zugleich geht nicht.** Entscheiden kann es nur der Code.
+      *Und genau diese Fehlerklasse — zwei Prosaordnungen, die niemand gegeneinander prueft —
+      macht eine deklarierte `rank`-Zeile strukturell unmoeglich.*
 
 ## Die vier Posten zum Ziel — Plan mit Toren in [`PLAN.md`](PLAN.md) §A
 

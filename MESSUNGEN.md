@@ -1911,3 +1911,135 @@ Emissionsflaeche**:
 > misst die **Codehaelfte des Pruefers**; ueber Annotation und Emission sagt es nichts — und
 > `README.md` fuehrt die Annotationsemission ausdruecklich als die Stelle, an der ein
 > stimmig abgeschwaechter Erzeuger **von keinem Beweis** gefangen wird.
+
+
+---
+
+# PAPIERTEST — Gruppe und Sperren am CapSpace/CDT-Paar
+
+**Gefahren 2026-08-14** gegen `arch/x86_64`. Drei Fragen nach Protokoll, drei Antworten, ein
+Urteil ueber ein Kandidatenkonstrukt — und zwei Luecken, die nicht im Auftrag standen.
+
+> **Nachgeprueft, nicht uebernommen.** Jede Fundstelle dieses Protokolls ist gegen den Baum
+> gehalten worden; was dabei dazukam, steht als *nachgetragen* markiert.
+
+## Antwort 1 — die Verbindungs-Invarianten: drei echte, vier strukturelle, und sie sind **schon formalisiert**
+
+`audit_cdt` fuehrt die Liste als Anomalie-Codes 1–7. **K1** (belegter Slot → belegtes Objekt),
+**K2** (`refcount(o)` == Zahl der zeigenden Slots — *das ist «B13» woertlich*) und **K3**
+(belegt ⟺ `refcount > 0`) sind **Verbindungs**-Invarianten; K4–K7 sind strukturell.
+
+**Der Fund, der die Schablonenfrage veraendert:**
+`Verification/capability-system/proofs/cap_space.rs` (**832 Zeilen, nachgeprueft**) fuehrt genau
+diese Liste als **eine** `spec fn cap_inv` (Zeile 56, Konjunktion der Klauseln 1–7, in Verus).
+Der Kopf der Datei sagt die Sache selbst:
+
+> *„Jede Capability-Operation wird bewiesen, `cap_inv` zu ERHALTEN — d. h. eine Operation
+> erhaelt ALLE Invarianten zugleich (anders als die getrennten Pilot-Modelle)."*
+
+**Das ist die Gruppen-Schablone, und sie existiert bereits von Hand.** Damit hat der Eintrag
+`gruppe.ops` eine **Vorlage statt eines leeren Blatts**: die „einmal je Operation"-Beweise
+waeren von der Schablone zu **erzeugen** statt zu erfinden. Und die Uebertragungsrichtung ist
+im Baum belegt — an zwei Stellen war das Audit-Oracle **schwaecher** als die Verus-Invariante
+und wurde nachgezogen. *Die formale Fassung ist die Quelle, das Audit die Projektion.*
+
+## Antwort 2 — die Gruppe existiert schon als Struktur; `by ops` verschaerft eine vorhandene Grenze
+
+**Der CDT ist keine zweite Tabelle:** `Mdb` (parent/first_child/next_sibling/prev_sibling)
+liegt **im Slot**. Das Paar ist `{slots, objects}` — beide Slabs in **einem** `CapSpace`, alle
+Mutationen Methoden ueber `&mut self`, also ueber beiden Traegern zugleich. **Gabbros
+Gruppen-`ops` gibt einer vorhandenen Architektur eine Grammatik, keine neue.**
+
+**Die Schreibstellen des kritischen Felds, einzeln nachgeprueft:**
+
+| Stelle | was | bestaetigt |
+|---|---|---|
+| `space.rs:1018` | `refcount: 1` im Verbundliteral (install) | ja |
+| `space.rs:543` | `+= 1` (copy, von mint mitbenutzt) | ja |
+| `space.rs:1067` | `-= 1`, **Null-Pruefung in :1068 danach** | ja — *das ist «B29»* |
+| *nachgetragen* | `object.rs:191` `refcount: 0` im `EMPTY`-Vorgabewert | keine Mutation eines lebenden Objekts |
+
+`object.rs:182` fuehrt das Feld als `pub(crate)`. **Rusts Sichtbarkeit ist damit das heutige
+`by ops` auf Crate-Ebene — die Grammatikzeile verengt Crate auf Konstrukt, sie erfindet die
+Grenze nicht.**
+
+> **B13-Urteil am Papier bestaetigt:** mit Gruppen-`ops` faellt K2 je Operation; mit `ops` je
+> Einzeltabelle faellt sie nicht. **Der Gruppen-Pruefsatz haelt.**
+
+## Antwort 3 — der Sperrabdruck: EINE Sperre, und von einer Art, die die Sprache nicht kennt
+
+`static CAPS: RwSpinLock<Caps>` (`system.rs:732`, Rang R0, aeusserster). Mutationen nehmen
+`write()` exklusiv, **die heisse Cap-Aufloesung nimmt nur `read()`**. Der Sperrabdruck der
+Gruppenoperationen ist einheitlich; die Frage *„eine gemeinsame oder zwei mit Ordnung"* ist
+beantwortet: **eine, per Architektur.**
+
+*Nachgetragen, weil es L-A beziffert:* **33 `CAPS.read()`-Stellen gegen 44 `CAPS.write()`.**
+
+### Das Urteil: **`locks ordered` stirbt**
+
+Die Pruefzeile war, ob jede Mehrfachnahme derselben Klasse lexikalisch gemeinsam steht. **Die
+Antwort ist staerker: es gibt keine einzige Mehrfachnahme derselben Klasse.** `system.rs:15`
+fuehrt es als Invariante — *„kein Pfad nimmt zwei verschiedene `SCHEDS[*]` gleichzeitig"* — und
+die Migration, der erwartete Prueffall, arbeitet anders: `SCHEDS[src].lock().migration_candidate()`
+(`system.rs:2804`) — **nehmen, waehlen, freigeben**, dann die Zielseite mit Neuvalidierung.
+
+> **Null Prueffaelle — das Wort kommt nicht in die Grammatik.** Kein Konstrukt ohne gemessenen
+> Bedarf; dieselbe Regel, die `abi { … }` gestoppt hat. **Und der Papiertest hat damit genau
+> das getan, wofuer er gebaut war: er hat seinen eigenen Kandidaten getoetet, statt ihn zu
+> bestaetigen.**
+
+## Zwei echte Luecken, die der Test stattdessen fand
+
+**L-A — die Sprache kennt keine geteilte Sperrnahme.** `lock`/`locks` und der `Held`-Zeuge sind
+**exklusiv** gedacht. Die heisseste Sperre des Baums ist ein **Reader-Writer**-Lock, und der
+heisse Pfad ist die geteilte Seite: **33 Fundstellen**. Ohne `locks shared` — *Held geteilt:
+liest die geschuetzten Plaetze, schreibt sie nicht, **mechanisch pruefbar gegen die Effektmenge
+des Blocks*** — ist die Cap-Aufloesung, **der meistgelaufene Pfad des Kernels, nicht
+schreibbar.** Konstruktluecke erster Ordnung, auf keiner Liste.
+
+**L-B — Uebergabe mit Neuvalidierung.** Das Muster, das Doppelnahme **ersetzt**: unter Sperre A
+waehlen, freigeben, unter B fortsetzen, **Befund neu pruefen**. Die ehrliche Fassung ist kein
+Atomizitaetsversprechen, sondern ein **Zwang**: ein Wert, der eine Sperrgrenze ueberquert,
+verliert seine Fakten (*das tut die Sprache schon* — V-Regeln sterben) **und** die Fortsetzung
+muss die tragende Bedingung erneut pruefen. Skizze: die Auswahl liefert `ghost Stale(T)`, das
+erst eine erneute Pruefung unter der neuen Sperre in ein nutzbares `T` wandelt.
+**Kandidat, kein Beschluss.**
+
+## Nebenbefunde — und N1 geht an Caprock, nicht an Gabbro
+
+**N1 — die zwei dokumentierten Sperrordnungen widersprechen sich, und zwar schaerfer als
+beschrieben.** Nachgeprueft:
+
+* `system.rs:11–13`: *„`CAPS` (R0) → `EPS`/… (R1) → `SCHEDS[*]` (R2) → `Heap.inner` (R3) →
+  `MEM` (R4, **innerster**)"* — und dazu **„`MEM` haelt nie einen weiteren Lock"**.
+* `system.rs:723`: *„aussen→innen: `CAPS` < {`EPS[i]`, `NTFNS[i]`, **`MEM`**} < `SCHEDS[*]` <
+  `FP_STATES`"* — **MEM in der Mitte einer Kette, die weitergeht**.
+
+Beides zugleich geht nicht: entweder ist MEM Blatt (Kopf) oder es hat SCHEDS unter sich (:723).
+**Genau diese Fehlerklasse — zwei Prosaordnungen, die niemand gegeneinander prueft — macht eine
+deklarierte `rank`-Zeile strukturell unmoeglich.** *An Caprock zu klaeren.*
+
+**N2 — `FP_OWNER` als „atomares Beiboot" der Sperrordnung.** Der Reschedule-Pfad haelt
+`SCHEDS[core]` „+ atomares `FP_OWNER`" — ein Atomic, das **ausdruecklich Teil der
+Deadlock-Herleitung** ist. Die Grenzziehung *„welche Atomics sind Ordnungsteilnehmer"* gehoert
+in die Ordering-Vollzaehlung als **eigene Spalte**.
+
+**N3 — die RwSpinLock-Beobachtung schaerft die `held`-Rechnung.** `held <= K ops` war fuer
+**exklusive** Halter gedacht; auf der geteilten Seite ist die Rechengroesse nicht die Haltezeit
+eines Lesers, sondern die **Writer-Wartezeit unter Leserdruck**. **Die Latenzformel aus §9.3
+braucht fuer Leser-Schreiber-Sperren einen eigenen Zweig** — und der Kostenpass rechnet heute
+nur den exklusiven Fall.
+
+## Die Sprechprobe, die der Test verlangt hat — gefahren
+
+`beispiele/gift/37-b29-unter-ops.gab` schreibt `zaehler -= 1` von Hand an einer `table` mit
+`ops`. **Dieselbe Zeile faellt zweimal:**
+
+```
+Fehler: [D001] `von_hand_senken` schreibt `Objekte` von Hand, obwohl die Tabelle `ops` nennt
+Fehler: [M104] `o.slots[…].zaehler` -= verlaesst den Bereich: `u32 in 0 .. 65535` gegen `1`
+```
+
+**Die Sprachform und die Messform an derselben Stelle** — `D001` sagt „die K-Bedingung faellt",
+`M104` ist der Unterlauf, der «B13» toedlich aussehen liess. Der K-Bedingungsbericht dazu:
+*1 Traeger, 0 mal haelt K.*

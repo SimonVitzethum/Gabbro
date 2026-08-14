@@ -61,6 +61,36 @@ wo man sie sucht, wenn man dem Ordner misstraut — und das ist diese Datei.
 > beschrieb drei Änderungen, die nicht ausgeführt wurden"). Die Stelle führt jetzt **den
 > Regelstatus mit, nicht nur die Tatsache**.
 
+## Das erste Konstrukt, das der eigene Papiertest getötet hat — `locks ordered`, 2026-08-14
+
+`locks ordered` stand seit dem Mehrkern-Vorstoß auf der Kandidatenliste: eine Grammatikzeile,
+die verlangt, dass jede Mehrfachnahme derselben Sperrklasse lexikalisch gemeinsam steht. Es war
+kein Hirngespinst — es war die Antwort auf einen echten Deadlock-Fall in fremden Kernen.
+
+**Der Papiertest gegen `arch/x86_64` fand null Prüffälle. Nicht wenige. Null.**
+
+Und die Antwort war stärker als die Frage: Es gibt im ganzen Baum **keine einzige
+Mehrfachnahme derselben Sperrklasse.** `system.rs:15` führt es als Invariante, und die
+Migration — der Prüffall, den ich erwartet hatte — arbeitet anders herum:
+`SCHEDS[src].lock().migration_candidate()` nimmt, wählt, **gibt frei**, und validiert die
+Zielseite neu.
+
+**Warum das hier steht und nicht im TODO als Haken:** Ein Konstrukt zu streichen ist kein
+erledigter Punkt. Es ist der Befund, dass ich eine Grammatik nach einer *vermuteten* Not
+entworfen hatte, ohne die Not gezählt zu haben. Dass es billig war, ist Glück: `locks ordered`
+war nie implementiert, es stand auf einer Liste. Die Regel, die es tötet, ist dieselbe, die
+`abi { … }` gestoppt hat — **kein Konstrukt ohne gemessenen Bedarf** — und sie hat diesmal
+funktioniert, weil ich sie vor dem Bauen angewandt habe statt danach.
+
+**Der Ertrag ist größer als der Verlust.** Derselbe Test fand zwei Lücken, die auf keiner
+Liste standen: die Sprache kennt **keine geteilte Sperrnahme** (`locks shared`) — und der
+meistgelaufene Pfad des Kernels, die Cap-Auflösung, nimmt genau so, **33 Fundstellen**. Ich
+hatte ein Konstrukt für einen seltenen Fall entworfen und den häufigen übersehen.
+
+> **Die Form:** Ich messe erst, wenn ich das Konstrukt schon schön finde. Hier war es
+> umgekehrt, und das Ergebnis war eine Löschung plus zwei echte Funde. **Der Test taugt
+> genau so weit, wie er seine eigenen Kandidaten töten darf.**
+
 ## Die übrigen, kürzer
 
 | Was | Fassung, die fiel | was stattdessen gilt |
