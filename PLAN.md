@@ -318,6 +318,34 @@ Sie ist die einzige, die sich nicht durch Umschichten von Text gewinnen lässt:
   danebensteht.
 * **Geschwätziger Code.** Deshalb wird in **Anweisungen** gezählt, nicht in Zeilen.
 
+> **ZWEI WEITERE WEGE, EINGETRAGEN 2026-08-14 — VOR der nächsten Zählung, damit sie als vorab
+> zählen.** Beide haben dieselbe Form wie das schon gebuchte `effects`-fail-open-Loch: *die
+> stärkste Zusage ist zugleich die kürzeste Spezifikation.*
+>
+> **Weg 4 — die Pflicht wandert ins Manifest und verschwindet aus beiden Töpfen.** Die
+> Grundregel sagt: *„Was der Übersetzer ableitet, ist Ausgabe — und zählt in keinem der beiden
+> Töpfe."* Das **Pflichtenmanifest ist abgeleitete Ausgabe**. Also fällt jede Pflicht, die
+> Gabbro **nicht ausdrücken kann**, aus der Kennzahl heraus — und damit gilt:
+> **je schwächer die Prädikatsprache, desto besser die Zahl.**
+> **Regel:** *eine `obligation`-Zeile des Manifests zählt in den **Spezifikationstopf**, mit dem
+> Umfang, den ihre Aussage in Gabbro hätte, wenn die Sprache sie trüge — und wo das nicht
+> abschätzbar ist, wird die Messung als **unvollständig** berichtet, nicht als gut.*
+>
+> **Weg 5 — die Pflicht wird durch ein VERBOT erledigt, und Verbote kostet die Zahl nichts.**
+> Strenge erledigt Klempnerei, indem sie **Programme entfernt**: kein `while`, keine
+> Verschlüsse (89 gemessene Fundstellen), keine Generizität, statische Sperrränge statt
+> adressgeordnetem Nehmen, Tabellen statt Zeigern. Jedes davon **verkleinert den Nenner nicht,
+> sondern die Menge der schreibbaren Programme** — und diese Kosten treten in keinem der beiden
+> Töpfe auf.
+> **Regel:** *neben jeder Kennzahl steht, welche Umschreibungen sie gekostet hat — Fundstelle
+> im Rust-Original gegen Fundstelle in Gabbro. Eine Kennzahl ohne diese Liste ist eine Zahl
+> über dem, was übrig blieb.*
+>
+> **Die K-Bedingung** (*„durch Konstruktion" gilt nur, wenn ALLE Mutationen des Trägers
+> erzeugte Operationen sind*) steht bereits im Messprotokoll für Messung 2 in
+> [`MESSUNGEN.md`](MESSUNGEN.md) — sie gilt für die Kennzahl mit, und sie liefert nebenbei die
+> `breaking`-Liste für L3.
+
 ### Der Boden ist nicht 5 : 1 — er ist die abstrakte Spezifikation, und die ist klein
 
 Die 20 : 1 von seL4 sind **kein einzelner Posten**. Aufgeteilt (Zahlen aus dem Gedächtnis,
