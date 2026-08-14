@@ -29,6 +29,8 @@ pub struct Umgebung {
     pub tabellen: HashMap<String, Vec<(String, Typ)>>,
     /// Tabellenname -> `count N`, wenn die Deklaration sie nennt.
     pub kapazitaeten: HashMap<String, u128>,
+    /// Uebergangsname -> seine festen Kosten (je `placeshift` ein Speichern).
+    pub uebergangskosten: HashMap<String, i128>,
     pub formate: HashMap<String, Vec<(String, Typ)>>,
     pub geraete: HashMap<String, Vec<(String, Typ)>>,
     /// `static`, `atomic`, `accumulates` -- alles, was ohne Deklaration im Rumpf sichtbar ist.
@@ -86,6 +88,10 @@ impl Umgebung {
     /// dann an der Wurzel, zuletzt ueber eine `use`-Zeile. *Ohne diese Ordnung verdeckt ein
     /// gleichnamiges `fn` in einem fremden Modul die Deklaration -- und mit ihr die
     /// Bereichspruefung, still.*
+    pub fn kandidaten_oeffentlich(&self, von: &str, pfad: &str) -> Vec<String> {
+        self.kandidaten(von, pfad)
+    }
+
     fn kandidaten(&self, von: &str, pfad: &str) -> Vec<String> {
         let mut out = Vec::new();
         // Im eigenen Modul und in jedem umgebenden, von innen nach aussen.
@@ -251,6 +257,21 @@ impl Umgebung {
                                 laenge: self.konst_wert(pfad, &b.anzahl).map(|v| v.max(0) as u128),
                             },
                         ));
+                    }
+                    // **Ein `transition` ist aufrufbar** (`wurzel_setzen(v);`), hat aber
+                    // keine `costs`-Klausel in der Grammatik. Seine Kosten stehen fest: je
+                    // `placeshift` ein Speichern, dazu die `requires`-Pruefung.
+                    for t in &d.uebergaenge {
+                        self.uebergangskosten
+                            .insert(q(&t.name.text), t.schritte.len() as i128 + 1);
+                        self.funktionen.insert(
+                            q(&t.name.text),
+                            Signatur {
+                                parameter: Vec::new(),
+                                ergebnis: None,
+                                span: t.span,
+                            },
+                        );
                     }
                     self.geraete.insert(q(&d.name.text), felder);
                 }

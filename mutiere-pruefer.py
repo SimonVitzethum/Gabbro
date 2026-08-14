@@ -288,6 +288,27 @@ MUTATIONEN = [
         "U11 -- Signaturen werden wieder nach blankem Namen aufgeloest",
     ),
     Mutation(
+        "kosten-egal",
+        "kosten.rs",
+        "                if n > zusage {",
+        "                if false && n > zusage {",
+        "K001 -- ein Rumpf darf jede Kostenzusage ueberschreiten",
+    ),
+    Mutation(
+        "haltezeit-egal",
+        "kosten.rs",
+        "                        if n > *zusage {",
+        "                        if false && n > *zusage {",
+        "K002 -- ein `locks`-Block darf seine `held`-Zusage ueberschreiten",
+    ),
+    Mutation(
+        "traversierung-kostenlos",
+        "kosten.rs",
+        "                (Kosten::Zahl(rumpf), Some(n)) => Kosten::Zahl(rumpf * n),",
+        "                (Kosten::Zahl(rumpf), Some(_)) => Kosten::Zahl(rumpf),",
+        "eine Traversierung zaehlt nicht Rumpfkosten x Domaenenschranke",
+    ),
+    Mutation(
         "pure-neben-allem",
         "wirkungen.rs",
         "    if w.liste.len() > 1 {",

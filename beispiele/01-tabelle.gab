@@ -111,7 +111,11 @@ impl fn einsammeln(c : ptr<normal, rw> Kappenraum,
     requires  Held(KAPPEN), baum_wohlgeformt(c)
     maintains baum_wohlgeformt
     effects   { consumes c.slots, writes o.slots, locks KAPPEN }
-    costs     <= 4096 ops
+    -- **Diese Zahl kommt aus dem Kostenpass, nicht aus einer Schaetzung.** Eine
+    -- Traversierung zaehlt Rumpfkosten x Domaenenschranke: NSLOTS Slots mal die 200 ops,
+    -- die `blatt_loeschen` zusagt, plus die drei Ladevorgaenge des Aufrufs. Wer sie kleiner
+    -- will, aendert den Rumpf -- nicht die Zusage.
+    costs     <= 831488 ops
     by        induction over descendants of s
 {
     traverse opfer over descendants of c.slots[s] by consuming
@@ -152,6 +156,6 @@ impl fn blatt_loeschen(c : ptr<normal, rw> Kappenraum,
     }
 }
 
-extern fn speicher_freigeben(p : Pa) effects { writes halde };
+extern fn speicher_freigeben(p : Pa) effects { writes halde } costs <= 64 ops;
 
 }

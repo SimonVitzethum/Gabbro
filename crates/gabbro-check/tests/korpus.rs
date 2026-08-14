@@ -29,6 +29,7 @@ const BENANNT: &[&str] = &[
     "M101", "M102", "M103", "M104", "M105", // M1 + V1-V3
     "N001", "N002", "N003", // Namen
     "S001", "S002", // Schleifen und Kontrollfluss
+    "K001", "K002", "K003", // Kosten
     "E001", "E002", "E003", "E004", "E005", "E006", // Wirkungen
 ];
 

@@ -56,7 +56,9 @@ impl fn scharfschalten(v : ptr<mmio, rw> Vtd, wurzel : Pa)
     requires  aligned(wurzel, 4096)
     ensures   v.GSTS.TES == 1
     effects   { writes v.RTA, writes v.GCMD, reads v.GSTS }
-    costs     <= 64 ops
+    -- Der `retry` allein sagt 1024 ops zu; eine Funktion, die ihn enthaelt, kann nicht
+    -- weniger zusagen. Die Zahl faellt aus dem Rumpf, nicht aus dem Wunsch.
+    costs     <= 1032 ops
 {
     v.RTA = wurzel;
     wurzel_setzen(v);

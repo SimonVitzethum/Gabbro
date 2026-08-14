@@ -13,7 +13,7 @@ type KernIdx  = u32 in 0 ..< NKERNE;
 type FadenIdx = u32 in 0 ..< NFAEDEN;
 type Frist    = u64 in 1 .. 1000000;
 
-table Warteschlange {
+table Warteschlange count NFAEDEN {
     slot {
         aktiv   : bool,
         frist   : Frist,
@@ -27,7 +27,8 @@ lock PLANER protects { bereit, laufend } rank 1 held <= 300 ops;
 impl fn faellige_wecken(q : ptr<normal, rw> Warteschlange, jetzt : Frist)
     requires Held(PLANER)
     effects  { writes q.slots, locks PLANER }
-    costs    <= 4096 ops
+    -- NFAEDEN Slots x 5 ops je Durchgang. Die Zahl faellt aus dem Rumpf.
+    costs    <= NFAEDEN * 5 ops
 {
     traverse eintrag over slots of q by unvisited
         touches writes q.slots
@@ -66,11 +67,14 @@ divergent fn dienstschleife(q : ptr<normal, rw> Warteschlange, marke : Angemelde
         progress zeitgeber_tickt
         leaves   marke
     {
-        locks PLANER {
-            traverse e over slots of q by unvisited touches writes q.slots {
+        -- **Die Sperre liegt IM Durchgang, nicht um die Traversierung.** Ein `locks`-Block
+        -- ueber einer vollen Tabelle haelt `PLANER` fuer NFAEDEN x 3 ops -- die Sperre sagt
+        -- 300 zu, und der Kostenpass rechnet das nach. Das ist keine Stilfrage: an dieser
+        -- Zahl haengt die Latenzaussage jeder Wartestelle (SPRACHE.md 9.3).
+        traverse e over slots of q by unvisited touches writes q.slots {
+            locks PLANER {
                 if q.slots[e].aktiv {
                     q.slots[e].aktiv = false;
-                    next dienst;
                 }
             }
         }

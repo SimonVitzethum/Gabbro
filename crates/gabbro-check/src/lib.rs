@@ -17,6 +17,7 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::Absagen;
 
+mod kosten;
 mod m1;
 mod namen;
 mod schleifen;
@@ -26,6 +27,7 @@ pub mod typen;
 pub mod umgebung;
 
 pub use m1::Zaehlung;
+pub use kosten::Zaehlung as Kostenzaehlung;
 
 pub mod korpus;
 pub mod manifest;
@@ -120,9 +122,11 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 9,
             name: "costs",
             quelle: "SPRACHE.md §7: 1 op = eine Gabbro-Primitive, statisch ausgerechnet",
-            zustand: Zustand::Offen(
-                "verlangt das Kostenmodell ueber dem Kernbaum -- `held`, `per_pass` und \
-                 `bounded` sprechen in dieser Groesse",
+            zustand: Zustand::Teilgebaut(
+                "gerechnet werden Ruempfe, `locks`-Bloecke gegen `held` und Aufrufe ueber \
+                 die DEKLARIERTEN Kosten des Gerufenen -- **Rekursion traegt damit eine \
+                 Annahme statt einer Rechnung**, und `per_pass` mit eingabeabhaengiger \
+                 Schranke steht nicht fest",
             ),
         },
     ]
@@ -133,6 +137,7 @@ pub fn passliste() -> Vec<Pass> {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Bericht {
     pub m1: Zaehlung,
+    pub kosten: Kostenzaehlung,
 }
 
 /// Fahrt aller **gebauten** Paesse ueber einen Baum, in der Reihenfolge der Liste.
@@ -141,7 +146,8 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     let m1 = m1::pass(baum, absagen);
     schleifen::pass(baum, absagen);
     wirkungen::pass(baum, absagen);
-    Bericht { m1 }
+    let kosten = kosten::pass(baum, absagen);
+    Bericht { m1, kosten }
 }
 
 /// Was dieser Lauf **nicht** geprueft hat -- zum Abdrucken neben dem Ergebnis.

@@ -1,0 +1,22 @@
+-- erwartet: K001
+--
+-- Eine Traversierung zaehlt Rumpfkosten x Domaenenschranke. 1024 Slots mal die 200 ops,
+-- die der Rumpf zusagt, sind 200 000 -- und nicht die 500, die dastehen.
+--
+-- Bis Pass 9 stand, war diese Zahl eine Behauptung: `retry … bounded N ops` BEHAUPTETE
+-- Terminierung, es prueft sie nicht.
+
+table Tabelle count 1024 { slot { benutzt : bool, } }
+
+impl fn teuer(t : ptr<normal, rw> Tabelle)
+    effects { writes t.slots }
+    costs   <= 500 ops
+{
+    traverse s over slots of t by unvisited touches writes t.slots {
+        arbeiten(t, s);
+    }
+}
+
+extern fn arbeiten(t : ptr<normal, rw> Tabelle, s : index into Tabelle)
+    effects { writes t.slots }
+    costs   <= 200 ops;

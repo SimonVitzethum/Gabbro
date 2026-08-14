@@ -1,0 +1,20 @@
+-- erwartet: K002
+--
+-- Ein `locks`-Block ueber einer vollen Tabelle. Die Sperre sagt `held <= 100 ops` zu, der
+-- Block haelt sie fuer 1024 x 2. An dieser Zahl haengt die Latenzaussage JEDER Wartestelle
+-- (SPRACHE.md 9.3) -- ohne die Pruefung ist sie eine Behauptung.
+
+table Tabelle count 1024 { slot { aktiv : bool, } }
+
+lock PLANER protects { bereit } rank 1 held <= 100 ops;
+
+impl fn zu_lange_gehalten(t : ptr<normal, rw> Tabelle)
+    effects { writes t.slots, locks PLANER }
+    costs   <= 4096 ops
+{
+    locks PLANER {
+        traverse s over slots of t by unvisited touches writes t.slots {
+            t.slots[s].aktiv = false;
+        }
+    }
+}
