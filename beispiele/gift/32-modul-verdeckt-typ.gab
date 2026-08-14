@@ -1,0 +1,17 @@
+-- erwartet: M104
+--
+-- Dasselbe fuer Typen, in der Richtung, die weh tut: `zwei::Eng` ist volles `u32`, und
+-- `x + 1000` laeuft darauf ueber. Ein gleichnamiges `Eng` im Nachbarmodul gab dem
+-- Parameter frueher den Bereich `0 .. 10` -- und M1 schwieg zu einem echten Ueberlauf.
+--
+-- Aus der Gegenpruefung vom 2026-08-14 (U11/U12).
+
+-- Umgekehrte Reihenfolge: jetzt gewinnt der ENGE Typ, und `zwei::Eng` (volles u32)
+-- bekommt den Bereich 0 .. 10. `x + 1000` laeuft auf einem echten u32 ueber -- M1 schweigt.
+module zwei {
+    type Eng = u32;
+    impl fn nimm(x : zwei::Eng) -> u32 effects { pure } { return x + 1000; }
+}
+module eins {
+    type Eng = u32 in 0 .. 10;
+}
