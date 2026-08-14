@@ -179,6 +179,87 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       **Writer-Wartezeit unter Leserdruck**, nicht die Haltezeit eines Lesers. **Der Kostenpass
       rechnet heute nur den exklusiven Fall** — und die Latenzformel aus §9.3 mit ihm.
 
+## Gruppen-`ops` + `by ops` — der Entwurf, VOR der ersten Grammatikzeile
+
+Drei Festlegungen aus dem Papiertest, jede nachgeprueft. **Sie stehen hier, weil sie den
+Entwurf aendern, nicht weil sie ihn schmuecken.**
+
+### E1 — Der Sperrabdruck der Gruppe ist ZWEISTUFIG, und das entscheidet die Grammatik
+
+Mutationen nehmen exklusiv, die erzeugte Leseoperation (`lookup`-Klasse) nimmt **geteilt** —
+das ist im Baum gemessen: `33 CAPS.read()` gegen `44 CAPS.write()`. **Also deklariert das
+Konstrukt beide Modi JE `op`, nicht einen je Gruppe.**
+
+```
+group Kappen over { Slots, Objekte } locks KAPPEN {
+    op einfuegen  exclusive;
+    op entfernen  exclusive;
+    op nachschlagen shared;      -- der heisse Pfad
+}
+```
+
+**Ohne diese Zeile waere `locks shared` gebaut und die Gruppe koennte es nicht nutzen** —
+jede erzeugte Operation naehme exklusiv, und der meistgelaufene Pfad des Kernels waere
+wieder der langsamste. *Ein Konstrukt, das ein anderes unbrauchbar macht, ist ein
+Entwurfsfehler, kein Feature-Rueckstand.*
+
+### E2 — Die Sprechprobe hat eine Pflichtrichtung, und sie ist eine DATEI
+
+`refcount -= 1` mit der Null-Pruefung **danach** muss unter `by ops` unschreibbar sein. Das
+gehoert als **Gift-Fragment in den Test, nicht als Satz in den Text** — die Regel des
+Ordners, dass eine Zusage eine Stelle braucht, an der sie faellt.
+
+**Nachgetragen, und es verschaerft den Auftrag:** der Schnitt steht **zweimal**, in zwei
+unabhaengig geschriebenen Kernen desselben Baums.
+
+| Baum | Stelle | Form |
+|---|---|---|
+| `SEL4Lake/SEL4Lake` (Caprock) | `crates/caprock-cap/src/space.rs:1067–1068` | `refcount -= 1;` dann `if … == 0` |
+| `SEL4Lake/ARMTest/stm32mp25-kernel` | `crates/sel4lake-cap/src/space.rs:617–618` | **dieselbe Form, dieselbe Reihenfolge** |
+
+*Damit ist der Bedarf nach W3 nicht bloss gezaehlt, sondern doppelt gezaehlt — und die
+Wiederholung in einem zweiten Kern sagt mehr als die Haeufigkeit im ersten: die Form kommt
+nicht aus einer Gewohnheit eines Autors.*
+
+Die vorhandene Probe `beispiele/gift/37-b29-unter-ops.gab` deckt `ops` auf der **Tabelle**
+(`D001`). Die neue deckt `by ops` auf dem **Feld** — `field : u16 by ops` — und muss genau
+diese Zeilenfolge treffen.
+
+### E3 — Die Verus-Vorlage: Klauselstruktur uebernehmen, Typen NICHT
+
+**Nachgeprueft, und der Mechanismus ist ein anderer als vermutet — die Warnung wird dadurch
+staerker, nicht schwaecher.**
+
+`cap_space.rs:17` fuehrt `pub refcount: nat`. Am Loeschpfad steht:
+
+```
+:791   let oldrc = cs.objects[o as int].refcount;
+:792   assert(oldrc >= 1);                        // <- WIRD BEWIESEN, aus der Invariante
+:793   let newrc: nat = (oldrc - 1) as nat;
+```
+
+**Das Modell beweist die Vorbedingung.** Es ist also nicht so, dass die Vorlage die Frage
+falsch beantwortet — sie beantwortet sie richtig, **aus der Invariante**. Was `nat`
+wegnimmt, ist etwas anderes: der Typ traegt **keine Breite**, also entsteht ueber die
+*Darstellung* nie eine Pflicht. Es gibt genau **ein** Netz, und es haengt an der Invariante.
+
+In Gabbro traegt dasselbe Feld `u32 in 0 ..= NSLOTS`. Damit ist `-= 1` bei 0 ein
+**M1-Fehler aus dem TYP** — ohne jeden Bezug auf die Invariante. **Zwei unabhaengige Netze
+statt einem**, und das zweite ist genau das, was in der Sprechprobe als `M104` neben `D001`
+fiel.
+
+> **Die Schablone uebernimmt die KLAUSELSTRUKTUR der Vorlage (eine `spec fn` ueber allen
+> Klauseln, Erhaltung je Operation), nicht ihre TYPEN.**
+>
+> Erbt sie `nat` mit, sieht die erzeugte Pflichtliste vollstaendig aus, waehrend das zweite
+> Netz fehlt — und schlimmer: eine erzeugte C-Emission koennte die Bereichspruefung
+> weglassen, *weil der Beweis sagt, es koenne nicht negativ werden*. Das ist woertlich die
+> gebuchte Fehlerklasse: **eine Behauptung ueber das Modell in die Maschine entlassen**
+> (`HISTORIE.md`, Commit `5904cae`). Dann waere die Vorlage ein trojanisches Geschenk.
+
+**Die Pruefzeile dagegen, mechanisch:** kein von einer Schablone erzeugtes Feld darf einen
+Typ ohne Breite tragen. Das ist an der Schablone selbst pruefbar, nicht erst am Erzeugnis.
+
 ## An CAPROCK, nicht an Gabbro
 
 - [ ] **N1 — die zwei dokumentierten Sperrordnungen in `system.rs` widersprechen sich.**

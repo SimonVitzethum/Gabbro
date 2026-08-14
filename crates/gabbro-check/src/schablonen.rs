@@ -216,7 +216,14 @@ pub const SCHABLONEN: &[Schablone] = &[
                   **Diese Schablone hat als einzige eine VORLAGE statt eines leeren Blatts**: \
                   Verification/capability-system/proofs/cap_space.rs fuehrt cap_inv als EINE \
                   spec fn ueber den Klauseln 1-7 und beweist je Operation die Erhaltung ALLER \
-                  zugleich -- die Schablone haette das zu ERZEUGEN statt zu erfinden.",
+                  zugleich -- die Schablone haette das zu ERZEUGEN statt zu erfinden. \
+                  ABER: die Vorlage fuehrt refcount als `nat`. Sie beweist die Vorbedingung \
+                  `oldrc >= 1` (Zeile 792) aus der Invariante -- richtig, aber es ist EIN \
+                  Netz. Gabbros `u32 in 0 ..= NSLOTS` gibt ein zweites, das ohne die \
+                  Invariante haelt. Uebernommen wird die KLAUSELSTRUKTUR, nicht der TYP; \
+                  sonst sieht die Pflichtliste vollstaendig aus, waehrend das zweite Netz \
+                  fehlt -- und eine Emission koennte die Bereichspruefung weglassen, WEIL \
+                  der Beweis sagt, es koenne nicht negativ werden.",
         stand: Stand::Entworfen,
         fundstelle: "MESSUNGEN.md, Papiertest CapSpace/CDT, 2026-08-14",
     },
