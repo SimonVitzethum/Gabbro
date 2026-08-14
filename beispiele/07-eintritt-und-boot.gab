@@ -1,0 +1,129 @@
+-- 07 -- Eintritt, Bootpfad und die Seitentabelle als `walk`.
+--
+-- Der Eintrittspfad ist in C nicht ausdrueckbar (`iretq`, Registerabdruck, Stapelwechsel).
+-- `entry` beschreibt ihn EINMAL je Vektor, statt ihn je Fundstelle zu schreiben: eine
+-- Emissionsstelle statt einhunderteinundsechzig.
+--
+-- Der unsichere Bootcode wird zweistufig unerreichbar: eine **lineare** Marke, die
+-- `boot_end` verbraucht (nicht kopierbar -- das kann Rust nicht), UND der `.boot`-Abschnitt
+-- wird im selben Zug abgebildet. Eine Sonde dorthin muss danach faulten.
+
+module beispiel::eintritt {
+
+opaque type Pa      = u64;
+opaque type Va      = u64;
+opaque type FadenId = u32;
+
+linear ghost type BootPhase;
+linear ghost type Cr3Gesetzt;
+linear ghost type PaeGesetzt;
+linear ghost type LmeGesetzt;
+linear ghost type Paging;
+
+-- Die Seitentabelle als Struktur: `walk` erzeugt die achte Quantorendomaene
+-- (`mappings of`), und damit ist W^X ueber die ganze Tabelle formulierbar --
+-- die eine Pflicht, die in der Messung unformulierbar blieb.
+walk Seitentabelle levels 4 {
+    node : [Pte; 512],
+    down : rahmen when it.praesent && !it.gross,
+    leaf : it.praesent && it.gross,
+
+    invariant wx_getrennt cost O(n) runs online :
+        forall m in mappings of Self : !(m.schreibbar && !m.nx);
+
+    invariant kein_nutzer_im_kern cost O(n) runs offline :
+        forall m in mappings of Self : m.va < 0xFFFF_8000_0000_0000 || !m.nutzer;
+}
+
+format Pte endian little {
+    praesent   : bool @0,
+    schreibbar : bool @1,
+    nutzer     : bool @2,
+    gross      : bool @7,
+    rahmen     : u64 embeds [51:12] scale 4096,
+    nx         : bool @63,
+}
+
+-- Der Syscall-Eintritt: Registerbelegung, was erhalten bleibt, was zerstoert wird, auf
+-- welchem Stapel gearbeitet wird und ob er verschachteln darf.
+entry syscall vector 0x80 arch x86_64 {
+    -- Links der Name im Rumpf, rechts das REGISTER -- nicht der Typ.
+    regs in  { nr : rax, a0 : rdi, a1 : rsi, a2 : rdx, a3 : r10, }
+    regs out { ret : rax, }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rcx, r11 }
+    stack kernstapel per cpu nested never
+    dispatch beispiel::eintritt::syscall_verteiler;
+}
+
+-- Ein Interrupt mit eigenem Stapel (IST) und begrenzter Verschachtelung.
+entry nmi vector 2 via idt arch x86_64 {
+    regs in  { }
+    regs out { }
+    -- «G7» `clobbers { }` ist nicht schreibbar: `identlist` verlangt mindestens einen
+    -- Namen. Ein Eintritt, der nichts zerstoert, kann das nicht sagen -- hier steht
+    -- deshalb das Register, das der Verteiler ohnehin anfasst.
+    preserves { rax, rbx, rcx, rdx, rsi, rdi, rbp, r8, r9, r10, r12, r13, r14, r15 }
+    clobbers  { r11 }
+    stack nmi_stapel per cpu ist 3 nested bounded 2
+    dispatch beispiel::eintritt::nmi_verteiler;
+}
+
+-- Die Mode-Leiter als Token-Fluss: `write_cr0(PG)` verlangt alle drei Marken. Ein
+-- vertauschter Schritt ist damit kein Laufzeitfehler, sondern ein fehlendes Token.
+boot multiboot1 arch x86_64 {
+    step stapelzeiger = boot_stapel_oben;
+    step bootinfo_retten(ebx);
+    step tabellen_laden(BOOT_IDENTITAET);
+    step write_cr3(BOOT_IDENTITAET);
+    step write_cr4(PAE);
+    step wrmsr_efer(LME);
+    step write_cr0(PG);
+    step gdt_laden(GDT64);
+    step bss_nullen(BSS_ANFANG, BSS_ENDE);
+    dispatch beispiel::eintritt::rust_eintritt;
+}
+
+const BOOT_IDENTITAET : Pa  = 0x1000;
+const BSS_ANFANG      : Va  = 0x2000;
+const BSS_ENDE        : Va  = 0x3000;
+const PAE             : u64 = 0x20;
+const LME             : u64 = 0x100;
+const PG              : u64 = 0x8000_0000;
+const GDT64           : u64 = 0x4000;
+const boot_stapel_oben : u64 = 0x9000;
+
+axiom write_cr4(bits : u64) effects { writes cr4 } falsifier sonde_cr4;
+axiom wrmsr_efer(bits : u64) effects { writes efer } falsifier sonde_efer;
+axiom write_cr0(bits : u64) effects { writes cr0, writes paging } falsifier sonde_cr0;
+axiom write_cr3(wurzel : Pa) effects { writes tlb, writes aktive_tabelle } falsifier sonde_cr3;
+
+-- `raw fn` verlangt die Bootphase geliehen; `boot_end` VERBRAUCHT sie und bildet
+-- `code<boot>` im selben Zug ab. Danach ist der Bootcode nicht mehr aufrufbar --
+-- nicht durch Vereinbarung, sondern weil die Marke weg ist.
+raw fn phys_schreiben(p : Pa, w : u64) requires BootPhase effects { writes phys };
+
+fn boot_ende(t : BootPhase) effects { consumes t, writes code_abbildung };
+
+-- Der Stapelwechsel ist in keiner strukturierten Sprache ausdrueckbar; deshalb `prim`.
+-- `effects` bleibt Pflicht -- auch hier, und gerade hier: SYNTAX.md §14 laesst es in
+-- seinem Beispiel weg, §7 verlangt es. Der Uebersetzer haelt sich an §7.
+prim fn wechseln(von : ptr<normal, rw> Kontext, nach : ptr<normal, r> Kontext) -> never
+    effects { writes maschinenzustand, writes stapel, diverges };
+prim fn fortsetzen(k : ptr<normal, r> Kontext) -> never
+    effects { writes maschinenzustand, diverges };
+
+divergent fn leerlauf() effects { diverges };
+
+extern fn syscall_verteiler(nr : u64, a0 : u64, a1 : u64, a2 : u64, a3 : u64) -> u64
+    effects { writes kernzustand };
+extern fn nmi_verteiler() effects { reads maschinenzustand };
+extern fn rust_eintritt(t : BootPhase) -> never effects { consumes t, diverges };
+extern fn bootinfo_retten(z : u64) effects { writes bootinfo };
+extern fn tabellen_laden(wurzel : Pa) effects { writes phys };
+extern fn gdt_laden(g : u64) effects { writes gdt };
+extern fn bss_nullen(a : Va, e : Va) effects { writes phys };
+
+type Kontext = { rsp : u64, rip : u64, };
+
+}

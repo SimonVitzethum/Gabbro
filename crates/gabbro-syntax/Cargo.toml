@@ -1,0 +1,13 @@
+[package]
+name = "gabbro-syntax"
+description = "Lexer, Wortschatz und Parser fuer Gabbro -- P2 aus SPRACHE.md Teil III, 6"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+# absichtlich leer -- s. Cargo.toml des Arbeitsbereichs
+
+[lints]
+workspace = true

@@ -1,0 +1,6 @@
+-- erwartet: E001
+-- `effects` ist Pflicht und nicht fail-open. Wer nichts anfasst, schreibt `effects { pure }`
+-- -- die Auslassung war zugleich die staerkste Zusage und die kuerzeste Spezifikation.
+impl fn schweigt(c : ptr<normal, rw> T) {
+    c.x = 1;
+}

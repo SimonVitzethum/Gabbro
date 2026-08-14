@@ -1,0 +1,165 @@
+-- 08 -- **M1 und die drei Flussregeln.** Das Beispiel, an dem der Pass haengt.
+--
+-- Ganzzahlen tragen ihren Wertebereich, und jede Operation muss darin bleiben. Was nicht
+-- hineinpasst, ist ein **Uebersetzungsfehler, keine Laufzeitpruefung** -- und was der
+-- Uebersetzer nicht selbst sieht, verlangt eine **Einengung mit benanntem Ausgang**, keine
+-- Beweiszeile.
+--
+-- Die Gegenmessung am echten Baum (255 Subtraktionen, 102 flusssensitiv) hat gezeigt, dass
+-- EINE Regel nicht reicht und `narrow` allein zum Ritual wuerde. Es gibt genau drei.
+
+module beispiel::bereiche {
+
+const NKERNE     : u32 = 64;
+const NFAEDEN    : u32 = 1024;
+const GRENZE     : u32 = 1000000;
+const SEITE      : u32 = 4096;
+const RESERVE    : u32 = 8;
+
+type KernIdx   = u32 in 0 ..< NKERNE;
+type FadenIdx  = u32 in 0 ..< NFAEDEN;
+type Zaehler   = u32 in 0 .. GRENZE;
+type Frist     = u64 in 1 .. 1000000000;
+
+opaque type Pa = u64;
+
+tagged type Nachricht = { Leer, Kurz(u32), Lang(Pa), Antwort(FadenIdx) };
+
+-- ---------------------------------------------------------------------------------------
+-- V1 -- eine geprüfte Bereichsbedingung verengt die geprüfte Stelle im Zweig danach.
+-- ---------------------------------------------------------------------------------------
+
+impl fn v1_teilen(n : Zaehler, summe : Zaehler) -> Zaehler
+    effects { pure }
+    costs   <= 8 ops
+{
+    -- Ohne die Pruefung ist `/ n` nicht schreibbar: der Bereich von `n` enthaelt die Null.
+    if n >= 1 {
+        return summe / n;
+    }
+    return 0;
+}
+
+impl fn v1_erhoehen(z : Zaehler) -> Zaehler
+    effects { pure }
+    costs   <= 4 ops
+{
+    -- `z + 1` reicht bis GRENZE+1 und passt damit NICHT in `Zaehler` -- ausser hier,
+    -- wo die Pruefung `z` vorher auf `0 .. GRENZE-1` verengt hat.
+    if z < GRENZE {
+        return z + 1;
+    }
+    return z;
+}
+
+-- Die Verengung stirbt bei jedem Schreiben auf eine beteiligte Stelle. Deshalb steht die
+-- Rechnung IM Zweig und nicht dahinter -- das ist keine Stilfrage, sondern die Regel.
+impl fn v1_zweiseitig(z : Zaehler) -> Zaehler
+    effects { pure }
+    costs   <= 8 ops
+{
+    if z >= 100 {
+        -- hier ist `z : u32 in 100 .. GRENZE`
+        return z - 100;
+    }
+    -- und hier ist `z : u32 in 0 .. 99`
+    return z;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- V2 -- eine geprüfte Beziehung ZWEIER Stellen wird zum Zweigfakt.
+-- Die 102 gemessenen flusssensitiven Fundstellen fallen saemtlich unter diese Form.
+-- ---------------------------------------------------------------------------------------
+
+impl fn v2_abstand(a : Zaehler, b : Zaehler) -> Zaehler
+    effects { pure }
+    costs   <= 8 ops
+{
+    -- `a - b` unterlaeuft, solange nichts ueber die beiden bekannt ist.
+    -- Unter dem Fakt `a >= b` faengt das Ergebnis bei 0 an.
+    if a >= b {
+        return a - b;
+    }
+    return b - a;
+}
+
+impl fn v2_echt_groesser(a : Zaehler, b : Zaehler) -> Zaehler
+    effects { pure }
+    costs   <= 8 ops
+{
+    -- Unter `a > b` faengt es bei 1 an -- die Differenz ist nie Null.
+    if a > b {
+        let d = a - b;
+        return d;
+    }
+    return 0;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- V3 -- `match` auf einen `tagged`-Typ verengt im Zweig auf die Variante samt Nutzlast.
+-- ---------------------------------------------------------------------------------------
+
+impl fn v3_auswerten(m : Nachricht) -> Zaehler
+    effects { pure }
+    costs   <= 12 ops
+{
+    match m {
+        Leer       => { return 0; }
+        -- `k` traegt hier `u32`, nicht `Nachricht` -- die Nutzlast SEINER Variante.
+        Kurz(k)    => { if k <= GRENZE { return k; } return 0; }
+        Lang(p)    => { return 1; }
+        Antwort(f) => { return 2; }
+    }
+    return 0;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- `narrow` -- fuer alles, was NICHT unter V1–V3 faellt. Eine Anweisung mit benanntem
+-- Ausgang, keine Beweiszeile. **Sie zaehlt als Klempnerei und muss klein bleiben; waechst
+-- sie ueber 24 Fundstellen im Baum, ist die Regelmenge zu klein gewaehlt -- und DAS ist
+-- die Widerlegung, nicht ein weiteres Regelwachstum in Stille.**
+-- ---------------------------------------------------------------------------------------
+
+impl fn einengen(roh : u32) -> Zaehler
+    effects { pure }
+    costs   <= 8 ops
+{
+    narrow roh to 0 .. GRENZE else { return 0; }
+    return roh;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Indizieren -- die Schranke faellt aus dem TYP des Index, nicht aus einer Laufzeitpruefung.
+-- ---------------------------------------------------------------------------------------
+
+static mut kernlast : [Zaehler; 64] = 0;
+
+impl fn last_lesen(k : KernIdx) -> Zaehler
+    effects { reads kernlast }
+    costs   <= 4 ops
+{
+    -- `KernIdx` ist `0 ..< NKERNE`, das Feld hat NKERNE Elemente: kein Test, kein Zweig.
+    return kernlast[k];
+}
+
+-- ---------------------------------------------------------------------------------------
+-- `wrapping` -- der einzige erlaubte Ueberlauf, und er steht in der Deklaration.
+-- ---------------------------------------------------------------------------------------
+
+table Marken {
+    slot {
+        marke  : u32 wrapping,
+        gueltig: bool,
+    }
+}
+
+impl fn marke_weiterdrehen(m : ptr<normal, rw> Marken, s : FadenIdx)
+    effects { writes m.slots }
+    costs   <= 4 ops
+{
+    -- Kein Befund: der Ueberlauf ist deklariert. Ohne `wrapping` waere diese Zeile
+    -- derselbe Fehler wie `z + 1` oben.
+    m.slots[s].marke += 1;
+}
+
+}

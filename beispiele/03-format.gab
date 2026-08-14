@@ -1,0 +1,67 @@
+-- 03 -- `format`: Drahtformate mit ausgesprochener Bytereihenfolge.
+--
+-- Der Leser prueft **einmal am Eintritt** die Pufferlaenge; alles Weitere sind bewiesene
+-- Zugriffe ohne Laufzeitpruefung. `offset_into Self` bindet einen Versatz an die
+-- Pufferlaenge -- die `where`-Klausel ist die einzige Zusatzangabe und senkt sich auf
+-- genau eine Bereichspruefung ab.
+
+module beispiel::format {
+
+const PH_GROESSE : u16 = 56;
+
+format Elf64Kopf endian little {
+    e_ident_magic : u32 in 0x464C_457F .. 0x464C_457F,
+    e_typ         : u16 in 1 .. 4,
+    e_maschine    : u16,
+    e_version     : u32 in 1 .. 1,
+    e_eintritt    : u64,
+    e_phoff       : u64 offset_into Self
+                    where e_phoff + e_phentsize * e_phnum <= lenof(Self),
+    e_shoff       : u64 offset_into Self,
+    e_flags       : u32 reserved,
+    e_ehsize      : u16 in 64 .. 64,
+    e_phentsize   : u16 in 56 .. 56,
+    e_phnum       : u16 in 0 .. 65535,
+}
+
+-- Ein Eintrag der Programmkopftabelle. `p_flags` ist ein vollstaendiges Layout: jedes Bit
+-- ist benannt, es gibt keinen Auffangzweig und keine „uebrigen Bits".
+format Elf64Ph endian little {
+    p_typ    : u32 in 0 .. 7,
+    p_flags  : u32 @[2:0],
+    p_offset : u64 offset_into Self,
+    p_vaddr  : u64,
+    p_paddr  : u64,
+    p_filesz : u64,
+    p_memsz  : u64 where p_memsz >= p_filesz,
+    p_align  : u64,
+}
+
+-- Ein eingebetteter Zeiger IST ein Bitfeld: `embeds` nennt die Bits, `scale` den Faktor,
+-- mit dem der Rohwert zur Adresse wird. Das Wurzelproblem der Seitentabellen, als Feld.
+format Pte endian little {
+    praesent  : bool @0,
+    schreibbar: bool @1,
+    nutzer    : bool @2,
+    gross     : bool @7,
+    rahmen    : u64 embeds [51:12] scale 4096,
+    nx        : bool @63,
+}
+
+reason LeseFehler {
+    ZuKurz       = 1 "der Puffer traegt den Kopf nicht"
+    FalscheMagie = 2 "kein ELF64"
+    Unbekannt    = 3 "unbekannter Programmkopftyp"
+    exhaustive
+}
+
+impl fn kopf_lesen(puffer : ptr<normal, r> Elf64Kopf) -> u64
+    requires lenof(puffer) >= sizeof(Elf64Kopf)
+    ensures  result == puffer.e_eintritt
+    effects  { reads puffer }
+    costs    <= 16 ops
+{
+    return puffer.e_eintritt;
+}
+
+}

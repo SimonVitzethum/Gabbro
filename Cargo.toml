@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/gabbro-syntax",
+    "crates/gabbro-check",
+    "crates/gabbro-cli",
+]
+
+# Der Erzeuger haelt dieselbe Regel wie Caprocks Handler-Module: keine Abhaengigkeit
+# ausserhalb einer benannten Liste. Die Liste ist heute LEER -- std und sonst nichts.
+# README.md: "Ein Erzeuger, der selbst ausbrechen kann, macht die Eigenschaft seines
+# Erzeugnisses wertlos."
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"

@@ -1,0 +1,61 @@
+-- 06 -- Hardware-Annahmen, Axiome und die lineare Pruefpflicht.
+--
+-- **Drei Klassen, und die dritte gibt es syntaktisch nicht:** *falsifiziert* (Sonde lief),
+-- *nicht falsifizierbar* (mit Grund als Zeichenkette), *nicht gefahren* -- und das ist die
+-- Abwesenheit beider Angaben und ein Uebersetzungsfehler. Eine nicht gefahrene Annahme darf
+-- nie wie eine falsifizierte aussehen.
+--
+-- `gabbro annahmen 06-annahmen.gab` gibt daraus die Menge, unter der alles Weitere gilt.
+
+module beispiel::annahmen {
+
+opaque type Pa      = u64;
+opaque type FadenId = u32;
+
+assume mmu_folgt_ihrem_modell
+    "Eine Uebersetzung mit P=0 faultet, bevor ein Zugriff die Zeile beruehrt."
+    falsifier sonde_pf_bei_p0;
+
+assume tlb_ist_nach_cr3_leer
+    "Ein Schreiben auf CR3 verwirft die nicht-globalen Eintraege."
+    falsifier sonde_tlb_nach_cr3;
+
+assume x2apic_zweischritt
+    "EN und EXTD in einem Schreibvorgang ist ein verbotener Uebergang."
+    unfalsifiable "qemu64 hat kein x2APIC -- die Sonde hat hier kein Geraet";
+
+assume ipi_kommt_an
+    "Ein gesendetes IPI erreicht den Zielkern in endlicher Zeit."
+    unfalsifiable "Lebendigkeit faellt unter keinen Mechanismus dieser Sprache";
+
+-- Je privilegiertem Befehl ein erklaerter Effekt. Das ist die groesste unbewiesene
+-- Flaeche der Sprache -- groesser als der Uebersetzer -- und deshalb zaehlbar.
+axiom write_cr3(p : Pa) effects { writes tlb, writes aktive_tabelle } falsifier sonde_cr3;
+axiom invlpg(v : u64)   effects { writes tlb }                       falsifier sonde_invlpg;
+axiom rdtsc()           effects { reads zeitzaehler }                falsifier sonde_tsc;
+axiom wbinvd()          effects { writes cache }
+    unfalsifiable "die Wirkung ist auf dieser Maschine nicht beobachtbar";
+
+-- `check` erzeugt eine `linear ghost Duty(name)`: eine Pflicht, die verbraucht werden MUSS.
+-- Vier Uebersetzungsfehler fallen dabei aus M1/M2/M3 statt aus Sonderregeln: `gates` fehlt
+-- -> die Pflicht wird nie verbraucht; `can_fail` fehlt -> dito; eine Groesse unter
+-- `measures`, die der gemessene Pfad schreibt -> Schreibrecht; einseitige Schwelle ohne
+-- `floor` -> die Groesse hat keinen Bereich.
+check stapel_wasserstand {
+    claim        "Kein Kern hat je mehr als 3/4 seines Stapels benutzt."
+    measures     tiefe_max, tiefe_lebend, kerne_gemessen
+    gates        abnahme, freigabe
+    can_fail {
+        let g = groesse_gemessen() else (e1) { return; }
+        if tiefe_max * 4 >= g * 3 {
+            return;
+        }
+    }
+    floor        kerne_gemessen >= 2, tiefe_max >= 1
+    counterprobe "Ein Kern mit kuenstlich tiefem Aufruf muss die Pflicht fallen lassen."
+        expects sonde_tiefer_stapel
+}
+
+extern fn groesse_gemessen() -> u64 effects { reads stapel };
+
+}

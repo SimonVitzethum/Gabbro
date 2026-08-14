@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Die `narrow`-Vollzaehlung -- klassiert jede Bereichspflicht nach K/V1/V2/V3/F/N.
+"""Findet Bereichspflichten in einem Rust-Baum und schlaegt eine Klasse vor (K/V1/V2/V3/F/N).
+
+**KEIN MESSGERAET.** Gefahren am 2026-08-14, Ergebnis in MESSUNGEN.md als UNGUELTIG
+berichtet: er besteht die Sprechprobe des Protokolls (drei bekannte Fundstellen) und liegt
+trotzdem in 3 von 5 handgeprueften N-Stellen falsch. Was ihm fehlt -- Bereichsrechnung ueber
+`1 << x`, Boolesche Ketten statt `if`, dokumentierte Vorbedingungen als F -- ist zusammen
+genau M1+V1--V3, angewandt auf Rust. Er bleibt hier als **Finder von Kandidaten**.
 
 Das Protokoll steht in MESSUNGEN.md und ist VOR diesem Skript geschrieben und committet.
 Dieses Skript aendert es nicht; wo es etwas nicht entscheiden kann, kippt es nach N.
@@ -618,8 +624,13 @@ def main():
         anteil = 100.0 * zaehlung[spalte] / gesamt if gesamt else 0.0
         print(f"  {spalte:<3} {zaehlung[spalte]:>5}   {anteil:5.1f} %")
 
-    print(f"\n  Gegen die Latte zaehlt NUR N: {zaehlung['N']} (Latte: <= 24)")
-    print(f"  Getrennt, ohne Latte:        F = {zaehlung['F']}")
+    print(f"\n  N = {zaehlung['N']}, F = {zaehlung['F']}")
+    print()
+    print("  !! DIESE ZAHLEN SIND KEINE MESSUNG. !!")
+    print("  Eine Handstichprobe (MESSUNGEN.md, 2026-08-14) fand in 3 von 5 N-Stellen")
+    print("  einen Fehler des Zaehlers, alle in dieselbe Richtung. Er findet KANDIDATEN;")
+    print("  die Latte `<= 24` entscheidet er nicht. Das Messgeraet dafuer ist der")
+    print("  Uebersetzer selbst -- und der braucht die Bereiche in Gabbro.")
 
     print("\n== N -- jede Stelle, die `narrow` braucht ==")
     for datei, zeile, art, links, rechts, fn in n_stellen:
@@ -639,7 +650,8 @@ def main():
             f"N {c['N']:>3}  F {c['F']:>3}  V1 {c['V1']:>3}  V2 {c['V2']:>3}  "
             f"V3 {c['V3']:>3}  K {c['K']:>3}"
         )
-    return 0 if zaehlung["N"] <= 24 else 1
+    # Kein Urteil im Rueckgabewert: der Zaehler faellt nur, wenn seine Sprechprobe faellt.
+    return 0
 
 
 if __name__ == "__main__":

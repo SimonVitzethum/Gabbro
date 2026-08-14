@@ -1,0 +1,14 @@
+-- erwartet: M104
+-- **Ein Fakt stirbt bei jedem Schreiben auf eine beteiligte Stelle.** Die Pruefung oben
+-- traegt bis zur Zuweisung -- und keinen Schritt weiter.
+const GRENZE : u32 = 65535;
+type Zaehler = u32 in 0 .. GRENZE;
+
+impl fn zweimal(z : ptr<normal, rw> Zelle) effects { writes z } {
+    if z.wert >= 1 {
+        z.wert -= 1;
+        z.wert -= 1;
+    }
+}
+
+type Zelle = { wert : Zaehler, };

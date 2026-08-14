@@ -1,0 +1,114 @@
+-- 05 -- Nebenlaeufigkeit: die Nutzlast steht am Store, nicht im Kommentar.
+--
+-- **`publishes` ist Pflicht an jedem Atomic.** Ordering wird nicht deklariert, sondern
+-- GEPAART: `publishes` am Schreiber, `awaits` am Leser. Ein Zaehler ohne Nutzlast schreibt
+-- `publishes nothing` -- und das ist ein Wort, kein leeres Listenloch.
+
+module beispiel::nebenlaeufigkeit {
+
+const NKERNE : u32 = 64;
+
+type KernIdx  = u32 in 0 ..< NKERNE;
+type FadenIdx = u32 in 0 .. 1023;
+
+-- `rank` gibt die Sperrordnung: Nehmen verlangt echt kleineren Rang, und daraus faellt
+-- Deadlockfreiheit. `held` ist die deklarierte Haltezeit -- ohne sie ist die Sperre in
+-- einer Dienstschleife nicht nehmbar.
+lock KAPPEN  protects { eintraege }        rank 0 held <= 400 ops masks irqs;
+lock SPEICHER protects { freiliste }       rank 1 held <= 200 ops;
+lock BERICHT protects { farbbericht }      rank 2 held <= 50 ops;
+
+atomic FARBE_FERTIG : bool release;
+atomic TIEFE_MAX    : u64 relaxed;
+atomic BESITZER     : u32 acquire;
+
+-- Sammelwerte ohne CAS-Schleife: je Kern eine Zelle, Zusammenfuehrung beim Lesen ueber
+-- die NCORES-beschraenkte Schleife. Kein CAS, keine unbegrenzte Schleife.
+accumulates hoechststand : u64 merge max;
+accumulates fehlerzahl   : u32 merge add;
+
+static mut farbbericht : u64 = 0;
+static     KERNZAHL    : u32 = 64 section ".rodata";
+
+impl fn bericht_veroeffentlichen(wert : u64)
+    effects { writes farbbericht, publishes FARBE_FERTIG }
+    costs   <= 8 ops
+{
+    farbbericht = wert;
+    -- Die Nutzlast wird dort genannt, wo sie entsteht, mit den dort sichtbaren Indizes.
+    FARBE_FERTIG = true publishes { farbbericht };
+}
+
+impl fn bericht_lesen() -> u64
+    effects { reads FARBE_FERTIG, reads farbbericht }
+    costs   <= 8 ops
+{
+    -- Die Gegenseite der Paarung: `awaits` nennt, was mit dem Laden sichtbar wird.
+    let fertig = FARBE_FERTIG awaits { farbbericht };
+    if fertig {
+        return farbbericht;
+    }
+    return 0;
+}
+
+-- Reine Zaehler haben keine Nutzlast, und das steht als Wort da.
+impl fn tiefe_melden(t : u64)
+    effects { writes TIEFE_MAX }
+    costs   <= 4 ops
+{
+    TIEFE_MAX = t publishes nothing;
+}
+
+-- **Ein Zaehler braucht eine Obergrenze -- und dann eine Pruefung vor dem Erhoehen.**
+-- `u64` allein heisst „bis 2^64-1"; `+ 1` verlaesst das dann, und M1 sagt es an der Zeile
+-- statt im Betrieb. Mit `in 0 .. GRENZE` ist der Bereich da, aber `wert + 1` reicht bis
+-- `GRENZE + 1` -- also fehlt immer noch die Pruefung. **Genau das ist der Mechanismus:**
+-- M1 zwingt die Schranke IN die Deklaration und die Pruefung VOR die Rechnung.
+const GRENZE : u64 = 0xFFFF_FFFF_FFFE;
+
+type Zaehlerwert = u64 in 0 .. GRENZE;
+
+-- RMW ist die dritte Form der Paarung. `update` rechnet alt -> neu und ist rein.
+impl fn zaehler_erhoehen(z : ptr<normal, rw> Zelle) -> Zaehlerwert
+    effects { writes z }
+    costs   <= 12 ops
+{
+    let alt = z.wert exchange update(v) {
+        -- V1: die Pruefung verengt `v` im Zweig danach auf `0 .. GRENZE-1`,
+        -- und damit passt `v + 1` in `0 .. GRENZE`.
+        if v < GRENZE {
+            return v + 1;
+        }
+        return v;
+    } publishes nothing;
+    return alt;
+}
+
+-- compare-exchange: der neue Wert gilt, WENN die Bedingung ueber dem alten haelt.
+impl fn besitz_nehmen(f : FadenIdx) -> bool
+    effects { writes BESITZER, publishes BESITZER }
+    costs   <= 16 ops
+{
+    let genommen = BESITZER exchange f when old(BESITZER) == 0 returns erfolg
+        publishes { farbbericht };
+    return genommen;
+}
+
+-- Ein `locks`-Block gibt am Ende frei. Wer kopieren-und-freigeben will, tut es INNERHALB
+-- und nimmt danach neu -- die Form macht das sichtbar.
+impl fn unter_zwei_sperren(c : ptr<normal, rw> Zelle)
+    effects { writes c, locks KAPPEN, locks SPEICHER }
+    costs   <= 100 ops
+{
+    locks KAPPEN {
+        locks SPEICHER {
+            if c.wert < GRENZE {
+                c.wert = c.wert + 1;
+            }
+        }
+    }
+}
+
+type Zelle = { wert : Zaehlerwert, };
+
+}

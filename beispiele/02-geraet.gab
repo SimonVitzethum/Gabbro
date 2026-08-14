@@ -1,0 +1,74 @@
+-- 02 -- `device`: Register als Typen, Uebergaenge statt Schreibvorgaenge.
+--
+-- Die Falle, gegen die das geschrieben ist, heisst nicht „GCMD lesen", sondern **„beim
+-- Schreiben die Zustandsbits nicht mitschreiben"**. `mirrors` nennt EINMAL je Geraet, woher
+-- die mitzufuehrenden Bits kommen; ein `store`, der sie fallenlaesst, ist damit nicht
+-- schreibbar. `class w` allein tat das nicht.
+
+module beispiel::geraet {
+
+opaque type Pa = u64;
+
+-- Die Registerlagen stehen einmal; jedes Bit ist benannt, und zwei Felder duerfen sich
+-- nicht ueberschneiden (D2 -- der Namenspass faellt sonst mit N003).
+device Vtd(basis : Pa) at mmio {
+    reg GCMD : u32 @0x18 class w  fields { TE @31, SRTP @30, IRE @25, }
+    reg GSTS : u32 @0x1c class r  fields { TES @31, RTPS @30, IRES @25, }
+    reg CAP  : u64 @0x08 class r  fields { FRO @[33:24], ND @[2:0], }
+    reg RTA  : u64 @0x20 class rw
+    reg FSTS : u32 @0x34 class w1c fields { PPF @1, PFO @0, }
+
+    -- Register an laufzeitberechneter Basis: der Index ist durch `count` M1-beschraenkt.
+    bank FRR at CAP.FRO * 16 stride 16 count 256 {
+        reg FR_LO : u64 @0x0 class rw
+        reg FR_HI : u64 @0x8 class rw
+    }
+
+    mirrors GCMD from GSTS;
+
+    -- Ein Uebergang nennt das GANZE geschriebene Wort, nicht das gesetzte Bit.
+    transition wurzel_setzen { GCMD.SRTP: 0 -> 1 }
+        effects { writes GCMD }
+
+    transition uebersetzung_an { GCMD.TE: 0 -> 1 }
+        requires GSTS.RTPS == 1
+        effects  { writes GCMD }
+
+    transition uebersetzung_aus { GCMD.TE: 1 -> 0 }
+        requires GSTS.TES == 1
+        effects  { writes GCMD }
+
+    -- MEHRERE Orte in EINEM Zug: `caller` und `reply_owner` sind nie halb gesetzt.
+    transition irq_umlenken { GCMD.IRE: 0 -> 1, GCMD.SRTP: 1 -> 1 }
+        requires GSTS.RTPS == 1
+        effects  { writes GCMD }
+}
+
+assume vtd_te_wirksam
+    "GCMD.TE schaltet die Uebersetzung scharf; DMA ohne Kontexteintrag faultet."
+    falsifier sonde_vtd_te;
+
+assume vtd_srtp_quittiert
+    "Nach SRTP=1 steht RTPS=1, bevor TE gesetzt werden darf."
+    falsifier sonde_vtd_srtp;
+
+impl fn scharfschalten(v : ptr<mmio, rw> Vtd, wurzel : Pa)
+    requires  aligned(wurzel, 4096)
+    ensures   v.GSTS.TES == 1
+    effects   { writes v.RTA, writes v.GCMD, reads v.GSTS }
+    costs     <= 64 ops
+{
+    v.RTA = wurzel;
+    wurzel_setzen(v);
+    retry warten until v.GSTS.RTPS == 1
+        bounded 1024 ops
+        progress geraet_quittiert
+        on_exceeded geraet_haengt
+        effects { reads v.GSTS }
+    { }
+    uebersetzung_an(v);
+}
+
+extern fn geraet_haengt() -> never effects { diverges };
+
+}

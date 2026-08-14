@@ -1,0 +1,18 @@
+[package]
+name = "gabbro-cli"
+description = "Der Gabbro-Uebersetzer als Kommandozeile"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "gabbro"
+path = "src/main.rs"
+
+[dependencies]
+gabbro-syntax = { path = "../gabbro-syntax" }
+gabbro-check = { path = "../gabbro-check" }
+
+[lints]
+workspace = true

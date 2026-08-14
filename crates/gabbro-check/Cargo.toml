@@ -1,0 +1,13 @@
+[package]
+name = "gabbro-check"
+description = "Die Pruefpaesse in fester Reihenfolge -- die Spezifikation IST die Passliste"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+gabbro-syntax = { path = "../gabbro-syntax" }
+
+[lints]
+workspace = true

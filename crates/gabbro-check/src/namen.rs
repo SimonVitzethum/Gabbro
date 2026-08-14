@@ -1,0 +1,239 @@
+//! **Pass 1 -- Namen.**
+//!
+//! E5: *jede Deklaration ist an genau einer Stelle vollstaendig.* Zwei Deklarationen desselben
+//! Namens im selben Geltungsbereich sind damit kein Streit ueber Vorrang, sondern ein Fehler --
+//! und zwar **hier**, nicht spaeter, wenn ein anderer Pass eine der beiden gewaehlt hat.
+//!
+//! Der Pass prueft **Doppelungen**, nicht Aufloesung: welcher Name wohin zeigt, entscheidet sich
+//! erst mit der Modulaufloesung, und die gibt es noch nicht (s. `Zustand::Offen` in der
+//! Passliste). Was er prueft, prueft er vollstaendig; was er nicht prueft, behauptet er nicht.
+
+use gabbro_syntax::ast::*;
+use gabbro_syntax::diag::{Absage, Absagen};
+use gabbro_syntax::span::Span;
+use std::collections::HashMap;
+
+pub fn pass(baum: &Programm, absagen: &mut Absagen) {
+    geltungsbereich(&baum.items, absagen);
+}
+
+fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
+    let mut gesehen: HashMap<String, Span> = HashMap::new();
+    for item in items {
+        if let Some(name) = item.art.name() {
+            // `arch` und `when` waehlen aus: zwei Deklarationen desselben Namens fuer
+            // **verschiedene** Architekturen sind eine Deklaration je Ziel, keine Doppelung.
+            // `FRAGMENTE.md` F5 schreibt `prim fn invoke … arch x86_64;` und dieselbe Zeile
+            // mit `arch aarch64;` -- wer das als Fehler meldet, verbietet die bedingte
+            // Uebersetzung, die `when` (SYNTAX.md §1) ausdruecklich traegt.
+            match auswahl(item) {
+                Auswahl::Immer => doppelt(
+                    &mut gesehen,
+                    &name.text,
+                    name.span,
+                    item.art.benennung(),
+                    absagen,
+                ),
+                Auswahl::Arch(a) => doppelt(
+                    &mut gesehen,
+                    &format!("{}\u{1}arch:{a}", name.text),
+                    name.span,
+                    item.art.benennung(),
+                    absagen,
+                ),
+                // Eine `when`-Bedingung kann dieser Pass nicht auswerten -- die
+                // Konstantenauswertung ist Teil von M1 und noch nicht gebaut. Also wird
+                // hier **nichts behauptet**.
+                Auswahl::Bedingt => {}
+            }
+        }
+        match &item.art {
+            ItemArt::Modul(m) => geltungsbereich(&m.items, absagen),
+            ItemArt::Tabelle(t) => tabelle(t, absagen),
+            ItemArt::Reason(r) => reason(r, absagen),
+            ItemArt::Device(d) => device(d, absagen),
+            ItemArt::Typ(t) => typdecl(t, absagen),
+            ItemArt::Format(f) => felder(&f.felder, "Format", absagen),
+            _ => {}
+        }
+    }
+}
+
+/// Wodurch ein Item ausgewaehlt wird -- der Schluessel, unter dem Doppelungen zaehlen.
+enum Auswahl {
+    Immer,
+    Arch(String),
+    Bedingt,
+}
+
+fn auswahl(item: &Item) -> Auswahl {
+    if item.when.is_some() {
+        return Auswahl::Bedingt;
+    }
+    if let ItemArt::Funktion(f) = &item.art {
+        if f.when.is_some() {
+            return Auswahl::Bedingt;
+        }
+        if let Some(a) = &f.arch {
+            return Auswahl::Arch(a.text.clone());
+        }
+    }
+    Auswahl::Immer
+}
+
+fn doppelt(
+    gesehen: &mut HashMap<String, Span>,
+    name: &str,
+    span: Span,
+    was: &str,
+    absagen: &mut Absagen,
+) {
+    if let Some(erste) = gesehen.get(name) {
+        absagen.schiebe(
+            Absage::fehler(
+                "N001",
+                span,
+                format!("`{name}` ist in diesem Geltungsbereich zweimal deklariert ({was})"),
+            )
+            .mit_notiz(format!(
+                "die erste Deklaration steht bei Versatz {}",
+                erste.von
+            ))
+            .mit_notiz("E5: jede Deklaration ist an genau einer Stelle vollstaendig"),
+        );
+    } else {
+        gesehen.insert(name.to_string(), span);
+    }
+}
+
+fn typdecl(t: &TypDecl, absagen: &mut Absagen) {
+    if let Some(TypExpr::Varianten(varianten, _)) = &t.rumpf {
+        let mut gesehen = HashMap::new();
+        for v in varianten {
+            doppelt(
+                &mut gesehen,
+                &v.name.text,
+                v.name.span,
+                "Variante",
+                absagen,
+            );
+        }
+    }
+    if let Some(TypExpr::Verbund(f, _)) = &t.rumpf {
+        felder(f, "Verbund", absagen);
+    }
+}
+
+fn felder(felder: &[FeldDecl], was: &str, absagen: &mut Absagen) {
+    let mut gesehen = HashMap::new();
+    for f in felder {
+        doppelt(&mut gesehen, &f.name.text, f.name.span, was, absagen);
+    }
+}
+
+fn tabelle(t: &Tabelle, absagen: &mut Absagen) {
+    if let Some(slot) = &t.slot {
+        let mut gesehen = HashMap::new();
+        for f in &slot.felder {
+            doppelt(&mut gesehen, &f.name.text, f.name.span, "Slotfeld", absagen);
+        }
+    }
+    let mut gesehen = HashMap::new();
+    for i in &t.invarianten {
+        doppelt(
+            &mut gesehen,
+            &i.name.text,
+            i.name.span,
+            "Invariante",
+            absagen,
+        );
+    }
+}
+
+fn reason(r: &Reason, absagen: &mut Absagen) {
+    let mut gesehen = HashMap::new();
+    let mut werte: HashMap<u128, Span> = HashMap::new();
+    for f in &r.faelle {
+        doppelt(&mut gesehen, &f.name.text, f.name.span, "Grund", absagen);
+        if let Some(erste) = werte.get(&f.wert) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N002",
+                    f.span,
+                    format!(
+                        "der Zahlwert {} ist in `{}` zweimal vergeben",
+                        f.wert, r.name.text
+                    ),
+                )
+                .mit_notiz(format!("zuerst bei Versatz {}", erste.von))
+                .mit_notiz(
+                    "Regel 3 (abweisen, nie deuten): ein Grund ist ueber seine Zahl \
+                     unterscheidbar, sonst ist der Bericht mehrdeutig",
+                ),
+            );
+        } else {
+            werte.insert(f.wert, f.span);
+        }
+    }
+}
+
+fn device(d: &Device, absagen: &mut Absagen) {
+    let mut gesehen = HashMap::new();
+    for r in &d.register {
+        doppelt(&mut gesehen, &r.name.text, r.name.span, "Register", absagen);
+        regfelder(r, absagen);
+    }
+    for b in &d.baenke {
+        doppelt(&mut gesehen, &b.name.text, b.name.span, "Bank", absagen);
+        let mut innen = HashMap::new();
+        for r in &b.register {
+            doppelt(&mut innen, &r.name.text, r.name.span, "Register", absagen);
+            regfelder(r, absagen);
+        }
+    }
+    let mut uebergaenge = HashMap::new();
+    for u in &d.uebergaenge {
+        doppelt(
+            &mut uebergaenge,
+            &u.name.text,
+            u.name.span,
+            "Uebergang",
+            absagen,
+        );
+    }
+}
+
+/// D2 -- vollstaendige Layouts: **zwei Feldnamen an einem Register sind ein Fehler, und zwei
+/// Felder auf demselben Bit auch.** Ein ueberlappendes Layout ist genau die Falle, gegen die
+/// „jedes Bit eines Wortes ist benannt" geschrieben wurde.
+fn regfelder(r: &RegDecl, absagen: &mut Absagen) {
+    let mut gesehen = HashMap::new();
+    for (name, _) in &r.felder {
+        doppelt(&mut gesehen, &name.text, name.span, "Registerfeld", absagen);
+    }
+    // Ueberlappung der Bitlagen.
+    let mut belegt: Vec<(u128, u128, &Ident)> = Vec::new();
+    for (name, bp) in &r.felder {
+        let (hoch, tief) = match bp {
+            BitPos::Bit(b) => (*b, *b),
+            BitPos::Bereich(h, t) => (*h.max(t), *h.min(t)),
+        };
+        for (h2, t2, andere) in &belegt {
+            if tief <= *h2 && *t2 <= hoch {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N003",
+                        name.span,
+                        format!(
+                            "die Bits von `{}` ueberschneiden sich mit `{}` in Register `{}`",
+                            name.text, andere.text, r.name.text
+                        ),
+                    )
+                    .mit_notiz("D2: jedes Bit eines Wortes ist benannt -- genau einmal"),
+                );
+                break;
+            }
+        }
+        belegt.push((hoch, tief, name));
+    }
+}

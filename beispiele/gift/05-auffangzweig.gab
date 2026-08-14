@@ -1,0 +1,11 @@
+-- erwartet: P034
+-- Es gibt keinen Auffangzweig. In Caprock sind seit Anlage fuenf `ObjectKind`-Varianten
+-- dazugekommen -- jede waere still in `_ => {}` gefallen.
+tagged type Art = { Eins(u32), Zwei(u32), Drei(u32) };
+
+impl fn deuten(a : Art) -> u32 effects { pure } {
+    match a {
+        Eins(x) => { return x; }
+        _       => { return 0; }
+    }
+}

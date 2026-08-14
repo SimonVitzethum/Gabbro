@@ -56,8 +56,12 @@ eine Zahl am Boden sagt, **was noch fehlt**.
 steht sie hinter dem Kriterium, nicht davor. Herleitung und Messprotokoll in [`PLAN.md`](PLAN.md);
 ohne Aufschlüsselung nach Logik/Klempnerei ist eine Zahl ab jetzt kein Messwert.
 
-Stand: 2026-08-13. **Nichts davon ist gebaut.** Was gemessen ist, steht als gemessen da; alles
-andere ist ausdrücklich Absicht.
+Stand: 2026-08-14. **Gebaut sind P2 und P3: Lexer, Wortschatz, Parser über die vollständige EBNF,
+dazu vier der neun Prüfpässe — Namen, M1+V1–V3, Schleifen, `effects`** (`crates/`, sicheres Rust,
+keine fremde Abhängigkeit). *Nicht gebaut: D1/D2, M2, M3, die Paarung, die Kosten, die C-Emission.*
+Der erste Lauf gegen die eigenen Fragmente **fällt: 1 von 6** — und M1 hat den handgeschriebenen
+Befund «B29» an derselben Zeile unabhängig wiedergefunden ([`MESSUNGEN.md`](MESSUNGEN.md)).
+Was gemessen ist, steht als gemessen da; alles andere ist ausdrücklich Absicht.
 
 ---
 
@@ -78,6 +82,26 @@ andere ist ausdrücklich Absicht.
 Dazu `fallen-klassifikation.tsv` (100 bezahlte Caprock-Fallen, einzeln klassifiziert) und drei
 Waechter: `pruefe-syntax.sh` (verbotene Formen, Prosa-Drift, Geschlossenheit, Erreichbarkeit,
 Terminaldeckung — mit Sprechproben), `pruefe-wortschatz.py`, `zaehle-fallen.sh`.
+
+**Und seit dem 2026-08-14 `crates/` — der Übersetzer selbst**, drei Kisten in sicherem Rust:
+`gabbro-syntax` (Lexik, Wortschatz, Grammatik), `gabbro-check` (die neun Prüfpässe in fester
+Reihenfolge, vier davon gebaut), `gabbro-cli` (`gabbro`). Vier Befehle, und der wichtigste ist
+`gabbro paesse`: er sagt, **was dieser Übersetzer nicht prüft**.
+
+```
+cargo test                                  -- 48 Sprechproben, je in beide Richtungen
+cargo run --bin gabbro -- paesse            -- die Passliste, gebaut UND offen
+cargo run --bin gabbro -- pruefe beispiele/*.gab   -- mit Deckungszahl je Datei
+cargo run --bin gabbro -- fragmente FRAGMENTE.md   -- Tor P2, gemessen
+cargo run --bin gabbro -- annahmen datei.gab       -- „bewiesen unter A1…An"
+```
+
+**Dazu `beispiele/` — die Sprache in acht Dateien**, jede gegen den Übersetzer gehalten:
+`table` mit Invarianten · `device` mit Übergängen · `format` mit ELF · die drei Schleifenformen ·
+Nebenläufigkeit mit `publishes`/`awaits` · Annahmen und `check` · `entry`/`boot`/`walk` ·
+und **`08-bereiche.gab`, an dem M1 und V1–V3 hängen**. Daneben `beispiele/gift/` — 15 Dateien,
+die **fallen müssen**, jede mit dem Code, mit dem sie fällt. Ein Korpus ohne Gegenprobe belohnt
+einen stummen Prüfer.
 
 > **Am 2026-08-14 von 24 auf 9 Dateien zusammengezogen.** Der Ordner war chronologisch gewachsen —
 > „Festlegung", dann drei „Ergaenzungen". **Das war falsch abgelegt: die Ergaenzungen sind zentrale

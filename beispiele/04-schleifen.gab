@@ -1,0 +1,105 @@
+-- 04 -- Die drei Schleifenformen. **Unendlich ist eine davon, und das ist erlaubt.**
+--
+-- Die Regel ist nicht „jede Schleife endet", sondern: **was eine Schleife tun darf, steht
+-- dabei.** `traverse` endet durch die Menge, `retry` durch eine Zahl, `forever` gar nicht --
+-- aber jeder Durchgang ist begrenzt und der Rahmen steht in `effects`.
+
+module beispiel::schleifen {
+
+const NKERNE  : u32 = 64;
+const NFAEDEN : u32 = 1024;
+
+type KernIdx  = u32 in 0 ..< NKERNE;
+type FadenIdx = u32 in 0 ..< NFAEDEN;
+type Frist    = u64 in 1 .. 1000000;
+
+table Warteschlange {
+    slot {
+        aktiv   : bool,
+        frist   : Frist,
+        naechst : option index into Warteschlange,
+    }
+}
+
+lock PLANER protects { bereit, laufend } rank 1 held <= 300 ops;
+
+-- 1. `traverse` -- endet durch die Menge. Bereich UND Terminierung fallen durch Konstruktion.
+impl fn faellige_wecken(q : ptr<normal, rw> Warteschlange, jetzt : Frist)
+    requires Held(PLANER)
+    effects  { writes q.slots, locks PLANER }
+    costs    <= 4096 ops
+{
+    traverse eintrag over slots of q by unvisited
+        touches writes q.slots
+    {
+        if q.slots[eintrag].frist <= jetzt {
+            q.slots[eintrag].aktiv = true;
+        }
+    }
+}
+
+-- 2. `retry` -- endet durch eine Zahl. Der Ueberlauf ist BENANNT, nicht gedeutet:
+--    `on_exceeded` nennt den Ausgang, statt dass ein Kommentar ihn beschreibt.
+impl fn auf_quittung_warten(g : ptr<mmio, r> Statusregister) -> u32
+    effects { reads g }
+    costs   <= 2048 ops
+{
+    retry warten until g.fertig == 1
+        bounded 1024 ops
+        progress geraet_antwortet
+        on_exceeded zeitablauf
+        effects { reads g }
+    { }
+    return 0;
+}
+
+-- 3. `forever` -- endet NICHT. `per_pass`, `on_exceeded` und `effects` sind Pflicht;
+--    `progress` nennt, WER sie beendet -- eine Annahme mit Falsifikator, und der
+--    Watchdog IST der Falsifikator. `leaves` nennt, was den Ausgang verlaesst.
+divergent fn dienstschleife(q : ptr<normal, rw> Warteschlange, marke : Angemeldet)
+    effects { diverges, writes q.slots, locks PLANER }
+{
+    forever dienst
+        per_pass bounded 4096 ops
+        on_exceeded watchdog_schlug_an
+        effects  { reads q.slots, writes q.slots, locks PLANER }
+        progress zeitgeber_tickt
+        leaves   marke
+    {
+        locks PLANER {
+            traverse e over slots of q by unvisited touches writes q.slots {
+                if q.slots[e].aktiv {
+                    q.slots[e].aktiv = false;
+                    next dienst;
+                }
+            }
+        }
+        if abschaltung_angefordert() {
+            leave dienst;
+        }
+    }
+}
+
+-- Die Schranke eines Durchgangs DARF von seinen Eingaben abhaengen -- damit ist eine
+-- Signatur ueber ein Manifest ehrlich beschreibbar statt falsch beschraenkt.
+impl fn manifest_pruefen(m : ptr<normal, r> Manifest) -> u32
+    effects { reads m }
+{
+    forever pruefer
+        per_pass bounded 64 + 12 * lenof(m) ops
+        on_exceeded zeitablauf
+        effects { reads m }
+        progress eingabe_endet
+    {
+        leave pruefer;
+    }
+    return 0;
+}
+
+linear type Angemeldet;
+
+extern fn abschaltung_angefordert() -> bool effects { reads schalter };
+extern fn zeitablauf() -> never effects { diverges };
+extern fn watchdog_schlug_an() -> never effects { diverges };
+
+}

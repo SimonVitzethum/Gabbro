@@ -1,0 +1,8 @@
+-- erwartet: M102
+-- Teilen und Rest verlangen einen Nenner, dessen Bereich die Null ausschliesst.
+-- `n` ist `0 .. 1000` -- die Null ist drin, also ist die Zeile nicht schreibbar.
+type Anzahl = u32 in 0 .. 1000;
+
+impl fn mittel(summe : u32, n : Anzahl) -> u32 effects { pure } {
+    return summe / n;
+}
