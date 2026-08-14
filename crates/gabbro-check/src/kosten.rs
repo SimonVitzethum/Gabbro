@@ -499,3 +499,131 @@ fn groesser(a: Kosten, b: Kosten) -> Kosten {
         (_, u) => u,
     }
 }
+
+/// **Die Nullzusage, als Werkzeug statt als Handgriff.**
+///
+/// Am 2026-08-14 habe ich die `costs`-Zeilen eines neuen Beispiels ermittelt, indem ich sie
+/// absichtlich auf `1 ops` drückte, den Prüfer die wahren Zahlen nennen liess und sie dann
+/// eintrug. Das Verfahren ist richtig — **eine `costs`-Zeile soll eine Messung sein, keine
+/// Schätzung** —, aber der Handgriff war Handarbeit, und Handarbeit an einer Zahl ist genau
+/// die Stelle, an der eine Zahl parallel zur Wahrheit zu laufen beginnt.
+///
+/// Also nennt der Prüfer sie jetzt selbst. `gabbro kosten datei.gab` druckt je Funktion die
+/// **gerechnete** Rumpfzahl neben der **zugesagten**, und je `locks`-Block die gerechnete
+/// Haltezeit neben `held` bzw. `shared held`. Wer eine Zusage schreibt, schreibt ab, was
+/// dasteht.
+///
+/// **Was die Spalte `Luft` bedeutet und was nicht:** sie ist die Differenz, nicht ein Urteil.
+/// Grosse Luft ist bei `costs` oft richtig (eine Signatur, die nicht bei jeder Rumpfänderung
+/// bricht) und bei `held` fast immer falsch (die Latenzaussage rechnet mit der Zusage, nicht
+/// mit der Rechnung).
+pub fn bericht(baum: &Programm) -> String {
+    let u = Umgebung::sammle(baum);
+    let mut deklariert: HashMap<String, i128> = HashMap::new();
+    let mut haltezeiten: HashMap<String, i128> = HashMap::new();
+    let mut geteilte_haltezeiten: HashMap<String, i128> = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
+        ItemArt::Funktion(f) => {
+            if let Some(c) = &f.costs {
+                if let Some(n) = u.konst_wert(modul, c) {
+                    deklariert.insert(f.name.text.clone(), n);
+                }
+            }
+        }
+        ItemArt::Lock(l) => {
+            if let Some(n) = l.haltezeit.as_ref().and_then(|h| u.konst_wert(modul, h)) {
+                haltezeiten.insert(l.name.text.clone(), n);
+            }
+            if let Some(n) = l
+                .geteilte_haltezeit
+                .as_ref()
+                .and_then(|h| u.konst_wert(modul, h))
+            {
+                geteilte_haltezeiten.insert(l.name.text.clone(), n);
+            }
+        }
+        _ => {}
+    });
+
+    let mut out = String::from(
+        "-- Was der Rumpf KOSTET, neben dem, was die Zeile ZUSAGT. Wer eine Zusage\n\
+         -- schreibt, schreibt ab, was hier steht -- eine `costs`-Zeile ist eine Messung,\n\
+         -- keine Schaetzung.\n\
+         -- Stelle\tgerechnet\tzugesagt\tLuft\n",
+    );
+    let (mut mit, mut ohne) = (0usize, 0usize);
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Block(b) = &f.rumpf else {
+            return;
+        };
+        let lokal = f
+            .parameter
+            .iter()
+            .map(|p| (p.name.text.clone(), u.typ_von_ausdruck_decl(modul, &p.typ)))
+            .collect();
+        let r = Rechner {
+            u: &u,
+            modul,
+            deklariert: &deklariert,
+            haltezeiten: &haltezeiten,
+            geteilte_haltezeiten: &geteilte_haltezeiten,
+            lokal,
+        };
+        let zugesagt = f.costs.as_ref().and_then(|c| u.konst_wert(modul, c));
+        match r.block(b) {
+            Kosten::Zahl(n) => {
+                mit += 1;
+                out.push_str(&format!("{}\t{n}\t{}\n", f.name.text, spalte(zugesagt, n)));
+            }
+            Kosten::Unbekannt(warum, _) => {
+                ohne += 1;
+                out.push_str(&format!(
+                    "{}\tOFFEN\t{}\t-- {warum}\n",
+                    f.name.text,
+                    zugesagt.map(|z| z.to_string()).unwrap_or("--".into())
+                ));
+            }
+        }
+        r.bloecke_zeigen(b, &f.name.text, &mut out);
+    });
+    out.push_str(&format!(
+        "-- {mit} Ruempfe ausgerechnet, {ohne} offen.\n\
+         -- `Luft` ist eine Differenz, kein Urteil: bei `costs` ist sie oft richtig (eine\n\
+         -- Signatur soll nicht bei jeder Rumpfaenderung brechen), bei `held` fast immer\n\
+         -- falsch -- die Latenzaussage rechnet mit der ZUSAGE, nicht mit der Rechnung.\n"
+    ));
+    out
+}
+
+fn spalte(zugesagt: Option<i128>, gerechnet: i128) -> String {
+    match zugesagt {
+        Some(z) => format!("{z}\t{}", z - gerechnet),
+        None => "--\t--".to_string(),
+    }
+}
+
+impl Rechner<'_> {
+    /// Je `locks`-Block: was er haelt, gegen das, was die Sperre zusagt.
+    fn bloecke_zeigen(&self, b: &Block, wo: &str, out: &mut String) {
+        for s in &b.anweisungen {
+            if let StmtArt::Sperrt(l) = &s.art {
+                let name = l.sperre.text();
+                let (topf, wort) = if l.geteilt {
+                    (self.geteilte_haltezeiten, "shared held")
+                } else {
+                    (self.haltezeiten, "held")
+                };
+                if let Kosten::Zahl(n) = self.block(&l.rumpf) {
+                    out.push_str(&format!(
+                        "  {wo} / {wort} {name}\t{n}\t{}\n",
+                        spalte(topf.get(&name).copied(), n)
+                    ));
+                }
+                self.bloecke_zeigen(&l.rumpf, wo, out);
+            }
+        }
+    }
+}

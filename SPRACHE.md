@@ -1011,11 +1011,30 @@ gescheitert sind, und dieses Konstrukt besteht es.*
 | `S003` | Hochstufung: exklusiv nehmen, während dieselbe Sperre geteilt gehalten wird. Auf einer Drehsperre ein Deadlock, kein Stilfehler. |
 | `S004` | `shared held` erklärt, aber nirgends geteilt genommen — *eine Zusage ohne Stelle, an der sie fällt.* |
 | `E007` | Geteilt **erklärt**, exklusiv **genommen**. Die gefährliche Richtung. |
+| `S005` | Aufruf einer Funktion mit `requires Held(…)` aus einem geteilten Block. **Zwischenregel**, siehe unten. |
 
 **Die Richtung ist nicht symmetrisch, und das ist der Kern von `E007`.** Exklusiv erklären
 deckt die geteilte Nahme — wer mehr hält, als er zusagt, irrt in die sichere Seite. Umgekehrt
 ist es eine Lüge: der Aufrufer liest `locks shared`, rechnet mit Nebenläufigkeit, die es nicht
 gibt, **und legt seine Latenzrechnung darauf an**.
+
+**Die Aufrufgrenze, und warum dort eine absichtlich zu strenge Regel steht.** `S001` sieht
+nur, was der Block **selbst** schreibt. Ruft ein geteilter Block eine Funktion mit
+`requires Held(N)`, schreibt **der Gerufene** exklusiv-berechtigt, während **der Rufer** nur
+geteilt hält — dieselbe Verletzung, einen Rahmen weiter. Ohne Regel wäre die Grenze nicht
+bloss ungeprüft, sondern **durchlässig**: der Zeuge existiert, seine Stärke wird nicht
+geprüft.
+
+Die richtige Prüfung braucht den **Aufrufgraphen** — denselben, an dem heute schon die
+Aufrufwirkungen in Pass 8 hängen. Bis dahin gilt:
+
+> **Ein geteilter Block ruft keine Funktion mit `requires Held(…)`. Punkt.**
+
+Das ist **zu streng** — es verbietet auch den harmlosen Aufruf über eine andere Sperre. Der
+Preis steht in der Absage. *Eine laute Übertreibung ist billiger als eine stille Ausnahme:
+nach der stillen sucht niemand* (`WERKZEUGKASTEN.md`, W4). Mit Pass 8 wird sie **ersetzt**,
+nicht gelockert: ein geteilter Zeuge deckt dann genau `requires Held-shared`, und die
+Asymmetrie steht eine Ebene höher noch einmal so, wie `E007` sie unten schneidet.
 
 **Zwei Zahlen, nicht eine.** `held` war für **exklusive** Halter gedacht. Auf der geteilten
 Seite ist die Rechengrösse eine andere — nicht die Haltezeit eines Lesers, sondern die

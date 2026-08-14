@@ -155,11 +155,16 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       (Zusage ohne Messstelle), `E007` (geteilt erklaert, exklusiv genommen), `K003` (die
       geteilte Haltezeit gegen ihre eigene Zahl). Fuenf neue Mutationen, alle gefangen;
       Beispiel `10-geteilte-sperre.gab`, Giftproben 38–41.
-      * **Was offen bleibt:** der **Zeuge am Aufrufrand**. Eine Funktion mit
-        `requires Held(N)` darf aus einem `locks shared N`-Block nicht gerufen werden — das
-        ist dieselbe Asymmetrie wie `E007`, nur eine Ebene hoeher. Sie braucht den
-        **Aufrufgraphen**, und der ist derselbe fehlende Teil, an dem heute schon die
-        Aufrufwirkungen in Pass 8 haengen. *Ein Loch, nicht zwei — und es zaehlt einmal.*
+      * **Der Zeuge am Aufrufrand steht als Zwischenregel** (`S005`): ein geteilter Block
+        ruft **keine** Funktion mit `requires Held(…)`. Punkt. Zu streng — auch der Aufruf
+        ueber eine andere Sperre faellt, der harmlos waere — aber in die sichere Richtung
+        irrend, und der Preis steht in der Absage.
+      * **Was offen bleibt, ist die ECHTE Pruefung**, und der Mechanismus ist derselbe wie
+        bei den Aufrufwirkungen in Pass 8: der **Aufrufgraph**. *Ein Mechanismus, zwei
+        Fehlerrichtungen* — und nur eine davon war gefaehrlich, naemlich diese: bis `S005`
+        stand, war die Grenze nicht ungeprueft, sondern **durchlaessig** (der Zeuge
+        existierte, seine Staerke wurde nicht geprueft). Mit Pass 8 wird `S005` **ersetzt**,
+        nicht gelockert: ein geteilter Zeuge deckt dann genau `requires Held-shared`.
 - [ ] **L-B — `ghost Stale(T)`: Uebergabe mit Neuvalidierung. Kandidat, kein Beschluss.**
       Das Muster, das Doppelnahme **ersetzt**: unter Sperre A waehlen, freigeben, unter B
       fortsetzen, Befund neu pruefen. Die ehrliche Fassung ist **kein Atomizitaetsversprechen,

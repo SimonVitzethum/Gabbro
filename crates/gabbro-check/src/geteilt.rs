@@ -34,11 +34,63 @@
 //! * **`S004`** — `shared held` erklärt, aber die Sperre wird nirgends geteilt genommen.
 //!   *Eine Zahl ohne Messstelle ist eine Behauptung; dieselbe Regel wie beim toten
 //!   Kandidaten — kein Konstrukt ohne gemessenen Bedarf.*
+//! * **`S005`** — **die Zwischenregel an der Aufrufgrenze.** Siehe unten.
+//!
+//! ## `S005` — warum eine absichtlich zu strenge Regel besser ist als keine
+//!
+//! Die tragende Regel `S001` sieht nur, was der Block **selbst** schreibt. Ein Aufruf trägt
+//! sie nicht mit: ruft ein geteilter Block eine Funktion mit `requires Held(N)`, so schreibt
+//! **der Gerufene** exklusiv-berechtigt, während **der Rufer** nur geteilt hält. **Das ist
+//! `S001` durch die Hintertür**, und bis Pass 8 steht, ist dieses Loch nicht bloss offen,
+//! sondern **durchlässig**: der Zeuge existiert, seine Stärke wird nicht geprüft.
+//!
+//! Die richtige Prüfung braucht den Aufrufgraphen — denselben, an dem heute schon die
+//! Aufrufwirkungen in Pass 8 hängen. Bis dahin gilt die grobe Fassung:
+//!
+//! > **Ein geteilter Block ruft keine Funktion mit `requires Held(…)`. Punkt.**
+//!
+//! Das ist **zu streng** — es verbietet auch den Aufruf über eine *andere* Sperre, der
+//! harmlos wäre. Aber es irrt in die sichere Richtung, und der Preis dafür ist bekannt und
+//! benannt. **Die Alternative wäre, dass die tragende Regel des neuen Konstrukts ausgerechnet
+//! an der Aufrufgrenze eine stille Ausnahme hat** — und eine stille Ausnahme ist teurer als
+//! eine laute Übertreibung, weil niemand sie sucht.
+//!
+//! Mit Pass 8 wird sie **ersetzt**, nicht gelockert: ein geteilter Zeuge deckt dann genau
+//! `requires Held-shared`, und die Asymmetrie steht eine Ebene höher noch einmal so, wie
+//! `E007` sie unten schneidet.
 
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
 use std::collections::BTreeMap;
+
+/// Nennt die `requires`-Klausel einen `Held(…)`-Zeugen? — der Prädikatbaum, flach gelesen.
+fn verlangt_held(p: &Pred) -> Option<String> {
+    match &p.art {
+        PredArt::Vergleich(e) => held_im_ausdruck(e),
+        PredArt::Klammer(x) | PredArt::Nicht(x) => verlangt_held(x),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) => verlangt_held(a).or_else(|| verlangt_held(b)),
+        PredArt::Element(e, _) => held_im_ausdruck(e),
+        _ => None,
+    }
+}
+
+fn held_im_ausdruck(e: &Expr) -> Option<String> {
+    match &e.art {
+        ExprArt::Ruf(r) if r.pfad.teile.last().is_some_and(|i| i.text == "Held") => Some(
+            r.argumente
+                .first()
+                .map(|a| match &a.art {
+                    ExprArt::Ort(o) => o.text(),
+                    _ => "…".to_string(),
+                })
+                .unwrap_or_else(|| "…".to_string()),
+        ),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => held_im_ausdruck(x),
+        ExprArt::Binaer(_, a, b) => held_im_ausdruck(a).or_else(|| held_im_ausdruck(b)),
+        _ => None,
+    }
+}
 
 /// Was über eine Sperre im Baum steht.
 struct Sperre {
@@ -62,6 +114,20 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         }
     });
 
+    // Wer einen `Held(…)`-Zeugen verlangt, darf aus einem geteilten Block nicht gerufen
+    // werden -- bis Pass 8 die Staerke des Zeugen wirklich prueft (S005).
+    let mut verlangt: BTreeMap<String, String> = BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            for r in &f.requires {
+                if let Some(sperre) = verlangt_held(r) {
+                    verlangt.insert(f.name.text.clone(), sperre);
+                    break;
+                }
+            }
+        }
+    });
+
     let mut geteilt_genommen: Vec<String> = Vec::new();
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Funktion(f) = &item.art else {
@@ -70,7 +136,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         let FnRumpf::Block(b) = &f.rumpf else {
             return;
         };
-        block(b, &[], &[], &sperren, &mut geteilt_genommen, absagen);
+        block(b, &[], &[], &sperren, &verlangt, &mut geteilt_genommen, absagen);
     });
 
     // S004 -- eine Zahl ohne Messstelle. Kein Konstrukt ohne gemessenen Bedarf, und keine
@@ -102,6 +168,7 @@ fn block(
     // nach sich zieht, laesst den Leser den Fehler an der falschen Stelle suchen.
     exklusiv: &[String],
     sperren: &BTreeMap<String, Sperre>,
+    verlangt: &BTreeMap<String, String>,
     genommen: &mut Vec<String>,
     absagen: &mut Absagen,
 ) {
@@ -137,7 +204,7 @@ fn block(
                     }
                     let mut tiefer = offen.to_vec();
                     tiefer.push(name);
-                    block(&l.rumpf, &tiefer, exklusiv, sperren, genommen, absagen);
+                    block(&l.rumpf, &tiefer, exklusiv, sperren, verlangt, genommen, absagen);
                 } else {
                     // S003 -- Hochstufung. Auf einer Drehsperre ist das kein Stilfehler.
                     if offen.contains(&name) {
@@ -163,39 +230,49 @@ fn block(
                     }
                     let mut tiefer = exklusiv.to_vec();
                     tiefer.push(name);
-                    block(&l.rumpf, offen, &tiefer, sperren, genommen, absagen);
+                    block(&l.rumpf, offen, &tiefer, sperren, verlangt, genommen, absagen);
                 }
             }
             StmtArt::Zuweisung(z) => {
-                schreibprobe(&z.ziel, s.span, offen, exklusiv, sperren, absagen)
+                schreibprobe(&z.ziel, s.span, offen, exklusiv, sperren, absagen);
+                rufprobe_expr(&z.wert, s.span, offen, verlangt, absagen);
             }
+            StmtArt::Ruf(r) => rufprobe(r, s.span, offen, verlangt, absagen),
+            StmtArt::Let(l) => rufprobe_expr(&l.wert, s.span, offen, verlangt, absagen),
+            StmtArt::Return(Some(e)) => rufprobe_expr(e, s.span, offen, verlangt, absagen),
             StmtArt::Publish(p) => schreibprobe(&p.ziel, s.span, offen, exklusiv, sperren, absagen),
             StmtArt::Exchange(e) => {
                 schreibprobe(&e.ort, s.span, offen, exklusiv, sperren, absagen);
                 if let XForm::Update { rumpf, .. } = &e.form {
-                    block(rumpf, offen, exklusiv, sperren, genommen, absagen);
+                    block(rumpf, offen, exklusiv, sperren, verlangt, genommen, absagen);
                 }
             }
             StmtArt::Wenn(w) => {
+                for (b, _) in &w.zweige {
+                    rufprobe_expr(b, s.span, offen, verlangt, absagen);
+                }
                 for (_, r) in &w.zweige {
-                    block(r, offen, exklusiv, sperren, genommen, absagen);
+                    block(r, offen, exklusiv, sperren, verlangt, genommen, absagen);
                 }
                 if let Some(r) = &w.sonst {
-                    block(r, offen, exklusiv, sperren, genommen, absagen);
+                    block(r, offen, exklusiv, sperren, verlangt, genommen, absagen);
                 }
             }
             StmtArt::Match(m) => {
                 for z in &m.zweige {
-                    block(&z.rumpf, offen, exklusiv, sperren, genommen, absagen);
+                    block(&z.rumpf, offen, exklusiv, sperren, verlangt, genommen, absagen);
                 }
             }
-            StmtArt::Bricht(x) => block(&x.rumpf, offen, exklusiv, sperren, genommen, absagen),
-            StmtArt::Narrow(x) => block(&x.sonst, offen, exklusiv, sperren, genommen, absagen),
-            StmtArt::LetSonst(x) => block(&x.sonst, offen, exklusiv, sperren, genommen, absagen),
+            StmtArt::Bricht(x) => block(&x.rumpf, offen, exklusiv, sperren, verlangt, genommen, absagen),
+            StmtArt::Narrow(x) => block(&x.sonst, offen, exklusiv, sperren, verlangt, genommen, absagen),
+            StmtArt::LetSonst(x) => {
+                rufprobe(&x.ruf, s.span, offen, verlangt, absagen);
+                block(&x.sonst, offen, exklusiv, sperren, verlangt, genommen, absagen);
+            }
             StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(x) => block(&x.rumpf, offen, exklusiv, sperren, genommen, absagen),
-                Schleife::Retry(x) => block(&x.rumpf, offen, exklusiv, sperren, genommen, absagen),
-                Schleife::Forever(x) => block(&x.rumpf, offen, exklusiv, sperren, genommen, absagen),
+                Schleife::Traverse(x) => block(&x.rumpf, offen, exklusiv, sperren, verlangt, genommen, absagen),
+                Schleife::Retry(x) => block(&x.rumpf, offen, exklusiv, sperren, verlangt, genommen, absagen),
+                Schleife::Forever(x) => block(&x.rumpf, offen, exklusiv, sperren, verlangt, genommen, absagen),
             },
             _ => {}
         }
@@ -245,4 +322,74 @@ fn schreibprobe(
 fn beruehrt(platz: &str, getan: &str) -> bool {
     let kern = platz.rsplit('.').next().unwrap_or(platz);
     getan.split(['.', '[']).any(|t| t == kern)
+}
+
+/// **S005 — die Zwischenregel.** Absichtlich grob: *jeder* `Held(…)`-Zeuge zählt, nicht nur
+/// der der gerade geteilt gehaltenen Sperre. Der Preis ist benannt, die Richtung ist sicher.
+fn rufprobe(
+    r: &Ruf,
+    span: Span,
+    offen: &[String],
+    verlangt: &BTreeMap<String, String>,
+    absagen: &mut Absagen,
+) {
+    if offen.is_empty() {
+        return;
+    }
+    let Some(name) = r.pfad.teile.last() else {
+        return;
+    };
+    let Some(sperre) = verlangt.get(&name.text) else {
+        return;
+    };
+    absagen.schiebe(
+        Absage::fehler(
+            "S005",
+            span,
+            format!(
+                "`{}` verlangt `Held({sperre})`, wird hier aber unter geteilter Nahme von \
+                 `{}` gerufen",
+                name.text,
+                offen.join("`, `")
+            ),
+        )
+        .mit_notiz(
+            "der Gerufene schreibt exklusiv-berechtigt, der Rufer haelt nur geteilt -- das \
+             waere S001 durch die Hintertuer",
+        )
+        .mit_notiz(
+            "ZWISCHENREGEL, absichtlich zu streng: bis der Aufrufgraph steht (Pass 8, \
+             Aufrufwirkungen), faellt JEDER `Held(…)`-Zeuge unter geteilter Nahme -- auch \
+             der einer anderen Sperre, der harmlos waere",
+        )
+        .mit_notiz(
+            "eine laute Uebertreibung ist billiger als eine stille Ausnahme: nach der \
+             stillen sucht niemand",
+        ),
+    );
+}
+
+fn rufprobe_expr(
+    e: &Expr,
+    span: Span,
+    offen: &[String],
+    verlangt: &BTreeMap<String, String>,
+    absagen: &mut Absagen,
+) {
+    match &e.art {
+        ExprArt::Ruf(r) => {
+            rufprobe(r, span, offen, verlangt, absagen);
+            for a in &r.argumente {
+                rufprobe_expr(a, span, offen, verlangt, absagen);
+            }
+        }
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => {
+            rufprobe_expr(x, span, offen, verlangt, absagen)
+        }
+        ExprArt::Binaer(_, a, b) => {
+            rufprobe_expr(a, span, offen, verlangt, absagen);
+            rufprobe_expr(b, span, offen, verlangt, absagen);
+        }
+        _ => {}
+    }
 }

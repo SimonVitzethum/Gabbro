@@ -19,7 +19,7 @@ use gabbro_syntax::diag::Absagen;
 
 pub mod geteilt;
 pub mod kbedingung;
-mod kosten;
+pub mod kosten;
 mod m1;
 mod namen;
 mod schleifen;

@@ -369,6 +369,13 @@ MUTATIONEN = [
         '                        (self.haltezeiten, "shared held", "K003")',
         "K003 -- die geteilte Haltezeit wird gegen die EXKLUSIVE Zahl geprueft",
     ),
+    Mutation(
+        "zeuge-an-der-aufrufgrenze-egal",
+        "geteilt.rs",
+        "    let Some(sperre) = verlangt.get(&name.text) else {",
+        "    let Some(sperre) = verlangt.get(&name.text).filter(|_| false) else {",
+        "S005 -- ein geteilter Block darf einen `Held(…)`-Zeugen rufen (S001 durch die Hintertuer)",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

@@ -112,6 +112,7 @@ ausdrücklich Absicht.
 | [`FRAGMENTE.md`](FRAGMENTE.md) | sechs Caprock-Bereiche in Gabbro ausgeschrieben, mit Herkunft und Urteil |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`WERKZEUGKASTEN.md`](WERKZEUGKASTEN.md) | **Arbeitsregeln aus eigenen Fehlern** — jede mit dem Schaden, fuer den sie bezahlt wurde |
 
 Dazu `fallen-klassifikation.tsv` (100 bezahlte Caprock-Fallen, einzeln klassifiziert) und
 **fünf Wächter, jeder mit Sprechprobe in beide Richtungen**: `pruefe-syntax.sh` (verbotene
@@ -156,6 +157,7 @@ durchkamen, und drei kommen aus dem Kostenpass. Ein Korpus ohne Gegenprobe beloh
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`WERKZEUGKASTEN.md`](WERKZEUGKASTEN.md) | **Arbeitsregeln aus eigenen Fehlern** — jede mit dem Schaden, fuer den sie bezahlt wurde |
 | [`MESSUNGEN.md`](MESSUNGEN.md) | **P0, soweit der Ordner es zulässt.** Ordering **36/36 bestanden**; `19 → 0` **nicht entscheidbar**, weil fünf Klassen nur im Scratchpad liegen — ein Befund über das **Protokoll** |
 | [`SPRACHE.md`](SPRACHE.md) | **die Axiomschicht ausgezählt am echten Zweig** (A1–A25) und **der Bootpfad als Sprache**. `port` als sechster Adressraum holt **70 Fundstellen** aus der Axiomschicht in die Gerätesprache; `Has(F)` macht die #UD-Klasse zum Übersetzungsfehler; die Mode-Leiter PAE→LME→CR3→PG ist ein **Token-Fluss** |
 | [`SPRACHE.md`](SPRACHE.md) · [`SPRACHE.md`](SPRACHE.md) | **die drei Löcher der Festlegung** — Ordering-**Paarung** (`awaits`), Eintrittspfad (`entry`), Boot-Unerreichbarkeit in drei Schichten; dazu RMW (`exchange`), `Vis` über Funktionsgrenzen, und **der Prüferplan P0–P7 mit Toren** |

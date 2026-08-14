@@ -1,0 +1,38 @@
+-- erwartet: S005
+-- **S001 durch die Hintertuer.** Der geteilte Block schreibt selbst nichts -- er RUFT nur.
+-- Der Gerufene verlangt `Held(KAPPEN)` und schreibt exklusiv-berechtigt; der Rufer haelt
+-- geteilt. Ohne diese Zwischenregel waere das durchlaessig: der Zeuge existiert, seine
+-- Staerke wird nicht geprueft, und die tragende Regel des Konstrukts haette ausgerechnet an
+-- der Aufrufgrenze eine stille Ausnahme.
+
+module gift {
+
+const N : u32 = 64;
+type Rechte = u32 in 0 .. 15;
+
+table Raum count N {
+    slot { belegt : bool, rechte : Rechte, }
+}
+
+lock KAPPEN protects { belegt, rechte } rank 0
+    held <= 8 ops
+    shared held <= 8 ops;
+
+impl fn setzt(k : ptr<normal, rw> Raum, i : index into Raum, r : Rechte)
+    requires Held(KAPPEN)
+    effects  { writes k.slots }
+    costs    <= 2 ops
+{
+    k.slots[i].rechte = r;
+}
+
+impl fn ruft_unter_geteilter_nahme(k : ptr<normal, rw> Raum, i : index into Raum)
+    effects { writes k.slots, locks shared KAPPEN }
+    costs   <= 8 ops
+{
+    locks shared KAPPEN {
+        setzt(k, i, 3);
+    }
+}
+
+}

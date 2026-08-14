@@ -39,6 +39,22 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
+        "kosten" => {
+            if rest.is_empty() {
+                eprintln!("gabbro kosten: keine Datei genannt");
+                return std::process::ExitCode::from(2);
+            }
+            for datei in rest {
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} nicht lesbar");
+                    continue;
+                };
+                let (baum, _) = gabbro_syntax::lies(datei, &quelle);
+                println!("== {datei} ==");
+                print!("{}", gabbro_check::kosten::bericht(&baum));
+            }
+            std::process::ExitCode::SUCCESS
+        }
         "schablonen" => {
             print!("{}", gabbro_check::schablonen::zeige());
             std::process::ExitCode::SUCCESS
