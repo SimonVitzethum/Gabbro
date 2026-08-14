@@ -96,15 +96,15 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 
 ## Aus der Gegenpruefung (2026-08-14) — was noch offen ist
 
-- [ ] **Modulaufloesung fehlt, und M1 loest trotzdem auf.** Signaturen, Typen und Konstanten
-      sind nach **blankem Namen** verschluesselt; ein gleichnamiges `fn` oder `type` in einem
-      anderen Modul verdeckt die Deklaration und **loescht die Bereichspruefung
-      stillschweigend**. Pass 3 steht deshalb als `Teilgebaut` in der Liste.
-      **Das ist der naechste Pflichtposten am Pruefer**, vor jedem neuen Pass.
-- [ ] **Der `effects`-Pass sieht nie einen Rumpf.** Geprueft wird die Deklaration
-      (Anwesenheit, `pure` allein, `diverges`); `effects { pure }` ueber einer Funktion, die
-      schreibt, kommt durch. Pass 8 steht als `Teilgebaut`. **Der Rumpfabgleich ist der Pass,
-      den `SPRACHE.md` §7 eigentlich meint.**
+- [ ] **`effects` prueft Schreiben und `locks`, aber nicht Lesen und nicht Aufrufe.**
+      Der Rumpfabgleich steht (E005/E006); zwei Haelften fehlen:
+      * **Lesen** — `FRAGMENTE.md` liest in jeder Funktion Stellen, die keine `reads`-Zeile
+        nennt. Ob das ein Befund ueber die Fragmente ist oder die gemeinte Bedeutung von
+        `effects`, **entscheidet der Ordner, nicht der Pass**. Solange das offen ist, darf
+        er nicht pruefen, was er nicht weiss.
+      * **Aufrufwirkungen** — die Wirkungen des Gerufenen muessten auf die Argumente des
+        Aufrufers abgebildet werden. **Das ist der Posten, der `effects` erst kompositional
+        macht**, und ohne ihn deckt eine Wirkungsliste nur die erste Ebene.
 - [ ] **Die Mutationsprobe deckt heute den Pruefer, nicht die Emission.**
       `./mutiere-pruefer.py` beschaedigt je eine Regel des Pruefers und sieht nach, ob eine
       Probe faellt — **24 von 24 gefangen** (2026-08-14). Was noch fehlt, ist dieselbe Probe

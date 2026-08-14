@@ -1508,3 +1508,57 @@ Fundstellen keinen Klassierer ueber 513 abnimmt. *Dieselbe Lehre, zweimal am sel
 Und die Probe deckt den **Pruefer**, nicht die **Emission**. Der Posten, den `README.md`
 fuehrt — *Mutationsprobe auf der Annotationsemission* — bleibt offen, weil noch nichts
 emittiert wird.
+
+
+---
+
+# Die zwei Teilpaesse geschlossen — und was die Mutationsprobe dabei fand
+
+**2026-08-14.** Nach der Gegenpruefung standen zwei Paesse als `Teilgebaut` in der Liste.
+Beide sind jetzt zu, und beide Reparaturen faengt die Mutationsprobe.
+
+## Pass 3 — Modulaufloesung
+
+Signaturen, Typen und Konstanten waren nach **blankem Namen** verschluesselt. Die
+Aufloesung geht jetzt vom eigenen Modul nach aussen, dann ueber die `use`-Zeilen.
+
+**Sie faengt beide Richtungen, und das ist der Beleg, dass sie stimmt:**
+
+| Fall | vorher | nachher |
+|---|---|---|
+| `zwei::nimm(x)` mit `x + 1000` auf vollem `u32`, daneben ein fremdes `eins::Eng = u32 in 0..10` | **0 Fehler** — der fremde enge Typ gewann, M1 schwieg zu einem echten Ueberlauf | 2 Fehler |
+| `eins::nimm(x)` mit `x + 1000` auf `0 .. 10`, daneben ein fremdes `zwei::Eng = u32` | **2 Fehler** — falscher Befund, der Pfad lief am letzten Abschnitt in ein fremdes Modul | 0 Fehler |
+
+Ein stilles Loch **und** ein falscher Befund, beide aus derselben Zeile.
+
+## Pass 8 — `effects` gegen den Rumpf
+
+Bis hierher pruefte der Pass nur die **Deklaration**: Anwesenheit, `pure` allein,
+`diverges`. Damit erzwang die Zusage *„`effects` ist nicht fail-open"* eine **Liste, nicht
+ihre Wahrheit** — `effects { pure }` ueber einer schreibenden Funktion kam durch.
+
+Jetzt muss **jedes Schreiben** und **jedes `locks`** von einer erklaerten Wirkung gedeckt
+sein (`E005`, `E006`); gedeckt heisst: die erklaerte Stelle ist ein Praefix der
+geschriebenen, `writes c.slots` deckt `c.slots[s].benutzt`.
+
+**Der Pass bleibt `Teilgebaut`, und zwar mit Grund** — nicht aus Unfertigkeit:
+
+* **Lesen wird nicht geprueft.** `FRAGMENTE.md` liest in jeder Funktion Stellen, die keine
+  `reads`-Zeile nennt. Ob das ein Befund ueber die Fragmente ist oder die gemeinte Bedeutung
+  von `effects`, **entscheidet der Ordner und nicht der Pass**. Ein Pruefer, der eine
+  ungeklaerte Frage in seine Absagen einbaut, entscheidet sie stillschweigend.
+* **Aufrufwirkungen ebenso nicht.** Dafuer muessten die Wirkungen des Gerufenen auf die
+  Argumente des Aufrufers abgebildet werden. **Das ist der Posten, der `effects` erst
+  kompositional macht.**
+
+## Was die Mutationsprobe dazu sagte
+
+Drei neue Mutationen (`rumpf-egal`, `sperre-egal`, `modul-egal`). Die dritte **ueberlebte** —
+die Gegenbeispiele zur Modulkollision lagen im Scratchpad, nicht im Giftkorpus. Zwei
+Dateien spaeter: **27 von 27.**
+
+*Dasselbe Muster wie beim ersten Lauf: die Reparatur stand im Quelltext, die Zusicherung
+nirgends. Ohne die Mutationsprobe waere es beide Male unbemerkt geblieben.*
+
+**Stand danach: 3 von 9 Paessen ganz gebaut, 1 teilweise, 5 offen.** 50 Tests, 32
+Giftdateien, fuenf Waechter gruen.
