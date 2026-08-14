@@ -568,26 +568,54 @@ benutzerdefinierte Quantorendomaenen · Rekursion in `spec fn` · handgeschriebe
 
 ---
 
-## Offene Punkte — benannt, nicht weggelassen
+## Offene Punkte — Stand 2026-08-14, nach zwei Messrunden
 
-- [ ] **`narrow` — ERGEBNIS ZURUECKGENOMMEN 2026-08-14**, s. [`LOGIK-KLEMPNEREI.md`](LOGIK-KLEMPNEREI.md): 54 **relationale** Faelle (`if a >= b { a - b }`), die ein Intervalltyp nicht tragen kann. Meine Stichprobe enthielt null davon. *Die alte Fassung:* **`narrow` — gemessen 2026-08-14** ([`NARROW-GEMESSEN.md`](NARROW-GEMESSEN.md)): die
-      flusssensitive Klasse sind **4 Fundstellen in 65 001 Zeilen**, alle dieselbe Redewendung
-      (Bitposition aus einem Wort), alle hinter einer Nullpruefung. **M1 braucht genau eine
-      Flussregel** — eine geprüfte Bedingung verengt den Bereich im Zweig danach —, nicht
-      allgemeine Inferenz. Mit einem eingebauten `highest_bit(x: u64 in 1..) -> u32 in 0..63` sind
-      alle vier ohne `narrow` schreibbar. **`narrow` bleibt Notausgang, nicht Regelfall.**
-      *Offen: die 69 Subtraktionen sind ungemessen und die einzige Klasse, die das kippen kann.*
-- [ ] **Sieben Quantorendomaenen ohne Notausgang.** Faellt eine Kernel-Eigenschaft heraus, ist sie
-      **gar nicht** formulierbar. Der Preis ist unbeziffert.
-- [ ] **`publishes` waere an 2 231 Atomic-Stellen faellig.** Ob das traegt, entscheidet keine
-      Papieruebung.
-- [ ] **`breaking` legalisiert eine Invariantenverletzung.** Der Preis ist Sichtbarkeit statt
+### Entschieden, mit Zahl
+
+- [x] **Generizitaet** — **16 von 62** Vorkommen sind echt polymorph, **alles** auf `Slab`/`SpinLock`;
+      **0 von 6** Traits polymorph. Beide Konstrukte existieren bereits. **Damit entfaellt der
+      Widerspruch zu M-Gold-2** (Monomorphisierung als erste nicht-flache Absenkung) — er trat nie ein.
+- [x] **Versionsevolution** — **0 von 11** Formatwechseln in Caprock waren Migrationen. **Absage**
+      ist die Vorgabe, Migration entfaellt.
+- [x] **`costs`** — **Zyklen entfallen**, `costs` zaehlt **Operationen**. D10 woertlich: „eine
+      Iterationszahl ist eine Eigenschaft des Programms, eine Zeitmessung nicht."
+
+### Offen, und nach Schwere
+
+- [ ] **19 haengende Klempnerei-Pflichten in 11 Klassen** ([`LOGIK-KLEMPNEREI.md`](LOGIK-KLEMPNEREI.md)).
+      **Das ist der Hauptposten.** Nach der Entscheidung vom 2026-08-14 ist fuer jede das Konstrukt
+      zu entwerfen, das sie abnimmt.
+- [ ] **54 relationale Vorbedingungen** (`if a >= b { a - b }`) — eine Beziehung zwischen **zwei**
+      Variablen, die ein Intervalltyp nicht tragen kann. **Der groesste Einzelposten**, und er hat
+      mein `narrow`-Ergebnis zurueckgenommen.
+- [ ] **Ein PTE ist zugleich Zeiger UND Bitfeld** — dafuer gibt es kein Konstrukt, und **daraus**
+      folgt die fehlende achte Quantorendomaene (W^X ueber zwei Ebenen, `mmu.rs:1283`, im Kernel
+      gefahren). **Die Wurzel, nicht die Domaene, ist zu entwerfen.**
+- [ ] **`per_pass` ist ein Ritual.** Es braucht **`on_exceeded` wie `retry`** (heute fehlt es —
+      D11 woertlich) und eine Antwort auf: **zaehlt Sperrwartezeit mit?** Zaehlt sie, ist die
+      Klausel fuer jede sperrende Schleife unerfuellbar; zaehlt sie nicht, sagt sie nichts.
+- [ ] **`publishes` sitzt an der Deklaration, die Nutzlast entsteht am Store.** Selbstbezuegliche
+      Faelle (`FP_OWNER[core]`) sind nicht schreibbar, und die sicherheitskritischste
+      Veroeffentlichung im Baum ist **gar kein Atomic**, sondern ein volatiler Store an ein Geraet.
+- [ ] **`accumulates max` widerspricht sich selbst** — die Absenkung ist eine **unbegrenzte
+      CAS-Schleife**, also emittiert der Uebersetzer, was die Sprache verbietet. **Erster Kandidat
+      fuer „zwei geforderte Eigenschaften widersprechen einander"** — zu zeigen, nicht zu vermuten.
+- [ ] **`break`/`continue` gibt es nicht**, und die Liste „Was es absichtlich nicht gibt" nennt sie
+      nicht. Vermutlich versehentlich; es trifft die Serverhauptschleife.
+- [ ] **`breaking` legalisiert eine Invariantenverletzung.** Preis ist Sichtbarkeit statt
       Verstecken; ob das reicht, ist unentschieden.
-- [ ] **Generizitaet fehlt.** Ohne sie braucht jede Tabelle ihren eigenen `traverse`; mit ihr ist
-      die Monomorphisierung die **erste nicht-flache Absenkung** und greift M-Gold-2 an.
-- [ ] **Versionsevolution** (`@version`): Absage oder Migration, unentschieden.
-- [ ] **`costs <= n cycles`** ist deklariert und **nicht durchgesetzt** — woher kaeme die Zahl?
-- [ ] **Die 18 Absenkungen aus [`MINIMALSPEZIFIKATION.md`](MINIMALSPEZIFIKATION.md) sind
-      Behauptungen.** Keine ist hingeschrieben.
-- [ ] **Der Gegenentwurf (1 882 Zeilen) ist weiterhin nicht eingearbeitet.** Diese Fassung nimmt
-      seine Befunde auf, nicht seinen Text.
+- [ ] **Ein Streitfall der Trennlinie:** `depleted_count -= 1` ist Klempnerei, faellt aber **nur
+      ueber eine Invariante, die Logik ist**. Vorschlag: dritte Klasse **„Klempnerei, getragen von
+      Logik"** — sonst wird „faellt durch Konstruktion" zur bequemen Buchung.
+
+### Nicht Grammatik, sondern Beleg — und deshalb der eigentliche Rueckstand
+
+- [ ] **Kein einziges ausgeschriebenes Fragment liegt im Ordner.** Beide Agenten haben welche
+      geschrieben; sie stehen im Scratchpad. **A3, A5, A6 und A7 aus [`FERTIG.md`](FERTIG.md) sind
+      damit bei null** — Treiber, Userspace, Pruefgeruest, und ein Urteil je Caprock-Bereich.
+- [ ] **Die 18 C-Absenkungen aus [`MINIMALSPEZIFIKATION.md`](MINIMALSPEZIFIKATION.md) sind
+      Behauptungen** (A8). Eine ist inzwischen widerlegt gewesen: `offset_into` stand im Wortschatz
+      und in keiner Produktion.
+- [ ] **Die 15 Regeln des Gegenentwurfs sind nur zum Teil eingearbeitet** — `mirrors`,
+      `publishes nothing`, `relaxed`, `old`, `offset_into`, `never`. Die uebrigen neun liegen im
+      Scratchpad.
