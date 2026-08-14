@@ -100,12 +100,19 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 gelesen faellt der Grossteil der 31 Fragmentbefunde heraus (`PLAN.md` §A, Neusortierung) —
 uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
 
-- [ ] **A1 — GEFAHREN, gruen auf die Mechanismusfrage; der URSPRUNG fehlt.** Die Leihe
-      traegt die Kette (`revoke`s `traverse` haelt, weil `effects` die `own`-Zeiger nicht
-      unter `consumes` nennt — kein neues Wort noetig, kein fuenfter Mechanismus). **Aber sie
-      hat keinen Anfang:** `lock L protects { … }` nennt Plaetze, `locks` hat keinen Binder,
-      `static mut` ist nicht linear, und **Gabbro hat keinen Adressoperator**. Ein `device`
-      hat eine Erzeugungsform, eine `table` nicht. **Das gehoert vor jede Zeile M2-Pass.**
+- [ ] **~~A1 und der Ursprung~~ — BEIDE ZU (2026-08-14).** Die Frage war kleiner als
+      gedacht: **Kernzustand braucht gar keinen Zeiger.** Eine `table` ist Speicher, ihr Name
+      ist ihr Ort; ein `device` hat seine Parameterliste als Konstruktor. Beides gebaut,
+      beides in `beispiele/09-ohne-zeiger.gab` ausgeschrieben. Uebrig bleiben Zeiger fuer
+      DMA, belegte Regionen und fremden Speicher — **und nur dort ist Trennung ueberhaupt
+      eine Frage.** Dort gibt eine Funktion Besitz her, und `own` macht ihn linear.
+      **Was jetzt fehlt, ist nur noch der Pass**, s. naechster Punkt.
+- [ ] **M2 (Pass 5) bauen — jetzt ohne Entwurfsfrage davor.** Linearitaet durchsetzen:
+      ein linearer Wert wird auf jedem Weg **genau einmal** verbraucht, nicht verdoppelt,
+      nicht fallengelassen; ein Parameter ist **verbraucht, wenn `effects` ihn unter
+      `consumes` nennt, sonst geliehen**. Daran haengen `Held`, `BootPhase`, `Parked`,
+      `Duty(check)` und die `own`-Zeiger. **Der Mechanismus, den kein vorhandenes Werkzeug
+      liefert — und der einzige, der die Sprache traegt.**
 - [ ] **A2 — GEFAHREN: dynamische Aufrufe werden verboten, `fnptr` braucht keinen Vertrag.**
       Die zwei dynamisch benutzten Traits haben je EINE Implementierung. **Neu und
       unentschieden: 89 Verschluesse** (`dyn FnMut`/`Fn`) — Gabbro hat keine, und was daraus

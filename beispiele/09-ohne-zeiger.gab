@@ -1,0 +1,131 @@
+-- 09 -- **Der Ursprung, aufgeloest: Kernzustand braucht keinen Zeiger.**
+--
+-- Caprock hat EINE CapSpace-Instanz (`CAPS.write().cspace`), hinter einer Sperre. Das
+-- `&mut CapSpace` in Rust ist die Leihform der Sperre, nicht die Struktur der Sache.
+-- In Gabbro ist die Tabelle der Speicher, ihr Name der Ort, und `Held(KAPPEN)` der Beleg.
+--
+-- Damit gibt es KEINE zwei Zeiger, also kein Alias -- und der Ursprung der Eigentumskette
+-- ist gar nicht noetig, weil es keine Kette gibt.
+
+module beispiel::ohne_zeiger {
+
+const NSLOTS   : u32 = 80256;
+const NOBJEKTE : u32 = 4096;
+
+type Zaehler = u32 in 0 .. 65535;
+opaque type Pa = u64;
+
+tagged type ObjektArt = { Speicher(Pa), Endpunkt(u32) };
+
+lock KAPPEN protects { Kappenraum, Objekte } rank 0 held <= 400 ops;
+
+table Objekte count NOBJEKTE {
+    slot { benutzt : bool, art : ObjektArt, zaehler : Zaehler, }
+}
+
+table Kappenraum count NSLOTS {
+    slot {
+        benutzt : bool,
+        objekt  : index into Objekte,
+        elter   : option index into Kappenraum,
+    }
+
+    invariant wurzel_ohne_vorgaenger cost O(n) runs offline :
+        forall s in slots of Kappenraum : Kappenraum.slots[s].benutzt;
+}
+
+spec fn ist_blatt(s : index into Kappenraum) -> bool
+    effects { pure }
+    = Kappenraum.slots[s].benutzt;
+
+impl fn blatt_loeschen(s : index into Kappenraum)
+    requires Held(KAPPEN), Kappenraum.slots[s].benutzt, ist_blatt(s)
+    ensures  !Kappenraum.slots[s].benutzt
+    effects  { writes Kappenraum.slots, writes Objekte.slots, locks KAPPEN }
+    costs    <= 200 ops
+{
+    let obj = Kappenraum.slots[s].objekt;
+    Kappenraum.slots[s].benutzt = false;
+    Kappenraum.slots[s].elter   = None;
+
+    if Objekte.slots[obj].zaehler >= 1 {
+        Objekte.slots[obj].zaehler -= 1;
+    }
+    if Objekte.slots[obj].zaehler == 0 {
+        match Objekte.slots[obj].art {
+            Speicher(p) => { speicher_freigeben(p); }
+            Endpunkt(e) => { }
+        }
+        Objekte.slots[obj].benutzt = false;
+    }
+}
+
+impl fn einsammeln(s : index into Kappenraum)
+    requires Held(KAPPEN)
+    effects  { consumes Kappenraum.slots, writes Objekte.slots, locks KAPPEN }
+    costs    <= 16371840 ops
+{
+    traverse opfer over descendants of Kappenraum.slots[s] by consuming
+        touches consumes Kappenraum.slots, writes Objekte.slots
+    {
+        blatt_loeschen(opfer);
+    }
+}
+
+extern fn speicher_freigeben(p : Pa) effects { writes halde } costs <= 64 ops;
+
+-- ---------------------------------------------------------------------------------------
+-- Die ZWEITE Klasse von Zustand: ein Geraet. Auch hier kein Zeiger -- **die Parameterliste
+-- der Deklaration IST der Konstruktor.** `device Vtd(basis : Pa)` sagt: aus einer `Pa` wird
+-- ein Vtd, und die Pa kommt aus der ACPI-DMAR-Tabelle, also aus Daten.
+-- ---------------------------------------------------------------------------------------
+
+device Vtd(basis : Pa) at mmio {
+    reg GCMD : u32 @0x18 class w  fields { TE @31, SRTP @30, }
+    reg GSTS : u32 @0x1c class r  fields { TES @31, RTPS @30, }
+    reg RTA  : u64 @0x20 class rw
+
+    mirrors GCMD from GSTS;
+
+    transition wurzel_setzen   { GCMD.SRTP: 0 -> 1 } effects { writes GCMD }
+    transition uebersetzung_an { GCMD.TE: 0 -> 1 }
+        requires GSTS.RTPS == 1
+        effects  { writes GCMD }
+}
+
+impl fn scharfschalten(basis : Pa, wurzel : Pa)
+    requires aligned(wurzel, 4096)
+    effects  { writes v.RTA, writes v.GCMD, reads v.GSTS }
+    costs    <= 1040 ops
+{
+    let v = Vtd(basis);
+    v.RTA = wurzel;
+    wurzel_setzen(v);
+    retry warten until v.GSTS.RTPS == 1
+        bounded 1024 ops
+        progress geraet_quittiert
+        on_exceeded geraet_haengt
+        effects { reads v.GSTS }
+    { }
+    uebersetzung_an(v);
+}
+
+extern fn geraet_haengt() -> never effects { diverges } costs <= 1 ops;
+
+-- ---------------------------------------------------------------------------------------
+-- **Was danach an Zeigern uebrigbleibt** -- und nur dort ist Trennung ueberhaupt eine Frage:
+-- DMA-Puffer, belegte Regionen, fremder Speicher. Dort ist der Ursprung eine Funktion, die
+-- Besitz HERGIBT, und `own` macht ihn linear. Beides ist ausdrueckbar, ohne neues Wort.
+-- ---------------------------------------------------------------------------------------
+
+linear type Region;
+
+extern fn belegen(bytes : u64) -> ptr<normal, rw+own> Region
+    effects { allocs halde }
+    costs   <= 200 ops;
+
+extern fn freigeben(r : ptr<normal, rw+own> Region)
+    effects { consumes r }
+    costs   <= 100 ops;
+
+}

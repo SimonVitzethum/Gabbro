@@ -229,6 +229,17 @@ impl Umgebung {
                     {
                         self.kapazitaeten.insert(q(&t.name.text), n as u128);
                     }
+                    // **Eine `table` IST Speicher, nicht nur eine Form.** Damit ist ihr
+                    // Name ein globaler Ort: `Kappenraum.slots[s]` hat einen Typ, und
+                    // Kernzustand braucht keinen Zeiger, um erreichbar zu sein.
+                    //
+                    // Das loest den Ursprung der Eigentumskette dort, wo er wirklich sitzt:
+                    // es gibt EINEN Kappenraum, kein Paar von Zeigern -- also auch kein
+                    // Alias. Caprock hat es genauso (`CAPS.write().cspace`, eine Instanz
+                    // hinter einer Sperre); die `&mut`-Parameter sind Rusts Leihform, nicht
+                    // die Struktur der Sache.
+                    self.globale
+                        .insert(q(&t.name.text), Typ::Tabelle(q(&t.name.text)));
                     self.tabellen.insert(q(&t.name.text), felder);
                 }
                 ItemArt::Format(f) => {
@@ -273,6 +284,26 @@ impl Umgebung {
                             },
                         );
                     }
+                    // **Die Parameterliste eines `device` IST sein Konstruktor.**
+                    // `device Vtd(basis : Pa) at mmio` sagt: aus einer `Pa` wird ein Vtd.
+                    // Damit hat auch die zweite Klasse von Zustand ihren Ursprung -- und
+                    // wieder ohne Zeiger, also ohne Aliasfrage.
+                    // Der Konstruktor kostet nichts: die Adresse IST der Griff.
+                    self.uebergangskosten.insert(q(&d.name.text), 0);
+                    self.funktionen.insert(
+                        q(&d.name.text),
+                        Signatur {
+                            parameter: d
+                                .parameter
+                                .iter()
+                                .map(|prm| {
+                                    (prm.name.text.clone(), self.typ_von_ausdruck_decl(pfad, &prm.typ))
+                                })
+                                .collect(),
+                            ergebnis: Some(Typ::Verbundname(q(&d.name.text))),
+                            span: d.span,
+                        },
+                    );
                     self.geraete.insert(q(&d.name.text), felder);
                 }
                 ItemArt::Funktion(f) => {

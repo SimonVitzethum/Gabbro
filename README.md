@@ -15,12 +15,19 @@ Blattheit, Publikation, Verfeinerung — trägt die Sprache. Die **Logik** („d
 Baum") schreibt der Programmierer, in jeder Sprache. Gold im seL4-Sinn ist damit **ausserhalb
 des Ziels**, nicht aufgeschoben.
 
-**Der Weg dorthin sind vier Posten** ([`PLAN.md`](PLAN.md) §A). **Alle vier sind gefahren**
-([`MESSUNGEN.md`](MESSUNGEN.md)) — und der wichtigste ging gut aus: *„kein Alias"* fällt aus
-**M2**, wenn `own` den Zeiger linear macht; ein **fünfter Mechanismus ist nicht nötig**, und die
-Leihe braucht kein neues Wort. **Was der Papiertest stattdessen fand, ist der Ursprung:** die
-Eigentumskette hat keinen Anfang, weil Gabbro keinen Adressoperator hat und eine `table` — anders
-als ein `device` — keine Erzeugungsform. Das steht jetzt vor jeder Zeile M2-Pass.
+**Der Weg dorthin sind vier Posten** ([`PLAN.md`](PLAN.md) §A). **Alle vier sind gefahren**, und
+der schwerste löste sich auf, statt geschlossen zu werden: *„kein Alias"* war eine Frage nach
+Zeigerpaaren — und **Kernzustand braucht gar keinen Zeiger.** Eine `table` *ist* Speicher, ihr
+Name ist ihr Ort; ein `device` hat seine Parameterliste als Konstruktor. F1 und F2 sind ohne
+einen einzigen Zeiger ausgeschrieben ([`beispiele/09-ohne-zeiger.gab`](beispiele/09-ohne-zeiger.gab)).
+Übrig bleiben Zeiger für DMA, belegte Regionen und fremden Speicher — **und nur dort war Trennung
+je eine Frage.** Dort gibt eine Funktion Besitz her, und `own` macht ihn linear. **Kein fünfter
+Mechanismus, kein neues Wort.**
+
+> Die Lehre ist nicht die Antwort, sondern die Frage: der Befund lautete *„der Kette fehlt der
+> Anfang"* — und **die Kette war das Problem.** Sie stand nur da, weil das Rust-Original sie
+> hatte. Ein Fragment, das seine Vorlage mitübersetzt, bringt deren Zwänge mit, und die sehen
+> dann wie Anforderungen der neuen Sprache aus.
 
 ## Drei Zusagen, drei verschiedene Stärken
 
@@ -122,10 +129,11 @@ cargo run --bin gabbro -- fragmente FRAGMENTE.md   -- Tor P2, gemessen
 cargo run --bin gabbro -- annahmen datei.gab       -- „bewiesen unter A1…An"
 ```
 
-**Dazu `beispiele/` — die Sprache in acht Dateien**, jede gegen den Übersetzer gehalten:
+**Dazu `beispiele/` — die Sprache in neun Dateien**, jede gegen den Übersetzer gehalten:
 `table` mit Invarianten · `device` mit Übergängen · `format` mit ELF · die drei Schleifenformen ·
 Nebenläufigkeit mit `publishes`/`awaits` · Annahmen und `check` · `entry`/`boot`/`walk` ·
-und **`08-bereiche.gab`, an dem M1 und V1–V3 hängen**. Daneben `beispiele/gift/` — 36 Dateien,
+**`08-bereiche.gab`, an dem M1 und V1–V3 hängen** · und **`09-ohne-zeiger.gab`, das zeigt,
+dass Kernzustand ohne Zeiger auskommt**. Daneben `beispiele/gift/` — 36 Dateien,
 die **fallen müssen**, jede mit dem Code, mit dem sie fällt — zehn davon sind Dateien, die einmal
 durchkamen, und drei kommen aus dem Kostenpass. Ein Korpus ohne Gegenprobe belohnt einen stummen Prüfer.
 

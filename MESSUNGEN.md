@@ -1662,3 +1662,52 @@ jeder Wartestelle (§9.3), und ohne Pass 9 war sie eine Behauptung.
 **Und drei Befunde, die es vor A1–A4 nicht gab:** der fehlende **Ursprung** der Eigentumskette
 (A1), die **89 Verschluesse** ohne Form in der Sprache (A2), und `costs` an einer **rekursiven**
 Funktion, das eine Annahme bleibt statt einer Rechnung (A4, im Passkopf benannt).
+
+
+---
+
+# Der Ursprung — und er loeste sich auf, statt geschlossen zu werden
+
+**2026-08-14.** A1 hatte einen Befund hinterlassen, der vor jeder Zeile M2-Pass stand: die
+Eigentumskette hat keinen Anfang. `lock L protects { … }` nennt Plaetze statt eines linearen
+Werts, `locks` hat keinen Binder, `static mut` ist nicht linear, und **Gabbro hat keinen
+Adressoperator** — niemand kann einen Zeiger auf globalen Zustand bilden.
+
+**Die Antwort ist nicht ein neues Konstrukt, sondern eine Frage, die vorher niemand gestellt
+hat: braucht Kernzustand ueberhaupt einen Zeiger?**
+
+## Nachgesehen, nicht vermutet
+
+`kernel/src/system.rs` schreibt `CAPS.write().cspace` — **eine** CapSpace-Instanz, hinter
+einer Sperre. Das `&mut CapSpace`, das durch alle Caprock-Signaturen laeuft, ist **Rusts
+Leihform**, nicht die Struktur der Sache. F1 hat sie mituebersetzt, weil die Vorlage sie hatte.
+
+## Zwei Aussagen, und beide kosten kein Wort
+
+| | |
+|---|---|
+| **Eine `table` IST Speicher.** Ihr Name ist ihr Ort: `Kappenraum.slots[s]` ist ein `place`, `Held(KAPPEN)` der Beleg | **eine** Instanz, also kein Zeigerpaar, also **keine Aliasfrage** |
+| **Die Parameterliste eines `device` IST sein Konstruktor.** `device Vtd(basis : Pa)` sagt, woraus ein Vtd entsteht | die Adresse kommt aus Daten (ACPI-DMAR), nicht aus dem Nichts |
+
+**F1 und F2 sind beide ohne einen einzigen Zeiger ausgeschrieben** und gehen durch alle fuenf
+gebauten Paesse (`beispiele/09-ohne-zeiger.gab`, 19 Items, 0 Fehler).
+
+## Was uebrig bleibt — und nur dort war Trennung je eine Frage
+
+**DMA-Puffer, belegte Regionen, fremder Speicher.** Dort gibt eine Funktion Besitz her:
+
+```gabbro
+extern fn belegen(bytes : u64) -> ptr<normal, rw+own> Region effects { allocs halde };
+extern fn freigeben(r : ptr<normal, rw+own> Region)          effects { consumes r };
+```
+
+`own` macht den Zeiger linear; **verbraucht, wenn `effects` ihn unter `consumes` nennt,
+sonst geliehen.** Kein fuenfter Mechanismus, kein neues Wort, keine Grammatikaenderung.
+
+> **Die Lehre ist nicht die Antwort, sondern die Frage.** Der Befund lautete *„der Kette
+> fehlt der Anfang"* — und die Kette war das Problem. Sie stand nur da, weil ein
+> Rust-Original sie hatte. **Ein Fragment, das seine Vorlage mituebersetzt, bringt deren
+> Zwaenge mit, und die sehen dann wie Anforderungen der neuen Sprache aus.** Das trifft die
+> anderen fuenf Fragmente genauso, und es ist ein Grund mehr, sie nachzuziehen.
+
+**Damit ist der letzte Entwurfsposten vor dem M2-Pass weg.** Was fehlt, ist nur noch der Pass.
