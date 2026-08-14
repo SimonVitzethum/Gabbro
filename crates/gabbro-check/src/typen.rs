@@ -428,10 +428,17 @@ mod proben {
         // Das Literal nimmt die Form der Gegenseite an -- `x + 1` muss rechnen.
         assert!(addiere(&breit, &literal).bereich.is_some());
         // Die deklarierte u8-Groesse nicht -- gemischte Breiten sind ehrlich unbekannt.
+        // **Beide Seiten**: die Regel steht zweimal symmetrisch im Quelltext, und eine
+        // Mutationsprobe, die nur eine Seite beschaedigt, ueberlebt sonst.
         assert!(
             addiere(&breit, &deklariert).bereich.is_none(),
-            "eine deklarierte Groesse darf keine fremde Breite uebernehmen"
+            "eine deklarierte Groesse darf keine fremde Breite uebernehmen (rechts)"
         );
+        assert!(
+            addiere(&deklariert, &breit).bereich.is_none(),
+            "eine deklarierte Groesse darf keine fremde Breite uebernehmen (links)"
+        );
+        assert!(addiere(&literal, &breit).bereich.is_some());
     }
 
     /// **U8.** Beide Ecken des Linksschiebens, nicht nur die obere.
