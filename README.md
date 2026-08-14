@@ -71,6 +71,7 @@ andere ist ausdrücklich Absicht.
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`FERTIG.md`](FERTIG.md) | **die Ziellinie, vorab**: acht Bedingungen für die Syntax, vier für den Plan — und **drei Gründe, den Lauf zu beenden, auch ohne Fertigstellung** |
 | [`NARROW-GEMESSEN.md`](NARROW-GEMESSEN.md) | **der gefährlichste offene Punkt, gemessen** — die flusssensitive Klasse sind **4 Stellen in 65 001 Zeilen**, und die erwartete Auswahlverzerrung trat nicht ein |
 | [`KRITERIUM.md`](KRITERIUM.md) | **das Kriterium**: nur Logik beweisen, sonst nichts — die Trennlinie, was sie mit den Messungen macht, und die neue Abbruchbedingung |
 | [`MINIMALSPEZIFIKATION.md`](MINIMALSPEZIFIKATION.md) | **die Umkehrung der Frage.** Alle 18 „geht nicht"-Befunde in „was muss minimal dastehen" umgewandelt, mit Absenkung nach C. **Sechs fallen auf denselben Mechanismus** |
