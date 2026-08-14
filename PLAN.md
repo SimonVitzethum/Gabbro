@@ -882,3 +882,206 @@ das waere ein Nullbefund ohne Groesse, und die Falle steht im Register.
   C-Absenkung ist eine Behauptung.
 * **Ein gruener Waechter.** `pruefe-syntax.sh` prueft Geschlossenheit und Wortschatz — **nicht**,
   ob echter Code hineinpasst. Er hat selbst schon ein falsches Gruen geliefert.
+
+---
+
+# A — Der Weg zum Ziel „alles ausser funktionaler Korrektheit"
+
+**Eingetragen 2026-08-14, nach einer Neusortierung der 31 Fragmentbefunde gegen dieses Ziel.**
+
+Das Ziel ist enger als die urspruengliche Ambition und **deshalb erreichbar**: Gabbro soll die
+**Klempnerei** vollstaendig tragen — Index, Ueberlauf, Alias, Rahmen, Sperre, Rennen,
+Terminierung, Phase, Blattheit, Publikation, Verfeinerung — und die **Logik** dem Menschen
+lassen. Funktionale Korrektheit (Gold) ist **ausserhalb**, nicht aufgeschoben.
+
+## Die Neusortierung — was das Ziel wegnimmt
+
+Die Fragmentbilanz (`FRAGMENTE.md`, 31 Befunde) ist gegen die **volle** Ambition geurteilt
+worden. Gegen dieses Ziel gelesen faellt der Grossteil heraus:
+
+| Befund | gegen Gold | gegen dieses Ziel |
+|---|---|---|
+| **«B13»** keine Aggregation, keine tabellenuebergreifende Domaene — `refcount_matches` unformulierbar | **toedlich**, „der teuerste Befund an F1" | **draussen.** `o.refcount == count(…)` nennt *die Sache*, nicht die Maschine — das ist Logik |
+| **«B29»** `refcount -= 1` faellt nur ueber jene Invariante | mit B13 verbunden | **drin, aber lokal:** `if refcount >= 1 { … }`, V1 traegt es. Man verliert „der Zaehler stimmt", man behaelt „er laeuft nicht unter" |
+| **«B12»** keine Zahlenbereichs-Domaene | Nachbedingungen ueber Nachrichtenworten | **draussen** — Rahmenaussagen laufen ueber `slots of` |
+| **«B15»** keine Generizitaet | — | **Kosten, nicht Unmoeglichkeit** (Verdopplung je Tabelle) |
+| **«B7»** kein Verbund-Literal · **«B27»** kein `abi`-Block | — | **blockieren das SCHREIBEN, nicht das BEWEISEN** — additive Konstrukte |
+| **«B9»** `fnptr` ohne Vertrag | — | **drin und tragend** — s. A2 |
+
+**Uebrig bleiben vier Posten.** Drei sind entworfen und ungebaut; **einer ist nicht geloest,
+sondern gestreift**, und er steht deshalb zuerst.
+
+---
+
+## A1 — `own` linear. **Papier, keine Zeile Code. Der einzige Posten, der einen fuenften Mechanismus erzwingen kann**
+
+### Der Befund
+
+`SYNTAX.md`:10 zaehlt **„Alias"** unter dem, was jede Regel durch Konstruktion erledigt. **Der
+Mechanismus dafuer ist nicht auffindbar.** M3 gibt Adress*raeume*, nicht Trennung innerhalb
+eines Raums; nichts verbietet, `delete_leaf(c : ptr<normal,rw> CapSpace, o : ptr<normal,rw>
+CapObjects, …)` mit demselben Zeiger fuer beide zu rufen. `effects` **deklariert** nur, und
+`BEWEIS.md` sagt es selbst: *„`restrict` aus `effects` erzeugt. **Ist `effects` falsch, ist das
+C-UB**"*. **Die Rahmenaussage ruht damit auf einer Zusage statt auf einer Bedingung** — genau
+das, was das Kriterium verbietet.
+
+### Der Vorschlag, und er kommt aus dem Ordner selbst
+
+Die Ableitungstabelle in `SPRACHE.md` §3b sagt: *„`region`, Eigentum → **M2** → ein linearer
+Block ist seine Region."* Die **Absicht** steht da, die **Grammatik** nicht: `own` ist heute ein
+Recht am Zeigertyp, und Zeigertypen sind kopierbar.
+
+> **Ein Zeiger, der `own` traegt, ist ein linearer Wert.** Zwei davon auf dasselbe Objekt kann
+> es nicht geben; Trennung faellt aus M2 statt aus einer Zusage. Geliehen wird wie bei der
+> Bootphase: `requires` nennt den Zeugen, `consumes` in `effects` verbraucht ihn.
+
+### Der Test — und die Stelle, an der er scheitern wird, wenn er scheitert
+
+Zwei Fragmente, von Hand, gegen die neue Regel:
+
+1. **F1 `delete_leaf(c, o, a, rf, s)`** — vier Zeiger, zwei davon mit `own`
+   (`PhysAllocator`, `Finalized`).
+2. **F1 `revoke`** — und **hier sitzt die Frage**: der Rumpf ruft `delete_leaf` in einer
+   `traverse`-Schleife. **Ein linearer Wert, der in einen Schleifenrumpf geht, ist nach dem
+   ersten Durchgang verbraucht.** Entweder `own`-Zeiger werden geliehen uebergeben (`requires`
+   statt `consumes`), oder die Schleife ist nicht schreibbar.
+3. **F3 IPC-Fastpath** — die Gegenprobe an einem Rumpf ohne Traversierung.
+
+> **Tor, zweiseitig:**
+> **Gruen** — beide Fragmente bleiben schreibbar, die Leihe traegt die Schleife, und es kommt
+> **kein Konstrukt** hinzu ausser der einen Grammatikzeile. Dann ist Trennung M2, Gabbro
+> behaelt vier Mechanismen, und A2–A4 folgen.
+> **Rot** — Trennung braucht einen **eigenen, fuenften Mechanismus**. Eintrag in
+> `HISTORIE.md`, und dann gilt die Gegenrechnungsregel dieses Plans: **fuer jeden weiteren
+> Mechanismus ist der Gegner zu messen — und der Gegner heisst hier Rust.** Rusts
+> Ausleihpruefer *liefert* Trennung. Die Rechtfertigung der Sprache steht heute auf **einem**
+> Mechanismus (echte Linearitaet); braucht sie einen fuenften, den Rust schon hat, wird sie
+> schmaler, nicht breiter. **Das ist kein Abbruch, aber es ist die teuerste denkbare Antwort.**
+
+**Aufwand:** ein halber bis ein Tag Papier. **Keine Zeile Pruefercode vor diesem Tor** — die
+Regel des Ordners, und diesmal wird sie eingehalten.
+
+---
+
+## A2 — Dynamische Aufrufe zaehlen. **Ein `grep`, und er entscheidet, ob ein Konstrukt noetig ist**
+
+### Der Befund
+
+`fnptr` traegt keinen Vertrag («B9»). **An jedem Aufruf durch einen Funktionszeiger ist die
+Rahmenaussage leer** — man weiss nicht, was der Gerufene anfasst, also deckt keine
+`effects`-Liste ihn. Caprock benutzt `&mut dyn SchedOps`; `fnptr` ist der Ersatz und verliert
+genau das, wofuer er da war.
+
+### Die Messung, vor dem Entwurf
+
+Zaehlen: **jede Stelle im Kern**, an der ein Aufruf nicht statisch aufgeloest ist
+(`dyn`, Funktionszeiger, Sprungtabellen) — mit Fundstelle, und getrennt nach *ersetzbar durch
+`match`* und *nicht ersetzbar*.
+
+> **Tor, zweiseitig:**
+> **≤ 10 und alle ersetzbar** — dynamischer Aufruf wird **verboten**. Kein neues Konstrukt,
+> die Verbotsliste waechst um eine Zeile, und die Rahmenaussage ist ueberall total.
+> **Sonst** — `fnptr` bekommt `requires`/`ensures`/`effects`, und **die Wirkungen des
+> Aufrufers muessen die des Zeigertyps decken**. Das ist eine Grammatikaenderung plus ein
+> Passanteil, und es gehoert dann in dieselbe Stufe wie A4.
+
+**Aufwand:** eine Stunde. **Sie steht vor A3 und A4, weil sie billig ist und ein Konstrukt
+einsparen kann.**
+
+---
+
+## A3 — `table … count N`. **Eine Zeile Grammatik, und sie holt M4 von einer Konvention auf die Sprache**
+
+### Der Befund (G8, 2026-08-14)
+
+Eine `table` **nennt ihre Slotzahl nicht**. `index into T` hat damit keine Obergrenze aus der
+Deklaration; die Schranke haengt an einem **von Hand passend gewaehlten** Indextyp
+(`type SlotIdx = u32 in 0 ..< NSLOTS`), und **nichts bindet die beiden aneinander**. „Kein
+ungeprueftes Indizieren" ruht an dieser Stelle auf einer Konvention. Der Uebersetzer prueft
+Indizes deshalb heute nur gegen `[T; N]`.
+
+### Der Vorschlag
+
+```
+table    = "table" ident [ "count" constexpr ] "{" { … } "}" ;
+slottype = … | "index" "into" ident | "option" "index" "into" ident | … ;
+```
+
+`index into T` erbt die Schranke von `T`s `count`. Der Indextyp wird **erzeugt**, nicht
+geschrieben.
+
+> **Tor, zweiseitig:**
+> **Gruen** — jede `index into`-Stelle der sechs Fragmente bekommt ihre Schranke ohne
+> handgeschriebenen Indextyp, und die `narrow`-Zahl ueber dem Korpus **waechst nicht**.
+> **Rot** — eine Tabelle, deren Kapazitaet erst zur Laufzeit feststeht (beim Boot belegt).
+> Dann traegt `count` sie nicht, die Schranke bleibt eine Deklaration, **und das ist als
+> Befund zu buchen statt als Sonderfall wegzudefinieren.**
+
+**Aufwand:** ein Tag (Grammatik, Parser, M1-Anteil, Fragmente nachziehen). **Vor A4, weil die
+Traversierungskosten eine Domaenenschranke brauchen.**
+
+---
+
+## A4 — Das Kostenmodell. **Pass 9, und ohne ihn ist Terminierung deklariert statt geprueft**
+
+### Der Befund
+
+`costs`, `held`, `per_pass`, `bounded` sind heute **Deklarationen, die niemand nachrechnet**.
+Damit gilt:
+
+* `retry … bounded N ops` **behauptet** Terminierung, es prueft sie nicht;
+* die Sperrhaltezeit, an der die ganze Latenzaussage haengt (§9.3: *„Ranghoehere halten ≤ ihrer
+  `held`-Summe"*), ist unbelegt;
+* `forever … per_pass bounded N ops` — die einzige Form, die unendlich laufen darf — traegt
+  ihre Rechtfertigung in einer ungeprueften Zahl.
+
+### Das Modell steht schon (`SPRACHE.md` §7)
+
+**1 op = eine Gabbro-Primitive** (Zuweisung, arithmetische Operation, Laden, Speichern); ein
+Aufruf zaehlt die deklarierten `costs` des Gerufenen; eine Traversierung zaehlt Rumpfkosten ×
+Domaenenschranke; Zweige zaehlen das Maximum. **Statisch, kein Loeser.**
+
+> **Tor, zweiseitig — und es misst die Deklarationen, nicht nur den Pass:**
+> **Gruen** — die berechneten Schranken der ausgeschriebenen Fragmente passen in ihre
+> deklarierten: `unlink` ≤ 40, `delete_leaf` ≤ 200, `revoke` ≤ 4096.
+> **Rot** — sie passen nicht. Dann ist **zu sagen, welche Seite falsch ist**: das Modell (eine
+> Primitive ist nicht eine op) oder die Deklarationen (die Zahlen waren geraten). *Eine
+> Anpassung ohne diese Aussage ist genau die Bewegung, gegen die das Messprotokoll
+> geschrieben ist.*
+
+**Aufwand:** zwei bis drei Tage. **Braucht A3.**
+
+---
+
+## A5 — Abnahme der vier Posten
+
+Erst wenn A1–A4 gruen sind:
+
+1. **Die sechs Fragmente auf die vierte Fassung ziehen** und neu beurteilen — mit dem
+   Uebersetzer, nicht von Hand.
+2. **Die `narrow`-Vollzaehlung mit dem Uebersetzer** ueber Gabbro-Quelltext. Damit ist die
+   Latte `≤ 24` **zum ersten Mal echt entscheidbar** — heute ist sie mit einem ungeeichten
+   Zaehler um Faktor 6–13 verfehlt, und ob das die Sprache trifft oder den Zaehler, steht offen.
+3. **Die vier nie ausgeschriebenen Bereiche** (Scheduler, MMU, Lader, Parser) als Fragmente.
+   *Ein Bereich ohne Fragment ist eine Vermutung* — und dort sitzen die Formen, die nicht in
+   `traverse` passen.
+
+## Was in A1–A5 NICHT enthalten ist
+
+**Fuenf Pruefpaesse fehlen weiter** — D1/D2, M3, M2, Paarung, costs. A4 ist der letzte davon;
+**M2 ist die Voraussetzung dafuer, dass A1 ueberhaupt geprueft wird** (A1 entscheidet die
+Grammatik, M2 setzt sie durch). Die Reihenfolge ist damit:
+
+> **A1 (Papier) → A2 (grep) → A3 (Grammatik) → M2-Pass → A4 (Kosten) → A5 (Abnahme)**
+
+Und weiter draussen, unveraendert: **Paarung** (Rennfreiheit), **M3** (Rechte am Zeiger),
+**D1/D2**, die **C-Emission** und die **C-Formentabelle** (40–60 Eintraege, ungeschrieben).
+
+## Die Abbruchbedingung fuer diesen Weg
+
+**A1 rot UND der fuenfte Mechanismus ist Rusts Ausleihpruefer.** Dann liefert ein vorhandenes
+Werkzeug zwei der fuenf Mechanismen (Trennung und — affin — Linearitaet), und die Frage aus
+`TODO.md` *„reicht ein Mechanismus, um eine Sprache zu rechtfertigen?"* beantwortet sich nach
+unten. **Das ist kein Beweis der Unmoeglichkeit und damit kein Abbruch nach Abschnitt C** —
+aber es ist der Punkt, an dem ein Beitrag an Verus billiger waere als diese Sprache, und das
+gehoerte dann hingeschrieben statt umgangen.

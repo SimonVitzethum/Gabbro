@@ -6,6 +6,21 @@ eine. Übersetzer in **sicherem Rust** (`forbid(unsafe_code)`).
 Der Zweck ist nicht, eine weitere Sprache zu haben. Er ist, einen **Kernel darin zu schreiben und
 ihn dann billig formal zu verifizieren** — Caprock vollständig, mit grüner Abnahmereihe.
 
+## Das Ziel, in einem Satz
+
+> **Gabbro beweist alles ausser funktionaler Korrektheit.**
+
+Alle **Klempnerei** — Index, Überlauf, **Alias**, Rahmen, Sperre, Rennen, Terminierung, Phase,
+Blattheit, Publikation, Verfeinerung — trägt die Sprache. Die **Logik** („der Baum bleibt ein
+Baum") schreibt der Programmierer, in jeder Sprache. Gold im seL4-Sinn ist damit **ausserhalb
+des Ziels**, nicht aufgeschoben.
+
+**Der Weg dorthin sind vier Posten** ([`PLAN.md`](PLAN.md) §A), und einer davon ist heute nicht
+gelöst, sondern gestreift: **„kein Alias" steht als Pflicht da, und der Mechanismus dafür ist
+nicht auffindbar.** Der Vorschlag — `own` macht den Zeiger linear — steht als Papiertest mit
+zweiseitigem Tor an erster Stelle, weil er als einziger einen **fünften Mechanismus** erzwingen
+kann. Und der Gegner für einen fünften hiesse dann Rusts Ausleihprüfer, der ihn liefert.
+
 ## Drei Zusagen, drei verschiedene Stärken
 
 Die Unterscheidung ist die ganze Ehrlichkeit dieses Ordners.
@@ -57,8 +72,9 @@ steht sie hinter dem Kriterium, nicht davor. Herleitung und Messprotokoll in [`P
 ohne Aufschlüsselung nach Logik/Klempnerei ist eine Zahl ab jetzt kein Messwert.
 
 Stand: 2026-08-14. **Gebaut sind P2 und P3: Lexer, Wortschatz, Parser über die vollständige EBNF,
-dazu vier der neun Prüfpässe — zwei ganz (Namen, Schleifen), zwei nur teilweise** (M1+V1–V3 ohne
-Modulauflösung, `effects` ohne Rumpfabgleich; `gabbro paesse` druckt aus, was durchkommt).
+dazu vier der neun Prüfpässe — drei ganz (Namen, M1+V1–V3, Schleifen), einer teilweise**
+(`effects` prüft Schreiben und `locks` gegen den Rumpf, Lesen und Aufrufwirkungen nicht;
+`gabbro paesse` druckt aus, was durchkommt).
 *Nicht gebaut: D1/D2, M2, M3, die Paarung, die Kosten, die C-Emission.* Der Lauf gegen die eigenen
 Fragmente **fällt: 1 von 6**. Eine Gegenprüfung fand **16 Dateien, die mit `0 Fehler` durchkamen
 und fallen mussten** — zehn dieser Löcher sind zu, jedes mit einer Giftdatei, die es festhält
@@ -91,11 +107,12 @@ er sagt das selbst.
 
 **Und seit dem 2026-08-14 `crates/` — der Übersetzer selbst**, drei Kisten in sicherem Rust:
 `gabbro-syntax` (Lexik, Wortschatz, Grammatik), `gabbro-check` (die neun Prüfpässe in fester
-Reihenfolge, vier davon gebaut), `gabbro-cli` (`gabbro`). Vier Befehle, und der wichtigste ist
+Reihenfolge, vier davon gebaut — drei ganz, einer teilweise), `gabbro-cli` (`gabbro`). Vier Befehle, und der wichtigste ist
 `gabbro paesse`: er sagt, **was dieser Übersetzer nicht prüft**.
 
 ```
-cargo test                                  -- 48 Sprechproben, je in beide Richtungen
+cargo test                                  -- 50 Sprechproben, je in beide Richtungen
+./mutiere-pruefer.py                        -- beschaedigt je eine Regel: 27 von 27 gefangen
 cargo run --bin gabbro -- paesse            -- die Passliste, gebaut UND offen
 cargo run --bin gabbro -- pruefe beispiele/*.gab   -- mit Deckungszahl je Datei
 cargo run --bin gabbro -- fragmente FRAGMENTE.md   -- Tor P2, gemessen

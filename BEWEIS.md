@@ -941,3 +941,39 @@ Erwartung.**
 erzeugte C schneller sein als der heutige Rust-Kernel, weil 1 398 Bereichspruefungen entfallen; in
 den Wartepfaden zunaechst langsamer, bis die Schrankenpruefung amortisiert ist; und ueber alles
 haengt eine ungepreiste Wette auf den C-Uebersetzer.*
+
+
+---
+
+## Der Aliasposten — genannt als Pflicht, und der Mechanismus fehlt
+
+**Eingetragen 2026-08-14.**
+
+`SYNTAX.md`:10 legt jeder Grammatikregel auf, eine Klempnerei-Pflicht durch Konstruktion zu
+erledigen, und zaehlt dabei **„Alias"** auf. `SPRACHE.md` §0 fuehrt ihn ebenso unter dem, was
+Gabbro selbst traegt. **Der Mechanismus dafuer ist nicht auffindbar:**
+
+* **M3 gibt Adressraeume, nicht Trennung.** `ptr<normal, rw>` und `ptr<normal, rw>` koennen
+  auf dasselbe Objekt zeigen; der Raum sagt nur, *welche* Barriere gilt.
+* **`effects` deklariert, es bedingt nicht.** `writes c.slots, writes o.slots` ueber zwei
+  Parametern, die dasselbe sind, ist eine wahre Aussage ueber eine falsche Annahme.
+* **Und das Inventar dieser Datei sagt es selbst** (Zeile 11): *„`restrict` falsch — aus
+  `effects` erzeugt. **Ist `effects` falsch, ist das C-UB** — ein Beweis-Export in Cs Regeln",*
+  gefuehrt als **echter Vertrauenstransfer**. `restrict` ist deshalb inzwischen standardmaessig
+  **aus**. Das entschaerft die C-Seite; **es beantwortet die Gabbro-Seite nicht.**
+
+**Damit ruht die Rahmenaussage auf einer Zusage statt auf einer Bedingung** — genau das, was
+das Kriterium dieser Datei verbietet: *eine Pflicht, die beim Programmierer haengenbleibt, ist
+an dieser Stelle eine Widerlegung, kein Schoenheitsfehler.*
+
+### Der Vorschlag steht im Ordner, nur nicht in der Grammatik
+
+Die Ableitungstabelle in `SPRACHE.md` §3b fuehrt *„`region`, Eigentum → **M2** → ein linearer
+Block ist seine Region"*. Die Absicht ist da; `own` ist heute aber ein **Recht am Zeigertyp**,
+und Zeigertypen sind kopierbar. **Ein Zeiger, der `own` traegt, muesste ein linearer Wert
+sein** — dann faellt Trennung aus M2, und Gabbro behaelt vier Mechanismen.
+
+**Der Papiertest dazu steht als A1 in [`PLAN.md`](PLAN.md), mit zweiseitigem Tor.** Faellt er
+rot, braucht Trennung einen **fuenften Mechanismus** — und der Gegner dafuer ist nicht Verus,
+sondern **Rusts Ausleihpruefer**, der ihn liefert. Das waere die teuerste denkbare Antwort auf
+die Frage, ob diese Sprache sich rechtfertigt.

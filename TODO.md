@@ -94,6 +94,38 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       Paarungs-Pass mit Litmus-Sonden, ein Caprock-Modul end-to-end.
       **Jede Stufe verbraucht das Ergebnis der vorigen, wie eine `Duty`.**
 
+## Die vier Posten zum Ziel — Plan mit Toren in [`PLAN.md`](PLAN.md) §A
+
+**Das Ziel ist: Gabbro beweist alles ausser funktionaler Korrektheit.** Gegen dieses Ziel
+gelesen faellt der Grossteil der 31 Fragmentbefunde heraus (`PLAN.md` §A, Neusortierung) —
+uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
+
+- [ ] **A1 — `own` linear: der Aliasposten, und der einzige, der einen FUENFTEN Mechanismus
+      erzwingen kann.** `SYNTAX.md`:10 zaehlt „Alias" unter dem, was durch Konstruktion faellt;
+      **der Mechanismus dafuer ist nicht auffindbar.** Nichts verbietet zwei
+      `ptr<normal,rw>`-Parameter auf dasselbe Objekt, und `restrict` wird aus `effects`
+      *erzeugt* — die Rahmenaussage ruht auf einer Zusage statt auf einer Bedingung.
+      **Vorschlag aus dem Ordner selbst** (`SPRACHE.md` §3b: *„ein linearer Block ist seine
+      Region"*): **ein Zeiger mit `own` ist ein linearer Wert**, geliehen ueber `requires` wie
+      die Bootphase. **Papiertest an F1 und F3, keine Zeile Code davor** — und die Stelle, an
+      der er scheitert, wenn er scheitert, ist `revoke`s `traverse`-Rumpf: ein linearer Wert
+      ist nach dem ersten Durchgang verbraucht.
+- [ ] **A2 — dynamische Aufrufe zaehlen (ein `grep`).** `fnptr` traegt keinen Vertrag («B9»),
+      also ist die Rahmenaussage an jedem Aufruf durch einen Zeiger leer. **≤ 10 und alle durch
+      `match` ersetzbar → verbieten** (kein neues Konstrukt); sonst braucht `fnptr` einen
+      Vertrag. **Eine Stunde, und sie kann ein Konstrukt einsparen.**
+- [ ] **A3 — `table … count N`.** Eine Tabelle nennt ihre Slotzahl nicht; `index into T` hat
+      keine Obergrenze aus der Deklaration, und M4 ruht dort auf einer Konvention. Eine Zeile
+      Grammatik, der Indextyp wird erzeugt statt geschrieben. **Vor A4** — Traversierungskosten
+      brauchen eine Domaenenschranke.
+- [ ] **A4 — das Kostenmodell (Pass 9).** `costs`, `held`, `per_pass`, `bounded` sind heute
+      Deklarationen, die niemand nachrechnet: **`retry` behauptet Terminierung, es prueft sie
+      nicht.** Modell steht (`SPRACHE.md` §7), Tor ist zweiseitig gegen die deklarierten Zahlen
+      der Fragmente — passt es nicht, ist zu sagen, **welche Seite falsch ist.**
+- [ ] **A5 — Abnahme:** Fragmente mit dem Uebersetzer neu, `narrow`-Vollzaehlung ueber
+      Gabbro-Quelltext (**erst dann ist die Latte ≤ 24 echt entscheidbar**), und die vier nie
+      ausgeschriebenen Bereiche.
+
 ## Aus der Gegenpruefung (2026-08-14) — was noch offen ist
 
 - [ ] **`effects` prueft Schreiben und `locks`, aber nicht Lesen und nicht Aufrufe.**
