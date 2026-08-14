@@ -155,6 +155,8 @@ entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
 accdecl    = "accumulates" ident ":" typeexpr
              "merge" ( "max" | "min" | "add" | "or" | "and" ) ";" ;
+             (* Verbundwerte: typeexpr darf structty sein, merge gilt fuer das erste Feld und
+                traegt die uebrigen mit -- P0 Teil 4c, sync:572-592 wird damit konsistent *)
 moduledecl = [ "pub" ] "module" path "{" { item } "}" ;
 usedecl    = [ "pub" ] "use" path ";" ;
 constdecl  = [ "pub" ] "const" ident ":" typeexpr "=" constexpr ";" ;
@@ -288,7 +290,9 @@ domain     = "slots" "of" place                  (* die Slots einer Tabelle *)
            | "fields" "of" path
            | "elems" "of" place
            | "threads"
-           | "mappings" "of" place ;             (* erzeugt aus einer walk-Deklaration *)
+           | "mappings" "of" place ;             (* erzeugt aus einer walk-Deklaration;
+                das Element traegt va, level und index[level] -- P0 Teil 4b: der echte W^X-Audit
+                schliesst die geteilten Kernel-Tabellen ueber index[2] >= FINE_BLOCKS aus *)
 member     = expr "in" domain ;
 reach      = place "reaches" place "via" ident ;
 predlist   = pred { "," pred } ;

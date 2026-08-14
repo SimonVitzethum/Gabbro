@@ -3,7 +3,25 @@
 > **Seit [`FESTLEGUNG.md`](FESTLEGUNG.md) (2026-08-14) sind die neun Entwurfsfragen entschieden.**
 > Was hier steht, ist ueberwiegend **Messung**, nicht Entwurf.
 
-- [ ] **P0 — DIE MESSUNG, UND KEINE PRUEFERZEILE VORHER.** Die 74-Pflichten-Messung gegen
+- [ ] **P0 IST TEILWEISE GEFAHREN** ([`P0-GEFAHREN.md`](P0-GEFAHREN.md), 2026-08-14). Ergebnis:
+      **Ordering-Stichprobe bestanden, 36/36, kein vierter Ausgang.** `19 → 0` ist
+      **nicht entscheidbar**, weil **fuenf der elf Klassen nur im Scratchpad liegen** — das ist ein
+      Befund ueber das **Protokoll**, nicht ueber die Sprache, und woertlich Falle 80.
+      `narrow` ≤ 24 ist offen, nur die Formpruefung war fahrbar.
+- [ ] **DER NAECHSTE SCHRITT IST KEINE ZEILE RUST: die fuenf Scratchpad-Klassen mit Fundstellen ins
+      Repo**, dann Teil 1 wiederholen. Vorher bleibt das Tor unentscheidbar.
+- [ ] **Die `narrow`-Vollzaehlung** mit robusterem Muster — **und gezielt nach dem Schnitt suchen,
+      bei dem Pruefung und Verwendung in VERSCHIEDENEN Funktionen liegen.** V-Fakten sterben an der
+      Funktionsgrenze; ob dieser Fall vorkommt, entscheidet, ob `requires a >= b` als Vertrag reicht.
+- [ ] **Eager-FP je Architektur oder global entscheiden.** Berichtigt: auf **x86 ist es eager**
+      (`system.rs:1215`, mit genau der CVE-Begruendung der Ergaenzung); **lazy ist der
+      aarch64-Pfad**. Das Dekret trifft also die andere Architektur, wo das Argument nicht in
+      derselben Form greift.
+- [ ] **Protokoll der Ordering-Klassifikation um K1–K3 ergaenzen** — sie sind **Wegfaelle**, keine
+      Widerlegungen: unter Sperre entfaellt das Atomic (K1, ein Teil der 2 231 verschwindet),
+      Konstruktinneres zaehlt in die Schablonenflaeche statt in die Stichprobe (K2), und
+      `accumulates` mit Verbund ist an `sync:572-592` **strikt besser als das Original** (K3).
+- [ ] **~~P0 — DIE MESSUNG~~** (urspruengliche Fassung): Die 74-Pflichten-Messung gegen
       Festlegung + beide Ergaenzungen wiederholen: **haengende Klempnerei 19 → 0**; dazu eine
       **Ordering-Stichprobe** (≥ 30 der 2 231 Fundstellen, geschichtet nach Datei) — jede ist
       Paarung, Zaehler oder benannter `seq`-Fall, **ein vierter Ausgang widerlegt die Paarung**;

@@ -71,6 +71,7 @@ andere ist ausdrücklich Absicht.
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`P0-GEFAHREN.md`](P0-GEFAHREN.md) | **P0, soweit der Ordner es zulässt.** Ordering **36/36 bestanden**; `19 → 0` **nicht entscheidbar**, weil fünf Klassen nur im Scratchpad liegen — ein Befund über das **Protokoll** |
 | [`ERGAENZUNG3.md`](ERGAENZUNG3.md) | **die Axiomschicht ausgezählt am echten Zweig** (A1–A25) und **der Bootpfad als Sprache**. `port` als sechster Adressraum holt **70 Fundstellen** aus der Axiomschicht in die Gerätesprache; `Has(F)` macht die #UD-Klasse zum Übersetzungsfehler; die Mode-Leiter PAE→LME→CR3→PG ist ein **Token-Fluss** |
 | [`ERGAENZUNG.md`](ERGAENZUNG.md) · [`ERGAENZUNG2.md`](ERGAENZUNG2.md) | **die drei Löcher der Festlegung** — Ordering-**Paarung** (`awaits`), Eintrittspfad (`entry`), Boot-Unerreichbarkeit in drei Schichten; dazu RMW (`exchange`), `Vis` über Funktionsgrenzen, und **der Prüferplan P0–P7 mit Toren** |
 | [`FESTLEGUNG.md`](FESTLEGUNG.md) | **die vollständige Festlegung** — entscheidet alle neun offenen Fragen (F1–F9) und nimmt die 19 hängenden Klempnerei-Pflichten je mit einem Konstrukt ab. **Abnahme ist die Wiederholung der 74-Pflichten-Messung: 19 → 0** |
