@@ -15,7 +15,7 @@ Die Unterscheidung ist die ganze Ehrlichkeit dieses Ordners.
 | **1** | **Speichersicherheit** — kein Zugriff ausserhalb, kein Gebrauch nach Freigabe, kein Alias, der eine Zusicherung bricht | **Gabbro beweist es selbst** — unter benannten **Hardware-Annahmen** und unter Vertrauen in Prüfer und Absenkung |
 | **1b** | **Unsicherer Bootcode läuft nach dem Boot nie wieder** | **beweisbar, zweistufig**: eine **lineare** Marke (nicht kopierbar — das kann Rust nicht) *und* der `.boot`-Abschnitt wird im selben Zug abgebildet. Falsifizierbar: eine Sonde dorthin muss faulten |
 | **2** | **Rennfreiheit** — Datenrennen **und** Protokollrennen | **später, aber JETZT eingeplant.** Nachträglich ändert sich jede Signatur, die geteilten Zustand anfasst |
-| **3** | **Funktionale Korrektheit (Gold)** | **Gabbro beweist sie NICHT — es macht sie billig.** Der Mechanismus ist die These des Ordners |
+| **3** | **Funktionale Korrektheit (Gold)** | **Gabbro beweist sie NICHT — es macht sie billig.** Und zwischen „gute Beweispflichten" und Gold liegt **nicht die letzte Meile, sondern der Weg**: Maschinenmodell, Speichermodell, Beweiser und Anfang fehlen ganz ([`GOLD-LUECKE.md`](GOLD-LUECKE.md)) |
 
 > **Zusage 1 gilt nur relativ.** „Speichersicher" heisst für einen Kernel notwendigerweise
 > *speichersicher, WENN die MMU tut, was ihr Modell sagt* — der Kernel schreibt seine eigenen
@@ -71,6 +71,7 @@ andere ist ausdrücklich Absicht.
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`GOLD-LUECKE.md`](GOLD-LUECKE.md) | **was für Gold fehlt, ausser Logik und Ausdruckskraft** — sechs Posten, vier davon je ein Teilprojekt: **Maschinenmodell, Speichermodell, Beweiser, Anfang** |
 | [`LOGIK-KLEMPNEREI.md`](LOGIK-KLEMPNEREI.md) | **das Kriterium, erstmals gemessen — und es fällt**: 74 Pflichten, **19 bleiben beim Programmierer hängen (33 %)**, `programs/` bricht 4 von 4 |
 | [`FERTIG.md`](FERTIG.md) | **die Ziellinie, vorab**: acht Bedingungen für die Syntax, vier für den Plan — und **drei Eskalationsgründe** — abgebrochen wird nur bei *bewiesener* Unmöglichkeit |
 | [`NARROW-GEMESSEN.md`](NARROW-GEMESSEN.md) | **der gefährlichste offene Punkt, gemessen** — die flusssensitive Klasse sind **4 Stellen in 65 001 Zeilen**, und die erwartete Auswahlverzerrung trat nicht ein |
