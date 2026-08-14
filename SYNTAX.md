@@ -178,7 +178,12 @@ Es senkt sich auf `#if` ab und ist **konstant auswertbar** — kein Praeprozesso
 ```ebnf
 typedecl   = [ "pub" ] [ "opaque" ] [ "linear" [ "ghost" ] ] [ "tagged" ]
              "type" ident [ "(" typelist ")" ] [ "=" typeexpr ] ";" ;
-typeexpr   = intty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants ;
+typeexpr   = intty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants
+           | indexty ;
+indexty    = [ "option" ] "index" "into" ident ;
+             (* Der ERZEUGTE Indextyp einer Tabelle: `0 ..< count`. Er steht als `typeexpr`,
+                weil er sonst in keiner Signatur genannt werden kann -- und dann bliebe die
+                Schranke doch wieder ein von Hand geschriebener Typ neben der Tabelle. *)
 nevertype  = "never" ;                             (* Rueckgabetyp von prim/divergent *)
 intty      = ( "u8"|"u16"|"u32"|"u64"|"i8"|"i16"|"i32"|"i64" ) [ "in" range ] ;
 boolty     = "bool" ;
@@ -461,7 +466,8 @@ forever
 ## 9. Tabellen, Traversierungen, Formate
 
 ```ebnf
-table      = "table" ident "{" { constdecl | slotdecl | invariant | opdecl } "}" ;
+table      = "table" ident [ "count" constexpr ] "{"
+               { constdecl | slotdecl | invariant | opdecl } "}" ;
 opdecl     = "ops" identlist ";" ;
 walkdecl   = "walk" ident "levels" constexpr "{"
                "node" ":" array ","
@@ -470,8 +476,10 @@ walkdecl   = "walk" ident "levels" constexpr "{"
                { invariant }
              "}" ;
 slotdecl   = "slot" "{" { ident ":" slottype "," } "}" ;
-slottype   = typeexpr | "index" "into" ident | "option" "index" "into" ident
-           | intty "wrapping" ;
+slottype   = typeexpr | intty "wrapping" ;
+             (* `index into T` ERBT die Schranke aus `T`s `count` -- der Indextyp wird
+                erzeugt, nicht geschrieben. Ohne `count` bleibt er unbeschraenkt, und das
+                ist dann eine Aussage der Deklaration statt eine Konvention. *)
 invariant  = "invariant" ident "cost" costexpr "runs" ( "online" | "offline" )
              [ "by" inductlist ] ":" pred ";" ;
 costexpr   = "O" "(" expr ")" ;

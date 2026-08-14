@@ -577,6 +577,18 @@ impl<'a> Parser<'a> {
                 })))
             }
             Art::Zeichen(Z::GeschweiftAuf) => self.verbund_oder_varianten(),
+            Art::Wort(Kw::Index) | Art::Wort(Kw::Option) => {
+                let anfang = self.span();
+                let optional = self.friss_kw(Kw::Option);
+                self.erwarte_kw(Kw::Index)?;
+                self.erwarte_kw(Kw::Into)?;
+                let tabelle = self.erwarte_ident()?;
+                Ok(TypExpr::Index {
+                    span: anfang.bis_zu(tabelle.span),
+                    tabelle,
+                    optional,
+                })
+            }
             Art::Ident => Ok(TypExpr::Pfad(self.pfad()?)),
             _ => {
                 let gefunden = t.benennung(self.quelle);
@@ -2251,6 +2263,11 @@ impl<'a> Parser<'a> {
     fn table(&mut self) -> Erg<Tabelle> {
         let anfang = self.erwarte_kw(Kw::Table)?;
         let name = self.erwarte_ident()?;
+        let kapazitaet = if self.friss_kw(Kw::Count) {
+            Some(self.expr()?)
+        } else {
+            None
+        };
         self.erwarte_z(Z::GeschweiftAuf)?;
         let mut konstanten = Vec::new();
         let mut slot = None;
@@ -2294,6 +2311,7 @@ impl<'a> Parser<'a> {
         let ende = self.erwarte_z(Z::GeschweiftZu)?;
         Ok(Tabelle {
             name,
+            kapazitaet,
             konstanten,
             slot,
             invarianten,
@@ -2325,15 +2343,6 @@ impl<'a> Parser<'a> {
     }
 
     fn slottype(&mut self) -> Erg<SlotTyp> {
-        if self.friss_kw(Kw::Index) {
-            self.erwarte_kw(Kw::Into)?;
-            return Ok(SlotTyp::Index(self.erwarte_ident()?));
-        }
-        if self.friss_kw(Kw::Option) {
-            self.erwarte_kw(Kw::Index)?;
-            self.erwarte_kw(Kw::Into)?;
-            return Ok(SlotTyp::OptionIndex(self.erwarte_ident()?));
-        }
         if let Art::Wort(k) = self.blick().art {
             if k.ist_intty() {
                 let ity = self.intty()?;

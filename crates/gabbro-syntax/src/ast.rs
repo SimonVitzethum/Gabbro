@@ -203,6 +203,12 @@ pub enum TypExpr {
     Verbund(Vec<FeldDecl>, Span),
     FnZeiger(Box<FnZeiger>),
     Varianten(Vec<Variante>, Span),
+    /// `[option] index into T` -- der aus `T`s `count` **erzeugte** Indextyp.
+    Index {
+        tabelle: Ident,
+        optional: bool,
+        span: Span,
+    },
 }
 
 impl TypExpr {
@@ -216,6 +222,7 @@ impl TypExpr {
             TypExpr::Verbund(_, s) => *s,
             TypExpr::FnZeiger(f) => f.span,
             TypExpr::Varianten(_, s) => *s,
+            TypExpr::Index { span, .. } => *span,
         }
     }
 }
@@ -857,6 +864,10 @@ pub struct Forever {
 #[derive(Debug, Clone)]
 pub struct Tabelle {
     pub name: Ident,
+    /// `count N` -- die Zahl der Slots. **Ohne sie hat `index into T` keine Obergrenze aus
+    /// der Deklaration**, und „kein ungeprueftes Indizieren" ruht auf der Konvention, dass
+    /// jemand von Hand einen passenden Indextyp gewaehlt hat (Befund G8).
+    pub kapazitaet: Option<Expr>,
     pub konstanten: Vec<KonstDecl>,
     pub slot: Option<SlotDecl>,
     pub invarianten: Vec<Invariante>,
@@ -881,10 +892,6 @@ pub struct SlotFeld {
 #[derive(Debug, Clone)]
 pub enum SlotTyp {
     Typ(TypExpr),
-    /// `index into ident`
-    Index(Ident),
-    /// `option index into ident`
-    OptionIndex(Ident),
     /// `intty wrapping`
     Wrapping(IntTy),
 }

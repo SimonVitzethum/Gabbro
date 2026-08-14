@@ -1,0 +1,20 @@
+-- erwartet: M103
+--
+-- A3: `table … count N` gibt `index into T` seine Schranke. Der Indextyp wird ERZEUGT,
+-- nicht von Hand gewaehlt -- und ein Index, der darueber hinausreicht, faellt.
+--
+-- Vorher (Befund G8) ruhte "kein ungeprueftes Indizieren" hier auf der Konvention, dass
+-- jemand `type SlotIdx = u32 in 0 ..< NSLOTS` passend zur Tabelle schreibt. Nichts band
+-- die beiden aneinander.
+
+type Weit = u32 in 0 .. 127;
+
+table Kappenraum count 64 {
+    slot { benutzt : bool, }
+}
+
+impl fn lesen(c : ptr<normal, r> Kappenraum, i : Weit) -> bool
+    effects { reads c }
+{
+    return c.slots[i].benutzt;
+}

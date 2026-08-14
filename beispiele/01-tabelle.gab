@@ -10,8 +10,9 @@ module beispiel::tabelle {
 const NSLOTS   : u32 = 4096;
 const NOBJEKTE : u32 = 1024;
 
-type SlotIdx  = u32 in 0 ..< NSLOTS;
-type ObjIdx   = u32 in 0 ..< NOBJEKTE;
+-- **Der Indextyp wird ERZEUGT, nicht geschrieben.** `count` an der Tabelle gibt
+-- `index into Kappenraum` seine Schranke; frueher stand daneben ein handgeschriebenes
+-- `type SlotIdx = u32 in 0 ..< NSLOTS`, und nichts band die beiden aneinander.
 type Zaehler  = u32 in 0 .. 65535;
 
 opaque type Pa      = u64;
@@ -31,7 +32,7 @@ lock KAPPEN protects { eintraege, baum } rank 0 held <= 400 ops masks irqs;
 
 -- Zweite Tabelle: `table` kennt genau EIN `slot`-Wort, und die Verbindung zwischen
 -- beiden traegt `index into` -- ein Index, dessen Schranke aus der Deklaration faellt.
-table Objekte {
+table Objekte count NOBJEKTE {
     slot {
         benutzt : bool,
         marke   : u32 wrapping,
@@ -40,7 +41,7 @@ table Objekte {
     }
 }
 
-table Kappenraum {
+table Kappenraum count NSLOTS {
     const WURZEL : u32 = 0;
 
     slot {
@@ -66,7 +67,7 @@ table Kappenraum {
         forall s in slots of Self : Self.slots[s] reaches WURZEL via elter;
 }
 
-spec fn ist_blatt(c : ptr<normal, r> Kappenraum, s : SlotIdx) -> bool
+spec fn ist_blatt(c : ptr<normal, r> Kappenraum, s : index into Kappenraum) -> bool
     effects { pure }
     = c.slots[s].benutzt && c.slots[s].erstes_kind == None;
 
@@ -74,7 +75,7 @@ spec fn baum_wohlgeformt(c : ptr<normal, r> Kappenraum) -> bool
     effects { pure }
     = forall s in slots of c : c.slots[s] reaches WURZEL via elter;
 
-impl fn aushaengen(c : ptr<normal, rw> Kappenraum, s : SlotIdx)
+impl fn aushaengen(c : ptr<normal, rw> Kappenraum, s : index into Kappenraum)
     requires  Held(KAPPEN), c.slots[s].benutzt
     ensures   c.slots[s].elter == None,
               c.slots[s].vorheriges == None,
@@ -106,7 +107,7 @@ impl fn aushaengen(c : ptr<normal, rw> Kappenraum, s : SlotIdx)
 -- der von der Struktur erzeugten Ordnung, tiefenfallend. Der Rumpf schrumpft auf eine Zeile.
 impl fn einsammeln(c : ptr<normal, rw> Kappenraum,
                    o : ptr<normal, rw> Objekte,
-                   s : SlotIdx)
+                   s : index into Kappenraum)
     requires  Held(KAPPEN), baum_wohlgeformt(c)
     maintains baum_wohlgeformt
     effects   { consumes c.slots, writes o.slots, locks KAPPEN }
@@ -122,7 +123,7 @@ impl fn einsammeln(c : ptr<normal, rw> Kappenraum,
 
 impl fn blatt_loeschen(c : ptr<normal, rw> Kappenraum,
                        o : ptr<normal, rw> Objekte,
-                       s : SlotIdx)
+                       s : index into Kappenraum)
     requires  Held(KAPPEN), c.slots[s].benutzt, ist_blatt(c, s)
     ensures   !c.slots[s].benutzt
     maintains baum_wohlgeformt

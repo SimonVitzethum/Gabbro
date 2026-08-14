@@ -238,6 +238,22 @@ MUTATIONEN = [
         "SPRACHE.md 7 -- `effects` ist wieder fail-open",
     ),
     Mutation(
+        "kapazitaet-egal",
+        "umgebung.rs",
+        "                        laenge: self.kapazitaeten.get(t).copied(),",
+        "                        laenge: None,",
+        "A3 -- eine Tabelle mit `count N` gibt ihrem Slotfeld keine Laenge",
+    ),
+    Mutation(
+        "index-erbt-nicht",
+        "umgebung.rs",
+        "                    .find_map(|k| self.kapazitaeten.get(&k).copied())\n"
+        "                    .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1))",
+        "                    .find_map(|k| self.kapazitaeten.get(&k).copied())\n"
+        "                    .map(|_| IntBereich::voll(32, false))",
+        "A3 -- `index into T` erbt die Schranke aus `count` nicht",
+    ),
+    Mutation(
         "rumpf-egal",
         "wirkungen.rs",
         "    for (ort, span) in &taten.schreibt {",

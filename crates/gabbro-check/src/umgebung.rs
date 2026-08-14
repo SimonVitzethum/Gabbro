@@ -27,6 +27,8 @@ pub struct Umgebung {
     pub konstanten: HashMap<String, i128>,
     /// Tabellenname -> Slotfelder.
     pub tabellen: HashMap<String, Vec<(String, Typ)>>,
+    /// Tabellenname -> `count N`, wenn die Deklaration sie nennt.
+    pub kapazitaeten: HashMap<String, u128>,
     pub formate: HashMap<String, Vec<(String, Typ)>>,
     pub geraete: HashMap<String, Vec<(String, Typ)>>,
     /// `static`, `atomic`, `accumulates` -- alles, was ohne Deklaration im Rumpf sichtbar ist.
@@ -213,6 +215,14 @@ impl Umgebung {
                                 .collect::<Vec<_>>()
                         })
                         .unwrap_or_default();
+                    if let Some(n) = t
+                        .kapazitaet
+                        .as_ref()
+                        .and_then(|e| self.konst_wert(pfad, e))
+                        .filter(|n| *n > 0)
+                    {
+                        self.kapazitaeten.insert(q(&t.name.text), n as u128);
+                    }
                     self.tabellen.insert(q(&t.name.text), felder);
                 }
                 ItemArt::Format(f) => {
@@ -470,6 +480,21 @@ impl Umgebung {
                     .collect(),
             ),
             TypExpr::FnZeiger(_) => Typ::Unbekannt,
+            // **A3.** `index into T` erbt die Schranke aus `T`s `count`. Ohne `count` bleibt
+            // sie offen -- und das ist dann eine Aussage der Deklaration, keine Konvention.
+            TypExpr::Index { tabelle, .. } => {
+                let bereich = self
+                    .kandidaten(von, &tabelle.text)
+                    .into_iter()
+                    .find_map(|k| self.kapazitaeten.get(&k).copied())
+                    .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1))
+                    .unwrap_or_else(|| IntBereich::voll(32, false));
+                Typ::Benannt {
+                    name: format!("index into {}", tabelle.text),
+                    undurchsichtig: false,
+                    unter: Box::new(Typ::Ganzzahl(bereich)),
+                }
+            }
             TypExpr::Varianten(v, _) => Typ::Summe {
                 name: String::new(),
                 varianten: v
@@ -527,13 +552,6 @@ impl Umgebung {
         let mut unterwegs = HashSet::new();
         match s {
             SlotTyp::Typ(t) => self.typexpr(von, t, &mut unterwegs),
-            // `index into T` traegt seine Schranke aus der Deklaration -- aber `table` nennt
-            // keine Slotzahl, also bleibt die Obergrenze offen (s. Befund G8 in TODO.md).
-            SlotTyp::Index(t) | SlotTyp::OptionIndex(t) => Typ::Benannt {
-                name: format!("index into {}", t.text),
-                undurchsichtig: false,
-                unter: Box::new(Typ::Ganzzahl(IntBereich::voll(32, false))),
-            },
             SlotTyp::Wrapping(i) => Typ::Umlaufend(self.intbereich(von, i, &mut unterwegs)),
         }
     }
@@ -590,7 +608,9 @@ impl Umgebung {
                     let felder = self.tabellen.get(t).cloned().unwrap_or_default();
                     Typ::Feld {
                         element: Box::new(Typ::Verbund(felder)),
-                        laenge: None,
+                        // **A3.** Mit `count N` bekommt M4 hier zum ersten Mal eine
+                        // Schranke aus der Sprache statt aus einer Konvention.
+                        laenge: self.kapazitaeten.get(t).copied(),
                     }
                 } else {
                     Typ::Unbekannt
