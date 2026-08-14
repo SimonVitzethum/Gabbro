@@ -83,6 +83,7 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
   Ablauf     if else match traverse over by touches retry forever until
              bounded progress on_exceeded per_pass return let mut
              unvisited consuming decreasing leave leaves next ops result
+             exchange update returns
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
              class fields bank at stride count mirrors from
@@ -93,6 +94,8 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
              atomic acquire release seq relaxed nothing accumulates merge
              max min add or and held protects rank
              embeds scale walk levels node down leaf mappings
+             entry vector regs out preserves clobbers stack dispatch
+             per cpu ist nested masked awaits
   Domaenen   slots of chain descendants queue elems fields threads reaches via
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 bool never w1c rc
   Eingebaut  sizeof lenof aligned forall exists true false Self
@@ -134,7 +137,17 @@ program    = { item } ;
 item       = [ "when" constexpr ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | reason | state | device | assume | axiom | check
-             | atomicdecl | lockdecl | accdecl | walkdecl ) ;
+             | atomicdecl | lockdecl | accdecl | walkdecl | entrydecl ) ;
+entrydecl  = "entry" ident [ "vector" constexpr ] "arch" ident "{"
+               "regs" "in"  "{" { ident ":" ident "," } "}"
+               "regs" "out" "{" { ident ":" ident "," } "}"
+               "preserves" "{" identlist "}"
+               "clobbers"  "{" identlist "}"
+               entryextra
+               "dispatch" path ";"
+             "}" ;
+entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
+             [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
 accdecl    = "accumulates" ident ":" typeexpr
              "merge" ( "max" | "min" | "add" | "or" | "and" ) ";" ;
 moduledecl = [ "pub" ] "module" path "{" { item } "}" ;
@@ -358,9 +371,15 @@ Sie muss am Ende des Blocks wiederhergestellt sein; der Bereich ist **sichtbar s
 block      = "{" { stmt } "}" ;
 stmt       = letstmt | assign | ifstmt | matchstmt | loopform | breakstmt
            | narrowstmt | lockstmt | leavestmt | nextstmt | publishstmt
-           | "return" [ expr ] ";" | exprstmt ;
+           | awaitload | exchstmt | "return" [ expr ] ";" | exprstmt ;
 leavestmt  = "leave" ident ";" ;
 nextstmt   = "next" ident ";" ;
+awaitload  = "let" ident "=" place "awaits" "{" placelist "}" ";" ;
+exchstmt   = "let" ident "=" place "exchange" xform
+             [ "publishes" ( placelist | "nothing" ) ]
+             [ "awaits" "{" placelist "}" ] ";" ;
+xform      = "update" "(" ident ")" block
+           | expr "when" pred "returns" ident ;
 letstmt    = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
            | "let" ident "=" call "else" "(" ident ")" block ;
 assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;

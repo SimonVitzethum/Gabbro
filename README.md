@@ -71,6 +71,7 @@ andere ist ausdrücklich Absicht.
 | [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`ERGAENZUNG.md`](ERGAENZUNG.md) · [`ERGAENZUNG2.md`](ERGAENZUNG2.md) | **die drei Löcher der Festlegung** — Ordering-**Paarung** (`awaits`), Eintrittspfad (`entry`), Boot-Unerreichbarkeit in drei Schichten; dazu RMW (`exchange`), `Vis` über Funktionsgrenzen, und **der Prüferplan P0–P7 mit Toren** |
 | [`FESTLEGUNG.md`](FESTLEGUNG.md) | **die vollständige Festlegung** — entscheidet alle neun offenen Fragen (F1–F9) und nimmt die 19 hängenden Klempnerei-Pflichten je mit einem Konstrukt ab. **Abnahme ist die Wiederholung der 74-Pflichten-Messung: 19 → 0** |
 | [`INDUKTION.md`](INDUKTION.md) | **was Induktion bräuchte und was sie kostet** — drei Stufen; die erste kostet **eine Zeile je Pflicht** und behält die Sprache. **Der Preis ist nicht die Zeilenzahl, sondern die Vorhersagbarkeit** |
 | [`BEWEISER.md`](BEWEISER.md) | **L3 und L4 entschieden — und die Decke benannt**: Gold im seL4-Sinn ist auf diesem Weg nicht erreichbar. Drei Arten Pflichten statt einer, Zertifikatsprüfer statt Löser im Vertrauen |

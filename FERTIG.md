@@ -6,6 +6,11 @@ Uebersetzer. Ein autonomer Lauf ohne benannte Ziellinie ist dasselbe Muster mit 
 
 **Hier steht die Ziellinie, vorab, und sie ist mechanisch pruefbar, wo das geht.**
 
+> **Seit dem 2026-08-14 gibt es einen schaerferen Plan mit denselben Eigenschaften:**
+> [`ERGAENZUNG2.md`](ERGAENZUNG2.md) §6 — **P0 bis P7, jede Stufe mit zweiseitigem Tor, und die
+> Reihenfolgeregel „keine Prueferzeile vor Tor P1"**. Er ersetzt diese Datei nicht, er macht sie
+> konkret: A1 ist P1, A4 ist P0.
+
 > **Der Lauf bricht nicht ab.** Was frueher Abbruch war, ist seit dem 2026-08-14 **Eskalation** —
 > s. Abschnitt C. Abgebrochen wird nur bei **bewiesener** Unmoeglichkeit, und wie die aussaehe,
 > steht dort ebenfalls, damit der Grund nicht leer ist.

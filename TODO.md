@@ -3,9 +3,18 @@
 > **Seit [`FESTLEGUNG.md`](FESTLEGUNG.md) (2026-08-14) sind die neun Entwurfsfragen entschieden.**
 > Was hier steht, ist ueberwiegend **Messung**, nicht Entwurf.
 
-- [ ] **DIE ABNAHME DER FESTLEGUNG: die 74-Pflichten-Messung wiederholen, haengende Klempnerei
-      19 → 0.** Abnahme ist nicht Zustimmung. Bleibt eine haengen, ist die Festlegung an dieser
-      Stelle widerlegt — mit Klasse und Fundstelle.
+- [ ] **P0 — DIE MESSUNG, UND KEINE PRUEFERZEILE VORHER.** Die 74-Pflichten-Messung gegen
+      Festlegung + beide Ergaenzungen wiederholen: **haengende Klempnerei 19 → 0**; dazu eine
+      **Ordering-Stichprobe** (≥ 30 der 2 231 Fundstellen, geschichtet nach Datei) — jede ist
+      Paarung, Zaehler oder benannter `seq`-Fall, **ein vierter Ausgang widerlegt die Paarung**;
+      dazu die **`narrow`-Zaehlung ≤ 24**. Abnahme ist nicht Zustimmung.
+- [x] **P1 — Grammatikvereinigung: GEFAHREN 2026-08-14.** Festlegung + beide Ergaenzungen sind in
+      der EBNF: **117 Regeln, 0 offen, jede von `program` erreichbar, 187 Terminale gegen 187
+      Wortschatzwoerter**, beide Waechter gruen. *Die Reihenfolgeregel „keine Pruefzeile vor Tor P1"
+      ist damit eingehalten.*
+- [ ] **P2–P7** aus [`ERGAENZUNG2.md`](ERGAENZUNG2.md) §6 — Lexer/Parser, M1+V1–V3, M2 samt
+      Schablone, C-Emission, Paarungs-Pass mit Litmus-Sonden, ein Caprock-Modul end-to-end.
+      **Jede Stufe verbraucht das Ergebnis der vorigen, wie eine `Duty`.**
 
 **Ausschliesslich Offenes.** Erledigtes steht in den Entwurfsdateien, Widerlegtes in
 [`HISTORIE.md`](HISTORIE.md). Die Reihenfolge folgt [`PLAN.md`](PLAN.md).
