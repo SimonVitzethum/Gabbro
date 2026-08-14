@@ -803,11 +803,35 @@ Entwurf mit einer Vorstellung.
 | # | Posten | was er bei seL4 ist | was Gabbro dafuer hat |
 |---|---|---|---|
 | **1** | **Maschinenmodell** | ein eigenes Modell in Isabelle: Register, Speicher, MMU; nicht Modelliertes ist **axiomatisiert** | die **Axiomschicht**, ~130 Namen fuer zwei Architekturen, **ratschenfaehig** und im Erzeugnis. `port` hat sie gerade um 70 Fundstellen entlastet |
-| **2** | **C-Semantik** | ein **C-Parser** samt Formalisierung eines C-Ausschnitts (Simpl/AutoCorres) — ein Teilprojekt fuer sich | **nichts Gleichwertiges.** Gabbro ersetzt es durch „eine Emission, syntaxgesteuert, nicht optimierend" — **und diese Entsprechung ist behauptet**, nicht formalisiert |
+| **2** | **C-Semantik** | ein **C-Parser** samt Formalisierung eines C-Ausschnitts (Simpl/AutoCorres) — ein Teilprojekt fuer sich | **nichts Gleichwertiges.** Gabbro ersetzt es durch „eine Emission, syntaxgesteuert, nicht optimierend" — **und diese Entsprechung ist behauptet**, nicht formalisiert. *Aber der Rueckstand ist kleiner als „nein" — s. die Zeile zu Posten 4* |
 | **3** | **Die Annahmenliste** | ausdruecklich gefuehrt: Assembler unbewiesen, Bootcode zunaechst aussen vor, Hardware wie modelliert, DMA eingeschraenkt, **verifizierte Konfiguration einkernig** | **das Pflichtenmanifest** — dieselbe Sache, aber maschinenlesbar, mit Klassen und Ratsche ueber Namen. **Schaerfer im ENTWURF**: seL4s Liste existiert als Artefakt, Gabbros als Spezifikation (§15) — emittiert wird sie heute nicht |
-| **4** | **Binaerverifikation** | Uebersetzungsvalidierung C ⟶ Maschinencode (graph-refine/SydTV), damit der Uebersetzer nicht der Riss ist. **Assembler und volatile sind ausgenommen** | **steht unter „Spaeter"**, ist aber **ermoeglicht** — derselbe Zeugnispruefer liefert benannten C-Ausschnitt und erhaltene Funktionsgrenzen. **Nur laege der ganze `device`-Zweig ausserhalb** |
+| **4** | **Binaerverifikation** | **Uebersetzungsvalidierung JE BAU** (graph-refine/SydTV, `tools/asmrefine` = 10 651 Zeilen) — **nicht** ein verifizierter Uebersetzer, sondern ein Zeugnis je Lauf. **Assembler und volatile sind ausgenommen** | **TV-lite ist gebaut, TV-voll ist erreichbar, ein verifizierter Emitter ist nicht noetig.** Das Deckungszeugnis je Lauf **ist** bereits die Leichtform; und **die syntaxgesteuerte Absenkung ist genau die Eigenschaft, die Validierung je Bau moeglich macht**, wo sie fuer optimierende Uebersetzer heroisch ist. **Nur laege der ganze `device`-Zweig ausserhalb** |
 | **5** | **Eigenschaften ueber der Korrektheit** | Integritaet, Vertraulichkeit, Autoritaetsbeschraenkung — **eigene Saetze mit eigenen Spezifikationen**; gemessen **+23,5 %** ueber der Korrektheit (`proof/infoflow` + `proof/access-control`, s. [`MESSUNGEN.md`](MESSUNGEN.md)) | **der Satz nicht, eine pruefbare Naeherung schon** — s. u. |
 | **6** | **Der Unterhalt** | **der Posten, den niemand mitzaehlt** — s. u. |
+
+---
+
+### Die 239 458 Zeilen beweisen einen EINKERN-Kernel — und das schneidet in beide Richtungen
+
+**Die verifizierte seL4-Konfiguration ist einkernig.** Damit liegt alles, woran der
+Scheduler-Bereich hart ist — adressgeordnetes Sperren, Warteschlangenchirurgie unter feinen
+Sperren, jede echte Nebenlaeufigkeit — **ausserhalb dessen, was die Aufteilung 40 / 32 / 28 je
+vermessen hat.**
+
+> **seL4 hat die Nebenlaeufigkeit nicht bewiesen, sondern per Konfiguration entfernt** — Weg 5
+> der Zaehlvorschrift ([`PLAN.md`](PLAN.md)) auf der groesstmoeglichen Stufe.
+
+**Was das fuer Gabbro heisst, schneidet in beide Richtungen:**
+
+* **Keine Vorlage.** Wer beim Scheduler eine seL4-Referenz sucht, findet keine. Die
+  Sperrordnung, die `Held`-Zeugen, die Paarung — dafuer gibt es **kein bewiesenes Vorbild**,
+  an dem man sich messen koennte.
+* **Aber auch kein unguenstiger Vergleich.** Gabbro ist dort nicht *hinter* seL4, sondern
+  **jenseits der vermessenen Front**, wo niemand Beweise hat.
+
+**Diese Zeile steht hier, bevor jemand die 40 % als uebertragbar auf einen SMP-Kernel liest.**
+Sie sind es nicht; sie sind an einem Kernel gemessen, der die schwerste Klasse per Konfiguration
+nicht hat.
 
 ---
 

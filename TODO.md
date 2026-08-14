@@ -94,6 +94,26 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       Paarungs-Pass mit Litmus-Sonden, ein Caprock-Modul end-to-end.
       **Jede Stufe verbraucht das Ergebnis der vorigen, wie eine `Duty`.**
 
+## Kandidatenkonstrukt `locks ordered` — und es muss WIDERLEGBAR bleiben
+
+- [ ] **`locks ordered (a, b) { … }` als dritter Ausgang fuer adressgeordnetes Sperren.**
+      Zwei Sperren derselben Klasse zugleich zu halten waere **nur** in dieser Form
+      schreibbar; die Erzeuger-Schablone sortiert nach Adresse und nimmt in dieser Reihenfolge,
+      beide `Held`-Zeugen entstehen im Block. **Das Deadlock-Argument ist syntaktisch
+      entscheidbar, ohne Loeser:** innerhalb einer Klasse laufen alle Mehrfachnahmen durch die
+      geordnete Form (Totalordnung ueber Adressen, kein Zyklus), zwischen Klassen gelten die
+      statischen Raenge — dieselbe Zweiteilung, die der Rang schon hat, eine Ebene feiner.
+      * **Der Preis ist benannt:** beide Nahmen muessen **lexikalisch gemeinsam** stehen. Zwei
+        Sperren derselben Klasse, an verschiedenen Stellen zu verschiedenen Zeiten genommen,
+        bleiben verboten.
+      * **DIE PRUEFZEILE, und sie muss das Konstrukt TOETEN koennen:** steht im echten
+        Scheduler-Code **jede** Mehrfachnahme lexikalisch gemeinsam? **Jede Fundstelle, wo sie
+        es nicht tut, ist ein Gegenbeispiel** und gehoert als solches ins Fragment — *vor* dem
+        Wort in die Grammatik. Das ist die `by consuming`-Lehre in der Reihenfolge, in der sie
+        beim zweiten Mal billiger ist: erst der Papiertest gegen den Baum, dann die Syntax.
+      * **Kein Entwurfstext vor dem Fragment**, und das Fragment steht im **dritten** Schritt
+        der Reihenfolge oben — es ueberholt die zwei billigeren Messungen nicht.
+
 ## Die vier Posten zum Ziel — Plan mit Toren in [`PLAN.md`](PLAN.md) §A
 
 **Das Ziel ist: Gabbro beweist alles ausser funktionaler Korrektheit.** Gegen dieses Ziel

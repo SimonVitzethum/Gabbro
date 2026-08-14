@@ -331,6 +331,15 @@ Sie ist die einzige, die sich nicht durch Umschichten von Text gewinnen lässt:
 > Umfang, den ihre Aussage in Gabbro hätte, wenn die Sprache sie trüge — und wo das nicht
 > abschätzbar ist, wird die Messung als **unvollständig** berichtet, nicht als gut.*
 >
+> **BERICHTIGT beim Eintragen:** die erste Fassung dieses Absatzes zog daraus ein Gesetz mit
+> **zwei** Ausgängen — beweisen oder entfernen. **Strenge hat drei**, und der Ordner ist den
+> dritten schon dreimal gegangen: **die Pflicht in eine ERZEUGTE FORM verlegen, deren Beweis
+> EINMAL faellt.** `by consuming` fuer die Blattheit, `accumulates` fuer den Verbund-Riss,
+> `transset` fuer das Halb-Gesetzte. **Ein Verbot ist der Ausgang, wenn kein Konstrukt
+> gefunden wird — nicht der Ausgang erster Wahl.** Weg 5 unten behaelt seinen Eintrag
+> trotzdem: **jede Verlegung in ein Konstrukt ist ein Wort mehr, und die Konvergenzwette
+> zahlt sie.**
+>
 > **Weg 5 — die Pflicht wird durch ein VERBOT erledigt, und Verbote kostet die Zahl nichts.**
 > Strenge erledigt Klempnerei, indem sie **Programme entfernt**: kein `while`, keine
 > Verschlüsse (89 gemessene Fundstellen), keine Generizität, statische Sperrränge statt
