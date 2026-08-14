@@ -144,3 +144,37 @@ Invariante *„der Zaehler ist die Zahl der erschoepften Konten"*, und die ist *
       kann. **Das ist der grosse Posten** — 54 Fundstellen.
 - [ ] **`break`/`continue`** entscheiden: aufnehmen oder ausdruecklich verbieten.
 - [ ] Die uebrigen fuenf Klassen aus dem Bericht im Scratchpad.
+
+---
+
+## Der Gegenentwurf, zweite Runde — 15 Regeln, und drei Selbstwiderlegungen
+
+Parallel hat der Vervollstaendiger die Grammatik gegen den ganzen Baum gehalten (1 896 Zeilen).
+**Was davon SOFORT eingearbeitet ist**, weil es einen Fund beantwortet:
+
+| Regel | ersetzt | Grund |
+|---|---|---|
+| `mirrors GCMD from GSTS` **je Geraet** | `keeping` **je Uebergang** | 18 handgefuehrte Eintraege, wo `vtd.rs` **eine** Konstante hat — das Konstrukt war die Falle, gegen die es gebaut war |
+| `publishes nothing`, `relaxed` | `publishes` als Prosa-Pflicht und EBNF-Kuer | 41 % der Atomics waren unschreibbar; `relaxed` fehlte bei **779** Vorkommen, `seq` stand im Wortschatz bei **0** |
+| `old`, `offset_into`, `never` als **Produktionen** | Woerter ohne Grammatik | **`offset_into` stand in der Wortschatztabelle und in keiner Produktion** — die ELF-Absenkung war damit nicht ungeprueft, sondern **unaufschreibbar** |
+
+**Drei Befunde, die der Vervollstaendiger gegen sich selbst gefunden hat:**
+
+1. **„Barrieren gehoeren zum Adressraum" ist zur Haelfte falsch.** In `Queue::publish` liegen beide
+   Stores im **selben** Raum (`dma`) und brauchen trotzdem eine Barriere. Berichtigt: **der Raum
+   bestimmt die STAERKE, `publishes` den ORT.**
+2. **`accumulates max` (Wasserstandsmarke, 213 RMW-Stellen) senkt sich auf eine unbegrenzte
+   CAS-Schleife ab** — **der Uebersetzer emittiert, was die Sprache verbietet.** Unentschieden, und
+   es ist der erste Kandidat fuer „zwei geforderte Eigenschaften widersprechen einander".
+3. **Sein staerkstes Fragment und seine schwaechste Annahme sind dasselbe Konstrukt:** die
+   Phasenverfolgung am `device` traegt nur bei *einem* Besitzer — und traegt damit genau dort
+   **nicht**, wo Falle 4 sitzt (VT-d, geteilt ueber alle Kerne).
+
+**Drei offene Punkte hat er geschlossen, mit Zahlen:** Generizitaet (**16 von 62** echt, alles auf
+`Slab`/`SpinLock` — beide Konstrukte existieren; **0 von 6** Traits polymorph) · Versionsevolution
+(**0 von 11** Migrationen ⇒ **Absage**) · `costs` (Zyklen entfallen, **Operationen** werden
+hergeleitet — D10 woertlich).
+
+**Sein schwaechster Teil, selbst benannt:** `abi { … }` — **5 von 25 neuen Woertern fuer eine Regel,
+die null bezahlte Fallen toetet**, und **3 von 168** `asm!`-Stellen angesehen. Eine Skizze, keine
+Regel.

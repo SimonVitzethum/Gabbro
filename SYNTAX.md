@@ -20,7 +20,15 @@ Stand 2026-08-13, zweite Fassung. **Kein Uebersetzer liest das.**
 | definierte EBNF-Regeln | 40 | **100** |
 | benutzt, aber nie definiert | 21 (17 tragend) | **0** |
 | offene Entwurfsfragen | 7 | **9, benannt am Ende** |
-| **Wächter** | — | `pruefe-syntax.sh` prüft die Grammatik jetzt auf **Geschlossenheit**, mit Sprechprobe |
+| **Wächter** | — | `pruefe-syntax.sh` prüft **Geschlossenheit der Regeln UND Deckung der Terminale durch den Wortschatz**, je mit Sprechprobe |
+
+> **Der Wächter hatte eine zweite blinde Stelle, und sie war dieselbe wie die erste.** Er prüfte
+> die **Nichtterminale** auf Geschlossenheit und behauptete daneben einen „geschlossenen
+> Wortschatz", **ohne die Terminale je anzusehen** — 39 Schlüsselwörter standen in der Grammatik
+> und nicht in der Tabelle, vier Tabellenwörter (`loop`, `never`, `offset_into`, `old`) in **keiner
+> Produktion**. Zwei davon trugen Argumente: **ohne `offset_into` ist ELF nicht schreibbar, ohne
+> `old` nicht die Differenzaussage.** Und sein erster eigener Fund war er selbst: er las „elf" aus
+> „Self", weil ihm die Wortgrenzen fehlten.
 
 Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `ifstmt`, `matchstmt`,
 `params`, `variants` — sind geschlossen. **`pred` ist dabei die wichtigste**: eine Beweissprache
@@ -49,17 +57,22 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
   Struktur   module pub use type opaque linear ghost tagged const static fn
              spec impl raw divergent prim section arch when
   Vertraege  requires ensures maintains breaking effects costs where in
-             exhaustive old
+             exhaustive old narrow to
   Wirkungen  reads writes locks masks allocs consumes publishes diverges pure
-  Ablauf     if else match loop traverse over by touches retry forever
+  Ablauf     if else match traverse over by touches retry forever until
              bounded progress on_exceeded per_pass return let mut
+             unvisited consuming decreasing
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
-             class fields bank assume falsifier unfalsifiable axiom
-             check claim measures gates can_fail floor counterprobe
-             endian reserved cost runs offset_into index into option chain
-             wrapping consuming atomic acquire release seq
-  Eingebaut  sizeof lenof forall exists never bool true false Self
+             class fields bank at stride count mirrors from
+             assume falsifier unfalsifiable axiom lock protects rank
+             check claim measures gates can_fail floor counterprobe expects
+             endian little big reserved cost runs online offline
+             offset_into index into option chain wrapping
+             atomic acquire release seq relaxed nothing
+  Domaenen   slots of chain descendants queue elems fields threads reaches via
+  Typen      u8 u16 u32 u64 i8 i16 i32 i64 bool never w1c rc
+  Eingebaut  sizeof lenof forall exists true false Self
 ```
 
 **Alles andere ist ein Bezeichner.** Ein neues Wort ist eine Sprachaenderung und braucht einen
@@ -121,13 +134,15 @@ Es senkt sich auf `#if` ab und ist **konstant auswertbar** — kein Praeprozesso
 ```ebnf
 typedecl   = [ "pub" ] [ "opaque" ] [ "linear" [ "ghost" ] ] [ "tagged" ]
              "type" ident [ "(" params ")" ] [ "=" typeexpr ] ";" ;
-typeexpr   = intty | boolty | path | array | ptrty | structty | fnptr | variants ;
+typeexpr   = intty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants ;
+nevertype  = "never" ;                             (* Rueckgabetyp von prim/divergent *)
 intty      = ( "u8"|"u16"|"u32"|"u64"|"i8"|"i16"|"i32"|"i64" ) [ "in" range ] ;
 boolty     = "bool" ;
 range      = expr ".." expr | expr "..<" expr ;
 array      = "[" typeexpr ";" constexpr "]" ;
 structty   = "{" { field } "}" ;
-field      = ident ":" typeexpr [ "@" bitpos ] [ "where" pred ] [ "reserved" ] "," ;
+field      = ident ":" typeexpr [ "@" bitpos ] [ "offset_into" ident ]
+             [ "where" pred ] [ "reserved" ] "," ;
 bitpos     = int | "[" int ":" int "]" ;
 variants   = "{" ident [ "(" typeexpr ")" ] { "," ident [ "(" typeexpr ")" ] } "}" ;
 fnptr      = "fn" "(" [ typelist ] ")" [ "->" typeexpr ] ;
@@ -217,7 +232,8 @@ pred       = orpred ;
 orpred     = andpred { "||" andpred } ;
 andpred    = notpred { "&&" notpred } ;
 notpred    = [ "!" ] atompred [ "=>" pred ] ;
-atompred   = cmpexpr | quant | member | reach | "(" pred ")" ;
+atompred   = cmpexpr | quant | member | reach | oldexpr | "(" pred ")" ;
+oldexpr    = "old" "(" place ")" ;                 (* nur in ensures *)
 quant      = ( "forall" | "exists" ) ident "in" domain ":" pred ;
 domain     = "slots" "of" place                  (* die Slots einer Tabelle *)
            | "chain" "(" ident "," ident ")" "in" place
@@ -407,14 +423,15 @@ ueber dem Maschinenzustand.
 ## 10. Geraete — und Falle 4
 
 ```ebnf
-device  = "device" ident [ "(" params ")" ] "at" space "{" { regdecl | bank | transition } "}" ;
+device  = "device" ident [ "(" params ")" ] "at" space
+          "{" [ mirrors ] { regdecl | bank | transition } "}" ;
+mirrors = "mirrors" place "from" place ";" ;       (* EINMAL je Geraet, nicht je Uebergang *)
 bank    = "bank" ident "at" expr "stride" expr "count" expr "{" { regdecl } "}" ;
 regdecl = "reg" ident ":" intty "@" expr
           "class" ( "r" | "w" | "rw" | "w1c" | "rc" )
           [ "fields" "{" { ident "@" bitpos "," } "}" ]
           [ "requires" pred ] ;
 transition = "transition" ident "{" place ":" expr "->" expr "}"
-             [ "keeping" placelist ]
              [ "requires" pred ] [ "effects" "{" efflist "}" ] ;
 ```
 
@@ -426,8 +443,9 @@ device Vtd(base: Pa) at mmio {
 
     bank FRR at CAP.FRO * 16 stride 16 count 256 { reg FR : u64 @0x8 class rw }
 
+    mirrors GCMD from GSTS;          -- EINMAL: alle Zustandsbits kommen aus GSTS
+
     transition arm_te { GCMD.TE: 0 -> 1 }
-        keeping  GSTS.TES, GSTS.RTPS
         requires GSTS.RTPS == 1
         effects  { writes GCMD }
 }
@@ -448,7 +466,8 @@ device Vtd(base: Pa) at mmio {
 
 ```ebnf
 atomicdecl = [ "pub" ] "atomic" ident ":" typeexpr
-             [ "publishes" placelist ] [ "acquire" | "release" | "seq" ] ";" ;
+             ( "publishes" placelist | "publishes" "nothing" )
+             [ "acquire" | "release" | "seq" | "relaxed" ] ";" ;
 lockdecl   = "lock" ident "protects" "{" placelist "}"
              "rank" constexpr [ "masks" ident ] ";" ;
 lockstmt   = "locks" place block ;

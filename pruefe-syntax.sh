@@ -55,6 +55,8 @@ PY
 }
 if ! ebnf_geschlossen SYNTAX.md; then echo "== SYNTAX: FEHLER (Grammatik nicht geschlossen) =="; exit 1; fi
 
+if ! ./pruefe-wortschatz.py SYNTAX.md; then echo "== SYNTAX: FEHLER (Wortschatz deckt die EBNF nicht) =="; exit 1; fi
+
 # --- Sprechprobe: der Pruefer MUSS bei jeder Verletzung fallen ---
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 n=0
