@@ -14,7 +14,9 @@ und einen **Beweiser**. Gabbro hat die Sprache — halb. Modell und Beweiser hat
 
 ---
 
-## L1 — Ein MASCHINENMODELL. Der schwerste Posten
+## L1 — Ein MASCHINENMODELL. **Entworfen am 2026-08-14** ([`MODELL.md`](MODELL.md)): 106 Axiome, ~130 Namen — und die 20 arch-neutralen Familien stehen bereits in `caprock-hal/*/cpu.rs`
+
+### Die urspruengliche Fassung der Luecke
 
 `axiom write_cr3(p: Pa) effects { writes tlb, writes active_table }` nennt eine **Wirkung auf einen
 Zustand, den es nicht gibt.** Es gibt keinen `tlb`, keine `active_table`, keinen Maschinenzustand —
@@ -32,7 +34,9 @@ Gold-Beweis ueber einem Kernel ist aber im Kern ein Beweis **ueber Maschinenzust
 
 ---
 
-## L2 — Ein SPEICHERMODELL. Ohne es kein nebenlaeufiger Gold-Beweis
+## L2 — Ein SPEICHERMODELL. **Entschieden: RC11 ohne SC** — und die Wahl ist weniger tragend als hier unterstellt, weil Caprock nur RMW-Atomizitaet und Kohaerenz je Adresse beansprucht ([`MODELL.md`](MODELL.md))
+
+### Die urspruengliche Fassung der Luecke
 
 `atomic X : bool publishes { Y } release;` ist heute eine **Schreibweise ohne Bedeutung.** Was
 `release` formal heisst — welche vorherigen Schreibvorgaenge fuer welchen `acquire` sichtbar werden
