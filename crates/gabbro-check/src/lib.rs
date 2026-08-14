@@ -35,6 +35,11 @@ pub mod manifest;
 pub enum Zustand {
     /// Gebaut und in diesem Lauf gefahren.
     Gebaut,
+    /// **Gebaut, aber mit benannten Loechern.** Die Gegenpruefung vom 2026-08-14 fand
+    /// Dateien, die durchkamen und fallen mussten; der Text nennt, was heute noch
+    /// durchkommt. *Ein teilgebauter Pass, der sich als gebaut meldet, ist ein falsches
+    /// Gruen -- und genau das war er, bis diese Stufe dazukam.*
+    Teilgebaut(&'static str),
     /// Nicht gebaut. Der Text nennt, was fehlt -- und was damit **ungeprueft** ist.
     Offen(&'static str),
 }
@@ -71,7 +76,11 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 3,
             name: "M1 + V1–V3",
             quelle: "SPRACHE.md §3.2: Bereichstypen und die drei Flussregeln",
-            zustand: Zustand::Gebaut,
+            zustand: Zustand::Teilgebaut(
+                "Namen werden ohne Modulaufloesung verschluesselt: ein gleichnamiges `fn` \
+                 oder `type` in einem ANDEREN Modul verdeckt die Signatur und loescht die \
+                 Bereichspruefung stillschweigend",
+            ),
         },
         Pass {
             nummer: 4,
@@ -104,7 +113,11 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 8,
             name: "effects",
             quelle: "SPRACHE.md §7: `effects` ist Pflicht und nicht fail-open",
-            zustand: Zustand::Gebaut,
+            zustand: Zustand::Teilgebaut(
+                "geprueft wird die DEKLARATION (Anwesenheit, `pure` allein, `diverges`), \
+                 nie der Rumpf: `effects { pure }` ueber einer Funktion, die schreibt, \
+                 kommt durch",
+            ),
         },
         Pass {
             nummer: 9,
@@ -138,7 +151,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
 pub fn ungeprueft() -> Vec<Pass> {
     passliste()
         .into_iter()
-        .filter(|p| matches!(p.zustand, Zustand::Offen(_)))
+        .filter(|p| matches!(p.zustand, Zustand::Offen(_) | Zustand::Teilgebaut(_)))
         .collect()
 }
 

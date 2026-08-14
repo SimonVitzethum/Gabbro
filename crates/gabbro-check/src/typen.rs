@@ -16,6 +16,11 @@ pub struct IntBereich {
     pub vorzeichen: bool,
     pub min: i128,
     pub max: i128,
+    /// **U10.** Ein Literal hat keine eigene Breite und nimmt die der Gegenseite an.
+    /// Eine DEKLARIERTE Groesse hat eine, auch wenn ihr Bereich ein Punkt ist: ohne diese
+    /// Unterscheidung entschied `u8 in 200 .. 200` gegen `u8 in 200 .. 201`, ob M1 rechnet
+    /// oder schweigt -- und die weniger konservative Antwort zaehlte als Deckung.
+    pub literal: bool,
 }
 
 impl IntBereich {
@@ -26,6 +31,7 @@ impl IntBereich {
             vorzeichen,
             min,
             max,
+            literal: false,
         }
     }
 
@@ -35,6 +41,7 @@ impl IntBereich {
             vorzeichen,
             min,
             max,
+            literal: false,
         }
     }
 
@@ -53,6 +60,7 @@ impl IntBereich {
             vorzeichen,
             min: wert,
             max: wert,
+            literal: true,
         }
     }
 
@@ -101,11 +109,12 @@ fn gemeinsame_form(a: &IntBereich, b: &IntBereich) -> Option<(u8, bool)> {
     if a.breite == b.breite && a.vorzeichen == b.vorzeichen {
         return Some((a.breite, a.vorzeichen));
     }
-    // Eine Konstante nimmt die Form der anderen Seite an -- sie hat keine eigene.
-    if a.min == a.max {
+    // Ein LITERAL nimmt die Form der anderen Seite an -- es hat keine eigene. Eine
+    // deklarierte Groesse tut das nicht, auch wenn ihr Bereich ein Punkt ist (U10).
+    if a.literal {
         return Some((b.breite, b.vorzeichen));
     }
-    if b.min == b.max {
+    if b.literal {
         return Some((a.breite, a.vorzeichen));
     }
     None
@@ -339,19 +348,27 @@ fn maske(wert: i128) -> i128 {
 }
 
 pub fn schiebe_links(a: &IntBereich, b: &IntBereich) -> Rechnung {
-    if a.min < 0 || b.min < 0 || b.max >= a.breite as i128 {
-        // Eine Schiebeweite ausserhalb der Breite ist keine Rechnung, sondern ein Befund;
-        // der Aufrufer meldet ihn ueber den Ueberlauf.
+    // Eine Schiebeweite ausserhalb der Breite ist keine Rechnung, sondern ein Befund.
+    if b.min < 0 || b.max >= a.breite as i128 {
         let (lo, hi) = grenzen(a.breite, a.vorzeichen);
         let mut r = ergebnis(a.breite, a.vorzeichen, lo, hi);
-        r.laeuft_ueber = b.max >= a.breite as i128;
+        r.laeuft_ueber = true;
         return r;
     }
+    // **U8.** Frueher gab der Vorzeichenfall den vollen Bereich zurueck und loeschte damit
+    // den Wertueberlauf: `i32 in -1 .. 1000000 << 20` kam durch. Die vier Ecken sind auch
+    // mit Vorzeichen richtig -- links schieben ist monoton in beiden Argumenten.
+    let ecken = [
+        a.min << b.min,
+        a.min << b.max,
+        a.max << b.min,
+        a.max << b.max,
+    ];
     ergebnis(
         a.breite,
         a.vorzeichen,
-        a.min << b.min,
-        a.max.checked_shl(b.max as u32).unwrap_or(i128::MAX >> 1),
+        ecken.iter().copied().min().unwrap_or(0),
+        ecken.iter().copied().max().unwrap_or(0),
     )
 }
 

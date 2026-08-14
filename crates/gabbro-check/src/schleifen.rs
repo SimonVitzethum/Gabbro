@@ -49,7 +49,29 @@ fn anweisung(s: &Stmt, marken: &mut Vec<String>, absagen: &mut Absagen) {
         StmtArt::Bricht(b) => block(&b.rumpf, marken, absagen),
         StmtArt::Narrow(n) => block(&n.sonst, marken, absagen),
         StmtArt::Sperrt(l) => block(&l.rumpf, marken, absagen),
-        StmtArt::LetSonst(l) => block(&l.sonst, marken, absagen),
+        StmtArt::LetSonst(l) => {
+            // **U7.** `SYNTAX.md` §7: *„der `else`-Zweig muss divergieren oder
+            // zurueckkehren"*. Faellt er durch, ist `let … else` genau der verborgene
+            // Kontrollfluss, gegen den es geschrieben wurde -- der Name waere danach
+            // gebunden, ohne dass je ein Wert entstand.
+            if !endet_immer(&l.sonst) {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "S002",
+                        l.sonst.span,
+                        format!(
+                            "der `else`-Zweig von `let {} = …` faellt durch",
+                            l.name.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "SYNTAX.md §7: die einzige Fehlerfortpflanzung ist `let … else (e) \
+                         { … }`, und ihr Zweig muss divergieren oder zurueckkehren",
+                    ),
+                );
+            }
+            block(&l.sonst, marken, absagen);
+        }
         StmtArt::Exchange(e) => {
             if let XForm::Update { rumpf, .. } = &e.form {
                 block(rumpf, marken, absagen);
@@ -76,6 +98,22 @@ fn mit_marke(marke: Option<&Ident>, rumpf: &Block, marken: &mut Vec<String>, abs
         marken.pop();
     } else {
         block(rumpf, marken, absagen);
+    }
+}
+
+/// Verlaesst dieser Block seinen Weg immer? Syntaktisch, ohne Fixpunkt -- dieselbe Frage,
+/// die M1 fuer die V1-Verneinung stellt.
+fn endet_immer(b: &Block) -> bool {
+    let Some(letzte) = b.anweisungen.last() else {
+        return false;
+    };
+    match &letzte.art {
+        StmtArt::Return(_) | StmtArt::Leave(_) | StmtArt::Next(_) => true,
+        StmtArt::Wenn(w) => {
+            w.sonst.as_ref().is_some_and(endet_immer) && w.zweige.iter().all(|(_, r)| endet_immer(r))
+        }
+        StmtArt::Match(m) => m.zweige.iter().all(|z| endet_immer(&z.rumpf)),
+        _ => false,
     }
 }
 

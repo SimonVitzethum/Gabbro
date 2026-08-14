@@ -1,0 +1,23 @@
+-- erwartet: M104
+--
+-- Dasselbe fuer den Schleifenrumpf: was die Schleife schreibt, toetet den Fakt davor.
+--
+-- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
+-- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+
+-- MUSS fallen (M104): die Schleife setzt z.wert auf 0, danach unterlaeuft `-= 1`.
+const GRENZE : u32 = 65535;
+type Zaehler = u32 in 0 .. GRENZE;
+
+impl fn b1(z : ptr<normal, rw> Zelle, c : ptr<normal, rw> T)
+    effects { writes z, writes c }
+{
+    if z.wert >= 1 {
+        traverse s over slots of c by unvisited touches writes c.slots {
+            z.wert = 0;
+        }
+        z.wert -= 1;
+    }
+}
+
+type Zelle = { wert : Zaehler, };

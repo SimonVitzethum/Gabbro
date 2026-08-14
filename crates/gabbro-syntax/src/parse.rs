@@ -1966,15 +1966,35 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// `( placelist | "nothing" )` -- **ohne** geschweifte Klammern (SYNTAX.md §11).
+    ///
+    /// Die Beispiele derselben Datei schreiben sie **mit** (`publishes { color_report }`),
+    /// und der Parser hat lange nur diese Form genommen: die EBNF-treue fiel, die
+    /// EBNF-fremde kam durch. Jetzt gehen beide, und die Klammerform sagt es (`P032`).
     fn nutzlast(&mut self) -> Erg<Nutzlast> {
         if self.ist_kw(Kw::Nothing) {
             let t = self.vor();
             return Ok(Nutzlast::Nichts(t.span));
         }
-        self.erwarte_z(Z::GeschweiftAuf)?;
-        let liste = self.placelist()?;
-        self.erwarte_z(Z::GeschweiftZu)?;
-        Ok(Nutzlast::Orte(liste))
+        if self.ist_z(Z::GeschweiftAuf) {
+            let auf = self.vor().span;
+            let liste = self.placelist()?;
+            let zu = self.erwarte_z(Z::GeschweiftZu)?;
+            self.absage(
+                Absage::hinweis(
+                    "P032",
+                    auf.bis_zu(zu),
+                    "`publishes { … }` steht nicht in der EBNF",
+                )
+                .mit_notiz(
+                    "SYNTAX.md §11: `publishes ( placelist | \"nothing\" )` -- ohne Klammern; \
+                     die Beispiele derselben Datei schreiben sie mit",
+                )
+                .mit_notiz("angenommen; die Grammatik ist an dieser Stelle nachzuziehen"),
+            );
+            return Ok(Nutzlast::Orte(liste));
+        }
+        Ok(Nutzlast::Orte(self.placelist()?))
     }
 
     fn zuweisung_oder_ruf(&mut self) -> Erg<StmtArt> {
@@ -2687,12 +2707,19 @@ impl<'a> Parser<'a> {
             let ort = self.place()?;
             self.erwarte_z(Z::Kolon)?;
             // Ab hier ist `->` der Uebergangspfeil und kein Ortssuffix -- s. `pfeil_ist_suffix`.
+            // **Die Wiederherstellung darf kein `?` ueberspringen.** Tat sie es, blieb der
+            // Schalter nach einem Fehler im ERSTEN Ausdruck stehen und machte `->` fuer den
+            // Rest der Uebersetzungseinheit zum Nichtsuffix -- ein Tippfehler in einem
+            // `transition` erzeugte Phantomabsagen in jeder spaeteren Zeile.
             self.pfeil_ist_suffix = false;
-            let von = self.expr()?;
-            let pfeil = self.erwarte_z(Z::Pfeil);
-            let nach = pfeil.and_then(|_| self.expr());
+            let ergebnis = (|s: &mut Self| {
+                let von = s.expr()?;
+                s.erwarte_z(Z::Pfeil)?;
+                let nach = s.expr()?;
+                Ok((von, nach))
+            })(self);
             self.pfeil_ist_suffix = true;
-            let nach = nach?;
+            let (von, nach) = ergebnis?;
             schritte.push(OrtSchritt {
                 span: ort.span.bis_zu(nach.span),
                 ort,

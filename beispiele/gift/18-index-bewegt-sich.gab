@@ -1,0 +1,21 @@
+-- erwartet: M102
+--
+-- Der Fakt ueber `buf[i]` stirbt, wenn `i` geschrieben wird. Sonst bleibt der Ort
+-- derselbe, waehrend sein Index sich darunter wegbewegt -- und die Pruefung verengt
+-- danach einen ganz anderen Platz.
+--
+-- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
+-- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+
+-- MUSS fallen (M102): nach `i = 0` meint `buf[i]` ein ANDERES Element als bei der Pruefung.
+static mut buf : [u32; 64] = 0;
+type Idx = u32 in 0 .. 63;
+
+impl fn c1(k : Idx) -> u32 effects { reads buf } {
+    let mut i : Idx = k;
+    if buf[i] >= 1 {
+        i = 0;
+        return 100 / buf[i];
+    }
+    return 0;
+}

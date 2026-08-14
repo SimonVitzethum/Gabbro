@@ -54,16 +54,24 @@ fn befehl_paesse() {
     for p in passliste() {
         let (marke, note) = match p.zustand {
             Zustand::Gebaut => ("gebaut", String::new()),
+            Zustand::Teilgebaut(w) => ("TEIL  ", format!("\n         kommt durch: {w}")),
             Zustand::Offen(w) => ("OFFEN ", format!("\n         ungeprueft: {w}")),
         };
         println!("  {} {}  {:<14} {}{}", marke, p.nummer, p.name, p.quelle, note);
     }
-    let offen = gabbro_check::ungeprueft().len();
+    let voll = passliste()
+        .iter()
+        .filter(|p| p.zustand == Zustand::Gebaut)
+        .count();
+    let teil = passliste()
+        .iter()
+        .filter(|p| matches!(p.zustand, Zustand::Teilgebaut(_)))
+        .count();
     println!(
-        "\n  {} von {} Paessen sind gebaut. Was OFFEN ist, wird NICHT geprueft --",
-        passliste().len() - offen,
+        "\n  {voll} von {} Paessen sind ganz gebaut, {teil} teilweise. Was OFFEN ist, wird",
         passliste().len()
     );
+    println!("  NICHT geprueft, und was TEIL ist, nur so weit wie danebensteht --");
     println!("  ein gruener Lauf ist deshalb kein Beweis, sondern die Abwesenheit der Befunde,");
     println!("  die die gebauten Paesse sehen koennen.");
 }
@@ -111,8 +119,12 @@ fn befehl_pruefe(dateien: &[String]) -> std::process::ExitCode {
     println!();
     println!("Nicht geprueft in diesem Lauf:");
     for p in gabbro_check::ungeprueft() {
-        if let Zustand::Offen(w) = p.zustand {
-            println!("  {} {:<14} {w}", p.nummer, p.name);
+        match p.zustand {
+            Zustand::Offen(w) => println!("  {} {:<14} {w}", p.nummer, p.name),
+            Zustand::Teilgebaut(w) => {
+                println!("  {} {:<14} NUR TEILWEISE -- {w}", p.nummer, p.name)
+            }
+            Zustand::Gebaut => {}
         }
     }
     if fehler == 0 {

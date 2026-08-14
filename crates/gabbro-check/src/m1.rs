@@ -61,6 +61,8 @@ enum Fakt {
     /// V1 -- die Stelle liegt in diesem Bereich.
     Bereich {
         schluessel: String,
+        /// Die Namen, die in den Indizes des Schluessels stehen (U3).
+        indizes: Vec<String>,
         min: i128,
         max: i128,
     },
@@ -69,6 +71,7 @@ enum Fakt {
         links: String,
         op: BinOp,
         rechts: String,
+        indizes: Vec<String>,
     },
 }
 
@@ -122,28 +125,56 @@ impl<'a> Pruefer<'a> {
         }
     }
 
+    /// **U1.** Ein Unterblock bekommt eine Kopie der Lage -- seine Schreibzugriffe muessen
+    /// die Fakten des UMGEBENDEN Blocks trotzdem toeten. Sonst ueberlebt ein Fakt jedes
+    /// Schreiben, das in einem `if`/`match`/Schleifen-/`locks`-Rumpf steht, und
+    /// `SPRACHE.md` §3.2 -- *„stirbt bei jedem Schreiben auf eine beteiligte Stelle"* --
+    /// ist an dieser Stelle falsch.
+    fn unterblock(&mut self, b: &Block, aussen: &mut Lage, ergebnis: Option<&Typ>) {
+        let mut innen = aussen.clone();
+        self.block(b, &mut innen, ergebnis);
+        self.geschriebenes_toeten(b, aussen);
+    }
+
+    fn geschriebenes_toeten(&mut self, b: &Block, aussen: &mut Lage) {
+        let mut ziele = Vec::new();
+        sammle_schreibziele(b, &mut ziele);
+        for z in ziele {
+            self.schreiben_toetet_fakten(&z, aussen);
+        }
+    }
+
     fn anweisung(&mut self, s: &Stmt, lage: &mut Lage, ergebnis: Option<&Typ>) {
         match &s.art {
             StmtArt::Let(l) => {
                 let wert = self.ausdruck(&l.wert, lage);
+                self.rufe_im_ausdruck(&l.wert, lage);
                 let ziel = l.typ.as_ref().map(|t| self.u.typ_von_ausdruck_decl(t));
                 if let Some(z) = &ziel {
                     self.passt(&wert, z, l.wert.span, "die Bindung");
                 }
+                // U2: die neue Bindung verdeckt die alte -- jeder Fakt ueber den Namen
+                // stirbt, sonst erbt die Verdeckung die Verengung ihres Vorgaengers.
+                lage.fakten
+                    .retain(|f| !nennt_namen(f, &l.name.text));
                 lage.lokal
                     .insert(l.name.text.clone(), ziel.unwrap_or(wert));
             }
             StmtArt::LetSonst(l) => {
                 let t = self.ruf(&l.ruf, lage);
+                lage.fakten.retain(|f| !nennt_namen(f, &l.name.text));
                 lage.lokal.insert(l.name.text.clone(), t);
                 self.aufruf_toetet_fakten(lage);
-                let mut innen = lage.clone();
-                self.block(&l.sonst, &mut innen, ergebnis);
+                self.unterblock(&l.sonst, lage, ergebnis);
             }
             StmtArt::Zuweisung(z) => {
+                // U9: M4 gilt auf BEIDEN Seiten. Ein Schreiben ausserhalb der Schranken ist
+                // die gefaehrlichere Richtung, und sie lief hier am Index vorbei.
+                self.index_pruefen(&z.ziel, lage);
                 let ziel = self.u.typ_von_ort(&z.ziel, &lage.lokal);
                 self.buche(&ziel);
                 let quelle = self.ausdruck(&z.wert, lage);
+                self.rufe_im_ausdruck(&z.wert, lage);
                 let ergebnis_typ = match z.op {
                     ZuwOp::Setzt => quelle,
                     // `a += b` ist `a = a + b`. Das GELESENE `a` traegt seine Fakten (V1/V2),
@@ -161,19 +192,23 @@ impl<'a> Pruefer<'a> {
                 self.schreiben_toetet_fakten(&z.ziel, lage);
             }
             StmtArt::Publish(p) => {
+                self.index_pruefen(&p.ziel, lage);
                 let ziel = self.u.typ_von_ort(&p.ziel, &lage.lokal);
                 self.buche(&ziel);
                 let quelle = self.ausdruck(&p.wert, lage);
+                self.rufe_im_ausdruck(&p.wert, lage);
                 self.passt(&quelle, &ziel, p.wert.span, "die Veroeffentlichung");
                 self.schreiben_toetet_fakten(&p.ziel, lage);
             }
             StmtArt::Wenn(w) => {
                 for (bedingung, rumpf) in &w.zweige {
                     let _ = self.ausdruck(bedingung, lage);
+                    self.rufe_im_ausdruck(bedingung, lage);
                     let mut innen = lage.clone();
                     // V1 und V2: die geprueften Stellen sind im Zweig danach enger.
                     self.fakten_aus(bedingung, false, &mut innen);
                     self.block(rumpf, &mut innen, ergebnis);
+                    self.geschriebenes_toeten(rumpf, lage);
                 }
                 if let Some(sonst) = &w.sonst {
                     let mut innen = lage.clone();
@@ -181,6 +216,7 @@ impl<'a> Pruefer<'a> {
                         self.fakten_aus(bedingung, true, &mut innen);
                     }
                     self.block(sonst, &mut innen, ergebnis);
+                    self.geschriebenes_toeten(sonst, lage);
                 }
                 // **V1 gilt auch fuer den Weg NACH einem Zweig, der immer verlaesst.**
                 // `if a >= b { return a - b; }` -- was danach kommt, ist genau der Fall
@@ -214,6 +250,7 @@ impl<'a> Pruefer<'a> {
                         innen.lokal.insert(binder.text.clone(), Typ::Unbekannt);
                     }
                     self.block(&zweig.rumpf, &mut innen, ergebnis);
+                    self.geschriebenes_toeten(&zweig.rumpf, lage);
                 }
             }
             StmtArt::Narrow(n) => {
@@ -221,28 +258,41 @@ impl<'a> Pruefer<'a> {
                 self.buche(&vorher);
                 let mut innen = lage.clone();
                 self.block(&n.sonst, &mut innen, ergebnis);
+                self.geschriebenes_toeten(&n.sonst, lage);
+                // U6: **der `else`-Zweig MUSS verlassen.** Ohne diese Pruefung installiert
+                // ein leeres `else { }` denselben Bereich wie ein `else { return … }` --
+                // und die Einengung gilt auf einem Weg, auf dem sie nie geprueft wurde.
+                if !self.endet_immer(&n.sonst) {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M105",
+                            n.sonst.span,
+                            "der `else`-Zweig eines `narrow` muss zurueckkehren oder divergieren",
+                        )
+                        .mit_notiz(
+                            "SYNTAX.md §7: `narrow place to range else { … }` ist eine \
+                             Anweisung mit BENANNTEM Ausgang -- faellt der Zweig durch, \
+                             gilt der eingeengte Bereich auf einem Weg, der ihn nie geprueft hat",
+                        ),
+                    );
+                }
                 // Der `else`-Zweig divergiert oder kehrt zurueck; danach gilt der Bereich.
                 let von = self.u.konst_wert(&n.bereich.von);
                 let bis = self.u.konst_wert(&n.bereich.bis);
-                if let (Some(lo), Some(hi), Some(schluessel)) =
-                    (von, bis, schluessel_von(&n.ort))
+                if let (Some(lo), Some(hi), Some((schluessel, indizes))) =
+                    (von, bis, schluessel_und_indizes(&n.ort))
                 {
                     let hi = if n.bereich.exklusiv { hi - 1 } else { hi };
                     lage.fakten.push(Fakt::Bereich {
                         schluessel,
+                        indizes,
                         min: lo,
                         max: hi,
                     });
                 }
             }
-            StmtArt::Bricht(b) => {
-                let mut innen = lage.clone();
-                self.block(&b.rumpf, &mut innen, ergebnis);
-            }
-            StmtArt::Sperrt(l) => {
-                let mut innen = lage.clone();
-                self.block(&l.rumpf, &mut innen, ergebnis);
-            }
+            StmtArt::Bricht(b) => self.unterblock(&b.rumpf, lage, ergebnis),
+            StmtArt::Sperrt(l) => self.unterblock(&l.rumpf, lage, ergebnis),
             StmtArt::Schleife(sch) => {
                 // Schleifen tragen keine Fakten hinein -- die Invariante der Traversierung
                 // tut das, und die gehoert dem Beweiser.
@@ -250,7 +300,7 @@ impl<'a> Pruefer<'a> {
                     lokal: lage.lokal.clone(),
                     fakten: Vec::new(),
                 };
-                match sch.as_ref() {
+                let rumpf = match sch.as_ref() {
                     Schleife::Traverse(t) => {
                         innen
                             .lokal
@@ -258,20 +308,23 @@ impl<'a> Pruefer<'a> {
                         if let Some(g) = &t.gegenstand {
                             let _ = self.ausdruck(g, lage);
                         }
-                        self.block(&t.rumpf, &mut innen, ergebnis);
+                        &t.rumpf
                     }
                     Schleife::Retry(r) => {
                         let _ = self.ausdruck_opt(r.schranke.clone(), lage);
-                        self.block(&r.rumpf, &mut innen, ergebnis);
+                        &r.rumpf
                     }
                     Schleife::Forever(f) => {
                         let _ = self.ausdruck_opt(f.je_durchgang.clone(), lage);
-                        self.block(&f.rumpf, &mut innen, ergebnis);
+                        &f.rumpf
                     }
-                }
+                };
+                self.block(rumpf, &mut innen, ergebnis);
+                self.geschriebenes_toeten(rumpf, lage);
             }
             StmtArt::Return(Some(e)) => {
                 let t = self.ausdruck(e, lage);
+                self.rufe_im_ausdruck(e, lage);
                 if let Some(z) = ergebnis {
                     self.passt(&t, z, e.span, "die Rueckgabe");
                 }
@@ -544,14 +597,22 @@ impl<'a> Pruefer<'a> {
         }
         // V2 -- Stelle gegen Stelle, ausschliesslich als Vergleichsfakt.
         if let (ExprArt::Ort(oa), ExprArt::Ort(ob)) = (&a.art, &b.art) {
-            if let (Some(links), Some(rechts)) = (schluessel_von(oa), schluessel_von(ob)) {
-                lage.fakten.push(Fakt::Beziehung { links, op, rechts });
+            if let (Some((links, mut ia)), Some((rechts, ib))) =
+                (schluessel_und_indizes(oa), schluessel_und_indizes(ob))
+            {
+                ia.extend(ib);
+                lage.fakten.push(Fakt::Beziehung {
+                    links,
+                    op,
+                    rechts,
+                    indizes: ia,
+                });
             }
         }
     }
 
     fn bereichsfakt(&mut self, o: &Ort, op: BinOp, wert: i128, lage: &mut Lage) {
-        let Some(schluessel) = schluessel_von(o) else {
+        let Some((schluessel, indizes)) = schluessel_und_indizes(o) else {
             return;
         };
         let (min, max) = match op {
@@ -564,6 +625,7 @@ impl<'a> Pruefer<'a> {
         };
         lage.fakten.push(Fakt::Bereich {
             schluessel,
+            indizes,
             min,
             max,
         });
@@ -584,6 +646,7 @@ impl<'a> Pruefer<'a> {
                 schluessel: s,
                 min: lo,
                 max: hi,
+                ..
             } = f
             {
                 if *s == schluessel {
@@ -602,7 +665,10 @@ impl<'a> Pruefer<'a> {
     fn beziehung(&self, a: &Ort, b: &Ort, lage: &Lage) -> Option<i128> {
         let (ka, kb) = (schluessel_von(a)?, schluessel_von(b)?);
         for f in &lage.fakten {
-            if let Fakt::Beziehung { links, op, rechts } = f {
+            if let Fakt::Beziehung {
+                links, op, rechts, ..
+            } = f
+            {
                 if *links == ka && *rechts == kb {
                     match op {
                         BinOp::GroesserGleich => return Some(0),
@@ -629,28 +695,62 @@ impl<'a> Pruefer<'a> {
             return;
         };
         lage.fakten.retain(|f| match f {
-            Fakt::Bereich { schluessel, .. } => !beruehrt(schluessel, &k),
-            Fakt::Beziehung { links, rechts, .. } => {
-                !beruehrt(links, &k) && !beruehrt(rechts, &k)
+            Fakt::Bereich {
+                schluessel,
+                indizes,
+                ..
+            } => !beruehrt(schluessel, &k) && !indizes.iter().any(|i| *i == k),
+            Fakt::Beziehung {
+                links,
+                rechts,
+                indizes,
+                ..
+            } => {
+                !beruehrt(links, &k)
+                    && !beruehrt(rechts, &k)
+                    && !indizes.iter().any(|i| *i == k)
             }
         });
         // Ein Schreiben durch einen Zeiger kann alles Nichtlokale treffen -- ohne M3 gibt es
         // keine Aliasaussage, also faellt hier alles Nichtlokale mit.
         if k.contains('.') || k.contains("->") || k.contains('[') {
             lage.fakten.retain(|f| match f {
-                Fakt::Bereich { schluessel, .. } => ist_lokal(schluessel),
-                Fakt::Beziehung { links, rechts, .. } => ist_lokal(links) && ist_lokal(rechts),
+                Fakt::Bereich { schluessel, .. } => self.ist_lokal(schluessel),
+                Fakt::Beziehung { links, rechts, .. } => {
+                    self.ist_lokal(links) && self.ist_lokal(rechts)
+                }
             });
         }
     }
 
     /// Ein Aufruf toetet die Fakten ueber alles **Nichtlokale**. Lokale Groessen kann er
     /// nicht aendern: Gabbro hat keinen Adressoperator.
+    /// **U5.** Ein Aufruf steht selten allein: `let t = nuller(z);` ist derselbe Aufruf wie
+    /// `nuller(z);`. Vorher toetete nur die zweite Form Fakten -- ein Zeichen Unterschied
+    /// entschied ueber die Zusage.
+    fn rufe_im_ausdruck(&self, e: &Expr, lage: &mut Lage) {
+        if enthaelt_ruf(e) {
+            self.aufruf_toetet_fakten(lage);
+        }
+    }
+
     fn aufruf_toetet_fakten(&self, lage: &mut Lage) {
         lage.fakten.retain(|f| match f {
-            Fakt::Bereich { schluessel, .. } => ist_lokal(schluessel),
-            Fakt::Beziehung { links, rechts, .. } => ist_lokal(links) && ist_lokal(rechts),
+            Fakt::Bereich { schluessel, .. } => self.ist_lokal(schluessel),
+            Fakt::Beziehung { links, rechts, .. } => {
+                self.ist_lokal(links) && self.ist_lokal(rechts)
+            }
         });
+    }
+
+    /// **U4.** Eine Stelle ist lokal, wenn sie weder Feld noch Index traegt **und kein
+    /// globaler Name ist**. `static mut g` erfuellt die erste Haelfte -- ohne die zweite
+    /// ueberlebt jeder Fakt ueber einen globalen Zaehler jeden Aufruf.
+    fn ist_lokal(&self, schluessel: &str) -> bool {
+        if schluessel.contains('.') || schluessel.contains('[') || schluessel.contains("->") {
+            return false;
+        }
+        !self.u.globale.contains_key(schluessel)
     }
 
     // -- Absagen ------------------------------------------------------------------------
@@ -791,7 +891,15 @@ impl<'a> Pruefer<'a> {
 /// ist. **Ohne Schluessel kein Fakt:** zwei verschiedene Indizes duerfen nicht denselben
 /// Namen bekommen, sonst verengt eine Pruefung ueber `a[i]` auch `a[j]`.
 fn schluessel_von(o: &Ort) -> Option<String> {
+    schluessel_und_indizes(o).map(|(s, _)| s)
+}
+
+/// **U3.** Zum Schluessel gehoeren die Namen seiner Indizes. `buf[i]` bleibt sonst
+/// derselbe Ort, waehrend `i` sich darunter wegbewegt -- ein Fakt ueber `buf[i]` ueberlebte
+/// `i = 0` und verengte danach einen ganz anderen Platz.
+fn schluessel_und_indizes(o: &Ort) -> Option<(String, Vec<String>)> {
     let mut s = o.basis.text.clone();
+    let mut indizes = Vec::new();
     for suffix in &o.suffixe {
         match suffix {
             OrtSuffix::Feld(f) => {
@@ -806,12 +914,13 @@ fn schluessel_von(o: &Ort) -> Option<String> {
                 ExprArt::Zahl(v) => s.push_str(&format!("[{v}]")),
                 ExprArt::Ort(inner) if inner.suffixe.is_empty() => {
                     s.push_str(&format!("[{}]", inner.basis.text));
+                    indizes.push(inner.basis.text.clone());
                 }
                 _ => return None,
             },
         }
     }
-    Some(s)
+    Some((s, indizes))
 }
 
 /// Beruehren sich zwei Ortsschluessel? Ein Schreiben auf `c.slots` trifft auch
@@ -826,10 +935,69 @@ fn trennt(c: Option<u8>) -> bool {
     matches!(c, Some(b'.') | Some(b'[') | Some(b'-'))
 }
 
-/// Eine Stelle ohne Feld- und Indexzugriff ist eine lokale Groesse -- die kann ein
-/// Gerufener nicht aendern, weil es keinen Adressoperator gibt.
-fn ist_lokal(schluessel: &str) -> bool {
-    !schluessel.contains('.') && !schluessel.contains('[') && !schluessel.contains("->")
+/// Steht irgendwo in diesem Ausdruck ein Aufruf?
+fn enthaelt_ruf(e: &Expr) -> bool {
+    match &e.art {
+        ExprArt::Ruf(_) => true,
+        ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => enthaelt_ruf(i),
+        ExprArt::Binaer(_, a, b) => enthaelt_ruf(a) || enthaelt_ruf(b),
+        ExprArt::Ort(o) => o.suffixe.iter().any(|sx| match sx {
+            OrtSuffix::Index(i) => enthaelt_ruf(i),
+            _ => false,
+        }),
+        ExprArt::Eingebaut(b) => match b.as_ref() {
+            Eingebaut::Aligned(a, c) => enthaelt_ruf(a) || enthaelt_ruf(c),
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
+/// Nennt der Fakt diesen Namen -- als Grundname oder in einem Index?
+fn nennt_namen(f: &Fakt, name: &str) -> bool {
+    let trifft = |s: &str| {
+        s == name
+            || s.starts_with(name) && trennt(s.as_bytes().get(name.len()).copied())
+            || s.split(['[', ']', '.']).any(|t| t == name)
+    };
+    match f {
+        Fakt::Bereich { schluessel, .. } => trifft(schluessel),
+        Fakt::Beziehung { links, rechts, .. } => trifft(links) || trifft(rechts),
+    }
+}
+
+/// Sammelt jedes Ziel, auf das ein Block schreibt -- auch in seinen Unterbloecken.
+fn sammle_schreibziele(b: &Block, out: &mut Vec<Ort>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Zuweisung(z) => out.push(z.ziel.clone()),
+            StmtArt::Publish(p) => out.push(p.ziel.clone()),
+            StmtArt::Exchange(e) => out.push(e.ort.clone()),
+            StmtArt::Wenn(w) => {
+                for (_, r) in &w.zweige {
+                    sammle_schreibziele(r, out);
+                }
+                if let Some(r) = &w.sonst {
+                    sammle_schreibziele(r, out);
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    sammle_schreibziele(&z.rumpf, out);
+                }
+            }
+            StmtArt::Bricht(x) => sammle_schreibziele(&x.rumpf, out),
+            StmtArt::Sperrt(x) => sammle_schreibziele(&x.rumpf, out),
+            StmtArt::Narrow(x) => sammle_schreibziele(&x.sonst, out),
+            StmtArt::LetSonst(x) => sammle_schreibziele(&x.sonst, out),
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Traverse(t) => sammle_schreibziele(&t.rumpf, out),
+                Schleife::Retry(r) => sammle_schreibziele(&r.rumpf, out),
+                Schleife::Forever(f) => sammle_schreibziele(&f.rumpf, out),
+            },
+            _ => {}
+        }
+    }
 }
 
 fn negiere(op: BinOp) -> BinOp {

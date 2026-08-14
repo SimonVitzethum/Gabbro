@@ -36,7 +36,7 @@ impl fn bericht_veroeffentlichen(wert : u64)
 {
     farbbericht = wert;
     -- Die Nutzlast wird dort genannt, wo sie entsteht, mit den dort sichtbaren Indizes.
-    FARBE_FERTIG = true publishes { farbbericht };
+    FARBE_FERTIG = true publishes farbbericht;
 }
 
 impl fn bericht_lesen() -> u64
@@ -90,7 +90,7 @@ impl fn besitz_nehmen(f : FadenIdx) -> bool
     costs   <= 16 ops
 {
     let genommen = BESITZER exchange f when old(BESITZER) == 0 returns erfolg
-        publishes { farbbericht };
+        publishes farbbericht;
     return genommen;
 }
 

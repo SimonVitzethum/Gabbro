@@ -1,0 +1,13 @@
+-- erwartet: S002
+--
+-- `let … else` ist die einzige Fehlerfortpflanzung, und ihr Zweig muss divergieren oder
+-- zurueckkehren. Faellt er durch, ist der Name gebunden, ohne dass je ein Wert entstand.
+--
+-- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
+-- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+
+impl fn quelle() -> u32 effects { pure } { return 1; }
+impl fn j1() -> u32 effects { pure } {
+    let v = quelle() else (e) { }
+    return v;
+}

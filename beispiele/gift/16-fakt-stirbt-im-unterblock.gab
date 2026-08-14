@@ -1,0 +1,24 @@
+-- erwartet: M104
+--
+-- Ein Schreiben IM Unterblock toetet den Fakt des UMGEBENDEN Blocks. Ohne diese Regel
+-- ueberlebt ein Fakt jedes `if`, `match`, `locks` und jeden Schleifenrumpf -- und
+-- SPRACHE.md 3.2 („stirbt bei jedem Schreiben auf eine beteiligte Stelle“) waere
+-- an dieser Stelle falsch.
+--
+-- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
+-- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+
+-- MUSS fallen (M104): auf dem Weg durch `if c` ist z.wert == 0, dann unterlaeuft `-= 1`.
+const GRENZE : u32 = 65535;
+type Zaehler = u32 in 0 .. GRENZE;
+
+impl fn a1(z : ptr<normal, rw> Zelle, c : bool) effects { writes z } {
+    if z.wert >= 1 {
+        if c {
+            z.wert = 0;
+        }
+        z.wert -= 1;
+    }
+}
+
+type Zelle = { wert : Zaehler, };

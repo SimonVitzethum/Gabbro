@@ -1,0 +1,14 @@
+-- erwartet: M104
+--
+-- Linksschieben mit moeglicherweise negativem Operanden. Der Vorzeichenfall gab frueher
+-- den vollen Bereich zurueck und loeschte damit genau den Ueberlauf, den er melden soll.
+--
+-- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
+-- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
+
+-- MUSS fallen (M104): 1000000 << 20 = 1048576000000, das ist weit ausserhalb i32.
+type Weit = i32 in -1 .. 1000000;
+
+impl fn d1(a : Weit) -> i32 effects { pure } {
+    return a << 20;
+}

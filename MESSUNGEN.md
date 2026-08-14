@@ -1050,23 +1050,41 @@ Selbst-Hosting steht auf der Verbotsliste. **Sprechprobe gefahren:** ein `unsafe
 samt Konstantenauswertung, V1, V2, V3**, dazu ein Beispielkorpus von **8 sauberen Dateien
 (871 Zeilen)** und **15 Giftdateien (128 Zeilen)**, jede mit dem Code, mit dem sie fallen muss.
 
-### Der Beleg, dass der Pass etwas kann, ist nicht sein Testlauf
+### Was der Pass am eigenen Fragment findet — und was das wert ist
 
-`FRAGMENTE.md` F1, Zeile 248: `o.slots[obj].refcount -= 1;`
+`FRAGMENTE.md` Zeile 248 (Fragment F1; das Rust-Original steht in
+`crates/caprock-cap/src/space.rs:1067`): `o.slots[obj].refcount -= 1;`
 
 ```
-Fehler: [M104] `o.slots[…].refcount` -= verlaesst den Bereich: `u32 in 0 .. 80255` gegen `1`
+Fehler: [M104] `o.slots[…].refcount` -= verlaesst den Bereich: `u32 in 0 .. 80255`
+               gegen `u8 in 1 .. 1`
 Fehler: [M101] die Zuweisung verlangt `u32 in 0 .. 80255`, der Wert hat `u32 in -1 .. 80254`
 ```
 
-**Das ist woertlich Befund «B29»** — im August von Hand in `FRAGMENTE.md` eingetragen, mit der
-Begruendung *„M1 verlangt, dass das Ergebnis im Bereich bleibt; `refcount == 0` faellt aber nur
-ueber die Buchfuehrungs-Invariante aus, und die ist nach «B13» gar nicht aufschreibbar."*
-Der Pass hat ihn **unabhaengig wiedergefunden**, an derselben Zeile, ohne dass ihm jemand
-gesagt haette, wo er suchen soll. Das ist die einzige Art Beleg, die zaehlt: eine Vorhersage
-auf Papier, danach dieselbe Zahl aus dem Werkzeug.
+Das ist Befund **«B29»**, drei Zeilen darueber von Hand eingetragen, mit der Begruendung
+*„M1 verlangt, dass das Ergebnis im Bereich bleibt; `refcount == 0` faellt aber nur ueber die
+Buchfuehrungs-Invariante aus, und die ist nach «B13» gar nicht aufschreibbar."*
 
-Ueber den ganzen Ordner: **8 M1-Befunde in 4 Klassen** (4 × `M101`, 4 × `M104`), alle in
+> **BERICHTIGT 2026-08-14, noch am selben Tag.** Die erste Fassung dieses Abschnitts nannte
+> das eine **„unabhaengige Wiederentdeckung … ohne dass ihm jemand gesagt haette, wo er
+> suchen soll"** und gab als Fundstelle `space.rs:248` an. **Beides war falsch:**
+>
+> * `space.rs:248` ist ein Strukturfeld; die 248 ist eine **`FRAGMENTE.md`-Zeile**, die
+>   echte Rust-Stelle liegt auf `:1067`. Eine Zeilennummer mit dem falschen Dateinamen
+>   davor ist keine Fundstelle.
+> * **„Unabhaengig" traegt nicht.** Genau dieser Fall ist die erklaerte Motivation des
+>   Passes und steht zweimal als eingebauter Pruefstein: `beispiele/gift/01-unterlauf.gab`
+>   nennt ihn in seiner Kopfzeile, und `typen.rs` fuehrt ihn als Einheitstest
+>   `subtraktion_faellt_unter_null`. Die **Zeile** wurde dem Pass nicht genannt, die
+>   **Form** schon. Das ist ein **bestandener Regressionstest**, und der ist etwas wert —
+>   aber er ist nicht der Beleg, als den ich ihn ausgegeben habe.
+>
+> Gefunden hat das die Gegenpruefung (s. u.), nicht ich. Der Ausgabeblock oben stand
+> zudem **redigiert** da (`gegen \`1\`` statt `gegen \`u8 in 1 .. 1\``) — weggefallen war
+> genau der Teil, der zeigt, dass das Literal `1` als **u8** modelliert wird, und das ist
+> die Wurzel eines eigenen Befunds.
+
+Ueber den ganzen Ordner: **8 M1-Befunde unter zwei Codes** (4 × `M101`, 4 × `M104`), alle in
 `FRAGMENTE.md`, keiner in den Beispielen.
 
 ### Zwei Befunde, die man nicht zusammenwerfen darf
@@ -1118,7 +1136,9 @@ beispiele/08-bereiche.gab: 23 Items, 0 Fehler, 0 Hinweise
   M1 sah 54 Ausdruecke, 0 davon ohne Typ (100 % Deckung)
 ```
 
-Ueber den Beispielkorpus: **150 Ausdruecke, 13 ohne Typ, 91 % Deckung.** Die 13 sind
+Ueber den Beispielkorpus: **150 Ausdruecke, 13 ohne Typ, 91 % Deckung** — und **Deckung
+heisst „hat einen Typ", nicht „wurde geprueft"** (s. die Gegenpruefung weiter unten; sie
+fand sechzehn Dateien mit echten Ueberlaeufen, vierzehn davon mit 100 % Deckung). Die 13 sind
 `sizeof`/`lenof` (brauchen das Layout, also die Absenkung), `old(…)` (Geisterausdruck) und
 Aufrufe fremder Funktionen. **Ohne diese Zahl sehen „nichts gefunden" und „nichts angesehen"
 gleich aus** — und das ist die Falle, an der ein Pruefer wertlos wird.
@@ -1307,11 +1327,129 @@ ist zusammen genau **M1 mit V1–V3, angewandt auf Rust** — also der Pass, der
 
 **Daraus folgt die Reihenfolge, und sie verbindet die beiden Messungen dieses Tages:**
 
-> **Die `narrow`-Zaehlung ist erst fahrbar, wenn Caprock-Bereiche in Gabbro vorliegen —
+> **Die `narrow`-Zaehlung ist erst genau fahrbar, wenn Caprock-Bereiche in Gabbro vorliegen —
 > dann zaehlt der Uebersetzer selbst, mit derselben Regelmenge, die er prueft.** Und dafuer
-> muessen zuerst die Fragmente parsen (heute **1 von 6**, Tor P2). Die Latte „≤ 24" bleibt
-> also offen, und zwar **nicht aus Nachlaessigkeit, sondern weil das Messgeraet dafuer der
-> Uebersetzer ist und der Korpus ihm noch fehlt.**
+> muessen zuerst die Fragmente parsen (heute **1 von 6**, Tor P2).
 
-**Was ausdruecklich NICHT gemessen ist:** die Zahl der `narrow`-Stellen. Wer sie zitiert,
-zitiert einen ungeeichten Zaehler.
+## BERICHTIGUNG 2026-08-14 — **die Latte ist nicht offen, sie ist verfehlt**
+
+Die erste Fassung dieses Abschnitts schloss mit *„Die Latte ≤ 24 bleibt also offen"*.
+**Das ist die eine Stelle, an der dieser Bericht sich selbst geschont hat**, und die
+Gegenpruefung hat sie gefunden.
+
+Sie hat den Klassierer unter **vier** Lesarten gefahren, darunter die fuer die Sprache
+guenstigste, die sich bauen liess:
+
+| Lesart | N |
+|---|---|
+| guenstigste (grosszuegige K-Regel **plus** erweiterte Konstantenerkennung) | **150** |
+| wie oben berichtet | **168** |
+| ohne die undeklarierte Ordnerbeschraenkung | **177** |
+| K-Regel **woertlich nach Protokoll** (der Nenner allein genuegt dort nicht) | **317** |
+
+**Die Latte ist 24. Jede Lesart verfehlt sie um Faktor 6 bis 13.** Die Fehlerrate des
+Zaehlers — von drei unabhaengigen Stichproben auf 40–60 % beziffert, alle einseitig zu viel
+N — reicht nicht annaehernd, um diesen Abstand zu erklaeren. Und die Gegenrichtung entlastet:
+**0 von 19 gezogenen K/V1/V2/F-Stellen waren in Wahrheit N**, 168 ist also eine harte
+**Obergrenze**, keine Schaetzung um einen Mittelwert.
+
+> **Damit steht es so:** die Zahl ist ungenau, das **Urteil** ist es nicht. *„Die Latte
+> bleibt offen"* war falsch — richtig ist: **die Latte ist nach jeder belegbaren Lesart
+> verfehlt, und wie weit genau, ist unbekannt.** Eine unbequeme Zahl mit einem
+> Methodenargument wegzuraeumen ist dieselbe Bewegung, gegen die das Messprotokoll oben
+> geschrieben ist — sie kam nur eine Ebene hoeher wieder herein.
+
+**Was das fuer die Sprache heisst, steht noch nicht fest** und gehoert nicht in diese
+Messung: ob V1–V3 zu klein sind, ob `narrow` zu eng gedacht ist, oder ob Rust-Code
+systematisch anders prueft als Gabbro-Code es koennte — das entscheidet erst der Lauf des
+Uebersetzers ueber Gabbro-Quelltext. **Was feststeht: die Latte haelt heute nicht.**
+
+**Was ausdruecklich NICHT gemessen ist:** die genaue Zahl der `narrow`-Stellen. Wer sie
+zitiert, zitiert einen ungeeichten Zaehler — **aber wer sagt, die Latte sei offen, zitiert
+gar nichts.**
+
+### Zwei weitere Protokollbrueche, von der Gegenpruefung gefunden
+
+* **Die groesste Klassierregel des Skripts steht nicht im Protokoll.** Das Protokoll sagt
+  K = *„**beide** Operanden sind Literale oder `const`"*; das Skript laesst bei `div`/`rem`
+  den **Nenner** genuegen. **149 der 513 Pflichten haengen daran**, und die Liste der vier
+  benannten Eichungsdefekte fuehrt ihn nicht auf — die Liste, die fuer Transparenz da ist,
+  laesst den groessten Posten aus.
+* **`V3 = 0` ist ein Artefakt.** Die V3-Regel des Skripts feuert ueber 513 Stellen kein
+  einziges Mal; `entkerne` frisst Byte-Literale (`b'0'`) und hinterlaesst Phantom-Operanden.
+  **Die Latte ist gegen V1–V3 gesetzt, gemessen wurde V1–V2.** Das allein macht die Zahl
+  ungueltig, unabhaengig von jeder Stichprobe.
+
+---
+
+# Die Gegenpruefung — **16 Dateien, die durchkamen und fallen mussten**
+
+**2026-08-14.** Ein zweiter Opus-5-Lauf hat den Uebersetzer, die Beispiele, die Messungen
+und dieses Dokument gegengelesen, mit dem ausdruecklichen Auftrag, **Fehler zu finden statt
+zu bestaetigen**. Er hat drei Unteragenten angesetzt, 111 Werkzeugaufrufe gefahren und
+**keine Datei in beiden Baeumen angefasst**. Was er gefunden hat, ist der wertvollste
+Einzelposten dieses Tages.
+
+## Der Satz, der falsch war — und er steht in der Spezifikation, nicht nur im Quelltext
+
+> [`SPRACHE.md`](SPRACHE.md) §3.2: *„eine **Faktenmenge**, die nur an den drei benannten
+> Stellen waechst und bei **jedem Schreiben auf eine beteiligte Stelle stirbt**"*
+
+**Er war auf fuenf unabhaengigen Wegen falsch.** Der Pass meldete `0 Fehler` — und in
+vierzehn der sechzehn Faelle dazu **„100 % Deckung"**.
+
+| | Was durchkam | zu |
+|---|---|---|
+| **U1** | ein Schreiben **im Unterblock** toetete den Fakt des umgebenden Blocks nicht — jedes `if`, `match`, `locks`, jeder Schleifenrumpf | **ja** |
+| **U2** | `let x = …` erbte den Fakt seines verdeckten Vorgaengers | **ja** |
+| **U3** | der Fakt ueber `buf[i]` ueberlebte `i = 0` — der Ort blieb, sein Index bewegte sich darunter weg | **ja** |
+| **U4** | `ist_lokal` hielt `static mut g` fuer lokal; sein Fakt starb bei keinem Aufruf | **ja** |
+| **U5** | ein Aufruf **in einem Ausdruck** (`let t = nuller(z);`) toetete gar nichts — nur die Anweisungsform tat es | **ja** |
+| **U6** | `narrow … else { }` installierte seinen Bereich, ohne dass der Zweig verlaesst | **ja** |
+| **U7** | `let … else { }` ohne Divergenz — die Regel aus `SYNTAX.md` §7 prueft**e** kein Pass | **ja** |
+| **U8** | `schiebe_links` gab bei moeglicherweise negativem Operanden den **vollen** Bereich zurueck und loeschte damit den Ueberlauf | **ja** |
+| **U9** | **M4 prueft**e den Index nur beim **Lesen**, nie beim **Schreiben** — die gefaehrlichere Richtung | **ja** |
+| **U10** | eine deklarierte `u8 in 200 .. 200` nahm die Breite der Gegenseite an; ob eine Deklaration zufaellig ein Punkt ist, entschied, ob M1 rechnet oder schweigt | **ja** |
+| **U11/U12** | Signaturen und Typen sind nach **blankem Namen** verschluesselt: ein gleichnamiges `fn` oder `type` in einem anderen Modul loescht die Bereichspruefung | **nein — s. u.** |
+| **Q** | der `effects`-Pass sieht **nie einen Rumpf**: `effects { pure }` ueber einer schreibenden Funktion kommt durch | **nein — s. u.** |
+
+**Zehn davon sind zu, mit je einer Giftdatei**, die sie festhaelt
+(`beispiele/gift/16-…` bis `25-…`). Zwei bleiben offen und stehen jetzt in der Passliste,
+wo `gabbro paesse` sie ausdruckt:
+
+* **Pass 3 (M1) ist `TEIL`** — Namen ohne Modulaufloesung.
+* **Pass 8 (`effects`) ist `TEIL`** — geprueft wird die Deklaration, nie der Rumpf.
+
+> **Der Zustand `Teilgebaut` ist neu, und er ist der eigentliche Ertrag dieses Befunds.**
+> Bis heute kannte die Passliste nur *gebaut* und *offen* — und ein Pass, der zur Haelfte
+> prueft, meldete sich als gebaut. **Das war ein falsches Gruen an genau der Stelle, an der
+> dieser Ordner keins haben will.**
+
+## Zwei Parserfehler, beide gefahren
+
+* **`pfeil_ist_suffix` leckte**: ein `?` sprang vor die Wiederherstellung, und ein Tippfehler
+  in **einem** `transition` machte `->` im **ganzen Rest der Datei** zum Nichtsuffix — drei
+  Absagen, zwei davon Phantome auf gueltigen Zeilen. Genau der Folgefehlerregen, den die
+  Anweisungserholung verhindern soll. **Zu.**
+* **`publishes`**: der Parser nahm `publishes { … }` (steht **nicht** in der EBNF) und wies
+  `publishes place` ab (**steht** dort, §11). Doppelt falsch, und bei `atomic … publishes`
+  meldete er den Riss sogar selbst. **Zu**, beide Formen gehen, die Klammerform sagt `P032`.
+
+## Was die Testsuite nicht konnte — und was daraus folgt
+
+> *„Es gibt keinen Test, dessen Fehlschlag ‚ein echter Ueberlauf wurde uebersehen' bedeutet."*
+
+48 Tests, beide Richtungen, alle gruen — und sechzehn Ueberlaeufe kamen durch. Die Proben
+pruefen **Anwesenheit einer erwarteten Absage** und **Abwesenheit von Absagen bei geglaubtem
+Wohlverhalten**; keine prueft, ob ein Loch existiert, das niemand vermutet hat. Der
+Giftkorpus ist jetzt von 15 auf **25** gewachsen, und die zehn neuen sind genau die Dateien,
+die einmal durchkamen. **Das ersetzt die fehlende Testart nicht — es sammelt nur, was eine
+Gegenpruefung findet, und die naechste findet anderes.**
+
+## Und die Deckungszahl, an der es am meisten haengt
+
+91 % Deckung ueber dem Beispielkorpus heisst **„hat einen Typ"**, nicht **„wurde geprueft"**.
+Vierzehn der sechzehn Gegenbeispiele meldeten **100 %**. Die Zahl steht im Bericht dafuer ein,
+dass *„nichts gefunden" und „nichts angesehen" nicht gleich aussehen* — **genau dort sahen
+sie gleich aus.** Sie bleibt stehen, weil sie etwas misst; **aber sie misst weniger, als ihr
+Name verspricht**, und das steht ab jetzt daneben.
