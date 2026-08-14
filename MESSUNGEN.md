@@ -1189,8 +1189,16 @@ deckt zwei von vier Pflichtklassen.
 1. **Passt eine Stelle auf zwei Spalten, gilt die teurere** (N vor F vor V3 vor V2 vor V1 vor K).
 2. **Ist unklar, ob zwischen Pruefung und Gebrauch geschrieben wird, ist es N.** Ein Fakt, der
    vielleicht gestorben ist, ist kein Fakt.
-3. **Liegt die Pruefung in einer Schleife, die die Stelle umschliesst, ist es N** — Schleifen
-   tragen keine Fakten hinein, und das ist eine Regel der Sprache, keine Schwaeche des Zaehlers.
+3. **Liegt eine SCHLEIFENGRENZE zwischen Pruefung und Stelle, ist es N** — die Pruefung steht
+   vor der Schleife, die Stelle in ihrem Rumpf. Schleifen tragen keine Fakten hinein, und das
+   ist eine Regel der Sprache, keine Schwaeche des Zaehlers. **Stehen beide im selben
+   Schleifenrumpf, gilt die Pruefung normal.**
+   > **Berichtigt 2026-08-14, VOR der ersten gezaehlten Stelle und in eigenem Commit.** Die
+   > erste Fassung las *„liegt die Pruefung in einer Schleife, die die Stelle umschliesst"* —
+   > das haette jede Pruefung INNERHALB eines Schleifenrumpfs nach N gekippt und damit eine
+   > Regel der Sprache falsch wiedergegeben. Der Fehler ist beim Bauen des Klassierers
+   > aufgefallen, nicht beim Zaehlen; **er steht hier, weil eine stille Berichtigung genau
+   > die Bewegung waere, gegen die dieses Protokoll geschrieben ist.**
 4. **Steht die Pruefung NACH der Stelle, zaehlt sie nicht.**
 
 ## Der Klassierer ist eine Heuristik — und er hat eine Sprechprobe
