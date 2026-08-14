@@ -1,5 +1,29 @@
 # Gabbro — offene Punkte
 
+## Was fehlt, um Caprock VOLLSTAENDIG in Gabbro zu schreiben (Stand 2026-08-14)
+
+**Bekannte Blocker: keiner mehr.** Die zwei gemessenen „passt nicht" aus `FRAGMENTE.md` sind zu —
+`forever` hat mit `leaves`/`leave` einen Ausgang, `transition` schreibt mit `transset` **mehrere
+Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
+
+**Was fehlt, ist deshalb keine Konstruktliste, sondern MESSUNG:**
+
+- [ ] **Vier von zehn Bereichen sind nie ausgeschrieben worden:** **Scheduler**, **MMU/
+      Seitentabellen**, **Lader/`SYS_LOAD`**, **Parser/Checkpoint**. Kein Urteil, kein Fragment —
+      und ein Bereich ohne Fragment ist eine Vermutung.
+- [ ] **Die sechs vorhandenen Fragmente sind gegen die ZWEITE Fassung geschrieben**, die Grammatik
+      ist bei der vierten. Sie muessen nachgezogen und neu beurteilt werden.
+- [ ] **Fuenf der elf Klempnerei-Klassen liegen nur im Scratchpad** — rund 6 der 19 haengenden
+      Pflichten sind damit **nicht gegen die Sprache pruefbar**.
+- [ ] **`programs/` brach 4 von 4** — aber die Messung ist **aelter als die Konstrukte**, die es
+      betreffen (`leaves`, `transition publishes`). Ungeprueft, ob es heute traegt.
+- [ ] **Die `narrow`-Vollzaehlung**, besonders der Schnitt, bei dem Pruefung und Verwendung in
+      **verschiedenen Funktionen** liegen.
+
+**Und getrennt davon, weil es nicht die Ausdruckskraft betrifft:** es gibt **keinen Uebersetzer**
+(P2–P7), die **C-Formentabelle** (40–60 Eintraege) ist ungeschrieben, und die
+**Beweisschablonen** sind benannt, nicht entworfen.
+
 > **Seit [`SPRACHE.md`](SPRACHE.md) (2026-08-14) sind die neun Entwurfsfragen entschieden.**
 > Was hier steht, ist ueberwiegend **Messung**, nicht Entwurf.
 

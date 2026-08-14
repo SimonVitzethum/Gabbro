@@ -517,8 +517,10 @@ regdecl = "reg" ident ":" intty "@" expr
           "class" ( "r" | "w" | "rw" | "w1c" | "rc" )
           [ "fields" "{" { ident "@" bitpos "," } "}" ]
           [ "requires" pred ] ;
-transition = "transition" ident "{" place ":" expr "->" expr "}"
+transition = "transition" ident "{" transset "}"
              [ "requires" pred ] [ "effects" "{" efflist "}" ] ;
+transset   = placeshift { "," placeshift } ;      (* MEHRERE Orte in EINEM Zug *)
+placeshift = place ":" expr "->" expr ;
 ```
 
 ```gabbro
