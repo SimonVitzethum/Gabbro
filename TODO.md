@@ -125,9 +125,21 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
         Erhaltung gegen die Gruppendeklaration.
       * **DER PRUEFSATZ, auf Papier, vor der Grammatik:** *B13 faellt genau dann, wenn jede im
         Baum vorkommende Verbindungs-Invariante eine Gruppe hat, deren `ops` sie schliessen.*
-        Am **CapSpace/CDT-Paar** entscheidbar — und die Warteschlangenchirurgie ist der
-        **zweite** Ort im Baum, an dem eine Invariante ueber zwei Strukturen zugleich lebt,
-        also gehoert die Gruppenfrage mit ins Scheduler-Fragment.
+      * **UND ER IST DIESELBE UNTERSUCHUNG WIE `locks ordered` — nicht zwei.** Mehrkern in
+        Zeile 1 verschmilzt sie: auf **einem** Kern heisst *„jede Operation fuer sich
+        erhaltend"* ein sequenzielles Argument; auf **mehreren** heisst es **erhaltend unter
+        dem Sperrprotokoll**. Eine `ops`-Operation muss deklarieren, **unter welcher Sperre**
+        sie laeuft, und die Schablone beweist die Erhaltung **relativ dazu**. Fuer die Gruppe
+        folgt sofort: Gruppen-`ops` ueber CapSpace *und* CDT halten die Sperren **beider**
+        Traeger — **und ob das eine gemeinsame Sperre ist oder zwei mit Ordnung, IST die
+        `locks ordered`-Frage.**
+      * **Ein Durchgang, drei Antworten** — am CapSpace/CDT-Paar, auf Papier:
+        1. welche Verbindungs-Invarianten existieren,
+        2. welche Gruppen schliessen sie,
+        3. **welchen Sperrabdruck haben die Gruppenoperationen.**
+        **Tauchen dort zwei Sperren derselben Klasse auf, ist das zugleich der erste echte
+        Prueffall fuer `locks ordered` — billiger als das ganze Scheduler-Fragment**, und der
+        Scheduler tritt danach mit einem **getesteten** statt einem vermuteten Sperrkonstrukt an.
 
 ## Kandidatenkonstrukt `locks ordered` — und es muss WIDERLEGBAR bleiben
 
@@ -259,6 +271,10 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
 - [ ] **G1 — `atomicdecl` braucht `publishes`.** Die Regel kennt es nicht, das Beispiel darunter
       benutzt es, [`SPRACHE.md`](SPRACHE.md) §11.3 verlangt es, F6 schreibt es achtmal.
       Der Uebersetzer nimmt es an und meldet `P031` — bis die EBNF nachgezogen ist.
+- [ ] **Jede neue erzeugte Form braucht ihren Schablonen-Eintrag, BEVOR sie Grammatik wird.**
+      `gabbro schablonen` fuehrt heute **16, davon 16 unbewiesen**. Die Liste ist die Ratsche
+      ueber der Flaeche, in die der dritte Ausgang seine Beweislast verschiebt —
+      **waechst sie, waechst die Vertrauensbasis, auch wenn die Kennzahl glaenzt.**
 - [ ] **G2 — `axiom` braucht `-> typeexpr` und `requires`.** `axiom rdtscp() -> u64 requires
       Has(RDTSCP) …` ist heute nicht schreibbar. **Betrifft die Axiomschicht**, also den groessten
       unbewiesenen Posten der Sprache.

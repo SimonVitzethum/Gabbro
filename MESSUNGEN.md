@@ -1818,3 +1818,31 @@ steht hier, nicht dort.
 > Die Pruefzeile dazu ist billig und mechanisch: *waere die Aussage noetig, wenn die Operation
 > erzeugt waere?* — **und sie gehoert in die Fragmentvorschrift**, neben die vier
 > Pruefschritte, die dort schon stehen.
+>
+> **Und sie hat einen zweiten Halbsatz, ohne den sie Schlagseite hat:**
+> *…**und was kostet die erzeugte Form die Schablonenflaeche?***
+>
+> **Der dritte Ausgang ist nicht kostenlos — er verschiebt Beweislast an EINEN Empfaenger.**
+> `by consuming`, `table ops`, `transset`, `exchange`, `accumulates`, und jetzt die vier
+> Kandidaten dieser Nachpruefung: alles faellt *„einmal in der Schablone"*, und die Schablone
+> ist die vertrauenskritischste unbewiesene Flaeche. **Ohne Zaehlung waechst sie monoton und
+> unbeziffert — genau wie die Axiomschicht vor ihrer Auszaehlung.**
+>
+> **Deshalb gibt es seit dem 2026-08-14 die dritte Zaehlspalte:** `gabbro schablonen`,
+> **16 Schablonen, 16 davon unbewiesen**, jede mit dem Satz, was genau einmal gezeigt werden
+> muss. Ein Eintrag ohne diesen Satz ist ein Name und keine Buchung, und ein Test setzt das
+> durch. **Der eine Isabelle-Posten ist damit keine Zahl 1, sondern eine Liste mit Laenge.**
+
+### Die Grenze dieser Nachpruefung — und sie gehoert an die Messstelle, nicht in eine Fussnote
+
+**Bei «B12» und «B14» steht als Beleg „parst und geht durch alle Paesse".** Das ist ein
+legitimes Orakel fuer **schreibbar** — der Uebersetzer entscheidet genau das. **Es ist kein
+Orakel fuer „traegt".** Die gebauten Paesse pruefen Grammatik, Namen, Bereiche, Schleifenmarken,
+Wirkungen und Kosten; sie pruefen **nicht die Semantik dahinter** — ob `elems of msg` wirklich
+ueber die Nachrichtenworte quantifiziert, entscheidet kein Pass, sondern die Bedeutung der
+Domaene.
+
+> **Beide Aussagen sauber getrennt:** «B12» behauptete, die Aussage sei **nicht schreibbar** —
+> das ist widerlegt. Ob sie **traegt**, ist damit nicht gezeigt, und **wer diese Zeile spaeter
+> als Beleg fuer das Zweite liest, erbt einen Zirkel:** ein junger Pruefer wuerde dann seine
+> eigene Unvollstaendigkeit als Bestaetigung ausgeben.
