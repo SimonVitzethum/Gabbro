@@ -3,6 +3,62 @@
 **Alles, was gefahren wurde, an einem Ort.** Zusammengezogen am 2026-08-14; Text unveraendert.
 **Was hier nicht steht, ist nicht gemessen.**
 
+
+---
+
+# MESSPROTOKOLL fuer Messung 2 — VORAB, vor der ersten angesehenen Pflicht
+
+**Diese Regeln stehen hier, bevor eine einzige der 17 Logik-Pflichten angesehen wurde.** Der Grund
+ist die dokumentierte Schwaeche dieses Ordners: **sechs von neun Berichtigungen in
+[`HISTORIE.md`](HISTORIE.md) waren Umdeutungen an einer Grenze.** Und diese Zaehlung hat ein
+eingebautes **Anreizgefaelle** — Abstiegsaussagen sind billig (automatische Induktion),
+Wertaussagen teuer. Wer das Kriterium waehrend der Zaehlung schaerft, schaerft es in die bequeme
+Richtung.
+
+*(Der Commit dieses Abschnitts steht im Verlauf **vor** dem Commit der Zaehlung. Das ist der
+einzige Beleg dafuer, dass „vorab" mehr ist als eine Behauptung ueber die Reihenfolge.)*
+
+## Die drei Spalten — je ein Satz, und mehr nicht
+
+| Spalte | Entscheidungsregel |
+|---|---|
+| **K — durch Konstruktion** | Die Aussage der Pflicht **erwaehnt nur die Maschine**, ODER sie ist eine **deklarierte Invariante**, deren Erhaltung der Erzeuger einmal ueber der Deklaration zeigt. **Ein Mensch schreibt nichts.** |
+| **A — Abstiegsaussage** | Die Pflicht laesst sich schreiben als *„fuer alle x in ⟨**deklarierter** Domaene⟩: P(x)"*, und P(x) folgt aus P auf den **echt kleineren** Elementen **plus genau einer deklarierten Schrittzusage**. |
+| **W — Wertaussage** | Alles Uebrige: das Argument betrifft **Werte, die ein Rumpf rechnet** und die keine Deklaration festlegt. |
+
+## Die Kippregel — sie kippt IMMER nach W
+
+1. **Passt eine Pflicht auf zwei Spalten, gilt die teurere.**
+2. **Muesste die Abstiegsstruktur fuer den Beweis erst eingefuehrt werden** (sie ist nicht
+   deklariert), ist es **W**.
+3. **Braucht die Induktion eine verstaerkte Hypothese**, ist es **W** — Verstaerkung ist
+   Menschenarbeit und genau der Schritt, den ein Loeser raten muesste.
+4. **Nicht geteilt, nicht gerundet.** Eine Pflicht zaehlt ganz, in einer Spalte.
+
+## Aufzeichnung, je Pflicht
+
+`Datei:Zeile` · Spalte · **ein** Satz Begruendung. Mehr nicht — eine lange Begruendung ist ein
+Kippfall, der sich verteidigt.
+
+**Und die Regeln muessen falsifizierbar bleiben:** laesst sich eine Pflicht mit diesen drei Saetzen
+**gar nicht** beurteilen, wird das als **Befund ueber die Regeln** aufgezeichnet und nicht still
+nach W gedrueckt. Ein Regelwerk, das jeden Fall entscheidet, hat keine Kante.
+
+## Die zwei Ausgaenge, ebenfalls vorab — damit gemessen und nicht gedeutet wird
+
+| Ausgang | was er heisst |
+|---|---|
+| **W ≥ 9 von 17** | Die Decke der Schrittzusagen deckt eine **Minderheit**. Der 5 : 1-Handbeweispreis gilt fuer **mehr** als die angenommenen 5 %, der 0,8 : 1-Ueberschlag wandert nach oben. **Das ist kein Stimmungsdaempfer, sondern die Zahl, die `k` beziffert** — und erst sie macht den seL4-Vergleich ehrlich |
+| **W ≤ 8 von 17** | Die Decke **traegt**, und die harten Schrittzusagen sind das **staerkste Stueck der Sprache** |
+
+**Beide Ausgaenge sind gute Ergebnisse — genau weil sie hier stehen, bevor gezaehlt wird.**
+
+## Was die Messung UNGUELTIG macht (nicht bloss unguenstig)
+
+Lassen sich weniger als 17 Pflichten mit `Datei:Zeile` wiederfinden, ist die **Quelle** nicht
+reproduzierbar — dieselbe Protokollklasse wie die fuenf Scratchpad-Klassen, und dann wird nicht
+gezaehlt, sondern erst die Grundlage hergestellt.
+
 ---
 
 
