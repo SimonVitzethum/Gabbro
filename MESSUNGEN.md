@@ -921,3 +921,310 @@ eingebauten `highest_bit(x: u64 in 1..) -> u32 in 0..63` traegt die Signatur den
 
 - [ ] **Die 69 Subtraktionen klassifizieren.** Das ist die naechste billige Messung und die
       einzige, die das Ergebnis noch kippen kann.
+
+---
+
+# P2 — Lexer und Parser, erstmals gefahren
+
+## P2 GEFAHREN (Teil 1): der Uebersetzer liest, und das Tor faellt — **1 von 6 Fragmenten**
+
+**2026-08-14.** Erste Zeile Rust in diesem Ordner. Gebaut ist P2 aus dem Prueferplan
+([`SPRACHE.md`](SPRACHE.md) Teil III §6): **Lexer, Wortschatz, Parser ueber die vollstaendige
+EBNF**, dazu drei der neun Pruefpaesse. Der Baum liegt in `crates/`, der Befehl heisst `gabbro`.
+
+> **Die Reihenfolgeregel ist verletzt, und das steht hier statt in einer Fussnote.**
+> `TODO.md` sagt: *„DER NAECHSTE SCHRITT IST KEINE ZEILE RUST"* — zuerst die fuenf
+> Scratchpad-Klassen, dann `19 → 0`. Der Uebersetzer wurde trotzdem angefangen, auf Ansage.
+> **Was das kostet, ist benannt:** P2 kann die These nicht mehr *vor* dem Uebersetzerbau toeten,
+> weil der Uebersetzerbau schon laeuft. Was es einbringt, steht unten — die Messung war ohne
+> Uebersetzer nicht fahrbar, und sie faellt gegen die Grammatik.
+
+### Das Tor, vorab und unveraendert
+
+> **P2** | Lexer+Parser ueber alle Fragmente des Ordners | *100 % der Fragmente parsen; drei
+> Gift-Fragmente scheitern mit benannter Absage*
+
+**Ergebnis: 1 von 6.** Die Gift-Seite steht: 26 Sprechproben, jede in beide Richtungen; die
+Verbotsliste (`while`, `for`, `goto`, `break`, `continue`, `switch`, `unsafe`, `_ =>`) faellt mit
+**benannter** Absage statt mit einem Folgefehler drei Token weiter.
+
+| Fragment | Zeilen | Fehler | Klasse |
+|---|---|---|---|
+| **F1** Cap-Space | 212 | 1 | Wortschatz (`slots`) |
+| **F2** VT-d als `device` | 134 | **0** | — |
+| **F3** IPC-Fastpath | 126 | 1 | Wortschatz (`ops`) |
+| **F4** virtio-Transport | 117 | 5 | Wortschatz (`next`, `slot`×2, `from`), veraltete Fassung |
+| **F5** Userspace-Dienstschleife | 92 | 1 | Wortschatz (`boot`) |
+| **F6** Pruefgeruest | 110 | 2 (+10 Hinweise) | Semikolon, `atomic … publishes` |
+
+Ueber den ganzen Ordner (`FRAGMENTE.md` + die Beispiele in `SYNTAX.md` und `SPRACHE.md`):
+**8 von 32 Uebersetzungseinheiten ohne Fehler, 1 030 Zeilen Gabbro.** Acht weitere Bloecke sind
+**Ausschnitte** — sie fangen mitten in einer Form an und zaehlen nicht gegen das Tor; der
+Uebersetzer trennt beide Klassen selbst, sonst waere die Prozentzahl ohne Nenner.
+
+### Der Befund, und er ist NICHT „die Fragmente sind alt"
+
+**Sieben von zehn Fehlern in `FRAGMENTE.md` sind eine einzige Klasse: der geschlossene Wortschatz
+kollidiert mit gewoehnlicher Kernel-Benennung.** Ueber den ganzen Ordner sind es **neun Woerter an
+elf Stellen**:
+
+| Wort | wo es kollidiert | Rolle im Wortschatz |
+|---|---|---|
+| **`slots`** | `lock CAPS protects { slots, cdt }` (F1, und dasselbe Beispiel in `SYNTAX.md` §11) | Quantorendomaene |
+| `ops` | Parametername (F3) | Kosteneinheit, `table ops` |
+| `next` | Registername im virtio-Deskriptor (F4) | `next <marke>;` |
+| `slot` | `let slot = q.AVAIL_IDX % q.n;` (F4, zweimal) | `slotdecl` |
+| `from` | Parametername (F4); `mirrors … from …` (`SYNTAX.md` §14) | `mirrors` |
+| `boot` | Parametername (F5) | Adressraum, `bootdecl` |
+| `stack` | `step stack = boot_stack_top;` (`SPRACHE.md` §5, Bootpfad) | `entryextra` |
+| `check` | `linear ghost type Duty(check);` (`SYNTAX.md` §2, eigenes Beispiel) | `check`-Block |
+| `u64` | `u64::max` (`SYNTAX.md` §2, `SPRACHE.md` §M1) | Ganzzahltyp |
+
+**`slots` ist der schwerste, weil die Sprache den Namen selbst erzeugt.** `slots of c` ist eine
+der acht Domaenen, `c.slots[s]` steht in jedem Fragment — und dieselbe Zeichenfolge ist als
+**Ort** nicht schreibbar. Der Parser laesst sie nach `.` und `->` zu (dort kann kein
+Schluesselwort stehen, also nichts verwechselt werden) und weist sie ueberall sonst ab. **Das ist
+eine Entscheidung, die die Grammatik nicht trifft, und sie steht als Entscheidung im Quelltext.**
+
+**Zwei Auswege, beide kosten etwas, keiner ist hier gewaehlt:** die kollidierenden Woerter
+kontextuell machen (dann ist der Wortschatz nicht mehr geschlossen, und die Tabelle in
+`SYNTAX.md` behauptet mehr, als sie haelt) — oder die Fragmente umbenennen (dann traegt jeder
+Anwender die Liste im Kopf, und `slots` bleibt trotzdem erzeugt **und** verboten).
+
+### Sechs Loecher in der Grammatik, gefunden vom Parser, nicht vom Lesen
+
+Jedes davon ist ein Fall, in dem **ein Beispiel der Spezifikation gegen die EBNF derselben
+Spezifikation faellt.** Dieselbe Familie wie die drei Fehler, die `pruefe-syntax.sh` 2026-08-13
+gefunden hat — und der Grund, warum ein Parser mehr sieht als ein Waechter ueber Regelnamen.
+
+| | Fundstelle | was fehlt |
+|---|---|---|
+| **G1** | `atomicdecl` (`SYNTAX.md` §11) | **kein `publishes`** — das Beispiel zwei Zeilen darunter benutzt es, `SPRACHE.md` §11.3 verlangt es, F6 schreibt es **achtmal**. Der Parser nimmt es an und meldet `P031` je Fundstelle |
+| **G2** | `axiom` (`SYNTAX.md` §12) | **kein `-> typeexpr`, kein `requires`** — `axiom rdtscp() -> u64 requires Has(RDTSCP) …` (`SPRACHE.md` Teil IV) ist nicht schreibbar. Betrifft die Axiomschicht, den *„groessten unbewiesenen Posten der ganzen Sprache"* |
+| **G3** | `placeshift` gegen `placesuffix` | **mehrdeutig**: in `transition drv { ST: ACK -> ACK \| DRIVER }` ist `ACK -> ACK` zugleich Uebergang und Feldzugriff. Der Parser loest es zugunsten des Uebergangs auf — **eine Entscheidung, die in die Grammatik gehoert** |
+| **G4** | `entrydecl` (`SYNTAX.md` §1) | `{ ident ":" ident "," }` verlangt das Schlusskomma **nach jedem** Eintrag; `regs in { nr: rax, …, a3: r10 }` (`SPRACHE.md` Teil II) hat keins |
+| **G5** | `path` (`SYNTAX.md`, Lexik) | `path = ident { "::" ident }` — **`u64::max` ist kein `path`**, weil `u64` und `max` Woerter sind. Steht in `SYNTAX.md` §2 und `SPRACHE.md` §M1 |
+| **G6** | `costexpr`, `format` | **`O` und `version` sind Terminale, die kein Waechter sieht**: `pruefe-wortschatz.py` liest nur `"[a-z_]…"`, also nicht `"O"` (gross) und nicht `"@version"` (fuehrendes `@`). Zwei Woerter ausserhalb der geschlossenen Tabelle |
+
+**G6 ist ein Befund ueber den Waechter, nicht ueber die Grammatik** — dieselbe blinde Stelle, die
+`SYNTAX.md` oben schon zweimal protokolliert. Der Uebersetzer haelt seine Wortliste jetzt
+mechanisch gegen die Tabelle (`tests/wortschatz.rs`, in **beide** Richtungen, 189/189).
+
+### Was an den Fragmenten selbst veraltet ist — und das ist kein Grammatikbefund
+
+* **F4**: `linear ghost type QueueSetup(q : Virtq);` schreibt `params` in die Klammern; `typedecl`
+  verlangt dort `typelist`. Der Kommentar «B3» im Fragment behauptet das Gegenteil — er ist gegen
+  die **zweite** Fassung geschrieben, die Grammatik ist bei der vierten. `Held(Lock)` ist heute
+  richtig.
+* **F6**: `let g = f() else (e) { return false; };` — die Grammatik gibt den Formen mit Block
+  **kein** abschliessendes Semikolon. Zwei Stellen.
+
+### Was dieser Lauf ausdruecklich NICHT sagt
+
+* **Sechs von neun Paessen sind nicht gebaut** — D1/D2, M1+V1–V3, M3, M2, Paarung, costs. `gabbro
+  paesse` druckt die Liste samt dem, was mit jedem offenen Pass ungeprueft bleibt, und jeder Lauf
+  wiederholt sie unter dem Ergebnis. **Ein gruener Lauf ist die Abwesenheit der Befunde, die drei
+  Paesse sehen koennen — mehr nicht.**
+* **Kein erzeugtes C.** Die Absenkung ist nicht angefangen; die Formentabelle (40–60 Eintraege)
+  ist weiter ungeschrieben.
+* **Der Parser prueft die FORM.** Dass `effects { pure }` dasteht, heisst nicht, dass es stimmt —
+  das entscheidet der Wirkungspass, den es noch nicht gibt.
+
+### Was gegen den Uebersetzer selbst geprueft wird
+
+`forbid(unsafe_code)` steht im Arbeitsbereich **und** wird von `tests/verfassung.rs` gehalten:
+jede Kiste muss `[lints] workspace = true` fuehren, jede Abhaengigkeit auf der benannten Liste
+stehen (heute: **keine ausser den eigenen Kisten**), und kein `.gab` im Uebersetzerbaum —
+Selbst-Hosting steht auf der Verbotsliste. **Sprechprobe gefahren:** ein `unsafe {}` in
+`span.rs` bricht die Uebersetzung mit `usage of an unsafe block`, dann zurueckgenommen.
+
+**31 Tests, alle gruen; `pruefe-syntax.sh` und `pruefe-wortschatz.py` unveraendert gruen.**
+
+---
+
+# P3 — M1 und die drei Flussregeln, gebaut und gefahren
+
+## P3 GEFAHREN: **der Pass reproduziert einen Befund, den der Ordner von Hand gefunden hatte**
+
+**2026-08-14, gleicher Tag wie P2.** Gebaut ist Pass 3 der Passliste: **Bereichstypen (M1)
+samt Konstantenauswertung, V1, V2, V3**, dazu ein Beispielkorpus von **8 sauberen Dateien
+(871 Zeilen)** und **15 Giftdateien (128 Zeilen)**, jede mit dem Code, mit dem sie fallen muss.
+
+### Der Beleg, dass der Pass etwas kann, ist nicht sein Testlauf
+
+`FRAGMENTE.md` F1, Zeile 248: `o.slots[obj].refcount -= 1;`
+
+```
+Fehler: [M104] `o.slots[…].refcount` -= verlaesst den Bereich: `u32 in 0 .. 80255` gegen `1`
+Fehler: [M101] die Zuweisung verlangt `u32 in 0 .. 80255`, der Wert hat `u32 in -1 .. 80254`
+```
+
+**Das ist woertlich Befund «B29»** — im August von Hand in `FRAGMENTE.md` eingetragen, mit der
+Begruendung *„M1 verlangt, dass das Ergebnis im Bereich bleibt; `refcount == 0` faellt aber nur
+ueber die Buchfuehrungs-Invariante aus, und die ist nach «B13» gar nicht aufschreibbar."*
+Der Pass hat ihn **unabhaengig wiedergefunden**, an derselben Zeile, ohne dass ihm jemand
+gesagt haette, wo er suchen soll. Das ist die einzige Art Beleg, die zaehlt: eine Vorhersage
+auf Papier, danach dieselbe Zahl aus dem Werkzeug.
+
+Ueber den ganzen Ordner: **8 M1-Befunde in 4 Klassen** (4 × `M101`, 4 × `M104`), alle in
+`FRAGMENTE.md`, keiner in den Beispielen.
+
+### Zwei Befunde, die man nicht zusammenwerfen darf
+
+| Code | Aussage |
+|---|---|
+| **`M104`** | der Wert ist auf der **Maschine nicht darstellbar** — die Breite ist weg (`u32 * u32`, `0 - 1` auf `u32`) |
+| **`M101`** | der Wert passt nicht in den **deklarierten Bereich seines Ziels** (`a + 1` verlaesst `0 .. GRENZE`) |
+| **`M102`** | der Nenner schliesst die Null nicht aus |
+| **`M103`** | der Index passt nicht in die Laenge seines Feldes |
+
+Wer die ersten beiden zusammenwirft, verliert genau die Aussage, die M1 macht: **der Bereich
+ist eine Zusage der Deklaration, die Breite eine Eigenschaft der Maschine.**
+
+### Die Lektion, die der Korpus erzwungen hat — und sie stand in keinem Dokument
+
+**Ein `u64`-Zaehler ohne Obergrenze ist nicht erhoehbar.** `wert + 1` verlaesst `u64`, wenn
+`wert` bis `2^64-1` reichen darf; M1 sagt das an der Zeile. Die Folge ist eine Regel, die
+jede Kernel-Zeile betrifft:
+
+> **Jeder Zaehler braucht zwei Dinge: eine Schranke in der Deklaration und eine Pruefung vor
+> der Rechnung.** `type Zaehlerwert = u64 in 0 .. GRENZE;` allein reicht nicht — `+ 1` reicht
+> dann bis `GRENZE + 1`. Erst `if w < GRENZE { w = w + 1; }` traegt, und V1 macht daraus
+> Code ohne Laufzeitkosten.
+
+Das ist an drei Stellen des eigenen Beispielkorpus aufgeschlagen, bevor es dastand.
+
+### Eine Regel, die dazukam — benannt, nicht eingeschmuggelt
+
+**V1 gilt auch fuer den Weg NACH einem Zweig, der immer verlaesst.**
+
+```gabbro
+if a < b { return 0; }
+return a - b;                    -- hier gilt a >= b, ohne dass es dasteht
+```
+
+Der Zweig endet mit `return`; was danach kommt, ist genau der Fall `a >= b` — **syntaktisch
+entscheidbar, ohne Fixpunkt** (letzte Anweisung ist `return`/`leave`/`next` oder ein Aufruf
+nach `never`). Ohne diese Regel braucht **jeder fruehe Rueckstieg** ein `narrow`, und die
+Messlatte *„`narrow` ≤ 24 Fundstellen"* faellt an einer Redewendung statt an der Sprache.
+**Sie steht als Entscheidung im Quelltext und hier, nicht als stilles Regelwachstum.**
+
+### Die Deckung — die Zahl, ohne die ein gruener Lauf nichts sagt
+
+`gabbro pruefe` druckt je Datei, **wieviele Ausdruecke M1 typisieren konnte**:
+
+```
+beispiele/08-bereiche.gab: 23 Items, 0 Fehler, 0 Hinweise
+  M1 sah 54 Ausdruecke, 0 davon ohne Typ (100 % Deckung)
+```
+
+Ueber den Beispielkorpus: **150 Ausdruecke, 13 ohne Typ, 91 % Deckung.** Die 13 sind
+`sizeof`/`lenof` (brauchen das Layout, also die Absenkung), `old(…)` (Geisterausdruck) und
+Aufrufe fremder Funktionen. **Ohne diese Zahl sehen „nichts gefunden" und „nichts angesehen"
+gleich aus** — und das ist die Falle, an der ein Pruefer wertlos wird.
+
+### Was P3 NICHT prueft
+
+* **Praedikate.** `requires`, `ensures`, `invariant` sind Geisterausdruecke; M1 sieht Ruempfe.
+* **Aufrufwirkungen auf Nichtlokales.** Jeder Aufruf toetet jeden Fakt ueber eine Stelle mit
+  Feld- oder Indexzugriff. Lokale Groessen bleiben — Gabbro hat **keinen Adressoperator**,
+  also kann ein Gerufener sie nicht aendern. Das ist der einzige Ort, an dem der Pass eine
+  Aussage ueber Alias macht, und er macht die **konservative**.
+* **`index into T` hat keine Obergrenze** — s. Befund G8 unten.
+
+### Zwei weitere Grammatikbefunde, gefunden beim Schreiben der Beispiele
+
+| | Fundstelle | was fehlt |
+|---|---|---|
+| **G7** | `entrydecl` | `clobbers { }` ist nicht schreibbar: `identlist` verlangt mindestens einen Namen. **Ein Eintritt, der nichts zerstoert, kann das nicht sagen.** |
+| **G8** | `table` | **eine Tabelle nennt ihre Slotzahl nicht.** `index into T` hat damit keine Obergrenze aus der Deklaration; die Schranke haengt an einem *von Hand* passend gewaehlten Indextyp (`type SlotIdx = u32 in 0 ..< NSLOTS`). **M4 — „kein ungeprueftes Indizieren" — ruht an dieser Stelle auf einer Konvention, nicht auf der Sprache.** Der Uebersetzer prueft Indizes deshalb nur gegen `[T; N]`, nicht gegen Tabellen |
+
+**48 Tests, alle gruen** (P2: 25, P3: +23), `pruefe-syntax.sh` und `pruefe-wortschatz.py`
+unveraendert gruen.
+
+---
+
+# MESSPROTOKOLL fuer die `narrow`-Vollzaehlung — VORAB, vor der ersten gezaehlten Stelle
+
+**Diese Regeln stehen hier, bevor eine einzige Fundstelle angesehen wurde, und in einem
+eigenen Commit VOR dem Commit der Zaehlung.** Der Grund ist die dokumentierte Schwaeche
+dieses Ordners: **sechs von neun Berichtigungen in [`HISTORIE.md`](HISTORIE.md) waren
+Umdeutungen an einer Grenze**, und diese Zaehlung hat ein eingebautes Anreizgefaelle — jede
+Stelle, die man einer V-Regel zuschlaegt, macht das Ergebnis besser. Wer die Regeln waehrend
+der Zaehlung schaerft, schaerft sie in die bequeme Richtung.
+
+## Die Latte, unveraendert seit [`SYNTAX.md`](SYNTAX.md)
+
+> **`narrow`-Zaehlung am Baum: ≤ 24 Fundstellen.** Wachsen sie darueber, ist die Regelmenge
+> V1–V3 zu klein — **und *das* ist die Widerlegung, nicht ein weiteres Regelwachstum in Stille.**
+
+## Was gezaehlt wird — und was ausdruecklich nicht
+
+**Gezaehlt werden die Stellen, an denen M1 eine Bereichspflicht erzeugt und sie NICHT aus den
+Operandentypen faellt:**
+
+| | Klasse | Grund |
+|---|---|---|
+| **ja** | Subtraktion auf vorzeichenloser Groesse | Unterlauf; die gemessene Klasse (255 Fundstellen, 102 flusssensitiv) |
+| **ja** | Division und Rest | der Nenner muss die Null ausschliessen |
+| **nein** | Addition und Multiplikation | in Rust ohne Bereichstypen nicht von „passt ohnehin" zu trennen; **eine Zahl daraus waere geraten** |
+| **nein** | Indizierung | die Schranke haengt an `index into T`, und **`table` nennt seine Slotzahl nicht** (Befund G8). Eine Zaehlung waere eine Aussage ueber eine Konvention, nicht ueber die Sprache |
+
+**Die Auslassungen sind Teil des Ergebnisses**, nicht sein Kleingedrucktes: die gemessene Zahl
+deckt zwei von vier Pflichtklassen.
+
+## Die sechs Spalten — je ein Satz, und mehr nicht
+
+| Spalte | Entscheidungsregel |
+|---|---|
+| **K — durch Konstruktion** | Beide Operanden sind Literale oder `const`, ODER die Operation ist ausdruecklich behandelt (`checked_sub`, `saturating_sub`, `wrapping_sub`, `checked_div`). **Keine Pflicht, kein Mensch.** |
+| **V1** | Im selben Rumpf steht **vor** der Stelle eine Pruefung der **geprueften Groesse gegen eine Konstante** (`if n > 0`, `if n == 0 { return }`, `assert!(n >= 1)`, `while n > 0`), und zwischen Pruefung und Gebrauch liegt **kein Schreiben** auf die Groesse. |
+| **V2** | Dasselbe, aber die Pruefung stellt **die beiden Stellen der Subtraktion gegeneinander** (`if a >= b`, `if a < b { return }`, `assert!(a >= b)`). |
+| **V3** | Die Stelle steht in einem `match`-Zweig, und der beteiligte Wert ist die **Bindung dieses Zweiges**. |
+| **F — Funktionsgrenze** | Keine Pruefung im Rumpf, und **mindestens ein Operand ist ein Parameter**. Die Pruefung liegt also — wenn es sie gibt — beim Aufrufer. **Das ist die Klasse, die entscheidet, ob `requires a >= b` als Vertrag reicht**, und sie zaehlt NICHT gegen die Latte. |
+| **N — `narrow`** | Alles Uebrige: keine Pruefung, und die Operanden entstehen im Rumpf. **Nur diese Spalte zaehlt gegen die 24.** |
+
+## Die Kippregel — sie kippt IMMER nach N
+
+1. **Passt eine Stelle auf zwei Spalten, gilt die teurere** (N vor F vor V3 vor V2 vor V1 vor K).
+2. **Ist unklar, ob zwischen Pruefung und Gebrauch geschrieben wird, ist es N.** Ein Fakt, der
+   vielleicht gestorben ist, ist kein Fakt.
+3. **Liegt die Pruefung in einer Schleife, die die Stelle umschliesst, ist es N** — Schleifen
+   tragen keine Fakten hinein, und das ist eine Regel der Sprache, keine Schwaeche des Zaehlers.
+4. **Steht die Pruefung NACH der Stelle, zaehlt sie nicht.**
+
+## Der Klassierer ist eine Heuristik — und er hat eine Sprechprobe
+
+Der Zaehler liest Rust **zeilenweise**, nicht als Baum. Er kann Makrorümpfe, Verschluesse und
+mehrzeilige Bedingungen falsch schneiden. **Deshalb gilt er nur als Messgeraet, wenn er die
+Stellen findet, die dieser Ordner schon kennt:**
+
+* `crates/caprock-sched/src/lib.rs:1996` — `31 - self.bitmap.leading_zeros()`, in
+  [`TODO.md`](TODO.md) als offene Klempnerei-Pflicht gefuehrt;
+* `kernel/src/colors.rs:864` und `crates/caprock-hal/src/cache_decode.rs:68` — dieselbe
+  Redewendung, die die frueherre Messung als „vier Fundstellen, alle dieselbe Form" fand.
+
+**Findet er sie nicht, ist die Zahl ungueltig** — nicht ungenau, ungueltig.
+
+## Was die Messung UNGUELTIG macht (nicht bloss unguenstig)
+
+1. **Der Klassierer findet die drei Sprechproben oben nicht.**
+2. **Eine Regel wird waehrend der Zaehlung geaendert.** Aendert sie sich, wird von vorn gezaehlt,
+   und das Protokoll bekommt einen neuen Abschnitt mit Datum.
+3. **Eine Stelle wird von Hand umklassifiziert, ohne dass die Regel dafuer hier steht.**
+4. **Die Zahl wird ohne die Spaltenverteilung berichtet.** Eine Gesamtzahl ohne K/V1/V2/V3/F/N
+   ist kein Messwert — sie sagt nicht, ob die Sprache traegt oder ob der Zaehler blind ist.
+
+## Die zwei Ausgaenge, ebenfalls vorab
+
+| | |
+|---|---|
+| **N ≤ 24** | Die Regelmenge V1–V3 traegt. `narrow` bleibt eine benannte Ausnahme statt eines Rituals. |
+| **N > 24** | **Widerlegung an dieser Stelle.** Die Regelmenge ist zu klein gewaehlt — und die Antwort ist dann NICHT eine vierte Regel, sondern der Eintrag in [`HISTORIE.md`](HISTORIE.md). |
+
+Und getrennt davon, ohne Latte, weil niemand sie vorab setzen konnte:
+
+| | |
+|---|---|
+| **F = 0** | V-Fakten sterben nie an der Funktionsgrenze; `requires` als Vertrag ist unnoetig. |
+| **F > 0** | **Jede dieser Stellen braucht `requires a >= b` am Gerufenen** — und damit ist die Frage aus [`TODO.md`](TODO.md) beantwortet, nicht vermutet. |
