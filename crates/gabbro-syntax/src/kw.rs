@@ -194,6 +194,7 @@ wortschatz! {
     Or            => "or",            res;
     And           => "and",           res;
     Held          => "held",          res;
+    Shared        => "shared",        res;
     Embeds        => "embeds",        res;
     Scale         => "scale",         res;
     Walk          => "walk",          res;

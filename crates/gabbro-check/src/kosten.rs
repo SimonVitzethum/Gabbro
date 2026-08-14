@@ -51,6 +51,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
     let u = Umgebung::sammle(baum);
     let mut deklariert: HashMap<String, i128> = HashMap::new();
     let mut haltezeiten: HashMap<String, i128> = HashMap::new();
+    let mut geteilte_haltezeiten: HashMap<String, i128> = HashMap::new();
 
     // Erst alle Deklarationen einsammeln: ein Aufruf zaehlt die deklarierten Kosten des
     // Gerufenen, und der kann weiter unten stehen.
@@ -66,6 +67,11 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
             if let Some(h) = &l.haltezeit {
                 if let Some(n) = u.konst_wert(modul, h) {
                     haltezeiten.insert(l.name.text.clone(), n);
+                }
+            }
+            if let Some(h) = &l.geteilte_haltezeit {
+                if let Some(n) = u.konst_wert(modul, h) {
+                    geteilte_haltezeiten.insert(l.name.text.clone(), n);
                 }
             }
         }
@@ -90,6 +96,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
             modul,
             deklariert: &deklariert,
             haltezeiten: &haltezeiten,
+            geteilte_haltezeiten: &geteilte_haltezeiten,
             lokal,
         };
 
@@ -173,6 +180,9 @@ struct Rechner<'a> {
     modul: &'a str,
     deklariert: &'a HashMap<String, i128>,
     haltezeiten: &'a HashMap<String, i128>,
+    /// **Der eigene Zweig der geteilten Seite** (MESSUNGEN.md, Nebenbefund N3): `held` ist
+    /// fuer exklusive Halter gedacht, und der Kostenpass rechnete bis dahin nur den.
+    geteilte_haltezeiten: &'a HashMap<String, i128>,
     /// Die Parameter der Funktion. **Ohne sie hat `c` in `slots of c` keinen Typ**, und die
     /// Domaenenschranke ist unauffindbar -- der Pass haette dann jede Traversierung als
     /// unbekannt gemeldet und damit seine eigene Blindheit gezaehlt.
@@ -410,19 +420,24 @@ impl<'a> Rechner<'a> {
         for s in &b.anweisungen {
             match &s.art {
                 StmtArt::Sperrt(l) => {
-                    if let (Some(zusage), Kosten::Zahl(n)) = (
-                        self.haltezeiten.get(&l.sperre.text()),
-                        self.block(&l.rumpf),
-                    ) {
+                    let (topf, wort, code) = if l.geteilt {
+                        (self.geteilte_haltezeiten, "shared held", "K003")
+                    } else {
+                        (self.haltezeiten, "held", "K002")
+                    };
+                    if let (Some(zusage), Kosten::Zahl(n)) =
+                        (topf.get(&l.sperre.text()), self.block(&l.rumpf))
+                    {
                         if n > *zusage {
                             absagen.schiebe(
                                 Absage::fehler(
-                                    "K002",
+                                    code,
                                     l.sperre.span,
                                     format!(
-                                        "der Block haelt `{}` fuer {n} ops, die Sperre sagt \
-                                         `held <= {zusage} ops` zu",
-                                        l.sperre.text()
+                                        "der Block haelt `{}`{} fuer {n} ops, die Sperre sagt \
+                                         `{wort} <= {zusage} ops` zu",
+                                        l.sperre.text(),
+                                        if l.geteilt { " geteilt" } else { "" }
                                     ),
                                 )
                                 .mit_notiz(

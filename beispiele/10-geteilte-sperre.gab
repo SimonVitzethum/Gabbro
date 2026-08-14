@@ -1,0 +1,79 @@
+-- 10 -- `locks shared`: die geteilte Sperrnahme. **Das erste Konstrukt, das aus einer
+-- Messung kam statt aus einem Entwurf.**
+--
+-- Am 2026-08-14 lief der Papiertest gegen einen echten Kern. Er sollte den Kandidaten
+-- `locks ordered` bestaetigen und hat ihn stattdessen getoetet -- null Prueffaelle. Dabei
+-- fiel auf, was auf keiner Liste stand: **die heisseste Sperre des Baums ist ein
+-- Reader-Writer-Lock, und der heisse Pfad ist die GETEILTE Seite** -- 33 Lesernahmen gegen
+-- 44 Schreibernahmen. `lock` und `locks` waren exklusiv gedacht. Der meistgelaufene Pfad
+-- eines Mikrokerns, die Cap-Aufloesung, war in Gabbro **nicht schreibbar**.
+--
+-- Die Zusage ist mechanisch, und das ist der ganze Punkt:
+--   **Geteilt halten heisst: die geschuetzten Plaetze lesen, sie nicht schreiben.**
+-- `protects { … }` nennt die Plaetze, der Rumpf nennt seine Schreibziele -- derselbe
+-- Abgleich wie `E006`, kein neuer Beweisbegriff.
+
+module beispiel::geteilte_sperre {
+
+const NSLOTS : u32 = 4096;
+
+type SlotIdx = u32 in 0 ..< NSLOTS;
+type Rechte  = u32 in 0 .. 15;
+
+table Kappenraum count NSLOTS {
+    slot {
+        belegt  : bool,
+        rechte  : Rechte,
+        objekt  : u32,
+    }
+}
+
+-- **Zwei Zahlen, nicht eine.** `held` ist fuer EXKLUSIVE Halter gedacht; auf der geteilten
+-- Seite ist die Rechengroesse eine andere -- nicht die Haltezeit eines Lesers, sondern die
+-- Schreiberwartezeit unter Leserdruck. Ohne `shared held` haette die Latenzaussage aus
+-- SPRACHE.md 9.3 fuer eine geteilt genommene Sperre keinen Zweig.
+lock KAPPEN protects { belegt, rechte, objekt } rank 0
+    held <= 2 ops
+    shared held <= 4 ops;
+
+-- Der heisse Pfad. Er nimmt geteilt -- viele Kerne zugleich, keiner schreibt.
+impl fn rechte_aufloesen(k : ptr<normal, r> Kappenraum, i : index into Kappenraum) -> Rechte
+    effects { reads k.slots, locks shared KAPPEN }
+    costs   <= 4 ops
+{
+    locks shared KAPPEN {
+        if k.slots[i].belegt {
+            return k.slots[i].rechte;
+        }
+    }
+    return 0;
+}
+
+-- Der kalte Pfad. Er schreibt, also nimmt er exklusiv -- und **er darf beides erklaeren
+-- nicht vertauschen**: geteilt erklaeren und exklusiv nehmen faellt mit `E007`, weil der
+-- Aufrufer sonst mit Nebenlaeufigkeit rechnet, die es nicht gibt.
+impl fn rechte_setzen(k : ptr<normal, rw> Kappenraum, i : index into Kappenraum, r : Rechte)
+    effects { writes k.slots, locks KAPPEN }
+    costs   <= 2 ops
+{
+    locks KAPPEN {
+        k.slots[i].rechte = r;
+    }
+}
+
+-- **Exklusiv erklaeren deckt die geteilte Nahme.** Die Richtung ist zulaessig, weil sie in
+-- die sichere Seite irrt: wer exklusiv liest, sagt weniger Nebenlaeufigkeit zu, als er
+-- haelt. Nur die Umkehrung ist eine Luege.
+impl fn zaehlen(k : ptr<normal, r> Kappenraum, i : index into Kappenraum) -> u32
+    effects { reads k.slots, locks KAPPEN }
+    costs   <= 2 ops
+{
+    locks shared KAPPEN {
+        if k.slots[i].belegt {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+}

@@ -1,0 +1,30 @@
+-- erwartet: S003
+-- Hochstufung: exklusiv nehmen, waehrend dieselbe Sperre geteilt gehalten wird. Auf einer
+-- Drehsperre wartet das auf die eigene Lesernahme -- ein Deadlock, kein Stilfehler.
+
+module gift {
+
+const N : u32 = 64;
+type Rechte = u32 in 0 .. 15;
+
+table Raum count N {
+    slot { belegt : bool, rechte : Rechte, }
+}
+
+lock KAPPEN protects { belegt, rechte } rank 0
+    held <= 8 ops
+    shared held <= 16 ops;
+
+impl fn stuft_hoch(k : ptr<normal, rw> Raum, i : index into Raum)
+    effects { reads k.slots, writes k.slots, locks KAPPEN, locks shared KAPPEN }
+    costs   <= 16 ops
+{
+    locks shared KAPPEN {
+        if k.slots[i].belegt {
+            locks KAPPEN {
+                k.slots[i].belegt = false;
+            }
+        }
+    }
+}
+}

@@ -1,0 +1,26 @@
+-- erwartet: S001
+-- **Die tragende Regel.** Geteilt halten heisst lesen, nicht schreiben -- und `protects`
+-- nennt `rechte` ausdruecklich. Der Abgleich ist derselbe wie bei `E006`.
+
+module gift {
+
+const N : u32 = 64;
+type Rechte = u32 in 0 .. 15;
+
+table Raum count N {
+    slot { belegt : bool, rechte : Rechte, }
+}
+
+lock KAPPEN protects { belegt, rechte } rank 0
+    held <= 8 ops
+    shared held <= 8 ops;
+
+impl fn schreibt_geteilt(k : ptr<normal, rw> Raum, i : index into Raum, r : Rechte)
+    effects { writes k.slots, locks shared KAPPEN }
+    costs   <= 8 ops
+{
+    locks shared KAPPEN {
+        k.slots[i].rechte = r;
+    }
+}
+}

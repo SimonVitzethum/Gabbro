@@ -1638,7 +1638,11 @@ impl<'a> Parser<'a> {
             }
             Art::Wort(Kw::Locks) => {
                 self.pos += 1;
-                WirkungArt::Sperrt(self.place()?)
+                if self.friss_kw(Kw::Shared) {
+                    WirkungArt::SperrtGeteilt(self.place()?)
+                } else {
+                    WirkungArt::Sperrt(self.place()?)
+                }
             }
             Art::Wort(Kw::Masks) => {
                 self.pos += 1;
@@ -1819,9 +1823,14 @@ impl<'a> Parser<'a> {
             }
             Art::Wort(Kw::Locks) => {
                 self.pos += 1;
+                let geteilt = self.friss_kw(Kw::Shared);
                 let sperre = self.place()?;
                 let rumpf = self.block()?;
-                StmtArt::Sperrt(SperrtStmt { sperre, rumpf })
+                StmtArt::Sperrt(SperrtStmt {
+                    sperre,
+                    geteilt,
+                    rumpf,
+                })
             }
             Art::Wort(Kw::Leave) => {
                 self.pos += 1;
@@ -2828,6 +2837,16 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // `shared held <= K ops` -- der eigene Zweig der geteilten Seite (N3).
+        let geteilte_haltezeit = if self.friss_kw(Kw::Shared) {
+            self.erwarte_kw(Kw::Held)?;
+            self.erwarte_z(Z::KleinerGleich)?;
+            let e = self.expr()?;
+            self.erwarte_kw(Kw::Ops)?;
+            Some(e)
+        } else {
+            None
+        };
         let maskiert = if self.friss_kw(Kw::Masks) {
             Some(self.erwarte_ident()?)
         } else {
@@ -2839,6 +2858,7 @@ impl<'a> Parser<'a> {
             schuetzt,
             rang,
             haltezeit,
+            geteilte_haltezeit,
             maskiert,
             span: anfang.bis_zu(self.vorheriger_span()),
         })

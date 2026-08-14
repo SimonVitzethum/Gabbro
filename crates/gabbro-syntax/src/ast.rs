@@ -605,6 +605,9 @@ pub enum WirkungArt {
     Liest(Ort),
     Schreibt(Ort),
     Sperrt(Ort),
+    /// `locks shared N` -- **geteilte Nahme.** Erlaubt Lesen der geschuetzten Plaetze,
+    /// verbietet Schreiben; mechanisch gegen `protects` pruefbar.
+    SperrtGeteilt(Ort),
     Maskiert(Ident),
     Belegt(Ident),
     Verbraucht(Ort),
@@ -620,6 +623,7 @@ impl WirkungArt {
             WirkungArt::Liest(o) => format!("reads {}", o.text()),
             WirkungArt::Schreibt(o) => format!("writes {}", o.text()),
             WirkungArt::Sperrt(o) => format!("locks {}", o.text()),
+            WirkungArt::SperrtGeteilt(o) => format!("locks shared {}", o.text()),
             WirkungArt::Maskiert(i) => format!("masks {}", i.text),
             WirkungArt::Belegt(i) => format!("allocs {}", i.text),
             WirkungArt::Verbraucht(o) => format!("consumes {}", o.text()),
@@ -634,6 +638,7 @@ impl WirkungArt {
             WirkungArt::Liest(_) => "reads",
             WirkungArt::Schreibt(_) => "writes",
             WirkungArt::Sperrt(_) => "locks",
+            WirkungArt::SperrtGeteilt(_) => "locks shared",
             WirkungArt::Maskiert(_) => "masks",
             WirkungArt::Belegt(_) => "allocs",
             WirkungArt::Verbraucht(_) => "consumes",
@@ -763,6 +768,9 @@ pub struct NarrowStmt {
 #[derive(Debug, Clone)]
 pub struct SperrtStmt {
     pub sperre: Ort,
+    /// `locks shared N { … }` -- die geteilte Nahme. **Der heisse Pfad eines Kernels nimmt
+    /// so**: die Cap-Aufloesung liest nur (MESSUNGEN.md, Papiertest: 33 gegen 44).
+    pub geteilt: bool,
     pub rumpf: Block,
 }
 
@@ -1067,6 +1075,11 @@ pub struct LockDecl {
     pub rang: Expr,
     /// `held <= constexpr ops` -- ohne sie ist die Sperre in Dienstschleifen nicht nehmbar.
     pub haltezeit: Option<Expr>,
+    /// `shared held <= constexpr ops` -- **der eigene Zweig fuer Leser-Schreiber-Sperren.**
+    /// `held` ist fuer EXKLUSIVE Halter gedacht; auf der geteilten Seite ist die
+    /// Rechengroesse eine andere, und ohne diese Zahl hat die Latenzaussage aus §9.3 fuer
+    /// eine geteilt genommene Sperre keinen Zweig (MESSUNGEN.md, Nebenbefund N3).
+    pub geteilte_haltezeit: Option<Expr>,
     pub maskiert: Option<Ident>,
     pub span: Span,
 }

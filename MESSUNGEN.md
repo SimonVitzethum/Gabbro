@@ -2043,3 +2043,31 @@ Fehler: [M104] `o.slots[…].zaehler` -= verlaesst den Bereich: `u32 in 0 .. 655
 **Die Sprachform und die Messform an derselben Stelle** — `D001` sagt „die K-Bedingung faellt",
 `M104` ist der Unterlauf, der «B13» toedlich aussehen liess. Der K-Bedingungsbericht dazu:
 *1 Traeger, 0 mal haelt K.*
+
+## Was aus dem Papiertest geworden ist — noch am selben Tag
+
+`locks ordered` ist **gestrichen** (Nachruf in [HISTORIE.md](HISTORIE.md)). **L-A ist
+gebaut**, weil die Zusage genau eine ist und mechanisch faellt: *geteilt halten heisst, die
+geschuetzten Plaetze zu lesen und nicht zu schreiben* — `protects` nennt sie, der Rumpf nennt
+seine Ziele, der Abgleich ist derselbe wie bei `E006`.
+
+| | |
+|---|---|
+| Grammatik | `locks [shared] place block`, `lock … [shared held <= K ops]`, `effects { locks shared N }` |
+| Absagen | `S001` `S002` `S003` `S004` `E007` `K003` |
+| Proben | Beispiel `10-geteilte-sperre.gab`; Gift `38`–`41` |
+| Mutationen | **+5, alle gefangen** — 37 von 37 auf der Flaeche *pruefer* |
+
+**Zwei Zahlen statt einer** (Nebenbefund N3 ist damit zu): `held` galt fuer **exklusive**
+Halter, und der Kostenpass rechnete nur den. `shared held` ist eine eigene Zusage mit eigener
+Pruefung, weil die tragende Groesse auf der geteilten Seite eine andere ist — die
+**Schreiberwartezeit unter Leserdruck**.
+
+**Die gefaehrliche Richtung hat einen eigenen Code bekommen.** `E007` faellt, wenn ein Rumpf
+exklusiv nimmt und `locks shared` erklaert; die Umkehrung ist zulaessig. Wer mehr haelt, als
+er zusagt, irrt in die sichere Seite — wer weniger haelt, laesst den Aufrufer eine
+Latenzrechnung auf Nebenlaeufigkeit bauen, die es nicht gibt.
+
+> **Offen bleibt der Zeuge am Aufrufrand** — `requires Held(N)` aus einem geteilten Block
+> heraus. Das ist dieselbe Asymmetrie eine Ebene hoeher und braucht den **Aufrufgraphen**:
+> genau das Loch, an dem in Pass 8 schon die Aufrufwirkungen haengen. *Ein Loch, nicht zwei.*

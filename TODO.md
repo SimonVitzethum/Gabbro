@@ -149,17 +149,17 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 > *Diese Datei fuehrt ausschliesslich Offenes; ein gestorbenes Konstrukt ist kein erledigter
 > Punkt, sondern ein Bruch mit der eigenen Absicht — und der gehoert in die Historie.*
 
-- [ ] **L-A — `locks shared`: die Sprache kennt keine geteilte Sperrnahme, und das trifft den
-      meistgelaufenen Pfad des Kernels.** `lock`/`locks` und `Held` sind exklusiv gedacht; die
-      heisseste Sperre ist ein **Reader-Writer**-Lock (`static CAPS: RwSpinLock<Caps>`), und
-      die Cap-Aufloesung nimmt sie **geteilt** — **33 `read()`-Stellen gegen 44 `write()`**.
-      Ohne das Konstrukt ist dieser Pfad **nicht schreibbar**.
-      * **Die Form ist mechanisch pruefbar:** `Held` geteilt heisst *liest die geschuetzten
-        Plaetze, schreibt sie nicht* — und das haelt der Wirkungspass gegen die Effektmenge
-        des Blocks, mit derselben Mechanik wie `E006`.
-      * **Voraussetzung fuer die Gruppen-`ops`:** ohne sie koennen die ihren echten
-        Sperrabdruck (Mutation exklusiv, Aufloesung geteilt) gar nicht deklarieren.
-      * **KONSTRUKTLUECKE ERSTER ORDNUNG, und sie stand auf keiner Liste.**
+- [ ] **L-A — `locks shared`: GEBAUT bis auf den Zeugen am Aufrufrand.**
+      Grammatik, Pass und Kostenzweig stehen (`SPRACHE.md` §11.2.1): `S001` (Schreiben unter
+      geteilter Nahme), `S002` (geteilt ohne `shared held`), `S003` (Hochstufung), `S004`
+      (Zusage ohne Messstelle), `E007` (geteilt erklaert, exklusiv genommen), `K003` (die
+      geteilte Haltezeit gegen ihre eigene Zahl). Fuenf neue Mutationen, alle gefangen;
+      Beispiel `10-geteilte-sperre.gab`, Giftproben 38–41.
+      * **Was offen bleibt:** der **Zeuge am Aufrufrand**. Eine Funktion mit
+        `requires Held(N)` darf aus einem `locks shared N`-Block nicht gerufen werden — das
+        ist dieselbe Asymmetrie wie `E007`, nur eine Ebene hoeher. Sie braucht den
+        **Aufrufgraphen**, und der ist derselbe fehlende Teil, an dem heute schon die
+        Aufrufwirkungen in Pass 8 haengen. *Ein Loch, nicht zwei — und es zaehlt einmal.*
 - [ ] **L-B — `ghost Stale(T)`: Uebergabe mit Neuvalidierung. Kandidat, kein Beschluss.**
       Das Muster, das Doppelnahme **ersetzt**: unter Sperre A waehlen, freigeben, unter B
       fortsetzen, Befund neu pruefen. Die ehrliche Fassung ist **kein Atomizitaetsversprechen,

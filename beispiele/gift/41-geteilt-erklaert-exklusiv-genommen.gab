@@ -1,0 +1,27 @@
+-- erwartet: E007
+-- **Die gefaehrliche Richtung.** Der Rumpf nimmt exklusiv, die Signatur sagt geteilt: wer
+-- sie liest, rechnet mit Nebenlaeufigkeit, die es nicht gibt, und legt seine Latenzrechnung
+-- darauf an. Umgekehrt waere es zulaessig -- exklusiv erklaeren deckt die geteilte Nahme.
+
+module gift {
+
+const N : u32 = 64;
+type Rechte = u32 in 0 .. 15;
+
+table Raum count N {
+    slot { belegt : bool, rechte : Rechte, }
+}
+
+lock KAPPEN protects { belegt, rechte } rank 0
+    held <= 8 ops
+    shared held <= 8 ops;
+
+impl fn luegt(k : ptr<normal, rw> Raum, i : index into Raum)
+    effects { writes k.slots, locks shared KAPPEN }
+    costs   <= 8 ops
+{
+    locks KAPPEN {
+        k.slots[i].belegt = true;
+    }
+}
+}

@@ -92,7 +92,7 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
              endian little big reserved cost runs online offline
              offset_into index into option chain wrapping
              atomic acquire release seq relaxed nothing accumulates merge
-             max min add or and held protects rank
+             max min add or and held protects rank shared
              embeds scale walk levels node down leaf mappings
              entry vector regs out preserves clobbers stack dispatch
              per cpu ist nested masked awaits port step via
@@ -339,7 +339,7 @@ fndecl   = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" | "extern"
 inductlist = induct { "," induct } ;
 induct     = "induction" "over" domain ;      (* nennt das SCHEMA -- kein Lemma, kein Beweisschritt *)
 efflist  = eff { "," eff } ;
-eff      = "reads" place | "writes" place | "locks" place | "masks" ident
+eff      = "reads" place | "writes" place | "locks" [ "shared" ] place | "masks" ident
          | "allocs" ident | "consumes" place | "publishes" place | "diverges"
          | "pure" ;
 ```
@@ -565,8 +565,9 @@ atomicdecl  = [ "pub" ] "atomic" ident ":" typeexpr
               [ "acquire" | "release" | "seq" | "relaxed" ] ";" ;
 publishstmt = place "=" expr "publishes" ( placelist | "nothing" ) ";" ;
 lockdecl   = "lock" ident "protects" "{" placelist "}"
-             "rank" constexpr [ "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
-lockstmt   = "locks" place block ;
+             "rank" constexpr [ "held" "<=" constexpr "ops" ]
+             [ "shared" "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
+lockstmt   = "locks" [ "shared" ] place block ;
 ```
 
 ```gabbro

@@ -17,6 +17,7 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::Absagen;
 
+pub mod geteilt;
 pub mod kbedingung;
 mod kosten;
 mod m1;
@@ -150,6 +151,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     let m1 = m1::pass(baum, absagen);
     schleifen::pass(baum, absagen);
     wirkungen::pass(baum, absagen);
+    geteilt::pass(baum, absagen);
     let kosten = kosten::pass(baum, absagen);
     Bericht { m1, kosten }
 }

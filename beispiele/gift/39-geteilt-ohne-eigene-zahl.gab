@@ -1,0 +1,27 @@
+-- erwartet: S002
+-- Geteilt genommen, aber die Sperre erklaert nur `held` -- die Zahl fuer EXKLUSIVE Halter.
+-- Auf der geteilten Seite ist die Rechengroesse die Schreiberwartezeit unter Leserdruck;
+-- ohne eigene Zahl hat die Latenzaussage aus 9.3 fuer diese Sperre keinen Zweig (N3).
+
+module gift {
+
+const N : u32 = 64;
+type Rechte = u32 in 0 .. 15;
+
+table Raum count N {
+    slot { belegt : bool, rechte : Rechte, }
+}
+
+lock KAPPEN protects { belegt, rechte } rank 0
+    held <= 8 ops
+;
+
+impl fn liest_geteilt(k : ptr<normal, r> Raum, i : index into Raum) -> Rechte
+    effects { reads k.slots, locks shared KAPPEN }
+    costs   <= 8 ops
+{
+    locks shared KAPPEN {
+        return k.slots[i].rechte;
+    }
+}
+}

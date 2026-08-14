@@ -27,7 +27,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 #[derive(Default)]
 struct Taten {
     schreibt: Vec<(String, Span)>,
-    sperrt: Vec<(String, Span)>,
+    /// Ort, Fundstelle, und **ob geteilt genommen** -- die Richtung ist nicht symmetrisch.
+    sperrt: Vec<(String, Span, bool)>,
 }
 
 /// Der Kopf eines Ortes, so wie eine Wirkung ihn nennt: `c.slots[s].benutzt` wird von
@@ -53,7 +54,7 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
                 }
             }
             StmtArt::Sperrt(l) => {
-                t.sperrt.push((l.sperre.text(), l.sperre.span));
+                t.sperrt.push((l.sperre.text(), l.sperre.span, l.geteilt));
                 sammle_taten(&l.rumpf, t);
             }
             StmtArt::Wenn(w) => {
@@ -111,11 +112,23 @@ fn rumpf_gegen_wirkungen(f: &FnDecl, w: &Wirkungen, b: &Block, absagen: &mut Abs
             _ => None,
         })
         .collect();
+    // Exklusiv erklaerte Sperren -- sie decken BEIDE Nahmen, denn exklusiv ist staerker.
     let sperren: Vec<String> = w
         .liste
         .iter()
         .filter_map(|e| match &e.art {
             WirkungArt::Sperrt(o) => Some(o.text()),
+            _ => None,
+        })
+        .collect();
+    // Geteilt erklaerte Sperren -- sie decken NUR die geteilte Nahme. Die Umkehrung waere
+    // die gefaehrliche Richtung: ein Aufrufer, der `locks shared` liest, rechnet mit
+    // Nebenlaeufigkeit, die es nicht gibt.
+    let geteilte: Vec<String> = w
+        .liste
+        .iter()
+        .filter_map(|e| match &e.art {
+            WirkungArt::SperrtGeteilt(o) => Some(o.text()),
             _ => None,
         })
         .collect();
@@ -158,20 +171,47 @@ fn rumpf_gegen_wirkungen(f: &FnDecl, w: &Wirkungen, b: &Block, absagen: &mut Abs
         }
     }
 
-    for (ort, span) in &taten.sperrt {
-        if !sperren.iter().any(|e| deckt(e, ort)) {
+    for (ort, span, geteilt) in &taten.sperrt {
+        if sperren.iter().any(|e| deckt(e, ort)) {
+            continue; // exklusiv erklaert deckt beide Nahmen
+        }
+        if *geteilt && geteilte.iter().any(|e| deckt(e, ort)) {
+            continue;
+        }
+        // **E007 ist die gefaehrliche Richtung und bekommt darum eigenen Text:** der Rumpf
+        // nimmt exklusiv, die Wirkung sagt geteilt. Wer die Signatur liest, rechnet mit
+        // Nebenlaeufigkeit, die es nicht gibt -- und baut seine Latenzrechnung darauf.
+        if !*geteilt && geteilte.iter().any(|e| deckt(e, ort)) {
             absagen.schiebe(
                 Absage::fehler(
-                    "E006",
+                    "E007",
                     *span,
                     format!(
-                        "`locks {ort}` steht im Rumpf, aber nicht in den Wirkungen von `{}`",
+                        "`{}` nimmt `{ort}` EXKLUSIV, erklaert aber `locks shared {ort}`",
                         f.name.text
                     ),
                 )
-                .mit_notiz("die Sperrordnung faellt aus den erklaerten Sperren, nicht aus dem Rumpf"),
+                .mit_notiz(
+                    "geteilt erklaeren und exklusiv nehmen ist die gefaehrliche Richtung: der \
+                     Aufrufer rechnet mit Nebenlaeufigkeit, die es nicht gibt, und legt seine \
+                     Latenzrechnung darauf an",
+                )
+                .mit_notiz("umgekehrt ist es zulaessig -- exklusiv erklaeren deckt die geteilte Nahme"),
             );
+            continue;
         }
+        absagen.schiebe(
+            Absage::fehler(
+                "E006",
+                *span,
+                format!(
+                    "`locks {}{ort}` steht im Rumpf, aber nicht in den Wirkungen von `{}`",
+                    if *geteilt { "shared " } else { "" },
+                    f.name.text
+                ),
+            )
+            .mit_notiz("die Sperrordnung faellt aus den erklaerten Sperren, nicht aus dem Rumpf"),
+        );
     }
 }
 

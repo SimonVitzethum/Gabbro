@@ -917,6 +917,11 @@ Auflösung ist kompositional statt im Schleifenkonstrukt:
 4. Die Latenzaussage je Wartestelle ist damit ableitbar (Ranghöhere halten ≤ ihrer `held`-Summe)
    und wird als Zahl ins Erzeugnis emittiert — eine **abgeleitete** Größe, die niemand parallel
    zur Wahrheit führt.
+5. **Für geteilt genommene Sperren gilt Punkt 1 mit einer anderen Zahl** (§11.2.1): `shared
+   held` statt `held`, geprüft als `K003`. Der Grund ist keine Formsache — Punkt 4 rechnet mit
+   der Haltezeit *eines* Halters, und auf der geteilten Seite ist die tragende Grösse die
+   **Schreiberwartezeit unter Leserdruck**. *Bis zum 2026-08-14 rechnete der Kostenpass nur den
+   exklusiven Fall, und die Latenzformel mit ihm* (`MESSUNGEN.md`, Nebenbefund N3).
 
 `progress` bleibt: es nennt, **wer** die Schleife beendet — eine Annahme mit Falsifikator; der
 Watchdog ist der Falsifikator.
@@ -973,12 +978,49 @@ atomicdecl = [ "pub" ] "atomic" ident ":" typeexpr
 
 ```ebnf
 lockdecl = "lock" ident "protects" "{" placelist "}"
-           "rank" constexpr [ "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
+           "rank" constexpr [ "held" "<=" constexpr "ops" ]
+           [ "shared" "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
+lockstmt = "locks" [ "shared" ] place block ;
 ```
 
 `rank`: Nehmen verlangt echt kleineren Rang (Bestand). `held` ist die deklarierte Haltezeit in
-ops; jeder `locks`-Block wird dagegen geprüft. Ohne `held` ist die Sperre in Dienstschleifen
-nicht nehmbar (§9.3).
+ops; jeder `locks`-Block wird dagegen geprüft (`K002`). Ohne `held` ist die Sperre in
+Dienstschleifen nicht nehmbar (§9.3).
+
+##### 11.2.1 `locks shared` — die geteilte Nahme
+
+**Das erste Konstrukt, das aus einer Messung kam statt aus einem Entwurf.** Der Papiertest vom
+2026-08-14 (`MESSUNGEN.md`) sollte den Kandidaten `locks ordered` bestätigen und hat ihn
+stattdessen getötet — null Prüffälle. Dabei fiel auf, was auf keiner Liste stand: **die
+heisseste Sperre eines echten Kerns ist ein Reader-Writer-Lock, und der heisse Pfad ist die
+geteilte Seite** — 33 Lesernahmen gegen 44 Schreibernahmen. `lock` und `locks` waren exklusiv
+gedacht; die Cap-Auflösung, der meistgelaufene Pfad, war nicht schreibbar.
+
+Die Zusage ist **eine einzige, und sie ist mechanisch**:
+
+> **Geteilt halten heisst: die geschützten Plätze lesen, sie nicht schreiben.**
+
+`protects { … }` nennt die Plätze, der Rumpf nennt seine Schreibziele — derselbe Abgleich wie
+`E006`, kein neuer Beweisbegriff. *Das ist das Kriterium, an dem `abi { … }` und `locks ordered`
+gescheitert sind, und dieses Konstrukt besteht es.*
+
+| Code | Absage |
+|---|---|
+| `S001` | Schreiben auf einen geschützten Platz unter geteilter Nahme. **Die tragende Regel.** |
+| `S002` | Geteilt genommen ohne `shared held <= … ops` — siehe die Zahl unten. |
+| `S003` | Hochstufung: exklusiv nehmen, während dieselbe Sperre geteilt gehalten wird. Auf einer Drehsperre ein Deadlock, kein Stilfehler. |
+| `S004` | `shared held` erklärt, aber nirgends geteilt genommen — *eine Zusage ohne Stelle, an der sie fällt.* |
+| `E007` | Geteilt **erklärt**, exklusiv **genommen**. Die gefährliche Richtung. |
+
+**Die Richtung ist nicht symmetrisch, und das ist der Kern von `E007`.** Exklusiv erklären
+deckt die geteilte Nahme — wer mehr hält, als er zusagt, irrt in die sichere Seite. Umgekehrt
+ist es eine Lüge: der Aufrufer liest `locks shared`, rechnet mit Nebenläufigkeit, die es nicht
+gibt, **und legt seine Latenzrechnung darauf an**.
+
+**Zwei Zahlen, nicht eine.** `held` war für **exklusive** Halter gedacht. Auf der geteilten
+Seite ist die Rechengrösse eine andere — nicht die Haltezeit eines Lesers, sondern die
+**Schreiberwartezeit unter Leserdruck**. `shared held` ist darum eine eigene Zusage mit einer
+eigenen Prüfung (`K003`), nicht dieselbe Zahl mit anderem Namen.
 
 #### 11.3 `publish` — die Publikation steht am Store
 

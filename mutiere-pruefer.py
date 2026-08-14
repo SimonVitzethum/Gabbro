@@ -279,8 +279,8 @@ MUTATIONEN = [
     Mutation(
         "sperre-egal",
         "wirkungen.rs",
-        "    for (ort, span) in &taten.sperrt {",
-        "    for (ort, span) in &taten.sperrt[..0] {",
+        "    for (ort, span, geteilt) in &taten.sperrt {",
+        "    for (ort, span, geteilt) in &taten.sperrt[..0] {",
         "E006 -- ein `locks`-Block braucht keine erklaerte Sperre",
     ),
     Mutation(
@@ -330,6 +330,44 @@ MUTATIONEN = [
         "    if w.liste.len() > 1 {",
         "    if false && w.liste.len() > 1 {",
         "E002 -- `pure` darf neben jeder anderen Wirkung stehen",
+    ),
+    # -- geteilt.rs: die geteilte Sperrnahme, aus dem Papiertest vom 2026-08-14 ----------
+    Mutation(
+        "geteilt-darf-schreiben",
+        "geteilt.rs",
+        "        let Some(platz) = sp.schuetzt.iter().find(|p| beruehrt(p, &ort)) else {\n"
+        "            continue;\n        };",
+        "        let Some(platz) = sp.schuetzt.iter().find(|p| beruehrt(p, &ort) && false) else {\n"
+        "            continue;\n        };",
+        "S001 -- unter geteilter Sperre darf geschrieben werden (die tragende Regel)",
+    ),
+    Mutation(
+        "geteilt-braucht-keine-zahl",
+        "geteilt.rs",
+        "                        Some(sp) if !sp.hat_geteilte_zeit => absagen.schiebe(",
+        "                        Some(sp) if !sp.hat_geteilte_zeit && false => absagen.schiebe(",
+        "S002 -- geteilt nehmen ohne `shared held`; die Latenzaussage verliert ihren Zweig",
+    ),
+    Mutation(
+        "hochstufung-ist-erlaubt",
+        "geteilt.rs",
+        "                    if offen.contains(&name) {",
+        "                    if false && offen.contains(&name) {",
+        "S003 -- geteilt gehalten und exklusiv nachgenommen: der Deadlock faellt durch",
+    ),
+    Mutation(
+        "luege-in-die-gefaehrliche-richtung",
+        "wirkungen.rs",
+        "        if !*geteilt && geteilte.iter().any(|e| deckt(e, ort)) {",
+        "        if false && geteilte.iter().any(|e| deckt(e, ort)) {",
+        "E007 -- exklusiv nehmen und geteilt erklaeren; der Aufrufer rechnet falsch",
+    ),
+    Mutation(
+        "geteilte-haltezeit-egal",
+        "kosten.rs",
+        '                        (self.geteilte_haltezeiten, "shared held", "K003")',
+        '                        (self.haltezeiten, "shared held", "K003")',
+        "K003 -- die geteilte Haltezeit wird gegen die EXKLUSIVE Zahl geprueft",
     ),
 ]
 
@@ -443,7 +481,7 @@ def main():
         marke = "  " if n else "!!"
         print(f"  {marke} {name:<12} {n:>3} Mutationen  -- {satz}")
     print("\n  Eine Flaeche mit 0 Mutationen ist nicht gedeckt, sondern unbeschaedigbar.")
-    print("  `32 von 32` misst den PRUEFER; ueber Annotation und Code sagt es nichts.")
+    print(f"  `{gefangen} von {gueltig}` misst den PRUEFER; ueber Annotation und Code sagt es nichts.")
     if ungueltig:
         print(f"   {len(ungueltig)} zaehlen nicht mit:")
         for m, z in ungueltig:
