@@ -801,6 +801,23 @@ Das ist eine **Eigenschaft des Programms** (D10), statisch ausgerechnet, keine Z
 sie ist die Größe, in der `per_pass`, `held` und `bounded` sprechen. Zyklen gibt es in der Sprache
 nicht.
 
+> **Zwei Präzisierungen, beide 2026-08-14 beim Bau von Pass 9 fällig geworden — und beide sind
+> Aussagen über das MODELL, nicht über den Prüfer:**
+>
+> 1. **Die vier Primitiven sind abschliessend.** Ein `if`, ein `match`, ein `return`, ein
+>    `leave` kosten **nichts** — sie sind keine der vier. Die *Bedingung* eines Zweiges kostet,
+>    der Zweig nicht. Und **was zur Übersetzungszeit feststeht, kostet zur Laufzeit nichts**:
+>    `GRENZE`, `4096`, `NSLOTS * 8` sind keine Ladevorgänge.
+> 2. **Was nach einem Zweig steht, der IMMER verlässt, liegt auf dem anderen Weg.** Bei
+>    `if x { return … }` gefolgt von weiterem Code sind es zwei Wege, nicht eine Summe. Ohne
+>    diese Regel zahlt jeder frühe Rückstieg zweimal, und die Zahl misst einen Weg, den kein
+>    Durchlauf nimmt. *Es ist dieselbe syntaktische Frage, die M1 für die V1-Verneinung stellt.*
+>
+> **Der erste Lauf des Passes hat beide Seiten geprüft und beide einmal falsch gefunden:** erst
+> rechnete der Pass zu viel (die Präzisierungen fehlten), dann waren drei geschriebene
+> `costs`-Zahlen geraten — darunter eine Traversierung über eine ganze Tabelle, die statt der
+> deklarierten 4 096 ops **831 488** kostet. Beides steht in [`MESSUNGEN.md`](MESSUNGEN.md).
+
 ---
 
 ### 8. Anweisungen
