@@ -95,7 +95,7 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
              max min add or and held protects rank
              embeds scale walk levels node down leaf mappings
              entry vector regs out preserves clobbers stack dispatch
-             per cpu ist nested masked awaits
+             per cpu ist nested masked awaits port step via
   Domaenen   slots of chain descendants queue elems fields threads reaches via
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 bool never w1c rc
   Eingebaut  sizeof lenof aligned forall exists true false Self
@@ -137,8 +137,13 @@ program    = { item } ;
 item       = [ "when" constexpr ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | reason | state | device | assume | axiom | check
-             | atomicdecl | lockdecl | accdecl | walkdecl | entrydecl ) ;
-entrydecl  = "entry" ident [ "vector" constexpr ] "arch" ident "{"
+             | atomicdecl | lockdecl | accdecl | walkdecl | entrydecl | bootdecl ) ;
+bootdecl   = "boot" ident "arch" ident "{"
+               { bootstep }
+               "dispatch" path ";"
+             "}" ;
+bootstep   = "step" ( call | ident "=" constexpr ) ";" ;
+entrydecl  = "entry" ident [ "vector" constexpr ] [ "via" ident ] "arch" ident "{"
                "regs" "in"  "{" { ident ":" ident "," } "}"
                "regs" "out" "{" { ident ":" ident "," } "}"
                "preserves" "{" identlist "}"
@@ -215,7 +220,7 @@ C-Union mit Marke ab. **`bitpos` als Bereich** deckt die 13 Mehrbitfelder in `vt
 
 ```ebnf
 ptrty  = "ptr" "<" space "," rights ">" typeexpr ;
-space  = "normal" | "mmio" | "dma" | "code" | "boot" | ident ;
+space  = "normal" | "mmio" | "dma" | "code" | "boot" | "port" | ident ;
 rights = right { "+" right } ;
 right  = "r" | "w" | "rw" | "x" | "own" [ "@" ident ] ;
 ```

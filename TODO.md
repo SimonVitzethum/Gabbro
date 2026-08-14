@@ -12,6 +12,10 @@
       der EBNF: **117 Regeln, 0 offen, jede von `program` erreichbar, 187 Terminale gegen 187
       Wortschatzwoerter**, beide Waechter gruen. *Die Reihenfolgeregel „keine Pruefzeile vor Tor P1"
       ist damit eingehalten.*
+- [ ] **Abnahme der dritten Ergaenzung** (§6): Katalog gegen Zaehlung — **jeder gezaehlte Befehl
+      hat ein Axiom oder ein Konstrukt, jede Zeile einen Befehl**; die Mode-Leiter als Sprechprobe
+      (vertauschtes `write_cr0(PG)` **muss** brechen); die vorberechneten Boot-Tabellen byteidentisch
+      gegen das, was das heutige Trampolin zur Laufzeit baut.
 - [ ] **P2–P7** aus [`ERGAENZUNG2.md`](ERGAENZUNG2.md) §6 — Lexer/Parser, M1+V1–V3, M2 samt
       Schablone, C-Emission, Paarungs-Pass mit Litmus-Sonden, ein Caprock-Modul end-to-end.
       **Jede Stufe verbraucht das Ergebnis der vorigen, wie eine `Duty`.**
