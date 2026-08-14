@@ -81,6 +81,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         u: &umgebung,
         absagen,
         zaehlung: Zaehlung::default(),
+        modul: String::new(),
     };
     p.programm(baum);
     p.zaehlung
@@ -90,6 +91,10 @@ struct Pruefer<'a> {
     u: &'a Umgebung,
     absagen: &'a mut Absagen,
     zaehlung: Zaehlung,
+    /// Das Modul, in dem der gerade gepruefte Rumpf steht. **Ohne ihn loest der Pass Namen
+    /// im Blindflug auf** -- und ein gleichnamiges `fn` in einem fremden Modul loescht eine
+    /// Bereichspruefung, ohne dass jemand es sieht (Gegenpruefung 2026-08-14, U11/U12).
+    modul: String,
 }
 
 /// Die Bindungen und Fakten eines Blocks. Ein Block erbt beide und gibt keins zurueck.
@@ -101,16 +106,20 @@ struct Lage {
 
 impl<'a> Pruefer<'a> {
     fn programm(&mut self, baum: &Programm) {
-        crate::fuer_jedes_item(baum, &mut |item| {
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
             if let ItemArt::Funktion(f) = &item.art {
                 // Nur Ruempfe: Praedikate haben keine Laufzeitwirkung.
                 if let FnRumpf::Block(b) = &f.rumpf {
+                    self.modul = modul.to_string();
                     let mut lage = Lage::default();
                     for prm in &f.parameter {
-                        let t = self.u.typ_von_ausdruck_decl(&prm.typ);
+                        let t = self.u.typ_von_ausdruck_decl(modul, &prm.typ);
                         lage.lokal.insert(prm.name.text.clone(), t);
                     }
-                    let ergebnis = f.ergebnis.as_ref().map(|t| self.u.typ_von_ausdruck_decl(t));
+                    let ergebnis = f
+                        .ergebnis
+                        .as_ref()
+                        .map(|t| self.u.typ_von_ausdruck_decl(modul, t));
                     self.block(b, &mut lage, ergebnis.as_ref());
                 }
             }
@@ -149,7 +158,7 @@ impl<'a> Pruefer<'a> {
             StmtArt::Let(l) => {
                 let wert = self.ausdruck(&l.wert, lage);
                 self.rufe_im_ausdruck(&l.wert, lage);
-                let ziel = l.typ.as_ref().map(|t| self.u.typ_von_ausdruck_decl(t));
+                let ziel = l.typ.as_ref().map(|t| self.u.typ_von_ausdruck_decl(&self.modul, t));
                 if let Some(z) = &ziel {
                     self.passt(&wert, z, l.wert.span, "die Bindung");
                 }
@@ -171,7 +180,7 @@ impl<'a> Pruefer<'a> {
                 // U9: M4 gilt auf BEIDEN Seiten. Ein Schreiben ausserhalb der Schranken ist
                 // die gefaehrlichere Richtung, und sie lief hier am Index vorbei.
                 self.index_pruefen(&z.ziel, lage);
-                let ziel = self.u.typ_von_ort(&z.ziel, &lage.lokal);
+                let ziel = self.u.typ_von_ort(&self.modul, &z.ziel, &lage.lokal);
                 self.buche(&ziel);
                 let quelle = self.ausdruck(&z.wert, lage);
                 self.rufe_im_ausdruck(&z.wert, lage);
@@ -193,7 +202,7 @@ impl<'a> Pruefer<'a> {
             }
             StmtArt::Publish(p) => {
                 self.index_pruefen(&p.ziel, lage);
-                let ziel = self.u.typ_von_ort(&p.ziel, &lage.lokal);
+                let ziel = self.u.typ_von_ort(&self.modul, &p.ziel, &lage.lokal);
                 self.buche(&ziel);
                 let quelle = self.ausdruck(&p.wert, lage);
                 self.rufe_im_ausdruck(&p.wert, lage);
@@ -254,7 +263,7 @@ impl<'a> Pruefer<'a> {
                 }
             }
             StmtArt::Narrow(n) => {
-                let vorher = self.u.typ_von_ort(&n.ort, &lage.lokal);
+                let vorher = self.u.typ_von_ort(&self.modul, &n.ort, &lage.lokal);
                 self.buche(&vorher);
                 let mut innen = lage.clone();
                 self.block(&n.sonst, &mut innen, ergebnis);
@@ -277,8 +286,8 @@ impl<'a> Pruefer<'a> {
                     );
                 }
                 // Der `else`-Zweig divergiert oder kehrt zurueck; danach gilt der Bereich.
-                let von = self.u.konst_wert(&n.bereich.von);
-                let bis = self.u.konst_wert(&n.bereich.bis);
+                let von = self.u.konst_wert(&self.modul, &n.bereich.von);
+                let bis = self.u.konst_wert(&self.modul, &n.bereich.bis);
                 if let (Some(lo), Some(hi), Some((schluessel, indizes))) =
                     (von, bis, schluessel_und_indizes(&n.ort))
                 {
@@ -334,12 +343,12 @@ impl<'a> Pruefer<'a> {
                 self.aufruf_toetet_fakten(lage);
             }
             StmtArt::AwaitLoad(a) => {
-                let t = self.u.typ_von_ort(&a.quelle, &lage.lokal);
+                let t = self.u.typ_von_ort(&self.modul, &a.quelle, &lage.lokal);
                 self.buche(&t);
                 lage.lokal.insert(a.name.text.clone(), t);
             }
             StmtArt::Exchange(e) => {
-                let t = self.u.typ_von_ort(&e.ort, &lage.lokal);
+                let t = self.u.typ_von_ort(&self.modul, &e.ort, &lage.lokal);
                 self.buche(&t);
                 lage.lokal.insert(e.name.text.clone(), t.clone());
                 if let XForm::Update { binder, rumpf } = &e.form {
@@ -433,7 +442,7 @@ impl<'a> Pruefer<'a> {
             ExprArt::Klammer(i) => self.ausdruck_roh(i, lage),
             ExprArt::Ort(o) => {
                 self.index_pruefen(o, lage);
-                let grund = self.u.typ_von_ort(o, &lage.lokal);
+                let grund = self.u.typ_von_ort(&self.modul, o, &lage.lokal);
                 self.mit_fakt(o, grund, lage)
             }
             // `old(x)` ist ein Geisterausdruck: er steht in `ensures`, nicht im Rumpf.
@@ -542,13 +551,8 @@ impl<'a> Pruefer<'a> {
     }
 
     fn ruf_roh(&mut self, r: &Ruf, lage: &Lage) -> Typ {
-        let name = r
-            .pfad
-            .teile
-            .last()
-            .map(|i| i.text.clone())
-            .unwrap_or_default();
-        let signatur = self.u.funktionen.get(&name).cloned();
+        // **Aufgeloest wird im Modul des Aufrufs**, nicht ueber den blanken Namen.
+        let signatur = self.u.funktion(&self.modul, &r.pfad).cloned();
         let mut argtypen = Vec::new();
         for a in &r.argumente {
             argtypen.push((self.ausdruck(a, lage), a.span));
@@ -589,10 +593,10 @@ impl<'a> Pruefer<'a> {
 
     fn vergleichsfakt(&mut self, op: BinOp, a: &Expr, b: &Expr, lage: &mut Lage) {
         // V1 -- Stelle gegen Konstante, in beiden Schreibrichtungen.
-        if let (ExprArt::Ort(o), Some(wert)) = (&a.art, self.u.konst_wert(b)) {
+        if let (ExprArt::Ort(o), Some(wert)) = (&a.art, self.u.konst_wert(&self.modul, b)) {
             self.bereichsfakt(o, op, wert, lage);
         }
-        if let (Some(wert), ExprArt::Ort(o)) = (self.u.konst_wert(a), &b.art) {
+        if let (Some(wert), ExprArt::Ort(o)) = (self.u.konst_wert(&self.modul, a), &b.art) {
             self.bereichsfakt(o, spiegle(op), wert, lage);
         }
         // V2 -- Stelle gegen Stelle, ausschliesslich als Vergleichsfakt.
@@ -880,7 +884,7 @@ impl<'a> Pruefer<'a> {
                     }
                 }
                 OrtSuffix::Feld(f) | OrtSuffix::Ueber(f) => {
-                    traeger = self.u.feld_von(&traeger, &f.text);
+                    traeger = self.u.feld_von(&self.modul, &traeger, &f.text);
                 }
             }
         }

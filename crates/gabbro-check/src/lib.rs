@@ -157,13 +157,25 @@ pub fn ungeprueft() -> Vec<Pass> {
 
 /// Laeuft ueber jedes Item, auch die in Modulen.
 pub(crate) fn fuer_jedes_item(baum: &Programm, f: &mut impl FnMut(&Item)) {
-    fn geh(items: &[Item], f: &mut impl FnMut(&Item)) {
+    fuer_jedes_item_im_modul(baum, &mut |i, _| f(i));
+}
+
+/// Wie oben, aber **mit dem Modulpfad**. Ohne ihn kann ein Pass einen Namen nicht
+/// aufloesen -- er sieht `nimm` und weiss nicht, ob `eins::nimm` oder `zwei::nimm` gemeint
+/// ist. Genau daran loeschte M1 bis zum 2026-08-14 Bereichspruefungen stillschweigend.
+pub(crate) fn fuer_jedes_item_im_modul(baum: &Programm, f: &mut impl FnMut(&Item, &str)) {
+    fn geh(items: &[Item], pfad: &str, f: &mut impl FnMut(&Item, &str)) {
         for i in items {
-            f(i);
+            f(i, pfad);
             if let ItemArt::Modul(m) = &i.art {
-                geh(&m.items, f);
+                let innen = if pfad.is_empty() {
+                    m.pfad.text()
+                } else {
+                    format!("{pfad}::{}", m.pfad.text())
+                };
+                geh(&m.items, &innen, f);
             }
         }
     }
-    geh(&baum.items, f);
+    geh(&baum.items, "", f);
 }
