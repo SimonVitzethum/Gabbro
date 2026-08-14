@@ -271,6 +271,13 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
 - [ ] **G1 — `atomicdecl` braucht `publishes`.** Die Regel kennt es nicht, das Beispiel darunter
       benutzt es, [`SPRACHE.md`](SPRACHE.md) §11.3 verlangt es, F6 schreibt es achtmal.
       Der Uebersetzer nimmt es an und meldet `P031` — bis die EBNF nachgezogen ist.
+- [ ] **Je Schablone mindestens eine Mutation, die NUR faellt, wenn die Einmal-Pflicht real
+      geprueft wird.** Heute: **0 von 16** — die meisten Schablonen sind entworfen, und was
+      kein Code ist, faengt keine Mutation. **Die Kopplung der zwei neuen Register ist die
+      Bedingung dafuer, dass das Schablonenregister mehr ist als eine Liste.**
+- [ ] **Die Annotationsemission braucht eigene Schablonen-Eintraege und eigene Mutationen.**
+      `32 von 32` misst heute den Pruefer; ueber den **Wunschform-Kanal** sagt es nichts —
+      und genau dort wird ein stimmig abgeschwaechter Erzeuger **von keinem Beweis** gefangen.
 - [ ] **Jede neue erzeugte Form braucht ihren Schablonen-Eintrag, BEVOR sie Grammatik wird.**
       `gabbro schablonen` fuehrt heute **16, davon 16 unbewiesen**. Die Liste ist die Ratsche
       ueber der Flaeche, in die der dritte Ausgang seine Beweislast verschiebt —

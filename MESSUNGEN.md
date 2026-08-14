@@ -1846,3 +1846,68 @@ Domaene.
 > das ist widerlegt. Ob sie **traegt**, ist damit nicht gezeigt, und **wer diese Zeile spaeter
 > als Beleg fuer das Zweite liest, erbt einen Zirkel:** ein junger Pruefer wuerde dann seine
 > eigene Unvollstaendigkeit als Bestaetigung ausgeben.
+
+
+---
+
+# Der Pruefer als Messgeraet fuer die Messungen, die vor ihm stehen sollten
+
+**2026-08-14.** Die [`HISTORIE.md`](HISTORIE.md) fuehrt den Bruch der Reihenfolgeregel. **Ein
+aufgezeichneter Bruch ist kein Freibrief dafuer, dass die Schere weiter aufgeht** — und je
+mehr Pruefer vor der 17er-Zaehlung entsteht, desto teurer wird deren unguenstiger Ausgang und
+desto groesser der Druck, ihn umzudeuten.
+
+**Der Ausweg ist nicht, das Werkzeug anzuhalten, sondern es der Warteschlange dienstbar zu
+machen.** Die K-Bedingung des Messprotokolls ist mit der vorhandenen Passinfrastruktur
+mechanisch pruefbar:
+
+> *„Je Pflicht ist das eine mechanische Frage: **sind alle Schreibstellen des Traegers
+> erzeugt?**"*
+
+`gabbro k-bedingung <datei>` beantwortet sie je Traeger — und **liefert nebenbei die
+`breaking`-Liste, also Posten L3 der Restliste**, genau wie das Protokoll es vorhersagt.
+Dieselbe Regel gibt es jetzt auch als Absage: **`D001`**, denn `SPRACHE.md` §10.2 sagt
+ohnehin *„handgeschriebene Mutation an einer `table` mit `ops` ist ein Uebersetzungsfehler"*.
+
+## Der erste Lauf, am eigenen Beispielkorpus
+
+```
+Traeger      ops    Handschrift  breaking  K
+Kappenraum   NEIN   9            0         FAELLT
+Objekte      NEIN   2            0         FAELLT
+-- 2 Traeger: 0 mal haelt K, 2 mal faellt sie.
+```
+
+**Null von zwei.** Beide Tabellen nennen kein `ops`, beide werden von Hand mutiert — **genau
+die Lage, in der `FRAGMENTE.md` F1 steht**, und genau der Grund, warum «B29» und «B13» dort
+toedlich aussahen. *Die Zahl ist damit kein Befund gegen die Sprache, sondern der erste
+mechanische Eingang in Messung 2* — die Spalte K/A/W je Pflicht faengt hier an.
+
+**Damit schliesst die Schere von der anderen Seite**, und der Eintrag in `HISTORIE.md`
+bekommt nachtraeglich einen Ertrag statt nur eines Preises.
+
+---
+
+## Zwei Praezisierungen an den neuen Registern
+
+**1. Die Fallrichtung der Schablonen-Ratsche steht jetzt da, und ein Test haelt sie:**
+
+> **Ein Eintrag verlaesst die Liste nur BEWIESEN oder MITSAMT SEINEM KONSTRUKT** — nicht
+> durch Umformulierung, nicht durch Zusammenfassen zweier Eintraege zu einem, nicht dadurch,
+> dass die Pflicht „eigentlich schon in einer anderen steckt". **Eine Flaeche, die man durch
+> Umschreiben verkleinert, ist nicht kleiner geworden.**
+
+**2. `32 von 32` hatte die falsche Bezugsgroesse.** Die ehrliche ist **Mutationen je
+Emissionsflaeche**:
+
+| Flaeche | Mutationen | |
+|---|---|---|
+| **Pruefer** (Absagen) | **32** | gebaut, mutierbar |
+| **Annotationsemission** — der Wunschform-Kanal | **0** | **nicht gebaut, also nicht beschaedigbar** |
+| **C-Emission** | **0** | nicht gebaut |
+| **Erzeuger-Schablonen** | **0** | 16 Eintraege, ueberwiegend entworfen — was kein Code ist, faengt keine Mutation |
+
+> **Eine Flaeche mit 0 Mutationen ist nicht gedeckt, sondern unbeschaedigbar.** `32 von 32`
+> misst die **Codehaelfte des Pruefers**; ueber Annotation und Emission sagt es nichts — und
+> `README.md` fuehrt die Annotationsemission ausdruecklich als die Stelle, an der ein
+> stimmig abgeschwaechter Erzeuger **von keinem Beweis** gefangen wird.
