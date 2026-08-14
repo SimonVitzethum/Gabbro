@@ -411,6 +411,40 @@ mod proben {
         assert!(r.laeuft_ueber);
     }
 
+    /// **U10.** Nur ein LITERAL nimmt die Breite der Gegenseite an. Eine deklarierte
+    /// Groesse mit Punktbereich tut es nicht -- sonst entscheidet der Zufall einer
+    /// Deklaration darueber, ob M1 rechnet oder schweigt.
+    ///
+    /// Diese Probe steht hier, weil die Mutationsprobe die Regel als **unbewacht** meldete:
+    /// der Beispielkorpus konnte „`u8 in 200..200` nimmt fremde Breite" nicht von
+    /// „nimmt sie nicht" unterscheiden.
+    #[test]
+    fn nur_ein_literal_hat_keine_eigene_breite() {
+        let literal = IntBereich::konstante(200);
+        let deklariert = IntBereich::genau(8, false, 200, 200);
+        let breit = IntBereich::voll(32, false);
+        assert!(literal.literal);
+        assert!(!deklariert.literal);
+        // Das Literal nimmt die Form der Gegenseite an -- `x + 1` muss rechnen.
+        assert!(addiere(&breit, &literal).bereich.is_some());
+        // Die deklarierte u8-Groesse nicht -- gemischte Breiten sind ehrlich unbekannt.
+        assert!(
+            addiere(&breit, &deklariert).bereich.is_none(),
+            "eine deklarierte Groesse darf keine fremde Breite uebernehmen"
+        );
+    }
+
+    /// **U8.** Beide Ecken des Linksschiebens, nicht nur die obere.
+    #[test]
+    fn schieben_prueft_auch_die_untere_ecke() {
+        let nur_unten = IntBereich::genau(32, true, -3000, 1);
+        let zwanzig = IntBereich::konstante(20);
+        assert!(
+            schiebe_links(&nur_unten, &zwanzig).laeuft_ueber,
+            "-3000 << 20 verlaesst i32 nach unten"
+        );
+    }
+
     #[test]
     fn teilen_durch_einen_bereich_mit_null_gibt_nichts() {
         let a = IntBereich::genau(32, false, 0, 100);

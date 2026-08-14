@@ -1,0 +1,12 @@
+-- erwartet: M104
+--
+-- Die UNTERE Ecke des Linksschiebens. `24-schieben-mit-vorzeichen.gab` faellt schon an der
+-- oberen -- deshalb ueberlebte eine Mutation, die nur die untere Ecke wegnimmt: der
+-- Giftkorpus konnte die halbe Regel nicht von der ganzen unterscheiden.
+--
+-- Gefunden von der Mutationsprobe (`./mutiere-pruefer.py`), nicht von einer Gegenpruefung.
+type Klein = i32 in -3000 .. 1;
+
+impl fn schieben(a : Klein) -> i32 effects { pure } {
+    return a << 20;
+}

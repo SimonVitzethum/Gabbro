@@ -1,0 +1,19 @@
+-- erwartet: M101
+--
+-- V3: der `match`-Binder traegt die Nutzlast SEINER Variante. `k` ist hier `u64` und passt
+-- damit nicht in den Rueckgabetyp -- nur wenn V3 lebt. Ohne V3 waere `k` unbekannt, und
+-- unbekannt heisst ungeprueft: die Regel koennte ausfallen, ohne dass etwas faellt.
+--
+-- Gefunden von der Mutationsprobe (`./mutiere-pruefer.py`).
+const G : u32 = 65535;
+type Z = u32 in 0 .. G;
+
+tagged type Nachricht = { Gross(u64), Klein(Z) };
+
+impl fn auspacken(m : Nachricht) -> Z effects { pure } {
+    match m {
+        Gross(k) => { return k; }
+        Klein(x) => { return x; }
+    }
+    return 0;
+}

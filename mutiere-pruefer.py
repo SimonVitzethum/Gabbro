@@ -1,0 +1,366 @@
+#!/usr/bin/env python3
+"""Mutationsprobe **auf den Pruefer selbst**.
+
+Die Testsuite prueft zwei Richtungen: eine erwartete Absage faellt, ein sauberer Fall geht
+durch. Beides sagt nichts ueber die Richtung, die am 2026-08-14 zwoelfmal offen stand:
+**eine Regel, die gar nicht mehr greift.** Sechzehn Dateien mit echten Ueberlaeufen kamen
+durch, und 48 gruene Proben merkten nichts davon.
+
+Diese Probe stellt genau die Frage. Sie **beschaedigt eine Regel des Pruefers** und sieht
+nach, ob irgendeine Probe faellt:
+
+    ueberlebt  ->  **BEFUND.** Diese Regel hat keinen Test. Ihr Ausfall waere unbemerkt
+                   geblieben -- also ist sie heute unbewacht.
+    gefangen   ->  die Regel steht unter Beobachtung.
+    ungueltig  ->  die Mutation uebersetzt nicht; sie sagt nichts und zaehlt nicht mit.
+
+`README.md` verlangt genau das fuer die Annotationsemission (*„Mutationsprobe auf der
+ANNOTATIONSEMISSION, nicht nur auf der Codeemission"*). Der Pruefer ist derselbe Fall: er
+emittiert Absagen, und ein Erzeuger, der stillschweigend schwaechere Absagen ausgibt,
+liefert ein gruenes Nichts.
+
+**Die Quelle wird nur waehrend eines Laufs veraendert und danach byteweise
+wiederhergestellt** -- gegen Hash geprueft. Bei jedem Abbruch ebenso.
+
+    ./mutiere-pruefer.py              alle Mutationen
+    ./mutiere-pruefer.py --schnell    nur die Sprechprobe des Geruests
+"""
+import hashlib
+import pathlib
+import subprocess
+import sys
+
+WURZEL = pathlib.Path(__file__).resolve().parent
+CHECK = WURZEL / "crates" / "gabbro-check" / "src"
+
+
+class Mutation:
+    def __init__(self, name, datei, alt, neu, regel):
+        self.name = name
+        self.pfad = CHECK / datei
+        self.alt = alt
+        self.neu = neu
+        self.regel = regel
+
+
+# Jede Mutation beschaedigt GENAU EINE Regel. Der Text daneben sagt, welche -- wer eine
+# Mutation ueberleben sieht, weiss damit sofort, was heute unbewacht ist.
+MUTATIONEN = [
+    # -- typen.rs: die Bereichsarithmetik ------------------------------------------------
+    Mutation(
+        "bereich-passt-immer",
+        "typen.rs",
+        "        self.min >= ziel.min && self.max <= ziel.max",
+        "        let _ = ziel; true",
+        "M101 -- ein Wert passt immer in sein Ziel",
+    ),
+    Mutation(
+        "breite-passt-immer",
+        "typen.rs",
+        "        let (lo, hi) = grenzen(self.breite, self.vorzeichen);\n"
+        "        self.min >= lo && self.max <= hi\n    }\n\n    pub fn enthaelt_null",
+        "        let (lo, hi) = grenzen(self.breite, self.vorzeichen);\n"
+        "        let _ = (lo, hi);\n        true\n    }\n\n    pub fn enthaelt_null",
+        "M104 -- kein Ueberlauf verlaesst je die Breite",
+    ),
+    Mutation(
+        "nenner-nie-null",
+        "typen.rs",
+        "    pub fn enthaelt_null(&self) -> bool {\n        self.min <= 0 && self.max >= 0",
+        "    pub fn enthaelt_null(&self) -> bool {\n        false && self.min <= 0 && self.max >= 0",
+        "M102 -- der Nenner schliesst die Null immer aus",
+    ),
+    Mutation(
+        "subtraktion-zu-eng",
+        "typen.rs",
+        "    ergebnis(breite, vz, a.min - b.max, a.max - b.min)",
+        "    ergebnis(breite, vz, a.min - b.min, a.max - b.min)",
+        "die Untergrenze der Subtraktion (Unterlauf wird unsichtbar)",
+    ),
+    Mutation(
+        "addition-zu-eng",
+        "typen.rs",
+        "    ergebnis(breite, vz, a.min + b.min, a.max + b.max)",
+        "    ergebnis(breite, vz, a.min + b.min, a.max + b.min)",
+        "die Obergrenze der Addition",
+    ),
+    Mutation(
+        "literal-immer",
+        "typen.rs",
+        "    if a.literal {\n        return Some((b.breite, b.vorzeichen));",
+        "    if a.literal || a.min == a.max {\n        return Some((b.breite, b.vorzeichen));",
+        "U10 -- ein Punktbereich nimmt wieder fremde Breite an",
+    ),
+    Mutation(
+        "schieben-ohne-vorzeichen",
+        "typen.rs",
+        "    let ecken = [\n        a.min << b.min,\n        a.min << b.max,\n"
+        "        a.max << b.min,\n        a.max << b.max,\n    ];",
+        "    let ecken = [a.max << b.min, a.max << b.max];",
+        "U8 -- schiebe_links vergisst den negativen Operanden",
+    ),
+    # -- m1.rs: die Faktenmenge ----------------------------------------------------------
+    Mutation(
+        "fakten-sterben-nie",
+        "m1.rs",
+        "    fn schreiben_toetet_fakten(&self, ziel: &Ort, lage: &mut Lage) {\n"
+        "        let Some(k) = schluessel_von(ziel) else {",
+        "    fn schreiben_toetet_fakten(&self, ziel: &Ort, lage: &mut Lage) {\n"
+        "        if true {\n            return;\n        }\n"
+        "        let Some(k) = schluessel_von(ziel) else {",
+        "SPRACHE.md 3.2 -- ein Fakt stirbt bei keinem Schreiben mehr",
+    ),
+    Mutation(
+        "unterblock-toetet-nicht",
+        "m1.rs",
+        "    fn geschriebenes_toeten(&mut self, b: &Block, aussen: &mut Lage) {\n"
+        "        let mut ziele = Vec::new();",
+        "    fn geschriebenes_toeten(&mut self, b: &Block, aussen: &mut Lage) {\n"
+        "        if true {\n            let _ = (b, aussen);\n            return;\n        }\n"
+        "        let mut ziele = Vec::new();",
+        "U1 -- ein Schreiben im Unterblock toetet den aeusseren Fakt nicht",
+    ),
+    Mutation(
+        "aufruf-toetet-nicht",
+        "m1.rs",
+        "    fn aufruf_toetet_fakten(&self, lage: &mut Lage) {\n        lage.fakten.retain",
+        "    fn aufruf_toetet_fakten(&self, lage: &mut Lage) {\n"
+        "        if true {\n            return;\n        }\n        lage.fakten.retain",
+        "U4/U5 -- ein Aufruf toetet keinen nichtlokalen Fakt",
+    ),
+    Mutation(
+        "index-ungeprueft",
+        "m1.rs",
+        "    fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {\n        let mut traeger",
+        "    fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {\n"
+        "        if true {\n            let _ = (o, lage);\n            return;\n        }\n"
+        "        let mut traeger",
+        "M103/M4 -- kein Index wird gegen seine Schranke geprueft",
+    ),
+    Mutation(
+        "v1-tot",
+        "m1.rs",
+        "        for f in &lage.fakten {\n            if let Fakt::Bereich {",
+        "        for f in &lage.fakten[..0] {\n            if let Fakt::Bereich {",
+        "V1 -- kein Fakt verengt je einen Bereich",
+    ),
+    Mutation(
+        "v2-tot",
+        "m1.rs",
+        "    fn beziehung(&self, a: &Ort, b: &Ort, lage: &Lage) -> Option<i128> {\n"
+        "        let (ka, kb) = (schluessel_von(a)?, schluessel_von(b)?);",
+        "    fn beziehung(&self, a: &Ort, b: &Ort, lage: &Lage) -> Option<i128> {\n"
+        "        if true {\n            let _ = (a, b, lage);\n            return None;\n        }\n"
+        "        let (ka, kb) = (schluessel_von(a)?, schluessel_von(b)?);",
+        "V2 -- eine Beziehung zweier Stellen traegt nie",
+    ),
+    Mutation(
+        "v3-tot",
+        "m1.rs",
+        "                        innen.lokal.insert(binder.text.clone(), nutzlast);",
+        "                        let _ = nutzlast;\n"
+        "                        innen.lokal.insert(binder.text.clone(), Typ::Unbekannt);",
+        "V3 -- der match-Binder traegt seine Nutzlast nicht mehr",
+    ),
+    Mutation(
+        "endet-immer-stimmt-immer",
+        "m1.rs",
+        "    fn endet_immer(&self, b: &Block) -> bool {\n        let Some(letzte) = b.anweisungen.last()",
+        "    fn endet_immer(&self, b: &Block) -> bool {\n"
+        "        if true {\n            let _ = b;\n            return true;\n        }\n"
+        "        let Some(letzte) = b.anweisungen.last()",
+        "U6/V1-Verneinung -- jeder Zweig gilt als verlassend",
+    ),
+    Mutation(
+        "index-nicht-im-schluessel",
+        "m1.rs",
+        "                    indizes.push(inner.basis.text.clone());",
+        "                    let _ = &inner.basis.text;",
+        "U3 -- der Fakt ueber a[i] ueberlebt das Schreiben von i",
+    ),
+    Mutation(
+        "let-verdeckt-nicht",
+        "m1.rs",
+        "                lage.fakten\n                    .retain(|f| !nennt_namen(f, &l.name.text));\n"
+        "                lage.lokal\n                    .insert(l.name.text.clone(), ziel.unwrap_or(wert));",
+        "                lage.lokal\n                    .insert(l.name.text.clone(), ziel.unwrap_or(wert));",
+        "U2 -- eine neue Bindung erbt den Fakt ihres Vorgaengers",
+    ),
+    Mutation(
+        "wrapping-ueberall",
+        "m1.rs",
+        "                if !ziel.laeuft_um() {\n"
+        "                    self.passt(&ergebnis_typ, &ziel, z.wert.span, \"die Zuweisung\");\n"
+        "                }",
+        "                if ziel.laeuft_um() {\n"
+        "                    self.passt(&ergebnis_typ, &ziel, z.wert.span, \"die Zuweisung\");\n"
+        "                }",
+        "jede Zuweisung gilt als `wrapping`",
+    ),
+    # -- namen.rs, schleifen.rs, wirkungen.rs --------------------------------------------
+    Mutation(
+        "doppelte-namen-egal",
+        "namen.rs",
+        "    if let Some(erste) = gesehen.get(name) {",
+        "    if false {\n        let erste = &span;",
+        "N001 -- zwei Deklarationen desselben Namens sind keine mehr",
+    ),
+    Mutation(
+        "bits-duerfen-ueberlappen",
+        "namen.rs",
+        "            if tief <= *h2 && *t2 <= hoch {",
+        "            if false && tief <= *h2 && *t2 <= hoch {",
+        "N003/D2 -- Registerfelder duerfen sich ueberschneiden",
+    ),
+    Mutation(
+        "marke-egal",
+        "schleifen.rs",
+        "    if marken.iter().any(|m| m == &ziel.text) {\n        return;\n    }",
+        "    if true || marken.iter().any(|m| m == &ziel.text) {\n        return;\n    }",
+        "S001 -- `leave`/`next` zielen auf beliebige Namen",
+    ),
+    Mutation(
+        "let-else-darf-durchfallen",
+        "schleifen.rs",
+        "            if !endet_immer(&l.sonst) {",
+        "            if false && !endet_immer(&l.sonst) {",
+        "U7/S002 -- der `else`-Zweig darf durchfallen",
+    ),
+    Mutation(
+        "effects-fail-open",
+        "wirkungen.rs",
+        "            if f.klasse != Some(FnKlasse::Spec) {\n"
+        "                absagen.schiebe(\n                    Absage::fehler(\n"
+        "                        \"E001\",",
+        "            if false && f.klasse != Some(FnKlasse::Spec) {\n"
+        "                absagen.schiebe(\n                    Absage::fehler(\n"
+        "                        \"E001\",",
+        "SPRACHE.md 7 -- `effects` ist wieder fail-open",
+    ),
+    Mutation(
+        "pure-neben-allem",
+        "wirkungen.rs",
+        "    if w.liste.len() > 1 {",
+        "    if false && w.liste.len() > 1 {",
+        "E002 -- `pure` darf neben jeder anderen Wirkung stehen",
+    ),
+]
+
+# Die Sprechprobe des Geruests selbst -- in beide Richtungen.
+NULLMUTATION = Mutation(
+    "NULLMUTATION",
+    "m1.rs",
+    "//! **Pass 3 -- M1 und die drei Flussregeln V1–V3.**",
+    "//! **Pass 3 -- M1 und die drei Flussregeln V1–V3.** (Nullmutation)",
+    "nichts -- diese MUSS ueberleben, sonst misst das Geruest die Datei statt die Regel",
+)
+
+
+def hash_von(p):
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+def proben_laufen():
+    """`cargo test` -- gibt (uebersetzt, alle_gruen)."""
+    r = subprocess.run(
+        ["cargo", "test", "--quiet"],
+        cwd=WURZEL,
+        capture_output=True,
+        text=True,
+    )
+    text = r.stdout + r.stderr
+    uebersetzt = "error[E" not in text and "could not compile" not in text
+    return uebersetzt, r.returncode == 0
+
+
+def fahre(m):
+    """Eine Mutation anwenden, pruefen, byteweise zuruecknehmen."""
+    urtext = m.pfad.read_text()
+    urhash = hashlib.sha256(urtext.encode()).hexdigest()
+    if m.alt not in urtext:
+        return "ANKER FEHLT", None
+    if urtext.count(m.alt) != 1:
+        return "ANKER MEHRDEUTIG", None
+    try:
+        m.pfad.write_text(urtext.replace(m.alt, m.neu, 1))
+        uebersetzt, gruen = proben_laufen()
+    finally:
+        m.pfad.write_text(urtext)
+        if hash_von(m.pfad) != urhash:
+            raise SystemExit(f"WIEDERHERSTELLUNG FEHLGESCHLAGEN: {m.pfad}")
+    if not uebersetzt:
+        return "ungueltig", None
+    return ("UEBERLEBT" if gruen else "gefangen"), gruen
+
+
+def sauberer_baum():
+    r = subprocess.run(
+        ["git", "status", "--porcelain", "crates/"],
+        cwd=WURZEL,
+        capture_output=True,
+        text=True,
+    )
+    return r.stdout.strip() == ""
+
+
+def main():
+    if not sauberer_baum():
+        print("crates/ ist nicht sauber -- erst committen. Diese Probe schreibt in Quellen.")
+        return 2
+
+    print("== Sprechprobe des Geruests ==")
+    zustand, _ = fahre(NULLMUTATION)
+    print(f"  Nullmutation: {zustand}")
+    if zustand != "UEBERLEBT":
+        print("  GESCHEITERT: eine Aenderung ohne Wirkung darf keine Probe brechen.")
+        return 1
+    gift = Mutation(
+        "SPRECHPROBE",
+        "typen.rs",
+        "        self.min >= ziel.min && self.max <= ziel.max",
+        "        let _ = ziel; true",
+        "",
+    )
+    zustand, _ = fahre(gift)
+    print(f"  Giftmutation: {zustand}")
+    if zustand != "gefangen":
+        print("  GESCHEITERT: das Geruest faengt nicht einmal eine tote Bereichspruefung.")
+        return 1
+    if "--schnell" in sys.argv:
+        return 0
+
+    print(f"\n== {len(MUTATIONEN)} Mutationen ==\n")
+    ueberlebt, gefangen, ungueltig = [], 0, []
+    for m in MUTATIONEN:
+        zustand, _ = fahre(m)
+        marke = {"UEBERLEBT": "!!", "gefangen": "  ", "ungueltig": "??"}.get(zustand, "??")
+        print(f"  {marke} {zustand:<10} {m.name:<28} {m.regel}")
+        if zustand == "UEBERLEBT":
+            ueberlebt.append(m)
+        elif zustand == "gefangen":
+            gefangen += 1
+        else:
+            ungueltig.append((m, zustand))
+
+    gueltig = gefangen + len(ueberlebt)
+    print(f"\n== {gefangen} von {gueltig} gueltigen Mutationen gefangen", end="")
+    if gueltig:
+        print(f" ({100 * gefangen // gueltig} %) ==")
+    else:
+        print(" ==")
+    if ungueltig:
+        print(f"   {len(ungueltig)} zaehlen nicht mit:")
+        for m, z in ungueltig:
+            print(f"     {m.name}: {z}")
+    if ueberlebt:
+        print("\n== UEBERLEBT -- jede dieser Regeln ist heute unbewacht ==")
+        for m in ueberlebt:
+            print(f"  {m.name:<28} {m.regel}")
+        print("\n  Eine ueberlebende Mutation heisst: die Regel koennte ausfallen, ohne dass")
+        print("  eine einzige Probe faellt. Das ist genau die Richtung, in der am 2026-08-14")
+        print("  zwoelf Loecher offenstanden.")
+    return 1 if ueberlebt else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
