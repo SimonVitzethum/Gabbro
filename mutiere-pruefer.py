@@ -34,13 +34,29 @@ WURZEL = pathlib.Path(__file__).resolve().parent
 CHECK = WURZEL / "crates" / "gabbro-check" / "src"
 
 
+# **Die Emissionsflaechen -- und die Bezugsgroesse, die 32/32 sonst verschweigt.**
+# `32 von 32` ist ein Verhaeltnis ueber DER FLAECHE, die es beschaedigen kann. Wo nichts
+# emittiert wird, kann nichts mutieren -- und eine Gesamtzahl liest sich dann wie Deckung.
+FLAECHEN = {
+    "pruefer": "Der Pruefer (Absagen). Gebaut, mutierbar.",
+    "annotation": "Die ANNOTATIONSEMISSION -- der Wunschform-Kanal. NICHT GEBAUT, also "
+                  "nicht mutierbar: ein Erzeuger, der stillschweigend abgeschwaechte "
+                  "Vertraege ausgibt, liefert einen gruenen Beweis ueber eine schwaechere "
+                  "Aussage, und keine Probe faengt ihn.",
+    "code": "Die C-Emission. NICHT GEBAUT, also nicht mutierbar.",
+    "schablone": "Die Erzeuger-Schablonen (16, keine bewiesen). Ueberwiegend ENTWORFEN -- "
+                 "was kein Code ist, kann keine Mutation fangen.",
+}
+
+
 class Mutation:
-    def __init__(self, name, datei, alt, neu, regel):
+    def __init__(self, name, datei, alt, neu, regel, flaeche="pruefer"):
         self.name = name
         self.pfad = CHECK / datei
         self.alt = alt
         self.neu = neu
         self.regel = regel
+        self.flaeche = flaeche
 
 
 # Jede Mutation beschaedigt GENAU EINE Regel. Der Text daneben sagt, welche -- wer eine
@@ -419,6 +435,15 @@ def main():
         print(f" ({100 * gefangen // gueltig} %) ==")
     else:
         print(" ==")
+    # **Die ehrliche Bezugsgroesse: Mutationen JE FLAECHE.** Eine Gesamtzahl ueber der
+    # einzigen gebauten Flaeche liest sich sonst wie Deckung ueber allen.
+    print("\n== Mutationen je Emissionsflaeche ==")
+    for name, satz in FLAECHEN.items():
+        n = sum(1 for m in MUTATIONEN if m.flaeche == name)
+        marke = "  " if n else "!!"
+        print(f"  {marke} {name:<12} {n:>3} Mutationen  -- {satz}")
+    print("\n  Eine Flaeche mit 0 Mutationen ist nicht gedeckt, sondern unbeschaedigbar.")
+    print("  `32 von 32` misst den PRUEFER; ueber Annotation und Code sagt es nichts.")
     if ungueltig:
         print(f"   {len(ungueltig)} zaehlen nicht mit:")
         for m, z in ungueltig:

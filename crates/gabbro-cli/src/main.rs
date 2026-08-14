@@ -20,6 +20,25 @@ fn main() -> std::process::ExitCode {
         "pruefe" => befehl_pruefe(rest),
         "fragmente" => fragmente::befehl(rest),
         "annahmen" => befehl_annahmen(rest),
+        "k-bedingung" => {
+            if rest.is_empty() {
+                eprintln!("gabbro k-bedingung: keine Datei genannt");
+                return std::process::ExitCode::from(2);
+            }
+            for datei in rest {
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} nicht lesbar");
+                    continue;
+                };
+                let (baum, _) = gabbro_syntax::lies(datei, &quelle);
+                println!("== {datei} ==");
+                print!(
+                    "{}",
+                    gabbro_check::kbedingung::zeige(&gabbro_check::kbedingung::erhebe(&baum))
+                );
+            }
+            std::process::ExitCode::SUCCESS
+        }
         "schablonen" => {
             print!("{}", gabbro_check::schablonen::zeige());
             std::process::ExitCode::SUCCESS
@@ -49,6 +68,7 @@ fn hilfe() {
   gabbro annahmen   <datei.gab>…    das Annahmenmanifest: bewiesen unter A1…An
   gabbro paesse                     die Passliste -- gebaut UND offen
   gabbro schablonen                 die Erzeuger-Schablonen: die dritte Zaehlspalte
+  gabbro k-bedingung <datei.gab>…   je Traeger: sind ALLE Schreibstellen erzeugt? (Messung 2)
 
 Rueckgabe: 0 wenn kein Fehler, 1 bei Fehlern, 2 bei falschem Aufruf."
     );

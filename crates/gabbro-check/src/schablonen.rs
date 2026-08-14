@@ -49,6 +49,35 @@ pub struct Schablone {
     pub fundstelle: &'static str,
 }
 
+/// **Die Fallrichtung der Ratsche** — ausgesprochen wie bei der Axiomschicht, sonst ist die
+/// Liste eine Sammlung und keine Buchung:
+///
+/// > **Ein Eintrag verlaesst die Liste nur auf zwei Wegen: BEWIESEN, oder MITSAMT SEINEM
+/// > KONSTRUKT.** Nicht durch Umformulierung, nicht durch Zusammenfassen zweier Eintraege zu
+/// > einem, nicht dadurch, dass die Pflicht „eigentlich schon in einer anderen steckt".
+///
+/// Dieselbe Bewegung, gegen die die Kennzahl fuenf benannte Wege fuehrt: **eine Flaeche, die
+/// man durch Umschreiben verkleinert, ist nicht kleiner geworden.** `RATSCHE` unten haelt das
+/// mechanisch — wer einen Namen entfernt, bricht einen Test.
+pub const RATSCHE: &[&str] = &[
+    "consuming.ordnung",
+    "consuming.leermenge",
+    "table.ops.erhaltung",
+    "table.induktion",
+    "transition.transset",
+    "exchange.rmw",
+    "accumulates.monoid",
+    "walk.mappings",
+    "format.roundtrip",
+    "entry.abdruck",
+    "device.konstruktor",
+    "table.indexschranke",
+    "ops.suche",
+    "state.reset",
+    "verbund.konstruktor",
+    "gruppe.ops",
+];
+
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
 /// nicht je Aufrufstelle. Ein neues Konstrukt mit erzeugter Form **gehoert hierher, bevor es
 /// in die Grammatik kommt**.
@@ -220,7 +249,9 @@ pub fn zeige() -> String {
     ));
     out.push_str(
         "-- Der eine Isabelle-Posten ist damit keine Zahl 1, sondern diese Liste.\n\
-         -- Waechst sie, waechst die Vertrauensbasis -- auch wenn die Kennzahl glaenzt.\n",
+         -- Waechst sie, waechst die Vertrauensbasis -- auch wenn die Kennzahl glaenzt.\n\
+         -- RATSCHE: ein Eintrag geht nur BEWIESEN oder MITSAMT SEINEM KONSTRUKT.\n\
+         --          Nicht durch Umformulierung, nicht durch Zusammenfassen.\n",
     );
     out
 }

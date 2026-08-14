@@ -17,6 +17,7 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::Absagen;
 
+pub mod kbedingung;
 mod kosten;
 mod m1;
 mod namen;
@@ -70,9 +71,10 @@ pub fn passliste() -> Vec<Pass> {
             name: "D1/D2",
             quelle: "SPRACHE.md §3: undurchsichtige Neutypen, vollstaendige Layouts, \
                      erschoepfende Aufzaehlung",
-            zustand: Zustand::Offen(
-                "erschoepfendes `match` ueber `tagged` braucht den Typ des Gegenstands \
-                 und damit M1; heute ungeprueft",
+            zustand: Zustand::Teilgebaut(
+                "die K-Bedingung ist gebaut (`D001`: keine Handmutation an einer `table` \
+                 mit `ops`) -- **erschoepfendes `match` ueber `tagged` nicht**, und \
+                 undurchsichtige Neutypen ohne Umwandlung ebenfalls nicht",
             ),
         },
         Pass {
@@ -144,6 +146,7 @@ pub struct Bericht {
 /// Fahrt aller **gebauten** Paesse ueber einen Baum, in der Reihenfolge der Liste.
 pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     namen::pass(baum, absagen);
+    kbedingung::pass(baum, absagen);
     let m1 = m1::pass(baum, absagen);
     schleifen::pass(baum, absagen);
     wirkungen::pass(baum, absagen);

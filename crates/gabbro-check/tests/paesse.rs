@@ -322,6 +322,18 @@ fn jede_schablone_nennt_ihre_pflicht() {
         assert!(!s.fundstelle.is_empty(), "`{}` ohne Fundstelle", s.name);
         assert!(!s.konstrukt.is_empty(), "`{}` ohne Konstrukt", s.name);
     }
+    // **Die Fallrichtung**: ein Eintrag geht nur bewiesen oder mitsamt seinem Konstrukt.
+    // Wer einen Namen still entfernt oder umformuliert, bricht hier.
+    use gabbro_check::schablonen::RATSCHE;
+    for name in RATSCHE {
+        assert!(
+            SCHABLONEN.iter().any(|s| s.name == *name),
+            "`{name}` ist aus der Schablonenliste verschwunden. Ein Eintrag geht nur \
+             BEWIESEN oder MITSAMT SEINEM KONSTRUKT -- nicht durch Umformulierung. \
+             Wurde das Konstrukt entfernt, gehoert der Name aus RATSCHE heraus, und das \
+             ist eine sichtbare Aenderung statt einer stillen."
+        );
+    }
     // Solange keine bewiesen ist, muss die Zahl das sagen -- eine Liste, die aussieht wie
     // Deckung, waere schlimmer als keine.
     assert_eq!(
