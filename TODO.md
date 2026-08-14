@@ -88,8 +88,8 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       **Jede Stufe verbraucht das Ergebnis der vorigen, wie eine `Duty`.**
 - [x] **P3 — M1 + V1–V3: GEFAHREN 2026-08-14** ([`MESSUNGEN.md`](MESSUNGEN.md)). Bereichstypen,
       Konstantenauswertung, die drei Flussregeln, dazu `beispiele/` (8 saubere Dateien,
-      871 Zeilen) und `beispiele/gift/` (15 Dateien, jede mit ihrem Code).
-      Der Pass faellt an Befund «B29** (`FRAGMENTE.md:248`, Rust-Original
+      871 Zeilen) und `beispiele/gift/` (**25 Dateien**, jede mit ihrem Code).
+      Der Pass faellt an Befund «B29» (`FRAGMENTE.md:248`, Rust-Original
       `space.rs:1067`) — *ein bestandener Regressionstest auf den Fall, der ihn motiviert
       hat, nicht mehr* (berichtigt, s. [`MESSUNGEN.md`](MESSUNGEN.md)). Deckung ueber dem
       Beispielkorpus **91 %** — und **Deckung heisst „hat einen Typ", nicht „wurde
