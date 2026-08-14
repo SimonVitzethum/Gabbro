@@ -519,7 +519,7 @@ regdecl = "reg" ident ":" intty "@" expr
           [ "requires" pred ] ;
 transition = "transition" ident "{" transset "}"
              [ "requires" pred ] [ "effects" "{" efflist "}" ] ;
-transset   = placeshift { "," placeshift } ;      (* MEHRERE Orte in EINEM Zug *)
+transset   = placeshift { "," placeshift } ;      (* MEHRERE Orte in EINEM Zug -- s. Grenze *)
 placeshift = place ":" expr "->" expr ;
 ```
 

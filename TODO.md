@@ -1,5 +1,19 @@
 # Gabbro — offene Punkte
 
+## Die Reihenfolge, billig zuerst — drei Dokumente laufen auf EINE fehlende Zahl zu
+
+1. **Die fuenf Scratchpad-Klassen ins Repo.** Sie entsperren das 19→0-Tor, das sonst
+   unentscheidbar bleibt.
+2. **Die 17 gemessenen Logik-Pflichten aufteilen** in *durch Konstruktion · Abstiegsaussage
+   (erzeugtes Schema greift) · Wertaussage (greift nicht)*. **Ein halber Tag Papier, und die
+   groesste Hebelwirkung im Ordner:** die Lueckenrechnung endet bei „k unbekannt", die harten
+   Zusagen enden bei derselben Aufteilung, und die Decke der Schrittzusagen haengt daran.
+   **Drei Dokumente, eine Zahl.**
+3. **Die vier fehlenden Bereichsfragmente** (Scheduler, MMU, Lader, Parser) — und sie sind
+   **zugleich das Messgeraet fuer die Konvergenzwette**: neue Konstrukte je Fragment muessen fallen.
+
+**Keine Prueferzeile vor dem Ergebnis von 2.**
+
 ## Was fehlt, um Caprock VOLLSTAENDIG in Gabbro zu schreiben (Stand 2026-08-14)
 
 **Bekannte Blocker: keiner mehr.** Die zwei gemessenen „passt nicht" aus `FRAGMENTE.md` sind zu —

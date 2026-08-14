@@ -754,6 +754,27 @@ nicht die Existenz des Pruefers** — eine absichtlich verschobene Auswertungsst
   Tabelle, und sie ist der **einzige Posten des ganzen Ordners ohne Instrument**.
 * **`restrict` und `volatile` bleiben Vertrauen**, benannt im Manifest.
 
+### Das Instrument, das es doch gibt — Zeugenpaare
+
+**„Der einzige Posten ohne Instrument" war falsch.** Das Werkzeug liegt im eigenen Kasten:
+**jeder Tabelleneintrag bekommt ein ausfuehrbares Zeugenpaar** — ein Gabbro-Fragment, das erwartete
+C, das erwartete Verhalten —, durch den **echten** C-Uebersetzer gefahren und verglichen. Damit ist
+die Tabelle **pruefbar statt handvertraut**, und ein Eintrag ohne Zeugenpaar ist unvollstaendig.
+
+### `restrict` wird eine bepreiste Option, kein Standardexport
+
+`restrict` exportiert eine Gabbro-Zusage in Cs UB-Regeln (Zeile 11 des Inventars). **Deshalb wird
+es standardmaessig NICHT emittiert** — nur dort, wo der Differenz-Benchmark es verlangt. Die
+Kostenwahrheit misst ohnehin gegen Handschrift; **der UB-Transfer wird also genau da bezahlt, wo er
+messbar etwas kauft**, und nirgends sonst.
+
+### Der Gleichtaktfehler des Deckungszeugnisses, benannt
+
+Zwei Programme mit **eigenen** Formentabellen sind N-Versionen — **aber beide Tabellen stammen aus
+demselben Spezifikationstext.** Ein Fehler *im Text* steht in beiden. **Der Gleichtaktfehler bleibt
+und ist damit ein benannter Posten**, kein geschlossener; die Zeugenpaare oben sind das einzige,
+was gegen ihn hilft, weil sie gegen den **Uebersetzer** messen statt gegen eine zweite Lesart.
+
 - [ ] **Der naechste Schritt ist die Formentabelle selbst** — 40–60 Eintraege, je *Gabbro-Operation
       → C-Form → Bedingung*. Sie ist klein genug, um sie zu schreiben, und gross genug, um sie zu
       **zaehlen und zu ratschen**. **Erst wenn sie steht, ist Posten 2 von „unformulierbar" auf
@@ -805,6 +826,22 @@ der Praxis Code, den man **nicht mehr gern anfasst**.
 
 **Das ist die eine Achse, auf der Gabbro seL4 nicht nachbaut, sondern schlaegt** — und sie steht
 und faellt mit derselben ungezaehlten Zahl: **wie gross ist der Logik-Anteil wirklich?**
+
+#### Die stille Vorbedingung — und sie ist messbar
+
+**„Klempnerei kann nicht brechen" gilt nur, solange die Aenderung INNERHALB der Konstrukte
+bleibt.** Eine Aenderung, die ein **neues Konstrukt** braucht, bricht keine Beweise — **sie bricht
+die Sprache.** Und dann ersetzt **Sprachunterhalt** den Beweisunterhalt, nur mit einem anderen
+Namen.
+
+**Die eigene Geschichte zeigt, dass der Preis real ist:** elf Klempnerei-Klassen wurden zwoelf;
+`keeping` wurde `mirrors`; `transition` wurde `transset`; `forever` bekam `leaves` — alles binnen
+Tagen.
+
+> **Die Wette lautet, dass der Wortschatz konvergiert, und sie ist MESSBAR:** *neue Konstrukte je
+> ausgeschriebenem Fragment muessen fallen.* **Die vier fehlenden Bereichsfragmente — Scheduler,
+> MMU, Lader, Parser — sind genau das Messgeraet dafuer**, und deshalb sind sie nicht nur eine
+> Abdeckungsluecke, sondern die Probe auf das staerkste Produktargument des Ordners.
 
 ---
 
