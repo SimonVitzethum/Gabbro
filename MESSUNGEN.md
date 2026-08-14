@@ -1453,3 +1453,58 @@ Vierzehn der sechzehn Gegenbeispiele meldeten **100 %**. Die Zahl steht im Beric
 dass *„nichts gefunden" und „nichts angesehen" nicht gleich aussehen* — **genau dort sahen
 sie gleich aus.** Sie bleibt stehen, weil sie etwas misst; **aber sie misst weniger, als ihr
 Name verspricht**, und das steht ab jetzt daneben.
+
+
+---
+
+# Mutationsprobe auf den Pruefer — **24 von 24**
+
+**2026-08-14.** Die Gegenpruefung hatte einen Satz hinterlassen, der die eigentliche Luecke
+benannte: *„Es gibt keinen Test, dessen Fehlschlag ‚ein echter Ueberlauf wurde uebersehen'
+bedeutet."* 48 Proben in beide Richtungen waren gruen, waehrend sechzehn Ueberlaeufe
+durchkamen — weil eine Probe **die Anwesenheit einer erwarteten Absage** prueft und nicht,
+**ob eine Regel ueberhaupt noch greift**.
+
+`./mutiere-pruefer.py` stellt genau diese Frage: es beschaedigt **je eine Regel** des
+Pruefers, faehrt die Testsuite und sieht nach, ob etwas faellt.
+
+| | |
+|---|---|
+| **ueberlebt** | **Befund.** Diese Regel koennte ausfallen, ohne dass eine Probe faellt — sie ist heute unbewacht |
+| **gefangen** | die Regel steht unter Beobachtung |
+| **ungueltig** | die Mutation uebersetzt nicht; sie zaehlt nicht mit |
+
+Die Quelle wird nur waehrend eines Laufs veraendert und danach **byteweise gegen Hash
+wiederhergestellt**, auch bei Abbruch. Das Geruest hat seine eigene Sprechprobe: eine
+**Nullmutation muss ueberleben** (sonst misst es die Datei statt die Regel) und eine tote
+Bereichspruefung **muss fallen**.
+
+## Erster Lauf: 21 von 24 — und die drei, die durchkamen, sind die interessanten
+
+| Mutation | Regel |
+|---|---|
+| `literal-immer` | **U10** — ein Punktbereich nimmt wieder fremde Breite an |
+| `schieben-ohne-vorzeichen` | **U8** — `schiebe_links` vergisst den negativen Operanden |
+| `v3-tot` | **V3** — der `match`-Binder traegt seine Nutzlast nicht mehr |
+
+**Alle drei waren Regeln, die am selben Tag repariert worden waren** — und keine hatte
+einen Test, der sie festhaelt. Die Reparaturen standen im Quelltext, die Zusicherung nirgends.
+Besonders deutlich bei U8: `beispiele/gift/24-schieben-mit-vorzeichen.gab` faellt schon an der
+**oberen** Ecke, also konnte der Korpus „halbe Regel" nicht von „ganzer Regel" unterscheiden.
+
+Drei neue Proben (`gift/26`, `gift/27`, zwei Einheitstests in `typen.rs`) schliessen das —
+und die letzte davon brauchte zwei Anlaeufe: die Regel steht **symmetrisch** im Quelltext,
+und ein Test, der nur eine Seite anfasst, laesst eine Mutation der anderen ueberleben.
+
+**Zweiter Lauf: 24 von 24.**
+
+## Was die Zahl NICHT sagt
+
+**Die 24 Mutationen sind von Hand geschrieben**, je eine je Regel. Ein Erzeuger, der alle
+Operatoren und Bedingungen des Pruefers systematisch verdreht, faende mehr. **100 % ist eine
+Aussage ueber diese 24, nicht ueber den Pruefer** — genau wie eine Sprechprobe ueber drei
+Fundstellen keinen Klassierer ueber 513 abnimmt. *Dieselbe Lehre, zweimal am selben Tag.*
+
+Und die Probe deckt den **Pruefer**, nicht die **Emission**. Der Posten, den `README.md`
+fuehrt — *Mutationsprobe auf der Annotationsemission* — bleibt offen, weil noch nichts
+emittiert wird.

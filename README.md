@@ -81,9 +81,13 @@ ausdrücklich Absicht.
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
 
-Dazu `fallen-klassifikation.tsv` (100 bezahlte Caprock-Fallen, einzeln klassifiziert) und drei
-Waechter: `pruefe-syntax.sh` (verbotene Formen, Prosa-Drift, Geschlossenheit, Erreichbarkeit,
-Terminaldeckung — mit Sprechproben), `pruefe-wortschatz.py`, `zaehle-fallen.sh`.
+Dazu `fallen-klassifikation.tsv` (100 bezahlte Caprock-Fallen, einzeln klassifiziert) und
+**fünf Wächter, jeder mit Sprechprobe in beide Richtungen**: `pruefe-syntax.sh` (verbotene
+Formen, Prosa-Drift, Geschlossenheit, Erreichbarkeit, Terminaldeckung) · `pruefe-wortschatz.py`
+· **`mutiere-pruefer.py`** (beschädigt je eine Regel des Prüfers und sieht nach, ob eine Probe
+fällt — **24 von 24**) · **`pruefe-todo.py`** (hält die Aufgabenliste gegen sich selbst) ·
+`zaehle-fallen.sh`. Dazu `zaehle-narrow.py` — **kein Wächter, ein Finder von Kandidaten**, und
+er sagt das selbst.
 
 **Und seit dem 2026-08-14 `crates/` — der Übersetzer selbst**, drei Kisten in sicherem Rust:
 `gabbro-syntax` (Lexik, Wortschatz, Grammatik), `gabbro-check` (die neun Prüfpässe in fester
