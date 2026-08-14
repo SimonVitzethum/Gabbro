@@ -6,6 +6,10 @@ Uebersetzer. Ein autonomer Lauf ohne benannte Ziellinie ist dasselbe Muster mit 
 
 **Hier steht die Ziellinie, vorab, und sie ist mechanisch pruefbar, wo das geht.**
 
+> **Der Lauf bricht nicht ab.** Was frueher Abbruch war, ist seit dem 2026-08-14 **Eskalation** —
+> s. Abschnitt C. Abgebrochen wird nur bei **bewiesener** Unmoeglichkeit, und wie die aussaehe,
+> steht dort ebenfalls, damit der Grund nicht leer ist.
+
 ---
 
 ## Das Ziel, gegen das geprueft wird
@@ -48,21 +52,43 @@ Daten) · Pruefgeruest · `programs/` (Userspace).
 
 ---
 
-## C — Wann der autonome Lauf ENDET, auch ohne Fertigstellung
+## C — ESKALATION statt Abbruch
 
-**Drei Abbruchgruende, und jeder verlangt einen Bericht statt einer weiteren Schicht:**
+**Entschieden am 2026-08-14: der Lauf bricht nicht ab.** Abgebrochen wird **nur bei bewiesener
+Unmoeglichkeit** — und ein Befund „geht nicht" ist keine. Er ist eine **Entwurfsaufgabe**, genau wie
+in [`MINIMALSPEZIFIKATION.md`](MINIMALSPEZIFIKATION.md): nicht *„geht das?"*, sondern *„was muss
+minimal dastehen, damit es geht?"*
 
-1. **Eine Klempnerei-Pflicht bleibt nachweislich haengen und kein Konstrukt nimmt sie ab.**
-   Das ist die Abbruchbedingung aus `KRITERIUM.md` — sie beendet den Lauf, nicht nur den Punkt.
-2. **Zwei aufeinanderfolgende Runden erzeugen mehr Entwurfstext als Messung.**
-   Gemessen an Zeilen: neue Zeilen in `SYNTAX.md`/`SPRACHE.md`/`PLAN.md` gegen neue Zeilen in
-   Ergebnisdateien (`P0-*`, `NARROW-GEMESSEN`, `logik-klempnerei`). **Ueberwiegt der Entwurf
-   zweimal hintereinander, ist der Korrekturkreislauf wieder schneller als der Messkreislauf** —
-   genau der Befund, den `HISTORIE.md` als Trajektorie fuehrt.
-3. **Ein Punkt aus A ist dreimal angefasst und nicht geschlossen worden.** Dann ist er kein
-   offener Punkt, sondern ein verdeckter Blocker, und gehoert als solcher benannt.
+| Lage | **frueher: Abbruch** | **jetzt: Eskalation** |
+|---|---|---|
+| Eine **Klempnerei-Pflicht bleibt haengen** und kein Konstrukt nimmt sie ab | Lauf endet | **das Konstrukt wird entworfen**, das sie abnimmt — mit minimaler Angabe und C-Absenkung. Gelingt das nicht, wird die **Unmoeglichkeit hingeschrieben**, nicht die Arbeit beendet |
+| Ein Punkt aus **A** ist dreimal angefasst und nicht geschlossen | Lauf endet | er wird **benannter Blocker** und bekommt eine eigene, gezielte Runde statt weiterer Nebenbei-Versuche |
+| Zwei Runden erzeugen **mehr Entwurf als Messung** | Lauf endet | **die Zahl wird berichtet, nicht befolgt** — s. unten |
 
----
+### Was von Abbruchgrund 2 bleibt: die Zahl, ohne die Wirkung
+
+Der Zaehler wird **weitergefuehrt und in jeder Runde genannt**: neue Zeilen in `SYNTAX.md`,
+`SPRACHE.md`, `PLAN.md` gegen neue Zeilen in Ergebnisdateien. **Er stoppt nichts mehr, aber er bleibt
+sichtbar** — ein Signal, das man abschaltet, ist beim naechsten Mal nicht da, und genau diese Klasse
+fuehrt `HISTORIE.md` als Falle 30 („ein Waechter, der nach seiner Behebung weiterschreit, wird
+abgeschaltet"). Hier ist die Loesung, ihn vom Urteil zu **entkoppeln**, statt ihn zu entfernen.
+
+### Was „bewiesen unmoeglich" heissen wuerde
+
+Damit der einzige verbliebene Abbruchgrund nicht leer ist, steht hier, wie er aussaehe. **Zwei
+Formen, und nur diese:**
+
+1. **Eine geforderte Eigenschaft ist nicht entscheidbar** und auch nicht durch eine benannte
+   Annahme ersetzbar. *Beispiel der Form:* allgemeine Lebendigkeit („dieser Thread laeuft
+   irgendwann") ueber unbeschraenkten Abläufen — kein Typsystem entscheidet das, und ein
+   `progress assume` ersetzt es nur, wenn sich ein Falsifikator bauen laesst.
+2. **Zwei geforderte Eigenschaften widersprechen einander.** *Der heute schon bekannte Kandidat:*
+   **Generizitaet verlangt Monomorphisierung, und die ist die erste nicht-flache Absenkung** —
+   sie greift M-Gold-2 („syntaxgesteuert, nicht optimierend") an. Beides zugleich zu wollen ist
+   moeglicherweise widerspruechlich; **das ist zu zeigen, nicht zu vermuten.**
+
+**Beides muss hingeschrieben werden, mit dem Argument.** „Ich sehe keinen Weg" ist kein Beweis —
+das waere ein Nullbefund ohne Groesse, und die Falle steht im Register.
 
 ## D — Was NICHT als Fertigstellung zaehlt
 
