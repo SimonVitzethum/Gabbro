@@ -73,7 +73,7 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
   Struktur   module pub use type opaque linear ghost tagged const static fn
              spec impl raw divergent prim section arch when
   Vertraege  requires ensures maintains breaking effects costs where in
-             exhaustive old narrow to
+             exhaustive old narrow to induction
   Wirkungen  reads writes locks masks allocs consumes publishes diverges pure
   Ablauf     if else match traverse over by touches retry forever until
              bounded progress on_exceeded per_pass return let mut
@@ -270,6 +270,13 @@ erlaubt und sonst nicht.
 > benutzerdefinierten Quantorendomaenen, keine Rekursion in `spec fn`, keine handgeschriebenen
 > Lemmata**. Wer mehr braucht, braucht Verus oder F\*.
 >
+> **Die eine Ausnahme, und sie ist KEIN Lemma: `by induction over <domain>`.** Sie **nennt** das
+> Induktionsschema, das der Uebersetzer aus der `table`-Deklaration **erzeugt** hat — kein
+> Beweisschritt, kein Beweiskoerper, keine rekursive `spec fn`. **Der Grund, warum sie genannt und
+> nicht geraten wird, ist Vorhersagbarkeit:** ein Uebersetzer, der das Schema waehlt, macht
+> „uebersetzt es" von Loeserglueck abhaengig — und M1 bis M4 sind Typen, keine Loeser.
+> Ganz in [`INDUKTION.md`](INDUKTION.md).
+>
 > **Der Preis ist unbeziffert und vermutlich der groesste des ganzen Entwurfs:** es gibt keinen
 > Notausgang. Faellt eine Kernel-Eigenschaft aus den sieben Domaenen heraus, ist sie **nicht
 > formulierbar** — nicht „teuer", sondern **gar nicht**.
@@ -286,8 +293,11 @@ fndecl   = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" ]
            [ "maintains" identlist ]
            [ "effects"   "{" efflist "}" ]
            [ "costs"     "<=" expr "ops" ]
+           [ "by"        inductlist ]
            [ "section" string ] [ "arch" ident ] [ "when" constexpr ]
            ( block | "=" pred ";" | ";" ) ;      (* "=" pred: nur fuer spec fn *)
+inductlist = induct { "," induct } ;
+induct     = "induction" "over" domain ;      (* nennt das SCHEMA -- kein Lemma, kein Beweisschritt *)
 efflist  = eff { "," eff } ;
 eff      = "reads" place | "writes" place | "locks" place | "masks" ident
          | "allocs" ident | "consumes" place | "publishes" place | "diverges"
@@ -302,6 +312,13 @@ eff      = "reads" place | "writes" place | "locks" place | "masks" ident
 ```gabbro
 spec fn cdt_wellformed(c: CapSpace) -> bool =
     forall s in slots of c: c.parent_chain(s) reaches Root via parent;
+
+impl fn revoke(c: ptr<normal, rw> CapSpace, s: SlotIdx) -> Result
+    ensures   !exists k in descendants of s: k.used
+    maintains cdt_wellformed
+    effects   { writes c.slots, locks CAPS }
+    by        induction over descendants of s
+{ … }
 
 impl fn delete_leaf(c: ptr<normal, rw> CapSpace, s: SlotIdx) -> Result
     requires  Held(CAPS), c.slots[s].used, !exists k in slots of c: k.parent == s
@@ -405,7 +422,7 @@ slotdecl   = "slot" "{" { ident ":" slottype "," } "}" ;
 slottype   = typeexpr | "index" "into" ident | "option" "index" "into" ident
            | intty "wrapping" ;
 invariant  = "invariant" ident "cost" costexpr "runs" ( "online" | "offline" )
-             ":" pred ";" ;
+             [ "by" inductlist ] ":" pred ";" ;
 costexpr   = "O" "(" expr ")" ;
 
 format     = "format" ident [ "@version" int ] [ "endian" ( "little" | "big" ) ]
@@ -600,6 +617,10 @@ benutzerdefinierte Quantorendomaenen · Rekursion in `spec fn` · handgeschriebe
 
 ### Offen, und nach Schwere
 
+- [ ] **Wieviele der 17 gemessenen Logik-Pflichten braeuchten `by induction over`?** Wieviele
+      kaemen ohne aus, wieviele braeuchten rekursive `spec fn` oder gar Lemmata?
+      **Ein einziger Fall in der letzten Spalte setzt die Decke wieder tiefer** — und es ist
+      dieselbe Messung, die als Falsifikator der L3-Entscheidung ansteht.
 - [ ] **19 haengende Klempnerei-Pflichten in 11 Klassen** ([`LOGIK-KLEMPNEREI.md`](LOGIK-KLEMPNEREI.md)).
       **Das ist der Hauptposten.** Nach der Entscheidung vom 2026-08-14 ist fuer jede das Konstrukt
       zu entwerfen, das sie abnimmt.

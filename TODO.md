@@ -57,6 +57,20 @@
 
 ---
 
+## Induktion — eingetragen, und die eine Zahl fehlt
+
+- [x] **`by induction over <domain>` steht in der Grammatik** (2026-08-14): **ein** neues Wort
+      (`over` wiederverwendet), zwei Produktionen, an `fndecl` und an `invariant`. Kein Lemma,
+      kein Beweisschritt, keine rekursive `spec fn` — das Schema wird **genannt**, nicht geraten.
+- [ ] **Die Zahl, die alles entscheidet:** wieviele der **17 gemessenen Logik-Pflichten** brauchen
+      `by induction over`, wieviele kommen ohne aus, **wieviele brauchen rekursive `spec fn` oder
+      Lemmata**? Ein einziger Fall in der letzten Spalte setzt die Decke tiefer. **Dieselbe Messung
+      ist der Falsifikator der L3-Entscheidung, die auf n = 1 ruht.**
+- [ ] **Das erzeugte Schema muss einmal nach Isabelle** — es ist eine Schablone im Sinne von L3 und
+      damit der Posten, der die Vertrauensbasis **verkleinert**.
+- [ ] **Wohlfundiertheit hängt an einer Invariante, die man beweisen will.** Die Deklaration muss
+      nennen, welche — und das Mass (Zahl der Abkömmlinge) ist Voraussetzung, nicht Ergebnis.
+
 ## Aus dem Kriterium ([`KRITERIUM.md`](KRITERIUM.md))
 
 - [ ] **Beide Messungen nach Logik/Klempnerei aufschlüsseln** — `delete_leaf` (3,6–6 : 1) und

@@ -104,6 +104,11 @@ haelt**, und die will man gerade beweisen. Die Standardaufloesung ist eine Induk
 
 **Machbar, bekannt — und genau dort sitzt die Arbeit.**
 
+**EINGETRAGEN 2026-08-14:** `by induction over <domain>` steht in der Grammatik — **ein** neues
+Wort (`over` wird wiederverwendet), zwei Produktionen, kein Lemma. Damit lautet die Decke:
+**Sicherheitshuelle + deklarierte Invarianten + induktive Eigenschaften ueber DEKLARIERTEN
+Strukturen.**
+
 - [ ] **Zu pruefen, und es ist billig:** reicht ein aus der `table`-Deklaration erzeugtes
       Induktionsschema fuer die 17 gemessenen Logik-Pflichten? **Diese Frage ersetzt die Behauptung
       „unmoeglich" durch eine Messung** — und sie ist dieselbe, die als Falsifikator der
