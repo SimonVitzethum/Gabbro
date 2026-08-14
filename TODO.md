@@ -94,6 +94,41 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       Paarungs-Pass mit Litmus-Sonden, ein Caprock-Modul end-to-end.
       **Jede Stufe verbraucht das Ergebnis der vorigen, wie eine `Duty`.**
 
+## Die Schreibrechtszeile `by ops` — und der Gruppen-Pruefsatz, der ihr vorausgeht
+
+- [ ] **`field : u16 by ops` — zwei vorhandene Woerter, null Wortschatzzuwachs.** Ein Feld, das
+      **nur** die erzeugten Operationen seiner Tabelle schreiben. Damit wird die K-Bedingung des
+      Messprotokolls (*„gilt nur, wenn ALLE Mutationen des Traegers erzeugte Operationen sind"*)
+      von einer **Pruefvorschrift zu einer Grammatikeigenschaft** — und `refcount -= 1` von Hand
+      ist schlicht nicht schreibbar. **Vor die Zaehlung eingetragen ist konsistent: sie macht
+      Messung 2 schaerfer, nicht weicher. Protokollarbeit, keine Zaehlung.**
+      * **Durchstich 1 — `breaking`.** Ein `breaking` auf einem `by ops`-Feld ist **entweder
+        Uebersetzungsfehler oder steht unter der F8-Regel** (Schluss nur durch erzeugte
+        Operation). Die Wechselwirkung muss ausgesprochen werden, sonst ist die Eigenschaft
+        eine Zusage mit Hintertuer.
+      * **Durchstich 2 — der Rand.** Ein `extern fn` mit Schreibwirkung auf den Traeger, oder
+        ein `dma`-Raum, der ihn erreicht, umgeht jede Grammatik. **Ehrliche Fassung: „innerhalb
+        von Gabbro unschreibbar; die Ausnahmen stehen im Manifest."** Und M3 schliesst den
+        DMA-Fall **strukturell** aus: ein `by ops`-Traeger liegt in keinem `dma`-erreichbaren
+        Bereich — eine Platzierungsregel wie bei der GDT.
+- [ ] **DER GRUPPEN-PRUEFSATZ, und er geht der Schreibrechtszeile VORAUS.** `refcount_matches`
+      ist eine **Verbindungs**-Invariante: der Zaehler in Tabelle A muss der Zahl der Verweise
+      in B entsprechen. **Werden `ops` je Tabelle erzeugt, erhaelt keine einzelne Operation
+      sie** — Verweis-Einfuegen in B *plus* Inkrement in A ist **eine** logische Operation ueber
+      beiden, und wer die Koordination als Handleim dazwischenschreibt, hat die Invariante
+      wieder als Aussage ueber die Zusammensetzung, also **L**.
+      **Ein `refcount`, den nur die `ops` von A schreiben, waehrend die Wahrheit ueber ihn in B
+      liegt, ist geschuetzt und trotzdem falsch.**
+      * **Was es braucht:** Operationen ueber einer **Tabellengruppe** — die Verbindungs-
+        Invariante an der Gruppe deklariert, die Operation (retype, CDT-insert, revoke-Schritt)
+        ueber CapSpace *und* CDT *und* Zaehler **in einem Zug**, der Erzeuger prueft die
+        Erhaltung gegen die Gruppendeklaration.
+      * **DER PRUEFSATZ, auf Papier, vor der Grammatik:** *B13 faellt genau dann, wenn jede im
+        Baum vorkommende Verbindungs-Invariante eine Gruppe hat, deren `ops` sie schliessen.*
+        Am **CapSpace/CDT-Paar** entscheidbar — und die Warteschlangenchirurgie ist der
+        **zweite** Ort im Baum, an dem eine Invariante ueber zwei Strukturen zugleich lebt,
+        also gehoert die Gruppenfrage mit ins Scheduler-Fragment.
+
 ## Kandidatenkonstrukt `locks ordered` — und es muss WIDERLEGBAR bleiben
 
 - [ ] **`locks ordered (a, b) { … }` als dritter Ausgang fuer adressgeordnetes Sperren.**
@@ -174,7 +209,10 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
 
 ## Aus der Gegenpruefung (2026-08-14) — was noch offen ist
 
-- [ ] **`effects` prueft Schreiben und `locks`, aber nicht Lesen und nicht Aufrufe.**
+- [ ] **DER BILLIGE ABSCHLUSS, und er gehoert VOR die grossen Saetze ueber „sonst nichts":
+      `effects` prueft Schreiben und `locks`, aber nicht Lesen und nicht Aufrufe.**
+      Rahmenvollstaendigkeit gilt heute nur fuer die **Schreibhaelfte**; „nur die eingetragene
+      Logik ist aktiv" ist damit eine halbe Aussage. Dieselbe Pruefmechanik, andere Richtung.
       Der Rumpfabgleich steht (E005/E006); zwei Haelften fehlen:
       * **Lesen** — `FRAGMENTE.md` liest in jeder Funktion Stellen, die keine `reads`-Zeile
         nennt. Ob das ein Befund ueber die Fragmente ist oder die gemeinte Bedeutung von

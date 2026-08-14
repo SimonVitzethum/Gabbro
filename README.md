@@ -8,10 +8,17 @@ ihn dann billig formal zu verifizieren** — Caprock vollständig, mit grüner A
 
 ## Das Ziel, in einem Satz
 
-> **Gabbro beweist alles ausser funktionaler Korrektheit.**
+> **Gabbro beweist alles ausser funktionaler Korrektheit — auf einem Mehrkernkernel mit DMA.**
 
 Alle **Klempnerei** — Index, Überlauf, **Alias**, Rahmen, Sperre, Rennen, Terminierung, Phase,
-Blattheit, Publikation, Verfeinerung — trägt die Sprache. Die **Logik** („der Baum bleibt ein
+Blattheit, Publikation, Verfeinerung — trägt die Sprache.
+
+> **Mehrkern und DMA sind gesetzt, nicht optional** (2026-08-14). Das ist eine Ansage gegen die
+> bequemste aller Vereinfachungen: **seL4s verifizierte Konfiguration ist einkernig**, und die
+> 239 458 gemessenen Beweiszeilen beweisen einen Kernel ohne echte Nebenläufigkeit. Damit gilt
+> für Gabbro: die **Paarung** (`publishes`/`awaits`) ist kein „später", sondern tragende Last;
+> der `dma`-Raum trägt echte Aussagen statt einer Klassifikation; und **es gibt für diesen Teil
+> kein bewiesenes Vorbild** — weder eine Vorlage noch einen ungünstigen Vergleich. Die **Logik** („der Baum bleibt ein
 Baum") schreibt der Programmierer, in jeder Sprache. Gold im seL4-Sinn ist damit **ausserhalb
 des Ziels**, nicht aufgeschoben.
 

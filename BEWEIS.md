@@ -833,6 +833,20 @@ vermessen hat.**
 Sie sind es nicht; sie sind an einem Kernel gemessen, der die schwerste Klasse per Konfiguration
 nicht hat.
 
+> **Und Gabbros Ziel ist seit dem 2026-08-14 ausdruecklich Mehrkern MIT DMA.** Damit ist die
+> Vereinfachung, die seL4 gewaehlt hat, **ausgeschlossen** — und daraus folgt dreierlei:
+>
+> 1. **Die Paarung (Pass 7) ist tragende Last, kein „spaeter".** Ohne sie gibt es keine
+>    Rennfreiheit, und ohne Rennfreiheit ist auf einem Mehrkerner keine der anderen Zusagen
+>    stabil: ein Fakt, der auf einem Kern gilt, gilt nicht, wenn ein zweiter schreibt.
+> 2. **Der `dma`-Raum muss Aussagen tragen, nicht nur klassifizieren.** Ein Geraet, das
+>    schreibt, ist ein zweiter Akteur ohne Sperre und ohne `Held`-Zeugen. **Konkret und
+>    sofort:** ein Traeger, dessen Felder nur die erzeugten `ops` schreiben duerfen, darf in
+>    **keinem `dma`-erreichbaren Bereich** liegen — eine **Platzierungsregel** wie bei der GDT,
+>    sonst ist die Schreibrechtszusage eine Zusage mit offener Tuer.
+> 3. **Es gibt fuer diesen Teil kein bewiesenes Vorbild.** Kein unguenstiger Vergleich, aber
+>    auch keine Vorlage: was hier gebaut wird, wird ohne Referenz gebaut.
+
 ---
 
 ### Posten 5 hat einen Boden — der Satz ist unerreichbar, eine Naeherung nicht

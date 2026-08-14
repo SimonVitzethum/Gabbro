@@ -1764,3 +1764,57 @@ dieselbe Sprache sind.** Das sind **67,9 %**. Aber die drei Drittel verhalten si
 **Die Kennzahl-Vorhersage aendert sich damit nicht, ihre Begruendung schon:** wer 0,5 : 1
 erwartet, erwartet, dass die 32 % vollstaendig amortisieren **und** die 28 % vertrauenswuerdig
 sind. Beides ist heute unbelegt.
+
+
+---
+
+# Die Suche nach weiteren B13-artigen Fehlurteilen — vier gefunden, drei Klassen
+
+**2026-08-14.** Die B13-Lehre lautet: *ein Urteil „nicht formulierbar" kann falsch sein, weil es
+die **handgeschriebene** Form voraussetzt — die erzeugte braucht die Aussage gar nicht.* Alle
+absoluten Urteile des Ordners sind daraufhin durchgesehen und, wo moeglich, **gegen den
+Uebersetzer gefahren** statt beurteilt.
+
+## Klasse 1 — B13-artig: das Urteil setzt die Handschrift voraus
+
+| | Urteil | der dritte Ausgang |
+|---|---|---|
+| **«B7»** | *„`return Completion { id: …, len: … }` ist nicht schreibbar"* — kein Verbundliteral in `expr` | **Die Parameterliste einer Deklaration IST ihr Konstruktor.** Genau das ist am 2026-08-14 fuer `device` gebaut worden (`Vtd(basis)`); ein `type Completion = { id, len }` bekaeme `Completion(id, len)` aus **demselben Mechanismus**. Das Urteil setzte voraus, dass ein Literal eine **syntaktische Form** sein muss |
+| **«B10»** | *„`traverse` liefert keinen Wert, es gibt kein `break`; die Suche nach dem ERSTEN Treffer wird zum Leeren der ganzen Menge, ein Operationszaehler ist nicht erhebbar"* | **Zwei Drittel loesen sich auf.** Eine **erzeugte** Suchoperation (`ops finde`) gibt den ersten Treffer ohne `break`; der Zaehler ist `accumulates` — **und `accumulates` war selbst der dritte Ausgang fuer «B21»**. Uebrig bleibt nur, dass ein handgeschriebener Suchrumpf weiter nicht geht |
+| **«B26»** | *„`transition reset { DEVICE_STATUS: any -> 0 }` ist nicht schreibbar: es gibt keinen Platzhalter fuer den Vorzustand"* | Eine **erzeugte** `reset`-Operation ueber der `state`-Deklaration braucht kein `any` — sie ist der Uebergang in den Anfangszustand, und den nennt die Deklaration bereits |
+
+## Klasse 2 — schlicht falsch: gegen den Uebersetzer gefahren
+
+| | Urteil | gefahren |
+|---|---|---|
+| **«B12»** | *„`forall i in 0 ..< MSG_WORDS` ist nicht schreibbar: die sieben Domaenen decken es nicht"* | **`elems of` IST eine der acht Domaenen.** `forall w in elems of msg : w == 0` **parst und geht durch alle Paesse.** Eine Zahlenbereichs-Domaene fehlt weiter — die Aussage ueber die Nachrichtenworte ist aber schreibbar, und genau die war der Anlass |
+| **«B14»** (halb) | *„`option` gibt es nur als `slottype`, nicht als `typeexpr`"* | **Mit A3 mitgekommen**, ohne dass ich es gemerkt habe: `impl fn f(o : option index into T)` geht. *Die zweite Haelfte — `let … else` verlangt rechts einen `call` — steht weiter offen* |
+
+## Klasse 3 — echt, und ausdruecklich NICHT in den dritten Ausgang geschoben
+
+* **«B15» Generizitaet.** `Queue(T, const N)` braucht **Monomorphisierung**, und die ist
+  [`PLAN.md`](PLAN.md)s eigener Kandidat fuer *„zwei geforderte Eigenschaften widersprechen
+  einander"* — sie ist die erste nicht-flache Absenkung und greift M-Gold-2 an. **Hier gibt es
+  keinen dritten Ausgang, und ihn zu behaupten waere derselbe Fehler wie B13, nur andersherum.**
+* **«B23»/«B20» Granularitaet.** Eine Klasse je *Register* statt je *Feld*; `wrapping` am
+  Slottyp statt am Registertyp. Das ist **fehlende Feinheit der Notation**, keine erzeugbare
+  Form. Ehrlich offen.
+* **«B27»** `prim fn` ohne `abi`-Block: ein fehlendes Konstrukt, kein Fehlurteil.
+
+## Und zwei stehengebliebene Urteile
+
+* [`FRAGMENTE.md`](FRAGMENTE.md):62 sagt weiter *„`forever` hat keinen Ausgang"* — `leaves`
+  gibt es seit der dritten Fassung.
+* [`BEWEIS.md`](BEWEIS.md):376 sagt *„W^X bleibt unformulierbar"* — `walk` + `mappings of` +
+  `embeds` gibt es seit der Festlegung.
+
+**Beide bleiben stehen**, weil der Ordner seine widerlegten Fassungen behaelt; die Widerlegung
+steht hier, nicht dort.
+
+## Die Lehre, in der Form, in der sie beim naechsten Mal greift
+
+> **Ein Urteil „nicht formulierbar" ist erst vollstaendig, wenn es sagt, WELCHE FORM es
+> voraussetzt.** B13, B7, B10 und B26 setzten alle die Handschrift voraus und nannten es nicht.
+> Die Pruefzeile dazu ist billig und mechanisch: *waere die Aussage noetig, wenn die Operation
+> erzeugt waere?* — **und sie gehoert in die Fragmentvorschrift**, neben die vier
+> Pruefschritte, die dort schon stehen.
