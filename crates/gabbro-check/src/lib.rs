@@ -76,11 +76,7 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 3,
             name: "M1 + V1–V3",
             quelle: "SPRACHE.md §3.2: Bereichstypen und die drei Flussregeln",
-            zustand: Zustand::Teilgebaut(
-                "Namen werden ohne Modulaufloesung verschluesselt: ein gleichnamiges `fn` \
-                 oder `type` in einem ANDEREN Modul verdeckt die Signatur und loescht die \
-                 Bereichspruefung stillschweigend",
-            ),
+            zustand: Zustand::Gebaut,
         },
         Pass {
             nummer: 4,
@@ -114,9 +110,10 @@ pub fn passliste() -> Vec<Pass> {
             name: "effects",
             quelle: "SPRACHE.md §7: `effects` ist Pflicht und nicht fail-open",
             zustand: Zustand::Teilgebaut(
-                "geprueft wird die DEKLARATION (Anwesenheit, `pure` allein, `diverges`), \
-                 nie der Rumpf: `effects { pure }` ueber einer Funktion, die schreibt, \
-                 kommt durch",
+                "Schreiben und `locks` werden gegen die Liste gehalten; **Lesen nicht** \
+                 (FRAGMENTE.md liest ueberall ohne `reads`-Zeile, und ob das ein Befund ist, \
+                 entscheidet nicht dieser Pass), und **Aufrufwirkungen nicht** -- dazu \
+                 muessten die Wirkungen des Gerufenen auf die Argumente abgebildet werden",
             ),
         },
         Pass {

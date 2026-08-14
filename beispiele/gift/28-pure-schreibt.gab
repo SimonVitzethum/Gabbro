@@ -1,0 +1,13 @@
+-- erwartet: E005
+--
+-- `pure` heisst: fasst nichts an. Bis zum 2026-08-14 pruefte der Wirkungspass nur die
+-- DEKLARATION -- eine Funktion mit `effects { pure }`, die schreibt, kam durch. Die Zusage
+-- (`effects` ist nicht fail-open) erzwang damit eine Liste, nicht ihre Wahrheit.
+--
+-- Aus der Gegenpruefung vom 2026-08-14.
+
+-- `pure` heisst "fasst nichts an" -- diese Funktion schreibt einen static mut.
+static mut g : u32 = 0;
+impl fn q1() effects { pure } {
+    g = 1;
+}

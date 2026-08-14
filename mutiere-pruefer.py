@@ -238,6 +238,34 @@ MUTATIONEN = [
         "SPRACHE.md 7 -- `effects` ist wieder fail-open",
     ),
     Mutation(
+        "rumpf-egal",
+        "wirkungen.rs",
+        "    for (ort, span) in &taten.schreibt {",
+        "    for (ort, span) in &taten.schreibt[..0] {",
+        "E005 -- der Rumpf darf jede Wirkungsliste ueberschreiten",
+    ),
+    Mutation(
+        "sperre-egal",
+        "wirkungen.rs",
+        "    for (ort, span) in &taten.sperrt {",
+        "    for (ort, span) in &taten.sperrt[..0] {",
+        "E006 -- ein `locks`-Block braucht keine erklaerte Sperre",
+    ),
+    Mutation(
+        "modul-egal",
+        "umgebung.rs",
+        "    pub fn funktion(&self, von: &str, pfad: &Pfad) -> Option<&Signatur> {\n"
+        "        self.suche(&self.funktionen, von, &pfad.text())",
+        "    pub fn funktion(&self, von: &str, pfad: &Pfad) -> Option<&Signatur> {\n"
+        "        let _ = von;\n"
+        "        return self\n            .funktionen\n            .iter()\n"
+        "            .find(|(k, _)| kurzname(k) == kurzname(&pfad.text()))\n"
+        "            .map(|(_, v)| v);\n"
+        "        #[allow(unreachable_code)]\n"
+        "        self.suche(&self.funktionen, von, &pfad.text())",
+        "U11 -- Signaturen werden wieder nach blankem Namen aufgeloest",
+    ),
+    Mutation(
         "pure-neben-allem",
         "wirkungen.rs",
         "    if w.liste.len() > 1 {",

@@ -1,0 +1,13 @@
+-- erwartet: E005
+--
+-- Die Liste stimmt nicht mit dem Rumpf: geschrieben wird `h`, erklaert ist `reads g`.
+-- Eine Liste, die der Rumpf ueberschreitet, ist dieselbe Auslassung mit mehr Zeichen.
+--
+-- Aus der Gegenpruefung vom 2026-08-14.
+
+-- deklariert `reads g`, schreibt aber.
+static mut g : u32 = 0;
+static mut h : u32 = 0;
+impl fn q2() effects { reads g } {
+    h = 1;
+}

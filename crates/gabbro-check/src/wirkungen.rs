@@ -13,6 +13,7 @@
 
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
+use gabbro_syntax::span::Span;
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
@@ -20,6 +21,158 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         ItemArt::Axiom(a) => rein_allein(&a.effects, absagen),
         _ => {}
     });
+}
+
+/// Was ein Rumpf tut -- Ort und Fundstelle je Tat.
+#[derive(Default)]
+struct Taten {
+    schreibt: Vec<(String, Span)>,
+    sperrt: Vec<(String, Span)>,
+}
+
+/// Der Kopf eines Ortes, so wie eine Wirkung ihn nennt: `c.slots[s].benutzt` wird von
+/// `writes c.slots` gedeckt, also zaehlt jeder Praefix.
+fn deckt(erklaert: &str, getan: &str) -> bool {
+    getan == erklaert
+        || getan.starts_with(erklaert)
+            && matches!(
+                getan.as_bytes().get(erklaert.len()).copied(),
+                Some(b'.') | Some(b'[') | Some(b'-')
+            )
+}
+
+fn sammle_taten(b: &Block, t: &mut Taten) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Zuweisung(z) => t.schreibt.push((z.ziel.text(), z.ziel.span)),
+            StmtArt::Publish(p) => t.schreibt.push((p.ziel.text(), p.ziel.span)),
+            StmtArt::Exchange(e) => {
+                t.schreibt.push((e.ort.text(), e.ort.span));
+                if let XForm::Update { rumpf, .. } = &e.form {
+                    sammle_taten(rumpf, t);
+                }
+            }
+            StmtArt::Sperrt(l) => {
+                t.sperrt.push((l.sperre.text(), l.sperre.span));
+                sammle_taten(&l.rumpf, t);
+            }
+            StmtArt::Wenn(w) => {
+                for (_, r) in &w.zweige {
+                    sammle_taten(r, t);
+                }
+                if let Some(r) = &w.sonst {
+                    sammle_taten(r, t);
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    sammle_taten(&z.rumpf, t);
+                }
+            }
+            StmtArt::Bricht(x) => sammle_taten(&x.rumpf, t),
+            StmtArt::Narrow(x) => sammle_taten(&x.sonst, t),
+            StmtArt::LetSonst(x) => sammle_taten(&x.sonst, t),
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                // Eine `traverse` mit `touches` traegt ihre eigene Wirkungsliste; sie muss
+                // trotzdem von der Funktion gedeckt sein, also zaehlt der Rumpf mit.
+                Schleife::Traverse(x) => sammle_taten(&x.rumpf, t),
+                Schleife::Retry(x) => sammle_taten(&x.rumpf, t),
+                Schleife::Forever(x) => sammle_taten(&x.rumpf, t),
+            },
+            _ => {}
+        }
+    }
+}
+
+/// **Der Rumpfabgleich.** Bis zum 2026-08-14 pruefte dieser Pass nur die DEKLARATION --
+/// Anwesenheit, `pure` allein, `diverges`. Ein `effects { pure }` ueber einer Funktion, die
+/// schreibt, kam durch, und damit war die Zusage *„`effects` ist nicht fail-open"* auf ihrer
+/// wichtigsten Haelfte leer: sie erzwang eine Liste, nicht ihre Wahrheit.
+///
+/// **Was hier geprueft wird und was nicht:** jedes **Schreiben** und jedes **`locks`** muss
+/// von einer erklaerten Wirkung gedeckt sein. **Lesen wird nicht geprueft** — `FRAGMENTE.md`
+/// liest in jeder Funktion Stellen, die keine `reads`-Zeile nennt, und ob das ein Befund ist
+/// oder die gemeinte Bedeutung, entscheidet nicht dieser Pass. **Aufrufwirkungen ebenso
+/// nicht:** dazu muessten die Wirkungen des Gerufenen auf die Argumente des Aufrufers
+/// abgebildet werden, und das ist ein eigener Posten.
+fn rumpf_gegen_wirkungen(f: &FnDecl, w: &Wirkungen, b: &Block, absagen: &mut Absagen) {
+    let mut taten = Taten::default();
+    sammle_taten(b, &mut taten);
+
+    let ist_rein = w.liste.iter().any(|e| matches!(e.art, WirkungArt::Rein));
+    let schreibrechte: Vec<String> = w
+        .liste
+        .iter()
+        .filter_map(|e| match &e.art {
+            WirkungArt::Schreibt(o)
+            | WirkungArt::Verbraucht(o)
+            | WirkungArt::Veroeffentlicht(o) => Some(o.text()),
+            WirkungArt::Belegt(i) | WirkungArt::Maskiert(i) => Some(i.text.clone()),
+            _ => None,
+        })
+        .collect();
+    let sperren: Vec<String> = w
+        .liste
+        .iter()
+        .filter_map(|e| match &e.art {
+            WirkungArt::Sperrt(o) => Some(o.text()),
+            _ => None,
+        })
+        .collect();
+
+    for (ort, span) in &taten.schreibt {
+        if ist_rein {
+            absagen.schiebe(
+                Absage::fehler(
+                    "E005",
+                    *span,
+                    format!("`{}` schreibt `{ort}`, erklaert aber `pure`", f.name.text),
+                )
+                .mit_notiz("`pure` heisst: fasst nichts an"),
+            );
+            continue;
+        }
+        if !schreibrechte.iter().any(|e| deckt(e, ort)) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "E005",
+                    *span,
+                    format!(
+                        "`{ort}` wird geschrieben, steht aber in keiner Wirkung von `{}`",
+                        f.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "SPRACHE.md §7: `effects` ist Pflicht und nicht fail-open -- eine Liste, \
+                     die der Rumpf ueberschreitet, ist dieselbe Auslassung mit mehr Zeichen",
+                )
+                .mit_notiz(format!(
+                    "erklaert sind: {}",
+                    if schreibrechte.is_empty() {
+                        "keine Schreibwirkung".to_string()
+                    } else {
+                        schreibrechte.join(", ")
+                    }
+                )),
+            );
+        }
+    }
+
+    for (ort, span) in &taten.sperrt {
+        if !sperren.iter().any(|e| deckt(e, ort)) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "E006",
+                    *span,
+                    format!(
+                        "`locks {ort}` steht im Rumpf, aber nicht in den Wirkungen von `{}`",
+                        f.name.text
+                    ),
+                )
+                .mit_notiz("die Sperrordnung faellt aus den erklaerten Sperren, nicht aus dem Rumpf"),
+            );
+        }
+    }
 }
 
 fn funktion(f: &FnDecl, absagen: &mut Absagen) {
@@ -44,7 +197,12 @@ fn funktion(f: &FnDecl, absagen: &mut Absagen) {
                 );
             }
         }
-        Some(w) => rein_allein(w, absagen),
+        Some(w) => {
+            rein_allein(w, absagen);
+            if let FnRumpf::Block(b) = &f.rumpf {
+                rumpf_gegen_wirkungen(f, w, b, absagen);
+            }
+        }
     }
 
     if f.klasse == Some(FnKlasse::Divergent) {
