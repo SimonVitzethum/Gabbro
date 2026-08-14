@@ -58,10 +58,64 @@ in **Ressourcen statt Wanduhr** (D13), Loeserversion im Fingerabdruck.
 
 ### Die Decke, und sie gehoert in Zeile 1 des Ordners
 
-> **Programm-spezifische Induktion ist damit fuer immer ausgeschlossen** — ein Anwender kann keine
-> Schablone schreiben. **Gold im seL4-Sinn ist auf diesem Weg nicht erreichbar.**
-> Die Decke ist **Sicherheitshuelle plus deklarierte Invarianten aus einer endlichen
+> **Programm-spezifische Induktion ist damit ausgeschlossen** — ein Anwender kann keine Schablone
+> schreiben. Die Decke ist **Sicherheitshuelle plus deklarierte Invarianten aus einer endlichen
 > Schablonenbibliothek.**
+
+### BERICHTIGUNG (2026-08-14, wenige Stunden spaeter): „unmoeglich" war falsch. Es ist VERBOTEN
+
+Die Fassung oben schrieb „fuer immer ausgeschlossen" und „Gold ist auf diesem Weg nicht
+erreichbar". **Nachgelesen: Induktion scheitert an drei Zeilen, und alle drei stehen in der Liste
+„Was es absichtlich nicht gibt"** (`SYNTAX.md`:585):
+
+> *benutzerdefinierte Quantorendomaenen · Rekursion in `spec fn` · handgeschriebene Lemmata*
+
+**Das sind Entwurfsentscheidungen, keine Saetze.** Wer sie zuruecknimmt, kann Induktion ausdruecken —
+und landet bei Verus oder F\*, was die Linie ausdruecklich vermeiden wollte. **Der Unterschied
+zwischen „unmoeglich" und „von uns verboten" ist genau der Zug, den `HISTORIE.md` als Hausmuster
+fuehrt** — ein Satz, der wahr waere, haette man den Geltungsbereich nicht erweitert.
+
+### Und es gibt einen dritten Weg, den niemand betrachtet hat
+
+Die Fassung oben setzt gleich: *Schablonen haengen am **Konstrukt*** ⟹ *endlich viele* ⟹ *nichts
+Programmspezifisches*. **Der mittlere Schritt stimmt nicht.**
+
+> **Ein Induktionsschema muss nicht fest sein — es kann aus der DEKLARATION DES ANWENDERS erzeugt
+> werden.**
+
+Eine `table` mit `parent`/`first_child`/`next_sibling` **deklariert einen Wald**. Das
+Strukturinduktionsprinzip darueber folgt aus der Deklaration — **genauso wie im Zuschnitt (c) die
+Mutationen daraus folgen.** Der Anwender schreibt **kein** Lemma und **keine** rekursive `spec fn`
+und bekommt trotzdem Induktion **ueber seine eigene Struktur**.
+
+**Das ist keine Erfindung:** Isabelle und Coq leiten das Induktionsprinzip seit jeher aus der
+Datentypdeklaration ab. Neu waere nur, es auf eine **deklarierte** Tabelle anzuwenden statt auf
+einen Datentyp.
+
+**Und es traefe den gemessenen Fall:** das Nachordnungslemma aus [`P0-1-REVOKE.md`](P0-1-REVOKE.md)
+ist strukturelle Induktion **ueber genau den deklarierten Baum**.
+
+### Wo die Schwierigkeit dann wirklich sitzt — und sie ist echt
+
+**Eine `table` ist kein induktiver Datentyp, sondern ein veraenderliches Feld.** „Ist ein Wald" ist
+eine **Invariante**, kein Typ — also gilt das Induktionsprinzip nur, **solange die Invariante
+haelt**, und die will man gerade beweisen. Die Standardaufloesung ist eine Induktion ueber ein
+**wohlfundiertes Mass** (etwa die Zahl der Abkoemmlinge) mit der Invariante als **Voraussetzung**.
+
+**Machbar, bekannt — und genau dort sitzt die Arbeit.**
+
+- [ ] **Zu pruefen, und es ist billig:** reicht ein aus der `table`-Deklaration erzeugtes
+      Induktionsschema fuer die 17 gemessenen Logik-Pflichten? **Diese Frage ersetzt die Behauptung
+      „unmoeglich" durch eine Messung** — und sie ist dieselbe, die als Falsifikator der
+      L3-Entscheidung ohnehin ansteht.
+
+### Was auch danach draussen bleibt
+
+* **Induktion ueber eine beliebige benutzerdefinierte rekursive Funktion** — die gibt es nicht,
+  und das bleibt so.
+* **Induktion ueber Programmablaeufe** (Lebendigkeit) — ausgesprochene Grenze, unabhaengig davon.
+* **Und der Vorbehalt gegen den dritten Weg selbst:** dass das erzeugte Schema die Pflichten
+  wirklich entlaedt, ist **ungeprueft**. Bis dahin ist er ein Entwurf, keine Loesung.
 
 **Zur Verwerfung der zweiten Emission:** sie haelt, **aber der Grund im Ordner ist zu breit.** Er
 trifft eine zweite **Code**emission (man zahlt L4 zweimal) und traegt **nicht** gegen ein

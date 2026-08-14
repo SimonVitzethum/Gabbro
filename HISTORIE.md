@@ -65,6 +65,8 @@ schwächer formuliert, ohne schwächer zu **werden**.
 
 | **„M1 braucht genau eine Flussregel"** | aus 4 gemessenen `leading_zeros`-Stellen abgeleitet | **die Stichprobe schloss die harte Form strukturell aus.** Alle vier sind **einstellig**; die Gegenmessung fand **54 relationale** Fälle (`if a >= b { a - b }`), die ein Intervalltyp nicht tragen kann. **Das Hausmuster, angewandt auf mich** — ein Satz, der wahr wäre, hätte ich den Geltungsbereich nicht erweitert |
 
+| **„Programm-spezifische Induktion ist für immer ausgeschlossen"** | stand als Decke des ganzen Entwurfs, mit der Folgerung „Gold ist auf diesem Weg nicht erreichbar" | **sie ist nicht unmöglich, sondern VERBOTEN** — durch drei Zeilen, die in der Liste „Was es absichtlich nicht gibt" stehen. **Der Unterschied zwischen „unmöglich" und „von uns verboten" ist genau das Hausmuster.** Und der Gleichsetzung *Schablone am Konstrukt ⟹ nichts Programmspezifisches* fehlt der mittlere Schritt: ein Induktionsschema kann **aus der Deklaration des Anwenders erzeugt** werden — wie Isabelle es aus einem Datentyp ableitet |
+
 ---
 
 ## Die Trajektorie — das Muster über den Einzelfehlern
