@@ -2096,3 +2096,59 @@ Paketumbenennung und die Verdopplung der Datei.
 > ihn so — auch beim fünften Umbau, auch nachdem die Falle einmal bezahlt war. Das trägt die
 > Sprechproben-Pflicht besser als die widerlegte Unabhängigkeitsbehauptung, denn es sagt
 > etwas über die **Wiederkehr**, nicht über die Verbreitung.
+
+---
+
+# VORAB — Messprotokoll: systematisch erzeugte Mutationen gegen den Pruefer
+
+**Eigener Commit, VOR dem Lauf.** Nach dem Lauf wird an diesem Abschnitt nichts geaendert;
+das Ergebnis kommt darunter.
+
+> **Anmerkung zur Form:** Der Auftrag verlangt das Vorab-Protokoll in einem eigenen Commit
+> *und* einen gitignorierten Werkstattordner. Beides zugleich geht nicht — ein Commit ueber
+> eine ignorierte Datei ist leer. Das Vorab steht deshalb **hier**, wo die Vorab-Protokolle
+> dieses Ordners immer standen (so schon bei Messung 2), und die Werkstattfassung verweist
+> darauf. *Die Regel ist die Unveraenderlichkeit nach dem Lauf, nicht der Ordner.*
+
+## Was gemessen wird
+
+Ein Generator verdreht **systematisch** je eine Stelle in `crates/gabbro-check/src/*.rs` —
+im Unterschied zu den 38 **von Hand** gewaehlten Mutationen, die je eine Regel treffen, die
+ich beim Schreiben im Kopf hatte. *Genau das ist der Verdacht: `38 von 38` ist eine Aussage
+ueber die 38 Stellen, die mir eingefallen sind.*
+
+| Klasse | Verdrehung |
+|---|---|
+| `VERGL` | Vergleichsoperator kippen (`>` ↔ `>=`, `<` ↔ `<=`, `==` ↔ `!=`) |
+| `BOOL` | `&&` ↔ `\|\|` |
+| `NEG` | Bedingung negieren |
+| `KONST` | Ganzzahlliteral um 1 verschieben |
+| `LEER` | Schleifenrumpf uebergehen |
+
+## Zaehlregel
+
+* **Ein Mutant zaehlt nur, wenn er UEBERSETZT.** Bricht `cargo build`, ist er **ungueltig**
+  und faellt aus Zaehler **und** Nenner. *Eine Deckungszahl zaehlt Belege, nicht Versuche*
+  (`WERKZEUGKASTEN.md` W1).
+* **Gefangen** = `cargo test` faellt **oder** eine Giftprobe verliert ihren Code **oder** ein
+  sauberes Beispiel bekommt eine Absage.
+* **Entkommen** = alle Proben bleiben gruen.
+* Die 38 Handmutationen werden **getrennt** gefuehrt und nicht dazugezaehlt.
+
+## Kippregel
+
+Haengt oder bricht die Probe (Zeitschranke 120 s), zaehlt der Mutant als **ungueltig**, nicht
+als gefangen. **Grenzfaelle kippen in die teurere Spalte, werden nie geteilt.**
+
+## Das zweiseitige Tor
+
+| | |
+|---|---|
+| **bestanden** | **mindestens ein entkommener Mutant**, den die 38 Handmutationen nicht finden — dann ist `38 von 38` als Aussage ueber 38 Stellen entlarvt |
+| **gefallen** | **kein einziger entkommt** — dann ist der Pruefer an den erzeugten Stellen so dicht wie an den gewaehlten. **Das ist ein Ergebnis, kein Misserfolg.** |
+| **ungueltig** | **weniger als 30 Mutanten uebersetzen** — dann misst der Lauf den Generator, nicht den Pruefer |
+
+## Was der Lauf ausdruecklich NICHT sagt
+
+Nichts ueber die Emissionsflaechen. Annotation, Code und Schablone haben weiterhin **0
+Mutationen** — und was 0 Mutationen hat, ist nicht gedeckt, sondern **unbeschaedigbar**.
