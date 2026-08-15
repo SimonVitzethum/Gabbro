@@ -81,7 +81,10 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       Vorher bleibt das `19 → 0`-Tor unentscheidbar. *(Der Satz hiess bis zum 2026-08-14
       „DER NAECHSTE SCHRITT IST KEINE ZEILE RUST" — er ist ueberholt, nicht erfuellt: die
       Rustzeilen kamen zuerst. Der Posten selbst ist unveraendert offen.)*
-- [ ] **Eager-FP je Architektur oder global entscheiden.** Berichtigt: auf **x86 ist es eager**
+- [ ] **Eager-FP je Architektur oder global entscheiden — haengt an der aarch64-Luecke oben.**
+      Die x86-Seite ist gemessen; die aarch64-Seite braucht einen Baum, den der Ordner nicht
+      hat (s. *Die Axiomschicht beziffern*). **Bis dahin ist „je Architektur" eine
+      Entscheidung ueber eine Lage, die niemand kennt.** Berichtigt: auf **x86 ist es eager**
       (`system.rs:1215`, mit genau der CVE-Begruendung der Ergaenzung); **lazy ist der
       aarch64-Pfad**. Das Dekret trifft also die andere Architektur, wo das Argument nicht in
       derselben Form greift.
@@ -555,8 +558,23 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
 - [ ] **Roundtrip** `lesen(schreiben(x)) == x` gehört in den Differenztest.
 - [ ] **Kostenangabe je Invariante** und an `by unbesucht`: welche Struktur, wer setzt sie zurück,
       was kostet der Reset, darf sie unter dem Lock leben.
-- [ ] **Die Axiomschicht beziffern.** Wie viele Axiome braucht ein x86- und ein aarch64-Kernel?
+- [ ] **Die Axiomschicht beziffern — die x86-Haelfte ist fahrbar, die aarch64-Haelfte NICHT.**
       **Solange die Zahl fehlt, ist „speichersicher unter A1…An" eine Form ohne Inhalt.**
+      * **x86:** fahrbar gegen `../caprock-messbasis` (= `SEL4Lake/SEL4Lake` @ `arch/x86_64`,
+        `a1bf707`). Offen.
+      * **~~aarch64~~ — BLOCKIERT, und zwar nicht aus Zeitgruenden (2026-08-15).** Der
+        einzige aarch64-Baum im Ordner (`SEL4Lake/ARMTest/stm32mp25-kernel`) ist **kein
+        zweiter Kernel, sondern ein aelterer Schnappschuss DERSELBEN Abstammung** — belegt
+        mit `git log --follow`: `R099`, eine Umbenennung mit 99 % Aehnlichkeit von
+        `sel4lake-cap` nach `caprock-cap` (s. [`HISTORIE.md`](HISTORIE.md), *Zwei Fundstellen
+        aus einer Vererbung*). Er liegt ausserhalb von git.
+        **Eine Gegentabelle daraus waere keine zweite Architektur, sondern dieselbe Linie
+        zweimal gezaehlt** — genau die Fehlerklasse, die dieser Ordner am 2026-08-15 gebucht
+        hat. *Die Zahl waere nicht ungenau, sondern falsch, und zwar in die schmeichelhafte
+        Richtung: sie wuerde Uebertragbarkeit belegen, wo nur Kopie steht.*
+      * **Was es braeuchte:** ein aarch64-Kernel mit **eigener** Abstammung, oder die
+        ehrliche Fassung des Satzes — *„gemessen fuer x86; fuer aarch64 steht keine Zahl,
+        und der vorhandene Baum kann sie nicht liefern."*
 - [ ] **Fortschritt/Aushungern** (Caprocks D8) fällt unter **keinen** Mechanismus. Offen, ob das
       so bleibt oder ob es einen sechsten braucht.
 - [ ] **B3 beziffern: welche Rümpfe lassen sich NICHT als Traversierung schreiben?** IPC-Fastpath,

@@ -2539,3 +2539,57 @@ find programs -name "*.rs" | wc -l                                  # 9
 grep -rcE "\bbreak\b" programs/hardware/virtio-blk/src/*.rs        # 2
 grep -rn "dyn Fn|Box<" programs/ --include=*.rs | wc -l             # 0
 ```
+
+---
+
+# Die aarch64-Luecke — warum eine Zahl fehlt und nicht bloss ungemessen ist
+
+**Eingetragen 2026-08-15.** Mehrere Posten des Ordners verlangen eine **zweite Architektur**:
+die Axiomschicht („wie viele Axiome braucht ein x86- **und** ein aarch64-Kernel"), die
+Eager-FP-Entscheidung, und implizit jede Aussage ueber Uebertragbarkeit.
+
+## Was da ist
+
+| Baum | was er ist |
+|---|---|
+| `SEL4Lake/SEL4Lake` @ `arch/x86_64` | der gemessene Kern. **139 Dateien, 75 294 Zeilen.** In git, Commit `a1bf707` |
+| `SEL4Lake/ARMTest/stm32mp25-kernel` | **kein zweiter Kernel** |
+
+## Der Nachweis
+
+```
+$ git log --follow --name-status -- crates/caprock-cap/src/space.rs
+R099   crates/sel4lake-cap/src/space.rs -> crates/caprock-cap/src/space.rs
+```
+
+**`R099` — eine Umbenennung mit 99 % Aehnlichkeit.** Der ARM-Baum traegt die Paketnamen von
+**vor** dieser Umbenennung (`sel4lake-cap`), liegt ausserhalb von git und ist damit ein
+**aelterer Schnappschuss derselben Abstammung**. Dieselbe Autorenlinie, dieselbe Datei.
+
+## Warum das die Zahl nicht bloss ungenau macht, sondern falsch
+
+Eine Axiomtabelle aus beiden Baeumen wuerde **Uebereinstimmung** zeigen — und diese
+Uebereinstimmung waere kein Befund ueber Architekturen, sondern ueber **Kopieren**. Sie
+wuerde genau die Frage beantworten, die niemand gestellt hat.
+
+> **Und sie irrte in die schmeichelhafte Richtung.** „Die Axiomschicht traegt ueber
+> Architekturen hinweg" ist die Aussage, die der Ordner gern haette. *Genau deshalb ist sie
+> die, bei der man zweimal hinsehen muss* — und genau diese Bewegung (aus
+> Oberflaechenaehnlichkeit auf Herkunft schliessen) steht seit dem 2026-08-15 in
+> [`HISTORIE.md`](HISTORIE.md) als bezahlter Fehler.
+
+## Die ehrliche Fassung, bis ein zweiter Baum da ist
+
+> *„Gemessen fuer x86. Fuer aarch64 steht keine Zahl, und der vorhandene Baum kann sie nicht
+> liefern — er ist derselbe Kernel in aelterer Fassung."*
+
+**Was den Posten entsperrt:** ein aarch64-Kernel mit eigener Abstammung. Nichts sonst — kein
+Werkzeug, keine Sorgfalt, kein zweiter Anlauf am selben Baum.
+
+## Pruefpfad
+```
+cd ../caprock-messbasis
+git log --follow --name-status -- crates/caprock-cap/src/space.rs | grep '^R'
+ls ../SEL4Lake/ARMTest/stm32mp25-kernel/crates/     # traegt die Namen VOR der Umbenennung
+cd ../SEL4Lake/ARMTest/stm32mp25-kernel && git rev-parse --show-toplevel   # scheitert: kein git
+```
