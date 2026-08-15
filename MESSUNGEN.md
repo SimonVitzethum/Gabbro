@@ -270,6 +270,13 @@ Klassifikation der Ergänzung trifft die Realität des Programms.
 
 ## Der Logik/Klempnerei-Split — erstmals gemessen, und er faellt gegen den Entwurf
 
+> **W7-KEHRAUS 2026-08-15: UNBELEGT — ZU ERSETZEN.** Die Aufteilung der **74** ist **nicht im
+> Ordner**; was dasteht, ist das Aggregat (74 / 17 / 57 / 19 / 1) und eine Bereichstabelle
+> ohne Fundstellen. Der ganze Abschnitt fuehrt **eine** `Datei:Zeile`, und die gehoert zur
+> Eager-FP-Frage. **Die 17er-Zaehlung ist daran am 2026-08-15 ungueltig geworden** (s. dort),
+> und `delete_leaf` ist beim Nachzaehlen von **3,6–6 : 1** auf **1,75 : 1** gekippt.
+> *Nicht geloescht: die Markierung ist der Befund.*
+
 **2026-08-14.** Zehn handuebersetzte Fragmente aus acht Bereichen, **74 Beweispflichten** einzeln
 zugeordnet. Das Kriterium aus [`BEWEIS.md`](BEWEIS.md) hatte bis dahin **nie** eine Messung
 gesehen.
@@ -2822,3 +2829,48 @@ einem Posten und einer Baustelle.
 > **Der Aufrufgraph hat drei Blocker geloest und keine Klasse abgeraeumt.** Das ist kein
 > Widerspruch: er war Voraussetzung, nicht Ursache. *R17 sagt, womit man anfaengt, nicht was
 > dabei herauskommt.*
+
+---
+
+# W7-KEHRAUS — Zahlen ohne Fundstellenliste, 2026-08-15
+
+**Suchweg, mechanisch:** je Absatz in `MESSUNGEN.md`, `BEWEIS.md`, `README.md`, `SPRACHE.md`
+alle fettgesetzten oder tabellierten Zahlen ≥ 10 sammeln und fragen, ob **im selben Absatz**
+ein Beleg steht — `Datei:Zeile`, ein `grep`/`git log`/`wc`-Aufruf, oder ein Verweis auf eine
+Liste.
+
+```
+MESSUNGEN.md   20 Absaetze mit Zahl ohne Beleg im Absatz
+BEWEIS.md       5
+SPRACHE.md      4
+README.md       0
+```
+
+**Die Rohzahl ist eine obere Schranke, kein Befund** — Tabellenkoepfe zaehlen mit, deren Rumpf
+die Belege trägt. Einzeln nachgesehen wurden die drei bekannten Aggregate und die vier
+groessten uebrigen.
+
+## Ergebnis je Fall
+
+| Zahl | Stand | Befund |
+|---|---|---|
+| **2 231** `Ordering::`-Fundstellen | **belegt** | `grep -rhoE "Ordering::" --include=*.rs . \| wc -l` liefert **exakt 2231**. *Der Suchweg stand nicht dabei; jetzt schon.* |
+| **74** Beweispflichten (17/57/19/1) | **unbelegt — markiert** | Aggregat ueberliefert, Zuordnung fehlt. Die 17er-Zaehlung ist daran ungueltig geworden |
+| **19** haengende Pflichten, elf Klassen | **unbelegt — ersetzt** | durch `N_neu = 5` mit Fundstellen (Neuerhebung 2026-08-15) |
+| **3,6–6 : 1** (`delete_leaf`) | **unbelegt — ersetzt** | durch **1,75 : 1** mit Zeilentabelle |
+| **106** Axiome (→ 65, 30, ~130 Namen) | **unbelegt — markiert** | keine Liste je Axiom, kein Suchweg. **Und die aarch64-Haelfte (58) ruht zusaetzlich auf dem versiegelten Baum** |
+| **1 398** Bereichspruefungen | **unbelegt — markiert** | Nachzaehlen liefert **2 143**; welcher Suchweg zu 1 398 fuehrte, steht nirgends |
+
+## Was der Kehraus ueber den Ordner sagt
+
+**Fuenf von sechs geprueften Grosszahlen waren unbelegt, eine war exakt reproduzierbar.**
+Und die eine reproduzierbare ist die, bei der jemand den Suchweg im Kopf hatte — nicht im
+Dokument. *Der Unterschied zwischen 2 231 und 106 ist nicht Sorgfalt, sondern ob die
+Zaehlung mechanisch war.*
+
+> **Die Regel, die daraus folgt, steht schon** (`WERKZEUGKASTEN.md` W7). Was dieser Kehraus
+> hinzufuegt: **eine Zahl, die aus einem `grep` stammt, traegt das `grep`** — dann ist sie
+> jederzeit nachfahrbar, auch wenn niemand eine Liste pflegt. *Fuer mechanisch erhebbare
+> Groessen ist der Suchweg die Liste.*
+
+**Nichts geloescht.** Fuenf Markierungen stehen im Text, wo die Zahlen stehen.

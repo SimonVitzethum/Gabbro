@@ -55,7 +55,7 @@ aufgeschluesselt**. Das ist der naechste Papierschritt, nicht eine Behauptung:
 
 | Messung | Zahl | **offen: welcher Anteil ist Logik?** |
 |---|---|---|
-| `delete_leaf` (Pruefer) | 3,6–6 : 1 ausgeschrieben | Kettenendlichkeit und Indexgrenzen sind **Klempnerei** und muessten fallen; `child_points_back` und `refcount_matches` sind **Formulierungen von Invarianten**, also Logik |
+| `delete_leaf` (Pruefer) | ~~3,6–6 : 1~~ **unbelegt, ersetzt durch 1,75 : 1** (2026-08-15, Aufschluesselung unten) | Kettenendlichkeit und Indexgrenzen sind **Klempnerei** und muessten fallen; `child_points_back` und `refcount_matches` sind **Formulierungen von Invarianten**, also Logik |
 | `Endpoint::call` (Entwerfer) | 1,8–2,3 : 1 | `msg_copied` ist **Logik** und war an nichts gebunden (G2); die fehlende `locks`-Wirkung (G3) ist **Klempnerei**, die gar nicht haette anfallen duerfen |
 
 - [ ] **Beide Messungen nach Logik/Klempnerei aufschluesseln.** Erst dann sagen sie etwas ueber das
@@ -303,6 +303,18 @@ nachgeprueft.
 ---
 
 ### L1 — Die Axiomzahl: **106**, und der schoenste Fund war schon da
+
+> **W7-KEHRAUS 2026-08-15: UNBELEGT — ZU ERSETZEN.** Die Zahl **106** (und die daraus
+> abgeleiteten **65**, **30**, **~130 Namen**) hat **keine Fundstellenliste im Ordner** —
+> weder je Axiom noch als nachfahrbarer Suchweg. Sie ist damit dieselbe Klasse wie die 74
+> Beweispflichten und die 19 haengenden: *ein ueberliefertes Aggregat ohne Zuordnung.*
+>
+> **Nicht geloescht, weil die Markierung der Befund ist.** Was sie zu ersetzen braucht: eine
+> Liste je Axiom mit `Datei:Zeile` im Registerhandbuch oder im Baum — und **nur die x86-Haelfte
+> ist erhebbar** (die aarch64-Zahl 58 ruht zusaetzlich auf dem versiegelten Baum, s. *Die
+> aarch64-Luecke*). **Bis dahin ist „speichersicher unter A1…An" wieder eine Form ohne Inhalt**,
+> und der Satz zwei Absaetze weiter unten, sie habe „erstmals einen Inhalt", steht unter
+> diesem Vorbehalt.
 
 | | |
 |---|---|
@@ -1019,7 +1031,10 @@ bei „erzeugt langsamer als Handschrift plus Messrauschen". **Bis dahin ist jed
 Erwartung.**
 
 **Die ehrliche Zusammenfassung in einem Satz:** *In den Zaehl- und Zugriffspfaden sollte das
-erzeugte C schneller sein als der heutige Rust-Kernel, weil 1 398 Bereichspruefungen entfallen; in
+erzeugte C schneller sein als der heutige Rust-Kernel, weil 1 398 Bereichspruefungen entfallen
+(**W7-Kehraus 2026-08-15: UNBELEGT — zu ersetzen.** Ein Nachzaehlen ueber `[…]`-Zugriffe im
+Baum liefert **2 143**, nicht 1 398; welcher Suchweg zu 1 398 fuehrte, steht nirgends. Die
+Zahlen messen vermutlich Verschiedenes — *vermutlich* ist der Punkt); in
 den Wartepfaden zunaechst langsamer, bis die Schrankenpruefung amortisiert ist; und ueber alles
 haengt eine ungepreiste Wette auf den C-Uebersetzer.*
 
