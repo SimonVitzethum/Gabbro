@@ -118,18 +118,20 @@ Dazu `fallen-klassifikation.tsv` (100 bezahlte Caprock-Fallen, einzeln klassifiz
 **sechs Wächter, jeder mit Sprechprobe in beide Richtungen**: `pruefe-syntax.sh` (verbotene
 Formen, Prosa-Drift, Geschlossenheit, Erreichbarkeit, Terminaldeckung) · `pruefe-wortschatz.py`
 · **`mutiere-pruefer.py`** (beschädigt je eine Regel des Prüfers und sieht nach, ob eine Probe
-fällt — **24 von 24**) · **`pruefe-todo.py`** (hält die Aufgabenliste gegen sich selbst) ·
-`zaehle-fallen.sh`. Dazu `zaehle-narrow.py` — **kein Wächter, ein Finder von Kandidaten**, und
+fällt — **38 von 38**) · **`erzeuge-mutationen.py`** (verdreht **systematisch** statt von
+Hand — **7 von 39**, und genau diese Lücke war der Zweck) · **`pruefe-todo.py`** (hält die
+Aufgabenliste gegen sich selbst, sieben Klassen) · `zaehle-fallen.sh`. Dazu `zaehle-narrow.py` — **kein Wächter, ein Finder von Kandidaten**, und
 er sagt das selbst.
 
 **Und seit dem 2026-08-14 `crates/` — der Übersetzer selbst**, drei Kisten in sicherem Rust:
 `gabbro-syntax` (Lexik, Wortschatz, Grammatik), `gabbro-check` (die neun Prüfpässe in fester
-Reihenfolge, fünf davon gebaut — drei ganz, zwei teilweise), `gabbro-cli` (`gabbro`). Vier Befehle, und der wichtigste ist
+Reihenfolge, sechs davon gebaut — drei ganz, drei teilweise), `gabbro-cli` (`gabbro`). Sechs Befehle, und der wichtigste ist
 `gabbro paesse`: er sagt, **was dieser Übersetzer nicht prüft**.
 
 ```
-cargo test                                  -- 50 Sprechproben, je in beide Richtungen
-./mutiere-pruefer.py                        -- beschaedigt je eine Regel: 32 von 32 gefangen
+cargo test                                  -- 51 Sprechproben, je in beide Richtungen
+./mutiere-pruefer.py                        -- beschaedigt je eine Regel: 38 von 38 gefangen
+./erzeuge-mutationen.py                     -- erzeugt sie systematisch:  7 von 39 gefangen
 ./pruefe-todo.py                            -- haelt die Aufgabenliste gegen sich selbst
 cargo run --bin gabbro -- paesse            -- die Passliste, gebaut UND offen
 cargo run --bin gabbro -- pruefe beispiele/*.gab   -- mit Deckungszahl je Datei
