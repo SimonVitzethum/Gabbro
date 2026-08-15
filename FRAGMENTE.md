@@ -745,7 +745,7 @@ device Virtq(base : Iova, n : u16 in 1 .. QMAX) at dma {
 -- `typedecl` (:135-136) verlangt dort `params`, also `ident ":" typeexpr`. SYNTAX.md
 -- macht denselben Fehler in seinen eigenen vier Beispielen (:162-167), `Held(Lock)`
 -- eingeschlossen — und `Held` steht in jedem `requires` dieser Datei.
-linear ghost type QueueSetup(q : Virtq);
+linear ghost type QueueSetup(Virtq);
 
 fn queue_reset(q : ptr<dma, rw> Virtq) -> QueueSetup
     effects { writes q };
@@ -937,6 +937,7 @@ reason Stackart {
     exhaustive
 }
 
+const STACK_MAX : u64 = 65536;   -- nachgetragen 2026-08-15: benutzt, nie erklaert
 type Bytes = u64 in 0 .. STACK_MAX;
 
 const MIND_RESERVE_NENNER : u32 in 1 .. 64 = 8;
@@ -1029,8 +1030,8 @@ check kstack {
         -- «B14» `let g = groesse else (e) { return false; };` ist nicht schreibbar: die
         -- `let … else`-Form (:316) verlangt RECHTS einen `call`. Ein `option`-wertiges
         -- `place` laesst sich damit nicht auspacken — und ein Atomic ist ein `place`.
-        let g = groesse_gemessen() else (e1) { return false; };
-        let f = frei_min_gemessen() else (e2) { return false; };
+        let g = groesse_gemessen() else (e1) { return false; }
+        let f = frei_min_gemessen() else (e2) { return false; }
         if f < g / MIND_RESERVE_NENNER { return false; }
         return (g - f) + irq.tiefe_max + g / MIND_RESERVE_NENNER <= g;
     }

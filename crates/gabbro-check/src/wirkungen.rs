@@ -24,6 +24,49 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 }
 
 /// Was ein Rumpf tut -- Ort und Fundstelle je Tat.
+/// Die **lokalen** Namen eines Rumpfes: alles, was `let` einfuehrt, plus die Laufvariablen
+/// der Schleifen. **Ein Schreibzugriff auf einen lokalen Namen ist keine Wirkung.**
+///
+/// `effects` beschreibt, was eine Funktion mit der WELT tut, nicht mit ihrem eigenen Stapel.
+/// Bis 2026-08-15 verlangte `E005` fuer `let mut i = 0; i += 1;` einen Eintrag in der
+/// Wirkungsliste -- eine Funktion, die nur zaehlt, konnte nicht `pure` sein. Gefunden am
+/// Fragmentlauf (`FRAGMENTE.md`, kstackmark), wo genau das aufschlug.
+fn lokale(b: &Block, aus: &mut Vec<String>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Let(l) => aus.push(l.name.text.clone()),
+            StmtArt::LetSonst(l) => aus.push(l.name.text.clone()),
+            StmtArt::AwaitLoad(a) => aus.push(a.name.text.clone()),
+            StmtArt::Exchange(e) => aus.push(e.name.text.clone()),
+            StmtArt::Narrow(x) => lokale(&x.sonst, aus),
+            StmtArt::Sperrt(x) => lokale(&x.rumpf, aus),
+            StmtArt::Bricht(x) => lokale(&x.rumpf, aus),
+            StmtArt::Wenn(w) => {
+                for (_, r) in &w.zweige {
+                    lokale(r, aus);
+                }
+                if let Some(r) = &w.sonst {
+                    lokale(r, aus);
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    lokale(&z.rumpf, aus);
+                }
+            }
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Traverse(x) => {
+                    aus.push(x.variable.text.clone());
+                    lokale(&x.rumpf, aus);
+                }
+                Schleife::Retry(x) => lokale(&x.rumpf, aus),
+                Schleife::Forever(x) => lokale(&x.rumpf, aus),
+            },
+            _ => {}
+        }
+    }
+}
+
 #[derive(Default)]
 struct Taten {
     schreibt: Vec<(String, Span)>,
@@ -133,7 +176,15 @@ fn rumpf_gegen_wirkungen(f: &FnDecl, w: &Wirkungen, b: &Block, absagen: &mut Abs
         })
         .collect();
 
+    // **Lokale Namen sind keine Wirkung.** Der Vergleich geht ueber den GRUNDNAMEN: ein
+    // Schreibzugriff auf `i` oder `i.feld` gehoert dem Stapel, einer auf `p.slots[i]` der Welt.
+    let mut lok = Vec::new();
+    lokale(b, &mut lok);
     for (ort, span) in &taten.schreibt {
+        let grund = ort.split(['.', '[', '-']).next().unwrap_or(ort);
+        if lok.iter().any(|l| l == grund) {
+            continue;
+        }
         if ist_rein {
             absagen.schiebe(
                 Absage::fehler(

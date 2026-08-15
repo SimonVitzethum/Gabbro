@@ -1,0 +1,21 @@
+-- erwartet: M101
+-- **Zwei Regeln an einer Datei, und nur eine davon soll greifen.**
+--
+-- Die Funktion schreibt `i` -- einen LOKALEN Namen. Bis 2026-08-15 verlangte `E005` dafuer
+-- einen Eintrag in der Wirkungsliste: eine Funktion, die nur zaehlt, konnte nicht `pure`
+-- sein. `effects` beschreibt, was eine Funktion mit der WELT tut, nicht mit ihrem Stapel.
+-- Gefunden am Fragmentlauf, nicht am Reissbrett.
+--
+-- Was BLEIBEN muss, ist die Zaehlerregel (SPRACHE.md §1): `in 0 .. GRENZE` allein reicht
+-- nicht, denn `+ 1` reicht bis GRENZE + 1. Diese Datei faellt deshalb genau einmal.
+module gift {
+const MAXI : u64 = 100;
+impl fn zaehlt() -> u64
+    effects { pure }
+    costs   <= 8 ops
+{
+    let mut i : u64 in 0 .. MAXI = 0;
+    i += 1;
+    return i;
+}
+}
