@@ -2489,3 +2489,53 @@ git log --oneline --all -S"repr(C)" -- '*.rs' | wc -l      # 5
 git log --format=%ad --date=short | tail -1                # 2026-06-23
 sed -n '1745,1750p' done.md                                # der Beinahe-Fall
 ```
+
+---
+
+# `programs/` — die Wiederholung, 2026-08-15
+
+> *„`programs/` brach 4 von 4 — aber die Messung ist **aelter als die Konstrukte**, die es
+> betreffen (`leaves`, `transition publishes`). Ungeprueft, ob es heute traegt."* (`TODO.md`:56)
+
+Gemessen an `../caprock-messbasis` @ `a1bf707`: **9 Rust-Dateien, 1 778 Zeilen** in vier
+Gruppen.
+
+## Was die alte Messung brach — und ob es heute noch bricht
+
+Der Bruch war **`loop { … break … }`**: die Grammatik der zweiten Fassung hatte weder
+`leave` noch `break`, und eine Dienstschleife war damit **nicht schreibbar**. Genau das
+schloss `forever … leaves`/`leave`.
+
+| Programm | Zeilen | Endlosschleifen | `break` | `dyn`/`Box` |
+|---|---:|---:|---:|---:|
+| `hardware/virtio-blk` | 426 | 2 | **2** | 0 |
+| `trusted/fs` | 365 | 3 | **5** | 0 |
+| `trusted/init` | 119 | 1 | 0 | 0 |
+| `userland/hello` | 25 | 0 | 0 | 0 |
+| **Summe** | **935** (4 von 9 Dateien) | **6** | **7** | **0** |
+
+**Alle sieben `break` sitzen in einer benannten Schleife** und sind damit `leave <marke>` —
+das Konstrukt, das seit der dritten Fassung steht. **Der gemessene Bruch ist zu.**
+
+**Und der zweite Kandidat faellt ebenfalls weg:** *null* `dyn Fn`/`Box` in den vier
+Programmen. Die 47 Verschluss-Stellen des Baums (`memos/M-verschluesse.md`) liegen
+**vollstaendig im Kern**, nicht in den Programmen.
+
+## Urteil — **teilweise aufgehoben, nicht aufgehoben**
+
+> **Der gemessene Grund des Bruchs traegt nicht mehr.** Ob `programs/` heute *durchgeht*,
+> sagt diese Messung **nicht** — dazu muessten die vier Programme in Gabbro ausgeschrieben
+> werden, und das ist ein Fragment-Auftrag, kein Zaehlauftrag.
+
+**Was diese Messung leistet:** sie nimmt dem Eintrag „4 von 4 gebrochen" seine Grundlage und
+sagt, **was an seine Stelle tritt** — eine offene Frage statt eines gemessenen Nein.
+*Ein Befund, dessen Grund weggefallen ist, ist kein Befund mehr; er ist eine ungestellte
+Frage.*
+
+## Pruefpfad
+```
+cd ../caprock-messbasis
+find programs -name "*.rs" | wc -l                                  # 9
+grep -rcE "\bbreak\b" programs/hardware/virtio-blk/src/*.rs        # 2
+grep -rn "dyn Fn|Box<" programs/ --include=*.rs | wc -l             # 0
+```
