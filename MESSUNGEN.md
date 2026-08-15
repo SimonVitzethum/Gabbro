@@ -3103,8 +3103,23 @@ ihr.*
 
 ## Der Ueberschlag und sein Vorbehalt
 
-**1,90** — gegen die Zielmarke, die der Ordner mit 0,56 (seL4) als unerreichbar und mit
-~0,3 als Boden fuehrt.
+**1,90** — und der Bezug dazu ist zu berichtigen.
+
+> **W7-Verstoss von mir, im selben Commit wie die Messung.** Ich schrieb „gegen die Zielmarke,
+> die der Ordner mit 0,56 (seL4) als unerreichbar fuehrt". **Die 0,56 steht nirgends im Ordner
+> ausser in diesem meinem Satz** — ich habe sie aus einer Unterhaltung uebernommen und als
+> Ordnerwissen ausgegeben. *Genau die Bewegung, gegen die W7 steht, begangen in der Zeile, die
+> W7 anwendet.*
+>
+> **Was gemessen im Ordner steht:** l4v hat **239 458 Zeilen** fuer die funktionale Korrektheit
+> eines Einkern-Kernels (`MESSUNGEN.md`, l4v-Zaehlung). Gegen seL4s C-Kern von rund 10 kZeilen
+> ist das ein Verhaeltnis **jenseits von 20 : 1**, nicht 0,56. **Die 0,56 kann keine
+> Beweis-zu-Code-Rate von seL4 sein**, und was sie sonst ist, weiss ich nicht — also steht sie
+> hier als *unbelegt* und nicht als Vergleichsmarke.
+
+Die belegten Bezugsgroessen sind die aus `PLAN.md`:341 — der Ordner rechnete mit **0,8 : 1**
+unter der Annahme, ein Zehntel des Kernels brauche den 5 : 1-Aufwand.
+**Gemessen sind es 34 % der Beweiszeilen, nicht 10 %** — daher 1,90 statt 0,8.
 
 **Und der Vorbehalt steht im Vorab-Protokoll, nicht hier erfunden:** die 81 sind **kein
 Zufallsschnitt**, sondern die Bereiche mit Verus-Beweis — die **gut verstandenen**. Deren
@@ -3115,3 +3130,68 @@ w = 0,341 eine Untergrenze und 1,90 ebenso.** Der wahre Wert liegt hoeher, nicht
 
 `revoke`s Kostenzusage steht als **W** — eine Aussage ueber eine gerechnete Groesse. Sie ist
 nicht unter K gebucht worden.
+
+---
+
+# Empfindlichkeitsprobe: **taugt Verus ueberhaupt als Grundgesamtheit?**
+
+**Die Frage kam von aussen, und sie ist beziffert zu beantworten.** Nachtraeglich und getrennt
+gefuehrt — **die berichtete Zahl (W = 40, Tor bestanden) wird nicht angetastet** (R2).
+
+## Was in den 81 steckt, das keine Logik-Pflicht ist
+
+**Acht der 81 sind Werkzeugartefakte**: sie quantifizieren ueber rohe `Seq<…>` und behaupten
+etwas ueber `push`/`update`/`len` — *das ist die Datenstruktur des BEWEISERS, nicht der
+Gegenstand.*
+
+```
+region-runtime/lemma_live_push:47        ensures live_bytes(regions.push(r)) == …
+capability-system/lemma_refs_push:90     ensures refs_to(slots.push(sl), o) == …
+capability-system/lemma_refs_update:117  requires 0 <= i < slots.len(), …
+…  (8 Stueck, 122 Zeilen)
+```
+
+Ein Faltungslemma ueber `Seq::push` sagt nichts ueber Capabilities. **Es existiert, weil der
+SMT-Loeser einen Hinweis brauchte.** In Gabbro gaebe es diese Pflicht nicht — nicht weil die
+Sprache klueger waere, sondern weil die Frage nie gestellt wuerde.
+
+## Und ihre Entfernung KIPPT das Tor
+
+| | N_L | K | A | W | Tor |
+|---|---:|---:|---:|---:|---|
+| wie berichtet | 81 | 28 | 13 | **40** | **bestanden** (40 ≤ 40,5) |
+| ohne die 8 Werkzeugartefakte | 73 | 28 | 7 | **38** | **VERFEHLT** (38 > 36,5) |
+
+`w` steigt von 0,341 auf 0,358, der Ueberschlag von 1,90 auf **1,98**.
+
+> **Das Torergebnis haengt daran, ob Verus' Sequenzlemmata als Logik-Pflichten zaehlen.**
+> Sie sollten es nicht. **Damit ist das Tor nicht robust**, und das ist ein groesserer Befund
+> als die Richtung, in die es faellt.
+
+## Die Antwort auf die Frage
+
+**Verus ist eine gute VERFUEGBARKEITS-Grundlage und eine schlechte SEMANTISCHE.**
+
+| dafuer | dagegen |
+|---|---|
+| Die 81 sind **aufgeschrieben und maschinell geprueft** — anders als jede Handzaehlung, die einen Klassierer braucht (und genau daran starb die erste `narrow`-Zaehlung) | Ein `proof fn` entsteht, **wenn der Loeser einen Hinweis braucht** — nicht, wenn die Sache eine Pflicht hat. Das ist eine Aussage ueber das Werkzeug |
+| Sie tragen `Datei:Zeile`, also W7-tauglich | Sie beweisen ueber einem **MODELL** (`cap_space.rs`), nicht ueber dem Code (`space.rs`). **Die Verfeinerung — bei seL4 27,8 % des Aufwands — kommt gar nicht vor** |
+| Sie sind die einzige Grundlage, die im Baum existiert | Bereiche ohne Verus-Beweis zaehlen **null**: MMU, Parser, Bringup. Die gut verstandenen sind ueberrepraesentiert, und die Richtung der Verzerrung ist bekannt |
+
+**Der schwerste Punkt ist die Verfeinerung.** Gabbros Zusage lautet *„Absenkung ist nahe 0"*,
+und die Verus-Grundgesamtheit kann diese Zusage **nicht pruefen**, weil sie dieselbe Luecke
+hat: sie beweist ueber einem Modell. **Eine Messung, die den groessten Posten des Vergleichs
+gar nicht enthaelt, kann ihn auch nicht widerlegen.**
+
+## Was eine bessere Grundlage waere
+
+Keine, die heute verfuegbar ist — und das ist der ehrliche Schluss. Was sie haben muesste:
+
+1. Pflichten **am Code**, nicht am Modell (also mit Verfeinerung).
+2. Eine Herkunft, die **nicht am Automatisierungsgrad eines Loesers haengt**.
+3. Fundstellen (W7).
+
+**Bedingung 1 und 2 schliessen einander heute aus:** was am Code beweist, tut es mit einem
+Loeser, und dessen Hinweise landen in der Zaehlung. *Das ist kein Mangel dieser Messung,
+sondern der Grund, warum die Zahl 1,90 mit ihrer Grundlage zitiert werden muss und nicht
+allein.*
