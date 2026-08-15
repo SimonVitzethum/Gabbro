@@ -38,15 +38,30 @@ KLASSEN = {
 
 # Zeilen, an denen eine Verdrehung nichts ueber eine REGEL sagt.
 BLIND = re.compile(
-    r"^\s*(//|///|//!)"  # Kommentare -- eine Verdrehung dort ist keine
-    r"|format!|push_str|write!|\.mit_notiz|Absage::|\"[^\"]{20,}\""  # Meldungstexte
+    r"^\s*(//|///|//!)"                       # Kommentare -- eine Verdrehung dort ist keine
+    r"|format!|push_str|write!|\.mit_notiz|Absage::"
+    r'|"[^"]{20,}"'                            # lange Zeichenketten: Meldungstext
+    r'|^\s*"'                                  # FORTSETZUNG einer Meldung ueber Zeilen --
+    r"|\\\s*$"                                 # zweite Filterluecke des ersten Laufs
 )
 
 
 def stellen(datei: pathlib.Path):
-    """Alle mutierbaren Stellen einer Datei: (Zeilennr, Klasse, alt, neu)."""
+    """Alle mutierbaren Stellen einer Datei: (Zeilennr, Klasse, alt, neu).
+
+    **Testkoerper zaehlen NICHT.** Eine Mutation in einem `#[cfg(test)]`-Bereich misst die
+    Probe, nicht die Regel -- der Lauf vom 2026-08-15 hatte drei davon unter den
+    "entkommenen" und meldete sie selbst als Filterluecke. Geschlossen 2026-08-15, und
+    zwar VOR dem zweiten Lauf: sonst waere die Grundgesamtheit gewachsen (377 -> 557,
+    weil die neuen Wertetabellen selbst mutierbar sind), die Ziehung eine andere, und
+    der Vergleich zweier Quoten waere keiner.
+    """
+    zeilen = datei.read_text().splitlines()
+    testab = next((i for i, l in enumerate(zeilen) if "#[cfg(test)]" in l), len(zeilen))
     aus = []
-    for nr, zeile in enumerate(datei.read_text().splitlines(), 1):
+    for nr, zeile in enumerate(zeilen, 1):
+        if nr > testab:
+            break
         if BLIND.search(zeile):
             continue
         for klasse, regeln in KLASSEN.items():
