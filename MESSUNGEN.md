@@ -2874,3 +2874,72 @@ Zaehlung mechanisch war.*
 > Groessen ist der Suchweg die Liste.*
 
 **Nichts geloescht.** Fuenf Markierungen stehen im Text, wo die Zahlen stehen.
+
+---
+
+# GRUNDLAGE N_L — die Logik-Pflichten, neu abgeleitet mit Fundstellen
+
+**2026-08-15, nur x86.** Kennzeichnung, die mitlaufen muss: **neu erhoben, nicht
+wiederhergestellt.** Die 17 sind **ersetzt**, nicht fortgesetzt — ihre Zuordnung war nicht
+im Ordner (W7-Kehraus).
+
+> **Jede Pflicht traegt ihre `Datei:Zeile` ab dem ersten Entwurf.** Ein Zwischenstand ohne
+> Fundstelle waere ein Aggregat auf dem Weg zur Liste — genau das, was beim ersten Mal
+> entstand. Diese Liste ist deshalb **zuerst** die Liste und **dann** eine Zahl.
+
+## Wo Logik-Pflichten im Baum stehen — der Suchweg
+
+Nach dem Kriterium (`BEWEIS.md`: *„Logik, wenn die Aussage die SACHE erwaehnt"*) sind das die
+Stellen, an denen der Baum eine **Invariante ueber seinem Gegenstand** fuehrt und ihre
+**Erhaltung** behauptet:
+
+```
+grep -rn "spec fn [a-z_]*inv\b" Verification/ --include=*.rs     # die Invarianten
+grep -rc "proof fn "             Verification/ --include=*.rs     # die Erhaltungssaetze
+```
+
+*Nicht gezaehlt:* Hilfsdefinitionen (`slot_live`, `contrib`, `refs_to`, `unlink`) — sie sind
+Vokabular der Invariante, nicht selbst eine Pflicht. **Grenzfaelle nach Kippregel in die
+teurere Klasse:** wo unklar war, ob eine `spec fn` Definition oder Aussage ist, zaehlt sie als
+Aussage.
+
+## Die acht Invarianten, einzeln
+
+| # | Invariante | Fundstelle | Gegenstand |
+|---:|---|---|---|
+| 1 | `pool_inv` | `Verification/region-runtime/proofs/conservation.rs:42` | Speicherregionen |
+| 2 | `dma_inv` | `Verification/dma-lifetime/proofs/dma_revoke.rs:33` | DMA-Lebensdauer |
+| 3 | `ntfn_inv` | `Verification/notifications/proofs/notification.rs:32` | Benachrichtigungen |
+| 4 | `ep_inv` | `Verification/ipc/proofs/endpoint.rs:199` | Endpunkte |
+| 5 | `token_inv` | `Verification/ipc/proofs/endpoint.rs:206` | Antwortmarken |
+| 6 | `budget_inv` | `Verification/scheduler/proofs/runqueue.rs:116` | Zeitbudgets |
+| 7 | `sched_inv` | `Verification/scheduler/proofs/runqueue.rs:130` | Laufwarteschlange |
+| 8 | `cap_inv` | `Verification/capability-system/proofs/cap_space.rs:56` | **CapSpace + CDT, Klauseln 1–7 in EINER spec fn** |
+
+## Die Erhaltungssaetze je Bereich
+
+| Bereich | Datei | Saetze |
+|---|---|---:|
+| Capability-System | `capability-system/proofs/cap_space.rs` | **16** |
+| IPC | `ipc/proofs/endpoint.rs` | **29** |
+| Scheduler | `scheduler/proofs/runqueue.rs` | **12** |
+| Notifications | `notifications/proofs/notification.rs` | 7 |
+| DMA-Lebensdauer | `dma-lifetime/proofs/dma_revoke.rs` | 6 |
+| Lader | `loader/proofs/load_gate.rs` | 6 |
+| Regionen | `region-runtime/proofs/conservation.rs` | 5 |
+| **Summe** | | **81** |
+
+## **N_L = 8 Invarianten mit 81 Erhaltungssaetzen**
+
+**Die Zahl, die in die K/A/W-Rechnung geht, ist 81** — eine Invariante *formulieren* ist eine
+Pflicht, sie *je Operation zu erhalten* sind so viele, wie es Operationen gibt, und **die
+Erhaltung ist die Arbeit.**
+
+> **Und das ist etwas anderes als die 17.** Die alte Zahl zaehlte Pflichten an
+> **handuebersetzten Fragmenten**; diese zaehlt sie an den **Verus-Beweisen, die es gibt**.
+> Beide sind legitim, keine ist in die andere umrechenbar — *und nur diese hier hat eine
+> Liste.*
+
+**Was diese Grundlage NICHT deckt:** Bereiche ohne Verus-Beweis (MMU/Seitentabellen, Parser,
+Bringup) haben hier **null** Pflichten stehen — nicht, weil sie keine haetten, sondern weil
+niemand sie aufgeschrieben hat. **Das ist eine Untergrenze und heisst so** (R16).
