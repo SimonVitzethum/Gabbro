@@ -2657,3 +2657,73 @@ und N_neu wird in diesem Lauf zum ersten Mal bestimmt.**
 Vor der ersten Zahl: jeder Suchweg wird **einmal gegen eine Stelle gefahren, von der ich
 weiss, dass sie existiert** (z. B. `refcount -= 1` fuer Ueberlauf, `CAPS.write()` fuer
 Sperre). Findet er sie nicht, misst er nicht, was er behauptet.
+
+## ERGEBNIS der Neuerhebung — 2026-08-15, **nur x86**
+
+**Kennzeichnung, die mitzulaufen hat: neu erhoben, nicht wiederhergestellt.**
+Die 19 aus der alten Zaehlung werden **ersetzt, nicht fortgesetzt** — ihr Gegenstand war
+nicht mehr benennbar.
+
+### R14 — die Suchwege finden ihre bekannten Stellen
+
+`refcount -= 1` → 1 · `CAPS.write()` → 45 · `self.slots[slot]` → 15 · Atomics → 704 ·
+Schleifen → 276. **Alle fuenf Proben treffen.**
+
+### Die elf Klassen
+
+| # | Klasse | Fundstellen | traegt ein Konstrukt sie? |
+|---:|---|---:|---|
+| 1 | **Index** | 2 143 | **ja** — `index into T` erbt die Schranke aus `count N` (A3), `M103` prueft |
+| 2 | **Ueberlauf** | 1 758 | **ja** — M1-Bereichstypen, `M101`/`M104`; der gewollte Umlauf ist seit «B32» am Slot **und** am Register aussprechbar |
+| 3 | **Alias** | 628 | **ja** — aufgeloest statt geschlossen: Kernzustand braucht keinen Zeiger (A1); wo doch, macht `own` ihn linear |
+| 4 | **Rahmen** | 296 | **HAENGT — halb.** `effects` prueft **Schreiben** und `locks` (`E005`/`E006`/`E007`), **Lesen nicht und Aufrufwirkungen nicht** |
+| 5 | **Sperre** | 419 | **ja** — `lock … rank … held`, `locks`/`locks shared`, `K002`/`K004`, `H001`–`H005` |
+| 6 | **Rennen** | 2 276 | **HAENGT.** Der Paarungspass (P6) ist **nicht gebaut**; `publishes`/`awaits` werden nicht gegenuebergestellt |
+| 7 | **Terminierung** | 276 | **ja** — drei Schleifenformen, `bounded`/`on_exceeded`/`progress`, `M4`; `forever` ist erlaubt und benannt |
+| 8 | **Phase** | **1** | **HAENGT — und die Klasse ist im Baum fast leer** (s. u.) |
+| 9 | **Blattheit** | 180 | **ja** — `descendants of` + `by consuming` mit Zeugenordnung (§9.2) |
+| 10 | **Publikation** | 824 | **HAENGT.** `publishstmt` steht in der Grammatik, der **Paarungspass fehlt** — dieselbe Luecke wie 6 |
+| 11 | **Verfeinerung** | 792 (168 `asm!`) | **HAENGT.** Die Absenkung ist Vertrauensbasis, kein Konstrukt; die C-Formentabelle ist ungeschrieben |
+
+### **N_neu = 5** — Tor **VERFEHLT**
+
+Haengend: **Rahmen · Rennen · Phase · Publikation · Verfeinerung.**
+
+Und **Rennen und Publikation sind dieselbe Luecke** — beide warten auf den Paarungspass.
+Zaehlt man Luecken statt Klassen, sind es **vier**. *Die Kippregel sagt: Klassen zaehlen, und
+Grenzfaelle in die teurere Spalte.* **N_neu = 5.**
+
+### Der Nebenbefund zur Klasse Phase, und er ist der interessanteste
+
+**Eine einzige Fundstelle im ganzen Baum:**
+
+```
+crates/caprock-slab/src/lib.rs:173
+    /// Wie [`Slab::attach`]. Zusätzlich: **nur beim Boot** aufrufen, bevor andere Kerne
+```
+
+**Der Kernel fuehrt keine Bootphase als Wert.** Die Pflicht existiert — sie steht als
+**Kommentar**, und nichts erzwingt sie. Das ist genau die Lage, gegen die Gabbros
+`BootPhase` als linearer Wert geschrieben ist.
+
+> **Zwei Lesarten, und der Unterschied ist gross.** Entweder: *die Klasse ist im Baum so
+> selten, dass ein Konstrukt dafuer nicht traegt* (dieselbe Logik, an der `locks ordered`
+> starb). Oder: *sie ist selten SICHTBAR, weil es keine Schreibweise gibt* — ein Kommentar
+> ist billig, ein linearer Wert nicht, und was man nicht schreiben kann, zaehlt niemand.
+>
+> **Diese Messung kann die zwei nicht trennen**, und das gehoert dazugesagt. Was sie trennen
+> wuerde: eine Suche nach Funktionen, die **faktisch** nur im Bringup gerufen werden — ein
+> Aufrufgraph, denselben, an dem `H005` und die Aufrufwirkungen haengen. **Dritter Posten am
+> selben fehlenden Werkzeug.**
+
+### Was die Zahl NICHT sagt
+
+Die Fundstellenzahlen sind **Groessen der Klassen**, keine Pflichten. 2 143 Indexzugriffe
+heissen nicht 2 143 Beweise — sie heissen, dass ein tragendes Konstrukt dort 2 143-mal
+greift. *Genau deshalb zaehlt `N_neu` Klassen und nicht Fundstellen.*
+
+### Vergleich mit den 19 — **es gibt keinen**
+
+Die alte Zahl zaehlte **Pflichten**, diese zaehlt **Klassen**. Beide sind legitim, keine ist
+in die andere umrechenbar, und die alte ist nicht mehr belegbar. *Wer beide nebeneinander
+stellt, vergleicht zwei Mengen, die nie dieselbe waren.*
