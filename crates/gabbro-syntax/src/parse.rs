@@ -360,8 +360,53 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // **Laxheit geschlossen (2026-08-15).** `pub` wurde vor JEDEM Item gefressen und
+        // bei dreizehn Item-Arten stillschweigend fallengelassen -- die EBNF fuehrt es an
+        // genau sieben (`moduledecl usedecl constdecl staticdecl typedecl fndecl
+        // atomicdecl`). Ein Sichtbarkeitswort, das der Parser annimmt und wegwirft, ist
+        // schlimmer als eines, das er ablehnt: der Leser sieht eine Zusage, die niemand
+        // haelt.
+        let pub_span = self.blick().span;
         let oeffentlich = self.friss_kw(Kw::Pub);
         let t = self.blick();
+        if oeffentlich
+            && !matches!(
+                t.art,
+                Art::Wort(
+                    Kw::Module
+                        | Kw::Use
+                        | Kw::Const
+                        | Kw::Static
+                        | Kw::Opaque
+                        | Kw::Linear
+                        | Kw::Tagged
+                        | Kw::Type
+                        | Kw::Fn
+                        | Kw::Spec
+                        | Kw::Impl
+                        | Kw::Raw
+                        | Kw::Divergent
+                        | Kw::Prim
+                        | Kw::Extern
+                        | Kw::Atomic
+                )
+            )
+        {
+            self.absage(
+                Absage::fehler(
+                    "P034",
+                    pub_span,
+                    format!(
+                        "`pub` steht hier nicht in der Grammatik: {} fuehrt kein `[ \"pub\" ]`",
+                        t.benennung(self.quelle)
+                    ),
+                )
+                .mit_notiz(
+                    "`[ \"pub\" ]` steht an sieben Item-Arten: module use const static type \
+                     fn atomic -- der Parser nahm es ueberall an und warf es weg",
+                ),
+            );
+        }
         let art = match t.art {
             Art::Wort(Kw::Module) => ItemArt::Modul(self.moduledecl(oeffentlich)?),
             Art::Wort(Kw::Use) => ItemArt::Use(self.usedecl(oeffentlich)?),
@@ -2300,6 +2345,14 @@ impl<'a> Parser<'a> {
         let mut ops = Vec::new();
         while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
             match self.blick().art {
+                // **Zu streng, geschlossen (2026-08-15).** Der `table`-Rumpf fuehrt
+                // `constdecl`, und `constdecl` traegt `[ "pub" ]` -- `pub const` im
+                // Tabellenrumpf ist damit ableitbar und war trotzdem nicht schreibbar.
+                // Die eine Stelle, an der der Parser strenger war als die Grammatik.
+                Art::Wort(Kw::Pub) if matches!(self.blick_n(1).art, Art::Wort(Kw::Const)) => {
+                    self.pos += 1;
+                    konstanten.push(self.constdecl(true)?)
+                }
                 Art::Wort(Kw::Const) => konstanten.push(self.constdecl(false)?),
                 Art::Wort(Kw::Slot) => {
                     let s = self.slotdecl()?;

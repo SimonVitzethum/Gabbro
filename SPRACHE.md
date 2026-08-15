@@ -124,6 +124,25 @@ Terminierung allein kauft wenig: eine Schleife mit Schrittgrenze **terminiert** 
 ausserhalb der Tabelle indizieren — genau das ist **S1a**. Die Schrittgrenze aus B-5.5 schützt gegen
 **Zyklen**, nicht gegen einen Index **ausserhalb**.
 
+#### Die Zählerregel — sie stand in keinem Dokument, und der eigene Beispielkorpus hat sie dreimal bezahlt
+
+> **Jeder Zähler braucht eine Schranke in der Deklaration *und* eine Prüfung vor der Rechnung.**
+
+Beide Hälften sind nötig, und **jede allein ist eine Falle**:
+
+* **`u64` ohne Obergrenze ist nicht erhöhbar.** M1 kennt keine Schranke, gegen die es rechnen
+  könnte; `+ 1` bleibt formal in der Breite und ist inhaltlich unbeschränkt.
+* **`in 0 .. GRENZE` allein reicht nicht** — `+ 1` reicht bis `GRENZE + 1`, und genau dort
+  fällt `M104`. Der Typ nennt den Bereich; er nennt nicht, dass die *Rechnung* darin bleibt.
+
+Die Prüfung gehört **vor** die Rechnung, nicht dahinter. *Das ist derselbe Schnitt, an dem
+«B29» hängt* — `refcount -= 1` mit der Null-Prüfung **danach** ist die Umkehrung dieser Regel,
+und sie hat im gemessenen Baum fünf Umbauten überlebt (`MESSUNGEN.md`).
+
+**Warum das hier steht und nicht als Stilhinweis:** Der Prüfer setzt die Regel bereits durch
+(`M104`), aber sie war nirgends aufgeschrieben — die Absage begründete sich selbst. *Eine
+Regel, die nur als Fehlermeldung existiert, kann niemand vor dem Schreiben lesen.*
+
 ### 2. Keine Zeiger — nur Versätze, jeder gegen eine Länge im Geltungsbereich
 
 Ein Versatz ohne die Länge, gegen die er gilt, ist nicht schreibbar. Die Bereichsprüfung entsteht

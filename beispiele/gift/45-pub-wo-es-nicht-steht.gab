@@ -1,0 +1,8 @@
+-- erwartet: P034
+-- Der Parser fraß `pub` vor JEDEM Item und liess es bei dreizehn Arten stillschweigend
+-- fallen. Die EBNF fuehrt `[ "pub" ]` an genau sieben. **Ein Sichtbarkeitswort, das
+-- angenommen und weggeworfen wird, ist schlimmer als eines, das abgelehnt wird**: der
+-- Leser sieht eine Zusage, die niemand haelt.
+module gift {
+pub lock L protects { a } rank 0 held <= 1 ops;
+}
