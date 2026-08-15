@@ -23,7 +23,7 @@ impl fn oben(p : ptr<normal, rw> T) effects { writes p.slots } costs <= 8 ops { 
 }
 
 #[test]
-fn eine_wirkung_ZWEI_ebenen_tiefer_kommt_oben_an() {
+fn eine_wirkung_zwei_ebenen_tiefer_kommt_oben_an() {
     // **Die Probe haengt am Pruefling** (R14b): nur der GERUFENE nennt `masks`, der Rufer
     // nicht. Faellt die Hülle auf die erste Ebene zurück, verschwindet die Wirkung.
     let q = "module t {
