@@ -740,7 +740,7 @@ mod wertetabellen {
     }
 
     #[test]
-    fn die_logischen_verknuepfungen_sind_UND_und_ODER_und_nicht_umgekehrt() {
+    fn die_logischen_verknuepfungen_sind_und_und_oder_und_nicht_umgekehrt() {
         // Die Kante: genau eine Seite wahr. `&&` und `||` sind dort unterscheidbar,
         // bei zwei wahren oder zwei falschen Seiten nicht.
         assert_eq!(wert("1 && 0"), Some(0), "eine Seite falsch -> UND ist falsch");

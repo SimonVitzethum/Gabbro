@@ -499,7 +499,7 @@ mod wertetabellen {
     }
 
     #[test]
-    fn multiplikation_nimmt_die_kleinste_und_groesste_ECKE() {
+    fn multiplikation_nimmt_die_kleinste_und_groesste_ecke() {
         // Vier Ecken, und bei gemischten Vorzeichen liegt das Minimum NICHT bei min*min.
         // Ein `unwrap_or(0)` statt `min()` faellt hier, ein `max()` statt `min()` auch.
         let r = multipliziere(&i(32, -3, 2), &i(32, -5, 7));
@@ -536,7 +536,7 @@ mod wertetabellen {
     }
 
     #[test]
-    fn bitweise_faellt_bei_JEDEM_negativen_operanden_auf_die_volle_breite() {
+    fn bitweise_faellt_bei_jedem_negativen_operanden_auf_die_volle_breite() {
         // Die Kante ist min == 0 gegen min == -1, auf BEIDEN Seiten.
         let r = bitweise(&u(8, 0, 3), &u(8, 0, 5), BitOpArt::Oder);
         assert_eq!(b(&r), (0, 7), "0..3 | 0..5 passt in die Maske 7");
@@ -561,7 +561,7 @@ mod wertetabellen {
     }
 
     #[test]
-    fn linksschieben_ueber_die_breite_ist_ein_BEFUND_kein_ergebnis() {
+    fn linksschieben_ueber_die_breite_ist_ein_befund_kein_ergebnis() {
         // Die Kante: Schiebeweite == breite-1 rechnet, == breite laeuft ueber.
         let r = schiebe_links(&u(8, 1, 1), &u(8, 7, 7));
         assert!(!r.laeuft_ueber, "1 << 7 = 128 passt in u8");
