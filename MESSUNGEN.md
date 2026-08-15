@@ -2071,3 +2071,28 @@ Latenzrechnung auf Nebenlaeufigkeit bauen, die es nicht gibt.
 > **Offen bleibt der Zeuge am Aufrufrand** — `requires Held(N)` aus einem geteilten Block
 > heraus. Das ist dieselbe Asymmetrie eine Ebene hoeher und braucht den **Aufrufgraphen**:
 > genau das Loch, an dem in Pass 8 schon die Aufrufwirkungen haengen. *Ein Loch, nicht zwei.*
+
+## Berichtigung zur Sprechproben-Begründung — 2026-08-15
+
+Ich hatte den B29-Schnitt als in **zwei unabhängig geschriebenen Kernen** stehend gemeldet.
+**Falsch.** `git log --follow` zeigt `R099` — eine Umbenennung mit 99 % Ähnlichkeit von
+`crates/sel4lake-cap/src/space.rs` nach `crates/caprock-cap/src/space.rs`, dieselbe
+Autorenlinie. Die zweite Kopie lag ausserhalb von git, ein älterer Schnappschuss derselben
+Abstammung. **Zwei Pfade sind kein Beleg für zwei Herkünfte** (`HISTORIE.md`).
+
+**Die tragfähige Begründung ist gemessen statt erschlossen.** `git log -L 1060,1075` über die
+Löschpfad-Region:
+
+| | |
+|---|---|
+| Ursprung | `2111f30`, **2026-06-23** — dort Zeile 341/342, wörtlich dieselbe Reihenfolge |
+| Umbauten der Region seither | **5**, bis `b026c83` (2026-07-29) |
+| davon an der Freigabesemantik selbst | **2** — `Reply-Cap mit Revocation`, `DMA-Teardown-Token` |
+
+Die Zeilenfolge — `-= 1`, Null-Prüfung **danach** — hat alle fünf überlebt, dazu eine
+Paketumbenennung und die Verdopplung der Datei.
+
+> **B29 ist kein Ausrutscher, sondern ein Attraktor.** Wer den Löschpfad schreibt, schreibt
+> ihn so — auch beim fünften Umbau, auch nachdem die Falle einmal bezahlt war. Das trägt die
+> Sprechproben-Pflicht besser als die widerlegte Unabhängigkeitsbehauptung, denn es sagt
+> etwas über die **Wiederkehr**, nicht über die Verbreitung.

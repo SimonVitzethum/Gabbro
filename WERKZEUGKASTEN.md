@@ -107,3 +107,64 @@ Ausnahme sucht niemand, denn sie sieht aus wie ein Grün.
 
 **Der Handgriff.** `S005`: ein geteilter Block ruft keine Funktion mit `requires Held(…)`.
 Punkt. Auch die einer anderen Sperre, was zu viel ist und in der Absage dransteht.
+
+---
+
+## W5 — Eine Zwischenregel trägt drei Teile, sonst wird sie zur Dauerregel
+
+*W4 sagt, **dass** die grobe Fassung davorkommt. W5 sagt, **wie** sie geschrieben sein muss,
+damit sie später wirklich ersetzt und nicht bloss gewohnt wird.*
+
+**Der Anlass.** `S005` ist absichtlich zu streng. Eine zu strenge Regel ohne Ablaufvermerk
+wird nach drei Monaten für die richtige gehalten — niemand weiss mehr, was sie zu viel
+verbietet, also traut sich niemand, sie anzufassen. **Die Übertreibung, die W4 rechtfertigt,
+ist genau das, was sie später unantastbar macht.**
+
+**Die Regel.** Eine konservative Zwischenregel nennt in ihrer eigenen Absage:
+
+1. **die Regel** — was sie verbietet;
+2. **den Preis** — was sie zu viel verbietet, konkret, nicht als „ggf. zu streng";
+3. **die Ablösung** — welche Prüfung sie ersetzen wird und was diese können muss.
+
+**Warum in der Absage und nicht im Ticket.** Ein Ticket liest, wer aufräumt. Die Absage liest,
+wer gerade dagegenläuft — und das ist derjenige, der den Preis zahlt und ihn deshalb melden
+kann.
+
+**Der Handgriff.** `S005` trägt alle drei Teile als Notizen. Bei Pass 8 wird es nicht das
+letzte Mal gewesen sein.
+
+---
+
+## W6 — Das Weglassen einer Laufzeitprüfung ist ausschliesslich M1-begründet, nie invariantenbegründet
+
+**Der Schaden, eine Ebene höher schon gebucht.** `5904cae`: eine Behauptung über den Baum
+glätten, statt den Baum zu befunden. Derselbe Griff eine Ebene tiefer wäre: eine
+Bereichsprüfung aus dem erzeugten C streichen, **weil der Beweis sagt, es könne nicht negativ
+werden**.
+
+**Die zwei Netze, und warum sie nicht dasselbe sind.**
+
+| | woran es hängt | wer es nachrechnet |
+|---|---|---|
+| **M1** | am **Typ** (`u32 in 0 ..= NSLOTS`) | das Typsystem, **je Programm**, jedes Mal |
+| **Invariante** | an der **Schablone**, die sie erhält | die Vertrauensfläche — einmal, für alle |
+
+Die Verus-Vorlage `cap_space.rs` führt `refcount : nat` und beweist `oldrc >= 1` (Zeile 792)
+**aus der Invariante**. Das ist richtig — und es ist **genau ein Netz**. Gabbros
+`u32 in 0 ..= NSLOTS` gibt ein zweites, das **ohne** die Invariante hält; es war das, was in
+der Sprechprobe als `M104` neben `D001` fiel.
+
+**Die Regel, mechanisch, an jeder Emissionsentscheidung, die einen Beweis zitiert:**
+
+> **Das zitierte Faktum muss aus M1 allein ableitbar sein. Sonst bleibt die Prüfung im C.**
+
+**Warum das billiger ist als die Spezialfassung.** Die enge Form — *kein von einer Schablone
+erzeugtes Feld trägt einen Typ ohne Breite* — deckt Felder. Zwischenwerte deckt sie nicht,
+und künftige Konstrukte deckt sie erst recht nicht; dort geht dasselbe Loch wieder auf. W6
+sitzt stattdessen **an der Entscheidung** statt am Gegenstand: **eine Zeile im
+Emissionspass statt einer je Konstrukt.**
+
+*Vorgemerkt für eine Fläche, die es noch nicht gibt.* Der Emissionspass ist nicht gebaut —
+`mutiere-pruefer.py` weist ihn mit **0 Mutationen** aus. Diese Regel ist damit heute eine
+**Vorabfestlegung**, keine geprüfte Zusage, und sie steht hier, damit sie beim Bauen nicht neu
+erfunden werden muss. **Was 0 Mutationen hat, ist nicht gedeckt, sondern unbeschädigbar.**

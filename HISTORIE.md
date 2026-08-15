@@ -91,6 +91,36 @@ hatte ein Konstrukt für einen seltenen Fall entworfen und den häufigen überse
 > umgekehrt, und das Ergebnis war eine Löschung plus zwei echte Funde. **Der Test taugt
 > genau so weit, wie er seine eigenen Kandidaten töten darf.**
 
+## Zwei Fundstellen aus einer Vererbung — 2026-08-15, und `git log` hätte es gesagt
+
+Ich hatte gemeldet, der B29-Schnitt (`refcount -= 1`, Null-Prüfung danach) stehe **zweimal**,
+in „zwei unabhängig geschriebenen Kernen desselben Baums", und daraus geschlossen: *die Form
+kommt nicht aus der Gewohnheit eines Autors*. Ein Befund, der genau in die Richtung zeigte,
+die ich brauchte.
+
+**Er ist falsch, und die Widerlegung kostet einen Befehl:**
+
+```
+R099   crates/sel4lake-cap/src/space.rs -> crates/caprock-cap/src/space.rs
+```
+
+99 % Ähnlichkeit, eine Umbenennung, dieselbe Autorenlinie. Die zweite Kopie lag ausserhalb
+von git, in einem älteren Schnappschuss — **ich hatte zwei Pfade gesehen und daraus zwei
+Herkünfte gemacht.**
+
+**Die Fehlerklasse:** eine Aussage über **Herkunft** aus **Oberflächenähnlichkeit** gebildet,
+statt aus dem Nachweis, der danebenliegt. Es ist dieselbe Bewegung wie in `5904cae` — eine
+Behauptung über den Baum glätten, statt den Baum zu befunden —, nur diesmal über die
+Geschichte statt über den Code. **Und sie war bequem**: die falsche Lesart war die stärkere.
+
+**Was bleibt, ist besser als das, was fiel.** Die Zeilenfolge steht seit dem Ursprungscommit
+(`2111f30`, 2026-06-23) und hat **fünf Umbauten genau dieser Region** überlebt, darunter zwei,
+die die Freigabesemantik selbst umschrieben. B29 ist kein Ausrutscher, sondern ein
+**Attraktor** — und *das* ist gemessen statt erschlossen.
+
+> **Die Lehre, mechanisch:** Eine Herkunftsaussage über Dateien wird mit `git log --follow`
+> belegt oder gar nicht gemacht. Zwei Pfade sind kein Beleg für zwei Herkünfte.
+
 ## Die übrigen, kürzer
 
 | Was | Fassung, die fiel | was stattdessen gilt |

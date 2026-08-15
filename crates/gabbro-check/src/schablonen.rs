@@ -16,6 +16,26 @@
 //!
 //! > *Waere die Aussage noetig, wenn die Operation erzeugt waere —* **und was kostet die
 //! > erzeugte Form die Schablonenflaeche?**
+//!
+//! ## Die Regel, die ueber allen Eintraegen steht (W6)
+//!
+//! Schablonen erzeugen zweierlei: **Beweispflichten** und **Code**. Zwischen beiden verlaeuft
+//! die Linie, an der dieser Ordner schon einmal bezahlt hat:
+//!
+//! > **Das Weglassen einer Laufzeitpruefung ist ausschliesslich M1-begruendet, nie
+//! > invariantenbegruendet. Das zitierte Faktum muss aus M1 allein ableitbar sein — sonst
+//! > bleibt die Pruefung im C.**
+//!
+//! **M1 haengt am Typ und wird je Programm nachgerechnet. Eine Invariante haengt an der
+//! Schablone, die sie erhaelt — also an genau dieser Flaeche hier**, der unbewiesenen. Wer
+//! eine Bereichspruefung streicht, *weil der Beweis sagt, es koenne nicht negativ werden*,
+//! entlaesst eine Behauptung ueber das Modell in die Maschine — woertlich die gebuchte
+//! Fehlerklasse aus `5904cae`, eine Ebene tiefer.
+//!
+//! Die Regel sitzt **an der Emissionsentscheidung**, nicht am Gegenstand: eine Zeile im
+//! Emissionspass statt einer je Konstrukt. **Heute ist sie eine Vorabfestlegung** — der
+//! Emissionspass ist nicht gebaut, `mutiere-pruefer.py` weist ihn mit 0 Mutationen aus, und
+//! was 0 Mutationen hat, ist nicht gedeckt, sondern unbeschaedigbar.
 
 /// Wie weit eine Schablone ist.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

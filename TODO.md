@@ -209,17 +209,40 @@ Entwurfsfehler, kein Feature-Rueckstand.*
 gehoert als **Gift-Fragment in den Test, nicht als Satz in den Text** — die Regel des
 Ordners, dass eine Zusage eine Stelle braucht, an der sie faellt.
 
-**Nachgetragen, und es verschaerft den Auftrag:** der Schnitt steht **zweimal**, in zwei
-unabhaengig geschriebenen Kernen desselben Baums.
+**BERICHTIGT.** Ich hatte geschrieben, der Schnitt stehe in zwei **unabhaengig
+geschriebenen** Kernen. Das ist falsch, und es ist mechanisch widerlegt:
 
-| Baum | Stelle | Form |
-|---|---|---|
-| `SEL4Lake/SEL4Lake` (Caprock) | `crates/caprock-cap/src/space.rs:1067–1068` | `refcount -= 1;` dann `if … == 0` |
-| `SEL4Lake/ARMTest/stm32mp25-kernel` | `crates/sel4lake-cap/src/space.rs:617–618` | **dieselbe Form, dieselbe Reihenfolge** |
+```
+$ git log --follow --name-status -- crates/caprock-cap/src/space.rs
+R099   crates/sel4lake-cap/src/space.rs -> crates/caprock-cap/src/space.rs
+```
 
-*Damit ist der Bedarf nach W3 nicht bloss gezaehlt, sondern doppelt gezaehlt — und die
-Wiederholung in einem zweiten Kern sagt mehr als die Haeufigkeit im ersten: die Form kommt
-nicht aus einer Gewohnheit eines Autors.*
+**`R099` — eine Umbenennung mit 99 % Aehnlichkeit.** Dieselbe Autorenlinie, dieselbe Datei;
+die Kopie unter `ARMTest/` ist ein aelterer Schnappschuss derselben Abstammung, kein zweiter
+Kern. *Zwei Fundstellen aus einer Vererbung sind eine Fundstelle.*
+
+Die tragfaehige Begruendung ist eine andere — und sie ist gemessen, nicht erschlossen:
+
+```
+$ git log -L 1060,1075:crates/caprock-cap/src/space.rs --oneline
+b026c83  A-3.3: Finalized leiht seinen Speicher …          2026-07-29
+083a698  DMA: Teardown-Token (ext-37) -- Freigabe nur gegen Nachweis
+0f246f9  ext-23 D0: DmaCap + DmaEnforcer …
+9085cc0  ext-22 P4: generische Device-MMIO-Infrastruktur …
+2d50d42  feat(cap/ipc): first-class Reply-Cap mit Revocation
+2111f30  initial                                            2026-06-23
+```
+
+Die Zeilenfolge steht **seit dem Ursprungscommit** (`2111f30`, dort Zeile 341/342, woertlich
+dieselbe Reihenfolge) und hat **fuenf Umbauten genau dieser Region** ueberlebt — darunter
+zwei, die die Freigabesemantik selbst umgeschrieben haben (`Reply-Cap mit Revocation`,
+`DMA-Teardown-Token`). Ueber fuenf Wochen, ueber eine Paketumbenennung, ueber die
+Verdopplung der Datei.
+
+> **B29 ist kein Ausrutscher, sondern ein Attraktor.** Wer den Loeschpfad schreibt, schreibt
+> ihn so — auch beim fuenften Umbau, auch nachdem die Falle einmal bezahlt war. **Das traegt
+> die Sprechproben-Pflicht genauso gut wie die widerlegte Unabhaengigkeitsbehauptung, und es
+> ist die wahre Begruendung.**
 
 Die vorhandene Probe `beispiele/gift/37-b29-unter-ops.gab` deckt `ops` auf der **Tabelle**
 (`D001`). Die neue deckt `by ops` auf dem **Feld** — `field : u16 by ops` — und muss genau

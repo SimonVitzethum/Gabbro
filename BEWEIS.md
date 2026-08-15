@@ -577,6 +577,22 @@ ist der Widerspruchskandidat aus [`PLAN.md`](PLAN.md) entlastet.
 
 ---
 
+### Die eine Regel, die für **jede** Emissionsentscheidung gilt (W6)
+
+> **Das Weglassen einer Laufzeitprüfung ist ausschliesslich M1-begründet, nie
+> invariantenbegründet.**
+
+Die beiden Netze sehen von aussen gleich aus und hängen an Verschiedenem: **M1 hängt am Typ
+und wird je Programm nachgerechnet; eine Invariante hängt an der Schablone, die sie erhält** —
+also an der unbewiesenen Fläche, die dieser Ordner ohnehin als vertrauenskritisch führt. Eine
+Emission, die eine Bereichsprüfung streicht, *weil der Beweis sagt, es könne nicht negativ
+werden*, verwechselt die zwei — und entlässt eine Behauptung über das **Modell** in die
+**Maschine**.
+
+**Mechanisch, an jeder Emissionsentscheidung, die einen Beweis zitiert:** das zitierte Faktum
+muss aus M1 allein ableitbar sein, sonst bleibt die Prüfung im C. *Vorabfestlegung für eine
+Fläche, die es noch nicht gibt* — siehe `WERKZEUGKASTEN.md`, W6.
+
 ### Der Inline-Assembler: **„eine Emissionsstelle statt 161" ist heute FALSCH**
 
 L4 gilt dort nicht — Assembler wird **nicht abgesenkt, sondern eingesetzt**. Pruefbar ist nur die
