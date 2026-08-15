@@ -2785,3 +2785,40 @@ behauptet".
 **Nicht getan, weil es nicht in diesen Lauf passt** — die Neuzuordnung von 74 Pflichten an
 zehn Fragmenten ist ein eigener Auftrag, kein Nebenpunkt. *Ein ehrliches „blockiert, weil"
 schlaegt eine Zahl mit Restzweifel.*
+
+---
+
+# Die Klasse *Rahmen* — neu beurteilt, 2026-08-15 (Nachtrag zur Neuerhebung)
+
+Die Neuerhebung buchte **Rahmen** als haengend, mit dem Grund: *„`effects` prueft Schreiben
+und `locks`, **Lesen nicht und Aufrufwirkungen nicht**."* Die zweite Haelfte ist seit dem
+Aufrufgraphen zu.
+
+| | vorher | jetzt |
+|---|---|---|
+| Schreiben | `E005` | `E005` |
+| `locks`, mit Staerke | `E006`/`E007` | `E006`/`E007` |
+| **Aufrufwirkungen** | **fehlte** | **`E008` — transitiv, ueber den Aufrufgraphen** |
+| **Lesen** | fehlt | **fehlt weiterhin** — `memos/M-effects-lesen.md`, und die Entscheidung liegt beim Ordner (R5) |
+
+## Urteil: **Rahmen haengt weiter — an EINER Haelfte statt an zweien**
+
+**N_neu bleibt bei 5.** Die Kippregel ist eindeutig: *traegt ein Konstrukt eine Klasse nur
+teilweise, zaehlt sie als haengend, und der gedeckte Teil wird benannt.* Was sich geaendert
+hat, ist nicht die Zahl, sondern **woran sie haengt** — und das ist der Unterschied zwischen
+einem Posten und einer Baustelle.
+
+**Und der Rest ist keine Bauarbeit mehr, sondern ein Urteil.** Die Lesehaelfte ist gemessen
+(Lesart A: 10 von 32 Funktionen, Lesart C: 3 von 32 — Faktor drei), das Memo liegt vor, und
+**was fehlt, ist die Entscheidung des Ordners, nicht ein Werkzeug.**
+
+## Was der Aufrufgraph an den anderen Klassen geaendert hat: nichts
+
+* **Rennen** und **Publikation** warten weiter auf den Paarungspass — dieselbe Luecke.
+* **Verfeinerung** wartet auf die C-Formentabelle.
+* **Phase** wartet auf das Lader-Fragment, nicht auf ein Werkzeug (R18: eine Klasse mit einer
+  Fundstelle, deren Schreibweise fehlt, wird **am Fragment** entschieden, nicht per Zaehlung).
+
+> **Der Aufrufgraph hat drei Blocker geloest und keine Klasse abgeraeumt.** Das ist kein
+> Widerspruch: er war Voraussetzung, nicht Ursache. *R17 sagt, womit man anfaengt, nicht was
+> dabei herauskommt.*
