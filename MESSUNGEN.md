@@ -2372,3 +2372,63 @@ Vor der ersten Zahl:
    wenn `gabbro pruefe` gar nicht laeuft — es zaehlt dann **nicht** null.
 2. **Die Zahl haengt nachweislich am Prueflingt.** Probe: **ein** `narrow` wieder einsetzen;
    N muss **um genau eins fallen**. Tut es das nicht, misst der Lauf etwas anderes.
+
+## ERGEBNIS der `narrow`-Zaehlung — 2026-08-15
+
+**N = 2** Bereichspflichten in 791 Zeilen Gabbro, sechs Uebersetzungseinheiten.
+
+| | |
+|---|---|
+| entfernte `narrow`-Anweisungen | 2 |
+| Tor P2 ohne sie | **4 von 6** — es faellt, also misst der Lauf etwas |
+| **N (Fundstellen)** | **2** |
+| Dichte | **2,5 je 1000 Zeilen** |
+| R14-Selbstprobe | **bestanden** — 2 entfernte `narrow` → genau 2 zusaetzliche Pflichten |
+
+## Handpruefung — n = 2, also JEDE (Vorab: „weniger als 20 ⇒ jede, Umfang berichten")
+
+| Stelle | Urteil |
+|---|---|
+| `space.rs`-Fragment, `refcount -= 1` | **echte Pflicht.** `u32 in 0 .. 80255`, und der Unterlauf ist «B29» selbst |
+| `kstackmark`-Fragment, `i += 1` | **KEINE echte Pflicht** — die Traversierung laeuft ueber `s.worte` und begrenzt `i`; **M1 sieht das nicht.** Eine Pruefer-Grenze, keine Sprachpflicht |
+
+**1 Fehler in der Stichprobe.** Die vorab festgelegte Schranke war „hoechstens 1" — die
+Zaehlung ist damit **gueltig**, und zwar **knapp**.
+
+> **Der Befund hinter dem Befund:** die Haelfte der gemessenen Pflichten ist eine
+> **Prueferbeschraenkung**, nicht eine Sprachpflicht. Bei n = 2 ist das keine Quote, sondern
+> ein Hinweis — aber es ist **derselbe Hinweis, den die ungueltige Rust-Zaehlung gab**
+> (Klassifikatorfehler 40–60 %, alle in dieselbe Richtung). *Zweimal in Folge zeigt die
+> Handprobe in dieselbe Richtung: die Rohzahl ist zu HOCH.*
+
+## Das Tor — **verfehlt nach dem Wortlaut, und das Protokoll war widersprüchlich**
+
+Hochgerechnet auf 75 294 Zeilen Kern: **2 / 791 × 75 294 ≈ 190**. Gegen eine Latte von 24
+ist das um den Faktor **acht** verfehlt; zieht man die Prueferbeschraenkung ab, bleibt
+**≈ 95**, also Faktor **vier**.
+
+**Und hier faellt ein Befund ueber mein eigenes Vorab-Protokoll an.** Es sagt beides:
+
+> *„bestanden: die gemessene Dichte traegt eine Hochrechnung ≤ 24"*
+>
+> *„Die Hochrechnung wird berichtet, aber **nicht als Messwert gefuehrt** — die sechs
+> Fragmente sind nach ihrer Schwierigkeit gewaehlt, nicht zufaellig."*
+
+**Ich habe das Tor an eine Groesse gehaengt, die dasselbe Protokoll als nicht-messend
+erklaert.** Nach **R2** wird ein Tor nach dem Lauf nicht angepasst — also steht: **verfehlt**,
+mitsamt der Feststellung, dass die Entscheidungsgrundlage nach dem eigenen Protokoll keine
+ist. *Ein Tor, das auf einer erklaerten Nicht-Messung ruht, ist ein Konstruktionsfehler des
+Protokolls, und er gehoert berichtet statt repariert.*
+
+**Was trotzdem feststeht und mehr wert ist als das Tor:**
+
+* Die Zaehlung ist **zum ersten Mal ohne Klassifikator gefahren** — nicht ein Skript
+  entscheidet, was eine Bereichspflicht ist, sondern der Pass, der sie prueft. *Genau daran
+  war die erste Zaehlung gestorben.*
+* **N = 2 ueber 791 Zeilen ist etwas voellig anderes als die 150…317 der Rust-Zaehlung** —
+  und der Unterschied ist kein Messfehler, sondern die **Sache**: die Rust-Zaehlung zaehlte
+  *alle* Bereichspflichten, Gabbros Typen und V-Regeln tragen davon den Grossteil **ohne**
+  eine `narrow`-Zeile. Gezaehlt wird hier nur, was den **Notausgang** braucht.
+* **Die naechste Zaehlung braucht n, nicht Sorgfalt.** Bei zwei Fundstellen entscheidet jede
+  einzelne Handprobe ueber 50 % des Ergebnisses. Die vier fehlenden Bereichsfragmente
+  (Scheduler, MMU, Lader, Parser) sind die Messgrundlage, nicht ein Nebenpunkt.
