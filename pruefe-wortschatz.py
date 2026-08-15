@@ -12,11 +12,41 @@ d = pathlib.Path(sys.argv[1]).read_text()
 m = re.search(r"```\n(  Struktur.*?)```", d, re.S)
 # Die Spaltenkoepfe stehen gross am Zeilenanfang -- ohne sie zu entfernen zaehlt der
 # Pruefer "blauf" (aus "Ablauf") als totes Wort. Erster Fund des Pruefers war er selbst.
-roh = re.sub(r"^\s*[A-ZÄÖÜ]\w*", "", m.group(1), flags=re.M) if m else ""
-vok = set(re.findall(r"\b[a-z_][a-z0-9_]+\b", roh))   # Wortgrenzen: sonst "elf" aus "Self"
-ebnf = "\n".join(re.findall(r"```ebnf\n(.*?)```", d, re.S))
-# Ein-Zeichen-Terminale stammen aus Zeichenbereichen ("a" … "z") und sind keine Woerter.
-term = {t for t in re.findall(r'"([a-z_][a-z0-9_]*)"', ebnf) if len(t) > 1}
+roh_tabelle = m.group(1) if m else ""
+roh = re.sub(r"^\s*[A-ZÄÖÜ]\w*", "", roh_tabelle, flags=re.M)
+vok = set(re.findall(r"(?<!@)\b[a-z_][a-z0-9_]+\b", roh))  # Wortgrenzen: sonst "elf" aus "Self";
+                                                     # `(?<!@)`: `@version` ist EIN Wort, nicht zwei
+# Die Tabelle muss dieselben zwei Sonderformen fuehren koennen, die die EBNF-Seite seit
+# G6 sieht: `@version` (fuehrendes `@` faellt aus der Wortgrenze) und `O` (ein einzelner
+# Grossbuchstabe). Ohne diese Zeile kann die Tabelle den Befund gar nicht beantworten --
+# der Waechter haette dann eine Meldung ohne moegliche Erwiderung.
+vok |= set(re.findall(r"@[a-z_][a-z0-9_]*", roh))
+vok |= {w for w in re.findall(r"(?<![\w@])([A-Z])(?![\w])", roh)}
+ebnf_roh = "\n".join(re.findall(r"```ebnf\n(.*?)```", d, re.S))
+# **Kommentare zuerst heraus.** Die Regelregex unten sucht das `;` am ZEILENENDE; steht
+# dahinter ein `(* … *)`, findet sie es nicht und `.*?` laeuft bis zum naechsten
+# Zeilenende-Semikolon -- sie VERSCHLUCKT die Folgeregel, still und ohne Meldung.
+# Gefunden 2026-08-15: elf Regeln waren so verschmolzen, darunter `program` selbst; von
+# `program` aus war dann NICHTS erreichbar, und die Erreichbarkeitspruefung meldete 112
+# Tote statt des einen Waechterfehlers. **Dritte blinde Stelle desselben Waechters** --
+# und dieselbe Klasse wie G6: das Werkzeug sah an seinem eigenen Rand nicht hin.
+ebnf = re.sub(r"\(\*.*?\*\)", "", ebnf_roh, flags=re.S)
+# **G6, geschlossen.** Bis 2026-08-15 lautete die Regel: nimm Terminale der Form
+# `[a-z_][a-z0-9_]*` mit Laenge > 1. Damit fielen ZWEI echte Terminale durch das Netz --
+# `O` (Grossbuchstabe, `costexpr`) und `@version` (fuehrendes `@`) --, und der Waechter
+# behauptete einen geschlossenen Wortschatz, ohne sie je angesehen zu haben. Dieselbe
+# blinde Stelle wie zweimal zuvor, nur an einem anderen Rand.
+#
+# Die Ausnahme ist jetzt MECHANISCH statt implizit: Zeichenmaterial steht in genau diesen
+# Regeln, und nur dort werden Ein-Zeichen-Terminale weggelassen. Alles andere zaehlt --
+# gross, klein oder mit `@`.
+ZEICHENREGELN = {"letter", "digit", "hexdigit", "char", "quote", "newline", "hex", "bin"}
+zeichenmaterial = set()
+for k, v in re.findall(r"^\s*([a-z][a-z0-9_]*)\s*=(.*?);\s*$", ebnf, re.M | re.S):
+    if k in ZEICHENREGELN:
+        zeichenmaterial |= set(re.findall(r'"([^"]*)"', v))
+term = {t for t in re.findall(r'"(@?[A-Za-z_][A-Za-z0-9_]*)"', ebnf)
+        if t not in zeichenmaterial and (len(t) > 1 or t.isupper())}
 
 # Erreichbarkeit: eine definierte, aber von `program` aus nie erreichte Regel ist ein
 # stiller Toter -- der Geschlossenheitspruefer sieht sie nicht, weil er die Gegenrichtung prueft.
@@ -35,10 +65,21 @@ tot_regel = sorted(set(prod) - erreicht - LEX)
 if tot_regel:
     print(f"    UNERREICHBAR VON program ({len(tot_regel)}): " + ", ".join(tot_regel))
 
+# **Sonderformen (G6):** Terminale, die ausdruecklich KEINE Wortschatzwoerter sind. Sie
+# stehen in einer eigenen Tabellenzeile und werden hier aus dem Abgleich genommen -- aber
+# gezaehlt und benannt. Der Unterschied zu vorher ist nicht die Ausnahme, sondern dass sie
+# sichtbar ist: bis 2026-08-15 fielen genau diese zwei aus der Terminalregex heraus, und
+# der Waechter behauptete Geschlossenheit ueber einer Menge, die er nie gesehen hatte.
+m_s = re.search(r"^\s*Sonderform\s+(.*?)(?:\(|$)", roh_tabelle, re.M)
+sonder = set(m_s.group(1).split()) if m_s else set()
+vok -= sonder
+term -= sonder
+
 fehlt = sorted(term - vok)          # in der Grammatik, nicht im Wortschatz
 tot   = sorted(vok - term)          # im Wortschatz, nirgends in der Grammatik
 
-print(f"  Wortschatz: {len(term)} EBNF-Terminale, {len(vok)} Tabellenwoerter")
+print(f"  Wortschatz: {len(term)} EBNF-Terminale, {len(vok)} Tabellenwoerter"
+      + (f" + {len(sonder)} Sonderformen ({', '.join(sorted(sonder))})" if sonder else ""))
 if fehlt:
     print(f"    NICHT IN DER TABELLE ({len(fehlt)}): " + ", ".join(fehlt))
 if tot:

@@ -30,6 +30,14 @@ fn tabelle(md: &str) -> BTreeSet<String> {
 
     let mut out = BTreeSet::new();
     for zeile in roh.lines() {
+        // **Sonderformen (G6) sind Terminale, aber keine Wortschatzwoerter.** `O` steht als
+        // Bezeichner in fester Stellung (`parse.rs:costexpr`), `@version` ist ein
+        // zusammengesetztes Zeichen. Der Lexer fuehrt beide nicht als Schluesselwort, und
+        // das ist die Zusage -- nicht das Loch. Das Loch war, dass `pruefe-wortschatz.py`
+        // sie bis 2026-08-15 gar nicht erst gesehen hat.
+        if zeile.trim_start().starts_with("Sonderform") {
+            continue;
+        }
         // Die Spaltenkoepfe stehen gross am Zeilenanfang und sind keine Woerter.
         let ohne_kopf = match zeile.find(|c: char| c.is_lowercase()) {
             Some(_) => {

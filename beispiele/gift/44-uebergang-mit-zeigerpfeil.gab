@@ -1,0 +1,12 @@
+-- erwartet: P001
+-- G3, in der Grammatik entschieden: `shiftplace` hat KEIN `->`-Suffix. In
+-- `ST: ACK -> ACK` waere `ACK -> ACK` sonst zugleich Zeigerzugriff und Uebergangspfeil.
+-- Ein `transition` beschreibt Registerfelder, keine Zeigerketten -- und das steht jetzt in
+-- der EBNF statt in einer Parserentscheidung.
+module gift {
+device Ding(basis : u64) at mmio {
+    reg ST : u32 @0x0 class rw fields { ACK @0, }
+    transition falsch { ST->ACK: 0 -> 1 }
+        effects { writes ST }
+}
+}

@@ -1117,6 +1117,10 @@ pub struct Assume {
 pub struct Axiom {
     pub name: Ident,
     pub parameter: Vec<Parameter>,
+    /// **G2.** `axiom rdtscp() -> u64 requires Has(RDTSCP) …` war bis 2026-08-15 nicht
+    /// schreibbar. Betrifft die Axiomschicht, also den groessten unbewiesenen Posten.
+    pub rueckgabe: Option<TypExpr>,
+    pub requires: Vec<Pred>,
     pub effects: Wirkungen,
     pub klasse: AnnahmeKlasse,
     pub span: Span,

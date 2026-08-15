@@ -99,6 +99,7 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
   Domaenen   slots of chain descendants queue elems fields threads reaches via
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 bool never w1c rc
   Eingebaut  sizeof lenof aligned forall exists true false Self
+  Sonderform O @version    (KEINE Wortschatzwoerter -- s. Fussnote G6)
 ```
 
 **Alles andere ist ein Bezeichner.** Ein neues Wort ist eine Sprachaenderung und braucht einen
@@ -122,9 +123,24 @@ char       = ? jedes Zeichen ausser quote und newline ? ;
 quote      = ? das Zeichen U+0022 ? ;
 newline    = ? Zeilenende ? ;
 comment    = "--" { char } newline ;
-path       = ident { "::" ident } ;
+path       = pathseg { "::" pathseg } ;                        (* G5 *)
+pathseg    = ident | "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" ;
+             (* `u64::max` -- beide Segmente sind Wortschatzwoerter. `primtype` als
+                Pfadsegment zuzulassen ist die kleinere Aenderung; die Alternative waere,
+                die Grenzwerte umzubenennen. *)
 identlist  = ident { "," ident } ;
+regbind    = ident ":" ident ;                                 (* G4 *)
 ```
+
+> **Die Zeile `Sonderform` und warum sie keine Ausnahme ist (G6).** `O` (in `costexpr`) und
+> `@version` (in `format`) sind **Terminale der Grammatik, aber keine Woerter des
+> Wortschatzes**: `O` steht als Bezeichner in fester Stellung (so auch im Parser,
+> `parse.rs:costexpr`), `@version` ist ein zusammengesetztes Zeichen, kein Schluesselwort.
+> **Der Befund war nie die Ausnahme, sondern dass der Waechter sie nie angesehen hat** — er
+> behauptete einen geschlossenen Wortschatz ueber einer Menge, aus der zwei Terminale
+> stillschweigend herausfielen (Grossbuchstabe, fuehrendes `@`). Jetzt zaehlt er sie, nennt
+> sie beim Namen und fuehrt sie in einer eigenen Klasse. *Eine benannte Ausnahme ist eine
+> Zusage; eine unsichtbare ist ein Loch.*
 
 **Kein Gleitkomma im Kern.** Zeichenketten nur in `claim`, `reason`, `assume` und `section`.
 
@@ -144,10 +160,11 @@ bootdecl   = "boot" ident "arch" ident "{"
              "}" ;
 bootstep   = "step" ( call | ident "=" constexpr ) ";" ;
 entrydecl  = "entry" ident [ "vector" constexpr ] [ "via" ident ] "arch" ident "{"
-               "regs" "in"  "{" { ident ":" ident "," } "}"
-               "regs" "out" "{" { ident ":" ident "," } "}"
-               "preserves" "{" identlist "}"
-               "clobbers"  "{" identlist "}"
+               "regs" "in"  "{" [ regbind { "," regbind } [ "," ] ] "}"
+               "regs" "out" "{" [ regbind { "," regbind } [ "," ] ] "}"   (* G4 *)
+               (* regbind steht unten bei den Hilfsregeln *)
+               "preserves" "{" [ identlist ] "}"
+               "clobbers"  "{" [ identlist ] "}"                (* G7: leer erlaubt *)
                entryextra
                "dispatch" path ";"
              "}" ;
@@ -248,12 +265,15 @@ bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" ) addexpr } ;
 addexpr    = mulexpr { ( "+" | "-" ) mulexpr } ;
 mulexpr    = unary { ( "*" | "/" | "%" ) unary } ;
 unary      = [ "!" | "-" ] primary ;
-primary    = int | "true" | "false" | place | call | cast | paren | builtin
+primary    = int | "true" | "false" | place | call | paren | builtin   (* G9: kein `cast` *)
            | oldexpr | "result" ;
 paren      = "(" expr ")" ;
 call       = path "(" [ arglist ] ")" ;
 arglist    = expr { "," expr } ;
-cast       = path "(" expr ")" ;                  (* nur zwischen vertraeglichen Typen *)
+(* G9: `cast` war eine echte Teilmenge von `call` und aus der Grammatik nie eindeutig
+   ableitbar. Die Produktion entfaellt: ein `call`, dessen `path` einen Typ nennt, IST die
+   Umwandlung. Die Unterscheidung ist eine Namensaufloesung, keine Syntaxfrage -- und ein
+   Erreichbarkeitswaechter auf Nichtterminalebene konnte sie nie sehen. *)
 builtin    = ( "sizeof" | "lenof" ) "(" ( typeexpr | place ) ")"
            | "aligned" "(" expr "," constexpr ")" ;
 oldexpr    = "old" "(" place ")" ;                 (* AUSDRUCK, nicht Praedikat; nur in ensures *)
@@ -303,7 +323,7 @@ reach      = place "reaches" place "via" ident ;
 predlist   = pred { "," pred } ;
 ```
 
-**Sieben Domaenen, geschlossen. Schachtelung hoechstens zwei.** `old(place)` ist in `ensures`
+**Acht Domaenen, geschlossen. Schachtelung hoechstens zwei.** `old(place)` ist in `ensures`
 erlaubt und sonst nicht.
 
 > **Das ist die Linie, und sie ist hier zum ersten Mal aufschreibbar.** Es gibt **keine
@@ -446,7 +466,8 @@ forever    = "forever" [ ident ]
 
 ```gabbro
 forever
-    per_pass bounded 4096 cycles
+    per_pass bounded 4096 ops
+    on_exceeded watchdog_schlug_an
     effects  { reads READY, writes CURRENT, locks SCHEDS }
     progress timer_tick_arrives
 { … }
@@ -528,7 +549,13 @@ regdecl = "reg" ident ":" intty "@" expr
 transition = "transition" ident "{" transset "}"
              [ "requires" pred ] [ "effects" "{" efflist "}" ] ;
 transset   = placeshift { "," placeshift } ;      (* MEHRERE Orte in EINEM Zug -- s. Grenze *)
-placeshift = place ":" expr "->" expr ;
+placeshift = shiftplace ":" expr "->" expr ;                   (* G3 *)
+shiftplace = ident { "." ident | "[" expr "]" } ;
+             (* KEIN "->"-Suffix: in `ST: ACK -> ACK` waere `ACK -> ACK` sonst zugleich
+                placesuffix und Uebergangspfeil. Die Entscheidung steht hier, nicht im
+                Parser -- ein Zeigerzugriff links eines Uebergangs ist damit nicht
+                schreibbar, und das ist die gewollte Seite: ein `transition` beschreibt
+                Registerfelder, keine Zeigerketten. *)
 ```
 
 ```gabbro
@@ -562,8 +589,16 @@ device Vtd(base: Pa) at mmio {
 
 ```ebnf
 atomicdecl  = [ "pub" ] "atomic" ident ":" typeexpr
+              [ "publishes" nutzlast ]                          (* G1 *)
               [ "acquire" | "release" | "seq" | "relaxed" ] ";" ;
-publishstmt = place "=" expr "publishes" ( placelist | "nothing" ) ";" ;
+              (* Reihenfolge nach dem BESTAND, nicht nach dem Entwurf: SYNTAX.md:603 und
+                 FRAGMENTE.md F6 (4x) schreiben `publishes` VOR der Ordnung. *)
+publishstmt = place "=" expr "publishes" nutzlast ";" ;
+nutzlast   = "{" placelist "}" | "nothing" ;
+             (* Nach dem BESTAND entschieden (2026-08-15): 22-mal `nothing`, 11-mal die
+                Klammerform, 2-mal klammerlos. Die Grammatik folgt den 33 und nicht den 2 --
+                die beiden Ausnahmen in beispiele/05 sind nachgezogen. Klammern trennen die
+                Nutzlast sichtbar von dem, was folgt (`release`, `;`). *)
 lockdecl   = "lock" ident "protects" "{" placelist "}"
              "rank" constexpr [ "held" "<=" constexpr "ops" ]
              [ "shared" "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
@@ -586,7 +621,9 @@ gibt am Ende frei; wer kopieren-und-freigeben will, tut es **innerhalb** und nim
 ```ebnf
 assume = "assume" ident string
          ( "falsifier" ident | "unfalsifiable" string ) ";" ;
-axiom  = "axiom" ident "(" [ params ] ")" "effects" "{" efflist "}"
+axiom  = "axiom" ident "(" [ params ] ")" [ "->" typeexpr ]
+         [ "requires" pred ]                                    (* G2 *)
+         "effects" "{" efflist "}"
          ( "falsifier" ident | "unfalsifiable" string ) ";" ;
 ```
 

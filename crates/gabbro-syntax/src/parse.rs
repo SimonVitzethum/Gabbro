@@ -486,7 +486,22 @@ impl<'a> Parser<'a> {
     }
 
     fn pfad(&mut self) -> Erg<Pfad> {
-        let erste = self.erwarte_ident()?;
+        // **G5.** `u64::max` -- beide Segmente sind Wortschatzwoerter. Als ERSTES Segment
+        // ist ein Grundtyp zugelassen (`pathseg = ident | "u8" | … | "i64"`); das deckt die
+        // Grenzwerte, ohne den Wortschatz an anderer Stelle aufzuweichen.
+        let erste = match self.blick().art {
+            Art::Wort(k)
+                if k.ist_intty() && matches!(self.blick_n(1).art, Art::Zeichen(Z::Kolon2)) =>
+            {
+                let span = self.blick().span;
+                self.pos += 1;
+                Ident {
+                    text: k.text().to_string(),
+                    span,
+                }
+            }
+            _ => self.erwarte_ident()?,
+        };
         let mut teile = vec![erste];
         while self.ist_z(Z::Kolon2) {
             self.pos += 1;
@@ -1288,6 +1303,17 @@ impl<'a> Parser<'a> {
         Ok(liste)
     }
 
+    /// **G7.** `identlist` verlangt mindestens einen Namen -- ein Eintritt, der nichts
+    /// zerstoert, konnte das bis 2026-08-15 nicht sagen. Die leere Liste ist eine AUSSAGE
+    /// („zerstoert nichts"), kein Fehlen; sie in der Grammatik zu verbieten hiess, die
+    /// staerkste Zusage unschreibbar zu machen.
+    fn identlist_leer_erlaubt(&mut self) -> Erg<Vec<Ident>> {
+        if self.ist_z(Z::GeschweiftZu) {
+            return Ok(Vec::new());
+        }
+        self.identlist()
+    }
+
     // -- 5. Praedikate ---------------------------------------------------------------------
 
     fn pred(&mut self) -> Erg<Pred> {
@@ -1992,30 +2018,20 @@ impl<'a> Parser<'a> {
     /// Die Beispiele derselben Datei schreiben sie **mit** (`publishes { color_report }`),
     /// und der Parser hat lange nur diese Form genommen: die EBNF-treue fiel, die
     /// EBNF-fremde kam durch. Jetzt gehen beide, und die Klammerform sagt es (`P032`).
+    /// `nutzlast = "{" placelist "}" | "nothing"` -- **die Klammerform ist die Form.**
+    ///
+    /// Bis 2026-08-15 nahm der Parser beide Schreibweisen und meldete `P032` fuer die
+    /// Klammern, weil die EBNF sie nicht fuehrte. Entschieden wurde nach dem BESTAND:
+    /// 22-mal `nothing`, 11-mal mit Klammern, 2-mal ohne. **Die Grammatik folgt den 33.**
     fn nutzlast(&mut self) -> Erg<Nutzlast> {
         if self.ist_kw(Kw::Nothing) {
             let t = self.vor();
             return Ok(Nutzlast::Nichts(t.span));
         }
-        if self.ist_z(Z::GeschweiftAuf) {
-            let auf = self.vor().span;
-            let liste = self.placelist()?;
-            let zu = self.erwarte_z(Z::GeschweiftZu)?;
-            self.absage(
-                Absage::hinweis(
-                    "P032",
-                    auf.bis_zu(zu),
-                    "`publishes { … }` steht nicht in der EBNF",
-                )
-                .mit_notiz(
-                    "SYNTAX.md §11: `publishes ( placelist | \"nothing\" )` -- ohne Klammern; \
-                     die Beispiele derselben Datei schreiben sie mit",
-                )
-                .mit_notiz("angenommen; die Grammatik ist an dieser Stelle nachzuziehen"),
-            );
-            return Ok(Nutzlast::Orte(liste));
-        }
-        Ok(Nutzlast::Orte(self.placelist()?))
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let liste = self.placelist()?;
+        self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(Nutzlast::Orte(liste))
     }
 
     fn zuweisung_oder_ruf(&mut self) -> Erg<StmtArt> {
@@ -2722,7 +2738,16 @@ impl<'a> Parser<'a> {
         self.erwarte_z(Z::GeschweiftAuf)?;
         let mut schritte = Vec::new();
         loop {
-            let ort = self.place()?;
+            // **G3, jetzt in der Grammatik statt in einer Parserentscheidung.** Links eines
+            // Uebergangs steht `shiftplace` -- ein Ort OHNE `->`-Suffix. Sonst waere in
+            // `ST: ACK -> ACK` die Folge `ACK -> ACK` zugleich Zeigerzugriff und
+            // Uebergangspfeil, und der Parser entschiede eine Mehrdeutigkeit, die die EBNF
+            // gar nicht als solche fuehrt. Ein `transition` beschreibt Registerfelder,
+            // keine Zeigerketten -- das ist die gewollte Seite.
+            self.pfeil_ist_suffix = false;
+            let ort_erg = self.place();
+            self.pfeil_ist_suffix = true;
+            let ort = ort_erg?;
             self.erwarte_z(Z::Kolon)?;
             // Ab hier ist `->` der Uebergangspfeil und kein Ortssuffix -- s. `pfeil_ist_suffix`.
             // **Die Wiederherstellung darf kein `?` ueberspringen.** Tat sie es, blieb der
@@ -2775,27 +2800,12 @@ impl<'a> Parser<'a> {
         let name = self.erwarte_ident()?;
         self.erwarte_z(Z::Kolon)?;
         let typ = self.typeexpr()?;
-        // `atomicdecl` in SYNTAX.md kennt diese Klausel NICHT -- das Beispiel zwei Zeilen
-        // darunter benutzt sie, `SPRACHE.md` §11.3 verlangt sie („Die Deklaration darf
-        // zusaetzlich eine Obermenge nennen"), und `FRAGMENTE.md` F6 schreibt sie achtmal.
-        // Angenommen wird sie deshalb, aber nicht stumm: die EBNF ist nachzuziehen.
-        let obermenge = if self.ist_kw(Kw::Publishes) {
-            let stelle = self.vor().span;
-            let n = self.nutzlast()?;
-            self.absage(
-                Absage::hinweis(
-                    "P031",
-                    stelle,
-                    "`publishes` an einer `atomic`-Deklaration steht nicht in der EBNF",
-                )
-                .mit_notiz(
-                    "SPRACHE.md §11.3 traegt die Klausel (die Deklaration darf zusaetzlich \
-                     eine Obermenge nennen), SYNTAX.md §11 zeigt sie im Beispiel -- \
-                     `atomicdecl` selbst fuehrt sie nicht",
-                )
-                .mit_notiz("angenommen; die Grammatik ist an dieser Stelle nachzuziehen"),
-            );
-            Some(n)
+        // **G1 geschlossen (2026-08-15).** Bis dahin nahm der Parser die Klausel an und
+        // meldete `P031`, weil `atomicdecl` sie nicht fuehrte. Die EBNF traegt sie jetzt --
+        // in der Reihenfolge des BESTANDS (`publishes` vor der Ordnung, so in SYNTAX.md:603
+        // und viermal in FRAGMENTE.md F6), nicht in der, die ich zuerst hingeschrieben hatte.
+        let obermenge = if self.friss_kw(Kw::Publishes) {
+            Some(self.nutzlast()?)
         } else {
             None
         };
@@ -2950,12 +2960,24 @@ impl<'a> Parser<'a> {
             self.params()?
         };
         self.erwarte_z(Z::RundZu)?;
+        // G2: ein Axiom darf einen Wert liefern und eine Vorbedingung tragen.
+        let rueckgabe = if self.friss_z(Z::Pfeil) {
+            Some(self.typeexpr()?)
+        } else {
+            None
+        };
+        let mut requires = Vec::new();
+        while self.friss_kw(Kw::Requires) {
+            requires.push(self.pred()?);
+        }
         let effects = self.effects_block()?;
         let klasse = self.annahmeklasse()?;
         self.erwarte_z(Z::Semi)?;
         Ok(Axiom {
             name,
             parameter,
+            rueckgabe,
+            requires,
             effects,
             klasse,
             span: anfang.bis_zu(self.vorheriger_span()),
@@ -3028,11 +3050,11 @@ impl<'a> Parser<'a> {
         let regs_out = self.regsliste()?;
         self.erwarte_kw(Kw::Preserves)?;
         self.erwarte_z(Z::GeschweiftAuf)?;
-        let preserves = self.identlist()?;
+        let preserves = self.identlist_leer_erlaubt()?;
         self.erwarte_z(Z::GeschweiftZu)?;
         self.erwarte_kw(Kw::Clobbers)?;
         self.erwarte_z(Z::GeschweiftAuf)?;
-        let clobbers = self.identlist()?;
+        let clobbers = self.identlist_leer_erlaubt()?;
         self.erwarte_z(Z::GeschweiftZu)?;
         // entryextra
         self.erwarte_kw(Kw::Stack)?;
@@ -3105,8 +3127,11 @@ impl<'a> Parser<'a> {
             let reg = self.erwarte_ident()?;
             self.erwarte_z(Z::Kolon)?;
             let typ = self.typname_als_ident()?;
-            self.erwarte_z(Z::Komma)?;
             liste.push((reg, typ));
+            // G4: das Schlusskomma ist freigestellt -- kein Beispiel im Ordner schrieb es.
+            if !self.friss_z(Z::Komma) {
+                break;
+            }
         }
         self.erwarte_z(Z::GeschweiftZu)?;
         Ok(liste)

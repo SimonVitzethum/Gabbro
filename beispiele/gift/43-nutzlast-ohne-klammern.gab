@@ -1,0 +1,7 @@
+-- erwartet: P001
+-- Die Nutzlast ohne Klammern. **Nach dem Bestand entschieden** (2026-08-15): 22-mal
+-- `nothing`, 11-mal mit Klammern, 2-mal ohne -- die Grammatik folgt den 33 und nicht den 2.
+-- Bis dahin nahm der Parser beide Formen und meldete `P032` fuer die richtige.
+module gift {
+atomic fertig : bool publishes bericht release;
+}

@@ -1,0 +1,40 @@
+-- 11 -- Die G-Befunde aus P2, geschlossen. **Ein Positivbeispiel je Reparatur.**
+--
+-- Jede Zeile hier war bis zum 2026-08-15 entweder nicht schreibbar oder nur gegen einen
+-- Hinweis schreibbar. Sie steht als Beispiel und nicht als Satz, weil eine geschlossene
+-- Luecke eine Stelle braucht, an der sie wieder aufginge.
+
+module beispiel::grammatikbefunde {
+
+-- G1 -- `publishes` an der `atomic`-Deklaration. Der Parser nahm es an und meldete `P031`,
+-- weil `atomicdecl` es nicht fuehrte. Die Reihenfolge folgt dem BESTAND (publishes vor der
+-- Ordnung), nicht dem Entwurf: so steht es in SYNTAX.md:603 und viermal in FRAGMENTE.md F6.
+atomic gefuellt : u32 publishes nothing relaxed;
+atomic fertig   : bool publishes { bericht } release;
+
+-- G2 -- ein Axiom darf einen Wert liefern und eine Vorbedingung tragen. Betrifft die
+-- Axiomschicht, also den groessten unbewiesenen Posten der Sprache.
+axiom rdtscp() -> u64
+    requires Has(RDTSCP)
+    effects { reads uhr }
+    falsifier sonde_rdtscp;
+
+-- G5 -- `u64::max`: beide Segmente sind Wortschatzwoerter. `pathseg` laesst einen Grundtyp
+-- als erstes Segment zu; das deckt die Grenzwerte, ohne den Wortschatz aufzuweichen.
+const OBERGRENZE : u64 = u64::max;
+
+-- G7 -- ein Eintritt, der nichts zerstoert, kann das jetzt SAGEN. Die leere Liste ist eine
+-- Aussage, kein Fehlen -- sie zu verbieten hiess, die staerkste Zusage unschreibbar zu machen.
+-- G4 -- und kein Eintrag verlangt mehr ein Schlusskomma.
+entry leiser_eintritt vector 32 arch x86_64 {
+    regs in  { nr : rax, a0 : rdi }
+    regs out { ret : rax }
+    preserves { }
+    clobbers  { }
+    stack kernstapel
+    dispatch behandler;
+}
+
+extern fn behandler() effects { pure };
+
+}
