@@ -2300,3 +2300,75 @@ Stelle laesst den Parser weiterlaufen und mehr finden. `memos/M-woerter.md` nann
 stand hinter zwei Desynchronisationen. **Und ich bin in dieselbe Falle getappt, nachdem ich sie
 notiert hatte:** Zeile 873 war keine Kollision, sondern ein Folgefehler — ich habe ein echtes
 Schluesselwort umbenannt und musste es zuruecknehmen.
+
+---
+
+# VORAB — Messprotokoll: die `narrow`-Zaehlung ueber GABBRO-Quelltext
+
+**Eigener Commit, VOR der Zaehlung.** Nach dem Lauf wird an diesem Abschnitt nichts geaendert.
+
+## Vorgeschichte, in einem Satz
+Die Zaehlung ueber **Rust** war am 2026-08-14 **ungueltig** (Klassifikatorfehler 40–60 %), und
+das Urteil lautete: *die Zahl ist ungenau, das Urteil nicht* — N = 150…317 gegen eine Latte
+von 24. Fahrbar wurde die Zaehlung erst mit Tor P2 (6 von 6, 2026-08-15).
+
+## Was gezaehlt wird
+
+**Die Bereichspflichten, die eine EXPLIZITE Abtragung brauchen** — also genau die Stellen, an
+denen der Schreiber `narrow … to … else { … }` hinschreiben muss, weil weder der Typ noch die
+V-Regeln den Nachweis tragen.
+
+**Mechanisch, ohne Klassifikator:**
+
+1. Aus dem Fragmentkorpus alle `narrow`-Anweisungen **entfernen**.
+2. `gabbro pruefe` fahren und die Absagen `M101`/`M104` zaehlen.
+3. **Diese Zahl ist N** — jede solche Absage ist eine Stelle, die ohne `narrow` nicht
+   uebersetzt.
+
+*Der Klassifikator, an dem die erste Zaehlung starb, faellt damit ersatzlos weg: nicht ein
+Skript entscheidet, was eine Bereichspflicht ist, sondern der Pass, der sie prueft.*
+
+## Zaehlregel
+
+* Gezaehlt werden **Fundstellen**, nicht Absagen: `M101` und `M104` an derselben Zeile sind
+  **eine** Pflicht (der Pass meldet Bereich und Breite getrennt).
+* Eine Stelle in einem **Kommentar** oder in einer entfernten `narrow`-Zeile selbst zaehlt
+  nicht.
+* **R16:** bricht der Parser irgendwo ab, ist die Zahl eine **untere Schranke** und wird als
+  „≥ n, Abbruch bei X" gefuehrt, nicht als n. Tor P2 steht bei 6 von 6 — es darf beim
+  Entfernen der `narrow` **nicht** fallen; faellt es, ist der Lauf ungueltig.
+
+## Handstichprobe — Umfang und Fehlerschranke VORAB
+
+* **n = 20** Fundstellen, geschichtet ueber die sechs Einheiten (je Einheit mindestens eine,
+  Rest proportional zur Zeilenzahl). Sind es weniger als 20 Fundstellen, wird **jede** geprueft
+  und der Umfang berichtet.
+* Von Hand entschieden: *ist an dieser Stelle wirklich ein Nachweis noetig, oder liegt der
+  Wert nachweislich im Bereich?*
+* **Fehlerschranke: hoechstens 1 Fehler in der Stichprobe.** Bei 2 oder mehr ist die Zaehlung
+  **ungueltig** — getrennt von „verfehlt" gefuehrt.
+
+## Hochrechnung, und ihre Grenze
+
+Der Korpus ist **791 Zeilen Gabbro** gegen **75 294 Zeilen Rust** im Kern (`a1bf707`,
+139 Dateien). Eine Hochrechnung ueber diesen Faktor **wird berichtet, aber nicht als Messwert
+gefuehrt** — die sechs Fragmente sind nach ihrer Schwierigkeit gewaehlt, nicht zufaellig, und
+sind damit **kein reprasentativer Schnitt**. Die Dichte steht als Dichte da.
+
+## Das zweiseitige Tor
+
+| | |
+|---|---|
+| **bestanden** | die gemessene Dichte traegt eine Hochrechnung **≤ 24** fuer den ganzen Kern |
+| **verfehlt** | sie traegt eine Hochrechnung **> 24** |
+| **ungueltig** | ≥ 2 Fehler in der Handstichprobe · **oder** Tor P2 faellt beim Entfernen der `narrow` · **oder** der Parser bricht ab (dann: untere Schranke, R16) |
+
+**Die Latte wird nicht verschoben.** Sie stand bei 24 und steht bei 24.
+
+## R14 — das Geschirr beweist zuerst, dass es messen kann
+
+Vor der ersten Zahl:
+1. **Der Bauabbruch unterscheidet sich vom Treffer.** Das Zaehlwerkzeug bricht sichtbar ab,
+   wenn `gabbro pruefe` gar nicht laeuft — es zaehlt dann **nicht** null.
+2. **Die Zahl haengt nachweislich am Prueflingt.** Probe: **ein** `narrow` wieder einsetzen;
+   N muss **um genau eins fallen**. Tut es das nicht, misst der Lauf etwas anderes.
