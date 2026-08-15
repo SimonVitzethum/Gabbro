@@ -168,3 +168,36 @@ Emissionspass statt einer je Konstrukt.**
 `mutiere-pruefer.py` weist ihn mit **0 Mutationen** aus. Diese Regel ist damit heute eine
 **Vorabfestlegung**, keine geprüfte Zusage, und sie steht hier, damit sie beim Bauen nicht neu
 erfunden werden muss. **Was 0 Mutationen hat, ist nicht gedeckt, sondern unbeschädigbar.**
+
+---
+
+## W7 — Eine Zahl ohne Fundstellenliste gehört nicht ins Dokument
+
+**Dreimal bezahlt, an einem Tag gefunden.**
+
+| Zahl | Aggregat | Zuordnung |
+|---|---|---|
+| 74 Beweispflichten (17 Logik / 57 Klempnerei) | im Ordner | **verloren** |
+| 19 hängende Pflichten in elf Klassen | im Ordner | **6 von 11** |
+| `delete_leaf` 3,6–6 : 1 | im Ordner | **verloren** |
+
+**Der Schaden ist nicht Unschärfe, sondern Unwiderlegbarkeit.** Eine Zahl, deren Zuordnung
+fehlt, kann niemand prüfen — auch der Autor nicht. Sie wird zitiert, sie trägt Entscheidungen,
+und sie ist gegen jede Korrektur immun, weil es nichts gibt, wogegen man sie hielte.
+
+**Zwei der drei sind bereits gekippt, als jemand nachzählte:** `delete_leaf` von 3,6–6 : 1 auf
+**1,75 : 1** (andere Zählweise: Pflichten statt Beweisschritte), und die elf Klassen von
+„19 hängend" auf **N_neu = 5 hängende Klassen** — nicht umrechenbar, weil die alte Menge nie
+belegt war.
+
+**Die Regel.** Eine gemeldete Zahl führt die Liste mit, aus der sie entstand: je Posten
+`Datei:Zeile` oder eine nachfahrbare Befehlszeile. Passt die Liste nicht ins Dokument, kommt
+sie in eine Datei daneben — **aber sie existiert.**
+
+**Die Kehrseite, und sie ist die eigentliche Zusage:** eine Zahl **mit** Liste darf falsch
+sein. Sie ist dann nachprüfbar falsch, und das ist der ganze Unterschied. *Falle 80 sagt,
+eine Zahl darf nicht parallel zur Wahrheit laufen; W7 sagt, wie man das verhindert.*
+
+**Der Handgriff, wo es mechanisch geht:** `pruefe-luecken.py` und `zaehle-bereichspflichten.py`
+drucken ihre Fundstellen mit; `gabbro kosten` und `gabbro k-bedingung` ebenso. Wo eine Zahl
+von Hand entsteht, gehört die Liste in dieselbe Änderung.

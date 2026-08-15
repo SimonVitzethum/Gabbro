@@ -2727,3 +2727,61 @@ greift. *Genau deshalb zaehlt `N_neu` Klassen und nicht Fundstellen.*
 Die alte Zahl zaehlte **Pflichten**, diese zaehlt **Klassen**. Beide sind legitim, keine ist
 in die andere umrechenbar, und die alte ist nicht mehr belegbar. *Wer beide nebeneinander
 stellt, vergleicht zwei Mengen, die nie dieselbe waren.*
+
+---
+
+# Die 17er-Zaehlung — **UNGUELTIG, und zwar nach ihrer eigenen Bedingung**
+
+**Angesetzt 2026-08-15**, nach dem committeten Protokoll, **unveraendert angewandt**.
+
+## Schritt 1 des Protokolls entscheidet, und er faellt
+
+> *„1. die 17 Pflichten mit `Datei:Zeile` auffinden (sonst ungueltig, s. u.);"*
+>
+> *„Lassen sich weniger als 17 Pflichten mit `Datei:Zeile` wiederfinden, ist die **Quelle**
+> nicht reproduzierbar — dieselbe Protokollklasse wie die fuenf Scratchpad-Klassen, und dann
+> wird nicht gezaehlt, sondern erst die Grundlage hergestellt."*
+
+**Gefunden: EINE.** Der ganze Abschnitt *Der Logik/Klempnerei-Split* (`MESSUNGEN.md`:268–300)
+fuehrt genau **eine** Fundstelle mit Datei und Zeile — `kernel/src/system.rs:1215` —, und die
+gehoert zur Eager-FP-Frage, nicht zu den 17.
+
+Die Quelle sagt: *„Zehn handuebersetzte Fragmente aus acht Bereichen, 74 Beweispflichten
+einzeln zugeordnet."* **Die Zuordnung selbst ist nicht im Ordner.** Was dasteht, ist das
+**Aggregat** — 74 / 17 / 57 / 19 / 1 — und eine Aufteilung nach Bereichen ohne Fundstellen.
+
+## Urteil: **ungueltig, nicht unguenstig**
+
+**Die Zaehlung wird nicht gefahren.** Nach dem Protokoll ist jetzt die **Grundlage
+herzustellen**, nicht das Ergebnis zu schaetzen.
+
+> **Und das ist derselbe Befund wie bei den fuenf Scratchpad-Klassen, zum zweiten Mal an
+> einem Tag:** eine Zahl steht im Ordner, ihr Gegenstand nicht. **Beide Male ist das Aggregat
+> ueberliefert und die Zuordnung verloren.**
+
+## Was das ueber die Buchfuehrung sagt — der eigentliche Ertrag
+
+Drei Messungen dieses Ordners ruhen auf Zuordnungen, die nicht im Ordner liegen:
+
+| Zahl | Aggregat vorhanden | Zuordnung vorhanden |
+|---|---|---|
+| 74 Beweispflichten (17 L / 57 K) | ja | **nein** |
+| 19 haengende Pflichten, elf Klassen | ja | **nur 6 von 11** |
+| `delete_leaf` 3,6–6 : 1 | ja | **nein** (deshalb kippte sie bei der Neuaufteilung auf 1,75 : 1) |
+
+**Das ist ein Muster, kein Einzelfall.** Und es ist maschinell verhinderbar: *eine Zahl ohne
+Fundstellenliste gehoert nicht ins Dokument.* **Das ist eine Waechterregel, keine
+Stilfrage** — dieselbe Klasse wie „`[x]` in einer Datei, die ausschliesslich Offenes
+behauptet".
+
+## Was jetzt zu tun ist, in dieser Reihenfolge
+
+1. **Die 74 neu zuordnen** — an den zehn Fragmenten, mit `Datei:Zeile` je Pflicht. Das ist
+   Handarbeit und der Grund, warum sie beim ersten Mal verlorenging.
+2. **Erst dann** die 17er-Aufteilung nach K/A/W, mit Zeilenumfang **vor** der Klassifikation
+   (so steht es im Protokoll, und die Reihenfolge ist der Punkt).
+3. Die Kennzeichnung mitfuehren: **neu zugeordnet, nicht wiederhergestellt.**
+
+**Nicht getan, weil es nicht in diesen Lauf passt** — die Neuzuordnung von 74 Pflichten an
+zehn Fragmenten ist ein eigener Auftrag, kein Nebenpunkt. *Ein ehrliches „blockiert, weil"
+schlaegt eine Zahl mit Restzweifel.*
