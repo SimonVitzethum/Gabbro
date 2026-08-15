@@ -2152,3 +2152,72 @@ als gefangen. **Grenzfaelle kippen in die teurere Spalte, werden nie geteilt.**
 
 Nichts ueber die Emissionsflaechen. Annotation, Code und Schablone haben weiterhin **0
 Mutationen** — und was 0 Mutationen hat, ist nicht gedeckt, sondern **unbeschaedigbar**.
+
+## ERGEBNIS des Laufs — 2026-08-15, Stichprobe 40 von 377 Stellen
+
+**Das Tor ist BESTANDEN, und deutlich.** Die vorab festgelegte Zahl:
+
+| | |
+|---|---|
+| mutierbare Stellen gefunden | **377** in 13 Dateien |
+| gezogen (deterministisch, fester Keim) | **40** |
+| **gefangen** | **7** |
+| **entkommen** | **32** |
+| ungueltig (uebersetzt nicht) | **1** — aus Zaehler **und** Nenner |
+| **Quote** | **7 von 39 = 18 %** |
+
+Gegen `38 von 38 = 100 %` der Handmutationen. **`38 von 38` war eine Aussage ueber 38
+Stellen, die mir beim Schreiben eingefallen sind — nicht ueber den Pruefer.** Genau das stand
+als Verdacht im TODO, und es ist jetzt beziffert.
+
+### Die Aufteilung der 32 — NACHTRAEGLICH, und darum getrennt gefuehrt
+
+**Die 18 % oben stehen und werden nicht angefasst** (R2). Was hier folgt, ist eine
+*Klassifikation danach*, keine Neurechnung — sie sagt, **was** entkommen ist, nicht wie viele.
+
+| | Klasse | was es bedeutet |
+|---:|---|---|
+| **15** | **REGEL** | echte Luecke: die Stelle koennte ausfallen, ohne dass eine Probe faellt |
+| 4 | Meldungstext / Dokumentation | eine verdrehte Fundstellenangabe ist keine Regelverletzung |
+| 3 | Testkoerper | misst die Probe, nicht die Regel — **Filterluecke des Generators** |
+
+**Die drei Testkoerper und die vier Meldungstexte sind ein Befund ueber den Generator**, nicht
+ueber den Pruefer: sein `BLIND`-Filter erkennt Kommentare und lange Zeichenketten, aber nicht
+`#[cfg(test)]`-Bereiche und nicht mehrzeilige Meldungen. *Auch das gehoert berichtet — ein
+Messgeraet, dessen Ausschuss man nicht kennt, liefert keine Zahl, sondern einen Eindruck.*
+
+### Die fuenfzehn echten Luecken
+
+```
+typen.rs:277  [VERGL]  if a.min >= 0 && b.min > 0 {
+typen.rs:317  [BOOL]   if a.min < 0 || b.min < 0 {
+typen.rs:343  [KONST]  if bits >= 127 {
+typen.rs:346  [KONST]  (1i128 << bits) - 1
+typen.rs:352  [VERGL]  if b.min < 0 || b.max >= a.breite as i128 {
+typen.rs:257  [KONST]  let min = ecken.iter().copied().min().unwrap_or(0);
+umgebung.rs:121 [VERGL] if z.rsplit("::").next() == Some(kurz) {
+umgebung.rs:438 [BOOL]  BinOp::Und => i128::from(x != 0 && y != 0),
+umgebung.rs:439 [BOOL]  BinOp::Oder => i128::from(x != 0 || y != 0),
+umgebung.rs:439 [KONST] (dieselbe Zeile, andere Verdrehung)
+umgebung.rs:543 [KONST] .unwrap_or_else(|| IntBereich::voll(32, false));
+kosten.rs:244 [KONST]   XForm::Update { rumpf, .. } => Kosten::Zahl(1).plus(…)
+kosten.rs:248 [KONST]   Kosten::Zahl(1).plus(self.ruf(&l.ruf)).plus(self.block(&l.sonst))
+kbedingung.rs:194 [KONST] let (mut haelt, mut faellt) = (0, 0);
+schablonen.rs:270 [KONST] n + 1,
+```
+
+**Das Muster ist lesbar, und es ist nicht zufaellig:** die Luecken haeufen sich in
+`typen.rs` (**6**) und `umgebung.rs` (**5**) — der **Bereichsarithmetik** und der
+**Konstantenauswertung**. Beides sind Schichten, die kein Beispiel direkt anspricht: die
+Beispiele pruefen, ob eine Absage faellt, nicht ob eine Grenze **genau** stimmt. Ein Beispiel
+mit `u8 in 0 .. 200` faellt bei jeder falschen Obergrenze zwischen 200 und 255 gleich aus.
+
+> **Der eigentliche Befund ist damit nicht „82 % entkommen", sondern WO sie entkommen:** Der
+> Pruefer ist dicht an den Stellen, an denen er **Absagen erzeugt**, und duenn an denen, an
+> denen er **rechnet**. Die Handmutationen zielten auf die Absagen, weil Absagen das sind,
+> was man beim Schreiben im Kopf hat.
+
+**Was daraus folgt und was NICHT.** Es folgt: die Bereichsarithmetik braucht Proben, die
+**Grenzen** treffen statt Klassen — Wertetabellen, nicht Beispieldateien. Es folgt **nicht**,
+dass der Pruefer an den 38 gemessenen Regeln schlechter ist als gemeldet; diese Zahl steht
+unveraendert und misst weiterhin, was sie misst.
