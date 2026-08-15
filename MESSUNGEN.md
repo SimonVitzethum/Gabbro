@@ -2593,3 +2593,67 @@ git log --follow --name-status -- crates/caprock-cap/src/space.rs | grep '^R'
 ls ../SEL4Lake/ARMTest/stm32mp25-kernel/crates/     # traegt die Namen VOR der Umbenennung
 cd ../SEL4Lake/ARMTest/stm32mp25-kernel && git rev-parse --show-toplevel   # scheitert: kein git
 ```
+
+---
+
+# VORAB — Neuerhebung der Klempnerei-Klassen gegen x86
+
+**Eigener Commit, VOR der Erhebung.** Nach dem Lauf wird hier nichts geaendert.
+Messbasis: `../caprock-messbasis` = `SEL4Lake/SEL4Lake` @ `arch/x86_64`, `a1bf707`.
+**Ausdruecklich nur x86** — die aarch64-Seite ist blockiert, s. *Die aarch64-Luecke*.
+
+## Warum neu und nicht wiederhergestellt
+
+Fuenf der elf Klassen lagen nur im Scratchpad und sind **nicht rekonstruierbar** — auch ihre
+**Namen** nicht: die sechs dokumentierten sind benannt, die fuenf uebrigen nur als „die
+uebrigen fuenf" erwaehnt. **Eine Messung, deren Gegenstand man nicht mehr nennen kann, ist
+nicht halb vorhanden, sondern gar nicht.**
+
+Deshalb werden **alle elf** neu erhoben. Das Ergebnis heisst **N_neu** und ist mit den 19
+**nicht vergleichbar** — es ersetzt sie, es setzt sie nicht fort.
+
+> **Kennzeichnung, die in jeder spaeteren Zitierung mitlaufen muss:
+> „neu erhoben 2026-08-15, nicht wiederhergestellt; nur x86."**
+
+## Die elf Klassen — der Bestand nennt sie (`README.md`:13)
+
+Index · Ueberlauf · Alias · Rahmen · Sperre · Rennen · Terminierung · Phase · Blattheit ·
+Publikation · Verfeinerung
+
+## Was gezaehlt wird, je Klasse
+
+**Zwei Zahlen, streng getrennt:**
+
+1. **Fundstellen** — mechanisch, mit dem Suchweg daneben. Das ist die **Groesse** der Klasse.
+2. **Haengt die Klasse?** — traegt ein *heutiges* Konstrukt sie **durch Konstruktion**, oder
+   bleibt Menschenarbeit? Antwort ist **ein Konstruktname oder eine benannte Luecke**, nie
+   „vermutlich".
+
+**N_neu = Zahl der Klassen, die haengen.** Nicht die Zahl der Fundstellen — eine Klasse mit
+40 000 Indexzugriffen und einem tragenden Konstrukt haengt **nicht**.
+
+## Kippregel
+
+* Traegt ein Konstrukt eine Klasse **nur teilweise**, zaehlt die Klasse als **haengend** und
+  der gedeckte Teil wird benannt. *Grenzfaelle in die teurere Spalte.*
+* Ist eine Klasse im x86-Baum **nicht auffindbar** (null Fundstellen), zaehlt sie **nicht als
+  gedeckt**, sondern als **nicht gemessen** — getrennt gefuehrt.
+* **R16:** bricht ein Suchweg ab, ist seine Zahl eine untere Schranke und heisst so.
+
+## Das zweiseitige Tor
+
+| | |
+|---|---|
+| **bestanden** | **N_neu = 0** — jede der elf Klassen wird von einem benannten Konstrukt getragen |
+| **verfehlt** | **N_neu > 0**, mit Klasse, Fundstelle und benannter Luecke je Posten |
+| **ungueltig** | eine Klasse laesst sich nicht mechanisch aufsuchen **und** nicht von Hand entscheiden — dann fehlt das Kriterium, nicht die Antwort |
+
+**Das Tor ist NICHT „19 → 0".** Die 19 sind nicht rekonstruierbar; ein Tor auf einer Zahl,
+die niemand mehr belegen kann, waere Falle 80 in Reinform. **Das neue Tor ist `N_neu → 0`,
+und N_neu wird in diesem Lauf zum ersten Mal bestimmt.**
+
+## R14 — das Geschirr zuerst
+
+Vor der ersten Zahl: jeder Suchweg wird **einmal gegen eine Stelle gefahren, von der ich
+weiss, dass sie existiert** (z. B. `refcount -= 1` fuer Ueberlauf, `CAPS.write()` fuer
+Sperre). Findet er sie nicht, misst er nicht, was er behauptet.
