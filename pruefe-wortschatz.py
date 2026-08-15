@@ -86,6 +86,16 @@ tot   = sorted(vok - term)          # im Wortschatz, nirgends in der Grammatik
 
 print(f"  Wortschatz: {len(term)} EBNF-Terminale, {len(vok)} Tabellenwoerter"
       + (f" + {len(sonder)} Sonderformen ({', '.join(sorted(sonder))})" if sonder else ""))
+# **Der Zaehler ueber den Ausnahmen, mitgefuehrt ab drei.** Eine benannte Ausnahme ist eine
+# Zusage; drei sind eine Liste; **fuenf sind ein Muster und verlangen eine eigene Regel**.
+# Ein Ausnahmefach, das waechst, ohne dass jemand die Zahl ansieht, wird zur zweiten
+# Grammatik -- dieselbe Bewegung wie ein Wortschatz, dessen Rand niemand prueft.
+if len(sonder) >= 5:
+    print(f"    !! {len(sonder)} SONDERFORMEN -- das ist kein Ausnahmefach mehr, sondern ein")
+    print( "       Muster. Es verlangt eine eigene Regel: WAS macht ein Terminal zu einer")
+    print( "       Sonderform, und warum ist die Menge geschlossen?")
+elif sonder:
+    print(f"    ({len(sonder)} von 5 -- ab fuenf verlangt die Klasse eine eigene Regel)")
 if fehlt:
     print(f"    NICHT IN DER TABELLE ({len(fehlt)}): " + ", ".join(fehlt))
 if tot:
