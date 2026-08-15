@@ -1,0 +1,28 @@
+-- 12 -- «B32»: **Der Umlauf gehoert an die Deklaration, nicht an die Rechnung.**
+--
+-- Gefunden am virtio-Fragment, nicht am Reissbrett: `slottype = intty "wrapping"` konnte
+-- den gewollten Ueberlauf aussprechen, `regdecl` nicht. Und der haeufigste Fall eines
+-- Treibers ist genau das -- ein Hardwarezaehler, der per Entwurf umlaeuft. Ohne das Wort
+-- stand die Absicht nirgends, und die Zaehlerregel sagte das richtige Programm ab.
+--
+-- **Warum an der Deklaration und nicht am Ausdruck:** dort gilt sie fuer JEDE Rechnung auf
+-- dem Register, nicht nur fuer die eine, an die jemand gedacht hat.
+
+module beispiel::umlauf {
+
+device Ring(basis : u64) at mmio {
+    -- Der virtio-Ringindex: zaehlt modulo 2^16, der Rest gegen die Ringlaenge waehlt den
+    -- Platz. Der Umlauf ist der ENTWURF, kein Versehen.
+    reg AVAIL_IDX : u16 wrapping @0x102 class rw
+    -- Die Ringlaenge dagegen laeuft nicht um; ein Ueberlauf waere hier ein Fehler.
+    reg RING_LEN  : u16          @0x104 class r
+}
+
+impl fn vorruecken(r : ptr<mmio, rw> Ring)
+    effects { writes r.AVAIL_IDX }
+    costs   <= 2 ops
+{
+    r.AVAIL_IDX += 1;
+}
+
+}

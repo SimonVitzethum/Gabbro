@@ -305,10 +305,17 @@ impl fn revoke(c  : ptr<normal, rw> CapSpace,
     -- geglaubt wird**, und sie ist hier zum zweiten Mal aufgeschlagen (zuerst bei A4:
     -- 4 096 zugesagt, 831 488 gerechnet).
     --
-    -- **Was der Kernel wirklich tut, steht damit nicht in dieser Zeile:** Caprock begrenzt
-    -- `revoke` ueber die CDT-Tiefe, nicht ueber die Tabellengroesse. Diese Schranke ist in
-    -- Gabbro heute nicht ausdrueckbar -- `descendants of` erbt die Tabelle. **Das ist der
-    -- Befund, nicht die Zahl.**
+    -- **BERICHTIGT 2026-08-15.** Hier stand: „Caprock begrenzt `revoke` ueber die
+    -- CDT-Tiefe, und diese Schranke ist in Gabbro nicht ausdrueckbar." **Das war aus dem
+    -- Gedaechtnis geschrieben und ist falsch.** `cdt_step_limit()` liefert
+    -- `self.slots.len()` (`caprock-cap/src/space.rs:932-933`) -- **dieselbe Schranke, die
+    -- Gabbro rechnet.**
+    --
+    -- Und der Kernel nimmt sie ZWEIMAL, innen und aussen (`:635`, `:648`); seine eigene
+    -- obere Schranke ist `slots.len()^2`, also rund 390-mal groesser als diese Zahl.
+    -- **Gabbros Schranke ist die schaerfere.** Es fehlt kein Konstrukt -- die 200 waren
+    -- schlicht der typische Fall statt der Schranke, und genau dagegen ist der Kostenpass
+    -- gebaut (`memos/M-kostenmass.md`).
     costs     <= 16452480 ops
 {
     -- «B10» `traverse` liefert KEINEN Wert (:337-341) und es gibt kein `break`. Der
@@ -786,7 +793,7 @@ device Virtq(base : Iova, n : u16 in 1 .. QMAX) at dma {
         reg naechst : u16 @0xe class w
     }
     reg AVAIL_FLAGS : u16 @0x100 class rw
-    reg AVAIL_IDX   : u16 @0x102 class rw
+    reg AVAIL_IDX   : u16 wrapping @0x102 class rw
     bank AVAIL_RING at 0x104 stride 2 count 256 { reg e : u16 @0x0 class w }
     reg USED_FLAGS  : u16 @0x200 class rw
     reg USED_IDX    : u16 @0x202 class rw
@@ -843,12 +850,16 @@ impl fn publish(q : ptr<dma, rw> Virtq, head : u16 in 0 ..< 256)
     -- haeufigste Fall ueberhaupt in einem Geraetetreiber -- kann seine Absicht nicht
     -- aussprechen. Bis das geschlossen ist, steht hier die Pruefung davor; sie ist an
     -- dieser Stelle NICHT die ehrliche Form, sondern der Ersatz dafuer.
-    -- **«B33», ein zweiter Befund an derselben Zeile:** die V-Regeln verengen nach einem
-    -- `if … == 65535 { … return; }` den Typ eines REGISTERORTES nicht -- nur `narrow` tut
-    -- das hier. Ob das Absicht ist (ein Register kann sich zwischen Pruefung und Rechnung
-    -- aendern!) oder eine Luecke, entscheidet der Ordner. **Wenn es Absicht ist, gehoert
-    -- die Begruendung aufgeschrieben** -- sie waere ein starkes Argument.
-    narrow q.AVAIL_IDX to 0 .. 65534 else { q.AVAIL_IDX = 0; return; }
+    -- **«B32» ist geschlossen (2026-08-15), und der Ersatz faellt weg.** Bis dahin stand
+    -- hier ein `narrow` mit einem `else`-Zweig, der die Absicht NICHT ausdrueckte, sondern
+    -- umging. Jetzt sagt die Deklaration `reg AVAIL_IDX : u16 wrapping`, was virtio meint,
+    -- und die Rechnung darf schlicht dastehen.
+    --
+    -- «B33» bleibt daneben offen: die V-Regeln verengen den Typ eines REGISTERORTES nach
+    -- `if … == N { return; }` nicht -- nur `narrow` traegt die Tatsache. Ob das Absicht ist
+    -- (ein Register kann sich zwischen Pruefung und Rechnung aendern!) oder eine Luecke,
+    -- entscheidet der Ordner. **Wenn es Absicht ist, gehoert die Begruendung
+    -- aufgeschrieben** -- sie waere ein starkes Argument.
     q.AVAIL_IDX += 1;
 }
 

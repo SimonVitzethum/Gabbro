@@ -1007,6 +1007,10 @@ pub struct Bank {
 pub struct RegDecl {
     pub name: Ident,
     pub typ: IntTy,
+    /// **«B32»:** der Umlauf ist am Register AUSGESPROCHEN, nicht geduldet. Er gilt dann
+    /// fuer jede Rechnung auf diesem Register -- die staerkere Form, weil sie an der
+    /// Deklaration steht und nicht an der einen Rechnung, an die jemand gedacht hat.
+    pub umlaufend: bool,
     pub versatz: Expr,
     pub klasse: RegKlasse,
     pub felder: Vec<(Ident, BitPos)>,

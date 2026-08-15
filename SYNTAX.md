@@ -556,7 +556,13 @@ device  = "device" ident [ "(" params ")" ] "at" space
           "{" [ mirrors ] { regdecl | bank | transition } "}" ;
 mirrors = "mirrors" place "from" place ";" ;       (* EINMAL je Geraet, nicht je Uebergang *)
 bank    = "bank" ident "at" expr "stride" expr "count" expr "{" { regdecl } "}" ;
-regdecl = "reg" ident ":" intty "@" expr
+regdecl = "reg" ident ":" intty [ "wrapping" ] "@" expr
+          (* «B32», 2026-08-15: `slottype = intty "wrapping"` konnte den gewollten Umlauf
+             aussprechen, `regdecl` nicht -- und der HAEUFIGSTE Fall eines Treibers ist ein
+             Hardwarezaehler, der per Entwurf umlaeuft (virtios `AVAIL_IDX` zaehlt modulo
+             2^16 und nimmt den Rest gegen `q.n`). Ohne das Wort stand die Absicht nirgends,
+             und die Zaehlerregel faellt zu Recht -- am falschen Programm. Gemessen am
+             Fragmentkorpus, nicht entworfen. *)
           "class" ( "r" | "w" | "rw" | "w1c" | "rc" )
           [ "fields" "{" { ident "@" bitpos "," } "}" ]
           [ "requires" pred ] ;

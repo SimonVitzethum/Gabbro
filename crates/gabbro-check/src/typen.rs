@@ -151,6 +151,10 @@ pub enum Typ {
     Register {
         bereich: IntBereich,
         felder: Vec<(String, IntBereich)>,
+        /// **«B32»:** `reg X : u16 wrapping @…` -- der Umlauf ist deklariert und damit
+        /// kein Befund. Ohne dieses Feld konnte ein Hardwarezaehler seine Absicht nicht
+        /// aussprechen, und M1 sagte an der richtigen Regel das falsche Programm ab.
+        umlaufend: bool,
     },
     /// Ein `format`-Kopf oder ein `device`-Block.
     Verbundname(String),
@@ -172,6 +176,8 @@ impl Typ {
     pub fn laeuft_um(&self) -> bool {
         match self {
             Typ::Umlaufend(_) => true,
+            // «B32»: ein Register darf seinen Umlauf ebenso aussprechen wie ein Slot.
+            Typ::Register { umlaufend, .. } => *umlaufend,
             Typ::Benannt { unter, .. } => unter.laeuft_um(),
             _ => false,
         }

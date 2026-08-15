@@ -1,0 +1,12 @@
+-- erwartet: M104
+-- Die Gegenprobe zu Beispiel 12: **dasselbe `+= 1` an einem Register OHNE `wrapping`.**
+-- Ohne diese Datei waere Beispiel 12 keine Probe, sondern eine Tautologie -- sie zeigt nur
+-- dann etwas, wenn die Gegenseite nachweislich faellt.
+module gift {
+device Ring(basis : u64) at mmio {
+    reg RING_LEN : u16 @0x104 class rw
+}
+impl fn falsch(r : ptr<mmio, rw> Ring) effects { writes r.RING_LEN } costs <= 2 ops {
+    r.RING_LEN += 1;
+}
+}

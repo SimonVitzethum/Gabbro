@@ -626,7 +626,11 @@ impl Umgebung {
                 (name.text.clone(), b)
             })
             .collect();
-        Typ::Register { bereich, felder }
+        Typ::Register {
+            bereich,
+            felder,
+            umlaufend: r.umlaufend,
+        }
     }
 
     /// Der Typ eines Ortes, gegeben die lokalen Bindungen.

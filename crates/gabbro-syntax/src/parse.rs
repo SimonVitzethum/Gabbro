@@ -2753,6 +2753,8 @@ impl<'a> Parser<'a> {
         let name = self.erwarte_ident()?;
         self.erwarte_z(Z::Kolon)?;
         let typ = self.intty()?;
+        // «B32»: der gewollte Umlauf steht an der Deklaration, nicht an der Rechnung.
+        let umlaufend = self.friss_kw(Kw::Wrapping);
         self.erwarte_z(Z::At)?;
         let versatz = self.expr()?;
         self.erwarte_kw(Kw::Class)?;
@@ -2799,6 +2801,7 @@ impl<'a> Parser<'a> {
         Ok(RegDecl {
             name,
             typ,
+            umlaufend,
             versatz,
             klasse,
             felder,
