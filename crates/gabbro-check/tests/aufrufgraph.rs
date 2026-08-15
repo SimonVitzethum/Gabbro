@@ -79,7 +79,7 @@ impl fn geteilt(p : ptr<normal, r> T) requires Held(L, shared) effects { reads p
 }
 
 #[test]
-fn ein_zyklus_bestaetigt_pure_NICHT_still() {
+fn ein_zyklus_bestaetigt_pure_nicht_still() {
     // **Die gefaehrlichste Stelle des ganzen Passes.** Beide Funktionen erklaeren `pure` und
     // rufen transitiv etwas Schreibendes -- ueber einen Zyklus. Aus einer unteren Schranke
     // wird nicht abgesagt (R16); wuerde sie deshalb still DURCHGELASSEN, waere das die

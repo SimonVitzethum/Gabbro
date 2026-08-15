@@ -82,3 +82,17 @@ printf '```ebnf\na = "x" ;\n```\n' > "$tmp/eok.md"
 ebnf_geschlossen "$tmp/eok.md" >/dev/null || { echo "SPRECHPROBE GESCHEITERT: geschlossene EBNF fiel durch"; exit 1; }
 echo "Sprechprobe: $n Gifte in Beispielen gefangen, Prosa-Zweig spricht, Sauberes durchgelassen."
 echo "== SYNTAX: ALL PASS =="
+
+# **Null Warnungen, und zwar geprueft statt erinnert.** Dreimal in drei Laeufen habe ich
+# GROSSSCHREIBUNG in einen Testnamen geschrieben und die Warnung hinterher weggeraeumt --
+# beim dritten Mal war sie schon gepusht. Eine Warnung, die bei jedem Bau mitlaeuft, tarnt
+# die naechste echte; ein Fehler, den man dreimal macht, gehoert in die Waechterkette.
+echo "== Warnungen =="
+W=$(cargo build --tests 2>&1 | grep -cE "^warning: " || true)
+if [ "$W" != "0" ]; then
+  echo "  $W WARNUNG(EN) -- der Endzustand verlangt null:"
+  cargo build --tests 2>&1 | grep -E "^warning: " | head -5
+  echo "== SYNTAX: FEHLER (Warnungen im Bau) =="
+  exit 1
+fi
+echo "  keine"
