@@ -21,27 +21,34 @@
 //! Annahme. **Das ist das Kriterium, an dem `abi { … }` und `locks ordered` gescheitert
 //! sind, und dieses Konstrukt besteht es.**
 //!
-//! ## Die vier Absagen
+//! ## Die fuenf Absagen
 //!
-//! * **`S001`** — Schreiben auf einen geschützten Platz unter geteilter Nahme. *Die
+//! **Kennbuchstabe `H` (Halten), nicht `S`.** Beim Bau am 2026-08-14 habe ich `S001`–`S005`
+//! vergeben, ohne den Kennungsraum zu pruefen — `schleifen.rs` fuehrt `S001`/`S002` seit
+//! Pass 6 fuer die Schleifenmarke und den durchfallenden `else`-Zweig. Zusammen mit der
+//! `K003`-Doppelbelegung war das **dreimal dieselbe Klasse an einem Tag**: eine Kennung
+//! vergeben, ohne nachzusehen, wer sie schon hat. **Die Giftproben pruefen auf Kennungen** —
+//! jede Doppelbelegung macht sie mehrdeutig.
+//!
+//! * **`H001`** — Schreiben auf einen geschützten Platz unter geteilter Nahme. *Die
 //!   tragende Regel.*
-//! * **`S002`** — geteilt genommen, aber die Sperre erklärt kein `shared held <= … ops`.
+//! * **`H002`** — geteilt genommen, aber die Sperre erklärt kein `shared held <= … ops`.
 //!   Ohne die Zahl hat die Latenzaussage aus §9.3 für diese Sperre keinen Zweig
 //!   (Nebenbefund **N3**: `held` war für **exklusive** Halter gedacht; auf der geteilten
 //!   Seite ist die Rechengrösse die **Schreiberwartezeit unter Leserdruck**).
-//! * **`S003`** — Hochstufung: exklusive Nahme derselben Sperre **innerhalb** einer
+//! * **`H003`** — Hochstufung: exklusive Nahme derselben Sperre **innerhalb** einer
 //!   geteilten. Auf einer Drehsperre ist das kein Stilfehler, sondern ein Deadlock.
-//! * **`S004`** — `shared held` erklärt, aber die Sperre wird nirgends geteilt genommen.
+//! * **`H004`** — `shared held` erklärt, aber die Sperre wird nirgends geteilt genommen.
 //!   *Eine Zahl ohne Messstelle ist eine Behauptung; dieselbe Regel wie beim toten
 //!   Kandidaten — kein Konstrukt ohne gemessenen Bedarf.*
-//! * **`S005`** — **die Zwischenregel an der Aufrufgrenze.** Siehe unten.
+//! * **`H005`** — **die Zwischenregel an der Aufrufgrenze.** Siehe unten.
 //!
-//! ## `S005` — warum eine absichtlich zu strenge Regel besser ist als keine
+//! ## `H005` — warum eine absichtlich zu strenge Regel besser ist als keine
 //!
-//! Die tragende Regel `S001` sieht nur, was der Block **selbst** schreibt. Ein Aufruf trägt
+//! Die tragende Regel `H001` sieht nur, was der Block **selbst** schreibt. Ein Aufruf trägt
 //! sie nicht mit: ruft ein geteilter Block eine Funktion mit `requires Held(N)`, so schreibt
 //! **der Gerufene** exklusiv-berechtigt, während **der Rufer** nur geteilt hält. **Das ist
-//! `S001` durch die Hintertür**, und bis Pass 8 steht, ist dieses Loch nicht bloss offen,
+//! `H001` durch die Hintertür**, und bis Pass 8 steht, ist dieses Loch nicht bloss offen,
 //! sondern **durchlässig**: der Zeuge existiert, seine Stärke wird nicht geprüft.
 //!
 //! Die richtige Prüfung braucht den Aufrufgraphen — denselben, an dem heute schon die
@@ -145,7 +152,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         if s.hat_geteilte_zeit && !geteilt_genommen.contains(name) {
             absagen.schiebe(
                 Absage::hinweis(
-                    "S004",
+                    "H004",
                     s.span,
                     format!("`{name}` erklaert `shared held`, wird aber nirgends geteilt genommen"),
                 )
@@ -164,7 +171,7 @@ fn block(
     offen: &[String],
     // Exklusiv gehaltene Sperren -- eine Schreibstelle unter ihnen ist gedeckt, auch wenn
     // dieselbe Sperre aussen herum geteilt gehalten wird. **Diese Verschachtelung faellt
-    // ohnehin mit `S003`; sie soll nicht ZWEIMAL fallen** -- eine Absage, die eine zweite
+    // ohnehin mit `H003`; sie soll nicht ZWEIMAL fallen** -- eine Absage, die eine zweite
     // nach sich zieht, laesst den Leser den Fehler an der falschen Stelle suchen.
     exklusiv: &[String],
     sperren: &BTreeMap<String, Sperre>,
@@ -183,7 +190,7 @@ fn block(
                     match sperren.get(&name) {
                         Some(sp) if !sp.hat_geteilte_zeit => absagen.schiebe(
                             Absage::fehler(
-                                "S002",
+                                "H002",
                                 l.sperre.span,
                                 format!(
                                     "`{name}` wird geteilt genommen, erklaert aber kein \
@@ -210,7 +217,7 @@ fn block(
                     if offen.contains(&name) {
                         absagen.schiebe(
                             Absage::fehler(
-                                "S003",
+                                "H003",
                                 l.sperre.span,
                                 format!(
                                     "`{name}` wird exklusiv genommen, obwohl sie hier schon \
@@ -300,7 +307,7 @@ fn schreibprobe(
         };
         absagen.schiebe(
             Absage::fehler(
-                "S001",
+                "H001",
                 span,
                 format!("`{ort}` wird geschrieben, waehrend `{name}` nur geteilt gehalten wird"),
             )
@@ -344,7 +351,7 @@ fn rufprobe(
     };
     absagen.schiebe(
         Absage::fehler(
-            "S005",
+            "H005",
             span,
             format!(
                 "`{}` verlangt `Held({sperre})`, wird hier aber unter geteilter Nahme von \

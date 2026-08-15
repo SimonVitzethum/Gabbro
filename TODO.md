@@ -158,20 +158,20 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 > Punkt, sondern ein Bruch mit der eigenen Absicht — und der gehoert in die Historie.*
 
 - [ ] **L-A — `locks shared`: GEBAUT bis auf den Zeugen am Aufrufrand.**
-      Grammatik, Pass und Kostenzweig stehen (`SPRACHE.md` §11.2.1): `S001` (Schreiben unter
-      geteilter Nahme), `S002` (geteilt ohne `shared held`), `S003` (Hochstufung), `S004`
+      Grammatik, Pass und Kostenzweig stehen (`SPRACHE.md` §11.2.1): `H001` (Schreiben unter
+      geteilter Nahme), `H002` (geteilt ohne `shared held`), `H003` (Hochstufung), `H004`
       (Zusage ohne Messstelle), `E007` (geteilt erklaert, exklusiv genommen), `K004` (die
       geteilte Haltezeit gegen ihre eigene Zahl). Fuenf neue Mutationen, alle gefangen;
       Beispiel `10-geteilte-sperre.gab`, Giftproben 38–41.
-      * **Der Zeuge am Aufrufrand steht als Zwischenregel** (`S005`): ein geteilter Block
+      * **Der Zeuge am Aufrufrand steht als Zwischenregel** (`H005`): ein geteilter Block
         ruft **keine** Funktion mit `requires Held(…)`. Punkt. Zu streng — auch der Aufruf
         ueber eine andere Sperre faellt, der harmlos waere — aber in die sichere Richtung
         irrend, und der Preis steht in der Absage.
       * **Was offen bleibt, ist die ECHTE Pruefung**, und der Mechanismus ist derselbe wie
         bei den Aufrufwirkungen in Pass 8: der **Aufrufgraph**. *Ein Mechanismus, zwei
-        Fehlerrichtungen* — und nur eine davon war gefaehrlich, naemlich diese: bis `S005`
+        Fehlerrichtungen* — und nur eine davon war gefaehrlich, naemlich diese: bis `H005`
         stand, war die Grenze nicht ungeprueft, sondern **durchlaessig** (der Zeuge
-        existierte, seine Staerke wurde nicht geprueft). Mit Pass 8 wird `S005` **ersetzt**,
+        existierte, seine Staerke wurde nicht geprueft). Mit Pass 8 wird `H005` **ersetzt**,
         nicht gelockert: ein geteilter Zeuge deckt dann genau `requires Held-shared`.
 - [ ] **L-B — `ghost Stale(T)`: Uebergabe mit Neuvalidierung. Kandidat, kein Beschluss.**
       Das Muster, das Doppelnahme **ersetzt**: unter Sperre A waehlen, freigeben, unter B

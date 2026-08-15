@@ -95,7 +95,7 @@ Verlust.*
 **Der Fall.** `locks shared` steht, aber der Zeuge an der **Aufrufgrenze** braucht den
 Aufrufgraphen, den es noch nicht gibt. Ohne Regel wäre die Grenze nicht bloss ungeprüft,
 sondern **durchlässig**: der Gerufene schreibt exklusiv-berechtigt, der Rufer hält nur geteilt
-— `S001` durch die Hintertür.
+— `H001` durch die Hintertür.
 
 **Die Regel.** Wo eine tragende Regel ein Loch hat, das erst später richtig zu schliessen ist,
 kommt die **grobe, zu strenge** Fassung davor — nicht nichts. Sie muss als Zwischenregel
@@ -105,7 +105,7 @@ ersetzen wird.
 **Warum.** Nach einer lauten Übertreibung sucht jemand — sie steht im Weg. Nach einer stillen
 Ausnahme sucht niemand, denn sie sieht aus wie ein Grün.
 
-**Der Handgriff.** `S005`: ein geteilter Block ruft keine Funktion mit `requires Held(…)`.
+**Der Handgriff.** `H005`: ein geteilter Block ruft keine Funktion mit `requires Held(…)`.
 Punkt. Auch die einer anderen Sperre, was zu viel ist und in der Absage dransteht.
 
 ---
@@ -115,7 +115,7 @@ Punkt. Auch die einer anderen Sperre, was zu viel ist und in der Absage dransteh
 *W4 sagt, **dass** die grobe Fassung davorkommt. W5 sagt, **wie** sie geschrieben sein muss,
 damit sie später wirklich ersetzt und nicht bloss gewohnt wird.*
 
-**Der Anlass.** `S005` ist absichtlich zu streng. Eine zu strenge Regel ohne Ablaufvermerk
+**Der Anlass.** `H005` ist absichtlich zu streng. Eine zu strenge Regel ohne Ablaufvermerk
 wird nach drei Monaten für die richtige gehalten — niemand weiss mehr, was sie zu viel
 verbietet, also traut sich niemand, sie anzufassen. **Die Übertreibung, die W4 rechtfertigt,
 ist genau das, was sie später unantastbar macht.**
@@ -130,7 +130,7 @@ ist genau das, was sie später unantastbar macht.**
 wer gerade dagegenläuft — und das ist derjenige, der den Preis zahlt und ihn deshalb melden
 kann.
 
-**Der Handgriff.** `S005` trägt alle drei Teile als Notizen. Bei Pass 8 wird es nicht das
+**Der Handgriff.** `H005` trägt alle drei Teile als Notizen. Bei Pass 8 wird es nicht das
 letzte Mal gewesen sein.
 
 ---

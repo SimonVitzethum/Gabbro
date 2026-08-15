@@ -1,4 +1,4 @@
--- erwartet: S005
+-- erwartet: H005
 -- **S001 durch die Hintertuer.** Der geteilte Block schreibt selbst nichts -- er RUFT nur.
 -- Der Gerufene verlangt `Held(KAPPEN)` und schreibt exklusiv-berechtigt; der Rufer haelt
 -- geteilt. Ohne diese Zwischenregel waere das durchlaessig: der Zeuge existiert, seine

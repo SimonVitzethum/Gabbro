@@ -233,7 +233,7 @@ MUTATIONEN = [
         "schleifen.rs",
         "    if marken.iter().any(|m| m == &ziel.text) {\n        return;\n    }",
         "    if true || marken.iter().any(|m| m == &ziel.text) {\n        return;\n    }",
-        "S001 -- `leave`/`next` zielen auf beliebige Namen",
+        "H001 -- `leave`/`next` zielen auf beliebige Namen",
     ),
     Mutation(
         "let-else-darf-durchfallen",
@@ -339,21 +339,21 @@ MUTATIONEN = [
         "            continue;\n        };",
         "        let Some(platz) = sp.schuetzt.iter().find(|p| beruehrt(p, &ort) && false) else {\n"
         "            continue;\n        };",
-        "S001 -- unter geteilter Sperre darf geschrieben werden (die tragende Regel)",
+        "H001 -- unter geteilter Sperre darf geschrieben werden (die tragende Regel)",
     ),
     Mutation(
         "geteilt-braucht-keine-zahl",
         "geteilt.rs",
         "                        Some(sp) if !sp.hat_geteilte_zeit => absagen.schiebe(",
         "                        Some(sp) if !sp.hat_geteilte_zeit && false => absagen.schiebe(",
-        "S002 -- geteilt nehmen ohne `shared held`; die Latenzaussage verliert ihren Zweig",
+        "H002 -- geteilt nehmen ohne `shared held`; die Latenzaussage verliert ihren Zweig",
     ),
     Mutation(
         "hochstufung-ist-erlaubt",
         "geteilt.rs",
         "                    if offen.contains(&name) {",
         "                    if false && offen.contains(&name) {",
-        "S003 -- geteilt gehalten und exklusiv nachgenommen: der Deadlock faellt durch",
+        "H003 -- geteilt gehalten und exklusiv nachgenommen: der Deadlock faellt durch",
     ),
     Mutation(
         "luege-in-die-gefaehrliche-richtung",
@@ -374,7 +374,7 @@ MUTATIONEN = [
         "geteilt.rs",
         "    let Some(sperre) = verlangt.get(&name.text) else {",
         "    let Some(sperre) = verlangt.get(&name.text).filter(|_| false) else {",
-        "S005 -- ein geteilter Block darf einen `Held(…)`-Zeugen rufen (S001 durch die Hintertuer)",
+        "H005 -- ein geteilter Block darf einen `Held(…)`-Zeugen rufen (S001 durch die Hintertuer)",
     ),
 ]
 

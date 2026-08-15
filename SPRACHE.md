@@ -1025,19 +1025,19 @@ gescheitert sind, und dieses Konstrukt besteht es.*
 
 | Code | Absage |
 |---|---|
-| `S001` | Schreiben auf einen geschützten Platz unter geteilter Nahme. **Die tragende Regel.** |
-| `S002` | Geteilt genommen ohne `shared held <= … ops` — siehe die Zahl unten. |
-| `S003` | Hochstufung: exklusiv nehmen, während dieselbe Sperre geteilt gehalten wird. Auf einer Drehsperre ein Deadlock, kein Stilfehler. |
-| `S004` | `shared held` erklärt, aber nirgends geteilt genommen — *eine Zusage ohne Stelle, an der sie fällt.* |
+| `H001` | Schreiben auf einen geschützten Platz unter geteilter Nahme. **Die tragende Regel.** |
+| `H002` | Geteilt genommen ohne `shared held <= … ops` — siehe die Zahl unten. |
+| `H003` | Hochstufung: exklusiv nehmen, während dieselbe Sperre geteilt gehalten wird. Auf einer Drehsperre ein Deadlock, kein Stilfehler. |
+| `H004` | `shared held` erklärt, aber nirgends geteilt genommen — *eine Zusage ohne Stelle, an der sie fällt.* |
 | `E007` | Geteilt **erklärt**, exklusiv **genommen**. Die gefährliche Richtung. |
-| `S005` | Aufruf einer Funktion mit `requires Held(…)` aus einem geteilten Block. **Zwischenregel**, siehe unten. |
+| `H005` | Aufruf einer Funktion mit `requires Held(…)` aus einem geteilten Block. **Zwischenregel**, siehe unten. |
 
 **Die Richtung ist nicht symmetrisch, und das ist der Kern von `E007`.** Exklusiv erklären
 deckt die geteilte Nahme — wer mehr hält, als er zusagt, irrt in die sichere Seite. Umgekehrt
 ist es eine Lüge: der Aufrufer liest `locks shared`, rechnet mit Nebenläufigkeit, die es nicht
 gibt, **und legt seine Latenzrechnung darauf an**.
 
-**Die Aufrufgrenze, und warum dort eine absichtlich zu strenge Regel steht.** `S001` sieht
+**Die Aufrufgrenze, und warum dort eine absichtlich zu strenge Regel steht.** `H001` sieht
 nur, was der Block **selbst** schreibt. Ruft ein geteilter Block eine Funktion mit
 `requires Held(N)`, schreibt **der Gerufene** exklusiv-berechtigt, während **der Rufer** nur
 geteilt hält — dieselbe Verletzung, einen Rahmen weiter. Ohne Regel wäre die Grenze nicht

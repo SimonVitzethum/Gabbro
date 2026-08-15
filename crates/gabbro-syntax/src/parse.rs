@@ -196,17 +196,21 @@ impl<'a> Parser<'a> {
                 })
             }
             Art::Wort(k) => {
-                self.absage(
-                    Absage::fehler(
-                        "P002",
-                        t.span,
-                        format!("`{}` ist ein Wort des Wortschatzes und kein Bezeichner", k),
-                    )
-                    .mit_notiz(
-                        "SYNTAX.md: der Wortschatz ist eine geschlossene Tabelle -- \
-                         alles andere ist ein Bezeichner",
-                    ),
+                let mut a = Absage::fehler(
+                    "P002",
+                    t.span,
+                    format!("`{}` ist ein Wort des Wortschatzes und kein Bezeichner", k),
+                )
+                .mit_notiz(
+                    "SYNTAX.md: der Wortschatz ist eine geschlossene Tabelle -- \
+                     alles andere ist ein Bezeichner",
                 );
+                // **M-woerter:** die Entscheidung war „umbenennen statt aufweichen". Damit
+                // die Last nicht beim Schreiber landet, nennt der Uebersetzer den Ersatz.
+                if let Some(v) = crate::kw::ersatzvorschlag(k) {
+                    a = a.mit_notiz(format!("stattdessen: `{v}`"));
+                }
+                self.absage(a);
                 Err(Abbruch)
             }
             _ => {

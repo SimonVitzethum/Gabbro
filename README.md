@@ -115,7 +115,7 @@ ausdrücklich Absicht.
 | [`WERKZEUGKASTEN.md`](WERKZEUGKASTEN.md) | **Arbeitsregeln aus eigenen Fehlern** — jede mit dem Schaden, fuer den sie bezahlt wurde |
 
 Dazu `fallen-klassifikation.tsv` (100 bezahlte Caprock-Fallen, einzeln klassifiziert) und
-**sechs Wächter, jeder mit Sprechprobe in beide Richtungen**: `pruefe-syntax.sh` (verbotene
+**sieben Wächter, jeder mit Sprechprobe in beide Richtungen**: `pruefe-syntax.sh` (verbotene
 Formen, Prosa-Drift, Geschlossenheit, Erreichbarkeit, Terminaldeckung) · `pruefe-wortschatz.py`
 · **`mutiere-pruefer.py`** (beschädigt je eine Regel des Prüfers und sieht nach, ob eine Probe
 fällt — **38 von 38**) · **`erzeuge-mutationen.py`** (verdreht **systematisch** statt von
@@ -133,6 +133,7 @@ cargo test                                  -- 51 Sprechproben, je in beide Rich
 ./mutiere-pruefer.py                        -- beschaedigt je eine Regel: 38 von 38 gefangen
 ./erzeuge-mutationen.py                     -- erzeugt sie systematisch:  7 von 39 gefangen
 ./pruefe-todo.py                            -- haelt die Aufgabenliste gegen sich selbst
+./pruefe-kennungen.py                       -- keine Absage-Kennung in zwei Dateien
 cargo run --bin gabbro -- paesse            -- die Passliste, gebaut UND offen
 cargo run --bin gabbro -- pruefe beispiele/*.gab   -- mit Deckungszahl je Datei
 cargo run --bin gabbro -- fragmente FRAGMENTE.md   -- Tor P2, gemessen

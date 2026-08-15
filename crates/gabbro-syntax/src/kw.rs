@@ -255,6 +255,39 @@ wortschatz! {
     SelfWort      => "Self",          res;
 }
 
+/// **Die Umbenennungstabelle (`M-woerter`, provisorisch umgesetzt 2026-08-15).**
+///
+/// Der geschlossene Wortschatz kollidiert an sieben gemessenen Stellen des Fragmentkorpus mit
+/// gewoehnlicher Benennung. Von den drei Auswegen — kontextuelle Woerter, Positionsregel,
+/// Umbenennen — traegt nur der letzte die Zusage weiter: **eine Aufweichung fuer sieben
+/// Stellen ist eine Aufweichung ohne gemessenen Bedarf** (`WERKZEUGKASTEN.md` W3).
+///
+/// Damit die Entscheidung nicht auf den Schreiber abgewaelzt wird („trag die Liste im Kopf"),
+/// **nennt der Uebersetzer den Ersatz selbst.** Das ist der ganze Preisunterschied zwischen
+/// „Umbenennen" und „Umbenennen mit Werkzeug".
+///
+/// **Rueckbaupfad:** diese Tabelle und die sieben Korpusstellen sind ein Commit; `git revert`
+/// stellt den Zustand her. Die Entscheidung bleibt dem Ordner (`memos/M-woerter.md`).
+pub fn ersatzvorschlag(k: Kw) -> Option<&'static str> {
+    Some(match k {
+        Kw::Slots => "plaetze",
+        Kw::Slot => "platz",
+        Kw::Ops => "dienste",
+        Kw::Next => "naechst",
+        Kw::From => "von",
+        Kw::Boot => "startwert",
+        Kw::Stack => "stapel",
+        Kw::Check => "pruefung",
+        Kw::State => "zustand",
+        Kw::Node => "knoten",
+        Kw::Step => "schritt",
+        Kw::Port => "tor",
+        Kw::Out => "aus",
+        Kw::Count => "anzahl",
+        _ => return None,
+    })
+}
+
 impl Kw {
     /// Die ganzzahligen Typwoerter -- `intty` in der Grammatik.
     pub const fn ist_intty(self) -> bool {

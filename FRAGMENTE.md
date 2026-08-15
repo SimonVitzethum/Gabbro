@@ -124,7 +124,7 @@ tagged type ObjectKind = { Memory(Region), Endpoint(EpId), Notification(EpId),
 -- «B2» `lockdecl` (SYNTAX.md:471) ist von `program` aus NICHT ERREICHBAR: `item` (:111-112)
 -- fuehrt es nicht auf. Dieselben zwei Zeilen stehen als Beispiel in §11 der Datei, die sie
 -- ausschliesst. Betroffen: jede Sperre in allen sechs Fragmenten.
-lock CAPS protects { slots, cdt } rank 0 masks irqs;
+lock CAPS protects { plaetze, cdt } rank 0 masks irqs;
 lock MEM  protects { freelist }   rank 9;
 
 -- «B16» Zwei Tabellen, weil `table` genau EIN `slot`-Wort kennt (:385-386). Der Cap-Space hat
@@ -568,7 +568,7 @@ type SchedOps = {
 };
 
 impl fn call(e    : ptr<normal, rw> Endpoint,
-             ops  : ptr<normal, r> SchedOps,
+             dienste : ptr<normal, r> SchedOps,
              core : u32,
              f    : ptr<normal, rw+own> Frame) -> ptr<normal, rw+own> Frame
     -- «B6» Die Nachbedingungen des Originals sprechen ueber `result`. `fndecl` (:266-274)
@@ -724,7 +724,7 @@ device Virtq(base : Iova, n : u16 in 1 .. QMAX) at dma {
         reg addr  : u64 @0x0 class w
         reg len   : u32 @0x8 class w
         reg flags : u16 @0xc class w fields { NEXT @0, WRITE @1, }
-        reg next  : u16 @0xe class w
+        reg naechst : u16 @0xe class w
     }
     reg AVAIL_FLAGS : u16 @0x100 class rw
     reg AVAIL_IDX   : u16 @0x102 class rw
@@ -765,12 +765,12 @@ impl fn publish(q : ptr<dma, rw> Virtq, head : u16 in 0 ..< 256)
     costs   <= 4 ops
 {
     -- Der Nenner schliesst die Null aus, weil `n : u16 in 1 .. QMAX` es tut (:216).
-    let slot = q.AVAIL_IDX % q.n;
-    q.AVAIL_RING[slot].e = head;
+    let platz = q.AVAIL_IDX % q.n;
+    q.AVAIL_RING[platz].e = head;
     q.AVAIL_IDX += 1;
 }
 
-impl fn poll_used(q : ptr<dma, r> Virtq, from : u16) -> u32
+impl fn poll_used(q : ptr<dma, r> Virtq, von : u16) -> u32
     effects { reads q }
 {
     -- Das traegt unveraendert, und die Reihenfolge stimmt mit der Produktion (:343-348):
@@ -841,7 +841,7 @@ prim fn invoke(nr : u64, cap : u64, m0 : u64, m1 : u64, m2 : u64, m3 : u64, tag 
     effects { writes machine_regs }
     arch aarch64;
 
-divergent fn run(boot : u64) -> never
+divergent fn run(startwert : u64) -> never
     effects { diverges, writes DMA, writes SHARED, reads EP }
 {
     let cfg    = map_window(CFG)    else (e1) { signal(NTFN, 0xD1A6_0001); exit(); };
