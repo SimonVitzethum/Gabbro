@@ -57,6 +57,29 @@ pub struct Huelle {
 
 pub fn erhebe(baum: &Programm) -> Graph {
     let mut g = Graph::default();
+    // **Uebergaenge sind Gerufene mit erklaerten Wirkungen.** Ohne sie meldete der Graph
+    // `uebersetzung_an ist unbekannt` und die Aufrufwirkungen von `scharfschalten` galten
+    // als unentscheidbar -- eine Luecke im GRAPHEN, nicht im Programm. Gefunden am eigenen
+    // Beispiel 02, eine Minute nachdem der dritte Zustand sichtbar wurde.
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Device(d) = &item.art {
+            for u in &d.uebergaenge {
+                let mut k = Knoten {
+                    eigen: BTreeSet::new(),
+                    ruft: BTreeSet::new(),
+                    verlangt: Vec::new(),
+                    hat_effects: u.effects.is_some(),
+                    span: u.name.span,
+                };
+                if let Some(w) = &u.effects {
+                    for e in &w.liste {
+                        k.eigen.insert(e.art.text());
+                    }
+                }
+                g.knoten.insert(u.name.text.clone(), k);
+            }
+        }
+    });
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Funktion(f) = &item.art else {
             return;

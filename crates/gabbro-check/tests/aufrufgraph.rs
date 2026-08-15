@@ -77,3 +77,45 @@ impl fn geteilt(p : ptr<normal, r> T) requires Held(L, shared) effects { reads p
     assert_eq!(g.verlangt("exklusiv"), &[("L".to_string(), false)][..], "exklusiv");
     assert_eq!(g.verlangt("geteilt"), &[("L".to_string(), true)][..], "geteilt");
 }
+
+#[test]
+fn ein_zyklus_bestaetigt_pure_NICHT_still() {
+    // **Die gefaehrlichste Stelle des ganzen Passes.** Beide Funktionen erklaeren `pure` und
+    // rufen transitiv etwas Schreibendes -- ueber einen Zyklus. Aus einer unteren Schranke
+    // wird nicht abgesagt (R16); wuerde sie deshalb still DURCHGELASSEN, waere das die
+    // Ausweg-Zusicherung aus R15 durch die Hintertuer: erfuellt, weil nichts passiert ist.
+    //
+    // Der ehrliche dritte Zustand heisst `E009` und ist sichtbar, nicht gruen.
+    let q = "module t {
+extern fn schreibt(p : ptr<normal, rw> T) effects { writes p.slots } costs <= 1 ops;
+impl fn a(p : ptr<normal, rw> T) effects { pure } costs <= 99 ops { b(p); }
+impl fn b(p : ptr<normal, rw> T) effects { pure } costs <= 99 ops { a(p); schreibt(p); }
+}";
+    let mut absagen = gabbro_syntax::diag::Absagen::neu("probe.gab");
+    gabbro_check::pruefe(&gabbro_syntax::lies("probe.gab", q).0, &mut absagen);
+    let text = absagen.zeige(q);
+    assert!(
+        text.contains("E009"),
+        "eine `pure`-Zusage hinter einem Zyklus darf nicht still durchgehen:\n{text}"
+    );
+    assert!(
+        text.contains("unentscheidbar"),
+        "der dritte Zustand muss beim Namen genannt werden:\n{text}"
+    );
+}
+
+#[test]
+fn ein_uebergang_ist_ein_gerufener_mit_wirkungen() {
+    // Ohne diese Kante meldete der Graph `unbekannt` und der dritte Zustand feuerte an einer
+    // Stelle, an der alles erklaert war -- eine Luecke im GRAPHEN, nicht im Programm.
+    let q = "module t {
+device D(basis : u64) at mmio {
+    reg G : u32 @0x0 class rw fields { TE @31, }
+    transition an { G.TE: 0 -> 1 } effects { writes G }
+}
+impl fn schalte(d : ptr<mmio, rw> D) effects { writes d.G } costs <= 4 ops { an(d); }
+}";
+    let h = graph(q).huelle("schalte");
+    assert!(h.unvollstaendig.is_none(), "der Uebergang ist bekannt: {:?}", h.unvollstaendig);
+    assert!(h.wirkungen.contains("writes G"), "seine Wirkung kommt an: {:?}", h.wirkungen);
+}

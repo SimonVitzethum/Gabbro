@@ -30,7 +30,7 @@ const BENANNT: &[&str] = &[
     "N001", "N002", "N003", // Namen
     "S001", "S002", // Schleifen und Kontrollfluss
     "K001", "K002", "K003", // Kosten
-    "E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008", // Wirkungen
+    "E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008", "E009", // Wirkungen
     "H001", "H002", "H003", "H004", "H005", // geteilter Halt
     "K004", "D001", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
 ];

@@ -393,9 +393,21 @@ fn rein_allein(w: &Wirkungen, absagen: &mut Absagen) {
 /// **Das sieht mehr Wirkungen als da sind, nie weniger.** Die Abbildung auf Argumente ist
 /// der naechste Schritt und braucht eine Alias-Analyse, die es nicht gibt.
 ///
-/// **Und wo die Huelle unvollstaendig ist, sagt sie es** (R16): ein Zyklus oder ein
-/// Gerufener ohne `effects` macht die Menge zu einer unteren Schranke, und dann wird nicht
-/// abgesagt — eine Absage aus einer unteren Schranke waere eine Behauptung.
+/// **Die Grobheit hat eine Richtung, und nur deshalb ist sie zulaessig.** Dieser Pass rechnet
+/// ueber **Mengen**, nicht ueber **Pfade** — das ist die richtige Grobheit, *aber nur weil sie
+/// hier in die SICHERE Richtung grob ist*: er sieht mehr Wirkungen als da sind, nie weniger.
+/// **Wo dieselbe Grobheit in die unsichere Richtung zeigte, wird sie nicht angewandt** — s.
+/// `diverges` unten. *Das ist R8 auf Analysen statt auf Absagen: bevor eine Analyse
+/// vergroebert, wird die Richtung geprueft, nicht die Bequemlichkeit.* **Der naechste Pass,
+/// der ueber Mengen rechnet, faengt mit dieser Frage an.**
+///
+/// **Und wo die Huelle unvollstaendig ist, gibt es einen DRITTEN Zustand** (R16 + R15): ein
+/// Zyklus oder ein Gerufener ohne `effects` macht die Menge zu einer unteren Schranke. Daraus
+/// wird **nicht abgesagt** — eine Absage aus einer unteren Schranke waere eine Behauptung.
+/// **Aber auch nicht bestaetigt**: eine untere Schranke ist eine *unsichere* Deckung fuer
+/// `pure`, und ein stilles Durchlassen waere die Ausweg-Zusicherung aus R15 durch die
+/// Hintertuer — *„erfuellt, weil nichts passiert ist"*. Der ehrliche dritte Zustand heisst
+/// **`E009` — unentscheidbar**, und er ist sichtbar, nicht gruen.
 fn aufrufwirkungen(
     f: &FnDecl,
     w: &Wirkungen,
@@ -403,8 +415,27 @@ fn aufrufwirkungen(
     absagen: &mut Absagen,
 ) {
     let h = g.huelle(&f.name.text);
-    if h.unvollstaendig.is_some() {
-        return; // untere Schranke -- daraus wird nicht abgesagt
+    if let Some(grund) = &h.unvollstaendig {
+        // Weder Absage noch Bestaetigung: der dritte Zustand, und er steht da.
+        absagen.schiebe(
+            Absage::hinweis(
+                "E009",
+                f.name.span,
+                format!(
+                    "die Aufrufwirkungen von `{}` sind unentscheidbar: {grund}",
+                    f.name.text
+                ),
+            )
+            .mit_notiz(
+                "die Wirkungsmenge ist hier nur eine UNTERE Schranke -- aus ihr wird weder \
+                 abgesagt noch bestaetigt",
+            )
+            .mit_notiz(
+                "insbesondere ist eine `pure`-Zusage an dieser Stelle NICHT geprueft; sie \
+                 stillschweigend durchzulassen waere eine Zusicherung ohne Inhalt",
+            ),
+        );
+        return;
     }
     let ist_rein = w.liste.iter().any(|e| matches!(e.art, WirkungArt::Rein));
     let eigene: Vec<String> = w.liste.iter().map(|e| e.art.benennung().to_string()).collect();

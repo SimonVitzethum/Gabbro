@@ -201,3 +201,70 @@ eine Zahl darf nicht parallel zur Wahrheit laufen; W7 sagt, wie man das verhinde
 **Der Handgriff, wo es mechanisch geht:** `pruefe-luecken.py` und `zaehle-bereichspflichten.py`
 drucken ihre Fundstellen mit; `gabbro kosten` und `gabbro k-bedingung` ebenso. Wo eine Zahl
 von Hand entsteht, gehört die Liste in dieselbe Änderung.
+
+---
+
+## W8 — Eine kompositionale Prüfung wird über **zwei Ebenen** geprobt, nicht über eine
+
+**Der Anlass.** `E008` schliesst die Wirkungen der Gerufenen ein. Die naheliegende Probe wäre:
+*Rufer nennt `writes`, Gerufener nennt `writes`, kommt an.* **Die misst nichts** — sie ist
+schon grün, wenn der Pass nur die erste Ebene sieht.
+
+**Die Regel.** Eine Probe für eine transitive Eigenschaft stellt eine **Zwischenfunktion**
+dazwischen, die die Eigenschaft **nicht selbst hat**:
+
+```gabbro
+extern fn ganz_tief() effects { masks IRQ } …   -- nur HIER steht `masks`
+impl fn mitte()       effects { pure }     …    { ganz_tief(); }
+impl fn oben()        effects { pure }     …    { mitte(); }
+```
+
+Die Zusicherung lautet: *`masks IRQ` kommt bei `oben` an.* **Fällt der Pass auf die erste
+Ebene zurück, verschwindet die Wirkung** — und die Probe kippt. Damit hängt sie nachweislich
+am Prüfling (R14b), und zwar an der **Transitivität**, nicht an einem Treffer.
+
+**Wo es wieder gebraucht wird:** der **Paarungspass** braucht dieselbe Probenform — eine
+Paarung `publishes`/`awaits` **über eine Zwischenfunktion hinweg**. Jede Analyse, die
+„schliesst … ein" sagt, braucht sie.
+
+---
+
+## W9 — Vergröbert eine Analyse, wird die **Richtung** geprüft, nicht die Bequemlichkeit
+
+*R8 sagt: übertreibe nur in die sichere Richtung — das galt für **Absagen**. W9 ist dasselbe
+für **Analysen**.*
+
+**Der Fall.** `E008` rechnet über **Mengen**, nicht über **Pfade**. Das ist die richtige
+Grobheit — **aber nur, weil sie hier in die sichere Richtung grob ist**: der Pass sieht mehr
+Wirkungen, als da sind, nie weniger.
+
+**Und dieselbe Grobheit ist an einer Stelle unzulässig.** `diverges` wandert **nicht** nach
+oben: wer eine divergierende Funktion ruft, divergiert nicht — nur wer sie auf **jedem** Weg
+ruft. Das ist eine Aussage über **Pfade**. Über Mengen gerechnet wäre sie in die **unsichere**
+Richtung grob: sie erzwänge `diverges` an Funktionen, die zurückkehren.
+
+**Die Regel.** Bevor eine Analyse vergröbert, wird je Eigenschaft gefragt: *irrt die grobe
+Fassung in die sichere oder in die unsichere Richtung?* **Die Antwort steht im Passkommentar,
+nicht im Kopf.** Eine Vergröberung ohne Richtungsprüfung ist eine Bequemlichkeit mit
+Zufallsergebnis.
+
+---
+
+## W10 — Der dritte Zustand: nicht abgesagt heisst nicht bestätigt
+
+**Der Beinahe-Fehler.** `E008` sagt aus einer **unteren Schranke** nicht ab — richtig (R16):
+eine Absage aus einer Untergrenze wäre eine Behauptung. Aber die erste Fassung liess die
+Funktion damit **still durchgehen**, und eine `pure`-Zusage hinter einem Zyklus war grün.
+
+**Das ist die Ausweg-Zusicherung aus R15 durch die Hintertür** — *„erfüllt, weil nichts
+passiert ist"*, nur eine Ebene tiefer: nicht in der Zusicherung, sondern im **Pass**.
+
+**Die Regel.** Wo eine Analyse aus Unvollständigkeit **nicht absagen** darf, darf sie auch
+**nicht bestätigen**. Der ehrliche dritte Zustand heisst **unentscheidbar**, hat eine eigene
+Kennung und ist **sichtbar**.
+
+**Der Handgriff.** `E009` nennt den Grund beim Namen (`Zyklus über …`, `… ist dem Graphen
+unbekannt`) und sagt ausdrücklich, dass die `pure`-Zusage an dieser Stelle **nicht geprüft**
+ist. *Ein Nebenertrag zeigte sich sofort:* zwei der drei ersten `E009` waren **Lücken im
+Graphen**, nicht im Programm — `transition`s fehlten ihm. Der dritte Zustand hat sich als
+erstes gegen das eigene Werkzeug gerichtet.
