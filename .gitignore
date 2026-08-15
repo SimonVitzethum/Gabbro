@@ -1,3 +1,6 @@
 target/
 *.o
 *.a
+
+# Der Arbeitsprotokoll-Ordner des autonomen Auftrags -- Werkstattnotizen, kein Repo-Inhalt.
+arbeitsprotokoll/
