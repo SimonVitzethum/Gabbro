@@ -1058,3 +1058,61 @@ sein** — dann faellt Trennung aus M2, und Gabbro behaelt vier Mechanismen.
 rot, braucht Trennung einen **fuenften Mechanismus** — und der Gegner dafuer ist nicht Verus,
 sondern **Rusts Ausleihpruefer**, der ihn liefert. Das waere die teuerste denkbare Antwort auf
 die Frage, ob diese Sprache sich rechtfertigt.
+
+
+---
+
+## Die Aufschlüsselung nach Logik/Klempnerei — gefahren 2026-08-15
+
+> *„Beide Messungen nach Logik/Klempnerei aufschlüsseln — `delete_leaf` (3,6–6 : 1) und
+> `Endpoint::call` (1,8–2,3 : 1). **Ohne diese Aufteilung ist eine Zahl kein Messwert.**"*
+> (`TODO.md`:524)
+
+Gemessen an `../caprock-messbasis` @ `a1bf707`, `crates/caprock-cap/src/space.rs:1062-1095`.
+
+### `delete_leaf` — 34 Zeilen, davon 12 Code und 15 Kommentar
+
+**Das Kriterium (`BEWEIS.md`, oben):** *nennt die Pflicht nur die Maschine, ist sie
+Klempnerei; nennt sie die Sache, ist sie Logik.*
+
+| Zeile | Pflicht | Klasse | warum |
+|---|---|---|---|
+| `slots[slot].object` | Index in Schranken | **K** | nennt nur den Speicher |
+| `unlink(slot)` | Ketten bleiben wohlgeformt | **L** | nennt den CDT, also die Sache |
+| `release_slot(slot)` | Slot ist danach frei | **K** | Zustand eines Platzes |
+| `refcount -= 1` | kein Unterlauf | **K** | «B29», reine Darstellung |
+| `refcount -= 1` | Zähler == Zahl der Verweise | **L** | **die Verbindungs-Invariante, «B13»** |
+| `if refcount == 0` | Freigabe genau bei null | **L** | nennt die Lebensdauer der Sache |
+| `match kind` — `Memory` | Region gehört dem RAM-Allokator | **L** | die 5 Kommentarzeilen 8–12 sind der Beleg |
+| `match kind` — `Dma` | Freigabe erst nach Nachweis | **L** | Kommentar 14–17 und 22–25: **Reihenfolge über Systemgrenzen** |
+| `match kind` — `Reply` | Aufrufer wird entblockt | **L** | nennt das IPC-Protokoll |
+| `gen.wrapping_add(1)` | Umlauf ist gewollt | **K** | Darstellung — *und in Gabbro seit «B32» aussprechbar* |
+| `objects[obj] = EMPTY` | kein Verweis überlebt | **L** | nennt die Sache |
+
+**Aufteilung: 4 K, 7 L.** Verhältnis **L : K ≈ 1,75 : 1** — die Klempnerei ist die
+**Minderheit**.
+
+> **Und das steht gegen die Zahl, die der Ordner führt.** `delete_leaf` war mit **3,6–6 : 1**
+> gebucht — als Beleg dafür, dass Klempnerei überwiegt. Aufgeschlüsselt kippt es: **die
+> Mehrheit der Pflichten dieser Funktion nennt die Sache.**
+
+**Warum die alte Zahl anders ausfiel, soweit rekonstruierbar:** sie zählte offenbar
+**Beweisschritte** (jeder Index, jeder Bereich, jeder Alias einzeln), nicht **Pflichten**.
+Ein `match` über zehn Varianten liefert zehn Klempnereischritte und **eine** logische Pflicht.
+*Beides sind legitime Zählweisen, aber sie beantworten verschiedene Fragen* — und die Frage
+des Ordners („was bleibt für den Menschen?") wird von der **Pflicht**-Zählung beantwortet,
+nicht von der Schritt-Zählung.
+
+**Der Kommentaranteil ist der zweite Befund:** 15 von 34 Zeilen sind Kommentar, und
+**jede einzelne davon trägt eine logische Pflicht** (welche Objektart hält RAM, warum `Dma`
+die Ausnahme ist, warum die Freigabe erst nach Nachweis kommt). *Was ein Mensch aufschreiben
+muss, damit die nächste Leserin die Funktion nicht kaputtmacht, ist ein guter Schätzer für
+den Logikanteil* — und er zeigt in dieselbe Richtung.
+
+### `Endpoint::call` — **nicht aufgeschlüsselt, und warum**
+
+Die Funktion liegt in `kernel/src/system.rs` und ist über den IPC-Fastpath mit
+`SCHEDS`/`FP_OWNER` verflochten; eine Aufschlüsselung nach demselben Kriterium braucht die
+Sperrlage **je Zeile**. Das ist machbar, aber es ist **die Arbeit des Scheduler-Fragments**
+(Welle 4) und nicht die dieser Messung. **Blockiert, mit Grund und Fundstelle** — nicht
+stillschweigend ausgelassen.
