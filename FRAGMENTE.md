@@ -622,7 +622,12 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
     -- bindet fuer den Rueckgabewert KEINEN Namen; `old(place)` gibt es, ein `result` nicht.
     requires  Held(EPS), e.slots[core].used
     maintains antwortpflicht_paarig
-    effects   { writes e.slots, locks SCHEDS, writes frames, consumes e.slots }
+    -- `reads dienste` steht hier, weil `current_id`/`frame_of` es nennen: seit 2026-08-15
+    -- schliesst eine Wirkungsliste die der Gerufenen ein (`E008`). **Die Zeile war vorher
+    -- unvollstaendig, und kein Werkzeug konnte es sagen** -- genau der Posten, der `effects`
+    -- erst kompositional macht.
+    effects   { writes e.slots, locks SCHEDS, writes frames, consumes e.slots,
+                reads dienste }
     costs     <= 2000 ops
 {
     if e.slots[core].quiescing {

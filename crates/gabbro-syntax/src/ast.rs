@@ -480,6 +480,16 @@ pub enum PredArt {
         nach: Ort,
         via: Ident,
     },
+    /// `Held(L)` bzw. `Held(L, shared)` -- **der Sperrzeuge MIT seiner Staerke.**
+    ///
+    /// Bis 2026-08-15 war das ein gewoehnlicher Aufruf im Praedikat und trug keine
+    /// Staerke; damit war `requires Held-shared` nicht schreibbar, und die Zwischenregel
+    /// `H005` musste JEDEN Zeugen unter geteilter Nahme sperren.
+    Held {
+        sperre: Ident,
+        geteilt: bool,
+        span: Span,
+    },
     Klammer(Box<Pred>),
     Nicht(Box<Pred>),
     Und(Box<Pred>, Box<Pred>),

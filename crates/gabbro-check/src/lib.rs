@@ -17,6 +17,7 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::Absagen;
 
+pub mod aufrufgraph;
 pub mod geteilt;
 pub mod kbedingung;
 pub mod kosten;

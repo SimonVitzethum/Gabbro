@@ -43,7 +43,7 @@
 //!   Kandidaten — kein Konstrukt ohne gemessenen Bedarf.*
 //! * **`H005`** — **die Zwischenregel an der Aufrufgrenze.** Siehe unten.
 //!
-//! ## `H005` — warum eine absichtlich zu strenge Regel besser ist als keine
+//! ## `H005` — **die Zwischenregel ist ERSETZT (2026-08-15), nicht gelockert**
 //!
 //! Die tragende Regel `H001` sieht nur, was der Block **selbst** schreibt. Ein Aufruf trägt
 //! sie nicht mit: ruft ein geteilter Block eine Funktion mit `requires Held(N)`, so schreibt
@@ -51,20 +51,24 @@
 //! `H001` durch die Hintertür**, und bis Pass 8 steht, ist dieses Loch nicht bloss offen,
 //! sondern **durchlässig**: der Zeuge existiert, seine Stärke wird nicht geprüft.
 //!
-//! Die richtige Prüfung braucht den Aufrufgraphen — denselben, an dem heute schon die
-//! Aufrufwirkungen in Pass 8 hängen. Bis dahin gilt die grobe Fassung:
+//! Die grobe Fassung lautete: *„Ein geteilter Block ruft **keine** Funktion mit
+//! `requires Held(…)`. Punkt."* — zu streng, denn sie verbot auch den harmlosen Aufruf über
+//! eine **andere** Sperre. Der Preis stand in der Absage, und die ersetzende Prüfung war
+//! dort **angekündigt**. *W5: eine Zwischenregel trägt die Ablösung in ihrer eigenen
+//! Absage.* **Hier ist sie.**
 //!
-//! > **Ein geteilter Block ruft keine Funktion mit `requires Held(…)`. Punkt.**
+//! Die echte Regel, seit `aufrufgraph.rs` steht:
 //!
-//! Das ist **zu streng** — es verbietet auch den Aufruf über eine *andere* Sperre, der
-//! harmlos wäre. Aber es irrt in die sichere Richtung, und der Preis dafür ist bekannt und
-//! benannt. **Die Alternative wäre, dass die tragende Regel des neuen Konstrukts ausgerechnet
-//! an der Aufrufgrenze eine stille Ausnahme hat** — und eine stille Ausnahme ist teurer als
-//! eine laute Übertreibung, weil niemand sie sucht.
+//! > **Ein geteilter Block darf `requires Held(L, shared)` rufen. Eine exklusive
+//! > Forderung — `requires Held(L)` — bleibt gesperrt, und zwar nur für die Sperre, die
+//! > hier geteilt gehalten wird.**
 //!
-//! Mit Pass 8 wird sie **ersetzt**, nicht gelockert: ein geteilter Zeuge deckt dann genau
-//! `requires Held-shared`, und die Asymmetrie steht eine Ebene höher noch einmal so, wie
-//! `E007` sie unten schneidet.
+//! Die Asymmetrie steht damit eine Ebene höher noch einmal so, wie `E007` sie unten
+//! schneidet: **wer mehr fordert, als der Rufer hält, fällt; wer weniger fordert, nicht.**
+//!
+//! *Was die Ablösung gekostet hat:* eine eigene Grammatikregel für den Zeugen
+//! (`heldpred = "Held" "(" ident [ "," "shared" ] ")"`), weil `shared` ein Wort des
+//! Wortschatzes ist und bleiben soll — **keine Aufweichung des Ausdrucks**.
 
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
@@ -72,33 +76,6 @@ use gabbro_syntax::span::Span;
 use std::collections::BTreeMap;
 
 /// Nennt die `requires`-Klausel einen `Held(…)`-Zeugen? — der Prädikatbaum, flach gelesen.
-fn verlangt_held(p: &Pred) -> Option<String> {
-    match &p.art {
-        PredArt::Vergleich(e) => held_im_ausdruck(e),
-        PredArt::Klammer(x) | PredArt::Nicht(x) => verlangt_held(x),
-        PredArt::Und(a, b) | PredArt::Oder(a, b) => verlangt_held(a).or_else(|| verlangt_held(b)),
-        PredArt::Element(e, _) => held_im_ausdruck(e),
-        _ => None,
-    }
-}
-
-fn held_im_ausdruck(e: &Expr) -> Option<String> {
-    match &e.art {
-        ExprArt::Ruf(r) if r.pfad.teile.last().is_some_and(|i| i.text == "Held") => Some(
-            r.argumente
-                .first()
-                .map(|a| match &a.art {
-                    ExprArt::Ort(o) => o.text(),
-                    _ => "…".to_string(),
-                })
-                .unwrap_or_else(|| "…".to_string()),
-        ),
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => held_im_ausdruck(x),
-        ExprArt::Binaer(_, a, b) => held_im_ausdruck(a).or_else(|| held_im_ausdruck(b)),
-        _ => None,
-    }
-}
-
 /// Was über eine Sperre im Baum steht.
 struct Sperre {
     schuetzt: Vec<String>,
@@ -123,17 +100,15 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 
     // Wer einen `Held(…)`-Zeugen verlangt, darf aus einem geteilten Block nicht gerufen
     // werden -- bis Pass 8 die Staerke des Zeugen wirklich prueft (S005).
-    let mut verlangt: BTreeMap<String, String> = BTreeMap::new();
-    crate::fuer_jedes_item(baum, &mut |item| {
-        if let ItemArt::Funktion(f) = &item.art {
-            for r in &f.requires {
-                if let Some(sperre) = verlangt_held(r) {
-                    verlangt.insert(f.name.text.clone(), sperre);
-                    break;
-                }
-            }
-        }
-    });
+    // **Aus dem Aufrufgraphen, nicht aus einem eigenen Durchgang.** Er traegt die Staerke
+    // je Forderung -- genau das, was die Zwischenregel nicht hatte.
+    let g = crate::aufrufgraph::erhebe(baum);
+    let verlangt: BTreeMap<String, Vec<(String, bool)>> = g
+        .knoten
+        .iter()
+        .filter(|(_, k)| !k.verlangt.is_empty())
+        .map(|(n, k)| (n.clone(), k.verlangt.clone()))
+        .collect();
 
     let mut geteilt_genommen: Vec<String> = Vec::new();
     crate::fuer_jedes_item(baum, &mut |item| {
@@ -175,7 +150,7 @@ fn block(
     // nach sich zieht, laesst den Leser den Fehler an der falschen Stelle suchen.
     exklusiv: &[String],
     sperren: &BTreeMap<String, Sperre>,
-    verlangt: &BTreeMap<String, String>,
+    verlangt: &BTreeMap<String, Vec<(String, bool)>>,
     genommen: &mut Vec<String>,
     absagen: &mut Absagen,
 ) {
@@ -333,11 +308,18 @@ fn beruehrt(platz: &str, getan: &str) -> bool {
 
 /// **S005 — die Zwischenregel.** Absichtlich grob: *jeder* `Held(…)`-Zeuge zählt, nicht nur
 /// der der gerade geteilt gehaltenen Sperre. Der Preis ist benannt, die Richtung ist sicher.
+/// **H005 — die ECHTE Prüfung, seit der Aufrufgraph steht (2026-08-15).**
+///
+/// Die Zwischenregel sperrte **jeden** `Held(…)`-Zeugen unter geteilter Nahme und nannte
+/// ihren Preis in der eigenen Absage. Ersetzt, nicht gelockert:
+///
+/// > Ein geteilter Block darf `requires Held(L, shared)` rufen. Eine **exklusive** Forderung
+/// > auf **der hier geteilt gehaltenen** Sperre fällt.
 fn rufprobe(
     r: &Ruf,
     span: Span,
     offen: &[String],
-    verlangt: &BTreeMap<String, String>,
+    verlangt: &BTreeMap<String, Vec<(String, bool)>>,
     absagen: &mut Absagen,
 ) {
     if offen.is_empty() {
@@ -346,41 +328,40 @@ fn rufprobe(
     let Some(name) = r.pfad.teile.last() else {
         return;
     };
-    let Some(sperre) = verlangt.get(&name.text) else {
+    let Some(forderungen) = verlangt.get(&name.text) else {
         return;
     };
-    absagen.schiebe(
-        Absage::fehler(
-            "H005",
-            span,
-            format!(
-                "`{}` verlangt `Held({sperre})`, wird hier aber unter geteilter Nahme von \
-                 `{}` gerufen",
-                name.text,
-                offen.join("`, `")
+    for (sperre, geteilt) in forderungen {
+        if *geteilt || !offen.iter().any(|o| o == sperre) {
+            continue;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "H005",
+                span,
+                format!(
+                    "`{}` verlangt `Held({sperre})` exklusiv, wird hier aber unter geteilter \
+                     Nahme von `{sperre}` gerufen",
+                    name.text
+                ),
+            )
+            .mit_notiz(
+                "der Gerufene schreibt exklusiv-berechtigt, der Rufer haelt nur geteilt -- \
+                 das waere H001 durch die Hintertuer",
+            )
+            .mit_notiz(
+                "`requires Held(L, shared)` waere hier zulaessig -- die Staerke des Zeugen \
+                 entscheidet, seit der Aufrufgraph steht",
             ),
-        )
-        .mit_notiz(
-            "der Gerufene schreibt exklusiv-berechtigt, der Rufer haelt nur geteilt -- das \
-             waere S001 durch die Hintertuer",
-        )
-        .mit_notiz(
-            "ZWISCHENREGEL, absichtlich zu streng: bis der Aufrufgraph steht (Pass 8, \
-             Aufrufwirkungen), faellt JEDER `Held(…)`-Zeuge unter geteilter Nahme -- auch \
-             der einer anderen Sperre, der harmlos waere",
-        )
-        .mit_notiz(
-            "eine laute Uebertreibung ist billiger als eine stille Ausnahme: nach der \
-             stillen sucht niemand",
-        ),
-    );
+        );
+    }
 }
 
 fn rufprobe_expr(
     e: &Expr,
     span: Span,
     offen: &[String],
-    verlangt: &BTreeMap<String, String>,
+    verlangt: &BTreeMap<String, Vec<(String, bool)>>,
     absagen: &mut Absagen,
 ) {
     match &e.art {

@@ -1447,6 +1447,33 @@ impl<'a> Parser<'a> {
         if self.ist_kw(Kw::Forall) || self.ist_kw(Kw::Exists) {
             return self.quant();
         }
+        // `heldpred = "Held" "(" ident [ "," "shared" ] ")"` -- eine eigene Regel statt einer
+        // Aufweichung des Ausdrucks: `shared` ist ein Wort des Wortschatzes und bleibt es.
+        if matches!(self.blick().art, Art::Ident) && self.blick().text(self.quelle) == "Held" {
+            if let Some(p) = self.versuch(|s| {
+                let anfang = s.span();
+                s.pos += 1;
+                s.erwarte_z(Z::RundAuf)?;
+                let sperre = s.erwarte_ident()?;
+                let geteilt = if s.friss_z(Z::Komma) {
+                    s.erwarte_kw(Kw::Shared)?;
+                    true
+                } else {
+                    false
+                };
+                s.erwarte_z(Z::RundZu)?;
+                Ok(Pred {
+                    span: anfang.bis_zu(s.vorheriger_span()),
+                    art: PredArt::Held {
+                        sperre,
+                        geteilt,
+                        span: anfang,
+                    },
+                })
+            }) {
+                return Ok(p);
+            }
+        }
         // `cmpexpr`, `member` und `reach` fangen alle mit einem Ausdruck an. Der
         // Rueckversuch trennt sie von `"(" pred ")"`, das ein Quantor enthalten kann.
         if let Some(p) = self.versuch(|s| {

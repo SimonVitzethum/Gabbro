@@ -16,8 +16,13 @@ use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
+    // **Der Aufrufgraph, seit 2026-08-15.** Ohne ihn deckte eine `effects`-Liste nur die
+    // ERSTE Ebene: `effects { pure }` galt fuer eine Funktion, die eine schreibende rief.
+    // Damit war „nur die eingetragene Logik ist aktiv" eine halbe Aussage, und die
+    // Klempnerei-Klasse *Rahmen* hing genau daran.
+    let g = crate::aufrufgraph::erhebe(baum);
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
-        ItemArt::Funktion(f) => funktion(f, absagen),
+        ItemArt::Funktion(f) => funktion(f, &g, absagen),
         ItemArt::Axiom(a) => rein_allein(&a.effects, absagen),
         _ => {}
     });
@@ -266,7 +271,7 @@ fn rumpf_gegen_wirkungen(f: &FnDecl, w: &Wirkungen, b: &Block, absagen: &mut Abs
     }
 }
 
-fn funktion(f: &FnDecl, absagen: &mut Absagen) {
+fn funktion(f: &FnDecl, g: &crate::aufrufgraph::Graph, absagen: &mut Absagen) {
     match &f.effects {
         None => {
             // `spec fn` hat keine Laufzeitwirkung; fuer sie ist die Klausel freigestellt.
@@ -292,6 +297,7 @@ fn funktion(f: &FnDecl, absagen: &mut Absagen) {
             rein_allein(w, absagen);
             if let FnRumpf::Block(b) = &f.rumpf {
                 rumpf_gegen_wirkungen(f, w, b, absagen);
+                aufrufwirkungen(f, w, g, absagen);
             }
         }
     }
@@ -372,5 +378,99 @@ fn rein_allein(w: &Wirkungen, absagen: &mut Absagen) {
             rein[1].span,
             "`pure` steht zweimal in derselben Wirkungsliste",
         ));
+    }
+}
+
+/// **E008 — die Wirkungen der Gerufenen gehoeren in die Liste des Rufers.**
+///
+/// *„Das ist der Posten, der `effects` erst kompositional macht"* (`TODO.md`). Ohne ihn galt
+/// `effects { pure }` fuer eine Funktion, die eine schreibende rief — und die Rahmenaussage
+/// endete an der ersten Aufrufgrenze.
+///
+/// **Die Fassung ist grob und in die sichere Richtung grob:** die Wirkung des Gerufenen wird
+/// mit SEINEM Parameternamen gesehen, nicht auf die Argumente des Rufers abgebildet. Ein
+/// `writes p.slots` beim Gerufenen verlangt beim Rufer eine Schreibwirkung — irgendeine.
+/// **Das sieht mehr Wirkungen als da sind, nie weniger.** Die Abbildung auf Argumente ist
+/// der naechste Schritt und braucht eine Alias-Analyse, die es nicht gibt.
+///
+/// **Und wo die Huelle unvollstaendig ist, sagt sie es** (R16): ein Zyklus oder ein
+/// Gerufener ohne `effects` macht die Menge zu einer unteren Schranke, und dann wird nicht
+/// abgesagt — eine Absage aus einer unteren Schranke waere eine Behauptung.
+fn aufrufwirkungen(
+    f: &FnDecl,
+    w: &Wirkungen,
+    g: &crate::aufrufgraph::Graph,
+    absagen: &mut Absagen,
+) {
+    let h = g.huelle(&f.name.text);
+    if h.unvollstaendig.is_some() {
+        return; // untere Schranke -- daraus wird nicht abgesagt
+    }
+    let ist_rein = w.liste.iter().any(|e| matches!(e.art, WirkungArt::Rein));
+    let eigene: Vec<String> = w.liste.iter().map(|e| e.art.benennung().to_string()).collect();
+    for wirkung in &h.wirkungen {
+        // **Die Benennung ist zweiwortig, wo sie es ist.** `locks shared X` heisst
+        // `locks shared`, nicht `locks` -- ein Vergleich am ersten Leerzeichen liess eine
+        // Funktion an ihrer EIGENEN Wirkung scheitern. Gefunden an `beispiele/10`, sofort
+        // beim ersten Lauf des neuen Passes.
+        let art = if wirkung.starts_with("locks shared") {
+            "locks shared"
+        } else {
+            wirkung.split_whitespace().next().unwrap_or("")
+        };
+        if art == "pure" {
+            continue;
+        }
+        // **`diverges` wandert NICHT nach oben.** Wer eine divergierende Funktion ruft,
+        // divergiert nicht -- nur wer sie auf JEDEM Weg ruft. Das ist eine Aussage ueber
+        // Pfade, und dieser Pass rechnet ueber Mengen. Die grobe Fassung waere hier in die
+        // UNSICHERE Richtung grob: sie erzwaenge `diverges` an Funktionen, die zurueckkehren.
+        // (`beispiele/11a`: der Fehlerzweig ruft `abbruch()`, der Normalfall kehrt zurueck.)
+        if art == "diverges" {
+            continue;
+        }
+        // Eine geteilte Nahme ist von einer exklusiven Erklaerung gedeckt -- dieselbe
+        // Asymmetrie wie `E007`, eine Ebene hoeher.
+        if art == "locks shared" && eigene.iter().any(|e| e == "locks") {
+            continue;
+        }
+        if ist_rein {
+            absagen.schiebe(
+                Absage::fehler(
+                    "E008",
+                    f.name.span,
+                    format!(
+                        "`{}` erklaert `pure`, ruft aber etwas mit `{wirkung}`",
+                        f.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "`effects` ist kompositional: die Wirkungen der Gerufenen gehoeren in \
+                     die Liste des Rufers -- sonst endet die Rahmenaussage an der ersten \
+                     Aufrufgrenze",
+                ),
+            );
+            return;
+        }
+        if !eigene.iter().any(|e| e == art) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "E008",
+                    f.name.span,
+                    format!(
+                        "`{}` ruft etwas mit `{wirkung}`, nennt aber keine `{art}`-Wirkung",
+                        f.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "die Wirkung stammt aus einem Gerufenen -- `effects` deckte bis \
+                     2026-08-15 nur die erste Ebene",
+                )
+                .mit_notiz(format!(
+                    "erklaert sind: {}",
+                    if eigene.is_empty() { "nichts".into() } else { eigene.join(", ") }
+                )),
+            );
+        }
     }
 }

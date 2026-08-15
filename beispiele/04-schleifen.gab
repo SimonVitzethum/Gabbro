@@ -58,7 +58,10 @@ impl fn auf_quittung_warten(g : ptr<mmio, r> Statusregister) -> u32
 --    `progress` nennt, WER sie beendet -- eine Annahme mit Falsifikator, und der
 --    Watchdog IST der Falsifikator. `leaves` nennt, was den Ausgang verlaesst.
 divergent fn dienstschleife(q : ptr<normal, rw> Warteschlange, marke : Angemeldet)
-    effects { diverges, writes q.slots, locks PLANER }
+    -- `reads schalter` steht hier, weil `abschaltung_angefordert()` es nennt: seit
+    -- 2026-08-15 schliesst eine Wirkungsliste die der Gerufenen ein (`E008`).
+    -- **Vorher war diese Zeile unvollstaendig, und niemand konnte es sehen.**
+    effects { diverges, writes q.slots, locks PLANER, reads schalter }
 {
     forever dienst
         per_pass bounded 4096 ops

@@ -1,0 +1,50 @@
+-- 13 -- **Was die Zwischenregel zu viel verbot, und jetzt durchgeht.**
+--
+-- `H005` sperrte bis zum 2026-08-15 JEDEN `Held(…)`-Zeugen unter geteilter Nahme. Der Preis
+-- stand in ihrer eigenen Absage: auch der Aufruf ueber eine ANDERE Sperre fiel, und auch ein
+-- Gerufener, der nur GETEILT fordert. Beides ist harmlos, und beides steht hier.
+--
+-- Die Regel, die sie ersetzt hat: **die Staerke des Zeugen entscheidet.**
+
+module beispiel::zeuge {
+
+const N : u32 = 64;
+type Rechte = u32 in 0 .. 15;
+
+table Raum count N {
+    slot { belegt : bool, rechte : Rechte, }
+}
+
+lock KAPPEN protects { belegt, rechte } rank 0 held <= 8 ops shared held <= 8 ops;
+lock ANDERE protects { zaehler }        rank 1 held <= 8 ops;
+
+-- Fordert GETEILT -- darf unter geteilter Nahme gerufen werden.
+impl fn liest(k : ptr<normal, r> Raum, i : index into Raum) -> Rechte
+    requires Held(KAPPEN, shared)
+    effects  { reads k.slots }
+    costs    <= 2 ops
+{
+    return k.slots[i].rechte;
+}
+
+-- Fordert eine ANDERE Sperre exklusiv -- geht die geteilte Nahme von KAPPEN nichts an.
+impl fn fremd(z : ptr<normal, rw> Zaehlwerk)
+    requires Held(ANDERE)
+    effects  { writes z }
+    costs    <= 2 ops
+{
+    z.wert = 0;
+}
+
+impl fn aufloesen(k : ptr<normal, r> Raum, i : index into Raum, z : ptr<normal, rw> Zaehlwerk) -> Rechte
+    effects { reads k.slots, writes z, locks shared KAPPEN }
+    costs   <= 8 ops
+{
+    locks shared KAPPEN {
+        fremd(z);
+        return liest(k, i);
+    }
+    return 0;
+}
+
+}

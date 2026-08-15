@@ -99,7 +99,7 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
   Domaenen   slots of chain descendants queue elems fields threads reaches via
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 bool never w1c rc
   Eingebaut  sizeof lenof aligned forall exists true false Self Some None
-  Sonderform O @version    (KEINE Wortschatzwoerter -- s. Fussnote G6)
+  Sonderform O @version Held    (KEINE Wortschatzwoerter -- s. Fussnote G6)
 ```
 
 **Alles andere ist ein Bezeichner.** Ein neues Wort ist eine Sprachaenderung und braucht einen
@@ -132,9 +132,9 @@ identlist  = ident { "," ident } ;
 regbind    = ident ":" ident ;                                 (* G4 *)
 ```
 
-> **Die Zeile `Sonderform` und warum sie keine Ausnahme ist (G6).** `O` (in `costexpr`) und
-> `@version` (in `format`) sind **Terminale der Grammatik, aber keine Woerter des
-> Wortschatzes**: `O` steht als Bezeichner in fester Stellung (so auch im Parser,
+> **Die Zeile `Sonderform` und warum sie keine Ausnahme ist (G6).** `O` (in `costexpr`),
+> `@version` (in `format`) und `Held` (in `heldpred`) sind **Terminale der Grammatik, aber
+> keine Woerter des Wortschatzes**: `O` steht als Bezeichner in fester Stellung (so auch im Parser,
 > `parse.rs:costexpr`), `@version` ist ein zusammengesetztes Zeichen, kein Schluesselwort.
 > **Der Befund war nie die Ausnahme, sondern dass der Waechter sie nie angesehen hat** — er
 > behauptete einen geschlossenen Wortschatz ueber einer Menge, aus der zwei Terminale
@@ -320,7 +320,14 @@ pred       = orpred ;
 orpred     = andpred { "||" andpred } ;
 andpred    = notpred { "&&" notpred } ;
 notpred    = [ "!" ] atompred [ "=>" pred ] ;
-atompred   = cmpexpr | quant | member | reach | "(" pred ")" ;
+atompred   = cmpexpr | quant | member | reach | heldpred | "(" pred ")" ;
+heldpred   = "Held" "(" ident [ "," "shared" ] ")" ;
+             (* Der Sperrzeuge, mit seiner STAERKE. Bis 2026-08-15 war `Held(L)` ein
+                gewoehnlicher Aufruf im Praedikat und trug keine Staerke -- damit war
+                `requires Held-shared` nicht schreibbar, und die Zwischenregel `H005`
+                musste JEDEN Zeugen sperren. Eine eigene Regel statt einer Aufweichung
+                des Ausdrucks: `shared` ist ein Wort des Wortschatzes und soll es
+                bleiben. *)
 quant      = ( "forall" | "exists" ) ident "in" domain ":" pred ;
 domain     = "slots" "of" place                  (* die Slots einer Tabelle *)
            | "chain" "(" ident "," ident ")" "in" place
