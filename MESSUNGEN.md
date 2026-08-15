@@ -2943,3 +2943,91 @@ Erhaltung ist die Arbeit.**
 **Was diese Grundlage NICHT deckt:** Bereiche ohne Verus-Beweis (MMU/Seitentabellen, Parser,
 Bringup) haben hier **null** Pflichten stehen — nicht, weil sie keine haetten, sondern weil
 niemand sie aufgeschrieben hat. **Das ist eine Untergrenze und heisst so** (R16).
+
+---
+
+# VORAB — die K/A/W-Zaehlung ueber N_L = 81, neu registriert
+
+**Eigener Commit, VOR der ersten Klassifikation.** Danach wird hier nichts geaendert (R2).
+
+## Warum neu registriert wird — und warum das KEINE Torverschiebung ist
+
+> **Die alte Grundgesamtheit war unbelegt (W7), nicht das alte Ergebnis unbequem (R2).**
+
+Das ist der ganze Grund, und er ist nachpruefbar: die 17 hatten **eine** `Datei:Zeile` im
+ganzen Ordner, und die gehoerte zur Eager-FP-Frage. Die neue Grundgesamtheit hat **89
+Fundstellen** (8 Invarianten + 81 Erhaltungssaetze), alle im Text darueber.
+
+*Wuerde ich hier die Latte verschieben, waere es an dieser Stelle sichtbar — deshalb steht
+sie hier und nicht im Ergebnis.*
+
+## Die drei Spalten — **unveraendert uebernommen**
+
+| Spalte | Entscheidungsregel (woertlich aus dem alten Protokoll) |
+|---|---|
+| **K — durch Konstruktion** | Die Aussage erwaehnt **nur die Maschine**, ODER sie ist eine **deklarierte Invariante**, deren Erhaltung der Erzeuger **einmal ueber der Deklaration** zeigt. Ein Mensch schreibt nichts. |
+| **A — Abstiegsaussage** | Schreibbar als *„fuer alle x in ⟨deklarierter Domaene⟩: P(x)"*, und P(x) folgt aus P auf den **echt kleineren** Elementen **plus genau einer deklarierten Schrittzusage**. |
+| **W — Wertaussage** | Alles Uebrige: das Argument betrifft **Werte, die ein Rumpf rechnet** und die keine Deklaration festlegt. |
+
+## Die K-Bedingung, mechanisch je Pflicht
+
+**K gilt nur, wenn ALLE Schreibstellen des Traegers erzeugt oder methodengebunden sind.**
+Geprueft per Fundstellensuche im Baum: schreibt irgendetwas ausserhalb der Methoden des
+Traegers auf seine Felder, faellt K.
+
+```
+grep -rn "<traeger>\.<feld>\s*[-+]\?=" --include=*.rs .     # je Pflicht
+```
+
+*Der Uebersetzer fuehrt dieselbe Pruefung fuer Gabbro-Quelltext als `gabbro k-bedingung`.*
+
+## Die vier Kippregeln — **immer nach W**
+
+1. Ist unklar, ob die Domaene **deklariert** ist, kippt A nach **W**.
+2. Ist unklar, ob der Erzeuger die Erhaltung **einmal** zeigt, kippt K nach **W**.
+3. Braucht die Pflicht **mehr als eine** Schrittzusage, ist sie **W**.
+4. Braucht eine Begruendung **mehr als einen Satz**, ist sie ein Kippfall und damit **W**.
+   *Eine lange Begruendung ist ein Kippfall, der sich verteidigt.*
+
+## Ausgaenge — als MEHRHEITSREGEL ueber N_L, nicht als absolute Zahl
+
+| | |
+|---|---|
+| **W > N_L/2** (also **> 40,5**, d. h. ab 41) | die Wertaussagen sind die Mehrheit — **die Decke der Schrittzusagen traegt nicht**, und das erzeugte Induktionsschema loest den Grossteil nicht |
+| **W ≤ 40** | die Mehrheit faellt unter K oder A — **die Decke traegt**, und der Rest ist benennbar |
+
+**Beide Ausgaenge sind vorab gute Ergebnisse.** Der erste toetet eine Zusage, der zweite
+belegt sie; keiner ist ein Misserfolg.
+
+## Ungueltig (getrennt von unguenstig)
+
+* Lassen sich **weniger als 81** Erhaltungssaetze mit `Datei:Zeile` auffinden → **ungueltig**,
+  Grundlage herstellen. *(Sie sind aufgefunden, s. Liste — diese Bedingung ist bereits
+  erfuellt.)*
+* Braucht **mehr als ein Drittel** der Pflichten eine Begruendung ueber einem Satz →
+  **ungueltig**: dann trennen die Spalten nicht, und das Kriterium ist das Problem, nicht die
+  Verteilung.
+
+## Die Gewichtsformel — festgeschrieben, Reihenfolge verbindlich
+
+**Zuerst** je Pflicht den Zeilenumfang des betroffenen Beweisrumpfs messen, **dann**
+klassifizieren. *Werden die Anteile nach der Zaehlung bestimmt, ist die Versuchung strukturell,
+W-Pflichten klein zu wiegen.*
+
+```
+F        = Zeilen aller 81 Beweisruempfe
+W_zeilen = Zeilen der Ruempfe, deren Pflicht als W gebucht ist
+w        = W_zeilen / F
+Ueberschlag = w * 5,0  +  (1 - w) * 0,3
+```
+
+**Der Vorbehalt in derselben Zeile:** die 81 sind **kein Zufallsschnitt** durch den Kernel —
+sie sind die Bereiche, fuer die **jemand einen Verus-Beweis geschrieben hat**, also die
+**gut verstandenen**. Die Hochrechnung traegt diese Verzerrung, und **ihre Richtung ist
+bekannt**: gut verstandene Bereiche haben *weniger* Wertaussagen. **Der Ueberschlag ist damit
+eine Untergrenze fuer w, keine Schaetzung.**
+
+## «B34» ist W-Kandidat und wird nicht vergessen
+
+Die `revoke`-Schranke (16 452 480 gegen zugesagte 200) ist eine **Wertaussage ueber eine
+gerechnete Groesse** — sie steht in der Liste und wird nicht stillschweigend unter K gebucht.
