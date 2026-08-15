@@ -1,0 +1,16 @@
+-- erwartet: S002
+-- **Die Regel bleibt, die Ausnahme kommt dazu.** Ein `let … else`-Zweig muss divergieren
+-- oder zurueckkehren. Bis 2026-08-15 sah der Pass nur `return`/`leave`/`next` und hielt
+-- jeden Aufruf fuer eine gewoehnliche Anweisung -- sieben Absagen im Fragmentkorpus kamen
+-- allein daher, an genau der Stelle, an der ein Kernel seine Fehlerbehandlung schreibt.
+--
+-- Diese Datei zeigt die Regel, die BLEIBT: `melde()` divergiert nicht, also faellt der
+-- Zweig durch, und der Name waere danach gebunden, ohne dass je ein Wert entstand.
+module gift {
+extern fn melde() effects { writes protokoll } costs <= 1 ops;
+extern fn hol() -> u32 effects { pure } costs <= 1 ops;
+impl fn f() -> u32 effects { pure } costs <= 8 ops {
+    let x = hol() else (e) { melde(); }
+    return x;
+}
+}

@@ -1,0 +1,18 @@
+-- 11a -- Die Gegenprobe zu Giftprobe 47: **wer divergiert, endet auch.**
+--
+-- Dieselbe Form, ein einziger Unterschied -- `abbruch` ist als `-> never` erklaert. Damit
+-- faellt der `else`-Zweig nicht durch, und die Fehlerbehandlung eines Kernels ist
+-- schreibbar. Ohne diese Datei waere Giftprobe 47 keine Probe, sondern eine Tautologie:
+-- sie faengt nur dann etwas, wenn die Gegenseite nachweislich durchgeht.
+
+module beispiel::divergenz {
+
+extern fn abbruch() -> never effects { diverges } costs <= 1 ops;
+extern fn hol() -> u32 effects { pure } costs <= 1 ops;
+
+impl fn f() -> u32 effects { pure } costs <= 8 ops {
+    let x = hol() else (e) { abbruch(); }
+    return x;
+}
+
+}

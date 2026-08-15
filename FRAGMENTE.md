@@ -582,7 +582,7 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
         set_reg(f, SYSNO_RESULT, IpcResult::ErrQuiescing);
         return f;
     }
-    let caller = current_id(ops, core);
+    let caller = current_id(dienste, core);
 
     -- «B10» Der Fastpath sucht den ERSTEN lebenden Empfaenger und hoert dann auf. `traverse`
     -- liefert keinen Wert und kennt kein `break` — mit `by consuming` wird deshalb die
@@ -592,7 +592,7 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
     traverse cand over queue e.slots[core].receivers by consuming
         touches consumes e.slots, reads sched
     {
-        if picked == KEIN_SERVER && frame_of(ops, cand) != KEIN_FRAME {
+        if picked == KEIN_SERVER && frame_of(dienste, cand) != KEIN_FRAME {
             picked = cand;
         }
     }
@@ -603,22 +603,22 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
             -- abgewiesen. Das traegt die Grammatik, und es ist der beste Zug in F3.
             set_reg(f, SYSNO_RESULT, IpcResult::ErrEpFull);
             return f;
-        };
-        return block_current(ops, core, f);
+        }
+        return block_current(dienste, core, f);
     }
 
-    transfer(f, frame_of(ops, picked));
-    set_reg(frame_of(ops, picked), SYSNO_RESULT, IpcResult::Ok);
-    set_reg(frame_of(ops, picked), EP_BADGE, 0);
+    transfer(f, frame_of(dienste, picked));
+    set_reg(frame_of(dienste, picked), SYSNO_RESULT, IpcResult::Ok);
+    set_reg(frame_of(dienste, picked), EP_BADGE, 0);
     -- «B17» hier stuende `open(e, caller, picked);` — der Uebergang, der beide Orte in
     -- EINEM Zug schreibt. Ohne ihn zwei Zuweisungen, und die Invariante gilt dazwischen nicht.
     e.slots[core].caller      = Some(caller);
     e.slots[core].reply_owner = Some(picked);
     if owner_core(picked) == core {
-        return switch_to(ops, core, f, picked);
+        return switch_to(dienste, core, f, picked);
     }
-    unblock(ops, picked);
-    return block_current(ops, core, f);
+    unblock(dienste, picked);
+    return block_current(dienste, core, f);
 }
 
 }
@@ -775,13 +775,13 @@ impl fn poll_used(q : ptr<dma, r> Virtq, von : u16) -> u32
 {
     -- Das traegt unveraendert, und die Reihenfolge stimmt mit der Produktion (:343-348):
     -- bounded, progress, on_exceeded, effects. Der Ueberlauf ist BENANNT.
-    retry until q.USED_IDX != from
-        bounded     MAX_POLL polls
+    retry warten until q.USED_IDX != von
+        bounded     MAX_POLL ops
         progress    device_completes_or_faults
         on_exceeded DeviceSilent
         effects     { reads q }
     { }
-    let s = from % q.n;
+    let s = von % q.n;
     -- «B7» `return Completion { id: …, len: … };` ist nicht schreibbar: `primary` (:200)
     -- kennt keinen Verbund- und keinen Feldliteral. Eine Funktion kann einen `structty`
     -- also nicht HERSTELLEN. Deshalb hier ein Skalar statt des Verbunds.
@@ -844,13 +844,13 @@ prim fn invoke(nr : u64, cap : u64, m0 : u64, m1 : u64, m2 : u64, m3 : u64, tag 
 divergent fn run(startwert : u64) -> never
     effects { diverges, writes DMA, writes SHARED, reads EP }
 {
-    let cfg    = map_window(CFG)    else (e1) { signal(NTFN, 0xD1A6_0001); exit(); };
-    let bar    = map_window(BAR)    else (e2) { signal(NTFN, 0xD1A6_0002); exit(); };
-    let dma    = map_window(DMA)    else (e3) { signal(NTFN, 0xD1A6_0003); exit(); };
-    let shared = map_window(SHARED) else (e4) { signal(NTFN, 0xD1A6_0004); exit(); };
+    let cfg    = map_window(CFG)    else (e1) { signal(NTFN, 0xD1A6_0001); exit(); }
+    let bar    = map_window(BAR)    else (e2) { signal(NTFN, 0xD1A6_0002); exit(); }
+    let dmafenster    = map_window(DMA)    else (e3) { signal(NTFN, 0xD1A6_0003); exit(); }
+    let teilfenster = map_window(SHARED) else (e4) { signal(NTFN, 0xD1A6_0004); exit(); }
 
-    let pool      = pool_new(dma)    else (e5) { signal(NTFN, 0xD1A6_0000); exit(); };
-    let transport = probe_ecam(cfg)  else (e6) { signal(NTFN, 0xD1A6_00FF); exit(); };
+    let pool      = pool_new(dmafenster)    else (e5) { signal(NTFN, 0xD1A6_0000); exit(); }
+    let transport = probe_ecam(cfg)  else (e6) { signal(NTFN, 0xD1A6_00FF); exit(); }
 
     signal(NTFN, 0);
 
@@ -867,12 +867,13 @@ divergent fn run(startwert : u64) -> never
     -- `continue`; SYNTAX.md fuehrt das selbst als offenen Punkt (:603) und vermutet, es sei
     -- versehentlich. Es ist der Unterschied zwischen „D0 faellt durch Konstruktion" und
     -- „die Dienstschleife ist nicht schreibbar".
-    forever
-        per_pass bounded MAX_POLL polls
+    forever dienst
+        per_pass bounded MAX_POLL ops
+        on_exceeded watchdog_schlug_an
         effects  { reads EP, writes SHARED, writes pool }
-        progress client_calls_or_endpoint_revoked
+        progress    client_calls_or_endpoint_revoked
     {
-        let m = recv(EP) else (e7) { exit(); };
+        let m = recv(EP) else (e7) { exit(); }
         match decode_op(m.op) {
             Info => {
                 let r = request_flush(transport, pool);
@@ -881,8 +882,8 @@ divergent fn run(startwert : u64) -> never
                 -- `primary` (:200) kennt kein Feldliteral. Vier Argumente statt eines Feldes.
                 reply4(EP, Status::Ok, r, MAX_SECTORS, SECTOR);
             }
-            Read  => { serve_rw(EP, transport, pool, shared, m, capacity); }
-            Write => { serve_rw(EP, transport, pool, shared, m, capacity); }
+            Read  => { serve_rw(EP, transport, pool, teilfenster, m, capacity); }
+            Write => { serve_rw(EP, transport, pool, teilfenster, m, capacity); }
             Flush => {
                 let r2 = request_flush(transport, pool);
                 reply4(EP, Status::Ok, 0, 0, bump_served(pool));
@@ -899,6 +900,13 @@ divergent fn run(startwert : u64) -> never
         }
     }
 }
+
+-- Nachgetragen 2026-08-15: `exit` und `signal` wurden benutzt und nie erklaert.
+-- Ohne `-> never` an `exit` kann kein Pass sehen, dass die Fehlerzweige nicht
+-- durchfallen -- sechs `S002` kamen allein daher.
+extern fn exit() -> never effects { diverges };
+extern fn signal(n : u64, w : u64) effects { writes NTFN };
+extern fn watchdog_schlug_an() -> never effects { diverges };
 
 }
 ```

@@ -238,8 +238,8 @@ MUTATIONEN = [
     Mutation(
         "let-else-darf-durchfallen",
         "schleifen.rs",
-        "            if !endet_immer(&l.sonst) {",
-        "            if false && !endet_immer(&l.sonst) {",
+        "            if !endet_immer(&l.sonst, div) {",
+        "            if false && !endet_immer(&l.sonst, div) {",
         "U7/S002 -- der `else`-Zweig darf durchfallen",
     ),
     Mutation(
@@ -374,7 +374,21 @@ MUTATIONEN = [
         "geteilt.rs",
         "    let Some(sperre) = verlangt.get(&name.text) else {",
         "    let Some(sperre) = verlangt.get(&name.text).filter(|_| false) else {",
-        "H005 -- ein geteilter Block darf einen `Held(…)`-Zeugen rufen (S001 durch die Hintertuer)",
+        "H005 -- ein geteilter Block darf einen `Held(…)`-Zeugen rufen (H001 durch die Hintertuer)",
+    ),
+    Mutation(
+        "divergenz-endet-nicht",
+        "schleifen.rs",
+        "            .is_some_and(|n| div.iter().any(|d| d == &n.text)),",
+        "            .is_some_and(|n| div.iter().any(|d| d == &n.text) && false),",
+        "S002 -- ein `else`-Zweig, der auf einem `-> never`-Aufruf endet, gilt als durchfallend",
+    ),
+    Mutation(
+        "alles-divergiert",
+        "schleifen.rs",
+        "            if nie || div {",
+        "            if true {",
+        "S002 -- JEDE Funktion gilt als divergierend, also endet jeder Zweig",
     ),
 ]
 
