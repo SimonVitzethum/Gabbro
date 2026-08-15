@@ -33,6 +33,7 @@ const BENANNT: &[&str] = &[
     "E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008", "E009", // Wirkungen
     "H001", "H002", "H003", "H004", "H005", // geteilter Halt
     "K004", "D001", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
+    "V001", "V002", "V003", "V004", // Paarung
 ];
 
 #[test]

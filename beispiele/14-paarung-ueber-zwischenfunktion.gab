@@ -1,0 +1,39 @@
+-- 14 -- **Die W8-Probe fuer den Paarungspass: eine Paarung ueber eine Zwischenfunktion.**
+--
+-- Die naheliegende Probe waere: eine Funktion publiziert, eine andere erwartet, es passt.
+-- **Die misst nichts** -- sie ist schon gruen, wenn der Pass nur die erste Ebene sieht.
+--
+-- Diese Datei stellt eine Zwischenfunktion dazwischen, die **weder publiziert noch
+-- erwartet**. Sie trennt die beiden Haelften genau dann, wenn der Pass die transitive
+-- Menge nicht bildet -- und dann faellt hier `V001` und `V002` zugleich.
+
+module beispiel::paarung {
+
+atomic FERTIG : bool publishes { farbbericht } release;
+
+-- Die veroeffentlichende Haelfte.
+impl fn melden(b : ptr<normal, rw> Bericht)
+    effects { writes b, writes FERTIG }
+    costs   <= 4 ops
+{
+    FERTIG = true publishes { b.daten };
+}
+
+-- **Die Zwischenfunktion.** Sie publiziert nichts und erwartet nichts -- sie ruft nur.
+impl fn anstossen(b : ptr<normal, rw> Bericht)
+    effects { writes b, writes FERTIG }
+    costs   <= 8 ops
+{
+    melden(b);
+}
+
+-- Die erwartende Haelfte.
+impl fn abholen(b : ptr<normal, r> Bericht) -> bool
+    effects { reads b }
+    costs   <= 4 ops
+{
+    let f = FERTIG awaits { b.daten };
+    return f;
+}
+
+}

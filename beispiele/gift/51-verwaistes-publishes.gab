@@ -1,0 +1,11 @@
+-- erwartet: V001
+-- Die andere Richtung: eine Barriere ohne Gegenstueck. Teuer und irrefuehrend --
+-- `publishes nothing` sagt ausdruecklich, dass es keine gibt.
+module gift {
+atomic FERTIG : bool publishes { bericht } release;
+impl fn melden(b : ptr<normal, rw> Bericht)
+    effects { writes b, writes FERTIG } costs <= 4 ops
+{
+    FERTIG = true publishes { b.daten };
+}
+}

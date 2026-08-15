@@ -1,0 +1,12 @@
+-- erwartet: V002
+-- **Die gefaehrliche Haelfte.** Ein `awaits`, dem niemand liefert, liest gueltigen Muell --
+-- und kein Typ sagt etwas dazu. Genau dieser Fehler ist der Grund fuer den Paarungspass.
+module gift {
+atomic FERTIG : bool publishes { bericht } release;
+impl fn lesen(b : ptr<normal, r> Bericht) -> bool
+    effects { reads b } costs <= 4 ops
+{
+    let f = FERTIG awaits { b.daten };
+    return f;
+}
+}

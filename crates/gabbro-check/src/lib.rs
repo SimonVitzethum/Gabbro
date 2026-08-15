@@ -18,6 +18,7 @@ use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::Absagen;
 
 pub mod aufrufgraph;
+pub mod paarung;
 pub mod geteilt;
 pub mod kbedingung;
 pub mod kosten;
@@ -153,6 +154,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     schleifen::pass(baum, absagen);
     wirkungen::pass(baum, absagen);
     geteilt::pass(baum, absagen);
+    paarung::pass(baum, absagen);
     let kosten = kosten::pass(baum, absagen);
     Bericht { m1, kosten }
 }

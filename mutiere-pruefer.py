@@ -390,6 +390,27 @@ MUTATIONEN = [
         "            if true {",
         "S002 -- JEDE Funktion gilt als divergierend, also endet jeder Zweig",
     ),
+    Mutation(
+        "paarung-je-funktion",
+        "paarung.rs",
+        "            if !alle_erwartet.contains(o) {",
+        "            if !h.erwartet.iter().any(|(x, _)| x == o) {",
+        "V001 -- die Paarung sieht nur die EIGENE Funktion, nicht die vereinigte Menge",
+    ),
+    Mutation(
+        "verwaistes-awaits-egal",
+        "paarung.rs",
+        "            if !alle_publiziert.contains(o) {",
+        "            if false && !alle_publiziert.contains(o) {",
+        "V002 -- ein `awaits` ohne Gegenstueck darf stehen (liest gueltigen Muell)",
+    ),
+    Mutation(
+        "relaxed-darf-tragen",
+        "paarung.rs",
+        "                        if ist_relaxed {",
+        "                        if false && ist_relaxed {",
+        "V004 -- `relaxed` darf eine Nutzlast tragen, die es nicht ordnet",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
