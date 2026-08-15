@@ -32,6 +32,7 @@
 //!   Eingaben abhaengen** (§9.3, `64 + 12 * lenof(msg)`), und dann ist sie nicht konstant
 //!   auswertbar. In dem Fall schweigt der Pass -- und zaehlt es.
 
+use crate::typen::Typ;
 use crate::umgebung::Umgebung;
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
@@ -334,9 +335,41 @@ impl<'a> Rechner<'a> {
                     })
                 })?
             }
+            // **`queue place` -- die Schranke steht im Verbund, nicht in einer Tabelle.**
+            //
+            // Eine Warteschlange ist in Gabbro ein gewoehnlicher Verbund mit **genau einem
+            // Feldarray** (`TidQueue = { buf : [u32; 32], head, tail, count }`). Damit ist
+            // ihre Schranke die Laenge dieses Arrays, und zwar eindeutig -- gaebe es zwei
+            // Arrays, waere nicht entscheidbar, welches die Schlange traegt.
+            //
+            // **Die Eindeutigkeit ist die Regel, nicht eine Konvention:** haben wir mehr
+            // oder weniger als ein Array, liefert diese Funktion `None`, der Kostenpass
+            // sagt `K003` und verlangt eine Deklaration. Er raet nicht.
+            //
+            // Gefunden am IPC-Fragment 2026-08-15: `traverse cand over queue
+            // e.slots[core].receivers` war die letzte Stelle, an der Tor P2 haengte.
+            Domaene::Schlange(o) => return self.arraylaenge_im_verbund(o),
             _ => return None,
         };
         self.u.kapazitaeten.get(&tabelle).map(|n| *n as i128)
+    }
+
+    /// Die Laenge des **einzigen** Feldarrays eines Verbundes -- oder `None`.
+    fn arraylaenge_im_verbund(&self, o: &Ort) -> Option<i128> {
+        let t = self.u.typ_von_ort(self.modul, o, &self.lokal);
+        let Typ::Verbund(felder) = t.durchgreifen() else {
+            return None;
+        };
+        let mut gefunden = None;
+        for (_, ft) in felder {
+            if let Typ::Feld { laenge, .. } = ft.durchgreifen() {
+                if gefunden.is_some() {
+                    return None; // zwei Arrays -- nicht entscheidbar, also nicht geraten
+                }
+                gefunden = laenge.map(|n| n as i128);
+            }
+        }
+        gefunden
     }
 
     /// Auf welche Tabelle zeigt dieser Ort?
@@ -384,6 +417,22 @@ impl<'a> Rechner<'a> {
             .last()
             .map(|i| i.text.clone())
             .unwrap_or_default();
+        // **«B35»: `Some(x)` und `None` sind KONSTRUKTOREN, keine Aufrufe.** Im Baum sind
+        // sie ein `Ruf` (ein Konstruktor ist genau das), aber sie tragen keinen Vertrag und
+        // koennen keinen nennen -- `costs` an `None` waere sinnlos. Die Ausnahme steht
+        // hier, an der einen Stelle, die sie braucht, mit ihrem Grund.
+        //
+        // Preis: eine Option zu bauen kostet **1 op** (`Some`) bzw. **0** (`None`) -- ein
+        // Etikett setzen, mehr ist es nicht.
+        if name == "Some" {
+            return r
+                .argumente
+                .iter()
+                .fold(Kosten::Zahl(1), |a, e| a.plus(self.ausdruck(e)));
+        }
+        if name == "None" {
+            return Kosten::Zahl(0);
+        }
         let uebergang = self
             .u
             .kandidaten_oeffentlich(self.modul, &name)

@@ -130,7 +130,7 @@ lock MEM  protects { freelist }   rank 9;
 -- «B16» Zwei Tabellen, weil `table` genau EIN `slot`-Wort kennt (:385-386). Der Cap-Space hat
 -- Slots UND Objekte; `index into CapObjects` traegt die Verbindung, aber keine Invariante
 -- kann sie noch aussprechen, s. B13 weiter unten.
-table CapObjects {
+table CapObjects count NOBJECTS {
     slot {
         used     : bool,
         gen      : u32 wrapping,
@@ -139,7 +139,7 @@ table CapObjects {
     }
 }
 
-table CapSpace {
+table CapSpace count NSLOTS {
     slot {
         used         : bool,
         gen          : u32 wrapping,
@@ -242,9 +242,23 @@ impl fn delete_leaf(c  : ptr<normal, rw> CapSpace,
     unlink(c, s);
     release_slot(c, s);
 
-    -- «B29» M1 verlangt, dass das Ergebnis im Bereich bleibt; `refcount == 0` faellt aber
-    -- nur ueber die Buchfuehrungs-Invariante aus, und die ist nach «B13» gar nicht
-    -- aufschreibbar. SYNTAX.md fuehrt genau diesen Streitfall als offenen Punkt (:607-609).
+    -- «B29» -- UND SO SIEHT DIE AUFLOESUNG AUS (nachgezogen 2026-08-15).
+    --
+    -- Die Vorlage schrieb `refcount -= 1;` und prueefte DANACH auf Null. M1 verlangt den
+    -- Nachweis VOR der Rechnung, und die Zaehlerregel (SPRACHE.md §1) sagt warum: ein
+    -- Bereich am Typ sagt nichts darueber, ob die RECHNUNG darin bleibt.
+    --
+    -- Das Argument der Vorlage war: `refcount > 0` faellt aus der Buchfuehrungs-Invariante,
+    -- und die ist nach «B13» nicht aufschreibbar. **Beides stimmt und beides hilft hier
+    -- nicht** -- denn `narrow … else` verlangt keine Invariante, sondern eine PRUEFUNG. Der
+    -- `else`-Zweig ist der Ort, an dem die Verletzung sichtbar wird, statt still zu wrappen.
+    --
+    -- Genau das ist der Unterschied zwischen EINEM Netz und ZWEIEN: die Invariante bleibt
+    -- der Grund, warum der Zweig nie genommen wird; der Typ bleibt der Grund, warum er
+    -- existieren muss.
+    narrow o.slots[obj].refcount to 1 .. 80255 else {
+        return Fehler::Buchfuehrung;
+    }
     o.slots[obj].refcount -= 1;
 
     if o.slots[obj].refcount == 0 {
@@ -278,7 +292,24 @@ impl fn revoke(c  : ptr<normal, rw> CapSpace,
     requires  Held(CAPS), Held(MEM), cdt_wohlgeformt(c)
     maintains cdt_wohlgeformt
     effects   { consumes c.slots, writes o.slots, writes rf, allocs a, locks CAPS }
-    costs     <= 200 ops
+    -- **«B34» -- DER GROESSTE EINZELBEFUND DIESES FRAGMENTS, und er kam vom Kostenpass.**
+    --
+    -- Die Vorlage sagte `<= 200 ops` zu. Sobald `CapSpace` seine Slotzahl nennt (`count
+    -- NSLOTS`, nachgetragen 2026-08-15) und die Domaenenschranke damit steht, rechnet der
+    -- Pass nach: **16 452 480 ops.** Fuenf Groessenordnungen.
+    --
+    -- Die 200 waren kein Tippfehler, sondern der TYPISCHE Fall -- ein `revoke` mit wenigen
+    -- Nachfahren. `costs` ist aber eine SCHRANKE, und die Schranke eines `revoke` ueber
+    -- einer 80 256-Slot-Tabelle ist die Tabelle. **Genau diese Verwechslung -- typischer
+    -- Fall statt oberer Schranke -- ist der Grund, warum die Zahl nachgerechnet und nicht
+    -- geglaubt wird**, und sie ist hier zum zweiten Mal aufgeschlagen (zuerst bei A4:
+    -- 4 096 zugesagt, 831 488 gerechnet).
+    --
+    -- **Was der Kernel wirklich tut, steht damit nicht in dieser Zeile:** Caprock begrenzt
+    -- `revoke` ueber die CDT-Tiefe, nicht ueber die Tabellengroesse. Diese Schranke ist in
+    -- Gabbro heute nicht ausdrueckbar -- `descendants of` erbt die Tabelle. **Das ist der
+    -- Befund, nicht die Zahl.**
+    costs     <= 16452480 ops
 {
     -- «B10» `traverse` liefert KEINEN Wert (:337-341) und es gibt kein `break`. Der
     -- Hoechststand `peak_revoke_ops` — im Rust-Original der Beleg dafuer, dass die Schranke
@@ -290,6 +321,14 @@ impl fn revoke(c  : ptr<normal, rw> CapSpace,
         delete_leaf(c, o, a, rf, victim);
     }
 }
+
+-- Nachgetragen 2026-08-15: drei Gerufene wurden benutzt und nie erklaert. Ohne `costs` am
+-- Gerufenen kann der Kostenpass die Zusage des Rufers nicht nachrechnen -- und er SAGT das
+-- (`K003`), statt stillschweigend zu schaetzen. Genau dafuer ist die Absage da.
+extern fn free_region(a : ptr<normal, rw> Allok, m : MemObj) effects { writes a } costs <= 32 ops;
+extern fn push_dma(rf : ptr<normal, rw> Finalized, d : DmaObj) effects { writes rf } costs <= 8 ops;
+extern fn push_reply(rf : ptr<normal, rw> Finalized, r : ReplyObj) effects { writes rf } costs <= 8 ops;
+
 
 }
 ```
@@ -499,6 +538,7 @@ Ueberlaufzweig der Senderschlange.
 module caprock::ipc {
 
 const QUEUE_CAP : u32 = 32;
+const NCORES    : u32 = 64;   -- nachgetragen 2026-08-15
 const MSG_WORDS : u32 = 6;
 
 reason IpcResult {
@@ -518,7 +558,7 @@ type TidQueue = {
     count : u32 in 0 .. 32,
 };
 
-table Endpoint {
+table Endpoint count NCORES {
     slot {
         used        : bool,
         quiescing   : bool,
@@ -569,7 +609,7 @@ type SchedOps = {
 
 impl fn call(e    : ptr<normal, rw> Endpoint,
              dienste : ptr<normal, r> SchedOps,
-             core : u32,
+             core : index into Endpoint,
              f    : ptr<normal, rw+own> Frame) -> ptr<normal, rw+own> Frame
     -- «B6» Die Nachbedingungen des Originals sprechen ueber `result`. `fndecl` (:266-274)
     -- bindet fuer den Rueckgabewert KEINEN Namen; `old(place)` gibt es, ein `result` nicht.
@@ -621,6 +661,25 @@ impl fn call(e    : ptr<normal, rw> Endpoint,
     return block_current(dienste, core, f);
 }
 
+
+-- Nachgetragen 2026-08-15: `set_reg` wurde zweimal gerufen und nie erklaert.
+extern fn set_reg(f : ptr<normal, rw> Frame, r : RegNr, w : u64) effects { writes f } costs <= 2 ops;
+extern fn enqueue(q : ptr<normal, rw> TidQueue, t : u32) effects { writes q } costs <= 4 ops;
+extern fn block_current(d : ptr<normal, r> SchedOps, core : index into Endpoint,
+                        f : ptr<normal, rw> Frame) -> u32
+    effects { reads d, writes f } costs <= 8 ops;
+extern fn switch_to(d : ptr<normal, r> SchedOps, core : index into Endpoint,
+                    f : ptr<normal, rw> Frame, t : u32) -> u32
+    effects { reads d, writes f } costs <= 12 ops;
+extern fn unblock(d : ptr<normal, r> SchedOps, t : u32) effects { reads d } costs <= 4 ops;
+extern fn owner_core(d : ptr<normal, r> SchedOps, t : u32) -> u32
+    effects { reads d } costs <= 2 ops;
+extern fn transfer(f : ptr<normal, rw> Frame, g : u32) effects { writes f } costs <= 6 ops;
+
+extern fn current_id(d : ptr<normal, r> SchedOps, core : index into Endpoint) -> u32
+    effects { reads d } costs <= 2 ops;
+extern fn frame_of(d : ptr<normal, r> SchedOps, t : u32) -> u32
+    effects { reads d } costs <= 2 ops;
 }
 ```
 
@@ -762,11 +821,34 @@ reason UnprovenReason {
 
 impl fn publish(q : ptr<dma, rw> Virtq, head : u16 in 0 ..< 256)
     effects { writes q }
-    costs   <= 4 ops
+    -- Nachgezogen 2026-08-15: die Vorlage sagte `<= 4 ops` zu, der Rumpf kostet 9. Die Zahl
+    -- ist mit `gabbro kosten` abgelesen, nicht geschaetzt (WERKZEUGKASTEN.md W2).
+    costs   <= 9 ops
 {
     -- Der Nenner schliesst die Null aus, weil `n : u16 in 1 .. QMAX` es tut (:216).
     let platz = q.AVAIL_IDX % q.n;
     q.AVAIL_RING[platz].e = head;
+    -- Nachgezogen 2026-08-15: der Ringzaehler LAEUFT UEBER, und zwar mit Absicht --
+    -- virtio zaehlt modulo 2^16 und nimmt den Rest gegen `q.n`. Die Vorlage schrieb
+    -- `+= 1` auf einem blanken `u16`; damit stand die Absicht nirgends, und die
+    -- Zaehlerregel (SPRACHE.md §1) faellt zu Recht.
+    --
+    -- **«B32» -- UND HIER FAELLT EIN NEUER BEFUND.** Die Sprache laesst den Umlauf an der
+    -- DEKLARATION aussprechen, nicht an der Rechnung: `slottype = intty "wrapping"`
+    -- (SYNTAX.md:500). Das ist die staerkere Form -- der Umlauf gilt dann fuer jede Rechnung
+    -- auf dem Feld, nicht nur fuer die eine, an die jemand gedacht hat.
+    --
+    -- **Aber `AVAIL_IDX` ist kein Slot, sondern ein REGISTER**, und `regdecl` (:545-548)
+    -- kennt `wrapping` nicht. Ein Hardwarezaehler, der per Entwurf umlaeuft -- der
+    -- haeufigste Fall ueberhaupt in einem Geraetetreiber -- kann seine Absicht nicht
+    -- aussprechen. Bis das geschlossen ist, steht hier die Pruefung davor; sie ist an
+    -- dieser Stelle NICHT die ehrliche Form, sondern der Ersatz dafuer.
+    -- **«B33», ein zweiter Befund an derselben Zeile:** die V-Regeln verengen nach einem
+    -- `if … == 65535 { … return; }` den Typ eines REGISTERORTES nicht -- nur `narrow` tut
+    -- das hier. Ob das Absicht ist (ein Register kann sich zwischen Pruefung und Rechnung
+    -- aendern!) oder eine Luecke, entscheidet der Ordner. **Wenn es Absicht ist, gehoert
+    -- die Begruendung aufgeschrieben** -- sie waere ein starkes Argument.
+    narrow q.AVAIL_IDX to 0 .. 65534 else { q.AVAIL_IDX = 0; return; }
     q.AVAIL_IDX += 1;
 }
 
@@ -985,6 +1067,12 @@ impl fn unberuehrt(s : ptr<normal, r+own> Stack) -> u64
         touches reads s
     {
         if w != MUSTER { return i * 8; }
+        -- Nachgezogen 2026-08-15: die Schranke faellt zwar aus der Domaene (die
+        -- Traversierung laeuft ueber `s.worte`), **aber M1 sieht das nicht** -- der
+        -- Zaehler ist eine gewoehnliche lokale Variable. Die Pruefung VOR der Rechnung
+        -- ist genau das, was die Zaehlerregel verlangt; der `else`-Zweig kann nicht
+        -- genommen werden und muss trotzdem dastehen.
+        narrow i to 0 .. 65535 else { return i * 8; }
         i += 1;
     }
     return i * 8;

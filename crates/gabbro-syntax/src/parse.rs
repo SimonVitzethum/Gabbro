@@ -1092,6 +1092,36 @@ impl<'a> Parser<'a> {
     }
 
     fn primary(&mut self) -> Erg<Expr> {
+        // «B35»: `optionexpr = "Some" "(" expr ")" | "None"`. Im Baum ist es ein `Ruf` --
+        // ein Konstruktor IST ein Aufruf, und jede eigene Variante haette jeden `match`
+        // ueber `ExprArt` angefasst, ohne etwas zu unterscheiden, was der Pruefer trennt.
+        // Die einzige Stelle, die es trennen MUSS, ist der Kostenpass; dort steht es.
+        if let Art::Wort(k @ (Kw::Some | Kw::None)) = self.blick().art {
+            let sp = self.blick().span;
+            self.pos += 1;
+            let mut argumente = Vec::new();
+            if k == Kw::Some {
+                self.erwarte_z(Z::RundAuf)?;
+                argumente.push(self.expr()?);
+                self.erwarte_z(Z::RundZu)?;
+            }
+            let span = sp.bis_zu(self.vorheriger_span());
+            return Ok(Expr {
+                art: ExprArt::Ruf(Ruf {
+                    pfad: Pfad {
+                        teile: vec![Ident {
+                            text: k.text().to_string(),
+                            span: sp,
+                        }],
+                        span: sp,
+                    },
+                    argumente,
+                    span,
+                }),
+                span,
+            });
+        }
+
         let t = self.blick();
         match t.art {
             Art::Zahl(v) => {
@@ -2170,7 +2200,20 @@ impl<'a> Parser<'a> {
         let mut zweige = Vec::new();
         while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
             let anfang = self.span();
-            let variante = self.erwarte_ident()?;
+            // «B35»: `Some`/`None` sind seit 2026-08-15 Woerter des Wortschatzes und damit
+            // keine Bezeichner mehr -- als Variantenname eines `option`-Musters stehen sie
+            // trotzdem, und zwar an genau dieser Stelle.
+            let variante = match self.blick().art {
+                Art::Wort(k @ (Kw::Some | Kw::None)) => {
+                    let sp = self.blick().span;
+                    self.pos += 1;
+                    Ident {
+                        text: k.text().to_string(),
+                        span: sp,
+                    }
+                }
+                _ => self.erwarte_ident()?,
+            };
             let binder = if self.friss_z(Z::RundAuf) {
                 let b = self.erwarte_ident()?;
                 self.erwarte_z(Z::RundZu)?;

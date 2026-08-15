@@ -2221,3 +2221,82 @@ mit `u8 in 0 .. 200` faellt bei jeder falschen Obergrenze zwischen 200 und 255 g
 **Grenzen** treffen statt Klassen — Wertetabellen, nicht Beispieldateien. Es folgt **nicht**,
 dass der Pruefer an den 38 gemessenen Regeln schlechter ist als gemeldet; diese Zahl steht
 unveraendert und misst weiterhin, was sie misst.
+
+---
+
+# TOR P2 IST ERREICHT — 6 von 6, am 2026-08-15
+
+**Zum ersten Mal parst der gesamte Fragmentkorpus gegen die Grammatik von heute** — 791 Zeilen
+Gabbro in sechs Uebersetzungseinheiten, null Absagen.
+
+| Stand | Einheiten sauber |
+|---|---|
+| 2026-08-14 (Lauf 1, vor allen Reparaturen) | **1 von 6** (17 %) |
+| nach Welle 0/1 | 1 von 6 |
+| nach `M-woerter` (provisorisch, R12) | 2 von 6 |
+| nach den semantischen Nachzuegen | **6 von 6 (100 %)** |
+
+## Was das Tor gekostet hat — und wer die Fehler hatte
+
+**Vier davon waren Fehler im PRUEFER, nicht im Korpus.** Das ist der eigentliche Ertrag:
+
+| | Befund | Klasse |
+|---|---|---|
+| `E005` | hielt **lokale Namen** fuer Wirkungen — eine Funktion, die nur zaehlt, konnte nicht `pure` sein | zu streng |
+| `S002` | `endet_immer` kannte **keine Aufrufe** — ein Block, der auf `exit();` endet, galt als durchfallend, obwohl `exit` divergiert | zu streng |
+| `queue`-Domaene | hatte **keine Schranke**, obwohl sie eindeutig ableitbar ist: der Verbund einer Warteschlange traegt **genau ein** Feldarray | Luecke |
+| `Some`/`None` | `option index into T` hatte **keinen Konstruktor**. Der Bestand schreibt `Some(x)` seit jeher — in `match`-Mustern, in Ausdruecken, **und in `SPRACHE.md`:381 selbst**; die Grammatik kannte es an keiner der drei Stellen | Luecke |
+
+Dazu zwei tote Woerter derselben Klasse: **`Self` stand in der Wortschatztabelle und in keiner
+Produktion** — der Waechter sah es nie, weil seine Terminalregex nur Kleinbuchstaben las.
+*Dritter Fund dieser Art an einem Tag.*
+
+## Und zwei Befunde ueber den KORPUS, die eine Groessenordnung tragen
+
+**«B34» — `revoke` sagte `<= 200 ops` zu; der Rumpf kostet 16 452 480.** Fuenf
+Groessenordnungen. Die 200 waren kein Tippfehler, sondern der **typische** Fall; `costs` ist
+aber eine **Schranke**. Sichtbar wurde es erst, als `CapSpace` seine Slotzahl nannte
+(`count NSLOTS`) — vorher konnte der Pass die Domaene nicht schranken und sagte das
+(`K003`), statt zu schaetzen. **Zweites Auftreten derselben Verwechslung** (A4: 4 096
+zugesagt, 831 488 gerechnet).
+
+> **Was der Kernel wirklich tut, steht damit nicht in der Zeile:** Caprock begrenzt `revoke`
+> ueber die **CDT-Tiefe**, nicht ueber die Tabellengroesse. Diese Schranke ist in Gabbro heute
+> **nicht ausdrueckbar** — `descendants of` erbt die Tabelle. *Das ist der Befund, nicht die
+> Zahl.*
+
+**«B32» — `wrapping` steht am Slot, nicht am Register.** virtios `AVAIL_IDX` laeuft **per
+Entwurf** um; `slottype = intty "wrapping"` (SYNTAX.md:500) kann das aussprechen, `regdecl`
+nicht. **Der haeufigste Fall in einem Geraetetreiber kann seine Absicht nicht sagen.**
+
+**«B33»** — die V-Regeln verengen den Typ eines **Registerortes** nach `if … == N { return; }`
+nicht; nur `narrow` traegt die Tatsache. Ob das Absicht ist (ein Register kann sich zwischen
+Pruefung und Rechnung aendern!) oder eine Luecke, entscheidet der Ordner. **Wenn es Absicht
+ist, gehoert die Begruendung aufgeschrieben — sie waere ein starkes Argument.**
+
+## «B29» ist aufgeloest, und zwar an der Sprache
+
+Die Vorlage schrieb `refcount -= 1;` und prueefte **danach** auf Null, mit dem Argument, die
+Buchfuehrungs-Invariante sei nach «B13» nicht aufschreibbar. **Beides stimmt und beides half
+nicht** — denn `narrow … else` verlangt keine Invariante, sondern eine **Pruefung**:
+
+```gabbro
+narrow o.slots[obj].refcount to 1 .. 80255 else {
+    return Fehler::Buchfuehrung;
+}
+o.slots[obj].refcount -= 1;
+```
+
+**Das ist der Unterschied zwischen einem Netz und zweien:** die Invariante bleibt der Grund,
+warum der `else`-Zweig nie genommen wird; der Typ bleibt der Grund, warum er **dastehen muss**.
+
+## Die methodische Lehre, und sie ist teuer bezahlt
+
+> **Eine Absageliste hinter einem Parserfehler ist keine Messung, sondern eine UNTERE
+> SCHRANKE.**
+
+Die Wortschatzkollisionen waren erst 6, dann 7, nach der Umbenennung **14** — jede geschlossene
+Stelle laesst den Parser weiterlaufen und mehr finden. `memos/M-woerter.md` nannte 6; die Zahl
+stand hinter zwei Desynchronisationen. **Und ich bin in dieselbe Falle getappt, nachdem ich sie
+notiert hatte:** Zeile 873 war keine Kollision, sondern ein Folgefehler — ich habe ein echtes
+Schluesselwort umbenannt und musste es zuruecknehmen.

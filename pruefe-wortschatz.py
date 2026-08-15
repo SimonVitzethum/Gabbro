@@ -22,6 +22,12 @@ vok = set(re.findall(r"(?<!@)\b[a-z_][a-z0-9_]+\b", roh))  # Wortgrenzen: sonst 
 # der Waechter haette dann eine Meldung ohne moegliche Erwiderung.
 vok |= set(re.findall(r"@[a-z_][a-z0-9_]*", roh))
 vok |= {w for w in re.findall(r"(?<![\w@])([A-Z])(?![\w])", roh)}
+# Grossgeschriebene Woerter der Tabelle (`Self`, `Some`, `None`) -- die
+# Kleinbuchstabenregex oben sieht sie nicht, und ohne diese Zeile meldet der
+# Waechter sie als "nicht in der Tabelle", obwohl sie danebenstehen.
+# Nur aus den Tabellenzeilen selbst, ohne den Klammerkommentar -- sonst zaehlt der
+# Waechter Prosa aus der Fussnote als Wortschatzwort.
+vok |= set(re.findall(r"\b[A-Z][a-z][A-Za-z]*\b", re.sub(r"\([^)]*\)", "", roh)))
 ebnf_roh = "\n".join(re.findall(r"```ebnf\n(.*?)```", d, re.S))
 # **Kommentare zuerst heraus.** Die Regelregex unten sucht das `;` am ZEILENENDE; steht
 # dahinter ein `(* … *)`, findet sie es nicht und `.*?` laeuft bis zum naechsten

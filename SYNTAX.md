@@ -98,7 +98,7 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
              per cpu ist nested masked awaits port step via
   Domaenen   slots of chain descendants queue elems fields threads reaches via
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 bool never w1c rc
-  Eingebaut  sizeof lenof aligned forall exists true false Self
+  Eingebaut  sizeof lenof aligned forall exists true false Self Some None
   Sonderform O @version    (KEINE Wortschatzwoerter -- s. Fussnote G6)
 ```
 
@@ -207,7 +207,13 @@ boolty     = "bool" ;
 range      = expr ".." expr | expr "..<" expr ;
 array      = "[" typeexpr ";" constexpr "]" ;
 structty   = "{" { field } "}" ;
-field      = ident ":" fieldty [ "@" bitpos ] [ "offset_into" ident ]
+field      = ident ":" fieldty [ "@" bitpos ] [ "offset_into" ( ident | "Self" ) ]
+             (* «B36», 2026-08-15: `Self` stand in der Wortschatztabelle und in KEINER
+                Produktion -- ein totes Wort, das der Waechter nie sah, weil seine
+                Terminalregex nur Kleinbuchstaben las. `offset_into Self` steht in
+                SYNTAX.md:524 und im ELF-Fragment; die Grammatik schrieb es nirgends.
+                Dritter Fund derselben Klasse an einem Tag: eine Zusage ueber eine Menge,
+                aus der die grossgeschriebenen Woerter stillschweigend herausfielen. *)
              [ "where" pred ] [ "reserved" ] "," ;
 fieldty    = typeexpr
            | typeexpr "embeds" "[" int ":" int "]" [ "scale" constexpr ] ;
@@ -265,8 +271,16 @@ bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" ) addexpr } ;
 addexpr    = mulexpr { ( "+" | "-" ) mulexpr } ;
 mulexpr    = unary { ( "*" | "/" | "%" ) unary } ;
 unary      = [ "!" | "-" ] primary ;
-primary    = int | "true" | "false" | place | call | paren | builtin   (* G9: kein `cast` *)
+primary    = int | "true" | "false" | place | call | paren | builtin | optionexpr
+                                                                (* G9: kein `cast` *)
            | oldexpr | "result" ;
+optionexpr = "Some" "(" expr ")" | "None" ;
+             (* «B35», 2026-08-15: `option index into T` hatte KEINEN Konstruktor. Der
+                Bestand schreibt `Some(x)` seit jeher -- in `match`-Mustern (beispiele/01,
+                dreimal), in Ausdruecken (FRAGMENTE.md IPC) und in SPRACHE.md:381 selbst.
+                Die Grammatik kannte es an keiner der drei Stellen; `Some` parste als
+                gewoehnlicher Aufruf, und der Kostenpass verlangte dafuer eine
+                `costs`-Zeile. Nachgezogen nach R9: die EBNF folgt dem Bestand. *)
 paren      = "(" expr ")" ;
 call       = path "(" [ arglist ] ")" ;
 arglist    = expr { "," expr } ;

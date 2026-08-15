@@ -55,10 +55,22 @@ fn f2_das_geraetefragment_bleibt_sauber() {
     // vollstaendig durchgeht. Faellt es, ist eine Regel zurueckgegangen.
     let md = lies("FRAGMENTE.md");
     let befunde = korpus::messe("FRAGMENTE.md", &md);
+    // **Am INHALT verankert, nicht an der Zeilennummer.** Bis 2026-08-15 stand hier
+    // `erste_zeile > 330 && < 350`; jede Aenderung weiter oben in der Datei brach den Test,
+    // ohne dass an F2 etwas falsch war. Eine Probe, die an einer Zeilennummer haengt, ist
+    // dieselbe Sorte Zahl wie eine, die ein Mensch parallel zur Wahrheit fuehrt.
+    // `Befund.text` ist der gerenderte BERICHT, nicht die Quelle -- der Inhalt muss aus
+    // den geschnittenen Bloecken kommen.
+    let quelle = korpus::schneide(&md);
+    let f2_zeile = quelle
+        .iter()
+        .find(|b| b.text.contains("device Vtd"))
+        .map(|b| b.erste_zeile)
+        .expect("F2 ist das VT-d-Fragment -- erkennbar an `device Vtd`");
     let f2 = befunde
         .iter()
-        .find(|b| b.erste_zeile > 330 && b.erste_zeile < 350)
-        .expect("F2 faengt kurz nach Zeile 340 an");
+        .find(|b| b.erste_zeile == f2_zeile)
+        .expect("zu jedem geschnittenen Block gehoert ein Befund");
     assert!(
         f2.sauber(),
         "F2 war sauber und ist es nicht mehr:\n{}",

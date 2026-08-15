@@ -253,6 +253,11 @@ wortschatz! {
     True          => "true",          res;
     False         => "false",         res;
     SelfWort      => "Self",          res;
+    // «B35»: `option index into T` hatte keinen Konstruktor. Der Bestand schreibt `Some(x)`
+    // seit jeher -- in `match`-Mustern, in Ausdruecken und in SPRACHE.md:381 selbst --, die
+    // Grammatik kannte es an keiner Stelle. Nachgezogen nach R9: der Bestand entscheidet.
+    Some          => "Some",          res;
+    None          => "None",          res;
 }
 
 /// **Die Umbenennungstabelle (`M-woerter`, provisorisch umgesetzt 2026-08-15).**
