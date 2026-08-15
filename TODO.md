@@ -81,7 +81,7 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       Widerlegungen: unter Sperre entfaellt das Atomic (K1, ein Teil der 2 231 verschwindet),
       Konstruktinneres zaehlt in die Schablonenflaeche statt in die Stichprobe (K2), und
       `accumulates` mit Verbund ist an `sync:572-592` **strikt besser als das Original** (K3).
-- [ ] **~~P0 — DIE MESSUNG~~** (urspruengliche Fassung): Die 74-Pflichten-Messung gegen
+- [ ] **~~P0 — DIE MESSUNG~~** (urspruengliche Fassung, ersetzt 2026-08-14): Die 74-Pflichten-Messung gegen
       Festlegung + beide Ergaenzungen wiederholen: **haengende Klempnerei 19 → 0**; dazu eine
       **Ordering-Stichprobe** (≥ 30 der 2 231 Fundstellen, geschichtet nach Datei) — jede ist
       Paarung, Zaehler oder benannter `seq`-Fall, **ein vierter Ausgang widerlegt die Paarung**;
@@ -319,7 +319,7 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
 - [ ] **A4 — `costs` an einer REKURSIVEN Funktion bleibt eine Annahme.** Ein Aufruf zaehlt
       die *deklarierten* Kosten des Gerufenen; bei einem Zyklus rechnet niemand nach. Das ist
       die Absicht von §7 — es heisst aber, dass die Terminierung dort an einer Zusage haengt.
-- [ ] **~~A1 (urspruenglich)~~ — der Aliasposten.** `SYNTAX.md`:10 zaehlt „Alias" unter dem, was durch Konstruktion faellt;
+- [ ] **~~A1 (urspruenglich)~~ — der Aliasposten, aufgeloest 2026-08-14.** `SYNTAX.md`:10 zaehlt „Alias" unter dem, was durch Konstruktion faellt;
       **der Mechanismus dafuer ist nicht auffindbar.** Nichts verbietet zwei
       `ptr<normal,rw>`-Parameter auf dasselbe Objekt, und `restrict` wird aus `effects`
       *erzeugt* — die Rahmenaussage ruht auf einer Zusage statt auf einer Bedingung.
@@ -328,18 +328,18 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
       die Bootphase. **Papiertest an F1 und F3, keine Zeile Code davor** — und die Stelle, an
       der er scheitert, wenn er scheitert, ist `revoke`s `traverse`-Rumpf: ein linearer Wert
       ist nach dem ersten Durchgang verbraucht.
-- [ ] **~~A2 (urspruenglich)~~ — dynamische Aufrufe zaehlen.** `fnptr` traegt keinen Vertrag («B9»),
+- [ ] **~~A2 (urspruenglich)~~ — dynamische Aufrufe zaehlen; gezaehlt 2026-08-14.** `fnptr` traegt keinen Vertrag («B9»),
       also ist die Rahmenaussage an jedem Aufruf durch einen Zeiger leer. **≤ 10 und alle durch
       `match` ersetzbar → verbieten** (kein neues Konstrukt); sonst braucht `fnptr` einen
       Vertrag. **Eine Stunde, und sie kann ein Konstrukt einsparen.**
-- [ ] **~~A3~~ — GEFAHREN und GEBAUT.** `index into T` erbt die Schranke; der Indextyp wird
+- [ ] **~~A3~~ — GEFAHREN und GEBAUT (2026-08-14).** `index into T` erbt die Schranke; der Indextyp wird
       erzeugt statt geschrieben. Nebenbefund: `index into` war nur `slottype`, nicht
       `typeexpr` — die halbe Aenderung waere nichts wert gewesen. Auch zu.
       *(urspruenglich:)* `table … count N`. Eine Tabelle nennt ihre Slotzahl nicht; `index into T` hat
       keine Obergrenze aus der Deklaration, und M4 ruht dort auf einer Konvention. Eine Zeile
       Grammatik, der Indextyp wird erzeugt statt geschrieben. **Vor A4** — Traversierungskosten
       brauchen eine Domaenenschranke.
-- [ ] **~~A4~~ — GEBAUT (Pass 9).** Das Tor fiel zweimal in beide Richtungen: erst rechnete
+- [ ] **~~A4~~ — GEBAUT (Pass 9, 2026-08-14).** Das Tor fiel zweimal in beide Richtungen: erst rechnete
       der Pass zu viel (vier Primitiven, nicht sechs), dann waren drei deklarierte Zahlen
       geraten — darunter eine Traversierung, die statt 4 096 ops **831 488** kostet.
       *(urspruenglich:)* das Kostenmodell (Pass 9). `costs`, `held`, `per_pass`, `bounded` sind heute
@@ -456,10 +456,13 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
 - [ ] **Zwei Fragmente sind veraltet, nicht falsch:** F4 schreibt `QueueSetup(q : Virtq)`
       (`typedecl` verlangt `typelist`, nicht `params` — der Kommentar «B3» ist gegen die zweite
       Fassung geschrieben), F6 setzt ein Semikolon hinter `let … else { … }`.
-- [ ] **Fuenf der neun Paesse fehlen ganz** (D1/D2, M3, M2, Paarung, costs), **zwei sind nur
-      teilweise gebaut** (M1 ohne Modulaufloesung, `effects` ohne Rumpfabgleich).
+- [ ] **Drei der neun Paesse fehlen ganz** (M3, M2, Paarung), **drei sind nur
+      teilweise gebaut** (D1/D2, `effects`, costs).
+      *(Berichtigt 2026-08-15: hier stand „Fuenf … zwei" — der Waechter haelt die Zahl
+      jetzt gegen `gabbro paesse` statt gegen die Erinnerung. Dieselbe Klasse wie Befund 4
+      des Abgleichs, nur diesmal maschinell gefunden.)*
       `gabbro paesse` fuehrt beide Klassen samt dem, was mit jeder durchkommt.
-      **Der naechste ganze ist M3 oder D1/D2 — vorher aber die zwei Teilstuecke**, weil ein
+      **Der naechste ganze ist M3 oder M2 — vorher aber die Teilstuecke**, weil ein
       halb gebauter Pass eine Zusage macht, die er nicht haelt.
 
 **Ausschliesslich Offenes** — und seit dem 2026-08-14 stimmt das wieder. Die Reihenfolge folgt

@@ -76,7 +76,69 @@ def pruefe(text, zahlen):
         if n > 1:
             befunde.append(f"'{name}' steht {n} mal als eigener Punkt")
 
+    # 5. **Passzahlen gegen `gabbro paesse`.** Der Abgleich vom 2026-08-14 fand „Sechs der
+    #    neun Paesse fehlen", wo es fuenf ganze und zwei halbe waren. Eine Zahl ueber den
+    #    eigenen Uebersetzer, die niemand gegen den Uebersetzer haelt, ist Falle 80.
+    ganz, halb = paesse_heute()
+    if ganz is not None:
+        for m in re.finditer(r"\*\*(\w+) der neun Paesse fehlen ganz\*\*", text):
+            if ZAHLWORT.get(m.group(1).lower()) != ganz:
+                befunde.append(
+                    f"Passzahl stimmt nicht: '{m.group(1)} der neun Paesse fehlen ganz', "
+                    f"`gabbro paesse` sagt {ganz}"
+                )
+        for m in re.finditer(r"\*\*(\w+) sind nur\s+teilweise gebaut\*\*", text):
+            if ZAHLWORT.get(m.group(1).lower()) != halb:
+                befunde.append(
+                    f"Passzahl stimmt nicht: '{m.group(1)} nur teilweise gebaut', "
+                    f"`gabbro paesse` sagt {halb}"
+                )
+
+    # 6. **Durchgestrichenes ohne Datum.** Eine Regel, die als verletzt markiert ist, muss
+    #    sagen WANN -- sonst steht sie als geltend da und ist es nicht (Befund 3 des
+    #    Abgleichs). Geprueft wird der Absatz, nicht die Zeile: die Begruendung folgt oft
+    #    darunter.
+    for m in re.finditer(r"~~[^~]+~~", text):
+        absatz = text[m.start() : m.start() + 400]
+        if not re.search(r"20\d\d-\d\d-\d\d", absatz):
+            befunde.append(
+                f"durchgestrichener Eintrag ohne Datum: {m.group(0)[:60]} -- "
+                f"eine verletzte Regel ohne Datum liest sich wie eine geltende"
+            )
+
+    # 7. **Beispielzahlen gegen das Dateisystem.**
+    n_bsp = len(list((WURZEL / "beispiele").glob("*.gab")))
+    n_gift = len(list((WURZEL / "beispiele/gift").glob("*.gab")))
+    for m in re.finditer(r"(\d+) saubere Beispiele", text):
+        if int(m.group(1)) != n_bsp:
+            befunde.append(f"'{m.group(1)} saubere Beispiele' -- es sind {n_bsp}")
+    for m in re.finditer(r"(\d+) Giftproben", text):
+        if int(m.group(1)) != n_gift:
+            befunde.append(f"'{m.group(1)} Giftproben' -- es sind {n_gift}")
+
     return befunde
+
+
+ZAHLWORT = {
+    "eine": 1, "eins": 1, "zwei": 2, "drei": 3, "vier": 4, "fuenf": 5, "fünf": 5,
+    "sechs": 6, "sieben": 7, "acht": 8, "neun": 9,
+}
+
+
+def paesse_heute():
+    """Wieviele Paesse fehlen ganz, wieviele sind halb? Aus `gabbro paesse`, nicht von Hand."""
+    r = subprocess.run(
+        ["cargo", "run", "-q", "-p", "gabbro-cli", "--", "paesse"],
+        cwd=WURZEL, capture_output=True, text=True,
+    )
+    if r.returncode != 0:
+        return None, None
+    # `gabbro paesse` markiert die Zeilen mit `OFFEN` bzw. `TEIL` -- die Zahlen aus
+    # der Ausgabe zu nehmen statt aus der Prosa ist der ganze Zweck dieser Pruefung.
+    return (
+        len(re.findall(r"^  OFFEN ", r.stdout, re.M)),
+        len(re.findall(r"^  TEIL  ", r.stdout, re.M)),
+    )
 
 
 def heutige_zahlen():

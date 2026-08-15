@@ -115,7 +115,7 @@ ausdrücklich Absicht.
 | [`WERKZEUGKASTEN.md`](WERKZEUGKASTEN.md) | **Arbeitsregeln aus eigenen Fehlern** — jede mit dem Schaden, fuer den sie bezahlt wurde |
 
 Dazu `fallen-klassifikation.tsv` (100 bezahlte Caprock-Fallen, einzeln klassifiziert) und
-**fünf Wächter, jeder mit Sprechprobe in beide Richtungen**: `pruefe-syntax.sh` (verbotene
+**sechs Wächter, jeder mit Sprechprobe in beide Richtungen**: `pruefe-syntax.sh` (verbotene
 Formen, Prosa-Drift, Geschlossenheit, Erreichbarkeit, Terminaldeckung) · `pruefe-wortschatz.py`
 · **`mutiere-pruefer.py`** (beschädigt je eine Regel des Prüfers und sieht nach, ob eine Probe
 fällt — **24 von 24**) · **`pruefe-todo.py`** (hält die Aufgabenliste gegen sich selbst) ·
