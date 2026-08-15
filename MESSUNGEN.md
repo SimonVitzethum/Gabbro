@@ -2432,3 +2432,60 @@ Protokolls, und er gehoert berichtet statt repariert.*
 * **Die naechste Zaehlung braucht n, nicht Sorgfalt.** Bei zwei Fundstellen entscheidet jede
   einzelne Handprobe ueber 50 % des Ergebnisses. Die vier fehlenden Bereichsfragmente
   (Scheduler, MMU, Lader, Parser) sind die Messgrundlage, nicht ein Nebenpunkt.
+
+---
+
+# BASISRATE — „Wie viele Formate hat Caprock wirklich, wie oft aendern sie sich, wie viele Fehler dieser Klasse pro Jahr?" (TODO.md:480)
+
+**Gefahren 2026-08-15** gegen `../caprock-messbasis` @ `a1bf707`.
+Der TODO-Eintrag nennt das ehrlichste moegliche Ergebnis selbst mit: *„Faellt sie klein aus,
+ist das ehrlichste Ergebnis ‚die Falle ist zu selten fuer eine Sprache'."*
+
+## Die Zahlen
+
+| Groesse | Suchweg | Ergebnis |
+|---|---|---|
+| Formate im Baum | `grep -rn "#\[repr(C)\]" --include=*.rs` | **5** |
+| davon benannt | `MemRegion`, `HandoverInfo`, `TrapFrame` (+2) | 3 lesbar |
+| Commits, die eine `repr(C)`-Struktur beruehren | `git log --all -S"repr(C)" -- '*.rs'` | **5** |
+| Beobachtungszeitraum | `git log` erster/letzter Commit | **2026-06-23 bis 2026-08-14 — 53 Tage** |
+| Eintraege in `done.md` | `grep -cE "^#{2,3} "` | 234 |
+| **Fehler dieser Klasse in `done.md`** | Muster fuer falsche Offsets, Feldreihenfolge, vertauschte Bytereihenfolge, Layoutfehler | **0 als eingetretener Fehler** |
+
+## Der einzige Beinahe-Fall, und er ist lehrreich
+
+`done.md:1745-1750` beschreibt die virtio-Kopfgroesse: **12 Byte** unter `VIRTIO_F_VERSION_1`,
+10 in der Legacy-Fassung.
+
+> *„Wer sie einsetzt, verschiebt jeden empfangenen Rahmen um zwei Byte und findet den
+> Ethertype an der falschen Stelle — ein Fehler, der wie ‚das Gegenueber antwortet nicht'
+> aussieht."*
+
+**Das ist die Falle in Reinform** — und sie steht dort als **vermiedene**, nicht als bezahlte.
+Der Text ist eine Warnung, kein Nachruf.
+
+## Urteil — und es geht gegen den Ordner
+
+**Hochgerechnet: 5 Formataenderungen in 53 Tagen ≈ 34 im Jahr; Fehler dieser Klasse: 0.**
+
+> **Die Basisrate traegt `format` nicht.** Fuenf Formate, null eingetretene Fehler der
+> Klasse, ein dokumentierter Beinahe-Fall, den ein aufmerksamer Kommentar abgefangen hat.
+
+**Was das NICHT heisst.** Es heisst nicht, dass `format` nutzlos ist — der Beinahe-Fall zeigt,
+dass die Klasse real ist und dass ihre Erkennung heute an **Aufmerksamkeit** haengt. Es heisst:
+**diese Messung rechtfertigt `format` nicht**, und wer es rechtfertigen will, braucht ein
+anderes Argument als die Fehlerhaeufigkeit in diesem Baum.
+
+**Und die ehrliche Einschraenkung dazu:** 53 Tage sind ein kurzer Zeitraum, und `done.md` ist
+ein **kuratiertes** Dokument — es fuehrt, was der Autor fuer berichtenswert hielt. Ein Fehler,
+der in fuenf Minuten gefunden und behoben wurde, steht dort nicht. **Die Null ist eine Null in
+`done.md`, nicht eine Null im Baum.**
+
+## Pruefpfad
+```
+cd ../caprock-messbasis
+grep -rn "#\[repr(C)\]" --include=*.rs . | wc -l          # 5
+git log --oneline --all -S"repr(C)" -- '*.rs' | wc -l      # 5
+git log --format=%ad --date=short | tail -1                # 2026-06-23
+sed -n '1745,1750p' done.md                                # der Beinahe-Fall
+```
