@@ -365,9 +365,9 @@ MUTATIONEN = [
     Mutation(
         "geteilte-haltezeit-egal",
         "kosten.rs",
-        '                        (self.geteilte_haltezeiten, "shared held", "K003")',
-        '                        (self.haltezeiten, "shared held", "K003")',
-        "K003 -- die geteilte Haltezeit wird gegen die EXKLUSIVE Zahl geprueft",
+        '                        (self.geteilte_haltezeiten, "shared held", "K004")',
+        '                        (self.haltezeiten, "shared held", "K004")',
+        "K004 -- die geteilte Haltezeit wird gegen die EXKLUSIVE Zahl geprueft",
     ),
     Mutation(
         "zeuge-an-der-aufrufgrenze-egal",

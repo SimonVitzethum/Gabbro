@@ -937,7 +937,7 @@ Auflösung ist kompositional statt im Schleifenkonstrukt:
    und wird als Zahl ins Erzeugnis emittiert — eine **abgeleitete** Größe, die niemand parallel
    zur Wahrheit führt.
 5. **Für geteilt genommene Sperren gilt Punkt 1 mit einer anderen Zahl** (§11.2.1): `shared
-   held` statt `held`, geprüft als `K003`. Der Grund ist keine Formsache — Punkt 4 rechnet mit
+   held` statt `held`, geprüft als `K004`. Der Grund ist keine Formsache — Punkt 4 rechnet mit
    der Haltezeit *eines* Halters, und auf der geteilten Seite ist die tragende Grösse die
    **Schreiberwartezeit unter Leserdruck**. *Bis zum 2026-08-14 rechnete der Kostenpass nur den
    exklusiven Fall, und die Latenzformel mit ihm* (`MESSUNGEN.md`, Nebenbefund N3).
@@ -1058,7 +1058,7 @@ Asymmetrie steht eine Ebene höher noch einmal so, wie `E007` sie unten schneide
 **Zwei Zahlen, nicht eine.** `held` war für **exklusive** Halter gedacht. Auf der geteilten
 Seite ist die Rechengrösse eine andere — nicht die Haltezeit eines Lesers, sondern die
 **Schreiberwartezeit unter Leserdruck**. `shared held` ist darum eine eigene Zusage mit einer
-eigenen Prüfung (`K003`), nicht dieselbe Zahl mit anderem Namen.
+eigenen Prüfung (`K004`), nicht dieselbe Zahl mit anderem Namen.
 
 #### 11.3 `publish` — die Publikation steht am Store
 

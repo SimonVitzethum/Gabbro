@@ -152,7 +152,7 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 - [ ] **L-A — `locks shared`: GEBAUT bis auf den Zeugen am Aufrufrand.**
       Grammatik, Pass und Kostenzweig stehen (`SPRACHE.md` §11.2.1): `S001` (Schreiben unter
       geteilter Nahme), `S002` (geteilt ohne `shared held`), `S003` (Hochstufung), `S004`
-      (Zusage ohne Messstelle), `E007` (geteilt erklaert, exklusiv genommen), `K003` (die
+      (Zusage ohne Messstelle), `E007` (geteilt erklaert, exklusiv genommen), `K004` (die
       geteilte Haltezeit gegen ihre eigene Zahl). Fuenf neue Mutationen, alle gefangen;
       Beispiel `10-geteilte-sperre.gab`, Giftproben 38–41.
       * **Der Zeuge am Aufrufrand steht als Zwischenregel** (`S005`): ein geteilter Block

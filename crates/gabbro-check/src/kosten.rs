@@ -421,7 +421,11 @@ impl<'a> Rechner<'a> {
             match &s.art {
                 StmtArt::Sperrt(l) => {
                     let (topf, wort, code) = if l.geteilt {
-                        (self.geteilte_haltezeiten, "shared held", "K003")
+                        // **K004, nicht K003.** Ich hatte den Code doppelt belegt: K003 fuehrt
+                        // seit Pass 9 die unbekannten Aufrufkosten. Zwei verschiedene Absagen
+                        // unter einer Kennung machen jede Zaehlung nach Codes falsch -- und
+                        // die Giftproben pruefen genau auf Kennungen.
+                        (self.geteilte_haltezeiten, "shared held", "K004")
                     } else {
                         (self.haltezeiten, "held", "K002")
                     };

@@ -2054,7 +2054,7 @@ seine Ziele, der Abgleich ist derselbe wie bei `E006`.
 | | |
 |---|---|
 | Grammatik | `locks [shared] place block`, `lock … [shared held <= K ops]`, `effects { locks shared N }` |
-| Absagen | `S001` `S002` `S003` `S004` `E007` `K003` |
+| Absagen | `S001` `S002` `S003` `S004` `E007` `K004` |
 | Proben | Beispiel `10-geteilte-sperre.gab`; Gift `38`–`41` |
 | Mutationen | **+5, alle gefangen** — 37 von 37 auf der Flaeche *pruefer* |
 
