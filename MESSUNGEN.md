@@ -3031,3 +3031,87 @@ eine Untergrenze fuer w, keine Schaetzung.**
 
 Die `revoke`-Schranke (16 452 480 gegen zugesagte 200) ist eine **Wertaussage ueber eine
 gerechnete Groesse** — sie steht in der Liste und wird nicht stillschweigend unter K gebucht.
+
+## ERGEBNIS der K/A/W-Zaehlung — 2026-08-15
+
+**Reihenfolge eingehalten:** Zeilenumfang je Pflicht **zuerst** (F = 1 389 Zeilen ueber 81
+Pflichten), **dann** klassifiziert.
+
+| | | |
+|---|---:|---|
+| **K — durch Konstruktion** | **28** | die Zusicherung nennt `requires <inv> … ensures <inv>` — Erhaltung einer deklarierten Invariante |
+| **A — Abstiegsaussage** | **13** | Hilfssaetze ueber eine deklarierte Domaene (alle `lemma_*`) |
+| **W — Wertaussage** | **40** | alles Uebrige |
+| **N_L** | **81** | |
+
+```
+F = 1389   W_zeilen = 474   w = 0,341
+Ueberschlag = 0,341 · 5,0 + 0,659 · 0,3 = 1,90
+```
+
+## Das Tor: **BESTANDEN — und zwar um EINE Pflicht**
+
+**W = 40 gegen N_L/2 = 40,5.** Die Mehrheit faellt unter K oder A; die Decke der
+Schrittzusagen traegt.
+
+> **Und das ist die unbequemste Zahl des ganzen Ordners, weil sie an einem einzigen Posten
+> haengt.** Eine Umbuchung in beide Richtungen kippt das Tor. **Das steht hier, statt als
+> „bestanden" zitiert zu werden** — wer diese Zahl weiterverwendet, muss die Eins mitnehmen.
+
+**Die 13 A-Pflichten sind sämtlich Kippkandidaten** und stehen einzeln in der Liste; ebenso
+die 28 K. *Die Kippregel des Protokolls sagt: im Zweifel nach W* — und im Zweifel faellt das
+Tor.
+
+## Die Klassifikation ist mechanisch, und der erste Versuch war es NICHT
+
+**Erster Durchgang: K=22, A=12, W=47 → Tor verfehlt.** Er klassifizierte nach **Namen**
+(`*_preserves` → K). Die Handprobe an den vier groessten W zeigte: `copy`, `mint`, `install`
+und `delete` stehen als
+
+```
+requires cap_inv(cs), slot_live(cs, src)
+ensures  cap_inv(cs2)
+```
+
+da — **das ist Erhaltung einer deklarierten Invariante, also K nach dem Vorab-Protokoll.**
+Der Namensklassierer hatte sie falsch, weil ihre Namen die Operation nennen und nicht die
+Zusage.
+
+**Zweiter Durchgang: aus der `ensures`-Klausel** — `K` genau dann, wenn dieselbe `*_inv` in
+`requires` **und** `ensures` steht. Ergebnis K=28, A=13, W=40.
+
+> **Beinahe haette ich `W = 47` und ein gefallenes Tor berichtet, auf Namensbasis.** Das ist
+> derselbe Fehler, an dem die erste `narrow`-Zaehlung starb — ein Klassierer, der auf die
+> Oberflaeche sieht. *Der Unterschied ist, dass diesmal die Handprobe VOR dem Bericht kam.*
+
+## Die K-Bedingung, mechanisch geprueft
+
+Das Protokoll verlangt sie je Pflicht: *K gilt nur, wenn alle Schreibstellen des Traegers
+erzeugt oder methodengebunden sind.*
+
+| Feld des Traegers | Schreibstellen | ausserhalb der Traegermethoden? |
+|---|---:|---|
+| `refcount` | 2 | nein — beide in `caprock-cap/src/space.rs` |
+| `used` | 14 in 3 Dateien | **geprueft:** die Stellen in `kernel/src/system.rs` schreiben `VSPACES` und `DmaCtx`, **nicht** `CapSpace.slots` |
+| `first_child` | 10 | nein |
+| `next`, `prev`, `rank`, `parent` | 2 / 0 / 0 / 3 | `pcie.rs:463` schreibt eine **PCIe-Topologie**, nicht den CDT |
+| | | **K-Bedingung haelt fuer `cap_inv`.** |
+
+*Zwei der Treffer waren Fehlalarme desselben Suchmusters — gleiche Feldnamen, andere
+Traeger. Ohne die Einzelpruefung waere die K-Bedingung faelschlich gefallen und das Tor mit
+ihr.*
+
+## Der Ueberschlag und sein Vorbehalt
+
+**1,90** — gegen die Zielmarke, die der Ordner mit 0,56 (seL4) als unerreichbar und mit
+~0,3 als Boden fuehrt.
+
+**Und der Vorbehalt steht im Vorab-Protokoll, nicht hier erfunden:** die 81 sind **kein
+Zufallsschnitt**, sondern die Bereiche mit Verus-Beweis — die **gut verstandenen**. Deren
+Richtung ist bekannt: gut verstandene Bereiche haben **weniger** Wertaussagen. **Damit ist
+w = 0,341 eine Untergrenze und 1,90 ebenso.** Der wahre Wert liegt hoeher, nicht tiefer.
+
+## «B34», wie vorab versprochen
+
+`revoke`s Kostenzusage steht als **W** — eine Aussage ueber eine gerechnete Groesse. Sie ist
+nicht unter K gebucht worden.
