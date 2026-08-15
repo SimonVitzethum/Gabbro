@@ -709,3 +709,70 @@ pub fn breite_von(k: Kw) -> (u8, bool) {
         _ => (64, false),
     }
 }
+
+/// **Wertetabellen fuer die Konstantenauswertung — der zweite Fundort des Generatorlaufs.**
+///
+/// 5 der 15 echten Luecken vom 2026-08-15 lagen hier. Der Grund ist derselbe wie in
+/// `typen.rs`: **eine Beispieldatei prueft, ob eine Absage faellt, nicht ob eine Zahl
+/// stimmt.** Ein `const N : u32 = 100;` mit falscher Auswertung faellt in keinem Beispiel
+/// auf, solange das Ergebnis irgendwo im gueltigen Bereich landet.
+#[cfg(test)]
+mod wertetabellen {
+    use super::*;
+
+    /// Wertet einen konstanten Ausdruck aus einer Quelle aus -- die kuerzeste Strecke von
+    /// Text zu Zahl, damit die Probe die RECHNUNG misst und nicht den Aufbau.
+    fn wert(ausdruck: &str) -> Option<i128> {
+        let quelle = format!("module t {{ const K : u64 = {ausdruck}; }}");
+        let (baum, _) = gabbro_syntax::lies("probe.gab", &quelle);
+        let u = Umgebung::sammle(&baum);
+        let mut aus = None;
+        crate::fuer_jedes_item_im_modul(&baum, &mut |item, modul| {
+            if let ItemArt::Konst(k) = &item.art {
+                aus = u.konst_wert(modul, &k.wert);
+            }
+        });
+        aus
+    }
+
+    #[test]
+    fn die_logischen_verknuepfungen_sind_UND_und_ODER_und_nicht_umgekehrt() {
+        // Die Kante: genau eine Seite wahr. `&&` und `||` sind dort unterscheidbar,
+        // bei zwei wahren oder zwei falschen Seiten nicht.
+        assert_eq!(wert("1 && 0"), Some(0), "eine Seite falsch -> UND ist falsch");
+        assert_eq!(wert("1 || 0"), Some(1), "eine Seite wahr -> ODER ist wahr");
+        assert_eq!(wert("0 && 1"), Some(0));
+        assert_eq!(wert("0 || 1"), Some(1));
+        // Und die Null-Deutung: jeder Wert != 0 ist wahr, nicht nur 1.
+        assert_eq!(wert("2 && 3"), Some(1), "!= 0 ist wahr, nicht nur == 1");
+        assert_eq!(wert("0 || 0"), Some(0));
+    }
+
+    #[test]
+    fn die_vergleiche_stehen_auf_ihrer_kante() {
+        // Jeder Vergleich wird an der Stelle geprueft, an der er sich vom Nachbarn trennt.
+        assert_eq!(wert("3 < 3"), Some(0));
+        assert_eq!(wert("3 <= 3"), Some(1), "hier trennt sich < von <=");
+        assert_eq!(wert("3 > 3"), Some(0));
+        assert_eq!(wert("3 >= 3"), Some(1), "und hier > von >=");
+        assert_eq!(wert("3 == 3"), Some(1));
+        assert_eq!(wert("3 != 3"), Some(0));
+    }
+
+    #[test]
+    fn die_verschiebungen_rechnen_und_raten_nicht() {
+        assert_eq!(wert("1 << 0"), Some(1));
+        assert_eq!(wert("1 << 10"), Some(1024));
+        assert_eq!(wert("1024 >> 10"), Some(1));
+        assert_eq!(wert("7 >> 1"), Some(3), "Abrunden, nicht Runden");
+    }
+
+    #[test]
+    fn grundrechenarten_an_ihren_kanten() {
+        assert_eq!(wert("7 / 2"), Some(3), "ganzzahlig abgerundet");
+        assert_eq!(wert("7 % 2"), Some(1));
+        assert_eq!(wert("6 % 2"), Some(0));
+        assert_eq!(wert("2 * 3 + 1"), Some(7), "Punkt vor Strich");
+        assert_eq!(wert("1 + 2 * 3"), Some(7), "und in der anderen Richtung");
+    }
+}

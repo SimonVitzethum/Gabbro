@@ -461,3 +461,124 @@ mod proben {
         assert_eq!(teile(&a, &c).bereich.expect("Bereich").max, 100);
     }
 }
+
+/// **Wertetabellen — Grenzen statt Klassen.**
+///
+/// Der erzeugte Mutationslauf vom 2026-08-15 fand **15 echte Regelluecken, 11 davon in
+/// `typen.rs` und `umgebung.rs`** — der Bereichsarithmetik und der Konstantenauswertung.
+/// Das Muster war lesbar und nicht zufaellig:
+///
+/// > **Der Pruefer ist dicht, wo er ABSAGEN ERZEUGT, und duenn, wo er RECHNET.**
+///
+/// Die 38 Handmutationen zielten auf Absagen, weil Absagen das sind, was man beim Schreiben
+/// im Kopf hat. Und die Beispieldateien koennen es nicht auffangen: **ein Beispiel mit
+/// `u8 in 0 .. 200` faellt bei jeder falschen Obergrenze zwischen 200 und 255 gleich aus.**
+/// Es trifft eine KLASSE, keine GRENZE.
+///
+/// Diese Tabellen tun das Gegenteil: jede Zeile steht auf einer Kante, an der ein Fehler um
+/// **eins** sichtbar wird.
+#[cfg(test)]
+mod wertetabellen {
+    use super::*;
+
+    fn u(breite: u8, min: i128, max: i128) -> IntBereich {
+        IntBereich::genau(breite, false, min, max)
+    }
+    fn i(breite: u8, min: i128, max: i128) -> IntBereich {
+        IntBereich::genau(breite, true, min, max)
+    }
+    fn b(r: &Rechnung) -> (i128, i128) {
+        let x = r.bereich.expect("Bereich erwartet");
+        (x.min, x.max)
+    }
+
+    #[test]
+    fn multiplikation_nimmt_die_kleinste_und_groesste_ECKE() {
+        // Vier Ecken, und bei gemischten Vorzeichen liegt das Minimum NICHT bei min*min.
+        // Ein `unwrap_or(0)` statt `min()` faellt hier, ein `max()` statt `min()` auch.
+        let r = multipliziere(&i(32, -3, 2), &i(32, -5, 7));
+        assert_eq!(b(&r), (-21, 15), "min = 2*-5 = -21, max = -3*-5 = 15");
+        let r = multipliziere(&i(32, -3, -1), &i(32, -5, -2));
+        assert_eq!(b(&r), (2, 15), "beide negativ: min = -1*-2, max = -3*-5");
+        let r = multipliziere(&u(32, 0, 0), &u(32, 5, 9));
+        assert_eq!(b(&r), (0, 0), "die Null frisst jede Ecke");
+    }
+
+    #[test]
+    fn division_hat_zwei_wege_und_der_schnelle_gilt_nur_streng_positiv() {
+        // `a.min >= 0 && b.min > 0` ist der schnelle Weg. Die Kante ist b.min == 1 gegen 0.
+        let r = teile(&u(32, 10, 20), &u(32, 1, 4));
+        assert_eq!(b(&r), (2, 20), "min = 10/4, max = 20/1");
+        // b.min == 0 heisst: enthaelt die Null -- gar keine Rechnung.
+        assert!(teile(&u(32, 10, 20), &u(32, 0, 4)).bereich.is_none());
+        //
+        // **AEQUIVALENTER MUTANT, nachgewiesen statt behauptet.** `b.min > 0` gegen
+        // `b.min >= 0` an dieser Verzweigung ist NICHT unterscheidbar: die Pruefung
+        // `b.enthaelt_null()` (`min <= 0 && max >= 0`) steht davor und faengt jedes `b` mit
+        // `min == 0 && max >= 0` ab; ist `max < 0`, so ist auch `min < 0`, und beide
+        // Bedingungen sind falsch. **Es gibt kein `b`, das die zwei Fassungen trennt.**
+        //
+        // Der erzeugte Mutationslauf zaehlt diese Stelle als „entkommen". Das ist richtig
+        // gezaehlt und trotzdem kein Loch -- und der Unterschied gehoert aufgeschrieben,
+        // sonst jagt jemand einer Probe hinterher, die es nicht geben kann.
+        // a.min == 0 ist noch der schnelle Weg (>= 0), b.min == 1 auch.
+        let r = teile(&u(32, 0, 20), &u(32, 1, 1));
+        assert_eq!(b(&r), (0, 20));
+        // Vorzeichenbehaftet muss ueber die vier Ecken gehen: -20/1 = -20 ist das Minimum.
+        let r = teile(&i(32, -20, 10), &i(32, 1, 2));
+        assert_eq!(b(&r), (-20, 10));
+    }
+
+    #[test]
+    fn bitweise_faellt_bei_JEDEM_negativen_operanden_auf_die_volle_breite() {
+        // Die Kante ist min == 0 gegen min == -1, auf BEIDEN Seiten.
+        let r = bitweise(&u(8, 0, 3), &u(8, 0, 5), BitOpArt::Oder);
+        assert_eq!(b(&r), (0, 7), "0..3 | 0..5 passt in die Maske 7");
+        let (lo, hi) = grenzen(8, true);
+        let r = bitweise(&i(8, -1, 3), &i(8, 0, 5), BitOpArt::Oder);
+        assert_eq!(b(&r), (lo, hi), "ein negativer Operand links -> volle Breite");
+        let r = bitweise(&i(8, 0, 3), &i(8, -1, 5), BitOpArt::Oder);
+        assert_eq!(b(&r), (lo, hi), "und rechts genauso -- `||`, nicht `&&`");
+    }
+
+    #[test]
+    fn die_maske_ist_die_naechste_zweierpotenz_minus_eins() {
+        // Die Kanten sind die Zweierpotenzen selbst: 7 -> 7, 8 -> 15.
+        assert_eq!(maske(0), 0);
+        assert_eq!(maske(1), 1);
+        assert_eq!(maske(7), 7, "7 braucht 3 Bit -> 2^3-1 = 7");
+        assert_eq!(maske(8), 15, "8 braucht 4 Bit -> 2^4-1 = 15, NICHT 8");
+        assert_eq!(maske(255), 255);
+        assert_eq!(maske(256), 511);
+        // Und die Ueberlaufkante bei 127 Bit: `1 << 127` waere ein Ueberlauf in i128.
+        assert_eq!(maske(i128::MAX), i128::MAX, "keine Verschiebung um 127 oder mehr");
+    }
+
+    #[test]
+    fn linksschieben_ueber_die_breite_ist_ein_BEFUND_kein_ergebnis() {
+        // Die Kante: Schiebeweite == breite-1 rechnet, == breite laeuft ueber.
+        let r = schiebe_links(&u(8, 1, 1), &u(8, 7, 7));
+        assert!(!r.laeuft_ueber, "1 << 7 = 128 passt in u8");
+        // **Der Wert muss PASSEN, damit nur die Weitenregel sprechen kann.** `1 << 8 = 256`
+        // laeuft ohnehin ueber; die Probe haette dann zwei Gruende und misst keinen.
+        // `0 << 8 = 0` passt in jedes u8 -- faellt es trotzdem, war es die Weite.
+        let r = schiebe_links(&u(8, 0, 0), &u(8, 8, 8));
+        assert!(
+            r.laeuft_ueber,
+            "0 << 8 PASST -- wenn es faellt, dann wegen der Weite == breite, sonst nichts"
+        );
+        let r = schiebe_links(&u(8, 0, 0), &u(8, 7, 7));
+        assert!(!r.laeuft_ueber, "Weite 7 < breite 8 ist eine Rechnung, kein Befund");
+        let r = schiebe_links(&u(8, 1, 1), &i(8, -1, 2));
+        assert!(r.laeuft_ueber, "eine negative Weite ist keine Rechnung");
+    }
+
+    #[test]
+    fn addition_erkennt_den_ueberlauf_an_der_kante_und_nicht_davor() {
+        // u8: 255 + 0 passt, 255 + 1 nicht. Ein `>=` statt `>` faellt hier.
+        assert!(!addiere(&u(8, 255, 255), &u(8, 0, 0)).laeuft_ueber);
+        assert!(addiere(&u(8, 255, 255), &u(8, 1, 1)).laeuft_ueber);
+        assert!(!addiere(&u(8, 0, 254), &u(8, 0, 1)).laeuft_ueber);
+        assert!(addiere(&u(8, 0, 255), &u(8, 0, 1)).laeuft_ueber);
+    }
+}
