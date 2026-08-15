@@ -51,6 +51,14 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       und ein Bereich ohne Fragment ist eine Vermutung.
 - [ ] **Die sechs vorhandenen Fragmente sind gegen die ZWEITE Fassung geschrieben**, die Grammatik
       ist bei der vierten. Sie muessen nachgezogen und neu beurteilt werden.
+      * **Teilweise gefahren 2026-08-15.** Vier veraltete Formen geschlossen (F4 `typelist`,
+        F6-Semikolon 2x, `STACK_MAX` benutzt und nie erklaert). **Absagen von 21 auf 13**,
+        Tor P2 unveraendert bei **1 von 6**.
+      * **Und das Tor haengt nicht an Arbeit, sondern an einem Urteil:** *6 der 13
+        verbleibenden Absagen sind die Wortschatzkollision.* Sie zu beseitigen heisst, die
+        Entscheidung unten (`slots`/`ops`/…) zu treffen. **Gemessen sind es sechs Woerter an
+        sechs Stellen, nicht neun an elf** — `u64` faellt seit G5 weg, `check` und `stack`
+        schlagen im Korpus nicht auf.
 - [ ] **Fuenf der elf Klempnerei-Klassen liegen nur im Scratchpad** — rund 6 der 19 haengenden
       Pflichten sind damit **nicht gegen die Sprache pruefbar**.
 - [ ] **`programs/` brach 4 von 4** — aber die Messung ist **aelter als die Konstrukte**, die es
@@ -371,15 +379,16 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
       auf der **Annotationsemission** (s. *Pruefer und Erzeuger*): dort entsteht der
       Wunschform-Beweis, und dort gibt es noch nichts zu beschaedigen, weil noch nichts
       emittiert wird.
-      * **Die Mutationen sind von Hand geschrieben** — 24 Stueck, je eine Regel. Ein
-        Erzeuger, der alle Operatoren und Bedingungen des Pruefers systematisch verdreht,
-        faende mehr. **Die 100 % sind eine Aussage ueber diese 24, nicht ueber den Pruefer.**
-- [ ] **`cast` ist aus der Grammatik nie eindeutig ableitbar** (`cast = path "(" expr ")"`
-      ist echte Teilmenge von `call`), und der Erreichbarkeitswaechter sieht das nicht, weil
-      er auf Nichtterminalebene arbeitet. **G9.**
-- [ ] **Das `forever`-Beispiel in [`SYNTAX.md`](SYNTAX.md) §8 parst nicht** — es schreibt
-      `bounded 4096 cycles` statt `ops` und laesst das pflichtige `on_exceeded` weg. **G10.**
-- [ ] **`SYNTAX.md` §5 sagt „Sieben Domaenen, geschlossen"** und zaehlt acht auf. **G11.**
+      * **~~Die Mutationen sind von Hand geschrieben~~ — GEFAHREN 2026-08-15, Tor
+        BESTANDEN.** `erzeuge-mutationen.py` verdreht systematisch: **7 von 39 gefangen
+        (18 %)** gegen 38 von 38 der Handmutationen. Der Verdacht war richtig, und der
+        eigentliche Befund ist **wo**: 6 der 15 echten Luecken in `typen.rs`, 5 in
+        `umgebung.rs`. *Der Pruefer ist dicht, wo er ABSAGEN ERZEUGT, und duenn, wo er
+        RECHNET.* Offen bleibt daraus: **Wertetabellen fuer die Bereichsarithmetik** —
+        Beispieldateien treffen Klassen, nicht Grenzen.
+
+
+
 - [ ] **Die Etiketten G1–G8 kollidieren** mit einer aelteren Messung in
       [`MESSUNGEN.md`](MESSUNGEN.md), die G1/G2/G3/G5 fuer etwas anderes vergibt.
 - [ ] **Der Parser ist an sechs Stellen laxer als die EBNF**: `pub` an 13 Item-Arten, die es
@@ -400,9 +409,7 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
       Zwei Auswege, beide mit Preis: kontextuelle Woerter (dann haelt die Tabelle nicht, was sie
       behauptet) oder Umbenennen (dann traegt jeder Anwender die Liste im Kopf).
       **Der Uebersetzer laesst Woerter heute nur nach `.`/`->` und vor `:` als Namen zu.**
-- [ ] **G1 — `atomicdecl` braucht `publishes`.** Die Regel kennt es nicht, das Beispiel darunter
-      benutzt es, [`SPRACHE.md`](SPRACHE.md) §11.3 verlangt es, F6 schreibt es achtmal.
-      Der Uebersetzer nimmt es an und meldet `P031` — bis die EBNF nachgezogen ist.
+
 - [ ] **Je Schablone mindestens eine Mutation, die NUR faellt, wenn die Einmal-Pflicht real
       geprueft wird.** Heute: **0 von 16** — die meisten Schablonen sind entworfen, und was
       kein Code ist, faengt keine Mutation. **Die Kopplung der zwei neuen Register ist die
@@ -414,30 +421,14 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
       `gabbro schablonen` fuehrt heute **16, davon 16 unbewiesen**. Die Liste ist die Ratsche
       ueber der Flaeche, in die der dritte Ausgang seine Beweislast verschiebt —
       **waechst sie, waechst die Vertrauensbasis, auch wenn die Kennzahl glaenzt.**
-- [ ] **G2 — `axiom` braucht `-> typeexpr` und `requires`.** `axiom rdtscp() -> u64 requires
-      Has(RDTSCP) …` ist heute nicht schreibbar. **Betrifft die Axiomschicht**, also den groessten
-      unbewiesenen Posten der Sprache.
-- [ ] **G3 — `placeshift` gegen `placesuffix`: `->` ist mehrdeutig.** In
-      `transition drv { ST: ACK -> ACK | DRIVER }` ist `ACK -> ACK` beides. Der Parser
-      entscheidet zugunsten des Uebergangs; **die Entscheidung gehoert in die Grammatik.**
-- [ ] **G4 — `entrydecl` verlangt ein Schlusskomma, das kein Beispiel schreibt.**
-- [ ] **G5 — `u64::max` ist kein `path`.** Beide Segmente sind Woerter; `path = ident
-      { "::" ident }` deckt es nicht, `SYNTAX.md` §2 schreibt es.
-- [ ] **G6 — zwei Terminale ausserhalb der Tabelle: `O` (`costexpr`) und `version`
-      (`@version`).** `pruefe-wortschatz.py` sieht beide nicht — Grossbuchstabe bzw. fuehrendes
-      `@`. **Ein Befund ueber den Waechter**, dieselbe blinde Stelle wie zweimal zuvor.
-- [ ] **G7 — `clobbers { }` ist nicht schreibbar.** `identlist` verlangt mindestens einen Namen;
-      ein Eintritt, der nichts zerstoert, kann das nicht sagen.
-- [ ] **G8 — eine `table` nennt ihre Slotzahl nicht, und das trifft M4.** `index into T` hat
-      keine Obergrenze aus der Deklaration; die Schranke haengt an einem von Hand passend
-      gewaehlten Indextyp (`type SlotIdx = u32 in 0 ..< NSLOTS`), und **nichts bindet die
-      beiden aneinander**. „Kein ungeprueftes Indizieren" ruht an dieser Stelle auf einer
-      Konvention statt auf der Sprache. Der Uebersetzer prueft Indizes deshalb nur gegen
-      `[T; N]`. **Vorschlag: `table T count N { … }`, und `index into T` erbt die Schranke.**
-- [ ] **Die Zaehlerregel gehoert in [`SPRACHE.md`](SPRACHE.md), sie stand in keinem Dokument:**
-      *jeder Zaehler braucht eine Schranke in der Deklaration **und** eine Pruefung vor der
-      Rechnung.* `u64` ohne Obergrenze ist nicht erhoehbar, und `in 0 .. GRENZE` allein reicht
-      nicht — `+ 1` reicht bis `GRENZE + 1`. Dreimal am eigenen Beispielkorpus aufgeschlagen.
+
+
+
+
+
+
+
+
 - [ ] **~~Die `narrow`-Vollzaehlung~~ — GEFAHREN 2026-08-14 und UNGUELTIG**
       ([`MESSUNGEN.md`](MESSUNGEN.md)). `zaehle-narrow.py` findet 513 Bereichspflichten im
       Baum und klassiert 168 nach N — **die Zahl wird nicht berichtet**, weil eine
@@ -453,9 +444,7 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
         die falsche Sprache. **Erst muessen die Fragmente parsen (heute 1 von 6, Tor P2);
         dann zaehlt Gabbro seine eigenen `narrow` mit derselben Regelmenge, die es prueft.**
       * Der Zaehler bleibt im Ordner — als **Finder von Kandidaten**, nicht als Messgeraet.
-- [ ] **Zwei Fragmente sind veraltet, nicht falsch:** F4 schreibt `QueueSetup(q : Virtq)`
-      (`typedecl` verlangt `typelist`, nicht `params` — der Kommentar «B3» ist gegen die zweite
-      Fassung geschrieben), F6 setzt ein Semikolon hinter `let … else { … }`.
+
 - [ ] **Drei der neun Paesse fehlen ganz** (M3, M2, Paarung), **drei sind nur
       teilweise gebaut** (D1/D2, `effects`, costs).
       *(Berichtigt 2026-08-15: hier stand „Fuenf … zwei" — der Waechter haelt die Zahl
@@ -642,11 +631,12 @@ Genau die Vorgeschichte, aus der der Ordner am 2026-08-14 seine 24 Dateien auf 9
       einen Lauf), *Pruefermaengel* (brauchen Code) und *Nachzupruefendes* (brauchen eine
       Quelle). Eine Liste, in der ein halber Tag Papier neben einem Teilprojekt steht, sortiert
       nicht mehr — und eine Liste, die nicht sortiert, wird nicht gelesen.
-- [ ] **Und die Buchfuehrung braucht einen Waechter.** Die acht Befunde oben sind **saemtlich
-      maschinell pruefbar**: `[x]` in einer Datei, die „ausschliesslich Offenes" behauptet ·
-      Zahlen gegen `pruefe-syntax.sh` · doppelte Themen · Etiketten gegen den Prueferplan.
-      **Dieser Ordner haelt seine Grammatik mit zwei Waechtern und seinen Pruefer mit einer
-      Mutationsprobe — seine Aufgabenliste mit gar nichts.**
+- [ ] **~~Und die Buchfuehrung braucht einen Waechter~~ — GEBAUT 2026-08-15,
+      `pruefe-todo.py`, sieben der acht Klassen.** Er fand beim ersten scharfen Lauf zwei
+      echte Befunde: die Passzahl („Fuenf … zwei" statt drei und drei) und fuenf
+      durchgestrichene Eintraege ohne Datum. **Die achte Klasse ist keine Klasse, sondern ein
+      Sammelbecken** („Aussagen, die der Ordner ueberholt hat") — sie braucht Semantik statt
+      Regex und wird als offen gefuehrt statt als gedeckt behauptet.
 
 ### Wo die herausgenommenen Punkte verzeichnet sind
 
@@ -660,3 +650,8 @@ Genau die Vorgeschichte, aus der der Ordner am 2026-08-14 seine 24 Dateien auf 9
 | `by induction over` | [`SYNTAX.md`](SYNTAX.md) §5, [`SPRACHE.md`](SPRACHE.md) Teil V |
 | seL4-Aufteilung, SPARK-Leiter | [`PLAN.md`](PLAN.md) |
 | `vtd.rs`, `space.rs`, P0.4 | [`MESSUNGEN.md`](MESSUNGEN.md), *P0.2/P0.3* und *P0.4* |
+| **G1–G11** (2026-08-15) | [`SYNTAX.md`](SYNTAX.md) (EBNF nachgezogen), `beispiele/11-grammatikbefunde.gab`, Gift `43`–`45` |
+| **Zaehlerregel** (2026-08-15) | [`SPRACHE.md`](SPRACHE.md) §1, *„Die Zaehlerregel"* |
+| **F4/F6 veraltet** (2026-08-15) | [`FRAGMENTE.md`](FRAGMENTE.md); Tor P2 steht weiter bei 1 von 6, s. u. |
+| **Mutationsgenerator** (2026-08-15) | `erzeuge-mutationen.py`, Vorab + Ergebnis in [`MESSUNGEN.md`](MESSUNGEN.md) |
+| **TODO-Waechter** (2026-08-15) | `pruefe-todo.py`, sieben Klassen mit Sprechprobe |
