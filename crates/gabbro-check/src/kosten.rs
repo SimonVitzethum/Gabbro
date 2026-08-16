@@ -349,6 +349,26 @@ impl<'a> Rechner<'a> {
             // Gefunden am IPC-Fragment 2026-08-15: `traverse cand over queue
             // e.slots[core].receivers` war die letzte Stelle, an der Tor P2 haengte.
             Domaene::Schlange(o) => return self.arraylaenge_im_verbund(o),
+            // **`mappings of` -- die Schranke steht in der `walk`-Deklaration.**
+            // `levels` mal Knotenlaenge; sie ist dort ausgesprochen und nirgends sonst.
+            // Gefunden am MMU-Fragment: dieselbe Klasse wie `queue` -- eine Schranke, die
+            // dasteht und die der Pass nicht las, also `K003` sagte statt zu rechnen.
+            Domaene::AbbildungenVon(o) => {
+                // Der Ort nennt den PARAMETER (`mappings of w`), nicht den Walk -- der
+                // Name kommt aus dem Typ, wie bei den Tabellen.
+                let name = match self.u.typ_von_ort(self.modul, o, &self.lokal).durchgreifen() {
+                    Typ::Benannt { name, .. } => name.clone(),
+                    Typ::Verbundname(n) => n.clone(),
+                    _ => o.basis.text.clone(),
+                };
+                let kurz = name.rsplit("::").next().unwrap_or(&name).to_string();
+                return self
+                    .u
+                    .walkschranken
+                    .iter()
+                    .find(|(k, _)| *k == &name || k.rsplit("::").next() == Some(kurz.as_str()))
+                    .map(|(_, n)| *n as i128);
+            }
             _ => return None,
         };
         self.u.kapazitaeten.get(&tabelle).map(|n| *n as i128)

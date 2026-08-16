@@ -1320,3 +1320,295 @@ Kette von Verbraeuchen und sagt nichts ueber ihre **Reihenfolge**.
 > **«B37»:** Linearitaet erzwingt *genau einmal*, nicht *in dieser Ordnung*. Fuer die
 > Reihenfolge braeuchte es je Schritt eine eigene Marke — dann waechst der Wortschatz mit
 > jedem Bootschritt — oder eine **Ordnung auf Marken**, und die gibt es nicht.
+
+
+---
+
+## F8 — Scheduler: `Stale(T)` **widerlegbar geführt**
+
+**Geschrieben 2026-08-16** gegen `kernel/src/system.rs` und `crates/caprock-sched/src/lib.rs`
+(`a1bf707`). **Die Sperrlage wird zitiert, nicht neu erhoben** — `MEM` ist Blatt, `CAPS` ist
+äusserster, `SCHEDS[*]` liegt dazwischen ([`AN-CAPROCK.md`](AN-CAPROCK.md), N1).
+
+### Der Kandidat und die Gegenprobe
+
+`Stale(T)` sollte das Muster tragen, das **Doppelnahme ersetzt**: unter Sperre A wählen,
+freigeben, unter B fortsetzen, **Befund neu prüfen**. Gemessen: **fünf Werte überqueren im
+Scheduler eine Sperrgrenze und werden danach unter einer anderen Sperre benutzt.**
+
+| # | Fundstelle | Wert | trägt ihn was? |
+|---:|---|---|---|
+| 1 | `system.rs:1119` → `caprock-sched:842` | `tid` an `kill` | **`resolve(tid)` — validiert neu.** Genau das Muster |
+| 2 | `system.rs:8325` | `tid` an `kill` | dasselbe |
+| 3 | `system.rs:1109` | `tid` aus `current_id` | **GEGENBEISPIEL** — s. u. |
+| 4 | `system.rs:9104` | `caller` aus `current_id` | dasselbe Gegenbeispiel |
+| 5 | `system.rs:4943` | `bekommen` aus `priority_of` | Selbsttest-Pfad; der Wert wird **gemeldet**, nicht benutzt |
+
+### **Das Gegenbeispiel, und es ist wörtlich begründet**
+
+`system.rs:1107-1109`:
+
+> *„Tid des sich beendenden Threads vor dem Wechsel merken; **IRQs sind im Trap maskiert →
+> der aktuelle Thread ist über die kurzen Sperren stabil**."*
+
+**Der Wert überquert eine Sperrgrenze und braucht trotzdem keine Neuvalidierung** — nicht weil
+jemand nachlässig war, sondern weil eine **andere** Zusage ihn trägt: die Maskierung. Ein
+`Stale(T)`, das Neuvalidierung erzwingt, würde diesen Pfad **unschreibbar machen**.
+
+> **«B38»: `Stale(T)` in der Zwangsfassung ist zu streng.** Zwei von fünf gemessenen
+> Übergängen ruhen nicht auf Neuvalidierung, sondern auf **Interruptmaskierung** — und die
+> ist in Gabbro heute `masks IRQ`, also **bereits eine Wirkung**. Die ehrliche Form wäre
+> nicht *„jede Fortsetzung prüft neu"*, sondern *„jede Fortsetzung prüft neu **oder** nennt,
+> was sie stattdessen trägt"* — und das ist keine neue Marke, sondern eine Bedingung an eine
+> vorhandene.
+
+```gabbro
+module caprock::sched {
+
+const NKERNE  : u32 = 64;
+const NFAEDEN : u32 = 1024;
+
+type KernIdx  = u32 in 0 ..< NKERNE;
+type FadenId  = u32 in 0 ..< NFAEDEN;
+
+table Laufliste count NFAEDEN {
+    slot { belegt : bool, kern : KernIdx, prio : u32 in 0 .. 255, }
+}
+
+lock SCHEDS protects { belegt, kern, prio } rank 2
+    held <= 300 ops
+    shared held <= 32 ops;
+
+-- Der Fall, der TRAEGT: der Wert ueberquert die Grenze, und die Fortsetzung prueft neu.
+-- `resolve` ist genau die Neuvalidierung; ohne sie waere `toeten` ein Rennen.
+extern fn aufloesen(l : ptr<normal, r> Laufliste, t : FadenId)
+    -> option index into Laufliste
+    requires Held(SCHEDS, shared)
+    effects  { reads l.slots } costs <= 8 ops;
+
+impl fn toeten(l : ptr<normal, rw> Laufliste, t : FadenId, k : index into Laufliste) -> bool
+    effects { reads l.slots, writes l.slots, locks SCHEDS }
+    costs   <= 340 ops
+{
+    locks SCHEDS {
+        -- **Die Neuvalidierung.** Der Faden kann zwischen Auswahl und Tat verschwunden
+        -- sein; `aufloesen` sagt es, und der `match` zwingt beide Ausgaenge.
+        match aufloesen(l, t) {
+            Some(i) => { l.slots[i].belegt = false; return true; }
+            None    => { return false; }
+        }
+    }
+    return false;
+}
+
+-- «B38» -- DER FALL, DEN DIE ZWANGSFASSUNG UNSCHREIBBAR MACHT.
+-- Der Wert ueberquert dieselbe Grenze und braucht KEINE Neuvalidierung, weil eine andere
+-- Zusage ihn traegt: die Interruptmaskierung. `masks IRQ` ist in Gabbro bereits eine
+-- Wirkung -- die Begruendung steht also schon in der Sprache, sie ist nur nicht mit der
+-- Sperrgrenze verknuepft.
+impl fn beenden(l : ptr<normal, rw> Laufliste, k : index into Laufliste) -> bool
+    requires Held(SCHEDS)
+    effects  { reads l.slots, writes l.slots, masks IRQ }
+    costs    <= 16 ops
+{
+    l.slots[k].belegt = false;
+    return true;
+}
+
+}
+```
+
+### Urteil: **`Stale(T)` in der vorgeschlagenen Form ist widerlegt**
+
+**Drei von fünf Übergängen tragen das Muster; zwei widerlegen seine Zwangsfassung.** Und die
+zwei sind nicht Ausnahmen, sondern der **heisseste Pfad** — `exit_current` und der
+IPC-Übergabepfad.
+
+> **Was bleibt, ist kein Konstrukt, sondern eine Bedingung:** ein Wert über einer Sperrgrenze
+> verliert seine Fakten — *das tut die Sprache schon, die V-Regeln sterben* — und die
+> Fortsetzung muss **entweder neu prüfen oder nennen, was sie stattdessen trägt**. Der zweite
+> Ausgang ist `masks IRQ`, und den gibt es.
+
+**Neue Konstrukte: 0.**
+
+
+---
+
+## F9 — MMU/Seitentabellen: der Eintrag, der Zeiger **und** Bitfeld ist
+
+**Geschrieben 2026-08-16** gegen `crates/caprock-hal/src/x86_64/mmu.rs` (1 719 Zeilen,
+`a1bf707`).
+
+### Der gemessene Kern
+
+Der Abstieg ist **vierstufig** und liest aus **derselben 64-Bit-Zahl** zweierlei:
+
+```
+mmu.rs:578   let e4 = PML4.0[((va >> 39) & 0x1ff) as usize];
+mmu.rs:582   let e3 = table_mut(e4 & MASK)[((va >> 30) & 0x1ff) as usize];
+mmu.rs:589   let e2 = table_mut(e3 & MASK)[((va >> 21) & 0x1ff) as usize];
+mmu.rs:596   let e1 = table_mut(e2 & MASK)[((va >> 12) & 0x1ff) as usize];
+```
+
+`e4 & MASK` ist eine **Adresse**; `e4 & P`, `& RW`, `& US`, `& NX` sind **Rechtebits** —
+neun benannte, davon zwei (`A`, `D`) *„von der HARDWARE gesetzt, nie von uns"*.
+
+**Das war der Befund, der die achte Domäne verlangte** (`mappings of`), und er ist mit
+`walk`/`embeds` beantwortet.
+
+```gabbro
+module caprock::mmu {
+
+const EBENEN   : u32 = 4;
+const EINTRAEGE: u32 = 512;
+
+opaque type Pa = u64;
+type Idx   = u32 in 0 ..< EINTRAEGE;
+type Ebene = u32 in 0 ..< EBENEN;
+
+-- **Der Eintrag ist EIN Wort mit zwei Lesarten**, und `embeds` sagt welche. Ohne die
+-- Zeile stünde die Adresse als blanke Zahl da, und `& MASK` wäre Konvention.
+format Pte @version 1 endian little {
+    roh : u64 embeds [51:12] scale 4096,   -- der Rahmen: Bits 51..12, mal 4096
+}
+
+-- Die neun Bits, einzeln benannt. `A` und `D` schreibt die Hardware -- sie stehen als
+-- `reserved`, weil ein Schreiben von uns ein Fehler wäre.
+device Seitentabelle(basis : Pa) at normal {
+    reg EINTRAG : u64 @0x0 class rw fields {
+        P @0, RW @1, US @2, PWT @3, PCD @4, A @5, D @6, PS @7, NX @63,
+    }
+}
+
+-- `walk` erzeugt die Domäne `mappings of`: je Abbildung stehen `va`, `level` und
+-- `index[level]` bereit. **Die vierstufige Kette wird damit EINE Traversierung**, und ihre
+-- Schranke fällt aus der Deklaration statt aus einer Zählung im Rumpf.
+walk Seitenabstieg levels EBENEN {
+    node : [Pte; EINTRAEGE],
+    down : roh when EINTRAG.PS == 0,
+    leaf : EINTRAG.PS == 1,
+}
+
+-- Die Schranke faellt aus `levels` mal `node`-Laenge: 4 Ebenen zu 512 Eintraegen.
+impl fn rechte_pruefen(w : ptr<normal, r> Seitenabstieg) -> bool
+    effects { reads w }
+    costs   <= 4096 ops
+{
+    traverse abbildung over mappings of w by unvisited
+        touches reads w
+    {
+        if abbildung.level == 3 {
+            return true;
+        }
+    }
+    return false;
+}
+
+}
+```
+
+### Urteil: **passt — und der Befund ist, was NICHT auffiel**
+
+**Neue Konstrukte: 0.** `embeds`, `walk` und `mappings of` standen bereits; das Fragment
+belegt sie zum ersten Mal an der Strecke, für die sie entworfen wurden.
+
+> **«B39» — der Befund liegt in den zwei Bits, die die Hardware schreibt.** `A` und `D`
+> setzt die MMU **selbst**, ohne dass Software es tut. In Gabbros Wirkungsrechnung ist das
+> ein **Schreiber, den keine `effects`-Zeile nennt** — die Rahmenaussage *„nur was
+> dasteht, ändert sich"* ist an dieser Stelle **falsch**, und zwar nicht wegen einer Lücke
+> im Prüfer, sondern weil die Hardware ein Beteiligter ist.
+>
+> **Die ehrliche Form ist eine Annahme mit Falsifikator**, nicht eine Wirkung: *„die MMU
+> setzt `A`/`D`, sonst nichts"* — genau die Bauart, die `assume … falsifier …` trägt. Damit
+> gehört der Fall in die **Axiomschicht**, und er ist einer der wenigen, die dort
+> hingehören, weil sie wirklich Hardware sind.
+
+
+---
+
+## F10 — Parser/Checkpoint: der Puffer, dem niemand glaubt
+
+**Geschrieben 2026-08-16** gegen `crates/caprock-dtb/src/lib.rs` (145 Zeilen, `a1bf707`) —
+der einzige Parser des Kerns, der **fremde Bytes** liest.
+
+### Der gemessene Kern
+
+`Dtb::parse` liest ein Magiewort, dann zwei Versätze:
+
+```rust
+if be32(data, 0)? != MAGIC { return None; }
+let off_struct  = be32(data, 8)?  as usize;
+let off_strings = be32(data, 12)? as usize;
+```
+
+**Jeder Zugriff geht über `be32(data, n)?`** — eine Funktion, die `Option` liefert, also die
+Länge prüft und bei Überlauf `None` gibt. **Das ist die Bereichspflicht, ausgeschrieben als
+Kontrollfluss**, und sie steht an *jedem* Zugriff einzeln.
+
+`format` nimmt genau das ab: **der Leser prüft einmal am Eintritt die Pufferlänge, alles
+Weitere sind bewiesene Zugriffe.**
+
+```gabbro
+module caprock::dtb {
+
+const MAGIE : u32 = 0xd00dfeed;
+
+-- Der Kopf ist ein FORMAT: feste Breiten, ausgesprochene Bytereihenfolge, und die
+-- `where`-Klausel bindet jeden Versatz an die Pufferlaenge. **Danach braucht kein
+-- einziger Zugriff mehr eine Laengenpruefung.**
+format DtbKopf @version 17 endian big {
+    magie       : u32 where magie == MAGIE,
+    gesamtlaenge: u32,
+    off_struct  : u32 offset_into Self where off_struct + 4 <= lenof(Self),
+    off_strings : u32 offset_into Self where off_strings + 4 <= lenof(Self),
+}
+
+-- Die Tiefe ist ein Zaehler, und die Zaehlerregel gilt: Schranke in der Deklaration UND
+-- Pruefung vor der Rechnung. Ein DTB mit 2^32 verschachtelten Knoten ist kein Baum mehr,
+-- sondern ein Angriff -- und die Schranke sagt das, statt es zu hoffen.
+const MAXTIEFE : u32 = 64;
+type Tiefe = u32 in 0 .. MAXTIEFE;
+
+extern fn naechstes_token(k : ptr<normal, r> DtbKopf, pos : u32) -> u32
+    effects { reads k } costs <= 4 ops;
+
+impl fn kerne_zaehlen(k : ptr<normal, r> DtbKopf) -> u32
+    effects { reads k }
+    costs   <= 65540 ops
+{
+    let mut tiefe : Tiefe = 0;
+    let mut zahl  : u32 in 0 .. 1024 = 0;
+
+    retry lesen until naechstes_token(k, 0) == 9
+        bounded 65536 ops
+        progress token_verbraucht
+        on_exceeded baum_unlesbar
+        effects { reads k }
+    {
+        narrow tiefe to 0 ..< MAXTIEFE else { return zahl; }
+        tiefe += 1;
+    }
+    return zahl;
+}
+
+extern fn baum_unlesbar() -> never effects { diverges } costs <= 0 ops;
+
+}
+```
+
+### Urteil: **passt — und der Befund ist die Stelle, an der die Vorlage schon Gabbro schreibt**
+
+**Neue Konstrukte: 0.**
+
+`be32(data, n)?` ist bereits *„prüfen, sonst abweisen"* — die Vorlage hat die Regel, sie hat
+sie nur **an jedem Zugriff einzeln**, statt einmal am Eintritt. **Das ist der billigste
+Fragmentbefund des Ordners**: `format` mit `offset_into Self` und `where` ersetzt eine
+Kontrollflussdisziplin, die der Autor schon durchhält, durch eine Deklaration, die der
+Übersetzer durchhält.
+
+> **«B40» — und er geht gegen den Ordner.** Die Vorlage prüft **145 Zeilen lang
+> fehlerfrei**, ohne Sprache und ohne Werkzeug. *Ein Parser, der seine Bereichspflichten
+> ohnehin einzeln erfüllt, gewinnt durch `format` **Kürze**, nicht **Sicherheit**.* Der
+> Gewinn ist real und er ist **nicht der Gewinn, den der Ordner verspricht** — und das
+> gehört gesagt, weil `format` an anderer Stelle (Basisrate: 5 Formate, 0 Fehler) schon
+> einmal ohne Beleg dastand.

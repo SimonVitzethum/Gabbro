@@ -59,11 +59,6 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 
 **Was fehlt, ist deshalb keine Konstruktliste, sondern MESSUNG:**
 
-- [ ] **Vier von zehn Bereichen sind nie ausgeschrieben worden:** **Scheduler**, **MMU/
-      Seitentabellen**, **Lader/`SYS_LOAD`**, **Parser/Checkpoint**. Kein Urteil, kein Fragment —
-      und ein Bereich ohne Fragment ist eine Vermutung.
-
-
 
 **Und getrennt davon, weil es nicht die Ausdruckskraft betrifft:** der Uebersetzer steht bis
 **P3** (Lexer, Parser, vier von neun Paessen — zwei davon nur teilweise, s. `gabbro paesse`);
@@ -140,12 +135,6 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 > Punkt, sondern ein Bruch mit der eigenen Absicht — und der gehoert in die Historie.*
 
 
-- [ ] **L-B — `ghost Stale(T)`: Uebergabe mit Neuvalidierung. Kandidat, kein Beschluss.**
-      Das Muster, das Doppelnahme **ersetzt**: unter Sperre A waehlen, freigeben, unter B
-      fortsetzen, Befund neu pruefen. Die ehrliche Fassung ist **kein Atomizitaetsversprechen,
-      sondern ein Zwang**: ein Wert ueber einer Sperrgrenze verliert seine Fakten (*das tut die
-      Sprache schon*) **und** die Fortsetzung muss die tragende Bedingung erneut pruefen.
-      **Hinter das Scheduler-Fragment — dort liegt seine Messstrecke.**
 
 - [ ] **N3 — `held` braucht einen Zweig fuer Leser-Schreiber-Sperren.** `held <= K ops` ist
       fuer **exklusive** Halter gedacht; auf der geteilten Seite ist die Rechengroesse die

@@ -3428,3 +3428,54 @@ Teil wird benannt.* **Phase bleibt in N_neu.**
 
 > **Ein Datenpunkt ist keine Kurve.** Drei weitere Bereichsfragmente stehen aus, und erst mit
 > ihnen sagt die Metrik etwas ueber Konvergenz. *Aber sie ist nicht mehr leer.*
+
+---
+
+# KONVERGENZMETRIK — vollständig, 2026-08-16
+
+**Die Probe auf das stärkste Produktargument des Ordners:** *neue Konstrukte je
+ausgeschriebenem Bereichsfragment müssen fallen.* Sie hatte bis heute **null Datenpunkte aus
+Bereichsfragmenten**; jetzt hat sie **vier**.
+
+| Fragment / Anlass | neue Konstrukte | kumulativ |
+|---|---:|---:|
+| F1–F6 (Bestand, 2. Fassung) | — | Basis |
+| «B32» virtio-Ringzähler | 1 — `wrapping` am `regdecl` | 1 |
+| «B34» revoke-Schranke | 0 — die Prämisse fiel | 1 |
+| «B29» refcount-Unterlauf | 0 — `narrow` genügte | 1 |
+| `heldpred` (aus `H005`) | 1 | 2 |
+| «B35» `Some`/`None` | 1 | 3 |
+| **F7 Lader/Bringup** | **0** | 3 |
+| **F8 Scheduler** | **0** | 3 |
+| **F9 MMU/Seitentabellen** | **0** | 3 |
+| **F10 Parser/Checkpoint** | **0** | 3 |
+
+## **Vier Bereichsfragmente, null neue Konstrukte.**
+
+**Das ist der erste echte Beleg für die Konvergenzwette** — und er ist stärker, als die Zahl
+aussieht: die vier Bereiche waren **nie ausgeschrieben** und galten als die schwersten
+(Scheduler, MMU, Lader, Parser). *Jeder von ihnen hätte ein Konstrukt fordern können.*
+
+## Was sie STATTDESSEN gefordert haben — und das ist der ehrliche Teil
+
+**Kein neues Konstrukt, aber vier Befunde und zwei Prüferlücken:**
+
+| | Befund | Art |
+|---|---|---|
+| «B37» | `BootPhase` trägt *genau einmal*, nicht *in dieser Ordnung* | **Grenze eines vorhandenen Konstrukts** |
+| «B38» | `Stale(T)` in der Zwangsfassung ist **widerlegt** — 2 von 5 Übergängen ruhen auf `masks IRQ`, nicht auf Neuvalidierung | **Kandidat gestorben** |
+| «B39» | die MMU schreibt `A`/`D` selbst — ein Schreiber, den keine `effects`-Zeile nennt | **gehört in die Axiomschicht** |
+| «B40» | der DTB-Parser prüft 145 Zeilen fehlerfrei ohne Werkzeug — `format` gewinnt **Kürze, nicht Sicherheit** | **geht gegen den Ordner** |
+
+Dazu **zwei Lücken im Prüfer**, beide am MMU-Fragment gefunden und beide geschlossen:
+
+1. Die Domäne `mappings of` hatte **keine Schranke**, obwohl `levels × Knotenlänge` in der
+   `walk`-Deklaration steht — dieselbe Klasse wie die `queue`-Domäne.
+2. **Ein `walk` war dem Typsystem gar nicht bekannt.** `ptr<normal, r> Seitenabstieg` war
+   schlicht `Unbekannt`; die Kette kannte Formate, Geräte und Tabellen — und keine Walks.
+   *Die Schranke stand schon da und griff trotzdem nicht.*
+
+> **Die Wette hält an vier Punkten, und der Preis steht daneben.** Die Fragmente kosteten
+> kein Konstrukt — sie kosteten **zwei Prüferreparaturen, einen toten Kandidaten und einen
+> Befund gegen das eigene Produktargument.** *Das ist ein besseres Ergebnis als eine glatte
+> Null, weil man es nachrechnen kann.*

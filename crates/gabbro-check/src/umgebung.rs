@@ -29,6 +29,10 @@ pub struct Umgebung {
     pub tabellen: HashMap<String, Vec<(String, Typ)>>,
     /// Tabellenname -> `count N`, wenn die Deklaration sie nennt.
     pub kapazitaeten: HashMap<String, u128>,
+    /// **`walk`-Name -> `levels` x Knotenlaenge.** Die Schranke der Domaene `mappings of`
+    /// steht in der Deklaration und nirgends sonst -- ohne sie kann der Kostenpass eine
+    /// Seitentabellen-Traversierung nicht rechnen und sagt das (`K003`).
+    pub walkschranken: HashMap<String, u128>,
     /// Uebergangsname -> seine festen Kosten (je `placeshift` ein Speichern).
     pub uebergangskosten: HashMap<String, i128>,
     pub formate: HashMap<String, Vec<(String, Typ)>>,
@@ -229,6 +233,7 @@ impl Umgebung {
                     {
                         self.kapazitaeten.insert(q(&t.name.text), n as u128);
                     }
+                    // (die Walk-Schranke steht weiter unten, bei `ItemArt::Walk`)
                     // **Eine `table` IST Speicher, nicht nur eine Form.** Damit ist ihr
                     // Name ein globaler Ort: `Kappenraum.slots[s]` hat einen Typ, und
                     // Kernzustand braucht keinen Zeiger, um erreichbar zu sein.
@@ -329,6 +334,26 @@ impl Umgebung {
                         span: a.span,
                     };
                     self.funktionen.insert(q(&a.name.text), sig);
+                }
+                // **`walk` traegt seine Schranke selbst:** `levels` mal Knotenlaenge.
+                // Ohne sie hat die Domaene `mappings of` keine, und der Kostenpass sagt das
+                // (`K003`) -- gefunden am MMU-Fragment 2026-08-16, dieselbe Klasse wie die
+                // `queue`-Domaene: eine Schranke, die dasteht und die niemand las.
+                ItemArt::Walk(w) => {
+                    // **Ein `walk` ist auch ein TYP.** Ohne diese Zeile ist
+                    // `ptr<normal, r> Seitenabstieg` dem Typsystem unbekannt, und die
+                    // Domaenenschranke unten findet ihren Namen nicht -- gefunden am
+                    // MMU-Fragment, nachdem die Schranke selbst schon dastand.
+                    self.typen
+                        .insert(q(&w.name.text), Typ::Verbundname(q(&w.name.text)));
+                    let ebenen = self.konst_wert(pfad, &w.ebenen);
+                    let laenge = self.konst_wert(pfad, &w.knoten.laenge);
+                    if let (Some(e), Some(l)) = (ebenen, laenge) {
+                        if e > 0 && l > 0 {
+                            self.walkschranken
+                                .insert(q(&w.name.text), (e as u128) * (l as u128));
+                        }
+                    }
                 }
                 _ => {}
             }
@@ -515,6 +540,14 @@ impl Umgebung {
                     .iter()
                     .find(|k| self.formate.contains_key(*k) || self.geraete.contains_key(*k))
                 {
+                    Typ::Verbundname(k.clone())
+                } else if let Some(k) = kand.iter().find(|k| self.walkschranken.contains_key(*k)) {
+                    // **Ein `walk` ist ein Traeger wie ein `device`.** Die Kette kannte
+                    // Formate, Geraete und Tabellen -- und keine Walks. Damit war
+                    // `ptr<normal, r> Seitenabstieg` schlicht `Unbekannt`, und die Schranke
+                    // der Domaene `mappings of` fand ihren Namen nie. Gefunden am
+                    // MMU-Fragment 2026-08-16, nachdem die Schranke selbst schon dastand
+                    // und trotzdem nicht griff.
                     Typ::Verbundname(k.clone())
                 } else {
                     Typ::Unbekannt

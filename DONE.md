@@ -70,6 +70,8 @@ Neu erhoben 2026-08-15, **nicht wiederhergestellt**, nur x86
 | **Elf Klempnerei-Klassen** | **Tor verfehlt** — `N_neu = 5` (heute 4) | `dokumente/MESSUNGEN.md`, *Neuerhebung* |
 | **K/A/W über N_L** | **Tor verfehlt** — `W = 38 von 73` | `dokumente/MESSUNGEN.md`, *Buchung* |
 | **Lader-Fragment, Klasse *Phase*** | **Marke trägt: 7 gegen k = 5** | `dokumente/FRAGMENTE.md` F7 |
+| **Alle vier Bereichsfragmente** | **Konvergenzmetrik: 0 neue Konstrukte** | `dokumente/FRAGMENTE.md` F7–F10 |
+| **`Stale(T)`** | **widerlegt** — 2 von 5 Übergängen ruhen auf `masks IRQ` | `dokumente/FRAGMENTE.md` F8, «B38» |
 | **Basisrate `format`** | **trägt `format` nicht** — 5 Formate, 0 Fehler der Klasse | `dokumente/MESSUNGEN.md` |
 | **`delete_leaf`** | **1,75 : 1** statt gebuchter 3,6–6 : 1 | `dokumente/BEWEIS.md` |
 | **`programs/`** | Grund des Bruchs trägt nicht mehr | `dokumente/MESSUNGEN.md` |
