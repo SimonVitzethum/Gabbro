@@ -249,6 +249,15 @@ von Posten, die weder Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
 ---
 
 # MESSUNGEN — brauchen einen Lauf
+
+- [ ] **BLOCKER: auf dieser Maschine ist kein Beweiser installiert.** `isabelle`, `coqc`,
+      `lean`, `agda`, `z3`, `cvc5`, `why3`, `alt-ergo` — **keiner vorhanden.** Damit ist der
+      Kopf des kritischen Pfads (`table.induktion` nach Isabelle) **nicht abschliessbar**;
+      der Formalisierungsversuch ist gefahren und hat vier stille Annahmen ausgespült
+      ([`beweise/Table_Induktion.thy`](beweise/Table_Induktion.thy), im Kopf als **ungeprüft**
+      gekennzeichnet), aber `Stand` bleibt `Entworfen`.
+      **Was es braucht:** eine Isabelle-Installation, oder eine begründete Wahl eines anderen
+      Beweisers — *und die Wahl ist selbst ein Posten, weil sie in die Vertrauensbasis geht.*
 ### Was fehlt, um Caprock VOLLSTAENDIG in Gabbro zu schreiben (Stand 2026-08-14)
 
 **Bekannte Blocker: keiner mehr.** Die zwei gemessenen „passt nicht" aus `dokumente/FRAGMENTE.md` sind zu —

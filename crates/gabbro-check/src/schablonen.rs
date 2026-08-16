@@ -61,6 +61,14 @@ impl Stand {
 
 pub struct Schablone {
     pub name: &'static str,
+    /// **Andere Schablonen, auf denen diese ruht.** Neu am 2026-08-16, und der Grund ist ein
+    /// Fund: die Formalisierung von `table.induktion` spuelte aus, dass ihre Endlichkeit
+    /// nicht aus ihrer eigenen Deklaration faellt, sondern aus `table.indexschranke`.
+    ///
+    /// > **Eine Schablonenliste ohne Abhaengigkeiten sieht aus wie 17 unabhaengige Posten --
+    /// > und ist es nicht.** Wer eine faellt, faellt sie moeglicherweise unter einer, die
+    /// > noch steht.
+    pub haengt_an: &'static [&'static str],
     /// Welches Konstrukt sie traegt.
     pub konstrukt: &'static str,
     /// **Was genau einmal gezeigt werden muss.** Ohne diesen Satz ist ein Eintrag ein Name.
@@ -105,6 +113,7 @@ pub const RATSCHE: &[&str] = &[
 pub const SCHABLONEN: &[Schablone] = &[
     Schablone {
         name: "consuming.ordnung",
+        haengt_an: &["table.induktion"],
         konstrukt: "traverse … by consuming",
         pflicht: "Die Domaene liefert ihre Zeugen in der erzeugten wohlfundierten Ordnung, \
                   und die Ordnung bleibt unter der erzeugten Mutation erhalten. Daraus faellt \
@@ -114,6 +123,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "consuming.leermenge",
+        haengt_an: &[],
         konstrukt: "traverse … by consuming",
         pflicht: "Die erzeugte Zeugenmenge ist VOLLSTAENDIG: ist sie leer, ist die Domaene \
                   leer. Ohne diese Richtung koennte eine Traversierung Elemente auslassen und \
@@ -123,6 +133,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "table.ops.erhaltung",
+        haengt_an: &[],
         konstrukt: "table … ops",
         pflicht: "Je erzeugter Mutation bleibt jede `online`-Invariante erhalten — einmal \
                   ueber der Deklaration, nicht je Aufrufstelle.",
@@ -131,14 +142,32 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "table.induktion",
+        haengt_an: &["table.indexschranke", "consuming.ordnung"],
         konstrukt: "by induction over <domain>",
+        // **Geschaerft am 2026-08-16 nach dem Formalisierungsversuch** (`beweise/`).
+        // Vier stille Annahmen ausgespuelt -- die alte Fassung lautete in ganzer Laenge:
+        // *„Das aus der `table`-Deklaration erzeugte Induktionsschema ist wohlfundiert und
+        // vollstaendig."* Zwei Woerter, vier Luecken.
         pflicht: "Das aus der `table`-Deklaration erzeugte Induktionsschema ist wohlfundiert \
-                  und vollstaendig.",
+                  und vollstaendig. **In vier Teilen, die die alte Fassung stillschweigend \
+                  trug:** (N-1) die Traegermenge ist ENDLICH, und das faellt NICHT aus dieser \
+                  Deklaration, sondern aus `table.indexschranke` -- ein Verkettungsfeld ohne \
+                  Bereichsschranke koennte aus der Tabelle hinauszeigen; (N-2) das Prinzip \
+                  gilt fuer EINEN Zustand -- ueber eine Traversierung, die waehrend des Laufs \
+                  mutiert, sagt es NICHTS, das ist `consuming.ordnung`; (N-3) eine eigene \
+                  Leere-Menge-Klausel braucht es NICHT, der Basisfall ist absorbiert -- was \
+                  `consuming.leermenge` behauptet, ist eine Aussage ueber die ERZEUGUNG der \
+                  Domaene, nicht ueber das Prinzip; (N-4) `vollstaendig` heisst zweierlei, und \
+                  die harte Lesart ist die zweite: fuer `chain(a,b) in` hat die Domaene ZWEI \
+                  Kantenarten und das Schema braucht ZWEI Praemissen, nicht eine. \
+                  **Wohlfundiertheit ist HYPOTHESE, nicht Ergebnis** -- die Deklaration muss \
+                  die tragende Invariante nennen (`invariant acyclic`).",
         stand: Stand::Entworfen,
         fundstelle: "SYNTAX.md §5, SPRACHE.md Teil V",
     },
     Schablone {
         name: "transition.transset",
+        haengt_an: &[],
         konstrukt: "transition { a: … , b: … }",
         pflicht: "Mehrere Orte in EINEM Zug: kein Zwischenzustand ist beobachtbar, in dem \
                   ein Teil gesetzt ist und ein anderer nicht.",
@@ -147,6 +176,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "exchange.rmw",
+        haengt_an: &[],
         konstrukt: "exchange update(v) { … } / … when … returns",
         pflicht: "Die erzeugte Lese-Aendere-Schreibe-Folge ist atomar und der Rumpf rein.",
         stand: Stand::Entworfen,
@@ -154,6 +184,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "accumulates.monoid",
+        haengt_an: &[],
         konstrukt: "accumulates … merge",
         pflicht: "Die Merge-Menge ist ein kommutatives Monoid, und die Absenkung (je Kern \
                   eine Zelle, Zusammenfuehrung beim Lesen) ergibt denselben Wert wie ein \
@@ -163,6 +194,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "walk.mappings",
+        haengt_an: &[],
         konstrukt: "walk … levels / mappings of",
         pflicht: "Die erzeugte Domaene `mappings of` trifft genau die erreichbaren \
                   Blatteintraege, samt va und level.",
@@ -171,6 +203,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "format.roundtrip",
+        haengt_an: &[],
         konstrukt: "format",
         pflicht: "`lesen(schreiben(x)) == x`, und der Leser prueft die Pufferlaenge genau \
                   einmal am Eintritt.",
@@ -179,6 +212,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "entry.abdruck",
+        haengt_an: &[],
         konstrukt: "entry … dispatch",
         pflicht: "Der erzeugte Eintrittspfad erhaelt `preserves`, zerstoert hoechstens \
                   `clobbers`, und der Stapelwechsel ist korrekt. **Kein nachgelagerter \
@@ -188,6 +222,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "device.konstruktor",
+        haengt_an: &[],
         konstrukt: "device D(params) at space",
         pflicht: "Aus der Adresse entsteht ein typisierter Griff, und die Registerlagen des \
                   Blocks treffen die Hardware-Lagen.",
@@ -196,6 +231,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "table.indexschranke",
+        haengt_an: &[],
         konstrukt: "table … count N / index into T",
         pflicht: "Der erzeugte Indextyp `0 ..< N` deckt genau die belegten Slots, und die \
                   Absenkung legt N Slots an.",
@@ -206,6 +242,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     // ---- Pflicht steht schon fest -- und genau das ist der Punkt dieser Liste.
     Schablone {
         name: "ops.suche",
+        haengt_an: &[],
         konstrukt: "ops finde … (Kandidat, aus «B10»)",
         pflicht: "Die erzeugte Suche gibt den ERSTEN Treffer in der Ordnung der Domaene und \
                   laesst die Menge unveraendert.",
@@ -214,6 +251,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "state.reset",
+        haengt_an: &[],
         konstrukt: "erzeugtes reset (Kandidat, aus «B26»)",
         pflicht: "Der erzeugte Uebergang in den Anfangszustand gilt aus JEDEM Zustand und \
                   ist selbst ein `transset`.",
@@ -222,6 +260,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "verbund.konstruktor",
+        haengt_an: &[],
         konstrukt: "erzeugter Konstruktor (Kandidat, aus «B7»)",
         pflicht: "Der aus der Felderliste erzeugte Konstruktor setzt jedes Feld genau einmal \
                   und laesst keins uninitialisiert.",
@@ -230,6 +269,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "gruppe.ops",
+        haengt_an: &[],
         konstrukt: "Gruppen-ops ueber mehreren Tabellen (Kandidat, aus «B13»)",
         pflicht: "Die Verbindungs-Invariante der Gruppe bleibt unter jeder Gruppenoperation \
                   erhalten -- und zwar unter dem deklarierten Sperrabdruck der Operation, \
@@ -250,6 +290,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "gruppe.sperrabdruck",
+        haengt_an: &[],
         konstrukt: "Gruppen-ops ueber Traegern MIT VERSCHIEDENEN SPERREN (aus «B41»-Sweep)",
         // **Warum das eine ZWEITE Schablone ist und kein Zusatz zur ersten.**
         //

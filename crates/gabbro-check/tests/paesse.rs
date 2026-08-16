@@ -369,3 +369,20 @@ fn das_schablonenregister_reisst_seine_marke_nicht() {
         SCHABLONEN.len()
     );
 }
+
+
+#[test]
+fn schablonen_abhaengigkeiten_zeigen_auf_vorhandene_eintraege() {
+    use gabbro_check::schablonen::SCHABLONEN;
+    for sch in SCHABLONEN {
+        for ziel in sch.haengt_an {
+            assert!(
+                SCHABLONEN.iter().any(|a| a.name == *ziel),
+                "`{}` haengt an `{ziel}` -- diesen Eintrag gibt es nicht. Eine Abhaengigkeit \
+                 auf einen fehlenden Namen ist schlechter als keine: sie sieht aus wie eine \
+                 gebuchte Beziehung",
+                sch.name
+            );
+        }
+    }
+}

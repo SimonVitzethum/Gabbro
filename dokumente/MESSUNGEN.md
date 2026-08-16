@@ -4631,3 +4631,76 @@ sondern um zu erfahren, **was das Register bisher verschwiegen hat**.*
 Aussage** als der Schablonentext — dann misst der Gang die Übersetzung, nicht die Schablone.
 Die Probe darauf ist mechanisch: **jeder Satz des Eintrags `table.induktion` muss sich einer
 Zeile der Formalisierung zuordnen lassen, und umgekehrt.**
+
+# ERGEBNIS — `table.induktion`: **vier Annahmen ausgespült, NICHT bewiesen**
+
+## Zuerst der Blocker, weil er vor dem Ergebnis kommt
+
+```
+isabelle  coqc  lean  lean4  agda  z3  cvc5  why3  alt-ergo   ->  keiner vorhanden
+```
+
+**Auf dieser Maschine ist kein Beweiser installiert.** Damit ist die Schablone **nicht
+bewiesen**, ihr `Stand` bleibt `Entworfen`, und die Ratschenmarke bleibt gerissen-nah bei
+17 von 18.
+
+> **Eine `.thy`-Datei, die niemand geprüft hat, ist eine Prosa-Schablone in anderer Schrift.**
+> Sie als Beweis zu buchen wäre genau der Griff, gegen den dieses Register steht — und er wäre
+> teurer als bei jeder anderen Zahl, weil das Register die **einzige** Fläche ist, deren Zweck
+> das Verkleinern der Vertrauensbasis ist.
+
+**Was trotzdem gefahren wurde**, ist der Teil, dessen vorregistrierter Ertrag nicht am
+Maschinencheck hängt: *nicht um „bewiesen" ins Register zu schreiben, sondern um zu erfahren,
+was das Register bisher verschwiegen hat.* Die Formalisierung steht als
+[`beweise/Table_Induktion.thy`](../beweise/Table_Induktion.thy), im Kopf als **ungeprüft**
+gekennzeichnet.
+
+## Der vorhergesagte Ausgang ist eingetreten — **alle vier**
+
+| | vorhergesagt | **gefunden** |
+|---|---|---|
+| **N-1** | Endlichkeit der Domäne | **ja — und schärfer:** sie fällt **nicht aus dieser Deklaration**, sondern aus `table.indexschranke`. Ein Verkettungsfeld ohne Bereichsschranke zeigt aus der Tabelle hinaus |
+| **N-2** | Stabilität der Zeugenordnung unter den erzeugten Mutationen | **ja — als GRENZE:** das Prinzip gilt für **einen** Zustand und sagt über eine mutierende Traversierung **nichts**. Das ist `consuming.ordnung`, eine andere Schablone |
+| **N-3** | die Leere-Menge-Klausel | **ja — aber in die andere Richtung** (s. u.) |
+| **N-4** | Vollständigkeit des Schemas | **ja:** `vollständig` war zweideutig, und für `chain(a,b) in` braucht das Schema **zwei Prämissen**, nicht eine |
+
+**Das verdächtige Ergebnis — glatt durchgegangen ohne eine einzige ausgespülte Annahme — ist
+NICHT eingetreten.** Die Gegenprüfung entfällt.
+
+## Der unbequemste der vier ist N-3, und zwar weil er in die falsche Richtung zeigte
+
+**Erwartet war eine FEHLENDE Klausel. Gefunden wurde eine FALSCH ZUGEORDNETE.**
+
+Der Basisfall ist im Induktionsprinzip **absorbiert** — für ein Blatt ist die Prämisse leer
+erfüllt. Es braucht hier gar keine Leere-Menge-Klausel. Was `consuming.leermenge` behauptet,
+ist etwas anderes: dass die **erzeugte Zeugenmenge vollständig** ist.
+
+> **Eine fehlende Klausel fügt man hinzu. Eine falsch zugeordnete hat bis dahin an der
+> falschen Stelle beruhigt.**
+
+## Und der strukturelle Fund, den niemand vorhergesagt hat
+
+**N-1 hat eine Abhängigkeit zwischen Schablonen aufgedeckt.** `table.induktion` ruht auf
+`table.indexschranke` — und der Eintrag nannte das nicht.
+
+> **Eine Schablonenliste ohne Abhängigkeiten sieht aus wie 17 unabhängige Posten — und ist es
+> nicht.** Wer eine fällt, fällt sie möglicherweise **unter** einer, die noch steht.
+
+**Gebaut:** `Schablone::haengt_an`, mit einem Test, der auf fehlende Ziele fällt (*eine
+Abhängigkeit auf einen fehlenden Namen ist schlechter als keine — sie sieht aus wie eine
+gebuchte Beziehung*). Zwei Kanten stehen: `table.induktion → {table.indexschranke,
+consuming.ordnung}` und `consuming.ordnung → table.induktion`. **Die zweite ist ein Zyklus,
+und er ist echt:** die Ordnung braucht das Schema, das Schema braucht die Ordnung für den
+mutierenden Fall. *Das ist keine Buchführungspanne, sondern die Sache selbst — und es heisst,
+dass die erste bewiesene Schablone diese zwei nicht trennen kann.*
+
+## Was der Eintrag jetzt sagt statt zwei Wörtern
+
+Die alte Fassung lautete in ganzer Länge: *„Das aus der `table`-Deklaration erzeugte
+Induktionsschema ist wohlfundiert und vollständig."* **Zwei Wörter, vier Lücken.** Die neue
+nennt N-1 bis N-4 einzeln und sagt ausdrücklich: **Wohlfundiertheit ist Hypothese, nicht
+Ergebnis** — die Deklaration muss die tragende Invariante nennen.
+
+> **Der Hang ist bestiegen, der Gipfel nicht. Was er abgeworfen hat, ist mehr wert als das,
+> was oben gestanden hätte:** ein „bewiesen" im Register hätte eine Zeile geändert; die vier
+> ausgespülten Bedingungen ändern, was die Schablone überhaupt behauptet.
