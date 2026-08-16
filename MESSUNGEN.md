@@ -3049,7 +3049,60 @@ F = 1389   W_zeilen = 474   w = 0,341
 Ueberschlag = 0,341 · 5,0 + 0,659 · 0,3 = 1,90
 ```
 
-## Das Tor: **BESTANDEN — und zwar um EINE Pflicht**
+## BUCHUNG (2026-08-16): **VERFEHLT** — und die Begruendung liegt in der POPULATION
+
+> **Die acht Werkzeugartefakte gehoerten nie in `N_L`, und das ist ex ante begruendbar.**
+>
+> `lemma_refs_push`, `lemma_live_update` und ihresgleichen quantifizieren ueber rohe `Seq<…>`
+> und behaupten etwas ueber `push`/`update`/`len`. **Das sind Bibliothekslemmata eines
+> Beweisers, den Gabbro nicht benutzt.** In Gabbros Welt existieren sie gar nicht — das
+> Manifest exportiert `ensures`-Pflichten, nicht die Hilfssaetze, die ein SMT-Loeser braucht,
+> um ueber eine Sequenz zu rechnen. **Die Frage wird dort nie gestellt.**
+>
+> **Also: `N_L = 73`, K = 28, A = 7, W = 38 gegen 36,5 — die Wertaussagen sind die Mehrheit,
+> die Decke der Schrittzusagen deckt eine MINDERHEIT.**
+
+### Warum das R2 nicht verletzt
+
+**R2 verbietet, ein Tor nach dem Lauf zu verschieben. Hier wird die Grundgesamtheit
+berichtigt, und zwar aus einem Grund, der vom Ergebnis unabhaengig ist** — er haette
+genauso gegolten, wenn er in die andere Richtung gezeigt haette.
+
+**Die Probe darauf ist die Richtung:** die Korrektur bewegt das Ergebnis **gegen die
+schmeichelhafte Lesart**. *In die unbequeme Richtung zu irren ist unter den Regeln dieses
+Ordners nie eine Umdeutung; nur die Gegenrichtung waere eine gewesen.* Waere `N_L = 73` das
+bequemere Ergebnis, stuende hier die 81.
+
+### Die Randlage ist selbst ein Befund
+
+**Eine Pflicht Abstand in der einen Population, zwei in der anderen.**
+
+> **Ein Tor, das an der Populationsdefinition kippt, misst die Definition mit.**
+
+Das ist kein Nebensatz: die Zahl beantwortet nicht nur *„wieviel bleibt fuer den Menschen"*,
+sondern auch *„was haben wir als Pflicht gezaehlt"* — und die zweite Frage war bis zu dieser
+Buchung unbeantwortet.
+
+### Was `W = 38 von 73` noch NICHT ist
+
+**Nicht der Ueberschlag.** Die Gewichtsformel braucht die **Zeilenanteile**, und die kommen
+erst mit der **B3-Bezifferung aus Welle 4** (welche Ruempfe sind keine Traversierungen, mit
+Zeilenanteil). *Die 1,90 bzw. 1,98 sind Einsetzungen mit den Zeilen der Verus-Ruempfe — nicht
+mit den Zeilen des Kernels.* Bis Welle 4 steht die Kennzahl als **offen**, nicht als 1,98.
+
+### Und was der vorregistrierte Text fuer diesen Ausgang vorgesehen hat
+
+> *„beide Ausgaenge sind vorab gute Ergebnisse. Der erste toetet eine Zusage, der zweite
+> belegt sie; keiner ist ein Misserfolg."*
+
+**Das ist kein Stimmungsdaempfer.** Der verfehlte Ausgang ist die Zahl, die **k beziffert** —
+den Anteil, der funktionale Korrektheit braucht — und **erst damit wird der seL4-Vergleich
+ehrlich**: seL4 traegt 0,32 Invarianten / 0,40 Verfeinerung / 0,28 crefine, und Gabbros These
+lautet, die letzten zwei fielen weg. **Ob die erste faellt, entscheidet genau diese Mehrheit.**
+
+---
+
+## Das Tor, wie zuerst gerechnet: **bestanden um EINE Pflicht** (Population 81)
 
 **W = 40 gegen N_L/2 = 40,5.** Die Mehrheit faellt unter K oder A; die Decke der
 Schrittzusagen traegt.
@@ -3105,17 +3158,33 @@ ihr.*
 
 **1,90** — und der Bezug dazu ist zu berichtigen.
 
-> **W7-Verstoss von mir, im selben Commit wie die Messung.** Ich schrieb „gegen die Zielmarke,
-> die der Ordner mit 0,56 (seL4) als unerreichbar fuehrt". **Die 0,56 steht nirgends im Ordner
-> ausser in diesem meinem Satz** — ich habe sie aus einer Unterhaltung uebernommen und als
-> Ordnerwissen ausgegeben. *Genau die Bewegung, gegen die W7 steht, begangen in der Zeile, die
-> W7 anwendet.*
+> **W7-Verstoss von mir, im selben Commit wie die Messung — und die Berichtigung hat einen
+> zweiten Verstoss darin gefunden.**
 >
-> **Was gemessen im Ordner steht:** l4v hat **239 458 Zeilen** fuer die funktionale Korrektheit
-> eines Einkern-Kernels (`MESSUNGEN.md`, l4v-Zaehlung). Gegen seL4s C-Kern von rund 10 kZeilen
-> ist das ein Verhaeltnis **jenseits von 20 : 1**, nicht 0,56. **Die 0,56 kann keine
-> Beweis-zu-Code-Rate von seL4 sein**, und was sie sonst ist, weiss ich nicht — also steht sie
-> hier als *unbelegt* und nicht als Vergleichsmarke.
+> Ich schrieb „gegen die Zielmarke, die der Ordner mit 0,56 (seL4) fuehrt". **Die 0,56 steht
+> nirgends im Ordner ausser in diesem meinem Satz.** Dann berichtigte ich mit *„gegen seL4s
+> C-Kern von rund 10 kZeilen"* — **und auch diese Zahl steht nirgends ausser in meinem Satz.**
+> *Eine Berichtigung, die eine unbelegte Zahl durch eine andere ersetzt, ist keine.*
+>
+> **Und die zwei Groessen sind nicht dieselbe.** Das gehoert getrennt:
+>
+> | | Zaehler | Nenner | Wert |
+> |---|---|---|---|
+> | **Beweis zu C** | 239 458 (`proof/`, ARM) — **gemessen** | seL4s C-Kern — **nicht gezaehlt** | „jenseits von 20 : 1" ist eine Schaetzung |
+> | **Spezifikation zu C** | **10 280** (`spec/abstract`, neutral + ARM) — **gemessen**, `f4940273` | seL4s C-Kern — **nicht gezaehlt** | **offen** |
+>
+> **Der 0,5 : 1-Boden der Sprache ist aus dem ZWEITEN Verhaeltnis hergeleitet, nicht aus dem
+> ersten** — eine Sprache, die Verfeinerung und Klempnerei abnimmt, traegt am Ende die
+> Spezifikation. *Mein „jenseits von 20 : 1" ersetzt den 0,56-Anker deshalb nicht; es
+> beantwortet eine andere Frage.*
+>
+> **Was fehlt, ist genau ein `wc -l`:** seL4s C-Kern an einem zum l4v-Stand passenden Punkt.
+> Der Zaehler (10 280) liegt gemessen vor, das l4v-Repo ist gepinnt (`f4940273`), **und der
+> seL4-Baum liegt nicht in diesem Ordner** — deshalb steht die Zahl hier als **blockiert mit
+> genanntem Suchweg**, nicht als geschaetzt.
+>
+> > **Solange sie fehlt, haengt das Kennzahlziel der Sprache an einem Satz von mir.**
+> > Das ist der teuerste offene W7-Posten, und er kostet einen einzigen Befehl.
 
 Die belegten Bezugsgroessen sind die aus `PLAN.md`:341 — der Ordner rechnete mit **0,8 : 1**
 unter der Annahme, ein Zehntel des Kernels brauche den 5 : 1-Aufwand.
