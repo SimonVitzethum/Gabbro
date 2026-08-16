@@ -97,9 +97,11 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 5,
             name: "M2",
             quelle: "SPRACHE.md §4: lineare und geisterhafte Werte",
-            zustand: Zustand::Offen(
-                "P4 des Prueferplans: echte Linearitaet -- der einzige Mechanismus, den \
-                 kein vorhandenes Werkzeug liefert",
+            zustand: Zustand::Teilgebaut(
+                "gebaut: genau-einmal je Weg, Zweigabgleich, `consumes` gegen geliehen \
+                 (`L101`-`L105`). **NICHT gebaut: die Ghost-Loeschung** -- ein `ghost`-Wert \
+                 existiert zur Laufzeit nicht, seine Linearitaet ist eine Aussage ueber den \
+                 BEWEIS, und die Aliasfrage gehoert M3",
             ),
         },
         Pass {
@@ -112,7 +114,13 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 7,
             name: "Paarung",
             quelle: "SPRACHE.md Teil II §1: Ordering wird gepaart, nicht deklariert",
-            zustand: Zustand::Offen("P6 des Prueferplans: `publishes`/`awaits` gegenueberstellen"),
+            zustand: Zustand::Teilgebaut(
+                "gebaut: `publishes`/`awaits`/`exchange` ueber die vereinigte Menge, \
+                 Namensgleichheit nach Indexsubstitution (`V001`-`V004`). **NICHT gebaut: die \
+                 Aussage ueber das SPEICHERMODELL** -- dass `release`/`acquire` die \
+                 Sichtbarkeit herstellen, die die Paarung behauptet, faellt in die \
+                 Axiomschicht und nicht in diesen Pass",
+            ),
         },
         Pass {
             nummer: 8,

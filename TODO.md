@@ -448,13 +448,17 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
         dann zaehlt Gabbro seine eigenen `narrow` mit derselben Regelmenge, die es prueft.**
       * Der Zaehler bleibt im Ordner — als **Finder von Kandidaten**, nicht als Messgeraet.
 
-- [ ] **Drei der neun Paesse fehlen ganz** (M3, M2, Paarung), **drei sind nur
-      teilweise gebaut** (D1/D2, `effects`, costs).
+- [ ] **Einer der neun Paesse fehlt ganz** (M3), **fuenf sind nur teilweise gebaut**
+      (D1/D2, M2, Paarung, `effects`, costs).
+      *(Berichtigt 2026-08-16: M2 und Paarung sind gebaut. Was an ihnen offen bleibt, steht
+      in ihrer eigenen Zeile in `gabbro paesse` — bei M2 die Ghost-Loeschung, bei der
+      Paarung die Aussage ueber das Speichermodell. **Beides sind keine Baustellen des
+      Passes**, sondern Posten der Axiomschicht bzw. des Beweisbegriffs.)*
       *(Berichtigt 2026-08-15: hier stand „Fuenf … zwei" — der Waechter haelt die Zahl
       jetzt gegen `gabbro paesse` statt gegen die Erinnerung. Dieselbe Klasse wie Befund 4
       des Abgleichs, nur diesmal maschinell gefunden.)*
       `gabbro paesse` fuehrt beide Klassen samt dem, was mit jeder durchkommt.
-      **Der naechste ganze ist M3 oder M2 — vorher aber die Teilstuecke**, weil ein
+      **Der naechste und letzte ganze ist M3**, weil ein
       halb gebauter Pass eine Zusage macht, die er nicht haelt.
 
 **Ausschliesslich Offenes** — und seit dem 2026-08-14 stimmt das wieder. Die Reihenfolge folgt
