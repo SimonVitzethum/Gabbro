@@ -158,7 +158,19 @@ von Posten, die weder Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
       Beides vertretbar, keins entschieden.
 - [ ] **Generizität** — ohne sie braucht jede Tabelle ihren eigenen `traverse`; mit ihr die Frage,
       wie Verträge parametrisiert werden.
-- [ ] **Die Sperrordnung fehlt in der Syntax.** `locks CAPS` nennt die Sperre, nicht die **Stufe**.
+- [ ] **BERICHTIGT 2026-08-16: die Sperrordnung fehlt NICHT in der Syntax — sie wird NICHT
+      GEPRUEFT.** `lock … rank N` steht seit jeher da (8 Fundstellen in
+      [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md)), und die Gruppengrammatik verlaesst sich
+      seit heute ausdruecklich darauf: *„die Ordnung wird nicht an der Gruppe deklariert, sie
+      steht in den `rank`-Zahlen."*
+      **Nur vergleicht kein Pass je zwei Raenge.** `grep '\.rang' crates/gabbro-check/src`
+      liefert **eine** Fundstelle — `gruppe.rs`, und die prueft nur auf *Gleichheit* (`U005`).
+      **Ein verschachtelter `locks A { locks B { … } }` mit `rank A > rank B` faellt heute
+      nirgends.**
+      *Das ist die unangenehmste Sorte Befund: eine Zusage, die deklariert, nie geprueft und
+      inzwischen von einem zweiten Konstrukt als Grundlage benutzt wird.* Der Bau ist billig
+      — ein Rangvergleich am geschachtelten `lockstmt`, dieselbe Stelle, an der `H003` schon
+      die Hochstufung sieht.
 - [ ] **Der Vorrat an Quantoren in `spec fn` ist unentschieden — und genau dort wandert die Linie**,
       wenn niemand aufpasst.
 - [ ] **Fehlerfortpflanzung:** ohne `?` wird jeder Aufruf drei Zeilen, mit `?` gibt es verborgenen
@@ -254,9 +266,12 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       hat ein Axiom oder ein Konstrukt, jede Zeile einen Befehl**; die Mode-Leiter als Sprechprobe
       (vertauschtes `write_cr0(PG)` **muss** brechen); die vorberechneten Boot-Tabellen byteidentisch
       gegen das, was das heutige Trampolin zur Laufzeit baut.
-- [ ] **P4–P7** aus [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §6 — M2 samt Schablone, C-Emission,
-      Paarungs-Pass mit Litmus-Sonden, ein Caprock-Modul end-to-end.
+- [ ] **P5–P7** aus [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §6 — **die Formtabelle mit
+      Zeugenpaaren, die C-Emission, ein Caprock-Modul end-to-end.**
       **Jede Stufe verbraucht das Ergebnis der vorigen, wie eine `Duty`.**
+      *(P4 ist gefallen: M2 steht als `L101`–`L105`, der Paarungs-Pass als `V001`–`V004`.
+      Was an P4 offen bleibt, ist die **Schablone** zu M2 — sie steht in der Schablonenliste,
+      nicht hier.)*
 ### Aus dem Kriterium ([`dokumente/BEWEIS.md`](dokumente/BEWEIS.md))
 
 
@@ -288,50 +303,34 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 # BAU — braucht Code
 ### Die Schreibrechtszeile `by ops` — und der Gruppen-Pruefsatz, der ihr vorausgeht
 
-- [ ] **`field : u16 by ops` — zwei vorhandene Woerter, null Wortschatzzuwachs.** Ein Feld, das
-      **nur** die erzeugten Operationen seiner Tabelle schreiben. Damit wird die K-Bedingung des
-      Messprotokolls (*„gilt nur, wenn ALLE Mutationen des Traegers erzeugte Operationen sind"*)
-      von einer **Pruefvorschrift zu einer Grammatikeigenschaft** — und `refcount -= 1` von Hand
-      ist schlicht nicht schreibbar. **Vor die Zaehlung eingetragen ist konsistent: sie macht
-      Messung 2 schaerfer, nicht weicher. Protokollarbeit, keine Zaehlung.**
-      * **Durchstich 1 — `breaking`.** Ein `breaking` auf einem `by ops`-Feld ist **entweder
-        Uebersetzungsfehler oder steht unter der F8-Regel** (Schluss nur durch erzeugte
-        Operation). Die Wechselwirkung muss ausgesprochen werden, sonst ist die Eigenschaft
-        eine Zusage mit Hintertuer.
-      * **Durchstich 2 — der Rand.** Ein `extern fn` mit Schreibwirkung auf den Traeger, oder
-        ein `dma`-Raum, der ihn erreicht, umgeht jede Grammatik. **Ehrliche Fassung: „innerhalb
-        von Gabbro unschreibbar; die Ausnahmen stehen im Manifest."** Und M3 schliesst den
-        DMA-Fall **strukturell** aus: ein `by ops`-Traeger liegt in keinem `dma`-erreichbaren
-        Bereich — eine Platzierungsregel wie bei der GDT.
-- [ ] **DER GRUPPEN-PRUEFSATZ, und er geht der Schreibrechtszeile VORAUS.** `refcount_matches`
-      ist eine **Verbindungs**-Invariante: der Zaehler in Tabelle A muss der Zahl der Verweise
-      in B entsprechen. **Werden `ops` je Tabelle erzeugt, erhaelt keine einzelne Operation
-      sie** — Verweis-Einfuegen in B *plus* Inkrement in A ist **eine** logische Operation ueber
-      beiden, und wer die Koordination als Handleim dazwischenschreibt, hat die Invariante
-      wieder als Aussage ueber die Zusammensetzung, also **L**.
-      **Ein `refcount`, den nur die `ops` von A schreiben, waehrend die Wahrheit ueber ihn in B
-      liegt, ist geschuetzt und trotzdem falsch.**
-      * **Was es braucht:** Operationen ueber einer **Tabellengruppe** — die Verbindungs-
-        Invariante an der Gruppe deklariert, die Operation (retype, CDT-insert, revoke-Schritt)
-        ueber CapSpace *und* CDT *und* Zaehler **in einem Zug**, der Erzeuger prueft die
-        Erhaltung gegen die Gruppendeklaration.
-      * **DER PRUEFSATZ, auf Papier, vor der Grammatik:** *B13 faellt genau dann, wenn jede im
-        Baum vorkommende Verbindungs-Invariante eine Gruppe hat, deren `ops` sie schliessen.*
-      * **UND ER IST DIESELBE UNTERSUCHUNG WIE `locks ordered` — nicht zwei.** Mehrkern in
-        Zeile 1 verschmilzt sie: auf **einem** Kern heisst *„jede Operation fuer sich
-        erhaltend"* ein sequenzielles Argument; auf **mehreren** heisst es **erhaltend unter
-        dem Sperrprotokoll**. Eine `ops`-Operation muss deklarieren, **unter welcher Sperre**
-        sie laeuft, und die Schablone beweist die Erhaltung **relativ dazu**. Fuer die Gruppe
-        folgt sofort: Gruppen-`ops` ueber CapSpace *und* CDT halten die Sperren **beider**
-        Traeger — **und ob das eine gemeinsame Sperre ist oder zwei mit Ordnung, IST die
-        `locks ordered`-Frage.**
-      * **Ein Durchgang, drei Antworten** — am CapSpace/CDT-Paar, auf Papier:
-        1. welche Verbindungs-Invarianten existieren,
-        2. welche Gruppen schliessen sie,
-        3. **welchen Sperrabdruck haben die Gruppenoperationen.**
-        **Tauchen dort zwei Sperren derselben Klasse auf, ist das zugleich der erste echte
-        Prueffall fuer `locks ordered` — billiger als das ganze Scheduler-Fragment**, und der
-        Scheduler tritt danach mit einem **getesteten** statt einem vermuteten Sperrkonstrukt an.
+- [ ] **`by ops` ist gebaut — offen bleibt EIN Durchstich: `breaking` auf einem
+      `by ops`-Feld.** Der Prüfer beantwortet die Frage heute *implizit*: `kbedingung.rs`
+      führt die `breaking`-Stellen je Träger, und `ist_geschlossen` verlangt, dass keine da
+      ist — ein `breaking` **öffnet den Träger also wieder**, statt ein Übersetzungsfehler zu
+      sein. **Das ist eine vertretbare Antwort und sie steht nirgends ausgesprochen.**
+      *Eine Eigenschaft, deren Hintertür nur im Code steht, ist eine Zusage mit Hintertür.*
+      (Durchstich 2 — der `dma`-Rand — ist geschlossen: `R001`, Platzierungsregel.)
+
+- [ ] **Der Gruppen-Pruefsatz: der Quantor ist offen, der Durchgang nicht mehr.**
+      *„B13 faellt genau dann, wenn **jede** im Baum vorkommende Verbindungs-Invariante eine
+      Gruppe hat, deren `ops` sie schliessen."* **Was am 2026-08-16 gefallen ist:** der
+      Papierdurchgang am CapSpace/CDT-Paar (drei Antworten), der Sweep nach den *anderen*
+      Invarianten (**vier gefunden: V1–V4**), die Grammatikzeile (`group … over { … }`) und
+      drei der vier Formpflichten (`U003`/`U005`/`U006`/`U007`).
+      **Was offen ist, sind genau zwei Dinge:**
+      * **Der Quantor selbst.** Vier gefunden heisst vier gefunden — W12. Der Sweep war eine
+        Kandidatenliste mit Suchwegen, kein mechanischer Durchlauf. Was er systematisch
+        verfehlt, steht dabei: Invarianten ohne gemeinsames Indexfeld, etwa eine
+        Summenbedingung ueber zwei Tabellen.
+      * **Die `ops` ueber der Gruppe** — der Empfaenger der Beweispflicht aus S16/S17.
+        Der Pruefer stellt heute die drei Bedingungen her, unter denen die Frage *„haelt die
+        Invariante?"* ueberhaupt gestellt werden kann; **er beantwortet sie nicht.**
+
+      *Und ein Nebenbefund des Sweeps aendert die Erwartung: **es gibt im Bestand KEINE
+      Doppelnahme derselben Sperrklasse** (`system.rs`:15). Der erwartete erste Prueffall fuer
+      `locks ordered` faellt damit aus; der gefundene ist ein anderer — zwei Klassen mit
+      Ordnung ueber zwei Kisten (V4).*
+
 ### Gruppen-`ops` + `by ops` — der Entwurf, VOR der ersten Grammatikzeile
 
 Drei Festlegungen aus dem Papiertest, jede nachgeprueft. **Sie stehen hier, weil sie den
@@ -461,10 +460,6 @@ Typ ohne Breite tragen. Das ist an der Schablone selbst pruefbar, nicht erst am 
 
 
 
-- [ ] **N3 — `held` braucht einen Zweig fuer Leser-Schreiber-Sperren.** `held <= K ops` ist
-      fuer **exklusive** Halter gedacht; auf der geteilten Seite ist die Rechengroesse die
-      **Writer-Wartezeit unter Leserdruck**, nicht die Haltezeit eines Lesers. **Der Kostenpass
-      rechnet heute nur den exklusiven Fall** — und die Latenzformel aus §9.3 mit ihm.
 ### Die vier Posten zum Ziel — Plan mit Toren in [`dokumente/PLAN.md`](dokumente/PLAN.md) §A
 
 **Das Ziel ist: Gabbro beweist alles ausser funktionaler Korrektheit.** Gegen dieses Ziel
@@ -543,14 +538,14 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
       **Der Uebersetzer laesst Woerter heute nur nach `.`/`->` und vor `:` als Namen zu.**
 
 - [ ] **Je Schablone mindestens eine Mutation, die NUR faellt, wenn die Einmal-Pflicht real
-      geprueft wird.** Heute: **0 von 16** — die meisten Schablonen sind entworfen, und was
+      geprueft wird.** Heute: **0 von 17** — die meisten Schablonen sind entworfen, und was
       kein Code ist, faengt keine Mutation. **Die Kopplung der zwei neuen Register ist die
       Bedingung dafuer, dass das Schablonenregister mehr ist als eine Liste.**
 - [ ] **Die Annotationsemission braucht eigene Schablonen-Eintraege und eigene Mutationen.**
       `32 von 32` misst heute den Pruefer; ueber den **Wunschform-Kanal** sagt es nichts —
       und genau dort wird ein stimmig abgeschwaechter Erzeuger **von keinem Beweis** gefangen.
 - [ ] **Jede neue erzeugte Form braucht ihren Schablonen-Eintrag, BEVOR sie Grammatik wird.**
-      `gabbro schablonen` fuehrt heute **16, davon 16 unbewiesen**. Die Liste ist die Ratsche
+      `gabbro schablonen` fuehrt heute **17, davon 17 unbewiesen**. Die Liste ist die Ratsche
       ueber der Flaeche, in die der dritte Ausgang seine Beweislast verschiebt —
       **waechst sie, waechst die Vertrauensbasis, auch wenn die Kennzahl glaenzt.**
 ### Prüfer und Erzeuger

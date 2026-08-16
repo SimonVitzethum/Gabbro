@@ -65,6 +65,9 @@ Neu erhoben 2026-08-15, **nicht wiederhergestellt**, nur x86
 | **`Some`/`None`** («B35») | `option` hatte **keinen Konstruktor** — der Bestand schrieb es seit jeher | `optionexpr` in `dokumente/SYNTAX.md`, `beispiele/01-tabelle.gab` |
 | **`table … count N`** | `index into T` erbt die Schranke | `M103` in `m1.rs`, `beispiele/01-tabelle.gab` |
 | **Platzierungsregel** | ein `ops`-Träger liegt in keinem `dma`-Raum — ein Gerät schreibt an jeder Grammatik vorbei | `R001`, Gift 58 |
+| **`by ops` am Feld** | die K-Bedingung wird von einer **Prüfvorschrift zur Grammatikeigenschaft**: `refcount -= 1` von Hand ist nicht schreibbar | `D002` in `kbedingung.rs`, `beispiele/16`, Gift 60 |
+| **`shared held` (N3)** | `held` ist für **exklusive** Halter gerechnet; die geteilte Seite hat eine eigene Rechengrösse | `K004` in `kosten.rs:497`, eigener Topf `geteilte_haltezeiten` |
+| **`group … over { … }`** | eine Invariante **zwischen** Trägern hat in keiner `table … invariant` Platz — gemessen: V1–V4 im Bestand | `U001`–`U007` in `gruppe.rs`, `beispiele/17`, Gift 63–66 |
 
 ## Gefahrene Messungen, mit Tor und Ausgang
 
