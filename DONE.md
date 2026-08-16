@@ -110,7 +110,7 @@ die niemand gegeneinander prüft.*
 ./pruefe-wortschatz.py    Terminale gegen Tabelle, Sonderform-Zähler (3 von 5)
 ./pruefe-todo.py          hält die Aufgabenliste gegen sich selbst, acht Klassen
 ./pruefe-kennungen.py     keine Absage-Kennung in zwei Dateien
-./mutiere-pruefer.py      beschädigt je eine Regel:  54 von 54
+./mutiere-pruefer.py      beschädigt je eine Regel:  56 von 56
 ./erzeuge-mutationen.py   verdreht systematisch:      7 von 39
 ./pruefe-luecken.py       die benannten Lücken einzeln: 13 von 15
 ./commit.sh               R19 — Commit-Nachrichten nur über Datei
