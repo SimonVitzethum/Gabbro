@@ -19,7 +19,7 @@ import subprocess
 import sys
 
 WURZEL = pathlib.Path(__file__).parent
-KORPUS = WURZEL / "FRAGMENTE.md"
+KORPUS = WURZEL / "dokumente/FRAGMENTE.md"
 
 
 def ohne_narrow(text):

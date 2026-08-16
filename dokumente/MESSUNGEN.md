@@ -1235,7 +1235,7 @@ mehrzeilige Bedingungen falsch schneiden. **Deshalb gilt er nur als Messgeraet, 
 Stellen findet, die dieser Ordner schon kennt:**
 
 * `crates/caprock-sched/src/lib.rs:1996` — `31 - self.bitmap.leading_zeros()`, in
-  [`TODO.md`](TODO.md) als offene Klempnerei-Pflicht gefuehrt;
+  [`TODO.md`](../TODO.md) als offene Klempnerei-Pflicht gefuehrt;
 * `kernel/src/colors.rs:864` und `crates/caprock-hal/src/cache_decode.rs:68` — dieselbe
   Redewendung, die die frueherre Messung als „vier Fundstellen, alle dieselbe Form" fand.
 
@@ -1262,7 +1262,7 @@ Und getrennt davon, ohne Latte, weil niemand sie vorab setzen konnte:
 | | |
 |---|---|
 | **F = 0** | V-Fakten sterben nie an der Funktionsgrenze; `requires` als Vertrag ist unnoetig. |
-| **F > 0** | **Jede dieser Stellen braucht `requires a >= b` am Gerufenen** — und damit ist die Frage aus [`TODO.md`](TODO.md) beantwortet, nicht vermutet. |
+| **F > 0** | **Jede dieser Stellen braucht `requires a >= b` am Gerufenen** — und damit ist die Frage aus [`TODO.md`](../TODO.md) beantwortet, nicht vermutet. |
 
 ---
 

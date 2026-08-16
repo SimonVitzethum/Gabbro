@@ -63,16 +63,16 @@ Neu erhoben 2026-08-15, **nicht wiederhergestellt**, nur x86
 
 | Messung | Ausgang | Beleg |
 |---|---|---|
-| **Tor P2** — der Korpus parst | **bestanden, 7 von 7** (und `SYNTAX.md` 6 von 6) | `gabbro fragmente dokumente/FRAGMENTE.md` |
-| **Mutationsgenerator** | **bestanden** — `7 von 39` gegen `54 von 54` der Hand | `erzeuge-mutationen.py`, `MESSUNGEN.md` |
+| **Tor P2** — der Korpus parst | **bestanden, 7 von 7** (und `dokumente/SYNTAX.md` 6 von 6) | `gabbro fragmente dokumente/FRAGMENTE.md` |
+| **Mutationsgenerator** | **bestanden** — `7 von 39` gegen `54 von 54` der Hand | `erzeuge-mutationen.py`, `dokumente/MESSUNGEN.md` |
 | **Die 15 Generatorlücken** | **13 zu, 2 beweisbar äquivalent** | `./pruefe-luecken.py` |
 | **`narrow`-Zählung** | **Tor verfehlt** — N = 2, und das Protokoll war widersprüchlich | `./zaehle-bereichspflichten.py` |
-| **Elf Klempnerei-Klassen** | **Tor verfehlt** — `N_neu = 5` (heute 4) | `MESSUNGEN.md`, *Neuerhebung* |
-| **K/A/W über N_L** | **Tor verfehlt** — `W = 38 von 73` | `MESSUNGEN.md`, *Buchung* |
+| **Elf Klempnerei-Klassen** | **Tor verfehlt** — `N_neu = 5` (heute 4) | `dokumente/MESSUNGEN.md`, *Neuerhebung* |
+| **K/A/W über N_L** | **Tor verfehlt** — `W = 38 von 73` | `dokumente/MESSUNGEN.md`, *Buchung* |
 | **Lader-Fragment, Klasse *Phase*** | **Marke trägt: 7 gegen k = 5** | `dokumente/FRAGMENTE.md` F7 |
-| **Basisrate `format`** | **trägt `format` nicht** — 5 Formate, 0 Fehler der Klasse | `MESSUNGEN.md` |
+| **Basisrate `format`** | **trägt `format` nicht** — 5 Formate, 0 Fehler der Klasse | `dokumente/MESSUNGEN.md` |
 | **`delete_leaf`** | **1,75 : 1** statt gebuchter 3,6–6 : 1 | `dokumente/BEWEIS.md` |
-| **`programs/`** | Grund des Bruchs trägt nicht mehr | `MESSUNGEN.md` |
+| **`programs/`** | Grund des Bruchs trägt nicht mehr | `dokumente/MESSUNGEN.md` |
 | **N1 (Caprock)** | **`MEM` ist Blatt**, `system.rs:724` ist falsch | `arbeitsprotokoll/03-N1.md` |
 
 ## Grammatik — die Befunde aus P2
@@ -84,7 +84,7 @@ Grammatik** · Schlusskomma · `u64::max` · `O`/`@version` als benannte `Sonder
 
 **Dazu:** die Nutzlastform nach dem Bestand entschieden (22 × `nothing`, 11 × Klammern,
 2 × ohne — die Grammatik folgt den 33), die `pub`-Laxheit (`P034`), `pub const` im
-`table`-Rumpf, und **`SYNTAX.md` hält jetzt seine eigene Grammatik** (Test
+`table`-Rumpf, und **`dokumente/SYNTAX.md` hält jetzt seine eigene Grammatik** (Test
 `die_beispiele_der_grammatik_gehen_selbst_durch`).
 
 ## Die Wächterkette — sechs, jeder mit Sprechprobe in beide Richtungen
@@ -102,7 +102,7 @@ Grammatik** · Schlusskomma · `u64::max` · `O`/`@version` als benannte `Sonder
 ```
 
 **Dazu drei Tests, die aus je einem bezahlten Fehler stammen:** kein Pass ohne Anmeldung ·
-`SYNTAX.md` gegen die eigene Grammatik · Korpus-Test am Inhalt statt an der Zeilennummer.
+`dokumente/SYNTAX.md` gegen die eigene Grammatik · Korpus-Test am Inhalt statt an der Zeilennummer.
 
 ## Die Arbeitsregeln — W1 bis W11
 

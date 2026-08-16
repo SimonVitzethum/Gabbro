@@ -22,7 +22,7 @@ Blattheit, Publikation, Verfeinerung — trägt die Sprache.
 Baum") schreibt der Programmierer, in jeder Sprache. Gold im seL4-Sinn ist damit **ausserhalb
 des Ziels**, nicht aufgeschoben.
 
-**Der Weg dorthin sind vier Posten** ([`PLAN.md`](PLAN.md) §A). **Alle vier sind gefahren**, und
+**Der Weg dorthin sind vier Posten** ([`dokumente/PLAN.md`](dokumente/PLAN.md) §A). **Alle vier sind gefahren**, und
 der schwerste löste sich auf, statt geschlossen zu werden: *„kein Alias"* war eine Frage nach
 Zeigerpaaren — und **Kernzustand braucht gar keinen Zeiger.** Eine `table` *ist* Speicher, ihr
 Name ist ihr Ort; ein `device` hat seine Parameterliste als Konstruktor. F1 und F2 sind ohne
@@ -45,7 +45,7 @@ Die Unterscheidung ist die ganze Ehrlichkeit dieses Ordners.
 | **1** | **Speichersicherheit** — kein Zugriff ausserhalb, kein Gebrauch nach Freigabe, kein Alias, der eine Zusicherung bricht | **Gabbro beweist es selbst** — unter benannten **Hardware-Annahmen** und unter Vertrauen in Prüfer und Absenkung |
 | **1b** | **Unsicherer Bootcode läuft nach dem Boot nie wieder** | **beweisbar, zweistufig**: eine **lineare** Marke (nicht kopierbar — das kann Rust nicht) *und* der `.boot`-Abschnitt wird im selben Zug abgebildet. Falsifizierbar: eine Sonde dorthin muss faulten |
 | **2** | **Rennfreiheit** — Datenrennen **und** Protokollrennen | **später, aber JETZT eingeplant.** Nachträglich ändert sich jede Signatur, die geteilten Zustand anfasst |
-| **3** | **Funktionale Korrektheit (Gold)** | **Die Decke ist heute: Sicherheitshülle plus deklarierte Invarianten.** Gemessen: die sieben Quantorendomänen fallen **nicht** in eine entscheidbare Theorie, und kein SMT-Löser führt Induktion ([`BEWEIS.md`](BEWEIS.md)). **Seit dem 2026-08-14 trägt die Grammatik `by induction over <domain>`** — ein genanntes, aus der `table`-Deklaration **erzeugtes** Schema, kein Lemma. Damit: **Hülle + deklarierte Invarianten + induktive Eigenschaften über deklarierten Strukturen** ([`SPRACHE.md`](SPRACHE.md)) |
+| **3** | **Funktionale Korrektheit (Gold)** | **Die Decke ist heute: Sicherheitshülle plus deklarierte Invarianten.** Gemessen: die sieben Quantorendomänen fallen **nicht** in eine entscheidbare Theorie, und kein SMT-Löser führt Induktion ([`dokumente/BEWEIS.md`](dokumente/BEWEIS.md)). **Seit dem 2026-08-14 trägt die Grammatik `by induction over <domain>`** — ein genanntes, aus der `table`-Deklaration **erzeugtes** Schema, kein Lemma. Damit: **Hülle + deklarierte Invarianten + induktive Eigenschaften über deklarierten Strukturen** ([`dokumente/SPRACHE.md`](dokumente/SPRACHE.md)) |
 
 > **Zusage 1 gilt nur relativ.** „Speichersicher" heisst für einen Kernel notwendigerweise
 > *speichersicher, WENN die MMU tut, was ihr Modell sagt* — der Kernel schreibt seine eigenen
@@ -63,7 +63,7 @@ sie die Sache erwähnt** („der Baum bleibt ein Baum", „die Nachricht kam bei
 
 **Abbruch ist damit nicht mehr eine Zahl, sondern:** *es bleibt eine **benannte** Klempnerei-Pflicht,
 die von Hand zu erledigen ist.* Das ist **auf Papier je Konstrukt prüfbar** — ungleich billiger als
-eine Zahl, die einen Übersetzer braucht. Ganz in [`BEWEIS.md`](BEWEIS.md).
+eine Zahl, die einen Übersetzer braucht. Ganz in [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md).
 
 ## Die Kennzahl — ab jetzt Diagnose, nicht Ziel
 
@@ -83,7 +83,7 @@ Beweisposten, der noch von Hand geschrieben wird. Eine Zahl, die man treffen kan
 eine Zahl am Boden sagt, **was noch fehlt**.
 
 **Die Zahl ist ein Stellvertreter, und Stellvertreter sind hier eine bezahlte Falle** — deshalb
-steht sie hinter dem Kriterium, nicht davor. Herleitung und Messprotokoll in [`PLAN.md`](PLAN.md);
+steht sie hinter dem Kriterium, nicht davor. Herleitung und Messprotokoll in [`dokumente/PLAN.md`](dokumente/PLAN.md);
 ohne Aufschlüsselung nach Logik/Klempnerei ist eine Zahl ab jetzt kein Messwert.
 
 Stand: 2026-08-14. **Gebaut sind P2 und P3: Lexer, Wortschatz, Parser über die vollständige EBNF,
@@ -94,7 +94,7 @@ Funktion bleibt die Zusage eine Annahme. `gabbro paesse` druckt beides aus).
 *Nicht gebaut: D1/D2, M2, M3, die Paarung, die Kosten, die C-Emission.* Der Lauf gegen die eigenen
 Fragmente **fällt: 1 von 6**. Eine Gegenprüfung fand **16 Dateien, die mit `0 Fehler` durchkamen
 und fallen mussten** — zehn dieser Löcher sind zu, jedes mit einer Giftdatei, die es festhält
-([`MESSUNGEN.md`](MESSUNGEN.md)). Was gemessen ist, steht als gemessen da; alles andere ist
+([`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md)). Was gemessen ist, steht als gemessen da; alles andere ist
 ausdrücklich Absicht.
 
 ---
@@ -104,15 +104,20 @@ ausdrücklich Absicht.
 | Datei | Rolle |
 |---|---|
 | `README.md` | dies — Zweck, Zusagen, Kennzahl, Stand |
-| [`SPRACHE.md`](SPRACHE.md) | **die Sprache, vollstaendig**: vier Mechanismen, zwei Deklarationsregeln, Bibliotheksschicht, Ordering-Paarung, Eintritt, Boot, Induktion, harte Schrittzusagen |
-| [`SYNTAX.md`](SYNTAX.md) | **die Grammatik** — 119 EBNF-Regeln, geschlossen und erreichbar, Wortschatz deckt jedes Terminal |
-| [`BEWEIS.md`](BEWEIS.md) | **die Beweisarchitektur**: das Kriterium, Maschinen- und Speichermodell, Beweiser, Zielsprache, der seL4-Vergleich |
-| [`PLAN.md`](PLAN.md) | **der Weg**: acht Phasen mit zweiseitigen Toren, Messprotokoll, Abbruchbedingungen, Ziellinie |
-| [`MESSUNGEN.md`](MESSUNGEN.md) | **alles, was gefahren wurde** — und was hier nicht steht, ist nicht gemessen |
-| [`FRAGMENTE.md`](FRAGMENTE.md) | sechs Caprock-Bereiche in Gabbro ausgeschrieben, mit Herkunft und Urteil |
+| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **die Sprache, vollstaendig**: vier Mechanismen, zwei Deklarationsregeln, Bibliotheksschicht, Ordering-Paarung, Eintritt, Boot, Induktion, harte Schrittzusagen |
+| [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) | **die Grammatik** — 119 EBNF-Regeln, geschlossen und erreichbar, Wortschatz deckt jedes Terminal |
+| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **die Beweisarchitektur**: das Kriterium, Maschinen- und Speichermodell, Beweiser, Zielsprache, der seL4-Vergleich |
+| [`dokumente/PLAN.md`](dokumente/PLAN.md) | **der Weg**: acht Phasen mit zweiseitigen Toren, Messprotokoll, Abbruchbedingungen, Ziellinie |
+| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **alles, was gefahren wurde** — und was hier nicht steht, ist nicht gemessen |
+| [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md) | sechs Caprock-Bereiche in Gabbro ausgeschrieben, mit Herkunft und Urteil |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
-| [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
-| [`WERKZEUGKASTEN.md`](WERKZEUGKASTEN.md) | **Arbeitsregeln aus eigenen Fehlern** — jede mit dem Schaden, fuer den sie bezahlt wurde |
+| [`DONE.md`](DONE.md) | **ausschliesslich Erledigtes** — jeder Eintrag mit seinem Beleg |
+| [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`dokumente/WERKZEUGKASTEN.md`](dokumente/WERKZEUGKASTEN.md) | **Arbeitsregeln aus eigenen Fehlern** — jede mit dem Schaden, fuer den sie bezahlt wurde |
+
+**Der Wurzelordner fuehrt drei Dateien** — `README.md`, `TODO.md`, `DONE.md`. Die acht
+Entwurfs- und Messdokumente liegen in [`dokumente/`](dokumente/); *eine Wurzel, in der
+man erst suchen muss, ist selbst eine Auslassung.*
 
 Dazu `fallen-klassifikation.tsv` (100 bezahlte Caprock-Fallen, einzeln klassifiziert) und
 **sieben Wächter, jeder mit Sprechprobe in beide Richtungen**: `pruefe-syntax.sh` (verbotene
@@ -155,38 +160,39 @@ durchkamen, und drei kommen aus dem Kostenpass. Ein Korpus ohne Gegenprobe beloh
 
 ---|---|
 | `README.md` | dies — Zweck, Zusagen, Kennzahl, Stand, Einstieg |
-| [`SYNTAX.md`](SYNTAX.md) | **die Schreibweise**: Grammatik, geschlossener Wortschatz, fünf Entscheidungen, was es absichtlich nicht gibt |
-| [`SPRACHE.md`](SPRACHE.md) | **die Mechanismen**: vier Mechanismen, zwei Deklarationsregeln, Bootphase, Rennfreiheit, Kernel-Vollständigkeit — und die Bibliotheksschicht darüber |
-| [`PLAN.md`](PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
+| [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) | **die Schreibweise**: Grammatik, geschlossener Wortschatz, fünf Entscheidungen, was es absichtlich nicht gibt |
+| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **die Mechanismen**: vier Mechanismen, zwei Deklarationsregeln, Bootphase, Rennfreiheit, Kernel-Vollständigkeit — und die Bibliotheksschicht darüber |
+| [`dokumente/PLAN.md`](dokumente/PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
-| [`HISTORIE.md`](HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
-| [`WERKZEUGKASTEN.md`](WERKZEUGKASTEN.md) | **Arbeitsregeln aus eigenen Fehlern** — jede mit dem Schaden, fuer den sie bezahlt wurde |
-| [`MESSUNGEN.md`](MESSUNGEN.md) | **P0, soweit der Ordner es zulässt.** Ordering **36/36 bestanden**; `19 → 0` **nicht entscheidbar**, weil fünf Klassen nur im Scratchpad liegen — ein Befund über das **Protokoll** |
-| [`SPRACHE.md`](SPRACHE.md) | **die Axiomschicht ausgezählt am echten Zweig** (A1–A25) und **der Bootpfad als Sprache**. `port` als sechster Adressraum holt **70 Fundstellen** aus der Axiomschicht in die Gerätesprache; `Has(F)` macht die #UD-Klasse zum Übersetzungsfehler; die Mode-Leiter PAE→LME→CR3→PG ist ein **Token-Fluss** |
-| [`SPRACHE.md`](SPRACHE.md) · [`SPRACHE.md`](SPRACHE.md) | **die drei Löcher der Festlegung** — Ordering-**Paarung** (`awaits`), Eintrittspfad (`entry`), Boot-Unerreichbarkeit in drei Schichten; dazu RMW (`exchange`), `Vis` über Funktionsgrenzen, und **der Prüferplan P0–P7 mit Toren** |
-| [`SPRACHE.md`](SPRACHE.md) | **die vollständige Festlegung** — entscheidet alle neun offenen Fragen (F1–F9) und nimmt die 19 hängenden Klempnerei-Pflichten je mit einem Konstrukt ab. **Abnahme ist die Wiederholung der 74-Pflichten-Messung: 19 → 0** |
-| [`BEWEIS.md`](BEWEIS.md) | **Posten 2: welches C.** Statt C zu formalisieren wie seL4 wird die Zielfläche geschlossen — **10 von 12 UB-Klassen sterben an Regeln, die schon dastehen**; übrig bleiben `restrict` und `volatile`, benannt |
-| [`BEWEIS.md`](BEWEIS.md) | **was eine seL4-Verifikation neben der Logik braucht** — sechs Posten, gegen Gabbro gehalten. Darunter der, den niemand mitzählt: **der Unterhalt**, und dort liegt Gabbros stärkstes Argument |
-| [`SPRACHE.md`](SPRACHE.md) | **erzwungene Schrittzusagen machen Induktion automatisch statt heuristisch** — eine Zeile je erzeugter Operation. Mit der Regel, an der alles hängt: **eine Pflichtzusage darf nur über EINEN Schritt sprechen** |
-| [`SPRACHE.md`](SPRACHE.md) | **was Induktion bräuchte und was sie kostet** — drei Stufen; die erste kostet **eine Zeile je Pflicht** und behält die Sprache. **Der Preis ist nicht die Zeilenzahl, sondern die Vorhersagbarkeit** |
-| [`BEWEIS.md`](BEWEIS.md) | **L3 und L4 entschieden — und die Decke benannt**: Gold im seL4-Sinn ist auf diesem Weg nicht erreichbar. Drei Arten Pflichten statt einer, Zertifikatsprüfer statt Löser im Vertrauen |
-| [`BEWEIS.md`](BEWEIS.md) | **L1 und L2 entworfen**: 106 Axiome (~130 Namen), RC11 ohne SC — und **die 20 arch-neutralen Axiomfamilien stehen schon im Baum**, ohne so zu heissen |
-| [`FRAGMENTE.md`](FRAGMENTE.md) | **sechs Caprock-Bereiche in Gabbro ausgeschrieben**, mit Herkunft und Urteil: 0 passen unverändert, 4 mit Befund, **2 gar nicht** — 31 Befunde, davon 7 in der Grammatik selbst |
-| [`BEWEIS.md`](BEWEIS.md) | **was für Gold fehlt, ausser Logik und Ausdruckskraft** — sechs Posten, vier davon je ein Teilprojekt: **Maschinenmodell, Speichermodell, Beweiser, Anfang** |
-| [`MESSUNGEN.md`](MESSUNGEN.md) | **das Kriterium, erstmals gemessen — und es fällt**: 74 Pflichten, **19 bleiben beim Programmierer hängen (33 %)**, `programs/` bricht 4 von 4 |
-| [`PLAN.md`](PLAN.md) | **die Ziellinie, vorab**: acht Bedingungen für die Syntax, vier für den Plan — und **drei Eskalationsgründe** — abgebrochen wird nur bei *bewiesener* Unmöglichkeit |
-| [`MESSUNGEN.md`](MESSUNGEN.md) | **der gefährlichste offene Punkt, gemessen** — die flusssensitive Klasse sind **4 Stellen in 65 001 Zeilen**, und die erwartete Auswahlverzerrung trat nicht ein |
-| [`BEWEIS.md`](BEWEIS.md) | **das Kriterium**: nur Logik beweisen, sonst nichts — die Trennlinie, was sie mit den Messungen macht, und die neue Abbruchbedingung |
-| [`SPRACHE.md`](SPRACHE.md) | **die Umkehrung der Frage.** Alle 18 „geht nicht"-Befunde in „was muss minimal dastehen" umgewandelt, mit Absenkung nach C. **Sechs fallen auf denselben Mechanismus** |
-| [`MESSUNGEN.md`](MESSUNGEN.md) | **Entwurf gegen Prüfer.** Der Anti-Katalog-Test bestanden (3 Wörter statt 12) — und ein Loch in der **Messvorschrift**: eine Kennzahl aus ungeprüften Zusagen belohnt **falsche** Zusagen, weil sie kurz sind |
-| [`MESSUNGEN.md`](MESSUNGEN.md) | **beide Tore gefallen** — `device` deckt 21 % von `vtd.rs` und ist dort 2× knapper, nicht 15×; und **65,1 % des Kernels brauchen handgeschriebene Spezifikation, nicht 10 %** |
-| [`MESSUNGEN.md`](MESSUNGEN.md) | **das erste gefahrene Papiertor.** `revoke` ist ausdrückbar — mit einem Konstrukt, das fehlte; und es hat einen Fehler in der Zählregel gefunden |
+| [`DONE.md`](DONE.md) | **ausschliesslich Erledigtes** — jeder Eintrag mit seinem Beleg |
+| [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
+| [`dokumente/WERKZEUGKASTEN.md`](dokumente/WERKZEUGKASTEN.md) | **Arbeitsregeln aus eigenen Fehlern** — jede mit dem Schaden, fuer den sie bezahlt wurde |
+| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **P0, soweit der Ordner es zulässt.** Ordering **36/36 bestanden**; `19 → 0` **nicht entscheidbar**, weil fünf Klassen nur im Scratchpad liegen — ein Befund über das **Protokoll** |
+| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **die Axiomschicht ausgezählt am echten Zweig** (A1–A25) und **der Bootpfad als Sprache**. `port` als sechster Adressraum holt **70 Fundstellen** aus der Axiomschicht in die Gerätesprache; `Has(F)` macht die #UD-Klasse zum Übersetzungsfehler; die Mode-Leiter PAE→LME→CR3→PG ist ein **Token-Fluss** |
+| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) · [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **die drei Löcher der Festlegung** — Ordering-**Paarung** (`awaits`), Eintrittspfad (`entry`), Boot-Unerreichbarkeit in drei Schichten; dazu RMW (`exchange`), `Vis` über Funktionsgrenzen, und **der Prüferplan P0–P7 mit Toren** |
+| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **die vollständige Festlegung** — entscheidet alle neun offenen Fragen (F1–F9) und nimmt die 19 hängenden Klempnerei-Pflichten je mit einem Konstrukt ab. **Abnahme ist die Wiederholung der 74-Pflichten-Messung: 19 → 0** |
+| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **Posten 2: welches C.** Statt C zu formalisieren wie seL4 wird die Zielfläche geschlossen — **10 von 12 UB-Klassen sterben an Regeln, die schon dastehen**; übrig bleiben `restrict` und `volatile`, benannt |
+| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **was eine seL4-Verifikation neben der Logik braucht** — sechs Posten, gegen Gabbro gehalten. Darunter der, den niemand mitzählt: **der Unterhalt**, und dort liegt Gabbros stärkstes Argument |
+| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **erzwungene Schrittzusagen machen Induktion automatisch statt heuristisch** — eine Zeile je erzeugter Operation. Mit der Regel, an der alles hängt: **eine Pflichtzusage darf nur über EINEN Schritt sprechen** |
+| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **was Induktion bräuchte und was sie kostet** — drei Stufen; die erste kostet **eine Zeile je Pflicht** und behält die Sprache. **Der Preis ist nicht die Zeilenzahl, sondern die Vorhersagbarkeit** |
+| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **L3 und L4 entschieden — und die Decke benannt**: Gold im seL4-Sinn ist auf diesem Weg nicht erreichbar. Drei Arten Pflichten statt einer, Zertifikatsprüfer statt Löser im Vertrauen |
+| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **L1 und L2 entworfen**: 106 Axiome (~130 Namen), RC11 ohne SC — und **die 20 arch-neutralen Axiomfamilien stehen schon im Baum**, ohne so zu heissen |
+| [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md) | **sechs Caprock-Bereiche in Gabbro ausgeschrieben**, mit Herkunft und Urteil: 0 passen unverändert, 4 mit Befund, **2 gar nicht** — 31 Befunde, davon 7 in der Grammatik selbst |
+| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **was für Gold fehlt, ausser Logik und Ausdruckskraft** — sechs Posten, vier davon je ein Teilprojekt: **Maschinenmodell, Speichermodell, Beweiser, Anfang** |
+| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **das Kriterium, erstmals gemessen — und es fällt**: 74 Pflichten, **19 bleiben beim Programmierer hängen (33 %)**, `programs/` bricht 4 von 4 |
+| [`dokumente/PLAN.md`](dokumente/PLAN.md) | **die Ziellinie, vorab**: acht Bedingungen für die Syntax, vier für den Plan — und **drei Eskalationsgründe** — abgebrochen wird nur bei *bewiesener* Unmöglichkeit |
+| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **der gefährlichste offene Punkt, gemessen** — die flusssensitive Klasse sind **4 Stellen in 65 001 Zeilen**, und die erwartete Auswahlverzerrung trat nicht ein |
+| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **das Kriterium**: nur Logik beweisen, sonst nichts — die Trennlinie, was sie mit den Messungen macht, und die neue Abbruchbedingung |
+| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **die Umkehrung der Frage.** Alle 18 „geht nicht"-Befunde in „was muss minimal dastehen" umgewandelt, mit Absenkung nach C. **Sechs fallen auf denselben Mechanismus** |
+| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **Entwurf gegen Prüfer.** Der Anti-Katalog-Test bestanden (3 Wörter statt 12) — und ein Loch in der **Messvorschrift**: eine Kennzahl aus ungeprüften Zusagen belohnt **falsche** Zusagen, weil sie kurz sind |
+| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **beide Tore gefallen** — `device` deckt 21 % von `vtd.rs` und ist dort 2× knapper, nicht 15×; und **65,1 % des Kernels brauchen handgeschriebene Spezifikation, nicht 10 %** |
+| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **das erste gefahrene Papiertor.** `revoke` ist ausdrückbar — mit einem Konstrukt, das fehlte; und es hat einen Fehler in der Zählregel gefunden |
 | `pruefe-syntax.sh` | hält die Beispiele gegen die Wortliste, die Prosa gegen die alte Schlüsselwortsprache **und die Grammatik auf Geschlossenheit** — drei Sprechproben |
 | [`fallen-klassifikation.tsv`](fallen-klassifikation.tsv) | die 100 bezahlten Caprock-Fallen, einzeln klassifiziert; `./zaehle-fallen.sh` leitet die Zahlen ab |
 
 > **Berichtigungen stehen bewusst vor allem Weiteren.** Zwei Überschreibungen („per Konstruktion
 > beweisbar", „Gold-Beweis billig"), ein falscher Nenner, ein zu hoher Boden, zwanzig Konstrukte
-> statt vier Mechanismen — alle samt Lehre in [`HISTORIE.md`](HISTORIE.md). Der Ordner behält seine
+> statt vier Mechanismen — alle samt Lehre in [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md). Der Ordner behält seine
 > widerlegten Fassungen, weil er sonst aussähe, als hätte er von Anfang an recht gehabt.
 
 ---
@@ -216,7 +222,7 @@ durchkamen, und drei kommen aus dem Kostenpass. Ein Korpus ohne Gegenprobe beloh
 * **15,7 % von Caprock sind Prüf- und Berichtsgerüst** — der Teil, der die Fehler gefunden hat, und
   keine dieser Sprachen sagt etwas darüber.
 
-**Daraus die Reihenfolge in [`PLAN.md`](PLAN.md):** zuerst Papier, dann `check` **ohne
+**Daraus die Reihenfolge in [`dokumente/PLAN.md`](dokumente/PLAN.md):** zuerst Papier, dann `check` **ohne
 Sprache**, dann der Kern. Nichts davon kostet einen Übersetzer, und jedes kann die These töten.
 
 ---
@@ -332,10 +338,10 @@ Frage steht offen und ist die teuerste des Ordners.**
 
 ## Wie es weitergeht
 
-[`PLAN.md`](PLAN.md) — acht Phasen, jede mit einem Tor. Die ersten drei kosten
+[`dokumente/PLAN.md`](dokumente/PLAN.md) — acht Phasen, jede mit einem Tor. Die ersten drei kosten
 **keinen Übersetzer** und können die These jeweils töten:
 
-1. ~~**`revoke` auf Papier**~~ — **gefahren 2026-08-13**, [`MESSUNGEN.md`](MESSUNGEN.md):
+1. ~~**`revoke` auf Papier**~~ — **gefahren 2026-08-13**, [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md):
    bedingt bestanden, Bedingung ist ein fehlendes Konstrukt. **Kein weiterer Entwurfstext vor 2.**
 2. ~~**`vtd.rs` als `device`-Block**~~ — **gefahren, GEFALLEN**: Faktor 2,0 auf dem gedeckten Teil.
 3. ~~**`space.rs` zweimal**~~ — **gefahren, über der Abbruchmarke**: 3,6–6 : 1 ausgeschrieben.

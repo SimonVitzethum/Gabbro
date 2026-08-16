@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Haelt die Beispiele gegen SYNTAX.md. Mit Sprechprobe in BEIDE Richtungen --
+# Haelt die Beispiele gegen dokumente/SYNTAX.md. Mit Sprechprobe in BEIDE Richtungen --
 # ein Pruefer, der nicht fehlschlagen kann, ist kein Pruefer.
 set -uo pipefail
 cd "$(dirname "$0")"
 
-# Woerter, die es laut SYNTAX.md ABSICHTLICH nicht gibt.
+# Woerter, die es laut dokumente/SYNTAX.md ABSICHTLICH nicht gibt.
 VERBOTEN='\bwhile\b|\bfor\b|\bgoto\b|\bunion\b|\bswitch\b|_ =>|\bvoid\*'
 # Deutsche Schluesselwoerter aus der Zeit vor E1 -- zwei Oberflaechen sind ein Riss.
 ALTDEUTSCH='\bwirkung\b|\bbenoetigt\b|\buebergang\b|\bgattert\b|\bsprechprobe\b|\buntergrenze\b|\bgegenprobe\b|\bklasse\b|\bfelder\b|\berhaelt\b|\bmaskiert\b|\bwechsle\b|\bentfernt\b|\bdecrement\b|\beinheit\b|\broh fn\b|\blaeuft\b'
@@ -20,9 +20,9 @@ pruefe() {                      # $1..: Dateien
 }
 
 # F19: bis 2026-08-13 sah der Waechter NUR Codebloecke -- und behauptete trotzdem
-# "keine zweite Schluesselwortsprache". `wechsle` stand derweil in SPRACHE.md:300, in PROSA.
+# "keine zweite Schluesselwortsprache". `wechsle` stand derweil in dokumente/SPRACHE.md:300, in PROSA.
 # Ein Pruefer, der mehr behauptet, als sein Muster trifft, ist ein falsches Gruen.
-# HISTORIE.md ist ausgenommen: sie DOKUMENTIERT die alten Woerter, das ist ihr Zweck.
+# dokumente/HISTORIE.md ist ausgenommen: sie DOKUMENTIERT die alten Woerter, das ist ihr Zweck.
 prosa() { grep -vh '^\s*```' "$@" | grep -oE '`[a-zA-Z_ ]+`' ; }
 pruefe_prosa() {
   local t
@@ -30,9 +30,9 @@ pruefe_prosa() {
   return 0
 }
 
-echo "== Beispiele gegen SYNTAX.md =="
-if pruefe SPRACHE.md SYNTAX.md PLAN.md README.md BEWEIS.md MESSUNGEN.md FRAGMENTE.md FRAGMENTE.md && \
-   pruefe_prosa SPRACHE.md SYNTAX.md PLAN.md README.md TODO.md BEWEIS.md MESSUNGEN.md FRAGMENTE.md; then
+echo "== Beispiele gegen dokumente/SYNTAX.md =="
+if pruefe dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md dokumente/FRAGMENTE.md && \
+   pruefe_prosa dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md TODO.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md; then
   echo "  keine verbotene Form in Beispielen, keine zweite Schluesselwortsprache in Prosa"
 else
   echo "== SYNTAX: FEHLER =="; exit 1
@@ -53,9 +53,9 @@ print(f"  EBNF: {len(defs)} Regeln definiert, {len(offen)} offen" + (": " + ", "
 sys.exit(1 if offen else 0)
 PY
 }
-if ! ebnf_geschlossen SYNTAX.md; then echo "== SYNTAX: FEHLER (Grammatik nicht geschlossen) =="; exit 1; fi
+if ! ebnf_geschlossen dokumente/SYNTAX.md; then echo "== SYNTAX: FEHLER (Grammatik nicht geschlossen) =="; exit 1; fi
 
-if ! ./pruefe-wortschatz.py SYNTAX.md; then echo "== SYNTAX: FEHLER (Wortschatz deckt die EBNF nicht) =="; exit 1; fi
+if ! ./pruefe-wortschatz.py dokumente/SYNTAX.md; then echo "== SYNTAX: FEHLER (Wortschatz deckt die EBNF nicht) =="; exit 1; fi
 
 # --- Sprechprobe: der Pruefer MUSS bei jeder Verletzung fallen ---
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT

@@ -32,7 +32,7 @@ schwächer formuliert, ohne schwächer zu **werden**.
 ## Die gebrochene Reihenfolgeregel — 2026-08-14, auf Ansage, und hier gebucht
 
 **Die Regel stand doppelt und in Grossbuchstaben:** *„Keine Prüferzeile vor dem Ergebnis von
-Messung 2"* ([`PLAN.md`](PLAN.md), [`TODO.md`](TODO.md)) und *„DER NÄCHSTE SCHRITT IST KEINE
+Messung 2"* ([`PLAN.md`](PLAN.md), [`TODO.md`](../TODO.md)) und *„DER NÄCHSTE SCHRITT IST KEINE
 ZEILE RUST"*. **Messung 2 ist bis heute nicht gefahren** — sie ist blockiert, weil fünf der elf
 Klempnerei-Klassen nur im Scratchpad liegen.
 
@@ -45,7 +45,7 @@ keine Werkzeugschicht** — die Wächter (`pruefe-syntax.sh`, `pruefe-wortschatz
 |---|---|
 | **Was es war** | **Bruch**, nicht Änderung. Die Regel gilt unverändert weiter |
 | **Wodurch** | auf ausdrückliche Ansage, nicht still |
-| **Wo es steht** | [`MESSUNGEN.md`](MESSUNGEN.md) P2, im ersten Absatz; [`TODO.md`](TODO.md); und ab jetzt hier |
+| **Wo es steht** | [`MESSUNGEN.md`](MESSUNGEN.md) P2, im ersten Absatz; [`TODO.md`](../TODO.md); und ab jetzt hier |
 | **Was es gekostet hat** | **P2 und P3 können die These nicht mehr *vor* dem Übersetzerbau töten.** Die Reihenfolge war so gebaut, dass jede Stufe das Ergebnis der vorigen verbraucht — diese Kette ist an einer Stelle durchtrennt |
 | **Was es eingebracht hat** | die Messungen in [`MESSUNGEN.md`](MESSUNGEN.md) ab P2: 1 von 6 Fragmenten, elf Grammatikbefunde, die Wortschatzkollision, 16 gefundene Unsoundness-Löcher, die Kostenzahlen |
 

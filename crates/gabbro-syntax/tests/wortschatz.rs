@@ -14,7 +14,7 @@ fn syntax_md() -> String {
     let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
-        .join("SYNTAX.md");
+        .join("dokumente/SYNTAX.md");
     std::fs::read_to_string(&wurzel)
         .unwrap_or_else(|e| panic!("SYNTAX.md nicht lesbar unter {}: {e}", wurzel.display()))
 }

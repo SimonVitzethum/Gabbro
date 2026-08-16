@@ -116,6 +116,27 @@ def pruefe(text, zahlen):
         if int(m.group(1)) != n_gift:
             befunde.append(f"'{m.group(1)} Giftproben' -- es sind {n_gift}")
 
+    # 8. **Die Gegenrichtung, seit 2026-08-16:** `DONE.md` fuehrt ausschliesslich
+    #    Erledigtes, und jeder Eintrag traegt seinen Beleg (W7). Ein offener Haken dort ist
+    #    derselbe Fehler wie ein `[x]` im TODO, nur spiegelverkehrt -- und er faellt
+    #    niemandem auf, weil ihn niemand sucht.
+    d = WURZEL / "DONE.md"
+    if d.is_file():
+        dt = d.read_text()
+        for offen in re.findall(r"^- \[ \][^\n]*", dt, re.M):
+            befunde.append(
+                f"offener Eintrag in DONE.md, die 'ausschliesslich Erledigtes' "
+                f"behauptet: {offen[:70]}"
+            )
+        for zeile in dt.splitlines():
+            if zeile.startswith("| **") and "|" in zeile[4:]:
+                # Die Zeichenklasse MUSS Grossbuchstaben tragen -- `dokumente/BEWEIS.md`
+                # ist ein Beleg. Meine erste Fassung sah ihn nicht, und die Sprechprobe
+                # hat es an der SAUBEREN Liste gefangen (falsches Rot).
+                if not re.search(r"`[\w./-]+\.(rs|py|sh|md|gab|tsv)`|`[A-Z][0-9]{3}`"
+                                 r"|gabbro |cargo |\./", zeile):
+                    befunde.append(f"DONE.md-Eintrag ohne Beleg (W7): {zeile[:70]}")
+
     return befunde
 
 

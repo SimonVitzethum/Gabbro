@@ -40,7 +40,7 @@ const BENANNT: &[&str] = &[
 
 #[test]
 fn der_korpus_bringt_nur_benannte_absagen() {
-    for datei in ["FRAGMENTE.md", "SYNTAX.md", "SPRACHE.md", "README.md"] {
+    for datei in ["dokumente/FRAGMENTE.md", "dokumente/SYNTAX.md", "dokumente/SPRACHE.md", "README.md"] {
         let md = lies(datei);
         for b in korpus::messe(datei, &md) {
             for (code, zeile) in b.fehler.iter().chain(b.hinweise.iter()) {
@@ -58,8 +58,8 @@ fn der_korpus_bringt_nur_benannte_absagen() {
 fn f2_das_geraetefragment_bleibt_sauber() {
     // F2 (VT-d als `device`) ist das eine Fragment, das gegen die heutige Grammatik
     // vollstaendig durchgeht. Faellt es, ist eine Regel zurueckgegangen.
-    let md = lies("FRAGMENTE.md");
-    let befunde = korpus::messe("FRAGMENTE.md", &md);
+    let md = lies("dokumente/FRAGMENTE.md");
+    let befunde = korpus::messe("dokumente/FRAGMENTE.md", &md);
     // **Am INHALT verankert, nicht an der Zeilennummer.** Bis 2026-08-15 stand hier
     // `erste_zeile > 330 && < 350`; jede Aenderung weiter oben in der Datei brach den Test,
     // ohne dass an F2 etwas falsch war. Eine Probe, die an einer Zeilennummer haengt, ist
@@ -85,7 +85,7 @@ fn f2_das_geraetefragment_bleibt_sauber() {
 
 #[test]
 fn jeder_block_wird_gefunden() {
-    let md = lies("FRAGMENTE.md");
+    let md = lies("dokumente/FRAGMENTE.md");
     let bloecke = korpus::schneide(&md);
     assert_eq!(
         bloecke.len(),
@@ -109,8 +109,8 @@ fn die_beispiele_der_grammatik_gehen_selbst_durch() {
     //
     // *Ein Grammatikdokument, dessen Beispiele die Grammatik verletzen, ist die teuerste
     // Sorte Prosa: es sieht aus wie ein Beleg.*
-    let md = lies("SYNTAX.md");
-    for b in korpus::messe("SYNTAX.md", &md) {
+    let md = lies("dokumente/SYNTAX.md");
+    for b in korpus::messe("dokumente/SYNTAX.md", &md) {
         if b.vollstaendig {
             assert!(
                 b.sauber(),
