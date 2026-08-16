@@ -1,0 +1,12 @@
+-- erwartet: R002
+-- **Das Recht steht am Zeiger, nicht in einer Konvention.** Ein `r`-Zeiger ist nicht
+-- beschreibbar, und das ist ein Uebersetzungsfehler -- keine Laufzeitpruefung.
+module gift {
+table Raum count 8 { slot { a : bool, } }
+impl fn schreibt(k : ptr<normal, r> Raum, i : index into Raum)
+    effects { writes k.slots }
+    costs   <= 2 ops
+{
+    k.slots[i].a = true;
+}
+}

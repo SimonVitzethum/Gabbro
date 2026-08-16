@@ -19,6 +19,7 @@ use gabbro_syntax::diag::Absagen;
 
 pub mod aufrufgraph;
 pub mod m2;
+pub mod m3;
 pub mod paarung;
 pub mod geteilt;
 pub mod kbedingung;
@@ -91,7 +92,14 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 4,
             name: "M3",
             quelle: "SYNTAX.md §3: Adressraeume und Zugriffsrechte am Zeiger",
-            zustand: Zustand::Offen("Rechtepruefung an Lesen/Schreiben, Barriere aus dem Raum"),
+            zustand: Zustand::Teilgebaut(
+                "gebaut: Rechtepruefung an Lesen und Schreiben, die Platzierungsregel \
+                 `ops`-Traeger nicht im `dma`-Raum (`R001`-`R003`). **NICHT gebaut: die \
+                 Barriere aus dem Raum** -- welche Barriere ein `dma`-Zugriff verlangt, ist \
+                 eine Aussage ueber das Speichermodell, dieselbe Axiomschicht wie bei der \
+                 Paarung. **Und keine Aliasanalyse**: zwei `ptr<normal, rw>` auf dasselbe \
+                 Objekt bleiben ununterscheidbar, dafuer steht `own`",
+            ),
         },
         Pass {
             nummer: 5,
@@ -163,6 +171,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     schleifen::pass(baum, absagen);
     wirkungen::pass(baum, absagen);
     geteilt::pass(baum, absagen);
+    m3::pass(baum, absagen);
     m2::pass(baum, absagen);
     paarung::pass(baum, absagen);
     let kosten = kosten::pass(baum, absagen);

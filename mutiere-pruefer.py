@@ -446,6 +446,34 @@ MUTATIONEN = [
         "            if false {\n                absagen.schiebe(\n                    Absage::fehler(\n                        \"L104\",",
         "L104 -- ein linearer Wert darf zweimal verbraucht werden",
     ),
+    Mutation(
+        "schreiben-ohne-recht-egal",
+        "m3.rs",
+        "    if !z.darf_schreiben() {",
+        "    if false && !z.darf_schreiben() {",
+        "R002 -- ein `r`-Zeiger darf beschrieben werden",
+    ),
+    Mutation(
+        "lesen-ohne-recht-egal",
+        "m3.rs",
+        "    if !z.darf_lesen() {",
+        "    if false && !z.darf_lesen() {",
+        "R003 -- ein `w`-Zeiger darf gelesen werden",
+    ),
+    Mutation(
+        "ops-traeger-darf-in-dma",
+        "m3.rs",
+        "                if z.raum == Raum::Dma {",
+        "                if false && z.raum == Raum::Dma {",
+        "R001 -- ein `ops`-Traeger darf im `dma`-Raum liegen (das Geraet umgeht die Grammatik)",
+    ),
+    Mutation(
+        "eigen-darf-alles-nicht",
+        "m3.rs",
+        "            .any(|r| matches!(r, Recht::Schreiben | Recht::LesenSchreiben | Recht::Eigen(_)))",
+        "            .any(|r| matches!(r, Recht::Schreiben | Recht::LesenSchreiben))",
+        "R002 -- `own` traegt kein Schreibrecht mehr (falscher Alarm an jedem own-Zeiger)",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

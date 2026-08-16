@@ -35,6 +35,7 @@ const BENANNT: &[&str] = &[
     "K004", "D001", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet
+    "R001", "R002", "R003", // M3, Raeume und Rechte
 ];
 
 #[test]

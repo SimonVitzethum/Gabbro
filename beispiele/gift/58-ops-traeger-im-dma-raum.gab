@@ -1,0 +1,16 @@
+-- erwartet: R001
+-- **Die Platzierungsregel.** Die K-Bedingung verlangt, dass ALLE Schreibstellen des
+-- Traegers erzeugt sind -- ein Geraet schreibt an jeder Grammatik vorbei. Ein `by ops`-
+-- Traeger liegt deshalb in keinem `dma`-erreichbaren Bereich, wie die GDT.
+module gift {
+table Ring count 8 {
+    slot { belegt : bool, }
+    ops einfuegen, entfernen;
+}
+impl fn anfassen(r : ptr<dma, rw> Ring)
+    effects { reads r.slots }
+    costs   <= 2 ops
+{
+    return;
+}
+}
