@@ -89,6 +89,7 @@ pub struct Schablone {
 /// mechanisch — wer einen Namen entfernt, bricht einen Test.
 pub const RATSCHE: &[&str] = &[
     "consuming.ordnung",
+    "consuming.umhaengen",
     "consuming.leermenge",
     "table.ops.erhaltung",
     "table.induktion",
@@ -100,6 +101,7 @@ pub const RATSCHE: &[&str] = &[
     "entry.abdruck",
     "device.konstruktor",
     "table.indexschranke",
+    "table.absenkung",
     "ops.suche",
     "state.reset",
     "verbund.konstruktor",
@@ -114,21 +116,61 @@ pub const SCHABLONEN: &[Schablone] = &[
     Schablone {
         name: "consuming.ordnung",
         haengt_an: &["table.induktion"],
-        konstrukt: "traverse … by consuming",
-        pflicht: "Die Domaene liefert ihre Zeugen in der erzeugten wohlfundierten Ordnung, \
-                  und die Ordnung bleibt unter der erzeugten Mutation erhalten. Daraus faellt \
-                  die Blattheit zum Verbrauchszeitpunkt.",
-        stand: Stand::Entworfen,
+        konstrukt: "traverse … by consuming (ENTFERNEN)",
+        // **Berichtigt und maschinell geprueft am 2026-08-16** (`beweise/Consuming.thy`).
+        // Die alte Fassung trug zwei Saetze, die beide zu gross waren:
+        //
+        //   K-1  `unter der erzeugten Mutation` -- Singular, ohne zu nennen WELCHE. Bewiesen
+        //        ist genau eine: das ENTFERNEN (`ordnung_bleibt_unter_entfernen`, ueber
+        //        `wf_subset`). Das UMHAENGEN ist nicht gedeckt -> `consuming.umhaengen`.
+        //   K-3  `daraus faellt die Blattheit` -- sie FAELLT NICHT. `wf` sagt, dass minimale
+        //        Elemente EXISTIEREN, nicht dass die Traversierung eines NIMMT. Die fehlende
+        //        Bedingung heisst `waehlt_minimal` und ist eine zusaetzliche Pflicht an die
+        //        Erzeugung der Zeugenreihenfolge, keine Folge.
+        pflicht: "Die Domaene liefert ihre Zeugen in der erzeugten wohlfundierten Ordnung. \
+                  Unter dem ENTFERNEN des besuchten Zeugen bleibt die Ordnung erhalten -- die \
+                  Kantenmenge wird kleiner, und eine Teilmenge einer wohlfundierten Relation \
+                  ist wohlfundiert. **Die Blattheit zum Verbrauchszeitpunkt folgt daraus \
+                  NICHT**; sie verlangt zusaetzlich, dass die Auswahl MINIMAL ist.",
+        stand: Stand::Bewiesen,
         fundstelle: "SPRACHE.md §9.2",
+    },
+    Schablone {
+        name: "consuming.umhaengen",
+        haengt_an: &["consuming.ordnung"],
+        konstrukt: "traverse … by consuming (UMHAENGEN)",
+        // **Abgespalten am 2026-08-16, und die naive Fassung ist WIDERLEGT.**
+        // `umhaengen_kann_zyklus_erzeugen` in `beweise/Consuming.thy` konstruiert einen
+        // wohlfundierten Zustand, aus dem EIN Umhaengen eine Schlinge macht.
+        //
+        // **Und es ist kein Randfall.** Der Bestand tut beides in EINEM Zug: `delete_leaf`
+        // ruft `unlink`, und `unlink` schreibt die Geschwisterzeiger der NACHBARN um --
+        // B3 hat das als Marke Nb2 gezaehlt (`space.rs:1044`).
+        pflicht: "Eine erzeugte Mutation, die Kanten HINZUFUEGT (Umhaengen von \
+                  Geschwister-/Kindzeigern), erhaelt die Wohlfundiertheit -- und das ist \
+                  NICHT durch `wf_subset` gedeckt, sondern je Mutation einzeln zu zeigen. \
+                  **Die pauschale Fassung ist widerlegt**, nicht offen.",
+        stand: Stand::Entworfen,
+        fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), Befund K-2; B3, Marke Nb2",
     },
     Schablone {
         name: "consuming.leermenge",
         haengt_an: &[],
         konstrukt: "traverse … by consuming",
-        pflicht: "Die erzeugte Zeugenmenge ist VOLLSTAENDIG: ist sie leer, ist die Domaene \
-                  leer. Ohne diese Richtung koennte eine Traversierung Elemente auslassen und \
-                  trotzdem terminieren -- sie waere dann total, aber nicht erschoepfend.",
-        stand: Stand::Entworfen,
+        // **Maschinell geprueft am 2026-08-16** -- `leermenge` in `beweise/Consuming.thy`,
+        // eine Aequivalenz in einer Zeile. Vorhergesagt waren 0--1 ausgespuelte Bedingungen;
+        // es wurde eine, und es ist dieselbe wie N-2 bei `table.induktion`:
+        //
+        //   der ZUSTAND. `Ist sie leer, ist die Domaene leer` nennt keinen -- und in einer
+        //   VERBRAUCHENDEN Traversierung ist genau das die Frage: leer WANN? Vor dem Zug
+        //   oder nach dem letzten Verbrauch? `leermenge_ist_zustandsabhaengig` zeigt, dass
+        //   die zwei Zeitpunkte verschiedene Antworten geben.
+        pflicht: "Die erzeugte Zeugenmenge ist VOLLSTAENDIG **an einem genannten Zustand**: \
+                  ist sie dort leer, ist die Domaene dort leer. Ohne diese Richtung koennte \
+                  eine Traversierung Elemente auslassen und trotzdem terminieren -- sie waere \
+                  dann total, aber nicht erschoepfend. **Ohne den genannten Zustand ist der \
+                  Satz in einer verbrauchenden Traversierung mehrdeutig.**",
+        stand: Stand::Bewiesen,
         fundstelle: "SPRACHE.md §9.2",
     },
     Schablone {
@@ -246,10 +288,44 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "table.indexschranke",
         haengt_an: &[],
         konstrukt: "table … count N / index into T",
-        pflicht: "Der erzeugte Indextyp `0 ..< N` deckt genau die belegten Slots, und die \
-                  Absenkung legt N Slots an.",
-        stand: Stand::Getragen,
+        // **Berichtigt und maschinell geprueft am 2026-08-16** (`beweise/Table_Indexschranke.thy`).
+        // Die alte Fassung lautete: *„Der erzeugte Indextyp `0 ..< N` deckt genau die
+        // belegten Slots, und die Absenkung legt N Slots an."* Davon war der erste Halbsatz
+        // **falsch** und der zweite gehoert nicht hierher:
+        //
+        //   M-1  `deckt genau die belegten Slots` ist WIDERLEGT -- eine Tabelle mit
+        //        `count 80256` und drei belegten Slots hat einen Indextyp mit 80256 Werten.
+        //        Gegenbeispiel: `indextyp_deckt_nicht_nur_belegte`.
+        //   M-2  der GEHALT liegt woanders: nicht im Typ, sondern in den SCHREIBSTELLEN --
+        //        jede erzeugte Schreibstelle bleibt im Typ (`schreibstellen_im_typ`). Genau
+        //        diese Haelfte braucht `table.induktion`, und sie stand nirgends.
+        //   M-3  `die Absenkung legt N Slots an` ist eine Aussage ueber die EMISSION. Es gibt
+        //        keinen Erzeuger -> eigener Eintrag `table.absenkung`.
+        pflicht: "Der erzeugte Indextyp ist `{i. i < N}` -- er ENTHAELT jeden belegten Slot \
+                  (`belegt_liegt_im_indextyp`) und deckt ihn NICHT genau: ein Index im Typ \
+                  muss nicht belegt sein. Und die tragende Haelfte ist die ueber den \
+                  SCHREIBSTELLEN: jedes erzeugte Verkettungsfeld eines belegten Slots zeigt \
+                  in den Typ (`schreibstellen_im_typ`, `kette_bleibt_im_typ`). Daraus faellt \
+                  `im_bereich` fuer `table.induktion` (`im_bereich_folgt_aus_indexschranke`).",
+        stand: Stand::Bewiesen,
         fundstelle: "MESSUNGEN.md, A3, 2026-08-14",
+    },
+    Schablone {
+        name: "table.absenkung",
+        haengt_an: &["table.indexschranke"],
+        konstrukt: "table … count N (Emission)",
+        // **Abgespalten am 2026-08-16.** Der Satz stand in `table.indexschranke` und ist dort
+        // nicht beweisbar: er redet ueber den ERZEUGTEN C-Code, und einen Erzeuger gibt es
+        // nicht (`mutiere-pruefer.py`: 0 Mutationen auf der Emissionsflaeche).
+        //
+        // *Die Abspaltung VERGROESSERT das Register, und das ist der ehrliche Preis: eine
+        // Zusage, die zur Haelfte beweisbar und zur Haelfte ueber einem Nichts ist, war als
+        // EIN Eintrag zu klein gebucht.*
+        pflicht: "Die Absenkung legt genau N Slots an -- nicht weniger (dann waere ein \
+                  Index im Typ ohne Speicher) und nicht mehr (dann waere Speicher ohne \
+                  Index, den keine Schranke deckt).",
+        stand: Stand::Entworfen,
+        fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), Befund M-3",
     },
     // ---- Kandidaten aus der Nachpruefung vom 2026-08-14. Noch kein Konstrukt, aber die
     // ---- Pflicht steht schon fest -- und genau das ist der Punkt dieser Liste.

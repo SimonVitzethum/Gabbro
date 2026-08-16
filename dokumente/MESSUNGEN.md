@@ -4836,3 +4836,89 @@ sagt am wenigsten.*
 **Die Maschine bestätigt, sie entdeckt nicht** — die Bedingungen spült die Handarbeit aus.
 Das gilt auch hier, und es ist der Grund, warum die Ausbeutezahl **eine Aussage über meine
 Sorgfalt beim Schreiben ist, nicht über Isabelle.**
+
+---
+
+# ERGEBNIS III — drei Schablonen, und die Ausbeute hat eine Kategorie, die niemand vorgesehen hat
+
+**Alle drei sind gefahren, alle drei gehen durch, alle drei mit negativer Kontrolle.**
+
+```
+Gabbro: theory Gabbro.Table_Induktion    100% (0.359s)
+Gabbro: theory Gabbro.Table_Indexschranke 100% (0.100s)
+Gabbro: theory Gabbro.Consuming          100% (0.159s)
+```
+
+`sorry`/`oops`: **0** in allen drei Dateien. **U-b erfüllt:** in jede Theorie wurde eine
+Falschbehauptung eingesetzt, und jede fiel (`Failed to finish proof`, Zeile 35 bzw. 40 bzw. 45).
+
+## Die vorhergesagte Zahl stimmt — **und sie ist die unwichtigere Hälfte**
+
+| | vorhergesagt | ausgespült | **widerlegt** |
+|---|---|---:|---:|
+| **S12** `table.indexschranke` | 1–2 | **2** | **1** |
+| **S1** `consuming.ordnung` | 2–4 | **2** | **1** |
+| **S2** `consuming.leermenge` | 0–1 | **1** | 0 |
+| | **3–7** | **5** | **2** |
+
+**5 ausgespült — mitten in der Vorhersage, also der langweiligste Ausgang.** Das Tor sagt
+weder *„Register war ehrlich"* (≤2) noch *„systematisch verschwiegen"* (≥8).
+
+> **Aber die Vorregistrierung kannte die Spalte rechts nicht.** Sie fragte nach *stillen
+> Annahmen*. Gefunden wurden **zwei Sätze, die schlicht FALSCH sind** — und das ist eine
+> andere Klasse als eine fehlende Bedingung.
+
+## Die zwei widerlegten Sätze
+
+**M-1 — `table.indexschranke`:** *„Der erzeugte Indextyp `0 ..< N` deckt **genau** die belegten
+Slots."* **Falsch.** Eine Tabelle mit `count 80256` und drei belegten Slots hat einen Indextyp
+mit 80256 Werten. Gegenbeispiel: `indextyp_deckt_nicht_nur_belegte`.
+
+**K-2 — `consuming.ordnung`:** *„die Ordnung bleibt unter der erzeugten Mutation erhalten."*
+**Falsch für das Umhängen.** `umhaengen_kann_zyklus_erzeugen` konstruiert einen
+wohlfundierten Zustand, aus dem **ein** Umhängen eine Schlinge macht.
+
+> **Und das ist kein Randfall:** der Bestand tut beides in **einem** Zug — `delete_leaf` ruft
+> `unlink`, und `unlink` schreibt die Geschwisterzeiger der **Nachbarn** um. **B3 hat genau
+> das als Marke Nb2 gezählt** (`space.rs:1044`), ohne dass jemand die Verbindung sah.
+
+## Der dritte Fund, und er zerstört die Ordnung der Liste
+
+**K-3:** *„Daraus fällt die Blattheit zum Verbrauchszeitpunkt."* — **Sie fällt nicht daraus.**
+`wf` sagt, dass minimale Elemente **existieren**, nicht, dass die Traversierung eines
+**nimmt**. Die fehlende Bedingung heisst `waehlt_minimal` und ist eine **zusätzliche Pflicht
+an die Erzeugung**, keine Folge.
+
+*Ein „daraus fällt" in einer Beweispflicht ist die teuerste Formulierung überhaupt: sie
+verspricht, dass an dieser Stelle nichts mehr zu tun ist.*
+
+## **Die Buchung, und sie ist unbequem**
+
+| | vorher | nachher |
+|---|---:|---:|
+| Einträge | 17 | **19** |
+| bewiesen | 1 | **4** |
+| **unbewiesen** | **16** | **15** |
+
+> **Drei Formalisierungen — und die Zahl der unbewiesenen fiel um EINS.**
+
+Der Grund: zwei Einträge mussten **aufgeteilt** werden, weil sie halb beweisbar und halb über
+einem Nichts waren. `table.indexschranke` → `+ table.absenkung` (redet über die Emission, die
+es nicht gibt). `consuming.ordnung` → `+ consuming.umhaengen` (die pauschale Fassung ist
+**widerlegt**, nicht offen).
+
+> **Die Vertrauensfläche ist nicht geschrumpft. Sie ist zum ersten Mal VERMESSEN worden** —
+> und dabei grösser geworden, weil das Messen die Halbheiten sichtbar macht, die eine
+> Prosa-Zeile zusammenhalten konnte.
+
+## Was das für „alle sechzehn" heisst
+
+**Von drei geprüften Einträgen enthielten zwei einen falschen Satz.** Das ist die Antwort auf
+die Frage, ob man den Rest durchziehen soll — und sie lautet anders als vorher:
+
+> **Das Register ist keine Liste von Beweispflichten. Es ist eine Liste von Entwürfen**, und
+> jeder dritte Satz darin hält einer Formalisierung nicht stand.
+
+*Die Arbeit ist damit nicht „sechzehn Beweise", sondern „neunzehn Einträge redigieren" — und
+das ist billiger, aber es heisst auch, dass die Zahl `17 unbewiesen` nie eine Zahl über
+Beweise war, sondern eine über unfertige Sätze.*
