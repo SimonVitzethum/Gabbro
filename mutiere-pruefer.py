@@ -284,6 +284,23 @@ MUTATIONEN = [
         "E006 -- ein `locks`-Block braucht keine erklaerte Sperre",
     ),
     Mutation(
+        "vorfahren-ohne-schranke",
+        "kosten.rs",
+        "            | Domaene::VorfahrenVon(o)\n",
+        "",
+        "K003 -- `ancestors of` erbt die Schranke von `descendants of` nicht mehr",
+    ),
+    Mutation(
+        # **Die Luecke, die der Bau von `ancestors of` aufgedeckt hat**, und sie lag bei
+        # `descendants of` schon vorher: der Tabellenname aus `index into T` ist
+        # unqualifiziert, die Kapazitaetentabelle schluesselt qualifiziert.
+        "indextyp-nennt-seine-tabelle-nicht",
+        "kosten.rs",
+        '            crate::typen::Typ::Benannt { ref name, .. } if name.starts_with("index into ") => {',
+        '            crate::typen::Typ::Benannt { ref name, .. } if name.starts_with("XXindex into ") => {',
+        "K003 -- ein `index into T` benennt seine Tabelle nicht mehr",
+    ),
+    Mutation(
         "rangordnung-egal",
         "geteilt.rs",
         "            if *alt >= neu {",

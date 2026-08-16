@@ -1599,6 +1599,11 @@ impl<'a> Parser<'a> {
                 self.erwarte_kw(Kw::Of)?;
                 Ok(Domaene::NachfahrenVon(self.place()?))
             }
+            Art::Wort(Kw::Ancestors) => {
+                self.pos += 1;
+                self.erwarte_kw(Kw::Of)?;
+                Ok(Domaene::VorfahrenVon(self.place()?))
+            }
             Art::Wort(Kw::Queue) => {
                 self.pos += 1;
                 Ok(Domaene::Schlange(self.place()?))
@@ -1632,7 +1637,7 @@ impl<'a> Parser<'a> {
                     )
                     .mit_notiz(
                         "acht Domaenen, geschlossen: slots of · chain(a,b) in · descendants of \
-                         · queue · fields of · elems of · threads · mappings of",
+                         · queue · fields of · elems of · threads · mappings of · ancestors of",
                     )
                     .mit_notiz(
                         "es gibt keine benutzerdefinierte Domaene -- was hier herausfaellt, \

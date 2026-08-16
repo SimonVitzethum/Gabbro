@@ -522,6 +522,13 @@ pub enum Domaene {
     SlotsVon(Ort),
     KetteIn { a: Ident, b: Ident, ort: Ort },
     NachfahrenVon(Ort),
+    /// `ancestors of <place>` -- **dieselbe Kante, andere Richtung.**
+    ///
+    /// Gemessen («B41», B3-Sweep): vier Ruempfe in DMAR/PCIe laufen die Geraetetopologie
+    /// AUFWAERTS (`cur = topo[cur].parent`). Abwaerts war es eine Domaene, aufwaerts keine --
+    /// und damit fielen 226 der 584 nicht traversierbaren Zeilen in einen Bereich, den
+    /// niemand verdaechtigt hatte.
+    VorfahrenVon(Ort),
     Schlange(Ort),
     FelderVon(Pfad),
     ElementeVon(Ort),
@@ -535,6 +542,7 @@ impl Domaene {
             Domaene::SlotsVon(_) => "slots of",
             Domaene::KetteIn { .. } => "chain(…) in",
             Domaene::NachfahrenVon(_) => "descendants of",
+            Domaene::VorfahrenVon(_) => "ancestors of",
             Domaene::Schlange(_) => "queue",
             Domaene::FelderVon(_) => "fields of",
             Domaene::ElementeVon(_) => "elems of",

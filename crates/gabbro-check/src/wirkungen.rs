@@ -723,6 +723,7 @@ fn domaene_liest(d: &Domaene, t: &mut Taten) {
     match d {
         Domaene::SlotsVon(o)
         | Domaene::NachfahrenVon(o)
+        | Domaene::VorfahrenVon(o)
         | Domaene::Schlange(o)
         | Domaene::ElementeVon(o)
         | Domaene::AbbildungenVon(o)

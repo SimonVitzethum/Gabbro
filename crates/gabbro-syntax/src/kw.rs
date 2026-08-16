@@ -226,6 +226,7 @@ wortschatz! {
     Slots         => "slots",         res;
     Of            => "of",            res;
     Descendants   => "descendants",   res;
+    Ancestors     => "ancestors"  ,   res;
     Queue         => "queue",         res;
     Elems         => "elems",         res;
     Threads       => "threads",       res;

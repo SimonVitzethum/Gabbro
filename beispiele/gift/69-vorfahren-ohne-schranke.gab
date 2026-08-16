@@ -1,0 +1,41 @@
+-- erwartet: K003
+-- **Gift 69 -- `ancestors of` ohne `count`, und die Schranke fehlt wirklich.**
+--
+-- Die neue Domaene erbt ihre Schranke von `descendants of` und aus demselben Grund: eine
+-- aufsteigende Kette kann ohne Zyklus nicht laenger sein als die Tabelle Slots hat.
+-- **Ohne `count` gibt es diese Zahl nicht**, und der Kostenpass muss das sagen statt zu
+-- raten.
+--
+-- **Diese Datei existiert, weil der Bau von `ancestors of` eine Luecke aufgedeckt hat, die
+-- `descendants of` schon hatte:** `traverse … over descendants of g` mit `g : index into T`
+-- lieferte `K003`, obwohl `T` sein `count` nannte -- der Name der Tabelle kam
+-- unqualifiziert aus dem Indextyp, und die Kapazitaetentabelle schluesselt qualifiziert.
+-- **Kein Beispiel hatte die Stelle je ausgeloest**, weil der Korpus `descendants of` nur in
+-- PRAEDIKATEN fuehrt, wo kein Kostenpass laeuft.
+--
+-- *Eine Schranke, die nie ausgeloest wurde, ist nicht gedeckt, sondern unbeschaedigbar.*
+--
+-- ERWARTET: K003, und sonst nichts.
+
+module gift69 {
+
+-- **Der Fehler.** Kein `count` -- also keine Schranke fuer die aufsteigende Kette.
+table Topologie {
+    slot { elter : option index into Topologie, }
+}
+
+lock TOPO protects { Topologie } rank 1 held <= 800 ops;
+
+impl fn hoehe(g : index into Topologie) -> u32
+    effects { reads Topologie.slots, writes Topologie.slots, locks TOPO }
+    costs   <= 900 ops
+{
+    locks TOPO {
+        traverse v of g over ancestors of g by decreasing v {
+            Topologie.slots[v].elter = None;
+        }
+    }
+    return 0;
+}
+
+}

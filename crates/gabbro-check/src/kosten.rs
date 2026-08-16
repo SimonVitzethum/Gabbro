@@ -324,7 +324,13 @@ impl<'a> Rechner<'a> {
     /// Die Schranke einer Domaene, soweit die Deklaration sie nennt.
     fn domaenenschranke(&self, d: &Domaene) -> Option<i128> {
         let tabelle = match d {
-            Domaene::SlotsVon(o) | Domaene::NachfahrenVon(o) | Domaene::ElementeVon(o) => {
+            // **`ancestors of` erbt die Schranke von `descendants of`** -- dieselbe Kante,
+            // andere Richtung, und eine aufsteigende Kette kann ohne Zyklus nicht laenger
+            // sein als die Tabelle Slots hat.
+            Domaene::SlotsVon(o)
+            | Domaene::NachfahrenVon(o)
+            | Domaene::VorfahrenVon(o)
+            | Domaene::ElementeVon(o) => {
                 // `descendants of c.slots[s]` zeigt IN die Tabelle -- die Schranke ist die
                 // der Tabelle, nicht die des Slots.
                 self.tabellenname(o).or_else(|| {
@@ -371,7 +377,21 @@ impl<'a> Rechner<'a> {
             }
             _ => return None,
         };
-        self.u.kapazitaeten.get(&tabelle).map(|n| *n as i128)
+        // **Der Name kann unqualifiziert sein** -- `index into Topologie` nennt die Tabelle
+        // ohne Modulpfad, waehrend `kapazitaeten` qualifiziert schluesselt. Ohne diesen
+        // Umweg fiel die Schranke still aus, und `K003` machte daraus eine Absage ueber die
+        // DEKLARATION statt ueber die Aufloesung.
+        self.u
+            .kapazitaeten
+            .get(&tabelle)
+            .copied()
+            .or_else(|| {
+                self.u
+                    .kandidaten_oeffentlich(self.modul, &tabelle)
+                    .into_iter()
+                    .find_map(|k| self.u.kapazitaeten.get(&k).copied())
+            })
+            .map(|n| n as i128)
     }
 
     /// Die Laenge des **einzigen** Feldarrays eines Verbundes -- oder `None`.
@@ -395,9 +415,25 @@ impl<'a> Rechner<'a> {
     /// Auf welche Tabelle zeigt dieser Ort?
     fn tabellenname(&self, o: &Ort) -> Option<String> {
         let t = self.u.typ_von_ort(self.modul, o, &self.lokal);
-        match t.durchgreifen() {
-            crate::typen::Typ::Tabelle(n) => Some(n.clone()),
-            _ => None,
+        match t {
+            // **Ein `index into T` benennt seine Tabelle, und das war eine Luecke.**
+            //
+            // Gefunden am 2026-08-17 beim Bau von `ancestors of`: `traverse v over
+            // descendants of g` mit `g : index into Topologie` lieferte `K003` -- keine
+            // Schranke. Und das galt fuer `descendants of` schon vorher; **kein Beispiel
+            // hatte die Stelle je ausgeloest**, weil der Korpus `descendants of` nur in
+            // PRAEDIKATEN fuehrt (`ensures !exists k in descendants of s`), wo kein
+            // Kostenpass laeuft.
+            //
+            // *Eine Schranke, die nie ausgeloest wurde, ist nicht gedeckt, sondern
+            // unbeschaedigbar -- dieselbe Klasse wie eine Flaeche mit 0 Mutationen.*
+            crate::typen::Typ::Benannt { ref name, .. } if name.starts_with("index into ") => {
+                Some(name["index into ".len()..].to_string())
+            }
+            _ => match t.durchgreifen() {
+                crate::typen::Typ::Tabelle(n) => Some(n.clone()),
+                _ => None,
+            },
         }
     }
 

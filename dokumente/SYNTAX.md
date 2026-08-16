@@ -96,7 +96,8 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
              embeds scale walk levels node down leaf mappings
              entry vector regs out preserves clobbers stack dispatch
              per cpu ist nested masked awaits port step via
-  Domaenen   slots of chain descendants queue elems fields threads reaches via
+  Domaenen   slots of chain descendants ancestors queue elems fields threads
+             reaches via
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 bool never w1c rc
   Eingebaut  sizeof lenof aligned forall exists true false Self Some None
   Sonderform O @version Held    (KEINE Wortschatzwoerter -- s. Fussnote G6)
@@ -340,6 +341,7 @@ quant      = ( "forall" | "exists" ) ident "in" domain ":" pred ;
 domain     = "slots" "of" place                  (* die Slots einer Tabelle *)
            | "chain" "(" ident "," ident ")" "in" place
            | "descendants" "of" place
+           | "ancestors" "of" place        (* «B41»: dieselbe Kante, andere Richtung *)
            | "queue" place
            | "fields" "of" path
            | "elems" "of" place

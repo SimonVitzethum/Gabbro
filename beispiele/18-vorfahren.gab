@@ -1,0 +1,53 @@
+-- 18 -- **`ancestors of`: dieselbe Kante, andere Richtung.**
+--
+-- Der Bedarf ist gemessen, nicht entworfen. B3 (`dokumente/MESSUNGEN.md`, 2026-08-16) fand
+-- **584 nicht traversierbare Zeilen im Kernel, und 226 davon (38,7 %) in DMAR/PCIe** --
+-- einem Bereich, den niemand verdaechtigt hatte. Vier Ruempfe dort laufen die
+-- Geraetetopologie **aufwaerts**:
+--
+--     cur = topo[cur].parent;
+--
+-- Abwaerts war das eine Domaene (`descendants of`), aufwaerts keine. **Das ist der erste
+-- konvergenzmetrisch GEMESSENE Konstruktbedarf des Ordners:** null neue Konstrukte aus vier
+-- Bereichsfragmenten, eins aus einer Messung.
+--
+-- Die Schranke erbt sie von `descendants of` und aus demselben Grund: eine aufsteigende
+-- Kette kann ohne Zyklus nicht laenger sein als die Tabelle Slots hat.
+
+module beispiel::vorfahren {
+
+const NGERAETE : u32 = 256;
+
+table Topologie count NGERAETE {
+    slot {
+        elter    : option index into Topologie,
+        bereich  : u8,
+        gesperrt : bool,
+    }
+
+    -- Die Invariante, die die Wohlfundiertheit traegt -- ohne sie ist `ancestors of` eine
+    -- Kette ohne Ende. `table.induktion` sagt es seit dem 2026-08-16 ausdruecklich:
+    -- Wohlfundiertheit ist HYPOTHESE, nicht Ergebnis.
+    invariant azyklisch cost O(n) runs offline :
+        forall g in slots of Topologie : Topologie.slots[g].bereich <= 255;
+}
+
+lock TOPO protects { Topologie } rank 1 held <= 800 ops;
+
+-- **Der Rumpf, den B3 in DMAR viermal gefunden hat.** Ohne `ancestors of` war er ein
+-- `while`-Kettenlauf ohne Domaene -- Marke Na, und damit ein 5:1-Posten.
+impl fn liegt_unter(g : index into Topologie, wurzel : index into Topologie) -> bool
+    effects { reads Topologie.slots, locks TOPO }
+    costs   <= 900 ops
+{
+    locks TOPO {
+        traverse v of g over ancestors of g by decreasing v {
+            if v == wurzel {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+}

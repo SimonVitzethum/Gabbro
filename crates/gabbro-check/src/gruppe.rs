@@ -463,6 +463,7 @@ fn domaene_namen(d: &Domaene, aus: &mut Vec<String>) {
     match d {
         Domaene::SlotsVon(o)
         | Domaene::NachfahrenVon(o)
+        | Domaene::VorfahrenVon(o)
         | Domaene::Schlange(o)
         | Domaene::ElementeVon(o)
         | Domaene::AbbildungenVon(o)
