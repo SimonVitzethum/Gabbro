@@ -1,0 +1,21 @@
+-- 15 -- **`own` trägt Lesen UND Schreiben.** Die Gegenprobe zu den Rechteabsagen.
+--
+-- Ohne diese Datei wäre die Rechteprüfung an jedem `own`-Zeiger ein falscher Alarm, und
+-- niemand hätte es gemerkt: die Mutation `eigen-darf-alles-nicht` ist beim ersten Lauf
+-- entkommen, weil KEINE Probe einen `own`-Zeiger benutzte.
+--
+-- Ein `own`-Zeiger ist ein linearer Besitzer -- wer besitzt, darf lesen und schreiben.
+
+module beispiel::eigen {
+
+table Region count 8 { slot { belegt : bool, } }
+
+impl fn uebernehmen(r : ptr<normal, own> Region, i : index into Region) -> bool
+    effects { reads r.slots, writes r.slots }
+    costs   <= 4 ops
+{
+    r.slots[i].belegt = true;
+    return r.slots[i].belegt;
+}
+
+}

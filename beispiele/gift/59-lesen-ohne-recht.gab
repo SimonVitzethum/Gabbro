@@ -1,0 +1,13 @@
+-- erwartet: R003
+-- Die Gegenrichtung zu 57: ein `w`-Zeiger ist nicht LESBAR. `class w` an einem Register
+-- meint dasselbe -- ein Statusregister, das man nur beschreiben darf, gibt beim Lesen nicht
+-- zurueck, was man hineingeschrieben hat.
+module gift {
+table Raum count 8 { slot { a : bool, } }
+impl fn liest(k : ptr<normal, w> Raum, i : index into Raum) -> bool
+    effects { reads k.slots }
+    costs   <= 2 ops
+{
+    return k.slots[i].a;
+}
+}
