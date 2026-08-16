@@ -1225,3 +1225,98 @@ Damit niemand daraus schliesst, es sei geprueft:
   `[GptEntry; GptHeader.entry_count]` verlangt eine **Laufzeit**laenge, wo `array` (:142) einen
   `constexpr` fordert. Nicht als Fragment gefuehrt, weil kein Rumpf dazu existiert.
 * **Der Checkpoint (Z4).** Kommt in keiner der Dateien vor.
+
+
+---
+
+## F7 — Lader/Bringup: die Bootstrecke mit `BootPhase` als Wert
+
+**Geschrieben 2026-08-16** gegen `kernel/src/main.rs:143-310` (`../caprock-messbasis`,
+`a1bf707`). **Das Fragment entscheidet die Klempnerei-Klasse *Phase*** — Vorab und Tor
+(`k = 5`) stehen in `MESSUNGEN.md`, Commit `27805bd`.
+
+Die Vorlage traegt ihre Reihenfolge **in Kommentaren**. Sieben Stellen, jede mit dem Satz,
+der sie erklaert:
+
+| # | Fundstelle | was sie sagt | Bedingung |
+|---:|---|---|---|
+| 1 | `main.rs:144`/`:151` | *„Vor der MMU sind Atomics/Spinlocks nicht wohldefiniert"* | Einkern + Reihenfolge |
+| 2 | `main.rs:213` | *„Cap-Tabellen VOR dem ersten Cap"* | Reihenfolge |
+| 3 | `main.rs:222` | *„IPC-Tabellen VOR dem ersten Endpoint"* | Reihenfolge |
+| 4 | `main.rs:251` | *„erst das Autoritaetsdokument melden, dann den Root-Task starten"* | Reihenfolge |
+| 5 | `main.rs:256` | *„der Verifizierer MUSS vor dem Root-Task stehen"* | Reihenfolge |
+| 6 | `main.rs:303` | AP-Eintritt: *„erst danach Atomics/Konsole gueltig"* | Einkern |
+| 7 | `caprock-slab/src/lib.rs:173` | *„nur beim Boot aufrufen, bevor andere Kerne"* | Einkern |
+
+> **Und Nr. 4 ist ein bezahlter Fehler genau dieser Klasse:** *„Genau diese Zeile fehlte auf
+> ARM — hier lief der Manifest-Pfad ungeprueft mit."* Die Reihenfolge stand als Kommentar in
+> einer Architektur und **fehlte in der anderen**. Kein Werkzeug konnte es sagen.
+
+```gabbro
+module caprock::bringup {
+
+-- Die Marke ist LINEAR: sie entsteht einmal, wandert durch die Strecke und wird am Ende
+-- verbraucht. Ein Weg, der sie fallenlaesst, ist ein Bootpfad, der nie fertig wird; einer,
+-- der sie verdoppelt, sind zwei Kerne, die beide glauben, sie booten allein.
+linear ghost type BootPhase;
+
+-- `roh` heisst: vor der MMU. Atomics sind hier nicht wohldefiniert, also ist die Konsole
+-- sperrfrei -- und das ist eine EIGENSCHAFT DER PHASE, nicht des Geraets.
+extern fn melde_roh(text : ptr<code, r> Text) -> u32
+    requires  Held(PHASE_ROH)
+    effects   { reads text } costs <= 64 ops;
+
+-- «B37» -- DER BEFUND DES FRAGMENTS. Die Marke traegt die Reihenfolge, aber sie traegt sie
+-- als LINEARITAET, nicht als ORDNUNG: `mmu_an` verbraucht die rohe Phase und gibt die
+-- gewoehnliche zurueck. Damit ist „vor der MMU" und „nach der MMU" unterscheidbar --
+-- **aber „Cap-Tabellen vor dem ersten Cap" ist es nicht**, denn beide liegen in derselben
+-- Phase. Fuer die vier Reihenfolgezwaenge INNERHALB einer Phase braucht es entweder je
+-- eine eigene Marke (dann waechst der Wortschatz mit jedem Bootschritt) oder eine
+-- Ordnung auf Marken -- und die gibt es nicht.
+extern fn mmu_an(p : BootPhase) -> BootPhase
+    effects { consumes p, writes mmu } costs <= 4096 ops;
+
+extern fn cap_tabellen(p : BootPhase) -> BootPhase
+    effects { consumes p, writes caps } costs <= 2048 ops;
+
+extern fn ipc_tabellen(p : BootPhase) -> BootPhase
+    effects { consumes p, writes eps } costs <= 2048 ops;
+
+extern fn autoritaet_melden(p : BootPhase) -> BootPhase
+    effects { consumes p, reads manifest } costs <= 512 ops;
+
+extern fn verifizierer_starten(p : BootPhase) -> BootPhase
+    effects { consumes p, writes faeden } costs <= 4096 ops;
+
+-- Der Root-Task VERBRAUCHT die Marke endgueltig: danach ist der Bootzustand vorbei, und
+-- kein Pfad kann noch etwas tun, das nur waehrend des Boots erlaubt war.
+extern fn root_task_starten(p : BootPhase)
+    effects { consumes p, writes faeden } costs <= 8192 ops;
+
+impl fn hochlauf(p : BootPhase)
+    effects { consumes p, writes mmu, writes caps, writes eps, reads manifest,
+              writes faeden }
+    costs   <= 32768 ops
+{
+    let p1 = mmu_an(p);
+    let p2 = cap_tabellen(p1);
+    let p3 = ipc_tabellen(p2);
+    let p4 = autoritaet_melden(p3);
+    let p5 = verifizierer_starten(p4);
+    root_task_starten(p5);
+}
+
+}
+```
+
+**Urteil: die Marke TRAEGT — an sieben Stellen, gegen ein Tor von fuenf.**
+
+Und der Ertrag ist nicht die Zahl, sondern **was sie NICHT traegt**: die Marke macht
+*„vor der MMU"* von *„nach der MMU"* unterscheidbar, weil dort ein Verbrauch liegt. **Die
+vier Reihenfolgezwaenge innerhalb einer Phase traegt sie nicht** — `cap_tabellen` vor
+`ipc_tabellen` steht hier nur, weil ich es hingeschrieben habe. Der Uebersetzer sieht eine
+Kette von Verbraeuchen und sagt nichts ueber ihre **Reihenfolge**.
+
+> **«B37»:** Linearitaet erzwingt *genau einmal*, nicht *in dieser Ordnung*. Fuer die
+> Reihenfolge braeuchte es je Schritt eine eigene Marke — dann waechst der Wortschatz mit
+> jedem Bootschritt — oder eine **Ordnung auf Marken**, und die gibt es nicht.

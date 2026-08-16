@@ -3366,3 +3366,65 @@ Fuenf ist die Schwelle, ab der eine Form sich lohnt — dieselbe Groessenordnung
 **Und die Zahl steht hier, weil sie danach nicht mehr gewaehlt werden kann.** Faellt die
 Messung auf 4, ist das ein Ergebnis; faellt sie auf 6, ebenso. *Beides ist vorab ein gutes
 Ergebnis — der eine Ausgang spart ein Konstrukt, der andere begruendet eines.*
+
+## ERGEBNIS des Lader-Fragments — die Klasse *Phase* ist **konstruktwuerdig**
+
+**Gemessen: 7 Stellen gegen ein Tor von k = 5.** Jede mit `Datei:Zeile` in `FRAGMENTE.md`
+(F7). *Konservativ gezaehlt* — `main.rs:144` und `:151` beschreiben **dieselbe** Grenze von
+zwei Seiten und sind als **eine** Stelle gebucht, nicht als zwei.
+
+| | |
+|---|---|
+| Kandidaten roh | 8 |
+| nach Zusammenfassung der MMU-Grenze | **7** |
+| Tor | **5** |
+| **Urteil** | **traegt — die Klasse kommt nicht aus der Sprache** |
+
+## Der Beleg, der schwerer wiegt als die Zahl
+
+`main.rs:251`, woertlich:
+
+> *„D5: erst das Autoritaetsdokument melden, dann den Root-Task starten. **Genau diese Zeile
+> fehlte auf ARM** — hier lief der Manifest-Pfad ungeprueft mit."*
+
+**Ein bezahlter Fehler genau dieser Klasse.** Die Reihenfolge stand als Kommentar in einer
+Architektur und **fehlte in der anderen**; kein Werkzeug konnte es sagen. *Das ist der
+Unterschied zwischen „selten" und „selten sichtbar", den R18 verlangt hat — und er faellt
+zugunsten der Sichtbarkeit.*
+
+## Und der Ertrag ist nicht die Zahl, sondern «B37»
+
+**Die Marke traegt „vor der MMU" gegen „nach der MMU"** — dort liegt ein Verbrauch, und
+Linearitaet macht die zwei Seiten unterscheidbar.
+
+**Die vier Reihenfolgezwaenge INNERHALB einer Phase traegt sie nicht.** `cap_tabellen` vor
+`ipc_tabellen` steht im Fragment nur, weil ich es hingeschrieben habe: der Uebersetzer sieht
+eine Kette von Verbraeuchen und sagt **nichts ueber ihre Ordnung**.
+
+> **«B37»: Linearitaet erzwingt *genau einmal*, nicht *in dieser Ordnung*.**
+>
+> Fuer die Reihenfolge braeuchte es je Schritt eine **eigene Marke** — dann waechst der
+> Wortschatz mit jedem Bootschritt, und das ist die Bewegung, gegen die `abi { … }` und
+> `locks ordered` gestorben sind — oder eine **Ordnung auf Marken**, und die gibt es nicht.
+
+**Damit ist die Klasse *Phase* halb getragen**, und die Kippregel sagt, wohin das faellt:
+*traegt ein Konstrukt eine Klasse nur teilweise, zaehlt sie als haengend, und der gedeckte
+Teil wird benannt.* **Phase bleibt in N_neu.**
+
+## Konvergenzmetrik — der erste Datenpunkt aus einem Bereichsfragment
+
+| Fragment / Anlass | neue Konstrukte | kumulativ |
+|---|---:|---:|
+| F1–F6 (Bestand) | — | Basis |
+| «B32» virtio-Ringzaehler | 1 (`wrapping` am `regdecl`) | 1 |
+| «B34» revoke-Schranke | 0 — die Praemisse fiel | 1 |
+| «B29» refcount-Unterlauf | 0 — `narrow` genuegte | 1 |
+| `heldpred` (aus H005) | 1 | 2 |
+| «B35» `Some`/`None` | 1 | 3 |
+| **F7 Lader/Bringup** | **0** | **3** |
+
+**Das Lader-Fragment hat kein neues Konstrukt gekostet** — es hat eines *begruendet*
+(`BootPhase`, das es schon gab) und eine **Grenze** gefunden («B37»).
+
+> **Ein Datenpunkt ist keine Kurve.** Drei weitere Bereichsfragmente stehen aus, und erst mit
+> ihnen sagt die Metrik etwas ueber Konvergenz. *Aber sie ist nicht mehr leer.*
