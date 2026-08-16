@@ -1,0 +1,58 @@
+-- 17 -- **Die Traegergruppe, und warum sie zwei Sperren nimmt.**
+--
+-- Gemessen (`dokumente/MESSUNGEN.md`, SWEEP der Verbindungs-Invarianten, 2026-08-16): im
+-- Bestand liegen vier Invarianten zwischen je zwei Traegern. Drei unter EINER Sperre --
+-- die deckt `lock … protects { A, B }` bereits. **Die vierte nicht:**
+--
+--   ein Faden steht in der Empfaengerliste eines Endpunkts  <=>  sein Grund ist gesetzt
+--
+-- Zwei Traeger, zwei Sperren, eine Ordnung. Diese Datei ist die richtige Fassung; die
+-- falsche steht als `beispiele/gift/63-gruppe-halb-gesperrt.gab` daneben und faellt mit
+-- `U003`.
+--
+-- **Die Ordnung wird hier NICHT deklariert.** Sie steht in `rank 1` und `rank 2` -- eine
+-- zweite Deklaration an der Gruppe waere eine zweite Wahrheit ueber dieselbe Sache. `U005`
+-- faellt, wenn zwei Sperren einer Gruppe denselben Rang tragen: dann gibt es keine Ordnung.
+
+
+
+module beispiel::gruppe {
+
+const NFAEDEN    : u32 = 256;
+const NPUNKTE    : u32 = 64;
+const KEIN_FADEN : u32 = 4294967295;
+
+table Faeden count NFAEDEN {
+    slot {
+        gruende  : u32,
+        bereit   : bool,
+    }
+}
+
+table Endpunkte count NPUNKTE {
+    slot {
+        wartet : u32,
+    }
+}
+
+lock PUNKTE protects { Endpunkte } rank 1 held <= 40 ops;
+lock PLAN   protects { Faeden }    rank 2 held <= 40 ops;
+
+-- Die Verbindungs-Invariante lebt zwischen den beiden Traegern, nicht in einem.
+group Zustellung over { Endpunkte, Faeden };
+
+-- **Der Fehler.** Beide Traeger geschrieben, nur `PUNKTE` gehalten.
+impl fn einreihen(e : index into Endpunkte, t : index into Faeden)
+    effects { reads Endpunkte.slots, writes Endpunkte.slots, writes Faeden.slots,
+              locks PUNKTE, locks PLAN }
+    costs   <= 40 ops
+{
+    locks PUNKTE {
+      locks PLAN {
+        Endpunkte.slots[e].wartet = t;
+        Faeden.slots[t].gruende   = 1;
+      }
+    }
+}
+
+}

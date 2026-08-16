@@ -1,0 +1,58 @@
+-- erwartet: U003
+-- **Gift 63 -- V4 in Gabbro geschrieben, und genau so, wie der Bestand es traegt.**
+--
+-- Der Sweep vom 2026-08-16 (`MESSUNGEN.md`) fand vier Verbindungs-Invarianten im Kernel.
+-- Drei liegen unter EINER Sperre. Die vierte nicht:
+--
+--   `t` steht in der Empfaengerliste eines Endpoints  <=>  `IPC` steht in seinen Gruenden.
+--
+-- Zwei Strukturen, ZWEI KISTEN, zwei Sperrklassen mit deklarierter Ordnung
+-- `EPS[i] < SCHEDS[core]`. Und im Bestand wird diese Ordnung von einem KOMMENTAR getragen
+-- (`caprock-microkit/src/lib.rs`:1303) -- einem Kommentar, der erklaert, warum eine Funktion
+-- dort steht, wo sie steht: naehme sie EPS unter SCHEDS, drehte sie die Ordnung um.
+--
+-- Hier ist der Fehler, gegen den `U003` steht: `einreihen` schreibt BEIDE Traeger der
+-- Gruppe und haelt nur EINE ihrer Sperren. Der Zwischenzustand -- der Faden steht in der
+-- Warteschlange, aber sein Grund ist noch nicht gesetzt -- ist damit fuer einen anderen
+-- Kern sichtbar.
+--
+-- ERWARTET: U003, und sonst nichts.
+
+module gift63 {
+
+const NFAEDEN    : u32 = 256;
+const NPUNKTE    : u32 = 64;
+const KEIN_FADEN : u32 = 4294967295;
+
+table Faeden count NFAEDEN {
+    slot {
+        gruende  : u32,
+        bereit   : bool,
+    }
+}
+
+table Endpunkte count NPUNKTE {
+    slot {
+        wartet : u32,
+    }
+}
+
+lock PUNKTE protects { Endpunkte } rank 1 held <= 40 ops;
+lock PLAN   protects { Faeden }    rank 2 held <= 40 ops;
+
+-- Die Verbindungs-Invariante lebt zwischen den beiden Traegern, nicht in einem.
+group Zustellung over { Endpunkte, Faeden };
+
+-- **Der Fehler.** Beide Traeger geschrieben, nur `PUNKTE` gehalten.
+impl fn einreihen(e : index into Endpunkte, t : index into Faeden)
+    effects { reads Endpunkte.slots, writes Endpunkte.slots, writes Faeden.slots,
+              locks PUNKTE }
+    costs   <= 40 ops
+{
+    locks PUNKTE {
+        Endpunkte.slots[e].wartet = t;
+        Faeden.slots[t].gruende   = 1;
+    }
+}
+
+}

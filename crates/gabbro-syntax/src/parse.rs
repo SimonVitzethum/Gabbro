@@ -432,6 +432,7 @@ impl<'a> Parser<'a> {
             Art::Wort(Kw::Axiom) => ItemArt::Axiom(self.axiom()?),
             Art::Wort(Kw::Check) => ItemArt::Check(self.check()?),
             Art::Wort(Kw::Lock) => ItemArt::Lock(self.lockdecl()?),
+            Art::Wort(Kw::Group) => ItemArt::Gruppe(self.gruppedecl()?),
             Art::Wort(Kw::Accumulates) => ItemArt::Accumulates(self.accdecl()?),
             Art::Wort(Kw::Walk) => ItemArt::Walk(self.walkdecl()?),
             Art::Wort(Kw::Entry) => ItemArt::Entry(self.entrydecl()?),
@@ -2989,6 +2990,33 @@ impl<'a> Parser<'a> {
             obermenge,
             ordnung,
             span: anfang.bis_zu(self.vorheriger_span()),
+        })
+    }
+
+    /// `group N over { A, B };` -- die Traegergruppe.
+    ///
+    /// **Zwei Mitglieder sind das Minimum, und der Parser haelt das nicht** -- er kann es
+    /// nicht: `over { A }` ist grammatisch dieselbe Liste. Die Absage kommt aus dem Pass
+    /// (`U004`), wo sie hingehoert; hier waere sie eine Laengenpruefung im Parser und damit
+    /// eine zweite Stelle, an der dieselbe Regel steht.
+    fn gruppedecl(&mut self) -> Erg<GruppeDecl> {
+        let anfang = self.erwarte_kw(Kw::Group)?;
+        let name = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::Over)?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut traeger = vec![self.erwarte_ident()?];
+        while self.friss_z(Z::Komma) {
+            if self.ist_z(Z::GeschweiftZu) {
+                break; // Schlusskomma -- dieselbe Regel wie ueberall seit 2026-08-16
+            }
+            traeger.push(self.erwarte_ident()?);
+        }
+        let zu = self.erwarte_z(Z::GeschweiftZu)?;
+        self.erwarte_z(Z::Semi)?;
+        Ok(GruppeDecl {
+            name,
+            traeger,
+            span: anfang.bis_zu(zu),
         })
     }
 

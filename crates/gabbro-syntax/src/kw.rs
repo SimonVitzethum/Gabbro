@@ -156,6 +156,7 @@ wortschatz! {
     Unfalsifiable => "unfalsifiable", res;
     Axiom         => "axiom",         res;
     Lock          => "lock",          res;
+    Group         => "group",         res;
     Protects      => "protects",      res;
     Rank          => "rank",          res;
     Check         => "check",         res;

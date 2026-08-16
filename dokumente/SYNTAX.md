@@ -87,7 +87,7 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
              class fields bank at stride count mirrors from
-             assume falsifier unfalsifiable axiom lock protects rank
+             assume falsifier unfalsifiable axiom lock protects rank group
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
              offset_into index into option chain wrapping
@@ -159,7 +159,8 @@ program    = { item } ;
 item       = [ "when" constexpr ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | reason | state | device | assume | axiom | check
-             | atomicdecl | lockdecl | accdecl | walkdecl | entrydecl | bootdecl ) ;
+             | atomicdecl | lockdecl | gruppedecl | accdecl | walkdecl | entrydecl
+             | bootdecl ) ;
 bootdecl   = "boot" ident "arch" ident "{"
                { bootstep }
                "dispatch" path ";"
@@ -645,12 +646,28 @@ lockdecl   = "lock" ident "protects" "{" placelist "}"
              "rank" constexpr [ "held" "<=" constexpr "ops" ]
              [ "shared" "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
 lockstmt   = "locks" [ "shared" ] place block ;
+gruppedecl = "group" ident "over" "{" ident { "," ident } [ "," ] "}" ";" ;
 ```
 
 ```gabbro
 lock CAPS protects { plaetze, cdt } rank 2 masks irqs;
 atomic COLOR_DONE : bool publishes { color_report } release;
+group Zustellung over { Endpunkte, Faeden };
 ```
+
+**`group` traegt die Invariante, die zwischen zwei Traegern lebt** — *„der Zaehler in A
+entspricht der Zahl der Verweise in B"*. Keine `table … invariant` kann das sagen; sie
+quantifiziert nur ueber ihrem eigenen Traeger.
+
+**Die Sperrordnung steht NICHT an der Gruppe.** Jeder Traeger liegt unter einer
+`lock … rank N`, und die Raenge geben die Ordnung — eine zweite Deklaration waere eine
+zweite Wahrheit ueber dieselbe Sache. Was der Pruefer daraus macht: `U003` verlangt, dass
+eine Funktion, die **zwei** Traeger einer Gruppe schreibt, **alle** ihre Sperren haelt, und
+`U005` faellt, wenn zwei Sperren einer Gruppe denselben Rang tragen — dann gibt es keine
+Ordnung, und die Gruppenoperation koennte sie in zwei Richtungen nehmen.
+
+*Der gemessene Bedarf steht in `MESSUNGEN.md`, SWEEP der Verbindungs-Invarianten: vier im
+Bestand, drei unter einer Sperre, eine (V4) ueber zwei Kisten mit zwei Sperrklassen.*
 
 **`publishes` ist Pflicht an jedem Atomic** — die Nutzlast ist Teil des Modells, nicht des
 Kommentars. **`rank`** gibt die Sperrordnung; Nehmen verlangt echt kleineren Rang. Ein `locks`-Block

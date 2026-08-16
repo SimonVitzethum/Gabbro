@@ -96,6 +96,7 @@ pub const RATSCHE: &[&str] = &[
     "state.reset",
     "verbund.konstruktor",
     "gruppe.ops",
+    "gruppe.sperrabdruck",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -246,6 +247,37 @@ pub const SCHABLONEN: &[Schablone] = &[
                   der Beweis sagt, es koenne nicht negativ werden.",
         stand: Stand::Entworfen,
         fundstelle: "MESSUNGEN.md, Papiertest CapSpace/CDT, 2026-08-14",
+    },
+    Schablone {
+        name: "gruppe.sperrabdruck",
+        konstrukt: "Gruppen-ops ueber Traegern MIT VERSCHIEDENEN SPERREN (aus «B41»-Sweep)",
+        // **Warum das eine ZWEITE Schablone ist und kein Zusatz zur ersten.**
+        //
+        // Der Sweep vom 2026-08-16 hat vier Verbindungs-Invarianten gefunden, und drei davon
+        // (V1 refcount, V2 Spendenkanten, V3 queued gegen Bereitliste) liegen unter EINER
+        // Sperre. `gruppe.ops` deckt sie. **V4 nicht:** die Endpoint-Warteschlange steht
+        // unter `EPS[i]`, der Thread-Zustand unter `SCHEDS[core]` -- zwei Klassen, zwei
+        // Kisten, eine deklarierte Ordnung.
+        //
+        // Eine Schablone, die beide Faelle als einen fuehrt, versteckt genau den Unterschied,
+        // an dem sie scheitern kann: unter einer Sperre ist die Erhaltung ein sequenzielles
+        // Argument, unter zweien haengt sie an der ORDNUNG und daran, dass zwischen den zwei
+        // Nahmen kein fremder Schreiber dazwischenkommt.
+        pflicht: "Die Gruppenoperation nimmt ALLE Sperren ihrer Traeger, in aufsteigender \
+                  `rank`-Ordnung, und haelt sie ueber den ganzen Zug. Der Erzeuger beweist: \
+                  (a) die Reihenfolge ist die deklarierte -- sonst ist die Deadlockfreiheit \
+                  des Bestands verloren, nicht bloss die Invariante; (b) die \
+                  Verbindungs-Invariante gilt am ANFANG und am ENDE des Zuges, NICHT \
+                  zwischendrin -- der Zwischenzustand ist genau der Grund, warum es eine \
+                  Gruppenoperation gibt; (c) kein Zwischenaustritt (`return`, `leave`, \
+                  Fehlerpfad) verlaesst den Zug im Zwischenzustand. \
+                  **Der Bestand traegt (a) heute von Hand:** caprock-microkit/src/lib.rs:1303 \
+                  ist ein Kommentar, der erklaert, warum eine Funktion dort steht, wo sie \
+                  steht -- naehme sie `EPS` unter `SCHEDS`, drehte sie die Ordnung um. \
+                  *Eine Gruppe mit deklariertem Abdruck haette diesen Kommentar ueberfluessig \
+                  gemacht; das ist der gemessene Bedarf, nicht ein Entwurfswunsch.*",
+        stand: Stand::Entworfen,
+        fundstelle: "MESSUNGEN.md, SWEEP der Verbindungs-Invarianten, 2026-08-16 (V4)",
     },
 ];
 

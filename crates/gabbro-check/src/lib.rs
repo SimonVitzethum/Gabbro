@@ -21,6 +21,7 @@ pub mod aufrufgraph;
 pub mod m2;
 pub mod m3;
 pub mod paarung;
+pub mod gruppe;
 pub mod geteilt;
 pub mod kbedingung;
 pub mod kosten;
@@ -177,6 +178,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     m3::pass(baum, absagen);
     m2::pass(baum, absagen);
     paarung::pass(baum, absagen);
+    gruppe::pass(baum, absagen);
     let kosten = kosten::pass(baum, absagen);
     Bericht { m1, kosten }
 }

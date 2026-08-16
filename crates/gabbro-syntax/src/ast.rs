@@ -75,6 +75,8 @@ pub enum ItemArt {
     Check(Check),
     Atomic(AtomicDecl),
     Lock(LockDecl),
+    /// `group N over { A, B };` -- ein Traegerverbund mit Verbindungs-Invariante.
+    Gruppe(GruppeDecl),
     Accumulates(AccDecl),
     Walk(WalkDecl),
     Entry(EntryDecl),
@@ -90,6 +92,7 @@ impl ItemArt {
             ItemArt::Typ(t) => Some(&t.name),
             ItemArt::Konst(k) => Some(&k.name),
             ItemArt::Statisch(s) => Some(&s.name),
+            ItemArt::Gruppe(g) => Some(&g.name),
             ItemArt::Funktion(f) => Some(&f.name),
             ItemArt::Format(f) => Some(&f.name),
             ItemArt::Tabelle(t) => Some(&t.name),
@@ -127,6 +130,7 @@ impl ItemArt {
             ItemArt::Check(_) => "check",
             ItemArt::Atomic(_) => "atomic",
             ItemArt::Lock(_) => "lock",
+            ItemArt::Gruppe(_) => "group",
             ItemArt::Accumulates(_) => "accumulates",
             ItemArt::Walk(_) => "walk",
             ItemArt::Entry(_) => "entry",
@@ -1083,6 +1087,25 @@ pub enum Ordnung {
     Release,
     Seq,
     Relaxed,
+}
+
+/// **`group N over { A, B };` -- der Traegerverbund.**
+///
+/// Der gemessene Bedarf steht im SWEEP der Verbindungs-Invarianten (`MESSUNGEN.md`,
+/// 2026-08-16): vier Invarianten zwischen je zwei Traegern, und **eine davon (V4) laeuft
+/// ueber zwei Kisten mit zwei Sperren.** Was eine einzelne Tabelle nicht ausdruecken kann:
+/// *„der Zaehler in A entspricht der Zahl der Verweise in B"* -- keine `table`-Invariante
+/// kann das, weil sie nur ueber ihrem eigenen Traeger quantifiziert.
+///
+/// **Die Sperrordnung wird NICHT erneut deklariert.** Sie steht schon: jeder Traeger liegt
+/// unter einer `lock … protects { … } rank N`, und die Raenge geben die Ordnung. Eine zweite
+/// Deklaration waere eine zweite Wahrheit ueber dieselbe Sache.
+#[derive(Debug, Clone)]
+pub struct GruppeDecl {
+    pub name: Ident,
+    /// Die Traeger. **Mindestens zwei** -- eine Gruppe mit einem Mitglied ist eine Tabelle.
+    pub traeger: Vec<Ident>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]

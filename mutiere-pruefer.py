@@ -284,6 +284,23 @@ MUTATIONEN = [
         "E006 -- ein `locks`-Block braucht keine erklaerte Sperre",
     ),
     Mutation(
+        "gruppe-abdruck-egal",
+        "gruppe.rs",
+        "            if !fehlend.is_empty() {",
+        "            if false && !fehlend.is_empty() {",
+        "U003 -- zwei Traeger einer Gruppe schreiben und nur eine Sperre halten",
+    ),
+    Mutation(
+        # **Die lockernde Fassung**: es genuegt, IRGENDEINE Sperre der Gruppe zu halten.
+        # Genau die Fassung, die ein Mensch schreiben wuerde, der die Ordnung fuer
+        # nebensaechlich haelt -- und die V4 nicht faengt.
+        "gruppe-eine-reicht",
+        "gruppe.rs",
+        "                    if !gehalten.iter().any(|h| h == sperre) && !fehlend.contains(sperre) {",
+        "                    if gehalten.is_empty() && !fehlend.contains(sperre) {",
+        "U003 -- eine gehaltene Sperre deckt die ganze Gruppe",
+    ),
+    Mutation(
         "lesen-egal",
         "wirkungen.rs",
         "    for (ort, span) in &taten.liest {",
