@@ -5015,3 +5015,42 @@ die sich hinschreiben lässt:
 **Keine dieser Regeln braucht Isabelle.** *Die teuerste Erkenntnis des Tages ist, dass die
 Formalisierung vor allem eines geleistet hat: sie hat mich gezwungen, die Sätze zu lesen, die
 ich selbst geschrieben hatte.*
+
+---
+
+# `ancestors of` gebaut — «B41», und der Bau deckte eine ältere Lücke auf
+
+**Der erste konvergenzmetrisch GEMESSENE Konstruktbedarf ist gebaut.** Eine Domänenzeile,
+dieselbe Erzeugungslogik wie `descendants of`, dieselbe Kante — andere Richtung. Die Schranke
+erbt sie und aus demselben Grund: *eine aufsteigende Kette kann ohne Zyklus nicht länger sein
+als die Tabelle Slots hat.*
+
+## Und dabei fiel etwas auf, das nichts mit `ancestors of` zu tun hat
+
+Das erste Beispiel fiel mit `K003` — **keine Schranke**. Die Gegenprobe mit `descendants of`
+an derselben Stelle fiel **genauso**:
+
+> **`traverse … over descendants of g` mit `g : index into T` hatte noch nie eine Schranke.**
+> Der Tabellenname kam **unqualifiziert** aus dem Indextyp, die Kapazitätentabelle schlüsselt
+> **qualifiziert** — die Auflösung fiel still aus, und `K003` machte daraus eine Absage über
+> die *Deklaration* statt über die *Auflösung*.
+
+**Kein Beispiel hatte die Stelle je ausgelöst.** Der Korpus führt `descendants of`
+ausschliesslich in **Prädikaten** (`ensures !exists k in descendants of s: …`), und dort
+läuft kein Kostenpass.
+
+> *Eine Schranke, die nie ausgelöst wurde, ist nicht gedeckt, sondern unbeschädigbar —
+> dieselbe Klasse wie eine Emissionsfläche mit 0 Mutationen.*
+
+**Zwei Mutationen sichern beides**: `vorfahren-ohne-schranke` (die neue Domäne verliert ihre
+Vererbung) und `indextyp-nennt-seine-tabelle-nicht` (die aufgedeckte Lücke). **65 von 65.**
+
+## Was «B41» damit noch offen hat
+
+| | Lücke | Stand |
+|---|---|---|
+| 1 | `ancestors of` | **gebaut** |
+| 2 | Kette über eine Kantenfunktion | **Linie steht** (`SPRACHE.md`, der Schnitt) — Entwurfszeile offen |
+| 3 | Union-Find | **Vorhersage: bekommt keine Traversierungsform** |
+
+*Von drei gemessenen Lücken ist eine gebaut, eine entschieden und eine vorhergesagt.*

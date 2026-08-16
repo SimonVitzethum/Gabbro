@@ -125,9 +125,12 @@ von Posten, die weder Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
         durch den Aufruf und ist nicht deklarierbar.
 
       **Die drei sind NICHT gleichrangig, und die Reihung ist die halbe Entscheidung:**
-      * **`ancestors of` — billig, und der Bedarf ist gemessen.** Dieselbe Erzeugungslogik
-        wie `descendants of`, dieselbe Kante, andere Richtung. **Zählt in der
-        Konvergenzmetrik als 1: null aus vier Fragmenten, eins aus einer Messung.**
+      * ~~**`ancestors of`**~~ — **gebaut 2026-08-17** (`beispiele/18`, Gift 69). Und der
+        Bau deckte eine Lücke auf, die `descendants of` schon hatte: über einem
+        `index into T` fand der Kostenpass die Schranke nicht, weil der Tabellenname
+        unqualifiziert aus dem Indextyp kam. **Kein Beispiel hatte die Stelle je
+        ausgelöst** — der Korpus führt `descendants of` nur in Prädikaten, wo kein
+        Kostenpass läuft.
       * **Kantenfunktion — die Linienfrage hat seit 2026-08-16 ihr KRITERIUM.** Sie ist der
         allgemeine Fall von `chain(a,b)`, und der Präzedenzfall steht schon in der Sprache:
         **der `update`-Rumpf von `exchange` — rein, M1-typisiert, über einem Wert, ohne

@@ -66,6 +66,7 @@ Neu erhoben 2026-08-15, **nicht wiederhergestellt**, nur x86
 | **`Some`/`None`** («B35») | `option` hatte **keinen Konstruktor** — der Bestand schrieb es seit jeher | `optionexpr` in `dokumente/SYNTAX.md`, `beispiele/01-tabelle.gab` |
 | **`table … count N`** | `index into T` erbt die Schranke | `M103` in `m1.rs`, `beispiele/01-tabelle.gab` |
 | **Platzierungsregel** | ein `ops`-Träger liegt in keinem `dma`-Raum — ein Gerät schreibt an jeder Grammatik vorbei | `R001`, Gift 58 |
+| **`ancestors of`** («B41») | **der erste gemessene Konstruktbedarf**: 4 Rümpfe laufen die Gerätetopologie aufwärts, 226 der 584 nicht traversierbaren Zeilen liegen dort | `beispiele/18-vorfahren.gab`, `beispiele/gift/69-vorfahren-ohne-schranke.gab` |
 | **`by ops` am Feld** | die K-Bedingung wird von einer **Prüfvorschrift zur Grammatikeigenschaft**: `refcount -= 1` von Hand ist nicht schreibbar | `D002` in `kbedingung.rs`, `beispiele/16`, Gift 60 |
 | **`shared held` (N3)** | `held` ist für **exklusive** Halter gerechnet; die geteilte Seite hat eine eigene Rechengrösse | `K004` in `kosten.rs:497`, eigener Topf `geteilte_haltezeiten` |
 | **Sperrordnung geprüft** | `rank` war deklariert und wurde **nie nachgerechnet** — und zwei Konstrukte beriefen sich darauf | `H006` in `geteilt.rs`, Gift 67 (Abstieg) + 68 (Gleichstand) |
@@ -124,7 +125,7 @@ die niemand gegeneinander prüft.*
 ./pruefe-wortschatz.py    Terminale gegen Tabelle, Sonderform-Zähler (3 von 5)
 ./pruefe-todo.py          hält die Aufgabenliste gegen sich selbst, acht Klassen
 ./pruefe-kennungen.py     keine Absage-Kennung in zwei Dateien
-./mutiere-pruefer.py      beschädigt je eine Regel:  63 von 63
+./mutiere-pruefer.py      beschädigt je eine Regel:  65 von 65
 ./erzeuge-mutationen.py   verdreht systematisch:      7 von 39
 ./pruefe-luecken.py       die benannten Lücken einzeln: 13 von 15
 ./commit.sh               R19 — Commit-Nachrichten nur über Datei
@@ -140,5 +141,5 @@ einem **bezahlten Fehler in diesem Ordner**, jede nennt den Schaden.
 
 ## Proben
 
-**18 saubere Beispiele, 68 Giftproben, 76 Tests** —
+**19 saubere Beispiele, 69 Giftproben, 76 Tests** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`
