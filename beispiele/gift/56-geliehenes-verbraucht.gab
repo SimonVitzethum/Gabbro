@@ -1,0 +1,17 @@
+-- erwartet: L102
+-- **Geliehen und trotzdem verbraucht.** Ein Parameter ist verbraucht, wenn `effects` ihn
+-- unter `consumes` nennt -- sonst geliehen. Wer einen geliehenen Wert verbraucht, nimmt dem
+-- Aufrufer etwas, das er noch hat: eine Pruefpflicht, die zweimal zu gelten scheint.
+--
+-- Der Zeuge heisst hier `Duty(farbtest)` -- der Parameter ist der NAME einer `check`-
+-- Deklaration, nicht das Wort `check` (SYNTAX.md:697, dort am 2026-08-16 berichtigt).
+module gift {
+linear ghost type Duty(farbtest);
+extern fn einloesen(d : Duty) effects { consumes d } costs <= 2 ops;
+impl fn nur_ansehen(d : Duty)
+    effects { reads d }
+    costs   <= 4 ops
+{
+    einloesen(d);
+}
+}

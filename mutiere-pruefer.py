@@ -418,6 +418,34 @@ MUTATIONEN = [
         "                        if false && ist_relaxed {",
         "V004 -- `relaxed` darf eine Nutzlast tragen, die es nicht ordnet",
     ),
+    Mutation(
+        "linear-darf-fallen",
+        "m2.rs",
+        "                (Zustand::Lebt, true) => absagen.schiebe(",
+        "                (Zustand::Verbraucht, true) => absagen.schiebe(",
+        "L101 -- ein linearer Wert unter `consumes` darf fallengelassen werden (affin statt linear)",
+    ),
+    Mutation(
+        "geliehenes-darf-sterben",
+        "m2.rs",
+        "                (Zustand::Verbraucht, false) => absagen.schiebe(",
+        "                (Zustand::Lebt, false) => absagen.schiebe(",
+        "L102 -- ein geliehener Wert darf verbraucht werden",
+    ),
+    Mutation(
+        "zweige-duerfen-abweichen",
+        "m2.rs",
+        "        if uneins {",
+        "        if false && uneins {",
+        "L103 -- die Zweige duerfen einen linearen Wert verschieden behandeln",
+    ),
+    Mutation(
+        "doppelverbrauch-egal",
+        "m2.rs",
+        "            if *z == Zustand::Verbraucht {\n                absagen.schiebe(\n                    Absage::fehler(\n                        \"L104\",",
+        "            if false {\n                absagen.schiebe(\n                    Absage::fehler(\n                        \"L104\",",
+        "L104 -- ein linearer Wert darf zweimal verbraucht werden",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

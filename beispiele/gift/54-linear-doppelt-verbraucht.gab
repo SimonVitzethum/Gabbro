@@ -1,0 +1,14 @@
+-- erwartet: L104
+-- **Doppelt verbraucht.** Linear heisst GENAU einmal -- der erste Verbrauch hat den Wert
+-- weggenommen. Bei `Parked` heisst das: ein Thread wird zweimal geweckt.
+module gift {
+linear type Parked;
+extern fn wecken(p : Parked) effects { consumes p } costs <= 2 ops;
+impl fn zweimal(p : Parked)
+    effects { consumes p }
+    costs   <= 8 ops
+{
+    wecken(p);
+    wecken(p);
+}
+}

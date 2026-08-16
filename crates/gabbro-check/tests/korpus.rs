@@ -34,6 +34,7 @@ const BENANNT: &[&str] = &[
     "H001", "H002", "H003", "H004", "H005", // geteilter Halt
     "K004", "D001", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
     "V001", "V002", "V003", "V004", // Paarung
+    "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet
 ];
 
 #[test]
@@ -95,5 +96,28 @@ fn jeder_block_wird_gefunden() {
     for b in &bloecke {
         let vorspann = b.text.chars().take_while(|c| *c == '\n').count();
         assert_eq!(vorspann + 1, b.erste_zeile);
+    }
+}
+
+#[test]
+fn die_beispiele_der_grammatik_gehen_selbst_durch() {
+    // **SYNTAX.md ist das Grammatikdokument -- seine eigenen Uebersetzungseinheiten muessen
+    // uebersetzen.** Bis 2026-08-16 hat das niemand verlangt, und es standen drei echte
+    // Fehler darin: `Duty(check)` (der Parameter ist der NAME einer Pruefung, nicht das
+    // Wort), und zweimal eine Wortschatzkollision in einem Beispiel.
+    //
+    // *Ein Grammatikdokument, dessen Beispiele die Grammatik verletzen, ist die teuerste
+    // Sorte Prosa: es sieht aus wie ein Beleg.*
+    let md = lies("SYNTAX.md");
+    for b in korpus::messe("SYNTAX.md", &md) {
+        if b.vollstaendig {
+            assert!(
+                b.sauber(),
+                "SYNTAX.md, Block ab Zeile {}: das Grammatikdokument bricht seine eigene \
+                 Grammatik:\n{}",
+                b.erste_zeile,
+                b.text
+            );
+        }
     }
 }

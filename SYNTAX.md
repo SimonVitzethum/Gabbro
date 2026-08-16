@@ -238,7 +238,8 @@ linear type Uninstalled(ObjectId);
 linear ghost type Held(Lock);
 linear ghost type BootPhase;
 linear ghost type MayWrite(ThreadId, Pa);
-linear ghost type Duty(check);
+linear ghost type Duty(farbtest);   -- der Parameter ist der NAME einer `check`-
+                                    -- Deklaration, nicht das Wort `check` (:697)
 ```
 
 **`tagged`** ist der Summentyp (13 `ObjectKind`-Varianten in Caprock) und senkt sich auf eine
@@ -633,7 +634,7 @@ lockstmt   = "locks" [ "shared" ] place block ;
 ```
 
 ```gabbro
-lock CAPS protects { slots, cdt } rank 2 masks irqs;
+lock CAPS protects { plaetze, cdt } rank 2 masks irqs;
 atomic COLOR_DONE : bool publishes { color_report } release;
 ```
 
@@ -710,8 +711,9 @@ Formatierung im Sprachkern existiert.
 raw fn phys_write(p: Pa, w: u64) requires BootPhase effects { writes phys };
 fn boot_end(t: BootPhase) effects { consumes t, writes code_map };
 
-prim fn switch_to(from: ptr<normal,rw> Context, to: ptr<normal,r> Context) -> never;
-prim fn resume(k: ptr<normal,r> Context) -> never;
+prim fn switch_to(von: ptr<normal,rw> Context, zu: ptr<normal,r> Context) -> never
+    effects { writes kontext };
+prim fn resume(k: ptr<normal,r> Context) -> never effects { reads k };
 divergent fn idle() effects { diverges };
 ```
 

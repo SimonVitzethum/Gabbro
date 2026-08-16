@@ -1,0 +1,13 @@
+-- erwartet: L101
+-- **Fallenlassen.** `consumes` ist eine Zusage an den Aufrufer: der Wert ist danach weg.
+-- Haelt der Rumpf sie nicht, ist der Wert beim Aufrufer verloren, ohne verbraucht zu sein --
+-- bei `Held(L)` heisst das: eine Sperre, die niemand freigibt.
+module gift {
+linear ghost type Held(Lock);
+impl fn freigeben(h : Held)
+    effects { consumes h }
+    costs   <= 2 ops
+{
+    return;
+}
+}

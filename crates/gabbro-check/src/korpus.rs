@@ -60,8 +60,23 @@ pub fn schneide(md: &str) -> Vec<Block> {
 /// und ein Parser, der sie als Programm liest, meldet einen Fehler, den es nicht gibt.
 /// Sie zusammenzuzaehlen waere derselbe Fehler wie eine Kennzahl ohne Nenner.
 pub fn ist_uebersetzungseinheit(text: &str) -> bool {
+    // **Ein Block mit `…` ist per Definition keiner.** Das Zeichen gehoert in keine Form der
+    // Sprache (`L006`) -- es steht fuer *„hier waere noch mehr"*. Ein solcher Block als
+    // Uebersetzungseinheit zu zaehlen heisst, eine Auslassung als Fehler zu melden, und das
+    // ist derselbe Fehler wie eine Kennzahl ohne Nenner, nur andersherum.
+    //
+    // Gefunden 2026-08-16, als SYNTAX.md zum ersten Mal gegen sein eigenes Tor lief.
+    //
+    // **Und die erste Fassung war zu grob und ist sofort aufgeflogen:** sie suchte `…` im
+    // ROHTEXT und warf damit fuenf der sechs Fragmente heraus, weil dort `…` in
+    // KOMMENTAREN steht. Der Lexer trennt das -- er meldet `L006` nur fuer Zeichen im Code.
+    // *Eine Vergroeberung, die in die falsche Richtung ging (W9): sie haette das Tor P2 von
+    // 6 auf 1 Einheit geschrumpft und dabei wie ein Erfolg ausgesehen.*
     let mut verworfen = gabbro_syntax::Absagen::neu("<probe>");
     let tokens = gabbro_syntax::lex::zerlege(text, &mut verworfen);
+    if !verworfen.leer() {
+        return false; // der Lexer stolpert -- das ist kein Programm, sondern eine Skizze
+    }
     let Some(erstes) = tokens.first() else {
         return false;
     };
