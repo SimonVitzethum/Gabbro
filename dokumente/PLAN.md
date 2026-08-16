@@ -1209,6 +1209,7 @@ diesem — und dürfen deshalb in keiner Kennzahl dieses Ordners auftauchen.
 > Bereichsfragmente forderten null neue Konstrukte, der ganze Kernel eines — der Wortschatz
 > konvergiert nachweisbar.
 >
-> **Was nicht konvergiert, ist die Vertrauensfläche.** 17 Schablonen, davon 0 bewiesen, zwei
+> **Was nicht konvergiert, ist die Vertrauensfläche.** 19 Schablonen, davon 4 bewiesen (Stand
+> 2026-08-17) — und **die vier haben das Register wachsen lassen, nicht schrumpfen**: zwei
 > davon an einem einzigen Tag dazugekommen. *Wer fragt, wieviel Gabbro noch fehlt, misst am
 > falschen Nenner, solange diese Liste keine Länge in Arbeit hat.*

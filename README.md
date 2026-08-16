@@ -1,357 +1,119 @@
 # Gabbro
 
-**Eine eigene Sprache, die seL4-Beweise leicht macht.** Ausgabe: **C + Inline-Assembler**, genau
-eine. Übersetzer in **sicherem Rust** (`forbid(unsafe_code)`).
+**A language whose point is to make seL4-style proofs cheap.** One output: **C plus inline
+assembly**. Compiler in **safe Rust** (`forbid(unsafe_code)`).
 
-Der Zweck ist nicht, eine weitere Sprache zu haben. Er ist, einen **Kernel darin zu schreiben und
-ihn dann billig formal zu verifizieren** — Caprock vollständig, mit grüner Abnahmereihe.
+The purpose is not to have another language. It is to **write a kernel in it and then verify
+that kernel cheaply** — Caprock in full, with a green acceptance run.
 
-> **Lizenz: AGPL-3.0** ([LICENSE](LICENSE)) — **mit einem Zusatz, der die wichtigste Frage
-> vorweg beantwortet:** *was du in Gabbro schreibst, ist kein abgeleitetes Werk.* Dein
-> Programm, das erzeugte C und die Binärdateien gehören dir, unter jeder Lizenz, die du
-> willst. **Die Bedingung ist eine Zeile:** erzeugte C-Dateien und Binärdateien tragen den
-> Hinweis, dass sie aus Gabbro stammen. Einzelheiten und die Rechtslage dazu in
-> [LIZENZ-ZUSATZ.md](LIZENZ-ZUSATZ.md).
+> **License: AGPL-3.0** ([LICENSE](LICENSE)) — **with an additional permission that answers the
+> important question up front:** *what you write in Gabbro is not a derived work.* Your
+> program, the generated C and the binaries are yours, under any license you like. **The
+> condition is one line:** generated C files and binaries carry a notice saying they came out
+> of Gabbro. Details and the legal reasoning in [LIZENZ-ZUSATZ.md](LIZENZ-ZUSATZ.md).
 
-## Das Ziel, in einem Satz
+## The goal, in one sentence
 
-> **Gabbro beweist alles ausser funktionaler Korrektheit — auf einem Mehrkernkernel mit DMA.**
+> **Gabbro proves everything except functional correctness — on a multicore kernel with DMA.**
 
-Alle **Klempnerei** — Index, Überlauf, **Alias**, Rahmen, Sperre, Rennen, Terminierung, Phase,
-Blattheit, Publikation, Verfeinerung — trägt die Sprache.
+All **plumbing** — index, overflow, **alias**, frame, lock, race, termination, phase, leafness,
+publication, refinement — is carried by the language. **Eight of the eleven classes are carried
+today**; the three that hang no longer hang on a missing pass, but each on something different:
+*race* on the axiom layer, *phase* on «B37», *refinement* on the code generator that does not
+exist.
 
-> **Mehrkern und DMA sind gesetzt, nicht optional** (2026-08-14). Das ist eine Ansage gegen die
-> bequemste aller Vereinfachungen: **seL4s verifizierte Konfiguration ist einkernig**, und die
-> 239 458 gemessenen Beweiszeilen beweisen einen Kernel ohne echte Nebenläufigkeit. Damit gilt
-> für Gabbro: die **Paarung** (`publishes`/`awaits`) ist kein „später", sondern tragende Last;
-> der `dma`-Raum trägt echte Aussagen statt einer Klassifikation; und **es gibt für diesen Teil
-> kein bewiesenes Vorbild** — weder eine Vorlage noch einen ungünstigen Vergleich. Die **Logik** („der Baum bleibt ein
-Baum") schreibt der Programmierer, in jeder Sprache. Gold im seL4-Sinn ist damit **ausserhalb
-des Ziels**, nicht aufgeschoben.
+> **Multicore and DMA are set, not optional.** That is a statement against the most convenient
+> of all simplifications: **seL4's verified configuration is single-core**, and its 239 458
+> measured proof lines prove a kernel without real concurrency. So for Gabbro the **pairing**
+> (`publishes`/`awaits`) is not a "later", it is load-bearing, and the `dma` space carries real
+> statements instead of a classification.
 
-**Der Weg dorthin sind vier Posten** ([`dokumente/PLAN.md`](dokumente/PLAN.md) §A). **Alle vier sind gefahren**, und
-der schwerste löste sich auf, statt geschlossen zu werden: *„kein Alias"* war eine Frage nach
-Zeigerpaaren — und **Kernzustand braucht gar keinen Zeiger.** Eine `table` *ist* Speicher, ihr
-Name ist ihr Ort; ein `device` hat seine Parameterliste als Konstruktor. F1 und F2 sind ohne
-einen einzigen Zeiger ausgeschrieben ([`beispiele/09-ohne-zeiger.gab`](beispiele/09-ohne-zeiger.gab)).
-Übrig bleiben Zeiger für DMA, belegte Regionen und fremden Speicher — **und nur dort war Trennung
-je eine Frage.** Dort gibt eine Funktion Besitz her, und `own` macht ihn linear. **Kein fünfter
-Mechanismus, kein neues Wort.**
+## The one number that defines success
 
-> Die Lehre ist nicht die Antwort, sondern die Frage: der Befund lautete *„der Kette fehlt der
-> Anfang"* — und **die Kette war das Problem.** Sie stand nur da, weil das Rust-Original sie
-> hatte. Ein Fragment, das seine Vorlage mitübersetzt, bringt deren Zwänge mit, und die sehen
-> dann wie Anforderungen der neuen Sprache aus.
-
-## Drei Zusagen, drei verschiedene Stärken
-
-Die Unterscheidung ist die ganze Ehrlichkeit dieses Ordners.
-
-| | Zusage | Status |
-|---|---|---|
-| **1** | **Speichersicherheit** — kein Zugriff ausserhalb, kein Gebrauch nach Freigabe, kein Alias, der eine Zusicherung bricht | **Gabbro beweist es selbst** — unter benannten **Hardware-Annahmen** und unter Vertrauen in Prüfer und Absenkung |
-| **1b** | **Unsicherer Bootcode läuft nach dem Boot nie wieder** | **beweisbar, zweistufig**: eine **lineare** Marke (nicht kopierbar — das kann Rust nicht) *und* der `.boot`-Abschnitt wird im selben Zug abgebildet. Falsifizierbar: eine Sonde dorthin muss faulten |
-| **2** | **Rennfreiheit** — Datenrennen **und** Protokollrennen | **später, aber JETZT eingeplant.** Nachträglich ändert sich jede Signatur, die geteilten Zustand anfasst |
-| **3** | **Funktionale Korrektheit (Gold)** | **Die Decke ist heute: Sicherheitshülle plus deklarierte Invarianten.** Gemessen: die sieben Quantorendomänen fallen **nicht** in eine entscheidbare Theorie, und kein SMT-Löser führt Induktion ([`dokumente/BEWEIS.md`](dokumente/BEWEIS.md)). **Seit dem 2026-08-14 trägt die Grammatik `by induction over <domain>`** — ein genanntes, aus der `table`-Deklaration **erzeugtes** Schema, kein Lemma. Damit: **Hülle + deklarierte Invarianten + induktive Eigenschaften über deklarierten Strukturen** ([`dokumente/SPRACHE.md`](dokumente/SPRACHE.md)) |
-
-> **Zusage 1 gilt nur relativ.** „Speichersicher" heisst für einen Kernel notwendigerweise
-> *speichersicher, WENN die MMU tut, was ihr Modell sagt* — der Kernel schreibt seine eigenen
-> Seitentabellen. Deshalb ist die Annahmenmenge **Teil des Satzes**: das Erzeugnis trägt
-> „**speichersicher unter A1…An**", maschinenlesbar.
-
-## Das Kriterium — und es ist eine ART, keine MENGE
-
-> **Wer ein Gabbro-Programm beweist, beweist die LOGIK seines Programms — und sonst nichts.**
-> Alles Übrige fällt durch Konstruktion.
-
-**Eine Pflicht ist Klempnerei, wenn ihre Aussage nur die Maschine erwähnt** (Index im Bereich, kein
-Überlauf, kein Alias, Rahmen, Sperrordnung, kein Datenrennen, Verfeinerung). **Sie ist Logik, wenn
-sie die Sache erwähnt** („der Baum bleibt ein Baum", „die Nachricht kam beim richtigen Thread an").
-
-**Abbruch ist damit nicht mehr eine Zahl, sondern:** *es bleibt eine **benannte** Klempnerei-Pflicht,
-die von Hand zu erledigen ist.* Das ist **auf Papier je Konstrukt prüfbar** — ungleich billiger als
-eine Zahl, die einen Übersetzer braucht. Ganz in [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md).
-
-## Die Kennzahl — ab jetzt Diagnose, nicht Ziel
-
-*Zeilen Spezifikation je Zeile **Gabbro**-Code* — Spezifikation ist, **was keine Laufzeitwirkung
-hat**; alles, was im erzeugten C ankommt, ist Code.
+**Proof lines : code lines.** seL4 sits at **20 : 1**. The floor — what no language can take
+away — is about **0,5 : 1**, the abstract specification itself.
 
 | | |
 |---|---|
-| seL4 (Isabelle über C) | **20 : 1** — davon rund **0,5 : 1 abstrakte Spezifikation**, **19,5 : 1 Beweis** |
-| **Boden** (nimmt keine Sprache weg) | **≈ 0,5 : 1** |
-| **Richtwert** | **0,5 : 1** — der Boden. **Aber selbst 2 : 1 ist gut, wenn die gezählten Zeilen Logik sind**, und 0,5 : 1 wäre ein Misserfolg, wenn Bereichsprüfungen darin stecken |
-| **gemessen** | `delete_leaf` **3,6–6 : 1**, `Endpoint::call` **1,8–2,3 : 1** (ausgeschrieben) — **beide noch nicht nach Logik/Klempnerei aufgeschlüsselt, und ohne diese Aufteilung kein Messwert** |
+| **measured today** | **≥ 1,90**, open — and it hangs almost entirely on the **W column** |
+| **target** | **0,5 : 1** |
 
-**Das Ziel ist bewusst der theoretische Boden, nicht ein erreichbarer Kompromiss.** Damit misst die
-Kennzahl den **Abstand** statt zu urteilen: jede Zehntelstelle über 0,5 ist ein benennbarer
-Beweisposten, der noch von Hand geschrieben wird. Eine Zahl, die man treffen kann, sagt „bestanden";
-eine Zahl am Boden sagt, **was noch fehlt**.
+**The measurement that produced that number also produced the sentence that matters more:**
 
-**Die Zahl ist ein Stellvertreter, und Stellvertreter sind hier eine bezahlte Falle** — deshalb
-steht sie hinter dem Kriterium, nicht davor. Herleitung und Messprotokoll in [`dokumente/PLAN.md`](dokumente/PLAN.md);
-ohne Aufschlüsselung nach Logik/Klempnerei ist eine Zahl ab jetzt kein Messwert.
+> **The expensive obligations are many, but small.** 38 of 73 by head count (52 %) but only
+> 34 % of the lines — a W obligation is on average **half the size** of a K or an A one. The
+> distance to the floor therefore hangs on the W column, not on loop shapes.
 
-Stand: 2026-08-14. **Gebaut sind P2 und P3: Lexer, Wortschatz, Parser über die vollständige EBNF,
-dazu fünf der neun Prüfpässe — drei ganz (Namen, M1+V1–V3, Schleifen), zwei teilweise**
-(`effects` prüft Schreiben und `locks` gegen den Rumpf, nicht Lesen und nicht
-Aufrufwirkungen; `costs` rechnet Rümpfe und `held` nach, aber an einer **rekursiven**
-Funktion bleibt die Zusage eine Annahme. `gabbro paesse` druckt beides aus).
-*Nicht gebaut: D1/D2, M2, M3, die Paarung, die Kosten, die C-Emission.* Der Lauf gegen die eigenen
-Fragmente **fällt: 1 von 6**. Eine Gegenprüfung fand **16 Dateien, die mit `0 Fehler` durchkamen
-und fallen mussten** — zehn dieser Löcher sind zu, jedes mit einer Giftdatei, die es festhält
-([`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md)). Was gemessen ist, steht als gemessen da; alles andere ist
-ausdrücklich Absicht.
+**Which is why the dashboard carries a second number**, and it predicts maintenance rather than
+writing: **W obligations per thousand lines, ≥ 0,63**. *Otherwise the folder optimises the
+denominator that shines instead of the one that costs.*
 
----
+## What is built
 
-## Wo was steht — neun Dateien, nach Rolle
-
-| Datei | Rolle |
-|---|---|
-| `README.md` | dies — Zweck, Zusagen, Kennzahl, Stand |
-| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **die Sprache, vollstaendig**: vier Mechanismen, zwei Deklarationsregeln, Bibliotheksschicht, Ordering-Paarung, Eintritt, Boot, Induktion, harte Schrittzusagen |
-| [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) | **die Grammatik** — 119 EBNF-Regeln, geschlossen und erreichbar, Wortschatz deckt jedes Terminal |
-| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **die Beweisarchitektur**: das Kriterium, Maschinen- und Speichermodell, Beweiser, Zielsprache, der seL4-Vergleich |
-| [`dokumente/PLAN.md`](dokumente/PLAN.md) | **der Weg**: acht Phasen mit zweiseitigen Toren, Messprotokoll, Abbruchbedingungen, Ziellinie |
-| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **alles, was gefahren wurde** — und was hier nicht steht, ist nicht gemessen |
-| [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md) | sechs Caprock-Bereiche in Gabbro ausgeschrieben, mit Herkunft und Urteil |
-| [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
-| [`DONE.md`](DONE.md) | **ausschliesslich Erledigtes** — jeder Eintrag mit seinem Beleg |
-| [`dokumente/AN-CAPROCK.md`](dokumente/AN-CAPROCK.md) | **Befunde, deren Gegenstand Caprock ist** — hier entstanden, dorthin gehörig |
-| [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
-| [`dokumente/WERKZEUGKASTEN.md`](dokumente/WERKZEUGKASTEN.md) | **Arbeitsregeln aus eigenen Fehlern** — jede mit dem Schaden, fuer den sie bezahlt wurde |
-
-**Der Wurzelordner fuehrt drei Dateien** — `README.md`, `TODO.md`, `DONE.md`. Die acht
-Entwurfs- und Messdokumente liegen in [`dokumente/`](dokumente/); *eine Wurzel, in der
-man erst suchen muss, ist selbst eine Auslassung.*
-
-Dazu `fallen-klassifikation.tsv` (100 bezahlte Caprock-Fallen, einzeln klassifiziert) und
-**sieben Wächter, jeder mit Sprechprobe in beide Richtungen**: `pruefe-syntax.sh` (verbotene
-Formen, Prosa-Drift, Geschlossenheit, Erreichbarkeit, Terminaldeckung) · `pruefe-wortschatz.py`
-· **`mutiere-pruefer.py`** (beschädigt je eine Regel des Prüfers und sieht nach, ob eine Probe
-fällt — **38 von 38**) · **`erzeuge-mutationen.py`** (verdreht **systematisch** statt von
-Hand — **7 von 39**, und genau diese Lücke war der Zweck) · **`pruefe-todo.py`** (hält die
-Aufgabenliste gegen sich selbst, sieben Klassen) · `zaehle-fallen.sh`. Dazu `zaehle-narrow.py` — **kein Wächter, ein Finder von Kandidaten**, und
-er sagt das selbst.
-
-**Und seit dem 2026-08-14 `crates/` — der Übersetzer selbst**, drei Kisten in sicherem Rust:
-`gabbro-syntax` (Lexik, Wortschatz, Grammatik), `gabbro-check` (die neun Prüfpässe in fester
-Reihenfolge, sechs davon gebaut — drei ganz, drei teilweise), `gabbro-cli` (`gabbro`). Sechs Befehle, und der wichtigste ist
-`gabbro paesse`: er sagt, **was dieser Übersetzer nicht prüft**.
-
-```
-cargo test                                  -- 51 Sprechproben, je in beide Richtungen
-./mutiere-pruefer.py                        -- beschaedigt je eine Regel: 38 von 38 gefangen
-./erzeuge-mutationen.py                     -- erzeugt sie systematisch:  7 von 39 gefangen
-./pruefe-todo.py                            -- haelt die Aufgabenliste gegen sich selbst
-./pruefe-kennungen.py                       -- keine Absage-Kennung in zwei Dateien
-cargo run --bin gabbro -- paesse            -- die Passliste, gebaut UND offen
-cargo run --bin gabbro -- pruefe beispiele/*.gab   -- mit Deckungszahl je Datei
-cargo run --bin gabbro -- fragmente FRAGMENTE.md   -- Tor P2, gemessen
-cargo run --bin gabbro -- annahmen datei.gab       -- „bewiesen unter A1…An"
-```
-
-**Dazu `beispiele/` — die Sprache in neun Dateien**, jede gegen den Übersetzer gehalten:
-`table` mit Invarianten · `device` mit Übergängen · `format` mit ELF · die drei Schleifenformen ·
-Nebenläufigkeit mit `publishes`/`awaits` · Annahmen und `check` · `entry`/`boot`/`walk` ·
-**`08-bereiche.gab`, an dem M1 und V1–V3 hängen** · und **`09-ohne-zeiger.gab`, das zeigt,
-dass Kernzustand ohne Zeiger auskommt**. Daneben `beispiele/gift/` — 36 Dateien,
-die **fallen müssen**, jede mit dem Code, mit dem sie fällt — zehn davon sind Dateien, die einmal
-durchkamen, und drei kommen aus dem Kostenpass. Ein Korpus ohne Gegenprobe belohnt einen stummen Prüfer.
-
-> **Am 2026-08-14 von 24 auf 9 Dateien zusammengezogen.** Der Ordner war chronologisch gewachsen —
-> „Festlegung", dann drei „Ergaenzungen". **Das war falsch abgelegt: die Ergaenzungen sind zentrale
-> Sprachbestandteile, kein Anhang.** Zusammengefuehrt wurde **strukturell, nicht redaktionell** —
-> jeder Text steht unveraendert, samt der Berichtigungen, die beim Eintragen entstanden.
-
----|---|
-| `README.md` | dies — Zweck, Zusagen, Kennzahl, Stand, Einstieg |
-| [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) | **die Schreibweise**: Grammatik, geschlossener Wortschatz, fünf Entscheidungen, was es absichtlich nicht gibt |
-| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **die Mechanismen**: vier Mechanismen, zwei Deklarationsregeln, Bootphase, Rennfreiheit, Kernel-Vollständigkeit — und die Bibliotheksschicht darüber |
-| [`dokumente/PLAN.md`](dokumente/PLAN.md) | **der Plan**: was 0,5 : 1 verlangt, die Evidenz, acht Phasen mit Toren, Messprotokoll, Abnahme, Abbruchbedingungen |
-| [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
-| [`DONE.md`](DONE.md) | **ausschliesslich Erledigtes** — jeder Eintrag mit seinem Beleg |
-| [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
-| [`dokumente/WERKZEUGKASTEN.md`](dokumente/WERKZEUGKASTEN.md) | **Arbeitsregeln aus eigenen Fehlern** — jede mit dem Schaden, fuer den sie bezahlt wurde |
-| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **P0, soweit der Ordner es zulässt.** Ordering **36/36 bestanden**; `19 → 0` **nicht entscheidbar**, weil fünf Klassen nur im Scratchpad liegen — ein Befund über das **Protokoll** |
-| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **die Axiomschicht ausgezählt am echten Zweig** (A1–A25) und **der Bootpfad als Sprache**. `port` als sechster Adressraum holt **70 Fundstellen** aus der Axiomschicht in die Gerätesprache; `Has(F)` macht die #UD-Klasse zum Übersetzungsfehler; die Mode-Leiter PAE→LME→CR3→PG ist ein **Token-Fluss** |
-| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) · [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **die drei Löcher der Festlegung** — Ordering-**Paarung** (`awaits`), Eintrittspfad (`entry`), Boot-Unerreichbarkeit in drei Schichten; dazu RMW (`exchange`), `Vis` über Funktionsgrenzen, und **der Prüferplan P0–P7 mit Toren** |
-| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **die vollständige Festlegung** — entscheidet alle neun offenen Fragen (F1–F9) und nimmt die 19 hängenden Klempnerei-Pflichten je mit einem Konstrukt ab. **Abnahme ist die Wiederholung der 74-Pflichten-Messung: 19 → 0** |
-| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **Posten 2: welches C.** Statt C zu formalisieren wie seL4 wird die Zielfläche geschlossen — **10 von 12 UB-Klassen sterben an Regeln, die schon dastehen**; übrig bleiben `restrict` und `volatile`, benannt |
-| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **was eine seL4-Verifikation neben der Logik braucht** — sechs Posten, gegen Gabbro gehalten. Darunter der, den niemand mitzählt: **der Unterhalt**, und dort liegt Gabbros stärkstes Argument |
-| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **erzwungene Schrittzusagen machen Induktion automatisch statt heuristisch** — eine Zeile je erzeugter Operation. Mit der Regel, an der alles hängt: **eine Pflichtzusage darf nur über EINEN Schritt sprechen** |
-| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **was Induktion bräuchte und was sie kostet** — drei Stufen; die erste kostet **eine Zeile je Pflicht** und behält die Sprache. **Der Preis ist nicht die Zeilenzahl, sondern die Vorhersagbarkeit** |
-| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **L3 und L4 entschieden — und die Decke benannt**: Gold im seL4-Sinn ist auf diesem Weg nicht erreichbar. Drei Arten Pflichten statt einer, Zertifikatsprüfer statt Löser im Vertrauen |
-| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **L1 und L2 entworfen**: 106 Axiome (~130 Namen), RC11 ohne SC — und **die 20 arch-neutralen Axiomfamilien stehen schon im Baum**, ohne so zu heissen |
-| [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md) | **sechs Caprock-Bereiche in Gabbro ausgeschrieben**, mit Herkunft und Urteil: 0 passen unverändert, 4 mit Befund, **2 gar nicht** — 31 Befunde, davon 7 in der Grammatik selbst |
-| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **was für Gold fehlt, ausser Logik und Ausdruckskraft** — sechs Posten, vier davon je ein Teilprojekt: **Maschinenmodell, Speichermodell, Beweiser, Anfang** |
-| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **das Kriterium, erstmals gemessen — und es fällt**: 74 Pflichten, **19 bleiben beim Programmierer hängen (33 %)**, `programs/` bricht 4 von 4 |
-| [`dokumente/PLAN.md`](dokumente/PLAN.md) | **die Ziellinie, vorab**: acht Bedingungen für die Syntax, vier für den Plan — und **drei Eskalationsgründe** — abgebrochen wird nur bei *bewiesener* Unmöglichkeit |
-| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **der gefährlichste offene Punkt, gemessen** — die flusssensitive Klasse sind **4 Stellen in 65 001 Zeilen**, und die erwartete Auswahlverzerrung trat nicht ein |
-| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | **das Kriterium**: nur Logik beweisen, sonst nichts — die Trennlinie, was sie mit den Messungen macht, und die neue Abbruchbedingung |
-| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | **die Umkehrung der Frage.** Alle 18 „geht nicht"-Befunde in „was muss minimal dastehen" umgewandelt, mit Absenkung nach C. **Sechs fallen auf denselben Mechanismus** |
-| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **Entwurf gegen Prüfer.** Der Anti-Katalog-Test bestanden (3 Wörter statt 12) — und ein Loch in der **Messvorschrift**: eine Kennzahl aus ungeprüften Zusagen belohnt **falsche** Zusagen, weil sie kurz sind |
-| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **beide Tore gefallen** — `device` deckt 21 % von `vtd.rs` und ist dort 2× knapper, nicht 15×; und **65,1 % des Kernels brauchen handgeschriebene Spezifikation, nicht 10 %** |
-| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **das erste gefahrene Papiertor.** `revoke` ist ausdrückbar — mit einem Konstrukt, das fehlte; und es hat einen Fehler in der Zählregel gefunden |
-| `pruefe-syntax.sh` | hält die Beispiele gegen die Wortliste, die Prosa gegen die alte Schlüsselwortsprache **und die Grammatik auf Geschlossenheit** — drei Sprechproben |
-| [`fallen-klassifikation.tsv`](fallen-klassifikation.tsv) | die 100 bezahlten Caprock-Fallen, einzeln klassifiziert; `./zaehle-fallen.sh` leitet die Zahlen ab |
-
-> **Berichtigungen stehen bewusst vor allem Weiteren.** Zwei Überschreibungen („per Konstruktion
-> beweisbar", „Gold-Beweis billig"), ein falscher Nenner, ein zu hoher Boden, zwanzig Konstrukte
-> statt vier Mechanismen — alle samt Lehre in [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md). Der Ordner behält seine
-> widerlegten Fassungen, weil er sonst aussähe, als hätte er von Anfang an recht gehabt.
-
----
-
-## Der Stand — was gemessen ist, und was es sagt
-
-**Gegen Gabbro:**
-
-* **Verus findet S1a und S1b am echten Cap-Space, für 0 Zeilen Annotation** (2026-08-13). Ein
-  Schalter; das Delta über die ganze Datei sind 24 Zeilen, davon 21 Attribute und **kein
-  Funktionsrumpf**. Die These „SPARK fand etwas, das Verus nicht kann" ist damit erledigt: es war
-  die **Voreinstellung**, nicht die Sprache.
-* **„Der Aufrufer hält den Lock" ist in Verus ausdrückbar** — `tracked`-Zeuge, drei Aufrufer, drei
-  verschiedene Ausgänge, `no_std`, kein Byte im Erzeugnis. Der schwerste Einzelposten der
-  Kernel-Liste, und er ist **kein Alleinstellungsmerkmal mehr**.
-* **Die sieben Konstrukte der Bibliotheksschicht decken ≤ 9 % von Caprock** (hart 4,6 %).
-
-**Für Gabbro:**
-
-* **`tracked` ist affin, nicht linear.** Wer den Zeugen fallenlässt, kommt durch — SPARKs
-  automatische Leckprüfung hat Verus nicht, Rust auch nicht. **Echte Linearität ist der einzige
-  Mechanismus, den kein vorhandenes Werkzeug liefert**, und an ihm hängen die Bootphase, `Parked`
-  und die lineare Prüfpflicht.
-* **Von 100 bezahlten Caprock-Fallen sind 36 % sprachlich adressierbar, 36 % Messdisziplin.** Das
-  stärkste Einzelkonstrukt ist **`check` mit 33 getöteten Fallen** — und es hat in Rust, SPARK,
-  Verus, F\* und ATS **kein Vorbild**.
-* **15,7 % von Caprock sind Prüf- und Berichtsgerüst** — der Teil, der die Fehler gefunden hat, und
-  keine dieser Sprachen sagt etwas darüber.
-
-**Daraus die Reihenfolge in [`dokumente/PLAN.md`](dokumente/PLAN.md):** zuerst Papier, dann `check` **ohne
-Sprache**, dann der Kern. Nichts davon kostet einen Übersetzer, und jedes kann die These töten.
-
----
-
-## Warum der Name
-
-**Gabbro ist der plutonische Zwilling des Basalts**: dieselbe Zusammensetzung, langsam abgekühlt —
-grosse, regelmässige Kristalle statt feinem Gefüge. Das Wort ist in Deutsch und Englisch identisch
-und passt zu Caprock (beides magmatisch); *Basalt*, der erste Vorschlag, ist bereits von einem
-Übersetzer belegt.
-
-- [ ] **Nachprüfen, nicht glauben.** „Ich habe nichts gefunden" ist ein Nullbefund ohne Grösse. Vor
-      der ersten Veröffentlichung eine Suche über Paketregister, GitHub und Sprachlisten — mitsamt
-      dem, was gefunden wurde.
-
----
-
-## Warum C + Inline-Assembler als Ziel
-
-* **Zwei Verbraucher ohne Umweg**: Rust bindet C über FFI, SPARK ebenso.
-* **Binärverifikation existiert als Weg**: seL4 beweist den *übersetzten* Code gegen das C.
-* **Vorhersagbarer Codegen** — geradliniger Code, keine Halde, keine versteckte Kontrolle.
-* **Der Inline-Assembler ist keine Schwäche des Ziels, sondern die Bedingung dafür, dass es EINES
-  bleibt.** Der Eintrittspfad (`iretq`/`eret`, Registerabdruck) ist in C nicht ausdrückbar; ohne
-  `iasm` bräuchte es eine zweite Ausgabe für genau ihn.
-
-### Damit löst sich eine Entsprechungspflicht auf
-
-Eine frühere Fassung nannte **drei** Beweiswege (Frama-C über dem C, Verus über einer Rust-Ausgabe,
-GNATprove über Ada) und handelte sich damit **zwei Ausgaben** ein: bewiesen die eine, ausgeliefert
-die andere. Mit „Gabbro prüft selbst, Ausgabe ist C + iasm" gibt es **eine**. Der Beweis liegt auf
-der **Quelle**, das C ist Codeerzeugung — die Low\*-Anordnung, und sie ist billiger.
-
-Das Vertrauen verschwindet nicht, es **wandert an benannte Stellen**:
-
-| | |
-|---|---|
-| **Der Prüfer** | Gabbros Typprüfer ist selbst unverifiziert. „Bewiesen" heisst „bewiesen unter Vertrauen in ihn" — wie bei jedem Typsystem |
-| **Die Absenkung** | **syntaxgesteuert und nicht optimierend**, sonst ist die Entsprechung Quelle↔C wieder offen. Zugleich die Bedingung dafür, dass ein Gold-Beweis billig wird |
-| **Die Axiomschicht** | je privilegiertem Befehl ein erklärter Effekt. **Der grösste unbewiesene Posten der ganzen Sprache**, grösser als der Übersetzer |
-| **Der `iasm`-Anteil** | aus einer Beschreibung emittiert, nicht je Fundstelle geschrieben: **eine Emissionsstelle statt 161** |
-
-### Leistung ist ein Entwurfsziel, kein Nachgedanke
-
-Keine Allokation · Bereichsprüfungen, die der C-Übersetzer entfernen kann, weil jeder Versatz gegen
-eine Länge im Geltungsbereich steht · `restrict` aus der Struktur · geradlinig statt schleifend, wo
-die Länge konstant ist · **und jede erzeugte Einheit bringt eine Messzeile mit** (Zyklen je Aufruf
-gegen eine handgeschriebene Referenz). Ohne die Gegenzahl ist „schnell" ein Gefühl.
-
-**Der Preis steht daneben:** eine nicht optimierende Absenkung verschiebt die Optimierung in den
-C-Übersetzer, und die ist dann **nicht** Teil der Zusage — dieselbe Grenze, an der seL4 die
-Binärverifikation ansetzt.
-
----
-
-## Der Übersetzer — und der Kanal für den Wunschform-Beweis
-
-**In sicherem Rust**, `#![forbid(unsafe_code)]`, ohne Abhängigkeiten ausserhalb einer benannten
-Liste — dieselbe Regel, die Caprock für seine Handler-Module durchsetzt. Ein Erzeuger, der selbst
-ausbrechen kann, macht die Eigenschaft seines Erzeugnisses wertlos. **Kein Selbst-Hosting:** ein
-Erzeuger, der sich selbst übersetzt, verliert seinen unabhängigen Prüfer.
-
-> **Der Erzeuger emittiert nicht nur Code, sondern auch die Verträge, die geprüft werden.** Ein
-> Erzeuger, der versehentlich abgeschwächte Verträge ausgibt, liefert einen **grünen Beweis über
-> eine schwächere Aussage** — wörtlich „ein Beweis, der die Wunschform beweist".
-
-| Mutation im Erzeuger | wer fängt sie |
-|---|---|
-| **Code** abgeschwächt, Vertrag bleibt | die **Prüfung** fällt |
-| **Vertrag** abgeschwächt, Code bleibt | nur eine **Mutationsprobe auf der Annotationsemission** |
-| **beide** stimmig abgeschwächt | **kein Beweis** — nur der **Differenztest gegen die Handschrift** |
-
-Damit hat der Differenztest eine benannte Aufgabe statt der Rolle eines allgemeinen Netzes: **er ist
-das einzige, was einen stimmig abgeschwächten Erzeuger fängt.**
-
----
-
-## Was Gabbro **nicht** löst
-
-* **Falsche Beschreiber.** Gabbro zeigt, dass der Code dem Beschreiber entspricht — nicht, dass der
-  Beschreiber der Wirklichkeit entspricht. Wer die Bytereihenfolge falsch aufschreibt, bekommt einen
-  makellosen falschen Leser; wer ein Registerhandbuch falsch liest, einen makellosen falschen
-  Treiber.
-* **Hardware-Zusagen.** `assume`/`falsifier` macht sie **zählbar**, nicht wahr. Eine bestandene
-  Sonde prüft *diese* Maschine, *diese* Konfiguration, *diesen* Augenblick.
-* **Fortschritt.** Aushungern und Lebendigkeit (Caprocks D8) fallen unter **keinen** Mechanismus.
-* **Werkzeug und Prozess.** Gemessen **18 %** der bezahlten Fallen: CI im Format des falschen
-  Servers, `.git/info/exclude`, `grep -q` unter `pipefail`, zwei Suiten mit verschiedenem Aufbau.
-* **Bedeutung.** Gemessen **10 %**: ein fehlendes `US`-Bit auf der Zwischenebene, „unten zuerst" als
-  Zufall der Grössenrelation, eine Wachseite, die einen Farbstreifen sprengt. **Fehler über
-  Bedeutung, nicht über Form** — gefunden hat die alle die Messdisziplin.
-
-**Die Obergrenze für den Sprachanteil ist damit 72 %, nicht 100 %.**
-
----
-
-## Verwandtschaft — und der eigene Vergleich, gefahren statt behauptet
-
-| Projekt | was es kann | was hier fehlt |
+| | | |
 |---|---|---|
-| **F\*/Low\*** | Gold, extrahiert nach C, in HACL\* ausgeliefert | Allzwecksprache — die Spezifikationslast bleibt |
-| **Verus** | Beweise auf Rust, `no_std`, Geisterwerte ohne Laufzeitkosten | **echte Linearität** (`tracked` ist affin); Werkzeugreife (vier Abstürze, versiegelte vstd-Schnittstelle, fehlende Iterator-Spezifikationen) |
-| **GNATprove/SPARK** | jede Indizierung und Arithmetik als Pflicht, **automatische** Leckprüfung | keine Ausdrucksform für „der Aufrufer hält den Lock"; dynamische Strukturen schwach; Linearität hängt an einer **Allokation** |
-| **EverParse, Kaitai, P4** | Parser aus Beschreibern | nur die `format`-Hälfte |
-| **ATS** | lineare Typen + Beweise, kompiliert nach C | der nächste Verwandte für den Kern — und **ungeprüft**, s. `TODO.md` |
+| **Compiler** | 10 passes, 3 complete, 7 partial, **0 open** | 90 diagnostics · `gabbro paesse` |
+| **Grammar** | **130 EBNF rules**, closed and reachable | vocabulary covers every terminal, 195 / 195 |
+| **Proof templates** | **19, of which 4 are machine-checked** | Isabelle2025-2, `beweise/` |
+| **Guardians** | 8, each with a two-way speech test | **65 of 65 mutations caught** |
+| **Corpus** | 19 clean examples, 69 poison files, 79 tests | `cargo test` |
 
-**Der Verus-Vergleich ist gefahren und ging gegen diesen Ordner aus** (2026-08-13, oben unter
-„Stand"). Was übrig bleibt, ist keine Ausdrucksfrage, sondern **echte Linearität plus
-Werkzeugreife** — und Reife bezahlt man mit Beiträgen an Verus, nicht mit einer Sprache. **Diese
-Frage steht offen und ist die teuerste des Ordners.**
+**The templates are the number to watch, not the passes.** They are the surface onto which
+every rescue is deferred — *a template falls once, not per program* — and until 2026-08-16 that
+sentence was a promise about ground nobody had walked on. **Four are walked now.**
 
----
+## How to read this folder
 
-## Wie es weitergeht
+**Every number in these documents carries the search path that produced it.** A number without
+a source list does not belong in a document — that is rule W7, and it was paid for three times
+in one day. When you find a number here, you can re-run it.
 
-[`dokumente/PLAN.md`](dokumente/PLAN.md) — acht Phasen, jede mit einem Tor. Die ersten drei kosten
-**keinen Übersetzer** und können die These jeweils töten:
+| File | Role |
+|---|---|
+| [`TODO.md`](TODO.md) | **open items only**, cut by role: decisions · measurements · build · bookkeeping |
+| [`DONE.md`](DONE.md) | **finished items only** — every entry carries its evidence |
+| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | the language: four mechanisms, two declaration rules, ordering pairing, entry, boot, induction |
+| [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) | the grammar, and what deliberately does not exist |
+| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | the proof architecture: criterion, machine and memory model, prover, the seL4 comparison |
+| [`dokumente/PLAN.md`](dokumente/PLAN.md) | the way there — phases with two-sided gates, and the coverage assessment |
+| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | **everything that was run** — and what is not in here was not measured |
+| [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md) | Caprock areas written out in Gabbro, with origin and verdict |
+| [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md) | **what was already wrong about this design**, with the lesson |
+| [`dokumente/WERKZEUGKASTEN.md`](dokumente/WERKZEUGKASTEN.md) | working rules from our own mistakes — each with the damage it was paid for |
+| [`dokumente/AN-CAPROCK.md`](dokumente/AN-CAPROCK.md) | findings whose subject is Caprock — found here, belonging there |
+| [`beweise/`](beweise/) | the Isabelle theories — each names what it does **not** prove |
 
-1. ~~**`revoke` auf Papier**~~ — **gefahren 2026-08-13**, [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md):
-   bedingt bestanden, Bedingung ist ein fehlendes Konstrukt. **Kein weiterer Entwurfstext vor 2.**
-2. ~~**`vtd.rs` als `device`-Block**~~ — **gefahren, GEFALLEN**: Faktor 2,0 auf dem gedeckten Teil.
-3. ~~**`space.rs` zweimal**~~ — **gefahren, über der Abbruchmarke**: 3,6–6 : 1 ausgeschrieben.
-4. **`check` als Rust-Makrobibliothek**, rückwirkend gegen die 33 Messdisziplin-Fallen gehalten —
-   **der einzige Posten, der die Messungen von heute überlebt hat.**
+## Running it
+
+```
+cargo run --bin gabbro -- pruefe beispiele/*.gab     # check files
+cargo run --bin gabbro -- paesse                     # what each pass does and does NOT do
+cargo run --bin gabbro -- schablonen                 # the proof-template register
+cargo test                                           # 79 tests
+./mutiere-pruefer.py                                 # damage one rule at a time: 65 of 65
+./pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
+isabelle build -d beweise -c Gabbro                  # the machine-checked templates
+```
+
+**`paesse` prints what each pass does *not* check.** A tool that lets unchecked silence look
+like a green result is a false green — the same class of error `pruefe-syntax.sh` paid for
+twice.
+
+## The three sentences this folder keeps coming back to
+
+> **A number without a source list does not belong in a document.** It is not wrong — it is
+> uncheckable, and that is the more expensive state.
+
+> **A rule with no mutation against it is not covered, it is undamageable.** Zero mutations on
+> a surface is not coverage; it means nothing there can break visibly.
+
+> **Not refused is not confirmed.** Where an analysis is a lower bound it neither rejects nor
+> approves — the third state has to exist, or the tool lies in one direction.
+
+## A note on language
+
+**This README is English. Most of the folder is still German**, and the translation is running
+rather than finished. The reason it cannot be one sweep: **six guardians and eight test files
+assert German strings** — the check chain that makes this folder worth trusting is coupled to
+the prose. Translating without moving them in lockstep would break exactly the thing that makes
+the numbers above worth reading.
