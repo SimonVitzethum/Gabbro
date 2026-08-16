@@ -3195,3 +3195,56 @@ Keine, die heute verfuegbar ist — und das ist der ehrliche Schluss. Was sie ha
 Loeser, und dessen Hinweise landen in der Zaehlung. *Das ist kein Mangel dieser Messung,
 sondern der Grund, warum die Zahl 1,90 mit ihrer Grundlage zitiert werden muss und nicht
 allein.*
+
+---
+
+# Rennen und Publikation — neu beurteilt, 2026-08-16
+
+Die Neuerhebung buchte beide als haengend, **mit demselben Grund**: *der Paarungspass ist
+nicht gebaut.* Er ist gebaut.
+
+## Was der Pass deckt, mit Fundstellen (W7)
+
+| | Absage | Fundstelle im Pruefer | Probe |
+|---|---|---|---|
+| verwaistes `publishes` | `V001` | `crates/gabbro-check/src/paarung.rs:123` | `beispiele/gift/51-verwaistes-publishes.gab` |
+| verwaistes `awaits` | `V002` | `paarung.rs:139` | `gift/50-verwaistes-awaits.gab` |
+| unentscheidbar (Zyklus) | `V003` | `paarung.rs:108` | — (W10, dritter Zustand) |
+| `relaxed` mit Nutzlast | `V004` | `paarung.rs:153` | `gift/52-relaxed-mit-nutzlast.gab` |
+| **Paarung ueber Zwischenfunktion** | — | `paarung.rs:94-101` (vereinigte Menge) | `beispiele/14-paarung-ueber-zwischenfunktion.gab` |
+
+Mutationen: `paarung-je-funktion`, `verwaistes-awaits-egal`, `relaxed-darf-tragen` —
+**alle drei gefangen**, 44 von 44 auf der Flaeche *pruefer*.
+
+## Urteil je Klasse
+
+**Publikation — GETRAGEN.** `publishstmt` nennt die Nutzlast am Store, der Pass haelt beide
+Haelften gegeneinander, und `relaxed` kann keine tragen. *Die Klasse faellt.*
+
+**Rennen — HAENGT WEITER, und der Grund ist jetzt ein anderer.**
+
+> Der Pass prueft, dass die **Deklarationen** paaren. Er prueft **nicht**, dass
+> `release`/`acquire` auf der Zielmaschine die Sichtbarkeit herstellen, die die Paarung
+> behauptet — das ist eine Aussage ueber das **Speichermodell**, und sie faellt in die
+> **Axiomschicht**, nicht in den Pass.
+
+**Das ist kein Mangel des Passes, sondern die Grenze dessen, was ein Pass hier leisten kann.**
+Und es verschiebt die Klasse von *„ungebaut"* nach *„gebaut, ruht auf benannten Axiomen"* —
+derselbe Ort, an dem `Verfeinerung` steht.
+
+*Die Axiomschicht ist im W7-Kehraus als unbelegt markiert (106 ohne Liste). **Rennen haengt
+damit an einer Zahl, die selbst offen ist.***
+
+## N_neu: **5 → 4**
+
+| | Stand |
+|---|---|
+| Index, Ueberlauf, Alias, Sperre, Terminierung, Blattheit | getragen |
+| **Publikation** | **getragen (neu)** |
+| Rahmen | haengt an EINER Haelfte (Lesen) — eine Entscheidung, keine Arbeit |
+| **Rennen** | haengt an der **Axiomschicht**, nicht mehr am Pass |
+| Phase | unentschieden — wird am Lader-Fragment entschieden (R18) |
+| Verfeinerung | ruht auf der Absenkung; Uebersetzungsvalidierung je Bau ist der Weg |
+
+**Sieben von elf getragen.** Und die vier uebrigen sind vier **verschiedene** Arten von
+Entfernung — eine Entscheidung, eine Axiomzahl, ein Fragment, ein Teilprojekt.
