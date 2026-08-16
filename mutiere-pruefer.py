@@ -372,9 +372,16 @@ MUTATIONEN = [
     Mutation(
         "zeuge-an-der-aufrufgrenze-egal",
         "geteilt.rs",
-        "    let Some(sperre) = verlangt.get(&name.text) else {",
-        "    let Some(sperre) = verlangt.get(&name.text).filter(|_| false) else {",
-        "H005 -- ein geteilter Block darf einen `Held(…)`-Zeugen rufen (H001 durch die Hintertuer)",
+        "        if *geteilt || !offen.iter().any(|o| o == sperre) {",
+        "        if true || !offen.iter().any(|o| o == sperre) {",
+        "H005 -- eine EXKLUSIVE Held-Forderung darf unter geteilter Nahme gerufen werden",
+    ),
+    Mutation(
+        "staerke-des-zeugen-egal",
+        "geteilt.rs",
+        "        if *geteilt || !offen.iter().any(|o| o == sperre) {",
+        "        if !offen.iter().any(|o| o == sperre) {",
+        "H005 -- die Staerke des Zeugen entscheidet nicht mehr: auch `shared` faellt",
     ),
     Mutation(
         "divergenz-endet-nicht",
