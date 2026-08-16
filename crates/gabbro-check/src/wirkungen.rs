@@ -21,8 +21,34 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // Damit war „nur die eingetragene Logik ist aktiv" eine halbe Aussage, und die
     // Klempnerei-Klasse *Rahmen* hing genau daran.
     let g = crate::aufrufgraph::erhebe(baum);
+    // **Eine Konstante ist kein Weltzustand.** `const GRENZE: u32 = 1000000;` steht zur
+    // Uebersetzungszeit fest; sie zu lesen ist kein Zugriff, sondern eine Zahl. Ohne diese
+    // Ausnahme waere `pure` praktisch unerreichbar -- die erste Fassung von `E010` meldete
+    // `v1_erhoehen liest GRENZE, erklaert aber pure` und hatte damit recht im Wortlaut und
+    // unrecht in der Sache.
+    //
+    // **Und die Umkehrung derselben Einsicht, gefunden am Korpus:** `E010` spricht nur ueber
+    // **bekannten Weltzustand** -- `static`, `atomic`, `table`, `device`, `state`. Der erste
+    // Lauf meldete `IpcResult.Ok` (eine Variante, kein Ort) und `MAX_SECTORS` (ein Name, den
+    // ein AUSSCHNITT gar nicht deklariert) als ungenannte Lesungen. Beides sind keine
+    // Wirkungen, und beide Meldungen waeren Laerm gewesen, der die echten zudeckt.
+    //
+    // *Verloren geht dabei nichts:* in einer vollstaendigen Uebersetzungseinheit muss jeder
+    // Name aufloesen -- ein unbekannter faellt bereits im Namenspass. Die Einschraenkung
+    // kostet also nur im Ausschnitt, und dort ist sie richtig.
+    let mut konstanten: Vec<String> = Vec::new();
+    let mut weltnamen: Vec<String> = Vec::new();
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
-        ItemArt::Funktion(f) => funktion(f, &g, absagen),
+        ItemArt::Konst(k) => konstanten.push(k.name.text.clone()),
+        ItemArt::Statisch(x) => weltnamen.push(x.name.text.clone()),
+        ItemArt::Atomic(x) => weltnamen.push(x.name.text.clone()),
+        ItemArt::Tabelle(x) => weltnamen.push(x.name.text.clone()),
+        ItemArt::Device(x) => weltnamen.push(x.name.text.clone()),
+        ItemArt::State(x) => weltnamen.push(x.name.text.clone()),
+        _ => {}
+    });
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Funktion(f) => funktion(f, &g, &konstanten, &weltnamen, absagen),
         ItemArt::Axiom(a) => rein_allein(&a.effects, absagen),
         _ => {}
     });
@@ -42,7 +68,15 @@ fn lokale(b: &Block, aus: &mut Vec<String>) {
             StmtArt::Let(l) => aus.push(l.name.text.clone()),
             StmtArt::LetSonst(l) => aus.push(l.name.text.clone()),
             StmtArt::AwaitLoad(a) => aus.push(a.name.text.clone()),
-            StmtArt::Exchange(e) => aus.push(e.name.text.clone()),
+            StmtArt::Exchange(e) => {
+                aus.push(e.name.text.clone());
+                // Der Binder von `update(v)` ist der ALTE Wert -- ein Name des Rumpfes,
+                // keine Stelle der Welt.
+                if let XForm::Update { binder, rumpf } = &e.form {
+                    aus.push(binder.text.clone());
+                    lokale(rumpf, aus);
+                }
+            }
             StmtArt::Narrow(x) => lokale(&x.sonst, aus),
             StmtArt::Sperrt(x) => lokale(&x.rumpf, aus),
             StmtArt::Bricht(x) => lokale(&x.rumpf, aus),
@@ -56,6 +90,15 @@ fn lokale(b: &Block, aus: &mut Vec<String>) {
             }
             StmtArt::Match(m) => {
                 for z in &m.zweige {
+                    // **Der Binder eines `match`-Zweiges ist ein lokaler Name**, und dass er
+                    // hier gefehlt hat, war eine Luecke mit zwei Gesichtern: `E010` meldete
+                    // ihn beim ersten Lauf als Weltzustand, und `E005` haette dasselbe fuer
+                    // ein `Some(p) => { p.feld = … }` getan. **Die Lesehaelfte hat einen
+                    // Fehler der SCHREIBhaelfte aufgedeckt** -- gefunden erst, weil Binder
+                    // fast immer gelesen und fast nie geschrieben werden.
+                    if let Some(bi) = &z.binder {
+                        aus.push(bi.text.clone());
+                    }
                     lokale(&z.rumpf, aus);
                 }
             }
@@ -75,6 +118,13 @@ fn lokale(b: &Block, aus: &mut Vec<String>) {
 #[derive(Default)]
 struct Taten {
     schreibt: Vec<(String, Span)>,
+    /// **Lesart A (2026-08-16).** Jedes Lesen eines nicht-lokalen Ortes. Die Entscheidung
+    /// steht in `TODO.md`, der Preis daneben: A laesst 10 von 32 Fragmentfunktionen fallen,
+    /// die gruebere Lesart C nur drei. **A ist die Lesart, deren Verletzung dieser Pass
+    /// PRAEZISE melden kann** -- welche Funktion welchen Ort ungenannt liest; C koennte nur
+    /// *„irgendwo ausserhalb von `mmio`/`dma`/`atomic`"* sagen. *Was man nicht genau melden
+    /// kann, setzt kein Pass durch* -- dieselbe Begruendung, an der Lesart B gestorben ist.
+    liest: Vec<(String, Span)>,
     /// Ort, Fundstelle, und **ob geteilt genommen** -- die Richtung ist nicht symmetrisch.
     sperrt: Vec<(String, Span, bool)>,
 }
@@ -90,13 +140,68 @@ fn deckt(erklaert: &str, getan: &str) -> bool {
             )
 }
 
+/// Jedes Lesen eines Ortes in einem Ausdruck. **Der Index ist selbst ein Lesen** --
+/// `c.slots[i]` liest `c.slots` *und* `i`; der lokale Anteil faellt spaeter am Grundnamen weg.
+fn liest_expr(e: &Expr, t: &mut Taten) {
+    match &e.art {
+        ExprArt::Ort(o) => {
+            t.liest.push((o.text(), o.span));
+            for suf in &o.suffixe {
+                if let OrtSuffix::Index(ix) = suf {
+                    liest_expr(ix, t);
+                }
+            }
+        }
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => liest_expr(x, t),
+        ExprArt::Binaer(_, a, b) => {
+            liest_expr(a, t);
+            liest_expr(b, t);
+        }
+        ExprArt::Ruf(r) => {
+            for a in &r.argumente {
+                liest_expr(a, t);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Ein **Schreib**ziel liest seine Indizes mit: `c.slots[naechster] = x` liest `naechster`.
+/// Der Ort selbst wird geschrieben, nicht gelesen.
+fn ziel_indizes(o: &Ort, t: &mut Taten) {
+    for suf in &o.suffixe {
+        if let OrtSuffix::Index(ix) = suf {
+            liest_expr(ix, t);
+        }
+    }
+}
+
 fn sammle_taten(b: &Block, t: &mut Taten) {
     for s in &b.anweisungen {
         match &s.art {
-            StmtArt::Zuweisung(z) => t.schreibt.push((z.ziel.text(), z.ziel.span)),
-            StmtArt::Publish(p) => t.schreibt.push((p.ziel.text(), p.ziel.span)),
+            StmtArt::Zuweisung(z) => {
+                t.schreibt.push((z.ziel.text(), z.ziel.span));
+                ziel_indizes(&z.ziel, t);
+                liest_expr(&z.wert, t);
+            }
+            StmtArt::Publish(p) => {
+                t.schreibt.push((p.ziel.text(), p.ziel.span));
+                ziel_indizes(&p.ziel, t);
+                liest_expr(&p.wert, t);
+            }
+            StmtArt::Let(l) => liest_expr(&l.wert, t),
+            StmtArt::Return(Some(x)) => liest_expr(x, t),
+            StmtArt::Ruf(r) => {
+                for a in &r.argumente {
+                    liest_expr(a, t);
+                }
+            }
+            // **Ein `awaits`-Laden IST ein Lesen**, und zwar das gefaehrlichste: es liest
+            // eine Nutzlast, die ein anderer Kern geschrieben hat.
+            StmtArt::AwaitLoad(a) => t.liest.push((a.quelle.text(), a.quelle.span)),
             StmtArt::Exchange(e) => {
                 t.schreibt.push((e.ort.text(), e.ort.span));
+                t.liest.push((e.ort.text(), e.ort.span));
                 if let XForm::Update { rumpf, .. } = &e.form {
                     sammle_taten(rumpf, t);
                 }
@@ -106,7 +211,8 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
                 sammle_taten(&l.rumpf, t);
             }
             StmtArt::Wenn(w) => {
-                for (_, r) in &w.zweige {
+                for (bed, r) in &w.zweige {
+                    liest_expr(bed, t);
                     sammle_taten(r, t);
                 }
                 if let Some(r) = &w.sonst {
@@ -114,17 +220,25 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
                 }
             }
             StmtArt::Match(m) => {
+                liest_expr(&m.gegenstand, t);
                 for z in &m.zweige {
                     sammle_taten(&z.rumpf, t);
                 }
             }
+            StmtArt::Narrow(x) => {
+                t.liest.push((x.ort.text(), x.ort.span));
+                sammle_taten(&x.sonst, t);
+            }
             StmtArt::Bricht(x) => sammle_taten(&x.rumpf, t),
-            StmtArt::Narrow(x) => sammle_taten(&x.sonst, t),
             StmtArt::LetSonst(x) => sammle_taten(&x.sonst, t),
             StmtArt::Schleife(sch) => match sch.as_ref() {
                 // Eine `traverse` mit `touches` traegt ihre eigene Wirkungsliste; sie muss
                 // trotzdem von der Funktion gedeckt sein, also zaehlt der Rumpf mit.
-                Schleife::Traverse(x) => sammle_taten(&x.rumpf, t),
+                // **Die Domaene selbst wird gelesen** -- `slots of c` liest `c`.
+                Schleife::Traverse(x) => {
+                    domaene_liest(&x.domaene, t);
+                    sammle_taten(&x.rumpf, t);
+                }
                 Schleife::Retry(x) => sammle_taten(&x.rumpf, t),
                 Schleife::Forever(x) => sammle_taten(&x.rumpf, t),
             },
@@ -144,7 +258,14 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
 /// oder die gemeinte Bedeutung, entscheidet nicht dieser Pass. **Aufrufwirkungen ebenso
 /// nicht:** dazu muessten die Wirkungen des Gerufenen auf die Argumente des Aufrufers
 /// abgebildet werden, und das ist ein eigener Posten.
-fn rumpf_gegen_wirkungen(f: &FnDecl, w: &Wirkungen, b: &Block, absagen: &mut Absagen) {
+fn rumpf_gegen_wirkungen(
+    f: &FnDecl,
+    w: &Wirkungen,
+    b: &Block,
+    konstanten: &[String],
+    weltnamen: &[String],
+    absagen: &mut Absagen,
+) {
     let mut taten = Taten::default();
     sammle_taten(b, &mut taten);
 
@@ -227,6 +348,90 @@ fn rumpf_gegen_wirkungen(f: &FnDecl, w: &Wirkungen, b: &Block, absagen: &mut Abs
         }
     }
 
+    // **Die Lesehaelfte -- Lesart A, seit 2026-08-16.**
+    //
+    // Bis hierher prueft der Pass Schreiben und `locks`. Das Lesen blieb offen, weil
+    // `FRAGMENTE.md` ueberall ohne `reads`-Zeile liest und die Frage war, ob das ein Befund
+    // ist oder die gemeinte Bedeutung. **Sie ist ein Befund.** Der Grund steht im `TODO.md`
+    // und hat zwei Teile: E3-Konsistenz (nichts ist implizit, auch kein Lesen), und
+    // Meldbarkeit -- diese Absage nennt Funktion UND Ort, die gruebere Lesart koennte nur
+    // eine Gegend nennen.
+    let leserechte: Vec<String> = w
+        .liste
+        .iter()
+        .filter_map(|e| match &e.art {
+            WirkungArt::Liest(o) => Some(o.text()),
+            // **Ein `awaits`-Laden liest den Ort, den `publishes` nennt** -- wer
+            // veroeffentlicht, hat ihn vorher gelesen zu duerfen; das ist keine Grosszuegigkeit,
+            // sondern dieselbe Stelle unter zwei Namen.
+            WirkungArt::Veroeffentlicht(o) => Some(o.text()),
+            _ => None,
+        })
+        .collect();
+    let mut gemeldet: Vec<String> = Vec::new();
+    for (ort, span) in &taten.liest {
+        let grund = ort.split(['.', '[', '-']).next().unwrap_or(ort);
+        if lok.iter().any(|l| l == grund) {
+            continue;
+        }
+        // **Ein Parameter ist kein Weltzustand.** Was der Aufrufer hereingibt, gehoert ihm;
+        // seine `effects` decken es. Sonst muesste jede Funktion ihre eigene Signatur
+        // nachdeklarieren -- eine Zeile, die nichts sagt.
+        if f.parameter.iter().any(|p| p.name.text == grund) {
+            continue;
+        }
+        if konstanten.iter().any(|k| k == grund) {
+            continue; // Konstante -- keine Stelle der Welt
+        }
+        if !weltnamen.iter().any(|k| k == grund) {
+            continue; // kein bekannter Weltzustand -- der Pass sagt nichts (s. Kopf)
+        }
+        if ist_rein {
+            if gemeldet.iter().any(|g| g == ort) {
+                continue;
+            }
+            gemeldet.push(ort.clone());
+            absagen.schiebe(
+                Absage::fehler(
+                    "E010",
+                    *span,
+                    format!("`{}` liest `{ort}`, erklaert aber `pure`", f.name.text),
+                )
+                .mit_notiz("`pure` heisst: fasst nichts an -- auch nicht lesend"),
+            );
+            continue;
+        }
+        if !leserechte.iter().any(|e| deckt(e, ort)) {
+            if gemeldet.iter().any(|g| g == ort) {
+                continue; // eine Fundstelle je Ort reicht; zehn Meldungen sind eine
+            }
+            gemeldet.push(ort.clone());
+            absagen.schiebe(
+                Absage::fehler(
+                    "E010",
+                    *span,
+                    format!(
+                        "`{ort}` wird gelesen, steht aber in keiner `reads`-Wirkung von `{}`",
+                        f.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "Lesart A: das Lesen wird genauso vollstaendig deklariert wie das \
+                     Schreiben -- eine Rahmenzusage, die nur die Schreibseite kennt, sagt \
+                     nichts darueber, WAS die Funktion gesehen hat",
+                )
+                .mit_notiz(format!(
+                    "erklaert sind: {}",
+                    if leserechte.is_empty() {
+                        "keine Lesewirkung".to_string()
+                    } else {
+                        leserechte.join(", ")
+                    }
+                )),
+            );
+        }
+    }
+
     for (ort, span, geteilt) in &taten.sperrt {
         if sperren.iter().any(|e| deckt(e, ort)) {
             continue; // exklusiv erklaert deckt beide Nahmen
@@ -271,7 +476,13 @@ fn rumpf_gegen_wirkungen(f: &FnDecl, w: &Wirkungen, b: &Block, absagen: &mut Abs
     }
 }
 
-fn funktion(f: &FnDecl, g: &crate::aufrufgraph::Graph, absagen: &mut Absagen) {
+fn funktion(
+    f: &FnDecl,
+    g: &crate::aufrufgraph::Graph,
+    konstanten: &[String],
+    weltnamen: &[String],
+    absagen: &mut Absagen,
+) {
     match &f.effects {
         None => {
             // `spec fn` hat keine Laufzeitwirkung; fuer sie ist die Klausel freigestellt.
@@ -296,7 +507,7 @@ fn funktion(f: &FnDecl, g: &crate::aufrufgraph::Graph, absagen: &mut Absagen) {
         Some(w) => {
             rein_allein(w, absagen);
             if let FnRumpf::Block(b) = &f.rumpf {
-                rumpf_gegen_wirkungen(f, w, b, absagen);
+                rumpf_gegen_wirkungen(f, w, b, konstanten, weltnamen, absagen);
                 aufrufwirkungen(f, w, g, absagen);
             }
         }
@@ -503,5 +714,20 @@ fn aufrufwirkungen(
                 )),
             );
         }
+    }
+}
+
+/// **Die Domaene einer `traverse` ist ein Lesen.** `traverse s of c over slots of c` liest
+/// `c` -- wer die Sammlung laeuft, greift sie an, auch wenn der Rumpf nur schreibt.
+fn domaene_liest(d: &Domaene, t: &mut Taten) {
+    match d {
+        Domaene::SlotsVon(o)
+        | Domaene::NachfahrenVon(o)
+        | Domaene::Schlange(o)
+        | Domaene::ElementeVon(o)
+        | Domaene::AbbildungenVon(o)
+        | Domaene::KetteIn { ort: o, .. } => t.liest.push((o.text(), o.span)),
+        // `fields of <pfad>` nennt einen TYP, keinen Ort; `threads` nennt gar nichts.
+        Domaene::FelderVon(_) | Domaene::Threads => {}
     }
 }

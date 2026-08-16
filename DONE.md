@@ -23,7 +23,7 @@
 | 5 | M2 *(teilweise)* | `L101`–`L105` | `m2.rs` — echte Linearität |
 | 6 | **M4/Schleifen** | `S001`, `S002` | `schleifen.rs` |
 | 7 | Paarung *(teilweise)* | `V001`–`V004` | `paarung.rs` |
-| 8 | effects *(teilweise)* | `E001`–`E009` | `wirkungen.rs` |
+| 8 | effects *(teilweise)* | `E001`–`E010` | `wirkungen.rs` — seit 2026-08-16 **mit Lesehälfte** (Lesart A) |
 | 9 | costs *(teilweise)* | `K001`–`K004` | `kosten.rs` |
 
 > **„Teilweise" heisst bei M2, M3 und Paarung nicht „halb fertig", sondern „fertig, ruht auf
@@ -126,5 +126,5 @@ einem **bezahlten Fehler in diesem Ordner**, jede nennt den Schaden.
 
 ## Proben
 
-**17 saubere Beispiele, 61 Giftproben, 76 Tests** —
+**17 saubere Beispiele, 62 Giftproben, 76 Tests** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`

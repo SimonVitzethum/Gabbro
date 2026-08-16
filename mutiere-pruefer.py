@@ -284,6 +284,23 @@ MUTATIONEN = [
         "E006 -- ein `locks`-Block braucht keine erklaerte Sperre",
     ),
     Mutation(
+        "lesen-egal",
+        "wirkungen.rs",
+        "    for (ort, span) in &taten.liest {",
+        "    for (ort, span) in &taten.liest[..0] {",
+        "E010 -- der Rumpf darf jede Stelle lesen, ohne sie zu nennen (Lesart A)",
+    ),
+    Mutation(
+        # **Die gefaehrlichere der beiden**, weil sie nicht abschaltet, sondern LOCKERT:
+        # jedes Lesen gilt als gedeckt, sobald IRGENDEINE `reads`-Zeile dasteht. Eine
+        # Funktion mit `reads a` duerfte dann `b` lesen -- und die Absage bleibt still.
+        "lesen-praefixlos",
+        "wirkungen.rs",
+        "        if !leserechte.iter().any(|e| deckt(e, ort)) {",
+        "        if leserechte.is_empty() {",
+        "E010 -- eine `reads`-Zeile deckt jede andere Stelle mit",
+    ),
+    Mutation(
         "modul-egal",
         "umgebung.rs",
         "    pub fn funktion(&self, von: &str, pfad: &Pfad) -> Option<&Signatur> {\n"

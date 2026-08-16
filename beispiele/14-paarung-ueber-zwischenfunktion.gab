@@ -29,7 +29,7 @@ impl fn anstossen(b : ptr<normal, rw> Bericht)
 
 -- Die erwartende Haelfte.
 impl fn abholen(b : ptr<normal, r> Bericht) -> bool
-    effects { reads b }
+    effects { reads b, reads FERTIG }
     costs   <= 4 ops
 {
     let f = FERTIG awaits { b.daten };

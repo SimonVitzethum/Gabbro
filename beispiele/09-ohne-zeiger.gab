@@ -41,7 +41,8 @@ spec fn ist_blatt(s : index into Kappenraum) -> bool
 impl fn blatt_loeschen(s : index into Kappenraum)
     requires Held(KAPPEN), Kappenraum.slots[s].benutzt, ist_blatt(s)
     ensures  !Kappenraum.slots[s].benutzt
-    effects  { writes Kappenraum.slots, writes Objekte.slots, locks KAPPEN }
+    effects  { reads Kappenraum.slots, reads Objekte.slots,
+               writes Kappenraum.slots, writes Objekte.slots, locks KAPPEN }
     costs    <= 200 ops
 {
     let obj = Kappenraum.slots[s].objekt;
@@ -62,7 +63,8 @@ impl fn blatt_loeschen(s : index into Kappenraum)
 
 impl fn einsammeln(s : index into Kappenraum)
     requires Held(KAPPEN)
-    effects  { consumes Kappenraum.slots, writes Objekte.slots, locks KAPPEN }
+    effects  { reads Kappenraum.slots,
+               consumes Kappenraum.slots, writes Objekte.slots, locks KAPPEN }
     costs    <= 16371840 ops
 {
     traverse opfer over descendants of Kappenraum.slots[s] by consuming

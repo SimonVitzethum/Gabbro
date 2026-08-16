@@ -1,0 +1,50 @@
+-- erwartet: E010
+-- **Gift 62 -- die Sprechprobe zur Lesart A (E010).**
+--
+-- Die Entscheidung vom 2026-08-16: das Lesen wird genauso vollstaendig deklariert wie das
+-- Schreiben. Diese Datei ist die Probe darauf, und sie ist die **billigste** Form des
+-- Fehlers, gegen den A steht:
+--
+--   `pruefe_grenze` liest den Zaehlerstand einer fremden Tabelle und trifft daran eine
+--   Entscheidung -- und ihre `effects`-Zeile sagt nur `writes Protokoll.slots`. Wer die
+--   Signatur liest, sieht eine Funktion, die etwas notiert. **Er sieht nicht, dass sie von
+--   `Objekte` abhaengt.**
+--
+-- Genau das ist der Unterschied zwischen A und der grueberen Lesart C: C wuesste, dass hier
+-- irgendwo gelesen wird; **A nennt den Ort.**
+--
+-- ERWARTET: E010 an der Lesestelle, und sonst nichts. Die Schreibhaelfte ist vollstaendig
+-- -- faellt die Datei mit E005 statt E010, prueft die Probe die falsche Haelfte.
+
+module gift62 {
+
+const NOBJEKTE   : u32 = 256;
+const NEINTRAEGE : u32 = 16;
+const OBERGRENZE : u32 = 64;
+
+table Objekte count NOBJEKTE {
+    slot { zaehler : u32, art : u8, }
+}
+
+table Protokoll count NEINTRAEGE {
+    slot { wert : u32, }
+}
+
+-- **Der Fehler.** `reads Objekte.slots` fehlt, und NUR das -- `reads Protokoll.slots` steht
+-- da und ist wahr. Das ist Absicht: eine Wirkungsliste, die *eine* Lesestelle nennt, sieht
+-- vollstaendig aus. **Genau daran faellt eine Absage, die nur prueft, OB gelesen erklaert
+-- wurde, statt WAS** -- die zweite Mutation in `mutiere-pruefer.py` baut sie nach.
+impl fn pruefe_grenze(i : index into Objekte, p : index into Protokoll) -> bool
+    effects { reads Protokoll.slots, writes Protokoll.slots }
+    costs   <= 16 ops
+{
+    let alt = Protokoll.slots[p].wert;
+    let z   = Objekte.slots[i].zaehler;
+    if z > alt && z > OBERGRENZE {
+        Protokoll.slots[p].wert = z;
+        return true;
+    }
+    return false;
+}
+
+}

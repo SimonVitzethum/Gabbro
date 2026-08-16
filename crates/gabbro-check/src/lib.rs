@@ -135,10 +135,13 @@ pub fn passliste() -> Vec<Pass> {
             name: "effects",
             quelle: "SPRACHE.md §7: `effects` ist Pflicht und nicht fail-open",
             zustand: Zustand::Teilgebaut(
-                "Schreiben und `locks` werden gegen die Liste gehalten; **Lesen nicht** \
-                 (FRAGMENTE.md liest ueberall ohne `reads`-Zeile, und ob das ein Befund ist, \
-                 entscheidet nicht dieser Pass), und **Aufrufwirkungen nicht** -- dazu \
-                 muessten die Wirkungen des Gerufenen auf die Argumente abgebildet werden",
+                "Schreiben, `locks` **und seit 2026-08-16 das Lesen** (Lesart A, `E010`) \
+                 werden gegen die Liste gehalten. **Was fehlt, ist die Reichweite von \
+                 `E010`:** es spricht nur ueber bekannten Weltzustand (`static`, `atomic`, \
+                 `table`, `device`, `state`), weil eine Variante kein Ort ist und ein \
+                 AUSSCHNITT seine Namen nicht deklariert -- auf dem Fragmentkorpus hat die \
+                 Regel damit **null Biss**, und ihr Beleg kommt aus Gift 62 und zwei \
+                 Mutationen, nicht vom Korpus",
             ),
         },
         Pass {

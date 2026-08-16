@@ -4125,3 +4125,55 @@ ausserhalb der Caps. **Was sie systematisch verfehlen:** Invarianten, deren beid
 Summenbedingung über zwei Tabellen. *Wer den Prüfsatz schliessen will, braucht einen
 mechanischen Durchlauf, keinen Suchweg; dieser hier ist eine Kandidatenliste mit
 Fundstellen.*
+
+---
+
+# Lesart A gebaut — und der vorhergesagte Preis ist NICHT eingetreten
+
+**Die Entscheidung** (`TODO.md`, Schlitz `M-effects-lesen`): das Lesen wird genauso
+vollständig deklariert wie das Schreiben. **Der vorregistrierte Preis war Faktor drei** —
+*„A lässt 10 von 32 Funktionen fallen, C drei"*.
+
+## Gemessen, nachdem der Pass gebaut war
+
+| | |
+|---|---:|
+| Fragmentfunktionen, die an `E010` fallen | **0 von 32** |
+| meine eigenen Beispiele, die fielen | **2 Dateien, 5 Stellen** |
+| Fehler in `E010` selbst, die der erste Lauf aufdeckte | **4** |
+
+> **Der vorhergesagte Preis war eine Schätzung, und sie war zu hoch.** `FRAGMENTE.md`
+> deklariert seine Lesungen bereits — die zehn erwarteten Ausfälle gibt es nicht. **Was
+> gefallen ist, waren meine eigenen Beispiele**, und das ist keine Eigenschaft der Lesart,
+> sondern meiner Sorgfalt beim Schreiben.
+
+## Was der erste Lauf an `E010` selbst gefunden hat — vier Dinge, zwei davon fremd
+
+1. **Der Binder eines `match`-Zweiges galt als Weltzustand.** `Some(p) => …` meldete `p`.
+   **Und das war ein Fehler der SCHREIBhälfte**: `lokale()` sammelte Binder nicht, also
+   hätte `E005` für ein `Some(p) => { p.feld = … }` dasselbe getan. *Die Lesehälfte hat einen
+   Fehler gefunden, der seit dem 2026-08-14 in `E005` lag.*
+2. **Der Binder von `update(v)`** — der alte Wert eines `exchange` — ebenso.
+3. **Eine Konstante ist kein Weltzustand.** `v1_erhoehen liest GRENZE, erklaert aber pure`
+   hatte im Wortlaut recht und in der Sache unrecht. Ohne diese Ausnahme wäre `pure`
+   praktisch unerreichbar.
+4. **Eine Variante ist kein Ort.** `IpcResult::Ok` und `Fehler::Buchfuehrung` wurden als
+   ungenannte Lesungen gemeldet.
+
+## Die Einschränkung, die daraus folgt — und was sie kostet
+
+**`E010` spricht nur über bekannten Weltzustand**: `static`, `atomic`, `table`, `device`,
+`state`. *In einer vollständigen Übersetzungseinheit geht dabei nichts verloren* — ein
+unbekannter Name fällt bereits im Namenspass. **Im Ausschnitt kostet sie die ganze Bissigkeit**,
+und das ist der ehrliche Satz dazu:
+
+> **Auf dem Fragmentkorpus hat `E010` heute NULL Biss** — nicht weil dort alles deklariert
+> ist, sondern weil Ausschnitte ihren Zustand nicht deklarieren. **Der Beleg, dass die Regel
+> greift, kommt deshalb nicht vom Korpus**, sondern von drei anderen Stellen: zwei eigene
+> Beispiele fielen (`09`, `14`), `beispiele/gift/62-lesen-ohne-reads.gab` fällt mit genau
+> einer Absage, und **zwei Mutationen** in `mutiere-pruefer.py` beschädigen die Regel — eine
+> schaltet sie ab, die zweite *lockert* sie (jede `reads`-Zeile deckt jede Stelle).
+
+*Die zweite Mutation ist die wichtigere, und das Gift ist eigens dafür gebaut: `pruefe_grenze`
+deklariert `reads Protokoll.slots` wahrheitsgemäss und liest `Objekte.slots` daneben. **Eine
+Wirkungsliste, die eine Lesestelle nennt, sieht vollständig aus.***
