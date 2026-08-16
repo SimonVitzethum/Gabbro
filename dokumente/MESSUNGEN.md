@@ -3437,20 +3437,26 @@ Teil wird benannt.* **Phase bleibt in N_neu.**
 ausgeschriebenem Bereichsfragment müssen fallen.* Sie hatte bis heute **null Datenpunkte aus
 Bereichsfragmenten**; jetzt hat sie **vier**.
 
-| Fragment / Anlass | neue Konstrukte | kumulativ |
-|---|---:|---:|
-| F1–F6 (Bestand, 2. Fassung) | — | Basis |
-| «B32» virtio-Ringzähler | 1 — `wrapping` am `regdecl` | 1 |
-| «B34» revoke-Schranke | 0 — die Prämisse fiel | 1 |
-| «B29» refcount-Unterlauf | 0 — `narrow` genügte | 1 |
-| `heldpred` (aus `H005`) | 1 | 2 |
-| «B35» `Some`/`None` | 1 | 3 |
-| **F7 Lader/Bringup** | **0** | 3 |
-| **F8 Scheduler** | **0** | 3 |
-| **F9 MMU/Seitentabellen** | **0** | 3 |
-| **F10 Parser/Checkpoint** | **0** | 3 |
+> **Zwei Spalten, nicht eine — und das ist der ehrliche Rahmen um die Zahl.**
+> **Null neue Wörter ist nicht null Sprachbewegung.** Die Wortschatz-Konvergenz misst nur
+> *eine* der beiden Unterhaltsgrössen; die andere ist die **Schablonen- und Axiomfläche**,
+> und sie wächst weiter. Ohne die zweite Spalte wird die zweite Bewegung unsichtbar, sobald
+> die erste glänzt.
 
-## **Vier Bereichsfragmente, null neue Konstrukte.**
+| Fragment / Anlass | **neue Konstrukte** | **veränderte Bedeutung Bestehender** | kumul. Wörter |
+|---|---:|---|---:|
+| F1–F6 (Bestand, 2. Fassung) | — | — | Basis |
+| «B32» virtio-Ringzähler | 1 — `wrapping` am `regdecl` | — | 1 |
+| «B34» revoke-Schranke | 0 — die Prämisse fiel | — | 1 |
+| «B29» refcount-Unterlauf | 0 — `narrow` genügte | — | 1 |
+| `heldpred` (aus `H005`) | 1 | `Held` trägt jetzt seine **Stärke** | 2 |
+| «B35» `Some`/`None` | 1 | — | 3 |
+| **F7 Lader/Bringup** | **0** | **«B37»:** `BootPhase` trägt *genau einmal*, **nicht** *in dieser Ordnung* — eine benannte **Grenze** | 3 |
+| **F8 Scheduler** | **0** | **«B38»:** Sperrgrenze verlangt Neuvalidierung **oder benannten Träger** — Semantik erweitert | 3 |
+| **F9 MMU/Seitentabellen** | **0** | **«B39»:** die Axiomschicht wird **länger** (`A`/`D` als Hardwareschreiber) | 3 |
+| **F10 Parser/Checkpoint** | **0** | — | 3 |
+
+## **Vier Bereichsfragmente, null neue Konstrukte — und drei veränderte Bedeutungen.**
 
 **Das ist der erste echte Beleg für die Konvergenzwette** — und er ist stärker, als die Zahl
 aussieht: die vier Bereiche waren **nie ausgeschrieben** und galten als die schwersten
@@ -3479,3 +3485,12 @@ Dazu **zwei Lücken im Prüfer**, beide am MMU-Fragment gefunden und beide gesch
 > kein Konstrukt — sie kosteten **zwei Prüferreparaturen, einen toten Kandidaten und einen
 > Befund gegen das eigene Produktargument.** *Das ist ein besseres Ergebnis als eine glatte
 > Null, weil man es nachrechnen kann.*
+
+## Und die zweite Spalte ist die, die weiterwächst
+
+**Der Wortschatz konvergiert (Spalte 1). Die Vertrauensfläche nicht (Spalte 2).**
+«B39» verlängert die Axiomschicht, «B38» erweitert eine Semantik, «B37» zieht eine Grenze in
+ein vorhandenes Konstrukt. **Keine dieser drei Bewegungen erscheint in der Wortzählung**, und
+alle drei erhöhen, was ein Leser glauben muss.
+
+> *Wer die Konvergenzwette zitiert, zitiert Spalte 1. Der Unterhalt steht in Spalte 2.*

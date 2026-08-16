@@ -19,6 +19,34 @@ pub struct Signatur {
     pub span: gabbro_syntax::span::Span,
 }
 
+/// **Die Traegerarten, erschoepfend.** Jede Deklaration, die einen Namen einfuehrt, den ein
+/// Zeiger tragen kann, steht hier — und jede Aufloesungsstelle matcht **ohne `_`-Zweig**
+/// darueber. Eine neue Art ist damit ein Uebersetzungsfehler an jeder Kette, die sie nicht
+/// behandelt, statt eines stillen `Unbekannt`.
+///
+/// *Gefunden am MMU-Fragment 2026-08-16: `walk` fehlte, und die Schranke, die schon dastand,
+/// griff trotzdem nicht.*
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Traegerart {
+    Neutyp,
+    Tabelle,
+    Format,
+    Geraet,
+    Walk,
+}
+
+impl Traegerart {
+    /// **Die Reihenfolge ist die Aufloesungsreihenfolge** — ein Neutyp verdeckt eine
+    /// gleichnamige Tabelle, so wie bisher.
+    pub const ALLE: [Traegerart; 5] = [
+        Traegerart::Neutyp,
+        Traegerart::Tabelle,
+        Traegerart::Format,
+        Traegerart::Geraet,
+        Traegerart::Walk,
+    ];
+}
+
 #[derive(Default)]
 pub struct Umgebung {
     roh_typen: HashMap<String, TypDecl>,
@@ -531,27 +559,40 @@ impl Umgebung {
                 // Der Name wird HIER aufgeloest, im Modul des Gebrauchs -- ein
                 // gleichnamiger Typ in einem fremden Modul verdeckt ihn damit nicht mehr.
                 let kand = self.kandidaten(von, &name);
-                if let Some(k) = kand.iter().find(|k| self.roh_typen.contains_key(*k)) {
-                    let k = k.clone();
-                    self.typ_aufloesen(modul_von(&k), kurzname(&k), unterwegs)
-                } else if let Some(k) = kand.iter().find(|k| self.tabellen.contains_key(*k)) {
-                    Typ::Tabelle(k.clone())
-                } else if let Some(k) = kand
+                // **Erschoepfend ueber die Traegerarten, ohne Auffangzweig.** Bis
+                // 2026-08-16 war das eine `if-else`-Kette ueber Karten, und ein `walk`
+                // fiel still durch: `ptr<normal, r> Seitenabstieg` war `Unbekannt`, die
+                // Schranke der Domaene `mappings of` fand ihren Namen nie -- **obwohl die
+                // Schranke selbst schon dastand.**
+                //
+                // *Eine gefuellte Karte ist kein Beleg fuer eine vollstaendige Karte.*
+                // `Unbekannt` fiel nicht ab, es lief als leerer Eintrag mit.
+                //
+                // Der `match` unten hat **keinen `_`-Zweig**: eine neue Traegerart ist ab
+                // jetzt ein UEBERSETZUNGSFEHLER an jeder Aufloesungsstelle, die sie nicht
+                // behandelt. **Dieselbe D2-Medizin, die die Sprache ihren Nutzern
+                // verschreibt, auf den Pruefer selbst angewandt.**
+                Traegerart::ALLE
                     .iter()
-                    .find(|k| self.formate.contains_key(*k) || self.geraete.contains_key(*k))
-                {
-                    Typ::Verbundname(k.clone())
-                } else if let Some(k) = kand.iter().find(|k| self.walkschranken.contains_key(*k)) {
-                    // **Ein `walk` ist ein Traeger wie ein `device`.** Die Kette kannte
-                    // Formate, Geraete und Tabellen -- und keine Walks. Damit war
-                    // `ptr<normal, r> Seitenabstieg` schlicht `Unbekannt`, und die Schranke
-                    // der Domaene `mappings of` fand ihren Namen nie. Gefunden am
-                    // MMU-Fragment 2026-08-16, nachdem die Schranke selbst schon dastand
-                    // und trotzdem nicht griff.
-                    Typ::Verbundname(k.clone())
-                } else {
-                    Typ::Unbekannt
-                }
+                    .find_map(|art| {
+                        let treffer = kand.iter().find(|k| match art {
+                            Traegerart::Neutyp => self.roh_typen.contains_key(*k),
+                            Traegerart::Tabelle => self.tabellen.contains_key(*k),
+                            Traegerart::Format => self.formate.contains_key(*k),
+                            Traegerart::Geraet => self.geraete.contains_key(*k),
+                            Traegerart::Walk => self.walkschranken.contains_key(*k),
+                        })?;
+                        Some((*art, treffer.clone()))
+                    })
+                    .map_or(Typ::Unbekannt, |(art, k)| match art {
+                        Traegerart::Neutyp => {
+                            self.typ_aufloesen(modul_von(&k), kurzname(&k), unterwegs)
+                        }
+                        Traegerart::Tabelle => Typ::Tabelle(k),
+                        Traegerart::Format | Traegerart::Geraet | Traegerart::Walk => {
+                            Typ::Verbundname(k)
+                        }
+                    })
             }
             TypExpr::Feld(a) => Typ::Feld {
                 element: Box::new(self.typexpr(von, &a.element, unterwegs)),

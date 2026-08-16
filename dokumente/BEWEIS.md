@@ -1131,3 +1131,56 @@ Die Funktion liegt in `kernel/src/system.rs` und ist über den IPC-Fastpath mit
 Sperrlage **je Zeile**. Das ist machbar, aber es ist **die Arbeit des Scheduler-Fragments**
 (Welle 4) und nicht die dieser Messung. **Blockiert, mit Grund und Fundstelle** — nicht
 stillschweigend ausgelassen.
+
+
+---
+
+# Die Wertthese hat sich verschoben — gemessen, mit Fundstellen
+
+**Die Gründungsannahme des Ordners war der Parser.** Die Fallen, die den Entwurf ausgelöst
+haben, waren Formatfallen: falsche Offsets, vertauschte Bytereihenfolge, ein Kopf von 10
+statt 12 Byte. `format` war das erste Konstrukt und das plausibelste.
+
+**Zwei unabhängige Messungen sagen inzwischen das Gegenteil.**
+
+## `format` steht zweimal ohne Beleg da
+
+| Messung | Ergebnis | Fundstelle |
+|---|---|---|
+| **Basisrate** | **5 Formate, 5 berührende Commits in 53 Tagen, 0 eingetretene Fehler der Klasse.** Der einzige Beinahe-Fall steht als **vermiedener** da — eine Warnung, kein Nachruf | `MESSUNGEN.md`, *Basisrate*; `done.md:1745-1750` |
+| **«B40», DTB-Fragment** | Der einzige Parser des Kerns, der fremde Bytes liest, prüft **145 Zeilen fehlerfrei ohne Sprache und ohne Werkzeug**. `be32(data, n)?` ist bereits *„prüfen, sonst abweisen"* | `FRAGMENTE.md` F10; `crates/caprock-dtb/src/lib.rs` |
+
+> **`format` gewinnt dort Kürze, nicht Sicherheit.** Der Gewinn ist real — eine Deklaration
+> statt einer Kontrollflussdisziplin an jedem Zugriff — **aber es ist nicht der Gewinn, den
+> der Ordner verspricht.**
+
+## Die Kernelseite trägt ihre Belege — alle
+
+| Konstrukt | Beleg | Art des Belegs |
+|---|---|---|
+| `table … count N` | `M103`, Fragment `revoke` | ein **gemessener** Fehler wäre sonst möglich |
+| `lock … rank … held` | `K002`/`K004`, `H001`–`H005` | 419 Sperrnahmen; `held` trägt die Latenzaussage |
+| `locks shared` | **33 `read()` gegen 44 `write()`** | der heisseste Pfad war **nicht schreibbar** |
+| Paarung | 2 276 Atomzugriffe, 824 Stores | `V001`/`V002` — die verwaiste Hälfte liest gültigen Müll |
+| `walk`/`embeds` | vierstufiger Abstieg, 9 benannte Bits | `FRAGMENTE.md` F9 |
+| `BootPhase` | **7 Stellen gegen ein Tor von 5**, darunter ein **bezahlter** Fehler | `main.rs:251` — *„Genau diese Zeile fehlte auf ARM"* |
+| M1/Überlauf | «B29» im Löschpfad, **fünf Umbauten überlebt** | `space.rs:1067` |
+
+**Sieben Konstrukte, sieben Belege — und drei davon sind bezahlte Fehler**, keine
+plausiblen Szenarien.
+
+## Der Satz, der daraus folgt
+
+> **Die Sprache rechtfertigt sich am Kernel, nicht am Parser.**
+
+Das ist **das Gegenteil der Gründungsannahme**, und es ist die nützlichste Verschiebung des
+Ordners: Sie sagt, wo weitergebaut wird (Träger, Sperren, Ordnung, Abstiege) und wo
+**nicht** (Formate, solange die Basisrate nicht steigt).
+
+**Was sie NICHT sagt:** dass `format` weg soll. Es trägt ELF, das Manifest und die
+DTB-Kürze, und der Beinahe-Fall zeigt, dass die Klasse real ist — *ihre Erkennung hängt
+heute an Aufmerksamkeit*. Es heisst: **`format` ist nicht mehr die Begründung der Sprache,
+sondern eine ihrer Bequemlichkeiten**, und wer es rechtfertigen will, braucht ein anderes
+Argument als die Fehlerhäufigkeit in diesem Baum.
+
+*Beide Messungen stehen mit Suchweg da (W7) — nachzählbar, und damit widerlegbar.*

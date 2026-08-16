@@ -1361,6 +1361,25 @@ jemand nachlässig war, sondern weil eine **andere** Zusage ihn trägt: die Mask
 > nicht *„jede Fortsetzung prüft neu"*, sondern *„jede Fortsetzung prüft neu **oder** nennt,
 > was sie stattdessen trägt"* — und das ist keine neue Marke, sondern eine Bedingung an eine
 > vorhandene.
+>
+> ### Und die Randbedingung gehört dazu, sonst ist der Träger ein Ausweg
+>
+> **Wer sich auf Maskierung beruft, muss im maskierten Zustand SEIN.**
+>
+> Ohne diese Kopplung wäre *„mich trägt die Maskierung"* genau die Zusicherung aus **R15**,
+> die erfüllt ist, sobald der Prüfer schweigt — ein `masks IRQ` in der Wirkungsliste sagt,
+> dass die Funktion maskiert, nicht dass sie **maskiert läuft**.
+>
+> **Und es ist mechanisch prüfbar, nicht nur formulierbar:** `entrydecl` führt
+> `nested ( "never" | "masked" | "bounded" constexpr )` — der Eintrittskontext sagt, ob ein
+> Pfad maskiert erreicht wird. Die Bedingung lautet damit vollständig:
+>
+> > *Ein Wert, der eine Sperrgrenze überquert, verliert seine Fakten. Die Fortsetzung prüft
+> > neu **oder** nennt einen Träger — und ein Träger `masks IRQ` gilt nur, wenn der
+> > Eintrittskontext `nested masked` führt.*
+>
+> **Das ist derselbe Schnitt wie bei `H005`:** dort entscheidet die *Stärke* des Zeugen, hier
+> der *Zustand* beim Eintritt. Beide Male reicht die blosse Nennung nicht.
 
 ```gabbro
 module caprock::sched {
@@ -1522,6 +1541,35 @@ belegt sie zum ersten Mal an der Strecke, für die sie entworfen wurden.
 > setzt `A`/`D`, sonst nichts"* — genau die Bauart, die `assume … falsifier …` trägt. Damit
 > gehört der Fall in die **Axiomschicht**, und er ist einer der wenigen, die dort
 > hingehören, weil sie wirklich Hardware sind.
+>
+> ### Und das Axiom allein genügt nicht — es braucht seine Ausnahmeregel
+>
+> **`A`/`D` sind die GDT-Lektion am Seitenwerk.** Hardware schreibt in eine Struktur, die
+> sonst `by ops`-artig gedacht ist: eine Seitentabelle ist genau der Träger, dessen
+> Schreibstellen man erzeugen möchte. **Sobald Gruppen-`ops` das Seitenwerk erreichen,
+> kollidiert das Axiom mit der Schreibrechtszusage** — die K-Bedingung verlangt, dass *alle*
+> Schreibstellen erzeugt sind, und die MMU ist keine erzeugte Operation.
+>
+> **Die Ausnahme muss deshalb an der Deklaration stehen, nicht im Fliesstext:** welche Felder
+> einer `walk`-Deklaration **hardwarebeschreibbar** sind, gehört in die Deklaration — so wie
+> `reserved` an einem `format`-Feld sagt, dass niemand es schreibt.
+>
+> ```gabbro
+> walk Seitenabstieg levels EBENEN {
+>     node : [Pte; EINTRAEGE],
+>     down : roh when EINTRAG.PS == 0,
+>     leaf : EINTRAG.PS == 1,
+>     -- die Kandidatenzeile: `hardware A, D;`
+> }
+> ```
+>
+> **Ohne sie ist die Platzierungsregel aus `R001` an dieser Stelle unhaltbar** — sie sagt
+> heute *„ein `ops`-Träger liegt in keinem `dma`-Raum"*, und der Grund ist genau dieser:
+> ein Gerät schreibt an jeder Grammatik vorbei. **Die MMU tut dasselbe, nur im `normal`-Raum**,
+> und `R001` sieht sie nicht.
+>
+> *Kandidat, kein Beschluss — und ausdrücklich einer, der die Konvergenzwette belastet: er
+> wäre ein neues Wort.*
 
 
 ---

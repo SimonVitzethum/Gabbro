@@ -126,6 +126,23 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
         Prueffall fuer `locks ordered` — billiger als das ganze Scheduler-Fragment**, und der
         Scheduler tritt danach mit einem **getesteten** statt einem vermuteten Sperrkonstrukt an.
 
+## Aus Welle 4 (2026-08-16) — zwei Bedingungen und ein Kandidat
+
+- [ ] **«B38» — die Randbedingung an den benannten Traeger.** *„Die Fortsetzung prueft neu
+      **oder** nennt, was sie stattdessen traegt"* ist die richtige Form — **aber ein Traeger
+      `masks IRQ` gilt nur, wenn der Eintrittskontext `nested masked` fuehrt.** Ohne diese
+      Kopplung ist *„mich traegt die Maskierung"* die Zusicherung aus **R15**, die erfuellt
+      ist, sobald der Pruefer schweigt. **Mechanisch pruefbar** ueber `entrydecl`; zu bauen.
+- [ ] **«B39» — die Ausnahmeregel zum Hardware-Axiom, und sie ist ein KANDIDAT auf ein neues
+      Wort.** `A`/`D` schreibt die MMU selbst — die GDT-Lektion am Seitenwerk. **Sobald
+      Gruppen-`ops` das Seitenwerk erreichen, kollidiert das Axiom mit der
+      Schreibrechtszusage**: die K-Bedingung verlangt, dass ALLE Schreibstellen erzeugt sind.
+      Welche Felder einer `walk`-Deklaration **hardwarebeschreibbar** sind, gehoert an die
+      Deklaration (Kandidatenzeile `hardware A, D;`), so wie `reserved` an einem
+      `format`-Feld. *`R001` sieht die MMU heute nicht — sie schreibt an jeder Grammatik
+      vorbei, nur im `normal`-Raum statt im `dma`-Raum.*
+      **Belastet die Konvergenzwette: es waere Spalte 1, nicht nur Spalte 2.**
+
 ## Aus dem Papiertest vom 2026-08-14 — ein toter und zwei lebendige Kandidaten
 
 > **Ein Kandidat ist am 2026-08-14 gestorben und steht deshalb NICHT mehr hier:**

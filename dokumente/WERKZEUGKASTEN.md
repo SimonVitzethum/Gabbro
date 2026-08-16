@@ -299,3 +299,35 @@ die Kehrseite:** wenn der Nenner schrumpft, muss das lauter sein als der steigen
 **Der Handgriff.** `gabbro fragmente` druckt N seit jeher; was fehlte, war die Aufmerksamkeit
 auf seine **Änderung**. Wo ein Werkzeug eine Grundgesamtheit definiert, gehört ihre Grösse in
 denselben Satz wie die Quote — und ihr Vorwert daneben, sobald es einen gibt.
+
+---
+
+## W12 — Eine gefüllte Karte ist kein Beleg für eine **vollständige** Karte
+
+**Der Schaden.** Die Domänenschranke für `mappings of` stand da — `levels × Knotenlänge`, aus
+der `walk`-Deklaration, in `walkschranken` eingetragen und per Probe nachgewiesen
+(`t::W → 2048`). **Sie griff trotzdem nicht.** Die Typauflösung kannte Formate, Geräte und
+Tabellen — und keine Walks. `ptr<normal, r> Seitenabstieg` war schlicht `Unbekannt`.
+
+**`Unbekannt` fiel nicht ab. Es lief als leerer Eintrag mit.** Ich habe eine halbe Stunde am
+falschen Ende gesucht, weil die Karte gefüllt war.
+
+**Die Klasse.** Das ist strukturell derselbe Fehler wie der Wortschatz-Wächter, der
+Geschlossenheit über einer Menge behauptete, die er nie gesehen hatte: **eine Auflösung mit
+Auffangzweig behauptet Vollständigkeit, die sie nicht hat.**
+
+**Die Regel.** An jeder Auflösungsstelle wird **erschöpfend über die Deklarationsarten**
+gematcht, **ohne `_`-Zweig**. Eine neue Art ist damit ein **Übersetzungsfehler** an jeder
+Kette, die sie nicht behandelt.
+
+> **Dieselbe D2-Medizin, die die Sprache ihren Nutzern verschreibt, auf den Prüfer selbst
+> angewandt** — Gabbro verlangt erschöpfendes `match` über `tagged`, und Rust gibt es hier
+> gratis her.
+
+**Der Handgriff.** `Traegerart::ALLE` (`umgebung.rs`) mit fünf Varianten und zwei `match`
+ohne Auffangzweig. *Die Reihenfolge des Arrays ist die Auflösungsreihenfolge* — sie steht
+damit an einer Stelle statt in der Schachtelung einer `if-else`-Kette.
+
+**Die Kehrseite, und sie ist der Preis:** `Typ::Unbekannt` bleibt als *Ergebnis* zulässig —
+ein Name, den keine Deklaration trägt, ist unbekannt, und das ist richtig. Was nicht mehr
+geht, ist **unbekannt zu sein, weil niemand nachgesehen hat.**
