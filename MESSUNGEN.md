@@ -3317,3 +3317,52 @@ damit an einer Zahl, die selbst offen ist.***
 
 **Sieben von elf getragen.** Und die vier uebrigen sind vier **verschiedene** Arten von
 Entfernung — eine Entscheidung, eine Axiomzahl, ein Fragment, ein Teilprojekt.
+
+---
+
+# VORAB — das Lader-Fragment entscheidet die Klasse *Phase*
+
+**Eigener Commit, VOR dem Schreiben des Fragments.** Danach wird hier nichts geaendert.
+Messbasis: `../caprock-messbasis` @ `a1bf707`, `kernel/src/arch/x86_64/bringup.rs`
+(**6 706 Zeilen, 36 Funktionen**).
+
+## Warum am Fragment und nicht per Zaehlung (R18)
+
+Die Neuerhebung fand fuer *Phase* **eine einzige Fundstelle im ganzen Baum**, und die ist ein
+**Kommentar**: `caprock-slab/src/lib.rs:173` — *„nur beim Boot aufrufen, bevor andere Kerne"*.
+
+> **Eine Klasse mit einer Fundstelle, deren Schreibweise fehlt, wird nicht per Zaehlung
+> entschieden.** Was man nicht schreiben kann, zaehlt niemand: ein Kommentar ist billig, ein
+> linearer Wert nicht. **Am Fragment zeigt sich, ob die Form traegt oder fehlt.**
+
+*`locks ordered` bleibt gueltig gestorben — Doppelnahme war schreibbar und kam trotzdem nicht
+vor. Hier ist es umgekehrt.*
+
+## Was gezaehlt wird
+
+**Stellen, an denen `BootPhase` als linearer Wert eine Pflicht traegt, die heute nichts
+traegt.** Eine Stelle zaehlt, wenn **eine** der drei Bedingungen gilt:
+
+1. **Einkern-Annahme** — die Operation ist nur korrekt, solange die weiteren Kerne stehen
+   (kein Lock, weil noch niemand nebenlaeufig ist).
+2. **Reihenfolgezwang** — sie muss nach einem benannten Bootschritt laufen und vor einem
+   anderen, und nur Prosa sagt das.
+3. **Einmaligkeit** — sie darf genau einmal laufen, und nichts erzwingt es.
+
+**Belegt wird jede Stelle mit `Datei:Zeile`** — ab dem ersten Entwurf, nicht im Endstand (W7).
+
+## Das zweiseitige Tor — **k = 5**
+
+| | |
+|---|---|
+| **konstruktwuerdig** | die Marke traegt an **≥ 5** Stellen |
+| **stirbt wie `locks ordered`** | sie traegt an **≤ 4** — dann ist der heutige Kommentar die angemessene Form, und `BootPhase` kommt aus der Sprache |
+| **ungueltig** | die drei Bedingungen lassen sich an `bringup.rs` nicht entscheiden — dann fehlt das Kriterium, nicht die Antwort |
+
+**Warum 5 und nicht 1:** ein Konstrukt, das eine einzige Stelle traegt, ist eine Sonderregel.
+Fuenf ist die Schwelle, ab der eine Form sich lohnt — dieselbe Groessenordnung, mit der die
+`Sonderform`-Klasse zum Muster wird.
+
+**Und die Zahl steht hier, weil sie danach nicht mehr gewaehlt werden kann.** Faellt die
+Messung auf 4, ist das ein Ergebnis; faellt sie auf 6, ebenso. *Beides ist vorab ein gutes
+Ergebnis — der eine Ausgang spart ein Konstrukt, der andere begruendet eines.*
