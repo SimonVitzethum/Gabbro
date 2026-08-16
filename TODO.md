@@ -5,6 +5,14 @@
 > **Zwanzig Punkte sind gegen den CODE geprueft und nach [`DONE.md`](DONE.md) gewandert** —
 > nicht gegen die Erinnerung: je Punkt eine Kennung, eine Datei oder eine Befehlszeile.
 >
+> **Caprock-Punkte herausgenommen 2026-08-16.** Diese Liste fuehrt **Gabbro**. Was ihren
+> Gegenstand in Caprocks Code oder Buchfuehrung hat, gehoert dorthin — auch wenn es hier
+> entstanden ist. *Eine Aufgabenliste, die zwei Projekte fuehrt, sortiert fuer keines.*
+> Herausgenommen: Eager-FP, K1–K3, N2, die zwei offenen Klempnerei-Pflichten,
+> Fortschritt/Aushungern (D8). **Nicht geloescht, sondern nach
+> [`dokumente/AN-CAPROCK.md`](dokumente/AN-CAPROCK.md) gewandert** — sie sind Befunde, nur
+> nicht unsere.
+>
 > **Abgeglichen 2026-08-14.** Diese Datei fuehrt **ausschliesslich Offenes**; Erledigtes steht
 > in den Entwurfsdateien, Widerlegtes in [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md), Gemessenes in
 > [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md). Der Abgleich am 2026-08-14 fand die Datei **in acht Punkten
@@ -66,17 +74,7 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 > Was hier steht, ist ueberwiegend **Messung**, nicht Entwurf.
 
 
-- [ ] **Eager-FP je Architektur oder global entscheiden — haengt an der aarch64-Luecke oben.**
-      Die x86-Seite ist gemessen; die aarch64-Seite braucht einen Baum, den der Ordner nicht
-      hat (s. *Die Axiomschicht beziffern*). **Bis dahin ist „je Architektur" eine
-      Entscheidung ueber eine Lage, die niemand kennt.** Berichtigt: auf **x86 ist es eager**
-      (`system.rs:1215`, mit genau der CVE-Begruendung der Ergaenzung); **lazy ist der
-      aarch64-Pfad**. Das Dekret trifft also die andere Architektur, wo das Argument nicht in
-      derselben Form greift.
-- [ ] **Protokoll der Ordering-Klassifikation um K1–K3 ergaenzen** — sie sind **Wegfaelle**, keine
-      Widerlegungen: unter Sperre entfaellt das Atomic (K1, ein Teil der 2 231 verschwindet),
-      Konstruktinneres zaehlt in die Schablonenflaeche statt in die Stichprobe (K2), und
-      `accumulates` mit Verbund ist an `sync:572-592` **strikt besser als das Original** (K3).
+
 
 - [ ] **Abnahme der dritten Ergaenzung** (§6): Katalog gegen Zaehlung — **jeder gezaehlte Befehl
       hat ein Axiom oder ein Konstrukt, jede Zeile einen Befehl**; die Mode-Leiter als Sprechprobe
@@ -148,9 +146,7 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
       sondern ein Zwang**: ein Wert ueber einer Sperrgrenze verliert seine Fakten (*das tut die
       Sprache schon*) **und** die Fortsetzung muss die tragende Bedingung erneut pruefen.
       **Hinter das Scheduler-Fragment — dort liegt seine Messstrecke.**
-- [ ] **N2 — die Ordering-Vollzaehlung braucht eine Spalte „Ordnungsteilnehmer".** `FP_OWNER`
-      ist ein Atomic, das **ausdruecklich Teil der Deadlock-Herleitung** ist. Welche Atomics
-      das sind, entscheidet, ob sie in die Paarung oder in die Sperrordnung gehoeren.
+
 - [ ] **N3 — `held` braucht einen Zweig fuer Leser-Schreiber-Sperren.** `held <= K ops` ist
       fuer **exklusive** Halter gedacht; auf der geteilten Seite ist die Rechengroesse die
       **Writer-Wartezeit unter Leserdruck**, nicht die Haltezeit eines Lesers. **Der Kostenpass
@@ -259,9 +255,6 @@ fiel.
 
 **Die Pruefzeile dagegen, mechanisch:** kein von einer Schablone erzeugtes Feld darf einen
 Typ ohne Breite tragen. Das ist an der Schablone selbst pruefbar, nicht erst am Erzeugnis.
-
-## An CAPROCK, nicht an Gabbro
-
 
 ## Die vier Posten zum Ziel — Plan mit Toren in [`dokumente/PLAN.md`](dokumente/PLAN.md) §A
 
@@ -407,10 +400,7 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
 ## Aus dem Kriterium ([`dokumente/BEWEIS.md`](dokumente/BEWEIS.md))
 
 
-- [ ] **Zwei Klempnerei-Pflichten stehen heute schon offen** und sind je eine Widerlegung des
-      Kriteriums an ihrer Stelle: `self.queues[p]` nach `31 - leading_zeros()`
-      (`caprock-sched/src/lib.rs:1996`) braucht die Datenstruktur-Invariante; und **jedes
-      Verfeinerungslemma**, falls die Absenkung nicht flach genug ist.
+
 - [ ] **Die Trennlinie an einem Grenzfall streiten.** „Nennt nur die Maschine" ist scharf genug für
       die heutigen Fälle — der erste Streitfall gehört in `dokumente/BEWEIS.md`, nicht in eine Fussnote.
 
@@ -463,8 +453,7 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
       * **Was es braeuchte:** ein aarch64-Kernel mit **eigener** Abstammung, oder die
         ehrliche Fassung des Satzes — *„gemessen fuer x86; fuer aarch64 steht keine Zahl,
         und der vorhandene Baum kann sie nicht liefern."*
-- [ ] **Fortschritt/Aushungern** (Caprocks D8) fällt unter **keinen** Mechanismus. Offen, ob das
-      so bleibt oder ob es einen sechsten braucht.
+
 - [ ] **B3 beziffern: welche Rümpfe lassen sich NICHT als Traversierung schreiben?** IPC-Fastpath,
       `revoke`, Warteschlangenchirurgie des Schedulers sind die Kandidaten. **Jeder von ihnen kostet
       5 : 1 auf seinem Anteil** — 5 % des Kernels sind +0,25 auf die Kennzahl, 10 % sind +0,5.

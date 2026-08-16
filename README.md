@@ -112,6 +112,7 @@ ausdrücklich Absicht.
 | [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md) | sechs Caprock-Bereiche in Gabbro ausgeschrieben, mit Herkunft und Urteil |
 | [`TODO.md`](TODO.md) | **ausschliesslich Offenes** |
 | [`DONE.md`](DONE.md) | **ausschliesslich Erledigtes** — jeder Eintrag mit seinem Beleg |
+| [`dokumente/AN-CAPROCK.md`](dokumente/AN-CAPROCK.md) | **Befunde, deren Gegenstand Caprock ist** — hier entstanden, dorthin gehörig |
 | [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md) | **was an diesem Entwurf schon falsch war**, mit Lehre |
 | [`dokumente/WERKZEUGKASTEN.md`](dokumente/WERKZEUGKASTEN.md) | **Arbeitsregeln aus eigenen Fehlern** — jede mit dem Schaden, fuer den sie bezahlt wurde |
 
