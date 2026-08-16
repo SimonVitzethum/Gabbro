@@ -1,0 +1,53 @@
+-- erwartet: H006
+-- **Gift 68 -- zwei Sperren gleichen Rangs, verschachtelt.**
+--
+-- `lock … rank N` steht seit der ersten Fassung in der Grammatik, und der Ordner beruft sich
+-- an mehreren Stellen darauf: die Deadlockfreiheit ruht darauf, und die Traegergruppe sagt
+-- seit dem 2026-08-16 ausdruecklich *„die Ordnung wird nicht an der Gruppe deklariert, sie
+-- steht in den `rank`-Zahlen."*
+--
+-- **Bis zu `H006` hat sie niemand nachgerechnet.** Ein `grep '.rang'` ueber dem Pruefer
+-- lieferte genau EINE Fundstelle, und die verglich auf Gleichheit. Eine Zusage, die
+-- deklariert, nie geprueft und von einem zweiten Konstrukt als Grundlage benutzt wird, ist
+-- schlechter als gar keine: **sie sieht aus wie ein Beleg.**
+--
+-- **Diese Datei prueft den GLEICHSTAND**, nicht den Abstieg -- Gift 67 macht das. Beide
+-- Sperren tragen `rank 1`, und das ist keine Ordnung: wer sie verschachtelt, kann es in zwei
+-- Richtungen tun, und genau daraus entsteht die Verklemmung.
+--
+-- Sie existiert, weil eine Mutation sonst ueberlebt: `>=` zu `>` zu schwaechen laesst den
+-- Gleichstand durch, und Gift 67 merkt es nicht -- dort sind die Raenge verschieden.
+-- *Eine Regel mit zwei Faellen braucht zwei Proben.*
+--
+-- ERWARTET: H006, und sonst nichts.
+
+module gift68 {
+
+const NFAEDEN : u32 = 256;
+const NPUNKTE : u32 = 64;
+
+table Faeden count NFAEDEN {
+    slot { gruende : u32, }
+}
+
+table Endpunkte count NPUNKTE {
+    slot { wartet : u32, }
+}
+
+lock PUNKTE protects { Endpunkte } rank 1 held <= 40 ops;
+lock PLAN   protects { Faeden }    rank 1 held <= 40 ops;
+
+-- **Der Fehler.** Zwei Sperren gleichen Rangs, verschachtelt.
+impl fn umhaengen(e : index into Endpunkte, t : index into Faeden)
+    effects { writes Faeden.slots, writes Endpunkte.slots, locks PLAN, locks PUNKTE }
+    costs   <= 60 ops
+{
+    locks PLAN {
+      locks PUNKTE {
+        Faeden.slots[t].gruende   = 0;
+        Endpunkte.slots[e].wartet = 0;
+      }
+    }
+}
+
+}

@@ -284,6 +284,24 @@ MUTATIONEN = [
         "E006 -- ein `locks`-Block braucht keine erklaerte Sperre",
     ),
     Mutation(
+        "rangordnung-egal",
+        "geteilt.rs",
+        "            if *alt >= neu {",
+        "            if false && *alt >= neu {",
+        "H006 -- die Sperrordnung darf absteigen",
+    ),
+    Mutation(
+        # **Die lockernde Fassung**, und sie ist die wahrscheinlichere: gleicher Rang gilt
+        # als in Ordnung. Zwei Sperren desselben Rangs haben aber keine Ordnung -- wer sie
+        # verschachtelt, kann es in zwei Richtungen tun, und genau daraus entsteht die
+        # Verklemmung.
+        "rangordnung-gleich-erlaubt",
+        "geteilt.rs",
+        "            if *alt >= neu {",
+        "            if *alt > neu {",
+        "H006 -- gleicher Rang gilt als Ordnung",
+    ),
+    Mutation(
         "gruppe-invariante-egal",
         "gruppe.rs",
         "            if treffer.len() < 2 {",

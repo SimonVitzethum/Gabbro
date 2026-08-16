@@ -32,7 +32,7 @@ const BENANNT: &[&str] = &[
     "K001", "K002", "K003", // Kosten
     "E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008", "E009",
     "E010", // Wirkungen -- E010 ist die Lesehaelfte (Lesart A, 2026-08-16)
-    "H001", "H002", "H003", "H004", "H005", // geteilter Halt
+    "H001", "H002", "H003", "H004", "H005", "H006", // geteilter Halt, Rangordnung
     "K004", "D001", "D002", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet

@@ -1,0 +1,49 @@
+-- erwartet: H006
+-- **Gift 67 -- die Sperrordnung, absteigend genommen.**
+--
+-- `lock … rank N` steht seit der ersten Fassung in der Grammatik, und der Ordner beruft sich
+-- an mehreren Stellen darauf: die Deadlockfreiheit ruht darauf, und die Traegergruppe sagt
+-- seit dem 2026-08-16 ausdruecklich *„die Ordnung wird nicht an der Gruppe deklariert, sie
+-- steht in den `rank`-Zahlen."*
+--
+-- **Bis zu `H006` hat sie niemand nachgerechnet.** Ein `grep '.rang'` ueber dem Pruefer
+-- lieferte genau EINE Fundstelle, und die verglich auf Gleichheit. Eine Zusage, die
+-- deklariert, nie geprueft und von einem zweiten Konstrukt als Grundlage benutzt wird, ist
+-- schlechter als gar keine: **sie sieht aus wie ein Beleg.**
+--
+-- Hier nimmt `umhaengen` erst `PLAN` (rank 2) und darin `PUNKTE` (rank 1) -- absteigend.
+-- Eine zweite Funktion, die es andersherum tut, und die Verklemmung ist fertig. Das Gemeine
+-- daran: BEIDE Funktionen sehen fuer sich genommen richtig aus.
+--
+-- ERWARTET: H006, und sonst nichts.
+
+module gift67 {
+
+const NFAEDEN : u32 = 256;
+const NPUNKTE : u32 = 64;
+
+table Faeden count NFAEDEN {
+    slot { gruende : u32, }
+}
+
+table Endpunkte count NPUNKTE {
+    slot { wartet : u32, }
+}
+
+lock PUNKTE protects { Endpunkte } rank 1 held <= 40 ops;
+lock PLAN   protects { Faeden }    rank 2 held <= 40 ops;
+
+-- **Der Fehler.** Innen `rank 1` unter aussen `rank 2` -- die Ordnung laeuft aufsteigend.
+impl fn umhaengen(e : index into Endpunkte, t : index into Faeden)
+    effects { writes Faeden.slots, writes Endpunkte.slots, locks PLAN, locks PUNKTE }
+    costs   <= 60 ops
+{
+    locks PLAN {
+      locks PUNKTE {
+        Faeden.slots[t].gruende   = 0;
+        Endpunkte.slots[e].wartet = 0;
+      }
+    }
+}
+
+}
