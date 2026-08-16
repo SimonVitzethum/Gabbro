@@ -17,7 +17,7 @@
 | # | Pass | Kennungen | Beleg |
 |---:|---|---|---|
 | 1 | **Namen** | `N001`–`N003` | `crates/gabbro-check/src/namen.rs` |
-| 2 | D1/D2 *(teilweise)* | `D001` | `kbedingung.rs` — die K-Bedingung |
+| 2 | D1/D2 *(teilweise)* | `D001`, `D002` | `kbedingung.rs` — die K-Bedingung, `by ops` je **Feld** |
 | 3 | **M1 + V1–V3** | `M101`–`M105` | `m1.rs`, `typen.rs` |
 | 4 | M3 *(teilweise)* | `R001`–`R003` | `m3.rs` — Räume, Rechte, Platzierungsregel |
 | 5 | M2 *(teilweise)* | `L101`–`L105` | `m2.rs` — echte Linearität |
@@ -76,6 +76,14 @@ Neu erhoben 2026-08-15, **nicht wiederhergestellt**, nur x86
 | **`delete_leaf`** | **1,75 : 1** statt gebuchter 3,6–6 : 1 | `dokumente/BEWEIS.md` |
 | **`programs/`** | Grund des Bruchs trägt nicht mehr | `dokumente/MESSUNGEN.md` |
 | **N1 (Caprock)** | **`MEM` ist Blatt**, `system.rs:724` ist falsch | `arbeitsprotokoll/03-N1.md` |
+| **B3 — nicht traversierbare Rümpfe** | **bestanden, `p = 0,96 %` gegen eine Latte von 5 %** — aber **R1 verfehlt** (Regel nach dem Lauf aufgeschrieben) | `./zaehle-b3.py ../caprock-messbasis`, `dokumente/MESSUNGEN.md` |
+
+> **Der B3-Eintrag ist der einzige in dieser Tabelle, der neben dem Ausgang einen
+> Protokollverstoss trägt** — und er steht hier statt in einer Fussnote, weil eine
+> Erledigt-Tabelle, die nur Ausgänge führt, die teuerste Zeile verschweigt: **die Markenregel
+> wurde in vier Fassungen mit sichtbaren Zahlen geschärft.** Was das Ergebnis rettet, ist
+> nicht Sorgfalt, sondern **Regelinvarianz**: alle vier Fassungen (0,03 % · 4,36 % · 0,74 % ·
+> 0,95 %) bestehen die Latte. *Von der Regelwahl hängt die Zahl ab, nicht das Urteil.*
 
 ## Grammatik — die Befunde aus P2
 
@@ -94,13 +102,13 @@ die niemand gegeneinander prüft.*
 `table`-Rumpf, und **`dokumente/SYNTAX.md` hält jetzt seine eigene Grammatik** (Test
 `die_beispiele_der_grammatik_gehen_selbst_durch`).
 
-## Die Wächterkette — sechs, jeder mit Sprechprobe in beide Richtungen
+## Die Wächterkette — acht, jeder mit Sprechprobe in beide Richtungen
 
 ```
 ./pruefe-syntax.sh        verbotene Formen, Prosa-Drift, Geschlossenheit, Erreichbarkeit,
                           Terminaldeckung — und NULL Bauwarnungen
 ./pruefe-wortschatz.py    Terminale gegen Tabelle, Sonderform-Zähler (3 von 5)
-./pruefe-todo.py          hält die Aufgabenliste gegen sich selbst, sieben Klassen
+./pruefe-todo.py          hält die Aufgabenliste gegen sich selbst, acht Klassen
 ./pruefe-kennungen.py     keine Absage-Kennung in zwei Dateien
 ./mutiere-pruefer.py      beschädigt je eine Regel:  54 von 54
 ./erzeuge-mutationen.py   verdreht systematisch:      7 von 39
@@ -111,12 +119,12 @@ die niemand gegeneinander prüft.*
 **Dazu drei Tests, die aus je einem bezahlten Fehler stammen:** kein Pass ohne Anmeldung ·
 `dokumente/SYNTAX.md` gegen die eigene Grammatik · Korpus-Test am Inhalt statt an der Zeilennummer.
 
-## Die Arbeitsregeln — W1 bis W11
+## Die Arbeitsregeln — W1 bis W12
 
 Vollständig in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Jede stammt aus
 einem **bezahlten Fehler in diesem Ordner**, jede nennt den Schaden.
 
 ## Proben
 
-**16 saubere Beispiele, 59 Giftproben, 75 Tests** —
+**17 saubere Beispiele, 61 Giftproben, 76 Tests** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`

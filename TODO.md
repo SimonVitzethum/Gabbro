@@ -34,8 +34,14 @@
 
 # DER KRITISCHE PFAD, in einer Zeile
 
-> **B3 → K/A/W-Einsetzung → zwei Entscheidungen (`effects`-Lesen, Verschlüsse) →
-> Gruppen-`ops` → P5 → P6 → P7**
+> ~~**B3**~~ → ~~**K/A/W-Einsetzung**~~ → **zwei Entscheidungen (`effects`-Lesen, Verschlüsse)
+> → Gruppen-`ops` → P5 → P6 → P7**
+
+**Die ersten zwei sind am 2026-08-16 gefallen** (`DONE.md`), und die Einsetzung hat den Pfad
+**verkürzt statt verlängert**: `p_B3 = 0,0096`, Aufschlag `≥ +0,05` — *unter der Auflösung der
+Kennzahl.* **B3 ist als Kostenposten erledigt; die Kennzahl bleibt bei `≥ 1,90` offen**, weil
+sie an der **Pflichtseite** hängt, nicht an der Codeform. Die Kopfstellung hat jetzt die
+Entscheidung, nicht die Messung.
 
 **Alles andere ist parallelisierbar oder Memo.** Und der einzige Posten auf diesem Pfad, der
 weder Code noch Lauf ist, sondern **ein Wort des Ordners**, ist der Schlitz:
@@ -55,6 +61,26 @@ Beide verbleibenden sind billig rückbaubar, also **R12-fähig, sobald die Richt
 ---
 
 # ENTSCHEIDUNGEN — brauchen ein Urteil, keinen Lauf
+### «B41» — drei Domänen sind gemessen gefordert. Bauen oder nicht?
+
+- [ ] **Der Bedarf liegt vor, mit `Datei:Zeile` — die Entscheidung nicht.** B3 fand
+      **584 nicht traversierbare Zeilen**, und **226 davon (38,7 %) stehen in DMAR/PCIe**,
+      also in keinem der drei vermuteten Bereiche. Drei benannte Lücken:
+      * **`ancestors of`** — die Gerätetopologie wird **aufwärts** gelaufen (`cur =
+        topo[cur].parent`, vier Rümpfe). Abwärts ist es eine Domäne, aufwärts keine.
+      * **Union-Find** — `dmar.rs:519` `find` **schreibt die Kette, die es gerade läuft**
+        (`parent[x] = parent[parent[x]]`). Traversierung und Chirurgie in einer Anweisung;
+        keine der acht Domänen deckt das.
+      * **Kette über eine Kantenfunktion** — `redirect.rs:577`/`625` laufen die Handler-Kante
+        über einen Parameter `kante: impl Fn(u16) -> Option<u16>`; die Kette entsteht erst
+        durch den Aufruf und ist nicht deklarierbar.
+
+      **W3 ist erfüllt (gemessener Bedarf), und W3 verlangt nicht, ihm zu folgen.** Der Preis
+      steht in Spalte 2 der Konvergenzmetrik: **drei Domänen mehr sind drei Domänen mehr, die
+      jeder Leser glauben muss.** *Die billigere Antwort für alle drei könnte eine einzige
+      sein — eine Domäne über einer deklarierten Kantenfunktion deckt möglicherweise auch
+      `ancestors of`. Das ist zu prüfen, bevor drei gebaut werden.*
+
 ### Die Frage, die über den Kern entscheidet
 
 - [ ] **Echte Linearität ist der einzige Mechanismus, den kein vorhandenes Werkzeug liefert** —
@@ -112,11 +138,13 @@ Beide verbleibenden sind billig rückbaubar, also **R12-fähig, sobald die Richt
         ehrliche Fassung des Satzes — *„gemessen fuer x86; fuer aarch64 steht keine Zahl,
         und der vorhandene Baum kann sie nicht liefern."*
 
-- [ ] **B3 beziffern: welche Rümpfe lassen sich NICHT als Traversierung schreiben?** IPC-Fastpath,
-      `revoke`, Warteschlangenchirurgie des Schedulers sind die Kandidaten. **Jeder von ihnen kostet
-      5 : 1 auf seinem Anteil** — 5 % des Kernels sind +0,25 auf die Kennzahl, 10 % sind +0,5.
-      Das ist die Zahl, die früh gebraucht wird und die niemand hat: sie sagt, **wie weit vom Boden
-      entfernt** der Entwurf landet.
+- [ ] **Die Zeilenanteile der GABBRO-Seite — das ist, was die Kennzahl noch schliesst.**
+      B3 ist gefahren und hat sie **nicht** geliefert; es misst die Codeform, die Formel
+      gewichtet Beweispflichten (`dokumente/MESSUNGEN.md`, *EINSETZUNG*). Was fehlt: was ein
+      Beweis **in Gabbro** für dieselben 73 Pflichten kostet. **Das ist keine Messung an
+      Caprock mehr** — dafür müssen die Pflichten in Gabbro geschrieben sein. Bis dahin steht
+      die Kennzahl als `≥ 1,90`, und **jede kleinere Zahl im Umlauf ist eine Verwechslung der
+      beiden Seiten**.
 
 ---
 ### Aus der Umkehrung der Frage ([`dokumente/SPRACHE.md`](dokumente/SPRACHE.md))

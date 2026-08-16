@@ -1165,9 +1165,14 @@ statt 12 Byte. `format` war das erste Konstrukt und das plausibelste.
 | `walk`/`embeds` | vierstufiger Abstieg, 9 benannte Bits | `FRAGMENTE.md` F9 |
 | `BootPhase` | **7 Stellen gegen ein Tor von 5**, darunter ein **bezahlter** Fehler | `main.rs:251` — *„Genau diese Zeile fehlte auf ARM"* |
 | M1/Überlauf | «B29» im Löschpfad, **fünf Umbauten überlebt** | `space.rs:1067` |
+| `traverse … over <domäne>` | **0 von 571 `for`-Schleifen** laufen über etwas, das keine Domäne ist; nicht traversierbar bleiben **584 von 60 756 Zeilen** | `MESSUNGEN.md`, *B3*; die drei Lücken als «B41» |
 
-**Sieben Konstrukte, sieben Belege — und drei davon sind bezahlte Fehler**, keine
+**Acht Konstrukte, acht Belege — und drei davon sind bezahlte Fehler**, keine
 plausiblen Szenarien.
+
+> **Der achte Beleg trägt seinen Gegenbeleg im selben Satz.** B3 zeigt den Schleifenvorrat
+> als tragend *und* nennt drei Domänen, die fehlen («B41»). **Beides ist dieselbe Messung** —
+> wer die 0,96 % zitiert, zitiert die drei Lücken mit.
 
 ## Der Satz, der daraus folgt
 

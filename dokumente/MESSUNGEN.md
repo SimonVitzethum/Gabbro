@@ -3097,6 +3097,49 @@ erst mit der **B3-Bezifferung aus Welle 4** (welche Ruempfe sind keine Traversie
 Zeilenanteil). *Die 1,90 bzw. 1,98 sind Einsetzungen mit den Zeilen der Verus-Ruempfe — nicht
 mit den Zeilen des Kernels.* Bis Welle 4 steht die Kennzahl als **offen**, nicht als 1,98.
 
+### EINSETZUNG (2026-08-16): **B3 ist gemessen — und schliesst die Kennzahl NICHT**
+
+**Die Zahl steht** (B3-Abschnitt weiter unten): `p_B3 = 0,0096` — 584 nicht-leere Zeilen in
+22 Ruempfen von 60 756, Tor bestanden mit Faktor 5 Abstand, **als untere Schranke** zu fuehren.
+
+```
+Aufschlag_B3 = p_B3 · 5,0  =  +0,048   ->   >= +0,05
+```
+
+**Und der Absatz darueber hat zu viel von ihr erwartet. Das ist eine Berichtigung, keine
+Fussnote:**
+
+> **B3 liefert nicht die Zeilenanteile der Gewichtsformel, weil es eine andere Groesse
+> misst.** Die Formel gewichtet **Beweispflichten** (welcher Anteil der Beweiszeilen gehoert
+> zu einer Wertaussage). B3 zaehlt **Codeform** (welcher Anteil der Kernelzeilen laesst sich
+> nicht als Traversierung schreiben). **Ein Rumpf kann traversierungsfoermig sein und
+> trotzdem 5 : 1 kosten** — wegen `effects`, `locks`, Linearitaet oder der
+> Schachtelungsgrenze. Die beiden Zahlen sind **Summanden, keine Ersetzungen.**
+
+**Die Falle steht in der Einsetzung selbst**, deshalb ausgeschrieben:
+
+| eingesetzt aus | Anteil | Ueberschlag nach derselben Formel |
+|---|---:|---:|
+| **Pflichtseite** (Verus-Ruempfe, `w = W_zeilen/F`) | 0,341 | **1,90** |
+| **Codeseite** (B3, `p_B3`) | 0,0096 | **0,345** |
+
+**Wer B3 als das kernelseitige `w` liest, bekommt 0,345 — und damit eine Kennzahl UNTER dem
+seL4-Anker 0,56, also einen Triumph.** Das waere falsch: die 0,345 sagt nur, dass der
+*Schleifenvorrat* fast den ganzen Kernel traegt. Sie sagt nichts ueber `effects`, `locks`,
+Linearitaet — und nichts ueber die 38 Wertaussagen, die daneben stehen bleiben.
+
+**Beide Zahlen sind untere Schranken. Die bindende ist die groessere:**
+
+```
+Kennzahl  >=  1,90        (Pflichtseite, Population 81; 1,98 mit N_L = 73)
+Aufschlag aus B3  >=  +0,05   — unter der Aufloesung, aber getrennt gefuehrt
+```
+
+**Damit ist B3 als Kostenposten erledigt und die Kennzahl weiter offen.** Was sie
+schliessen wuerde, ist benannt und steht in `TODO.md`: die Zeilenanteile der **Gabbro-Seite**
+— also was ein Beweis in Gabbro fuer dieselben 73 Pflichten tatsaechlich kostet. *Das ist
+keine Messung an Caprock mehr; dafuer muessen die Pflichten in Gabbro geschrieben sein.*
+
 ### Und was der vorregistrierte Text fuer diesen Ausgang vorgesehen hat
 
 > *„beide Ausgaenge sind vorab gute Ergebnisse. Der erste toetet eine Zusage, der zweite
@@ -3479,6 +3522,7 @@ aussieht: die vier Bereiche waren **nie ausgeschrieben** und galten als die schw
 | «B38» | `Stale(T)` in der Zwangsfassung ist **widerlegt** — 2 von 5 Übergängen ruhen auf `masks IRQ`, nicht auf Neuvalidierung | **Kandidat gestorben** |
 | «B39» | die MMU schreibt `A`/`D` selbst — ein Schreiber, den keine `effects`-Zeile nennt | **gehört in die Axiomschicht** |
 | «B40» | der DTB-Parser prüft 145 Zeilen fehlerfrei ohne Werkzeug — `format` gewinnt **Kürze, nicht Sicherheit** | **geht gegen den Ordner** |
+| «B41» | **drei Domänen fehlen, und zwar gemessen** (B3): `ancestors of` (die Gerätetopologie wird aufwärts gelaufen), Union-Find (`find` schreibt die Kette, die es läuft), Kette über eine **Kantenfunktion** (`kante: impl Fn(u16) -> Option<u16>`) | **erste gemessene Konstruktforderung** |
 
 Dazu **zwei Lücken im Prüfer**, beide am MMU-Fragment gefunden und beide geschlossen:
 
@@ -3501,3 +3545,401 @@ ein vorhandenes Konstrukt. **Keine dieser drei Bewegungen erscheint in der Wortz
 alle drei erhöhen, was ein Leser glauben muss.
 
 > *Wer die Konvergenzwette zitiert, zitiert Spalte 1. Der Unterhalt steht in Spalte 2.*
+
+## NACHTRAG (2026-08-16): **«B41» steht neben der Null in Spalte 1, nicht darunter**
+
+**Die Null in Spalte 1 gilt für die vier Bereichsfragmente F7–F10. B3 misst eine andere
+Grundgesamtheit — den ganzen Kernel — und findet dort eine Forderung nach drei Domänen.**
+
+| | Grundgesamtheit | neue Konstrukte |
+|---|---|---:|
+| Konvergenzmetrik F7–F10 | vier ausgeschriebene Bereichsfragmente | **0** |
+| **B3** | **`kernel/` + `crates/`, 2 186 Rümpfe** | **3 gefordert** |
+
+**Die Zahlen widersprechen sich nicht — sie beantworten verschiedene Fragen**, und genau
+deshalb steht die zweite hier: **wer „null neue Konstrukte" zitiert, muss «B41» mitnehmen.**
+Ein Fragment schreibt man in der Sprache, die man hat; ein Kernel enthält, was er enthält.
+*Der Konvergenzbeleg wird schwächer, wenn man die Grundgesamtheit wechselt — und das ist
+der ehrlichere Satz als die Null allein.*
+
+> **Und die Forderung ist noch kein Bau.** W3 verlangt für ein Konstrukt einen **gemessenen
+> Bedarf** — der liegt jetzt vor, mit `Datei:Zeile`. Er verlangt nicht, ihm zu folgen: drei
+> Domänen mehr sind drei Domänen mehr, die jeder Leser glauben muss (Spalte 2). *Die
+> Entscheidung steht im `TODO.md`, nicht hier.*
+
+---
+
+# B3 beziffern: welche Rümpfe sind NICHT als Traversierung schreibbar
+
+> ## **Diese Messung hat R1 NICHT eingehalten, und das steht vor dem Ergebnis.**
+>
+> **Die Markenregel wurde mit sichtbaren Zahlen geschärft.** Der Ablauf im Protokoll des
+> Laufs: Werkzeug gebaut und gefahren (Fassungen 1–4), *danach* der Vorab-Text geschrieben.
+> Es gibt **keinen Vorregistrierungs-Commit**; das „VORAB" unten ist nachträglich
+> aufgeschrieben. Genau die Versuchung, gegen die R1 steht — vier Fassungen, vier Zahlen,
+> jede im Wissen um die vorige.
+>
+> **Was trotzdem hält, und warum die Zahl nicht in den Papierkorb geht:**
+>
+> 1. **Das Tor war vorregistriert, die Regel nicht.** Die 5 %-Latte steht in
+>    `TODO.md` @ `642e4c0`:112–118, Eintrag „B3 beziffern“ — dort seit `75c9841`
+>    (2026-08-13), also **drei Tage vor diesem Lauf**. Der Eintrag ist mit dieser Buchung nach
+>    `DONE.md` gewandert; die Fundstelle nennt deshalb den Commit, nicht nur die Zeile. **R2 ist eingehalten** — verschoben
+>    wurde nichts.
+> 2. **Das Torurteil ist regelinvariant.** Die vier Fassungen ergaben 0,03 % · 4,36 % ·
+>    0,74 % · 0,95 %. **Alle vier bestehen die 5 %-Latte** — auch die bewusst zu grobe
+>    Fassung 2. *Von der Regelwahl hängt die Zahl ab, nicht das Urteil.*
+> 3. **Jede Verschärfung ging in die teurere Spalte.** 19 → 26 Rümpfe: jeder Schritt fügte
+>    hinzu, keiner entfernte. Wer eine Regel schärft, während das Tor „≤ 5 %" lautet,
+>    schärft **gegen** das eigene Bestehen.
+>
+> **Was nicht heilbar ist:** eine Wiederholung „nach Protokoll" stellt die Vorregistrierung
+> nicht her, weil die Regel jetzt bekannt ist. **R1 ist eine Einmalregel, und sie ist hier
+> verfehlt.** Die Zahl gilt als *untere Schranke mit bestandenem, regelinvariantem Tor* —
+> nicht als vorregistrierte Messung.
+
+## VORAB — nachträglich aufgeschrieben (s. Kasten), Wortlaut wie beim Lauf verwendet
+
+**Messbasis:** `../caprock-messbasis` = `SEL4Lake/SEL4Lake` @ `arch/x86_64`, `a1bf707`.
+Nur gelesen; `git status --porcelain` dort ist nach dem Lauf leer.
+**Grundgesamtheit:** `kernel/` + `crates/`, 105 `.rs`-Dateien.
+
+### Was „als Traversierung schreibbar" mechanisch heisst
+
+Gabbro hat **drei** Schleifenformen (`dokumente/SYNTAX.md`:459–478) und **acht** Domänen
+(`dokumente/SPRACHE.md`:778–783):
+
+```
+traverse … over <domäne> by (unvisited | consuming | decreasing e)
+retry   … until <pred> bounded N ops on_exceeded <name>
+forever … per_pass bounded N ops on_exceeded <name> effects { … }
+
+Domänen: slots of · chain(a,b) in · descendants of · queue · fields of
+         elems of · threads · mappings of
+```
+
+Ein Rumpf ist **nicht** als Traversierung schreibbar, wenn er mindestens eine der drei
+Marken trägt. Die Marken sind syntaktisch und werden von `zaehle-b3.py` erhoben.
+
+| Marke | Bedingung |
+|---|---|
+| **Na — Kettenlauf ohne Domäne** | In einem `while`/`loop` ist der Rundenfortschritt ein Kettenschritt: `x = …x….<feld>` (Zeigerkette), `x = A[x]` (Indexkette, ein Feld dessen Elemente Indizes in dasselbe Feld halten), oder `let Some(n) = f(x)` gefolgt von `x = n` (Kantenkette, eine erst durch einen Aufruf entstehende Kette). **Ausgenommen**, weil von einer Domäne gedeckt: `first_child`/`next_sibling` (`chain(first_child,next_sibling) in slots`, `descendants of`) und `qnext`/`qprev` (`queue`). |
+| **Nb1 — Zeigerchirurgie ohne Domäne** | Der Rumpf **schreibt** ein Verkettungsfeld — Elementauswahl (`[…]`, `*`-Deref, `&mut`-Bindung) **und** ein Feld, das ein anderes Element derselben Sammlung benennt — an einer Struktur, für die keine der acht Domänen erklärbar ist. |
+| **Nb2 — Zeigerchirurgie mit Domäne** | Dasselbe Schreiben an einer Struktur, die eine Domäne **hat**. |
+
+**Warum Nb2 überhaupt zählt, und das ist die einzige wertende Entscheidung im Protokoll:**
+eine Domäne gibt das **Lesen** einer Verkettung, nicht das **Umhängen**. `by consuming`
+deckt genau das Entfernen des *gerade besuchten* Elements, also **einen** Schreibort je
+Runde. Wer drei Nachbarn in einem Zug umbiegt, traversiert nicht. Das ist ein Grenzfall —
+und Grenzfälle kippen nach Regel in die **teurere** Spalte.
+
+**Beide Zahlen werden getrennt berichtet:** *Buchstabe* = Na + Nb1 (Wortlaut der
+Definition), *berichtet* = Na + Nb1 + Nb2 (mit Kippregel). Wer die Kippentscheidung nicht
+teilt, kann die andere Zahl ablesen, ohne nachzurechnen.
+
+### Zählregel
+
+* **Einheit ist der Funktionsrumpf**, nicht die Schleife. Ein Rumpf mit fünf Schleifen, von
+  denen eine kippt, zählt einmal — mit **allen** seinen Zeilen.
+* **Zeilen je Rumpf = nicht-leere Zeilen zwischen den Rumpfklammern**, Kommentare
+  eingeschlossen. Die Bezugsgrösse ist mit derselben Regel gebildet.
+* **Rümpfe ohne Schleife zählen mit.** Die zweite Hälfte der Definition kennt keine
+  Schleifenbedingung: Zeigerchirurgie ist Zeigerchirurgie, ob geradeaus oder in einer
+  Schleife. *Diese Festlegung war nötig, weil die namentlich erwartete
+  Warteschlangenchirurgie des Schedulers gar keine Schleife hat (s. u.).*
+* **Geschachtelte `fn` zählen nicht doppelt** — nur der äusserste Rumpf.
+* **Bezugsgrösse:** nicht-leere Zeilen von `kernel/` + `crates/`. Zusätzlich wird die
+  Grösse **ohne `#[cfg(test)]`-Module** geführt; berichtet wird die Paarung mit dem
+  **grösseren** Verhältnis (teurere Spalte).
+
+### Kippregel
+
+1. Ist unklar, ob ein Feld ein **Verkettungsfeld** ist, gilt es als eines.
+2. Ist unklar, ob eine Struktur eine **Domäne** hat, zählt sie als Nb2 — also mit.
+3. Ist unklar, ob eine Schleife eine **Kette** läuft oder nur nachschlägt, zählt sie als Kette.
+4. Prozente werden **aufgerundet**, nie wohlwollend gerundet.
+
+### Das zweiseitige Tor
+
+Das Tor ist **nicht neu gesetzt**, sondern aus `TODO.md` @ `642e4c0`:112–118 übernommen
+(dort seit `75c9841`, 2026-08-13; heute in `DONE.md`): *„5 % des Kernels sind +0,25 auf die Kennzahl, 10 % sind +0,5"*, also
+Aufschlag = Anteil · 5.
+
+| | |
+|---|---|
+| **bestanden** | **p ≤ 5 %** — der Rest kostet höchstens **+0,25**, die Schleifenformen tragen den Kernel |
+| **gefallen** | **p > 5 %** — die drei Schleifenformen decken zu wenig, und der Vorrat ist zu erweitern oder der Aufschlag zu tragen |
+
+**Ungültig — getrennt von ungünstig, und keine dieser Bedingungen sagt etwas über die Höhe von p:**
+
+* **U1** Der Klammerabgleich bricht in mehr als 2 % der Dateien ab → das Rumpfverzeichnis
+  ist unvollständig, die Zahl ist keine Messung (R16).
+* **U2** R14(b) schlägt fehl: eine Änderung am Prüfling ändert die Zahl nicht → das
+  Werkzeug hängt nicht am Gegenstand.
+* **U3** Die Handstichprobe (**n = 13**: jeder 4. der nach `Datei:Zeile` sortierten
+  N-Liste, plus 6 gleichabständige aus der Menge der Rümpfe mit Schleife ohne Marke)
+  zeigt **mehr als 1** Fehlklassifikation.
+* **U4** Mehr als ein Drittel der Marken lässt sich nur mit Fliesstext begründen statt mit
+  einer Fundstelle → dann trennt das Kriterium nicht.
+
+### R14 — das Geschirr zuerst
+
+* **(a) Ein Abbruch muss sich von einem Treffer unterscheiden.** Eine unbalancierte Klammer
+  wird in die *Kopie* eines Prüflings gesetzt; das Werkzeug muss `Abbrueche: 1` melden und
+  darf nicht stillschweigend eine Zahl liefern.
+* **(b) Die Zahl muss am Prüfling hängen.** Drei Mutationen an der Kopie: einen N-Rumpf
+  **entfernen**, einen künstlichen N-Rumpf **einfügen**, einen N-Rumpf in eine
+  **Traversierung umschreiben**. Jede muss die Zahl in die vorhergesagte Richtung bewegen,
+  die Rücknahme muss den Ausgangswert wiederherstellen.
+* **(c) Vollzählung statt Regelvertrauen bei den `for`-Köpfen.** Die Domänenerkennung im
+  `for`-Kopf ist eine Musterliste und damit angreifbar. Deshalb werden **alle** verschiedenen
+  `for … in`-Ausdrücke aufgezählt und die ohne Musterteffer **einzeln** von Hand entschieden.
+
+---
+
+## ERGEBNIS — 2026-08-16, nur x86, gegen `a1bf707`
+
+### Die Grundgesamtheit
+
+```
+./zaehle-b3.py ../caprock-messbasis
+find kernel crates -name '*.rs' -exec cat {} + | wc -l              # 69 283 roh
+find kernel crates -name '*.rs' -exec cat {} + | grep -c '[^[:space:]]'   # 65 168 nicht leer
+```
+
+| | |
+|---|---:|
+| Dateien | 105 |
+| Zeilen roh / nicht leer | 69 283 / **65 168** |
+| davon `#[cfg(test)]`-Module (nicht leer) | 4 412 |
+| Bezugsgrösse ohne Testmodule | **60 756** |
+| Funktionsrümpfe | 2 536 (davon 2 186 ausserhalb der Testmodule) |
+| Rümpfe mit Schleife | 462 |
+| Schleifen: `for` / `while` / `loop` | 571 / 146 / 117 |
+
+### R14 — alle drei Proben bestanden
+
+**(a) Abbruch.** Unbalancierte Klammer in `dmar.rs` → `Abbrueche: 1`. Wichtiger als das
+Melden ist, **was daneben passierte**: die berichtete Zahl fiel dabei still von 26 auf 24,
+weil zwei Rümpfe aus dem Verzeichnis fielen. **Ohne den Abbruchzähler hätte die Messung
+eine um zwei zu niedrige Zahl geliefert und dabei gesund ausgesehen.**
+
+**(b) Die Zahl hängt am Prüfling.**
+
+| Mutation an der *Kopie* | erwartet | gemessen |
+|---|---|---|
+| `dmar::union` (6 Z) entkernt | −1 Rumpf | 26 → **25**, 621 → 615 Z |
+| künstlicher Kettenlauf über eine Kantenfunktion angehängt | +1 Rumpf | 26 → **27**, 621 → 631 Z |
+| Rücknahme beider | Ausgangswert | **26 / 621 Z** |
+
+**(c) Die `for`-Köpfe, vollzählig.** 347 verschiedene `for … in`-Ausdrücke. 331 treffen ein
+Domänenmuster. Die **16 übrigen wurden einzeln entschieden** und sind **alle** Domänen:
+elf blosse Orte (`segs`, `endow`, `caps`, `regions`, `runs`, `w`, `holes`, `bytes`,
+`entries`, `data`, `paare` → `elems of`), zwei Feldliterale (`&[true,false]`,
+`&[0u32,1,4242]`), ein Pfad (`system::ERLAUBTE_SPAETBINDUNGEN`) und zwei eigene Iteratoren,
+die beide domänengestützt sind: `img.segments()` = `(0..self.phnum).filter_map(…)`
+(`elf.rs`:166 → `slots of`) und `self.ops()` = `&[Op]` (`irte.rs`:1023 → `elems of`).
+
+> **Befund, und er geht gegen die Erwartung:** **keine einzige der 571 `for`-Schleifen im
+> Kern läuft über etwas, das keine Domäne ist.** Die Nicht-Traversierbarkeit sitzt
+> vollständig in `while`, `loop` und in schleifenlosen Rümpfen.
+
+### Die Zahl
+
+| | Rümpfe | Zeilen | Anteil | Aufschlag |
+|---|---:|---:|---:|---:|
+| **Buchstabe** (Na + Nb1) — ohne Testmodule | 12 | 387 | 0,637 % | +0,032 |
+| **berichtet** (+ Nb2, Kippregel) — ganzer Baum | 26 | 621 | 0,953 % | +0,048 |
+| **berichtet** — ohne Testmodule | 22 | 584 | **0,961 %** | **+0,048** |
+| nachrichtlich, gegen den TODO-Nenner 75 294 (roh, ganzer Baum) | 26 | 621 | 0,825 % | +0,041 |
+
+**Berichtet wird die teuerste Paarung: p = 0,961 %, aufgerundet p = 1,0 %.**
+
+#### **Tor BESTANDEN** — p = 1,0 % gegen eine Latte von 5 %, mit Faktor 5 Abstand.
+
+Abbrüche: **0**. U1–U4 sämtlich nicht ausgelöst. Die Handstichprobe (n = 13) ergab
+**0 Fehlklassifikationen** bei einer Toleranz von 1 — geprüft wurden `move_cap`,
+`abstieg_terminiert_auf_einem_zyklus`, `scope_covers`, `build_groups`,
+`handler_kante_loesen`, `remove_from_ready`, `alloc` aus der N-Liste und `classify_all`,
+`exception::init`, `arbitrary_mutations_never_panic`, `ring3_worker`, `loader::probe`,
+`run_certfuzz` aus der Gegenmenge.
+
+### Die 26 Rümpfe, je mit `Datei:Zeile` (W7)
+
+| `Datei:Zeile` | Rumpf | Marke | Z |
+|---|---|---|---:|
+| `crates/caprock-cap/src/space.rs:557` | `move_cap` | Nb2 | 34 |
+| `crates/caprock-cap/src/space.rs:783` | `audit_cdt` | Na | 100 |
+| `crates/caprock-cap/src/space.rs:1032` | `link_child` | Nb2 | 10 |
+| `crates/caprock-cap/src/space.rs:1044` | `unlink` | Nb2 | 15 |
+| `crates/caprock-cap/src/space.rs:1138` | `abstieg_terminiert_auf_einem_zyklus` *(Testmodul)* | Nb2 | 10 |
+| `crates/caprock-cap/src/space.rs:1152` | `abstieg_weist_index_ausserhalb_der_tabelle_ab` *(Testmodul)* | Nb2 | 7 |
+| `crates/caprock-cap/src/space.rs:1163` | `kinderliste_zaehlt_und_bricht_ab` *(Testmodul)* | Nb2 | 14 |
+| `crates/caprock-cap/src/space.rs:1182` | `kinderliste_weist_index_ausserhalb_der_tabelle_ab` *(Testmodul)* | Nb2 | 6 |
+| `crates/caprock-hal/src/x86_64/dmar.rs:374` | `scope_covers` | Na | 24 |
+| `crates/caprock-hal/src/x86_64/dmar.rs:519` | `find` | Na, Nb1 | 7 |
+| `crates/caprock-hal/src/x86_64/dmar.rs:526` | `union` | Nb1 | 6 |
+| `crates/caprock-hal/src/x86_64/dmar.rs:538` | `alias_rid` | Na | 13 |
+| `crates/caprock-hal/src/x86_64/dmar.rs:553` | `build_groups` | Na | 106 |
+| `crates/caprock-hal/src/x86_64/dmar.rs:689` | `is_below` | Na | 12 |
+| `crates/caprock-hal/src/x86_64/pcie.rs:406` | `read_topology` | Nb1 | 58 |
+| `crates/caprock-microkit/src/lib.rs:779` | `handler_kante_setzen` | Nb1 | 8 |
+| `crates/caprock-microkit/src/lib.rs:793` | `handler_kante_loesen` | Nb1 | 10 |
+| `crates/caprock-sched/src/lib.rs:926` | `switch_to` | Nb2 | 21 |
+| `crates/caprock-sched/src/lib.rs:1700` | `end_donation` | Nb2 | 10 |
+| `crates/caprock-sched/src/lib.rs:1873` | `enqueue_ready` | Nb2 | 18 |
+| `crates/caprock-sched/src/lib.rs:1893` | `remove_from_ready` | Nb2 | 25 |
+| `crates/caprock-sched/src/lib.rs:1922` | `record_zombie` | Nb2 | 46 |
+| `crates/caprock-sched/src/redirect.rs:577` | `pruefe_bindung` | Na | 31 |
+| `crates/caprock-sched/src/redirect.rs:625` | `kettenlaenge` | Na | 12 |
+| `crates/caprock-slab/src/lib.rs:258` | `alloc` | Nb2 | 10 |
+| `crates/caprock-slab/src/lib.rs:271` | `free` | Nb2 | 8 |
+
+Verteilung der 584 Zeilen ausserhalb der Testmodule: **DMAR/PCIe 226 Z (38,7 %) ·
+Scheduler 163 Z (27,9 %) · CDT 159 Z (27,2 %) · Microkit 18 Z · Slab 18 Z.**
+
+---
+
+### Was gegen die eigene These spricht
+
+#### 1. Alle drei namentlich erwarteten Kandidaten waren falsch getippt — zwei ganz, einer halb.
+
+**`revoke` ist die sauberste Traversierung im ganzen Baum.**
+`crates/caprock-cap/src/space.rs`:619–657 ist Wort für Wort
+`traverse it of s over descendants of s by consuming { delete_leaf(it) }` — und trägt die
+`bounded N ops`-Form bereits von Hand: `limit = self.cdt_step_limit()`, `ops > limit`,
+`note_overrun()`. Der Rumpf steht **nicht** in der Liste, und zwar nicht durch eine
+wohlwollende Regel, sondern weil `descendants of` ihn deckt. *Der TODO-Eintrag hat hier
+das Gegenteil vermutet.*
+
+**Ein IPC-Fastpath existiert — aber nicht dort, wo gesucht wurde, und er kostet aus einem
+anderen Grund.** `grep -rniE 'fastpath|fast_path' kernel crates` → 12 Fundstellen; der
+Pfad ist `Scheduler::switch_to` (`crates/caprock-sched/src/lib.rs`:926). Das
+Nachrichtenkopieren, das man verdächtigt hätte, ist `for i in 0..MSG_WORDS`
+(`crates/caprock-ipc/src/lib.rs`:171–177) = `slots of`, und die Endpunkt-Warteschlange ist
+ein Ringpuffer über einem Feld (`head`/`tail` mod `QCAP`, ebd. 68–95) = `queue`. **Was
+`switch_to` teuer macht, ist die Chirurgie an den Spendenkanten** `sc_donor`/`sc_donee` —
+zwei wechselseitige Verweise zwischen TCBs, für die keine der acht Domänen erklärbar ist,
+weil **niemand sie je läuft** (kein `for`/`while`/`loop` im Baum folgt ihnen). 21 Zeilen,
+nicht der Nachrichtenpfad.
+
+**Die Warteschlangenchirurgie des Schedulers ist echt — hat aber gar keine Schleife.**
+`enqueue_ready` (18 Z) und `remove_from_ready` (25 Z) sind geradeaus, O(1). Und die
+Bereitliste **hat** eine Domäne (`queue`); ihre Läufer — `migration_candidate`:1415 und
+`audit`:1743, beide `while i != NIL { i = t.qnext }` — sind saubere Traversierungen und
+stehen **nicht** in der Liste. Die Chirurgie landet nur über die **Kippregel** in der
+teuren Spalte, nicht nach dem Wortlaut der Definition. *Hätte ich die Kippregel nicht
+vorab festgeschrieben, wäre der namentlich erwartete Posten mit 43 Zeilen ganz
+herausgefallen.*
+
+#### 2. Der grösste Posten steht in keinem der drei Verdachtsbereiche.
+
+**DMAR/PCIe stellt 226 der 584 Zeilen — 38,7 %, mehr als Scheduler und CDT einzeln.** Und
+er benennt eine **konkrete Sprachlücke**, die keine Zählung vorher hatte:
+
+* **Gabbro hat `descendants of`, aber kein `ancestors of`.** Vier der fünf DMAR-Rümpfe
+  (`scope_covers`, `alias_rid`, `build_groups`, `is_below`) laufen die Gerätetopologie
+  **aufwärts**: `cur = topo[cur].parent`. Abwärts wäre es eine Domäne; aufwärts ist es keine.
+* **Union-Find ist keiner der acht Domänen zugänglich** — `dmar.rs`:519 `find` schreibt die
+  Kette, die es gerade läuft (`parent[x] = parent[parent[x]]`). Das ist Traversierung und
+  Chirurgie in derselben Anweisung.
+* **Eine Kette, die erst durch einen Aufruf entsteht,** ist nicht deklarierbar:
+  `pruefe_bindung`/`kettenlaenge` (`redirect.rs`:577, 625) laufen die Handler-Kante über
+  einen Parameter `kante: impl Fn(u16) -> Option<u16>`.
+
+**Diese drei Lücken sind der eigentliche Ertrag der Messung, und sie wiegen mehr als die Zahl.**
+
+#### 3. Das Werkzeug hätte die Messung zweimal ruiniert — nicht der Gegenstand.
+
+Vier Regelfassungen, vier Zahlen: **2 → 27 → 19 → 26 Rümpfe**, entsprechend
+**0,03 % → 4,36 % → 0,74 % → 0,95 %.** (Die vierte Fassung ist die berichtete; die
+Korrektur des `==`-Fehlers senkte sie noch von 27 auf 26.)
+
+* Fassung 1 (0,03 %) sah nur Rümpfe **mit** Schleife — die schleifenlose Chirurgie war unsichtbar.
+* Fassung 2 (4,36 %) las `for x in segs` als Nicht-Domäne; ein einziger falsch markierter
+  Rumpf (`demo_report_then_idle`, 1 360 Z) machte allein 2 % aus.
+* Fassung 3 übersah Indexketten (`find`/`union`), Kantenketten (`pruefe_bindung`,
+  `kettenlaenge`) und die Spendenkanten (`switch_to`, `record_zombie`).
+* Fassung 4 las `==` als Zuweisung und markierte `migration_candidate` (18 Z) falsch.
+
+**Die beiden verworfenen Fassungen spannen einen Faktor 130 auf und klammern die richtige
+Antwort ein.** Beide hätten sich mit derselben Fundstellenliste vorführen lassen. Der
+Unterschied zwischen ihnen und der Endfassung ist **ausschliesslich R14** — die
+Vollzählung der `for`-Köpfe und die drei Mutationsproben. **Eine Zahl aus dieser
+Werkzeugklasse ohne R14 ist wertlos, und das ist kein Nebensatz: drei von vier Fassungen
+waren falsch.**
+
+#### 4. Die Zahl ist eine UNTERE SCHRANKE — mit vier benannten Gründen.
+
+Nicht wegen R16 (0 Abbrüche), sondern aus der Bauart des Werkzeugs:
+
+1. **Die Reihe konvergiert nicht sichtbar von oben.** Jede Verschärfung nach Fassung 2 hat
+   **echte** Rümpfe hinzugefügt, keine entfernt (19 → 26). Es gibt keinen Grund
+   anzunehmen, dass eine fünfte Fassung nichts mehr fände.
+2. **`unsafe`/`asm!`-Blöcke werden nicht gemessen.** Der Bereiniger ersetzt Stringliterale
+   durch Leerzeichen; die 168 `asm!`-Fundstellen sind für dieses Werkzeug leer.
+3. **Chirurgie hinter einem Aufruf zählt beim Helfer, nicht beim Aufrufer.** Das ist die
+   richtige Einheit, heisst aber: `revoke` bleibt sauber, obwohl es `delete_leaf` ruft, das
+   `unlink` ruft, das umhängt. Wer den 5 : 1-Aufschlag auch den Aufrufern zurechnet, kommt
+   höher.
+4. **B3 fragt nur nach dem Schleifenvorrat.** Ein Rumpf kann traversierungsförmig sein und
+   trotzdem 5 : 1 kosten — wegen `effects`, `locks`, Linearität oder der
+   Schachtelungsgrenze zwei (`arbitrary_mutations_never_panic`, `manifest.rs`:867, schachtelt
+   drei tief und steht als **T** in der Zählung). **Der Aufschlag aus B3 ist nicht der
+   Abstand des Entwurfs zum Boden, sondern ein Summand darin.**
+
+#### 5. Eine Annahme, die zugunsten der These wirkt und die hier steht, damit sie nicht untergeht.
+
+Die Zählung liest jede Rust-Slice-/Feld-Iteration als `elems of` bzw. `slots of`. In
+Gabbro setzt das voraus, dass der Ort eine **deklarierte** Sammlung mit `count N` ist.
+Diese Pflicht ist nicht neu und nicht hier gebucht — sie hängt an der Klasse *Index*, die
+die Neuerhebung vom 2026-08-15 als **getragen** verbucht hat (`index into T` erbt die
+Schranke aus `count N`, A3/`M103`). **Fällt jene Buchung, fällt diese Zahl mit ihr** — und
+zwar nicht um ein paar Zeilen, sondern um die 449 Rümpfe mit Schleife, die hier als
+traversierbar zählen.
+
+#### 6. Was auffällt und was diese Messung NICHT belegen kann.
+
+Vier der grössten N-Rümpfe sind **Prüfer**: `audit_cdt` (100 Z) sucht Zyklen im CDT,
+`pruefe_bindung` (31 Z) sucht Zyklen in der Handler-Kette, `is_below`/`scope_covers`
+(36 Z) prüfen Topologiezugehörigkeit — zusammen **167 der 584 Zeilen, 29 %**. Es liegt
+nahe zu sagen, dass diese Rümpfe in Gabbro gar nicht existierten, weil die Invariante im
+Typ steht statt in einem Auditor. **Das ist eine Vermutung, und diese Messung stützt sie
+nicht.** Sie zählt Rümpfe im Bestand, nicht Rümpfe in einem Gegenentwurf. Notiert, nicht
+verrechnet.
+
+---
+
+### Die Zahl für die K/A/W-Gewichtsformel
+
+```
+p_B3        = 0,0096   (584 nicht-leere Zeilen von 60 756; aufgerundet 0,010)
+Aufschlag   = p_B3 · 5,0  =  +0,048   ->  gerundet  +0,05
+```
+
+**In die Formel einzusetzen: `p_B3 = 0,010`, Aufschlag `+0,05`.**
+
+**Es ist eine UNTERE SCHRANKE** — aus den vier Gründen unter Punkt 4, nicht wegen eines
+Abbruchs. Sie ist als `≥ +0,05` zu führen und **nicht** als Schätzung.
+
+**Und der nüchternste Befund zum Schluss:** der Aufschlag liegt **unter der Auflösung der
+Kennzahl**. Selbst die falsche Fassung 2 mit 4,36 % hätte nur +0,22 ergeben. **B3 ist
+damit als Kostenposten erledigt — und als Fundstellenliste für drei fehlende Domänen
+(`ancestors of`, Union-Find, Kette-über-Kantenfunktion) offen.** Der zweite Teil ist der
+wertvollere.
+
+### Prüfpfad
+
+```
+./zaehle-b3.py ../caprock-messbasis                 # 26 Ruempfe, 621 Z, 0,953 % / 0,961 %
+./zaehle-b3.py ../caprock-messbasis --json=b3.json  # Marken + Belege je Rumpf
+cd ../caprock-messbasis
+grep -rniE 'fastpath|fast_path' --include=*.rs kernel crates              # 12
+grep -rnE '\.(next|prev|first_child|next_sibling|prev_sibling|head|tail|link|sibling|parent|qnext|qprev)\s*=[^=]' \
+     --include=*.rs kernel crates | wc -l                                 # 45
+find kernel crates -name '*.rs' -exec cat {} + | grep -c '[^[:space:]]'   # 65 168
+git status --porcelain | wc -l                                            # 0 — nur gelesen
+```
+
+Werkzeug: [`zaehle-b3.py`](../zaehle-b3.py), Marken und Ausnahmen im Kopfkommentar und
+in den Regexen `KETTE`/`IDXKETTE`/`KANTENKETTE`/`CHIR`/`DOM_LINK_ABSTIEG`.
