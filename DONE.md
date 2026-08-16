@@ -67,6 +67,7 @@ Neu erhoben 2026-08-15, **nicht wiederhergestellt**, nur x86
 | **Platzierungsregel** | ein `ops`-Träger liegt in keinem `dma`-Raum — ein Gerät schreibt an jeder Grammatik vorbei | `R001`, Gift 58 |
 | **`by ops` am Feld** | die K-Bedingung wird von einer **Prüfvorschrift zur Grammatikeigenschaft**: `refcount -= 1` von Hand ist nicht schreibbar | `D002` in `kbedingung.rs`, `beispiele/16`, Gift 60 |
 | **`shared held` (N3)** | `held` ist für **exklusive** Halter gerechnet; die geteilte Seite hat eine eigene Rechengrösse | `K004` in `kosten.rs:497`, eigener Topf `geteilte_haltezeiten` |
+| **Sperrordnung geprüft** | `rank` war deklariert und wurde **nie nachgerechnet** — und zwei Konstrukte beriefen sich darauf | `H006` in `geteilt.rs`, Gift 67 (Abstieg) + 68 (Gleichstand) |
 | **`group … over { … }`** | eine Invariante **zwischen** Trägern hat in keiner `table … invariant` Platz — gemessen: V1–V4 im Bestand | `U001`–`U007` in `gruppe.rs`, `beispiele/17`, Gift 63–66 |
 
 ## Gefahrene Messungen, mit Tor und Ausgang
@@ -120,7 +121,7 @@ die niemand gegeneinander prüft.*
 ./pruefe-wortschatz.py    Terminale gegen Tabelle, Sonderform-Zähler (3 von 5)
 ./pruefe-todo.py          hält die Aufgabenliste gegen sich selbst, acht Klassen
 ./pruefe-kennungen.py     keine Absage-Kennung in zwei Dateien
-./mutiere-pruefer.py      beschädigt je eine Regel:  61 von 61
+./mutiere-pruefer.py      beschädigt je eine Regel:  63 von 63
 ./erzeuge-mutationen.py   verdreht systematisch:      7 von 39
 ./pruefe-luecken.py       die benannten Lücken einzeln: 13 von 15
 ./commit.sh               R19 — Commit-Nachrichten nur über Datei
@@ -136,5 +137,5 @@ einem **bezahlten Fehler in diesem Ordner**, jede nennt den Schaden.
 
 ## Proben
 
-**18 saubere Beispiele, 66 Giftproben, 76 Tests** —
+**18 saubere Beispiele, 68 Giftproben, 76 Tests** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`

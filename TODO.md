@@ -158,19 +158,6 @@ von Posten, die weder Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
       Beides vertretbar, keins entschieden.
 - [ ] **Generizität** — ohne sie braucht jede Tabelle ihren eigenen `traverse`; mit ihr die Frage,
       wie Verträge parametrisiert werden.
-- [ ] **BERICHTIGT 2026-08-16: die Sperrordnung fehlt NICHT in der Syntax — sie wird NICHT
-      GEPRUEFT.** `lock … rank N` steht seit jeher da (8 Fundstellen in
-      [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md)), und die Gruppengrammatik verlaesst sich
-      seit heute ausdruecklich darauf: *„die Ordnung wird nicht an der Gruppe deklariert, sie
-      steht in den `rank`-Zahlen."*
-      **Nur vergleicht kein Pass je zwei Raenge.** `grep '\.rang' crates/gabbro-check/src`
-      liefert **eine** Fundstelle — `gruppe.rs`, und die prueft nur auf *Gleichheit* (`U005`).
-      **Ein verschachtelter `locks A { locks B { … } }` mit `rank A > rank B` faellt heute
-      nirgends.**
-      *Das ist die unangenehmste Sorte Befund: eine Zusage, die deklariert, nie geprueft und
-      inzwischen von einem zweiten Konstrukt als Grundlage benutzt wird.* Der Bau ist billig
-      — ein Rangvergleich am geschachtelten `lockstmt`, dieselbe Stelle, an der `H003` schon
-      die Hochstufung sieht.
 - [ ] **Der Vorrat an Quantoren in `spec fn` ist unentschieden — und genau dort wandert die Linie**,
       wenn niemand aufpasst.
 - [ ] **Fehlerfortpflanzung:** ohne `?` wird jeder Aufruf drei Zeilen, mit `?` gibt es verborgenen
