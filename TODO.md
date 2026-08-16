@@ -85,14 +85,17 @@ von Posten, die weder Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
 ---
 
 # ENTSCHEIDUNGEN — brauchen ein Urteil, keinen Lauf
-### Die Gruppe ist gebaut — offen ist ihre INVARIANTE
+### Die Gruppe: Sperrabdruck und Zug stehen — offen ist die INVARIANTE
 
-- [ ] **`group N over { A, B };` trägt heute keine Verbindungsaussage.** Der Sperrabdruck
-      steht (`U001`–`U005`, Pass 10), die Invariante nicht. **Was fehlt, ist die Klausel
-      selbst** — `invariant refcount_passt : forall …` über zwei Trägern — und mit ihr die
-      Frage, die S17 stellt: *die Invariante gilt am Anfang und am Ende des Zuges, nicht
-      dazwischen.* Ohne einen Begriff von „Zug" ist das nicht prüfbar; **die Gruppenoperation
-      (`ops` über der Gruppe) ist damit die nächste Grammatikzeile, nicht die Klausel.**
+- [ ] **Zwei der drei S17-Pflichten stehen. Die mittlere fehlt, und sie ist die eigentliche.**
+      Gebaut: (a) Sperren in Rangordnung (`U003`/`U005`), (c) kein Zwischenaustritt (`U006`).
+      **Offen: (b) die Invariante gilt am Anfang und am Ende des Zuges** — dafür braucht die
+      Gruppe eine `invariant`-Klausel über **zwei** Trägern, und die ist ohne `spec fn` über
+      der Gruppe nicht formulierbar.
+      **Der Befund aus dem Bau, der die Reihenfolge ändert:** (c) war ohne jede Erzeugung
+      prüfbar — die Pflicht klingt nach einer Aussage über einen erzeugten Zug und ist eine
+      über den Kontrollfluss. *Damit ist die Gruppenoperation NICHT mehr die Vorbedingung für
+      die Klausel; sie kann direkt kommen.*
 
 ### «B41» — drei Domänen sind gemessen gefordert. Bauen oder nicht?
 

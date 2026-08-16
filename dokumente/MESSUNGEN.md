@@ -4246,3 +4246,57 @@ liest, als sie ist.*
 `beispiele/gift/63-gruppe-halb-gesperrt.gab` (fällt mit genau `U003`), und **zwei Mutationen**
 — eine schaltet `U003` ab, die zweite *lockert* sie: eine gehaltene Sperre deckt die ganze
 Gruppe. **58 von 58 gefangen.**
+
+---
+
+# `U006` — die dritte S17-Pflicht, und eine überlebende Mutation
+
+**Von den drei Pflichten, die S17 an eine Gruppenoperation stellt, stehen jetzt zwei:**
+
+| | Pflicht | Stand |
+|---|---|---|
+| (a) | Sperren in Rangordnung | **`U003`/`U005`** |
+| (b) | Invariante am Anfang **und** am Ende | **offen** — braucht die Klausel |
+| (c) | **kein Zwischenaustritt** | **`U006`** |
+
+**(c) war ohne jede Erzeugung prüfbar**, und das war nicht abzusehen: die Pflicht klingt nach
+einer Aussage über einen erzeugten Zug, ist aber eine über den **Kontrollfluss zwischen dem
+ersten und dem letzten Schreibzugriff**. *Wer Träger A geschrieben hat und den Rumpf
+verlässt, bevor er B geschrieben hat, hinterlässt die Gruppe im Zwischenzustand — und der
+Fehlerpfad ist genau die Stelle, an der das passiert, weil dort niemand hinsieht.*
+
+## Die überlebende Mutation ist der Ertrag, nicht die Panne
+
+Nach Gift 64 (`return` zwischen den Schreibzugriffen) stand die Probe bei **59 von 60**:
+
+```
+!! UEBERLEBT  gruppe-austritt-nur-return   U006 -- `let … else` ist kein Austritt
+```
+
+**63 Giftproben merkten nicht, dass der Prüfer eine seiner drei Türen verloren hatte.** Gift
+64 hätte es nie gefangen — es nimmt `return`.
+
+> **Eine Regel mit drei Wegen braucht drei Proben, nicht eine.**
+
+**Und der zweite Anlauf reichte auch nicht.** Gift 65 nahm zuerst
+`let g = … else (fehler) { return false; }` — der Sonst-Zweig enthielt ein `return`, also fing
+die **`return`-Regel** den Fall, und die Mutation überlebte weiter. Erst ein Sonst-Zweig, der
+**divergiert** statt zurückzukehren (`aufgeben()`), isoliert die `let … else`-Tür.
+
+> **Zweimal am selben Tag dieselbe Bauart:** eine Probe, die den beabsichtigten Fall auslöst,
+> aber über eine **andere** Regel. Bei `E010` war es die Schreibhälfte, hier die
+> `return`-Hälfte. *Eine Giftprobe belegt nur dann eine Regel, wenn sie ohne diese Regel
+> durchginge — und das sagt keine Absage, das sagt nur die Mutation.*
+
+**Stand: 60 von 60.** `beispiele/gift/64-gruppe-zwischenaustritt.gab` (`return`),
+`beispiele/gift/65-gruppe-austritt-durch-else.gab` (`let … else`, divergenter Sonst-Zweig),
+und die Gegenprobe: dieselbe Funktion mit der Prüfung **vor** dem ersten Schreibzugriff geht
+sauber durch.
+
+## Die Grobheit hat eine Richtung (W9)
+
+Die Reihenfolge ist die **Quellreihenfolge** des rekursiven Abstiegs, nicht der Kontrollfluss.
+Ein Austritt in einem Zweig, der den zweiten Schreibzugriff gar nicht erreichen kann, wird
+trotzdem gemeldet. **Zu viel zu melden ist hier die sichere Seite** — die Absage sagt *„hier
+verlässt ein Weg den Zug"*, und wer weiss, dass dieser Weg nicht existiert, hat den Beweis
+dafür zu schreiben, nicht der Pass.
