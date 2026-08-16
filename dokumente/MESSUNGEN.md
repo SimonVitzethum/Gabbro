@@ -4775,3 +4775,64 @@ ausspülen als er sah. Das fände erst eine unabhängige.*
 fiel, bis die Zahl hier **und** in `BEWEIS.md` nachgezogen war. Er steht jetzt auf **16** —
 *wer die nächste beweist, fällt wieder; eine Zahl, die sich still mitbewegt, ist keine
 Ratsche.*
+
+---
+
+# VORAB — drei weitere Schablonen, und die Ausbeute wird MITGEMESSEN (2026-08-16)
+
+**Committet vor der ersten Zeile Isabelle.** Gefahren werden **S12**, dann **S1 + S2
+gemeinsam** — getrennt geht es nicht, `consuming.ordnung` und `table.induktion` bilden den
+Zyklus vom selben Tag.
+
+## Warum genau diese drei, und nicht alle sechzehn
+
+**S12 zuerst, weil der Beweis von S4 auf ihr ruht.** `traeger_endlich` nimmt `im_bereich N σ`
+an — und das ist wörtlich, was `table.indexschranke` schuldet.
+
+> **Eine bewiesene Schablone, die auf einer unbewiesenen ruht, hat die Vertrauensbasis nicht
+> verkleinert, sondern verschoben.**
+
+*Von den sechzehn sind vier gar nicht beweisbar (das Konstrukt existiert nicht — ein Beweis
+darüber beweist einen Wunsch und sieht danach wie Deckung aus), zwei warten auf eine andere
+Fläche (Erzeuger, Speichermodell), zehn wären formalisierbar. **Sechzehn am Stück, vom selben
+Verfasser, wären die grösste grüne Fläche dieses Ordners und die am wenigsten gemessene.***
+
+## **Die eigentliche Messung: die AUSBEUTE, nicht die Häkchen**
+
+Der Ertrag einer Formalisierung ist nicht das Wort *bewiesen*, sondern **was sie ausspült**.
+Es gibt genau **einen** Datenpunkt: `table.induktion` gab **4** stille Annahmen frei.
+
+**Vorhergesagt, je Schablone:**
+
+| | Vorhersage | Begründung |
+|---|---|---|
+| **S12** | **1–2** | der Eintrag ist konkret (*„deckt genau die belegten Slots"*), aber *„die Absenkung legt N Slots an"* ist eine Aussage über die **Emission**, die es nicht gibt — die erwarte ich als Grenze |
+| **S1** | **2–4** | *„die Ordnung bleibt unter der erzeugten Mutation erhalten"* — **unter WELCHEN Mutationen**, steht nicht da |
+| **S2** | **0–1** | der Satz ist bereits scharf (*„ist sie leer, ist die Domäne leer"*) — hier erwarte ich am wenigsten |
+
+**Summe vorhergesagt: 3–7.**
+
+## Das zweiseitige Tor für die Ausbeute
+
+| | |
+|---|---|
+| **Register war ehrlicher als befürchtet** | **≤ 2** ausgespült über alle drei → die restlichen zwölf sind Fleissarbeit ohne Erkenntnis, und *das ist ein gutes Ergebnis* |
+| **Register hat systematisch verschwiegen** | **≥ 8** → dann ist die Frage nicht *„alle 16 beweisen"*, sondern **warum die Einträge so ungenau geschrieben sind** — und das ist ein Befund über das Verfahren, nicht über die Schablonen |
+
+*Zwischen 3 und 7 liegt die Vorhersage; sie zu treffen ist der langweiligste Ausgang und
+sagt am wenigsten.*
+
+## Was ungültig macht
+
+* **U-a** Eine der drei formalisiert eine andere Aussage als ihr Eintrag (Satz-gegen-Zeile in
+  beide Richtungen, wie bei S4).
+* **U-b** Der Beweiser läuft ohne negative Kontrolle — **jede** Theorie bekommt eine
+  eingesetzte Falschbehauptung, und sie muss fallen.
+* **U-c** Eine „ausgespülte Nebenbedingung" wird gezählt, die schon im Eintrag stand. *Nur was
+  vorher NICHT dastand, zählt.*
+
+## Und die Grenze, die von S4 übrig bleibt
+
+**Die Maschine bestätigt, sie entdeckt nicht** — die Bedingungen spült die Handarbeit aus.
+Das gilt auch hier, und es ist der Grund, warum die Ausbeutezahl **eine Aussage über meine
+Sorgfalt beim Schreiben ist, nicht über Isabelle.**
