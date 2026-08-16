@@ -49,8 +49,14 @@ PROBE
     # (Erste Fassung dieser Probe pruefte, ob `-F` ohne `--cleanup=verbatim` die #-Zeile
     #  streift. Tut es nicht -- `-F` benutzt den `whitespace`-Modus. Eine Gegenprobe, die
     #  eine falsche Annahme prueft, ist keine.)
-    git -C "$W" reset -q --soft HEAD~1
-    git -C "$W" reset -q
+    # **KEIN zweiter Reset hier.** Die Gegenprobe unten legt keinen Commit an -- sie
+    # prueft, was die SHELL mit der Nachricht macht. Meine erste Fassung setzte trotzdem
+    # einen Reset und schob HEAD einen Commit ZU WEIT zurueck; der Baum sah danach aus, als
+    # waere die Aufraeumarbeit geloescht (sie war es nicht -- der Commit lag im Objektspeicher,
+    # nur HEAD stand falsch).
+    #
+    # *Zweimal derselbe Fehler in derselben Datei am selben Tag: ein Werkzeug, das HEAD
+    # bewegt, wird nach jeder Aenderung gefahren, nicht nur gelesen.*
     ROH="$(cat "$MSG")"
     VERSTUEMMELT="$(eval "echo \"$ROH\"" 2>/dev/null || true)"
     if [ "$VERSTUEMMELT" = "$ROH" ]; then
