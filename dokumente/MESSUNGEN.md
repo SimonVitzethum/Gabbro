@@ -4922,3 +4922,41 @@ die Frage, ob man den Rest durchziehen soll — und sie lautet anders als vorher
 *Die Arbeit ist damit nicht „sechzehn Beweise", sondern „neunzehn Einträge redigieren" — und
 das ist billiger, aber es heisst auch, dass die Zahl `17 unbewiesen` nie eine Zahl über
 Beweise war, sondern eine über unfertige Sätze.*
+
+---
+
+# VORAB — Redaktion aller 19 Schablonen-Einträge (2026-08-17)
+
+**Committet vor dem ersten gelesenen Eintrag.** Kein Beweisen — **Lesen**, gegen die drei
+Fehlerformen, die die Formalisierung von S4/S12/S1/S2 **gemessen** hat.
+
+## Die drei Marken
+
+| | Marke | Beispiel aus der Messung |
+|---|---|---|
+| **F-1** | **„genau" / „alle" / „nur"** — eine Behauptung, die zu stark ist und damit falsch | S12: *„deckt **genau** die belegten Slots"* |
+| **F-2** | **ein Singular, wo mehrere Fälle stehen** — und mindestens einer davon hält nicht | S1: *„unter **der** erzeugten Mutation"* |
+| **F-3** | **„daraus fällt" / „damit gilt"** — verspricht, dass an dieser Stelle nichts mehr zu tun ist | S1: *„**daraus fällt** die Blattheit"* |
+
+**Dazu eine vierte, die aus S12/M-3 stammt und keine Sprachform ist:**
+
+| **F-4** | **zwei Hälften in einem Eintrag**, von denen eine über einem Gegenstand redet, den es nicht gibt |
+
+## Der Erwartungswert, damit das Ergebnis nicht überlesen wird
+
+**Aus 3 geprüften Einträgen kamen 2 mit falschem Satz.** Naiv hochgerechnet: **etwa 12 von 19**.
+*Diese Hochrechnung ist die schlechteste Sorte Zahl* — n = 3, und die drei waren nicht zufällig
+gewählt, sondern die formalisierbarsten. **Sie steht hier als Vorhersage, nicht als Schätzung**,
+damit man sie schlagen kann.
+
+**Vorhergesagt: 8–14 Einträge mit mindestens einer Marke.**
+
+## Das zweiseitige Tor
+
+| | |
+|---|---|
+| **die zwei aus drei waren ein Ausreisser** | **≤ 5** markiert → das Register ist besser geschrieben als die Stichprobe nahelegte, und die Redaktion ist ein Nachmittag |
+| **die Regel, nicht die Ausnahme** | **≥ 12** markiert → *„17 unbewiesen" war nie eine Zahl über Beweise*, und das Register braucht eine Schreibregel, bevor ein weiterer Eintrag dazukommt |
+
+**Ungültig:** eine Marke wird vergeben, ohne den Satz zu zitieren, der sie trägt. *Jede Marke
+nennt ihren Wortlaut — sonst ist die Redaktion eine Meinung mit Zähler.*
