@@ -143,26 +143,39 @@ pub const SCHABLONEN: &[Schablone] = &[
     Schablone {
         name: "table.induktion",
         haengt_an: &["table.indexschranke", "consuming.ordnung"],
+        // **Maschinell geprueft am 2026-08-16** -- Isabelle2025-2, `beweise/`.
+        // Zuordnung Satz -> Zeile (die vorregistrierte Ungueltigkeitsprobe):
+        //   N-1  Endlichkeit           -> `im_bereich`, `kante_bleibt_im_bereich`,
+        //                                 `traeger_endlich`
+        //   N-2  ein Zustand           -> `kante :: tabelle => (idx * idx) set` (Parameter)
+        //   N-3  Basisfall absorbiert  -> `blatt_ohne_eigene_klausel`
+        //   N-4  zwei Praemissen       -> `kante` als Vereinigung, `table_induktion_zwei_kanten`
+        //   Wohlfundiertheit Hypothese -> `assumes wf` in `table_induktion`
+        // Umgekehrt: keine Zeile der Formalisierung ohne Satz im Eintrag.
+        //
+        // **Was NICHT bewiesen ist, und es steht hier statt in einer Fussnote:** dass der
+        // ERZEUGER dieses Schema emittiert. Es gibt keinen Erzeuger; die Emissionsflaechen
+        // weist `mutiere-pruefer.py` mit 0 Mutationen aus. Bewiesen ist die MATHEMATIK der
+        // Schablone, nicht ihre Auslieferung.
+        //
+        // **Und die zweite Grenze ist unbequemer:** die vier Nebenbedingungen hat die
+        // HANDARBEIT ausgespuelt, nicht die Maschine. Der erste Anlauf haette am Pruefer
+        // scheitern muessen (ein Vorwaertsverweis auf eine nie definierte Funktion) -- ich
+        // habe ihn vorher berichtigt. **Die Maschine hat bestaetigt, nicht entdeckt.**
+        // Eine Formalisierung, die nur aufschreibt, was ihr Verfasser ohnehin glaubte, kann
+        // nicht mehr ausspuelen als er sah; das faende erst eine UNABHAENGIGE.
         konstrukt: "by induction over <domain>",
-        // **Geschaerft am 2026-08-16 nach dem Formalisierungsversuch** (`beweise/`).
-        // Vier stille Annahmen ausgespuelt -- die alte Fassung lautete in ganzer Laenge:
-        // *„Das aus der `table`-Deklaration erzeugte Induktionsschema ist wohlfundiert und
-        // vollstaendig."* Zwei Woerter, vier Luecken.
         pflicht: "Das aus der `table`-Deklaration erzeugte Induktionsschema ist wohlfundiert \
                   und vollstaendig. **In vier Teilen, die die alte Fassung stillschweigend \
                   trug:** (N-1) die Traegermenge ist ENDLICH, und das faellt NICHT aus dieser \
-                  Deklaration, sondern aus `table.indexschranke` -- ein Verkettungsfeld ohne \
-                  Bereichsschranke koennte aus der Tabelle hinauszeigen; (N-2) das Prinzip \
-                  gilt fuer EINEN Zustand -- ueber eine Traversierung, die waehrend des Laufs \
-                  mutiert, sagt es NICHTS, das ist `consuming.ordnung`; (N-3) eine eigene \
-                  Leere-Menge-Klausel braucht es NICHT, der Basisfall ist absorbiert -- was \
-                  `consuming.leermenge` behauptet, ist eine Aussage ueber die ERZEUGUNG der \
-                  Domaene, nicht ueber das Prinzip; (N-4) `vollstaendig` heisst zweierlei, und \
-                  die harte Lesart ist die zweite: fuer `chain(a,b) in` hat die Domaene ZWEI \
-                  Kantenarten und das Schema braucht ZWEI Praemissen, nicht eine. \
+                  Deklaration, sondern aus `table.indexschranke`; (N-2) das Prinzip gilt fuer \
+                  EINEN Zustand -- ueber eine mutierende Traversierung sagt es NICHTS, das ist \
+                  `consuming.ordnung`; (N-3) eine eigene Leere-Menge-Klausel braucht es NICHT, \
+                  der Basisfall ist absorbiert; (N-4) fuer `chain(a,b) in` hat die Domaene \
+                  ZWEI Kantenarten und das Schema braucht ZWEI Praemissen. \
                   **Wohlfundiertheit ist HYPOTHESE, nicht Ergebnis** -- die Deklaration muss \
                   die tragende Invariante nennen (`invariant acyclic`).",
-        stand: Stand::Entworfen,
+        stand: Stand::Bewiesen,
         fundstelle: "SYNTAX.md §5, SPRACHE.md Teil V",
     },
     Schablone {

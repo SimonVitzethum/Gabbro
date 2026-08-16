@@ -1,0 +1,4 @@
+session Gabbro = HOL +
+  options [document = false]
+  theories
+    Table_Induktion

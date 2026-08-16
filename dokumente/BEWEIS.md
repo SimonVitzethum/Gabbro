@@ -466,7 +466,7 @@ Beweiser-Frontend.
 
 | Stufe | Pflicht | wohin |
 |---|---|---|
-| **1** | **Schablonen** (Geistertheorie, Nachordnungslemma) — endlich viele, haengen am **Konstrukt**, nicht am Programm. **Seit 2026-08-14 gezaehlt, Stand 2026-08-16: 17, davon 17 unbewiesen** (`gabbro schablonen`) — *zwei kamen an einem Tag dazu, gefallen ist keine* — der eine Posten ist eine **Liste mit Laenge** | **Isabelle, einmal, ausserhalb des Bauvorgangs.** Der **einzige** Posten, der die Vertrauensbasis **verkleinert** — heute heisst die Schablone „vertrauenskritischste Komponente, geprueft vom unverifizierten Kern" |
+| **1** | **Schablonen** (Geistertheorie, Nachordnungslemma) — endlich viele, haengen am **Konstrukt**, nicht am Programm. **Seit 2026-08-14 gezaehlt, Stand 2026-08-16: 17, davon 16 unbewiesen** (`gabbro schablonen`) — **die erste ist gefallen:** `table.induktion`, maschinell geprueft mit Isabelle2025-2 (`beweise/`). *Damit gilt das Amortisierungsargument zum ersten Mal nicht als Zusage, sondern an einem Fall* — der eine Posten ist eine **Liste mit Laenge** | **Isabelle, einmal, ausserhalb des Bauvorgangs.** Der **einzige** Posten, der die Vertrauensbasis **verkleinert** — heute heisst die Schablone „vertrauenskritischste Komponente, geprueft vom unverifizierten Kern" |
 | **2** | **Programmpflichten** | eigener VC-Erzeuger → Z3/cvc5 — **aber im Vertrauen steht ein Zertifikatspruefer in sicherem Rust, nicht der Loeser** |
 | **3** | die Leiter **bewiesen · geprueft · geschuldet** | **null neue Woerter** — sie besteht aus `invariant … runs online\|offline`, `check` und der Annahmenmenge |
 

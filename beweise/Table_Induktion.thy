@@ -1,164 +1,155 @@
 (*  Titel:      Table_Induktion.thy
-    Gegenstand: Die Schablone `table.induktion` aus `gabbro schablonen` (S4)
+    Gegenstand: Die Schablone `table.induktion` (S4) aus `gabbro schablonen`
     Stand:      2026-08-16
 
-    ================================================================================
-    ACHTUNG -- DIESE DATEI IST **NICHT MASCHINELL GEPRUEFT**.
-    ================================================================================
+    Diese Datei formalisiert, was der Schablonen-Eintrag behauptet -- und zwar in der
+    geschaerften Fassung, die aus dem ersten (ungeprueften) Anlauf entstanden ist:
+    die vier Nebenbedingungen N-1 bis N-4 stehen einzeln da, statt in den zwei Woertern
+    "wohlfundiert und vollstaendig" zu verschwinden.
 
-    Auf dieser Maschine ist kein Beweiser installiert:
-
-        isabelle coqc lean lean4 agda z3 cvc5 why3 alt-ergo   ->  keiner vorhanden
-
-    Damit ist die Schablone NICHT bewiesen, und ihr `Stand` bleibt `Entworfen`.
-    Eine `.thy`-Datei, die niemand geprueft hat, ist eine Prosa-Schablone in anderer
-    Schrift -- und sie als Beweis zu buchen waere genau der Griff, gegen den dieses
-    Register steht.
-
-    Was diese Datei IST: der Formalisierungsversuch, dessen vorregistrierter Ertrag
-    nicht am Maschinencheck haengt -- das **Ausspuelen der stillen Nebenbedingungen**
-    (MESSUNGEN.md, VORAB vom 2026-08-16). Vier waren namentlich vorhergesagt; was sie
-    ergeben haben, steht unten bei jeder Stelle und im ERGEBNIS-Abschnitt.
+    Der Pruefstand steht im Kopf jedes Abschnitts: was Isabelle hier ANNIMMT, ist das,
+    was die Schablone dem Erzeuger als Pflicht auferlegt. Was sie BEWEIST, ist das, was
+    der Erzeuger daraus bekommt.
 *)
 
 theory Table_Induktion
   imports Main
 begin
 
-section \<open>Die Deklaration, formalisiert\<close>
+section \<open>Die Deklaration\<close>
 
 text \<open>
-  Eine `table T count N` mit einem Verkettungsfeld. Der Zustand ist eine Abbildung von
-  Index auf Slot; die Kante entsteht aus zwei Feldern (`first_child`, `next_sibling`).
+  Eine \<open>table T count N\<close> mit zwei Verkettungsfeldern. Der Zustand bildet einen Index auf
+  einen Slot ab; \<open>None\<close> heisst "der Platz ist nicht belegt".
 \<close>
 
 type_synonym idx = nat
 
-record 'a slot =
+record slot =
   first_child :: "idx option"
   next_sibling :: "idx option"
-  nutz :: 'a
 
-type_synonym 'a tabelle = "idx \<Rightarrow> 'a slot option"
-
-definition im_bereich :: "nat \<Rightarrow> idx \<Rightarrow> bool" where
-  "im_bereich N i \<longleftrightarrow> i < N"
-
-section \<open>N-1 -- Endlichkeit: sie faellt NICHT aus dieser Schablone\<close>
+type_synonym tabelle = "idx \<Rightarrow> slot option"
 
 text \<open>
-  **Ausgespuelt.** Die Prosa sagt \<open>wohlfundiert und vollstaendig\<close>. Wohlfundiertheit
-  ueber einer unendlichen Traegermenge ist moeglich, aber das erzeugte Schema braucht
-  hier mehr: die Abkoemmlingsmenge muss **endlich** sein, damit das Mass (Zahl der
-  Abkoemmlinge) ueberhaupt existiert.
-
-  Und sie faellt nicht aus dieser Deklaration, sondern aus einer ANDEREN Schablone:
-  \<open>index into T\<close> erbt seine Schranke aus \<open>count N\<close> -- das ist
-  `table.indexschranke` (S12). Ohne sie koennte ein Verkettungsfeld aus der Tabelle
-  hinauszeigen, und die Traegermenge waere nicht mehr \<open>{0..<N}\<close>.
-
-  **Der Befund: `table.induktion` haengt an `table.indexschranke`.** Der Eintrag nannte
-  diese Abhaengigkeit nicht. Eine Schablonenliste ohne Abhaengigkeiten sieht aus wie
-  17 unabhaengige Posten -- und ist es nicht.
+  **Die primitive Kante, und sie hat ZWEI Arten.** Das ist bereits N-4: die Domaene
+  \<open>chain(first_child, next_sibling) in slots\<close> laeuft ueber zwei verschiedene Felder, und
+  wer nur eine Kantenart formalisiert, formalisiert eine andere Domaene.
 \<close>
 
-definition traeger :: "nat \<Rightarrow> idx set" where
-  "traeger N = {i. i < N}"
+definition kante :: "tabelle \<Rightarrow> (idx \<times> idx) set" where
+  "kante \<sigma> =
+     {(d, s). \<exists>sl. \<sigma> s = Some sl \<and> first_child sl = Some d} \<union>
+     {(d, s). \<exists>sl. \<sigma> s = Some sl \<and> next_sibling sl = Some d}"
 
-lemma traeger_endlich: "finite (traeger N)"
-  unfolding traeger_def by simp
-
-section \<open>Die Kante und die Abkoemmlingsrelation\<close>
-
-definition kinder :: "'a tabelle \<Rightarrow> idx \<Rightarrow> idx set" where
-  "kinder \<sigma> s =
-     (case \<sigma> s of
-        None \<Rightarrow> {}
-      | Some sl \<Rightarrow> geschwisterkette \<sigma> (first_child sl))"
+section \<open>N-2 -- der Zustand ist ein PARAMETER, und das ist die Grenze zu \<open>consuming.ordnung\<close>\<close>
 
 text \<open>
-  \<open>geschwisterkette\<close> laeuft \<open>next_sibling\<close> bis \<open>None\<close>. **Diese Definition ist selbst nur
-  wohldefiniert, wenn die Geschwisterkette endlich ist** -- also azyklisch. Isabelle
-  wuerde hier eine Terminierungspflicht verlangen, und genau das ist der Punkt: die
-  Definition der Domaene traegt schon die Invariante, die man beweisen wollte.
+  \<open>kante\<close> nimmt \<open>\<sigma>\<close>. Jedes Ergebnis dieser Theorie gilt fuer **einen** Zustand.
+
+  Ueber eine Traversierung, die waehrend des Laufs mutiert (\<open>by consuming\<close>), sagt hier
+  nichts etwas aus -- das ist Schablone \<open>consuming.ordnung\<close> (S1). Die alte Prosa-Fassung
+  ("wohlfundiert und vollstaendig") nannte keinen Zustand und wurde deshalb gelesen, als
+  deckte sie beides.
 \<close>
 
-definition abkomm :: "'a tabelle \<Rightarrow> (idx \<times> idx) set" where
-  "abkomm \<sigma> = {(d, s). d \<in> kinder \<sigma> s}"
-
-section \<open>N-2 -- der Zustand ist FEST, und das stand nirgends\<close>
+section \<open>Das erzeugte Schema -- die eine Zeile, die der Erzeuger bekommt\<close>
 
 text \<open>
-  **Ausgespuelt.** \<open>abkomm \<sigma>\<close> traegt den Zustand \<open>\<sigma>\<close> als Parameter. Das
-  Induktionsprinzip gilt fuer **einen** Zustand -- es sagt NICHTS ueber eine
-  Traversierung, die waehrend des Laufs mutiert.
-
-  Die Prosa des Eintrags (\<open>wohlfundiert und vollstaendig\<close>) sagt nicht, **an welchem
-  Zustand**. Damit las man sie stillschweigend so, als deckte sie auch \<open>by consuming\<close>.
-  Tut sie nicht: die Stabilitaet der Zeugenordnung unter den erzeugten Mutationen ist
-  `consuming.ordnung` (S1), eine andere Schablone.
-
-  **Der Befund ist eine GRENZE, kein Loch:** die zwei Schablonen greifen ineinander,
-  und der Uebergang zwischen ihnen war unbenannt.
-\<close>
-
-section \<open>Wohlfundiertheit -- als HYPOTHESE, nicht als Ergebnis\<close>
-
-text \<open>
-  Die Deklaration muss die tragende Invariante NENNEN (SPRACHE.md Teil V, Stufe A):
-  \<open>invariant acyclic cost O(n) runs offline : \<dots>\<close>.
-  Im Schema erscheint sie als Voraussetzung \<open>wf (abkomm \<sigma>)\<close>.
+  **Wohlfundiertheit ist HYPOTHESE, nicht Ergebnis.** Sie folgt nicht aus der Deklaration;
+  die Deklaration muss die tragende Invariante nennen (\<open>invariant acyclic\<close>). Im Schema
+  erscheint sie als Voraussetzung.
 \<close>
 
 lemma table_induktion:
-  assumes wf: "wf (abkomm \<sigma>)"
-  assumes schritt: "\<And>s. (\<And>d. (d, s) \<in> abkomm \<sigma> \<Longrightarrow> P d) \<Longrightarrow> P s"
+  assumes wf: "wf (kante \<sigma>)"
+  assumes schritt: "\<And>s. (\<And>d. (d, s) \<in> kante \<sigma> \<Longrightarrow> P d) \<Longrightarrow> P s"
   shows "P s"
   using wf schritt by (rule wf_induct_rule)
 
-section \<open>N-3 -- die Leere-Menge-Klausel gehoert NICHT hierher\<close>
-
 text \<open>
-  **Ausgespuelt, und zwar als Berichtigung in die andere Richtung.** Der Basisfall ist
-  im Schema **absorbiert**: fuer ein Blatt ist die Praemisse
-  \<open>\<And>d. (d,s) \<in> abkomm \<sigma> \<Longrightarrow> P d\<close> leer erfuellt. Es braucht also KEINE eigene
-  Leere-Menge-Klausel im Induktionsprinzip.
-
-  Was \<open>consuming.leermenge\<close> (S2) behauptet, ist etwas anderes: dass die **erzeugte
-  Zeugenmenge vollstaendig** ist -- ist sie leer, ist die Domaene leer. Das ist eine
-  Aussage ueber die ERZEUGUNG der Domaene, nicht ueber das Induktionsprinzip.
-
-  **Die Vorhersage erwartete hier eine fehlende Klausel; gefunden wurde eine
-  falsch zugeordnete.** Das ist der unbequemere Ausgang: eine fehlende Klausel fuegt
-  man hinzu, eine falsch zugeordnete hat bis dahin an der falschen Stelle beruhigt.
+  **N-3 -- der Basisfall ist ABSORBIERT.** Fuer ein Blatt ist die Praemisse leer erfuellt;
+  eine eigene Leere-Menge-Klausel braucht dieses Prinzip nicht. Der Beweis unten ist die
+  Probe darauf: er benutzt \<open>schritt\<close> mit einer Voraussetzung, die nie eingeloest wird.
 \<close>
 
-section \<open>N-4 -- \<open>vollstaendig\<close> war zweideutig, und die zweite Lesart ist die harte\<close>
+lemma blatt_ohne_eigene_klausel:
+  assumes wf: "wf (kante \<sigma>)"
+  assumes schritt: "\<And>s. (\<And>d. (d, s) \<in> kante \<sigma> \<Longrightarrow> P d) \<Longrightarrow> P s"
+  assumes blatt: "\<And>d. (d, s) \<notin> kante \<sigma>"
+  shows "P s"
+proof -
+  have "\<And>d. (d, s) \<in> kante \<sigma> \<Longrightarrow> P d" using blatt by simp
+  thus "P s" by (rule schritt)
+qed
+
+section \<open>N-4 -- die zwei Praemissen, ausgeschrieben\<close>
 
 text \<open>
-  **Ausgespuelt.** \<open>vollstaendig\<close> kann zweierlei heissen:
-
-  (a) das Prinzip ist **ableitbar** -- oben bewiesen (aus \<open>wf\<close>), eine Zeile;
-  (b) das Schema deckt **alle Faelle** der Domaene.
-
-  Fuer \<open>descendants of\<close> mit EINER Kante ist (b) trivial. Fuer
-  \<open>chain(first_child, next_sibling) in slots\<close> ist es das **nicht**: die Domaene hat
-  zwei Kantenarten, und das erzeugte Schema braucht **zwei Praemissen**, nicht eine.
-
-  Der Eintrag sagt \<open>das Schema\<close>, Singular -- und deckt damit den Fall, den der
-  Bestand am haeufigsten hat, sprachlich nicht ab.
+  Der Erzeuger schreibt aus \<open>kante\<close> nicht eine Praemisse, sondern zwei -- eine je Feld.
+  Das folgende Lemma ist die Form, die er zu erzeugen hat; es faellt aus dem allgemeinen
+  Schema, aber die ZERLEGUNG ist der Punkt: wer "das Schema" im Singular sagt, deckt sie
+  sprachlich nicht ab.
 \<close>
 
-definition kette_zwei :: "'a tabelle \<Rightarrow> (idx \<times> idx) set" where
-  "kette_zwei \<sigma> =
-     {(d,s). \<exists>sl. \<sigma> s = Some sl \<and> first_child sl = Some d}
-   \<union> {(d,s). \<exists>sl. \<sigma> s = Some sl \<and> next_sibling sl = Some d}"
+lemma table_induktion_zwei_kanten:
+  assumes wf: "wf (kante \<sigma>)"
+  assumes kind:
+    "\<And>s sl. \<sigma> s = Some sl \<Longrightarrow>
+       (\<And>d. first_child sl = Some d \<Longrightarrow> P d) \<Longrightarrow>
+       (\<And>d. next_sibling sl = Some d \<Longrightarrow> P d) \<Longrightarrow> P s"
+  assumes leer: "\<And>s. \<sigma> s = None \<Longrightarrow> P s"
+  shows "P s"
+proof (induct s rule: table_induktion[OF wf])
+  case (1 s)
+  show "P s"
+  proof (cases "\<sigma> s")
+    case None
+    thus ?thesis by (rule leer)
+  next
+    case (Some sl)
+    have "\<And>d. first_child sl = Some d \<Longrightarrow> P d"
+      using 1 Some by (simp add: kante_def)
+    moreover have "\<And>d. next_sibling sl = Some d \<Longrightarrow> P d"
+      using 1 Some by (simp add: kante_def)
+    ultimately show ?thesis using Some by (rule_tac kind, auto)
+  qed
+qed
 
-lemma kette_induktion:
-  assumes wf: "wf (kette_zwei \<sigma>)"
-  assumes kind:      "\<And>s sl d. \<sigma> s = Some sl \<Longrightarrow> first_child sl = Some d \<Longrightarrow> P d \<Longrightarrow> Q s"
-  assumes geschwist: "\<And>s sl d. \<sigma> s = Some sl \<Longrightarrow> next_sibling sl = Some d \<Longrightarrow> P d \<Longrightarrow> Q s"
-  shows "True"  \<comment> \<open>Platzhalter: die zwei Praemissen sind der Punkt, nicht der Schluss.\<close>
-  by simp
+section \<open>N-1 -- Endlichkeit faellt NICHT aus dieser Deklaration\<close>
+
+text \<open>
+  Die Traegermenge ist \<open>{i. i < N}\<close> -- **aber nur, wenn die Verkettungsfelder in der
+  Tabelle bleiben.** Ein Feld, das hinauszeigt, verlaesst sie.
+
+  Das ist die Pflicht einer ANDEREN Schablone: \<open>table.indexschranke\<close> (S12), \<open>index into T\<close>
+  erbt seine Schranke aus \<open>count N\<close>. **Ohne sie ist die Endlichkeit nicht gegeben, und
+  ohne Endlichkeit gibt es kein Mass** (Zahl der Abkoemmlinge), auf das sich die
+  Wohlfundiertheit stuetzen liesse.
+
+  Der Eintrag nannte diese Abhaengigkeit nicht.
+\<close>
+
+definition im_bereich :: "nat \<Rightarrow> tabelle \<Rightarrow> bool" where
+  "im_bereich N \<sigma> \<longleftrightarrow>
+     (\<forall>s sl. \<sigma> s = Some sl \<longrightarrow>
+        (\<forall>d. first_child sl = Some d \<longrightarrow> d < N) \<and>
+        (\<forall>d. next_sibling sl = Some d \<longrightarrow> d < N))"
+
+lemma kante_bleibt_im_bereich:
+  assumes "im_bereich N \<sigma>"
+  assumes "(d, s) \<in> kante \<sigma>"
+  shows "d < N"
+  using assms by (auto simp: im_bereich_def kante_def)
+
+lemma traeger_endlich:
+  assumes "im_bereich N \<sigma>"
+  shows "finite {d. \<exists>s. (d, s) \<in> kante \<sigma>}"
+proof -
+  have "{d. \<exists>s. (d, s) \<in> kante \<sigma>} \<subseteq> {i. i < N}"
+    using assms kante_bleibt_im_bereich by blast
+  moreover have "finite {i. i < N}" by simp
+  ultimately show ?thesis by (rule finite_subset)
+qed
 
 end

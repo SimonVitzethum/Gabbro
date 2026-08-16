@@ -89,6 +89,7 @@ Neu erhoben 2026-08-15, **nicht wiederhergestellt**, nur x86
 | **`programs/`** | Grund des Bruchs trägt nicht mehr | `dokumente/MESSUNGEN.md` |
 | **N1 (Caprock)** | **`MEM` ist Blatt**, `system.rs:724` ist falsch | `arbeitsprotokoll/03-N1.md` |
 | **Verschlüsse nach Verwendungsart** | **Tor VOID** — die Grundgesamtheit reproduziert nicht (89 → 64), und V-b ist **leer** | `dokumente/MESSUNGEN.md`, *ERGEBNIS Verschlüsse* |
+| **`table.induktion` nach Isabelle** | **BEWIESEN** — die erste Schablone, maschinell geprüft (Isabelle2025-2); vier stille Annahmen ausgespült | `beweise/Table_Induktion.thy`, `gabbro schablonen` |
 | **B3 — nicht traversierbare Rümpfe** | **bestanden, `p = 0,96 %` gegen eine Latte von 5 %** — aber **R1 verfehlt** (Regel nach dem Lauf aufgeschrieben) | `./zaehle-b3.py ../caprock-messbasis`, `dokumente/MESSUNGEN.md` |
 
 > **Der B3-Eintrag ist der einzige in dieser Tabelle, der neben dem Ausgang einen

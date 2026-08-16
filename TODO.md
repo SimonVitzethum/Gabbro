@@ -35,7 +35,7 @@
 # DER KRITISCHE PFAD, in einer Zeile
 
 > ~~**B3**~~ → ~~**K/A/W-Einsetzung**~~ → ~~**`effects`-Lesen**~~ → ~~**Verschlüsse**~~ →
-> **`table.induktion` nach Isabelle** → Gruppen-`ops` → P5 → P6 → P7
+> ~~**`table.induktion` nach Isabelle**~~ → **Gruppen-`ops` → P5 → P6 → P7**
 
 > **Der Pfad hat am 2026-08-16 seinen Kopf gewechselt, und zwar gegen die eigene frühere
 > Angabe.** Nicht Gruppen-`ops`, sondern **die erste bewiesene Schablone**. Der Grund ist
@@ -249,34 +249,6 @@ von Posten, die weder Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
 ---
 
 # MESSUNGEN — brauchen einen Lauf
-
-- [ ] **BLOCKER: auf dieser Maschine ist kein Beweiser installiert.** `isabelle`, `coqc`,
-      `lean`, `agda`, `z3`, `cvc5`, `why3`, `alt-ergo` — **keiner vorhanden.** Damit ist der
-      Kopf des kritischen Pfads (`table.induktion` nach Isabelle) **nicht abschliessbar**;
-      der Formalisierungsversuch ist gefahren und hat vier stille Annahmen ausgespült
-      ([`beweise/Table_Induktion.thy`](beweise/Table_Induktion.thy), im Kopf als **ungeprüft**
-      gekennzeichnet), aber `Stand` bleibt `Entworfen`.
-      **Was es braucht:** eine Isabelle-Installation, oder eine begründete Wahl eines anderen
-      Beweisers — *und die Wahl ist selbst ein Posten, weil sie in die Vertrauensbasis geht.*
-### Was fehlt, um Caprock VOLLSTAENDIG in Gabbro zu schreiben (Stand 2026-08-14)
-
-**Bekannte Blocker: keiner mehr.** Die zwei gemessenen „passt nicht" aus `dokumente/FRAGMENTE.md` sind zu —
-`forever` hat mit `leaves`/`leave` einen Ausgang, `transition` schreibt mit `transset` **mehrere
-Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
-
-**Was fehlt, ist deshalb keine Konstruktliste, sondern MESSUNG:**
-
-
-**Und getrennt davon, weil es nicht die Ausdruckskraft betrifft:** der Uebersetzer steht bei
-**neun von neun angefassten Paessen** (3 ganz, 6 teilweise, **0 offen** — s. `gabbro paesse`);
-**P5–P7 fehlen** (Emission, Litmus-Sonden, ein Caprock-Modul end-to-end), die **C-Formentabelle** (40–60 Eintraege) ist ungeschrieben, und die
-**Beweisschablonen** sind benannt, nicht entworfen.
-
-> **Seit [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) (2026-08-14) sind die neun Entwurfsfragen entschieden.**
-> Was hier steht, ist ueberwiegend **Messung**, nicht Entwurf.
-
-
-
 
 - [ ] **Abnahme der dritten Ergaenzung** (§6): Katalog gegen Zaehlung — **jeder gezaehlte Befehl
       hat ein Axiom oder ein Konstrukt, jede Zeile einen Befehl**; die Mode-Leiter als Sprechprobe

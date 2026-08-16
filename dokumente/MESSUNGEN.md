@@ -4704,3 +4704,74 @@ Ergebnis** — die Deklaration muss die tragende Invariante nennen.
 > **Der Hang ist bestiegen, der Gipfel nicht. Was er abgeworfen hat, ist mehr wert als das,
 > was oben gestanden hätte:** ein „bewiesen" im Register hätte eine Zeile geändert; die vier
 > ausgespülten Bedingungen ändern, was die Schablone überhaupt behauptet.
+
+---
+
+# ERGEBNIS II — `table.induktion` ist **maschinell geprüft**, 2026-08-16
+
+**Isabelle2025-2 ist installiert und die Theorie geht durch.**
+
+```
+Session Unsorted/Gabbro
+Gabbro: theory Gabbro.Table_Induktion 100% (0.293s cumulated time)
+Finished Gabbro (0:00:01 elapsed time)
+```
+
+`sorry`/`oops`: **0.** Fünf Lemmata, zwei Definitionen.
+
+## R14 gilt auch für den Beweiser: er muss ablehnen können
+
+**Bevor das Ergebnis gebucht wurde, ist eine falsche Behauptung eingesetzt worden** —
+`kante_bleibt_im_bereich` mit `shows "d < N ∧ False"`:
+
+```
+*** ⟹ False
+*** At command "by" (line 143 of "…/Table_Induktion.thy")
+Unfinished session(s): Gabbro
+```
+
+**Der Prüfer lehnt ab.** *Ein grüner Lauf, dessen Werkzeug nie rot werden kann, ist kein
+Ergebnis — dieselbe Regel, mit der jede Messung dieses Ordners anfängt.*
+
+## Die Ungültigkeitsprobe: Satz gegen Zeile, in beide Richtungen
+
+| Satz des Eintrags | Zeile der Formalisierung |
+|---|---|
+| **N-1** Endlichkeit | `im_bereich`, `kante_bleibt_im_bereich`, `traeger_endlich` |
+| **N-2** ein Zustand | `kante :: tabelle ⇒ (idx × idx) set` — der Zustand ist **Parameter** |
+| **N-3** Basisfall absorbiert | `blatt_ohne_eigene_klausel` |
+| **N-4** zwei Prämissen | `kante` als Vereinigung, `table_induktion_zwei_kanten` |
+| Wohlfundiertheit ist Hypothese | `assumes wf` in `table_induktion` |
+
+**Umgekehrt: keine Zeile der Formalisierung ohne Satz im Eintrag.** Die Probe ist bestanden.
+
+## **Zwei Grenzen, und die zweite ist die unbequeme**
+
+**Erstens: bewiesen ist die MATHEMATIK, nicht die Auslieferung.** Dass ein *Erzeuger* dieses
+Schema emittiert, ist nicht formalisiert — es gibt keinen Erzeuger, `mutiere-pruefer.py` weist
+die Emissionsflächen mit **0 Mutationen** aus.
+
+**Zweitens, und das ist die Grenze, die man leicht verschweigt:**
+
+> **Die vier Nebenbedingungen hat die HANDARBEIT ausgespült, nicht die Maschine.**
+>
+> Der erste Anlauf hätte am Prüfer scheitern müssen — ein Vorwärtsverweis auf eine nie
+> definierte Funktion. **Ich habe ihn vorher berichtigt.** Die Maschine hat damit *bestätigt*,
+> nicht *entdeckt*.
+
+*Eine Formalisierung, die nur aufschreibt, was ihr Verfasser ohnehin glaubte, kann nicht mehr
+ausspülen als er sah. Das fände erst eine unabhängige.*
+
+## Was sich dadurch ändert — und es ist nicht die Zahl
+
+**`17, davon 16 unbewiesen`.** Die Zahl ist um eins gefallen, und das ist der kleinere Teil.
+
+> **Das Amortisierungsargument gilt zum ersten Mal nicht als Zusage, sondern an einem Fall.**
+> Bis heute lautete der Unterschied zwischen der Schablonenliste und seL4s Beweisberg: *„eine
+> Schablone fällt einmal, nicht je Programm"* — eine Behauptung über eine Fläche, die niemand
+> betreten hatte. **Jetzt ist eine betreten.**
+
+**Und der Test hat die Buchführung erzwungen**, wie er sollte: `ungedeckt() == SCHABLONEN.len()`
+fiel, bis die Zahl hier **und** in `BEWEIS.md` nachgezogen war. Er steht jetzt auf **16** —
+*wer die nächste beweist, fällt wieder; eine Zahl, die sich still mitbewegt, ist keine
+Ratsche.*
