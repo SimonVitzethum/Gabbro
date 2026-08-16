@@ -159,6 +159,52 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         }
     }
 
+    // **U007 -- die Verbindungs-Invariante muss verbinden.**
+    //
+    // Die dritte der drei S17-Pflichten ist die Invariante selbst, und der Pruefer kann sie
+    // nicht BEWEISEN -- das ist Beweisersache. Was er kann, ist die Frage stellen, die die
+    // Gruppe ueberhaupt rechtfertigt:
+    //
+    // > **Nennt diese Aussage mehr als einen Traeger der Gruppe?**
+    //
+    // Tut sie es nicht, gehoert sie an die Tabelle. Das ist dieselbe Absage wie `U004`, nur
+    // eine Ebene tiefer: dort ist die DEKLARATION einelementig, hier die AUSSAGE. *Ohne diese
+    // Pruefung waere `group` eine bequemere Schreibweise fuer `table … invariant` -- und ein
+    // Konstrukt, das nur bequemer ist, hat in diesem Ordner keinen Beleg.*
+    for g in &gruppen {
+        for inv in &g.invarianten {
+            let mut genannt: Vec<String> = Vec::new();
+            pred_namen(&inv.pred, &mut genannt);
+            let treffer: Vec<&Ident> = g
+                .traeger
+                .iter()
+                .filter(|t| genannt.iter().any(|n| n == &t.text))
+                .collect();
+            if treffer.len() < 2 {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "U007",
+                        inv.span,
+                        format!(
+                            "`invariant {}` in `group {}` nennt {} Traeger",
+                            inv.name.text,
+                            g.name.text,
+                            treffer.len()
+                        ),
+                    )
+                    .mit_notiz(
+                        "eine Verbindungs-Invariante quantifiziert ueber MEHREREN Traegern -- \
+                         was ueber einem einzigen gilt, gehoert an die `table … invariant`",
+                    )
+                    .mit_notiz(
+                        "dieselbe Absage wie `U004`, eine Ebene tiefer: dort ist die \
+                         Deklaration einelementig, hier die Aussage",
+                    ),
+                );
+            }
+        }
+    }
+
     if gruppen.is_empty() {
         return;
     }
@@ -210,6 +256,13 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     }
                 }
                 if verschieden.len() >= 2 {
+                    // Der erste Schreibzugriff -- er macht den Zwischenzustand auf, und die
+                    // Absage nennt ihn, weil die Stelle des AUSTRITTS allein nicht sagt,
+                    // wovon man austritt.
+                    let anfang = match &ev[i] {
+                        Ereignis::Schreibt(n, sp) => Some((n.clone(), *sp)),
+                        _ => None,
+                    };
                     for e in &ev[i..j] {
                         if let Ereignis::Austritt(art, span) = e {
                             absagen.schiebe(
@@ -232,7 +285,14 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                                     "S17, dritte Pflicht: kein Zwischenaustritt. Der \
                                      Fehlerpfad ist die Stelle, an der das passiert, weil \
                                      dort niemand hinsieht",
-                                ),
+                                )
+                                .mit_notiz(match &anfang {
+                                    Some((n, sp)) => format!(
+                                        "der Zug faengt bei `{n}` an (Zeichen {})",
+                                        sp.von
+                                    ),
+                                    None => "der Zug faengt am ersten Schreibzugriff an".into(),
+                                }),
                             );
                             break; // eine Meldung je Funktion und Gruppe reicht
                         }
@@ -371,5 +431,71 @@ fn sammle(b: &Block, schreibt: &mut Vec<String>, haelt: &mut Vec<String>) {
             },
             _ => {}
         }
+    }
+}
+
+/// Alle **Grundnamen**, die ein Praedikat nennt -- fuer `U007`.
+fn pred_namen(p: &Pred, aus: &mut Vec<String>) {
+    match &p.art {
+        PredArt::Vergleich(e) => expr_namen(e, aus),
+        PredArt::Element(e, d) => {
+            expr_namen(e, aus);
+            domaene_namen(d, aus);
+        }
+        PredArt::Erreicht { von, nach, .. } => {
+            aus.push(von.basis.text.clone());
+            aus.push(nach.basis.text.clone());
+        }
+        PredArt::Quantor(q) => {
+            domaene_namen(&q.domaene, aus);
+            pred_namen(&q.rumpf, aus);
+        }
+        PredArt::Klammer(x) | PredArt::Nicht(x) => pred_namen(x, aus),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+            pred_namen(a, aus);
+            pred_namen(b, aus);
+        }
+        PredArt::Held { .. } => {}
+    }
+}
+
+fn domaene_namen(d: &Domaene, aus: &mut Vec<String>) {
+    match d {
+        Domaene::SlotsVon(o)
+        | Domaene::NachfahrenVon(o)
+        | Domaene::Schlange(o)
+        | Domaene::ElementeVon(o)
+        | Domaene::AbbildungenVon(o)
+        | Domaene::KetteIn { ort: o, .. } => aus.push(o.basis.text.clone()),
+        Domaene::FelderVon(pf) => {
+            if let Some(i) = pf.teile.last() {
+                aus.push(i.text.clone());
+            }
+        }
+        Domaene::Threads => {}
+    }
+}
+
+fn expr_namen(e: &Expr, aus: &mut Vec<String>) {
+    match &e.art {
+        ExprArt::Ort(o) => {
+            aus.push(o.basis.text.clone());
+            for suf in &o.suffixe {
+                if let OrtSuffix::Index(ix) = suf {
+                    expr_namen(ix, aus);
+                }
+            }
+        }
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => expr_namen(x, aus),
+        ExprArt::Binaer(_, a, b) => {
+            expr_namen(a, aus);
+            expr_namen(b, aus);
+        }
+        ExprArt::Ruf(r) => {
+            for a in &r.argumente {
+                expr_namen(a, aus);
+            }
+        }
+        _ => {}
     }
 }

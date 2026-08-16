@@ -3011,11 +3011,23 @@ impl<'a> Parser<'a> {
             }
             traeger.push(self.erwarte_ident()?);
         }
-        let zu = self.erwarte_z(Z::GeschweiftZu)?;
-        self.erwarte_z(Z::Semi)?;
+        let mut zu = self.erwarte_z(Z::GeschweiftZu)?;
+        // **Der Rumpf ist freigestellt, die Invariante nicht bedeutungslos.** `group N over
+        // { A, B };` deklariert den Verbund und laesst `U003`/`U005`/`U006` greifen -- den
+        // SPERRABDRUCK und den ZUG. Erst der Rumpf traegt die Verbindungsaussage selbst.
+        let mut invarianten = Vec::new();
+        if self.friss_z(Z::GeschweiftAuf) {
+            while !self.ist_z(Z::GeschweiftZu) {
+                invarianten.push(self.invariant()?);
+            }
+            zu = self.erwarte_z(Z::GeschweiftZu)?;
+        } else {
+            self.erwarte_z(Z::Semi)?;
+        }
         Ok(GruppeDecl {
             name,
             traeger,
+            invarianten,
             span: anfang.bis_zu(zu),
         })
     }

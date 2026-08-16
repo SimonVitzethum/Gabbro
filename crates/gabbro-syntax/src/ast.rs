@@ -1105,6 +1105,10 @@ pub struct GruppeDecl {
     pub name: Ident,
     /// Die Traeger. **Mindestens zwei** -- eine Gruppe mit einem Mitglied ist eine Tabelle.
     pub traeger: Vec<Ident>,
+    /// **Die Verbindungs-Invarianten.** Der Grund, warum es die Gruppe gibt: eine Aussage,
+    /// die ueber MEHREREN Traegern quantifiziert und die deshalb an keiner einzelnen
+    /// `table … invariant` stehen kann.
+    pub invarianten: Vec<Invariante>,
     pub span: Span,
 }
 

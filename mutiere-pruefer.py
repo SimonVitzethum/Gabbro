@@ -284,6 +284,13 @@ MUTATIONEN = [
         "E006 -- ein `locks`-Block braucht keine erklaerte Sperre",
     ),
     Mutation(
+        "gruppe-invariante-egal",
+        "gruppe.rs",
+        "            if treffer.len() < 2 {",
+        "            if treffer.len() < 0 {",
+        "U007 -- eine Gruppen-Invariante darf einen einzigen Traeger nennen",
+    ),
+    Mutation(
         "gruppe-austritt-egal",
         "gruppe.rs",
         "                    for e in &ev[i..j] {",

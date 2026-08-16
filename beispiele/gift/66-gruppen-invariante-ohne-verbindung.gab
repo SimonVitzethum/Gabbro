@@ -1,22 +1,21 @@
--- 17 -- **Die Traegergruppe, und warum sie zwei Sperren nimmt.**
+-- erwartet: U007
+-- **Gift 66 -- eine Gruppen-Invariante, die nichts verbindet.**
 --
--- Gemessen (`dokumente/MESSUNGEN.md`, SWEEP der Verbindungs-Invarianten, 2026-08-16): im
--- Bestand liegen vier Invarianten zwischen je zwei Traegern. Drei unter EINER Sperre --
--- die deckt `lock … protects { A, B }` bereits. **Die vierte nicht:**
+-- Die Gruppe existiert fuer eine Aussage ZWISCHEN Traegern. Diese hier quantifiziert ueber
+-- `Endpunkte` und liest `Endpunkte` -- sie nennt `Faeden` gar nicht. Damit ist sie eine
+-- `table Endpunkte … invariant` mit mehr Zeremonie, und die Gruppe waere bloss die
+-- bequemere Schreibweise.
 --
---   ein Faden steht in der Empfaengerliste eines Endpunkts  <=>  sein Grund ist gesetzt
+-- **Ein Konstrukt, das nur bequemer ist, hat in diesem Ordner keinen Beleg** (W3).
 --
--- Zwei Traeger, zwei Sperren, eine Ordnung. Diese Datei ist die richtige Fassung; die
--- falsche steht als `beispiele/gift/63-gruppe-halb-gesperrt.gab` daneben und faellt mit
--- `U003`.
+-- `U007` ist dieselbe Absage wie `U004`, eine Ebene tiefer: dort ist die DEKLARATION
+-- einelementig, hier die AUSSAGE.
 --
--- **Die Ordnung wird hier NICHT deklariert.** Sie steht in `rank 1` und `rank 2` -- eine
--- zweite Deklaration an der Gruppe waere eine zweite Wahrheit ueber dieselbe Sache. `U005`
--- faellt, wenn zwei Sperren einer Gruppe denselben Rang tragen: dann gibt es keine Ordnung.
+-- ERWARTET: U007, und sonst nichts.
 
 
 
-module beispiel::gruppe {
+module gift66 {
 
 const NFAEDEN    : u32 = 256;
 const NPUNKTE    : u32 = 64;
@@ -45,8 +44,7 @@ group Zustellung over { Endpunkte, Faeden } {
     -- eigenen Traeger quantifiziert. `U007` faellt, wenn eine Gruppen-Invariante nur EINEN
     -- Traeger nennt: dann gehoert sie an die Tabelle, und die Gruppe waere bloss bequemer.
     invariant wartende_haben_grund cost O(n) runs offline :
-        forall e in slots of Endpunkte :
-            Faeden.slots[Endpunkte.slots[e].wartet].gruende > 0;
+        forall e in slots of Endpunkte : Endpunkte.slots[e].wartet > 0;
 }
 
 -- **Der Fehler.** Beide Traeger geschrieben, nur `PUNKTE` gehalten.

@@ -646,13 +646,18 @@ lockdecl   = "lock" ident "protects" "{" placelist "}"
              "rank" constexpr [ "held" "<=" constexpr "ops" ]
              [ "shared" "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
 lockstmt   = "locks" [ "shared" ] place block ;
-gruppedecl = "group" ident "over" "{" ident { "," ident } [ "," ] "}" ";" ;
+gruppedecl = "group" ident "over" "{" ident { "," ident } [ "," ] "}"
+             ( "{" { invariant } "}" | ";" ) ;
 ```
 
 ```gabbro
 lock CAPS protects { plaetze, cdt } rank 2 masks irqs;
 atomic COLOR_DONE : bool publishes { color_report } release;
-group Zustellung over { Endpunkte, Faeden };
+group Zustellung over { Endpunkte, Faeden } {
+    invariant wartende_haben_grund cost O(n) runs offline :
+        forall e in slots of Endpunkte :
+            Faeden.slots[Endpunkte.slots[e].wartet].gruende > 0;
+}
 ```
 
 **`group` traegt die Invariante, die zwischen zwei Traegern lebt** — *„der Zaehler in A
@@ -664,7 +669,15 @@ quantifiziert nur ueber ihrem eigenen Traeger.
 zweite Wahrheit ueber dieselbe Sache. Was der Pruefer daraus macht: `U003` verlangt, dass
 eine Funktion, die **zwei** Traeger einer Gruppe schreibt, **alle** ihre Sperren haelt, und
 `U005` faellt, wenn zwei Sperren einer Gruppe denselben Rang tragen — dann gibt es keine
-Ordnung, und die Gruppenoperation koennte sie in zwei Richtungen nehmen.
+Ordnung, und die Gruppenoperation koennte sie in zwei Richtungen nehmen. `U006` faellt, wenn
+ein Weg den Rumpf **zwischen** dem ersten und dem letzten Schreibzugriff verlaesst
+(`return`, `leave`, `let … else`) — dort gilt die Invariante nicht.
+
+**Der Rumpf ist freigestellt, die Invariante nicht bedeutungslos.** Ohne Rumpf greifen
+Sperrabdruck und Zug; erst mit ihm steht die Verbindungsaussage selbst da. **`U007` faellt,
+wenn eine Gruppen-Invariante weniger als zwei Traeger der Gruppe nennt** — dann gehoert sie
+an die `table … invariant`, und die Gruppe waere bloss die bequemere Schreibweise. *Ein
+Konstrukt, das nur bequemer ist, hat keinen Beleg (W3).*
 
 *Der gemessene Bedarf steht in `MESSUNGEN.md`, SWEEP der Verbindungs-Invarianten: vier im
 Bestand, drei unter einer Sperre, eine (V4) ueber zwei Kisten mit zwei Sperrklassen.*
