@@ -85,17 +85,18 @@ von Posten, die weder Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
 ---
 
 # ENTSCHEIDUNGEN — brauchen ein Urteil, keinen Lauf
-### Die Gruppe: Sperrabdruck und Zug stehen — offen ist die INVARIANTE
+### Die Gruppe: drei Formen stehen — offen ist die ERHALTUNG
 
-- [ ] **Zwei der drei S17-Pflichten stehen. Die mittlere fehlt, und sie ist die eigentliche.**
-      Gebaut: (a) Sperren in Rangordnung (`U003`/`U005`), (c) kein Zwischenaustritt (`U006`).
-      **Offen: (b) die Invariante gilt am Anfang und am Ende des Zuges** — dafür braucht die
-      Gruppe eine `invariant`-Klausel über **zwei** Trägern, und die ist ohne `spec fn` über
-      der Gruppe nicht formulierbar.
-      **Der Befund aus dem Bau, der die Reihenfolge ändert:** (c) war ohne jede Erzeugung
-      prüfbar — die Pflicht klingt nach einer Aussage über einen erzeugten Zug und ist eine
-      über den Kontrollfluss. *Damit ist die Gruppenoperation NICHT mehr die Vorbedingung für
-      die Klausel; sie kann direkt kommen.*
+- [ ] **Alle drei S17-Pflichten stehen als FORM. Was fehlt, ist die Erhaltung.**
+      Gebaut: (a) Sperren in Rangordnung (`U003`/`U005`), (c) kein Zwischenaustritt (`U006`),
+      (b) die Aussage verbindet (`U007`).
+      **Nachgezogen 2026-08-16:** die Klausel steht, und mit ihr `U007` — eine
+      Gruppen-Invariante muss **mindestens zwei** Träger nennen, sonst gehört sie an die
+      Tabelle. Damit ist (b) als **Form** gebaut. **Offen bleibt (b) als ERHALTUNG:** dass die
+      Aussage unter einer Operation hält, ist Beweisersache und fällt an S16/S17 — der Prüfer
+      stellt die drei Bedingungen her, unter denen die Frage überhaupt gestellt werden kann.
+      **Der nächste Schritt ist damit die Gruppenoperation** (`ops` über der Gruppe), und sie
+      ist jetzt kein Vorbau mehr, sondern der Empfänger der Beweispflicht.
 
 ### «B41» — drei Domänen sind gemessen gefordert. Bauen oder nicht?
 

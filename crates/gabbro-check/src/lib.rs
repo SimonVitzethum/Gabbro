@@ -159,14 +159,13 @@ pub fn passliste() -> Vec<Pass> {
             name: "Gruppe",
             quelle: "MESSUNGEN.md, SWEEP der Verbindungs-Invarianten (2026-08-16), V4",
             zustand: Zustand::Teilgebaut(
-                "gebaut: der SPERRABDRUCK (`U001`-`U005`) und der ZUG (`U006`). Wer zwei \
-                 Traeger einer Gruppe schreibt, haelt alle ihre Sperren; zwei Sperren \
-                 gleichen Rangs sind keine Ordnung; und **kein Weg verlaesst den Rumpf \
-                 zwischen dem ersten und dem letzten Schreibzugriff** -- das ist die dritte \
-                 Pflicht aus S17, und sie ist ohne jede Erzeugung pruefbar. **NICHT gebaut: \
-                 die Invariante selbst** -- die Gruppe nennt ihre Traeger, nicht ihre \
-                 Verbindungsaussage. Zwei der drei S17-Pflichten stehen, die mittlere \
-                 (`gilt am Anfang und am Ende`) braucht die Klausel",
+                "gebaut: der SPERRABDRUCK (`U001`-`U005`), der ZUG (`U006`) und die \
+                 VERBINDUNGSAUSSAGE als Form (`U007`: eine Gruppen-Invariante nennt \
+                 mindestens zwei Traeger, sonst gehoert sie an die Tabelle). **NICHT \
+                 gebaut: die Erhaltung** -- dass die Invariante unter einer Operation HAELT, \
+                 ist Beweisersache und faellt an S16/S17, nicht an diesen Pass. Er prueft \
+                 die drei Bedingungen, unter denen die Frage ueberhaupt gestellt werden \
+                 kann",
             ),
         },
         Pass {

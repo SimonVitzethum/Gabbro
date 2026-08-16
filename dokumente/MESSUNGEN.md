@@ -4300,3 +4300,49 @@ Ein Austritt in einem Zweig, der den zweiten Schreibzugriff gar nicht erreichen 
 trotzdem gemeldet. **Zu viel zu melden ist hier die sichere Seite** — die Absage sagt *„hier
 verlässt ein Weg den Zug"*, und wer weiss, dass dieser Weg nicht existiert, hat den Beweis
 dafür zu schreiben, nicht der Pass.
+
+---
+
+# `U007` — die Verbindungsaussage, und wo der Prüfer aufhört
+
+**Die dritte S17-Pflicht ist jetzt als FORM gebaut, nicht als Beweis.** Der Unterschied ist
+die ganze Aussage dieses Abschnitts:
+
+| | Frage | wer beantwortet sie |
+|---|---|---|
+| **Form** | *Nennt diese Invariante mehr als einen Träger der Gruppe?* | **`U007`, mechanisch** |
+| **Erhaltung** | *Hält sie unter jeder Operation?* | **S16/S17 — Beweisersache** |
+
+> **`U007` ist dieselbe Absage wie `U004`, eine Ebene tiefer:** dort ist die **Deklaration**
+> einelementig, hier die **Aussage**. Und der Grund ist derselbe: *ohne diese Prüfung wäre
+> `group` eine bequemere Schreibweise für `table … invariant` — und ein Konstrukt, das nur
+> bequemer ist, hat nach W3 keinen Beleg.*
+
+## Die Zeile, wie sie jetzt aussieht
+
+```gabbro
+group Zustellung over { Endpunkte, Faeden } {
+    invariant wartende_haben_grund cost O(n) runs offline :
+        forall e in slots of Endpunkte :
+            Faeden.slots[Endpunkte.slots[e].wartet].gruende > 0;
+}
+```
+
+**Der Rumpf ist freigestellt.** Ohne ihn greifen Sperrabdruck (`U003`/`U005`) und Zug
+(`U006`) — die Gruppe ist also schon vor ihrer Invariante nützlich. *Das war nicht geplant und
+ist der zweite Befund dieses Baus: die zwei mechanischen Pflichten aus S17 hängen gar nicht
+an der Aussage, sondern am Kontrollfluss und an den Rängen.*
+
+## Stand der Trägergruppe
+
+| | | |
+|---|---|---|
+| `U001`–`U002` | Träger existiert, Träger ist gesperrt | |
+| `U003`, `U005` | **(a)** Sperren, Rangordnung | S17 |
+| `U006` | **(c)** kein Zwischenaustritt | S17 |
+| `U007` | **(b)** die Aussage verbindet | S17, **Form** |
+| — | **(b)** die Aussage **hält** | **offen, Beweisersache** |
+
+**61 von 61 Mutationen.** Belege: `beispiele/17-gruppe-ueber-zwei-sperren.gab` (Gruppe mit
+Invariante, sauber), Gift 63 (`U003`), 64 (`U006` via `return`), 65 (`U006` via `let … else`
+mit divergentem Sonst-Zweig), 66 (`U007`).

@@ -31,7 +31,7 @@
 | 7 | Paarung *(teilweise)* | `V001`–`V004` | `paarung.rs` |
 | 8 | effects *(teilweise)* | `E001`–`E010` | `wirkungen.rs` — seit 2026-08-16 **mit Lesehälfte** (Lesart A) |
 | 9 | costs *(teilweise)* | `K001`–`K004` | `kosten.rs` |
-| **10** | **Gruppe** *(neu, teilweise)* | `U001`–`U006` | `gruppe.rs` — **Sperrabdruck und Zug**; zwei der drei S17-Pflichten |
+| **10** | **Gruppe** *(neu, teilweise)* | `U001`–`U007` | `gruppe.rs` — Sperrabdruck, Zug **und Verbindungsaussage** |
 
 > **„Teilweise" heisst bei M2, M3 und Paarung nicht „halb fertig", sondern „fertig, ruht auf
 > einem benannten Posten"** — Ghost-Löschung, Barriere aus dem Raum, Speichermodell. **Drei
@@ -117,7 +117,7 @@ die niemand gegeneinander prüft.*
 ./pruefe-wortschatz.py    Terminale gegen Tabelle, Sonderform-Zähler (3 von 5)
 ./pruefe-todo.py          hält die Aufgabenliste gegen sich selbst, acht Klassen
 ./pruefe-kennungen.py     keine Absage-Kennung in zwei Dateien
-./mutiere-pruefer.py      beschädigt je eine Regel:  60 von 60
+./mutiere-pruefer.py      beschädigt je eine Regel:  61 von 61
 ./erzeuge-mutationen.py   verdreht systematisch:      7 von 39
 ./pruefe-luecken.py       die benannten Lücken einzeln: 13 von 15
 ./commit.sh               R19 — Commit-Nachrichten nur über Datei
@@ -133,5 +133,5 @@ einem **bezahlten Fehler in diesem Ordner**, jede nennt den Schaden.
 
 ## Proben
 
-**18 saubere Beispiele, 65 Giftproben, 76 Tests** —
+**18 saubere Beispiele, 66 Giftproben, 76 Tests** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`
