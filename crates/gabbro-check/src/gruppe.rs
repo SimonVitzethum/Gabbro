@@ -81,11 +81,11 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 Absage::fehler(
                     "U004",
                     g.span,
-                    format!("`group {}` nennt nur einen Traeger", g.name.text),
+                    format!("`group {}` names only one carrier", g.name.text),
                 )
                 .mit_notiz(
-                    "eine Gruppe existiert fuer eine Invariante ZWISCHEN Traegern -- was \
-                     ueber einem einzigen gilt, ist eine `table … invariant`",
+                    "a group exists for an invariant BETWEEN carriers -- what holds over a \
+                     single one is a `table … invariant`",
                 ),
             );
         }
@@ -99,9 +99,9 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     Absage::fehler(
                         "U001",
                         t.span,
-                        format!("`group {}` nennt `{}`, das kein Traeger ist", g.name.text, t.text),
+                        format!("`group {}` names `{}`, which is not a carrier", g.name.text, t.text),
                     )
-                    .mit_notiz("Traeger sind `table`, `static` und `state`"),
+                    .mit_notiz("carriers are `table`, `static` and `state`"),
                 );
                 continue;
             }
@@ -113,14 +113,14 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                             "U002",
                             t.span,
                             format!(
-                                "`{}` liegt in `group {}`, steht aber unter keiner Sperre",
+                                "`{}` is in `group {}` but sits under no lock",
                                 t.text, g.name.text
                             ),
                         )
                         .mit_notiz(
-                            "eine Verbindungs-Invariante ueber einem ungeschuetzten Traeger \
-                             ist auf einem Mehrkerner keine Aussage -- der Abdruck der \
-                             Gruppenoperation waere unvollstaendig",
+                            "a connecting invariant over an unprotected carrier says nothing on a \
+                             multicore machine -- the footprint of the group operation \
+                             would be incomplete",
                         ),
                     );
                 }
@@ -140,18 +140,18 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                             "U005",
                             g.span,
                             format!(
-                                "`group {}` spannt `{}` und `{}` -- beide `rank {}`",
+                                "`group {}` spans `{}` and `{}` -- both `rank {}`",
                                 g.name.text, a.1, b.1, a.2
                             ),
                         )
                         .mit_notiz(
-                            "zwei Sperren gleichen Rangs haben keine Ordnung; eine \
-                             Gruppenoperation koennte sie in zwei Richtungen nehmen, und \
-                             genau daraus entsteht die Verklemmung",
+                            "two locks of equal rank have no order; a group operation could take \
+                             them in either direction, and that is exactly where the \
+                             deadlock comes from",
                         )
                         .mit_notiz(
-                            "die Ordnung wird NICHT an der Gruppe deklariert -- sie steht in \
-                             den `rank`-Zahlen, und dort ist sie zu berichtigen",
+                            "the order is NOT declared at the group -- it lives in the `rank` \
+                             numbers, and that is where it must be corrected",
                         ),
                     );
                 }
@@ -186,19 +186,19 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                         "U007",
                         inv.span,
                         format!(
-                            "`invariant {}` in `group {}` nennt {} Traeger",
+                            "`invariant {}` in `group {}` names {} carriers",
                             inv.name.text,
                             g.name.text,
                             treffer.len()
                         ),
                     )
                     .mit_notiz(
-                        "eine Verbindungs-Invariante quantifiziert ueber MEHREREN Traegern -- \
-                         was ueber einem einzigen gilt, gehoert an die `table … invariant`",
+                        "a connecting invariant quantifies over SEVERAL carriers -- what holds \
+                         over a single one belongs on the `table … invariant`",
                     )
                     .mit_notiz(
-                        "dieselbe Absage wie `U004`, eine Ebene tiefer: dort ist die \
-                         Deklaration einelementig, hier die Aussage",
+                        "the same refusal as `U004`, one level down: there the DECLARATION is \
+                         a singleton, here the STATEMENT is",
                     ),
                 );
             }
@@ -270,28 +270,26 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                                     "U006",
                                     *span,
                                     format!(
-                                        "`{}` verlaesst `group {}` mit `{art}` im \
-                                         Zwischenzustand",
+                                        "`{}` leaves `group {}` via `{art}` while in the \
+                                         intermediate state",
                                         f.name.text, g.name.text
                                     ),
                                 )
                                 .mit_notiz(
-                                    "zwischen dem ersten und dem letzten Schreibzugriff auf \
-                                     die Traeger der Gruppe gilt die Verbindungs-Invariante \
-                                     NICHT -- ein Weg, der hier hinausfuehrt, hinterlaesst \
-                                     sie gebrochen",
+                                    "between the first and the last write to the carriers of the \
+                                     group the connecting invariant does NOT hold -- a path \
+                                     leaving here leaves it broken",
                                 )
                                 .mit_notiz(
-                                    "S17, dritte Pflicht: kein Zwischenaustritt. Der \
-                                     Fehlerpfad ist die Stelle, an der das passiert, weil \
-                                     dort niemand hinsieht",
+                                    "S17, third obligation: no intermediate exit. The error path is \
+                                     where this happens, because nobody looks there",
                                 )
                                 .mit_notiz(match &anfang {
                                     Some((n, sp)) => format!(
-                                        "der Zug faengt bei `{n}` an (Zeichen {})",
+                                        "the move starts at `{n}` (character {})",
                                         sp.von
                                     ),
-                                    None => "der Zug faengt am ersten Schreibzugriff an".into(),
+                                    None => "the move starts at the first write".into(),
                                 }),
                             );
                             break; // eine Meldung je Funktion und Gruppe reicht
@@ -305,7 +303,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                         "U003",
                         f.name.span,
                         format!(
-                            "`{}` schreibt {} Traeger von `group {}`, haelt aber {} nicht",
+                            "`{}` writes {} carriers of `group {}` but does not hold {}",
                             f.name.text,
                             beruehrt.len(),
                             g.name.text,
@@ -313,13 +311,13 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                         ),
                     )
                     .mit_notiz(
-                        "die Verbindungs-Invariante gilt am Anfang und am Ende des Zuges, \
-                         nicht dazwischen -- wer nur eine Haelfte sperrt, laesst den \
-                         Zwischenzustand fuer einen anderen Kern sichtbar",
+                        "the connecting invariant holds at the start and at the end of the \
+                         move, not in between -- locking only one half leaves the \
+                         intermediate state visible to another core",
                     )
                     .mit_notiz(
-                        "gemessen an V4 (`MESSUNGEN.md`, SWEEP): genau dieser Fall wird im \
-                         Bestand von einem KOMMENTAR getragen, nicht von einer Zusage",
+                        "measured at V4 (`MESSUNGEN.md`, SWEEP): in the existing tree this \
+                         very case is carried by a COMMENT, not by a promise",
                     ),
                 );
             }

@@ -92,20 +92,20 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                                         "R001",
                                         p.name.span,
                                         format!(
-                                            "`{}` zeigt in den `dma`-Raum auf `{}`, und diese \
-                                             Tabelle nennt `ops`",
+                                            "`{}` points into the `dma` space at `{}`, and that \
+                                             table declares `ops`",
                                             p.name.text, n.text
                                         ),
                                     )
                                     .mit_notiz(
-                                        "die K-Bedingung verlangt, dass ALLE Schreibstellen \
-                                         des Traegers erzeugt sind -- ein Geraet schreibt an \
-                                         jeder Grammatik vorbei",
+                                        "the K condition requires that ALL write sites of the \
+                                         carrier are generated -- a device writes past any \
+                                         grammar there is",
                                     )
                                     .mit_notiz(
-                                        "die ehrliche Fassung ist eine Platzierungsregel wie \
-                                         bei der GDT: ein `by ops`-Traeger liegt in keinem \
-                                         `dma`-erreichbaren Bereich",
+                                        "the honest form is a placement rule, like the one for \
+                                         the GDT: a `by ops` carrier lies in no \
+                                         `dma`-reachable region",
                                     ),
                                 );
                             }
@@ -175,13 +175,13 @@ fn schreibt(o: &Ort, span: Span, zeiger: &BTreeMap<String, Zeiger>, absagen: &mu
                 "R002",
                 span,
                 format!(
-                    "`{}` wird geschrieben, der Zeiger traegt aber kein `w`",
+                    "`{}` is written, but the pointer carries no `w`",
                     o.text()
                 ),
             )
             .mit_notiz(format!(
-                "`{}` steht als `ptr<{}, …>` ohne Schreibrecht -- das ist ein \
-                 Uebersetzungsfehler, keine Laufzeitpruefung",
+                "`{}` is declared `ptr<{}, …>` without write permission -- that is a \
+                 compile error, not a runtime check",
                 o.basis.text,
                 raumname(&z.raum)
             )),
@@ -198,9 +198,9 @@ fn liest(o: &Ort, span: Span, zeiger: &BTreeMap<String, Zeiger>, absagen: &mut A
             Absage::fehler(
                 "R003",
                 span,
-                format!("`{}` wird gelesen, der Zeiger traegt aber kein `r`", o.text()),
+                format!("`{}` is read, but the pointer carries no `r`", o.text()),
             )
-            .mit_notiz("ein `w`-Zeiger ist nicht lesbar -- `class w` an einem Register meint dasselbe"),
+            .mit_notiz("a `w` pointer is not readable -- `class w` on a register means the same"),
         );
     }
 }
