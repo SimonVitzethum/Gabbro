@@ -54,7 +54,26 @@ weder Code noch Lauf ist, sondern **ein Wort des Ordners**, ist der Schlitz:
 
 | | |
 |---|---|
-| **`M-effects-lesen` — Richtung** | `_____` |
+| **`M-effects-lesen` — Richtung** | **A** — die zehn Fragmentfunktionen nachdeklarieren (2026-08-16) |
+
+**Begründung, und sie hat zwei Teile, die beide nachprüfbar sind:**
+
+1. **E3-Konsistenz.** Der Ordner sagt an jeder anderen Stelle *„nichts ist implizit"*. Eine
+   gröbere Rahmenzusage (C) wäre genau die stille Ausnahme — ein Lesen, das keine Zeile
+   nennt, weil die Zeile zu lang würde.
+2. **A ist die Lesart, deren Verletzung der Pass PRÄZISE melden kann.** C meldet
+   *„irgendwo ausserhalb von `mmio`/`dma`/`atomic` gelesen"*; A meldet **welche Funktion
+   welchen Ort liest, ohne ihn zu nennen**. *Was man nicht genau melden kann, setzt kein
+   Pass durch — dieselbe Begründung, an der Lesart B gestorben ist.*
+
+**Der Preis steht daneben und wird nicht kleingeredet:** A lässt **10 von 32 Funktionen
+fallen**, C nur drei — Faktor drei. **Das ist der teurere Ausgang, und er ist gewollt:** die
+zehn sind nachzudeklarieren, nicht freizustellen.
+
+**Rückbauweg (R12), damit die Entscheidung billig bleibt:** die Lesehälfte ist ein Zusatz in
+`wirkungen.rs` gegen dieselbe Liste, gegen die heute das Schreiben läuft. Fällt sie, fällt
+eine Absageklasse und die zehn Nachdeklarationen — *keine Grammatikänderung, kein Datentyp,
+kein Beispiel muss zurück.*
 
 **A** = die zehn Fragmentfunktionen nachdeklarieren (Vollzählung) · **C** = gröbere
 Rahmenzusage (nur `mmio`/`dma`/`atomic`). Gemessen: **A lässt 10 von 32 Funktionen fallen,
@@ -62,7 +81,8 @@ C drei** — Faktor drei. **Lesart B ist durch ihren eigenen Befund ausgeschiede
 nicht mechanisch trennbar, und *was man nicht zählen kann, kann kein Pass durchsetzen.*
 Beide verbleibenden sind billig rückbaubar, also **R12-fähig, sobald die Richtung dasteht**.
 
-*Steht hier keine Richtung, bleibt Pass 8 bei der heutigen Prüfung — keine stille Wahl.*
+*Die Richtung steht. Damit ist der kritische Pfad zum ersten Mal frei von Posten, die weder
+Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
 
 ---
 

@@ -3132,8 +3132,20 @@ Linearitaet — und nichts ueber die 38 Wertaussagen, die daneben stehen bleiben
 
 ```
 Kennzahl  >=  1,90        (Pflichtseite, Population 81; 1,98 mit N_L = 73)
-Aufschlag aus B3  >=  +0,05   — unter der Aufloesung, aber getrennt gefuehrt
+
+Aufschlag aus B3  =  >= +0,05  UNTER GETRAGENER INDEX-BUCHUNG
+                     +1,03     FAELLT SIE
 ```
+
+> **Der Aufschlag wird BEDINGT eingesetzt, nicht absolut** — und die Bedingung steht in der
+> Formel, nicht drei Absaetze darueber. *Eine Einsetzung, die ihre Bedingung nicht mitfuehrt,
+> ist die naechste Zahl, die parallel zur Wahrheit laeuft, sobald jemand die Buchung anfasst.*
+
+**Die Bedingung ist stabil, und das gehoert dazu, sonst liest sich die Zeile bedrohlicher als
+sie ist:** die Klasse *Index* ruht auf **2 143 Fundstellen** und auf **purer M1-Mechanik**
+(`index into T` erbt die Schranke aus `count N`, A3, geprueft von `M103`) — **sie ist die
+bestbelegte Klasse der Neuerhebung** (Rang 1 der elf, s. o.). *Bedingt heisst nicht wackelig;
+es heisst benannt.*
 
 **Der Vorbehalt der Messung steht hier woertlich, weil er genau an dieser Stelle gebraucht
 wird und nirgends sonst:**
@@ -3618,6 +3630,24 @@ der ehrlichere Satz als die Null allein.*
 > nicht her, weil die Regel jetzt bekannt ist. **R1 ist eine Einmalregel, und sie ist hier
 > verfehlt.** Die Zahl gilt als *untere Schranke mit bestandenem, regelinvariantem Tor* —
 > nicht als vorregistrierte Messung.
+>
+> ---
+>
+> ## **Der Satz, auf den die ganze Messung hinausläuft:**
+>
+> ## **Das Tor ist regelinvariant, aber buchungsvariant.**
+>
+> | | Spanne | Wirkung aufs Tor |
+> |---|---|---|
+> | **Regelfassungen** (0,03 % … 4,36 %) | **Faktor 130** | **keine** — alle vier bestehen |
+> | **eine einzige Buchungsentscheidung** (Klasse *Index*) | **Faktor 21** | **das Tor kippt** |
+>
+> **Die Regelinvarianz trägt als Rettung mehr, als sie klingt:** ein Ergebnis, das über eine
+> Faktor-130-Spanne **bewusst zu grober** Regeln stabil bleibt, ist gegen Regel-Fitting gut
+> verteidigt. **Und ihre Grenze steht im selben Satz:** sie gilt nur innerhalb der
+> **erprobten** Fassungen. Vier Fassungen sind keine Stichprobe aus dem Regelraum; sie sind
+> vier Punkte, die ich gewählt habe. *Genau deshalb bleibt R1 als verfehlt gebucht, statt
+> durch die Invarianz aufgehoben zu werden.*
 
 ## VORAB — nachträglich aufgeschrieben (s. Kasten), Wortlaut wie beim Lauf verwendet
 
@@ -4030,3 +4060,68 @@ git status --porcelain | wc -l                                            # 0 �
 
 Werkzeug: [`zaehle-b3.py`](../zaehle-b3.py), Marken und Ausnahmen im Kopfkommentar und
 in den Regexen `KETTE`/`IDXKETTE`/`KANTENKETTE`/`CHIR`/`DOM_LINK_ABSTIEG`.
+
+---
+
+# SWEEP — die anderen Verbindungs-Invarianten, 2026-08-16
+
+**Was hier NICHT wiederholt wird:** der Papierdurchgang am CapSpace/CDT-Paar. Der ist
+gefahren (K1–K3 plus vier strukturelle, die Gruppe existiert als `CapSpace`-Struktur mit
+genau drei `refcount`-Schreibstellen, Sperrabdruck eine `CAPS`-RwSperre), und E1–E3 im
+`TODO.md` zitieren ihn. **Offen war nicht der Durchgang, sondern der Quantor des
+Prüfsatzes** — *„**jede** im Baum vorkommende Verbindungs-Invariante hat eine Gruppe, deren
+`ops` sie schliessen"* —, und dafür fehlte der Durchlauf nach den **anderen**.
+
+**Und B3 hatte den zweiten Prüffall schon geliefert**, ohne dass er als solcher gebucht war:
+die Spendenkanten `sc_donor`/`sc_donee`, der gemessen teure Teil von `switch_to`, sind
+wörtlich eine Verbindungs-Invariante — Reziprozität über **zwei TCBs**, dieselbe Form wie die
+Mdb-Geschwister.
+
+## Die vier gefundenen, je mit Träger und Sperrabdruck
+
+| | Verbindungs-Invariante | Träger | Sperrabdruck der Gruppen-`ops` |
+|---|---|---|---|
+| **V1** | `refcount_matches` — Zähler in A gegen Verweise in B | **eine** Struktur (`CapSpace`) | **eine** Sperre: `CAPS`, zweistufig |
+| **V2** | **Reziprozität der Spendenkanten** — `tcbs[t].sc_donor == Some(a)` ⟺ `tcbs[a].sc_donee == Some(t)` | **eine** Struktur (`Scheduler.tcbs`) | **eine** Sperre: `SCHEDS[core]` |
+| **V3** | Warteschlangenmarke gegen Bereitliste — `tcbs[t].queued` gegen die tatsächliche Verkettung | **eine** Struktur (`Scheduler`) | **eine** Sperre: `SCHEDS[core]` |
+| **V4** | **Endpoint-Warteschlange gegen Thread-Zustand** — `t ∈ ep.receivers` ⟺ `IPC ∈ tcbs[t].reasons` | **ZWEI Strukturen, zwei Kisten** (`caprock-ipc::Endpoint` / `caprock-sched::Scheduler`) | **ZWEI Sperren, zwei Klassen, deklarierte Ordnung `EPS[i] < SCHEDS[core]`** |
+
+**Fundstellen (W7):** V2 — `crates/caprock-sched/src/lib.rs`:958–959 (setzen), 1704–1705,
+1937–1938, 1947–1948 (lösen), 1537/1596 (lesen). V3 — ebd. 1881, 1912, 1823. V4 —
+`crates/caprock-ipc/src/lib.rs`:513, 625, 652, 675, 692 gegen
+`crates/caprock-sched/src/lib.rs`:930, 935, 1004, 1008; Ordnung in
+`kernel/src/system.rs`:724 und :881.
+
+## **V4 ist der erste Abdruck, der nicht eine einzelne Sperre ist — und damit der erste echte Test für die `locks`-Zeile der Gruppengrammatik**
+
+> Eine Gruppen-`ops` über V4 müsste **`EPS[i]` und `SCHEDS[core]` halten**, in dieser
+> Reihenfolge, über zwei Kisten hinweg. **Das beantwortet die `locks ordered`-Frage
+> empirisch: es sind zwei Sperren mit Ordnung, nicht eine gemeinsame.**
+
+**Und der Kernel sagt es selbst, in derselben Zeile, in der er sich absichert:** der
+Fault-Hook in `crates/caprock-microkit/src/lib.rs`:1303–1305 steht dort, wo er steht, **weil
+er sonst `EPS` unter `SCHEDS` nähme und die Ordnung umdrehte.** *Eine Gruppe, deren `ops` die
+Ordnung deklarieren, hätte diesen Kommentar überflüssig gemacht — er ist eine von Hand
+getragene Verbindungs-Invariante zwischen zwei Sperren.*
+
+## Was der Sweep NICHT gefunden hat, und das ist ein eigener Befund
+
+**Keine Doppelnahme derselben Sperrklasse.** `kernel/src/system.rs`:15 sagt es ausdrücklich:
+*„kein Pfad nimmt zwei verschiedene `SCHEDS[*]` gleichzeitig"* — die Migration läuft über eine
+Übergabe, nicht über zwei gehaltene Instanzen.
+
+> **Damit fällt der erwartete Prüffall für `locks ordered` aus, und der gefundene ist ein
+> anderer:** nicht *„zwei Sperren derselben Klasse"*, sondern **zwei Klassen mit Ordnung über
+> zwei Kisten.** *Die Grammatikzeile muss den zweiten Fall tragen; den ersten gibt es im Baum
+> nicht.*
+
+## W12 — dies ist eine gefüllte Karte, kein Beleg für eine vollständige
+
+**Der Quantor des Prüfsatzes ist damit NICHT bewiesen.** Vier gefunden heisst vier gefunden.
+Die Suchwege waren: reziproke Feldschreibungen (`sc_donor`/`sc_donee`), Marke-gegen-Struktur
+(`queued`), Warteschlange-gegen-Zustand (`receivers`/`reasons`), zählerartige Grössen
+ausserhalb der Caps. **Was sie systematisch verfehlen:** Invarianten, deren beide Hälften
+**denselben Namen** nicht teilen und **nicht** über ein Indexfeld verbunden sind — etwa eine
+Summenbedingung über zwei Tabellen. *Wer den Prüfsatz schliessen will, braucht einen
+mechanischen Durchlauf, keinen Suchweg; dieser hier ist eine Kandidatenliste mit
+Fundstellen.*

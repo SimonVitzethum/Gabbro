@@ -1231,3 +1231,29 @@ K + A:  41 Pflichten,  915 Zeilen   ->  22,3 Zeilen je Pflicht
 *Das ist die Spannung, die die Messkette erzeugt hat, und sie steht hier statt in einer
 Zusammenfassung: **die Kennzahl wird gut, weil die teuren Pflichten kurz sind — nicht, weil
 es wenige wären.***
+
+## Deshalb braucht das Armaturenbrett eine **zweite** Zahl
+
+**Die Kennzahl misst Schreibkosten. Die W-Anzahl misst Beweiskosten. Sie können
+auseinanderlaufen** — und dieser Ordner hat gerade gemessen, dass sie es tun:
+
+> **Eine Sprache kann 0,5 : 1 erreichen und dabei 38 kleine Handbeweise offen lassen.**
+> Das Zeilenverhältnis sähe dann aus wie ein Sieg, und der Unterhalt wäre unverändert.
+
+**Die zweite Zahl ist deshalb `W`-Pflichten je tausend Zeilen** — der **Unterhaltsprädiktor**,
+neben dem Zeilenverhältnis geführt, nicht darunter:
+
+| Kennzahl | misst | Stand |
+|---|---|---|
+| **Beweiszeilen : Codezeilen** | **Schreibkosten** — einmal | **≥ 1,90**, offen (Pflichtseite) |
+| **W-Pflichten je 1 000 Zeilen** | **Beweiskosten** — bei **jeder** Änderung | **≥ 0,63** (38 von 60 756) |
+
+**Die zweite ist ausdrücklich eine untere Schranke, und ihre Richtung ist bekannt.** Der
+Nenner ist die ganze Messbasis; der Zähler stammt aus den Bereichen, für die **jemand einen
+Verus-Beweis geschrieben hat**. Bereiche ohne Beweis tragen **null** Pflichten bei — nicht,
+weil sie keine hätten. *Die scharfe Zahl braucht die Codezeilen der bewiesenen Bereiche; die
+liegen in einem Baum, der hier nicht vorliegt, und das ist eine kleine, benannte Messung, kein
+Vorbehalt.*
+
+> **Warum die zweite Zahl überhaupt nötig ist, in einem Satz:** *sonst optimiert der Ordner
+> auf den Nenner, der glänzt, statt auf den, der kostet.*
