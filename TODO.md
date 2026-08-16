@@ -34,8 +34,8 @@
 
 # DER KRITISCHE PFAD, in einer Zeile
 
-> ~~**B3**~~ → ~~**K/A/W-Einsetzung**~~ → **zwei Entscheidungen (`effects`-Lesen, Verschlüsse)
-> → Gruppen-`ops` → P5 → P6 → P7**
+> ~~**B3**~~ → ~~**K/A/W-Einsetzung**~~ → ~~**`effects`-Lesen**~~ → **Verschlüsse →
+> Gruppen-`ops`** *(Sperrabdruck steht, Invariante offen)* **→ P5 → P6 → P7**
 
 **Die ersten zwei sind am 2026-08-16 gefallen** (`DONE.md`), und die Einsetzung hat den Pfad
 **verkürzt statt verlängert**: `p_B3 = 0,0096`, Aufschlag `≥ +0,05` — *unter der Auflösung der
@@ -66,27 +66,34 @@ weder Code noch Lauf ist, sondern **ein Wort des Ordners**, ist der Schlitz:
    welchen Ort liest, ohne ihn zu nennen**. *Was man nicht genau melden kann, setzt kein
    Pass durch — dieselbe Begründung, an der Lesart B gestorben ist.*
 
-**Der Preis steht daneben und wird nicht kleingeredet:** A lässt **10 von 32 Funktionen
-fallen**, C nur drei — Faktor drei. **Das ist der teurere Ausgang, und er ist gewollt:** die
-zehn sind nachzudeklarieren, nicht freizustellen.
+**Der vorregistrierte Preis war Faktor drei — und er ist NICHT eingetreten.** Das Memo
+sagte *„A lässt 10 von 32 Funktionen fallen, C drei"*. Gemessen, nachdem der Pass gebaut war
+(`dokumente/MESSUNGEN.md`, *Lesart A gebaut*): **0 von 32.** `FRAGMENTE.md` deklariert seine
+Lesungen bereits; gefallen sind **zwei eigene Beispiele**, und das ist keine Eigenschaft der
+Lesart, sondern meiner Sorgfalt beim Schreiben.
 
-**Rückbauweg (R12), damit die Entscheidung billig bleibt:** die Lesehälfte ist ein Zusatz in
-`wirkungen.rs` gegen dieselbe Liste, gegen die heute das Schreiben läuft. Fällt sie, fällt
-eine Absageklasse und die zehn Nachdeklarationen — *keine Grammatikänderung, kein Datentyp,
-kein Beispiel muss zurück.*
+**Lesart B war schon vorher ausgeschieden** — durch ihren eigenen Befund: sie ist nicht
+mechanisch trennbar, und *was man nicht zählen kann, kann kein Pass durchsetzen.*
 
-**A** = die zehn Fragmentfunktionen nachdeklarieren (Vollzählung) · **C** = gröbere
-Rahmenzusage (nur `mmio`/`dma`/`atomic`). Gemessen: **A lässt 10 von 32 Funktionen fallen,
-C drei** — Faktor drei. **Lesart B ist durch ihren eigenen Befund ausgeschieden**: sie ist
-nicht mechanisch trennbar, und *was man nicht zählen kann, kann kein Pass durchsetzen.*
-Beide verbleibenden sind billig rückbaubar, also **R12-fähig, sobald die Richtung dasteht**.
+**Rückbauweg (R12) steht weiter:** die Lesehälfte ist ein Zusatz in `wirkungen.rs` gegen
+dieselbe Liste, gegen die das Schreiben läuft. Fällt sie, fällt eine Absageklasse —
+*keine Grammatikänderung, kein Datentyp, kein Beispiel muss zurück.*
 
-*Die Richtung steht. Damit ist der kritische Pfad zum ersten Mal frei von Posten, die weder
-Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
+*Die Richtung steht und ist gebaut (`E010`). Damit ist der kritische Pfad zum ersten Mal frei
+von Posten, die weder Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
 
 ---
 
 # ENTSCHEIDUNGEN — brauchen ein Urteil, keinen Lauf
+### Die Gruppe ist gebaut — offen ist ihre INVARIANTE
+
+- [ ] **`group N over { A, B };` trägt heute keine Verbindungsaussage.** Der Sperrabdruck
+      steht (`U001`–`U005`, Pass 10), die Invariante nicht. **Was fehlt, ist die Klausel
+      selbst** — `invariant refcount_passt : forall …` über zwei Trägern — und mit ihr die
+      Frage, die S17 stellt: *die Invariante gilt am Anfang und am Ende des Zuges, nicht
+      dazwischen.* Ohne einen Begriff von „Zug" ist das nicht prüfbar; **die Gruppenoperation
+      (`ops` über der Gruppe) ist damit die nächste Grammatikzeile, nicht die Klausel.**
+
 ### «B41» — drei Domänen sind gemessen gefordert. Bauen oder nicht?
 
 - [ ] **Der Bedarf liegt vor, mit `Datei:Zeile` — die Entscheidung nicht.** B3 fand

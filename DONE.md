@@ -10,9 +10,15 @@
 
 ---
 
-## Der Übersetzer — neun Pässe, keiner mehr offen
+## Der Übersetzer — **zehn** Pässe, keiner offen
 
-`cargo run --bin gabbro -- paesse` · **3 ganz gebaut, 6 teilweise, 0 offen**
+`cargo run --bin gabbro -- paesse` · **3 ganz gebaut, 7 teilweise, 0 offen**
+
+> **Der zehnte ist NEU, und das ist eine Änderung an der Spezifikation.** `SPRACHE.md`
+> Teil III §6 legt neun fest und sagt *„die Spezifikation ist die Passliste"* — ein zehnter
+> heisst also nicht „ein Modul mehr", sondern **die Liste ist gewachsen**. Der Grund ist
+> gemessen (SWEEP, V4), nicht entworfen: eine Invariante **zwischen** Trägern hat in den
+> neun Pässen keine Stelle.
 
 | # | Pass | Kennungen | Beleg |
 |---:|---|---|---|
@@ -25,6 +31,7 @@
 | 7 | Paarung *(teilweise)* | `V001`–`V004` | `paarung.rs` |
 | 8 | effects *(teilweise)* | `E001`–`E010` | `wirkungen.rs` — seit 2026-08-16 **mit Lesehälfte** (Lesart A) |
 | 9 | costs *(teilweise)* | `K001`–`K004` | `kosten.rs` |
+| **10** | **Gruppe** *(neu, teilweise)* | `U001`–`U005` | `gruppe.rs` — der **Sperrabdruck** der Trägergruppe |
 
 > **„Teilweise" heisst bei M2, M3 und Paarung nicht „halb fertig", sondern „fertig, ruht auf
 > einem benannten Posten"** — Ghost-Löschung, Barriere aus dem Raum, Speichermodell. **Drei
@@ -110,7 +117,7 @@ die niemand gegeneinander prüft.*
 ./pruefe-wortschatz.py    Terminale gegen Tabelle, Sonderform-Zähler (3 von 5)
 ./pruefe-todo.py          hält die Aufgabenliste gegen sich selbst, acht Klassen
 ./pruefe-kennungen.py     keine Absage-Kennung in zwei Dateien
-./mutiere-pruefer.py      beschädigt je eine Regel:  56 von 56
+./mutiere-pruefer.py      beschädigt je eine Regel:  58 von 58
 ./erzeuge-mutationen.py   verdreht systematisch:      7 von 39
 ./pruefe-luecken.py       die benannten Lücken einzeln: 13 von 15
 ./commit.sh               R19 — Commit-Nachrichten nur über Datei
@@ -126,5 +133,5 @@ einem **bezahlten Fehler in diesem Ordner**, jede nennt den Schaden.
 
 ## Proben
 
-**17 saubere Beispiele, 62 Giftproben, 76 Tests** —
+**18 saubere Beispiele, 63 Giftproben, 76 Tests** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`

@@ -249,7 +249,7 @@ fn praedikatsrumpf_nur_fuer_spec() {
 #[test]
 fn die_passliste_sagt_was_sie_nicht_prueft() {
     let liste = passliste();
-    assert_eq!(liste.len(), 9, "die Reihenfolge steht in SPRACHE.md Teil III §6");
+    assert_eq!(liste.len(), 10, "die Reihenfolge steht in SPRACHE.md Teil III §6");
     let offen = gabbro_check::ungeprueft();
     assert!(
         !offen.is_empty(),

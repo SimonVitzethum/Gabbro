@@ -1654,7 +1654,21 @@ benannt, nicht entworfen — sie sind Teil des Prüferplans (P4), nicht dieses D
 | | Entscheidung | Grund |
 |---|---|---|
 | Wirtssprache | **Rust, `forbid(unsafe_code)`**, keine Beweiswerkzeug-Abhängigkeit | der Prüfer ist Typregeln, kein Löser; die CSolver/Miri-Disziplin ist vorhanden |
-| Architektur | Lexer → Parser (aus der **vereinigten** EBNF, handgeschrieben, kein Generator) → ein Kernbaum → **Prüfpässe in fester Reihenfolge** (Namen, D1/D2, M1+V1–V3, M3, M2, M4/Schleifen, Paarung, effects, costs) → C-Emission | jede Regel dieser drei Dokumente ist genau **ein** Pass oder ein benannter Teil eines Passes — die Spezifikation ist die Passliste |
+| Architektur | Lexer → Parser (aus der **vereinigten** EBNF, handgeschrieben, kein Generator) → ein Kernbaum → **Prüfpässe in fester Reihenfolge** (Namen, D1/D2, M1+V1–V3, M3, M2, M4/Schleifen, Paarung, **Gruppe**, effects, costs) → C-Emission | jede Regel dieser drei Dokumente ist genau **ein** Pass oder ein benannter Teil eines Passes — die Spezifikation ist die Passliste |
+
+> **Die Liste ist am 2026-08-16 von neun auf zehn gewachsen, und das steht hier statt in einem
+> Modulnamen.** *„Die Spezifikation ist die Passliste"* heisst umgekehrt: **ein neuer Pass ist
+> eine Änderung der Spezifikation**, und sie wird an dieser Zeile gebucht oder gar nicht.
+>
+> **Der zehnte ist *Gruppe*, und sein Bedarf ist gemessen, nicht entworfen.** Der SWEEP der
+> Verbindungs-Invarianten (`MESSUNGEN.md`, 2026-08-16) fand vier Invarianten **zwischen** je
+> zwei Trägern; drei liegen unter einer Sperre, die vierte (V4 — Endpoint-Warteschlange gegen
+> Thread-Zustand) über **zwei Kisten mit zwei Sperrklassen**. In den neun Pässen hat das keine
+> Stelle: Pass 2 prüft Deklarationen, Pass 8 die Wirkungsliste **einer** Funktion gegen ihren
+> Rumpf — **keiner von beiden kennt einen Verbund.**
+>
+> *Gebaut ist der **Sperrabdruck** (`U001`–`U005`), nicht die Invariante. Die Gruppe nennt
+> heute ihre Träger, nicht ihre Verbindungsaussage.*
 | Absenkung | syntaxgesteuert, ein Konstrukt → eine C-Form, deterministisch byteweise | Festlegung §14, unverändert |
 | Selbstanwendung | **nie** — der Prüfer bleibt Rust (Verbotsliste: Selbst-Hosting) | ein Vorhaben, das seinen Prüfer umbaut, hat keinen |
 | Prüfstrategie | jeder Pass mit Sprechprobe in beide Richtungen (Gift fällt, Sauberes passiert) **plus Mutationsprobe auf die Emission** (Code UND Annotation) | die Wunschform-Beweis-Lektion |

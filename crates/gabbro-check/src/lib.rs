@@ -145,6 +145,25 @@ pub fn passliste() -> Vec<Pass> {
                  Mutationen, nicht vom Korpus",
             ),
         },
+        // **Pass 10 ist neu, und das ist eine Aenderung an der Spezifikation.**
+        //
+        // `SPRACHE.md` Teil III §6 legt neun Paesse fest und sagt: *„die Spezifikation IST die
+        // Passliste"*. Ein zehnter Pass heisst also nicht „ein Modul mehr", sondern **die
+        // Liste ist gewachsen** -- und das gehoert gebucht, nicht eingeschoben. Der Grund ist
+        // gemessen (`MESSUNGEN.md`, SWEEP, V4) und nicht entworfen: eine Invariante ZWISCHEN
+        // Traegern hat in den neun Paessen keine Stelle. Pass 2 prueft Deklarationen, Pass 8
+        // die Wirkungsliste einer Funktion gegen ihren Rumpf -- keiner von beiden kennt einen
+        // Verbund.
+        Pass {
+            nummer: 10,
+            name: "Gruppe",
+            quelle: "MESSUNGEN.md, SWEEP der Verbindungs-Invarianten (2026-08-16), V4",
+            zustand: Zustand::Teilgebaut(
+                "gebaut: der SPERRABDRUCK (`U001`-`U005`) -- wer zwei Traeger einer Gruppe                  schreibt, haelt alle ihre Sperren, und zwei Sperren gleichen Rangs sind                  keine Ordnung. **NICHT gebaut: die Invariante selbst** -- die Gruppe nennt                  heute ihre Traeger, nicht ihre Verbindungsaussage. `U003` sagt, dass \
+                 nicht alles gehalten wird, was angefasst wird -- nicht, dass die \
+                 Invariante haelt",
+            ),
+        },
         Pass {
             nummer: 9,
             name: "costs",

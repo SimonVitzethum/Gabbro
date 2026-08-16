@@ -4177,3 +4177,72 @@ und das ist der ehrliche Satz dazu:
 *Die zweite Mutation ist die wichtigere, und das Gift ist eigens dafür gebaut: `pruefe_grenze`
 deklariert `reads Protokoll.slots` wahrheitsgemäss und liest `Objekte.slots` daneben. **Eine
 Wirkungsliste, die eine Lesestelle nennt, sieht vollständig aus.***
+
+---
+
+# Die Traegergruppe gebaut — Pass 10, und die Passliste ist gewachsen
+
+**R7 zuerst, und diesmal ohne Abkürzung:** der Schablonen-Eintrag stand vor der Grammatik.
+`S16 gruppe.ops` gab es schon (aus «B13»); der Sweep verlangte einen **zweiten**, weil er
+einen Fall fand, den der erste nicht deckt:
+
+| | Schablone | deckt |
+|---|---|---|
+| S16 | `gruppe.ops` | Gruppen über Trägern unter **einer** Sperre (V1–V3) |
+| **S17** | **`gruppe.sperrabdruck`** | Gruppen über Trägern mit **verschiedenen** Sperren (V4) |
+
+> **Eine Schablone, die beide Fälle als einen führt, versteckt den Unterschied, an dem sie
+> scheitern kann:** unter einer Sperre ist die Erhaltung ein sequenzielles Argument, unter
+> zweien hängt sie an der **Ordnung** und daran, dass zwischen den zwei Nahmen kein fremder
+> Schreiber dazwischenkommt.
+
+## Die Grammatikzeile — und was sie NICHT deklariert
+
+```gabbro
+group Zustellung over { Endpunkte, Faeden };
+```
+
+**Die Sperrordnung steht nicht an der Gruppe.** Jeder Träger liegt unter einer
+`lock … rank N`, und die Ränge geben die Ordnung. *Eine zweite Deklaration wäre eine zweite
+Wahrheit über dieselbe Sache* — dieselbe Fehlerklasse wie zwei Etikettensysteme mit denselben
+Namen.
+
+## Fünf Absagen, und `U003` ist die, die V4 gebraucht hätte
+
+| | |
+|---|---|
+| `U001` | die Gruppe nennt etwas, das **deklariert und kein Träger** ist |
+| `U002` | ein Träger der Gruppe steht **unter keiner Sperre** |
+| `U003` | **eine Funktion schreibt zwei Träger der Gruppe und hält nicht alle ihre Sperren** |
+| `U004` | eine Gruppe mit **einem** Mitglied — das ist eine Tabelle |
+| `U005` | zwei Sperren der Gruppe tragen **denselben Rang** — es gibt keine Ordnung |
+
+> **`U003` macht einen Kommentar überflüssig.** `caprock-microkit/src/lib.rs`:1303 erklärt,
+> warum eine Funktion dort steht, wo sie steht — nähme sie `EPS` unter `SCHEDS`, drehte sie
+> die Ordnung um. **Das ist eine von Hand getragene Verbindungs-Invariante zwischen zwei
+> Sperren**, und sie ist der gemessene Bedarf, nicht ein Entwurfswunsch.
+
+## Zwei Wächter haben unterwegs zugeschlagen, und beide zu Recht
+
+1. **Die Wortschatz-Ratsche** hielt `group` an, bevor es im Lexer sein durfte — das Wort
+   musste erst in `SYNTAX.md` stehen.
+2. **Der Passlisten-Test** hielt den zehnten Pass an: `assert_eq!(liste.len(), 9, "die
+   Reihenfolge steht in SPRACHE.md Teil III §6")`.
+
+> **Der zweite ist der wichtigere, und er hat genau das getan, wofür er gebaut ist.**
+> *„Die Spezifikation ist die Passliste"* heisst umgekehrt: **ein neuer Pass ist eine Änderung
+> der Spezifikation.** Ohne den Test wäre der zehnte Pass ein Modul mehr gewesen, und
+> `SPRACHE.md` hätte weiter neun behauptet. **Er ist jetzt in `SPRACHE.md` Teil III §6
+> gebucht, mit seinem Grund.**
+
+## Und die Deckung, so klein wie sie ist
+
+**Gebaut ist der Sperrabdruck, nicht die Invariante.** Die Gruppe nennt heute ihre Träger,
+nicht ihre Verbindungsaussage. `U003` sagt, dass nicht alles gehalten wird, was angefasst
+wird — **nicht, dass die Invariante hält.** *Das steht hier, damit niemand die Deckung grösser
+liest, als sie ist.*
+
+**Belege:** `beispiele/17-gruppe-ueber-zwei-sperren.gab` (die richtige Fassung),
+`beispiele/gift/63-gruppe-halb-gesperrt.gab` (fällt mit genau `U003`), und **zwei Mutationen**
+— eine schaltet `U003` ab, die zweite *lockert* sie: eine gehaltene Sperre deckt die ganze
+Gruppe. **58 von 58 gefangen.**
