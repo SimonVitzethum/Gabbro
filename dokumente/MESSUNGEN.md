@@ -4388,3 +4388,72 @@ ist der eigentliche Fortschritt gegenüber `N_neu = 5`:
 
 > *Drei Klassen, drei verschiedene Gründe, kein gemeinsamer Bau.* Wer `N_neu` senken will,
 > hat ab hier drei Projekte vor sich und nicht mehr eine Baustelle.
+
+---
+
+# BERICHTIGUNG: was „0 von 571" sagt — und was nicht
+
+**Die Zahl bleibt, der Satz daneben ändert sich.** Bisher stand sie als *„99,04 % der
+Kernelzeilen sind als Traversierung schreibbar"*. Das ist die Überschreibungsform als
+Statistik, und die B3-Kette hat den richtigen Rahmen selbst geliefert.
+
+> **`for`-Köpfe treffen Domänen — die KETTEN laufen in `while`.**
+
+Union-Find, Kantenfunktionen, die drei «B41»-Lücken: sie liegen **konstruktionsbedingt
+ausserhalb der Grundgesamtheit dieser Zählung.** Die 571 sind die `for`-Schleifen; die harte
+Minderheit hat gar keine `for`-Form, also konnte sie in dieser Zahl nie auftauchen.
+
+**Die zwei Sätze gehören nebeneinander, und beide sind stark:**
+
+1. **Der Domänenvorrat ist für die zählschleifenförmige Mehrheit VOLLSTÄNDIG** — 0 von 571,
+   und das ging gegen die Erwartung.
+2. **Über die harte Minderheit sagt die Zahl NICHTS**, weil deren Schleifenform nicht
+   mitgezählt wurde.
+
+*Der erste allein wäre eine Statistik, die ihre eigene Grundgesamtheit verschweigt — dieselbe
+Bauart wie ein Filter, der die Grundgesamtheit schrumpft und als Erfolg erscheint (W11).*
+
+---
+
+# VORAB — die 89 Verschlüsse nach Verwendungsart, 2026-08-16
+
+**R1 diesmal eingehalten: dieser Abschnitt ist committet, BEVOR gezählt wurde.** Bei B3 war
+er es nicht, und die Buchung dort sagt das ausdrücklich. *Eine Regel, die einmal verfehlt
+wurde, wird beim nächsten Mal sichtbar eingehalten oder sie ist keine.*
+
+## Die Frage
+
+`dyn FnMut`/`Fn` — **89 Fundstellen**, und Gabbro hat **keine Form** dafür. Der Posten galt
+als der schwerste der fünf Nötigen, weil bei ihm die Frage *ob* lautet statt *wie*.
+
+> **Die These, die geprüft wird: die Frage ist entscheidbarer, als sie aussieht, weil die 89
+> Stellen nach Verwendungsart zerfallen — und jede Klasse hat schon eine Antwort.**
+
+## Die drei vorhergesagten Klassen, mit ihrer Antwort
+
+| | Klasse | erwartete Antwort |
+|---|---|---|
+| **V-a** | **Rückruf mit EINER Implementierung** | wird ein gewöhnlicher Aufruf — **die Gabbro-Antwort existiert schon: A2** |
+| **V-b** | **gespeicherter Handler in einer Tabelle** | Zeiger-plus-Kontext, **entwerfbar als deklarierte Verteilertabelle** — dieselbe Medizin wie `entry … dispatch`, nur benutzerseitig |
+| **V-c** | **echter Kombinatorfall** (Iterator-Adapter, `map`/`filter`-Ketten) | **Verbot** — sie wären in einer Sprache ohne Generizität ohnehin nicht tippbar |
+
+**Fällt die Zählung so aus, ist „ob" ein dreifaches „wie / wie / nein", und der Posten
+verliert seinen Sonderstatus.**
+
+## Das zweiseitige Tor, vor dem Lauf festgeschrieben
+
+| | |
+|---|---|
+| **bestanden** | **jede der 89 Stellen fällt in V-a, V-b oder V-c**, und keine Klasse ist die Mehrheit *durch* die Restkategorie |
+| **gefallen** | **mehr als 10 %** der Stellen passen in keine der drei → es gibt eine vierte Verwendungsart, und *die* ist der Entwurfsposten |
+
+**Ungültig** (getrennt von ungünstig): die Fundstellenzahl weicht um mehr als 10 % von 89 ab
+→ dann misst die Zählung etwas anderes als die Quelle der 89, und die Klassen sind über einer
+fremden Grundgesamtheit gebildet.
+
+## Die Kippregel
+
+1. Ist unklar, ob ein Rückruf **eine** Implementierung hat, zählt er als **V-b** (teurer).
+2. Ist unklar, ob eine Kette ein Kombinator ist, zählt sie als **V-b**, nicht als V-c —
+   *Verbot ist die billigste Antwort und darf deshalb nie die Zweifelsantwort sein.*
+3. Was in keine Klasse fällt, wird **einzeln aufgeführt**, nicht in eine gerundet.
