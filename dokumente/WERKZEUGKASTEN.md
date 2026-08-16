@@ -1,412 +1,405 @@
-# Werkzeugkasten — Arbeitsregeln, die dieser Ordner sich erarbeitet hat
+# Toolbox — working rules this folder earned
 
-**Aufnahmebedingung:** Eine Regel kommt hier nur hinein, wenn sie aus einem **Fehler in diesem
-Ordner** stammt und der Fehler benannt ist. Keine guten Vorsätze, keine übernommene Weisheit.
-Wer eine Regel liest, soll den Schaden sehen können, für den sie bezahlt wurde.
+**Admission condition:** a rule gets in here only if it comes from a **mistake in this folder**
+and the mistake is named. No good intentions, no borrowed wisdom. Whoever reads a rule should
+be able to see the damage it was paid for.
 
-> Die **Fallen**-Nummerierung (`Falle 80` …) steht in
-> [`fallen-klassifikation.tsv`](fallen-klassifikation.tsv) — 100 bezahlte Caprock-Fallen,
-> Quelle `CLAUDE.md`, Stand 2026-08-13. Diese Datei ist ein **gemessener Bestand mit
-> genannter Quelle**; nichts wird ihr nachträglich hinzugefügt. Die `W`-Nummern hier sind
-> eigene und stehen daneben, nicht darin.
+> The **trap** numbering (`Falle 80` …) lives in
+> [`fallen-klassifikation.tsv`](fallen-klassifikation.tsv) — 100 paid-for Caprock traps, source
+> `CLAUDE.md`, as of 2026-08-13. That file is a **measured inventory with a named source**;
+> nothing is added to it after the fact. The `W` numbers here are our own and stand beside it,
+> not inside it.
 >
-> `Falle 80` lautet dort wörtlich: *eine Zahl, die ein Mensch parallel zur Wahrheit fuehrt*
-> (Klasse `S`, `ableitung`). **W1 und W2 unten sind beide Kinder dieser Falle** — einmal im
-> Messgerät, einmal in der Deklaration.
+> `Falle 80` reads there, literally: *a number a human runs parallel to the truth* (class `S`,
+> `ableitung`). **W1 and W2 below are both children of that trap** — once in the instrument,
+> once in the declaration.
 
 ---
 
-## W1 — Eine Deckungszahl zählt Belege, nicht Versuche
+## W1 — A coverage number counts evidence, not attempts
 
-*Neben Falle 80: eine Zahl, die ein Mensch parallel zur Wahrheit führt.*
+*Next to trap 80: a number a human runs parallel to the truth.*
 
-**Der Schaden.** Am 2026-08-14 wuchs der Prüfer um fünf Regeln, und ich schrieb fünf
-Mutationen dazu. Die Zusammenfassungszeile druckte `37 von 37` — aus `len(MUTATIONEN)`, also
-aus der Zahl der **geschriebenen** Mutationen. Gleichzeitig hatte eine ältere Mutation
-(`sperre-egal`) ihren Anker verloren, weil ich die Zeile umgebaut hatte, auf die sie zielte.
-Sie lief gar nicht. **Eine tote Mutation zählte als Deckung.**
+**The damage.** On 2026-08-14 the checker grew by five rules, and I wrote five mutations to go
+with them. The summary line printed `37 of 37` — from `len(MUTATIONEN)`, i.e. from the number
+of **written** mutations. At the same time an older mutation (`sperre-egal`) had lost its
+anchor because I had rebuilt the line it targeted. It did not run at all. **A dead mutation
+counted as coverage.**
 
-**Warum das schlimmer ist als eine ungeprüfte Regel.** Ein Loch, von dem man weiss, ist ein
-Posten. Eine Deckungszahl, die Löcher als Deckung zählt, **entwertet jede andere Zahl im
-Ordner** — denn sie ist die Zahl, mit der man die anderen prüft. Es ist die Wunschform *im
-Messgerät*.
+**Why that is worse than an unchecked rule.** A hole you know about is an item. A coverage
+number that counts holes as coverage **devalues every other number in the folder** — because it
+is the number you check the others with. It is the wished-for form *inside the instrument*.
 
-**Die Regel.** Jede Deckungs-, Abdeckungs- oder Fortschrittszahl wird aus **verifizierten
-Belegen** gebildet, nie aus der Zahl der Versuche, Einträge oder Zeilen. Wo ein Beleg
-ausfallen kann (toter Anker, übersprungene Probe, nicht gebaute Fläche), muss der Ausfall die
-Zahl **senken**, nicht sie unberührt lassen.
+**The rule.** Every coverage, completeness or progress number is formed from **verified
+evidence**, never from the number of attempts, entries or lines. Where a piece of evidence can
+drop out (dead anchor, skipped probe, unbuilt surface), the dropout must **lower** the number,
+not leave it untouched.
 
-**Der Handgriff.** `mutiere-pruefer.py` zählt jetzt `gefangen` von `gültig`; ein verlorener
-Anker erscheint als `ANKER FEHLT` und **fällt aus dem Nenner heraus, nicht in den Zähler**.
+**The handle.** `mutiere-pruefer.py` now counts `caught` out of `valid`; a lost anchor appears
+as `ANKER FEHLT` and **falls out of the denominator, not into the numerator**.
 
 ---
 
-## W2 — Die Nullzusage: der Prüfer ist das Messgerät für die Zahlen, die er prüft
+## W2 — The zero promise: the checker is the instrument for the numbers it checks
 
-**Der Anlass.** Für ein neues Beispiel brauchte ich drei `costs`-Zeilen. Statt sie zu schätzen,
-habe ich sie auf `1 ops` gedrückt, den Prüfer die wahren Zahlen nennen lassen (`4`, `2`, `2`)
-und diese eingetragen. **Die Zahlen fielen aus dem Rumpf, nicht aus dem Wunsch.**
+**The occasion.** For a new example I needed three `costs` lines. Instead of estimating them I
+pushed them down to `1 ops`, let the checker name the true numbers (`4`, `2`, `2`) and entered
+those. **The numbers fell out of the body, not out of the wish.**
 
-**Der Rückfall, der darin steckte.** Das Verfahren war richtig, der Handgriff war Handarbeit —
-und Handarbeit an einer Zahl ist genau die Stelle, an der eine Zahl beginnt, parallel zur
-Wahrheit zu laufen. Ein Verfahren, das Disziplin braucht, ist ein Verfahren mit Ablaufdatum.
+**The relapse inside that.** The procedure was right, the handle was manual work — and manual
+work on a number is exactly where a number starts running parallel to the truth. A procedure
+that needs discipline is a procedure with an expiry date.
 
-**Die Regel.** Wo ein Pass eine deklarierte Zahl **prüft**, muss er sie auch **nennen können**.
-Eine Zusage schreibt man ab, man errät sie nicht.
+**The rule.** Where a pass **checks** a declared number, it must also be able to **name** it. A
+promise is copied down, not guessed.
 
-**Der Handgriff.** `gabbro kosten datei.gab` druckt je Funktion die gerechnete Rumpfzahl neben
-der zugesagten und je `locks`-Block die gerechnete Haltezeit neben `held` bzw. `shared held`.
+**The handle.** `gabbro kosten datei.gab` prints, per function, the computed body figure next to
+the promised one, and per `locks` block the computed hold time next to `held` resp.
+`shared held`.
 
 ```
--- Stelle                                  gerechnet  zugesagt  Luft
+-- Site                                    computed   promised  slack
 rechte_aufloesen                           4          4         0
   rechte_aufloesen / shared held KAPPEN    4          4         0
 ```
 
-**Die Spalte `Luft` ist eine Differenz, kein Urteil** — und die beiden Fälle sind
-verschieden: bei `costs` ist Luft oft richtig (eine Signatur soll nicht bei jeder
-Rumpfänderung brechen), bei `held` fast immer falsch, **denn die Latenzaussage rechnet mit der
-Zusage, nicht mit der Rechnung**.
+**The `slack` column is a difference, not a verdict** — and the two cases differ: for `costs`
+slack is often right (a signature should not break on every body change), for `held` it is
+almost always wrong, **because the latency statement computes with the promise, not with the
+computation**.
 
-**Wo es wieder gebraucht wird:** `held`, `shared held` (heute schon), `per_pass bounded` —
-dort mit dem bekannten Vorbehalt, dass eine eingabeabhängige Schranke keine Zahl ist, sondern
-ein Term.
-
----
-
-## W3 — Kein Konstrukt ohne gemessenen Bedarf
-
-**Zweimal bezahlt.** `abi { … }` wurde gestoppt, bevor es geschrieben war. `locks ordered`
-starb am Papiertest vom 2026-08-14 mit **null Prüffällen** — und die Antwort war stärker als
-die Frage: es gab im ganzen Baum keine einzige Mehrfachnahme derselben Sperrklasse.
-
-**Die Regel.** Ein Konstrukt braucht **gezählte** Fundstellen im echten Code, bevor die erste
-Grammatikzeile steht. Nicht plausible, nicht erinnerte — gezählte.
-
-**Die Probe, ob die Regel wirkt:** Der Test muss seinen eigenen Kandidaten töten dürfen. Ein
-Papiertest, der nur bestätigt, ist eine Vorführung. *Derselbe Test fand statt des bestätigten
-Konstrukts zwei Lücken, die auf keiner Liste standen — der Ertrag war grösser als der
-Verlust.*
+**Where it will be needed again:** `held`, `shared held` (already today), `per_pass bounded` —
+there with the known caveat that an input-dependent bound is not a number but a term.
 
 ---
 
-## W4 — Eine laute Übertreibung ist billiger als eine stille Ausnahme
+## W3 — No construct without measured need
 
-**Der Fall.** `locks shared` steht, aber der Zeuge an der **Aufrufgrenze** braucht den
-Aufrufgraphen, den es noch nicht gibt. Ohne Regel wäre die Grenze nicht bloss ungeprüft,
-sondern **durchlässig**: der Gerufene schreibt exklusiv-berechtigt, der Rufer hält nur geteilt
-— `H001` durch die Hintertür.
+**Paid for twice.** `abi { … }` was stopped before it was written. `locks ordered` died at the
+paper test of 2026-08-14 with **zero test cases** — and the answer was stronger than the
+question: in the whole tree there was not a single repeated acquisition of the same lock class.
 
-**Die Regel.** Wo eine tragende Regel ein Loch hat, das erst später richtig zu schliessen ist,
-kommt die **grobe, zu strenge** Fassung davor — nicht nichts. Sie muss als Zwischenregel
-**benannt** sein, mitsamt dem, was sie zu viel verbietet, und mitsamt der Prüfung, die sie
-ersetzen wird.
+**The rule.** A construct needs **counted** sites in real code before the first line of grammar
+is written. Not plausible ones, not remembered ones — counted ones.
 
-**Warum.** Nach einer lauten Übertreibung sucht jemand — sie steht im Weg. Nach einer stillen
-Ausnahme sucht niemand, denn sie sieht aus wie ein Grün.
-
-**Der Handgriff.** `H005`: ein geteilter Block ruft keine Funktion mit `requires Held(…)`.
-Punkt. Auch die einer anderen Sperre, was zu viel ist und in der Absage dransteht.
+**The probe for whether the rule works:** the test must be allowed to kill its own candidate. A
+paper test that only confirms is a demonstration. *That same test found, instead of the
+confirmed construct, two gaps that were on no list — the yield was larger than the loss.*
 
 ---
 
-## W5 — Eine Zwischenregel trägt drei Teile, sonst wird sie zur Dauerregel
+## W4 — A loud overstatement is cheaper than a silent exception
 
-*W4 sagt, **dass** die grobe Fassung davorkommt. W5 sagt, **wie** sie geschrieben sein muss,
-damit sie später wirklich ersetzt und nicht bloss gewohnt wird.*
+**The case.** `locks shared` stands, but the witness at the **call boundary** needs the call
+graph, which does not exist yet. Without a rule the boundary would be not merely unchecked but
+**permeable**: the callee writes with exclusive rights, the caller holds only shared — `H001`
+through the back door.
 
-**Der Anlass.** `H005` ist absichtlich zu streng. Eine zu strenge Regel ohne Ablaufvermerk
-wird nach drei Monaten für die richtige gehalten — niemand weiss mehr, was sie zu viel
-verbietet, also traut sich niemand, sie anzufassen. **Die Übertreibung, die W4 rechtfertigt,
-ist genau das, was sie später unantastbar macht.**
+**The rule.** Where a load-bearing rule has a hole that can only be closed properly later, the
+**coarse, too-strict** version goes in front — not nothing. It has to be **named** as an interim
+rule, together with what it forbids too much, and together with the check that will replace it.
 
-**Die Regel.** Eine konservative Zwischenregel nennt in ihrer eigenen Absage:
+**Why.** Somebody goes looking after a loud overstatement — it is in the way. Nobody goes
+looking after a silent exception, because it looks like a green.
 
-1. **die Regel** — was sie verbietet;
-2. **den Preis** — was sie zu viel verbietet, konkret, nicht als „ggf. zu streng";
-3. **die Ablösung** — welche Prüfung sie ersetzen wird und was diese können muss.
-
-**Warum in der Absage und nicht im Ticket.** Ein Ticket liest, wer aufräumt. Die Absage liest,
-wer gerade dagegenläuft — und das ist derjenige, der den Preis zahlt und ihn deshalb melden
-kann.
-
-**Der Handgriff.** `H005` trägt alle drei Teile als Notizen. Bei Pass 8 wird es nicht das
-letzte Mal gewesen sein.
+**The handle.** `H005`: a shared block calls no function with `requires Held(…)`. Full stop.
+Including one for a different lock, which is too much and says so in the refusal.
 
 ---
 
-## W6 — Das Weglassen einer Laufzeitprüfung ist ausschliesslich M1-begründet, nie invariantenbegründet
+## W5 — An interim rule carries three parts, otherwise it becomes permanent
 
-**Der Schaden, eine Ebene höher schon gebucht.** `5904cae`: eine Behauptung über den Baum
-glätten, statt den Baum zu befunden. Derselbe Griff eine Ebene tiefer wäre: eine
-Bereichsprüfung aus dem erzeugten C streichen, **weil der Beweis sagt, es könne nicht negativ
-werden**.
+*W4 says **that** the coarse version goes first. W5 says **how** it must be written so that it
+really gets replaced later and not merely grown accustomed to.*
 
-**Die zwei Netze, und warum sie nicht dasselbe sind.**
+**The occasion.** `H005` is deliberately too strict. A too-strict rule without an expiry note is
+taken for the right one after three months — nobody remembers what it forbids too much, so
+nobody dares touch it. **The overstatement that W4 justifies is exactly what later makes it
+untouchable.**
 
-| | woran es hängt | wer es nachrechnet |
+**The rule.** A conservative interim rule names, in its own refusal:
+
+1. **the rule** — what it forbids;
+2. **the price** — what it forbids too much, concretely, not as "possibly too strict";
+3. **the replacement** — which check will replace it and what that check must be able to do.
+
+**Why in the refusal and not in a ticket.** A ticket is read by whoever tidies up. The refusal
+is read by whoever is running into it right now — and that is the person paying the price, and
+therefore the one who can report it.
+
+**The handle.** `H005` carries all three parts as notes. At pass 8 it will not have been the
+last time.
+
+---
+
+## W6 — Omitting a runtime check is justified by M1 alone, never by an invariant
+
+**The damage, already booked one level up.** `5904cae`: smoothing a claim about the tree instead
+of surveying the tree. The same grip one level down would be: striking a range check from the
+generated C **because the proof says it cannot go negative**.
+
+**The two nets, and why they are not the same.**
+
+| | what it hangs on | who recomputes it |
 |---|---|---|
-| **M1** | am **Typ** (`u32 in 0 ..= NSLOTS`) | das Typsystem, **je Programm**, jedes Mal |
-| **Invariante** | an der **Schablone**, die sie erhält | die Vertrauensfläche — einmal, für alle |
+| **M1** | on the **type** (`u32 in 0 ..= NSLOTS`) | the type system, **per program**, every time |
+| **invariant** | on the **template** that preserves it | the trust surface — once, for all |
 
-Die Verus-Vorlage `cap_space.rs` führt `refcount : nat` und beweist `oldrc >= 1` (Zeile 792)
-**aus der Invariante**. Das ist richtig — und es ist **genau ein Netz**. Gabbros
-`u32 in 0 ..= NSLOTS` gibt ein zweites, das **ohne** die Invariante hält; es war das, was in
-der Sprechprobe als `M104` neben `D001` fiel.
+The Verus template `cap_space.rs` carries `refcount : nat` and proves `oldrc >= 1` (line 792)
+**from the invariant**. That is correct — and it is **exactly one net**. Gabbro's
+`u32 in 0 ..= NSLOTS` gives a second one that holds **without** the invariant; it was the one
+that fell as `M104` next to `D001` in the speech test.
 
-**Die Regel, mechanisch, an jeder Emissionsentscheidung, die einen Beweis zitiert:**
+**The rule, mechanically, at every emission decision that cites a proof:**
 
-> **Das zitierte Faktum muss aus M1 allein ableitbar sein. Sonst bleibt die Prüfung im C.**
+> **The cited fact must be derivable from M1 alone. Otherwise the check stays in the C.**
 
-**Warum das billiger ist als die Spezialfassung.** Die enge Form — *kein von einer Schablone
-erzeugtes Feld trägt einen Typ ohne Breite* — deckt Felder. Zwischenwerte deckt sie nicht,
-und künftige Konstrukte deckt sie erst recht nicht; dort geht dasselbe Loch wieder auf. W6
-sitzt stattdessen **an der Entscheidung** statt am Gegenstand: **eine Zeile im
-Emissionspass statt einer je Konstrukt.**
+**Why that is cheaper than the special version.** The narrow form — *no field generated by a
+template carries a type without a width* — covers fields. It does not cover intermediate values,
+and it covers future constructs even less; there the same hole opens again. W6 instead sits **at
+the decision** rather than at the subject: **one line in the emission pass instead of one per
+construct.**
 
-*Vorgemerkt für eine Fläche, die es noch nicht gibt.* Der Emissionspass ist nicht gebaut —
-`mutiere-pruefer.py` weist ihn mit **0 Mutationen** aus. Diese Regel ist damit heute eine
-**Vorabfestlegung**, keine geprüfte Zusage, und sie steht hier, damit sie beim Bauen nicht neu
-erfunden werden muss. **Was 0 Mutationen hat, ist nicht gedeckt, sondern unbeschädigbar.**
+*Noted in advance for a surface that does not yet exist.* The emission pass is not built —
+`mutiere-pruefer.py` reports it with **0 mutations**. This rule is therefore a **prior
+commitment** today, not a checked promise, and it stands here so that it need not be reinvented
+when the building starts. **What has 0 mutations is not covered, it is undamageable.**
 
 ---
 
-## W7 — Eine Zahl ohne Fundstellenliste gehört nicht ins Dokument
+## W7 — A number without a source list does not belong in a document
 
-**Dreimal bezahlt, an einem Tag gefunden.**
+**Paid for three times, found in one day.**
 
-| Zahl | Aggregat | Zuordnung |
+| Number | Aggregate | Attribution |
 |---|---|---|
-| 74 Beweispflichten (17 Logik / 57 Klempnerei) | im Ordner | **verloren** |
-| 19 hängende Pflichten in elf Klassen | im Ordner | **6 von 11** |
-| `delete_leaf` 3,6–6 : 1 | im Ordner | **verloren** |
+| 74 proof obligations (17 logic / 57 plumbing) | in the folder | **lost** |
+| 19 hanging obligations in eleven classes | in the folder | **6 of 11** |
+| `delete_leaf` 3,6–6 : 1 | in the folder | **lost** |
 
-**Der Schaden ist nicht Unschärfe, sondern Unwiderlegbarkeit.** Eine Zahl, deren Zuordnung
-fehlt, kann niemand prüfen — auch der Autor nicht. Sie wird zitiert, sie trägt Entscheidungen,
-und sie ist gegen jede Korrektur immun, weil es nichts gibt, wogegen man sie hielte.
+**The damage is not vagueness but irrefutability.** A number whose attribution is missing cannot
+be checked by anyone — not even by its author. It gets quoted, it carries decisions, and it is
+immune to every correction, because there is nothing to hold it against.
 
-**Zwei der drei sind bereits gekippt, als jemand nachzählte:** `delete_leaf` von 3,6–6 : 1 auf
-**1,75 : 1** (andere Zählweise: Pflichten statt Beweisschritte), und die elf Klassen von
-„19 hängend" auf **N_neu = 5 hängende Klassen** — nicht umrechenbar, weil die alte Menge nie
-belegt war.
+**Two of the three had already tipped once someone recounted:** `delete_leaf` from 3,6–6 : 1 to
+**1,75 : 1** (different counting: obligations instead of proof steps), and the eleven classes
+from "19 hanging" to **N_neu = 5 hanging classes** — not convertible, because the old set was
+never evidenced.
 
-**Die Regel.** Eine gemeldete Zahl führt die Liste mit, aus der sie entstand: je Posten
-`Datei:Zeile` oder eine nachfahrbare Befehlszeile. Passt die Liste nicht ins Dokument, kommt
-sie in eine Datei daneben — **aber sie existiert.**
+**The rule.** A reported number carries the list it came from: per item `file:line` or a
+re-runnable command line. If the list does not fit in the document, it goes in a file beside it
+— **but it exists.**
 
-**Die Kehrseite, und sie ist die eigentliche Zusage:** eine Zahl **mit** Liste darf falsch
-sein. Sie ist dann nachprüfbar falsch, und das ist der ganze Unterschied. *Falle 80 sagt,
-eine Zahl darf nicht parallel zur Wahrheit laufen; W7 sagt, wie man das verhindert.*
+**The flip side, and it is the actual promise:** a number **with** a list is allowed to be
+wrong. It is then checkably wrong, and that is the whole difference. *Trap 80 says a number must
+not run parallel to the truth; W7 says how to prevent it.*
 
-**Der Handgriff, wo es mechanisch geht:** `pruefe-luecken.py` und `zaehle-bereichspflichten.py`
-drucken ihre Fundstellen mit; `gabbro kosten` und `gabbro k-bedingung` ebenso. Wo eine Zahl
-von Hand entsteht, gehört die Liste in dieselbe Änderung.
+**The handle, where it can be mechanical:** `pruefe-luecken.py` and `zaehle-bereichspflichten.py`
+print their sites; `gabbro kosten` and `gabbro k-bedingung` likewise. Where a number arises by
+hand, the list belongs in the same change.
 
-### **Die Ergänzung, gemessen am 2026-08-16: der KEHRAUS liest Tabellenzellen als Behauptungen**
+### **The addition, measured on 2026-08-16: the SWEEP reads table cells as claims**
 
-**Der W7-Kehraus vom 2026-08-15 hat eine Zahl übersehen, und der Grund ist keine
-Nachlässigkeit, sondern das Verfahren.** Er ging die **Sätze** des Ordners durch. Die 89
-Verschlüsse standen in einer **Tabellenzelle** — und überlebten.
+**The W7 sweep of 2026-08-15 missed a number, and the reason is not carelessness but the
+procedure.** It went through the folder's **sentences**. The 89 closures sat in a **table
+cell** — and survived.
 
-> **Der Kehraus liest Tabellenzellen als Behauptungen, nicht nur Sätze.**
+> **The sweep reads table cells as claims, not only sentences.**
 >
-> *Sonst ist jede künftige Tabelle ein Versteck — und dieser Ordner hat gerade gemessen, dass
-> es funktioniert.*
+> *Otherwise every future table is a hiding place — and this folder has just measured that it
+> works.*
 
-**Das ist eine Lücke im Verfahren, keine entkommene Zahl.** Eine Zahl entkommt einmal; ein
-Verfahren, das eine ganze Darstellungsform nicht ansieht, lässt jede künftige entkommen.
+**That is a gap in the procedure, not an escaped number.** A number escapes once; a procedure
+that never looks at an entire presentation form lets every future one escape.
 
 ---
 
-## **Das Zahlenpaar zu W7 — der zweite quantitative Beleg des Ordners**
+## **The number pair for W7 — the folder's second quantitative piece of evidence**
 
-R14 hat ihres (**Faktor 130 zwischen verworfenen Regelfassungen, Faktor 1 danach**). W7 hat
-seit dem 2026-08-16 ein eigenes, und es ist sauberer, weil beide Zahlen aus **derselben
-Messung an demselben Baum** stammen:
+R14 has its own (**factor 130 between discarded rule versions, factor 1 afterwards**). Since
+2026-08-16 W7 has one too, and it is cleaner, because both numbers come from **the same
+measurement on the same tree**:
 
-| Zahl | Suchweg | Reproduktion |
+| Number | Search path | Reproduction |
 |---|---|---|
-| **67** `dyn`-Stellen | steht in der Messung | **exakt** |
-| **89** Verschlüsse | **steht nirgends** | **64 — Abweichung −28 %** |
+| **67** `dyn` sites | stated in the measurement | **exact** |
+| **89** closures | **stated nowhere** | **64 — deviation −28 %** |
 
-> **Dieselbe Messung, zwei Zahlen, eine mit Suchweg, eine ohne.** Die mit Liste reproduziert
-> auf die Stelle; die ohne war um mehr als ein Viertel daneben — **und niemand hätte es
-> gemerkt, weil sie plausibel aussah.**
+> **Same measurement, two numbers, one with a search path, one without.** The one with a list
+> reproduces to the digit; the one without was off by more than a quarter — **and nobody would
+> have noticed, because it looked plausible.**
 
-**Das ist die ganze Regel in einem Zahlenpaar:** eine Zahl mit Liste darf falsch sein, denn
-sie ist prüfbar falsch. Eine ohne Liste ist nicht falsch — *sie ist unprüfbar*, und das ist
-der teurere Zustand.
+**That is the whole rule in one number pair:** a number with a list may be wrong, because it is
+checkably wrong. One without a list is not wrong — *it is uncheckable*, and that is the more
+expensive state.
 
 ---
 
-## W8 — Eine kompositionale Prüfung wird über **zwei Ebenen** geprobt, nicht über eine
+## W8 — A compositional check is probed over **two levels**, not one
 
-**Der Anlass.** `E008` schliesst die Wirkungen der Gerufenen ein. Die naheliegende Probe wäre:
-*Rufer nennt `writes`, Gerufener nennt `writes`, kommt an.* **Die misst nichts** — sie ist
-schon grün, wenn der Pass nur die erste Ebene sieht.
+**The occasion.** `E008` includes the effects of callees. The obvious probe would be: *caller
+declares `writes`, callee declares `writes`, it arrives.* **That measures nothing** — it is
+already green if the pass only sees the first level.
 
-**Die Regel.** Eine Probe für eine transitive Eigenschaft stellt eine **Zwischenfunktion**
-dazwischen, die die Eigenschaft **nicht selbst hat**:
+**The rule.** A probe for a transitive property puts an **intermediate function** in between
+that does **not have the property itself**:
 
 ```gabbro
-extern fn ganz_tief() effects { masks IRQ } …   -- nur HIER steht `masks`
+extern fn ganz_tief() effects { masks IRQ } …   -- only HERE does `masks` appear
 impl fn mitte()       effects { pure }     …    { ganz_tief(); }
 impl fn oben()        effects { pure }     …    { mitte(); }
 ```
 
-Die Zusicherung lautet: *`masks IRQ` kommt bei `oben` an.* **Fällt der Pass auf die erste
-Ebene zurück, verschwindet die Wirkung** — und die Probe kippt. Damit hängt sie nachweislich
-am Prüfling (R14b), und zwar an der **Transitivität**, nicht an einem Treffer.
+The assurance is: *`masks IRQ` arrives at `oben`.* **If the pass falls back to the first level,
+the effect disappears** — and the probe tips. It thereby demonstrably hangs on the subject
+(R14b), and specifically on **transitivity**, not on a single hit.
 
-**Wo es wieder gebraucht wird:** der **Paarungspass** braucht dieselbe Probenform — eine
-Paarung `publishes`/`awaits` **über eine Zwischenfunktion hinweg**. Jede Analyse, die
-„schliesst … ein" sagt, braucht sie.
-
----
-
-## W9 — Vergröbert eine Analyse, wird die **Richtung** geprüft, nicht die Bequemlichkeit
-
-*R8 sagt: übertreibe nur in die sichere Richtung — das galt für **Absagen**. W9 ist dasselbe
-für **Analysen**.*
-
-**Der Fall.** `E008` rechnet über **Mengen**, nicht über **Pfade**. Das ist die richtige
-Grobheit — **aber nur, weil sie hier in die sichere Richtung grob ist**: der Pass sieht mehr
-Wirkungen, als da sind, nie weniger.
-
-**Und dieselbe Grobheit ist an einer Stelle unzulässig.** `diverges` wandert **nicht** nach
-oben: wer eine divergierende Funktion ruft, divergiert nicht — nur wer sie auf **jedem** Weg
-ruft. Das ist eine Aussage über **Pfade**. Über Mengen gerechnet wäre sie in die **unsichere**
-Richtung grob: sie erzwänge `diverges` an Funktionen, die zurückkehren.
-
-**Die Regel.** Bevor eine Analyse vergröbert, wird je Eigenschaft gefragt: *irrt die grobe
-Fassung in die sichere oder in die unsichere Richtung?* **Die Antwort steht im Passkommentar,
-nicht im Kopf.** Eine Vergröberung ohne Richtungsprüfung ist eine Bequemlichkeit mit
-Zufallsergebnis.
+**Where it will be needed again:** the **pairing pass** needs the same probe shape — a
+`publishes`/`awaits` pairing **across an intermediate function**. Every analysis that says
+"includes …" needs it.
 
 ---
 
-## W10 — Der dritte Zustand: nicht abgesagt heisst nicht bestätigt
+## W9 — If an analysis coarsens, the **direction** is checked, not the convenience
 
-**Der Beinahe-Fehler.** `E008` sagt aus einer **unteren Schranke** nicht ab — richtig (R16):
-eine Absage aus einer Untergrenze wäre eine Behauptung. Aber die erste Fassung liess die
-Funktion damit **still durchgehen**, und eine `pure`-Zusage hinter einem Zyklus war grün.
+*R8 says: overstate only in the safe direction — that applied to **refusals**. W9 is the same
+for **analyses**.*
 
-**Das ist die Ausweg-Zusicherung aus R15 durch die Hintertür** — *„erfüllt, weil nichts
-passiert ist"*, nur eine Ebene tiefer: nicht in der Zusicherung, sondern im **Pass**.
+**The case.** `E008` computes over **sets**, not over **paths**. That is the right coarseness —
+**but only because here it is coarse in the safe direction**: the pass sees more effects than
+there are, never fewer.
 
-**Die Regel.** Wo eine Analyse aus Unvollständigkeit **nicht absagen** darf, darf sie auch
-**nicht bestätigen**. Der ehrliche dritte Zustand heisst **unentscheidbar**, hat eine eigene
-Kennung und ist **sichtbar**.
+**And the same coarseness is inadmissible in one place.** `diverges` does **not** travel upward:
+whoever calls a diverging function does not diverge — only whoever calls it on **every** path.
+That is a statement about **paths**. Computed over sets it would be coarse in the **unsafe**
+direction: it would force `diverges` onto functions that return.
 
-**Der Handgriff.** `E009` nennt den Grund beim Namen (`Zyklus über …`, `… ist dem Graphen
-unbekannt`) und sagt ausdrücklich, dass die `pure`-Zusage an dieser Stelle **nicht geprüft**
-ist. *Ein Nebenertrag zeigte sich sofort:* zwei der drei ersten `E009` waren **Lücken im
-Graphen**, nicht im Programm — `transition`s fehlten ihm. Der dritte Zustand hat sich als
-erstes gegen das eigene Werkzeug gerichtet.
+**The rule.** Before an analysis coarsens, ask per property: *does the coarse version err in the
+safe or in the unsafe direction?* **The answer goes in the pass comment, not in someone's
+head.** A coarsening without a direction check is a convenience with a random result.
 
 ---
 
-## W11 — Jede Torquote nennt ihr N, und ein N-Sprung ist selbst ein Prüffall
+## W10 — The third state: not refused does not mean confirmed
 
-**Der Beinahe-Fehler.** Ich verschärfte die Trennung *Ausschnitt / Übersetzungseinheit* und
-suchte `…` im **Rohtext**. Das warf fünf der sechs Fragmente heraus — dort steht `…` in
-**Kommentaren**. Tor P2 hätte gemeldet:
+**The near miss.** `E008` does not refuse on the basis of a **lower bound** — correct (R16): a
+refusal from a lower bound would be a claim. But the first version thereby let the function pass
+**silently**, and a `pure` promise behind a cycle was green.
+
+**That is the escape-hatch assurance from R15 through the back door** — *"satisfied, because
+nothing happened"*, only one level down: not in the assurance but in the **pass**.
+
+**The rule.** Where an analysis may **not refuse** out of incompleteness, it may also **not
+confirm**. The honest third state is called **undecidable**, has a diagnostic code of its own,
+and is **visible**.
+
+**The handle.** `E009` names the reason (`cycle over …`, `… is unknown to the graph`) and says
+explicitly that the `pure` promise is **not checked** at this site. *A side benefit showed up
+immediately:* two of the first three `E009` were **gaps in the graph**, not in the program —
+`transition`s were missing from it. The third state turned first against our own tool.
+
+---
+
+## W11 — Every gate ratio names its N, and a jump in N is itself a test case
+
+**The near miss.** I sharpened the separation *excerpt / translation unit* and searched for `…`
+in the **raw text**. That threw out five of the six fragments — there `…` appears in
+**comments**. Gate P2 would have reported:
 
 ```
 Uebersetzungseinheiten: 1 von 1 ohne Fehler (100 %)
 ```
 
-**Und das ist auch 100 %.** Ein Filter, der die Grundgesamtheit schrumpft, **maskiert als
-Erfolg** — die Quote steigt, während die Deckung fällt.
+**And that is also 100 %.** A filter that shrinks the population **masquerades as success** —
+the ratio rises while coverage falls.
 
-**Die Regel.** Jede Torquote nennt ihr **N**, und ein **N-Sprung gegen den Vorlauf ist selbst
-ein Prüffall**. Die richtige Meldung wäre nicht *„1 von 1 grün"* gewesen, sondern:
+**The rule.** Every gate ratio names its **N**, and a **jump in N against the previous run is
+itself a test case**. The right report would not have been *"1 of 1 green"* but:
 
-> **„N fiel von 6 auf 1."**
+> **"N fell from 6 to 1."**
 
-*Die zweite Meldung ist die, die den Fehler zeigt.* Eine Quote ohne Nenner ist keine Zahl —
-das ist Falle 80 —, und ein Nenner, der sich ohne Anlass bewegt, ist ein Befund.
+*The second report is the one that shows the error.* A ratio without a denominator is not a
+number — that is trap 80 — and a denominator that moves without cause is a finding.
 
-**Die Verwandtschaft.** W1 sagt: eine Deckungszahl zählt Belege, nicht Versuche. **W11 sagt
-die Kehrseite:** wenn der Nenner schrumpft, muss das lauter sein als der steigende Zähler.
-*Beide Fehler sehen im Bericht gleich aus — nur der Nenner unterscheidet sie.*
+**The kinship.** W1 says: a coverage number counts evidence, not attempts. **W11 says the flip
+side:** when the denominator shrinks, that must be louder than the rising numerator. *Both
+errors look the same in the report — only the denominator tells them apart.*
 
-**Der Handgriff.** `gabbro fragmente` druckt N seit jeher; was fehlte, war die Aufmerksamkeit
-auf seine **Änderung**. Wo ein Werkzeug eine Grundgesamtheit definiert, gehört ihre Grösse in
-denselben Satz wie die Quote — und ihr Vorwert daneben, sobald es einen gibt.
+**The handle.** `gabbro fragmente` has always printed N; what was missing was attention to its
+**change**. Where a tool defines a population, its size belongs in the same sentence as the
+ratio — and its previous value beside it, as soon as there is one.
 
-### **Die Bestätigung kam einen Tag nach der Regel — in Reinform**
+### **Confirmation came one day after the rule — in pure form**
 
-**B3, 2026-08-16.** Die R14(a)-Probe setzte eine kaputte Klammer in eine Kopie des Prüflings.
-Das Werkzeug meldete `Abbrueche: 1` — **und die berichtete Zahl fiel dabei still von 26 auf
-24**, weil zwei Rümpfe aus dem Verzeichnis fielen.
+**B3, 2026-08-16.** The R14(a) probe put a broken brace into a copy of the subject. The tool
+reported `Abbrueche: 1` — **and the reported number silently fell from 26 to 24**, because two
+bodies dropped out of the inventory.
 
-> **Ohne den Abbruchzähler hätte die Messung eine um zwei zu niedrige Zahl geliefert und
-> dabei gesund ausgesehen** — bei einem Tor, das nach *unten* besteht, also in die
-> schmeichelhafte Richtung.
+> **Without the abort counter the measurement would have delivered a number two too low and
+> looked healthy doing it** — with a gate that passes *downward*, i.e. in the flattering
+> direction.
 
-*Dieselbe Bauart wie der P2-Fall: der Zähler stimmt, der Nenner ist gewandert, und der
-Bericht sieht in beiden Fällen gleich aus.* **Eine Regel, die einen Tag nach ihrer
-Niederschrift ihren zweiten Fall fängt, ist keine Vorsichtsmassnahme mehr.**
+*The same construction as the P2 case: the numerator is right, the denominator has moved, and
+the report looks identical in both cases.* **A rule that catches its second case one day after
+being written down is no longer a precaution.**
 
 ---
 
-## **Das Zahlenpaar zu R14 — das quantitativste Argument, das dieser Ordner besitzt**
+## **The number pair for R14 — the most quantitative argument this folder owns**
 
-R14 (*ein Messwerkzeug beweist, dass es messen kann*) stand bisher mit Begründungen da. **B3
-gibt ihr Zahlen, und sie sind unangenehm deutlich:**
+R14 (*a measuring tool proves it can measure*) stood on justifications until now. **B3 gives it
+numbers, and they are uncomfortably clear:**
 
 | | |
 |---|---:|
-| Spanne zwischen den **verworfenen** Regelfassungen (0,03 % … 4,36 %) | **Faktor 130** |
-| Abstand zwischen **Werkzeug und Wahrheit** nach den drei R14-Proben | **Faktor 1** |
+| spread between the **discarded** rule versions (0,03 % … 4,36 %) | **factor 130** |
+| distance between **tool and truth** after the three R14 probes | **factor 1** |
 
-**Vier Fassungen, drei davon falsch:**
+**Four versions, three of them wrong:**
 
 ```
-Fassung 1   0,03 %   sah nur Ruempfe MIT Schleife -- schleifenlose Chirurgie unsichtbar
-Fassung 2   4,36 %   las `for x in segs` als Nicht-Domaene -- EIN Rumpf machte 2 % aus
-Fassung 3   0,74 %   uebersah Index-, Kanten- und Spendenketten
-Fassung 4   0,95 %   die berichtete
+version 1   0,03 %   saw only bodies WITH a loop -- loopless surgery invisible
+version 2   4,36 %   read `for x in segs` as a non-domain -- ONE body made up 2 %
+version 3   0,74 %   missed index, edge and donation chains
+version 4   0,95 %   the reported one
 ```
 
-> **Die beiden verworfenen Fassungen klammern die richtige Antwort ein und spannen dabei
-> einen Faktor 130 auf. Beide hätten sich mit derselben Fundstellenliste vorführen lassen.**
-> Der einzige Unterschied zwischen ihnen und der Endfassung ist **R14** — die Vollzählung
-> aller 347 `for`-Köpfe und die drei Mutationsproben.
+> **The two discarded versions bracket the right answer and span a factor of 130 doing it. Both
+> could have been presented with the same list of sites.** The only difference between them and
+> the final version is **R14** — the full count of all 347 `for` heads and the three mutation
+> probes.
 
-**Die Regel, die daraus folgt, steht in einer Zeile:** *eine Zahl aus dieser Werkzeugklasse
-ohne R14 ist nicht ungenau, sondern wertlos.* **Drei von vier Fassungen waren falsch, und
-keine davon sah falsch aus.**
+**The rule that follows fits on one line:** *a number from this class of tool without R14 is not
+imprecise, it is worthless.* **Three of four versions were wrong, and none of them looked
+wrong.**
 
 ---
 
-## W12 — Eine gefüllte Karte ist kein Beleg für eine **vollständige** Karte
+## W12 — A filled map is no evidence of a **complete** map
 
-**Der Schaden.** Die Domänenschranke für `mappings of` stand da — `levels × Knotenlänge`, aus
-der `walk`-Deklaration, in `walkschranken` eingetragen und per Probe nachgewiesen
-(`t::W → 2048`). **Sie griff trotzdem nicht.** Die Typauflösung kannte Formate, Geräte und
-Tabellen — und keine Walks. `ptr<normal, r> Seitenabstieg` war schlicht `Unbekannt`.
+**The damage.** The domain bound for `mappings of` was there — `levels × node length`, from the
+`walk` declaration, entered into `walkschranken` and demonstrated by a probe (`t::W → 2048`).
+**It still did not bite.** Type resolution knew formats, devices and tables — and no walks.
+`ptr<normal, r> Seitenabstieg` was simply `Unbekannt`.
 
-**`Unbekannt` fiel nicht ab. Es lief als leerer Eintrag mit.** Ich habe eine halbe Stunde am
-falschen Ende gesucht, weil die Karte gefüllt war.
+**`Unbekannt` did not drop out. It ran along as an empty entry.** I spent half an hour searching
+at the wrong end, because the map was filled.
 
-**Die Klasse.** Das ist strukturell derselbe Fehler wie der Wortschatz-Wächter, der
-Geschlossenheit über einer Menge behauptete, die er nie gesehen hatte: **eine Auflösung mit
-Auffangzweig behauptet Vollständigkeit, die sie nicht hat.**
+**The class.** That is structurally the same error as the vocabulary guardian claiming closure
+over a set it had never seen: **a resolution with a catch-all branch claims a completeness it
+does not have.**
 
-**Die Regel.** An jeder Auflösungsstelle wird **erschöpfend über die Deklarationsarten**
-gematcht, **ohne `_`-Zweig**. Eine neue Art ist damit ein **Übersetzungsfehler** an jeder
-Kette, die sie nicht behandelt.
+**The rule.** At every resolution site, match **exhaustively over the declaration kinds**,
+**without a `_` branch**. A new kind is thereby a **compile error** at every chain that does not
+handle it.
 
-> **Dieselbe D2-Medizin, die die Sprache ihren Nutzern verschreibt, auf den Prüfer selbst
-> angewandt** — Gabbro verlangt erschöpfendes `match` über `tagged`, und Rust gibt es hier
-> gratis her.
+> **The same D2 medicine the language prescribes to its users, applied to the checker itself** —
+> Gabbro demands exhaustive `match` over `tagged`, and Rust hands it over for free here.
 
-**Der Handgriff.** `Traegerart::ALLE` (`umgebung.rs`) mit fünf Varianten und zwei `match`
-ohne Auffangzweig. *Die Reihenfolge des Arrays ist die Auflösungsreihenfolge* — sie steht
-damit an einer Stelle statt in der Schachtelung einer `if-else`-Kette.
+**The handle.** `Traegerart::ALLE` (`umgebung.rs`) with five variants and two `match`es without
+a catch-all. *The order of the array is the resolution order* — it therefore lives in one place
+instead of in the nesting of an `if-else` chain.
 
-**Die Kehrseite, und sie ist der Preis:** `Typ::Unbekannt` bleibt als *Ergebnis* zulässig —
-ein Name, den keine Deklaration trägt, ist unbekannt, und das ist richtig. Was nicht mehr
-geht, ist **unbekannt zu sein, weil niemand nachgesehen hat.**
+**The flip side, and it is the price:** `Typ::Unbekannt` remains admissible as a *result* — a
+name no declaration carries is unknown, and that is right. What is no longer possible is **being
+unknown because nobody looked.**
