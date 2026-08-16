@@ -6,6 +6,13 @@ eine. Übersetzer in **sicherem Rust** (`forbid(unsafe_code)`).
 Der Zweck ist nicht, eine weitere Sprache zu haben. Er ist, einen **Kernel darin zu schreiben und
 ihn dann billig formal zu verifizieren** — Caprock vollständig, mit grüner Abnahmereihe.
 
+> **Lizenz: AGPL-3.0** ([LICENSE](LICENSE)) — **mit einem Zusatz, der die wichtigste Frage
+> vorweg beantwortet:** *was du in Gabbro schreibst, ist kein abgeleitetes Werk.* Dein
+> Programm, das erzeugte C und die Binärdateien gehören dir, unter jeder Lizenz, die du
+> willst. **Die Bedingung ist eine Zeile:** erzeugte C-Dateien und Binärdateien tragen den
+> Hinweis, dass sie aus Gabbro stammen. Einzelheiten und die Rechtslage dazu in
+> [LIZENZ-ZUSATZ.md](LIZENZ-ZUSATZ.md).
+
 ## Das Ziel, in einem Satz
 
 > **Gabbro beweist alles ausser funktionaler Korrektheit — auf einem Mehrkernkernel mit DMA.**

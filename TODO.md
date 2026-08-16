@@ -292,6 +292,15 @@ von Posten, die weder Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
 ---
 
 # BAU — braucht Code
+
+- [ ] **Der Erzeuger muss den Lizenzhinweis SELBST schreiben — heute tut es niemand.**
+      [`LIZENZ-ZUSATZ.md`](LIZENZ-ZUSATZ.md) knüpft die zusätzliche Erlaubnis (*„dein Programm
+      ist kein abgeleitetes Werk"*) an eine Bedingung: erzeugte C-Dateien tragen im Kopf und
+      Binärdateien als Zeichenkette den Hinweis `Erzeugt von Gabbro`. **Es gibt keinen
+      Erzeuger, also schreibt ihn nichts.** Solange das so ist, ist die Bedingung eine Zusage
+      an ein Werkzeug, das es nicht gibt — *dieselbe Bauart wie eine Schranke, die nie
+      ausgelöst wurde.* **Der Hinweis gehört in dieselbe Änderung wie die erste Zeile
+      Emission, nicht später.**
 ### Die Schreibrechtszeile `by ops` — und der Gruppen-Pruefsatz, der ihr vorausgeht
 
 - [ ] **`by ops` ist gebaut — offen bleibt EIN Durchstich: `breaking` auf einem
