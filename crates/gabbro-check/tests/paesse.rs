@@ -342,3 +342,30 @@ fn jede_schablone_nennt_ihre_pflicht() {
         "wenn eine Schablone nach Isabelle gebracht wurde, gehoert das hierher UND in BEWEIS.md"
     );
 }
+
+
+// -- Die Schablonen-Ratsche, zwei Zaehne ------------------------------------------------
+
+#[test]
+fn kein_schablonen_eintrag_ohne_fundstelle() {
+    let ohne = gabbro_check::schablonen::ohne_fundstelle();
+    assert!(
+        ohne.is_empty(),
+        "Schablonen ohne Fundstelle: {ohne:?} -- der erste Zahn der Ratsche verlangt einen \
+         GEMESSENEN Bedarf je Eintrag, und eine Fundstelle ist sein Mindestbeleg"
+    );
+}
+
+#[test]
+fn das_schablonenregister_reisst_seine_marke_nicht() {
+    use gabbro_check::schablonen::{marke_gerissen, MARKE_OHNE_BEWEIS, SCHABLONEN};
+    assert!(
+        !marke_gerissen(),
+        "{} Schablonen, keine bewiesen -- die Marke steht bei {MARKE_OHNE_BEWEIS}. \
+         **Das ist ein gefallenes Tor, kein Hinweis.** Der Ausweg ist NICHT, die Marke zu \
+         erhoehen: er ist, die erste Schablone zu beweisen. Benannt ist sie seit langem -- \
+         `table.induktion`, die kleinste der Liste. Eine bewiesene von achtzehn ist \
+         qualitativ etwas anderes als null von siebzehn.",
+        SCHABLONEN.len()
+    );
+}

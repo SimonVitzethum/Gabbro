@@ -281,6 +281,50 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
 ];
 
+/// **DIE MARKE — der zweite Zahn der Ratsche, seit 2026-08-16.**
+///
+/// Bis heute hatte dieses Register **einen Zaehler und sonst nichts**. Der Wortschatz hat
+/// seine Ratsche (189 gegen 189), die Axiomschicht ihre Klassen mit Falsifikatorpflicht, die
+/// Kennzahl ihre Latte — **die Schablonen hatten keine Abbruchbedingung.** Und ohne sie ist
+/// die ehrlichste Beschreibung des Projektstands unangenehm:
+///
+/// > Eine Sprache, deren Syntax konvergiert, deren Beweise aber vollstaendig in eine Flaeche
+/// > delegiert sind, die **monoton waechst** — strukturell dieselbe Kurve wie seL4s
+/// > Beweisberg, nur dass sie Schablonenliste heisst und noch niemand angefangen hat, sie
+/// > abzutragen.
+///
+/// **Der Unterschied zum Beweisberg ist einzig das Amortisierungsargument** (eine Schablone
+/// faellt EINMAL, nicht je Programm) — **und das gilt erst ab der ersten BEWIESENEN
+/// Schablone.** Bis dahin ist es eine Zusage ueber eine Flaeche, die niemand betreten hat.
+///
+/// Deshalb die Marke: **solange KEINE einzige Schablone bewiesen ist, darf das Register
+/// achtzehn nicht ueberschreiten.** Die Zahl ist nicht heilig — sie ist die heutige plus
+/// eins, also *ein* weiterer Eintrag Luft. Wer den neunzehnten braucht, muss vorher den
+/// ersten beweisen.
+///
+/// *Der erste ist benannt und war es die ganze Zeit:* `table.induktion` — das erzeugte
+/// Induktionsschema, seit der INDUKTION-Eintragung als L3-Posten markiert, die kleinste
+/// Schablone der Liste. **Sie kommt seit Tagen nicht dran, weil sie mit nichts konkurriert
+/// ausser mit allem.**
+pub const MARKE_OHNE_BEWEIS: usize = 18;
+
+/// Ist das Register ueber seiner Marke? **Ein gefallenes Tor, kein Hinweis.**
+pub fn marke_gerissen() -> bool {
+    SCHABLONEN.iter().all(|s| s.stand != Stand::Bewiesen) && SCHABLONEN.len() > MARKE_OHNE_BEWEIS
+}
+
+/// **Der ERSTE Zahn, ausgesprochen:** kein neuer Eintrag ohne gemessenen Bedarf. Er gilt de
+/// facto schon — `gruppe.sperrabdruck` (S17) kam aus dem Sweep, nicht aus einem Entwurf —
+/// und steht hier, damit er nicht bloss Gewohnheit ist. Jede Schablone traegt ihre
+/// `fundstelle`; ist sie leer oder nennt sie kein Dokument, faellt der Test.
+pub fn ohne_fundstelle() -> Vec<&'static str> {
+    SCHABLONEN
+        .iter()
+        .filter(|s| s.fundstelle.trim().is_empty())
+        .map(|s| s.name)
+        .collect()
+}
+
 /// Wieviele Schablonen tragen heute, ohne bewiesen zu sein?
 pub fn ungedeckt() -> usize {
     SCHABLONEN
@@ -313,8 +357,12 @@ pub fn zeige() -> String {
     out.push_str(
         "-- Der eine Isabelle-Posten ist damit keine Zahl 1, sondern diese Liste.\n\
          -- Waechst sie, waechst die Vertrauensbasis -- auch wenn die Kennzahl glaenzt.\n\
-         -- RATSCHE: ein Eintrag geht nur BEWIESEN oder MITSAMT SEINEM KONSTRUKT.\n\
-         --          Nicht durch Umformulierung, nicht durch Zusammenfassen.\n",
+         -- RATSCHE, ZAHN 1: kein Eintrag ohne gemessenen Bedarf (Fundstelle pflichtig).\n\
+         -- RATSCHE, ZAHN 2: solange KEINE bewiesen ist, sind hoechstens 18 zulaessig.\n\
+         --   Der Ausweg ist nicht, die Marke zu heben -- er ist, die erste zu beweisen.\n\
+         --   Benannt und seit langem faellig: `table.induktion`, die kleinste der Liste.\n\
+         -- Ein Eintrag verlaesst die Liste nur BEWIESEN oder MITSAMT SEINEM KONSTRUKT.\n\
+         --   Nicht durch Umformulierung, nicht durch Zusammenfassen.\n",
     );
     out
 }

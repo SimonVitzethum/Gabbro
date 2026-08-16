@@ -342,7 +342,7 @@ Sie ist die einzige, die sich nicht durch Umschichten von Text gewinnen lässt:
 >
 > **Weg 5 — die Pflicht wird durch ein VERBOT erledigt, und Verbote kostet die Zahl nichts.**
 > Strenge erledigt Klempnerei, indem sie **Programme entfernt**: kein `while`, keine
-> Verschlüsse (89 gemessene Fundstellen), keine Generizität, statische Sperrränge statt
+> Verschlüsse (64 gemessene Fundstellen), keine Generizität, statische Sperrränge statt
 > adressgeordnetem Nehmen, Tabellen statt Zeigern. Jedes davon **verkleinert den Nenner nicht,
 > sondern die Menge der schreibbaren Programme** — und diese Kosten treten in keinem der beiden
 > Töpfe auf.
@@ -1150,7 +1150,7 @@ steht, steht ihre Quelle daneben; wo keine steht, heisst der Satz *„geschätzt
 
 | | Lücke | gemessen |
 |---|---|---|
-| **1** | **Verschlüsse** — Gabbro hat **keine Form** für `dyn FnMut`/`Fn` | **89 Fundstellen** |
+| **1** | **Verschlüsse** — Gabbro hat **keine Form** für `dyn FnMut`/`Fn` | **64 Fundstellen** |
 | **2** | **Die Emission** — C und Annotation, **beide bei null** | 0 von 2 Flächen, 0 Mutationen |
 | **3** | **Die Erhaltung** der Gruppen-Invariante — die Form steht, die Beweispflicht hat keinen Empfänger | S16/S17, 17 Schablonen unbewiesen |
 | **4** | **Generizität** — ohne sie braucht jede Tabelle ihren eigenen `traverse` | ungemessen (Schätzung) |

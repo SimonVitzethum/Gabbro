@@ -2291,3 +2291,29 @@ Unterschied, auf den es fuer die Kennzahl ankommt.
       es sich nach C absenken?"* Ein Bericht, der ein Loch meldet, ohne die minimale Angabe zu
       nennen, ist unvollstaendig — **er hat die Arbeit an der Stelle abgebrochen, an der sie
       anfaengt.**
+
+---
+
+## Der Schnitt für deklarierte Funktionen in Domänen (2026-08-16)
+
+**Die Frage, die «B41» gestellt hat:** darf eine Domäne über einer *deklarierten Funktion*
+laufen — `traverse … over chain via f` —, oder ist das **Quantorenvorrat durch die
+Hintertür**, also die Stelle, an der die Grenze zwischen Sprache und Beweiser wandert?
+
+**Der Präzedenzfall steht seit jeher in der Sprache:** der `update`-Rumpf von `exchange` ist
+**rein, M1-typisiert, über einem Wert, ohne Quantor** — und niemand hat ihn je für
+Quantorenvorrat gehalten.
+
+> **Der Schnitt: Quantorenvorrat beginnt dort, wo die Funktion in AUSSAGEN auftaucht statt in
+> DOMÄNEN-ERZEUGUNG.**
+>
+> Eine Funktion, die **einen Wert nimmt und einen `option`-Wert liefert, ohne die Welt
+> anzufassen**, ist ein *deklarierter Schritt*. Sie liefert Zeugen. Sobald dieselbe Funktion
+> in einem `requires`, einem `invariant` oder einem `ensures` steht, quantifiziert man über
+> ihr — und **dort, nicht früher, wandert die Linie.**
+
+**Was der Schnitt kostet und was er einbringt:** er ist eine Regel über der *Verwendung*, nicht
+über der Deklaration — der Prüfer muss also beide Stellen kennen. **Er bringt ein:** die
+Kettendomäne über einer Kantenfunktion verschluckt `ancestors of` (dieselbe Kante, andere
+Richtung ist ein anderes `f`), und aus drei gemessenen Domänenlücken wird **eine
+Entwurfszeile**.

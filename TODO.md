@@ -34,8 +34,20 @@
 
 # DER KRITISCHE PFAD, in einer Zeile
 
-> ~~**B3**~~ → ~~**K/A/W-Einsetzung**~~ → ~~**`effects`-Lesen**~~ → **Verschlüsse →
-> Gruppen-`ops`** *(Sperrabdruck steht, Invariante offen)* **→ P5 → P6 → P7**
+> ~~**B3**~~ → ~~**K/A/W-Einsetzung**~~ → ~~**`effects`-Lesen**~~ → ~~**Verschlüsse**~~ →
+> **`table.induktion` nach Isabelle** → Gruppen-`ops` → P5 → P6 → P7
+
+> **Der Pfad hat am 2026-08-16 seinen Kopf gewechselt, und zwar gegen die eigene frühere
+> Angabe.** Nicht Gruppen-`ops`, sondern **die erste bewiesene Schablone**. Der Grund ist
+> kein Aufwand, sondern eine Kurve: *das Amortisierungsargument — eine Schablone fällt
+> EINMAL, nicht je Programm — **gilt erst ab der ersten bewiesenen Schablone.*** Bis dahin
+> ist die Schablonenliste strukturell derselbe Berg wie seL4s Beweisberg, nur unbestiegen.
+> **Eine bewiesene von achtzehn ist qualitativ etwas anderes als null von siebzehn:** das
+> Register wechselt von *„Liste mit Länge"* zu *„Liste mit Fallrichtung"*.
+>
+> `table.induktion` ist die kleinste, sie ist seit der INDUKTION-Eintragung als L3-Posten
+> markiert, und **sie kommt seit Tagen nicht dran, weil sie mit nichts konkurriert ausser mit
+> allem.**
 
 **Die ersten zwei sind am 2026-08-16 gefallen** (`DONE.md`), und die Einsetzung hat den Pfad
 **verkürzt statt verlängert**: `p_B3 = 0,0096`, Aufschlag `≥ +0,05` — *unter der Auflösung der
@@ -116,10 +128,18 @@ von Posten, die weder Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
       * **`ancestors of` — billig, und der Bedarf ist gemessen.** Dieselbe Erzeugungslogik
         wie `descendants of`, dieselbe Kante, andere Richtung. **Zählt in der
         Konvergenzmetrik als 1: null aus vier Fragmenten, eins aus einer Messung.**
-      * **Kantenfunktion — offene Frage nach der LINIE, kein Bauauftrag.** Sie ist der
-        allgemeine Fall von `chain(a,b)`. Zu entscheiden: hält eine **deklarierte**
-        Kantenfunktion (rein, M1-typisiert, wie der `update`-Rumpf von `exchange`), oder ist
-        sie **Quantorenvorrat durch die Hintertür**?
+      * **Kantenfunktion — die Linienfrage hat seit 2026-08-16 ihr KRITERIUM.** Sie ist der
+        allgemeine Fall von `chain(a,b)`, und der Präzedenzfall steht schon in der Sprache:
+        **der `update`-Rumpf von `exchange` — rein, M1-typisiert, über einem Wert, ohne
+        Quantor.** Eine Kantenfunktion derselben Klasse (*ein Wert rein, ein `option`-Wert
+        raus, keine Welt*) ist **kein Quantorenvorrat, sondern ein deklarierter Schritt.**
+        > **Der Schnitt:** Quantorenvorrat beginnt dort, wo die Funktion in **Aussagen**
+        > auftaucht statt in **Domänen-Erzeugung**. Solange sie nur Zeugen liefert und in
+        > keinem `requires`/`invariant` steht, wandert die Linie nicht.
+        **Mit diesem Schnitt verschluckt die Kette `ancestors of`**, und «B41» geht von drei
+        Lücken auf **eine Entwurfszeile** zurück. *Und die Messung vom selben Tag zeigt, dass
+        es derselbe Gegenstand ist wie der Verschluss-Posten:* `impl Fn(u16) -> Option<u16>`
+        steht dreimal in `sched/redirect.rs` und ist beides zugleich.
       * **Union-Find — bekommt voraussichtlich GAR KEINE Traversierungsform.** `find` mit
         Pfadkompression mutiert die Struktur, über die es läuft: **die Verschränkung aus
         P0.1-Versuch 1, als Leseoperation getarnt.** Vorhersage im Ordner: es bleibt ein
@@ -457,7 +477,7 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
 
 - [ ] **A2 — GEFAHREN: dynamische Aufrufe werden verboten, `fnptr` braucht keinen Vertrag.**
       Die zwei dynamisch benutzten Traits haben je EINE Implementierung. **Neu und
-      unentschieden: 89 Verschluesse** (`dyn FnMut`/`Fn`) — Gabbro hat keine, und was daraus
+      unentschieden: 64 Verschluesse** (`dyn FnMut`/`Fn`) — Gabbro hat keine, und was daraus
       wird (einbetten, Zeiger plus Kontext, Verbot), steht nirgends.
 - [ ] **A4 — `costs` an einer REKURSIVEN Funktion bleibt eine Annahme.** Ein Aufruf zaehlt
       die *deklarierten* Kosten des Gerufenen; bei einem Zyklus rechnet niemand nach. Das ist

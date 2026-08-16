@@ -1617,7 +1617,7 @@ einen Zeiger auf globalen Zustand bilden. Ein `device` hat eine Erzeugungsform
 | `SchedOps` | 10 | **1** (`KernelSched`) |
 | `Park` | 9 | **1** (`Sicht<'_>`) |
 | `DmaEnforcer` | 0 | 2 (benutzt schon statische Dispatch) |
-| `FnMut`/`Fn` | 89 | — (**Verschluesse**, s. u.) |
+| `FnMut`/`Fn` | ~~89~~ **64** | — (**Verschluesse**, s. u.) · *die 89 hat keinen Suchweg, berichtigt 2026-08-16, s. ERGEBNIS* |
 
 **Die beiden Traits, die dynamisch benutzt werden, haben je EINE Implementierung.** Das ist
 keine Polymorphie, sondern eine Schichtgrenze — der Aufruf ist statisch bekannt, und in
@@ -1626,7 +1626,7 @@ Gabbro verschwindet das Trait-Objekt.
 > **`fnptr` braucht keinen Vertrag.** Der Posten aus «B9» faellt weg, und die Verbotsliste
 > waechst statt der Grammatik.
 
-**Der Rest ist eine Frage, die der Plan nicht vorgesehen hat: 89 Verschluesse.** Gabbro hat
+**Der Rest ist eine Frage, die der Plan nicht vorgesehen hat: 64 Verschluesse** (*hier stand 89; die Zahl hatte keinen Suchweg*)**.** Gabbro hat
 gar keine — weder `dyn FnMut` noch `impl FnMut`. Was daraus wird (einbetten, Zeiger plus
 Kontext, oder Verbot), ist **unentschieden und neu**.
 
@@ -1674,7 +1674,7 @@ jeder Wartestelle (§9.3), und ohne Pass 9 war sie eine Behauptung.
 | Waechter | 5 | 5 |
 
 **Und drei Befunde, die es vor A1–A4 nicht gab:** der fehlende **Ursprung** der Eigentumskette
-(A1), die **89 Verschluesse** ohne Form in der Sprache (A2), und `costs` an einer **rekursiven**
+(A1), die **64 Verschluesse** ohne Form in der Sprache (A2) — *hier stand 89, eine Zahl ohne Suchweg* —, und `costs` an einer **rekursiven**
 Funktion, das eine Annahme bleibt statt einer Rechnung (A4, im Passkopf benannt).
 
 
@@ -4457,3 +4457,86 @@ fremden Grundgesamtheit gebildet.
 2. Ist unklar, ob eine Kette ein Kombinator ist, zählt sie als **V-b**, nicht als V-c —
    *Verbot ist die billigste Antwort und darf deshalb nie die Zweifelsantwort sein.*
 3. Was in keine Klasse fällt, wird **einzeln aufgeführt**, nicht in eine gerundet.
+
+# ERGEBNIS — die Verschlüsse, 2026-08-16: **das Tor ist VOID, und der Grund ist die Zahl selbst**
+
+## Zuerst die Ungültigkeit, weil sie vor dem Ergebnis kommt
+
+**Die vorregistrierte Ungültigkeitsbedingung ist ausgelöst.** Sie lautete: *„die
+Fundstellenzahl weicht um mehr als 10 % von 89 ab → dann misst die Zählung etwas anderes als
+die Quelle der 89."*
+
+```
+grep -rnoE "(dyn|impl|&|Box<)\s*(dyn\s*)?(FnMut|FnOnce|Fn)\s*\(" kernel crates   ->  64
+grep -rnE  "\bdyn\b"                                              kernel crates   ->  67
+```
+
+**Die 67 `dyn`-Stellen reproduzieren exakt** — es ist derselbe Baum. **Die 89 nicht: der
+reproduzierbare Wert ist 64, eine Abweichung von −28 %.** Und kein plausibler Suchweg trifft
+89: Verschlussliterale `|…|` ergeben **441**, `move`-Verschlüsse **16**, `Box<dyn Fn*>` **0**.
+
+> **Die 89 ist eine Zahl ohne Suchweg** — genau die Klasse, gegen die W7 steht, und sie hat
+> den W7-Kehraus vom 2026-08-15 überlebt, weil sie in einer *Tabelle* stand und nicht in
+> einem Satz. **Wer nur Sätze prüft, findet sie nicht.**
+
+**Das Tor ist damit void. Ein neues wird jetzt NICHT gesetzt** — das wäre R2. Was folgt, ist
+eine **beschreibende Zählung ohne Tor**, und sie ist als solche gekennzeichnet.
+
+## Die beschreibende Zählung über der reproduzierbaren Grundgesamtheit (64)
+
+| Klasse | vorhergesagt | **gemessen** |
+|---|---|---|
+| **V-a** Rückruf, als Parameter übergeben | Mehrheit | **praktisch alle** — 39 direkt in Parameterlisten, der Rest in mehrzeiligen Signaturen |
+| **V-b** gespeicherter Handler in einer Tabelle | eigene Klasse | **NULL.** `Box<dyn Fn*>` = 0, Strukturfelder mit Fn-Typ = 0 (alle 20 Treffer sind mehrzeilige *Parameter*) |
+| **V-c** Kombinator (Iterator-Adapter) | eigene Klasse | **nicht in dieser Grundgesamtheit** — sie lebt in den 441 Verschlussliteralen, davon **270** in `.map`/`.filter`/… |
+
+## **Der eigentliche Befund: es sind ZWEI Populationen, und „89" benennt keine davon**
+
+| | Population | Zahl |
+|---|---|---:|
+| **P1** | Nennungen der `Fn`-Traits als **Typ** | **64** |
+| **P2** | **Verschlussliterale** `\|…\|` | **441**, davon 270 in Iterator-Adaptern |
+
+**Die Vorhersage mischt sie:** V-a und V-b sind Aussagen über P1, V-c ist eine über P2. *Eine
+Klassifikation über einer Grundgesamtheit, die zwei Dinge zugleich meint, kann nicht bestehen
+oder fallen — sie kann nur so aussehen.*
+
+## Was die Vorhersage trotzdem richtig hatte, und es ist die teure Hälfte
+
+**V-b ist LEER, und das ist die günstigste Widerlegung, die möglich war.** Die Klasse war die
+einzige, die ein **neues Konstrukt** gefordert hätte (deklarierte Verteilertabelle,
+benutzerseitiges `entry … dispatch`). *Sie kommt im Baum nicht vor.*
+
+**Und die dominante Verwendung ist EINE:**
+
+```
+&mut dyn FnMut() -> Option<u64>      25 Fundstellen   (mmu, smmu, vtd)
+```
+
+**Der Seitentabellen-Allokator, denselben Rückruf 25-mal durchgereicht.** Das ist kein
+Verschluss im Sinne der Frage — es ist **ein Rückruf mit einer Implementierung**, also
+wörtlich A2, und Gabbros Antwort steht seit dem 2026-08-14 fest.
+
+**Die zweitgrösste ist ein alter Bekannter:**
+
+```
+impl Fn(u16) -> Option<u16>           3 Fundstellen   (sched/redirect.rs)
+```
+
+**Das ist die Kantenfunktion aus «B41».** Der Verschluss-Posten und die dritte
+Domänenlücke sind **derselbe Gegenstand**, und keine der beiden Untersuchungen hat das
+bemerkt, bis beide Zahlen nebeneinander lagen.
+
+## Urteil
+
+> **Der Verschluss-Posten verliert seinen Sonderstatus — aber nicht, weil die Vorhersage
+> aufging, sondern weil die Grundgesamtheit falsch war.**
+
+* **P1 (64)** zerfällt in *„Rückruf mit einer Implementierung"* (A2, entschieden) und
+  *„Kantenfunktion"* (die Linienfrage aus «B41»). **Kein neues Konstrukt, eine offene Linie.**
+* **P2 (441)** ist eine andere Frage und heisst richtig *„braucht Gabbro Iterator-Adapter?"* —
+  und sie hängt an der **Generizität**, nicht an Verschlüssen.
+
+**Was als „der schwerste der fünf Nötigen, weil die Frage *ob* lautet" gebucht war, ist nach
+dieser Zählung zwei Fragen, von denen eine schon beantwortet ist und die andere Generizität
+heisst.** *Der Posten war nicht schwer, er war unscharf.*
