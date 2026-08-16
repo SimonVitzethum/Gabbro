@@ -1146,19 +1146,23 @@ steht, steht ihre Quelle daneben; wo keine steht, heisst der Satz *„geschätzt
 
 ## Was NICHT gedeckt ist — nach Notwendigkeit geschnitten, nicht nach Aufwand
 
-### NÖTIG — ohne das ist das Ziel nicht erreichbar
+### NÖTIG — **vier**, nicht fünf (berichtigt 2026-08-16 nach der Verschluss-Zählung)
 
 | | Lücke | gemessen |
 |---|---|---|
-| **1** | **Verschlüsse** — Gabbro hat **keine Form** für `dyn FnMut`/`Fn` | **64 Fundstellen** |
+| ~~1~~ | ~~**Verschlüsse**~~ — **gestrichen.** Die Zählung fand zwei Grossmuster und beide sind entschieden: 25× Allokator-Rückruf (= A2) und 3× Kantenfunktion (= «B41», Linie steht) | 64 statt 89, Tor void |
 | **2** | **Die Emission** — C und Annotation, **beide bei null** | 0 von 2 Flächen, 0 Mutationen |
 | **3** | **Die Erhaltung** der Gruppen-Invariante — die Form steht, die Beweispflicht hat keinen Empfänger | S16/S17, 17 Schablonen unbewiesen |
 | **4** | **Generizität** — ohne sie braucht jede Tabelle ihren eigenen `traverse` | ungemessen (Schätzung) |
 | **5** | **Fehlerfortpflanzung** — `let … else` ist die einzige, und `U006` hat gezeigt, dass sie zugleich die **stillste Tür hinaus** ist | 1 Form für alles |
 
-**Der schwerste ist 1, und zwar aus einem Grund, der nichts mit Aufwand zu tun hat:** ein
-Verschluss ist der einzige Posten dieser Liste, für den es **keinen Entwurf** gibt — nicht
-einmal einen verworfenen. Bei allen anderen ist die Frage *wie*, hier ist sie *ob*.
+> **Der Posten, der als einziger *„ob"* hiess, war nicht schwer — er war unscharf.** Er ist
+> nach der Zählung vom 2026-08-16 auf **zwei bereits entschiedene *„wie"*** zerfallen, und was
+> von P2 (441 Verschlussliterale) bleibt, heisst richtig *„braucht Gabbro Iterator-Adapter?"*
+> und hängt an **Generizität** — Posten 4, nicht an Verschlüssen.
+>
+> **Der schwerste der verbleibenden vier ist damit die Emission**, und bei ihr lautet die
+> Frage *wie*.
 
 ### PRAKTISCH — kleiner Bau, gemessener Bedarf, sofortiger Ertrag
 

@@ -4540,3 +4540,94 @@ bemerkt, bis beide Zahlen nebeneinander lagen.
 **Was als „der schwerste der fünf Nötigen, weil die Frage *ob* lautet" gebucht war, ist nach
 dieser Zählung zwei Fragen, von denen eine schon beantwortet ist und die andere Generizität
 heisst.** *Der Posten war nicht schwer, er war unscharf.*
+
+## Nachtrag zur Verschluss-Zählung: **die Fehlerform hat einen Vorgänger im selben Ordner**
+
+**Eine Klassifikation über einer Doppelmenge kann nicht bestehen oder fallen — sie kann nur
+so aussehen.** Die Vorhersage behandelte *„89 Verschlüsse"* als **eine** Menge, die **zwei**
+war: Typnennungen (P1) gegen Literale (P2).
+
+> **Das ist dieselbe Fehlerform wie die zwei Generatorquoten über verschiedenen Stichproben
+> — nur im ENTWURF statt in der Messung.**
+
+*Dort waren es zwei Quoten über zwei Grundgesamtheiten, die als eine gelesen wurden; hier ist
+es eine Vorhersage über zwei Grundgesamtheiten, die als eine geschrieben wurde.* Die Regel,
+die daraus folgt, steht schon (W11: jede Quote nennt ihr N) — **sie gilt auch für Vorhersagen,
+nicht nur für Messungen.**
+
+## Und die Konvergenz, die niemand gesucht hat
+
+**Der schwerste „ob"-Posten und die letzte «B41»-Lücke waren derselbe Gegenstand.**
+
+| | | |
+|---|---|---|
+| **25×** | `&mut dyn FnMut() -> Option<u64>` | der Allokator-Rückruf — **wörtlich A2, seit dem 2026-08-14 beantwortet** |
+| **3×** | `impl Fn(u16) -> Option<u16>` | die **Kantenfunktion** — die Domänenzeile, deren Linie seit dem Schnitt steht |
+
+**Damit ist die Fünferliste der Nötigen real eine VIERERLISTE**, und der Posten, der als
+einziger *„ob"* hiess, ist auf **zwei bereits entschiedene „wie"** zerfallen.
+
+> **Keine der beiden Untersuchungen sah es, bis die Zahlen NEBENEINANDER lagen.**
+
+*Das ist ein leises Argument dafür, dass dieses Dokument irgendwann eine Querverweisspalte
+braucht — welche Messungen teilen Fundstellen. Buchführung für später, kein Posten für jetzt.*
+
+---
+
+# VORAB — `table.induktion` nach Isabelle, die erste Schablone
+
+**Vorregistriert am 2026-08-16, bevor eine Zeile Isabelle geschrieben ist.** Dieselbe
+Disziplin wie bei den Verschlüssen, und aus demselben Grund: *bei B3 fehlte sie, und die
+Buchung dort sagt das ausdrücklich.*
+
+## Warum dieser Posten den Kopf des kritischen Pfads bekommt
+
+**Nicht wegen des Aufwands — wegen einer Kurve.** Das Amortisierungsargument des ganzen
+Entwurfs lautet: *eine Schablone fällt **einmal**, nicht je Programm.* Es ist der einzige
+Unterschied zwischen der Schablonenliste und seL4s Beweisberg.
+
+> **Und es gilt erst ab der ersten BEWIESENEN Schablone.** Bis dahin ist es eine Zusage über
+> eine Fläche, die niemand betreten hat. **Eine bewiesene von achtzehn ist qualitativ etwas
+> anderes als null von siebzehn:** das Register wechselt von *„Liste mit Länge"* zu *„Liste
+> mit Fallrichtung"*.
+
+## **Der erwartete Ausgang — und er ist NICHT „bestätigt"**
+
+**Die Vorhersage, damit das Ergebnis nicht überlesen wird:** das Formalisieren wird die
+Schablone fast sicher **nicht einfach bestätigen**. Der wahrscheinliche Ausgang ist, dass es
+die **Nebenbedingungen ausspült**, die die Prosa-Fassung stillschweigend trägt. Vier stehen
+namentlich als Kandidaten da, damit man nachher nicht sagen kann, man habe sie gemeint:
+
+| | erwartete stille Annahme |
+|---|---|
+| **N-1** | **Endlichkeit der Domäne** — die Prosa sagt „wohlfundiert", nicht „endlich"; für `slots of` fällt es aus `count N`, für `descendants of` nicht ohne Weiteres |
+| **N-2** | **Stabilität der Zeugenordnung** unter **genau den erzeugten Mutationen** — nicht unter beliebigen |
+| **N-3** | **die Leere-Menge-Klausel** — sie stand schon einmal als blosse **Implikation** da, statt als eigene Pflicht (`consuming.leermenge`) |
+| **N-4** | **Vollständigkeit des Schemas** — dass das erzeugte Induktionsprinzip **alle** Fälle deckt, nicht nur die vorkommenden |
+
+## Wie das Ergebnis gebucht wird — vorab festgelegt, damit die Richtung nicht wandert
+
+> **Jede ausgespülte Nebenbedingung ist ein GEWINN und wird als solcher gebucht** — als
+> **Präzisierung des Schablonen-Eintrags**, nicht als Rückschlag.
+
+*Genau dafür klettert man den ersten Hang: nicht um „bewiesen" ins Register zu schreiben,
+sondern um zu erfahren, **was das Register bisher verschwiegen hat**.*
+
+## Das Tor, zweiseitig — und das verdächtige Ergebnis ist das glatte
+
+| | |
+|---|---|
+| **gut** | die Schablone geht durch, **und mindestens eine stille Annahme ist ausgespült** und steht danach im Eintrag |
+| **auch gut** | die Schablone geht **nicht** durch — dann ist eine Zusage des Ordners widerlegt, und zwar die billigste von allen |
+| **VERDÄCHTIG** | die Schablone geht **glatt** durch, **ohne eine einzige stille Annahme auszuspülen** |
+
+> **Der dritte Ausgang ist der einzige, der eine Gegenprüfung auslöst.** Eine Prosa-Schablone,
+> die beim Formalisieren nichts verliert, war entweder schon formal geschrieben — oder die
+> Formalisierung hat dieselben Annahmen stillschweigend übernommen. *Bei einem Eintrag, der
+> seit Tagen als „die kleinste" gilt und nie drankam, ist die zweite Erklärung die
+> wahrscheinlichere.*
+
+**Ungültig** (getrennt von ungünstig): die Isabelle-Fassung formalisiert **eine andere
+Aussage** als der Schablonentext — dann misst der Gang die Übersetzung, nicht die Schablone.
+Die Probe darauf ist mechanisch: **jeder Satz des Eintrags `table.induktion` muss sich einer
+Zeile der Formalisierung zuordnen lassen, und umgekehrt.**

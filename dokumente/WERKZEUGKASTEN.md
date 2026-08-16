@@ -202,6 +202,41 @@ eine Zahl darf nicht parallel zur Wahrheit laufen; W7 sagt, wie man das verhinde
 drucken ihre Fundstellen mit; `gabbro kosten` und `gabbro k-bedingung` ebenso. Wo eine Zahl
 von Hand entsteht, gehört die Liste in dieselbe Änderung.
 
+### **Die Ergänzung, gemessen am 2026-08-16: der KEHRAUS liest Tabellenzellen als Behauptungen**
+
+**Der W7-Kehraus vom 2026-08-15 hat eine Zahl übersehen, und der Grund ist keine
+Nachlässigkeit, sondern das Verfahren.** Er ging die **Sätze** des Ordners durch. Die 89
+Verschlüsse standen in einer **Tabellenzelle** — und überlebten.
+
+> **Der Kehraus liest Tabellenzellen als Behauptungen, nicht nur Sätze.**
+>
+> *Sonst ist jede künftige Tabelle ein Versteck — und dieser Ordner hat gerade gemessen, dass
+> es funktioniert.*
+
+**Das ist eine Lücke im Verfahren, keine entkommene Zahl.** Eine Zahl entkommt einmal; ein
+Verfahren, das eine ganze Darstellungsform nicht ansieht, lässt jede künftige entkommen.
+
+---
+
+## **Das Zahlenpaar zu W7 — der zweite quantitative Beleg des Ordners**
+
+R14 hat ihres (**Faktor 130 zwischen verworfenen Regelfassungen, Faktor 1 danach**). W7 hat
+seit dem 2026-08-16 ein eigenes, und es ist sauberer, weil beide Zahlen aus **derselben
+Messung an demselben Baum** stammen:
+
+| Zahl | Suchweg | Reproduktion |
+|---|---|---|
+| **67** `dyn`-Stellen | steht in der Messung | **exakt** |
+| **89** Verschlüsse | **steht nirgends** | **64 — Abweichung −28 %** |
+
+> **Dieselbe Messung, zwei Zahlen, eine mit Suchweg, eine ohne.** Die mit Liste reproduziert
+> auf die Stelle; die ohne war um mehr als ein Viertel daneben — **und niemand hätte es
+> gemerkt, weil sie plausibel aussah.**
+
+**Das ist die ganze Regel in einem Zahlenpaar:** eine Zahl mit Liste darf falsch sein, denn
+sie ist prüfbar falsch. Eine ohne Liste ist nicht falsch — *sie ist unprüfbar*, und das ist
+der teurere Zustand.
+
 ---
 
 ## W8 — Eine kompositionale Prüfung wird über **zwei Ebenen** geprobt, nicht über eine
