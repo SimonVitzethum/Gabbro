@@ -474,6 +474,20 @@ MUTATIONEN = [
         "            .any(|r| matches!(r, Recht::Schreiben | Recht::LesenSchreiben))",
         "R002 -- `own` traegt kein Schreibrecht mehr (falscher Alarm an jedem own-Zeiger)",
     ),
+    Mutation(
+        "by-ops-egal",
+        "kbedingung.rs",
+        "                    if text.split(['.', '[']).any(|x| x == feld) {",
+        "                    if false && text.split(['.', '[']).any(|x| x == feld) {",
+        "D002 -- ein `by ops`-Feld darf von Hand geschrieben werden (B29 wieder schreibbar)",
+    ),
+    Mutation(
+        "by-ops-trifft-alles",
+        "kbedingung.rs",
+        "                    if text.split(['.', '[']).any(|x| x == feld) {",
+        "                    if true {",
+        "D002 -- `by ops` trifft JEDES Feld (falscher Alarm an jedem Nachbarfeld)",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

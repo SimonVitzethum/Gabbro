@@ -2480,11 +2480,20 @@ impl<'a> Parser<'a> {
             let name = self.erwarte_feldname()?;
             self.erwarte_z(Z::Kolon)?;
             let typ = self.slottype()?;
+            // `by ops` -- zwei vorhandene Woerter, null Wortschatzzuwachs.
+            let nur_ops = if self.ist_kw(Kw::By) {
+                self.pos += 1;
+                self.erwarte_kw(Kw::Ops)?;
+                true
+            } else {
+                false
+            };
             self.erwarte_z(Z::Komma)?;
             felder.push(SlotFeld {
                 span: name.span.bis_zu(self.vorheriger_span()),
                 name,
                 typ,
+                nur_ops,
             });
         }
         let ende = self.erwarte_z(Z::GeschweiftZu)?;

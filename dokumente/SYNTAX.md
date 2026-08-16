@@ -518,7 +518,13 @@ walkdecl   = "walk" ident "levels" constexpr "{"
                "leaf" ":" pred ","
                { invariant }
              "}" ;
-slotdecl   = "slot" "{" { ident ":" slottype "," } "}" ;
+slotdecl   = "slot" "{" { ident ":" slottype [ "by" "ops" ] "," } "}" ;
+             (* `by ops`: dieses Feld schreiben NUR die erzeugten Operationen der Tabelle.
+                Zwei vorhandene Woerter, null Wortschatzzuwachs. Damit wird die K-Bedingung
+                des Messprotokolls -- *„gilt nur, wenn ALLE Mutationen des Traegers erzeugte
+                Operationen sind"* -- von einer PRUEFVORSCHRIFT zu einer
+                GRAMMATIKEIGENSCHAFT, und `refcount -= 1` von Hand ist schlicht nicht
+                schreibbar. *)
 slottype   = typeexpr | intty "wrapping" ;
              (* `index into T` ERBT die Schranke aus `T`s `count` -- der Indextyp wird
                 erzeugt, nicht geschrieben. Ohne `count` bleibt er unbeschraenkt, und das

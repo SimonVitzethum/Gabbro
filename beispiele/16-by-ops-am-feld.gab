@@ -1,0 +1,39 @@
+-- 16 -- **`by ops` am Feld: zwei vorhandene Wörter, null Wortschatzzuwachs.**
+--
+-- Die K-Bedingung des Messprotokolls lautet: *„gilt nur, wenn ALLE Mutationen des Trägers
+-- erzeugte Operationen sind."* Mit `by ops` ist sie **je Feld abgeschlossen** statt je
+-- Tabelle nachgezählt — aus einer Prüfvorschrift wird eine Grammatikeigenschaft.
+--
+-- **Und sie verbietet nur das SCHREIBEN.** Lesen bleibt frei; ein Zähler, den niemand lesen
+-- darf, wäre kein Zähler. Ohne diese Datei wäre Giftprobe 60 eine Tautologie.
+
+module beispiel::byops {
+
+const N : u32 = 8;
+type Zaehler = u32 in 0 .. 65535;
+
+table Objekte count N {
+    slot {
+        benutzt : bool,
+        zaehler : Zaehler by ops,
+    }
+}
+
+-- Lesen: erlaubt.
+impl fn stand(o : ptr<normal, r> Objekte, i : index into Objekte) -> Zaehler
+    effects { reads o.slots }
+    costs   <= 2 ops
+{
+    return o.slots[i].zaehler;
+}
+
+-- Das Feld OHNE `by ops` darf von Hand geschrieben werden -- die Tabelle als Ganzes
+-- nennt kein `ops`, und genau darin liegt der Unterschied zu `D001`.
+impl fn belegen(o : ptr<normal, rw> Objekte, i : index into Objekte)
+    effects { writes o.slots }
+    costs   <= 2 ops
+{
+    o.slots[i].benutzt = true;
+}
+
+}

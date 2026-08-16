@@ -152,8 +152,77 @@ fn sammle(b: &Block, ziele: &mut Vec<(Ort, Span)>, brueche: &mut Vec<(String, Sp
     }
 }
 
+/// **`by ops` am Feld — die schärfere Fassung (2026-08-16).**
+///
+/// `D001` fällt an einer `table`, die `ops` nennt: dort ist **jede** Handmutation ein Fehler.
+/// **`by ops` steht am FELD** und trägt damit einen Fall, den `D001` nicht kann: eine Tabelle,
+/// deren Slots teils erzeugt und teils von Hand geschrieben werden — *`refcount` gehört den
+/// Operationen, `benutzt` nicht.*
+///
+/// **Und das ist der Unterschied zwischen einer Prüfvorschrift und einer
+/// Grammatikeigenschaft:** die K-Bedingung des Messprotokolls lautet *„gilt nur, wenn ALLE
+/// Mutationen des Trägers erzeugte Operationen sind"* — mit `by ops` ist sie **je Feld
+/// abgeschlossen**, statt je Tabelle nachgezählt.
+fn nur_ops_felder(baum: &Programm) -> Vec<(String, String)> {
+    let mut aus = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Tabelle(t) = &item.art {
+            if let Some(sd) = &t.slot {
+                for f in &sd.felder {
+                    if f.nur_ops {
+                        aus.push((t.name.text.clone(), f.name.text.clone()));
+                    }
+                }
+            }
+        }
+    });
+    aus
+}
+
 /// **Die Sprachform:** eine `table` mit `ops` duldet keine Handmutation (`SPRACHE.md` §10.2).
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
+    // **D002 -- `by ops` am Feld.** Schärfer als `D001`: es trifft auch dort, wo die Tabelle
+    // als Ganzes Handmutationen duldet, das EINE Feld aber nicht.
+    let geschuetzt = nur_ops_felder(baum);
+    if !geschuetzt.is_empty() {
+        crate::fuer_jedes_item(baum, &mut |item| {
+            let ItemArt::Funktion(f) = &item.art else {
+                return;
+            };
+            let FnRumpf::Block(b) = &f.rumpf else {
+                return;
+            };
+            let mut ziele = Vec::new();
+            let mut brueche = Vec::new();
+            sammle(b, &mut ziele, &mut brueche);
+            for (ort, span) in &ziele {
+                let text = ort.text();
+                for (tab, feld) in &geschuetzt {
+                    if text.split(['.', '[']).any(|x| x == feld) {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "D002",
+                                *span,
+                                format!(
+                                    "`{text}` traegt `by ops` in `{tab}` und wird von Hand \
+                                     geschrieben"
+                                ),
+                            )
+                            .mit_notiz(
+                                "`by ops` heisst: dieses Feld schreiben NUR die erzeugten \
+                                 Operationen der Tabelle -- die K-Bedingung ist damit je Feld \
+                                 abgeschlossen statt je Tabelle nachgezaehlt",
+                            )
+                            .mit_notiz(
+                                "genau so wird `refcount -= 1` von Hand unschreibbar, und das \
+                                 ist der Fall, der fuenf Umbauten ueberlebt hat («B29»)",
+                            ),
+                        );
+                    }
+                }
+            }
+        });
+    }
     for t in erhebe(baum) {
         if !t.hat_ops {
             continue;

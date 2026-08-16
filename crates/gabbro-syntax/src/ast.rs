@@ -904,6 +904,9 @@ pub struct SlotDecl {
 pub struct SlotFeld {
     pub name: Ident,
     pub typ: SlotTyp,
+    /// **`by ops`** — dieses Feld schreiben nur die erzeugten Operationen der Tabelle.
+    /// Die K-Bedingung wird damit von einer Pruefvorschrift zu einer Grammatikeigenschaft.
+    pub nur_ops: bool,
     pub span: Span,
 }
 
