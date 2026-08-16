@@ -9,7 +9,7 @@
 -- Gift 64 nimmt `return`. Diese Datei nimmt `let … else` -- **die einzige
 -- Fehlerfortpflanzung der Sprache**, und die einzige, die wie eine ZUWEISUNG aussieht:
 --
---     let g = pruefe_platz(e) else (fehler) { return false; }
+--     let g = pruefe_platz(e) else (fehler) { aufgeben(); }
 --
 -- Zwischen den beiden Schreibzugriffen steht damit ein Weg hinaus, den niemand als Weg
 -- liest. **Diese Datei existiert, weil eine Mutationsprobe ueberlebt hat:**
@@ -40,6 +40,10 @@ group Zustellung over { Endpunkte, Faeden };
 
 extern fn pruefe_platz(e : index into Endpunkte) -> u32
     effects { reads Endpunkte.slots } costs <= 8 ops;
+-- **Der Sonst-Zweig enthaelt KEIN `return`** -- sonst faengt die `return`-Regel den Fall und
+-- die Probe prueft die falsche Haelfte. Er divergiert, und auch das ist ein Weg hinaus:
+-- die Gruppe bleibt gebrochen, die Maschine steht.
+extern fn aufgeben() -> never effects { diverges } costs <= 1 ops;
 
 -- **Der Fehler.** Beide Sperren gehalten, richtige Ordnung -- und ein `let … else` dazwischen.
 impl fn einreihen(e : index into Endpunkte, t : index into Faeden) -> bool
@@ -50,7 +54,7 @@ impl fn einreihen(e : index into Endpunkte, t : index into Faeden) -> bool
     locks PUNKTE {
       locks PLAN {
         Endpunkte.slots[e].wartet = t;
-        let g = pruefe_platz(e) else (fehler) { return false; }
+        let g = pruefe_platz(e) else (fehler) { aufgeben(); }
         Faeden.slots[t].gruende = g;
       }
     }
