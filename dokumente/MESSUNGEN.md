@@ -750,11 +750,18 @@ Drei Belege, alle im Fragment, das die Zahl des Entwerfers traegt:
 
 | | Fund | Fundstelle |
 |---|---|---|
-| **G1** | ein `ensures` ist **falsch**, nicht bloss unbewiesen: `e.caller is Some(cl) => cl == current_id(...)`. Bei offenem Rendezvous A und Aufrufer B behauptet es `A == B` — **nachgeprueft**: der zweite Aufrufer geht in `senders`, ohne `caller` anzufassen. **Und es ist im Zaehler mitgezaehlt** | `crates/caprock-ipc/src/lib.rs:652` |
-| **G2** | `msg_copied` — die **einzige** funktionale Eigenschaft eines Fastpaths — steht in **keinem** `ensures`. Gezaehlt und an nichts gebunden; `transfer()` hat gar keine Nachbedingung | — |
-| **G3** | `effects` vergisst `locks SCHEDS[owner_core(...)]` auf dem Cross-Core-Pfad — **vom Autor der Regel** | — |
+> **Umbenannt 2026-08-16: `G1`–`G3` heissen hier jetzt `GP1`–`GP3`.** Die Kennungen
+> kollidierten mit den Grammatikbefunden `G1`–`G11` aus P2 (`SYNTAX.md`), die etwas voellig
+> anderes bezeichnen — dort eine fehlende EBNF-Zeile, hier ein falsches `ensures`.
+> **Zwei Etikettensysteme mit denselben Namen sind dieselbe Fehlerklasse wie zwei
+> Prosaordnungen, die niemand gegeneinander prueft** — `GP` fuer *Gegenpruefung*, `G` bleibt
+> bei der Grammatik.
 
-**G3 und der Fund F12 („`effects` ist fail-open") sind dasselbe Loch von zwei Seiten:** eine
+| **GP1** | ein `ensures` ist **falsch**, nicht bloss unbewiesen: `e.caller is Some(cl) => cl == current_id(...)`. Bei offenem Rendezvous A und Aufrufer B behauptet es `A == B` — **nachgeprueft**: der zweite Aufrufer geht in `senders`, ohne `caller` anzufassen. **Und es ist im Zaehler mitgezaehlt** | `crates/caprock-ipc/src/lib.rs:652` |
+| **GP2** | `msg_copied` — die **einzige** funktionale Eigenschaft eines Fastpaths — steht in **keinem** `ensures`. Gezaehlt und an nichts gebunden; `transfer()` hat gar keine Nachbedingung | — |
+| **GP3** | `effects` vergisst `locks SCHEDS[owner_core(...)]` auf dem Cross-Core-Pfad — **vom Autor der Regel** | — |
+
+**GP3 und der Fund F12 („`effects` ist fail-open") sind dasselbe Loch von zwei Seiten:** eine
 weggelassene Wirkung ist **zugleich die staerkste Zusage und die kuerzeste Spezifikation**. Wer
 misst, wird belohnt; wer vollstaendig ist, bestraft.
 

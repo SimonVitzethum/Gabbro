@@ -1,0 +1,10 @@
+-- erwartet: P035
+-- `{ }` ist weder ein Verbund noch ein Summentyp. Bis zum 2026-08-16 fiel der Fall
+-- stillschweigend in den `variants`-Zweig und ergab einen LEEREN SUMMENTYP -- einen Typ ohne
+-- Wert, ueber den ein `match` erschoepfend ist, indem er nichts tut.
+--
+-- E3 sagt: nichts ist implizit. Auch keine Wahl zwischen zwei Bedeutungen, die niemand
+-- hingeschrieben hat.
+module gift {
+type Leer = { };
+}

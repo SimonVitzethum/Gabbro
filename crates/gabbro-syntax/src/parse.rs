@@ -827,8 +827,31 @@ impl<'a> Parser<'a> {
 
     /// `structty` und `variants` fangen beide mit `{` an. Unterschieden wird am zweiten
     /// Token: einem Feld folgt `:`, einer Variante `(`, `,` oder `}`.
+    ///
+    /// **`type T = { };` ist KEINS von beiden** (2026-08-16). Bis dahin fiel der leere
+    /// Klammerpaar-Fall in den `variants`-Zweig und ergab einen **leeren Summentyp** — einen
+    /// Typ ohne Wert, ueber den ein `match` erschoepfend ist, indem er nichts tut. *Das ist
+    /// nicht dasselbe wie ein leerer Verbund, und beides ist als Absicht unglaubwuerdig.*
+    /// **E3 sagt: nichts ist implizit** — auch keine Wahl zwischen zwei Bedeutungen, die
+    /// niemand hingeschrieben hat.
     fn verbund_oder_varianten(&mut self) -> Erg<TypExpr> {
         let anfang = self.span();
+        if matches!(self.blick_n(1).art, Art::Zeichen(Z::GeschweiftZu)) {
+            let sp = anfang.bis_zu(self.blick_n(1).span);
+            self.absage(
+                Absage::fehler("P035", sp, "`{ }` ist weder ein Verbund noch ein Summentyp")
+                    .mit_notiz(
+                        "der leere Klammerpaar-Fall ergab bisher stillschweigend einen LEEREN \
+                         SUMMENTYP -- einen Typ ohne Wert, ueber den ein `match` erschoepfend \
+                         ist, indem er nichts tut",
+                    )
+                    .mit_notiz(
+                        "E3: nichts ist implizit -- auch keine Wahl zwischen zwei Bedeutungen, \
+                         die niemand hingeschrieben hat",
+                    ),
+            );
+            return Err(Abbruch);
+        }
         let ist_verbund = matches!(self.blick_n(2).art, Art::Zeichen(Z::Kolon));
         if ist_verbund {
             self.erwarte_z(Z::GeschweiftAuf)?;

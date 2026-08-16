@@ -84,6 +84,11 @@ Neu erhoben 2026-08-15, **nicht wiederhergestellt**, nur x86
 Grammatik** · Schlusskomma · `u64::max` · `O`/`@version` als benannte `Sonderform` ·
 `clobbers { }` leer · `count N` · `cast` entfällt · das `forever`-Beispiel · acht Domänen.
 
+**Etikettenkollision aufgelöst** (2026-08-16): die Gegenprüfungsbefunde in
+`dokumente/MESSUNGEN.md` heissen jetzt `GP1`–`GP3`; `G1`–`G11` gehören der Grammatik.
+*Zwei Etikettensysteme mit denselben Namen sind dieselbe Fehlerklasse wie zwei Prosaordnungen,
+die niemand gegeneinander prüft.*
+
 **Dazu:** die Nutzlastform nach dem Bestand entschieden (22 × `nothing`, 11 × Klammern,
 2 × ohne — die Grammatik folgt den 33), die `pub`-Laxheit (`P034`), `pub const` im
 `table`-Rumpf, und **`dokumente/SYNTAX.md` hält jetzt seine eigene Grammatik** (Test

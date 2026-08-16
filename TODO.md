@@ -443,16 +443,17 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
 
 
 
-- [ ] **Die Etiketten G1–G8 kollidieren** mit einer aelteren Messung in
-      [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md), die G1/G2/G3/G5 fuer etwas anderes vergibt.
-- [ ] **Der Parser ist an sechs Stellen laxer als die EBNF**: `pub` an 13 Item-Arten, die es
-      nicht fuehren · Wortschatzwoerter als Namen nach `::`, in `reaches … via` und in
-      `chain(a,b)` (drei Stellen, die der eigene Dateikopf **nicht** freistellt) · `mut` und
-      Typannotation an `let … else` · `exhaustive` und `mirrors` an beliebiger Stelle ·
-      `reg … fields` ohne Schlusskomma, waehrend `slotdecl` es erzwingt · `type T = { };`
-      wird zum leeren **Summen**typ statt zum leeren Verbund.
-      **Und an einer Stelle strenger:** `pub const` im `table`-Rumpf faellt, obwohl es
-      ableitbar ist.
+
+- [ ] **Der Parser ist an DREI Stellen laxer als die EBNF** *(war: sechs; berichtigt und
+      geprueft 2026-08-16 — je Stelle eine `.gab`-Probe gefahren)*:
+      * Wortschatzwoerter als Namen nach `::`, in `reaches … via` und in `chain(a,b)` — drei
+        Stellen, die der eigene Dateikopf **nicht** freistellt.
+      **Geschlossen sind:** `pub` an 13 Item-Arten (`P034`), `pub const` im `table`-Rumpf (war
+      zu streng), `type T = { };` als leerer Summentyp (`P035`, Gift 61), und die
+      Kommaregel — `entrydecl`, `slotdecl` und `reg … fields` fuehrten **drei verschiedene
+      Regeln fuer dieselbe Sache**; jetzt eine: Trennkomma pflichtig, Schlusskomma
+      freigestellt.
+
 ### Aus P2 — was der Parser gefunden hat und was jetzt zu entscheiden ist
 
 - [ ] **DIE ENTSCHEIDUNG, die P2 erzwingt: der geschlossene Wortschatz kollidiert mit

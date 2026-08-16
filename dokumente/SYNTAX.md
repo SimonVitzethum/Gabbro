@@ -132,6 +132,12 @@ identlist  = ident { "," ident } ;
 regbind    = ident ":" ident ;                                 (* G4 *)
 ```
 
+> **Eine Kommaregel fuer alle Listen (2026-08-16).** `entrydecl`, `slotdecl` und
+> `reg … fields` schrieben drei verschiedene Regeln fuer dieselbe Sache — zweimal
+> Pflicht-Schlusskomma, einmal keins, und der Parser hielt keine davon. **Jetzt eine:
+> Trennkomma zwischen den Eintraegen, Schlusskomma freigestellt.** *Der Bestand schreibt es
+> ueberall; nichts bricht, und die Grammatik hat eine Regel statt dreier.*
+
 > **Die Zeile `Sonderform` und warum sie keine Ausnahme ist (G6).** `O` (in `costexpr`),
 > `@version` (in `format`) und `Held` (in `heldpred`) sind **Terminale der Grammatik, aber
 > keine Woerter des Wortschatzes**: `O` steht als Bezeichner in fester Stellung (so auch im Parser,
@@ -518,7 +524,8 @@ walkdecl   = "walk" ident "levels" constexpr "{"
                "leaf" ":" pred ","
                { invariant }
              "}" ;
-slotdecl   = "slot" "{" { ident ":" slottype [ "by" "ops" ] "," } "}" ;
+slotdecl   = "slot" "{" [ slotfeld { "," slotfeld } [ "," ] ] "}" ;
+slotfeld   = ident ":" slottype [ "by" "ops" ] ;
              (* `by ops`: dieses Feld schreiben NUR die erzeugten Operationen der Tabelle.
                 Zwei vorhandene Woerter, null Wortschatzzuwachs. Damit wird die K-Bedingung
                 des Messprotokolls -- *„gilt nur, wenn ALLE Mutationen des Traegers erzeugte
@@ -578,7 +585,8 @@ regdecl = "reg" ident ":" intty [ "wrapping" ] "@" expr
              und die Zaehlerregel faellt zu Recht -- am falschen Programm. Gemessen am
              Fragmentkorpus, nicht entworfen. *)
           "class" ( "r" | "w" | "rw" | "w1c" | "rc" )
-          [ "fields" "{" { ident "@" bitpos "," } "}" ]
+          [ "fields" "{" [ regfeld { "," regfeld } [ "," ] ] "}" ]
+regfeld = ident "@" bitpos ;
           [ "requires" pred ] ;
 transition = "transition" ident "{" transset "}"
              [ "requires" pred ] [ "effects" "{" efflist "}" ] ;
