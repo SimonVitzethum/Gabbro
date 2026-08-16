@@ -1,0 +1,56 @@
+-- erwartet: U006
+-- **Gift 64 -- der Zwischenaustritt, und er sieht harmlos aus.**
+--
+-- S17 (`gabbro schablonen`) verlangt von einer Gruppenoperation dreierlei:
+--   (a) die Sperren in Rangordnung        -> `U003`/`U005`
+--   (b) die Invariante am Anfang UND am Ende -> braucht die Klausel, die es noch nicht gibt
+--   (c) KEINEN ZWISCHENAUSTRITT           -> diese Datei
+--
+-- Hier ist (c) verletzt, und zwar auf dem Weg, auf dem es immer passiert: **dem Fehlerpfad.**
+-- `einreihen` schreibt den Endpunkt, prueft dann etwas, und gibt bei Misserfolg zurueck --
+-- BEVOR es den Faden geschrieben hat. Zurueck bleibt ein Endpunkt, der auf einen Faden
+-- zeigt, dessen Grund nie gesetzt wurde.
+--
+-- Die Sperren sind beide genommen, in der richtigen Ordnung. `U003` ist zufrieden. **Genau
+-- das ist der Punkt:** ein richtiger Sperrabdruck sagt nichts darueber, ob der Zug
+-- vollstaendig durchlaufen wird.
+--
+-- ERWARTET: U006, und sonst nichts.
+
+module gift64 {
+
+const NFAEDEN : u32 = 256;
+const NPUNKTE : u32 = 64;
+
+table Faeden count NFAEDEN {
+    slot { gruende : u32, bereit : bool, }
+}
+
+table Endpunkte count NPUNKTE {
+    slot { wartet : u32, offen : bool, }
+}
+
+lock PUNKTE protects { Endpunkte } rank 1 held <= 40 ops;
+lock PLAN   protects { Faeden }    rank 2 held <= 40 ops;
+
+group Zustellung over { Endpunkte, Faeden };
+
+-- **Der Fehler.** Beide Sperren gehalten, richtige Ordnung -- und ein `return` dazwischen.
+impl fn einreihen(e : index into Endpunkte, t : index into Faeden) -> bool
+    effects { reads Endpunkte.slots, writes Endpunkte.slots, writes Faeden.slots,
+              locks PUNKTE, locks PLAN }
+    costs   <= 60 ops
+{
+    locks PUNKTE {
+      locks PLAN {
+        Endpunkte.slots[e].wartet = t;
+        if Endpunkte.slots[e].offen == false {
+            return false;
+        }
+        Faeden.slots[t].gruende = 1;
+      }
+    }
+    return true;
+}
+
+}

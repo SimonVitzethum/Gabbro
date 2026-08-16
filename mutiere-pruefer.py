@@ -284,6 +284,23 @@ MUTATIONEN = [
         "E006 -- ein `locks`-Block braucht keine erklaerte Sperre",
     ),
     Mutation(
+        "gruppe-austritt-egal",
+        "gruppe.rs",
+        "                    for e in &ev[i..j] {",
+        "                    for e in &ev[i..i] {",
+        "U006 -- ein Austritt im Zwischenzustand faellt nicht auf",
+    ),
+    Mutation(
+        # **Die lockernde Fassung**: nur `return` gilt als Austritt. `let … else` -- die
+        # einzige Fehlerfortpflanzung der Sprache und der stillste der drei Wege hinaus --
+        # rutscht durch. Genau die Fassung, die jemand schreibt, der an `return` denkt.
+        "gruppe-austritt-nur-return",
+        "gruppe.rs",
+        '                aus.push(Ereignis::Austritt("let … else", s.span));',
+        "                let _ = s.span;",
+        "U006 -- `let … else` ist kein Austritt",
+    ),
+    Mutation(
         "gruppe-abdruck-egal",
         "gruppe.rs",
         "            if !fehlend.is_empty() {",

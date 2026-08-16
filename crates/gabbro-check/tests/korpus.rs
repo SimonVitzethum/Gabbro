@@ -37,7 +37,7 @@ const BENANNT: &[&str] = &[
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet
     "R001", "R002", "R003", // M3, Raeume und Rechte
-    "U001", "U002", "U003", "U004", "U005", // Traegergruppe, Sperrabdruck
+    "U001", "U002", "U003", "U004", "U005", "U006", // Traegergruppe, Sperrabdruck und Zug
 ];
 
 #[test]

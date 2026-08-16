@@ -25,6 +25,7 @@
 
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
+use gabbro_syntax::span::Span;
 use std::collections::BTreeMap;
 
 /// Welche Sperre schuetzt welchen Traeger, und mit welchem Rang.
@@ -192,6 +193,52 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     }
                 }
             }
+            // **U006 -- der Zwischenaustritt.** Erst pruefen, wenn die Gruppe wirklich
+            // beruehrt ist (>= 2 Traeger), sonst gibt es keinen Zug, den man verlassen kann.
+            let mut ev = Vec::new();
+            let traeger_liste: Vec<String> = g.traeger.iter().map(|t| t.text.clone()).collect();
+            ereignisse(b, &traeger_liste, &mut ev);
+            let erste = ev.iter().position(|e| matches!(e, Ereignis::Schreibt(..)));
+            let letzte = ev.iter().rposition(|e| matches!(e, Ereignis::Schreibt(..)));
+            if let (Some(i), Some(j)) = (erste, letzte) {
+                let mut verschieden = Vec::new();
+                for e in &ev {
+                    if let Ereignis::Schreibt(n, _) = e {
+                        if !verschieden.contains(n) {
+                            verschieden.push(n.clone());
+                        }
+                    }
+                }
+                if verschieden.len() >= 2 {
+                    for e in &ev[i..j] {
+                        if let Ereignis::Austritt(art, span) = e {
+                            absagen.schiebe(
+                                Absage::fehler(
+                                    "U006",
+                                    *span,
+                                    format!(
+                                        "`{}` verlaesst `group {}` mit `{art}` im \
+                                         Zwischenzustand",
+                                        f.name.text, g.name.text
+                                    ),
+                                )
+                                .mit_notiz(
+                                    "zwischen dem ersten und dem letzten Schreibzugriff auf \
+                                     die Traeger der Gruppe gilt die Verbindungs-Invariante \
+                                     NICHT -- ein Weg, der hier hinausfuehrt, hinterlaesst \
+                                     sie gebrochen",
+                                )
+                                .mit_notiz(
+                                    "S17, dritte Pflicht: kein Zwischenaustritt. Der \
+                                     Fehlerpfad ist die Stelle, an der das passiert, weil \
+                                     dort niemand hinsieht",
+                                ),
+                            );
+                            break; // eine Meldung je Funktion und Gruppe reicht
+                        }
+                    }
+                }
+            }
             if !fehlend.is_empty() {
                 absagen.schiebe(
                     Absage::fehler(
@@ -218,6 +265,77 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             }
         }
     });
+}
+
+/// Ein Ereignis im Rumpf, **in Quellreihenfolge** -- fuer `U006`.
+enum Ereignis {
+    /// Ein Traeger wird geschrieben.
+    Schreibt(String, Span),
+    /// Der Rumpf verlaesst den Zug: `return`, `leave`, der Sonst-Zweig von `let … else`.
+    Austritt(&'static str, Span),
+}
+
+/// **U006 -- der Zwischenaustritt, die dritte Pflicht aus S17.**
+///
+/// Die Schablone verlangt dreierlei: (a) die Sperren in Rangordnung, (b) die Invariante am
+/// Anfang UND am Ende des Zuges, (c) **kein Zwischenaustritt**. (a) traegt `U003`/`U005`.
+/// (b) braucht die Invariantenklausel, die es noch nicht gibt. **(c) ist heute pruefbar**, und
+/// zwar ohne jede Erzeugung:
+///
+/// > Wer Traeger A geschrieben hat und den Rumpf verlaesst, **bevor** er B geschrieben hat,
+/// > hinterlaesst die Gruppe im Zwischenzustand -- und der Fehlerpfad ist genau die Stelle,
+/// > an der das passiert, weil dort niemand hinsieht.
+///
+/// Die Reihenfolge ist die **Quellreihenfolge** des rekursiven Abstiegs. Das ist grob, und
+/// die Richtung stimmt (W9): ein Austritt in einem Zweig, der den zweiten Schreibzugriff gar
+/// nicht erreichen kann, wird trotzdem gemeldet. **Zu viel zu melden ist hier die sichere
+/// Seite** -- die Absage sagt „hier verlaesst ein Weg den Zug", und wer weiss, dass dieser
+/// Weg nicht existiert, hat den Beweis dafuer zu schreiben, nicht der Pass.
+fn ereignisse(b: &Block, traeger: &[String], aus: &mut Vec<Ereignis>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Zuweisung(z) => merke(&z.ziel.basis.text, s.span, traeger, aus),
+            StmtArt::Publish(p) => merke(&p.ziel.basis.text, s.span, traeger, aus),
+            StmtArt::Exchange(e) => merke(&e.ort.basis.text, s.span, traeger, aus),
+            StmtArt::Return(_) => aus.push(Ereignis::Austritt("return", s.span)),
+            StmtArt::Leave(_) => aus.push(Ereignis::Austritt("leave", s.span)),
+            StmtArt::LetSonst(x) => {
+                // **Die stillste der drei.** `let x = f() else (e) { … }` sieht wie eine
+                // Zuweisung aus und ist ein Austritt -- die einzige Fehlerfortpflanzung der
+                // Sprache. Genau deshalb steht sie hier einzeln.
+                aus.push(Ereignis::Austritt("let … else", s.span));
+                ereignisse(&x.sonst, traeger, aus);
+            }
+            StmtArt::Sperrt(l) => ereignisse(&l.rumpf, traeger, aus),
+            StmtArt::Wenn(w) => {
+                for (_, r) in &w.zweige {
+                    ereignisse(r, traeger, aus);
+                }
+                if let Some(r) = &w.sonst {
+                    ereignisse(r, traeger, aus);
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    ereignisse(&z.rumpf, traeger, aus);
+                }
+            }
+            StmtArt::Bricht(x) => ereignisse(&x.rumpf, traeger, aus),
+            StmtArt::Narrow(x) => ereignisse(&x.sonst, traeger, aus),
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Traverse(x) => ereignisse(&x.rumpf, traeger, aus),
+                Schleife::Retry(x) => ereignisse(&x.rumpf, traeger, aus),
+                Schleife::Forever(x) => ereignisse(&x.rumpf, traeger, aus),
+            },
+            _ => {}
+        }
+    }
+}
+
+fn merke(name: &str, span: Span, traeger: &[String], aus: &mut Vec<Ereignis>) {
+    if traeger.iter().any(|t| t == name) {
+        aus.push(Ereignis::Schreibt(name.to_string(), span));
+    }
 }
 
 fn sammle(b: &Block, schreibt: &mut Vec<String>, haelt: &mut Vec<String>) {

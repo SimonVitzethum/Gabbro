@@ -159,9 +159,14 @@ pub fn passliste() -> Vec<Pass> {
             name: "Gruppe",
             quelle: "MESSUNGEN.md, SWEEP der Verbindungs-Invarianten (2026-08-16), V4",
             zustand: Zustand::Teilgebaut(
-                "gebaut: der SPERRABDRUCK (`U001`-`U005`) -- wer zwei Traeger einer Gruppe                  schreibt, haelt alle ihre Sperren, und zwei Sperren gleichen Rangs sind                  keine Ordnung. **NICHT gebaut: die Invariante selbst** -- die Gruppe nennt                  heute ihre Traeger, nicht ihre Verbindungsaussage. `U003` sagt, dass \
-                 nicht alles gehalten wird, was angefasst wird -- nicht, dass die \
-                 Invariante haelt",
+                "gebaut: der SPERRABDRUCK (`U001`-`U005`) und der ZUG (`U006`). Wer zwei \
+                 Traeger einer Gruppe schreibt, haelt alle ihre Sperren; zwei Sperren \
+                 gleichen Rangs sind keine Ordnung; und **kein Weg verlaesst den Rumpf \
+                 zwischen dem ersten und dem letzten Schreibzugriff** -- das ist die dritte \
+                 Pflicht aus S17, und sie ist ohne jede Erzeugung pruefbar. **NICHT gebaut: \
+                 die Invariante selbst** -- die Gruppe nennt ihre Traeger, nicht ihre \
+                 Verbindungsaussage. Zwei der drei S17-Pflichten stehen, die mittlere \
+                 (`gilt am Anfang und am Ende`) braucht die Klausel",
             ),
         },
         Pass {
