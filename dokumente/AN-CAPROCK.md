@@ -1,87 +1,87 @@
-# An Caprock, nicht an Gabbro
+# For Caprock, not for Gabbro
 
-> **Befunde, die in diesem Ordner entstanden sind und deren Gegenstand Caprock ist.**
-> Herausgenommen aus [`../TODO.md`](../TODO.md) am 2026-08-16: *eine Aufgabenliste, die zwei
-> Projekte führt, sortiert für keines.* **Nicht gelöscht — sie sind Befunde, nur nicht unsere.**
+> **Findings that arose in this folder and whose subject is Caprock.**
+> Taken out of [`../TODO.md`](../TODO.md) on 2026-08-16: *a task list that runs two projects
+> sorts for neither.* **Not deleted — they are findings, just not ours.**
 >
-> Messbasis durchweg: `SEL4Lake/SEL4Lake` @ `arch/x86_64`, Commit `a1bf707`.
+> Measurement base throughout: `SEL4Lake/SEL4Lake` @ `arch/x86_64`, commit `a1bf707`.
 
 ---
 
-## N1 — die zwei Sperrordnungen widersprechen sich · **geklärt, Vorschlag steht**
+## N1 — the two lock orders contradict each other · **resolved, proposal stands**
 
-`kernel/src/system.rs:11–13` führt `… → SCHEDS[*] (R2) → Heap.inner (R3) → MEM (R4,
-innerster)` und sagt dazu **„`MEM` hält nie einen weiteren Lock"**. `:724` führt
-`CAPS < {EPS[i], NTFNS[i], MEM} < SCHEDS[*] < FP_STATES` — dort hat `MEM` etwas **unter** sich.
+`kernel/src/system.rs:11–13` states `… → SCHEDS[*] (R2) → Heap.inner (R3) → MEM (R4,
+innermost)` and adds **"`MEM` never holds another lock"**. Line `:724` states
+`CAPS < {EPS[i], NTFNS[i], MEM} < SCHEDS[*] < FP_STATES` — there `MEM` has something **below**
+it.
 
-**Gemessen (2026-08-15):**
+**Measured (2026-08-15):**
 
-| Frage | Antwort |
+| Question | Answer |
 |---|---:|
-| `MEM`-Halter, die eine andere Sperre nehmen | **0** von 54 |
-| Halter äusserer Sperren, die `MEM` nachnehmen | **2** — beide `CAPS` (`space.rs`-Pfad, `system.rs:2495`, `:2509`) |
-| Schachtelungen `MEM`/`SCHEDS`, in irgendeiner Richtung | **0** |
+| `MEM` holders that take another lock | **0** of 54 |
+| holders of outer locks that take `MEM` afterwards | **2** — both `CAPS` (`space.rs` path, `system.rs:2495`, `:2509`) |
+| nestings of `MEM`/`SCHEDS`, in either direction | **0** |
 
-> **`MEM` ist Blatt. Der Kopf beschreibt den Code; `:724` ist falsch.**
+> **`MEM` is a leaf. The header describes the code; `:724` is wrong.**
 
-**Vorschlag** (nicht ausgeführt — Caprock wurde nicht geändert):
+**Proposal** (not carried out — Caprock was not modified):
 
 ```
-// Sperrordnung (außen->innen): CAPS < {EPS[i], NTFNS[i]} < SCHEDS[*] < FP_STATES < MEM.
-// MEM ist Blatt (R4) und haelt nie einen weiteren Lock -- gemessen: 0 von 54 Nahmestellen.
+// Lock order (outer->inner): CAPS < {EPS[i], NTFNS[i]} < SCHEDS[*] < FP_STATES < MEM.
+// MEM is a leaf (R4) and never holds another lock -- measured: 0 of 54 acquisition sites.
 ```
 
-## N2 — welche Atomics sind Ordnungsteilnehmer?
+## N2 — which atomics take part in the order?
 
-`system.rs:725` führt `FP_OWNER` als **atomares Beiboot** der Sperrordnung: der
-Reschedule-Pfad hält `SCHEDS[core]` „+ atomares `FP_OWNER`", und das Atomic ist
-**ausdrücklich Teil der Deadlock-Herleitung**.
+`system.rs:725` lists `FP_OWNER` as an **atomic tender** of the lock order: the reschedule path
+holds `SCHEDS[core]` "+ atomic `FP_OWNER`", and the atomic is **explicitly part of the deadlock
+argument**.
 
-**Offen:** die Ordering-Vollzählung braucht eine Spalte *„Ordnungsteilnehmer"*. Welche
-Atomics das sind, entscheidet, ob sie in die Paarung oder in die Sperrordnung gehören — und
-`FP_OWNER` steht heute in **keiner** der beiden dokumentierten Ordnungen, obwohl es in der
-Herleitung vorkommt. **Eine dritte Fassung derselben Sache, diesmal unvollständig.**
+**Open:** the full ordering count needs a column *"order participant"*. Which atomics those are
+decides whether they belong in the pairing or in the lock order — and `FP_OWNER` today appears
+in **neither** of the two documented orders, although the argument relies on it. **A third
+version of the same thing, this time incomplete.**
 
-## K1–K3 — das Ordering-Protokoll um die Wegfälle ergänzen
+## K1–K3 — extend the ordering protocol by the removals
 
-Es sind **Wegfälle, keine Widerlegungen**:
+These are **removals, not refutations**:
 
-* **K1** — unter Sperre entfällt das Atomic; ein Teil der 2 231 Fundstellen verschwindet.
-* **K2** — Konstruktinneres zählt in die Schablonenfläche statt in die Stichprobe.
-* **K3** — `accumulates` mit Verbund ist an `caprock-sync:572-592` **strikt besser als das
-  Original**.
+* **K1** — under a lock the atomic falls away; part of the 2 231 sites disappears.
+* **K2** — the inside of a construct counts towards the template surface instead of the sample.
+* **K3** — `accumulates` with a record is **strictly better than the original** at
+  `caprock-sync:572-592`.
 
-## Eager-FP je Architektur oder global
+## Eager FP per architecture or global
 
-Berichtigt: auf **x86 ist es eager** (`system.rs:1215`, mit genau der CVE-Begründung), **lazy
-ist der aarch64-Pfad**. Das Dekret trifft also die andere Architektur, wo das Argument nicht
-in derselben Form greift.
+Corrected: **on x86 it is eager** (`system.rs:1215`, with exactly the CVE justification),
+**lazy is the aarch64 path**. So the decree hits the other architecture, where the argument
+does not apply in the same form.
 
-> **Blockiert, und nicht aus Zeitgründen:** der einzige aarch64-Baum im Ordner ist **kein
-> zweiter Kernel**, sondern ein älterer Schnappschuss derselben Abstammung (`git log --follow`:
-> `R099`, Umbenennung mit 99 % Ähnlichkeit). Siehe
-> [`MESSUNGEN.md`](MESSUNGEN.md), *Die aarch64-Lücke*.
+> **Blocked, and not for reasons of time:** the only aarch64 tree in the folder is **not a
+> second kernel** but an older snapshot of the same lineage (`git log --follow`: `R099`, a
+> rename with 99 % similarity). See [`MESSUNGEN.md`](MESSUNGEN.md), *Die aarch64-Lücke*.
 
-## Zwei Klempnerei-Pflichten, die offen stehen
+## Two plumbing obligations that remain open
 
-Je eine Widerlegung des Kriteriums an ihrer Stelle:
+One refutation of the criterion each, at their own site:
 
-1. `self.queues[p]` nach `31 - leading_zeros()` (`caprock-sched/src/lib.rs:1996`) — braucht die
-   **Datenstruktur-Invariante**, um die Indexpflicht zu erledigen. Reine Klempnerei, und heute
-   nicht durch Konstruktion lösbar.
-2. **Jedes Verfeinerungslemma**, falls die Absenkung nicht flach genug ist.
+1. `self.queues[p]` after `31 - leading_zeros()` (`caprock-sched/src/lib.rs:1996`) — needs the
+   **data-structure invariant** to discharge the index obligation. Pure plumbing, and today not
+   solvable by construction.
+2. **Every refinement lemma**, should the lowering not be flat enough.
 
-## Fortschritt / Aushungern (D8)
+## Progress / starvation (D8)
 
-Fällt unter **keinen** der Mechanismen M1–M4. Offen, ob das so bleibt oder ob es einen
-sechsten bräuchte — *aber das ist eine Frage an Caprocks Scheduler-Garantien, nicht an
-Gabbros Typsystem.*
+Falls under **none** of the mechanisms M1–M4. Open whether it stays that way or whether it
+would need a sixth — *but that is a question for Caprock's scheduler guarantees, not for
+Gabbro's type system.*
 
 ---
 
-## Was NICHT hier steht
+## What is NOT here
 
-Die `2 231 publishes`-Stellen und die Basisrate bleiben in Gabbros Listen: sie messen zwar
-**an** Caprock, aber sie beantworten eine Frage **über Gabbro** — trägt das Konstrukt die
-Last, und ist die Falle häufig genug für eine Sprache. *Der Unterschied ist, wessen
-Entscheidung am Ende daran hängt.*
+The `2 231 publishes` sites and the base rate stay in Gabbro's lists: they measure **against**
+Caprock, but they answer a question **about Gabbro** — does the construct carry the load, and
+is the trap frequent enough to justify a language. *The difference is whose decision hangs on
+it in the end.*
