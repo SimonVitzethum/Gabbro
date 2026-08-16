@@ -177,8 +177,15 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "table.ops.erhaltung",
         haengt_an: &[],
         konstrukt: "table … ops",
-        pflicht: "Je erzeugter Mutation bleibt jede `online`-Invariante erhalten — einmal \
-                  ueber der Deklaration, nicht je Aufrufstelle.",
+        // **F-1, Redaktion 2026-08-17.** Alt: *„Je erzeugter Mutation bleibt JEDE
+        // `online`-Invariante erhalten."* Zu stark und vom eigenen Ordner widerlegt: eine
+        // VERBINDUNGS-Invariante ueber zwei Traegern wird von keiner Operation eines
+        // einzelnen Traegers erhalten -- genau deshalb gibt es `gruppe.ops` («B13»). Der
+        // Eintrag versprach, was S16 als offen fuehrt.
+        pflicht: "Je erzeugter Mutation bleibt jede `online`-Invariante DIESES TRAEGERS \
+                  erhalten -- einmal ueber der Deklaration, nicht je Aufrufstelle. \
+                  **Invarianten UEBER Traegern sind ausdruecklich nicht gedeckt**; sie sind \
+                  `gruppe.ops`.",
         stand: Stand::Entworfen,
         fundstelle: "SPRACHE.md §10.2",
     },
@@ -224,8 +231,14 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "transition.transset",
         haengt_an: &[],
         konstrukt: "transition { a: … , b: … }",
-        pflicht: "Mehrere Orte in EINEM Zug: kein Zwischenzustand ist beobachtbar, in dem \
-                  ein Teil gesetzt ist und ein anderer nicht.",
+        // **F-1, Redaktion 2026-08-17.** Alt: *„KEIN Zwischenzustand ist beobachtbar."*
+        // Beobachtbar **von wem**? Auf einem Mehrkerner sieht ein fremder Kern ihn, sofern
+        // nicht eine Sperre oder Atomaritaet ihn deckt. Der Satz war absolut und liess
+        // seinen Beobachter weg -- dieselbe Luecke wie N-2 bei `table.induktion`.
+        pflicht: "Mehrere Orte in EINEM Zug: kein Zwischenzustand ist beobachtbar **fuer \
+                  einen benannten Beobachter** -- auf einem Kern der Kontrollfluss, auf \
+                  mehreren jeder Kern, der die Sperre des Zuges nicht haelt. **Ohne \
+                  benannten Beobachter ist die Zusage auf einem Mehrkerner leer.**",
         stand: Stand::Entworfen,
         fundstelle: "SYNTAX.md §10",
     },
@@ -233,7 +246,13 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "exchange.rmw",
         haengt_an: &[],
         konstrukt: "exchange update(v) { … } / … when … returns",
-        pflicht: "Die erzeugte Lese-Aendere-Schreibe-Folge ist atomar und der Rumpf rein.",
+        // **F-4, Redaktion 2026-08-17.** Zwei Haelften in einem Satz, und sie gehoeren
+        // verschiedenen Flaechen: die REINHEIT ist mechanisch pruefbar (Pass 8), die
+        // ATOMARITAET ist eine Aussage ueber das Speichermodell und faellt in die
+        // Axiomschicht -- `paarung.rs` sagt dasselbe ueber `release`/`acquire`.
+        pflicht: "Der Rumpf von `update(v)` ist rein (mechanisch, Pass 8). **Die \
+                  Atomaritaet der Lese-Aendere-Schreibe-Folge ist KEINE Schablonenpflicht, \
+                  sondern eine Annahme der Axiomschicht** -- sie steht dort und nicht hier.",
         stand: Stand::Entworfen,
         fundstelle: "SPRACHE.md Teil III §1",
     },
@@ -241,9 +260,15 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "accumulates.monoid",
         haengt_an: &[],
         konstrukt: "accumulates … merge",
-        pflicht: "Die Merge-Menge ist ein kommutatives Monoid, und die Absenkung (je Kern \
-                  eine Zelle, Zusammenfuehrung beim Lesen) ergibt denselben Wert wie ein \
-                  atomares RMW.",
+        // **F-1 UND F-4, Redaktion 2026-08-17.** Zwei Haelften (Monoid: pruefbar;
+        // Absenkung: redet ueber die Emission, die es nicht gibt) -- und die zweite ist
+        // falsch, wie sie dasteht: ein NEBENLAEUFIGES Lesen einer je-Kern-Zelle liefert
+        // nicht denselben Wert wie ein atomares RMW, nur an einem Ruhepunkt.
+        pflicht: "Die Merge-Menge ist ein kommutatives Monoid (mechanisch pruefbar). \
+                  **Die Absenkung ergibt denselben Wert wie ein atomares RMW nur an einem \
+                  RUHEPUNKT** -- nebenlaeufig gelesen tut sie es nicht, und das ist keine \
+                  Ungenauigkeit, sondern der Preis der Absenkung. *Die Emissionshaelfte \
+                  wartet auf einen Erzeuger.*",
         stand: Stand::Entworfen,
         fundstelle: "SPRACHE.md §11.4",
     },
@@ -251,8 +276,14 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "walk.mappings",
         haengt_an: &[],
         konstrukt: "walk … levels / mappings of",
-        pflicht: "Die erzeugte Domaene `mappings of` trifft genau die erreichbaren \
-                  Blatteintraege, samt va und level.",
+        // **F-1, Redaktion 2026-08-17.** *„trifft GENAU die erreichbaren Blatteintraege"*
+        // -- dieselbe Form wie das widerlegte *„deckt genau die belegten Slots"* bei S12,
+        // und aus demselben Grund verdaechtig: eine grosse Seite ist ein Mapping an einem
+        // Eintrag, der KEIN Blatt der vollen Tiefe ist.
+        pflicht: "Die erzeugte Domaene `mappings of` trifft jeden erreichbaren Eintrag, \
+                  der eine Abbildung TRAEGT -- samt va und level. **Das ist nicht dasselbe \
+                  wie `Blatteintrag`:** eine grosse Seite bildet oberhalb der vollen Tiefe \
+                  ab. *Ob die Domaene sie heute trifft, ist ungeprueft.*",
         stand: Stand::Entworfen,
         fundstelle: "SPRACHE.md §5.4, §6",
     },
@@ -260,8 +291,14 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "format.roundtrip",
         haengt_an: &[],
         konstrukt: "format",
-        pflicht: "`lesen(schreiben(x)) == x`, und der Leser prueft die Pufferlaenge genau \
-                  einmal am Eintritt.",
+        // **F-1 UND F-4, Redaktion 2026-08-17.** *„genau einmal am Eintritt"* ist fuer
+        // VARIABLE Laengen falsch -- und genau die sind ein offener Posten der Sprache. Dazu
+        // zwei Pflichten in einem Satz.
+        pflicht: "(1) `lesen(schreiben(x)) == x` fuer jedes darstellbare x. (2) Der Leser \
+                  prueft die Pufferlaenge einmal am Eintritt -- **das gilt nur fuer FESTE \
+                  Laengen.** Bei variablen faellt die Schranke erst aus dem Inhalt, und dann \
+                  ist je Feld zu pruefen. *Solange variable Laengen offen sind, deckt diese \
+                  Schablone nur den festen Fall.*",
         stand: Stand::Entworfen,
         fundstelle: "SPRACHE.md §10.1",
     },
@@ -269,9 +306,15 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "entry.abdruck",
         haengt_an: &[],
         konstrukt: "entry … dispatch",
-        pflicht: "Der erzeugte Eintrittspfad erhaelt `preserves`, zerstoert hoechstens \
-                  `clobbers`, und der Stapelwechsel ist korrekt. **Kein nachgelagerter \
-                  Beweiser** -- das Vertrauen schrumpft auf eine Stelle, es verschwindet nicht.",
+        // **F-4, Redaktion 2026-08-17.** Drei Pflichten in einem Satz, und die dritte ist
+        // ein undefinierter Begriff: *„der Stapelwechsel ist KORREKT"* -- korrekt WOGEGEN?
+        // Eine Beweispflicht mit unbestimmtem Praedikat ist keine.
+        pflicht: "(1) Der erzeugte Eintrittspfad erhaelt jedes Register aus `preserves`. \
+                  (2) Er schreibt kein Register ausserhalb von `clobbers`. (3) **Der \
+                  Stapelwechsel ist NOCH KEINE Pflicht, sondern ein unbestimmtes Wort** -- \
+                  `korrekt` ist nirgends definiert; die Pflicht ist erst formulierbar, wenn \
+                  eine Stapelinvariante dasteht. **Kein nachgelagerter Beweiser** -- das \
+                  Vertrauen schrumpft auf eine Stelle, es verschwindet nicht.",
         stand: Stand::Entworfen,
         fundstelle: "SPRACHE.md Teil II §2",
     },
@@ -279,8 +322,14 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "device.konstruktor",
         haengt_an: &[],
         konstrukt: "device D(params) at space",
-        pflicht: "Aus der Adresse entsteht ein typisierter Griff, und die Registerlagen des \
-                  Blocks treffen die Hardware-Lagen.",
+        // **F-4, Redaktion 2026-08-17.** Zwei Haelften, und die zweite ist in KEINEM
+        // Beweiser zeigbar: *„die Registerlagen treffen die Hardware-Lagen"* ist eine
+        // Aussage ueber ein physisches Geraet. Eine Schablone, die eine Hardwareannahme
+        // fuehrt, macht sie beweisbar aussehen.
+        pflicht: "Aus der Adresse entsteht ein typisierter Griff, und die erzeugten \
+                  Zugriffe treffen die im `device`-Block DEKLARIERTEN Lagen. **Dass die \
+                  deklarierten Lagen die des Geraets sind, ist eine ANNAHME der \
+                  Axiomschicht** und wird hier nicht gezeigt.",
         stand: Stand::Getragen,
         fundstelle: "MESSUNGEN.md, Der Ursprung, 2026-08-14",
     },
@@ -333,8 +382,13 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "ops.suche",
         haengt_an: &[],
         konstrukt: "ops finde … (Kandidat, aus «B10»)",
-        pflicht: "Die erzeugte Suche gibt den ERSTEN Treffer in der Ordnung der Domaene und \
-                  laesst die Menge unveraendert.",
+        // **F-2, Redaktion 2026-08-17.** *„die Ordnung der Domaene"* -- Singular, und
+        // fuer `chain(a,b) in` gibt es keine: die Domaene hat ZWEI Kantenarten (N-4 bei S4),
+        // also keinen kanonischen ERSTEN Treffer ohne zusaetzliche Festlegung.
+        pflicht: "Die erzeugte Suche gibt den ersten Treffer in einer **erzeugten, \
+                  benannten Aufzaehlungsreihenfolge** und laesst die Menge unveraendert. \
+                  **Fuer Domaenen mit mehreren Kantenarten (`chain(a,b) in`) ist diese \
+                  Reihenfolge zusaetzlich festzulegen** -- sie faellt nicht aus der Domaene.",
         stand: Stand::Entworfen,
         fundstelle: "MESSUNGEN.md, B13-Nachpruefung",
     },
@@ -342,8 +396,14 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "state.reset",
         haengt_an: &[],
         konstrukt: "erzeugtes reset (Kandidat, aus «B26»)",
-        pflicht: "Der erzeugte Uebergang in den Anfangszustand gilt aus JEDEM Zustand und \
-                  ist selbst ein `transset`.",
+        // **F-1, Redaktion 2026-08-17.** *„gilt aus JEDEM Zustand"* -- falsch, sobald
+        // lineare Werte im Spiel sind: ein `reset` aus einem Zustand, der einen linearen
+        // Wert haelt, LECKT ihn, und M2 verbietet genau das. Der Eintrag versprach eine
+        // Totalitaet, die die Sprache an anderer Stelle ausschliesst.
+        pflicht: "Der erzeugte Uebergang in den Anfangszustand gilt aus jedem Zustand, \
+                  **in dem kein linearer Wert gehalten wird**, und ist selbst ein \
+                  `transset`. *Aus einem Zustand mit gehaltenem linearem Wert ist er ein \
+                  Leck und muss abgelehnt werden -- M2, nicht diese Schablone.*",
         stand: Stand::Entworfen,
         fundstelle: "MESSUNGEN.md, B13-Nachpruefung",
     },
@@ -358,11 +418,18 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "gruppe.ops",
-        haengt_an: &[],
+        haengt_an: &["gruppe.sperrabdruck"],
         konstrukt: "Gruppen-ops ueber mehreren Tabellen (Kandidat, aus «B13»)",
+        // **F-4, Redaktion 2026-08-17.** Der Eintrag fuehrt ZWEI Pflichten: die ERHALTUNG
+        // der Invariante und den SPERRABDRUCK, unter dem sie gilt. Seit dem 2026-08-16 hat
+        // der Abdruck einen eigenen Eintrag (`gruppe.sperrabdruck`, S17) mit drei benannten
+        // Teilen -- und damit steht er hier ein zweites Mal. *Zwei Eintraege, die dieselbe
+        // Pflicht fuehren, sind dieselbe Fehlerklasse wie zwei Zahlen ueber verschiedenen
+        // Grundgesamtheiten: keiner von beiden kann fallen, ohne dass der andere so aussieht,
+        // als trage er weiter.*
         pflicht: "Die Verbindungs-Invariante der Gruppe bleibt unter jeder Gruppenoperation \
-                  erhalten -- und zwar unter dem deklarierten Sperrabdruck der Operation, \
-                  nicht sequenziell. Auf einem Mehrkerner ist das die eigentliche Pflicht. \
+                  erhalten. **Der Sperrabdruck, unter dem das gilt, steht NICHT hier, \
+                  sondern in `gruppe.sperrabdruck`** -- diese Schablone setzt ihn voraus. Auf einem Mehrkerner ist das die eigentliche Pflicht. \
                   **Diese Schablone hat als einzige eine VORLAGE statt eines leeren Blatts**: \
                   Verification/capability-system/proofs/cap_space.rs fuehrt cap_inv als EINE \
                   spec fn ueber den Klauseln 1-7 und beweist je Operation die Erhaltung ALLER \

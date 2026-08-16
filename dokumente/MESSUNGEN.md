@@ -4960,3 +4960,58 @@ damit man sie schlagen kann.
 
 **Ungültig:** eine Marke wird vergeben, ohne den Satz zu zitieren, der sie trägt. *Jede Marke
 nennt ihren Wortlaut — sonst ist die Redaktion eine Meinung mit Zähler.*
+
+# ERGEBNIS — Redaktion aller 19 Einträge: **11 markiert**
+
+**Vorhergesagt waren 8–14. Gemessen: 11.** Das Tor sagt weder *„Ausreisser"* (≤5) noch
+*„die Regel"* (≥12) — **und es verfehlt die zweite Schwelle um EINEN Eintrag.**
+
+> *Ein Tor, das an einem Posten kippt, misst die Definition mit* — derselbe Satz wie bei der
+> K/A/W-Randlage, und er gilt hier genauso.
+
+## Die elf, jede mit ihrem Wortlaut (U-Bedingung der Vorregistrierung)
+
+| Eintrag | Marke | der Satz, der sie trägt |
+|---|---|---|
+| `table.ops.erhaltung` | **F-1** | *„bleibt **jede** `online`-Invariante erhalten"* — eine **Verbindungs**-Invariante wird von keiner Einzelträger-Operation erhalten; genau dafür gibt es `gruppe.ops` |
+| `transition.transset` | **F-1** | *„**kein** Zwischenzustand ist beobachtbar"* — beobachtbar **von wem**? Auf einem Mehrkerner leer |
+| `exchange.rmw` | **F-4** | *„ist atomar **und** der Rumpf rein"* — Atomarität ist Axiomschicht, Reinheit ist Pass 8 |
+| `accumulates.monoid` | **F-1 + F-4** | *„ergibt **denselben Wert** wie ein atomares RMW"* — nur an einem Ruhepunkt, nicht nebenläufig |
+| `walk.mappings` | **F-1** | *„trifft **genau** die erreichbaren Blatteinträge"* — eine grosse Seite bildet **oberhalb** der vollen Tiefe ab |
+| `format.roundtrip` | **F-1 + F-4** | *„prüft die Pufferlänge **genau einmal** am Eintritt"* — für **variable** Längen falsch, und die sind offen |
+| `entry.abdruck` | **F-4** | *„und der Stapelwechsel ist **korrekt**"* — korrekt **wogegen**? Ein unbestimmtes Prädikat ist keine Pflicht |
+| `device.konstruktor` | **F-4** | *„die Registerlagen treffen die **Hardware**-Lagen"* — in keinem Beweiser zeigbar; Axiomschicht |
+| `ops.suche` | **F-2** | *„in **der** Ordnung der Domäne"* — `chain(a,b)` hat zwei Kantenarten, also keine |
+| `state.reset` | **F-1** | *„gilt aus **JEDEM** Zustand"* — aus einem mit gehaltenem linearem Wert wäre er ein Leck; M2 verbietet ihn |
+| `gruppe.ops` | **F-4** | führt den **Sperrabdruck** ein zweites Mal, den seit dem 2026-08-16 `gruppe.sperrabdruck` trägt |
+
+## Die Verteilung ist schärfer als die Zahl — und sie ist eine NACHTRÄGLICHE Aufteilung
+
+**Das Tor stand über den 19. Diese Spalte stand nicht in der Vorregistrierung** und wird
+deshalb als Befund geführt, nicht als Torergebnis:
+
+| | Einträge | markiert |
+|---|---:|---:|
+| **heute geschrieben oder redigiert** | 7 | **0** |
+| **älter** | 12 | **11** |
+
+> **Elf von zwölf älteren Einträgen tragen eine Marke. Der zwölfte ist
+> `verbund.konstruktor`** — *„setzt jedes Feld genau einmal und lässt keins uninitialisiert"*,
+> ein Satz, der seine eigene Bedingung definiert statt sie zu behaupten.
+
+**Das ist die Antwort auf die Frage, ob 2 von 3 ein Ausreisser waren: sie waren es nicht.**
+
+## Was daraus folgt, und es ist keine Beweisarbeit
+
+**Die vier Marken sind Schreibfehler, keine Denkfehler** — und drei davon haben eine Regel,
+die sich hinschreiben lässt:
+
+> **F-1:** *„genau", „alle", „jeder", „kein"* in einer Beweispflicht braucht einen Beleg
+> **im selben Satz**, sonst ist es eine Behauptung über einen Rand, den niemand geprüft hat.
+> **F-2:** ein Singular über einer Domäne mit mehreren Kantenarten ist keiner.
+> **F-3:** *„daraus fällt"* verspricht, dass nichts mehr zu tun ist — und war beide Male falsch.
+> **F-4:** zwei Pflichten in einem Satz können nicht einzeln fallen.
+
+**Keine dieser Regeln braucht Isabelle.** *Die teuerste Erkenntnis des Tages ist, dass die
+Formalisierung vor allem eines geleistet hat: sie hat mich gezwungen, die Sätze zu lesen, die
+ich selbst geschrieben hatte.*
