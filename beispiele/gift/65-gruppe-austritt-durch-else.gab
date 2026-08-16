@@ -1,0 +1,60 @@
+-- erwartet: U006
+-- **Gift 65 -- derselbe Zwischenaustritt, aber durch die STILLSTE Tuer.**
+--
+-- S17 (`gabbro schablonen`) verlangt von einer Gruppenoperation dreierlei:
+--   (a) die Sperren in Rangordnung        -> `U003`/`U005`
+--   (b) die Invariante am Anfang UND am Ende -> braucht die Klausel, die es noch nicht gibt
+--   (c) KEINEN ZWISCHENAUSTRITT           -> diese Datei
+--
+-- Gift 64 nimmt `return`. Diese Datei nimmt `let … else` -- **die einzige
+-- Fehlerfortpflanzung der Sprache**, und die einzige, die wie eine ZUWEISUNG aussieht:
+--
+--     let g = pruefe_platz(e) else (fehler) { return false; }
+--
+-- Zwischen den beiden Schreibzugriffen steht damit ein Weg hinaus, den niemand als Weg
+-- liest. **Diese Datei existiert, weil eine Mutationsprobe ueberlebt hat:**
+-- `gruppe-austritt-nur-return` ersetzte die `let … else`-Zeile im Pruefer durch nichts, und
+-- 63 Giftproben merkten es nicht. Gift 64 haette es nie gefangen -- es nimmt `return`.
+--
+-- *Eine Regel mit drei Wegen braucht drei Proben, nicht eine.*
+--
+-- ERWARTET: U006, und sonst nichts.
+
+module gift65 {
+
+const NFAEDEN : u32 = 256;
+const NPUNKTE : u32 = 64;
+
+table Faeden count NFAEDEN {
+    slot { gruende : u32, bereit : bool, }
+}
+
+table Endpunkte count NPUNKTE {
+    slot { wartet : u32, offen : bool, }
+}
+
+lock PUNKTE protects { Endpunkte } rank 1 held <= 40 ops;
+lock PLAN   protects { Faeden }    rank 2 held <= 40 ops;
+
+group Zustellung over { Endpunkte, Faeden };
+
+extern fn pruefe_platz(e : index into Endpunkte) -> u32
+    effects { reads Endpunkte.slots } costs <= 8 ops;
+
+-- **Der Fehler.** Beide Sperren gehalten, richtige Ordnung -- und ein `let … else` dazwischen.
+impl fn einreihen(e : index into Endpunkte, t : index into Faeden) -> bool
+    effects { reads Endpunkte.slots, writes Endpunkte.slots, writes Faeden.slots,
+              locks PUNKTE, locks PLAN }
+    costs   <= 60 ops
+{
+    locks PUNKTE {
+      locks PLAN {
+        Endpunkte.slots[e].wartet = t;
+        let g = pruefe_platz(e) else (fehler) { return false; }
+        Faeden.slots[t].gruende = g;
+      }
+    }
+    return true;
+}
+
+}
