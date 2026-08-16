@@ -3135,6 +3135,16 @@ Kennzahl  >=  1,90        (Pflichtseite, Population 81; 1,98 mit N_L = 73)
 Aufschlag aus B3  >=  +0,05   — unter der Aufloesung, aber getrennt gefuehrt
 ```
 
+**Der Vorbehalt der Messung steht hier woertlich, weil er genau an dieser Stelle gebraucht
+wird und nirgends sonst:**
+
+> **„Der Aufschlag aus B3 ist nicht der Abstand des Entwurfs zum Boden, sondern ein Summand
+> darin."**
+
+**Und die Rueckrechnung gehoert mit eingesetzt, sonst ist die +0,05 zu ruhig gelesen:** faellt
+die Buchung der Klasse *Index*, wird aus dem Summanden **+1,03** — Faktor 21. *Die Einsetzung
+traegt damit dieselbe Bedingung wie die Messung: sie steht auf `index into T` erbt `count N`.*
+
 **Damit ist B3 als Kostenposten erledigt und die Kennzahl weiter offen.** Was sie
 schliessen wuerde, ist benannt und steht in `TODO.md`: die Zeilenanteile der **Gabbro-Seite**
 — also was ein Beweis in Gabbro fuer dieselben 73 Pflichten tatsaechlich kostet. *Das ist
@@ -3505,6 +3515,7 @@ Bereichsfragmenten**; jetzt hat sie **vier**.
 | **F8 Scheduler** | **0** | **«B38»:** Sperrgrenze verlangt Neuvalidierung **oder benannten Träger** — Semantik erweitert | 3 |
 | **F9 MMU/Seitentabellen** | **0** | **«B39»:** die Axiomschicht wird **länger** (`A`/`D` als Hardwareschreiber) | 3 |
 | **F10 Parser/Checkpoint** | **0** | — | 3 |
+| **B3 (ganzer Kernel, keine Fragmentzeile)** | **1** — `ancestors of` | **«B41»:** zwei weitere Lücken, **keine davon ein Konstrukt** (offene Frage bzw. Vorhersage) | 3 |
 
 ## **Vier Bereichsfragmente, null neue Konstrukte — und drei veränderte Bedeutungen.**
 
@@ -3554,7 +3565,17 @@ Grundgesamtheit — den ganzen Kernel — und findet dort eine Forderung nach dr
 | | Grundgesamtheit | neue Konstrukte |
 |---|---|---:|
 | Konvergenzmetrik F7–F10 | vier ausgeschriebene Bereichsfragmente | **0** |
-| **B3** | **`kernel/` + `crates/`, 2 186 Rümpfe** | **3 gefordert** |
+| **B3** | **`kernel/` + `crates/`, 2 186 Rümpfe** | **1** (`ancestors of`) |
+
+**Die Eins ist gereiht, nicht gerundet.** Von den drei Lücken zählt hier **nur `ancestors
+of`** — eine Domänenzeile mit derselben Erzeugungslogik wie `descendants of`, also ein
+Konstrukt im Sinn der Metrik. Die **Kantenfunktion** ist eine offene Frage nach der Linie
+(der allgemeine Fall von `chain(a,b)`), und **Union-Find bekommt voraussichtlich gar keine
+Traversierungsform** — es ist die getarnte Verschränkung aus P0.1-Versuch 1, kein fehlender
+Vorrat. *Wer alle drei als Konstrukte zählt, zählt eine Vorhersage und eine offene Frage mit.*
+
+> **`ancestors of` ist damit der erste konvergenzmetrisch GEMESSENE Konstruktbedarf:
+> null aus vier Fragmenten, eins aus einer Messung.**
 
 **Die Zahlen widersprechen sich nicht — sie beantworten verschiedene Fragen**, und genau
 deshalb steht die zweite hier: **wer „null neue Konstrukte" zitiert, muss «B41» mitnehmen.**
@@ -3764,6 +3785,24 @@ Abbrüche: **0**. U1–U4 sämtlich nicht ausgelöst. Die Handstichprobe (n = 13
 `exception::init`, `arbitrary_mutations_never_panic`, `ring3_worker`, `loader::probe`,
 `run_certfuzz` aus der Gegenmenge.
 
+### **Und der Ertrag steht nicht in der Zahl. Er steht in der Verdachtsliste, die falsch war.**
+
+> **Alle drei namentlich erwarteten Kandidaten waren falsch getippt, und der grösste Posten
+> stand in keinem Verdachtsbereich.** DMAR/PCIe stellt **226 der 584 Zeilen (38,7 %)** —
+> mehr als Scheduler und CDT einzeln.
+
+**Das ist R18 von der anderen Seite.** Die Regel steht als *Sichtbarkeitsverzerrung*: was
+laut ist, wird gezählt. Hier war es die Umkehrung — **die Verdachtsliste stammte aus dem, was
+*berühmt* schwer ist** (IPC-Fastpath, `revoke`, Scheduler-Warteschlange), **nicht aus dem, was
+*gemessen* schwer ist** (Gerätetopologie, Union-Find, Handler-Ketten). *Ein Verdacht aus dem
+Ruf einer Sache ist keine Messung; er ist die Erinnerung an fremde Kernel.*
+
+**Und `revoke` liefert nebenbei den schönsten Beleg, den `by consuming` je bekommen wird.**
+Der Rumpf, für den das Konstrukt **auf Papier entworfen** wurde, existiert im echten Kernel
+bereits in genau dieser Form — `space.rs`:619–657, Wort für Wort `descendants of s by
+consuming`, samt handgeschriebener `bounded N ops`-Disziplin. **Nicht ein Konstrukt, das zu
+einem Rumpf passt, sondern ein Rumpf, der ohne die Sprache dieselbe Form gefunden hat.**
+
 ### Die 26 Rümpfe, je mit `Datei:Zeile` (W7)
 
 | `Datei:Zeile` | Rumpf | Marke | Z |
@@ -3849,6 +3888,26 @@ er benennt eine **konkrete Sprachlücke**, die keine Zählung vorher hatte:
 
 **Diese drei Lücken sind der eigentliche Ertrag der Messung, und sie wiegen mehr als die Zahl.**
 
+##### **Sie sind aber NICHT gleichrangig — und die Reihung gehört daneben, sonst schlägt jemand eine `union_find`-Domäne vor**
+
+| | Lücke | Urteil |
+|---|---|---|
+| **billig** | **`ancestors of`** | **eine Domänenzeile mit derselben Erzeugungslogik wie `descendants of`** — dieselbe Kante, andere Richtung. Die Konvergenzmetrik verkraftet sie als *gemessenen* Bedarf. |
+| **mittel, offen** | **Kette über eine Kantenfunktion** | der **allgemeine Fall von `chain(a,b)`**. Die Frage ist nicht, ob es geht, sondern **wo die Linie liegt**: hält eine *deklarierte* Kantenfunktion — rein, M1-typisiert, wie der `update`-Rumpf von `exchange` — oder ist sie **Quantorenvorrat durch die Hintertür**? |
+| **gar nicht** | **Union-Find** | **prinzipiell anders. Bekommt voraussichtlich gar keine Traversierungsform.** |
+
+> **Union-Find ist keine fehlende Domäne, sondern eine getarnte Verschränkung.**
+> `find` mit Pfadkompression **mutiert die Struktur, über die es läuft** — das ist nicht
+> *„keine Domäne vorhanden"*, das ist **die Verschränkung aus P0.1-Versuch 1, als
+> Leseoperation verkleidet.** Wer sie zur Domäne macht, holt genau den Fall zurück, an dem
+> der erste Anlauf gescheitert ist.
+>
+> **Die ehrliche Vorhersage, damit sie später widerlegbar ist:** Union-Find bleibt
+> **entweder ein 5 : 1-Posten** oder wird **Gruppen-`ops`-Material** — die Kompression als
+> *erzeugte Operation* mit Erhaltung der Repräsentanten-Invariante, nicht als Schleifenform.
+> *Das ist eine Vorhersage, keine Messung. Sie steht hier, damit der nächste Vorschlag sie
+> zuerst schlagen muss.*
+
 #### 3. Das Werkzeug hätte die Messung zweimal ruiniert — nicht der Gegenstand.
 
 Vier Regelfassungen, vier Zahlen: **2 → 27 → 19 → 26 Rümpfe**, entsprechend
@@ -3897,6 +3956,34 @@ die Neuerhebung vom 2026-08-15 als **getragen** verbucht hat (`index into T` erb
 Schranke aus `count N`, A3/`M103`). **Fällt jene Buchung, fällt diese Zahl mit ihr** — und
 zwar nicht um ein paar Zeilen, sondern um die 449 Rümpfe mit Schleife, die hier als
 traversierbar zählen.
+
+##### **Die Rückrechnung, damit die spätere Neubuchung ein EINSETZEN wird und keine Neumessung**
+
+Ein Vorbehalt, der eine Zahl an eine **offene Entscheidung** koppelt, muss die betroffene
+Teilmenge beziffern — sonst ist er eine Warnung ohne Preisschild. **Das Werkzeug weist sie
+seit dieser Buchung mit aus** (`./zaehle-b3.py … ` → Abschnitt *RUECKRECHNUNG*):
+
+| | Rümpfe | Zeilen | Anteil | Aufschlag | Tor (Latte 5 %) |
+|---|---:|---:|---:|---:|---|
+| **heute** — Klasse *Index* getragen | 22 | 584 | **0,96 %** | +0,05 | **bestanden** |
+| **daran hängend** (jeder Rumpf mit `for`) | +268 | +11 974 | | | |
+| **fiele die Index-Buchung** | **290** | **12 558** | **20,67 %** | **+1,03** | **GEFALLEN** |
+
+**Die Gegenrechnung ist exakt und nicht geschätzt:** die Vollzählung aus R14(c) hat ergeben,
+dass **alle** 347 verschiedenen `for … in`-Ausdrücke eine Domäne treffen und **alle
+getroffenen Domänen `elems of`/`slots of`** sind — die Kettendomänen (`descendants of`,
+`queue`) laufen in `while`, nicht in `for`. *Die betroffene Menge ist deshalb genau: jeder
+Rumpf mit mindestens einem `for`.*
+
+> **Faktor 21. Das Tor kippt, und es kippt nicht knapp.**
+>
+> **Damit misst B3 nicht in erster Linie den Schleifenvorrat, sondern die Index-Buchung.**
+> Die 0,96 % sagen: *„wenn `index into T` seine Schranke aus `count N` erbt, trägt der
+> Vorrat den Kernel."* Sie sagen **nicht**, dass der Vorrat ihn unbedingt trägt. **Der
+> tragende Posten dieser Messung ist eine Buchung vom 2026-08-15, nicht eine Schleifenform.**
+>
+> *Und die Richtung des Restrisikos ist damit benannt: **das einzige, was diese Messung
+> umwerfen kann, ist keine Nachzählung an ihr selbst, sondern eine Umbuchung woanders.***
 
 #### 6. Was auffällt und was diese Messung NICHT belegen kann.
 

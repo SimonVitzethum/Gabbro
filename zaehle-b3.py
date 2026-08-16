@@ -738,7 +738,9 @@ def lauf(wurzel, unterbaeume=('kernel', 'crates')):
                         'zeilen': nichtleere_zeilen(r['rein']), 'marken': mk,
                         'belege': bl[:8],
                         'test': any(a <= r['z0'] <= b for (a, b) in tb),
-                        'schleifen': len(schleifen(r['rein']))})
+                        'schleifen': len(schleifen(r['rein'])),
+                        # Fuer die Rueckrechnung: wie viele Schleifen sind `for`?
+                        'fors': sum(1 for s in schleifen(r['rein']) if s['art'] == 'for')})
     return erg, ab, z_roh, z_nl, z_test, len(dat)
 
 
@@ -761,6 +763,35 @@ def zeige(erg, ab, z_roh, z_nl, z_test, nd, prod=False):
 
 
 
+def rueckrechnung(erg, z_nl, z_test):
+    """**Was haengt an der `elems of`-Lesart von Slice-Iterationen?**
+
+    Der Vorbehalt der Messung koppelt die Zahl an eine OFFENE Buchung: jede
+    Rust-Slice-/Feld-/Bereichs-Iteration wird als `elems of` bzw. `slots of` gelesen,
+    und das setzt voraus, dass der Ort eine deklarierte Sammlung mit `count N` ist
+    (Klasse *Index*, `M103`). **Faellt jene Buchung, faellt diese Zahl mit ihr.**
+
+    Damit die spaetere Neubuchung ein EINSETZEN wird und keine Neumessung, wird die
+    betroffene Teilmenge hier schon ausgewiesen. Die Vollzaehlung der `for`-Koepfe
+    (R14(c)) hat ergeben: **alle** 347 verschiedenen `for … in`-Ausdruecke treffen eine
+    Domaene, und **alle** getroffenen Domaenen sind `elems of`/`slots of` — die
+    Kettendomaenen (`descendants of`, `queue`) laufen in `while`, nicht in `for`.
+    Die Gegenrechnung ist deshalb genau: *jeder Rumpf mit mindestens einem `for`*.
+    """
+    for prod in (False, True):
+        e = [r for r in erg if not r['test']] if prod else erg
+        basis = (z_nl - z_test) if prod else z_nl
+        N = [r for r in e if r['marken']]
+        zn = sum(r['zeilen'] for r in N)
+        zusatz = [r for r in e if not r['marken'] and r['fors']]
+        zz = sum(r['zeilen'] for r in zusatz)
+        print('%-16s  N heute %3d R / %5d Z (%.3f %%)   + an `elems of` haengend '
+              '%3d R / %5d Z   =>  %3d R / %5d Z (%.2f %%)'
+              % ('OHNE TESTS' if prod else 'GANZER BAUM',
+                 len(N), zn, 100.0 * zn / basis, len(zusatz), zz,
+                 len(N) + len(zusatz), zn + zz, 100.0 * (zn + zz) / basis))
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print(__doc__)
@@ -771,6 +802,8 @@ if __name__ == '__main__':
     N, B, basis = zeige(erg, ab, zr, zn, zt, nd, prod=False)
     print()
     zeige(erg, ab, zr, zn, zt, nd, prod=True)
+    print('\n--- RUECKRECHNUNG: was an der `elems of`-Lesart haengt ---')
+    rueckrechnung(erg, zn, zt)
     print('\n--- Liste (berichtet), nach Datei:Zeile ---')
     for r in sorted(N, key=lambda x: (x['datei'], x['z0'])):
         print('%s:%d  %s  [%s]  %d Zeilen%s'

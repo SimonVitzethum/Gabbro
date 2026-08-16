@@ -300,6 +300,50 @@ die Kehrseite:** wenn der Nenner schrumpft, muss das lauter sein als der steigen
 auf seine **Änderung**. Wo ein Werkzeug eine Grundgesamtheit definiert, gehört ihre Grösse in
 denselben Satz wie die Quote — und ihr Vorwert daneben, sobald es einen gibt.
 
+### **Die Bestätigung kam einen Tag nach der Regel — in Reinform**
+
+**B3, 2026-08-16.** Die R14(a)-Probe setzte eine kaputte Klammer in eine Kopie des Prüflings.
+Das Werkzeug meldete `Abbrueche: 1` — **und die berichtete Zahl fiel dabei still von 26 auf
+24**, weil zwei Rümpfe aus dem Verzeichnis fielen.
+
+> **Ohne den Abbruchzähler hätte die Messung eine um zwei zu niedrige Zahl geliefert und
+> dabei gesund ausgesehen** — bei einem Tor, das nach *unten* besteht, also in die
+> schmeichelhafte Richtung.
+
+*Dieselbe Bauart wie der P2-Fall: der Zähler stimmt, der Nenner ist gewandert, und der
+Bericht sieht in beiden Fällen gleich aus.* **Eine Regel, die einen Tag nach ihrer
+Niederschrift ihren zweiten Fall fängt, ist keine Vorsichtsmassnahme mehr.**
+
+---
+
+## **Das Zahlenpaar zu R14 — das quantitativste Argument, das dieser Ordner besitzt**
+
+R14 (*ein Messwerkzeug beweist, dass es messen kann*) stand bisher mit Begründungen da. **B3
+gibt ihr Zahlen, und sie sind unangenehm deutlich:**
+
+| | |
+|---|---:|
+| Spanne zwischen den **verworfenen** Regelfassungen (0,03 % … 4,36 %) | **Faktor 130** |
+| Abstand zwischen **Werkzeug und Wahrheit** nach den drei R14-Proben | **Faktor 1** |
+
+**Vier Fassungen, drei davon falsch:**
+
+```
+Fassung 1   0,03 %   sah nur Ruempfe MIT Schleife -- schleifenlose Chirurgie unsichtbar
+Fassung 2   4,36 %   las `for x in segs` als Nicht-Domaene -- EIN Rumpf machte 2 % aus
+Fassung 3   0,74 %   uebersah Index-, Kanten- und Spendenketten
+Fassung 4   0,95 %   die berichtete
+```
+
+> **Die beiden verworfenen Fassungen klammern die richtige Antwort ein und spannen dabei
+> einen Faktor 130 auf. Beide hätten sich mit derselben Fundstellenliste vorführen lassen.**
+> Der einzige Unterschied zwischen ihnen und der Endfassung ist **R14** — die Vollzählung
+> aller 347 `for`-Köpfe und die drei Mutationsproben.
+
+**Die Regel, die daraus folgt, steht in einer Zeile:** *eine Zahl aus dieser Werkzeugklasse
+ohne R14 ist nicht ungenau, sondern wertlos.* **Drei von vier Fassungen waren falsch, und
+keine davon sah falsch aus.**
+
 ---
 
 ## W12 — Eine gefüllte Karte ist kein Beleg für eine **vollständige** Karte

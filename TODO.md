@@ -43,6 +43,12 @@ Kennzahl.* **B3 ist als Kostenposten erledigt; die Kennzahl bleibt bei `≥ 1,90
 sie an der **Pflichtseite** hängt, nicht an der Codeform. Die Kopfstellung hat jetzt die
 Entscheidung, nicht die Messung.
 
+> **Und der Satz, den die Messkette erzeugt hat, gehört an ihren Kopf:** *die teuren Pflichten
+> sind **viele, aber klein*** — W = 38 von 73 nach Kopfzahl, aber nur 34 % der Zeilen; eine
+> W-Pflicht ist im Mittel **halb so gross** wie eine K- oder A-Pflicht (`dokumente/BEWEIS.md`).
+> **Der Abstand zum Boden hängt damit fast vollständig an der W-Spalte selbst**, nicht an
+> Schleifenformen. Wer den Entwurf angreifen will, greift dort an.
+
 **Alles andere ist parallelisierbar oder Memo.** Und der einzige Posten auf diesem Pfad, der
 weder Code noch Lauf ist, sondern **ein Wort des Ordners**, ist der Schlitz:
 
@@ -75,11 +81,24 @@ Beide verbleibenden sind billig rückbaubar, also **R12-fähig, sobald die Richt
         über einen Parameter `kante: impl Fn(u16) -> Option<u16>`; die Kette entsteht erst
         durch den Aufruf und ist nicht deklarierbar.
 
+      **Die drei sind NICHT gleichrangig, und die Reihung ist die halbe Entscheidung:**
+      * **`ancestors of` — billig, und der Bedarf ist gemessen.** Dieselbe Erzeugungslogik
+        wie `descendants of`, dieselbe Kante, andere Richtung. **Zählt in der
+        Konvergenzmetrik als 1: null aus vier Fragmenten, eins aus einer Messung.**
+      * **Kantenfunktion — offene Frage nach der LINIE, kein Bauauftrag.** Sie ist der
+        allgemeine Fall von `chain(a,b)`. Zu entscheiden: hält eine **deklarierte**
+        Kantenfunktion (rein, M1-typisiert, wie der `update`-Rumpf von `exchange`), oder ist
+        sie **Quantorenvorrat durch die Hintertür**?
+      * **Union-Find — bekommt voraussichtlich GAR KEINE Traversierungsform.** `find` mit
+        Pfadkompression mutiert die Struktur, über die es läuft: **die Verschränkung aus
+        P0.1-Versuch 1, als Leseoperation getarnt.** Vorhersage im Ordner: es bleibt ein
+        5 : 1-Posten oder wird **Gruppen-`ops`-Material** (Kompression als erzeugte Operation
+        mit Erhaltung der Repräsentanten-Invariante). *Die Vorhersage steht da, damit ein
+        Vorschlag für eine `union_find`-Domäne sie zuerst schlagen muss.*
+
       **W3 ist erfüllt (gemessener Bedarf), und W3 verlangt nicht, ihm zu folgen.** Der Preis
-      steht in Spalte 2 der Konvergenzmetrik: **drei Domänen mehr sind drei Domänen mehr, die
-      jeder Leser glauben muss.** *Die billigere Antwort für alle drei könnte eine einzige
-      sein — eine Domäne über einer deklarierten Kantenfunktion deckt möglicherweise auch
-      `ancestors of`. Das ist zu prüfen, bevor drei gebaut werden.*
+      steht in Spalte 2 der Konvergenzmetrik: **jede Domäne mehr ist eine Domäne mehr, die
+      jeder Leser glauben muss.**
 
 ### Die Frage, die über den Kern entscheidet
 

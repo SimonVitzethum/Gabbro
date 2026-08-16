@@ -1189,3 +1189,45 @@ sondern eine ihrer Bequemlichkeiten**, und wer es rechtfertigen will, braucht ei
 Argument als die Fehlerhäufigkeit in diesem Baum.
 
 *Beide Messungen stehen mit Suchweg da (W7) — nachzählbar, und damit widerlegbar.*
+
+---
+
+# Das eigentliche Ergebnis der ganzen Messkette: **die teuren Pflichten sind viele, aber klein**
+
+Zwei Messungen, die getrennt gefahren wurden, ergeben zusammen einen Satz, den keine von
+beiden allein trägt:
+
+| | Ergebnis | Lesart |
+|---|---|---|
+| **K/A/W** (`N_L = 73`) | **W = 38 gegen 36,5** — die Wertaussagen sind die **Mehrheit** | die Decke der Schrittzusagen deckt eine **Minderheit** |
+| **B3** (`p = 0,96 %`) | Aufschlag **+0,05** — unter der Auflösung der Kennzahl | die Codeform kostet **fast nichts** |
+
+**Beides zusammen heisst: der Abstand zum Boden hängt fast vollständig an der W-Spalte
+selbst.** Nicht an Schleifenformen, nicht an Domänen, nicht am Schleifenvorrat — an der
+Frage, wie viele Pflichten **Wertaussagen** sind.
+
+**Und die Grössenverteilung sagt, wie das gehen kann.** In der Population, in der die Zeilen
+gemessen sind (81, `F = 1 389`):
+
+```
+W:      40 Pflichten,  474 Zeilen   ->  11,9 Zeilen je Pflicht
+K + A:  41 Pflichten,  915 Zeilen   ->  22,3 Zeilen je Pflicht
+```
+
+> **Eine W-Pflicht ist im Mittel halb so gross wie eine K- oder A-Pflicht** — 52 % der
+> Pflichten, aber nur 34 % der Zeilen. **Die Mehrheit ist eine Mehrheit nach Kopfzahl, nicht
+> nach Umfang.**
+
+**Was das für die These bedeutet, in beide Richtungen:**
+
+* **Dafür:** die Decke deckt eine Minderheit der Pflichten und **kostet fast nichts** — die
+  Klempnerei ist nicht das Problem. Wer den Entwurf angreifen will, greift die W-Spalte an,
+  nicht die Schleifenformen.
+* **Dagegen:** *„viele, aber klein"* ist **kein Trost, sondern eine Warnung**. Kleine
+  Beweisrümpfe sind billig zu schreiben und teuer zu **halten**: 38 Stellen, an denen ein
+  Mensch etwas über einen **Wert** behaupten muss, sind 38 Stellen, die bei jeder Änderung
+  neu zu prüfen sind. **Der Aufwand skaliert mit der Anzahl, die Kennzahl mit den Zeilen.**
+
+*Das ist die Spannung, die die Messkette erzeugt hat, und sie steht hier statt in einer
+Zusammenfassung: **die Kennzahl wird gut, weil die teuren Pflichten kurz sind — nicht, weil
+es wenige wären.***
