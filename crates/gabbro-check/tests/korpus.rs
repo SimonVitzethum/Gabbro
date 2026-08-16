@@ -122,3 +122,53 @@ fn die_beispiele_der_grammatik_gehen_selbst_durch() {
         }
     }
 }
+
+#[test]
+fn jeder_gebaute_pass_ist_auch_angemeldet() {
+    // **Gegen den entzogenen Halbcommit.** Am 2026-08-16 loeste ein `git stash` die
+    // Registrierung des Paarungspasses aus dem Index; der Commit trug den Pass ohne seine
+    // Anmeldung, und `gabbro paesse` haette ihn weiter als OFFEN gefuehrt. Niemand haette
+    // es gemerkt -- die Proben liefen gruen, weil `pruefe()` ihn ja aufrief.
+    //
+    // Dieselbe mechanische Loesung wie fuer die Kennungen: der Abgleich steht in der
+    // Waechterkette, nicht in der Aufmerksamkeit.
+    let quelle = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs"),
+    )
+    .expect("lib.rs");
+    // Jedes `<name>::pass(` in `pruefe()` muss einen Eintrag in `passliste()` haben, der
+    // NICHT `Zustand::Offen` ist -- ein aufgerufener Pass, der als offen gilt, ist eine
+    // Zusage in die falsche Richtung: er prueft mehr, als er zugibt.
+    let rumpf = quelle
+        .split("pub fn pruefe(")
+        .nth(1)
+        .and_then(|s| s.split("\n}").next())
+        .expect("pruefe()");
+    for zeile in rumpf.lines() {
+        let Some(modul) = zeile.trim().strip_suffix("::pass(baum, absagen);") else {
+            continue;
+        };
+        let name = match modul {
+            "m1" => "M1",
+            "m2" => "M2",
+            "m3" => "M3",
+            "paarung" => "Paarung",
+            "wirkungen" => "effects",
+            "kosten" => "costs",
+            "schleifen" => "M4",
+            "namen" => "Namen",
+            _ => continue, // Hilfspaesse ohne eigene Nummer (kbedingung, geteilt)
+        };
+        let eintrag = gabbro_check::passliste()
+            .into_iter()
+            .find(|p| p.name.starts_with(name))
+            .unwrap_or_else(|| panic!("`{modul}::pass` laeuft, steht aber in keiner Passliste"));
+        assert!(
+            !matches!(eintrag.zustand, gabbro_check::Zustand::Offen(_)),
+            "`{modul}::pass` wird gerufen, `gabbro paesse` fuehrt `{}` aber als OFFEN -- \
+             ein Pass, der prueft und sich als ungebaut ausgibt, ist eine Zusage in die \
+             falsche Richtung",
+            eintrag.name
+        );
+    }
+}

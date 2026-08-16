@@ -268,3 +268,34 @@ unbekannt`) und sagt ausdrücklich, dass die `pure`-Zusage an dieser Stelle **ni
 ist. *Ein Nebenertrag zeigte sich sofort:* zwei der drei ersten `E009` waren **Lücken im
 Graphen**, nicht im Programm — `transition`s fehlten ihm. Der dritte Zustand hat sich als
 erstes gegen das eigene Werkzeug gerichtet.
+
+---
+
+## W11 — Jede Torquote nennt ihr N, und ein N-Sprung ist selbst ein Prüffall
+
+**Der Beinahe-Fehler.** Ich verschärfte die Trennung *Ausschnitt / Übersetzungseinheit* und
+suchte `…` im **Rohtext**. Das warf fünf der sechs Fragmente heraus — dort steht `…` in
+**Kommentaren**. Tor P2 hätte gemeldet:
+
+```
+Uebersetzungseinheiten: 1 von 1 ohne Fehler (100 %)
+```
+
+**Und das ist auch 100 %.** Ein Filter, der die Grundgesamtheit schrumpft, **maskiert als
+Erfolg** — die Quote steigt, während die Deckung fällt.
+
+**Die Regel.** Jede Torquote nennt ihr **N**, und ein **N-Sprung gegen den Vorlauf ist selbst
+ein Prüffall**. Die richtige Meldung wäre nicht *„1 von 1 grün"* gewesen, sondern:
+
+> **„N fiel von 6 auf 1."**
+
+*Die zweite Meldung ist die, die den Fehler zeigt.* Eine Quote ohne Nenner ist keine Zahl —
+das ist Falle 80 —, und ein Nenner, der sich ohne Anlass bewegt, ist ein Befund.
+
+**Die Verwandtschaft.** W1 sagt: eine Deckungszahl zählt Belege, nicht Versuche. **W11 sagt
+die Kehrseite:** wenn der Nenner schrumpft, muss das lauter sein als der steigende Zähler.
+*Beide Fehler sehen im Bericht gleich aus — nur der Nenner unterscheidet sie.*
+
+**Der Handgriff.** `gabbro fragmente` druckt N seit jeher; was fehlte, war die Aufmerksamkeit
+auf seine **Änderung**. Wo ein Werkzeug eine Grundgesamtheit definiert, gehört ihre Grösse in
+denselben Satz wie die Quote — und ihr Vorwert daneben, sobald es einen gibt.
