@@ -1122,3 +1122,89 @@ Werkzeug zwei der fuenf Mechanismen (Trennung und — affin — Linearitaet), un
 unten. **Das ist kein Beweis der Unmoeglichkeit und damit kein Abbruch nach Abschnitt C** —
 aber es ist der Punkt, an dem ein Beitrag an Verus billiger waere als diese Sprache, und das
 gehoerte dann hingeschrieben statt umgangen.
+
+---
+
+# ABDECKUNG — was die Syntax trägt, was nicht, 2026-08-16
+
+**Diese Bewertung ist gegen Messungen geschrieben, nicht gegen Erwartung.** Wo eine Zahl
+steht, steht ihre Quelle daneben; wo keine steht, heisst der Satz *„geschätzt"*.
+
+## Was gedeckt ist — und die stärkste Zahl ist eine, die niemand erwartet hat
+
+| | Deckung | Quelle |
+|---|---|---|
+| **Schleifenformen** | **0 von 571 `for`-Schleifen** im Kernel laufen über etwas, das keine Domäne ist | B3, Vollzählung R14(c) |
+| **Traversierbarkeit** | **99,04 %** der Kernelzeilen sind als Traversierung schreibbar | B3 (`p = 0,96 %`) |
+| **Klempnerei** | **8 von 11** Klassen getragen | Neuerhebung + Rahmen-Nachbuchung |
+| **Prüfer** | 10 Pässe, **90 Absagen**, 63/63 Mutationen | `gabbro paesse` |
+| **Konvergenz** | vier Bereichsfragmente, **0 neue Konstrukte**; eine Messung, **1** | Konvergenzmetrik, «B41» |
+
+> **Die 0 von 571 ist der Befund, der die Sprache trägt** — und er ging gegen die Erwartung.
+> Die Nicht-Traversierbarkeit sitzt vollständig in `while`, `loop` und in schleifenlosen
+> Rümpfen, nicht in den Schleifen, die man verdächtigt hätte.
+
+## Was NICHT gedeckt ist — nach Notwendigkeit geschnitten, nicht nach Aufwand
+
+### NÖTIG — ohne das ist das Ziel nicht erreichbar
+
+| | Lücke | gemessen |
+|---|---|---|
+| **1** | **Verschlüsse** — Gabbro hat **keine Form** für `dyn FnMut`/`Fn` | **89 Fundstellen** |
+| **2** | **Die Emission** — C und Annotation, **beide bei null** | 0 von 2 Flächen, 0 Mutationen |
+| **3** | **Die Erhaltung** der Gruppen-Invariante — die Form steht, die Beweispflicht hat keinen Empfänger | S16/S17, 17 Schablonen unbewiesen |
+| **4** | **Generizität** — ohne sie braucht jede Tabelle ihren eigenen `traverse` | ungemessen (Schätzung) |
+| **5** | **Fehlerfortpflanzung** — `let … else` ist die einzige, und `U006` hat gezeigt, dass sie zugleich die **stillste Tür hinaus** ist | 1 Form für alles |
+
+**Der schwerste ist 1, und zwar aus einem Grund, der nichts mit Aufwand zu tun hat:** ein
+Verschluss ist der einzige Posten dieser Liste, für den es **keinen Entwurf** gibt — nicht
+einmal einen verworfenen. Bei allen anderen ist die Frage *wie*, hier ist sie *ob*.
+
+### PRAKTISCH — kleiner Bau, gemessener Bedarf, sofortiger Ertrag
+
+* **`ancestors of`** — eine Domänenzeile, dieselbe Erzeugungslogik wie `descendants of`.
+  **4 Rümpfe in DMAR/PCIe**, und es ist der erste konvergenzmetrisch *gemessene*
+  Konstruktbedarf.
+* **Variable Längen in `format`** — die harten 20 % jedes Parser-Erzeugers. *Der Ertrag ist
+  hier kleiner als er aussieht:* «B40» hat gemessen, dass `format` **Kürze gewinnt, nicht
+  Sicherheit**.
+* **`touches` feiner** — heute zu grob für *„verändert die Menge nur durch Entfernen"*.
+* **Amortisierte Schrankenprüfung** — `bounded N ops` muss nicht je Durchgang prüfen.
+
+### THEORETISCH MÖGLICH UND INTERESSANT — hier liegt die Forschung, nicht die Arbeit
+
+**1. Die Kette über eine deklarierte Kantenfunktion.** Der allgemeine Fall von `chain(a,b)`:
+`traverse … over chain via f` mit `f` rein und M1-typisiert, wie der `update`-Rumpf von
+`exchange`. **Sie würde `ancestors of` mit verschlucken** und die drei «B41»-Lücken auf eine
+reduzieren. *Die offene Frage ist nicht die Implementierung, sondern die Linie:* eine
+deklarierte Funktion in einer Domäne ist ein Schritt in Richtung Quantorenvorrat, und genau
+dort wandert die Grenze zwischen „Sprache" und „Beweiser", wenn niemand aufpasst.
+
+**2. Traversierung, die die gelaufene Struktur mutiert.** Union-Find mit Pfadkompression:
+`find` schreibt die Kette, die es läuft. **Das ist keine fehlende Domäne, sondern die
+Verschränkung aus P0.1-Versuch 1, als Leseoperation getarnt.** Theoretisch interessant, weil
+eine Domäne mit *veränderlicher Zeugenordnung* ein Wohlfundiertheitsargument braucht, das die
+Mutation überlebt — und das ist genau die Schablone, die niemand geschrieben hat. **Meine
+Vorhersage bleibt: es bekommt keine Traversierungsform.**
+
+**3. Die Sperrordnung als Ordnung statt als Zahl.** `rank 2` ist eine Totalordnung, wo eine
+**Halbordnung** reichen würde — zwei Sperren, die einander nie begegnen, brauchen keinen
+Rangvergleich. *Praktisch: die Zahlen funktionieren und werden seit `H006` nachgerechnet.
+Theoretisch: eine Halbordnung wäre ehrlicher und würde weniger falsch ablehnen.* Kein
+gemessener Bedarf — noch nicht.
+
+**4. Binärverifikation.** Der einzige Weg, der die **Absenkung** aus der Vertrauensbasis
+nimmt. Alles andere in diesem Ordner verschiebt Vertrauen; dieser Posten entfernt es.
+
+**5. Wiederverwendbare Spezifikationstheorien.** Sie helfen dem **zweiten** Projekt, nicht
+diesem — und dürfen deshalb in keiner Kennzahl dieses Ordners auftauchen.
+
+## Das Urteil in zwei Sätzen
+
+> **Die Syntax ist fast fertig, und das ist die unwichtigere Hälfte.** Vier
+> Bereichsfragmente forderten null neue Konstrukte, der ganze Kernel eines — der Wortschatz
+> konvergiert nachweisbar.
+>
+> **Was nicht konvergiert, ist die Vertrauensfläche.** 17 Schablonen, davon 0 bewiesen, zwei
+> davon an einem einzigen Tag dazugekommen. *Wer fragt, wieviel Gabbro noch fehlt, misst am
+> falschen Nenner, solange diese Liste keine Länge in Arbeit hat.*

@@ -4346,3 +4346,45 @@ an der Aussage, sondern am Kontrollfluss und an den Rängen.*
 **61 von 61 Mutationen.** Belege: `beispiele/17-gruppe-ueber-zwei-sperren.gab` (Gruppe mit
 Invariante, sauber), Gift 63 (`U003`), 64 (`U006` via `return`), 65 (`U006` via `let … else`
 mit divergentem Sonst-Zweig), 66 (`U007`).
+
+---
+
+# NACHBUCHUNG: **Rahmen** ist getragen — `N_neu = 3`
+
+**Die Klasse hing an einer Hälfte und an einem Wort.** Die Neuerhebung buchte sie als hängend
+mit dem Grund *„`effects` prüft Schreiben, nicht Lesen"*, und das Urteil vom 2026-08-15 sagte:
+*„der Rest ist keine Bauarbeit mehr, sondern ein Urteil"*.
+
+**Beides ist am 2026-08-16 gefallen:** die Richtung steht (**A**), und sie ist gebaut
+(`E010`). Damit hält `effects` alle vier Teile — Schreiben (`E005`), `locks` (`E006`/`E007`),
+**Lesen** (`E010`) und die **Aufrufwirkungen** (`E008` über dem Aufrufgraphen).
+
+## Die Grenze wird mitgebucht, sonst ist die Buchung geschönt
+
+> **`E010` spricht nur über deklariertem Weltzustand** (`static`, `atomic`, `table`, `device`,
+> `state`). Auf dem Fragmentkorpus hat die Regel deshalb **null Biss** — Ausschnitte
+> deklarieren ihren Zustand nicht.
+
+**In einer vollständigen Übersetzungseinheit geht dabei nichts verloren**, weil ein
+unbekannter Name bereits im Namenspass fällt. *Die Klasse gilt damit als getragen für
+Übersetzungseinheiten und nicht für Ausschnitte — und weil Gabbro Programme übersetzt und
+keine Ausschnitte, ist das die richtige Grundgesamtheit.*
+
+## Stand der elf Klassen
+
+| | |
+|---|---|
+| **getragen (8)** | Index · Überlauf · Alias · Sperre · Terminierung · Blattheit · Publikation · **Rahmen** |
+| **hängend (3)** | **Rennen** · **Phase** · **Verfeinerung** |
+
+**Und die drei hängen nicht mehr an fehlenden Pässen, sondern jede an etwas anderem** — das
+ist der eigentliche Fortschritt gegenüber `N_neu = 5`:
+
+* **Rennen** hängt an der **Axiomschicht**, nicht an einem Pass: der Paarungspass steht
+  (`V001`–`V004`), aber dass `release`/`acquire` die Sichtbarkeit *herstellen*, die die
+  Paarung behauptet, ist eine Aussage über das Speichermodell.
+* **Phase** hängt an «B37» — `BootPhase` trägt *genau einmal*, nicht *in dieser Ordnung*.
+* **Verfeinerung** hängt an der **Emission**, die es nicht gibt.
+
+> *Drei Klassen, drei verschiedene Gründe, kein gemeinsamer Bau.* Wer `N_neu` senken will,
+> hat ab hier drei Projekte vor sich und nicht mehr eine Baustelle.

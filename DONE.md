@@ -40,7 +40,7 @@
 **Dazu der Aufrufgraph** (`aufrufgraph.rs`, 268 Zeilen) — er hat drei Blocker auf einmal
 gelöst: `H005`, die Aufrufwirkungen in Pass 8, und die Trennung bei der Klasse *Phase*.
 
-## Die Klempnerei-Klassen — 7 von 11 getragen
+## Die Klempnerei-Klassen — **8 von 11** getragen
 
 Neu erhoben 2026-08-15, **nicht wiederhergestellt**, nur x86
 ([dokumente/MESSUNGEN.md](dokumente/MESSUNGEN.md), *Neuerhebung*):
@@ -50,10 +50,11 @@ Neu erhoben 2026-08-15, **nicht wiederhergestellt**, nur x86
 | **Index** | `index into T` erbt `count N` · `M103` |
 | **Überlauf** | M1-Bereichstypen · `M101`/`M104`; gewollter Umlauf seit «B32» am Slot **und** am Register |
 | **Alias** | aufgelöst statt geschlossen — Kernzustand braucht keinen Zeiger (A1); wo doch, macht `own` ihn linear. Beleg: `beispiele/09-ohne-zeiger.gab`, `beispiele/15-own-traegt-beide-rechte.gab` |
-| **Sperre** | `rank`/`held`/`shared held` · `H001`–`H005` · `K002`/`K004` |
+| **Sperre** | `rank`/`held`/`shared held` · `H001`–`H006` · `K002`/`K004`; die **Rangordnung wird seit 2026-08-16 nachgerechnet**, nicht nur deklariert |
 | **Terminierung** | drei Schleifenformen · `bounded`/`on_exceeded`/`progress` · `S001`/`S002` in `schleifen.rs`, `beispiele/04-schleifen.gab` |
 | **Blattheit** | `descendants of` + `by consuming` mit Zeugenordnung · Domänenschranke in `kosten.rs`, `dokumente/FRAGMENTE.md` (`revoke`) |
 | **Publikation** | `publishstmt` am Store · Paarungspass · `relaxed` trägt keine Nutzlast · `V001`–`V004` in `paarung.rs` |
+| **Rahmen** *(nachgebucht 2026-08-16)* | `effects` hält Schreiben, `locks` **und Lesen** (`E010`, Lesart A) und die Aufrufwirkungen (`E008` über dem Aufrufgraphen). **Die benannte Grenze:** `E010` spricht nur über deklariertem Weltzustand — im Ausschnitt hat es null Biss, in einer vollständigen Übersetzungseinheit deckt der Namenspass den Rest |
 
 ## Konstrukte, die gebaut und belegt sind
 
