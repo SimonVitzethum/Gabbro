@@ -1,200 +1,188 @@
-# Gabbro — die Berichtigungen
+# Gabbro — the corrections
 
-Diese Datei hält fest, **was an diesem Entwurf schon falsch war**. Sie steht getrennt, weil das
-`README` sonst als Sediment aus Berichtigungsschichten wächst — bei 658 Zeilen war es das bereits,
-und die Ortsangabe „diese Berichtigung steht in Zeile 3" war schon verrottet, bevor jemand sie las.
+This file records **what was already wrong about this design**. It stands apart because the
+`README` would otherwise grow as sediment from layers of corrections — at 658 lines it already
+had, and the location note "this correction is in line 3" had rotted before anyone read it.
 
-**Der dokumentarische Wert ist der Punkt.** Ein Entwurfsordner, der seine widerlegten Fassungen
-löscht, sieht am Ende so aus, als hätte er von Anfang an recht gehabt.
+**The documentary value is the point.** A design folder that deletes its refuted versions ends
+up looking as if it had been right from the start.
 
 ---
 
-## Die zwei Überschreibungen — dieselbe Klasse, zwei Wochen auseinander
+## The two overreaches — same class, two weeks apart
 
-Beide standen in **Zeile 3**, beide waren das stärkste Wort an der Stelle mit der schwächsten
-Deckung, und die zweite entstand beim **Berichtigen der ersten**.
+Both stood in **line 3**, both were the strongest word at the place with the weakest coverage,
+and the second arose while **correcting the first**.
 
-| | Fassung | was daran falsch war |
+| | Version | what was wrong with it |
 |---|---|---|
-| **Ü1** | „per Konstruktion **beweisbar**" | Gabbro beweist nichts. Es erzeugt nach Regeln; die Korrektheit hängt an einem **unverifizierten Übersetzer**. EverParse beweist seine Parser tatsächlich, in F\*. Gabbro liefert „korrekt unter Vertrauen in den Erzeuger, plus Differenztest" |
-| **Ü2** | „Programme, deren **GOLD**-Beweis billig ist" | Gold heisst funktionale Korrektheit. Die sieben Konstrukte liefern ausdrücklich **keine** allgemeinen Nachbedingungen — was daraus folgt, ist eine **Sicherheitshülle plus deklarierte Invarianten**. Nur bei `format` ist der Beschreiber die vollständige funktionale Spezifikation |
+| **Ü1** | "**provable** by construction" | Gabbro proves nothing. It generates by rules; correctness hangs on an **unverified compiler**. EverParse actually proves its parsers, in F\*. Gabbro delivers "correct given trust in the generator, plus a differential test" |
+| **Ü2** | "programs whose **GOLD** proof is cheap" | Gold means functional correctness. The seven constructs explicitly deliver **no** general postconditions — what follows is a **safety hull plus declared invariants**. Only for `format` is the descriptor the complete functional specification |
 
-**Ü2 ist die lehrreichere.** Sie entstand als *Berichtigung* von Ü1 und war eine Stufe leiser —
-nicht mehr „Gabbro beweist", sondern „Gabbros Erzeugnis ist billig zu beweisen". Der Fehler wanderte
-vom Verb zum Objekt. Das ist die Form, in der eine Überschreibung eine Korrektur überlebt: sie wird
-schwächer formuliert, ohne schwächer zu **werden**.
+**Ü2 is the more instructive one.** It arose as a *correction* of Ü1 and was one notch quieter
+— no longer "Gabbro proves" but "Gabbro's output is cheap to prove". The error moved from the
+verb to the object. That is the form in which an overreach survives a correction: it gets
+worded weaker without **becoming** weaker.
 
-> Der Satz „ein Beweis, der die Wunschform beweist, ist schlechter als keiner" gilt auch für Wörter
-> in Überschriften — und offenbar auch für Wörter in Berichtigungen von Überschriften.
+> The sentence "a proof that proves the wished-for form is worse than none" also applies to
+> words in headings — and apparently to words in corrections of headings.
 
 ---
 
-## Die gebrochene Reihenfolgeregel — 2026-08-14, auf Ansage, und hier gebucht
+## The broken ordering rule — 2026-08-14, announced, and booked here
 
-**Die Regel stand doppelt und in Grossbuchstaben:** *„Keine Prüferzeile vor dem Ergebnis von
-Messung 2"* ([`PLAN.md`](PLAN.md), [`TODO.md`](../TODO.md)) und *„DER NÄCHSTE SCHRITT IST KEINE
-ZEILE RUST"*. **Messung 2 ist bis heute nicht gefahren** — sie ist blockiert, weil fünf der elf
-Klempnerei-Klassen nur im Scratchpad liegen.
+**The rule stood twice and in capitals:** *"No checker line before the result of measurement
+2"* ([`PLAN.md`](PLAN.md), [`TODO.md`](../TODO.md)) and *"THE NEXT STEP IS NOT A LINE OF
+RUST"*. **Measurement 2 has still not been run** — it is blocked because five of the eleven
+plumbing classes exist only in the scratchpad.
 
-**Am 2026-08-14 ist trotzdem ein Übersetzer entstanden:** Lexer, Parser über die vollständige
-EBNF, fünf von neun Prüfpässen, dazu Beispiel- und Giftkorpus. **Das ist echter Prüfercode,
-keine Werkzeugschicht** — die Wächter (`pruefe-syntax.sh`, `pruefe-wortschatz.py`,
-`zaehle-fallen.sh`) waren nie gesperrt, der Übersetzer war es.
+**On 2026-08-14 a compiler came into being anyway:** lexer, parser over the complete EBNF, five
+of nine checking passes, plus example and poison corpora. **That is real checker code, not a
+tool layer** — the guardians (`pruefe-syntax.sh`, `pruefe-wortschatz.py`, `zaehle-fallen.sh`)
+were never barred; the compiler was.
 
 | | |
 |---|---|
-| **Was es war** | **Bruch**, nicht Änderung. Die Regel gilt unverändert weiter |
-| **Wodurch** | auf ausdrückliche Ansage, nicht still |
-| **Wo es steht** | [`MESSUNGEN.md`](MESSUNGEN.md) P2, im ersten Absatz; [`TODO.md`](../TODO.md); und ab jetzt hier |
-| **Was es gekostet hat** | **P2 und P3 können die These nicht mehr *vor* dem Übersetzerbau töten.** Die Reihenfolge war so gebaut, dass jede Stufe das Ergebnis der vorigen verbraucht — diese Kette ist an einer Stelle durchtrennt |
-| **Was es eingebracht hat** | die Messungen in [`MESSUNGEN.md`](MESSUNGEN.md) ab P2: 1 von 6 Fragmenten, elf Grammatikbefunde, die Wortschatzkollision, 16 gefundene Unsoundness-Löcher, die Kostenzahlen |
+| **What it was** | a **breach**, not a change. The rule stands unchanged |
+| **How** | on explicit announcement, not silently |
+| **Where it is recorded** | [`MESSUNGEN.md`](MESSUNGEN.md) P2, first paragraph; [`TODO.md`](../TODO.md); and from now on here |
+| **What it cost** | **P2 and P3 can no longer kill the thesis *before* the compiler is built.** The order was built so that each stage consumes the result of the previous one — that chain is severed at one point |
+| **What it earned** | the measurements in [`MESSUNGEN.md`](MESSUNGEN.md) from P2 on: 1 of 6 fragments, eleven grammar findings, the vocabulary collision, 16 unsoundness holes found, the cost figures |
 
-**Die Lehre ist nicht „der Bruch war falsch"** — er war eine Entscheidung mit Ertrag, und der
-Ertrag steht gemessen da. **Die Lehre ist, wo er gebucht wurde:** er stand als Absatz *in der
-Messung, die von ihm profitierte*, und nirgends sonst. Eine gebrochene Regel gehört dorthin,
-wo man sie sucht, wenn man dem Ordner misstraut — und das ist diese Datei.
+**The lesson is not "the breach was wrong"** — it was a decision with a yield, and the yield is
+recorded as measured. **The lesson is where it was booked:** it stood as a paragraph *inside
+the measurement that profited from it*, and nowhere else. A broken rule belongs where you look
+for it when you distrust the folder — and that is this file.
 
-> **Und die Form, in der es beinahe verschwunden wäre:** in [`BEWEIS.md`](BEWEIS.md) stand noch
-> *„Gabbro hat keine Zeile Übersetzer"*. Der Satz ist falsch geworden, und ihn **auf den neuen
-> Stand zu ziehen** wäre die bequeme Bewegung gewesen — die Behauptung glattziehen statt den
-> Baum befunden. Das ist wörtlich die Klasse aus Commit `5904cae` („die vorige Commit-Nachricht
-> beschrieb drei Änderungen, die nicht ausgeführt wurden"). Die Stelle führt jetzt **den
-> Regelstatus mit, nicht nur die Tatsache**.
+> **And the form in which it nearly disappeared:** [`BEWEIS.md`](BEWEIS.md) still said *"Gabbro
+> has no line of compiler"*. That sentence became false, and **pulling it up to the new state**
+> would have been the convenient move — smoothing the claim instead of surveying the tree. That
+> is literally the class from commit `5904cae` ("the previous commit message described three
+> changes that were not carried out"). The passage now carries **the rule status, not just the
+> fact**.
 
-## Das erste Konstrukt, das der eigene Papiertest getötet hat — `locks ordered`, 2026-08-14
+## The first construct killed by our own paper test — `locks ordered`, 2026-08-14
 
-`locks ordered` stand seit dem Mehrkern-Vorstoß auf der Kandidatenliste: eine Grammatikzeile,
-die verlangt, dass jede Mehrfachnahme derselben Sperrklasse lexikalisch gemeinsam steht. Es war
-kein Hirngespinst — es war die Antwort auf einen echten Deadlock-Fall in fremden Kernen.
+`locks ordered` had been on the candidate list since the multicore push: a grammar line
+requiring that every repeated acquisition of the same lock class stand lexically together. It
+was not a fantasy — it was the answer to a real deadlock case in other kernels.
 
-**Der Papiertest gegen `arch/x86_64` fand null Prüffälle. Nicht wenige. Null.**
+**The paper test against `arch/x86_64` found zero test cases. Not few. Zero.**
 
-Und die Antwort war stärker als die Frage: Es gibt im ganzen Baum **keine einzige
-Mehrfachnahme derselben Sperrklasse.** `system.rs:15` führt es als Invariante, und die
-Migration — der Prüffall, den ich erwartet hatte — arbeitet anders herum:
-`SCHEDS[src].lock().migration_candidate()` nimmt, wählt, **gibt frei**, und validiert die
-Zielseite neu.
+And the answer was stronger than the question: in the whole tree there is **not a single
+repeated acquisition of the same lock class.** `system.rs:15` states it as an invariant, and
+migration — the test case I had expected — works the other way round:
+`SCHEDS[src].lock().migration_candidate()` takes, selects, **releases**, and revalidates the
+target side.
 
-**Warum das hier steht und nicht im TODO als Haken:** Ein Konstrukt zu streichen ist kein
-erledigter Punkt. Es ist der Befund, dass ich eine Grammatik nach einer *vermuteten* Not
-entworfen hatte, ohne die Not gezählt zu haben. Dass es billig war, ist Glück: `locks ordered`
-war nie implementiert, es stand auf einer Liste. Die Regel, die es tötet, ist dieselbe, die
-`abi { … }` gestoppt hat — **kein Konstrukt ohne gemessenen Bedarf** — und sie hat diesmal
-funktioniert, weil ich sie vor dem Bauen angewandt habe statt danach.
+**Why this is here and not a tick in the TODO:** striking a construct is not a completed item.
+It is the finding that I had designed a grammar around a *presumed* need without having counted
+the need. That it was cheap is luck: `locks ordered` was never implemented, it stood on a list.
+The rule that kills it is the same one that stopped `abi { … }` — **no construct without
+measured need** — and this time it worked, because I applied it before building rather than
+after.
 
-**Der Ertrag ist größer als der Verlust.** Derselbe Test fand zwei Lücken, die auf keiner
-Liste standen: die Sprache kennt **keine geteilte Sperrnahme** (`locks shared`) — und der
-meistgelaufene Pfad des Kernels, die Cap-Auflösung, nimmt genau so, **33 Fundstellen**. Ich
-hatte ein Konstrukt für einen seltenen Fall entworfen und den häufigen übersehen.
+**The yield is larger than the loss.** The same test found two gaps that were on no list: the
+language knows **no shared lock acquisition** (`locks shared`) — and the most-travelled path of
+the kernel, capability resolution, takes exactly that way, **33 sites**. I had designed a
+construct for a rare case and missed the common one.
 
-> **Die Form:** Ich messe erst, wenn ich das Konstrukt schon schön finde. Hier war es
-> umgekehrt, und das Ergebnis war eine Löschung plus zwei echte Funde. **Der Test taugt
-> genau so weit, wie er seine eigenen Kandidaten töten darf.**
+> **The form:** I measure only once I already like the construct. Here it was the other way
+> round, and the result was one deletion plus two real finds. **The test is worth exactly as
+> much as its licence to kill its own candidates.**
 
-## Zwei Fundstellen aus einer Vererbung — 2026-08-15, und `git log` hätte es gesagt
+## Two sites from one inheritance — 2026-08-15, and `git log` would have said so
 
-Ich hatte gemeldet, der B29-Schnitt (`refcount -= 1`, Null-Prüfung danach) stehe **zweimal**,
-in „zwei unabhängig geschriebenen Kernen desselben Baums", und daraus geschlossen: *die Form
-kommt nicht aus der Gewohnheit eines Autors*. Ein Befund, der genau in die Richtung zeigte,
-die ich brauchte.
+I had reported that the B29 pattern (`refcount -= 1`, null check afterwards) stood **twice**, in
+"two independently written kernels of the same tree", and concluded: *the form does not come
+from one author's habit*. A finding pointing exactly the way I needed.
 
-**Er ist falsch, und die Widerlegung kostet einen Befehl:**
+**It is wrong, and the refutation costs one command:**
 
 ```
 R099   crates/sel4lake-cap/src/space.rs -> crates/caprock-cap/src/space.rs
 ```
 
-99 % Ähnlichkeit, eine Umbenennung, dieselbe Autorenlinie. Die zweite Kopie lag ausserhalb
-von git, in einem älteren Schnappschuss — **ich hatte zwei Pfade gesehen und daraus zwei
-Herkünfte gemacht.**
+99 % similarity, a rename, the same authorship line. The second copy lay outside git, in an
+older snapshot — **I had seen two paths and made two origins out of them.**
 
-**Die Fehlerklasse:** eine Aussage über **Herkunft** aus **Oberflächenähnlichkeit** gebildet,
-statt aus dem Nachweis, der danebenliegt. Es ist dieselbe Bewegung wie in `5904cae` — eine
-Behauptung über den Baum glätten, statt den Baum zu befunden —, nur diesmal über die
-Geschichte statt über den Code. **Und sie war bequem**: die falsche Lesart war die stärkere.
+**The error class:** a statement about **origin** formed from **surface similarity**, instead of
+from the evidence lying right next to it. It is the same move as in `5904cae` — smoothing a
+claim about the tree instead of surveying it — only this time about history rather than code.
+**And it was convenient**: the wrong reading was the stronger one.
 
-**Was bleibt, ist besser als das, was fiel.** Die Zeilenfolge steht seit dem Ursprungscommit
-(`2111f30`, 2026-06-23) und hat **fünf Umbauten genau dieser Region** überlebt, darunter zwei,
-die die Freigabesemantik selbst umschrieben. B29 ist kein Ausrutscher, sondern ein
-**Attraktor** — und *das* ist gemessen statt erschlossen.
+**What remains is better than what fell.** The line sequence has stood since the original
+commit (`2111f30`, 2026-06-23) and has survived **five rebuilds of exactly this region**, two of
+which rewrote the release semantics themselves. B29 is not a slip but an **attractor** — and
+*that* is measured rather than inferred.
 
-> **Die Lehre, mechanisch:** Eine Herkunftsaussage über Dateien wird mit `git log --follow`
-> belegt oder gar nicht gemacht. Zwei Pfade sind kein Beleg für zwei Herkünfte.
+> **The lesson, mechanically:** a statement about the origin of files is backed by
+> `git log --follow` or not made at all. Two paths are no evidence of two origins.
 
-## Die übrigen, kürzer
+## The rest, shorter
 
-| Was | Fassung, die fiel | was stattdessen gilt |
+| What | Version that fell | what holds instead |
 |---|---|---|
-| **`format` = `table`** | die erste Fassung behandelte beide gleich | ein Format ist eine **reine Funktion**, eine Tabelle **mutierter Zustand**. Der Unterschied entscheidet den Wert des ganzen Ordners, und aus ihm folgt der Zuschnitt (a)/(b)/(c) |
-| **Der Vergleichsgegner** | der Kernel-Zweig wurde an **Low\*** gemessen | die billigeren Gegner stehen näher: **Rust-heute** und **Verus**. Low\* ist der übernächste |
-| **`Parked` als Argument** | wurde als Beleg **für** den Zweig geführt | es zählt **dagegen**: Rust-heute hat die fünfte Stelle gefunden, **ohne dass es Gabbro gab**. Wer den Erfolg der Grundlinie anführt, führt einen Grund an, sie **nicht** zu ersetzen |
-| **„63 von 63 gemessen"** | die `Depends`-Messung galt als Beleg für Gabbros `touches` | die Messung ist echt, die **Übertragbarkeit** ist angenommen — SPARK prüft vorhandenen Code, Gabbro erzeugt ihn. Eine halbe Stufe zu stark |
-| **`restrict`** | die Tabellenzeile klang allgemein | es trägt **nur an den Parametergrenzen** erzeugter Funktionen; innerhalb eines Traversierungskörpers in (c) sagt es nichts |
-| **Die Linie bricht an `insert`** | so stand es zuerst | sie bricht an **`revoke`** — dessen Korrektheitsbedingung ist strukturell (Baumform, Induktion), also genau die ausgeschlossenen Quantoren |
-| **Der SPARK-Fund** | „SPARK fand zwei Fehler, die Verus nicht fand ⇒ eine eigene Sprache bringt etwas" | der Gewinn kam aus einer **Voreinstellung**, nicht aus Adas Sprachvermögen. `refcount` steht im Verus-Modell als `nat` und kann die Frage **nicht einmal stellen**. Übrig bleibt die prüfbare Fassung: *Vorgabe schlägt Fähigkeit* |
-| **„steht bewusst in Zeile 3"** | eine Ortsangabe im Fliesstext | veraltet beim ersten Einschub darüber. Aussagen über die **Reihenfolge** halten, Zeilennummern nicht |
-
-| **„weder SPARK noch Rust"** | „der Aufrufer hält den Lock" galt als **grösster Einzelposten** und als Ausdruckslücke aller vorhandenen Werkzeuge | **gemessen 2026-08-13: Verus kann es**, als `tracked`-Zeuge, `no_std`, ohne Byte im Erzeugnis. Der Satz war wahr für SPARK und Rust und wurde stillschweigend auf „alle" erweitert — und **Verus stand in der Verwandtschaftstabelle mit „beweist, was jemand modelliert hat" abgetan.** Wer den nächsten Verwandten abwertet, statt ihn zu fahren, behält seine Begründung länger, als sie hält |
-
-| **Zwanzig Konstrukte** | die erste Fassung von der Plandatei führte je Fehlerklasse ein Schlüsselwort — `device`, `lock`, `atomic`, `barrier`, `bitfeld`, `einheit`, `menge`, `recht`, `platzierung`, … | **das ist ein Katalog, keine Sprache**, und er wächst mit jedem Fund. Die naheliegende Ableitung aus einer Fallenliste ist der falsche Schluss. Es sind **vier Mechanismen** (Bereichstypen · lineare, auch geisterhafte Werte · Adressräume mit Rechten · kein ungeprüfter Index) und **zwei Deklarationsregeln**; die zwanzig fallen daraus als Bibliothek heraus. Die schönste Ableitung ist `check`: eine **lineare Pflicht**, kein Prüf-Schlüsselwort |
-
-| **Ü2 ist ZURÜCKGEKEHRT** | „Gold billig machen" stand als widerlegt in dieser Datei | **und steht seit dem 2026-08-13 wieder im `README`** — das gehört hierher, sonst sieht eine stillschweigend zurückgenommene Korrektur wie eine nie gemachte aus. Der Unterschied zur widerlegten Fassung ist zweifach: es gibt jetzt einen **Mechanismus** (Invarianten an der Struktur · syntaxgesteuerte Absenkung · `spec`/`impl` in einer Sprache, der Plandatei §3c) und ein **gesenktes Ziel** (5 : 1 für Kernelcode statt 1 : 1). **Eine Behauptung darf zurückkehren — aber nur mit Mechanismus und mit Zahl** |
-| **„keine Allzwecksprache"** | stand als Zusage im `README` und im Fahrplan | **aufgegeben am 2026-08-13**, auf Anforderung und ausdrücklich. Der Ersatz sind die fünf Abbruchbedingungen in der Plandatei — eine aufgegebene Zusage ohne Ersatz wäre nur ein vergessener Satz |
-
-| **Der falsche Nenner** | die Kennzahl maß Spezifikationszeilen gegen die **handgeschriebene Rust-Referenz** | der Nenner ist **Gabbro-Code** — gefragt ist, ob ein *in Gabbro geschriebener* Kernel billig zu verifizieren ist; Rust kommt darin nicht vor. Die falsche Fassung ergab „für Caprock als Ganzes: nein", die richtige „bedingt ja". **Ein Nenner ist eine Frage, keine Formalie** — mit dem falschen beantwortet man sauber die Frage, die niemand gestellt hat |
-| **5 : 1 als Boden** | galt als hergeleitete Untergrenze für Kernelcode | die 20 : 1 von seL4 sind **kein einzelner Posten**: rund 0,5 : 1 abstrakte Spezifikation, rund 19,5 : 1 Beweis. Nur der erste ist unantastbar. **Der Boden ist ≈ 0,5 : 1**, und die 5 : 1 kamen daher, dass der Beweisaufwand als unteilbar behandelt wurde |
-
-| **Zwei Wege im Ordner** | ein enger Formaterzeuger als „Rückfallzuschnitt" **und** der Kernel als Hauptrichtung, dazu zwei Pläne nebeneinander | **gestrichen am 2026-08-13.** Ein Ordner mit einem Rückfall hat kein Tor — man fällt zurück, statt abzubrechen. Der Formaterzeuger ist die **Bibliotheksschicht** der Sprache, kein eigener Weg; es gibt einen Plan und ein Ziel |
-| **Ziel mit Schwelle verwechselt** | 0,5 : 1 stand als **Auslösung** („darüber ist die These widerlegt“) | es ist das **Ziel** — der theoretische Boden. Eine Schwelle sagt „bestanden“, ein Ziel am Boden sagt **was noch fehlt**: jede Zehntelstelle darüber ist ein benennbarer, noch handgeschriebener Beweisposten. Abgebrochen wird bei **> 3 : 1**, wo der Beweis wieder dominiert |
-| **0,8 : 1 als Vorhersage** | rechnete mit 10 % des Kernels zu 5 : 1 | **unvereinbar mit dem Ziel 0,5 : 1**, das der Boden ist. 0,5 : 1 heisst **kein handgeschriebener Beweis** — schon 5 % zu 5 : 1 wären +0,25 |
-
-| **B2: „der Löser bekommt die Invariante geschenkt"** | stand als Bedingung für 0,5 : 1 | **Überschreibung Nr. 3.** Geschenkt ist die **Sicherheitshülle**; funktionale Schleifeninvarianten schreibt weiterhin jemand hin. Wahr für die Hülle, stillschweigend auf Gold erweitert — **exakt die Form, die diese Datei als Muster führt**, und diesmal trug sie das Kennzahlziel |
-| **„kein Variant, kein Lemma"** | stand im Ergebnis von P0.1 für Pflicht **T**, während dieselbe Sache bei **I** korrekt als „der Erzeuger zeigt einmal" formuliert war | **wäre Überschreibung Nr. 4 gewesen — abgefangen, bevor sie sich fortpflanzte.** Es ist **Amortisierung, keine Beseitigung**: je Programm null, je Konstrukt nicht null. „Fällt heraus" heisst überall „fällt einmal im Erzeuger an" |
-| **Die Zählregel, zweite Fassung** | „was ein **Mensch** schreibt" | lässt bei einem KI-Koautor eine Lücke — und **einen Umweg: eine Makroschicht Quelltext erzeugen zu lassen, der dann als geschrieben zählt.** Belastbar ist **Quelle gegen Abgeleitetes**: am Artefakt entscheidbar, ohne Aussage darüber, wer getippt hat |
-| **Die Zählregel, erste Fassung** | „Spezifikation ist, was keine Laufzeitwirkung hat" | erzeugter Geistercode hat keine — er hätte **in den Zähler** gezählt, und damit hätte der Gold-Mechanismus die Kennzahl verschlechtert, je besser er wirkt. Richtig: **was ein MENSCH schreibt** und gelöscht wird |
-
-| **0,5 : 1 als Ziel** | die Zahl war das Ziel, an dem alles hing | **sie ist ein Stellvertreter.** Das Kriterium ist eine **Art**, keine Menge: nur Logik beweisen, sonst nichts. Selbst 2 : 1 ist gut, wenn die Zeilen Logik sind; 0,5 : 1 wäre ein Misserfolg mit handgeschriebenen Bereichsprüfungen. Dieselbe Klasse wie „ein Prüfer, der ein einzelnes Byte liest" — **die Grösse war messbar, die Eigenschaft war es nicht** |
-
-| **„M1 braucht genau eine Flussregel"** | aus 4 gemessenen `leading_zeros`-Stellen abgeleitet | **die Stichprobe schloss die harte Form strukturell aus.** Alle vier sind **einstellig**; die Gegenmessung fand **54 relationale** Fälle (`if a >= b { a - b }`), die ein Intervalltyp nicht tragen kann. **Das Hausmuster, angewandt auf mich** — ein Satz, der wahr wäre, hätte ich den Geltungsbereich nicht erweitert |
-
-| **„Programm-spezifische Induktion ist für immer ausgeschlossen"** | stand als Decke des ganzen Entwurfs, mit der Folgerung „Gold ist auf diesem Weg nicht erreichbar" | **sie ist nicht unmöglich, sondern VERBOTEN** — durch drei Zeilen, die in der Liste „Was es absichtlich nicht gibt" stehen. **Der Unterschied zwischen „unmöglich" und „von uns verboten" ist genau das Hausmuster.** Und der Gleichsetzung *Schablone am Konstrukt ⟹ nichts Programmspezifisches* fehlt der mittlere Schritt: ein Induktionsschema kann **aus der Deklaration des Anwenders erzeugt** werden — wie Isabelle es aus einem Datentyp ableitet |
+| **`format` = `table`** | the first version treated both alike | a format is a **pure function**, a table is **mutated state**. The difference decides the value of the whole folder, and the (a)/(b)/(c) cut follows from it |
+| **The comparison opponent** | the kernel branch was measured against **Low\*** | the cheaper opponents stand closer: **Rust-today** and **Verus**. Low\* is the one after next |
+| **`Parked` as an argument** | was cited as evidence **for** the branch | it counts **against**: Rust-today found the fifth site **without Gabbro existing**. Whoever cites the success of the baseline cites a reason **not** to replace it |
+| **"63 of 63 measured"** | the `Depends` measurement counted as evidence for Gabbro's `touches` | the measurement is real, the **transferability** is assumed — SPARK checks existing code, Gabbro generates it. Half a notch too strong |
+| **`restrict`** | the table row sounded general | it carries **only at the parameter boundaries** of generated functions; inside a traversal body in (c) it says nothing |
+| **The line breaks at `insert`** | so it first stood | it breaks at **`revoke`** — whose correctness condition is structural (tree shape, induction), i.e. exactly the excluded quantifiers |
+| **The SPARK finding** | "SPARK found two errors Verus did not ⇒ a language of one's own buys something" | the gain came from a **default setting**, not from Ada's expressive power. `refcount` sits in the Verus model as `nat` and **cannot even ask** the question. What remains is the checkable version: *defaults beat capability* |
+| **"deliberately in line 3"** | a location note in running text | stale at the first insertion above it. Statements about **order** hold, line numbers do not |
+| **"neither SPARK nor Rust"** | "the caller holds the lock" counted as the **largest single item** and as an expressive gap in all existing tools | **measured 2026-08-13: Verus can do it**, as a `tracked` witness, `no_std`, without a byte in the artefact. The sentence was true for SPARK and Rust and was silently extended to "all" — and **Verus stood in the relatives table dismissed with "proves what someone modelled".** Whoever devalues the nearest relative instead of running it keeps their justification longer than it holds |
+| **Twenty constructs** | the first version of the plan file had one keyword per error class — `device`, `lock`, `atomic`, `barrier`, `bitfield`, `unit`, `set`, `right`, `placement`, … | **that is a catalogue, not a language**, and it grows with every finding. The obvious derivation from a list of traps is the wrong conclusion. There are **four mechanisms** (range types · linear, also ghost values · address spaces with rights · no unchecked index) and **two declaration rules**; the twenty fall out of them as a library. The prettiest derivation is `check`: a **linear obligation**, not a checking keyword |
+| **Ü2 has RETURNED** | "make Gold cheap" stood as refuted in this file | **and has been back in the `README` since 2026-08-13** — that belongs here, otherwise a silently withdrawn correction looks like one never made. The difference from the refuted version is twofold: there is now a **mechanism** (invariants on the structure · syntax-directed lowering · `spec`/`impl` in one language, plan file §3c) and a **lowered target** (5 : 1 for kernel code instead of 1 : 1). **A claim may return — but only with a mechanism and with a number** |
+| **"not a general-purpose language"** | stood as a promise in the `README` and the roadmap | **abandoned on 2026-08-13**, on request and explicitly. The replacement is the five abort conditions in the plan file — an abandoned promise without a replacement would be merely a forgotten sentence |
+| **The wrong denominator** | the metric measured specification lines against the **hand-written Rust reference** | the denominator is **Gabbro code** — the question is whether a kernel *written in Gabbro* is cheap to verify; Rust does not appear in it. The wrong version gave "for Caprock as a whole: no", the right one "conditionally yes". **A denominator is a question, not a formality** — with the wrong one you answer cleanly the question nobody asked |
+| **5 : 1 as the floor** | counted as a derived lower bound for kernel code | seL4's 20 : 1 is **not a single item**: about 0,5 : 1 abstract specification, about 19,5 : 1 proof. Only the first is untouchable. **The floor is ≈ 0,5 : 1**, and the 5 : 1 came from treating proof effort as indivisible |
+| **Two paths in the folder** | a narrow format generator as a "fallback cut" **and** the kernel as the main direction, with two plans side by side | **struck on 2026-08-13.** A folder with a fallback has no gate — you fall back instead of stopping. The format generator is the **library layer** of the language, not a path of its own; there is one plan and one goal |
+| **Goal confused with threshold** | 0,5 : 1 stood as a **trigger** ("above this the thesis is refuted") | it is the **goal** — the theoretical floor. A threshold says "passed", a goal at the floor says **what is still missing**: every tenth above it is a nameable, still hand-written proof item. The abort is at **> 3 : 1**, where proof dominates again |
+| **0,8 : 1 as a prediction** | assumed 10 % of the kernel at 5 : 1 | **incompatible with the goal 0,5 : 1**, which is the floor. 0,5 : 1 means **no hand-written proof** — even 5 % at 5 : 1 would be +0,25 |
+| **B2: "the solver gets the invariant for free"** | stood as the condition for 0,5 : 1 | **overreach no. 3.** What is free is the **safety hull**; functional loop invariants are still written by someone. True for the hull, silently extended to Gold — **exactly the form this file tracks as a pattern**, and this time it carried the metric goal |
+| **"no variant, no lemma"** | stood in the result of P0.1 for obligation **T**, while the same thing under **I** was correctly phrased as "the generator shows it once" | **would have been overreach no. 4 — caught before it propagated.** It is **amortisation, not elimination**: zero per program, not zero per construct. "Falls out" everywhere means "falls once, in the generator" |
+| **The counting rule, second version** | "what a **human** writes" | leaves a gap with an AI co-author — and **a detour: have a macro layer generate source that then counts as written.** What holds up is **source versus derived**: decidable at the artefact, with no claim about who typed |
+| **The counting rule, first version** | "specification is what has no runtime effect" | generated ghost code has none — it would have counted **into the numerator**, and the Gold mechanism would have worsened the metric the better it worked. Correct: **what a HUMAN writes** and gets deleted |
+| **0,5 : 1 as the goal** | the number was the goal everything hung on | **it is a proxy.** The criterion is a **kind**, not a quantity: prove logic only, nothing else. Even 2 : 1 is good if the lines are logic; 0,5 : 1 would be a failure with hand-written range checks. Same class as "a checker that reads a single byte" — **the size was measurable, the property was not** |
+| **"M1 needs exactly one flow rule"** | derived from 4 measured `leading_zeros` sites | **the sample structurally excluded the hard form.** All four are **unary**; the counter-measurement found **54 relational** cases (`if a >= b { a - b }`) that an interval type cannot carry. **The house pattern, applied to me** — a sentence that would be true had I not extended its scope |
+| **"program-specific induction is excluded forever"** | stood as the ceiling of the whole design, with the conclusion "Gold is unreachable this way" | **it is not impossible but FORBIDDEN** — by three lines in the list "what deliberately does not exist". **The difference between "impossible" and "forbidden by us" is exactly the house pattern.** And the equation *template at the construct ⟹ nothing program-specific* is missing its middle step: an induction scheme can be **generated from the user's declaration** — the way Isabelle derives one from a datatype |
 
 ---
 
-## Die Trajektorie — das Muster über den Einzelfehlern
+## The trajectory — the pattern above the individual errors
 
-**Jedes gefallene Tor hat dieser Ordner durch Neugründung überlebt**, und das harte Tor ist dabei
-hinter den Übersetzer gewandert:
+**This folder has survived every fallen gate by refounding**, and the hard gate has migrated
+behind the compiler in the process:
 
-| Tor | Ausgang | Antwort |
+| Gate | Outcome | Answer |
 |---|---|---|
-| EverParse | deckt nur die `format`-Hälfte | **umgangen** |
-| Basisrate / Deckung | ≤ 9 % gemessen | nicht „zu klein", sondern **Plan für die anderen 91 %** |
-| Verus × 2 | **beide gefallen** | nicht Ende, sondern **Vereinigung zu einer Sprache** |
-| Rückfallzuschnitt | war die billige, verteidigbare Fassung | **gestrichen**, damit die teure die einzige ist |
+| EverParse | covers only the `format` half | **bypassed** |
+| base rate / coverage | ≤ 9 % measured | not "too small" but **a plan for the other 91 %** |
+| Verus × 2 | **both fell** | not an ending but **a merge into one language** |
+| fallback cut | was the cheap, defensible version | **struck**, so that the expensive one is the only one |
 
-Das Argument dafür — *„ein Ordner mit einem Rückfall hat kein Tor"* — ist scharf und **schneidet in
-beide Richtungen**. Der alte Satz „der Weg, auf dem ein Formaterzeuger unbemerkt zur Sprachfamilie
-wird" ist eingetreten: **nicht unbemerkt, sondern bemerkt, dokumentiert — und trotzdem.**
+The argument for it — *"a folder with a fallback has no gate"* — is sharp and **cuts both
+ways**. The old sentence "the path on which a format generator quietly becomes a language
+family" has come true: **not quietly, but noticed, documented — and anyway.**
 
-Die harte Marke ist jetzt `> 3 : 1`, **gewählt statt hergeleitet** und messbar erst, wenn ein
-Übersetzer existiert. Die drei billigen Tore davor waren durch drei Umbauten hindurch benannt und
-**ungefahren**, während an einem Tag rund 2000 Zeilen Entwurfstext entstanden. **Der
-Korrekturkreislauf lief schneller als der Messkreislauf** — „measure before building", auf der
-Meta-Ebene invertiert.
+The hard mark is now `> 3 : 1`, **chosen rather than derived**, and measurable only once a
+compiler exists. The three cheap gates before it were named through three rebuilds and **never
+run**, while about 2000 lines of design text appeared in a single day. **The correction loop ran
+faster than the measurement loop** — "measure before building", inverted at the meta level.
 
-**Gegenmassnahme, seit dem 2026-08-13:** P0.1 ist gefahren ([`MESSUNGEN.md`](MESSUNGEN.md)) und
-hat sofort einen Fehler in der Zählregel gefunden, den drei Umbauten Gegenlesen nicht fanden. **Kein
-weiterer Entwurfstext vor P0.2 und P0.3.**
+**Countermeasure, since 2026-08-13:** P0.1 has been run ([`MESSUNGEN.md`](MESSUNGEN.md)) and
+immediately found an error in the counting rule that three rebuilds of proofreading had not.
+**No further design text before P0.2 and P0.3.**
 
 ---
 
-## Die Form, die sich wiederholt
+## The form that repeats
 
-Sechs der neun Einträge sind dieselbe Bewegung: **ein Satz, der wahr wäre, wenn der Geltungsbereich
-nicht stillschweigend erweitert würde.** `format` → alles; Parametergrenze → überall; eine Messung
-am Mechanismus → die Übertragung; Silber → Gold.
+Six of the nine entries are the same move: **a sentence that would be true if its scope were
+not silently widened.** `format` → everything; parameter boundary → everywhere; one measurement
+of the mechanism → its transfer; Silver → Gold.
 
-Das ist kein Flüchtigkeitsfehler, sondern das, was ein Entwurfstext von selbst tut, solange niemand
-den Geltungsbereich **hinschreibt**. Deshalb trägt jede Aussage im `README` und in [`SPRACHE.md`](SPRACHE.md) jetzt
-einen — und wo keiner steht, ist das ein Befund.
+That is not carelessness but what a design text does by itself as long as nobody **writes the
+scope down**. Which is why every claim in the `README` and in [`SPRACHE.md`](SPRACHE.md) now
+carries one — and where none stands, that is a finding.
