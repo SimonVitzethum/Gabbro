@@ -1,5 +1,13 @@
 # Gabbro — offene Punkte
 
+> **Nach ROLLE geschnitten 2026-08-16.** Die Datei hatte sich diese Frage im Abgleich vom
+> 14. selbst gestellt und nicht beantwortet — *„eine Liste, in der ein halber Tag Papier
+> neben einem Teilprojekt steht, sortiert nicht mehr, und eine Liste, die nicht sortiert,
+> wird nicht gelesen."* Vier Rollen: **Entscheidungen · Messungen · Bau · Buchfuehrung.**
+> Dazu sind **sechs veraltete Stellen** nachgezogen (die fuenf Scratchpad-Klassen, die
+> 17er-Aufteilung, die vier Bereichsfragmente, „Uebersetzer bis P3", die Aufrufwirkungen,
+> „P2 bei 1 von 6") — *genau die Klasse, die der Abgleich vom 14. schon einmal bezahlt hat.*
+>
 > **Aufgeraeumt 2026-08-16.** Die acht Entwurfs- und Messdokumente liegen jetzt in
 > [`dokumente/`](dokumente/); im Wurzelverzeichnis stehen nur noch **README, TODO und DONE**.
 > **Zwanzig Punkte sind gegen den CODE geprueft und nach [`DONE.md`](DONE.md) gewandert** —
@@ -22,7 +30,115 @@
 > sie sagt an jeder Stelle „das ist noch offen", und der Leser glaubt es.
 > Was der Abgleich einzeln gefunden hat, steht am Ende unter *Abgleich*.
 
-## Leistung — zwei Posten, beide vor dem ersten Benchmark
+---
+
+# DER KRITISCHE PFAD, in einer Zeile
+
+> **B3 → K/A/W-Einsetzung → zwei Entscheidungen (`effects`-Lesen, Verschlüsse) →
+> Gruppen-`ops` → P5 → P6 → P7**
+
+**Alles andere ist parallelisierbar oder Memo.** Und der einzige Posten auf diesem Pfad, der
+weder Code noch Lauf ist, sondern **ein Wort des Ordners**, ist der Schlitz:
+
+| | |
+|---|---|
+| **`M-effects-lesen` — Richtung** | `_____` |
+
+**A** = die zehn Fragmentfunktionen nachdeklarieren (Vollzählung) · **C** = gröbere
+Rahmenzusage (nur `mmio`/`dma`/`atomic`). Gemessen: **A lässt 10 von 32 Funktionen fallen,
+C drei** — Faktor drei. **Lesart B ist durch ihren eigenen Befund ausgeschieden**: sie ist
+nicht mechanisch trennbar, und *was man nicht zählen kann, kann kein Pass durchsetzen.*
+Beide verbleibenden sind billig rückbaubar, also **R12-fähig, sobald die Richtung dasteht**.
+
+*Steht hier keine Richtung, bleibt Pass 8 bei der heutigen Prüfung — keine stille Wahl.*
+
+---
+
+# ENTSCHEIDUNGEN — brauchen ein Urteil, keinen Lauf
+### Die Frage, die über den Kern entscheidet
+
+- [ ] **Echte Linearität ist der einzige Mechanismus, den kein vorhandenes Werkzeug liefert** —
+      gemessen: Verus' `tracked` ist **affin**, Rust ist affin, SPARKs Leckprüfung hängt an einer
+      **Allokation**. An ihr hängen die Bootphase, `Parked` und die lineare Prüfpflicht.
+      **Offen: reicht ein Mechanismus, um eine Sprache zu rechtfertigen?** Die billigere Antwort
+      wäre ein Beitrag an Verus (linear statt affin). Das ist die teuerste offene Frage des Ordners.
+- [ ] **ATS ist der nächste Verwandte für den Kern und ungeprüft** — lineare Typen plus Beweise,
+      kompiliert nach C. Dieselbe Logik wie das Verus-Tor: *der nächste Verwandte ist gebaut, der
+      Ordner nicht.* **Sollte vor P2 gefahren werden; P2 lief zuerst.** Damit ist der Vergleich
+      nicht hinfaellig, sondern nur teurer: er misst jetzt gegen etwas Gebautes statt gegen
+      einen Entwurf.
+- [ ] **Für jeden weiteren Mechanismus die Gegenrechnung führen.** M2 am Sperrbeleg und M1 sind am
+      2026-08-13 gegen den Ordner ausgegangen. **M3 ist gegen die richtige Grundlinie zu messen:
+      nicht Verus, sondern `tock-registers`/`svd2rust`** — typisierte Registerzugriffe sind eine
+      Rust-Bibliothek. Die Frage ist, was ihr fehlt: Übergänge über Bits, Bedingungen über
+      Registergrenzen, Barrierendomäne im Typ.
+
+---
+### Syntax — offene Entscheidungen (Einzelheiten in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md))
+
+- [ ] **Variable Längen in `format`** — die harten 20 % jedes Parser-Erzeugers, keine
+      Schreibweise vorhanden.
+- [ ] **Versionsevolution:** liest ein `@version 3`-Leser auch v2 — **Absage oder Migration**?
+      Beides vertretbar, keins entschieden.
+- [ ] **Generizität** — ohne sie braucht jede Tabelle ihren eigenen `traverse`; mit ihr die Frage,
+      wie Verträge parametrisiert werden.
+- [ ] **Die Sperrordnung fehlt in der Syntax.** `locks CAPS` nennt die Sperre, nicht die **Stufe**.
+- [ ] **Der Vorrat an Quantoren in `spec fn` ist unentschieden — und genau dort wandert die Linie**,
+      wenn niemand aufpasst.
+- [ ] **Fehlerfortpflanzung:** ohne `?` wird jeder Aufruf drei Zeilen, mit `?` gibt es verborgenen
+      Kontrollfluss. Beides widerspricht einer Entwurfsregel.
+- [ ] **Schlüsselwortsprache** steht auf Englisch, weil das der Bestand ist. Preis: Bruch mit dem
+      deutschen Fliesstext. Reversibel (eine Tabelle im Lexer).
+### Entwurf — offene Entscheidungen
+
+- [ ] **Roundtrip** `lesen(schreiben(x)) == x` gehört in den Differenztest.
+- [ ] **Kostenangabe je Invariante** und an `by unbesucht`: welche Struktur, wer setzt sie zurück,
+      was kostet der Reset, darf sie unter dem Lock leben.
+- [ ] **Die Axiomschicht beziffern — die x86-Haelfte ist fahrbar, die aarch64-Haelfte NICHT.**
+      **Solange die Zahl fehlt, ist „speichersicher unter A1…An" eine Form ohne Inhalt.**
+      * **x86:** fahrbar gegen `../caprock-messbasis` (= `SEL4Lake/SEL4Lake` @ `arch/x86_64`,
+        `a1bf707`). Offen.
+      * **~~aarch64~~ — BLOCKIERT, und zwar nicht aus Zeitgruenden (2026-08-15).** Der
+        einzige aarch64-Baum im Ordner (`SEL4Lake/ARMTest/stm32mp25-kernel`) ist **kein
+        zweiter Kernel, sondern ein aelterer Schnappschuss DERSELBEN Abstammung** — belegt
+        mit `git log --follow`: `R099`, eine Umbenennung mit 99 % Aehnlichkeit von
+        `sel4lake-cap` nach `caprock-cap` (s. [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md), *Zwei Fundstellen
+        aus einer Vererbung*). Er liegt ausserhalb von git.
+        **Eine Gegentabelle daraus waere keine zweite Architektur, sondern dieselbe Linie
+        zweimal gezaehlt** — genau die Fehlerklasse, die dieser Ordner am 2026-08-15 gebucht
+        hat. *Die Zahl waere nicht ungenau, sondern falsch, und zwar in die schmeichelhafte
+        Richtung: sie wuerde Uebertragbarkeit belegen, wo nur Kopie steht.*
+      * **Was es braeuchte:** ein aarch64-Kernel mit **eigener** Abstammung, oder die
+        ehrliche Fassung des Satzes — *„gemessen fuer x86; fuer aarch64 steht keine Zahl,
+        und der vorhandene Baum kann sie nicht liefern."*
+
+- [ ] **B3 beziffern: welche Rümpfe lassen sich NICHT als Traversierung schreiben?** IPC-Fastpath,
+      `revoke`, Warteschlangenchirurgie des Schedulers sind die Kandidaten. **Jeder von ihnen kostet
+      5 : 1 auf seinem Anteil** — 5 % des Kernels sind +0,25 auf die Kennzahl, 10 % sind +0,5.
+      Das ist die Zahl, die früh gebraucht wird und die niemand hat: sie sagt, **wie weit vom Boden
+      entfernt** der Entwurf landet.
+
+---
+### Aus der Umkehrung der Frage ([`dokumente/SPRACHE.md`](dokumente/SPRACHE.md))
+
+- [ ] **Die achtzehn Umwandlungen sind Behauptungen über Absenkbarkeit, keine Belege.** Jede braucht
+      ihre C-Absenkung hingeschrieben — vor der Kanonisierung in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md).
+- [ ] **`retry` mit `bounded`/`progress`/`on_exceeded` ist der Ersatz für „unbegrenztes Warten".**
+      Offen: reicht eine Zahl, oder braucht es zwei Schranken (Versuche **und** Ticks)?
+- [ ] **Nr. 14 verlangt eine `publishes`-Klausel an 2 231 Stellen.** Ob das trägt, entscheidet keine
+      Papierübung — das ist der grösste Einzelposten der ganzen Umstellung.
+- [ ] **`breaking I { … }` legalisiert eine Invariantenverletzung.** Der Preis ist Sichtbarkeit
+      statt Verstecken; ob das reicht, ist unentschieden.
+### Papierschritte — keine Zeile Code. Jeder Punkt kann die These töten
+
+> **Umbenannt 2026-08-14.** Diese Ueberschrift hiess „P0", die naechste „P1" — und
+> [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §6 vergibt P0…P7 an den **Prueferplan**, wo P1 die
+> Grammatikvereinigung ist und nicht `check`. **Zwei Etikettensysteme mit denselben Namen
+> in derselben Datei**; dieselbe Fehlerklasse wie die G-Kollision weiter oben.
+
+- [ ] **`touches` ist zu grob** — es braucht eine Form für „verändert die Menge nur durch
+      Verbrauch". Ohne sie hängt die Ordnung an einer Zusage statt an einer Bedingung.
+### Leistung — zwei Posten, beide vor dem ersten Benchmark
 
 - [ ] **Die Schrankenpruefung amortisieren:** `bounded N ops` muss nicht je Durchgang geprueft
       werden. `progress` traegt die Terminierung, die Schranke ist ein **Watchdog** — eine Pruefung
@@ -33,25 +149,10 @@
       Korrektheitsseite bezahlt; auf der Leistungsseite ist die Absenkung eine **Wette auf den
       C-Uebersetzer**, und sie haengt an der ungeschriebenen Formentabelle.
 
-## Die Reihenfolge, billig zuerst — drei Dokumente laufen auf EINE fehlende Zahl zu
+---
 
-1. **Die fuenf Scratchpad-Klassen ins Repo.** Sie entsperren das 19→0-Tor, das sonst
-   unentscheidbar bleibt.
-2. **Die 17 gemessenen Logik-Pflichten aufteilen** in *durch Konstruktion · Abstiegsaussage
-   (erzeugtes Schema greift) · Wertaussage (greift nicht)*. **Ein halber Tag Papier, und die
-   groesste Hebelwirkung im Ordner:** die Lueckenrechnung endet bei „k unbekannt", die harten
-   Zusagen enden bei derselben Aufteilung, und die Decke der Schrittzusagen haengt daran.
-   **Drei Dokumente, eine Zahl.**
-3. **Die vier fehlenden Bereichsfragmente** (Scheduler, MMU, Lader, Parser) — und sie sind
-   **zugleich das Messgeraet fuer die Konvergenzwette**: neue Konstrukte je Fragment muessen fallen.
-
-> **~~Keine Prueferzeile vor dem Ergebnis von 2.~~ — VERLETZT am 2026-08-14, auf Ansage.**
-> Der Uebersetzer wurde vor dem Ergebnis von 2 angefangen. Die Regel bleibt hier stehen,
-> durchgestrichen statt geloescht: was sie verhindern sollte, ist eingetreten — P2 und P3
-> koennen die These nicht mehr *vor* dem Uebersetzerbau toeten. Was der Bau eingebracht hat,
-> steht in [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md); was er gekostet hat, steht hier.
-
-## Was fehlt, um Caprock VOLLSTAENDIG in Gabbro zu schreiben (Stand 2026-08-14)
+# MESSUNGEN — brauchen einen Lauf
+### Was fehlt, um Caprock VOLLSTAENDIG in Gabbro zu schreiben (Stand 2026-08-14)
 
 **Bekannte Blocker: keiner mehr.** Die zwei gemessenen „passt nicht" aus `dokumente/FRAGMENTE.md` sind zu —
 `forever` hat mit `leaves`/`leave` einen Ausgang, `transition` schreibt mit `transset` **mehrere
@@ -60,9 +161,9 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 **Was fehlt, ist deshalb keine Konstruktliste, sondern MESSUNG:**
 
 
-**Und getrennt davon, weil es nicht die Ausdruckskraft betrifft:** der Uebersetzer steht bis
-**P3** (Lexer, Parser, vier von neun Paessen — zwei davon nur teilweise, s. `gabbro paesse`);
-**P4–P7 fehlen**, die **C-Formentabelle** (40–60 Eintraege) ist ungeschrieben, und die
+**Und getrennt davon, weil es nicht die Ausdruckskraft betrifft:** der Uebersetzer steht bei
+**neun von neun angefassten Paessen** (3 ganz, 6 teilweise, **0 offen** — s. `gabbro paesse`);
+**P5–P7 fehlen** (Emission, Litmus-Sonden, ein Caprock-Modul end-to-end), die **C-Formentabelle** (40–60 Eintraege) ist ungeschrieben, und die
 **Beweisschablonen** sind benannt, nicht entworfen.
 
 > **Seit [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) (2026-08-14) sind die neun Entwurfsfragen entschieden.**
@@ -78,8 +179,36 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
 - [ ] **P4–P7** aus [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §6 — M2 samt Schablone, C-Emission,
       Paarungs-Pass mit Litmus-Sonden, ein Caprock-Modul end-to-end.
       **Jede Stufe verbraucht das Ergebnis der vorigen, wie eine `Duty`.**
+### Aus dem Kriterium ([`dokumente/BEWEIS.md`](dokumente/BEWEIS.md))
 
-## Die Schreibrechtszeile `by ops` — und der Gruppen-Pruefsatz, der ihr vorausgeht
+
+
+- [ ] **Die Trennlinie an einem Grenzfall streiten.** „Nennt nur die Maschine" ist scharf genug für
+      die heutigen Fälle — der erste Streitfall gehört in `dokumente/BEWEIS.md`, nicht in eine Fussnote.
+### Induktion — eingetragen, und die eine Zahl fehlt
+
+
+- [ ] **Das erzeugte Schema muss einmal nach Isabelle** — es ist eine Schablone im Sinne von L3 und
+      damit der Posten, der die Vertrauensbasis **verkleinert**.
+- [ ] **Wohlfundiertheit hängt an einer Invariante, die man beweisen will.** Die Deklaration muss
+      nennen, welche — und das Mass (Zahl der Abkömmlinge) ist Voraussetzung, nicht Ergebnis.
+### Nachzuprüfen, weil aus dem Gedächtnis zitiert
+
+- [ ] **Die Namensfreiheit „Gabbro"** über Paketregister, GitHub und Sprachlisten — mitsamt dem,
+      was gefunden wurde. „Ich habe nichts gefunden" ist ein Nullbefund ohne Grösse.
+
+---
+### `check` ohne Sprache
+
+- [ ] **`check` als Rust-Makrobibliothek**, rückwirkend gegen die 33 Messdisziplin-Fallen, jede mit
+      Mutation. Tor: **≥ 5 gefangen**. Nützlich auch dann, wenn Gabbro nie entsteht.
+
+---
+
+---
+
+# BAU — braucht Code
+### Die Schreibrechtszeile `by ops` — und der Gruppen-Pruefsatz, der ihr vorausgeht
 
 - [ ] **`field : u16 by ops` — zwei vorhandene Woerter, null Wortschatzzuwachs.** Ein Feld, das
       **nur** die erzeugten Operationen seiner Tabelle schreiben. Damit wird die K-Bedingung des
@@ -125,40 +254,7 @@ Orte in einem Zug** (`caller` und `reply_owner` nie halb gesetzt).
         **Tauchen dort zwei Sperren derselben Klasse auf, ist das zugleich der erste echte
         Prueffall fuer `locks ordered` — billiger als das ganze Scheduler-Fragment**, und der
         Scheduler tritt danach mit einem **getesteten** statt einem vermuteten Sperrkonstrukt an.
-
-## Aus Welle 4 (2026-08-16) — zwei Bedingungen und ein Kandidat
-
-- [ ] **«B38» — die Randbedingung an den benannten Traeger.** *„Die Fortsetzung prueft neu
-      **oder** nennt, was sie stattdessen traegt"* ist die richtige Form — **aber ein Traeger
-      `masks IRQ` gilt nur, wenn der Eintrittskontext `nested masked` fuehrt.** Ohne diese
-      Kopplung ist *„mich traegt die Maskierung"* die Zusicherung aus **R15**, die erfuellt
-      ist, sobald der Pruefer schweigt. **Mechanisch pruefbar** ueber `entrydecl`; zu bauen.
-- [ ] **«B39» — die Ausnahmeregel zum Hardware-Axiom, und sie ist ein KANDIDAT auf ein neues
-      Wort.** `A`/`D` schreibt die MMU selbst — die GDT-Lektion am Seitenwerk. **Sobald
-      Gruppen-`ops` das Seitenwerk erreichen, kollidiert das Axiom mit der
-      Schreibrechtszusage**: die K-Bedingung verlangt, dass ALLE Schreibstellen erzeugt sind.
-      Welche Felder einer `walk`-Deklaration **hardwarebeschreibbar** sind, gehoert an die
-      Deklaration (Kandidatenzeile `hardware A, D;`), so wie `reserved` an einem
-      `format`-Feld. *`R001` sieht die MMU heute nicht — sie schreibt an jeder Grammatik
-      vorbei, nur im `normal`-Raum statt im `dma`-Raum.*
-      **Belastet die Konvergenzwette: es waere Spalte 1, nicht nur Spalte 2.**
-
-## Aus dem Papiertest vom 2026-08-14 — ein toter und zwei lebendige Kandidaten
-
-> **Ein Kandidat ist am 2026-08-14 gestorben und steht deshalb NICHT mehr hier:**
-> `locks ordered` — null Prueffaelle im Baum. Der Nachruf steht in
-> [HISTORIE.md](dokumente/HISTORIE.md), die Messung in [MESSUNGEN.md](dokumente/MESSUNGEN.md).
-> *Diese Datei fuehrt ausschliesslich Offenes; ein gestorbenes Konstrukt ist kein erledigter
-> Punkt, sondern ein Bruch mit der eigenen Absicht — und der gehoert in die Historie.*
-
-
-
-- [ ] **N3 — `held` braucht einen Zweig fuer Leser-Schreiber-Sperren.** `held <= K ops` ist
-      fuer **exklusive** Halter gedacht; auf der geteilten Seite ist die Rechengroesse die
-      **Writer-Wartezeit unter Leserdruck**, nicht die Haltezeit eines Lesers. **Der Kostenpass
-      rechnet heute nur den exklusiven Fall** — und die Latenzformel aus §9.3 mit ihm.
-
-## Gruppen-`ops` + `by ops` — der Entwurf, VOR der ersten Grammatikzeile
+### Gruppen-`ops` + `by ops` — der Entwurf, VOR der ersten Grammatikzeile
 
 Drei Festlegungen aus dem Papiertest, jede nachgeprueft. **Sie stehen hier, weil sie den
 Entwurf aendern, nicht weil sie ihn schmuecken.**
@@ -261,8 +357,37 @@ fiel.
 
 **Die Pruefzeile dagegen, mechanisch:** kein von einer Schablone erzeugtes Feld darf einen
 Typ ohne Breite tragen. Das ist an der Schablone selbst pruefbar, nicht erst am Erzeugnis.
+### Aus Welle 4 (2026-08-16) — zwei Bedingungen und ein Kandidat
 
-## Die vier Posten zum Ziel — Plan mit Toren in [`dokumente/PLAN.md`](dokumente/PLAN.md) §A
+- [ ] **«B38» — die Randbedingung an den benannten Traeger.** *„Die Fortsetzung prueft neu
+      **oder** nennt, was sie stattdessen traegt"* ist die richtige Form — **aber ein Traeger
+      `masks IRQ` gilt nur, wenn der Eintrittskontext `nested masked` fuehrt.** Ohne diese
+      Kopplung ist *„mich traegt die Maskierung"* die Zusicherung aus **R15**, die erfuellt
+      ist, sobald der Pruefer schweigt. **Mechanisch pruefbar** ueber `entrydecl`; zu bauen.
+- [ ] **«B39» — die Ausnahmeregel zum Hardware-Axiom, und sie ist ein KANDIDAT auf ein neues
+      Wort.** `A`/`D` schreibt die MMU selbst — die GDT-Lektion am Seitenwerk. **Sobald
+      Gruppen-`ops` das Seitenwerk erreichen, kollidiert das Axiom mit der
+      Schreibrechtszusage**: die K-Bedingung verlangt, dass ALLE Schreibstellen erzeugt sind.
+      Welche Felder einer `walk`-Deklaration **hardwarebeschreibbar** sind, gehoert an die
+      Deklaration (Kandidatenzeile `hardware A, D;`), so wie `reserved` an einem
+      `format`-Feld. *`R001` sieht die MMU heute nicht — sie schreibt an jeder Grammatik
+      vorbei, nur im `normal`-Raum statt im `dma`-Raum.*
+      **Belastet die Konvergenzwette: es waere Spalte 1, nicht nur Spalte 2.**
+### Aus dem Papiertest vom 2026-08-14 — ein toter und zwei lebendige Kandidaten
+
+> **Ein Kandidat ist am 2026-08-14 gestorben und steht deshalb NICHT mehr hier:**
+> `locks ordered` — null Prueffaelle im Baum. Der Nachruf steht in
+> [HISTORIE.md](dokumente/HISTORIE.md), die Messung in [MESSUNGEN.md](dokumente/MESSUNGEN.md).
+> *Diese Datei fuehrt ausschliesslich Offenes; ein gestorbenes Konstrukt ist kein erledigter
+> Punkt, sondern ein Bruch mit der eigenen Absicht — und der gehoert in die Historie.*
+
+
+
+- [ ] **N3 — `held` braucht einen Zweig fuer Leser-Schreiber-Sperren.** `held <= K ops` ist
+      fuer **exklusive** Halter gedacht; auf der geteilten Seite ist die Rechengroesse die
+      **Writer-Wartezeit unter Leserdruck**, nicht die Haltezeit eines Lesers. **Der Kostenpass
+      rechnet heute nur den exklusiven Fall** — und die Latenzformel aus §9.3 mit ihm.
+### Die vier Posten zum Ziel — Plan mit Toren in [`dokumente/PLAN.md`](dokumente/PLAN.md) §A
 
 **Das Ziel ist: Gabbro beweist alles ausser funktionaler Korrektheit.** Gegen dieses Ziel
 gelesen faellt der Grossteil der 31 Fragmentbefunde heraus (`dokumente/PLAN.md` §A, Neusortierung) —
@@ -285,8 +410,7 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
       **Gabbro-Quelltext** statt ueber Rust (**erst dann ist die Latte ≤ 24 echt
       entscheidbar** — s. den Bericht der ungueltigen Messung weiter unten), und die vier nie
       ausgeschriebenen Bereiche.
-
-## Aus der Gegenpruefung (2026-08-14) — was noch offen ist
+### Aus der Gegenpruefung (2026-08-14) — was noch offen ist
 
 - [ ] **DER BILLIGE ABSCHLUSS, und er gehoert VOR die grossen Saetze ueber „sonst nichts":
       `effects` prueft Schreiben und `locks`, aber nicht Lesen und nicht Aufrufe.**
@@ -297,9 +421,12 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
         nennt. Ob das ein Befund ueber die Fragmente ist oder die gemeinte Bedeutung von
         `effects`, **entscheidet der Ordner, nicht der Pass**. Solange das offen ist, darf
         er nicht pruefen, was er nicht weiss.
-      * **Aufrufwirkungen** — die Wirkungen des Gerufenen muessten auf die Argumente des
-        Aufrufers abgebildet werden. **Das ist der Posten, der `effects` erst kompositional
-        macht**, und ohne ihn deckt eine Wirkungsliste nur die erste Ebene.
+      * ~~**Aufrufwirkungen**~~ — **GEBAUT 2026-08-15 (`E008`).** Eine Wirkungsliste
+        schliesst die der Gerufenen ein; `effects { pure }` heisst transitiv rein. *Was
+        NICHT gebaut ist und dabeisteht: die Abbildung auf die ARGUMENTE — ein
+        `writes p.slots` des Gerufenen wird mit SEINEM Parameternamen gesehen. Grob in die
+        sichere Richtung (W9), und die Abbildung braucht eine Alias-Analyse, die es nicht
+        gibt.*
 - [ ] **Die Mutationsprobe deckt heute den Pruefer, nicht die Emission.**
       `./mutiere-pruefer.py` beschaedigt je eine Regel des Pruefers und sieht nach, ob eine
       Probe faellt — **24 von 24 gefangen** (2026-08-14). Was noch fehlt, ist dieselbe Probe
@@ -326,8 +453,7 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
       wird zum leeren **Summen**typ statt zum leeren Verbund.
       **Und an einer Stelle strenger:** `pub const` im `table`-Rumpf faellt, obwohl es
       ableitbar ist.
-
-## Aus P2 — was der Parser gefunden hat und was jetzt zu entscheiden ist
+### Aus P2 — was der Parser gefunden hat und was jetzt zu entscheiden ist
 
 - [ ] **DIE ENTSCHEIDUNG, die P2 erzwingt: der geschlossene Wortschatz kollidiert mit
       gewoehnlicher Benennung** — neun Woerter an elf Stellen, `slots` `ops` `next` `slot`
@@ -348,127 +474,7 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
       `gabbro schablonen` fuehrt heute **16, davon 16 unbewiesen**. Die Liste ist die Ratsche
       ueber der Flaeche, in die der dritte Ausgang seine Beweislast verschiebt —
       **waechst sie, waechst die Vertrauensbasis, auch wenn die Kennzahl glaenzt.**
-
-
-
-
-
-
-
-
-
-
-## Papierschritte — keine Zeile Code. Jeder Punkt kann die These töten
-
-> **Umbenannt 2026-08-14.** Diese Ueberschrift hiess „P0", die naechste „P1" — und
-> [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §6 vergibt P0…P7 an den **Prueferplan**, wo P1 die
-> Grammatikvereinigung ist und nicht `check`. **Zwei Etikettensysteme mit denselben Namen
-> in derselben Datei**; dieselbe Fehlerklasse wie die G-Kollision weiter oben.
-
-- [ ] **`touches` ist zu grob** — es braucht eine Form für „verändert die Menge nur durch
-      Verbrauch". Ohne sie hängt die Ordnung an einer Zusage statt an einer Bedingung.
-
-## `check` ohne Sprache
-
-- [ ] **`check` als Rust-Makrobibliothek**, rückwirkend gegen die 33 Messdisziplin-Fallen, jede mit
-      Mutation. Tor: **≥ 5 gefangen**. Nützlich auch dann, wenn Gabbro nie entsteht.
-
----
-
-## Die Frage, die über den Kern entscheidet
-
-- [ ] **Echte Linearität ist der einzige Mechanismus, den kein vorhandenes Werkzeug liefert** —
-      gemessen: Verus' `tracked` ist **affin**, Rust ist affin, SPARKs Leckprüfung hängt an einer
-      **Allokation**. An ihr hängen die Bootphase, `Parked` und die lineare Prüfpflicht.
-      **Offen: reicht ein Mechanismus, um eine Sprache zu rechtfertigen?** Die billigere Antwort
-      wäre ein Beitrag an Verus (linear statt affin). Das ist die teuerste offene Frage des Ordners.
-- [ ] **ATS ist der nächste Verwandte für den Kern und ungeprüft** — lineare Typen plus Beweise,
-      kompiliert nach C. Dieselbe Logik wie das Verus-Tor: *der nächste Verwandte ist gebaut, der
-      Ordner nicht.* **Sollte vor P2 gefahren werden; P2 lief zuerst.** Damit ist der Vergleich
-      nicht hinfaellig, sondern nur teurer: er misst jetzt gegen etwas Gebautes statt gegen
-      einen Entwurf.
-- [ ] **Für jeden weiteren Mechanismus die Gegenrechnung führen.** M2 am Sperrbeleg und M1 sind am
-      2026-08-13 gegen den Ordner ausgegangen. **M3 ist gegen die richtige Grundlinie zu messen:
-      nicht Verus, sondern `tock-registers`/`svd2rust`** — typisierte Registerzugriffe sind eine
-      Rust-Bibliothek. Die Frage ist, was ihr fehlt: Übergänge über Bits, Bedingungen über
-      Registergrenzen, Barrierendomäne im Typ.
-
----
-
-## Induktion — eingetragen, und die eine Zahl fehlt
-
-
-- [ ] **Das erzeugte Schema muss einmal nach Isabelle** — es ist eine Schablone im Sinne von L3 und
-      damit der Posten, der die Vertrauensbasis **verkleinert**.
-- [ ] **Wohlfundiertheit hängt an einer Invariante, die man beweisen will.** Die Deklaration muss
-      nennen, welche — und das Mass (Zahl der Abkömmlinge) ist Voraussetzung, nicht Ergebnis.
-
-## Aus dem Kriterium ([`dokumente/BEWEIS.md`](dokumente/BEWEIS.md))
-
-
-
-- [ ] **Die Trennlinie an einem Grenzfall streiten.** „Nennt nur die Maschine" ist scharf genug für
-      die heutigen Fälle — der erste Streitfall gehört in `dokumente/BEWEIS.md`, nicht in eine Fussnote.
-
-## Aus der Umkehrung der Frage ([`dokumente/SPRACHE.md`](dokumente/SPRACHE.md))
-
-- [ ] **Die achtzehn Umwandlungen sind Behauptungen über Absenkbarkeit, keine Belege.** Jede braucht
-      ihre C-Absenkung hingeschrieben — vor der Kanonisierung in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md).
-- [ ] **`retry` mit `bounded`/`progress`/`on_exceeded` ist der Ersatz für „unbegrenztes Warten".**
-      Offen: reicht eine Zahl, oder braucht es zwei Schranken (Versuche **und** Ticks)?
-- [ ] **Nr. 14 verlangt eine `publishes`-Klausel an 2 231 Stellen.** Ob das trägt, entscheidet keine
-      Papierübung — das ist der grösste Einzelposten der ganzen Umstellung.
-- [ ] **`breaking I { … }` legalisiert eine Invariantenverletzung.** Der Preis ist Sichtbarkeit
-      statt Verstecken; ob das reicht, ist unentschieden.
-
-## Syntax — offene Entscheidungen (Einzelheiten in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md))
-
-- [ ] **Variable Längen in `format`** — die harten 20 % jedes Parser-Erzeugers, keine
-      Schreibweise vorhanden.
-- [ ] **Versionsevolution:** liest ein `@version 3`-Leser auch v2 — **Absage oder Migration**?
-      Beides vertretbar, keins entschieden.
-- [ ] **Generizität** — ohne sie braucht jede Tabelle ihren eigenen `traverse`; mit ihr die Frage,
-      wie Verträge parametrisiert werden.
-- [ ] **Die Sperrordnung fehlt in der Syntax.** `locks CAPS` nennt die Sperre, nicht die **Stufe**.
-- [ ] **Der Vorrat an Quantoren in `spec fn` ist unentschieden — und genau dort wandert die Linie**,
-      wenn niemand aufpasst.
-- [ ] **Fehlerfortpflanzung:** ohne `?` wird jeder Aufruf drei Zeilen, mit `?` gibt es verborgenen
-      Kontrollfluss. Beides widerspricht einer Entwurfsregel.
-- [ ] **Schlüsselwortsprache** steht auf Englisch, weil das der Bestand ist. Preis: Bruch mit dem
-      deutschen Fliesstext. Reversibel (eine Tabelle im Lexer).
-
-## Entwurf — offene Entscheidungen
-
-- [ ] **Roundtrip** `lesen(schreiben(x)) == x` gehört in den Differenztest.
-- [ ] **Kostenangabe je Invariante** und an `by unbesucht`: welche Struktur, wer setzt sie zurück,
-      was kostet der Reset, darf sie unter dem Lock leben.
-- [ ] **Die Axiomschicht beziffern — die x86-Haelfte ist fahrbar, die aarch64-Haelfte NICHT.**
-      **Solange die Zahl fehlt, ist „speichersicher unter A1…An" eine Form ohne Inhalt.**
-      * **x86:** fahrbar gegen `../caprock-messbasis` (= `SEL4Lake/SEL4Lake` @ `arch/x86_64`,
-        `a1bf707`). Offen.
-      * **~~aarch64~~ — BLOCKIERT, und zwar nicht aus Zeitgruenden (2026-08-15).** Der
-        einzige aarch64-Baum im Ordner (`SEL4Lake/ARMTest/stm32mp25-kernel`) ist **kein
-        zweiter Kernel, sondern ein aelterer Schnappschuss DERSELBEN Abstammung** — belegt
-        mit `git log --follow`: `R099`, eine Umbenennung mit 99 % Aehnlichkeit von
-        `sel4lake-cap` nach `caprock-cap` (s. [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md), *Zwei Fundstellen
-        aus einer Vererbung*). Er liegt ausserhalb von git.
-        **Eine Gegentabelle daraus waere keine zweite Architektur, sondern dieselbe Linie
-        zweimal gezaehlt** — genau die Fehlerklasse, die dieser Ordner am 2026-08-15 gebucht
-        hat. *Die Zahl waere nicht ungenau, sondern falsch, und zwar in die schmeichelhafte
-        Richtung: sie wuerde Uebertragbarkeit belegen, wo nur Kopie steht.*
-      * **Was es braeuchte:** ein aarch64-Kernel mit **eigener** Abstammung, oder die
-        ehrliche Fassung des Satzes — *„gemessen fuer x86; fuer aarch64 steht keine Zahl,
-        und der vorhandene Baum kann sie nicht liefern."*
-
-- [ ] **B3 beziffern: welche Rümpfe lassen sich NICHT als Traversierung schreiben?** IPC-Fastpath,
-      `revoke`, Warteschlangenchirurgie des Schedulers sind die Kandidaten. **Jeder von ihnen kostet
-      5 : 1 auf seinem Anteil** — 5 % des Kernels sind +0,25 auf die Kennzahl, 10 % sind +0,5.
-      Das ist die Zahl, die früh gebraucht wird und die niemand hat: sie sagt, **wie weit vom Boden
-      entfernt** der Entwurf landet.
-
----
-
-## Prüfer und Erzeuger
+### Prüfer und Erzeuger
 
 - [ ] **Mutationsprobe auf der ANNOTATIONSEMISSION**, nicht nur auf der Codeemission. Der stimmig
       abgeschwächte Fall (Code **und** Vertrag) wird von **keinem** Beweis gefangen — nur vom
@@ -481,15 +487,7 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
       Überschreibungen in `dokumente/HISTORIE.md`.
 
 ---
-
-## Nachzuprüfen, weil aus dem Gedächtnis zitiert
-
-- [ ] **Die Namensfreiheit „Gabbro"** über Paketregister, GitHub und Sprachlisten — mitsamt dem,
-      was gefunden wurde. „Ich habe nichts gefunden" ist ein Nullbefund ohne Grösse.
-
----
-
-## Später
+### Später
 
 - [ ] **Binärverifikation** — der einzige Weg, der die Absenkung aus der Vertrauensbasis nimmt.
       Eigenes Projekt.
@@ -499,7 +497,33 @@ uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
 
 ---
 
-## Abgleich — was der 2026-08-14 an dieser Datei fand
+---
+
+# BUCHFUEHRUNG
+### Die Reihenfolge, billig zuerst — drei Dokumente laufen auf EINE fehlende Zahl zu
+
+1. ~~**Die fuenf Scratchpad-Klassen ins Repo.**~~ **GEFAHREN 2026-08-15** als
+   *Neuerhebung aller elf* — `N_neu = 5`, heute 4. Die 19 sind **ersetzt, nicht
+   fortgesetzt**; ihr Gegenstand war nicht mehr benennbar (W7).
+2. ~~**Die 17 gemessenen Logik-Pflichten aufteilen**~~ **GEFAHREN 2026-08-16** ueber
+   `N_L = 81`: K = 28, A = 13, W = 40 — und **als VERFEHLT gebucht** ueber der
+   berichtigten Grundgesamtheit (`N_L = 73`, W = 38), weil acht Seq-Lemmata
+   Werkzeugartefakte sind. **Was fehlt, ist B3** — ohne Zeilenanteile keine
+   Einsetzung in die Gewichtsformel. *(urspruenglich:)* aufteilen in *durch Konstruktion · Abstiegsaussage
+   (erzeugtes Schema greift) · Wertaussage (greift nicht)*. **Ein halber Tag Papier, und die
+   groesste Hebelwirkung im Ordner:** die Lueckenrechnung endet bei „k unbekannt", die harten
+   Zusagen enden bei derselben Aufteilung, und die Decke der Schrittzusagen haengt daran.
+   **Drei Dokumente, eine Zahl.**
+3. ~~**Die vier fehlenden Bereichsfragmente**~~ **GESCHRIEBEN 2026-08-16** (F7–F10). Die
+   Konvergenzwette hat ihre Datenpunkte: **vier Fragmente, null neue Konstrukte** — und in
+   der zweiten Spalte **drei veraenderte Bedeutungen** («B37», «B38», «B39»).
+
+> **~~Keine Prueferzeile vor dem Ergebnis von 2.~~ — VERLETZT am 2026-08-14, auf Ansage.**
+> Der Uebersetzer wurde vor dem Ergebnis von 2 angefangen. Die Regel bleibt hier stehen,
+> durchgestrichen statt geloescht: was sie verhindern sollte, ist eingetreten — P2 und P3
+> koennen die These nicht mehr *vor* dem Uebersetzerbau toeten. Was der Bau eingebracht hat,
+> steht in [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md); was er gekostet hat, steht hier.
+### Abgleich — was der 2026-08-14 an dieser Datei fand
 
 **Die Frage war, ob diese Liste ueberhaupt noch sinnvoll ist.** Antwort: der **Inhalt** ja,
 die **Buchfuehrung** nein. Acht Klassen von Befunden, alle mechanisch nachweisbar:
@@ -547,6 +571,6 @@ Genau die Vorgeschichte, aus der der Ordner am 2026-08-14 seine 24 Dateien auf 9
 | `vtd.rs`, `space.rs`, P0.4 | [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md), *P0.2/P0.3* und *P0.4* |
 | **G1–G11** (2026-08-15) | [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) (EBNF nachgezogen), `beispiele/11-grammatikbefunde.gab`, Gift `43`–`45` |
 | **Zaehlerregel** (2026-08-15) | [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §1, *„Die Zaehlerregel"* |
-| **F4/F6 veraltet** (2026-08-15) | [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md); Tor P2 steht weiter bei 1 von 6, s. u. |
+| **F4/F6 veraltet** (2026-08-15) | [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md); **Tor P2 steht bei 10 von 10** (2026-08-16) |
 | **Mutationsgenerator** (2026-08-15) | `erzeuge-mutationen.py`, Vorab + Ergebnis in [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) |
 | **TODO-Waechter** (2026-08-15) | `pruefe-todo.py`, sieben Klassen mit Sprechprobe |
