@@ -112,7 +112,7 @@ of items that are neither code nor a run — what remains is building and measur
 - [ ] **PL.2 — die drei Saetze mit der groessten Traglast:** `K001` Summation (**hat heute schon
       einen gemessenen Fehler**), `H006` Rangordnung, V2 relationale Verengung (102 Stellen).
 - [ ] **PL.3 — die Bruecke: (c) je Satz eine Sprechprobe, die den Rust gegen das Modell faehrt.**
-      Das Geschirr steht (`mutiere-pruefer.py`, 146 von 146) -- was fehlt, ist der Satz, der
+      Das Geschirr steht (`mutiere-pruefer.py`, 148 von 148) -- was fehlt, ist der Satz, der
       sagt, WELCHE Beschaedigung fallen muss. *Aus 132 Mutationen ohne Satz werden 132 mit
       einem.*
 

@@ -7065,3 +7065,85 @@ Korpus       23 saubere Beispiele, 74 Giftproben
 Tests        117
 Mutationen   146 -- fuenf neu: drei fuer den Zweig, zwei fuer `protects`
 ```
+
+---
+
+# K11.2.3 und K11.3.2 — und beide fanden einen Fehler beim Hinsehen
+
+## K11.2.3 — die Ordnung senkt ab, und der alte Grund war kein Grund mehr
+
+Die Weigerung trug ihren Grund mit: *„dass ein release-Speichern die Sichtbarkeit
+**herstellt**, die die Paarung behauptet, ist eine Aussage über das Speichermodell."*
+
+**Der Grund stimmt weiter — er ist nur kein Grund für eine Weigerung.** Die Aussage steht seit
+K100.2 als **A10** in der Axiomschicht, gebucht als *nicht falsifizierbar*.
+
+> *Sich weiter zu weigern hieße, dieselbe Aussage zweimal zu verlangen: einmal als Axiom und
+> einmal als Beweis.*
+
+Die Absenkung ist **explizit**, nicht über den Zuweisungsoperator — `A = w` auf einem `_Atomic`
+wäre in C `seq_cst`, eine andere und teurere Ordnung als die deklarierte:
+
+```c
+/* publishes { b.daten } -- paired at compile time (V001-V004) */
+atomic_store_explicit(&FERTIG, true, memory_order_release);
+```
+
+### Der Fehler beim Lesen des erzeugten C
+
+Die erste Fassung lud mit `memory_order_release`. **Das gibt es in C11 nicht** —
+`atomic_load_explicit` nimmt relaxed, consume, acquire oder seq_cst. *Die Deklaration nennt die
+Speicherseite; ein `awaits` lädt mit acquire.*
+
+> `cc` hätte es auch gesagt. **Sich darauf zu verlassen hieße, die Absage zu delegieren, wo die
+> Antwort hier steht.**
+
+### Und die Sprechprobe sagte die Wahrheit
+
+Das erste Gift ersetzte `release` durch `relaxed` — und das veränderte Erzeugnis liefert
+dasselbe. *Natürlich tut es das.* **Ein einläufiger Test kann eine Ordnung nicht sehen**, und
+genau das hat `PLAN.md` (K11.2.3) vorab gesagt.
+
+Das Gift vertauscht jetzt den **Wert**; die Ordnung wird anderswo gehalten — gebuchtes Zeugnis,
+Sprechprobe, zwei Mutationen. **Und eine davon überlebte:** meine Probe prüfte die Deklaration
+und das Laden, nicht das Speichern.
+
+> *Eine Beschädigungsprobe, die niemand fangen kann, ist keine.* Die Zeile steht jetzt da.
+
+## K11.3.2 — `table.absenkung` bewiesen
+
+Der erste der vier **lebend** getragenen Sätze, und zwar zuerst, weil die anderen darauf
+aufsitzen: *`option.sonderwert` braucht die Länge für den Sonderwert, `table.induktion` die
+Schranke für die Terminierung.*
+
+Der Eintrag las sich wie eine Aussage über eine Zahl — „genau N Slots". **Der Beweis nimmt die
+beiden Fehlrichtungen einzeln, weil sie verschieden teuer sind:**
+
+```
+m < N   ein Index im Typ ohne Speicher     ← der gefährliche
+m > N   Speicher ohne Index                ← harmloser, nicht harmlos
+```
+
+*Sie zusammen als `m = N` hinzuschreiben wäre richtig und würde das verschweigen.*
+
+**Und der Gehalt liegt eine Stufe weiter:** aus `m = N` und der Indexschranke fällt, dass
+**kein** Zugriff des erzeugten Programms aus dem Feld läuft. Erst das ist die Aussage, um
+derentwillen die Absenkung ein festes Feld nimmt und keinen Zeiger mit Länge.
+
+```
+lebend_ungedeckt()   4 → 3
+Schablonen           20, davon 6 bewiesen
+```
+
+**Es bleiben drei:** `option.sonderwert` · `format.roundtrip` · `device.konstruktor`.
+
+## Stand nach K11
+
+| | |
+|---|---|
+| **K11.1** Zweig | ✓ `O006`, `O005` zurückgezogen |
+| **K11.2.1** `protects` beisst | ✓ `H007`/`H008` — und fand `lock BERICHT` im eigenen Korpus |
+| **K11.2.2** Ausführungskontexte | **nicht baubar** — 4 Kontextwurzeln, 0 mit Rumpf |
+| **K11.2.3** Ordnung absenken | ✓ unter A10, 9. Übersetzungseinheit |
+| **K11.3.1** Breite | teilweise — `static`, `publishes`, `awaits` gebaut; die fünf befundgesperrten offen |
+| **K11.3.2** Tiefe | 1 von 4 — `table.absenkung` bewiesen |
