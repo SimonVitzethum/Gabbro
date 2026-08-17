@@ -157,10 +157,12 @@ MUTATIONEN = [
     Mutation(
         "index-ungeprueft",
         "m1.rs",
-        "    fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {\n        let mut traeger",
+        # **Der Anker brach am 2026-08-17**, als der Kartenblick modulbewusst wurde --
+        # das Geruest meldete `ANKER FEHLT` und schloss die Mutation AUS, statt sie still
+        # als gefangen zu zaehlen. *Genau dafuer ist die Meldung da.*
+        "    fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {",
         "    fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {\n"
-        "        if true {\n            let _ = (o, lage);\n            return;\n        }\n"
-        "        let mut traeger",
+        "        if true {\n            let _ = (o, lage);\n            return;\n        }",
         "M103/M4 -- kein Index wird gegen seine Schranke geprueft",
     ),
     Mutation(
