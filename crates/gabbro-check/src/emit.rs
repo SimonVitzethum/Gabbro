@@ -55,6 +55,11 @@ struct Namen {
     /// anderen Typ erklaert, faellt er heraus. Dieselbe Bauart wie `vorzeichenlos` -- Unwissen
     /// faellt nach lautstark, dann weigert sich der Registerzugriff.
     geraetezeiger: HashMap<String, String>,
+    /// Name -> Tabelle, fuer Zeigerparameter. Konservativ wie `geraetezeiger`.
+    tabellenzeiger: HashMap<String, String>,
+    /// (Tabelle, Slotfeld) -> Zieltabelle, fuer `option index into T`-Felder. **Ohne das
+    /// weiss der Erzeuger bei `x = None` nicht, WELCHER Sonderwert gemeint ist.**
+    optionfeld: HashMap<(String, String), String>,
     /// Je Tabelle ihr aufgeloester `count`-Wert. **Der Sonderwert haengt daran** -- siehe
     /// `beweise/Option_Sonderwert.thy`, M-1.
     kapazitaet: HashMap<String, i128>,
@@ -306,6 +311,49 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             eindeutig.remove(s);
         }
         namen.geraetezeiger = eindeutig;
+    }
+
+    // Optionfelder und Tabellenzeiger -- fuer `x = None`.
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Tabelle(tb) = &item.art {
+            if let Some(slot) = &tb.slot {
+                for f in &slot.felder {
+                    if let SlotTyp::Typ(TypExpr::Index { tabelle, optional: true, .. }) = &f.typ {
+                        namen.optionfeld.insert(
+                            (tb.name.text.clone(), f.name.text.clone()),
+                            tabelle.text.clone(),
+                        );
+                    }
+                }
+            }
+        }
+    });
+    {
+        let mut eindeutig: HashMap<String, String> = HashMap::new();
+        let mut strittig: BTreeSet<String> = BTreeSet::new();
+        crate::fuer_jedes_item(baum, &mut |item| {
+            let ItemArt::Funktion(f) = &item.art else { return };
+            for p in &f.parameter {
+                let TypExpr::Zeiger(z) = &p.typ else { continue };
+                let TypExpr::Pfad(pf) = &z.ziel else { continue };
+                let Some(n) = pf.teile.last() else { continue };
+                if !namen.tabellen.iter().any(|x| *x == n.text) {
+                    continue;
+                }
+                match eindeutig.get(&p.name.text) {
+                    Some(v) if *v != n.text => {
+                        strittig.insert(p.name.text.clone());
+                    }
+                    _ => {
+                        eindeutig.insert(p.name.text.clone(), n.text.clone());
+                    }
+                }
+            }
+        });
+        for s in &strittig {
+            eindeutig.remove(s);
+        }
+        namen.tabellenzeiger = eindeutig;
     }
 
     namen.retry_schranke = retry_schranken(baum);
@@ -628,16 +676,87 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             }
         }
     }
-    if !d.baenke.is_empty() {
-        weigere(absagen, d.span, "`bank` -- a register file at a computed location");
-        return;
-    }
+
     aus.push_str(&format!(
         "\ntypedef struct {{ volatile uint8_t *basis; }} {};\n",
         d.name.text
     ));
+    for b in &d.baenke {
+        bank(d, b, aus, u, absagen);
+    }
     for u2 in &d.uebergaenge {
         uebergang(d, u2, aus, u, absagen);
+    }
+}
+
+/// **`bank FRR at CAP.FRO * 16 stride 16 count 256` -- ein Registersatz an BERECHNETER Lage.**
+///
+/// Die Lage kommt aus einem GELESENEN Feld: `CAP.FRO` sagt, wo die Fehlerregister liegen, und
+/// der Bestand rechnet dieselbe Adresse von Hand aus (`vtd.rs:442`, `frr_off`). **Der Index
+/// ist ueber `count` M1-beschraenkt** -- die Schranke steht in der Deklaration, nicht in einer
+/// Pruefung im Rumpf.
+///
+/// Abgesenkt als Zugriffsfunktion mit Index, weil die Lage erst zur Laufzeit feststeht:
+///
+/// ```c
+/// static inline uint64_t Vtd_FRR_FR_LO(const Vtd *d, uint32_t i) {
+///     return *(volatile uint64_t *)(d->basis + <lage> + i * 16 + 0);
+/// }
+/// ```
+fn bank(d: &Device, b: &Bank, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
+    let (Some(schritt), Some(anzahl)) = (konst_zahl(&b.schritt), konst_zahl(&b.anzahl)) else {
+        weigere(absagen, b.span, "`bank` with a non-constant `stride` or `count`");
+        return;
+    };
+    // Die BASIS darf berechnet sein -- das ist der Sinn der Form. Sie muss aber aus Feldern
+    // dieses Geraets kommen, sonst kennt der Erzeuger ihren Wert nicht.
+    let lage = ausdruck_geraet(&b.basis, d, u, absagen);
+    if lage.is_empty() {
+        weigere(absagen, b.span, "`bank` base that is not computed from this device's fields");
+        return;
+    }
+    for r in &b.register {
+        let Some(off) = konst_zahl(&r.versatz) else {
+            weigere(absagen, r.name.span, "`bank` register at a non-constant offset");
+            return;
+        };
+        let breite = intty(&r.typ);
+        aus.push_str(&format!(
+            "\nstatic inline {breite} {}_{}_{}(const {} *d, uint32_t i) {{\n\
+             \x20   /* count {anzahl}: the index bound falls out of the declaration */\n\
+             \x20   return *(volatile {breite} *)(d->basis + ({lage}) + i * {schritt}u + {off}u);\n}}\n",
+            d.name.text, b.name.text, r.name.text, d.name.text
+        ));
+    }
+}
+
+/// Ein Ausdruck ueber Feldern DIESES Geraets -- fuer die berechnete Banklage.
+fn ausdruck_geraet(e: &Expr, d: &Device, u: &Namen, absagen: &mut Absagen) -> String {
+    match &e.art {
+        ExprArt::Zahl(n) => n.to_string(),
+        ExprArt::Klammer(x) => format!("({})", ausdruck_geraet(x, d, u, absagen)),
+        ExprArt::Binaer(op, a, b) => format!(
+            "{} {} {}",
+            ausdruck_geraet(a, d, u, absagen),
+            op_text(op),
+            ausdruck_geraet(b, d, u, absagen)
+        ),
+        // `CAP.FRO` -- ein Feld dieses Geraets, gelesen ueber `d`.
+        ExprArt::Ort(o) if o.suffixe.len() == 1 => {
+            let Some(g) = u.geraete.get(&d.name.text) else { return String::new() };
+            let Some((versatz, breite)) = g.reg.get(&o.basis.text) else { return String::new() };
+            let OrtSuffix::Feld(f) = &o.suffixe[0] else { return String::new() };
+            let Some((hi, lo, _)) = g.felder.get(&o.basis.text).and_then(|m| m.get(&f.text))
+            else {
+                return String::new();
+            };
+            let maske: u128 = (1u128 << (hi - lo + 1)) - 1;
+            format!("(((*(volatile {breite} *)(d->basis + {versatz})) >> {lo}) & {maske}u)")
+        }
+        _ => {
+            let _ = absagen;
+            String::new()
+        }
     }
 }
 
@@ -665,12 +784,25 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
 /// > ist die Bewegung, gegen die dieser Ordner an jeder anderen Stelle steht.* Die Klausel
 /// > steht darum als Kommentar im C -- sichtbar, aber nicht ausgefuehrt.
 fn uebergang(d: &Device, x: &Uebergang, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
-    if x.schritte.len() != 1 {
-        weigere(absagen, x.span, "`transset` -- several places in one move");
+    // **`transset` -- mehrere Orte in EINEM Zug.** Am Register ist das entscheidbar: die Bits
+    // werden veroderrt und in einem Schreibzug gesetzt. *Genau die Form, an der F3 zerbricht
+    // («B17») -- dort geht es um zwei SLOTFELDER, und dafuer gibt es keinen Schreibzug, der
+    // beide zugleich trifft.* Am Wort eines Registers gibt es ihn.
+    if x.schritte.is_empty() {
+        weigere(absagen, x.span, "`transition` without a step");
+        return;
+    }
+    let reg = x.schritte[0].ort.basis.text.clone();
+    if x.schritte.iter().any(|s| s.ort.basis.text != reg) {
+        weigere(
+            absagen,
+            x.span,
+            "`transset` across two different registers -- there is no single write that hits \
+             both, and that is «B17» one level up",
+        );
         return;
     }
     let s = &x.schritte[0];
-    let reg = s.ort.basis.text.clone();
     let Some(g) = u.geraete.get(&d.name.text) else { return };
     let Some((versatz, breite)) = g.reg.get(&reg) else {
         weigere(absagen, x.span, "`transition` on something that is not a register");
@@ -679,35 +811,18 @@ fn uebergang(d: &Device, x: &Uebergang, aus: &mut String, u: &Namen, absagen: &m
     let leer = HashMap::new();
     let felder = g.felder.get(&reg).unwrap_or(&leer);
 
-    // Welche Bits aendert dieser Zug, und auf welchen Wert?
-    let (geaendert, neu) = match s.ort.suffixe.first() {
-        // `GCMD.SRTP: 0 -> 1` -- genau ein Bit.
-        Some(OrtSuffix::Feld(f)) => {
-            let Some((hi, lo, _)) = felder.get(&f.text) else {
-                weigere(absagen, f.span, "`transition` on an unknown register field");
-                return;
-            };
-            if hi != lo {
-                weigere(absagen, f.span, "`transition` on a multi-bit field");
-                return;
-            }
-            let maske = 1u128 << lo;
-            let an = matches!(&s.nach.art, ExprArt::Zahl(n) if *n != 0);
-            (maske, if an { maske } else { 0 })
-        }
-        // `DEVICE_STATUS: ACK -> ACK | DRIVER` -- eine Veroderung von Feldnamen.
-        None => match bitwort(&s.nach, felder) {
-            Some(n) => (n, n),
-            None => {
-                weigere(absagen, x.span, "`transition` target that is not a set of field names");
-                return;
-            }
-        },
-        _ => {
-            weigere(absagen, x.span, "`transition` on an indexed place");
-            return;
-        }
-    };
+    // Welche Bits aendert dieser Zug, und auf welchen Wert? Ueber ALLE Schritte veroderrt.
+    let mut geaendert: u128 = 0;
+    let mut neu: u128 = 0;
+    for s in &x.schritte {
+        let (g2, n2) = match schrittbits(s, felder, absagen) {
+            Some(v) => v,
+            None => return,
+        };
+        geaendert |= g2;
+        neu |= n2;
+    }
+    let _ = s;
 
     let wort = format!("(*(volatile {breite} *)(d->basis + {versatz}))");
     aus.push_str(&format!("\n/* transition {} */\n", x.name.text));
@@ -735,6 +850,42 @@ fn uebergang(d: &Device, x: &Uebergang, aus: &mut String, u: &Namen, absagen: &m
         _ => aus.push_str(&format!("    {wort} = ({breite}){neu}u;\n")),
     }
     aus.push_str("}\n");
+}
+
+/// Die geaenderten und die neuen Bits EINES Schritts.
+fn schrittbits(
+    s: &OrtSchritt,
+    felder: &HashMap<String, (u32, u32, u32)>,
+    absagen: &mut Absagen,
+) -> Option<(u128, u128)> {
+    match s.ort.suffixe.first() {
+        // `GCMD.SRTP: 0 -> 1` -- genau ein Bit.
+        Some(OrtSuffix::Feld(f)) => {
+            let Some((hi, lo, _)) = felder.get(&f.text) else {
+                weigere(absagen, f.span, "`transition` on an unknown register field");
+                return None;
+            };
+            if hi != lo {
+                weigere(absagen, f.span, "`transition` on a multi-bit field");
+                return None;
+            }
+            let maske = 1u128 << lo;
+            let an = matches!(&s.nach.art, ExprArt::Zahl(n) if *n != 0);
+            Some((maske, if an { maske } else { 0 }))
+        }
+        // `DEVICE_STATUS: ACK -> ACK | DRIVER` -- eine Veroderung von Feldnamen.
+        None => match bitwort(&s.nach, felder) {
+            Some(n) => Some((n, n)),
+            None => {
+                weigere(absagen, s.span, "`transition` target that is not a set of field names");
+                None
+            }
+        },
+        _ => {
+            weigere(absagen, s.span, "`transition` on an indexed place");
+            None
+        }
+    }
 }
 
 /// Eine Veroderung von Feldnamen als Bitwort -- `ACK | DRIVER` wird `0b11`.
@@ -1291,12 +1442,39 @@ fn anweisung(
         // **Der Operator wurde bis zum 2026-08-17 IGNORIERT:** `x += 1` wurde `x = 1`. Er
         // ist in keiner der drei Waechtereinheiten vorgekommen -- und genau darum hat er
         // ueberlebt. *Dieselbe Sorte stiller Ausfall wie die Null im Ausdruckszweig.*
-        StmtArt::Zuweisung(z) => aus.push_str(&format!(
-            "{e}{} {} {};\n",
-            ort(&z.ziel, u, absagen),
-            zuw_op(&z.op),
-            ausdruck(&z.wert, u, absagen)
-        )),
+        StmtArt::Zuweisung(z) => {
+            // **`x = None` braucht die ZIELTABELLE, sonst weiss der Erzeuger nicht, welcher
+            // Sonderwert gemeint ist.** Bis zum 2026-08-17 weigerte er sich hier; jetzt loest
+            // er das Feld auf -- und weigert sich weiterhin, wenn er es NICHT kann.
+            let wert = match option_ziel(&z.ziel, u) {
+                Some(tab) => match &z.wert.art {
+                    // `None` kommt als Ruf ohne Argumente an -- es IST ein Konstruktor.
+                    ExprArt::Ruf(r) if r.pfad.teile.last().is_some_and(|i| i.text == "None") => {
+                        format!("{tab}_NONE")
+                    }
+                    ExprArt::Ort(o) if o.suffixe.is_empty() && o.basis.text == "None" => {
+                        format!("{tab}_NONE")
+                    }
+                    ExprArt::Ruf(r) if r.pfad.teile.last().is_some_and(|i| i.text == "Some") => {
+                        match r.argumente.first() {
+                            Some(a) => ausdruck(a, u, absagen),
+                            None => {
+                                weigere(absagen, s.span, "`Some` without an argument");
+                                return;
+                            }
+                        }
+                    }
+                    _ => ausdruck(&z.wert, u, absagen),
+                },
+                None => ausdruck(&z.wert, u, absagen),
+            };
+            aus.push_str(&format!(
+                "{e}{} {} {};\n",
+                ort(&z.ziel, u, absagen),
+                zuw_op(&z.op),
+                wert
+            ));
+        }
         // **`narrow x to a .. b else { … }` ist die einzige Laufzeitpruefung, die dieser
         // Erzeuger ausgibt** -- und sie steht hier, weil die Sprache sie als Pruefung
         // DEFINIERT, nicht weil M1 versagt haette. *W6 gilt in die andere Richtung: was M1
@@ -1598,6 +1776,17 @@ fn match_option(
         anweisung(k, aus, u, absagen, tiefe + 2, austritt);
     }
     aus.push_str(&format!("{e}    }}\n{e}}}\n"));
+}
+
+/// Ist dieser Ort ein `option index into T`-Feld? Dann die Zieltabelle.
+///
+/// Erkannt wird die Form `<zeiger>.slots[<i>].<feld>` -- die einzige, in der ein Slotfeld
+/// ueberhaupt vorkommt. **Alles andere liefert `None`, und dann weigert sich der Erzeuger**
+/// statt einen Sonderwert zu raten.
+fn option_ziel(o: &Ort, u: &Namen) -> Option<String> {
+    let tab = u.tabellenzeiger.get(&o.basis.text)?;
+    let OrtSuffix::Feld(feld) = o.suffixe.last()? else { return None };
+    u.optionfeld.get(&(tab.clone(), feld.text.clone())).cloned()
 }
 
 /// Liefert den Tabellennamen, wenn dieser Ausdruck ein `option index into T` ist.

@@ -781,3 +781,55 @@ fn mirrors_schreibt_die_zustandsbits_mit() {
     let rumpf = &c[c.find("static inline void V_setze_rtp").expect("der Uebergang")..];
     assert!(!rumpf.contains("assert("), "keine erzeugte Zusicherung:\n{rumpf}");
 }
+
+/// **Drei Absenkungen aus einem Zug: `option` als Wert, `bank`, `transset`.**
+#[test]
+fn option_als_wert_bank_und_transset() {
+    fn c_von(q: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.text.clone()).collect())
+    }
+
+    // **1. `x = None` braucht die ZIELTABELLE.** Der Sonderwert gehoert der Tabelle, auf die
+    // das Feld zeigt -- nicht der, in der es steht. Bei zwei Tabellen faellt der Unterschied
+    // auf, und genau darum weigerte sich der Erzeuger, solange er ihn nicht aufloesen konnte.
+    let (c, f) = c_von(
+        "module t {
+table A count 8 { slot { a : bool, } }
+table B count 16 { slot { zeigt : option index into A, } }
+impl fn loesche(b : ptr<normal, rw> B, i : index into B)
+    effects { writes b.slots } costs <= 4 ops { b.slots[i].zeigt = None; } }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    assert!(c.contains("zeigt = A_NONE;"), "der Sonderwert der ZIELtabelle:\n{c}");
+    assert!(!c.contains("B_NONE;"), "nicht der der eigenen:\n{c}");
+
+    // **2. `bank` -- ein Registersatz an BERECHNETER Lage.** Die Lage kommt aus einem
+    // gelesenen Feld; der Bestand rechnet dieselbe Adresse von Hand aus (`vtd.rs:442`).
+    let (c, f) = c_von(
+        "module t { device V(basis : u64) at mmio {
+    reg CAP : u64 @0x08 class r fields { FRO @[33:24], }
+    bank FRR at CAP.FRO * 16 stride 16 count 256 { reg LO : u64 @0x0 class r }
+} }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    assert!(c.contains("V_FRR_LO(const V *d, uint32_t i)"), "Zugriff mit Index:\n{c}");
+    assert!(c.contains("i * 16u"), "der Schritt:\n{c}");
+    assert!(
+        c.contains(">> 24) & 1023u"),
+        "die Lage kommt aus dem gelesenen Feld, nicht aus einer Konstanten:\n{c}"
+    );
+
+    // **3. `transset` -- mehrere Bits in EINEM Schreibzug.** Am Register geht das; an zwei
+    // SLOTFELDERN nicht, und das ist «B17» eine Ebene tiefer.
+    let (c, f) = c_von(
+        "module t { device V(basis : u64) at mmio {
+    reg R : u32 @0x0 class rw fields { A @0, B @1, }
+    transition beide { R.A: 0 -> 1, R.B: 0 -> 1 } effects { writes R }
+} }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    assert!(c.contains("= (uint32_t)3u;"), "beide Bits in einem Zug:\n{c}");
+}

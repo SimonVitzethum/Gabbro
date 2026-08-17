@@ -1117,6 +1117,30 @@ MUTATIONEN = [
         "SPRACHE -- die Vorbedingung eines Uebergangs verschwindet spurlos aus dem Erzeugnis",
         "code",
     ),
+    Mutation(
+        "none-nimmt-die-falsche-tabelle",
+        "emit.rs",
+        "    u.optionfeld.get(&(tab.clone(), feld.text.clone())).cloned()",
+        "    { let _ = feld; Some(tab.clone()) }",
+        "C-Absenkung -- `x = None` nimmt den Sonderwert der EIGENEN statt der Zieltabelle",
+        "code",
+    ),
+    Mutation(
+        "bank-ohne-schritt",
+        "emit.rs",
+        "i * {schritt}u + {off}u);",
+        "i * 0u + {off}u);",
+        "C-Absenkung -- jeder Eintrag einer `bank` liegt an derselben Adresse",
+        "code",
+    ),
+    Mutation(
+        "transset-nimmt-nur-den-ersten",
+        "emit.rs",
+        "        geaendert |= g2;\n        neu |= n2;",
+        "        geaendert = g2;\n        neu = n2;",
+        "C-Absenkung -- ein `transset` setzt nur das letzte Bit; die uebrigen Orte fallen weg",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
