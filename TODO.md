@@ -324,6 +324,13 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **`cc -Wextra` finds a dead parameter and NO Gabbro pass does.** `FRAGMENTE.md` F8 takes
+      `toeten(l, t, k)` and never reads `k` — the function resolves `t` instead. The C emitter
+      silences it with `(void)k;` because *the user did not write the generated line*, and the
+      finding belongs on the Gabbro level. **Today the checker has no diagnostic for an unread
+      parameter**, and a C compiler found something ten passes did not. *That is a small pass
+      and a real one.*
+
 - [ ] **`publishes` at a DEVICE REGISTER — the one unbuilt item of the escalation of 2026-08-14.**
       Six of the seven are built, this one is not: `publishes` sits at `atomicdecl`, and the
       store the class *Publication* exists for is not an atomic at all — the virtio `avail`

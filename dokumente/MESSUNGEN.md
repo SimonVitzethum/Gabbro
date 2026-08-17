@@ -5706,3 +5706,72 @@ became the literal zero**, in a component every other pass hands its result to.
 through the expression path and broke the anchor of `geist-let-verschwindet-ganz` — the most
 important emission mutation there is. *The harness reported `ANKER FEHLT` and excluded it from
 the count instead of quietly passing 94 of 94.*
+
+
+---
+
+# F8 abgesenkt — drei Entscheidungen, keine Übersetzungen
+
+**`1 1 1 0 0 1 1 1`.** The third translation unit goes through the whole chain, and unlike F7
+none of its three lowerings was a translation — each was a decision the folder had not taken.
+*They are booked here with their reason and their alternative, and each is reversible.*
+
+## 1. `option index into T` carries the sentinel `N`
+
+**The representation was open, and the emitter refused (`C001`) rather than coarsen** — a bare
+`uint32_t` would have erased the `None` silently, because every value `0 ..< N` is a valid
+index.
+
+| | |
+|---|---|
+| **chosen** | the sentinel is **`N` itself** — zero cost, no tag, no extra word |
+| why it is free | `count N` bounds the index type to `0 ..< N`; **`N` is the one value M1 guarantees no real index takes** |
+| the alternative | a tagged struct — one word per field, and F1 carries **four** such fields in `CapSpace` |
+| the evidence | *the measured code already does it by hand*: `while i != NIL { i = t.qnext }` (`MESSUNGEN.md`, B3) |
+
+> **The construct does not invent the sentinel. It makes it checked and names it once.**
+
+**And it bought an obligation, which is the point of the register:** `option.sonderwert` —
+*the sentinel lies outside the index domain, and no generated computation reaches it.* Both
+halves have to be shown. The register stands at **20, of which 16 unproved**; the repaired
+ratchet allows 22 (base 18 + one slot per proved template), so the entry was affordable —
+**and the next one is not free.**
+
+## 2. A `lock` emits two prototypes and no line of body
+
+`rank 2`, `held <= 300 ops`, `shared held <= 32 ops` appear **nowhere** in the C. `H006`
+recomputes the order at compile time, `K002`/`K004` the hold times — and **what the checker has
+decided, the machine must not check again** (W6).
+
+> **What remains is the primitive, and that is a trust base, not a product.** It belongs in the
+> axiom layer beside `write_cr3`. *The emitter names it and does not define it.*
+
+## 3. `locks X { … return … }` releases before EVERY return — and this is the C8 class
+
+`toeten` returns out of the `locks` block from **both** match arms. An emitter that writes the
+release only at the end of the block leaves the lock held on both paths — **and the C
+compiles.**
+
+```c
+    SCHEDS_nimm();
+    {   … if (…) { … SCHEDS_gib(); return true; }
+             else {   SCHEDS_gib(); return false; }   }
+    SCHEDS_gib();
+```
+
+> *Literally the class C8 paid for: a new refusal path does not inherit the cleanup duty of the
+> old one.* **Here it inherits it, because the writer is not the one emitting it.**
+
+The two middle numbers of `1 **1 1** 0 0 **1 1** 1` are the measurement: taken once, released
+once — **on each of the two return paths separately.**
+
+## The finding that came from the C compiler, not from us
+
+`toeten(l, t, k)` never reads `k`. **`cc -Wextra` says so, and no pass of this compiler does.**
+
+The emitter silences it with `(void)k;` — *the user did not write the generated line, so a
+warning in it says nothing about them* — and the finding goes to `TODO.md` as a missing pass.
+
+> **A C compiler found something ten passes did not.** That is not embarrassing, it is the
+> cheapest kind of finding there is: the emitter now runs real code through a second, older,
+> much better-tested checker, and it will keep doing that at every further fragment.
