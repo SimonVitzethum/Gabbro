@@ -1,719 +1,717 @@
-# Gabbro — die Beweisarchitektur
+# Gabbro — the proof architecture
 
-**Was bewiesen wird, wovon es spricht, wer es entlaedt, und wohin es abgesenkt wird.**
-Zusammengezogen am 2026-08-14 aus sechs Einzeldateien — Text unveraendert.
-
----
-
+**What is proved, what it speaks about, who discharges it, and where it is lowered to.**
+Drawn together on 2026-08-14 from six separate files — text unchanged.
 
 ---
 
-# Das Kriterium — nur Logik
-
-## Das Kriterium: **nur Logik beweisen, sonst nichts**
-
-**2026-08-13.** Bis hierher war das Ziel eine **Zahl** (0,5 : 1). Sie ist ein Stellvertreter, und
-Stellvertreter sind in diesem Projekt eine bezahlte Falle. Das eigentliche Kriterium ist eine
-**Art**, nicht eine Menge:
-
-> **Wer ein Gabbro-Programm beweist, beweist die LOGIK seines Programms — und sonst nichts.**
-> Alles Uebrige faellt durch Konstruktion.
-
-**Selbst 2 : 1 waere gut, wenn die gezaehlten Zeilen Logik sind.** Und 0,5 : 1 waere ein
-Misserfolg, wenn darin Bereichspruefungen von Hand stecken. **Die Zahl wird damit vom Ziel zur
-Diagnose.**
 
 ---
 
-### Die Trennlinie, und sie muss scharf sein
+# The criterion — logic only
 
-> **Eine Pflicht ist KLEMPNEREI, wenn ihre Aussage nur die MASCHINE erwaehnt.
-> Sie ist LOGIK, wenn sie die SACHE erwaehnt.**
+## The criterion: **prove logic, nothing else**
 
-| **Klempnerei — muss durch Konstruktion fallen** | **Logik — die schreibt man, in jeder Sprache** |
+**2026-08-13.** Up to here the goal was a **number** (0,5 : 1). It is a proxy, and proxies are a
+paid-for trap in this project. The actual criterion is a **kind**, not a quantity:
+
+> **Whoever proves a Gabbro program proves the LOGIC of their program — and nothing else.**
+> Everything else falls out by construction.
+
+**Even 2 : 1 would be good if the counted lines are logic.** And 0,5 : 1 would be a failure if
+hand-written range checks sit inside it. **The number thereby turns from the goal into the
+diagnosis.**
+
+---
+
+### The dividing line, and it has to be sharp
+
+> **An obligation is PLUMBING if its statement mentions only the MACHINE.
+> It is LOGIC if it mentions the SUBJECT.**
+
+| **Plumbing — must fall by construction** | **Logic — you write it, in every language** |
 |---|---|
-| ein Index liegt im Bereich | „der Baum bleibt ein Baum" |
-| kein Ueber-/Unterlauf | „der Refcount ist die Zahl der Verweise" |
-| kein Alias, keine Ausleihverletzung | „die Nachricht kam beim richtigen Thread an" |
-| Rahmenbedingung: was **nicht** angefasst wird | „nach `revoke` hat `s` keine Abkoemmlinge" |
-| die Sperre wird gehalten, die Ordnung stimmt | „ein erschoepfter Thread laeuft nicht" |
-| kein Datenrennen | „die Faerbung trennt die Mandanten" |
-| die Schleife endet, weil die Menge endlich ist | die Schleife endet, weil **der Algorithmus** fortschreitet |
-| die Verfeinerung Quelle ↔ C | — |
-| die Wohlgeformtheit einer Datenstruktur nach einer **erzeugten** Mutation | die **Formulierung** der Invariante |
+| an index lies in range | "the tree stays a tree" |
+| no over-/underflow | "the refcount is the number of references" |
+| no alias, no borrow violation | "the message arrived at the right thread" |
+| frame condition: what is **not** touched | "after `revoke`, `s` has no descendants" |
+| the lock is held, the order is right | "an exhausted thread does not run" |
+| no data race | "the colouring separates the tenants" |
+| the loop ends because the set is finite | the loop ends because **the algorithm** makes progress |
+| the refinement source ↔ C | — |
+| the well-formedness of a data structure after a **generated** mutation | the **formulation** of the invariant |
 
-**Der Grenzfall ist die Terminierung**, und die Regel entscheidet ihn: „endet, weil ueber eine
-endliche Menge gelaufen wird" nennt nur die Maschine — **Klempnerei**. „Endet, weil der Scheduler
-Fortschritt macht" nennt die Sache — **Logik**, und sie gehoert hingeschrieben.
+**The borderline case is termination**, and the rule decides it: "ends because it runs over a
+finite set" names only the machine — **plumbing**. "Ends because the scheduler makes progress"
+names the subject — **logic**, and it belongs written down.
 
 ---
 
-### Was das mit den vorhandenen Messungen macht
+### What that does to the existing measurements
 
-**Die Zahlen bleiben, ihre Lesart aendert sich** — und beide Messungen sind daraufhin **noch nicht
-aufgeschluesselt**. Das ist der naechste Papierschritt, nicht eine Behauptung:
+**The numbers stay, their reading changes** — and both measurements are consequently **not yet
+broken down**. That is the next paper step, not a claim:
 
-| Messung | Zahl | **offen: welcher Anteil ist Logik?** |
+| Measurement | Number | **open: which share is logic?** |
 |---|---|---|
-| `delete_leaf` (Pruefer) | ~~3,6–6 : 1~~ **unbelegt, ersetzt durch 1,75 : 1** (2026-08-15, Aufschluesselung unten) | Kettenendlichkeit und Indexgrenzen sind **Klempnerei** und muessten fallen; `child_points_back` und `refcount_matches` sind **Formulierungen von Invarianten**, also Logik |
-| `Endpoint::call` (Entwerfer) | 1,8–2,3 : 1 | `msg_copied` ist **Logik** und war an nichts gebunden (G2); die fehlende `locks`-Wirkung (G3) ist **Klempnerei**, die gar nicht haette anfallen duerfen |
+| `delete_leaf` (checker) | ~~3,6–6 : 1~~ **unevidenced, replaced by 1,75 : 1** (2026-08-15, breakdown below) | chain finiteness and index bounds are **plumbing** and would have to fall; `child_points_back` and `refcount_matches` are **formulations of invariants**, i.e. logic |
+| `Endpoint::call` (designer) | 1,8–2,3 : 1 | `msg_copied` is **logic** and was bound to nothing (G2); the missing `locks` effect (G3) is **plumbing** that should never have arisen at all |
 
-- [ ] **Beide Messungen nach Logik/Klempnerei aufschluesseln.** Erst dann sagen sie etwas ueber das
-      Kriterium. **Eine Zahl ohne diese Aufteilung ist ab jetzt kein Messwert.**
-
----
-
-### Die Abbruchbedingung wird schaerfer, nicht weicher
-
-Bisher: *„ueber 3 : 1"* — eine Zahl, messbar erst mit Uebersetzer.
-
-**Jetzt:** *„es bleibt eine **benannte** Klempnerei-Pflicht, die der Programmierer von Hand
-erledigen muss."*
-
-Das ist **auf Papier je Konstrukt pruefbar** und damit ungleich billiger. Jede solche Stelle ist
-entweder ein fehlendes Konstrukt oder das Ende der These.
-
-**Zwei stehen heute schon da, beide aus den Papiertests:**
-
-1. **`self.queues[p]` nach `31 - leading_zeros()`** (`caprock-sched/src/lib.rs:1996`) braucht die
-   Datenstruktur-Invariante, um die Indexpflicht zu erledigen. **Reine Klempnerei** — und heute
-   nicht durch Konstruktion gedeckt. Entweder M1 traegt sie, oder das Kriterium ist an dieser
-   Stelle verletzt.
-2. **Die Verfeinerung**, wenn die Absenkung nicht flach genug ist. Sie erwaehnt nie die Sache und
-   ist damit per Definition Klempnerei — jedes Verfeinerungslemma ist ein Verstoss.
+- [ ] **Break both measurements down into logic/plumbing.** Only then do they say anything about
+      the criterion. **A number without that split is from now on not a measured value.**
 
 ---
 
-### Warum das Kriterium besser ist als die Zahl
+### The abort condition gets sharper, not softer
 
-* **Es ist per Konstrukt entscheidbar**, ohne Uebersetzer und ohne Korpus.
-* **Es kann nicht durch kurze falsche Zusagen geschoent werden** — der Fund aus
-  [`MESSUNGEN.md`](MESSUNGEN.md) verliert seine Wirkung, weil nicht mehr die **Menge**
-  zaehlt, sondern die **Art**. Ein falsches `ensures` ist Logik, die falsch ist; es macht die Zahl
-  nicht besser.
-* **Es sagt, was Gabbro ist**, in einem Satz, den man widerlegen kann: *alles ausser der Logik
-  faellt durch Konstruktion.* Wer eine Klempnerei-Pflicht findet, die haengen bleibt, hat den Satz
-  an dieser Stelle widerlegt — und zugleich gesagt, welches Konstrukt fehlt.
-* **Es macht die Zahl ehrlich:** 2 : 1 aus lauter Logik ist ein Erfolg. 0,5 : 1 mit
-  handgeschriebenen Bereichspruefungen ist keiner.
+Until now: *"above 3 : 1"* — a number, measurable only once there is a compiler.
 
----
+**Now:** *"a **named** plumbing obligation remains that the programmer has to discharge by
+hand."*
 
-### Was es nicht heisst
+That is **checkable on paper, per construct**, and thereby incomparably cheaper. Every such site
+is either a missing construct or the end of the thesis.
 
-* **Die Trennlinie ist eine Entscheidung, kein Naturgesetz.** „Nennt nur die Maschine" ist scharf
-  genug fuer die Faelle oben und wird an einem Grenzfall streiten muessen. **Der Streitfall gehoert
-  dann hierher, nicht in eine Fussnote.**
-* **Es ersetzt die Messung nicht, es ordnet sie.** Ohne Aufschluesselung bleibt jede Zahl das, was
-  sie vorher war: ein Stellvertreter.
+**Two of them already stand there today, both from the paper tests:**
 
+1. **`self.queues[p]` after `31 - leading_zeros()`** (`caprock-sched/src/lib.rs:1996`) needs the
+   data-structure invariant in order to discharge the index obligation. **Pure plumbing** — and
+   today not covered by construction. Either M1 carries it, or the criterion is violated at this
+   site.
+2. **The refinement**, if the lowering is not flat enough. It never mentions the subject and is
+   therefore plumbing by definition — every refinement lemma is a breach.
 
 ---
 
-# Die Luecken zwischen Beweispflicht und Gold
+### Why the criterion is better than the number
 
-## Was Gabbro fuer GOLD fehlt — ausser dem Logikbeweis und der Ausdruckskraft
-
-**2026-08-14.** Zwei Posten sind ausdruecklich **nicht** gemeint: der **Logikbeweis** (den schreibt
-der Programmierer, in jeder Sprache) und die **Ausdruckskraft** (dass alle Programme, vor allem
-Caprock, hineinpassen — das ist der laufende Rueckstand, s. `PLAN.md` A3/A5/A6/A7).
-
-**Was bleibt, wenn man beides wegnimmt?** Die Antwort ist unbequem und kurz:
-
-> **Gabbro erzeugt Beweispflichten. Es gibt nichts, was sie erfuellt, und nichts, WORUEBER sie
-> sprechen.**
-
-Eine Beweispflicht braucht dreierlei: eine **Sprache**, ein **Modell**, in dem sie einen Sinn hat,
-und einen **Beweiser**. Gabbro hat die Sprache — halb. Modell und Beweiser hat es gar nicht.
+* **It is decidable per construct**, without a compiler and without a corpus.
+* **It cannot be flattered by short false promises** — the finding from
+  [`MESSUNGEN.md`](MESSUNGEN.md) loses its force, because what counts is no longer the
+  **quantity** but the **kind**. A false `ensures` is logic that is false; it does not make the
+  number better.
+* **It says what Gabbro is**, in one sentence you can refute: *everything except the logic falls
+  out by construction.* Whoever finds a plumbing obligation that stays hanging has refuted the
+  sentence at that point — and at the same time said which construct is missing.
+* **It makes the number honest:** 2 : 1 of pure logic is a success. 0,5 : 1 with hand-written
+  range checks is not.
 
 ---
 
-### L1 — Ein MASCHINENMODELL. **Entworfen am 2026-08-14** ([`BEWEIS.md`](BEWEIS.md)): 106 Axiome, ~130 Namen — und die 20 arch-neutralen Familien stehen bereits in `caprock-hal/*/cpu.rs`
+### What it does not mean
 
-#### Die urspruengliche Fassung der Luecke
+* **The dividing line is a decision, not a law of nature.** "Mentions only the machine" is sharp
+  enough for the cases above and will have to be argued over at some borderline case. **The
+  disputed case then belongs here, not in a footnote.**
+* **It does not replace the measurement, it orders it.** Without the breakdown every number stays
+  what it was before: a proxy.
 
-`axiom write_cr3(p: Pa) effects { writes tlb, writes active_table }` nennt eine **Wirkung auf einen
-Zustand, den es nicht gibt.** Es gibt keinen `tlb`, keine `active_table`, keinen Maschinenzustand —
-nur ein Wort in einer Wirkungsliste.
 
-**Damit ist heute nicht sagbar, was ein privilegierter Befehl TUT**, nur dass er etwas anfasst. Ein
-Gold-Beweis ueber einem Kernel ist aber im Kern ein Beweis **ueber Maschinenzustaenden**: „nach
-`write_cr3(p)` uebersetzt jeder Zugriff nach der Tabelle bei `p`".
+---
+
+# The gaps between proof obligation and Gold
+
+## What Gabbro lacks for GOLD — apart from the logic proof and the expressive power
+
+**2026-08-14.** Two items are explicitly **not** meant: the **logic proof** (the programmer
+writes that, in every language) and the **expressive power** (that all programs, above all
+Caprock, fit inside — that is the running backlog, see `PLAN.md` A3/A5/A6/A7).
+
+**What is left when you take both away?** The answer is uncomfortable and short:
+
+> **Gabbro produces proof obligations. There is nothing that discharges them, and nothing they
+> speak ABOUT.**
+
+A proof obligation needs three things: a **language**, a **model** in which it has a meaning, and
+a **prover**. Gabbro has the language — half of it. Model and prover it does not have at all.
+
+---
+
+### L1 — A MACHINE MODEL. **Designed on 2026-08-14** ([`BEWEIS.md`](BEWEIS.md)): 106 axioms, ~130 names — and the 20 arch-neutral families already stand in `caprock-hal/*/cpu.rs`
+
+#### The original version of the gap
+
+`axiom write_cr3(p: Pa) effects { writes tlb, writes active_table }` names an **effect on a state
+that does not exist.** There is no `tlb`, no `active_table`, no machine state — only a word in an
+effect list.
+
+**With that it is not sayable today what a privileged instruction DOES**, only that it touches
+something. But a Gold proof over a kernel is at its core a proof **over machine states**: "after
+`write_cr3(p)` every access translates according to the table at `p`".
 
 | | |
 |---|---|
-| **Was fehlt** | ein Zustandsraum (Register, TLB, Seitentabellen, Geraetezustand) und je Axiom eine **Uebergangsfunktion** darauf |
-| **Warum es nicht „Logik" ist** | der Programmierer beweist ueber *seinem* Programm; das Maschinenmodell ist **unter** ihm und fuer alle Programme dasselbe |
-| **Groessenordnung** | seL4 hat dafuer ein eigenes Modell in Isabelle. **Das ist kein Nebenposten, das ist ein Teilprojekt** |
+| **What is missing** | a state space (registers, TLB, page tables, device state) and per axiom a **transition function** over it |
+| **Why it is not "logic"** | the programmer proves over *his* program; the machine model is **beneath** him and the same for all programs |
+| **Order of magnitude** | seL4 has its own model in Isabelle for this. **That is not a side item, that is a subproject** |
 
 ---
 
-### L2 — Ein SPEICHERMODELL. **Entschieden: RC11 ohne SC** — und die Wahl ist weniger tragend als hier unterstellt, weil Caprock nur RMW-Atomizitaet und Kohaerenz je Adresse beansprucht ([`BEWEIS.md`](BEWEIS.md))
+### L2 — A MEMORY MODEL. **Decided: RC11 without SC** — and the choice is less load-bearing than assumed here, because Caprock claims only RMW atomicity and per-address coherence ([`BEWEIS.md`](BEWEIS.md))
 
-#### Die urspruengliche Fassung der Luecke
+#### The original version of the gap
 
-`atomic X : bool publishes { Y } release;` ist heute eine **Schreibweise ohne Bedeutung.** Was
-`release` formal heisst — welche vorherigen Schreibvorgaenge fuer welchen `acquire` sichtbar werden
-—, steht nirgends.
+`atomic X : bool publishes { Y } release;` is today a **notation without a meaning.** What
+`release` formally means — which prior writes become visible for which `acquire` — stands
+nowhere.
 
-**Ohne Speichermodell ist ueber einen nebenlaeufigen Kernel nichts zu beweisen.** Und Caprock ist
-nebenlaeufig: **2 231 `Ordering::`-Fundstellen**, davon 872 in einer einzigen Datei.
+**Without a memory model nothing can be proved about a concurrent kernel.** And Caprock is
+concurrent: **2 231 `Ordering::` sites**, 872 of them in a single file.
 
-> **Das ist der Posten, den seL4 UMGANGEN hat**, nicht geloest — der seL4-Beweis ist im Kern
-> sequenziell. Wer einen nebenlaeufigen Kernel gold beweisen will, betritt Gebiet, das auch die
-> Vorbilder nicht betreten haben.
-
----
-
-### L3 — **ENTSCHIEDEN 2026-08-14** ([`BEWEIS.md`](BEWEIS.md)): drei Arten Pflichten, Schablonen nach Isabelle, Programmpflichten ueber einen **Zertifikatspruefer**. **Und die Decke: Gold im seL4-Sinn ist auf diesem Weg nicht erreichbar**
-
-#### Die urspruengliche Fassung der Luecke
-
-Der Typpruefer erledigt **Klempnerei**. Die **Logik**-Pflichten — `ensures`, `maintains`,
-`invariant` — erzeugt Gabbro und **niemand entlaedt sie**.
-
-Frueher stand dafuer „ein vorhandener Beweiser" (Verus/GNATprove/Frama-C). **Mit der Entscheidung
-„Ausgabe ist C + iasm, Gabbro prueft selbst" ist dieser Weg zu** — und kein Ersatz benannt.
-
-- [ ] **Zu entscheiden, und es ist eine Richtungsentscheidung:** eigener SMT-Anschluss (Z3/CVC5
-      hinter `pred`), oder Ausgabe der Pflichten in ein vorhandenes System (Why3, Isabelle), oder
-      doch eine zweite Emission. **Jede Antwort kostet etwas anderes**, und heute steht keine da.
+> **This is the item seL4 SIDESTEPPED**, not solved — the seL4 proof is sequential at its core.
+> Whoever wants to prove a concurrent kernel gold enters territory the models themselves have not
+> entered.
 
 ---
 
-### L4 — **ENTSCHIEDEN 2026-08-14**: es sind **drei** Absenkungen, nicht eine; Deckungszeugnis je Lauf; und der unbenannte Riss ist **welches C** ([`BEWEIS.md`](BEWEIS.md))
+### L3 — **DECIDED 2026-08-14** ([`BEWEIS.md`](BEWEIS.md)): three kinds of obligation, templates into Isabelle, program obligations via a **certificate checker**. **And the ceiling: Gold in the seL4 sense is not reachable on this path**
 
-#### Die urspruengliche Fassung der Luecke
+#### The original version of the gap
 
-„Syntaxgesteuert und nicht optimierend" ist die Bedingung, unter der die Verfeinerung billig wird.
-**Nichts prueft sie.** Der Beweis liegt auf der Quelle, ausgeliefert wird das C — dass beide
-dasselbe tun, ist **unbewiesen**, und genau diese Luecke schliesst seL4 mit Binaerverifikation
-(eigenes Projekt, steht unter „Spaeter").
+The type checker discharges **plumbing**. The **logic** obligations — `ensures`, `maintains`,
+`invariant` — Gabbro produces and **nobody discharges them**.
+
+Formerly the answer was "an existing prover" (Verus/GNATprove/Frama-C). **With the decision
+"output is C + iasm, Gabbro checks for itself" that route is closed** — and no replacement is
+named.
+
+- [ ] **To be decided, and it is a decision about direction:** an SMT connection of one's own
+      (Z3/CVC5 behind `pred`), or emitting the obligations into an existing system (Why3,
+      Isabelle), or after all a second emission. **Every answer costs something different**, and
+      today none of them stands there.
 
 ---
 
-### L5 — Die eigene TCB ist nicht benennbar
+### L4 — **DECIDED 2026-08-14**: there are **three** lowerings, not one; a coverage certificate per run; and the unnamed crack is **which C** ([`BEWEIS.md`](BEWEIS.md))
 
-Die Annahmenmenge im Erzeugnis („bewiesen unter A1…An") deckt die **Hardware**. Sie deckt **nicht**:
+#### The original version of the gap
 
-| | unverifiziert |
+"Syntax-directed and non-optimising" is the condition under which the refinement becomes cheap.
+**Nothing checks it.** The proof lies on the source, what is shipped is the C — that both do the
+same thing is **unproved**, and exactly this gap seL4 closes with binary verification (a project
+of its own, filed under "Later").
+
+---
+
+### L5 — One's own TCB cannot be named
+
+The assumption set in the artefact ("proved under A1…An") covers the **hardware**. It does **not**
+cover:
+
+| | unverified |
 |---|---|
-| der Gabbro-Typpruefer | ja |
-| die Absenkung nach C | ja |
-| die **Geistertheorie-Schablonen** (dort lebt die strukturelle Induktion) | ja |
-| die Axiomschicht | ja, und sie ist die groesste Flaeche |
+| the Gabbro type checker | yes |
+| the lowering to C | yes |
+| the **ghost-theory templates** (that is where the structural induction lives) | yes |
+| the axiom layer | yes, and it is the largest surface |
 
-**Fuer Gold muss man sagen koennen, worauf man vertraut hat.** Heute kann man es fuer die Hardware
-und fuer nichts sonst.
-
----
-
-### L6 — Der ANFANG fehlt
-
-Ein Beweis beginnt in einem Zustand. **Welcher Zustand gilt, bevor der erste Gabbro-Code laeuft?**
-Die Bootphase ist als Marke da (`BootPhase`, linear, `boot_end` bildet `.boot` ab) — aber was
-**gilt**, wenn sie verbraucht wird, steht nirgends. seL4 hat dafuer einen eigenen Initialisierungs-
-beweis.
+**For Gold you have to be able to say what you trusted.** Today you can say it for the hardware
+and for nothing else.
 
 ---
 
-### Was ausdruecklich NICHT auf dieser Liste steht
+### L6 — The BEGINNING is missing
 
-* **Lebendigkeit und Fortschritt** — kein Mechanismus adressiert sie, und das ist eine
-  ausgesprochene Grenze, kein Rueckstand.
-* **Der Logikbeweis** — er ist der Punkt der Uebung, nicht ein Mangel.
-* **Die Ausdruckskraft** — sie ist der laufende Rueckstand (19 haengende Klempnerei-Pflichten,
-  kein Fragment im Ordner), aber sie war ausgenommen.
+A proof begins in a state. **Which state holds before the first Gabbro code runs?** The boot phase
+is there as a token (`BootPhase`, linear, `boot_end` unmaps `.boot`) — but what **holds** when it
+is consumed stands nowhere. seL4 has an initialisation proof of its own for this.
 
 ---
 
-### Die ehrliche Bilanz
+### What explicitly is NOT on this list
 
-**Vier der sechs Posten (L1, L2, L3, L6) sind jeweils ein Teilprojekt**, kein offener Punkt. L2 ist
-zusaetzlich einer, den die Vorbilder nicht geloest, sondern **umgangen** haben.
+* **Liveness and progress** — no mechanism addresses them, and that is a stated limit, not a
+  backlog.
+* **The logic proof** — it is the point of the exercise, not a defect.
+* **The expressive power** — it is the running backlog (19 hanging plumbing obligations, no
+  fragment in the folder — *both figures are from 2026-08-14 and the folder has overtaken them:
+  the fragments stand written out in [`FRAGMENTE.md`](FRAGMENTE.md), and the 19 were never
+  evidenced, see W7*), but it was excepted.
 
-> **Damit ist die Frage „was fehlt fuer Gold" heute nicht mit einer Liste von Konstrukten zu
-> beantworten.** Die Sprache kann die Pflichten **aufstellen**; sie hat weder das Modell, in dem
-> sie einen Sinn haben, noch das Werkzeug, das sie entlaedt.
+---
+
+### The honest balance
+
+**Four of the six items (L1, L2, L3, L6) are each a subproject**, not an open item. L2 is on top
+of that one the models did not solve but **sidestepped**.
+
+> **With that the question "what is missing for Gold" cannot be answered today with a list of
+> constructs.** The language can **set up** the obligations; it has neither the model in which
+> they have a meaning nor the tool that discharges them.
 >
-> **Das ist keine Widerlegung** — Gabbros Zusage war nie, den Beweis zu fuehren. Es ist die
-> Feststellung, dass zwischen „erzeugt gute Beweispflichten" und „Gold" **nicht die letzte Meile
-> liegt, sondern der Weg**.
+> **That is not a refutation** — Gabbro's promise was never to carry out the proof. It is the
+> observation that between "produces good proof obligations" and "Gold" lies **not the last mile
+> but the road**.
 
-- [ ] **Der billigste Schritt dagegen ist L3, und er ist eine Entscheidung, keine Arbeit:** wohin
-      gehen die Logik-Pflichten? Solange das offen ist, ist jede weitere Grammatikregel eine Zeile
-      fuer einen Empfaenger, den es nicht gibt.
+- [ ] **The cheapest step against this is L3, and it is a decision, not work:** where do the logic
+      obligations go? As long as that is open, every further grammar rule is a line for a
+      recipient that does not exist.
 
 
 ---
 
-### Was die Luecken KOSTEN — die Rechnung, zusammengezogen (2026-08-14)
+### What the gaps COST — the bill, drawn together (2026-08-14)
 
-**Die Frage ist nicht, ob es Luecken gibt, sondern in welcher Waehrung sie bezahlt werden.** Es
-gibt genau zwei, und der Unterschied ist der ganze Entwurf:
+**The question is not whether there are gaps, but in which currency they are paid.** There are
+exactly two, and the difference is the whole design:
 
-| Waehrung | heisst | Beispiel |
+| Currency | means | Example |
 |---|---|---|
-| **Reichweite** | der Satz gilt **relativ zu benannten Annahmen**. Man weiss, was man bewiesen hat, und woran es haengt | „speichersicher **unter A1…An**" |
-| **Gueltigkeit** | man weiss **nicht**, was man bewiesen hat, weil die Annahme unbenannt ist | ein `unsafe`-Block mit einem Kommentar |
+| **Reach** | the sentence holds **relative to named assumptions**. You know what you have proved, and what it hangs on | "memory-safe **under A1…An**" |
+| **Validity** | you do **not** know what you have proved, because the assumption is unnamed | an `unsafe` block with a comment |
 
-> **Gabbros Entwurf besteht im Kern darin, jede Luecke von der zweiten Waehrung in die erste zu
-> ueberfuehren.** Deshalb steht die Annahmenmenge **im Erzeugnis** und nicht in einer Fussnote.
+> **Gabbro's design consists at its core in transferring every gap from the second currency into
+> the first.** Which is why the assumption set stands **in the artefact** and not in a footnote.
 
-#### Die vier Luecken, einzeln beziffert
+#### The four gaps, itemised
 
-| Luecke | kostet | Zahl |
+| Gap | costs | Number |
 |---|---|---|
-| **Axiomschicht** | Reichweite | **~130 Namen** fuer zwei Architekturen (A1–A25 gezaehlt, plus MSRs, CPUID-Blaetter, Geraeteannahmen). **Ratsche: darf nur fallen** — und `port` hat sie gerade um **70 Fundstellen** entlastet |
-| **Speichermodell** | Reichweite | **2 Annahmen** (`c11_release_acquire_x86`/`_aarch64`), je mit Litmus-Falsifikator (MP/SB/LB) |
-| **Vertrauensbasis der Werkzeuge** | Reichweite | **4 Posten**: Pruefer, Absenkung, **eine** `iasm`-Emissionsstelle, N Geistertheorie-Schablonen. Alle benannt, keiner geschaetzt |
-| **Naht CPU ↔ Geraet** | Reichweite, **aber ohne Vorbild** | die Geraeteseite ist `assume` + Sonde, die **Verbindung** hat kein mechanisiertes Modell. Fuer die MMU gibt es Vorarbeit, fuer DMA nicht |
-| **Lebendigkeit (D8)** | Reichweite | jede Fortschrittsaussage ist ein `progress`-**assume** mit Falsifikator (der Watchdog). **96 Endlosschleifen** gemessen; wieviele eine Fortschrittsaussage brauchen, ist ungezaehlt |
-| **Funktionale Korrektheit ausserhalb der Struktur-Induktion** | **unbekannt** | **das ist die einzige Luecke ohne Zahl** — und genau sie ist die offene Messung |
+| **Axiom layer** | reach | **~130 names** for two architectures (A1–A25 counted, plus MSRs, CPUID leaves, device assumptions). **Ratchet: may only fall** — and `port` has just relieved it by **70 sites** |
+| **Memory model** | reach | **2 assumptions** (`c11_release_acquire_x86`/`_aarch64`), each with a litmus falsifier (MP/SB/LB) |
+| **Trust base of the tools** | reach | **4 items**: checker, lowering, **one** `iasm` emission site, N ghost-theory templates. All named, none estimated |
+| **Seam CPU ↔ device** | reach, **but without a model to follow** | the device side is `assume` + probe, the **connection** has no mechanised model. For the MMU there is prior work, for DMA there is none |
+| **Liveness (D8)** | reach | every progress statement is a `progress` **assume** with a falsifier (the watchdog). **96 infinite loops** measured; how many need a progress statement is uncounted |
+| **Functional correctness outside the structural induction** | **unknown** | **that is the only gap without a number** — and it is exactly the open measurement |
 
-#### Der Satz, den ein fertiger Caprock-Beweis am Ende traegt
+#### The sentence a finished Caprock proof carries at the end
 
 ```
-speichersicher    unter A1…An            n ≈ 130, gemessen, ratschenfaehig
-rennfrei          unter c11_*            2, mit Litmus-Sonden
-funktional offen  an O1…Ok               k UNBEKANNT
+memory-safe       under A1…An            n ≈ 130, measured, ratchetable
+race-free         under c11_*            2, with litmus probes
+functionally open on O1…Ok               k UNKNOWN
 ```
 
-> **Die Kosten aller Luecken zusammen sind: `n` ist gross, aber gezaehlt und fallend — und `k` ist
-> ungezaehlt.** Das ist die ganze Rechnung. **`k` zu kennen, ist der billigste Schritt, der den
-> Ordner noch bewegt**, und er ist derselbe wie der Falsifikator der L3-Entscheidung: **die 17
-> gemessenen Logik-Pflichten einordnen** in *durch Konstruktion · durch erzeugtes Induktionsschema ·
-> von Hand*.
+> **The cost of all the gaps together is: `n` is large, but counted and falling — and `k` is
+> uncounted.** That is the whole bill. **Knowing `k` is the cheapest step that still moves the
+> folder**, and it is the same one as the falsifier of the L3 decision: **classify the 17 measured
+> logic obligations** into *by construction · by generated induction scheme · by hand*.
 
-**Was die dritte Spalte kostet, laesst sich vorab sagen:** ein Rumpf, der von Hand bewiesen werden
-muss, kostet nach der eigenen Messung **5 : 1** auf seinem Anteil. Bei 5 % des Kernels sind das
-+0,25 auf die Kennzahl, bei 10 % +0,5. **Ein einziger unerwarteter Fall dort ist deshalb teurer als
-alle 130 Axiome zusammen** — die kosten Reichweite, er kostet Arbeit.
+**What the third column costs can be said in advance:** a body that has to be proved by hand costs,
+by our own measurement, **5 : 1** on its share. At 5 % of the kernel that is +0,25 on the metric,
+at 10 % +0,5. **A single unexpected case there is therefore more expensive than all 130 axioms
+together** — they cost reach, it costs work.
 
-
----
-
-# L1 und L2 — Maschinenmodell und Speichermodell
-
-## L1 und L2 — Maschinenmodell und Speichermodell, entworfen und gemessen
-
-**2026-08-14.** Die zwei schwersten Posten aus [`BEWEIS.md`](BEWEIS.md). Tragende Zahlen
-nachgeprueft.
 
 ---
 
-### L1 — Die Axiomzahl: **106**, und der schoenste Fund war schon da
+# L1 and L2 — machine model and memory model
 
-> **W7-KEHRAUS 2026-08-15: UNBELEGT — ZU ERSETZEN.** Die Zahl **106** (und die daraus
-> abgeleiteten **65**, **30**, **~130 Namen**) hat **keine Fundstellenliste im Ordner** —
-> weder je Axiom noch als nachfahrbarer Suchweg. Sie ist damit dieselbe Klasse wie die 74
-> Beweispflichten und die 19 haengenden: *ein ueberliefertes Aggregat ohne Zuordnung.*
+## L1 and L2 — machine model and memory model, designed and measured
+
+**2026-08-14.** The two heaviest items from [`BEWEIS.md`](BEWEIS.md). Load-bearing numbers
+re-checked.
+
+---
+
+### L1 — The axiom count: **106**, and the finest find was already there
+
+> **W7 SWEEP 2026-08-15: UNEVIDENCED — TO BE REPLACED.** The number **106** (and the **65**,
+> **30**, **~130 names** derived from it) has **no source list in the folder** — neither per axiom
+> nor as a re-runnable search path. It is therefore the same class as the 74 proof obligations and
+> the 19 hanging ones: *a handed-down aggregate without attribution.*
 >
-> **Nicht geloescht, weil die Markierung der Befund ist.** Was sie zu ersetzen braucht: eine
-> Liste je Axiom mit `Datei:Zeile` im Registerhandbuch oder im Baum — und **nur die x86-Haelfte
-> ist erhebbar** (die aarch64-Zahl 58 ruht zusaetzlich auf dem versiegelten Baum, s. *Die
-> aarch64-Luecke*). **Bis dahin ist „speichersicher unter A1…An" wieder eine Form ohne Inhalt**,
-> und der Satz zwei Absaetze weiter unten, sie habe „erstmals einen Inhalt", steht unter
-> diesem Vorbehalt.
+> **Not deleted, because the marking is the finding.** What it needs in order to be replaced: a
+> list per axiom with `file:line` in the register manual or in the tree — and **only the x86 half
+> is collectable** (the aarch64 figure 58 additionally rests on the sealed tree, see *The aarch64
+> gap*). **Until then "memory-safe under A1…An" is again a form without content**, and the
+> sentence two paragraphs below, that it has "for the first time a content", stands under this
+> reservation.
 
 | | |
 |---|---|
-| Axiome, je Register und Breite gezaehlt | **106** — x86_64 40, aarch64 58, MMIO-Zugriff 8 |
-| konservativ (parametrisiert) | **65** |
-| davon **reine Lesungen** | **30 (28 %)** — sie aendern keinen Zustand und sind der billige Teil |
-| dazu Kontrollfluss-Primitive, Geraeteannahmen | ~8 + ~25 |
-| **Die Annahmenmenge A1…An eines Zwei-Architektur-Kernels** | **rund 130 Namen** |
+| axioms, counted per register and width | **106** — x86_64 40, aarch64 58, MMIO access 8 |
+| conservative (parameterised) | **65** |
+| of these **pure reads** | **30 (28 %)** — they change no state and are the cheap part |
+| plus control-flow primitives, device assumptions | ~8 + ~25 |
+| **The assumption set A1…An of a two-architecture kernel** | **around 130 names** |
 
-**Damit hat „speichersicher unter A1…An" erstmals einen Inhalt.** 130 ist gross genug, um eine
-Ratsche zu rechtfertigen, und klein genug, um sie zu fuehren.
+**With that, "memory-safe under A1…An" has for the first time a content.** 130 is large enough to
+justify a ratchet, and small enough to maintain one.
 
-#### Zwei Korrekturen an meiner Vorabmessung, beide gegen mich
+#### Two corrections to my advance measurement, both against me
 
-* **168 `asm!` waren nie 168 Fundstellen** — es sind Aufrufe **plus** `global_asm!` **plus**
-  Doc-Erwaehnungen. *(Nachgezaehlt: 150 + 15; die Abweichung zur Agentenzahl ist ein anderes
-  Suchmuster, nicht ein anderer Befund.)*
-* **Von 129 volatilen Zugriffen sind nur 61 Geraete-MMIO.** Die anderen 68 sind Marken und
-  `packed`-Strukturen im normalen RAM. **Ich hatte volatile mit Geraet gleichgesetzt.**
+* **168 `asm!` were never 168 sites** — they are calls **plus** `global_asm!` **plus** doc
+  mentions. *(Recounted: 150 + 15; the deviation from the agent's figure is a different search
+  pattern, not a different finding.)*
+* **Of 129 volatile accesses only 61 are device MMIO.** The other 68 are tokens and `packed`
+  structs in normal RAM. **I had equated volatile with device.**
 
-#### Der Fund: die Axiomschicht steht schon im Baum, nur ohne Namen
+#### The find: the axiom layer already stands in the tree, only without a name
 
-> **Der arch-neutrale Durchschnitt sind ~20 Familien** — aus zwei unabhaengigen Richtungen
-> hergeleitet (Absenkungsklassen und Schnittmenge beider Architekturen).
-> **Nachgeprueft, und es sind exakt 20:** `caprock-hal/src/x86_64/cpu.rs` hat 27 oeffentliche
-> Funktionen, `aarch64/cpu.rs` hat 20, **die Schnittmenge ist 20** — namensgleich:
+> **The arch-neutral intersection is ~20 families** — derived from two independent directions
+> (lowering classes and the intersection of both architectures).
+> **Re-checked, and it is exactly 20:** `caprock-hal/src/x86_64/cpu.rs` has 27 public functions,
+> `aarch64/cpu.rs` has 20, **the intersection is 20** — identically named:
 > `local_irq_save/restore/enable/disable`, `dsb_sy`, `isb`, `csdb`, `csv2`, `csv3`,
 > `speculation_barrier`, `array_index_nospec`, `sb_supported`, `core_id`, `mpidr_affinity`,
 > `current_el`, `halt`, `wfi`, `irqs_freigegeben`, `hypervisor_present`, `sync_code_range`.
 
-**Caprock hat die Axiomabstraktion gebaut, ohne sie so zu nennen.** Das ist der billigste denkbare
-Anfang fuer L1: die Schnittstelle existiert, es fehlen die Uebergangsfunktionen dahinter.
+**Caprock built the axiom abstraction without calling it that.** That is the cheapest conceivable
+beginning for L1: the interface exists, what is missing are the transition functions behind it.
 
 ---
 
-### L2 — RC11 ohne die SC-Achse. Und die Wahl ist weniger tragend als gedacht
+### L2 — RC11 without the SC axis. And the choice is less load-bearing than thought
 
-**Kein Modell erfunden.** Gewaehlt: **RC11 ohne SC**, mit Ownership-Transfer (RSL/FSL/iRC11) als
-Oberflaeche — **der Programmierer sieht RC11 nie**, er schreibt `publishes`.
+**No model invented.** Chosen: **RC11 without SC**, with ownership transfer (RSL/FSL/iRC11) as the
+surface — **the programmer never sees RC11**, he writes `publishes`.
 
-**Die Begruendung ist gemessen, nicht gewaehlt:**
+**The justification is measured, not chosen:**
 
 | | |
 |---|---|
-| `Ordering::SeqCst` im ganzen Baum | **0** — nachgezaehlt |
+| `Ordering::SeqCst` in the whole tree | **0** — recounted |
 | `compare_exchange` | 11 |
-| nichttriviale lock-freie Algorithmen | 3 |
-| Seqlock, RCU, `AtomicPtr`-CAS | **keine** |
-| Anteil der Ordnungsangaben in **Selbsttestcode** | **70 %** |
+| non-trivial lock-free algorithms | 3 |
+| seqlock, RCU, `AtomicPtr` CAS | **none** |
+| share of the ordering annotations in **self-test code** | **70 %** |
 
-*Promising* faellt, weil sein Alleinstellungsmerkmal (out-of-thin-air) in Caprock kein Gegenstueck
-hat; „Rusts Modell" ist kein dritter Kandidat, sondern C11 mit anderer Syntax.
+*Promising* falls, because its distinguishing feature (out-of-thin-air) has no counterpart in
+Caprock; "Rust's model" is not a third candidate but C11 with a different syntax.
 
-> **Die schaerfere Fassung, und sie relativiert L2 selbst:** was Caprock **beansprucht**, ist
-> **RMW-Atomizitaet plus Kohaerenz je Adresse** — und die ist in **allen drei** Modellen identisch.
-> Jede Dekker-foermige Stelle im Baum kollabiert darauf. **Die Modellwahl ist damit deutlich
-> weniger tragend, als die Luecke unterstellt hat.**
+> **The sharper version, and it relativises L2 itself:** what Caprock **claims** is **RMW
+> atomicity plus per-address coherence** — and that is identical in **all three** models. Every
+> Dekker-shaped site in the tree collapses onto it. **The choice of model is thereby considerably
+> less load-bearing than the gap assumed.**
 
 ---
 
-### Was NICHT abgedeckt ist
+### What is NOT covered
 
-**Die Naht CPU ↔ Geraet ist Forschung**, und der Grund ist differenziert statt pauschal:
+**The seam CPU ↔ device is research**, and the reason is differentiated rather than blanket:
 
-| Seite | Stand |
+| Side | State |
 |---|---|
-| CPU | **mechanisch** — Ueberapproximation plus voller Zaun |
-| Geraet | **benannte Annahme mit Falsifikator** — das kann Gabbro |
-| **die Verbindung** | **kein mechanisiertes Vorbild.** Fuer die MMU gibt es Vorarbeit (Syeda & Klein), fuer DMA-Geraete nicht |
+| CPU | **mechanical** — over-approximation plus full fence |
+| device | **named assumption with falsifier** — that Gabbro can do |
+| **the connection** | **no mechanised model to follow.** For the MMU there is prior work (Syeda & Klein), for DMA devices there is none |
 
-**W^X bleibt unformulierbar**, und die Ursache ist dieselbe wie bekannt: **ein PTE ist Zeiger und
-Bitfeld zugleich.** Neu ist die Folge — **der TLB-Entwurf haengt daran.** Damit ist das
-PTE-Konstrukt kein offener Punkt mehr, sondern ein **Blocker mit Grund**.
-
----
-
-### Der schwaechste Teil — vom Entwerfer selbst benannt, und es ist das Hausmuster
-
-> **„Der Maschinenzustand ist die Menge der linearen Geisterwerte."**
-
-Wahr fuer Zustand, den ein Kern **haelt**. Stillschweigend erweitert auf **den** Maschinenzustand —
-**exakt der Zug, den `HISTORIE.md` als Muster fuehrt**, diesmal von einem Agenten an sich selbst
-gefunden. `vspace_wx_ok` ist **eine** gemessene Gegeninstanz, und **wie viele es sonst gibt, ist
-nicht gezaehlt**.
-
-- [ ] **Diese Zahl entscheidet, ob L1 ein Entwurf ist oder eine Skizze.** Sie ist billig zu
-      erheben und steht als naechster Schritt.
-
-Nachrangig, aber lehrreich: **die erste eigene Axiomzaehlung lag bei 75 statt 106 — 29 % zu klein,
-und alle Auslassungen in dieselbe Richtung.** Eine Zaehlung, deren Fehler ein Vorzeichen haben, ist
-keine Zaehlung.
+**W^X remains unformulable**, and the cause is the same one as known: **a PTE is pointer and
+bitfield at once.** New is the consequence — **the TLB design hangs on it.** With that the PTE
+construct is no longer an open item but a **blocker with a reason**.
 
 ---
 
-### Grammatik
+### The weakest part — named by the designer himself, and it is the house pattern
 
-**Ein neues Wort** (`result`), vier Produktionen, **kein neuer Mechanismus** — und `result` war
-unabhaengig schon noetig: ohne es kann **keine** Funktion mit Rueckgabewert in `ensures` ueber ihn
-zusichern. **Die sieben Domaenen halten** — bezahlt mit W^X.
+> **"The machine state is the set of the linear ghost values."**
+
+True for state a core **holds**. Silently extended to **the** machine state — **exactly the move
+`HISTORIE.md` keeps as a pattern**, this time found by an agent on itself. `vspace_wx_ok` is
+**one** measured counter-instance, and **how many others there are is not counted**.
+
+- [ ] **This number decides whether L1 is a design or a sketch.** It is cheap to collect and
+      stands as the next step.
+
+Secondary, but instructive: **the first axiom count of my own came to 75 instead of 106 — 29 % too
+small, and all the omissions in the same direction.** A count whose errors have a sign is not a
+count.
+
+---
+
+### Grammar
+
+**One new word** (`result`), four productions, **no new mechanism** — and `result` was
+independently needed already: without it **no** function with a return value can assure anything
+about it in `ensures`. **The seven domains hold** — paid for with W^X.
 
 
 ---
 
-# L3 und L4 — Beweiser und Entsprechung
+# L3 and L4 — prover and correspondence
 
-## L3 und L4 — der Beweiser und die Entsprechung. **Und die Decke ist benannt**
+## L3 and L4 — the prover and the correspondence. **And the ceiling is named**
 
-**2026-08-14.** Die Auftragsfrage lautete: fallen die sieben Quantorendomaenen bei Schachtelung 2
-in eine **entscheidbare** Theorie? Das waere der staerkste Befund des ganzen Ordners gewesen.
+**2026-08-14.** The commissioned question was: do the seven quantifier domains at nesting depth 2
+fall into a **decidable** theory? That would have been the strongest finding in the whole folder.
 
-> **Gefahren. Antwort: nein.** Und der Grund ist nicht die Domaenenliste.
-
----
-
-### Warum es nicht entscheidbar ist — vier Gruende, jeder fuer sich hinreichend
-
-1. **Die sieben sind in Wahrheit drei Klassen**, und die Zaehlung war schief: eine verschwindet
-   zur Uebersetzungszeit (`fields of`), vier sind endlich indiziert, **zwei sind transitive
-   Huelle** — dazu `reaches … via`, das **dasselbe** ist wie `chain(…) in`, nur als Praedikat
-   geschrieben. **Die Erreichbarkeitsklasse ist drei von acht Konstrukten, nicht eine von sieben.**
-2. **Das array property fragment ist einschlaegig und bricht genau hier:** quantifizierte Indizes
-   duerfen **nur direkt** gelesen werden, `a[b[i]]` ist verboten. **Caprocks CDT ist ein
-   Zeigergeflecht, als Indizes kodiert** — also durchgaengig `a[b[i]]`.
-3. **Die drei tragenden Invarianten von `space.rs` liegen in DREI verschiedenen Theorien:**
-   `cdt_wellformed` (transitive Huelle), `child_points_back` (geschachtelte Lesezugriffe),
-   `refcount_matches` (Kardinalitaet). **Keine bekannte Kombination enthaelt alle drei plus
-   Bitvektoren.**
-4. **Die Schranke „Schachtelung hoechstens zwei" haelt nicht.** Sie gilt ueber dem **Quelltext**,
-   nicht ueber der **Formel**: `maintains` setzt eine `spec fn` mit eigenem `forall` in ein
-   `ensures` mit `forall`, und `spec fn` darf `spec fn` rufen — verboten ist nur Rekursion.
-   **Auf Papier pruefbar, heute nirgends geprueft.**
-
-**Und darueber steht ein Posten, den der Ordner schon gemessen hat:** das Nachordnungslemma aus
-[`MESSUNGEN.md`](MESSUNGEN.md) ist **strukturelle Induktion**, und **kein SMT-Loeser fuehrt
-Induktion**. Damit war die Richtung entschieden, bevor die Frage gestellt war.
-
-**Ein konstruktiver Gegenbefund, und er ist der wertvollste Teil:** die Beweisflaeche ist nicht die
-Domaenenliste, sondern die **Kodierung**. Modelliert man `parent`/`first_child` als **unaere
-Funktionen auf einer abstrakten Sorte** statt als Array-Indizes, wandert die Invariantenfamilie in
-die Erreichbarkeitstheorie. **Zur Laufzeit bleibt es ein Array — die Logik sieht nie einen Index.**
-*(Ungeprueft: der Schluss stammt vom Entwerfer, und `refcount_matches` faellt sicher nicht hinein.)*
+> **Run. Answer: no.** And the reason is not the domain list.
 
 ---
 
-### L3 — Die Pflichten sind nicht EINE Art, sondern DREI
+### Why it is not decidable — four reasons, each sufficient on its own
 
-**Der Ordner hat sie als eine behandelt.** Sobald man trennt, verschwindet der Hauptgrund fuer ein
-Beweiser-Frontend.
+1. **The seven are in truth three classes**, and the count was skewed: one disappears at compile
+   time (`fields of`), four are finitely indexed, **two are transitive closure** — plus
+   `reaches … via`, which is **the same thing** as `chain(…) in`, only written as a predicate.
+   **The reachability class is three of eight constructs, not one of seven.**
+2. **The array property fragment is directly on point and breaks exactly here:** quantified indices
+   may **only** be read directly, `a[b[i]]` is forbidden. **Caprock's CDT is a pointer mesh,
+   encoded as indices** — hence `a[b[i]]` throughout.
+3. **The three load-bearing invariants of `space.rs` lie in THREE different theories:**
+   `cdt_wellformed` (transitive closure), `child_points_back` (nested reads), `refcount_matches`
+   (cardinality). **No known combination contains all three plus bitvectors.**
+4. **The bound "nesting at most two" does not hold.** It holds over the **source text**, not over
+   the **formula**: `maintains` puts a `spec fn` with its own `forall` inside an `ensures` with
+   `forall`, and `spec fn` may call `spec fn` — only recursion is forbidden. **Checkable on paper,
+   today checked nowhere.**
 
-| Stufe | Pflicht | wohin |
+**And above that stands an item the folder has already measured:** the reordering lemma from
+[`MESSUNGEN.md`](MESSUNGEN.md) is **structural induction**, and **no SMT solver does induction**.
+With that the direction was decided before the question was asked.
+
+**A constructive counter-finding, and it is the most valuable part:** the proof surface is not the
+domain list but the **encoding**. If you model `parent`/`first_child` as **unary functions over an
+abstract sort** instead of as array indices, the invariant family moves into the reachability
+theory. **At run time it stays an array — the logic never sees an index.** *(Unchecked: the
+conclusion comes from the designer, and `refcount_matches` certainly does not fall into it.)*
+
+---
+
+### L3 — The obligations are not ONE kind, but THREE
+
+**The folder treated them as one.** As soon as you separate them, the main reason for a prover
+front end disappears.
+
+| Level | Obligation | where to |
 |---|---|---|
-| **1** | **Schablonen** (Geistertheorie, Nachordnungslemma) — endlich viele, haengen am **Konstrukt**, nicht am Programm. **Seit 2026-08-14 gezaehlt, Stand 2026-08-17: 19, davon 15 unbewiesen** (`gabbro schablonen`) — vier sind maschinell geprueft (Isabelle2025-2, `beweise/`). **Und die Zahlen sind die eigentliche Meldung: vier Formalisierungen, das Register wuchs von 17 auf 19, die unbewiesenen fielen um EINS.** *Das Amortisierungsargument gilt jetzt an vier Faellen — und der Preis dafuer war, zwei Eintraege aufzuteilen, weil sie halb beweisbar und halb ueber einem Nichts waren* — der eine Posten ist eine **Liste mit Laenge** | **Isabelle, einmal, ausserhalb des Bauvorgangs.** Der **einzige** Posten, der die Vertrauensbasis **verkleinert** — heute heisst die Schablone „vertrauenskritischste Komponente, geprueft vom unverifizierten Kern" |
-| **2** | **Programmpflichten** | eigener VC-Erzeuger → Z3/cvc5 — **aber im Vertrauen steht ein Zertifikatspruefer in sicherem Rust, nicht der Loeser** |
-| **3** | die Leiter **bewiesen · geprueft · geschuldet** | **null neue Woerter** — sie besteht aus `invariant … runs online\|offline`, `check` und der Annahmenmenge |
+| **1** | **Templates** (ghost theory, reordering lemma) — finitely many, hanging on the **construct**, not on the program. **Counted since 2026-08-14, as of 2026-08-17: 19, of which 15 unproved** (`gabbro schablonen`) — four are machine-checked (Isabelle2025-2, `beweise/`). **And the numbers are the actual report: four formalisations, the register grew from 17 to 19, the unproved ones fell by ONE.** *The amortisation argument now holds over four cases — and the price for it was splitting two entries, because they were half provable and half over a nothing* — the one item is a **list with a length** | **Isabelle, once, outside the build process.** The **only** item that **shrinks** the trust base — today the template is called "the most trust-critical component, checked by the unverified core" |
+| **2** | **Program obligations** | a VC generator of one's own → Z3/cvc5 — **but what stands in the trust base is a certificate checker in safe Rust, not the solver** |
+| **3** | the ladder **proved · checked · owed** | **zero new words** — it consists of `invariant … runs online\|offline`, `check` and the assumption set |
 
-**Fail-closed, nachgeschlagen:** cvc5s Alethe deckt nur Teile, LFSC druckt **`trust steps`** — ein
-Zertifikat mit `trust step` gilt **nicht als bewiesen**. Bei Fehlschlag bricht der Bau **immer** ab,
-mit **unterscheidbaren** Ausgaengen (`widerlegt` ≠ `unklar` — Caprocks Falle woertlich), Zeitschranken
-in **Ressourcen statt Wanduhr** (D13), Loeserversion im Fingerabdruck.
+**Fail-closed, looked up:** cvc5's Alethe covers only parts, LFSC prints **`trust steps`** — a
+certificate with a `trust step` does **not** count as proved. On failure the build **always**
+aborts, with **distinguishable** outcomes (`widerlegt` ≠ `unklar` — Caprock's trap, literally),
+time bounds in **resources rather than wall clock** (D13), solver version in the fingerprint.
 
-**Harte Regel: die Leiter gilt ausschliesslich fuer Logik.** Eine ungeloeste Klempnerei-Pflicht hat
-**genau eine Sprosse und keinen Ausgang.**
+**Hard rule: the ladder applies exclusively to logic.** An unsolved plumbing obligation has
+**exactly one rung and no way out.**
 
-#### Die Decke, und sie gehoert in Zeile 1 des Ordners
+#### The ceiling, and it belongs in line 1 of the folder
 
-> **Programm-spezifische Induktion ist damit ausgeschlossen** — ein Anwender kann keine Schablone
-> schreiben. Die Decke ist **Sicherheitshuelle plus deklarierte Invarianten aus einer endlichen
-> Schablonenbibliothek.**
+> **Program-specific induction is thereby excluded** — a user cannot write a template. The ceiling
+> is **safety hull plus declared invariants from a finite template library.**
 
-#### BERICHTIGUNG (2026-08-14, wenige Stunden spaeter): „unmoeglich" war falsch. Es ist VERBOTEN
+#### CORRECTION (2026-08-14, a few hours later): "impossible" was wrong. It is FORBIDDEN
 
-Die Fassung oben schrieb „fuer immer ausgeschlossen" und „Gold ist auf diesem Weg nicht
-erreichbar". **Nachgelesen: Induktion scheitert an drei Zeilen, und alle drei stehen in der Liste
-„Was es absichtlich nicht gibt"** (`SYNTAX.md`:585):
+The version above wrote "excluded forever" and "Gold is not reachable on this path". **Looked up
+again: induction fails on three lines, and all three stand in the list "What deliberately does not
+exist"** (`SYNTAX.md`:585):
 
-> *benutzerdefinierte Quantorendomaenen · Rekursion in `spec fn` · handgeschriebene Lemmata*
+> *user-defined quantifier domains · recursion in `spec fn` · hand-written lemmas*
 
-**Das sind Entwurfsentscheidungen, keine Saetze.** Wer sie zuruecknimmt, kann Induktion ausdruecken —
-und landet bei Verus oder F\*, was die Linie ausdruecklich vermeiden wollte. **Der Unterschied
-zwischen „unmoeglich" und „von uns verboten" ist genau der Zug, den `HISTORIE.md` als Hausmuster
-fuehrt** — ein Satz, der wahr waere, haette man den Geltungsbereich nicht erweitert.
+**Those are design decisions, not theorems.** Whoever takes them back can express induction — and
+lands at Verus or F\*, which the line explicitly wanted to avoid. **The difference between
+"impossible" and "forbidden by us" is exactly the move `HISTORIE.md` keeps as the house pattern**
+— a sentence that would be true had its scope not been widened.
 
-#### Und es gibt einen dritten Weg, den niemand betrachtet hat
+#### And there is a third way that nobody looked at
 
-Die Fassung oben setzt gleich: *Schablonen haengen am **Konstrukt*** ⟹ *endlich viele* ⟹ *nichts
-Programmspezifisches*. **Der mittlere Schritt stimmt nicht.**
+The version above equates: *templates hang on the **construct*** ⟹ *finitely many* ⟹ *nothing
+program-specific*. **The middle step is not right.**
 
-> **Ein Induktionsschema muss nicht fest sein — es kann aus der DEKLARATION DES ANWENDERS erzeugt
-> werden.**
+> **An induction scheme does not have to be fixed — it can be GENERATED FROM THE USER'S
+> DECLARATION.**
 
-Eine `table` mit `parent`/`first_child`/`next_sibling` **deklariert einen Wald**. Das
-Strukturinduktionsprinzip darueber folgt aus der Deklaration — **genauso wie im Zuschnitt (c) die
-Mutationen daraus folgen.** Der Anwender schreibt **kein** Lemma und **keine** rekursive `spec fn`
-und bekommt trotzdem Induktion **ueber seine eigene Struktur**.
+A `table` with `parent`/`first_child`/`next_sibling` **declares a forest**. The structural
+induction principle over it follows from the declaration — **just as in cut (c) the mutations
+follow from it.** The user writes **no** lemma and **no** recursive `spec fn` and still gets
+induction **over his own structure**.
 
-**Das ist keine Erfindung:** Isabelle und Coq leiten das Induktionsprinzip seit jeher aus der
-Datentypdeklaration ab. Neu waere nur, es auf eine **deklarierte** Tabelle anzuwenden statt auf
-einen Datentyp.
+**That is not an invention:** Isabelle and Coq have always derived the induction principle from the
+datatype declaration. The only new thing would be applying it to a **declared** table instead of to
+a datatype.
 
-**Und es traefe den gemessenen Fall:** das Nachordnungslemma aus [`MESSUNGEN.md`](MESSUNGEN.md)
-ist strukturelle Induktion **ueber genau den deklarierten Baum**.
+**And it would hit the measured case:** the reordering lemma from [`MESSUNGEN.md`](MESSUNGEN.md)
+is structural induction **over exactly the declared tree**.
 
-#### Wo die Schwierigkeit dann wirklich sitzt — und sie ist echt
+#### Where the difficulty then really sits — and it is real
 
-**Eine `table` ist kein induktiver Datentyp, sondern ein veraenderliches Feld.** „Ist ein Wald" ist
-eine **Invariante**, kein Typ — also gilt das Induktionsprinzip nur, **solange die Invariante
-haelt**, und die will man gerade beweisen. Die Standardaufloesung ist eine Induktion ueber ein
-**wohlfundiertes Mass** (etwa die Zahl der Abkoemmlinge) mit der Invariante als **Voraussetzung**.
+**A `table` is not an inductive datatype but a mutable array.** "Is a forest" is an **invariant**,
+not a type — so the induction principle holds only **as long as the invariant holds**, and that is
+precisely what one wants to prove. The standard resolution is an induction over a **well-founded
+measure** (say the number of descendants) with the invariant as a **premise**.
 
-**Machbar, bekannt — und genau dort sitzt die Arbeit.**
+**Doable, known — and that is exactly where the work sits.**
 
-**EINGETRAGEN 2026-08-14:** `by induction over <domain>` steht in der Grammatik — **ein** neues
-Wort (`over` wird wiederverwendet), zwei Produktionen, kein Lemma. Damit lautet die Decke:
-**Sicherheitshuelle + deklarierte Invarianten + induktive Eigenschaften ueber DEKLARIERTEN
-Strukturen.**
+**ENTERED 2026-08-14:** `by induction over <domain>` stands in the grammar — **one** new word
+(`over` is reused), two productions, no lemma. With that the ceiling reads: **safety hull +
+declared invariants + inductive properties over DECLARED structures.**
 
-- [ ] **Zu pruefen, und es ist billig:** reicht ein aus der `table`-Deklaration erzeugtes
-      Induktionsschema fuer die 17 gemessenen Logik-Pflichten? **Diese Frage ersetzt die Behauptung
-      „unmoeglich" durch eine Messung** — und sie ist dieselbe, die als Falsifikator der
-      L3-Entscheidung ohnehin ansteht.
+- [ ] **To be checked, and it is cheap:** does an induction scheme generated from the `table`
+      declaration suffice for the 17 measured logic obligations? **This question replaces the
+      claim "impossible" with a measurement** — and it is the same one that is due anyway as the
+      falsifier of the L3 decision.
 
-#### Was auch danach draussen bleibt
+#### What stays outside even after that
 
-* **Induktion ueber eine beliebige benutzerdefinierte rekursive Funktion** — die gibt es nicht,
-  und das bleibt so.
-* **Induktion ueber Programmablaeufe** (Lebendigkeit) — ausgesprochene Grenze, unabhaengig davon.
-* **Und der Vorbehalt gegen den dritten Weg selbst:** dass das erzeugte Schema die Pflichten
-  wirklich entlaedt, ist **ungeprueft**. Bis dahin ist er ein Entwurf, keine Loesung.
+* **Induction over an arbitrary user-defined recursive function** — that does not exist, and it
+  stays that way.
+* **Induction over program runs** (liveness) — a stated limit, independently of this.
+* **And the reservation against the third way itself:** that the generated scheme really discharges
+  the obligations is **unchecked**. Until then it is a design, not a solution.
 
-**Zur Verwerfung der zweiten Emission:** sie haelt, **aber der Grund im Ordner ist zu breit.** Er
-trifft eine zweite **Code**emission (man zahlt L4 zweimal) und traegt **nicht** gegen ein
-**Pflichten**-Frontend wie Why3. Why3 faellt aus einem anderen Grund: sein Nutzen ist der manuelle
-Rueckfall — *„ein Ordner mit einem Rueckfall hat kein Tor."*
+**On the rejection of the second emission:** it holds, **but the reason in the folder is too
+broad.** It hits a second **code** emission (you pay L4 twice) and does **not** carry against an
+**obligations** front end like Why3. Why3 falls for a different reason: its use is the manual
+fallback — *"a folder with a fallback has no gate."*
 
 ---
 
-### L4 — „Die Absenkung" gibt es nicht, es sind drei
+### L4 — "The lowering" does not exist, there are three
 
-| | Teil | ist „syntaxgesteuert, nicht optimierend" … |
+| | Part | is "syntax-directed, non-optimising" … |
 |---|---|---|
-| **(a)** | flacher Kern | **wahr** |
-| **(b)** | Bibliotheksemissionen (`format`, `table`, `device`) | **gegenstandslos** — eine Deklaration wird zu einem Algorithmus, es gibt keine Quellstruktur |
-| **(c)** | Assembler | **nicht anwendbar** |
+| **(a)** | flat core | **true** |
+| **(b)** | library emissions (`format`, `table`, `device`) | **moot** — a declaration becomes an algorithm, there is no source structure |
+| **(c)** | assembler | **not applicable** |
 
-**Die Bedingung ist ausgerechnet fuer den Teil formuliert, der am wenigsten Zeilen erzeugt.**
+**The condition is formulated, of all things, for the part that generates the fewest lines.**
 
-* **„Nicht optimierend" wird pruefbar als Bijektion zwischen Auswertungsstellen** — und **das geht
-  nur, weil E2 und E3 schon entschieden sind** (Zuweisung ist kein Ausdruck, nichts ist implizit).
-  Ohne sie waere es semantisch und damit unentscheidbar. **Das ist die staerkste Begruendung fuer
-  E2/E3, und sie stand nirgends im Ordner.**
-* **(a):** Deckungszeugnis je Uebersetzungslauf, nachgerechnet von einem **eigenen** Programm mit
-  eigener Regeltabelle — die `checkfat.py`-Lehre. **Abnahme ist die Mutationsliste, nicht die
-  Existenz des Pruefers.**
-* **(b):** ein **Deuter im Uebersetzer** statt der Handschrift, Differenztest gegen den Beschreiber.
-  **Preis, heute nirgends genannt: die Bibliotheksschicht wird zweimal gebaut.**
+* **"Non-optimising" becomes checkable as a bijection between evaluation sites** — and **that only
+  works because E2 and E3 are already decided** (assignment is not an expression, nothing is
+  implicit). Without them it would be semantic and thereby undecidable. **That is the strongest
+  justification for E2/E3, and it stood nowhere in the folder.**
+* **(a):** coverage certificate per compilation run, recomputed by a **separate** program with its
+  own rule table — the `checkfat.py` lesson. **What is accepted is the mutation list, not the
+  existence of the checker.**
+* **(b):** an **interpreter in the compiler** instead of the handwriting, differential test against
+  the descriptor. **Price, named nowhere today: the library layer gets built twice.**
 
-#### Der unbenannte Riss: **welches C?**
+#### The unnamed crack: **which C?**
 
-„Ausgabe ist C" — **ohne benannten Ausschnitt und benannte Uebersetzeroptionen ist die Entsprechung
-nicht unbewiesen, sondern UNFORMULIERBAR.** Vier Stellen, an denen Gabbros eigener Entwurf auf
-undefiniertes Verhalten trifft: `restrict`, vorzeichenbehafteter Ueberlauf, `tagged` → Union,
-volatile. **Die Menge gehoert ins Erzeugnis, neben A1…An.**
+"Output is C" — **without a named subset and named compiler options the correspondence is not
+unproved but UNFORMULABLE.** Four places where Gabbro's own design meets undefined behaviour:
+`restrict`, signed overflow, `tagged` → union, volatile. **The set belongs in the artefact, next to
+A1…An.**
 
-#### Binaerverifikation: **ermoeglicht, und billiger als gedacht**
+#### Binary verification: **enabled, and cheaper than thought**
 
-Sie braucht benannten C-Ausschnitt und erhaltene Funktionsgrenzen — **beides liefert derselbe
-Zeugnispruefer. Eine Eigenschaft, zwei Kaeufe.** Und **Monomorphisierung verbaut sie nicht** — damit
-ist der Widerspruchskandidat aus [`PLAN.md`](PLAN.md) entlastet.
+It needs a named C subset and preserved function boundaries — **the same certificate checker
+delivers both. One property, two purchases.** And **monomorphisation does not block it** — with
+that the contradiction candidate from [`PLAN.md`](PLAN.md) is relieved.
 
-> **Aber:** seL4 nimmt Assembler **und volatile Zugriffe** aus. **Damit laege der ganze
-> `device`/`mmio`-Zweig ebenfalls draussen — genau der Teil mit den meisten getoeteten Fallen.**
-
----
-
-### Die eine Regel, die für **jede** Emissionsentscheidung gilt (W6)
-
-> **Das Weglassen einer Laufzeitprüfung ist ausschliesslich M1-begründet, nie
-> invariantenbegründet.**
-
-Die beiden Netze sehen von aussen gleich aus und hängen an Verschiedenem: **M1 hängt am Typ
-und wird je Programm nachgerechnet; eine Invariante hängt an der Schablone, die sie erhält** —
-also an der unbewiesenen Fläche, die dieser Ordner ohnehin als vertrauenskritisch führt. Eine
-Emission, die eine Bereichsprüfung streicht, *weil der Beweis sagt, es könne nicht negativ
-werden*, verwechselt die zwei — und entlässt eine Behauptung über das **Modell** in die
-**Maschine**.
-
-**Mechanisch, an jeder Emissionsentscheidung, die einen Beweis zitiert:** das zitierte Faktum
-muss aus M1 allein ableitbar sein, sonst bleibt die Prüfung im C. *Vorabfestlegung für eine
-Fläche, die es noch nicht gibt* — siehe `WERKZEUGKASTEN.md`, W6.
-
-### Der Inline-Assembler: **„eine Emissionsstelle statt 161" ist heute FALSCH**
-
-L4 gilt dort nicht — Assembler wird **nicht abgesenkt, sondern eingesetzt**. Pruefbar ist nur die
-**Schnittstelle**, und **die ist heute nicht einmal sagbar**: `prim fn` hat **keinen `abi`-Block**;
-`arch` gibt es, die Registerbelegung nicht.
-
-**Die Flaeche schrumpft also nicht — sie wandert in eine Deklaration ohne Inhalt.**
-
-Die minimale Fassung ist entworfen (`abi`-Block, **vier neue Woerter**); drei der vier Bedingungen
-fallen aus **D2** und **M1**, also nicht beim Programmierer. Die billigere Zwei-Wort-Fassung ist
-geprueft und **verworfen** — `reserved` hiesse dann zweierlei, Caprocks teuerste Fallenklasse.
-**Fuer den Block gilt Zaehlbarkeit, nicht Korrektheit:** ein Axiom eigener Klasse **„Emission"**
-(nicht „Hardware"), plus baubare Falsifikatoren — **drei von vier laufen in Caprock schon.**
-**Der Block bekommt keinen Beweis, aber `check`.**
-
-- [ ] **Noch nicht in der Grammatik.** Die vier Woerter stehen nicht im Wortschatz, die zwei
-      Produktionen nicht in der EBNF, `./pruefe-syntax.sh` ist nicht dagegen gefahren. **Bis dahin
-      ist der `abi`-Teil eine Skizze, keine Regel** — und seine Begruendung ist **schwaecher als
-      bei jedem anderen Konstrukt**: ein Sprachbefund, keine bezahlte Falle.
+> **But:** seL4 excludes assembler **and volatile accesses**. **With that the whole
+> `device`/`mmio` branch would lie outside as well — exactly the part with the most killed
+> traps.**
 
 ---
 
-### Der schwaechste Teil — vom Entwerfer benannt, und er trifft
+### The one rule that applies to **every** emission decision (W6)
 
-1. **Die L3-Entscheidung ruht auf n = 1** (`revoke` → Nachordnungslemma) — **in einem Ordner, der
-   genau diesen Fehler zweimal gemessen hat.** Der Falsifikator steht dabei und kostet einen Tag:
-   die **17 gemessenen Logik-Pflichten** einordnen in *SMT-entscheidbar / braucht Schablone /
-   braucht **programm-spezifische** Induktion*. **Ein einziger Fall in der dritten Spalte widerlegt
-   die Entscheidung.**
-2. **Das Deckungszeugnis prueft STRUKTUR, und es gibt kein Argument, dass Struktur Bedeutung
-   impliziert.** Dazwischen liegt eine handgeschriebene, handgeglaubte Tabelle
-   *Gabbro-Operation → C-Operation → Bedingung*, geschaetzt **40–60 Eintraege** — **A8 um eine
-   Groessenordnung skaliert, und der einzige Posten ohne Instrument.**
-3. **Drei Literaturbehauptungen aus dem Gedaechtnis**; der Satz „bei Funktionskodierung faellt
-   Caprocks Invariantenfamilie in ein entscheidbares Fragment" ist **ein Schluss, ungeprueft**.
+> **Omitting a runtime check is justified by M1 alone, never by an invariant.**
+
+The two nets look the same from outside and hang on different things: **M1 hangs on the type and
+is recomputed per program; an invariant hangs on the template that preserves it** — that is, on
+the unproved surface this folder already keeps as trust-critical. An emission that strikes a range
+check *because the proof says it cannot go negative* confuses the two — and releases a claim about
+the **model** into the **machine**.
+
+**Mechanically, at every emission decision that cites a proof:** the cited fact must be derivable
+from M1 alone, otherwise the check stays in the C. *A prior commitment for a surface that does not
+yet exist* — see `WERKZEUGKASTEN.md`, W6.
+
+### The inline assembler: **"one emission site instead of 161" is FALSE today**
+
+L4 does not apply there — assembler is **not lowered but inserted**. What is checkable is only the
+**interface**, and **today that is not even sayable**: `prim fn` has **no `abi` block**; `arch`
+exists, the register allocation does not.
+
+**The surface therefore does not shrink — it moves into a declaration without content.**
+
+The minimal version is designed (`abi` block, **four new words**); three of the four conditions
+fall out of **D2** and **M1**, so not on the programmer. The cheaper two-word version has been
+examined and **rejected** — `reserved` would then mean two things, Caprock's most expensive trap
+class. **For the block, countability applies, not correctness:** an axiom of its own class
+**"emission"** (not "hardware"), plus buildable falsifiers — **three of four already run in
+Caprock.** **The block gets no proof, but it gets `check`.**
+
+- [ ] **Not in the grammar yet.** The four words are not in the vocabulary, the two productions not
+      in the EBNF, `./pruefe-syntax.sh` has not been run against it. **Until then the `abi` part is
+      a sketch, not a rule** — and its justification is **weaker than that of every other
+      construct**: a language finding, not a paid-for trap.
+
+---
+
+### The weakest part — named by the designer, and it lands
+
+1. **The L3 decision rests on n = 1** (`revoke` → reordering lemma) — **in a folder that has
+   measured exactly this error twice.** The falsifier stands right beside it and costs one day:
+   classify the **17 measured logic obligations** into *SMT-decidable / needs a template / needs
+   **program-specific** induction*. **A single case in the third column refutes the decision.**
+2. **The coverage certificate checks STRUCTURE, and there is no argument that structure implies
+   meaning.** In between lies a hand-written, hand-trusted table *Gabbro operation → C operation →
+   condition*, estimated **40–60 entries** — **A8 scaled up by an order of magnitude, and the only
+   item without an instrument.**
+3. **Three claims from the literature quoted from memory**; the sentence "under a function
+   encoding Caprock's invariant family falls into a decidable fragment" is **a conclusion,
+   unchecked**.
 
 
 ---
 
-# Posten 2 — welches C
+# Item 2 — which C
 
-## Posten 2 — WELCHES C, und wie die Absenkung von einer Zusage zu einer Aussage wird
+## Item 2 — WHICH C, and how the lowering turns from a promise into a statement
 
-**2026-08-14.** Der einzige Posten, an dem Gabbro **strukturell** hinter seL4 zurueckliegt
-([`BEWEIS.md`](BEWEIS.md)). seL4 loest ihn durch **Formalisierung** eines
-C-Ausschnitts (Parser, Simpl/AutoCorres) — ein Teilprojekt.
+**2026-08-14.** The only item on which Gabbro is **structurally** behind seL4
+([`BEWEIS.md`](BEWEIS.md)). seL4 solves it by **formalising** a C subset (parser,
+Simpl/AutoCorres) — a subproject.
 
-**Gabbro loest ihn anders, und der Unterschied ist die ganze Antwort:**
+**Gabbro solves it differently, and the difference is the whole answer:**
 
-> **seL4 formalisiert C. Gabbro emittiert so wenig C, dass dessen Semantik eine ENDLICHE TABELLE
-> ist.** Was nie emittiert wird, braucht keine Semantik.
+> **seL4 formalises C. Gabbro emits so little C that its semantics is a FINITE TABLE.** What is
+> never emitted needs no semantics.
 
 ---
 
-### 1. Die Zielsprache ist nicht „C", sondern eine geschlossene Formenliste
+### 1. The target language is not "C" but a closed list of forms
 
-Der Emittent kennt **eine C-Form je Konstrukt** (Festlegung §14.1). Damit ist die Zielsprache
-**aufzaehlbar**, und sie ist klein:
+The emitter knows **one C form per construct** (definition §14.1). With that the target language
+is **enumerable**, and it is small:
 
 ```
-Deklarationen   static, extern, typedef-freie Struct-/Union-Definition, enum-freie Konstanten
-Typen           uint{8,16,32,64}_t, int{8,16,32,64}_t, _Bool, T*, T[N], struct, union
-Anweisungen     Zuweisung, if/else, switch (erschoepfend, ohne default), for (Zaehlschleife),
-                return, goto NUR als erzeugter Schleifenausgang, Aufruf
-Ausdruecke      Literal, Bezeichner, Feldzugriff, Index, unaeres !/-, binaeres
-                + - * / % & | ^ << >> == != < <= > >=, Aufruf, EXPLIZITER Cast
-Sonstiges       volatile-Zugriff, _Atomic mit benannter Ordnung, _Noreturn, restrict,
-                Inline-Assembler an genau einer Emissionsstelle
+Declarations    static, extern, typedef-free struct/union definition, enum-free constants
+Types           uint{8,16,32,64}_t, int{8,16,32,64}_t, _Bool, T*, T[N], struct, union
+Statements      assignment, if/else, switch (exhaustive, no default), for (counting loop),
+                return, goto ONLY as a generated loop exit, call
+Expressions     literal, identifier, field access, index, unary !/-, binary
+                + - * / % & | ^ << >> == != < <= > >=, call, EXPLICIT cast
+Other           volatile access, _Atomic with named ordering, _Noreturn, restrict,
+                inline assembler at exactly one emission site
 ```
 
-**Was NIE emittiert wird** — und damit ohne Semantikbedarf ist: Praeprozessor ausser `#if` aus
-`when`; `void*`; Zeigerarithmetik; `union`-Umdeutung ohne Marke; Komma-Operator; Zuweisung im
-Ausdruck; `?:`; verschachtelte Zuweisung; implizite Umwandlung; variadische Funktionen; `longjmp`;
-VLA; Bitfelder (Gabbro macht sie selbst mit Maske und Schiebung); `const`-Verwerfung.
+**What is NEVER emitted** — and is therefore free of any need for semantics: preprocessor other
+than `#if` out of `when`; `void*`; pointer arithmetic; `union` reinterpretation without a tag;
+comma operator; assignment inside an expression; `?:`; nested assignment; implicit conversion;
+variadic functions; `longjmp`; VLA; bitfields (Gabbro does them itself with mask and shift);
+`const` discarding.
 
-- [ ] **Die Liste ist zu zaehlen und zu ratschen**, wie die Axiomschicht. Waechst sie, um ein
-      Emissionsproblem zu loesen, ist das dieselbe Bewegung wie eine wachsende Axiomschicht.
+- [ ] **The list is to be counted and ratcheted**, like the axiom layer. If it grows in order to
+      solve an emission problem, that is the same movement as a growing axiom layer.
 
 ---
 
-### 2. Das UB-Inventar — jede Klasse, und wodurch sie stirbt
+### 2. The UB inventory — every class, and what kills it
 
-**Die Beweise leben in Gabbro. Die Gefahr ist, dass die EMISSION sie durch Cs eigene Regeln
-entwertet.** Deshalb ist die Liste nicht „welches UB kann Gabbro-Code haben" (keines), sondern
-**„welches UB kann das erzeugte C haben"**:
+**The proofs live in Gabbro. The danger is that the EMISSION devalues them through C's own
+rules.** Which is why the list is not "which UB can Gabbro code have" (none) but **"which UB can
+the generated C have"**:
 
-| # | UB-Klasse in C | stirbt durch | Restrisiko |
+| # | UB class in C | dies through | residual risk |
 |---|---|---|---|
-| 1 | **vorzeichenbehafteter Ueberlauf** | M1 beweist die Schranke — **aber C weiss das nicht.** Emission nutzt vorzeichenlose Typen, wo moeglich; sonst `-fwrapv` als Guertel | keins, wenn beides steht |
-| 2 | **Zugriff ausserhalb** | M1/M4 im Quelltyp; die Emission erzeugt **keine** Zeigerarithmetik | keins |
-| 3 | **Division/Rest durch null** | M1: der Nenner-Bereich schliesst 0 aus | keins |
-| 4 | **Schieben um ≥ Breite** | M1 beschraenkt den Schiebebetrag | keins |
-| 5 | **striktes Aliasing** | **kein Cast zwischen Zeigertypen wird je emittiert**; `-fno-strict-aliasing` als Guertel | keins |
-| 6 | **Auswertungsreihenfolge / Sequenzpunkte** | **E2**: Zuweisung ist kein Ausdruck, je Anweisung eine Wirkung. **Die ganze Klasse entfaellt** | keins |
-| 7 | **implizite Umwandlung / Ganzzahl-Promotion** | **E3** im Quelltext; die Emission setzt **ueberall explizite Casts** | keins, aber **mechanisch zu pruefen** |
-| 8 | **uninitialisiertes Lesen** | E3: nichts ist implizit, jede Deklaration hat einen Wert | keins |
-| 9 | **Nullzeiger** | Gabbro hat kein `null`; `option` ist `tagged` | **nur am `extern`-Rand** |
-| 10 | **`union`-Umdeutung** | `tagged` schreibt und liest **ueber die Marke**; C11 erlaubt das Lesen eines anderen Glieds ausdruecklich | Fuellbytes bleiben unspezifiziert — **nie gelesen** |
-| 11 | **`restrict` falsch** | aus `effects` erzeugt. **Ist `effects` falsch, ist das C-UB** — ein **Beweis-Export in Cs Regeln** | **echter Vertrauenstransfer, benannt** |
-| 12 | **`volatile`-Semantik** | schwach spezifiziert; MMIO-Praxis. **seL4 nimmt genau das aus** | **Axiom, benannt** (A12/A17) |
+| 1 | **signed overflow** | M1 proves the bound — **but C does not know that.** Emission uses unsigned types where possible; otherwise `-fwrapv` as a belt | none, if both stand |
+| 2 | **out-of-bounds access** | M1/M4 in the source type; the emission generates **no** pointer arithmetic | none |
+| 3 | **division/remainder by zero** | M1: the denominator range excludes 0 | none |
+| 4 | **shift by ≥ width** | M1 bounds the shift amount | none |
+| 5 | **strict aliasing** | **no cast between pointer types is ever emitted**; `-fno-strict-aliasing` as a belt | none |
+| 6 | **evaluation order / sequence points** | **E2**: assignment is not an expression, one effect per statement. **The whole class disappears** | none |
+| 7 | **implicit conversion / integer promotion** | **E3** in the source text; the emission places **explicit casts everywhere** | none, but **to be checked mechanically** |
+| 8 | **uninitialised read** | E3: nothing is implicit, every declaration has a value | none |
+| 9 | **null pointer** | Gabbro has no `null`; `option` is `tagged` | **only at the `extern` boundary** |
+| 10 | **`union` reinterpretation** | `tagged` writes and reads **via the tag**; C11 explicitly permits reading another member | padding bytes stay unspecified — **never read** |
+| 11 | **`restrict` wrong** | generated from `effects`. **If `effects` is wrong, that is C UB** — a **proof export into C's rules** | **a real trust transfer, named** |
+| 12 | **`volatile` semantics** | weakly specified; MMIO practice. **seL4 excludes exactly this** | **axiom, named** (A12/A17) |
 
-> **Zwei Zeilen tragen echtes Restrisiko, und beide sind benannt statt gedeckt:** `restrict` (11)
-> exportiert eine Gabbro-Zusage in Cs UB-Regeln, und `volatile` (12) ist ohnehin Axiom. **Alles
-> Uebrige stirbt an einer Regel, die aus einem anderen Grund schon dasteht** — E2 und E3 zahlen
-> hier zum zweiten Mal.
+> **Two rows carry real residual risk, and both are named rather than covered:** `restrict` (11)
+> exports a Gabbro promise into C's UB rules, and `volatile` (12) is an axiom anyway. **Everything
+> else dies on a rule that is already there for another reason** — E2 and E3 pay a second time
+> here.
 
 ---
 
-### 3. Die Uebersetzeroptionen sind Teil des Artefakts, nicht der Umgebung
+### 3. The compiler options are part of the artefact, not of the environment
 
 ```
 -std=c11 -ffreestanding -fno-builtin
@@ -721,539 +719,520 @@ entwertet.** Deshalb ist die Liste nicht „welches UB kann Gabbro-Code haben" (
 -fno-common -fno-stack-protector
 ```
 
-**Sie gehoeren ins Erzeugnis, neben A1…An** — und mit **Fingerabdruck**. Die Lehre steht im
-Register: *„`cargo build` laeuft durch" ist kein Beleg, solange niemand die KONFIGURATION bindet*
-(`CAPROCK_FLAGS_FP`). Eine Absenkung, deren Gueltigkeit an Optionen haengt, die niemand festhaelt,
-ist eine Zusage ueber eine fremde Maschine.
+**They belong in the artefact, next to A1…An** — and with a **fingerprint**. The lesson stands in
+the register: *"`cargo build` runs through" is no evidence as long as nobody binds the
+CONFIGURATION* (`CAPROCK_FLAGS_FP`). A lowering whose validity hangs on options nobody records is a
+promise about somebody else's machine.
 
-- [ ] **Fail-closed:** uebersetzt jemand das erzeugte C **ohne** die genannten Optionen, muss es
-      **brechen**, nicht stiller anders bedeuten. Mechanismus: eine erzeugte
-      `_Static_assert`-Praeambel, die `__OPTIMIZE__`-unabhaengige Merkmale prueft, plus der
-      Fingerabdruck im Abbild.
+- [ ] **Fail-closed:** if somebody compiles the generated C **without** the named options, it must
+      **break**, not quietly mean something different. Mechanism: a generated `_Static_assert`
+      preamble that checks `__OPTIMIZE__`-independent features, plus the fingerprint in the image.
 
 ---
 
-### 4. Wie die Absenkung von einer Zusage zu einer AUSSAGE wird
+### 4. How the lowering turns from a promise into a STATEMENT
 
-**„Syntaxgesteuert und nicht optimierend" ist heute Prosa.** Pruefbar wird es als **Bijektion
-zwischen Auswertungsstellen** — und **das geht nur, weil E2 und E3 schon entschieden sind**: ohne
-sie waere die Frage semantisch und damit unentscheidbar.
+**"Syntax-directed and non-optimising" is prose today.** It becomes checkable as a **bijection
+between evaluation sites** — and **that only works because E2 and E3 are already decided**:
+without them the question would be semantic and thereby undecidable.
 
-Der Emittent gibt je Uebersetzungslauf ein **Deckungszeugnis** aus:
+The emitter produces a **coverage certificate** per compilation run:
 
 ```
 site  gabbro:space.gb:412:9   ->  c:space.c:1187:5   form ASSIGN_INDEX
 site  gabbro:space.gb:413:5   ->  c:space.c:1188:5   form CALL
-form  ASSIGN_INDEX  =  "<lhs>[<idx>] = <rhs>;"        aus Regel R17
+form  ASSIGN_INDEX  =  "<lhs>[<idx>] = <rhs>;"        from rule R17
 ```
 
-Ein **unabhaengiges** Programm mit **eigener** Formentabelle rechnet nach:
+An **independent** program with its **own** form table recomputes:
 
-1. **Vollstaendigkeit** — jede Gabbro-Auswertungsstelle kommt **genau einmal** vor.
-2. **Reihenfolge** — die C-Stellen stehen in derselben Ordnung.
-3. **Geschlossenheit** — jede C-Form steht in der Liste aus §1.
-4. **Keine Zusatzwirkung** — das C enthaelt keine Auswertungsstelle ohne Gabbro-Urbild.
+1. **Completeness** — every Gabbro evaluation site appears **exactly once**.
+2. **Order** — the C sites stand in the same order.
+3. **Closure** — every C form stands in the list from §1.
+4. **No additional effect** — the C contains no evaluation site without a Gabbro preimage.
 
-**Die `checkfat.py`-Lehre gilt woertlich:** der Nachrechner ist **ein zweites Programm mit
-eigenem Muster**, nicht derselbe Code zweimal gerufen. **Und die Abnahme ist die Mutationsliste,
-nicht die Existenz des Pruefers** — eine absichtlich verschobene Auswertungsstelle muss auffallen.
-
----
-
-### 5. Was das erreicht — und was ausdruecklich nicht
-
-**Erreicht:**
-
-* **Die Zielsprache ist benannt und geschlossen**, damit ist die Entsprechung ueberhaupt
-  formulierbar — vorher war sie das nicht.
-* **Zehn von zwoelf UB-Klassen sterben an vorhandenen Regeln**, nicht an neuen.
-* **Die Absenkung wird je Lauf nachgerechnet**, von einem zweiten Programm.
-* **Binaerverifikation bleibt moeglich** und wird sogar leichter: benannter Ausschnitt und
-  erhaltene Funktionsgrenzen sind genau das, was sie verlangt.
-
-**Nicht erreicht, und der Unterschied zu seL4 bleibt:**
-
-* **Das ist KEINE formale C-Semantik.** Es ist eine **Verkleinerung der Flaeche plus eine
-  strukturelle Nachrechnung.** Was die zwoelf Formen *bedeuten*, steht in einer Tabelle, die ein
-  Mensch geschrieben hat — **40–60 Eintraege, handgeglaubt** (so schon in
-  [`BEWEIS.md`](BEWEIS.md) benannt).
-* **Struktur impliziert nicht Bedeutung.** Das Zeugnis zeigt, dass die Stellen **einander
-  entsprechen** — nicht, dass die C-Form dasselbe **tut**. Die Luecke dazwischen ist genau die
-  Tabelle, und sie ist der **einzige Posten des ganzen Ordners ohne Instrument**.
-* **`restrict` und `volatile` bleiben Vertrauen**, benannt im Manifest.
-
-### Das Instrument, das es doch gibt — Zeugenpaare
-
-**„Der einzige Posten ohne Instrument" war falsch.** Das Werkzeug liegt im eigenen Kasten:
-**jeder Tabelleneintrag bekommt ein ausfuehrbares Zeugenpaar** — ein Gabbro-Fragment, das erwartete
-C, das erwartete Verhalten —, durch den **echten** C-Uebersetzer gefahren und verglichen. Damit ist
-die Tabelle **pruefbar statt handvertraut**, und ein Eintrag ohne Zeugenpaar ist unvollstaendig.
-
-### `restrict` wird eine bepreiste Option, kein Standardexport
-
-`restrict` exportiert eine Gabbro-Zusage in Cs UB-Regeln (Zeile 11 des Inventars). **Deshalb wird
-es standardmaessig NICHT emittiert** — nur dort, wo der Differenz-Benchmark es verlangt. Die
-Kostenwahrheit misst ohnehin gegen Handschrift; **der UB-Transfer wird also genau da bezahlt, wo er
-messbar etwas kauft**, und nirgends sonst.
-
-### Der Gleichtaktfehler des Deckungszeugnisses, benannt
-
-Zwei Programme mit **eigenen** Formentabellen sind N-Versionen — **aber beide Tabellen stammen aus
-demselben Spezifikationstext.** Ein Fehler *im Text* steht in beiden. **Der Gleichtaktfehler bleibt
-und ist damit ein benannter Posten**, kein geschlossener; die Zeugenpaare oben sind das einzige,
-was gegen ihn hilft, weil sie gegen den **Uebersetzer** messen statt gegen eine zweite Lesart.
-
-- [ ] **Der naechste Schritt ist die Formentabelle selbst** — 40–60 Eintraege, je *Gabbro-Operation
-      → C-Form → Bedingung*. Sie ist klein genug, um sie zu schreiben, und gross genug, um sie zu
-      **zaehlen und zu ratschen**. **Erst wenn sie steht, ist Posten 2 von „unformulierbar" auf
-      „benannt" gerueckt** — und mehr behauptet dieser Entwurf nicht.
-
+**The `checkfat.py` lesson applies literally:** the recomputer is **a second program with its own
+pattern**, not the same code called twice. **And what is accepted is the mutation list, not the
+existence of the checker** — a deliberately displaced evaluation site must be noticed.
 
 ---
 
-# Was seL4 neben der Logik braucht
+### 5. What that achieves — and what explicitly not
 
-## Was eine seL4-Verifikation NEBEN dem Logikbeweis braucht — und was Gabbro dafuer hat
+**Achieved:**
 
-**2026-08-14.** Gabbros Zusage lautet „alles ausser dem Logikbeweis faellt durch Konstruktion".
-**Dann muss man wissen, was „alles ausser" bei seL4 wirklich ist** — sonst vergleicht man einen
-Entwurf mit einer Vorstellung.
+* **The target language is named and closed**, which makes the correspondence formulable at all —
+  before, it was not.
+* **Ten of twelve UB classes die on existing rules**, not on new ones.
+* **The lowering is recomputed per run**, by a second program.
+* **Binary verification stays possible** and even becomes easier: a named subset and preserved
+  function boundaries are exactly what it demands.
 
-> **Vorbehalt, und er gilt fuer die ganze Datei:** die seL4-Angaben sind **aus dem Gedaechtnis**.
-> Der Ordner hat dieselbe Klasse schon einmal gebraucht (die 20:1-Aufteilung) und sie wurde
-> bestaetigt — **das ist kein Beleg fuer diese hier.** Wo eine Zahl steht, steht sie als
-> Groessenordnung.
+**Not achieved, and the difference from seL4 remains:**
+
+* **This is NOT a formal C semantics.** It is a **reduction of the surface plus a structural
+  recomputation.** What the twelve forms *mean* stands in a table a human wrote — **40–60 entries,
+  hand-trusted** (named as such already in [`BEWEIS.md`](BEWEIS.md)).
+* **Structure does not imply meaning.** The certificate shows that the sites **correspond to each
+  other** — not that the C form **does** the same thing. The gap in between is exactly that table,
+  and it is the **only item in the whole folder without an instrument**.
+* **`restrict` and `volatile` remain trust**, named in the manifest.
+
+### The instrument that does exist after all — witness pairs
+
+**"The only item without an instrument" was wrong.** The tool lies in our own box: **every table
+entry gets an executable witness pair** — a Gabbro fragment, the expected C, the expected behaviour
+—, run through the **real** C compiler and compared. With that the table is **checkable instead of
+hand-trusted**, and an entry without a witness pair is incomplete.
+
+### `restrict` becomes a priced option, not a default export
+
+`restrict` exports a Gabbro promise into C's UB rules (row 11 of the inventory). **Which is why it
+is NOT emitted by default** — only where the differential benchmark demands it. The cost truth
+measures against handwriting anyway; **the UB transfer is therefore paid exactly where it buys
+something measurable**, and nowhere else.
+
+### The common-mode failure of the coverage certificate, named
+
+Two programs with **their own** form tables are N-versions — **but both tables come from the same
+specification text.** An error *in the text* stands in both. **The common-mode failure remains and
+is thereby a named item**, not a closed one; the witness pairs above are the only thing that helps
+against it, because they measure against the **compiler** instead of against a second reading.
+
+- [ ] **The next step is the form table itself** — 40–60 entries, each *Gabbro operation → C form →
+      condition*. It is small enough to write, and large enough to **count and to ratchet**. **Only
+      once it stands has item 2 moved from "unformulable" to "named"** — and this design claims
+      nothing more.
+
 
 ---
 
-### Die sechs Posten neben der Logik
+# What seL4 needs besides the logic
 
-| # | Posten | was er bei seL4 ist | was Gabbro dafuer hat |
+## What an seL4 verification needs BESIDES the logic proof — and what Gabbro has for it
+
+**2026-08-14.** Gabbro's promise reads "everything except the logic proof falls out by
+construction". **Then one has to know what "everything except" really is at seL4** — otherwise one
+is comparing a design with an impression.
+
+> **Reservation, and it holds for the whole file:** the seL4 figures are **from memory**. The
+> folder has needed the same class once before (the 20:1 split) and it was confirmed — **that is
+> no evidence for these here.** Where a number stands, it stands as an order of magnitude.
+
+---
+
+### The six items besides the logic
+
+| # | Item | what it is at seL4 | what Gabbro has for it |
 |---|---|---|---|
-| **1** | **Maschinenmodell** | ein eigenes Modell in Isabelle: Register, Speicher, MMU; nicht Modelliertes ist **axiomatisiert** | die **Axiomschicht**, ~130 Namen fuer zwei Architekturen, **ratschenfaehig** und im Erzeugnis. `port` hat sie gerade um 70 Fundstellen entlastet |
-| **2** | **C-Semantik** | ein **C-Parser** samt Formalisierung eines C-Ausschnitts (Simpl/AutoCorres) — ein Teilprojekt fuer sich | **nichts Gleichwertiges.** Gabbro ersetzt es durch „eine Emission, syntaxgesteuert, nicht optimierend" — **und diese Entsprechung ist behauptet**, nicht formalisiert. *Aber der Rueckstand ist kleiner als „nein" — s. die Zeile zu Posten 4* |
-| **3** | **Die Annahmenliste** | ausdruecklich gefuehrt: Assembler unbewiesen, Bootcode zunaechst aussen vor, Hardware wie modelliert, DMA eingeschraenkt, **verifizierte Konfiguration einkernig** | **das Pflichtenmanifest** — dieselbe Sache, aber maschinenlesbar, mit Klassen und Ratsche ueber Namen. **Schaerfer im ENTWURF**: seL4s Liste existiert als Artefakt, Gabbros als Spezifikation (§15) — emittiert wird sie heute nicht |
-| **4** | **Binaerverifikation** | **Uebersetzungsvalidierung JE BAU** (graph-refine/SydTV, `tools/asmrefine` = 10 651 Zeilen) — **nicht** ein verifizierter Uebersetzer, sondern ein Zeugnis je Lauf. **Assembler und volatile sind ausgenommen** | **TV-lite ist gebaut, TV-voll ist erreichbar, ein verifizierter Emitter ist nicht noetig.** Das Deckungszeugnis je Lauf **ist** bereits die Leichtform; und **die syntaxgesteuerte Absenkung ist genau die Eigenschaft, die Validierung je Bau moeglich macht**, wo sie fuer optimierende Uebersetzer heroisch ist. **Nur laege der ganze `device`-Zweig ausserhalb** |
-| **5** | **Eigenschaften ueber der Korrektheit** | Integritaet, Vertraulichkeit, Autoritaetsbeschraenkung — **eigene Saetze mit eigenen Spezifikationen**; gemessen **+23,5 %** ueber der Korrektheit (`proof/infoflow` + `proof/access-control`, s. [`MESSUNGEN.md`](MESSUNGEN.md)) | **der Satz nicht, eine pruefbare Naeherung schon** — s. u. |
-| **6** | **Der Unterhalt** | **der Posten, den niemand mitzaehlt** — s. u. |
+| **1** | **Machine model** | a model of its own in Isabelle: registers, memory, MMU; what is not modelled is **axiomatised** | the **axiom layer**, ~130 names for two architectures, **ratchetable** and in the artefact. `port` has just relieved it by 70 sites |
+| **2** | **C semantics** | a **C parser** together with a formalisation of a C subset (Simpl/AutoCorres) — a subproject in itself | **nothing equivalent.** Gabbro replaces it with "one emission, syntax-directed, non-optimising" — **and this correspondence is claimed**, not formalised. *But the shortfall is smaller than "no" — see the row on item 4* |
+| **3** | **The assumption list** | explicitly maintained: assembler unproved, boot code initially left out, hardware as modelled, DMA restricted, **verified configuration single-core** | **the obligation manifest** — the same thing, but machine-readable, with classes and a ratchet over names. **Sharper in the DESIGN**: seL4's list exists as an artefact, Gabbro's as a specification (§15) — it is not emitted today |
+| **4** | **Binary verification** | **translation validation PER BUILD** (graph-refine/SydTV, `tools/asmrefine` = 10 651 lines) — **not** a verified compiler, but a certificate per run. **Assembler and volatile are excluded** | **TV-lite is built, TV-full is reachable, a verified emitter is not needed.** The coverage certificate per run **is** already the light form; and **the syntax-directed lowering is precisely the property that makes per-build validation possible**, where for optimising compilers it is heroic. **Only the whole `device` branch would lie outside** |
+| **5** | **Properties above correctness** | integrity, confidentiality, authority confinement — **theorems of their own with specifications of their own**; measured **+23,5 %** on top of correctness (`proof/infoflow` + `proof/access-control`, see [`MESSUNGEN.md`](MESSUNGEN.md)) | **not the theorem, but a checkable approximation** — see below |
+| **6** | **The upkeep** | **the item nobody counts along** — see below |
 
 ---
 
-### Die 239 458 Zeilen beweisen einen EINKERN-Kernel — und das schneidet in beide Richtungen
+### The 239 458 lines prove a SINGLE-CORE kernel — and that cuts both ways
 
-**Die verifizierte seL4-Konfiguration ist einkernig.** Damit liegt alles, woran der
-Scheduler-Bereich hart ist — adressgeordnetes Sperren, Warteschlangenchirurgie unter feinen
-Sperren, jede echte Nebenlaeufigkeit — **ausserhalb dessen, was die Aufteilung 40 / 32 / 28 je
-vermessen hat.**
+**The verified seL4 configuration is single-core.** With that everything that makes the scheduler
+area hard — address-ordered locking, queue surgery under fine-grained locks, every real
+concurrency — lies **outside what the 40 / 32 / 28 split ever surveyed.**
 
-> **seL4 hat die Nebenlaeufigkeit nicht bewiesen, sondern per Konfiguration entfernt** — Weg 5
-> der Zaehlvorschrift ([`PLAN.md`](PLAN.md)) auf der groesstmoeglichen Stufe.
+> **seL4 did not prove the concurrency, it removed it by configuration** — route 5 of the counting
+> rule ([`PLAN.md`](PLAN.md)) at the largest possible scale.
 
-**Was das fuer Gabbro heisst, schneidet in beide Richtungen:**
+**What that means for Gabbro cuts both ways:**
 
-* **Keine Vorlage.** Wer beim Scheduler eine seL4-Referenz sucht, findet keine. Die
-  Sperrordnung, die `Held`-Zeugen, die Paarung — dafuer gibt es **kein bewiesenes Vorbild**,
-  an dem man sich messen koennte.
-* **Aber auch kein unguenstiger Vergleich.** Gabbro ist dort nicht *hinter* seL4, sondern
-  **jenseits der vermessenen Front**, wo niemand Beweise hat.
+* **No model to follow.** Whoever looks for an seL4 reference at the scheduler finds none. The lock
+  order, the `Held` witnesses, the pairing — for those there is **no proved precedent** to measure
+  against.
+* **But also no unfavourable comparison.** Gabbro is not *behind* seL4 there, but **beyond the
+  surveyed front**, where nobody has proofs.
 
-**Diese Zeile steht hier, bevor jemand die 40 % als uebertragbar auf einen SMP-Kernel liest.**
-Sie sind es nicht; sie sind an einem Kernel gemessen, der die schwerste Klasse per Konfiguration
-nicht hat.
+**This line stands here before somebody reads the 40 % as transferable to an SMP kernel.** They are
+not; they are measured on a kernel that, by configuration, does not have the hardest class.
 
-> **Und Gabbros Ziel ist seit dem 2026-08-14 ausdruecklich Mehrkern MIT DMA.** Damit ist die
-> Vereinfachung, die seL4 gewaehlt hat, **ausgeschlossen** — und daraus folgt dreierlei:
+> **And Gabbro's goal has explicitly been multicore WITH DMA since 2026-08-14.** With that the
+> simplification seL4 chose is **excluded** — and three things follow from it:
 >
-> 1. **Die Paarung (Pass 7) ist tragende Last, kein „spaeter".** Ohne sie gibt es keine
->    Rennfreiheit, und ohne Rennfreiheit ist auf einem Mehrkerner keine der anderen Zusagen
->    stabil: ein Fakt, der auf einem Kern gilt, gilt nicht, wenn ein zweiter schreibt.
-> 2. **Der `dma`-Raum muss Aussagen tragen, nicht nur klassifizieren.** Ein Geraet, das
->    schreibt, ist ein zweiter Akteur ohne Sperre und ohne `Held`-Zeugen. **Konkret und
->    sofort:** ein Traeger, dessen Felder nur die erzeugten `ops` schreiben duerfen, darf in
->    **keinem `dma`-erreichbaren Bereich** liegen — eine **Platzierungsregel** wie bei der GDT,
->    sonst ist die Schreibrechtszusage eine Zusage mit offener Tuer.
-> 3. **Es gibt fuer diesen Teil kein bewiesenes Vorbild.** Kein unguenstiger Vergleich, aber
->    auch keine Vorlage: was hier gebaut wird, wird ohne Referenz gebaut.
+> 1. **The pairing (pass 7) is load-bearing, not a "later".** Without it there is no race freedom,
+>    and without race freedom none of the other promises is stable on a multicore machine: a fact
+>    that holds on one core does not hold when a second one writes.
+> 2. **The `dma` space must carry statements, not merely classify.** A device that writes is a
+>    second actor without a lock and without `Held` witnesses. **Concretely and immediately:** a
+>    carrier whose fields only the generated `ops` may write must lie in **no `dma`-reachable
+>    region** — a **placement rule** as with the GDT, otherwise the write-right promise is a
+>    promise with an open door.
+> 3. **For this part there is no proved precedent.** No unfavourable comparison, but also no model
+>    to follow: what is built here is built without a reference.
 
 ---
 
-### Posten 5 hat einen Boden — der Satz ist unerreichbar, eine Naeherung nicht
+### Item 5 has a floor — the theorem is unreachable, an approximation is not
 
-**Nichtinterferenz ist eine Hypereigenschaft ueber Ablauf*paaren*.** Gewoehnliche
-Hoare-Logik und Verfeinerung koennen sie **strukturell nicht ausdruecken**; sie kann deshalb
-**niemals aus M1–M4 kommen**, egal wie weit man sie baut. Das ist die kategorische Aussage,
-und sie bleibt.
+**Non-interference is a hyperproperty over *pairs* of runs.** Ordinary Hoare logic and refinement
+**cannot structurally express** it; it can therefore **never come out of M1–M4**, however far one
+builds them. That is the categorical statement, and it stands.
 
-**Aber sie ist kein Totalausfall.** Aus vorhandenen Regeln faellt eine **syntaktische
-Flussdisziplin** als **Ueberapproximation**: `effects` nennt, was gelesen und geschrieben
-wird, und M3 trennt die Adressraeume — **was nicht in der Effektmenge steht, wird vom
-erzeugten Code nicht gelesen.** Das ist pruefbar, es ist heute halb gebaut (der Rumpfabgleich
-prueft Schreiben und `locks`, nicht Lesen), und es ist der Unterschied zwischen
+**But it is not a total loss.** Out of existing rules there falls a **syntactic flow discipline**
+as an **over-approximation**: `effects` names what is read and written, and M3 separates the
+address spaces — **what is not in the effect set is not read by the generated code.** That is
+checkable, it is half built today (the body reconciliation checks writes and `locks`, not reads),
+and it is the difference between
 
-> *„unerreichbar"* und *„der **Satz** ist unerreichbar, eine **pruefbare Naeherung** existiert."*
+> *"unreachable"* and *"the **theorem** is unreachable, a **checkable approximation** exists."*
 
-**Was die Naeherung nicht deckt, gehoert danebengeschrieben:** Zeitverhalten, Scheduling,
-indirekte Fluesse ueber Kontrollfluss und Belegungszustand. Eine Ueberapproximation, die
-diese Liste nicht mitfuehrt, ist wieder eine Zusage statt einer Bedingung.
-
----
-
-### Posten 6: der Unterhalt, und hier liegt Gabbros staerkstes Argument
-
-**Die eigentlichen Kosten einer Gold-Verifikation sind nicht der erste Beweis, sondern dass er
-gepflegt werden muss.** Jede Kerneländerung bricht Beweise; die Beweisbasis (Groessenordnung
-200 000 Zeilen) ist ein **dauerhafter** Posten, kein einmaliger. Deshalb ist verifizierter Code in
-der Praxis Code, den man **nicht mehr gern anfasst**.
-
-> **Gabbros Antwort darauf ist strukturell und wurde bisher nirgends ausgesprochen:**
-> **faellt Klempnerei durch Konstruktion, kann eine Codeaenderung sie nicht brechen.** Ein neuer
-> Index, eine neue Subtraktion, eine neue Sperrnahme erzeugen **keine** neue Beweisarbeit — sie
-> uebersetzen oder nicht. **Der Unterhaltsaufwand skaliert mit dem LOGIK-Anteil, nicht mit der
-> Codegroesse.**
-
-**Das ist die eine Achse, auf der Gabbro seL4 nicht nachbaut, sondern schlaegt** — und sie steht
-und faellt mit derselben ungezaehlten Zahl: **wie gross ist der Logik-Anteil wirklich?**
-
-#### Die stille Vorbedingung — und sie ist messbar
-
-**„Klempnerei kann nicht brechen" gilt nur, solange die Aenderung INNERHALB der Konstrukte
-bleibt.** Eine Aenderung, die ein **neues Konstrukt** braucht, bricht keine Beweise — **sie bricht
-die Sprache.** Und dann ersetzt **Sprachunterhalt** den Beweisunterhalt, nur mit einem anderen
-Namen.
-
-**Die eigene Geschichte zeigt, dass der Preis real ist:** elf Klempnerei-Klassen wurden zwoelf;
-`keeping` wurde `mirrors`; `transition` wurde `transset`; `forever` bekam `leaves` — alles binnen
-Tagen.
-
-> **Die Wette lautet, dass der Wortschatz konvergiert, und sie ist MESSBAR:** *neue Konstrukte je
-> ausgeschriebenem Fragment muessen fallen.* **Die vier fehlenden Bereichsfragmente — Scheduler,
-> MMU, Lader, Parser — sind genau das Messgeraet dafuer**, und deshalb sind sie nicht nur eine
-> Abdeckungsluecke, sondern die Probe auf das staerkste Produktargument des Ordners.
+**What the approximation does not cover belongs written down beside it:** timing behaviour,
+scheduling, indirect flows via control flow and occupancy state. An over-approximation that does
+not carry this list is once again a promise instead of a condition.
 
 ---
 
-### Wo Gabbro schlechter ist, ohne Beschoenigung
+### Item 6: the upkeep, and here lies Gabbro's strongest argument
 
-1. **Keine C-Semantik.** seL4 hat eine Formalisierung; Gabbro hat eine **Zusage ueber die eigene
-   Absenkung**. Das ist Posten 2, und er ist der groesste Rueckstand.
-2. **Kein Beweis ueber den Pruefer.** seL4s Beweise laufen in Isabelle, dessen Kern klein und
-   geprueft ist. Gabbros Pruefer ist **unverifiziertes Rust**, und alles haengt an ihm.
-3. **Keine Sicherheitsaussagen.** Integritaet und Informationsfluss sind bei seL4 **eigene
-   Saetze**; Gabbro liefert sie nicht und behauptet es auch nicht.
-4. **Reife.** seL4s Kette ist gefahren, mehrfach, auf echter Hardware.
-   **Gabbro hat seit dem 2026-08-14 Uebersetzer- und Pruefercode** (Lexer, Parser ueber die
-   vollstaendige EBNF, fuenf von neun Paessen) — **und der ist unter Bruch der eigenen
-   Reihenfolgeregel entstanden.** „Keine Prueferzeile vor dem Ergebnis von Messung 2" galt und
-   gilt; Messung 2 ist nicht gefahren. Der Bruch geschah **auf Ansage, nicht still**, und steht
-   als Bruch in [`HISTORIE.md`](HISTORIE.md) und in [`MESSUNGEN.md`](MESSUNGEN.md).
-   *Diese Zeile fuehrt den Regelstatus mit, weil die Tatsache allein sie glattziehen wuerde —
-   und das ist die Fehlerklasse aus Commit `5904cae`.*
+**The real cost of a Gold verification is not the first proof but the fact that it has to be
+maintained.** Every kernel change breaks proofs; the proof base (order of magnitude 200 000 lines)
+is a **permanent** item, not a one-off. Which is why verified code is in practice code one **no
+longer likes to touch**.
+
+> **Gabbro's answer to this is structural and has so far been stated nowhere:**
+> **if plumbing falls out by construction, a code change cannot break it.** A new index, a new
+> subtraction, a new lock acquisition produce **no** new proof work — they compile or they do not.
+> **The upkeep effort scales with the LOGIC share, not with the code size.**
+
+**That is the one axis on which Gabbro does not reproduce seL4 but beats it** — and it stands and
+falls with the same uncounted number: **how large is the logic share really?**
+
+#### The silent precondition — and it is measurable
+
+**"Plumbing cannot break" holds only as long as the change stays INSIDE the constructs.** A change
+that needs a **new construct** breaks no proofs — **it breaks the language.** And then **language
+upkeep** replaces proof upkeep, only under a different name.
+
+**Our own history shows the price is real:** eleven plumbing classes became twelve; `keeping`
+became `mirrors`; `transition` became `transset`; `forever` got `leaves` — all within days.
+
+> **The bet is that the vocabulary converges, and it is MEASURABLE:** *new constructs per
+> written-out fragment must fall.* **The four missing domain fragments — scheduler, MMU, loader,
+> parser — are precisely the instrument for that**, and that is why they are not merely a coverage
+> gap but the probe on the folder's strongest product argument.
 
 ---
 
-### Was der Vergleich fuer die harten Zusagen sagt
+### Where Gabbro is worse, without embellishment
 
-[`SPRACHE.md`](SPRACHE.md) macht Induktion automatisch statt heuristisch — das
-adressiert **den Beweisteil**, also genau den Posten, den seL4 mit 200 000 Zeilen bezahlt.
+1. **No C semantics.** seL4 has a formalisation; Gabbro has a **promise about its own lowering**.
+   That is item 2, and it is the largest shortfall.
+2. **No proof about the checker.** seL4's proofs run in Isabelle, whose kernel is small and
+   checked. Gabbro's checker is **unverified Rust**, and everything hangs on it.
+3. **No security statements.** Integrity and information flow are **theorems of their own** at
+   seL4; Gabbro does not deliver them and does not claim to.
+4. **Maturity.** seL4's chain has been run, repeatedly, on real hardware.
+   **Gabbro has had compiler and checker code since 2026-08-14** (lexer, parser over the complete
+   EBNF; on that date five of nine passes, **today ten passes and none open**, `gabbro paesse`)
+   — **and it came into being in breach of our own ordering rule.** "No
+   checker line before the result of measurement 2" held and holds; measurement 2 has not been run.
+   The breach happened **on announcement, not silently**, and stands as a breach in
+   [`HISTORIE.md`](HISTORIE.md) and in [`MESSUNGEN.md`](MESSUNGEN.md).
+   *This line carries the rule status along, because the fact alone would smooth it over — and that
+   is the error class from commit `5904cae`.*
 
-**Der Vergleich zeigt aber, dass das die kleinere Haelfte ist:** von den sechs Posten neben der
-Logik beruehrt die Schrittzusage **einen** (den Beweisaufwand ueber deklarierten Strukturen).
-**Posten 2 und 5 bleiben unberuehrt, Posten 4 steht unter „Spaeter", Posten 3 ist gut geloest,
-Posten 1 ist zur Haelfte da.**
+---
 
-- [ ] **Die ehrliche Folge fuer den Plan:** die naechste Arbeit ist **nicht** eine weitere
-      Verschaerfung der Beweisautomatik, sondern **Posten 2** — was heisst „welches C", und wie
-      wird die Absenkung von einer Zusage zu einer pruefbaren Aussage? Das steht in
-      [`BEWEIS.md`](BEWEIS.md) als L4 und ist der einzige Posten, an dem Gabbro **strukturell**
-      hinter seL4 zurueckliegt statt nur an Reife.
+### What the comparison says for the hard promises
+
+[`SPRACHE.md`](SPRACHE.md) makes induction automatic instead of heuristic — that addresses **the
+proof part**, i.e. exactly the item seL4 pays for with 200 000 lines.
+
+**But the comparison shows that this is the smaller half:** of the six items besides the logic, the
+step promise touches **one** (the proof effort over declared structures). **Items 2 and 5 remain
+untouched, item 4 stands under "Later", item 3 is well solved, item 1 is half there.**
+
+- [ ] **The honest consequence for the plan:** the next piece of work is **not** a further
+      sharpening of the proof automation, but **item 2** — what does "which C" mean, and how does
+      the lowering turn from a promise into a checkable statement? That stands in
+      [`BEWEIS.md`](BEWEIS.md) as L4 and is the only item on which Gabbro is **structurally**
+      behind seL4 rather than merely behind in maturity.
 
 
 ---
 
-# Die Leistung des erzeugten C — was gemessen ist (nichts) und was folgt
+# The performance of the generated C — what is measured (nothing) and what follows
 
-**2026-08-14.** Der Ordner hat dazu eine **Tabelle mit Behauptungen** (Festlegung §14.2) und
-**keine Messung**. Hier steht, was daraus folgt, getrennt nach Richtung — und der Posten, den die
-Tabelle **nicht** nennt.
+**2026-08-14.** The folder has on this subject a **table of claims** (definition §14.2) and **no
+measurement**. What follows from that stands here, separated by direction — and the item the table
+does **not** name.
 
-## Wo es schneller sein sollte als der heutige Rust-Kernel
+## Where it should be faster than today's Rust kernel
 
-| | Grund | Zahl |
+| | Reason | Number |
 |---|---|---|
-| **Bereichspruefungen** | Rust prueft **jede** Indizierung, ausser LLVM kann sie wegoptimieren. **Caprock umgeht das nirgends** — nachgezaehlt: **0** `get_unchecked`, **0** `unreachable_unchecked`, **0** `assert_unchecked`. Gabbro **beweist** und emittiert **keine** | **1 398** variable Indizierungen im Baum |
-| **`accumulates`** | Zelle je Kern plus Merge beim Lesen statt CAS-Schleife | gemessen an `sync:572–592` **strikt besser als das Original**, das dort zusaetzlich eine hingenommene Rennstelle hat |
-| **`transition`/`mirrors`** | **ein** Store mit konstanter Maske statt Lesen-Aendern-Schreiben | je Geraeteuebergang |
-| **Geister, Vertraege, `check`** | verschwinden vor der Codeerzeugung; `check` uebersetzt nur unter `when TESTBUILD` | **0 Bytes** |
+| **Range checks** | Rust checks **every** indexing, unless LLVM can optimise it away. **Caprock bypasses that nowhere** — recounted: **0** `get_unchecked`, **0** `unreachable_unchecked`, **0** `assert_unchecked`. Gabbro **proves** and emits **none** | **1 398** variable indexings in the tree |
+| **`accumulates`** | one cell per core plus a merge at read time instead of a CAS loop | measured on `sync:572–592` **strictly better than the original**, which additionally has an accepted race site there |
+| **`transition`/`mirrors`** | **one** store with a constant mask instead of read-modify-write | per device transition |
+| **Ghosts, contracts, `check`** | disappear before code generation; `check` compiles only under `when TESTBUILD` | **0 bytes** |
 
-## Wo es gleich sein sollte
+## Where it should be the same
 
-Bereichstypen → nackter C-Typ · `tagged`+`match` → Union mit Marke, `switch` · `traverse` → `for`
-ohne Bound-Checks · `format`-Leser → Zugriffe **nach einer** Laengenpruefung · `lock`/`locks` → die
-vorhandene Primitive.
+Range types → bare C type · `tagged`+`match` → union with tag, `switch` · `traverse` → `for`
+without bound checks · `format` readers → accesses **after one** length check · `lock`/`locks` →
+the existing primitive.
 
-## Wo es LANGSAMER sein wird — und die Tabelle nennt es nicht
+## Where it will be SLOWER — and the table does not name it
 
-### 1. Die Schleifenschranken kosten einen Zaehler, den es vorher nicht gab
+### 1. The loop bounds cost a counter that was not there before
 
-`retry`/`forever` verlangen `bounded N ops`. **Eine Warteschleife, die heute ohne Zaehler spinnt,
-bekommt einen** — Inkrement und Vergleich je Durchgang. Bei einer umkaempften Sperre ist das
-messbar. Gemessen: **96 `spin_loop`-Hinweise** im Baum, **2** rohe `loop {` allein in
-`caprock-sync`.
+`retry`/`forever` demand `bounded N ops`. **A wait loop that spins without a counter today gets
+one** — increment and comparison per iteration. On a contended lock that is measurable. Measured:
+**96 `spin_loop` hints** in the tree, **2** raw `loop {` in `caprock-sync` alone.
 
-- [ ] **Abhilfe, entwerfbar und noch nicht entworfen:** die Schranke muss nicht **je Durchgang**
-      geprueft werden. Ist sie eine **Watchdog**-Schranke (und das ist sie, denn `progress` traegt
-      die Terminierung), genuegt eine Pruefung **alle 2^k Durchgaenge** — Kosten fallen auf
-      ~1/2^k, die Zusage bleibt „bricht nach hoechstens N + 2^k". **Das gehoert entschieden, bevor
-      der erste Benchmark laeuft**, sonst misst er ein Konstrukt, das niemand so bauen wuerde.
+- [ ] **A remedy, designable and not yet designed:** the bound does not have to be checked **per
+      iteration**. If it is a **watchdog** bound (and it is, since `progress` carries the
+      termination), a check **every 2^k iterations** suffices — cost falls to ~1/2^k, the promise
+      remains "breaks after at most N + 2^k". **That belongs decided before the first benchmark
+      runs**, otherwise it measures a construct nobody would build that way.
 
-### 2. `restrict` ist jetzt standardmaessig AUS
+### 2. `restrict` is now OFF by default
 
-Der UB-Transfer wird nur bezahlt, wo der Differenz-Benchmark ihn verlangt. **Der Preis dafuer ist
-konservativerer C-Code an genau den Stellen**, wo Handschrift `restrict` gesetzt haette — und das
-sind die kopierenden Pfade, also die heissen.
+The UB transfer is paid only where the differential benchmark demands it. **The price for that is
+more conservative C code at exactly those places** where handwriting would have set `restrict` —
+and those are the copying paths, i.e. the hot ones.
 
-### 3. Der strukturelle Posten: **flach absenken und schnell sein stehen in Spannung**
+### 3. The structural item: **lowering flat and being fast stand in tension**
 
-**„Syntaxgesteuert, nicht optimierend" ist die Bedingung, unter der die Verfeinerung billig wird**
-(M-Gold-2) — und sie heisst: **der Emittent restrukturiert nicht.** Wo ein Mensch eine Schleife
-verschmolzen, eine Berechnung hochgezogen oder eine Staerke reduziert haette, emittiert Gabbro die
-naive Form und **verlaesst sich auf den C-Uebersetzer**.
+**"Syntax-directed, non-optimising" is the condition under which the refinement becomes cheap**
+(M-Gold-2) — and it means: **the emitter does not restructure.** Where a human would have fused a
+loop, hoisted a computation or reduced a strength, Gabbro emits the naive form and **relies on the
+C compiler**.
 
-> **Der Ordner hat diese Spannung bisher nur auf der Korrektheitsseite bepreist.** Auf der
-> Leistungsseite ist sie ungepreist: **die Absenkung ist eine Wette darauf, dass LLVM/GCC die
-> Form, die Gabbro erzeugt, gut behandelt.** Ob das stimmt, weiss niemand — es haengt an der
-> Formentabelle, die noch nicht geschrieben ist.
+> **The folder has so far priced this tension only on the correctness side.** On the performance
+> side it is unpriced: **the lowering is a bet that LLVM/GCC handle the form Gabbro produces
+> well.** Whether that is true nobody knows — it hangs on the form table, which is not yet written.
 
-## Was es entscheidet — und es ist nicht diese Datei
+## What decides it — and it is not this file
 
-**Der Differenz-Benchmark je Modul** (P3/P5-Tor): erzeugtes C gegen handgeschriebenes, Ausloesung
-bei „erzeugt langsamer als Handschrift plus Messrauschen". **Bis dahin ist jede Zahl hier eine
-Erwartung.**
+**The differential benchmark per module** (P3/P5 gate): generated C against hand-written, triggering
+at "generated slower than handwriting plus measurement noise". **Until then every number here is an
+expectation.**
 
-**Die ehrliche Zusammenfassung in einem Satz:** *In den Zaehl- und Zugriffspfaden sollte das
-erzeugte C schneller sein als der heutige Rust-Kernel, weil 1 398 Bereichspruefungen entfallen
-(**W7-Kehraus 2026-08-15: UNBELEGT — zu ersetzen.** Ein Nachzaehlen ueber `[…]`-Zugriffe im
-Baum liefert **2 143**, nicht 1 398; welcher Suchweg zu 1 398 fuehrte, steht nirgends. Die
-Zahlen messen vermutlich Verschiedenes — *vermutlich* ist der Punkt); in
-den Wartepfaden zunaechst langsamer, bis die Schrankenpruefung amortisiert ist; und ueber alles
-haengt eine ungepreiste Wette auf den C-Uebersetzer.*
+**The honest summary in one sentence:** *In the counting and access paths the generated C should be
+faster than today's Rust kernel, because 1 398 range checks fall away
+(**W7 sweep 2026-08-15: UNEVIDENCED — to be replaced.** A recount over `[…]` accesses in the tree
+gives **2 143**, not 1 398; which search path led to 1 398 stands nowhere. The numbers probably
+measure different things — *probably* is the point); in the waiting paths slower at first, until
+the bound check is amortised; and over the whole thing hangs an unpriced bet on the C compiler.*
 
 
 ---
 
-## Der Aliasposten — genannt als Pflicht, und der Mechanismus fehlt
+## The alias item — named as an obligation, and the mechanism is missing
 
-**Eingetragen 2026-08-14.**
+**Entered 2026-08-14.**
 
-`SYNTAX.md`:10 legt jeder Grammatikregel auf, eine Klempnerei-Pflicht durch Konstruktion zu
-erledigen, und zaehlt dabei **„Alias"** auf. `SPRACHE.md` §0 fuehrt ihn ebenso unter dem, was
-Gabbro selbst traegt. **Der Mechanismus dafuer ist nicht auffindbar:**
+`SYNTAX.md`:10 imposes on every grammar rule that it discharge a plumbing obligation by
+construction, and lists **"alias"** among them. `SPRACHE.md` §0 likewise carries it under what
+Gabbro itself bears. **The mechanism for it is nowhere to be found:**
 
-* **M3 gibt Adressraeume, nicht Trennung.** `ptr<normal, rw>` und `ptr<normal, rw>` koennen
-  auf dasselbe Objekt zeigen; der Raum sagt nur, *welche* Barriere gilt.
-* **`effects` deklariert, es bedingt nicht.** `writes c.slots, writes o.slots` ueber zwei
-  Parametern, die dasselbe sind, ist eine wahre Aussage ueber eine falsche Annahme.
-* **Und das Inventar dieser Datei sagt es selbst** (Zeile 11): *„`restrict` falsch — aus
-  `effects` erzeugt. **Ist `effects` falsch, ist das C-UB** — ein Beweis-Export in Cs Regeln",*
-  gefuehrt als **echter Vertrauenstransfer**. `restrict` ist deshalb inzwischen standardmaessig
-  **aus**. Das entschaerft die C-Seite; **es beantwortet die Gabbro-Seite nicht.**
+* **M3 gives address spaces, not separation.** `ptr<normal, rw>` and `ptr<normal, rw>` can point
+  at the same object; the space says only *which* barrier applies.
+* **`effects` declares, it does not condition.** `writes c.slots, writes o.slots` over two
+  parameters that are the same thing is a true statement about a false assumption.
+* **And this file's own inventory says so** (row 11): *"`restrict` wrong — generated from
+  `effects`. **If `effects` is wrong, that is C UB** — a proof export into C's rules",* kept as a
+  **real trust transfer**. `restrict` is therefore **off** by default now. That defuses the C side;
+  **it does not answer the Gabbro side.**
 
-**Damit ruht die Rahmenaussage auf einer Zusage statt auf einer Bedingung** — genau das, was
-das Kriterium dieser Datei verbietet: *eine Pflicht, die beim Programmierer haengenbleibt, ist
-an dieser Stelle eine Widerlegung, kein Schoenheitsfehler.*
+**With that the frame statement rests on a promise instead of a condition** — exactly what this
+file's criterion forbids: *an obligation that stays hanging on the programmer is a refutation at
+that point, not a blemish.*
 
-### Der Vorschlag steht im Ordner, nur nicht in der Grammatik
+### The proposal stands in the folder, only not in the grammar
 
-Die Ableitungstabelle in `SPRACHE.md` §3b fuehrt *„`region`, Eigentum → **M2** → ein linearer
-Block ist seine Region"*. Die Absicht ist da; `own` ist heute aber ein **Recht am Zeigertyp**,
-und Zeigertypen sind kopierbar. **Ein Zeiger, der `own` traegt, muesste ein linearer Wert
-sein** — dann faellt Trennung aus M2, und Gabbro behaelt vier Mechanismen.
+The derivation table in `SPRACHE.md` §3b carries *"`region`, ownership → **M2** → a linear block is
+its region"*. The intention is there; but `own` is today a **right on the pointer type**, and
+pointer types are copyable. **A pointer carrying `own` would have to be a linear value** — then
+separation falls out of M2, and Gabbro keeps four mechanisms.
 
-**Der Papiertest dazu steht als A1 in [`PLAN.md`](PLAN.md), mit zweiseitigem Tor.** Faellt er
-rot, braucht Trennung einen **fuenften Mechanismus** — und der Gegner dafuer ist nicht Verus,
-sondern **Rusts Ausleihpruefer**, der ihn liefert. Das waere die teuerste denkbare Antwort auf
-die Frage, ob diese Sprache sich rechtfertigt.
-
+**The paper test for this stands as A1 in [`PLAN.md`](PLAN.md), with a two-sided gate.** If it
+comes out red, separation needs a **fifth mechanism** — and the opponent for that is not Verus but
+**Rust's borrow checker**, which supplies it. That would be the most expensive conceivable answer
+to the question whether this language justifies itself.
 
 ---
 
-## Die Aufschlüsselung nach Logik/Klempnerei — gefahren 2026-08-15
+## The breakdown into logic/plumbing — run 2026-08-15
 
-> *„Beide Messungen nach Logik/Klempnerei aufschlüsseln — `delete_leaf` (3,6–6 : 1) und
-> `Endpoint::call` (1,8–2,3 : 1). **Ohne diese Aufteilung ist eine Zahl kein Messwert.**"*
+> *"Break both measurements down into logic/plumbing — `delete_leaf` (3,6–6 : 1) and
+> `Endpoint::call` (1,8–2,3 : 1). **Without that split a number is not a measured value.**"*
 > (`TODO.md`:524)
 
-Gemessen an `../caprock-messbasis` @ `a1bf707`, `crates/caprock-cap/src/space.rs:1062-1095`.
+Measured against `../caprock-messbasis` @ `a1bf707`, `crates/caprock-cap/src/space.rs:1062-1095`.
 
-### `delete_leaf` — 34 Zeilen, davon 12 Code und 15 Kommentar
+### `delete_leaf` — 34 lines, of which 12 code and 15 comment
 
-**Das Kriterium (`BEWEIS.md`, oben):** *nennt die Pflicht nur die Maschine, ist sie
-Klempnerei; nennt sie die Sache, ist sie Logik.*
+**The criterion (`BEWEIS.md`, above):** *if the obligation names only the machine it is plumbing;
+if it names the subject it is logic.*
 
-| Zeile | Pflicht | Klasse | warum |
+| Line | Obligation | Class | why |
 |---|---|---|---|
-| `slots[slot].object` | Index in Schranken | **K** | nennt nur den Speicher |
-| `unlink(slot)` | Ketten bleiben wohlgeformt | **L** | nennt den CDT, also die Sache |
-| `release_slot(slot)` | Slot ist danach frei | **K** | Zustand eines Platzes |
-| `refcount -= 1` | kein Unterlauf | **K** | «B29», reine Darstellung |
-| `refcount -= 1` | Zähler == Zahl der Verweise | **L** | **die Verbindungs-Invariante, «B13»** |
-| `if refcount == 0` | Freigabe genau bei null | **L** | nennt die Lebensdauer der Sache |
-| `match kind` — `Memory` | Region gehört dem RAM-Allokator | **L** | die 5 Kommentarzeilen 8–12 sind der Beleg |
-| `match kind` — `Dma` | Freigabe erst nach Nachweis | **L** | Kommentar 14–17 und 22–25: **Reihenfolge über Systemgrenzen** |
-| `match kind` — `Reply` | Aufrufer wird entblockt | **L** | nennt das IPC-Protokoll |
-| `gen.wrapping_add(1)` | Umlauf ist gewollt | **K** | Darstellung — *und in Gabbro seit «B32» aussprechbar* |
-| `objects[obj] = EMPTY` | kein Verweis überlebt | **L** | nennt die Sache |
+| `slots[slot].object` | index in bounds | **K** | names only the memory |
+| `unlink(slot)` | chains stay well-formed | **L** | names the CDT, i.e. the subject |
+| `release_slot(slot)` | slot is free afterwards | **K** | state of a place |
+| `refcount -= 1` | no underflow | **K** | «B29», pure representation |
+| `refcount -= 1` | counter == number of references | **L** | **the connection invariant, «B13»** |
+| `if refcount == 0` | release exactly at zero | **L** | names the lifetime of the subject |
+| `match kind` — `Memory` | region belongs to the RAM allocator | **L** | the 5 comment lines 8–12 are the evidence |
+| `match kind` — `Dma` | release only after proof | **L** | comments 14–17 and 22–25: **ordering across system boundaries** |
+| `match kind` — `Reply` | caller is unblocked | **L** | names the IPC protocol |
+| `gen.wrapping_add(1)` | wraparound is intended | **K** | representation — *and in Gabbro sayable since «B32»* |
+| `objects[obj] = EMPTY` | no reference survives | **L** | names the subject |
 
-**Aufteilung: 4 K, 7 L.** Verhältnis **L : K ≈ 1,75 : 1** — die Klempnerei ist die
-**Minderheit**.
+**Split: 4 K, 7 L.** Ratio **L : K ≈ 1,75 : 1** — the plumbing is the **minority**.
 
-> **Und das steht gegen die Zahl, die der Ordner führt.** `delete_leaf` war mit **3,6–6 : 1**
-> gebucht — als Beleg dafür, dass Klempnerei überwiegt. Aufgeschlüsselt kippt es: **die
-> Mehrheit der Pflichten dieser Funktion nennt die Sache.**
+> **And that stands against the number the folder carries.** `delete_leaf` was booked at **3,6–6 :
+> 1** — as evidence that plumbing predominates. Broken down it tips: **the majority of this
+> function's obligations name the subject.**
 
-**Warum die alte Zahl anders ausfiel, soweit rekonstruierbar:** sie zählte offenbar
-**Beweisschritte** (jeder Index, jeder Bereich, jeder Alias einzeln), nicht **Pflichten**.
-Ein `match` über zehn Varianten liefert zehn Klempnereischritte und **eine** logische Pflicht.
-*Beides sind legitime Zählweisen, aber sie beantworten verschiedene Fragen* — und die Frage
-des Ordners („was bleibt für den Menschen?") wird von der **Pflicht**-Zählung beantwortet,
-nicht von der Schritt-Zählung.
+**Why the old number came out differently, as far as it can be reconstructed:** it apparently
+counted **proof steps** (every index, every range, every alias individually), not **obligations**.
+A `match` over ten variants yields ten plumbing steps and **one** logical obligation. *Both are
+legitimate ways of counting, but they answer different questions* — and the folder's question
+("what is left for the human?") is answered by the **obligation** count, not by the step count.
 
-**Der Kommentaranteil ist der zweite Befund:** 15 von 34 Zeilen sind Kommentar, und
-**jede einzelne davon trägt eine logische Pflicht** (welche Objektart hält RAM, warum `Dma`
-die Ausnahme ist, warum die Freigabe erst nach Nachweis kommt). *Was ein Mensch aufschreiben
-muss, damit die nächste Leserin die Funktion nicht kaputtmacht, ist ein guter Schätzer für
-den Logikanteil* — und er zeigt in dieselbe Richtung.
+**The comment share is the second finding:** 15 of 34 lines are comment, and **every single one of
+them carries a logical obligation** (which kind of object holds RAM, why `Dma` is the exception,
+why the release comes only after proof). *What a human has to write down so that the next reader
+does not break the function is a good estimator for the logic share* — and it points in the same
+direction.
 
-### `Endpoint::call` — **nicht aufgeschlüsselt, und warum**
+### `Endpoint::call` — **not broken down, and why**
 
-Die Funktion liegt in `kernel/src/system.rs` und ist über den IPC-Fastpath mit
-`SCHEDS`/`FP_OWNER` verflochten; eine Aufschlüsselung nach demselben Kriterium braucht die
-Sperrlage **je Zeile**. Das ist machbar, aber es ist **die Arbeit des Scheduler-Fragments**
-(Welle 4) und nicht die dieser Messung. **Blockiert, mit Grund und Fundstelle** — nicht
-stillschweigend ausgelassen.
+The function lies in `kernel/src/system.rs` and is interwoven with `SCHEDS`/`FP_OWNER` via the IPC
+fastpath; a breakdown by the same criterion needs the lock situation **per line**. That is doable,
+but it is **the work of the scheduler fragment** (wave 4) and not the work of this measurement.
+**Blocked, with a reason and a source reference** — not silently omitted.
 
 
 ---
 
-# Die Wertthese hat sich verschoben — gemessen, mit Fundstellen
+# The value thesis has shifted — measured, with source references
 
-**Die Gründungsannahme des Ordners war der Parser.** Die Fallen, die den Entwurf ausgelöst
-haben, waren Formatfallen: falsche Offsets, vertauschte Bytereihenfolge, ein Kopf von 10
-statt 12 Byte. `format` war das erste Konstrukt und das plausibelste.
+**The folder's founding assumption was the parser.** The traps that triggered the design were
+format traps: wrong offsets, swapped byte order, a header of 10 instead of 12 bytes. `format` was
+the first construct and the most plausible one.
 
-**Zwei unabhängige Messungen sagen inzwischen das Gegenteil.**
+**Two independent measurements now say the opposite.**
 
-## `format` steht zweimal ohne Beleg da
+## `format` stands there twice without evidence
 
-| Messung | Ergebnis | Fundstelle |
+| Measurement | Result | Source |
 |---|---|---|
-| **Basisrate** | **5 Formate, 5 berührende Commits in 53 Tagen, 0 eingetretene Fehler der Klasse.** Der einzige Beinahe-Fall steht als **vermiedener** da — eine Warnung, kein Nachruf | `MESSUNGEN.md`, *Basisrate*; `done.md:1745-1750` |
-| **«B40», DTB-Fragment** | Der einzige Parser des Kerns, der fremde Bytes liest, prüft **145 Zeilen fehlerfrei ohne Sprache und ohne Werkzeug**. `be32(data, n)?` ist bereits *„prüfen, sonst abweisen"* | `FRAGMENTE.md` F10; `crates/caprock-dtb/src/lib.rs` |
+| **Base rate** | **5 formats, 5 touching commits in 53 days, 0 occurred errors of the class.** The one near miss stands there as **avoided** — a warning, not an obituary | `MESSUNGEN.md`, *Basisrate*; `done.md:1745-1750` |
+| **«B40», DTB fragment** | The only parser of the core that reads foreign bytes checks **145 lines without error, without a language and without a tool**. `be32(data, n)?` is already *"check, otherwise refuse"* | `FRAGMENTE.md` F10; `crates/caprock-dtb/src/lib.rs` |
 
-> **`format` gewinnt dort Kürze, nicht Sicherheit.** Der Gewinn ist real — eine Deklaration
-> statt einer Kontrollflussdisziplin an jedem Zugriff — **aber es ist nicht der Gewinn, den
-> der Ordner verspricht.**
+> **`format` wins brevity there, not safety.** The gain is real — a declaration instead of a
+> control-flow discipline at every access — **but it is not the gain the folder promises.**
 
-## Die Kernelseite trägt ihre Belege — alle
+## The kernel side carries its evidence — all of it
 
-| Konstrukt | Beleg | Art des Belegs |
+| Construct | Evidence | Kind of evidence |
 |---|---|---|
-| `table … count N` | `M103`, Fragment `revoke` | ein **gemessener** Fehler wäre sonst möglich |
-| `lock … rank … held` | `K002`/`K004`, `H001`–`H005` | 419 Sperrnahmen; `held` trägt die Latenzaussage |
-| `locks shared` | **33 `read()` gegen 44 `write()`** | der heisseste Pfad war **nicht schreibbar** |
-| Paarung | 2 276 Atomzugriffe, 824 Stores | `V001`/`V002` — die verwaiste Hälfte liest gültigen Müll |
-| `walk`/`embeds` | vierstufiger Abstieg, 9 benannte Bits | `FRAGMENTE.md` F9 |
-| `BootPhase` | **7 Stellen gegen ein Tor von 5**, darunter ein **bezahlter** Fehler | `main.rs:251` — *„Genau diese Zeile fehlte auf ARM"* |
-| M1/Überlauf | «B29» im Löschpfad, **fünf Umbauten überlebt** | `space.rs:1067` |
-| `traverse … over <domäne>` | **0 von 571 `for`-Schleifen** laufen über etwas, das keine Domäne ist; nicht traversierbar bleiben **584 von 60 756 Zeilen** | `MESSUNGEN.md`, *B3*; die drei Lücken als «B41» |
+| `table … count N` | `M103`, fragment `revoke` | a **measured** error would otherwise be possible |
+| `lock … rank … held` | `K002`/`K004`, `H001`–`H005` | 419 lock acquisitions; `held` carries the latency statement |
+| `locks shared` | **33 `read()` against 44 `write()`** | the hottest path was **not writable** |
+| Pairing | 2 276 atomic accesses, 824 stores | `V001`/`V002` — the orphaned half reads valid garbage |
+| `walk`/`embeds` | four-level descent, 9 named bits | `FRAGMENTE.md` F9 |
+| `BootPhase` | **7 sites against a gate of 5**, among them a **paid-for** error | `main.rs:251` — *"exactly this line was missing on ARM"* |
+| M1/overflow | «B29» in the delete path, **survived five rebuilds** | `space.rs:1067` |
+| `traverse … over <domain>` | **0 of 571 `for` loops** run over something that is not a domain; what stays non-traversable is **584 of 60 756 lines** | `MESSUNGEN.md`, *B3*; the three gaps as «B41» |
 
-**Acht Konstrukte, acht Belege — und drei davon sind bezahlte Fehler**, keine
-plausiblen Szenarien.
+**Eight constructs, eight pieces of evidence — and three of them are paid-for errors**, not
+plausible scenarios.
 
-> **Der achte Beleg trägt seinen Gegenbeleg im selben Satz.** B3 zeigt den Schleifenvorrat
-> als tragend *und* nennt drei Domänen, die fehlen («B41»). **Beides ist dieselbe Messung** —
-> wer die 0,96 % zitiert, zitiert die drei Lücken mit.
+> **The eighth piece of evidence carries its counter-evidence in the same sentence.** B3 shows the
+> loop stock as load-bearing *and* names three domains that are missing («B41»). **Both are the
+> same measurement** — whoever quotes the 0,96 % quotes the three gaps along with it.
 
-## Der Satz, der daraus folgt
+## The sentence that follows from it
 
-> **Die Sprache rechtfertigt sich am Kernel, nicht am Parser.**
+> **The language justifies itself at the kernel, not at the parser.**
 
-Das ist **das Gegenteil der Gründungsannahme**, und es ist die nützlichste Verschiebung des
-Ordners: Sie sagt, wo weitergebaut wird (Träger, Sperren, Ordnung, Abstiege) und wo
-**nicht** (Formate, solange die Basisrate nicht steigt).
+That is **the opposite of the founding assumption**, and it is the folder's most useful shift: it
+says where building continues (carriers, locks, ordering, descents) and where **not** (formats, as
+long as the base rate does not rise).
 
-**Was sie NICHT sagt:** dass `format` weg soll. Es trägt ELF, das Manifest und die
-DTB-Kürze, und der Beinahe-Fall zeigt, dass die Klasse real ist — *ihre Erkennung hängt
-heute an Aufmerksamkeit*. Es heisst: **`format` ist nicht mehr die Begründung der Sprache,
-sondern eine ihrer Bequemlichkeiten**, und wer es rechtfertigen will, braucht ein anderes
-Argument als die Fehlerhäufigkeit in diesem Baum.
+**What it does NOT say:** that `format` should go. It carries ELF, the manifest and the DTB
+brevity, and the near miss shows that the class is real — *its detection today hangs on
+attention*. It means: **`format` is no longer the justification of the language but one of its
+conveniences**, and whoever wants to justify it needs an argument other than the error frequency in
+this tree.
 
-*Beide Messungen stehen mit Suchweg da (W7) — nachzählbar, und damit widerlegbar.*
+*Both measurements stand there with a search path (W7) — recountable, and thereby refutable.*
 
 ---
 
-# Das eigentliche Ergebnis der ganzen Messkette: **die teuren Pflichten sind viele, aber klein**
+# The actual result of the whole measurement chain: **the expensive obligations are many, but small**
 
-Zwei Messungen, die getrennt gefahren wurden, ergeben zusammen einen Satz, den keine von
-beiden allein trägt:
+Two measurements that were run separately together yield a sentence that neither of them carries
+alone:
 
-| | Ergebnis | Lesart |
+| | Result | Reading |
 |---|---|---|
-| **K/A/W** (`N_L = 73`) | **W = 38 gegen 36,5** — die Wertaussagen sind die **Mehrheit** | die Decke der Schrittzusagen deckt eine **Minderheit** |
-| **B3** (`p = 0,96 %`) | Aufschlag **+0,05** — unter der Auflösung der Kennzahl | die Codeform kostet **fast nichts** |
+| **K/A/W** (`N_L = 73`) | **W = 38 against 36,5** — the value statements are the **majority** | the ceiling of the step promises covers a **minority** |
+| **B3** (`p = 0,96 %`) | surcharge **+0,05** — below the resolution of the metric | the code form costs **almost nothing** |
 
-**Beides zusammen heisst: der Abstand zum Boden hängt fast vollständig an der W-Spalte
-selbst.** Nicht an Schleifenformen, nicht an Domänen, nicht am Schleifenvorrat — an der
-Frage, wie viele Pflichten **Wertaussagen** sind.
+**Both together mean: the distance to the floor hangs almost entirely on the W column itself.** Not
+on loop forms, not on domains, not on the loop stock — on the question of how many obligations are
+**value statements**.
 
-**Und die Grössenverteilung sagt, wie das gehen kann.** In der Population, in der die Zeilen
-gemessen sind (81, `F = 1 389`):
+**And the size distribution says how that can be.** In the population in which the lines are
+measured (81, `F = 1 389`):
 
 ```
-W:      40 Pflichten,  474 Zeilen   ->  11,9 Zeilen je Pflicht
-K + A:  41 Pflichten,  915 Zeilen   ->  22,3 Zeilen je Pflicht
+W:      40 obligations,  474 lines   ->  11,9 lines per obligation
+K + A:  41 obligations,  915 lines   ->  22,3 lines per obligation
 ```
 
-> **Eine W-Pflicht ist im Mittel halb so gross wie eine K- oder A-Pflicht** — 52 % der
-> Pflichten, aber nur 34 % der Zeilen. **Die Mehrheit ist eine Mehrheit nach Kopfzahl, nicht
-> nach Umfang.**
+> **A W obligation is on average half the size of a K or A obligation** — 52 % of the obligations,
+> but only 34 % of the lines. **The majority is a majority by head count, not by extent.**
 
-**Was das für die These bedeutet, in beide Richtungen:**
+**What that means for the thesis, in both directions:**
 
-* **Dafür:** die Decke deckt eine Minderheit der Pflichten und **kostet fast nichts** — die
-  Klempnerei ist nicht das Problem. Wer den Entwurf angreifen will, greift die W-Spalte an,
-  nicht die Schleifenformen.
-* **Dagegen:** *„viele, aber klein"* ist **kein Trost, sondern eine Warnung**. Kleine
-  Beweisrümpfe sind billig zu schreiben und teuer zu **halten**: 38 Stellen, an denen ein
-  Mensch etwas über einen **Wert** behaupten muss, sind 38 Stellen, die bei jeder Änderung
-  neu zu prüfen sind. **Der Aufwand skaliert mit der Anzahl, die Kennzahl mit den Zeilen.**
+* **In favour:** the ceiling covers a minority of the obligations and **costs almost nothing** —
+  the plumbing is not the problem. Whoever wants to attack the design attacks the W column, not the
+  loop forms.
+* **Against:** *"many, but small"* is **not a consolation but a warning**. Small proof bodies are
+  cheap to write and expensive to **maintain**: 38 places where a human has to claim something
+  about a **value** are 38 places that have to be re-checked on every change. **The effort scales
+  with the count, the metric with the lines.**
 
-*Das ist die Spannung, die die Messkette erzeugt hat, und sie steht hier statt in einer
-Zusammenfassung: **die Kennzahl wird gut, weil die teuren Pflichten kurz sind — nicht, weil
-es wenige wären.***
+*That is the tension the measurement chain produced, and it stands here instead of in a summary:
+**the metric turns out well because the expensive obligations are short — not because there are
+few of them.***
 
-## Deshalb braucht das Armaturenbrett eine **zweite** Zahl
+## That is why the dashboard needs a **second** number
 
-**Die Kennzahl misst Schreibkosten. Die W-Anzahl misst Beweiskosten. Sie können
-auseinanderlaufen** — und dieser Ordner hat gerade gemessen, dass sie es tun:
+**The metric measures writing cost. The W count measures proof cost. They can diverge** — and this
+folder has just measured that they do:
 
-> **Eine Sprache kann 0,5 : 1 erreichen und dabei 38 kleine Handbeweise offen lassen.**
-> Das Zeilenverhältnis sähe dann aus wie ein Sieg, und der Unterhalt wäre unverändert.
+> **A language can reach 0,5 : 1 and leave 38 small hand proofs open in the process.**
+> The line ratio would then look like a victory, and the upkeep would be unchanged.
 
-**Die zweite Zahl ist deshalb `W`-Pflichten je tausend Zeilen** — der **Unterhaltsprädiktor**,
-neben dem Zeilenverhältnis geführt, nicht darunter:
+**The second number is therefore `W` obligations per thousand lines** — the **upkeep predictor**,
+carried beside the line ratio, not beneath it:
 
-| Kennzahl | misst | Stand |
+| Metric | measures | State |
 |---|---|---|
-| **Beweiszeilen : Codezeilen** | **Schreibkosten** — einmal | **≥ 1,90**, offen (Pflichtseite) |
-| **W-Pflichten je 1 000 Zeilen** | **Beweiskosten** — bei **jeder** Änderung | **≥ 0,63** (38 von 60 756) |
+| **proof lines : code lines** | **writing cost** — once | **≥ 1,90**, open (obligation side) |
+| **W obligations per 1 000 lines** | **proof cost** — on **every** change | **≥ 0,63** (38 of 60 756) |
 
-**Die zweite ist ausdrücklich eine untere Schranke, und ihre Richtung ist bekannt.** Der
-Nenner ist die ganze Messbasis; der Zähler stammt aus den Bereichen, für die **jemand einen
-Verus-Beweis geschrieben hat**. Bereiche ohne Beweis tragen **null** Pflichten bei — nicht,
-weil sie keine hätten. *Die scharfe Zahl braucht die Codezeilen der bewiesenen Bereiche; die
-liegen in einem Baum, der hier nicht vorliegt, und das ist eine kleine, benannte Messung, kein
-Vorbehalt.*
+**The second is explicitly a lower bound, and its direction is known.** The denominator is the whole
+measurement base; the numerator comes from the areas for which **somebody wrote a Verus proof**.
+Areas without a proof contribute **zero** obligations — not because they have none. *The sharp
+number needs the code lines of the proved areas; those lie in a tree that is not available here,
+and that is a small, named measurement, not a reservation.*
 
-> **Warum die zweite Zahl überhaupt nötig ist, in einem Satz:** *sonst optimiert der Ordner
-> auf den Nenner, der glänzt, statt auf den, der kostet.*
+> **Why the second number is needed at all, in one sentence:** *otherwise the folder optimises for
+> the denominator that shines instead of the one that costs.*
