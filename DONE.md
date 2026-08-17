@@ -1,145 +1,146 @@
-# Gabbro — was fertig ist
+# Gabbro — what is finished
 
-> **Diese Datei führt ausschliesslich Erledigtes.** Offenes steht in [TODO.md](TODO.md),
-> Widerlegtes in [dokumente/HISTORIE.md](dokumente/HISTORIE.md), Gemessenes in
+> **This file carries exclusively what is done.** What is open stands in [TODO.md](TODO.md),
+> what is refuted in [dokumente/HISTORIE.md](dokumente/HISTORIE.md), what is measured in
 > [dokumente/MESSUNGEN.md](dokumente/MESSUNGEN.md).
 >
-> **Jeder Eintrag trägt seinen Beleg** — eine Datei, eine Kennung oder eine nachfahrbare
-> Befehlszeile. *Eine Erledigt-Meldung ohne Beleg ist dieselbe Zahl ohne Fundstellenliste,
-> gegen die W7 steht* ([dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md)).
+> **Every entry carries its evidence** — a file, a refusal code or a re-runnable command line.
+> *A done report without evidence is the same number without a source list that W7 stands
+> against* ([dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md)).
 
 ---
 
-## Der Übersetzer — **zehn** Pässe, keiner offen
+## The compiler — **ten** passes, none open
 
-`cargo run --bin gabbro -- paesse` · **3 ganz gebaut, 7 teilweise, 0 offen**
+`cargo run --bin gabbro -- paesse` · **3 fully built, 7 partial, 0 open**
 
-> **Der zehnte ist NEU, und das ist eine Änderung an der Spezifikation.** `SPRACHE.md`
-> Teil III §6 legt neun fest und sagt *„die Spezifikation ist die Passliste"* — ein zehnter
-> heisst also nicht „ein Modul mehr", sondern **die Liste ist gewachsen**. Der Grund ist
-> gemessen (SWEEP, V4), nicht entworfen: eine Invariante **zwischen** Trägern hat in den
-> neun Pässen keine Stelle.
+> **The tenth is NEW, and that is a change to the specification.** `SPRACHE.md`
+> part III §6 fixes nine and says *"the specification is the pass list"* — a tenth therefore
+> does not mean "one module more" but **the list has grown**. The reason is
+> measured (SWEEP, V4), not designed: an invariant **between** carriers has no place in the
+> nine passes.
 
-| # | Pass | Kennungen | Beleg |
+| # | Pass | Codes | Evidence |
 |---:|---|---|---|
 | 1 | **Namen** | `N001`–`N003` | `crates/gabbro-check/src/namen.rs` |
-| 2 | D1/D2 *(teilweise)* | `D001`, `D002` | `kbedingung.rs` — die K-Bedingung, `by ops` je **Feld** |
+| 2 | D1/D2 *(partial)* | `D001`, `D002` | `kbedingung.rs` — the K condition, `by ops` per **field** |
 | 3 | **M1 + V1–V3** | `M101`–`M105` | `m1.rs`, `typen.rs` |
-| 4 | M3 *(teilweise)* | `R001`–`R003` | `m3.rs` — Räume, Rechte, Platzierungsregel |
-| 5 | M2 *(teilweise)* | `L101`–`L105` | `m2.rs` — echte Linearität |
-| 6 | **M4/Schleifen** | `S001`, `S002` | `schleifen.rs` |
-| 7 | Paarung *(teilweise)* | `V001`–`V004` | `paarung.rs` |
-| 8 | effects *(teilweise)* | `E001`–`E010` | `wirkungen.rs` — seit 2026-08-16 **mit Lesehälfte** (Lesart A) |
-| 9 | costs *(teilweise)* | `K001`–`K004` | `kosten.rs` |
-| **10** | **Gruppe** *(neu, teilweise)* | `U001`–`U007` | `gruppe.rs` — Sperrabdruck, Zug **und Verbindungsaussage** |
+| 4 | M3 *(partial)* | `R001`–`R003` | `m3.rs` — spaces, rights, placement rule |
+| 5 | M2 *(partial)* | `L101`–`L105` | `m2.rs` — real linearity |
+| 6 | **M4/loops** | `S001`, `S002` | `schleifen.rs` |
+| 7 | Pairing *(partial)* | `V001`–`V004` | `paarung.rs` |
+| 8 | effects *(partial)* | `E001`–`E010` | `wirkungen.rs` — since 2026-08-16 **with the read half** (reading A) |
+| 9 | costs *(partial)* | `K001`–`K004` | `kosten.rs` |
+| **10** | **Group** *(new, partial)* | `U001`–`U007` | `gruppe.rs` — lock imprint, move **and connection statement** |
 
-> **„Teilweise" heisst bei M2, M3 und Paarung nicht „halb fertig", sondern „fertig, ruht auf
-> einem benannten Posten"** — Ghost-Löschung, Barriere aus dem Raum, Speichermodell. **Drei
-> davon sind derselbe Posten: die Axiomschicht.**
+> **"Partial" for M2, M3 and pairing does not mean "half finished" but "finished, resting on a
+> named item"** — ghost deletion, the barrier out of the space, the memory model. **Three
+> of them are the same item: the axiom layer.**
 
-**Dazu der Aufrufgraph** (`aufrufgraph.rs`, 268 Zeilen) — er hat drei Blocker auf einmal
-gelöst: `H005`, die Aufrufwirkungen in Pass 8, und die Trennung bei der Klasse *Phase*.
+**Plus the call graph** (`aufrufgraph.rs`, 268 lines) — it solved three blockers at once:
+`H005`, the call effects in pass 8, and the separation at the class *Phase*.
 
-## Die Klempnerei-Klassen — **8 von 11** getragen
+## The plumbing classes — **8 of 11** carried
 
-Neu erhoben 2026-08-15, **nicht wiederhergestellt**, nur x86
+Newly collected 2026-08-15, **not reconstructed**, x86 only
 ([dokumente/MESSUNGEN.md](dokumente/MESSUNGEN.md), *Neuerhebung*):
 
-| getragen | wodurch |
+| carried | by what |
 |---|---|
-| **Index** | `index into T` erbt `count N` · `M103` |
-| **Überlauf** | M1-Bereichstypen · `M101`/`M104`; gewollter Umlauf seit «B32» am Slot **und** am Register |
-| **Alias** | aufgelöst statt geschlossen — Kernzustand braucht keinen Zeiger (A1); wo doch, macht `own` ihn linear. Beleg: `beispiele/09-ohne-zeiger.gab`, `beispiele/15-own-traegt-beide-rechte.gab` |
-| **Sperre** | `rank`/`held`/`shared held` · `H001`–`H006` · `K002`/`K004`; die **Rangordnung wird seit 2026-08-16 nachgerechnet**, nicht nur deklariert |
-| **Terminierung** | drei Schleifenformen · `bounded`/`on_exceeded`/`progress` · `S001`/`S002` in `schleifen.rs`, `beispiele/04-schleifen.gab` |
-| **Blattheit** | `descendants of` + `by consuming` mit Zeugenordnung · Domänenschranke in `kosten.rs`, `dokumente/FRAGMENTE.md` (`revoke`) |
-| **Publikation** | `publishstmt` am Store · Paarungspass · `relaxed` trägt keine Nutzlast · `V001`–`V004` in `paarung.rs` |
-| **Rahmen** *(nachgebucht 2026-08-16)* | `effects` hält Schreiben, `locks` **und Lesen** (`E010`, Lesart A) und die Aufrufwirkungen (`E008` über dem Aufrufgraphen). **Die benannte Grenze:** `E010` spricht nur über deklariertem Weltzustand — im Ausschnitt hat es null Biss, in einer vollständigen Übersetzungseinheit deckt der Namenspass den Rest |
+| **Index** | `index into T` inherits `count N` · `M103` |
+| **Overflow** | M1 range types · `M101`/`M104`; intended wraparound since «B32» at the slot **and** at the register |
+| **Alias** | dissolved rather than closed — core state needs no pointer (A1); where it does, `own` makes it linear. Evidence: `beispiele/09-ohne-zeiger.gab`, `beispiele/15-own-traegt-beide-rechte.gab` |
+| **Lock** | `rank`/`held`/`shared held` · `H001`–`H006` · `K002`/`K004`; the **lock order has been recomputed since 2026-08-16**, not merely declared |
+| **Termination** | three loop forms · `bounded`/`on_exceeded`/`progress` · `S001`/`S002` in `schleifen.rs`, `beispiele/04-schleifen.gab` |
+| **Leafness** | `descendants of` + `by consuming` with a witness ordering · domain bound in `kosten.rs`, `dokumente/FRAGMENTE.md` (`revoke`) |
+| **Publication** | `publishstmt` at the store · pairing pass · `relaxed` carries no payload · `V001`–`V004` in `paarung.rs` |
+| **Frame** *(booked in retrospect 2026-08-16)* | `effects` holds writes, `locks` **and reads** (`E010`, reading A) and the call effects (`E008` over the call graph). **The named limit:** `E010` speaks only about declared world state — in an excerpt it has zero bite, in a complete translation unit the name pass covers the rest |
 
-## Konstrukte, die gebaut und belegt sind
+## Constructs that are built and evidenced
 
-| Konstrukt | Grund | Beleg |
+| Construct | Reason | Evidence |
 |---|---|---|
-| **`locks shared`** | gemessen: 33 `read()` gegen 44 `write()` — der heisseste Pfad war nicht schreibbar | `H001`–`H005`, `beispiele/10`, Gift 38–42 |
-| **`wrapping` am Register** («B32») | virtios Ringzähler läuft per Entwurf um; die Absicht stand nirgends | `beispiele/12-umlaufendes-register.gab`, `beispiele/gift/48-register-ohne-umlauf.gab` |
-| **`heldpred`** | die Stärke des Zeugen, ohne Aufweichung des Ausdrucks | `dokumente/SYNTAX.md` (`atompred`), `beispiele/13-zeuge-mit-staerke.gab` |
-| **`Some`/`None`** («B35») | `option` hatte **keinen Konstruktor** — der Bestand schrieb es seit jeher | `optionexpr` in `dokumente/SYNTAX.md`, `beispiele/01-tabelle.gab` |
-| **`table … count N`** | `index into T` erbt die Schranke | `M103` in `m1.rs`, `beispiele/01-tabelle.gab` |
-| **Platzierungsregel** | ein `ops`-Träger liegt in keinem `dma`-Raum — ein Gerät schreibt an jeder Grammatik vorbei | `R001`, Gift 58 |
-| **`ancestors of`** («B41») | **der erste gemessene Konstruktbedarf**: 4 Rümpfe laufen die Gerätetopologie aufwärts, 226 der 584 nicht traversierbaren Zeilen liegen dort | `beispiele/18-vorfahren.gab`, `beispiele/gift/69-vorfahren-ohne-schranke.gab` |
-| **`by ops` am Feld** | die K-Bedingung wird von einer **Prüfvorschrift zur Grammatikeigenschaft**: `refcount -= 1` von Hand ist nicht schreibbar | `D002` in `kbedingung.rs`, `beispiele/16`, Gift 60 |
-| **`shared held` (N3)** | `held` ist für **exklusive** Halter gerechnet; die geteilte Seite hat eine eigene Rechengrösse | `K004` in `kosten.rs:497`, eigener Topf `geteilte_haltezeiten` |
-| **Sperrordnung geprüft** | `rank` war deklariert und wurde **nie nachgerechnet** — und zwei Konstrukte beriefen sich darauf | `H006` in `geteilt.rs`, Gift 67 (Abstieg) + 68 (Gleichstand) |
-| **`group … over { … }`** | eine Invariante **zwischen** Trägern hat in keiner `table … invariant` Platz — gemessen: V1–V4 im Bestand | `U001`–`U007` in `gruppe.rs`, `beispiele/17`, Gift 63–66 |
+| **`locks shared`** | measured: 33 `read()` against 44 `write()` — the hottest path was not writable | `H001`–`H005`, `beispiele/10`, poison 38–42 |
+| **`wrapping` at the register** («B32») | virtio's ring counter wraps by design; the intent stood nowhere | `beispiele/12-umlaufendes-register.gab`, `beispiele/gift/48-register-ohne-umlauf.gab` |
+| **`heldpred`** | the strength of the witness, without weakening the expression | `dokumente/SYNTAX.md` (`atompred`), `beispiele/13-zeuge-mit-staerke.gab` |
+| **`Some`/`None`** («B35») | `option` had **no constructor** — the existing code has always written it | `optionexpr` in `dokumente/SYNTAX.md`, `beispiele/01-tabelle.gab` |
+| **`table … count N`** | `index into T` inherits the bound | `M103` in `m1.rs`, `beispiele/01-tabelle.gab` |
+| **Placement rule** | an `ops` carrier lies in no `dma` space — a device writes past every grammar | `R001`, poison 58 |
+| **`ancestors of`** («B41») | **the first measured need for a construct**: 4 bodies walk the device topology upwards, 226 of the 584 non-traversable lines lie there | `beispiele/18-vorfahren.gab`, `beispiele/gift/69-vorfahren-ohne-schranke.gab` |
+| **`by ops` at the field** | the K condition turns from a **checking prescription into a grammar property**: `refcount -= 1` by hand is not writable | `D002` in `kbedingung.rs`, `beispiele/16`, poison 60 |
+| **`shared held` (N3)** | `held` is computed for **exclusive** holders; the shared side has a computed quantity of its own | `K004` in `kosten.rs:497`, its own pot `geteilte_haltezeiten` |
+| **Lock order checked** | `rank` was declared and was **never recomputed** — and two constructs appealed to it | `H006` in `geteilt.rs`, poison 67 (descent) + 68 (tie) |
+| **`group … over { … }`** | an invariant **between** carriers has no room in any `table … invariant` — measured: V1–V4 in the existing code | `U001`–`U007` in `gruppe.rs`, `beispiele/17`, poison 63–66 |
 
-## Gefahrene Messungen, mit Tor und Ausgang
+## Measurements run, with gate and outcome
 
-| Messung | Ausgang | Beleg |
+| Measurement | Outcome | Evidence |
 |---|---|---|
-| **Tor P2** — der Korpus parst | **bestanden, 7 von 7** (und `dokumente/SYNTAX.md` 6 von 6) | `gabbro fragmente dokumente/FRAGMENTE.md` |
-| **Mutationsgenerator** | **bestanden** — `7 von 39` gegen `54 von 54` der Hand | `erzeuge-mutationen.py`, `dokumente/MESSUNGEN.md` |
-| **Die 15 Generatorlücken** | **13 zu, 2 beweisbar äquivalent** | `./pruefe-luecken.py` |
-| **`narrow`-Zählung** | **Tor verfehlt** — N = 2, und das Protokoll war widersprüchlich | `./zaehle-bereichspflichten.py` |
-| **Elf Klempnerei-Klassen** | **Tor verfehlt** — `N_neu = 5` (heute 4) | `dokumente/MESSUNGEN.md`, *Neuerhebung* |
-| **K/A/W über N_L** | **Tor verfehlt** — `W = 38 von 73` | `dokumente/MESSUNGEN.md`, *Buchung* |
-| **Lader-Fragment, Klasse *Phase*** | **Marke trägt: 7 gegen k = 5** | `dokumente/FRAGMENTE.md` F7 |
-| **Alle vier Bereichsfragmente** | **Konvergenzmetrik: 0 neue Konstrukte** | `dokumente/FRAGMENTE.md` F7–F10 |
-| **`Stale(T)`** | **widerlegt** — 2 von 5 Übergängen ruhen auf `masks IRQ` | `dokumente/FRAGMENTE.md` F8, «B38» |
-| **Basisrate `format`** | **trägt `format` nicht** — 5 Formate, 0 Fehler der Klasse | `dokumente/MESSUNGEN.md` |
-| **`delete_leaf`** | **1,75 : 1** statt gebuchter 3,6–6 : 1 | `dokumente/BEWEIS.md` |
-| **`programs/`** | Grund des Bruchs trägt nicht mehr | `dokumente/MESSUNGEN.md` |
-| **N1 (Caprock)** | **`MEM` ist Blatt**, `system.rs:724` ist falsch | `arbeitsprotokoll/03-N1.md` |
-| **Verschlüsse nach Verwendungsart** | **Tor VOID** — die Grundgesamtheit reproduziert nicht (89 → 64), und V-b ist **leer** | `dokumente/MESSUNGEN.md`, *ERGEBNIS Verschlüsse* |
-| **Vier Schablonen maschinell geprüft** | `table.induktion` · `table.indexschranke` · `consuming.ordnung` · `consuming.leermenge` — **5 stille Annahmen ausgespült, 2 Sätze WIDERLEGT**, Register 17 → 19, unbewiesen 16 → 15 | `beweise/*.thy` (Isabelle2025-2), `gabbro schablonen` |
-| **B3 — nicht traversierbare Rümpfe** | **bestanden, `p = 0,96 %` gegen eine Latte von 5 %** — aber **R1 verfehlt** (Regel nach dem Lauf aufgeschrieben) | `./zaehle-b3.py ../caprock-messbasis`, `dokumente/MESSUNGEN.md` |
+| **Gate P2** — the corpus parses | **passed, 10 of 10** (and `dokumente/SYNTAX.md` 6 of 6) | `gabbro fragmente dokumente/FRAGMENTE.md` |
+| **Mutation generator** | **passed** — `7 von 39` against `54 von 54` by hand | `erzeuge-mutationen.py`, `dokumente/MESSUNGEN.md` |
+| **The 15 generator gaps** | **13 closed, 2 provably equivalent** | `./pruefe-luecken.py` |
+| **`narrow` count** | **gate missed** — N = 2, and the protocol was contradictory | `./zaehle-bereichspflichten.py` |
+| **Eleven plumbing classes** | **gate missed** — `N_neu = 5` (today 4) | `dokumente/MESSUNGEN.md`, *Neuerhebung* |
+| **K/A/W over N_L** | **gate missed** — `W = 38 von 73` | `dokumente/MESSUNGEN.md`, *Buchung* |
+| **Loader fragment, class *Phase*** | **the token carries: 7 against k = 5** | `dokumente/FRAGMENTE.md` F7 |
+| **All four domain fragments** | **convergence metric: 0 new constructs** | `dokumente/FRAGMENTE.md` F7–F10 |
+| **`Stale(T)`** | **refuted** — 2 of 5 transitions rest on `masks IRQ` | `dokumente/FRAGMENTE.md` F8, «B38» |
+| **Base rate `format`** | **does not carry `format`** — 5 formats, 0 errors of the class | `dokumente/MESSUNGEN.md` |
+| **`delete_leaf`** | **1,75 : 1** instead of the booked 3,6–6 : 1 | `dokumente/BEWEIS.md` |
+| **`programs/`** | the reason for the breach no longer carries | `dokumente/MESSUNGEN.md` |
+| **N1 (Caprock)** | **`MEM` is a leaf**, `system.rs:724` is wrong | `arbeitsprotokoll/03-N1.md` |
+| **Closures by kind of use** | **gate VOID** — the population does not reproduce (89 → 64), and V-b is **empty** | `dokumente/MESSUNGEN.md`, *ERGEBNIS Verschlüsse* |
+| **Four templates machine-checked** | `table.induktion` · `table.indexschranke` · `consuming.ordnung` · `consuming.leermenge` — **5 silent assumptions flushed out, 2 statements REFUTED**, register 17 → 19, unproved 16 → 15 | `beweise/*.thy` (Isabelle2025-2), `gabbro schablonen` |
+| **B3 — non-traversable bodies** | **passed, `p = 0,96 %` against a mark of 5 %** — but **R1 missed** (rule written down after the run) | `./zaehle-b3.py ../caprock-messbasis`, `dokumente/MESSUNGEN.md` |
 
-> **Der B3-Eintrag ist der einzige in dieser Tabelle, der neben dem Ausgang einen
-> Protokollverstoss trägt** — und er steht hier statt in einer Fussnote, weil eine
-> Erledigt-Tabelle, die nur Ausgänge führt, die teuerste Zeile verschweigt: **die Markenregel
-> wurde in vier Fassungen mit sichtbaren Zahlen geschärft.** Was das Ergebnis rettet, ist
-> nicht Sorgfalt, sondern **Regelinvarianz**: alle vier Fassungen (0,03 % · 4,36 % · 0,74 % ·
-> 0,95 %) bestehen die Latte. *Von der Regelwahl hängt die Zahl ab, nicht das Urteil.*
+> **The B3 entry is the only one in this table that carries a protocol breach beside its
+> outcome** — and it stands here rather than in a footnote, because a done table that carries
+> only outcomes conceals the most expensive line: **the token rule was sharpened in four
+> versions with visible numbers.** What saves the result is not care but **rule invariance**:
+> all four versions (0,03 % · 4,36 % · 0,74 % · 0,95 %) pass the mark. *The number depends on
+> the choice of rule, the verdict does not.*
 
-## Grammatik — die Befunde aus P2
+## Grammar — the findings from P2
 
-**G1–G11 geschlossen** ([dokumente/SYNTAX.md](dokumente/SYNTAX.md), `beispiele/11`, Gift 43–45):
-`atomicdecl publishes` · `axiom -> typeexpr requires` · die `->`-Mehrdeutigkeit **in der
-Grammatik** · Schlusskomma · `u64::max` · `O`/`@version` als benannte `Sonderform` ·
-`clobbers { }` leer · `count N` · `cast` entfällt · das `forever`-Beispiel · acht Domänen.
+**G1–G11 closed** ([dokumente/SYNTAX.md](dokumente/SYNTAX.md), `beispiele/11`, poison 43–45):
+`atomicdecl publishes` · `axiom -> typeexpr requires` · the `->` ambiguity **in the
+grammar** · trailing comma · `u64::max` · `O`/`@version` as a named `Sonderform` ·
+`clobbers { }` empty · `count N` · `cast` disappears · the `forever` example · eight domains.
 
-**Etikettenkollision aufgelöst** (2026-08-16): die Gegenprüfungsbefunde in
-`dokumente/MESSUNGEN.md` heissen jetzt `GP1`–`GP3`; `G1`–`G11` gehören der Grammatik.
-*Zwei Etikettensysteme mit denselben Namen sind dieselbe Fehlerklasse wie zwei Prosaordnungen,
-die niemand gegeneinander prüft.*
+**Label collision resolved** (2026-08-16): the counter-check findings in
+`dokumente/MESSUNGEN.md` are now called `GP1`–`GP3`; `G1`–`G11` belong to the grammar.
+*Two label systems with the same names are the same error class as two prose orderings that
+nobody checks against each other.*
 
-**Dazu:** die Nutzlastform nach dem Bestand entschieden (22 × `nothing`, 11 × Klammern,
-2 × ohne — die Grammatik folgt den 33), die `pub`-Laxheit (`P034`), `pub const` im
-`table`-Rumpf, und **`dokumente/SYNTAX.md` hält jetzt seine eigene Grammatik** (Test
+**Plus:** the payload form decided from the existing code (22 × `nothing`, 11 × parentheses,
+2 × without — the grammar follows the 33), the `pub` laxity (`P034`), `pub const` in the
+`table` body, and **`dokumente/SYNTAX.md` now holds its own grammar** (test
 `die_beispiele_der_grammatik_gehen_selbst_durch`).
 
-## Die Wächterkette — acht, jeder mit Sprechprobe in beide Richtungen
+## The guardian chain — eight, each with a speech test in both directions
 
 ```
-./pruefe-syntax.sh        verbotene Formen, Prosa-Drift, Geschlossenheit, Erreichbarkeit,
-                          Terminaldeckung — und NULL Bauwarnungen
-./pruefe-wortschatz.py    Terminale gegen Tabelle, Sonderform-Zähler (3 von 5)
-./pruefe-todo.py          hält die Aufgabenliste gegen sich selbst, acht Klassen
-./pruefe-kennungen.py     keine Absage-Kennung in zwei Dateien
-./mutiere-pruefer.py      beschädigt je eine Regel:  65 von 65
-./erzeuge-mutationen.py   verdreht systematisch:      7 von 39
-./pruefe-luecken.py       die benannten Lücken einzeln: 13 von 15
-./commit.sh               R19 — Commit-Nachrichten nur über Datei
+./pruefe-syntax.sh        forbidden forms, prose drift, closure, reachability,
+                          terminal coverage — and ZERO build warnings
+./pruefe-wortschatz.py    terminals against the table, Sonderform counter (3 of 5)
+./pruefe-todo.py          holds the task list against itself, eight classes
+./pruefe-kennungen.py     no refusal code in two files
+./mutiere-pruefer.py      damages one rule at a time:   65 of 65
+./erzeuge-mutationen.py   twists systematically:         7 of 39
+./pruefe-luecken.py       the named gaps one by one:    13 of 15
+./commit.sh               R19 — commit messages only via file
 ```
 
-**Dazu drei Tests, die aus je einem bezahlten Fehler stammen:** kein Pass ohne Anmeldung ·
-`dokumente/SYNTAX.md` gegen die eigene Grammatik · Korpus-Test am Inhalt statt an der Zeilennummer.
+**Plus three tests, each of which comes from a paid-for error:** no pass without registration ·
+`dokumente/SYNTAX.md` against its own grammar · corpus test anchored at the content instead of at
+the line number.
 
-## Die Arbeitsregeln — W1 bis W12
+## The working rules — W1 to W12
 
-Vollständig in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Jede stammt aus
-einem **bezahlten Fehler in diesem Ordner**, jede nennt den Schaden.
+Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each comes from a
+**paid-for error in this folder**, each names the damage.
 
-## Proben
+## Probes
 
-**19 saubere Beispiele, 69 Giftproben, 76 Tests** —
+**19 clean examples, 69 poison probes, 79 tests** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`
