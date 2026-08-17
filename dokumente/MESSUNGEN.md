@@ -5661,3 +5661,48 @@ fragment is an excerpt of a larger program. The emitter lowers it to an **incomp
 **And C11 has a second requirement the first version missed:** the tag must stand **before** the
 parameter list, otherwise its visibility ends at the semicolon. `-Wall` said so, `-Werror` made
 it a finding, and the test now asserts the ordering rather than the presence.
+
+
+---
+
+# Der Erzeuger fiel an drei Stellen OFFEN aus — 2026-08-17
+
+**Found by the same method as the day before: run the emitter against the corpus and read what
+it does.** The emitter's entire design is one sentence — *refuse by name instead of emitting
+something plausible* — and it had **three exceptions**. All three compile. Two compute something
+else.
+
+| Site | old output | why it is wrong |
+|---|---|---|
+| `option index into T` | `uint32_t` | **every value 0..<N is a valid index** — no bit pattern is left to mean *absent*. The C is structurally incapable of holding what the type says |
+| unknown expression form | `/* NOT LOWERED */ 0` | it compiles **and yields zero**. *A comment nobody reads is not a refusal* |
+| `Some` / `None` | `None()` | an implicit declaration. That `-Werror` catches it is **luck, not refusal** |
+
+## The `option` case is a decision the folder has not taken
+
+Lowering it to a plain index is not a coarsening — it is a **loss of information the type
+promises**. An option needs a representation: a sentinel value (which costs a slot of the index
+range and has to be checked), or a tagged struct (which costs a word per field).
+
+> **Choosing one is a template obligation, not a translation** — and the register has no entry
+> for it. *The refusal is therefore the honest state: `C001` says the emitter cannot lower this
+> until the folder decides how.*
+
+**And it is load-bearing in the corpus:** F1's `CapSpace` carries four `option index into
+CapSpace` fields (parent, first_child, next_sibling, prev_sibling) — the whole CDT. F8's
+`aufloesen` returns one, and that return is the revalidation the fragment exists for.
+
+## The expression fallback is the one that scares me most
+
+`"/* NOT LOWERED */ 0"` predates the ghost work. **Any expression form the emitter did not know
+became the literal zero**, in a component every other pass hands its result to.
+
+> *It never fired in the two units the guardian runs* — which is exactly why it survived: a
+> fail-open path is invisible until something walks into it. **The mutation `ausdruck-faellt-
+> offen-auf-null` now makes it visible**, and the probe that catches it uses a unary `!`, a form
+> the emitter still does not lower.
+
+**95 of 95 mutations, and one had to be re-anchored:** the signature change threaded `Absagen`
+through the expression path and broke the anchor of `geist-let-verschwindet-ganz` — the most
+important emission mutation there is. *The harness reported `ANKER FEHLT` and excluded it from
+the count instead of quietly passing 94 of 94.*
