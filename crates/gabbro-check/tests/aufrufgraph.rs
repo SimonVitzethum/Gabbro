@@ -119,3 +119,64 @@ impl fn schalte(d : ptr<mmio, rw> D) effects { writes d.G } costs <= 4 ops { an(
     assert!(h.unvollstaendig.is_none(), "der Uebergang ist bekannt: {:?}", h.unvollstaendig);
     assert!(h.wirkungen.contains("writes G"), "seine Wirkung kommt an: {:?}", h.wirkungen);
 }
+
+// -- Die Sammelseite: sechs Anweisungsklassen, und keine war je angesehen ----------------
+//
+// **`huelle` war gepruft, `sammle_rufe` nicht.** Die sieben Proben oben rufen ausschliesslich
+// auf der obersten Rumpfebene. Ein Ruf in einem `match`-Zweig, in einem `locks`-Block oder in
+// einem Schleifenrumpf haette stillschweigend fehlen koennen -- und dann deckt `effects` genau
+// die Aufrufe, die niemand versteckt hat.
+//
+// *Genau diese Form steht im Korpus:* `delete_leaf` ruft `free_region`, `push_dma` und
+// `push_reply` in drei `match`-Zweigen (`FRAGMENTE.md`:277-279).
+
+#[test]
+fn ein_ruf_im_match_zweig_kommt_in_der_huelle_an() {
+    let q = "module t {
+tagged type A = { Eins(u32), Zwei(u32) };
+extern fn tief(p : ptr<normal, rw> T) effects { masks IRQ } costs <= 1 ops;
+impl fn oben(p : ptr<normal, rw> T, a : A) effects { pure } costs <= 8 ops
+{ match a { Eins(x) => { tief(p); } Zwei(y) => { } } }
+}";
+    let h = graph(q).huelle("oben");
+    assert!(
+        h.wirkungen.contains("masks IRQ"),
+        "ein Ruf in einem `match`-Zweig ist ein Ruf: {:?}",
+        h.wirkungen
+    );
+}
+
+#[test]
+fn ein_ruf_unter_locks_und_in_einer_schleife_kommt_an() {
+    let q = "module t {
+lock L protects { a } rank 0 held <= 8 ops;
+extern fn tief(p : ptr<normal, rw> T) effects { masks IRQ } costs <= 1 ops;
+impl fn oben(p : ptr<normal, rw> T) effects { pure } costs <= 8 ops
+{ locks L { traverse s over slots of p by unvisited { tief(p); } } }
+}";
+    let h = graph(q).huelle("oben");
+    assert!(
+        h.wirkungen.contains("masks IRQ"),
+        "weder ein `locks`-Block noch ein Schleifenrumpf versteckt einen Ruf: {:?}",
+        h.wirkungen
+    );
+}
+
+#[test]
+fn some_und_none_sind_konstruktoren_und_keine_gerufenen() {
+    // «B35»: `option` hatte keinen Konstruktor, und der Bestand schreibt ihn seit jeher.
+    // Zaehlt der Graph `Some` als Ruf, ist er dem Graphen unbekannt -- und JEDE Huelle ueber
+    // einer Tabelle mit `option`-Feld wird zur unteren Schranke. Eine Luecke im GRAPHEN,
+    // nicht im Programm, und zwar dieselbe Klasse wie beim `transition`.
+    let q = "module t {
+table T count 8 { slot { eltern : option index into T, } }
+impl fn setze(p : ptr<normal, rw> T, i : index into T) effects { writes p.slots } costs <= 4 ops
+{ p.slots[i].eltern = None; }
+}";
+    let h = graph(q).huelle("setze");
+    assert!(
+        h.unvollstaendig.is_none(),
+        "`None` ist ein Konstruktor, kein unbekannter Gerufener: {:?}",
+        h.unvollstaendig
+    );
+}

@@ -659,6 +659,68 @@ MUTATIONEN = [
         "    let _ = &paarung::pass;",
         "Passliste -- Pass 7 (Paarung) faellt still aus; V001-V004 schweigen",
     ),
+    # -- aufrufgraph.rs: 268 Zeilen, an denen DREI Posten haengen ------------------------
+    #
+    # `H005`, die Aufrufwirkungen (`E008`) und die Trennung an der Klasse *Phase* -- alle drei
+    # ruhen auf einer transitiven Huelle, die bis zum 2026-08-17 keine einzige Mutation trug.
+    # Die Huelle war geprueft; die SAMMELSEITE nicht: alle sieben Proben riefen ausschliesslich
+    # auf der obersten Rumpfebene.
+    Mutation(
+        "huelle-bleibt-flach",
+        "aufrufgraph.rs",
+        "        for g in &k.ruft {\n            self.gehe(g, gesehen, menge, offen);\n        }",
+        "        let _ = &k.ruft;",
+        "E008 -- `effects` deckt wieder nur die ERSTE Ebene",
+    ),
+    Mutation(
+        "zyklus-schweigt",
+        "aufrufgraph.rs",
+        "            if offen.is_none() {\n                *offen = Some(format!(\"cycle over `{name}`\"));\n            }\n            return;",
+        "            return;",
+        "R16 -- ein Zyklus liefert eine untere Schranke und nennt sich nicht mehr so",
+    ),
+    Mutation(
+        "gerufener-ohne-effects-egal",
+        "aufrufgraph.rs",
+        "        if !k.hat_effects {",
+        "        if false && !k.hat_effects {",
+        "E009 -- ein Gerufener ohne `effects` macht die Menge nicht mehr zur unteren Schranke",
+    ),
+    Mutation(
+        "held-ist-immer-geteilt",
+        "aufrufgraph.rs",
+        "        PredArt::Held { sperre, geteilt, .. } => aus.push((sperre.text.clone(), *geteilt)),",
+        "        PredArt::Held { sperre, geteilt, .. } => { let _ = geteilt; aus.push((sperre.text.clone(), true)) }",
+        "H005 -- eine EXKLUSIVE Sperrforderung gilt als geteilt (der geteilte Block laesst sie durch)",
+    ),
+    Mutation(
+        "match-zweige-unsichtbar",
+        "aufrufgraph.rs",
+        "            StmtArt::Match(m) => {\n                for z in &m.zweige {\n                    sammle_rufe(&z.rumpf, aus);\n                }\n            }",
+        "            StmtArt::Match(m) => { let _ = m; }",
+        "E008 -- Rufe in `match`-Zweigen sind unsichtbar (delete_leaf ruft dort dreimal)",
+    ),
+    Mutation(
+        "locks-block-versteckt-rufe",
+        "aufrufgraph.rs",
+        "            StmtArt::Sperrt(x) => sammle_rufe(&x.rumpf, aus),",
+        "            StmtArt::Sperrt(x) => { let _ = x; }",
+        "E008 -- ein `locks`-Block versteckt seine Rufe, und genau dort sitzt H005",
+    ),
+    Mutation(
+        "schleifenrumpf-versteckt-rufe",
+        "aufrufgraph.rs",
+        "                Schleife::Traverse(x) => sammle_rufe(&x.rumpf, aus),",
+        "                Schleife::Traverse(x) => { let _ = x; }",
+        "E008 -- ein `traverse`-Rumpf versteckt seine Rufe (revoke ruft dort delete_leaf)",
+    ),
+    Mutation(
+        "some-ist-ein-ruf",
+        "aufrufgraph.rs",
+        "        if n.text != \"Some\" && n.text != \"None\" {",
+        "        if true {",
+        "B35 -- `Some`/`None` gelten als unbekannte Gerufene; jede option-Huelle wird untere Schranke",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
