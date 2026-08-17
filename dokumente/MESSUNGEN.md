@@ -5598,3 +5598,66 @@ unguarded although **gate P2 rests on it**: it decides what gets counted at all.
 
 The probe it demanded takes five excerpt forms and both borderline cases of the ellipsis —
 allowed in a comment, not in code.
+
+
+---
+
+# NACHTRAG zur Neuzuweisung: `H = 36 → 35`, und die Absenkung ist bei 1 von 10
+
+**Same day, and the run is not re-opened** — the measurement booked `H = 36` and that number
+stands as measured. What changed is the world, not the count: **F7's lowering obligation is
+carried since 2026-08-17**, and the ledger in [`PFLICHTEN.md`](PFLICHTEN.md) carries the
+correction with its date.
+
+```
+.gab (aus FRAGMENTE.md geschnitten)  →  C  →  cc -Werror  →  ausgefuehrt  →  123456
+```
+
+**Six boot steps, in order, each exactly once.** The generator does not read a copy — the
+guardian cuts the block out of the frozen corpus and refuses if the cut misses.
+
+## What F7 buys, and it is the folder's first statement about COST
+
+`BootPhase` is a `linear ghost type`. It carries the entire safety argument of the fragment —
+*the token arises once, travels the stretch and is consumed; a path that drops it is a boot that
+never finishes, one that duplicates it is two cores each believing they boot alone* — and it
+lowers to **nothing**.
+
+> **The obligation is discharged at compile time. At run time the six calls stand there and the
+> token does not.** *That is the first sentence this folder can make about what Gabbro costs,
+> and the answer at this site is: nothing.*
+
+## The erasure holds at three places, and two failure forms are silent
+
+| place | right | wrong |
+|---|---|---|
+| signature | `void mmu_an(void)` | `void mmu_an(BootPhase)` — needs a representation that does not exist |
+| call site | `mmu_an()` | `mmu_an(p)` — passes a value that is not there |
+| **`let` binding** | **`mmu_an();`** | `void p1 = mmu_an();` *(does not compile)* — **or the whole statement drops** |
+
+**The third right-hand cell is the dangerous one, and it was measured rather than assumed.**
+Made to fail that way, the C **compiles without a warning** and prints `6`:
+
+```
+erwartet:   123456
+bekommen:   6
+```
+
+**Five of six boot steps gone, silently.** Only `root_task_starten()` survived — it is a plain
+call statement, not a `let`. *That is exactly why stage 4 of the guardian exists: a generator
+that produces compilable C computing something else is worse than one that produces nothing.*
+
+## One decision inside it deserves naming: the foreign type
+
+`extern fn melde_roh(text : ptr<code, r> Text)` names `Text` and nowhere declares it — the
+fragment is an excerpt of a larger program. The emitter lowers it to an **incomplete** C type
+(`struct Text;` forward, `const struct Text *` at the parameter).
+
+> **That is not a guess.** C already carries the rule the emitter would otherwise have to
+> invent: behind a pointer an incomplete type is legal, and **any use that needs the layout is a
+> compile error.** *The refusal is delegated, not dropped — and delegated to the one tool that
+> can decide it.*
+
+**And C11 has a second requirement the first version missed:** the tag must stand **before** the
+parameter list, otherwise its visibility ends at the semicolon. `-Wall` said so, `-Werror` made
+it a finding, and the test now asserts the ordering rather than the presence.

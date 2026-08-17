@@ -8,10 +8,21 @@
 //!
 //! ## What this emitter is, and what it deliberately is not
 //!
-//! **It is one fragment, not ten.** It covers exactly the forms that
-//! `beispiele/16-by-ops-am-feld.gab` uses: a `table` with `count`, range types, `bool`,
-//! `index into T`, pointer parameters, field and index access, assignment, `return`. Anything
-//! else it **refuses by name** (`C001`) instead of emitting something plausible.
+//! **It is two translation units, not ten.** It covers exactly the forms that
+//! `beispiele/16-by-ops-am-feld.gab` and `FRAGMENTE.md` F7 use: a `table` with `count`, range
+//! types, `bool`, `index into T`, pointer parameters, field and index access, assignment,
+//! `return`, calls, prototypes for bodiless declarations, and **the erasure of a
+//! `linear ghost type`**. Anything else it **refuses by name** (`C001`) instead of emitting
+//! something plausible.
+//!
+//! ## The erasure is the one thing here that is not a lowering
+//!
+//! A ghost value **does not exist at run time**. It has to vanish from the signature, from the
+//! call site and from the `let` binding — three places at once, and two of the three failure
+//! forms are silent. *The third is the dangerous one:* drop the whole `let` statement instead
+//! of only its binding and the C compiles while the boot step **does not happen**. The
+//! counter-probe of 2026-08-17 produced `6` where `123456` was expected — five of six steps
+//! gone without a warning.
 //!
 //! > **A generator that emits something for a form it does not know is worse than one that
 //! > stops.** The whole value of this crate is that its output is trustworthy; a silent

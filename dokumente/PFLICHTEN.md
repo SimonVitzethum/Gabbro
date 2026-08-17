@@ -383,13 +383,25 @@ carries and the Rust original did not — because it does not write them down.*
 
 | Fragment | Obligation | | discharged by |
 |---|---|---|---|
-| F1 … F10 | **the generated C computes what the fragment says** | K | **gap, for all ten.** The emitter of 2026-08-17 lowers `beispiele/16-by-ops-am-feld.gab` — **an example, not a fragment**. It refuses by name (`C001`) for every form these ten need: loops, `match`, `locks`, `publish`, `exchange`, every generated operation |
+| **F7** | **the generated C computes what the fragment says** | K | **carried, measured by execution.** `pruefe-emission.sh` cuts F7 out of the frozen corpus, emits, compiles with `cc -std=c11 -Wall -Wextra -Werror`, runs it and compares: **`123456`** — six boot steps, in order, each exactly once. The `linear ghost type` leaves **no trace** in the C |
+| F1–F6, F8–F10 | same | K | **gap, for nine.** `C001` refuses for every form they need: loops, `match`, `locks`, `publish`, `exchange`, `format`, `walk`, every generated operation |
 
-**+10 obligations, 10 K, all 10 hanging.**
+**+10 obligations, 10 K, 9 hanging** *(updated 2026-08-17, after F7)*.
 
-> *That is the honest connection to yesterday's work.* The differential test showed that **one**
-> lowering holds for **one** file, measured by execution. **Refinement is a statement about
-> every lowering**, and against this corpus it stands at zero of ten.
+> *That is the honest connection to the emitter work.* The differential test now shows that
+> **two** lowerings hold for **two** files, measured by execution — and F7's is the first over a
+> **fragment** rather than an example. **Refinement is a statement about every lowering**, and
+> against this corpus it stands at **one of ten**.
+>
+> **What F7 buys is a statement about cost, and it is the first one this folder can make:** the
+> boot phase is threaded as a linear ghost token through six steps, carries the whole safety
+> argument of the fragment — and lowers to *nothing*. The obligation was discharged at compile
+> time; at run time the six calls stand there and the token does not.
+>
+> **And the danger was measured, not assumed.** The erasure has to hold in the signature, at the
+> call site and at the `let` binding. Made to fail at the third — dropping the whole statement
+> instead of only the binding — the C **compiles cleanly** and prints `6`: five of six boot
+> steps gone without a warning. *That is why stage 4 of the guardian exists.*
 
 ---
 
@@ -400,7 +412,7 @@ carries and the Rust original did not — because it does not write them down.*
 | **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
 | **Plumbing (K)** | **173** | 73 % |
 | **Logic (L)** | **65** | 27 % |
-| **hanging** | **50** | of which **36 are K** — every one a breach of the thesis at its site |
+| **hanging** | **49** | of which **35 are K** — every one a breach of the thesis at its site. *(F7's lowering was carried on 2026-08-17; the run booked 36.)* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
 **L : K = 0,38 : 1.**
@@ -419,14 +431,14 @@ carries and the Rust original did not — because it does not write them down.*
 | F8 Scheduler | 14 | 12 | 2 | 1 | 1 |
 | F9 MMU | 11 | 7 | 4 | 2 | 1 |
 | F10 Parser | 11 | 9 | 2 | 1 | 1 |
-| Lowering | 10 | 10 | 0 | 10 | 10 |
-| | **238** | **173** | **65** | **50** | **36** |
+| Lowering | 10 | 10 | 0 | 9 | 9 |
+| | **238** | **173** | **65** | **49** | **35** |
 
 ## The 36 hanging plumbing obligations, by cause
 
 | Cause | # | Sites |
 |---|---:|---|
-| **the lowering** | 10 | one per fragment — the emitter covers an **example**, no fragment |
+| **the lowering** | 9 | one per fragment — **F7 is carried since 2026-08-17**, measured by execution (`123456`) |
 | **device notation** | 6 | «B23» mixed register class · «B24» bit position beyond 64 (×2) · «B26» pre-state (×2) · «B18» phases at the `device` |
 | **hand-written `narrow`** | 3 | F1:268 · F6:1100 (**else branch unreachable**) · F10:1660 (**else branch reachable**) |
 | **`format`/compound** | 4 | «B25» value set vs interval · «B22-near» refusal vs absence · «B7» struct literal (×2) |

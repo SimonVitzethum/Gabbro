@@ -88,7 +88,8 @@ Newly collected 2026-08-15, **not reconstructed**, x86 only
 | **Base rate `format`** | **does not carry `format`** — 5 formats, 0 errors of the class | `dokumente/MESSUNGEN.md` |
 | **`delete_leaf`** | **1,75 : 1** instead of the booked 3,6–6 : 1 | `dokumente/BEWEIS.md` |
 | **`programs/`** | the reason for the breach no longer carries | `dokumente/MESSUNGEN.md` |
-| **C emission, one fragment** | **the first yes-statement**: `.gab` → C → `cc -Werror` → executed → **result compared** (`42 1 8 0`) | `./pruefe-emission.sh`, `crates/gabbro-check/src/emit.rs` |
+| **C emission, two units** | **the first yes-statements**: `.gab` → C → `cc -Werror` → executed → **result compared**. `beispiele/16` yields `42 1 8 0`; **`FRAGMENTE.md` F7 yields `123456`** — six boot steps, in order, each exactly once | `./pruefe-emission.sh`, `crates/gabbro-check/src/emit.rs` |
+| **Ghost erasure** | **`linear ghost type` costs nothing at run time** — `BootPhase` carries F7's whole safety argument and leaves **no trace** in the C. Erased in the signature, at the call site and at the `let` binding; the counter-probe on the third produced `6` instead of `123456` | `crates/gabbro-check/src/emit.rs`, `./pruefe-emission.sh`, poison `geist-let-verschwindet-ganz` |
 | **N1 (Caprock)** | **`MEM` is a leaf**, `system.rs:724` is wrong | `arbeitsprotokoll/03-N1.md` |
 | **Closures by kind of use** | **gate VOID** — the population does not reproduce (89 → 64), and V-b is **empty** | `dokumente/MESSUNGEN.md`, *ERGEBNIS Verschlüsse* |
 | **Four templates machine-checked** | `table.induktion` · `table.indexschranke` · `consuming.ordnung` · `consuming.leermenge` — **5 silent assumptions flushed out, 2 statements REFUTED**, register 17 → 19, unproved 16 → 15 | `beweise/*.thy` (Isabelle2025-2), `gabbro schablonen` |
@@ -136,10 +137,10 @@ nobody checks against each other.*
 ./pruefe-wortschatz.py    terminals against the table, Sonderform counter (3 of 5)
 ./pruefe-todo.py          holds the task list against itself, eight classes
 ./pruefe-kennungen.py     no refusal code in two files
-./mutiere-pruefer.py      damages one rule at a time:   87 of 87
+./mutiere-pruefer.py      damages one rule at a time:   92 of 92
 ./erzeuge-mutationen.py   twists systematically:         7 of 39
 ./pruefe-luecken.py       the named gaps one by one:    13 of 15
-./pruefe-emission.sh      .gab → C → cc -Werror → run → compare (`42 1 8 0`)
+./pruefe-emission.sh      .gab → C → cc -Werror → run → compare, TWO units
 ./commit.sh               R19 — commit messages only via file
 ```
 

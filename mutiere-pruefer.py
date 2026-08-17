@@ -47,8 +47,9 @@ FLAECHEN = {
     # cc -Werror -> ausgefuehrt -> verglichen (`pruefe-emission.sh`). Die Flaeche ist damit
     # beschaedigbar geworden, und das ist der ganze Unterschied: was 0 Mutationen hat, ist
     # nicht gedeckt, sondern unbeschaedigbar.
-    "code": "Die C-Emission. EIN Fragment gebaut und mutierbar; neun weitere ungeprueft, "
-            "und `C001` weigert sich fuer jede Form, die dieses eine nicht braucht.",
+    "code": "Die C-Emission. ZWEI Uebersetzungseinheiten gebaut und mutierbar (ein Beispiel "
+            "und Fragment F7, die Geistloeschung); acht Fragmente ungeprueft, und `C001` "
+            "weigert sich fuer jede Form, die diese beiden nicht brauchen.",
     # **Diese Zahl wird NICHT hier gepflegt.** Sie stand hier als "16, keine bewiesen",
     # waehrend `gabbro schablonen` 19 mit 4 bewiesenen meldete -- zwei Register ueber
     # derselben Sache, und das ist die Fehlerklasse, gegen die W7 steht. Wer sie hier
