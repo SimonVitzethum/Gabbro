@@ -98,6 +98,7 @@ Newly collected 2026-08-15, **not reconstructed**, x86 only
 | **N1 (Caprock)** | **`MEM` is a leaf**, `system.rs:724` is wrong | `arbeitsprotokoll/03-N1.md` |
 | **Closures by kind of use** | **gate VOID** — the population does not reproduce (89 → 64), and V-b is **empty** | `dokumente/MESSUNGEN.md`, *ERGEBNIS Verschlüsse* |
 | **`option.sonderwert` machine-checked — and it flushed out a premise nobody had written** | the encoding `None ↦ N`, `Some i ↦ i` is **injective**, which is what *lossless* means — **under `N < 2^w`.** At `N = 2^w` the sentinel falls onto slot 0 and `None` is `Some 0`. **The premise stood in none of the three places** (register, `SPRACHE.md`, emitter); the emitter emitted `#define T_NONE (N)` for `count 4294967296` without a word. *Satisfied in practice, unchecked in fact.* Now a check | `beweise/Option_Sonderwert.thy`, poison `sonderwert-ohne-wortgrenze` |
+| **Three more lowerings, and one of them names «B17»** | `x = None` resolves the **target** table's sentinel (not its own — a distinction that only shows with two tables) · `bank … at CAP.FRO * 16` becomes an indexed accessor whose base is **read from a field**, the address the stock computes by hand at `vtd.rs:442` · and **`transset` sets several bits in ONE write** — possible at a register word, *impossible at two slot fields, and that is «B17» one level up* | `beispiele/02-geraet.gab` now emits, poison `transset-nimmt-nur-den-ersten` |
 | **TRAP 4 in the generated C, not in a comment** | `mirrors GCMD from GSTS;` — **one line per device** — becomes `write(GCMD, (read(GSTS) & ~changed) \| new)`. GCMD is `class w`, i.e. unreadable, so a read-modify-write is impossible; the state bits to carry sit in the register **next to it**. *In the measured code this is a mask plus a wall of comment (`vtd.rs:42-52`).* Measured `1 1 1 1` — **the second and fourth numbers ARE the trap**: without `mirrors` they are 0 and the unit switches translation off mid-operation. And the `requires` becomes **no runtime check** — the same kind of clause as `requires Held(…)`, i.e. a caller obligation; asserting here and not there would be the silent exception | `beispiele/20-falle-vier.gab`, `./pruefe-emission.sh` |
 | **The assumption set now travels WITH the code** | `SYNTAX.md` §12 demands *"the assumption set is emitted into the artefact ('proved under A1…An'), as a set of NAMES WITH CLASS"* — and until 2026-08-17 nothing did it: `gabbro annahmen` printed to the console and the artefact knew nothing. *A promise that lives only in a tool invocation does not travel with the code.* It now stands in the generated header, beside the licence notice and for the same reason | `crates/gabbro-check/src/emit.rs`, poison `annahmen-fahren-nicht-mit` |
 | **Device bit fields — read yes, write no** | `v.GSTS.TES` becomes `((word >> 31) & 1u)`. **Writing one is refused**: a write to a single bit is a read-modify-write on the WHOLE register, impossible for `class w` — *and that is exactly trap 4*, for which `mirrors` exists and is not lowered. A bit position beyond the declared register width is an **error**, not an open point («B24» is about a `format` spanning two words, where the width is unsaid) | `crates/gabbro-check/src/emit.rs`, poison `bitlage-darf-herausragen` |
@@ -147,7 +148,7 @@ nobody checks against each other.*
 ./pruefe-wortschatz.py    terminals against the table, Sonderform counter (3 of 5)
 ./pruefe-todo.py          holds the task list against itself, eight classes
 ./pruefe-kennungen.py     no refusal code in two files
-./mutiere-pruefer.py      damages one rule at a time:  126 of 126
+./mutiere-pruefer.py      damages one rule at a time:  129 of 129
 ./erzeuge-mutationen.py   twists systematically:         7 of 39
 ./pruefe-luecken.py       the named gaps one by one:    13 of 15
 ./pruefe-emission.sh      .gab → C → cc -Werror → run → compare, SEVEN units
@@ -191,5 +192,5 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**21 clean examples, 69 poison probes, 103 tests** —
+**21 clean examples, 69 poison probes, 104 tests** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`

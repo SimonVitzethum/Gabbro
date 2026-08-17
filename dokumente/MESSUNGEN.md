@@ -6171,3 +6171,38 @@ eingefrorene Fragmenttext benutzt sie nicht, und er wird nicht angefasst.)*
 **Vier der Sperren sind offene Befunde des Ordners selbst** — «B10», «B11», «B12», «B24» — und
 eine ist die Axiomschicht. *Der Erzeuger hat sie nicht erzeugt; er ist auf sie aufgelaufen, und
 das ist die nützlichere Hälfte seines Ertrags.*
+
+
+---
+
+# Der Stand nach dem Auftrag „alle F-Lücken schliessen"
+
+**Acht Beispiele und drei Fragmente gehen durch die ganze Kette.** Was an den zehn Fragmenten
+offen bleibt, steht hier vollständig — **und jeder Posten nennt, wem er gehört.**
+
+## Geschlossen in diesem Zug
+
+| | |
+|---|---|
+| **`option` als Wert** | `x = None` löst die **Zieltabelle** auf, nicht die eigene. *Der Unterschied zeigt sich erst mit zwei Tabellen — und genau darum weigerte sich der Erzeuger, solange er ihn nicht auflösen konnte.* |
+| **`bank … at CAP.FRO * 16`** | ein Registersatz an **berechneter** Lage: die Basis wird aus einem gelesenen Feld geschoben und maskiert. *Der Bestand rechnet dieselbe Adresse von Hand (`vtd.rs:442`).* Die Indexschranke fällt aus `count`, nicht aus einer Prüfung im Rumpf |
+| **`transset`** | mehrere Bits in **einem** Schreibzug. **Am Registerwort geht das; an zwei Slotfeldern nicht** — und das ist «B17» eine Ebene höher. *Der Erzeuger kann das eine und sagt beim anderen, warum nicht.* |
+
+## Was bleibt — und die Aufteilung ist der eigentliche Befund
+
+| Posten | gehört |
+|---|---|
+| «B10» `traverse` liefert keinen Wert, kein `break` (F3) | **dem Ordner** |
+| «B11» `forever` hat keinen Ausgang (F5) | **dem Ordner** |
+| «B12» `elems of` — Element oder Index (F6) | **dem Ordner** |
+| «B17» `transition` schreibt genau ein `place` (F3) | **dem Ordner** |
+| «B24» Bitlage jenseits der Wortbreite (F2 · F9) | **dem Ordner** |
+| `at dma` — welche Barriere (F4 · F9) | **der Axiomschicht**, M3 baut sie ausdrücklich nicht |
+| `descendants of` (F1) · `mappings of`/`walk` (F9) · `atomic`/`check` (F6) | **noch zu bauen** |
+
+**Fünf offene Befunde des Ordners, eine Axiomschicht, drei Bauposten.** *Von den Sperren, die
+zehn Fragmente heute noch aufhalten, sind sechs von neun keine Bauarbeit.*
+
+> **Und zwei der zehn sind gar nicht zu schliessen.** `FRAGMENTE.md` führt F3 und F5 seit dem
+> 2026-08-14 selbst als *„passt nicht"*. Ein Erzeuger, der dafür C ausgäbe, gäbe C für ein
+> Programm aus, das Gabbro ablehnt — *die eine Bewegung, gegen die dieses Modul gebaut ist.*
