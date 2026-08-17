@@ -147,6 +147,12 @@ of items that are neither code nor a run — what remains is building and measur
       0 Fehler) -- *und kein Pass liest es.* Die Schicht hat damit zwei Haelften: die sieben
       Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
       tragen lassen (PL-Arbeit).
+- [ ] **Eine `bank` mit `stride 0` erzeugt LEERE Zellen, und der Satz gilt trivial**
+      *(ausgespuelt beim Beweis von `device.konstruktor`, 2026-08-17)*. `bankeintraege_
+      ueberlappen_nicht` braucht `stride > 0` nicht als Praemisse -- bei null ist jede
+      Bankzelle leer, und leere Mengen schneiden sich nicht. **Richtig und nutzlos ist keine
+      bestandene Pruefung:** der Erzeuger sollte `stride 0` ablehnen, statt sie leerlaufen zu
+      lassen. *Ein Beweis, der einen Fall trivial macht statt ihn zu decken, hat ihn gefunden.*
 - [ ] **K11.2.2 ist am Korpus nicht messbar, und das ist ein Befund** *(gemessen 2026-08-17)*.
       Vier Kontextwurzeln (3 × `entry`, 1 × `boot`), **null davon mit einem Rumpf, den Gabbro
       sieht** -- jedes `dispatch`-Ziel ist ein `extern fn`. Die Huelle ueber einer

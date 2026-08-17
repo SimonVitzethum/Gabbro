@@ -1659,7 +1659,7 @@ UNZUGEORDNET: …
 | Achse | Messgrösse | heute |
 |---|---|---|
 | **Breite** — jede Form wird abgesenkt | `UNZUGEORDNET = 0` **und** kein `C001` über dem Korpus | 8 von 22+3 Einheiten senken ab |
-| **Tiefe** — jede benutzte Schablone ist bewiesen | `davon UNBEWIESEN = 0` | **6 von 20 bewiesen, 3 lebend getragen** *(K11.3.2, 2026-08-17: `table.absenkung`)* |
+| **Tiefe** — jede benutzte Schablone ist bewiesen | `davon UNBEWIESEN = 0` | **8 von 20 bewiesen, 1 lebend getragen** *(K11.3.2, 2026-08-17)* — **acht der neun Übersetzungseinheiten melden `0 davon UNBEWIESEN`** |
 
 ### K11.3.1 — Breite: die Weigerungen abbauen, **in der Reihenfolge ihrer Sperre**
 
@@ -1682,7 +1682,11 @@ ist am 2026-08-17 gefallen** (`beweise/Table_Absenkung.thy`) — und zwar zuerst
 anderen darauf aufsitzen: *`option.sonderwert` braucht die Länge für den Sonderwert,
 `table.induktion` die Schranke für die Terminierung.*
 
-**Es bleiben drei:** `option.sonderwert` · `format.roundtrip` · `device.konstruktor`.
+**`format.roundtrip` und `device.konstruktor` sind am selben Tag gefallen.** Es bleibt
+**einer**: `option.sonderwert` — und er bleibt bewusst *getragen*, weil seine offene Hälfte
+der Eintrag selbst als **die eigentliche** führt (*„dass keine erzeugte Rechnung den Sonderwert
+HERSTELLT"*), nicht als generische Brücke. *Ihn jetzt umzubuchen wäre genau das Verkleinern
+durch Umschreiben, das die Ratsche verbietet.*
 
 ### K11.3.3 — Und die starke Fassung von (b), als Grenze benannt
 
@@ -1704,7 +1708,7 @@ Plan zu einem anderen Projekt machen.
 O005 = 0     kein unentschiedener Phasenschritt im Korpus
 protects     beisst, und die Zahl der gefallenen Stellen stand VORHER im Protokoll
 UNZUGEORDNET = 0   über jeder Datei, die absenkt
-L ≤ 3        lebend unbewiesene Schablonen — seit K11.3.2 eine weniger
+L = 1        lebend unbewiesene Schablonen — K11.3.2 hat drei bewiesen
 ```
 
 **Und die Zahl lügt, wenn eines davon fehlt:**

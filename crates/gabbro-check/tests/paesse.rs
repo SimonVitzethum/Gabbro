@@ -351,7 +351,7 @@ fn jede_schablone_nennt_ihre_pflicht() {
     // still mitbewegt, ist keine Ratsche.*
     assert_eq!(
         ungedeckt(),
-        14,
+        12,
         "wenn eine Schablone nach Isabelle gebracht wurde, gehoert das hierher UND in BEWEIS.md"
     );
 }
@@ -495,12 +495,12 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     use gabbro_check::schablonen::{bewiesen, lebend_ungedeckt, ungedeckt, SCHABLONEN, Stand};
     assert_eq!(
         lebend_ungedeckt(),
-        3,
+        1,
         "getragen und unbewiesen: wer eine Schablone in den Erzeuger einbaut, vergroessert \
          die LEBENDE Vertrauensbasis -- und das gehoert hierher UND in BEWEIS.md"
     );
-    assert_eq!(ungedeckt(), 14);
-    assert_eq!(bewiesen(), 6);
+    assert_eq!(ungedeckt(), 12);
+    assert_eq!(bewiesen(), 8);
 
     // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
     // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.

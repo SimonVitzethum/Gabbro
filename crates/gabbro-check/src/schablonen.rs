@@ -330,8 +330,14 @@ pub const SCHABLONEN: &[Schablone] = &[
         // **Getragen seit 2026-08-17** fuer den byteweisen Fall: `emit.rs` erzeugt Zugriffe in
         // der erklaerten Bytereihenfolge plus eine Gueltigkeitsfunktion aus den
         // `where`-Klauseln. Bitlagen bleiben abgelehnt («B24»).
-        stand: Stand::Getragen,
-        fundstelle: "SPRACHE.md §10.1",
+        //
+        // **Maschinell geprueft am 2026-08-17** (`beweise/Format_Roundtrip.thy`, K11.3.2).
+        // *Ausgespuelt hat der Beweis eine dritte Haelfte, die der Eintrag nicht nannte:* die
+        // Rundreise je Feld ist wertlos, solange nicht dasteht, dass ein Schreiben in das eine
+        // das andere nicht zerstoert (`schreiben_stoert_getrennte_felder_nicht`) -- **und
+        // genau das ist die Stelle, an der ein Erzeuger zwei Versaetze ueberlappen laesst.**
+        stand: Stand::Bewiesen,
+        fundstelle: "SPRACHE.md §10.1; beweise/Format_Roundtrip.thy",
     },
     Schablone {
         name: "entry.abdruck",
@@ -360,9 +366,22 @@ pub const SCHABLONEN: &[Schablone] = &[
         pflicht: "Aus der Adresse entsteht ein typisierter Griff, und die erzeugten \
                   Zugriffe treffen die im `device`-Block DEKLARIERTEN Lagen. **Dass die \
                   deklarierten Lagen die des Geraets sind, ist eine ANNAHME der \
-                  Axiomschicht** und wird hier nicht gezeigt.",
-        stand: Stand::Getragen,
-        fundstelle: "MESSUNGEN.md, Der Ursprung, 2026-08-14",
+                  Axiomschicht** und wird hier nicht gezeigt. **Was bleibt, ist die \
+                  RECHNUNG**, und sie ist maschinell geprueft: getrennte Register treffen \
+                  getrennte Zellen, und zwar FUER JEDE BASIS \
+                  (`trennung_haengt_nicht_an_der_basis` -- deshalb darf der Griff der \
+                  Konstruktor sein); Bankeintraege ueberlappen nicht \
+                  (`bankeintraege_ueberlappen_nicht`).",
+        // **Maschinell geprueft am 2026-08-17** (`beweise/Device_Konstruktor.thy`, K11.3.2).
+        // Der Beweis darf kurz sein, und der Eintrag sagt warum: *„stimmt 0x18 fuer GCMD?"*
+        // ist keine Frage an ein Beweissystem, sondern an ein Datenblatt -- sie steht als
+        // Annahme mit Sonde im Manifest.
+        //
+        // **Und er spuelte einen Posten aus:** eine `bank` mit `stride 0` erzeugt LEERE
+        // Zellen, der Satz gilt trivial, und der Erzeuger sollte sie ablehnen statt sie
+        // leerlaufen zu lassen. *Richtig und nutzlos ist keine bestandene Pruefung.*
+        stand: Stand::Bewiesen,
+        fundstelle: "MESSUNGEN.md, Der Ursprung, 2026-08-14; beweise/Device_Konstruktor.thy",
     },
     Schablone {
         name: "table.indexschranke",
