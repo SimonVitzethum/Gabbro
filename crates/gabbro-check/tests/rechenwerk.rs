@@ -688,3 +688,54 @@ impl fn vor(r : ptr<mmio, rw> R) effects { writes r.IDX } costs <= 2 ops { r.IDX
         "`at dma` darf nicht abgesenkt werden: {f:?}"
     );
 }
+
+/// **Die Annahmenmenge faehrt jetzt mit dem Code mit — `SYNTAX.md` §12 verlangt es.**
+///
+/// *„Die Annahmenmenge wird ins Erzeugnis emittiert (‚bewiesen unter A1…An'), als Menge von
+/// Namen mit Klasse, nicht als Zahl."* Bis zum 2026-08-17 hat das nichts getan: `gabbro
+/// annahmen` druckte sie auf die Konsole, und das Erzeugnis wusste nichts davon.
+///
+/// > *Eine Zusage, die nur in einem Werkzeugaufruf steht, faehrt nicht mit dem Code mit.*
+/// > Sie steht jetzt im Kopf der erzeugten Datei — dort, wo auch der Lizenzhinweis steht,
+/// > und aus demselben Grund.
+///
+/// **Und ein Bitfeld wird gelesen, nicht geschrieben.** Ein Schreiben waere ein
+/// Lese-Aendere-Schreib-Zug auf dem GANZEN Register — bei `class w` unmoeglich, und genau
+/// dafuer gibt es `mirrors` (Falle 4).
+#[test]
+fn annahmen_und_bitfelder() {
+    let (baum, mut a) = gabbro_syntax::lies(
+        "p.gab",
+        "module t {
+axiom write_cr3(p : u64) effects { writes tlb } falsifier sonde_cr3;
+assume tlb_leer \"Ein Schreiben auf CR3 verwirft die nicht-globalen Eintraege.\"
+    unfalsifiable \"auf dieser Maschine nicht beobachtbar\";
+device V(basis : u64) at mmio { reg GSTS : u32 @0x1c class r fields { TES @31, ND @[2:0], } }
+impl fn bereit(v : ptr<mmio, r> V) -> u32 effects { reads v.GSTS } costs <= 2 ops
+{ return v.GSTS.TES; } }",
+    );
+    let c = gabbro_check::emit::emittiere(&baum, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(""));
+
+    // **Die Klasse steht dabei, nicht nur der Name** -- und der unfalsifizierbare Fall
+    // traegt seinen Grund, sonst waere er eine Annahme ohne Rechenschaft.
+    assert!(c.contains("Proved under the following assumptions"), "{c}");
+    assert!(c.contains("write_cr3 (axiom): falsifier sonde_cr3"), "{c}");
+    assert!(c.contains("UNFALSIFIABLE -- auf dieser Maschine nicht beobachtbar"), "{c}");
+
+    // Ein Einzelbit und ein Bereich, beide aus demselben volatilen Wort.
+    assert!(
+        c.contains(">> 31) & 1u"),
+        "das Einzelbit wird aus dem Wort geschoben und maskiert:\n{c}"
+    );
+
+    let (baum, mut a) = gabbro_syntax::lies(
+        "p.gab",
+        "module t { device V(basis : u64) at mmio { reg R : u8 @0x0 class r fields { X @9, } } }",
+    );
+    let _ = gabbro_check::emit::emittiere(&baum, &mut a);
+    assert!(
+        a.absagen.iter().any(|x| x.text.contains("outside the declared register width")),
+        "eine Bitlage jenseits der erklaerten Breite ist ein Fehler, kein offener Punkt"
+    );
+}

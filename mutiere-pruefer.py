@@ -1060,6 +1060,38 @@ MUTATIONEN = [
         "C-Absenkung -- jedes Register liegt an Versatz 0; alle treffen dasselbe Wort",
         "code",
     ),
+    Mutation(
+        "annahmen-fahren-nicht-mit",
+        "emit.rs",
+        "        aus.push_str(\"\\n/* Proved under the following assumptions (SYNTAX.md 12).\\n\");",
+        "        aus.push_str(\"\\n/*\\n\");",
+        "SYNTAX.md 12 -- die Annahmenmenge steht nicht im Erzeugnis; die Zusage bleibt im Werkzeug",
+        "code",
+    ),
+    Mutation(
+        "unfalsifizierbar-ohne-grund-im-c",
+        "emit.rs",
+        "                    format!(\"UNFALSIFIABLE -- {grund}\")",
+        "                    { let _ = grund; format!(\"UNFALSIFIABLE\") }",
+        "SYNTAX.md 12 -- eine nicht falsifizierbare Annahme faehrt ohne ihren Grund mit",
+        "code",
+    ),
+    Mutation(
+        "bitlage-darf-herausragen",
+        "emit.rs",
+        "            if hi >= breite {",
+        "            if false && hi >= breite {",
+        "C-Absenkung -- eine Bitlage jenseits der Registerbreite wird maskiert statt abgelehnt",
+        "code",
+    ),
+    Mutation(
+        "bitfeld-ohne-verschiebung",
+        "emit.rs",
+        "                        return format!(\"(({wort} >> {lo}) & {maske}u)\");",
+        "                        return format!(\"(({wort} >> 0) & {maske}u)\");",
+        "C-Absenkung -- jedes Bitfeld wird ab Bit 0 gelesen",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

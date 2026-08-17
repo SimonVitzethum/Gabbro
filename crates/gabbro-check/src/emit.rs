@@ -106,6 +106,8 @@ struct Geraet {
     /// liest ihn direkt aus dem Baum, und ein zweites Feld daneben waere das zweite Register
     /// ueber derselben Sache (W7).
     reg: HashMap<String, (i128, String)>,
+    /// Registername -> Feldname -> (hoechstes Bit, niedrigstes Bit, Registerbreite in Bit).
+    felder: HashMap<String, HashMap<String, (u32, u32, u32)>>,
 }
 
 /// **Is this type a ghost — i.e. does it vanish in the C?**
@@ -155,7 +157,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         ItemArt::Device(d) => {
             namen.geraete.insert(
                 d.name.text.clone(),
-                Geraet { reg: HashMap::new() },
+                Geraet { reg: HashMap::new(), felder: HashMap::new() },
             );
         }
         ItemArt::Tabelle(t) => namen.tabellen.push(t.name.text.clone()),
@@ -255,13 +257,26 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
             if let ItemArt::Device(d) = &item.art {
                 let mut reg = HashMap::new();
+                let mut felder: HashMap<String, HashMap<String, (u32, u32, u32)>> =
+                    HashMap::new();
                 for r in &d.register {
                     if let Some(v) = umg.konst_wert(modul, &r.versatz) {
                         reg.insert(r.name.text.clone(), (v, intty(&r.typ)));
                     }
+                    let breite = breite_von(&r.typ) * 8;
+                    let mut f = HashMap::new();
+                    for (name, lage) in &r.felder {
+                        let (hi, lo) = match lage {
+                            BitPos::Bit(b) => (*b as u32, *b as u32),
+                            BitPos::Bereich(h, l) => (*h as u32, *l as u32),
+                        };
+                        f.insert(name.text.clone(), (hi, lo, breite));
+                    }
+                    felder.insert(r.name.text.clone(), f);
                 }
                 if let Some(g) = namen.geraete.get_mut(&d.name.text) {
                     g.reg = reg;
+                    g.felder = felder;
                 }
             }
         });
@@ -311,6 +326,25 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
     });
 
     let mut aus = String::from(KOPF);
+    let annahmen = crate::manifest::sammle(baum);
+    if !annahmen.is_empty() {
+        let (menge, _) = crate::manifest::vereinige(annahmen);
+        aus.push_str("\n/* Proved under the following assumptions (SYNTAX.md 12).\n");
+        aus.push_str(" * Each is a statement about the MACHINE that this program takes on\n");
+        aus.push_str(" * trust. A falsifier names the probe that could refute it.\n");
+        for a in &menge {
+            let wie = match &a.klasse {
+                crate::manifest::Klasse::Falsifizierbar { sonde } => {
+                    format!("falsifier {sonde}")
+                }
+                crate::manifest::Klasse::NichtFalsifizierbar { grund } => {
+                    format!("UNFALSIFIABLE -- {grund}")
+                }
+            };
+            aus.push_str(&format!(" *   {} ({}): {}\n", a.name, a.art, wie));
+        }
+        aus.push_str(" */\n");
+    }
     // **Alle Prototypen vor allen Rümpfen.** In C ist ein Ruf vor der Erklärung eine
     // implizite Deklaration, und `-Werror` haelt dort an. Die Quellreihenfolge einer
     // Gabbro-Datei ist aber frei: `FRAGMENTE.md` F10 erklaert `baum_unlesbar` NACH dem
@@ -370,6 +404,17 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             }
         }
         ItemArt::Funktion(f) => funktion(f, &mut aus, &mut rumpf, &namen, absagen),
+        // **`assume` und `axiom` erzeugen keinen Code -- aber sie erzeugen die ZUSAGE.**
+        //
+        // `SYNTAX.md` §12: *„Die Annahmenmenge wird ins Erzeugnis emittiert (‚bewiesen unter
+        // A1…An‘), als Menge von Namen mit Klasse, nicht als Zahl."* Bis zum 2026-08-17 hat
+        // das nichts getan: `gabbro annahmen` druckt sie auf die Konsole, und das Erzeugnis
+        // wusste nichts davon.
+        //
+        // > *Eine Zusage, die nur in einem Werkzeugaufruf steht, faehrt nicht mit dem Code
+        // > mit.* Sie steht jetzt im Kopf der erzeugten Datei -- dort, wo auch der
+        // > Lizenzhinweis steht, und aus demselben Grund.
+        ItemArt::Assume(_) | ItemArt::Axiom(_) => {}
         ItemArt::Modul(_) | ItemArt::Use(_) => {}
         _ => weigere(
             absagen,
@@ -562,10 +607,25 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         );
         return;
     }
+    // **«B24» an seiner eigenen Stelle:** eine Bitlage muss INNERHALB der erklaerten
+    // Registerbreite liegen. Der Befund des Ordners redet ueber Lagen jenseits von 64 in
+    // einem `format`; hier ist die Breite erklaert, also ist die Frage entscheidbar -- und
+    // eine Lage, die herausragt, ist ein Fehler, kein offener Punkt.
     for r in &d.register {
-        if !r.felder.is_empty() {
-            weigere(absagen, r.name.span, "`reg … fields { … }` -- bit accessors are not lowered yet");
-            return;
+        let breite = breite_von(&r.typ) * 8;
+        for (name, lage) in &r.felder {
+            let hi = match lage {
+                BitPos::Bit(b) => *b as u32,
+                BitPos::Bereich(h, _) => *h as u32,
+            };
+            if hi >= breite {
+                weigere(
+                    absagen,
+                    name.span,
+                    &format!("bit {hi} lies outside the declared register width of {breite}"),
+                );
+                return;
+            }
         }
     }
     if !d.baenke.is_empty() {
@@ -1484,13 +1544,37 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
         (u.geraetezeiger.get(&o.basis.text), o.suffixe.first())
     {
         if let Some((versatz, breite)) = u.geraete.get(g).and_then(|d| d.reg.get(&f.text)) {
+            let wort = format!(
+                "(*(volatile {breite} *)({}->basis + {versatz}))",
+                o.basis.text
+            );
             if o.suffixe.len() == 1 {
-                return format!(
-                    "(*(volatile {breite} *)({}->basis + {versatz}))",
-                    o.basis.text
-                );
+                return wort;
             }
-            weigere(absagen, f.span, "a bit field of a device register");
+            // **Ein Bitfeld LESEN ist mechanisch. Es zu SCHREIBEN ist Falle 4.**
+            //
+            // Ein Schreiben auf ein einzelnes Bit ist ein Lese-Aendere-Schreib-Zug auf dem
+            // GANZEN Register -- und bei `class w` ist das unmoeglich, weil sich das Register
+            // nicht lesen laesst. Genau dafuer gibt es `mirrors` (die x86-Fassung von Falle 4,
+            // `FRAGMENTE.md` F2), und `mirrors` ist nicht abgesenkt.
+            //
+            // *Der Erzeuger gibt darum nur den LESENDEN Ausdruck aus.* Ein Schreiben darauf
+            // waere in C ein Zuweisungsziel, das es nicht gibt -- und `cc` sagt es sofort.
+            if let Some(OrtSuffix::Feld(feld)) = o.suffixe.get(1) {
+                if o.suffixe.len() == 2 {
+                    if let Some((hi, lo, breite_bit)) =
+                        u.geraete.get(g).and_then(|d| d.felder.get(&f.text)).and_then(|m| m.get(&feld.text))
+                    {
+                        let maske: u128 = if *hi - *lo + 1 >= *breite_bit {
+                            u128::MAX >> (128 - breite_bit)
+                        } else {
+                            (1u128 << (*hi - *lo + 1)) - 1
+                        };
+                        return format!("(({wort} >> {lo}) & {maske}u)");
+                    }
+                }
+            }
+            weigere(absagen, f.span, "device register access form");
             return String::new();
         }
     }
