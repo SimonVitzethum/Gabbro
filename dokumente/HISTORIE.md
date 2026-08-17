@@ -32,9 +32,16 @@ worded weaker without **becoming** weaker.
 ## The broken ordering rule — 2026-08-14, announced, and booked here
 
 **The rule stood twice and in capitals:** *"No checker line before the result of measurement
-2"* ([`PLAN.md`](PLAN.md), [`TODO.md`](../TODO.md)) and *"THE NEXT STEP IS NOT A LINE OF
-RUST"*. **Measurement 2 has still not been run** — it is blocked because five of the eleven
-plumbing classes exist only in the scratchpad.
+2"* and *"THE NEXT STEP IS NOT A LINE OF RUST"*.
+
+> **Both citations were checked on 2026-08-17, and one of them no longer resolves.**
+> [`TODO.md`](../TODO.md) still carries the sentence (struck through, dated).
+> [`PLAN.md`](PLAN.md) carries only two weaker descendants of it. *A file that records broken
+> rules and cites a site that has since moved does the same thing it accuses others of — so
+> the citation now says which of the two holds.*
+
+**Measurement 2 has still not been run** — it is blocked because five of the eleven plumbing
+classes exist only in the scratchpad.
 
 **On 2026-08-14 a compiler came into being anyway:** lexer, parser over the complete EBNF, five
 of nine checking passes, plus example and poison corpora. **That is real checker code, not a

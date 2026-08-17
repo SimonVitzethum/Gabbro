@@ -44,7 +44,11 @@ FLAECHEN = {
                   "Vertraege ausgibt, liefert einen gruenen Beweis ueber eine schwaechere "
                   "Aussage, und keine Probe faengt ihn.",
     "code": "Die C-Emission. NICHT GEBAUT, also nicht mutierbar.",
-    "schablone": "Die Erzeuger-Schablonen (16, keine bewiesen). Ueberwiegend ENTWORFEN -- "
+    # **Diese Zahl wird NICHT hier gepflegt.** Sie stand hier als "16, keine bewiesen",
+    # waehrend `gabbro schablonen` 19 mit 4 bewiesenen meldete -- zwei Register ueber
+    # derselben Sache, und das ist die Fehlerklasse, gegen die W7 steht. Wer sie hier
+    # nachfuehrt, baut das zweite Register wieder auf.
+    "schablone": "Die Erzeuger-Schablonen (Zahl: `gabbro schablonen`). Ueberwiegend ENTWORFEN -- "
                  "was kein Code ist, kann keine Mutation fangen.",
 }
 

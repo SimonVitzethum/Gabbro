@@ -77,7 +77,7 @@ a hand-written proof, 0,5 : 1 is lost on that day — independently of everythin
 A plan made of constructs somebody considers good is a wish list. The constructs below are derived
 from the **base rate**: the 100 entries of the list "traps this project has already paid for".
 Every entry is classified individually in
-[`fallen-klassifikation.tsv`](fallen-klassifikation.tsv); the numbers below are **derived** with
+[`fallen-klassifikation.tsv`](../fallen-klassifikation.tsv); the numbers below are **derived** with
 `./zaehle-fallen.sh`, not written down beside them.
 
 | Class | Share | means |

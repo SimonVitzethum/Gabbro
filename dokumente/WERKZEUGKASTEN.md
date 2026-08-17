@@ -5,7 +5,7 @@ and the mistake is named. No good intentions, no borrowed wisdom. Whoever reads 
 be able to see the damage it was paid for.
 
 > The **trap** numbering (`Falle 80` …) lives in
-> [`fallen-klassifikation.tsv`](fallen-klassifikation.tsv) — 100 paid-for Caprock traps, source
+> [`fallen-klassifikation.tsv`](../fallen-klassifikation.tsv) — 100 paid-for Caprock traps, source
 > `CLAUDE.md`, as of 2026-08-13. That file is a **measured inventory with a named source**;
 > nothing is added to it after the fact. The `W` numbers here are our own and stand beside it,
 > not inside it.
