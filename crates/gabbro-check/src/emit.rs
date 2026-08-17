@@ -74,6 +74,8 @@ struct Signatur {
     geist_param: Vec<bool>,
     /// Does it return a ghost? Then `let x = f(…)` loses its binding, **not its call**.
     geist_rueck: bool,
+    /// Returns `option index into T`? Then the table name, for the sentinel comparison.
+    option_rueck: Option<String>,
 }
 
 /// **Is this type a ghost — i.e. does it vanish in the C?**
@@ -133,6 +135,12 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             let sig = Signatur {
                 geist_param: f.parameter.iter().map(|p| ist_geist(&p.typ, &namen)).collect(),
                 geist_rueck: f.ergebnis.as_ref().is_some_and(|t| ist_geist(t, &namen)),
+                option_rueck: match &f.ergebnis {
+                    Some(TypExpr::Index { tabelle, optional: true, .. }) => {
+                        Some(tabelle.text.clone())
+                    }
+                    _ => None,
+                },
             };
             namen.funktionen.insert(f.name.text.clone(), sig);
         }
@@ -182,6 +190,29 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         }
         ItemArt::Typ(_) => {} // Range types lower to their carrier; see `ctyp`.
         ItemArt::Tabelle(t) => tabelle(t, &mut aus, &namen, absagen),
+        // **Eine Sperre erzeugt zwei Prototypen und keine Zeile Rumpf.**
+        //
+        // Rang und Haltezeit stehen im C NIRGENDS: `H006` rechnet die Ordnung zur
+        // Uebersetzungszeit nach, `K002`/`K004` die Haltezeiten -- und **was der Pruefer
+        // entschieden hat, darf die Maschine nicht noch einmal pruefen** (W6, und hier ist
+        // die Begruendung eine M1-artige: die Ordnung ist eine Eigenschaft des Programms,
+        // keine des Laufs).
+        //
+        // Was bleibt, ist das Primitiv selbst, und **das ist Vertrauensbasis, nicht
+        // Erzeugnis** -- es gehoert in die Axiomschicht wie `write_cr3`. Der Erzeuger nennt
+        // es und definiert es nicht.
+        ItemArt::Lock(l) => {
+            aus.push_str(&format!(
+                "\nvoid {n}_nimm(void);\nvoid {n}_gib(void);\n",
+                n = l.name.text
+            ));
+            if l.geteilte_haltezeit.is_some() {
+                aus.push_str(&format!(
+                    "void {n}_nimm_geteilt(void);\nvoid {n}_gib_geteilt(void);\n",
+                    n = l.name.text
+                ));
+            }
+        }
         ItemArt::Funktion(f) => funktion(f, &mut aus, &namen, absagen),
         ItemArt::Modul(_) | ItemArt::Use(_) => {}
         _ => weigere(
@@ -236,11 +267,16 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         }
     }
     aus.push_str(&format!("}} {}_slot;\n\ntypedef struct {{\n", t.name.text));
+    let laenge = zahltext(n, absagen);
     aus.push_str(&format!(
         "    {}_slot slots[{}];\n}} {};\n",
-        t.name.text,
-        zahltext(n, absagen),
-        t.name.text
+        t.name.text, laenge, t.name.text
+    ));
+    // **Der Sonderwert fuer `option index into T`.** Er ist die Laenge selbst -- der eine
+    // Wert, den ein gueltiger Index nach `count N` und M1 nie annimmt.
+    aus.push_str(&format!(
+        "#define {}_NONE ({})\n",
+        t.name.text, laenge
     ));
 }
 
@@ -312,16 +348,21 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
         }
         // `index into T` -- the bound comes from `count N` and is an M1 fact.
         //
-        // **`option index into T` is REFUSED, and that is not a gap but a decision the folder
-        // has not taken.** Lowering it to `uint32_t` erases the `None`: every value 0..<N is a
-        // valid index, so no bit pattern is left to mean *absent*. The C would be
-        // structurally incapable of holding what the type says — and it would compile.
+        // **`option index into T` carries a SENTINEL, and the sentinel is `N` itself.**
         //
-        // *An option needs a representation (a sentinel, or a tagged struct), and choosing one
-        // is a template obligation, not a translation.* Found 2026-08-17 by running the
-        // emitter against the corpus; the same class as the table pointer of the day before.
-        TypExpr::Index { optional: false, .. } => Some("uint32_t".into()),
-        TypExpr::Index { optional: true, .. } => None,
+        // The representation was open until 2026-08-17 and the emitter refused rather than
+        // coarsen — lowering the option to a bare `uint32_t` would have erased the `None`
+        // silently. The decision now taken is the cheap one, and it is *cheap because of
+        // `count N`*: the index type is `0 ..< N`, so **`N` is the one value M1 guarantees no
+        // real index ever takes.** No extra word, no tag.
+        //
+        // > *And it is what the measured code already does by hand:* Caprock walks its queues
+        // > as `while i != NIL { i = t.qnext }` (`MESSUNGEN.md`, B3). The construct does not
+        // > invent the sentinel — it makes it checked and names it once.
+        //
+        // **The obligation this buys is entered in the register** as `option.sentinel`: the
+        // sentinel is outside the index domain, and no arithmetic reaches it.
+        TypExpr::Index { .. } => Some("uint32_t".into()),
         TypExpr::Zeiger(z) => {
             // **A pointer to a type this unit does not declare becomes an INCOMPLETE C type.**
             // `extern fn melde_roh(text : ptr<code, r> Text)` names `Text` and nowhere declares
@@ -400,42 +441,221 @@ fn funktion(f: &FnDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         return;
     };
     aus.push_str(&format!("\n{rueck} {}({liste}) {{\n", f.name.text));
+    // **`(void)k;` fuer jeden Parameter, den der Rumpf nicht liest -- und das ist ein Befund,
+    // kein Kunstgriff.**
+    //
+    // `FRAGMENTE.md` F8 nimmt `toeten(l, t, k)` und liest `k` nie: die Funktion loest `t`
+    // stattdessen neu auf. **`cc -Wextra` sagt das, und KEIN Pass dieses Uebersetzers sagt
+    // es** -- der C-Uebersetzer hat hier etwas gefunden, wofuer Gabbro keine Diagnose hat.
+    //
+    // > *Der Befund gehoert auf die Gabbro-Ebene, nicht ins Erzeugnis.* Der Anwender hat die
+    // > erzeugte Zeile nicht geschrieben; eine Warnung darin sagt nichts ueber ihn. Deshalb
+    // > wird sie hier stillgelegt **und in `TODO.md` als fehlender Pass gebucht** -- nicht
+    // > verschwiegen, sondern an die richtige Stelle gelegt.
+    let mut gelesen = std::collections::BTreeSet::new();
+    benutzte_namen(b, &mut gelesen);
+    for p in &f.parameter {
+        if !ist_geist(&p.typ, u) && !gelesen.contains(&p.name.text) {
+            aus.push_str(&format!("    (void){};\n", p.name.text));
+        }
+    }
     for s in &b.anweisungen {
-        anweisung(s, aus, u, absagen);
+        anweisung(s, aus, u, absagen, 1, &Vec::new());
     }
     aus.push_str("}\n");
 }
 
-fn anweisung(s: &Stmt, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
-    match &s.art {
-        StmtArt::Return(Some(e)) => aus.push_str(&format!("    return {};\n", ausdruck(e, u, absagen))),
-        StmtArt::Return(None) => aus.push_str("    return;\n"),
-        StmtArt::Zuweisung(z) => {
-            aus.push_str(&format!("    {} = {};\n", ort(&z.ziel, u, absagen), ausdruck(&z.wert, u, absagen)))
+/// Welche Namen liest dieser Rumpf? Nur die Formen, die der Erzeuger ueberhaupt absenkt --
+/// jede andere wird ohnehin abgelehnt.
+fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
+    fn e(x: &Expr, aus: &mut std::collections::BTreeSet<String>) {
+        match &x.art {
+            ExprArt::Ort(o) => o_(o, aus),
+            ExprArt::Klammer(y) | ExprArt::Unaer(_, y) => e(y, aus),
+            ExprArt::Binaer(_, a, c) => {
+                e(a, aus);
+                e(c, aus);
+            }
+            ExprArt::Ruf(r) => {
+                for a in &r.argumente {
+                    e(a, aus);
+                }
+            }
+            _ => {}
         }
-        StmtArt::Ruf(r) => aus.push_str(&format!("    {};\n", ruf(r, u, absagen))),
-        // **The third place the erasure has to hold, and the one that is silent if it does
-        // not.** `let p1 = mmu_an(p);` binds a ghost: the BINDING goes, the CALL stays. Making
-        // it `void p1 = mmu_an();` does not compile; dropping the whole statement compiles and
-        // **computes something else** -- the boot step would simply not happen.
+    }
+    fn o_(o: &Ort, aus: &mut std::collections::BTreeSet<String>) {
+        aus.insert(o.basis.text.clone());
+        for s in &o.suffixe {
+            if let OrtSuffix::Index(x) = s {
+                e(x, aus);
+            }
+        }
+    }
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Return(Some(x)) => e(x, aus),
+            StmtArt::Zuweisung(z) => {
+                o_(&z.ziel, aus);
+                e(&z.wert, aus);
+            }
+            StmtArt::Ruf(r) => {
+                for a in &r.argumente {
+                    e(a, aus);
+                }
+            }
+            StmtArt::Let(l) => e(&l.wert, aus),
+            StmtArt::Sperrt(x) => benutzte_namen(&x.rumpf, aus),
+            StmtArt::Match(m) => {
+                e(&m.gegenstand, aus);
+                for z in &m.zweige {
+                    benutzte_namen(&z.rumpf, aus);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// **Die Austrittsliste -- der Grund, warum `locks` nicht nur zwei Zeilen ist.**
+///
+/// In einem `locks`-Block darf kein `return` die Sperre stehen lassen. Die Liste traegt die
+/// Freigaben der offenen Bloecke, innerste zuletzt; vor jedem `return` werden sie **in
+/// umgekehrter Reihenfolge** ausgegeben.
+///
+/// > *Das ist woertlich die Klasse, die C8 bezahlt hat:* ein neuer Abweispfad erbt die
+/// > Aufraeumpflicht des alten nicht. Hier erbt er sie, weil nicht der Schreiber sie ausgibt.
+type Austritt = Vec<String>;
+
+fn einzug(n: usize) -> String {
+    "    ".repeat(n)
+}
+
+fn anweisung(
+    s: &Stmt,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+    austritt: &Austritt,
+) {
+    let e = einzug(tiefe);
+    match &s.art {
+        StmtArt::Return(w) => {
+            // **Erst freigeben, dann zurueckkehren** -- und zwar fuer JEDEN offenen Block.
+            for freigabe in austritt.iter().rev() {
+                aus.push_str(&format!("{e}{freigabe};\n"));
+            }
+            match w {
+                Some(x) => aus.push_str(&format!("{e}return {};\n", ausdruck(x, u, absagen))),
+                None => aus.push_str(&format!("{e}return;\n")),
+            }
+        }
+        StmtArt::Zuweisung(z) => aus.push_str(&format!(
+            "{e}{} = {};\n",
+            ort(&z.ziel, u, absagen),
+            ausdruck(&z.wert, u, absagen)
+        )),
+        StmtArt::Ruf(r) => aus.push_str(&format!("{e}{};\n", ruf(r, u, absagen))),
+        // **The third place the ghost erasure has to hold, and the one that is silent if it
+        // does not.** `let p1 = mmu_an(p);` binds a ghost: the BINDING goes, the CALL stays.
+        // Making it `void p1 = mmu_an();` does not compile; dropping the whole statement
+        // compiles and **computes something else** -- the boot step would simply not happen.
         StmtArt::Let(l) if geist_wert(&l.wert, u) => {
-            aus.push_str(&format!("    {};\n", ausdruck(&l.wert, u, absagen)))
+            aus.push_str(&format!("{e}{};\n", ausdruck(&l.wert, u, absagen)))
         }
         StmtArt::Let(l) => {
             // A non-ghost `let` needs a type, and the emitter does not guess one. The first
             // version wrote `uint32_t` unconditionally -- correct for the one file it was
             // built against and wrong for every other.
-            let typ = l
-                .typ
-                .as_ref()
-                .and_then(|t| ctyp(t, u))
-                .or_else(|| ruf_rueckgabe(&l.wert, u));
-            match typ {
-                Some(c) => aus.push_str(&format!("    {c} {} = {};\n", l.name.text, ausdruck(&l.wert, u, absagen))),
+            match l.typ.as_ref().and_then(|t| ctyp(t, u)) {
+                Some(c) => aus.push_str(&format!(
+                    "{e}{c} {} = {};\n",
+                    l.name.text,
+                    ausdruck(&l.wert, u, absagen)
+                )),
                 None => weigere(absagen, s.span, "`let` without a resolvable type"),
             }
         }
+        // **`locks X { … }` -- die Sperre selbst ist eine Vertrauensbasis, die DISZIPLIN
+        // nicht.** Rang und Haltezeit stehen im C nirgends: `H006` und `K002` rechnen sie zur
+        // Uebersetzungszeit nach, und was der Pruefer entschieden hat, muss die Maschine nicht
+        // noch einmal pruefen (W6). Was bleibt, ist Nehmen und Geben -- und dass GEGEBEN wird,
+        // auf jedem Pfad.
+        StmtArt::Sperrt(x) => {
+            let name = x.sperre.text();
+            let (nimm, gib) = if x.geteilt {
+                (format!("{name}_nimm_geteilt()"), format!("{name}_gib_geteilt()"))
+            } else {
+                (format!("{name}_nimm()"), format!("{name}_gib()"))
+            };
+            aus.push_str(&format!("{e}{nimm};\n{e}{{\n"));
+            let mut innen = austritt.clone();
+            innen.push(gib.clone());
+            for k in &x.rumpf.anweisungen {
+                anweisung(k, aus, u, absagen, tiefe + 1, &innen);
+            }
+            aus.push_str(&format!("{e}}}\n{e}{gib};\n"));
+        }
+        // **`match` ueber einem `option index into T`.** Der Sonderwert macht daraus einen
+        // Vergleich; die Bindung des `Some`-Zweigs ist der Wert selbst.
+        StmtArt::Match(m) => match_option(m, s, aus, u, absagen, tiefe, austritt),
         _ => weigere(absagen, s.span, "statement kind"),
+    }
+}
+
+/// Nur `match` ueber einer Option wird abgesenkt. **Ein `match` ueber einem `tagged type` ist
+/// eine eigene Entwurfsfrage** (markierter Verbund, Variantennummern, Nutzlast) und wird
+/// abgelehnt statt geraten.
+fn match_option(
+    m: &MatchStmt,
+    s: &Stmt,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+    austritt: &Austritt,
+) {
+    let e = einzug(tiefe);
+    let Some(tabelle) = option_quelle(&m.gegenstand, u) else {
+        weigere(absagen, s.span, "`match` over something other than an `option index into T`");
+        return;
+    };
+    let namen: Vec<&str> = m.zweige.iter().map(|z| z.variante.text.as_str()).collect();
+    if namen.len() != 2 || !namen.contains(&"Some") || !namen.contains(&"None") {
+        weigere(absagen, s.span, "`match` over an option needs exactly `Some` and `None`");
+        return;
+    }
+    let ja = m.zweige.iter().find(|z| z.variante.text == "Some").unwrap();
+    let nein = m.zweige.iter().find(|z| z.variante.text == "None").unwrap();
+    let hilf = format!("_o{}", tiefe);
+
+    aus.push_str(&format!(
+        "{e}{{\n{e}    uint32_t {hilf} = {};\n{e}    if ({hilf} != {tabelle}_NONE) {{\n",
+        ausdruck(&m.gegenstand, u, absagen)
+    ));
+    if let Some(b) = &ja.binder {
+        aus.push_str(&format!("{e}        uint32_t {} = {hilf};\n", b.text));
+    }
+    for k in &ja.rumpf.anweisungen {
+        anweisung(k, aus, u, absagen, tiefe + 2, austritt);
+    }
+    aus.push_str(&format!("{e}    }} else {{\n"));
+    for k in &nein.rumpf.anweisungen {
+        anweisung(k, aus, u, absagen, tiefe + 2, austritt);
+    }
+    aus.push_str(&format!("{e}    }}\n{e}}}\n"));
+}
+
+/// Liefert den Tabellennamen, wenn dieser Ausdruck ein `option index into T` ist.
+fn option_quelle(e: &Expr, u: &Namen) -> Option<String> {
+    match &e.art {
+        ExprArt::Ruf(r) => u
+            .funktionen
+            .get(&r.pfad.teile.last()?.text)?
+            .option_rueck
+            .clone(),
+        _ => None,
     }
 }
 
@@ -450,11 +670,6 @@ fn geist_wert(e: &Expr, u: &Namen) -> bool {
             .is_some_and(|s| s.geist_rueck),
         _ => false,
     }
-}
-
-/// The declared C return type of a called function — only used to type a `let`.
-fn ruf_rueckgabe(_e: &Expr, _u: &Namen) -> Option<String> {
-    None
 }
 
 /// **A call, with the ghost arguments dropped.** The positions come from the callee's

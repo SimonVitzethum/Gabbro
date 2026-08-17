@@ -261,18 +261,18 @@ fn der_erzeuger_weigert_sich_statt_offen_auszufallen() {
         a.absagen.iter().map(|x| x.text.clone()).collect()
     }
 
-    // **1. `option` hat keine Darstellung, also keine Absenkung.** Die Wahl einer Darstellung
-    // (Sonderwert oder markierter Verbund) ist eine Schablonenpflicht, keine Uebersetzung.
+    // **1. `option` wurde am selben Tag entschieden, und der Test wird im Gleichschritt
+    // nachgezogen.** Beim Fund war die Absage die ehrliche Antwort -- die Darstellung war
+    // offen. Seit F8 traegt sie den Sonderwert `N`, und `der_erzeuger_gibt_die_sperre_auf_
+    // jedem_pfad` prueft ihn. *Was hier bleibt, ist die Richtung: der Sonderwert darf nicht
+    // null sein, sonst kollidiert er mit Slot 0.*
     let mit_option = absagen_von(
         "module t { table T count 8 { slot { eltern : option index into T, } } }",
     );
-    assert!(
-        mit_option.iter().any(|s| s.contains("field type")),
-        "`option index into T` darf nicht zu `uint32_t` werden: {mit_option:?}"
-    );
+    assert!(mit_option.is_empty(), "`option` traegt seit dem Sonderwert: {mit_option:?}");
 
-    // Der pflichtige Index OHNE `option` senkt sich weiterhin ab -- die Schranke kommt aus
-    // `count N` und ist eine M1-Tatsache.
+    // Der pflichtige Index senkt sich ebenso ab -- die Schranke kommt aus `count N` und ist
+    // eine M1-Tatsache.
     let ohne_option = absagen_von(
         "module t { table T count 8 { slot { eltern : index into T, } } }",
     );
@@ -299,4 +299,77 @@ fn der_erzeuger_weigert_sich_statt_offen_auszufallen() {
         konstruktor.iter().any(|s| s.contains("`option` constructor")),
         "`None` darf nicht als Ruf ausgegeben werden: {konstruktor:?}"
     );
+}
+
+/// **F8: die Sperre, der Sonderwert und der Austritt aus dem Block.**
+///
+/// Drei Absenkungen, die keine Uebersetzungen sind sondern Entscheidungen, und alle drei
+/// stehen im Kopf von `emit.rs` mit ihrem Grund:
+///
+/// 1. **`option index into T` traegt den Sonderwert `N`.** Er ist gratis, weil `count N` den
+///    Index auf `0 ..< N` bindet -- `N` ist der eine Wert, den M1 nie durchlaesst. *Und der
+///    gemessene Bestand macht es von Hand: `while i != NIL`.*
+/// 2. **Eine `lock`-Deklaration erzeugt zwei Prototypen und keine Zeile Rumpf.** Rang und
+///    Haltezeit sind Uebersetzungszeit (`H006`, `K002`); das Primitiv ist Vertrauensbasis.
+/// 3. **`locks X { … return … }` gibt die Sperre VOR jeder Rueckkehr frei.** Woertlich die
+///    Klasse, die C8 bezahlt hat -- nur erbt der neue Abweispfad die Pflicht hier, weil nicht
+///    der Schreiber sie ausgibt.
+#[test]
+fn der_erzeuger_gibt_die_sperre_auf_jedem_pfad() {
+    let quelle = "module t {
+const N : u32 = 1024;
+type Id = u32 in 0 ..< N;
+table L count N { slot { belegt : bool, } }
+lock S protects { belegt } rank 2 held <= 300 ops shared held <= 32 ops;
+extern fn aufloesen(l : ptr<normal, r> L, t : Id) -> option index into L
+    requires Held(S, shared) effects { reads l.slots } costs <= 8 ops;
+impl fn toeten(l : ptr<normal, rw> L, t : Id, k : index into L) -> bool
+    effects { reads l.slots, writes l.slots, locks S } costs <= 340 ops
+{
+    locks S {
+        match aufloesen(l, t) {
+            Some(i) => { l.slots[i].belegt = false; return true; }
+            None    => { return false; }
+        }
+    }
+    return false;
+}
+}";
+    let mut absagen = gabbro_syntax::Absagen::neu("f8.gab");
+    let (baum, _) = gabbro_syntax::lies("f8.gab", quelle);
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
+
+    // 1. Der Sonderwert ist die LAENGE, nicht null -- sonst kollidiert er mit Slot 0.
+    assert!(c.contains("#define L_NONE (N)"), "der Sonderwert ist die Laenge:\n{c}");
+    assert!(c.contains("!= L_NONE"), "der Vergleich benutzt ihn:\n{c}");
+
+    // 2. Zwei Prototypen, und kein Rang und keine Haltezeit im C.
+    assert!(c.contains("void S_nimm(void);"), "{c}");
+    assert!(c.contains("void S_gib(void);"), "{c}");
+    assert!(c.contains("void S_nimm_geteilt(void);"), "die geteilte Seite ist erklaert:\n{c}");
+    assert!(!c.contains("300"), "die Haltezeit ist Uebersetzungszeit, nicht Laufzeit:\n{c}");
+    assert!(!c.contains("rank"), "der Rang steht im C nirgends:\n{c}");
+
+    // 3. **Die Freigabe steht vor JEDEM `return` im Block -- zweimal, einmal je Zweig.**
+    let rumpf = &c[c.find("bool toeten").expect("toeten")..];
+    assert_eq!(
+        rumpf.matches("S_gib();").count(),
+        3,
+        "zwei Rueckkehrpfade im Block plus der normale Blockausgang:\n{rumpf}"
+    );
+    let vor_true = rumpf.find("return true;").expect("Some-Zweig");
+    let gib_davor = rumpf[..vor_true].rfind("S_gib();").expect("keine Freigabe vor return true");
+    assert!(
+        rumpf[gib_davor..vor_true].trim().len() < 20,
+        "die Freigabe muss DIREKT vor der Rueckkehr stehen:\n{rumpf}"
+    );
+
+    // Die Bindung des `Some`-Zweigs ist der Wert selbst.
+    assert!(c.contains("uint32_t i = _o"), "der Binder bekommt den Index:\n{c}");
+
+    // Und der tote Parameter: `k` wird nie gelesen. **`cc -Wextra` sagt das, kein Pass dieses
+    // Uebersetzers sagt es** -- der Befund steht in TODO.md, die Stilllegung hier.
+    assert!(c.contains("(void)k;"), "ein ungelesener Parameter wird stillgelegt:\n{c}");
+    assert!(!c.contains("(void)l;"), "ein gelesener nicht:\n{c}");
 }

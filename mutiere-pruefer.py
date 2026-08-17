@@ -855,6 +855,51 @@ MUTATIONEN = [
         "C-Absenkung -- `None` wird als Ruf `None()` ausgegeben; dass -Werror ihn faengt, ist Glueck",
         "code",
     ),
+    # -- emit.rs: F8 -- Sonderwert, Sperre, Austritt ---------------------------------------
+    #
+    # Drei Absenkungen, die keine Uebersetzungen sind sondern Entscheidungen. Die dritte ist
+    # die, gegen die C8 bezahlt hat: ein Rueckkehrpfad aus einem `locks`-Block, der die Sperre
+    # stehen laesst -- und das C uebersetzt anstandslos.
+    Mutation(
+        "sperre-bleibt-beim-return-liegen",
+        "emit.rs",
+        "            for freigabe in austritt.iter().rev() {\n                aus.push_str(&format!(\"{e}{freigabe};\\n\"));\n            }",
+        "            for freigabe in austritt.iter().rev() {\n                let _ = freigabe;\n            }",
+        "C-Absenkung -- ein `return` aus einem `locks`-Block laesst die Sperre stehen (C8)",
+        "code",
+    ),
+    Mutation(
+        "sonderwert-ist-null",
+        "emit.rs",
+        "        \"#define {}_NONE ({})\\n\",",
+        "        \"#define {}_NONE (0*{})\\n\",",
+        "C-Absenkung -- der Sonderwert kollidiert mit Slot 0; `None` und der erste Eintrag sind gleich",
+        "code",
+    ),
+    Mutation(
+        "sperre-ohne-prototypen",
+        "emit.rs",
+        "            aus.push_str(&format!(\n                \"\\nvoid {n}_nimm(void);\\nvoid {n}_gib(void);\\n\",\n                n = l.name.text\n            ));",
+        "            let _ = &l.name;",
+        "C-Absenkung -- eine Sperre wird genommen, ohne dass ihr Primitiv erklaert ist",
+        "code",
+    ),
+    Mutation(
+        "match-bindet-den-index-nicht",
+        "emit.rs",
+        "        aus.push_str(&format!(\"{e}        uint32_t {} = {hilf};\\n\", b.text));",
+        "        let _ = b;",
+        "C-Absenkung -- der `Some`-Zweig bekommt seinen Index nicht gebunden",
+        "code",
+    ),
+    Mutation(
+        "toter-parameter-bleibt-laut",
+        "emit.rs",
+        "            aus.push_str(&format!(\"    (void){};\\n\", p.name.text));",
+        "            let _ = &p.name;",
+        "C-Absenkung -- ein ungelesener Parameter laesst `cc -Wextra` das Erzeugnis ablehnen",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

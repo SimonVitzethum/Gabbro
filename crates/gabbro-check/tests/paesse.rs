@@ -343,7 +343,7 @@ fn jede_schablone_nennt_ihre_pflicht() {
     // still mitbewegt, ist keine Ratsche.*
     assert_eq!(
         ungedeckt(),
-        15,
+        16,
         "wenn eine Schablone nach Isabelle gebracht wurde, gehoert das hierher UND in BEWEIS.md"
     );
 }

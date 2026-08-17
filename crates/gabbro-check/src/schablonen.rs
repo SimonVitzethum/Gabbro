@@ -109,12 +109,29 @@ pub const RATSCHE: &[&str] = &[
     "verbund.konstruktor",
     "gruppe.ops",
     "gruppe.sperrabdruck",
+    "option.sonderwert",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
 /// nicht je Aufrufstelle. Ein neues Konstrukt mit erzeugter Form **gehoert hierher, bevor es
 /// in die Grammatik kommt**.
 pub const SCHABLONEN: &[Schablone] = &[
+    Schablone {
+        name: "option.sonderwert",
+        haengt_an: &["table.indexschranke"],
+        konstrukt: "option index into T (Absenkung)",
+        // **Eingetragen 2026-08-17, als der Erzeuger F8 absenkte.** Die Darstellung war bis
+        // dahin offen, und der Erzeuger weigerte sich (`C001`) statt zu vergroebern -- eine
+        // Absenkung zu blankem `uint32_t` haette das `None` still geloescht.
+        pflicht: "Der Sonderwert `N` liegt AUSSERHALB der Indexdomaene `0 ..< N`, und keine \
+                  erzeugte Rechnung erreicht ihn. Damit ist die Absenkung von \
+                  `option index into T` auf ein blankes Maschinenwort verlustfrei: jeder \
+                  gueltige Index ist von `None` unterscheidbar. **Zu zeigen ist beides** -- \
+                  die Disjunktheit UND dass keine Operation den Sonderwert erzeugen kann.",
+        stand: Stand::Getragen,
+        fundstelle: "FRAGMENTE.md F1 (vier CDT-Felder), F8 (`aufloesen`); MESSUNGEN.md B3, \
+                     `while i != NIL` -- der Bestand macht es von Hand",
+    },
     Schablone {
         name: "consuming.ordnung",
         haengt_an: &["table.induktion"],

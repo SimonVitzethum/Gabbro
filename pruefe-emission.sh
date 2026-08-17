@@ -5,7 +5,7 @@
 # Projekts: `mutiere-pruefer.py` wies sie mit 0 Mutationen aus, und *was 0 Mutationen hat,
 # ist nicht gedeckt, sondern unbeschaedigbar*.
 #
-# Dieser Waechter schliesst sie fuer ZWEI Uebersetzungseinheiten, nicht fuer zehn:
+# Dieser Waechter schliesst sie fuer DREI Uebersetzungseinheiten, nicht fuer zehn:
 #
 #     .gab  ->  gabbro emit  ->  C  ->  cc -Werror  ->  ausgefuehrt  ->  Ergebnis verglichen
 #
@@ -155,7 +155,57 @@ int main(void) {
 lauf "fragment7" "$ARB/f7.gab" "$TREIBER7" "123456" \
      's/    ipc_tabellen();/    \/* geloescht *\//'
 
-echo "== EMISSION: ALL PASS -- 2 Uebersetzungseinheiten durchgestochen =="
-echo "  Und was das NICHT heisst: acht weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser beiden Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Zwei Ja-Aussagen sind keine ueber die Sprache."
+# -- 3. Das Fragment F8: die Sperre wird auf JEDEM Pfad gegeben --------------------------
+#
+# **Der Rumpf von `toeten` kehrt aus dem `locks`-Block heraus zurueck, und zwar aus beiden
+# Zweigen.** Ein Erzeuger, der die Freigabe nur ans Blockende schreibt, laesst die Sperre auf
+# beiden Wegen stehen -- und das C uebersetzt. *Woertlich die Klasse, die C8 bezahlt hat: ein
+# neuer Abweispfad erbt die Aufraeumpflicht des alten nicht.* Hier erbt er sie, weil nicht der
+# Schreiber sie ausgibt.
+#
+# Zweitens misst dieser Lauf den SONDERWERT: `aufloesen` liefert `option index into Laufliste`,
+# und `Laufliste_NONE` ist die Laenge selbst -- der eine Wert, den ein gueltiger Index nach
+# `count N` und M1 nie annimmt.
+schneide "$W/dokumente/FRAGMENTE.md" "module caprock::sched" > "$ARB/f8.gab"
+if ! grep -q "locks SCHEDS" "$ARB/f8.gab"; then
+    echo "== EMISSION: F8 NICHT GESCHNITTEN =="; exit 1
+fi
+TREIBER8='#include <stdio.h>
+static int genommen, gegeben;
+static unsigned antwort;
+void SCHEDS_nimm(void)         { genommen++; }
+void SCHEDS_gib(void)          { gegeben++; }
+void SCHEDS_nimm_geteilt(void) { genommen++; }
+void SCHEDS_gib_geteilt(void)  { gegeben++; }
+#include "@ERZEUGT@"
+uint32_t aufloesen(const Laufliste *l, uint32_t t) { (void)l; (void)t; return antwort; }
+int main(void) {
+    static Laufliste l;
+    l.slots[3].belegt = true;
+    antwort = 3; genommen = 0; gegeben = 0;
+    int a = toeten(&l, 7, 0);
+    printf("%d %d %d %d", a, genommen, gegeben, (int)l.slots[3].belegt);
+
+    l.slots[3].belegt = true;
+    antwort = Laufliste_NONE; genommen = 0; gegeben = 0;
+    int b = toeten(&l, 7, 0);
+    printf(" %d %d %d %d\n", b, genommen, gegeben, (int)l.slots[3].belegt);
+    return 0;
+}
+'
+#    Erwartet, Fall A (`aufloesen` findet den Faden):
+#      1  -- `toeten` meldet Erfolg
+#      1  -- die Sperre wurde einmal genommen
+#      1  -- **und einmal gegeben, obwohl der Weg mit `return` aus dem Block springt**
+#      0  -- der Slot ist geraeumt
+#    Fall B (`aufloesen` liefert `None`):
+#      0  -- kein Erfolg
+#      1 1 -- genommen und gegeben, auch auf dem ANDEREN Rueckkehrpfad
+#      1  -- und der Slot ist unberuehrt: der None-Zweig fasst nichts an
+lauf "fragment8" "$ARB/f8.gab" "$TREIBER8" "1 1 1 0 0 1 1 1" \
+     '0,/^                SCHEDS_gib();$/s///'
+
+echo "== EMISSION: ALL PASS -- 3 Uebersetzungseinheiten durchgestochen =="
+echo "  Und was das NICHT heisst: sieben weitere Fragmente sind ungeprueft, der Erzeuger"
+echo '  deckt genau die Formen dieser drei Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Drei Ja-Aussagen sind keine ueber die Sprache."
