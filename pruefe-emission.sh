@@ -5,7 +5,7 @@
 # Projekts: `mutiere-pruefer.py` wies sie mit 0 Mutationen aus, und *was 0 Mutationen hat,
 # ist nicht gedeckt, sondern unbeschaedigbar*.
 #
-# Dieser Waechter schliesst sie fuer SECHS Uebersetzungseinheiten, nicht fuer zehn:
+# Dieser Waechter schliesst sie fuer SIEBEN Uebersetzungseinheiten, nicht fuer zehn:
 #
 #     .gab  ->  gabbro emit  ->  C  ->  cc -Werror  ->  ausgefuehrt  ->  Ergebnis verglichen
 #
@@ -328,7 +328,53 @@ int main(void) {
 lauf "beispiel12" "$W/beispiele/12-umlaufendes-register.gab" "$TREIBER12" "8 0 64 8" \
      's/+ 258/+ 260/'
 
-echo "== EMISSION: ALL PASS -- 6 Uebersetzungseinheiten durchgestochen =="
+# -- 7. FALLE 4: `mirrors`, und der Test misst genau die bezahlte Falle -----------------
+#
+# **Die Falle, in einem Satz:** `GCMD` ist kein Lese-Aendere-Schreib-Register. Wer ein Bit
+# setzt, schreibt das GANZE Wort -- und jedes Zustandsbit, das er nicht mitschreibt, ist
+# danach geloescht. Die mitzuschreibenden Bits stehen nicht in GCMD (es ist `class w`,
+# unlesbar), sondern im Statusregister daneben.
+#
+#     mirrors GCMD from GSTS;   ->   write(GCMD, (read(GSTS) & ~geaendert) | neu)
+#
+# *Eine Zeile je Geraet, und sie ersetzt `GCMD_STATE_MASK` samt der Kommentarwand.*
+TREIBER20='#include <stdio.h>
+#include "@ERZEUGT@"
+static uint8_t mmio[64];
+#define GCMD (*(volatile uint32_t *)(mmio + 0x18))
+#define GSTS (*(volatile uint32_t *)(mmio + 0x1c))
+int main(void) {
+    Einheit e = { mmio };
+    /* Das Geraet meldet: die Uebersetzung laeuft bereits (TES, Bit 31). */
+    GSTS = 1u << 31;
+    GCMD = 0;
+    Einheit_setze_rtp(&e);
+    unsigned nach_rtp = GCMD;
+
+    /* Und jetzt meldet es zusaetzlich RTPS (Bit 30). */
+    GSTS = (1u << 31) | (1u << 30);
+    GCMD = 0;
+    Einheit_scharf_te(&e);
+    unsigned nach_te = GCMD;
+
+    printf("%d %d %d %d\n",
+           !!(nach_rtp & (1u << 30)),   /* SRTP gesetzt */
+           !!(nach_rtp & (1u << 31)),   /* TES MITGESCHRIEBEN -- das ist die Falle */
+           !!(nach_te  & (1u << 31)),   /* TE gesetzt */
+           !!(nach_te  & (1u << 30)));  /* RTPS mitgeschrieben */
+    return 0;
+}
+'
+#    Erwartet:  1 1 1 1
+#      Die ERSTE und die DRITTE Zahl sagen, dass der Uebergang tut, was er sagt.
+#      **Die ZWEITE und die VIERTE sind die Falle.** Ohne `mirrors` waeren sie 0: das
+#      Zustandsbit, das niemand mitgeschrieben hat, waere geloescht -- und die Einheit haette
+#      die Uebersetzung mitten im Betrieb abgeschaltet. *Genau dafuer hat der Bestand eine
+#      Maske und eine Kommentarwand; hier ist es eine Zeile.*
+lauf "beispiel20" "$W/beispiele/20-falle-vier.gab" "$TREIBER20" "1 1 1 1" \
+     's/(_s \& /(0*_s \& /'
+
+echo "== EMISSION: ALL PASS -- 7 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser sechs Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Sechs Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser sieben Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Sieben Ja-Aussagen sind keine ueber die Sprache."

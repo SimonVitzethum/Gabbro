@@ -1092,6 +1092,31 @@ MUTATIONEN = [
         "C-Absenkung -- jedes Bitfeld wird ab Bit 0 gelesen",
         "code",
     ),
+    # -- emit.rs: FALLE 4 -----------------------------------------------------------------
+    Mutation(
+        "mirrors-vergisst-den-zustand",
+        "emit.rs",
+        "                 \\x20   {wort} = ({breite})((_s & ({breite})~({breite}){geaendert}u) | ({breite}){neu}u);\\n\"",
+        "                 \\x20   {wort} = ({breite})((0*_s & ({breite})~({breite}){geaendert}u) | ({breite}){neu}u);\\n\"",
+        "FALLE 4 -- ein nicht mitgeschriebenes Zustandsbit wird geloescht; die Einheit schaltet sich mitten im Betrieb ab",
+        "code",
+    ),
+    Mutation(
+        "uebergang-maskiert-nicht",
+        "emit.rs",
+        "            let maske = 1u128 << lo;",
+        "            let maske = 1u128;",
+        "FALLE 4 -- der Uebergang aendert Bit 0 statt des benannten Bits",
+        "code",
+    ),
+    Mutation(
+        "requires-wird-zusicherung",
+        "emit.rs",
+        "        aus.push_str(\"/* requires: a caller obligation, not a generated assertion */\\n\");",
+        "        aus.push_str(\"\\n\");",
+        "SPRACHE -- die Vorbedingung eines Uebergangs verschwindet spurlos aus dem Erzeugnis",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

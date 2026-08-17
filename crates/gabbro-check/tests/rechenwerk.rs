@@ -739,3 +739,41 @@ impl fn bereit(v : ptr<mmio, r> V) -> u32 effects { reads v.GSTS } costs <= 2 op
         "eine Bitlage jenseits der erklaerten Breite ist ein Fehler, kein offener Punkt"
     );
 }
+
+/// **Falle 4, im erzeugten C statt in einem Kommentar.**
+///
+/// `GCMD` ist kein Lese-Aendere-Schreib-Register. Wer ein Bit setzt, schreibt das GANZE Wort —
+/// und jedes Zustandsbit, das er nicht mitschreibt, ist danach geloescht. Die mitzuschreibenden
+/// Bits stehen nicht in GCMD (`class w`, unlesbar), sondern im Statusregister daneben.
+///
+/// > `mirrors GCMD from GSTS;` ist **eine Zeile je Geraet** und ersetzt `GCMD_STATE_MASK`
+/// > samt der Kommentarwand (`vtd.rs:42-52`). *Das Konstrukt war gegen die Falle gebaut —
+/// > jetzt steht sie im C.*
+#[test]
+fn mirrors_schreibt_die_zustandsbits_mit() {
+    let (baum, mut a) = gabbro_syntax::lies(
+        "p.gab",
+        "module t { device V(basis : u64) at mmio {
+    mirrors GCMD from GSTS;
+    reg GCMD : u32 @0x18 class w fields { SRTP @30, TE @31, }
+    reg GSTS : u32 @0x1c class r fields { RTPS @30, TES @31, }
+    transition setze_rtp { GCMD.SRTP: 0 -> 1 } requires GSTS.TES == 0 effects { writes GCMD }
+} }",
+    );
+    let c = gabbro_check::emit::emittiere(&baum, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(""));
+
+    // **Der Zustand kommt aus GSTS (Versatz 0x1c = 28), geschrieben wird GCMD (0x18 = 24).**
+    assert!(c.contains("_s = (*(volatile uint32_t *)(d->basis + 28))"), "{c}");
+    assert!(c.contains("(d->basis + 24)) = "), "{c}");
+
+    // Die geaenderten Bits werden ausmaskiert, die uebrigen mitgeschrieben. Bit 30 = 2^30.
+    assert!(c.contains("_s & (uint32_t)~(uint32_t)1073741824u"), "die Maske:\n{c}");
+    assert!(c.contains("| (uint32_t)1073741824u"), "und das neue Bit:\n{c}");
+
+    // **Das `requires` wird KEINE Laufzeitpruefung** -- es ist dieselbe Art Klausel wie ein
+    // `requires Held(...)` an einer Funktion, also eine Pflicht des Rufers. Hier zu pruefen
+    // und dort nicht waere die stille Ausnahme.
+    assert!(c.contains("a caller obligation, not a generated assertion"), "{c}");
+    assert!(!c.contains("assert"), "keine erzeugte Zusicherung:\n{c}");
+}

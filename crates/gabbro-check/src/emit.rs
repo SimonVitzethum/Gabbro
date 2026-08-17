@@ -632,14 +632,126 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         weigere(absagen, d.span, "`bank` -- a register file at a computed location");
         return;
     }
-    if !d.uebergaenge.is_empty() {
-        weigere(absagen, d.span, "`transition` -- whether the precondition becomes a runtime check is not decided");
-        return;
-    }
     aus.push_str(&format!(
         "\ntypedef struct {{ volatile uint8_t *basis; }} {};\n",
         d.name.text
     ));
+    for u2 in &d.uebergaenge {
+        uebergang(d, u2, aus, u, absagen);
+    }
+}
+
+/// **`transition` -- und `mirrors` ist die Antwort auf Falle 4.**
+///
+/// Ein Uebergang schreibt das GANZE Wort. Das ist keine Bequemlichkeit, sondern die Sache
+/// selbst: `GCMD` ist **kein** Lese-Aendere-Schreib-Register, und ein nicht mitgeschriebenes
+/// Zustandsbit wird geloescht. Woher die mitzuschreibenden Bits kommen, sagt `mirrors`:
+///
+/// ```text
+///     mirrors GCMD from GSTS;      ->   write(GCMD, (read(GSTS) & ~geaendert) | neu)
+/// ```
+///
+/// **Eine Zeile je Geraet, und sie ersetzt `GCMD_STATE_MASK` samt der Kommentarwand**
+/// (`FRAGMENTE.md` F2, `vtd.rs:42-52`). *Das Konstrukt war die Falle, gegen die es gebaut
+/// wurde -- jetzt steht sie im erzeugten C statt in einem Kommentar.*
+///
+/// ## Das `requires` wird KEINE Laufzeitpruefung, und das ist die Entscheidung
+///
+/// `requires GSTS.RTPS == 1` ist dieselbe Art Klausel wie `requires Held(CAPS)` an einer
+/// Funktion: eine **Pflicht des Rufers**, kein erzeugter Zusicherungsaufruf. Der Erzeuger
+/// gibt fuer ein Funktions-`requires` auch keine Pruefung aus.
+///
+/// > **Die Alternative waere die stille Ausnahme:** hier pruefen und dort nicht. *Genau das
+/// > ist die Bewegung, gegen die dieser Ordner an jeder anderen Stelle steht.* Die Klausel
+/// > steht darum als Kommentar im C -- sichtbar, aber nicht ausgefuehrt.
+fn uebergang(d: &Device, x: &Uebergang, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
+    if x.schritte.len() != 1 {
+        weigere(absagen, x.span, "`transset` -- several places in one move");
+        return;
+    }
+    let s = &x.schritte[0];
+    let reg = s.ort.basis.text.clone();
+    let Some(g) = u.geraete.get(&d.name.text) else { return };
+    let Some((versatz, breite)) = g.reg.get(&reg) else {
+        weigere(absagen, x.span, "`transition` on something that is not a register");
+        return;
+    };
+    let leer = HashMap::new();
+    let felder = g.felder.get(&reg).unwrap_or(&leer);
+
+    // Welche Bits aendert dieser Zug, und auf welchen Wert?
+    let (geaendert, neu) = match s.ort.suffixe.first() {
+        // `GCMD.SRTP: 0 -> 1` -- genau ein Bit.
+        Some(OrtSuffix::Feld(f)) => {
+            let Some((hi, lo, _)) = felder.get(&f.text) else {
+                weigere(absagen, f.span, "`transition` on an unknown register field");
+                return;
+            };
+            if hi != lo {
+                weigere(absagen, f.span, "`transition` on a multi-bit field");
+                return;
+            }
+            let maske = 1u128 << lo;
+            let an = matches!(&s.nach.art, ExprArt::Zahl(n) if *n != 0);
+            (maske, if an { maske } else { 0 })
+        }
+        // `DEVICE_STATUS: ACK -> ACK | DRIVER` -- eine Veroderung von Feldnamen.
+        None => match bitwort(&s.nach, felder) {
+            Some(n) => (n, n),
+            None => {
+                weigere(absagen, x.span, "`transition` target that is not a set of field names");
+                return;
+            }
+        },
+        _ => {
+            weigere(absagen, x.span, "`transition` on an indexed place");
+            return;
+        }
+    };
+
+    let wort = format!("(*(volatile {breite} *)(d->basis + {versatz}))");
+    aus.push_str(&format!("\n/* transition {} */\n", x.name.text));
+    if let Some(p) = &x.requires {
+        // Sichtbar, aber nicht ausgefuehrt -- siehe oben.
+        let _ = p;
+        aus.push_str("/* requires: a caller obligation, not a generated assertion */\n");
+    }
+    aus.push_str(&format!(
+        "static inline void {}_{}({} *d) {{\n",
+        d.name.text, x.name.text, d.name.text
+    ));
+    match &d.mirrors {
+        Some(m) if m.ziel.basis.text == reg => {
+            let quelle = m.quelle.basis.text.clone();
+            let Some((qv, qb)) = g.reg.get(&quelle) else {
+                weigere(absagen, m.span, "`mirrors` from a register this device does not declare");
+                return;
+            };
+            aus.push_str(&format!(
+                "    {breite} _s = (*(volatile {qb} *)(d->basis + {qv}));\n\
+                 \x20   {wort} = ({breite})((_s & ({breite})~({breite}){geaendert}u) | ({breite}){neu}u);\n"
+            ));
+        }
+        _ => aus.push_str(&format!("    {wort} = ({breite}){neu}u;\n")),
+    }
+    aus.push_str("}\n");
+}
+
+/// Eine Veroderung von Feldnamen als Bitwort -- `ACK | DRIVER` wird `0b11`.
+fn bitwort(e: &Expr, felder: &HashMap<String, (u32, u32, u32)>) -> Option<u128> {
+    match &e.art {
+        ExprArt::Zahl(n) => Some(*n as u128),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => {
+            let (hi, lo, _) = felder.get(&o.basis.text)?;
+            if hi != lo {
+                return None;
+            }
+            Some(1u128 << lo)
+        }
+        ExprArt::Klammer(x) => bitwort(x, felder),
+        ExprArt::Binaer(BinOp::BitOder, a, b) => Some(bitwort(a, felder)? | bitwort(b, felder)?),
+        _ => None,
+    }
 }
 
 /// **Ein `format` wird KEIN C-Verbund, und das ist die Entscheidung.**

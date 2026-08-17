@@ -1,0 +1,43 @@
+-- 20 -- `mirrors`: Falle 4, und diesmal im erzeugten C statt in einem Kommentar.
+--
+-- **Die bezahlte Falle, in einem Satz:** `GCMD` ist KEIN Lese-Aendere-Schreib-Register. Wer
+-- ein Bit setzt, schreibt das ganze Wort -- und jedes Zustandsbit, das er nicht mitschreibt,
+-- ist danach geloescht. Im Bestand steht dafuer eine Maske und eine Kommentarwand
+-- (`vtd.rs:42-52`); die Bits, die mitgeschrieben werden muessen, stehen NICHT im Register,
+-- sondern im Statusregister daneben.
+--
+-- `mirrors GCMD from GSTS;` ist eine Zeile je Geraet und sagt genau das. Der Erzeuger macht
+-- daraus:
+--
+--     write(GCMD, (read(GSTS) & ~geaendert) | neu)
+--
+-- **Das `requires` wird KEINE Laufzeitpruefung.** Es ist dieselbe Art Klausel wie ein
+-- `requires Held(...)` an einer Funktion: eine Pflicht des Rufers. Hier zu pruefen und dort
+-- nicht waere die stille Ausnahme, gegen die dieser Ordner sonst ueberall steht -- die Klausel
+-- steht darum als Kommentar im C, sichtbar und nicht ausgefuehrt.
+
+module beispiel::fallevier {
+
+opaque type Pa = u64;
+
+device Einheit(basis : Pa) at mmio {
+    -- Die eine Zeile. Sie ersetzt `GCMD_STATE_MASK` samt der Wand daneben.
+    mirrors GCMD from GSTS;
+
+    -- `class w`: GCMD laesst sich nicht lesen. **Genau darum ist ein Lese-Aendere-Schreib-Zug
+    -- hier unmoeglich, und genau darum braucht es `mirrors`.**
+    reg GCMD : u32 @0x18 class w fields { SRTP @30, TE @31, }
+    reg GSTS : u32 @0x1c class r fields { RTPS @30, TES @31, }
+
+    -- Der Wurzeltabellenzeiger wird scharf gemacht, bevor die Uebersetzung es wird.
+    transition setze_rtp { GCMD.SRTP: 0 -> 1 }
+        requires GSTS.TES == 0
+        effects  { writes GCMD }
+
+    -- Und erst danach die Uebersetzung. Die Reihenfolge ist die Zusage; `requires` traegt sie.
+    transition scharf_te { GCMD.TE: 0 -> 1 }
+        requires GSTS.RTPS == 1
+        effects  { writes GCMD }
+}
+
+}
