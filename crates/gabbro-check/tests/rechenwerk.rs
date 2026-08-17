@@ -409,9 +409,75 @@ impl fn zaehle(t : ptr<normal, rw> T, i : index into T, tiefe : Tiefe) -> u32
 
     // `narrow … to 0 ..< MAX` -- die obere Schranke ist AUSGESCHLOSSEN. Ein `<=` statt `<`
     // liesse genau den einen Wert durch, gegen den die Schranke steht.
-    assert!(c.contains("if (!(tiefe >= 0 && tiefe < MAX))"), "die Pruefung, exklusiv oben:\n{c}");
+    //
+    // **Und die untere Pruefung fehlt mit Absicht** (nachgezogen 2026-08-17): `tiefe` ist
+    // `u32`, also ist `tiefe >= 0` immer wahr -- `-Wextra` sagt das zu Recht
+    // (`-Wtype-limits`). Sie faellt aber **nur weg, wenn der Erzeuger die Vorzeichenlosigkeit
+    // KENNT**; weiss er es nicht, gibt er sie aus und nimmt die Warnung in Kauf. *Dann wird
+    // der Waechter rot, statt dass eine Pruefung still verschwindet.*
+    assert!(c.contains("if (!(tiefe < MAX))"), "die Pruefung, exklusiv oben:\n{c}");
+    assert!(!c.contains("tiefe >= 0"), "die vakuume untere Pruefung faellt weg:\n{c}");
 
     // `-> never` -- ohne das Wort sieht der C-Uebersetzer die Fehlerzweige als durchfallend
     // an. Genau daher kamen in F5 sechs `S002`, bevor `exit()` sein `-> never` bekam.
     assert!(c.contains("_Noreturn void unlesbar(void);"), "{c}");
+}
+
+/// **`retry` und `format` — die zwei Entscheidungen aus F10.**
+///
+/// `bounded N ops` ist ein **Operationsbudget**, kein Schleifenzaehler. `SPRACHE.md` ist
+/// eindeutig -- die Einheit ist `ops`, Zeitmasse sind an D10 gestorben. Die Laufzeitschranke
+/// ist also `floor(N / Kosten-je-Durchgang)`, **und die Kosten rechnet der Kostenpass**, nicht
+/// ein zweiter Rechner im Erzeuger.
+///
+/// > **Der Vergleich mit `traverse` ist der Ertrag:** eine Traversierung braucht KEINEN
+/// > Laufzeitzaehler, weil ihre Domaene durch Konstruktion endlich ist. Ein `retry` braucht
+/// > einen, weil seine Bedingung von der Welt abhaengt -- und genau darum verlangt die
+/// > Grammatik dort ein `on_exceeded` und hier keines.
+///
+/// Und ein `format` wird **kein C-Verbund**: Fuellung und Bitreihenfolge sind
+/// implementierungsoffen, ein Format ist aber genau eine Zusage ueber Bytes.
+#[test]
+fn retry_teilt_das_budget_und_format_liest_bytes() {
+    let quelle = "module t {
+const MAGIE : u32 = 3735928559;
+format Kopf @version 1 endian big {
+    magie : u32 where magie == MAGIE,
+    laenge : u32,
+}
+extern fn schritt(k : ptr<normal, r> Kopf) -> u32 effects { reads k } costs <= 4 ops;
+extern fn leer() -> never effects { diverges } costs <= 0 ops;
+impl fn zaehle(k : ptr<normal, r> Kopf) -> u32 effects { reads k } costs <= 4096 ops
+{
+    retry lesen until schritt(k) == 9
+        bounded 400 ops progress verbraucht on_exceeded leer effects { reads k }
+    { }
+    return 0;
+}
+}";
+    let mut absagen = gabbro_syntax::Absagen::neu("p.gab");
+    let (baum, _) = gabbro_syntax::lies("p.gab", quelle);
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
+
+    // **Das Format ist ein Bytezeiger, kein Verbund.**
+    assert!(c.contains("const uint8_t *bytes"), "{c}");
+    assert!(!c.contains("uint32_t magie;"), "kein Feld -- ein Zugriff:\n{c}");
+    assert!(c.contains("gabbro_be32(v->bytes + 0)"), "Versatz 0, gross gelesen:\n{c}");
+    assert!(c.contains("gabbro_be32(v->bytes + 4)"), "Versatz 4:\n{c}");
+    assert!(!c.contains("gabbro_le32"), "nur der GEBRAUCHTE Leser wird erzeugt:\n{c}");
+
+    // Die `where`-Klausel wird EINE Gueltigkeitsfunktion, mit der Laengenpruefung davor.
+    assert!(c.contains("if (v->len < 8u) return false;"), "{c}");
+    assert!(c.contains("if (!(Kopf_magie(v) == MAGIE)) return false;"), "{c}");
+
+    // **Das Budget geteilt durch die Durchgangskosten.** Der Rumpf ist leer, die Bedingung
+    // ruft `schritt` (4 ops) plus Vergleich -- der Kostenpass rechnet, der Erzeuger teilt.
+    let z = c.find("_r1 >= ").expect("Durchgangsschranke fehlt");
+    let zahl: u32 = c[z + 7..].split('u').next().unwrap().parse().expect("Zahl");
+    assert!(zahl > 0 && zahl < 400, "geteilt, nicht uebernommen: {zahl} aus 400 ops");
+
+    // Der Ueberlauf ist BENANNT -- D11 woertlich.
+    assert!(c.contains("{ leer(); }"), "der benannte Ausgang wird gerufen:\n{c}");
+    assert!(c.contains("_Noreturn void leer(void);"), "und er kehrt nicht zurueck:\n{c}");
 }

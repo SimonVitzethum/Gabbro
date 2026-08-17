@@ -929,6 +929,63 @@ MUTATIONEN = [
         "C-Absenkung -- eine nicht zurueckkehrende Funktion sieht fuer den C-Uebersetzer durchfallend aus",
         "code",
     ),
+    # -- emit.rs: `retry` und `format` (F10) -----------------------------------------------
+    Mutation(
+        "budget-ist-schleifenzaehler",
+        "emit.rs",
+        "                        if c > 0 && n / c > 0 {\n                            aus.insert(r.span.von, n / c);",
+        "                        if c > 0 && n > 0 {\n                            aus.insert(r.span.von, n);",
+        "C-Absenkung -- `bounded N ops` wird als Durchgangszahl gelesen statt als Operationsbudget",
+        "code",
+    ),
+    Mutation(
+        "on-exceeded-darf-zurueckkehren",
+        "emit.rs",
+        "    if !u.funktionen.get(ausgang).is_some_and(|s| s.nie_rueck) {",
+        "    if false && !u.funktionen.get(ausgang).is_some_and(|s| s.nie_rueck) {",
+        "C-Absenkung -- `on_exceeded` darf auf etwas zeigen, das zurueckkehrt; die Schleife dreht weiter",
+        "code",
+    ),
+    Mutation(
+        "format-liest-immer-klein",
+        "emit.rs",
+        "        (4, true) => \"gabbro_be32\",",
+        "        (4, true) => \"gabbro_le32\",",
+        "C-Absenkung -- `endian big` wird klein gelesen; jedes Feld ist byteverdreht",
+        "code",
+    ),
+    Mutation(
+        "format-versatz-waechst-nicht",
+        "emit.rs",
+        "        versatz += breite;",
+        "        versatz += 0 * breite;",
+        "C-Absenkung -- jedes Formatfeld liest bei Versatz 0; alle Felder liefern dasselbe",
+        "code",
+    ),
+    Mutation(
+        "where-klausel-faellt-weg",
+        "emit.rs",
+        "        aus.push_str(&format!(\"    if (!({p})) return false;\\n\"));",
+        "        let _ = p;",
+        "C-Absenkung -- die `where`-Klauseln pruefen nichts; danach braucht jeder Zugriff wieder eine Laengenpruefung",
+        "code",
+    ),
+    Mutation(
+        "format-ohne-laengenpruefung",
+        "emit.rs",
+        "    if (v->len < {versatz}u) return false;\\n\"",
+        "    if (0 && v->len < {versatz}u) return false;\\n\"",
+        "C-Absenkung -- ein Puffer kuerzer als der Kopf gilt als gueltig",
+        "code",
+    ),
+    Mutation(
+        "untere-schranke-faellt-immer-weg",
+        "emit.rs",
+        "            let bedingung = if untere_ist_null && vorzeichenlos.contains(&n.ort.basis.text) {",
+        "            let bedingung = if untere_ist_null {",
+        "C-Absenkung -- die untere `narrow`-Pruefung faellt auch fuer vorzeichenbehaftete Werte weg",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

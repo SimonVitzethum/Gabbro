@@ -5,7 +5,7 @@
 # Projekts: `mutiere-pruefer.py` wies sie mit 0 Mutationen aus, und *was 0 Mutationen hat,
 # ist nicht gedeckt, sondern unbeschaedigbar*.
 #
-# Dieser Waechter schliesst sie fuer DREI Uebersetzungseinheiten, nicht fuer zehn:
+# Dieser Waechter schliesst sie fuer VIER Uebersetzungseinheiten, nicht fuer zehn:
 #
 #     .gab  ->  gabbro emit  ->  C  ->  cc -Werror  ->  ausgefuehrt  ->  Ergebnis verglichen
 #
@@ -205,7 +205,58 @@ int main(void) {
 lauf "fragment8" "$ARB/f8.gab" "$TREIBER8" "1 1 1 0 0 1 1 1" \
      '0,/^                SCHEDS_gib();$/s///'
 
-echo "== EMISSION: ALL PASS -- 3 Uebersetzungseinheiten durchgestochen =="
-echo "  Und was das NICHT heisst: sieben weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser drei Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Drei Ja-Aussagen sind keine ueber die Sprache."
+# -- 4. Das Fragment F10: das Format und das Operationsbudget ----------------------------
+#
+# **Zwei Absenkungen, die keine Uebersetzungen sind.**
+#
+# `format` wird KEIN C-Verbund -- Fuellung und Bitreihenfolge sind in C implementierungsoffen,
+# und ein Format ist genau eine Zusage ueber BYTES. Es wird ein Bytezeiger mit
+# Zugriffsfunktionen in der ERKLAERTEN Reihenfolge, plus EINER Gueltigkeitsfunktion aus den
+# `where`-Klauseln. *Der gemessene Bestand schreibt genau das von Hand: `be32(data, n)?`.*
+#
+# `retry ... bounded 65536 ops` ist ein OPERATIONSBUDGET, kein Schleifenzaehler. Geteilt durch
+# die Kosten eines Durchgangs (der Kostenpass rechnet sie) ergibt das 21845 Durchgaenge.
+schneide "$W/dokumente/FRAGMENTE.md" "module caprock::dtb" > "$ARB/f10.gab"
+if ! grep -q "format DtbKopf" "$ARB/f10.gab"; then
+    echo "== EMISSION: F10 NICHT GESCHNITTEN =="; exit 1
+fi
+TREIBER10='#include <stdio.h>
+#include <stdlib.h>
+#include "@ERZEUGT@"
+static int rufe;
+uint32_t naechstes_token(const DtbKopf *k, uint32_t pos) { (void)k; (void)pos; rufe++; return 1; }
+_Noreturn void baum_unlesbar(void) { printf(" UEBERLAUF"); exit(0); }
+int main(void) {
+    static const uint8_t gut[16]    = { 0xd0,0x0d,0xfe,0xed, 0,0,0,64, 0,0,0,40, 0,0,0,50 };
+    static const uint8_t falsch[16] = { 0xde,0xad,0xbe,0xef, 0,0,0,64, 0,0,0,40, 0,0,0,50 };
+    DtbKopf a = { gut, 64 }, b = { falsch, 64 }, c = { gut, 8 }, d = { gut, 20 };
+    rufe = 0;
+    unsigned n = kerne_zaehlen(&a);
+    printf("%d %d %d %d %u %d\n",
+           (int)DtbKopf_gueltig(&a), (int)DtbKopf_gueltig(&b),
+           (int)DtbKopf_gueltig(&c), (int)DtbKopf_gueltig(&d), n, rufe);
+    return 0;
+}
+'
+#    Erwartet:
+#      1  -- der gute Kopf ist gueltig: Magie stimmt, beide Versaetze liegen im Puffer
+#      0  -- **die Magie ist die Zusage, und `endian big` ist der Grund**: dieselben Bytes
+#            klein gelesen ergaeben etwas anderes
+#      0  -- ein Puffer kuerzer als der Kopf faellt an `v->len < 16`
+#      0  -- und DAS ist die eigentliche `where`-Klausel: der Kopf passt, aber `off_struct`
+#            zeigt hinter den Puffer. *Danach braucht kein Zugriff mehr eine Laengenpruefung.*
+#      0  -- `kerne_zaehlen` liefert seine Null
+#     65  -- **die Durchgaenge, und die Zahl ist vorhergesagt worden**: `narrow tiefe to
+#            0 ..< 64` traegt 64 Durchgaenge, der 65. Test faellt. Nicht 21845 -- das
+#            Operationsbudget ist die WEITERE Schranke, nicht die engere
+#    **Die Sprechprobe dreht die Bytereihenfolge im LESER**, nicht seinen Namen. Der erste
+#    Versuch ersetzte `gabbro_be32` durch `gabbro_le32` -- und traf damit Definition UND
+#    Rufort, benannte die Funktion also bloss um. *Ein Gift, das nichts aendert, ist keines,
+#    und die Probe hat es gemeldet.*
+lauf "fragment10" "$ARB/f10.gab" "$TREIBER10" "1 0 0 0 0 65" \
+     's/(uint32_t)p\[0\] << 24/(uint32_t)p[3] << 24/'
+
+echo "== EMISSION: ALL PASS -- 4 Uebersetzungseinheiten durchgestochen =="
+echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
+echo '  deckt genau die Formen dieser vier Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Vier Ja-Aussagen sind keine ueber die Sprache."

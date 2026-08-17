@@ -736,3 +736,62 @@ impl Rechner<'_> {
         }
     }
 }
+
+/// **Die Durchgangskosten eines Schleifenrumpfs — für den Erzeuger, nicht für den Pass.**
+///
+/// `retry … bounded N ops` sagt ein OPERATIONSBUDGET zu, keinen Schleifenzähler. Wer daraus
+/// eine Laufzeitschranke machen will, muss durch die Kosten EINES Durchgangs teilen — und die
+/// rechnet dieses Modul ohnehin schon aus. *Ein zweiter Kostenrechner im Erzeuger wäre genau
+/// das zweite Register, gegen das W7 steht.*
+///
+/// `None` heißt: die Kosten stehen nicht fest. Der Erzeuger weigert sich dann (`C001`), statt
+/// eine Zahl zu raten.
+pub fn durchgangskosten(
+    baum: &Programm,
+    modul: &str,
+    r: &Retry,
+    lokal: HashMap<String, crate::typen::Typ>,
+) -> Option<i128> {
+    let u = Umgebung::sammle(baum);
+    let mut deklariert: HashMap<String, i128> = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, m| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if let Some(c) = &f.costs {
+                if let Some(n) = u.konst_wert(m, c) {
+                    deklariert.insert(f.name.text.clone(), n);
+                }
+            }
+        }
+    });
+    let leer: HashMap<String, i128> = HashMap::new();
+    let rechner = Rechner {
+        u: &u,
+        modul,
+        deklariert: &deklariert,
+        haltezeiten: &leer,
+        geteilte_haltezeiten: &leer,
+        lokal,
+    };
+    // **Ein Durchgang ist Rumpf PLUS Bedingung.** Die `until`-Bedingung wird bei jedem
+    // Durchgang ausgewertet und kann teurer sein als der Rumpf -- `FRAGMENTE.md` F4 pollt
+    // mit leerem Rumpf. *Nur den Rumpf zu zaehlen hiesse, den teuersten Teil zu uebersehen.*
+    let rumpf = rechner.block(&r.rumpf);
+    let bedingung = match &r.bis {
+        Some(p) => pred_kosten(&rechner, p),
+        None => Kosten::Zahl(0),
+    };
+    match rumpf.plus(bedingung) {
+        Kosten::Zahl(n) if n > 0 => Some(n),
+        _ => None,
+    }
+}
+
+/// Die Kosten eines Praedikats -- fuer den `until`-Test, der bei jedem Durchgang laeuft.
+fn pred_kosten(r: &Rechner, p: &Pred) -> Kosten {
+    match &p.art {
+        PredArt::Vergleich(e) | PredArt::Element(e, _) => r.ausdruck(e),
+        PredArt::Klammer(x) | PredArt::Nicht(x) => pred_kosten(r, x),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) => pred_kosten(r, a).plus(pred_kosten(r, b)),
+        _ => Kosten::Zahl(1),
+    }
+}

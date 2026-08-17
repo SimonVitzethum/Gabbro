@@ -46,6 +46,8 @@ use std::collections::{BTreeSet, HashMap};
 #[derive(Default)]
 struct Namen {
     tabellen: Vec<String>,
+    /// Die `format`-Namen. Ein Pfad, der eines nennt, IST der Zugriffsverbund.
+    formate: BTreeSet<String>,
     typen: HashMap<String, TypExpr>,
     /// `linear ghost type BootPhase;` — a value that **does not exist at run time**.
     geister: Vec<String>,
@@ -53,6 +55,14 @@ struct Namen {
     /// Namen, die diese Einheit **nicht deklariert** und die nur hinter einem Zeiger
     /// vorkommen. Sie werden als unvollstaendiger C-Typ vorwaerts deklariert.
     fremde: BTreeSet<String>,
+    /// Je `retry` (an seinem Spannenanfang): die **Zahl der Durchgaenge**, die sein
+    /// Operationsbudget hergibt. Siehe `retry_schranken`.
+    retry_schranke: HashMap<u32, i128>,
+    /// Die `const`-Namen -- in einer `where`-Klausel ist ein blanker Name sonst ein FELD.
+    konstanten: BTreeSet<String>,
+    /// Namen, deren Typ der Erzeuger als VORZEICHENLOS kennt. Nur fuer sie darf die untere
+    /// Schranke eines `narrow` bei null wegfallen -- Unwissen faellt nach lautstark.
+    vorzeichenlos: BTreeSet<String>,
 }
 
 /// Ist `t` ein Zeiger auf einen Pfad, den diese Einheit nicht aufloest? Dann traegt sie
@@ -76,6 +86,8 @@ struct Signatur {
     geist_rueck: bool,
     /// Returns `option index into T`? Then the table name, for the sentinel comparison.
     option_rueck: Option<String>,
+    /// `-> never`. Ein `on_exceeded` darf nur auf so eine Funktion zeigen.
+    nie_rueck: bool,
 }
 
 /// **Is this type a ghost — i.e. does it vanish in the C?**
@@ -116,6 +128,12 @@ pub const KOPF: &str = "\
 pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
     let mut namen = Namen::default();
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Konst(k) => {
+            namen.konstanten.insert(k.name.text.clone());
+        }
+        ItemArt::Format(f) => {
+            namen.formate.insert(f.name.text.clone());
+        }
         ItemArt::Tabelle(t) => namen.tabellen.push(t.name.text.clone()),
         ItemArt::Typ(t) => {
             // **A ghost type has no body and no C.** `linear ghost type BootPhase;` declares a
@@ -135,6 +153,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             let sig = Signatur {
                 geist_param: f.parameter.iter().map(|p| ist_geist(&p.typ, &namen)).collect(),
                 geist_rueck: f.ergebnis.as_ref().is_some_and(|t| ist_geist(t, &namen)),
+                nie_rueck: matches!(f.ergebnis, Some(TypExpr::Never(_))),
                 option_rueck: match &f.ergebnis {
                     Some(TypExpr::Index { tabelle, optional: true, .. }) => {
                         Some(tabelle.text.clone())
@@ -169,7 +188,62 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
     });
     namen.fremde = fremde;
 
+    // **Welche Namen sind nachweislich vorzeichenlos?** Konservativ ueber alle Funktionen:
+    // wer irgendwo vorzeichenbehaftet erklaert ist, faellt heraus. *Unwissen faellt nach
+    // lautstark -- dann bleibt die untere Pruefung stehen und `-Wextra` meldet sich.*
+    let mut ohne: BTreeSet<String> = BTreeSet::new();
+    let mut mit: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        let mut erklaert: Vec<(&str, Option<&TypExpr>)> =
+            f.parameter.iter().map(|p| (p.name.text.as_str(), Some(&p.typ))).collect();
+        if let FnRumpf::Block(b) = &f.rumpf {
+            for s in &b.anweisungen {
+                if let StmtArt::Let(l) = &s.art {
+                    erklaert.push((l.name.text.as_str(), l.typ.as_ref()));
+                }
+            }
+        }
+        for (name, ty) in erklaert {
+            match ty.and_then(|x| vorzeichen(x, &namen)) {
+                Some(true) => ohne.insert(name.to_string()),
+                _ => mit.insert(name.to_string()),
+            };
+        }
+    });
+    namen.vorzeichenlos = ohne.difference(&mit).cloned().collect();
+
+    namen.retry_schranke = retry_schranken(baum);
+
+    // **Die Wortleser werden MITERZEUGT, nicht vorausgesetzt** -- ein Erzeugnis, das eine
+    // Bibliothek braucht, ist kein Erzeugnis. Und nur die gebrauchten: eine ungenutzte
+    // Funktion im erzeugten C ist ein Befund ueber den Erzeuger.
+    let mut leser: BTreeSet<&'static str> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Format(f) = &item.art {
+            let gross = matches!(f.endian, Some(Endian::Gross));
+            for feld in &f.felder {
+                if let TypExpr::Int(i) = &feld.typ.typ {
+                    leser.insert(lesewort(breite_von(i), gross));
+                }
+            }
+        }
+    });
+
     let mut aus = String::from(KOPF);
+    // **Alle Prototypen vor allen Rümpfen.** In C ist ein Ruf vor der Erklärung eine
+    // implizite Deklaration, und `-Werror` haelt dort an. Die Quellreihenfolge einer
+    // Gabbro-Datei ist aber frei: `FRAGMENTE.md` F10 erklaert `baum_unlesbar` NACH dem
+    // Rufer. *Der Erzeuger sortiert, statt die Quelle zu einer C-Reihenfolge zu zwingen.*
+    let mut rumpf = String::new();
+    if !leser.is_empty() {
+        aus.push_str(
+            "\n/* Word readers for the declared byte order. Generated, not assumed. */\n",
+        );
+        for l in &leser {
+            aus.push_str(LESER_C.iter().find(|(n, _)| n == l).map(|(_, c)| *c).unwrap_or(""));
+        }
+    }
     if !namen.fremde.is_empty() {
         aus.push_str(
             "\n/* Types this unit names but does not declare. Incomplete on purpose: C\n\
@@ -190,6 +264,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         }
         ItemArt::Typ(_) => {} // Range types lower to their carrier; see `ctyp`.
         ItemArt::Tabelle(t) => tabelle(t, &mut aus, &namen, absagen),
+        ItemArt::Format(f) => format_(f, &mut aus, &namen, absagen),
         // **Eine Sperre erzeugt zwei Prototypen und keine Zeile Rumpf.**
         //
         // Rang und Haltezeit stehen im C NIRGENDS: `H006` rechnet die Ordnung zur
@@ -213,7 +288,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 ));
             }
         }
-        ItemArt::Funktion(f) => funktion(f, &mut aus, &namen, absagen),
+        ItemArt::Funktion(f) => funktion(f, &mut aus, &mut rumpf, &namen, absagen),
         ItemArt::Modul(_) | ItemArt::Use(_) => {}
         _ => weigere(
             absagen,
@@ -221,7 +296,67 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             "this item kind has no lowering in this emitter yet",
         ),
     });
+    aus.push_str(&rumpf);
     aus
+}
+
+/// **`bounded N ops` ist ein OPERATIONSBUDGET, kein Schleifenzaehler — und das ist die
+/// Entscheidung, die diese Funktion traegt.**
+///
+/// `SPRACHE.md` ist eindeutig: die Einheit ist `ops`, und Zeitmasse sind an D10 gestorben
+/// (*"eine Iterationszahl ist eine Eigenschaft des Programms, eine Zeitmessung nicht"*). Wer
+/// die Zusage zur Laufzeit durchsetzen will, teilt also durch die Kosten EINES Durchgangs:
+///
+/// ```text
+///     Durchgaenge  =  floor( N / Kosten-je-Durchgang )
+/// ```
+///
+/// **Die Kosten rechnet der Kostenpass, nicht der Erzeuger** — ein zweiter Kostenrechner waere
+/// genau das zweite Register, gegen das W7 steht. Steht die Zahl nicht fest, weigert sich der
+/// Erzeuger (`C001`), statt eine zu raten.
+///
+/// > **Und der Vergleich mit `traverse` ist der eigentliche Ertrag der Absenkung:** eine
+/// > Traversierung braucht **keinen** Laufzeitzaehler, weil ihre Domaene durch Konstruktion
+/// > endlich ist. Ein `retry` braucht einen, weil seine Bedingung von der WELT abhaengt — und
+/// > genau darum verlangt die Grammatik dort ein `on_exceeded` und hier keines. *Die
+/// > Absenkung macht sichtbar, was die beiden Formen unterscheidet.*
+fn retry_schranken(baum: &Programm) -> HashMap<u32, i128> {
+    let mut aus = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        sammle_retry(baum, modul, b, &mut aus);
+    });
+    aus
+}
+
+fn sammle_retry(baum: &Programm, modul: &str, b: &Block, aus: &mut HashMap<u32, i128>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Schleife(sch) => {
+                if let Schleife::Retry(r) = sch.as_ref() {
+                    let budget = crate::umgebung::Umgebung::sammle(baum)
+                        .konst_wert(modul, &r.schranke);
+                    let je_gang =
+                        crate::kosten::durchgangskosten(baum, modul, r, HashMap::new());
+                    if let (Some(n), Some(c)) = (budget, je_gang) {
+                        if c > 0 && n / c > 0 {
+                            aus.insert(r.span.von, n / c);
+                        }
+                    }
+                    sammle_retry(baum, modul, &r.rumpf, aus);
+                }
+            }
+            StmtArt::Sperrt(x) => sammle_retry(baum, modul, &x.rumpf, aus),
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    sammle_retry(baum, modul, &z.rumpf, aus);
+                }
+            }
+            StmtArt::Narrow(n) => sammle_retry(baum, modul, &n.sonst, aus),
+            _ => {}
+        }
+    }
 }
 
 /// **C001 -- the emitter refuses instead of guessing.**
@@ -280,6 +415,188 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     ));
 }
 
+/// **Ein `format` wird KEIN C-Verbund, und das ist die Entscheidung.**
+///
+/// Fuellung, Bitreihenfolge und Wortbreite eines `struct` sind in C implementierungsoffen —
+/// ein Format ist aber genau eine Zusage ueber BYTES. Ein Verbund waere also die eine
+/// Absenkung, die genau das verliert, wofuer es das Konstrukt gibt.
+///
+/// **Die gewaehlte Form sind Zugriffsfunktionen ueber einem Bytezeiger** — und sie ist nicht
+/// erfunden: der gemessene Bestand schreibt sie schon von Hand. *`be32(data, n)?` ist bereits
+/// „pruefen, sonst absagen"* (`BEWEIS.md`, «B40»: 145 Zeilen ohne Fehler, ohne Sprache und
+/// ohne Werkzeug).
+///
+/// ```c
+/// typedef struct { const uint8_t *bytes; uint32_t len; } DtbKopf;
+/// static uint32_t DtbKopf_magie(const DtbKopf *f) { … }
+/// static bool     DtbKopf_gueltig(const DtbKopf *f) { … }   /* jede `where`-Klausel */
+/// ```
+///
+/// **Heute abgesenkt wird der byteweise Fall**: ganzzahlige Felder in Deklarationsreihenfolge,
+/// mit der erklaerten Bytereihenfolge. **Bitlagen (`@[63:12]`) werden beim Namen abgelehnt** —
+/// dort steht mit «B24» ein offener Befund des Ordners selbst: `bitpos` sagt nicht, worauf
+/// sich eine Lage jenseits von 64 bezieht und wie sie mit `endian` zusammenwirkt. *Eine
+/// Absenkung zu bauen, waehrend die Bedeutung offen ist, hiesse die Frage still zu
+/// beantworten.*
+fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
+    let gross = matches!(f.endian, Some(Endian::Gross));
+    if f.endian.is_none() {
+        weigere(absagen, f.span, "`format` without `endian` -- the byte order is the point");
+        return;
+    }
+    let n = &f.name.text;
+    aus.push_str(&format!(
+        "\ntypedef struct {{ const uint8_t *bytes; uint32_t len; }} {n};\n"
+    ));
+    let mut versatz: u32 = 0;
+    let mut pruefungen: Vec<String> = Vec::new();
+    for feld in &f.felder {
+        if feld.bitpos.is_some() || feld.typ.embeds.is_some() {
+            weigere(
+                absagen,
+                feld.span,
+                "`format` field with a bit position -- «B24» is open: what a position beyond \
+                 the word width refers to, and how it interacts with `endian`, is unsaid",
+            );
+            return;
+        }
+        let TypExpr::Int(i) = &feld.typ.typ else {
+            weigere(absagen, feld.span, "`format` field type");
+            return;
+        };
+        let breite = match i.wort {
+            gabbro_syntax::kw::Kw::U8 | gabbro_syntax::kw::Kw::I8 => 1u32,
+            gabbro_syntax::kw::Kw::U16 | gabbro_syntax::kw::Kw::I16 => 2,
+            gabbro_syntax::kw::Kw::U32 | gabbro_syntax::kw::Kw::I32 => 4,
+            _ => 8,
+        };
+        let c = intty(i);
+        let leser = lesewort(breite, gross);
+        if !feld.reserviert {
+            aus.push_str(&format!(
+                "static inline {c} {n}_{f2}(const {n} *v) {{ return ({c}){leser}(v->bytes + {versatz}); }}\n",
+                f2 = feld.name.text
+            ));
+        }
+        if let Some(b) = &feld.bedingung {
+            match pred_c_format(b, n, u, absagen) {
+                Some(x) => pruefungen.push(x),
+                None => {
+                    weigere(absagen, feld.span, "`where` clause form in a `format`");
+                    return;
+                }
+            }
+        }
+        versatz += breite;
+    }
+    // **Die `where`-Klauseln sind der Grund, warum danach kein Zugriff mehr eine
+    // Laengenpruefung braucht** (`PFLICHTEN.md` F10). Sie stehen als EINE Funktion da, damit
+    // der Rufer sie einmal stellt statt an jedem Feld.
+    aus.push_str(&format!(
+        "static inline bool {n}_gueltig(const {n} *v) {{\n    if (v->len < {versatz}u) return false;\n"
+    ));
+    for p in &pruefungen {
+        aus.push_str(&format!("    if (!({p})) return false;\n"));
+    }
+    aus.push_str("    return true;\n}\n");
+}
+
+/// Der Leser fuer eine Breite und eine Bytereihenfolge. **Er wird MITERZEUGT**, nicht
+/// vorausgesetzt: ein Erzeugnis, das eine Bibliothek braucht, ist kein Erzeugnis.
+/// `Some(true)` = nachweislich vorzeichenlos, `Some(false)` = nachweislich mit Vorzeichen,
+/// `None` = der Erzeuger weiss es nicht. **Die dritte Antwort wird wie die zweite behandelt.**
+fn vorzeichen(t: &TypExpr, u: &Namen) -> Option<bool> {
+    match t {
+        TypExpr::Int(i) => Some(matches!(
+            i.wort,
+            gabbro_syntax::kw::Kw::U8
+                | gabbro_syntax::kw::Kw::U16
+                | gabbro_syntax::kw::Kw::U32
+                | gabbro_syntax::kw::Kw::U64
+        )),
+        // `index into T` ist ein erzeugter, vorzeichenloser Index.
+        TypExpr::Index { .. } => Some(true),
+        TypExpr::Pfad(p) => {
+            let n = &p.teile.last()?.text;
+            match n.as_str() {
+                "u8" | "u16" | "u32" | "u64" => Some(true),
+                "i8" | "i16" | "i32" | "i64" => Some(false),
+                _ => vorzeichen(u.typen.get(n)?, u),
+            }
+        }
+        _ => None,
+    }
+}
+
+fn breite_von(i: &IntTy) -> u32 {
+    match i.wort {
+        gabbro_syntax::kw::Kw::U8 | gabbro_syntax::kw::Kw::I8 => 1,
+        gabbro_syntax::kw::Kw::U16 | gabbro_syntax::kw::Kw::I16 => 2,
+        gabbro_syntax::kw::Kw::U32 | gabbro_syntax::kw::Kw::I32 => 4,
+        _ => 8,
+    }
+}
+
+/// Die Leser selbst. **Byteweise zusammengesetzt, nicht gecastet** -- ein `*(uint32_t*)p`
+/// waere unausgerichtet und haette die Bytereihenfolge der Maschine statt der erklaerten.
+const LESER_C: &[(&str, &str)] = &[
+    ("gabbro_u8", "static inline uint8_t gabbro_u8(const uint8_t *p) { return p[0]; }\n"),
+    ("gabbro_be16", "static inline uint16_t gabbro_be16(const uint8_t *p) { return (uint16_t)((uint16_t)p[0] << 8 | p[1]); }\n"),
+    ("gabbro_le16", "static inline uint16_t gabbro_le16(const uint8_t *p) { return (uint16_t)((uint16_t)p[1] << 8 | p[0]); }\n"),
+    ("gabbro_be32", "static inline uint32_t gabbro_be32(const uint8_t *p) { return (uint32_t)p[0] << 24 | (uint32_t)p[1] << 16 | (uint32_t)p[2] << 8 | p[3]; }\n"),
+    ("gabbro_le32", "static inline uint32_t gabbro_le32(const uint8_t *p) { return (uint32_t)p[3] << 24 | (uint32_t)p[2] << 16 | (uint32_t)p[1] << 8 | p[0]; }\n"),
+    ("gabbro_be64", "static inline uint64_t gabbro_be64(const uint8_t *p) { return (uint64_t)gabbro_be32(p) << 32 | gabbro_be32(p + 4); }\n"),
+    ("gabbro_le64", "static inline uint64_t gabbro_le64(const uint8_t *p) { return (uint64_t)gabbro_le32(p + 4) << 32 | gabbro_le32(p); }\n"),
+];
+
+fn lesewort(breite: u32, gross: bool) -> &'static str {
+    match (breite, gross) {
+        (1, _) => "gabbro_u8",
+        (2, true) => "gabbro_be16",
+        (2, false) => "gabbro_le16",
+        (4, true) => "gabbro_be32",
+        (4, false) => "gabbro_le32",
+        (8, true) => "gabbro_be64",
+        _ => "gabbro_le64",
+    }
+}
+
+/// Eine `where`-Klausel im `format`. Feldnamen darin sind Zugriffe auf DAS Format, und
+/// `lenof(Self)` ist seine Laenge.
+fn pred_c_format(p: &Pred, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    Some(match &p.art {
+        PredArt::Vergleich(e) => ausdruck_format(e, fmt, u, absagen),
+        PredArt::Klammer(x) => format!("({})", pred_c_format(x, fmt, u, absagen)?),
+        PredArt::Nicht(x) => format!("!({})", pred_c_format(x, fmt, u, absagen)?),
+        PredArt::Und(a, b) => format!(
+            "{} && {}",
+            pred_c_format(a, fmt, u, absagen)?,
+            pred_c_format(b, fmt, u, absagen)?
+        ),
+        _ => return None,
+    })
+}
+
+/// Wie `ausdruck`, aber ein blanker Name ist ein FELD dieses Formats.
+fn ausdruck_format(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> String {
+    match &e.art {
+        ExprArt::Ort(o) if o.suffixe.is_empty() && !u.konstanten.contains(&o.basis.text) => {
+            format!("{fmt}_{}(v)", o.basis.text)
+        }
+        ExprArt::Klammer(x) => format!("({})", ausdruck_format(x, fmt, u, absagen)),
+        ExprArt::Binaer(op, a, b) => format!(
+            "{} {} {}",
+            ausdruck_format(a, fmt, u, absagen),
+            op_text(op),
+            ausdruck_format(b, fmt, u, absagen)
+        ),
+        // `lenof(Self)` ist die Laenge des Puffers -- die Groesse, an der jede
+        // `where`-Klausel dieses Formats haengt.
+        ExprArt::Eingebaut(b) if matches!(b.as_ref(), Eingebaut::Lenof(_)) => "v->len".into(),
+        _ => ausdruck(e, u, absagen),
+    }
+}
+
 fn intty(i: &IntTy) -> String {
     // The word IS the width -- `u32 wrapping` lowers to `uint32_t`, whose wraparound C
     // defines. «B32»: the wraparound is spoken at the declaration, not tolerated.
@@ -334,6 +651,8 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                 // *W9 asks for the direction of a coarsening; it does not license one where
                 // the exact answer is available.*
                 _ if u.tabellen.iter().any(|x| *x == n) => n,
+                // Ein Pfad, der ein `format` nennt, ist sein Zugriffsverbund.
+                _ if u.formate.contains(&n) => n,
                 // **A named range type lowers to its carrier.** `type Zaehler = u32 in
                 // 0 .. 65535` becomes `uint32_t`; the range itself is an M1 fact and stays in
                 // the checker -- W6: what is left out of the C is left out because M1 carries
@@ -398,7 +717,13 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
 /// **A `spec fn` is specification and has no C.** Everything else with a body becomes a
 /// definition; everything else *without* one becomes a **prototype** — without it a call in
 /// C11 is an implicit declaration, and `-Werror` stops there.
-fn funktion(f: &FnDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
+fn funktion(
+    f: &FnDecl,
+    aus: &mut String,
+    rumpf_aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+) {
     if matches!(f.klasse, Some(FnKlasse::Spec)) {
         return;
     }
@@ -440,10 +765,10 @@ fn funktion(f: &FnDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     } else {
         params.join(", ")
     };
-    let FnRumpf::Block(b) = &f.rumpf else {
-        aus.push_str(&format!("\n{rueck} {}({liste});\n", f.name.text));
-        return;
-    };
+    // Der Prototyp steht IMMER oben -- auch fuer eine Funktion mit Rumpf.
+    aus.push_str(&format!("\n{rueck} {}({liste});\n", f.name.text));
+    let FnRumpf::Block(b) = &f.rumpf else { return };
+    let aus = rumpf_aus;
     aus.push_str(&format!("\n{rueck} {}({liste}) {{\n", f.name.text));
     // **`(void)k;` fuer jeden Parameter, den der Rumpf nicht liest -- und das ist ein Befund,
     // kein Kunstgriff.**
@@ -467,6 +792,38 @@ fn funktion(f: &FnDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         anweisung(s, aus, u, absagen, 1, &Vec::new());
     }
     aus.push_str("}\n");
+}
+
+/// Die Namen in einem Praedikat -- ein `until` liest ebenso wie ein Rumpf.
+fn pred_namen(p: &Pred, aus: &mut std::collections::BTreeSet<String>) {
+    match &p.art {
+        PredArt::Vergleich(e) | PredArt::Element(e, _) => sammle_expr_namen(e, aus),
+        PredArt::Klammer(x) | PredArt::Nicht(x) => pred_namen(x, aus),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) => {
+            pred_namen(a, aus);
+            pred_namen(b, aus);
+        }
+        _ => {}
+    }
+}
+
+fn sammle_expr_namen(x: &Expr, aus: &mut std::collections::BTreeSet<String>) {
+    match &x.art {
+        ExprArt::Ort(o) => {
+            aus.insert(o.basis.text.clone());
+        }
+        ExprArt::Klammer(y) | ExprArt::Unaer(_, y) => sammle_expr_namen(y, aus),
+        ExprArt::Binaer(_, a, b) => {
+            sammle_expr_namen(a, aus);
+            sammle_expr_namen(b, aus);
+        }
+        ExprArt::Ruf(r) => {
+            for a in &r.argumente {
+                sammle_expr_namen(a, aus);
+            }
+        }
+        _ => {}
+    }
 }
 
 /// Welche Namen liest dieser Rumpf? Nur die Formen, die der Erzeuger ueberhaupt absenkt --
@@ -510,6 +867,23 @@ fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
             }
             StmtArt::Let(l) => e(&l.wert, aus),
             StmtArt::Sperrt(x) => benutzte_namen(&x.rumpf, aus),
+            // **Fehlte bis zum 2026-08-17**, und die Folge war ein `(void)k;` fuer einen
+            // Parameter, den der Schleifenrumpf sehr wohl liest -- also eine stillgelegte
+            // Warnung ueber einen Namen, der gar nicht tot ist.
+            StmtArt::Narrow(x) => {
+                o_(&x.ort, aus);
+                benutzte_namen(&x.sonst, aus);
+            }
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Retry(r) => {
+                    if let Some(b) = &r.bis {
+                        pred_namen(b, aus);
+                    }
+                    benutzte_namen(&r.rumpf, aus);
+                }
+                Schleife::Traverse(x) => benutzte_namen(&x.rumpf, aus),
+                Schleife::Forever(x) => benutzte_namen(&x.rumpf, aus),
+            },
             StmtArt::Match(m) => {
                 e(&m.gegenstand, aus);
                 for z in &m.zweige {
@@ -543,6 +917,7 @@ fn anweisung(
     tiefe: usize,
     austritt: &Austritt,
 ) {
+    let vorzeichenlos = &u.vorzeichenlos;
     let e = einzug(tiefe);
     match &s.art {
         StmtArt::Return(w) => {
@@ -573,7 +948,18 @@ fn anweisung(
             let von = ausdruck(&n.bereich.von, u, absagen);
             let bis = ausdruck(&n.bereich.bis, u, absagen);
             let oben = if n.bereich.exklusiv { "<" } else { "<=" };
-            aus.push_str(&format!("{e}if (!({o} >= {von} && {o} {oben} {bis})) {{\n"));
+            // **`x >= 0` auf einem vorzeichenlosen Wort ist immer wahr, und `-Wextra` sagt
+            // das zu Recht** (`-Wtype-limits`). Die untere Pruefung faellt deshalb weg --
+            // **aber nur, wenn der Erzeuger den Typ als vorzeichenlos KENNT.** Weiss er es
+            // nicht, gibt er sie aus und nimmt die Warnung in Kauf: *dann wird der Waechter
+            // rot, statt dass eine Pruefung still verschwindet.*
+            let untere_ist_null = matches!(&n.bereich.von.art, ExprArt::Zahl(0));
+            let bedingung = if untere_ist_null && vorzeichenlos.contains(&n.ort.basis.text) {
+                format!("{o} {oben} {bis}")
+            } else {
+                format!("{o} >= {von} && {o} {oben} {bis}")
+            };
+            aus.push_str(&format!("{e}if (!({bedingung})) {{\n"));
             for k in &n.sonst.anweisungen {
                 anweisung(k, aus, u, absagen, tiefe + 1, austritt);
             }
@@ -623,8 +1009,84 @@ fn anweisung(
         // **`match` ueber einem `option index into T`.** Der Sonderwert macht daraus einen
         // Vergleich; die Bindung des `Some`-Zweigs ist der Wert selbst.
         StmtArt::Match(m) => match_option(m, s, aus, u, absagen, tiefe, austritt),
+        StmtArt::Schleife(sch) => match sch.as_ref() {
+            Schleife::Retry(r) => retry(r, s, aus, u, absagen, tiefe, austritt),
+            _ => weigere(absagen, s.span, "loop form"),
+        },
         _ => weigere(absagen, s.span, "statement kind"),
     }
+}
+
+/// **`retry` -- die Schleife, deren Bedingung von der WELT abhaengt.**
+///
+/// Drei Teile, und jeder traegt eine Zusage der Deklaration ins C:
+///
+/// * `until <pred>` wird die Abbruchbedingung,
+/// * `bounded N ops` wird ein **Durchgangszaehler** gegen `floor(N / Kosten-je-Durchgang)`,
+/// * `on_exceeded X` wird der **benannte** Ausgang -- D11 woertlich: *wer eine Kapazitaet
+///   einfuehrt, muss den Ueberlauf NENNEN.*
+///
+/// `X` muss `-> never` sein. Zeigt `on_exceeded` auf einen `reason`-Wert, braeuchte es eine
+/// Fehlerrueckgabe-Konvention -- **und die ist nicht entschieden**, also wird abgelehnt.
+fn retry(
+    r: &Retry,
+    s: &Stmt,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+    austritt: &Austritt,
+) {
+    let e = einzug(tiefe);
+    let Some(bis) = &r.bis else {
+        weigere(absagen, s.span, "`retry` without `until` -- nothing bounds the condition");
+        return;
+    };
+    let Some(bedingung) = pred_c(bis, u, absagen) else {
+        weigere(absagen, s.span, "`until` predicate form");
+        return;
+    };
+    let Some(gaenge) = u.retry_schranke.get(&r.span.von) else {
+        weigere(
+            absagen,
+            s.span,
+            "`bounded … ops` -- the per-pass cost is not fixed, so the budget yields no \
+             iteration count",
+        );
+        return;
+    };
+    let ausgang = &r.bei_ueberschreitung.text;
+    if !u.funktionen.get(ausgang).is_some_and(|s| s.nie_rueck) {
+        weigere(
+            absagen,
+            r.bei_ueberschreitung.span,
+            "`on_exceeded` must name a function returning `never` -- a `reason` value would \
+             need an error-return convention, and that is not decided",
+        );
+        return;
+    }
+    let z = format!("_r{tiefe}");
+    aus.push_str(&format!(
+        "{e}{{\n{e}    uint32_t {z} = 0;\n{e}    while (!({bedingung})) {{\n\
+         {e}        if ({z} >= {gaenge}u) {{ {ausgang}(); }}\n{e}        {z}++;\n"
+    ));
+    for k in &r.rumpf.anweisungen {
+        anweisung(k, aus, u, absagen, tiefe + 2, austritt);
+    }
+    aus.push_str(&format!("{e}    }}\n{e}}}\n"));
+}
+
+/// Ein Praedikat als C-Bedingung. **Nur die Formen, die ein `until` heute braucht** -- jede
+/// andere wird abgelehnt, statt sie plausibel zu uebersetzen.
+fn pred_c(p: &Pred, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    Some(match &p.art {
+        PredArt::Vergleich(e) => ausdruck(e, u, absagen),
+        PredArt::Klammer(x) => format!("({})", pred_c(x, u, absagen)?),
+        PredArt::Nicht(x) => format!("!({})", pred_c(x, u, absagen)?),
+        PredArt::Und(a, b) => format!("{} && {}", pred_c(a, u, absagen)?, pred_c(b, u, absagen)?),
+        PredArt::Oder(a, b) => format!("{} || {}", pred_c(a, u, absagen)?, pred_c(b, u, absagen)?),
+        _ => return None,
+    })
 }
 
 /// Nur `match` ueber einer Option wird abgesenkt. **Ein `match` ueber einem `tagged type` ist
