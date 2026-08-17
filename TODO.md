@@ -97,6 +97,37 @@ of items that are neither code nor a run — what remains is building and measur
 ---
 
 # DECISIONS — need a judgement, not a run
+### From the reassignment (2026-08-17) — three judgements the measurement forces
+
+- [ ] **Frame and Publication are refuted as carried, each at ONE named site.** «B39» — the MMU
+      writes `A`/`D` itself, so *"only what stands there changes"* is **false** there, and the
+      limit the rebooking of 2026-08-16 wrote down (*"an unknown name falls in the name pass"*)
+      does **not** cover a writer that is not a program. «B19» — see the item under BUILDING.
+      **The tipping rule is unambiguous** (*a construct that carries a class only partly leaves
+      it hanging*); what is open is whether the folder applies it, which would put `N_neu` at
+      **5** again. *The evidence is there; the booking is a judgement.*
+- [ ] **Does a NAMED residue tip a class?** *Overflow* has five hanging obligations, and three of
+      them are `narrow … else` — a **named, checked, bounded** discharge with its own bar (≤ 24),
+      not an unnamed gap. **If a named residue tips, `N_neu` rises again; if it does not, the
+      tipping rule needs the word "unnamed" in it.** Either way the rule gets sharper, and today
+      it is silent on the difference.
+- [ ] **Thirteen of the 36 hanging plumbing obligations belong to NO class of the eleven** —
+      device notation, `format`, the missing struct literal, the missing return-value binding.
+      **The taxonomy was built for what a kernel gets wrong; a third of the measured gaps are
+      about what the language cannot SAY.** *Does the folder count on a second axis, or does it
+      say why it does not?*
+- [ ] **`narrow` sites are not equal, and neither measurement sees it.** `FRAGMENTE.md`:1660 —
+      else branch **reachable** (a hostile DTB takes it). `:1100` — else branch **cannot be
+      taken** and must stand there anyway. **The bar of 24 counts them the same.** A yardstick
+      that cannot tell a check from a ritual measures the wrong thing.
+
+### From the escalation of 2026-08-14 — one number never reconciled
+
+- [ ] **54 or 102 relational preconditions?** Part 1 of the design review says 54,
+      [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md):662 and :1222 say 102. **Two numbers for the
+      same population, neither with a search path** — W7. Resolving it means a count against
+      `../caprock-messbasis`, not a decision.
+
 ### The group: three forms stand — what is open is PRESERVATION
 
 - [ ] **All three S17 obligations stand as FORM. What is missing is the preservation.**
@@ -293,14 +324,12 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
-- [ ] **The generator has to write the licence notice ITSELF — today nothing does.**
-      [`LIZENZ-ZUSATZ.md`](LIZENZ-ZUSATZ.md) ties the additional permission (*"your program
-      is not a derived work"*) to a condition: generated C files carry the notice
-      `Erzeugt von Gabbro` in the header and binaries carry it as a string. **There is no
-      generator, so nothing writes it.** As long as that is so, the condition is a promise
-      to a tool that does not exist — *the same construction as a bound that was never
-      triggered.* **The notice belongs in the same change as the first line of
-      emission, not later.**
+- [ ] **`publishes` at a DEVICE REGISTER — the one unbuilt item of the escalation of 2026-08-14.**
+      Six of the seven are built, this one is not: `publishes` sits at `atomicdecl`, and the
+      store the class *Publication* exists for is not an atomic at all — the virtio `avail`
+      index is a **volatile store into a DMA region, to a device** («B19»,
+      [`PFLICHTEN.md`](dokumente/PFLICHTEN.md) F4:796). **The class is carried for atomics and
+      not for device registers**, and that is the second half of the same gap.
 ### The write-right line `by ops` — and the group proof sentence that precedes it
 
 - [ ] **`by ops` is built — what stays open is ONE breakthrough: `breaking` on a

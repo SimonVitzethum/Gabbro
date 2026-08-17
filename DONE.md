@@ -93,6 +93,8 @@ Newly collected 2026-08-15, **not reconstructed**, x86 only
 | **Closures by kind of use** | **gate VOID** — the population does not reproduce (89 → 64), and V-b is **empty** | `dokumente/MESSUNGEN.md`, *ERGEBNIS Verschlüsse* |
 | **Four templates machine-checked** | `table.induktion` · `table.indexschranke` · `consuming.ordnung` · `consuming.leermenge` — **5 silent assumptions flushed out, 2 statements REFUTED**, register 17 → 19, unproved 16 → 15 | `beweise/*.thy` (Isabelle2025-2), `gabbro schablonen` |
 | **B3 — non-traversable bodies** | **passed, `p = 0,96 %` against a mark of 5 %** — but **R1 missed** (rule written down after the run) | `./zaehle-b3.py ../caprock-messbasis`, `dokumente/MESSUNGEN.md` |
+| **The 74 reassigned** | **238 obligations, each with `file:line`** — 173 K / 65 L; **gate MISSED at `H = 36`** hanging plumbing obligations. R1 kept this time (pre-registration in its own commit), R14 calibration **refuted the rule** and was repaired before the run | `dokumente/PFLICHTEN.md`, `./zaehle-pflichten.py` |
+| **The escalation of 2026-08-14** | **6 of 7 items built**, 1 open («B19»), 1 unrecoverable — and the 36 sorted onto the eleven classes **refute two booked-as-carried classes by name** | `dokumente/MESSUNGEN.md`, *The escalation … settled* |
 
 > **The B3 entry is the only one in this table that carries a protocol breach beside its
 > outcome** — and it stands here rather than in a footnote, because a done table that carries
@@ -100,6 +102,14 @@ Newly collected 2026-08-15, **not reconstructed**, x86 only
 > versions with visible numbers.** What saves the result is not care but **rule invariance**:
 > all four versions (0,03 % · 4,36 % · 0,74 % · 0,95 %) pass the mark. *The number depends on
 > the choice of rule, the verdict does not.*
+
+> **And the reassignment turned the folder's headline metric against itself.** The same
+> function, the same dividing line: the **Rust** original of `delete_leaf` gives **1,75 : 1**, the
+> **Gabbro** fragment gives **0,62 : 1** — because Gabbro *writes down* nine plumbing obligations
+> that Rust leaves unwritten. **The language does not create them, it makes them visible**, and
+> `L : K` punishes it for exactly that (**R18**). *Hence the measurand is no longer the ratio but
+> `H` — the plumbing that stays on the human: **36 of 173**, i.e. **79 % carried by
+> construction**.*
 
 ## Grammar — the findings from P2
 
