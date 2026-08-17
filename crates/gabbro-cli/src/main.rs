@@ -89,6 +89,38 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
+        // **K100.4, Weg (b): das Uebersetzungszeugnis.** Je Datei die Liste dessen, worauf
+        // ihre Absenkung ruht -- Annahmen, Schablonen, direkte Formen. *Es beweist die
+        // Uebersetzung nicht; es macht aus „der Erzeuger wird schon" eine Aufzaehlung mit
+        // Laenge.* Der Pruefer laeuft davor, aus demselben Grund wie bei `emit`.
+        "zeugnis" => {
+            if rest.is_empty() {
+                eprintln!("gabbro zeugnis: keine Datei genannt");
+                return std::process::ExitCode::from(2);
+            }
+            let mut schlecht = false;
+            for datei in rest {
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} not readable");
+                    schlecht = true;
+                    continue;
+                };
+                let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+                gabbro_check::pruefe(&baum, &mut absagen);
+                if absagen.fehler_zahl() > 0 {
+                    eprint!("{}", absagen.zeige(&quelle));
+                    eprintln!("gabbro zeugnis: {datei} hat Fehler -- kein Zeugnis");
+                    schlecht = true;
+                    continue;
+                }
+                print!("{}", gabbro_check::zeugnis::zeige(&baum, datei));
+            }
+            if schlecht {
+                std::process::ExitCode::from(1)
+            } else {
+                std::process::ExitCode::SUCCESS
+            }
+        }
         "schablonen" => {
             print!("{}", gabbro_check::schablonen::zeige());
             std::process::ExitCode::SUCCESS

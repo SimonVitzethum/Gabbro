@@ -40,6 +40,7 @@ pub use kosten::Zaehlung as Kostenzaehlung;
 pub mod korpus;
 pub mod manifest;
 pub mod schablonen;
+pub mod zeugnis;
 
 /// Was ein Pass heute leistet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

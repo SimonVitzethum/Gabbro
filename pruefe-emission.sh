@@ -43,8 +43,8 @@ schneide() {
     ' "$1"
 }
 
-lauf() {                       # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed
-    local name="$1" quelle="$2" treiber="$3" erwartet="$4" gift="$5"
+lauf() {          # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6 Zeugnis
+    local name="$1" quelle="$2" treiber="$3" erwartet="$4" gift="$5" zeugnis="$6"
     local c="$ARB/$name.c"
     echo "== Differenztest: $name =="
 
@@ -83,15 +83,44 @@ lauf() {                       # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5
     fi
     echo "  4. Ergebnis:   ok ($ist)"
 
+    # 5. **Das Uebersetzungszeugnis** -- K100.4, Weg (b). Die Differenztests messen EIN
+    #    Ergebnis; das Zeugnis zaehlt auf, worauf die Uebersetzung ruht. Die Bedingung hier ist
+    #    die Kreuzprobe: **was der Erzeuger absenkt, muss das Zeugnis einordnen.** Steht eine
+    #    Form in keiner Einordnung, hat der Erzeuger etwas abgesenkt und es niemandem gesagt.
+    if ! cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- zeugnis "$quelle" \
+            > "$ARB/$name.zeugnis" 2> "$ARB/zfehler"; then
+        echo "  5. Zeugnis:    GESCHEITERT"; cat "$ARB/zfehler"; exit 1
+    fi
+    if grep -q "UNZUGEORDNET" "$ARB/$name.zeugnis"; then
+        echo "  5. Zeugnis:    UNZUGEORDNET -- der Erzeuger senkt eine Form ab, die keine"
+        echo "                 Einordnung kennt. Die Vertrauensflaeche ist groesser als gebucht."
+        grep -A3 "UNZUGEORDNET" "$ARB/$name.zeugnis"; exit 1
+    fi
+    # **Die Zahl wird ABGELESEN, nicht nachgezaehlt** (W2). Ein `grep -c` ueber der
+    # Schablonenliste zaehlte hier erst die Zeile „keine. Diese Einheit nimmt nichts an" mit --
+    # sie faengt genauso mit fuenf Leerzeichen und einem Punkt an. *Eine zweite Zaehlung neben
+    # einer vorhandenen ist eine Gelegenheit, sich zu widersprechen.*
+    #    **Und der Befund wird VERGLICHEN, nicht gedruckt.** Ein Zeugnis, das man nur ansieht,
+    #    ist ein Bericht; eines, gegen das ein Tor steht, ist eine Buchung. Wer eine Form
+    #    umklassifiziert -- eine Schablone zur direkten Absenkung erklaert -- faellt hier.
+    local zist; zist="$(sed -n 's/^     \(.*Schablonen.*\)$/\1/p' "$ARB/$name.zeugnis")"
+    if [ "$zist" != "$zeugnis" ]; then
+        echo "  5. Zeugnis:    ANDERS ALS GEBUCHT"
+        echo "     gebucht:    $zeugnis"
+        echo "     bekommen:   $zist"
+        exit 1
+    fi
+    echo "  5. Zeugnis:    ok ($zist)"
+
     # **Die Sprechprobe in die andere Richtung.** Ein Differenztest, der nicht rot werden kann,
     # misst nichts -- dieselbe Regel, mit der jede Messung dieses Ordners anfaengt (R14).
     sed "$gift" "$c" > "$ARB/$name-gift.c"
     printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name-gift.c/" > "$ARB/$name-gifttreiber.c"
     cc -std=c11 -w -I"$ARB" -o "$ARB/$name-giftprobe" "$ARB/$name-gifttreiber.c"
     if [ "$("$ARB/$name-giftprobe")" = "$erwartet" ]; then
-        echo "  5. Sprechprobe: UEBERSEHEN -- ein veraendertes Erzeugnis liefert dasselbe?"; exit 1
+        echo "  6. Sprechprobe: UEBERSEHEN -- ein veraendertes Erzeugnis liefert dasselbe?"; exit 1
     fi
-    echo "  5. Sprechprobe: ok (verfaelschtes C faellt)"
+    echo "  6. Sprechprobe: ok (verfaelschtes C faellt)"
 }
 
 # -- 1. Das Beispiel: eine Tabelle, ein Feld, eine erzeugte Operation --------------------
@@ -115,7 +144,8 @@ int main(void) {
 }
 '
 lauf "beispiel16" "$W/beispiele/16-by-ops-am-feld.gab" "$TREIBER16" "42 1 8 0" \
-     's/\.benutzt = true/.benutzt = false/'
+     's/\.benutzt = true/.benutzt = false/' \
+     "0 Annahmen, 1 Schablonen (1 davon UNBEWIESEN), 5 direkte Formen"
 
 # -- 2. Das Fragment: die Geistloeschung -------------------------------------------------
 #
@@ -153,7 +183,8 @@ int main(void) {
 }
 '
 lauf "fragment7" "$ARB/f7.gab" "$TREIBER7" "123456" \
-     's/    ipc_tabellen();/    \/* geloescht *\//'
+     's/    ipc_tabellen();/    \/* geloescht *\//' \
+     "0 Annahmen, 0 Schablonen (0 davon UNBEWIESEN), 3 direkte Formen"
 
 # -- 3. Das Fragment F8: die Sperre wird auf JEDEM Pfad gegeben --------------------------
 #
@@ -203,7 +234,8 @@ int main(void) {
 #      1 1 -- genommen und gegeben, auch auf dem ANDEREN Rueckkehrpfad
 #      1  -- und der Slot ist unberuehrt: der None-Zweig fasst nichts an
 lauf "fragment8" "$ARB/f8.gab" "$TREIBER8" "1 1 1 0 0 1 1 1" \
-     '0,/^                SCHEDS_gib();$/s///'
+     '0,/^                SCHEDS_gib();$/s///' \
+     "0 Annahmen, 3 Schablonen (3 davon UNBEWIESEN), 5 direkte Formen"
 
 # -- 4. Das Fragment F10: das Format und das Operationsbudget ----------------------------
 #
@@ -254,7 +286,8 @@ int main(void) {
 #    Rufort, benannte die Funktion also bloss um. *Ein Gift, das nichts aendert, ist keines,
 #    und die Probe hat es gemeldet.*
 lauf "fragment10" "$ARB/f10.gab" "$TREIBER10" "1 0 0 0 0 65" \
-     's/(uint32_t)p\[0\] << 24/(uint32_t)p[3] << 24/'
+     's/(uint32_t)p\[0\] << 24/(uint32_t)p[3] << 24/' \
+     "0 Annahmen, 2 Schablonen (1 davon UNBEWIESEN), 7 direkte Formen"
 
 # -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
 #
@@ -289,7 +322,8 @@ int main(void) {
 #      0  -- nach dem Loeschen ist keiner mehr aktiv
 #      0  -- und der LETZTE Slot ist mitgeloescht: die Grenze ist `< n`, nicht `< n-1`
 lauf "beispiel19" "$W/beispiele/19-traversierung.gab" "$TREIBER19" "16 6 0 0" \
-     's/; i++)/; i += 2)/'
+     's/; i++)/; i += 2)/' \
+     "0 Annahmen, 2 Schablonen (1 davon UNBEWIESEN), 8 direkte Formen"
 
 # -- 6. Das Geraet: ein Register ist KEIN Feld ------------------------------------------
 #
@@ -326,7 +360,8 @@ int main(void) {
 #      8  -- der Griff ist ein Zeiger, kein abgebildeter Registersatz: kein `struct` mit
 #            Fuellung, ueber die der Uebersetzer entscheidet
 lauf "beispiel12" "$W/beispiele/12-umlaufendes-register.gab" "$TREIBER12" "8 0 64 8" \
-     's/+ 258/+ 260/'
+     's/+ 258/+ 260/' \
+     "0 Annahmen, 1 Schablonen (1 davon UNBEWIESEN), 2 direkte Formen"
 
 # -- 7. FALLE 4: `mirrors`, und der Test misst genau die bezahlte Falle -----------------
 #
@@ -372,7 +407,8 @@ int main(void) {
 #      die Uebersetzung mitten im Betrieb abgeschaltet. *Genau dafuer hat der Bestand eine
 #      Maske und eine Kommentarwand; hier ist es eine Zeile.*
 lauf "beispiel20" "$W/beispiele/20-falle-vier.gab" "$TREIBER20" "1 1 1 1" \
-     's/(_s \& /(0*_s \& /'
+     's/(_s \& /(0*_s \& /' \
+     "0 Annahmen, 2 Schablonen (2 davon UNBEWIESEN), 1 direkte Formen"
 
 
 # -- 8. «B7»: der Verbundwert, und der Test misst genau das, wofuer die Marken Pflicht sind --
@@ -399,7 +435,8 @@ int main(void) {
 #      Die ersten beiden Zahlen sind die Falle: **vertauscht waeren sie `300 5`**, und kein
 #      Typ haette etwas dagegen gehabt. Das Gift unten vertauscht genau die zwei Bestimmer.
 lauf "beispiel21" "$W/beispiele/21-verbundwert.gab" "$TREIBER21" "5 300 7 9 1" \
-     's/\.id = k, \.len = n/.id = n, .len = k/'
+     's/\.id = k, \.len = n/.id = n, .len = k/' \
+     "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 4 direkte Formen"
 
 echo "== EMISSION: ALL PASS -- 8 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"

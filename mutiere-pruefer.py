@@ -1197,6 +1197,26 @@ MUTATIONEN = [
         "B7 -- ein Verbundkonstruktor zaehlt als Aufruf; `P` wird unbekannter Gerufener "
         "und jede Huelle darueber untere Schranke",
     ),
+    # -- K100.4: die Kreuzprobe des Uebersetzungszeugnisses --------------------------------
+    #
+    # **Das Zeugnis ist eine ZWEITE Lesung derselben Datei.** Sein Wert haengt daran, dass es
+    # meldet, was es nicht einordnen kann -- schluckt es das, deckt es sich mit dem Erzeuger
+    # per Konstruktion und misst nichts mehr.
+    Mutation(
+        "zeugnis-schluckt-unbekannte-items",
+        "zeugnis.rs",
+        'andere => e.unzugeordnet.push(format!("item `{}`", art_name(andere))),',
+        "andere => { let _ = andere; }",
+        "K100.4 -- das Zeugnis verschweigt Items, die es nicht einordnet; "
+        "die Vertrauensflaeche ist dann groesser als gebucht",
+    ),
+    Mutation(
+        "zeugnis-schluckt-unbekannte-anweisungen",
+        "zeugnis.rs",
+        '            StmtArt::Bricht(_) => e.unzugeordnet.push("breaking".into()),',
+        "            StmtArt::Bricht(_) => {}",
+        "K100.4 -- dasselbe eine Ebene tiefer: eine Anweisung faellt still aus der Buchung",
+    ),
     Mutation(
         "verbund-ohne-marken-geht-durch",
         "m1.rs",
