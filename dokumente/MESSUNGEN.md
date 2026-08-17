@@ -5407,3 +5407,97 @@ serves worst.*
   the human a declaration, not an argument.
 * **Newly assigned, not reconstructed.** The 74 is replaced. The old count and this one are not
   convertible, and the old one can no longer be evidenced.
+
+
+---
+
+# The escalation of 2026-08-14, settled — eleven classes, each with its construct
+
+**The decision of 2026-08-14 read:** *"that is not an abort but an escalation: for each of the
+eleven classes the construct that takes it over is to be designed."* Seven items were written
+down. **They are now checked against today's grammar and today's passes, not against the design
+verdict of Part 1** — that verdict said *"falls"* six times, and *falls* was a statement about a
+drawing.
+
+## The seven items
+
+| | demanded 2026-08-14 | state today | evidence |
+|---:|---|---|---|
+| 1a | **`forever` needs `on_exceeded`** like `retry` | **built** | `SYNTAX.md`:489–491 — `forever` carries `per_pass bounded … ops` **and** `on_exceeded ident` |
+| 1b | **whether lock time counts in `per_pass`** | **decided, and written down** | `SPRACHE.md`:924 — *"lock waiting time does not count into `per_pass` — and must nevertheless not be unbounded"*; `held` carries the second half |
+| 2 | **`per_pass` in a quantity other than `cycles`** | **built** | `SYNTAX.md`:490 — the unit is `ops`. *"There are no cycles in the language"* (`SPRACHE.md`:820) |
+| 3a | **`publishes` at the STORE** | **built** | `publishstmt = place "=" expr "publishes" nutzlast ";"` (:652), reachable from `stmt` (:444) |
+| 3b | **a form for "nothing"** | **built** | `[ "publishes" ( placelist \| "nothing" ) ]` (:450) |
+| 3c | **a form for volatile stores to a device** | **NOT built** | `publishes` sits at `atomicdecl`, not at a device register — «B19», `PFLICHTEN.md` F4:796 |
+| 4 | **a construct for "pointer AND bitfield"** (PTE) | **built and evidenced** | `embeds` (:233), `walkdecl` (:530), `mappings of` (:355) — F9 uses all three, **0 new constructs needed** |
+| 5 | **a form for relational preconditions** — *"the big item"* | **built** | **V2** (`SPRACHE.md`:662): under `a >= b`, `a - b` has type `0 .. a.max − b.min`. Pass 3, `M101`–`M105` |
+| 6 | **`break`/`continue`: admit or forbid** | **admitted, with a name** | `leavestmt = "leave" ident ";"`, `nextstmt = "next" ident ";"` (:446–447) — **the exit carries a name, which is what D0 cost ten days for** |
+| 7 | **the remaining five classes from the scratchpad** | **permanently lost** | not even their names were recorded. Replaced twice over: by `N_neu` for classes, by the 238 for obligations |
+
+**Six of seven built, one open** (3c), one unrecoverable (7).
+
+> **And item 5 carries a number discrepancy that nobody has reconciled.** Part 1 says *"54
+> relational preconditions"*, `SPRACHE.md`:662 and :1222 say *"the **102** sites"*. **Two
+> numbers for the same population, neither with a search path** — a W7 item, entered here rather
+> than resolved, because resolving it means a count against `../caprock-messbasis`, not a
+> decision.
+
+## The eleven classes, each with the construct that takes it over
+
+**And now for the first time against evidence instead of against a design**: the 36 hanging
+plumbing obligations of [`PFLICHTEN.md`](PFLICHTEN.md) are sorted onto the classes.
+
+| Class | taking-over construct | booked | hanging obligations found |
+|---|---|---|---:|
+| **Index** | `index into T` inherits `count N` · `M103` | carried | **0** — confirmed |
+| **Overflow** | M1 range types · `M101`/`M104` · `wrapping` | carried | **5** — three `narrow`, «B33», the V rules do no arithmetic |
+| **Alias** | dissolved: no pointer needed; where one is, `own` · `L101`–`L105` | carried | **0** — confirmed |
+| **Frame** | `effects` with writes, `locks`, reads (`E010`), call effects (`E008`) | carried | **1 — «B39»** |
+| **Lock** | `lock … rank … held` · `H001`–`H006` · `K002`/`K004` | carried | **0** — confirmed |
+| **Race** | *(hangs on the axiom layer)* | hanging | **2** — «B21», «B38» |
+| **Termination** | three loop forms · `bounded`/`progress`/`on_exceeded` · `S001`/`S002` | carried | **0** — confirmed |
+| **Phase** | `linear ghost type` · `L101` | hanging | **3** — «B37» ×2, «B18» |
+| **Leafness** | `descendants of` + `by consuming` · `kosten.rs` | carried | **0** — confirmed |
+| **Publication** | `publishstmt` · pairing pass · `V001`–`V004` | carried | **1 — «B19»** |
+| **Refinement** | *(the emission)* | hanging | **11** — ten lowerings + «B27» |
+| **— no class —** | | | **13** — device, `format` and expression notation |
+
+## Two classes booked as carried are refuted by name
+
+**Frame — «B39».** `FRAGMENTE.md`:1558 says it literally: **the MMU sets `A` and `D` itself, and
+the frame statement *"only what stands there changes"* is FALSE at this site.** The rebooking of
+2026-08-16 named its limit as *"`E010` speaks only about declared world state; in a complete
+translation unit nothing is lost, because an unknown name already falls in the name pass."*
+
+> **That limit does not cover this case.** The MMU is not an unknown name — it is a **writer that
+> is not a program**. The honest form is `assume … falsifier …`, which moves the case into the
+> axiom layer, *where Race already sits.*
+
+**Publication — «B19».** Booked carried on `publishstmt` + pairing pass. But the store the
+class exists for is not an atomic: the virtio `avail` index is a **volatile store into a DMA
+region, to a device**, and `publishes` sits at `atomicdecl`. **The class is carried for atomics
+and not for device registers** — and item 3c above is the same gap, arriving from the other side.
+
+**Overflow is a different case, and it is definitional, not factual.** Its five sites are
+`narrow … else` and the two V-rule limits. A `narrow` is a **named, checked, bounded** residue
+with its own bar (≤ 24) — not an unnamed gap. *Whether a named residue tips a class is a
+question for the folder (R5), and it is not decided here.*
+
+## What replaces the 19
+
+| | |
+|---|---|
+| **2026-08-14** | 19 hanging obligations in eleven classes — **aggregate only, six classes named, five lost** |
+| **2026-08-15** | `N_neu = 5` hanging **classes**, with sites — *replaces, does not continue* |
+| **2026-08-16** | `N_neu = 3` after the Frame rebooking |
+| **2026-08-17** | **36 hanging plumbing obligations**, each with fragment, line, statement and gap |
+
+**The 36 are the evidenced successor of the 19** — not comparable as a number (the old one
+counted differently and can no longer be evidenced), but the same question, answered with a
+source list.
+
+> **And they say something the class count cannot: thirteen of the 36 belong to no class at
+> all.** Device notation, `format`, the missing struct literal, the missing return-value binding.
+> **The eleven-class taxonomy was built for what a kernel gets wrong; a third of the measured
+> gaps are about what the language cannot SAY.** *That is a different axis, and the folder has
+> been counting on one axis only.*
