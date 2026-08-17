@@ -5832,3 +5832,87 @@ this compiler says so.** A forty-year-old C compiler found something ten Gabbro 
 
 > *That is the cheapest kind of finding there is, and it will keep arriving:* every further
 > fragment runs real generated code through a second, older, far better-tested checker.
+
+
+---
+
+# Zwei der sieben Konstrukte — `retry` und `format`
+
+**Four units through the whole chain** (`beispiele/16`, F7, F8, F10). Two of the seven blocking
+constructs are decided and built; five remain.
+
+## `retry` — the budget is not a counter
+
+`bounded N ops` is an **operation budget**. `SPRACHE.md` is unambiguous — the unit is `ops`, and
+time measures died at D10 (*"an iteration count is a property of the program, a time measurement
+is not"*). Enforcing the promise at run time therefore means dividing:
+
+```
+Durchgaenge  =  floor( N / Kosten-je-Durchgang )
+```
+
+**And the per-pass cost is the body PLUS the `until` condition.** The first version measured only
+the body — and a probe with an empty body and a costly condition refused, which is how the gap
+showed. *F4 polls with an empty body: there the condition is the whole cost.*
+
+> **The comparison with `traverse` is the actual yield of this lowering.** A traversal needs **no**
+> runtime counter — its domain is finite by construction. A `retry` needs one, because its
+> condition depends on the **world**. *That is exactly why the grammar demands `on_exceeded`
+> there and nothing here — and the C makes the difference visible.*
+
+**`on_exceeded` must name a function returning `never`.** Pointing it at a `reason` value would
+need an error-return convention, and that is not decided — so it is refused, not guessed.
+
+## `format` — not a C struct, and that is the decision
+
+Padding, bit order and word width of a `struct` are implementation-defined in C. A format is
+precisely a promise about **bytes**. *A struct would be the one lowering that loses exactly what
+the construct exists for.*
+
+```c
+typedef struct { const uint8_t *bytes; uint32_t len; } DtbKopf;
+static inline uint32_t DtbKopf_magie(const DtbKopf *v) { return gabbro_be32(v->bytes + 0); }
+static inline bool     DtbKopf_gueltig(const DtbKopf *v) { … every `where` clause … }
+```
+
+**The form is not invented** — the measured code writes it by hand: *`be32(data, n)?` is already
+"check, otherwise refuse"* («B40»: 145 lines without an error, without a language and without a
+tool). The word readers are **generated, not assumed**: an artefact that needs a library is not
+an artefact.
+
+**Lowered today is the byte-aligned case. Bit positions are refused by name** — «B24» is an open
+finding of the folder itself: what a position beyond the word width refers to, and how it
+interacts with `endian`, is unsaid. *Building a lowering while the meaning is open would answer
+the question silently.*
+
+## The measurement, and one number was predicted
+
+```
+1 0 0 0 0 65
+```
+
+**The fourth number is the one that matters:** a header that passes the length check but whose
+`off_struct` points past the buffer is **invalid** — that is the `where` clause biting, and it is
+why *after it no access needs a length check* (`PFLICHTEN.md` F10).
+
+**And the 65 was written down before the run:** `narrow tiefe to 0 ..< 64` carries 64 passes, the
+65th test falls. **Not 21845** — the operation budget is the *wider* bound here, not the
+narrower one. *Two bounds on one loop, and the measurement says which one bites.*
+
+## Three findings on the way, and two came from a surviving mutation
+
+| | |
+|---|---|
+| **`on_exceeded` returning normally** | unguarded — the loop would spin on after the overflow, and the bound would be a promise without effect |
+| **the lower `narrow` test** | dropped for signed values too. It may only go when the emitter **knows** the type is unsigned; not knowing must fail **loud** (`-Wtype-limits` turns the guardian red) |
+| **the test helper ignored the PARSER's refusals** | my own probe used `r` as a loop label — that is the read right at a pointer, i.e. a keyword. The probe did not parse, and **the empty refusal list read like a finding instead of a typo.** *Exactly the green screen R14 exists against.* Both helpers now assert the probe parses first |
+
+## What remains: five constructs
+
+| Construct | blocks | |
+|---|---|---|
+| **`traverse`** | F1 · F3 · F5 · F6 · F9 | reported as `loop form` — every domain iterates differently |
+| **`device`** | F2 · F4 · F9 | register class, `mirrors`, `transition`, computed bank |
+| **`format` bit positions** | F2 · F9 | **«B24» is open in the folder** — not a build item but a decision |
+| **`atomic` / `check`** | F6 | memory ordering; a test harness is not a program |
+| **`option` as a VALUE** | F1 · F3 | the sentinel carries the type; `x = None` needs the target's table, which the emitter does not track |
