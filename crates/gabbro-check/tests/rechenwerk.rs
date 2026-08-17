@@ -775,5 +775,7 @@ fn mirrors_schreibt_die_zustandsbits_mit() {
     // `requires Held(...)` an einer Funktion, also eine Pflicht des Rufers. Hier zu pruefen
     // und dort nicht waere die stille Ausnahme.
     assert!(c.contains("a caller obligation, not a generated assertion"), "{c}");
-    assert!(!c.contains("assert"), "keine erzeugte Zusicherung:\n{c}");
+    // Kein `assert(...)` im Rumpf -- der Kommentar oben enthaelt das Wort, der CODE nicht.
+    let rumpf = &c[c.find("static inline void V_setze_rtp").expect("der Uebergang")..];
+    assert!(!rumpf.contains("assert("), "keine erzeugte Zusicherung:\n{rumpf}");
 }
