@@ -128,7 +128,7 @@ nobody checks against each other.*
 `table` body, and **`dokumente/SYNTAX.md` now holds its own grammar** (test
 `die_beispiele_der_grammatik_gehen_selbst_durch`).
 
-## The guardian chain — eight, each with a speech test in both directions
+## The guardian chain — nine, each with a speech test in both directions
 
 ```
 ./pruefe-syntax.sh        forbidden forms, prose drift, closure, reachability,
@@ -136,11 +136,25 @@ nobody checks against each other.*
 ./pruefe-wortschatz.py    terminals against the table, Sonderform counter (3 of 5)
 ./pruefe-todo.py          holds the task list against itself, eight classes
 ./pruefe-kennungen.py     no refusal code in two files
-./mutiere-pruefer.py      damages one rule at a time:   65 of 65
+./mutiere-pruefer.py      damages one rule at a time:   72 of 72
 ./erzeuge-mutationen.py   twists systematically:         7 of 39
 ./pruefe-luecken.py       the named gaps one by one:    13 of 15
+./pruefe-emission.sh      .gab → C → cc -Werror → run → compare (`42 1 8 0`)
 ./commit.sh               R19 — commit messages only via file
 ```
+
+> **The mutation density is a diagnostic in its own right, and it found two things on
+> 2026-08-17.** Measured per checker file, `1 310` of 6 823 lines carried **zero** mutations —
+> *and a surface with zero mutations is not covered, it is undamageable.* The largest was
+> `schablonen.rs` (565 lines), the very file the amortisation argument rests on. Closed to
+> **504** lines; what remains is `aufrufgraph.rs` (268), `korpus.rs` (137), `manifest.rs` (99).
+>
+> **And inside it lay a mechanism that had been dead for a day:** the ratchet's second tooth read
+> *"all unproved AND longer than 18"*, so **the first proved template made it false forever** —
+> the register could then grow without limit, and it grew 17 → 19 on that same day. *A ratchet
+> with a single detent is a stop, not a ratchet.* Repaired as the literal generalisation of the
+> sentence already standing there: **base mark plus one slot per proved template**, so every
+> further entry costs a proof.
 
 **Plus three tests, each of which comes from a paid-for error:** no pass without registration ·
 `dokumente/SYNTAX.md` against its own grammar · corpus test anchored at the content instead of at
