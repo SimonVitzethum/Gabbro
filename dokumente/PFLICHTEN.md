@@ -412,7 +412,7 @@ carries and the Rust original did not — because it does not write them down.*
 | **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
 | **Plumbing (K)** | **171** | 72 % |
 | **Logic (L)** | **67** | 28 % |
-| **hanging** | **45** | of which **29 are K** — every one a breach of the thesis at its site. *(The run booked 50/36; five K were closed on 2026-08-17, each with its reason — see below.)* |
+| **hanging** | **40** | of which **24 are K** — every one a breach of the thesis at its site. *(The run booked 50/36; five K were closed on 2026-08-17, each with its reason — see below.)* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
 **L : K = 0,38 : 1.**
@@ -432,7 +432,7 @@ carries and the Rust original did not — because it does not write them down.*
 | F9 MMU | 11 | 7 | 4 | 2 | 1 |
 | F10 Parser | 11 | 9 | 2 | 1 | 1 |
 | Lowering | 10 | 10 | 0 | 7 | 7 |
-| | **238** | **171** | **67** | **45** | **29** |
+| | **238** | **171** | **67** | **40** | **24** |
 
 ## Die hängenden Klempnereipflichten — nachgezogen 2026-08-17, Posten für Posten
 
@@ -457,7 +457,7 @@ ausdrücklich verlangt hatte.
 | **handgeschriebenes `narrow`** | **1** | nur `F6:1100` — **der Zweig kann nicht genommen werden und muss dastehen.** *K100.1 (2026-08-17) hat die drei Stellen getrennt: F10:1660 (feindliches DTB) und F1:268 (das zweite Netz) sind **Logik**, nicht Klempnerrest* |
 | **`format`/Verbund** | 4 | «B25» Wertemenge statt Intervall · «B22-nah» Absage statt Abwesenheit · «B7» Verbundliteral (×2) |
 | **die Reihenfolgezusage** | 2 | «B37» — *Linearität ist keine Ordnung* |
-| **«B19»** Barrieren am Geräteregister | 1 | die sicherheitskritischste Veröffentlichung im Baum ist kein Atomic |
+| ~~«B19»~~ · ~~«B38»~~ · ~~«B39»~~ · ~~`at dma`~~ · ~~`atomic release`~~ | **0** | **K100.2: in die Axiomschicht umgebucht** (2026-08-17) — `beispiele/06-annahmen.gab`, `gabbro annahmen` meldet 19. *Keine Erledigung: eine Führung beim Namen mit einer Sonde, und zwei davon ohne* |  die sicherheitskritischste Veröffentlichung im Baum ist kein Atomic |
 | **«B21»** `accumulates` | 1 | 213 RMW-Stellen |
 | **«B38»** `masks IRQ` an der Sperrgrenze | 1 | die Wirkung existiert und ist nicht an die Grenze geknüpft |
 | **«B39»** die MMU schreibt `A`/`D` | 1 | ein Schreiber, den keine `effects`-Zeile nennt |

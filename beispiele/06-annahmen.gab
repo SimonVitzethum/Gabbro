@@ -58,4 +58,39 @@ check stapel_wasserstand {
 
 extern fn groesse_gemessen() -> u64 effects { reads stapel };
 
+-- ==========================================================================================
+-- K100.2 -- die fuenf UMGEBUCHTEN Klempnereipflichten (2026-08-17)
+--
+-- **Eine Umbuchung ist keine Erledigung.** Diese fuenf Saetze standen bis heute als haengende
+-- Klempnereipflichten in `PFLICHTEN.md` -- Stellen, an denen der Mensch etwas von Hand zu
+-- zeigen hatte. Sie sind es nicht: es sind Aussagen ueber die MASCHINE, und dafuer gibt es
+-- den richtigen Ort.
+--
+-- > *Sie hier zu fuehren heisst, sie beim Namen mit einer Sonde zu tragen -- nicht, sie
+-- > erledigt zu haben.* Genau diese Vertrauensform ist gemeint, wenn jemand sagt „im
+-- > Vertrauen auf Gabbro und seine Hardwareannahmen": das Vertrauen bekommt eine Liste.
+--
+-- **Und der Preis steht dabei:** die Vertrauensbasis waechst um fuenf Saetze, zwei davon
+-- ohne Sonde. Wer die Klempnereizahl liest, muss diese Zeile mitlesen.
+
+assume dma_veroeffentlichung_braucht_barriere
+    "Ein Speichern in eine DMA-Region wird fuer das Geraet erst nach der Barriere des Raumes sichtbar; ohne sie liest das Geraet den alten Wert."
+    falsifier sonde_dma_ohne_barriere;
+
+assume masks_irq_schuetzt_wie_eine_sperre
+    "Auf einem Kern mit maskierten Interrupts kann kein anderer Pfad desselben Kerns dazwischentreten; der Wert ueberquert die Grenze unveraendert."
+    falsifier sonde_irq_maskiert;
+
+assume mmu_schreibt_nur_a_und_d
+    "Die MMU setzt in einem Seitentabelleneintrag ausschliesslich die Bits A und D; kein anderes Feld aendert sich ohne Software."
+    unfalsifiable "eine Sonde muesste die MMU anhalten und dabei genau das Fenster oeffnen, in dem sie schreibt";
+
+assume release_stellt_sichtbarkeit_her
+    "Ein Release-Speichern macht jede vorher geschriebene Nutzlast fuer den Leser sichtbar, der dieselbe Zelle mit Acquire liest."
+    unfalsifiable "das Speichermodell ist nicht durch Ausfuehrung widerlegbar -- eine erfolgreiche Probe zeigt nur, dass die Umordnung diesmal ausblieb";
+
+assume geraeteregister_veroeffentlicht_wie_ein_atomic
+    "Ein volatiler Speichervorgang in ein Geraeteregister macht die zuvor geschriebene Nutzlast fuer das Geraet sichtbar, sobald das Register geschrieben ist."
+    falsifier sonde_virtio_avail;
+
 }

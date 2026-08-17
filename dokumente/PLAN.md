@@ -1372,3 +1372,108 @@ A = 19       Annahmen, jede mit Sonde oder mit Grund
 > Reinform: eine Zahl, die man erreicht, indem man auf sie hin baut.
 
 *Der zweite Korpus gehört in denselben Plan wie das letzte Konstrukt, nicht danach.*
+
+---
+
+# PL — die LOGIK des Prüfers beweisen
+
+**Der Auftrag sagt „zumindest die Logik des Prüfers", und das ist die richtige Verkleinerung.**
+Den Prüfer als Rust zu verifizieren ist CompCert-Größenordnung. **Seine Logik zu beweisen ist
+etwas anderes und viel kleineres** — und dieser Ordner hat die Form dafür schon dreimal gebaut.
+
+## Der Befund, mit dem der Plan anfängt: der Prüfer hat als einziger keine Zählspalte
+
+| Fläche | Ratsche | Stand |
+|---|---|---|
+| Wortschatz | `pruefe-wortschatz.py` | 195 gegen 195 |
+| Axiomschicht | `gabbro annahmen` | **19**, jede mit Sonde oder Grund |
+| Erzeuger-Schablonen | `gabbro schablonen` | 20, davon 4 bewiesen, **4 lebend unbewiesen** |
+| **die Pässe** | **keine** | **10 Pässe, 0 gezählte Beweispflichten** |
+
+> **Zehn Pässe entscheiden über jedes Programm, und keiner von ihnen schuldet einen Satz.**
+> *Das ist dieselbe Lage, in der die Schablonen vor ihrer Auszählung waren — monoton wachsend
+> und unbeziffert.*
+
+## Die Trennung, auf der alles ruht
+
+**Ein Pass besteht aus zwei Dingen, und nur eines davon ist Rust:**
+
+| | | beweisbar wie |
+|---|---|---|
+| **die REGEL** | *unter `a >= b` hat `a - b` den Typ `0 .. a.max − b.min`* (V2) | **Isabelle, über einem abstrakten Modell** — ganz ohne den Prüfer |
+| **die UMSETZUNG** | dass `typen.rs` genau diese Regel rechnet | Mutationen, Differenztests, Sprechproben |
+
+**Die Regeln sind Mathematik über Bereichen, Mengen, Ordnungen und transitiven Hüllen.** Sie
+reden über keinen Rust-Wert. *Genau darum sind sie beweisbar, ohne den Prüfer anzufassen.*
+
+> **Und die zweite Zeile ist heute schon besser bewacht, als es aussieht:** `132 von 132`
+> Mutationen, und **null unbeschädigbare Zeilen** im Prüfer. Was fehlt, ist nicht die Umsetzung
+> — es ist der Satz, gegen den sie umgesetzt wird.
+
+## PL.1 — Das Passregister anlegen *(die billigste Zeile des ganzen Plans)*
+
+Wie `schablonen.rs`, mit denselben zwei Zähnen: **je Pass die Sätze, die er behauptet**, jeder
+mit Fundstelle und Stand (`Entworfen` · `Getragen` · `Bewiesen`).
+
+**Erste Schätzung, aus den Absagecodes abgeleitet:**
+
+| Pass | Sätze, grob |
+|---|---:|
+| M1 + V1–V3 (`M101`–`M105`) | **5** — Bereichsarithmetik, Breite, Nenner, Indexschranke, die drei V-Regeln |
+| Sperren (`H001`–`H006`) | **3** — Rangordnung ist azyklisch · geteilt/exklusiv · Haltezeit |
+| Wirkungen (`E005`–`E010`) | **3** — Abschluss über dem Aufrufgraphen · Zyklus als untere Schranke · Leseseite |
+| Kosten (`K001`–`K004`) | **3** — Summation, Zweigmaximum, Domänenschranke |
+| Schleifen · Paarung · Gruppe · M2 · M3 · Namen | **~8** | |
+| | **≈ 22** |
+
+* **Tor:** `gabbro paesse` meldet je Pass seine Satzzahl, und ein Test nagelt sie an — *eine
+  Zahl, die sich still mitbewegt, ist keine Ratsche.*
+* **Und der zweite Zahn sofort:** **kein neuer Absagecode ohne seinen Satz.** Heute gibt es 52
+  Codes und null Sätze.
+
+## PL.2 — Die drei Sätze zuerst, an denen etwas hängt
+
+**Nicht in Reihenfolge der Größe, sondern in Reihenfolge der TRAGLAST:**
+
+1. **`K001` — die Summationsregel.** *Anweisungen addieren sich, außer hinter einem Zweig, der
+   immer verlässt; eine Traversierung kostet Rumpf × Domänenschranke; Zweige das Maximum.*
+   **An ihr hängt jede Kostenzusage des Ordners** — und sie hat heute schon einen gemessenen
+   Fehler (`mappings of`: 2 048 gegen 512⁴). *Der Beweis würde ihn erzwingen.*
+2. **`H006` — die Rangordnung.** *Wenn jede Sperre einen Rang trägt und jeder Pfad sie
+   aufsteigend nimmt, ist kein Verklemmen möglich.* Der klassische Satz, klein, und die Klasse
+   *Sperre* steht auf ihm.
+3. **V2 — die relationale Verengung.** *Unter `a >= b` ist `a - b` im Bereich
+   `0 .. a.max − b.min`.* **102 Stellen** hängen daran, und M1 ist der Pass, den alles benutzt.
+
+* **Tor je Satz:** die Theorie übersetzt ohne `sorry`, und **eine Mutation, die den Satz im
+  Rust verletzt, wird gefangen** — sonst ist der Beweis über einem Modell geführt, das der Code
+  nicht ist.
+
+## PL.3 — Die Brücke, und sie ist der eigentliche Posten
+
+**Ein Beweis über einem Modell sagt nichts über Rust.** Drei Wege, und der Plan wählt:
+
+| | | |
+|---|---|---|
+| (a) | den Prüfer in Isabelle/HOL schreiben und extrahieren | CompCert-Weg, **Jahre** |
+| (b) | das Modell aus dem Rust ableiten (Übersetzer ins Modell) | ein zweites Werkzeug, das selbst unbewiesen ist |
+| **(c)** | **je Satz eine Sprechprobe, die den Rust gegen das Modell fährt** | **das Geschirr steht** |
+
+> **(c), und der Grund ist nicht Bequemlichkeit:** `mutiere-pruefer.py` beschädigt heute schon
+> je eine Regel und verlangt, dass etwas fällt. **Der Satz sagt, WELCHE Beschädigung fallen
+> muss.** *Aus 132 Mutationen ohne Satz werden 132 Mutationen mit einem — und aus einem grünen
+> Lauf wird eine Aussage.*
+
+**Was (c) nicht leistet, und es gehört in denselben Absatz:** es zeigt, dass der Rust die
+*geprüften* Fälle wie das Modell behandelt, nicht dass er es *überall* tut. **Der Rest bleibt
+Vertrauensbasis** — aber ein benannter, gezählter, und um genau die 22 Sätze kleinerer.
+
+## Was PL am Ende ändert, in einem Satz
+
+> **Heute:** *„die zehn Pässe finden keine hängende Pflicht mehr"* — eine Aussage über ein
+> unverifiziertes Werkzeug.
+> **Nach PL:** *„die 22 Sätze, auf denen die zehn Pässe beruhen, sind bewiesen; dass der Rust
+> sie umsetzt, ist an 132 Beschädigungen geprüft."*
+
+*Der zweite Satz ist nicht der Beweis des Prüfers. Er ist die Auskunft darüber, wieviel man
+noch glauben muss — und die gibt es heute nicht.*

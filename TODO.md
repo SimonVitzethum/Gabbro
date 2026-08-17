@@ -104,10 +104,18 @@ of items that are neither code nor a run — what remains is building and measur
       ueber `s.worte`, also kann `i` die Laenge nicht ueberschreiten; **M1 sieht es nicht**,
       weil der Zaehler eine gewoehnliche lokale Variable ist. *Eine V-Regel, keine neue
       Grammatik.* Tor danach: **`N_ritus = 0`**.
-- [ ] **K100.2 — fuenf Pflichten in die Axiomschicht umbuchen** («B19», «B38», «B39», `at dma`,
-      `atomic release`). **Das ist keine Erledigung, sondern eine Fuehrung beim Namen mit einer
-      Sonde** — und genau die Vertrauensform, die der Auftrag gewaehrt. Tor: `gabbro annahmen`
-      meldet 19, alle im erzeugten C wiederzufinden.
+- [ ] **PL.1 — das PASSREGISTER anlegen** ([`dokumente/PLAN.md`](dokumente/PLAN.md), PL).
+      **Zehn Paesse entscheiden ueber jedes Programm, und keiner schuldet einen Satz** --
+      dieselbe Lage, in der die Schablonen vor ihrer Auszaehlung waren. Wie `schablonen.rs`,
+      mit denselben zwei Zaehnen; **~22 Saetze** geschaetzt. Zweiter Zahn sofort: *kein neuer
+      Absagecode ohne seinen Satz* (heute 52 Codes, null Saetze).
+- [ ] **PL.2 — die drei Saetze mit der groessten Traglast:** `K001` Summation (**hat heute schon
+      einen gemessenen Fehler**), `H006` Rangordnung, V2 relationale Verengung (102 Stellen).
+- [ ] **PL.3 — die Bruecke: (c) je Satz eine Sprechprobe, die den Rust gegen das Modell faehrt.**
+      Das Geschirr steht (`mutiere-pruefer.py`, 132 von 132) -- was fehlt, ist der Satz, der
+      sagt, WELCHE Beschaedigung fallen muss. *Aus 132 Mutationen ohne Satz werden 132 mit
+      einem.*
+
 - [ ] **K100.3 — die sieben Notationsluecken** («B3», «B6», «B7», «B14», «B21», «B22», «B25»).
       **Die vier ohne Schablone zuerst**, die drei mit je einzeln und mit ihrem Isabelle-Lauf
       DAVOR — sonst reisst `L <= 4`.
