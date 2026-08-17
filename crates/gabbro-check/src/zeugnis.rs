@@ -223,6 +223,18 @@ pub struct Erhebung {
     pub posten: BTreeMap<&'static str, usize>,
     /// **Konstrukte, die vorkommen und die `EINORDNUNG` nicht kennt.**
     pub unzugeordnet: Vec<String>,
+    /// **Die Ruempfe, die diese Uebersetzungseinheit NICHT schreibt** — mit dem Vertrag, den
+    /// Gabbro ueber sie annimmt.
+    ///
+    /// Das ist die Liste, die uebrig bleibt, wenn man annimmt, dass *ganz Gabbro* verifiziert
+    /// ist: **sie loest sich unter dieser Praemisse nicht auf.** Ein `extern fn`, ein
+    /// `prim fn`, ein `lock` — Gabbro schreibt den Prototyp und rechnet mit `effects` und
+    /// `costs`, die daneben stehen. **Wer sie schreibt, schuldet den Beweis**, und der ist
+    /// weder Gabbros Klempnerei noch die Logik des Rufers.
+    ///
+    /// > *Ein Vertrag, auf den gerechnet wird und dessen Rumpf woanders steht, ist eine
+    /// > Annahme — sie steht hier bei den anderen Annahmen und nicht im Kleingedruckten.*
+    pub fremde: Vec<(String, String)>,
 }
 
 fn zaehle(e: &mut Erhebung, was: &'static str) {
@@ -265,7 +277,15 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             }
         }
         ItemArt::Atomic(_) => zaehle(&mut e, "atomic"),
-        ItemArt::Lock(_) => zaehle(&mut e, "lock"),
+        ItemArt::Lock(l) => {
+            zaehle(&mut e, "lock");
+            e.fremde.push((
+                format!("{}_nimm / _gib (+ geteilt)", l.name.text),
+                "der Rumpf einer Sperre -- gegenseitiger Ausschluss, Fortschritt, und dass \
+                 `rank` die Ordnung ist, die der Pruefer annimmt"
+                    .into(),
+            ));
+        }
         ItemArt::Assume(_) | ItemArt::Axiom(_) => zaehle(&mut e, "assume / axiom"),
         ItemArt::Funktion(f) => {
             if matches!(f.klasse, Some(FnKlasse::Spec)) {
@@ -273,8 +293,13 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
                 return;
             }
             zaehle(&mut e, "fn (impl/raw/prim/extern)");
-            if let FnRumpf::Block(b) = &f.rumpf {
-                block(b, &mut e, &geister);
+            match &f.rumpf {
+                FnRumpf::Block(b) => block(b, &mut e, &geister),
+                // **Kein Rumpf heisst: der Rumpf steht woanders.** Der Erzeuger schreibt
+                // einen Prototyp, und die Paesse rechnen mit `effects` und `costs`, die hier
+                // daneben stehen -- *als Vertrag, nicht als Messung.*
+                FnRumpf::Keiner => e.fremde.push((f.name.text.clone(), vertrag(f))),
+                FnRumpf::Pred(_) => {}
             }
         }
         // **Kein Auffangzweig.** Ein Item, das hier nicht steht, ist keines, das der Erzeuger
@@ -282,6 +307,26 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
         andere => e.unzugeordnet.push(format!("item `{}`", art_name(andere))),
     });
     e
+}
+
+/// Der Vertrag, mit dem der Pruefer ueber einen fremden Rumpf rechnet.
+fn vertrag(f: &FnDecl) -> String {
+    let w = f
+        .effects
+        .as_ref()
+        .map(|e| {
+            e.liste
+                .iter()
+                .map(|x| x.art.text())
+                .collect::<Vec<_>>()
+                .join(", ")
+        })
+        .unwrap_or_else(|| "KEINE `effects`-Klausel".into());
+    let k = match &f.costs {
+        Some(_) => "mit `costs`",
+        None => "**ohne `costs`** -- jede Huelle darueber ist eine untere Schranke",
+    };
+    format!("effects {{ {w} }}, {k}")
 }
 
 fn art_name(a: &ItemArt) -> &'static str {
@@ -459,7 +504,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
                 .any(|p| p.konstrukt == **k && p.traegt == Traegt::Fremd)
         })
         .collect();
-    if !fremd.is_empty() {
+    if !fremd.is_empty() || !e.fremde.is_empty() {
         aus.push_str(
             "\nE  FREMD -- der Erzeuger schreibt den Prototyp, den Rumpf schreibt jemand anderes\n",
         );
@@ -470,6 +515,16 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
                 .map(|p| p.grund)
                 .unwrap_or("");
             aus.push_str(&format!("     {:<28} {n}x  {grund}\n", k));
+        }
+        // **Und hier stehen sie mit Namen.** Das ist die Liste, die uebrig bleibt, wenn man
+        // annimmt, dass GANZ Gabbro verifiziert ist -- sie loest sich unter dieser Praemisse
+        // nicht auf, weil sie nicht von Gabbro handelt.
+        if !e.fremde.is_empty() {
+            aus.push_str("\n     Die Ruempfe, die diese Einheit NICHT schreibt, und der Vertrag,\n");
+            aus.push_str("     mit dem der Pruefer ueber sie rechnet:\n");
+            for (n, v) in &e.fremde {
+                aus.push_str(&format!("       {n:<26} {v}\n"));
+            }
         }
     }
 
@@ -489,8 +544,10 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
              \x20    schon da) -- oder er senkt sie ab, und niemand hat gebucht, worauf.\n",
         );
     }
+    // **Eine Zeile traegt die Buchung.** Der Waechter vergleicht genau sie; eine zweite Zahl
+    // daneben waere eine Gelegenheit, sich zu widersprechen.
     aus.push_str(&format!(
-        "     {} Annahmen, {} Schablonen ({} davon UNBEWIESEN), {} direkte Formen\n",
+        "     {} Annahmen, {} Schablonen ({} davon UNBEWIESEN), {} direkte Formen, {} fremde Ruempfe\n",
         annahmen.len(),
         benutzt.len(),
         offen.len(),
@@ -499,8 +556,15 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
             .filter(|(k, _)| EINORDNUNG
                 .iter()
                 .any(|p| p.konstrukt == **k && p.traegt == Traegt::Direkt))
-            .count()
+            .count(),
+        e.fremde.len()
     ));
+    if !e.fremde.is_empty() {
+        aus.push_str(
+            "     Ein fremder Rumpf loest sich auch dann nicht auf, wenn GANZ Gabbro\n\
+             \x20    verifiziert ist -- sein Beweis faellt dem an, der ihn schreibt.\n",
+        );
+    }
     if !offen.is_empty() {
         offen.sort();
         offen.dedup();

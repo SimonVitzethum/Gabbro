@@ -6705,3 +6705,74 @@ Deklaration sagt.
 
 *Das ist weniger, als der Satz verspricht, und mehr, als irgendein anderer Ordner beziffern
 kann.*
+
+---
+
+# Nachtrag: die Frage war schärfer gemeint — **GANZ Gabbro verifiziert, also fertig**
+
+**Die Rückfrage lautete:** *„mit zukünftig war gemeint, dass ALLES von Gabbro formal verifiziert
+ist."* Also nicht der heutige Stand, sondern das fertige Ding: zehn Pässe voll gebaut und
+bewiesen, zwanzig Schablonen bewiesen, der Erzeuger verifiziert und für jede Form zuständig.
+
+**Damit fallen die ersten drei Punkte oben weg — alle drei.** Teilgebaute Pässe: fertig.
+Fehlende Absenkung: gebaut. Vierzehn hängende Pflichten, weil die Sprache etwas nicht sagen
+kann: gesagt. *Das waren Bauschulden, keine Grenzen.*
+
+**Was dann noch übrig ist, ist eine einzige Klasse — und sie ist heute schon messbar.**
+
+## Der Rest sind die Rümpfe, die Gabbro nicht schreibt
+
+```
+$ gabbro zeugnis <F7 aus FRAGMENTE.md>
+     0 Annahmen, 0 Schablonen, 3 direkte Formen, 7 FREMDE RUEMPFE
+```
+
+**F7 ist das Fragment, auf das dieser Ordner am stolzesten ist:** die Bootphase, vollständig
+abgesenkt, an der Ausführung gemessen (`123456`), der lineare Geistwert zu **nichts** gelöscht.
+
+Und sein Zeugnis sagt: das ganze Fragment besteht daraus, **sieben Funktionen zu rufen, deren
+Rümpfe Gabbro nie sieht.**
+
+```
+melde_roh              effects { reads text }
+mmu_an                 effects { consumes p, writes mmu }
+cap_tabellen           effects { consumes p, writes caps }
+ipc_tabellen           effects { consumes p, writes eps }
+autoritaet_melden      effects { consumes p, reads manifest }
+verifizierer_starten   effects { consumes p, writes faeden }
+root_task_starten      effects { consumes p, writes faeden }
+```
+
+> **Was Gabbro an F7 beweist, ist die REIHENFOLGE** — der lineare Geistwert lässt keine
+> Vertauschung und keine Auslassung zu. **Was jeder Schritt TUT, steht in sieben Rümpfen, über
+> die Gabbro nur den Vertrag kennt.**
+
+Dasselbe an jeder Sperre: `lock KAPPEN protects … rank 3;` senkt zu vier Prototypen ab. *Dass
+`KAPPEN_nimm` gegenseitigen Ausschluss herstellt, Fortschritt garantiert und `rank` die Ordnung
+ist, die `H006` annimmt* — das ist der Beweis dessen, der die Sperre schreibt.
+
+## Und darum lautet die Antwort auf die scharfe Frage: fast
+
+| unter „ganz Gabbro verifiziert + Hardwareannahmen stimmen" | wem es fällt |
+|---|---|
+| Index, Überlauf, Alias, Rahmen, Sperre, Rennen, Terminierung, Phase, Blattheit, Publikation, Verfeinerung | **Gabbro** |
+| die Logik des Programms | **dem Programmierer** — und das ist der Satz, um den es geht |
+| **die Rümpfe, die Gabbro nicht schreibt** (`extern`, `prim`, `lock`, Assembler unter `entry`/`boot`) | **dem, der sie schreibt** |
+| der C-Übersetzer, Binder, Assembler unter dem Erzeugnis | **niemandem in diesem Ordner** |
+
+**Die dritte Zeile ist die, die sich nicht auflöst.** Sie ist keine Schwäche von Gabbro — *eine
+Kernsprache, die den Rumpf jeder fremden Funktion mitbeweisen wollte, wäre keine Kernsprache
+mehr, sondern das ganze System.* Aber sie gehört benannt, und seit heute zählt das Zeugnis sie
+je Datei.
+
+> **Die ehrlichste Fassung des Satzes, den dieser Ordner trägt:**
+> *„Gabbro beweist alles ausser funktionaler Korrektheit"* — **und ausser dem, was es nicht
+> sieht.** Das Zeugnis sagt je Programm, wie viel das ist. Bei `beispiele/21` ist es null. Bei
+> F7 sind es sieben.
+
+## Der vierte Punkt bleibt auch dann offen, und er steht schon im Plan
+
+**`H = 0` über den zehn Fragmenten ist keine Aussage über Gabbro.** Sie sind nach ihrer
+Schwierigkeit gewählt. *Solange kein zweiter Korpus danebensteht, den beim Bauen niemand
+angesehen hat, ist die Zahl Falle 80 in Reinform* — eine, die man erreicht, indem man auf sie
+hin baut. `PLAN.md` führt ihn im selben Plan wie das letzte Konstrukt, nicht danach.

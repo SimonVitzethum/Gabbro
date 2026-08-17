@@ -134,6 +134,14 @@ of items that are neither code nor a run — what remains is building and measur
       nicht, dass sie haelt.* Die starke Fassung waere ein maschinell geprueftes Zeugnis je
       Uebersetzung -- **und die Vorstufe ist als Vorstufe benannt**, damit die Zahl nicht mehr
       verspricht, als sie misst.
+- [ ] **Die FREMDEN RUEMPFE sind die eine Klasse, die sich auch unter „ganz Gabbro
+      verifiziert" nicht aufloest** *(gemessen 2026-08-17)*. F7 -- das Fragment, das
+      vollstaendig abgesenkt und an der Ausfuehrung gemessen ist -- besteht aus **sieben**
+      Rufen an Ruempfe, die Gabbro nie sieht; jede Sperre bringt vier Prototypen mit.
+      **`gabbro zeugnis` zaehlt sie je Datei.** *Was fehlt, ist die andere Haelfte: eine Form,
+      in der der Rufer die Pflicht des fremden Rumpfes AUSSPRICHT statt sie nur zu unterstellen
+      -- die Sperre etwa schuldet gegenseitigen Ausschluss, Fortschritt und die Rangordnung,
+      und keine Zeile sagt das heute.*
 - [ ] **Die Absenkung fehlt fuer die meisten Formen -- und zwar als WEIGERUNG, nicht als Luecke.**
       `C001` weigert sich benannt fuer `forever`, `publishes`, `awaits`, `exchange`,
       `let … else`, `static`, `reason`, `group`, `walk`, `entry`, `boot`, `accumulates`,
