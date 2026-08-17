@@ -6605,7 +6605,103 @@ Messung.
 | | |
 |---|---|
 | **Notation** | **8 von 8** — und sechs Gegenproben halten die Entscheidung |
-| **Mutationen** | **136 von 136** · die drei neuen fangen: Marken als Menge, Konstruktor als Aufruf, Verbund ohne Marken. *Und «B7» hat den Anker von `some-ist-ein-ruf` gebrochen — das Geruest meldete `ANKER FEHLT` statt still eine niedrigere Zahl zu liefern* |
+| **Mutationen** | **136 von 136** (nach K100.4: 138) · die drei neuen fangen: Marken als Menge, Konstruktor als Aufruf, Verbund ohne Marken. *Und «B7» hat den Anker von `some-ist-ein-ruf` gebrochen — das Geruest meldete `ANKER FEHLT` statt still eine niedrigere Zahl zu liefern* |
 | **Emission** | **8 Übersetzungseinheiten** — das Gift von Nr. 8 vertauscht die zwei Bestimmer |
 | **Schablonen** | 20, davon **5 bewiesen**; `verbund.konstruktor` ist **getragen** — und war **vorher** bewiesen, wie das zweite Tor es verlangt |
 | **`lebend_ungedeckt()`** | **4, unverändert** — *genau dafür stand das zweite Tor* |
+
+---
+
+# Was ein Gabbro-Programmierer heute noch schuldet — ausser seiner Logik
+
+**Die Frage, wörtlich:** *„Muss bei einem zukünftigen Gabbro-Programm nur noch die eigene Logik
+bewiesen werden — unter der Annahme, dass ganz Gabbro formal verifiziert ist und die
+Hardwareannahmen des Programms stimmen?"*
+
+**Nein. Und das Zeugnis sagt jetzt je Programm, warum.** Die Prämisse deckt weniger ab, als sie
+zu decken scheint, und zwar an drei verschiedenen Stellen. Jede hat eine Quelle, die man
+abfragen kann.
+
+## Was die Prämisse WIRKLICH abdeckt
+
+| | Quelle | heute |
+|---|---|---|
+| **die vier getragenen Schablonen** | `gabbro schablonen` | `option.sonderwert`, `format.roundtrip`, `device.konstruktor`, `table.absenkung` — **unbewiesen, und die Prämisse deckt sie** |
+| **die Richtigkeit der gebauten Pässe** | `gabbro paesse` | dass `M103` richtig rechnet, ist genau die Aussage „Gabbro ist verifiziert" |
+| **die 19 Annahmen** | `gabbro annahmen` | die zweite Hälfte der Prämisse |
+
+*Das ist echt und es ist viel.* Unter dieser Prämisse fallen Index, Überlauf, Rahmen, Sperre,
+Rennen, Terminierung, Phase, Blattheit und Publikation als Klempnerei weg.
+
+## Was sie NICHT abdeckt — und das ist die Antwort
+
+### 1. Sieben von zehn Pässen sind nur TEILWEISE gebaut
+
+**Ein verifizierter Pass, der eine Frage nicht stellt, beantwortet sie nicht.** Verifikation
+macht einen Pass *richtig*, nicht *vollständig* — und was er nicht prüft, fällt auf den
+Programmierer zurück, mit oder ohne Beweis:
+
+* **keine Aliasanalyse** (M3) — zwei `ptr<normal, rw>` auf dasselbe Objekt bleiben
+  ununterscheidbar. *Dafür steht `own`, und wer es nicht benutzt, beweist Aliasfreiheit selbst.*
+* **keine Ghost-Löschung** (M2) — dass ein `ghost`-Wert zur Laufzeit nicht existiert, ist eine
+  Aussage über den BEWEIS und keine über den Rumpf.
+* **erschöpfendes `match` über `tagged` nicht gebaut** (D2).
+* **`E010` hat auf dem Fragmentkorpus null Biss** — die Leseregel spricht nur über bekannten
+  Weltzustand, und ein AUSSCHNITT deklariert seine Namen nicht.
+* **Rekursion trägt im Kostenpass eine Annahme statt einer Rechnung.**
+* **Die Barriere aus dem Adressraum** und **die Sichtbarkeitsaussage der Paarung** liegen in der
+  Axiomschicht, nicht im Pass.
+
+> *`gabbro paesse` sagt es selbst, und der Satz ist die Kurzfassung dieses ganzen Abschnitts:*
+> **„a green run is therefore not a proof but the absence of the findings that the built passes
+> are able to see."**
+
+### 2. Die Absenkung fehlt für die meisten Formen — und zwar als Weigerung
+
+**Acht Übersetzungseinheiten stehen. Sieben der zehn Fragmente haben kein C.** Der Erzeuger
+weigert sich benannt (`C001`) für `forever`, `publishes`, `awaits`, `exchange`, `let … else`,
+`static`, `reason`, `group`, `walk`, `entry`, `boot`, `accumulates`, `descendants of`,
+`ancestors of`, `format`-Bitlagen und `match` über etwas anderem als einer `option`.
+
+*Ein verifizierter Erzeuger, der sich weigert, erzeugt nichts.* **Das ist keine Beweislücke,
+sondern eine Bauschuld** — und sie steht in `PFLICHTEN.md` als sieben von 21 hängenden Pflichten.
+
+### 3. Vierzehn Pflichten hängen, weil die SPRACHE sie nicht sagen kann
+
+`./zaehle-pflichten.py --haengend` liest sie ab. **Kein Beweis über Gabbros Implementierung
+schliesst eine davon** — sie sind Aussagen darüber, was sich hinschreiben lässt:
+
+| | # |
+|---|---:|
+| **Gerätenotation** — «B23» gemischte Registerklasse, «B24» Bitlage jenseits des Wortes, «B18» Phasen am `device`, «B26» Ausgang ohne Namen | 5 |
+| **die Reihenfolgezusage** «B37» — *Linearität ist keine Ordnung* | 2 |
+| **«B21»** `accumulates`, **«B27»** Registerbelegung, **«B9»** `fnptr` ohne Vertrag | 3 |
+| **die V-Regeln rechnen nicht** — `f < g/N` liefert nicht `f < g` | 1 |
+| **ein handgeschriebenes `narrow`**, dessen Zweig nicht genommen werden kann | 1 |
+| **«B22-nah»** — `format` kennt nur Absage, nicht Abwesenheit | 1 |
+| **eine Domänenschranke**, die dasteht und die M1 nicht sieht | 1 |
+
+## Und was das Zeugnis daran ändert
+
+**Vorher war „ich vertraue Gabbro" ein Satz. Jetzt ist es eine Liste mit Länge, je Datei:**
+
+```
+$ gabbro zeugnis beispiele/21-verbundwert.gab
+A  DIE ANNAHMEN            keine
+B  DIE SCHABLONEN          verbund.konstruktor   bewiesen   2x
+C  DIE DIREKTE ABSENKUNG   4 Formen
+-- BEFUND
+     0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 4 direkte Formen
+```
+
+Und daneben, in derselben Ausgabe, was es **nicht** sagt: dass eine Schablone gilt, dass die
+direkte Absenkung stimmt, dass eine Annahme zutrifft, dass eine fremde Funktion tut, was ihre
+Deklaration sagt.
+
+> **Die ehrliche Fassung der Antwort:** *für ein Programm, das nur aus den Formen der acht
+> stehenden Übersetzungseinheiten besteht, und dessen Klempnerei ganz in den gebauten Teilen
+> der zehn Pässe liegt — ja, dann bleibt die Logik.* **Für jedes andere sagt das Zeugnis in
+> vier Zeilen, was zusätzlich dazukommt.**
+
+*Das ist weniger, als der Satz verspricht, und mehr, als irgendein anderer Ordner beziffern
+kann.*

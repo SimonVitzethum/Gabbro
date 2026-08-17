@@ -112,7 +112,7 @@ of items that are neither code nor a run — what remains is building and measur
 - [ ] **PL.2 — die drei Saetze mit der groessten Traglast:** `K001` Summation (**hat heute schon
       einen gemessenen Fehler**), `H006` Rangordnung, V2 relationale Verengung (102 Stellen).
 - [ ] **PL.3 — die Bruecke: (c) je Satz eine Sprechprobe, die den Rust gegen das Modell faehrt.**
-      Das Geschirr steht (`mutiere-pruefer.py`, 136 von 136) -- was fehlt, ist der Satz, der
+      Das Geschirr steht (`mutiere-pruefer.py`, 138 von 138) -- was fehlt, ist der Satz, der
       sagt, WELCHE Beschaedigung fallen muss. *Aus 132 Mutationen ohne Satz werden 132 mit
       einem.*
 
@@ -129,9 +129,16 @@ of items that are neither code nor a run — what remains is building and measur
       Gerufenen stuende daneben. **Die Weigerung (`C001`) ist die sichere Richtung**, aber sie
       kostet an jeder Bindung eines zusammengesetzten Werts eine Zeile. *Entweder aus der
       Signatur ablesen (kein Raten, ein Nachschlagen) oder die Zeile als Absicht aufschreiben.*
-- [ ] **K100.4 — die Verfeinerung, und der Weg ist zu waehlen:** verifizierter Erzeuger (a) oder
-      **Uebersetzungsvalidierung (b)**. *Die Differenztests sind bereits die schwache Fassung von
-      (b) — sie messen EIN Ergebnis statt aller.*
+- [ ] **K100.4 — die STARKE Fassung von (b) fehlt noch.** `gabbro zeugnis` zaehlt auf, worauf
+      eine Uebersetzung ruht (gebaut 2026-08-17, acht Einheiten, je Befund gebucht). *Es sagt
+      nicht, dass sie haelt.* Die starke Fassung waere ein maschinell geprueftes Zeugnis je
+      Uebersetzung -- **und die Vorstufe ist als Vorstufe benannt**, damit die Zahl nicht mehr
+      verspricht, als sie misst.
+- [ ] **Die Absenkung fehlt fuer die meisten Formen -- und zwar als WEIGERUNG, nicht als Luecke.**
+      `C001` weigert sich benannt fuer `forever`, `publishes`, `awaits`, `exchange`,
+      `let … else`, `static`, `reason`, `group`, `walk`, `entry`, `boot`, `accumulates`,
+      `descendants of`, `ancestors of`, `format`-Bitlagen und `match` ueber etwas anderem als
+      einer `option`. *Ein verifizierter Erzeuger, der sich weigert, erzeugt nichts.*
 - [ ] **Der ZWEITE Korpus gehoert in denselben Plan wie das letzte Konstrukt.** Die zehn
       Fragmente sind nach ihrer SCHWIERIGKEIT gewaehlt; `H = 0` ueber ihnen ist keine Aussage
       ueber Gabbro. **Ohne einen Korpus, den beim Bauen niemand angesehen hat, ist K100 Falle 80

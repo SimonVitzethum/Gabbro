@@ -1349,7 +1349,7 @@ Die fünf oben, jede mit `assume … falsifier <sonde>` oder `unfalsifiable "<gr
 > **Und `L ≤ 4` hält:** `verbund.konstruktor` ist jetzt **getragen** und war **vorher**
 > bewiesen. `lebend_ungedeckt()` steht unverändert bei 4 — genau dafür stand das zweite Tor.
 
-### K100.4 — Die Verfeinerung *(7 Pflichten, und sie ist die härteste)*
+### K100.4 — Die Verfeinerung *(7 Pflichten, und sie ist die härteste)* — **Weg (b) gebaut**
 
 Sieben Fragmente sind nicht abgesenkt. **Fünf davon sind durch Befunde gesperrt**, nicht durch
 Arbeit — «B10», «B12», «B17», «B24» und die Domänenschranke von `mappings of`. *Die fallen mit
@@ -1368,6 +1368,28 @@ K100.3 und den Entscheidungen, nicht mit Erzeugercode.*
 > **(b) passt zu diesem Ordner.** Die Differenztests sind bereits die schwache Fassung davon —
 > sie messen **ein** Ergebnis statt aller. *Der Weg von hier ist, aus `pruefe-emission.sh` ein
 > Zeugnis zu machen, nicht eine längere Liste von Beispielen.*
+
+> **AUSGEFÜHRT 2026-08-17.** `gabbro zeugnis <datei>` — fünf Abschnitte je Datei: Annahmen,
+> Schablonen, direkte Absenkung, Gelöschtes, **Fremdes**. *Es beweist die Übersetzung nicht; es
+> zählt auf, worauf sie ruht* — und damit wird aus „ich vertraue Gabbro" eine Liste mit Länge.
+>
+> **Die Einordnung ist eine ZWEITE Lesung**, unabhängig von der `match`-Kaskade des Erzeugers
+> geführt. Senkt der Erzeuger etwas ab, das keine Einordnung kennt, meldet das Zeugnis
+> `UNZUGEORDNET`. *Das ist der Fall „der Erzeuger ist gewachsen und hat es niemandem gesagt".*
+>
+> **Und genau den fand die Kreuzprobe beim ersten Lauf.** `lock KAPPEN protects … rank 3;`
+> senkt zu vier Prototypen ab; `beispiele/10` und `/13` übersetzen damit sauber, und keine
+> Einordnung kannte die Form. Daraus wurde die fünfte Klasse **FREMD**: weder direkt (die
+> C-Form IST nicht die Gabbro-Form) noch erzeugt (es entsteht kein Rumpf), sondern **ein
+> Versprechen an eine Funktion, die es in dieser Übersetzungseinheit nicht gibt.**
+>
+> **Das Zeugnis wird verglichen, nicht gedruckt:** je Übersetzungseinheit steht sein Befund
+> gebucht in `pruefe-emission.sh`. Wer eine Form umklassifiziert, fällt dort.
+>
+> **Was (b) NICHT ist, und es steht in derselben Ausgabe:** ein Zeugnis über *diese* Übersetzung
+> ist keine Aussage über *alle* Eingaben. Die vier Zeilen sagen, worauf die Übersetzung ruht —
+> nicht, dass sie hält. *Die stärkere Fassung von (b) bliebe ein maschinell geprüftes Zeugnis je
+> Übersetzung; dies ist die aufzählende Vorstufe davon, und sie ist als Vorstufe benannt.*
 
 ---
 
@@ -1423,7 +1445,7 @@ etwas anderes und viel kleineres** — und dieser Ordner hat die Form dafür sch
 **Die Regeln sind Mathematik über Bereichen, Mengen, Ordnungen und transitiven Hüllen.** Sie
 reden über keinen Rust-Wert. *Genau darum sind sie beweisbar, ohne den Prüfer anzufassen.*
 
-> **Und die zweite Zeile ist heute schon besser bewacht, als es aussieht:** `136 von 136`
+> **Und die zweite Zeile ist heute schon besser bewacht, als es aussieht:** `138 von 138`
 > Mutationen, und **null unbeschädigbare Zeilen** im Prüfer. Was fehlt, ist nicht die Umsetzung
 > — es ist der Satz, gegen den sie umgesetzt wird.
 
