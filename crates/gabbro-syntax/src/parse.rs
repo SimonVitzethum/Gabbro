@@ -1,20 +1,19 @@
-//! Der Parser. **Handgeschrieben, kein Generator** (`SPRACHE.md` Teil III, §6) und
-//! regelweise gegen `SYNTAX.md` gelegt: zu jeder EBNF-Regel gehoert eine Funktion, die ihren
-//! Namen traegt.
+//! The parser. **Hand-written, no generator** (`SPRACHE.md` part III, §6) and laid rule by
+//! rule against `SYNTAX.md`: every EBNF rule has a function carrying its name.
 //!
-//! **Der Parser deutet nicht.** Wo die Grammatik eine Klausel verlangt, verlangt er sie; wo sie
-//! sie freistellt, laesst er das Feld leer und ueberlaesst die Pflicht dem Pass, der sie kennt.
-//! Er erfindet keine Voreinstellung -- E3: nichts ist implizit.
+//! **The parser does not interpret.** Where the grammar demands a clause, it demands it; where
+//! the grammar leaves it optional, it leaves the field empty and hands the obligation to the
+//! pass that knows it. It invents no default -- E3: nothing is implicit.
 //!
-//! **Zwei Stellen, an denen ein Wort des Wortschatzes doch ein Name sein darf**, beide
-//! eindeutig aus der Grammatik:
+//! **Two places where a word of the vocabulary may be a name after all**, both unambiguous
+//! from the grammar:
 //!
-//! 1. **nach `.` und `->`** (`placesuffix = "." ident`): dort kann kein Schluesselwort stehen,
-//!    also kann keins verwechselt werden -- `c.slots[s]` steht so in `FRAGMENTE.md`;
-//! 2. **als deklarierter Feldname** in `field`/`slotdecl`, wo dem Namen ein `:` folgt.
+//! 1. **after `.` and `->`** (`placesuffix = "." ident`): no keyword can stand there, so none
+//!    can be confused -- `c.slots[s]` is written that way in `FRAGMENTE.md`;
+//! 2. **as a declared field name** in `field`/`slotdecl`, where the name is followed by `:`.
 //!
-//! Ueberall sonst gilt der geschlossene Wortschatz: `let slot = …` ist kein Bezeichner, und die
-//! Absage sagt das mit Wort und Fundstelle.
+//! Everywhere else the closed vocabulary holds: `let slot = …` is not an identifier, and the
+//! refusal says so with the word and the site.
 
 use crate::ast::*;
 use crate::diag::{Absage, Absagen};
@@ -22,7 +21,7 @@ use crate::kw::Kw;
 use crate::lex::{Art, Token, Z};
 use crate::span::Span;
 
-/// Der Parser hat die Absage schon abgelegt; das hier ist nur der Ruecksprung.
+/// The parser has already filed the refusal; this is only the return jump.
 #[derive(Debug, Clone, Copy)]
 pub struct Abbruch;
 
@@ -33,19 +32,19 @@ pub struct Parser<'a> {
     tokens: Vec<Token>,
     pos: usize,
     absagen: &'a mut Absagen,
-    /// Waehrend eines Rueckversuchs werden Absagen nicht abgelegt.
+    /// During a backtracking attempt, refusals are not filed.
     stumm: usize,
-    /// **Die eine mehrdeutige Stelle der Grammatik**, aufgeloest statt geraten.
+    /// **The one ambiguous place in the grammar**, resolved rather than guessed.
     ///
-    /// `placesuffix = "->" ident` und `placeshift = place ":" expr "->" expr` treffen sich in
-    /// `transition ack { REG: A -> B }`: `A -> B` ist zugleich ein Ort mit Feldzugriff und ein
-    /// Uebergang. Innerhalb der beiden Ausdruecke eines `placeshift` ist `->` deshalb **kein**
-    /// Ortssuffix -- der Ort davor darf eins tragen. Ohne diese Regel ist `FRAGMENTE.md`s
-    /// `transition drv { DEVICE_STATUS: ACK -> ACK | DRIVER }` nicht lesbar.
+    /// `placesuffix = "->" ident` and `placeshift = place ":" expr "->" expr` meet in
+    /// `transition ack { REG: A -> B }`: `A -> B` is at once a place with field access and a
+    /// transition. Inside the two expressions of a `placeshift`, `->` is therefore **not** a
+    /// place suffix -- the place before it may carry one. Without this rule `FRAGMENTE.md`'s
+    /// `transition drv { DEVICE_STATUS: ACK -> ACK | DRIVER }` is unreadable.
     pfeil_ist_suffix: bool,
 }
 
-/// Zerlegt und parst eine Quelle. Absagen sammeln sich in `absagen`.
+/// Lexes and parses a source. Refusals accumulate in `absagen`.
 pub fn parse(quelle: &str, absagen: &mut Absagen) -> Programm {
     let tokens = crate::lex::zerlege(quelle, absagen);
     let mut p = Parser {
@@ -60,7 +59,7 @@ pub fn parse(quelle: &str, absagen: &mut Absagen) -> Programm {
 }
 
 impl<'a> Parser<'a> {
-    // -- Grundwerkzeug -------------------------------------------------------------------
+    // -- Basic tooling ------------------------------------------------------------------
 
     fn blick(&self) -> Token {
         self.tokens[self.pos.min(self.tokens.len() - 1)]
@@ -92,7 +91,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Ein Rueckversuch: Stellung merken, stumm probieren, bei Misserfolg zuruecksetzen.
+    /// A backtracking attempt: remember the position, try silently, reset on failure.
     fn versuch<T>(&mut self, f: impl FnOnce(&mut Self) -> Erg<T>) -> Option<T> {
         let merk = self.pos;
         let vorher = self.absagen.absagen.len();
@@ -165,7 +164,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Ein freier Bezeichner. Ein Wort des Wortschatzes ist hier **kein** Name.
+    /// A free identifier. A word of the vocabulary is **not** a name here.
     fn erwarte_ident(&mut self) -> Erg<Ident> {
         let t = self.blick();
         if t.art == Art::Ident && t.text(self.quelle) == "_" {
@@ -187,7 +186,7 @@ impl<'a> Parser<'a> {
                     span: t.span,
                 })
             }
-            // Einbuchstabige Woerter (`r`, `w`, `x`) sind kontextuell -- s. kw.rs.
+            // Single-letter words (`r`, `w`, `x`) are contextual -- see kw.rs.
             Art::Wort(k) if !k.reserviert() => {
                 self.pos += 1;
                 Ok(Ident {
@@ -205,8 +204,8 @@ impl<'a> Parser<'a> {
                     "SYNTAX.md: der Wortschatz ist eine geschlossene Tabelle -- \
                      alles andere ist ein Bezeichner",
                 );
-                // **M-woerter:** die Entscheidung war „umbenennen statt aufweichen". Damit
-                // die Last nicht beim Schreiber landet, nennt der Uebersetzer den Ersatz.
+                // **M-woerter:** the decision was "rename rather than soften". So the burden
+                // does not land on the writer, the compiler names the replacement.
                 if let Some(v) = crate::kw::ersatzvorschlag(k) {
                     a = a.mit_notiz(format!("stattdessen: `{v}`"));
                 }
@@ -225,8 +224,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Ein Name in Feldstellung: nach `.`/`->` oder vor `:` in einer Felddeklaration.
-    /// Dort ist ein Wort des Wortschatzes eindeutig ein Name -- s. Kopf dieser Datei.
+    /// A name in field position: after `.`/`->` or before `:` in a field declaration.
+    /// There a word of the vocabulary is unambiguously a name -- see the head of this file.
     fn erwarte_feldname(&mut self) -> Erg<Ident> {
         let t = self.blick();
         match t.art {
@@ -291,7 +290,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // -- 1. Programm, Module ---------------------------------------------------------------
+    // -- 1. Program, modules --------------------------------------------------------------
 
     fn programm(&mut self) -> Programm {
         let mut items = Vec::new();
@@ -302,9 +301,9 @@ impl<'a> Parser<'a> {
                     if !self.synchronisiere() {
                         break;
                     }
-                    // Eine schliessende Klammer auf oberster Ebene gehoert zu dem Rumpf, den
-                    // die Absage gerade gekostet hat. Sie noch einmal zu melden, macht aus
-                    // einem Befund zwei -- und der zweite hat keinen eigenen Inhalt.
+                    // A closing brace at top level belongs to the body the refusal has just
+                    // cost. Reporting it again turns one finding into two -- and the second
+                    // has no content of its own.
                     while self.ist_z(Z::GeschweiftZu) {
                         self.pos += 1;
                     }
@@ -314,8 +313,8 @@ impl<'a> Parser<'a> {
         Programm { items }
     }
 
-    /// Nach einer Absage bis zum naechsten Item-Anfang gehen. Gibt `false`, wenn nichts mehr
-    /// kommt -- sonst laeuft der Parser auf der Stelle.
+    /// After a refusal, advance to the next item start. Returns `false` when nothing more
+    /// follows -- otherwise the parser would spin in place.
     fn synchronisiere(&mut self) -> bool {
         let start = self.pos;
         let mut tiefe = 0i32;
@@ -325,11 +324,11 @@ impl<'a> Parser<'a> {
                 Art::Zeichen(Z::GeschweiftZu) => {
                     tiefe -= 1;
                     if tiefe < 0 {
-                        // Ein `}`, das nicht zu uns gehoert -- gehoert es dem **umgebenden**
-                        // Rumpf, ist hier Schluss. Folgt ihm aber noch etwas, das kein Item
-                        // anfaengt (`protects { … } rank 0 …`), gehoerte es zur kaputten
-                        // Deklaration: dann weiter, sonst verschluckt die Erholung die
-                        // schliessende Klammer des Moduls und jedes weitere Item faellt.
+                        // A `}` that is not ours -- if it belongs to the **enclosing** body,
+                        // we stop here. But if something follows that starts no item
+                        // (`protects { … } rank 0 …`), it belonged to the broken declaration:
+                        // then continue, otherwise recovery swallows the module's closing
+                        // brace and every further item falls.
                         let danach = self.blick_n(1);
                         let aeusserlich = match danach.art {
                             Art::Ende | Art::Zeichen(Z::GeschweiftZu) => true,
@@ -364,12 +363,11 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
-        // **Laxheit geschlossen (2026-08-15).** `pub` wurde vor JEDEM Item gefressen und
-        // bei dreizehn Item-Arten stillschweigend fallengelassen -- die EBNF fuehrt es an
-        // genau sieben (`moduledecl usedecl constdecl staticdecl typedecl fndecl
-        // atomicdecl`). Ein Sichtbarkeitswort, das der Parser annimmt und wegwirft, ist
-        // schlimmer als eines, das er ablehnt: der Leser sieht eine Zusage, die niemand
-        // haelt.
+        // **Laxity closed (2026-08-15).** `pub` was eaten before EVERY item and silently
+        // dropped for thirteen item kinds -- the EBNF carries it on exactly seven
+        // (`moduledecl usedecl constdecl staticdecl typedecl fndecl atomicdecl`). A
+        // visibility word the parser accepts and throws away is worse than one it rejects:
+        // the reader sees a promise nobody keeps.
         let pub_span = self.blick().span;
         let oeffentlich = self.friss_kw(Kw::Pub);
         let t = self.blick();
@@ -536,9 +534,9 @@ impl<'a> Parser<'a> {
     }
 
     fn pfad(&mut self) -> Erg<Pfad> {
-        // **G5.** `u64::max` -- beide Segmente sind Wortschatzwoerter. Als ERSTES Segment
-        // ist ein Grundtyp zugelassen (`pathseg = ident | "u8" | … | "i64"`); das deckt die
-        // Grenzwerte, ohne den Wortschatz an anderer Stelle aufzuweichen.
+        // **G5.** `u64::max` -- both segments are vocabulary words. As the FIRST segment a
+        // primitive type is admitted (`pathseg = ident | "u8" | … | "i64"`); that covers the
+        // limit values without softening the vocabulary anywhere else.
         let erste = match self.blick().art {
             Art::Wort(k)
                 if k.ist_intty() && matches!(self.blick_n(1).art, Art::Zeichen(Z::Kolon2)) =>
@@ -561,7 +559,7 @@ impl<'a> Parser<'a> {
         Ok(Pfad { teile, span })
     }
 
-    // -- 2. Typen --------------------------------------------------------------------------
+    // -- 2. Types -------------------------------------------------------------------------
 
     fn typedecl(&mut self, oeffentlich: bool) -> Erg<TypDecl> {
         let anfang = self.span();
@@ -826,15 +824,14 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// `structty` und `variants` fangen beide mit `{` an. Unterschieden wird am zweiten
-    /// Token: einem Feld folgt `:`, einer Variante `(`, `,` oder `}`.
+    /// `structty` and `variants` both start with `{`. They are told apart at the second
+    /// token: a field is followed by `:`, a variant by `(`, `,` or `}`.
     ///
-    /// **`type T = { };` ist KEINS von beiden** (2026-08-16). Bis dahin fiel der leere
-    /// Klammerpaar-Fall in den `variants`-Zweig und ergab einen **leeren Summentyp** — einen
-    /// Typ ohne Wert, ueber den ein `match` erschoepfend ist, indem er nichts tut. *Das ist
-    /// nicht dasselbe wie ein leerer Verbund, und beides ist als Absicht unglaubwuerdig.*
-    /// **E3 sagt: nichts ist implizit** — auch keine Wahl zwischen zwei Bedeutungen, die
-    /// niemand hingeschrieben hat.
+    /// **`type T = { };` is NEITHER** (2026-08-16). Until then the empty-brace case fell into
+    /// the `variants` branch and produced an **empty sum type** -- a type without a value over
+    /// which a `match` is exhaustive by doing nothing. *That is not the same as an empty
+    /// record, and both are implausible as intentions.* **E3 says: nothing is implicit** --
+    /// including a choice between two meanings that nobody wrote down.
     fn verbund_oder_varianten(&mut self) -> Erg<TypExpr> {
         let anfang = self.span();
         if matches!(self.blick_n(1).art, Art::Zeichen(Z::GeschweiftZu)) {
@@ -923,7 +920,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// `offset_into Self` -- `Self` ist ein Wort, steht hier aber in Namensstellung.
+    /// `offset_into Self` -- `Self` is a word, but stands here in name position.
     fn typname_als_ident(&mut self) -> Erg<Ident> {
         if self.ist_kw(Kw::SelfWort) {
             let t = self.vor();
@@ -989,7 +986,7 @@ impl<'a> Parser<'a> {
         Ok(liste)
     }
 
-    // -- 4. Ausdruecke ---------------------------------------------------------------------
+    // -- 4. Expressions --------------------------------------------------------------------
 
     fn expr(&mut self) -> Erg<Expr> {
         self.orexpr()
@@ -1019,7 +1016,7 @@ impl<'a> Parser<'a> {
         Ok(links)
     }
 
-    /// `cmpexpr = bitexpr [ cmp bitexpr ]` -- **hoechstens einer**, Vergleiche ketten nicht.
+    /// `cmpexpr = bitexpr [ cmp bitexpr ]` -- **at most one**, comparisons do not chain.
     fn cmpexpr(&mut self) -> Erg<Expr> {
         let links = self.bitexpr()?;
         let op = match self.blick().art {
@@ -1116,10 +1113,10 @@ impl<'a> Parser<'a> {
     }
 
     fn primary(&mut self) -> Erg<Expr> {
-        // «B35»: `optionexpr = "Some" "(" expr ")" | "None"`. Im Baum ist es ein `Ruf` --
-        // ein Konstruktor IST ein Aufruf, und jede eigene Variante haette jeden `match`
-        // ueber `ExprArt` angefasst, ohne etwas zu unterscheiden, was der Pruefer trennt.
-        // Die einzige Stelle, die es trennen MUSS, ist der Kostenpass; dort steht es.
+        // «B35»: `optionexpr = "Some" "(" expr ")" | "None"`. In the tree it is a `Ruf` --
+        // a constructor IS a call, and a variant of its own would have touched every `match`
+        // over `ExprArt` without distinguishing anything the checker separates. The one place
+        // that MUST separate it is the cost pass; it is written there.
         if let Art::Wort(k @ (Kw::Some | Kw::None)) = self.blick().art {
             let sp = self.blick().span;
             self.pos += 1;
@@ -1223,7 +1220,7 @@ impl<'a> Parser<'a> {
                     span: t.span.bis_zu(ende),
                 })
             }
-            // `Self` und die Ganzzahlwoerter tragen Pfade: `Self.slots[s]`, `u64::max`.
+            // `Self` and the integer words carry paths: `Self.slots[s]`, `u64::max`.
             Art::Wort(Kw::SelfWort) => {
                 self.pos += 1;
                 let basis = Ident {
@@ -1268,7 +1265,7 @@ impl<'a> Parser<'a> {
                 }
             }
             Art::Ident | Art::Wort(_) => {
-                // `place` oder `call`/`cast` -- der Unterschied ist die Klammer.
+                // `place` or `call`/`cast` -- the parenthesis makes the difference.
                 let erste = self.erwarte_ident()?;
                 if self.ist_z(Z::Kolon2) || self.ist_z(Z::RundAuf) {
                     let mut teile = vec![erste];
@@ -1321,7 +1318,7 @@ impl<'a> Parser<'a> {
             Art::Wort(k) => {
                 k.ist_intty()
                     || matches!(k, Kw::Bool | Kw::Never | Kw::Ptr | Kw::Fn)
-                    // `Self` ist als Ganzes ein Typ, `Self.feld` ein Ort.
+                    // `Self` as a whole is a type, `Self.field` a place.
                     || (k == Kw::SelfWort && !matches!(self.blick_n(1).art, Art::Zeichen(Z::Punkt)))
             }
             Art::Zeichen(Z::EckAuf) | Art::Zeichen(Z::GeschweiftAuf) => true,
@@ -1406,10 +1403,9 @@ impl<'a> Parser<'a> {
         Ok(liste)
     }
 
-    /// **G7.** `identlist` verlangt mindestens einen Namen -- ein Eintritt, der nichts
-    /// zerstoert, konnte das bis 2026-08-15 nicht sagen. Die leere Liste ist eine AUSSAGE
-    /// („zerstoert nichts"), kein Fehlen; sie in der Grammatik zu verbieten hiess, die
-    /// staerkste Zusage unschreibbar zu machen.
+    /// **G7.** `identlist` demands at least one name -- an entry that destroys nothing could
+    /// not say so until 2026-08-15. The empty list is a STATEMENT ("destroys nothing"), not an
+    /// absence; forbidding it in the grammar meant making the strongest promise unwritable.
     fn identlist_leer_erlaubt(&mut self) -> Erg<Vec<Ident>> {
         if self.ist_z(Z::GeschweiftZu) {
             return Ok(Vec::new());
@@ -1417,7 +1413,7 @@ impl<'a> Parser<'a> {
         self.identlist()
     }
 
-    // -- 5. Praedikate ---------------------------------------------------------------------
+    // -- 5. Predicates --------------------------------------------------------------------
 
     fn pred(&mut self) -> Erg<Pred> {
         self.orpred()
@@ -1471,8 +1467,8 @@ impl<'a> Parser<'a> {
         if self.ist_kw(Kw::Forall) || self.ist_kw(Kw::Exists) {
             return self.quant();
         }
-        // `heldpred = "Held" "(" ident [ "," "shared" ] ")"` -- eine eigene Regel statt einer
-        // Aufweichung des Ausdrucks: `shared` ist ein Wort des Wortschatzes und bleibt es.
+        // `heldpred = "Held" "(" ident [ "," "shared" ] ")"` -- a rule of its own instead of
+        // softening the expression: `shared` is a word of the vocabulary and stays one.
         if matches!(self.blick().art, Art::Ident) && self.blick().text(self.quelle) == "Held" {
             if let Some(p) = self.versuch(|s| {
                 let anfang = s.span();
@@ -1498,8 +1494,8 @@ impl<'a> Parser<'a> {
                 return Ok(p);
             }
         }
-        // `cmpexpr`, `member` und `reach` fangen alle mit einem Ausdruck an. Der
-        // Rueckversuch trennt sie von `"(" pred ")"`, das ein Quantor enthalten kann.
+        // `cmpexpr`, `member` and `reach` all start with an expression. Backtracking
+        // separates them from `"(" pred ")"`, which may contain a quantifier.
         if let Some(p) = self.versuch(|s| {
             let e = s.cmpexpr()?;
             if s.ist_kw(Kw::In) {
@@ -1657,7 +1653,7 @@ impl<'a> Parser<'a> {
         Ok(liste)
     }
 
-    // -- 6. Funktionen ---------------------------------------------------------------------
+    // -- 6. Functions --------------------------------------------------------------------
 
     fn fndecl(&mut self, oeffentlich: bool) -> Erg<FnDecl> {
         let anfang = self.span();
@@ -1687,8 +1683,8 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
-        // E4: die Klauseln stehen in FESTER Reihenfolge -- ein Werkzeug, das sortieren muss,
-        // kann nicht sagen „hier fehlt `effects`".
+        // E4: the clauses stand in a FIXED order -- a tool that has to sort cannot say
+        // "`effects` is missing here".
         let requires = if self.friss_kw(Kw::Requires) {
             self.predlist()?
         } else {
@@ -1868,7 +1864,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    // -- 7. Anweisungen --------------------------------------------------------------------
+    // -- 7. Statements -------------------------------------------------------------------
 
     fn block(&mut self) -> Erg<Block> {
         let anfang = self.erwarte_z(Z::GeschweiftAuf)?;
@@ -1877,9 +1873,9 @@ impl<'a> Parser<'a> {
             match self.stmt() {
                 Ok(s) => anweisungen.push(s),
                 Err(e) => {
-                    // Eine kaputte Anweisung kostet die Anweisung, nicht die Funktion:
-                    // sonst zeigt ein Lauf einen Befund und verschweigt die neun dahinter.
-                    // Im Rueckversuch wird nicht erholt -- dort ist der Abbruch das Ergebnis.
+                    // A broken statement costs the statement, not the function: otherwise a
+                    // run shows one finding and hides the nine behind it. During backtracking
+                    // there is no recovery -- there the abort IS the result.
                     if self.stumm > 0 || !self.synchronisiere_anweisung() {
                         return Err(e);
                     }
@@ -1893,8 +1889,8 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// Nach einer kaputten Anweisung bis hinter das naechste `;` derselben Ebene gehen --
-    /// oder bis vor das `}`, das den Block schliesst.
+    /// After a broken statement, advance past the next `;` of the same level -- or up to the
+    /// `}` that closes the block.
     fn synchronisiere_anweisung(&mut self) -> bool {
         let start = self.pos;
         let mut tiefe = 0i32;
@@ -1906,7 +1902,7 @@ impl<'a> Parser<'a> {
                         return self.pos > start;
                     }
                     tiefe -= 1;
-                    // Ein Block als Anweisung endet mit seiner Klammer.
+                    // A block used as a statement ends with its brace.
                     if tiefe == 0 {
                         self.pos += 1;
                         return true;
@@ -1936,8 +1932,8 @@ impl<'a> Parser<'a> {
             );
             return Err(Abbruch);
         }
-        // Abweisen, nie deuten: die Formen, die es absichtlich nicht gibt, bekommen ihre
-        // eigene Absage statt eines Folgefehlers drei Token weiter.
+        // Refuse, never interpret: the forms that deliberately do not exist get a refusal of
+        // their own instead of a knock-on error three tokens later.
         if self.blick().art == Art::Ident {
             let wort = self.blick().text(self.quelle);
             if let Some(grund) = abgeschaffte_form(wort) {
@@ -2023,8 +2019,8 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// Vier Formen fangen mit `let` an: `letstmt`, `letstmt … else`, `awaitload`, `exchstmt`.
-    /// Unterschieden wird **nach** dem `=`, an dem Wort, das dem ersten Ausdruck folgt.
+    /// Four forms start with `let`: `letstmt`, `letstmt … else`, `awaitload`, `exchstmt`.
+    /// They are told apart **after** the `=`, by the word following the first expression.
     fn letform(&mut self) -> Erg<StmtArt> {
         self.erwarte_kw(Kw::Let)?;
         let veraenderlich = self.friss_kw(Kw::Mut);
@@ -2148,16 +2144,12 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// `( placelist | "nothing" )` -- **ohne** geschweifte Klammern (SYNTAX.md §11).
+    /// `nutzlast = "{" placelist "}" | "nothing"` -- **the braced form IS the form.**
     ///
-    /// Die Beispiele derselben Datei schreiben sie **mit** (`publishes { color_report }`),
-    /// und der Parser hat lange nur diese Form genommen: die EBNF-treue fiel, die
-    /// EBNF-fremde kam durch. Jetzt gehen beide, und die Klammerform sagt es (`P032`).
-    /// `nutzlast = "{" placelist "}" | "nothing"` -- **die Klammerform ist die Form.**
-    ///
-    /// Bis 2026-08-15 nahm der Parser beide Schreibweisen und meldete `P032` fuer die
-    /// Klammern, weil die EBNF sie nicht fuehrte. Entschieden wurde nach dem BESTAND:
-    /// 22-mal `nothing`, 11-mal mit Klammern, 2-mal ohne. **Die Grammatik folgt den 33.**
+    /// Until 2026-08-15 the parser accepted both spellings and reported `P032` for the
+    /// braces, because the EBNF did not carry them: the EBNF-faithful form fell, the
+    /// EBNF-foreign one came through. Decided by the CORPUS: 22 times `nothing`, 11 times
+    /// with braces, 2 times without. **The grammar follows the 33.**
     fn nutzlast(&mut self) -> Erg<Nutzlast> {
         if self.ist_kw(Kw::Nothing) {
             let t = self.vor();
@@ -2170,8 +2162,8 @@ impl<'a> Parser<'a> {
     }
 
     fn zuweisung_oder_ruf(&mut self) -> Erg<StmtArt> {
-        // Ein Aufruf traegt einen Pfad, eine Zuweisung einen Ort. Beide fangen mit einem
-        // Bezeichner an; die Klammer entscheidet.
+        // A call carries a path, an assignment a place. Both start with an identifier; the
+        // parenthesis decides.
         let erste = self.erwarte_ident()?;
         if self.ist_z(Z::Kolon2) || self.ist_z(Z::RundAuf) {
             let mut teile = vec![erste];
@@ -2256,9 +2248,9 @@ impl<'a> Parser<'a> {
         let mut zweige = Vec::new();
         while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
             let anfang = self.span();
-            // «B35»: `Some`/`None` sind seit 2026-08-15 Woerter des Wortschatzes und damit
-            // keine Bezeichner mehr -- als Variantenname eines `option`-Musters stehen sie
-            // trotzdem, und zwar an genau dieser Stelle.
+            // «B35»: since 2026-08-15 `Some`/`None` are words of the vocabulary and thus no
+            // longer identifiers -- as the variant name of an `option` pattern they stand
+            // nonetheless, and at exactly this place.
             let variante = match self.blick().art {
                 Art::Wort(k @ (Kw::Some | Kw::None)) => {
                     let sp = self.blick().span;
@@ -2293,7 +2285,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    // -- 8. Schleifen ----------------------------------------------------------------------
+    // -- 8. Loops ---------------------------------------------------------------------
 
     fn traverse(&mut self) -> Erg<Traverse> {
         let anfang = self.erwarte_kw(Kw::Traverse)?;
@@ -2431,7 +2423,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    // -- 9. Tabellen, Formate --------------------------------------------------------------
+    // -- 9. Tables, formats -------------------------------------------------------------
 
     fn table(&mut self) -> Erg<Tabelle> {
         let anfang = self.erwarte_kw(Kw::Table)?;
@@ -2448,10 +2440,10 @@ impl<'a> Parser<'a> {
         let mut ops = Vec::new();
         while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
             match self.blick().art {
-                // **Zu streng, geschlossen (2026-08-15).** Der `table`-Rumpf fuehrt
-                // `constdecl`, und `constdecl` traegt `[ "pub" ]` -- `pub const` im
-                // Tabellenrumpf ist damit ableitbar und war trotzdem nicht schreibbar.
-                // Die eine Stelle, an der der Parser strenger war als die Grammatik.
+                // **Too strict, closed (2026-08-15).** The `table` body carries `constdecl`,
+                // and `constdecl` carries `[ "pub" ]` -- `pub const` inside a table body is
+                // therefore derivable and was unwritable all the same. The one place where
+                // the parser was stricter than the grammar.
                 Art::Wort(Kw::Pub) if matches!(self.blick_n(1).art, Art::Wort(Kw::Const)) => {
                     self.pos += 1;
                     konstanten.push(self.constdecl(true)?)
@@ -2509,7 +2501,7 @@ impl<'a> Parser<'a> {
             let name = self.erwarte_feldname()?;
             self.erwarte_z(Z::Kolon)?;
             let typ = self.slottype()?;
-            // `by ops` -- zwei vorhandene Woerter, null Wortschatzzuwachs.
+            // `by ops` -- two existing words, zero growth of the vocabulary.
             let nur_ops = if self.ist_kw(Kw::By) {
                 self.pos += 1;
                 self.erwarte_kw(Kw::Ops)?;
@@ -2575,8 +2567,8 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// `costexpr = "O" "(" expr ")"` -- `O` ist ein Grossbuchstabe und damit kein Wort des
-    /// Wortschatzes; hier steht er als Bezeichner in fester Stellung.
+    /// `costexpr = "O" "(" expr ")"` -- `O` is a capital letter and therefore no word of the
+    /// vocabulary; here it stands as an identifier in a fixed position.
     fn costexpr(&mut self) -> Erg<Expr> {
         let t = self.blick();
         let name = self.erwarte_ident()?;
@@ -2734,7 +2726,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    // -- 10. Geraete -----------------------------------------------------------------------
+    // -- 10. Devices ----------------------------------------------------------------------
 
     fn device(&mut self) -> Erg<Device> {
         let anfang = self.erwarte_kw(Kw::Device)?;
@@ -2818,7 +2810,7 @@ impl<'a> Parser<'a> {
         let name = self.erwarte_ident()?;
         self.erwarte_z(Z::Kolon)?;
         let typ = self.intty()?;
-        // «B32»: der gewollte Umlauf steht an der Deklaration, nicht an der Rechnung.
+        // «B32»: the intended wraparound sits at the declaration, not at the computation.
         let umlaufend = self.friss_kw(Kw::Wrapping);
         self.erwarte_z(Z::At)?;
         let versatz = self.expr()?;
@@ -2906,22 +2898,22 @@ impl<'a> Parser<'a> {
         self.erwarte_z(Z::GeschweiftAuf)?;
         let mut schritte = Vec::new();
         loop {
-            // **G3, jetzt in der Grammatik statt in einer Parserentscheidung.** Links eines
-            // Uebergangs steht `shiftplace` -- ein Ort OHNE `->`-Suffix. Sonst waere in
-            // `ST: ACK -> ACK` die Folge `ACK -> ACK` zugleich Zeigerzugriff und
-            // Uebergangspfeil, und der Parser entschiede eine Mehrdeutigkeit, die die EBNF
-            // gar nicht als solche fuehrt. Ein `transition` beschreibt Registerfelder,
-            // keine Zeigerketten -- das ist die gewollte Seite.
+            // **G3, now in the grammar instead of in a parser decision.** To the left of a
+            // transition stands `shiftplace` -- a place WITHOUT a `->` suffix. Otherwise, in
+            // `ST: ACK -> ACK`, the sequence `ACK -> ACK` would be both pointer access and
+            // transition arrow, and the parser would settle an ambiguity the EBNF does not
+            // even carry as one. A `transition` describes register fields, not pointer chains
+            // -- that is the intended side.
             self.pfeil_ist_suffix = false;
             let ort_erg = self.place();
             self.pfeil_ist_suffix = true;
             let ort = ort_erg?;
             self.erwarte_z(Z::Kolon)?;
-            // Ab hier ist `->` der Uebergangspfeil und kein Ortssuffix -- s. `pfeil_ist_suffix`.
-            // **Die Wiederherstellung darf kein `?` ueberspringen.** Tat sie es, blieb der
-            // Schalter nach einem Fehler im ERSTEN Ausdruck stehen und machte `->` fuer den
-            // Rest der Uebersetzungseinheit zum Nichtsuffix -- ein Tippfehler in einem
-            // `transition` erzeugte Phantomabsagen in jeder spaeteren Zeile.
+            // From here `->` is the transition arrow and not a place suffix -- see
+            // `pfeil_ist_suffix`. **The restore must not be skipped by a `?`.** When it was,
+            // the switch stayed set after an error in the FIRST expression and made `->` a
+            // non-suffix for the rest of the translation unit -- one typo in a `transition`
+            // produced phantom refusals on every later line.
             self.pfeil_ist_suffix = false;
             let ergebnis = (|s: &mut Self| {
                 let von = s.expr()?;
@@ -2961,17 +2953,17 @@ impl<'a> Parser<'a> {
         })
     }
 
-    // -- 11. Nebenlaeufigkeit --------------------------------------------------------------
+    // -- 11. Concurrency -------------------------------------------------------------
 
     fn atomicdecl(&mut self, oeffentlich: bool) -> Erg<AtomicDecl> {
         let anfang = self.erwarte_kw(Kw::Atomic)?;
         let name = self.erwarte_ident()?;
         self.erwarte_z(Z::Kolon)?;
         let typ = self.typeexpr()?;
-        // **G1 geschlossen (2026-08-15).** Bis dahin nahm der Parser die Klausel an und
-        // meldete `P031`, weil `atomicdecl` sie nicht fuehrte. Die EBNF traegt sie jetzt --
-        // in der Reihenfolge des BESTANDS (`publishes` vor der Ordnung, so in SYNTAX.md:603
-        // und viermal in FRAGMENTE.md F6), nicht in der, die ich zuerst hingeschrieben hatte.
+        // **G1 closed (2026-08-15).** Until then the parser accepted the clause and reported
+        // `P031`, because `atomicdecl` did not carry it. The EBNF carries it now -- in the
+        // order of the CORPUS (`publishes` before the ordering, as in SYNTAX.md:603 and four
+        // times in FRAGMENTE.md F6), not in the one I had written down first.
         let obermenge = if self.friss_kw(Kw::Publishes) {
             Some(self.nutzlast()?)
         } else {
@@ -2998,12 +2990,12 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// `group N over { A, B };` -- die Traegergruppe.
+    /// `group N over { A, B };` -- the carrier group.
     ///
-    /// **Zwei Mitglieder sind das Minimum, und der Parser haelt das nicht** -- er kann es
-    /// nicht: `over { A }` ist grammatisch dieselbe Liste. Die Absage kommt aus dem Pass
-    /// (`U004`), wo sie hingehoert; hier waere sie eine Laengenpruefung im Parser und damit
-    /// eine zweite Stelle, an der dieselbe Regel steht.
+    /// **Two members are the minimum, and the parser does not hold that** -- it cannot:
+    /// `over { A }` is grammatically the same list. The refusal comes from the pass (`U004`),
+    /// where it belongs; here it would be a length check in the parser and thus a second
+    /// place carrying the same rule.
     fn gruppedecl(&mut self) -> Erg<GruppeDecl> {
         let anfang = self.erwarte_kw(Kw::Group)?;
         let name = self.erwarte_ident()?;
@@ -3017,9 +3009,9 @@ impl<'a> Parser<'a> {
             traeger.push(self.erwarte_ident()?);
         }
         let mut zu = self.erwarte_z(Z::GeschweiftZu)?;
-        // **Der Rumpf ist freigestellt, die Invariante nicht bedeutungslos.** `group N over
-        // { A, B };` deklariert den Verbund und laesst `U003`/`U005`/`U006` greifen -- den
-        // SPERRABDRUCK und den ZUG. Erst der Rumpf traegt die Verbindungsaussage selbst.
+        // **The body is optional, the invariant is not meaningless.** `group N over
+        // { A, B };` declares the group and lets `U003`/`U005`/`U006` bite -- the LOCK
+        // FOOTPRINT and the MOVE. Only the body carries the connecting statement itself.
         let mut invarianten = Vec::new();
         if self.friss_z(Z::GeschweiftAuf) {
             while !self.ist_z(Z::GeschweiftZu) {
@@ -3054,7 +3046,7 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
-        // `shared held <= K ops` -- der eigene Zweig der geteilten Seite (N3).
+        // `shared held <= K ops` -- the separate branch of the shared side (N3).
         let geteilte_haltezeit = if self.friss_kw(Kw::Shared) {
             self.erwarte_kw(Kw::Held)?;
             self.erwarte_z(Z::KleinerGleich)?;
@@ -3117,7 +3109,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    // -- 12. Annahmen und Axiome -----------------------------------------------------------
+    // -- 12. Assumptions and axioms ----------------------------------------------------------
 
     fn annahmeklasse(&mut self) -> Erg<AnnahmeKlasse> {
         if self.friss_kw(Kw::Falsifier) {
@@ -3167,7 +3159,7 @@ impl<'a> Parser<'a> {
             self.params()?
         };
         self.erwarte_z(Z::RundZu)?;
-        // G2: ein Axiom darf einen Wert liefern und eine Vorbedingung tragen.
+        // G2: an axiom may yield a value and carry a precondition.
         let rueckgabe = if self.friss_z(Z::Pfeil) {
             Some(self.typeexpr()?)
         } else {
@@ -3231,7 +3223,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    // -- 14. Eintritt und Boot -------------------------------------------------------------
+    // -- 14. Entry and boot ------------------------------------------------------------
 
     fn entrydecl(&mut self) -> Erg<EntryDecl> {
         let anfang = self.erwarte_kw(Kw::Entry)?;
@@ -3335,7 +3327,7 @@ impl<'a> Parser<'a> {
             self.erwarte_z(Z::Kolon)?;
             let typ = self.typname_als_ident()?;
             liste.push((reg, typ));
-            // G4: das Schlusskomma ist freigestellt -- kein Beispiel im Ordner schrieb es.
+            // G4: the trailing comma is optional -- no example in the folder wrote it.
             if !self.friss_z(Z::Komma) {
                 break;
             }
@@ -3383,8 +3375,8 @@ impl<'a> Parser<'a> {
     }
 }
 
-/// Die Formen der Verbotsliste, jede mit ihrem Ersatz. Ohne diese Tabelle faellt `while (x) {}`
-/// als „`;` erwartet" -- ein Folgefehler, der den Grund verschweigt.
+/// The forms of the prohibition list, each with its replacement. Without this table
+/// `while (x) {}` falls as "`;` expected" -- a knock-on error that hides the reason.
 fn abgeschaffte_form(wort: &str) -> Option<&'static str> {
     match wort {
         "while" | "for" | "do" | "loop" => Some(
@@ -3403,7 +3395,7 @@ fn abgeschaffte_form(wort: &str) -> Option<&'static str> {
     }
 }
 
-/// Faengt mit diesem Wort ein Item an? Auch die Erholung und der Korpuslauf fragen das.
+/// Does an item start with this word? Recovery and the corpus run ask this too.
 pub fn faengt_item_an(k: Kw) -> bool {
     matches!(
         k,

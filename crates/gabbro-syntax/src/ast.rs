@@ -1,10 +1,10 @@
-//! Der Kernbaum. **Eine Regel der EBNF -- ein Knoten hier.**
+//! The core tree. **One EBNF rule -- one node here.**
 //!
-//! Der Baum deutet nichts: er hebt keine Klammer auf, sortiert keine Vertragsklausel um und
-//! kennt keine Voreinstellung. Was in `SYNTAX.md` fakultativ ist, ist hier `Option`; was dort
-//! Pflicht ist, ist hier ein Feld ohne `Option`. Ein Pass, der eine Pflicht prueft, prueft
-//! damit den **Inhalt**, nie die Anwesenheit -- ausser bei `effects`, wo die Anwesenheit die
-//! Pflicht ist (`SPRACHE.md` §7: nicht fail-open).
+//! The tree interprets nothing: it removes no parenthesis, reorders no contract clause and
+//! knows no default. What is optional in `SYNTAX.md` is `Option` here; what is mandatory there
+//! is a field without `Option` here. A pass that checks an obligation therefore checks the
+//! **content**, never the presence -- except for `effects`, where the presence IS the
+//! obligation (`SPRACHE.md` §7: not fail-open).
 
 use crate::kw::Kw;
 use crate::span::Span;
@@ -41,7 +41,7 @@ impl Pfad {
 }
 
 // ---------------------------------------------------------------------------------------
-// 1. Programm, Module, Konstanten
+// 1. Program, modules, constants
 // ---------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
@@ -51,7 +51,7 @@ pub struct Programm {
 
 #[derive(Debug, Clone)]
 pub struct Item {
-    /// `when constexpr` -- die bedingte Uebersetzung, an jedem Item.
+    /// `when constexpr` -- conditional compilation, on every item.
     pub when: Option<Expr>,
     pub art: ItemArt,
     pub span: Span,
@@ -75,7 +75,7 @@ pub enum ItemArt {
     Check(Check),
     Atomic(AtomicDecl),
     Lock(LockDecl),
-    /// `group N over { A, B };` -- ein Traegerverbund mit Verbindungs-Invariante.
+    /// `group N over { A, B };` -- a carrier group with a connecting invariant.
     Gruppe(GruppeDecl),
     Accumulates(AccDecl),
     Walk(WalkDecl),
@@ -84,7 +84,7 @@ pub enum ItemArt {
 }
 
 impl ItemArt {
-    /// Der Name, unter dem das Item deklariert ist -- fuer den Namenspass.
+    /// The name the item is declared under -- for the name pass.
     pub fn name(&self) -> Option<&Ident> {
         match self {
             ItemArt::Modul(m) => m.pfad.teile.last(),
@@ -111,7 +111,7 @@ impl ItemArt {
         }
     }
 
-    /// Wie die Art in einer Absage heisst.
+    /// How the kind is named in a refusal.
     pub fn benennung(&self) -> &'static str {
         match self {
             ItemArt::Modul(_) => "Modul",
@@ -170,8 +170,8 @@ pub struct StatischDecl {
     pub section: Option<Textliteral>,
 }
 
-/// Eine Zeichenkette samt Fundstelle. Zeichenketten gibt es nur in `claim`, `reason`,
-/// `assume`, `section` und `unfalsifiable`.
+/// A string together with its site. Strings exist only in `claim`, `reason`, `assume`,
+/// `section` and `unfalsifiable`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Textliteral {
     pub text: String,
@@ -179,7 +179,7 @@ pub struct Textliteral {
 }
 
 // ---------------------------------------------------------------------------------------
-// 2. Typen
+// 2. Types
 // ---------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
@@ -190,7 +190,7 @@ pub struct TypDecl {
     pub ghost: bool,
     pub tagged: bool,
     pub name: Ident,
-    /// `type Duty(check)` -- die Parameterliste eines linearen Zeugen.
+    /// `type Duty(check)` -- the parameter list of a linear witness.
     pub parameter: Option<Vec<TypExpr>>,
     pub rumpf: Option<TypExpr>,
     pub span: Span,
@@ -207,7 +207,7 @@ pub enum TypExpr {
     Verbund(Vec<FeldDecl>, Span),
     FnZeiger(Box<FnZeiger>),
     Varianten(Vec<Variante>, Span),
-    /// `[option] index into T` -- der aus `T`s `count` **erzeugte** Indextyp.
+    /// `[option] index into T` -- the index type **generated** from `T`'s `count`.
     Index {
         tabelle: Ident,
         optional: bool,
@@ -243,7 +243,7 @@ pub struct IntTy {
 pub struct Bereich {
     pub von: Expr,
     pub bis: Expr,
-    /// `..<` -- obere Grenze ausgeschlossen.
+    /// `..<` -- upper bound excluded.
     pub exklusiv: bool,
     pub span: Span,
 }
@@ -298,7 +298,7 @@ pub struct FeldDecl {
 #[derive(Debug, Clone)]
 pub struct FeldTy {
     pub typ: TypExpr,
-    /// `embeds [ hoch : tief ] [ scale konst ]` -- ein Zeiger, der zugleich Bitfeld ist.
+    /// `embeds [ hi : lo ] [ scale const ]` -- a pointer that is also a bitfield.
     pub embeds: Option<(u128, u128)>,
     pub scale: Option<Expr>,
 }
@@ -329,7 +329,7 @@ pub struct Parameter {
 }
 
 // ---------------------------------------------------------------------------------------
-// 4. Ausdruecke
+// 4. Expressions
 // ---------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
@@ -347,9 +347,9 @@ pub enum ExprArt {
     Ruf(Ruf),
     Klammer(Box<Expr>),
     Eingebaut(Box<Eingebaut>),
-    /// `old(place)` -- Ausdruck, nicht Praedikat; nur in `ensures`.
+    /// `old(place)` -- expression, not predicate; only in `ensures`.
     Alt(Ort),
-    /// `result` -- der Rueckgabewert in `ensures`.
+    /// `result` -- the return value in `ensures`.
     Ergebnis,
     Unaer(UnOp, Box<Expr>),
     Binaer(BinOp, Box<Expr>, Box<Expr>),
@@ -406,7 +406,7 @@ pub struct Ort {
 }
 
 impl Ort {
-    /// Der Ort, wie er in der Quelle stand -- fuer Manifest und Absagen.
+    /// The place as it stood in the source -- for the manifest and for refusals.
     pub fn text(&self) -> String {
         let mut s = self.basis.text.clone();
         for suffix in &self.suffixe {
@@ -419,7 +419,7 @@ impl Ort {
                     s.push_str("->");
                     s.push_str(&i.text);
                 }
-                // Der Index ist ein Ausdruck; das Manifest nennt die Stelle, nicht den Wert.
+                // The index is an expression; the manifest names the site, not the value.
                 OrtSuffix::Index(_) => s.push_str("[…]"),
             }
         }
@@ -437,7 +437,7 @@ pub enum OrtSuffix {
     Ueber(Ident),
 }
 
-/// `call = path "(" [ arglist ] ")"` -- syntaktisch dieselbe Form wie `cast`.
+/// `call = path "(" [ arglist ] ")"` -- syntactically the same form as `cast`.
 #[derive(Debug, Clone)]
 pub struct Ruf {
     pub pfad: Pfad,
@@ -462,7 +462,7 @@ pub enum TypOderOrt {
 }
 
 // ---------------------------------------------------------------------------------------
-// 5. Praedikate -- hier liegt die Linie
+// 5. Predicates -- this is where the line runs
 // ---------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
@@ -473,7 +473,7 @@ pub struct Pred {
 
 #[derive(Debug, Clone)]
 pub enum PredArt {
-    /// Ein `cmpexpr` als Atom.
+    /// A `cmpexpr` as an atom.
     Vergleich(Expr),
     Quantor(Box<Quantor>),
     /// `expr in domain`
@@ -484,11 +484,11 @@ pub enum PredArt {
         nach: Ort,
         via: Ident,
     },
-    /// `Held(L)` bzw. `Held(L, shared)` -- **der Sperrzeuge MIT seiner Staerke.**
+    /// `Held(L)` resp. `Held(L, shared)` -- **the lock witness WITH its strength.**
     ///
-    /// Bis 2026-08-15 war das ein gewoehnlicher Aufruf im Praedikat und trug keine
-    /// Staerke; damit war `requires Held-shared` nicht schreibbar, und die Zwischenregel
-    /// `H005` musste JEDEN Zeugen unter geteilter Nahme sperren.
+    /// Until 2026-08-15 this was an ordinary call inside the predicate and carried no
+    /// strength; `requires Held-shared` was therefore unwritable, and the interim rule
+    /// `H005` had to bar EVERY witness under shared acquisition.
     Held {
         sperre: Ident,
         geteilt: bool,
@@ -498,7 +498,7 @@ pub enum PredArt {
     Nicht(Box<Pred>),
     Und(Box<Pred>, Box<Pred>),
     Oder(Box<Pred>, Box<Pred>),
-    /// `=>` -- Implikation.
+    /// `=>` -- implication.
     Folgt(Box<Pred>, Box<Pred>),
 }
 
@@ -516,18 +516,17 @@ pub enum QuantorArt {
     Existiert,
 }
 
-/// Die acht Domaenen. **Geschlossen** -- es gibt keine benutzerdefinierte.
+/// The eight domains. **Closed** -- there is no user-defined one.
 #[derive(Debug, Clone)]
 pub enum Domaene {
     SlotsVon(Ort),
     KetteIn { a: Ident, b: Ident, ort: Ort },
     NachfahrenVon(Ort),
-    /// `ancestors of <place>` -- **dieselbe Kante, andere Richtung.**
+    /// `ancestors of <place>` -- **the same edge, the other direction.**
     ///
-    /// Gemessen («B41», B3-Sweep): vier Ruempfe in DMAR/PCIe laufen die Geraetetopologie
-    /// AUFWAERTS (`cur = topo[cur].parent`). Abwaerts war es eine Domaene, aufwaerts keine --
-    /// und damit fielen 226 der 584 nicht traversierbaren Zeilen in einen Bereich, den
-    /// niemand verdaechtigt hatte.
+    /// Measured («B41», B3 sweep): four bodies in DMAR/PCIe walk the device topology
+    /// UPWARDS (`cur = topo[cur].parent`). Downwards it was a domain, upwards it was none --
+    /// and so 226 of the 584 non-traversable lines fell into an area nobody had suspected.
     VorfahrenVon(Ort),
     Schlange(Ort),
     FelderVon(Pfad),
@@ -553,7 +552,7 @@ impl Domaene {
 }
 
 // ---------------------------------------------------------------------------------------
-// 6. Funktionen und Vertraege
+// 6. Functions and contracts
 // ---------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
@@ -566,8 +565,8 @@ pub struct FnDecl {
     pub requires: Vec<Pred>,
     pub ensures: Vec<Pred>,
     pub maintains: Vec<Ident>,
-    /// `None` heisst: die Klausel fehlt. Das ist ein Fehler ausser bei `spec fn`
-    /// -- `effects` ist nicht fail-open.
+    /// `None` means: the clause is missing. That is an error except for `spec fn`
+    /// -- `effects` is not fail-open.
     pub effects: Option<Wirkungen>,
     pub costs: Option<Expr>,
     pub by: Vec<Induktion>,
@@ -604,9 +603,9 @@ impl FnKlasse {
 #[derive(Debug, Clone)]
 pub enum FnRumpf {
     Block(Block),
-    /// `= pred ;` -- nur fuer `spec fn`.
+    /// `= pred ;` -- only for `spec fn`.
     Pred(Pred),
-    /// `;` -- Deklaration ohne Rumpf.
+    /// `;` -- declaration without a body.
     Keiner,
 }
 
@@ -627,8 +626,8 @@ pub enum WirkungArt {
     Liest(Ort),
     Schreibt(Ort),
     Sperrt(Ort),
-    /// `locks shared N` -- **geteilte Nahme.** Erlaubt Lesen der geschuetzten Plaetze,
-    /// verbietet Schreiben; mechanisch gegen `protects` pruefbar.
+    /// `locks shared N` -- **shared acquisition.** Permits reading the protected places,
+    /// forbids writing; mechanically checkable against `protects`.
     SperrtGeteilt(Ort),
     Maskiert(Ident),
     Belegt(Ident),
@@ -639,7 +638,7 @@ pub enum WirkungArt {
 }
 
 impl WirkungArt {
-    /// Wirkung samt Gegenstand: `writes c.slots`, nicht bloss `writes`.
+    /// Effect together with its subject: `writes c.slots`, not merely `writes`.
     pub fn text(&self) -> String {
         match self {
             WirkungArt::Liest(o) => format!("reads {}", o.text()),
@@ -671,7 +670,7 @@ impl WirkungArt {
     }
 }
 
-/// `induct = "induction" "over" domain` -- **nennt** das erzeugte Schema, beweist nicht.
+/// `induct = "induction" "over" domain` -- **names** the generated scheme, proves nothing.
 #[derive(Debug, Clone)]
 pub struct Induktion {
     pub domaene: Domaene,
@@ -679,7 +678,7 @@ pub struct Induktion {
 }
 
 // ---------------------------------------------------------------------------------------
-// 7./8. Anweisungen und Schleifen
+// 7./8. Statements and loops
 // ---------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
@@ -697,7 +696,7 @@ pub struct Stmt {
 #[derive(Debug, Clone)]
 pub enum StmtArt {
     Let(LetStmt),
-    /// `let ident = call else (ident) block` -- die einzige Fehlerfortpflanzung.
+    /// `let ident = call else (ident) block` -- the only error propagation.
     LetSonst(LetSonst),
     Zuweisung(Zuweisung),
     Wenn(WennStmt),
@@ -755,7 +754,7 @@ pub enum ZuwOp {
 
 #[derive(Debug, Clone)]
 pub struct WennStmt {
-    /// Die Bedingung und ihr Block; weitere Eintraege sind `else if`.
+    /// The condition and its block; further entries are `else if`.
     pub zweige: Vec<(Expr, Block)>,
     pub sonst: Option<Block>,
 }
@@ -790,8 +789,8 @@ pub struct NarrowStmt {
 #[derive(Debug, Clone)]
 pub struct SperrtStmt {
     pub sperre: Ort,
-    /// `locks shared N { … }` -- die geteilte Nahme. **Der heisse Pfad eines Kernels nimmt
-    /// so**: die Cap-Aufloesung liest nur (MESSUNGEN.md, Papiertest: 33 gegen 44).
+    /// `locks shared N { … }` -- shared acquisition. **The hot path of a kernel takes it
+    /// this way**: capability resolution only reads (MESSUNGEN.md, paper test: 33 against 44).
     pub geteilt: bool,
     pub rumpf: Block,
 }
@@ -803,7 +802,7 @@ pub struct PublishStmt {
     pub nutzlast: Nutzlast,
 }
 
-/// `publishes ( placelist | "nothing" )` -- `nothing` ist ein Wort, kein leeres Listenloch.
+/// `publishes ( placelist | "nothing" )` -- `nothing` is a word, not an empty list hole.
 #[derive(Debug, Clone)]
 pub enum Nutzlast {
     Orte(Vec<Ort>),
@@ -828,7 +827,7 @@ pub struct ExchangeStmt {
 
 #[derive(Debug, Clone)]
 pub enum XForm {
-    /// `update(ident) block` -- der Rumpf rechnet alt -> neu.
+    /// `update(ident) block` -- the body computes old -> new.
     Update { binder: Ident, rumpf: Block },
     /// `expr when pred returns ident` -- compare-exchange.
     Vergleich {
@@ -888,20 +887,20 @@ pub struct Forever {
 }
 
 // ---------------------------------------------------------------------------------------
-// 9. Tabellen, Traversierungen, Formate
+// 9. Tables, traversals, formats
 // ---------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub struct Tabelle {
     pub name: Ident,
-    /// `count N` -- die Zahl der Slots. **Ohne sie hat `index into T` keine Obergrenze aus
-    /// der Deklaration**, und „kein ungeprueftes Indizieren" ruht auf der Konvention, dass
-    /// jemand von Hand einen passenden Indextyp gewaehlt hat (Befund G8).
+    /// `count N` -- the number of slots. **Without it `index into T` has no upper bound from
+    /// the declaration**, and "no unchecked indexing" rests on the convention that someone
+    /// picked a fitting index type by hand (finding G8).
     pub kapazitaet: Option<Expr>,
     pub konstanten: Vec<KonstDecl>,
     pub slot: Option<SlotDecl>,
     pub invarianten: Vec<Invariante>,
-    /// `ops identlist ;` -- die **erzeugten** Mutationen.
+    /// `ops identlist ;` -- the **generated** mutations.
     pub ops: Vec<Ident>,
     pub span: Span,
 }
@@ -916,8 +915,8 @@ pub struct SlotDecl {
 pub struct SlotFeld {
     pub name: Ident,
     pub typ: SlotTyp,
-    /// **`by ops`** — dieses Feld schreiben nur die erzeugten Operationen der Tabelle.
-    /// Die K-Bedingung wird damit von einer Pruefvorschrift zu einer Grammatikeigenschaft.
+    /// **`by ops`** -- only the table's generated operations write this field. The K
+    /// condition thereby turns from a checking rule into a property of the grammar.
     pub nur_ops: bool,
     pub span: Span,
 }
@@ -996,7 +995,7 @@ pub struct StateDecl {
 }
 
 // ---------------------------------------------------------------------------------------
-// 10. Geraete
+// 10. Devices
 // ---------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
@@ -1032,9 +1031,9 @@ pub struct Bank {
 pub struct RegDecl {
     pub name: Ident,
     pub typ: IntTy,
-    /// **«B32»:** der Umlauf ist am Register AUSGESPROCHEN, nicht geduldet. Er gilt dann
-    /// fuer jede Rechnung auf diesem Register -- die staerkere Form, weil sie an der
-    /// Deklaration steht und nicht an der einen Rechnung, an die jemand gedacht hat.
+    /// **«B32»:** the wraparound is SPOKEN at the register, not tolerated. It then holds for
+    /// every computation on that register -- the stronger form, because it sits at the
+    /// declaration and not at the one computation somebody thought of.
     pub umlaufend: bool,
     pub versatz: Expr,
     pub klasse: RegKlasse,
@@ -1048,16 +1047,16 @@ pub enum RegKlasse {
     Lesen,
     Schreiben,
     LesenSchreiben,
-    /// `w1c` -- Schreiben einer Eins loescht.
+    /// `w1c` -- writing a one clears.
     W1c,
-    /// `rc` -- Lesen loescht.
+    /// `rc` -- reading clears.
     Rc,
 }
 
 #[derive(Debug, Clone)]
 pub struct Uebergang {
     pub name: Ident,
-    /// `transset` -- MEHRERE Orte in EINEM Zug.
+    /// `transset` -- SEVERAL places in ONE move.
     pub schritte: Vec<OrtSchritt>,
     pub requires: Option<Pred>,
     pub effects: Option<Wirkungen>,
@@ -1073,7 +1072,7 @@ pub struct OrtSchritt {
 }
 
 // ---------------------------------------------------------------------------------------
-// 11. Nebenlaeufigkeit
+// 11. Concurrency
 // ---------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
@@ -1081,9 +1080,9 @@ pub struct AtomicDecl {
     pub oeffentlich: bool,
     pub name: Ident,
     pub typ: TypExpr,
-    /// Die **Obermenge** der Nutzlast an der Deklaration (SPRACHE.md §11.3). Die Pflicht sitzt
-    /// am Store; diese Angabe ist freiwillig und wird gegen jede Store-Nutzlast geprueft.
-    /// Sie steht heute **nicht** in der EBNF -- s. Absage `P031`.
+    /// The **superset** of the payload at the declaration (SPRACHE.md §11.3). The obligation
+    /// sits at the store; this entry is voluntary and is checked against every store payload.
+    /// It is **not** in the EBNF today -- see refusal `P031`.
     pub obermenge: Option<Nutzlast>,
     pub ordnung: Option<Ordnung>,
     pub span: Span,
@@ -1097,25 +1096,25 @@ pub enum Ordnung {
     Relaxed,
 }
 
-/// **`group N over { A, B };` -- der Traegerverbund.**
+/// **`group N over { A, B };` -- the carrier group.**
 ///
-/// Der gemessene Bedarf steht im SWEEP der Verbindungs-Invarianten (`MESSUNGEN.md`,
-/// 2026-08-16): vier Invarianten zwischen je zwei Traegern, und **eine davon (V4) laeuft
-/// ueber zwei Kisten mit zwei Sperren.** Was eine einzelne Tabelle nicht ausdruecken kann:
-/// *„der Zaehler in A entspricht der Zahl der Verweise in B"* -- keine `table`-Invariante
-/// kann das, weil sie nur ueber ihrem eigenen Traeger quantifiziert.
+/// The measured need is in the SWEEP der Verbindungs-Invarianten (`MESSUNGEN.md`,
+/// 2026-08-16): four invariants between two carriers each, and **one of them (V4) runs across
+/// two crates with two locks.** What a single table cannot express: *"the counter in A equals
+/// the number of references in B"* -- no `table` invariant can say it, because it quantifies
+/// only over its own carrier.
 ///
-/// **Die Sperrordnung wird NICHT erneut deklariert.** Sie steht schon: jeder Traeger liegt
-/// unter einer `lock … protects { … } rank N`, und die Raenge geben die Ordnung. Eine zweite
-/// Deklaration waere eine zweite Wahrheit ueber dieselbe Sache.
+/// **The lock order is NOT declared again.** It already stands: every carrier lies under a
+/// `lock … protects { … } rank N`, and the ranks give the order. A second declaration would be
+/// a second truth about the same thing.
 #[derive(Debug, Clone)]
 pub struct GruppeDecl {
     pub name: Ident,
-    /// Die Traeger. **Mindestens zwei** -- eine Gruppe mit einem Mitglied ist eine Tabelle.
+    /// The carriers. **At least two** -- a group with one member is a table.
     pub traeger: Vec<Ident>,
-    /// **Die Verbindungs-Invarianten.** Der Grund, warum es die Gruppe gibt: eine Aussage,
-    /// die ueber MEHREREN Traegern quantifiziert und die deshalb an keiner einzelnen
-    /// `table … invariant` stehen kann.
+    /// **The connecting invariants.** The reason the group exists: a statement that
+    /// quantifies over SEVERAL carriers and therefore cannot sit on any single
+    /// `table … invariant`.
     pub invarianten: Vec<Invariante>,
     pub span: Span,
 }
@@ -1125,12 +1124,12 @@ pub struct LockDecl {
     pub name: Ident,
     pub schuetzt: Vec<Ort>,
     pub rang: Expr,
-    /// `held <= constexpr ops` -- ohne sie ist die Sperre in Dienstschleifen nicht nehmbar.
+    /// `held <= constexpr ops` -- without it the lock cannot be taken in service loops.
     pub haltezeit: Option<Expr>,
-    /// `shared held <= constexpr ops` -- **der eigene Zweig fuer Leser-Schreiber-Sperren.**
-    /// `held` ist fuer EXKLUSIVE Halter gedacht; auf der geteilten Seite ist die
-    /// Rechengroesse eine andere, und ohne diese Zahl hat die Latenzaussage aus §9.3 fuer
-    /// eine geteilt genommene Sperre keinen Zweig (MESSUNGEN.md, Nebenbefund N3).
+    /// `shared held <= constexpr ops` -- **the separate branch for reader-writer locks.**
+    /// `held` is meant for EXCLUSIVE holders; on the shared side the quantity computed is a
+    /// different one, and without this number the latency statement of §9.3 has no branch for
+    /// a lock taken shared (MESSUNGEN.md, side finding N3).
     pub geteilte_haltezeit: Option<Expr>,
     pub maskiert: Option<Ident>,
     pub span: Span,
@@ -1154,7 +1153,7 @@ pub enum MergeOp {
 }
 
 // ---------------------------------------------------------------------------------------
-// 12. Hardwareannahmen und Axiome
+// 12. Hardware assumptions and axioms
 // ---------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
@@ -1169,8 +1168,8 @@ pub struct Assume {
 pub struct Axiom {
     pub name: Ident,
     pub parameter: Vec<Parameter>,
-    /// **G2.** `axiom rdtscp() -> u64 requires Has(RDTSCP) …` war bis 2026-08-15 nicht
-    /// schreibbar. Betrifft die Axiomschicht, also den groessten unbewiesenen Posten.
+    /// **G2.** `axiom rdtscp() -> u64 requires Has(RDTSCP) …` was unwritable until
+    /// 2026-08-15. Concerns the axiom layer, i.e. the largest unproven item.
     pub rueckgabe: Option<TypExpr>,
     pub requires: Vec<Pred>,
     pub effects: Wirkungen,
@@ -1178,8 +1177,8 @@ pub struct Axiom {
     pub span: Span,
 }
 
-/// Drei Klassen, und die dritte gibt es syntaktisch nicht: *nicht gefahren* ist die
-/// **Abwesenheit beider Angaben** und damit ein Uebersetzungsfehler.
+/// Three classes, and the third does not exist syntactically: *not run* is the **absence of
+/// both entries** and therefore a compile error.
 #[derive(Debug, Clone)]
 pub enum AnnahmeKlasse {
     Falsifizierbar(Ident),
@@ -1203,7 +1202,7 @@ pub struct Check {
 }
 
 // ---------------------------------------------------------------------------------------
-// 14. Eintritt und Boot
+// 14. Entry and boot
 // ---------------------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
