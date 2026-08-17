@@ -5263,3 +5263,147 @@ the old count was at the coarse granularity the `delete_leaf` re-count already r
 * An obligation count is not a proof-step count. *Both are legitimate, they answer different
   questions, and the folder's question — what is left for the human? — is answered by the
   obligation count.*
+
+
+---
+
+# RESULT — NEUZUWEISUNG: **238 obligations, gate MISSED at H = 36**
+
+**Newly assigned 2026-08-17, not reconstructed.** The full list with `file:line` per obligation
+stands in [`PFLICHTEN.md`](PFLICHTEN.md) — *this section carries the protocol, the gate and the
+findings; the list is the source list W7 demands.*
+
+| | | |
+|---|---:|---|
+| Obligations in total | **238** | 228 anchored at a line + 10 lowering |
+| **Plumbing (K)** | **173** | 73 % |
+| **Logic (L)** | **65** | 27 % |
+| **hanging** | **50** | of which **36 K** |
+| disputed | **1** | 0,4 % — the gate allowed up to 10 % |
+
+## Gate: **MISSED.** `H = 36` against a bar of 0
+
+`BEWEIS.md` fixes the abort condition as *"a **named** plumbing obligation remains that the
+programmer has to discharge by hand"*. **Thirty-six of them are now named**, each with fragment,
+line, statement and gap ([`PFLICHTEN.md`](PFLICHTEN.md), *The 36 hanging plumbing obligations*).
+
+**The run is valid:** the enumeration did not abort, one row of 238 is disputed, and the R14
+calibration was repaired before the count (below). *Missed is not invalid — the number is
+usable.*
+
+## R14 — the calibration failed as pre-registered, and the repair is booked
+
+The rule of the VORAB was applied to `delete_leaf` first. **It did not find the published
+eleven.** Three gaps, all in the rule, none in the answer:
+
+| | what was missing | why it is principled |
+|---|---|---|
+| 1 | `costs`, `effects`, `touches`, `where`, `bounded`, `on_exceeded`, `floor`, `claim` were not in event **A** | they are declared clauses. A plain bug |
+| 2 | **the call** — `unlink(c, s)` triggers the callee's precondition | published obligations 2 and 3 sit exactly there → new event **I** |
+| 3 | **the branch** — `Memory(m) => { free_region(a, m); }` | published obligations 6–9 and 11 sit exactly there → new event **J** |
+
+After the repair the aid finds **11 of 11** published statements at their Gabbro anchor.
+
+> **A rule pulled into shape after seeing the result would be an R2 breach; a rule calibrated
+> against a published result before the run is R14.** All three additions are general — a
+> precondition at a call site and a state-changing branch generate obligations in any program
+> logic, not only in this one.
+
+## The prediction: **right on the counts, wrong on the ratio**
+
+| predicted | measured | |
+|---|---|---|
+| far above 74 in total | **238** | 3,2 × — holds |
+| far above 17 in L | **65** | 3,8 × — holds |
+| — | **L : K = 0,38 : 1** | against the old **0,30 : 1** — **near** |
+
+**The ratio nearly reproduced across a threefold change of granularity**, and that was not
+predicted. The plausible cause is dull rather than deep: the same dividing line over the same
+corpus scales both columns roughly together. *It is booked because it was not predicted, not
+because it is proved.*
+
+## THE FINDING — the same function, the same criterion, and the ratio flips
+
+`delete_leaf` was broken down on 2026-08-15 over the **Rust** original: **4 K / 7 L = 1,75 : 1**,
+and the folder booked that as *"the plumbing is the minority"*. Over the **Gabbro** fragment the
+same criterion gives:
+
+```
+Rust original    4 K  /  7 L   =  1,75 : 1
+Gabbro fragment 13 K  /  8 L   =  0,62 : 1
+```
+
+**All eleven Rust obligations are still there.** What changed is that the Gabbro version carries
+**nine more plumbing obligations** — `Held(CAPS)`, `Held(MEM)`, `<= 200 ops`, the `effects` line,
+the `own` threading, the second index, two call preconditions.
+
+> **Gabbro does not create those obligations. It writes them down.** They were true of the Rust
+> function too — unwritten, unchecked and therefore uncounted. **R18 in its purest form, and it
+> is hitting the folder's own headline metric:** the language makes plumbing visible, and the
+> metric punishes it for that.
+
+## What follows: the ratio is the wrong statistic
+
+`BEWEIS.md` says *"2 : 1 of pure logic is a success. 0,5 : 1 with hand-written range checks is
+not."* **The ratio cannot tell those two apart** — `Held(CAPS)` and a hand-written `narrow` both
+count as one K.
+
+**The third column can.** *Who discharges it* separates a plumbing obligation with a refusal code
+beside it from one the human has to write out:
+
+| | | |
+|---|---:|---|
+| K, carried by construction | **137** | 79 % of all plumbing |
+| **K, hanging — H** | **36** | 21 % |
+
+> **H is the measurand, not L : K.** A language that carries more plumbing explicitly gets a
+> *worse* ratio and a *better* H — and only the second is the direction the thesis claims. *The
+> number turns from the goal into the diagnosis, and this run says which number.*
+
+## The `narrow` count and H are the same quantity
+
+Three of the 36 are hand-written `narrow … else`. The folder counts those separately
+(`zaehle-bereichspflichten.py`, bar of 24) **under a different name and against a different
+bar.** They are the overflow class of H.
+
+**And the three are not equal, which neither measurement sees today:**
+
+| Site | else branch | |
+|---|---|---|
+| `FRAGMENTE.md`:1660 (F10) | **reachable** — a hostile DTB takes it | a real check |
+| `FRAGMENTE.md`:1100 (F6) | **cannot be taken**, and must stand there anyway | a ritual — the bound falls out of the domain, M1 does not see it |
+| `FRAGMENTE.md`:268 (F1) | reachable only if the bookkeeping invariant is already broken | the second net, deliberately |
+
+*A `narrow` whose else branch is unreachable is a different finding from one that catches an
+attack. The bar of 24 counts them the same.*
+
+## The largest single cause is the lowering — 10 of 36
+
+**One per fragment, and all ten hang.** The emitter of 2026-08-17 lowers
+`beispiele/16-by-ops-am-feld.gab` — **an example, not a fragment** — and `C001` refuses for every
+form these ten need. *That is the honest connection to yesterday's work: the differential test
+showed one lowering holds for one file; refinement is a statement about every lowering, and
+against this corpus it stands at zero of ten.*
+
+## Two further findings from the assignment
+
+**The old "1 logic obligation not formulable at all" is now two, and both are in F1's `table`
+body:** «B13» `refcount == count(s in slots : s.object == o)` — no aggregation, no cross-table
+domain — and «B14» the mutuality of the sibling chain — `pred` cannot resolve an
+`option index into`. **Both are L, not K**, so they do not enter H; they are the human's work
+that the language cannot even let him write down.
+
+**F6 is the worst-carried fragment and F3 the most logic-heavy.** The test scaffold has 21 K
+against 5 L with **7 hanging K** — measuring apparatus is almost pure plumbing, and Gabbro
+carries the least of it. F3 is the only fragment with L ≥ K (13/13), and it is one of the two
+that *do not fit*. *The fragment that says most about the subject is the one the grammar
+serves worst.*
+
+## What this number does NOT say
+
+* **The ten fragments were chosen by their difficulty, not at random.** No extrapolation to the
+  core is carried as a measured value.
+* **238 obligations are not 238 proofs.** 137 of them have a refusal code beside them and cost
+  the human a declaration, not an argument.
+* **Newly assigned, not reconstructed.** The 74 is replaced. The old count and this one are not
+  convertible, and the old one can no longer be evidenced.
