@@ -6408,7 +6408,7 @@ Variable, und keine Regel verbindet sie mit der Domäne, über der ihre Schleife
 
 # K100.3 — und der Ertrag ist eine BERICHTIGUNG, kein Bau
 
-**`./pruefe-notation.py` — 6 von 8 geschlossen.** Von den sieben Notationslücken, die
+**`./pruefe-notation.py` — 6 von 8 geschlossen** *(Stand dieses Abschnitts; seit «B22», «B14b» und «B7» sind es **8 von 8**)*. Von den sieben Notationslücken, die
 `PFLICHTEN.md` als hängende Klempnereipflichten führte, waren **fünf bereits zu**, bevor ich
 eine Zeile schrieb.
 
@@ -6480,3 +6480,132 @@ dann schon falsch ist.
 **Die Schablone dafür ist bezahlt** (`beweise/Verbund_Konstruktor.thy`, 2026-08-17). *Was
 fehlt, ist nicht der Beweis und nicht der Code — es ist die Entscheidung, wie die Grammatik
 eindeutig bleibt.*
+
+---
+
+# «B7» geschlossen — und die Entscheidung ist teurer als der Code
+
+**Der Befund las sich als Notationslücke:** *„`return Completion { id: …, len: … }` is not
+writable"* — keine Produktion für ein Verbundliteral. Er war keine.
+
+```
+Stellen im Korpus, an denen ein `{` direkt auf einen Ausdruck folgt:  76
+```
+
+`if x {` · `match a {` · `traverse i over d {` · `retry … until p {` · `locks S {`.
+
+> **Bis heute war das eindeutig, weil KEINE Ausdrucksform je mit `{` weiterging.** Ein
+> geschweiftes Literal wäre die erste — und damit ist `if x { … }` nicht mehr entscheidbar,
+> ohne dass der Parser weiß, wo er steht.
+
+Rust löst das mit einem Kontextschalter (*„hier kein Verbundliteral"*). Gabbros Parser hat
+keinen. **Und der Fehlerfall ist still:** wer ihn falsch setzt, verliest die 76 Stellen — sie
+parsen weiter, nur anders. Kein Tor meldet das, weil jedes Tor auf einem Baum steht, der dann
+schon falsch ist.
+
+## Die Antwort stand seit dem 2026-08-14 im Ordner, ohne dass sie als Antwort gelesen wurde
+
+Die Befundtabelle hatte sie selbst notiert: **„The parameter list of a declaration IS its
+constructor."** Genau das war am 2026-08-14 für `device` gebaut worden (`Vtd(basis)`).
+
+**Die Felderliste eines `type` ist dasselbe, über Felder gesagt** — und ein Ruf ist ohne
+Kontext eindeutig, weil er in Klammern steht.
+
+```gabbro
+type Completion = { id : u32, len : u32, };
+
+return Completion(id: k, len: n);
+```
+
+Der Preis ist ein Zeichen. Der Gewinn ist eine Grammatik, die eindeutig bleibt, **ohne zu
+wissen, wo sie steht.**
+
+## Die Marken sind Pflicht, und das ist der zweite Teil der Entscheidung
+
+`Completion` hat zwei `u32`-Felder. **Eine Reihung `Completion(k, n)` ließe sich vertauschen,
+ohne dass ein Typ dagegen spricht** — der Feldname ist die einzige Unterscheidung.
+
+Und damit fällt `M106` mit der am selben Tag bewiesenen Schablone zusammen:
+
+```
+deckt fs zs  ⟷  map fst zs = fs          (beweise/Verbund_Konstruktor.thy)
+```
+
+Der Beweis wählt die **Reihenfolgefassung** ausdrücklich gegen `set (map fst zs) = set fs` —
+*eine Zuordnung, die nur die Menge trifft, sieht beim Leser aus wie die Deklaration und ist es
+nicht.* Diese Zeile im Prüfer ist genau dieser Vergleich, und die Mutation
+`verbundmarken-nur-als-menge` beschädigt genau ihn.
+
+> **Der Beweis führt unter M-2 seine eigene Grenze:** *„nicht gezeigt ist, dass der ERZEUGER
+> `deckt` herstellt."* **Das ist jetzt gebaut, und es hat seine Sprechprobe** — die Grenze war
+> vorher benannt, nicht bloß nachträglich gefunden.
+
+## Der syntaktische Unterscheider — und warum er nicht nachschlägt
+
+Drei Pässe müssen einen Konstruktor anders behandeln als einen Aufruf. Sie fragen `marken`,
+nicht eine Karte:
+
+| Pass | was er tut | was ein Nachschlagen ins Leere gekostet hätte |
+|---|---|---|
+| **Aufrufgraph** | keine Kante | `P` wäre ein **unbekannter Gerufener**, und jede Hülle darüber nur noch eine untere Schranke (`E009`) |
+| **Kosten** | ein Speichern je Feld | `K003` — eine Zahl über Unbekanntem. *Ein Konstruktor kann keine `costs`-Klausel bekommen: er hat keine Deklaration, an die sie sich schreiben ließe* |
+| **Erzeuger** | `(P){ .a = …, .b = … }` | ein positionelles Literal hätte dieselben Bits erzeugt und die eine Eigenschaft verloren, um derentwillen die Marken Pflicht sind |
+
+*Ein Nachschlagen, das ins Leere geht, ist der stille Fall.* Die Marken stehen im Baum.
+
+## Der Wächter ist zweiseitig, und ohne die zweite Hälfte wäre die erste wertlos
+
+Eine Lücke schließt sich immer, indem man die Form zulässt. **Was hier zählt, ist die
+Entscheidung dagegen** — und die kennt jetzt ein Werkzeug:
+
+```
+== 8 von 8 geschlossen ==
+== Gegenprobe: 6 von 6 Formen abgesagt, wie entschieden ==
+```
+
+Je Gegenprobe eine Form, die es nicht geben soll, mit dem Absagecode, den sie auslösen **muss**:
+`P { a: 1 }` → `P037` · `P(1, 2)` → `M107` · `P(b: …, a: …)` → `M106` · `P(a: 1)` → `M106` ·
+`g(x: 1)` → `M107` · `P(a: 1, 2)` → `P036`.
+
+> *Eine Entscheidung, die kein Wächter kennt, ist eine Meinung.*
+
+## Nebenbefund: der Erzeuger hielt jede Basis für einen Zeiger
+
+`ort` senkte einen Feldzugriff auf `->` ab, mit dem Kommentar *„the base of a place in a
+function is a pointer parameter"*. **Das war wahr, solange jeder zusammengesetzte Wert von
+außen kam.** `let c : Completion` ist der erste, der es nicht ist.
+
+*Der Fall fällt bei `cc` und nicht still* — `->` auf einem Wert ist dort ein Übersetzungsfehler.
+Trotzdem gehört er hier entschieden: **eine Weigerung, auf die man baut, ist eine Zusage.**
+
+## Und die Zahl war nicht mehr aus ihrer Quelle ableitbar
+
+Beim Nachtragen der geschlossenen Zeilen fiel auf: **sechs Zeilen in `PFLICHTEN.md` standen
+noch als `gap:` da, die in den Summen längst geschlossen waren** — zwei von K100.1 nach Logik
+umgebucht, drei von K100.2 in die Axiomschicht, eine durch «B22».
+
+> **W7 sagt: eine Zahl ohne Suchweg gehört nicht in den Ordner.** *Eine Zahl, deren Suchweg ihr
+> widerspricht, ist schlimmer — sie sieht belegt aus.*
+
+`./zaehle-pflichten.py --haengend` liest sie jetzt ab statt sie fortzuschreiben:
+
+```
+  verankert        14
+  Absenkung         7
+  H                21
+```
+
+**Und eine zweite Unstimmigkeit bleibt offen stehen, statt geglättet zu werden:** die Spalte
+*„of which K"* der Fragmenttabelle summiert sich zu **33**, die Summenzeile sagt **18**. Beide
+können nicht stimmen; bis die Herkunft jeder Zahl geklärt ist, ist die Spalte Urteil und nicht
+Messung.
+
+## Stand
+
+| | |
+|---|---|
+| **Notation** | **8 von 8** — und sechs Gegenproben halten die Entscheidung |
+| **Mutationen** | **136 von 136** · die drei neuen fangen: Marken als Menge, Konstruktor als Aufruf, Verbund ohne Marken. *Und «B7» hat den Anker von `some-ist-ein-ruf` gebrochen — das Geruest meldete `ANKER FEHLT` statt still eine niedrigere Zahl zu liefern* |
+| **Emission** | **8 Übersetzungseinheiten** — das Gift von Nr. 8 vertauscht die zwei Bestimmer |
+| **Schablonen** | 20, davon **5 bewiesen**; `verbund.konstruktor` ist **getragen** — und war **vorher** bewiesen, wie das zweite Tor es verlangt |
+| **`lebend_ungedeckt()`** | **4, unverändert** — *genau dafür stand das zweite Tor* |

@@ -718,7 +718,7 @@ MUTATIONEN = [
     Mutation(
         "some-ist-ein-ruf",
         "aufrufgraph.rs",
-        "        if n.text != \"Some\" && n.text != \"None\" {",
+        "        if n.text != \"Some\" && n.text != \"None\" && !r.ist_verbundwert() {",
         "        if true {",
         "B35 -- `Some`/`None` gelten als unbekannte Gerufene; jede option-Huelle wird untere Schranke",
     ),
@@ -1200,8 +1200,8 @@ MUTATIONEN = [
     Mutation(
         "verbund-ohne-marken-geht-durch",
         "m1.rs",
-        "            (true, false) => {",
-        "            (true, false) if false => {",
+        "        let gefunden = self.u.verbundfelder(&self.modul, &r.pfad).cloned();",
+        "        let gefunden = if r.ist_verbundwert() { self.u.verbundfelder(&self.modul, &r.pfad).cloned() } else { None };",
         "B7 -- `P(1, 2)` ohne Feldnamen faellt nicht mehr; zwei gleichtypige Felder "
         "sind vertauschbar, ohne dass ein Typ dagegen spricht",
     ),

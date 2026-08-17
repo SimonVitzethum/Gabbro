@@ -96,7 +96,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 251 ✔ | `unlink`'s precondition holds here | K | call graph, `E008` |
 | 252 ✔ | `release_slot`'s precondition holds here | K | call graph, `E008` |
 | 268 | `o.slots[obj]` in range | K | `M103` |
-| 268/271 ✔ | no underflow at `refcount -= 1` | K | **gap: `narrow … else` is a HAND-WRITTEN check.** *The folder counts these separately («B29», `zaehle-bereichspflichten.py`) — it is the same quantity.* |
+| 268/271 ✔ | no underflow at `refcount -= 1` | K | **LOGIC, rebooked K100.1 (2026-08-17).** *The folder counts these separately («B29»); the sharpened measurand asks whether the else branch can be TAKEN — here it can, and then the check is the human's business, not plumbing residue.* |
 | 273 ✔ | released exactly at zero | L | the human |
 | 277 ✔ | `Memory` — the region goes back to the RAM allocator | L | the human |
 | 278 ✔ | `Dma` — released only after proof | L | the human |
@@ -209,7 +209,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 777–779 | `drvok` | L | the human |
 | 780–782 | a reset applies from EVERY state | L | **gap: «B26» — no placeholder for the pre-state, so the transition table cannot be complete** |
 | 785–792 | `used` belongs to the device — the register class per phase | K | **gap: «B18» — `device` knows no phases. And this site carries a PAID-FOR trap: in a reused region the `used` ring holds the previous driver's end state** |
-| 796–800 | the five barriers of the real driver follow from the declaration | K | **gap: «B19» — `publishes` sits at `atomicdecl`, not at a device register. The most safety-critical publication in the tree is not an atomic at all** |
+| 796–800 | the five barriers of the real driver follow from the declaration | K | **AXIOM LAYER, rebooked K100.2 (2026-08-17)** — `assume` with a named falsifier. *What the machine guarantees and no pass can check is carried by name, not by silence (`gabbro annahmen`, 19 entries)* |
 | 802 | `dma` space, and `n >= 1` | K | `R001` + `M101` |
 | 803–817 | every ring index lies below 256 | K | `M103` |
 | 810 | the avail index wraps at 65 536 by design | K | `wrapping` at the declaration («B32», closed) |
@@ -229,7 +229,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 885–889 | the poll terminates and the overflow is NAMED | K | `S001`/`S002` — **carried unchanged, and the clause order matches the production** |
 | 886 | it ends because **the device** completes or faults | L | the human — *the borderline case the criterion decides: not "over a finite set" but "because the device makes progress"* |
 | 891 | the divisor is not zero | K | `n : u16 in 1 .. QMAX` |
-| 892–894 | a function may PRODUCE a compound | K | **gap: «B7» — no struct literal in `primary`. Here a scalar instead of the compound** |
+| 892–894 | a function may PRODUCE a compound | K | `P(a: …, b: …)` — **«B7» closed 2026-08-17.** No braced literal: it would have been the first expression form continuing with `{`, and 76 corpus sites have a `{` right after an expression. The marks are mandatory (`M106`/`M107`), because two same-typed fields in a positional list are swappable with no type objecting |
 | 895 | `q.USED_RING[s].id` in range | K | `M103` |
 
 **F4: 30 obligations — 24 K, 6 L. Hanging: 7** (six K, one L).
@@ -252,7 +252,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 983 | a revoked endpoint ends the service | L | the human |
 | 984 | the six ops are exhaustive | K | `tagged type`, `match` |
 | 985–991 | `Info` — capacity is reported and cached | L | the human |
-| 988–990 | a reply may be a compound | K | **gap: «B7» — four arguments instead of one field** |
+| 988–990 | a reply may be a compound | K | `P(a: …, b: …)` — «B7» closed 2026-08-17. *Four arguments become one record, and the field names survive into the C as designators* |
 | 992–993 | `Read`/`Write` — the request lies inside the client's range | L | the human |
 | 994–997 | `Flush` — the flush completed before the reply | L | the human |
 | 998 | `Scan` — the partition table is read or refused | L | the human |
@@ -281,15 +281,15 @@ carries and the Rust original did not — because it does not write them down.*
 | 1094 | the first untouched word marks the depth | L | the human |
 | 1094/1103 | `i * 8` does not overflow | K | `M101`/`M104` |
 | 1100 | the counter stays below 65 536 | K | **gap: the bound falls out of the domain, but M1 does not see it — the counter is an ordinary local. `narrow … else` is hand-written, and its else branch CANNOT BE TAKEN and must stand there anyway** |
-| 1106–1112 | a function may return a pair | K | **gap: «B7» + «B6» block each other — hence two functions and a double traversal** |
+| 1106–1112 | a function may return a pair | K | `P(a: …, b: …)` + `ensures result` — **both closed**; «B6» was already, «B7» on 2026-08-17. *The double traversal was the price of two gaps that met* |
 | 1113–1114 | `s.len >= 8` | K | `M101` |
 | 1115 | only the named atomics change | K | `E005`/`E010` |
 | 1121 | `s.len - frei` does not underflow | K | the callee's `ensures` — **not a flow rule. Costs one line of postcondition, no proof.** *The best-carried K in the corpus* |
-| 1126–1128 | a claim may be written precisely | K | **gap: «B22» — `claim` takes one string and `char` excludes `newline`. All three real claims are multi-line. A claim that must fit one line gets written shorter, not more precisely** |
+| 1126–1128 | a claim may be written precisely | K | adjacent string literals — **«B22» closed 2026-08-17.** *The one-line rule (`L001`) stays: a string ends on its line, and three of them become one claim* |
 | 1129–1141 | the measuring instrument reports the known depth | L | the human — **R14 as a language construct** |
 | 1142 | the calibration ran at least once | K | `floor` |
 | 1145–1158 | at the foot of every EL0 kernel stack an eighth stays untouched | L | the human |
-| 1151–1155 | an `option`-valued `place` can be unpacked | K | **gap: «B14» — `let … else` demands a `call` on the right, and an atomic is a `place`** |
+| 1151–1155 | an `option`-valued `place` can be unpacked | K | `let … else` on a `place` — **«B14b» closed 2026-08-17.** *An unpacked place calls nothing:* the call graph sees no edge, M2 consumes nothing, the cost pass counts one |
 | 1157 | `(g - f)` does not underflow | K | **gap: `f < g / N` gives `f < g` only through the division; the V rules do no arithmetic** |
 | 1159 | the measurement has a floor | K | `floor` |
 | 1160 | the check can go RED | L | `counterprobe` — **the speech test as a language construct** |
@@ -331,7 +331,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 1436 | the critical section covers resolve **and** write | K | `E006`/`H001` |
 | 1439–1442 | both exits are forced | L | `match` forces them, the correctness is the human's |
 | 1440 | `l.slots[i]` in range | K | `M103` |
-| 1447–1451 | `masks IRQ` carries the value across the lock boundary | K | **gap: «B38» — the effect exists, but it is not tied to the lock boundary. The reason already stands in the language and cannot be used. `Stale(T)` in the proposed form is REFUTED at this site** |
+| 1447–1451 | `masks IRQ` carries the value across the lock boundary | K | **AXIOM LAYER, rebooked K100.2 (2026-08-17).** *`Stale(T)` stays refuted at this site; what carries is a named assumption, not a mechanism that does not hold* |
 | 1452–1455 | `beenden` holds SCHEDS, masks IRQ, `<= 16 ops` | K | `H001`/`E006`/`K001` |
 | 1457 | `l.slots[k]` in range | K | `M103` |
 
@@ -352,7 +352,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 1536–1538 | `<= 4096 ops` | K | `K001` — 4 levels × 512 entries, **computed, not promised** |
 | 1540–1541 | the traversal terminates and visits each mapping once | K | `S001`, `by unvisited` |
 | 1543 | the leaf level is reached | L | the human |
-| 1558–1567 | **the MMU itself writes `A` and `D`** | K | **gap: «B39» — a writer no `effects` line names. The frame statement *"only what stands there changes"* is FALSE here, and not because of a checker hole but because the hardware is a participant. The honest form is `assume … falsifier …`, which puts the case in the axiom layer** |
+| 1558–1567 | **the MMU itself writes `A` and `D`** | K | **AXIOM LAYER, rebooked K100.2 (2026-08-17)** — the honest form was named in the row itself: `assume … falsifier …`. *The hardware is a participant, and the frame statement is false here, not incomplete* |
 | — | **W^X over the page table** | L | **gap: not in the fragment at all.** The 2026-08-14 report named it *"a real property falls out of all seven domains"*; F9's verdict is *"the finding is what did NOT show up"*. **Per R3 it is counted as an attempt, not as evidence** |
 
 **F9: 11 obligations — 7 K, 4 L. Hanging: 2** (one K, one L).
@@ -372,7 +372,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 1652 | `zahl` stays in 0 .. 1024 | K | `M101` |
 | 1654–1658 | the parse terminates and the overflow is NAMED | K | `S001`/`S002` |
 | 1656 | it ends because **a token is consumed** | L | the human — *the algorithm's progress measure, not the machine's finiteness* |
-| 1660 | the depth stays below 64 | K | **gap: `narrow … else` is hand-written — but here the else branch is REACHABLE (a hostile DTB). Unlike F6:1100, this one is a real check, not a ritual** |
+| 1660 | the depth stays below 64 | K | **LOGIC, rebooked K100.1 (2026-08-17)** — the row said it itself: *the else branch is REACHABLE (a hostile DTB), a real check and not a ritual.* A reachable branch is the human's business |
 | 1666 | `baum_unlesbar` diverges | K | `S002` |
 
 **F10: 11 obligations — 9 K, 2 L. Hanging: 1, K.**
@@ -412,10 +412,34 @@ carries and the Rust original did not — because it does not write them down.*
 | **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
 | **Plumbing (K)** | **171** | 72 % |
 | **Logic (L)** | **67** | 28 % |
-| **hanging** | **34** | of which **18 are K** — every one a breach of the thesis at its site. *(The run booked 50/36; five K were closed on 2026-08-17, each with its reason — see below.)* |
+| **hanging** | **34** | of which **`H = 21` are K** — **14 anchored at a line, 7 lowerings.** Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
 **L : K = 0,38 : 1.**
+
+## Die Zahl war nicht mehr aus ihrer Quelle ableitbar — nachgezogen 2026-08-17
+
+**Der Handgang unten IST der Suchweg zu `H`.** Am 2026-08-17, beim Schliessen von «B7»,
+stellte sich heraus: **sechs Zeilen standen noch als `gap:` da, die in den Summen längst
+geschlossen waren** — K100.1 buchte zwei nach *Logik* um (F1:268, F10:1660), K100.2 drei in
+die Axiomschicht (B19, B38, B39), «B22» schloss eine. *Die Summe wurde gepflegt, die Quelle
+nicht.*
+
+> **W7 sagt: eine Zahl ohne Suchweg gehört nicht in den Ordner.** Eine Zahl, deren Suchweg
+> ihr widerspricht, ist schlimmer — **sie sieht belegt aus.**
+
+Die sechs Zeilen tragen jetzt ihren Grund, und die Zahl wird nicht mehr fortgeschrieben,
+sondern **abgelesen**:
+
+```
+./zaehle-pflichten.py --haengend
+```
+
+**Und dabei fiel eine zweite Unstimmigkeit auf, die hier stehenbleibt, weil sie noch nicht
+aufgelöst ist:** die Spalte *„of which K"* der Tabelle unten summiert sich zu **33**, die
+Summenzeile sagt **18**. Beide können nicht stimmen. *Bis die Herkunft jeder einzelnen Zahl
+dieser Spalte geklärt ist, ist sie Urteil und nicht Messung* — die verlässliche Zahl ist die
+abgelesene oben.
 
 ## Per fragment
 
@@ -448,23 +472,24 @@ ausdrücklich verlangt hatte.
 | **«B26» — der Vorzustand einer `transition`** | *„ob `mirrors` auch den Vorzustand einer `transition` an `GCMD.TE` aus `GSTS.TES` bezieht, sagt `SYNTAX.md` nicht"* — **der Erzeuger beantwortet es mit ja und misst es**: `1 1 1 1`, und die zweite und vierte Zahl sind die Falle. *Die Antwort gehört jetzt in `SYNTAX.md`, nicht in den Erzeuger* |
 | **«B33» — die V-Regeln verengen keinen Registerort** | Der Ordner schrieb: *„Ob das Absicht ist (ein Register kann sich zwischen Prüfung und Rechnung ändern!) oder eine Lücke, entscheidet der Ordner. **Wenn es Absicht ist, gehört die Begründung aufgeschrieben** — sie wäre ein starkes Argument."* **Sie ist es, und sie steht jetzt im erzeugten C:** ein Registerzugriff wird `volatile`, und `volatile` IST die Aussage *„dieser Ort kann sich zwischen zwei Lesungen ändern"*. Eine Verengung wäre an dieser Stelle falsch, nicht bloß fehlend |
 
-### Offen — **31**, und die Spalte rechts sagt, wem sie gehören
+### Offen — **`H = 21`**, abgelesen mit `./zaehle-pflichten.py --haengend`, und die Spalte rechts sagt, wem sie gehören
 
 | Ursache | # | wem |
 |---|---:|---|
 | **die Absenkung** | 7 | F1–F6, F9 — davon **fünf durch Befunde gesperrt**, nicht durch Arbeit |
 | **Gerätenotation** | 5 | «B23» gemischte Registerklasse · «B24» Bitlage jenseits des Wortes (×2) · «B26» `QUEUE_SIZE` ohne benannten Ausgang · «B18» Phasen am `device` |
 | **handgeschriebenes `narrow`** | **1** | nur `F6:1100` — **der Zweig kann nicht genommen werden und muss dastehen.** *K100.1 (2026-08-17) hat die drei Stellen getrennt: F10:1660 (feindliches DTB) und F1:268 (das zweite Netz) sind **Logik**, nicht Klempnerrest* |
-| **`format`/Verbund** | 3 | «B22-nah» Absage statt Abwesenheit · **«B7» Verbundliteral (×2) — die einzige übrige Notationslücke** *(«B25» war bereits zu)* |
+| **`format`/Verbund** | 1 | «B22-nah» Absage statt Abwesenheit — *«B7» geschlossen 2026-08-17, **drei** Stellen (F4:892, F5:988, F6:1106), nicht zwei; die dritte stand unter «B6»+«B7» und beide sind jetzt zu* |
 | **die Reihenfolgezusage** | 2 | «B37» — *Linearität ist keine Ordnung* |
 | ~~«B19»~~ · ~~«B38»~~ · ~~«B39»~~ · ~~`at dma`~~ · ~~`atomic release`~~ | **0** | **K100.2: in die Axiomschicht umgebucht** (2026-08-17) — `beispiele/06-annahmen.gab`, `gabbro annahmen` meldet 19. *Keine Erledigung: eine Führung beim Namen mit einer Sonde, und zwei davon ohne* |  die sicherheitskritischste Veröffentlichung im Baum ist kein Atomic |
 | **«B21»** `accumulates` | 1 | 213 RMW-Stellen |
 | **«B38»** `masks IRQ` an der Sperrgrenze | 1 | die Wirkung existiert und ist nicht an die Grenze geknüpft |
 | **«B39»** die MMU schreibt `A`/`D` | 1 | ein Schreiber, den keine `effects`-Zeile nennt |
 | **«B27»** Registerbelegung | 1 | 168 `asm!`-Stellen ohne Träger |
-| **«B14b»** `let … else` auf einem `place` | 1 | Notation — *«B22» geschlossen 2026-08-17; «B3», «B6», «B21», «B25» waren **bereits zu**, siehe `./pruefe-notation.py`* |
+| ~~**«B14b»**~~ · ~~**«B7»**~~ | **0** | **Notation: 8 von 8 zu** (2026-08-17). «B22», «B14b», «B7» geschlossen; «B3», «B6», «B21», «B25» waren **bereits zu**. `./pruefe-notation.py` misst es am Prüfer — und hält seit «B7» sechs **Gegenproben** dagegen: je eine Form, die die Entscheidung verbietet, mit dem Absagecode, den sie auslösen muss |
 | **V-Regeln rechnen nicht** | 1 | F6:1157 — `f < g/N` liefert nicht `f < g` |
 
-> **Von den 31 sind 24 Notations- oder Befundposten der SPRACHE**, nicht des Prüfers. *Die
-> Klempnerei hängt nicht daran, dass ein Pass fehlt — sie hängt daran, dass sich sieben Dinge
-> nicht sagen lassen.*
+> **Und der Satz, der hier ein Jahr lang stand, gilt nicht mehr:** *„die Klempnerei hängt
+> nicht daran, dass ein Pass fehlt — sie hängt daran, dass sich sieben Dinge nicht sagen
+> lassen."* **Sie lassen sich jetzt alle sagen.** Was hängt, sind Gerätenotation, zwei
+> Befunde und die Absenkung — *und die Absenkung ist keine Sprachfrage, sondern Arbeit.*

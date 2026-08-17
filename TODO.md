@@ -112,24 +112,23 @@ of items that are neither code nor a run — what remains is building and measur
 - [ ] **PL.2 — die drei Saetze mit der groessten Traglast:** `K001` Summation (**hat heute schon
       einen gemessenen Fehler**), `H006` Rangordnung, V2 relationale Verengung (102 Stellen).
 - [ ] **PL.3 — die Bruecke: (c) je Satz eine Sprechprobe, die den Rust gegen das Modell faehrt.**
-      Das Geschirr steht (`mutiere-pruefer.py`, 132 von 132) -- was fehlt, ist der Satz, der
+      Das Geschirr steht (`mutiere-pruefer.py`, 136 von 136) -- was fehlt, ist der Satz, der
       sagt, WELCHE Beschaedigung fallen muss. *Aus 132 Mutationen ohne Satz werden 132 mit
       einem.*
 
-- [ ] **«B7» ist keine Notationsluecke, sondern eine GRAMMATIKMEHRDEUTIGKEIT** *(gefunden
-      2026-08-17 beim Anlauf, `verbund.konstruktor` ist bereits bewiesen)*.
-      Ein Verbundliteral heisst `P { a: 1 }` -- ein Ausdruck, der mit `{` weitergeht. **In
-      Gabbro folgt an 76 Stellen des Korpus ein `{` direkt auf einen Ausdruck**: `if x {`,
-      `match a {`, `traverse i over d {`, `retry … until p {`, `locks S {`. *Bis heute war das
-      eindeutig, weil KEINE Ausdrucksform je mit `{` weiterging.*
-      **Der Parser braucht also einen Kontextschalter** („hier kein Verbundliteral"), wie Rust
-      ihn hat -- und den gibt es nicht. Wer ihn falsch setzt, verliest den ganzen Korpus, ohne
-      dass ein Tor es meldet: **die 76 Stellen wuerden weiter parsen, nur anders.**
-      *Der Preis ist damit nicht Grammatik plus Pass, sondern eine Mehrdeutigkeitsentscheidung
-      -- und die gehoert vor die erste Zeile.*
-- [ ] **«B14b» `let … else` auf einem `place`** (ein Atomic IST ein `place`). `LetSonst` traegt
-      im AST einen `Ruf`; einen `place` zuzulassen heisst AST-Variante, Parser **und 16
-      Verbrauchsstellen** in Kosten-, Wirkungs-, Aufrufgraph-, M1- und Emissionspass.
+- [ ] **Die Spalte „of which K" in `PFLICHTEN.md` summiert sich zu 33, die Summenzeile sagt
+      18** *(gefunden 2026-08-17 beim Ablesen von `H`)*. **Beide koennen nicht stimmen.** Die
+      verlaessliche Zahl ist seither die abgelesene (`./zaehle-pflichten.py --haengend`,
+      `H = 21` = 14 verankert + 7 Absenkungen); *bis die Herkunft jeder einzelnen Zahl dieser
+      Spalte geklaert ist, ist sie Urteil und nicht Messung.* **Derselbe Vorgang hat schon
+      sechs `gap:`-Zeilen produziert, die in den Summen laengst geschlossen waren** -- die
+      Summe wurde gepflegt, die Quelle nicht.
+- [ ] **Der Erzeuger raet den Typ eines `let` nicht, obwohl er ihn ablesen koennte**
+      *(gesehen 2026-08-17 an `beispiele/21`)*. `let c : Completion = fertig(k, 7);` braucht
+      die Annotation, weil `ctyp` nur die geschriebene Form kennt -- die Signatur des
+      Gerufenen stuende daneben. **Die Weigerung (`C001`) ist die sichere Richtung**, aber sie
+      kostet an jeder Bindung eines zusammengesetzten Werts eine Zeile. *Entweder aus der
+      Signatur ablesen (kein Raten, ein Nachschlagen) oder die Zeile als Absicht aufschreiben.*
 - [ ] **K100.4 — die Verfeinerung, und der Weg ist zu waehlen:** verifizierter Erzeuger (a) oder
       **Uebersetzungsvalidierung (b)**. *Die Differenztests sind bereits die schwache Fassung von
       (b) — sie messen EIN Ergebnis statt aller.*

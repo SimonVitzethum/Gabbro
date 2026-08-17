@@ -1313,7 +1313,7 @@ Die fünf oben, jede mit `assume … falsifier <sonde>` oder `unfalsifiable "<gr
   `D`" müsste die MMU anhalten.
 * **Ertrag:** `H = 29 → 24`.
 
-### K100.3 — Die sieben Notationslücken *(24 Pflichten, der Hauptteil)*
+### K100.3 — Die acht Notationslücken *(24 Pflichten, der Hauptteil)* — **AUSGEFÜHRT**
 
 | Lücke | was fehlt | Schablone? |
 |---|---|---|
@@ -1331,6 +1331,23 @@ Die fünf oben, jede mit `assume … falsifier <sonde>` oder `unfalsifiable "<gr
 * **Tor je Lücke:** ein Giftbeispiel, das ohne das Konstrukt **fällt** — und `pruefe-wortschatz.py`
   hält die Terminalzahl gegen die Tabelle.
 * **Ertrag:** `H = 24 → 0` bei den Notationsposten. **Es bleiben die sieben Absenkungen.**
+
+> **AUSGEFÜHRT 2026-08-17. `8 von 8`, und der Ertrag kam anders als geplant.** Fünf der acht
+> waren **bereits zu** — der Plan las den eingefrorenen Befundtext, nicht die Grammatik
+> (`./pruefe-notation.py` misst jetzt am Prüfer). Gebaut wurden «B22», «B14b» und «B7».
+>
+> **«B7» war die einzige echte Entscheidung, und sie war keine Notationsfrage:** ein
+> geschweiftes Literal wäre die erste Ausdrucksform, die mit `{` weitergeht, und an 76
+> Korpusstellen folgt ein `{` direkt auf einen Ausdruck. *Der Fehlerfall eines
+> Kontextschalters ist still.* Gewählt ist der markierte Ruf `P(a: …, b: …)` — und die
+> Markenpflicht kommt aus dem Beweis, nicht aus dem Geschmack: `deckt fs zs ⟷ map fst zs = fs`.
+>
+> **Das Tor je Lücke ist erfüllt und um seine Gegenrichtung erweitert:** sechs Gegenproben,
+> je eine Form, die die Entscheidung verbietet, mit dem Absagecode, den sie auslösen muss.
+> *Eine Entscheidung, die kein Wächter kennt, ist eine Meinung.*
+>
+> **Und `L ≤ 4` hält:** `verbund.konstruktor` ist jetzt **getragen** und war **vorher**
+> bewiesen. `lebend_ungedeckt()` steht unverändert bei 4 — genau dafür stand das zweite Tor.
 
 ### K100.4 — Die Verfeinerung *(7 Pflichten, und sie ist die härteste)*
 
@@ -1406,7 +1423,7 @@ etwas anderes und viel kleineres** — und dieser Ordner hat die Form dafür sch
 **Die Regeln sind Mathematik über Bereichen, Mengen, Ordnungen und transitiven Hüllen.** Sie
 reden über keinen Rust-Wert. *Genau darum sind sie beweisbar, ohne den Prüfer anzufassen.*
 
-> **Und die zweite Zeile ist heute schon besser bewacht, als es aussieht:** `132 von 132`
+> **Und die zweite Zeile ist heute schon besser bewacht, als es aussieht:** `136 von 136`
 > Mutationen, und **null unbeschädigbare Zeilen** im Prüfer. Was fehlt, ist nicht die Umsetzung
 > — es ist der Satz, gegen den sie umgesetzt wird.
 

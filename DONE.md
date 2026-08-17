@@ -71,6 +71,7 @@ Newly collected 2026-08-15, **not reconstructed**, x86 only
 | **`shared held` (N3)** | `held` is computed for **exclusive** holders; the shared side has a computed quantity of its own | `K004` in `kosten.rs:497`, its own pot `geteilte_haltezeiten` |
 | **Lock order checked** | `rank` was declared and was **never recomputed** — and two constructs appealed to it | `H006` in `geteilt.rs`, poison 67 (descent) + 68 (tie) |
 | **`group … over { … }`** | an invariant **between** carriers has no room in any `table … invariant` — measured: V1–V4 in the existing code | `U001`–`U007` in `gruppe.rs`, `beispiele/17`, poison 63–66 |
+| **The record constructor** («B7») | a function could not **produce** a record. **And the braced literal is refused on purpose:** it would have been the first expression form continuing with `{`, and 76 corpus sites have a `{` right after an expression — *a wrongly set context flag misreads all 76 silently* | `P(a: …, b: …)`; `M106` = `deckt fs zs ⟷ map fst zs = fs` (`beweise/Verbund_Konstruktor.thy`), `M107`, `P036`, `P037`, `beispiele/21`, **six counter-probes** in `pruefe-notation.py` |
 
 ## Measurements run, with gate and outcome
 
@@ -196,5 +197,5 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**21 clean examples, 69 poison probes, 105 tests** —
+**22 clean examples, 69 poison probes, 109 tests** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`

@@ -169,5 +169,52 @@ def main():
         print("hier sorgt dafuer, dass er nichts uebersieht.")
 
 
+def haengend():
+    """**Die haengenden Klempnereipflichten, aus dem Handgang ABGELESEN statt fortgeschrieben.**
+
+    Der Handgang steht in `PFLICHTEN.md` als Tabelle: je Zeile eine Pflicht, Spalte 3 die
+    Klasse (`K`/`L`), Spalte 4 wodurch sie erledigt ist. **Eine haengende Pflicht ist eine,
+    deren vierte Spalte mit `gap:` anfaengt** -- das ist keine Auslegung, das ist die Form,
+    in der die Tabelle geschrieben wurde.
+
+    Warum das hier dazukommt: am 2026-08-17 standen SECHS Zeilen als `gap:` da, die in den
+    Summen laengst geschlossen waren (K100.1 buchte zwei nach Logik um, K100.2 drei in die
+    Axiomschicht, «B22» eine). *Die Summe wurde gepflegt, die Quelle nicht* -- und damit war
+    die Zahl nicht mehr aus ihrem Suchweg ableitbar.
+
+    > **W7 sagt es andersherum, und das ist derselbe Satz:** eine Zahl ohne Suchweg gehoert
+    > nicht in den Ordner. Eine Zahl, deren Suchweg ihr widerspricht, ist schlimmer -- sie
+    > SIEHT belegt aus.
+    """
+    import re
+    quelle = Path(__file__).parent / "dokumente" / "PFLICHTEN.md"
+    frag, offen = None, {}
+    for nr, z in enumerate(quelle.read_text(encoding="utf-8").splitlines(), 1):
+        m = re.match(r"^# (F\d+)", z)
+        if m:
+            frag = m.group(1)
+        if z.startswith("|") and "gap:" in z:
+            sp = [c.strip() for c in z.strip("|").split("|")]
+            if len(sp) >= 4 and sp[2] == "K":
+                offen.setdefault(frag, []).append((nr, sp[0]))
+    print("== Haengende Klempnereipflichten, an einer Zeile verankert ==")
+    for f in sorted(offen, key=lambda x: int(x[1:])):
+        stellen = ", ".join(s for _, s in offen[f])
+        print(f"  {f:<4} {len(offen[f]):>2}   {stellen}")
+    n = sum(len(v) for v in offen.values())
+    print(f"\n  verankert       {n:>3}")
+    print( "  Absenkung         7   F1-F6 und F9 -- eine Zeile fuer neun, in")
+    print( "                        `The tenth event`; F7/F8/F10 sind gemessen")
+    print(f"  ---------------------")
+    print(f"  H               {n + 7:>3}")
+    print()
+    print("**Und was diese Zahl NICHT ist:** eine Aussage ueber Gabbro. Die zehn Fragmente")
+    print("sind nach ihrer SCHWIERIGKEIT gewaehlt; `H = 0` ueber ihnen bliebe Falle 80,")
+    print("solange kein Korpus daneben steht, den beim Bauen niemand angesehen hat.")
+
+
 if __name__ == "__main__":
-    main()
+    if "--haengend" in sys.argv:
+        haengend()
+    else:
+        main()
