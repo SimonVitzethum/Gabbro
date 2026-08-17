@@ -61,7 +61,7 @@ Newly collected 2026-08-15, **not reconstructed**, x86 only
 
 | open | why | Evidence |
 |---|---|---|
-| **Race** | *the memory model.* That a `release` store **establishes** the visibility the pairing claims is not a checker statement — the emitter refuses `release`/`acquire` by name rather than lowering them. Belongs to the axiom layer, and is booked there | `crates/gabbro-check/src/emit.rs` (`C001` at `atomic … release`), poison `release-wird-abgesenkt`, `gabbro annahmen` |
+| **Race** *(carried in part since K11.2.1/.3)* | **`protects` now bites** (`H007`): every access to a protected place stands under its lock, and a lock nobody takes is reported (`H008`). **The ordering lowers** — `atomic_store_explicit`/`atomic_load_explicit` carry the ordering the source declared, not C's default, under **A10**. **The named limit, and it is the whole class:** Gabbro does not say **who runs concurrently**. `entry`/`boot` declare contexts, but all four `dispatch` targets in the corpus are `extern fn` — the hull over a context root is empty, so *„every place two contexts touch is locked or atomic"* cannot fire once. *And a differential test cannot show the absence of a race* | `geteilt.rs` (`H007`/`H008`), poison 74, `pruefe-emission.sh` unit 9, `gabbro annahmen` A10 |
 | **Refinement** | *the lowering.* Eight translation units stand, measured by execution; seven of the ten fragments have no C at all. `gabbro zeugnis` says per file what its translation rests on — **but a certificate over THIS translation is no statement about ALL inputs** | `./pruefe-emission.sh` (8 units, each certificate against a booked finding), `crates/gabbro-check/src/zeugnis.rs` |
 
 ## Constructs that are built and evidenced
@@ -205,5 +205,5 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**23 clean examples, 74 poison probes, 117 tests** —
+**23 clean examples, 74 poison probes, 117 tests · 9 translation units** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`

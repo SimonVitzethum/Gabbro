@@ -850,13 +850,34 @@ fn atomic_check_und_die_unbenannte_kante() {
     assert!(f.is_empty(), "{f:?}");
     assert!(c.contains("_Atomic uint32_t n;"), "{c}");
 
-    // **`release` wird abgelehnt**: dass ein release-Speichern die Sichtbarkeit HERSTELLT,
-    // die die Paarung behauptet, ist eine Aussage ueber das Speichermodell -- die Klasse
-    // *Rennen* haengt genau daran, und der Pruefer baut sie nicht.
-    let (_, f) = c_von("module t { atomic n : u32 publishes { x } release; }");
+    // **`release` wurde bis zum 2026-08-17 abgelehnt**, mit diesem Grund: *dass ein
+    // release-Speichern die Sichtbarkeit HERSTELLT, die die Paarung behauptet, ist eine
+    // Aussage ueber das Speichermodell.* **Der Grund stimmt weiter — er ist nur kein Grund
+    // fuer eine Weigerung:** die Aussage steht seit K100.2 als **A10** in der Axiomschicht,
+    // gebucht als *nicht falsifizierbar*.
+    //
+    // > Sich weiter zu weigern hiesse, dieselbe Aussage zweimal zu verlangen: einmal als
+    // > Axiom und einmal als Beweis.
+    //
+    // **Was das C dafuer tragen MUSS**, ist die Ordnung, die die Quelle sagte — nicht das
+    // Vorgabemodell von `_Atomic`.
+    let (c, f) = c_von("module t { atomic n : u32 publishes { x } release; }");
+    assert!(f.is_empty(), "unter A10 traegt die Absenkung: {f:?}");
+    assert!(c.contains("#define n_ORDER memory_order_release"), "{c}");
+    assert!(c.contains("A10"), "die Annahme steht im Erzeugnis, nicht nur im Ordner:\n{c}");
+
+    // **Und ein LADEN mit `release` gibt es in C11 nicht.** Die Deklaration nennt die
+    // Speicherseite; `awaits` laedt mit ACQUIRE. *Gefunden beim Lesen des erzeugten C —
+    // `cc` haette es auch gesagt, aber sich darauf zu verlassen hiesse, die Absage zu
+    // delegieren, wo die Antwort hier steht.*
+    let (c, _) = c_von(
+        "module t { static mut d : u32 = 0; atomic f : bool publishes { d } release;
+impl fn lies() -> bool effects { reads f, reads d } costs <= 8 ops
+{ let g = f awaits { d }; return g; } }",
+    );
     assert!(
-        f.iter().any(|s| s.contains("memory model")),
-        "der Erzeuger entscheidet nicht, was der Pruefer offenlaesst: {f:?}"
+        c.contains("atomic_load_explicit(&f, memory_order_acquire)"),
+        "ein Laden nimmt acquire, nicht release:\n{c}"
     );
 
     // **2. Ein `check` wird eine Funktion, und seine Behauptung faehrt mit.** Eine Probe

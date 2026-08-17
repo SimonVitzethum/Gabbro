@@ -438,7 +438,50 @@ lauf "beispiel21" "$W/beispiele/21-verbundwert.gab" "$TREIBER21" "5 300 7 9 1" \
      's/\.id = k, \.len = n/.id = n, .len = k/' \
      "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 4 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
-echo "== EMISSION: ALL PASS -- 8 Uebersetzungseinheiten durchgestochen =="
+
+# -- 9. K11.2.3: `release`/`acquire` senken ab -- und was der Test NICHT zeigen kann ------
+#
+# Bis zum 2026-08-17 weigerte sich der Erzeuger hier, mit diesem Grund: *„dass ein
+# release-Speichern die Sichtbarkeit HERSTELLT, die die Paarung behauptet, ist eine Aussage
+# ueber das Speichermodell."* **Der Grund stimmt weiter -- er ist nur kein Grund fuer eine
+# Weigerung.** Die Aussage steht als A10 in der Axiomschicht, gebucht als NICHT falsifizierbar.
+#
+# **Und die Grenze dieses Tests gehoert hierher, nicht in eine Fussnote:** ein Differenztest
+# kann die ABWESENHEIT eines Rennens nicht zeigen. Ein gruener Lauf sagt nur, dass die
+# Umordnung diesmal ausblieb -- woertlich der Satz, mit dem A10 als nicht falsifizierbar
+# gebucht ist.
+#
+# *Was er zeigt, ist die STRUKTURELLE Zusage: im C steht die Ordnung, die die Quelle sagte,
+# und nicht das Vorgabemodell von `_Atomic`.* Das Gift unten ersetzt sie durch `relaxed`.
+TREIBER14='#include <stdio.h>
+struct Bericht { unsigned daten; };
+#include "@ERZEUGT@"
+int main(void) {
+    struct Bericht b = { 0 };
+    printf("%d ", abholen(&b) ? 1 : 0);
+    anstossen(&b);
+    printf("%d\n", abholen(&b) ? 1 : 0);
+    return 0;
+}
+'
+#    Erwartet:  0 1
+#      Vor dem Anstossen liest die Gegenseite `false`, danach `true` -- die Paarung traegt
+#      ueber eine ZWISCHENFUNKTION (`anstossen` publiziert selbst nicht).
+#
+#    **Das Gift vertauscht den WERT, nicht die Ordnung, und das ist kein Versehen.** Ein
+#    erster Versuch ersetzte `memory_order_release` durch `relaxed` -- und die Sprechprobe
+#    meldete UEBERSEHEN: das veraenderte Erzeugnis liefert dasselbe. *Natuerlich tut es das.*
+#    Ein einlaeufiger Test kann eine Ordnung nicht sehen.
+#
+#    > **Genau das hat `PLAN.md` (K11.2.3) vorab gesagt:** ein Differenztest kann die
+#    > ABWESENHEIT eines Rennens nicht zeigen. Die Ordnung im C wird darum ANDERSWO gehalten
+#    > -- durch das gebuchte Zeugnis (Stufe 5), eine Sprechprobe in `rechenwerk.rs` und zwei
+#    > Mutationen. *Hier faellt der Wert; die Ordnung faellt dort.*
+lauf "beispiel14" "$W/beispiele/14-paarung-ueber-zwischenfunktion.gab" "$TREIBER14" "0 1" \
+     's/atomic_store_explicit(&FERTIG, true,/atomic_store_explicit(\&FERTIG, false,/' \
+     "0 Annahmen, 0 Schablonen (0 davon UNBEWIESEN), 6 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+
+echo "== EMISSION: ALL PASS -- 9 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser acht Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Acht Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser neun Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Neun Ja-Aussagen sind keine ueber die Sprache."

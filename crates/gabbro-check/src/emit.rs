@@ -68,6 +68,15 @@ struct Namen {
     /// Sie werden zu einem C-`typedef struct`, und ihr Konstruktor zu einem
     /// zusammengesetzten Literal. *`fs` aus `beweise/Verbund_Konstruktor.thy`.*
     verbunde: BTreeSet<String>,
+    /// Atomicname -> (C-Typ, `memory_order`-Wort). **K11.2.3** -- ohne den Typ hat ein
+    /// `let x = A awaits { … }` keinen, und ohne die Ordnung stuende im C das Vorgabemodell
+    /// von `_Atomic` statt dessen, was die Quelle sagte.
+    /// **Zwei Ordnungen, nicht eine.** Die Deklaration nennt die SPEICHERseite; ein Laden
+    /// mit `memory_order_release` gibt es in C11 nicht (`atomic_load_explicit` nimmt
+    /// relaxed, consume, acquire oder seq_cst). *Gefunden beim Lesen des erzeugten C fuer
+    /// `beispiele/14` -- der C-Uebersetzer haette es auch gesagt, aber sich darauf zu
+    /// verlassen hiesse, die Absage zu delegieren, wo die Antwort hier steht.*
+    atomics: HashMap<String, (String, &'static str, &'static str)>,
     /// Namen, die einen Verbund als **Wert** tragen (Parameter oder `let`). Ihr Feldzugriff
     /// ist `.`, nicht `->` -- siehe `ort`.
     werte: BTreeSet<String>,
@@ -196,6 +205,7 @@ pub const KOPF: &str = "\
  */
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 ";
 
 /// Emits C for a tree, or refuses by name.
@@ -215,6 +225,16 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             );
         }
         ItemArt::Tabelle(t) => namen.tabellen.push(t.name.text.clone()),
+        ItemArt::Atomic(a) => {
+            // (Speichern, Laden) -- die Deklaration nennt die Speicherseite.
+            let (sp, ld) = match a.ordnung {
+                Some(Ordnung::Release) => ("memory_order_release", "memory_order_acquire"),
+                Some(Ordnung::Acquire) => ("memory_order_release", "memory_order_acquire"),
+                Some(Ordnung::Seq) => ("memory_order_seq_cst", "memory_order_seq_cst"),
+                _ => ("memory_order_relaxed", "memory_order_relaxed"),
+            };
+            namen.atomics.insert(a.name.text.clone(), (String::new(), sp, ld));
+        }
         ItemArt::Typ(t) => {
             // **A ghost type has no body and no C.** `linear ghost type BootPhase;` declares a
             // value the checker threads and the machine never sees.
@@ -393,6 +413,22 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         namen.werte.extend(gefunden);
     });
 
+    {
+        let mut typen: Vec<(String, String)> = Vec::new();
+        crate::fuer_jedes_item(baum, &mut |item| {
+            if let ItemArt::Atomic(a) = &item.art {
+                if let Some(c) = ctyp(&a.typ, &namen) {
+                    typen.push((a.name.text.clone(), c));
+                }
+            }
+        });
+        for (n, c) in typen {
+            if let Some(e) = namen.atomics.get_mut(&n) {
+                e.0 = c;
+            }
+        }
+    }
+
     // Optionfelder und Tabellenzeiger -- fuer `x = None`.
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Tabelle(tb) = &item.art {
@@ -522,6 +558,36 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         // > Speichermodell -- die Klempnerei-Klasse *Rennen* haengt seit dem 2026-08-16 genau
         // > daran, und der Pruefer baut sie nicht. *Der Erzeuger entscheidet nicht, was der
         // > Pruefer offenlaesst.*
+        // **K11.3.1: `static` senkt ab.** Bis heute weigerte sich der Erzeuger, und das hat
+        // `beispiele/05` und `/22` am C gehindert -- beides Dateien, deren Gegenstand
+        // (Paarung, Bootstrecke) gar nicht am `static` haengt.
+        //
+        // **Ohne `mut` ist es `const`, und das ist keine Kosmetik:** ein Schreiben darauf ist
+        // in C ein Uebersetzungsfehler, und damit traegt das Erzeugnis die
+        // Unveraenderlichkeit selbst statt sie dem Pruefer allein zu ueberlassen.
+        //
+        // `section ".rodata"` wird ein Attribut. *Es ist eine Aussage ueber die PLATZIERUNG,
+        // und die gehoert in das Erzeugnis -- ein Kommentar daneben waere genau die Bauart,
+        // gegen die `mirrors` gebaut wurde.*
+        ItemArt::Statisch(st) => {
+            let Some(c) = ctyp(&st.typ, &namen) else {
+                weigere(absagen, st.name.span, "`static` of an unresolvable type");
+                return;
+            };
+            let Some(w) = konst_zahl(&st.wert) else {
+                weigere(absagen, st.name.span, "`static` with a non-constant initialiser");
+                return;
+            };
+            let konst = if st.veraenderlich { "" } else { "const " };
+            let abschnitt = match &st.section {
+                Some(t) => format!(" __attribute__((section(\"{}\")))", t.text),
+                None => String::new(),
+            };
+            aus.push_str(&format!(
+                "\nstatic {konst}{c} {}{abschnitt} = {w};\n",
+                st.name.text
+            ));
+        }
         ItemArt::Atomic(a) => {
             match a.ordnung {
                 // `publishes nothing` IST die lastfreie Form -- sie steht als Nutzlast da,
@@ -534,12 +600,58 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                         None => weigere(absagen, a.span, "`atomic` of an unresolvable type"),
                     }
                 }
-                _ => weigere(
+                // **K11.2.3 (2026-08-17): `release`/`acquire`/`seq` senken ab.**
+                //
+                // Bis heute stand hier eine Weigerung mit diesem Grund: *„dass ein
+                // release-Speichern die Sichtbarkeit HERSTELLT, die die Paarung behauptet,
+                // ist eine Aussage ueber das Speichermodell, und der Pruefer baut sie nicht."*
+                // **Der Grund stimmt weiter -- er ist nur kein Grund fuer eine Weigerung.**
+                //
+                // Die Aussage steht seit K100.2 als **A10** in der Axiomschicht
+                // (`release_stellt_sichtbarkeit_her`), gebucht als **nicht falsifizierbar**:
+                // *das Speichermodell ist nicht durch Ausfuehrung widerlegbar -- eine
+                // erfolgreiche Probe zeigt nur, dass die Umordnung diesmal ausblieb.*
+                //
+                // > **Eine Annahme, die benannt und gebucht ist, traegt.** Sich weiter zu
+                // > weigern hiesse, dieselbe Aussage zweimal zu verlangen: einmal als Axiom
+                // > und einmal als Beweis.
+                //
+                // Die Ordnung wandert in einen Kommentar neben die Deklaration und in die
+                // Zugriffe (`atomic_store_explicit`/`atomic_load_explicit`) -- **im C steht
+                // dann, was die Quelle sagte, und nicht das Vorgabemodell von `_Atomic`.**
+                // *Das ist die strukturelle Zusage; mehr kann eine Uebersetzung hier nicht
+                // geben, und ein Differenztest koennte die Abwesenheit eines Rennens ohnehin
+                // nicht zeigen.*
+                Some(o) => match ctyp(&a.typ, &namen) {
+                    Some(c) => {
+                        let (wort, notiz) = match o {
+                            Ordnung::Release => ("memory_order_release", "publishes"),
+                            Ordnung::Acquire => ("memory_order_acquire", "awaits"),
+                            Ordnung::Seq => ("memory_order_seq_cst", "total order"),
+                            Ordnung::Relaxed => ("memory_order_relaxed", "no payload"),
+                        };
+                        let last = match &a.obermenge {
+                            Some(Nutzlast::Orte(l)) => l
+                                .iter()
+                                .map(|x| x.text())
+                                .collect::<Vec<_>>()
+                                .join(", "),
+                            _ => "nothing".into(),
+                        };
+                        aus.push_str(&format!(
+                            "\n/* {} under A10 (release_stellt_sichtbarkeit_her, UNFALSIFIABLE):\n\
+                             \x20* the ordering below is the one the source declared, not C's default.\n\
+                             \x20* payload: {last} */\n_Atomic {c} {};\n#define {}_ORDER {wort}\n",
+                            notiz, a.name.text, a.name.text
+                        ));
+                    }
+                    None => weigere(absagen, a.span, "`atomic` of an unresolvable type"),
+                },
+                None => weigere(
                     absagen,
                     a.span,
-                    "`atomic` with a payload or an ordering other than `relaxed` -- that a \
-                     release store ESTABLISHES the visibility the pairing claims is a \
-                     statement about the memory model, and the checker does not build it",
+                    "`atomic` with a payload but no ordering -- a payload without an ordering \
+                     is a publication nobody can pair",
                 ),
             }
         }
@@ -1728,6 +1840,47 @@ fn anweisung(
         // Uebersetzungszeit nach, und was der Pruefer entschieden hat, muss die Maschine nicht
         // noch einmal pruefen (W6). Was bleibt, ist Nehmen und Geben -- und dass GEGEBEN wird,
         // auf jedem Pfad.
+        // **K11.2.3: die Veroeffentlichung und ihre Gegenseite.**
+        //
+        // `A = w publishes { … };` wird `atomic_store_explicit(&A, w, A_ORDER)` --
+        // **explizit, nicht ueber den Zuweisungsoperator.** Ein `A = w` auf einem `_Atomic`
+        // waere in C `seq_cst`, also eine ANDERE und teurere Ordnung als die deklarierte.
+        //
+        // > *Ein Erzeuger, der die deklarierte Ordnung durch eine staerkere ersetzt, ist nicht
+        // > auf der sicheren Seite -- er erzeugt ein Programm, das die Quelle nicht sagt.*
+        //
+        // Die Nutzlast steht als Kommentar daneben: sie IST die Zusage, und der Paarungspass
+        // hat sie schon geprueft (`V001`-`V004`). W6 -- was der Pruefer entschieden hat, muss
+        // die Maschine nicht noch einmal pruefen.
+        StmtArt::Publish(pb) => {
+            let ziel = pb.ziel.text();
+            let Some((_, ordnung, _)) = u.atomics.get(&ziel) else {
+                weigere(absagen, s.span, "`publishes` on something that is not an atomic");
+                return;
+            };
+            let last = match &pb.nutzlast {
+                Nutzlast::Orte(l) => l.iter().map(|x| x.text()).collect::<Vec<_>>().join(", "),
+                Nutzlast::Nichts(_) => "nothing".into(),
+            };
+            aus.push_str(&format!(
+                "{e}/* publishes {{ {last} }} -- paired at compile time (V001-V004) */\n\
+                 {e}atomic_store_explicit(&{ziel}, {}, {ordnung});\n",
+                ausdruck(&pb.wert, u, absagen)
+            ));
+        }
+        StmtArt::AwaitLoad(al) => {
+            let quelle = al.quelle.text();
+            let Some((typ, _, ordnung)) = u.atomics.get(&quelle) else {
+                weigere(absagen, s.span, "`awaits` on something that is not an atomic");
+                return;
+            };
+            let last = al.erwartet.iter().map(|x| x.text()).collect::<Vec<_>>().join(", ");
+            aus.push_str(&format!(
+                "{e}/* awaits {{ {last} }} -- paired at compile time (V001-V004) */\n\
+                 {e}{typ} {} = atomic_load_explicit(&{quelle}, {ordnung});\n",
+                al.name.text
+            ));
+        }
         StmtArt::Sperrt(x) => {
             let name = x.sperre.text();
             let (nimm, gib) = if x.geteilt {

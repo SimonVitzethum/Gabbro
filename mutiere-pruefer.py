@@ -1197,6 +1197,27 @@ MUTATIONEN = [
         "B7 -- ein Verbundkonstruktor zaehlt als Aufruf; `P` wird unbekannter Gerufener "
         "und jede Huelle darueber untere Schranke",
     ),
+    # -- K11.2.3: die Ordnung im erzeugten C ------------------------------------------------
+    #
+    # **Die Absenkung von `release`/`acquire` ruht auf A10 -- und ihre einzige strukturelle
+    # Zusage ist, dass die Ordnung im C die der Quelle ist.** Faellt die, erzeugt der Ordner
+    # ein Programm, das die Quelle nicht sagt, und kein Differenztest zeigt es: ein Rennen
+    # laesst sich durch Ausfuehrung nicht widerlegen.
+    Mutation(
+        "veroeffentlichung-nimmt-die-vorgabeordnung",
+        "emit.rs",
+        "atomic_store_explicit(&{ziel}, {}, {ordnung});",
+        "{ziel} = {}; /* {ordnung} */",
+        "K11.2.3 -- die Veroeffentlichung wird ein `=`, also seq_cst statt der deklarierten "
+        "Ordnung; das erzeugte Programm sagt etwas anderes als die Quelle",
+    ),
+    Mutation(
+        "laden-nimmt-die-speicherordnung",
+        "emit.rs",
+        "            let Some((typ, _, ordnung)) = u.atomics.get(&quelle) else {",
+        "            let Some((typ, ordnung, _)) = u.atomics.get(&quelle) else {",
+        "K11.2.3 -- ein Laden mit `memory_order_release`; das gibt es in C11 nicht",
+    ),
     # -- K11.2.1: `protects` beisst ---------------------------------------------------------
     #
     # **Die erste ist die tragende.** Ohne sie prueft der Ordner wieder nur die DISZIPLIN

@@ -144,9 +144,28 @@ pub const EINORDNUNG: &[Posten] = &[
                 Haltezeit bleiben im Pruefer (W6), der RUMPF kommt von aussen",
     },
     Posten {
+        konstrukt: "static",
+        traegt: Traegt::Direkt,
+        grund: "ohne `mut` ein C-`const` -- ein Schreiben darauf ist dort ein Uebersetzungsfehler; \
+                `section` wird ein Attribut, weil Platzierung eine Aussage ist",
+    },
+    Posten {
         konstrukt: "atomic",
         traegt: Traegt::Direkt,
-        grund: "`_Atomic` mit `relaxed`; `release`/`acquire` werden abgelehnt (Speichermodell)",
+        grund: "`_Atomic`, und die deklarierte Ordnung steht daneben -- unter A10, das die \
+                Sichtbarkeitsaussage traegt und NICHT falsifizierbar ist",
+    },
+    Posten {
+        konstrukt: "publishes",
+        traegt: Traegt::Direkt,
+        grund: "`atomic_store_explicit` mit der DEKLARIERTEN Ordnung -- ein `=` waere in C \
+                `seq_cst`, also eine andere und teurere als die, die dasteht",
+    },
+    Posten {
+        konstrukt: "awaits",
+        traegt: Traegt::Direkt,
+        grund: "`atomic_load_explicit` mit ACQUIRE -- die Deklaration nennt die Speicherseite, \
+                und ein Laden mit `release` gibt es in C11 nicht",
     },
     Posten {
         konstrukt: "fn (impl/raw/prim/extern)",
@@ -283,6 +302,7 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             }
         }
         ItemArt::Atomic(_) => zaehle(&mut e, "atomic"),
+        ItemArt::Statisch(_) => zaehle(&mut e, "static"),
         ItemArt::Lock(l) => {
             zaehle(&mut e, "lock");
             e.fremde.push((
@@ -432,8 +452,8 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
             },
             StmtArt::LetSonst(_) => e.unzugeordnet.push("let … else".into()),
             StmtArt::Bricht(_) => e.unzugeordnet.push("breaking".into()),
-            StmtArt::Publish(_) => e.unzugeordnet.push("publishes".into()),
-            StmtArt::AwaitLoad(_) => e.unzugeordnet.push("awaits".into()),
+            StmtArt::Publish(_) => zaehle(e, "publishes"),
+            StmtArt::AwaitLoad(_) => zaehle(e, "awaits"),
             StmtArt::Exchange(_) => e.unzugeordnet.push("exchange".into()),
             StmtArt::Leave(_) => e.unzugeordnet.push("leave".into()),
             StmtArt::Next(_) => e.unzugeordnet.push("next".into()),
