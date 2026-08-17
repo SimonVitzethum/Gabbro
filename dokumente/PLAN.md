@@ -1445,7 +1445,7 @@ etwas anderes und viel kleineres** — und dieser Ordner hat die Form dafür sch
 **Die Regeln sind Mathematik über Bereichen, Mengen, Ordnungen und transitiven Hüllen.** Sie
 reden über keinen Rust-Wert. *Genau darum sind sie beweisbar, ohne den Prüfer anzufassen.*
 
-> **Und die zweite Zeile ist heute schon besser bewacht, als es aussieht:** `142 von 142`
+> **Und die zweite Zeile ist heute schon besser bewacht, als es aussieht:** `146 von 146`
 > Mutationen, und **null unbeschädigbare Zeilen** im Prüfer. Was fehlt, ist nicht die Umsetzung
 > — es ist der Satz, gegen den sie umgesetzt wird.
 
@@ -1605,8 +1605,29 @@ Ohne das lässt sich der eigentliche Satz nicht sagen:
 > *jeder Platz, den zwei Kontexte berühren, ist unter einer Sperre, atomar, oder gehört
 > genau einem Kern (`per cpu`).*
 
+* **VORAB GEMESSEN 2026-08-17, und das Ergebnis ändert diese Phase:**
+
+  ```
+  Kontextwurzeln im Korpus:                 4   (3 × entry, 1 × boot)
+  davon mit einem Rumpf, den Gabbro sieht:  0
+  ```
+
+  **Alle vier `dispatch`-Ziele sind `extern fn`.** `syscall_verteiler`, `nmi_verteiler`,
+  `rust_eintritt` — jedes ein fremder Rumpf. Die Hülle über einer Kontextwurzel ist damit
+  **leer**, und die Regel *„jeder Platz, den zwei Kontexte berühren, ist gesperrt oder
+  atomar"* kann auf diesem Korpus **nicht ein einziges Mal feuern**.
+
+  > **Dieselbe Lage wie `E010`, und sie gehört vor die Regel und nicht dahinter.** Eine Regel,
+  > deren Beleg nur aus Giftproben kommen kann, ist nicht falsch — *aber wer das erst
+  > nachher merkt, hat eine Zahl gebaut, die grün aussieht und nichts misst* (W1).
+
+  **Damit hat diese Phase eine Vorbedingung, die vorher nicht sichtbar war:** ohne einen
+  Korpus, in dem eine Kontextwurzel einen Rumpf hat, ist K11.2.2 nicht messbar. *Sie hängt
+  am zweiten Korpus, und der steht ohnehin als Bedingung über K11.*
+
 * **Tor:** je geteiltem Platz ist die Kontextmenge ableitbar und wird gedruckt; ein Platz, den
-  zwei Kontexte ohne Sperre/Atomic/`per cpu` berühren, fällt.
+  zwei Kontexte ohne Sperre/Atomic/`per cpu` berührt, fällt — **und die Zahl der berührten
+  Plätze steht daneben**, damit ein leerer Lauf nicht wie ein bestandener aussieht.
 * **Preis, ausgesprochen:** das ist der **grösste** Posten dieses Plans. Er braucht ein
   Nebenläufigkeitsmodell, und `masks IRQ` («B38», heute in der Axiomschicht) gehört dann
   hinein statt daneben.

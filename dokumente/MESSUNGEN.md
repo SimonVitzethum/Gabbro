@@ -6970,3 +6970,98 @@ Korpus             23 saubere Beispiele, 73 Giftproben
 
 **`lebend_ungedeckt()` steht unverändert bei 4** — `order`/`advances` erzeugen keinen Code,
 sie prüfen. *Ein Pass kostet keine Schablone.*
+
+---
+
+# K11.1 und K11.2.1 — und `protects` fand beim ersten Lauf einen Fehler im eigenen Korpus
+
+## K11.1 — der Zweig wird entschieden
+
+`O005` sagte: *„dieser Pass entscheidet das nicht."* **Die Meldung war richtig und keine
+Lösung.** Gewählt ist die strenge Fassung — **alle Zweige erreichen dieselbe Stufe** (`O006`)
+—, weil man von ihr aus lockern kann und umgekehrt nie.
+
+> **Die erste Fassung fiel in der GEGENRICHTUNG auf:** die Giftprobe fiel wie gewollt, und die
+> **saubere fiel mit.** Ein Zweig, der mit `return` ENDET, schliesst sich nicht an — er
+> verlässt die Funktion. *Ein Tor, das nur in eine Richtung geprüft wird, misst die Hälfte.*
+
+**`O005` ist zurückgezogen und der Code bleibt frei.** *Eine Absage, die heimlich ihre
+Bedeutung wechselt, ist schlimmer als eine Nummer, die ungenutzt bleibt.*
+
+## K11.2.1 — `protects` beisst, und die Vorabmessung war die halbe Wahrheit
+
+**Die Messung vor der Regel**, wie `PLAN.md` sie festlegte:
+
+```
+Zugriffsstellen auf geschützte Plätze (grob, per Skript):   6
+davon gemeldet:                                             2   ← beide dieselbe `spec fn`
+```
+
+Ein `spec fn` fasst zur Laufzeit nichts an — also **null**. *Das Skript sagte: die Regel ist
+gefahrlos.* **Der Prüfer selbst sagte etwas anderes:**
+
+```
+beispiele/05-nebenlaeufigkeit.gab:  H007 = 2,  H008 = 1
+```
+
+### Der Befund
+
+```gabbro
+lock BERICHT protects { farbbericht }      rank 2 held <= 50 ops;
+```
+
+**Diese Zeile stand seit dem Bestehen der Datei im Ordner, und die Sperre wurde NIRGENDS
+genommen.** `farbbericht` ist über die Paarung synchronisiert — `publishes { farbbericht }` am
+Release-Speichern, `awaits { farbbericht }` am Acquire-Laden.
+
+> **Zwei Mechanismen für denselben Platz, und einer davon war Zierde.** Eine
+> `protects`-Klausel, die niemand einhält, ist schlimmer als keine: *sie sieht aus wie eine
+> Zusage und ist eine Behauptung.*
+
+Daraus fiel **`H008`** ab, die Gegenrichtung: eine Sperre, die nichts nimmt und nichts fordert.
+**Hinweis, nicht Fehler** — in einem Ausschnitt kann die Nahme ausserhalb liegen.
+
+### Was als „gehalten" gilt, und warum das keine Nachsicht ist
+
+| | |
+|---|---|
+| ein umschliessender `locks`-Block | die Nahme steht da |
+| `effects { locks L }` | die Nahme ist die **Pflicht des Rufers**, und `E006` hält Rumpf gegen Klausel |
+| `requires Held(L)` | der **Zeuge** IST die Aussage, dass sie gehalten wird |
+
+## Der dritte Befund fiel beim Eintragen an
+
+**`geteilt.rs` trägt seit dem 2026-08-15 acht Absagecodes und stand in KEINER Zeile der
+Passliste.**
+
+> *Dieselbe Lage, in der die Schablonen vor ihrer Auszählung waren: vorhanden, wirksam und
+> unbeziffert.* Die Liste ist die Zählspalte des Prüfers — was nicht drinsteht, kann niemand
+> vermissen. **Jetzt Pass 12, mit seiner Grenze.**
+
+## K11.2.2 lässt sich an diesem Korpus NICHT messen
+
+```
+Kontextwurzeln im Korpus:                 4   (3 × entry, 1 × boot)
+davon mit einem Rumpf, den Gabbro sieht:  0
+```
+
+**Alle vier `dispatch`-Ziele sind `extern fn`.** Die Hülle über einer Kontextwurzel ist leer,
+und die Regel *„jeder Platz, den zwei Kontexte berühren, ist gesperrt oder atomar"* kann auf
+diesem Korpus **nicht ein einziges Mal feuern**.
+
+> **Dieselbe Lage wie `E010` — und sie gehört VOR die Regel.** Eine Regel, deren Beleg nur aus
+> Giftproben kommen kann, ist nicht falsch. *Aber wer das erst nachher merkt, hat eine Zahl
+> gebaut, die grün aussieht und nichts misst.*
+
+**Damit hat K11.2.2 eine Vorbedingung, die vorher nicht sichtbar war:** sie hängt am zweiten
+Korpus — und der stand ohnehin als Bedingung über ganz K11.
+
+## Stand
+
+```
+Pässe        3 von 12 voll gebaut  (Pass 11 Phasen, Pass 12 Sperren -- beide neu gebucht)
+Codes        102, davon H007, H008, O006 neu; O005 zurückgezogen
+Korpus       23 saubere Beispiele, 74 Giftproben
+Tests        117
+Mutationen   146 -- fuenf neu: drei fuer den Zweig, zwei fuer `protects`
+```

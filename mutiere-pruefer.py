@@ -1197,6 +1197,27 @@ MUTATIONEN = [
         "B7 -- ein Verbundkonstruktor zaehlt als Aufruf; `P` wird unbekannter Gerufener "
         "und jede Huelle darueber untere Schranke",
     ),
+    # -- K11.2.1: `protects` beisst ---------------------------------------------------------
+    #
+    # **Die erste ist die tragende.** Ohne sie prueft der Ordner wieder nur die DISZIPLIN
+    # einer genommenen Sperre und nicht, dass sie genommen wird -- der Zustand, in dem
+    # `beispiele/05` eine `protects`-Klausel trug, die niemand einhielt.
+    Mutation(
+        "protects-beisst-nicht-mehr",
+        "geteilt.rs",
+        "        if da.iter().any(|d| d == &sperre) {\n            return;\n        }",
+        "        if true {\n            return;\n        }",
+        "K11.2.1 -- jeder Zugriff auf einen geschuetzten Platz gilt als gedeckt; "
+        "`protects` ist wieder Zierde",
+    ),
+    Mutation(
+        "nie-genommene-sperre-schweigt",
+        "geteilt.rs",
+        "        if !ueberhaupt_genommen.contains(name)",
+        "        if false && !ueberhaupt_genommen.contains(name)",
+        "K11.2.1 -- eine Sperre, die niemand nimmt, faellt nicht mehr auf; genau so stand "
+        "`lock BERICHT` im eigenen Korpus",
+    ),
     # -- «B37»: die Ordnung auf einer Geistmarke -------------------------------------------
     #
     # **Die erste ist die wichtigste.** Ohne `O003` erzwingt der lineare Wert wieder nur eine

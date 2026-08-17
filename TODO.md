@@ -112,7 +112,7 @@ of items that are neither code nor a run — what remains is building and measur
 - [ ] **PL.2 — die drei Saetze mit der groessten Traglast:** `K001` Summation (**hat heute schon
       einen gemessenen Fehler**), `H006` Rangordnung, V2 relationale Verengung (102 Stellen).
 - [ ] **PL.3 — die Bruecke: (c) je Satz eine Sprechprobe, die den Rust gegen das Modell faehrt.**
-      Das Geschirr steht (`mutiere-pruefer.py`, 142 von 142) -- was fehlt, ist der Satz, der
+      Das Geschirr steht (`mutiere-pruefer.py`, 146 von 146) -- was fehlt, ist der Satz, der
       sagt, WELCHE Beschaedigung fallen muss. *Aus 132 Mutationen ohne Satz werden 132 mit
       einem.*
 
@@ -147,14 +147,12 @@ of items that are neither code nor a run — what remains is building and measur
       0 Fehler) -- *und kein Pass liest es.* Die Schicht hat damit zwei Haelften: die sieben
       Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
       tragen lassen (PL-Arbeit).
-- [ ] **`protects` beisst nicht** *(gemessen 2026-08-17, und es ist der Befund, an dem K11.2
-      anfaengt)*. `lock KAPPEN protects { K } rank 3;` steht da, `K.slots[i].a = 1;` steht ohne
-      `locks` daneben -- **4 Items, 0 Fehler.** `H001`-`H006` pruefen die DISZIPLIN einer
-      genommenen Sperre (geteilt gegen exklusiv, Rang, Haltezeit); sie pruefen nicht, **dass
-      sie genommen wird**. *Die Klasse Rennen haengt heute nicht am Speichermodell -- sie
-      haengt an einer Regel, die niemand gebaut hat.* **Vor der Regel messen:** 17
-      `protects`-Klauseln in 9 Dateien; wie viele Zugriffsstellen fielen? Eine Regel, die den
-      eigenen Korpus zerlegt, ist ein Befund und keine Regel.
+- [ ] **K11.2.2 ist am Korpus nicht messbar, und das ist ein Befund** *(gemessen 2026-08-17)*.
+      Vier Kontextwurzeln (3 × `entry`, 1 × `boot`), **null davon mit einem Rumpf, den Gabbro
+      sieht** -- jedes `dispatch`-Ziel ist ein `extern fn`. Die Huelle ueber einer
+      Kontextwurzel ist leer, also kann die Regel *„jeder Platz, den zwei Kontexte beruehren,
+      ist gesperrt oder atomar"* nie feuern. **Dieselbe Lage wie `E010`.** Sie haengt damit am
+      ZWEITEN Korpus, der ohnehin als Bedingung ueber K11 steht.
 - [ ] **Ein Tippfehler in einem `ensures` faellt nicht** *(gemessen 2026-08-17)*.
       `ensures zaheler == 1` neben `static mut zaehler` geht mit **0 Fehlern** durch: kein
       Pass liest Praedikate, also prueft auch keiner ihre NAMEN. *Eine Pflicht, die niemand
