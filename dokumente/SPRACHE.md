@@ -243,7 +243,7 @@ register:
 
 > **D0 was NOT a data race.** `spawn()` enqueued, `bind_pd()` came afterwards; every access was
 > properly synchronised, no Rust `unsafe`, no missing atomic. The error was that a thread became
-> **reachable** before it had authority. Rate **0.018 %**, ten days of searching, and **every**
+> **reachable** before it had authority. Rate **0,018 %**, ten days of searching, and **every**
 > data-race checker in the world would have kept quiet.
 
 | Class | Example from the register | falls out of |
