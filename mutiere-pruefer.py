@@ -1039,8 +1039,8 @@ MUTATIONEN = [
     Mutation(
         "register-ohne-volatile",
         "emit.rs",
-        "                    \"(*(volatile {breite} *)({}->basis + {versatz}))\",",
-        "                    \"(*({breite} *)({}->basis + {versatz}))\",",
+        "                \"(*(volatile {breite} *)({}->basis + {versatz}))\",",
+        "                \"(*({breite} *)({}->basis + {versatz}))\",",
         "C-Absenkung -- ein Registerzugriff darf wegoptimiert werden",
         "code",
     ),
