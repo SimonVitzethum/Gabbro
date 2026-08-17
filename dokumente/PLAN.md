@@ -1720,3 +1720,91 @@ L = 1        lebend unbewiesene Schablonen — K11.3.2 hat drei bewiesen
 > **Und eine zweite Falle, die K11 eigenhändig aufstellt:** eine Klasse gilt als *getragen*,
 > sobald eine Regel greift — nicht, sobald sie *alles* greift. Jede der neun getragenen führt
 > ihre Grenze mit. **Eine zehnte und elfte ohne Grenze wären verdächtiger als mit.**
+
+---
+
+# Wozu Gabbro taugen wird — und wozu nicht, wenn die Pläne aufgehen
+
+**Die Frage war: wie gut lässt sich Gabbro für alltägliche Programme nutzen, wenn es sich nach
+den Plänen entwickelt — und wäre comptime sinnvoll?**
+
+## Die Antwort auf die erste Hälfte ist unbequem: **es wird nicht besser darin, und das ist kein Versäumnis**
+
+**Kein Plan in dieser Datei bewegt Gabbro in Richtung Alltag.** K100, K11 und PL schließen
+Klempnereipflichten für Code *kernelförmigen Zuschnitts*. Was den Alltag ausmacht, ist von
+Gabbro **absichtlich ausgeschlossen**:
+
+| alltäglich | in Gabbro | was es kostet, das zu ändern |
+|---|---|---|
+| Schleife bis EOF, bis Nutzereingabe, bis Abbruch | **drei Formen, alle beschränkt** | **Terminierung** fällt zurück an den Menschen |
+| dynamische Sammlungen | `table … count N`, fest | **Index** fällt zurück — `count N` IST die Schranke |
+| Allokation nach Bedarf | `allocs` benennt, mehr nicht | eine **zwölfte Klasse**, die es heute nicht gibt |
+| Gleitkomma | nicht im Kern | — |
+| „das kostet, was es kostet" | `costs <= N ops`, **Pflicht** | die Latenzaussage je Wartestelle fällt |
+
+> **Das ist ein Regler, kein Mangel.** *Gabbros Alltagstauglichkeit und seine
+> Klempnereiabdeckung sind dieselbe Stellschraube* — jede Lockerung gibt genau eine der elf
+> Klassen zurück, und zwar die, deren Beweis sie trug.
+
+**Wofür Gabbro taugen wird, wenn die Pläne aufgehen:** Kernel, Treiber, Bootstrecken,
+Interruptbehandler, Protokollzustandsmaschinen, alles mit einer harten Latenzaussage —
+**Code, bei dem jemand die Schranken ohnehin von Hand ausrechnet und in Kommentare schreibt.**
+*Dort nimmt Gabbro Arbeit ab. Anderswo verbietet es nur.*
+
+## Und comptime? **Die Antwort steht schon im eigenen Register**
+
+**Gabbro ist heute voller comptime — es ist nur nicht vom Nutzer schreibbar.** `const`,
+`when constexpr`, `count N`, `index into T`, die erzeugten Konstruktoren, `sizeof`/`lenof`/
+`aligned`, `walk levels`, `mirrors`, die Kostenrechnung: **alles wird zur Übersetzungszeit
+gerechnet.**
+
+Jeder dieser Erzeuger hat einen Eintrag in `schablonen.rs` — und die Liste hat eine Ratsche:
+**Grundmarke 18 plus ein Platz je bewiesener Schablone.**
+
+> **Ein comptime, das der Nutzer schreibt, ist ein Erzeuger, dessen Beweispflicht niemand
+> aufgeschrieben hat.** Die Schablonenmenge würde unbeschränkt und unbeziffert — genau der
+> Zustand, gegen den die Ratsche gebaut ist.
+
+### Aber die Linie verläuft nicht zwischen „comptime ja/nein", sondern hier:
+
+```
+comptime, das WERTE rechnet   →  kostet keine Schablone
+comptime, das CODE erzeugt    →  kostet eine, und die will bewiesen werden
+```
+
+**Und die erste Hälfte fehlt Gabbro wirklich.** Heute rechnet `konst_wert` nur Literale und
+`const`-Ketten; eine Schranke wie `count NSLOTS * 2` oder `costs <= laenge(T) + 4` lässt sich
+nicht schreiben. Der kleinste Zusatz wäre:
+
+```gabbro
+const fn zellen(kerne : u32) -> u32 requires kerne <= 256 costs <= 4 ops
+{ return kerne * 4; }
+
+table Warteschlange count zellen(NKERNE) { … }
+```
+
+* **Ein `const fn` erzeugt keinen Code, also keine Schablone.** Es liefert eine Zahl, und die
+  Zahl steht dann in `count`, in `costs`, in einer Bereichsgrenze.
+* **Seine Beweispflicht ist Totalität — und die trägt die Sprache schon:** drei beschränkte
+  Schleifenformen, keine Rekursion ohne Schranke, `effects { pure }` erzwungen. *Ein `const fn`
+  ist ein `impl fn`, dem der Prüfer glaubt, weil er es nachrechnen kann.*
+* **Der Gewinn ist nicht Bequemlichkeit, sondern Ableitbarkeit:** heute steht `NSLOTS` an
+  drei Stellen und ihr Zusammenhang in einem Kommentar.
+
+### Was NICHT dazugehört, und der Grund ist derselbe
+
+* **Kein comptime, das Deklarationen erzeugt** (Makros, Templates, `derive`). Jede erzeugte
+  Deklaration ist eine Schablone ohne Eintrag.
+* **Kein comptime mit Effekten.** Ein Erzeuger, der beim Übersetzen liest oder schreibt, macht
+  das Erzeugnis von etwas abhängig, das im Zeugnis nicht steht.
+* **Kein Turing-vollständiges comptime.** *Eine Sprache, die zur Laufzeit keine unbeschränkte
+  Schleife erlaubt und zur Übersetzungszeit schon, hat die Regel nicht, sondern eine Ausnahme.*
+
+## Die ehrliche Zusammenfassung
+
+**Gabbro wird nach den Plänen ein Werkzeug, mit dem man Kernelcode schreibt, ohne die
+Klempnerei zu beweisen — und mit dem man kein Textverarbeitungsprogramm schreibt.** Das war die
+Entscheidung, bevor die erste Zeile stand; die Pläne führen sie aus, sie erweitern sie nicht.
+
+*Wer beides will, braucht zwei Sprachen — oder gibt die elf Klassen einzeln zurück und schreibt
+je Rückgabe auf, welche.*

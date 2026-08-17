@@ -147,6 +147,27 @@ of items that are neither code nor a run — what remains is building and measur
       0 Fehler) -- *und kein Pass liest es.* Die Schicht hat damit zwei Haelften: die sieben
       Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
       tragen lassen (PL-Arbeit).
+- [ ] **`const fn` -- comptime, das WERTE rechnet und keine Schablone kostet**
+      *(bewertet 2026-08-17, `PLAN.md`: „Wozu Gabbro taugen wird")*. Heute rechnet
+      `konst_wert` nur Literale und `const`-Ketten; `count NSLOTS * 2` oder
+      `costs <= laenge(T) + 4` sind nicht schreibbar, und der Zusammenhang dreier Konstanten
+      steht in einem Kommentar. **Ein `const fn` erzeugt keinen Code, also keinen
+      Schabloneneintrag** -- seine Beweispflicht ist Totalitaet, und die traegt die Sprache
+      schon (drei beschraenkte Schleifenformen, `effects { pure }` erzwungen).
+      *Die Linie: comptime, das Werte rechnet, ist frei; comptime, das CODE erzeugt, kostet
+      eine Schablone -- und ein nutzergeschriebener Erzeuger ist einer, dessen Beweispflicht
+      niemand aufgeschrieben hat.*
+- [ ] **`accumulates` kann nicht absenken, und es fehlt kein Erzeugercode, sondern ZWEI
+      Entscheidungen** *(gemessen 2026-08-17, nachdem `accumulates.monoid` bewiesen war)*.
+      `SPRACHE.md` §11.4 sagt: *„one cell per core, merged on reading over the
+      NCORES-bounded loop."* **Beide Groessen stehen nirgends:**
+      1. **Die Zellenzahl.** `accdecl` nennt keine. Der Erzeuger muesste `NCORES` raten oder
+         einen Namen suchen -- *genau das Raten, gegen das `C001` steht.* Der kleinste
+         Ausweg ist `per cpu <constexpr>` an der Deklaration; die Woerter gibt es schon.
+      2. **Der aktuelle Kern.** Es gibt in Gabbro KEINEN Ausdruck dafuer. `per cpu` steht
+         allein am `stack` eines `entry`. Ohne ihn laesst sich die Schreibstelle
+         `x = v` nicht in `x_zellen[kern]` absenken.
+      *Die Schablone ist bezahlt (`Accumulates_Monoid.thy`) -- was fehlt, ist die Sprache.*
 - [ ] **Zum ZWEITEN Mal in eine Beweissuche gelaufen -- und die Regel stand schon da**
       *(2026-08-17)*. Erst ein `metis` (9 Minuten, 6,3 GB), dann ein `blast` (12 Minuten,
       4,8 GB). **Eine Regel, die man kennt und trotzdem bricht, braucht keinen weiteren Satz
