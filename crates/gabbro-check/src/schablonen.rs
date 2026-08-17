@@ -402,14 +402,30 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Zusage, die zur Haelfte beweisbar und zur Haelfte ueber einem Nichts ist, war als
         // EIN Eintrag zu klein gebucht.*
         pflicht: "Die Absenkung legt genau N Slots an -- nicht weniger (dann waere ein \
-                  Index im Typ ohne Speicher) und nicht mehr (dann waere Speicher ohne \
-                  Index, den keine Schranke deckt).",
+                  Index im Typ ohne Speicher, `zu_kurz_laesst_einen_index_ohne_speicher`) \
+                  und nicht mehr (dann waere Speicher ohne Index, \
+                  `zu_lang_laesst_speicher_ohne_index`). **Und der Gehalt liegt eine Stufe \
+                  weiter:** aus `m = N` und der Indexschranke faellt, dass KEIN Zugriff des \
+                  erzeugten Programms aus dem Feld laeuft \
+                  (`kein_zugriff_laeuft_aus_dem_feld`) -- erst das ist die Aussage, um \
+                  derentwillen die Absenkung ein festes Feld nimmt und keinen Zeiger mit \
+                  Laenge. **OFFEN bleibt, dass der ERZEUGER `m = N` herstellt** -- eine \
+                  Aussage ueber `emit.rs`, und sie faellt in die Bruecke (PL.3): eine \
+                  Mutation, die die Feldlaenge von der Kapazitaet loest, muss fallen.",
         // **Getragen seit 2026-08-17**: `emit.rs` senkt eine `table … count N` zu einem festen
         // C-Feld ab, und `pruefe-emission.sh` misst es an der Ausfuehrung. *Damit ist dieser
         // Satz keine Zusage ueber einen kuenftigen Erzeuger mehr -- der Uebersetzer stuetzt
         // sich JETZT darauf.*
-        stand: Stand::Getragen,
-        fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), Befund M-3",
+        // **Maschinell geprueft 2026-08-17** (`beweise/Table_Absenkung.thy`, K11.3.2) -- der
+        // erste der vier LEBEND getragenen Saetze, und der, auf dem die anderen aufsitzen:
+        // `option.sonderwert` braucht die Laenge fuer den Sonderwert, `table.induktion` die
+        // Schranke fuer die Terminierung.
+        //
+        // > *`lebend_ungedeckt()` faellt damit von 4 auf 3* -- und das ist die einzige Zahl
+        // > dieses Ordners, die kleiner zu werden ETWAS kostet.
+        stand: Stand::Bewiesen,
+        fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), Befund M-3; \
+                     beweise/Table_Absenkung.thy",
     },
     // ---- Kandidaten aus der Nachpruefung vom 2026-08-14. Noch kein Konstrukt, aber die
     // ---- Pflicht steht schon fest -- und genau das ist der Punkt dieser Liste.

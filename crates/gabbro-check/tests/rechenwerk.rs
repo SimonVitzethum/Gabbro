@@ -880,6 +880,23 @@ impl fn lies() -> bool effects { reads f, reads d } costs <= 8 ops
         "ein Laden nimmt acquire, nicht release:\n{c}"
     );
 
+    // **Und das SPEICHERN explizit, nicht ueber den Zuweisungsoperator.** `A = w` auf einem
+    // `_Atomic` waere in C `seq_cst` -- eine andere und teurere Ordnung als die deklarierte.
+    //
+    // > *Diese Zeile fehlte bis zum 2026-08-17, und die Mutation
+    // > `veroeffentlichung-nimmt-die-vorgabeordnung` UEBERLEBTE.* Ich hatte behauptet, die
+    // > Ordnung werde von zwei Mutationen gehalten -- eine davon fing nichts. **Eine
+    // > Beschaedigungsprobe, die niemand fangen kann, ist keine.**
+    let (c, _) = c_von(
+        "module t { static mut d : u32 = 0; atomic f : bool publishes { d } release;
+impl fn melde(w : u32) effects { writes d, publishes f } costs <= 8 ops
+{ d = w; f = true publishes { d }; } }",
+    );
+    assert!(
+        c.contains("atomic_store_explicit(&f, true, memory_order_release)"),
+        "ein Speichern nimmt die DEKLARIERTE Ordnung, kein `=`:\n{c}"
+    );
+
     // **2. Ein `check` wird eine Funktion, und seine Behauptung faehrt mit.** Eine Probe
     // auszuliefern, deren Behauptung nirgends steht, waere eine Zahl ohne Gegenstand.
     let (c, f) = c_von(

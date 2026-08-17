@@ -1659,7 +1659,7 @@ UNZUGEORDNET: …
 | Achse | Messgrösse | heute |
 |---|---|---|
 | **Breite** — jede Form wird abgesenkt | `UNZUGEORDNET = 0` **und** kein `C001` über dem Korpus | 8 von 22+3 Einheiten senken ab |
-| **Tiefe** — jede benutzte Schablone ist bewiesen | `davon UNBEWIESEN = 0` | 5 von 20 bewiesen, 4 lebend getragen |
+| **Tiefe** — jede benutzte Schablone ist bewiesen | `davon UNBEWIESEN = 0` | **6 von 20 bewiesen, 3 lebend getragen** *(K11.3.2, 2026-08-17: `table.absenkung`)* |
 
 ### K11.3.1 — Breite: die Weigerungen abbauen, **in der Reihenfolge ihrer Sperre**
 
@@ -1677,8 +1677,12 @@ Das zweite Tor aus K100 gilt weiter: `lebend_ungedeckt() ≤ 4`. **Wer eine Form
 ihre Schablone von `Entworfen` auf `Getragen`** — und ohne Beweis davor steigt die lebende
 Fläche. *Genau so ist `verbund.konstruktor` gelaufen, und deshalb bewegte sich die Zahl nicht.*
 
-Die vier lebend getragenen zuerst, weil sie **heute schon** getragen werden:
-`option.sonderwert` · `format.roundtrip` · `device.konstruktor` · `table.absenkung`.
+Die lebend getragenen zuerst, weil sie **heute schon** getragen werden. **`table.absenkung`
+ist am 2026-08-17 gefallen** (`beweise/Table_Absenkung.thy`) — und zwar zuerst, weil die
+anderen darauf aufsitzen: *`option.sonderwert` braucht die Länge für den Sonderwert,
+`table.induktion` die Schranke für die Terminierung.*
+
+**Es bleiben drei:** `option.sonderwert` · `format.roundtrip` · `device.konstruktor`.
 
 ### K11.3.3 — Und die starke Fassung von (b), als Grenze benannt
 
@@ -1700,7 +1704,7 @@ Plan zu einem anderen Projekt machen.
 O005 = 0     kein unentschiedener Phasenschritt im Korpus
 protects     beisst, und die Zahl der gefallenen Stellen stand VORHER im Protokoll
 UNZUGEORDNET = 0   über jeder Datei, die absenkt
-L ≤ 4        lebend unbewiesene Schablonen — unverändert
+L ≤ 3        lebend unbewiesene Schablonen — seit K11.3.2 eine weniger
 ```
 
 **Und die Zahl lügt, wenn eines davon fehlt:**
