@@ -116,11 +116,20 @@ of items that are neither code nor a run — what remains is building and measur
       sagt, WELCHE Beschaedigung fallen muss. *Aus 132 Mutationen ohne Satz werden 132 mit
       einem.*
 
-- [ ] **K100.3 — die letzten ZWEI Notationsluecken** (`./pruefe-notation.py`, 6 von 8 zu):
-      **«B7» das Verbundliteral** — eine Funktion kann heute keinen `structty` HERSTELLEN, und
-      das trifft zwei Stellen im Korpus — sowie **«B14b» `let … else` auf einem `place`** (ein
-      Atomic IST ein `place`). *Beide ziehen einen Schablonen-Eintrag nach; die Ratsche will
-      ihn vorher bezahlt haben.*
+- [ ] **«B7» ist keine Notationsluecke, sondern eine GRAMMATIKMEHRDEUTIGKEIT** *(gefunden
+      2026-08-17 beim Anlauf, `verbund.konstruktor` ist bereits bewiesen)*.
+      Ein Verbundliteral heisst `P { a: 1 }` -- ein Ausdruck, der mit `{` weitergeht. **In
+      Gabbro folgt an 76 Stellen des Korpus ein `{` direkt auf einen Ausdruck**: `if x {`,
+      `match a {`, `traverse i over d {`, `retry … until p {`, `locks S {`. *Bis heute war das
+      eindeutig, weil KEINE Ausdrucksform je mit `{` weiterging.*
+      **Der Parser braucht also einen Kontextschalter** („hier kein Verbundliteral"), wie Rust
+      ihn hat -- und den gibt es nicht. Wer ihn falsch setzt, verliest den ganzen Korpus, ohne
+      dass ein Tor es meldet: **die 76 Stellen wuerden weiter parsen, nur anders.**
+      *Der Preis ist damit nicht Grammatik plus Pass, sondern eine Mehrdeutigkeitsentscheidung
+      -- und die gehoert vor die erste Zeile.*
+- [ ] **«B14b» `let … else` auf einem `place`** (ein Atomic IST ein `place`). `LetSonst` traegt
+      im AST einen `Ruf`; einen `place` zuzulassen heisst AST-Variante, Parser **und 16
+      Verbrauchsstellen** in Kosten-, Wirkungs-, Aufrufgraph-, M1- und Emissionspass.
 - [ ] **K100.4 — die Verfeinerung, und der Weg ist zu waehlen:** verifizierter Erzeuger (a) oder
       **Uebersetzungsvalidierung (b)**. *Die Differenztests sind bereits die schwache Fassung von
       (b) — sie messen EIN Ergebnis statt aller.*

@@ -6443,3 +6443,40 @@ bestandener Test).
 
 **Und was übrig ist, ist klein und benannt:** zwei Notationslücken, beide echte Bauarbeit —
 das Verbundliteral («B7», zwei Stellen) und `let … else` auf einem `place` («B14b»).
+
+
+---
+
+# «B7» ist keine Notationslücke — es ist eine Grammatikmehrdeutigkeit
+
+**Gefunden beim Anlauf, nicht beim Bauen.** `verbund.konstruktor` ist bewiesen, das Tor stand
+offen — und dann zeigte die erste Frage nach der Form etwas anderes als eine fehlende
+Produktion.
+
+Ein Verbundliteral heisst `P { a: 1 }`: **ein Ausdruck, der mit `{` weitergeht.**
+
+```
+Stellen im Korpus, an denen ein `{` direkt auf einen Ausdruck folgt:  76
+```
+
+`if x {` · `match a {` · `traverse i over d {` · `retry … until p {` · `locks S {`.
+
+> **Bis heute war das eindeutig, weil KEINE Ausdrucksform je mit `{` weiterging.** Das
+> Verbundliteral ist die erste — und damit ist `if x { … }` nicht mehr entscheidbar, ohne dass
+> der Parser weiss, wo er steht.
+
+## Warum das gefährlicher ist als eine fehlende Produktion
+
+Rust löst es mit einem Kontextschalter (*„hier kein Verbundliteral"*). Gabbros Parser hat
+keinen.
+
+**Und der Fehlerfall ist still:** wer den Schalter falsch setzt, verliest die 76 Stellen —
+*sie parsen weiter, nur anders.* Kein Tor meldet das, weil jedes Tor auf einem Baum steht, der
+dann schon falsch ist.
+
+> *Der Preis von «B7» ist damit nicht Grammatik plus Pass, sondern eine
+> Mehrdeutigkeitsentscheidung — und die gehört vor die erste Zeile, nicht in sie.*
+
+**Die Schablone dafür ist bezahlt** (`beweise/Verbund_Konstruktor.thy`, 2026-08-17). *Was
+fehlt, ist nicht der Beweis und nicht der Code — es ist die Entscheidung, wie die Grammatik
+eindeutig bleibt.*
