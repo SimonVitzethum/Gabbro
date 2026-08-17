@@ -271,14 +271,40 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// **«B22» geschlossen 2026-08-17: benachbarte Zeichenketten werden EINE.**
+    ///
+    /// Der Befund lautete: *„`claim` nimmt eine Zeichenkette, und `char` schliesst `newline`
+    /// aus. Alle drei echten Behauptungen sind mehrzeilig; hier zusammengezogen. **Eine
+    /// Behauptung, die in eine Zeile passen muss, wird kuerzer geschrieben, nicht genauer.**"*
+    ///
+    /// **Die naheliegende Reparatur waere gewesen, `newline` in der Zeichenkette zu
+    /// erlauben** -- und sie haette die Pruefung mitgenommen, die dahintersteht: ein
+    /// vergessenes Anfuehrungszeichen verschluckt sonst den Rest der Datei, und `L001` faende
+    /// es nie. *Eine Laufzeitpruefung wegzunehmen ist ausschliesslich M1-begruendet (W6); hier
+    /// waere es gar nicht begruendet gewesen.*
+    ///
+    /// Stattdessen: **zwei Zeichenketten nebeneinander sind eine**, mit einem Leerzeichen
+    /// verbunden. Die Regel *„eine Zeichenkette endet auf ihrer Zeile"* bleibt unangetastet,
+    /// und die Behauptung darf so lang werden, wie sie genau sein muss.
+    ///
+    /// ```gabbro
+    /// claim "Am Fuss jedes EL0-Stacks bleibt ein Achtel unberuehrt,"
+    ///       "und tiefste Kette plus IRQ-Handler passen zusammen in die Groesse."
+    /// ```
     fn erwarte_text(&mut self) -> Erg<Textliteral> {
         let t = self.blick();
         if t.art == Art::Text {
             self.pos += 1;
-            Ok(Textliteral {
-                text: t.text(self.quelle).to_string(),
-                span: t.span,
-            })
+            let mut text = t.text(self.quelle).to_string();
+            let mut span = t.span;
+            while self.blick().art == Art::Text {
+                let w = self.blick();
+                self.pos += 1;
+                text.push(' ');
+                text.push_str(w.text(self.quelle));
+                span = crate::span::Span::neu(span.von, w.span.bis);
+            }
+            Ok(Textliteral { text, span })
         } else {
             let gefunden = t.benennung(self.quelle);
             self.absage(Absage::fehler(

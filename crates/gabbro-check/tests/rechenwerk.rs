@@ -891,3 +891,45 @@ impl fn f(t : ptr<normal, rw> T, s : index into T) effects { writes t.slots } co
         "die unbenannte Kante muss beim Namen stehen: {f:?}"
     );
 }
+
+/// **«B22» geschlossen: benachbarte Zeichenketten sind EINE.**
+///
+/// Der Befund lautete: *„Eine Behauptung, die in eine Zeile passen muss, wird kuerzer
+/// geschrieben, nicht genauer."*
+///
+/// > **Die naheliegende Reparatur waere gewesen, `newline` in der Zeichenkette zu erlauben** —
+/// > und sie haette die Pruefung mitgenommen, die dahintersteht: ein vergessenes
+/// > Anfuehrungszeichen verschluckt sonst den Rest der Datei, und `L001` faende es nie.
+/// > *W6 in die andere Richtung: eine Pruefung wegzunehmen braucht einen Grund, und hier gab
+/// > es keinen.*
+#[test]
+fn benachbarte_zeichenketten_sind_eine_und_l001_bleibt() {
+    let q = "module t {
+extern fn e() -> u32 effects { pure } costs <= 2 ops;
+check lang {
+    claim    \"Erste Zeile,\"
+             \"zweite Zeile,\"
+             \"dritte.\"
+    measures n
+    gates    g
+    can_fail { if e() != 0 { return false; } return true; }
+    floor    n >= 1
+} }";
+    let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&baum, &mut a);
+    assert!(
+        c.contains("claim: Erste Zeile, zweite Zeile, dritte."),
+        "die drei Stuecke werden EIN Satz, mit Leerzeichen verbunden:\n{c}"
+    );
+
+    // **Und die Sprechprobe: `L001` muss weiter greifen.** Eine Zeichenkette endet auf ihrer
+    // Zeile -- daran hat sich nichts geaendert, und genau das faengt das vergessene
+    // Anfuehrungszeichen.
+    let (_, a2) = gabbro_syntax::lies("p.gab", "module t { assume x \"offen\n und weiter\" ; }");
+    assert!(
+        a2.absagen.iter().any(|x| x.code == "L001"),
+        "eine Zeichenkette endet auf ihrer Zeile, und L001 sagt es: {:?}",
+        a2.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
+    );
+}
