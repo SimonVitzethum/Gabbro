@@ -1141,6 +1141,30 @@ MUTATIONEN = [
         "C-Absenkung -- ein `transset` setzt nur das letzte Bit; die uebrigen Orte fallen weg",
         "code",
     ),
+    Mutation(
+        "release-wird-abgesenkt",
+        "emit.rs",
+        "                Some(Ordnung::Relaxed) | None\n                    if matches!(a.obermenge, None | Some(Nutzlast::Nichts(_))) =>",
+        "                _ if true =>",
+        "C-Absenkung -- ein `release`-Atomic wird ohne Begruendung der Sichtbarkeit abgesenkt",
+        "code",
+    ),
+    Mutation(
+        "check-ohne-behauptung",
+        "emit.rs",
+        "        \"\\n/* check {}\\n * claim: {}\\n\",\n        c.name.text, c.claim.text",
+        "        \"\\n/* check {}\\n * claim: {}\\n\",\n        c.name.text, \"\"",
+        "C-Absenkung -- eine Probe faehrt ohne ihre Behauptung aus; eine Zahl ohne Gegenstand",
+        "code",
+    ),
+    Mutation(
+        "check-ohne-gegenprobe",
+        "emit.rs",
+        "        rumpf_aus.push_str(&format!(\n            \" * counterprobe: \\\"{}\\\" expects {}\\n\",",
+        "        let _ = (was, erwartet);\n        rumpf_aus.push_str(&format!(\n            \"{}{}\",",
+        "C-Absenkung -- die Gegenprobe faellt weg; eine Probe, die nicht rot werden kann, misst nichts",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

@@ -833,3 +833,61 @@ impl fn loesche(b : ptr<normal, rw> B, i : index into B)
     assert!(f.is_empty(), "{f:?}");
     assert!(c.contains("= (uint32_t)3u;"), "beide Bits in einem Zug:\n{c}");
 }
+
+/// **`atomic` ohne Nutzlast, `check` als Funktion — und `descendants of` als BEFUND.**
+#[test]
+fn atomic_check_und_die_unbenannte_kante() {
+    fn c_von(q: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.text.clone()).collect())
+    }
+
+    // **1. `publishes nothing relaxed` ist die lastfreie Form** -- es gibt nichts zu paaren,
+    // also nichts zu begruenden. `_Atomic` mit relaxed ist genau das, was dasteht.
+    let (c, f) = c_von("module t { atomic n : u32 publishes nothing relaxed; }");
+    assert!(f.is_empty(), "{f:?}");
+    assert!(c.contains("_Atomic uint32_t n;"), "{c}");
+
+    // **`release` wird abgelehnt**: dass ein release-Speichern die Sichtbarkeit HERSTELLT,
+    // die die Paarung behauptet, ist eine Aussage ueber das Speichermodell -- die Klasse
+    // *Rennen* haengt genau daran, und der Pruefer baut sie nicht.
+    let (_, f) = c_von("module t { atomic n : u32 publishes { x } release; }");
+    assert!(
+        f.iter().any(|s| s.contains("memory model")),
+        "der Erzeuger entscheidet nicht, was der Pruefer offenlaesst: {f:?}"
+    );
+
+    // **2. Ein `check` wird eine Funktion, und seine Behauptung faehrt mit.** Eine Probe
+    // auszuliefern, deren Behauptung nirgends steht, waere eine Zahl ohne Gegenstand.
+    let (c, f) = c_von(
+        "module t {
+extern fn hole() -> u32 effects { pure } costs <= 2 ops;
+check eich {
+    claim \"Das Messgeraet meldet an einem leeren Feld null.\"
+    measures n
+    gates all_done
+    can_fail { if hole() != 0 { return false; } return true; }
+    floor n >= 1
+    counterprobe \"Fuellung ausgehaengt\" expects waechst
+} }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    assert!(c.contains("bool pruefe_eich(void) {"), "{c}");
+    assert!(c.contains("claim: Das Messgeraet meldet"), "die Behauptung faehrt mit:\n{c}");
+    // **Die Gegenprobe ist die Zeile, die die Probe erst zu einer macht.**
+    assert!(c.contains("counterprobe: \"Fuellung ausgehaengt\""), "{c}");
+
+    // **3. `descendants of` ist ein BEFUND, kein Bauposten.** Die Domaene sagt nicht, an
+    // welcher Kante sie laeuft -- und `chain(a, b) in` zeigt, dass die Grammatik es kann.
+    let (_, f) = c_von(
+        "module t { table T count 8 { slot { p : option index into T, k : option index into T, } }
+impl fn f(t : ptr<normal, rw> T, s : index into T) effects { writes t.slots } costs <= 64 ops
+{ traverse v over descendants of t.slots[s] by consuming touches writes t.slots { } } }",
+    );
+    assert!(
+        f.iter().any(|s| s.contains("does not name the EDGE")),
+        "die unbenannte Kante muss beim Namen stehen: {f:?}"
+    );
+}

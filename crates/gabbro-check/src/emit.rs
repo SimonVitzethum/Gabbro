@@ -428,6 +428,43 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         ItemArt::Tabelle(t) => tabelle(t, &mut aus, &namen, absagen),
         ItemArt::Format(f) => format_(f, &mut aus, &namen, absagen),
         ItemArt::Device(d) => geraet(d, &mut aus, &namen, absagen),
+        // **`atomic x : u32 publishes nothing relaxed;`** -- der lastfreie Zaehler, und nur
+        // er. Er traegt KEINE Nutzlast, also gibt es keine Paarung und keine Sichtbarkeit zu
+        // begruenden: `_Atomic` mit `relaxed` ist genau das, was dasteht.
+        //
+        // > **`release`/`acquire` werden abgelehnt.** Dass ein `release`-Speichern die
+        // > Sichtbarkeit HERSTELLT, die die Paarung behauptet, ist eine Aussage ueber das
+        // > Speichermodell -- die Klempnerei-Klasse *Rennen* haengt seit dem 2026-08-16 genau
+        // > daran, und der Pruefer baut sie nicht. *Der Erzeuger entscheidet nicht, was der
+        // > Pruefer offenlaesst.*
+        ItemArt::Atomic(a) => {
+            match a.ordnung {
+                // `publishes nothing` IST die lastfreie Form -- sie steht als Nutzlast da,
+                // und genau darum ist sie harmlos: es gibt nichts zu paaren.
+                Some(Ordnung::Relaxed) | None
+                    if matches!(a.obermenge, None | Some(Nutzlast::Nichts(_))) =>
+                {
+                    match ctyp(&a.typ, &namen) {
+                        Some(c) => aus.push_str(&format!("\n_Atomic {c} {};\n", a.name.text)),
+                        None => weigere(absagen, a.span, "`atomic` of an unresolvable type"),
+                    }
+                }
+                _ => weigere(
+                    absagen,
+                    a.span,
+                    "`atomic` with a payload or an ordering other than `relaxed` -- that a \
+                     release store ESTABLISHES the visibility the pairing claims is a \
+                     statement about the memory model, and the checker does not build it",
+                ),
+            }
+        }
+        // **`check` -- der Pruefkoerper wird eine Funktion, der Rest faehrt als Kommentar mit.**
+        //
+        // `claim`, `measures`, `gates`, `floor` und `counterprobe` sind Buchfuehrung ueber die
+        // MESSUNG, nicht Rechnung: sie sagen, was die Probe behauptet, woran sie haengt und
+        // wie sie rot werden koennte. *Sie zu unterschlagen hiesse, eine Probe auszuliefern,
+        // deren Behauptung nirgends steht.*
+        ItemArt::Check(c) => pruefkoerper(c, &mut aus, &mut rumpf, &namen, absagen),
         // **Eine Sperre erzeugt zwei Prototypen und keine Zeile Rumpf.**
         //
         // Rang und Haltezeit stehen im C NIRGENDS: `H006` rechnet die Ordnung zur
@@ -758,6 +795,38 @@ fn ausdruck_geraet(e: &Expr, d: &Device, u: &Namen, absagen: &mut Absagen) -> St
             String::new()
         }
     }
+}
+
+/// **`check` -- die Probe wird eine Funktion, ihre Behauptung ein Kommentar.**
+fn pruefkoerper(
+    c: &Check,
+    aus: &mut String,
+    rumpf_aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+) {
+    aus.push_str(&format!("\nbool pruefe_{}(void);\n", c.name.text));
+    rumpf_aus.push_str(&format!(
+        "\n/* check {}\n * claim: {}\n",
+        c.name.text, c.claim.text
+    ));
+    for g in &c.gates {
+        rumpf_aus.push_str(&format!(" * gates: {}\n", g.text));
+    }
+    if let Some((was, erwartet)) = &c.counterprobe {
+        // **Die Gegenprobe ist die Zeile, die die Probe erst zu einer macht** -- sie sagt,
+        // wie die Probe ROT werden koennte. Eine Probe ohne sie ist eine Zusage.
+        rumpf_aus.push_str(&format!(
+            " * counterprobe: \"{}\" expects {}\n",
+            was.text, erwartet.text
+        ));
+    }
+    rumpf_aus.push_str(" */\n");
+    rumpf_aus.push_str(&format!("bool pruefe_{}(void) {{\n", c.name.text));
+    for s in &c.can_fail.anweisungen {
+        anweisung(s, rumpf_aus, u, absagen, 1, &Vec::new());
+    }
+    rumpf_aus.push_str("}\n");
 }
 
 /// **`transition` -- und `mirrors` ist die Antwort auf Falle 4.**
@@ -1714,11 +1783,24 @@ fn traverse(
             aus.push_str(&format!("{e}}}\n"));
             return;
         }
+        // **Und das ist ein BEFUND, kein Bauposten** (2026-08-17, beim Absenken gefunden).
+        //
+        // Die Domaene sagt nicht, AN WELCHER KANTE sie laeuft. `FRAGMENTE.md` F1 fuehrt in
+        // seiner Tabelle vier Kandidaten -- `parent`, `first_child`, `next_sibling`,
+        // `prev_sibling` -- und `descendants of c.slots[s]` nennt keinen.
+        //
+        // > **Die Grammatik weiss sehr wohl, wie man das sagt:** `chain(a, b) in <ort>`
+        // > (`SYNTAX.md`:348) benennt seine beiden Felder. `descendants of` und
+        // > `ancestors of` tun es nicht. *Das ist eine Unsymmetrie in der Grammatik, kein
+        // > fehlender Erzeugercode* -- und sie faellt erst auf, wenn jemand die Domaene
+        // > absenken will.
         Domaene::NachfahrenVon(_) => {
-            "`descendants of` -- a tree walk whose order is a template obligation \
-             (`consuming.ordnung`), not a loop form"
+            "`descendants of` -- the domain does not name the EDGE it walks. `CapSpace` \
+             carries four candidates (parent, first_child, next_sibling, prev_sibling), and \
+             `chain(a, b) in` shows the grammar already knows how to name one. That is an \
+             asymmetry in the grammar, not missing emitter code"
         }
-        Domaene::VorfahrenVon(_) => "`ancestors of` -- the upward walk needs its own bound",
+        Domaene::VorfahrenVon(_) => "`ancestors of` -- the same as `descendants of`: the edge is not named",
         Domaene::Schlange(_) => {
             "`queue` -- «B10»: `traverse` yields no value and knows no `break`, so \
              `by consuming` drains the WHOLE queue; that is a different program"
