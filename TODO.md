@@ -662,7 +662,7 @@ what remains is four, and **one of them is not solved but grazed**.
       `65 von 65` measures the checker today; about the **wished-for-form channel** it says nothing —
       and that is exactly where a coherently weakened generator is caught **by no proof**.
 - [ ] **Every new generated form needs its template entry BEFORE it becomes grammar.**
-      `gabbro schablonen` carries today **20, of which 16 unproved**. The list is the ratchet
+      `gabbro schablonen` carries today **20, of which 15 unproved**. The list is the ratchet
       over the surface into which the third way out shifts its burden of proof —
       **if it grows, the trust base grows, even if the metric shines.**
 ### Checker and generator

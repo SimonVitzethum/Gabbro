@@ -446,10 +446,24 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "verbund.konstruktor",
         haengt_an: &[],
         konstrukt: "erzeugter Konstruktor (Kandidat, aus «B7»)",
-        pflicht: "Der aus der Felderliste erzeugte Konstruktor setzt jedes Feld genau einmal \
-                  und laesst keins uninitialisiert.",
-        stand: Stand::Entworfen,
-        fundstelle: "MESSUNGEN.md, B13-Nachpruefung",
+        // **Maschinell geprueft 2026-08-17** (`beweise/Verbund_Konstruktor.thy`), und zwar
+        // VOR dem Konstrukt: das Verbundliteral («B7») zu bauen haette diesen Eintrag von
+        // `Entworfen` auf `Getragen` gehoben und damit `L` auf 5 -- das Tor aus K100.
+        //
+        // **Ausgespuelt (M-1):** die zwei Haelften des Satzes sind EINE, sobald die
+        // Deklaration wohlgeformt ist. Und der Gehalt liegt eine Stufe weiter, als der
+        // Eintrag sagte: nicht *„jedes Feld gesetzt"*, sondern **die Ablesung ist eindeutig**.
+        pflicht: "UNTER `distinct fs`: wenn die Zuordnungsliste des Konstruktors genau die \
+                  Feldliste als Schluesselfolge hat (`map fst zs = fs`), ist jedes Feld genau \
+                  einmal gesetzt UND keins uninitialisiert -- die beiden Haelften fallen \
+                  zusammen. **Und die Ablesung ist eindeutig**: `liest zs f = Some v` fuer \
+                  genau den Wert, den der Konstruktor dort hingeschrieben hat \
+                  (`ablesung_ist_eindeutig`, `jedes_feld_hat_einen_wert`). **OFFEN bleibt, \
+                  dass der ERZEUGER `deckt` herstellt** -- das ist eine Aussage ueber \
+                  `emit.rs`, und sie faellt in die Bruecke (PLAN.md, PL.3): eine Mutation, \
+                  die ein Feld doppelt oder gar nicht setzt, muss fallen.",
+        stand: Stand::Bewiesen,
+        fundstelle: "MESSUNGEN.md, B13-Nachpruefung; beweise/Verbund_Konstruktor.thy",
     },
     Schablone {
         name: "gruppe.ops",
