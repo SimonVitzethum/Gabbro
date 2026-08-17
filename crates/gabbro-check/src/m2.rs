@@ -152,7 +152,9 @@ fn gehe(
             StmtArt::Ruf(r) => ruf(r, s.span, verbraucht_param, zust, absagen),
             StmtArt::Let(l) => ausdruck(&l.wert, s.span, verbraucht_param, zust, absagen),
             StmtArt::LetSonst(l) => {
-                ruf(&l.ruf, s.span, verbraucht_param, zust, absagen);
+                if let Some(r) = l.als_ruf() {
+                    ruf(r, s.span, verbraucht_param, zust, absagen);
+                }
                 gehe(&l.sonst, linear, verbraucht_param, zust, absagen);
             }
             StmtArt::Return(Some(e)) => ausdruck(e, s.span, verbraucht_param, zust, absagen),

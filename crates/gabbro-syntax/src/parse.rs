@@ -2116,16 +2116,22 @@ impl<'a> Parser<'a> {
         }
 
         if self.ist_kw(Kw::Else) {
-            let ExprArt::Ruf(ruf) = wert.art else {
-                self.absage(
-                    Absage::fehler(
-                        "P016",
-                        wert.span,
-                        "`let … else` carries a call, no other expression",
-                    )
-                    .mit_notiz("`letstmt = \"let\" ident \"=\" call \"else\" \"(\" ident \")\" block`"),
-                );
-                return Err(Abbruch);
+            // **«B14b»: die Quelle darf ein Ruf ODER ein `place` sein.** Ein Atomic ist ein
+            // `place`, und `option`-wertige Orte auszupacken war bis heute unmoeglich.
+            let quelle = match wert.art {
+                ExprArt::Ruf(ruf) => LetQuelle::Ruf(ruf),
+                ExprArt::Ort(o) => LetQuelle::Ort(o),
+                _ => {
+                    self.absage(
+                        Absage::fehler(
+                            "P016",
+                            wert.span,
+                            "`let … else` carries a call or a place, no other expression",
+                        )
+                        .mit_notiz("`letstmt = \"let\" ident \"=\" ( call | place ) \"else\" \"(\" ident \")\" block`"),
+                    );
+                    return Err(Abbruch);
+                }
             };
             self.pos += 1;
             self.erwarte_z(Z::RundAuf)?;
@@ -2134,7 +2140,7 @@ impl<'a> Parser<'a> {
             let sonst = self.block()?;
             return Ok(StmtArt::LetSonst(LetSonst {
                 name,
-                ruf,
+                quelle,
                 fehlername,
                 sonst,
             }));

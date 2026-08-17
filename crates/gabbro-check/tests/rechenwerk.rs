@@ -933,3 +933,42 @@ check lang {
         a2.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
     );
 }
+
+/// **«B14b» geschlossen: `let … else` packt auch einen `place` aus.**
+///
+/// Der Befund lautete: *„`let … else` verlangt RECHTS einen `call`. Ein `option`-wertiges
+/// `place` laesst sich damit nicht auspacken — und ein Atomic IST ein `place`."* Genau daran
+/// zerbrach die Messstelle in `FRAGMENTE.md` F6.
+///
+/// **Die Paesse, die nur Rufe interessieren, fragen ueber `als_ruf()`** — statt dass jeder von
+/// ihnen die neue Form kennen muss. *Ein Ort ruft nichts: der Aufrufgraph sieht keine Kante,
+/// M2 verbraucht nichts, und der Kostenpass zaehlt EINE Operation fuer die Ablesung.*
+#[test]
+fn let_else_packt_auch_einen_ort_aus() {
+    let q = "module t {
+atomic g : u32 publishes nothing relaxed;
+impl fn f() -> bool effects { reads g } costs <= 4 ops
+{ let x = g else (e) { return false; } return true; } }";
+    let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let _ = gabbro_check::pruefe(&baum, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "und die Paesse tragen es auch:\n{}", a.zeige(q));
+
+    // **Ein Ort ruft nichts.** Der Aufrufgraph darf daraus keine Kante machen -- sonst
+    // waere `g` ein unbekannter Gerufener und JEDE Huelle darueber eine untere Schranke.
+    let h = gabbro_check::aufrufgraph::erhebe(&baum).huelle("f");
+    assert!(
+        h.unvollstaendig.is_none(),
+        "ein ausgepackter Ort ist kein Ruf: {:?}",
+        h.unvollstaendig
+    );
+
+    // Was NICHT geht, geht weiterhin nicht: ein zusammengesetzter Ausdruck.
+    let (_, a2) = gabbro_syntax::lies("p.gab",
+        "module t { impl fn f() -> bool effects { pure } costs <= 4 ops \
+         { let x = 1 + 2 else (e) { return false; } return true; } }");
+    assert!(
+        a2.absagen.iter().any(|x| x.code == "P016"),
+        "ein Rechenausdruck hat nichts auszupacken"
+    );
+}

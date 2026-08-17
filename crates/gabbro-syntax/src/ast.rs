@@ -731,9 +731,33 @@ pub struct LetStmt {
 #[derive(Debug, Clone)]
 pub struct LetSonst {
     pub name: Ident,
-    pub ruf: Ruf,
+    /// **«B14b» geschlossen 2026-08-17: die Quelle darf auch ein `place` sein.**
+    ///
+    /// Der Befund lautete: *„`let … else` verlangt RECHTS einen `call`. Ein `option`-wertiges
+    /// `place` laesst sich damit nicht auspacken -- und ein Atomic IST ein `place`."*
+    /// Genau daran zerbrach die Messstelle in `FRAGMENTE.md` F6.
+    pub quelle: LetQuelle,
     pub fehlername: Ident,
     pub sonst: Block,
+}
+
+/// Woraus ein `let … else` auspackt.
+#[derive(Debug, Clone)]
+pub enum LetQuelle {
+    Ruf(Ruf),
+    /// Ein `place` -- ein Atomic, ein Slotfeld, alles mit `option`-Wert.
+    Ort(Ort),
+}
+
+impl LetSonst {
+    /// Der Ruf, falls die Quelle einer ist. **Die Paesse, die nur Rufe interessieren, fragen
+    /// so** -- statt dass jede von ihnen die neue Form kennen muss.
+    pub fn als_ruf(&self) -> Option<&Ruf> {
+        match &self.quelle {
+            LetQuelle::Ruf(r) => Some(r),
+            LetQuelle::Ort(_) => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

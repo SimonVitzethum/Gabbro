@@ -260,7 +260,9 @@ fn block(
             StmtArt::Bricht(x) => block(&x.rumpf, offen, kette, exklusiv, sperren, verlangt, genommen, absagen),
             StmtArt::Narrow(x) => block(&x.sonst, offen, kette, exklusiv, sperren, verlangt, genommen, absagen),
             StmtArt::LetSonst(x) => {
-                rufprobe(&x.ruf, s.span, offen, verlangt, absagen);
+                if let Some(r) = x.als_ruf() {
+                    rufprobe(r, s.span, offen, verlangt, absagen);
+                }
                 block(&x.sonst, offen, kette, exklusiv, sperren, verlangt, genommen, absagen);
             }
             StmtArt::Schleife(sch) => match sch.as_ref() {

@@ -452,7 +452,7 @@ exchstmt   = "let" ident "=" place "exchange" xform
 xform      = "update" "(" ident ")" block
            | expr "when" pred "returns" ident ;
 letstmt    = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
-           | "let" ident "=" call "else" "(" ident ")" block ;
+           | "let" ident "=" ( call | place ) "else" "(" ident ")" block ;   (* «B14b» *)
 assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;
 exprstmt   = call ";" ;
 ifstmt     = "if" expr block { "else" "if" expr block } [ "else" block ] ;

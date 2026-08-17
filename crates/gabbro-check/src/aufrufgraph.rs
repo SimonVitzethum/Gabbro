@@ -205,7 +205,10 @@ fn sammle_rufe(b: &Block, aus: &mut BTreeSet<String>) {
             StmtArt::Ruf(r) => nimm(r, aus),
             StmtArt::Let(l) => aus_expr(&l.wert, aus),
             StmtArt::LetSonst(l) => {
-                nimm(&l.ruf, aus);
+                // «B14b»: eine Quelle, die ein `place` ist, ruft nichts.
+                if let Some(r) = l.als_ruf() {
+                    nimm(r, aus);
+                }
                 sammle_rufe(&l.sonst, aus);
             }
             StmtArt::Zuweisung(z) => aus_expr(&z.wert, aus),

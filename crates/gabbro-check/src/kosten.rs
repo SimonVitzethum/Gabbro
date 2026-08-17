@@ -246,7 +246,13 @@ impl<'a> Rechner<'a> {
                 XForm::Vergleich { wert, .. } => Kosten::Zahl(1).plus(self.ausdruck(wert)),
             },
             StmtArt::LetSonst(l) => {
-                Kosten::Zahl(1).plus(self.ruf(&l.ruf)).plus(self.block(&l.sonst))
+                // **Ein `place` auszupacken kostet EINE Operation** -- die Ablesung. Ein
+                // Ruf kostet, was der Gerufene zusagt.
+                let quelle = match l.als_ruf() {
+                    Some(r) => self.ruf(r),
+                    None => Kosten::Zahl(1),
+                };
+                Kosten::Zahl(1).plus(quelle).plus(self.block(&l.sonst))
             }
             StmtArt::Ruf(r) => self.ruf(r),
             // Ein Ruecksprung ist keine der vier Primitiven; sein Ausdruck kostet.

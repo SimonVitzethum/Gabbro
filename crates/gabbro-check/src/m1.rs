@@ -170,7 +170,10 @@ impl<'a> Pruefer<'a> {
                     .insert(l.name.text.clone(), ziel.unwrap_or(wert));
             }
             StmtArt::LetSonst(l) => {
-                let t = self.ruf(&l.ruf, lage);
+                let t = match l.als_ruf() {
+                    Some(r) => self.ruf(r, lage),
+                    None => crate::typen::Typ::Unbekannt,
+                };
                 lage.fakten.retain(|f| !nennt_namen(f, &l.name.text));
                 lage.lokal.insert(l.name.text.clone(), t);
                 self.aufruf_toetet_fakten(lage);

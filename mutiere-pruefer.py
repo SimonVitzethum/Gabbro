@@ -1165,6 +1165,14 @@ MUTATIONEN = [
         "C-Absenkung -- die Gegenprobe faellt weg; eine Probe, die nicht rot werden kann, misst nichts",
         "code",
     ),
+    # -- «B14b»: ein ausgepackter Ort ist kein Ruf ---------------------------------------
+    Mutation(
+        "ausgepackter-ort-gilt-als-ruf",
+        "aufrufgraph.rs",
+        "                if let Some(r) = l.als_ruf() {\n                    nimm(r, aus);\n                }",
+        "                nimm(&Ruf { pfad: Pfad { teile: vec![l.name.clone()], span: l.name.span }, argumente: vec![], span: l.name.span }, aus);",
+        "B14b -- ein ausgepackter Ort gilt als Ruf; jede Huelle darueber wird untere Schranke",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
