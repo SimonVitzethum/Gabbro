@@ -142,6 +142,11 @@ of items that are neither code nor a run — what remains is building and measur
       in der der Rufer die Pflicht des fremden Rumpfes AUSSPRICHT statt sie nur zu unterstellen
       -- die Sperre etwa schuldet gegenseitigen Ausschluss, Fortschritt und die Rangordnung,
       und keine Zeile sagt das heute.*
+      **Gemessen 2026-08-17: 48 fremde Ruempfe im Korpus, NULL sprechen ihre Pflicht aus.**
+      `ensures` an einer Deklaration ohne Rumpf ist grammatisch seit jeher moeglich (geprueft,
+      0 Fehler) -- *und kein Pass liest es.* Die Schicht hat damit zwei Haelften: die sieben
+      Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
+      tragen lassen (PL-Arbeit).
 - [ ] **Die Absenkung fehlt fuer die meisten Formen -- und zwar als WEIGERUNG, nicht als Luecke.**
       `C001` weigert sich benannt fuer `forever`, `publishes`, `awaits`, `exchange`,
       `let … else`, `static`, `reason`, `group`, `walk`, `entry`, `boot`, `accumulates`,

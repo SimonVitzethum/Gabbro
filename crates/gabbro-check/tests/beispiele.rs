@@ -206,3 +206,41 @@ fn das_zeugnis_meldet_was_es_nicht_einordnen_kann() {
         "eine vollstaendig gebuchte Datei meldet nichts"
     );
 }
+
+/// **48 fremde Ruempfe im Korpus, NULL davon sagen, was sie herstellen muessen.**
+///
+/// `effects` und `costs` sind **Schranken, keine Pflichten.** `extern fn mmu_an(p) ->
+/// BootPhase effects { consumes p, writes mmu } costs <= 4096 ops;` erlaubt einen Rumpf, der
+/// **gar nichts tut**: er fasst nichts Verbotenes an und kostet null. *Was der Rufer wirklich
+/// annimmt — „danach ist die MMU an" — steht nirgends.*
+///
+/// **`ensures` an einer Deklaration ohne Rumpf ist genau diese Zeile, und die Grammatik kennt
+/// sie seit jeher.** Gemessen 2026-08-17: null Stueck im ganzen Korpus.
+///
+/// > Diese Probe nagelt die Null NICHT fest — sie soll fallen, sobald jemand die erste
+/// > schreibt. Was sie festnagelt, ist, dass die Zaehlung **funktioniert**: eine
+/// > ausgesprochene Pflicht muss auch als solche ankommen.
+#[test]
+fn eine_ausgesprochene_pflicht_wird_gezaehlt() {
+    let ohne = "module t { linear ghost type P; \
+                extern fn f(p : P) -> P effects { consumes p, writes mmu } costs <= 8 ops; }";
+    let (baum, a) = gabbro_syntax::lies("p.gab", ohne);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(ohne));
+    let e = gabbro_check::zeugnis::erhebe(&baum);
+    assert_eq!(e.fremde.len(), 1, "ein Rumpf, den diese Einheit nicht schreibt");
+    assert_eq!(
+        e.fremde_mit_pflicht, 0,
+        "`effects` und `costs` sind Schranken -- ein Rumpf, der nichts tut, erfuellt sie"
+    );
+
+    let mit = "module t { linear ghost type P; \
+               extern fn f(p : P) -> P ensures result != p \
+               effects { consumes p, writes mmu } costs <= 8 ops; }";
+    let (baum2, a2) = gabbro_syntax::lies("p.gab", mit);
+    assert_eq!(a2.fehler_zahl(), 0, "{}", a2.zeige(mit));
+    assert_eq!(
+        gabbro_check::zeugnis::erhebe(&baum2).fremde_mit_pflicht,
+        1,
+        "eine ausgesprochene Pflicht muss ankommen -- sonst zaehlt die Spalte nichts"
+    );
+}

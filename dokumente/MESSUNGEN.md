@@ -6776,3 +6776,100 @@ je Datei.
 Schwierigkeit gewählt. *Solange kein zweiter Korpus danebensteht, den beim Bauen niemand
 angesehen hat, ist die Zahl Falle 80 in Reinform* — eine, die man erreicht, indem man auf sie
 hin baut. `PLAN.md` führt ihn im selben Plan wie das letzte Konstrukt, nicht danach.
+
+---
+
+# Was nötig wäre, um F7 zu «fixen» — drei Schichten mit drei verschiedenen Preisen
+
+**F7 ist 54 Zeilen und besteht im Kern aus sechs Zeilen Rumpf:**
+
+```gabbro
+let p1 = mmu_an(p);
+let p2 = cap_tabellen(p1);
+let p3 = ipc_tabellen(p2);
+let p4 = autoritaet_melden(p3);
+let p5 = verifizierer_starten(p4);
+root_task_starten(p5);
+```
+
+Sieben `extern fn` davor. **Das Zeugnis sagt: `0 Schablonen, 3 direkte Formen, 7 fremde
+Rümpfe`.** Was „fixen" heißt, zerfällt in drei Dinge, und nur eines davon ist Gabbros.
+
+## Schicht 1 — «B37», und der Befund steht IM FRAGMENT
+
+Das Fragment schreibt seinen eigenen Mangel hin (`FRAGMENTE.md`:1293–1299):
+
+> *„Die Marke trägt die Reihenfolge, aber sie trägt sie als **LINEARITÄT**, nicht als
+> **ORDNUNG**: `mmu_an` verbraucht die rohe Phase und gibt die gewöhnliche zurück. Damit ist
+> „vor der MMU" und „nach der MMU" unterscheidbar — **aber „Cap-Tabellen vor dem ersten Cap"
+> ist es nicht**, denn beide liegen in derselben Phase."*
+
+**Der lineare Wert erzwingt eine Kette, aber nicht WELCHE.** `cap_tabellen(p1)` und
+`ipc_tabellen(p2)` sind vertauschbar, ohne dass ein Pass etwas sagt — jede der 720
+Reihenfolgen der sechs Schritte typprüft.
+
+**Zwei Wege, und die Wahl ist die Arbeit:**
+
+| | Preis |
+|---|---|
+| **je Schritt eine eigene Marke** | der Wortschatz wächst mit jedem Bootschritt — `RohPhase`, `MmuAn`, `CapsBereit`, … *Genau die Bauart, gegen die dieser Ordner sonst steht* |
+| **eine Ordnung auf Marken** | ein Mechanismus, kein Name je Schritt. Aber `rank` gibt es nur an der Sperre, und ihn zu verallgemeinern ist eine Entwurfsfrage mit eigener Schablone |
+
+*Das sind die zwei hängenden Pflichten, die `PFLICHTEN.md` unter «B37» führt.* **Das ist die
+Schicht, die wirklich Gabbros ist.**
+
+## Schicht 2 — die Pflicht des fremden Rumpfes ist SAGBAR und wird nirgends gesagt
+
+```
+Fremde Rümpfe im Korpus:                    48
+davon mit ausgesprochener Pflicht:           0
+```
+
+**`effects` und `costs` sind Schranken, keine Pflichten.**
+
+```gabbro
+extern fn mmu_an(p : BootPhase) -> BootPhase
+    effects { consumes p, writes mmu } costs <= 4096 ops;
+```
+
+> **Diese Zeile erlaubt einen Rumpf, der gar nichts tut.** Er fasst nichts Verbotenes an und
+> kostet null. *Was der Rufer wirklich annimmt — „danach ist die MMU an" — steht nirgends.*
+
+**`ensures` an einer Deklaration ohne Rumpf ist genau diese Zeile, und die Grammatik kennt sie
+seit jeher.** Geprüft: `extern fn mmu_an(p) -> BootPhase ensures result != p effects { … }`
+geht durch, 0 Fehler.
+
+**Aber die Hälfte fehlt, und sie fehlt beim Prüfer:** kein Pass liest `ensures` — `grep -rn
+"\.ensures" crates/gabbro-check/src` findet außer dem Zeugnis nichts. Nur `requires` wird
+gelesen, und nur vom Aufrufgraph für `Held(…)`.
+
+*Also: hinschreiben kostet nichts und ist heute Dokumentation.* **Die volle Schicht 2 ist:
+(a) die sieben Zeilen schreiben, (b) den Prüfer sie in die Beweispflicht des Rufers tragen
+lassen** — und (b) ist PL-Arbeit, nicht Erzeugerarbeit.
+
+## Schicht 3 — die Rümpfe selbst, und das ist KEIN Mangel von F7
+
+| Rumpf | ginge in Gabbro? |
+|---|---|
+| `mmu_an` | **ja** — `device` + `walk`, beides gebaut |
+| `cap_tabellen` · `ipc_tabellen` | **ja** — `table … count N` + `state`/`transition` |
+| `autoritaet_melden` | **ja** — `format` über dem Manifest |
+| `melde_roh` | **ja** — `device at mmio`; die Sperrfreiheit ist eine Phaseneigenschaft |
+| `verifizierer_starten` · `root_task_starten` | **nein, nicht ganz** — einen Faden zu starten endet im Assembler (`entry`, `raw fn`) |
+
+**Sechs von sieben könnten Gabbro sein. Der siebte bleibt fremd, und das ist richtig so.**
+
+> *Ein Fragment ist ein AUSSCHNITT.* Dass die Rümpfe woanders liegen, ist keine Lücke, sondern
+> die Definition. **Was fehlt, ist nicht, sie hierher zu holen — es ist, dass F7 nicht sagt,
+> was es von ihnen erwartet.**
+
+## Der kürzeste Weg, und er ist überraschend kurz
+
+1. **Sieben `ensures`-Zeilen an die `extern`-Deklarationen.** Kostet nichts an Grammatik, und
+   das Zeugnis zählt sie ab dem nächsten Lauf: `7 fremde Rümpfe (7 sprechen ihre Pflicht aus)`.
+2. **«B37» entscheiden** — Marke je Schritt oder Ordnung auf Marken. *Zwei Pflichten, eine
+   Entwurfsfrage, keine Zeile Erzeuger.*
+3. **PL: den Prüfer `ensures` lesen lassen** — dann wird aus der Dokumentation eine Übergabe.
+
+**Punkt 1 und 2 machen F7 zu einem Fragment ohne hängende Klempnereipflicht. Punkt 3 macht die
+Übergabe an den fremden Rumpf zu einer geprüften.**

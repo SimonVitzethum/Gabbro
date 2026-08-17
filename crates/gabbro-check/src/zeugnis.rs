@@ -235,6 +235,12 @@ pub struct Erhebung {
     /// > *Ein Vertrag, auf den gerechnet wird und dessen Rumpf woanders steht, ist eine
     /// > Annahme — sie steht hier bei den anderen Annahmen und nicht im Kleingedruckten.*
     pub fremde: Vec<(String, String)>,
+    /// **Wie viele davon AUSSPRECHEN, was ihr Rumpf herstellen muss** (`ensures`/`maintains`).
+    ///
+    /// Der Rest steht mit `effects` und `costs` da — und beides sind *Schranken*: ein Rumpf,
+    /// der gar nichts tut, erfuellt sie. **Was der Rufer wirklich annimmt, steht dann
+    /// nirgends.** Eine Sperre bringt keine mit; sie ist die Bauart selbst.
+    pub fremde_mit_pflicht: usize,
 }
 
 fn zaehle(e: &mut Erhebung, was: &'static str) {
@@ -298,7 +304,12 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
                 // **Kein Rumpf heisst: der Rumpf steht woanders.** Der Erzeuger schreibt
                 // einen Prototyp, und die Paesse rechnen mit `effects` und `costs`, die hier
                 // daneben stehen -- *als Vertrag, nicht als Messung.*
-                FnRumpf::Keiner => e.fremde.push((f.name.text.clone(), vertrag(f))),
+                FnRumpf::Keiner => {
+                    if spricht_seine_pflicht_aus(f) {
+                        e.fremde_mit_pflicht += 1;
+                    }
+                    e.fremde.push((f.name.text.clone(), vertrag(f)))
+                }
                 FnRumpf::Pred(_) => {}
             }
         }
@@ -307,6 +318,21 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
         andere => e.unzugeordnet.push(format!("item `{}`", art_name(andere))),
     });
     e
+}
+
+/// **Sagt diese Deklaration, was ihr Rumpf HERSTELLEN muss?**
+///
+/// `effects` und `costs` sagen, was er anfassen und was er kosten darf — **beides sind
+/// Schranken, keine Pflichten.** Ein `extern fn mmu_an(p) -> BootPhase effects { consumes p,
+/// writes mmu } costs <= 4096 ops;` erlaubt einen Rumpf, der gar nichts tut: er fasst nichts
+/// Verbotenes an und kostet null.
+///
+/// > *Was der Rufer wirklich annimmt — „danach ist die MMU an" — steht nirgends.*
+///
+/// **`ensures` an einer Deklaration ohne Rumpf ist genau diese Zeile**, und die Grammatik
+/// kennt sie seit jeher. Am 2026-08-17 gemessen: **im ganzen Korpus null Stück.**
+pub fn spricht_seine_pflicht_aus(f: &FnDecl) -> bool {
+    !f.ensures.is_empty() || !f.maintains.is_empty()
 }
 
 /// Der Vertrag, mit dem der Pruefer ueber einen fremden Rumpf rechnet.
@@ -326,7 +352,12 @@ fn vertrag(f: &FnDecl) -> String {
         Some(_) => "mit `costs`",
         None => "**ohne `costs`** -- jede Huelle darueber ist eine untere Schranke",
     };
-    format!("effects {{ {w} }}, {k}")
+    let pf = if spricht_seine_pflicht_aus(f) {
+        format!(", ensures ({})", f.ensures.len() + f.maintains.len())
+    } else {
+        " -- OHNE `ensures`: was er HERSTELLEN muss, steht nirgends".into()
+    };
+    format!("effects {{ {w} }}, {k}{pf}")
 }
 
 fn art_name(a: &ItemArt) -> &'static str {
@@ -547,7 +578,8 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     // **Eine Zeile traegt die Buchung.** Der Waechter vergleicht genau sie; eine zweite Zahl
     // daneben waere eine Gelegenheit, sich zu widersprechen.
     aus.push_str(&format!(
-        "     {} Annahmen, {} Schablonen ({} davon UNBEWIESEN), {} direkte Formen, {} fremde Ruempfe\n",
+        "     {} Annahmen, {} Schablonen ({} davon UNBEWIESEN), {} direkte Formen, \
+         {} fremde Ruempfe ({} sprechen ihre Pflicht aus)\n",
         annahmen.len(),
         benutzt.len(),
         offen.len(),
@@ -557,7 +589,8 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
                 .iter()
                 .any(|p| p.konstrukt == **k && p.traegt == Traegt::Direkt))
             .count(),
-        e.fremde.len()
+        e.fremde.len(),
+        e.fremde_mit_pflicht
     ));
     if !e.fremde.is_empty() {
         aus.push_str(

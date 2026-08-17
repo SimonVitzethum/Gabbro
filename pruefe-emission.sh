@@ -145,7 +145,7 @@ int main(void) {
 '
 lauf "beispiel16" "$W/beispiele/16-by-ops-am-feld.gab" "$TREIBER16" "42 1 8 0" \
      's/\.benutzt = true/.benutzt = false/' \
-     "0 Annahmen, 1 Schablonen (1 davon UNBEWIESEN), 5 direkte Formen, 0 fremde Ruempfe"
+     "0 Annahmen, 1 Schablonen (1 davon UNBEWIESEN), 5 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
 # -- 2. Das Fragment: die Geistloeschung -------------------------------------------------
 #
@@ -184,7 +184,7 @@ int main(void) {
 '
 lauf "fragment7" "$ARB/f7.gab" "$TREIBER7" "123456" \
      's/    ipc_tabellen();/    \/* geloescht *\//' \
-     "0 Annahmen, 0 Schablonen (0 davon UNBEWIESEN), 3 direkte Formen, 7 fremde Ruempfe"
+     "0 Annahmen, 0 Schablonen (0 davon UNBEWIESEN), 3 direkte Formen, 7 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
 # -- 3. Das Fragment F8: die Sperre wird auf JEDEM Pfad gegeben --------------------------
 #
@@ -235,7 +235,7 @@ int main(void) {
 #      1  -- und der Slot ist unberuehrt: der None-Zweig fasst nichts an
 lauf "fragment8" "$ARB/f8.gab" "$TREIBER8" "1 1 1 0 0 1 1 1" \
      '0,/^                SCHEDS_gib();$/s///' \
-     "0 Annahmen, 3 Schablonen (3 davon UNBEWIESEN), 5 direkte Formen, 2 fremde Ruempfe"
+     "0 Annahmen, 3 Schablonen (3 davon UNBEWIESEN), 5 direkte Formen, 2 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
 # -- 4. Das Fragment F10: das Format und das Operationsbudget ----------------------------
 #
@@ -287,7 +287,7 @@ int main(void) {
 #    und die Probe hat es gemeldet.*
 lauf "fragment10" "$ARB/f10.gab" "$TREIBER10" "1 0 0 0 0 65" \
      's/(uint32_t)p\[0\] << 24/(uint32_t)p[3] << 24/' \
-     "0 Annahmen, 2 Schablonen (1 davon UNBEWIESEN), 7 direkte Formen, 2 fremde Ruempfe"
+     "0 Annahmen, 2 Schablonen (1 davon UNBEWIESEN), 7 direkte Formen, 2 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
 # -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
 #
@@ -323,7 +323,7 @@ int main(void) {
 #      0  -- und der LETZTE Slot ist mitgeloescht: die Grenze ist `< n`, nicht `< n-1`
 lauf "beispiel19" "$W/beispiele/19-traversierung.gab" "$TREIBER19" "16 6 0 0" \
      's/; i++)/; i += 2)/' \
-     "0 Annahmen, 2 Schablonen (1 davon UNBEWIESEN), 8 direkte Formen, 0 fremde Ruempfe"
+     "0 Annahmen, 2 Schablonen (1 davon UNBEWIESEN), 8 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
 # -- 6. Das Geraet: ein Register ist KEIN Feld ------------------------------------------
 #
@@ -361,7 +361,7 @@ int main(void) {
 #            Fuellung, ueber die der Uebersetzer entscheidet
 lauf "beispiel12" "$W/beispiele/12-umlaufendes-register.gab" "$TREIBER12" "8 0 64 8" \
      's/+ 258/+ 260/' \
-     "0 Annahmen, 1 Schablonen (1 davon UNBEWIESEN), 2 direkte Formen, 0 fremde Ruempfe"
+     "0 Annahmen, 1 Schablonen (1 davon UNBEWIESEN), 2 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
 # -- 7. FALLE 4: `mirrors`, und der Test misst genau die bezahlte Falle -----------------
 #
@@ -408,7 +408,7 @@ int main(void) {
 #      Maske und eine Kommentarwand; hier ist es eine Zeile.*
 lauf "beispiel20" "$W/beispiele/20-falle-vier.gab" "$TREIBER20" "1 1 1 1" \
      's/(_s \& /(0*_s \& /' \
-     "0 Annahmen, 2 Schablonen (2 davon UNBEWIESEN), 1 direkte Formen, 0 fremde Ruempfe"
+     "0 Annahmen, 2 Schablonen (2 davon UNBEWIESEN), 1 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
 
 # -- 8. «B7»: der Verbundwert, und der Test misst genau das, wofuer die Marken Pflicht sind --
@@ -436,7 +436,7 @@ int main(void) {
 #      Typ haette etwas dagegen gehabt. Das Gift unten vertauscht genau die zwei Bestimmer.
 lauf "beispiel21" "$W/beispiele/21-verbundwert.gab" "$TREIBER21" "5 300 7 9 1" \
      's/\.id = k, \.len = n/.id = n, .len = k/' \
-     "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 4 direkte Formen, 0 fremde Ruempfe"
+     "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 4 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
 echo "== EMISSION: ALL PASS -- 8 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
