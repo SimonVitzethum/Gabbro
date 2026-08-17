@@ -768,7 +768,9 @@ fn mirrors_schreibt_die_zustandsbits_mit() {
     assert!(c.contains("(d->basis + 24)) = "), "{c}");
 
     // Die geaenderten Bits werden ausmaskiert, die uebrigen mitgeschrieben. Bit 30 = 2^30.
-    assert!(c.contains("_s & (uint32_t)~(uint32_t)1073741824u"), "die Maske:\n{c}");
+    // **Am oeffnenden Klammerpaar verankert.** Ohne es matchte auch `0*_s & …` -- und genau
+    // das war die Mutation, die ueberlebt hat: eine Teilzeichenkette ist keine Verankerung.
+    assert!(c.contains("((_s & (uint32_t)~(uint32_t)1073741824u)"), "die Maske:\n{c}");
     assert!(c.contains("| (uint32_t)1073741824u"), "und das neue Bit:\n{c}");
 
     // **Das `requires` wird KEINE Laufzeitpruefung** -- es ist dieselbe Art Klausel wie ein
