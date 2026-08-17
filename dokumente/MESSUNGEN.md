@@ -5148,3 +5148,118 @@ statement about **every** lowering.
 > **The surface is no longer undamageable, and that is the whole of today's gain.** Two
 > mutations now bite in it (`67 of 67`): one turns the table pointer back into `uint32_t`, the
 > other drops the licence notice. Before today neither could have failed.
+
+
+---
+
+# VORAB — NEUZUWEISUNG: the 74 proof obligations, with `file:line`
+
+**Separate commit, BEFORE the count. After the run nothing in this section is changed.**
+
+## Prior history, in one sentence
+
+The aggregate **74 / 17 / 57 / 19 / 1** was assigned on 2026-08-14 over ten hand-translated
+fragments; on 2026-08-15 the W7 sweep found that the whole section carries **exactly one**
+`file:line`, and that one belongs to the eager-FP question. Verdict then: **invalid, not
+unfavourable** — *the count is not run, the basis is established first.* The folder wrote down
+the order itself (`MESSUNGEN.md`, *What is to be done now*): reassign · then the K/A/W split ·
+and carry the marking **newly assigned, not reconstructed**.
+
+## Population, and it is frozen
+
+`dokumente/FRAGMENTE.md` @ commit `708beed`, the ten ```gabbro blocks:
+
+```
+F1  92-349 (258)   F2  397-530 (134)   F3  554-704 (151)   F4  753-896 (144)
+F5 919-1018 (100)  F6 1047-1163 (117)  F7 1280-1333 (54)   F8 1409-1461 (53)
+F9 1503-1550 (48)  F10 1624-1668 (45)                      = 1 104 lines of Gabbro
+```
+
+The file carries its own freeze sentence (*"a record of 2026-08-14 and stays untouched"*), so
+the line numbers are stable. **The anchor of every obligation is `FRAGMENTE.md:NNN`**; the
+Caprock origin stands per fragment in its header and is not repeated per line.
+
+## What is counted
+
+**An obligation is a statement that must be true for the fragment to be correct**, at a named
+line. It arises from exactly one of eight events — **one obligation per (line, event)**, and
+repeated occurrences of the SAME statement at the SAME line collapse to one:
+
+| | Event | recognised at |
+|---|---|---|
+| **A** | **declared clause** | `requires` · `ensures` · `maintains` · `invariant` · `axiom` · `progress` · `variant` |
+| **B** | **index** | an expression indexes a `table`, an array or a slot |
+| **C** | **bounded arithmetic** | `+` `-` `*` on a range type or a `wrapping` type |
+| **D** | **ownership move** | `own` · `consume` · `by consuming` · a linear value handed on |
+| **E** | **lock** | an acquisition · `locks` · `locks shared` · `held` |
+| **F** | **ordering** | `publishes` · `awaits` · `exchange` · atomic access · barrier · `mirrors` |
+| **G** | **loop** | **one per loop head** — its termination argument |
+| **H** | **lowering** | **one per fragment** — the refinement of this fragment to C |
+
+## The three columns, and the third is the yield
+
+1. **The statement**, in words.
+2. **K or L**, by the criterion of `BEWEIS.md`: *mentions only the MACHINE → K (plumbing);
+   mentions the SUBJECT → L (logic).*
+3. **Who discharges it** — a **refusal code of a present-day pass** (`M103`, `E005`, `U003`, …)
+   or a **named gap**. Never "presumably".
+
+> **The interesting cell is K with a gap.** `BEWEIS.md` fixes the abort condition as *"a named
+> plumbing obligation remains that the programmer has to discharge by hand"* — so **every K
+> without a code is a breach of the thesis at that site**, and it is the number this run exists
+> to produce. Call it **H** (hanging).
+
+## The two-sided gate
+
+| | |
+|---|---|
+| **passed** | **H = 0** — no plumbing obligation on the ten fragments stays on the human |
+| **missed** | **H > 0**, each with fragment, `FRAGMENTE.md:line`, statement and named gap |
+| **invalid** | the R14 calibration fails and cannot be repaired · **or** more than 10 % of obligations are **disputed** (the criterion does not decide them) · **or** the enumeration aborts — then R16: the number is a **lower bound** and is called one |
+
+**The bar is not moved.** `BEWEIS.md` set it at "no hanging plumbing obligation", and it stays
+there. *The old aggregate itself named 19 hanging ones — a gate at 19 would be a gate on a
+number nobody can evidence any more.*
+
+## R14 — the harness first, and it has a published answer to hit
+
+**`delete_leaf` is part of F1 and was already broken down on 2026-08-15:** 11 obligations,
+**4 K / 7 L** (`BEWEIS.md`:1078–1092). The generation rule above is applied to `delete_leaf`
+**first**, before anything else is touched.
+
+* **Hits 11 with 4 K / 7 L** → the rule measures what the folder has already measured, and the
+  new count is **commensurable** with the 1,75 : 1.
+* **Comes out different** → the rule is **corrected before the other nine fragments are
+  read**, and the correction is booked with its reason. *A rule tuned after seeing the result is
+  an R2 breach; a rule calibrated against a published result before the run is R14.*
+
+## The search path is mechanical, the classification is not
+
+`zaehle-pflichten.py` enumerates the **candidate lines** per event class over the ten blocks and
+prints `FRAGMENTE.md:NNN` for each. It guarantees that no line is missed; it cannot decide
+what a statement says. **Both numbers are reported** — candidates from the tool and obligations
+after the hand pass — so every correction is visible instead of absorbed.
+
+## The prediction, written down before the run — R11
+
+The old aggregate says 17 L against 57 P: **0,3 : 1**. The `delete_leaf` re-count says
+**1,75 : 1** — and `delete_leaf` is one of these ten fragments. **Both cannot be right.** If the
+old 17 held, `delete_leaf` alone would carry **7 of them** and the remaining nine fragments
+**10 between them**.
+
+**Predicted:** the fresh count lands **far above 74 in total and far above 17 in L**, because
+the old count was at the coarse granularity the `delete_leaf` re-count already refuted
+(proof steps instead of obligations, `BEWEIS.md`:1098).
+
+> **If it lands near 74 / 17, that is the suspicious outcome, not the confirming one** (R11).
+> Two countings at different granularities do not agree by accident.
+
+## What the number will NOT say
+
+* **The ten fragments were chosen by their difficulty, not at random.** No extrapolation to the
+  core is carried as a measured value. A density stands there as a density.
+* **Newly assigned, not reconstructed.** The 74 is **replaced**, not continued — the same
+  marking the Neuerhebung of the eleven classes carries.
+* An obligation count is not a proof-step count. *Both are legitimate, they answer different
+  questions, and the folder's question — what is left for the human? — is answered by the
+  obligation count.*
