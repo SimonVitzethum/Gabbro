@@ -18,6 +18,40 @@ fn main() -> std::process::ExitCode {
     let (befehl, rest) = args.split_first().expect("nicht leer");
     match befehl.as_str() {
         "pruefe" => befehl_pruefe(rest),
+        // **The emitter, since 2026-08-17.** It covers one fragment, not ten, and refuses by
+        // name (`C001`) for every form it does not know -- a generator that guesses undoes
+        // every pass in front of it.
+        "emit" => {
+            if rest.is_empty() {
+                eprintln!("gabbro emit: no file named");
+                return std::process::ExitCode::from(2);
+            }
+            let mut schlecht = false;
+            for datei in rest {
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} not readable");
+                    schlecht = true;
+                    continue;
+                };
+                let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+                // **The checker runs first, and that is the point.** Emitting from a tree the
+                // passes have not accepted would produce C for a program Gabbro rejects.
+                gabbro_check::pruefe(&baum, &mut absagen);
+                let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+                if absagen.fehler_zahl() > 0 {
+                    eprint!("{}", absagen.zeige(&quelle));
+                    eprintln!("gabbro emit: {datei} has errors -- no C written");
+                    schlecht = true;
+                    continue;
+                }
+                print!("{c}");
+            }
+            if schlecht {
+                std::process::ExitCode::from(1)
+            } else {
+                std::process::ExitCode::SUCCESS
+            }
+        }
         "fragmente" => fragmente::befehl(rest),
         "annahmen" => befehl_annahmen(rest),
         "k-bedingung" => {
