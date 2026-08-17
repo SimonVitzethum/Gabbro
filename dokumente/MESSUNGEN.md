@@ -6343,3 +6343,62 @@ Werkzeugaufruf lebt.* **Sie gehört in `SYNTAX.md`**, und steht als Posten im TO
 
 **Sieben der 31 sind Absenkungen**, und fünf davon sind ihrerseits durch Befunde gesperrt. *Der
 Rest, den man bauen könnte, ist damit auf zwei geschrumpft.*
+
+
+---
+
+# K100.1 — die Messgrösse geschärft: `H = 31 → 29`
+
+**Keine Zeile Code, und die Zahl bedeutet danach etwas anderes.**
+
+Drei der 31 hängenden Klempnereipflichten sind handgeschriebene `narrow … else`. Sie wurden bis
+heute als **dasselbe** gezählt. Sie sind es nicht:
+
+| Stelle | `else`-Zweig | was es ist | zählt als |
+|---|---|---|---|
+| `FRAGMENTE.md`:1660 (F10, DTB-Tiefe) | **erreichbar** — ein feindliches DTB nimmt ihn | *„dieser Eingang ist feindlich"* ist die Aussage des **Programmierers** | **Logik** |
+| `:268` (F1, refcount) | erreichbar, wenn die Buchführungsinvariante schon gebrochen ist | das **zweite Netz**, mit Absicht: *die Invariante ist der Grund, warum der Zweig nie genommen wird; der Typ der Grund, warum er existieren muss* | **Logik** |
+| `:1100` (F6, Traversierungszähler) | **kann nicht genommen werden** und muss dastehen | die Schranke fällt aus der Domäne, **und M1 sieht es nicht** | **Klempnerei** |
+
+> **Nur die dritte ist eine Klempnereipflicht.** *Ein Maßstab, der eine Prüfung nicht von einem
+> Ritus trennt, misst das Falsche* — und der Maßstab dieses Ordners hat es bis heute nicht
+> getan.
+
+## Was das am Tor ändert, und es wird schärfer statt milder
+
+**Alt:** `narrow`-Stellen ≤ 24 über dem Baum. *Eine Obergrenze über einer Menge, in der ein
+echter Angriffsschutz und ein Ritus gleich viel wiegen.*
+
+**Neu:** **`N_ritus = 0`** — keine `narrow`-Stelle, deren `else`-Zweig unerreichbar ist.
+
+| | |
+|---|---|
+| **bestanden** | jede `narrow`-Stelle hat einen erreichbaren `else`-Zweig |
+| **verfehlt** | eine hat keinen — *dann ist sie ein Loch in M1*, mit Stelle und Grund |
+| **ungültig** | die Erreichbarkeit lässt sich an einer Stelle weder mechanisch noch von Hand entscheiden |
+
+**Heute: `N_ritus = 1`** (`FRAGMENTE.md`:1100). *Das Tor ist damit von „24 sind erlaubt" auf
+„einer ist zu viel" gewandert, und es ist trotzdem fast erfüllt* — weil die alte Zahl zwei
+verschiedene Dinge summierte.
+
+## Die eine Stelle, und woran sie hängt
+
+```gabbro
+traverse w of s over elems of s.worte by decreasing (lenof(s.worte) - i)
+{
+    if w != MUSTER { return i * 8; }
+    narrow i to 0 .. 65535 else { return i * 8; }   -- kann nie greifen
+    i += 1;
+}
+```
+
+**Die Schranke fällt aus der Domäne** — die Traversierung läuft über `s.worte`, also kann `i`
+die Länge nicht überschreiten. **M1 sieht das nicht:** der Zähler ist eine gewöhnliche lokale
+Variable, und keine Regel verbindet sie mit der Domäne, über der ihre Schleife läuft.
+
+> **Das ist der Posten, und er ist klein und benannt:** *ein Traversierungszähler erbt die
+> Schranke seiner Domäne.* Eine V-Regel, keine neue Grammatik — und sie schließt die letzte
+> `narrow`-Klempnereipflicht des Korpus.
+
+**`H = 31 → 29`**, und die zwei Verschobenen stehen jetzt in der Logikspalte, wo sie hingehören:
+**L = 65 → 67.**

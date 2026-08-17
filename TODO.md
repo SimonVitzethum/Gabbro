@@ -99,10 +99,11 @@ of items that are neither code nor a run — what remains is building and measur
 # DECISIONS — need a judgement, not a run
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
-- [ ] **K100.1 — die Messgroesse schaerfen.** Drei `narrow`-Stellen, drei verschiedene Dinge:
-      ein erreichbarer `else`-Zweig ist LOGIK (das feindliche DTB), ein unerreichbarer ist ein
-      Loch in M1. *Ein Massstab, der eine Pruefung nicht von einem Ritus trennt, misst das
-      Falsche.* Keine Zeile Code, senkt `H` um 2.
+- [ ] **Ein Traversierungszaehler erbt die Schranke seiner Domaene** — die letzte
+      `narrow`-Klempnereipflicht des Korpus (`FRAGMENTE.md`:1100). Die Traversierung laeuft
+      ueber `s.worte`, also kann `i` die Laenge nicht ueberschreiten; **M1 sieht es nicht**,
+      weil der Zaehler eine gewoehnliche lokale Variable ist. *Eine V-Regel, keine neue
+      Grammatik.* Tor danach: **`N_ritus = 0`**.
 - [ ] **K100.2 — fuenf Pflichten in die Axiomschicht umbuchen** («B19», «B38», «B39», `at dma`,
       `atomic release`). **Das ist keine Erledigung, sondern eine Fuehrung beim Namen mit einer
       Sonde** — und genau die Vertrauensform, die der Auftrag gewaehrt. Tor: `gabbro annahmen`
