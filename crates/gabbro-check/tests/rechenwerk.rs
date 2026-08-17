@@ -1080,3 +1080,88 @@ impl fn f(x : u32) -> u32 requires x < 4 effects { reads s } costs <= 9 ops
     let (_, a) = gabbro_syntax::lies("p.gab", q);
     assert_eq!(a.fehler_zahl(), 0, "ein `{{` nach einem Ausdruck gehoert dem Block:\n{}", a.zeige(q));
 }
+
+/// **«B37» geschlossen: eine ORDNUNG auf einer linearen Geistmarke.**
+///
+/// Der Befund stand im Bootfragment selbst: *„die Marke traegt die Reihenfolge, aber sie
+/// traegt sie als LINEARITAET, nicht als ORDNUNG."* **Ein linearer Wert erzwingt eine KETTE,
+/// aber nicht WELCHE** — bei sechs Bootschritten typprueften alle **720** Reihenfolgen, weil
+/// M2 nur sieht, dass jede Marke genau einmal weiterwandert.
+///
+/// Das Fragment nannte beide Auswege und verwarf keinen: *je Schritt eine eigene Marke (dann
+/// waechst der Wortschatz mit jedem Bootschritt) oder eine Ordnung auf Marken.* **Gewaehlt ist
+/// die zweite:** die Stufen sind Bezeichner in EINER Deklaration, der Wortschatz waechst um
+/// `order` und `advances` — einmal.
+#[test]
+fn eine_ordnung_auf_marken_schliesst_b37() {
+    let kopf = "module t {
+linear ghost type P order { roh, mmu, caps };
+static mut w : u32 = 0;
+extern fn a(p : P) -> P advances roh -> mmu effects { consumes p, writes w } costs <= 8 ops;
+extern fn b(p : P) -> P advances mmu -> caps effects { consumes p, writes w } costs <= 8 ops;
+";
+    let sauber = format!(
+        "{kopf}impl fn s(p : P) -> P advances roh -> caps effects {{ consumes p, writes w }} \
+         costs <= 32 ops {{ let x = a(p); let y = b(x); return y; }} }}"
+    );
+    let (baum, mut ab) = gabbro_syntax::lies("p.gab", &sauber);
+    assert_eq!(ab.fehler_zahl(), 0, "{}", ab.zeige(&sauber));
+    let _ = gabbro_check::pruefe(&baum, &mut ab);
+    assert_eq!(ab.fehler_zahl(), 0, "und die Paesse tragen es:\n{}", ab.zeige(&sauber));
+
+    // **Die Zeile, die die 720 Reihenfolgen auf eine reduziert.** Vertauscht faellt `O003`.
+    let vertauscht = format!(
+        "{kopf}impl fn s(p : P) -> P advances roh -> caps effects {{ consumes p, writes w }} \
+         costs <= 32 ops {{ let x = b(p); let y = a(x); return y; }} }}"
+    );
+    let (baum2, mut ab2) = gabbro_syntax::lies("p.gab", &vertauscht);
+    let _ = gabbro_check::pruefe(&baum2, &mut ab2);
+    let c: Vec<&str> = ab2.absagen.iter().map(|x| x.code).collect();
+    assert!(c.contains(&"O003"), "zwei vertauschte Schritte muessen fallen: {c:?}");
+
+    // **`O002` macht aus der Liste eine Ordnung.** Ohne sie waere `order` Zeremonie.
+    let rueckwaerts = "module t { linear ghost type P order { roh, mmu }; static mut w : u32 = 0;
+extern fn z(p : P) -> P advances mmu -> roh effects { consumes p, writes w } costs <= 8 ops; }";
+    let (baum3, mut ab3) = gabbro_syntax::lies("p.gab", rueckwaerts);
+    let _ = gabbro_check::pruefe(&baum3, &mut ab3);
+    assert!(
+        ab3.absagen.iter().any(|x| x.code == "O002"),
+        "ein Schritt rueckwaerts ist keiner"
+    );
+
+    // **`O004`: eine Strecke, die unterwegs aufhoert, ist keine.**
+    let kurz = format!(
+        "{kopf}impl fn s(p : P) -> P advances roh -> caps effects {{ consumes p, writes w }} \
+         costs <= 32 ops {{ let x = a(p); return x; }} }}"
+    );
+    let (baum4, mut ab4) = gabbro_syntax::lies("p.gab", &kurz);
+    let _ = gabbro_check::pruefe(&baum4, &mut ab4);
+    assert!(
+        ab4.absagen.iter().any(|x| x.code == "O004"),
+        "die Schritte muessen sich zur Zusage zusammensetzen"
+    );
+}
+
+/// **Und was der Pass NICHT entscheidet, sagt er.**
+///
+/// Zwei Zweige koennen die Marke auf verschiedene Stufen bringen; welche danach gilt, ist eine
+/// Fallunterscheidung und gehoert dem Beweiser.
+///
+/// > *Ein Pass, der bei Verzweigung stillschweigend durchlaesst, ist schlimmer als einer, der
+/// > sagt, dass er hier nicht zustaendig ist.*
+#[test]
+fn ein_phasenschritt_im_zweig_wird_gemeldet_nicht_entschieden() {
+    let q = "module t {
+linear ghost type P order { roh, mmu };
+static mut w : u32 = 0;
+extern fn a(p : P) -> P advances roh -> mmu effects { consumes p, writes w } costs <= 8 ops;
+impl fn s(p : P, k : bool) -> P advances roh -> mmu effects { consumes p, writes w }
+costs <= 32 ops { if k { let x = a(p); return x; } let y = a(p); return y; } }";
+    let (baum, mut ab) = gabbro_syntax::lies("p.gab", q);
+    let _ = gabbro_check::pruefe(&baum, &mut ab);
+    assert!(
+        ab.absagen.iter().any(|x| x.code == "O005"),
+        "ein Schritt im Zweig gehoert gemeldet: {:?}",
+        ab.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
+    );
+}

@@ -304,13 +304,13 @@ carries and the Rust original did not — because it does not write them down.*
 |---|---|---|---|
 | 1285 | the boot token arises once, travels and is consumed | K | `L101`–`L105` |
 | 1289–1291 | before the MMU the console is lock-free — **a property of the PHASE** | L | the human |
-| 1293–1299 | "cap tables before the first cap" | K | **gap: «B37» — the token carries the order as LINEARITY, not as ORDER. `mmu_an` separates before/after the MMU; the four ordering constraints WITHIN one phase need either a token per boot step (the vocabulary grows with every step) or an order on tokens, and there is none** |
+| 1293–1299 | "cap tables before the first cap" | K | `order { … }` + `advances a -> b` — **«B37» closed 2026-08-17.** The folder took the second way **the row itself named**: *an order on tokens.* The stages are identifiers in ONE declaration, so the vocabulary grows by two words, once. `O003` refuses a step that meets a token on the wrong stage — **before this, all 720 orderings of the six boot steps type-checked** |
 | 1300–1318 | every boot step consumes the token and returns it | K | `L101` |
 | 1300–1318 | every boot step names its effects and its bound | K | `E005`/`K003` |
 | 1317–1318 | after the root task no path can do what only boot allowed | K | `L101` — **carried, and it is the fragment's win** |
 | 1320–1323 | `hochlauf` costs at most the sum of its steps | K | `K001`/`E008` |
 | 1325–1330 | every step happens exactly once | K | `L101` |
-| 1325–1330 | the steps happen **in this sequence** | K | **gap: «B37» at its site** |
+| 1325–1330 | the steps happen **in this sequence** | K | `advances` at the site — **«B37» closed 2026-08-17**; `beispiele/22-bootstrecke.gab` carries F7's shape with the order *and* the seven stated obligations. *`FRAGMENTE.md` stays untouched — a report of 2026-08-14 is not made right afterwards* |
 
 **F7: 9 obligations — 8 K, 1 L. Hanging: 2, both K** — *and they are the same gap.*
 
@@ -412,7 +412,7 @@ carries and the Rust original did not — because it does not write them down.*
 | **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
 | **Plumbing (K)** | **171** | 72 % |
 | **Logic (L)** | **67** | 28 % |
-| **hanging** | **34** | of which **`H = 21` are K** — **14 anchored at a line, 7 lowerings.** Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
+| **hanging** | **34** | of which **`H = 19` are K** — **12 anchored at a line, 7 lowerings.** Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
 **L : K = 0,38 : 1.**
@@ -472,7 +472,7 @@ ausdrücklich verlangt hatte.
 | **«B26» — der Vorzustand einer `transition`** | *„ob `mirrors` auch den Vorzustand einer `transition` an `GCMD.TE` aus `GSTS.TES` bezieht, sagt `SYNTAX.md` nicht"* — **der Erzeuger beantwortet es mit ja und misst es**: `1 1 1 1`, und die zweite und vierte Zahl sind die Falle. *Die Antwort gehört jetzt in `SYNTAX.md`, nicht in den Erzeuger* |
 | **«B33» — die V-Regeln verengen keinen Registerort** | Der Ordner schrieb: *„Ob das Absicht ist (ein Register kann sich zwischen Prüfung und Rechnung ändern!) oder eine Lücke, entscheidet der Ordner. **Wenn es Absicht ist, gehört die Begründung aufgeschrieben** — sie wäre ein starkes Argument."* **Sie ist es, und sie steht jetzt im erzeugten C:** ein Registerzugriff wird `volatile`, und `volatile` IST die Aussage *„dieser Ort kann sich zwischen zwei Lesungen ändern"*. Eine Verengung wäre an dieser Stelle falsch, nicht bloß fehlend |
 
-### Offen — **`H = 21`**, abgelesen mit `./zaehle-pflichten.py --haengend`, und die Spalte rechts sagt, wem sie gehören
+### Offen — **`H = 19`**, abgelesen mit `./zaehle-pflichten.py --haengend`, und die Spalte rechts sagt, wem sie gehören
 
 | Ursache | # | wem |
 |---|---:|---|
@@ -480,7 +480,7 @@ ausdrücklich verlangt hatte.
 | **Gerätenotation** | 5 | «B23» gemischte Registerklasse · «B24» Bitlage jenseits des Wortes (×2) · «B26» `QUEUE_SIZE` ohne benannten Ausgang · «B18» Phasen am `device` |
 | **handgeschriebenes `narrow`** | **1** | nur `F6:1100` — **der Zweig kann nicht genommen werden und muss dastehen.** *K100.1 (2026-08-17) hat die drei Stellen getrennt: F10:1660 (feindliches DTB) und F1:268 (das zweite Netz) sind **Logik**, nicht Klempnerrest* |
 | **`format`/Verbund** | 1 | «B22-nah» Absage statt Abwesenheit — *«B7» geschlossen 2026-08-17, **drei** Stellen (F4:892, F5:988, F6:1106), nicht zwei; die dritte stand unter «B6»+«B7» und beide sind jetzt zu* |
-| **die Reihenfolgezusage** | 2 | «B37» — *Linearität ist keine Ordnung* |
+| ~~**die Reihenfolgezusage**~~ | **0** | **«B37» geschlossen 2026-08-17** — `order`/`advances`, Pass 11, fünf Absagecodes, vier Giftproben. *Der Ausweg stand in der Befundzeile selbst; gebaut ist der, der den Wortschatz nicht je Schritt wachsen lässt* |
 | ~~«B19»~~ · ~~«B38»~~ · ~~«B39»~~ · ~~`at dma`~~ · ~~`atomic release`~~ | **0** | **K100.2: in die Axiomschicht umgebucht** (2026-08-17) — `beispiele/06-annahmen.gab`, `gabbro annahmen` meldet 19. *Keine Erledigung: eine Führung beim Namen mit einer Sonde, und zwei davon ohne* |  die sicherheitskritischste Veröffentlichung im Baum ist kein Atomic |
 | **«B21»** `accumulates` | 1 | 213 RMW-Stellen |
 | **«B38»** `masks IRQ` an der Sperrgrenze | 1 | die Wirkung existiert und ist nicht an die Grenze geknüpft |

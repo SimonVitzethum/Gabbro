@@ -23,7 +23,7 @@ of prose: it looks like evidence.)*
 
 | | first version | **this one** |
 |---|---|---|
-| defined EBNF rules | 40 | **131** |
+| defined EBNF rules | 40 | **132** |
 | used but never defined | 21 (17 load-bearing) | **0** |
 | open design questions | 7 | **9, named at the end** |
 | **Guardian** | — | `pruefe-syntax.sh` checks **closure of the rules AND coverage of the terminals by the vocabulary**, each with a speech test |
@@ -84,7 +84,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
   Struktur   module pub use type opaque linear ghost tagged const static fn
              spec impl raw divergent prim extern section arch when
   Vertraege  requires ensures maintains breaking effects costs where in
-             exhaustive old narrow to induction
+             exhaustive old narrow to induction order advances
   Wirkungen  reads writes locks masks allocs consumes publishes diverges pure
   Ablauf     if else match traverse over by touches retry forever until
              bounded progress on_exceeded per_pass return let mut
@@ -208,7 +208,21 @@ It lowers to `#if` and is **constant-evaluable** — no preprocessor, no text su
 
 ```ebnf
 typedecl   = [ "pub" ] [ "opaque" ] [ "linear" [ "ghost" ] ] [ "tagged" ]
-             "type" ident [ "(" typelist ")" ] [ "=" typeexpr ] ";" ;
+             "type" ident [ "(" typelist ")" ] [ markorder ] [ "=" typeexpr ] ";" ;
+markorder  = "order" "{" identlist "}" ;
+(* «B37», 2026-08-17. Der Befund stand im Bootfragment selbst: „die Marke traegt die
+   Reihenfolge, aber sie traegt sie als LINEARITAET, nicht als ORDNUNG." Ein linearer Wert
+   erzwingt eine KETTE, aber nicht WELCHE -- bei sechs Bootschritten typprueften alle 720
+   Reihenfolgen, weil M2 nur sieht, dass jede Marke genau einmal weiterwandert.
+
+   Das Fragment nannte beide Auswege: je Schritt eine eigene Marke (dann waechst der
+   Wortschatz mit jedem Bootschritt) oder eine Ordnung auf Marken. **Gewaehlt ist die
+   zweite** -- die Stufen sind Bezeichner in EINER Deklaration, der Wortschatz waechst um
+   zwei Woerter, einmal.
+
+   `order` steht VOR dem `=`, weil es kein Rumpf ist: eine Ordnung sagt nichts darueber,
+   woraus der Wert besteht, sondern welche Schritte auf ihm zulaessig sind. Ein
+   `linear ghost type` hat ohnehin keinen Rumpf. *)
 typeexpr   = intty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants
            | indexty ;
 indexty    = [ "option" ] "index" "into" ident ;
@@ -407,11 +421,21 @@ fndecl   = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" | "extern"
            [ "requires"  predlist ]
            [ "ensures"   predlist ]
            [ "maintains" identlist ]
+           [ "advances"  ident "->" ident ]
            [ "effects"   "{" efflist "}" ]
            [ "costs"     "<=" expr "ops" ]
            [ "by"        inductlist ]
            [ "section" string ] [ "arch" ident ] [ "when" constexpr ]
            ( block | "=" pred ";" | ";" ) ;      (* "=" pred: nur fuer spec fn *)
+(* «B37»: `advances roh -> mmu` sagt, WELCHEN Schritt diese Funktion auf einer Marke mit
+   `order` tut. Sie steht an der DEKLARATION, nicht am Rufer -- wer den Schritt macht, weiss,
+   welcher es ist; wer ruft, soll es nicht wiederholen muessen. Zwischen `maintains` und
+   `effects`, weil sie zu den ZUSAGEN gehoert: was der Schritt anfasst, sagt `effects`.
+
+   Geprueft wird in drei Stufen: die Stufen gibt es und der Schritt geht VORWAERTS
+   (`O001`/`O002` -- ohne die zweite Haelfte waere `order` eine Liste), die Marke steht beim
+   Ruf auf der Ausgangsstufe (`O003`), und der Rumpf setzt sich zu seiner eigenen Zusage
+   zusammen (`O004`). Ein Schritt in einem Zweig wird GEMELDET, nicht entschieden (`O005`). *)
 inductlist = induct { "," induct } ;
 induct     = "induction" "over" domain ;      (* nennt das SCHEMA -- kein Lemma, kein Beweisschritt *)
 efflist  = eff { "," eff } ;

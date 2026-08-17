@@ -1,0 +1,40 @@
+-- erwartet: O003
+-- **Gift 70 -- zwei Bootschritte vertauscht, und vor «B37» fiel dabei NICHTS.**
+--
+-- Ein linearer Wert erzwingt eine KETTE, aber nicht WELCHE. `cap_tabellen` und
+-- `ipc_tabellen` verbrauchen beide eine `BootPhase` und geben eine zurueck -- M2 sieht eine
+-- saubere Kette, und alle 720 Reihenfolgen der sechs Schritte typprueften.
+--
+-- **`order` macht aus der Liste eine Ordnung, `advances` haengt jeden Schritt daran.**
+
+module gift70 {
+
+linear ghost type BootPhase order { roh, mmu, caps, eps };
+
+static mut w : u32 = 0;
+
+extern fn mmu_an(p : BootPhase) -> BootPhase
+    advances roh -> mmu
+    effects { consumes p, writes w } costs <= 8 ops;
+
+extern fn cap_tabellen(p : BootPhase) -> BootPhase
+    advances mmu -> caps
+    effects { consumes p, writes w } costs <= 8 ops;
+
+extern fn ipc_tabellen(p : BootPhase) -> BootPhase
+    advances caps -> eps
+    effects { consumes p, writes w } costs <= 8 ops;
+
+impl fn hochlauf(p : BootPhase) -> BootPhase
+    advances roh -> eps
+    effects { consumes p, writes w }
+    costs   <= 64 ops
+{
+    let p1 = mmu_an(p);
+    -- Hier steht der dritte Schritt an zweiter Stelle.
+    let p2 = ipc_tabellen(p1);
+    let p3 = cap_tabellen(p2);
+    return p3;
+}
+
+}

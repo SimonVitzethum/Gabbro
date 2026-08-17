@@ -1,0 +1,17 @@
+-- erwartet: O001
+-- **Gift 72 -- ein `advances` auf eine Stufe, die die Marke nicht hat.**
+--
+-- Ein Tippfehler in einer Stufe waere sonst eine stille Zusage ueber nichts: der Pass wuesste
+-- nicht, worauf er pruefen soll, und liesse durch.
+
+module gift72 {
+
+linear ghost type BootPhase order { roh, mmu };
+
+static mut w : u32 = 0;
+
+extern fn schritt(p : BootPhase) -> BootPhase
+    advances roh -> mmuu
+    effects { consumes p, writes w } costs <= 8 ops;
+
+}

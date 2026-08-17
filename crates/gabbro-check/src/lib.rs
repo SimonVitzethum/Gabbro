@@ -39,6 +39,7 @@ pub use kosten::Zaehlung as Kostenzaehlung;
 
 pub mod korpus;
 pub mod manifest;
+pub mod phasen;
 pub mod schablonen;
 pub mod zeugnis;
 
@@ -112,7 +113,28 @@ pub fn passliste() -> Vec<Pass> {
                 "gebaut: genau-einmal je Weg, Zweigabgleich, `consumes` gegen geliehen \
                  (`L101`-`L105`). **NICHT gebaut: die Ghost-Loeschung** -- ein `ghost`-Wert \
                  existiert zur Laufzeit nicht, seine Linearitaet ist eine Aussage ueber den \
-                 BEWEIS, und die Aliasfrage gehoert M3",
+                 BEWEIS, und die Aliasfrage gehoert M3. **Seit dem 2026-08-17 steht die \
+                 ORDNUNG daneben** (Pass 11) -- M2 sieht die Kette, nicht welche",
+            ),
+        },
+        // **«B37» -- der elfte Pass, und er ist die zweite Haelfte von M2.**
+        //
+        // Die Nummer haengt hinten, weil die Reihenfolge der Liste die Reihenfolge der Fahrt
+        // ist und `phasen` direkt hinter M2 laeuft; die Zaehlung der SPRACHE.md-Liste bleibt
+        // damit unangetastet. *Ein Pass, der sich in die Numerierung einer Spezifikation
+        // draengt, verschiebt jede Fundstelle, die auf sie zeigt.*
+        Pass {
+            nummer: 11,
+            name: "Phasen",
+            quelle: "MESSUNGEN.md, «B37»: Linearitaet ist keine Ordnung",
+            zustand: Zustand::Teilgebaut(
+                "gebaut: die Stufen einer `order` gibt es und `advances` geht VORWAERTS \
+                 (`O001`/`O002`), die Marke steht beim Ruf auf ihrer Ausgangsstufe (`O003`), \
+                 und der Rumpf setzt sich zu seiner eigenen Zusage zusammen (`O004`). \
+                 **NICHT entschieden: ein Schritt in einem Zweig oder einer Schleife** -- zwei \
+                 Zweige koennen die Marke auf verschiedene Stufen bringen, und welche danach \
+                 gilt, ist eine Fallunterscheidung. Sie wird GEMELDET (`O005`), nicht \
+                 stillschweigend durchgelassen",
             ),
         },
         Pass {
@@ -202,6 +224,10 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     geteilt::pass(baum, absagen);
     m3::pass(baum, absagen);
     m2::pass(baum, absagen);
+    // **«B37», seit 2026-08-17.** M2 sieht, dass eine lineare Marke genau einmal
+    // weitergereicht wird -- nicht, in welcher REIHENFOLGE. Dieser Pass steht direkt
+    // dahinter, weil er auf derselben Kette arbeitet und die andere Haelfte prueft.
+    phasen::pass(baum, absagen);
     paarung::pass(baum, absagen);
     gruppe::pass(baum, absagen);
     let kosten = kosten::pass(baum, absagen);

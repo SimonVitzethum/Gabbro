@@ -1,0 +1,19 @@
+-- erwartet: O002
+-- **Gift 71 -- ein `advances`, das rueckwaerts geht.**
+--
+-- Ohne diese Pruefung waere `order` eine LISTE und keine ORDNUNG: `advances caps -> mmu`
+-- liesse sich hinschreiben, und die Kette waere wieder beliebig -- nur mit mehr Zeremonie.
+--
+-- *Genau daran haengt, dass «B37» geschlossen ist und nicht nur umbenannt.*
+
+module gift71 {
+
+linear ghost type BootPhase order { roh, mmu, caps };
+
+static mut w : u32 = 0;
+
+extern fn zurueck(p : BootPhase) -> BootPhase
+    advances caps -> mmu
+    effects { consumes p, writes w } costs <= 8 ops;
+
+}

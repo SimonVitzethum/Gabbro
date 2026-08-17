@@ -610,6 +610,19 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // **«B37»: `order { roh, mmu, caps }` -- die Stufen einer linearen Geistmarke.**
+        //
+        // Sie steht VOR dem `=`, weil sie kein Rumpf ist: eine Ordnung sagt nichts darueber,
+        // woraus der Wert besteht, sondern nur, welche Schritte auf ihm zulaessig sind.
+        // *Ein `linear ghost type` hat ohnehin keinen Rumpf -- er traegt nur seinen Namen.*
+        let ordnung = if self.friss_kw(Kw::Order) {
+            self.erwarte_z(Z::GeschweiftAuf)?;
+            let l = self.identlist()?;
+            self.erwarte_z(Z::GeschweiftZu)?;
+            Some(l)
+        } else {
+            None
+        };
         let rumpf = if self.friss_z(Z::Gleich) {
             Some(self.typeexpr()?)
         } else {
@@ -617,6 +630,7 @@ impl<'a> Parser<'a> {
         };
         self.erwarte_z(Z::Semi)?;
         Ok(TypDecl {
+            ordnung,
             oeffentlich,
             opaque,
             linear,
@@ -1815,6 +1829,17 @@ impl<'a> Parser<'a> {
         } else {
             Vec::new()
         };
+        // **«B37»: `advances roh -> mmu`.** Sie steht zwischen `maintains` und `effects`,
+        // weil sie zu den ZUSAGEN gehoert und nicht zu den Wirkungen: was der Schritt
+        // anfasst, sagt `effects`; WELCHER Schritt es ist, sagt diese Zeile.
+        let advances = if self.friss_kw(Kw::Advances) {
+            let von = self.erwarte_ident()?;
+            self.erwarte_z(Z::Pfeil)?;
+            let nach = self.erwarte_ident()?;
+            Some((von, nach))
+        } else {
+            None
+        };
         let effects = if self.ist_kw(Kw::Effects) {
             Some(self.effects_block()?)
         } else {
@@ -1867,6 +1892,7 @@ impl<'a> Parser<'a> {
             requires,
             ensures,
             maintains,
+            advances,
             effects,
             costs,
             by,

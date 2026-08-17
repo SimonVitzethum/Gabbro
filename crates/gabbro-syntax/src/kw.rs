@@ -159,6 +159,10 @@ wortschatz! {
     Group         => "group",         res;
     Protects      => "protects",      res;
     Rank          => "rank",          res;
+    // «B37»: die ORDNUNG auf einer linearen Geistmarke. Zwei Woerter -- und zwar
+    // ZWEI, nicht zwei je Bootschritt: die Stufen sind Bezeichner in EINER Deklaration.
+    Order         => "order",         res;
+    Advances      => "advances",      res;
     Check         => "check",         res;
     Claim         => "claim",         res;
     Measures      => "measures",      res;

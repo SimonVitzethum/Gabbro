@@ -1,0 +1,122 @@
+-- 22 -- Die Bootstrecke: «B37» geschlossen, und die sieben Pflichten ausgesprochen.
+--
+-- **Das hier ist F7 aus `FRAGMENTE.md`, repariert.** Die Fragmentdatei bleibt unangetastet --
+-- sie traegt ihren Einfriersatz, und ein Bericht vom 2026-08-14 wird nicht nachtraeglich
+-- richtig gemacht. *Was sich geaendert hat, gehoert daneben, nicht hinein.*
+--
+-- ## Der Befund, den das Fragment selbst hinschrieb
+--
+-- > „Die Marke traegt die Reihenfolge, aber sie traegt sie als LINEARITAET, nicht als
+-- > ORDNUNG: `mmu_an` verbraucht die rohe Phase und gibt die gewoehnliche zurueck. Damit ist
+-- > „vor der MMU" und „nach der MMU" unterscheidbar -- aber „Cap-Tabellen vor dem ersten
+-- > Cap" ist es nicht, denn beide liegen in derselben Phase."
+--
+-- **Ein linearer Wert erzwingt eine KETTE, aber nicht WELCHE.** Bei sechs Schritten
+-- typpruefen alle 720 Reihenfolgen; M2 sieht nur, dass jede Marke genau einmal weiterwandert.
+--
+-- Das Fragment nannte zwei Auswege. Gewaehlt ist der zweite:
+--
+--     je Schritt eine eigene Marke  ->  der Wortschatz waechst mit jedem Bootschritt
+--     eine ORDNUNG auf Marken       ->  zwei Woerter, einmal   <-- diese hier
+--
+-- ## Und die zweite Reparatur: `effects` und `costs` sind SCHRANKEN, keine Pflichten
+--
+-- Die Zeile aus dem Fragment --
+--
+--     extern fn mmu_an(p : BootPhase) -> BootPhase
+--         effects { consumes p, writes mmu } costs <= 4096 ops;
+--
+-- -- erlaubt einen Rumpf, der **gar nichts tut**: er fasst nichts Verbotenes an und kostet
+-- null. *Was der Rufer wirklich annimmt -- „danach ist die MMU an" -- steht nirgends.*
+--
+-- Gemessen am 2026-08-17: **48 fremde Ruempfe im Korpus, null sprachen ihre Pflicht aus.**
+-- `ensures` an einer Deklaration ohne Rumpf ist grammatisch seit jeher moeglich. Hier stehen
+-- sieben davon, und `gabbro zeugnis` zaehlt sie.
+
+-- ## Was diese Datei NICHT ist: ein Emissionsbeispiel
+--
+-- Sie senkt nicht ab -- `static` hat keine Absenkung (`C001`). Das ist Absicht: die
+-- Weltzustaende stehen hier als `static`, damit die sieben `ensures`-Zeilen NAMEN nennen, die
+-- es gibt. F7 kommt ohne aus, weil ein Fragment ein Ausschnitt ist und seine Namen nicht
+-- deklariert.
+--
+-- **Und dabei faellt ein Befund ab, der hierher gehoert:** ein Tippfehler in einem `ensures`
+-- faellt nicht. `ensures zaheler == 1` neben `static mut zaehler` geht durch -- gemessen
+-- 2026-08-17, 0 Fehler. *Kein Pass liest `ensures`.* Die sieben Zeilen unten sind damit
+-- wohlgeformt, weil jemand hingesehen hat, nicht weil ein Tor es haelt.
+
+module beispiel::bootstrecke {
+
+-- **Die Ordnung.** Sechs Stufen, ein Bezeichner je Stufe, und der Wortschatz waechst um
+-- `order` und `advances` -- einmal, nicht je Schritt.
+linear ghost type BootPhase order { roh, mmu, caps, eps, autoritaet, dienste };
+
+-- Der Weltzustand, den die Strecke anfasst. Er steht hier, damit `writes` etwas nennt, das
+-- es gibt -- ein `effects`, das ins Leere zeigt, ist eine Zusage ueber nichts.
+static mut mmu_an_zahl  : u32 = 0;
+static mut caps_bereit  : u32 = 0;
+static mut eps_bereit   : u32 = 0;
+static mut gemeldet     : u32 = 0;
+static mut faeden       : u32 = 0;
+
+-- **Die sieben Pflichten, ausgesprochen.** Jede `ensures`-Zeile sagt, was der fremde Rumpf
+-- HERSTELLEN muss -- nicht, was er anfassen darf. *Der Unterschied ist der ganze Punkt:
+-- `effects { writes mmu }` erlaubt einen leeren Rumpf, `ensures mmu_an_zahl == 1` nicht.*
+
+-- `roh` heisst: vor der MMU. Atomics sind hier nicht wohldefiniert, also ist die Konsole
+-- sperrfrei -- und das ist eine EIGENSCHAFT DER PHASE, nicht des Geraets. Sie macht keinen
+-- Schritt: melden veraendert die Strecke nicht.
+extern fn melde_roh(text : ptr<code, r> Text) -> u32
+    ensures  result <= 4096
+    effects  { reads text } costs <= 64 ops;
+
+extern fn mmu_an(p : BootPhase) -> BootPhase
+    ensures  mmu_an_zahl == 1
+    advances roh -> mmu
+    effects  { consumes p, writes mmu_an_zahl } costs <= 4096 ops;
+
+extern fn cap_tabellen(p : BootPhase) -> BootPhase
+    ensures  caps_bereit == 1
+    advances mmu -> caps
+    effects  { consumes p, writes caps_bereit } costs <= 2048 ops;
+
+extern fn ipc_tabellen(p : BootPhase) -> BootPhase
+    ensures  eps_bereit == 1
+    advances caps -> eps
+    effects  { consumes p, writes eps_bereit } costs <= 2048 ops;
+
+extern fn autoritaet_melden(p : BootPhase) -> BootPhase
+    ensures  gemeldet == 1
+    advances eps -> autoritaet
+    effects  { consumes p, writes gemeldet } costs <= 512 ops;
+
+extern fn verifizierer_starten(p : BootPhase) -> BootPhase
+    ensures  faeden >= 1
+    advances autoritaet -> dienste
+    effects  { consumes p, writes faeden } costs <= 4096 ops;
+
+-- Der Root-Task VERBRAUCHT die Marke endgueltig: danach ist der Bootzustand vorbei. Er
+-- bekommt keine `advances`-Zeile, weil er keine Stufe mehr erreicht -- er beendet die Strecke.
+extern fn root_task_starten(p : BootPhase)
+    ensures  faeden >= 2
+    effects  { consumes p, writes faeden } costs <= 8192 ops;
+
+-- **Die Strecke, und ihre eigene Zusage setzt sich aus den Schritten zusammen** (`O004`).
+-- Ein Rumpf, der unterwegs aufhoert, ist keine Strecke.
+impl fn hochlauf(p : BootPhase)
+    advances roh -> dienste
+    effects { consumes p, writes mmu_an_zahl, writes caps_bereit, writes eps_bereit,
+              writes gemeldet, writes faeden }
+    costs   <= 32768 ops
+{
+    -- **Vertauscht man zwei dieser Zeilen, faellt `O003`.** Vor dem 2026-08-17 fiel nichts:
+    -- alle 720 Reihenfolgen typprueften, weil M2 nur die Kette sieht und nicht die Ordnung.
+    let p1 = mmu_an(p);
+    let p2 = cap_tabellen(p1);
+    let p3 = ipc_tabellen(p2);
+    let p4 = autoritaet_melden(p3);
+    let p5 = verifizierer_starten(p4);
+    root_task_starten(p5);
+}
+
+}

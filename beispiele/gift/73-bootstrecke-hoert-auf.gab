@@ -1,0 +1,27 @@
+-- erwartet: O004
+-- **Gift 73 -- eine Strecke, die unterwegs aufhoert.**
+--
+-- `hochlauf` sagt `roh -> caps` zu und macht nur den ersten Schritt. Die Zusage steht ueber
+-- dem Rumpf, und die Schritte darin muessen sich zu ihr zusammensetzen -- sonst ist die
+-- Zeile darueber eine Behauptung.
+
+module gift73 {
+
+linear ghost type BootPhase order { roh, mmu, caps };
+
+static mut w : u32 = 0;
+
+extern fn mmu_an(p : BootPhase) -> BootPhase
+    advances roh -> mmu
+    effects { consumes p, writes w } costs <= 8 ops;
+
+impl fn hochlauf(p : BootPhase) -> BootPhase
+    advances roh -> caps
+    effects { consumes p, writes w }
+    costs   <= 32 ops
+{
+    let p1 = mmu_an(p);
+    return p1;
+}
+
+}

@@ -192,6 +192,21 @@ pub struct TypDecl {
     pub name: Ident,
     /// `type Duty(check)` -- the parameter list of a linear witness.
     pub parameter: Option<Vec<TypExpr>>,
+    /// **«B37»: `order { roh, mmu, caps, … }` -- die Stufen einer linearen Geistmarke.**
+    ///
+    /// Der Befund des Bootfragments lautete: *„die Marke traegt die Reihenfolge, aber sie
+    /// traegt sie als LINEARITAET, nicht als ORDNUNG."* Ein linearer Wert erzwingt eine
+    /// **Kette, aber nicht WELCHE** -- bei sechs Bootschritten typpruefen alle 720
+    /// Reihenfolgen.
+    ///
+    /// Das Fragment nannte beide Auswege und verwarf keinen:
+    ///
+    /// > *„entweder je eine eigene Marke (dann waechst der Wortschatz mit jedem Bootschritt)
+    /// > oder eine Ordnung auf Marken -- und die gibt es nicht."*
+    ///
+    /// **Gewaehlt ist die zweite.** Die Stufen sind Bezeichner in EINER Deklaration; der
+    /// Wortschatz waechst um zwei Woerter, einmal, nicht je Schritt.
+    pub ordnung: Option<Vec<Ident>>,
     pub rumpf: Option<TypExpr>,
     pub span: Span,
 }
@@ -601,6 +616,12 @@ pub struct FnDecl {
     pub section: Option<Textliteral>,
     pub arch: Option<Ident>,
     pub when: Option<Expr>,
+    /// **«B37»: `advances roh -> mmu`** -- welchen Schritt diese Funktion auf der Marke tut.
+    ///
+    /// Sie steht an der DEKLARATION, nicht am Rufer: *wer den Schritt macht, weiss, welcher
+    /// es ist; wer ruft, soll es nicht wiederholen muessen.* Der Pruefer haelt sie gegen die
+    /// `order` der Marke und gegen den Zustand am Rufort.
+    pub advances: Option<(Ident, Ident)>,
     pub rumpf: FnRumpf,
     pub span: Span,
 }

@@ -1197,6 +1197,39 @@ MUTATIONEN = [
         "B7 -- ein Verbundkonstruktor zaehlt als Aufruf; `P` wird unbekannter Gerufener "
         "und jede Huelle darueber untere Schranke",
     ),
+    # -- «B37»: die Ordnung auf einer Geistmarke -------------------------------------------
+    #
+    # **Die erste ist die wichtigste.** Ohne `O003` erzwingt der lineare Wert wieder nur eine
+    # Kette und nicht WELCHE -- alle 720 Reihenfolgen der sechs Bootschritte gingen durch, und
+    # `order`/`advances` waeren Zeremonie.
+    Mutation(
+        "phasenschritt-trifft-jede-stufe",
+        "phasen.rs",
+        "    if ist != sch.von {",
+        "    if false {",
+        "B37 -- ein Schritt trifft jede Stufe; zwei vertauschte Bootschritte fallen nicht mehr",
+    ),
+    Mutation(
+        "phasenordnung-ist-nur-eine-liste",
+        "phasen.rs",
+        "        if a >= b {",
+        "        if false {",
+        "B37 -- `advances` darf rueckwaerts gehen; aus der Ordnung wird wieder eine Liste",
+    ),
+    Mutation(
+        "phasenstrecke-darf-aufhoeren",
+        "phasen.rs",
+        "            if letzte != eigen.nach {",
+        "            if false {",
+        "B37 -- ein Rumpf muss sich nicht mehr zu seiner Zusage zusammensetzen",
+    ),
+    Mutation(
+        "phasenschritt-im-zweig-schweigt",
+        "phasen.rs",
+        "                if melden && enthaelt_schritt(s, schritte) {",
+        "                if false {",
+        "B37 -- ein Schritt im Zweig wird stillschweigend durchgelassen statt gemeldet",
+    ),
     # -- K100.4: die Kreuzprobe des Uebersetzungszeugnisses --------------------------------
     #
     # **Das Zeugnis ist eine ZWEITE Lesung derselben Datei.** Sein Wert haengt daran, dass es

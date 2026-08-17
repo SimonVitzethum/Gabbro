@@ -6873,3 +6873,100 @@ lassen** — und (b) ist PL-Arbeit, nicht Erzeugerarbeit.
 
 **Punkt 1 und 2 machen F7 zu einem Fragment ohne hängende Klempnereipflicht. Punkt 3 macht die
 Übergabe an den fremden Rumpf zu einer geprüften.**
+
+---
+
+# «B37» geschlossen — der Ausweg stand in der Befundzeile selbst
+
+**Der Befund war der einzige, den ein Fragment über sich selbst geschrieben hat**
+(`FRAGMENTE.md`:1293–1299):
+
+> *„Die Marke trägt die Reihenfolge, aber sie trägt sie als **LINEARITÄT**, nicht als
+> **ORDNUNG** … Für die vier Reihenfolgezwänge INNERHALB einer Phase braucht es entweder je
+> eine eigene Marke (dann wächst der Wortschatz mit jedem Bootschritt) **oder eine Ordnung auf
+> Marken — und die gibt es nicht.**"*
+
+```
+Reihenfolgen der sechs Bootschritte, die vor heute typprüften:   720
+```
+
+M2 sieht, dass jede Marke **genau einmal** weiterwandert. Es sieht nicht, **wohin.**
+
+## Gewählt ist der zweite Ausweg, und der Preis ist zwei Wörter
+
+```gabbro
+linear ghost type BootPhase order { roh, mmu, caps, eps, autoritaet, dienste };
+
+extern fn cap_tabellen(p : BootPhase) -> BootPhase
+    ensures  caps_bereit == 1
+    advances mmu -> caps
+    effects  { consumes p, writes caps_bereit } costs <= 2048 ops;
+```
+
+**Die Stufen sind Bezeichner in EINER Deklaration.** Der Wortschatz wächst um `order` und
+`advances` — einmal, nicht je Bootschritt. *Genau die Bedingung, an der der erste Ausweg
+scheiterte.*
+
+## Drei Prüfungen, und die zweite ist die, die zählt
+
+| | |
+|---|---|
+| `O001` | die Stufen einer `advances`-Zeile gibt es |
+| **`O002`** | **`advances a -> b` geht VORWÄRTS.** *Ohne diese Zeile wäre `order` eine Liste und keine Ordnung — und «B37» nur umbenannt* |
+| `O003` | die Marke steht beim Ruf auf der Ausgangsstufe — **die Zeile, die 720 auf 1 reduziert** |
+| `O004` | der Rumpf setzt sich zu seiner eigenen Zusage zusammen |
+| `O005` | ein Schritt in einem Zweig wird **gemeldet, nicht entschieden** |
+
+Gemessen, nicht behauptet — zwei vertauschte Bootschritte:
+
+```
+Fehler: [O003] `ipc_tabellen` setzt `caps` voraus, `p1` steht auf `mmu`
+Fehler: [O003] `autoritaet_melden` setzt `eps` voraus, `p3` steht auf `caps`
+```
+
+## Und die sieben Pflichten stehen jetzt da
+
+`beispiele/22-bootstrecke.gab` trägt F7s Gestalt mit der Ordnung **und** sieben
+`ensures`-Zeilen. Das Zeugnis daneben:
+
+| | fremde Rümpfe | sprechen ihre Pflicht aus |
+|---|---:|---:|
+| **F7**, eingefroren | 7 | **0** |
+| **`beispiele/22`** | 7 | **7** |
+
+> **`FRAGMENTE.md` bleibt unangetastet.** Sie trägt ihren Einfriersatz, und ein Bericht vom
+> 2026-08-14 wird nicht nachträglich richtig gemacht. *Was sich geändert hat, gehört daneben,
+> nicht hinein.*
+
+## Der Befund, der beim Schreiben der sieben Zeilen abfiel
+
+```
+$ cat tippfehler.gab
+  static mut zaehler : u32 = 0;
+  extern fn f() -> u32 ensures zaheler == 1 effects { writes zaehler } costs <= 8 ops;
+
+3 Items, 0 Fehler, 0 Hinweise
+```
+
+**`zaheler` gibt es nicht, und niemand sagt etwas.** Kein Pass liest Prädikate, also prüft auch
+keiner ihre *Namen*.
+
+> *Eine Pflicht, die niemand liest, kann niemand falsch schreiben — und genau das ist das
+> Problem.* Die sieben Zeilen in `beispiele/22` sind wohlgeformt, **weil jemand hingesehen
+> hat, nicht weil ein Tor es hält.**
+
+Der kleinste Schritt ist nicht, `ensures` zu beweisen, sondern seine **Grundnamen
+aufzulösen**. *Und vorher zu messen, wie viele Korpusstellen dabei fallen — eine Regel, die den
+eigenen Korpus zerlegt, ist ein Befund und keine Regel.*
+
+## Stand
+
+```
+H = 21 → 19        ./zaehle-pflichten.py --haengend
+Pässe              10 aus SPRACHE.md + 1 aus «B37»
+Absagecodes        100, davon O001–O005 neu
+Korpus             23 saubere Beispiele, 73 Giftproben
+```
+
+**`lebend_ungedeckt()` steht unverändert bei 4** — `order`/`advances` erzeugen keinen Code,
+sie prüfen. *Ein Pass kostet keine Schablone.*

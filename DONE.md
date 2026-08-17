@@ -10,7 +10,7 @@
 
 ---
 
-## The compiler — **ten** passes, none open
+## The compiler — **ten** passes, none open (plus an eleventh from «B37»)
 
 `cargo run --bin gabbro -- paesse` · **3 fully built, 7 partial, 0 open**
 
@@ -197,5 +197,5 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**22 clean examples, 69 poison probes, 113 tests** —
+**23 clean examples, 73 poison probes, 116 tests** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`
