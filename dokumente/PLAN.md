@@ -1445,7 +1445,7 @@ etwas anderes und viel kleineres** — und dieser Ordner hat die Form dafür sch
 **Die Regeln sind Mathematik über Bereichen, Mengen, Ordnungen und transitiven Hüllen.** Sie
 reden über keinen Rust-Wert. *Genau darum sind sie beweisbar, ohne den Prüfer anzufassen.*
 
-> **Und die zweite Zeile ist heute schon besser bewacht, als es aussieht:** `138 von 138`
+> **Und die zweite Zeile ist heute schon besser bewacht, als es aussieht:** `142 von 142`
 > Mutationen, und **null unbeschädigbare Zeilen** im Prüfer. Was fehlt, ist nicht die Umsetzung
 > — es ist der Satz, gegen den sie umgesetzt wird.
 
