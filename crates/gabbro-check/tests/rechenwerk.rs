@@ -1142,26 +1142,141 @@ extern fn z(p : P) -> P advances mmu -> roh effects { consumes p, writes w } cos
     );
 }
 
-/// **Und was der Pass NICHT entscheidet, sagt er.**
+/// **K11.1 — der Zweig wird jetzt ENTSCHIEDEN, nicht nur gemeldet.**
 ///
-/// Zwei Zweige koennen die Marke auf verschiedene Stufen bringen; welche danach gilt, ist eine
-/// Fallunterscheidung und gehoert dem Beweiser.
+/// Bis zum 2026-08-17 stand hier `O005`, ein Hinweis: *„dieser Pass entscheidet das nicht."*
+/// Die Meldung war richtig und keine Loesung. Gewaehlt ist die strenge Fassung —
+/// **alle Zweige erreichen dieselbe Stufe** —, weil man von ihr aus lockern kann und
+/// umgekehrt nie.
 ///
-/// > *Ein Pass, der bei Verzweigung stillschweigend durchlaesst, ist schlimmer als einer, der
-/// > sagt, dass er hier nicht zustaendig ist.*
+/// > **Die erste Fassung fiel in der GEGENRICHTUNG auf**: die Giftprobe fiel wie gewollt, und
+/// > die saubere fiel mit. Ein Zweig, der mit `return` ENDET, schliesst sich nicht an — er
+/// > verlaesst die Funktion. *Ein Tor, das nur in eine Richtung geprueft wird, misst die
+/// > Haelfte.*
 #[test]
-fn ein_phasenschritt_im_zweig_wird_gemeldet_nicht_entschieden() {
-    let q = "module t {
+fn die_zweige_muessen_dieselbe_stufe_erreichen() {
+    let kopf = "module t {
 linear ghost type P order { roh, mmu };
 static mut w : u32 = 0;
 extern fn a(p : P) -> P advances roh -> mmu effects { consumes p, writes w } costs <= 8 ops;
-impl fn s(p : P, k : bool) -> P advances roh -> mmu effects { consumes p, writes w }
-costs <= 32 ops { if k { let x = a(p); return x; } let y = a(p); return y; } }";
-    let (baum, mut ab) = gabbro_syntax::lies("p.gab", q);
-    let _ = gabbro_check::pruefe(&baum, &mut ab);
+extern fn ende(p : P) effects { consumes p, writes w } costs <= 8 ops;
+";
+    // **Sauber: beide Wege erreichen `mmu`** — der erste, indem er die Funktion verlaesst.
+    let gleich = format!(
+        "{kopf}impl fn s(p : P, k : bool) -> P advances roh -> mmu \
+         effects {{ consumes p, writes w }} costs <= 32 ops \
+         {{ if k {{ let x = a(p); return x; }} let y = a(p); return y; }} }}"
+    );
+    let (b1, mut a1) = gabbro_syntax::lies("p.gab", &gleich);
+    let _ = gabbro_check::pruefe(&b1, &mut a1);
+    assert_eq!(a1.fehler_zahl(), 0, "ein Zweig mit `return` endet:\n{}", a1.zeige(&gleich));
+
+    // **Gift: ein Zweig schiebt, der andere nicht.**
+    let ungleich = format!(
+        "{kopf}impl fn s(p : P, k : bool) advances roh -> mmu \
+         effects {{ consumes p, writes w }} costs <= 32 ops \
+         {{ if k {{ let x = a(p); ende(x); }} else {{ ende(p); }} }} }}"
+    );
+    let (b2, mut a2) = gabbro_syntax::lies("p.gab", &ungleich);
+    let _ = gabbro_check::pruefe(&b2, &mut a2);
     assert!(
-        ab.absagen.iter().any(|x| x.code == "O005"),
-        "ein Schritt im Zweig gehoert gemeldet: {:?}",
-        ab.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
+        a2.absagen.iter().any(|x| x.code == "O006"),
+        "auseinanderlaufende Zweige: {:?}",
+        a2.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
+    );
+
+    // **Ein Schritt in einer Schleife wird abgelehnt, nicht geeinigt.** Ein Schritt geschieht
+    // einmal, eine Schleife oft.
+    let schleife = format!(
+        "{kopf}reason Ablauf {{ zu_lang = 1 \"zu lang\" }}
+impl fn s(p : P) advances roh -> mmu effects {{ consumes p, writes w }} \
+         costs <= 512 ops {{ retry warten until w == 1 bounded 64 ops \
+         on_exceeded zu_lang effects {{ consumes p, writes w }} \
+         {{ let x = a(p); ende(x); }} return; }} }}"
+    );
+    let (b3, mut a3) = gabbro_syntax::lies("p.gab", &schleife);
+    let _ = gabbro_check::pruefe(&b3, &mut a3);
+    assert!(
+        a3.absagen.iter().any(|x| x.code == "O006"),
+        "ein Schritt in einer Schleife: {:?}",
+        a3.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
+    );
+}
+
+/// **K11.2.1 — `protects` beisst, und die Gegenrichtung fand den Befund zuerst.**
+///
+/// Bis zum 2026-08-17 ging das hier mit **0 Fehlern** durch: `lock KAPPEN protects { K }` stand
+/// da, `K.slots[i].a = 1;` daneben, ohne `locks`. `H001`–`H006` pruefen die **Disziplin** einer
+/// genommenen Sperre — geteilt gegen exklusiv, Rang, Haltezeit. **Sie pruefen nicht, dass sie
+/// genommen wird.**
+///
+/// > *Die Klasse Rennen hing damit nicht am Speichermodell — sie hing an einer Regel, die
+/// > niemand gebaut hatte.*
+///
+/// **`H008` ist ein HINWEIS, kein Fehler**, und darum steht die Probe hier statt in der
+/// Giftmappe: in einem AUSSCHNITT kann die Nahme ausserhalb liegen. Im eigenen Korpus lag sie
+/// nirgends — `beispiele/05` erklaerte `lock BERICHT protects { farbbericht }` und nahm sie
+/// nie; der Platz war ueber `publishes`/`awaits` synchronisiert.
+#[test]
+fn protects_beisst_und_eine_nie_genommene_sperre_faellt_auf() {
+    let kopf = "module t { table K count 8 { slot { a : u32, } }
+lock KAPPEN protects { K } rank 3 held <= 40 ops;
+";
+    // **Drei Wege gelten als gehalten**, und das ist die Bauart der Sprache, keine Nachsicht.
+    for (was, koerper) in [
+        ("ein `locks`-Block", "effects { writes K, locks KAPPEN } costs <= 40 ops \
+                               { locks KAPPEN { K.slots[i].a = 1; } return true; }"),
+        ("ein `effects { locks … }`", "effects { writes K, locks KAPPEN } costs <= 40 ops \
+                                       { K.slots[i].a = 1; return true; }"),
+        ("ein `requires Held(…)`", "requires Held(KAPPEN) effects { writes K } \
+                                    costs <= 4 ops { K.slots[i].a = 1; return true; }"),
+    ] {
+        let q = format!("{kopf}impl fn f(i : index into K) -> bool {koerper} }}");
+        let (b, mut a) = gabbro_syntax::lies("p.gab", &q);
+        let _ = gabbro_check::pruefe(&b, &mut a);
+        assert!(
+            !a.absagen.iter().any(|x| x.code == "H007"),
+            "{was} zaehlt als gehalten:\n{}",
+            a.zeige(&q)
+        );
+    }
+
+    // **Und ohne alles faellt es.**
+    let ohne = format!(
+        "{kopf}impl fn f(i : index into K) -> bool effects {{ writes K }} costs <= 4 ops \
+         {{ K.slots[i].a = 1; return true; }} }}"
+    );
+    let (b, mut a) = gabbro_syntax::lies("p.gab", &ohne);
+    let _ = gabbro_check::pruefe(&b, &mut a);
+    assert!(
+        a.absagen.iter().any(|x| x.code == "H007"),
+        "ein geschuetzter Platz ohne Sperre: {:?}",
+        a.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
+    );
+
+    // **Ein `spec fn` fasst zur Laufzeit nichts an** — die Vorabmessung meldete genau eine,
+    // und sie war der einzige Treffer im Korpus.
+    let spec = format!(
+        "{kopf}spec fn p(i : index into K) -> bool effects {{ pure }} = K.slots[i].a == 1; }}"
+    );
+    let (b, mut a) = gabbro_syntax::lies("p.gab", &spec);
+    let _ = gabbro_check::pruefe(&b, &mut a);
+    assert!(
+        !a.absagen.iter().any(|x| x.code == "H007"),
+        "eine Spezifikationsfunktion braucht keine Sperre:\n{}",
+        a.zeige(&spec)
+    );
+
+    // **`H008`: eine Klausel, die niemand einhaelt.** Hinweis, nicht Fehler — im Ausschnitt
+    // kann die Nahme ausserhalb liegen.
+    let nie = "module t { static mut b : u64 = 0;
+lock B protects { b } rank 2 held <= 50 ops;
+impl fn f(x : u32) -> u32 effects { pure } costs <= 4 ops { return x; } }";
+    let (bb, mut aa) = gabbro_syntax::lies("p.gab", nie);
+    let _ = gabbro_check::pruefe(&bb, &mut aa);
+    assert!(
+        aa.absagen.iter().any(|x| x.code == "H008"),
+        "eine nie genommene Sperre: {:?}",
+        aa.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
     );
 }

@@ -117,6 +117,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         .collect();
 
     let mut geteilt_genommen: Vec<String> = Vec::new();
+    let mut ueberhaupt_genommen: Vec<String> = Vec::new();
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Funktion(f) = &item.art else {
             return;
@@ -126,6 +127,71 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         };
         block(b, &[], &[], &[], &sperren, &verlangt, &mut geteilt_genommen, absagen);
     });
+
+    // **H007 -- K11.2.1: `protects` beisst.**
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        // **Ein `spec fn` fasst zur Laufzeit nichts an.** Es ist Beweisersache, und eine
+        // Sperre dort zu verlangen hiesse, eine Laufzeitdisziplin auf einen Geistausdruck
+        // anzuwenden. *Gefunden bei der Vorabmessung: beide gemeldeten Stellen des Korpus
+        // waren dieselbe `spec fn`.*
+        if matches!(f.klasse, Some(FnKlasse::Spec)) {
+            return;
+        }
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        let mut da: Vec<String> = Vec::new();
+        sperrnahmen(b, &mut ueberhaupt_genommen);
+        if let Some(w) = &f.effects {
+            for e in &w.liste {
+                // **Geteilt genommen zaehlt mit.** `H001` entscheidet danach, ob ein
+                // SCHREIBEN unter geteilter Nahme zulaessig ist -- das ist die Staerke, und
+                // sie ist eine andere Frage als die Nahme selbst.
+                if let WirkungArt::Sperrt(o) | WirkungArt::SperrtGeteilt(o) = &e.art {
+                    da.push(o.text());
+                    if !ueberhaupt_genommen.contains(&o.text()) {
+                        ueberhaupt_genommen.push(o.text());
+                    }
+                }
+            }
+        }
+        for p in &f.requires {
+            let mut h = Vec::new();
+            crate::aufrufgraph::held_aus_pred(p, &mut h);
+            da.extend(h.into_iter().map(|(n, _)| n));
+        }
+        schutz(b, &da, &sperren, &f.name.text, absagen);
+    });
+
+    // **H008 -- die Gegenrichtung von H007, und sie haette den Befund zuerst gefunden.**
+    //
+    // `lock BERICHT protects { farbbericht } rank 2 held <= 50 ops;` stand seit dem Bestehen
+    // von `beispiele/05` im Ordner und wurde **nirgends genommen** -- der Platz ist ueber die
+    // Paarung `publishes`/`awaits` synchronisiert, nicht ueber eine Sperre. *Zwei Mechanismen
+    // fuer denselben Platz, und einer davon war Zierde.*
+    //
+    // > **Eine `protects`-Klausel, die niemand einhaelt, ist schlimmer als keine:** sie
+    // > sieht aus wie eine Zusage und ist eine Behauptung. Dieselbe Bauart wie `S004`.
+    for (name, sp) in &sperren {
+        if !ueberhaupt_genommen.contains(name)
+            && !verlangt.values().any(|v| v.iter().any(|(n, _)| n == name))
+        {
+            absagen.schiebe(
+                Absage::hinweis(
+                    "H008",
+                    sp.span,
+                    format!("`{name}` schuetzt {:?}, wird aber nirgends genommen", sp.schuetzt),
+                )
+                .mit_notiz(
+                    "weder ein `locks`-Block noch ein `effects { locks … }` noch ein \
+                     `requires Held(…)` nennt sie",
+                )
+                .mit_notiz(
+                    "ist der Platz anders synchronisiert -- etwa ueber `publishes`/`awaits` \
+                     --, gehoert die Sperre weg; sonst fehlt die Nahme",
+                ),
+            );
+        }
+    }
 
     // S004 -- eine Zahl ohne Messstelle. Kein Konstrukt ohne gemessenen Bedarf, und keine
     // Zusage ohne Ort, an dem sie faellt.
@@ -147,6 +213,175 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 }
 
 /// `offen` ist der Stapel der geteilt gehaltenen Sperren — er trägt die Verschachtelung.
+/// Alle Sperren, die ein Rumpf nimmt -- fuer `H008`.
+fn sperrnahmen(b: &Block, aus: &mut Vec<String>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Sperrt(l) => {
+                let n = l.sperre.text();
+                if !aus.contains(&n) {
+                    aus.push(n);
+                }
+                sperrnahmen(&l.rumpf, aus);
+            }
+            StmtArt::Wenn(w) => {
+                for (_, r) in &w.zweige {
+                    sperrnahmen(r, aus);
+                }
+                if let Some(r) = &w.sonst {
+                    sperrnahmen(r, aus);
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    sperrnahmen(&z.rumpf, aus);
+                }
+            }
+            StmtArt::Bricht(x) => sperrnahmen(&x.rumpf, aus),
+            StmtArt::Narrow(x) => sperrnahmen(&x.sonst, aus),
+            StmtArt::LetSonst(x) => sperrnahmen(&x.sonst, aus),
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Traverse(t) => sperrnahmen(&t.rumpf, aus),
+                Schleife::Retry(r) => sperrnahmen(&r.rumpf, aus),
+                Schleife::Forever(f) => sperrnahmen(&f.rumpf, aus),
+            },
+            _ => {}
+        }
+    }
+}
+
+/// **`H007` — jeder Zugriff auf einen geschuetzten Platz steht unter seiner Sperre.**
+///
+/// **Gemessen am 2026-08-17, und es war der Befund, mit dem K11.2 anfing:**
+///
+/// ```gabbro
+/// lock KAPPEN protects { K } rank 3 held <= 40 ops;
+/// impl fn schreib(i : index into K) -> bool effects { writes K } costs <= 4 ops
+/// { K.slots[i].a = 1; return true; }          -- kein `locks KAPPEN`
+/// → 4 Items, 0 Fehler, 0 Hinweise
+/// ```
+///
+/// `H001`–`H006` pruefen die **Disziplin** einer genommenen Sperre — geteilt gegen exklusiv,
+/// Rang, Haltezeit. **Sie pruefen nicht, dass sie genommen wird.**
+///
+/// > *Die Klasse Rennen hing damit nicht am Speichermodell — sie hing an einer Regel, die
+/// > niemand gebaut hatte.*
+///
+/// **Als „genommen" gilt dreierlei**, und das ist keine Nachsicht, sondern die Bauart der
+/// Sprache: ein umschliessender `locks`-Block, ein `effects { locks L }` (dann ist die Nahme
+/// die Pflicht des Rufers, und `E006` haelt Rumpf gegen Klausel), und ein
+/// `requires Held(L)` — der Zeuge IST die Aussage, dass sie gehalten wird.
+fn schutz(
+    b: &Block,
+    da: &[String],
+    sperren: &BTreeMap<String, Sperre>,
+    wo: &str,
+    absagen: &mut Absagen,
+) {
+    let deckt = |ort: &str| -> Option<String> {
+        sperren
+            .iter()
+            .find(|(_, sp)| sp.schuetzt.iter().any(|p| beruehrt(p, ort)))
+            .map(|(n, _)| n.clone())
+    };
+    let pruefe = |o: &Ort, absagen: &mut Absagen| {
+        let t = o.text();
+        let Some(sperre) = deckt(&t) else { return };
+        if da.iter().any(|d| d == &sperre) {
+            return;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "H007",
+                o.span,
+                format!("`{t}` ist von `{sperre}` geschuetzt, `{wo}` haelt sie nicht"),
+            )
+            .mit_notiz(
+                "als gehalten gilt: ein umschliessender `locks`-Block, ein \
+                 `effects { locks … }` (dann ist die Nahme die Pflicht des Rufers) oder ein \
+                 `requires Held(…)`",
+            )
+            .mit_notiz(
+                "`protects` nannte die Plaetze schon; bis K11.2.1 pruefte niemand, dass die \
+                 Sperre auch GENOMMEN wird",
+            ),
+        );
+    };
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Sperrt(l) => {
+                let mut innen = da.to_vec();
+                innen.push(l.sperre.text());
+                schutz(&l.rumpf, &innen, sperren, wo, absagen);
+            }
+            StmtArt::Zuweisung(z) => {
+                pruefe(&z.ziel, absagen);
+                orte_in(&z.wert, &mut |o| pruefe(o, absagen));
+            }
+            StmtArt::Publish(p) => {
+                pruefe(&p.ziel, absagen);
+                orte_in(&p.wert, &mut |o| pruefe(o, absagen));
+            }
+            StmtArt::Let(l) => orte_in(&l.wert, &mut |o| pruefe(o, absagen)),
+            StmtArt::Return(Some(x)) => orte_in(x, &mut |o| pruefe(o, absagen)),
+            StmtArt::Ruf(r) => {
+                for a in &r.argumente {
+                    orte_in(a, &mut |o| pruefe(o, absagen));
+                }
+            }
+            StmtArt::Wenn(w) => {
+                for (bed, r) in &w.zweige {
+                    orte_in(bed, &mut |o| pruefe(o, absagen));
+                    schutz(r, da, sperren, wo, absagen);
+                }
+                if let Some(r) = &w.sonst {
+                    schutz(r, da, sperren, wo, absagen);
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    schutz(&z.rumpf, da, sperren, wo, absagen);
+                }
+            }
+            StmtArt::Bricht(x) => schutz(&x.rumpf, da, sperren, wo, absagen),
+            StmtArt::Narrow(x) => schutz(&x.sonst, da, sperren, wo, absagen),
+            StmtArt::LetSonst(x) => schutz(&x.sonst, da, sperren, wo, absagen),
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Traverse(t) => schutz(&t.rumpf, da, sperren, wo, absagen),
+                Schleife::Retry(r) => schutz(&r.rumpf, da, sperren, wo, absagen),
+                Schleife::Forever(f) => schutz(&f.rumpf, da, sperren, wo, absagen),
+            },
+            _ => {}
+        }
+    }
+}
+
+/// Die Orte eines Ausdrucks, **einschliesslich der Indizes** -- `c.slots[naechster]` liest
+/// beides.
+fn orte_in(e: &Expr, f: &mut impl FnMut(&Ort)) {
+    match &e.art {
+        ExprArt::Ort(o) => {
+            f(o);
+            for suf in &o.suffixe {
+                if let OrtSuffix::Index(ix) = suf {
+                    orte_in(ix, f);
+                }
+            }
+        }
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => orte_in(x, f),
+        ExprArt::Binaer(_, a, b) => {
+            orte_in(a, f);
+            orte_in(b, f);
+        }
+        ExprArt::Ruf(r) => {
+            for a in &r.argumente {
+                orte_in(a, f);
+            }
+        }
+        _ => {}
+    }
+}
+
 fn block(
     b: &Block,
     offen: &[String],

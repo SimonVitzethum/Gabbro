@@ -252,7 +252,7 @@ fn die_passliste_sagt_was_sie_nicht_prueft() {
     // **Zehn aus `SPRACHE.md` Teil III §6, plus einer, der nicht daher stammt.**
     // `Phasen` («B37», 2026-08-17) hat keine Nummer in der Spezifikationsliste -- er haengt
     // hinten an, damit die zehn Fundstellen, die auf sie zeigen, stehenbleiben.
-    assert_eq!(liste.len(), 11, "die ersten zehn stehen in SPRACHE.md Teil III §6");
+    assert_eq!(liste.len(), 12, "die ersten zehn stehen in SPRACHE.md Teil III §6");
     assert_eq!(
         liste.iter().filter(|p| p.nummer <= 10).count(),
         10,

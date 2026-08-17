@@ -435,7 +435,9 @@ fndecl   = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" | "extern"
    Geprueft wird in drei Stufen: die Stufen gibt es und der Schritt geht VORWAERTS
    (`O001`/`O002` -- ohne die zweite Haelfte waere `order` eine Liste), die Marke steht beim
    Ruf auf der Ausgangsstufe (`O003`), und der Rumpf setzt sich zu seiner eigenen Zusage
-   zusammen (`O004`). Ein Schritt in einem Zweig wird GEMELDET, nicht entschieden (`O005`). *)
+   zusammen (`O004`), und alle Zweige erreichen dieselbe Stufe (`O006`, K11.1) -- ein Zweig,
+   der mit `return` endet, schliesst sich nicht an; ein Schritt in einer Schleife wird
+   abgelehnt. *)
 inductlist = induct { "," induct } ;
 induct     = "induction" "over" domain ;      (* nennt das SCHEMA -- kein Lemma, kein Beweisschritt *)
 efflist  = eff { "," eff } ;

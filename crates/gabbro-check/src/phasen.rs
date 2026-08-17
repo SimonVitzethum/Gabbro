@@ -38,18 +38,29 @@
 //! 3. **Die Zusammensetzung** (`O004`): der Rumpf muss auf die Stufe kommen, die seine eigene
 //!    `advances`-Zeile zusagt. *Eine Strecke, die unterwegs aufhoert, ist keine Strecke.*
 //!
+//! 4. **Der Zweig** (`O006`, seit K11.1): **alle Zweige erreichen dieselbe Stufe.** Ein
+//!    Zweig, der mit `return` ENDET, schliesst sich nicht an -- er verlaesst die Funktion.
+//!    Ein Schritt in einer **Schleife** wird abgelehnt: *ein Schritt geschieht einmal, eine
+//!    Schleife oft.*
+//!
+//! ## `O005` ist ZURUECKGEZOGEN, und das gehoert hierher statt in eine Luecke
+//!
+//! Bis K11.1 stand dort ein Hinweis: *„ein Phasenschritt steht in einem Zweig -- dieser Pass
+//! entscheidet das NICHT."* **Die Meldung war richtig und keine Loesung.** Sie ist durch
+//! `O006` ersetzt, und der Code bleibt frei.
+//!
+//! > *Eine Absage, die heimlich ihre Bedeutung wechselt, ist schlimmer als eine Nummer, die
+//! > ungenutzt bleibt.* Deshalb ein neuer Code und keine Umwidmung.
+//!
 //! ## Und was er NICHT prueft, mit seinem Grund
 //!
-//! **Ein Phasenschritt innerhalb eines Zweiges oder einer Schleife wird gemeldet, nicht
-//! entschieden** (`O005`, Hinweis). Zwei Zweige koennen die Marke auf verschiedene Stufen
-//! bringen, und welche danach gilt, ist eine Fallunterscheidung -- *die gehoert dem Beweiser,
-//! nicht dieser Buchhaltung.*
-//!
-//! > *Ein Pass, der bei Verzweigung stillschweigend durchlaesst, ist schlimmer als einer, der
-//! > sagt, dass er hier nicht zustaendig ist.*
+//! **Die weichere Fassung des Zweigs ist nicht gebaut:** eine STUFENMENGE zu tragen und den
+//! naechsten Schritt alle akzeptieren zu lassen. Gewaehlt ist die strenge --
+//! *von ihr aus laesst sich lockern, umgekehrt nie* (`PLAN.md`, K11.1 (b)).
 
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
+use gabbro_syntax::span::Span;
 use std::collections::BTreeMap;
 
 /// Was eine Funktion auf einer Marke tut.
@@ -221,30 +232,167 @@ fn fluss(
                     zuletzt = Some(neu);
                 }
             }
-            // **`O005` -- gemeldet, nicht entschieden.**
-            StmtArt::Wenn(_) | StmtArt::Match(_) | StmtArt::Schleife(_) | StmtArt::Sperrt(_) => {
-                if melden && enthaelt_schritt(s, schritte) {
+            // **Ein `locks`-Block ist kein Zweig.** Er wird durchlaufen wie gerader Code.
+            StmtArt::Sperrt(x) => {
+                if let Some(n) = fluss(&x.rumpf, schritte, stand, absagen, melden) {
+                    zuletzt = Some(n);
+                }
+            }
+            // **K11.1: die Zweige muessen sich EINIGEN** (`O006`).
+            //
+            // Bis zum 2026-08-17 stand hier `O005` -- ein Hinweis: *„ein Phasenschritt steht
+            // in einem Zweig, und dieser Pass entscheidet das nicht."* **Die Meldung war
+            // richtig und keine Loesung.**
+            //
+            // Gewaehlt ist die strenge Fassung: *alle Zweige muessen dieselbe Stufe
+            // erreichen.* Ein Bootpfad, der je nach Zweig woanders endet, ist zwei Bootpfade.
+            //
+            // > **Wer streng anfaengt, kann spaeter lockern; wer permissiv anfaengt, kann nie
+            // > mehr verschaerfen.** Die weichere Fassung -- eine STUFENMENGE tragen und den
+            // > naechsten Schritt alle akzeptieren lassen -- bleibt moeglich und ist in
+            // > `PLAN.md` (K11.1) als (b) benannt.
+            StmtArt::Wenn(w) => {
+                let mut zweige: Vec<(BTreeMap<String, String>, Span)> = Vec::new();
+                for (_, r) in &w.zweige {
+                    let mut k = stand.clone();
+                    fluss(r, schritte, &mut k, absagen, melden);
+                    if !endet_immer(r) {
+                        zweige.push((k, r.span));
+                    }
+                }
+                // **Ein `if` ohne `else` hat einen unsichtbaren zweiten Zweig**, und der
+                // aendert nichts. Ihn zu vergessen hiesse, den haeufigsten Fall zu uebersehen.
+                match &w.sonst {
+                    Some(r) => {
+                        let mut k = stand.clone();
+                        fluss(r, schritte, &mut k, absagen, melden);
+                        if !endet_immer(r) {
+                            zweige.push((k, r.span));
+                        }
+                    }
+                    // **Ein `if` ohne `else` hat einen unsichtbaren zweiten Zweig**, und der
+                    // aendert nichts. Ihn zu vergessen hiesse, den haeufigsten Fall zu
+                    // uebersehen -- er faellt aber weg, wenn ALLE `if`-Zweige enden.
+                    None => zweige.push((stand.clone(), s.span)),
+                }
+                if let Some(neu) = einigen(&zweige, s.span, absagen, "Zweige eines `if`") {
+                    *stand = neu;
+                }
+            }
+            StmtArt::Match(m) => {
+                let mut zweige: Vec<(BTreeMap<String, String>, Span)> = Vec::new();
+                for z in &m.zweige {
+                    let mut k = stand.clone();
+                    fluss(&z.rumpf, schritte, &mut k, absagen, melden);
+                    if !endet_immer(&z.rumpf) {
+                        zweige.push((k, z.rumpf.span));
+                    }
+                }
+                if let Some(neu) = einigen(&zweige, s.span, absagen, "Zweige eines `match`") {
+                    *stand = neu;
+                }
+            }
+            // **Ein Schritt geschieht EINMAL, eine Schleife oft.** Hier wird nicht geeinigt,
+            // sondern abgelehnt: eine Stufe, die ein Durchgang weiterschiebt, ist nach zwei
+            // Durchgaengen eine andere -- und wie viele es sind, entscheidet die Laufzeit.
+            StmtArt::Schleife(sch) => {
+                let rumpf = match sch.as_ref() {
+                    Schleife::Traverse(t) => &t.rumpf,
+                    Schleife::Retry(r) => &r.rumpf,
+                    Schleife::Forever(f) => &f.rumpf,
+                };
+                if enthaelt_schritt(s, schritte) {
                     absagen.schiebe(
-                        Absage::hinweis(
-                            "O005",
+                        Absage::fehler(
+                            "O006",
                             s.span,
-                            "ein Phasenschritt steht in einem Zweig oder einer Schleife",
+                            "ein Phasenschritt steht in einer Schleife",
                         )
                         .mit_notiz(
-                            "zwei Zweige koennen die Marke auf verschiedene Stufen bringen; \
-                             welche danach gilt, ist eine Fallunterscheidung",
-                        )
-                        .mit_notiz(
-                            "dieser Pass entscheidet das NICHT -- er sagt es, statt \
-                             stillschweigend durchzulassen",
+                            "ein Schritt geschieht einmal, eine Schleife oft -- nach zwei \
+                             Durchgaengen steht die Marke woanders, und wie viele es sind, \
+                             entscheidet die Laufzeit",
                         ),
                     );
+                } else {
+                    let mut k = stand.clone();
+                    fluss(rumpf, schritte, &mut k, absagen, melden);
                 }
             }
             _ => {}
         }
     }
     zuletzt
+}
+
+/// **Ein Zweig, der ENDET, schliesst sich nicht an.**
+///
+/// `if k { let x = a(p); return x; }` hat nach dem `if` keinen zweiten Stand -- der Zweig
+/// verlaesst die Funktion. Ihn in die Einigung zu nehmen hiesse, den haeufigsten sauberen
+/// Fall abzulehnen.
+///
+/// > **Das fand die erste Probe, und zwar in der GEGENRICHTUNG:** die Giftprobe fiel wie
+/// > gewollt, und die SAUBERE fiel mit. *Ein Tor, das nur in eine Richtung geprueft wird,
+/// > misst die Haelfte.*
+fn endet_immer(b: &Block) -> bool {
+    let Some(letzte) = b.anweisungen.last() else {
+        return false;
+    };
+    match &letzte.art {
+        StmtArt::Return(_) | StmtArt::Leave(_) | StmtArt::Next(_) => true,
+        StmtArt::Wenn(w) => {
+            w.sonst.as_ref().is_some_and(endet_immer) && w.zweige.iter().all(|(_, r)| endet_immer(r))
+        }
+        StmtArt::Match(m) => m.zweige.iter().all(|z| endet_immer(&z.rumpf)),
+        _ => false,
+    }
+}
+
+/// **Die Einigung der Zweige** (`O006`) -- K11.1.
+///
+/// Alle Zweige muessen denselben Stand hinterlassen. Das ist die strenge Fassung, und sie ist
+/// mit Absicht die strenge: *ein Bootpfad, der je nach Zweig woanders endet, ist zwei
+/// Bootpfade.*
+///
+/// Verglichen wird der ganze Stand, nicht nur die zuletzt erreichte Stufe -- **zwei Marken in
+/// einem Rumpf sind moeglich**, und eine Einigung, die nur eine ansieht, ist keine.
+fn einigen(
+    zweige: &[(BTreeMap<String, String>, Span)],
+    span: Span,
+    absagen: &mut Absagen,
+    was: &str,
+) -> Option<BTreeMap<String, String>> {
+    let (erster, _) = zweige.first()?;
+    for (k, wo) in &zweige[1..] {
+        if k != erster {
+            let zeig = |m: &BTreeMap<String, String>| {
+                if m.is_empty() {
+                    "keine Marke".to_string()
+                } else {
+                    m.iter()
+                        .map(|(n, st)| format!("{n} auf {st}"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                }
+            };
+            absagen.schiebe(
+                Absage::fehler(
+                    "O006",
+                    *wo,
+                    format!("die {was} bringen die Marke auf verschiedene Stufen"),
+                )
+                .mit_notiz(format!("hier: {}", zeig(k)))
+                .mit_notiz(format!("anderswo: {}", zeig(erster)))
+                .mit_notiz(
+                    "gewaehlt ist die strenge Fassung: alle Zweige erreichen dieselbe \
+                     Stufe. Ein Pfad, der je nach Zweig woanders endet, ist zwei Pfade",
+                ),
+            );
+            let _ = span;
+            return None;
+        }
+    }
+    Some(erster.clone())
 }
 
 /// Wendet einen Ruf auf den Stand an. `None`, wenn er kein Schritt ist.

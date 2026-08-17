@@ -165,7 +165,7 @@ impl Graph {
 }
 
 /// `requires Held(X)` bzw. `Held(X, shared)` -- flach über den Prädikatbaum.
-fn held_aus_pred(p: &Pred, aus: &mut Vec<(String, bool)>) {
+pub fn held_aus_pred(p: &Pred, aus: &mut Vec<(String, bool)>) {
     match &p.art {
         PredArt::Held { sperre, geteilt, .. } => aus.push((sperre.text.clone(), *geteilt)),
         PredArt::Vergleich(e) | PredArt::Element(e, _) => held_aus_expr(e, aus),

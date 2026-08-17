@@ -123,6 +123,29 @@ pub fn passliste() -> Vec<Pass> {
         // ist und `phasen` direkt hinter M2 laeuft; die Zaehlung der SPRACHE.md-Liste bleibt
         // damit unangetastet. *Ein Pass, der sich in die Numerierung einer Spezifikation
         // draengt, verschiebt jede Fundstelle, die auf sie zeigt.*
+        // **Der zwoelfte -- und er stand die ganze Zeit da, ohne gefuehrt zu werden.**
+        //
+        // `geteilt.rs` traegt seit dem 2026-08-15 die Sperrdisziplin (`H001`-`H006`) und ist
+        // in KEINER Zeile dieser Liste aufgetaucht. Gefunden am 2026-08-17, beim Eintragen
+        // von `H007`/`H008` -- *ein Pass mit acht Absagecodes, den die Liste nicht kennt.*
+        //
+        // > Dieselbe Lage, in der die Schablonen vor ihrer Auszaehlung waren: **vorhanden,
+        // > wirksam und unbeziffert.** Die Liste ist die Zaehlspalte des Pruefers; was nicht
+        // > drinsteht, kann niemand vermissen.
+        Pass {
+            nummer: 12,
+            name: "Sperren",
+            quelle: "SPRACHE.md §9: `rank`, `held`, `protects` -- die Sperrdisziplin",
+            zustand: Zustand::Teilgebaut(
+                "gebaut: geteilt gegen exklusiv (`H001`-`H004`), die Zwischenregel an der \
+                 Aufrufgrenze (`H005`), die nachgerechnete Rangordnung (`H006`) -- und seit \
+                 K11.2.1 beisst `protects`: jeder Zugriff auf einen geschuetzten Platz steht \
+                 unter seiner Sperre (`H007`), eine nie genommene Sperre faellt auf (`H008`). \
+                 **NICHT gebaut: die Ausfuehrungskontexte** -- wer nebenlaeufig laeuft, sagt \
+                 Gabbro nicht, und ohne das laesst sich `jeder Platz, den zwei Kontexte \
+                 beruehren, ist gesperrt oder atomar` nicht sagen (PLAN.md, K11.2.2)",
+            ),
+        },
         Pass {
             nummer: 11,
             name: "Phasen",
@@ -131,10 +154,12 @@ pub fn passliste() -> Vec<Pass> {
                 "gebaut: die Stufen einer `order` gibt es und `advances` geht VORWAERTS \
                  (`O001`/`O002`), die Marke steht beim Ruf auf ihrer Ausgangsstufe (`O003`), \
                  und der Rumpf setzt sich zu seiner eigenen Zusage zusammen (`O004`). \
-                 **NICHT entschieden: ein Schritt in einem Zweig oder einer Schleife** -- zwei \
-                 Zweige koennen die Marke auf verschiedene Stufen bringen, und welche danach \
-                 gilt, ist eine Fallunterscheidung. Sie wird GEMELDET (`O005`), nicht \
-                 stillschweigend durchgelassen",
+                 **Und seit K11.1 der Zweig**: alle Zweige muessen dieselbe Stufe erreichen \
+                 (`O006`); ein Zweig, der mit `return` ENDET, schliesst sich nicht an, und ein \
+                 Schritt in einer SCHLEIFE wird abgelehnt -- ein Schritt geschieht einmal, \
+                 eine Schleife oft. **NICHT gebaut: die weichere Fassung** -- eine Stufenmenge \
+                 zu tragen und den naechsten Schritt alle akzeptieren zu lassen. *Von der \
+                 strengen Fassung aus laesst sich lockern, umgekehrt nie* (PLAN.md, K11.1)",
             ),
         },
         Pass {

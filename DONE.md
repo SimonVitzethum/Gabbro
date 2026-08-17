@@ -10,7 +10,7 @@
 
 ---
 
-## The compiler — **ten** passes, none open (plus an eleventh from «B37»)
+## The compiler — **ten** passes, none open (plus two more: «B37» and the lock discipline)
 
 `cargo run --bin gabbro -- paesse` · **3 fully built, 7 partial, 0 open**
 
@@ -55,7 +55,7 @@ Newly collected 2026-08-15, **not reconstructed**, x86 only
 | **Leafness** | `descendants of` + `by consuming` with a witness ordering · domain bound in `kosten.rs`, `dokumente/FRAGMENTE.md` (`revoke`) |
 | **Publication** | `publishstmt` at the store · pairing pass · `relaxed` carries no payload · `V001`–`V004` in `paarung.rs` |
 | **Frame** *(booked in retrospect 2026-08-16)* | `effects` holds writes, `locks` **and reads** (`E010`, reading A) and the call effects (`E008` over the call graph). **The named limit:** `E010` speaks only about declared world state — in an excerpt it has zero bite, in a complete translation unit the name pass covers the rest |
-| **Phase** *(closed 2026-08-17 with «B37»)* | the linear ghost token carried the order as **linearity**, not as **order** — all 720 orderings of F7's six boot steps type-checked. `order { … }` on the token plus `advances a -> b` at each step; `O002` forces the step forward, `O003` refuses a step that meets the token on the wrong stage. **The named limit:** a step inside a branch is **reported** (`O005`), not decided — which stage holds after two branches is a case distinction and belongs to the prover |
+| **Phase** *(closed 2026-08-17 with «B37»)* | the linear ghost token carried the order as **linearity**, not as **order** — all 720 orderings of F7's six boot steps type-checked. `order { … }` on the token plus `advances a -> b` at each step; `O002` forces the step forward, `O003` refuses a step that meets the token on the wrong stage. Since K11.1 the branch is **decided**, not reported: all branches must reach the same stage (`O006`), a branch ending in `return` does not join, and a step inside a **loop** is refused — *a step happens once, a loop often.* **The named limit:** the softer reading — carrying a SET of stages and letting the next step accept all of them — is not built. *From the strict form one can loosen; the other way never* |
 
 **The two that are NOT carried, and each for a different reason:**
 
@@ -205,5 +205,5 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**23 clean examples, 73 poison probes, 116 tests** —
+**23 clean examples, 74 poison probes, 117 tests** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`

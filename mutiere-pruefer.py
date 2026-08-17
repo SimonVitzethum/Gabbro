@@ -1223,12 +1223,29 @@ MUTATIONEN = [
         "            if false {",
         "B37 -- ein Rumpf muss sich nicht mehr zu seiner Zusage zusammensetzen",
     ),
+    # K11.1: die Zweige muessen sich einigen -- und ein Zweig, der ENDET, gehoert nicht dazu.
     Mutation(
-        "phasenschritt-im-zweig-schweigt",
+        "phasenzweige-muessen-sich-nicht-einigen",
         "phasen.rs",
-        "                if melden && enthaelt_schritt(s, schritte) {",
+        "        if k != erster {",
+        "        if false {",
+        "K11.1 -- zwei Zweige duerfen die Marke auf verschiedene Stufen bringen",
+    ),
+    Mutation(
+        "phasenschritt-in-der-schleife-geht-durch",
+        "phasen.rs",
+        "                if enthaelt_schritt(s, schritte) {",
         "                if false {",
-        "B37 -- ein Schritt im Zweig wird stillschweigend durchgelassen statt gemeldet",
+        "K11.1 -- ein Schritt in einer Schleife faellt nicht mehr; er geschieht einmal, "
+        "die Schleife oft",
+    ),
+    Mutation(
+        "endender-zweig-zaehlt-mit",
+        "phasen.rs",
+        "                    if !endet_immer(r) {\n                        zweige.push((k, r.span));\n                    }\n                }\n                // **Ein `if` ohne `else`",
+        "                    zweige.push((k, r.span));\n                }\n                // **Ein `if` ohne `else`",
+        "K11.1 -- ein Zweig, der mit `return` endet, wird in die Einigung genommen; "
+        "der haeufigste saubere Fall faellt",
     ),
     # -- K100.4: die Kreuzprobe des Uebersetzungszeugnisses --------------------------------
     #

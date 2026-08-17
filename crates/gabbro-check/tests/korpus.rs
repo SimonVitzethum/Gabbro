@@ -33,6 +33,15 @@ const BENANNT: &[&str] = &[
     "E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008", "E009",
     "E010", // Wirkungen -- E010 ist die Lesehaelfte (Lesart A, 2026-08-16)
     "H001", "H002", "H003", "H004", "H005", "H006", // geteilter Halt, Rangordnung
+    // K11.2.1: `protects` beisst (`H007`) und eine nie genommene Sperre faellt auf (`H008`).
+    "H007", "H008",
+    // «B37» und K11.1: die Ordnung auf einer linearen Geistmarke. `O005` ist ZURUECKGEZOGEN --
+    // der Hinweis „dieser Pass entscheidet das nicht" ist durch `O006` ersetzt, und der Code
+    // bleibt frei: eine Absage, die heimlich ihre Bedeutung wechselt, ist schlimmer als eine
+    // Nummer, die ungenutzt bleibt.
+    "O001", "O002", "O003", "O004", "O006",
+    // «B7»: der Verbundkonstruktor.
+    "M106", "M107", "P036", "P037",
     "K004", "D001", "D002", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet

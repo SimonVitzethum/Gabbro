@@ -16,7 +16,15 @@ type FadenIdx = u32 in 0 .. 1023;
 -- einer Dienstschleife nicht nehmbar.
 lock KAPPEN  protects { eintraege }        rank 0 held <= 400 ops masks irqs;
 lock SPEICHER protects { freiliste }       rank 1 held <= 200 ops;
-lock BERICHT protects { farbbericht }      rank 2 held <= 50 ops;
+-- **`lock BERICHT protects { farbbericht }` stand hier bis zum 2026-08-17 -- und wurde
+-- nirgends genommen.** `farbbericht` ist ueber die Paarung synchronisiert
+-- (`publishes { farbbericht }` am Release-Speichern, `awaits { farbbericht }` am
+-- Acquire-Laden), nicht ueber eine Sperre. **Zwei Mechanismen fuer denselben Platz, und
+-- einer davon war Zierde.**
+--
+-- Gefunden hat es `H007` bei seinem ERSTEN Korpuslauf, `H008` bestaetigt es von der anderen
+-- Seite. *Eine `protects`-Klausel, die niemand einhaelt, ist schlimmer als keine: sie sieht
+-- aus wie eine Zusage und ist eine Behauptung.*
 
 atomic FARBE_FERTIG : bool release;
 atomic TIEFE_MAX    : u64 relaxed;

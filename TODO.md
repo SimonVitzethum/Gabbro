@@ -155,10 +155,6 @@ of items that are neither code nor a run — what remains is building and measur
       haengt an einer Regel, die niemand gebaut hat.* **Vor der Regel messen:** 17
       `protects`-Klauseln in 9 Dateien; wie viele Zugriffsstellen fielen? Eine Regel, die den
       eigenen Korpus zerlegt, ist ein Befund und keine Regel.
-- [ ] **«B37» hat einen benannten Rest: `O005` meldet, entscheidet nicht.** Was die Stufe einer
-      Marke NACH einem `if` ist, steht nicht fest. Zwei Wege in `PLAN.md` (K11.1); empfohlen
-      ist **alle Zweige muessen dieselbe Stufe erreichen** (`O006`) -- *wer damit anfaengt,
-      kann spaeter lockern; wer mit der permissiven Fassung anfaengt, kann nie verschaerfen.*
 - [ ] **Ein Tippfehler in einem `ensures` faellt nicht** *(gemessen 2026-08-17)*.
       `ensures zaheler == 1` neben `static mut zaehler` geht mit **0 Fehlern** durch: kein
       Pass liest Praedikate, also prueft auch keiner ihre NAMEN. *Eine Pflicht, die niemand
