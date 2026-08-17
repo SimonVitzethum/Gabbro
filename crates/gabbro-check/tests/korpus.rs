@@ -174,3 +174,52 @@ fn jeder_gebaute_pass_ist_auch_angemeldet() {
         );
     }
 }
+
+/// **Diese Probe kam aus einer Mutation, die ueberlebt hat (2026-08-17).**
+///
+/// `eine-einheit-faengt-mit-irgendwas-an` machte `ist_uebersetzungseinheit` blind fuer die
+/// Frage, womit ein Block anfaengt — und **nichts fiel**. Die Regel *„eine
+/// Uebersetzungseinheit faengt mit einem Item an"* war damit unbewacht, obwohl Tor P2 auf
+/// ihr steht: sie entscheidet, was ueberhaupt gezaehlt wird.
+///
+/// > *Ein Nenner, den niemand prueft, ist die billigste Art, eine Quote zu verbessern.*
+#[test]
+fn eine_uebersetzungseinheit_faengt_mit_einem_item_an() {
+    use gabbro_check::korpus::ist_uebersetzungseinheit;
+
+    assert!(
+        ist_uebersetzungseinheit("module t {\nconst A : u32 = 1;\n}"),
+        "ein Modul ist eine Uebersetzungseinheit"
+    );
+    assert!(
+        ist_uebersetzungseinheit("const A : u32 = 1;"),
+        "ein Item auf oberster Ebene auch"
+    );
+
+    // **Ausschnitte, und genau sie sind der Grund fuer die Unterscheidung.** SPRACHE.md und
+    // SYNTAX.md zeigen ueberwiegend einzelne Anweisungen; wer sie als Programm liest, meldet
+    // Fehler, die es nicht gibt — und wer sie MITZAEHLT, rechnet die Quote von Tor P2 schoen.
+    for ausschnitt in [
+        "let x : u32 = 1;",
+        "return 0;",
+        "if a < b { return 0; }",
+        "traverse s over slots of c by unvisited { }",
+        "match a { Eins(x) => { } }",
+    ] {
+        assert!(
+            !ist_uebersetzungseinheit(ausschnitt),
+            "`{ausschnitt}` faengt mit einer ANWEISUNG an und ist kein Programm"
+        );
+    }
+
+    // Und der Fall, der die erste Fassung dieser Regel aufgeflogen hat: `…` im KOMMENTAR
+    // ist erlaubt (der Lexer trennt Code von Kommentar), `…` im CODE nicht.
+    assert!(
+        ist_uebersetzungseinheit("-- hier waere noch mehr …\nconst A : u32 = 1;"),
+        "`…` im Kommentar macht aus einem Programm keine Skizze (W9, gemessene Richtung)"
+    );
+    assert!(
+        !ist_uebersetzungseinheit("const A : u32 = …;"),
+        "`…` im Code ist eine Auslassung, kein Programm"
+    );
+}
