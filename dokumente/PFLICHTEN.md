@@ -412,7 +412,7 @@ carries and the Rust original did not — because it does not write them down.*
 | **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
 | **Plumbing (K)** | **173** | 73 % |
 | **Logic (L)** | **65** | 27 % |
-| **hanging** | **49** | of which **35 are K** — every one a breach of the thesis at its site. *(F7's lowering was carried on 2026-08-17; the run booked 36.)* |
+| **hanging** | **45** | of which **31 are K** — every one a breach of the thesis at its site. *(The run booked 50/36; five K were closed on 2026-08-17, each with its reason — see below.)* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
 **L : K = 0,38 : 1.**
@@ -431,26 +431,40 @@ carries and the Rust original did not — because it does not write them down.*
 | F8 Scheduler | 14 | 12 | 2 | 1 | 1 |
 | F9 MMU | 11 | 7 | 4 | 2 | 1 |
 | F10 Parser | 11 | 9 | 2 | 1 | 1 |
-| Lowering | 10 | 10 | 0 | 9 | 9 |
-| | **238** | **173** | **65** | **49** | **35** |
+| Lowering | 10 | 10 | 0 | 7 | 7 |
+| | **238** | **173** | **65** | **45** | **31** |
 
-## The 36 hanging plumbing obligations, by cause
+## Die hängenden Klempnereipflichten — nachgezogen 2026-08-17, Posten für Posten
 
-| Cause | # | Sites |
+**Der Lauf buchte 36. Fünf sind seither geschlossen, und jede mit ihrem Grund** — drei durch
+Ausführung, eine durch die Absenkung selbst, eine durch ein Argument, das der Ordner
+ausdrücklich verlangt hatte.
+
+### Geschlossen
+
+| Pflicht | wodurch |
+|---|---|
+| **Absenkung F7 · F8 · F10** | **an der Ausführung gemessen** — `123456`, `1 1 1 0 0 1 1 1`, `1 0 0 0 0 65` |
+| **«B26» — der Vorzustand einer `transition`** | *„ob `mirrors` auch den Vorzustand einer `transition` an `GCMD.TE` aus `GSTS.TES` bezieht, sagt `SYNTAX.md` nicht"* — **der Erzeuger beantwortet es mit ja und misst es**: `1 1 1 1`, und die zweite und vierte Zahl sind die Falle. *Die Antwort gehört jetzt in `SYNTAX.md`, nicht in den Erzeuger* |
+| **«B33» — die V-Regeln verengen keinen Registerort** | Der Ordner schrieb: *„Ob das Absicht ist (ein Register kann sich zwischen Prüfung und Rechnung ändern!) oder eine Lücke, entscheidet der Ordner. **Wenn es Absicht ist, gehört die Begründung aufgeschrieben** — sie wäre ein starkes Argument."* **Sie ist es, und sie steht jetzt im erzeugten C:** ein Registerzugriff wird `volatile`, und `volatile` IST die Aussage *„dieser Ort kann sich zwischen zwei Lesungen ändern"*. Eine Verengung wäre an dieser Stelle falsch, nicht bloß fehlend |
+
+### Offen — **31**, und die Spalte rechts sagt, wem sie gehören
+
+| Ursache | # | wem |
 |---|---:|---|
-| **the lowering** | 9 | one per fragment — **F7 is carried since 2026-08-17**, measured by execution (`123456`) |
-| **device notation** | 6 | «B23» mixed register class · «B24» bit position beyond 64 (×2) · «B26» pre-state (×2) · «B18» phases at the `device` |
-| **hand-written `narrow`** | 3 | F1:268 · F6:1100 (**else branch unreachable**) · F10:1660 (**else branch reachable**) |
-| **`format`/compound** | 4 | «B25» value set vs interval · «B22-near» refusal vs absence · «B7» struct literal (×2) |
-| **the ordering constraint** | 2 | «B37» at the declaration and at the site — *linearity is not an order* |
-| **«B19» barriers at a device register** | 1 | *the most safety-critical publication in the tree is not an atomic* |
-| **«B33» narrowing at a register place** | 1 | undecided — intent or hole |
-| **«B21» `accumulates`** | 1 | 213 RMW sites, 19 `fetch_max`/`fetch_min` |
-| **«B38» `masks IRQ` at the lock boundary** | 1 | the effect exists and is not tied to the boundary |
-| **«B39» the MMU writes `A`/`D`** | 1 | a writer no `effects` line names — *hardware is a participant* |
-| **«B27» register assignment** | 1 | 168 `asm!` sites without a carrier |
-| **«B22» multi-line `claim`** | 1 | |
-| **«B14» `let … else` on a `place`** | 1 | |
-| **«B6» return-value binding** | 1 | |
-| **«B3» `Held(Lock)` notation** | 1 | touches every `requires` in F4 |
-| **V rules do no arithmetic** | 1 | F6:1157 — `f < g/N` does not yield `f < g` |
+| **die Absenkung** | 7 | F1–F6, F9 — davon **fünf durch Befunde gesperrt**, nicht durch Arbeit |
+| **Gerätenotation** | 5 | «B23» gemischte Registerklasse · «B24» Bitlage jenseits des Wortes (×2) · «B26» `QUEUE_SIZE` ohne benannten Ausgang · «B18» Phasen am `device` |
+| **handgeschriebenes `narrow`** | 3 | F1:268 · F6:1100 (**Zweig unerreichbar**) · F10:1660 (**Zweig erreichbar**) — *und der Unterschied wird von keiner Messung gesehen* |
+| **`format`/Verbund** | 4 | «B25» Wertemenge statt Intervall · «B22-nah» Absage statt Abwesenheit · «B7» Verbundliteral (×2) |
+| **die Reihenfolgezusage** | 2 | «B37» — *Linearität ist keine Ordnung* |
+| **«B19»** Barrieren am Geräteregister | 1 | die sicherheitskritischste Veröffentlichung im Baum ist kein Atomic |
+| **«B21»** `accumulates` | 1 | 213 RMW-Stellen |
+| **«B38»** `masks IRQ` an der Sperrgrenze | 1 | die Wirkung existiert und ist nicht an die Grenze geknüpft |
+| **«B39»** die MMU schreibt `A`/`D` | 1 | ein Schreiber, den keine `effects`-Zeile nennt |
+| **«B27»** Registerbelegung | 1 | 168 `asm!`-Stellen ohne Träger |
+| **«B22»** mehrzeiliges `claim` · **«B14»** `let … else` auf einem `place` · **«B6»** Rückgabebindung · **«B3»** `Held(Lock)` | 4 | Notation |
+| **V-Regeln rechnen nicht** | 1 | F6:1157 — `f < g/N` liefert nicht `f < g` |
+
+> **Von den 31 sind 24 Notations- oder Befundposten der SPRACHE**, nicht des Prüfers. *Die
+> Klempnerei hängt nicht daran, dass ein Pass fehlt — sie hängt daran, dass sich sieben Dinge
+> nicht sagen lassen.*

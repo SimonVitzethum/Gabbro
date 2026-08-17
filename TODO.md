@@ -97,6 +97,19 @@ of items that are neither code nor a run — what remains is building and measur
 ---
 
 # DECISIONS — need a judgement, not a run
+### From the emitter (2026-08-17) — two answers belong in the SPECIFICATION now
+
+- [ ] **«B26» is answered, and the answer belongs in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md).**
+      The finding read: *"ob `mirrors` damit auch den Vorzustand einer `transition` an `GCMD.TE`
+      aus `GSTS.TES` bezieht, sagt `SYNTAX.md` nicht."* **The emitter answers yes and measures
+      it** (`1 1 1 1`, `beispiele/20-falle-vier.gab`). *An answer that lives only in the
+      generator is the same construction as a promise that lives only in a tool invocation.*
+- [ ] **«B33» is answered too, and its reason is now demonstrable.** The folder asked: *"Wenn es
+      Absicht ist, gehört die Begründung aufgeschrieben — sie wäre ein starkes Argument."*
+      **It is:** a register access lowers to `volatile`, and `volatile` IS the statement *"this
+      place may change between two reads"*. Narrowing it after a comparison would be **wrong**,
+      not merely absent. The reason belongs in `SPRACHE.md` beside V1–V3.
+
 ### From the emitter (2026-08-17) — the cost pass carries the typical case
 
 - [ ] **`mappings of`: the cost pass under-counts by seven orders of magnitude.**

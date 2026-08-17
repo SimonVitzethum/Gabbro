@@ -6299,3 +6299,47 @@ Kostenpass hat es gefangen.** Er ist genau dafür gebaut (`memos/M-kostenmass.md
 **Der Erzeuger senkt nicht ab, sondern weigert sich mit beiden Lesarten im Absagetext.** *Eine
 davon still zu wählen wäre genau die Bewegung, gegen die er gebaut ist — und es wäre die
 kleinere.*
+
+
+---
+
+# Die Klempnereipflichten nachgezogen — `H = 36 → 31`
+
+**Posten für Posten gegen den heutigen Stand, nicht aus dem Gedächtnis.** Fünf sind
+geschlossen, und **drei verschiedene Arten von Grund** stehen dahinter:
+
+| | wodurch | Art |
+|---|---|---|
+| **Absenkung F7 · F8 · F10** | `123456` · `1 1 1 0 0 1 1 1` · `1 0 0 0 0 65` | **an der Ausführung gemessen** |
+| **«B26»** — der Vorzustand einer `transition` | `1 1 1 1` | **von der Absenkung entschieden** |
+| **«B33»** — die V-Regeln verengen keinen Registerort | `volatile` | **durch ein Argument** |
+
+## «B33» ist der interessante Fall, weil der Ordner den Grund selbst bestellt hatte
+
+> *"Ob das Absicht ist (ein Register kann sich zwischen Prüfung und Rechnung ändern!) oder eine
+> Lücke, entscheidet der Ordner. **Wenn es Absicht ist, gehört die Begründung aufgeschrieben —
+> sie wäre ein starkes Argument.**"* (`FRAGMENTE.md` F4:872)
+
+**Sie ist es, und sie steht jetzt im erzeugten C.** Ein Registerzugriff wird `volatile`, und
+`volatile` ist genau die Aussage *„dieser Ort kann sich zwischen zwei Lesungen ändern"*.
+
+> **Eine Verengung wäre dort nicht fehlend, sondern falsch.** *Die Absenkung hat aus einer
+> offenen Frage ein Argument gemacht — nicht durch mehr Code, sondern indem sie zeigte, was der
+> Ort ist.*
+
+## Und «B26» ist beantwortet, aber am falschen Ort
+
+Der Erzeuger sagt: **ja**, `mirrors` liefert den Vorzustand, und misst es. *Aber eine Antwort,
+die nur im Erzeuger lebt, ist dieselbe Konstruktion wie eine Zusage, die nur in einem
+Werkzeugaufruf lebt.* **Sie gehört in `SYNTAX.md`**, und steht als Posten im TODO.
+
+## Was bleibt: 31 — und die Aufteilung ist der Befund
+
+**24 von 31 sind Notations- oder Befundposten der SPRACHE**, nicht des Prüfers.
+
+> **Die Klempnerei hängt nicht daran, dass ein Pass fehlt.** *Sie hängt daran, dass sich sieben
+> Dinge nicht sagen lassen* — «B3», «B6», «B7», «B14», «B21», «B22», «B25». Dazu die fünf
+> gebuchten Befunde und die Axiomschicht.
+
+**Sieben der 31 sind Absenkungen**, und fünf davon sind ihrerseits durch Befunde gesperrt. *Der
+Rest, den man bauen könnte, ist damit auf zwei geschrumpft.*
