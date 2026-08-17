@@ -148,7 +148,11 @@ def pruefe(text, zahlen):
                 # Die Zeichenklasse MUSS Grossbuchstaben tragen -- `dokumente/BEWEIS.md`
                 # ist ein Beleg. Meine erste Fassung sah ihn nicht, und die Sprechprobe
                 # hat es an der SAUBEREN Liste gefangen (falsches Rot).
-                if not re.search(r"`[\w./-]+\.(rs|py|sh|md|gab|tsv)`|`[A-Z][0-9]{3}`"
+                if not re.search(# **`.thy` fehlte bis zum 2026-08-17**, und der Waechter hat einen Eintrag
+                # abgewiesen, dessen Beleg eine ISABELLE-THEORIE war -- also der staerkste
+                # Beleg, den dieser Ordner kennt. *Ein Beleglisten-Waechter, der die
+                # Beweise nicht kennt, misst die Buchhaltung und nicht die Sache.*
+                r"`[\w./-]+\.(rs|py|sh|md|gab|tsv|thy)`|`[A-Z][0-9]{3}`"
                                  r"|gabbro |cargo |\./", zeile):
                     befunde.append(f"DONE.md-Eintrag ohne Beleg (W7): {zeile[:70]}")
 
