@@ -986,6 +986,47 @@ MUTATIONEN = [
         "C-Absenkung -- die untere `narrow`-Pruefung faellt auch fuer vorzeichenbehaftete Werte weg",
         "code",
     ),
+    # -- emit.rs: `traverse` und `if` ------------------------------------------------------
+    Mutation(
+        "traversierung-laesst-den-letzten-aus",
+        "emit.rs",
+        "\"{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\\n\"",
+        "\"{e}for (uint32_t {v} = 0; {v} + 1 < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\\n\"",
+        "C-Absenkung -- die Traversierung laesst den letzten Slot aus; die Domaene ist nicht mehr vollstaendig",
+        "code",
+    ),
+    Mutation(
+        "traversierung-nimmt-den-punkt",
+        "emit.rs",
+        "            let feld = format!(\"{}->slots\", ort(o, u, absagen));",
+        "            let feld = format!(\"{}.slots\", ort(o, u, absagen));",
+        "C-Absenkung -- die Domaene greift durch den Zeiger mit `.` statt `->`",
+        "code",
+    ),
+    Mutation(
+        "zeugenordnung-egal",
+        "emit.rs",
+        "            if !matches!(x.abstieg, Abstieg::Unbesucht) {",
+        "            if false && !matches!(x.abstieg, Abstieg::Unbesucht) {",
+        "C-Absenkung -- `by consuming`/`by decreasing` laufen wie `by unvisited`",
+        "code",
+    ),
+    Mutation(
+        "forever-wird-abgesenkt",
+        "emit.rs",
+        "            Schleife::Forever(_) => weigere(",
+        "            Schleife::Forever(_) => nichts_tun(",
+        "C-Absenkung -- `forever` wird still uebergangen statt abgelehnt; `on_exceeded` faellt weg",
+        "code",
+    ),
+    Mutation(
+        "if-zweig-ohne-austritt",
+        "emit.rs",
+        "                for k in &rumpf.anweisungen {\n                    anweisung(k, aus, u, absagen, tiefe + 1, austritt);\n                }\n            }\n            if let Some(sonst) = &w.sonst {",
+        "                for k in &rumpf.anweisungen {\n                    anweisung(k, aus, u, absagen, tiefe + 1, &Vec::new());\n                }\n            }\n            if let Some(sonst) = &w.sonst {",
+        "C-Absenkung -- ein `return` aus einem `if` im `locks`-Block laesst die Sperre stehen",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

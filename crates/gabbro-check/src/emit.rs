@@ -359,6 +359,13 @@ fn sammle_retry(baum: &Programm, modul: &str, b: &Block, aus: &mut HashMap<u32, 
     }
 }
 
+/// **Das Gegenteil von `weigere` -- und es steht hier NUR, damit eine Mutation es einsetzen
+/// kann.** Ein Erzeuger, der eine Form still uebergeht, ist der eine Fehler, gegen den dieses
+/// Modul gebaut ist; `mutiere-pruefer.py` setzt diese Funktion an die Stelle einer Absage und
+/// prueft, dass etwas faellt.
+#[allow(dead_code)]
+fn nichts_tun(_a: &mut Absagen, _s: gabbro_syntax::span::Span, _w: &str) {}
+
 /// **C001 -- the emitter refuses instead of guessing.**
 fn weigere(absagen: &mut Absagen, span: gabbro_syntax::span::Span, was: &str) {
     absagen.schiebe(
@@ -881,7 +888,24 @@ fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
                     }
                     benutzte_namen(&r.rumpf, aus);
                 }
-                Schleife::Traverse(x) => benutzte_namen(&x.rumpf, aus),
+                Schleife::Traverse(x) => {
+                    // **Der Ort der DOMAENE wird gelesen.** Ohne ihn hielt der Erzeuger den
+                    // traversierten Traeger fuer tot und legte ihn mit `(void)w;` still --
+                    // waehrend die Schleife ihn genau dort benutzt.
+                    if let Domaene::SlotsVon(o)
+                    | Domaene::NachfahrenVon(o)
+                    | Domaene::VorfahrenVon(o)
+                    | Domaene::Schlange(o)
+                    | Domaene::ElementeVon(o)
+                    | Domaene::AbbildungenVon(o) = &x.domaene
+                    {
+                        o_(o, aus);
+                    }
+                    if let Some(g) = &x.gegenstand {
+                        e(g, aus);
+                    }
+                    benutzte_namen(&x.rumpf, aus);
+                }
                 Schleife::Forever(x) => benutzte_namen(&x.rumpf, aus),
             },
             StmtArt::Match(m) => {
@@ -1009,9 +1033,47 @@ fn anweisung(
         // **`match` ueber einem `option index into T`.** Der Sonderwert macht daraus einen
         // Vergleich; die Bindung des `Some`-Zweigs ist der Wert selbst.
         StmtArt::Match(m) => match_option(m, s, aus, u, absagen, tiefe, austritt),
+        // `if` -- mehrere Zweige werden eine `else if`-Kette. **Der Austritt wird
+        // durchgereicht**, sonst laesst ein `return` in einem Zweig die Sperre stehen.
+        StmtArt::Wenn(w) => {
+            for (i, (bed, rumpf)) in w.zweige.iter().enumerate() {
+                let kopf = if i == 0 { "if" } else { "} else if" };
+                aus.push_str(&format!("{e}{kopf} ({}) {{\n", ausdruck(bed, u, absagen)));
+                for k in &rumpf.anweisungen {
+                    anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+                }
+            }
+            if let Some(sonst) = &w.sonst {
+                aus.push_str(&format!("{e}}} else {{\n"));
+                for k in &sonst.anweisungen {
+                    anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+                }
+            }
+            aus.push_str(&format!("{e}}}\n"));
+        }
         StmtArt::Schleife(sch) => match sch.as_ref() {
             Schleife::Retry(r) => retry(r, s, aus, u, absagen, tiefe, austritt),
-            _ => weigere(absagen, s.span, "loop form"),
+            Schleife::Traverse(x) => traverse(x, s, aus, u, absagen, tiefe, austritt),
+            // **`forever` wird ABGELEHNT, und der Grund ist ein Befund des Ordners selbst.**
+            //
+            // `per_pass bounded N ops` ist eine Aussage ueber EINEN Durchgang, und die
+            // rechnet der Kostenpass zur UEBERSETZUNGSZEIT nach. Zur Laufzeit gibt es
+            // deshalb nichts zu zaehlen -- **und damit hat `on_exceeded` keinen Ausloeser.**
+            //
+            // > *`MESSUNGEN.md` nennt das seit dem 2026-08-14 einen Ritus* (**„`per_pass
+            // > bounded n cycles` ist ein Ritus"**). Die Absenkung bestaetigt den Befund an
+            // > der Maschine: die Klausel liesse sich nur weglassen, und **eine Klausel still
+            // > fallenzulassen ist genau das, was dieser Erzeuger nicht tut.**
+            //
+            // Dazu «B11»: `forever` hat ueberhaupt keinen Ausgang. Beides gehoert entschieden,
+            // bevor hier eine Zeile C entsteht.
+            Schleife::Forever(_) => weigere(
+                absagen,
+                s.span,
+                "`forever` -- `per_pass … ops` is a COMPILE-TIME claim, so `on_exceeded` has \
+                 no runtime trigger, and dropping the clause would discard it silently \
+                 (MESSUNGEN.md: \"a ritual\"); «B11»: there is no exit either",
+            ),
         },
         _ => weigere(absagen, s.span, "statement kind"),
     }
@@ -1087,6 +1149,78 @@ fn pred_c(p: &Pred, u: &Namen, absagen: &mut Absagen) -> Option<String> {
         PredArt::Oder(a, b) => format!("{} || {}", pred_c(a, u, absagen)?, pred_c(b, u, absagen)?),
         _ => return None,
     })
+}
+
+/// **`traverse` -- die Schleife, die KEINEN Laufzeitzaehler braucht.**
+///
+/// Ihre Domaene ist durch Konstruktion endlich; die Schranke faellt aus der Deklaration
+/// (`count N`), nicht aus einer Zaehlung im Rumpf. *Genau darum verlangt die Grammatik hier
+/// kein `on_exceeded` und beim `retry` eines* -- und die Absenkung macht den Unterschied
+/// sichtbar: hier steht eine Laufgrenze, dort ein Wachhund.
+///
+/// **Abgesenkt wird heute EINE Domaene: `slots of <ort>`.** Sie bindet einen INDEX (so
+/// benutzen es `beispiele/04` und `18`), und ihre Laenge rechnet C selbst aus dem Feld aus --
+/// der Erzeuger muss den Tabellennamen dafuer gar nicht kennen.
+///
+/// **Jede andere Domaene wird beim Namen abgelehnt, mit ihrem eigenen Grund.** Sie sind
+/// keine Bauarbeit, sondern Entscheidungen -- und zwei von ihnen haengen an offenen Befunden
+/// des Ordners («B12»: bindet `elems of` ein Element oder einen Index? «B10»: `traverse`
+/// liefert keinen Wert und kennt kein `break`).
+fn traverse(
+    x: &Traverse,
+    s: &Stmt,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+    austritt: &Austritt,
+) {
+    let e = einzug(tiefe);
+    let grund = match &x.domaene {
+        Domaene::SlotsVon(o) => {
+            // **Die Zeugenordnung ist ein BEWEISMITTEL, kein Laufzeitding.** `by unvisited`
+            // heisst: jeder Slot einmal -- das ist die Laufform selbst. `by consuming` und
+            // `by decreasing` sagen etwas ueber die Erhaltung einer Ordnung und haetten hier
+            // eine andere Laufform; sie werden abgelehnt.
+            if !matches!(x.abstieg, Abstieg::Unbesucht) {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`slots of … by consuming`/`by decreasing` -- the witness ordering is a \
+                     proof device; what it means for the run is not decided",
+                );
+                return;
+            }
+            let feld = format!("{}->slots", ort(o, u, absagen));
+            let v = &x.variable.text;
+            aus.push_str(&format!(
+                "{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
+            ));
+            for k in &x.rumpf.anweisungen {
+                anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+            }
+            aus.push_str(&format!("{e}}}\n"));
+            return;
+        }
+        Domaene::NachfahrenVon(_) => {
+            "`descendants of` -- a tree walk whose order is a template obligation \
+             (`consuming.ordnung`), not a loop form"
+        }
+        Domaene::VorfahrenVon(_) => "`ancestors of` -- the upward walk needs its own bound",
+        Domaene::Schlange(_) => {
+            "`queue` -- «B10»: `traverse` yields no value and knows no `break`, so \
+             `by consuming` drains the WHOLE queue; that is a different program"
+        }
+        Domaene::ElementeVon(_) => {
+            "`elems of` -- «B12» is open: whether it binds an ELEMENT or an INDEX is used \
+             both ways in the specification and fixed nowhere"
+        }
+        Domaene::AbbildungenVon(_) => "`mappings of` -- it comes from a `walk`, which has no lowering",
+        Domaene::KetteIn { .. } => "`chain in` -- the sibling chain needs its own bound",
+        Domaene::FelderVon(_) => "`fields of` -- a register field list is not a runtime domain",
+        Domaene::Threads => "`threads` -- the thread set is not declared in a translation unit",
+    };
+    weigere(absagen, s.span, grund);
 }
 
 /// Nur `match` ueber einer Option wird abgesenkt. **Ein `match` ueber einem `tagged type` ist

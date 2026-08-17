@@ -5,7 +5,7 @@
 # Projekts: `mutiere-pruefer.py` wies sie mit 0 Mutationen aus, und *was 0 Mutationen hat,
 # ist nicht gedeckt, sondern unbeschaedigbar*.
 #
-# Dieser Waechter schliesst sie fuer VIER Uebersetzungseinheiten, nicht fuer zehn:
+# Dieser Waechter schliesst sie fuer FUENF Uebersetzungseinheiten, nicht fuer zehn:
 #
 #     .gab  ->  gabbro emit  ->  C  ->  cc -Werror  ->  ausgefuehrt  ->  Ergebnis verglichen
 #
@@ -256,7 +256,42 @@ int main(void) {
 lauf "fragment10" "$ARB/f10.gab" "$TREIBER10" "1 0 0 0 0 65" \
      's/(uint32_t)p\[0\] << 24/(uint32_t)p[3] << 24/'
 
-echo "== EMISSION: ALL PASS -- 4 Uebersetzungseinheiten durchgestochen =="
+# -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
+#
+# **Der Unterschied zu `retry` steht jetzt im C nebeneinander:**
+#
+#     traverse  ->  for (uint32_t i = 0; i < sizeof(...)/sizeof(...[0]); i++)
+#     retry     ->  while (!(...)) { if (n >= SCHRANKE) { ausgang(); } n++; ... }
+#
+# Die Laufgrenze hier, der Wachhund dort -- und der Grund ist die Domaene: `slots of` ist
+# durch Konstruktion endlich, die Bedingung eines `retry` haengt von der Welt ab. *Genau
+# darum verlangt die Grammatik dort ein `on_exceeded` und hier keines.*
+TREIBER19='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    static Werte w;
+    for (unsigned i = 0; i < 16; i++) w.slots[i].aktiv = (i % 3 == 0);
+    unsigned vorher = aktive_zaehlen(&w);
+    aktive_loeschen(&w);
+    unsigned nachher = aktive_zaehlen(&w);
+    printf("%d %u %u %d\n",
+           (int)(sizeof(w.slots) / sizeof(w.slots[0])), vorher, nachher,
+           (int)w.slots[15].aktiv);
+    return 0;
+}
+'
+#    Erwartet:
+#     16  -- die Domaenenschranke kommt aus `count NSLOTS`, nicht aus dem Rumpf
+#      6  -- Slots 0,3,6,9,12,15 sind aktiv: **jeder Slot GENAU EINMAL besucht**. Eine
+#            Traversierung, die einen ausliesse, zaehlte weniger; eine, die doppelt liefe,
+#            mehr -- und der Zaehler ist auf `0 ..< 16` verengt, koennte also gar nicht ueber
+#            16 hinaus
+#      0  -- nach dem Loeschen ist keiner mehr aktiv
+#      0  -- und der LETZTE Slot ist mitgeloescht: die Grenze ist `< n`, nicht `< n-1`
+lauf "beispiel19" "$W/beispiele/19-traversierung.gab" "$TREIBER19" "16 6 0 0" \
+     's/; i++)/; i += 2)/'
+
+echo "== EMISSION: ALL PASS -- 5 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser vier Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Vier Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser fuenf Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Fuenf Ja-Aussagen sind keine ueber die Sprache."
