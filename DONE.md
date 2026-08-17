@@ -40,7 +40,7 @@
 **Plus the call graph** (`aufrufgraph.rs`, 268 lines) — it solved three blockers at once:
 `H005`, the call effects in pass 8, and the separation at the class *Phase*.
 
-## The plumbing classes — **8 of 11** carried
+## The plumbing classes — **9 of 11** carried
 
 Newly collected 2026-08-15, **not reconstructed**, x86 only
 ([dokumente/MESSUNGEN.md](dokumente/MESSUNGEN.md), *Neuerhebung*):
@@ -55,6 +55,14 @@ Newly collected 2026-08-15, **not reconstructed**, x86 only
 | **Leafness** | `descendants of` + `by consuming` with a witness ordering · domain bound in `kosten.rs`, `dokumente/FRAGMENTE.md` (`revoke`) |
 | **Publication** | `publishstmt` at the store · pairing pass · `relaxed` carries no payload · `V001`–`V004` in `paarung.rs` |
 | **Frame** *(booked in retrospect 2026-08-16)* | `effects` holds writes, `locks` **and reads** (`E010`, reading A) and the call effects (`E008` over the call graph). **The named limit:** `E010` speaks only about declared world state — in an excerpt it has zero bite, in a complete translation unit the name pass covers the rest |
+| **Phase** *(closed 2026-08-17 with «B37»)* | the linear ghost token carried the order as **linearity**, not as **order** — all 720 orderings of F7's six boot steps type-checked. `order { … }` on the token plus `advances a -> b` at each step; `O002` forces the step forward, `O003` refuses a step that meets the token on the wrong stage. **The named limit:** a step inside a branch is **reported** (`O005`), not decided — which stage holds after two branches is a case distinction and belongs to the prover |
+
+**The two that are NOT carried, and each for a different reason:**
+
+| open | why | Evidence |
+|---|---|---|
+| **Race** | *the memory model.* That a `release` store **establishes** the visibility the pairing claims is not a checker statement — the emitter refuses `release`/`acquire` by name rather than lowering them. Belongs to the axiom layer, and is booked there | `crates/gabbro-check/src/emit.rs` (`C001` at `atomic … release`), poison `release-wird-abgesenkt`, `gabbro annahmen` |
+| **Refinement** | *the lowering.* Eight translation units stand, measured by execution; seven of the ten fragments have no C at all. `gabbro zeugnis` says per file what its translation rests on — **but a certificate over THIS translation is no statement about ALL inputs** | `./pruefe-emission.sh` (8 units, each certificate against a booked finding), `crates/gabbro-check/src/zeugnis.rs` |
 
 ## Constructs that are built and evidenced
 
