@@ -536,3 +536,72 @@ impl fn f(x : S) -> u32 effects { pure } costs <= 8 ops
         "bei einem vorzeichenbehafteten Wert bleibt die untere Pruefung stehen:\n{c}"
     );
 }
+
+/// **`traverse`, `forever` und der Austritt aus einem `if` — fuenf Regeln auf einmal.**
+///
+/// Alle fuenf ueberlebten ihre Mutation, weil sie **nur** vom Shell-Waechter beruehrt wurden
+/// und `mutiere-pruefer.py` `cargo test` laeuft. *Eine Regel, die nur ein Werkzeug bewacht,
+/// ist gegen jedes andere blind.*
+#[test]
+fn traversierung_forever_und_der_austritt_aus_einem_zweig() {
+    fn c_von(q: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.text.clone()).collect())
+    }
+
+    // **1. Die Traversierung laeuft ueber die GANZE Domaene und greift durch den Zeiger.**
+    let (c, f) = c_von(
+        "module t { table W count 16 { slot { a : bool, } }
+impl fn loesche(w : ptr<normal, rw> W) effects { writes w.slots } costs <= 64 ops
+{ traverse i over slots of w by unvisited touches writes w.slots { w.slots[i].a = false; } } }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    assert!(c.contains("i < (uint32_t)(sizeof("), "die Grenze ist `< n`, nicht `< n-1`:\n{c}");
+    assert!(c.contains("sizeof(w->slots)"), "durch den Zeiger, nicht mit `.`:\n{c}");
+    assert!(!c.contains("(void)w;"), "der traversierte Traeger ist nicht tot:\n{c}");
+
+    // **2. Eine andere Zeugenordnung ist eine andere Laufform.** `by consuming` sagt etwas
+    // ueber die Erhaltung einer Ordnung -- was es fuer den LAUF heisst, ist nicht entschieden.
+    let (_, f) = c_von(
+        "module t { table W count 16 { slot { a : bool, } }
+impl fn loesche(w : ptr<normal, rw> W) effects { writes w.slots } costs <= 64 ops
+{ traverse i over slots of w by consuming touches writes w.slots { w.slots[i].a = false; } } }",
+    );
+    assert!(
+        f.iter().any(|s| s.contains("witness ordering")),
+        "`by consuming` darf nicht wie `by unvisited` laufen: {f:?}"
+    );
+
+    // **3. `forever` wird abgelehnt, und der Grund ist ein Befund des Ordners.** `per_pass`
+    // ist eine Aussage ueber die UEBERSETZUNGSZEIT, also hat `on_exceeded` keinen Ausloeser --
+    // die Klausel liesse sich nur still fallenlassen.
+    let (_, f) = c_von(
+        "module t {
+extern fn wacht() -> never effects { diverges } costs <= 0 ops;
+divergent fn dienst() -> never effects { diverges }
+{ forever d per_pass bounded 64 ops on_exceeded wacht effects { pure } { } } }",
+    );
+    assert!(
+        f.iter().any(|s| s.contains("COMPILE-TIME claim")),
+        "`forever` darf nicht still uebergangen werden: {f:?}"
+    );
+
+    // **4. Ein `return` aus einem `if` INNERHALB eines `locks` gibt die Sperre frei.**
+    // Woertlich die Klasse, die C8 bezahlt hat -- und der Zweig ist der Weg, auf dem sie am
+    // leichtesten verlorengeht.
+    let (c, f) = c_von(
+        "module t { table W count 16 { slot { a : bool, } }
+lock S protects { a } rank 0 held <= 64 ops;
+impl fn f(w : ptr<normal, rw> W, i : index into W) -> bool
+    effects { reads w.slots, writes w.slots, locks S } costs <= 64 ops
+{ locks S { if w.slots[i].a { return true; } } return false; } }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    let vor_true = c.find("return true;").expect("der Zweig");
+    assert!(
+        c[..vor_true].rfind("S_gib();").is_some_and(|g| c[g..vor_true].trim().len() < 20),
+        "die Freigabe muss direkt vor der Rueckkehr stehen:\n{c}"
+    );
+}
