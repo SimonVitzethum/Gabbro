@@ -5775,3 +5775,60 @@ warning in it says nothing about them* — and the finding goes to `TODO.md` as 
 > **A C compiler found something ten passes did not.** That is not embarrassing, it is the
 > cheapest kind of finding there is: the emitter now runs real code through a second, older,
 > much better-tested checker, and it will keep doing that at every further fragment.
+
+
+---
+
+# Wo der Erzeuger heute steht — gemessen, nicht geschätzt
+
+**Search path:** cut all ten ```gabbro blocks out of `FRAGMENTE.md`, run `gabbro emit` on each,
+collect the constructs `C001` names.
+
+| | |
+|---|---:|
+| translation units through the whole chain | **3** — `beispiele/16`, F7, F8 |
+| fragments through | **2 of 10** |
+| lowering obligations carried | **2 of 10** (`PFLICHTEN.md`) |
+| mutations in the emission surface | **19** (was 0 on 2026-08-16) |
+
+## The finding: every remaining fragment is blocked by a DECISION
+
+**Seven constructs block the other seven fragments, and not one of them is a translation.**
+Each needs a representation the folder has not chosen — which is why the emitter refuses by
+name instead of producing something plausible.
+
+| Construct | blocks | the open question |
+|---|---|---|
+| **`traverse`** | F1 · F3 · F6 · F9 | every domain iterates differently. **The one mechanical case — `slots of … by unvisited` — is used by none of the four** |
+| **`format`** | F2 · F9 · F10 | *not a C struct*: padding and bitfield order are implementation-defined |
+| **`device`** | F2 · F4 · F9 | register class, `mirrors`, `transition`, computed bank location |
+| **`retry`** | F4 · F10 | **`bounded N ops` is an operation budget, not an iteration count** |
+| **`forever`** | F5 | the same, plus «B11»: no exit |
+| **`walk`** | F9 | the four-level descent |
+| **`atomic` / `check`** | F6 | memory ordering; a test harness is not a program |
+
+> **That is a better result than a fourth fragment would have been.** The cheap half of the
+> emission surface is done; what is left is not work but judgement, and it now stands as seven
+> named questions instead of one vague "the emitter is incomplete".
+
+## Four decisions were taken today, and they are listed as mine
+
+`option index into T` → the sentinel `N` · a `lock` → two prototypes, no body · `locks` →
+release before every return · a foreign named type behind a pointer → an incomplete C type.
+**Each is booked with its reason and its alternative, and each is reversible** (`emit.rs`,
+`DONE.md`). *Three of the seven remaining ones are larger than any of these, and they are not
+taken here.*
+
+## And the emitter keeps finding its own errors — three more today
+
+| what | how it was wrong | how it was found |
+|---|---|---|
+| `x += 1` | emitted as **`x = 1`** — the operator stood in the tree and was never read | reading the code |
+| `-> never` | emitted as plain `void` — the C compiler then sees the error branches as falling through, *the exact reason `S002` fired six times in F5* | reading the code |
+| a dead parameter | `cc -Wextra` refused the generated C | **the C compiler** |
+
+**The third one is the interesting entry:** `toeten(l, t, k)` never reads `k`, and **no pass of
+this compiler says so.** A forty-year-old C compiler found something ten Gabbro passes did not.
+
+> *That is the cheapest kind of finding there is, and it will keep arriving:* every further
+> fragment runs real generated code through a second, older, far better-tested checker.

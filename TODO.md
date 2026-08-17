@@ -324,6 +324,28 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+### The emitter: every remaining fragment is blocked by a DECISION, not by work
+
+**Measured 2026-08-17** by running `gabbro emit` over all ten blocks of
+[`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md). Three units go through
+(`beispiele/16`, F7, F8); the other seven are blocked by **seven constructs**, and **none of
+the seven is a translation** — each needs a representation the folder has not chosen:
+
+| Construct | blocks | the open question |
+|---|---|---|
+| **`traverse`** | F1 · F3 · F6 · F9 | each domain iterates differently: `descendants of` is a tree walk with removal, `queue`, `elems of`, `mappings of` from a `walk`. **`slots of … by unvisited` would be mechanical — none of the four uses it** |
+| **`format`** | F2 · F9 · F10 | byte layout, declared endianness, the `where` validator, `offset_into Self`. *Not a C struct — padding and bitfield order are implementation-defined.* Accessors over a byte pointer is the candidate; the register already carries `format.roundtrip` |
+| **`device`** | F2 · F4 · F9 | register accessors per `class r`/`w`/`w1c`, `mirrors`, `transition`, `bank … at expr` |
+| **`retry`** | F4 · F10 | **`bounded N ops` is an OPERATION budget, not an iteration count.** The conversion is `N / cost-per-pass`, which the cost pass knows and the emitter does not — *and whether that conversion is the right reading is a decision, not arithmetic* |
+| **`forever`** | F5 | the same, plus «B11»: it has no exit at all |
+| **`walk`** | F9 | the four-level descent as an iteration |
+| **`atomic` / `check`** | F6 | memory ordering; and `check` is a test harness, not a program |
+
+- [ ] **Decide `retry`'s ops→iterations reading.** It is the cheapest of the seven and it
+      unblocks two fragments. **The emitter refuses today rather than guess.**
+- [ ] **Decide the `format` lowering.** It unblocks three, and the template obligation
+      (`format.roundtrip`) is already entered — *no new ratchet slot needed.*
+
 - [ ] **`cc -Wextra` finds a dead parameter and NO Gabbro pass does.** `FRAGMENTE.md` F8 takes
       `toeten(l, t, k)` and never reads `k` — the function resolves `t` instead. The C emitter
       silences it with `(void)k;` because *the user did not write the generated line*, and the
