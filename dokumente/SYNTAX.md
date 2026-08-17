@@ -185,7 +185,17 @@ entrydecl  = "entry" ident [ "vector" constexpr ] [ "via" ident ] "arch" ident "
 entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
 accdecl    = "accumulates" ident ":" typeexpr
-             "merge" ( "max" | "min" | "add" | "or" | "and" ) ";" ;
+             "merge" ( "max" | "min" | "add" | "or" | "and" )
+             [ "per" "cpu" constexpr ] ";" ;
+(* `per cpu N` -- die ZELLENZAHL, 2026-08-18. SPRACHE.md 11.4 sagte seit jeher "one cell
+   per core, merged over the NCORES-bounded loop" und nannte die Zahl NIRGENDS; der
+   Erzeuger haette `NCORES` raten muessen. Optional in der Grammatik, PFLICHT fuer die
+   Absenkung -- ohne sie weigert er sich benannt.
+
+   **Der aktuelle Kern ist KEIN Ausdruck der Sprache.** Er ist eine Maschinenfrage, also
+   ein fremder Rumpf (`gabbro_kern()`), und das Zeugnis fuehrt ihn in Abschnitt E mit
+   seinem Vertrag -- genauso wie den Rumpf einer Sperre. *Ihn in die Sprache zu heben
+   hiesse, eine Maschinenfrage als Ausdruck zu tarnen.* *)
              (* Verbundwerte: typeexpr darf structty sein, merge gilt fuer das erste Feld und
                 traegt die uebrigen mit -- P0 Teil 4c, sync:572-592 wird damit konsistent *)
 moduledecl = [ "pub" ] "module" path "{" { item } "}" ;

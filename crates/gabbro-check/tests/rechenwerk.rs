@@ -1387,3 +1387,48 @@ impl fn f(i : index into W) -> u32 effects { reads W } costs <= 4 ops
     let _ = gabbro_check::pruefe(&b2, &mut a2);
     assert_eq!(a2.fehler_zahl(), 0, "{}", a2.zeige(sauber));
 }
+
+/// **`accumulates` senkt ab — und der Beweis lag VOR dem Konstrukt.**
+///
+/// Zwei Entscheidungen, die die Sprache vorher nicht traf: **die Zellenzahl** (`per cpu N` —
+/// `SPRACHE.md` §11.4 sagte *„one cell per core"* und nannte sie nirgends) und **der aktuelle
+/// Kern**, der KEIN Ausdruck der Sprache ist, sondern ein fremder Rumpf.
+///
+/// > **Die Falle steckt in `min`:** C nullt statische Felder, und null ist nicht das Neutrale
+/// > von `min`. Der erste Differenzlauf lieferte `0` statt `3`, weil 61 unberührte Zellen
+/// > mitzählten. *Der Beweis hatte den Satz (`min_ist_monoid_mit_top`), die Absenkung nicht.*
+///
+/// Gelöst über die **Darstellung**: `min` und `and` speichern das Komplement und falten mit
+/// `max` bzw. `or` — dann trifft Zero-Init genau das Neutrale.
+#[test]
+fn accumulates_senkt_ab_und_min_traegt_sein_neutrales() {
+    let q = "module t {
+const NK : u32 = 8;
+accumulates hoch : u64 merge max per cpu NK;
+accumulates tief : u64 merge min per cpu NK;
+impl fn m(t : u64) effects { writes tief } costs <= 8 ops { tief = t; }
+impl fn l() -> u64 effects { reads tief } costs <= 64 ops { return tief; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    // **`max` faltet direkt, `min` ueber das Komplement** -- daran haengt das Neutrale.
+    assert!(c.contains("static _Atomic uint64_t tief_zellen[NK];"), "{c}");
+    assert!(c.contains("return (uint64_t)~z;"), "`min` nimmt die Umkehr zurueck:\n{c}");
+    assert!(!c.contains("return (uint64_t)~z;\n}\n\nstatic uint64_t hoch"), "{c}");
+    // Ein Schreiben MELDET, es setzt nicht -- der Kern faltet in seine eigene Zelle.
+    assert!(c.contains("tief_melde("), "ein Schreiben meldet:\n{c}");
+    assert!(c.contains("return tief_lies();"), "ein Lesen faltet:\n{c}");
+    // Und der aktuelle Kern kommt von aussen.
+    assert!(c.contains("gabbro_kern()"), "{c}");
+
+    // **Ohne `per cpu` weigert er sich benannt** statt `NCORES` zu raten.
+    let ohne = "module t { accumulates h : u64 merge max; }";
+    let (b2, mut a2) = gabbro_syntax::lies("p.gab", ohne);
+    let _ = gabbro_check::emit::emittiere(&b2, &mut a2);
+    assert!(
+        a2.absagen.iter().any(|x| x.code == "C001"),
+        "eine Deklaration, die ihre eigene Groesse nicht nennt, ist keine"
+    );
+}

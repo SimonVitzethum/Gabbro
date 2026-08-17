@@ -1199,6 +1199,19 @@ MUTATIONEN = [
         "B7 -- ein Verbundkonstruktor zaehlt als Aufruf; `P` wird unbekannter Gerufener "
         "und jede Huelle darueber untere Schranke",
     ),
+    # -- `accumulates`: die Darstellung von `min`/`and` -------------------------------------
+    #
+    # **C nullt statische Felder, und null ist nicht das Neutrale von `min`.** Der erste Lauf
+    # lieferte 0 statt 3, weil 61 unberuehrte Zellen mitzaehlten. `min` und `and` speichern
+    # darum das KOMPLEMENT -- nimmt man die Umkehr heraus, ist das Ergebnis wieder falsch.
+    Mutation(
+        "min-akkumulator-ohne-umkehr",
+        "emit.rs",
+        '                MergeOp::Min => ("z = (z > v) ? z : v;", true),',
+        '                MergeOp::Min => ("z = (z < v) ? z : v;", false),',
+        "accumulates -- `min` speichert nicht mehr das Komplement; die unberuehrten Zellen "
+        "ziehen jedes Ergebnis auf null",
+    ),
     # -- Die Indexschranke an einer GLOBALEN Tabelle ----------------------------------------
     #
     # **Der Blick auf die Karte war unqualifiziert, und `M103` schwieg in jedem

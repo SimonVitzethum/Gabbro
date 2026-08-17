@@ -1,0 +1,72 @@
+-- 23 -- `accumulates`: eine Zelle je Kern, und der Beweis lag VOR dem Konstrukt.
+--
+-- **Das Problem, das `accumulates` loest.** Ein Hoechststand ueber alle Kerne braucht sonst
+-- eine CAS-Schleife: `lade, vergleiche, tausche, wiederhole`. Die Schleife ist unbeschraenkt
+-- -- unter Konkurrenz kann sie beliebig oft scheitern --, und **Gabbro verbietet
+-- unbeschraenkte Schleifen.** Der Uebersetzer haette also erzeugt, was die Sprache verbietet.
+--
+-- Die Absenkung: **eine Zelle je Kern.** Jeder Kern faltet in seine eigene; niemand sonst
+-- schreibt sie, also braucht es kein CAS. Das Lesen faltet ueber `per cpu` Zellen -- eine
+-- Schleife mit einer Schranke, die in der Deklaration steht.
+--
+-- ## Zwei Entscheidungen, die die Sprache vorher nicht traf
+--
+-- `SPRACHE.md` §11.4 sagte seit jeher *„one cell per core"* und nannte die Zahl **nirgends**.
+-- Der Erzeuger haette `NCORES` raten muessen -- genau das Raten, gegen das `C001` steht.
+-- Seit dem 2026-08-18 steht sie da: `per cpu NKERNE`. Die Woerter gab es schon.
+--
+-- Und **der aktuelle Kern ist KEIN Ausdruck der Sprache.** Er ist eine Maschinenfrage, also
+-- ein fremder Rumpf: `gabbro_kern()`. Das Zeugnis fuehrt ihn in Abschnitt E, mit Vertrag.
+--
+-- ## Die Falle, die der Beweis ausgespuelt hat
+--
+-- `beweise/Accumulates_Monoid.thy` (2026-08-17, VOR diesem Konstrukt) zeigt: die vier
+-- Verknuepfungen sind kommutative Monoide, die Faltung ist reihenfolgeunabhaengig, und am
+-- **Ruhepunkt** stimmt sie mit einer atomaren RMW-Kette ueberein.
+--
+-- Beim Nachweis der Instanzen fiel ab: **`min` hat als Neutrales das MAXIMUM des Typs, nicht
+-- die Null.** Ueber `nat` gibt es gar keines -- es gaebe keine groesste Zahl. *Ein Erzeuger,
+-- der `min` mit `0` anfangen laesst, zieht jedes Ergebnis auf null*, und der Differenztest
+-- misst genau das.
+--
+-- ## Und was die Schablone NICHT zusagt
+--
+-- **Nebenlaeufig gelesen stimmt die Faltung nicht mit einem atomaren RMW ueberein.** Wer
+-- waehrend des Lesens schreibt, wird beim naechsten Lesen gezaehlt und nicht bei diesem.
+-- *Das ist keine Ungenauigkeit, sondern der Preis der Absenkung* -- und er steht im
+-- erzeugten C als Kommentar, nicht nur hier.
+
+module beispiel::akkumulatoren {
+
+const NKERNE : u32 = 64;
+
+accumulates hoechststand : u64 merge max per cpu NKERNE;
+accumulates tiefststand  : u64 merge min per cpu NKERNE;
+accumulates fehlerzahl   : u32 merge add per cpu NKERNE;
+
+impl fn melde_hoch(t : u64)
+    effects { writes hoechststand } costs <= 8 ops
+{ hoechststand = t; }
+
+impl fn melde_tief(t : u64)
+    effects { writes tiefststand } costs <= 8 ops
+{ tiefststand = t; }
+
+impl fn fehler_melden(n : u32)
+    effects { writes fehlerzahl } costs <= 8 ops
+{ fehlerzahl = n; }
+
+-- **Das Lesen ist die beschraenkte Schleife**, und ihre Schranke steht in der Deklaration.
+impl fn hoechster() -> u64
+    effects { reads hoechststand } costs <= 512 ops
+{ return hoechststand; }
+
+impl fn tiefster() -> u64
+    effects { reads tiefststand } costs <= 512 ops
+{ return tiefststand; }
+
+impl fn fehler() -> u32
+    effects { reads fehlerzahl } costs <= 512 ops
+{ return fehlerzahl; }
+
+}

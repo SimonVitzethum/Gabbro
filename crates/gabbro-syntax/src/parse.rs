@@ -3259,11 +3259,21 @@ impl<'a> Parser<'a> {
             }
         };
         self.pos += 1;
+        // **`per cpu N` -- die Zellenzahl.** Sie ist optional in der Grammatik und PFLICHT
+        // fuer die Absenkung: der Erzeuger weigert sich ohne sie benannt, statt `NCORES` zu
+        // raten. *Eine Deklaration, die ihre eigene Groesse nicht nennt, ist keine.*
+        let pro_kern = if self.friss_kw(Kw::Per) {
+            self.erwarte_kw(Kw::Cpu)?;
+            Some(self.expr()?)
+        } else {
+            None
+        };
         self.erwarte_z(Z::Semi)?;
         Ok(AccDecl {
             name,
             typ,
             merge,
+            pro_kern,
             span: anfang.bis_zu(self.vorheriger_span()),
         })
     }

@@ -481,7 +481,41 @@ lauf "beispiel14" "$W/beispiele/14-paarung-ueber-zwischenfunktion.gab" "$TREIBER
      's/atomic_store_explicit(&FERTIG, true,/atomic_store_explicit(\&FERTIG, false,/' \
      "0 Annahmen, 0 Schablonen (0 davon UNBEWIESEN), 6 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
-echo "== EMISSION: ALL PASS -- 9 Uebersetzungseinheiten durchgestochen =="
+
+# -- 10. `accumulates`: eine Zelle je Kern, und der Test misst die SCHABLONE ---------------
+#
+# **Der Beweis lag VOR dem Konstrukt** (`beweise/Accumulates_Monoid.thy`, 2026-08-17), und er
+# hat die Falle ausgespuelt, die hier drinsteckt: `min` hat als Neutrales das MAXIMUM des
+# Typs, nicht die Null. Ein Erzeuger, der mit `0` anfaengt, zieht jedes `min` auf null.
+#
+# Der Treiber setzt drei Kerne und liest -- **das ist der RUHEPUNKT**, und nur dort sagt die
+# Schablone eine Gleichheit mit einem atomaren RMW zu.
+TREIBER23='#include <stdio.h>
+static unsigned aktueller_kern = 0;
+unsigned gabbro_kern(void) { return aktueller_kern; }
+#include "@ERZEUGT@"
+int main(void) {
+    aktueller_kern = 0; melde_hoch(7);  melde_tief(7);  fehler_melden(1);
+    aktueller_kern = 2; melde_hoch(19); melde_tief(3);  fehler_melden(1);
+    aktueller_kern = 3; melde_hoch(4);  melde_tief(11); fehler_melden(1);
+    printf("%llu %llu %u\n",
+           (unsigned long long)hoechster(), (unsigned long long)tiefster(), fehler());
+    return 0;
+}
+'
+#    Erwartet:  19 3 3
+#      Das MITTLERE ist die Falle: `min` ueber drei Kernen, waehrend 61 Zellen UNBERUEHRT
+#      sind. **Der erste Lauf lieferte dort 0** -- C nullt statische Felder, und null ist
+#      nicht das Neutrale von `min`. Der Beweis hatte den Satz (`min_ist_monoid_mit_top`),
+#      die Absenkung hatte ihn nicht.
+#
+#      Die Loesung ist die DARSTELLUNG: `min` speichert das Komplement und faltet mit `max`.
+#      Das Gift nimmt die Ruecknahme heraus -- dann steht dort das Komplement statt der Zahl.
+lauf "beispiel23" "$W/beispiele/23-akkumulatoren.gab" "$TREIBER23" "19 3 3" \
+     's/return (uint64_t)~z;/return z;/' \
+     "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 4 direkte Formen, 3 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+
+echo "== EMISSION: ALL PASS -- 10 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser neun Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Neun Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser zehn Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Zehn Ja-Aussagen sind keine ueber die Sprache."

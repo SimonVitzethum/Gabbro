@@ -150,6 +150,12 @@ pub const EINORDNUNG: &[Posten] = &[
                 `section` wird ein Attribut, weil Platzierung eine Aussage ist",
     },
     Posten {
+        konstrukt: "accumulates",
+        traegt: Traegt::Schablone("accumulates.monoid"),
+        grund: "eine Zelle je Kern, gefaltet beim Lesen -- kein CAS, keine unbeschraenkte \
+                Schleife. Der aktuelle Kern kommt von aussen (`gabbro_kern`)",
+    },
+    Posten {
         konstrukt: "atomic",
         traegt: Traegt::Direkt,
         grund: "`_Atomic`, und die deklarierte Ordnung steht daneben -- unter A10, das die \
@@ -302,6 +308,15 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             }
         }
         ItemArt::Atomic(_) => zaehle(&mut e, "atomic"),
+        ItemArt::Accumulates(_) => {
+            zaehle(&mut e, "accumulates");
+            e.fremde.push((
+                "gabbro_kern".into(),
+                "liefert die Nummer des laufenden Kerns, kleiner als `per cpu` -- eine \
+                 MASCHINENFRAGE, und darum ein fremder Rumpf statt eines Ausdrucks"
+                    .into(),
+            ));
+        }
         ItemArt::Statisch(_) => zaehle(&mut e, "static"),
         ItemArt::Lock(l) => {
             zaehle(&mut e, "lock");

@@ -68,6 +68,9 @@ struct Namen {
     /// Sie werden zu einem C-`typedef struct`, und ihr Konstruktor zu einem
     /// zusammengesetzten Literal. *`fs` aus `beweise/Verbund_Konstruktor.thy`.*
     verbunde: BTreeSet<String>,
+    /// Die `accumulates`-Namen. **Ein Lesen wird ein Ruf, ein Schreiben auch** -- sonst
+    /// stuende im C ein Zugriff auf eine Zelle, die es nicht gibt.
+    akkus: BTreeSet<String>,
     /// Atomicname -> (C-Typ, `memory_order`-Wort). **K11.2.3** -- ohne den Typ hat ein
     /// `let x = A awaits { … }` keinen, und ohne die Ordnung stuende im C das Vorgabemodell
     /// von `_Atomic` statt dessen, was die Quelle sagte.
@@ -225,6 +228,9 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             );
         }
         ItemArt::Tabelle(t) => namen.tabellen.push(t.name.text.clone()),
+        ItemArt::Accumulates(ac) => {
+            namen.akkus.insert(ac.name.text.clone());
+        }
         ItemArt::Atomic(a) => {
             // (Speichern, Laden) -- die Deklaration nennt die Speicherseite.
             let (sp, ld) = match a.ordnung {
@@ -586,6 +592,96 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             aus.push_str(&format!(
                 "\nstatic {konst}{c} {}{abschnitt} = {w};\n",
                 st.name.text
+            ));
+        }
+        // **`accumulates` -- eine Zelle je Kern, gefaltet beim Lesen.** Kein CAS, keine
+        // unbeschraenkte Schleife: der Widerspruch *„der Uebersetzer erzeugt, was die Sprache
+        // verbietet"* faellt damit weg.
+        //
+        // **Die Schablone war VOR dem Konstrukt bewiesen** (`beweise/Accumulates_Monoid.thy`,
+        // 2026-08-17) -- so verlangt es das zweite Tor. Und sie hat die Falle ausgespuelt,
+        // die hier drinsteckt: **`min` hat als Neutrales das MAXIMUM des Typs, nicht die
+        // Null.** Ein Erzeuger, der mit `0` anfaengt, zieht jedes `min` auf null.
+        //
+        // *Der aktuelle Kern ist ein FREMDER Rumpf* -- `gabbro_kern()`. Ihn in die Sprache zu
+        // heben waere ein Ausdruck fuer eine Maschinenfrage; so steht er da, wo er hingehoert:
+        // im Zeugnis, Abschnitt E, mit seinem Vertrag.
+        ItemArt::Accumulates(ac) => {
+            let Some(c) = ctyp(&ac.typ, &namen) else {
+                weigere(absagen, ac.name.span, "`accumulates` of an unresolvable type");
+                return;
+            };
+            let Some(zahl) = &ac.pro_kern else {
+                weigere(
+                    absagen,
+                    ac.name.span,
+                    "`accumulates` without `per cpu <constexpr>` -- the lowering is one cell \
+                     per core, and how many cores there are is not in the declaration",
+                );
+                return;
+            };
+            // **Wie bei `count`: eine Zahl ODER ein `const`-Name.** Ein `#define` steht schon
+            // im Kopf des Erzeugnisses, also traegt der Name sich selbst.
+            let n = zahltext(zahl, absagen);
+            // **Die Zellen fangen bei NULL an, und C laesst sich das nicht abgewoehnen.**
+            //
+            // Fuer `max`, `add` und `or` ist null das Neutrale -- die unberuehrten Zellen
+            // stoeren nicht. **Fuer `min` und `and` ist es das Vollbild des Typs**
+            // (`min_ist_monoid_mit_top`), und eine statische Belegung damit gibt es in
+            // Standard-C nicht: `= { [0 ... N-1] = ~0 }` ist eine GCC-Erweiterung, und die
+            // Liste auszuschreiben geht nicht, wenn `per cpu` einen `const`-NAMEN nennt.
+            //
+            // > **Der erste Lauf zeigte es sofort:** drei Kerne melden 7, 3, 11 -- und
+            // > `min` lieferte **0**, weil 61 unberuehrte Zellen mitgezaehlt wurden. *Der
+            // > Beweis hatte den Satz; die Absenkung hatte ihn nicht.*
+            //
+            // **Die Loesung ist die Darstellung, nicht die Belegung:** `min` und `and`
+            // speichern das KOMPLEMENT und falten mit `max` bzw. `or`. Die Komplementbildung
+            // kehrt die Ordnung um, also ist `~(max ~v) = min v` -- und eine unberuehrte
+            // Zelle traegt `~0`-komplementiert, also das Neutrale. *Zero-init trifft damit
+            // genau das, was der Satz verlangt.*
+            let (falte, kehrt) = match ac.merge {
+                MergeOp::Max => ("z = (z > v) ? z : v;", false),
+                MergeOp::Min => ("z = (z > v) ? z : v;", true),
+                MergeOp::Add => ("z += v;", false),
+                MergeOp::Or => ("z |= v;", false),
+                MergeOp::And => ("z |= v;", true),
+            };
+            let (auf, ab) = if kehrt {
+                (format!("({c})~"), format!("({c})~"))
+            } else {
+                (String::new(), String::new())
+            };
+            let neutral = "0";
+            let op = match ac.merge {
+                MergeOp::Max => "max", MergeOp::Min => "min", MergeOp::Add => "add",
+                MergeOp::Or => "or", MergeOp::And => "and",
+            };
+            let nm = &ac.name.text;
+            aus.push_str(&format!(
+                "\n/* accumulates {nm} merge {op} per cpu {n} -- one cell per core.\n\
+                 \x20* The merge set is a commutative monoid, so the fold is order-independent\n\
+                 \x20* (beweise/Accumulates_Monoid.thy). AT A QUIESCENT POINT this equals an\n\
+                 \x20* atomic RMW chain -- read while others write, it does not, and that is\n\
+                 \x20* the price of the lowering, not an inaccuracy. */\n\
+                 static _Atomic {c} {nm}_zellen[{n}];\n\
+                 \n\
+                 static {c} {nm}_lies(void) {{\n\
+                 \x20   {c} z = ({c}){neutral};\n\
+                 \x20   for (uint32_t k = 0; k < (uint32_t)({n}); k++) {{\n\
+                 \x20       {c} v = atomic_load_explicit(&{nm}_zellen[k], memory_order_relaxed);\n\
+                 \x20       {falte}\n\
+                 \x20   }}\n\
+                 \x20   return {ab}z;\n\
+                 }}\n\
+                 \n\
+                 static void {nm}_melde({c} roh) {{\n\
+                 \x20   {c} v = {auf}roh;\n\
+                 \x20   uint32_t k = gabbro_kern();\n\
+                 \x20   {c} z = atomic_load_explicit(&{nm}_zellen[k], memory_order_relaxed);\n\
+                 \x20   {falte}\n\
+                 \x20   atomic_store_explicit(&{nm}_zellen[k], z, memory_order_relaxed);\n\
+                 }}\n"
             ));
         }
         ItemArt::Atomic(a) => {
@@ -1756,6 +1852,18 @@ fn anweisung(
         // ist in keiner der drei Waechtereinheiten vorgekommen -- und genau darum hat er
         // ueberlebt. *Dieselbe Sorte stiller Ausfall wie die Null im Ausdruckszweig.*
         StmtArt::Zuweisung(z) => {
+            // **Ein Schreiben auf ein `accumulates` MELDET, es setzt nicht.** Der Kern
+            // faltet in seine eigene Zelle -- deshalb braucht es kein CAS: **niemand sonst
+            // schreibt sie.** *Die Absenkung waere sonst genau die unbeschraenkte Schleife,
+            // die die Sprache verbietet.*
+            if z.ziel.suffixe.is_empty() && u.akkus.contains(&z.ziel.basis.text) {
+                aus.push_str(&format!(
+                    "{e}{}_melde({});\n",
+                    z.ziel.basis.text,
+                    ausdruck(&z.wert, u, absagen)
+                ));
+                return;
+            }
             // **`x = None` braucht die ZIELTABELLE, sonst weiss der Erzeuger nicht, welcher
             // Sonderwert gemeint ist.** Bis zum 2026-08-17 weigerte er sich hier; jetzt loest
             // er das Feld auf -- und weigert sich weiterhin, wenn er es NICHT kann.
@@ -2292,6 +2400,12 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
             weigere(absagen, f.span, "device register access form");
             return String::new();
         }
+    }
+    // **Ein `accumulates` wird beim LESEN gefaltet.** Der Name steht fuer den ganzen
+    // Zellenblock, nicht fuer eine Zelle -- ein blanker Zugriff waere ein Zugriff auf etwas,
+    // das es im C nicht gibt.
+    if o.suffixe.is_empty() && u.akkus.contains(&o.basis.text) {
+        return format!("{}_lies()", o.basis.text);
     }
     let mut t = o.basis.text.clone();
     // The base of a place in a function is a pointer parameter -- **unless it is a record

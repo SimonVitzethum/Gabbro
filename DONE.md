@@ -205,5 +205,5 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**23 clean examples, 75 poison probes, 119 tests · 9 translation units** —
+**24 clean examples, 75 poison probes, 120 tests · 10 translation units** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`

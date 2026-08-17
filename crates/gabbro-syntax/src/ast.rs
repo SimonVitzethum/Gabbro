@@ -1228,6 +1228,16 @@ pub struct AccDecl {
     pub name: Ident,
     pub typ: TypExpr,
     pub merge: MergeOp,
+    /// **`per cpu <constexpr>` -- wie viele Zellen** (2026-08-18).
+    ///
+    /// `SPRACHE.md` §11.4 sagt seit jeher *„one cell per core, merged over the
+    /// NCORES-bounded loop"* -- **und nannte die Zahl nirgends.** Der Erzeuger haette
+    /// `NCORES` raten oder einen Namen suchen muessen; genau das Raten, gegen das `C001`
+    /// steht.
+    ///
+    /// *Die Woerter gab es schon* (`per cpu` am `stack` eines `entry`), also kostet die
+    /// Entscheidung keinen Wortschatz -- nur eine Stelle, an der die Zahl steht.
+    pub pro_kern: Option<Expr>,
     pub span: Span,
 }
 
