@@ -180,3 +180,60 @@ fn der_erzeuger_senkt_die_formen_dieses_fragments_ab() {
     // Der benannte Bereichstyp senkt zu seinem Traeger ab; der Bereich bleibt M1-Sache.
     assert!(c.contains("uint32_t zaehler;"), "{c}");
 }
+
+/// **Die Geistloeschung -- F7, und sie muss an DREI Orten gleichzeitig halten.**
+///
+/// `BootPhase` ist ein `linear ghost type`: er traegt das ganze Sicherheitsargument des
+/// Fragments (die Marke entsteht einmal, wandert durch die Strecke, wird verbraucht) und darf
+/// zur Laufzeit **nicht existieren**. Die Loeschung sitzt in der Signatur, am Rufort und an
+/// der `let`-Bindung -- und **zwei der drei Fehlformen sind still**.
+///
+/// > *Die gefaehrlichste ist die dritte:* laesst man die ganze `let`-Anweisung verschwinden
+/// > statt nur ihrer Bindung, uebersetzt das C anstandslos und **der Bootschritt findet nicht
+/// > statt.** `pruefe-emission.sh` misst genau das und bekam in der Gegenprobe `6` statt
+/// > `123456` -- fuenf von sechs Schritten lautlos weg.
+#[test]
+fn der_erzeuger_loescht_den_geist_und_nicht_den_ruf() {
+    let quelle = "module t {
+linear ghost type BootPhase;
+extern fn melde_roh(text : ptr<code, r> Text) -> u32
+    requires Held(PHASE_ROH) effects { reads text } costs <= 64 ops;
+extern fn mmu_an(p : BootPhase) -> BootPhase
+    effects { consumes p, writes mmu } costs <= 4096 ops;
+extern fn root_task_starten(p : BootPhase)
+    effects { consumes p, writes faeden } costs <= 8192 ops;
+impl fn hochlauf(p : BootPhase) effects { consumes p, writes mmu, writes faeden }
+    costs <= 32768 ops
+{
+    let p1 = mmu_an(p);
+    root_task_starten(p1);
+}
+}";
+    let mut absagen = gabbro_syntax::Absagen::neu("f7.gab");
+    let (baum, _) = gabbro_syntax::lies("f7.gab", quelle);
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
+
+    // **Erstens: der Geisttyp selbst erzeugt NICHTS.** Kein `typedef`, keine Struktur.
+    assert!(!c.contains("BootPhase"), "ein Geist hat keine Darstellung:\n{c}");
+
+    // **Zweitens: die Signatur.** Ein Geistparameter faellt weg, der Geistrueckgabetyp wird
+    // `void`. Bleibt eines von beiden stehen, weigert sich `ctyp` -- laut, nicht still.
+    assert!(c.contains("void mmu_an(void);"), "Signatur und Rueckgabe geloescht:\n{c}");
+    assert!(c.contains("void root_task_starten(void);"), "{c}");
+    assert!(c.contains("void hochlauf(void) {"), "{c}");
+
+    // **Drittens, und hier ist die stille Stelle: die Bindung geht, der RUF bleibt.**
+    assert!(c.contains("    mmu_an();"), "der Bootschritt muss stattfinden:\n{c}");
+    assert!(!c.contains("p1"), "die Bindung an einen Geist hat keine Entsprechung:\n{c}");
+    assert!(c.contains("    root_task_starten();"), "{c}");
+
+    // **Und der fremde Typ:** `Text` wird hier genannt und nirgends erklaert. C traegt dafuer
+    // bereits eine Form -- unvollstaendig, hinter einem Zeiger erlaubt, und jede Benutzung,
+    // die das Layout braucht, ist ein Uebersetzungsfehler. *Die Absage ist delegiert, nicht
+    // fallengelassen.* Der Tag muss VOR der Parameterliste stehen, sonst reicht seine
+    // Sichtbarkeit nur bis zum Semikolon -- und `-Wall` sagt das zu Recht.
+    let vorwaerts = c.find("struct Text;").expect("Vorwaertsdeklaration fehlt");
+    let benutzung = c.find("const struct Text *text").expect("Zeigerparameter fehlt");
+    assert!(vorwaerts < benutzung, "der Tag muss VOR seiner Benutzung stehen:\n{c}");
+}

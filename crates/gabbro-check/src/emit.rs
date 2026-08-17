@@ -27,14 +27,57 @@
 
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
-/// What the emitter must resolve: table names (a path naming one IS the struct) and named
-/// types (they lower to their carrier).
+/// What the emitter must resolve: table names (a path naming one IS the struct), named
+/// types (they lower to their carrier), **ghost types (they lower to NOTHING)** and the
+/// signatures it needs in order to erase a ghost at a call site.
 #[derive(Default)]
 struct Namen {
     tabellen: Vec<String>,
     typen: HashMap<String, TypExpr>,
+    /// `linear ghost type BootPhase;` — a value that **does not exist at run time**.
+    geister: Vec<String>,
+    funktionen: HashMap<String, Signatur>,
+    /// Namen, die diese Einheit **nicht deklariert** und die nur hinter einem Zeiger
+    /// vorkommen. Sie werden als unvollstaendiger C-Typ vorwaerts deklariert.
+    fremde: BTreeSet<String>,
+}
+
+/// Ist `t` ein Zeiger auf einen Pfad, den diese Einheit nicht aufloest? Dann traegt sie
+/// seinen Namen, aber nicht sein Layout -- und C hat dafuer bereits eine Form.
+fn fremdes_ziel(t: &TypExpr, u: &Namen) -> Option<String> {
+    let TypExpr::Zeiger(z) = t else { return None };
+    if ctyp(&z.ziel, u).is_some() {
+        return None;
+    }
+    match &z.ziel {
+        TypExpr::Pfad(p) => Some(p.teile.last()?.text.clone()),
+        _ => None,
+    }
+}
+
+/// What must be known about a callee in order to erase a ghost **at the call site**.
+struct Signatur {
+    /// Per parameter: is it a ghost? A ghost argument is dropped from the C call.
+    geist_param: Vec<bool>,
+    /// Does it return a ghost? Then `let x = f(…)` loses its binding, **not its call**.
+    geist_rueck: bool,
+}
+
+/// **Is this type a ghost — i.e. does it vanish in the C?**
+///
+/// This is the one question that separates an erasure from a lowering, and getting it wrong is
+/// silent in both directions: erase too much and the C computes something else; erase too
+/// little and it does not compile.
+fn ist_geist(t: &TypExpr, u: &Namen) -> bool {
+    match t {
+        TypExpr::Pfad(p) => p
+            .teile
+            .last()
+            .is_some_and(|i| u.geister.iter().any(|g| *g == i.text)),
+        _ => false,
+    }
 }
 
 /// **The licence notice, and it is not decoration.**
@@ -62,13 +105,62 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         ItemArt::Tabelle(t) => namen.tabellen.push(t.name.text.clone()),
         ItemArt::Typ(t) => {
-            if let Some(unter) = &t.rumpf {
+            // **A ghost type has no body and no C.** `linear ghost type BootPhase;` declares a
+            // value the checker threads and the machine never sees.
+            if t.ghost {
+                namen.geister.push(t.name.text.clone());
+            } else if let Some(unter) = &t.rumpf {
                 namen.typen.insert(t.name.text.clone(), unter.clone());
             }
         }
         _ => {}
     });
+    // **Second pass, and it needs the first**: whether a parameter is a ghost can only be
+    // decided once the ghost names are known.
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            let sig = Signatur {
+                geist_param: f.parameter.iter().map(|p| ist_geist(&p.typ, &namen)).collect(),
+                geist_rueck: f.ergebnis.as_ref().is_some_and(|t| ist_geist(t, &namen)),
+            };
+            namen.funktionen.insert(f.name.text.clone(), sig);
+        }
+    });
+    // **Dritter Sammelgang: die fremden Zeigerziele.** C verlangt den Tag VOR der
+    // Parameterliste -- sonst hat er nur Prototyp-Reichweite, und `-Wall` sagt das zu Recht.
+    let mut fremde = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            for p in &f.parameter {
+                fremde.extend(fremdes_ziel(&p.typ, &namen));
+            }
+            if let Some(r) = &f.ergebnis {
+                fremde.extend(fremdes_ziel(r, &namen));
+            }
+        }
+        if let ItemArt::Tabelle(tb) = &item.art {
+            if let Some(slot) = &tb.slot {
+                for f in &slot.felder {
+                    if let SlotTyp::Typ(ty) = &f.typ {
+                        fremde.extend(fremdes_ziel(ty, &namen));
+                    }
+                }
+            }
+        }
+    });
+    namen.fremde = fremde;
+
     let mut aus = String::from(KOPF);
+    if !namen.fremde.is_empty() {
+        aus.push_str(
+            "\n/* Types this unit names but does not declare. Incomplete on purpose: C\n\
+             \x20* refuses every use that needs the layout, which is the refusal this emitter\n\
+             \x20* would otherwise have to invent. */\n",
+        );
+        for f in &namen.fremde {
+            aus.push_str(&format!("struct {f};\n"));
+        }
+    }
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         ItemArt::Konst(k) => {
             if let Some(w) = konst_zahl(&k.wert) {
@@ -205,7 +297,21 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
         // `index into T` -- the bound comes from `count N` and is an M1 fact.
         TypExpr::Index { .. } => Some("uint32_t".into()),
         TypExpr::Zeiger(z) => {
-            let ziel = ctyp(&z.ziel, u)?;
+            // **A pointer to a type this unit does not declare becomes an INCOMPLETE C type.**
+            // `extern fn melde_roh(text : ptr<code, r> Text)` names `Text` and nowhere declares
+            // it -- the fragment is an excerpt of a larger program.
+            //
+            // *This is not a guess.* C already carries exactly the rule the emitter would
+            // otherwise have to invent: behind a pointer an incomplete type is legal, and any
+            // use that needs the layout is a compile error. **The refusal is delegated, not
+            // dropped** -- and it is delegated to the one tool that can decide it.
+            let ziel = match ctyp(&z.ziel, u) {
+                Some(z) => z,
+                None => match &z.ziel {
+                    TypExpr::Pfad(p) => format!("struct {}", p.teile.last()?.text),
+                    _ => return None,
+                },
+            };
             let konst = if z.rechte.iter().any(|r| {
                 matches!(
                     r,
@@ -222,11 +328,17 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
     }
 }
 
+/// **A `spec fn` is specification and has no C.** Everything else with a body becomes a
+/// definition; everything else *without* one becomes a **prototype** — without it a call in
+/// C11 is an implicit declaration, and `-Werror` stops there.
 fn funktion(f: &FnDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
-    let FnRumpf::Block(b) = &f.rumpf else {
-        return; // `spec fn` and bodiless declarations have no C.
-    };
+    if matches!(f.klasse, Some(FnKlasse::Spec)) {
+        return;
+    }
+    // **The ghost return becomes `void` — not a lowering but an ERASURE.** `mmu_an` hands the
+    // boot token on; the token is the checker's argument and nothing the machine can hold.
     let rueck = match &f.ergebnis {
+        Some(t) if ist_geist(t, u) => "void".into(),
         Some(t) => match ctyp(t, u) {
             Some(c) => c,
             None => {
@@ -238,6 +350,9 @@ fn funktion(f: &FnDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     };
     let mut params = Vec::new();
     for p in &f.parameter {
+        if ist_geist(&p.typ, u) {
+            continue; // erased -- see above
+        }
         match ctyp(&p.typ, u) {
             Some(c) => {
                 let luecke = if c.ends_with('*') { "" } else { " " };
@@ -254,30 +369,85 @@ fn funktion(f: &FnDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     } else {
         params.join(", ")
     };
+    let FnRumpf::Block(b) = &f.rumpf else {
+        aus.push_str(&format!("\n{rueck} {}({liste});\n", f.name.text));
+        return;
+    };
     aus.push_str(&format!("\n{rueck} {}({liste}) {{\n", f.name.text));
     for s in &b.anweisungen {
-        anweisung(s, aus, absagen);
+        anweisung(s, aus, u, absagen);
     }
     aus.push_str("}\n");
 }
 
-fn anweisung(s: &Stmt, aus: &mut String, absagen: &mut Absagen) {
+fn anweisung(s: &Stmt, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     match &s.art {
-        StmtArt::Return(Some(e)) => aus.push_str(&format!("    return {};\n", ausdruck(e))),
+        StmtArt::Return(Some(e)) => aus.push_str(&format!("    return {};\n", ausdruck(e, u))),
         StmtArt::Return(None) => aus.push_str("    return;\n"),
         StmtArt::Zuweisung(z) => {
-            aus.push_str(&format!("    {} = {};\n", ort(&z.ziel), ausdruck(&z.wert)))
+            aus.push_str(&format!("    {} = {};\n", ort(&z.ziel, u), ausdruck(&z.wert, u)))
         }
-        StmtArt::Let(l) => aus.push_str(&format!(
-            "    uint32_t {} = {};\n",
-            l.name.text,
-            ausdruck(&l.wert)
-        )),
+        StmtArt::Ruf(r) => aus.push_str(&format!("    {};\n", ruf(r, u))),
+        // **The third place the erasure has to hold, and the one that is silent if it does
+        // not.** `let p1 = mmu_an(p);` binds a ghost: the BINDING goes, the CALL stays. Making
+        // it `void p1 = mmu_an();` does not compile; dropping the whole statement compiles and
+        // **computes something else** -- the boot step would simply not happen.
+        StmtArt::Let(l) if geist_wert(&l.wert, u) => {
+            aus.push_str(&format!("    {};\n", ausdruck(&l.wert, u)))
+        }
+        StmtArt::Let(l) => {
+            // A non-ghost `let` needs a type, and the emitter does not guess one. The first
+            // version wrote `uint32_t` unconditionally -- correct for the one file it was
+            // built against and wrong for every other.
+            let typ = l
+                .typ
+                .as_ref()
+                .and_then(|t| ctyp(t, u))
+                .or_else(|| ruf_rueckgabe(&l.wert, u));
+            match typ {
+                Some(c) => aus.push_str(&format!("    {c} {} = {};\n", l.name.text, ausdruck(&l.wert, u))),
+                None => weigere(absagen, s.span, "`let` without a resolvable type"),
+            }
+        }
         _ => weigere(absagen, s.span, "statement kind"),
     }
 }
 
-fn ort(o: &Ort) -> String {
+/// Does this expression yield a ghost? Today: a call to a function with a ghost return.
+fn geist_wert(e: &Expr, u: &Namen) -> bool {
+    match &e.art {
+        ExprArt::Ruf(r) => r
+            .pfad
+            .teile
+            .last()
+            .and_then(|i| u.funktionen.get(&i.text))
+            .is_some_and(|s| s.geist_rueck),
+        _ => false,
+    }
+}
+
+/// The declared C return type of a called function — only used to type a `let`.
+fn ruf_rueckgabe(_e: &Expr, _u: &Namen) -> Option<String> {
+    None
+}
+
+/// **A call, with the ghost arguments dropped.** The positions come from the callee's
+/// signature; an unknown callee keeps every argument, which cannot compile silently — it
+/// fails at `cc`, and that is the direction to fail in.
+fn ruf(r: &Ruf, u: &Namen) -> String {
+    let name = r.pfad.teile.last().map(|i| i.text.clone()).unwrap_or_default();
+    let geist = u.funktionen.get(&name).map(|s| s.geist_param.clone());
+    let args: Vec<String> = r
+        .argumente
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !geist.as_ref().is_some_and(|g| *g.get(*i).unwrap_or(&false)))
+        .map(|(_, a)| ausdruck(a, u))
+        .collect();
+    format!("{name}({})", args.join(", "))
+}
+
+fn ort(o: &Ort, u: &Namen) -> String {
     let mut t = o.basis.text.clone();
     let mut zeiger = true; // The base of a place in a function is a pointer parameter.
     for suf in &o.suffixe {
@@ -293,21 +463,24 @@ fn ort(o: &Ort) -> String {
             OrtSuffix::Ueber(f) => t = format!("{t}->{}", f.text),
             OrtSuffix::Index(e) => {
                 zeiger = false;
-                t = format!("{t}[{}]", ausdruck(e));
+                t = format!("{t}[{}]", ausdruck(e, u));
             }
         }
     }
     t
 }
 
-fn ausdruck(e: &Expr) -> String {
+fn ausdruck(e: &Expr, u: &Namen) -> String {
     match &e.art {
         ExprArt::Zahl(n) => n.to_string(),
         ExprArt::Wahr => "true".into(),
         ExprArt::Falsch => "false".into(),
-        ExprArt::Ort(o) => ort(o),
-        ExprArt::Klammer(x) => format!("({})", ausdruck(x)),
-        ExprArt::Binaer(op, a, b) => format!("{} {} {}", ausdruck(a), op_text(op), ausdruck(b)),
+        ExprArt::Ort(o) => ort(o, u),
+        ExprArt::Klammer(x) => format!("({})", ausdruck(x, u)),
+        ExprArt::Binaer(op, a, b) => {
+            format!("{} {} {}", ausdruck(a, u), op_text(op), ausdruck(b, u))
+        }
+        ExprArt::Ruf(r) => ruf(r, u),
         _ => "/* NOT LOWERED */ 0".into(),
     }
 }

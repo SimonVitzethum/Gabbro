@@ -778,6 +778,53 @@ MUTATIONEN = [
         "        gabbro_syntax::lex::Art::Wort(k) => { let _ = k; true }",
         "Tor P2 -- ein Block, der mit einer Anweisung anfaengt, gilt als Uebersetzungseinheit",
     ),
+    # -- emit.rs: die Geistloeschung -----------------------------------------------------
+    #
+    # Sie sitzt an DREI Orten gleichzeitig -- Signatur, Rufort, `let`-Bindung -- und zwei der
+    # drei Fehlformen sind still. Die gefaehrlichste ist die dritte: laesst man die ganze
+    # `let`-Anweisung verschwinden statt nur ihrer Bindung, uebersetzt das C anstandslos und
+    # der Bootschritt findet nicht statt. `pruefe-emission.sh` bekam in der Gegenprobe `6`
+    # statt `123456`.
+    Mutation(
+        "geist-let-verschwindet-ganz",
+        "emit.rs",
+        "        StmtArt::Let(l) if geist_wert(&l.wert, u) => {\n            aus.push_str(&format!(\"    {};\\n\", ausdruck(&l.wert, u)))\n        }",
+        "        StmtArt::Let(l) if geist_wert(&l.wert, u) => { let _ = l; }",
+        "C-Absenkung -- eine Bindung an einen Geist nimmt den RUF mit; der Schritt entfaellt still",
+        "code",
+    ),
+    Mutation(
+        "geist-parameter-bleibt-stehen",
+        "emit.rs",
+        "        if ist_geist(&p.typ, u) {\n            continue; // erased -- see above\n        }",
+        "        if false && ist_geist(&p.typ, u) {\n            continue;\n        }",
+        "C-Absenkung -- ein Geistparameter steht im C und braucht eine Darstellung, die es nicht gibt",
+        "code",
+    ),
+    Mutation(
+        "geist-rueckgabe-bleibt-stehen",
+        "emit.rs",
+        "        Some(t) if ist_geist(t, u) => \"void\".into(),",
+        "        Some(t) if false && ist_geist(t, u) => \"void\".into(),",
+        "C-Absenkung -- ein Geistrueckgabetyp wird abgesenkt statt geloescht",
+        "code",
+    ),
+    Mutation(
+        "ruf-behaelt-die-geistargumente",
+        "emit.rs",
+        "        .filter(|(i, _)| !geist.as_ref().is_some_and(|g| *g.get(*i).unwrap_or(&false)))",
+        "        .filter(|(i, _)| { let _ = i; true })",
+        "C-Absenkung -- der Rufort uebergibt einen Geist, den es zur Laufzeit nicht gibt",
+        "code",
+    ),
+    Mutation(
+        "fremder-tag-ohne-vorwaertsdeklaration",
+        "emit.rs",
+        "        for f in &namen.fremde {\n            aus.push_str(&format!(\"struct {f};\\n\"));\n        }",
+        "        for f in &namen.fremde {\n            let _ = f;\n        }",
+        "C-Absenkung -- der Tag steht erst in der Parameterliste; seine Sichtbarkeit endet am Semikolon",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
