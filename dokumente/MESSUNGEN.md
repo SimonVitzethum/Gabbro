@@ -6260,3 +6260,42 @@ einzige, der weder ein Befund noch die Axiomschicht ist.
 > **Von acht Sperren sind sieben keine Bauarbeit.** *Das ist der Ertrag dieses Erzeugers: er hat
 > die Fragen nicht erzeugt, er ist auf sie aufgelaufen — und jede trägt jetzt einen Namen und
 > eine Stelle.*
+
+
+---
+
+# `walk` war der letzte Bauposten — und er ist ein Fehler im Kostenpass
+
+**Der Erzeuger wollte `mappings of` absenken und hat nachgesehen, welche Schranke gilt.**
+
+| | |
+|---|---:|
+| `SPRACHE.md`:786 | *"`mappings of` quantifies over **ALL reachable leaf entries** of a `walk` structure"* |
+| Kostenpass (`kosten.rs`:362, `walkschranken`) | **Ebenen × Knotenlänge** = 4 × 512 = **2 048** |
+| erreichbare Blätter bei vier Ebenen zu 512 | **512⁴ = 68 719 476 736** |
+
+> **Sieben Größenordnungen.** *Der Pass zählt EINEN Abstiegspfad und nennt es die Domäne.*
+
+## Und das ist die Klasse, die dieser Ordner zweimal bezahlt hat
+
+| | zugesagt | gerechnet |
+|---|---:|---:|
+| F1 `revoke` | 200 ops | **16 452 480** |
+| A4 | 4 096 | **831 488** |
+
+**Beide Male war es ein MENSCH, der den typischen Fall statt der Schranke schrieb — und der
+Kostenpass hat es gefangen.** Er ist genau dafür gebaut (`memos/M-kostenmass.md`).
+
+> **Hier ist es der Pass selbst.** *Das Werkzeug gegen diese Fehlerklasse trägt sie an einer
+> Stelle in sich.*
+
+## Was zu entscheiden ist, und es ist eine Entweder-oder
+
+* **Die Domäne meint einen PFAD** — dann ist `SPRACHE.md`:786 falsch, und der Name `mappings`
+  (Plural) führt in die Irre.
+* **Die Domäne meint die MENGE** — dann kann **keine** `walk`-Traversierung eine Kostenzusage
+  tragen, und F9s `costs <= 4096 ops` ist um sieben Größenordnungen zu klein.
+
+**Der Erzeuger senkt nicht ab, sondern weigert sich mit beiden Lesarten im Absagetext.** *Eine
+davon still zu wählen wäre genau die Bewegung, gegen die er gebaut ist — und es wäre die
+kleinere.*

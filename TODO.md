@@ -97,6 +97,21 @@ of items that are neither code nor a run — what remains is building and measur
 ---
 
 # DECISIONS — need a judgement, not a run
+### From the emitter (2026-08-17) — the cost pass carries the typical case
+
+- [ ] **`mappings of`: the cost pass under-counts by seven orders of magnitude.**
+      [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md):786 says it quantifies over **ALL
+      reachable leaf entries** of a `walk`; the pass bounds it at `levels × node length`
+      (`kosten.rs`:362, `walkschranken`) — **2 048** for four levels of 512, where the leaves
+      number **512^4 = 68 719 476 736**. *The pass counts one descent PATH and calls it the
+      domain.*
+      **This is the class the folder has paid for twice** — `revoke` promised 200 ops and costs
+      16 452 480, A4 promised 4 096 and costs 831 488. **Both times a HUMAN wrote the typical
+      case instead of the bound and the pass caught it. Here it is the pass itself.**
+      Either the domain means a path (then `SPRACHE.md`:786 is wrong and the name misleads) or
+      it means the set (then no `walk` traversal can carry a cost promise). *The emitter
+      refuses rather than pick the smaller reading.*
+
 ### From the reassignment (2026-08-17) — three judgements the measurement forces
 
 - [ ] **Frame and Publication are refuted as carried, each at ONE named site.** «B39» — the MMU

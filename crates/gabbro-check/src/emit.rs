@@ -1809,7 +1809,28 @@ fn traverse(
             "`elems of` -- «B12» is open: whether it binds an ELEMENT or an INDEX is used \
              both ways in the specification and fixed nowhere"
         }
-        Domaene::AbbildungenVon(_) => "`mappings of` -- it comes from a `walk`, which has no lowering",
+        // **UND HIER STEHT KEIN BAUPOSTEN, SONDERN EIN FEHLER IM KOSTENPASS** (2026-08-17).
+        //
+        // `SPRACHE.md`:786 sagt: *„`mappings of` quantifies over ALL reachable leaf entries
+        // of a `walk` structure."* Der Kostenpass rechnet dafuer `walkschranken` =
+        // **Ebenen mal Knotenlaenge** (`umgebung.rs`, `kosten.rs`:362) -- bei vier Ebenen zu
+        // 512 Eintraegen also **2 048**.
+        //
+        // > **Die Zahl der erreichbaren Blaetter ist 512^4 = 68 719 476 736.** Sieben
+        // > Groessenordnungen. *Der Pass zaehlt EINEN Abstiegspfad und nennt es die Domaene.*
+        //
+        // **Das ist dieselbe Klasse, die dieser Ordner zweimal bezahlt hat** -- `revoke` sagte
+        // 200 ops zu und kostet 16 452 480, A4 sagte 4 096 zu und kostet 831 488. Beide Male
+        // war es ein MENSCH, der den typischen Fall statt der Schranke schrieb, und der Pass
+        // hat es gefangen. **Hier ist es der Pass selbst.**
+        //
+        // Absenken hiesse, die kleinere der beiden Lesarten still zu waehlen.
+        Domaene::AbbildungenVon(_) => {
+            "`mappings of` -- SPRACHE.md:786 says it quantifies over ALL reachable leaf \
+             entries, but the cost pass bounds it at levels x node length (2048 for a \
+             four-level table of 512), while the leaves number 512^4. **Seven orders of \
+             magnitude**, and lowering it would silently pick the smaller reading"
+        }
         Domaene::KetteIn { .. } => "`chain in` -- the sibling chain needs its own bound",
         Domaene::FelderVon(_) => "`fields of` -- a register field list is not a runtime domain",
         Domaene::Threads => "`threads` -- the thread set is not declared in a translation unit",
