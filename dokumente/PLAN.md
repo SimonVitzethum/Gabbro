@@ -1808,3 +1808,77 @@ Entscheidung, bevor die erste Zeile stand; die Pläne führen sie aus, sie erwei
 
 *Wer beides will, braucht zwei Sprachen — oder gibt die elf Klassen einzeln zurück und schreibt
 je Rückgabe auf, welche.*
+
+---
+
+# Zwei Fragen, die die Grenzen beschreiben
+
+## Was man in Gabbro **nie** wird schreiben können
+
+Nicht „noch nicht" — **nie**, weil die Form mit einer der elf Klassen unvereinbar ist. Die
+Trennlinie ist scharf und liegt nicht dort, wo man sie vermutet:
+
+| geht **nicht** | woran es scheitert |
+|---|---|
+| **alles mit unbekannt vielen Objekten** — Compiler, Datenbank, Editor, Webserver mit Verbindungen nach Bedarf | `table … count N` **ist** die Indexschranke. Ohne feste Zahl fällt die Klasse *Index*, und mit ihr `M103` |
+| **Rekursion über Daten** — Baumtraversierung, Parser, Auswerter | der Kostenpass rechnet Rümpfe und Rufe; Rekursion trägt eine **Annahme statt einer Rechnung**. `descendants of` gibt es, aber über einer Tabelle mit Schranke |
+| **allgemeine Zeichenketten** | eine Zeichenkette ist ein Feld unbekannter Länge. `format` deckt **feste** Längen; variable sind offen und würden die Einmalprüfung am Eintritt kosten |
+| **Gleitkomma-Numerik** | nicht im Kern, und M1 ist über Intervallen ganzer Zahlen gebaut |
+| **alles, was Speicher anfordert und freigibt** | `allocs` **benennt** eine Wirkung, mehr nicht. Eine zwölfte Klasse gibt es nicht |
+| **Selbstbeherbergung** — Gabbro in Gabbro | steht schon unter *„What deliberately does not exist"*. Ein Übersetzer ist ein Baumverarbeiter mit Rekursion und dynamischem Speicher — **also die drei Zeilen oben zusammen** |
+
+> **Und die Gegenprobe, damit die Liste nicht größer aussieht, als sie ist:** eine Dienstschleife,
+> die Jahre läuft, geht (`forever … per_pass bounded … progress … leaves`). Ein Zustandsautomat
+> geht. Ein Ringpuffer geht. Ein Treiber geht. **Was fehlt, ist immer dasselbe: eine Zahl, die
+> zur Übersetzungszeit niemand kennt.**
+
+*Das ist keine Reihe von Lücken, sondern eine Entscheidung, sechsmal sichtbar.*
+
+## Eine eigene Bibliotheks-ABI für verifizierte Gabbro-Bibliotheken?
+
+**Ja — und der Ordner hat das Werkzeug dafür schon gebaut, ohne es so zu nennen.**
+
+`gabbro zeugnis` gibt heute je Übersetzungseinheit genau das aus, was eine solche ABI
+transportieren müsste:
+
+```
+A  die Annahmen           was die MASCHINE leisten muss
+B  die Schablonen         worauf der Erzeuger sich stützt, mit Beweisstand
+C  die direkte Absenkung  was 1:1 übergeht
+E  die fremden Rümpfe     was jemand anderes schuldet, mit Vertrag
+```
+
+**Eine Bibliotheks-ABI ist genau die Frage: was muss der Rufer mitnehmen, damit die Zusage der
+Bibliothek bei ihm noch gilt?** Und die Antwort ist nicht die Signatur, sondern diese vier Listen.
+
+### Was sie tragen muss, und jedes Stück hat schon eine Zeile
+
+| | warum es in die ABI gehört |
+|---|---|
+| **die Annahmenmenge** | „bewiesen unter A1…An" ist wertlos, wenn A7 beim Rufer nicht gilt. **Zwei Bibliotheken mit widersprüchlichen Annahmen dürfen nicht in ein Programm** — `manifest::vereinige` weigert sich heute schon bei gleichem Namen mit anderem Inhalt |
+| **die Schablonen mit Beweisstand** | die Vertrauensfläche des Rufers ist die **Vereinigung** der Flächen aller Bibliotheken. Eine Bibliothek, die auf einer unbewiesenen Schablone ruht, vergrößert sie — *und heute sähe man es nicht* |
+| **`effects`, `costs`, `requires Held(…)`** | schon in der Signatur, aber **die Kostenzahl ist eine ABI-Zusage**: `K001` rechnet beim Rufer damit. Ändert die Bibliothek sie, bricht die Latenzaussage, ohne dass ein Typ sich rührt |
+| **die Sperrordnung (`rank`)** | **das ist der schärfste Posten.** `H006` rechnet die Ordnung nach; zwei Bibliotheken mit unabhängig vergebenen Rängen ergeben zusammen einen **Zyklus**, den keine von beiden allein sehen kann |
+
+### Und der Grund, warum sie **nötig** ist und nicht bloß hübsch
+
+> **Gabbros ganze Zusage ist eine Aussage über eine Übersetzungseinheit.** Jede der elf Klassen
+> wird an einem Baum geprüft, den ein Lauf ganz sieht. **Eine Bibliothek durchschneidet genau
+> das** — und ohne eine ABI, die die vier Listen mitführt, fällt die Zusage an der Schnittstelle
+> lautlos auf „untere Schranke" zurück, genau wie bei einem unbekannten Gerufenen (`E009`).
+
+### Was sie nicht sein darf
+
+* **Kein C-ABI mit Kommentaren.** Die Zusage muss maschinenlesbar sein, sonst prüft sie niemand.
+* **Keine Versionsnummer als Ersatz.** *Eine Ratsche über einer Kardinalzahl greift nicht gegen
+  Austausch* — derselbe Satz, mit dem `SYNTAX.md` §12 die Annahmenmenge als **Menge von Namen**
+  verlangt statt als Zahl.
+* **Kein Vertrauen ohne Zeugnis.** Eine Bibliothek ohne Zeugnis ist ein fremder Rumpf — und die
+  gehören in Abschnitt E, nicht in Abschnitt B.
+
+**Der Weg dahin ist kurz, weil das Format steht:** `gabbro zeugnis` schreibt, `gabbro pruefe`
+liest die Zeugnisse der gerufenen Bibliotheken mit und vereinigt Annahmen, Schablonen und
+Sperrränge — **mit denselben Weigerungen, die es innerhalb einer Einheit schon gibt.**
+
+*Das ist der erste Posten, bei dem Gabbro etwas gewinnt, das es heute nicht hat, ohne eine
+Klasse zurückzugeben.*

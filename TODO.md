@@ -147,6 +147,18 @@ of items that are neither code nor a run — what remains is building and measur
       0 Fehler) -- *und kein Pass liest es.* Die Schicht hat damit zwei Haelften: die sieben
       Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
       tragen lassen (PL-Arbeit).
+- [ ] **Eine Bibliotheks-ABI, und das Format steht schon** *(bewertet 2026-08-18,
+      `PLAN.md`: „Zwei Fragen, die die Grenzen beschreiben")*. **Gabbros ganze Zusage ist eine
+      Aussage ueber EINE Uebersetzungseinheit** -- jede der elf Klassen wird an einem Baum
+      geprueft, den ein Lauf ganz sieht. Eine Bibliothek durchschneidet genau das, und ohne
+      ABI faellt die Zusage an der Schnittstelle lautlos auf „untere Schranke" zurueck (`E009`).
+      **`gabbro zeugnis` schreibt bereits, was sie tragen muss:** Annahmenmenge, Schablonen mit
+      Beweisstand, `effects`/`costs`/`Held`, und die SPERRRAENGE -- *der schaerfste Posten:
+      zwei Bibliotheken mit unabhaengig vergebenen Raengen ergeben einen Zyklus, den keine von
+      beiden allein sehen kann.* Was fehlt: `gabbro pruefe` liest die Zeugnisse der gerufenen
+      Bibliotheken mit und vereinigt sie -- mit denselben Weigerungen, die es innerhalb einer
+      Einheit schon gibt. **Der erste Posten, bei dem Gabbro etwas gewinnt, ohne eine Klasse
+      zurueckzugeben.**
 - [ ] **Zwei Blicke auf dieselbe Karte gingen auseinander, und nur einer hatte einen Test**
       *(gefunden 2026-08-17 beim Bauen von `const fn`, weil eine Giftprobe nicht fiel, die
       fallen musste -- R11)*. `typ_von_ort` schlug den globalen Traeger modulbewusst nach
