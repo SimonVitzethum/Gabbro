@@ -868,8 +868,8 @@ MUTATIONEN = [
     Mutation(
         "sonderwert-ist-null",
         "emit.rs",
-        "        \"#define {}_NONE ({})\\n\",",
-        "        \"#define {}_NONE (0*{})\\n\",",
+        "            aus.push_str(&format!(\"#define {}_NONE ({})\\n\", t.name.text, laenge));",
+        "            aus.push_str(&format!(\"#define {}_NONE (0*{})\\n\", t.name.text, laenge));",
         "C-Absenkung -- der Sonderwert kollidiert mit Slot 0; `None` und der erste Eintrag sind gleich",
         "code",
     ),
