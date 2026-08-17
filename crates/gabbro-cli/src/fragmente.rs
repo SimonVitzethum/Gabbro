@@ -24,7 +24,7 @@ pub fn befehl(dateien: &[String]) -> std::process::ExitCode {
         };
         let befunde = korpus::messe(datei, &quelle);
         if befunde.is_empty() {
-            println!("{datei}: kein ```gabbro-Block");
+            println!("{datei}: no ```gabbro block");
             continue;
         }
         println!("{datei}:");

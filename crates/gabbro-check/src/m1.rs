@@ -826,7 +826,7 @@ impl<'a> Pruefer<'a> {
                 "M104",
                 span,
                 format!(
-                    "`{} {zeichen} {}` verlaesst die Breite des Ergebnistyps",
+                    "`{} {zeichen} {}` leaves the width of the result type",
                     a.text(),
                     b.text()
                 ),

@@ -235,7 +235,7 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
                         Span::neu(von as u32, von as u32 + 2),
                         "Grossbuchstabe im Zahlenpraefix",
                     )
-                    .mit_notiz("die Lexik kennt `0x` und `0b`, nicht `0X`/`0B`"),
+                    .mit_notiz("the lexer knows `0x` and `0b`, not `0X`/`0B`"),
                 );
             }
             let gueltig = |ch: u8, basis: u32| -> bool {
@@ -256,7 +256,7 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
                 absagen.schiebe(Absage::fehler(
                     "L002",
                     Span::neu(von as u32, i as u32),
-                    "Zahl ohne Ziffern nach dem Praefix",
+                    "number with no digits after the prefix",
                 ));
                 schiebe(&mut out, Art::Zahl(0), von, i);
                 continue;
@@ -276,7 +276,7 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
                         "L003",
                         Span::neu(von as u32, ende as u32),
                         format!(
-                            "Ziffer oder Buchstabe `{}` gehoert nicht in diese Zahl",
+                            "digit or letter `{}` does not belong in this number",
                             &quelle[i..ende]
                         ),
                     )
@@ -297,9 +297,9 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
                         Absage::fehler(
                             "L005",
                             Span::neu(von as u32, i as u32),
-                            "Zahl passt in keinen Ganzzahltyp der Sprache",
+                            "number fits no integer type of the language",
                         )
-                        .mit_notiz("der groesste Typ ist `u64`"),
+                        .mit_notiz("the largest type is `u64`"),
                     );
                     schiebe(&mut out, Art::Zahl(0), von, i);
                 }
@@ -390,7 +390,7 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
         absagen.schiebe(Absage::fehler(
             "L006",
             Span::neu(i as u32, (i + breite) as u32),
-            format!("Zeichen `{ch}` gehoert in keine Form der Sprache"),
+            format!("character `{ch}` belongs to no form of the language"),
         ));
         i += breite;
     }

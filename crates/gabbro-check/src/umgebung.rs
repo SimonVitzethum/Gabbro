@@ -842,7 +842,7 @@ mod wertetabellen {
         assert_eq!(wert("1 << 0"), Some(1));
         assert_eq!(wert("1 << 10"), Some(1024));
         assert_eq!(wert("1024 >> 10"), Some(1));
-        assert_eq!(wert("7 >> 1"), Some(3), "Abrunden, nicht Runden");
+        assert_eq!(wert("7 >> 1"), Some(3), "truncate, do not round");
     }
 
     #[test]
@@ -851,6 +851,6 @@ mod wertetabellen {
         assert_eq!(wert("7 % 2"), Some(1));
         assert_eq!(wert("6 % 2"), Some(0));
         assert_eq!(wert("2 * 3 + 1"), Some(7), "Punkt vor Strich");
-        assert_eq!(wert("1 + 2 * 3"), Some(7), "und in der anderen Richtung");
+        assert_eq!(wert("1 + 2 * 3"), Some(7), "and in the other direction");
     }
 }

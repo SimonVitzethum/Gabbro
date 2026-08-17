@@ -69,7 +69,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 1,
             name: "Namen",
-            quelle: "E5: jede Deklaration ist an genau einer Stelle vollstaendig",
+            quelle: "E5: every declaration is complete in exactly one place",
             zustand: Zustand::Gebaut,
         },
         Pass {
@@ -86,7 +86,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 3,
             name: "M1 + V1–V3",
-            quelle: "SPRACHE.md §3.2: Bereichstypen und die drei Flussregeln",
+            quelle: "SPRACHE.md §3.2: range types and the three flow rules",
             zustand: Zustand::Gebaut,
         },
         Pass {
@@ -116,7 +116,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 6,
             name: "M4/Schleifen",
-            quelle: "SYNTAX.md §8: drei Schleifenformen, `leave`/`next` zielen auf eine Marke",
+            quelle: "SYNTAX.md §8: three loop forms, `leave`/`next` target a label",
             zustand: Zustand::Gebaut,
         },
         Pass {
@@ -171,7 +171,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 9,
             name: "costs",
-            quelle: "SPRACHE.md §7: 1 op = eine Gabbro-Primitive, statisch ausgerechnet",
+            quelle: "SPRACHE.md §7: 1 op = one Gabbro primitive, computed statically",
             zustand: Zustand::Teilgebaut(
                 "gerechnet werden Ruempfe, `locks`-Bloecke gegen `held` und Aufrufe ueber \
                  die DEKLARIERTEN Kosten des Gerufenen -- **Rekursion traegt damit eine \

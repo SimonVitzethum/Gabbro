@@ -397,7 +397,7 @@ fn rumpf_gegen_wirkungen(
                     *span,
                     format!("`{}` reads `{ort}` but declares `pure`", f.name.text),
                 )
-                .mit_notiz("`pure` heisst: fasst nichts an -- auch nicht lesend"),
+                .mit_notiz("`pure` means: touches nothing -- not even by reading"),
             );
             continue;
         }
@@ -580,7 +580,7 @@ fn rein_allein(w: &Wirkungen, absagen: &mut Absagen) {
                     andere.join(", ")
                 ),
             )
-            .mit_notiz("entweder `effects { pure }` allein, oder die Wirkungen ohne `pure`"),
+            .mit_notiz("either `effects { pure }` alone, or the effects without `pure`"),
         );
     }
     if rein.len() > 1 {

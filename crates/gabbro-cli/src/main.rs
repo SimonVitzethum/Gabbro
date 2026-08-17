@@ -27,7 +27,7 @@ fn main() -> std::process::ExitCode {
             }
             for datei in rest {
                 let Ok(quelle) = std::fs::read_to_string(datei) else {
-                    eprintln!("gabbro: {datei} nicht lesbar");
+                    eprintln!("gabbro: {datei} not readable");
                     continue;
                 };
                 let (baum, _) = gabbro_syntax::lies(datei, &quelle);
@@ -46,7 +46,7 @@ fn main() -> std::process::ExitCode {
             }
             for datei in rest {
                 let Ok(quelle) = std::fs::read_to_string(datei) else {
-                    eprintln!("gabbro: {datei} nicht lesbar");
+                    eprintln!("gabbro: {datei} not readable");
                     continue;
                 };
                 let (baum, _) = gabbro_syntax::lies(datei, &quelle);
@@ -109,12 +109,12 @@ fn befehl_paesse() {
         .filter(|p| matches!(p.zustand, Zustand::Teilgebaut(_)))
         .count();
     println!(
-        "\n  {voll} von {} Paessen sind ganz gebaut, {teil} teilweise. Was OFFEN ist, wird",
+        "\n  {voll} of {} passes are fully built, {teil} partial. What is OPEN is",
         passliste().len()
     );
     println!("  NICHT geprueft, und was TEIL ist, nur so weit wie danebensteht --");
-    println!("  ein gruener Lauf ist deshalb kein Beweis, sondern die Abwesenheit der Befunde,");
-    println!("  die die gebauten Paesse sehen koennen.");
+    println!("  a green run is therefore not a proof but the absence of the findings");
+    println!("  that the built passes are able to see.");
 }
 
 fn befehl_pruefe(dateien: &[String]) -> std::process::ExitCode {
@@ -147,7 +147,7 @@ fn befehl_pruefe(dateien: &[String]) -> std::process::ExitCode {
         // Die Deckung steht NEBEN dem Ergebnis: „nichts gefunden" und „nichts angesehen"
         // sehen sonst gleich aus.
         if bericht.m1.gesamt() == 0 {
-            println!("  M1 sah keinen Ausdruck -- diese Datei hat keinen Funktionsrumpf");
+            println!("  M1 saw no expression -- this file has no function body");
         } else {
             println!(
                 "  M1 sah {} Ausdruecke, {} davon ohne Typ ({:.0} % Deckung)",
@@ -191,7 +191,7 @@ fn befehl_annahmen(dateien: &[String]) -> std::process::ExitCode {
         };
         let (baum, absagen) = gabbro_syntax::lies(datei, &quelle);
         if absagen.absagen.iter().any(|a| a.stufe == Stufe::Fehler) {
-            eprintln!("gabbro: {datei} hat Fehler -- das Manifest waere unvollstaendig");
+            eprintln!("gabbro: {datei} has errors -- the manifest would be incomplete");
             print!("{}", absagen.zeige(&quelle));
             return std::process::ExitCode::from(1);
         }

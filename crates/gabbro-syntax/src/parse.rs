@@ -170,7 +170,7 @@ impl<'a> Parser<'a> {
         let t = self.blick();
         if t.art == Art::Ident && t.text(self.quelle) == "_" {
             self.absage(
-                Absage::fehler("P034", t.span, "`_` allein ist kein Bezeichner")
+                Absage::fehler("P034", t.span, "`_` on its own is not an identifier")
                     .mit_notiz(
                         "es gibt keinen Auffangzweig (`match` ist erschoepfend) und keinen \
                          Platzhalterbinder -- eine neue Variante soll die Uebersetzung brechen",
@@ -199,7 +199,7 @@ impl<'a> Parser<'a> {
                 let mut a = Absage::fehler(
                     "P002",
                     t.span,
-                    format!("`{}` ist ein Wort des Wortschatzes und kein Bezeichner", k),
+                    format!("`{}` is a word of the vocabulary, not an identifier", k),
                 )
                 .mit_notiz(
                     "SYNTAX.md: der Wortschatz ist eine geschlossene Tabelle -- \
@@ -401,7 +401,7 @@ impl<'a> Parser<'a> {
                     "P034",
                     pub_span,
                     format!(
-                        "`pub` steht hier nicht in der Grammatik: {} fuehrt kein `[ \"pub\" ]`",
+                        "`pub` is not in the grammar here: {} carries no `[ \"pub\" ]`",
                         t.benennung(self.quelle)
                     ),
                 )
@@ -443,7 +443,7 @@ impl<'a> Parser<'a> {
                     Absage::fehler(
                         "P006",
                         t.span,
-                        format!("hier faengt kein Item an: {gefunden}"),
+                        format!("no item starts here: {gefunden}"),
                     )
                     .mit_notiz(
                         "`item` kennt: module use type const static fn format table reason \
@@ -840,7 +840,7 @@ impl<'a> Parser<'a> {
         if matches!(self.blick_n(1).art, Art::Zeichen(Z::GeschweiftZu)) {
             let sp = anfang.bis_zu(self.blick_n(1).span);
             self.absage(
-                Absage::fehler("P035", sp, "`{ }` ist weder ein Verbund noch ein Summentyp")
+                Absage::fehler("P035", sp, "`{ }` is neither a record nor a sum type")
                     .mit_notiz(
                         "der leere Klammerpaar-Fall ergab bisher stillschweigend einen LEEREN \
                          SUMMENTYP -- einen Typ ohne Wert, ueber den ein `match` erschoepfend \
@@ -1927,7 +1927,7 @@ impl<'a> Parser<'a> {
         let anfang = self.span();
         if self.ist_z(Z::Semi) {
             self.absage(
-                Absage::fehler("P033", anfang, "ein Semikolon allein ist keine Anweisung")
+                Absage::fehler("P033", anfang, "a semicolon on its own is not a statement")
                     .mit_notiz(
                         "die Formen mit Block -- `if`, `match`, `traverse`, `retry`, \
                          `forever`, `breaking`, `narrow … else`, `locks`, `let … else` -- \
@@ -2043,7 +2043,7 @@ impl<'a> Parser<'a> {
                 self.absage(Absage::fehler(
                     "P015",
                     wert.span,
-                    "vor `awaits` steht ein Ort, kein zusammengesetzter Ausdruck",
+                    "before `awaits` stands a place, not a compound expression",
                 ));
                 return Err(Abbruch);
             };
@@ -2064,7 +2064,7 @@ impl<'a> Parser<'a> {
                 self.absage(Absage::fehler(
                     "P015",
                     wert.span,
-                    "vor `exchange` steht ein Ort, kein zusammengesetzter Ausdruck",
+                    "before `exchange` stands a place, not a compound expression",
                 ));
                 return Err(Abbruch);
             };
@@ -2099,7 +2099,7 @@ impl<'a> Parser<'a> {
                     Absage::fehler(
                         "P016",
                         wert.span,
-                        "`let … else` traegt einen Aufruf, keinen anderen Ausdruck",
+                        "`let … else` carries a call, no other expression",
                     )
                     .mit_notiz("`letstmt = \"let\" ident \"=\" call \"else\" \"(\" ident \")\" block`"),
                 );
@@ -2200,7 +2200,7 @@ impl<'a> Parser<'a> {
                         t.span,
                         format!("Zuweisung oder Aufruf erwartet, {gefunden} gefunden"),
                     )
-                    .mit_notiz("E2: eine Zuweisung ist kein Ausdruck"),
+                    .mit_notiz("E2: an assignment is not an expression"),
                 );
                 return Err(Abbruch);
             }
@@ -2215,7 +2215,7 @@ impl<'a> Parser<'a> {
                 self.absage(Absage::fehler(
                     "P018",
                     t.span,
-                    "eine Veroeffentlichung steht an `=`, nicht an einer Rechenzuweisung",
+                    "a publication sits on `=`, not on a compound assignment",
                 ));
                 return Err(Abbruch);
             }
@@ -2611,7 +2611,7 @@ impl<'a> Parser<'a> {
                 self.absage(Absage::fehler(
                     "P023",
                     anderes.span(),
-                    "`node` einer `walk`-Deklaration ist ein Feld `[T; N]`",
+                    "the `node` of a `walk` declaration is an array `[T; N]`",
                 ));
                 return Err(Abbruch);
             }
@@ -2770,9 +2770,9 @@ impl<'a> Parser<'a> {
                             Absage::fehler(
                                 "P025",
                                 m_anfang.bis_zu(m_ende),
-                                "`mirrors` steht EINMAL je Geraet",
+                                "`mirrors` appears ONCE per device",
                             )
-                            .mit_notiz("SYNTAX.md §10: nicht je Uebergang"),
+                            .mit_notiz("SYNTAX.md §10: not per transition"),
                         );
                         return Err(Abbruch);
                     }
@@ -3102,7 +3102,7 @@ impl<'a> Parser<'a> {
                         t.span,
                         format!("Merge-Operation erwartet, {gefunden} gefunden"),
                     )
-                    .mit_notiz("die Menge ist geschlossen: max min add or and"),
+                    .mit_notiz("the set is closed: max min add or and"),
                 );
                 return Err(Abbruch);
             }
@@ -3393,8 +3393,8 @@ fn abgeschaffte_form(wort: &str) -> Option<&'static str> {
         ),
         "break" => Some("die geordnete Abschaltung heisst `leave <marke>;`"),
         "continue" => Some("der naechste Durchgang heisst `next <marke>;`"),
-        "goto" => Some("es gibt keinen Sprung -- der Kontrollfluss steht in der Form"),
-        "switch" => Some("`match` ist erschoepfend und hat keinen Auffangzweig"),
+        "goto" => Some("there is no jump -- control flow lives in the form"),
+        "switch" => Some("`match` is exhaustive and has no catch-all branch"),
         "unsafe" => Some(
             "unsichere Fenster gibt es nicht; was die Maschine anfasst, steht in `axiom`, \
              `raw fn` oder `prim fn` -- benannt und gezaehlt",

@@ -277,13 +277,13 @@ pub fn zeige(traeger: &[Traeger]) -> String {
         ));
     }
     out.push_str(&format!(
-        "-- {} Traeger: {haelt} mal haelt K, {faellt} mal faellt sie.\n",
+        "-- {} carriers: K holds {haelt} times, falls {faellt} times.\n",
         traeger.len()
     ));
     // Der Nebenertrag, den das Protokoll ausdruecklich nennt: die breaking-Liste ist L3.
     let brueche: Vec<&(String, Span)> = traeger.iter().flat_map(|t| t.breaking.iter()).collect();
     out.push_str(&format!(
-        "-- {} `breaking`-Stelle(n) -- das ist zugleich Posten L3 der Restliste.\n",
+        "-- {} `breaking` site(s) -- which is also item L3 of the remaining list.\n",
         brueche.len()
     ));
     out

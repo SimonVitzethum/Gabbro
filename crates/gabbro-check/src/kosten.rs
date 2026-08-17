@@ -119,7 +119,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
                             "K001",
                             zusage_expr.span,
                             format!(
-                                "`{}` sagt <= {zusage} ops zu, der Rumpf kostet {n}",
+                                "`{}` promises <= {zusage} ops, the body costs {n}",
                                 f.name.text
                             ),
                         )

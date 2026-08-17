@@ -539,12 +539,12 @@ mod wertetabellen {
     fn bitweise_faellt_bei_jedem_negativen_operanden_auf_die_volle_breite() {
         // Die Kante ist min == 0 gegen min == -1, auf BEIDEN Seiten.
         let r = bitweise(&u(8, 0, 3), &u(8, 0, 5), BitOpArt::Oder);
-        assert_eq!(b(&r), (0, 7), "0..3 | 0..5 passt in die Maske 7");
+        assert_eq!(b(&r), (0, 7), "0..3 | 0..5 fits mask 7");
         let (lo, hi) = grenzen(8, true);
         let r = bitweise(&i(8, -1, 3), &i(8, 0, 5), BitOpArt::Oder);
         assert_eq!(b(&r), (lo, hi), "ein negativer Operand links -> volle Breite");
         let r = bitweise(&i(8, 0, 3), &i(8, -1, 5), BitOpArt::Oder);
-        assert_eq!(b(&r), (lo, hi), "und rechts genauso -- `||`, nicht `&&`");
+        assert_eq!(b(&r), (lo, hi), "and the same on the right -- `||`, not `&&`");
     }
 
     #[test]
@@ -571,7 +571,7 @@ mod wertetabellen {
         let r = schiebe_links(&u(8, 0, 0), &u(8, 8, 8));
         assert!(
             r.laeuft_ueber,
-            "0 << 8 PASST -- wenn es faellt, dann wegen der Weite == breite, sonst nichts"
+            "0 << 8 FITS -- if it falls, it is because width == breadth, nothing else"
         );
         let r = schiebe_links(&u(8, 0, 0), &u(8, 7, 7));
         assert!(!r.laeuft_ueber, "width 7 < 8 is arithmetic, not a finding");

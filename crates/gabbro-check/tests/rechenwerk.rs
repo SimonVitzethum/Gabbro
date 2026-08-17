@@ -77,14 +77,14 @@ fn der_k_bedingungsbericht_zaehlt_bei_null_an() {
     // Ein Baum ohne jede Tabelle: null Traeger, null mal haelt K, null mal faellt sie.
     let t = kbedingung::zeige(&kbedingung::erhebe(&baum("module t { }")));
     assert!(
-        t.contains("0 Traeger: 0 mal haelt K, 0 mal faellt sie"),
+        t.contains("0 carriers: K holds 0 times, falls 0 times"),
         "ohne Tabellen sind ALLE drei Zahlen null -- ein Startwert != 0 faellt hier:\n{t}"
     );
     // Und mit genau einer Tabelle ohne `ops` faellt K genau einmal.
     let q = "module t { table T count 4 { slot { a : bool, } } }";
     let t = kbedingung::zeige(&kbedingung::erhebe(&baum(q)));
     assert!(
-        t.contains("1 Traeger: 0 mal haelt K, 1 mal faellt sie"),
+        t.contains("1 carriers: K holds 0 times, falls 1 times"),
         "eine Tabelle ohne `ops`: K faellt genau einmal:\n{t}"
     );
 }
