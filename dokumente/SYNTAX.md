@@ -23,7 +23,7 @@ of prose: it looks like evidence.)*
 
 | | first version | **this one** |
 |---|---|---|
-| defined EBNF rules | 40 | **130** |
+| defined EBNF rules | 40 | **131** |
 | used but never defined | 21 (17 load-bearing) | **0** |
 | open design questions | 7 | **9, named at the end** |
 | **Guardian** | — | `pruefe-syntax.sh` checks **closure of the rules AND coverage of the terminals by the vocabulary**, each with a speech test |
@@ -298,7 +298,26 @@ optionexpr = "Some" "(" expr ")" | "None" ;
                 `costs`-Zeile. Nachgezogen nach R9: die EBNF folgt dem Bestand. *)
 paren      = "(" expr ")" ;
 call       = path "(" [ arglist ] ")" ;
-arglist    = expr { "," expr } ;
+arglist    = arg { "," arg } ;
+(* «B7»: `arg` traegt eine MARKE, und damit ist `call` zugleich der Verbundkonstruktor:
+   `P(a: 1, b: true)` stellt einen `type P = { a : u32, b : bool }` her.
+
+   **Ein geschweiftes Verbundliteral gibt es nicht, und das ist eine Entscheidung.**
+   `P { a: 1 }` waere die erste Ausdrucksform, die mit `{` weitergeht; an 76 Korpusstellen
+   folgt ein `{` direkt auf einen Ausdruck (`if x {`, `match a {`, `traverse i over d {`,
+   `retry … until p {`, `locks S {`). Rust loest das mit einem Kontextschalter -- und wer
+   den falsch setzt, verliest die 76 Stellen, ohne dass ein Tor es meldet: sie parsen
+   weiter, nur anders. **Ein stiller Verleser ist teurer als eine fehlende Form.**
+
+   Der Preis der gewaehlten Form ist eine Klammer statt einer geschweiften; der Gewinn ist
+   eine Grammatik, die ohne Kontext eindeutig bleibt. Die Marke ist ihrerseits eindeutig:
+   ein Ausdruck kann nie mit `ident ":"` anfangen (Pfade trennen mit `::`, Orte mit `.`).
+
+   M1 haelt die Marken gegen die Felderliste (`M106`) und verlangt sie am Verbund
+   vollstaendig (`M107`) -- `deckt fs zs ⟷ map fst zs = fs`, bewiesen in
+   `beweise/Verbund_Konstruktor.thy`. Entweder ALLE Argumente sind markiert oder keines
+   (`P036`). *)
+arg        = [ ident ":" ] expr ;
 (* G9: `cast` war eine echte Teilmenge von `call` und aus der Grammatik nie eindeutig
    ableitbar. Die Produktion entfaellt: ein `call`, dessen `path` einen Typ nennt, IST die
    Umwandlung. Die Unterscheidung ist eine Namensaufloesung, keine Syntaxfrage -- und ein
@@ -784,7 +803,37 @@ probe there must fault afterwards; that is the falsifier.
 `while` · `for` · `goto` · `union` as reinterpretation · preprocessor · implicit conversion · `void*` ·
 pointer arithmetic without a basis · catch-all branch · exceptions · inheritance · reflection · GC ·
 floating point in the core · assignment as an expression · forward declaration · self-hosting ·
-user-defined quantifier domains · recursion in `spec fn` · hand-written lemmas.
+user-defined quantifier domains · recursion in `spec fn` · hand-written lemmas ·
+**the braced compound literal**.
+
+### The last one is the youngest, and it is the one with a price — «B7», 2026-08-17
+
+`P { a: 1, b: true }` does not exist. A record value is made by a **labelled call**:
+`P(a: 1, b: true)`.
+
+> **It would have been the first expression form in Gabbro that continues with `{`.** At
+> **76** sites of the corpus a `{` follows an expression directly — `if x {`, `match a {`,
+> `traverse i over d {`, `retry … until p {`, `locks S {`. Until now that was unambiguous
+> for exactly one reason: no expression ever went on with a brace.
+
+Rust resolves this with a context flag (*"no struct literal here"*). Gabbro has none, and
+whoever sets one wrongly **misreads all 76 sites without a single gate firing** — they keep
+parsing, only differently. *A silent misparse is dearer than a missing form.*
+
+What is given up: one character. What is kept: a grammar that stays unambiguous **without
+knowing where it stands**. And the mechanism was already there — the parameter list of a
+`device` declaration is its constructor (`Vtd(basis)`); the field list of a `type` is the
+same thing, said about fields.
+
+**Labels are mandatory at a record and forbidden elsewhere** (`M107`), and they must be the
+field list in declaration order (`M106`). That is not politeness: two same-typed fields in a
+positional list are swappable **without any type objecting**, and the name is the only thing
+that tells them apart. The rule is `deckt fs zs ⟷ map fst zs = fs`, machine-checked in
+[`beweise/Verbund_Konstruktor.thy`](../beweise/Verbund_Konstruktor.thy).
+
+Writing the braced form is refused by name (`P037`), not by a follow-on error — the refusal
+carries the reason, because *a form that deliberately does not exist deserves its ground and
+not the silence of one nobody thought about.*
 
 ---
 

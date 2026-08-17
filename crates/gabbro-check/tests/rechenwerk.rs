@@ -972,3 +972,111 @@ impl fn f() -> bool effects { reads g } costs <= 4 ops
         "ein Rechenausdruck hat nichts auszupacken"
     );
 }
+
+/// **«B7» geschlossen: eine Funktion darf einen Verbund HERSTELLEN -- und wie, ist eine
+/// Entscheidung ueber die Grammatik, nicht ueber eine fehlende Produktion.**
+///
+/// Der Befund lautete: *„`return Completion { id: …, len: … }` laesst sich nicht schreiben."*
+/// Er las sich wie eine Luecke. **Er war eine Mehrdeutigkeit:** ein geschweiftes Literal waere
+/// die ERSTE Ausdrucksform, die mit `{` weitergeht, und an **76** Korpusstellen folgt ein `{`
+/// direkt auf einen Ausdruck. Rust loest das mit einem Kontextschalter; wer ihn falsch setzt,
+/// verliest die 76 Stellen, **ohne dass ein Tor es meldet.**
+///
+/// Gewaehlt ist darum `P(a: 1, b: true)`: eine Klammer statt einer geschweiften, und die
+/// Marke `ident ":"` kann kein Ausdruck sein.
+#[test]
+fn verbundwert_ist_ein_markierter_ruf() {
+    let q = "module t {
+type P = { a : u32, b : bool, };
+impl fn f(x : u32) -> P requires x < 8 effects { pure } costs <= 4 ops
+{ return P(a: x, b: true); } }";
+    let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let _ = gabbro_check::pruefe(&baum, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "und die Paesse tragen es auch:\n{}", a.zeige(q));
+
+    // **Ein Konstruktor ruft nichts** -- dieselbe Aussage wie bei «B14b», und hier die
+    // wichtigste: eine Kante auf `P` machte den Gerufenen unbekannt, und ueber einem
+    // unbekannten Gerufenen ist jede Huelle nur noch eine untere Schranke.
+    let h = gabbro_check::aufrufgraph::erhebe(&baum).huelle("f");
+    assert!(
+        h.unvollstaendig.is_none(),
+        "ein Verbundkonstruktor ist kein Aufruf: {:?}",
+        h.unvollstaendig
+    );
+
+    // Und im C steht ein zusammengesetztes Literal mit BENANNTEN Bestimmern -- die Marken
+    // werden uebersetzt, nicht weggeworfen.
+    let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+    let c = gabbro_check::emit::emittiere(&baum, &mut a);
+    assert!(
+        c.contains("typedef struct {\n    uint32_t a;\n    bool b;\n} P;"),
+        "ein `type` mit Feldern wird ein C-Verbund:\n{c}"
+    );
+    assert!(
+        c.contains("return (P){ .a = x, .b = true };"),
+        "die Marken werden benannte Bestimmer, nicht eine Reihung:\n{c}"
+    );
+}
+
+/// **Die Gegenprobe zu «B7» -- und sie ist die Haelfte, an der die Entscheidung haengt.**
+///
+/// Eine Luecke schliesst sich immer, indem man die Form zulaesst. Was hier zaehlt, ist, dass
+/// die verworfenen Formen **benannt** abgesagt werden statt still anders gelesen zu werden.
+#[test]
+fn die_verworfenen_verbundformen_werden_benannt_abgesagt() {
+    let faellt = |q: &str, code: &str| {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        let _ = gabbro_check::pruefe(&baum, &mut a);
+        let c: Vec<&str> = a.absagen.iter().map(|x| x.code).collect();
+        assert!(c.contains(&code), "erwartet {code}, gefallen {c:?}\n{q}");
+    };
+
+    // Das geschweifte Literal selbst -- mit seinem Grund, nicht als Folgefehler.
+    faellt(
+        "module t { type P = { a : u32, }; impl fn f() -> P effects { pure } costs <= 2 ops \
+         { return P { a: 1 }; } }",
+        "P037",
+    );
+    // **Der stille Fall, gegen den die Markenpflicht steht:** zwei gleichtypige Felder in
+    // Reihung sind vertauschbar, ohne dass ein Typ dagegen spricht.
+    faellt(
+        "module t { type P = { a : u32, b : u32, }; impl fn f() -> P effects { pure } \
+         costs <= 4 ops { return P(1, 2); } }",
+        "M107",
+    );
+    // `deckt fs zs <-> map fst zs = fs`: die REIHENFOLGE, nicht bloss die Menge. Der Beweis
+    // waehlt die strengere Fassung, und diese Zeile ist sie.
+    faellt(
+        "module t { type P = { a : u32, b : bool, }; impl fn f() -> P effects { pure } \
+         costs <= 4 ops { return P(b: true, a: 1); } }",
+        "M106",
+    );
+    // Ein ausgelassenes Feld -- die zweite Haelfte derselben Zusage.
+    faellt(
+        "module t { type P = { a : u32, b : bool, }; impl fn f() -> P effects { pure } \
+         costs <= 4 ops { return P(a: 1); } }",
+        "M106",
+    );
+    // Eine Marke an einer Funktion: die Reihenfolge ihrer Parameter steht in ihrer
+    // Deklaration, und eine Marke am Aufruf waere eine zweite Wahrheit daneben.
+    faellt(
+        "module t { impl fn g(x : u32) -> u32 effects { pure } costs <= 2 ops { return x; } \
+         impl fn f() -> u32 effects { pure } costs <= 4 ops { return g(x: 1); } }",
+        "M107",
+    );
+    // Halb markiert ist weder das eine noch das andere.
+    faellt(
+        "module t { type P = { a : u32, b : u32, }; impl fn f() -> P effects { pure } \
+         costs <= 4 ops { return P(a: 1, 2); } }",
+        "P036",
+    );
+
+    // **Und die 76 Stellen lesen weiter wie vorher.** Das ist die Zusage, um derentwillen
+    // die geschweifte Form ueberhaupt verworfen wurde -- sie gehoert angenagelt.
+    let q = "module t { static s : u32 = 0;
+impl fn f(x : u32) -> u32 requires x < 4 effects { reads s } costs <= 9 ops
+{ if x < 2 { return 1; } return s; } }";
+    let (_, a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "ein `{{` nach einem Ausdruck gehoert dem Block:\n{}", a.zeige(q));
+}

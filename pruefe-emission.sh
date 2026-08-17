@@ -374,7 +374,34 @@ int main(void) {
 lauf "beispiel20" "$W/beispiele/20-falle-vier.gab" "$TREIBER20" "1 1 1 1" \
      's/(_s \& /(0*_s \& /'
 
-echo "== EMISSION: ALL PASS -- 7 Uebersetzungseinheiten durchgestochen =="
+
+# -- 8. «B7»: der Verbundwert, und der Test misst genau das, wofuer die Marken Pflicht sind --
+#
+# **Die Entscheidung, in einem Satz:** ein geschweiftes `P { a: 1 }` waere die erste
+# Ausdrucksform gewesen, die mit `{` weitergeht -- an 76 Korpusstellen folgt ein `{` direkt
+# auf einen Ausdruck, und ein falsch gesetzter Kontextschalter verliest sie ALLE still.
+# Gewaehlt ist darum der markierte Ruf `P(a: …, b: …)`.
+#
+# **Und die Marken sind nicht Zierde.** `Completion` hat zwei `u32`-Felder; eine Reihung
+# `Completion(k, n)` liesse sich vertauschen, ohne dass ein Typ dagegen spricht. Der Erzeuger
+# uebersetzt die Marken zu BENANNTEN Bestimmern -- `(Completion){ .id = k, .len = n }` --,
+# und damit steht die bewiesene Zusage `map fst zs = fs` im Erzeugnis statt nur im Pruefer.
+TREIBER21='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    Completion c = fertig(5, 300);
+    Marke m = markiere(9);
+    printf("%u %u %u %u %d\n", c.id, c.len, laenge_von(5), m.wer, m.fertig ? 1 : 0);
+    return 0;
+}
+'
+#    Erwartet:  5 300 7 9 1
+#      Die ersten beiden Zahlen sind die Falle: **vertauscht waeren sie `300 5`**, und kein
+#      Typ haette etwas dagegen gehabt. Das Gift unten vertauscht genau die zwei Bestimmer.
+lauf "beispiel21" "$W/beispiele/21-verbundwert.gab" "$TREIBER21" "5 300 7 9 1" \
+     's/\.id = k, \.len = n/.id = n, .len = k/'
+
+echo "== EMISSION: ALL PASS -- 8 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser sieben Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Sieben Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser acht Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Acht Ja-Aussagen sind keine ueber die Sprache."

@@ -247,9 +247,19 @@ fn sammle_rufe(b: &Block, aus: &mut BTreeSet<String>) {
 }
 
 fn nimm(r: &Ruf, aus: &mut BTreeSet<String>) {
+    // **Ein Konstruktor ruft nichts.** Dieselbe Aussage wie bei «B14b» und dieselbe wie
+    // bei `Some`/`None` -- und sie ist hier die wichtigste von allen: eine Kante auf einen
+    // Namen, hinter dem keine Funktion steht, macht den Gerufenen UNBEKANNT, und ueber
+    // einem unbekannten Gerufenen ist jede Huelle nur noch eine untere Schranke (`E009`).
+    //
+    // > *Der Pass haette dann nicht falsch gerechnet, sondern aufgehoert zu rechnen -- und
+    // > das Aufhoeren steht als Hinweis da, nicht als Fehler.*
+    //
+    // Der Unterscheider ist SYNTAKTISCH (`ist_verbundwert`, die Marken): dieser Pass hat
+    // keine Umgebung, und ein Nachschlagen, das ins Leere geht, waere genau der stille Fall.
     if let Some(n) = r.pfad.teile.last() {
         // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).
-        if n.text != "Some" && n.text != "None" {
+        if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
             aus.insert(n.text.clone());
         }
     }

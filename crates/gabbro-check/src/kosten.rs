@@ -495,6 +495,24 @@ impl<'a> Rechner<'a> {
         if name == "None" {
             return Kosten::Zahl(0);
         }
+        // **«B7»: ein Verbundwert ist ein Konstruktor, und seine Kosten stehen fest.**
+        //
+        // Die bewiesene Schablone sagt, WAS er tut: *setzt jedes Feld genau einmal und laesst
+        // keins uninitialisiert.* Damit ist die Rechnung nicht geschaetzt, sondern abgelesen
+        // -- **ein Speichern je Feld**, und die Felderzahl steht in der Deklaration.
+        //
+        // Ohne diesen Zweig faellt der Ruf in den Zweig darunter und traegt keine `costs`
+        // (`K003`): eine Zahl ueber Unbekanntem. *Ein Konstruktor kann keine `costs`-Klausel
+        // bekommen -- er hat keine Deklaration, an die sie sich schreiben liesse.* Dieselbe
+        // Lage wie beim `transition`, und dieselbe Antwort: die Kosten stehen in der Form.
+        if r.ist_verbundwert() {
+            return r
+                .argumente
+                .iter()
+                .fold(Kosten::Zahl(r.marken.len() as i128), |a, e| {
+                    a.plus(self.ausdruck(e))
+                });
+        }
         let uebergang = self
             .u
             .kandidaten_oeffentlich(self.modul, &name)

@@ -1,0 +1,84 @@
+-- 21 -- Der Verbundwert: eine Funktion darf einen Verbund HERSTELLEN («B7»).
+--
+-- **Der Befund lautete:** `return Completion { id: …, len: … }` laesst sich nicht schreiben.
+-- Er stand als Notationsluecke im Bericht -- eine fehlende Produktion, sonst nichts.
+--
+-- **Er war keine.** Ein geschweiftes Literal waere die ERSTE Ausdrucksform in Gabbro, die mit
+-- `{` weitergeht; an 76 Korpusstellen folgt ein `{` direkt auf einen Ausdruck (`if x {`,
+-- `match a {`, `traverse i over d {`, `retry … until p {`, `locks S {`). Bis heute war das
+-- eindeutig, weil keine Ausdrucksform je mit `{` weiterging.
+--
+-- Rust loest es mit einem Kontextschalter. **Wer den falsch setzt, verliest die 76 Stellen,
+-- ohne dass ein Tor es meldet -- sie parsen weiter, nur anders.**
+--
+-- Deshalb heisst der Konstruktor `Completion(id: …, len: …)`: eine Klammer statt einer
+-- geschweiften, und die Grammatik bleibt ohne Kontext eindeutig. Die Marke `ident :` kann kein
+-- Ausdruck sein (Pfade trennen mit `::`, Orte mit `.`), also reicht ein Blick auf zwei Zeichen.
+--
+-- **Die Marken sind PFLICHT, und das ist der zweite Teil der Entscheidung.** `Completion(k, n)`
+-- mit zwei `u32` laesst sich vertauschen, ohne dass ein Typ dagegen spricht. Der Feldname ist
+-- die einzige Unterscheidung, und `M106` haelt ihn gegen die Deklaration:
+--
+--     deckt fs zs  <->  map fst zs = fs         (beweise/Verbund_Konstruktor.thy)
+--
+-- Der Satz war VOR dem Konstrukt bewiesen -- so verlangt es das zweite Tor von K100.
+
+module beispiel::verbundwert {
+
+-- Der Verbund. Zwei gleichtypige Felder: genau der Fall, in dem eine Reihung still ist.
+type Completion = {
+    id : u32,
+    len : u32,
+};
+
+-- Ein Verbund darf auch ein Feld tragen, dessen Typ eine Schranke hat -- die Schranke gilt
+-- am Konstruktor wie an jeder anderen Zuweisung (M1).
+type Zaehler = u32 in 0 .. 63;
+
+type Marke = {
+    wer : Zaehler,
+    fertig : bool,
+};
+
+-- **Die Kosten stehen fest und werden nicht geschaetzt:** ein Speichern je Feld. Die
+-- Schablone sagt, WAS der Konstruktor tut (jedes Feld genau einmal), und daraus faellt die
+-- Zahl ab. Ein Konstruktor koennte auch gar keine `costs`-Klausel bekommen -- er hat keine
+-- Deklaration, an die sie sich schreiben liesse.
+impl fn fertig(k : u32, n : u32) -> Completion
+    requires k < 64 && n < 4096
+    effects { pure }
+    costs <= 4 ops
+{
+    return Completion(id: k, len: n);
+}
+
+-- Ein Verbund ist ein gewoehnlicher Wert: er laesst sich binden und wieder ablesen.
+impl fn laenge_von(k : u32) -> u32
+    requires k < 64
+    effects { pure }
+    costs <= 7 ops
+{
+    -- 4 fuer den Ruf (seine Zusage), 2 fuer die Argumente, 1 fuer die Ablesung.
+    --
+    -- **Der Typ steht da, weil der Erzeuger keinen raet.** Er koennte ihn hier aus der
+    -- Signatur des Gerufenen ablesen -- und genau solche Ableitungen sind die Stelle, an
+    -- der ein Erzeuger anfaengt, plausibel zu sein statt richtig. Er weigert sich lieber
+    -- benannt (`C001`).
+    let c : Completion = fertig(k, 7);
+    return c.len;
+}
+
+-- Das Feld mit Schranke: `wer` verlangt `0 .. 63`, und der Parameter traegt sie schon.
+--
+-- **`requires w <= 63` haette hier NICHT gereicht, und das ist keine Luecke des
+-- Konstruktors.** M1 prueft Ruempfe, keine Praedikate (`m1.rs`, Kopf) -- eine
+-- Vorbedingung gehoert dem Beweiser. Am gewoehnlichen Aufruf gilt genau dasselbe, und
+-- deshalb faellt der Verbundkonstruktor hier nicht aus der Reihe.
+impl fn markiere(w : Zaehler) -> Marke
+    effects { pure }
+    costs <= 8 ops
+{
+    return Marke(wer: w, fertig: true);
+}
+
+}

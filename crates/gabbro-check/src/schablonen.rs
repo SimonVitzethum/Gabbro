@@ -445,7 +445,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     Schablone {
         name: "verbund.konstruktor",
         haengt_an: &[],
-        konstrukt: "erzeugter Konstruktor (Kandidat, aus «B7»)",
+        konstrukt: "P(a: …, b: …) -- der markierte Ruf (Absenkung)",
         // **Maschinell geprueft 2026-08-17** (`beweise/Verbund_Konstruktor.thy`), und zwar
         // VOR dem Konstrukt: das Verbundliteral («B7») zu bauen haette diesen Eintrag von
         // `Entworfen` auf `Getragen` gehoben und damit `L` auf 5 -- das Tor aus K100.
@@ -461,9 +461,17 @@ pub const SCHABLONEN: &[Schablone] = &[
                   (`ablesung_ist_eindeutig`, `jedes_feld_hat_einen_wert`). **OFFEN bleibt, \
                   dass der ERZEUGER `deckt` herstellt** -- das ist eine Aussage ueber \
                   `emit.rs`, und sie faellt in die Bruecke (PLAN.md, PL.3): eine Mutation, \
-                  die ein Feld doppelt oder gar nicht setzt, muss fallen.",
+                  die ein Feld doppelt oder gar nicht setzt, muss fallen. **Sie steht seit \
+                  dem 2026-08-17 da** (`verbundmarken-nur-als-menge`, \
+                  `verbund-ohne-marken-geht-durch`) -- die erste beschaedigt genau die \
+                  Reihenfolgefassung, die der Beweis gegen die Mengenfassung gewaehlt hat.",
+        // **Getragen seit dem 2026-08-17**, seit «B7» gebaut ist: `m1::marken_pruefen`
+        // stellt `deckt` her, und `emit::ruf` senkt es zu benannten Bestimmern ab. Der
+        // Beweis lag VORHER -- so verlangt es das zweite Tor von K100, und deshalb bewegt
+        // dieser Schritt `lebend_ungedeckt()` nicht.
         stand: Stand::Bewiesen,
-        fundstelle: "MESSUNGEN.md, B13-Nachpruefung; beweise/Verbund_Konstruktor.thy",
+        fundstelle: "MESSUNGEN.md, B13-Nachpruefung; beweise/Verbund_Konstruktor.thy; \
+                     m1.rs::marken_pruefen; emit.rs::verbund",
     },
     Schablone {
         name: "gruppe.ops",

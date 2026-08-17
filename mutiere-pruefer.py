@@ -1170,8 +1170,40 @@ MUTATIONEN = [
         "ausgepackter-ort-gilt-als-ruf",
         "aufrufgraph.rs",
         "                if let Some(r) = l.als_ruf() {\n                    nimm(r, aus);\n                }",
-        "                nimm(&Ruf { pfad: Pfad { teile: vec![l.name.clone()], span: l.name.span }, argumente: vec![], span: l.name.span }, aus);",
+        "                nimm(&Ruf { pfad: Pfad { teile: vec![l.name.clone()], span: l.name.span }, argumente: vec![], marken: vec![], span: l.name.span }, aus);",
         "B14b -- ein ausgepackter Ort gilt als Ruf; jede Huelle darueber wird untere Schranke",
+    ),
+    # -- «B7»: der Verbundkonstruktor ------------------------------------------------------
+    #
+    # **Die erste ist die Sprechprobe zur bewiesenen Schablone.** `Verbund_Konstruktor.thy`
+    # waehlt `deckt fs zs <-> map fst zs = fs` -- die REIHENFOLGE -- ausdruecklich gegen die
+    # Mengenfassung, und fuehrt unter M-2 als eigene Grenze: *nicht gezeigt ist, dass der
+    # ERZEUGER `deckt` herstellt.* Diese Mutation ist genau diese Grenze, beschaedigt.
+    Mutation(
+        "verbundmarken-nur-als-menge",
+        "m1.rs",
+        "                if gegeben != felder {",
+        "                let (mut g, mut f) = (gegeben.clone(), felder.clone());\n"
+        "                g.sort(); f.sort();\n"
+        "                if g != f {",
+        "B7 -- die Marken gelten nur als MENGE; `P(b: …, a: …)` geht durch, "
+        "und der Leser sieht die Deklaration, wo keine ist",
+    ),
+    Mutation(
+        "konstruktor-gilt-als-aufruf",
+        "aufrufgraph.rs",
+        'if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {',
+        'if n.text != "Some" && n.text != "None" {',
+        "B7 -- ein Verbundkonstruktor zaehlt als Aufruf; `P` wird unbekannter Gerufener "
+        "und jede Huelle darueber untere Schranke",
+    ),
+    Mutation(
+        "verbund-ohne-marken-geht-durch",
+        "m1.rs",
+        "            (true, false) => {",
+        "            (true, false) if false => {",
+        "B7 -- `P(1, 2)` ohne Feldnamen faellt nicht mehr; zwei gleichtypige Felder "
+        "sind vertauschbar, ohne dass ein Typ dagegen spricht",
     ),
 ]
 

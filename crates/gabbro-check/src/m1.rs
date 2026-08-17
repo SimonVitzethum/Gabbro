@@ -560,6 +560,7 @@ impl<'a> Pruefer<'a> {
         for a in &r.argumente {
             argtypen.push((self.ausdruck(a, lage), a.span));
         }
+        self.marken_pruefen(r);
         let Some(sig) = signatur else {
             return Typ::Unbekannt;
         };
@@ -568,6 +569,105 @@ impl<'a> Pruefer<'a> {
             self.passt(t, pt, *span, &format!("das Argument `{pname}`"));
         }
         sig.ergebnis.clone().unwrap_or(Typ::Unbekannt)
+    }
+
+    /// **`M106` IST `deckt` aus `beweise/Verbund_Konstruktor.thy`, und `M107` ist die Frage,
+    /// ob die Zuordnungsliste ueberhaupt eine ist.**
+    ///
+    /// Die Schablone `verbund.konstruktor` sagt: *„setzt jedes Feld genau einmal und laesst
+    /// keins uninitialisiert."* Der Beweis fuehrt das auf eine Zeile zurueck --
+    ///
+    /// ```text
+    /// deckt fs zs  ⟷  map fst zs = fs
+    /// ```
+    ///
+    /// -- und die Zeile darunter ist genau dieser `!=`-Vergleich. *Beide Haelften der Zusage
+    /// fallen zusammen, sobald die Deklaration wohlgeformt ist* (`deckt_setzt_jedes_genau_einmal`);
+    /// deshalb steht hier **eine** Pruefung und nicht zwei.
+    ///
+    /// > Der Beweis fuehrt unter M-2 seine eigene Grenze: *nicht gezeigt ist, dass der
+    /// > ERZEUGER `deckt` herstellt.* Das ist diese Funktion. Sie ist die Bruecke, und die
+    /// > Mutation `verbundmarken-egal` ist ihre Sprechprobe.
+    ///
+    /// **Warum die REIHENFOLGE und nicht nur die Menge:** der Beweis waehlt `map fst zs = fs`
+    /// bewusst gegen `set (map fst zs) = set fs` -- *eine Zuordnung, die nur die Menge trifft,
+    /// sieht beim Leser aus wie die Deklaration und ist es nicht.*
+    fn marken_pruefen(&mut self, r: &Ruf) {
+        let gefunden = self.u.verbundfelder(&self.modul, &r.pfad).cloned();
+        let felder = gefunden.clone().unwrap_or_default();
+        match (gefunden.is_some(), r.ist_verbundwert()) {
+            // Ein Verbund mit Marken: der Schluesselstrom gegen die Felderliste.
+            (true, true) => {
+                let gegeben: Vec<String> = r.marken.iter().map(|m| m.text.clone()).collect();
+                if gegeben != felder {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M106",
+                            r.span,
+                            format!(
+                                "`{}` hat die Felder ({}), der Konstruktor nennt ({})",
+                                r.pfad.text(),
+                                felder.join(", "),
+                                gegeben.join(", ")
+                            ),
+                        )
+                        .mit_notiz(
+                            "die Marken muessen die Felderliste sein -- in der Reihenfolge der \
+                             Deklaration, jedes Feld genau einmal, keins ausgelassen",
+                        )
+                        .mit_notiz(
+                            "Schablone `verbund.konstruktor`, bewiesen: \
+                             `deckt fs zs ⟷ map fst zs = fs`",
+                        ),
+                    );
+                }
+            }
+            // **Ein Verbund ohne Marken ist der stille Fall, gegen den die Entscheidung
+            // steht.** `Punkt(x, y)` mit zwei `u32` laesst sich vertauschen, ohne dass ein
+            // Typ dagegen spricht -- und ein Feldname ist das einzige, was die beiden
+            // unterscheidet.
+            (true, false) => {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "M107",
+                        r.span,
+                        format!(
+                            "`{}` ist ein Verbund; sein Konstruktor nennt seine Felder",
+                            r.pfad.text()
+                        ),
+                    )
+                    .mit_notiz(format!(
+                        "`{}({})`",
+                        r.pfad.text(),
+                        felder
+                            .iter()
+                            .map(|f| format!("{f}: …"))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ))
+                    .mit_notiz(
+                        "zwei gleichtypige Felder in Reihung sind vertauschbar, ohne dass ein \
+                         Typ dagegen spricht -- der Name ist die einzige Unterscheidung",
+                    ),
+                );
+            }
+            // Marken an etwas, das kein Verbund ist. Eine Funktion hat Parameter, keine
+            // Felder; eine Marke dort behauptet eine Zuordnung, die es nicht gibt.
+            (false, true) => {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "M107",
+                        r.span,
+                        format!("`{}` ist kein Verbund; Marken gibt es nur am Konstruktor", r.pfad.text()),
+                    )
+                    .mit_notiz(
+                        "die Reihenfolge der Parameter einer Funktion steht in ihrer \
+                         Deklaration -- eine Marke am Aufruf waere eine zweite Wahrheit daneben",
+                    ),
+                );
+            }
+            (false, false) => {}
+        }
     }
 
     // -- Fakten -------------------------------------------------------------------------

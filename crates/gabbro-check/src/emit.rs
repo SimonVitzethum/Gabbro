@@ -64,6 +64,13 @@ struct Namen {
     /// `beweise/Option_Sonderwert.thy`, M-1.
     kapazitaet: HashMap<String, i128>,
     typen: HashMap<String, TypExpr>,
+    /// **Die Verbundtypen: Name -> Felderliste in Deklarationsreihenfolge** («B7»).
+    /// Sie werden zu einem C-`typedef struct`, und ihr Konstruktor zu einem
+    /// zusammengesetzten Literal. *`fs` aus `beweise/Verbund_Konstruktor.thy`.*
+    verbunde: BTreeSet<String>,
+    /// Namen, die einen Verbund als **Wert** tragen (Parameter oder `let`). Ihr Feldzugriff
+    /// ist `.`, nicht `->` -- siehe `ort`.
+    werte: BTreeSet<String>,
     /// `linear ghost type BootPhase;` — a value that **does not exist at run time**.
     geister: Vec<String>,
     funktionen: HashMap<String, Signatur>,
@@ -78,6 +85,48 @@ struct Namen {
     /// Namen, deren Typ der Erzeuger als VORZEICHENLOS kennt. Nur fuer sie darf die untere
     /// Schranke eines `narrow` bei null wegfallen -- Unwissen faellt nach lautstark.
     vorzeichenlos: BTreeSet<String>,
+}
+
+/// Die lokal gebundenen Verbundwerte eines Rumpfes -- **auch in verschachtelten Bloecken**.
+///
+/// *Ein Sammler, der nur die oberste Ebene sieht, liefert eine Teilmenge und sieht aus wie
+/// eine Menge* -- dieselbe Bauart wie eine gefuellte Karte, die niemand vollstaendig geprueft
+/// hat (`umgebung.rs`, `Traegerart`).
+fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
+    let ist_verbund = |t: &TypExpr| {
+        matches!(t, TypExpr::Pfad(p)
+            if p.teile.last().is_some_and(|n| u.verbunde.contains(&n.text)))
+    };
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Let(l) if l.typ.as_ref().is_some_and(|t| ist_verbund(t)) => {
+                aus.push(l.name.text.clone())
+            }
+            StmtArt::Wenn(w) => {
+                for (_, r) in &w.zweige {
+                    verbundlokale(r, u, aus);
+                }
+                if let Some(r) = &w.sonst {
+                    verbundlokale(r, u, aus);
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    verbundlokale(&z.rumpf, u, aus);
+                }
+            }
+            StmtArt::Bricht(x) => verbundlokale(&x.rumpf, u, aus),
+            StmtArt::Sperrt(x) => verbundlokale(&x.rumpf, u, aus),
+            StmtArt::Narrow(x) => verbundlokale(&x.sonst, u, aus),
+            StmtArt::LetSonst(x) => verbundlokale(&x.sonst, u, aus),
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Traverse(t) => verbundlokale(&t.rumpf, u, aus),
+                Schleife::Retry(r) => verbundlokale(&r.rumpf, u, aus),
+                Schleife::Forever(f) => verbundlokale(&f.rumpf, u, aus),
+            },
+            _ => {}
+        }
+    }
 }
 
 /// Ist `t` ein Zeiger auf einen Pfad, den diese Einheit nicht aufloest? Dann traegt sie
@@ -172,6 +221,9 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             if t.ghost {
                 namen.geister.push(t.name.text.clone());
             } else if let Some(unter) = &t.rumpf {
+                if matches!(unter, TypExpr::Verbund(f, _) if !f.is_empty()) && !t.opaque {
+                    namen.verbunde.insert(t.name.text.clone());
+                }
                 namen.typen.insert(t.name.text.clone(), unter.clone());
             }
         }
@@ -313,6 +365,34 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         namen.geraetezeiger = eindeutig;
     }
 
+    // **Die Namen, die WERTE sind und keine Zeiger** («B7»).
+    //
+    // Die Absenkung eines Ortes nahm bis heute an, dass die Basis eines `place` ein
+    // Zeigerparameter ist -- was sie war, solange jeder zusammengesetzte Wert von aussen kam.
+    // **Ein `let c : Completion` ist der erste, der es nicht ist**, und `c->len` waere dafuer
+    // schlicht falsch.
+    //
+    // *Der Fehler faellt bei `cc` und nicht still* -- `->` auf einem Wert ist dort ein
+    // Uebersetzungsfehler, `.` auf einem Zeiger ebenso. Es ist dieselbe delegierte Weigerung
+    // wie beim unvollstaendigen Zeigerziel. Trotzdem gehoert sie hier entschieden und nicht
+    // dem C-Uebersetzer ueberlassen: **eine Weigerung, auf die man baut, ist eine Zusage.**
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        let ist_verbund = |t: &TypExpr, u: &Namen| {
+            matches!(t, TypExpr::Pfad(p)
+                if p.teile.last().is_some_and(|n| u.verbunde.contains(&n.text)))
+        };
+        for p in &f.parameter {
+            if ist_verbund(&p.typ, &namen) {
+                namen.werte.insert(p.name.text.clone());
+            }
+        }
+        let FnRumpf::Block(rumpf) = &f.rumpf else { return };
+        let mut gefunden = Vec::new();
+        verbundlokale(rumpf, &namen, &mut gefunden);
+        namen.werte.extend(gefunden);
+    });
+
     // Optionfelder und Tabellenzeiger -- fuer `x = None`.
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Tabelle(tb) = &item.art {
@@ -424,7 +504,12 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 weigere(absagen, k.name.span, "const with a non-constant value");
             }
         }
-        ItemArt::Typ(_) => {} // Range types lower to their carrier; see `ctyp`.
+        // Range types lower to their carrier (see `ctyp`); a **record** gets a C struct.
+        ItemArt::Typ(t) => {
+            if namen.verbunde.contains(&t.name.text) {
+                verbund(t, &mut aus, &namen, absagen);
+            }
+        }
         ItemArt::Tabelle(t) => tabelle(t, &mut aus, &namen, absagen),
         ItemArt::Format(f) => format_(f, &mut aus, &namen, absagen),
         ItemArt::Device(d) => geraet(d, &mut aus, &namen, absagen),
@@ -592,6 +677,47 @@ fn konst_zahl(e: &Expr) -> Option<i128> {
         ExprArt::Zahl(n) => Some(*n as i128),
         _ => None,
     }
+}
+
+/// **Ein `type P = { a : u32, b : bool }` wird ein C-Verbund -- und HIER ist es einer.**
+///
+/// Bei `format` steht die entgegengesetzte Entscheidung, mit ihrem Grund: *ein Format ist
+/// eine Zusage ueber BYTES*, und ein C-Verbund haette dort eine Layoutbehauptung eingefuehrt,
+/// die die Deklaration nicht macht. **Ein `type` macht sie.** Es sagt nichts ueber Bytes,
+/// Versaetze oder Reihenfolge im Speicher -- es sagt „diese Felder gehoeren zusammen", und
+/// genau das ist ein C-`struct`.
+///
+/// > *Derselbe Satz, zweimal verschieden beantwortet, weil zweimal etwas anderes dasteht.*
+///
+/// Was der Erzeuger **nicht** tut: `packed`, `aligned` oder eine Reihenfolgezusage. Wer ein
+/// Verbund ueber eine Schnittstelle schickt, will ein `format`; wer ihn im Programm herumreicht,
+/// will diesen hier. Die C-Freiheit beim Auffuellen ist damit kein Verlust, sondern die
+/// Abwesenheit einer Zusage, die niemand gegeben hat.
+fn verbund(t: &TypDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
+    let Some(TypExpr::Verbund(felder, _)) = &t.rumpf else {
+        return;
+    };
+    aus.push_str("\ntypedef struct {\n");
+    for f in felder {
+        // **Ein Bitfeld in einem `type` wird abgelehnt, nicht weggelassen.** `@ hi:lo` ist
+        // eine Aussage ueber die Lage in einem Wort; sie gehoert in ein `format` oder an ein
+        // Register. Sie hier stillschweigend fallen zu lassen hiesse, ein Programm zu
+        // erzeugen, das die Deklaration nicht mehr erfuellt.
+        if f.bitpos.is_some() || f.offset_into.is_some() {
+            weigere(
+                absagen,
+                f.name.span,
+                "a `type` record carries no bit position and no `offset_into` -- \
+                 those are statements about a layout, and a `format` makes them",
+            );
+            continue;
+        }
+        match ctyp(&f.typ.typ, u) {
+            Some(c) => aus.push_str(&format!("    {c} {};\n", f.name.text)),
+            None => weigere(absagen, f.name.span, "field type"),
+        }
+    }
+    aus.push_str(&format!("}} {};\n", t.name.text));
 }
 
 /// A table becomes a slot struct plus a carrier struct with a fixed-size array.
@@ -1214,6 +1340,12 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                 _ if u.formate.contains(&n) => n,
                 // Ein Pfad, der ein `device` nennt, ist sein Griff.
                 _ if u.geraete.contains_key(&n) => n,
+                // **Ein Pfad, der einen Verbund nennt, IST der Verbund** («B7»). Er steht
+                // VOR der Bereichstypzeile darunter: `u.typen` enthaelt ihn auch, und dort
+                // wuerde `ctyp` in den Rumpf absteigen und an `TypExpr::Verbund` scheitern
+                // -- also `None`, also eine Weigerung fuer einen Typ, den diese Einheit
+                // gerade selbst deklariert hat.
+                _ if u.verbunde.contains(&n) => n,
                 // **A named range type lowers to its carrier.** `type Zaehler = u32 in
                 // 0 .. 65535` becomes `uint32_t`; the range itself is an M1 fact and stays in
                 // the checker -- W6: what is left out of the C is left out because M1 carries
@@ -1929,6 +2061,32 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         weigere(absagen, r.span, "`option` constructor -- `option` has no representation yet");
         return String::new();
     }
+    // **«B7»: der Verbundkonstruktor wird ein ZUSAMMENGESETZTES LITERAL mit benannten
+    // Bestimmern** -- `(P){ .a = 1, .b = true }`, C99 §6.5.2.5.
+    //
+    // *Die Marken werden nicht weggeworfen, sie werden uebersetzt.* Damit steht die bewiesene
+    // Zusage im Erzeugnis selbst und nicht nur im Pruefer: `deckt fs zs ⟷ map fst zs = fs`
+    // heisst in C, dass jeder Bestimmer sein Feld nennt -- und ein Feldname, den `P` nicht
+    // hat, ist dort ein Uebersetzungsfehler, kein falsch belegtes Wort.
+    //
+    // > Ein positionelles `(P){1, true}` haette dieselben Bits erzeugt und die eine Eigenschaft
+    // > verloren, um derentwillen die Marken ueberhaupt Pflicht sind.
+    //
+    // **Und `cc` prueft die Vollstaendigkeit ein zweites Mal:** `-Wmissing-field-initializers`
+    // meldet ein ausgelassenes Feld. Zwei unabhaengige Leser derselben Zusage.
+    if r.ist_verbundwert() {
+        let felder: Vec<String> = r
+            .marken
+            .iter()
+            .zip(r.argumente.iter())
+            .map(|(m, a)| format!(".{} = {}", m.text, ausdruck(a, u, absagen)))
+            .collect();
+        if !u.verbunde.contains(&name) {
+            weigere(absagen, r.span, "labelled call to something this unit does not declare as a record");
+            return String::new();
+        }
+        return format!("({name}){{ {} }}", felder.join(", "));
+    }
     let geist = u.funktionen.get(&name).map(|s| s.geist_param.clone());
     let args: Vec<String> = r
         .argumente
@@ -1983,7 +2141,9 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
         }
     }
     let mut t = o.basis.text.clone();
-    let mut zeiger = true; // The base of a place in a function is a pointer parameter.
+    // The base of a place in a function is a pointer parameter -- **unless it is a record
+    // value bound here** («B7»). `c->len` on a `let c : Completion` is simply wrong.
+    let mut zeiger = !u.werte.contains(&o.basis.text);
     for suf in &o.suffixe {
         match suf {
             OrtSuffix::Feld(f) => {

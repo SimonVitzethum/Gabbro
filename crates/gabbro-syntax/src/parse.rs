@@ -1163,6 +1163,8 @@ impl<'a> Parser<'a> {
                         span: sp,
                     },
                     argumente,
+                    // `Some(x)` traegt keine Marke -- der Variantenname IST die Marke.
+                    marken: Vec::new(),
                     span,
                 }),
                 span,
@@ -1357,13 +1359,64 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// `call = path "(" [ arglist ] ")"`, `arglist = arg { "," arg }`, `arg = [ ident ":" ] expr`
+    ///
+    /// **Die Marke ist eindeutig, ohne dass der Parser irgendetwas wissen muss.** Ein
+    /// Ausdruck kann in Gabbro nie mit `ident ":"` anfangen: Pfade trennen mit `::`, Orte mit
+    /// `.` und `[`. Deshalb reicht ein Blick auf zwei Zeichen -- **kein Kontextschalter, und
+    /// damit auch kein stiller Verleser** («B7»).
     fn ruf_ab(&mut self, pfad: Pfad) -> Erg<Ruf> {
         self.erwarte_z(Z::RundAuf)?;
         let mut argumente = Vec::new();
+        let mut marken: Vec<Ident> = Vec::new();
         if !self.ist_z(Z::RundZu) {
             loop {
-                argumente.push(self.expr()?);
+                // Marke und Wert werden ZUSAMMEN angehaengt -- die Invariante von
+                // `Ruf::marken` entsteht hier und nirgends sonst.
+                // `erwarte_feldname`, nicht `erwarte_ident`: die Deklarationsseite laesst
+                // Schluesselwoerter als Feldnamen zu (`count`, `len`), und eine Marke, die
+                // ihr Feld nicht benennen kann, waere keine.
+                let marke = if matches!(self.blick().art, Art::Ident | Art::Wort(_))
+                    && self.blick_n(1).art == Art::Zeichen(Z::Kolon)
+                {
+                    let m = self.erwarte_feldname()?;
+                    self.erwarte_z(Z::Kolon)?;
+                    Some(m)
+                } else {
+                    None
+                };
+                let wert = self.expr()?;
+                // **Halb markiert ist schlimmer als gar nicht markiert.** Bei `P(a: 1, 2)`
+                // sieht die Ablesung des Lesers wie eine Zuordnung aus und ist eine Reihung.
+                // Der Pruefer haelt spaeter `map fst zs = fs` dagegen (`M106`) -- aber nur,
+                // wenn der Schluesselstrom ueberhaupt vollstaendig ist.
+                //
+                // Das erste Argument legt die Betriebsart fest, jedes weitere muss sie halten.
+                let markiert = !argumente.is_empty() && !marken.is_empty();
+                if !argumente.is_empty() && marke.is_some() != markiert {
+                    self.absage(
+                        Absage::fehler(
+                            "P036",
+                            wert.span,
+                            "in einer Argumentliste sind entweder ALLE Argumente markiert \
+                             oder keines",
+                        )
+                        .mit_notiz(
+                            "`P(a: 1, b: 2)` stellt einen Verbund her, `f(1, 2)` ruft eine \
+                             Funktion -- eine halb markierte Liste ist weder das eine noch \
+                             das andere",
+                        ),
+                    );
+                    return Err(Abbruch);
+                }
+                if let Some(m) = marke {
+                    marken.push(m);
+                }
+                argumente.push(wert);
                 if !self.friss_z(Z::Komma) {
+                    break;
+                }
+                if self.ist_z(Z::RundZu) {
                     break;
                 }
             }
@@ -1373,7 +1426,43 @@ impl<'a> Parser<'a> {
             span: pfad.span.bis_zu(ende),
             pfad,
             argumente,
+            marken,
         })
+    }
+
+    /// **Die Absage, die «B7» als ENTSCHEIDUNG sichtbar macht statt als Folgefehler.**
+    ///
+    /// An den drei Stellen, an denen ein Mensch ein Verbundliteral hinschreiben wuerde --
+    /// `return P { … };`, `let x = P { … };`, `x = P { … };` -- ist ein `{` nach dem Ausdruck
+    /// heute schlicht falsch. Bis hierher fiel dort „`;` erwartet, `{` gefunden": richtig und
+    /// nutzlos.
+    ///
+    /// > *Eine Form, die es absichtlich nicht gibt, verdient eine Absage mit ihrem Grund --
+    /// > nicht das Schweigen einer Form, an die niemand gedacht hat.*
+    ///
+    /// Sie steht **nur** an diesen drei Stellen, nicht in `expr`. In `if x { … }`,
+    /// `match a { … }`, `traverse i over d { … }` gehoert das `{` dazu; ein Wachhund dort
+    /// waere genau der Kontextschalter, den diese Entscheidung vermeidet.
+    fn kein_verbundliteral(&mut self, nach: Span) {
+        if !self.ist_z(Z::GeschweiftAuf) {
+            return;
+        }
+        self.absage(
+            Absage::fehler(
+                "P037",
+                nach.bis_zu(self.span()),
+                "Gabbro hat kein geschweiftes Verbundliteral",
+            )
+            .mit_notiz("statt `P { a: 1, b: 2 }` schreibt man `P(a: 1, b: 2)`")
+            .mit_notiz(
+                "die Felderliste einer Deklaration IST ihr Konstruktor -- genau wie die \
+                 Parameterliste eines `device` (`Vtd(basis)`)",
+            )
+            .mit_notiz(
+                "SYNTAX.md, \u{201e}Was es absichtlich nicht gibt\u{201c}: ein `{` nach einem \
+                 Ausdruck gehoert in Gabbro immer einem Block",
+            ),
+        );
     }
 
     fn place(&mut self) -> Erg<Ort> {
@@ -2034,6 +2123,9 @@ impl<'a> Parser<'a> {
                 } else {
                     Some(self.expr()?)
                 };
+                if let Some(w) = &wert {
+                    self.kein_verbundliteral(w.span);
+                }
                 self.erwarte_z(Z::Semi)?;
                 StmtArt::Return(wert)
             }
@@ -2146,6 +2238,7 @@ impl<'a> Parser<'a> {
             }));
         }
 
+        self.kein_verbundliteral(wert.span);
         self.erwarte_z(Z::Semi)?;
         Ok(StmtArt::Let(LetStmt {
             veraenderlich,
@@ -2249,6 +2342,7 @@ impl<'a> Parser<'a> {
                 nutzlast,
             }));
         }
+        self.kein_verbundliteral(wert.span);
         self.erwarte_z(Z::Semi)?;
         Ok(StmtArt::Zuweisung(Zuweisung { ziel, op, wert }))
     }

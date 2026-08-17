@@ -438,11 +438,39 @@ pub enum OrtSuffix {
 }
 
 /// `call = path "(" [ arglist ] ")"` -- syntactically the same form as `cast`.
+///
+/// **«B7»: ein Verbundwert ist ein Ruf mit MARKEN.** `P(a: 1, b: true)` stellt einen
+/// `type P = { a : u32, b : bool }` her. Warum als Ruf und nicht als `P { a: 1 }`, steht in
+/// `SYNTAX.md` unter „Was es absichtlich nicht gibt" -- kurz: ein geschweiftes Literal waere
+/// die ERSTE Ausdrucksform, die mit `{` weitergeht, und an 76 Korpusstellen folgt ein `{`
+/// direkt auf einen Ausdruck. Der Fehlerfall eines Kontextschalters ist STILL.
 #[derive(Debug, Clone)]
 pub struct Ruf {
     pub pfad: Pfad,
     pub argumente: Vec<Expr>,
+    /// **Invariante: leer, oder genauso lang wie `argumente`.**
+    ///
+    /// Sie wird an genau einer Stelle hergestellt (`parse::ruf_ab`, eine Schleife, die Marke
+    /// und Wert zusammen anhaengt) und an genau einer Stelle geprueft
+    /// (`m1::verbundwert`, die den Schluesselstrom gegen die Felderliste haelt).
+    ///
+    /// **Leer heisst nicht „keine Marken erlaubt", sondern „keine geschrieben".** Ob das
+    /// zulaessig ist, entscheidet M1 am Gerufenen: ein Verbund verlangt sie, eine Funktion
+    /// verbietet sie.
+    pub marken: Vec<Ident>,
     pub span: Span,
+}
+
+impl Ruf {
+    /// **Der syntaktische Unterscheider: ein markierter Ruf ist ein Verbundwert.**
+    ///
+    /// Er braucht keine Umgebung, keine Namensaufloesung und keine Karte -- und genau das ist
+    /// der Punkt. Die Paesse, die einen Konstruktor anders behandeln muessen als einen Aufruf
+    /// (Kosten, Wirkungen, Aufrufgraph), fragen hier und koennen sich nicht an einer
+    /// fehlenden Karteneintragung stillschweigend vorbeimogeln.
+    pub fn ist_verbundwert(&self) -> bool {
+        !self.marken.is_empty()
+    }
 }
 
 #[derive(Debug, Clone)]

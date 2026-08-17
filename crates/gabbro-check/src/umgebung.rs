@@ -68,6 +68,10 @@ pub struct Umgebung {
     /// `static`, `atomic`, `accumulates` -- alles, was ohne Deklaration im Rumpf sichtbar ist.
     pub globale: HashMap<String, Typ>,
     pub funktionen: HashMap<String, Signatur>,
+    /// **Die Namen, deren Signatur ein KONSTRUKTOR ist, kein Aufruf** («B7»).
+    /// Wert ist die Felderliste in Deklarationsreihenfolge -- `fs` aus
+    /// `beweise/Verbund_Konstruktor.thy`.
+    pub verbundtypen: HashMap<String, Vec<String>>,
     /// Je Modulpfad die Pfade seiner `use`-Zeilen.
     verwendet: HashMap<String, Vec<String>>,
 }
@@ -181,6 +185,15 @@ impl Umgebung {
 
     pub fn funktion(&self, von: &str, pfad: &Pfad) -> Option<&Signatur> {
         self.suche(&self.funktionen, von, &pfad.text())
+    }
+
+    /// **Nennt dieser Pfad einen Verbundtyp?** («B7»)
+    ///
+    /// Die Frage steht neben `funktion` und nicht in ihr, weil beide Antworten gebraucht
+    /// werden: der Konstruktor hat eine Signatur *wie* eine Funktion, und M1 muss trotzdem
+    /// wissen, dass er eine ist -- sonst faellt `P(1, true)` (ohne Marken) still durch.
+    pub fn verbundfelder(&self, von: &str, pfad: &Pfad) -> Option<&Vec<String>> {
+        self.suche(&self.verbundtypen, von, &pfad.text())
     }
 
     fn sammle_roh(&mut self, items: &[Item], pfad: &str) {
@@ -338,6 +351,41 @@ impl Umgebung {
                         },
                     );
                     self.geraete.insert(q(&d.name.text), felder);
+                }
+                // **«B7»: die Felderliste eines `type` IST sein Konstruktor** -- genau die
+                // Bauart, die `device` seit dem 2026-08-14 traegt (`Vtd(basis)`, oben).
+                //
+                // Damit bekommt `P(a: 1, b: true)` seine Signatur aus DERSELBEN Karte wie
+                // jeder Aufruf, und die Paesse, die den Gerufenen nachschlagen (M1, Kosten,
+                // `geteilt`, M2), finden ihn, statt ihn als unbekannt zu fuehren. *Ein
+                // unbekannter Gerufener macht jede Huelle darueber zur unteren Schranke* --
+                // dieser eine Eintrag ist der Unterschied zwischen einer Messung und einer.
+                //
+                // Nur ein VERBUND bekommt einen: `type Zaehler = u32 in 0 .. 9` ist ein
+                // Bereichstyp, und `Zaehler(3)` waere eine Umwandlung, keine Herstellung.
+                ItemArt::Typ(t) => {
+                    // `durchgreifen`: ein benannter Typ ist `Benannt { unter }`, und der
+                    // Verbund steht darunter. **Ohne diesen Griff war die Karte leer und
+                    // jede Absage darunter unerreichbar** -- gefunden an der ersten Probe.
+                    if let Typ::Verbund(felder) = self
+                        .typen
+                        .get(&q(&t.name.text))
+                        .map(|x| x.durchgreifen())
+                        .unwrap_or(&Typ::Unbekannt)
+                    {
+                        if !felder.is_empty() && !t.opaque {
+                            let sig = Signatur {
+                                parameter: felder.clone(),
+                                ergebnis: Some(Typ::Verbund(felder.clone())),
+                                span: t.span,
+                            };
+                            self.funktionen.insert(q(&t.name.text), sig);
+                            self.verbundtypen.insert(
+                                q(&t.name.text),
+                                felder.iter().map(|(n, _)| n.clone()).collect(),
+                            );
+                        }
+                    }
                 }
                 ItemArt::Funktion(f) => {
                     let sig = Signatur {
