@@ -1222,3 +1222,153 @@ this one — and may therefore appear in no metric of this folder.
 > 2026-08-17) — and **the four made the register grow, not shrink**: two
 > of them were added on a single day. *Whoever asks how much of Gabbro is still missing is
 > measuring against the wrong denominator as long as this list has no length in progress.*
+
+
+---
+
+# K100 — der Weg auf 100 % Klempnereiabdeckung
+
+**Ziel, in der Fassung des Auftrags:** *der Programmierer beweist nur noch seine eigene Logik —
+im Vertrauen auf Gabbro und seine Hardwareannahmen.*
+
+**Ausgangslage, gemessen 2026-08-17** ([`PFLICHTEN.md`](PFLICHTEN.md)): 173 Klempnereipflichten
+über den zehn Fragmenten, **137 getragen**, **31 hängend**.
+
+---
+
+## Die Falle steht im Plan, nicht in der Rückschau
+
+**Klempnereiabdeckung und Vertrauensfläche sind kommunizierende Röhren.**
+
+Jedes Konstrukt, das eine Pflicht schließt, ist eine **Schablone** — eine Beweispflicht des
+Erzeugers, die *einmal* fällt, aber heute unbewiesen dasteht. Das Register führt **20 Einträge,
+16 unbewiesen, 4 davon lebend.** Die 24 Notationslücken zu schließen kostet nach heutiger
+Schätzung **sieben weitere Einträge**.
+
+> **Ein Plan, der nur `H` verfolgt, erreicht 100 % und ist danach schlechter dran.** Er hätte
+> die Klempnerei vom Menschen in eine unbewiesene Fläche verschoben und die Verschiebung nicht
+> gezählt — *dieselbe Bewegung, gegen die die Ratsche steht.*
+
+**Deshalb hat K100 ZWEI Zahlen, und beide sind Tore:**
+
+| | |
+|---|---|
+| **`H → 0`** | keine hängende Klempnereipflicht über dem Korpus |
+| **`L ≤ 4`** | die **lebend unbewiesene** Schablonenfläche wächst nicht — jeder neue getragene Eintrag kostet vorher einen Isabelle-Lauf |
+
+*Wer nur die erste erreicht, hat die These nicht eingelöst, sondern umgetopft.*
+
+---
+
+## Und ein Teil der 31 wird nicht geschlossen, sondern UMGEBUCHT
+
+**Der Auftrag sagt es selbst: *„mit Vertrauen auf Gabbro und seine Hardwareannahmen."*** Fünf
+der 31 sind Aussagen über die Maschine, nicht über das Programm:
+
+| | |
+|---|---|
+| «B19» | welche Barriere eine Veröffentlichung an ein Gerät braucht |
+| «B38» | dass `masks IRQ` denselben Schutz gibt wie eine Sperrgrenze |
+| «B39» | dass die MMU `A`/`D` schreibt **und nichts sonst** |
+| `at dma` | welche Barriere ein DMA-Zugriff verlangt |
+| `atomic release` | dass ein Release-Speichern die Sichtbarkeit **herstellt** |
+
+**Für sie gibt es den richtigen Ort schon:** `assume … falsifier …`. Eine Pflicht dorthin zu
+bewegen heißt **nicht**, sie zu erledigen — es heißt, sie **beim Namen mit einer Sonde** zu
+führen, und genau das ist die Vertrauensform, die der Auftrag gewährt.
+
+> **Die Umbuchung ist nur dann ehrlich, wenn sie gezählt wird.** `gabbro annahmen` steht heute
+> bei **14**; nach K100 muss dort **19** stehen, und die fünf neuen müssen ihre Sonde nennen
+> oder ihren Grund, warum es keine gibt.
+
+---
+
+## Die vier Phasen
+
+### K100.1 — Die Messgröße schärfen *(keine Zeile Code, und sie senkt `H` um 2)*
+
+**Drei der 31 sind handgeschriebene `narrow`. Sie sind nicht dasselbe:**
+
+| Stelle | `else`-Zweig | was es ist |
+|---|---|---|
+| `FRAGMENTE.md`:1660 (F10) | **erreichbar** — ein feindliches DTB nimmt ihn | **Logik**, kein Klempnerrest: die Aussage *„dieser Eingang ist feindlich"* ist die des Programmierers |
+| `:268` (F1) | erreichbar, wenn die Buchführungsinvariante schon gebrochen ist | das zweite Netz, mit Absicht |
+| `:1100` (F6) | **kann nicht genommen werden** und muss dastehen | **ein Loch in M1** — die Schranke fällt aus der Domäne, und M1 sieht es nicht |
+
+**Nur die dritte ist eine Klempnereipflicht.** Die erste ist Logik, die zweite eine bewusste
+Doppelung.
+
+* **Tor:** `zaehle-bereichspflichten.py` unterscheidet die drei Fälle. *Ein Maßstab, der eine
+  Prüfung nicht von einem Ritus trennt, misst das Falsche.*
+* **Ertrag:** `H = 31 → 29`, und die Zahl bedeutet zum ersten Mal etwas Einheitliches.
+
+### K100.2 — Die Umbuchung in die Axiomschicht *(5 Pflichten)*
+
+Die fünf oben, jede mit `assume … falsifier <sonde>` oder `unfalsifiable "<grund>"`.
+
+* **Tor:** `gabbro annahmen` meldet **19**, und `pruefe-emission.sh` findet alle neunzehn im
+  erzeugten C wieder (der Kanal steht seit dem 2026-08-17).
+* **Preis, ausgesprochen:** die Vertrauensbasis wächst um fünf Sätze über die Hardware. **Zwei
+  davon werden vermutlich unfalsifizierbar sein** — eine Sonde für „die MMU schreibt nur `A` und
+  `D`" müsste die MMU anhalten.
+* **Ertrag:** `H = 29 → 24`.
+
+### K100.3 — Die sieben Notationslücken *(24 Pflichten, der Hauptteil)*
+
+| Lücke | was fehlt | Schablone? |
+|---|---|---|
+| «B3» | `Held(Lock)` — `typedecl` verlangt `params`, die Beispiele schreiben Typen | nein |
+| «B6» | eine Bindung für den Rückgabewert in `ensures` | nein |
+| «B7» | ein Verbundliteral — eine Funktion kann heute keinen `structty` **herstellen** | **ja** |
+| «B14» | `option` in `typeexpr`, und `let … else` auf einem `place` | **ja** |
+| «B21» | `accumulates max/min/+` — 213 RMW-Stellen | **ja** |
+| «B22» | ein mehrzeiliges `claim` | nein |
+| «B25» | eine Wertemenge statt eines Intervalls | nein |
+
+* **Reihenfolge:** die vier ohne Schablone zuerst — sie kosten Wortschatz, aber keine
+  Vertrauensfläche. Die drei mit Schablone **je einzeln, und jede mit ihrem Isabelle-Lauf
+  davor**, sonst reißt `L ≤ 4`.
+* **Tor je Lücke:** ein Giftbeispiel, das ohne das Konstrukt **fällt** — und `pruefe-wortschatz.py`
+  hält die Terminalzahl gegen die Tabelle.
+* **Ertrag:** `H = 24 → 0` bei den Notationsposten. **Es bleiben die sieben Absenkungen.**
+
+### K100.4 — Die Verfeinerung *(7 Pflichten, und sie ist die härteste)*
+
+Sieben Fragmente sind nicht abgesenkt. **Fünf davon sind durch Befunde gesperrt**, nicht durch
+Arbeit — «B10», «B12», «B17», «B24» und die Domänenschranke von `mappings of`. *Die fallen mit
+K100.3 und den Entscheidungen, nicht mit Erzeugercode.*
+
+**Aber `H = 0` an den zehn Fragmenten ist NICHT die Verfeinerung.** Verfeinerung ist eine Aussage
+über **jede** Absenkung, und zehn gemessene Dateien sind keine.
+
+**Dafür gibt es genau zwei Wege, und der Plan muss einen wählen:**
+
+| | |
+|---|---|
+| **(a) verifizierter Erzeuger** | `emit.rs` selbst nach Isabelle. *Groß, einmalig, und es ist das, was CompCert getan hat* |
+| **(b) Übersetzungsvalidierung** | je Übersetzung ein maschinell geprüftes Zeugnis, dass **dieses** C **dieses** Gabbro erhält. *Kleiner je Schritt, aber jedes Mal fällig* |
+
+> **(b) passt zu diesem Ordner.** Die Differenztests sind bereits die schwache Fassung davon —
+> sie messen **ein** Ergebnis statt aller. *Der Weg von hier ist, aus `pruefe-emission.sh` ein
+> Zeugnis zu machen, nicht eine längere Liste von Beispielen.*
+
+---
+
+## Wann K100 erreicht ist — und wann die Zahl lügt
+
+**Erreicht:**
+
+```
+H = 0        über dem Fragmentkorpus, mit ./zaehle-pflichten.py neu abgeleitet
+L ≤ 4        lebend unbewiesene Schablonen
+A = 19       Annahmen, jede mit Sonde oder mit Grund
+```
+
+**Und die Zahl lügt, wenn eines davon fehlt:**
+
+> **Die zehn Fragmente sind nach ihrer SCHWIERIGKEIT gewählt, nicht zufällig.** `H = 0` über
+> ihnen ist keine Aussage über Gabbro. **K100 ist erst dann eine Messung, wenn ein ZWEITER
+> Korpus danebensteht, den niemand beim Bauen angesehen hat** — sonst ist es Falle 80 in
+> Reinform: eine Zahl, die man erreicht, indem man auf sie hin baut.
+
+*Der zweite Korpus gehört in denselben Plan wie das letzte Konstrukt, nicht danach.*

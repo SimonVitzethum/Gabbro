@@ -97,6 +97,27 @@ of items that are neither code nor a run — what remains is building and measur
 ---
 
 # DECISIONS — need a judgement, not a run
+### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md))
+
+- [ ] **K100.1 — die Messgroesse schaerfen.** Drei `narrow`-Stellen, drei verschiedene Dinge:
+      ein erreichbarer `else`-Zweig ist LOGIK (das feindliche DTB), ein unerreichbarer ist ein
+      Loch in M1. *Ein Massstab, der eine Pruefung nicht von einem Ritus trennt, misst das
+      Falsche.* Keine Zeile Code, senkt `H` um 2.
+- [ ] **K100.2 — fuenf Pflichten in die Axiomschicht umbuchen** («B19», «B38», «B39», `at dma`,
+      `atomic release`). **Das ist keine Erledigung, sondern eine Fuehrung beim Namen mit einer
+      Sonde** — und genau die Vertrauensform, die der Auftrag gewaehrt. Tor: `gabbro annahmen`
+      meldet 19, alle im erzeugten C wiederzufinden.
+- [ ] **K100.3 — die sieben Notationsluecken** («B3», «B6», «B7», «B14», «B21», «B22», «B25»).
+      **Die vier ohne Schablone zuerst**, die drei mit je einzeln und mit ihrem Isabelle-Lauf
+      DAVOR — sonst reisst `L <= 4`.
+- [ ] **K100.4 — die Verfeinerung, und der Weg ist zu waehlen:** verifizierter Erzeuger (a) oder
+      **Uebersetzungsvalidierung (b)**. *Die Differenztests sind bereits die schwache Fassung von
+      (b) — sie messen EIN Ergebnis statt aller.*
+- [ ] **Der ZWEITE Korpus gehoert in denselben Plan wie das letzte Konstrukt.** Die zehn
+      Fragmente sind nach ihrer SCHWIERIGKEIT gewaehlt; `H = 0` ueber ihnen ist keine Aussage
+      ueber Gabbro. **Ohne einen Korpus, den beim Bauen niemand angesehen hat, ist K100 Falle 80
+      in Reinform.**
+
 ### From the emitter (2026-08-17) — two answers belong in the SPECIFICATION now
 
 - [ ] **«B26» is answered, and the answer belongs in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md).**
