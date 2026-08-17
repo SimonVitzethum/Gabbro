@@ -5,7 +5,7 @@
 # Projekts: `mutiere-pruefer.py` wies sie mit 0 Mutationen aus, und *was 0 Mutationen hat,
 # ist nicht gedeckt, sondern unbeschaedigbar*.
 #
-# Dieser Waechter schliesst sie fuer FUENF Uebersetzungseinheiten, nicht fuer zehn:
+# Dieser Waechter schliesst sie fuer SECHS Uebersetzungseinheiten, nicht fuer zehn:
 #
 #     .gab  ->  gabbro emit  ->  C  ->  cc -Werror  ->  ausgefuehrt  ->  Ergebnis verglichen
 #
@@ -291,7 +291,44 @@ int main(void) {
 lauf "beispiel19" "$W/beispiele/19-traversierung.gab" "$TREIBER19" "16 6 0 0" \
      's/; i++)/; i += 2)/'
 
-echo "== EMISSION: ALL PASS -- 5 Uebersetzungseinheiten durchgestochen =="
+# -- 6. Das Geraet: ein Register ist KEIN Feld ------------------------------------------
+#
+# Ein C-Verbund haette dieselbe Schwaeche wie beim `format`: die Versaetze stehen in der
+# Deklaration, die Fuellung eines `struct` bestimmt der Uebersetzer. Dazu kommt hier, dass ein
+# Registerzugriff **nicht wegoptimiert werden darf** -- `volatile` ist die eine Stelle, an der
+# die Absenkung dem C-Uebersetzer etwas VERBIETEN muss.
+#
+#     r.AVAIL_IDX += 1;   ->   (*(volatile uint16_t *)(r->basis + 258)) += 1;
+#
+# **Und der Umlauf ist erklaert, nicht geduldet** («B32»): `u16 wrapping` senkt zu `uint16_t`
+# ab, dessen Umlauf C definiert. Bei 0xffff geht es auf 0 -- genau das, was virtio meint.
+TREIBER12='#include <stdio.h>
+#include "@ERZEUGT@"
+static uint8_t bank[512];
+int main(void) {
+    Ring r = { bank };
+    *(volatile uint16_t *)(bank + 258) = 7;
+    *(volatile uint16_t *)(bank + 260) = 64;
+    vorruecken(&r);
+    unsigned a = *(volatile uint16_t *)(bank + 258);
+    *(volatile uint16_t *)(bank + 258) = 0xffff;
+    vorruecken(&r);
+    unsigned b = *(volatile uint16_t *)(bank + 258);
+    unsigned c = *(volatile uint16_t *)(bank + 260);
+    printf("%u %u %u %d\n", a, b, c, (int)sizeof(Ring));
+    return 0;
+}
+'
+#    Erwartet:
+#      8  -- 7 + 1: der Zugriff trifft Versatz 0x102 und nichts daneben
+#      0  -- **0xffff + 1 laeuft um**, und zwar mit Absicht: `u16 wrapping` («B32»)
+#     64  -- das NACHBARREGISTER bei 0x104 ist unberuehrt geblieben
+#      8  -- der Griff ist ein Zeiger, kein abgebildeter Registersatz: kein `struct` mit
+#            Fuellung, ueber die der Uebersetzer entscheidet
+lauf "beispiel12" "$W/beispiele/12-umlaufendes-register.gab" "$TREIBER12" "8 0 64 8" \
+     's/+ 258/+ 260/'
+
+echo "== EMISSION: ALL PASS -- 6 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser fuenf Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Fuenf Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser sechs Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Sechs Ja-Aussagen sind keine ueber die Sprache."

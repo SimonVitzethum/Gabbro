@@ -48,6 +48,13 @@ struct Namen {
     tabellen: Vec<String>,
     /// Die `format`-Namen. Ein Pfad, der eines nennt, IST der Zugriffsverbund.
     formate: BTreeSet<String>,
+    /// Je Geraet: der Raum und seine Register. **Ein Registerzugriff ist KEIN Feldzugriff**
+    /// -- siehe `geraet`.
+    geraete: HashMap<String, Geraet>,
+    /// Name -> Geraetetyp, **global und konservativ**: wird derselbe Name irgendwo mit einem
+    /// anderen Typ erklaert, faellt er heraus. Dieselbe Bauart wie `vorzeichenlos` -- Unwissen
+    /// faellt nach lautstark, dann weigert sich der Registerzugriff.
+    geraetezeiger: HashMap<String, String>,
     /// Je Tabelle ihr aufgeloester `count`-Wert. **Der Sonderwert haengt daran** -- siehe
     /// `beweise/Option_Sonderwert.thy`, M-1.
     kapazitaet: HashMap<String, i128>,
@@ -93,6 +100,14 @@ struct Signatur {
     nie_rueck: bool,
 }
 
+/// Ein Geraet, so wie der Erzeuger es braucht.
+struct Geraet {
+    /// `at mmio` / `at dma` / `at normal`. **Nur `mmio` wird abgesenkt** -- siehe `geraet`.
+    raum: String,
+    /// Registername -> (Versatz, C-Wortbreite).
+    reg: HashMap<String, (i128, String)>,
+}
+
 /// **Is this type a ghost — i.e. does it vanish in the C?**
 ///
 /// This is the one question that separates an erasure from a lowering, and getting it wrong is
@@ -136,6 +151,15 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         }
         ItemArt::Format(f) => {
             namen.formate.insert(f.name.text.clone());
+        }
+        ItemArt::Device(d) => {
+            namen.geraete.insert(
+                d.name.text.clone(),
+                Geraet {
+                    raum: format!("{:?}", d.raum).to_lowercase(),
+                    reg: HashMap::new(),
+                },
+            );
         }
         ItemArt::Tabelle(t) => namen.tabellen.push(t.name.text.clone()),
         ItemArt::Typ(t) => {
@@ -229,6 +253,49 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         });
     }
 
+    {
+        let umg = crate::umgebung::Umgebung::sammle(baum);
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+            if let ItemArt::Device(d) = &item.art {
+                let mut reg = HashMap::new();
+                for r in &d.register {
+                    if let Some(v) = umg.konst_wert(modul, &r.versatz) {
+                        reg.insert(r.name.text.clone(), (v, intty(&r.typ)));
+                    }
+                }
+                if let Some(g) = namen.geraete.get_mut(&d.name.text) {
+                    g.reg = reg;
+                }
+            }
+        });
+        // Welcher Name traegt welches Geraet? Konservativ ueber alle Funktionen.
+        let mut eindeutig: HashMap<String, String> = HashMap::new();
+        let mut strittig: BTreeSet<String> = BTreeSet::new();
+        crate::fuer_jedes_item(baum, &mut |item| {
+            let ItemArt::Funktion(f) = &item.art else { return };
+            for p in &f.parameter {
+                let TypExpr::Zeiger(z) = &p.typ else { continue };
+                let TypExpr::Pfad(pf) = &z.ziel else { continue };
+                let Some(n) = pf.teile.last() else { continue };
+                if !namen.geraete.contains_key(&n.text) {
+                    continue;
+                }
+                match eindeutig.get(&p.name.text) {
+                    Some(vorher) if *vorher != n.text => {
+                        strittig.insert(p.name.text.clone());
+                    }
+                    _ => {
+                        eindeutig.insert(p.name.text.clone(), n.text.clone());
+                    }
+                }
+            }
+        });
+        for s in &strittig {
+            eindeutig.remove(s);
+        }
+        namen.geraetezeiger = eindeutig;
+    }
+
     namen.retry_schranke = retry_schranken(baum);
 
     // **Die Wortleser werden MITERZEUGT, nicht vorausgesetzt** -- ein Erzeugnis, das eine
@@ -281,6 +348,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         ItemArt::Typ(_) => {} // Range types lower to their carrier; see `ctyp`.
         ItemArt::Tabelle(t) => tabelle(t, &mut aus, &namen, absagen),
         ItemArt::Format(f) => format_(f, &mut aus, &namen, absagen),
+        ItemArt::Device(d) => geraet(d, &mut aus, &namen, absagen),
         // **Eine Sperre erzeugt zwei Prototypen und keine Zeile Rumpf.**
         //
         // Rang und Haltezeit stehen im C NIRGENDS: `H006` rechnet die Ordnung zur
@@ -462,6 +530,59 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
              checked against the index word",
         ),
     }
+}
+
+/// **Ein Geraeteregister wird ein volatiler Zugriff an `basis + Versatz` -- und KEIN Feld.**
+///
+/// Ein C-Verbund haette dieselbe Schwaeche wie beim `format`: die Versaetze stehen in der
+/// Deklaration, die Fuellung eines `struct` bestimmt der Uebersetzer. Hier kommt hinzu, dass
+/// ein Registerzugriff **nicht wegoptimiert werden darf** -- dafuer steht `volatile`, und es
+/// ist die eine Stelle, an der die Absenkung dem C-Uebersetzer etwas VERBIETEN muss.
+///
+/// ```c
+/// typedef struct { volatile uint8_t *basis; } Ring;
+/// /* r.AVAIL_IDX  ->  (*(volatile uint16_t *)((r)->basis + 0x102)) */
+/// ```
+///
+/// **Der Zugriff wird als ORT abgesenkt, nicht als Funktionspaar.** Damit traegt `+=` sich
+/// von selbst, und die Rechteregel bleibt beim Pruefer: `R002`/`R003` weisen ein Schreiben
+/// auf `class r` ab, und **was der Pruefer entschieden hat, prueft die Maschine nicht noch
+/// einmal** (W6).
+///
+/// **Nur `at mmio` wird abgesenkt.** `at dma` verlangt Barrieren, und *welche* Barriere ein
+/// `dma`-Zugriff braucht, ist eine Aussage ueber das Speichermodell -- dieselbe Axiomschicht
+/// wie bei der Paarung, und der Pruefer baut sie ausdruecklich nicht (M3, `SPRACHE.md`).
+/// `at normal` waere gar kein Geraetezugriff.
+fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
+    let _ = u;
+    if !matches!(d.raum, Raum::Mmio) {
+        weigere(
+            absagen,
+            d.span,
+            "`device … at dma`/`at normal` -- which barrier a `dma` access needs is a \
+             statement about the memory model (the same axiom layer as pairing), and the \
+             checker does not build it either",
+        );
+        return;
+    }
+    for r in &d.register {
+        if !r.felder.is_empty() {
+            weigere(absagen, r.name.span, "`reg … fields { … }` -- bit accessors are not lowered yet");
+            return;
+        }
+    }
+    if !d.baenke.is_empty() {
+        weigere(absagen, d.span, "`bank` -- a register file at a computed location");
+        return;
+    }
+    if !d.uebergaenge.is_empty() {
+        weigere(absagen, d.span, "`transition` -- whether the precondition becomes a runtime check is not decided");
+        return;
+    }
+    aus.push_str(&format!(
+        "\ntypedef struct {{ volatile uint8_t *basis; }} {};\n",
+        d.name.text
+    ));
 }
 
 /// **Ein `format` wird KEIN C-Verbund, und das ist die Entscheidung.**
@@ -702,6 +823,8 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                 _ if u.tabellen.iter().any(|x| *x == n) => n,
                 // Ein Pfad, der ein `format` nennt, ist sein Zugriffsverbund.
                 _ if u.formate.contains(&n) => n,
+                // Ein Pfad, der ein `device` nennt, ist sein Griff.
+                _ if u.geraete.contains_key(&n) => n,
                 // **A named range type lowers to its carrier.** `type Zaehler = u32 in
                 // 0 .. 65535` becomes `uint32_t`; the range itself is an M1 fact and stays in
                 // the checker -- W6: what is left out of the C is left out because M1 carries
@@ -1357,6 +1480,23 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
 }
 
 fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
+    // **Ein Geraeteregister ist kein Feld, sondern ein volatiler Zugriff an `basis + Versatz`.**
+    // Der C-Uebersetzer darf ihn nicht wegoptimieren, und `volatile` ist die eine Stelle, an
+    // der die Absenkung ihm etwas VERBIETEN muss.
+    if let (Some(g), Some(OrtSuffix::Feld(f))) =
+        (u.geraetezeiger.get(&o.basis.text), o.suffixe.first())
+    {
+        if let Some((versatz, breite)) = u.geraete.get(g).and_then(|d| d.reg.get(&f.text)) {
+            if o.suffixe.len() == 1 {
+                return format!(
+                    "(*(volatile {breite} *)({}->basis + {versatz}))",
+                    o.basis.text
+                );
+            }
+            weigere(absagen, f.span, "a bit field of a device register");
+            return String::new();
+        }
+    }
     let mut t = o.basis.text.clone();
     let mut zeiger = true; // The base of a place in a function is a pointer parameter.
     for suf in &o.suffixe {

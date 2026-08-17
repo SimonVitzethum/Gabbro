@@ -643,3 +643,48 @@ table T count N { slot { e : option index into T, } } }",
         "bei `N = 2^32` muss der Erzeuger anhalten: {voll:?}"
     );
 }
+
+/// **Das Geraet: ein Register ist KEIN Feld, und `at dma` wird abgelehnt.**
+#[test]
+fn ein_registerzugriff_ist_volatil_und_dma_wird_abgelehnt() {
+    fn c_von(q: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.text.clone()).collect())
+    }
+
+    let (c, f) = c_von(
+        "module t {
+device R(basis : u64) at mmio {
+    reg IDX : u16 wrapping @0x102 class rw
+    reg LEN : u16          @0x104 class r
+}
+impl fn vor(r : ptr<mmio, rw> R) effects { writes r.IDX } costs <= 2 ops { r.IDX += 1; } }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+
+    // **Der Griff ist ein Zeiger, kein abgebildeter Registersatz.** Ein `struct` mit Feldern
+    // haette eine Fuellung, ueber die der Uebersetzer entscheidet -- die Versaetze stehen aber
+    // in der Deklaration.
+    assert!(c.contains("volatile uint8_t *basis"), "{c}");
+    assert!(!c.contains("uint16_t IDX;"), "kein Feld:\n{c}");
+
+    // **`volatile` ist die eine Stelle, an der die Absenkung dem C-Uebersetzer etwas
+    // VERBIETET** -- ein Registerzugriff darf nicht wegoptimiert werden.
+    assert!(
+        c.contains("(*(volatile uint16_t *)(r->basis + 258)) += 1;"),
+        "Zugriff an basis + 0x102, volatil, und `+=` traegt sich von selbst:\n{c}"
+    );
+
+    // **`at dma` wird abgelehnt, und der Grund ist der Pruefer selbst:** welche Barriere ein
+    // `dma`-Zugriff braucht, ist eine Aussage ueber das Speichermodell, und M3 baut sie
+    // ausdruecklich nicht. *Der Erzeuger darf nicht entscheiden, was der Pruefer offenlaesst.*
+    let (_, f) = c_von(
+        "module t { device Q(basis : u64) at dma { reg I : u16 @0x0 class rw } }",
+    );
+    assert!(
+        f.iter().any(|s| s.contains("memory model")),
+        "`at dma` darf nicht abgesenkt werden: {f:?}"
+    );
+}

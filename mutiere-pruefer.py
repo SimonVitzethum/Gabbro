@@ -1035,6 +1035,31 @@ MUTATIONEN = [
         "C-Absenkung -- der Sonderwert wird nicht gegen das Indexwort geprueft (Option_Sonderwert.thy M-1)",
         "code",
     ),
+    # -- emit.rs: das Geraet -----------------------------------------------------------
+    Mutation(
+        "register-ohne-volatile",
+        "emit.rs",
+        "                    \"(*(volatile {breite} *)({}->basis + {versatz}))\",",
+        "                    \"(*({breite} *)({}->basis + {versatz}))\",",
+        "C-Absenkung -- ein Registerzugriff darf wegoptimiert werden",
+        "code",
+    ),
+    Mutation(
+        "dma-wird-abgesenkt",
+        "emit.rs",
+        "    if !matches!(d.raum, Raum::Mmio) {",
+        "    if false && !matches!(d.raum, Raum::Mmio) {",
+        "C-Absenkung -- `at dma` wird ohne Barriere abgesenkt, die M3 ausdruecklich nicht baut",
+        "code",
+    ),
+    Mutation(
+        "registerversatz-egal",
+        "emit.rs",
+        "                        reg.insert(r.name.text.clone(), (v, intty(&r.typ)));",
+        "                        reg.insert(r.name.text.clone(), (0 * v, intty(&r.typ)));",
+        "C-Absenkung -- jedes Register liegt an Versatz 0; alle treffen dasselbe Wort",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
