@@ -6057,3 +6057,56 @@ layer as pairing — and **M3 expressly does not build it.**
 `fields { … }` (bit accessors) · `bank … at <computed>` · `transition` (whether the
 precondition becomes a runtime check is undecided) · `mirrors` · `class w1c`. **Five named
 questions instead of one construct.**
+
+
+---
+
+# Zwei Nachträge am Erzeuger, und beide schließen eine Zusage kurz
+
+## Die Annahmenmenge fährt jetzt mit dem Code mit
+
+`SYNTAX.md` §12: *"Die Annahmenmenge wird ins Erzeugnis emittiert ('bewiesen unter A1…An'), als
+**Menge von Namen mit Klasse**, nicht als Zahl."*
+
+**Bis zum 2026-08-17 hat das nichts getan.** `gabbro annahmen` druckte auf die Konsole; das
+Erzeugnis wusste nichts davon.
+
+> *Eine Zusage, die nur in einem Werkzeugaufruf steht, fährt nicht mit dem Code mit.* Sie steht
+> jetzt im Kopf der erzeugten Datei — **dort, wo auch der Lizenzhinweis steht, und aus demselben
+> Grund**: eine Bedingung, die von jemandes Erinnerung abhängt, ist keine.
+
+Und die Klasse steht dabei: ein `unfalsifiable` fährt **mit seinem Grund** mit, sonst wäre es
+eine Annahme ohne Rechenschaft.
+
+## Bitfelder: lesen ja, schreiben nein — und das Nein ist Falle 4
+
+```
+v.GSTS.TES   ->   (((*(volatile uint32_t *)(v->basis + 28)) >> 31) & 1u)
+```
+
+**Ein Schreiben auf ein einzelnes Bit ist ein Lese-Ändere-Schreib-Zug auf dem GANZEN
+Register** — und bei `class w` ist das unmöglich, weil sich das Register nicht lesen lässt.
+
+> *Genau dafür gibt es `mirrors`* — die x86-Fassung von Falle 4, eine Zeile je Gerät, die
+> `GCMD_STATE_MASK` samt Kommentarwand ersetzt (`FRAGMENTE.md` F2). **`mirrors` ist nicht
+> abgesenkt, also wird das Schreiben nicht abgesenkt.**
+
+**Und «B24» bekommt hier seine Grenze.** Der Befund des Ordners redet über eine Bitlage
+*jenseits von 64* in einem `format`, dessen Wortbreite unausgesprochen ist. **Am Register ist
+die Breite erklärt** — also ist die Frage entscheidbar, und eine Lage, die herausragt, ist ein
+**Fehler**, kein offener Punkt.
+
+## Der Stand: sechs Einheiten, und die Sperren sind alle benannt
+
+| Fragment | was noch fehlt |
+|---|---|
+| **F2** | `bank … at <berechnet>` · `format`-Bitlagen («B24») · `transition`/`mirrors` |
+| **F4** | `at dma` (Barrieren) · `transition` · `retry` mit unbestimmten Durchgangskosten |
+| **F9** | `at normal` · `format`-Bitlagen · `mappings of`/`walk` |
+| F1 · F3 | `option` als Wert · `descendants of`/`queue` |
+| F5 | `forever` («B11», und der Ritus) |
+| F6 | `elems of` («B12») · `atomic`/`check` |
+
+**Kein einziger dieser Posten ist noch ein `loop form` oder ein `item kind`.** Jeder nennt sein
+Konstrukt und seinen Grund, und **vier von ihnen sind offene Befunde des Ordners selbst** —
+«B10», «B11», «B12», «B24». *Der Erzeuger hat sie nicht gefunden; er hat sie eingeholt.*
