@@ -1,78 +1,84 @@
-# Gabbro — die Syntax
+# Gabbro — the syntax
 
-**Die Quelle fuer die Oberflaeche.** [`SPRACHE.md`](SPRACHE.md) sagt, welche Mechanismen es gibt
-und warum; [`BEWEIS.md`](BEWEIS.md), wozu sie da sind; hier steht, wie man sie hinschreibt.
-Was hier nicht steht, ist nicht schreibbar.
+**The source for the surface.** [`SPRACHE.md`](SPRACHE.md) says which mechanisms there are
+and why; [`BEWEIS.md`](BEWEIS.md), what they are there for; here stands how one writes them down.
+What does not stand here is not writable.
 
-Stand 2026-08-13, zweite Fassung. **Kein Uebersetzer liest das.**
+As of 2026-08-13, second version. **The compiler reads this** — since 2026-08-16 the corpus test
+`die_beispiele_der_grammatik_gehen_selbst_durch` runs the ```gabbro blocks below through the
+checker, `wortschatz.rs` holds the lexer against the vocabulary table, and
+`pruefe-wortschatz.py` holds the table against the terminals of the EBNF. *(Until 2026-08-17 the
+line here read "No compiler reads this." That was true on 2026-08-13 and has been false since the
+compiler existed — a grammar document whose examples nobody translates is the most expensive kind
+of prose: it looks like evidence.)*
 
-> **Was jede Regel dieser Grammatik zu leisten hat:** eine **Klempnerei**-Pflicht durch Konstruktion
-> erledigen — Index, Ueberlauf, Alias, Rahmen, Sperre, Rennen, Verfeinerung. Bleibt eine davon beim
-> Programmierer haengen, ist das an dieser Stelle **eine Widerlegung**, kein Schoenheitsfehler.
-> **Logik** schreibt der Programmierer ohnehin, in jeder Sprache.
+> **What every rule of this grammar has to achieve:** discharge one **plumbing** obligation by
+> construction — index, overflow, alias, frame, lock, race, refinement. If one of them stays hanging
+> on the programmer, that is **a refutation** at that point, not a blemish.
+> **Logic** the programmer writes anyway, in every language.
 
 ---
 
-## Stand — gemessen
+## State — measured
 
-| | erste Fassung | **diese** |
+| | first version | **this one** |
 |---|---|---|
-| definierte EBNF-Regeln | 40 | **104** |
-| benutzt, aber nie definiert | 21 (17 tragend) | **0** |
-| offene Entwurfsfragen | 7 | **9, benannt am Ende** |
-| **Wächter** | — | `pruefe-syntax.sh` prüft **Geschlossenheit der Regeln UND Deckung der Terminale durch den Wortschatz**, je mit Sprechprobe |
+| defined EBNF rules | 40 | **130** |
+| used but never defined | 21 (17 load-bearing) | **0** |
+| open design questions | 7 | **9, named at the end** |
+| **Guardian** | — | `pruefe-syntax.sh` checks **closure of the rules AND coverage of the terminals by the vocabulary**, each with a speech test |
 
-> **DRITTE blinde Stelle, dieselbe Familie — und sie kostete drei Grammatikfehler, die die Sprache
-> unbrauchbar machten.** Der Wächter prüfte, dass jede **benutzte** Regel definiert ist, **nicht ob
-> jede definierte Regel erreichbar ist**. Gefunden von einem Fragmentprüfer, nachgerüstet als
-> Erreichbarkeitslauf von `program` aus. Er fand sofort:
-> **`atomicdecl`, `lockdecl`, `lockstmt` waren definiert und von `program` aus nie erreichbar** —
-> also **kein Atomic, keine Sperre, kein kritischer Abschnitt** in der ganzen Sprache, während
-> alle sechs Fragmente sie benutzen. Und eine **doppelte `item`-Produktion**, bei der die zweite
-> die erste verdeckte.
+> **THIRD blind spot, the same family — and it cost three grammar errors that made the language
+> unusable.** The guardian checked that every **used** rule is defined, **not whether
+> every defined rule is reachable**. Found by a fragment checker, retrofitted as a
+> reachability run from `program`. It found immediately:
+> **`atomicdecl`, `lockdecl`, `lockstmt` were defined and never reachable from `program`** —
+> so **no atomic, no lock, no critical section** in the whole language, while
+> all six fragments use them. And a **duplicate `item` production** in which the second
+> hid the first.
 >
-> Dazu zwei Fehler, die kein Wächter sah, weil sie *innerhalb* gültiger Grammatik lagen:
-> **`old(x)` hing unter `atompred` statt unter `primary`** — es konnte als Prädikat für sich
-> stehen, aber in **keinem Ausdruck** vorkommen, also nie neben `==`. **Die Differenzaussage, die
-> dieses Projekt als Kernlehre führt, war nicht schreibbar** — und das eigene `delete_leaf`-Beispiel
-> gab eine an. Und **`fndecl` liess nur `block | ";"`**, womit **keine einzige `spec fn`
-> schreibbar** war.
+> Plus two errors no guardian saw, because they lay *inside* valid grammar:
+> **`old(x)` hung under `atompred` instead of under `primary`** — it could stand as a predicate on
+> its own, but could occur in **no expression**, hence never next to `==`. **The difference
+> statement this project carries as a core lesson was not writable** — and our own `delete_leaf`
+> example gave one. And **`fndecl` allowed only `block | ";"`**, with which **not a single `spec fn`
+> was writable**.
 
-> **Der Wächter hatte eine zweite blinde Stelle, und sie war dieselbe wie die erste.** Er prüfte
-> die **Nichtterminale** auf Geschlossenheit und behauptete daneben einen „geschlossenen
-> Wortschatz", **ohne die Terminale je anzusehen** — 39 Schlüsselwörter standen in der Grammatik
-> und nicht in der Tabelle, vier Tabellenwörter (`loop`, `never`, `offset_into`, `old`) in **keiner
-> Produktion**. Zwei davon trugen Argumente: **ohne `offset_into` ist ELF nicht schreibbar, ohne
-> `old` nicht die Differenzaussage.** Und sein erster eigener Fund war er selbst: er las „elf" aus
-> „Self", weil ihm die Wortgrenzen fehlten.
+> **The guardian had a second blind spot, and it was the same as the first.** It checked
+> the **nonterminals** for closure and claimed alongside a "closed
+> vocabulary", **without ever looking at the terminals** — 39 keywords stood in the grammar
+> and not in the table, four table words (`loop`, `never`, `offset_into`, `old`) in **no
+> production**. Two of them carried arguments: **without `offset_into` ELF is not writable, without
+> `old` the difference statement is not.** And its first find of its own was itself: it read "elf" out
+> of "Self", because it lacked the word boundaries.
 
-Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `ifstmt`, `matchstmt`,
-`params`, `variants` — sind geschlossen. **`pred` ist dabei die wichtigste**: eine Beweissprache
-*ist* ihre Praedikatsprache, und erst mit ihr laesst sich sagen, wo die Linie liegt.
+The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`, `ifstmt`, `matchstmt`,
+`params`, `variants` — are closed. **`pred` is the most important of them**: a proof language
+*is* its predicate language, and only with it can one say where the line lies.
 
 ---
 
-## Fuenf Entscheidungen, die alles andere festlegen
+## Five decisions that fix everything else
 
-| | Entscheidung | Grund |
+| | Decision | Reason |
 |---|---|---|
-| **E1** | **Englische Schluesselwoerter, deutscher Fliesstext, freie Bezeichner** | Caprocks eigene Praxis. Der Wortschatz ist eine **geschlossene Tabelle**; ein Tausch kostet den Lexer |
-| **E2** | **Anweisungsorientiert, Zuweisung ist KEIN Ausdruck** | `if (x = y)` ist nicht schreibbar; die Auswertungsreihenfolge bleibt sichtbar |
-| **E3** | **Nichts ist implizit** — keine Umwandlung, keine Kopie eines linearen Werts, kein Auffangzweig, kein Standardwert | jede der vier Klassen hat eine bezahlte Falle |
-| **E4** | **Vertraege stehen VOR dem Rumpf, in fester Reihenfolge** | ein Werkzeug, das sortieren muss, kann nicht sagen „hier fehlt `effects`" |
-| **E5** | **Jede Deklaration ist an genau einer Stelle vollstaendig** | kein Praeprozessor, keine Vorwaertsdeklaration |
+| **E1** | **English keywords, German running text, free identifiers** | Caprock's own practice. The vocabulary is a **closed table**; a swap costs the lexer |
+| **E2** | **Statement-oriented, assignment is NOT an expression** | `if (x = y)` is not writable; the evaluation order stays visible |
+| **E3** | **Nothing is implicit** — no conversion, no copy of a linear value, no catch-all branch, no default value | each of the four classes has a paid-for trap |
+| **E4** | **Contracts stand BEFORE the body, in a fixed order** | a tool that has to sort cannot say "`effects` is missing here" |
+| **E5** | **Every declaration is complete at exactly one place** | no preprocessor, no forward declaration |
 
-> **`obligation` ist KEIN Quellwort.** Die Festlegung zaehlt es unter ihren dreizehn neuen
-> Woertern; es steht aber im **Pflichtenmanifest**, also im **Erzeugnis**. Der Wortschatz hier ist
-> der der **Quelle** — das Manifest hat sein eigenes Format, und beides zu vermischen waere
-> derselbe Riss wie zwei Schluesselwortsprachen. **Zwoelf neue Quellwoerter, nicht dreizehn.**
+> **`obligation` is NOT a source word.** The definition counts it among its thirteen new
+> words; but it stands in the **obligation manifest**, i.e. in the **artefact**. The vocabulary here is
+> that of the **source** — the manifest has a format of its own, and mixing the two would be
+> the same crack as two keyword languages. **Twelve new source words, not thirteen.**
 
-> **Schreibregel fuer diese Dateien:** `Backticks` bezeichnen **heutige Gabbro-Syntax**. Ein
-> abgeschaffter Name steht *kursiv in Anfuehrungszeichen* — er **ist** keine Syntax mehr.
+> **Writing rule for these files:** `Backticks` denote **today's Gabbro syntax**. An
+> abolished name stands *in italics in quotation marks* — it **is** no longer syntax.
 
 ---
 
-## Wortschatz — geschlossen
+## Vocabulary — closed
 
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
@@ -103,12 +109,12 @@ Die tragenden Luecken der ersten Fassung — `expr`, `pred`, `block`, `place`, `
   Sonderform O @version Held    (KEINE Wortschatzwoerter -- s. Fussnote G6)
 ```
 
-**Alles andere ist ein Bezeichner.** Ein neues Wort ist eine Sprachaenderung und braucht einen
-Eintrag hier.
+**Everything else is an identifier.** A new word is a language change and needs an
+entry here.
 
 ---
 
-## Lexik
+## Lexis
 
 ```ebnf
 ident      = ( letter | "_" ) { letter | digit | "_" } ;
@@ -133,27 +139,27 @@ identlist  = ident { "," ident } ;
 regbind    = ident ":" ident ;                                 (* G4 *)
 ```
 
-> **Eine Kommaregel fuer alle Listen (2026-08-16).** `entrydecl`, `slotdecl` und
-> `reg … fields` schrieben drei verschiedene Regeln fuer dieselbe Sache — zweimal
-> Pflicht-Schlusskomma, einmal keins, und der Parser hielt keine davon. **Jetzt eine:
-> Trennkomma zwischen den Eintraegen, Schlusskomma freigestellt.** *Der Bestand schreibt es
-> ueberall; nichts bricht, und die Grammatik hat eine Regel statt dreier.*
+> **One comma rule for all lists (2026-08-16).** `entrydecl`, `slotdecl` and
+> `reg … fields` wrote three different rules for the same thing — twice a
+> compulsory trailing comma, once none, and the parser held none of them. **Now one:
+> separating comma between the entries, trailing comma optional.** *The existing code writes it
+> everywhere; nothing breaks, and the grammar has one rule instead of three.*
 
-> **Die Zeile `Sonderform` und warum sie keine Ausnahme ist (G6).** `O` (in `costexpr`),
-> `@version` (in `format`) und `Held` (in `heldpred`) sind **Terminale der Grammatik, aber
-> keine Woerter des Wortschatzes**: `O` steht als Bezeichner in fester Stellung (so auch im Parser,
-> `parse.rs:costexpr`), `@version` ist ein zusammengesetztes Zeichen, kein Schluesselwort.
-> **Der Befund war nie die Ausnahme, sondern dass der Waechter sie nie angesehen hat** — er
-> behauptete einen geschlossenen Wortschatz ueber einer Menge, aus der zwei Terminale
-> stillschweigend herausfielen (Grossbuchstabe, fuehrendes `@`). Jetzt zaehlt er sie, nennt
-> sie beim Namen und fuehrt sie in einer eigenen Klasse. *Eine benannte Ausnahme ist eine
-> Zusage; eine unsichtbare ist ein Loch.*
+> **The `Sonderform` line and why it is not an exception (G6).** `O` (in `costexpr`),
+> `@version` (in `format`) and `Held` (in `heldpred`) are **terminals of the grammar but
+> not words of the vocabulary**: `O` stands as an identifier in a fixed position (so too in the parser,
+> `parse.rs:costexpr`), `@version` is a composite character, not a keyword.
+> **The finding was never the exception, but that the guardian never looked at it** — it
+> claimed a closed vocabulary over a set out of which two terminals
+> silently fell (capital letter, leading `@`). Now it counts them, names
+> them and carries them in a class of their own. *A named exception is a
+> promise; an invisible one is a hole.*
 
-**Kein Gleitkomma im Kern.** Zeichenketten nur in `claim`, `reason`, `assume` und `section`.
+**No floating point in the core.** Strings only in `claim`, `reason`, `assume` and `section`.
 
 ---
 
-## 1. Programm, Module, Konstanten
+## 1. Program, modules, constants
 
 ```ebnf
 program    = { item } ;
@@ -191,14 +197,14 @@ staticdecl = [ "pub" ] "static" [ "mut" ] ident ":" typeexpr "=" expr
              [ "section" string ] ";" ;
 ```
 
-**`when`** steht an jedem `item` (oben in der Produktion) und ersetzt die bedingte Uebersetzung
-(335 `cfg`-Stellen in Caprock).
+**`when`** stands at every `item` (above in the production) and replaces conditional compilation
+(335 `cfg` sites in Caprock).
 
-Es senkt sich auf `#if` ab und ist **konstant auswertbar** — kein Praeprozessor, keine Textersetzung.
+It lowers to `#if` and is **constant-evaluable** — no preprocessor, no text substitution.
 
 ---
 
-## 2. Typen — M1, D1, D2
+## 2. Types — M1, D1, D2
 
 ```ebnf
 typedecl   = [ "pub" ] [ "opaque" ] [ "linear" [ "ghost" ] ] [ "tagged" ]
@@ -250,12 +256,12 @@ linear ghost type Duty(farbtest);   -- der Parameter ist der NAME einer `check`-
                                     -- Deklaration, nicht das Wort `check` (:697)
 ```
 
-**`tagged`** ist der Summentyp (13 `ObjectKind`-Varianten in Caprock) und senkt sich auf eine
-C-Union mit Marke ab. **`bitpos` als Bereich** deckt die 13 Mehrbitfelder in `vtd.rs` (F5).
+**`tagged`** is the sum type (13 `ObjectKind` variants in Caprock) and lowers to a
+C union with a tag. **`bitpos` as a range** covers the 13 multi-bit fields in `vtd.rs` (F5).
 
 ---
 
-## 3. Zeiger und Adressraeume — M3
+## 3. Pointers and address spaces — M3
 
 ```ebnf
 ptrty  = "ptr" "<" space "," rights ">" typeexpr ;
@@ -264,12 +270,12 @@ rights = right { "+" right } ;
 right  = "r" | "w" | "rw" | "x" | "own" [ "@" ident ] ;
 ```
 
-`own` ist das Eigentumsrecht: wer es haelt, darf freigeben — damit ist `Finalized` ohne
-Lebenszeiten ausdrueckbar. Die Barriere folgt aus dem **Raum**, nicht aus der Architektur.
+`own` is the ownership right: whoever holds it may release — with that `Finalized` is expressible
+without lifetimes. The barrier follows from the **space**, not from the architecture.
 
 ---
 
-## 4. Ausdruecke — `expr`
+## 4. Expressions — `expr`
 
 ```ebnf
 expr       = orexpr ;
@@ -305,24 +311,24 @@ placesuffix= "." ident | "[" expr "]" | "->" ident ;
 placelist  = place { "," place } ;
 ```
 
-**M1 wirkt hier und nirgends sonst:** jede Operation muss im Bereich ihres Ergebnistyps bleiben.
-`a + b` mit `a, b : u32 in 0..1000` hat den Typ `u32 in 0..2000`; passt der nicht in das Ziel, ist
-es ein **Uebersetzungsfehler**, keine Laufzeitpruefung.
+**M1 acts here and nowhere else:** every operation must stay within the range of its result type.
+`a + b` with `a, b : u32 in 0..1000` has the type `u32 in 0..2000`; if that does not fit into the
+target, it is a **compile error**, not a runtime check.
 
-**Division und Rest verlangen einen Nenner, dessen Bereich die Null ausschliesst.**
-`%` und `/` durch `u32 in 0..n` sind nicht schreibbar; durch `u32 in 1..n` schon.
+**Division and remainder demand a denominator whose range excludes zero.**
+`%` and `/` by `u32 in 0..n` are not writable; by `u32 in 1..n` they are.
 
-> **Die Grenze von M1 ist benannt und seit dem 2026-08-14 GEMESSEN.** `31 - x.leading_zeros()`
-> braucht eine **flusssensitive** Folgerung. **Aber nur eine Regel, nicht allgemeine Inferenz:**
-> *eine geprüfte Bedingung verengt den Bereich der geprüften Groesse im Zweig danach.* Vier
-> Fundstellen im ganzen Baum, alle dieselbe Redewendung. Wo er nicht durchkommt, verlangt Gabbro eine
-> **Einengung** statt eines Beweises: `narrow x to 1..u32::max else { … }` — eine Anweisung mit
-> benanntem Ausgang, keine Beweiszeile. **Sie zaehlt als Klempnerei und muss klein bleiben; wenn
-> sie das nicht tut, ist das eine Widerlegung** (s. offene Punkte).
+> **The limit of M1 is named and has been MEASURED since 2026-08-14.** `31 - x.leading_zeros()`
+> needs a **flow-sensitive** inference. **But only one rule, not general inference:**
+> *a checked condition narrows the range of the checked quantity in the branch after it.* Four
+> sites in the whole tree, all the same turn of phrase. Where it does not get through, Gabbro demands a
+> **narrowing** instead of a proof: `narrow x to 1..u32::max else { … }` — a statement with a
+> named exit, not a proof line. **It counts as plumbing and must stay small; if
+> it does not, that is a refutation** (see open items).
 
 ---
 
-## 5. Praedikate — `pred`. **Hier liegt die Linie**
+## 5. Predicates — `pred`. **Here lies the line**
 
 ```ebnf
 pred       = orpred ;
@@ -354,27 +360,27 @@ reach      = place "reaches" place "via" ident ;
 predlist   = pred { "," pred } ;
 ```
 
-**Acht Domaenen, geschlossen. Schachtelung hoechstens zwei.** `old(place)` ist in `ensures`
-erlaubt und sonst nicht.
+**Eight domains, closed. Nesting at most two.** `old(place)` is permitted in `ensures`
+and nowhere else.
 
-> **Das ist die Linie, und sie ist hier zum ersten Mal aufschreibbar.** Es gibt **keine
-> benutzerdefinierten Quantorendomaenen, keine Rekursion in `spec fn`, keine handgeschriebenen
-> Lemmata**. Wer mehr braucht, braucht Verus oder F\*.
+> **That is the line, and here it is writable down for the first time.** There are **no
+> user-defined quantifier domains, no recursion in `spec fn`, no hand-written
+> lemmas**. Whoever needs more needs Verus or F\*.
 >
-> **Die eine Ausnahme, und sie ist KEIN Lemma: `by induction over <domain>`.** Sie **nennt** das
-> Induktionsschema, das der Uebersetzer aus der `table`-Deklaration **erzeugt** hat — kein
-> Beweisschritt, kein Beweiskoerper, keine rekursive `spec fn`. **Der Grund, warum sie genannt und
-> nicht geraten wird, ist Vorhersagbarkeit:** ein Uebersetzer, der das Schema waehlt, macht
-> „uebersetzt es" von Loeserglueck abhaengig — und M1 bis M4 sind Typen, keine Loeser.
-> Ganz in [`SPRACHE.md`](SPRACHE.md).
+> **The one exception, and it is NOT a lemma: `by induction over <domain>`.** It **names** the
+> induction scheme that the compiler **generated** from the `table` declaration — no
+> proof step, no proof body, no recursive `spec fn`. **The reason it is named and
+> not guessed is predictability:** a compiler that chooses the scheme makes
+> "it compiles" depend on solver luck — and M1 to M4 are types, not solvers.
+> In full in [`SPRACHE.md`](SPRACHE.md).
 >
-> **Der Preis ist unbeziffert und vermutlich der groesste des ganzen Entwurfs:** es gibt keinen
-> Notausgang. Faellt eine Kernel-Eigenschaft aus den sieben Domaenen heraus, ist sie **nicht
-> formulierbar** — nicht „teuer", sondern **gar nicht**.
+> **The price is unquantified and probably the largest of the whole design:** there is no
+> emergency exit. If a kernel property falls outside the seven domains, it is **not
+> formulable** — not "expensive" but **not at all**.
 
 ---
 
-## 6. Funktionen und Vertraege — E4
+## 6. Functions and contracts — E4
 
 ```ebnf
 fndecl   = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
@@ -395,10 +401,10 @@ eff      = "reads" place | "writes" place | "locks" [ "shared" ] place | "masks"
          | "pure" ;
 ```
 
-> **`effects` ist NICHT fail-open.** Eine Funktion **ohne** `effects` ist ein Uebersetzungsfehler;
-> wer nichts anfasst, schreibt `effects { pure }`. Die frueher moegliche Auslassung war zugleich
-> **die staerkste Zusage und die kuerzeste Spezifikation** — der Anreiz stand gegen die
-> Vollstaendigkeit.
+> **`effects` is NOT fail-open.** A function **without** `effects` is a compile error;
+> whoever touches nothing writes `effects { pure }`. The omission that was formerly possible was at once
+> **the strongest promise and the shortest specification** — the incentive stood against
+> completeness.
 
 ```gabbro
 spec fn cdt_wellformed(c: CapSpace) -> bool =
@@ -420,17 +426,17 @@ impl fn delete_leaf(c: ptr<normal, rw> CapSpace, s: SlotIdx) -> Result
 { … }
 ```
 
-**`breaking`** benennt den Bereich, in dem eine Invariante ruht — drei Fundstellen in Caprock:
+**`breaking`** names the region in which an invariant rests — three sites in Caprock:
 
 ```ebnf
 breakstmt = "breaking" identlist block ;
 ```
 
-Sie muss am Ende des Blocks wiederhergestellt sein; der Bereich ist **sichtbar statt versteckt**.
+It must be restored at the end of the block; the region is **visible instead of hidden**.
 
 ---
 
-## 7. Anweisungen
+## 7. Statements
 
 ```ebnf
 block      = "{" { stmt } "}" ;
@@ -454,15 +460,15 @@ matchstmt  = "match" expr "{" { ident [ "(" ident ")" ] "=>" block } "}" ;
 narrowstmt = "narrow" place "to" range "else" block ;
 ```
 
-**`match` ist erschoepfend** — es gibt keinen Auffangzweig; eine neue Variante bricht die
-Uebersetzung. **Fehlerfortpflanzung** ist `let … else (e) { … }`: kein verborgener Kontrollfluss,
-der `else`-Zweig muss divergieren oder zurueckkehren.
+**`match` is exhaustive** — there is no catch-all branch; a new variant breaks the
+compilation. **Error propagation** is `let … else (e) { … }`: no hidden control flow,
+the `else` branch must diverge or return.
 
 ---
 
-## 8. Schleifen — **drei Formen, und unendlich ist eine davon**
+## 8. Loops — **three forms, and infinite is one of them**
 
-**Die Regel ist nicht „jede Schleife endet", sondern: was eine Schleife tun darf, steht dabei.**
+**The rule is not "every loop ends" but: what a loop may do stands beside it.**
 
 ```ebnf
 loopform   = traverse | retry | forever ;
@@ -489,11 +495,11 @@ forever    = "forever" [ ident ]
              block ;
 ```
 
-| Form | endet? | was die Klempnerei erledigt |
+| Form | ends? | what discharges the plumbing |
 |---|---|---|
-| **`traverse`** | ja, durch die Menge | Bereich **und** Terminierung; `by consuming` zusaetzlich die Blattheit ueber die Ordnung der Domaene |
-| **`retry`** | ja, durch `bounded` | Terminierung als **Zahl**; der Ueberlauf ist **benannt** (`on_exceeded`), nicht gedeutet |
-| **`forever`** | **nein — und das ist erlaubt** | jeder **Durchgang** ist begrenzt, der **Rahmen** steht in `effects` |
+| **`traverse`** | yes, through the set | range **and** termination; `by consuming` additionally the leafness via the ordering of the domain |
+| **`retry`** | yes, through `bounded` | termination as a **number**; the overrun is **named** (`on_exceeded`), not interpreted |
+| **`forever`** | **no — and that is permitted** | every **pass** is bounded, the **frame** stands in `effects` |
 
 ```gabbro
 forever
@@ -504,18 +510,18 @@ forever
 { … }
 ```
 
-> **Das ist der enge Rahmen.** Eine Leerlaufschleife, die Hauptschleife eines Servers, ein
-> Spinlock — sie sollen ewig laufen. Was **nicht** erlaubt ist: ein Durchgang, der selbst
-> unbegrenzt ist, oder eine Schleife, die anfasst, was nicht in ihrem Rahmen steht.
-> **`per_pass` und `effects` sind Pflicht; `forever` ohne sie uebersetzt nicht.**
+> **That is the narrow frame.** An idle loop, the main loop of a server, a
+> spinlock — they are meant to run forever. What is **not** permitted: a pass that is itself
+> unbounded, or a loop that touches what does not stand in its frame.
+> **`per_pass` and `effects` are compulsory; `forever` without them does not compile.**
 >
-> **`progress` nennt, WER sie beendet** — eine Annahme ueber die Umgebung, mit Falsifikator. Der
-> Watchdog **ist** der Falsifikator. Damit ist eine Warteschleife nicht „unbeweisbar", sondern
-> **beweisbar unter einer benannten, falsifizierbaren Annahme**.
+> **`progress` names WHO ends it** — an assumption about the environment, with a falsifier. The
+> watchdog **is** the falsifier. With that a wait loop is not "unprovable" but
+> **provable under a named, falsifiable assumption**.
 
 ---
 
-## 9. Tabellen, Traversierungen, Formate
+## 9. Tables, traversals, formats
 
 ```ebnf
 table      = "table" ident [ "count" constexpr ] "{"
@@ -547,7 +553,7 @@ format     = "format" ident [ "@version" int ] [ "endian" ( "little" | "big" ) ]
              "{" { field } "}" ;
 ```
 
-**Variable Laengen und Versaetze** — damit ist ELF ein `format`:
+**Variable lengths and offsets** — with them ELF is a `format`:
 
 ```gabbro
 format Elf64 endian little {
@@ -557,23 +563,23 @@ format Elf64 endian little {
 }
 ```
 
-`offset_into Self` bindet den Versatz an die Pufferlaenge; die `where`-Klausel ist die **einzige**
-Zusatzangabe und senkt sich auf eine Bereichspruefung ab.
+`offset_into Self` binds the offset to the buffer length; the `where` clause is the **only**
+additional statement and lowers to a range check.
 
-**`reason`** ist Regel 3 in Schreibweise, **`state`** nennt die erlaubten Uebergaenge eines Wertes:
+**`reason`** is rule 3 in notation, **`state`** names the permitted transitions of a value:
 
 ```ebnf
 reason  = "reason" ident "{" { ident "=" int string } [ "exhaustive" ] "}" ;
 state   = "state" ident "{" { transition } "}" ;
 ```
 
-`state` und `device`s `transition` sind **dasselbe Konstrukt auf zwei Ebenen**: einmal ueber
-Feldern, einmal ueber Registerbits. `resume` (`iretq`/`eret`) ist der Uebergang auf der dritten —
-ueber dem Maschinenzustand.
+`state` and `device`'s `transition` are **the same construct on two levels**: once over
+fields, once over register bits. `resume` (`iretq`/`eret`) is the transition on the third —
+over the machine state.
 
 ---
 
-## 10. Geraete — und Falle 4
+## 10. Devices — and trap 4
 
 ```ebnf
 device  = "device" ident [ "(" params ")" ] "at" space
@@ -619,18 +625,23 @@ device Vtd(base: Pa) at mmio {
 }
 ```
 
-> **`keeping` toetet Falle 4, und `class w` allein tat es nicht.** Die Falle ist nicht „GCMD lesen",
-> sondern **„beim Schreiben die Zustandsbits nicht mitschreiben"**. `keeping` nennt die Bits, die
-> das geschriebene Wort **mitfuehren** muss; ihre Quelle ist ein lesbares Register. Ein `store`,
-> der sie fallenlaesst, ist damit **nicht schreibbar** — und ein Lesen von `GCMD` bleibt weiterhin
-> untypisierbar.
+> **`mirrors` kills trap 4, and `class w` alone did not.** The trap is not "reading GCMD"
+> but **"not carrying the state bits along when writing"**. `mirrors` names the bits that
+> the written word must **carry along**; their source is a readable register. A `store`
+> that drops them is thereby **not writable** — and a read of `GCMD` remains
+> untypeable.
 >
-> **`bank`** deckt Register an laufzeitberechneter Basis (F6): `FRR` bei `CAP.FRO*16`. Der Index
-> ist M1-beschraenkt durch `count`.
+> *(Until 2026-08-17 this paragraph said `keeping` three times. The word was renamed to
+> `mirrors`; the production above has carried the new name for a while, the prose carried the old
+> one — and the file's own writing rule says that backticks denote **today's** syntax. A name in
+> backticks that no grammar knows is the same false green as a table word in no production.)*
+>
+> **`bank`** covers registers at a run-time-computed base (F6): `FRR` at `CAP.FRO*16`. The index
+> is M1-bounded by `count`.
 
 ---
 
-## 11. Nebenlaeufigkeit
+## 11. Concurrency
 
 ```ebnf
 atomicdecl  = [ "pub" ] "atomic" ident ":" typeexpr
@@ -662,35 +673,35 @@ group Zustellung over { Endpunkte, Faeden } {
 }
 ```
 
-**`group` traegt die Invariante, die zwischen zwei Traegern lebt** — *„der Zaehler in A
-entspricht der Zahl der Verweise in B"*. Keine `table … invariant` kann das sagen; sie
-quantifiziert nur ueber ihrem eigenen Traeger.
+**`group` carries the invariant that lives between two carriers** — *"the counter in A
+corresponds to the number of references in B"*. No `table … invariant` can say that; it
+quantifies only over its own carrier.
 
-**Die Sperrordnung steht NICHT an der Gruppe.** Jeder Traeger liegt unter einer
-`lock … rank N`, und die Raenge geben die Ordnung — eine zweite Deklaration waere eine
-zweite Wahrheit ueber dieselbe Sache. Was der Pruefer daraus macht: `U003` verlangt, dass
-eine Funktion, die **zwei** Traeger einer Gruppe schreibt, **alle** ihre Sperren haelt, und
-`U005` faellt, wenn zwei Sperren einer Gruppe denselben Rang tragen — dann gibt es keine
-Ordnung, und die Gruppenoperation koennte sie in zwei Richtungen nehmen. `U006` faellt, wenn
-ein Weg den Rumpf **zwischen** dem ersten und dem letzten Schreibzugriff verlaesst
-(`return`, `leave`, `let … else`) — dort gilt die Invariante nicht.
+**The lock order does NOT stand at the group.** Every carrier lies under a
+`lock … rank N`, and the ranks give the order — a second declaration would be a
+second truth about the same thing. What the checker makes of it: `U003` demands that
+a function that writes **two** carriers of a group holds **all** their locks, and
+`U005` falls if two locks of a group carry the same rank — then there is no
+order, and the group operation could take them in two directions. `U006` falls if
+a path leaves the body **between** the first and the last write access
+(`return`, `leave`, `let … else`) — there the invariant does not hold.
 
-**Der Rumpf ist freigestellt, die Invariante nicht bedeutungslos.** Ohne Rumpf greifen
-Sperrabdruck und Zug; erst mit ihm steht die Verbindungsaussage selbst da. **`U007` faellt,
-wenn eine Gruppen-Invariante weniger als zwei Traeger der Gruppe nennt** — dann gehoert sie
-an die `table … invariant`, und die Gruppe waere bloss die bequemere Schreibweise. *Ein
-Konstrukt, das nur bequemer ist, hat keinen Beleg (W3).*
+**The body is optional, the invariant is not meaningless.** Without a body the lock imprint
+and the move bite; only with it does the connection statement itself stand there. **`U007` falls
+if a group invariant names fewer than two carriers of the group** — then it belongs
+at the `table … invariant`, and the group would be merely the more convenient notation. *A
+construct that is only more convenient has no evidence (W3).*
 
-*Der gemessene Bedarf steht in `MESSUNGEN.md`, SWEEP der Verbindungs-Invarianten: vier im
-Bestand, drei unter einer Sperre, eine (V4) ueber zwei Kisten mit zwei Sperrklassen.*
+*The measured need stands in `MESSUNGEN.md`, SWEEP der Verbindungs-Invarianten: four in the
+existing code, three under one lock, one (V4) over two crates with two lock classes.*
 
-**`publishes` ist Pflicht an jedem Atomic** — die Nutzlast ist Teil des Modells, nicht des
-Kommentars. **`rank`** gibt die Sperrordnung; Nehmen verlangt echt kleineren Rang. Ein `locks`-Block
-gibt am Ende frei; wer kopieren-und-freigeben will, tut es **innerhalb** und nimmt danach neu.
+**`publishes` is compulsory at every atomic** — the payload is part of the model, not of the
+comment. **`rank`** gives the lock order; acquiring demands a strictly smaller rank. A `locks` block
+releases at the end; whoever wants copy-and-release does it **inside** and acquires afresh afterwards.
 
 ---
 
-## 12. Hardwareannahmen und Axiome — **tragend, nicht Beiwerk**
+## 12. Hardware assumptions and axioms — **load-bearing, not trimming**
 
 ```ebnf
 assume = "assume" ident string
@@ -713,22 +724,22 @@ assume x2apic_two_step
 axiom write_cr3(p: Pa) effects { writes tlb, writes active_table } falsifier probe_cr3;
 ```
 
-**Drei Klassen, und die dritte gibt es syntaktisch nicht:** *falsifiziert* (Sonde lief und hielt),
-*nicht falsifizierbar* (**mit Grund als Zeichenkette**), *nicht gefahren* — das ist die
-**Abwesenheit beider Angaben** und ein **Uebersetzungsfehler**. Eine nicht gefahrene Annahme darf
-nie wie eine falsifizierte aussehen.
+**Three classes, and the third does not exist syntactically:** *falsified* (probe ran and held),
+*not falsifiable* (**with a reason as a string**), *not run* — that is the
+**absence of both statements** and a **compile error**. An assumption that has not been run must
+never look like a falsified one.
 
-**Die Annahmenmenge wird ins Erzeugnis emittiert** („bewiesen unter A1…An"), als **Menge von Namen
-mit Klasse**, nicht als Zahl — eine Ratsche ueber einer Kardinalzahl greift nicht gegen Austausch.
+**The assumption set is emitted into the artefact** ("proved under A1…An"), as a **set of names
+with a class**, not as a number — a ratchet over a cardinal number does not bite against exchange.
 
-> **Damit ist die Zusage relativ, und das steht im Artefakt statt in einer Fussnote:**
-> *speichersicher unter A1…An.* Ein Beweis, dessen Annahmenmenge der Verbraucher nicht kennt, hat
-> keine Reichweite. **Die Axiomschicht ist die groesste unbewiesene Flaeche der Sprache** — groesser
-> als der Uebersetzer — und deshalb zaehlbar und ratschenfaehig.
+> **With that the promise is relative, and that stands in the artefact instead of in a footnote:**
+> *memory-safe under A1…An.* A proof whose assumption set the consumer does not know has
+> no reach. **The axiom layer is the largest unproved surface of the language** — larger
+> than the compiler — and therefore countable and ratchetable.
 
 ---
 
-## 13. `check` — die lineare Pruefpflicht
+## 13. `check` — the linear checking obligation
 
 ```ebnf
 check = "check" ident "{"
@@ -741,17 +752,17 @@ check = "check" ident "{"
         "}" ;
 ```
 
-Der Uebersetzer erzeugt ein `linear ghost Duty(ident)`. **Vier Uebersetzungsfehler fallen aus
-M1/M2/M3, nicht aus Sonderregeln:** `gates` fehlt → die Pflicht wird nie verbraucht;
-`can_fail` fehlt → dito; eine Groesse unter `measures`, die der **gemessene Pfad** schreibt →
-Schreibrecht; einseitige Schwelle ohne `floor` → die Groesse hat keinen Bereich.
+The compiler generates a `linear ghost Duty(ident)`. **Four compile errors fall out of
+M1/M2/M3, not out of special rules:** `gates` missing → the obligation is never consumed;
+`can_fail` missing → likewise; a quantity under `measures` that the **measured path** writes →
+write right; a one-sided threshold without `floor` → the quantity has no range.
 
-**Die `measures`-Liste IST die Berichtszeile** — daraus entsteht die Formatierung, ohne dass
-Formatierung im Sprachkern existiert.
+**The `measures` list IS the report line** — the formatting arises out of it, without
+formatting existing in the language core.
 
 ---
 
-## 14. Bootphase, Maschinenzustand, Assembler
+## 14. Boot phase, machine state, assembler
 
 ```gabbro
 raw fn phys_write(p: Pa, w: u64) requires BootPhase effects { writes phys };
@@ -763,48 +774,50 @@ prim fn resume(k: ptr<normal,r> Context) -> never effects { reads k };
 divergent fn idle() effects { diverges };
 ```
 
-`boot_end` verbraucht die **lineare** Marke **und** bildet `code<boot>` ab — ein Ereignis. Eine
-Sonde dorthin muss danach faulten; das ist der Falsifikator.
+`boot_end` consumes the **linear** token **and** unmaps `code<boot>` — an event. A
+probe there must fault afterwards; that is the falsifier.
 
 ---
 
-## Was es absichtlich nicht gibt
+## What deliberately does not exist
 
-`while` · `for` · `goto` · `union` als Umdeutung · Praeprozessor · implizite Umwandlung · `void*` ·
-Zeigerarithmetik ohne Grundlage · Auffangzweig · Ausnahmen · Vererbung · Reflexion · GC ·
-Gleitkomma im Kern · Zuweisung als Ausdruck · Vorwaertsdeklaration · Selbst-Hosting ·
-benutzerdefinierte Quantorendomaenen · Rekursion in `spec fn` · handgeschriebene Lemmata.
+`while` · `for` · `goto` · `union` as reinterpretation · preprocessor · implicit conversion · `void*` ·
+pointer arithmetic without a basis · catch-all branch · exceptions · inheritance · reflection · GC ·
+floating point in the core · assignment as an expression · forward declaration · self-hosting ·
+user-defined quantifier domains · recursion in `spec fn` · hand-written lemmas.
 
 ---
 
-## Offene Punkte — Stand 2026-08-14, nach der Festlegung
+## Open items — as of 2026-08-14, after the definition
 
-**Die neun Entwurfsfragen sind in [`SPRACHE.md`](SPRACHE.md) §18 entschieden (F1–F9).**
-Was hier steht, ist, was danach **noch offen** ist — und das sind Messungen, keine Entwuerfe.
+**The nine design questions are decided in [`SPRACHE.md`](SPRACHE.md) §18 (F1–F9).**
+What stands here is what is **still open** after that — and those are measurements, not designs.
 
-### Die eine Messung, an der die Festlegung haengt
+### The one measurement the definition hangs on
 
-- [ ] **Die 74-Pflichten-Messung gegen diese Fassung wiederholen: haengende Klempnerei 19 → 0.**
-      Das ist die **Abnahme** der Festlegung, nicht ihre Zustimmung. Bleibt eine haengen, ist sie
-      an dieser Stelle widerlegt — mit Klasse und Fundstelle.
+- [ ] **Repeat the 74-obligation measurement against this version: hanging plumbing 19 → 0.**
+      That is the **acceptance** of the definition, not agreement with it. If one stays hanging, it is
+      refuted at that point — with a class and a source reference.
 
-### Vier Messlatten, alle vorab gesetzt
+### Four marks, all set in advance
 
-- [ ] **`narrow`-Zaehlung am Baum: ≤ 24 Fundstellen.** Wachsen sie darueber, ist die Regelmenge
-      V1–V3 zu klein — **und *das* ist die Widerlegung, nicht ein weiteres Regelwachstum in Stille.**
-- [ ] **Wieviele der 17 gemessenen Logik-Pflichten brauchen `by induction over`**, wieviele kommen
-      ohne aus, **wieviele braeuchten rekursive `spec fn` oder Lemmata**? Ein einziger Fall in der
-      letzten Spalte setzt die Decke tiefer.
-- [ ] **Kostenwahrheit je uebersetztem Modul** (Festlegung §14.2): erzeugtes C gegen
-      handgeschriebenes im Differenz-Benchmark.
-- [ ] **Die zehn Fragmente auf diese Syntax ziehen**, Waechter gruen. Sechs liegen in
-      [`FRAGMENTE.md`](FRAGMENTE.md) und sind gegen die **zweite** Fassung geschrieben.
+- [ ] **`narrow` count on the tree: ≤ 24 sites.** If they grow beyond that, the rule set
+      V1–V3 is too small — **and *that* is the refutation, not a further growth of rules in silence.**
+- [ ] **How many of the 17 measured logic obligations need `by induction over`**, how many manage
+      without, **how many would need a recursive `spec fn` or lemmas**? A single case in the
+      last column sets the ceiling lower.
+- [ ] **Cost truth per compiled module** (definition §14.2): generated C against
+      hand-written in the differential benchmark.
+- [ ] **Pull the ten fragments onto this syntax**, guardians green. All ten now lie in
+      [`FRAGMENTE.md`](FRAGMENTE.md) (F1–F10, gate P2 at 10 of 10 since 2026-08-16); the first six
+      are written against the **second** version. *(Until 2026-08-17 this line said "six lie in
+      FRAGMENTE.md" — F7–F10 were written on 2026-08-16 and the line was not pulled up.)*
 
-### Was auch nach der Festlegung nicht gedeckt ist — benannt, nicht vergessen
+### What is not covered even after the definition — named, not forgotten
 
-- [ ] **Die Naht CPU ↔ Geraet** hat kein mechanisiertes Vorbild ([`BEWEIS.md`](BEWEIS.md)).
-- [ ] **Der `iasm`-Eintrittspfad hat keinen nachgelagerten Beweiser** — das Vertrauen schrumpft von
-      161 Fundstellen auf eine Stelle, es verschwindet nicht.
-- [ ] **Lebendigkeit und Fortschritt** faellt unter keinen Mechanismus.
-- [ ] **Die Geistertheorie-Schablonen sind die vertrauenskritischste Flaeche** und gehoeren einmal
-      nach Isabelle ([`BEWEIS.md`](BEWEIS.md), Stufe 1).
+- [ ] **The seam CPU ↔ device** has no mechanised model to follow ([`BEWEIS.md`](BEWEIS.md)).
+- [ ] **The `iasm` entry path has no downstream prover** — the trust shrinks from
+      161 sites to one site, it does not disappear.
+- [ ] **Liveness and progress** falls under no mechanism.
+- [ ] **The ghost-theory templates are the most trust-critical surface** and belong in
+      Isabelle once ([`BEWEIS.md`](BEWEIS.md), level 1).
