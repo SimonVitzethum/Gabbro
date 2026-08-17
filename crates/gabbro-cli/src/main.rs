@@ -231,7 +231,16 @@ fn befehl_annahmen(dateien: &[String]) -> std::process::ExitCode {
         }
         alle.extend(manifest::sammle(&baum));
     }
-    alle.sort_by(|a, b| a.name.cmp(&b.name));
+    // **Menge, nicht Liste** (`SYNTAX.md` §12). Zwei Dateien duerfen dieselbe Annahme
+    // erklaeren -- aber sie zaehlt einmal. Erklaeren sie sie VERSCHIEDEN, ist das ein
+    // Widerspruch und kein Duplikat, und dann faellt der Befehl.
+    let (alle, streit) = manifest::vereinige(alle);
+    if !streit.is_empty() {
+        for s in &streit {
+            eprintln!("gabbro annahmen: {s}");
+        }
+        return std::process::ExitCode::from(1);
+    }
     print!("{}", manifest::zeige(&alle));
     std::process::ExitCode::SUCCESS
 }

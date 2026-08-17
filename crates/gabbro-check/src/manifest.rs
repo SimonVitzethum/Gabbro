@@ -62,6 +62,43 @@ fn sammle_items(items: &[Item], out: &mut Vec<Eintrag>) {
     }
 }
 
+/// **Die Annahmenmenge ist eine MENGE, und bis zum 2026-08-17 war sie eine Liste.**
+///
+/// `SYNTAX.md` §12 verlangt sie als *„Menge von Namen mit Klasse"*. Ueber mehrere Dateien
+/// hinweg haengte der Aufruf die Ergebnisse aber schlicht aneinander: `beispiele/06` und
+/// `beispiele/07` erklaeren beide `axiom write_cr3` mit derselben Sonde und denselben
+/// Wirkungen (nur der Parametername unterscheidet sich, und den fuehrt das Manifest nicht).
+/// **Also stand `write_cr3` zweimal drin, und die Zeile darunter meldete 15 statt 14.**
+///
+/// > *Eine Zusage „bewiesen unter A1…An" mit einem doppelten A behauptet eine groessere
+/// > Annahmenmenge, als sie hat.*
+///
+/// **Der gefaehrlichere Fall ist der andere, und gegen ihn ist diese Funktion eigentlich
+/// gebaut:** zwei Dateien erklaeren denselben NAMEN mit verschiedenem Inhalt — andere Sonde,
+/// andere Wirkungen, oder einmal falsifizierbar und einmal nicht. Das ist ein **Widerspruch
+/// in der Annahmenmenge**, und die alte Fassung haette beide Zeilen nebeneinander gedruckt,
+/// ohne ein Wort. Hier faellt er als `Vec<String>` heraus, und der Rufer entscheidet.
+pub fn vereinige(alle: Vec<Eintrag>) -> (Vec<Eintrag>, Vec<String>) {
+    let mut aus: Vec<Eintrag> = Vec::new();
+    let mut streit = Vec::new();
+    for e in alle {
+        match aus.iter().find(|a| a.name == e.name) {
+            None => aus.push(e),
+            Some(vorher) => {
+                if vorher.art != e.art || vorher.klasse != e.klasse || vorher.aussage != e.aussage {
+                    streit.push(format!(
+                        "`{}` is declared twice with different content -- \
+                         a contradiction in the assumption set, not a duplicate",
+                        e.name
+                    ));
+                }
+            }
+        }
+    }
+    aus.sort_by(|a, b| a.name.cmp(&b.name));
+    (aus, streit)
+}
+
 fn klasse(k: &AnnahmeKlasse) -> Klasse {
     match k {
         AnnahmeKlasse::Falsifizierbar(i) => Klasse::Falsifizierbar {

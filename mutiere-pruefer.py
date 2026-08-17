@@ -721,6 +721,63 @@ MUTATIONEN = [
         "        if true {",
         "B35 -- `Some`/`None` gelten als unbekannte Gerufene; jede option-Huelle wird untere Schranke",
     ),
+    # -- manifest.rs: die Ratsche, die als Vorbild zitiert wurde -------------------------
+    #
+    # `schablonen.rs` nennt die Axiomschicht als das Beispiel einer Ratsche, DIE ES SCHON
+    # GIBT. Sie hatte bis zum 2026-08-17 keinen Test und keine Mutation -- also genau die
+    # Lage, die dort ueber die Schablonen beklagt wird, eine Datei weiter. Und die erste
+    # Probe fand sofort etwas: `gabbro annahmen beispiele/*.gab` meldete 15, wo 14 stehen.
+    Mutation(
+        "menge-ist-wieder-liste",
+        "manifest.rs",
+        "        match aus.iter().find(|a| a.name == e.name) {\n            None => aus.push(e),",
+        "        match None::<&Eintrag> {\n            None => aus.push(e),",
+        "SYNTAX.md §12 -- die Annahmenmenge zaehlt Duplikate wieder mit (15 statt 14)",
+    ),
+    Mutation(
+        "widerspruch-schweigt",
+        "manifest.rs",
+        "                if vorher.art != e.art || vorher.klasse != e.klasse || vorher.aussage != e.aussage {",
+        "                if false && (vorher.art != e.art || vorher.klasse != e.klasse || vorher.aussage != e.aussage) {",
+        "SYNTAX.md §12 -- derselbe Name mit anderem Inhalt gilt als Duplikat statt als Widerspruch",
+    ),
+    Mutation(
+        "annahme-im-modul-verloren",
+        "manifest.rs",
+        "            ItemArt::Modul(m) => sammle_items(&m.items, out),",
+        "            ItemArt::Modul(m) => { let _ = m; }",
+        "SYNTAX.md §12 -- eine Annahme in einem verschachtelten Modul faellt aus dem Manifest",
+    ),
+    Mutation(
+        "nicht-falsifizierbar-ohne-grund",
+        "manifest.rs",
+        "        AnnahmeKlasse::NichtFalsifizierbar(t) => Klasse::NichtFalsifizierbar {\n            grund: t.text.clone(),\n        },",
+        "        AnnahmeKlasse::NichtFalsifizierbar(t) => { let _ = t; Klasse::NichtFalsifizierbar {\n            grund: String::new(),\n        } },",
+        "SYNTAX.md §12 -- `unfalsifiable` verliert seinen Grund; eine Annahme ohne Rechenschaft",
+    ),
+
+    # -- korpus.rs: der Schneider, an dem Tor P2 haengt -----------------------------------
+    Mutation(
+        "schneider-verliert-den-vorspann",
+        "korpus.rs",
+        "                inhalt = \"\\n\".repeat(nr);",
+        "                inhalt = String::new();",
+        "Tor P2 -- Absagen zeigen auf Zeilen, die es in der Markdown-Datei nicht gibt",
+    ),
+    Mutation(
+        "eine-skizze-gilt-als-einheit",
+        "korpus.rs",
+        "    if !verworfen.leer() {\n        return false; // der Lexer stolpert -- das ist kein Programm, sondern eine Skizze",
+        "    if false && !verworfen.leer() {\n        return false; //",
+        "Tor P2 -- ein Ausschnitt mit `…` zaehlt als Uebersetzungseinheit (W9, falsche Richtung)",
+    ),
+    Mutation(
+        "eine-einheit-faengt-mit-irgendwas-an",
+        "korpus.rs",
+        "        gabbro_syntax::lex::Art::Wort(k) => gabbro_syntax::parse::faengt_item_an(k),",
+        "        gabbro_syntax::lex::Art::Wort(k) => { let _ = k; true }",
+        "Tor P2 -- ein Block, der mit einer Anweisung anfaengt, gilt als Uebersetzungseinheit",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

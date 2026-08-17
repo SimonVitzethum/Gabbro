@@ -1,0 +1,125 @@
+//! **Das Annahmenmanifest -- bis zum 2026-08-17 ohne eine einzige Probe.**
+//!
+//! `schablonen.rs` nennt die Axiomschicht als das Beispiel einer Ratsche, die es schon gibt
+//! (*„Die Axiomschicht hat ihre (`gabbro annahmen`, „bewiesen unter A1…An")"*). **Sie hatte
+//! keinen Test und keine Mutation** -- also genau die Lage, die dort ueber die Schablonen
+//! beklagt wird, eine Datei weiter.
+//!
+//! Und die erste Probe fand sofort etwas: `gabbro annahmen beispiele/*.gab` meldete
+//! **15 Annahmen**, von denen zwei dieselbe waren.
+
+use gabbro_check::manifest::{sammle, vereinige, Eintrag, Klasse};
+
+fn baum(q: &str) -> gabbro_syntax::ast::Programm {
+    gabbro_syntax::lies("probe.gab", q).0
+}
+
+#[test]
+fn ein_axiom_und_ein_assume_kommen_mit_ihrer_klasse_an() {
+    let q = "module t {
+axiom write_cr3(p : u64) effects { writes tlb } falsifier sonde_cr3;
+assume tlb_leer \"Ein Schreiben auf CR3 verwirft die nicht-globalen Eintraege.\"
+    falsifier sonde_tlb;
+assume wbinvd_wirkt \"Der Cache ist danach leer.\"
+    unfalsifiable \"auf dieser Maschine nicht beobachtbar\";
+}";
+    let e = sammle(&baum(q));
+    assert_eq!(e.len(), 3, "drei Annahmen: {e:?}");
+
+    let cr3 = e.iter().find(|x| x.name == "write_cr3").expect("write_cr3");
+    assert_eq!(cr3.art, "axiom");
+    assert_eq!(cr3.aussage, "writes tlb", "bei einem Axiom ist die Aussage die Wirkungsliste");
+    assert_eq!(
+        cr3.klasse,
+        Klasse::Falsifizierbar { sonde: "sonde_cr3".into() },
+        "die Sonde gehoert ins Manifest -- ob sie lief, sagt der Lauf"
+    );
+
+    let wb = e.iter().find(|x| x.name == "wbinvd_wirkt").expect("wbinvd");
+    assert!(
+        matches!(&wb.klasse, Klasse::NichtFalsifizierbar { grund } if grund.contains("beobachtbar")),
+        "**nicht-falsifizierbar nur MIT Grund** -- ohne ihn waere es eine Annahme ohne Rechenschaft: {:?}",
+        wb.klasse
+    );
+}
+
+#[test]
+fn annahmen_in_verschachtelten_modulen_gehen_nicht_verloren() {
+    let q = "module a { module b {
+axiom tief() effects { writes x } falsifier s;
+} }";
+    assert_eq!(sammle(&baum(q)).len(), 1, "ein Modul im Modul versteckt keine Annahme");
+}
+
+// -- Die Menge ist eine MENGE ------------------------------------------------------------
+
+fn e(name: &str, art: &'static str, sonde: &str, aussage: &str) -> Eintrag {
+    Eintrag {
+        name: name.into(),
+        art,
+        klasse: Klasse::Falsifizierbar { sonde: sonde.into() },
+        aussage: aussage.into(),
+    }
+}
+
+#[test]
+fn dieselbe_annahme_aus_zwei_dateien_zaehlt_einmal() {
+    // **Der gefundene Fall, woertlich.** `beispiele/06` und `beispiele/07` erklaeren beide
+    // `axiom write_cr3` mit derselben Sonde und denselben Wirkungen; nur der Parametername
+    // unterscheidet sich, und den fuehrt das Manifest nicht. Die alte Fassung meldete
+    // deshalb **15 Annahmen**, wo es 14 gibt.
+    let (aus, streit) = vereinige(vec![
+        e("write_cr3", "axiom", "sonde_cr3", "writes tlb, writes aktive_tabelle"),
+        e("invlpg", "axiom", "sonde_invlpg", "writes tlb"),
+        e("write_cr3", "axiom", "sonde_cr3", "writes tlb, writes aktive_tabelle"),
+    ]);
+    assert_eq!(aus.len(), 2, "zweimal dasselbe ist EINE Annahme: {aus:?}");
+    assert!(streit.is_empty(), "gleicher Inhalt ist kein Streit: {streit:?}");
+    assert_eq!(
+        aus.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(),
+        vec!["invlpg", "write_cr3"],
+        "und die Ausgabe bleibt sortiert"
+    );
+}
+
+#[test]
+fn derselbe_name_mit_anderem_inhalt_ist_ein_widerspruch() {
+    // **Der eigentliche Grund fuer die Funktion.** Ein Duplikat ist eine falsche Zahl; ZWEI
+    // verschiedene Erklaerungen desselben Namens sind ein Widerspruch in der Annahmenmenge --
+    // und die Zusage lautet „bewiesen unter A1…An". Welches A gilt dann?
+    let (_, streit) = vereinige(vec![
+        e("write_cr3", "axiom", "sonde_cr3", "writes tlb"),
+        e("write_cr3", "axiom", "sonde_cr3", "writes tlb, writes aktive_tabelle"),
+    ]);
+    assert_eq!(streit.len(), 1, "der Widerspruch muss beim Namen genannt werden: {streit:?}");
+    assert!(streit[0].contains("write_cr3"));
+
+    // Auch die KLASSE zaehlt: einmal falsifizierbar, einmal nicht, ist derselbe Fall.
+    let mit_grund = Eintrag {
+        name: "write_cr3".into(),
+        art: "axiom",
+        klasse: Klasse::NichtFalsifizierbar { grund: "keine Sonde".into() },
+        aussage: "writes tlb".into(),
+    };
+    let (_, streit) = vereinige(vec![e("write_cr3", "axiom", "sonde_cr3", "writes tlb"), mit_grund]);
+    assert_eq!(
+        streit.len(),
+        1,
+        "eine Annahme, die einmal falsifizierbar heisst und einmal nicht, ist ein Streit"
+    );
+}
+
+#[test]
+fn die_zaehlzeile_zaehlt_die_menge_und_nicht_die_liste() {
+    let (aus, _) = vereinige(vec![
+        e("a", "axiom", "s", "writes x"),
+        e("a", "axiom", "s", "writes x"),
+    ]);
+    let text = gabbro_check::manifest::zeige(&aus);
+    assert!(text.contains("-- 1 Annahmen"), "die Zahl unter der Tabelle:\n{text}");
+    assert_eq!(
+        text.lines().filter(|l| l.starts_with('A')).count(),
+        1,
+        "eine Zeile je Annahme:\n{text}"
+    );
+}
