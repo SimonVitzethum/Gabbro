@@ -916,8 +916,8 @@ MUTATIONEN = [
     Mutation(
         "narrow-prueft-nicht",
         "emit.rs",
-        "            aus.push_str(&format!(\"{e}if (!({o} >= {von} && {o} {oben} {bis})) {{\\n\"));",
-        "            aus.push_str(&format!(\"{e}if (0) {{ /* {o} {von} {oben} {bis} */\\n\"));",
+        "            aus.push_str(&format!(\"{e}if (!({bedingung})) {{\\n\"));",
+        "            aus.push_str(&format!(\"{e}if (0) {{ /* {bedingung} */\\n\"));",
         "C-Absenkung -- der `else`-Zweig eines `narrow` kann nie genommen werden",
         "code",
     ),

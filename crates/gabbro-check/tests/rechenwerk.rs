@@ -481,3 +481,52 @@ impl fn zaehle(k : ptr<normal, r> Kopf) -> u32 effects { reads k } costs <= 4096
     assert!(c.contains("{ leer(); }"), "der benannte Ausgang wird gerufen:\n{c}");
     assert!(c.contains("_Noreturn void leer(void);"), "und er kehrt nicht zurueck:\n{c}");
 }
+
+/// **Zwei Regeln, die eine ueberlebende Mutation aufgedeckt hat (2026-08-17).**
+///
+/// `on-exceeded-darf-zurueckkehren` und `untere-schranke-faellt-immer-weg` gingen durch, ohne
+/// dass etwas fiel. Beide Regeln waren gebaut und **keine von beiden war bewacht** -- genau
+/// der Zustand, gegen den das Mutationsgeruest steht.
+#[test]
+fn on_exceeded_und_die_untere_schranke_sind_bewacht() {
+    fn absagen_von(q: &str) -> Vec<String> {
+        let mut a = gabbro_syntax::Absagen::neu("p.gab");
+        let (baum, _) = gabbro_syntax::lies("p.gab", q);
+        let _ = gabbro_check::emit::emittiere(&baum, &mut a);
+        a.absagen.iter().map(|x| x.text.clone()).collect()
+    }
+
+    // **1. `on_exceeded` muss auf eine Funktion zeigen, die NICHT zurueckkehrt.** Kehrt sie
+    // zurueck, dreht die Schleife nach dem Ueberlauf weiter -- die Schranke waere dann eine
+    // Zusage ohne Wirkung, also genau das, wogegen D11 steht.
+    let kehrt_zurueck = absagen_von(
+        "module t {
+extern fn schritt() -> u32 effects { pure } costs <= 4 ops;
+extern fn merker() -> u32 effects { pure } costs <= 1 ops;
+impl fn f() -> u32 effects { pure } costs <= 4096 ops
+{ retry r until schritt() == 9 bounded 400 ops progress p on_exceeded merker
+    effects { pure } { } return 0; }
+}",
+    );
+    assert!(
+        kehrt_zurueck.iter().any(|s| s.contains("`never`")),
+        "ein zurueckkehrendes `on_exceeded` muss abgelehnt werden: {kehrt_zurueck:?}"
+    );
+
+    // **2. Die untere `narrow`-Pruefung faellt NUR fuer nachweislich vorzeichenlose Werte
+    // weg.** Bei einem vorzeichenbehafteten Wert ist `x >= 0` keine Redensart, sondern die
+    // halbe Pruefung.
+    let quelle = "module t {
+type S = i32 in 0 .. 100;
+impl fn f(x : S) -> u32 effects { pure } costs <= 8 ops
+{ narrow x to 0 .. 50 else { return 0; } return 1; }
+}";
+    let mut a = gabbro_syntax::Absagen::neu("s.gab");
+    let (baum, _) = gabbro_syntax::lies("s.gab", quelle);
+    let c = gabbro_check::emit::emittiere(&baum, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(quelle));
+    assert!(
+        c.contains("x >= 0"),
+        "bei einem vorzeichenbehafteten Wert bleibt die untere Pruefung stehen:\n{c}"
+    );
+}
