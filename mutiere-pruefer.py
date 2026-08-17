@@ -1197,6 +1197,19 @@ MUTATIONEN = [
         "B7 -- ein Verbundkonstruktor zaehlt als Aufruf; `P` wird unbekannter Gerufener "
         "und jede Huelle darueber untere Schranke",
     ),
+    # -- Die Indexschranke an einer GLOBALEN Tabelle ----------------------------------------
+    #
+    # **Der Blick auf die Karte war unqualifiziert, und `M103` schwieg in jedem
+    # `module`-Block.** Die erste getragene Klempnereiklasse traf genau die Form nicht, fuer
+    # die sie da ist -- Kernzustand ohne Zeiger.
+    Mutation(
+        "indexschranke-sucht-unqualifiziert",
+        "m1.rs",
+        "                self.u\n                    .suche_global(&self.modul, &o.basis.text)\n                    .cloned()",
+        "                self.u.globale.get(&o.basis.text).cloned()",
+        "M103 -- der Traeger wird unqualifiziert gesucht; eine globale Tabelle in einem "
+        "`module` hat wieder keine Indexschranke",
+    ),
     # -- K11.2.3: die Ordnung im erzeugten C ------------------------------------------------
     #
     # **Die Absenkung von `release`/`acquire` ruht auf A10 -- und ihre einzige strukturelle

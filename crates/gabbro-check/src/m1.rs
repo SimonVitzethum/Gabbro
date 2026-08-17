@@ -943,11 +943,35 @@ impl<'a> Pruefer<'a> {
 
     /// M4 an der Stelle, an der M1 die Zahl hat: ein Index gegen die Laenge seines Feldes.
     fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {
+        // **`suche` und nicht `get`, und das war ein Loch in der ERSTEN getragenen Klasse.**
+        //
+        // Bis zum 2026-08-17 stand hier ein direktes `get(&o.basis.text)`. Die Schluessel in
+        // `globale` sind QUALIFIZIERT (`beispiel::x::Kappenraum`), also traf der Blick auf
+        // `"Kappenraum"` in jedem `module`-Block ins Leere -- der Traeger wurde `Unbekannt`,
+        // und `M103` sagte nichts.
+        //
+        // ```gabbro
+        // table W count 8 { slot { a : u32, } }
+        // impl fn f(i : u32 in 0 .. 300) -> u32 { return W.slots[i].a; }   -- 0 Fehler
+        // ```
+        //
+        // > **Die Regel war gebaut, gebucht und getragen -- und traf genau die Form nicht,
+        // > fuer die sie da ist:** eine Tabelle, die ueber ihren globalen Namen adressiert
+        // > wird. *Das ist die Bauart von `beispiele/09-ohne-zeiger.gab`, dessen ganzer Punkt
+        // > es ist, dass Kernzustand keinen Zeiger braucht.*
+        //
+        // Gefunden beim Bauen von `const fn`, weil eine Giftprobe nicht fiel, die fallen
+        // musste (R11). *`typ_von_ort` daneben hat immer `suche` benutzt -- die zwei Blicke
+        // auf dieselbe Karte gingen auseinander, und nur einer davon hatte einen Test.*
         let mut traeger = lage
             .lokal
             .get(&o.basis.text)
             .cloned()
-            .or_else(|| self.u.globale.get(&o.basis.text).cloned())
+            .or_else(|| {
+                self.u
+                    .suche_global(&self.modul, &o.basis.text)
+                    .cloned()
+            })
             .unwrap_or(Typ::Unbekannt);
         for suffix in &o.suffixe {
             match suffix {

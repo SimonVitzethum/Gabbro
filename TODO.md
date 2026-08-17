@@ -147,6 +147,16 @@ of items that are neither code nor a run — what remains is building and measur
       0 Fehler) -- *und kein Pass liest es.* Die Schicht hat damit zwei Haelften: die sieben
       Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
       tragen lassen (PL-Arbeit).
+- [ ] **Zwei Blicke auf dieselbe Karte gingen auseinander, und nur einer hatte einen Test**
+      *(gefunden 2026-08-17 beim Bauen von `const fn`, weil eine Giftprobe nicht fiel, die
+      fallen musste -- R11)*. `typ_von_ort` schlug den globalen Traeger modulbewusst nach
+      (`suche`), `index_pruefen` unqualifiziert (`get`). **`M103` schwieg damit in jedem
+      `module`-Block fuer eine Tabelle, die ueber ihren globalen Namen adressiert wird.**
+      Behoben und mit Gift 76 belegt. *Was fehlt, ist die allgemeine Frage: an wie vielen
+      Stellen wird eine der Karten aus `umgebung.rs` DIREKT befragt statt ueber `suche`?
+      Jede davon ist derselbe Fehler, und keine hat heute einen Waechter.* **Gezaehlt:
+      13 direkte `.get(`-Blicke auf die Karten in `umgebung.rs`** -- wie viele davon in einem
+      `module` danebengreifen, ist ungemessen.
 - [ ] **`const fn` -- comptime, das WERTE rechnet und keine Schablone kostet**
       *(bewertet 2026-08-17, `PLAN.md`: „Wozu Gabbro taugen wird")*. Heute rechnet
       `konst_wert` nur Literale und `const`-Ketten; `count NSLOTS * 2` oder

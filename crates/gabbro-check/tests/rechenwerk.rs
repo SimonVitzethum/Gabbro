@@ -1318,3 +1318,72 @@ impl fn f(x : u32) -> u32 effects { pure } costs <= 4 ops { return x; } }";
         aa.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
     );
 }
+
+/// **`const fn` — comptime, das WERTE rechnet und keine Schablone kostet.**
+///
+/// Die Linie steht in `PLAN.md` („Wozu Gabbro taugen wird"):
+///
+/// ```text
+/// comptime, das WERTE rechnet   ->  kostet keine Schablone
+/// comptime, das CODE  erzeugt   ->  kostet eine, und die will bewiesen werden
+/// ```
+///
+/// **Der Nachweis ist nicht, dass es parst, sondern dass die ZAHL ANKOMMT** — dass
+/// `count zellen(NKERNE)` dieselbe Indexschranke erzeugt wie `count 256`.
+#[test]
+fn const_fn_rechnet_werte_und_die_schranke_kommt_an() {
+    let mit = "module t {
+const NKERNE : u32 = 64;
+const fn zellen(kerne : u32 in 0 .. 256) -> u32 effects { pure } costs <= 4 ops
+{ return kerne * 4; }
+table W count zellen(NKERNE) { slot { a : u32, } }
+impl fn f() -> u32 effects { reads W } costs <= 4 ops
+{ let i : index into W = 300; return W.slots[i].a; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", mit);
+    assert_eq!(a.fehler_zahl(), 0, "es parst:\n{}", a.zeige(mit));
+    let _ = gabbro_check::pruefe(&b, &mut a);
+    let text: Vec<String> = a.absagen.iter().map(|x| x.text.clone()).collect();
+    assert!(
+        text.iter().any(|t| t.contains("0 .. 255")),
+        "die gerechnete Zahl muss dieselbe Schranke erzeugen wie ein Literal: {text:?}"
+    );
+
+    // **Und ohne `const fn` dasselbe** — die beiden Wege müssen sich decken, sonst rechnet
+    // der Zusatz etwas anderes als er verspricht.
+    let ohne = mit.replace("count zellen(NKERNE)", "count 256");
+    let (b2, mut a2) = gabbro_syntax::lies("p.gab", &ohne);
+    let _ = gabbro_check::pruefe(&b2, &mut a2);
+    let text2: Vec<String> = a2.absagen.iter().map(|x| x.text.clone()).collect();
+    assert_eq!(text, text2, "gerechnet und hingeschrieben muessen dasselbe ergeben");
+}
+
+/// **M103 traf die Form nicht, für die es da ist — Kernzustand ohne Zeiger.**
+///
+/// `index_pruefen` schlug den globalen Träger **unqualifiziert** nach; in einem
+/// `module`-Block traf `globale.get("W")` nie, und die Schranke sagte nichts.
+///
+/// > *Zwei Blicke auf dieselbe Karte gingen auseinander* — `typ_von_ort` benutzte `suche`,
+/// > `index_pruefen` ein direktes `get`. **Und nur einer davon hatte einen Test.**
+///
+/// Gefunden, weil beim Bauen von `const fn` eine Giftprobe nicht fiel, die fallen musste (R11).
+#[test]
+fn die_indexschranke_greift_auch_an_einer_globalen_tabelle() {
+    let q = "module t { table W count 8 { slot { a : u32, } }
+impl fn f(i : u32 in 0 .. 300) -> u32 effects { reads W } costs <= 4 ops
+{ return W.slots[i].a; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    let _ = gabbro_check::pruefe(&b, &mut a);
+    assert!(
+        a.absagen.iter().any(|x| x.code == "M103"),
+        "eine Tabelle ueber ihren globalen Namen hat dieselbe Schranke wie ueber einen Zeiger: {:?}",
+        a.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
+    );
+
+    // Und der saubere Fall geht durch -- sonst waere die Regel nur ein Verbot.
+    let sauber = "module t { table W count 8 { slot { a : u32, } }
+impl fn f(i : index into W) -> u32 effects { reads W } costs <= 4 ops
+{ return W.slots[i].a; } }";
+    let (b2, mut a2) = gabbro_syntax::lies("p.gab", sauber);
+    let _ = gabbro_check::pruefe(&b2, &mut a2);
+    assert_eq!(a2.fehler_zahl(), 0, "{}", a2.zeige(sauber));
+}

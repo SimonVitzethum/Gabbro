@@ -416,7 +416,7 @@ and nowhere else.
 ## 6. Functions and contracts — E4
 
 ```ebnf
-fndecl   = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
+fndecl   = [ "pub" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
            "fn" ident "(" [ params ] ")" [ "->" typeexpr ]
            [ "requires"  predlist ]
            [ "ensures"   predlist ]
@@ -427,6 +427,26 @@ fndecl   = [ "pub" ] [ "spec" | "impl" | "raw" | "divergent" | "prim" | "extern"
            [ "by"        inductlist ]
            [ "section" string ] [ "arch" ident ] [ "when" constexpr ]
            ( block | "=" pred ";" | ";" ) ;      (* "=" pred: nur fuer spec fn *)
+(* `const fn` -- comptime, das WERTE rechnet, 2026-08-17. Die Linie, an der es haengt:
+
+     comptime, das WERTE rechnet   ->  kostet keine Schablone
+     comptime, das CODE  erzeugt   ->  kostet eine, und die will bewiesen werden
+
+   Ein `const fn` erzeugt keinen Code; es liefert eine Zahl, und die steht dann in `count`,
+   in `costs` oder in einer Bereichsgrenze:
+
+     const fn zellen(kerne : u32 in 0 .. 256) -> u32 effects { pure } costs <= 4 ops
+     { return kerne * 4; }
+     table W count zellen(NKERNE) { … }
+
+   **Der Rumpf ist EIN Ausdruck** -- `{ return <expr>; }`. Das ist keine Vorstufe, sondern
+   die Entscheidung: ein `const fn` mit Verzweigung waere ein Auswerter im Pruefer, und ein
+   Auswerter ist ein Erzeuger. Rekursion liefert `None` statt zu haengen -- dieselbe
+   Schranke, die die Sprache ihren Schleifen auferlegt.
+
+   `const` faengt damit zweierlei an; ein Blick auf das naechste Wort trennt sie
+   (`const N : u32 = 4;` gegen `const fn f(…)`), und das ist KEIN Kontextschalter. *)
+
 (* «B37»: `advances roh -> mmu` sagt, WELCHEN Schritt diese Funktion auf einer Marke mit
    `order` tut. Sie steht an der DEKLARATION, nicht am Rufer -- wer den Schritt macht, weiss,
    welcher es ist; wer ruft, soll es nicht wiederholen muessen. Zwischen `maintains` und

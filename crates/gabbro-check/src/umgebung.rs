@@ -51,6 +51,13 @@ impl Traegerart {
 pub struct Umgebung {
     roh_typen: HashMap<String, TypDecl>,
     roh_konst: HashMap<String, Expr>,
+    /// **`const fn` -- Name -> (Parameternamen, Rumpfausdruck).**
+    ///
+    /// Nur der einzeilige Fall: `{ return <expr>; }`. **Das ist keine Vorstufe, sondern die
+    /// Entscheidung** -- ein `const fn` mit Verzweigung waere ein Auswerter im Pruefer, und
+    /// ein Auswerter ist ein Erzeuger. *Comptime, das Werte rechnet, kostet keine Schablone;
+    /// comptime, das rechnet WIE ein Programm, faengt an eine zu kosten.*
+    konst_fn: HashMap<String, (Vec<String>, Expr)>,
     pub typen: HashMap<String, Typ>,
     pub konstanten: HashMap<String, i128>,
     /// Tabellenname -> Slotfelder.
@@ -192,6 +199,14 @@ impl Umgebung {
     /// Die Frage steht neben `funktion` und nicht in ihr, weil beide Antworten gebraucht
     /// werden: der Konstruktor hat eine Signatur *wie* eine Funktion, und M1 muss trotzdem
     /// wissen, dass er eine ist -- sonst faellt `P(1, true)` (ohne Marken) still durch.
+    /// Ein globaler Traeger, **modulbewusst** -- die Schluessel sind qualifiziert.
+    ///
+    /// *Die Karte direkt zu befragen war ein Loch in `M103`:* in einem `module`-Block traf
+    /// `globale.get("Kappenraum")` nie, und die Indexschranke sagte nichts.
+    pub fn suche_global(&self, von: &str, name: &str) -> Option<&Typ> {
+        self.suche(&self.globale, von, name)
+    }
+
     pub fn verbundfelder(&self, von: &str, pfad: &Pfad) -> Option<&Vec<String>> {
         self.suche(&self.verbundtypen, von, &pfad.text())
     }
@@ -216,6 +231,19 @@ impl Umgebung {
                 ItemArt::Konst(k) => {
                     self.roh_konst
                         .insert(qualifiziere(pfad, &k.name.text), k.wert.clone());
+                }
+                ItemArt::Funktion(f) if matches!(f.klasse, Some(FnKlasse::Konst)) => {
+                    if let FnRumpf::Block(b) = &f.rumpf {
+                        if let [Stmt { art: StmtArt::Return(Some(w)), .. }] = &b.anweisungen[..] {
+                            self.konst_fn.insert(
+                                qualifiziere(pfad, &f.name.text),
+                                (
+                                    f.parameter.iter().map(|p| p.name.text.clone()).collect(),
+                                    w.clone(),
+                                ),
+                            );
+                        }
+                    }
                 }
                 ItemArt::Tabelle(t) => {
                     // Die Konstanten einer Tabelle gehoeren in ihren Modulpfad, nicht in
@@ -464,6 +492,46 @@ impl Umgebung {
         self.auswerten(von, e, &mut unterwegs)
     }
 
+    /// Wie `auswerten`, aber mit gebundenen Parameternamen -- der Rumpf eines `const fn`.
+    fn auswerten_mit(
+        &self,
+        von: &str,
+        e: &Expr,
+        werte: &HashMap<String, i128>,
+        unterwegs: &mut HashSet<String>,
+    ) -> Option<i128> {
+        if let ExprArt::Ort(o) = &e.art {
+            if o.suffixe.is_empty() {
+                if let Some(v) = werte.get(&o.basis.text) {
+                    return Some(*v);
+                }
+            }
+        }
+        match &e.art {
+            ExprArt::Klammer(i) => self.auswerten_mit(von, i, werte, unterwegs),
+            ExprArt::Unaer(UnOp::Negativ, i) => {
+                self.auswerten_mit(von, i, werte, unterwegs).map(|v| -v)
+            }
+            ExprArt::Binaer(op, a, b) => {
+                let x = self.auswerten_mit(von, a, werte, unterwegs)?;
+                let y = self.auswerten_mit(von, b, werte, unterwegs)?;
+                // Dieselbe Rechnung wie unten, ueber einem Ersatzbaum -- die Bruecke ist
+                // schmal genug, dass zwei Zahlen sie tragen.
+                let za = Expr { art: ExprArt::Zahl(u128::try_from(x).ok()?), span: a.span };
+                let zb = Expr { art: ExprArt::Zahl(u128::try_from(y).ok()?), span: b.span };
+                self.auswerten(
+                    von,
+                    &Expr {
+                        art: ExprArt::Binaer(*op, Box::new(za), Box::new(zb)),
+                        span: e.span,
+                    },
+                    unterwegs,
+                )
+            }
+            _ => self.auswerten(von, e, unterwegs),
+        }
+    }
+
     fn auswerten(&self, von: &str, e: &Expr, unterwegs: &mut HashSet<String>) -> Option<i128> {
         match &e.art {
             ExprArt::Zahl(v) => i128::try_from(*v).ok(),
@@ -539,6 +607,35 @@ impl Umgebung {
                     BinOp::Und => i128::from(x != 0 && y != 0),
                     BinOp::Oder => i128::from(x != 0 || y != 0),
                 })
+            }
+            // **Ein `const fn` wird HIER gerechnet, und nur hier.**
+            //
+            // Die Argumente werden zuerst ausgewertet -- schlaegt eines fehl, schlaegt der
+            // Ruf fehl. *Ein `const fn` mit einem nicht-konstanten Argument ist kein
+            // konstanter Ausdruck, und es waere die kleinere Luege, ihn zu raten.*
+            //
+            // `unterwegs` traegt den Rekursionsschutz: ein `const fn`, das sich selbst ruft,
+            // liefert `None` statt zu haengen. **Das ist keine Nachsicht -- es ist dieselbe
+            // Schranke, die die Sprache ihren Schleifen auferlegt.**
+            ExprArt::Ruf(r) => {
+                let name = self
+                    .kandidaten(von, &r.pfad.text())
+                    .into_iter()
+                    .find(|k| self.konst_fn.contains_key(k))?;
+                if !unterwegs.insert(format!("constfn:{name}")) {
+                    return None;
+                }
+                let (params, rumpf) = self.konst_fn.get(&name)?.clone();
+                if params.len() != r.argumente.len() {
+                    return None;
+                }
+                let mut werte = HashMap::new();
+                for (p, a) in params.iter().zip(r.argumente.iter()) {
+                    werte.insert(p.clone(), self.auswerten(von, a, unterwegs)?);
+                }
+                let erg = self.auswerten_mit(modul_von(&name), &rumpf, &werte, unterwegs);
+                unterwegs.remove(&format!("constfn:{name}"));
+                erg
             }
             // `sizeof`/`lenof` brauchen das Layout; das entscheidet die Absenkung, nicht M1.
             _ => None,

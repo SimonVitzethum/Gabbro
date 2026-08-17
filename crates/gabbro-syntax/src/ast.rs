@@ -629,6 +629,20 @@ pub struct FnDecl {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FnKlasse {
     Spec,
+    /// **`const fn` -- comptime, das WERTE rechnet.**
+    ///
+    /// Die Linie, an der dieser Zusatz haengt (`PLAN.md`, „Wozu Gabbro taugen wird"):
+    ///
+    /// ```text
+    /// comptime, das WERTE rechnet   ->  kostet keine Schablone
+    /// comptime, das CODE  erzeugt   ->  kostet eine, und die will bewiesen werden
+    /// ```
+    ///
+    /// Ein `const fn` erzeugt keinen Code -- es liefert eine Zahl, und die steht dann in
+    /// `count`, in `costs` oder in einer Bereichsgrenze. *Deshalb bekommt es KEINEN
+    /// Schabloneneintrag, und deshalb ist es der einzige comptime-Zusatz, den die Ratsche
+    /// zulaesst.*
+    Konst,
     Impl,
     Raw,
     Divergent,
@@ -640,6 +654,7 @@ impl FnKlasse {
     pub const fn text(self) -> &'static str {
         match self {
             FnKlasse::Spec => "spec",
+            FnKlasse::Konst => "const",
             FnKlasse::Impl => "impl",
             FnKlasse::Raw => "raw",
             FnKlasse::Divergent => "divergent",

@@ -438,6 +438,12 @@ impl<'a> Parser<'a> {
         let art = match t.art {
             Art::Wort(Kw::Module) => ItemArt::Modul(self.moduledecl(oeffentlich)?),
             Art::Wort(Kw::Use) => ItemArt::Use(self.usedecl(oeffentlich)?),
+            // **`const` faengt zweierlei an**, und ein Blick auf das naechste Wort trennt
+            // sie: `const N : u32 = 4;` ist eine Konstante, `const fn f(...)` eine Funktion,
+            // die eine liefert. *Kein Kontextschalter -- ein Wort weiter, und es steht fest.*
+            Art::Wort(Kw::Const) if matches!(self.blick_n(1).art, Art::Wort(Kw::Fn)) => {
+                ItemArt::Funktion(self.fndecl(oeffentlich)?)
+            }
             Art::Wort(Kw::Const) => ItemArt::Konst(self.constdecl(oeffentlich)?),
             Art::Wort(Kw::Static) => ItemArt::Statisch(self.staticdecl(oeffentlich)?),
             Art::Wort(Kw::Opaque | Kw::Linear | Kw::Tagged | Kw::Type) => {
@@ -1788,6 +1794,7 @@ impl<'a> Parser<'a> {
         let anfang = self.span();
         let klasse = match self.blick().art {
             Art::Wort(Kw::Spec) => Some(FnKlasse::Spec),
+            Art::Wort(Kw::Const) => Some(FnKlasse::Konst),
             Art::Wort(Kw::Impl) => Some(FnKlasse::Impl),
             Art::Wort(Kw::Raw) => Some(FnKlasse::Raw),
             Art::Wort(Kw::Divergent) => Some(FnKlasse::Divergent),

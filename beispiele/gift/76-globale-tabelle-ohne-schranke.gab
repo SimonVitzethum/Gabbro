@@ -1,0 +1,19 @@
+-- erwartet: M103
+-- **Gift 76 -- eine Tabelle ueber ihren GLOBALEN Namen, mit einem Index, der zu weit reicht.**
+--
+-- Bis zum 2026-08-17 ging das mit **0 Fehlern** durch. `M103` schlug den Traeger
+-- unqualifiziert nach; in einem `module`-Block traf `globale.get("W")` nie, und die Schranke
+-- sagte nichts.
+--
+-- **Die Regel war gebaut, gebucht und getragen -- und traf genau die Form nicht, fuer die sie
+-- da ist:** Kernzustand, der ohne Zeiger auskommt (`beispiele/09-ohne-zeiger.gab`).
+
+module gift76 {
+
+table W count 8 { slot { a : u32, } }
+
+impl fn f(i : u32 in 0 .. 300) -> u32
+    effects { reads W } costs <= 4 ops
+{ return W.slots[i].a; }
+
+}
