@@ -102,9 +102,9 @@ struct Signatur {
 
 /// Ein Geraet, so wie der Erzeuger es braucht.
 struct Geraet {
-    /// `at mmio` / `at dma` / `at normal`. **Nur `mmio` wird abgesenkt** -- siehe `geraet`.
-    raum: String,
-    /// Registername -> (Versatz, C-Wortbreite).
+    /// Registername -> (Versatz, C-Wortbreite). **Der Raum steht nicht hier** -- `geraet`
+    /// liest ihn direkt aus dem Baum, und ein zweites Feld daneben waere das zweite Register
+    /// ueber derselben Sache (W7).
     reg: HashMap<String, (i128, String)>,
 }
 
@@ -155,10 +155,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         ItemArt::Device(d) => {
             namen.geraete.insert(
                 d.name.text.clone(),
-                Geraet {
-                    raum: format!("{:?}", d.raum).to_lowercase(),
-                    reg: HashMap::new(),
-                },
+                Geraet { reg: HashMap::new() },
             );
         }
         ItemArt::Tabelle(t) => namen.tabellen.push(t.name.text.clone()),
