@@ -1027,6 +1027,14 @@ MUTATIONEN = [
         "C-Absenkung -- ein `return` aus einem `if` im `locks`-Block laesst die Sperre stehen",
         "code",
     ),
+    Mutation(
+        "sonderwert-ohne-wortgrenze",
+        "emit.rs",
+        "        Some(&n) if n < WORTGRENZE => {",
+        "        Some(&n) if n < WORTGRENZE || true => {",
+        "C-Absenkung -- der Sonderwert wird nicht gegen das Indexwort geprueft (Option_Sonderwert.thy M-1)",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

@@ -48,6 +48,9 @@ struct Namen {
     tabellen: Vec<String>,
     /// Die `format`-Namen. Ein Pfad, der eines nennt, IST der Zugriffsverbund.
     formate: BTreeSet<String>,
+    /// Je Tabelle ihr aufgeloester `count`-Wert. **Der Sonderwert haengt daran** -- siehe
+    /// `beweise/Option_Sonderwert.thy`, M-1.
+    kapazitaet: HashMap<String, i128>,
     typen: HashMap<String, TypExpr>,
     /// `linear ghost type BootPhase;` — a value that **does not exist at run time**.
     geister: Vec<String>,
@@ -212,6 +215,19 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         }
     });
     namen.vorzeichenlos = ohne.difference(&mit).cloned().collect();
+
+    {
+        let umg = crate::umgebung::Umgebung::sammle(baum);
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+            if let ItemArt::Tabelle(tb) = &item.art {
+                if let Some(k) = &tb.kapazitaet {
+                    if let Some(n) = umg.konst_wert(modul, k) {
+                        namen.kapazitaet.insert(tb.name.text.clone(), n);
+                    }
+                }
+            }
+        });
+    }
 
     namen.retry_schranke = retry_schranken(baum);
 
@@ -414,12 +430,38 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         "    {}_slot slots[{}];\n}} {};\n",
         t.name.text, laenge, t.name.text
     ));
-    // **Der Sonderwert fuer `option index into T`.** Er ist die Laenge selbst -- der eine
-    // Wert, den ein gueltiger Index nach `count N` und M1 nie annimmt.
-    aus.push_str(&format!(
-        "#define {}_NONE ({})\n",
-        t.name.text, laenge
-    ));
+    // **Der Sonderwert fuer `option index into T`, und er hat eine PRAEMISSE.**
+    //
+    // Er ist die Laenge selbst -- der eine Wert, den ein gueltiger Index nach `count N` und
+    // M1 nie annimmt. **Aber nur, solange `N` ins Maschinenwort passt.** Der Index senkt zu
+    // `uint32_t` ab; ist `N = 2^32`, faellt der Sonderwert mit dem ERSTEN Slot zusammen, und
+    // `None` ist von `Some 0` nicht mehr zu unterscheiden.
+    //
+    // > **Diese Praemisse stand nirgends** -- nicht im Registereintrag, nicht in `SPRACHE.md`,
+    // > nicht hier. Sie kam am 2026-08-17 aus der Formalisierung
+    // > (`beweise/Option_Sonderwert.thy`, `sonderwert_kollidiert_bei_vollem_wort` und
+    // > `kodiere_wort_injektiv`). *In der Praxis war sie erfuellt -- `count 80256` gegen
+    // > `2^32` -- aber erfuellt und geprueft sind zwei Zustaende.*
+    const WORTGRENZE: i128 = 1 << 32;
+    match u.kapazitaet.get(&t.name.text) {
+        Some(&n) if n < WORTGRENZE => {
+            aus.push_str(&format!("#define {}_NONE ({})\n", t.name.text, laenge));
+        }
+        Some(&n) => weigere(
+            absagen,
+            t.span,
+            &format!(
+                "`count {n}` fills the index word: the `option` sentinel would be `2^32`, \
+                 which collides with slot 0 -- see beweise/Option_Sonderwert.thy, M-1"
+            ),
+        ),
+        None => weigere(
+            absagen,
+            t.span,
+            "`count` does not resolve to a number, so the `option` sentinel cannot be \
+             checked against the index word",
+        ),
+    }
 }
 
 /// **Ein `format` wird KEIN C-Verbund, und das ist die Entscheidung.**

@@ -605,3 +605,41 @@ impl fn f(w : ptr<normal, rw> W, i : index into W) -> bool
         "die Freigabe muss direkt vor der Rueckkehr stehen:\n{c}"
     );
 }
+
+/// **Die Praemisse, die aus dem Beweis kam (2026-08-17).**
+///
+/// `beweise/Option_Sonderwert.thy` zeigt die Kodierung `None -> N`, `Some i -> i` als
+/// injektiv — **unter `N < 2^w`**. Bei `N = 2^w` faellt der Sonderwert mit dem ersten Slot
+/// zusammen (`sonderwert_kollidiert_bei_vollem_wort`), und `None` ist von `Some 0` nicht mehr
+/// zu unterscheiden.
+///
+/// > **Die Praemisse stand in keiner der drei Fassungen des Satzes** — nicht im Register,
+/// > nicht in `SPRACHE.md`, nicht im Erzeuger. In der Praxis war sie erfuellt (`count 80256`
+/// > gegen `2^32`), *aber erfuellt und geprueft sind zwei Zustaende.*
+#[test]
+fn der_sonderwert_passt_ins_indexwort() {
+    fn absagen_von(q: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let _ = gabbro_check::emit::emittiere(&baum, &mut a);
+        a.absagen.iter().map(|x| x.text.clone()).collect()
+    }
+
+    // Knapp darunter traegt es: 2^32 - 1 Slots, der Sonderwert ist 2^32 - 1... nein, er ist
+    // die LAENGE, also passt er noch.
+    let knapp = absagen_von(
+        "module t { const N : u32 = 4294967295;
+table T count N { slot { e : option index into T, } } }",
+    );
+    assert!(knapp.is_empty(), "unter der Wortgrenze traegt der Sonderwert: {knapp:?}");
+
+    // **Genau darauf faellt es.**
+    let voll = absagen_von(
+        "module t { const N : u32 = 4294967296;
+table T count N { slot { e : option index into T, } } }",
+    );
+    assert!(
+        voll.iter().any(|s| s.contains("collides with slot 0")),
+        "bei `N = 2^32` muss der Erzeuger anhalten: {voll:?}"
+    );
+}

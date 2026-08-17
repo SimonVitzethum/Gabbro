@@ -123,14 +123,23 @@ pub const SCHABLONEN: &[Schablone] = &[
         // **Eingetragen 2026-08-17, als der Erzeuger F8 absenkte.** Die Darstellung war bis
         // dahin offen, und der Erzeuger weigerte sich (`C001`) statt zu vergroebern -- eine
         // Absenkung zu blankem `uint32_t` haette das `None` still geloescht.
-        pflicht: "Der Sonderwert `N` liegt AUSSERHALB der Indexdomaene `0 ..< N`, und keine \
-                  erzeugte Rechnung erreicht ihn. Damit ist die Absenkung von \
-                  `option index into T` auf ein blankes Maschinenwort verlustfrei: jeder \
-                  gueltige Index ist von `None` unterscheidbar. **Zu zeigen ist beides** -- \
-                  die Disjunktheit UND dass keine Operation den Sonderwert erzeugen kann.",
+        // **Nachgezogen 2026-08-17 nach der Formalisierung** (`beweise/Option_Sonderwert.thy`).
+        // Die Praemisse `N < 2^w` stand in keiner der drei Fassungen des Satzes -- weder hier
+        // noch in `SPRACHE.md` noch im Erzeuger. Sie kam aus dem Beweis und steht jetzt als
+        // Pruefung im Erzeuger.
+        pflicht: "UNTER DER PRAEMISSE `N < 2^w` (w = Breite des Indexworts, heute 32): der \
+                  Sonderwert `N` liegt ausserhalb der Indexdomaene `0 ..< N`, und die \
+                  Kodierung `None -> N`, `Some i -> i` ist injektiv -- **maschinell geprueft** \
+                  (`kodiere_wort_injektiv`). Bei `N = 2^w` faellt sie zusammen, und `None` ist \
+                  von `Some 0` nicht mehr zu unterscheiden \
+                  (`sonderwert_kollidiert_bei_vollem_wort`). **OFFEN bleibt die zweite \
+                  Haelfte:** dass keine erzeugte Rechnung den Sonderwert HERSTELLT. Ihr \
+                  Gegenstand ist `emit.rs`, nicht eine Menge; heute weigert sich der Erzeuger \
+                  fuer `None` als Ausdruck, und *solange er das tut*, kann keine Rechnung ihn \
+                  erzeugen.",
         stand: Stand::Getragen,
         fundstelle: "FRAGMENTE.md F1 (vier CDT-Felder), F8 (`aufloesen`); MESSUNGEN.md B3, \
-                     `while i != NIL` -- der Bestand macht es von Hand",
+                     `while i != NIL`; beweise/Option_Sonderwert.thy",
     },
     Schablone {
         name: "consuming.ordnung",
