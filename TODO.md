@@ -97,15 +97,6 @@ of items that are neither code nor a run — what remains is building and measur
 ---
 
 # DECISIONS — need a judgement, not a run
-### From the code reading (2026-08-17) — what is still undamageable
-
-- [ ] **504 lines of the checker carry no mutation at all** — `aufrufgraph.rs` (268),
-      `korpus.rs` (137), `manifest.rs` (99). *A surface with zero mutations is not covered, it
-      is undamageable.* **The call graph is the expensive one:** it discharges `H005`, the call
-      effects (`E008`) and the separation at the class *Phase* — three items on one untested
-      transitive closure. A mutation that makes the closure non-transitive must make `E008` go
-      silent; today nothing would notice.
-
 ### From the reassignment (2026-08-17) — three judgements the measurement forces
 
 - [ ] **Frame and Publication are refuted as carried, each at ONE named site.** «B39» — the MMU

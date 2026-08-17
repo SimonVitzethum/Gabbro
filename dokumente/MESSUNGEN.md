@@ -5501,3 +5501,100 @@ source list.
 > **The eleven-class taxonomy was built for what a kernel gets wrong; a third of the measured
 > gaps are about what the language cannot SAY.** *That is a different axis, and the folder has
 > been counting on one axis only.*
+
+
+---
+
+# The mutation density as a diagnostic — 2026-08-17
+
+**The question was not "how many mutations are caught" but "which lines can be damaged at
+all".** `87 of 87` is a ratio over the surface that can be damaged; where nothing can be
+damaged, a total reads like coverage.
+
+## The search path
+
+```
+Mutationen je Zieldatei  =  grep -oE '^\s*"[a-z0-9_]+\.rs",' mutiere-pruefer.py | sort | uniq -c
+Zeilen je Datei          =  wc -l crates/gabbro-check/src/*.rs
+```
+
+| | before | after |
+|---|---:|---:|
+| checker lines | 6 823 | 8 163 |
+| **lines with zero mutations** | **1 310** (19 %) | **0** |
+| mutations | 67 | **87** |
+| tests | 79 | **91** |
+
+## What the undamageable lines were hiding
+
+**Four findings, and none of them came from reading the code for its own sake** — each came
+from asking *what would a mutation here break?*
+
+### 1. The template ratchet's second tooth had been dead for a day
+
+```rust
+SCHABLONEN.iter().all(|s| s.stand != Stand::Bewiesen) && SCHABLONEN.len() > MARKE_OHNE_BEWEIS
+```
+
+**With the first proved template the left half became false forever.** From then on the
+register could grow without limit — and it grew **17 → 19 on that same day**.
+
+> **The mechanism failed on exactly the day the event it was waiting for occurred.** *A ratchet
+> with a single detent is a stop, not a ratchet.*
+
+Repaired as the literal generalisation of the sentence already standing beside it (*"whoever
+needs the nineteenth must prove the first"*): **base mark plus one slot per proved template**,
+so every further entry costs a proof. **The three slots of air today are booked as air** — two
+of the four proofs arose from *splitting* entries and thereby created entries of their own.
+
+**And both teeth only ever read the real list, which is healthy.** They therefore said nothing
+about whether the mechanism bites. Both now take a list as an argument and have a speech test
+with deliberately broken registers.
+
+### 2. A pass could silently not run
+
+`SPRACHE.md` part III fixes *"the specification is the pass list"*. 241 lines of `lib.rs`
+carried no mutation, so nothing enforced the sentence. Two mutations now remove a pass from the
+list; `U001`–`U007` and `V001`–`V004` fall silent, and the poison probes catch it.
+
+### 3. The call graph's collection side had never been looked at
+
+`huelle` was probed seven times; `sammle_rufe` not once — **all seven probes called on the top
+statement level only.** A call in a `match` arm, under `locks` or in a loop body could have
+gone missing, and then `effects` covers exactly the calls nobody hid.
+
+> **The corpus has precisely that shape.** `delete_leaf` calls three times inside `match` arms
+> (`FRAGMENTE.md`:277–279), `revoke` calls `delete_leaf` inside a `traverse` body (:337).
+
+Three new probes, **all green on the first run — R11**, and eight mutations are the answer to
+that: each shows that its probe hangs on the subject.
+
+### 4. `gabbro annahmen` reported 15 assumptions where there are 14
+
+**The file the folder cites as the ratchet that already exists had neither test nor mutation.**
+`schablonen.rs` names the axiom layer as *the* example (*"the axiom layer has its own"*);
+`manifest.rs` was the least guarded file in the crate.
+
+`beispiele/06` and `beispiele/07` both declare `axiom write_cr3` — same probe, same effects,
+only the parameter name differs, and the manifest does not carry parameter names. The command
+**concatenated per file instead of uniting**, though `SYNTAX.md` §12 demands a **set of names
+with class**.
+
+> *A promise "proved under A1…An" with a duplicated A claims a larger assumption set than it
+> has.*
+
+**The dangerous case is the other one, and the repair is built for it:** two files declaring the
+same NAME with different content — other probe, other effects, or falsifiable in one place and
+not in the other — are a **contradiction in the assumption set**, not a duplicate. The old
+version would have printed both lines without a word; the command now refuses by name.
+
+## And one mutation survived, which is the point of the harness
+
+`eine-einheit-faengt-mit-irgendwas-an` made `ist_uebersetzungseinheit` blind to what a block
+begins with — **and nothing fell.** The rule *"a translation unit begins with an item"* stood
+unguarded although **gate P2 rests on it**: it decides what gets counted at all.
+
+> *A denominator nobody checks is the cheapest way to improve a ratio.*
+
+The probe it demanded takes five excerpt forms and both borderline cases of the ellipsis —
+allowed in a comment, not in code.

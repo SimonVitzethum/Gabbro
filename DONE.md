@@ -136,25 +136,38 @@ nobody checks against each other.*
 ./pruefe-wortschatz.py    terminals against the table, Sonderform counter (3 of 5)
 ./pruefe-todo.py          holds the task list against itself, eight classes
 ./pruefe-kennungen.py     no refusal code in two files
-./mutiere-pruefer.py      damages one rule at a time:   72 of 72
+./mutiere-pruefer.py      damages one rule at a time:   87 of 87
 ./erzeuge-mutationen.py   twists systematically:         7 of 39
 ./pruefe-luecken.py       the named gaps one by one:    13 of 15
 ./pruefe-emission.sh      .gab → C → cc -Werror → run → compare (`42 1 8 0`)
 ./commit.sh               R19 — commit messages only via file
 ```
 
-> **The mutation density is a diagnostic in its own right, and it found two things on
-> 2026-08-17.** Measured per checker file, `1 310` of 6 823 lines carried **zero** mutations —
-> *and a surface with zero mutations is not covered, it is undamageable.* The largest was
-> `schablonen.rs` (565 lines), the very file the amortisation argument rests on. Closed to
-> **504** lines; what remains is `aufrufgraph.rs` (268), `korpus.rs` (137), `manifest.rs` (99).
+> **The mutation density is a diagnostic in its own right, and on 2026-08-17 it found four
+> things.** Measured per checker file, `1 310` of 6 823 lines carried **zero** mutations — *and a
+> surface with zero mutations is not covered, it is undamageable.* **Today it is zero of 8 163.**
 >
-> **And inside it lay a mechanism that had been dead for a day:** the ratchet's second tooth read
-> *"all unproved AND longer than 18"*, so **the first proved template made it false forever** —
-> the register could then grow without limit, and it grew 17 → 19 on that same day. *A ratchet
-> with a single detent is a stop, not a ratchet.* Repaired as the literal generalisation of the
-> sentence already standing there: **base mark plus one slot per proved template**, so every
-> further entry costs a proof.
+> 1. **The template ratchet's second tooth had been dead for a day.** It read *"all unproved AND
+>    longer than 18"*, so **the first proved template made it false forever** — the register could
+>    then grow without limit, and it grew 17 → 19 on that same day. *A ratchet with a single
+>    detent is a stop, not a ratchet.* Repaired as the literal generalisation of the sentence
+>    already standing beside it: **base mark plus one slot per proved template.**
+> 2. **A pass could silently not run.** `SPRACHE.md` part III says *"the specification is the
+>    pass list"*; 241 lines of `lib.rs` carried no mutation, so nothing enforced it.
+> 3. **The call graph's collection side had never been looked at.** All seven probes called on
+>    the top statement level only — a call in a `match` arm, under `locks` or in a loop body could
+>    have gone missing, and **the corpus has exactly that shape** (`delete_leaf` calls three times
+>    in `match` arms, `revoke` inside `traverse`).
+> 4. **`gabbro annahmen` reported 15 assumptions where there are 14** — see below.
+
+> **The axiom layer was the ratchet everything else was measured against, and it had no test.**
+> `schablonen.rs` cites it as *the* example of a ratchet that already exists; `manifest.rs` had
+> neither probe nor mutation. The first probe found that `beispiele/06` and `beispiele/07` both
+> declare `axiom write_cr3` identically, and the command **concatenated instead of uniting** —
+> *a promise "proved under A1…An" with a duplicated A claims a larger assumption set than it
+> has.* **The dangerous case is the other one**, and the repair is built for it: two files
+> declaring the same NAME with different content are a **contradiction**, not a duplicate, and
+> the command now refuses by name instead of printing both lines silently.
 
 **Plus three tests, each of which comes from a paid-for error:** no pass without registration ·
 `dokumente/SYNTAX.md` against its own grammar · corpus test anchored at the content instead of at
