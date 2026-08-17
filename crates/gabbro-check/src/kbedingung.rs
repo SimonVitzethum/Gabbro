@@ -233,7 +233,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     "D001",
                     *span,
                     format!(
-                        "`{}` schreibt `{}` von Hand, obwohl die Tabelle `ops` nennt",
+                        "`{}` writes `{}` by hand although the table declares `ops`",
                         fn_name, t.name
                     ),
                 )

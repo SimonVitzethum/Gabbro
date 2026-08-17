@@ -134,19 +134,19 @@ impl Graph {
         if !gesehen.insert(name.to_string()) {
             // Zyklus. Die Menge ist ab hier eine untere Schranke -- und sagt das.
             if offen.is_none() {
-                *offen = Some(format!("Zyklus ueber `{name}`"));
+                *offen = Some(format!("cycle over `{name}`"));
             }
             return;
         }
         let Some(k) = self.knoten.get(name) else {
             if offen.is_none() {
-                *offen = Some(format!("`{name}` ist dem Graphen unbekannt"));
+                *offen = Some(format!("`{name}` is unknown to the graph"));
             }
             return;
         };
         if !k.hat_effects {
             if offen.is_none() {
-                *offen = Some(format!("`{name}` nennt keine `effects`"));
+                *offen = Some(format!("`{name}` declares no `effects`"));
             }
         }
         menge.extend(k.eigen.iter().cloned());

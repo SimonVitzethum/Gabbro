@@ -135,7 +135,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 Absage::hinweis(
                     "H004",
                     s.span,
-                    format!("`{name}` erklaert `shared held`, wird aber nirgends geteilt genommen"),
+                    format!("`{name}` declares `shared held` but is never taken shared"),
                 )
                 .mit_notiz(
                     "eine Zusage ohne Stelle, an der sie faellt, ist eine Behauptung -- \
@@ -296,7 +296,7 @@ fn schreibprobe(
             Absage::fehler(
                 "H001",
                 span,
-                format!("`{ort}` wird geschrieben, waehrend `{name}` nur geteilt gehalten wird"),
+                format!("`{ort}` is written while `{name}` is held only shared"),
             )
             .mit_notiz(format!(
                 "`{name}` schuetzt `{platz}` -- geteilt halten heisst: die geschuetzten \
@@ -431,7 +431,7 @@ fn rangprobe(
                         "H006",
                         span,
                         format!(
-                            "`{name}` (rank {neu}) wird unter `{aussen}` (rank {alt}) genommen"
+                            "`{name}` (rank {neu}) is taken under `{aussen}` (rank {alt})"
                         ),
                     )
                     .mit_notiz(

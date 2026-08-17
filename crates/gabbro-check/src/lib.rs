@@ -122,7 +122,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 7,
             name: "Paarung",
-            quelle: "SPRACHE.md Teil II §1: Ordering wird gepaart, nicht deklariert",
+            quelle: "SPRACHE.md part II §1: ordering is PAIRED, not declared",
             zustand: Zustand::Teilgebaut(
                 "gebaut: `publishes`/`awaits`/`exchange` ueber die vereinigte Menge, \
                  Namensgleichheit nach Indexsubstitution (`V001`-`V004`). **NICHT gebaut: die \
@@ -134,7 +134,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 8,
             name: "effects",
-            quelle: "SPRACHE.md §7: `effects` ist Pflicht und nicht fail-open",
+            quelle: "SPRACHE.md §7: `effects` is mandatory and not fail-open",
             zustand: Zustand::Teilgebaut(
                 "Schreiben, `locks` **und seit 2026-08-16 das Lesen** (Lesart A, `E010`) \
                  werden gegen die Liste gehalten. **Was fehlt, ist die Reichweite von \

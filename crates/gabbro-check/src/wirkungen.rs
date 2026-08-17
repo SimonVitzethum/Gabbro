@@ -316,7 +316,7 @@ fn rumpf_gegen_wirkungen(
                 Absage::fehler(
                     "E005",
                     *span,
-                    format!("`{}` schreibt `{ort}`, erklaert aber `pure`", f.name.text),
+                    format!("`{}` writes `{ort}` but declares `pure`", f.name.text),
                 )
                 .mit_notiz("`pure` heisst: fasst nichts an"),
             );
@@ -328,7 +328,7 @@ fn rumpf_gegen_wirkungen(
                     "E005",
                     *span,
                     format!(
-                        "`{ort}` wird geschrieben, steht aber in keiner Wirkung von `{}`",
+                        "`{ort}` is written but appears in no effect of `{}`",
                         f.name.text
                     ),
                 )
@@ -337,9 +337,9 @@ fn rumpf_gegen_wirkungen(
                      die der Rumpf ueberschreitet, ist dieselbe Auslassung mit mehr Zeichen",
                 )
                 .mit_notiz(format!(
-                    "erklaert sind: {}",
+                    "declared are: {}",
                     if schreibrechte.is_empty() {
-                        "keine Schreibwirkung".to_string()
+                        "no write effect".to_string()
                     } else {
                         schreibrechte.join(", ")
                     }
@@ -395,7 +395,7 @@ fn rumpf_gegen_wirkungen(
                 Absage::fehler(
                     "E010",
                     *span,
-                    format!("`{}` liest `{ort}`, erklaert aber `pure`", f.name.text),
+                    format!("`{}` reads `{ort}` but declares `pure`", f.name.text),
                 )
                 .mit_notiz("`pure` heisst: fasst nichts an -- auch nicht lesend"),
             );
@@ -411,7 +411,7 @@ fn rumpf_gegen_wirkungen(
                     "E010",
                     *span,
                     format!(
-                        "`{ort}` wird gelesen, steht aber in keiner `reads`-Wirkung von `{}`",
+                        "`{ort}` is read but appears in no `reads` effect of `{}`",
                         f.name.text
                     ),
                 )
@@ -421,9 +421,9 @@ fn rumpf_gegen_wirkungen(
                      nichts darueber, WAS die Funktion gesehen hat",
                 )
                 .mit_notiz(format!(
-                    "erklaert sind: {}",
+                    "declared are: {}",
                     if leserechte.is_empty() {
-                        "keine Lesewirkung".to_string()
+                        "no read effect".to_string()
                     } else {
                         leserechte.join(", ")
                     }
@@ -448,7 +448,7 @@ fn rumpf_gegen_wirkungen(
                     "E007",
                     *span,
                     format!(
-                        "`{}` nimmt `{ort}` EXKLUSIV, erklaert aber `locks shared {ort}`",
+                        "`{}` takes `{ort}` EXCLUSIVELY but declares `locks shared {ort}`",
                         f.name.text
                     ),
                 )
@@ -457,7 +457,7 @@ fn rumpf_gegen_wirkungen(
                      Aufrufer rechnet mit Nebenlaeufigkeit, die es nicht gibt, und legt seine \
                      Latenzrechnung darauf an",
                 )
-                .mit_notiz("umgekehrt ist es zulaessig -- exklusiv erklaeren deckt die geteilte Nahme"),
+                .mit_notiz("the converse is allowed -- declaring exclusive covers the shared acquisition"),
             );
             continue;
         }
@@ -466,12 +466,12 @@ fn rumpf_gegen_wirkungen(
                 "E006",
                 *span,
                 format!(
-                    "`locks {}{ort}` steht im Rumpf, aber nicht in den Wirkungen von `{}`",
+                    "`locks {}{ort}` is in the body but not in the effects of `{}`",
                     if *geteilt { "shared " } else { "" },
                     f.name.text
                 ),
             )
-            .mit_notiz("die Sperrordnung faellt aus den erklaerten Sperren, nicht aus dem Rumpf"),
+            .mit_notiz("the lock order follows from the declared locks, not from the body"),
         );
     }
 }
@@ -491,7 +491,7 @@ fn funktion(
                     Absage::fehler(
                         "E001",
                         f.name.span,
-                        format!("`{}` hat keine `effects`-Klausel", f.name.text),
+                        format!("`{}` has no `effects` clause", f.name.text),
                     )
                     .mit_notiz(
                         "SPRACHE.md §7: `effects` ist Pflicht und nicht fail-open -- \
@@ -525,7 +525,7 @@ fn funktion(
                     "E003",
                     f.name.span,
                     format!(
-                        "`divergent fn {}` nennt `diverges` nicht in seinen Wirkungen",
+                        "`divergent fn {}` does not name `diverges` among its effects",
                         f.name.text
                     ),
                 )
@@ -544,7 +544,7 @@ fn funktion(
                 Absage::fehler(
                     "E004",
                     p.span,
-                    "ein Praedikat als Rumpf steht nur einer `spec fn` zu",
+                    "a predicate as a body is allowed only for a `spec fn`",
                 )
                 .mit_notiz("`fndecl`: `= pred ;` nur fuer `spec fn`"),
             );
@@ -576,7 +576,7 @@ fn rein_allein(w: &Wirkungen, absagen: &mut Absagen) {
                 "E002",
                 stelle,
                 format!(
-                    "`pure` steht neben {} -- `pure` heisst, dass nichts angefasst wird",
+                    "`pure` stands next to {} -- `pure` means nothing is touched",
                     andere.join(", ")
                 ),
             )
@@ -587,7 +587,7 @@ fn rein_allein(w: &Wirkungen, absagen: &mut Absagen) {
         absagen.schiebe(Absage::fehler(
             "E002",
             rein[1].span,
-            "`pure` steht zweimal in derselben Wirkungsliste",
+            "`pure` appears twice in the same effect list",
         ));
     }
 }
@@ -633,7 +633,7 @@ fn aufrufwirkungen(
                 "E009",
                 f.name.span,
                 format!(
-                    "die Aufrufwirkungen von `{}` sind unentscheidbar: {grund}",
+                    "the call effects of `{}` are undecidable: {grund}",
                     f.name.text
                 ),
             )
@@ -682,7 +682,7 @@ fn aufrufwirkungen(
                     "E008",
                     f.name.span,
                     format!(
-                        "`{}` erklaert `pure`, ruft aber etwas mit `{wirkung}`",
+                        "`{}` declares `pure` but calls something with `{wirkung}`",
                         f.name.text
                     ),
                 )
@@ -700,7 +700,7 @@ fn aufrufwirkungen(
                     "E008",
                     f.name.span,
                     format!(
-                        "`{}` ruft etwas mit `{wirkung}`, nennt aber keine `{art}`-Wirkung",
+                        "`{}` calls something with `{wirkung}` but names no `{art}` effect",
                         f.name.text
                     ),
                 )

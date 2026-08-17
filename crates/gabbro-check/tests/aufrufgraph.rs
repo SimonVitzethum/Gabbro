@@ -47,7 +47,7 @@ impl fn b() effects { pure } costs <= 4 ops { a(); }
 }";
     let h = graph(q).huelle("a");
     assert!(
-        h.unvollstaendig.as_deref().is_some_and(|s| s.contains("Zyklus")),
+        h.unvollstaendig.as_deref().is_some_and(|s| s.contains("cycle")),
         "ein Zyklus liefert eine UNTERE SCHRANKE und heisst so: {:?}",
         h.unvollstaendig
     );
@@ -99,7 +99,7 @@ impl fn b(p : ptr<normal, rw> T) effects { pure } costs <= 99 ops { a(p); schrei
         "eine `pure`-Zusage hinter einem Zyklus darf nicht still durchgehen:\n{text}"
     );
     assert!(
-        text.contains("unentscheidbar"),
+        text.contains("undecidable"),
         "der dritte Zustand muss beim Namen genannt werden:\n{text}"
     );
 }

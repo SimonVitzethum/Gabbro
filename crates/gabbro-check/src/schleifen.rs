@@ -61,7 +61,7 @@ fn anweisung(s: &Stmt, marken: &mut Vec<String>, div: &[String], absagen: &mut A
                         "S002",
                         l.sonst.span,
                         format!(
-                            "der `else`-Zweig von `let {} = …` faellt durch",
+                            "the `else` branch of `let {} = …` falls through",
                             l.name.text
                         ),
                     )
@@ -168,7 +168,7 @@ fn ziel_pruefen(ziel: &Ident, marken: &[String], wort: &str, absagen: &mut Absag
         "S001",
         ziel.span,
         format!(
-            "`{wort} {}` zielt auf keine umgebende Schleifenmarke",
+            "`{wort} {}` targets no enclosing loop label",
             ziel.text
         ),
     )
@@ -177,7 +177,7 @@ fn ziel_pruefen(ziel: &Ident, marken: &[String], wort: &str, absagen: &mut Absag
          bei geschachtelten Schleifen waere das Ziel sonst Konvention statt Syntax",
     );
     if marken.is_empty() {
-        a = a.mit_notiz("hier ist keine Marke im Geltungsbereich; `retry`/`forever` nehmen eine");
+        a = a.mit_notiz("no label is in scope here; `retry`/`forever` take one");
     } else {
         a = a.mit_notiz(format!("im Geltungsbereich: {}", marken.join(", ")));
     }

@@ -407,7 +407,7 @@ mod proben {
         let eins = IntBereich::konstante(1);
         let r = subtrahiere(&z, &eins);
         assert_eq!(r.bereich.expect("Bereich").min, -1);
-        assert!(r.laeuft_ueber, "unter Null ist Ueberlauf in u32");
+        assert!(r.laeuft_ueber, "below zero is overflow in u32");
     }
 
     #[test]
@@ -438,11 +438,11 @@ mod proben {
         // Mutationsprobe, die nur eine Seite beschaedigt, ueberlebt sonst.
         assert!(
             addiere(&breit, &deklariert).bereich.is_none(),
-            "eine deklarierte Groesse darf keine fremde Breite uebernehmen (rechts)"
+            "a declared quantity must not adopt a foreign width (right)"
         );
         assert!(
             addiere(&deklariert, &breit).bereich.is_none(),
-            "eine deklarierte Groesse darf keine fremde Breite uebernehmen (links)"
+            "a declared quantity must not adopt a foreign width (left)"
         );
         assert!(addiere(&literal, &breit).bereich.is_some());
     }
@@ -552,8 +552,8 @@ mod wertetabellen {
         // Die Kanten sind die Zweierpotenzen selbst: 7 -> 7, 8 -> 15.
         assert_eq!(maske(0), 0);
         assert_eq!(maske(1), 1);
-        assert_eq!(maske(7), 7, "7 braucht 3 Bit -> 2^3-1 = 7");
-        assert_eq!(maske(8), 15, "8 braucht 4 Bit -> 2^4-1 = 15, NICHT 8");
+        assert_eq!(maske(7), 7, "7 needs 3 bits -> 2^3-1 = 7");
+        assert_eq!(maske(8), 15, "8 needs 4 bits -> 2^4-1 = 15, NOT 8");
         assert_eq!(maske(255), 255);
         assert_eq!(maske(256), 511);
         // Und die Ueberlaufkante bei 127 Bit: `1 << 127` waere ein Ueberlauf in i128.
@@ -574,9 +574,9 @@ mod wertetabellen {
             "0 << 8 PASST -- wenn es faellt, dann wegen der Weite == breite, sonst nichts"
         );
         let r = schiebe_links(&u(8, 0, 0), &u(8, 7, 7));
-        assert!(!r.laeuft_ueber, "Weite 7 < breite 8 ist eine Rechnung, kein Befund");
+        assert!(!r.laeuft_ueber, "width 7 < 8 is arithmetic, not a finding");
         let r = schiebe_links(&u(8, 1, 1), &i(8, -1, 2));
-        assert!(r.laeuft_ueber, "eine negative Weite ist keine Rechnung");
+        assert!(r.laeuft_ueber, "a negative width is not arithmetic");
     }
 
     #[test]

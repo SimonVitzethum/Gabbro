@@ -113,7 +113,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                         "L101",
                         *span,
                         format!(
-                            "`{name}` steht unter `consumes`, wird aber auf keinem Weg verbraucht"
+                            "`{name}` is listed under `consumes` but is consumed on no path"
                         ),
                     )
                     .mit_notiz(
@@ -126,7 +126,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     Absage::fehler(
                         "L102",
                         *span,
-                        format!("`{name}` ist geliehen und wird trotzdem verbraucht"),
+                        format!("`{name}` is borrowed and is consumed anyway"),
                     )
                     .mit_notiz(
                         "ein Parameter ist verbraucht, wenn `effects` ihn unter `consumes` \
@@ -241,7 +241,7 @@ fn abgleich(
                 Absage::fehler(
                     "L103",
                     span,
-                    format!("`{name}` wird nicht auf jedem Weg gleich behandelt"),
+                    format!("`{name}` is not treated the same on every path"),
                 )
                 .mit_notiz(
                     "linear heisst GENAU einmal, nicht hoechstens einmal: ein Wert, der nur \
@@ -289,13 +289,13 @@ fn ruf(
                     Absage::fehler(
                         "L104",
                         span,
-                        format!("`{arg}` wird ein zweites Mal verbraucht"),
+                        format!("`{arg}` is consumed a second time"),
                     )
                     .mit_notiz(
                         "linear heisst genau einmal -- der erste Verbrauch hat den Wert \
                          weggenommen",
                     )
-                    .mit_notiz("der erste Verbrauch steht weiter oben im selben Rumpf"),
+                    .mit_notiz("the first consumption is further up in the same body"),
                 );
             }
             *z = Zustand::Verbraucht;
@@ -304,9 +304,9 @@ fn ruf(
                 Absage::fehler(
                     "L105",
                     span,
-                    format!("`{arg}` wird benutzt, nachdem er verbraucht wurde"),
+                    format!("`{arg}` is used after it was consumed"),
                 )
-                .mit_notiz("nach dem Verbrauch gibt es den Wert nicht mehr"),
+                .mit_notiz("after consumption the value no longer exists"),
             );
         }
     }

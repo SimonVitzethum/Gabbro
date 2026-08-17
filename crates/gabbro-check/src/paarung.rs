@@ -107,7 +107,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 Absage::hinweis(
                     "V003",
                     h.publiziert[0].1,
-                    format!("die Paarung in `{name}` ist unentscheidbar: der Aufrufgraph ist hier unvollstaendig"),
+                    format!("the pairing in `{name}` is undecidable: the call graph is incomplete here"),
                 )
                 .mit_notiz(
                     "die Nutzlastmengen sind nur eine UNTERE Schranke -- aus ihr wird weder \
@@ -152,7 +152,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 Absage::fehler(
                     "V004",
                     *span,
-                    format!("`{o}` ist `relaxed` und traegt trotzdem eine Nutzlast"),
+                    format!("`{o}` is `relaxed` and carries a payload anyway"),
                 )
                 .mit_notiz(
                     "`relaxed` ordnet nichts -- eine Nutzlast daran ist eine Zusage, die die \

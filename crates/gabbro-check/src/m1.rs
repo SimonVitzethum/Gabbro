@@ -276,7 +276,7 @@ impl<'a> Pruefer<'a> {
                         Absage::fehler(
                             "M105",
                             n.sonst.span,
-                            "der `else`-Zweig eines `narrow` muss zurueckkehren oder divergieren",
+                            "the `else` branch of a `narrow` must return or diverge",
                         )
                         .mit_notiz(
                             "SYNTAX.md §7: `narrow place to range else { … }` ist eine \
@@ -507,7 +507,7 @@ impl<'a> Pruefer<'a> {
                             "M102",
                             b.span,
                             format!(
-                                "der Nenner hat den Bereich `{}` und schliesst die Null nicht aus",
+                                "the denominator has range `{}` and does not exclude zero",
                                 bb.text()
                             ),
                         )
@@ -778,7 +778,7 @@ impl<'a> Pruefer<'a> {
             "M101",
             span,
             format!(
-                "{was} verlangt `{}`, der Wert hat `{}`",
+                "{was} requires `{}`, the value has `{}`",
                 z.text(),
                 q.text()
             ),
@@ -863,7 +863,7 @@ impl<'a> Pruefer<'a> {
                                         "M103",
                                         idx.span,
                                         format!(
-                                            "der Index hat `{}`, das Feld hat {n} Elemente",
+                                            "the index has `{}`, the array has {n} elements",
                                             b.text()
                                         ),
                                     )

@@ -93,13 +93,13 @@ fn doppelt(
             Absage::fehler(
                 "N001",
                 span,
-                format!("`{name}` ist in diesem Geltungsbereich zweimal deklariert ({was})"),
+                format!("`{name}` is declared twice in this scope ({was})"),
             )
             .mit_notiz(format!(
-                "die erste Deklaration steht bei Versatz {}",
+                "the first declaration is at offset {}",
                 erste.von
             ))
-            .mit_notiz("E5: jede Deklaration ist an genau einer Stelle vollstaendig"),
+            .mit_notiz("E5: every declaration is complete in exactly one place"),
         );
     } else {
         gesehen.insert(name.to_string(), span);
@@ -161,7 +161,7 @@ fn reason(r: &Reason, absagen: &mut Absagen) {
                     "N002",
                     f.span,
                     format!(
-                        "der Zahlwert {} ist in `{}` zweimal vergeben",
+                        "the numeric value {} is assigned twice in `{}`",
                         f.wert, r.name.text
                     ),
                 )
@@ -225,11 +225,11 @@ fn regfelder(r: &RegDecl, absagen: &mut Absagen) {
                         "N003",
                         name.span,
                         format!(
-                            "die Bits von `{}` ueberschneiden sich mit `{}` in Register `{}`",
+                            "the bits of `{}` overlap with `{}` in register `{}`",
                             name.text, andere.text, r.name.text
                         ),
                     )
-                    .mit_notiz("D2: jedes Bit eines Wortes ist benannt -- genau einmal"),
+                    .mit_notiz("D2: every bit of a word is named -- exactly once"),
                 );
                 break;
             }

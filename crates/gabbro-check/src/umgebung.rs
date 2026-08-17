@@ -817,12 +817,12 @@ mod wertetabellen {
     fn die_logischen_verknuepfungen_sind_und_und_oder_und_nicht_umgekehrt() {
         // Die Kante: genau eine Seite wahr. `&&` und `||` sind dort unterscheidbar,
         // bei zwei wahren oder zwei falschen Seiten nicht.
-        assert_eq!(wert("1 && 0"), Some(0), "eine Seite falsch -> UND ist falsch");
-        assert_eq!(wert("1 || 0"), Some(1), "eine Seite wahr -> ODER ist wahr");
+        assert_eq!(wert("1 && 0"), Some(0), "one side false -> AND is false");
+        assert_eq!(wert("1 || 0"), Some(1), "one side true -> OR is true");
         assert_eq!(wert("0 && 1"), Some(0));
         assert_eq!(wert("0 || 1"), Some(1));
         // Und die Null-Deutung: jeder Wert != 0 ist wahr, nicht nur 1.
-        assert_eq!(wert("2 && 3"), Some(1), "!= 0 ist wahr, nicht nur == 1");
+        assert_eq!(wert("2 && 3"), Some(1), "!= 0 is true, not only == 1");
         assert_eq!(wert("0 || 0"), Some(0));
     }
 

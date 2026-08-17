@@ -306,7 +306,7 @@ impl<'a> Rechner<'a> {
             Schleife::Retry(r) => match self.u.konst_wert(self.modul, &r.schranke) {
                 Some(n) => Kosten::Zahl(n),
                 None => Kosten::Unbekannt(
-                    "die `bounded`-Schranke des `retry` steht nicht fest".to_string(),
+                    "the `bounded` bound of the `retry` is not fixed".to_string(),
                     Some(r.span),
                 ),
             },
@@ -501,12 +501,12 @@ impl<'a> Rechner<'a> {
                 // (extern, prim, Randfunktion) kostet unbekannt viel.
                 if self.u.funktion(self.modul, &r.pfad).is_some() {
                     Kosten::Unbekannt(
-                        format!("der Aufruf von `{name}` nennt keine `costs`"),
+                        format!("the call to `{name}` declares no `costs`"),
                         Some(r.span),
                     )
                 } else {
                     Kosten::Unbekannt(
-                        format!("`{name}` ist hier nicht deklariert"),
+                        format!("`{name}` is not declared here"),
                         Some(r.span),
                     )
                 }
