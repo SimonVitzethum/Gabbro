@@ -116,9 +116,11 @@ of items that are neither code nor a run — what remains is building and measur
       sagt, WELCHE Beschaedigung fallen muss. *Aus 132 Mutationen ohne Satz werden 132 mit
       einem.*
 
-- [ ] **K100.3 — die sieben Notationsluecken** («B3», «B6», «B7», «B14», «B21», «B22», «B25»).
-      **Die vier ohne Schablone zuerst**, die drei mit je einzeln und mit ihrem Isabelle-Lauf
-      DAVOR — sonst reisst `L <= 4`.
+- [ ] **K100.3 — die letzten ZWEI Notationsluecken** (`./pruefe-notation.py`, 6 von 8 zu):
+      **«B7» das Verbundliteral** — eine Funktion kann heute keinen `structty` HERSTELLEN, und
+      das trifft zwei Stellen im Korpus — sowie **«B14b» `let … else` auf einem `place`** (ein
+      Atomic IST ein `place`). *Beide ziehen einen Schablonen-Eintrag nach; die Ratsche will
+      ihn vorher bezahlt haben.*
 - [ ] **K100.4 — die Verfeinerung, und der Weg ist zu waehlen:** verifizierter Erzeuger (a) oder
       **Uebersetzungsvalidierung (b)**. *Die Differenztests sind bereits die schwache Fassung von
       (b) — sie messen EIN Ergebnis statt aller.*

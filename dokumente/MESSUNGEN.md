@@ -6402,3 +6402,44 @@ Variable, und keine Regel verbindet sie mit der Domäne, über der ihre Schleife
 
 **`H = 31 → 29`**, und die zwei Verschobenen stehen jetzt in der Logikspalte, wo sie hingehören:
 **L = 65 → 67.**
+
+
+---
+
+# K100.3 — und der Ertrag ist eine BERICHTIGUNG, kein Bau
+
+**`./pruefe-notation.py` — 6 von 8 geschlossen.** Von den sieben Notationslücken, die
+`PFLICHTEN.md` als hängende Klempnereipflichten führte, waren **fünf bereits zu**, bevor ich
+eine Zeile schrieb.
+
+| | |
+|---|---|
+| **«B3»** `Held(Lock)` · **«B6»** Rückgabebindung · **«B14a»** `option` in `typeexpr` · **«B21»** `accumulates` · **«B25»** Wertemenge | **waren zu** |
+| **«B22»** mehrzeiliges `claim` | **heute geschlossen** |
+| **«B7»** Verbundliteral · **«B14b»** `let … else` auf einem `place` | **offen — echte Bauarbeit** |
+
+## Woher der Fehler kam, und er ist eine bekannte Klasse
+
+**Die Liste stammte aus `FRAGMENTE.md`, und diese Datei trägt ihren eigenen Einfriersatz:**
+*„ein Bericht vom 2026-08-14, und er bleibt unangetastet."* **Die Grammatik ist
+weitergegangen, der Befundtext nicht — und die Messung hat den Befundtext gelesen.**
+
+> *Dieselbe Klasse wie die 89 Verschlüsse ohne Suchweg:* **eine Zahl, die aus einem Dokument
+> stammt statt aus dem Gegenstand.**
+
+**Der Unterschied ist die Richtung, und er ist der eigentliche Befund:** diesmal war die Zahl
+**zu gross**. *Der Ordner hat sich schlechter gerechnet, als er ist* — und das ist die
+seltenere und die gefährlichere Hälfte, weil niemand sie prüft. **Eine zu grosse
+Schuldenliste sieht aus wie Sorgfalt.**
+
+## Die Lehre steht als Werkzeug da, nicht als Vorsatz
+
+`pruefe-notation.py` schreibt je Lücke das kleinste Programm, das sie braucht, und fragt **den
+Prüfer**. Es ist wiederholbar, es fällt rot, wenn eine Lücke wieder aufgeht — **und es bricht
+ab statt zu melden, wenn der Prüfer gar nicht baut** (W1: ein fehlendes Werkzeug ist kein
+bestandener Test).
+
+## `H = 24 → 18`
+
+**Und was übrig ist, ist klein und benannt:** zwei Notationslücken, beide echte Bauarbeit —
+das Verbundliteral («B7», zwei Stellen) und `let … else` auf einem `place` («B14b»).
