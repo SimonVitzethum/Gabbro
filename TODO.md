@@ -147,6 +147,12 @@ of items that are neither code nor a run — what remains is building and measur
       0 Fehler) -- *und kein Pass liest es.* Die Schicht hat damit zwei Haelften: die sieben
       Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
       tragen lassen (PL-Arbeit).
+- [ ] **Zum ZWEITEN Mal in eine Beweissuche gelaufen -- und die Regel stand schon da**
+      *(2026-08-17)*. Erst ein `metis` (9 Minuten, 6,3 GB), dann ein `blast` (12 Minuten,
+      4,8 GB). **Eine Regel, die man kennt und trotzdem bricht, braucht keinen weiteren Satz
+      -- sie braucht ein Werkzeug.** `./pruefe-beweise.sh` haelt jetzt bei 3 GB an. *Was
+      fehlt, ist die andere Haelfte: kein Wachhund verhindert, dass ich den Schritt beim
+      Schreiben suchen LASSE statt ihn hinzuschreiben.*
 - [ ] **Eine `bank` mit `stride 0` erzeugt LEERE Zellen, und der Satz gilt trivial**
       *(ausgespuelt beim Beweis von `device.konstruktor`, 2026-08-17)*. `bankeintraege_
       ueberlappen_nicht` braucht `stride > 0` nicht als Praemisse -- bei null ist jede

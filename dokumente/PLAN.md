@@ -1659,7 +1659,7 @@ UNZUGEORDNET: …
 | Achse | Messgrösse | heute |
 |---|---|---|
 | **Breite** — jede Form wird abgesenkt | `UNZUGEORDNET = 0` **und** kein `C001` über dem Korpus | 8 von 22+3 Einheiten senken ab |
-| **Tiefe** — jede benutzte Schablone ist bewiesen | `davon UNBEWIESEN = 0` | **8 von 20 bewiesen, 1 lebend getragen** *(K11.3.2, 2026-08-17)* — **acht der neun Übersetzungseinheiten melden `0 davon UNBEWIESEN`** |
+| **Tiefe** — jede benutzte Schablone ist bewiesen | `davon UNBEWIESEN = 0` | **9 von 20 bewiesen, 1 lebend getragen** *(K11.3.2, 2026-08-17)* — **acht der neun Übersetzungseinheiten melden `0 davon UNBEWIESEN`**; `accumulates.monoid` ist bewiesen, **bevor** das Konstrukt absenkt |
 
 ### K11.3.1 — Breite: die Weigerungen abbauen, **in der Reihenfolge ihrer Sperre**
 

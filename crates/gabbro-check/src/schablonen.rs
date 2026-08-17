@@ -296,9 +296,20 @@ pub const SCHABLONEN: &[Schablone] = &[
                   **Die Absenkung ergibt denselben Wert wie ein atomares RMW nur an einem \
                   RUHEPUNKT** -- nebenlaeufig gelesen tut sie es nicht, und das ist keine \
                   Ungenauigkeit, sondern der Preis der Absenkung. *Die Emissionshaelfte \
-                  wartet auf einen Erzeuger.*",
-        stand: Stand::Entworfen,
-        fundstelle: "SPRACHE.md §11.4",
+                  wartet auf einen Erzeuger.* **Maschinell geprueft:** die Faltung ist \
+                  reihenfolgeunabhaengig (`faltung_ist_reihenfolgeunabhaengig`) und stimmt \
+                  am Ruhepunkt mit der atomaren RMW-Kette ueberein \
+                  (`am_ruhepunkt_gleich_dem_atomaren_rmw`); je Verknuepfung steht die \
+                  Instanz da -- **und `min` hat als Neutrales das MAXIMUM des Typs, nicht \
+                  die Null** (`min_ist_monoid_mit_top`).",
+        // **Maschinell geprueft am 2026-08-17** (`beweise/Accumulates_Monoid.thy`, K11.3.2)
+        // -- und zwar VOR dem Konstrukt, wie das zweite Tor es verlangt.
+        //
+        // *Ausgespuelt: `min` mit `0` als Startwert zieht jedes Ergebnis auf null.* Eine
+        // Falle, die der Eintrag nicht nannte und die beim Nachweis der Instanzen abfiel --
+        // ueber `nat` gibt es kein Neutrales fuer `min`, ueber einem Maschinenwort schon.
+        stand: Stand::Bewiesen,
+        fundstelle: "SPRACHE.md §11.4; beweise/Accumulates_Monoid.thy",
     },
     Schablone {
         name: "walk.mappings",
