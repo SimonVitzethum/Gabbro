@@ -90,6 +90,7 @@ Newly collected 2026-08-15, **not reconstructed**, x86 only
 | **`programs/`** | the reason for the breach no longer carries | `dokumente/MESSUNGEN.md` |
 | **C emission, two units** | **the first yes-statements**: `.gab` → C → `cc -Werror` → executed → **result compared**. `beispiele/16` yields `42 1 8 0`; **`FRAGMENTE.md` F7 yields `123456`** — six boot steps, in order, each exactly once | `./pruefe-emission.sh`, `crates/gabbro-check/src/emit.rs` |
 | **Three fail-open paths closed** | the emitter's whole design is *refuse by name*, and it had **three exceptions** — `option index into T` → `uint32_t` (**no bit pattern left for absent**), an unknown expression form → literal `0`, `None` → the call `None()`. All three compiled; two computed something else | `crates/gabbro-check/src/emit.rs`, poison `option-wird-vergroebert` |
+| **`traverse` lowered, `forever` refused — and the pair is the point** | `traverse … over slots of` becomes a plain bounded `for`: **no runtime counter**, because the domain is finite by construction. `retry` becomes a `while` **with** one, because its condition depends on the world. *The C now shows side by side why the grammar demands `on_exceeded` there and not here.* And `forever` is **refused with the folder's own finding**: `per_pass … ops` is a compile-time claim, so `on_exceeded` has no runtime trigger — the clause could only be dropped silently. Measured `16 6 0 0` | `beispiele/19-traversierung.gab`, `./pruefe-emission.sh` |
 | **F10 lowered — `retry` and `format`** | **`bounded N ops` is an operation BUDGET, not an iteration count** — divided by the per-pass cost the cost pass computes (body **plus** the `until` condition, which F4 shows can be the expensive half). And a **`format` is not a C struct**: padding and bit order are implementation-defined, so it becomes a byte pointer with accessors in the *declared* order plus **one** validity function from the `where` clauses. Measured `1 0 0 0 0 65`, and the 65 was predicted before the run | `./pruefe-emission.sh`, `crates/gabbro-check/src/emit.rs` |
 | **F8 lowered — three decisions, not translations** | `option index into T` carries the **sentinel `N`** (free, because `count N` bounds the index to `0 ..< N`; and Caprock already does it by hand as `NIL`) · a `lock` emits **two prototypes and no body** (rank and hold time are compile-time, `H006`/`K002`) · **`locks X { … return … }` releases before EVERY return** — the C8 class, and the new exit path inherits the duty because the writer does not write it. Measured: `1 1 1 0 0 1 1 1` | `./pruefe-emission.sh`, template `option.sonderwert` |
 | **Two more silent lowerings found by reading** | `x += 1` was emitted as `x = 1` — **the operator stood in the tree and the emitter never looked at it** — and `-> never` became plain `void`. Neither occurs in the three guardian units, *which is exactly why both survived* | `crates/gabbro-check/src/emit.rs`, poison `zuweisungsoperator-egal` |
@@ -141,10 +142,10 @@ nobody checks against each other.*
 ./pruefe-wortschatz.py    terminals against the table, Sonderform counter (3 of 5)
 ./pruefe-todo.py          holds the task list against itself, eight classes
 ./pruefe-kennungen.py     no refusal code in two files
-./mutiere-pruefer.py      damages one rule at a time:  110 of 110
+./mutiere-pruefer.py      damages one rule at a time:  115 of 115
 ./erzeuge-mutationen.py   twists systematically:         7 of 39
 ./pruefe-luecken.py       the named gaps one by one:    13 of 15
-./pruefe-emission.sh      .gab → C → cc -Werror → run → compare, FOUR units
+./pruefe-emission.sh      .gab → C → cc -Werror → run → compare, FIVE units
 ./commit.sh               R19 — commit messages only via file
 ```
 
@@ -185,5 +186,5 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**19 clean examples, 69 poison probes, 79 tests** —
+**20 clean examples, 69 poison probes, 99 tests** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`

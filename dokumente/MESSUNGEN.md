@@ -5916,3 +5916,60 @@ narrower one. *Two bounds on one loop, and the measurement says which one bites.
 | **`format` bit positions** | F2 · F9 | **«B24» is open in the folder** — not a build item but a decision |
 | **`atomic` / `check`** | F6 | memory ordering; a test harness is not a program |
 | **`option` as a VALUE** | F1 · F3 | the sentinel carries the type; `x = None` needs the target's table, which the emitter does not track |
+
+
+---
+
+# `traverse` und `forever` — das Paar ist die Aussage
+
+**Five translation units through the whole chain.** `beispiele/19-traversierung.gab` is new and
+exists for one purpose: to put the two loop forms **side by side in the C**.
+
+```
+traverse  ->  for (uint32_t i = 0; i < sizeof(w->slots)/sizeof(w->slots[0]); i++)
+retry     ->  while (!(cond)) { if (n >= SCHRANKE) { ausgang(); } n++; … }
+```
+
+> **The running bound here, the watchdog there** — and the reason is the domain. `slots of` is
+> finite by construction; a `retry`'s condition depends on the **world**. *That is exactly why
+> the grammar demands `on_exceeded` in one and nothing in the other, and the lowering makes it
+> visible instead of arguing it.*
+
+**Measured `16 6 0 0`:** the bound comes from `count NSLOTS` and not from the body · six of
+sixteen slots are active, so **each slot was visited exactly once** · after the clearing pass
+none is · and the **last** slot is cleared too — the bound is `< n`, not `< n-1`.
+
+## `forever` is refused, and the reason is the folder's own finding
+
+`per_pass bounded N ops` is a statement about **one pass**, and the cost pass checks it at
+**compile time**. At run time there is therefore nothing to count — **so `on_exceeded` has no
+trigger.**
+
+> *`MESSUNGEN.md` has called this a ritual since 2026-08-14* (**"`per_pass bounded n cycles` is
+> a ritual"**). The lowering confirms the finding at the machine: the clause could only be
+> **dropped**, and dropping a clause silently is the one thing this emitter does not do.
+
+Plus «B11»: `forever` has no exit at all. **Both belong decided before a line of C is written
+here** — and the refusal says so by name instead of leaving `loop form` as a shrug.
+
+## Every other domain now refuses with ITS OWN reason
+
+That is the actual yield of this stretch: one vague `loop form` became seven named questions.
+
+| Domain | why it is not lowered |
+|---|---|
+| `descendants of` | a tree walk whose **order is a template obligation** (`consuming.ordnung`, machine-proved), not a loop form |
+| `queue` | **«B10»**: `traverse` yields no value and knows no `break`, so `by consuming` drains the whole queue — *a different program* |
+| `elems of` | **«B12» is open**: whether it binds an ELEMENT or an INDEX is used both ways in the specification and fixed nowhere |
+| `mappings of` | comes from a `walk`, which has no lowering |
+| `ancestors of` · `chain in` | each needs its own bound |
+| `fields of` · `threads` | a register field list and the thread set are not runtime domains |
+| **a witness ordering other than `by unvisited`** | `by consuming`/`by decreasing` say something about **preserving an order**; what that means for the RUN is not decided |
+
+## Five mutations survived, and the reason is a lesson about the harness
+
+`mutiere-pruefer.py` runs `cargo test`. The whole `traverse` lowering was exercised **only** by
+`pruefe-emission.sh` — so damaging it broke nothing the harness could see.
+
+> **A rule guarded by one tool is blind to every other.** The five probes are now in
+> `rechenwerk.rs`, where the harness reaches them: **115 of 115.**
