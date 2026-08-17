@@ -789,7 +789,7 @@ MUTATIONEN = [
     Mutation(
         "geist-let-verschwindet-ganz",
         "emit.rs",
-        "        StmtArt::Let(l) if geist_wert(&l.wert, u) => {\n            aus.push_str(&format!(\"    {};\\n\", ausdruck(&l.wert, u)))\n        }",
+        "        StmtArt::Let(l) if geist_wert(&l.wert, u) => {\n            aus.push_str(&format!(\"    {};\\n\", ausdruck(&l.wert, u, absagen)))\n        }",
         "        StmtArt::Let(l) if geist_wert(&l.wert, u) => { let _ = l; }",
         "C-Absenkung -- eine Bindung an einen Geist nimmt den RUF mit; der Schritt entfaellt still",
         "code",
