@@ -237,3 +237,66 @@ impl fn hochlauf(p : BootPhase) effects { consumes p, writes mmu, writes faeden 
     let benutzung = c.find("const struct Text *text").expect("Zeigerparameter fehlt");
     assert!(vorwaerts < benutzung, "der Tag muss VOR seiner Benutzung stehen:\n{c}");
 }
+
+/// **Der Erzeuger fiel an drei Stellen OFFEN aus — gefunden 2026-08-17 am Korpus.**
+///
+/// Sein ganzer Entwurf ist *„weigere dich beim Namen, statt etwas Plausibles auszugeben"*, und
+/// genau davon gab es drei Ausnahmen. Alle drei uebersetzen, und zwei von ihnen rechnen still
+/// etwas anderes:
+///
+/// | Stelle | alte Ausgabe | warum sie falsch ist |
+/// |---|---|---|
+/// | `option index into T` | `uint32_t` | **jeder Wert 0..<N ist ein gueltiger Index** — es bleibt kein Bitmuster fuer *abwesend* |
+/// | unbekannte Ausdrucksform | `/* NOT LOWERED */ 0` | uebersetzt und **liefert null** |
+/// | `Some`/`None` | `None()` | ein impliziter Ruf; dass `-Werror` ihn faengt, ist Glueck, keine Absage |
+///
+/// *Dieselbe Klasse wie der Tabellenzeiger vom Vortag, und mit derselben Methode gefunden:
+/// den Erzeuger gegen den Korpus laufen lassen.*
+#[test]
+fn der_erzeuger_weigert_sich_statt_offen_auszufallen() {
+    fn absagen_von(q: &str) -> Vec<String> {
+        let mut a = gabbro_syntax::Absagen::neu("p.gab");
+        let (baum, _) = gabbro_syntax::lies("p.gab", q);
+        let _ = gabbro_check::emit::emittiere(&baum, &mut a);
+        a.absagen.iter().map(|x| x.text.clone()).collect()
+    }
+
+    // **1. `option` hat keine Darstellung, also keine Absenkung.** Die Wahl einer Darstellung
+    // (Sonderwert oder markierter Verbund) ist eine Schablonenpflicht, keine Uebersetzung.
+    let mit_option = absagen_von(
+        "module t { table T count 8 { slot { eltern : option index into T, } } }",
+    );
+    assert!(
+        mit_option.iter().any(|s| s.contains("field type")),
+        "`option index into T` darf nicht zu `uint32_t` werden: {mit_option:?}"
+    );
+
+    // Der pflichtige Index OHNE `option` senkt sich weiterhin ab -- die Schranke kommt aus
+    // `count N` und ist eine M1-Tatsache.
+    let ohne_option = absagen_von(
+        "module t { table T count 8 { slot { eltern : index into T, } } }",
+    );
+    assert!(ohne_option.is_empty(), "ein pflichtiger Index traegt: {ohne_option:?}");
+
+    // **2. Eine unbekannte Ausdrucksform wird abgelehnt, nicht zu null.**
+    let unaer = absagen_von(
+        "module t { table T count 8 { slot { benutzt : bool, } }\n\
+         impl fn f(t : ptr<normal, r> T, i : index into T) -> bool \
+         effects { reads t.slots } costs <= 4 ops { return !t.slots[i].benutzt; } }",
+    );
+    assert!(
+        unaer.iter().any(|s| s.contains("expression form")),
+        "eine unbekannte Ausdrucksform muss beim Namen abgelehnt werden: {unaer:?}"
+    );
+
+    // **3. `Some`/`None` sind Konstruktoren, keine Rufe** («B35»).
+    let konstruktor = absagen_von(
+        "module t { table T count 8 { slot { eltern : index into T, } }\n\
+         impl fn f(t : ptr<normal, rw> T, i : index into T) \
+         effects { writes t.slots } costs <= 4 ops { t.slots[i].eltern = None; } }",
+    );
+    assert!(
+        konstruktor.iter().any(|s| s.contains("`option` constructor")),
+        "`None` darf nicht als Ruf ausgegeben werden: {konstruktor:?}"
+    );
+}

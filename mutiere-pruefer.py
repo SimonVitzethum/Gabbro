@@ -826,6 +826,35 @@ MUTATIONEN = [
         "C-Absenkung -- der Tag steht erst in der Parameterliste; seine Sichtbarkeit endet am Semikolon",
         "code",
     ),
+    # -- emit.rs: die drei OFFENEN Ausfaelle ----------------------------------------------
+    #
+    # Der ganze Entwurf des Erzeugers ist "weigere dich beim Namen statt zu raten" -- und davon
+    # gab es bis zum 2026-08-17 drei Ausnahmen, alle drei uebersetzbar, zwei davon still
+    # falsch. Gefunden am Korpus, dieselbe Klasse wie der Tabellenzeiger vom Vortag.
+    Mutation(
+        "option-wird-vergroebert",
+        "emit.rs",
+        "        TypExpr::Index { optional: true, .. } => None,",
+        "        TypExpr::Index { optional: true, .. } => Some(\"uint32_t\".into()),",
+        "C-Absenkung -- `option index into T` verliert das `None`; kein Bitmuster bleibt fuer abwesend",
+        "code",
+    ),
+    Mutation(
+        "ausdruck-faellt-offen-auf-null",
+        "emit.rs",
+        "        _ => {\n            weigere(absagen, e.span, \"expression form\");\n            String::new()\n        }",
+        "        _ => \"0\".into(),",
+        "C-Absenkung -- eine unbekannte Ausdrucksform wird zu null statt abgelehnt",
+        "code",
+    ),
+    Mutation(
+        "option-konstruktor-wird-ein-ruf",
+        "emit.rs",
+        "    if name == \"Some\" || name == \"None\" {",
+        "    if false && (name == \"Some\" || name == \"None\") {",
+        "C-Absenkung -- `None` wird als Ruf `None()` ausgegeben; dass -Werror ihn faengt, ist Glueck",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

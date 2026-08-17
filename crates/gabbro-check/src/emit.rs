@@ -239,7 +239,7 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     aus.push_str(&format!(
         "    {}_slot slots[{}];\n}} {};\n",
         t.name.text,
-        zahltext(n),
+        zahltext(n, absagen),
         t.name.text
     ));
 }
@@ -260,11 +260,16 @@ fn intty(i: &IntTy) -> String {
     .to_string()
 }
 
-fn zahltext(e: &Expr) -> String {
+/// The array length of a `table`. **A length this emitter cannot read is refused** — the same
+/// reason as above, and here it decides how much memory the struct has.
+fn zahltext(e: &Expr, absagen: &mut Absagen) -> String {
     match &e.art {
         ExprArt::Zahl(n) => n.to_string(),
         ExprArt::Ort(o) => o.text(),
-        _ => "0 /* NOT LOWERED */".into(),
+        _ => {
+            weigere(absagen, e.span, "table length");
+            String::new()
+        }
     }
 }
 
@@ -306,7 +311,17 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
             })
         }
         // `index into T` -- the bound comes from `count N` and is an M1 fact.
-        TypExpr::Index { .. } => Some("uint32_t".into()),
+        //
+        // **`option index into T` is REFUSED, and that is not a gap but a decision the folder
+        // has not taken.** Lowering it to `uint32_t` erases the `None`: every value 0..<N is a
+        // valid index, so no bit pattern is left to mean *absent*. The C would be
+        // structurally incapable of holding what the type says — and it would compile.
+        //
+        // *An option needs a representation (a sentinel, or a tagged struct), and choosing one
+        // is a template obligation, not a translation.* Found 2026-08-17 by running the
+        // emitter against the corpus; the same class as the table pointer of the day before.
+        TypExpr::Index { optional: false, .. } => Some("uint32_t".into()),
+        TypExpr::Index { optional: true, .. } => None,
         TypExpr::Zeiger(z) => {
             // **A pointer to a type this unit does not declare becomes an INCOMPLETE C type.**
             // `extern fn melde_roh(text : ptr<code, r> Text)` names `Text` and nowhere declares
@@ -393,18 +408,18 @@ fn funktion(f: &FnDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
 
 fn anweisung(s: &Stmt, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     match &s.art {
-        StmtArt::Return(Some(e)) => aus.push_str(&format!("    return {};\n", ausdruck(e, u))),
+        StmtArt::Return(Some(e)) => aus.push_str(&format!("    return {};\n", ausdruck(e, u, absagen))),
         StmtArt::Return(None) => aus.push_str("    return;\n"),
         StmtArt::Zuweisung(z) => {
-            aus.push_str(&format!("    {} = {};\n", ort(&z.ziel, u), ausdruck(&z.wert, u)))
+            aus.push_str(&format!("    {} = {};\n", ort(&z.ziel, u, absagen), ausdruck(&z.wert, u, absagen)))
         }
-        StmtArt::Ruf(r) => aus.push_str(&format!("    {};\n", ruf(r, u))),
+        StmtArt::Ruf(r) => aus.push_str(&format!("    {};\n", ruf(r, u, absagen))),
         // **The third place the erasure has to hold, and the one that is silent if it does
         // not.** `let p1 = mmu_an(p);` binds a ghost: the BINDING goes, the CALL stays. Making
         // it `void p1 = mmu_an();` does not compile; dropping the whole statement compiles and
         // **computes something else** -- the boot step would simply not happen.
         StmtArt::Let(l) if geist_wert(&l.wert, u) => {
-            aus.push_str(&format!("    {};\n", ausdruck(&l.wert, u)))
+            aus.push_str(&format!("    {};\n", ausdruck(&l.wert, u, absagen)))
         }
         StmtArt::Let(l) => {
             // A non-ghost `let` needs a type, and the emitter does not guess one. The first
@@ -416,7 +431,7 @@ fn anweisung(s: &Stmt, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                 .and_then(|t| ctyp(t, u))
                 .or_else(|| ruf_rueckgabe(&l.wert, u));
             match typ {
-                Some(c) => aus.push_str(&format!("    {c} {} = {};\n", l.name.text, ausdruck(&l.wert, u))),
+                Some(c) => aus.push_str(&format!("    {c} {} = {};\n", l.name.text, ausdruck(&l.wert, u, absagen))),
                 None => weigere(absagen, s.span, "`let` without a resolvable type"),
             }
         }
@@ -445,20 +460,27 @@ fn ruf_rueckgabe(_e: &Expr, _u: &Namen) -> Option<String> {
 /// **A call, with the ghost arguments dropped.** The positions come from the callee's
 /// signature; an unknown callee keeps every argument, which cannot compile silently — it
 /// fails at `cc`, and that is the direction to fail in.
-fn ruf(r: &Ruf, u: &Namen) -> String {
+fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
     let name = r.pfad.teile.last().map(|i| i.text.clone()).unwrap_or_default();
+    // **«B35»: `Some`/`None` are CONSTRUCTORS, not calls.** The old path emitted `None()` —
+    // an implicit declaration that `-Werror` happens to catch. *Happening to fail is not
+    // refusing.* Their lowering waits on the same decision as `option index into T`.
+    if name == "Some" || name == "None" {
+        weigere(absagen, r.span, "`option` constructor -- `option` has no representation yet");
+        return String::new();
+    }
     let geist = u.funktionen.get(&name).map(|s| s.geist_param.clone());
     let args: Vec<String> = r
         .argumente
         .iter()
         .enumerate()
         .filter(|(i, _)| !geist.as_ref().is_some_and(|g| *g.get(*i).unwrap_or(&false)))
-        .map(|(_, a)| ausdruck(a, u))
+        .map(|(_, a)| ausdruck(a, u, absagen))
         .collect();
     format!("{name}({})", args.join(", "))
 }
 
-fn ort(o: &Ort, u: &Namen) -> String {
+fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     let mut t = o.basis.text.clone();
     let mut zeiger = true; // The base of a place in a function is a pointer parameter.
     for suf in &o.suffixe {
@@ -474,25 +496,33 @@ fn ort(o: &Ort, u: &Namen) -> String {
             OrtSuffix::Ueber(f) => t = format!("{t}->{}", f.text),
             OrtSuffix::Index(e) => {
                 zeiger = false;
-                t = format!("{t}[{}]", ausdruck(e, u));
+                t = format!("{t}[{}]", ausdruck(e, u, absagen));
             }
         }
     }
     t
 }
 
-fn ausdruck(e: &Expr, u: &Namen) -> String {
+/// **Every expression form this emitter does not know is REFUSED.**
+///
+/// Until 2026-08-17 the fallback here read `"/* NOT LOWERED */ 0"` — *it compiled, and it
+/// computed zero.* A fail-open path in the one component whose whole design is "refuse rather
+/// than guess", and a comment nobody reads is not a refusal.
+fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
     match &e.art {
         ExprArt::Zahl(n) => n.to_string(),
         ExprArt::Wahr => "true".into(),
         ExprArt::Falsch => "false".into(),
-        ExprArt::Ort(o) => ort(o, u),
-        ExprArt::Klammer(x) => format!("({})", ausdruck(x, u)),
+        ExprArt::Ort(o) => ort(o, u, absagen),
+        ExprArt::Klammer(x) => format!("({})", ausdruck(x, u, absagen)),
         ExprArt::Binaer(op, a, b) => {
-            format!("{} {} {}", ausdruck(a, u), op_text(op), ausdruck(b, u))
+            format!("{} {} {}", ausdruck(a, u, absagen), op_text(op), ausdruck(b, u, absagen))
         }
-        ExprArt::Ruf(r) => ruf(r, u),
-        _ => "/* NOT LOWERED */ 0".into(),
+        ExprArt::Ruf(r) => ruf(r, u, absagen),
+        _ => {
+            weigere(absagen, e.span, "expression form");
+            String::new()
+        }
     }
 }
 
