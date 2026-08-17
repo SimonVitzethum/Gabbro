@@ -1,346 +1,346 @@
-# Gabbro — offene Punkte
+# Gabbro — open items
 
-> **Nach ROLLE geschnitten 2026-08-16.** Die Datei hatte sich diese Frage im Abgleich vom
-> 14. selbst gestellt und nicht beantwortet — *„eine Liste, in der ein halber Tag Papier
-> neben einem Teilprojekt steht, sortiert nicht mehr, und eine Liste, die nicht sortiert,
-> wird nicht gelesen."* Vier Rollen: **Entscheidungen · Messungen · Bau · Buchfuehrung.**
-> Dazu sind **sechs veraltete Stellen** nachgezogen (die fuenf Scratchpad-Klassen, die
-> 17er-Aufteilung, die vier Bereichsfragmente, „Uebersetzer bis P3", die Aufrufwirkungen,
-> „P2 bei 1 von 6") — *genau die Klasse, die der Abgleich vom 14. schon einmal bezahlt hat.*
+> **Cut by ROLE 2026-08-16.** The file had put this question to itself in the reconciliation of
+> the 14th and left it unanswered — *"a list in which half a day of paper stands next to a
+> subproject no longer sorts, and a list that does not sort does not get read."* Four roles:
+> **decisions · measurements · building · bookkeeping.**
+> On top of that **six outdated places** have been pulled up (the five scratchpad classes, the
+> 17-way split, the four domain fragments, "compiler up to P3", the call effects,
+> "P2 at 1 of 6") — *exactly the class the reconciliation of the 14th has already paid for once.*
 >
-> **Aufgeraeumt 2026-08-16.** Die acht Entwurfs- und Messdokumente liegen jetzt in
-> [`dokumente/`](dokumente/); im Wurzelverzeichnis stehen nur noch **README, TODO und DONE**.
-> **Zwanzig Punkte sind gegen den CODE geprueft und nach [`DONE.md`](DONE.md) gewandert** —
-> nicht gegen die Erinnerung: je Punkt eine Kennung, eine Datei oder eine Befehlszeile.
+> **Tidied up 2026-08-16.** The eight design and measurement documents now lie in
+> [`dokumente/`](dokumente/); in the root directory there stand only **README, TODO and DONE**.
+> **Twenty items have been checked against the CODE and moved to [`DONE.md`](DONE.md)** —
+> not against memory: per item a refusal code, a file or a command line.
 >
-> **Caprock-Punkte herausgenommen 2026-08-16.** Diese Liste fuehrt **Gabbro**. Was ihren
-> Gegenstand in Caprocks Code oder Buchfuehrung hat, gehoert dorthin — auch wenn es hier
-> entstanden ist. *Eine Aufgabenliste, die zwei Projekte fuehrt, sortiert fuer keines.*
-> Herausgenommen: Eager-FP, K1–K3, N2, die zwei offenen Klempnerei-Pflichten,
-> Fortschritt/Aushungern (D8). **Nicht geloescht, sondern nach
-> [`dokumente/AN-CAPROCK.md`](dokumente/AN-CAPROCK.md) gewandert** — sie sind Befunde, nur
-> nicht unsere.
+> **Caprock items taken out 2026-08-16.** This list carries **Gabbro**. Whatever has its subject
+> in Caprock's code or bookkeeping belongs there — even if it arose here. *A task list that
+> carries two projects sorts for neither.*
+> Taken out: eager FP, K1–K3, N2, the two open plumbing obligations,
+> progress/starvation (D8). **Not deleted, but moved to
+> [`dokumente/AN-CAPROCK.md`](dokumente/AN-CAPROCK.md)** — they are findings, only
+> not ours.
 >
-> **Abgeglichen 2026-08-14.** Diese Datei fuehrt **ausschliesslich Offenes**; Erledigtes steht
-> in den Entwurfsdateien, Widerlegtes in [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md), Gemessenes in
-> [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md). Der Abgleich am 2026-08-14 fand die Datei **in acht Punkten
-> unwahr ueber sich selbst** — acht erledigte Eintraege, sechs Aussagen, die der Ordner
-> ueberholt hatte, drei doppelt gefuehrte Themen, zwei kollidierende Etikettensysteme und
-> stehengebliebene Zahlen aus P1. **Eine Liste, die nicht stimmt, kostet mehr als keine:**
-> sie sagt an jeder Stelle „das ist noch offen", und der Leser glaubt es.
-> Was der Abgleich einzeln gefunden hat, steht am Ende unter *Abgleich*.
+> **Reconciled 2026-08-14.** This file carries **exclusively what is open**; what is done stands
+> in the design files, what is refuted in [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md), what is measured in
+> [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md). The reconciliation on 2026-08-14 found the file **untrue
+> about itself in eight points** — eight done entries, six statements the folder had
+> overtaken, three topics carried twice, two colliding label systems and
+> stale numbers from P1. **A list that is not right costs more than none:**
+> it says at every point "this is still open", and the reader believes it.
+> What the reconciliation found item by item stands at the end under *Reconciliation*.
 
 ---
 
-# DER KRITISCHE PFAD, in einer Zeile
+# THE CRITICAL PATH, in one line
 
-> ~~**B3**~~ → ~~**K/A/W-Einsetzung**~~ → ~~**`effects`-Lesen**~~ → ~~**Verschlüsse**~~ →
-> ~~**`table.induktion` nach Isabelle**~~ → **Gruppen-`ops` → P5 → P6 → P7**
+> ~~**B3**~~ → ~~**K/A/W substitution**~~ → ~~**`effects` reading**~~ → ~~**closures**~~ →
+> ~~**`table.induktion` into Isabelle**~~ → **group `ops` → P5 → P6 → P7**
 
-> **Der Pfad hat am 2026-08-16 seinen Kopf gewechselt, und zwar gegen die eigene frühere
-> Angabe.** Nicht Gruppen-`ops`, sondern **die erste bewiesene Schablone**. Der Grund ist
-> kein Aufwand, sondern eine Kurve: *das Amortisierungsargument — eine Schablone fällt
-> EINMAL, nicht je Programm — **gilt erst ab der ersten bewiesenen Schablone.*** Bis dahin
-> ist die Schablonenliste strukturell derselbe Berg wie seL4s Beweisberg, nur unbestiegen.
-> **Eine bewiesene von achtzehn ist qualitativ etwas anderes als null von siebzehn:** das
-> Register wechselt von *„Liste mit Länge"* zu *„Liste mit Fallrichtung"*.
+> **The path changed its head on 2026-08-16, and against its own earlier
+> statement.** Not group `ops`, but **the first proved template**. The reason is
+> not effort but a curve: *the amortisation argument — a template falls
+> ONCE, not per program — **holds only from the first proved template onwards.*** Until then
+> the template list is structurally the same mountain as seL4's proof mountain, only unclimbed.
+> **One proved out of eighteen is qualitatively something other than zero out of seventeen:** the
+> register changes from *"list with a length"* to *"list with a fall direction"*.
 >
-> `table.induktion` ist die kleinste, sie ist seit der INDUKTION-Eintragung als L3-Posten
-> markiert, und **sie kommt seit Tagen nicht dran, weil sie mit nichts konkurriert ausser mit
-> allem.**
+> `table.induktion` is the smallest, it has been marked as an L3 item since the INDUCTION entry,
+> and **it has not got its turn for days, because it competes with nothing except
+> everything.**
 
-**Die ersten zwei sind am 2026-08-16 gefallen** (`DONE.md`), und die Einsetzung hat den Pfad
-**verkürzt statt verlängert**: `p_B3 = 0,0096`, Aufschlag `≥ +0,05` — *unter der Auflösung der
-Kennzahl.* **B3 ist als Kostenposten erledigt; die Kennzahl bleibt bei `≥ 1,90` offen**, weil
-sie an der **Pflichtseite** hängt, nicht an der Codeform. Die Kopfstellung hat jetzt die
-Entscheidung, nicht die Messung.
+**The first two fell on 2026-08-16** (`DONE.md`), and the substitution has **shortened** the path
+rather than lengthened it: `p_B3 = 0,0096`, surcharge `≥ +0,05` — *below the resolution of the
+metric.* **B3 is done as a cost item; the metric stays open at `≥ 1,90`**, because
+it hangs on the **obligation side**, not on the code form. The head position now belongs to the
+decision, not to the measurement.
 
-> **Und der Satz, den die Messkette erzeugt hat, gehört an ihren Kopf:** *die teuren Pflichten
-> sind **viele, aber klein*** — W = 38 von 73 nach Kopfzahl, aber nur 34 % der Zeilen; eine
-> W-Pflicht ist im Mittel **halb so gross** wie eine K- oder A-Pflicht (`dokumente/BEWEIS.md`).
-> **Der Abstand zum Boden hängt damit fast vollständig an der W-Spalte selbst**, nicht an
-> Schleifenformen. Wer den Entwurf angreifen will, greift dort an.
+> **And the sentence the measurement chain produced belongs at its head:** *the expensive
+> obligations are **many, but small*** — W = 38 of 73 by head count, but only 34 % of the lines; a
+> W obligation is on average **half the size** of a K or A obligation (`dokumente/BEWEIS.md`).
+> **The distance to the floor therefore hangs almost entirely on the W column itself**, not on
+> loop forms. Whoever wants to attack the design attacks there.
 
-**Alles andere ist parallelisierbar oder Memo.** Und der einzige Posten auf diesem Pfad, der
-weder Code noch Lauf ist, sondern **ein Wort des Ordners**, ist der Schlitz:
+**Everything else is parallelisable or a memo.** And the only item on this path that is
+neither code nor a run but **a word of the folder** is the slot:
 
 | | |
 |---|---|
-| **`M-effects-lesen` — Richtung** | **A** — die zehn Fragmentfunktionen nachdeklarieren (2026-08-16) |
+| **`M-effects-lesen` — direction** | **A** — redeclare the ten fragment functions (2026-08-16) |
 
-**Begründung, und sie hat zwei Teile, die beide nachprüfbar sind:**
+**Justification, and it has two parts, both of them checkable:**
 
-1. **E3-Konsistenz.** Der Ordner sagt an jeder anderen Stelle *„nichts ist implizit"*. Eine
-   gröbere Rahmenzusage (C) wäre genau die stille Ausnahme — ein Lesen, das keine Zeile
-   nennt, weil die Zeile zu lang würde.
-2. **A ist die Lesart, deren Verletzung der Pass PRÄZISE melden kann.** C meldet
-   *„irgendwo ausserhalb von `mmio`/`dma`/`atomic` gelesen"*; A meldet **welche Funktion
-   welchen Ort liest, ohne ihn zu nennen**. *Was man nicht genau melden kann, setzt kein
-   Pass durch — dieselbe Begründung, an der Lesart B gestorben ist.*
+1. **E3 consistency.** The folder says at every other point *"nothing is implicit"*. A
+   coarser frame promise (C) would be exactly the silent exception — a read that names no line
+   because the line would get too long.
+2. **A is the reading whose violation the pass can report PRECISELY.** C reports
+   *"read somewhere outside `mmio`/`dma`/`atomic`"*; A reports **which function
+   reads which place without naming it**. *What cannot be reported exactly, no
+   pass enforces — the same justification reading B died on.*
 
-**Der vorregistrierte Preis war Faktor drei — und er ist NICHT eingetreten.** Das Memo
-sagte *„A lässt 10 von 32 Funktionen fallen, C drei"*. Gemessen, nachdem der Pass gebaut war
-(`dokumente/MESSUNGEN.md`, *Lesart A gebaut*): **0 von 32.** `FRAGMENTE.md` deklariert seine
-Lesungen bereits; gefallen sind **zwei eigene Beispiele**, und das ist keine Eigenschaft der
-Lesart, sondern meiner Sorgfalt beim Schreiben.
+**The pre-registered price was a factor of three — and it did NOT occur.** The memo
+said *"A drops 10 of 32 functions, C drops three"*. Measured after the pass was built
+(`dokumente/MESSUNGEN.md`, *Lesart A gebaut*): **0 of 32.** `FRAGMENTE.md` already declares its
+reads; what fell were **two of my own examples**, and that is not a property of the
+reading but of my care in writing.
 
-**Lesart B war schon vorher ausgeschieden** — durch ihren eigenen Befund: sie ist nicht
-mechanisch trennbar, und *was man nicht zählen kann, kann kein Pass durchsetzen.*
+**Reading B had already been eliminated before that** — by its own finding: it is not
+mechanically separable, and *what cannot be counted, no pass can enforce.*
 
-**Rückbauweg (R12) steht weiter:** die Lesehälfte ist ein Zusatz in `wirkungen.rs` gegen
-dieselbe Liste, gegen die das Schreiben läuft. Fällt sie, fällt eine Absageklasse —
-*keine Grammatikänderung, kein Datentyp, kein Beispiel muss zurück.*
+**The unbuild route (R12) still stands:** the read half is an addition in `wirkungen.rs` against
+the same list the write side runs against. If it falls, one refusal class falls —
+*no grammar change, no data type, no example has to go back.*
 
-*Die Richtung steht und ist gebaut (`E010`). Damit ist der kritische Pfad zum ersten Mal frei
-von Posten, die weder Code noch Lauf sind — was bleibt, ist Bauen und Messen.*
-
----
-
-# ENTSCHEIDUNGEN — brauchen ein Urteil, keinen Lauf
-### Die Gruppe: drei Formen stehen — offen ist die ERHALTUNG
-
-- [ ] **Alle drei S17-Pflichten stehen als FORM. Was fehlt, ist die Erhaltung.**
-      Gebaut: (a) Sperren in Rangordnung (`U003`/`U005`), (c) kein Zwischenaustritt (`U006`),
-      (b) die Aussage verbindet (`U007`).
-      **Nachgezogen 2026-08-16:** die Klausel steht, und mit ihr `U007` — eine
-      Gruppen-Invariante muss **mindestens zwei** Träger nennen, sonst gehört sie an die
-      Tabelle. Damit ist (b) als **Form** gebaut. **Offen bleibt (b) als ERHALTUNG:** dass die
-      Aussage unter einer Operation hält, ist Beweisersache und fällt an S16/S17 — der Prüfer
-      stellt die drei Bedingungen her, unter denen die Frage überhaupt gestellt werden kann.
-      **Der nächste Schritt ist damit die Gruppenoperation** (`ops` über der Gruppe), und sie
-      ist jetzt kein Vorbau mehr, sondern der Empfänger der Beweispflicht.
-
-### «B41» — drei Domänen sind gemessen gefordert. Bauen oder nicht?
-
-- [ ] **Der Bedarf liegt vor, mit `Datei:Zeile` — die Entscheidung nicht.** B3 fand
-      **584 nicht traversierbare Zeilen**, und **226 davon (38,7 %) stehen in DMAR/PCIe**,
-      also in keinem der drei vermuteten Bereiche. Drei benannte Lücken:
-      * **`ancestors of`** — die Gerätetopologie wird **aufwärts** gelaufen (`cur =
-        topo[cur].parent`, vier Rümpfe). Abwärts ist es eine Domäne, aufwärts keine.
-      * **Union-Find** — `dmar.rs:519` `find` **schreibt die Kette, die es gerade läuft**
-        (`parent[x] = parent[parent[x]]`). Traversierung und Chirurgie in einer Anweisung;
-        keine der acht Domänen deckt das.
-      * **Kette über eine Kantenfunktion** — `redirect.rs:577`/`625` laufen die Handler-Kante
-        über einen Parameter `kante: impl Fn(u16) -> Option<u16>`; die Kette entsteht erst
-        durch den Aufruf und ist nicht deklarierbar.
-
-      **Die drei sind NICHT gleichrangig, und die Reihung ist die halbe Entscheidung:**
-      * ~~**`ancestors of`**~~ — **gebaut 2026-08-17** (`beispiele/18`, Gift 69). Und der
-        Bau deckte eine Lücke auf, die `descendants of` schon hatte: über einem
-        `index into T` fand der Kostenpass die Schranke nicht, weil der Tabellenname
-        unqualifiziert aus dem Indextyp kam. **Kein Beispiel hatte die Stelle je
-        ausgelöst** — der Korpus führt `descendants of` nur in Prädikaten, wo kein
-        Kostenpass läuft.
-      * **Kantenfunktion — die Linienfrage hat seit 2026-08-16 ihr KRITERIUM.** Sie ist der
-        allgemeine Fall von `chain(a,b)`, und der Präzedenzfall steht schon in der Sprache:
-        **der `update`-Rumpf von `exchange` — rein, M1-typisiert, über einem Wert, ohne
-        Quantor.** Eine Kantenfunktion derselben Klasse (*ein Wert rein, ein `option`-Wert
-        raus, keine Welt*) ist **kein Quantorenvorrat, sondern ein deklarierter Schritt.**
-        > **Der Schnitt:** Quantorenvorrat beginnt dort, wo die Funktion in **Aussagen**
-        > auftaucht statt in **Domänen-Erzeugung**. Solange sie nur Zeugen liefert und in
-        > keinem `requires`/`invariant` steht, wandert die Linie nicht.
-        **Mit diesem Schnitt verschluckt die Kette `ancestors of`**, und «B41» geht von drei
-        Lücken auf **eine Entwurfszeile** zurück. *Und die Messung vom selben Tag zeigt, dass
-        es derselbe Gegenstand ist wie der Verschluss-Posten:* `impl Fn(u16) -> Option<u16>`
-        steht dreimal in `sched/redirect.rs` und ist beides zugleich.
-      * **Union-Find — bekommt voraussichtlich GAR KEINE Traversierungsform.** `find` mit
-        Pfadkompression mutiert die Struktur, über die es läuft: **die Verschränkung aus
-        P0.1-Versuch 1, als Leseoperation getarnt.** Vorhersage im Ordner: es bleibt ein
-        5 : 1-Posten oder wird **Gruppen-`ops`-Material** (Kompression als erzeugte Operation
-        mit Erhaltung der Repräsentanten-Invariante). *Die Vorhersage steht da, damit ein
-        Vorschlag für eine `union_find`-Domäne sie zuerst schlagen muss.*
-
-      **W3 ist erfüllt (gemessener Bedarf), und W3 verlangt nicht, ihm zu folgen.** Der Preis
-      steht in Spalte 2 der Konvergenzmetrik: **jede Domäne mehr ist eine Domäne mehr, die
-      jeder Leser glauben muss.**
-
-### Die Frage, die über den Kern entscheidet
-
-- [ ] **Echte Linearität ist der einzige Mechanismus, den kein vorhandenes Werkzeug liefert** —
-      gemessen: Verus' `tracked` ist **affin**, Rust ist affin, SPARKs Leckprüfung hängt an einer
-      **Allokation**. An ihr hängen die Bootphase, `Parked` und die lineare Prüfpflicht.
-      **Offen: reicht ein Mechanismus, um eine Sprache zu rechtfertigen?** Die billigere Antwort
-      wäre ein Beitrag an Verus (linear statt affin). Das ist die teuerste offene Frage des Ordners.
-- [ ] **ATS ist der nächste Verwandte für den Kern und ungeprüft** — lineare Typen plus Beweise,
-      kompiliert nach C. Dieselbe Logik wie das Verus-Tor: *der nächste Verwandte ist gebaut, der
-      Ordner nicht.* **Sollte vor P2 gefahren werden; P2 lief zuerst.** Damit ist der Vergleich
-      nicht hinfaellig, sondern nur teurer: er misst jetzt gegen etwas Gebautes statt gegen
-      einen Entwurf.
-- [ ] **Für jeden weiteren Mechanismus die Gegenrechnung führen.** M2 am Sperrbeleg und M1 sind am
-      2026-08-13 gegen den Ordner ausgegangen. **M3 ist gegen die richtige Grundlinie zu messen:
-      nicht Verus, sondern `tock-registers`/`svd2rust`** — typisierte Registerzugriffe sind eine
-      Rust-Bibliothek. Die Frage ist, was ihr fehlt: Übergänge über Bits, Bedingungen über
-      Registergrenzen, Barrierendomäne im Typ.
-
----
-### Syntax — offene Entscheidungen (Einzelheiten in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md))
-
-- [ ] **Variable Längen in `format`** — die harten 20 % jedes Parser-Erzeugers, keine
-      Schreibweise vorhanden.
-- [ ] **Versionsevolution:** liest ein `@version 3`-Leser auch v2 — **Absage oder Migration**?
-      Beides vertretbar, keins entschieden.
-- [ ] **Generizität** — ohne sie braucht jede Tabelle ihren eigenen `traverse`; mit ihr die Frage,
-      wie Verträge parametrisiert werden.
-- [ ] **Der Vorrat an Quantoren in `spec fn` ist unentschieden — und genau dort wandert die Linie**,
-      wenn niemand aufpasst.
-- [ ] **Fehlerfortpflanzung:** ohne `?` wird jeder Aufruf drei Zeilen, mit `?` gibt es verborgenen
-      Kontrollfluss. Beides widerspricht einer Entwurfsregel.
-- [ ] **Schlüsselwortsprache** steht auf Englisch, weil das der Bestand ist. Preis: Bruch mit dem
-      deutschen Fliesstext. Reversibel (eine Tabelle im Lexer).
-### Entwurf — offene Entscheidungen
-
-- [ ] **Roundtrip** `lesen(schreiben(x)) == x` gehört in den Differenztest.
-- [ ] **Kostenangabe je Invariante** und an `by unbesucht`: welche Struktur, wer setzt sie zurück,
-      was kostet der Reset, darf sie unter dem Lock leben.
-- [ ] **Die Axiomschicht beziffern — die x86-Haelfte ist fahrbar, die aarch64-Haelfte NICHT.**
-      **Solange die Zahl fehlt, ist „speichersicher unter A1…An" eine Form ohne Inhalt.**
-      * **x86:** fahrbar gegen `../caprock-messbasis` (= `SEL4Lake/SEL4Lake` @ `arch/x86_64`,
-        `a1bf707`). Offen.
-      * **~~aarch64~~ — BLOCKIERT, und zwar nicht aus Zeitgruenden (2026-08-15).** Der
-        einzige aarch64-Baum im Ordner (`SEL4Lake/ARMTest/stm32mp25-kernel`) ist **kein
-        zweiter Kernel, sondern ein aelterer Schnappschuss DERSELBEN Abstammung** — belegt
-        mit `git log --follow`: `R099`, eine Umbenennung mit 99 % Aehnlichkeit von
-        `sel4lake-cap` nach `caprock-cap` (s. [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md), *Zwei Fundstellen
-        aus einer Vererbung*). Er liegt ausserhalb von git.
-        **Eine Gegentabelle daraus waere keine zweite Architektur, sondern dieselbe Linie
-        zweimal gezaehlt** — genau die Fehlerklasse, die dieser Ordner am 2026-08-15 gebucht
-        hat. *Die Zahl waere nicht ungenau, sondern falsch, und zwar in die schmeichelhafte
-        Richtung: sie wuerde Uebertragbarkeit belegen, wo nur Kopie steht.*
-      * **Was es braeuchte:** ein aarch64-Kernel mit **eigener** Abstammung, oder die
-        ehrliche Fassung des Satzes — *„gemessen fuer x86; fuer aarch64 steht keine Zahl,
-        und der vorhandene Baum kann sie nicht liefern."*
-
-- [ ] **Die Zeilenanteile der GABBRO-Seite — das ist, was die Kennzahl noch schliesst.**
-      B3 ist gefahren und hat sie **nicht** geliefert; es misst die Codeform, die Formel
-      gewichtet Beweispflichten (`dokumente/MESSUNGEN.md`, *EINSETZUNG*). Was fehlt: was ein
-      Beweis **in Gabbro** für dieselben 73 Pflichten kostet. **Das ist keine Messung an
-      Caprock mehr** — dafür müssen die Pflichten in Gabbro geschrieben sein. Bis dahin steht
-      die Kennzahl als `≥ 1,90`, und **jede kleinere Zahl im Umlauf ist eine Verwechslung der
-      beiden Seiten**.
-
----
-### Aus der Umkehrung der Frage ([`dokumente/SPRACHE.md`](dokumente/SPRACHE.md))
-
-- [ ] **Die achtzehn Umwandlungen sind Behauptungen über Absenkbarkeit, keine Belege.** Jede braucht
-      ihre C-Absenkung hingeschrieben — vor der Kanonisierung in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md).
-- [ ] **`retry` mit `bounded`/`progress`/`on_exceeded` ist der Ersatz für „unbegrenztes Warten".**
-      Offen: reicht eine Zahl, oder braucht es zwei Schranken (Versuche **und** Ticks)?
-- [ ] **Nr. 14 verlangt eine `publishes`-Klausel an 2 231 Stellen.** Ob das trägt, entscheidet keine
-      Papierübung — das ist der grösste Einzelposten der ganzen Umstellung.
-- [ ] **`breaking I { … }` legalisiert eine Invariantenverletzung.** Der Preis ist Sichtbarkeit
-      statt Verstecken; ob das reicht, ist unentschieden.
-### Papierschritte — keine Zeile Code. Jeder Punkt kann die These töten
-
-> **Umbenannt 2026-08-14.** Diese Ueberschrift hiess „P0", die naechste „P1" — und
-> [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §6 vergibt P0…P7 an den **Prueferplan**, wo P1 die
-> Grammatikvereinigung ist und nicht `check`. **Zwei Etikettensysteme mit denselben Namen
-> in derselben Datei**; dieselbe Fehlerklasse wie die G-Kollision weiter oben.
-
-- [ ] **`touches` ist zu grob** — es braucht eine Form für „verändert die Menge nur durch
-      Verbrauch". Ohne sie hängt die Ordnung an einer Zusage statt an einer Bedingung.
-### Leistung — zwei Posten, beide vor dem ersten Benchmark
-
-- [ ] **Die Schrankenpruefung amortisieren:** `bounded N ops` muss nicht je Durchgang geprueft
-      werden. `progress` traegt die Terminierung, die Schranke ist ein **Watchdog** — eine Pruefung
-      **alle 2^k Durchgaenge** senkt die Kosten auf ~1/2^k, die Zusage wird „bricht nach hoechstens
-      N + 2^k". **Vor dem ersten Benchmark entscheiden**, sonst misst er ein Konstrukt, das niemand
-      so bauen wuerde.
-- [ ] **Die Spannung flach-absenken gegen schnell ist ungepreist.** Der Ordner hat sie nur auf der
-      Korrektheitsseite bezahlt; auf der Leistungsseite ist die Absenkung eine **Wette auf den
-      C-Uebersetzer**, und sie haengt an der ungeschriebenen Formentabelle.
+*The direction stands and is built (`E010`). With that the critical path is for the first time free
+of items that are neither code nor a run — what remains is building and measuring.*
 
 ---
 
-# MESSUNGEN — brauchen einen Lauf
+# DECISIONS — need a judgement, not a run
+### The group: three forms stand — what is open is PRESERVATION
 
-- [ ] **Abnahme der dritten Ergaenzung** (§6): Katalog gegen Zaehlung — **jeder gezaehlte Befehl
-      hat ein Axiom oder ein Konstrukt, jede Zeile einen Befehl**; die Mode-Leiter als Sprechprobe
-      (vertauschtes `write_cr0(PG)` **muss** brechen); die vorberechneten Boot-Tabellen byteidentisch
-      gegen das, was das heutige Trampolin zur Laufzeit baut.
-- [ ] **P5–P7** aus [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §6 — **die Formtabelle mit
-      Zeugenpaaren, die C-Emission, ein Caprock-Modul end-to-end.**
-      **Jede Stufe verbraucht das Ergebnis der vorigen, wie eine `Duty`.**
-      *(P4 ist gefallen: M2 steht als `L101`–`L105`, der Paarungs-Pass als `V001`–`V004`.
-      Was an P4 offen bleibt, ist die **Schablone** zu M2 — sie steht in der Schablonenliste,
-      nicht hier.)*
-### Aus dem Kriterium ([`dokumente/BEWEIS.md`](dokumente/BEWEIS.md))
+- [ ] **All three S17 obligations stand as FORM. What is missing is the preservation.**
+      Built: (a) locks in rank order (`U003`/`U005`), (c) no intermediate exit (`U006`),
+      (b) the statement connects (`U007`).
+      **Pulled up 2026-08-16:** the clause stands, and with it `U007` — a
+      group invariant must name **at least two** carriers, otherwise it belongs at the
+      table. With that (b) is built as a **form**. **What stays open is (b) as PRESERVATION:** that the
+      statement holds under an operation is the prover's business and falls to S16/S17 — the checker
+      establishes the three conditions under which the question can be put at all.
+      **The next step is therefore the group operation** (`ops` over the group), and it
+      is no longer a preliminary but the recipient of the proof obligation.
 
+### «B41» — three domains are demanded as measured. Build them or not?
 
+- [ ] **The need is on the table, with `file:line` — the decision is not.** B3 found
+      **584 non-traversable lines**, and **226 of them (38,7 %) stand in DMAR/PCIe**,
+      that is, in none of the three suspected areas. Three named gaps:
+      * **`ancestors of`** — the device topology is walked **upwards** (`cur =
+        topo[cur].parent`, four bodies). Downwards it is a domain, upwards it is not.
+      * **Union-find** — `dmar.rs:519` `find` **writes the chain it is walking**
+        (`parent[x] = parent[parent[x]]`). Traversal and surgery in one statement;
+        none of the eight domains covers that.
+      * **Chain over an edge function** — `redirect.rs:577`/`625` walk the handler edge
+        over a parameter `kante: impl Fn(u16) -> Option<u16>`; the chain arises only
+        through the call and is not declarable.
 
-- [ ] **Die Trennlinie an einem Grenzfall streiten.** „Nennt nur die Maschine" ist scharf genug für
-      die heutigen Fälle — der erste Streitfall gehört in `dokumente/BEWEIS.md`, nicht in eine Fussnote.
-### Induktion — eingetragen, und die eine Zahl fehlt
+      **The three are NOT of equal rank, and the ordering is half the decision:**
+      * ~~**`ancestors of`**~~ — **built 2026-08-17** (`beispiele/18`, poison 69). And the
+        build uncovered a gap that `descendants of` already had: over an
+        `index into T` the cost pass did not find the bound, because the table name came
+        unqualified out of the index type. **No example had ever triggered the
+        site** — the corpus carries `descendants of` only in predicates, where no
+        cost pass runs.
+      * **Edge function — the line question has had its CRITERION since 2026-08-16.** It is the
+        general case of `chain(a,b)`, and the precedent already stands in the language:
+        **the `update` body of `exchange` — pure, M1-typed, over a value, without a
+        quantifier.** An edge function of the same class (*one value in, one `option` value
+        out, no world*) is **not a quantifier stock but a declared step.**
+        > **The cut:** quantifier stock begins where the function appears in **statements**
+        > instead of in **domain generation**. As long as it only supplies witnesses and stands in
+        > no `requires`/`invariant`, the line does not move.
+        **With this cut the chain swallows `ancestors of`**, and «B41» goes from three
+        gaps back to **one design line**. *And the measurement from the same day shows that
+        it is the same subject as the closure item:* `impl Fn(u16) -> Option<u16>`
+        stands three times in `sched/redirect.rs` and is both at once.
+      * **Union-find — will probably get NO traversal form at all.** `find` with
+        path compression mutates the structure it runs over: **the interlocking from
+        P0.1 attempt 1, disguised as a read operation.** Prediction in the folder: it stays a
+        5 : 1 item or becomes **group-`ops` material** (compression as a generated operation
+        with preservation of the representative invariant). *The prediction stands there so that a
+        proposal for a `union_find` domain has to beat it first.*
 
+      **W3 is satisfied (measured need), and W3 does not demand that one follow it.** The price
+      stands in column 2 of the convergence metric: **every further domain is one more domain that
+      every reader has to believe.**
 
-- [ ] **Das erzeugte Schema muss einmal nach Isabelle** — es ist eine Schablone im Sinne von L3 und
-      damit der Posten, der die Vertrauensbasis **verkleinert**.
-- [ ] **Wohlfundiertheit hängt an einer Invariante, die man beweisen will.** Die Deklaration muss
-      nennen, welche — und das Mass (Zahl der Abkömmlinge) ist Voraussetzung, nicht Ergebnis.
-### Nachzuprüfen, weil aus dem Gedächtnis zitiert
+### The question that decides the core
 
-- [ ] **Die Namensfreiheit „Gabbro"** über Paketregister, GitHub und Sprachlisten — mitsamt dem,
-      was gefunden wurde. „Ich habe nichts gefunden" ist ein Nullbefund ohne Grösse.
+- [ ] **Real linearity is the only mechanism no existing tool supplies** —
+      measured: Verus' `tracked` is **affine**, Rust is affine, SPARK's leak check hangs on an
+      **allocation**. The boot phase, `Parked` and the linear checking obligation hang on it.
+      **Open: is one mechanism enough to justify a language?** The cheaper answer
+      would be a contribution to Verus (linear instead of affine). That is the most expensive open question in the folder.
+- [ ] **ATS is the nearest relative for the core and is unexamined** — linear types plus proofs,
+      compiled to C. The same logic as the Verus gate: *the nearest relative is built, the
+      folder is not.* **Should have been run before P2; P2 ran first.** That does not make the comparison
+      void, only more expensive: it now measures against something built instead of against
+      a design.
+- [ ] **For every further mechanism, run the counter-calculation.** M2 at the lock evidence and M1 came out
+      against the folder on 2026-08-13. **M3 is to be measured against the right baseline:
+      not Verus, but `tock-registers`/`svd2rust`** — typed register accesses are a
+      Rust library. The question is what it lacks: transitions over bits, conditions over
+      register boundaries, barrier domain in the type.
 
 ---
-### `check` ohne Sprache
+### Syntax — open decisions (details in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md))
 
-- [ ] **`check` als Rust-Makrobibliothek**, rückwirkend gegen die 33 Messdisziplin-Fallen, jede mit
-      Mutation. Tor: **≥ 5 gefangen**. Nützlich auch dann, wenn Gabbro nie entsteht.
+- [ ] **Variable lengths in `format`** — the hard 20 % of every parser generator, no
+      notation available.
+- [ ] **Version evolution:** does an `@version 3` reader also read v2 — **refusal or migration**?
+      Both defensible, neither decided.
+- [ ] **Genericity** — without it every table needs its own `traverse`; with it the question
+      of how contracts are parameterised.
+- [ ] **The stock of quantifiers in `spec fn` is undecided — and that is exactly where the line moves**,
+      if nobody watches.
+- [ ] **Error propagation:** without `?` every call becomes three lines, with `?` there is hidden
+      control flow. Both contradict a design rule.
+- [ ] **The keyword language** is in English, because that is what the existing code is. Price: a break with the
+      German running text. Reversible (one table in the lexer).
+### Design — open decisions
+
+- [ ] **Roundtrip** `lesen(schreiben(x)) == x` belongs in the differential test.
+- [ ] **Cost figure per invariant** and at `by unbesucht`: which structure, who resets it,
+      what the reset costs, whether it may live under the lock.
+- [ ] **Quantify the axiom layer — the x86 half is runnable, the aarch64 half is NOT.**
+      **As long as the number is missing, "memory-safe under A1…An" is a form without content.**
+      * **x86:** runnable against `../caprock-messbasis` (= `SEL4Lake/SEL4Lake` @ `arch/x86_64`,
+        `a1bf707`). Open.
+      * **~~aarch64~~ — BLOCKED, and not for reasons of time (2026-08-15).** The
+        only aarch64 tree in the folder (`SEL4Lake/ARMTest/stm32mp25-kernel`) is **not a
+        second kernel but an older snapshot of THE SAME lineage** — evidenced
+        with `git log --follow`: `R099`, a rename with 99 % similarity from
+        `sel4lake-cap` to `caprock-cap` (see [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md), *Zwei Fundstellen
+        aus einer Vererbung*). It lies outside git.
+        **A counter-table from it would not be a second architecture but the same line
+        counted twice** — exactly the error class this folder booked on 2026-08-15.
+        *The number would not be imprecise but wrong, and in the flattering
+        direction: it would evidence transferability where only a copy stands.*
+      * **What it would take:** an aarch64 kernel with a lineage **of its own**, or the
+        honest version of the sentence — *"measured for x86; for aarch64 no number stands,
+        and the available tree cannot supply one."*
+
+- [ ] **The line shares of the GABBRO side — that is what still closes the metric.**
+      B3 has been run and did **not** supply them; it measures the code form, the formula
+      weights proof obligations (`dokumente/MESSUNGEN.md`, *EINSETZUNG*). What is missing: what a
+      proof **in Gabbro** costs for the same 73 obligations. **That is no longer a measurement on
+      Caprock** — for it the obligations have to be written in Gabbro. Until then
+      the metric stands at `≥ 1,90`, and **every smaller number in circulation is a confusion of
+      the two sides**.
+
+---
+### From the inversion of the question ([`dokumente/SPRACHE.md`](dokumente/SPRACHE.md))
+
+- [ ] **The eighteen conversions are claims about lowerability, not evidence.** Each needs
+      its C lowering written down — before the canonisation in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md).
+- [ ] **`retry` with `bounded`/`progress`/`on_exceeded` is the replacement for "unbounded waiting".**
+      Open: is one number enough, or does it need two bounds (attempts **and** ticks)?
+- [ ] **No. 14 demands a `publishes` clause at 2 231 sites.** Whether that carries is decided by no
+      paper exercise — that is the largest single item of the whole conversion.
+- [ ] **`breaking I { … }` legalises an invariant violation.** The price is visibility
+      instead of hiding; whether that is enough is undecided.
+### Paper steps — not a line of code. Every item can kill the thesis
+
+> **Renamed 2026-08-14.** This heading was called "P0", the next one "P1" — and
+> [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §6 assigns P0…P7 to the **checker plan**, where P1 is the
+> grammar unification and not `check`. **Two label systems with the same names
+> in the same file**; the same error class as the G collision further up.
+
+- [ ] **`touches` is too coarse** — it needs a form for "changes the set only through
+      consumption". Without it the ordering hangs on a promise instead of on a condition.
+### Performance — two items, both before the first benchmark
+
+- [ ] **Amortise the bound check:** `bounded N ops` does not have to be checked per
+      iteration. `progress` carries the termination, the bound is a **watchdog** — a check
+      **every 2^k iterations** lowers the cost to ~1/2^k, the promise becomes "breaks after at most
+      N + 2^k". **Decide before the first benchmark**, otherwise it measures a construct nobody
+      would build that way.
+- [ ] **The tension lowering-flat against fast is unpriced.** The folder has paid it only on the
+      correctness side; on the performance side the lowering is a **bet on the
+      C compiler**, and it hangs on the unwritten form table.
+
+---
+
+# MEASUREMENTS — need a run
+
+- [ ] **Acceptance of the third addition** (§6): catalogue against count — **every counted instruction
+      has an axiom or a construct, every line an instruction**; the mode ladder as a speech test
+      (a swapped `write_cr0(PG)` **must** break); the precomputed boot tables byte-identical
+      against what today's trampoline builds at run time.
+- [ ] **P5–P7** from [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §6 — **the form table with
+      witness pairs, the C emission, one Caprock module end-to-end.**
+      **Every stage consumes the result of the previous one, like a `Duty`.**
+      *(P4 has fallen: M2 stands as `L101`–`L105`, the pairing pass as `V001`–`V004`.
+      What stays open at P4 is the **template** for M2 — it stands in the template list,
+      not here.)*
+### From the criterion ([`dokumente/BEWEIS.md`](dokumente/BEWEIS.md))
+
+
+
+- [ ] **Argue the dividing line at a borderline case.** "Names only the machine" is sharp enough for
+      today's cases — the first disputed case belongs in `dokumente/BEWEIS.md`, not in a footnote.
+### Induction — entered, and the one number is missing
+
+
+- [ ] **The generated scheme has to go into Isabelle once** — it is a template in the sense of L3 and
+      thereby the item that **shrinks** the trust base.
+- [ ] **Well-foundedness hangs on an invariant one wants to prove.** The declaration has to
+      name which — and the measure (number of descendants) is a premise, not a result.
+### To be re-checked, because quoted from memory
+
+- [ ] **The freedom of the name "Gabbro"** across package registries, GitHub and language lists — together with what
+      was found. "I found nothing" is a null finding without a size.
+
+---
+### `check` without a language
+
+- [ ] **`check` as a Rust macro library**, retroactively against the 33 measurement-discipline traps, each with a
+      mutation. Gate: **≥ 5 caught**. Useful even if Gabbro never comes into being.
 
 ---
 
 ---
 
-# BAU — braucht Code
+# BUILDING — needs code
 
-- [ ] **Der Erzeuger muss den Lizenzhinweis SELBST schreiben — heute tut es niemand.**
-      [`LIZENZ-ZUSATZ.md`](LIZENZ-ZUSATZ.md) knüpft die zusätzliche Erlaubnis (*„dein Programm
-      ist kein abgeleitetes Werk"*) an eine Bedingung: erzeugte C-Dateien tragen im Kopf und
-      Binärdateien als Zeichenkette den Hinweis `Erzeugt von Gabbro`. **Es gibt keinen
-      Erzeuger, also schreibt ihn nichts.** Solange das so ist, ist die Bedingung eine Zusage
-      an ein Werkzeug, das es nicht gibt — *dieselbe Bauart wie eine Schranke, die nie
-      ausgelöst wurde.* **Der Hinweis gehört in dieselbe Änderung wie die erste Zeile
-      Emission, nicht später.**
-### Die Schreibrechtszeile `by ops` — und der Gruppen-Pruefsatz, der ihr vorausgeht
+- [ ] **The generator has to write the licence notice ITSELF — today nothing does.**
+      [`LIZENZ-ZUSATZ.md`](LIZENZ-ZUSATZ.md) ties the additional permission (*"your program
+      is not a derived work"*) to a condition: generated C files carry the notice
+      `Erzeugt von Gabbro` in the header and binaries carry it as a string. **There is no
+      generator, so nothing writes it.** As long as that is so, the condition is a promise
+      to a tool that does not exist — *the same construction as a bound that was never
+      triggered.* **The notice belongs in the same change as the first line of
+      emission, not later.**
+### The write-right line `by ops` — and the group proof sentence that precedes it
 
-- [ ] **`by ops` ist gebaut — offen bleibt EIN Durchstich: `breaking` auf einem
-      `by ops`-Feld.** Der Prüfer beantwortet die Frage heute *implizit*: `kbedingung.rs`
-      führt die `breaking`-Stellen je Träger, und `ist_geschlossen` verlangt, dass keine da
-      ist — ein `breaking` **öffnet den Träger also wieder**, statt ein Übersetzungsfehler zu
-      sein. **Das ist eine vertretbare Antwort und sie steht nirgends ausgesprochen.**
-      *Eine Eigenschaft, deren Hintertür nur im Code steht, ist eine Zusage mit Hintertür.*
-      (Durchstich 2 — der `dma`-Rand — ist geschlossen: `R001`, Platzierungsregel.)
+- [ ] **`by ops` is built — what stays open is ONE breakthrough: `breaking` on a
+      `by ops` field.** The checker answers the question today *implicitly*: `kbedingung.rs`
+      keeps the `breaking` sites per carrier, and `ist_geschlossen` demands that there be none
+      — a `breaking` therefore **opens the carrier again**, instead of being a compile error.
+      **That is a defensible answer and it stands stated nowhere.**
+      *A property whose back door stands only in the code is a promise with a back door.*
+      (Breakthrough 2 — the `dma` edge — is closed: `R001`, placement rule.)
 
-- [ ] **Der Gruppen-Pruefsatz: der Quantor ist offen, der Durchgang nicht mehr.**
-      *„B13 faellt genau dann, wenn **jede** im Baum vorkommende Verbindungs-Invariante eine
-      Gruppe hat, deren `ops` sie schliessen."* **Was am 2026-08-16 gefallen ist:** der
-      Papierdurchgang am CapSpace/CDT-Paar (drei Antworten), der Sweep nach den *anderen*
-      Invarianten (**vier gefunden: V1–V4**), die Grammatikzeile (`group … over { … }`) und
-      drei der vier Formpflichten (`U003`/`U005`/`U006`/`U007`).
-      **Was offen ist, sind genau zwei Dinge:**
-      * **Der Quantor selbst.** Vier gefunden heisst vier gefunden — W12. Der Sweep war eine
-        Kandidatenliste mit Suchwegen, kein mechanischer Durchlauf. Was er systematisch
-        verfehlt, steht dabei: Invarianten ohne gemeinsames Indexfeld, etwa eine
-        Summenbedingung ueber zwei Tabellen.
-      * **Die `ops` ueber der Gruppe** — der Empfaenger der Beweispflicht aus S16/S17.
-        Der Pruefer stellt heute die drei Bedingungen her, unter denen die Frage *„haelt die
-        Invariante?"* ueberhaupt gestellt werden kann; **er beantwortet sie nicht.**
+- [ ] **The group proof sentence: the quantifier is open, the walkthrough is no longer.**
+      *"B13 falls exactly when **every** connection invariant occurring in the tree has a
+      group whose `ops` close it."* **What fell on 2026-08-16:** the
+      paper walkthrough at the CapSpace/CDT pair (three answers), the sweep for the *other*
+      invariants (**four found: V1–V4**), the grammar line (`group … over { … }`) and
+      three of the four form obligations (`U003`/`U005`/`U006`/`U007`).
+      **What is open is exactly two things:**
+      * **The quantifier itself.** Four found means four found — W12. The sweep was a
+        candidate list with search paths, not a mechanical walkthrough. What it systematically
+        misses stands beside it: invariants without a common index field, say a
+        sum condition over two tables.
+      * **The `ops` over the group** — the recipient of the proof obligation from S16/S17.
+        The checker today establishes the three conditions under which the question *"does the
+        invariant hold?"* can be put at all; **it does not answer it.**
 
-      *Und ein Nebenbefund des Sweeps aendert die Erwartung: **es gibt im Bestand KEINE
-      Doppelnahme derselben Sperrklasse** (`system.rs`:15). Der erwartete erste Prueffall fuer
-      `locks ordered` faellt damit aus; der gefundene ist ein anderer — zwei Klassen mit
-      Ordnung ueber zwei Kisten (V4).*
+      *And a side finding of the sweep changes the expectation: **there is in the existing code NO
+      double acquisition of the same lock class** (`system.rs`:15). The expected first test case for
+      `locks ordered` thereby drops out; the one that was found is a different one — two classes with
+      an ordering over two crates (V4).*
 
-### Gruppen-`ops` + `by ops` — der Entwurf, VOR der ersten Grammatikzeile
+### Group `ops` + `by ops` — the design, BEFORE the first grammar line
 
-Drei Festlegungen aus dem Papiertest, jede nachgeprueft. **Sie stehen hier, weil sie den
-Entwurf aendern, nicht weil sie ihn schmuecken.**
+Three commitments from the paper test, each re-checked. **They stand here because they change the
+design, not because they decorate it.**
 
-### E1 — Der Sperrabdruck der Gruppe ist ZWEISTUFIG, und das entscheidet die Grammatik
+### E1 — The group's lock imprint is TWO-LEVEL, and that decides the grammar
 
-Mutationen nehmen exklusiv, die erzeugte Leseoperation (`lookup`-Klasse) nimmt **geteilt** —
-das ist im Baum gemessen: `33 CAPS.read()` gegen `44 CAPS.write()`. **Also deklariert das
-Konstrukt beide Modi JE `op`, nicht einen je Gruppe.**
+Mutations take exclusive, the generated read operation (`lookup` class) takes **shared** —
+that is measured in the tree: `33 CAPS.read()` against `44 CAPS.write()`. **The
+construct therefore declares both modes PER `op`, not one per group.**
 
 ```
 group Kappen over { Slots, Objekte } locks KAPPEN {
@@ -350,30 +350,30 @@ group Kappen over { Slots, Objekte } locks KAPPEN {
 }
 ```
 
-**Ohne diese Zeile waere `locks shared` gebaut und die Gruppe koennte es nicht nutzen** —
-jede erzeugte Operation naehme exklusiv, und der meistgelaufene Pfad des Kernels waere
-wieder der langsamste. *Ein Konstrukt, das ein anderes unbrauchbar macht, ist ein
-Entwurfsfehler, kein Feature-Rueckstand.*
+**Without this line `locks shared` would be built and the group could not use it** —
+every generated operation would take exclusive, and the most-travelled path of the kernel would be
+the slowest again. *A construct that makes another one unusable is a
+design error, not a feature backlog.*
 
-### E2 — Die Sprechprobe hat eine Pflichtrichtung, und sie ist eine DATEI
+### E2 — The speech test has an obligatory direction, and it is a FILE
 
-`refcount -= 1` mit der Null-Pruefung **danach** muss unter `by ops` unschreibbar sein. Das
-gehoert als **Gift-Fragment in den Test, nicht als Satz in den Text** — die Regel des
-Ordners, dass eine Zusage eine Stelle braucht, an der sie faellt.
+`refcount -= 1` with the null check **afterwards** must be unwritable under `by ops`. That
+belongs as a **poison fragment in the test, not as a sentence in the text** — the folder's
+rule that a promise needs a place at which it falls.
 
-**BERICHTIGT.** Ich hatte geschrieben, der Schnitt stehe in zwei **unabhaengig
-geschriebenen** Kernen. Das ist falsch, und es ist mechanisch widerlegt:
+**CORRECTED.** I had written that the cut stands in two **independently
+written** cores. That is wrong, and it is mechanically refuted:
 
 ```
 $ git log --follow --name-status -- crates/caprock-cap/src/space.rs
 R099   crates/sel4lake-cap/src/space.rs -> crates/caprock-cap/src/space.rs
 ```
 
-**`R099` — eine Umbenennung mit 99 % Aehnlichkeit.** Dieselbe Autorenlinie, dieselbe Datei;
-die Kopie unter `ARMTest/` ist ein aelterer Schnappschuss derselben Abstammung, kein zweiter
-Kern. *Zwei Fundstellen aus einer Vererbung sind eine Fundstelle.*
+**`R099` — a rename with 99 % similarity.** The same authorship line, the same file;
+the copy under `ARMTest/` is an older snapshot of the same lineage, not a second
+core. *Two sites from one inheritance are one site.*
 
-Die tragfaehige Begruendung ist eine andere — und sie ist gemessen, nicht erschlossen:
+The load-bearing justification is a different one — and it is measured, not inferred:
 
 ```
 $ git log -L 1060,1075:crates/caprock-cap/src/space.rs --oneline
@@ -385,27 +385,27 @@ b026c83  A-3.3: Finalized leiht seinen Speicher …          2026-07-29
 2111f30  initial                                            2026-06-23
 ```
 
-Die Zeilenfolge steht **seit dem Ursprungscommit** (`2111f30`, dort Zeile 341/342, woertlich
-dieselbe Reihenfolge) und hat **fuenf Umbauten genau dieser Region** ueberlebt — darunter
-zwei, die die Freigabesemantik selbst umgeschrieben haben (`Reply-Cap mit Revocation`,
-`DMA-Teardown-Token`). Ueber fuenf Wochen, ueber eine Paketumbenennung, ueber die
-Verdopplung der Datei.
+The line sequence has stood **since the original commit** (`2111f30`, there at line 341/342, literally
+the same order) and has survived **five rebuilds of exactly this region** — among them
+two that rewrote the release semantics themselves (`Reply-Cap mit Revocation`,
+`DMA-Teardown-Token`). Over five weeks, over a package rename, over the
+duplication of the file.
 
-> **B29 ist kein Ausrutscher, sondern ein Attraktor.** Wer den Loeschpfad schreibt, schreibt
-> ihn so — auch beim fuenften Umbau, auch nachdem die Falle einmal bezahlt war. **Das traegt
-> die Sprechproben-Pflicht genauso gut wie die widerlegte Unabhaengigkeitsbehauptung, und es
-> ist die wahre Begruendung.**
+> **B29 is not a slip but an attractor.** Whoever writes the delete path writes
+> it that way — even at the fifth rebuild, even after the trap had been paid for once. **That carries
+> the speech-test obligation just as well as the refuted independence claim, and it
+> is the true justification.**
 
-Die vorhandene Probe `beispiele/gift/37-b29-unter-ops.gab` deckt `ops` auf der **Tabelle**
-(`D001`). Die neue deckt `by ops` auf dem **Feld** — `field : u16 by ops` — und muss genau
-diese Zeilenfolge treffen.
+The existing probe `beispiele/gift/37-b29-unter-ops.gab` covers `ops` on the **table**
+(`D001`). The new one covers `by ops` on the **field** — `field : u16 by ops` — and must hit exactly
+this line sequence.
 
-### E3 — Die Verus-Vorlage: Klauselstruktur uebernehmen, Typen NICHT
+### E3 — The Verus template: take over the clause structure, NOT the types
 
-**Nachgeprueft, und der Mechanismus ist ein anderer als vermutet — die Warnung wird dadurch
-staerker, nicht schwaecher.**
+**Re-checked, and the mechanism is a different one than assumed — the warning becomes
+stronger thereby, not weaker.**
 
-`cap_space.rs:17` fuehrt `pub refcount: nat`. Am Loeschpfad steht:
+`cap_space.rs:17` carries `pub refcount: nat`. At the delete path stands:
 
 ```
 :791   let oldrc = cs.objects[o as int].refcount;
@@ -413,238 +413,237 @@ staerker, nicht schwaecher.**
 :793   let newrc: nat = (oldrc - 1) as nat;
 ```
 
-**Das Modell beweist die Vorbedingung.** Es ist also nicht so, dass die Vorlage die Frage
-falsch beantwortet — sie beantwortet sie richtig, **aus der Invariante**. Was `nat`
-wegnimmt, ist etwas anderes: der Typ traegt **keine Breite**, also entsteht ueber die
-*Darstellung* nie eine Pflicht. Es gibt genau **ein** Netz, und es haengt an der Invariante.
+**The model proves the precondition.** So it is not that the template answers the question
+wrongly — it answers it rightly, **from the invariant**. What `nat`
+takes away is something else: the type carries **no width**, so over the
+*representation* no obligation ever arises. There is exactly **one** net, and it hangs on the invariant.
 
-In Gabbro traegt dasselbe Feld `u32 in 0 ..= NSLOTS`. Damit ist `-= 1` bei 0 ein
-**M1-Fehler aus dem TYP** — ohne jeden Bezug auf die Invariante. **Zwei unabhaengige Netze
-statt einem**, und das zweite ist genau das, was in der Sprechprobe als `M104` neben `D001`
-fiel.
+In Gabbro the same field carries `u32 in 0 ..= NSLOTS`. With that `-= 1` at 0 is an
+**M1 error out of the TYPE** — without any reference to the invariant. **Two independent nets
+instead of one**, and the second is exactly what fell in the speech test as `M104` next to `D001`.
 
-> **Die Schablone uebernimmt die KLAUSELSTRUKTUR der Vorlage (eine `spec fn` ueber allen
-> Klauseln, Erhaltung je Operation), nicht ihre TYPEN.**
+> **The template takes over the CLAUSE STRUCTURE of the model (one `spec fn` over all
+> clauses, preservation per operation), not its TYPES.**
 >
-> Erbt sie `nat` mit, sieht die erzeugte Pflichtliste vollstaendig aus, waehrend das zweite
-> Netz fehlt — und schlimmer: eine erzeugte C-Emission koennte die Bereichspruefung
-> weglassen, *weil der Beweis sagt, es koenne nicht negativ werden*. Das ist woertlich die
-> gebuchte Fehlerklasse: **eine Behauptung ueber das Modell in die Maschine entlassen**
-> (`dokumente/HISTORIE.md`, Commit `5904cae`). Dann waere die Vorlage ein trojanisches Geschenk.
+> If it inherits `nat` along with it, the generated obligation list looks complete while the second
+> net is missing — and worse: a generated C emission could
+> omit the range check, *because the proof says it cannot go negative*. That is literally the
+> booked error class: **releasing a claim about the model into the machine**
+> (`dokumente/HISTORIE.md`, commit `5904cae`). Then the model would be a trojan gift.
 
-**Die Pruefzeile dagegen, mechanisch:** kein von einer Schablone erzeugtes Feld darf einen
-Typ ohne Breite tragen. Das ist an der Schablone selbst pruefbar, nicht erst am Erzeugnis.
-### Aus Welle 4 (2026-08-16) — zwei Bedingungen und ein Kandidat
+**The checking line against it, mechanically:** no field generated by a template may carry a
+type without a width. That is checkable at the template itself, not only at the artefact.
+### From wave 4 (2026-08-16) — two conditions and one candidate
 
-- [ ] **«B38» — die Randbedingung an den benannten Traeger.** *„Die Fortsetzung prueft neu
-      **oder** nennt, was sie stattdessen traegt"* ist die richtige Form — **aber ein Traeger
-      `masks IRQ` gilt nur, wenn der Eintrittskontext `nested masked` fuehrt.** Ohne diese
-      Kopplung ist *„mich traegt die Maskierung"* die Zusicherung aus **R15**, die erfuellt
-      ist, sobald der Pruefer schweigt. **Mechanisch pruefbar** ueber `entrydecl`; zu bauen.
-- [ ] **«B39» — die Ausnahmeregel zum Hardware-Axiom, und sie ist ein KANDIDAT auf ein neues
-      Wort.** `A`/`D` schreibt die MMU selbst — die GDT-Lektion am Seitenwerk. **Sobald
-      Gruppen-`ops` das Seitenwerk erreichen, kollidiert das Axiom mit der
-      Schreibrechtszusage**: die K-Bedingung verlangt, dass ALLE Schreibstellen erzeugt sind.
-      Welche Felder einer `walk`-Deklaration **hardwarebeschreibbar** sind, gehoert an die
-      Deklaration (Kandidatenzeile `hardware A, D;`), so wie `reserved` an einem
-      `format`-Feld. *`R001` sieht die MMU heute nicht — sie schreibt an jeder Grammatik
-      vorbei, nur im `normal`-Raum statt im `dma`-Raum.*
-      **Belastet die Konvergenzwette: es waere Spalte 1, nicht nur Spalte 2.**
-### Aus dem Papiertest vom 2026-08-14 — ein toter und zwei lebendige Kandidaten
+- [ ] **«B38» — the side condition on the named carrier.** *"The continuation re-checks
+      **or** names what it carries instead"* is the right form — **but a carrier
+      `masks IRQ` holds only if the entry context carries `nested masked`.** Without this
+      coupling *"the masking carries me"* is the assurance from **R15**, which is satisfied
+      as soon as the checker is silent. **Mechanically checkable** via `entrydecl`; to be built.
+- [ ] **«B39» — the exception rule to the hardware axiom, and it is a CANDIDATE for a new
+      word.** `A`/`D` are written by the MMU itself — the GDT lesson at the page machinery. **As soon as
+      group `ops` reach the page machinery, the axiom collides with the
+      write-right promise**: the K condition demands that ALL write sites be generated.
+      Which fields of a `walk` declaration are **hardware-writable** belongs at the
+      declaration (candidate line `hardware A, D;`), the way `reserved` belongs at a
+      `format` field. *`R001` does not see the MMU today — it writes past every grammar,
+      only in the `normal` space instead of in the `dma` space.*
+      **It burdens the convergence bet: it would be column 1, not only column 2.**
+### From the paper test of 2026-08-14 — one dead and two live candidates
 
-> **Ein Kandidat ist am 2026-08-14 gestorben und steht deshalb NICHT mehr hier:**
-> `locks ordered` — null Prueffaelle im Baum. Der Nachruf steht in
-> [HISTORIE.md](dokumente/HISTORIE.md), die Messung in [MESSUNGEN.md](dokumente/MESSUNGEN.md).
-> *Diese Datei fuehrt ausschliesslich Offenes; ein gestorbenes Konstrukt ist kein erledigter
-> Punkt, sondern ein Bruch mit der eigenen Absicht — und der gehoert in die Historie.*
-
-
-
-### Die vier Posten zum Ziel — Plan mit Toren in [`dokumente/PLAN.md`](dokumente/PLAN.md) §A
-
-**Das Ziel ist: Gabbro beweist alles ausser funktionaler Korrektheit.** Gegen dieses Ziel
-gelesen faellt der Grossteil der 31 Fragmentbefunde heraus (`dokumente/PLAN.md` §A, Neusortierung) —
-uebrig bleiben vier, und **einer davon ist nicht geloest, sondern gestreift**.
+> **One candidate died on 2026-08-14 and therefore stands here NO LONGER:**
+> `locks ordered` — zero test cases in the tree. The obituary stands in
+> [HISTORIE.md](dokumente/HISTORIE.md), the measurement in [MESSUNGEN.md](dokumente/MESSUNGEN.md).
+> *This file carries exclusively what is open; a construct that has died is not a done
+> item but a break with our own intention — and that belongs in the history.*
 
 
 
-- [ ] **A2 — GEFAHREN: dynamische Aufrufe werden verboten, `fnptr` braucht keinen Vertrag.**
-      Die zwei dynamisch benutzten Traits haben je EINE Implementierung. **Neu und
-      unentschieden: 64 Verschluesse** (`dyn FnMut`/`Fn`) — Gabbro hat keine, und was daraus
-      wird (einbetten, Zeiger plus Kontext, Verbot), steht nirgends.
-- [ ] **A4 — `costs` an einer REKURSIVEN Funktion bleibt eine Annahme.** Ein Aufruf zaehlt
-      die *deklarierten* Kosten des Gerufenen; bei einem Zyklus rechnet niemand nach. Das ist
-      die Absicht von §7 — es heisst aber, dass die Terminierung dort an einer Zusage haengt.
+### The four items to the goal — plan with gates in [`dokumente/PLAN.md`](dokumente/PLAN.md) §A
+
+**The goal is: Gabbro proves everything except functional correctness.** Read against this goal
+the greater part of the 31 fragment findings falls away (`dokumente/PLAN.md` §A, resorting) —
+what remains is four, and **one of them is not solved but grazed**.
 
 
 
-
-- [ ] **A5 — Abnahme:** Fragmente mit dem Uebersetzer neu, die Zaehlung ueber
-      **Gabbro-Quelltext** statt ueber Rust (**erst dann ist die Latte ≤ 24 echt
-      entscheidbar** — s. den Bericht der ungueltigen Messung weiter unten), und die vier nie
-      ausgeschriebenen Bereiche.
-### Aus der Gegenpruefung (2026-08-14) — was noch offen ist
-
-- [ ] **DER BILLIGE ABSCHLUSS, und er gehoert VOR die grossen Saetze ueber „sonst nichts":
-      `effects` prueft Schreiben und `locks`, aber nicht Lesen und nicht Aufrufe.**
-      Rahmenvollstaendigkeit gilt heute nur fuer die **Schreibhaelfte**; „nur die eingetragene
-      Logik ist aktiv" ist damit eine halbe Aussage. Dieselbe Pruefmechanik, andere Richtung.
-      Der Rumpfabgleich steht (E005/E006); zwei Haelften fehlen:
-      * **Lesen** — `dokumente/FRAGMENTE.md` liest in jeder Funktion Stellen, die keine `reads`-Zeile
-        nennt. Ob das ein Befund ueber die Fragmente ist oder die gemeinte Bedeutung von
-        `effects`, **entscheidet der Ordner, nicht der Pass**. Solange das offen ist, darf
-        er nicht pruefen, was er nicht weiss.
-      * ~~**Aufrufwirkungen**~~ — **GEBAUT 2026-08-15 (`E008`).** Eine Wirkungsliste
-        schliesst die der Gerufenen ein; `effects { pure }` heisst transitiv rein. *Was
-        NICHT gebaut ist und dabeisteht: die Abbildung auf die ARGUMENTE — ein
-        `writes p.slots` des Gerufenen wird mit SEINEM Parameternamen gesehen. Grob in die
-        sichere Richtung (W9), und die Abbildung braucht eine Alias-Analyse, die es nicht
-        gibt.*
-- [ ] **Die Mutationsprobe deckt heute den Pruefer, nicht die Emission.**
-      `./mutiere-pruefer.py` beschaedigt je eine Regel des Pruefers und sieht nach, ob eine
-      Probe faellt — **24 von 24 gefangen** (2026-08-14). Was noch fehlt, ist dieselbe Probe
-      auf der **Annotationsemission** (s. *Pruefer und Erzeuger*): dort entsteht der
-      Wunschform-Beweis, und dort gibt es noch nichts zu beschaedigen, weil noch nichts
-      emittiert wird.
-      * **~~Die Mutationen sind von Hand geschrieben~~ — GEFAHREN 2026-08-15, Tor
-        BESTANDEN.** `erzeuge-mutationen.py` verdreht systematisch: **7 von 39 gefangen
-        (18 %)** gegen 38 von 38 der Handmutationen. Der Verdacht war richtig, und der
-        eigentliche Befund ist **wo**: 6 der 15 echten Luecken in `typen.rs`, 5 in
-        `umgebung.rs`. *Der Pruefer ist dicht, wo er ABSAGEN ERZEUGT, und duenn, wo er
-        RECHNET.* Offen bleibt daraus: **Wertetabellen fuer die Bereichsarithmetik** —
-        Beispieldateien treffen Klassen, nicht Grenzen.
+- [ ] **A2 — RUN: dynamic calls are forbidden, `fnptr` needs no contract.**
+      The two dynamically used traits have ONE implementation each. **New and
+      undecided: 64 closures** (`dyn FnMut`/`Fn`) — Gabbro has none, and what becomes of them
+      (embedding, pointer plus context, prohibition) stands nowhere.
+- [ ] **A4 — `costs` at a RECURSIVE function stays an assumption.** A call counts
+      the *declared* costs of the callee; at a cycle nobody recomputes. That is
+      the intention of §7 — but it means that the termination hangs there on a promise.
 
 
 
 
-- [ ] **Der Parser ist an DREI Stellen laxer als die EBNF** *(war: sechs; berichtigt und
-      geprueft 2026-08-16 — je Stelle eine `.gab`-Probe gefahren)*:
-      * Wortschatzwoerter als Namen nach `::`, in `reaches … via` und in `chain(a,b)` — drei
-        Stellen, die der eigene Dateikopf **nicht** freistellt.
-      **Geschlossen sind:** `pub` an 13 Item-Arten (`P034`), `pub const` im `table`-Rumpf (war
-      zu streng), `type T = { };` als leerer Summentyp (`P035`, Gift 61), und die
-      Kommaregel — `entrydecl`, `slotdecl` und `reg … fields` fuehrten **drei verschiedene
-      Regeln fuer dieselbe Sache**; jetzt eine: Trennkomma pflichtig, Schlusskomma
-      freigestellt.
+- [ ] **A5 — acceptance:** fragments through the compiler afresh, the count over
+      **Gabbro source text** instead of over Rust (**only then is the mark ≤ 24 really
+      decidable** — see the report of the invalid measurement further below), and the four never
+      written-out areas.
+### From the counter-check (2026-08-14) — what is still open
 
-### Aus P2 — was der Parser gefunden hat und was jetzt zu entscheiden ist
+- [ ] **THE CHEAP CLOSURE, and it belongs BEFORE the big sentences about "nothing else":
+      `effects` checks writes and `locks`, but not reads and not calls.**
+      Frame completeness holds today only for the **write half**; "only the entered
+      logic is active" is thereby half a statement. The same checking mechanics, the other direction.
+      The body reconciliation stands (E005/E006); two halves are missing:
+      * **Reading** — `dokumente/FRAGMENTE.md` reads in every function places that no `reads` line
+        names. Whether that is a finding about the fragments or the intended meaning of
+        `effects`, **the folder decides, not the pass**. As long as that is open, it
+        may not check what it does not know.
+      * ~~**Call effects**~~ — **BUILT 2026-08-15 (`E008`).** An effect list
+        includes those of the callees; `effects { pure }` means transitively pure. *What
+        is NOT built and stands beside it: the mapping onto the ARGUMENTS — a
+        `writes p.slots` of the callee is seen with ITS parameter name. Coarse in the
+        safe direction (W9), and the mapping needs an alias analysis that does not
+        exist.*
+- [ ] **The mutation probe covers the checker today, not the emission.**
+      `./mutiere-pruefer.py` damages one rule of the checker at a time and looks whether a
+      probe falls — **24 of 24 caught** (2026-08-14). What is still missing is the same probe
+      on the **annotation emission** (see *Checker and generator*): that is where the
+      wished-for-form proof arises, and there is still nothing there to damage, because nothing
+      is emitted yet.
+      * **~~The mutations are written by hand~~ — RUN 2026-08-15, gate
+        PASSED.** `erzeuge-mutationen.py` twists systematically: **7 of 39 caught
+        (18 %)** against 38 of 38 of the hand mutations. The suspicion was right, and the
+        actual finding is **where**: 6 of the 15 real gaps in `typen.rs`, 5 in
+        `umgebung.rs`. *The checker is tight where it PRODUCES REFUSALS, and thin where it
+        COMPUTES.* What stays open from it: **value tables for the range arithmetic** —
+        example files hit classes, not boundaries.
 
-- [ ] **DIE ENTSCHEIDUNG, die P2 erzwingt: der geschlossene Wortschatz kollidiert mit
-      gewoehnlicher Benennung** — neun Woerter an elf Stellen, `slots` `ops` `next` `slot`
-      `from` `boot` `stack` `check` `u64`. **Der schwerste Fall ist `slots`, weil die Sprache
-      den Namen selbst erzeugt** (`slots of c`, `c.slots[s]`) und ihn als Ort zugleich verbietet.
-      Zwei Auswege, beide mit Preis: kontextuelle Woerter (dann haelt die Tabelle nicht, was sie
-      behauptet) oder Umbenennen (dann traegt jeder Anwender die Liste im Kopf).
-      **Der Uebersetzer laesst Woerter heute nur nach `.`/`->` und vor `:` als Namen zu.**
 
-- [ ] **Je Schablone mindestens eine Mutation, die NUR faellt, wenn die Einmal-Pflicht real
-      geprueft wird.** Heute: **0 von 17** — die meisten Schablonen sind entworfen, und was
-      kein Code ist, faengt keine Mutation. **Die Kopplung der zwei neuen Register ist die
-      Bedingung dafuer, dass das Schablonenregister mehr ist als eine Liste.**
-- [ ] **Die Annotationsemission braucht eigene Schablonen-Eintraege und eigene Mutationen.**
-      `32 von 32` misst heute den Pruefer; ueber den **Wunschform-Kanal** sagt es nichts —
-      und genau dort wird ein stimmig abgeschwaechter Erzeuger **von keinem Beweis** gefangen.
-- [ ] **Jede neue erzeugte Form braucht ihren Schablonen-Eintrag, BEVOR sie Grammatik wird.**
-      `gabbro schablonen` fuehrt heute **17, davon 17 unbewiesen**. Die Liste ist die Ratsche
-      ueber der Flaeche, in die der dritte Ausgang seine Beweislast verschiebt —
-      **waechst sie, waechst die Vertrauensbasis, auch wenn die Kennzahl glaenzt.**
-### Prüfer und Erzeuger
 
-- [ ] **Mutationsprobe auf der ANNOTATIONSEMISSION**, nicht nur auf der Codeemission. Der stimmig
-      abgeschwächte Fall (Code **und** Vertrag) wird von **keinem** Beweis gefangen — nur vom
-      Differenztest gegen die Handschrift. Das ist dessen benannte Aufgabe.
-- [ ] **Annahmenmenge ins Erzeugnis emittieren** („bewiesen unter A1…An"), als **Menge von Namen**
-      mit Klasse, nicht als Zahl. Eine Ratsche über einer Kardinalzahl greift nicht gegen Austausch.
-- [ ] **Jeder Falsifikator braucht seine eigene Sprechprobe:** *kann er überhaupt fehlschlagen?*
-- [ ] **Der Geltungsbereich in [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) ist neu — Gegenprobe fahren:** ein Konstrukt suchen,
-      dessen Zeile zu stark ist. Die Tabelle hat dieselbe Vorgeschichte wie die zwei
-      Überschreibungen in `dokumente/HISTORIE.md`.
 
----
-### Später
+- [ ] **The parser is laxer than the EBNF at THREE places** *(was: six; corrected and
+      checked 2026-08-16 — one `.gab` probe run per place)*:
+      * Vocabulary words as names after `::`, in `reaches … via` and in `chain(a,b)` — three
+        places that the file's own header does **not** exempt.
+      **Closed are:** `pub` at 13 item kinds (`P034`), `pub const` in the `table` body (was
+      too strict), `type T = { };` as an empty sum type (`P035`, poison 61), and
+      the comma rule — `entrydecl`, `slotdecl` and `reg … fields` carried **three different
+      rules for the same thing**; now one: separating comma obligatory, trailing comma
+      optional.
 
-- [ ] **Binärverifikation** — der einzige Weg, der die Absenkung aus der Vertrauensbasis nimmt.
-      Eigenes Projekt.
-- [ ] **Wiederverwendbare Spezifikationstheorien** — helfen dem **zweiten** Projekt. Dürfen in
-      keiner Kostenrechnung mitgezählt werden, solange es einen Kernel gibt.
+### From P2 — what the parser found and what is now to be decided
 
+- [ ] **THE DECISION that P2 forces: the closed vocabulary collides with
+      ordinary naming** — nine words at eleven places, `slots` `ops` `next` `slot`
+      `from` `boot` `stack` `check` `u64`. **The hardest case is `slots`, because the language
+      generates the name itself** (`slots of c`, `c.slots[s]`) and at the same time forbids it as a place.
+      Two ways out, both with a price: contextual words (then the table does not hold what it
+      claims) or renaming (then every user carries the list in their head).
+      **The compiler today admits words as names only after `.`/`->` and before `:`.**
+
+- [ ] **Per template at least one mutation that falls ONLY if the once-obligation is really
+      checked.** Today: **0 of 19** — most templates are designed, and what
+      is not code catches no mutation. **The coupling of the two new registers is the
+      condition for the template register being more than a list.**
+- [ ] **The annotation emission needs template entries of its own and mutations of its own.**
+      `65 von 65` measures the checker today; about the **wished-for-form channel** it says nothing —
+      and that is exactly where a coherently weakened generator is caught **by no proof**.
+- [ ] **Every new generated form needs its template entry BEFORE it becomes grammar.**
+      `gabbro schablonen` carries today **19, of which 15 unproved**. The list is the ratchet
+      over the surface into which the third way out shifts its burden of proof —
+      **if it grows, the trust base grows, even if the metric shines.**
+### Checker and generator
+
+- [ ] **Mutation probe on the ANNOTATION EMISSION**, not only on the code emission. The coherently
+      weakened case (code **and** contract) is caught by **no** proof — only by the
+      differential test against the handwriting. That is its named task.
+- [ ] **Emit the assumption set into the artefact** ("proved under A1…An"), as a **set of names**
+      with a class, not as a number. A ratchet over a cardinal number does not bite against exchange.
+- [ ] **Every falsifier needs its own speech test:** *can it fail at all?*
+- [ ] **The scope in [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) is new — run a counter-probe:** look for a construct
+      whose line is too strong. The table has the same prehistory as the two
+      overreaches in `dokumente/HISTORIE.md`.
 
 ---
+### Later
+
+- [ ] **Binary verification** — the only route that takes the lowering out of the trust base.
+      A project of its own.
+- [ ] **Reusable specification theories** — they help the **second** project. May be counted in
+      no cost calculation as long as there is one kernel.
+
 
 ---
 
-# BUCHFUEHRUNG
-### Die Reihenfolge, billig zuerst — drei Dokumente laufen auf EINE fehlende Zahl zu
+---
 
-1. ~~**Die fuenf Scratchpad-Klassen ins Repo.**~~ **GEFAHREN 2026-08-15** als
-   *Neuerhebung aller elf* — `N_neu = 5`, heute 4. Die 19 sind **ersetzt, nicht
-   fortgesetzt**; ihr Gegenstand war nicht mehr benennbar (W7).
-2. ~~**Die 17 gemessenen Logik-Pflichten aufteilen**~~ **GEFAHREN 2026-08-16** ueber
-   `N_L = 81`: K = 28, A = 13, W = 40 — und **als VERFEHLT gebucht** ueber der
-   berichtigten Grundgesamtheit (`N_L = 73`, W = 38), weil acht Seq-Lemmata
-   Werkzeugartefakte sind. **Was fehlt, ist B3** — ohne Zeilenanteile keine
-   Einsetzung in die Gewichtsformel. *(urspruenglich:)* aufteilen in *durch Konstruktion · Abstiegsaussage
-   (erzeugtes Schema greift) · Wertaussage (greift nicht)*. **Ein halber Tag Papier, und die
-   groesste Hebelwirkung im Ordner:** die Lueckenrechnung endet bei „k unbekannt", die harten
-   Zusagen enden bei derselben Aufteilung, und die Decke der Schrittzusagen haengt daran.
-   **Drei Dokumente, eine Zahl.**
-3. ~~**Die vier fehlenden Bereichsfragmente**~~ **GESCHRIEBEN 2026-08-16** (F7–F10). Die
-   Konvergenzwette hat ihre Datenpunkte: **vier Fragmente, null neue Konstrukte** — und in
-   der zweiten Spalte **drei veraenderte Bedeutungen** («B37», «B38», «B39»).
+# BOOKKEEPING
+### The order, cheapest first — three documents converge on ONE missing number
 
-> **~~Keine Prueferzeile vor dem Ergebnis von 2.~~ — VERLETZT am 2026-08-14, auf Ansage.**
-> Der Uebersetzer wurde vor dem Ergebnis von 2 angefangen. Die Regel bleibt hier stehen,
-> durchgestrichen statt geloescht: was sie verhindern sollte, ist eingetreten — P2 und P3
-> koennen die These nicht mehr *vor* dem Uebersetzerbau toeten. Was der Bau eingebracht hat,
-> steht in [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md); was er gekostet hat, steht hier.
-### Abgleich — was der 2026-08-14 an dieser Datei fand
+1. ~~**The five scratchpad classes into the repo.**~~ **RUN 2026-08-15** as
+   *a fresh collection of all eleven* — `N_neu = 5`, today 4. The 19 are **replaced, not
+   continued**; their subject was no longer nameable (W7).
+2. ~~**Split the 17 measured logic obligations**~~ **RUN 2026-08-16** over
+   `N_L = 81`: K = 28, A = 13, W = 40 — and **booked as MISSED** over the
+   corrected population (`N_L = 73`, W = 38), because eight seq lemmas
+   are tool artefacts. **What is missing is B3** — without line shares no
+   substitution into the weighting formula. *(originally:)* split into *by construction · descent statement
+   (generated scheme bites) · value statement (does not bite)*. **Half a day of paper, and the
+   greatest leverage in the folder:** the gap calculation ends at "k unknown", the hard
+   promises end at the same split, and the ceiling of the step promises hangs on it.
+   **Three documents, one number.**
+3. ~~**The four missing domain fragments**~~ **WRITTEN 2026-08-16** (F7–F10). The
+   convergence bet has its data points: **four fragments, zero new constructs** — and in
+   the second column **three changed meanings** («B37», «B38», «B39»).
 
-**Die Frage war, ob diese Liste ueberhaupt noch sinnvoll ist.** Antwort: der **Inhalt** ja,
-die **Buchfuehrung** nein. Acht Klassen von Befunden, alle mechanisch nachweisbar:
+> **~~No checker line before the result of 2.~~ — VIOLATED on 2026-08-14, on announcement.**
+> The compiler was begun before the result of 2. The rule stays standing here,
+> struck through instead of deleted: what it was meant to prevent has happened — P2 and P3
+> can no longer kill the thesis *before* the compiler is built. What the build brought in
+> stands in [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md); what it cost stands here.
+### Reconciliation — what 2026-08-14 found in this file
 
-| | Befund | erledigt |
+**The question was whether this list is still sensible at all.** Answer: the **content** yes,
+the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
+
+| | Finding | done |
 |---|---|---|
-| **1** | **Acht `[x]`-Eintraege** in einer Datei, deren Schlusssatz „ausschliesslich Offenes" lautet | herausgenommen; jeder ist anderswo verzeichnet (s. u.) |
-| **2** | **„es gibt keinen Uebersetzer (P2–P7)"** — es gibt einen bis P3 | berichtigt |
-| **3** | **Zwei Reihenfolgeregeln standen als geltend da, obwohl sie verletzt sind** („keine Prueferzeile vor 2", „keine Zeile Rust") | durchgestrichen mit Datum, nicht geloescht |
-| **4** | **„Sechs der neun Paesse fehlen"** — es sind fuenf ganz und zwei halb | berichtigt |
-| **5** | **Stehengebliebene Zahlen aus P1**: 117 Regeln, 187 Terminale (heute 121 / 189) | mit dem Eintrag herausgenommen |
-| **6** | **Drei Themen doppelt** — `narrow` dreimal, *Variable Laengen* und *Versionsevolution* je zweimal | zusammengezogen |
-| **7** | **Zwei Etikettensysteme mit denselben Namen**: die Ueberschriften „P0"/„P1" gegen den Prueferplan P0…P7, wo P1 die Grammatikvereinigung ist | umbenannt |
-| **8** | **Vier erledigte Posten als offen gefuehrt**: `by consuming` (steht seit `dokumente/SYNTAX.md`:416 in der Grammatik), `vtd.rs` und `space.rs` (beide gefahren, s. `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (gefahren, `dokumente/MESSUNGEN.md`) | herausgenommen |
+| **1** | **Eight `[x]` entries** in a file whose closing sentence reads "exclusively what is open" | taken out; each is recorded elsewhere (see below) |
+| **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
+| **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
+| **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 130 / 195) | taken out along with the entry |
+| **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
+| **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
+| **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |
 
-**Und einer, der mir gehoert:** die Berichtigung *„die Latte ≤ 24 ist verfehlt, nicht offen"*
-habe ich am selben Tag als erledigt gemeldet — in `dokumente/MESSUNGEN.md` war sie es, **hier nicht**.
-Die Ersetzung traf das Anfuehrungszeichen nicht und lief still ins Leere. *Eine Berichtigung,
-die man meldet, ohne sie nachzusehen, ist dieselbe Bewegung wie eine Zahl, die man behauptet,
-ohne sie zu messen.*
+**And one that is mine:** the correction *"the mark ≤ 24 is missed, not open"*
+I reported as done on the same day — in `dokumente/MESSUNGEN.md` it was, **here it was not**.
+The replacement missed the quotation mark and ran silently into nothing. *A correction
+one reports without looking it up is the same movement as a number one claims
+without measuring it.*
 
-### Was das ueber die Form dieser Datei sagt
+### What that says about the form of this file
 
-Sie ist **chronologisch gewachsen** — jeder Tag haengte unten an, und niemand ging zurueck.
-Genau die Vorgeschichte, aus der der Ordner am 2026-08-14 seine 24 Dateien auf 9 zusammenzog.
-**Die naechste Frage ist deshalb keine Aufraeumfrage, sondern eine Rollenfrage:**
+It has **grown chronologically** — every day appended at the bottom, and nobody went back.
+Exactly the prehistory out of which the folder drew its 24 files together to 9 on 2026-08-14.
+**The next question is therefore not a tidying question but a question of role:**
 
-- [ ] **Braucht diese Datei einen Schnitt nach ROLLE statt nach Datum?** Heute mischt sie vier
-      Sorten: *Entwurfsfragen* (unentschieden, brauchen ein Urteil), *Messungen* (brauchen
-      einen Lauf), *Pruefermaengel* (brauchen Code) und *Nachzupruefendes* (brauchen eine
-      Quelle). Eine Liste, in der ein halber Tag Papier neben einem Teilprojekt steht, sortiert
-      nicht mehr — und eine Liste, die nicht sortiert, wird nicht gelesen.
+- [ ] **Does this file need a cut by ROLE instead of by date?** Today it mixes four
+      kinds: *design questions* (undecided, need a judgement), *measurements* (need
+      a run), *checker defects* (need code) and *things to be re-checked* (need a
+      source). A list in which half a day of paper stands next to a subproject no longer
+      sorts — and a list that does not sort does not get read.
 
-### Wo die herausgenommenen Punkte verzeichnet sind
+### Where the removed items are recorded
 
-| Punkt | Fundstelle |
+| Item | Source |
 |---|---|
-| P1 — Grammatikvereinigung | [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §6 (Prueferplan), Waechter `pruefe-syntax.sh` |
-| P2 — Lexer und Parser | [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md), Abschnitt *P2* |
-| P3 — M1 + V1–V3 | [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md), Abschnitt *P3* |
-| `revoke` auf Papier | [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md), *P0.1* |
-| P0.1b — Zeugenordnung | [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §9.2 |
-| `by induction over` | [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) §5, [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) Teil V |
-| seL4-Aufteilung, SPARK-Leiter | [`dokumente/PLAN.md`](dokumente/PLAN.md) |
-| `vtd.rs`, `space.rs`, P0.4 | [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md), *P0.2/P0.3* und *P0.4* |
-| **G1–G11** (2026-08-15) | [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) (EBNF nachgezogen), `beispiele/11-grammatikbefunde.gab`, Gift `43`–`45` |
-| **Zaehlerregel** (2026-08-15) | [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §1, *„Die Zaehlerregel"* |
-| **F4/F6 veraltet** (2026-08-15) | [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md); **Tor P2 steht bei 10 von 10** (2026-08-16) |
-| **Mutationsgenerator** (2026-08-15) | `erzeuge-mutationen.py`, Vorab + Ergebnis in [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) |
-| **TODO-Waechter** (2026-08-15) | `pruefe-todo.py`, sieben Klassen mit Sprechprobe |
+| P1 — grammar unification | [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §6 (checker plan), guardian `pruefe-syntax.sh` |
+| P2 — lexer and parser | [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md), section *P2* |
+| P3 — M1 + V1–V3 | [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md), section *P3* |
+| `revoke` on paper | [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md), *P0.1* |
+| P0.1b — witness ordering | [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §9.2 |
+| `by induction over` | [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) §5, [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) part V |
+| seL4 split, SPARK ladder | [`dokumente/PLAN.md`](dokumente/PLAN.md) |
+| `vtd.rs`, `space.rs`, P0.4 | [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md), *P0.2/P0.3* and *P0.4* |
+| **G1–G11** (2026-08-15) | [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) (EBNF pulled up), `beispiele/11-grammatikbefunde.gab`, poison `43`–`45` |
+| **Counter rule** (2026-08-15) | [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §1, *„Die Zaehlerregel"* |
+| **F4/F6 outdated** (2026-08-15) | [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md); **gate P2 stands at 10 of 10** (2026-08-16) |
+| **Mutation generator** (2026-08-15) | `erzeuge-mutationen.py`, advance protocol + result in [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) |
+| **TODO guardian** (2026-08-15) | `pruefe-todo.py`, seven classes with a speech test |

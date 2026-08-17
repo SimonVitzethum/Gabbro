@@ -22,15 +22,20 @@ import sys
 WURZEL = pathlib.Path(__file__).resolve().parent
 
 # Die Etiketten des Prueferplans. Wer sie zweitvergibt, hat zwei Systeme mit denselben Namen.
+#
+# **Englisch seit der Uebersetzung von `TODO.md` (2026-08-17).** Die Werte werden gegen den
+# Ueberschriftentext gehalten (`gemeint.split()[0]`); stuende hier weiter `Grammatikvereinigung`,
+# meldete der Waechter jede englische Ueberschrift als Kollision -- ein falsches Rot, und zwar
+# eines, das mit der Zeit als richtig gilt.
 PRUEFERPLAN = {
-    "P0": "Wiederholungsmessung auf Papier",
-    "P1": "Grammatikvereinigung",
-    "P2": "Lexer+Parser",
+    "P0": "repeat measurement on paper",
+    "P1": "grammar unification",
+    "P2": "lexer+parser",
     "P3": "M1+V1–V3",
-    "P4": "M2 + Erzeuger-Schablone",
-    "P5": "C-Emission",
-    "P6": "Paarungs-Pass",
-    "P7": "ein Caprock-Modul end-to-end",
+    "P4": "M2 + generator template",
+    "P5": "C emission",
+    "P6": "pairing pass",
+    "P7": "one Caprock module end-to-end",
 }
 
 
@@ -39,7 +44,11 @@ def pruefe(text, zahlen):
     befunde = []
 
     # 1. Behauptet die Datei „ausschliesslich Offenes" und fuehrt Erledigtes?
-    if "Ausschliesslich Offenes" in text or "ausschliesslich Offenes" in text:
+    #    **Beide Sprachen, seit der Uebersetzung.** Die deutsche Wendung bleibt stehen: die
+    #    Sprechprobe unten fuehrt sie, und ein Waechter, der nur die neue Fassung kennt, faellt
+    #    still aus, sobald irgendwo die alte steht.
+    if any(s in text for s in ("Ausschliesslich Offenes", "ausschliesslich Offenes",
+                               "Exclusively what is open", "exclusively what is open")):
         erledigt = re.findall(r"^- \[x\][^\n]*", text, re.M)
         for e in erledigt:
             befunde.append(
@@ -67,9 +76,9 @@ def pruefe(text, zahlen):
 
     # 4. Themen, die mehrfach als eigener Punkt gefuehrt werden.
     themen = [
-        (r"^- \[ \] \*\*[^\n]*`?narrow`?-Vollzaehlung", "narrow-Vollzaehlung"),
-        (r"^- \[ \] \*\*Variable L[äa]ngen", "Variable Laengen"),
-        (r"^- \[ \] \*\*Versionsevolution", "Versionsevolution"),
+        (r"^- \[ \] \*\*[^\n]*`?narrow`?[- ](Vollzaehlung|full count)", "narrow-Vollzaehlung"),
+        (r"^- \[ \] \*\*Variable (L[äa]ngen|lengths)", "Variable Laengen"),
+        (r"^- \[ \] \*\*Version(sevolution| evolution)", "Versionsevolution"),
     ]
     for muster, name in themen:
         n = len(re.findall(muster, text, re.M))
@@ -81,18 +90,22 @@ def pruefe(text, zahlen):
     #    eigenen Uebersetzer, die niemand gegen den Uebersetzer haelt, ist Falle 80.
     ganz, halb = paesse_heute()
     if ganz is not None:
-        for m in re.finditer(r"\*\*(\w+) der neun Paesse fehlen ganz\*\*", text):
-            if ZAHLWORT.get(m.group(1).lower()) != ganz:
-                befunde.append(
-                    f"Passzahl stimmt nicht: '{m.group(1)} der neun Paesse fehlen ganz', "
-                    f"`gabbro paesse` sagt {ganz}"
-                )
-        for m in re.finditer(r"\*\*(\w+) sind nur\s+teilweise gebaut\*\*", text):
-            if ZAHLWORT.get(m.group(1).lower()) != halb:
-                befunde.append(
-                    f"Passzahl stimmt nicht: '{m.group(1)} nur teilweise gebaut', "
-                    f"`gabbro paesse` sagt {halb}"
-                )
+        for muster in (r"\*\*(\w+) der neun Paesse fehlen ganz\*\*",
+                       r"\*\*\"?(\w+) of the nine passes are missing entirely\"?\*\*"):
+            for m in re.finditer(muster, text):
+                if ZAHLWORT.get(m.group(1).lower()) != ganz:
+                    befunde.append(
+                        f"Passzahl stimmt nicht: '{m.group(1)} von neun Paessen fehlt ganz', "
+                        f"`gabbro paesse` sagt {ganz}"
+                    )
+        for muster in (r"\*\*(\w+) sind nur\s+teilweise gebaut\*\*",
+                       r"\*\*(\w+) are only\s+partially built\*\*"):
+            for m in re.finditer(muster, text):
+                if ZAHLWORT.get(m.group(1).lower()) != halb:
+                    befunde.append(
+                        f"Passzahl stimmt nicht: '{m.group(1)} nur teilweise gebaut', "
+                        f"`gabbro paesse` sagt {halb}"
+                    )
 
     # 6. **Durchgestrichenes ohne Datum.** Eine Regel, die als verletzt markiert ist, muss
     #    sagen WANN -- sonst steht sie als geltend da und ist es nicht (Befund 3 des
@@ -109,12 +122,14 @@ def pruefe(text, zahlen):
     # 7. **Beispielzahlen gegen das Dateisystem.**
     n_bsp = len(list((WURZEL / "beispiele").glob("*.gab")))
     n_gift = len(list((WURZEL / "beispiele/gift").glob("*.gab")))
-    for m in re.finditer(r"(\d+) saubere Beispiele", text):
-        if int(m.group(1)) != n_bsp:
-            befunde.append(f"'{m.group(1)} saubere Beispiele' -- es sind {n_bsp}")
-    for m in re.finditer(r"(\d+) Giftproben", text):
-        if int(m.group(1)) != n_gift:
-            befunde.append(f"'{m.group(1)} Giftproben' -- es sind {n_gift}")
+    for muster in (r"(\d+) saubere Beispiele", r"(\d+) clean examples"):
+        for m in re.finditer(muster, text):
+            if int(m.group(1)) != n_bsp:
+                befunde.append(f"'{m.group(1)} saubere Beispiele' -- es sind {n_bsp}")
+    for muster in (r"(\d+) Giftproben", r"(\d+) poison probes"):
+        for m in re.finditer(muster, text):
+            if int(m.group(1)) != n_gift:
+                befunde.append(f"'{m.group(1)} Giftproben' -- es sind {n_gift}")
 
     # 8. **Die Gegenrichtung, seit 2026-08-16:** `DONE.md` fuehrt ausschliesslich
     #    Erledigtes, und jeder Eintrag traegt seinen Beleg (W7). Ein offener Haken dort ist
@@ -125,7 +140,7 @@ def pruefe(text, zahlen):
         dt = d.read_text()
         for offen in re.findall(r"^- \[ \][^\n]*", dt, re.M):
             befunde.append(
-                f"offener Eintrag in DONE.md, die 'ausschliesslich Erledigtes' "
+                f"offener Eintrag in DONE.md, die 'exclusively what is done' "
                 f"behauptet: {offen[:70]}"
             )
         for zeile in dt.splitlines():
@@ -143,6 +158,10 @@ def pruefe(text, zahlen):
 ZAHLWORT = {
     "eine": 1, "eins": 1, "zwei": 2, "drei": 3, "vier": 4, "fuenf": 5, "fünf": 5,
     "sechs": 6, "sieben": 7, "acht": 8, "neun": 9,
+    # Seit der Uebersetzung stehen die Zahlwoerter englisch in der Prosa. Beide Saetze
+    # nebeneinander -- ein Waechter, der die alte Schreibweise vergisst, wird an ihr blind.
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9,
 }
 
 
@@ -163,14 +182,29 @@ def paesse_heute():
 
 
 def heutige_zahlen():
-    """Was die Waechter heute melden -- gegen die Zahlen in der Prosa."""
+    """Was die Waechter heute melden -- gegen die Zahlen in der Prosa.
+
+    **Die dritte und vierte Zeile sind am 2026-08-17 dazugekommen, und zwar an einem Fund.**
+    Befund 5 des Abgleichs vom 14. lautet *„stehengebliebene Zahlen aus P1: 117 Regeln, 187
+    Terminale (heute 121 / 189)"* -- und die Klammer *heute* war selbst stehengeblieben: der
+    Waechter sagt 130 / 195. Die zwei alten Muster trafen die Zeile nicht, weil sie eine
+    andere Schreibweise fuehrt als die, gegen die sie geschrieben waren.
+
+    *Eine Zeile ueber stehengebliebene Zahlen, die eine stehengebliebene Zahl traegt, ist der
+    genaue Fall, fuer den dieser Waechter gebaut wurde -- und er hat ihn zwei Tage lang nicht
+    gesehen.*
+    """
     r = subprocess.run(["./pruefe-syntax.sh"], cwd=WURZEL, capture_output=True, text=True)
     aus = r.stdout
     regeln = re.search(r"EBNF: (\d+) Regeln", aus)
     terme = re.search(r"Wortschatz: (\d+) EBNF-Terminale, (\d+) Tabellenwoerter", aus)
+    r_heute = regeln.group(1) if regeln else "?"
+    t_heute = terme.group(1) if terme else "?"
     return [
-        (r"\*\*(\d+) Regeln, 0 offen", regeln.group(1) if regeln else "?", "EBNF-Regeln"),
-        (r"(\d+) Terminale gegen", terme.group(1) if terme else "?", "EBNF-Terminale"),
+        (r"\*\*(\d+) (?:Regeln, 0 offen|rules, 0 open)", r_heute, "EBNF-Regeln"),
+        (r"(\d+) (?:Terminale gegen|terminals against)", t_heute, "EBNF-Terminale"),
+        (r"\((?:heute|today) (\d+) / \d+\)", r_heute, "EBNF-Regeln (heute-Klammer)"),
+        (r"\((?:heute|today) \d+ / (\d+)\)", t_heute, "EBNF-Terminale (heute-Klammer)"),
     ]
 
 
@@ -184,6 +218,8 @@ def sprechprobe(zahlen):
 
 ## P1 — `check` ohne Sprache
 
+Stehengebliebene Zahlen aus P1: 117 Regeln, 187 Terminale (heute 1 / 1)
+
 **Ausschliesslich Offenes.**
 """
     sauber = """# Probe
@@ -196,13 +232,16 @@ def sprechprobe(zahlen):
 """
     b_gift = pruefe(gift, zahlen)
     b_sauber = pruefe(sauber, zahlen)
+    # **Fuenf statt drei, seit die heute-Klammer mitgeprueft wird.** Die Marke wandert mit dem
+    # Waechter mit: eine Untergrenze, die stehenbleibt, waehrend Regeln dazukommen, misst
+    # irgendwann nur noch die aeltesten.
     print(f"  Giftliste:    {len(b_gift)} Befunde", end="")
-    print(" -- ok" if len(b_gift) >= 3 else " -- GESCHEITERT (der Waechter ist stumm)")
+    print(" -- ok" if len(b_gift) >= 5 else " -- GESCHEITERT (der Waechter ist stumm)")
     for b in b_gift:
         print(f"     {b}")
     print(f"  Saubere Liste: {len(b_sauber)} Befunde", end="")
     print(" -- ok" if not b_sauber else " -- GESCHEITERT (falsches Rot)")
-    return len(b_gift) >= 3 and not b_sauber
+    return len(b_gift) >= 5 and not b_sauber
 
 
 def main():
