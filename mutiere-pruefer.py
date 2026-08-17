@@ -608,6 +608,57 @@ MUTATIONEN = [
         "                    if true {",
         "D002 -- `by ops` trifft JEDES Feld (falscher Alarm an jedem Nachbarfeld)",
     ),
+    # -- schablonen.rs: die Ratsche ------------------------------------------------------
+    #
+    # **565 Zeilen ohne eine einzige Mutation, bis zum 2026-08-17.** Damit war die groesste
+    # unbeschaedigbare Flaeche des Pruefers ausgerechnet die, auf der das ganze
+    # Amortisierungsargument ruht -- und in ihr war ZAHN 2 seit dem 16.8. stumpf, ohne dass
+    # ein Test es haette sagen koennen. *Eine Ratsche, die niemand beschaedigen kann, ist
+    # eine Zusage.*
+    Mutation(
+        "ratsche-zahn-eins-stumpf",
+        "schablonen.rs",
+        "        .filter(|s| s.fundstelle.trim().is_empty())",
+        "        .filter(|_s| false)",
+        "RATSCHE Zahn 1 -- ein Eintrag ohne Fundstelle faellt nicht mehr auf",
+        "schablone",
+    ),
+    Mutation(
+        "ratsche-zahn-zwei-stumpf",
+        "schablonen.rs",
+        "pub fn marke_gerissen_in(liste: &[Schablone]) -> bool {\n    liste.len() > zulaessig_in(liste)",
+        "pub fn marke_gerissen_in(liste: &[Schablone]) -> bool {\n    let _ = liste;\n    false",
+        "RATSCHE Zahn 2 -- das Register darf beliebig wachsen (der Fehler vom 16.8.)",
+        "schablone",
+    ),
+    Mutation(
+        "ein-beweis-kauft-alles",
+        "schablonen.rs",
+        "    MARKE_OHNE_BEWEIS + bewiesen_in(liste)",
+        "    if bewiesen_in(liste) > 0 { usize::MAX } else { MARKE_OHNE_BEWEIS }",
+        "RATSCHE Zahn 2 -- der erste Beweis hebt die Marke ganz auf statt um EINEN Platz",
+        "schablone",
+    ),
+
+    # -- lib.rs: die Passliste -----------------------------------------------------------
+    #
+    # `SPRACHE.md` Teil III sagt: **die Spezifikation IST die Passliste.** Laeuft ein Pass
+    # still nicht, ist die Spezifikation nicht durchgesetzt -- und bis zum 2026-08-17 konnte
+    # das niemand bemerken: 241 Zeilen, 0 Mutationen.
+    Mutation(
+        "ein-pass-laeuft-nicht",
+        "lib.rs",
+        "    gruppe::pass(baum, absagen);",
+        "    let _ = &gruppe::pass;",
+        "Passliste -- Pass 10 (Gruppe) faellt still aus; U001-U007 schweigen",
+    ),
+    Mutation(
+        "die-paarung-faellt-aus",
+        "lib.rs",
+        "    paarung::pass(baum, absagen);",
+        "    let _ = &paarung::pass;",
+        "Passliste -- Pass 7 (Paarung) faellt still aus; V001-V004 schweigen",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

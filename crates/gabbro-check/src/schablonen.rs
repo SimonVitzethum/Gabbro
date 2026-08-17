@@ -33,9 +33,10 @@
 //! Fehlerklasse aus `5904cae`, eine Ebene tiefer.
 //!
 //! Die Regel sitzt **an der Emissionsentscheidung**, nicht am Gegenstand: eine Zeile im
-//! Emissionspass statt einer je Konstrukt. **Heute ist sie eine Vorabfestlegung** — der
-//! Emissionspass ist nicht gebaut, `mutiere-pruefer.py` weist ihn mit 0 Mutationen aus, und
-//! was 0 Mutationen hat, ist nicht gedeckt, sondern unbeschaedigbar.
+//! Emissionspass statt einer je Konstrukt. **Sie ist weiterhin eine Vorabfestlegung** — der
+//! Emissionspass existiert seit dem 2026-08-17 (`emit.rs`, zwei Mutationen), senkt aber genau
+//! die Formen EINER Beispieldatei ab und weigert sich (`C001`) fuer jede andere. Keine
+//! Schablone dieser Liste ist damit beruehrt.
 
 /// Wie weit eine Schablone ist.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,7 +46,7 @@ pub enum Stand {
     /// Der Uebersetzer stuetzt sich heute darauf.
     Getragen,
     /// Einmal nach Isabelle gebracht. **Der einzige Stand, der die Vertrauensbasis
-    /// verkleinert** — und heute erreicht ihn keine.
+    /// verkleinert** — und seit dem 2026-08-16 erreichen ihn vier.
     Bewiesen,
 }
 
@@ -59,6 +60,7 @@ impl Stand {
     }
 }
 
+#[derive(Clone)]
 pub struct Schablone {
     pub name: &'static str,
     /// **Andere Schablonen, auf denen diese ruht.** Neu am 2026-08-16, und der Grund ist ein
@@ -501,25 +503,75 @@ pub const SCHABLONEN: &[Schablone] = &[
 ///
 /// *Der erste ist benannt und war es die ganze Zeit:* `table.induktion` — das erzeugte
 /// Induktionsschema, seit der INDUKTION-Eintragung als L3-Posten markiert, die kleinste
-/// Schablone der Liste. **Sie kommt seit Tagen nicht dran, weil sie mit nichts konkurriert
-/// ausser mit allem.**
+/// Schablone der Liste.
+///
+/// # BERICHTIGT 2026-08-17: der Zahn war seit dem 16.8. stumpf
+///
+/// Die erste Fassung las `alle unbewiesen && len > MARKE`. **Mit der ersten bewiesenen
+/// Schablone wurde die linke Haelfte fuer immer falsch** — und damit die Marke wirkungslos,
+/// unabhaengig davon, wie gross das Register noch wird. Der Mechanismus fiel also genau an
+/// dem Tag aus, an dem das Ereignis eintrat, auf das er wartete; das Register wuchs
+/// **am selben Tag** von 17 auf 19.
+///
+/// > *Eine Ratsche mit einer einzigen Raste ist ein Anschlag, keine Ratsche.*
+///
+/// **Repariert als die woertliche Verallgemeinerung des Satzes, der schon dastand**
+/// (*„wer den neunzehnten braucht, muss vorher den ersten beweisen"*): das Register darf die
+/// Grundmarke um **hoechstens so viele Eintraege ueberschreiten, wie Schablonen bewiesen
+/// sind.** Jeder weitere Eintrag kostet einen Beweis, dauerhaft und nicht nur einmal.
+///
+/// **Die Luft ist heute drei Plaetze, und das gehoert dazugesagt:** zwei der vier Beweise
+/// entstanden aus dem AUFTEILEN von Eintraegen (17 → 19) und haben damit selbst Eintraege
+/// erzeugt. Die Regel ist bei ihrer ersten Anwendung absichtlich grosszuegig — sie zieht sich
+/// mit jedem weiteren Eintrag von selbst zu.
 pub const MARKE_OHNE_BEWEIS: usize = 18;
 
+/// Wieviele Schablonen sind maschinell bewiesen?
+pub fn bewiesen_in(liste: &[Schablone]) -> usize {
+    liste.iter().filter(|s| s.stand == Stand::Bewiesen).count()
+}
+
+/// Wieviele Eintraege sind heute zulaessig: die Grundmarke plus je einen je Beweis.
+pub fn zulaessig_in(liste: &[Schablone]) -> usize {
+    MARKE_OHNE_BEWEIS + bewiesen_in(liste)
+}
+
 /// Ist das Register ueber seiner Marke? **Ein gefallenes Tor, kein Hinweis.**
+///
+/// Nimmt die Liste als Argument, damit der Mechanismus **unabhaengig von den heutigen Daten**
+/// gepruefbar ist: ein Tor, das nur auf gesunden Daten laeuft, ist nie rot gewesen.
+pub fn marke_gerissen_in(liste: &[Schablone]) -> bool {
+    liste.len() > zulaessig_in(liste)
+}
+
+pub fn bewiesen() -> usize {
+    bewiesen_in(SCHABLONEN)
+}
+
+pub fn zulaessig() -> usize {
+    zulaessig_in(SCHABLONEN)
+}
+
 pub fn marke_gerissen() -> bool {
-    SCHABLONEN.iter().all(|s| s.stand != Stand::Bewiesen) && SCHABLONEN.len() > MARKE_OHNE_BEWEIS
+    marke_gerissen_in(SCHABLONEN)
 }
 
 /// **Der ERSTE Zahn, ausgesprochen:** kein neuer Eintrag ohne gemessenen Bedarf. Er gilt de
 /// facto schon — `gruppe.sperrabdruck` (S17) kam aus dem Sweep, nicht aus einem Entwurf —
 /// und steht hier, damit er nicht bloss Gewohnheit ist. Jede Schablone traegt ihre
 /// `fundstelle`; ist sie leer oder nennt sie kein Dokument, faellt der Test.
-pub fn ohne_fundstelle() -> Vec<&'static str> {
-    SCHABLONEN
+///
+/// Auch dieser nimmt die Liste als Argument, aus demselben Grund wie oben.
+pub fn ohne_fundstelle_in(liste: &[Schablone]) -> Vec<&'static str> {
+    liste
         .iter()
         .filter(|s| s.fundstelle.trim().is_empty())
         .map(|s| s.name)
         .collect()
+}
+
+pub fn ohne_fundstelle() -> Vec<&'static str> {
+    ohne_fundstelle_in(SCHABLONEN)
 }
 
 /// Wieviele Schablonen tragen heute, ohne bewiesen zu sein?
@@ -547,19 +599,23 @@ pub fn zeige() -> String {
         ));
     }
     out.push_str(&format!(
-        "-- {} Schablonen, {} davon unbewiesen.\n",
+        "-- {} Schablonen, {} davon unbewiesen, {} maschinell bewiesen.\n",
         SCHABLONEN.len(),
-        ungedeckt()
+        ungedeckt(),
+        bewiesen()
     ));
-    out.push_str(
+    out.push_str(&format!(
         "-- Der eine Isabelle-Posten ist damit keine Zahl 1, sondern diese Liste.\n\
          -- Waechst sie, waechst die Vertrauensbasis -- auch wenn die Kennzahl glaenzt.\n\
          -- RATSCHE, ZAHN 1: kein Eintrag ohne gemessenen Bedarf (Fundstelle pflichtig).\n\
-         -- RATSCHE, ZAHN 2: solange KEINE bewiesen ist, sind hoechstens 18 zulaessig.\n\
-         --   Der Ausweg ist nicht, die Marke zu heben -- er ist, die erste zu beweisen.\n\
-         --   Benannt und seit langem faellig: `table.induktion`, die kleinste der Liste.\n\
+         -- RATSCHE, ZAHN 2: Grundmarke {} plus je ein Platz je BEWIESENER Schablone.\n\
+         --   Heute: {} Eintraege, {} zulaessig. Jeder weitere kostet einen Beweis.\n\
+         --   Der Ausweg ist nicht, die Marke zu heben -- er ist, die naechste zu beweisen.\n\
          -- Ein Eintrag verlaesst die Liste nur BEWIESEN oder MITSAMT SEINEM KONSTRUKT.\n\
          --   Nicht durch Umformulierung, nicht durch Zusammenfassen.\n",
-    );
+        MARKE_OHNE_BEWEIS,
+        SCHABLONEN.len(),
+        zulaessig()
+    ));
     out
 }

@@ -363,15 +363,94 @@ fn kein_schablonen_eintrag_ohne_fundstelle() {
 
 #[test]
 fn das_schablonenregister_reisst_seine_marke_nicht() {
-    use gabbro_check::schablonen::{marke_gerissen, MARKE_OHNE_BEWEIS, SCHABLONEN};
+    use gabbro_check::schablonen::{bewiesen, marke_gerissen, zulaessig, SCHABLONEN};
     assert!(
         !marke_gerissen(),
-        "{} Schablonen, keine bewiesen -- die Marke steht bei {MARKE_OHNE_BEWEIS}. \
+        "{} Schablonen gegen {} zulaessige ({} Grundmarke + {} bewiesene). \
          **Das ist ein gefallenes Tor, kein Hinweis.** Der Ausweg ist NICHT, die Marke zu \
-         erhoehen: er ist, die erste Schablone zu beweisen. Benannt ist sie seit langem -- \
-         `table.induktion`, die kleinste der Liste. Eine bewiesene von achtzehn ist \
-         qualitativ etwas anderes als null von siebzehn.",
-        SCHABLONEN.len()
+         erhoehen: er ist, die naechste Schablone zu beweisen. Jeder Eintrag ueber der \
+         Grundmarke kostet einen Beweis -- dauerhaft, nicht einmal.",
+        SCHABLONEN.len(),
+        zulaessig(),
+        gabbro_check::schablonen::MARKE_OHNE_BEWEIS,
+        bewiesen()
+    );
+}
+
+use gabbro_check::schablonen::{Schablone, Stand};
+
+// -- Die Sprechprobe zu beiden Zaehnen ---------------------------------------------------
+//
+// **Beide Zahn-Tests oben lesen die ECHTE Liste, und die ist gesund.** Damit sagen sie
+// nichts darueber, ob der Mechanismus greift -- sie sagen nur, dass die heutigen Daten in
+// Ordnung sind. *Ein Tor, das nie rot war, ist eine Zusage.* Die beiden Proben hier fuettern
+// darum absichtlich kaputte Register.
+
+fn probe(name: &'static str, fundstelle: &'static str, stand: Stand) -> Schablone {
+    Schablone {
+        name,
+        haengt_an: &[],
+        konstrukt: "Probe",
+        pflicht: "Ein Satz, der lang genug ist, um die Pflichtpruefung zu passieren, und zwar deutlich.",
+        stand,
+        fundstelle,
+    }
+}
+
+#[test]
+fn der_erste_zahn_spricht() {
+    use gabbro_check::schablonen::ohne_fundstelle_in;
+    let gesund = [probe("a", "MESSUNGEN.md", Stand::Entworfen)];
+    assert!(
+        ohne_fundstelle_in(&gesund).is_empty(),
+        "ein Eintrag MIT Fundstelle darf nicht anschlagen"
+    );
+
+    let krank = [
+        probe("a", "MESSUNGEN.md", Stand::Entworfen),
+        probe("ohne", "   ", Stand::Entworfen),
+    ];
+    assert_eq!(
+        ohne_fundstelle_in(&krank),
+        vec!["ohne"],
+        "**der erste Zahn greift nicht.** Ein Eintrag ohne Fundstelle ist genau das, wogegen \
+         er gebaut ist -- er muss ihn beim Namen nennen"
+    );
+}
+
+#[test]
+fn der_zweite_zahn_spricht() {
+    use gabbro_check::schablonen::{marke_gerissen_in, MARKE_OHNE_BEWEIS};
+    // Grundmarke voll, nichts bewiesen: haelt.
+    let voll: Vec<_> = (0..MARKE_OHNE_BEWEIS)
+        .map(|_| probe("x", "MESSUNGEN.md", Stand::Entworfen))
+        .collect();
+    assert!(!marke_gerissen_in(&voll), "die Grundmarke selbst darf halten");
+
+    // Einer mehr, nichts bewiesen: reisst.
+    let mut zuviel = voll.clone();
+    zuviel.push(probe("neunzehnter", "MESSUNGEN.md", Stand::Entworfen));
+    assert!(
+        marke_gerissen_in(&zuviel),
+        "**der zweite Zahn greift nicht.** Genau das war der Fehler bis zum 2026-08-17: \
+         die alte Fassung las `alle unbewiesen && zu lang`, und mit der ersten bewiesenen \
+         Schablone wurde sie fuer immer falsch"
+    );
+
+    // Einer mehr, aber einer bewiesen: haelt wieder -- der Beweis KAUFT den Platz.
+    let mut gekauft = zuviel.clone();
+    gekauft[0] = probe("x", "MESSUNGEN.md", Stand::Bewiesen);
+    assert!(
+        !marke_gerissen_in(&gekauft),
+        "ein Beweis muss einen Platz kaufen -- sonst ist die Ratsche ein Anschlag"
+    );
+
+    // Und zwar GENAU einen: zwei ueber der Marke, ein Beweis -> reisst wieder.
+    let mut zweiter = gekauft.clone();
+    zweiter.push(probe("zwanzigster", "MESSUNGEN.md", Stand::Entworfen));
+    assert!(
+        marke_gerissen_in(&zweiter),
+        "ein Beweis kauft EINEN Platz, nicht die Marke ab"
     );
 }
 
