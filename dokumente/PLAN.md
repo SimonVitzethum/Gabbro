@@ -1516,3 +1516,178 @@ Vertrauensbasis** — aber ein benannter, gezählter, und um genau die 22 Sätze
 
 *Der zweite Satz ist nicht der Beweis des Prüfers. Er ist die Auskunft darüber, wieviel man
 noch glauben muss — und die gibt es heute nicht.*
+
+---
+
+# K11 — auf **elf von elf** Klempnereiklassen
+
+**Neun sind getragen** (`DONE.md`). Zwei stehen offen, und sie stehen aus verschiedenen
+Gründen offen — *das ist der ganze Plan.* Dazu ein Rest von «B37», der beim Bauen benannt
+wurde und nicht verschwunden ist.
+
+```
+Rennen        das SPEICHERMODELL  → gebucht als A10, nicht falsifizierbar
+Verfeinerung  die ABSENKUNG       → 8 Übersetzungseinheiten, 7 Fragmente ohne C
+«B37»-Rest    der ZWEIG           → O005 meldet, entscheidet nicht
+```
+
+---
+
+## K11.1 — «B37» zu Ende bringen *(klein, und der Rest ist benannt)*
+
+`O005` sagt heute: *„ein Phasenschritt steht in einem Zweig oder einer Schleife"* — und
+entscheidet nicht. **Die Meldung war richtig; sie ist keine Lösung.**
+
+**Die Entscheidung, die vor die erste Zeile gehört:** was ist die Stufe einer Marke *nach*
+einem `if`?
+
+| | |
+|---|---|
+| **(a) alle Zweige müssen dieselbe Stufe erreichen** | refuse rather than interpret — die Bauart dieses Ordners. Ein Bootpfad, der je nach Zweig woanders endet, ist zwei Bootpfade |
+| (b) die Vereinigung tragen, der nächste Schritt muss alle akzeptieren | permissiver, und der nächste Schritt braucht dann eine Stufenmenge statt einer Stufe |
+
+**Empfehlung: (a)**, neuer Code `O006`. *Wer (b) will, kann später lockern; wer mit (b)
+anfängt, kann nie mehr verschärfen.*
+
+* **Tor:** `O005` verschwindet vom Korpus, eine Giftprobe mit auseinanderlaufenden Zweigen
+  fällt mit `O006`, und **eine zweite Giftprobe, in der beide Zweige dieselbe Stufe erreichen,
+  geht durch** — sonst hat (a) nur alles verboten.
+* **Preis:** eine Passerweiterung, zwei Giftproben. *Keine Grammatik, keine Schablone.*
+
+---
+
+## K11.2 — Rennen, und der erste Schritt ist NICHT der Speichermodell-Teil
+
+**Gemessen am 2026-08-17, und es ist der Befund, mit dem dieser Plan anfängt:**
+
+```gabbro
+table K count 8 { slot { a : u32, } }
+lock KAPPEN protects { K } rank 3 held <= 40 ops;
+
+impl fn schreib(i : index into K) -> bool
+    effects { writes K } costs <= 4 ops
+{ K.slots[i].a = 1; return true; }      -- kein `locks KAPPEN`
+
+→ 4 Items, 0 Fehler, 0 Hinweise
+```
+
+> **`protects` beisst nicht.** Der Platz ist erklärtermaßen geschützt, der Zugriff steht ohne
+> Sperre da, und kein Pass sagt etwas. *Die Klasse Rennen hängt heute nicht am Speichermodell —
+> sie hängt an einer Regel, die niemand gebaut hat.*
+
+`H001`–`H006` prüfen die **Disziplin** einer genommenen Sperre (geteilt gegen exklusiv,
+Rang, Haltezeit). Sie prüfen nicht, **dass sie genommen wird.**
+
+### K11.2.1 — `protects` muss beissen *(die tragende Regel)*
+
+Jeder Zugriff auf einen Platz, den ein `lock … protects { … }` nennt, steht unter dieser
+Sperre — **oder die Funktion deklariert sie** (`effects { locks P }`), und dann gilt sie
+transitiv über den Aufrufgraphen. *Das Geschirr dafür steht: `H005` löst genau diese
+Zwischenregel an der Aufrufgrenze, und die Hülle ist gebaut.*
+
+* **VORHER MESSEN, und das ist Vorabfestlegung, nicht Vorsicht:** 17 `protects`-Klauseln in 9
+  Dateien. Wie viele Zugriffsstellen fielen unter der neuen Regel? **Eine Regel, die den
+  eigenen Korpus zerlegt, ist ein Befund und keine Regel** — dann gehört die Zahl ins Protokoll
+  und die Regel auf den Prüfstand, nicht der Korpus in die Reparatur.
+* **Tor:** die Giftprobe oben fällt; `beispiele/10` und `/13` bleiben grün; die Zahl der
+  gefallenen Korpusstellen steht im Protokoll, bevor eine Zeile Korpus angefasst wird.
+* **Der dritte Zustand gilt (W10):** wo der Aufrufgraph unvollständig ist, ist die
+  Sperrenmenge eine **untere** Schranke — daraus wird weder abgesagt noch bestätigt.
+
+### K11.2.2 — Die Ausführungskontexte benennen
+
+**Rennfreiheit ist eine Aussage über NEBENLÄUFIGKEIT, und Gabbro sagt heute nicht, wer
+nebenläufig ist.** `entry vector … per cpu ist nested masked`, `boot`, `fn` stehen als
+Deklarationen da; **kein Pass leitet daraus ab, welche Kontexte einen Platz anfassen.**
+
+Ohne das lässt sich der eigentliche Satz nicht sagen:
+
+> *jeder Platz, den zwei Kontexte berühren, ist unter einer Sperre, atomar, oder gehört
+> genau einem Kern (`per cpu`).*
+
+* **Tor:** je geteiltem Platz ist die Kontextmenge ableitbar und wird gedruckt; ein Platz, den
+  zwei Kontexte ohne Sperre/Atomic/`per cpu` berühren, fällt.
+* **Preis, ausgesprochen:** das ist der **grösste** Posten dieses Plans. Er braucht ein
+  Nebenläufigkeitsmodell, und `masks IRQ` («B38», heute in der Axiomschicht) gehört dann
+  hinein statt daneben.
+* **Risiko, benannt:** `ist nested` heisst, ein Interrupt kann sich selbst unterbrechen.
+  *Wer das übersieht, baut eine Regel, die auf einem Kern falsch ist.*
+
+### K11.2.3 — Die Absenkung von `release`/`acquire`
+
+Heute weigert sich der Erzeuger benannt. Unter **A10** (`release_stellt_sichtbarkeit_her`,
+gebucht als **nicht falsifizierbar**) ist die Absenkung `_Atomic` mit der deklarierten Ordnung.
+
+* **Tor, und es ist ein ehrliches:** das erzeugte C trägt **strukturell** die Ordnung, die die
+  Quelle deklariert — geprüft am Text, nicht an einem Lauf.
+* **Was hier NICHT geht, und es gehört danebengeschrieben:** *ein Differenztest kann die
+  Abwesenheit eines Rennens nicht zeigen.* Ein erfolgreicher Lauf sagt nur, dass die Umordnung
+  diesmal ausblieb — genau der Satz, mit dem A10 als nicht falsifizierbar gebucht ist.
+
+---
+
+## K11.3 — Verfeinerung, und das Messgerät steht schon
+
+`gabbro zeugnis` misst **beide Achsen**, je Datei, seit dem 2026-08-17:
+
+```
+0 Annahmen, N Schablonen (M davon UNBEWIESEN), K direkte Formen, F fremde Rümpfe
+UNZUGEORDNET: …
+```
+
+| Achse | Messgrösse | heute |
+|---|---|---|
+| **Breite** — jede Form wird abgesenkt | `UNZUGEORDNET = 0` **und** kein `C001` über dem Korpus | 8 von 22+3 Einheiten senken ab |
+| **Tiefe** — jede benutzte Schablone ist bewiesen | `davon UNBEWIESEN = 0` | 5 von 20 bewiesen, 4 lebend getragen |
+
+### K11.3.1 — Breite: die Weigerungen abbauen, **in der Reihenfolge ihrer Sperre**
+
+Nicht alle `C001` sind gleich. **Fünf sind durch BEFUNDE gesperrt, nicht durch Arbeit** —
+«B10», «B12», «B17», «B24» und die Domänenschranke von `mappings of`; `descendants of` nennt
+seine Kante nicht. *Die fallen mit einer Entscheidung, nicht mit Erzeugercode.* Der Rest
+(`static`, `reason`, `publishes`, `awaits`, `exchange`, `forever`, `let … else`) ist Bauarbeit.
+
+* **Reihenfolge:** erst die **Entscheidungen** (sie kosten keine Zeile und lösen fünf), dann
+  die Bauarbeit — *jede mit ihrem Differenztest, keine ohne.*
+
+### K11.3.2 — Tiefe: **je Schablone ein Isabelle-Lauf, und der Beweis kommt VOR dem Konstrukt**
+
+Das zweite Tor aus K100 gilt weiter: `lebend_ungedeckt() ≤ 4`. **Wer eine Form absenkt, hebt
+ihre Schablone von `Entworfen` auf `Getragen`** — und ohne Beweis davor steigt die lebende
+Fläche. *Genau so ist `verbund.konstruktor` gelaufen, und deshalb bewegte sich die Zahl nicht.*
+
+Die vier lebend getragenen zuerst, weil sie **heute schon** getragen werden:
+`option.sonderwert` · `format.roundtrip` · `device.konstruktor` · `table.absenkung`.
+
+### K11.3.3 — Und die starke Fassung von (b), als Grenze benannt
+
+**Ein Zeugnis über DIESE Übersetzung ist keine Aussage über ALLE Eingaben.** Die starke Fassung
+wäre je Übersetzung ein maschinell geprüftes Simulationszeugnis; **Weg (a), der verifizierte
+Erzeuger, bleibt ausdrücklich draussen** — er ist CompCert-Grössenordnung und würde diesen
+Plan zu einem anderen Projekt machen.
+
+*Die Vorstufe ist als Vorstufe gebucht, damit die Zahl nicht mehr verspricht, als sie misst.*
+
+---
+
+## Wann K11 erreicht ist — und wann die Zahl lügt
+
+**Erreicht:**
+
+```
+11 von 11    Klempnereiklassen getragen, jede mit ihrer benannten Grenze
+O005 = 0     kein unentschiedener Phasenschritt im Korpus
+protects     beisst, und die Zahl der gefallenen Stellen stand VORHER im Protokoll
+UNZUGEORDNET = 0   über jeder Datei, die absenkt
+L ≤ 4        lebend unbewiesene Schablonen — unverändert
+```
+
+**Und die Zahl lügt, wenn eines davon fehlt:**
+
+> **`11 von 11` über den zehn Fragmenten ist keine Aussage über Gabbro.** Sie sind nach ihrer
+> Schwierigkeit gewählt. **K11 ist erst dann eine Messung, wenn der ZWEITE Korpus danebensteht**
+> — derselbe Satz wie bei K100, und er ist seither nicht eingelöst.
+
+> **Und eine zweite Falle, die K11 eigenhändig aufstellt:** eine Klasse gilt als *getragen*,
+> sobald eine Regel greift — nicht, sobald sie *alles* greift. Jede der neun getragenen führt
+> ihre Grenze mit. **Eine zehnte und elfte ohne Grenze wären verdächtiger als mit.**

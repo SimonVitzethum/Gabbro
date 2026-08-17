@@ -147,6 +147,18 @@ of items that are neither code nor a run — what remains is building and measur
       0 Fehler) -- *und kein Pass liest es.* Die Schicht hat damit zwei Haelften: die sieben
       Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
       tragen lassen (PL-Arbeit).
+- [ ] **`protects` beisst nicht** *(gemessen 2026-08-17, und es ist der Befund, an dem K11.2
+      anfaengt)*. `lock KAPPEN protects { K } rank 3;` steht da, `K.slots[i].a = 1;` steht ohne
+      `locks` daneben -- **4 Items, 0 Fehler.** `H001`-`H006` pruefen die DISZIPLIN einer
+      genommenen Sperre (geteilt gegen exklusiv, Rang, Haltezeit); sie pruefen nicht, **dass
+      sie genommen wird**. *Die Klasse Rennen haengt heute nicht am Speichermodell -- sie
+      haengt an einer Regel, die niemand gebaut hat.* **Vor der Regel messen:** 17
+      `protects`-Klauseln in 9 Dateien; wie viele Zugriffsstellen fielen? Eine Regel, die den
+      eigenen Korpus zerlegt, ist ein Befund und keine Regel.
+- [ ] **«B37» hat einen benannten Rest: `O005` meldet, entscheidet nicht.** Was die Stufe einer
+      Marke NACH einem `if` ist, steht nicht fest. Zwei Wege in `PLAN.md` (K11.1); empfohlen
+      ist **alle Zweige muessen dieselbe Stufe erreichen** (`O006`) -- *wer damit anfaengt,
+      kann spaeter lockern; wer mit der permissiven Fassung anfaengt, kann nie verschaerfen.*
 - [ ] **Ein Tippfehler in einem `ensures` faellt nicht** *(gemessen 2026-08-17)*.
       `ensures zaheler == 1` neben `static mut zaehler` geht mit **0 Fehlern** durch: kein
       Pass liest Praedikate, also prueft auch keiner ihre NAMEN. *Eine Pflicht, die niemand
