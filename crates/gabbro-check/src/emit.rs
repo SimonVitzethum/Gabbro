@@ -406,6 +406,10 @@ fn funktion(f: &FnDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     // boot token on; the token is the checker's argument and nothing the machine can hold.
     let rueck = match &f.ergebnis {
         Some(t) if ist_geist(t, u) => "void".into(),
+        // **`-> never` heisst `_Noreturn void`.** Ohne das Wort sieht der C-Uebersetzer die
+        // Fehlerzweige als durchfallend an -- genau der Grund, aus dem `S002` im Gabbro sechs
+        // Mal ansprang, bevor `exit()` sein `-> never` bekam (`FRAGMENTE.md` F5).
+        Some(TypExpr::Never(_)) => "_Noreturn void".into(),
         Some(t) => match ctyp(t, u) {
             Some(c) => c,
             None => {
@@ -551,11 +555,30 @@ fn anweisung(
                 None => aus.push_str(&format!("{e}return;\n")),
             }
         }
+        // **Der Operator wurde bis zum 2026-08-17 IGNORIERT:** `x += 1` wurde `x = 1`. Er
+        // ist in keiner der drei Waechtereinheiten vorgekommen -- und genau darum hat er
+        // ueberlebt. *Dieselbe Sorte stiller Ausfall wie die Null im Ausdruckszweig.*
         StmtArt::Zuweisung(z) => aus.push_str(&format!(
-            "{e}{} = {};\n",
+            "{e}{} {} {};\n",
             ort(&z.ziel, u, absagen),
+            zuw_op(&z.op),
             ausdruck(&z.wert, u, absagen)
         )),
+        // **`narrow x to a .. b else { … }` ist die einzige Laufzeitpruefung, die dieser
+        // Erzeuger ausgibt** -- und sie steht hier, weil die Sprache sie als Pruefung
+        // DEFINIERT, nicht weil M1 versagt haette. *W6 gilt in die andere Richtung: was M1
+        // traegt, wird weggelassen; was `narrow` heisst, bleibt stehen.*
+        StmtArt::Narrow(n) => {
+            let o = ort(&n.ort, u, absagen);
+            let von = ausdruck(&n.bereich.von, u, absagen);
+            let bis = ausdruck(&n.bereich.bis, u, absagen);
+            let oben = if n.bereich.exklusiv { "<" } else { "<=" };
+            aus.push_str(&format!("{e}if (!({o} >= {von} && {o} {oben} {bis})) {{\n"));
+            for k in &n.sonst.anweisungen {
+                anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+            }
+            aus.push_str(&format!("{e}}}\n"));
+        }
         StmtArt::Ruf(r) => aus.push_str(&format!("{e}{};\n", ruf(r, u, absagen))),
         // **The third place the ghost erasure has to hold, and the one that is silent if it
         // does not.** `let p1 = mmu_an(p);` binds a ghost: the BINDING goes, the CALL stays.
@@ -738,6 +761,16 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
             weigere(absagen, e.span, "expression form");
             String::new()
         }
+    }
+}
+
+fn zuw_op(op: &ZuwOp) -> &'static str {
+    match op {
+        ZuwOp::Setzt => "=",
+        ZuwOp::Plus => "+=",
+        ZuwOp::Minus => "-=",
+        ZuwOp::Und => "&=",
+        ZuwOp::Oder => "|=",
     }
 }
 

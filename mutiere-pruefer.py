@@ -897,6 +897,38 @@ MUTATIONEN = [
         "C-Absenkung -- ein ungelesener Parameter laesst `cc -Wextra` das Erzeugnis ablehnen",
         "code",
     ),
+    Mutation(
+        "zuweisungsoperator-egal",
+        "emit.rs",
+        "            zuw_op(&z.op),",
+        "            { let _ = &z.op; \"=\" },",
+        "C-Absenkung -- `x += 1` wird `x = 1`; der Operator stand im Baum und wurde nicht angesehen",
+        "code",
+    ),
+    Mutation(
+        "narrow-schranke-inklusiv",
+        "emit.rs",
+        "            let oben = if n.bereich.exklusiv { \"<\" } else { \"<=\" };",
+        "            let oben = \"<=\";",
+        "C-Absenkung -- `..<` wird `..`; genau der eine Wert kommt durch, gegen den die Schranke steht",
+        "code",
+    ),
+    Mutation(
+        "narrow-prueft-nicht",
+        "emit.rs",
+        "            aus.push_str(&format!(\"{e}if (!({o} >= {von} && {o} {oben} {bis})) {{\\n\"));",
+        "            aus.push_str(&format!(\"{e}if (0) {{ /* {o} {von} {oben} {bis} */\\n\"));",
+        "C-Absenkung -- der `else`-Zweig eines `narrow` kann nie genommen werden",
+        "code",
+    ),
+    Mutation(
+        "never-ist-gewoehnlich",
+        "emit.rs",
+        "        Some(TypExpr::Never(_)) => \"_Noreturn void\".into(),",
+        "        Some(TypExpr::Never(_)) => \"void\".into(),",
+        "C-Absenkung -- eine nicht zurueckkehrende Funktion sieht fuer den C-Uebersetzer durchfallend aus",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

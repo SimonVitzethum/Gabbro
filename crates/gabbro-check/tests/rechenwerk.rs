@@ -373,3 +373,45 @@ impl fn toeten(l : ptr<normal, rw> L, t : Id, k : index into L) -> bool
     assert!(c.contains("(void)k;"), "ein ungelesener Parameter wird stillgelegt:\n{c}");
     assert!(!c.contains("(void)l;"), "ein gelesener nicht:\n{c}");
 }
+
+/// **Zwei stille Ausfaelle und eine Laufzeitpruefung — 2026-08-17, beim Lesen gefunden.**
+///
+/// `x += 1` wurde `x = 1`. Der Operator stand im Baum und der Erzeuger sah ihn nicht an.
+/// **Er ist in keiner der drei Waechtereinheiten vorgekommen — genau darum hat er
+/// ueberlebt**, dieselbe Sorte wie die Null im Ausdruckszweig. *Ein offener Ausfall ist
+/// unsichtbar, bis jemand hineinlaeuft.*
+///
+/// Und `narrow` ist die **einzige** Laufzeitpruefung, die dieser Erzeuger ausgibt — nicht weil
+/// M1 versagt haette, sondern weil die Sprache sie als Pruefung definiert. *W6 gilt in beide
+/// Richtungen: was M1 traegt, faellt weg; was `narrow` heisst, bleibt stehen.*
+#[test]
+fn zusammengesetzte_zuweisung_narrow_und_never() {
+    let quelle = "module t {
+const MAX : u32 = 64;
+type Tiefe = u32 in 0 .. MAX;
+table T count 8 { slot { z : u32 wrapping, } }
+extern fn unlesbar() -> never effects { diverges } costs <= 0 ops;
+impl fn zaehle(t : ptr<normal, rw> T, i : index into T, tiefe : Tiefe) -> u32
+    effects { writes t.slots } costs <= 8 ops
+{
+    narrow tiefe to 0 ..< MAX else { return 0; }
+    t.slots[i].z += 1;
+    return 1;
+}
+}";
+    let mut absagen = gabbro_syntax::Absagen::neu("p.gab");
+    let (baum, _) = gabbro_syntax::lies("p.gab", quelle);
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
+
+    // **Der Operator, und er ist der eigentliche Befund.**
+    assert!(c.contains("z += 1;"), "`+=` ist nicht `=`:\n{c}");
+
+    // `narrow … to 0 ..< MAX` -- die obere Schranke ist AUSGESCHLOSSEN. Ein `<=` statt `<`
+    // liesse genau den einen Wert durch, gegen den die Schranke steht.
+    assert!(c.contains("if (!(tiefe >= 0 && tiefe < MAX))"), "die Pruefung, exklusiv oben:\n{c}");
+
+    // `-> never` -- ohne das Wort sieht der C-Uebersetzer die Fehlerzweige als durchfallend
+    // an. Genau daher kamen in F5 sechs `S002`, bevor `exit()` sein `-> never` bekam.
+    assert!(c.contains("_Noreturn void unlesbar(void);"), "{c}");
+}
