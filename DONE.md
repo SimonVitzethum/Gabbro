@@ -88,6 +88,7 @@ Newly collected 2026-08-15, **not reconstructed**, x86 only
 | **Base rate `format`** | **does not carry `format`** — 5 formats, 0 errors of the class | `dokumente/MESSUNGEN.md` |
 | **`delete_leaf`** | **1,75 : 1** instead of the booked 3,6–6 : 1 | `dokumente/BEWEIS.md` |
 | **`programs/`** | the reason for the breach no longer carries | `dokumente/MESSUNGEN.md` |
+| **C emission, one fragment** | **the first yes-statement**: `.gab` → C → `cc -Werror` → executed → **result compared** (`42 1 8 0`) | `./pruefe-emission.sh`, `crates/gabbro-check/src/emit.rs` |
 | **N1 (Caprock)** | **`MEM` is a leaf**, `system.rs:724` is wrong | `arbeitsprotokoll/03-N1.md` |
 | **Closures by kind of use** | **gate VOID** — the population does not reproduce (89 → 64), and V-b is **empty** | `dokumente/MESSUNGEN.md`, *ERGEBNIS Verschlüsse* |
 | **Four templates machine-checked** | `table.induktion` · `table.indexschranke` · `consuming.ordnung` · `consuming.leermenge` — **5 silent assumptions flushed out, 2 statements REFUTED**, register 17 → 19, unproved 16 → 15 | `beweise/*.thy` (Isabelle2025-2), `gabbro schablonen` |
