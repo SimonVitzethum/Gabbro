@@ -97,6 +97,8 @@ Newly collected 2026-08-15, **not reconstructed**, x86 only
 | **Ghost erasure** | **`linear ghost type` costs nothing at run time** — `BootPhase` carries F7's whole safety argument and leaves **no trace** in the C. Erased in the signature, at the call site and at the `let` binding; the counter-probe on the third produced `6` instead of `123456` | `crates/gabbro-check/src/emit.rs`, `./pruefe-emission.sh`, poison `geist-let-verschwindet-ganz` |
 | **N1 (Caprock)** | **`MEM` is a leaf**, `system.rs:724` is wrong | `arbeitsprotokoll/03-N1.md` |
 | **Closures by kind of use** | **gate VOID** — the population does not reproduce (89 → 64), and V-b is **empty** | `dokumente/MESSUNGEN.md`, *ERGEBNIS Verschlüsse* |
+| **`option.sonderwert` machine-checked — and it flushed out a premise nobody had written** | the encoding `None ↦ N`, `Some i ↦ i` is **injective**, which is what *lossless* means — **under `N < 2^w`.** At `N = 2^w` the sentinel falls onto slot 0 and `None` is `Some 0`. **The premise stood in none of the three places** (register, `SPRACHE.md`, emitter); the emitter emitted `#define T_NONE (N)` for `count 4294967296` without a word. *Satisfied in practice, unchecked in fact.* Now a check | `beweise/Option_Sonderwert.thy`, poison `sonderwert-ohne-wortgrenze` |
+| **`device … at mmio` lowered** | a register is **not a field**: `r.AVAIL_IDX += 1` becomes `(*(volatile uint16_t *)(r->basis + 258)) += 1`. *`volatile` is the one place where the lowering must FORBID the C compiler something.* **`at dma` is refused** — which barrier a `dma` access needs is a memory-model statement, and M3 does not build it either. Measured `8 0 64 8`, the second number being «B32»'s intended wraparound | `beispiele/12-umlaufendes-register.gab`, `./pruefe-emission.sh` |
 | **Four templates machine-checked** | `table.induktion` · `table.indexschranke` · `consuming.ordnung` · `consuming.leermenge` — **5 silent assumptions flushed out, 2 statements REFUTED**, register 17 → 19, unproved 16 → 15; **20/16 since `option.sonderwert`** (2026-08-17) | `beweise/*.thy` (Isabelle2025-2), `gabbro schablonen` |
 | **B3 — non-traversable bodies** | **passed, `p = 0,96 %` against a mark of 5 %** — but **R1 missed** (rule written down after the run) | `./zaehle-b3.py ../caprock-messbasis`, `dokumente/MESSUNGEN.md` |
 | **The 74 reassigned** | **238 obligations, each with `file:line`** — 173 K / 65 L; **gate MISSED at `H = 36`** hanging plumbing obligations. R1 kept this time (pre-registration in its own commit), R14 calibration **refuted the rule** and was repaired before the run | `dokumente/PFLICHTEN.md`, `./zaehle-pflichten.py` |
@@ -142,10 +144,10 @@ nobody checks against each other.*
 ./pruefe-wortschatz.py    terminals against the table, Sonderform counter (3 of 5)
 ./pruefe-todo.py          holds the task list against itself, eight classes
 ./pruefe-kennungen.py     no refusal code in two files
-./mutiere-pruefer.py      damages one rule at a time:  115 of 115
+./mutiere-pruefer.py      damages one rule at a time:  119 of 119
 ./erzeuge-mutationen.py   twists systematically:         7 of 39
 ./pruefe-luecken.py       the named gaps one by one:    13 of 15
-./pruefe-emission.sh      .gab → C → cc -Werror → run → compare, FIVE units
+./pruefe-emission.sh      .gab → C → cc -Werror → run → compare, SIX units
 ./commit.sh               R19 — commit messages only via file
 ```
 

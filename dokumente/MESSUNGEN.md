@@ -5973,3 +5973,87 @@ That is the actual yield of this stretch: one vague `loop form` became seven nam
 
 > **A rule guarded by one tool is blind to every other.** The five probes are now in
 > `rechenwerk.rs`, where the harness reaches them: **115 of 115.**
+
+
+---
+
+# `option.sonderwert` bewiesen — und der Beweis fand eine Prämisse
+
+**The register said "both halves are to be shown". One is now machine-checked, the other is
+carried openly — and on the way the formalisation found a premise that stood in none of the
+three places that should have carried it.**
+
+## Die erste Hälfte, und nicht in der trivialen Fassung
+
+`N ∉ {i. i < N}` is one line, and saying so is part of the booking. **The content is one step
+further:** the encoding `None ↦ N`, `Some i ↦ i` is **injective** — *that* is what "lossless"
+means, and it is what `kodiere_injektiv` proves.
+
+## M-1 — die Prämisse: `N < 2^w`
+
+The entry talks about `N` and `{i. i < N}` — natural numbers. **The emitter writes a
+`uint32_t`, where everything is modulo `2^w`.**
+
+```isabelle
+lemma sonderwert_kollidiert_bei_vollem_wort:
+  assumes "N = 2 ^ w"  shows "kodiere_wort w N None = kodiere_wort w N (Some 0)"
+```
+
+**At `N = 2^w` the sentinel falls onto zero — and zero is the FIRST valid slot.** `None` and
+`Some 0` become the same word.
+
+> **The premise stood nowhere:** not in the register entry, not in `SPRACHE.md`, not in the
+> emitter. *In practice it was satisfied — `count 80256` against `2^32` — but satisfied and
+> checked are two states, and this folder has paid for the difference before.*
+
+**And it was not hypothetical.** `count 4294967296` produced `#define T_NONE (N)` without a
+word; the sentinel would have been unreachable and every `None` would have read as a valid
+index. It is now a refusal with the proof named in its text.
+
+## M-2 — die zweite Hälfte bleibt offen, und sie wird offen geführt
+
+*That no generated computation reaches the sentinel* is a statement about `emit.rs`, not about
+a set. **What can be said today is more than on 2026-08-16:** the surface is small and
+enumerable — the emitter produces exactly two forms for an option value (the sentinel
+comparison and the `Some` binding) and **refuses `None` as an expression**.
+
+> *As long as it refuses, no computation can PRODUCE the sentinel.* That is an observation
+> about a narrow surface, not a proof — **and it falls the moment `None` is lowered as a
+> value.**
+
+---
+
+# `device … at mmio` — ein Register ist kein Feld
+
+```
+r.AVAIL_IDX += 1;   ->   (*(volatile uint16_t *)(r->basis + 258)) += 1;
+```
+
+A C struct would carry the same weakness as with `format`: the offsets stand in the
+declaration, the padding is the compiler's. **And one thing more: a register access must not be
+optimised away** — `volatile` is *the one place where the lowering has to FORBID the C compiler
+something.*
+
+**The access is lowered as a PLACE, not as a function pair.** That way `+=` carries itself, and
+the rights rule stays with the checker: `R002`/`R003` refuse a write to `class r`, and **what
+the checker has decided the machine does not check again** (W6).
+
+## `at dma` is refused, and the reason is the checker itself
+
+*Which* barrier a `dma` access needs is a statement about the memory model — the same axiom
+layer as pairing — and **M3 expressly does not build it.**
+
+> *The emitter must not decide what the checker leaves open.* `at normal` would not be a device
+> access at all.
+
+## Measured: `8 0 64 8`
+
+`7 + 1` hits offset `0x102` and nothing beside it · **`0xffff + 1` wraps to 0, by design**
+(«B32»: `u16 wrapping`) · the neighbouring register at `0x104` is untouched · and the handle is
+**8 bytes — a pointer**, not a mapped register file whose padding the compiler decides.
+
+## Was am `device` NICHT abgesenkt ist, jedes mit seinem Grund
+
+`fields { … }` (bit accessors) · `bank … at <computed>` · `transition` (whether the
+precondition becomes a runtime check is undecided) · `mirrors` · `class w1c`. **Five named
+questions instead of one construct.**
