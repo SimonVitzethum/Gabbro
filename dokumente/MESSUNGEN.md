@@ -6110,3 +6110,64 @@ die Breite erklärt** — also ist die Frage entscheidbar, und eine Lage, die he
 **Kein einziger dieser Posten ist noch ein `loop form` oder ein `item kind`.** Jeder nennt sein
 Konstrukt und seinen Grund, und **vier von ihnen sind offene Befunde des Ordners selbst** —
 «B10», «B11», «B12», «B24». *Der Erzeuger hat sie nicht gefunden; er hat sie eingeholt.*
+
+
+---
+
+# FALLE 4 im erzeugten C — und was an den zehn Fragmenten NICHT zu schliessen ist
+
+## `mirrors` ist eine Zeile, und sie ersetzt eine Kommentarwand
+
+```c
+uint32_t _s = (*(volatile uint32_t *)(d->basis + 28));          /* GSTS */
+(*(volatile uint32_t *)(d->basis + 24)) =                       /* GCMD */
+    (uint32_t)((_s & (uint32_t)~(uint32_t)1073741824u) | (uint32_t)1073741824u);
+```
+
+**GCMD ist `class w` — unlesbar.** Ein Lese-Ändere-Schreib-Zug ist dort unmöglich, und die
+Zustandsbits, die mitgeschrieben werden müssen, stehen im Register **daneben**. *Im gemessenen
+Bestand ist das eine Maske plus eine Wand aus Kommentar (`vtd.rs:42-52`).*
+
+**Gemessen `1 1 1 1`, und die zweite und vierte Zahl SIND die Falle:** ohne `mirrors` wären sie
+0 — das Zustandsbit, das niemand mitgeschrieben hat, wäre gelöscht, und die Einheit hätte die
+Übersetzung mitten im Betrieb abgeschaltet.
+
+## Das `requires` wird keine Laufzeitprüfung, und das ist die Entscheidung
+
+`requires GSTS.RTPS == 1` ist dieselbe Art Klausel wie `requires Held(CAPS)` an einer Funktion:
+eine **Pflicht des Rufers**. Der Erzeuger gibt für ein Funktions-`requires` auch keine Prüfung
+aus.
+
+> **Die Alternative wäre die stille Ausnahme:** hier prüfen und dort nicht. *Genau die Bewegung,
+> gegen die dieser Ordner an jeder anderen Stelle steht.* Die Klausel steht als Kommentar im C —
+> sichtbar, nicht ausgeführt.
+
+## Und jetzt die ehrliche Bilanz: zwei der zehn sind NICHT zu schliessen
+
+**`FRAGMENTE.md` führt sie selbst als *„passt nicht"*, und zwar seit dem 2026-08-14:**
+
+| | bricht an | und das ist |
+|---|---|---|
+| **F3** IPC-Fastpath | **«B17»** — `transition` schreibt **genau ein** `place`, die ganze Aussage des Fragments ist aber, dass `caller` und `reply_owner` **nie halb** gesetzt werden | eine Grammatiklücke |
+| **F5** Dienstschleife | **«B11»** — `forever` hat **keinen Ausgang**; weder `leave` noch `break` noch `continue` standen 2026-08-14 in der Grammatik | eine Grammatiklücke |
+
+> **Ich kann nicht absenken, was die Sprache nicht sagen kann.** Ein Erzeuger, der für F3 oder
+> F5 C ausgibt, gibt C für ein Programm aus, das Gabbro ablehnt — und das ist die eine Bewegung,
+> gegen die dieses Modul gebaut ist.
+
+*(`leave`/`next` stehen inzwischen in der Grammatik — die Eskalation vom 14.8., Posten 6. Der
+eingefrorene Fragmenttext benutzt sie nicht, und er wird nicht angefasst.)*
+
+## Was an den übrigen acht offen ist, jedes mit seinem Grund
+
+| | Sperre | Art |
+|---|---|---|
+| **F1 · F3** | `option` als **Wert** (`x = None` braucht die Zieltabelle) · `descendants of` · `queue` («B10») | zwei Entscheidungen, ein offener Befund |
+| **F2** | `bank … at <berechnet>` · `format`-Bitlagen («B24») | eine Entscheidung, ein offener Befund |
+| **F4** | `at dma` — **welche Barriere, ist eine Aussage über das Speichermodell, und M3 baut sie ausdrücklich nicht** | die Axiomschicht |
+| **F6** | `elems of` («B12» — Element oder Index, die Grammatik legt es nirgends fest) · `atomic` · `check` | ein offener Befund, zwei Entscheidungen |
+| **F9** | `at normal` · `format`-Bitlagen («B24») · `mappings of`/`walk` | |
+
+**Vier der Sperren sind offene Befunde des Ordners selbst** — «B10», «B11», «B12», «B24» — und
+eine ist die Axiomschicht. *Der Erzeuger hat sie nicht erzeugt; er ist auf sie aufgelaufen, und
+das ist die nützlichere Hälfte seines Ertrags.*
