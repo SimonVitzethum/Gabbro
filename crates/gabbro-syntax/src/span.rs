@@ -1,7 +1,7 @@
-//! Stellen in der Quelle. Byteversaetze, und ein Zeilenindex, der sie fuer den Menschen
-//! uebersetzt. Eine Absage ohne Fundstelle ist eine Meinung.
+//! Sites in the source. Byte offsets, and a line index that translates them for a human.
+//! A refusal without a site is an opinion.
 
-/// Ein halboffener Byteabschnitt `[von, bis)` in einer Quelldatei.
+/// A half-open byte range `[von, bis)` in a source file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Span {
     pub von: u32,
@@ -13,7 +13,7 @@ impl Span {
         Span { von, bis }
     }
 
-    /// Der Abschnitt, der beide umschliesst.
+    /// The range enclosing both.
     pub fn bis_zu(self, andere: Span) -> Span {
         Span {
             von: self.von.min(andere.von),
@@ -26,14 +26,14 @@ impl Span {
     }
 }
 
-/// Zeilenanfaenge einer Quelle, einmal berechnet.
+/// Line starts of a source, computed once.
 #[derive(Debug, Clone)]
 pub struct Zeilenindex {
     anfaenge: Vec<u32>,
     laenge: u32,
 }
 
-/// Eine Stelle, wie ein Mensch sie liest: 1-basierte Zeile, 1-basierte Spalte in *Zeichen*.
+/// A site as a human reads it: 1-based line, 1-based column in *characters*.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Stelle {
     pub zeile: u32,
@@ -61,7 +61,7 @@ impl Zeilenindex {
             Err(i) => i - 1,
         };
         let anfang = self.anfaenge[zeile] as usize;
-        // Spalte in Zeichen, nicht in Bytes -- die Lexik laesst Umlaute in Bezeichnern zu.
+        // Column in characters, not bytes -- the lexis allows umlauts in identifiers.
         let spalte = quelle[anfang..versatz as usize].chars().count() as u32 + 1;
         Stelle {
             zeile: zeile as u32 + 1,
@@ -69,7 +69,7 @@ impl Zeilenindex {
         }
     }
 
-    /// Der Text der Zeile (ohne Zeilenende), zu der der Versatz gehoert.
+    /// The text of the line (without the line ending) the offset belongs to.
     pub fn zeilentext<'a>(&self, quelle: &'a str, versatz: u32) -> &'a str {
         let versatz = versatz.min(self.laenge) as usize;
         let zeile = match self.anfaenge.binary_search(&(versatz as u32)) {

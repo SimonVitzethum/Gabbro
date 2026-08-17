@@ -1,13 +1,13 @@
-//! **Gabbro -- Lexik, Wortschatz, Grammatik.**
+//! **Gabbro -- lexis, vocabulary, grammar.**
 //!
-//! Stufe **P2** aus dem Prueferplan (`SPRACHE.md`, Teil III §6): *Lexer + Parser ueber alle
-//! Fragmente des Ordners.* Diese Kiste liest Quelltext und gibt einen Kernbaum; sie prueft
-//! **nichts** ausser der Form. Jede Zusage der Sprache -- M1 bis M4, D1/D2, Paarung, Wirkungen,
-//! Kosten -- liegt in `gabbro-check`, in fester Passfolge.
+//! Stage **P2** of the checker plan (`SPRACHE.md`, part III §6): *lexer + parser over all
+//! fragments of the folder.* This crate reads source text and yields a core tree; it checks
+//! **nothing** but form. Every promise of the language -- M1 to M4, D1/D2, pairing, effects,
+//! costs -- lives in `gabbro-check`, in a fixed pass order.
 //!
-//! Der Erzeuger haelt `forbid(unsafe_code)` (Arbeitsbereichs-`Cargo.toml`) und hat keine
-//! Abhaengigkeit ausserhalb von `std`. `README.md`: *„Ein Erzeuger, der selbst ausbrechen kann,
-//! macht die Eigenschaft seines Erzeugnisses wertlos."*
+//! The generator holds `forbid(unsafe_code)` (workspace `Cargo.toml`) and has no dependency
+//! outside `std`. `README.md`: *"A generator that can itself break out makes the property of
+//! its product worthless."*
 
 pub mod ast;
 pub mod diag;
@@ -19,7 +19,7 @@ pub mod span;
 pub use diag::{Absage, Absagen, Stufe};
 pub use parse::parse;
 
-/// Liest eine Quelle und gibt Baum und Absagen.
+/// Reads a source and yields tree and refusals.
 pub fn lies(datei: &str, quelle: &str) -> (ast::Programm, Absagen) {
     let mut absagen = Absagen::neu(datei);
     let baum = parse::parse(quelle, &mut absagen);

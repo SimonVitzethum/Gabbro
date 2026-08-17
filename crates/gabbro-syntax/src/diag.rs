@@ -1,27 +1,27 @@
-//! Absagen. **Abweisen, nie deuten** (`SPRACHE.md`, Regel 3): jede Absage traegt einen
-//! stabilen Code, eine Fundstelle und einen Grund im Klartext. Der Code ist das, was ein
-//! Pruefgeruest zaehlt; der Text ist fuer den Menschen daneben.
+//! Refusals. **Refuse, never interpret** (`SPRACHE.md`, rule 3): every refusal carries a
+//! stable code, a site and a reason in plain words. The code is what a test harness counts;
+//! the text is for the human beside it.
 
 use crate::span::{Span, Zeilenindex};
 
-/// Wie schwer eine Absage wiegt.
+/// How heavily a refusal weighs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Stufe {
-    /// Bricht die Uebersetzung.
+    /// Breaks compilation.
     Fehler,
-    /// Bricht nicht, ist aber ein Befund.
+    /// Does not break, but is a finding.
     Hinweis,
 }
 
-/// Eine einzelne Absage.
+/// A single refusal.
 #[derive(Debug, Clone)]
 pub struct Absage {
     pub stufe: Stufe,
-    /// Stabiler Code, z. B. `L003` (Lexik), `P017` (Parser), `V002` (Pruefpass).
+    /// Stable code, e.g. `L003` (lexis), `P017` (parser), `V002` (checking pass).
     pub code: &'static str,
     pub text: String,
     pub span: Span,
-    /// Zusaetzliche Zeilen unter der Fundstelle -- Regel, Vorbild, Gegenvorschlag.
+    /// Extra lines under the site -- rule, example, counter-proposal.
     pub notizen: Vec<String>,
 }
 
@@ -52,7 +52,7 @@ impl Absage {
     }
 }
 
-/// Alle Absagen eines Laufs, samt der Quelle, gegen die sie gemessen wurden.
+/// All refusals of a run, together with the source they were measured against.
 #[derive(Debug, Clone)]
 pub struct Absagen {
     pub datei: String,
@@ -82,7 +82,7 @@ impl Absagen {
         self.absagen.is_empty()
     }
 
-    /// Fuer den Menschen: Fundstelle, Zeile, Zeiger, Grund.
+    /// For the human: site, line, caret, reason.
     pub fn zeige(&self, quelle: &str) -> String {
         let index = Zeilenindex::neu(quelle);
         let mut out = String::new();

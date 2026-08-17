@@ -1,14 +1,14 @@
-//! Der Lexer -- `SYNTAX.md`, Abschnitt „Lexik".
+//! The lexer -- `SYNTAX.md`, section "Lexik".
 //!
-//! Kein Gleitkomma, `--` bis Zeilenende als Kommentar, Zahlen mit `_`, Umlaute in Bezeichnern.
-//! Zeichenketten kennen **keine Maskierung**: `char = jedes Zeichen ausser quote und newline`.
-//! Das ist keine Auslassung, sondern die Grammatik -- eine Maskierung waere ein neues Wort.
+//! No floating point, `--` to end of line as a comment, numbers with `_`, umlauts in
+//! identifiers. Strings know **no escaping**: `char = any character except quote and newline`.
+//! That is not an omission but the grammar -- an escape would be a new word.
 
 use crate::diag::{Absage, Absagen};
 use crate::kw::Kw;
 use crate::span::Span;
 
-/// Ein Satzzeichen oder Operator.
+/// A punctuation mark or operator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Z {
     Kolon2,
@@ -100,16 +100,16 @@ impl Z {
     }
 }
 
-/// Was ein Token ist.
+/// What a token is.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Art {
-    /// Ein freier Bezeichner.
+    /// A free identifier.
     Ident,
-    /// Ein Wort des geschlossenen Wortschatzes.
+    /// A word of the closed vocabulary.
     Wort(Kw),
-    /// Eine Ganzzahl. Gleitkomma gibt es im Kern nicht.
+    /// An integer. There is no floating point in the core.
     Zahl(u128),
-    /// Eine Zeichenkette, ohne die Anfuehrungszeichen.
+    /// A string, without the quotes.
     Text,
     Zeichen(Z),
     Ende,
@@ -122,7 +122,7 @@ pub struct Token {
 }
 
 impl Token {
-    /// Der Text des Tokens in der Quelle -- bei `Text` ohne die Anfuehrungszeichen.
+    /// The token's text in the source -- for `Text` without the quotes.
     pub fn text<'a>(&self, quelle: &'a str) -> &'a str {
         let (von, bis) = match self.art {
             Art::Text => (self.span.von as usize + 1, self.span.bis as usize - 1),
@@ -131,7 +131,7 @@ impl Token {
         quelle.get(von..bis).unwrap_or("")
     }
 
-    /// Wie das Token in einer Absage genannt wird.
+    /// How the token is named in a refusal.
     pub fn benennung(&self, quelle: &str) -> String {
         match self.art {
             Art::Ident => format!("Bezeichner `{}`", self.text(quelle)),
@@ -152,8 +152,8 @@ fn ist_folgezeichen(c: char) -> bool {
     ist_buchstabe(c) || c.is_ascii_digit() || c == '_'
 }
 
-/// Zerlegt die Quelle. Absagen sammeln sich; der Strom bricht nicht ab, damit ein Lauf
-/// mehr als einen Befund zeigt.
+/// Splits the source. Refusals accumulate; the stream does not abort, so that one run shows
+/// more than a single finding.
 pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
     let b = quelle.as_bytes();
     let mut i = 0usize;
@@ -169,13 +169,13 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
     while i < b.len() {
         let c = b[i];
 
-        // Zwischenraum
+        // Whitespace
         if c == b' ' || c == b'\t' || c == b'\r' || c == b'\n' {
             i += 1;
             continue;
         }
 
-        // Kommentar `--` bis Zeilenende. Steht VOR jeder Deutung von `-`.
+        // Comment `--` to end of line. Comes BEFORE any interpretation of `-`.
         if c == b'-' && i + 1 < b.len() && b[i + 1] == b'-' {
             while i < b.len() && b[i] != b'\n' {
                 i += 1;
@@ -183,7 +183,7 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
             continue;
         }
 
-        // Zeichenkette
+        // String
         if c == b'"' {
             let von = i;
             i += 1;
@@ -216,7 +216,7 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
             continue;
         }
 
-        // Zahl
+        // Number
         if c.is_ascii_digit() {
             let von = i;
             let (basis, ziffernanfang) = if c == b'0' && i + 1 < b.len() && b[i + 1] == b'x' {
@@ -261,8 +261,8 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
                 schiebe(&mut out, Art::Zahl(0), von, i);
                 continue;
             }
-            // Eine Ziffernfolge, die an eine Zahl grenzt, ist eine Falle: `0b12` waere sonst
-            // `0b1` gefolgt von `2`. Abweisen, nie deuten.
+            // A digit run adjoining a number is a trap: `0b12` would otherwise be `0b1`
+            // followed by `2`. Refuse, never interpret.
             if i < b.len() && (ist_buchstabe(b[i] as char) || b[i].is_ascii_digit()) {
                 let ende = {
                     let mut j = i;
@@ -307,7 +307,7 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
             continue;
         }
 
-        // Bezeichner oder Wort
+        // Identifier or word
         let ch = quelle[i..].chars().next().unwrap_or('\0');
         if ist_buchstabe(ch) || ch == '_' {
             let von = i;
@@ -329,7 +329,7 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
             continue;
         }
 
-        // Satzzeichen -- laengste Uebereinstimmung zuerst.
+        // Punctuation -- longest match first.
         let rest = &quelle[i..];
         const TABELLE: &[(&str, Z)] = &[
             ("..<", Z::BereichEx),
