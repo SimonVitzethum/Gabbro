@@ -789,7 +789,7 @@ MUTATIONEN = [
     Mutation(
         "geist-let-verschwindet-ganz",
         "emit.rs",
-        "        StmtArt::Let(l) if geist_wert(&l.wert, u) => {\n            aus.push_str(&format!(\"    {};\\n\", ausdruck(&l.wert, u, absagen)))\n        }",
+        "        StmtArt::Let(l) if geist_wert(&l.wert, u) => {\n            aus.push_str(&format!(\"{e}{};\\n\", ausdruck(&l.wert, u, absagen)))\n        }",
         "        StmtArt::Let(l) if geist_wert(&l.wert, u) => { let _ = l; }",
         "C-Absenkung -- eine Bindung an einen Geist nimmt den RUF mit; der Schritt entfaellt still",
         "code",
@@ -831,14 +831,11 @@ MUTATIONEN = [
     # Der ganze Entwurf des Erzeugers ist "weigere dich beim Namen statt zu raten" -- und davon
     # gab es bis zum 2026-08-17 drei Ausnahmen, alle drei uebersetzbar, zwei davon still
     # falsch. Gefunden am Korpus, dieselbe Klasse wie der Tabellenzeiger vom Vortag.
-    Mutation(
-        "option-wird-vergroebert",
-        "emit.rs",
-        "        TypExpr::Index { optional: true, .. } => None,",
-        "        TypExpr::Index { optional: true, .. } => Some(\"uint32_t\".into()),",
-        "C-Absenkung -- `option index into T` verliert das `None`; kein Bitmuster bleibt fuer abwesend",
-        "code",
-    ),
+    # `option-wird-vergroebert` stand hier vom Vormittag des 2026-08-17 bis zum Nachmittag
+    # desselben Tages. **Sie ist mitsamt ihrer Regel entfallen**: die Absage, die sie
+    # beschaedigte, gibt es nicht mehr, weil F8 die Darstellung entschieden hat. Ihre Sorge
+    # traegt jetzt `sonderwert-ist-null` -- dieselbe Frage, andere Form. *Eine Mutation geht
+    # nur mit ihrer Regel, nicht durch Umformulierung.*
     Mutation(
         "ausdruck-faellt-offen-auf-null",
         "emit.rs",
