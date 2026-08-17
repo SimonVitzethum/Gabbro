@@ -470,3 +470,36 @@ fn schablonen_abhaengigkeiten_zeigen_auf_vorhandene_eintraege() {
         }
     }
 }
+
+/// **Die LEBENDE Vertrauensflaeche — die Zahl, die bis zum 2026-08-17 nirgends stand.**
+///
+/// `ungedeckt()` wirft zwei sehr verschiedene Zustaende zusammen: `Entworfen` ist eine Zusage
+/// ueber etwas, das niemand gebaut hat; `Getragen` heisst, **der Uebersetzer stuetzt sich JETZT
+/// darauf.** Ist ein getragener Satz falsch, ist das erzeugte C falsch — ab dem naechsten Lauf.
+///
+/// > *Der Erzeuger hat die lebende Flaeche an einem Tag von 1 auf 4 gebracht, waehrend
+/// > `ungedeckt()` sich um eins bewegte.* Wer nur die eine Zahl liest, liest die harmlosere.
+///
+/// **Dieser Test nagelt beide an**, aus demselben Grund wie die Ratsche: eine Zahl, die sich
+/// still mitbewegt, ist keine.
+#[test]
+fn die_lebende_vertrauensflaeche_ist_gebucht() {
+    use gabbro_check::schablonen::{bewiesen, lebend_ungedeckt, ungedeckt, SCHABLONEN, Stand};
+    assert_eq!(
+        lebend_ungedeckt(),
+        4,
+        "getragen und unbewiesen: wer eine Schablone in den Erzeuger einbaut, vergroessert \
+         die LEBENDE Vertrauensbasis -- und das gehoert hierher UND in BEWEIS.md"
+    );
+    assert_eq!(ungedeckt(), 16);
+    assert_eq!(bewiesen(), 4);
+
+    // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
+    // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.
+    let entworfen = SCHABLONEN.iter().filter(|s| s.stand == Stand::Entworfen).count();
+    assert_eq!(
+        entworfen + lebend_ungedeckt() + bewiesen(),
+        SCHABLONEN.len(),
+        "entworfen + getragen + bewiesen muss die ganze Liste sein"
+    );
+}

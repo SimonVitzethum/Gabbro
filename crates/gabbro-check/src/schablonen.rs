@@ -318,7 +318,10 @@ pub const SCHABLONEN: &[Schablone] = &[
                   Laengen.** Bei variablen faellt die Schranke erst aus dem Inhalt, und dann \
                   ist je Feld zu pruefen. *Solange variable Laengen offen sind, deckt diese \
                   Schablone nur den festen Fall.*",
-        stand: Stand::Entworfen,
+        // **Getragen seit 2026-08-17** fuer den byteweisen Fall: `emit.rs` erzeugt Zugriffe in
+        // der erklaerten Bytereihenfolge plus eine Gueltigkeitsfunktion aus den
+        // `where`-Klauseln. Bitlagen bleiben abgelehnt («B24»).
+        stand: Stand::Getragen,
         fundstelle: "SPRACHE.md §10.1",
     },
     Schablone {
@@ -392,7 +395,11 @@ pub const SCHABLONEN: &[Schablone] = &[
         pflicht: "Die Absenkung legt genau N Slots an -- nicht weniger (dann waere ein \
                   Index im Typ ohne Speicher) und nicht mehr (dann waere Speicher ohne \
                   Index, den keine Schranke deckt).",
-        stand: Stand::Entworfen,
+        // **Getragen seit 2026-08-17**: `emit.rs` senkt eine `table … count N` zu einem festen
+        // C-Feld ab, und `pruefe-emission.sh` misst es an der Ausfuehrung. *Damit ist dieser
+        // Satz keine Zusage ueber einen kuenftigen Erzeuger mehr -- der Uebersetzer stuetzt
+        // sich JETZT darauf.*
+        stand: Stand::Getragen,
         fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), Befund M-3",
     },
     // ---- Kandidaten aus der Nachpruefung vom 2026-08-14. Noch kein Konstrukt, aber die
@@ -591,6 +598,30 @@ pub fn ohne_fundstelle() -> Vec<&'static str> {
     ohne_fundstelle_in(SCHABLONEN)
 }
 
+/// **Die LEBENDE Vertrauensflaeche — und sie ist die Zahl, auf die es ankommt.**
+///
+/// `ungedeckt()` zaehlt alles, was nicht bewiesen ist, und wirft damit zwei sehr verschiedene
+/// Zustaende zusammen:
+///
+/// * **`Entworfen`** — in der Spezifikation benannt, **kein Erzeugercode**. Eine Zusage ueber
+///   etwas, das niemand gebaut hat. Sie kann falsch sein, ohne dass heute etwas davon abhaengt.
+/// * **`Getragen`** — **der Uebersetzer stuetzt sich JETZT darauf.** Ist der Satz falsch, ist
+///   das erzeugte C falsch, und zwar ab dem naechsten Lauf.
+///
+/// > *Die zweite Zahl ist die gefaehrliche, und bis zum 2026-08-17 stand sie nirgends.* Der
+/// > Erzeuger hat an diesem Tag zwei Eintraege von `Entworfen` nach `Getragen` bewegt
+/// > (`table.absenkung`, `format.roundtrip`) und einen neuen als `Getragen` angelegt
+/// > (`option.sonderwert`) — **die lebende Flaeche ist an einem Tag von 1 auf 4 gewachsen**,
+/// > waehrend `ungedeckt()` sich um eins bewegte.
+///
+/// *Wer die Kennzahl liest, liest bisher die harmlosere Haelfte.*
+pub fn lebend_ungedeckt() -> usize {
+    SCHABLONEN
+        .iter()
+        .filter(|s| s.stand == Stand::Getragen)
+        .count()
+}
+
 /// Wieviele Schablonen tragen heute, ohne bewiesen zu sein?
 pub fn ungedeckt() -> usize {
     SCHABLONEN
@@ -616,10 +647,13 @@ pub fn zeige() -> String {
         ));
     }
     out.push_str(&format!(
-        "-- {} Schablonen, {} davon unbewiesen, {} maschinell bewiesen.\n",
+        "-- {} Schablonen, {} davon unbewiesen, {} maschinell bewiesen.\n\
+         --   davon LEBEND unbewiesen (der Uebersetzer stuetzt sich darauf): {}\n\
+         --   der Rest ist entworfen -- benannt, aber ohne Erzeugercode.\n",
         SCHABLONEN.len(),
         ungedeckt(),
-        bewiesen()
+        bewiesen(),
+        lebend_ungedeckt()
     ));
     out.push_str(&format!(
         "-- Der eine Isabelle-Posten ist damit keine Zahl 1, sondern diese Liste.\n\
