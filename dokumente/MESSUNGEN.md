@@ -6206,3 +6206,57 @@ zehn Fragmente heute noch aufhalten, sind sechs von neun keine Bauarbeit.*
 > **Und zwei der zehn sind gar nicht zu schliessen.** `FRAGMENTE.md` führt F3 und F5 seit dem
 > 2026-08-14 selbst als *„passt nicht"*. Ein Erzeuger, der dafür C ausgäbe, gäbe C für ein
 > Programm aus, das Gabbro ablehnt — *die eine Bewegung, gegen die dieses Modul gebaut ist.*
+
+
+---
+
+# Die drei letzten Bauposten — und einer war keiner
+
+## `descendants of` benennt seine Kante nicht
+
+**Gefunden beim Absenken, 2026-08-17.** Die Domäne sagt nicht, an welcher Kante sie läuft.
+`FRAGMENTE.md` F1 führt in seiner Tabelle **vier** Kandidaten — `parent`, `first_child`,
+`next_sibling`, `prev_sibling` — und `descendants of c.slots[s]` nennt keinen.
+
+> **Die Grammatik weiss sehr wohl, wie man das sagt:** `chain(a, b) in <ort>`
+> (`SYNTAX.md`:348) benennt seine beiden Felder. `descendants of` und `ancestors of` tun es
+> nicht.
+
+*Das ist eine Unsymmetrie in der Grammatik, kein fehlender Erzeugercode* — und sie fällt erst
+auf, wenn jemand die Domäne absenken will. **Damit ist der Posten kein Bauposten mehr, sondern
+der sechste offene Befund** neben «B10», «B11», «B12», «B17» und «B24».
+
+## `atomic` — nur der lastfreie Fall
+
+`publishes nothing relaxed` wird `_Atomic`: **es gibt nichts zu paaren, also nichts zu
+begründen.**
+
+**`release`/`acquire` werden abgelehnt.** Dass ein `release`-Speichern die Sichtbarkeit
+*herstellt*, die die Paarung behauptet, ist eine Aussage über das Speichermodell — **die
+Klempnerei-Klasse *Rennen* hängt seit dem 2026-08-16 genau daran**, und der Prüfer baut sie
+nicht.
+
+> *Der Erzeuger entscheidet nicht, was der Prüfer offenlässt.*
+
+## `check` — die Probe wird eine Funktion, ihre Behauptung fährt mit
+
+`claim`, `gates` und `counterprobe` sind Buchführung über die **Messung**, nicht Rechnung.
+
+> **Die Gegenprobe ist die Zeile, die die Probe erst zu einer macht** — sie sagt, wie die Probe
+> ROT werden könnte. *Eine Probe ohne sie ist eine Zusage, und eine Probe ohne ihre Behauptung
+> auszuliefern wäre eine Zahl ohne Gegenstand.*
+
+## Der Endstand
+
+**Ein Bauposten bleibt:** `walk`/`mappings of` (F9) — der vierstufige Abstieg. Er ist der
+einzige, der weder ein Befund noch die Axiomschicht ist.
+
+| | Posten | gehört |
+|---|---|---|
+| 6 | «B10» · «B11» · «B12» · «B17» · «B24» · **die unbenannte Kante** | **dem Ordner** |
+| 1 | `at dma` · `atomic release` — die Barriere und die Sichtbarkeit | **der Axiomschicht** |
+| 1 | `walk`/`mappings of` | **zu bauen** |
+
+> **Von acht Sperren sind sieben keine Bauarbeit.** *Das ist der Ertrag dieses Erzeugers: er hat
+> die Fragen nicht erzeugt, er ist auf sie aufgelaufen — und jede trägt jetzt einen Namen und
+> eine Stelle.*
