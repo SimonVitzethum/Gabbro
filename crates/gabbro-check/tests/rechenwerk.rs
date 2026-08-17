@@ -255,8 +255,10 @@ impl fn hochlauf(p : BootPhase) effects { consumes p, writes mmu, writes faeden 
 #[test]
 fn der_erzeuger_weigert_sich_statt_offen_auszufallen() {
     fn absagen_von(q: &str) -> Vec<String> {
-        let mut a = gabbro_syntax::Absagen::neu("p.gab");
-        let (baum, _) = gabbro_syntax::lies("p.gab", q);
+        // Die Absagen des Parsers gehoeren dazu -- sonst liest sich eine Probe, die gar
+        // nicht parst, wie ein Erzeuger ohne Beanstandung.
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe selbst parst nicht:\n{}", a.zeige(q));
         let _ = gabbro_check::emit::emittiere(&baum, &mut a);
         a.absagen.iter().map(|x| x.text.clone()).collect()
     }
@@ -490,8 +492,12 @@ impl fn zaehle(k : ptr<normal, r> Kopf) -> u32 effects { reads k } costs <= 4096
 #[test]
 fn on_exceeded_und_die_untere_schranke_sind_bewacht() {
     fn absagen_von(q: &str) -> Vec<String> {
-        let mut a = gabbro_syntax::Absagen::neu("p.gab");
-        let (baum, _) = gabbro_syntax::lies("p.gab", q);
+        // **Die Absagen des PARSERS gehoeren dazu.** Ohne sie sieht ein Tippfehler in der
+        // Probe aus wie ein Erzeuger, der nichts zu beanstanden hat -- und genau das ist
+        // hier passiert: `r` als Schleifenmarke ist das Leserecht am Zeiger, die Probe
+        // parste nicht, und die leere Absagenliste las sich wie ein Befund.
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe selbst parst nicht:\n{}", a.zeige(q));
         let _ = gabbro_check::emit::emittiere(&baum, &mut a);
         a.absagen.iter().map(|x| x.text.clone()).collect()
     }
@@ -504,7 +510,7 @@ fn on_exceeded_und_die_untere_schranke_sind_bewacht() {
 extern fn schritt() -> u32 effects { pure } costs <= 4 ops;
 extern fn merker() -> u32 effects { pure } costs <= 1 ops;
 impl fn f() -> u32 effects { pure } costs <= 4096 ops
-{ retry r until schritt() == 9 bounded 400 ops progress p on_exceeded merker
+{ retry warten until schritt() == 9 bounded 400 ops progress p on_exceeded merker
     effects { pure } { } return 0; }
 }",
     );
