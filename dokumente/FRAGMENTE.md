@@ -1690,3 +1690,95 @@ compiler sustains.
 > gain is real and it is **not the gain the folder promises** — and that
 > needs saying, because `format` elsewhere (base rate: 5 formats, 0 errors) once already
 > stood there without evidence.
+
+---
+
+# «F0» — der Gleitkommakorpus, und er hat sofort eine Planentscheidung gekippt
+
+> **Gemessen 2026-08-18** an *Fraktaler 3* (Version 3.1), einem gleitkommaschweren Renderer:
+> 52 Quelldateien, **479 `float`, 355 `double`, 37 `long double`**, 128 NaN/Inf-Stellen — und
+> **kein `-ffast-math`** im Makefile eines leistungskritischen Programms.
+>
+> *Die Messbasis dieses Ordners (Caprock) hat null rechnende Gleitkommastellen. Ein Korpus für
+> «F» muss also von außerhalb kommen, sonst entwirft man für eine vorgestellte Verwendung.*
+
+## FF1 — Der Fluchttest. Vier der sieben Entscheidungen in einer Zeile.
+
+```c
+float t = float(arg(Z1)) / (2.0f * 3.141592653f);
+if (Zz2 < ER2 || isnan(de.x) || isinf(de.x) || isnan(de.y) || isinf(de.y))
+```
+
+**Befund.** Der Programmierer schreibt die NaN-Prüfung **von Hand neben den Vergleich** — weil
+`Zz2 < ER2` allein den Fall nicht abdeckt. *Das ist genau die Lage, die F1.3 beschreibt, und
+hier steht sie als echter Code.* Dazu in derselben Umgebung: eine Klemmung
+(`min(max(x, 0.), 1.)` — das ist `narrow`), eine Breitenmischung (`float` aus `double`,
+ausdrücklich umgewandelt), zwei `log`-Aufrufe (libm, also die Axiomschicht) und ein
+**inexaktes Literal** (`3.141592653`).
+
+## FF2 — Die Genauigkeitsleiter. Sie beantwortet die `long double`-Frage.
+
+```c
+= { "none", "float", "double", "long double", "floatexp", "doubleexp", "softfloat"
+#ifdef HAVE_FLOAT128
+  , "float128"
+#endif
+};
+```
+
+**Befund, und er ist stärker als die Empfehlung, die er trägt.** In der Domäne, die
+Extragenauigkeit *wirklich* braucht, ist `long double` **eine Sprosse von sieben** — darüber
+liegen `floatexp`, `doubleexp`, `softfloat`, `float128`, alles Softwaretypen des Programms.
+
+> **Wer mehr als f64 braucht, will keinen plattformabhängigen 80-Bit-Typ, sondern eine
+> BENANNTE Genauigkeit.** Die Weigerung bei `long double` ist damit nicht Härte, sondern die
+> Ablesung dessen, was echte Programme ohnehin tun.
+
+## FF3 — Die Reduktion.
+
+```c
+progress_t a = 0;
+for (count_t i = 0; i < count; ++i) { a += progress[1 + count + i]; }
+```
+
+**Befund.** Eine Summe über ein Feld — in Gabbro die Form, für die `accumulates` da ist. Über
+Gleitkomma ist sie **reihenfolgeabhängig**, und `accumulates.monoid` ist unter der Prämisse
+bewiesen, dass sie es nicht ist. *Der Korpus liefert damit den Bedarfsbeleg für `F004`: die
+Weigerung ist nicht vorsorglich, sie trifft eine Form, die wirklich vorkommt.*
+
+## FF4 — Die Literalmessung, und sie hat F1.5 gekippt
+
+Alle 340 Gleitkommaliterale des Renderers gegen die Frage *„exakt darstellbar?"* gehalten
+(`m/10^d` ist dyadisch genau dann, wenn `5^d` die Mantisse teilt):
+
+```
+340  Literale gesamt
+287  exakt darstellbar   (84 %)   -- 0.0, 1.0, 2.0, 3.0, 0.5 …
+ 53  NICHT exakt         (16 %)   -- 0.6931471805599453, 6.283185307179586, 0.04045, 4.1
+```
+
+**Die geplante Regel hätte 53 Literale abgelehnt, darunter ln 2 und 2π.** Das ist keine
+Härtung, das ist eine unbrauchbare Sprache: eine transzendente Konstante ist in *keiner*
+binären Breite exakt, und ihre Dezimalform ist schon eine Näherung.
+
+**Aber die Messung sagt auch, wo die Grenze wirklich liegt.** Die exakten 84 % sind
+Strukturkonstanten; die inexakten 16 % sind **Näherungen an reelle Zahlen**. Die richtige
+Regel verbietet also nicht das Inexakte, sondern das **stillschweigend** Inexakte:
+
+```gabbro
+const TAU : f64 = 6.283185307179586 rounded;
+```
+
+*Ein Wort, und es hat schon ein Geschwister im Ordner:* `u32 wrapping` sagt **der Überlauf ist
+erklärt und darum kein Befund** — `rounded` sagt dasselbe über die Rundung. **Dieselbe Form,
+dieselbe Begründung, und darum kein neues Muster.**
+
+## Was F0 beigetragen hat
+
+| | |
+|---|---|
+| **F1.3** bestätigt | die Handprüfung neben dem Vergleich steht als echter Code da |
+| **F1.5 gekippt** | „exakt oder Absage" wäre unbrauchbar — die Regel heißt jetzt „erklärt oder Absage" |
+| **`long double`** | die Weigerung ist eine Ablesung, keine Härte: echte Programme bauen eine Leiter |
+| **F004** belegt | die Gleitkommareduktion kommt wirklich vor |
+| **kein fast-math** | ein leistungskritischer Renderer verzichtet freiwillig darauf |

@@ -2502,7 +2502,9 @@ ein Konstrukt, das es braucht.
 > gegen die R7 und W3 stehen. *Der Bedarf darf entschieden werden; er darf nicht erfunden
 > werden.*
 
-**Tor F0:** 3–5 Fragmente liegen in `FRAGMENTE.md`, jedes mit seinem Befund.
+**Tor F0: ERREICHT 2026-08-18.** Vier Fragmente aus *Fraktaler 3* liegen in
+`FRAGMENTE.md` — und F0 hat seine Aufgabe sofort erfüllt: **es hat F1.5 gekippt**, bevor eine
+Zeile Code dafür geschrieben war. *Genau dafür kommt der Korpus zuerst.*
 
 ## F1 — Sieben Entscheidungen VOR der Grammatik (R7)
 
@@ -2534,10 +2536,26 @@ nicht abgeschaltet, sondern **bedingt** — man wird NaN einmal los und rechnet 
 **4. Wie man NaN loswird.** Über die vorhandene Form: `narrow x to finite else { … }`. Die
 Prüfung bleibt im erzeugten C, bis M1 sie wegbeweist (W6) — genau wie bei jedem Bereich.
 
-**5. Literale.** Ein Literal muss im Zieltyp **exakt darstellbar** sein, sonst Absage
-(`F002`). *Kein stilles Runden von Quelltext.* Und der Leser bekommt eine gemessene Aufgabe:
-`0..100` ist heute gültig, also ist `1.5` gegen `1..5` echt mehrdeutig — **`..` frisst zuerst**
-(maximal munch), `1.` allein wird abgelehnt.
+**5. Literale — BERICHTIGT durch F0 am 2026-08-18.** Die geplante Regel lautete *exakt
+darstellbar, sonst Absage*. **F0 hat sie gekippt:** an 340 Literalen eines echten Renderers
+gemessen wären **53 abgelehnt worden, darunter ln 2 und 2π**. Eine transzendente Konstante ist
+in keiner binären Breite exakt; ihre Dezimalform ist schon eine Näherung.
+
+*Aber dieselbe Messung sagt, wo die Grenze wirklich liegt:* die exakten 84 % sind
+Strukturkonstanten (`0.0`, `1.0`, `0.5`), die inexakten 16 % sind Näherungen an reelle Zahlen.
+
+> **Verboten ist nicht das Inexakte, sondern das STILLSCHWEIGEND Inexakte.**
+
+```gabbro
+const TAU : f64 = 6.283185307179586 rounded;
+```
+
+Ein Wort, und es hat ein Geschwister im Ordner: `u32 wrapping` sagt *der Überlauf ist erklärt
+und darum kein Befund* — `rounded` sagt dasselbe über die Rundung. **Dieselbe Form, dieselbe
+Begründung, kein neues Muster.** `F002` trifft nur noch das unerklärte Literal.
+
+Und der Leser bekommt eine gemessene Aufgabe: `0..100` ist heute gültig, also ist `1.5` gegen
+`1..5` echt mehrdeutig — **`..` frisst zuerst** (maximal munch), `1.` allein wird abgelehnt.
 
 **6. Gleichheit** bleibt erlaubt. `x == x` ist für NaN falsch, und genau das führt die
 Faktenmaschine. *Ein Verbot wäre eine Härtung ohne gemessenen Bedarf.*
@@ -2550,7 +2568,7 @@ assoziativ, `max` mit NaN ist kein Verband). `F004`, und die Prämisse ist berei
 
 | | |
 |---|---|
-| zwei Wörter | `f32`, `f64` — der Wortschatzwächter hält `kw.rs` gegen die Tabelle |
+| drei Wörter | `f32`, `f64`, `rounded` — der Wortschatzwächter hält `kw.rs` gegen die Tabelle |
 | `intty` → `numty` | die EBNF-Regel wird verallgemeinert, die Ganzzahlform bleibt darin |
 | Literalform | Gleitkommaliteral im Leser, mit der `..`-Regel aus F1.5 |
 | Bereiche | `f64 in 0.0 .. 1.0` — erlaubt, und die Grenzen müssen exakt darstellbar sein |
