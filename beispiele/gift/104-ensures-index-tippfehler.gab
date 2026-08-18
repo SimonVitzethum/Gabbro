@@ -1,0 +1,22 @@
+-- erwartet: M109
+-- **Der Index ist ein Ausdruck, und niemand las ihn.** Bis zum 2026-08-19 sammelte
+-- `sammle_namen_pred` aus einem Ort nur den Grundnamen; die Suffixe blieben ungelesen.
+-- Damit prueft `M109` genau die Namen, die niemand falsch schreibt -- und schweigt an
+-- der Stelle, an der ein Tippfehler wahrscheinlich ist.
+--
+-- *Die Gegenrichtung steht in `beispiele/01-tabelle.gab`: dort ist `s` ein Quantorbinder
+-- und darf NICHT fallen. Ohne die Bindung waere dieser Absteig ein Fehlalarm.*
+module gift::ensures_index {
+
+table Werke count 8 { slot { a : u32 in 0 .. 10, } }
+
+impl fn nullen() -> unit
+    ensures  forall s in slots of Werke : Werke.slots[tippfehler].a == 0
+    effects  { reads Werke, writes Werke }
+    costs <= 64 ops
+{
+    traverse s over slots of Werke by unvisited { Werke.slots[s].a = 0; }
+    return;
+}
+
+}

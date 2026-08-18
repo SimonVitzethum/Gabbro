@@ -6839,9 +6839,14 @@ extern fn mmu_an(p : BootPhase) -> BootPhase
 seit jeher.** Geprüft: `extern fn mmu_an(p) -> BootPhase ensures result != p effects { … }`
 geht durch, 0 Fehler.
 
-**Aber die Hälfte fehlt, und sie fehlt beim Prüfer:** kein Pass liest `ensures` — `grep -rn
-"\.ensures" crates/gabbro-check/src` findet außer dem Zeugnis nichts. Nur `requires` wird
+**Aber die Hälfte fehlt, und sie fehlt beim Prüfer:** ~~kein Pass liest `ensures`~~ — `grep
+-rn "\.ensures" crates/gabbro-check/src` fand außer dem Zeugnis nichts. Nur `requires` wurde
 gelesen, und nur vom Aufrufgraph für `Held(…)`.
+
+> **Überholt am 2026-08-18** durch `m1::ensures_pruefen` (`M109`/`M110`/`M111`). Die Messung
+> oben bleibt als Messung stehen; **was sie über den heutigen Prüfer sagt, gilt nicht mehr.**
+> *Geprüft wird die Wohlgeformtheit — Namen, `result`, Herstellbarkeit. Nicht geprüft wird die
+> Einlösung durch den Rumpf, und die bleibt Beweisersache.*
 
 *Also: hinschreiben kostet nichts und ist heute Dokumentation.* **Die volle Schicht 2 ist:
 (a) die sieben Zeilen schreiben, (b) den Prüfer sie in die Beweispflicht des Rufers tragen
@@ -6948,12 +6953,17 @@ $ cat tippfehler.gab
 3 Items, 0 Fehler, 0 Hinweise
 ```
 
-**`zaheler` gibt es nicht, und niemand sagt etwas.** Kein Pass liest Prädikate, also prüft auch
-keiner ihre *Namen*.
+**`zaheler` gibt es nicht, und niemand sagt etwas.** ~~Kein Pass liest Prädikate, also prüft
+auch keiner ihre *Namen*.~~
 
 > *Eine Pflicht, die niemand liest, kann niemand falsch schreiben — und genau das ist das
 > Problem.* Die sieben Zeilen in `beispiele/22` sind wohlgeformt, **weil jemand hingesehen
 > hat, nicht weil ein Tor es hält.**
+
+> **Nachgemessen 2026-08-19, und der Satz gilt nicht mehr.** Dieselbe Eingabe fällt heute an
+> `M109` (*„`zaheler` in `ensures` ist hier nicht erklaert"*) **und** an `M111`, und zwar an
+> einem `impl fn` wie an einem rumpflosen `extern fn`. *Das Tor gibt es seit dem 2026-08-18;
+> was fehlte, war ein Wächter, der den Befundtext daneben nachzieht.*
 
 Der kleinste Schritt ist nicht, `ensures` zu beweisen, sondern seine **Grundnamen
 aufzulösen**. *Und vorher zu messen, wie viele Korpusstellen dabei fallen — eine Regel, die den
@@ -7441,3 +7451,99 @@ Fragment geht durch", und dieser Ordner hat ihn schon einmal bezahlt.
 
 **Und sie ist auf `kernel/` und `mm/` beschränkt** — 234 von rund 64 000 Dateien. Die Auswahl
 ist der Kern, nicht der Baum.
+
+---
+
+# Der Widerruf ohne Wächter — acht Stellen, drei Dateien, 2026-08-19
+
+**Gemessen beim Ablesen des Standes, nicht beim Bauen.** Die Frage war *„was ist noch offen"*;
+gefunden wurde etwas anderes: **Sätze, die der Ordner widerrufen hat und die trotzdem
+dastanden.**
+
+## Der Befund, mit Fundstellen
+
+<!-- widerruf:aus -->
+| Datei | Zeile | was dastand | widerlegt durch |
+|---|---|---|---|
+| `dokumente/PLAN.md` | 1742 | „Gleitkomma — nicht im Kern" | «F1», `typen.rs` |
+| `dokumente/PLAN.md` | 1826 | „M1 ist über Intervallen ganzer Zahlen gebaut" | `FBereich` |
+| `dokumente/PLAN.md` | 1983 | 3D-Renderer: **für immer draußen** | dieselbe Spalte |
+| `dokumente/PLAN.md` | 2018 | „hat keinen Bereich, den `M101` vergleichen könnte" | `M101` |
+| `dokumente/PLAN.md` | 2150 | `opaque` zum Beißen bringen — **eingeschoben** | `D003`/`D004` |
+| `dokumente/PLAN.md` | 2158 | Punkt 5: **nicht bauen** | «F», derselbe Tag |
+| `dokumente/SPRACHE.md` | 614 | „no floating point in the core" | «F1» |
+| `dokumente/SYNTAX.md` | 165 | „**No floating point in the core.**" | «F1» |
+<!-- widerruf:an -->
+
+**Die ersten sechs wurden von Hand gefunden, die letzten zwei vom Wächter.** Und die letzten
+zwei sind die teureren: sie stehen in der **Spezifikation**. *Ein Satz in `SYNTAX.md` ist die
+Antwort auf „was ist erlaubt" — er wird gelesen und nicht überflogen.*
+
+## Die Gegenprobe, und sie ist die eigentliche Messung
+
+`beispiele/26-gleitkomma.gab` läuft mit **8 Items, 0 Fehlern, 100 % Deckung** — während drei
+Dateien daneben schrieben, es gehe nicht. **Die Messung war nie strittig; sie war nur nirgends
+angekommen.**
+
+## Und dann fing der Wächter seinen eigenen Autor
+
+<!-- widerruf:aus -->
+Beim Bauen des zweiten Eintrags (`WE1`, *„kein Pass liest `ensures`"*) meldete er **sechs
+lebende Vorkommen in vier Dateien**:
+<!-- widerruf:an -->
+
+<!-- widerruf:aus -->
+```
+dokumente/MESSUNGEN.md:6842   kein Pass liest `ensures`
+dokumente/MESSUNGEN.md:6951   Kein Pass liest Prädikate
+dokumente/PLAN.md:2909        Kein Pass liest Prädikate       <- zwanzig Minuten alt
+TODO.md:268                   prueft auch keiner ihre NAMEN
+beispiele/22-bootstrecke.gab:45  Kein Pass liest `ensures`
+```
+<!-- widerruf:an -->
+
+**Die dritte Zeile stand seit zwanzig Minuten da** — geschrieben in derselben Sitzung, in der
+der Wächter entstand, sechzig Zeilen über sich selbst. *Ein Werkzeug, das seinen Autor beim
+Schreiben fängt, hat den Bedarf nicht behauptet, sondern belegt.*
+
+**Nachgemessen:** `ensures zaheler == 1` neben `static mut zaehler` fällt seit dem 2026-08-18
+an `M109` **und** `M111`, an einem `impl fn` wie an einem rumpflosen `extern fn`.
+
+## Der Rest war ein echtes Loch — und der Index war es
+
+Beim Nachmessen der verbliebenen Hälfte (*Quantorbinder und `Self`*) fiel eine Lücke auf, die
+in keiner Liste stand:
+
+```gabbro
+ensures forall s in slots of W : W.slots[tippfehler].a == 0
+→ 3 Items, 0 Fehler, 0 Hinweise
+```
+
+**`sammle_namen_pred` sammelte aus einem `Ort` nur den Grundnamen.** Die Suffixe blieben
+ungelesen, und ein Index ist ein *Ausdruck*. Damit prüfte `M109` genau die Namen, die niemand
+falsch schreibt. **Fünf der sechzehn `ensures`-Stellen des Korpus indizieren** — in keiner war
+der Index gelesen.
+
+> **Dieselbe Bauart wie die vier blinden Walker des 2026-08-18:** der Rumpf wurde betreten,
+> ein Zweig davon nicht. *Das ist inzwischen die fünfte Instanz, und sie ist das stärkste
+> Argument für den Walker-Wächter, den `TODO.md` unter BAUEN führt.*
+
+**Gebaut, mit beiden Richtungen gemessen:**
+
+| | |
+|---|---|
+| Absteig in `OrtSuffix::Index` | Gift 104 fällt an `M109` |
+| Quantorbinder gebunden | `beispiele/01`, `09`, `17`, `18` bleiben grün — **ohne die Bindung wäre der Absteig ein Fehlalarm** |
+| Domänenträger gelesen | `forall s in slots of W` verlangt jetzt, dass `W` auflöst |
+
+**Korpuspreis: null.** 31 Beispiele, 12 Übersetzungseinheiten, 104 Giftproben — *alle grün, und
+die 103 alten beißen weiter.* Eine Regel, die den eigenen Korpus nicht zerlegt, ist hier
+ausnahmsweise kein Verdachtsmoment: die sechzehn Stellen wurden von Hand geschrieben und von
+Hand gegengelesen, und genau das war der Einwand.
+
+## Was der Wächter NICHT kann
+
+**Er ist ein Gedächtnis, kein Urteil.** Er findet die sieben Widerrufe, die jemand
+aufgeschrieben hat. Gegen einen Satz, den niemand als überholt erkannt hat, hilft er nicht —
+*und die zwei Fundstellen in der Spezifikation zeigen, dass genau das der wahrscheinliche Fall
+ist.*

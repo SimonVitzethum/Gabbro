@@ -162,7 +162,13 @@ regbind    = ident ":" ident ;                                 (* G4 *)
 > them and carries them in a class of their own. *A named exception is a
 > promise; an invisible one is a hole.*
 
-**No floating point in the core.** Strings only in `claim`, `reason`, `assume` and `section`.
+~~**No floating point in the core.**~~ **Revoked 2026-08-18 by «F».** `f32` and `f64` are
+core types: a declared range, a NaN bit and an infinity bit, arithmetic rounded outward,
+round-to-nearest-even pinned. *The sentence stood for as long as the need was measured at
+zero; the folder decided otherwise, and «F0» names the substitute for the missing need
+instead of inventing one.*
+
+Strings only in `claim`, `reason`, `assume` and `section`.
 
 ---
 

@@ -263,14 +263,14 @@ of items that are neither code nor a run — what remains is building and measur
       Kontextwurzel ist leer, also kann die Regel *„jeder Platz, den zwei Kontexte beruehren,
       ist gesperrt oder atomar"* nie feuern. **Dieselbe Lage wie `E010`.** Sie haengt damit am
       ZWEITEN Korpus, der ohnehin als Bedingung ueber K11 steht.
-- [ ] **Ein Tippfehler in einem `ensures` faellt nicht** *(gemessen 2026-08-17)*.
-      `ensures zaheler == 1` neben `static mut zaehler` geht mit **0 Fehlern** durch: kein
-      Pass liest Praedikate, also prueft auch keiner ihre NAMEN. *Eine Pflicht, die niemand
-      liest, kann niemand falsch schreiben -- und genau das ist das Problem.* Der kleinste
-      Schritt ist nicht, `ensures` zu beweisen, sondern seine **Grundnamen aufzuloesen**
-      (Parameter, Globale, Konstanten, Quantorbinder, `result`, `Self`). **Vorher messen, wie
-      viele Korpusstellen dabei faellen** -- eine Regel, die den eigenen Korpus zerlegt, ist
-      ein Befund und keine Regel.
+- [ ] **`ensures` ist wohlgeformt geprueft -- die EINLOESUNG fehlt** *(nachgemessen
+      2026-08-19)*. ~~Ein Tippfehler in einem `ensures` faellt nicht.~~ Er faellt seit dem
+      2026-08-18 an `M109` und `M111`, an einem `impl fn` wie an einem rumpflosen
+      `extern fn`; die Grundnamen loesen auf (Parameter, Globale, Konstanten, `result`).
+      **Was offen bleibt, ist die andere Haelfte und sie ist die groessere:** dass der Rumpf
+      die Zusage HERSTELLT, prueft niemand, und das ist Beweisersache. *Der kleinste naechste
+      Schritt ist nicht der Beweis, sondern die Quantorbinder und `Self` -- die zwei
+      Namensarten, die `sammle_namen_pred` heute nicht kennt.*
 - [ ] **Die Absenkung fehlt fuer die meisten Formen -- und zwar als WEIGERUNG, nicht als Luecke.**
       `C001` weigert sich benannt fuer `forever`, `publishes`, `awaits`, `exchange`,
       `let … else`, `static`, `reason`, `group`, `walk`, `entry`, `boot`, `accumulates`,
@@ -535,6 +535,26 @@ of items that are neither code nor a run — what remains is building and measur
 ---
 
 # BUILDING — needs code
+
+- [ ] **Ein Waechter, der jeden Pass-Walker gegen die blockfuehrenden Anweisungsarten haelt**
+      *(fuenfte Instanz am 2026-08-19)*. Vier blinde Walker an einem Tag (`H007` in
+      `observes`, der RCU-Walker in Schleifen, `typ_von_ort` gegen `index_pruefen`, und der
+      `retry`-Rumpf), und jetzt die fuenfte: **`sammle_namen_pred` betrat den `Ort`, aber
+      nicht seinen Index** -- `ensures … W.slots[tippfehler]` ging mit 0 Fehlern durch.
+      *Jedes Mal wurde der Rumpf betreten und ein Zweig davon nicht.* **Fuenf Funde derselben
+      Bauart sind kein Zufall, sondern ein fehlendes Werkzeug** -- dasselbe Argument wie bei
+      `pruefe-klauseln.py` und `pruefe-widerruf.py`, und beide haben beim ersten Lauf
+      geliefert.
+- [ ] **`pruefe-widerruf.py` ist ein GEDAECHTNIS und kein URTEIL** *(gebaut 2026-08-19)*.
+      Sieben Widerrufe gebucht, acht Fundstellen geschlossen. **Er findet nur, was jemand als
+      widerrufen aufgeschrieben hat** -- und dass zwei der acht in der SPEZIFIKATION standen
+      (`SYNTAX.md`:165, `SPRACHE.md`:614) und von Hand nicht gefunden wurden, sagt, dass es
+      weitere gibt. *Was fehlt, ist die andere Richtung: eine Liste dessen, was gebaut wurde,
+      gegen die Dokumente gehalten -- statt eine Liste dessen, was widerrufen wurde.*
+- [ ] **`Self` in einem `ensures` ist ungemessen** *(2026-08-19)*. `sammle_namen_pred` bindet
+      seit heute Quantorbinder und steigt in Indizes ab; **`Self` kennt es nicht.** Im Korpus
+      steht `Self` nur in `invariant`, wo dieser Pass nicht laeuft -- *also ist es heute kein
+      Fehlalarm und morgen vielleicht einer.* Eine Zeile, sobald ein `ensures` es benutzt.
 
 - [ ] **`atomic` ist ein ITEM, kein Slotfeld** *(gemessen 2026-08-18 an K2-F2)*. Das Original
       benutzt `atomic_long_inc_not_zero` -- **ein atomares RMW ist seine eigene

@@ -40,10 +40,13 @@
 -- es gibt. F7 kommt ohne aus, weil ein Fragment ein Ausschnitt ist und seine Namen nicht
 -- deklariert.
 --
--- **Und dabei faellt ein Befund ab, der hierher gehoert:** ein Tippfehler in einem `ensures`
--- faellt nicht. `ensures zaheler == 1` neben `static mut zaehler` geht durch -- gemessen
--- 2026-08-17, 0 Fehler. *Kein Pass liest `ensures`.* Die sieben Zeilen unten sind damit
--- wohlgeformt, weil jemand hingesehen hat, nicht weil ein Tor es haelt.
+-- **Und dabei fiel ein Befund ab, der seither behoben ist:** ~~ein Tippfehler in einem
+-- `ensures` faellt nicht~~ (gemessen 2026-08-17, 0 Fehler). Seit dem 2026-08-18 faellt er an
+-- `M109` und `M111`. Die sieben Zeilen unten sind damit wohlgeformt, **weil ein Tor es
+-- haelt** -- und nicht mehr bloss, weil jemand hingesehen hat.
+--
+-- *Was das Tor NICHT haelt: dass der fremde Rumpf die Zusage einloest. Das ist der Grund,
+-- warum diese Datei sie ueberhaupt hinschreibt.*
 
 module beispiel::bootstrecke {
 

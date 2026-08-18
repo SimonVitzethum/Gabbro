@@ -92,8 +92,15 @@ cargo run --bin gabbro -- schablonen                 # the proof-template regist
 cargo test                                           # 79 tests
 ./mutiere-pruefer.py                                 # damage one rule at a time: 65 of 65
 ./pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
+./pruefe-klauseln.py                                 # declared, exported, never read
+./pruefe-widerruf.py                                 # sentences the folder has revoked, still standing
 isabelle build -d beweise -c Gabbro                  # the machine-checked templates
 ```
+
+**`pruefe-widerruf.py` guards the class that cost this folder eight sites in three files on
+2026-08-19** — a sentence that was true when written and says *"this can never work"* long
+after it was built. *It prevents work rather than merely delaying it, and it does so
+quietly, because it reads like a result.*
 
 **`paesse` prints what each pass does *not* check.** A tool that lets unchecked silence look
 like a green result is a false green — the same class of error `pruefe-syntax.sh` paid for

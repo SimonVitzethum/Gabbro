@@ -611,8 +611,9 @@ body in a fixed order; every declaration complete at exactly one place.
 
 ### 2. Lexis and vocabulary
 
-Lexis unchanged (identifiers, numbers with `_`, `--` comments, no floating point in the core,
-strings only in `claim`, `reason`, `assume`, `section`, `unfalsifiable`).
+Lexis unchanged (identifiers, numbers with `_`, `--` comments, ~~no floating point in the
+core~~ **floating-point literals since «F1» (2026-08-18)**, strings only in `claim`, `reason`,
+`assume`, `section`, `unfalsifiable`).
 
 **The vocabulary is closed. This specification adds exactly twelve source words** — each one at an
 obligation from the measurement, none from stock:

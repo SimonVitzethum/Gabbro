@@ -1739,7 +1739,7 @@ Gabbro **absichtlich ausgeschlossen**:
 | Schleife bis EOF, bis Nutzereingabe, bis Abbruch | **drei Formen, alle beschränkt** | **Terminierung** fällt zurück an den Menschen |
 | dynamische Sammlungen | `table … count N`, fest | **Index** fällt zurück — `count N` IST die Schranke |
 | Allokation nach Bedarf | `allocs` benennt, mehr nicht | eine **zwölfte Klasse**, die es heute nicht gibt |
-| Gleitkomma | nicht im Kern | — |
+| ~~Gleitkomma~~ **gefallen 2026-08-18** | `f32`/`f64` mit Bereich, NaN- und Unendlichbit | — |
 | „das kostet, was es kostet" | `costs <= N ops`, **Pflicht** | die Latenzaussage je Wartestelle fällt |
 
 > **Das ist ein Regler, kein Mangel.** *Gabbros Alltagstauglichkeit und seine
@@ -1823,7 +1823,7 @@ Trennlinie ist scharf und liegt nicht dort, wo man sie vermutet:
 | **alles mit unbekannt vielen Objekten** — Compiler, Datenbank, Editor, Webserver mit Verbindungen nach Bedarf | `table … count N` **ist** die Indexschranke. Ohne feste Zahl fällt die Klasse *Index*, und mit ihr `M103` |
 | **Rekursion über Daten** — Baumtraversierung, Parser, Auswerter | der Kostenpass rechnet Rümpfe und Rufe; Rekursion trägt eine **Annahme statt einer Rechnung**. `descendants of` gibt es, aber über einer Tabelle mit Schranke |
 | **allgemeine Zeichenketten** | eine Zeichenkette ist ein Feld unbekannter Länge. `format` deckt **feste** Längen; variable sind offen und würden die Einmalprüfung am Eintritt kosten |
-| **Gleitkomma-Numerik** | nicht im Kern, und M1 ist über Intervallen ganzer Zahlen gebaut |
+| ~~**Gleitkomma-Numerik**~~ — **die einzige Zeile dieser Tabelle, die gefallen ist** *(«F», 2026-08-18)* | M1 trägt `FBereich` mit außen gerundeter Arithmetik. **Was bleibt, ist kleiner und benannt:** Produkt, Quotient und die Null haben ihren Satz noch nicht |
 | **alles, was Speicher anfordert und freigibt** | `allocs` **benennt** eine Wirkung, mehr nicht. Eine zwölfte Klasse gibt es nicht |
 | **Selbstbeherbergung** — Gabbro in Gabbro | steht schon unter *„What deliberately does not exist"*. Ein Übersetzer ist ein Baumverarbeiter mit Rekursion und dynamischem Speicher — **also die drei Zeilen oben zusammen** |
 
@@ -1980,7 +1980,7 @@ gebaut* · *nach den Plänen möglich* · *nie, weil eine Klasse daran hängt.*
 |---|---|---|---|
 | **Netzwerkstack** (TCP/IP) | **fast** — blockiert an **einer** Entscheidung | ✓ | — |
 | **Renderer**, 2D, Festkomma, über Syscalls | teilweise | ✓ | — |
-| **Renderer**, 3D mit Gleitkomma | ✗ | ✗ | **Gleitkomma** |
+| **Renderer**, 3D mit Gleitkomma | **teilweise** — die Zahlen gehen, die Matrizen sind Bauarbeit | ✓ | ~~Gleitkomma~~ *(gefallen 2026-08-18)* |
 | **Sprachlaufzeit** mit Pool-Halde | ✗ | ✓ | — |
 | **Sprachlaufzeit** mit wachsender Halde | ✗ | ✗ | **kein Erschöpfungszweig** |
 | **Compiler** | ✗ | ✓ *(schreibbar, nicht angenehm)* | — |
@@ -2013,13 +2013,26 @@ Ein Bildspeicher ist eine Region, ein Blitter eine beschränkte Schleife, die Sy
 `extern fn` — **fremde Rümpfe, die das Zeugnis zählt.** Ein 2D-Renderer mit Festkomma ist nach
 §1 schreibbar.
 
-**Ein 3D-Renderer ist es nicht, und der Grund ist eine Zeile in `SYNTAX.md`:** *„No floating
-point in the core."* M1 ist über Intervallen **ganzer** Zahlen gebaut; `IntBereich` hat
-`min`, `max` und eine Breite. Eine Gleitkommazahl hat keinen Bereich, den `M101` vergleichen
-könnte — **die Überlaufklasse hätte über ihr keinen Inhalt.**
+<!-- widerruf:aus -->
+> **Widerrufen am 2026-08-18, und zwar von diesem Ordner selbst.** Was hier stand, war:
+> *„Ein 3D-Renderer ist es nicht … M1 ist über Intervallen **ganzer** Zahlen gebaut; eine
+> Gleitkommazahl hat keinen Bereich, den `M101` vergleichen könnte."* **Der Satz war zum
+> Zeitpunkt seines Schreibens richtig und ist es seit «F» nicht mehr** — `typen.rs` führt
+> `FBereich { breite, lo, hi, kann_nan, kann_unendlich, literal, gerundet }`, und `M101`
+> vergleicht ihn. *Er blieb sechs Abschnitte lang stehen, während vier Abschnitte weiter
+> unten der Bauplan lag.*
+<!-- widerruf:an -->
 
-*Festkomma ist ganzzahlig und geht. Wer Gleitkomma braucht, ruft eine fremde Bibliothek — und
-bekommt dafür einen Eintrag in Abschnitt E des Zeugnisses statt einer Zusage.*
+**Ein 3D-Renderer ist heute teilweise schreibbar, und die Grenze läuft woanders.** Die
+*Zahlen* gehen: `f32`/`f64` mit deklariertem Bereich, außen gerundete Intervalle, NaN- und
+Unendlichbit, und ein geglückter Vergleich räumt das NaN-Bit auf beiden Seiten ab. Was fehlt,
+ist keine Zahlenfrage, sondern dieselbe wie überall: **eine Transformationskette ist eine
+Matrix, und eine Matrix ist `table … count 16`** — schreibbar, aber ohne Generizität je
+Größe eine eigene Deklaration.
+
+*Festkomma ist ganzzahlig und geht ebenfalls. Wer die fremde Bibliothek ruft, bekommt weiter
+einen Eintrag in Abschnitt E des Zeugnisses statt einer Zusage — nur ist das jetzt eine Wahl
+und kein Zwang.*
 
 ## Compiler und Laufzeit: schreibbar heißt nicht angenehm
 
@@ -2049,8 +2062,9 @@ ist ein Feld aus Bytes. **Der Sprung nicht:** was danach läuft, hat keine `effe
 
 **Gabbro kann heute alles, dessen Größen jemand aufschreiben kann.** Nach der Erweiterung
 alles, dessen Größen jemand *bei der Erzeugung* aufschreiben kann. **Nie: alles, was keinen
-Punkt hat, an dem „es reicht nicht" gesagt wird** — plus Gleitkomma, plus alles hinter einem
-Sprung ins Ungezeugte.
+Punkt hat, an dem „es reicht nicht" gesagt wird** — ~~plus Gleitkomma,~~ plus alles hinter
+einem Sprung ins Ungezeugte. *(Der Gleitkommazusatz ist am 2026-08-18 entfallen; die
+Aufzählung hat damit zwei Glieder statt drei.)*
 
 ---
 
@@ -2103,7 +2117,7 @@ Wahl — der Name verspricht Arithmetik, die es nicht gibt.*
 müsste (Transformationsmatrizen), rechnet dann die GPU im Shader — *und der Shader ist
 Gastcode, also dieselbe Konstruktion wie der JIT: Isolation statt Beweis.*
 
-## Aber: der Vorschlag verlangt, dass `opaque` HÄLT — und es hält nicht
+## Aber: der Vorschlag verlangt, dass `opaque` HÄLT — und es hielt nicht
 
 ```gabbro
 opaque type F32 = u32;
@@ -2114,6 +2128,11 @@ impl fn unsinn(a : F32, b : F32) -> F32 { return a & b; }
 **Bitweises Und behält die Breite, also schweigt die Überlaufregel — und der undurchsichtige
 Typ wird als sein Träger gerechnet.** Zwei Gleitkommazahlen bitweise zu verunden ergibt
 Unsinn, und nichts sagt es.
+
+> ~~**Gemessen 2026-08-18, und seither behoben.**~~ `D003` nimmt einem `opaque type` die
+> Rechnung seines Trägers, `D004` schließt die implizite Umwandlung an der Modulgrenze.
+> **Der Kasten oben ist der Zustand VOR dem Fund und bleibt als Messung stehen** — das
+> Ergebnis `3 Items, 0 Fehler` gilt heute nicht mehr.
 
 Dass `a + b` fällt, ist **Zufall**: es fällt an `M104` (die Breite läuft über), nicht daran,
 dass der Typ undurchsichtig ist. *Wo die Breiten aufgehen, geht der Unsinn durch.*
@@ -2135,21 +2154,25 @@ kostet.**
 2. **`entrust`** — ein Wort, öffnet JVM/JIT/jedes Gastmodul. *Der Einwand hat recht: der
    Sprung ins Ungezeugte ist ein Adressraumwechsel, kein Kontrollflusssprung, und Gabbro
    schuldet dem Gast nichts.*
-3. **`opaque` zum Beißen bringen** — **eingeschoben**, weil Punkt 4 sonst auf einem Typ ruht,
-   der seine Zusage nicht hält. Klein, D1/D2, und es fällt für alle undurchsichtigen Typen.
+3. **`opaque` zum Beißen bringen** — ~~eingeschoben~~ **GEBAUT 2026-08-18** (`D003` die
+   Rechnung, `D004` die Wand an der Modulgrenze). Klein, D1/D2, und es fällt für alle
+   undurchsichtigen Typen zugleich. *Offen bleibt die Tür: es gibt keine Form, einen
+   undurchsichtigen Typ ABSICHTLICH zu öffnen — ein Verbot ohne Ausweg.*
 4. **Festkomma** — ~~als Fragment~~ **gemessen und geschlossen, 2026-08-18.** M1 trägt die
    doppelte Zwischenbreite nicht und muss es nicht: es rechnet mit dem deklarierten BEREICH.
    `type Q16 = i64 in -2147483648 .. 2147483647` mit `(a*b) >> 16` geht sauber durch, ohne
    Laufzeitprüfung. *Der Träger ist die Breite, der Bereich ist die Zusage.* Offen bleibt der
    Nebenbefund: **eine Zwischenbreite lässt sich nicht NENNEN** — dieselbe Bauart wie `opaque`
    ohne Tür.
-5. **Gleitkomma** — ~~als Memo~~ **geschrieben und beschlossen, 2026-08-18**
-   ([`MEMO-GLEITKOMMA.md`](MEMO-GLEITKOMMA.md)): **nicht bauen.** Die Bedarfszählung ergab
-   **0 rechnende Stellen in 139 Kerneldateien**; beide `f64`-Erwähnungen stehen in
-   Kommentaren, und die erste verneint den Bedarf ausdrücklich. Was gebraucht wird — eine
-   Nachkommastelle — ist seit derselben Messung schreibbar. *Der teuerste Fund ist ein
-   anderer: Gleitkomma ändert die AUFRUFKONVENTION, und das trifft die Bibliotheks-ABI, auch
-   wenn Gabbro nie eine Gleitkommazahl kennt.*
+5. **Gleitkomma** — ~~als Memo~~ ~~**geschrieben und beschlossen, 2026-08-18**~~
+   **GEBAUT, am selben Tag** («F», weiter unten). Das Memo
+   ([`MEMO-GLEITKOMMA.md`](MEMO-GLEITKOMMA.md)) empfahl **nicht bauen**, und die Empfehlung
+   stand auf einer Zählung — **0 rechnende Stellen in 139 Kerneldateien**; beide
+   `f64`-Erwähnungen stehen in Kommentaren, und die erste verneint den Bedarf ausdrücklich.
+   **Die Entscheidung des Ordners lautete anders, und «F0» nennt den Ersatz für den fehlenden
+   Bedarf statt ihn zu erfinden.** *Der teuerste Fund des Memos steht unberührt: Gleitkomma
+   ändert die AUFRUFKONVENTION, und das trifft die Bibliotheks-ABI, auch wenn Gabbro nie eine
+   Gleitkommazahl kennt.*
 
 ---
 
@@ -2775,3 +2798,161 @@ Bedarf entschieden wurde.
 **«F» steht neben Punkt 1, nicht davor.** Die Reserve/Hinterlegung hat einen gemessenen
 Bedarf und entsperrt einen Allokator; «F» hat einen entschiedenen. *Beides ist zulässig, und
 der Unterschied gehört aufgeschrieben, damit er später nicht als gleichrangig gelesen wird.*
+
+---
+
+# «W» — der WIDERRUF hat keinen Wächter, und er hat fünf Stellen gekostet
+
+> **Gefunden 2026-08-19 beim Ablesen des Standes, nicht beim Bauen.** Der Fund ist nicht,
+> dass fünf Sätze falsch waren — es ist, **dass niemand sie halten musste.**
+
+## Der Befund
+
+`pruefe-todo.py` hält `TODO.md` gegen sechs Klassen, darunter *stehengebliebene Zahl* und
+*Erledigtes in einer Datei, die „ausschließlich Offenes" behauptet*. **Er sieht genau eine
+Datei.** Am selben Tag, an dem «F» f32 und f64 baute, standen vier Abschnitte weiter oben in
+**derselben Datei** fünf Sätze, die das Gegenteil sagten:
+
+<!-- widerruf:aus -->
+| Zeile | stand da | falsch seit |
+|---|---|---|
+| 1742 | „Gleitkomma — nicht im Kern" | «F1», `typen.rs` |
+| 1826 | „M1 ist über Intervallen ganzer Zahlen gebaut" | `FBereich` |
+| 1983 | 3D-Renderer: **für immer draußen** | dieselbe Spalte |
+| 2018 | „hat keinen Bereich, den `M101` vergleichen könnte" | `M101` vergleicht ihn |
+| 2158 | Punkt 5: **nicht bauen** | am selben Tag gebaut |
+| 2150 | Punkt 3: `opaque` zum Beißen bringen — **eingeschoben** | `D003`/`D004`, derselbe Tag |
+<!-- widerruf:an -->
+
+**Es waren sechs, nicht fünf** — die sechste fiel beim Schreiben des Wächters auf, nicht beim
+Ablesen. *Das ist kein Zufall, sondern der Grund für den Wächter:* eine Liste, die man
+anlegen muss, wird beim Anlegen länger als die, die man im Kopf hatte.
+
+## Und der erste Lauf fand ZWEI weitere Dateien
+
+**`pruefe-widerruf.py` ist beim ersten Lauf rot geworden** — und zwar an Stellen, die von Hand
+nicht gefunden worden waren, weil von Hand nur `PLAN.md` angesehen wurde:
+
+<!-- widerruf:aus -->
+| | |
+|---|---|
+| `dokumente/SPRACHE.md`:614 | *„Lexis unchanged (… no floating point in the core …)"* |
+| `dokumente/SYNTAX.md`:165 | *„**No floating point in the core.**"* |
+<!-- widerruf:an -->
+
+**Damit sind es acht Stellen in drei Dateien**, und die beiden neuen sind die teureren: sie
+stehen in der **Spezifikation**, nicht in einem Planungstext. *Ein Satz in `SYNTAX.md` ist die
+Antwort auf die Frage „was ist erlaubt" — er wird gelesen, nicht überflogen.*
+
+> **Das ist die Umkehrung von R11.** Eine Probe, die beim ersten Lauf durchgeht, ist
+> verdächtig; **eine, die beim ersten Lauf zwei unbekannte Fundstellen liefert, hat sich
+> ausgewiesen.** Derselbe Verlauf wie bei `pruefe-klauseln.py` (48 statt der erwarteten vier).
+
+**Gemessen und nicht geschätzt:** [`beispiele/26-gleitkomma.gab`](../beispiele/26-gleitkomma.gab)
+läuft mit *8 Items, 0 Fehler, 100 % Deckung* — während die Datei daneben schrieb, es gehe nicht.
+
+## Warum es genau diese Klasse ist
+
+Es ist **dieselbe Bauart wie die sechs `gap:`-Zeilen**, die in den Summen längst geschlossen
+waren: *die Summe wurde gepflegt, die Quelle nicht.* Und dieselbe wie die Klasse, die
+`pruefe-klauseln.py` gefunden hat — **dreimal von Hand gefunden, also fehlt ein Werkzeug, nicht
+ein Vorsatz.**
+
+> **Der Unterschied zu einer bloßen Ungenauigkeit:** ein widerrufener Satz sagt nicht *„hier
+> ist noch etwas offen"*, sondern *„das geht nie"*. **Er verhindert Arbeit, statt sie nur zu
+> verzögern** — und er tut es leise, weil er wie ein Ergebnis aussieht.
+
+## Der Wächter: `pruefe-widerruf.py`
+
+Eine Liste **widerrufener Sätze**. Jeder Eintrag führt vier Dinge, und ohne alle vier wird er
+nicht angenommen:
+
+```
+muster    was nicht mehr dastehen darf (Regulärausdruck)
+datum     wann es widerrufen wurde
+grund     WAS es widerrufen hat -- eine Datei, ein Beispiel, eine Kennung
+ersatz    was stattdessen gilt
+```
+
+**Zahn 1 (Ausnahmen sind benannt):** ein Vorkommen ist erlaubt, wenn es im selben Absatz
+durchgestrichen oder als Widerruf markiert steht — *der Ordner streicht durch, er löscht
+nicht.* **Zahn 2 (R14):** der Wächter prüft sich selbst, indem er einen widerrufenen Satz in
+eine Kopie einsetzt und verlangt, dass er fällt.
+
+> **Und die Grenze, damit die Zahl nicht mehr verspricht als sie misst:** der Wächter findet
+> nur, was jemand als widerrufen aufgeschrieben hat. **Er ist ein Gedächtnis, kein Urteil** —
+> gegen einen Satz, den niemand als überholt erkannt hat, hilft er nicht.
+
+---
+
+# Was Gabbro nicht kann und können sollte — nach PREIS sortiert, 2026-08-19
+
+> Die Liste ist nicht neu; **die Sortierung ist es.** `TODO.md` führt 116 offene Punkte in vier
+> Rollen — *Entscheidungen · Messungen · Bauen · Buchhaltung.* Was fehlte, war die Frage
+> **„was davon kostet keine Zeile Code"**, und sie sortiert die Liste anders als die Rollen.
+
+## Erste Spalte — eine ENTSCHEIDUNG, keine Zeile Code
+
+| | Sperre | was danach frei ist |
+|---|---|---|
+| **«B24»** `format`-Bitlagen | was eine Bitposition jenseits der Wortbreite bedeutet, und wie sie mit `endian` zusammenwirkt | **ein Netzwerkstack** — alles Übrige steht (`count NCONN`, Pool, Prüfsumme ≤ MTU, `retry bounded`, `forever per_pass`) |
+| **`atomic` als Slotfeld** | ein atomares RMW ist seine eigene Wechselseitigkeit; heute ist `atomic` ein Item | **die Nachbildung hört auf, strenger zu sein als das Vorbild** (gemessen an K2-F2) |
+| **`f64<RNE>`** | Rundungsmodus im Typ, vierte Instanz eines vorhandenen Musters | `F003` wird erreichbar — heute ist es unerreichbar, weil kein anderer Modus schreibbar ist |
+
+## Zweite Spalte — die Grammatik erlaubt es, kein Pass hält es nach
+
+**Das ist die gefährlichste Klasse, weil sie nicht schweigt, sondern VERSPRICHT.**
+`pruefe-klauseln.py` zählt sie: **16 ZUSAGE von 49 gebuchten Klauseln.** Die schärfsten:
+
+| | was heute durchgeht |
+|---|---|
+| **`ensures`** | ~~der Tippfehler fällt nicht~~ — **das war beim Aufschreiben dieser Tabelle schon falsch**, siehe unten. Offen ist die EINLÖSUNG, nicht die Wohlgeformtheit |
+| **parametrische `costs`** | `costs <= 0 * n ops` an einem Rumpf, der 1 op kostet — **3 Items, 0 Fehler, 0 Hinweise** |
+| **`mut`** | eine Zuweisung an ein unveränderliches Band fällt bei keinem Pass — ein Verbot ohne Biss |
+| **`versatz`** | dass zwei `reg` einander nicht überlappen, ist der **Hauptsatz** von `Device_Konstruktor.thy` — und kein Pass rechnet ihn nach |
+| **`abstieg`** | an ihm hängt die Terminierung eines `traverse`; `schleifen.rs` geht in den Rumpf und liest ihn nicht |
+| **die Gnadenfrist** | `rcu … reclaims` ohne benannte Annahme geht durch — dieselbe Regel wie `S003`, an einem anderen Konstrukt |
+
+Dazu **acht Prämissen ohne Erzeuger** (Zahn 3): Beweise, die auf etwas ruhen, das kein Pass
+herstellt.
+
+## Dritte Spalte — Bauarbeit, benannt
+
+`observes` senkt nicht ab · `accumulates` kann nicht absenken (**Zellenzahl und aktueller Kern
+fehlen beide als Ausdruck**) · `entry` existiert nicht · `const fn` · Generizität · `?` ·
+variable Längen in `format` · der Verbundliteral · die Rückgabebindung.
+
+## Vierte Spalte — die Klasse, die sich auch unter „alles verifiziert" nicht auflöst
+
+**48 fremde Rümpfe im Korpus, NULL sprechen ihre Pflicht aus.** Eine Sperre schuldet
+gegenseitigen Ausschluss, Fortschritt und die Rangordnung — *keine Zeile sagt das heute.*
+`ensures` an einer rumpflosen Deklaration ist seit jeher grammatisch (geprüft, 0 Fehler), und
+**kein Pass liest es.** Daneben die **Bibliotheks-ABI**: Gabbros ganze Zusage ist eine Aussage
+über **eine** Übersetzungseinheit.
+
+> **Die zweite und die vierte Spalte sind dieselbe Sache von zwei Seiten** — einmal verspricht
+> der eigene Code etwas, das niemand hält, einmal verlässt sich der eigene Code auf etwas, das
+> niemand ausspricht. *Und `ensures` steht in beiden.* **Deshalb ist es der nächste Posten:**
+> nicht weil es das größte ist, sondern weil es zwei Spalten zugleich berührt.
+
+## Die Reihenfolge, und die Begründung ist die Kante
+
+1. **`pruefe-widerruf.py`** — der Wächter oben. *Eine Datei, die an fünf Stellen das Gegenteil
+   des Gebauten sagt, ist teurer als keine.*
+2. ~~**`ensures` — die Grundnamen auflösen.**~~ **Beim Messen erledigt vorgefunden**, und
+   zwar noch in derselben Stunde, in der Punkt 1 gebaut wurde. `M109`/`M110`/`M111` stehen
+   seit dem 2026-08-18 in `m1::ensures_pruefen`; der Tippfehler fällt an einem `impl fn` wie
+   an einem rumpflosen `extern fn`. **Was bleibt, ist zweigeteilt:** die zwei Namensarten,
+   die `sammle_namen_pred` nicht kennt (**Quantorbinder** und `Self`) — klein —, und die
+   **Einlösung durch den Rumpf** — Beweisersache und die eigentliche Hälfte.
+
+<!-- widerruf:aus -->
+   > **Und dieser Punkt ist der beste Beleg für Punkt 1, den es geben konnte.** Die Zeile
+   > *„kein Pass liest `ensures`"* stand am 2026-08-19 an **sechs** Stellen in vier Dateien —
+   > in `MESSUNGEN.md` zweimal, in `TODO.md`, in einem Beispielkommentar **und in dieser
+   > Datei, sechzig Zeilen über sich selbst geschrieben.** *Der Wächter hat seinen eigenen
+   > Autor gefangen, keine zwanzig Minuten nachdem er entstand.*
+<!-- widerruf:an -->
+
+3. **«B24»** — die Entscheidung, hinter der ein Netzwerkstack liegt. *Sie rückt damit auf
+   Platz zwei nach.*

@@ -1994,38 +1994,89 @@ fn op_zeichen(op: BinOp) -> &'static str {
 }
 
 /// Die BASISNAMEN, die ein Praedikat nennt -- ohne Feldnamen, denn die haengen am Traeger.
+/// **Der INDEX war das Loch, und er ist die Haelfte der Korpusstellen.**
+///
+/// Bis zum 2026-08-19 sammelte diese Funktion aus einem `Ort` nur `o.basis.text` -- die
+/// Suffixe blieben ungelesen, und ein Index ist ein AUSDRUCK.
+///
+/// ```gabbro
+/// ensures forall s in slots of W : W.slots[tippfehler].a == 0
+/// --> 3 Items, 0 Fehler, 0 Hinweise
+/// ```
+///
+/// **`M109` prueft damit genau die Namen, die niemand falsch schreibt.** Fuenf der sechzehn
+/// `ensures`-Stellen des Korpus indizieren (`c.slots[s]`, `Kappenraum.slots[s]`), und in
+/// keiner war der Index gelesen. *Dieselbe Bauart wie die vier blinden Walker: der Rumpf
+/// wurde betreten, ein Zweig davon nicht.*
+///
+/// Die zweite Haelfte ist die Bindung: `forall s in …` ERKLAERT `s`, also darf `s` im Rumpf
+/// nicht als unbekannt gelten. **Ohne sie waere der Absteig ein Fehlalarm** -- und ein
+/// Fehlalarm an einer Regel, die den eigenen Korpus zerlegt, ist schlimmer als die Luecke.
 fn sammle_namen_pred(p: &Pred, out: &mut Vec<String>) {
-    fn aus_expr(e: &Expr, out: &mut Vec<String>) {
+    sammle_namen_pred_geb(p, &mut Vec::new(), out);
+}
+
+fn sammle_namen_pred_geb(p: &Pred, gebunden: &mut Vec<String>, out: &mut Vec<String>) {
+    fn aus_ort(o: &Ort, gebunden: &[String], out: &mut Vec<String>) {
+        if !gebunden.iter().any(|g| *g == o.basis.text) {
+            out.push(o.basis.text.clone());
+        }
+        // **Und hier steigt es ab.** `.feld` und `->feld` sind Namen im TYP, nicht in der
+        // Umgebung; ein `[expr]` dagegen ist ein gewoehnlicher Ausdruck ueber gewoehnlichen
+        // Orten -- und genau dort stand der Tippfehler, den niemand fand.
+        for s in &o.suffixe {
+            if let OrtSuffix::Index(e) = s {
+                aus_expr(e, gebunden, out);
+            }
+        }
+    }
+    fn aus_expr(e: &Expr, gebunden: &[String], out: &mut Vec<String>) {
         match &e.art {
-            ExprArt::Ort(o) => out.push(o.basis.text.clone()),
-            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => aus_expr(i, out),
+            ExprArt::Ort(o) => aus_ort(o, gebunden, out),
+            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => aus_expr(i, gebunden, out),
             ExprArt::Binaer(_, a, b) => {
-                aus_expr(a, out);
-                aus_expr(b, out);
+                aus_expr(a, gebunden, out);
+                aus_expr(b, gebunden, out);
             }
             ExprArt::Ruf(r) => {
                 // `old(x)` ist ein Geisterausdruck; sein Argument ist ein gewoehnlicher Ort.
                 for a in &r.argumente {
-                    aus_expr(a, out);
+                    aus_expr(a, gebunden, out);
                 }
             }
             ExprArt::Ergebnis => out.push("result".into()),
             // `old(x)` ist ein Geisterausdruck ueber den VORzustand -- sein Ort muss es
             // trotzdem geben. *Eine Nachbedingung ueber den alten Wert von nichts ist keine.*
-            ExprArt::Alt(o) => out.push(o.basis.text.clone()),
+            ExprArt::Alt(o) => aus_ort(o, gebunden, out),
             _ => {}
         }
     }
     match &p.art {
-        PredArt::Vergleich(e) => aus_expr(e, out),
-        PredArt::Element(e, _) => aus_expr(e, out),
+        PredArt::Vergleich(e) => aus_expr(e, gebunden, out),
+        PredArt::Element(e, _) => aus_expr(e, gebunden, out),
         PredArt::Erreicht { von, nach, .. } => {
-            out.push(von.basis.text.clone());
-            out.push(nach.basis.text.clone());
+            aus_ort(von, gebunden, out);
+            aus_ort(nach, gebunden, out);
         }
         // `Held(L)` nennt eine Sperre, keine Zusage ueber einen Wert.
         PredArt::Held { .. } => {}
-        PredArt::Quantor(q) => sammle_namen_pred(&q.rumpf, out),
+        PredArt::Quantor(q) => {
+            // Der TRAEGER der Domaene ist ein gewoehnlicher Ort und muss aufloesen; die
+            // VARIABLE wird von ihr erklaert und darf es nicht muessen.
+            match &q.domaene {
+                Domaene::SlotsVon(o)
+                | Domaene::NachfahrenVon(o)
+                | Domaene::VorfahrenVon(o)
+                | Domaene::Schlange(o)
+                | Domaene::ElementeVon(o)
+                | Domaene::AbbildungenVon(o)
+                | Domaene::KetteIn { ort: o, .. } => aus_ort(o, gebunden, out),
+                Domaene::FelderVon(_) | Domaene::Threads => {}
+            }
+            gebunden.push(q.variable.text.clone());
+            sammle_namen_pred_geb(&q.rumpf, gebunden, out);
+            gebunden.pop();
+        }
         _ => {}
     }
 }
