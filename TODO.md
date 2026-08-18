@@ -524,6 +524,22 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **`index into T` im Slotfeld verliert seinen Typ, wenn `T` noch nicht fertig ist**
+      *(gemessen 2026-08-18, fuenf Proben)*. Nicht `option`, nicht die Selbstbezueglichkeit --
+      die DEKLARATIONSREIHENFOLGE. Quer ueber zwei Tabellen sauber, vorwaerts `M103`, auf die
+      eigene Tabelle `M101`. **Selbstbezueglichkeit ist der Fall, der IMMER faellt**: eine
+      Tabelle ist beim Aufloesen ihrer eigenen Slotfelder nie fertig. *Damit ist jede
+      verkettete Struktur unschreibbar* -- Freiliste, CDT, Objektgraph. Genau diese Form steht
+      im Korpus (`FRAGMENTE.md`:158-161) und ist die Struktur, ueber die
+      `Table_Induktion.thy` seine Saetze fuehrt. **Es faellt sicher, nicht still** -- der
+      Pruefer weigert sich, statt einen ungeprueften Index durchzulassen.
+- [ ] **`i < N` ist nicht `i ist hinterlegt`** *(2026-08-18)*. Eine `table count 1000000000`
+      geht sauber durch und senkt zu einem Feld von knapp 30 GiB ab. Was Gabbro NICHT sagen
+      kann: dass nur die ersten `k` Plaetze hinterlegt sind. Ein Zugriff auf einen nicht
+      hinterlegten Platz ist typkorrekt und trotzdem ein Fehlzugriff -- **und in einem Kernel
+      ist das besonders scharf, weil er selbst die Instanz ist, die Seiten hinterlegt.** Das
+      ist der Bedarfsbeleg fuer die wertgetragene Schranke.
+
 - [ ] **`entrust` senkt nicht ab** *(2026-08-18)*. Wort, Item, Zeugniszeile und drei Absagen
       stehen (`N004`/`N005`/`N006`); der Erzeuger weigert sich benannt (`C001`). Die
       Uebergabe ist ein Registervertrag plus Sprung -- **dieselbe Baustelle wie `entry`**, und

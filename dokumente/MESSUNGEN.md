@@ -7280,3 +7280,85 @@ Meldung nennt beide Bereiche, nicht bloß die Typnamen.
 > Und der Nebenbefund ist der interessantere — **es gibt keine Form, eine Zwischenbreite zu
 > NENNEN.** Wo der Bereich nicht reicht, weigert sich M1, und eine Verbreiterungsform gibt es
 > nicht. *Dieselbe Bauart wie `opaque` ohne Tür: eine Regel ohne Ausweg.*
+
+---
+
+# 2026-08-18 — Speicherverwaltung gemessen, und die Freiliste fällt
+
+Anlass war eine Frage: *wie verwaltet ein Gabbro-Nutzer heute Speicher, und ließe sich ein GC
+schreiben, der 100 MiB belegt und bis 30 GiB wächst?* Beim Nachmessen fiel etwas anderes an.
+
+## I. Was heute dasteht
+
+| | |
+|---|---|
+| **Halde** | keine. Alles ist eine deklarierte `table T count N` — ein fester Platzvorrat |
+| **Belegen** | eine Freiliste über `option index into T`; der Sonderwert ist **bewiesen** |
+| **Besitz** | `own` am Zeiger (M3), lineare Typen und `consumes` (M2) — Freigeben ist Verbrauchen |
+| **`allocs`** | ein Wirkungswort **ohne Semantik**: eine einzige Fundstelle, und die zieht nur den Namen heraus |
+
+**Eine `table` darf sehr groß sein.** Gemessen: `count 1000000000` geht sauber durch und senkt
+zu `Halde_slot slots[1000000000]` ab — knapp 30 GiB, und jeder Zugriff bleibt gegen `N`
+geprüft.
+
+## II. Der Fund: `index into T` im Slotfeld verliert seinen Typ
+
+Fünf Proben, und sie trennen die Ursache sauber:
+
+| | Probe | |
+|---|---|---|
+| A | `option index into Halde` **in `table Halde`**, gelesen | **`M101`** |
+| E | `index into Halde` **in `table Halde`**, gelesen | **`M101`** |
+| F | `u32 in 0 .. 100` im selben Slot, gelesen | sauber |
+| H | `index into Ziel` in `table Quelle`, **Ziel vorher deklariert** | sauber |
+| I | dasselbe, **Ziel danach deklariert** | **`M103`** |
+
+**Es ist nicht `option`, und es ist nicht die Selbstbezüglichkeit — es ist die
+Deklarationsreihenfolge.** Ein `index into T` trägt seine Schranke nur, wenn `T` beim Auflösen
+des Feldtyps schon fertig bekannt ist. Sonst fällt der Typ auf blankes `u32` zurück, und der
+nächste Zugriff wird abgelehnt.
+
+> **Selbstbezüglichkeit ist davon der Fall, der IMMER fällt** — eine Tabelle ist beim Auflösen
+> ihrer eigenen Slotfelder nie fertig.
+
+## III. Warum das mehr ist als ein Randfall
+
+Genau diese Form steht im Korpus (`FRAGMENTE.md`:158–161), und sie ist Caprocks CDT:
+
+```gabbro
+parent       : option index into CapSpace,
+first_child  : option index into CapSpace,
+next_sibling : option index into CapSpace,
+prev_sibling : option index into CapSpace,
+```
+
+Es ist außerdem die Struktur, über die `Table_Induktion.thy` seine Sätze führt
+(`first_child`/`next_sibling` als `idx option`). **Der Beweis handelt von einer Form, die der
+Prüfer heute nicht typisieren kann** — und damit ist jede verkettete Struktur unschreibbar:
+Freiliste, CDT, Objektgraph eines GC.
+
+**Es fällt sicher, nicht still.** Der Prüfer weigert sich (`M101`/`M103`), statt einen
+ungeprüften Index durchzulassen. *Das ist die richtige Richtung — aber die Sprache kann die
+zentrale Datenstruktur ihres eigenen Korpus nicht ausdrücken.*
+
+## IV. Und die GC-Frage, an der die Messung hing
+
+Die **Objektgraph-Hälfte** ist Gabbros Stärke: `by unvisited` ist zyklensicheres Markieren,
+`table.induktion` gibt die Terminierung, die Kosten sind beschränkt.
+
+Die **Wachstums-Hälfte** ist es nicht, und der Grund ist nicht die Größe:
+
+```
+der Indextyp sagt      i < N
+gebraucht wird         i ist HINTERLEGT
+```
+
+**Die zweite Aussage kann Gabbro nicht formulieren.** Ein Zugriff auf einen nicht hinterlegten
+Platz ist typkorrekt und trotzdem ein Fehlzugriff. In einem Kernel ist das besonders scharf:
+*der Kernel ist selbst die Instanz, die Seiten hinterlegt* — er kann sich nicht darauf
+verlassen, dass jemand anders sein BSS bedarfsweise füllt.
+
+Was fehlt, ist genau der offene Posten **wertgetragene Schranke**: von `N` deklarierten
+Plätzen sind `k` lebendig, `k` ist ein Wert, `belegen` erhöht ihn, und jeder Zugriff wird gegen
+`k` geprüft statt gegen `N`. *Damit wäre „100 MiB belegt, 30 GiB deklariert" eine Aussage der
+Sprache und nicht eine Hoffnung an den Seitenfehlerpfad.*
