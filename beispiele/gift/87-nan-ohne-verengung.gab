@@ -1,0 +1,15 @@
+-- erwartet: F001
+-- **Ein deklarierter Gleitkommawert kann alles sein, NaN eingeschlossen.**
+--
+-- Ohne `narrow … to finite` traegt er die zwei Bits, und ein Ziel mit genanntem Bereich
+-- vertraegt sie nicht. *Dieselbe Zeile geht durch, sobald die Verengung davorsteht* --
+-- siehe `beispiele/26-gleitkomma.gab`.
+module gift::nan {
+
+type Anteil = f64 in 0.0 .. 1.0;
+
+impl fn klemmen(x : f64) -> Anteil effects { pure } costs <= 2 ops {
+    return x;
+}
+
+}

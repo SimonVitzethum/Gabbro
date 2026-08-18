@@ -268,7 +268,25 @@ impl Umgebung {
                     self.sammle_traeger(&m.items, &innen);
                 }
                 ItemArt::Konst(k) => {
-                    let t = self.typ_von_ausdruck_decl(pfad, &k.typ);
+                    let mut t = self.typ_von_ausdruck_decl(pfad, &k.typ);
+                    // **«F»: eine Konstante ist so endlich wie ihr Initialisierer.**
+                    //
+                    // `const HALB : f64 = 0.5;` deklariert `f64` -- und `f64` kann NaN sein.
+                    // Der WERT kann es nicht. Ohne diese Zeile waere der deklarierte Typ
+                    // weiter als die Konstante, und jede Benutzung braeuchte eine Verengung
+                    // gegen etwas, das schon feststeht.
+                    //
+                    // *Ein `const` mit bekannt endlichem Initialisierer ist der reinste Fall,
+                    // den es gibt* -- und er faellt hier an, nicht in einem zweiten Pass.
+                    if let (Typ::Gleitkomma(mut f), Some(w)) =
+                        (t.clone(), self.gleitwert(&k.wert))
+                    {
+                        if w.is_finite() {
+                            f.kann_nan = false;
+                            f.kann_unendlich = false;
+                            t = Typ::Gleitkomma(f);
+                        }
+                    }
                     self.globale.insert(q(&k.name.text), t);
                 }
                 ItemArt::Statisch(s) => {

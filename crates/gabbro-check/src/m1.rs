@@ -66,6 +66,21 @@ enum Fakt {
         min: i128,
         max: i128,
     },
+    /// **«F»: die Stelle ist nicht NaN und/oder nicht unendlich.**
+    ///
+    /// **Keine Bereichsverfeinerung, und das ist der Punkt:** Endlichkeit ist im Gitter kein
+    /// Intervall. NaN liegt in KEINEM Intervall, und dieselbe Aussage ist trotzdem nicht
+    /// „der Bereich ist enger". Zwei Bits, die unabhaengig geloescht werden koennen.
+    ///
+    /// *Der Bedarfsbeleg ist eine Disjunktion* (`FRAGMENTE.md`, «F0»/FF1): der Fluchttest
+    /// eines echten Renderers lautet `Zz2 < ER2 || isnan(de.x) || isinf(de.x) || …`, und im
+    /// Nein-Zweig fallen beide Bits gleichzeitig.
+    Endlich {
+        schluessel: String,
+        indizes: Vec<String>,
+        nan: bool,
+        unendlich: bool,
+    },
     /// V2 -- die Beziehung zweier Stellen, ausschliesslich als Vergleich.
     Beziehung {
         links: String,
@@ -313,19 +328,37 @@ impl<'a> Pruefer<'a> {
                         ),
                     );
                 }
-                // Der `else`-Zweig divergiert oder kehrt zurueck; danach gilt der Bereich.
-                let von = self.u.konst_wert(&self.modul, &n.bereich.von);
-                let bis = self.u.konst_wert(&self.modul, &n.bereich.bis);
-                if let (Some(lo), Some(hi), Some((schluessel, indizes))) =
-                    (von, bis, schluessel_und_indizes(&n.ort))
-                {
-                    let hi = if n.bereich.exklusiv { hi - 1 } else { hi };
-                    lage.fakten.push(Fakt::Bereich {
-                        schluessel,
-                        indizes,
-                        min: lo,
-                        max: hi,
-                    });
+                // Der `else`-Zweig divergiert oder kehrt zurueck; danach gilt die Zusage.
+                match &n.ziel {
+                    NarrowZiel::Bereich(bereich) => {
+                        let von = self.u.konst_wert(&self.modul, &bereich.von);
+                        let bis = self.u.konst_wert(&self.modul, &bereich.bis);
+                        if let (Some(lo), Some(hi), Some((schluessel, indizes))) =
+                            (von, bis, schluessel_und_indizes(&n.ort))
+                        {
+                            let hi = if bereich.exklusiv { hi - 1 } else { hi };
+                            lage.fakten.push(Fakt::Bereich {
+                                schluessel,
+                                indizes,
+                                min: lo,
+                                max: hi,
+                            });
+                        }
+                    }
+                    // **«F»: beide Bits auf einmal.** `finite` heisst nicht NaN UND nicht
+                    // unendlich -- eine Pruefung, zwei Flanken. *Der `else`-Zweig ist der
+                    // NaN-Weg, und damit steht in Gabbro als EINE Anweisung, was der Korpus
+                    // von Hand als Disjunktion schreibt.*
+                    NarrowZiel::Endlich(_) => {
+                        if let Some((schluessel, indizes)) = schluessel_und_indizes(&n.ort) {
+                            lage.fakten.push(Fakt::Endlich {
+                                schluessel,
+                                indizes,
+                                nan: true,
+                                unendlich: true,
+                            });
+                        }
+                    }
                 }
             }
             StmtArt::Bricht(b) => self.unterblock(&b.rumpf, lage, ergebnis),
@@ -805,10 +838,34 @@ impl<'a> Pruefer<'a> {
                 self.fakten_aus(b, true, lage);
             }
             ExprArt::Binaer(op, a, b) if op.ist_vergleich() => {
+                // **«F» -- das Herzstueck: die Negation ist BEDINGT, nicht abgeschaltet.**
+                //
+                // Ist ein Operand NaN, sind ALLE Vergleiche falsch, und aus `!(x < y)` folgt
+                // `x >= y` nicht. Die Tatsache faellt darum genau dann an, wenn beide Seiten
+                // als nicht-NaN bekannt sind -- und bekannt werden sie durch
+                // `narrow … to finite` oder dadurch, dass sie Literale sind.
+                //
+                // *Damit ist Gleitkomma nicht faktenlos, sondern gewoehnlich: man wird NaN
+                // einmal los und rechnet danach weiter.*
+                if negiert && (self.nan_moeglich(a, lage) || self.nan_moeglich(b, lage)) {
+                    return;
+                }
                 let op = if negiert { negiere(*op) } else { *op };
                 self.vergleichsfakt(op, a, b, lage);
             }
             _ => {}
+        }
+    }
+
+    /// **«F»: kann dieser Ausdruck NaN sein?**
+    ///
+    /// Nur Gleitkomma kann es. Ein Ganzzahlausdruck gibt `false`, und damit bleibt die
+    /// Verengungsmaschinerie fuer den ganzen bisherigen Bestand unveraendert -- *die
+    /// Erweiterung darf den gemessenen Pfad nicht anfassen* (Tor P-F1).
+    fn nan_moeglich(&mut self, e: &Expr, lage: &Lage) -> bool {
+        match self.ausdruck(e, lage) {
+            Typ::Gleitkomma(f) => f.kann_nan,
+            _ => false,
         }
     }
 
@@ -858,6 +915,31 @@ impl<'a> Pruefer<'a> {
 
     /// Der Typ eines Ortes, verengt durch die Fakten, die ueber ihn gelten.
     fn mit_fakt(&self, o: &Ort, grund: Typ, lage: &Lage) -> Typ {
+        // **«F»: die zwei Bits zuerst** -- sie haengen an keinem Bereich, und ein
+        // Gleitkommatyp hat gar keinen `bereich()` im Ganzzahlsinn.
+        if let Typ::Gleitkomma(mut f) = grund {
+            if let Some(schluessel) = schluessel_von(o) {
+                for fk in &lage.fakten {
+                    if let Fakt::Endlich {
+                        schluessel: s,
+                        nan,
+                        unendlich,
+                        ..
+                    } = fk
+                    {
+                        if *s == schluessel {
+                            if *nan {
+                                f.kann_nan = false;
+                            }
+                            if *unendlich {
+                                f.kann_unendlich = false;
+                            }
+                        }
+                    }
+                }
+            }
+            return Typ::Gleitkomma(f);
+        }
         let Some(b) = grund.bereich() else {
             return grund;
         };
@@ -920,7 +1002,15 @@ impl<'a> Pruefer<'a> {
             return;
         };
         lage.fakten.retain(|f| match f {
-            Fakt::Bereich {
+            // **«F»: dieselbe Regel wie fuer den Bereich.** Wird die Stelle beschrieben,
+            // faellt auch die Endlichkeitszusage -- *ein Fakt ueber einen Wert ueberlebt
+            // dessen Ueberschreiben nicht.*
+            Fakt::Endlich {
+                schluessel,
+                indizes,
+                ..
+            }
+            | Fakt::Bereich {
                 schluessel,
                 indizes,
                 ..
@@ -940,7 +1030,7 @@ impl<'a> Pruefer<'a> {
         // keine Aliasaussage, also faellt hier alles Nichtlokale mit.
         if k.contains('.') || k.contains("->") || k.contains('[') {
             lage.fakten.retain(|f| match f {
-                Fakt::Bereich { schluessel, .. } => self.ist_lokal(schluessel),
+                Fakt::Endlich { schluessel, .. } | Fakt::Bereich { schluessel, .. } => self.ist_lokal(schluessel),
                 Fakt::Beziehung { links, rechts, .. } => {
                     self.ist_lokal(links) && self.ist_lokal(rechts)
                 }
@@ -961,7 +1051,7 @@ impl<'a> Pruefer<'a> {
 
     fn aufruf_toetet_fakten(&self, lage: &mut Lage) {
         lage.fakten.retain(|f| match f {
-            Fakt::Bereich { schluessel, .. } => self.ist_lokal(schluessel),
+            Fakt::Endlich { schluessel, .. } | Fakt::Bereich { schluessel, .. } => self.ist_lokal(schluessel),
             Fakt::Beziehung { links, rechts, .. } => {
                 self.ist_lokal(links) && self.ist_lokal(rechts)
             }
@@ -989,6 +1079,46 @@ impl<'a> Pruefer<'a> {
     }
 
     fn passt(&mut self, quelle: &Typ, ziel: &Typ, span: Span, was: &str) {
+        // **«F»: die zwei Bits, und sie sind der Abnehmer der Faktenmaschine.**
+        //
+        // Ohne diese Zeilen waere `Fakt::Endlich` gebaut und von nichts gelesen -- genau die
+        // Klasse, gegen die `pruefe-klauseln.py` steht. *Ein Typ mit einem GENANNTEN Bereich
+        // schliesst NaN aus; ein blankes `f64` nicht.*
+        // Neutypen durchgreifen: `type Anteil = f64 in 0.0 .. 1.0` traegt dieselbe Zusage
+        // wie die ausgeschriebene Form. *Sonst haenge die Regel daran, ob jemand dem Typ
+        // einen Namen gegeben hat.*
+        if let (Typ::Gleitkomma(q), Typ::Gleitkomma(z)) =
+            (quelle.durchgreifen(), ziel.durchgreifen())
+        {
+            let mut fehlt = Vec::new();
+            if q.kann_nan && !z.kann_nan {
+                fehlt.push("NaN");
+            }
+            if q.kann_unendlich && !z.kann_unendlich {
+                fehlt.push("unendlich");
+            }
+            if !fehlt.is_empty() {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "F001",
+                        span,
+                        format!(
+                            "{was} vertraegt kein {}, der Wert kann es sein",
+                            fehlt.join(" und kein ")
+                        ),
+                    )
+                    .mit_notiz(
+                        "`narrow <ort> to finite else { … }` stellt beides auf einmal her; \
+                         der `else`-Zweig IST der NaN-Weg",
+                    )
+                    .mit_notiz(
+                        "ohne die Tatsache liefert auch die Negation eines Vergleichs \
+                         nichts: ist ein Operand NaN, sind alle Vergleiche falsch",
+                    ),
+                );
+            }
+            return;
+        }
         let (Some(q), Some(z)) = (quelle.bereich(), ziel.bereich()) else {
             return;
         };
@@ -1210,7 +1340,7 @@ fn nennt_namen(f: &Fakt, name: &str) -> bool {
             || s.split(['[', ']', '.']).any(|t| t == name)
     };
     match f {
-        Fakt::Bereich { schluessel, .. } => trifft(schluessel),
+        Fakt::Endlich { schluessel, .. } | Fakt::Bereich { schluessel, .. } => trifft(schluessel),
         Fakt::Beziehung { links, rechts, .. } => trifft(links) || trifft(rechts),
     }
 }

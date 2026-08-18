@@ -536,6 +536,12 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **Das INTERVALL eines Gleitkommatyps wird nicht geprueft, nur die zwei Bits**
+      *(2026-08-18)*. `F001` haelt NaN und Unendlich; dass ein Wert wirklich in `0.0 .. 1.0`
+      liegt, prueft niemand. **`narrow … to <fbereich>` installiert auch keinen Fakt** -- der
+      Weg dorthin geht ueber `konst_wert`, und das ist ganzzahlig. *Dieselbe Gestalt wie die
+      zwei Bits, nur mit Intervallfortpflanzung dahinter (F3).*
+
 ### «F» — f32 und f64, geplant 2026-08-18 (`PLAN.md`, „«F» — f32 und f64, vollstaendig")
 
 **Der Beschluss weicht von W3 ab und sagt es:** der Bedarf ist gemessen null, die Entscheidung

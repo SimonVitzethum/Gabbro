@@ -900,8 +900,25 @@ pub struct BrichtStmt {
 #[derive(Debug, Clone)]
 pub struct NarrowStmt {
     pub ort: Ort,
-    pub bereich: Bereich,
+    pub ziel: NarrowZiel,
     pub sonst: Block,
+}
+
+/// **Wohin verengt wird.**
+///
+/// `finite` kam mit «F» dazu, und es ist **keine** Bereichsverfeinerung: *Endlichkeit ist im
+/// Gitter kein Intervall.* NaN liegt in keinem Intervall, und dieselbe Aussage ist trotzdem
+/// nicht „der Bereich ist enger". Darum eine eigene Form statt eines Bereichs mit
+/// Sonderwerten.
+///
+/// **Und es gibt kein `isnan` in der Sprache.** `narrow … to finite else { … }` IST die
+/// Prüfung, und ihr `else`-Zweig ist der NaN-Weg -- genau die Gestalt, die der Korpus von
+/// Hand schreibt (`FRAGMENTE.md`, «F0»/FF1).
+#[derive(Debug, Clone)]
+pub enum NarrowZiel {
+    Bereich(Bereich),
+    /// Nicht NaN UND nicht unendlich -- zwei Bits, auf einmal gesetzt.
+    Endlich(Span),
 }
 
 #[derive(Debug, Clone)]

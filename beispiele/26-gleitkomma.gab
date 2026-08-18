@@ -1,0 +1,44 @@
+-- 26 -- «F»: f32/f64, und das Herzstueck ist die BEDINGTE Negation.
+--
+-- **Was hier NICHT versprochen wird: numerische Genauigkeit.** Der Pruefer macht Klempnerei,
+-- nicht Numerik. Was er traegt, ist die Ganzzahltatsache plus ZWEI BITS -- ein Intervall
+-- ueber den reellen Zahlen, dazu `kann_nan` und `kann_unendlich`.
+--
+-- **Und der Erzeuger weigert sich benannt** (`C001`): erklaert und geprueft, nicht abgesenkt.
+
+module beispiel::gleitkomma {
+
+-- Ein GENANNTER Bereich schliesst NaN aus: NaN liegt in keinem Intervall, weil jeder
+-- Vergleich mit ihm falsch ist.
+type Anteil = f64 in 0.0 .. 1.0;
+
+-- **`rounded` kam aus dem Korpus, nicht aus dem Entwurf** («F0»/FF4): an 340 Literalen eines
+-- echten Renderers waeren ohne das Wort 53 abgelehnt worden, darunter ln 2 und 2 pi. Eine
+-- transzendente Konstante ist in KEINER binaeren Breite exakt.
+--
+-- *Verboten ist nicht das Inexakte, sondern das STILLSCHWEIGEND Inexakte -- genau der Satz,
+-- den `wrapping` ueber den Ueberlauf sagt.*
+const TAU  : f64 = 6.283185307179586 rounded;
+const HALB : f64 = 0.5;
+
+-- **Die Verengung IST die Pruefung, und ihr `else`-Zweig ist der NaN-Weg.**
+--
+-- Der Korpus schreibt dieselbe Bewegung von Hand («F0»/FF1): dort steht
+-- `isnan(de.x) || isinf(de.x) || …` neben dem Vergleich, weil der Vergleich allein den Fall
+-- nicht abdeckt. In Gabbro ist es eine Anweisung, und danach rechnet man gewoehnlich.
+impl fn klemmen(x : f64) -> Anteil
+    effects { pure }
+    costs   <= 8 ops
+{
+    narrow x to finite else { return HALB; }
+    if x < 0.0 { return 0.0; }
+    if x > 1.0 { return 1.0; }
+    return x;
+}
+
+-- Ein Literal ist bekannt endlich -- deshalb braucht DIESE Zeile keine Verengung.
+impl fn voll() -> Anteil effects { pure } costs <= 1 ops {
+    return 1.0;
+}
+
+}

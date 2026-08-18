@@ -2013,16 +2013,23 @@ fn anweisung(
         // DEFINIERT, nicht weil M1 versagt haette. *W6 gilt in die andere Richtung: was M1
         // traegt, wird weggelassen; was `narrow` heisst, bleibt stehen.*
         StmtArt::Narrow(n) => {
+            // **«F»: `narrow … to finite` senkt NICHT ab.** Der Erzeuger traegt heute keine
+            // Gleitkommaform, und er weigert sich benannt, statt etwas Plausibles zu
+            // schreiben -- dieselbe Haltung wie bei `entrust`.
+            let NarrowZiel::Bereich(bereich) = &n.ziel else {
+                weigere(absagen, n.ort.basis.span, "`narrow … to finite` (Gleitkomma)");
+                return;
+            };
             let o = ort(&n.ort, u, absagen);
-            let von = ausdruck(&n.bereich.von, u, absagen);
-            let bis = ausdruck(&n.bereich.bis, u, absagen);
-            let oben = if n.bereich.exklusiv { "<" } else { "<=" };
+            let von = ausdruck(&bereich.von, u, absagen);
+            let bis = ausdruck(&bereich.bis, u, absagen);
+            let oben = if bereich.exklusiv { "<" } else { "<=" };
             // **`x >= 0` auf einem vorzeichenlosen Wort ist immer wahr, und `-Wextra` sagt
             // das zu Recht** (`-Wtype-limits`). Die untere Pruefung faellt deshalb weg --
             // **aber nur, wenn der Erzeuger den Typ als vorzeichenlos KENNT.** Weiss er es
             // nicht, gibt er sie aus und nimmt die Warnung in Kauf: *dann wird der Waechter
             // rot, statt dass eine Pruefung still verschwindet.*
-            let untere_ist_null = matches!(&n.bereich.von.art, ExprArt::Zahl(0));
+            let untere_ist_null = matches!(&bereich.von.art, ExprArt::Zahl(0));
             let bedingung = if untere_ist_null && vorzeichenlos.contains(&n.ort.basis.text) {
                 format!("{o} {oben} {bis}")
             } else {

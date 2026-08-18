@@ -2155,14 +2155,16 @@ impl<'a> Parser<'a> {
                 self.pos += 1;
                 let ort = self.place()?;
                 self.erwarte_kw(Kw::To)?;
-                let bereich = self.range()?;
+                let ziel = if self.ist_kw(Kw::Finite) {
+                    let sp = self.blick().span;
+                    self.pos += 1;
+                    NarrowZiel::Endlich(sp)
+                } else {
+                    NarrowZiel::Bereich(self.range()?)
+                };
                 self.erwarte_kw(Kw::Else)?;
                 let sonst = self.block()?;
-                StmtArt::Narrow(NarrowStmt {
-                    ort,
-                    bereich,
-                    sonst,
-                })
+                StmtArt::Narrow(NarrowStmt { ort, ziel, sonst })
             }
             Art::Wort(Kw::Locks) => {
                 self.pos += 1;
