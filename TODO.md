@@ -552,6 +552,19 @@ of items that are neither code nor a run — what remains is building and measur
       vorhandenen Musters (`ptr<…>`, `atomic … seq`, `format … endian`); `long double` wird
       benannt abgelehnt, und der Korpus begruendet es (FF2: eine Sprosse von sieben).
 
+- [ ] **Der PRUEFER hat kein Register** *(2026-08-18)*. `Intervall_Aussen.thy` ist die erste
+      Theorie dieses Ordners, die von M1 handelt statt vom Erzeuger -- und sie steht in
+      **keinem** Schablonenregister, weil das Register Erzeugerpflichten fuehrt
+      (*„eine Beweispflicht, die der Erzeuger schuldet"*). **Damit gibt es jetzt zwei
+      Vertrauensflaechen und nur eine Buchung.** Die zweite wird bisher nur von
+      `mutiere-pruefer.py` gemessen -- Mutationen, nicht Saetze. *Ein zweites Register waere
+      die naheliegende Antwort; ob es eines sein soll, ist eine Entscheidung.*
+- [ ] **Produkt, Quotient und die Null haben ihren Satz noch nicht**
+      *(2026-08-18)*. `Intervall_Aussen.thy` deckt die SUMME. Fuer Produkt und Quotient
+      rechnet der Pruefer ueber die vier Ecken; dass das Minimum der vier die untere Schranke
+      ist, braucht Monotonie in beiden Argumenten und eine Fallunterscheidung nach Vorzeichen.
+      Die Null ist ein eigener Satz: `-0.0` liegt in `0.0 .. 1.0`, und `1.0 / x` gibt `-inf`.
+
 ### «F» — f32 und f64, geplant 2026-08-18 (`PLAN.md`, „«F» — f32 und f64, vollstaendig")
 
 **Der Beschluss weicht von W3 ab und sagt es:** der Bedarf ist gemessen null, die Entscheidung
