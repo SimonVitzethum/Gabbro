@@ -2478,3 +2478,146 @@ jitpuffer   GAST auf `x86_64`, Stapel `gaststapel`, Register { eintritt: rdi, ka
 Der Erzeuger weigert sich benannt (`C001`). Die Übergabe ist ein Registervertrag plus Sprung —
 **dieselbe Baustelle wie `entry`, und die ist gemessen leer.** *Wer `entrust` absenkt, senkt
 den Eintrittsvertrag zum ersten Mal ab.*
+
+---
+
+# «F» — f32 und f64, vollständig. Der Plan.
+
+> **Beschlossen 2026-08-18.** Das Memo empfahl *nicht bauen*; die Entscheidung lautet anders,
+> und sie ist die des Ordners. Was hier steht, ist der Weg — mit der einen Abweichung vorn,
+> statt versteckt.
+
+## F0 — Die Abweichung, und was sie ersetzt
+
+Die Regel des Ordners heißt **kein Bau ohne gemessenen Bedarf** (W3), und der Bedarf ist
+gemessen **null** (139 Kerneldateien, 0 rechnende Stellen). *Eine Regel, die man kennt und
+bricht, braucht keinen weiteren Satz — sie braucht einen Ersatz.*
+
+**Der Ersatz ist der Korpus, und er kommt ZUERST.** Drei bis fünf echte Gleitkommafragmente
+von außerhalb dieses Baums — eine Transformationskette, ein Filter, ein Integrationsschritt,
+der Messpfad, der in Caprock eine Nachkommastelle brauchte. Jedes Fragment nennt mindestens
+ein Konstrukt, das es braucht.
+
+> **Ohne F0 entwirft man für eine vorgestellte Verwendung**, und das ist genau die Bewegung,
+> gegen die R7 und W3 stehen. *Der Bedarf darf entschieden werden; er darf nicht erfunden
+> werden.*
+
+**Tor F0:** 3–5 Fragmente liegen in `FRAGMENTE.md`, jedes mit seinem Befund.
+
+## F1 — Sieben Entscheidungen VOR der Grammatik (R7)
+
+**1. Die Ebene.** Gemessen: lokal ist nur *reell + Fehlerschranke* baubar
+(`HOL-Library.Float` sind dyadische Rationalzahlen, `Interval_Float` liegt daneben, **IEEE-754
+in Isabelle ist nicht installiert**). Und der Prüfer macht ohnehin Klempnerei, nicht Numerik.
+
+> **Die Entscheidung: die Gleitkommatatsache ist die Ganzzahltatsache plus ZWEI BITS.**
+> Ein Intervall über den reellen Zahlen, dazu `kann_nan` und `kann_unendlich`.
+
+*Das ist kein Löser* — es ist Intervallfortpflanzung, dieselbe Bauart wie der Bereich, den M1
+schon trägt. Die Kante von oben gilt unverändert: geschlossene Form, keine freie Arithmetik.
+
+**2. Der Rundungsmodus.** Zunächst **nur RNE**. `f64` heißt `f64<RNE>`; jeder andere Modus
+wird **benannt abgelehnt** (`F003`). Die Tür bleibt offen — die Form dafür steht schon fest
+(`ptr<…>`-Gestalt, vierte Instanz des Musters).
+
+**3. Die Negation — das Herzstück.** Nicht *Gleitkomma bekommt keine Fakten*, sondern:
+
+```
+!(x < y)  liefert  x >= y   GENAU DANN, wenn beide Operanden
+                            als NICHT-NaN bekannt sind
+```
+
+**Nicht-NaN-Sein ist selbst eine Tatsache, die M1 führt.** Damit ist die Verengungsmaschinerie
+nicht abgeschaltet, sondern **bedingt** — man wird NaN einmal los und rechnet danach normal.
+*Ohne diese Entscheidung ist Gleitkomma in Gabbro unbrauchbar; mit ihr ist es gewöhnlich.*
+
+**4. Wie man NaN loswird.** Über die vorhandene Form: `narrow x to finite else { … }`. Die
+Prüfung bleibt im erzeugten C, bis M1 sie wegbeweist (W6) — genau wie bei jedem Bereich.
+
+**5. Literale.** Ein Literal muss im Zieltyp **exakt darstellbar** sein, sonst Absage
+(`F002`). *Kein stilles Runden von Quelltext.* Und der Leser bekommt eine gemessene Aufgabe:
+`0..100` ist heute gültig, also ist `1.5` gegen `1..5` echt mehrdeutig — **`..` frisst zuerst**
+(maximal munch), `1.` allein wird abgelehnt.
+
+**6. Gleichheit** bleibt erlaubt. `x == x` ist für NaN falsch, und genau das führt die
+Faktenmaschine. *Ein Verbot wäre eine Härtung ohne gemessenen Bedarf.*
+
+**7. `accumulates` weigert sich mechanisch.** `merge add|max|min` über einem Gleitkommatyp
+bricht die Prämisse einer **bewiesenen** Schablone (`accumulates.monoid`: `add` ist nicht
+assoziativ, `max` mit NaN ist kein Verband). `F004`, und die Prämisse ist bereits geteilt.
+
+## F2 — Wortschatz und Grammatik
+
+| | |
+|---|---|
+| zwei Wörter | `f32`, `f64` — der Wortschatzwächter hält `kw.rs` gegen die Tabelle |
+| `intty` → `numty` | die EBNF-Regel wird verallgemeinert, die Ganzzahlform bleibt darin |
+| Literalform | Gleitkommaliteral im Leser, mit der `..`-Regel aus F1.5 |
+| Bereiche | `f64 in 0.0 .. 1.0` — erlaubt, und die Grenzen müssen exakt darstellbar sein |
+
+## F3 — Typmodell und M1
+
+`Typ::Gleitkomma(FBereich)` mit `FBereich { lo, hi, kann_nan, kann_unendlich, breite }`.
+**Die sechzehn gemessenen Stellen** (`umgebung` 6, `m1` 6, `typen` 4) entscheiden je, was sie
+mit der neuen Variante tun — *keine darf stillschweigend durchfallen.*
+
+Die eine numerisch heikle Stelle: die Fortpflanzung für `+ − × ÷` muss **nach außen gerundet**
+werden, um ein Ulp. Dort verdient `Interval_Float` seinen Platz.
+
+## F4 — Die Absagen, Familie `F` (gemessen frei)
+
+```
+F001  hier kann NaN oder Unendlich entstehen, und niemand behandelt es
+F002  das Literal ist im Zieltyp nicht exakt darstellbar
+F003  ein anderer Rundungsmodus als RNE
+F004  `merge` über einem Gleitkommatyp
+F005  Breitenmischung ohne benannte Umwandlung
+F006  `long double` und `f16` -- benannt abgelehnt, mit dem Grund
+```
+
+## F5 — Absenkung und ABI
+
+- `float`/`double`; **`-ffast-math` niemals**, und der Erzeuger sagt die verlangten Schalter an.
+- **x86 verlangt SSE2** (Excess precision, Doppelrundung am x87) — das wird eine Annahme mit
+  Falsifikator in der Axiomschicht, nicht eine Fußnote.
+- **Die Einheit benutzt Gleitkomma** — das ändert die Aufrufkonvention *und* den
+  Kontextwechsel. Es gehört ins Zeugnis, nicht in einen Kommentar.
+
+## F6 — Zeugnis
+
+Abschnitt A bekommt die Gleitkommaannahmen (Rundungsmodus gepinnt, SSE2, kein fast-math), und
+es kommt **eine neue Zeile** dazu: *diese Einheit rechnet mit Gleitkomma.* **Der Leser des
+Zeugnisses muss es sehen, ohne den Quelltext zu lesen** — denn für einen Kernel ist es eine
+Aussage über Preemption und Kontextgröße, nicht über Zahlen.
+
+## F7 — Schablonen und Beweise
+
+| | |
+|---|---|
+| `accumulates.monoid` | Prämisse bereits geteilt und geschärft — nichts weiter zu tun |
+| **neu** `float.intervall` | die nach außen gerundete Fortpflanzung ist korrekt |
+| **neu** `float.nichtnan` | die Verengung stellt Nicht-NaN-Sein her |
+
+**Beide brauchen nach Zahn 3 ihre Rückrichtung**, bevor sie als bewiesen gelten: welcher Pass
+stellt welche Prämisse her.
+
+## F8 — Die Tore
+
+```
+P-F1   jede vorhandene Probe bleibt grün, und der GANZZAHLPFAD ist bitgleich
+       -- eine Differenzeinheit weist es nach, nicht ein Eindruck
+P-F2   je Entscheidung aus F1 eine Giftprobe, die beißt (sieben)
+P-F3   die Fragmente aus F0 gehen durch, oder die Weigerung ist benannt
+P-F4   `lebend_ungedeckt()` waechst NICHT: jede neue Schablone ist bewiesen,
+       oder der Erzeuger weigert sich
+```
+
+**P-F1 ist das wichtigste Tor.** Die sechzehn Stellen sind alle auf dem Ganzzahlpfad; wer dort
+etwas verschiebt, beschädigt eine Sprache, deren Bedarf gemessen ist, zugunsten einer, deren
+Bedarf entschieden wurde.
+
+## Verhältnis zu Punkt 1
+
+**«F» steht neben Punkt 1, nicht davor.** Die Reserve/Hinterlegung hat einen gemessenen
+Bedarf und entsperrt einen Allokator; «F» hat einen entschiedenen. *Beides ist zulässig, und
+der Unterschied gehört aufgeschrieben, damit er später nicht als gleichrangig gelesen wird.*

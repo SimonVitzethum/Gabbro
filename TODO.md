@@ -536,6 +536,27 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+### «F» — f32 und f64, geplant 2026-08-18 (`PLAN.md`, „«F» — f32 und f64, vollstaendig")
+
+**Der Beschluss weicht von W3 ab und sagt es:** der Bedarf ist gemessen null, die Entscheidung
+zu bauen ist die des Ordners. **Ersatz fuer die Bedarfszaehlung ist der Korpus, und er kommt
+zuerst** -- sonst entwirft man fuer eine vorgestellte Verwendung.
+
+- [ ] **F0: drei bis fuenf echte Gleitkommafragmente**, jedes mit seinem Befund. *Der Bedarf
+      darf entschieden werden; er darf nicht erfunden werden.*
+- [ ] **F1: sieben Entscheidungen vor der Grammatik.** Die tragende ist die dritte: **die
+      Negation liefert ihre Tatsache GENAU DANN, wenn beide Operanden als Nicht-NaN bekannt
+      sind.** Damit ist die Verengungsmaschinerie bedingt statt abgeschaltet -- *ohne diese
+      Entscheidung ist Gleitkomma in Gabbro unbrauchbar, mit ihr gewoehnlich.*
+- [ ] **F3: die sechzehn gemessenen Stellen** (`umgebung` 6, `m1` 6, `typen` 4) entscheiden je,
+      was sie mit `Typ::Gleitkomma` tun. **Keine darf stillschweigend durchfallen.**
+- [ ] **F5/F6: die Einheit rechnet mit Gleitkomma -- das gehoert ins ZEUGNIS.** Es aendert
+      Aufrufkonvention und Kontextwechsel; fuer einen Kernel ist es eine Aussage ueber
+      Preemption, nicht ueber Zahlen. Dazu SSE2 als Annahme mit Falsifikator.
+- [ ] **P-F1 ist das wichtigste Tor: der GANZZAHLPFAD bleibt bitgleich**, nachgewiesen von
+      einer Differenzeinheit statt von einem Eindruck. *Wer dort etwas verschiebt, beschaedigt
+      eine Sprache mit gemessenem Bedarf zugunsten einer mit entschiedenem.*
+
 - [ ] **`index into T` im Slotfeld verliert seinen Typ, wenn `T` noch nicht fertig ist**
       *(gemessen 2026-08-18, fuenf Proben)*. Nicht `option`, nicht die Selbstbezueglichkeit --
       die DEKLARATIONSREIHENFOLGE. Quer ueber zwei Tabellen sauber, vorwaerts `M103`, auf die
