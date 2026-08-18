@@ -2140,3 +2140,156 @@ kostet.**
 4. **Festkomma als Fragment** — misst nebenbei, ob M1 die doppelte Zwischenbreite trägt.
 5. **Gleitkomma als Memo mit Bedarfszählung**, nicht als Bau. *Und das Memo hat jetzt seinen
    Kernsatz: die Kosten sind eine zweite Faktenlogik, nicht ein zweiter Zahlentyp.*
+
+---
+
+# Die Klasse hat jetzt einen Namen und einen Wächter — *deklariert, exportiert, nie gelesen*
+
+Dreimal in zwei Wochen dasselbe Muster, und jedes Mal von Hand gefunden:
+
+| | | |
+|---|---|---|
+| `rank` | deklariert, im Zeugnis | von keinem Pass gegen die Sperrordnung gehalten |
+| `opaque` | deklariert, ein **Verbot** | biss an keiner Rechenstelle |
+| `ensures` | deklariert, im Zeugnis **gezählt** | gegen keinen Rumpf gehalten |
+
+**Ein Muster, das dreimal von Hand gefunden wird, ist kein Zufall, sondern ein fehlendes
+Werkzeug.** Und die vierte Fundstelle ist teurer als die dritte, weil auf ihr dann schon etwas
+steht: die wertgetragenen Indextypen bauen auf `opaque`, die Bibliotheks-ABI baut auf
+`ensures`. *Den Boden reparieren, bevor das Stockwerk kommt, ist billiger als danach.*
+
+`./pruefe-klauseln.py` hält jedes `pub`-Feld jeder `pub struct` aus `ast.rs` — **die ganze
+Fläche, die der Leser füllt, ohne Auswahl** — gegen die Menge der Felder, auf die irgendein
+Pass zugreift. Die Leser zerfallen in zwei Lager, und die Trennung *ist* die Aussage: unter
+`gabbro-check/src` wird **geprüft**, in `emit.rs`/`zeugnis.rs`/`gabbro-cli` nur **abgesenkt und
+berichtet**.
+
+## Es waren nicht vier, es sind neunundvierzig
+
+```
+131 Feldnamen · 23 Leserdateien, davon 4 tragend
+
+  nur getragen   21   abgesenkt oder berichtet, von keinem Pass geprüft
+  ungelesen      28   der Leser füllt sie, niemand sieht hin
+
+  ZUSAGE         18   eine Aussage über Verhalten, die kein Pass hält  ← die Klasse
+  ABSENKUNG       6   der Erzeuger ist ihr richtiger und einziger Leser
+  TOT            25   das Bauteil ist gelesen und sonst nirgends
+```
+
+**Die Stufe ist gemessen, die Klasse ist ein Urteil** — das Werkzeug sagt beides getrennt an,
+statt das eine als das andere auszugeben.
+
+Vier Funde, die nicht in der Erwartung standen:
+
+- **`fortschritt` (`progress`) liest niemand.** `schleifen.rs` steigt in den Rumpf jeder
+  `forever`- und `retry`-Schleife und sieht den Zeugen nicht an. *Das ist genau die Zusage, an
+  der ein Kernel hängt, der Jahre läuft* — und sie ist heute ein Wort ohne Leser.
+- **`versatz` liest nur der Erzeuger.** Dass zwei Register einander nicht überlappen, ist der
+  **Hauptsatz** von `Device_Konstruktor.thy`. Der Beweis steht; die Prüferzeile fehlt.
+  *Ein bewiesener Satz ohne Pass ist eine Zusage über ein Programm, das so nicht geprüft wird.*
+- **`entry` gibt es nicht.** Zwölf Felder — `regs_in`, `regs_out`, `preserves`, `clobbers`,
+  `stack`, `vektor`, `via`, `ist`, `verschachtelt`, `dispatch`, `pro_kern` — und **keine Datei
+  außerhalb des Lesers nennt `EntryDecl`.** Der Eintrittsvertrag ist geschriebene Grammatik
+  und sonst nichts. *Das ist der Vertrag, den `entrust` erben soll.*
+- **`pub` ist wirkungslos.** Kein Pass, kein Erzeuger liest `oeffentlich`. Sichtbarkeit wird
+  weder geprüft noch abgesenkt — und eine Bibliotheks-ABI beginnt bei genau diesem Wort.
+
+## Die Vergröberung geht in die sichere Richtung
+
+Gemessen wird **je Name, nicht je Struktur**: heißt ein Feld in zwei Strukturen gleich und
+liest ein Pass nur das eine, gilt der Name als gelesen. Der Bericht ist damit eine **untere
+Schranke** der Klasse (W10) — was er nennt, ist echt; was er verschweigt, kann trotzdem da
+sein. *Er darf verpflichten und nicht freisprechen.*
+
+Und weil ein Zähler, der immer null sagt, dasselbe Rot wie Grün liefert, weist das Werkzeug
+seine Messfähigkeit nach (R14): `span` **muss** als gelesen herauskommen, `section` **muss** es
+nicht. Fällt eine der beiden Proben, bricht es ab, statt zu schweigen. Die Ratsche klemmt in
+beide Richtungen — eine neue Fundstelle schlägt an, **und eine gestiegene Zeile auch**. *Eine
+Tabelle, die nur wächst, ist eine Ausnahmeliste.*
+
+---
+
+# Der Beweiswächter sang über einem Lauf, der nichts gebaut hatte
+
+`isabelle build -D .` wählte **keine Sitzung aus**, tat nichts, endete mit 0 — und
+`pruefe-beweise.sh` meldete darüber *„ALL PASS — 9 Theorien"*. Die Zahl kam aus `ROOT`, nicht
+aus dem Bau. **Ein Werkzeug, das Schweigen für Zustimmung nimmt, misst nicht** (W7, R14).
+
+Drei Änderungen, jede mit einer Probe, die anschlägt:
+
+| | |
+|---|---|
+| die Sitzung **benennen** (`-d . Gabbro`) | ein unbekannter Name ist ein Fehler, kein Schweigen |
+| einen **Nachweis** verlangen | frische Fertigmeldung *oder* ein Bauwerksbuch, das jünger ist als jede Quelle |
+| `ROOT` gegen den **Ordner** halten | eine `.thy` ohne Eintrag ist ein Beweis, den niemand führt |
+
+Die dritte fand ihren Anlass in der eigenen Geschichte: `Verbund_Konstruktor.thy` lag genau so
+im Ordner, bevor sie in `ROOT` kam.
+
+**Vier Proben, vier Bisse:** Waise ohne Eintrag → Abbruch · alte Fassung plus geänderte Quelle
+→ *ohne Nachweis* · kaputter Beweisschritt → `FEHLER` mit Zeilennummer · wiederhergestellt →
+`Finished Gabbro (0:00:22)`. *Der grüne Lauf trägt seitdem seinen Nachweis im Text.*
+
+---
+
+# Die symbolische Kostenrechnung hat eine KANTE — und sie wird vor der ersten Zeile gezogen
+
+Der Block ist **kleiner, als er wirkt**, solange die Ausdrucksform geschlossen bleibt. Und die
+Form steht bereits im Prüfer, ohne dass jemand sie als Grenze ausgesprochen hätte —
+`kosten.rs`:
+
+```rust
+struct Term { fest: i128, glieder: BTreeMap<String, i128> }
+```
+
+Das *ist* die geschlossene Form. Was fehlt, ist der Satz, dass sie geschlossen **bleibt**:
+
+```
+zulässig    K                    eine Zahl
+            K · n                eine Zahl mal einem DEKLARIERTEN Maß
+            K₀ + K₁·n₁ + … + Kₘ·nₘ
+
+Vergleich   nur bei identischen Maßen, koeffizientenweise
+            (Nichtnegativität ist Prämisse und wird geprüft)
+
+verboten    freie Arithmetik · `min` · Fallunterscheidung
+            Vergleich verschiedener Maße
+```
+
+**Sobald jemand `min`, Fallunterscheidungen oder den Vergleich verschiedener Maße will, ist es
+ein Löser** — und dann ist die Linie überschritten, die diesen Ordner definiert. Ein Prüfer,
+der `min(40·n, 2^32)` gegen `40·m` hält, sucht; er rechnet nicht mehr.
+
+> Das ist dieselbe Kante wie bei `@[66:64]`: **die Weigerung ist die Antwort.** Wer zwei Maße
+> vergleichen will, nennt das zweite Maß — so wie ein 128-Bit-Eintrag zwei Wörter sind und der
+> Programmierer das zweite benennt.
+
+*Eine Kante, die vor der ersten Zeile gezogen wird, kostet einen Absatz. Nach der ersten Zeile
+kostet sie einen Rückbau.*
+
+---
+
+# Die Reihenfolge nach HEBELWIRKUNG statt nach Größe
+
+Die vorige Liste sortierte nach Größe. Das ist die falsche Achse: **ein kleiner Posten, auf dem
+etwas gebaut werden soll, ist teurer als ein großer, der allein steht.**
+
+1. **`opaque` bekommt eine Tür.** Es beißt seit `5e9f31e` — aber ein Verbot ohne
+   Umwandlungsform ist eine Sackgasse. Die wertgetragenen Indextypen sind das **vierte**
+   Konstrukt, das auf Undurchsichtigkeit baut; der `rank`-Fund hat diese Reihenfolge schon
+   einmal gelehrt.
+2. **`ensures` wird gelesen.** Keine Kleinigkeit: eine Zusage, die im Zeugnis erscheint, in der
+   Bibliotheks-ABI getragen werden soll und heute nirgends gegen den Rumpf **oder auch nur
+   gegen die Wohlgeformtheit** geprüft wird. Der Wächter hat siebzehn Geschwister dazu benannt.
+3. **Der zweite Korpus.** Als einziger der großen Blöcke **entsperrt** er andere, statt selbst
+   zu wachsen: K11.2.2 hängt daran, jede Null im Zeugnis hängt daran, und die Konvergenzmetrik
+   bekommt erst mit ihm einen zweiten Datenpunkt aus einer anderen Autorenlinie. *Die
+   aarch64-Lektion in neuer Form: ein Korpus, den derselbe Autor für dieselbe Sprache
+   schreibt, misst Passung, nicht Übertragbarkeit.*
+4. **Dann erst die Erweiterung** — mit der Kante oben, bevor die erste symbolische Kostenzeile
+   geschrieben wird. *Die Erweiterung ohne zweiten Korpus verlängert die Sprache um Konstrukte,
+   deren Bedarf nur der eine Baum belegt.*
+
+`entrust`, Festkomma und das Gleitkomma-Memo bleiben, wo sie standen — sie tragen nichts, was
+vorher fallen müsste.

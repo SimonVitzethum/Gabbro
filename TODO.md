@@ -524,6 +524,46 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+### Deklariert, exportiert, nie gelesen — die Klasse hat einen Namen und einen Waechter
+
+**Gemessen 2026-08-18** mit `./pruefe-klauseln.py`: 131 Feldnamen aus `ast.rs` gegen 23
+Leserdateien. **49 Felder gebucht** -- 21 nur getragen (nur `emit.rs`/`zeugnis.rs`/`cli`),
+28 ungelesen. Nach Urteil: **18 ZUSAGE**, 6 ABSENKUNG, 25 TOT. *Die Stufe ist gemessen, die
+Klasse ist ein Urteil, und das Werkzeug sagt beides getrennt an.*
+
+Der Waechter klemmt in beide Richtungen und weist seine Messfaehigkeit nach (R14: `span` muss
+als gelesen herauskommen, `section` nicht). **Die Liste unten ist eine UNTERE Schranke** --
+gemessen wird je Name, nicht je Struktur (W10).
+
+- [ ] **`progress` liest niemand** *(gemessen 2026-08-18)*. `schleifen.rs` steigt in den Rumpf
+      jeder `forever`- und `retry`-Schleife und sieht `fortschritt` nicht an. **Das ist die
+      Zusage, an der ein Kernel haengt, der Jahre laeuft** -- und sie ist heute ein Wort ohne
+      Leser. Dasselbe gilt fuer `verlaesst` (`leaves`) und `abstieg` (die Terminierung des
+      `traverse`).
+- [ ] **`versatz`: der bewiesene Satz hat keine Prueferzeile** *(gemessen 2026-08-18)*. Dass
+      zwei `reg` einander nicht ueberlappen, ist der HAUPTSATZ von `Device_Konstruktor.thy`;
+      gelesen wird das Feld nur von `emit.rs`. Gleich daneben: `schritt` -- **`stride 0` macht
+      die Bank leer**, und die Theorie nennt das selbst eine Fundstelle. *Ein bewiesener Satz
+      ohne Pass ist eine Zusage ueber ein Programm, das so nicht geprueft wird.*
+- [ ] **`entry` gibt es nicht** *(gemessen 2026-08-18)*. Zwoelf Felder -- `regs_in`,
+      `regs_out`, `preserves`, `clobbers`, `stack`, `vektor`, `via`, `ist`, `verschachtelt`,
+      `dispatch`, `pro_kern` -- und **keine Datei ausserhalb des Lesers nennt `EntryDecl`**.
+      Der Eintrittsvertrag ist geschriebene Grammatik und sonst nichts. *Das ist der Vertrag,
+      den `entrust` erben soll* -- wer `entrust` baut, baut ihn zum ersten Mal.
+- [ ] **`pub` ist wirkungslos** *(gemessen 2026-08-18)*. Kein Pass, kein Erzeuger liest
+      `oeffentlich`. Sichtbarkeit wird weder geprueft noch abgesenkt -- **und eine
+      Bibliotheks-ABI beginnt bei genau diesem Wort.**
+- [ ] **`ensures`/`maintains` werden GEZAEHLT, nicht gelesen** *(gemessen 2026-08-18)*.
+      `zeugnis.rs:370,391` ruft `.len()` und `.is_empty()`; kein Pass haelt sie gegen den
+      Rumpf oder auch nur gegen die Wohlgeformtheit. **Die Bibliotheks-ABI soll sie tragen.**
+- [ ] **`walk`, `check`, `invariant`: gelesen und sonst nirgends** *(gemessen 2026-08-18)*.
+      der Abstieg eines `walk` (`from`/`down`/`leaf`), `floor`/`measures`/`gates`/
+      `counterprobe`, `cost`/`runs` an der `invariant` -- dazu `by` (der Induktionshinweis
+      verfaellt), `masked` an einer Sperre, `exhaustive`, der Ergebnistyp eines `axiom`,
+      `scale`, die Formatversion und der Fehlername im `let … else`. *Kein Fehler, aber auch
+      keine Sprache.*
+
+
 ### The emitter: every remaining fragment is blocked by a DECISION, not by work
 
 **Measured 2026-08-17** by running `gabbro emit` over all ten blocks of

@@ -22,8 +22,22 @@ ISABELLE="${ISABELLE:-$HOME/Isabelle2025-2/bin/isabelle}"
 
 [ -x "$ISABELLE" ] || { echo "ABBRUCH: $ISABELLE nicht ausfuehrbar -- es wurde NICHTS geprueft."; exit 1; }
 
+# **(c) Deckt ROOT jede Theoriedatei?** Eine `.thy`, die keiner Sitzung angehoert, wird nie
+# geprueft -- und die Theorienzahl unten haette sie trotzdem nicht gezaehlt. *Eine Datei, die
+# im Ordner liegt und in keinem ROOT steht, ist ein Beweis, den niemand fuehrt.*
+FEHLT=""
+for T in "$W"/beweise/*.thy; do
+    N="$(basename "$T" .thy)"
+    grep -qE "^    $N\\b" "$W/beweise/ROOT" || FEHLT="$FEHLT $N"
+done
+if [ -n "$FEHLT" ]; then
+    echo "ABBRUCH: Theorien ohne ROOT-Eintrag --$FEHLT"
+    echo "  Sie liegen im Ordner und gehoeren keiner Sitzung an. Es wurde NICHTS an ihnen geprueft."
+    exit 1
+fi
+
 echo "== Beweise: Sitzung Gabbro, Wachhund bei ${GRENZE_GB} GB / ${ZEIT}s =="
-( cd "$W/beweise" && "$ISABELLE" build -o threads=1 -D . ) > /tmp/gabbro-beweise.log 2>&1 &
+( cd "$W/beweise" && "$ISABELLE" build -o threads=1 -d . Gabbro ) > /tmp/gabbro-beweise.log 2>&1 &
 BAU=$!
 
 ANGEHALTEN=0
@@ -56,9 +70,27 @@ if [ $ERG != 0 ]; then
     grep -E "^\*\*\*" /tmp/gabbro-beweise.log | head -12
     exit 1
 fi
-grep -E "Finished Gabbro" /tmp/gabbro-beweise.log
+# **(b) Ausgang 0 ist keine Evidenz.** `isabelle build` schweigt und meldet Erfolg, wenn die
+# Auswahl LEER ist -- genau das tat die erste Fassung mit `-D .`: sie sang „ALL PASS" ueber
+# einem Lauf, der nichts gebaut hatte. *Ein Waechter, der Schweigen fuer Zustimmung nimmt,
+# misst nicht.* Darum wird hier ein Nachweis verlangt: entweder eine frische Fertigmeldung
+# oder ein Bauwerksbuch, das juenger ist als jede Quelle.
+BUCH="$(ls -t "$($ISABELLE getenv -b ISABELLE_HEAPS)"/*/log/Gabbro.db 2>/dev/null | head -1)"
+if grep -qE "Finished Gabbro" /tmp/gabbro-beweise.log; then
+    NACHWEIS="$(grep -E 'Finished Gabbro' /tmp/gabbro-beweise.log)"
+elif [ -n "$BUCH" ] && [ -z "$(find "$W/beweise" -name '*.thy' -newer "$BUCH" -print -quit)" ] \
+                    && [ ! "$W/beweise/ROOT" -nt "$BUCH" ]; then
+    NACHWEIS="unveraendert seit $(date -r "$BUCH" '+%d.%m. %H:%M') -- keine Quelle ist juenger"
+else
+    echo "== BEWEISE: OHNE NACHWEIS =="
+    echo "  Der Lauf endete ohne Fehler und ohne Fertigmeldung, und kein Bauwerksbuch ist"
+    echo "  juenger als die Quellen. **Das ist kein gruener Lauf, sondern gar keiner.**"
+    exit 1
+fi
 N=$(grep -c "^    [A-Z]" "$W/beweise/ROOT")
-echo "== BEWEISE: ALL PASS -- $N Theorien =="
+D=$(ls "$W"/beweise/*.thy | wc -l)
+echo "== BEWEISE: ALL PASS -- $N Theorien ($D Dateien) =="
+echo "  Nachweis: $NACHWEIS"
 echo "  Und was das NICHT heisst: jede Theorie fuehrt ihren eigenen M-2-Abschnitt --"
 echo "  was sie zeigt, und was sie ausdruecklich nicht zeigt. Ein gruener Lauf ist die"
 echo "  Summe dieser Saetze, nicht mehr."
