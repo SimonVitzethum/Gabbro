@@ -12,6 +12,12 @@ Werkzeug, nicht von Hand. `schleifen.rs` liest ihn jetzt (`S003`/`S004`), und di
 die Zeile beim naechsten Lauf als VERALTET gemeldet. *Genau dafuer klemmt sie in beide
 Richtungen.*
 
+**Der zweite, am selben Tag: `ensures`** -- der Fall, der der Klasse ihren Namen gab.
+`M109`/`M110`/`M111` pruefen die WOHLGEFORMTHEIT, nicht den Beweis: aufloesende Namen,
+`result` nur wo es eins gibt, und keine Zusage ohne einen Ort, an dem die Funktion sie
+herstellen koennte. *Beim ersten Lauf fiel ein Fund im Korpus an -- `ensures unberuehrt <=
+s.len` nannte den FUNKTIONSNAMEN statt `result`, und die Zeile stand seit dem Schnitt da.*
+
 Ein Muster, das dreimal von Hand gefunden wird, ist kein Zufall, sondern ein fehlendes
 Werkzeug. **Und die vierte Fundstelle ist teurer als die dritte**, weil auf ihr dann schon
 etwas steht: wertgetragene Indextypen bauen auf `opaque`, die Bibliotheks-ABI baut auf
@@ -61,7 +67,6 @@ TRAGEND_DATEIEN = {"emit.rs", "zeugnis.rs"}
 # in beide Richtungen klemmt, ist eine Ratsche.*
 ERWARTET = {
     # -- ZUSAGE: eine Aussage ueber Verhalten, die kein Pass gegen etwas haelt ------------
-    "ensures":      ("ZUSAGE", "Was der Rumpf herstellen muss. Das Zeugnis ZAEHLT es; kein Pass haelt es gegen den Rumpf. **Der benannte Fall.**"),
     "maintains":    ("ZUSAGE", "Wie `ensures`: gezaehlt, nie gehalten."),
     "versatz":      ("ZUSAGE", "Registerlage. Dass zwei Register einander nicht ueberlappen, ist der HAUPTSATZ von `Device_Konstruktor.thy` -- und kein Pass rechnet ihn nach."),
     "schritt":      ("ZUSAGE", "`stride`. `stride 0` macht die Bank leer; `Device_Konstruktor.thy` sagt es und nennt es selbst eine Fundstelle."),

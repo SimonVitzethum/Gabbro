@@ -50,6 +50,8 @@ const BENANNT: &[&str] = &[
     "O001", "O002", "O003", "O004", "O006",
     // «B7»: der Verbundkonstruktor.
     "M106", "M107", "M108", "P036", "P037",
+    // Punkt 3: `ensures` wird gelesen -- Wohlgeformtheit, nicht Beweis.
+    "M109", "M110", "M111",
     "K004", "K005", "D001", "D002", "D003", "D004", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet

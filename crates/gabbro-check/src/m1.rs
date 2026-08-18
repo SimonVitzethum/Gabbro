@@ -204,6 +204,10 @@ impl<'a> Pruefer<'a> {
                 self.passt(&quelle, &ziel, st.wert.span, "der statische Wert");
             }
             if let ItemArt::Funktion(f) = &item.art {
+                self.modul = modul.to_string();
+                self.ensures_pruefen(f);
+            }
+            if let ItemArt::Funktion(f) = &item.art {
                 // Nur Ruempfe: Praedikate haben keine Laufzeitwirkung.
                 if let FnRumpf::Block(b) = &f.rumpf {
                     self.modul = modul.to_string();
@@ -1604,6 +1608,104 @@ impl<'a> Pruefer<'a> {
         })
     }
 
+    /// **`ensures` wird gelesen -- seit 2026-08-18, und vorher von niemandem.**
+    ///
+    /// Gemessen: vier unsinnige Nachbedingungen gingen still durch -- ein Name, den es nicht
+    /// gibt; `result` an einer Funktion ohne Ergebnis; eine Zusage ueber Zustand, den die
+    /// Funktion nicht anfasst; `old` an etwas Nichtexistentem.
+    ///
+    /// **Was hier NICHT geprueft wird: ob der Rumpf die Zusage einloest.** Das ist
+    /// Beweisersache und bleibt es -- der Nutzer beweist seine eigene Logik. *Geprueft wird
+    /// die WOHLGEFORMTHEIT, und die ist die Haelfte, die eine Maschine haben kann.*
+    ///
+    /// Die dritte Regel ist die schaerfste und die einzige, die nicht bloss Buchhaltung ist:
+    /// **eine Nachbedingung, die kein `result` nennt und keinen geschriebenen Ort, kann die
+    /// Funktion nicht HERSTELLEN.** Sie ist dann ein `requires` oder ein `maintains` am
+    /// falschen Platz.
+    fn ensures_pruefen(&mut self, f: &FnDecl) {
+        if f.ensures.is_empty() {
+            return;
+        }
+        let geschrieben: Vec<String> = f
+            .effects
+            .as_ref()
+            .map(|w| {
+                w.liste
+                    .iter()
+                    .filter_map(|x| match &x.art {
+                        WirkungArt::Schreibt(o) | WirkungArt::Veroeffentlicht(o) => {
+                            Some(o.basis.text.clone())
+                        }
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        for p in &f.ensures {
+            let mut namen = Vec::new();
+            sammle_namen_pred(p, &mut namen);
+            let mut nennt_ergebnis = false;
+            let mut nennt_geschriebenes = false;
+            for n in &namen {
+                if n == "result" {
+                    nennt_ergebnis = true;
+                    if f.ergebnis.is_none() {
+                        self.absagen.schiebe(
+                            Absage::fehler(
+                                "M110",
+                                p.span,
+                                format!("`{}` nennt `result` und liefert keins", f.name.text),
+                            )
+                            .mit_notiz(
+                                "eine Nachbedingung ueber ein Ergebnis, das es nicht gibt, \
+                                 spricht ueber nichts",
+                            ),
+                        );
+                    }
+                    continue;
+                }
+                if geschrieben.iter().any(|g| g == n) {
+                    nennt_geschriebenes = true;
+                }
+                let bekannt = f.parameter.iter().any(|x| x.name.text == *n)
+                    || self.u.suche_global(&self.modul, n).is_some()
+                    || self.u.kandidaten_oeffentlich(&self.modul, n).iter().any(|k| {
+                        self.u.typen.contains_key(k) || self.u.konstanten.contains_key(k)
+                    });
+                if !bekannt {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M109",
+                            p.span,
+                            format!("`{n}` in `ensures` ist hier nicht erklaert"),
+                        )
+                        .mit_notiz(
+                            "eine Nachbedingung, deren Namen nicht aufloesen, steht im \
+                             Zeugnis und in der Bibliotheks-ABI -- und sagt nichts",
+                        ),
+                    );
+                }
+            }
+            if !nennt_ergebnis && !nennt_geschriebenes && !namen.is_empty() {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "M111",
+                        p.span,
+                        format!(
+                            "`{}` kann diese Nachbedingung nicht herstellen",
+                            f.name.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "sie nennt weder `result` noch einen Ort, den die Funktion laut \
+                         `effects` schreibt -- dann ist sie ein `requires` oder ein \
+                         `maintains` am falschen Platz",
+                    ),
+                );
+            }
+        }
+    }
+
     /// M4 an der Stelle, an der M1 die Zahl hat: ein Index gegen die Laenge seines Feldes.
     fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {
         // **`suche` und nicht `get`, und das war ein Loch in der ERSTEN getragenen Klasse.**
@@ -1887,5 +1989,42 @@ fn op_zeichen(op: BinOp) -> &'static str {
         BinOp::BitOder => "|",
         BinOp::BitXor => "^",
         _ => "?",
+    }
+}
+
+/// Die BASISNAMEN, die ein Praedikat nennt -- ohne Feldnamen, denn die haengen am Traeger.
+fn sammle_namen_pred(p: &Pred, out: &mut Vec<String>) {
+    fn aus_expr(e: &Expr, out: &mut Vec<String>) {
+        match &e.art {
+            ExprArt::Ort(o) => out.push(o.basis.text.clone()),
+            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => aus_expr(i, out),
+            ExprArt::Binaer(_, a, b) => {
+                aus_expr(a, out);
+                aus_expr(b, out);
+            }
+            ExprArt::Ruf(r) => {
+                // `old(x)` ist ein Geisterausdruck; sein Argument ist ein gewoehnlicher Ort.
+                for a in &r.argumente {
+                    aus_expr(a, out);
+                }
+            }
+            ExprArt::Ergebnis => out.push("result".into()),
+            // `old(x)` ist ein Geisterausdruck ueber den VORzustand -- sein Ort muss es
+            // trotzdem geben. *Eine Nachbedingung ueber den alten Wert von nichts ist keine.*
+            ExprArt::Alt(o) => out.push(o.basis.text.clone()),
+            _ => {}
+        }
+    }
+    match &p.art {
+        PredArt::Vergleich(e) => aus_expr(e, out),
+        PredArt::Element(e, _) => aus_expr(e, out),
+        PredArt::Erreicht { von, nach, .. } => {
+            out.push(von.basis.text.clone());
+            out.push(nach.basis.text.clone());
+        }
+        // `Held(L)` nennt eine Sperre, keine Zusage ueber einen Wert.
+        PredArt::Held { .. } => {}
+        PredArt::Quantor(q) => sammle_namen_pred(&q.rumpf, out),
+        _ => {}
     }
 }

@@ -1082,7 +1082,12 @@ atomic groesse      : u64 publishes nothing relaxed;
 atomic tiefster     : u32 publishes nothing relaxed;
 
 impl fn unberuehrt(s : ptr<normal, r+own> Stack) -> u64
-    ensures  unberuehrt <= s.len
+    -- **Berichtigt 2026-08-18, gefunden von `M109`.** Hier stand `unberuehrt <= s.len` --
+    -- der FUNKTIONSNAME an der Stelle, an der `result` hingehoert. Gabbro hat das Wort;
+    -- die Vorlage kam aus einer Sprache, in der der Name das Ergebnis bezeichnet.
+    -- *Die Zeile stand seit dem Schnitt da und ist niemandem aufgefallen, weil `ensures`
+    -- von keinem Pass gelesen wurde.*
+    ensures  result <= s.len
     effects  { reads s }
 {
     let mut i : u64 in 0 .. STACK_MAX = 0;

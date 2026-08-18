@@ -2354,7 +2354,19 @@ etwas gebaut werden soll, ist teurer als ein großer, der allein steht.**
    > zwölf `opaque`-Deklarationen der Beispiele erklären und benutzen im selben Modul. *Das
    > ist eine Eigenschaft des Korpus, nicht der Regel — und ein weiteres Argument für den
    > zweiten.*
-3. **`ensures` wird gelesen.** Keine Kleinigkeit: eine Zusage, die im Zeugnis erscheint, in der
+3. **`ensures`** — ~~wird gelesen~~ **gelesen seit 2026-08-18.** `M109`/`M110`/`M111` prüfen
+   die **Wohlgeformtheit**, nicht den Beweis — *ob der Rumpf die Zusage einlöst, bleibt
+   Beweisersache, und das ist die Arbeitsteilung dieses Ordners.* Geprüft wird: auflösende
+   Namen, `result` nur wo es eins gibt, und **keine Zusage ohne einen Ort, an dem die
+   Funktion sie herstellen könnte** — die dritte hält sie gegen `effects`, also gegen eine
+   Klausel, die gelesen wird.
+
+   > **Beim ersten Lauf fiel ein Fund im Korpus an:** `ensures unberuehrt <= s.len` nannte
+   > den **Funktionsnamen** statt `result`. Die Vorlage kam aus einer Sprache, in der der
+   > Name das Ergebnis bezeichnet — *und die Zeile stand seit dem Schnitt da, weil `ensures`
+   > von keinem Pass gelesen wurde.*
+
+   Keine Kleinigkeit: eine Zusage, die im Zeugnis erscheint, in der
    Bibliotheks-ABI getragen werden soll und heute nirgends gegen den Rumpf **oder auch nur
    gegen die Wohlgeformtheit** geprüft wird. Der Wächter hat siebzehn Geschwister dazu benannt.
 4. **Der zweite Korpus.** Als einziger der großen Blöcke **entsperrt** er andere, statt selbst

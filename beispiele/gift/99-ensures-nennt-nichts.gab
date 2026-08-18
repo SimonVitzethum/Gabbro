@@ -1,0 +1,18 @@
+-- erwartet: M109
+-- **Eine Nachbedingung, deren Namen nicht aufloesen, steht im Zeugnis und in der
+-- Bibliotheks-ABI -- und sagt nichts.**
+--
+-- Genau diese Form stand im Korpus (`FRAGMENTE.md`, `unberuehrt`): der FUNKTIONSNAME an der
+-- Stelle, an der `result` hingehoert. *Die Zeile stand seit dem Schnitt da und ist niemandem
+-- aufgefallen, weil `ensures` von keinem Pass gelesen wurde.*
+module gift::zusage {
+
+impl fn laenge(x : u32 in 0 .. 10) -> u32
+    ensures laenge <= 10
+    effects { pure }
+    costs   <= 1 ops
+{
+    return x;
+}
+
+}
