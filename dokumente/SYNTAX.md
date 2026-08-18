@@ -93,7 +93,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
              class fields bank at stride count backed mirrors from
-             assume falsifier unfalsifiable axiom lock protects rank group rcu observes
+             assume falsifier unfalsifiable axiom lock protects rank group rcu observes reclaims
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
              offset_into index into option chain wrapping
@@ -801,7 +801,7 @@ lockdecl   = "lock" ident "protects" "{" placelist "}"
              "rank" constexpr [ "held" "<=" constexpr "ops" ]
              [ "shared" "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
 lockstmt   = "locks" [ "shared" ] place block ;
-rcudecl    = "rcu" ident "protects" "{" placelist "}" ";" ;
+rcudecl    = "rcu" ident "protects" "{" placelist "}" [ "reclaims" place ] ";" ;
 observestmt = "observes" ident block ;
 (* RCU, und es ist KEINE Sperre (2026-08-18, aus «K2»).
 
@@ -815,9 +815,17 @@ observestmt = "observes" ident block ;
      H009  ein LESEN einer rcu-geschuetzten Stelle steht in `observes`
      H010  ein SCHREIBEN steht zusaetzlich unter einer echten Sperre
 
-   NICHT gebaut: die GNADENFRIST. Dass ein Objekt erst freigegeben wird, wenn kein Leser es
-   mehr sehen kann, ist eine Phasenaussage -- «B37» hat die Maschinerie (`order`/`advances`),
-   und es fehlt der Begriff des Freigebens. *)
+   `reclaims` nennt den Ort, an dem ein Platz zurueckgegeben wird -- den Kopf der Freiliste.
+   Daran haengen zwei weitere Regeln:
+
+     H011  eine Rueckgabe steht NICHT in `observes` -- wer zurueckgibt, ist nicht Leser
+     H012  eine Rueckgabe steht unter der Schreibersperre
+
+   Und die GNADENFRIST selbst ist keine Pruefung, sondern eine ANNAHME: dass kein Leser das
+   alte Objekt mehr sehen kann, ist eine Aussage ueber die Umgebung -- kein statischer Pass
+   stellt sie her. Sie gehoert damit dorthin, wo `progress` steht: in die Annahmenschicht,
+   mit Falsifikator. *`progress` nennt, wer eine Schleife beendet; die Gnadenfrist nennt, wer
+   garantiert, dass kein Leser mehr drin ist.* *)
 gruppedecl = "group" ident "over" "{" ident { "," ident } [ "," ] "}"
              ( "{" { invariant } "}" | ";" ) ;
 ```

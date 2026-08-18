@@ -940,6 +940,12 @@ pub enum NarrowZiel {
 pub struct RcuDecl {
     pub name: Ident,
     pub schuetzt: Vec<Ort>,
+    /// **`reclaims <ort>` -- wo ein Platz zurueckgegeben wird.**
+    ///
+    /// Der Kopf der Freiliste. *Ohne einen genannten Ort haette die Gnadenfrist nichts, an
+    /// dem sie haengen koennte* -- und mit ihm sind zwei Regeln pruefbar, die es vorher nicht
+    /// waren.
+    pub gibt_zurueck: Option<Ort>,
     pub span: Span,
 }
 

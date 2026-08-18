@@ -1,0 +1,21 @@
+-- erwartet: H011
+-- **Wer zurueckgibt, ist nicht Leser.** Eine Rueckgabe im eigenen Lesebereich gibt einen
+-- Platz frei, den man selbst noch haelt.
+module gift::rueckgabe {
+
+table Konten count 256 { slot { zaehler : u32 in 0 .. 100, } }
+static mut frei : option index into Konten = None;
+rcu BACCT protects { Konten } reclaims frei;
+lock SCHREIBER protects { Konten, frei } rank 3 held <= 100 ops;
+
+impl fn falsch(i : index into Konten)
+    effects { locks SCHREIBER, writes frei } costs <= 5 ops
+{
+    locks SCHREIBER {
+        observes BACCT {
+            frei = Some(i);
+        }
+    }
+}
+
+}

@@ -536,12 +536,20 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
-- [ ] **Die GNADENFRIST fehlt noch** *(2026-08-18)*. `rcu`/`observes` stehen (`H009`,
-      `H010`), und damit sind Leseseite und Schreiberausschluss benannt. **Was fehlt, ist der
-      Punkt, an dem freigegeben werden darf**: dass kein Leser das alte Objekt mehr sehen
-      kann. Das ist eine PHASENaussage -- «B37» hat die Maschinerie (`order`/`advances`) --
-      und es fehlt der Begriff des Freigebens, denn Gabbro hat keinen Allokator, nur
-      Platzvorraete. *Punkt 1 hat die Haelfte davon gebaut; die andere ist die Rueckgabe.*
+- [ ] **`atomic` ist ein ITEM, kein Slotfeld** *(gemessen 2026-08-18 an K2-F2)*. Das Original
+      benutzt `atomic_long_inc_not_zero` -- **ein atomares RMW ist seine eigene
+      Wechselseitigkeit**, und ein RCU-Leser darf damit einen Zaehler erhoehen, ohne die
+      Schreibersperre zu nehmen. In Gabbro ist ein Zaehler IM Objekt nicht atomar
+      deklarierbar, also verlangt `H010` dort eine Sperre, die das Original nicht braucht.
+      *Die Nachbildung ist damit strenger als das Vorbild -- und das ist ein Befund ueber die
+      Sprache, nicht ueber den Prueferlauf.*
+- [ ] **Die GNADENFRIST ist eine ANNAHME, keine Pruefung -- und hat noch keinen Ort**
+      *(2026-08-18)*. `H011`/`H012` halten die zwei pruefbaren Haelften (nicht im eigenen
+      Lesebereich, nicht ohne Schreibersperre). Dass kein Leser das alte Objekt mehr sieht,
+      stellt kein statischer Pass her. **Sie gehoert dorthin, wo `progress` steht** -- und der
+      Pruefer verlangt sie noch nicht: ein `rcu … reclaims` ohne eine benannte
+      Gnadenfristannahme geht heute durch. *Dieselbe Regel wie `S003`, an einem anderen
+      Konstrukt.*
 - [ ] **`observes` senkt nicht ab** *(2026-08-18)*. Der Erzeuger weigert sich benannt. Die
       Absenkung waere zwei fremde Ruempfe wie bei `lock` (`_beobachten`/`_freigeben`), und die
       Zeugniszeile muesste sagen, dass diese Einheit eine RCU-Domaene liest -- **eine Aussage
@@ -1035,7 +1043,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 139 / 205) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 139 / 206) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |

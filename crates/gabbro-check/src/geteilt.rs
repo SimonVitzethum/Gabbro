@@ -133,12 +133,16 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // Ein Leser in `observes` darf die Schreibersperre nicht brauchen; sonst waere RCU eine
     // Sperre mit einem zweiten Namen.
     let mut rcu_domaenen: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    let mut rueckgaben: BTreeMap<String, String> = BTreeMap::new();
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Rcu(r) = &item.art {
             rcu_domaenen.insert(
                 r.name.text.clone(),
                 r.schuetzt.iter().map(|o| o.text()).collect(),
             );
+            if let Some(g) = &r.gibt_zurueck {
+                rueckgaben.insert(g.text(), r.name.text.clone());
+            }
         }
     });
 
@@ -204,7 +208,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     }
                 }
             }
-            rcu_schutz(b, &[], &aussen, &domaenen, &sperren, &f.name.text, absagen);
+            rcu_schutz(b, &[], &aussen, &domaenen, &rueckgaben, &sperren, &f.name.text, absagen);
         });
     }
 
@@ -779,6 +783,7 @@ fn rcu_schutz(
     beobachtet: &[String],
     gehalten: &[String],
     domaenen: &BTreeMap<String, Vec<String>>,
+    rueckgaben: &BTreeMap<String, String>,
     sperren: &BTreeMap<String, Sperre>,
     wo: &str,
     absagen: &mut Absagen,
@@ -800,19 +805,57 @@ fn rcu_schutz(
             StmtArt::Observiert(o) => {
                 let mut tiefer = beobachtet.to_vec();
                 tiefer.push(o.domaene.text.clone());
-                rcu_schutz(&o.rumpf, &tiefer, gehalten, domaenen, sperren, wo, absagen);
+                rcu_schutz(&o.rumpf, &tiefer, gehalten, domaenen, rueckgaben, sperren, wo, absagen);
             }
             StmtArt::Sperrt(l) => {
                 let mut tiefer = gehalten.to_vec();
                 tiefer.push(l.sperre.text());
-                rcu_schutz(&l.rumpf, beobachtet, &tiefer, domaenen, sperren, wo, absagen);
+                rcu_schutz(&l.rumpf, beobachtet, &tiefer, domaenen, rueckgaben, sperren, wo, absagen);
             }
             StmtArt::Wenn(w) => {
                 for (_, r) in &w.zweige {
-                    rcu_schutz(r, beobachtet, gehalten, domaenen, sperren, wo, absagen);
+                    rcu_schutz(r, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen);
                 }
                 if let Some(r) = &w.sonst {
-                    rcu_schutz(r, beobachtet, gehalten, domaenen, sperren, wo, absagen);
+                    rcu_schutz(r, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen);
+                }
+            }
+            // **Die Bloecke, die die erste Fassung uebersah -- und der Fund kam vom
+            // KORPUS, nicht vom Nachdenken.**
+            //
+            // K2-F2 noch einmal gerendert, diesmal mit RCU: 0 Fehler. Falsch -- der Zaehler
+            // wird ohne Sperre erhoeht, nur steht die Zeile in einem `retry`, und dort sah
+            // dieser Waechter nicht hinein. *`schutz` daneben tut es seit jeher; ich habe
+            // seine Arme nicht zu Ende gelesen.*
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    rcu_schutz(&z.rumpf, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen);
+                }
+            }
+            StmtArt::Bricht(x) => {
+                rcu_schutz(&x.rumpf, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen)
+            }
+            StmtArt::Narrow(x) => {
+                rcu_schutz(&x.sonst, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen)
+            }
+            StmtArt::LetSonst(x) => {
+                rcu_schutz(&x.sonst, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen)
+            }
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Traverse(t) => {
+                    rcu_schutz(&t.rumpf, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen)
+                }
+                Schleife::Retry(r) => {
+                    rcu_schutz(&r.rumpf, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen)
+                }
+                Schleife::Forever(f) => {
+                    rcu_schutz(&f.rumpf, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen)
+                }
+            },
+            StmtArt::Publish(p) => geschrieben.push(&p.ziel),
+            StmtArt::Ruf(r) => {
+                for a in &r.argumente {
+                    orte_aus_expr(a, &mut gelesen);
                 }
             }
             _ => {}
@@ -837,6 +880,48 @@ fn rcu_schutz(
         }
         for o in geschrieben {
             let t = o.text();
+            // **H011/H012 -- die Rueckgewinnung.**
+            //
+            // Die GNADENFRIST selbst ist keine Pruefung, sondern eine Annahme: dass kein Leser
+            // das alte Objekt mehr sehen kann, stellt kein statischer Pass her. *Sie gehoert
+            // dorthin, wo `progress` steht.* **Zwei Dinge sind aber pruefbar**, und beide sind
+            // Fehler, die man wirklich macht.
+            if let Some(d) = rueckgaben.get(&t) {
+                if !beobachtet.is_empty() {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "H011",
+                            o.span,
+                            format!("`{t}` gibt zurueck, waehrend `{wo}` in `observes` steht"),
+                        )
+                        .mit_notiz(
+                            "wer zurueckgibt, ist nicht Leser -- eine Rueckgabe im eigenen \
+                             Lesebereich gibt einen Platz frei, den man selbst noch haelt",
+                        ),
+                    );
+                }
+                let unter = gehalten.iter().any(|g| {
+                    sperren.get(g).is_some_and(|sp| {
+                        domaenen
+                            .get(d)
+                            .is_some_and(|orte| orte.iter().any(|p| sp.schuetzt.iter().any(|q| beruehrt(q, p))))
+                    })
+                });
+                if !unter {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "H012",
+                            o.span,
+                            format!("`{t}` gibt zurueck, ohne die Schreibersperre von `{d}` zu halten"),
+                        )
+                        .mit_notiz(
+                            "die Rueckgabe ist die Schreibseite -- und RCU serialisiert \
+                             Schreiber nicht gegeneinander",
+                        ),
+                    );
+                }
+                continue;
+            }
             let Some(d) = deckt(&t) else { continue };
             let unter_sperre = gehalten.iter().any(|g| {
                 sperren

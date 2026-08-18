@@ -3262,10 +3262,16 @@ impl<'a> Parser<'a> {
             }
         }
         self.erwarte_z(Z::GeschweiftZu)?;
+        let gibt_zurueck = if self.friss_kw(Kw::Reclaims) {
+            Some(self.place()?)
+        } else {
+            None
+        };
         let ende = self.erwarte_z(Z::Semi)?;
         Ok(RcuDecl {
             name,
             schuetzt,
+            gibt_zurueck,
             span: anfang.bis_zu(ende),
         })
     }

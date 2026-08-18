@@ -172,6 +172,8 @@ wortschatz! {
     // *Zwei Woerter, und die Maschinerie darunter ist die vorhandene.*
     Rcu           => "rcu",           res;
     Observes      => "observes",      res;
+    // **Die Rueckgewinnung -- der Ort, an dem die Gnadenfrist etwas zu tun bekommt.**
+    Reclaims      => "reclaims",      res;
     Group         => "group",         res;
     Protects      => "protects",      res;
     Rank          => "rank",          res;

@@ -11,16 +11,23 @@
 module beispiel::rcu {
 
 table Konten count 256 {
-    slot { zaehler : u32 in 0 .. 65535, }
+    slot {
+        zaehler : u32 in 0 .. 65535,
+        naechst : option index into Konten,
+    }
 }
 
 -- Die Domaene. **Kein `rank`, kein `held`** -- es gibt keine Haltezeit, gegen die eine
 -- Latenzaussage rechnen koennte, und keine Ordnung, in der etwas genommen wuerde.
-rcu BACCT protects { Konten };
+-- `reclaims` nennt den Ort, an dem ein Platz zurueckgegeben wird. **Ohne einen genannten Ort
+-- haette die Gnadenfrist nichts, an dem sie haengen koennte.**
+rcu BACCT protects { Konten } reclaims frei;
+
+static mut frei : option index into Konten = None;
 
 -- Die Schreibseite braucht ihre EIGENE Wechselseitigkeit: RCU serialisiert Leser gegen die
 -- Rueckgewinnung und nicht Schreiber gegeneinander. *Das ist die Regel, die man vergisst.*
-lock SCHREIBER protects { Konten } rank 3 held <= 100 ops;
+lock SCHREIBER protects { Konten, frei } rank 3 held <= 100 ops;
 
 -- **Der Leser braucht die Schreibersperre NICHT** -- das ist die ganze Substanz des
 -- Konstrukts. Ohne diese Ausnahme kaufte `observes` nichts, und RCU waere eine Sperre mit
@@ -44,5 +51,28 @@ impl fn setzen(i : index into Konten, w : u32 in 0 .. 65535)
         Konten.slots[i].zaehler = w;
     }
 }
+
+-- **Die Rueckgewinnung, und die GNADENFRIST ist keine Pruefung, sondern eine Annahme.**
+--
+-- Dass kein Leser das alte Objekt mehr sehen kann, stellt kein statischer Pass her -- es ist
+-- eine Aussage ueber die Umgebung. *Sie gehoert dorthin, wo `progress` steht: `progress`
+-- nennt, wer eine Schleife beendet; die Gnadenfrist nennt, wer garantiert, dass kein Leser
+-- mehr drin ist.*
+--
+-- Zwei Dinge sind aber pruefbar, und beide sind Fehler, die man wirklich macht:
+-- **nicht im eigenen Lesebereich zurueckgeben** (`H011`) und **nicht ohne die
+-- Schreibersperre** (`H012`).
+impl fn zurueckgeben(i : index into Konten)
+    effects { locks SCHREIBER, writes frei }
+    costs   <= 4 ops
+{
+    locks SCHREIBER {
+        frei = Some(i);
+    }
+}
+
+assume gnadenfrist_ist_abgelaufen
+    "Nach der Ruecknahme des Zeigers ist kein Leser mehr in einem `observes BACCT`."
+    falsifier sonde_leser_noch_drin;
 
 }
