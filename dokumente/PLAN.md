@@ -2616,6 +2616,39 @@ darf keine Bereichsverfeinerung sein:
 Daraus die Form: `Fakt::Endlich { schluessel, indizes, nan: bool, unendlich: bool }` — zwei
 Flanken, einzeln setzbar, und `narrow … to finite` setzt beide auf einmal.
 
+## F1c — Was der Vergleich GESCHENKT hat, und was die Intervalle kosten werden
+
+**Ein geglückter Vergleich impliziert Nicht-NaN auf beiden Seiten.** Im Dann-Zweig von
+`if x < y` sind beide Operanden nan-frei, **ohne jedes `narrow`** — bei `<`, `<=`, `>`, `>=`
+und `==` gleichermaßen. Nur `!=` gibt nichts her, denn `NaN != NaN` ist wahr.
+
+> **Genau darum waren zwei Bits richtig:** der Vergleich löscht **eins**, `narrow … to finite`
+> löscht **beide**. Wäre Endlichkeit ein Prädikat, hätte der Vergleich nichts beitragen können.
+
+Und `x == x` fällt damit von selbst in seine Rolle — im Korpus die Handschrift für `isnan`,
+hier ein gewöhnlicher Vergleich, dessen Dann-Zweig das NaN-Bit löscht. *Er muss nicht als
+Idiom erkannt werden.*
+
+### Drei Stellen, an denen die ganzzahlige Gestalt trägt und die Arithmetik darunter nicht
+
+**1. Die Schranken müssen nach AUSSEN runden.** `[a,b] + [c,d]` ist `[RD(a+c), RU(b+d)]`,
+nicht `[a+c, b+d]`. Rechnet der Prüfer seine Schranken mit Wirtsdoubles in RNE, sind sie um
+bis zu ein Ulp **zu eng** — unsound in der Richtung, die nichts meldet.
+
+> *Der Prüfer selbst braucht `rounded`, im selben Sinn, in dem FF4 es für Literale verlangt:*
+> verboten ist nicht das Inexakte, sondern die Stelle, an der nicht dransteht, dass gerundet
+> wurde.
+
+**2. Die Null hat zwei Werte, aber nur einen Vergleichsplatz.** `-0.0` liegt in `0.0 .. 1.0`,
+weil alle Vergleiche das sagen — `1.0 / x` liefert dafür aber `-inf` statt `+inf`. **Ein
+Intervall, das die Null enthält, schränkt das Vorzeichen des Kehrwerts nicht ein**; die
+Division muss dort in beide Richtungen unbeschränkt antworten, nicht nur nach oben.
+
+**3. Solange nicht gerechnet wird, ist die weiteste Antwort die einzige ehrliche.**
+Gleitkommaarithmetik gibt heute den **vollen** Bereich zurück, NaN eingeschlossen. *Keine
+Fortpflanzung heißt nicht „keine Aussage", sondern die weiteste — sonst wäre das Schweigen
+eine Zusage.*
+
 ## F2 — Wortschatz und Grammatik
 
 | | |

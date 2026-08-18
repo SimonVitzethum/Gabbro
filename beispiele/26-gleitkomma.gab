@@ -30,9 +30,21 @@ impl fn klemmen(x : f64) -> Anteil
     effects { pure }
     costs   <= 8 ops
 {
+    narrow x to 0.0 .. 1.0 else { return HALB; }
+    return x;
+}
+
+-- **Und `finite` ALLEIN reicht nicht, sobald der Zieltyp einen Bereich nennt.**
+--
+-- 2.5 ist endlich und liegt trotzdem nicht in `0.0 .. 1.0`. Die erste Fassung dieses
+-- Beispiels tat genau das und ging durch -- *ein Beispiel, das den Gewinn zeigt und zugleich
+-- die Luecke belegt.* Schweigen ist unvollstaendig; eine ungeprueft gebliebene Zusage ist
+-- falsch.
+impl fn nur_endlich(x : f64) -> f64
+    effects { pure }
+    costs   <= 3 ops
+{
     narrow x to finite else { return HALB; }
-    if x < 0.0 { return 0.0; }
-    if x > 1.0 { return 1.0; }
     return x;
 }
 

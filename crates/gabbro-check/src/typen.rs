@@ -271,7 +271,15 @@ impl Typ {
                     ""
                 };
                 if f.lo == f64::NEG_INFINITY && f.hi == f64::INFINITY {
-                    format!("f{}{art}", f.breite)
+                    // **Unbeschraenkt und endlich sind zwei verschiedene Aussagen.** Die
+                    // Schranke `+inf` heisst „nach oben offen"; `kann_unendlich = false`
+                    // heisst „der Wert ist nie die Gleitkomma-Unendlichkeit". Ohne diese
+                    // Zeile las sich das eine wie das andere.
+                    if f.ist_sicher() {
+                        format!("f{} finite", f.breite)
+                    } else {
+                        format!("f{}{art}", f.breite)
+                    }
                 } else {
                     format!("f{} in {} .. {}{art}", f.breite, f.lo, f.hi)
                 }

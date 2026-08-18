@@ -536,11 +536,14 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
-- [ ] **Das INTERVALL eines Gleitkommatyps wird nicht geprueft, nur die zwei Bits**
-      *(2026-08-18)*. `F001` haelt NaN und Unendlich; dass ein Wert wirklich in `0.0 .. 1.0`
-      liegt, prueft niemand. **`narrow … to <fbereich>` installiert auch keinen Fakt** -- der
-      Weg dorthin geht ueber `konst_wert`, und das ist ganzzahlig. *Dieselbe Gestalt wie die
-      zwei Bits, nur mit Intervallfortpflanzung dahinter (F3).*
+- [ ] **Die Intervallfortpflanzung fehlt -- Arithmetik antwortet mit dem VOLLEN Bereich**
+      *(2026-08-18)*. Das ist sicher und grob: `[0,1] + [0,1]` gibt `f64` statt `[0,2]`. Drei
+      Dinge muss sie mitbringen (`PLAN.md`, F1c): **nach aussen runden** (mit Wirtsdoubles in
+      RNE waeren die Schranken um ein Ulp zu ENG, unsound in der Richtung, die nichts meldet),
+      **`-0.0`** (liegt in `0.0 .. 1.0`, aber `1.0 / x` gibt `-inf` -- ein Intervall um die
+      Null schraenkt das Vorzeichen des Kehrwerts nicht ein), und der **Vergleich als
+      Faktenquelle** fuer Gleitkommagrenzen (heute laeuft `vergleichsfakt` ueber
+      `konst_wert`, und das ist ganzzahlig).
 
 ### «F» — f32 und f64, geplant 2026-08-18 (`PLAN.md`, „«F» — f32 und f64, vollstaendig")
 

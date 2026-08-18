@@ -284,6 +284,13 @@ impl Umgebung {
                         if w.is_finite() {
                             f.kann_nan = false;
                             f.kann_unendlich = false;
+                            // **Und ihr WERT, nicht nur ihre zwei Bits.** Die erste Fassung
+                            // loeschte nur NaN und Unendlich und liess das Intervall offen --
+                            // dann war `const HALB : f64 = 0.5;` „endlich, sonst unbekannt",
+                            // und `return HALB;` fiel gegen jeden genannten Bereich. *Eine
+                            // Konstante ist ihr Wert.*
+                            f.lo = w;
+                            f.hi = w;
                             t = Typ::Gleitkomma(f);
                         }
                     }
@@ -713,7 +720,7 @@ impl Umgebung {
     /// Nimmt ein Gleitkommaliteral und eine Ganzzahl (`f64 in 0 .. 1` soll schreibbar sein).
     /// *Ein Ausdruck, der erst gerechnet werden muesste, gibt `None` -- und dann bleibt der
     /// volle Bereich stehen, was die sichere Richtung ist.*
-    fn gleitwert(&self, e: &Expr) -> Option<f64> {
+    pub fn gleitwert(&self, e: &Expr) -> Option<f64> {
         match &e.art {
             ExprArt::Gleitkomma { bits, .. } => Some(f64::from_bits(*bits)),
             ExprArt::Zahl(v) => Some(*v as f64),

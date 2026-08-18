@@ -1,0 +1,21 @@
+-- erwartet: M101
+-- **2.5 ist endlich und liegt trotzdem nicht in `0.0 .. 1.0`.**
+--
+-- Diese Probe haelt eine Luecke fest, die zwischenzeitlich OFFEN war: `narrow … to finite`
+-- loescht die zwei Bits, und ein Zieltyp mit genanntem Bereich sah trotzdem nicht hin. Damit
+-- stand eine Behauptung im Typ, die nie eingeloest wurde.
+--
+-- *Schweigen ist unvollstaendig; eine ungeprueft gebliebene Zusage ist falsch.* Die zwei
+-- Bits sind nicht die kleinere Schwester der Bereichspruefung, sondern ihre Voraussetzung:
+-- mit NaN im Wertebereich ist der Vergleich keine totale Ordnung, und ohne totale Ordnung
+-- ist ein Intervallverband kein Verband.
+module gift::bereich {
+
+type Anteil = f64 in 0.0 .. 1.0;
+
+impl fn zu_gross(x : f64) -> Anteil effects { pure } costs <= 3 ops {
+    narrow x to finite else { return 0.0; }
+    return x;
+}
+
+}

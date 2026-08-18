@@ -81,6 +81,19 @@ enum Fakt {
         nan: bool,
         unendlich: bool,
     },
+    /// **«F»: die Stelle liegt in diesem Gleitkommaintervall.**
+    ///
+    /// Getrennt von `Bereich`, weil die Grenzen keine ganzen Zahlen sind -- und getrennt von
+    /// `Endlich`, weil ein Intervall die zwei Bits nicht ersetzt: *mit NaN im Wertebereich
+    /// ist der Vergleich keine totale Ordnung, und ohne totale Ordnung ist ein
+    /// Intervallverband kein Verband.* Die zwei Bits sind die Voraussetzung dieser Zusage,
+    /// nicht ihre kleinere Schwester.
+    FIntervall {
+        schluessel: String,
+        indizes: Vec<String>,
+        lo: f64,
+        hi: f64,
+    },
     /// V2 -- die Beziehung zweier Stellen, ausschliesslich als Vergleich.
     Beziehung {
         links: String,
@@ -331,6 +344,30 @@ impl<'a> Pruefer<'a> {
                 // Der `else`-Zweig divergiert oder kehrt zurueck; danach gilt die Zusage.
                 match &n.ziel {
                     NarrowZiel::Bereich(bereich) => {
+                        // **«F»: dieselbe Anweisung, ein anderer Fakt.** Ist die Stelle ein
+                        // Gleitkommawert, sind die Grenzen keine ganzen Zahlen -- und ein
+                        // ganzzahliger Fakt darueber waere schlicht falsch.
+                        let ist_gleit = matches!(
+                            self.u
+                                .typ_von_ort(&self.modul, &n.ort, &lage.lokal)
+                                .durchgreifen(),
+                            Typ::Gleitkomma(_)
+                        );
+                        if ist_gleit {
+                            if let (Some(lo), Some(hi), Some((schluessel, indizes))) = (
+                                self.u.gleitwert(&bereich.von),
+                                self.u.gleitwert(&bereich.bis),
+                                schluessel_und_indizes(&n.ort),
+                            ) {
+                                lage.fakten.push(Fakt::FIntervall {
+                                    schluessel,
+                                    indizes,
+                                    lo,
+                                    hi,
+                                });
+                            }
+                            return;
+                        }
                         let von = self.u.konst_wert(&self.modul, &bereich.von);
                         let bis = self.u.konst_wert(&self.modul, &bereich.bis);
                         if let (Some(lo), Some(hi), Some((schluessel, indizes))) =
@@ -569,6 +606,23 @@ impl<'a> Pruefer<'a> {
         let tb = self.ausdruck(b, lage);
         if op == BinOp::Und || op == BinOp::Oder {
             return Typ::Wahrheit;
+        }
+        // **«F»: Gleitkommaarithmetik antwortet heute mit dem VOLLEN Bereich.**
+        //
+        // Keine Fortpflanzung heisst nicht „keine Aussage", sondern die weiteste -- sonst
+        // waere das Schweigen eine Zusage. `[0,1] + [0,1]` liegt in `[0,2]`, und ohne
+        // Rechnung ist die einzige ehrliche Antwort: alles, NaN eingeschlossen.
+        //
+        // *Die Fortpflanzung muss NACH AUSSEN runden, wenn sie kommt* (`PLAN.md`, F3):
+        // `[a,b] + [c,d]` ist `[RD(a+c), RU(b+d)]`. Mit Wirtsdoubles in RNE gerechnet waeren
+        // die Schranken um bis zu ein Ulp zu ENG -- unsound in der Richtung, die nichts
+        // meldet.
+        if !op.ist_vergleich() {
+            if let (Typ::Gleitkomma(x), _) | (_, Typ::Gleitkomma(x)) =
+                (ta.durchgreifen().clone(), tb.durchgreifen().clone())
+            {
+                return Typ::Gleitkomma(crate::typen::FBereich::voll(x.breite));
+            }
         }
         if op.ist_vergleich() {
             return Typ::Wahrheit;
@@ -850,6 +904,38 @@ impl<'a> Pruefer<'a> {
                 if negiert && (self.nan_moeglich(a, lage) || self.nan_moeglich(b, lage)) {
                     return;
                 }
+                // **Ein GEGLUECKTER Vergleich impliziert Nicht-NaN auf BEIDEN Seiten.**
+                //
+                // Im Dann-Zweig von `if x < y` sind beide Operanden nan-frei, ohne jedes
+                // `narrow` -- bei `<`, `<=`, `>`, `>=` und `==` gleichermassen. **Nur `!=`
+                // gibt nichts her**, denn `NaN != NaN` ist wahr.
+                //
+                // *Genau darum waren zwei Bits richtig:* der Vergleich loescht EINS,
+                // `narrow … to finite` loescht beide. Waere Endlichkeit ein Praedikat,
+                // haette der Vergleich nichts beitragen koennen.
+                //
+                // Und `x == x` faellt damit von selbst in seine Rolle -- im Korpus die
+                // Handschrift fuer `isnan`, hier ein Vergleich, dessen Dann-Zweig das
+                // NaN-Bit loescht. **Er muss nicht als Idiom erkannt werden.**
+                if !negiert && *op != BinOp::Ungleich {
+                    for seite in [a, b] {
+                        if let ExprArt::Ort(o) = &seite.art {
+                            if matches!(
+                                self.ausdruck(seite, lage).durchgreifen(),
+                                Typ::Gleitkomma(_)
+                            ) {
+                                if let Some((schluessel, indizes)) = schluessel_und_indizes(o) {
+                                    lage.fakten.push(Fakt::Endlich {
+                                        schluessel,
+                                        indizes,
+                                        nan: true,
+                                        unendlich: false,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
                 let op = if negiert { negiere(*op) } else { *op };
                 self.vergleichsfakt(op, a, b, lage);
             }
@@ -936,6 +1022,23 @@ impl<'a> Pruefer<'a> {
                             }
                         }
                     }
+                    if let Fakt::FIntervall {
+                        schluessel: s,
+                        lo,
+                        hi,
+                        ..
+                    } = fk
+                    {
+                        if *s == schluessel {
+                            f.lo = f.lo.max(*lo);
+                            f.hi = f.hi.min(*hi);
+                            // Ein genanntes endliches Intervall schliesst beides aus.
+                            if lo.is_finite() && hi.is_finite() {
+                                f.kann_nan = false;
+                                f.kann_unendlich = false;
+                            }
+                        }
+                    }
                 }
             }
             return Typ::Gleitkomma(f);
@@ -1010,6 +1113,11 @@ impl<'a> Pruefer<'a> {
                 indizes,
                 ..
             }
+            | Fakt::FIntervall {
+                schluessel,
+                indizes,
+                ..
+            }
             | Fakt::Bereich {
                 schluessel,
                 indizes,
@@ -1030,7 +1138,9 @@ impl<'a> Pruefer<'a> {
         // keine Aliasaussage, also faellt hier alles Nichtlokale mit.
         if k.contains('.') || k.contains("->") || k.contains('[') {
             lage.fakten.retain(|f| match f {
-                Fakt::Endlich { schluessel, .. } | Fakt::Bereich { schluessel, .. } => self.ist_lokal(schluessel),
+                Fakt::Endlich { schluessel, .. }
+            | Fakt::FIntervall { schluessel, .. }
+            | Fakt::Bereich { schluessel, .. } => self.ist_lokal(schluessel),
                 Fakt::Beziehung { links, rechts, .. } => {
                     self.ist_lokal(links) && self.ist_lokal(rechts)
                 }
@@ -1051,7 +1161,9 @@ impl<'a> Pruefer<'a> {
 
     fn aufruf_toetet_fakten(&self, lage: &mut Lage) {
         lage.fakten.retain(|f| match f {
-            Fakt::Endlich { schluessel, .. } | Fakt::Bereich { schluessel, .. } => self.ist_lokal(schluessel),
+            Fakt::Endlich { schluessel, .. }
+            | Fakt::FIntervall { schluessel, .. }
+            | Fakt::Bereich { schluessel, .. } => self.ist_lokal(schluessel),
             Fakt::Beziehung { links, rechts, .. } => {
                 self.ist_lokal(links) && self.ist_lokal(rechts)
             }
@@ -1096,6 +1208,26 @@ impl<'a> Pruefer<'a> {
             }
             if q.kann_unendlich && !z.kann_unendlich {
                 fehlt.push("unendlich");
+            }
+            // **Das INTERVALL, und ohne es waere der genannte Bereich eine Behauptung, die
+            // nie eingeloest wird.** Schweigen ist unvollstaendig; eine ungepruefte Zusage
+            // ist falsch -- und `2.5` ist endlich, liegt aber nicht in `0.0 .. 1.0`.
+            if q.lo < z.lo || q.hi > z.hi {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "M101",
+                        span,
+                        format!(
+                            "{was} requires `{}`, the value has `{}`",
+                            Typ::Gleitkomma(*z).text(),
+                            Typ::Gleitkomma(*q).text()
+                        ),
+                    )
+                    .mit_notiz(
+                        "`narrow <ort> to <von> .. <bis> else { … }` verengt den Bereich; \
+                         `finite` allein loescht nur NaN und Unendlich",
+                    ),
+                );
             }
             if !fehlt.is_empty() {
                 self.absagen.schiebe(
@@ -1340,7 +1472,9 @@ fn nennt_namen(f: &Fakt, name: &str) -> bool {
             || s.split(['[', ']', '.']).any(|t| t == name)
     };
     match f {
-        Fakt::Endlich { schluessel, .. } | Fakt::Bereich { schluessel, .. } => trifft(schluessel),
+        Fakt::Endlich { schluessel, .. }
+        | Fakt::FIntervall { schluessel, .. }
+        | Fakt::Bereich { schluessel, .. } => trifft(schluessel),
         Fakt::Beziehung { links, rechts, .. } => trifft(links) || trifft(rechts),
     }
 }
