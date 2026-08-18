@@ -1,0 +1,15 @@
+-- erwartet: F005
+-- **Ein Gleitkommawert IST ein Bitmuster, aber seine Bedeutung ist keines.**
+--
+-- Die Verknuepfung stillschweigend mit dem vollen Bereich zu beantworten waere eine
+-- Erlaubnis -- dieselbe Bauart wie `opaque` vor `D003`, wo bitweises Und die Breite behielt
+-- und der undurchsichtige Typ als sein Traeger gerechnet wurde.
+module gift::bitweise {
+
+type Anteil = f64 in 0.0 .. 1.0;
+
+impl fn unsinn(a : Anteil, b : Anteil) -> f64 effects { pure } costs <= 2 ops {
+    return a & b;
+}
+
+}

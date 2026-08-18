@@ -1,0 +1,21 @@
+-- erwartet: M101
+-- **Die Schranken muessen nach AUSSEN runden, und diese Probe misst es.**
+--
+-- `1.0 + 1e-19` rundet in RNE auf `1.0` zurueck. Uebernaehme der Pruefer die Schranke, wie
+-- sie herauskommt, passte das Ergebnis in `0.0 .. 1.0` -- und die Analyse waere unsound, und
+-- zwar **in der Richtung, die nichts meldet.** Mit der Rundung wandert die obere Schranke auf
+-- `1.0000000000000002` und faellt.
+--
+-- *Der Pruefer selbst braucht `rounded`, im selben Sinn, in dem `F002` es fuer Literale
+-- verlangt: verboten ist nicht das Inexakte, sondern die Stelle, an der nicht dransteht,
+-- dass gerundet wurde.*
+module gift::wandert {
+
+type Eins   = f64 in 0.0 .. 1.0;
+type Winzig = f64 in 0.0 .. 0.0000000000000000001 rounded;
+
+impl fn s(a : Eins, b : Winzig) -> Eins effects { pure } costs <= 2 ops {
+    return a + b;
+}
+
+}

@@ -536,14 +536,11 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
-- [ ] **Die Intervallfortpflanzung fehlt -- Arithmetik antwortet mit dem VOLLEN Bereich**
-      *(2026-08-18)*. Das ist sicher und grob: `[0,1] + [0,1]` gibt `f64` statt `[0,2]`. Drei
-      Dinge muss sie mitbringen (`PLAN.md`, F1c): **nach aussen runden** (mit Wirtsdoubles in
-      RNE waeren die Schranken um ein Ulp zu ENG, unsound in der Richtung, die nichts meldet),
-      **`-0.0`** (liegt in `0.0 .. 1.0`, aber `1.0 / x` gibt `-inf` -- ein Intervall um die
-      Null schraenkt das Vorzeichen des Kehrwerts nicht ein), und der **Vergleich als
-      Faktenquelle** fuer Gleitkommagrenzen (heute laeuft `vergleichsfakt` ueber
-      `konst_wert`, und das ist ganzzahlig).
+- [ ] **Der Vergleich ist noch keine Faktenquelle fuer Gleitkommagrenzen**
+      *(2026-08-18)*. `if x < 1.0 { … }` loescht das NaN-Bit, verengt aber die SCHRANKE nicht
+      -- `vergleichsfakt` laeuft ueber `konst_wert`, und das ist ganzzahlig. Damit bleibt
+      `narrow … to <fbereich>` die einzige Quelle eines Gleitkommaintervalls. *Die
+      Fortpflanzung selbst steht seit heute (nach aussen gerundet, `-0.0` beim Kehrwert).*
 
 ### «F» — f32 und f64, geplant 2026-08-18 (`PLAN.md`, „«F» — f32 und f64, vollstaendig")
 

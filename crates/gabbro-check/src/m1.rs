@@ -153,6 +153,49 @@ impl<'a> Pruefer<'a> {
                 let quelle = self.ausdruck(&k.wert, &mut lage);
                 self.passt(&quelle, &ziel, k.wert.span, "die Konstante");
             }
+            // **`F004` -- und der Bedarfsbeleg steht im Korpus, nicht in einer Vorsorge.**
+            //
+            // «F0»/FF3 zeigt eine Gleitkommareduktion in echtem Code: `a += progress[i]`
+            // ueber ein Feld. Genau die Form, fuer die `accumulates` da ist -- und ueber
+            // Gleitkomma ist sie REIHENFOLGEABHAENGIG.
+            //
+            // `accumulates.monoid` ist BEWIESEN, unter der Praemisse, dass die Merge-Menge
+            // ein kommutatives Monoid ist. Der Eintrag sagt, warum das mechanisch pruefbar
+            // ist: der Wortschatz ist geschlossen. **Das ist die halbe Wahrheit** -- er
+            // reicht nur, weil alle Zahlentypen ganzzahlig sind. Ueber `f64` ist `add` nicht
+            // assoziativ und `max` mit NaN kein Verband, und
+            // `faltung_ist_reihenfolgeunabhaengig` verlangt beides.
+            //
+            // *Der Satz bliebe wahr und seine Praemisse wuerde falsch.* Also weigert sich der
+            // Pruefer, statt eine bewiesene Schablone ueber einen Fall zu spannen, den sie
+            // nicht traegt.
+            if let ItemArt::Accumulates(a) = &item.art {
+                self.modul = modul.to_string();
+                let t = self.u.typ_von_ausdruck_decl(modul, &a.typ);
+                if matches!(t.durchgreifen(), Typ::Gleitkomma(_)) {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "F004",
+                            a.name.span,
+                            format!(
+                                "`accumulates {}` ueber einem Gleitkommatyp -- die Faltung \
+                                 waere reihenfolgeabhaengig",
+                                a.name.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "die Absenkung faltet eine Zelle je Kern in einer Reihenfolge, \
+                             die niemand festlegt; `add` ist ueber Gleitkomma nicht \
+                             assoziativ und `max` mit NaN kein Verband",
+                        )
+                        .mit_notiz(
+                            "`accumulates.monoid` ist BEWIESEN -- unter der Praemisse, dass \
+                             die Merge-Menge ein kommutatives Monoid ist. Hier waere sie es \
+                             nicht, und der Satz haette eine falsche Praemisse",
+                        ),
+                    );
+                }
+            }
             if let ItemArt::Statisch(st) = &item.art {
                 self.modul = modul.to_string();
                 let ziel = self.u.typ_von_ausdruck_decl(modul, &st.typ);
@@ -618,10 +661,51 @@ impl<'a> Pruefer<'a> {
         // die Schranken um bis zu ein Ulp zu ENG -- unsound in der Richtung, die nichts
         // meldet.
         if !op.ist_vergleich() {
-            if let (Typ::Gleitkomma(x), _) | (_, Typ::Gleitkomma(x)) =
-                (ta.durchgreifen().clone(), tb.durchgreifen().clone())
-            {
-                return Typ::Gleitkomma(crate::typen::FBereich::voll(x.breite));
+            match (ta.durchgreifen().clone(), tb.durchgreifen().clone()) {
+                (Typ::Gleitkomma(x), Typ::Gleitkomma(y)) => {
+                    return match op {
+                        BinOp::Plus => Typ::Gleitkomma(x.plus(y)),
+                        BinOp::Minus => Typ::Gleitkomma(x.minus(y)),
+                        BinOp::Mal => Typ::Gleitkomma(x.mal(y)),
+                        BinOp::Geteilt => Typ::Gleitkomma(x.geteilt(y)),
+                        // **`F005`: eine Verknuepfung, die es fuer Gleitkomma nicht gibt.**
+                        // Sie stillschweigend mit dem vollen Bereich zu beantworten waere
+                        // eine Erlaubnis -- dieselbe Bauart wie `opaque` vor `D003`.
+                        _ => {
+                            self.absagen.schiebe(
+                                Absage::fehler(
+                                    "F005",
+                                    span,
+                                    "diese Verknuepfung gibt es fuer Gleitkomma nicht",
+                                )
+                                .mit_notiz(
+                                    "Bitverknuepfung, Schieben und Rest sind Aussagen ueber \
+                                     ein Bitmuster; ein Gleitkommawert IST eines, aber seine \
+                                     Bedeutung ist keine",
+                                ),
+                            );
+                            Typ::Unbekannt
+                        }
+                    };
+                }
+                // **Breitenmischung mit einer Ganzzahl gibt es nicht ohne Umwandlung** -- und
+                // eine Umwandlungsform steht noch nicht da.
+                (Typ::Gleitkomma(x), _) | (_, Typ::Gleitkomma(x)) => {
+                    let _ = x;
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "F005",
+                            span,
+                            "Gleitkomma und Ganzzahl in einer Verknuepfung",
+                        )
+                        .mit_notiz(
+                            "es gibt keine Umwandlungsform; eine stillschweigende waere \
+                             genau die Stelle, an der nicht dransteht, dass gerundet wurde",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                }
+                _ => {}
             }
         }
         if op.ist_vergleich() {

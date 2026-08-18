@@ -36,7 +36,7 @@ const BENANNT: &[&str] = &[
     "S003", "S004",
     // «F»: f32/f64. `F002` trifft das stillschweigend inexakte Literal -- die Regel kam aus
     // dem Korpus (FRAGMENTE.md, «F0»/FF4), nicht aus dem Entwurf.
-    "F001", "F002",
+    "F001", "F002", "F004", "F005",
     "K001", "K002", "K003", // Kosten
     "E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008", "E009",
     "E010", // Wirkungen -- E010 ist die Lesehaelfte (Lesart A, 2026-08-16)

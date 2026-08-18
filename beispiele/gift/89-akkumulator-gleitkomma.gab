@@ -1,0 +1,15 @@
+-- erwartet: F004
+-- **`accumulates.monoid` ist BEWIESEN -- unter einer Praemisse, die hier falsch waere.**
+--
+-- Der Eintrag sagt, warum sie mechanisch pruefbar ist: der Wortschatz ist geschlossen
+-- (`max`, `min`, `add`, `or`, `and`). Das ist die halbe Wahrheit -- er reicht nur, WEIL alle
+-- Zahlentypen ganzzahlig sind. Ueber `f64` ist `add` nicht assoziativ, und
+-- `faltung_ist_reihenfolgeunabhaengig` verlangt genau das.
+--
+-- *Der Bedarfsbeleg steht im Korpus* («F0»/FF3): eine Gleitkommareduktion ueber ein Feld,
+-- in echtem Code. Die Weigerung ist keine Vorsorge.
+module gift::akku {
+
+accumulates fehlersumme : f64 merge add per cpu 64;
+
+}

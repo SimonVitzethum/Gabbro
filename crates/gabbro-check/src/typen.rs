@@ -179,6 +179,163 @@ impl FBereich {
     pub fn ist_sicher(self) -> bool {
         !self.kann_nan && !self.kann_unendlich
     }
+
+    /// **Nach AUSSEN, und das ist keine Feinheit.**
+    ///
+    /// Der Wirt rechnet in RNE; das wahre Ergebnis liegt bis zu ein halbes Ulp neben dem
+    /// gerechneten. Wer die Schranke uebernimmt, wie sie herauskommt, hat sie **zu ENG** --
+    /// und zwar unsound in der Richtung, die nichts meldet.
+    ///
+    /// *Der Pruefer selbst braucht `rounded`, im selben Sinn, in dem `F002` es fuer Literale
+    /// verlangt: verboten ist nicht das Inexakte, sondern die Stelle, an der nicht
+    /// dransteht, dass gerundet wurde.*
+    fn hoch(x: f64, exakt: bool) -> f64 {
+        if exakt || !x.is_finite() { x } else { x.next_up() }
+    }
+
+    fn runter(x: f64, exakt: bool) -> f64 {
+        if exakt || !x.is_finite() { x } else { x.next_down() }
+    }
+
+    /// **Die Summe und ihr Fehler, exakt** (Knuths 2Sum, gueltig fuer alle Operanden).
+    ///
+    /// *Nur so bleibt die Rundung nach aussen scharf statt bloss sicher:* `0.0 + 0.0` ist
+    /// exakt, und eine Schranke, die dort ein Ulp wandert, verliert die Aussage `[0,1] +
+    /// [0,1] = [0,2]` -- richtig, aber unbrauchbar.
+    fn summe_exakt(a: f64, b: f64) -> (f64, bool) {
+        let s = a + b;
+        if !s.is_finite() {
+            return (s, true);
+        }
+        let bb = s - a;
+        let fehler = (a - (s - bb)) + (b - bb);
+        (s, fehler == 0.0)
+    }
+
+    fn produkt_exakt(a: f64, b: f64) -> (f64, bool) {
+        let p = a * b;
+        if !p.is_finite() {
+            return (p, true);
+        }
+        (p, a.mul_add(b, -p) == 0.0)
+    }
+
+    fn quotient_exakt(a: f64, b: f64) -> (f64, bool) {
+        let q = a / b;
+        if !q.is_finite() {
+            return (q, true);
+        }
+        (q, q.mul_add(-b, a) == 0.0)
+    }
+
+    fn aus(lo: (f64, bool), hi: (f64, bool), breite: u8, roh_nan: bool) -> Self {
+        let (lo, lo_exakt) = lo;
+        let (hi, hi_exakt) = hi;
+        FBereich {
+            breite,
+            lo: Self::runter(lo, lo_exakt),
+            hi: Self::hoch(hi, hi_exakt),
+            // **Ein Ergebnis, dessen Schranke ins Unendliche laeuft, KANN unendlich sein**,
+            // und `inf - inf` ist NaN -- darum faellt beides zusammen.
+            kann_nan: roh_nan || !lo.is_finite() || !hi.is_finite() || lo.is_nan() || hi.is_nan(),
+            kann_unendlich: !lo.is_finite() || !hi.is_finite(),
+            literal: false,
+        }
+    }
+
+    fn breite_mit(self, o: Self) -> u8 {
+        if self.literal {
+            o.breite
+        } else if o.literal {
+            self.breite
+        } else {
+            self.breite.max(o.breite)
+        }
+    }
+
+    /// Gemeinsame Vorbedingung: kann eine Seite NaN oder unendlich sein, kann es das
+    /// Ergebnis auch (`inf - inf`, `0 * inf`, `inf / inf`).
+    fn ansteckend(self, o: Self) -> bool {
+        self.kann_nan || o.kann_nan || self.kann_unendlich || o.kann_unendlich
+    }
+
+    pub fn plus(self, o: Self) -> Self {
+        Self::aus(
+            Self::summe_exakt(self.lo, o.lo),
+            Self::summe_exakt(self.hi, o.hi),
+            self.breite_mit(o),
+            self.ansteckend(o),
+        )
+    }
+
+    pub fn minus(self, o: Self) -> Self {
+        Self::aus(
+            Self::summe_exakt(self.lo, -o.hi),
+            Self::summe_exakt(self.hi, -o.lo),
+            self.breite_mit(o),
+            self.ansteckend(o),
+        )
+    }
+
+    /// Die kleinste und die groesste der vier Ecken -- **je mit ihrer eigenen Exaktheit**,
+    /// denn eine Ecke kann exakt sein und die andere nicht.
+    fn ecke(e: [(f64, bool); 4], groesste: bool) -> (f64, bool) {
+        let mut beste = e[0];
+        for k in e.iter().skip(1) {
+            let besser = if groesste { k.0 > beste.0 } else { k.0 < beste.0 };
+            if besser || (k.0 == beste.0 && !k.1) {
+                beste = *k;
+            }
+        }
+        beste
+    }
+
+    pub fn mal(self, o: Self) -> Self {
+        let e = [
+            Self::produkt_exakt(self.lo, o.lo),
+            Self::produkt_exakt(self.lo, o.hi),
+            Self::produkt_exakt(self.hi, o.lo),
+            Self::produkt_exakt(self.hi, o.hi),
+        ];
+        Self::aus(
+            Self::ecke(e, false),
+            Self::ecke(e, true),
+            self.breite_mit(o),
+            self.ansteckend(o),
+        )
+    }
+
+    /// **Die Null hat zwei Werte, aber nur einen Vergleichsplatz.**
+    ///
+    /// `-0.0` liegt in `0.0 .. 1.0`, weil alle Vergleiche das sagen -- `1.0 / x` liefert
+    /// dafuer aber `-inf` statt `+inf`. **Ein Intervall, das die Null enthaelt, schraenkt das
+    /// Vorzeichen des Kehrwerts nicht ein**; die Antwort muss dort in BEIDE Richtungen
+    /// unbeschraenkt sein, nicht nur nach oben.
+    pub fn geteilt(self, o: Self) -> Self {
+        let breite = self.breite_mit(o);
+        if o.lo <= 0.0 && o.hi >= 0.0 {
+            return FBereich {
+                breite,
+                lo: f64::NEG_INFINITY,
+                hi: f64::INFINITY,
+                kann_nan: true,
+                kann_unendlich: true,
+                literal: false,
+            };
+        }
+        let e = [
+            Self::quotient_exakt(self.lo, o.lo),
+            Self::quotient_exakt(self.lo, o.hi),
+            Self::quotient_exakt(self.hi, o.lo),
+            Self::quotient_exakt(self.hi, o.hi),
+        ];
+        Self::aus(
+            Self::ecke(e, false),
+            Self::ecke(e, true),
+            breite,
+            self.ansteckend(o),
+        )
+    }
 }
 
 /// Ein Typ, so weit dieser Pass ihn kennt.
@@ -281,7 +438,7 @@ impl Typ {
                         format!("f{}{art}", f.breite)
                     }
                 } else {
-                    format!("f{} in {} .. {}{art}", f.breite, f.lo, f.hi)
+                    format!("f{} in {:?} .. {:?}{art}", f.breite, f.lo, f.hi)
                 }
             }
             Typ::Umlaufend(b) => format!("{} wrapping", b.text()),

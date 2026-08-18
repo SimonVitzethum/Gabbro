@@ -2674,9 +2674,18 @@ F001  hier kann NaN oder Unendlich entstehen, und niemand behandelt es
 F002  das Literal ist im Zieltyp nicht exakt darstellbar
 F003  ein anderer Rundungsmodus als RNE
 F004  `merge` über einem Gleitkommatyp
-F005  Breitenmischung ohne benannte Umwandlung
+F005  eine Verknuepfung, die es fuer Gleitkomma nicht gibt (Bitweise, Schieben,
+      Rest) -- UND die Mischung mit einer Ganzzahl, solange keine Umwandlungsform dasteht
 F006  `long double` und `f16` -- benannt abgelehnt, mit dem Grund
 ```
+
+**Gebaut 2026-08-18: `F001`, `F002`, `F004`, `F005`.** Offen: `F003` (Rundungsmodus, an
+`f64<RNE>` haengend) und `F006`.
+
+*`F005` trägt zwei Fälle statt des geplanten einen, und der zweite ist der wichtigere:* eine
+Bitverknüpfung stillschweigend mit dem vollen Bereich zu beantworten wäre eine **Erlaubnis** —
+dieselbe Bauart wie `opaque` vor `D003`, wo bitweises Und die Breite behielt und der
+undurchsichtige Typ als sein Träger gerechnet wurde.
 
 ## F5 — Absenkung und ABI
 
