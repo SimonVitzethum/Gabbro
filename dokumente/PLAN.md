@@ -2285,19 +2285,68 @@ kostet sie einen Rückbau.*
 Die vorige Liste sortierte nach Größe. Das ist die falsche Achse: **ein kleiner Posten, auf dem
 etwas gebaut werden soll, ist teurer als ein großer, der allein steht.**
 
-1. **`opaque` bekommt eine Tür.** Es beißt seit `5e9f31e` — aber ein Verbot ohne
+1. **DIE RESERVE UND DIE HINTERLEGUNG — `count N` mit `backed k`, samt Freiliste.**
+   *Neu an Position 1 am 2026-08-18, und der Bedarf ist gemessen, nicht geschätzt.* Er hat
+   drei Teile, und der dritte ist das Tor:
+
+   **(a) Die Freiliste muss schreibbar werden.** `index into T` in einem Slotfeld verliert
+   seine Schranke, wenn `T` beim Auflösen noch nicht fertig ist — bei Selbstbezüglichkeit
+   also **immer**. Damit ist heute keine verkettete Struktur schreibbar: keine Freiliste,
+   keine CDT, kein Objektgraph. *Ohne (a) gibt es keinen Allokator, über den (b) und (c)
+   reden könnten.*
+
+   **(b) Die Hinterlegung wird eine Zahl.** Eine Tabelle nennt zwei Größen statt einer:
+
+   ```gabbro
+   table Halde count 1000000000        -- die RESERVE: Adressraum, ~30 GiB
+       backed  hinterlegt              -- die HINTERLEGUNG: ein WERT, monoton
+   ```
+
+   Das trennt, was heute zusammenfällt: **`count` ist Adressraum, `backed` ist Speicher.**
+   30 GiB zu deklarieren und 100 MiB zu hinterlegen ist damit eine Aussage der Sprache und
+   keine Hoffnung an den Seitenfehlerpfad. *Und `allocs` bekommt endlich eine Bedeutung* —
+   heute ist es ein Wirkungswort mit genau einer Fundstelle, die nur den Namen herauszieht;
+   morgen ist es die Wirkung der einen Funktion, die `hinterlegt` erhöht.
+
+   **(c) Das Tor ist KEINE neue Prüfung — es ist dieselbe gegen die richtige Zahl.**
+   `M103` hält jeden Index gegen die deklarierte Schranke. Heute ist das `N`, die Reserve.
+   Darf es `hinterlegt` sein, prüft **derselbe Pass dieselbe Sache** — nur gegen die Zahl,
+   auf die es ankommt. Gemessen am 2026-08-18:
+
+   ```
+   narrow i to 0 ..< N   (Konstante)   ->  0 Fehler, der Zugriff geht durch
+   narrow i to 0 ..< k   (Wert)        ->  von der GRAMMATIK angenommen,
+                                           M1 lässt die Tatsache fallen
+   ```
+
+   **Die Form steht also schon da; es fehlt der Träger.** Was M1 lernen muss, ist eine
+   Bereichsgrenze, die ein Wert ist — und für den Vergleich zweier solcher Schranken gilt die
+   Kante von oben: geschlossene Form, identische Maße, kein Löser.
+
+   > **Und die Gefahr ist nicht das Wachsen, sondern das SCHRUMPFEN.** Eine Tatsache `i <
+   > hinterlegt`, die vor einer Verkleinerung gewonnen wurde, ist danach falsch. Also
+   > entweder **monoton** — die einfache, ehrliche Fassung — oder das Verkleinern ist ein
+   > Phasenschritt, nach dem kein alter Index überlebt. *Für das Zweite gibt es die
+   > «B37»-Maschinerie schon (`order`/`advances`), und für das Erste braucht es nichts.*
+
+   *Damit wäre ein GC schreibbar: die Objektgraph-Hälfte kann Gabbro längst — `by unvisited`
+   ist zyklensicheres Markieren, `table.induktion` gibt die Terminierung, die Kosten sind
+   beschränkt.*
+
+2. **`opaque` bekommt eine Tür.** Es beißt seit `5e9f31e` — aber ein Verbot ohne
    Umwandlungsform ist eine Sackgasse. Die wertgetragenen Indextypen sind das **vierte**
    Konstrukt, das auf Undurchsichtigkeit baut; der `rank`-Fund hat diese Reihenfolge schon
-   einmal gelehrt.
-2. **`ensures` wird gelesen.** Keine Kleinigkeit: eine Zusage, die im Zeugnis erscheint, in der
+   einmal gelehrt. **Und Punkt 1 macht ihn dringender**, denn `backed` ist ein wertgetragener
+   Indextyp.
+3. **`ensures` wird gelesen.** Keine Kleinigkeit: eine Zusage, die im Zeugnis erscheint, in der
    Bibliotheks-ABI getragen werden soll und heute nirgends gegen den Rumpf **oder auch nur
    gegen die Wohlgeformtheit** geprüft wird. Der Wächter hat siebzehn Geschwister dazu benannt.
-3. **Der zweite Korpus.** Als einziger der großen Blöcke **entsperrt** er andere, statt selbst
+4. **Der zweite Korpus.** Als einziger der großen Blöcke **entsperrt** er andere, statt selbst
    zu wachsen: K11.2.2 hängt daran, jede Null im Zeugnis hängt daran, und die Konvergenzmetrik
    bekommt erst mit ihm einen zweiten Datenpunkt aus einer anderen Autorenlinie. *Die
    aarch64-Lektion in neuer Form: ein Korpus, den derselbe Autor für dieselbe Sprache
    schreibt, misst Passung, nicht Übertragbarkeit.*
-4. **Dann erst die Erweiterung** — mit der Kante oben, bevor die erste symbolische Kostenzeile
+5. **Dann erst die übrige Erweiterung** — mit der Kante oben, bevor die erste symbolische Kostenzeile
    geschrieben wird. *Die Erweiterung ohne zweiten Korpus verlängert die Sprache um Konstrukte,
    deren Bedarf nur der eine Baum belegt.*
 
