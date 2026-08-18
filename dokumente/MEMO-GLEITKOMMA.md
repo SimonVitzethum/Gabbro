@@ -7,8 +7,31 @@
 
 ## 1. Was bricht — und es ist nicht die Arithmetik
 
-Intervallarithmetik über IEEE-754 ist gebaut, bekannt und teuer, aber nicht neu. **Was in
-Gabbro bricht, ist die NEGATION einer Vergleichsbedingung.**
+**Berichtigt 2026-08-18.** Die erste Fassung dieses Abschnitts las sich, als sei Gleitkomma
+schwer zu verifizieren. *Das ist falsch, und die Berichtigung gehört an den Anfang.* IEEE 754
+ist eine **vollständig deterministische** Spezifikation: jede Basisoperation liefert bei
+festem Rundungsmodus genau ein Bitmuster. Gleitkommazahlen sind logisch nicht schwerer als
+Bitvektoren — sie sind Bitvektoren mit einer unhandlichen Interpretationsfunktion.
+
+Verifiziert wird auf einer von zwei Ebenen, beide gebaut und im Einsatz:
+
+| | |
+|---|---|
+| **bitgenau** | SMT-LIB führt seit 2014 eine `FloatingPoint`-Theorie (Z3, CVC5, MathSAT). Intern meist Bit-Blasting; eine 64-Bit-Multiplikation wird ein brutaler Schaltkreis. Gut für *kein NaN, kein Überlauf*, schlecht für *numerisch korrekt* |
+| **reell + Fehlerschranke** | `fl(x ∘ y) = (x ∘ y)(1+δ)` mit `|δ| ≤ u` — Gappa, Flocq, FPTaylor, Daisy, PRECiSA. Skaliert besser und liefert die Aussage, die man eigentlich will |
+
+Und die Belege sind industriell, nicht akademisch: Russinoff hat AMDs Division und Wurzel in
+ACL2 verifiziert (nach dem FDIV-Fehler), Harrison dieselbe Klasse bei Intel in HOL Light,
+CompCert beweist Semantikerhaltung **einschließlich** Gleitkomma auf Flocq, Astrée weist
+Laufzeitfehlerfreiheit in Flugsteuerungscode nach, der fast nur aus Gleitkomma besteht, und
+NASAs PRECiSA verifiziert DAIDALUS mit realer Gleitkommasemantik.
+
+> **Schwer ist nicht die Ausführung, sondern die SPEZIFIKATION.** Bei Ganzzahlen ist korrekt
+> meist offensichtlich; hier braucht es zwei Semantiken — reell und Maschine — plus die
+> Relation dazwischen.
+
+Was in **Gabbro** bricht, ist damit keine Aussage über Gleitkomma, sondern eine über M1:
+**die NEGATION einer Vergleichsbedingung.**
 
 Ist ein Operand `NaN`, sind *alle* Vergleiche falsch — `x < y`, `x >= y`, `x == x`. Damit gilt
 nicht mehr:
@@ -32,6 +55,37 @@ Zwei Auswege, beide teuer:
 | **die Negation kein Faktum liefern lassen** | sicher, und dann **ungeprüft genau dort, wo man prüfen wollte** |
 
 ---
+
+## 1a. Die Landminen — und eine davon liegt im eigenen Ordner
+
+| | |
+|---|---|
+| **Nicht-Assoziativität** | `(a+b)+c ≠ a+(b+c)`. Jede Umsortierung durch einen Übersetzer ist unsound; `-ffast-math` ist im verifizierten Kontext tot, und parallele Reduktionen sind nur mit **expliziter Reihenfolge** deterministisch |
+| **libm** | IEEE 754 fordert für `sin`, `exp`, `log` **keine** korrekte Rundung (2019 empfiehlt sie nur). Die Verifikation endet am libm-Rand, sofern man nicht axiomatisiert oder selbst verifiziert |
+| **Rundungsmodus** | MXCSR/FPCR ist ein **impliziter Eingang jeder Operation** und damit kompositional giftig. Fast alle Beweise pinnen round-to-nearest-even und verifizieren das Pinnen separat |
+| **Excess precision** | x87 mit 80 Bit und Doppelrundung — der Grund, warum CompCert auf x86 SSE2 voraussetzt. `FLT_EVAL_METHOD` ignoriert zu lassen ist ein Loch |
+| **NaN-Nutzlasten** | implementierungsdefiniert; bitgenaue Aussagen sind hier plattformspezifisch |
+
+**Und die erste Zeile trifft eine BEWIESENE Schablone dieses Ordners.**
+
+`accumulates.monoid` ist bewiesen — *unter der Prämisse, dass die Merge-Menge ein kommutatives
+Monoid ist.* Der Eintrag sagt, warum diese Prämisse mechanisch prüfbar ist: **der Wortschatz
+ist geschlossen** (`max`, `min`, `add`, `or`, `and`). Mit einem Gleitkommatyp wäre das nicht
+mehr genug:
+
+```
+merge add   ueber f64   ->  NICHT assoziativ, das Monoid faellt
+merge max   ueber f64   ->  NaN vergleicht sich mit nichts
+```
+
+`faltung_ist_reihenfolgeunabhaengig` ruht auf `assoz` und `komm`. **Der Satz bliebe wahr und
+seine Prämisse würde falsch** — und die Absenkung faltet die Kernzellen in einer Reihenfolge,
+die niemand festlegt. *Das ist genau die Lage, für die Zahn 3 gebaut wurde: eine Prämisse, die
+heute vom geschlossenen Wortschatz hergestellt wird und morgen von ihm allein nicht mehr.*
+
+> **Ein Gleitkommatyp müsste `merge` also einschränken, mechanisch** — und dann lautet die
+> Prämisse nicht mehr *der Wortschatz ist geschlossen*, sondern *der Wortschatz ist geschlossen
+> UND alle Zahlentypen sind ganzzahlig*.
 
 ## 2. Die Bedarfszählung — gemessen, nicht geschätzt
 
@@ -93,6 +147,44 @@ und kein Zeugnis sagt es heute.
 
 ---
 
+## 4a. Warum verifizierte Kernel Gleitkomma ausschließen — und es hat wenig mit Beweisen zu tun
+
+Fast alle, seL4 eingeschlossen, halten Gleitkomma aus der TCB heraus: der Kernel wird
+soft-float bzw. `-mgeneral-regs-only` übersetzt, FPU-Zustand ist **Kontext, nicht Rechnung**.
+Drei Gründe, und **alle drei gelten unabhängig von Verifizierbarkeit**:
+
+1. **Der Rundungsmodus ist vom Userspace kontrollierter globaler Zustand.** Man müsste ihn
+   beim Kerneleintritt sichern und normalisieren.
+2. **Lazy FPU switching hat eine eigene Leckklasse** — LazyFP, CVE-2018-3665.
+3. **FP-Kontext im Kernel macht Preemption teurer.**
+
+*Die Verifikationsersparnis ist Nebeneffekt, nicht Motiv.* **Das ersetzt eine Begründung
+dieses Memos durch eine bessere:** nicht *weil es schwer zu beweisen wäre*, sondern weil der
+Rundungsmodus fremder globaler Zustand ist und der Kontextwechsel eine Angriffsfläche hat.
+
+## 4b. Wenn doch — dann gehört der Rundungsmodus in den TYP
+
+Das ist die eigentliche Designfrage, und sie ist **von der Arithmetik unabhängig**. Ein
+`f64<RNE>`, das sich mit `f64<RTZ>` nicht mischen lässt, beseitigt eine ganze Fehlerklasse
+**strukturell — ohne einen einzigen Beweis über Zahlenwerte.**
+
+**Und es wäre die vierte Instanz eines Musters, das dieser Ordner längst führt:**
+
+| | |
+|---|---|
+| `ptr<normal, rw>` | Adressraum und Rechte stehen **am Typ**, nicht in Umgebungszustand |
+| `atomic … seq` | die Ordnung steht **an der Deklaration**, nicht in einer Übersetzerschalterei |
+| `format … endian big` | die Byteordnung steht **am Format** |
+| `f64<RNE>` | der Rundungsmodus stünde **am Typ** statt in MXCSR |
+
+Gemessen: `ptr<…>` ist **kein allgemeiner Typparameter**, sondern ein eigener Typkonstruktor
+mit zwei geschlossenen Wortmengen (`space()`, `rights()`). *Genau diese Form hätte `f64<RNE>`
+— und das Nichtmischen ist dieselbe Maschinerie, mit der `opaque` seit `5e9f31e` beißt.*
+
+**Der Schritt danach ist eine andere Größenordnung:** Fehlerschranken im Typ (Rosa, Daisy)
+hängen vom Eingangsbereich ab und verlangen faktisch Refinement-Types. *Das ist die
+wertgetragene Schranke aus Punkt 1 noch einmal, eine Stufe schärfer.*
+
 ## 5. Und „nur auf der GPU" ist keine Erweiterung, sondern eine Ablesung
 
 Was ein Renderer selbst ausrechnen müsste — Transformationsmatrizen — rechnet die GPU im
@@ -103,12 +195,22 @@ Isolation statt Beweis. *Dafür ist seit heute ein Wort da, und es braucht keine
 
 ## Beschluss
 
-**Nicht bauen.** Drei Gründe, in dieser Reihenfolge:
+**Die erste Fassung hat zwei Entscheidungen vermengt.** Sie sind zu trennen:
+
+**(i) Gleitkomma-ARITHMETIK mit numerischen Zusagen — nicht bauen.**
 
 1. Der Bedarf ist **gemessen null** an 139 Dateien eines echten Mikrokernels.
 2. Was tatsächlich gebraucht wird — eine Nachkommastelle — ist **heute schreibbar**.
-3. Der Preis ist eine **zweite Faktenlogik**, und die zahlt jede Verengung mit, auch die, die
-   nie eine Gleitkommazahl sieht.
+3. Der Preis ist eine zweite Faktenlogik in M1, und die zahlt jede Verengung mit, auch die,
+   die nie eine Gleitkommazahl sieht. *Nicht, weil es unbeweisbar wäre — sondern weil die
+   Spezifikation zwei Semantiken plus ihre Relation verlangt.*
+4. Und ein Gleitkommatyp würde die Prämisse einer **bewiesenen** Schablone brechen (§1a).
+
+**(ii) Der Rundungsmodus im TYP — die Entscheidung ist offen und billig.**
+
+Sie kostet keinen Beweis über Zahlenwerte, sie ist die vierte Instanz eines vorhandenen
+Musters, und sie hängt nicht daran, ob Gabbro je rechnet: **auch der Gast hinter `entrust`
+hat einen Rundungsmodus, und heute sagt darüber niemand etwas.**
 
 **Was stattdessen zu tun ist:** die ABI-Frage aus §4 in der Bibliotheks-ABI führen. *Sie
 besteht auch dann, wenn Gabbro nie eine Gleitkommazahl kennt* — denn der Gast, dem `entrust`

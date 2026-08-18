@@ -97,6 +97,18 @@ of items that are neither code nor a run — what remains is building and measur
 ---
 
 # DECISIONS — need a judgement, not a run
+
+- [ ] **Gehoert der Rundungsmodus in den TYP?** *(offen seit 2026-08-18)*. Ein `f64<RNE>`, das
+      sich mit `f64<RTZ>` nicht mischen laesst, beseitigt eine ganze Fehlerklasse
+      STRUKTURELL -- ohne einen einzigen Beweis ueber Zahlenwerte. **Es waere die vierte
+      Instanz eines vorhandenen Musters**: `ptr<normal, rw>`, `atomic … seq`, `format … endian
+      big` stellen ihren Modus schon an den Typ statt in Umgebungszustand. Gemessen: `ptr<…>`
+      ist kein allgemeiner Typparameter, sondern ein eigener Typkonstruktor mit zwei
+      geschlossenen Wortmengen -- **genau diese Form haette `f64<RNE>`.** *Und die Frage haengt
+      nicht daran, ob Gabbro je rechnet: auch der Gast hinter `entrust` hat einen
+      Rundungsmodus, und heute sagt darueber niemand etwas.* Nicht zu verwechseln mit
+      Fehlerschranken im Typ (Rosa/Daisy) -- die brauchen Refinement-Types und sind die
+      wertgetragene Schranke eine Stufe schaerfer.
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
 - [ ] **Ein Traversierungszaehler erbt die Schranke seiner Domaene** — die letzte

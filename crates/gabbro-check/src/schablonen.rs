@@ -355,7 +355,16 @@ pub const SCHABLONEN: &[Schablone] = &[
         // ueber `nat` gibt es kein Neutrales fuer `min`, ueber einem Maschinenwort schon.
         stand: Stand::Bewiesen,
         voraussetzungen: &[
+            // **Praezisiert 2026-08-18.** Die Praemisse lautete "die Verknuepfung stammt aus
+            // max/min/add/or/and", hergestellt vom geschlossenen Wortschatz. Das ist die
+            // halbe Wahrheit: der Wortschatz reicht nur, WEIL alle Zahlentypen ganzzahlig
+            // sind. Ueber `f64` waere `add` nicht assoziativ und `max` mit NaN kein Verband
+            // -- `faltung_ist_reihenfolgeunabhaengig` verlangt beides.
+            //
+            // *Der Satz bliebe wahr und seine Praemisse wuerde falsch* -- genau die Bewegung,
+            // gegen die Zahn 3 steht.
             Voraussetzung { was: "die Verknuepfung stammt aus max/min/add/or/and", durch: Some("der geschlossene Wortschatz: `MergeOp` laesst nichts anderes zu") },
+            Voraussetzung { was: "und alle Zahlentypen sind GANZZAHLIG -- sonst ist `add` nicht assoziativ", durch: Some("es gibt keinen Gleitkommatyp (MEMO-GLEITKOMMA.md); mit einem muesste `merge` mechanisch einschraenken") },
             Voraussetzung { was: "je Kern eine Zelle, mit dem richtigen Neutralen angelegt", durch: Some("Mutationsprobe `min-akkumulator-ohne-umkehr`, Einheit `beispiel23`") },
             Voraussetzung { was: "der RUHEPUNKT -- kein Kern schreibt mehr, waehrend gefaltet wird", durch: None },
         ],
