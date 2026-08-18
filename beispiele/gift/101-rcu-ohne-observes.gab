@@ -1,0 +1,17 @@
+-- erwartet: H009
+-- **Die Leseseite nimmt nichts -- aber sie muss BENANNT sein.**
+--
+-- Ohne den Bereich gibt es keinen Punkt, an dem eine Gnadenfrist enden koennte: die
+-- Schreibseite wartet darauf, dass kein Leser mehr drin ist, und "drin" ist genau `observes`.
+module gift::rcu1 {
+
+table Konten count 256 { slot { zaehler : u32 in 0 .. 65535, } }
+rcu BACCT protects { Konten };
+
+impl fn lesen(i : index into Konten) -> u32
+    effects { reads Konten.slots } costs <= 3 ops
+{
+    return Konten.slots[i].zaehler;
+}
+
+}

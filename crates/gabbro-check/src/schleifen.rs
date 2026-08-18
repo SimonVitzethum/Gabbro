@@ -65,6 +65,7 @@ fn anweisung(s: &Stmt, marken: &mut Vec<String>, lg: &Lage, absagen: &mut Absage
         StmtArt::Bricht(b) => block(&b.rumpf, marken, lg, absagen),
         StmtArt::Narrow(n) => block(&n.sonst, marken, lg, absagen),
         StmtArt::Sperrt(l) => block(&l.rumpf, marken, lg, absagen),
+        StmtArt::Observiert(o) => block(&o.rumpf, marken, lg, absagen),
         StmtArt::LetSonst(l) => {
             // **U7.** `SYNTAX.md` §7: *„der `else`-Zweig muss divergieren oder
             // zurueckkehren"*. Faellt er durch, ist `let … else` genau der verborgene

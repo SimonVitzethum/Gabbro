@@ -162,6 +162,16 @@ wortschatz! {
     Unfalsifiable => "unfalsifiable", res;
     Axiom         => "axiom",         res;
     Lock          => "lock",          res;
+    // **RCU -- und es ist KEINE Sperre.**
+    //
+    // Der zweite Korpus hat die Klasse gezeigt, die der erste nie zeigte (578 Leseseiten in
+    // `kernel/`+`mm/`): die Leseseite nimmt GAR NICHTS, die Schreibseite tauscht einen Zeiger
+    // und wartet auf eine Gnadenfrist. `lock`/`protects`/`rank`/`held` beschreibt
+    // gegenseitigen Ausschluss; hier gibt es keinen.
+    //
+    // *Zwei Woerter, und die Maschinerie darunter ist die vorhandene.*
+    Rcu           => "rcu",           res;
+    Observes      => "observes",      res;
     Group         => "group",         res;
     Protects      => "protects",      res;
     Rank          => "rank",          res;

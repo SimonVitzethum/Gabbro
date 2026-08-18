@@ -43,6 +43,8 @@ const BENANNT: &[&str] = &[
     "H001", "H002", "H003", "H004", "H005", "H006", // geteilter Halt, Rangordnung
     // K11.2.1: `protects` beisst (`H007`) und eine nie genommene Sperre faellt auf (`H008`).
     "H007", "H008",
+    // «K2»: RCU ist keine Sperre -- H009 Leseseite benannt, H010 Schreiber braucht eine.
+    "H009", "H010",
     // «B37» und K11.1: die Ordnung auf einer linearen Geistmarke. `O005` ist ZURUECKGEZOGEN --
     // der Hinweis „dieser Pass entscheidet das nicht" ist durch `O006` ersetzt, und der Code
     // bleibt frei: eine Absage, die heimlich ihre Bedeutung wechselt, ist schlimmer als eine

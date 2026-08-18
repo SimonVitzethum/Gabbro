@@ -438,6 +438,9 @@ impl<'a> Rechner<'a> {
             }
             StmtArt::Bricht(b) => self.block(&b.rumpf),
             StmtArt::Sperrt(l) => self.block(&l.rumpf),
+            // **`observes` kostet die NAHME nicht** -- RCU nimmt nichts. Was es kostet, ist
+            // der Rumpf und die zwei Marken; die zaehlen als eine Primitive.
+            StmtArt::Observiert(o) => Kosten::Zahl(1).plus(self.block(&o.rumpf)),
             StmtArt::Narrow(n) => Kosten::Zahl(1).plus(groesser(
                 Kosten::Zahl(0),
                 self.block(&n.sonst),

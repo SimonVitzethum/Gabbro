@@ -1,0 +1,48 @@
+-- 31 -- **RCU, und es ist KEINE Sperre.**
+--
+-- Der zweite Korpus («K2») zeigte die Klasse, die der erste nie zeigte: 578 Leseseiten in
+-- `kernel/` und `mm/` eines Linux-Baums, und beide geschnittenen Fragmente scheiterten daran
+-- -- **und sonst an nichts.**
+--
+-- Die Leseseite nimmt gar nichts; die Schreibseite tauscht einen Zeiger und wartet auf eine
+-- Gnadenfrist. `lock`/`protects`/`rank`/`held` beschreibt gegenseitigen Ausschluss -- *hier
+-- gibt es keinen.*
+
+module beispiel::rcu {
+
+table Konten count 256 {
+    slot { zaehler : u32 in 0 .. 65535, }
+}
+
+-- Die Domaene. **Kein `rank`, kein `held`** -- es gibt keine Haltezeit, gegen die eine
+-- Latenzaussage rechnen koennte, und keine Ordnung, in der etwas genommen wuerde.
+rcu BACCT protects { Konten };
+
+-- Die Schreibseite braucht ihre EIGENE Wechselseitigkeit: RCU serialisiert Leser gegen die
+-- Rueckgewinnung und nicht Schreiber gegeneinander. *Das ist die Regel, die man vergisst.*
+lock SCHREIBER protects { Konten } rank 3 held <= 100 ops;
+
+-- **Der Leser braucht die Schreibersperre NICHT** -- das ist die ganze Substanz des
+-- Konstrukts. Ohne diese Ausnahme kaufte `observes` nichts, und RCU waere eine Sperre mit
+-- einem zweiten Namen.
+impl fn lesen(i : index into Konten) -> u32
+    effects { reads Konten.slots }
+    costs   <= 4 ops
+{
+    observes BACCT {
+        return Konten.slots[i].zaehler;
+    }
+    return 0;
+}
+
+-- Der Schreiber nimmt die Sperre, und `observes` hilft ihm dabei nicht.
+impl fn setzen(i : index into Konten, w : u32 in 0 .. 65535)
+    effects { locks SCHREIBER, writes Konten.slots }
+    costs   <= 4 ops
+{
+    locks SCHREIBER {
+        Konten.slots[i].zaehler = w;
+    }
+}
+
+}

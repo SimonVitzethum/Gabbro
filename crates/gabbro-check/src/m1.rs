@@ -471,6 +471,7 @@ impl<'a> Pruefer<'a> {
             }
             StmtArt::Bricht(b) => self.unterblock(&b.rumpf, lage, ergebnis),
             StmtArt::Sperrt(l) => self.unterblock(&l.rumpf, lage, ergebnis),
+            StmtArt::Observiert(o) => self.unterblock(&o.rumpf, lage, ergebnis),
             StmtArt::Schleife(sch) => {
                 // Schleifen tragen keine Fakten hinein -- die Invariante der Traversierung
                 // tut das, und die gehoert dem Beweiser.

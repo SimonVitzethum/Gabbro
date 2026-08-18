@@ -462,6 +462,7 @@ impl<'a> Parser<'a> {
             Art::Wort(Kw::Axiom) => ItemArt::Axiom(self.axiom()?),
             Art::Wort(Kw::Check) => ItemArt::Check(self.check()?),
             Art::Wort(Kw::Lock) => ItemArt::Lock(self.lockdecl()?),
+            Art::Wort(Kw::Rcu) => ItemArt::Rcu(self.rcudecl()?),
             Art::Wort(Kw::Group) => ItemArt::Gruppe(self.gruppedecl()?),
             Art::Wort(Kw::Accumulates) => ItemArt::Accumulates(self.accdecl()?),
             Art::Wort(Kw::Walk) => ItemArt::Walk(self.walkdecl()?),
@@ -2166,6 +2167,12 @@ impl<'a> Parser<'a> {
                 let sonst = self.block()?;
                 StmtArt::Narrow(NarrowStmt { ort, ziel, sonst })
             }
+            Art::Wort(Kw::Observes) => {
+                self.pos += 1;
+                let domaene = self.erwarte_ident()?;
+                let rumpf = self.block()?;
+                StmtArt::Observiert(ObserviertStmt { domaene, rumpf })
+            }
             Art::Wort(Kw::Locks) => {
                 self.pos += 1;
                 let geteilt = self.friss_kw(Kw::Shared);
@@ -3237,6 +3244,32 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// **RCU: `protects` und sonst nichts.**
+    ///
+    /// Kein `rank`, kein `held` -- *es gibt keine Haltezeit, gegen die eine Latenzaussage
+    /// rechnen koennte, und keine Ordnung, in der etwas genommen wuerde.* Die Deklaration ist
+    /// darum kuerzer als die einer Sperre, und das ist die Aussage.
+    fn rcudecl(&mut self) -> Erg<RcuDecl> {
+        let anfang = self.erwarte_kw(Kw::Rcu)?;
+        let name = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::Protects)?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut schuetzt = Vec::new();
+        while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
+            schuetzt.push(self.place()?);
+            if !self.friss_z(Z::Komma) {
+                break;
+            }
+        }
+        self.erwarte_z(Z::GeschweiftZu)?;
+        let ende = self.erwarte_z(Z::Semi)?;
+        Ok(RcuDecl {
+            name,
+            schuetzt,
+            span: anfang.bis_zu(ende),
+        })
+    }
+
     fn lockdecl(&mut self) -> Erg<LockDecl> {
         let anfang = self.erwarte_kw(Kw::Lock)?;
         let name = self.erwarte_ident()?;
@@ -3676,6 +3709,7 @@ pub fn faengt_item_an(k: Kw) -> bool {
             | Kw::Check
             | Kw::Atomic
             | Kw::Lock
+            | Kw::Rcu
             | Kw::Accumulates
             | Kw::Walk
             | Kw::Entry

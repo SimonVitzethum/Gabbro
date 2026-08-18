@@ -1,0 +1,19 @@
+-- erwartet: H010
+-- **RCU serialisiert Leser gegen die RUECKGEWINNUNG, nicht Schreiber gegeneinander.**
+--
+-- Das ist die Regel, die man vergisst: wer nur `observes` nimmt und schreibt, hat zwei
+-- Schreiber nebeneinander. Die Schreibseite braucht ihre eigene Wechselseitigkeit.
+module gift::rcu2 {
+
+table Konten count 256 { slot { zaehler : u32 in 0 .. 65535, } }
+rcu BACCT protects { Konten };
+
+impl fn setzen(i : index into Konten)
+    effects { writes Konten.slots } costs <= 4 ops
+{
+    observes BACCT {
+        Konten.slots[i].zaehler = 1;
+    }
+}
+
+}

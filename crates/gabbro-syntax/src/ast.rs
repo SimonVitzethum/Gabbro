@@ -75,6 +75,8 @@ pub enum ItemArt {
     Check(Check),
     Atomic(AtomicDecl),
     Lock(LockDecl),
+    /// **RCU -- eine Domaene, kein Schloss.** Siehe `RcuDecl`.
+    Rcu(RcuDecl),
     /// `group N over { A, B };` -- a carrier group with a connecting invariant.
     Gruppe(GruppeDecl),
     Accumulates(AccDecl),
@@ -105,6 +107,7 @@ impl ItemArt {
             ItemArt::Check(c) => Some(&c.name),
             ItemArt::Atomic(a) => Some(&a.name),
             ItemArt::Lock(l) => Some(&l.name),
+            ItemArt::Rcu(r) => Some(&r.name),
             ItemArt::Accumulates(a) => Some(&a.name),
             ItemArt::Walk(w) => Some(&w.name),
             ItemArt::Entry(e) => Some(&e.name),
@@ -132,6 +135,7 @@ impl ItemArt {
             ItemArt::Check(_) => "check",
             ItemArt::Atomic(_) => "atomic",
             ItemArt::Lock(_) => "lock",
+            ItemArt::Rcu(_) => "rcu",
             ItemArt::Gruppe(_) => "group",
             ItemArt::Accumulates(_) => "accumulates",
             ItemArt::Walk(_) => "walk",
@@ -802,6 +806,8 @@ pub enum StmtArt {
     Narrow(NarrowStmt),
     /// `locks place block`
     Sperrt(SperrtStmt),
+    /// `observes D { … }` -- die RCU-Leseseite.
+    Observiert(ObserviertStmt),
     Leave(Ident),
     Next(Ident),
     /// `place = expr publishes (placelist | nothing) ;`
@@ -919,6 +925,30 @@ pub enum NarrowZiel {
     Bereich(Bereich),
     /// Nicht NaN UND nicht unendlich -- zwei Bits, auf einmal gesetzt.
     Endlich(Span),
+}
+
+/// **Eine RCU-Domaene. KEINE Sperre.**
+///
+/// Der zweite Korpus zeigte die Klasse, die der erste nie zeigte: die Leseseite nimmt gar
+/// nichts, die Schreibseite tauscht einen Zeiger und wartet auf eine Gnadenfrist.
+/// `lock`/`protects`/`rank`/`held` beschreibt gegenseitigen Ausschluss -- **hier gibt es
+/// keinen.**
+///
+/// *Darum kein `rank` und kein `held`: es gibt keine Haltezeit, gegen die eine Latenzaussage
+/// rechnen koennte, und keine Ordnung, in der etwas genommen wuerde.*
+#[derive(Debug, Clone)]
+pub struct RcuDecl {
+    pub name: Ident,
+    pub schuetzt: Vec<Ort>,
+    pub span: Span,
+}
+
+/// `observes D { … }` -- die LESESEITE. Ein Bereich, in dem ein gelesener Zeiger gueltig
+/// bleibt; kein Ausschluss, keine Nahme.
+#[derive(Debug, Clone)]
+pub struct ObserviertStmt {
+    pub domaene: Ident,
+    pub rumpf: Block,
 }
 
 #[derive(Debug, Clone)]

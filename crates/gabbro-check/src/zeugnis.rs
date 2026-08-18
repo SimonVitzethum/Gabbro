@@ -477,6 +477,7 @@ fn art_name(a: &ItemArt) -> &'static str {
         ItemArt::Check(_) => "check",
         ItemArt::Atomic(_) => "atomic",
         ItemArt::Lock(_) => "lock",
+        ItemArt::Rcu(_) => "rcu",
         ItemArt::Gruppe(_) => "group",
         ItemArt::Accumulates(_) => "accumulates",
         ItemArt::Walk(_) => "walk",
@@ -507,6 +508,10 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
                 for z in &m.zweige {
                     block(&z.rumpf, e, geister);
                 }
+            }
+            StmtArt::Observiert(o) => {
+                zaehle(e, "observes");
+                block(&o.rumpf, e, geister);
             }
             StmtArt::Sperrt(x) => {
                 zaehle(e, "locks");

@@ -128,6 +128,20 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         block(b, &[], &[], &[], &sperren, &verlangt, &mut geteilt_genommen, absagen);
     });
 
+    // **Die RCU-Domaenen -- vor H007 gesammelt, weil H007 sie BRAUCHT.**
+    //
+    // Ein Leser in `observes` darf die Schreibersperre nicht brauchen; sonst waere RCU eine
+    // Sperre mit einem zweiten Namen.
+    let mut rcu_domaenen: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Rcu(r) = &item.art {
+            rcu_domaenen.insert(
+                r.name.text.clone(),
+                r.schuetzt.iter().map(|o| o.text()).collect(),
+            );
+        }
+    });
+
     // **H007 -- K11.2.1: `protects` beisst.**
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Funktion(f) = &item.art else { return };
@@ -159,8 +173,40 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             crate::aufrufgraph::held_aus_pred(p, &mut h);
             da.extend(h.into_iter().map(|(n, _)| n));
         }
-        schutz(b, &da, &sperren, &f.name.text, absagen);
+        schutz(b, &da, &sperren, &rcu_domaenen, &[], &f.name.text, absagen);
     });
+
+    // **H009/H010 -- RCU, und es ist KEINE Sperre.**
+    //
+    // Aus «K2»: der zweite Korpus zeigte die Klasse, die der erste nie zeigte. Die Leseseite
+    // nimmt gar nichts, die Schreibseite tauscht einen Zeiger und wartet auf eine
+    // Gnadenfrist. Daraus zwei Regeln, und beide spiegeln `protects`/`H007`:
+    //
+    //   H009  ein LESEN einer rcu-geschuetzten Stelle steht in `observes`
+    //   H010  ein SCHREIBEN steht zusaetzlich unter einer echten Sperre
+    //
+    // *Die zweite ist die, die man vergisst:* RCU serialisiert Leser gegen die
+    // Rueckgewinnung und **nicht Schreiber gegeneinander**. Wer nur `observes` nimmt und
+    // schreibt, hat zwei Schreiber nebeneinander.
+    let domaenen = rcu_domaenen.clone();
+    if !domaenen.is_empty() {
+        crate::fuer_jedes_item(baum, &mut |item| {
+            let ItemArt::Funktion(f) = &item.art else { return };
+            if matches!(f.klasse, Some(FnKlasse::Spec)) {
+                return;
+            }
+            let FnRumpf::Block(b) = &f.rumpf else { return };
+            let mut aussen: Vec<String> = Vec::new();
+            if let Some(w) = &f.effects {
+                for x in &w.liste {
+                    if let WirkungArt::Sperrt(o) | WirkungArt::SperrtGeteilt(o) = &x.art {
+                        aussen.push(o.text());
+                    }
+                }
+            }
+            rcu_schutz(b, &[], &aussen, &domaenen, &sperren, &f.name.text, absagen);
+        });
+    }
 
     // **H008 -- die Gegenrichtung von H007, und sie haette den Befund zuerst gefunden.**
     //
@@ -275,6 +321,8 @@ fn schutz(
     b: &Block,
     da: &[String],
     sperren: &BTreeMap<String, Sperre>,
+    rcu: &BTreeMap<String, Vec<String>>,
+    beobachtet: &[String],
     wo: &str,
     absagen: &mut Absagen,
 ) {
@@ -284,10 +332,31 @@ fn schutz(
             .find(|(_, sp)| sp.schuetzt.iter().any(|p| beruehrt(p, ort)))
             .map(|(n, _)| n.clone())
     };
+    // **Die RCU-Ausnahme, und sie ist die ganze Substanz des Konstrukts.**
+    //
+    // Steht eine Stelle in einer RCU-Domaene und stehen wir in deren `observes`, braucht ein
+    // LESEN die Schreibersperre nicht. *Ohne diese Zeile kauft `observes` nichts* -- der
+    // Leser muesste die Sperre trotzdem nehmen, und dann waere RCU eine Sperre mit einem
+    // zweiten Namen.
+    //
+    // **Fuer ein SCHREIBEN gilt sie nicht** -- dafuer steht `H010` daneben.
+    //
+    // *Genauer:* `pruefe` unterscheidet Lesen und Schreiben nicht, also nimmt ein Schreiben
+    // in `observes` die Ausnahme mit. **Das ist folgenlos, weil `H010` strenger ist** und die
+    // bessere Meldung gibt -- „RCU serialisiert Schreiber nicht" statt „die Sperre fehlt".
+    // Ein Schreiben unter der richtigen Sperre besteht beide, eines ohne faellt an `H010`.
+    let rcu_deckt_lesen = |ort: &str| -> bool {
+        rcu.iter().any(|(d, orte)| {
+            beobachtet.iter().any(|b| b == d) && orte.iter().any(|p| beruehrt(p, ort))
+        })
+    };
     let pruefe = |o: &Ort, absagen: &mut Absagen| {
         let t = o.text();
         let Some(sperre) = deckt(&t) else { return };
         if da.iter().any(|d| d == &sperre) {
+            return;
+        }
+        if rcu_deckt_lesen(&t) {
             return;
         }
         absagen.schiebe(
@@ -312,7 +381,18 @@ fn schutz(
             StmtArt::Sperrt(l) => {
                 let mut innen = da.to_vec();
                 innen.push(l.sperre.text());
-                schutz(&l.rumpf, &innen, sperren, wo, absagen);
+                schutz(&l.rumpf, &innen, sperren, rcu, beobachtet, wo, absagen);
+            }
+            // **`observes` haelt NICHTS, und der Waechter muss trotzdem hineinsehen.**
+            //
+            // Beim Bauen von RCU stand hier zuerst nichts -- und damit war ein `observes`
+            // ein blinder Fleck fuer `H007`: ein Schreiber haette sich darin verstecken und
+            // die Sperre umgehen koennen. *Ein Bereich, den ein Waechter nicht betritt, ist
+            // eine Einladung.* Die Domaene wandert AUSDRUECKLICH nicht in `da`.
+            StmtArt::Observiert(o) => {
+                let mut tiefer = beobachtet.to_vec();
+                tiefer.push(o.domaene.text.clone());
+                schutz(&o.rumpf, da, sperren, rcu, &tiefer, wo, absagen);
             }
             StmtArt::Zuweisung(z) => {
                 pruefe(&z.ziel, absagen);
@@ -332,24 +412,24 @@ fn schutz(
             StmtArt::Wenn(w) => {
                 for (bed, r) in &w.zweige {
                     orte_in(bed, &mut |o| pruefe(o, absagen));
-                    schutz(r, da, sperren, wo, absagen);
+                    schutz(r, da, sperren, rcu, beobachtet, wo, absagen);
                 }
                 if let Some(r) = &w.sonst {
-                    schutz(r, da, sperren, wo, absagen);
+                    schutz(r, da, sperren, rcu, beobachtet, wo, absagen);
                 }
             }
             StmtArt::Match(m) => {
                 for z in &m.zweige {
-                    schutz(&z.rumpf, da, sperren, wo, absagen);
+                    schutz(&z.rumpf, da, sperren, rcu, beobachtet, wo, absagen);
                 }
             }
-            StmtArt::Bricht(x) => schutz(&x.rumpf, da, sperren, wo, absagen),
-            StmtArt::Narrow(x) => schutz(&x.sonst, da, sperren, wo, absagen),
-            StmtArt::LetSonst(x) => schutz(&x.sonst, da, sperren, wo, absagen),
+            StmtArt::Bricht(x) => schutz(&x.rumpf, da, sperren, rcu, beobachtet, wo, absagen),
+            StmtArt::Narrow(x) => schutz(&x.sonst, da, sperren, rcu, beobachtet, wo, absagen),
+            StmtArt::LetSonst(x) => schutz(&x.sonst, da, sperren, rcu, beobachtet, wo, absagen),
             StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(t) => schutz(&t.rumpf, da, sperren, wo, absagen),
-                Schleife::Retry(r) => schutz(&r.rumpf, da, sperren, wo, absagen),
-                Schleife::Forever(f) => schutz(&f.rumpf, da, sperren, wo, absagen),
+                Schleife::Traverse(t) => schutz(&t.rumpf, da, sperren, rcu, beobachtet, wo, absagen),
+                Schleife::Retry(r) => schutz(&r.rumpf, da, sperren, rcu, beobachtet, wo, absagen),
+                Schleife::Forever(f) => schutz(&f.rumpf, da, sperren, rcu, beobachtet, wo, absagen),
             },
             _ => {}
         }
@@ -690,4 +770,110 @@ fn rangprobe(
     let mut aus = kette.to_vec();
     aus.push((name.to_string(), rang));
     aus
+}
+
+/// **Der RCU-Waechter.** `beobachtet` sind die Domaenen, in deren `observes` wir stehen;
+/// `gehalten` die Sperren, die der Rumpf haelt.
+fn rcu_schutz(
+    b: &Block,
+    beobachtet: &[String],
+    gehalten: &[String],
+    domaenen: &BTreeMap<String, Vec<String>>,
+    sperren: &BTreeMap<String, Sperre>,
+    wo: &str,
+    absagen: &mut Absagen,
+) {
+    let deckt = |ort: &str| -> Option<String> {
+        domaenen
+            .iter()
+            .find(|(_, orte)| orte.iter().any(|p| beruehrt(p, ort)))
+            .map(|(n, _)| n.clone())
+    };
+    for s in &b.anweisungen {
+        // Lesen: jeder Ort im Ausdruck; Schreiben: das Ziel.
+        let mut gelesen: Vec<&Ort> = Vec::new();
+        let mut geschrieben: Vec<&Ort> = Vec::new();
+        match &s.art {
+            StmtArt::Zuweisung(z) => geschrieben.push(&z.ziel),
+            StmtArt::Let(l) => orte_aus_expr(&l.wert, &mut gelesen),
+            StmtArt::Return(Some(e)) => orte_aus_expr(e, &mut gelesen),
+            StmtArt::Observiert(o) => {
+                let mut tiefer = beobachtet.to_vec();
+                tiefer.push(o.domaene.text.clone());
+                rcu_schutz(&o.rumpf, &tiefer, gehalten, domaenen, sperren, wo, absagen);
+            }
+            StmtArt::Sperrt(l) => {
+                let mut tiefer = gehalten.to_vec();
+                tiefer.push(l.sperre.text());
+                rcu_schutz(&l.rumpf, beobachtet, &tiefer, domaenen, sperren, wo, absagen);
+            }
+            StmtArt::Wenn(w) => {
+                for (_, r) in &w.zweige {
+                    rcu_schutz(r, beobachtet, gehalten, domaenen, sperren, wo, absagen);
+                }
+                if let Some(r) = &w.sonst {
+                    rcu_schutz(r, beobachtet, gehalten, domaenen, sperren, wo, absagen);
+                }
+            }
+            _ => {}
+        }
+        for o in gelesen {
+            let t = o.text();
+            let Some(d) = deckt(&t) else { continue };
+            if beobachtet.iter().any(|x| *x == d) {
+                continue;
+            }
+            absagen.schiebe(
+                Absage::fehler(
+                    "H009",
+                    o.span,
+                    format!("`{t}` gehoert zur RCU-Domaene `{d}`, `{wo}` steht nicht in `observes {d}`"),
+                )
+                .mit_notiz(
+                    "die Leseseite nimmt nichts -- aber sie muss BENANNT sein, sonst gibt es \
+                     keinen Punkt, an dem eine Gnadenfrist enden koennte",
+                ),
+            );
+        }
+        for o in geschrieben {
+            let t = o.text();
+            let Some(d) = deckt(&t) else { continue };
+            let unter_sperre = gehalten.iter().any(|g| {
+                sperren
+                    .get(g)
+                    .is_some_and(|sp| sp.schuetzt.iter().any(|p| beruehrt(p, &t)))
+            });
+            if unter_sperre {
+                continue;
+            }
+            absagen.schiebe(
+                Absage::fehler(
+                    "H010",
+                    o.span,
+                    format!("`{t}` wird in `{wo}` ohne Sperre geschrieben (RCU-Domaene `{d}`)"),
+                )
+                .mit_notiz(
+                    "RCU serialisiert Leser gegen die RUECKGEWINNUNG, nicht Schreiber \
+                     gegeneinander -- die Schreibseite braucht ihre eigene Wechselseitigkeit",
+                ),
+            );
+        }
+    }
+}
+
+fn orte_aus_expr<'a>(e: &'a Expr, out: &mut Vec<&'a Ort>) {
+    match &e.art {
+        ExprArt::Ort(o) => out.push(o),
+        ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => orte_aus_expr(i, out),
+        ExprArt::Binaer(_, a, b) => {
+            orte_aus_expr(a, out);
+            orte_aus_expr(b, out);
+        }
+        ExprArt::Ruf(r) => {
+            for a in &r.argumente {
+                orte_aus_expr(a, out);
+            }
+        }
+        _ => {}
+    }
 }

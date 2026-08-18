@@ -93,7 +93,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
              class fields bank at stride count backed mirrors from
-             assume falsifier unfalsifiable axiom lock protects rank group
+             assume falsifier unfalsifiable axiom lock protects rank group rcu observes
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
              offset_into index into option chain wrapping
@@ -173,7 +173,7 @@ program    = { item } ;
 item       = [ "when" constexpr ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | reason | state | device | assume | axiom | check
-             | atomicdecl | lockdecl | gruppedecl | accdecl | walkdecl | entrydecl | entrustdecl
+             | atomicdecl | lockdecl | rcudecl | gruppedecl | accdecl | walkdecl | entrydecl | entrustdecl
              | bootdecl ) ;
 bootdecl   = "boot" ident "arch" ident "{"
                { bootstep }
@@ -558,7 +558,7 @@ It must be restored at the end of the block; the region is **visible instead of 
 ```ebnf
 block      = "{" { stmt } "}" ;
 stmt       = letstmt | assign | ifstmt | matchstmt | loopform | breakstmt
-           | narrowstmt | lockstmt | leavestmt | nextstmt | publishstmt
+           | narrowstmt | lockstmt | observestmt | leavestmt | nextstmt | publishstmt
            | awaitload | exchstmt | "return" [ expr ] ";" | exprstmt ;
 leavestmt  = "leave" ident ";" ;
 nextstmt   = "next" ident ";" ;
@@ -801,6 +801,23 @@ lockdecl   = "lock" ident "protects" "{" placelist "}"
              "rank" constexpr [ "held" "<=" constexpr "ops" ]
              [ "shared" "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
 lockstmt   = "locks" [ "shared" ] place block ;
+rcudecl    = "rcu" ident "protects" "{" placelist "}" ";" ;
+observestmt = "observes" ident block ;
+(* RCU, und es ist KEINE Sperre (2026-08-18, aus «K2»).
+
+   Die Leseseite nimmt gar nichts: `observes D { … }` ist ein BEREICH, in dem ein gelesener
+   Zeiger gueltig bleibt -- kein Ausschluss. Die Schreibseite braucht ihre eigene
+   Wechselseitigkeit, denn RCU serialisiert Leser gegen die Rueckgewinnung und nicht
+   Schreiber gegeneinander.
+
+   Daraus zwei Regeln, und beide spiegeln `protects`/`H007`:
+
+     H009  ein LESEN einer rcu-geschuetzten Stelle steht in `observes`
+     H010  ein SCHREIBEN steht zusaetzlich unter einer echten Sperre
+
+   NICHT gebaut: die GNADENFRIST. Dass ein Objekt erst freigegeben wird, wenn kein Leser es
+   mehr sehen kann, ist eine Phasenaussage -- «B37» hat die Maschinerie (`order`/`advances`),
+   und es fehlt der Begriff des Freigebens. *)
 gruppedecl = "group" ident "over" "{" ident { "," ident } [ "," ] "}"
              ( "{" { invariant } "}" | ";" ) ;
 ```

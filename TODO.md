@@ -536,13 +536,16 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
-- [ ] **RCU hat in Gabbro kein Wort** *(gemessen 2026-08-18 am zweiten Korpus: 578
-      Leseseiten, 73 Dereferenzierungen, 99 Gnadenfristen)*. **Keine Nachlaessigkeit, sondern
-      die Klasse, die der erste Korpus nie zeigte** -- Caprock benutzt kein RCU. Und es ist
-      nicht "eine Sperre mit anderem Namen": die Leseseite nimmt GAR NICHTS, die Schreibseite
-      tauscht einen Zeiger und wartet auf eine Gnadenfrist. `lock`/`protects`/`rank`/`held`
-      beschreibt gegenseitigen Ausschluss; hier gibt es keinen. *Die Paarung trifft die
-      Zeigerveroeffentlichung, die Gnadenfrist trifft sie nicht.*
+- [ ] **Die GNADENFRIST fehlt noch** *(2026-08-18)*. `rcu`/`observes` stehen (`H009`,
+      `H010`), und damit sind Leseseite und Schreiberausschluss benannt. **Was fehlt, ist der
+      Punkt, an dem freigegeben werden darf**: dass kein Leser das alte Objekt mehr sehen
+      kann. Das ist eine PHASENaussage -- «B37» hat die Maschinerie (`order`/`advances`) --
+      und es fehlt der Begriff des Freigebens, denn Gabbro hat keinen Allokator, nur
+      Platzvorraete. *Punkt 1 hat die Haelfte davon gebaut; die andere ist die Rueckgabe.*
+- [ ] **`observes` senkt nicht ab** *(2026-08-18)*. Der Erzeuger weigert sich benannt. Die
+      Absenkung waere zwei fremde Ruempfe wie bei `lock` (`_beobachten`/`_freigeben`), und die
+      Zeugniszeile muesste sagen, dass diese Einheit eine RCU-Domaene liest -- **eine Aussage
+      ueber die Rueckgewinnung, nicht ueber Zahlen.**
 - [ ] **«K2»: zwei Fragmente stehen, drei fehlen** *(2026-08-18)*. K2-F1 und K2-F2 sind
       geschnitten und gemessen; **beide sind vom selben einen Konstrukt blockiert (RCU), und
       der ganze Rest traegt** -- Sperre, Rang, Haltezeit, beschraenkte Wiederholung, benannter
@@ -1032,7 +1035,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 137 / 203) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 139 / 205) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |
