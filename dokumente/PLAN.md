@@ -2369,7 +2369,14 @@ etwas gebaut werden soll, ist teurer als ein großer, der allein steht.**
    Keine Kleinigkeit: eine Zusage, die im Zeugnis erscheint, in der
    Bibliotheks-ABI getragen werden soll und heute nirgends gegen den Rumpf **oder auch nur
    gegen die Wohlgeformtheit** geprüft wird. Der Wächter hat siebzehn Geschwister dazu benannt.
-4. **Der zweite Korpus.** Als einziger der großen Blöcke **entsperrt** er andere, statt selbst
+4. **Der zweite Korpus** — **angefangen 2026-08-18**, und er hat beim ersten Hinsehen
+   geliefert, wofür er da ist: einen **Konstruktfund**. RCU (578 Leseseiten in `kernel/`+`mm/`
+   eines Linux-Baums) hat in Gabbro kein Wort — *keine Nachlässigkeit, sondern die Klasse,
+   die der erste Korpus nie zeigte.* Dazu die zwei Zielgrößen an fremdem Code: `BUG_ON`/
+   `WARN_ON` **2034** (was Gabbro ersetzt) und `goto` **2669** (was Gabbro absichtlich nicht
+   hat, und was in vier Formen zerfällt, von denen es drei gibt). *Gemessen sind Formen, nicht
+   Übersetzbarkeit — Fragmente sind noch keine geschnitten.* Als einziger der großen Blöcke
+   **entsperrt** er andere, statt selbst
    zu wachsen: K11.2.2 hängt daran, jede Null im Zeugnis hängt daran, und die Konvergenzmetrik
    bekommt erst mit ihm einen zweiten Datenpunkt aus einer anderen Autorenlinie. *Die
    aarch64-Lektion in neuer Form: ein Korpus, den derselbe Autor für dieselbe Sprache

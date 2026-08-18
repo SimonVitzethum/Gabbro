@@ -536,6 +536,20 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **RCU hat in Gabbro kein Wort** *(gemessen 2026-08-18 am zweiten Korpus: 578
+      Leseseiten, 73 Dereferenzierungen, 99 Gnadenfristen)*. **Keine Nachlaessigkeit, sondern
+      die Klasse, die der erste Korpus nie zeigte** -- Caprock benutzt kein RCU. Und es ist
+      nicht "eine Sperre mit anderem Namen": die Leseseite nimmt GAR NICHTS, die Schreibseite
+      tauscht einen Zeiger und wartet auf eine Gnadenfrist. `lock`/`protects`/`rank`/`held`
+      beschreibt gegenseitigen Ausschluss; hier gibt es keinen. *Die Paarung trifft die
+      Zeigerveroeffentlichung, die Gnadenfrist trifft sie nicht.*
+- [ ] **«K2»: die Zaehlung ist keine Uebersetzung** *(2026-08-18)*. Gemessen sind FORMEN
+      (`goto` 2669, `BUG_ON` 2034, `spin_lock` 808 …), nicht Uebersetzbarkeit -- kein Fragment
+      ist geschnitten, kein Pruefer ist darueber gelaufen. **Der Unterschied ist derselbe wie
+      zwischen „`format` gibt es" und „das Fragment geht durch"**, und dieser Ordner hat ihn
+      schon einmal bezahlt. Naechster Schritt: drei bis fuenf Fragmente schneiden und den
+      Pruefer darueber laufen lassen -- wie bei «F0».
+
 - [ ] **`D004` hat auf diesem Korpus NULL Biss** *(gemessen 2026-08-18)*. Alle zwoelf
       `opaque`-Deklarationen der Beispiele erklaeren und benutzen im **selben Modul**, also
       greift die Modulgrenze zu Recht nicht. **Dieselbe Lage wie `E010`**, und derselbe

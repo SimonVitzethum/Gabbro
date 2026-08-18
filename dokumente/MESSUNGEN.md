@@ -7362,3 +7362,82 @@ Was fehlt, ist genau der offene Posten **wertgetragene Schranke**: von `N` dekla
 Plätzen sind `k` lebendig, `k` ist ein Wert, `belegen` erhöht ihn, und jeder Zugriff wird gegen
 `k` geprüft statt gegen `N`. *Damit wäre „100 MiB belegt, 30 GiB deklariert" eine Aussage der
 Sprache und nicht eine Hoffnung an den Seitenfehlerpfad.*
+
+---
+
+# «K2» — der zweite Korpus, gemessen: ein Linux-Kernelbaum
+
+> **2026-08-18.** Die aarch64-Lektion lautete: *ein Korpus, den derselbe Autor für dieselbe
+> Sprache schreibt, misst Passung, nicht Übertragbarkeit.* Der zweite Korpus muss also aus
+> einer fremden Autorenlinie kommen — und auf dieser Maschine liegt einer: ein
+> Linux-Kernelbaum.
+>
+> **Gemessen wurde, nicht abgeschrieben.** Kein Fremdcode geht in diesen Ordner; was hier
+> steht, sind Zählungen über `kernel/` und `mm/` (234 Dateien).
+
+## Die Klempnereiklassen, gezählt
+
+```
+spin_lock                 808        Belegung (kmalloc etc.)     938
+mutex + rcu_read_lock     571        BUG_ON / WARN_ON           2034
+atomic_*()                637        goto                       2669
+per_cpu                   411        unbeschränkte Schleifen      74
+Barrieren / *_ONCE        589
+```
+
+**Die zwei größten Zahlen sind die zwei Aussagen dieses Ordners**, und sie stehen hier zum
+ersten Mal an fremdem Code:
+
+| | |
+|---|---|
+| **`BUG_ON`/`WARN_ON` 2034** | Laufzeitzusicherungen — genau die Klasse, die Gabbro durch M1-Fakten **ersetzt**, nicht prüft. *Die Behauptung „die Klempnerei trägt die Sprache" hat hier ihre Zielgröße.* |
+| **`goto` 2669** | die häufigste Kontrollflussform des Baums, und Gabbro hat sie **absichtlich nicht** |
+
+## `goto` zerfällt in vier Gabbro-Formen, und drei gibt es
+
+```
+out 756 · out_unlock 124 · unlock 96 · err 64 · error 55 · fail 52     -> 1147
+retry 90 · next 54
+```
+
+| Ziel | Gabbros Antwort |
+|---|---|
+| `out`, `err`, `error`, `fail` | `let … else` — die **eine** Fehlerfortpflanzung |
+| `out_unlock`, `unlock` | **entfällt**: ein `locks { … }`-Block nimmt und gibt auf jedem Pfad |
+| `retry` | `retry … bounded N ops … on_exceeded` |
+| `next` | `next` — das Wort gibt es |
+
+*Die zweite Zeile ist die interessanteste: 220 Sprungmarken existieren nur, weil das
+Freigeben von Hand geschieht. In Gabbro gibt es das Ziel nicht, weil es das Problem nicht
+gibt.*
+
+## Der Fund auf KONSTRUKTEBENE: RCU
+
+```
+rcu_read_lock / _unlock   578
+rcu_dereference            73
+call_rcu / synchronize     99
+```
+
+**Gabbro hat dafür kein Wort.** Und es ist keine Nachlässigkeit, sondern die Klasse, die der
+erste Korpus nie zeigte: Caprock benutzt kein RCU, also stellte sich die Frage nie.
+
+RCU ist auch nicht „eine Sperre mit anderem Namen": die Leseseite nimmt **gar nichts**, die
+Schreibseite tauscht einen Zeiger und wartet auf eine Gnadenfrist. Gabbros Sperrmodell —
+`lock`, `protects`, `rank`, `held` — beschreibt gegenseitigen Ausschluss; hier gibt es keinen.
+*Die Paarung (`publishes`/`awaits`) trifft die Zeigerveröffentlichung, die Gnadenfrist trifft
+sie nicht.*
+
+> **Das ist genau das, wofür der zweite Korpus da ist.** Er hat nicht bestätigt, dass die
+> Sprache passt — er hat eine Klasse gezeigt, die sie nicht kennt. Ein Korpus, der nur
+> bestätigt, misst Passung.
+
+## Was diese Messung NICHT ist
+
+Sie zählt **Formen**, nicht Übersetzbarkeit. Kein Fragment ist geschnitten, kein Prüfer ist
+darüber gelaufen. *Die Zahlen sagen, wie oft eine Klasse vorkommt — nicht, ob Gabbro den
+konkreten Rumpf trägt.* Der Unterschied ist derselbe wie zwischen „`format` gibt es" und „das
+Fragment geht durch", und dieser Ordner hat ihn schon einmal bezahlt.
+
+**Und sie ist auf `kernel/` und `mm/` beschränkt** — 234 von rund 64 000 Dateien. Die Auswahl
+ist der Kern, nicht der Baum.
