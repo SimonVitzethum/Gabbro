@@ -610,7 +610,9 @@ impl<'a> Pruefer<'a> {
                         ),
                     );
                 }
-                Typ::Gleitkomma(crate::typen::FBereich::punkt(f64::from_bits(*bits)))
+                let mut b = crate::typen::FBereich::punkt(f64::from_bits(*bits));
+                b.gerundet = *gerundet;
+                Typ::Gleitkomma(b)
             }
             ExprArt::Wahr | ExprArt::Falsch => Typ::Wahrheit,
             ExprArt::Ergebnis => Typ::Unbekannt,
@@ -1350,6 +1352,29 @@ impl<'a> Pruefer<'a> {
             }
             if q.kann_unendlich && !z.kann_unendlich {
                 fehlt.push("unendlich");
+            }
+            // **`F002` an der VERSCHMAELERUNG.** Ein Literal, das in `f64` exakt liegt,
+            // muss es in `f32` nicht -- und `FBereich::mantisse()` stand dafuer da und wurde
+            // von niemandem gelesen. *Dieselbe Klasse wie die siebzehn ZUSAGEN, in meinem
+            // eigenen Code, einen Tag alt.*
+            if q.literal
+                && !q.gerundet
+                && !crate::typen::FBereich::passt_in_mantisse(q.lo, z.breite)
+            {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "F002",
+                        span,
+                        format!(
+                            "das Literal liegt in `f{}` nicht exakt (in `f64` schon)",
+                            z.breite
+                        ),
+                    )
+                    .mit_notiz(
+                        "`f32` traegt 24 Mantissenbits, `f64` traegt 53 -- schreibe \
+                         `rounded` dahinter, wenn die Rundung gemeint ist",
+                    ),
+                );
             }
             // **Das INTERVALL, und ohne es waere der genannte Bereich eine Behauptung, die
             // nie eingeloest wird.** Schweigen ist unvollstaendig; eine ungepruefte Zusage

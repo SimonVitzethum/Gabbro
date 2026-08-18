@@ -16,6 +16,82 @@ use std::collections::{HashMap, HashSet};
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     geltungsbereich(&baum.items, absagen);
     entrust_annahme(baum, absagen);
+    verweigerte_zahltypen(baum, absagen);
+}
+
+/// **`F006`: `long double`, `f16` und `float128` werden BENANNT abgelehnt.**
+///
+/// Ohne diese Zeilen bekaeme der Schreiber „unbekannter Typ" -- und daraus liest niemand,
+/// dass es eine ENTSCHEIDUNG war. *Die Weigerung ist die Antwort, und sie muss ihren Grund
+/// mitbringen.*
+///
+/// Und der Grund kommt aus dem Korpus, nicht aus einer Vorliebe (`FRAGMENTE.md`, «F0»/FF2):
+/// in der Domaene, die Extragenauigkeit wirklich braucht, ist `long double` **eine Sprosse
+/// von sieben** -- darueber `floatexp`, `doubleexp`, `softfloat`, `float128`, alles
+/// Softwaretypen des Programms. **Wer mehr als `f64` braucht, will keinen
+/// plattformabhaengigen 80-Bit-Typ, sondern eine BENANNTE Genauigkeit.**
+fn verweigerte_zahltypen(baum: &Programm, absagen: &mut Absagen) {
+    fn grund(n: &str) -> Option<&'static str> {
+        match n {
+            "f16" | "float16" | "half" => Some(
+                "auf den meisten Zielen ist `f16` Speicherform plus Umwandlung und keine \
+                 native Rechnung. „Vollstaendig\" hiesse Emulation oder Rechnen in `f32` -- \
+                 und dann ist die DOPPELRUNDUNG f16 -> f32 -> f16 eine neue Falle, nicht eine \
+                 kleinere Ausgabe derselben. Als reine Speicherform gehoert es zu `format`",
+            ),
+            "f80" | "f128" | "float128" | "longdouble" | "long_double" => Some(
+                "das ist kein Typ, sondern eine Plattformlotterie: 80 Bit x87 auf x86-Linux, \
+                 128 Bit anderswo, gleich `double` auf wieder anderen -- und der x87 rundet \
+                 DOPPELT. Wer mehr als `f64` braucht, nennt eine Genauigkeit; der Korpus \
+                 baut dafuer eine Leiter aus Softwaretypen (FRAGMENTE.md, «F0»/FF2)",
+            ),
+            _ => None,
+        }
+    }
+    fn im_typ(t: &TypExpr, absagen: &mut Absagen) {
+        match t {
+            TypExpr::Pfad(p) => {
+                if let Some(letzt) = p.teile.last() {
+                    if let Some(g) = grund(&letzt.text) {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "F006",
+                                letzt.span,
+                                format!("`{}` gibt es in Gabbro nicht, und zwar entschieden", letzt.text),
+                            )
+                            .mit_notiz(g),
+                        );
+                    }
+                }
+            }
+            TypExpr::Feld(a) => im_typ(&a.element, absagen),
+            TypExpr::Zeiger(z) => im_typ(&z.ziel, absagen),
+            TypExpr::Verbund(fs, _) => {
+                for f in fs {
+                    im_typ(&f.typ.typ, absagen);
+                }
+            }
+            _ => {}
+        }
+    }
+    crate::fuer_jedes_item(baum, &mut |i| match &i.art {
+        ItemArt::Konst(k) => im_typ(&k.typ, absagen),
+        ItemArt::Statisch(st) => im_typ(&st.typ, absagen),
+        ItemArt::Typ(t) => {
+            if let Some(r) = &t.rumpf {
+                im_typ(r, absagen);
+            }
+        }
+        ItemArt::Funktion(f) => {
+            for prm in &f.parameter {
+                im_typ(&prm.typ, absagen);
+            }
+            if let Some(e) = &f.ergebnis {
+                im_typ(e, absagen);
+            }
+        }
+        _ => {}
+    });
 }
 
 /// **`entrust` nennt eine Annahme, und sie muss es GEBEN.**

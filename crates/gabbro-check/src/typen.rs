@@ -143,6 +143,9 @@ pub struct FBereich {
     pub kann_unendlich: bool,
     /// Wie bei `IntBereich`: ein Literal hat keine eigene Breite.
     pub literal: bool,
+    /// **Stand `rounded` dahinter?** Nur an einem Literal von Belang -- und dort entscheidet
+    /// es, ob eine Verschmaelerung auf `f32` eine Absage ist oder eine erklaerte Rundung.
+    pub gerundet: bool,
 }
 
 impl FBereich {
@@ -155,6 +158,7 @@ impl FBereich {
             kann_nan: true,
             kann_unendlich: true,
             literal: false,
+            gerundet: false,
         }
     }
 
@@ -167,7 +171,23 @@ impl FBereich {
             kann_nan: false,
             kann_unendlich: false,
             literal: true,
+            gerundet: false,
         }
+    }
+
+    /// **Passt dieser Wert in die Mantisse dieser Breite?**
+    ///
+    /// Die Frage, um derentwillen `mantisse()` geschrieben wurde -- und die bis 2026-08-18
+    /// **niemand gestellt hat**: ein Literal, das `f64` traegt und `f32` nicht, fiel nicht
+    /// auf. *Eine Methode, die niemand liest, ist genau die Klasse, gegen die dieser Ordner
+    /// seinen Klauselwaechter gebaut hat -- und der hat sie nicht gefunden, weil er
+    /// AST-Felder misst und keine Prueferhilfen.*
+    pub fn passt_in_mantisse(wert: f64, breite: u8) -> bool {
+        if breite != 32 {
+            return true;
+        }
+        let eng = wert as f32;
+        (eng as f64) == wert
     }
 
     /// **Die Mantissenbreite -- daran haengt die Exaktheit eines Literals.**
@@ -240,6 +260,7 @@ impl FBereich {
             kann_nan: roh_nan || !lo.is_finite() || !hi.is_finite() || lo.is_nan() || hi.is_nan(),
             kann_unendlich: !lo.is_finite() || !hi.is_finite(),
             literal: false,
+            gerundet: false,
         }
     }
 
@@ -321,6 +342,7 @@ impl FBereich {
                 kann_nan: true,
                 kann_unendlich: true,
                 literal: false,
+                gerundet: false,
             };
         }
         let e = [

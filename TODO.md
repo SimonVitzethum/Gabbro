@@ -536,11 +536,17 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
-- [ ] **SSE2 als Annahme mit FALSIFIKATOR, nicht als Kommentar** *(2026-08-18)*. Der
-      erzeugte Kopf nennt sie, das Zeugnis nennt sie -- aber sie steht in keiner
-      `assume`-Deklaration, also **in keinem Manifest und mit keiner Sonde**. *Genau die
-      Klasse, gegen die `S003`/`N004` stehen: ein Name, den niemand erklaert hat.* Dasselbe
-      fuer den Rundungsmodus.
+- [ ] **Die zwei Gleitkommasonden gibt es als NAMEN, nicht als Programm**
+      *(2026-08-18)*. `sonde_mxcsr_rne` und `sonde_keine_ueberbreite` stehen im Manifest, und
+      damit ist die Annahme falsifizierbar ERKLAERT. **Geschrieben ist keine von beiden.**
+      *Das Manifest sagt selbst, dass es nur die Sonde nennt und nicht ihren Lauf* -- aber ein
+      Name ohne Programm ist die schwaechste Form von falsifizierbar, die es gibt.
+- [ ] **`F003` (Rundungsmodus im Typ) ist heute UNERREICHBAR, und das ist die Antwort**
+      *(2026-08-18)*. Die Absage soll einen anderen Modus als RNE treffen -- **es gibt keine
+      Form, einen zu schreiben.** Sie jetzt zu bauen hiesse, drei oder vier Woerter in den
+      Wortschatz zu nehmen, deren einziger Zweck es waere, abgelehnt zu werden: eine
+      Spracherweiterung ohne gemessenen Bedarf (W3). *Die Entscheidung `f64<RNE>` bleibt
+      gebucht; die Absage entsteht mit ihr, nicht davor.*
 - [ ] **`F003` (Rundungsmodus im Typ) und `F006` (`long double`/`f16`)** *(2026-08-18)*. Die
       beiden letzten Absagen der Familie. `f64<RNE>` waere die vierte Instanz eines
       vorhandenen Musters (`ptr<…>`, `atomic … seq`, `format … endian`); `long double` wird

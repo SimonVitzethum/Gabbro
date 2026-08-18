@@ -27,9 +27,74 @@ pub struct Eintrag {
     pub aussage: String,
 }
 
+/// **«F»: die zwei Annahmen, die eine Gleitkommaeinheit MITBRINGT.**
+///
+/// Sie standen bis 2026-08-18 im erzeugten Kopf und im Zeugnistext -- und **in keiner
+/// `assume`-Deklaration**, also in keinem Manifest und mit keiner Sonde. *Genau die Klasse,
+/// gegen die `S003` und `N004` stehen: ein Name, den niemand erklaert hat.*
+///
+/// Sie werden ERZEUGT statt verlangt, aus demselben Grund, aus dem `accumulates` sich
+/// `gabbro_kern` selbst in die fremden Ruempfe schreibt: **es sind Maschinenfragen, keine
+/// Programmfragen.** Jedes Gleitkommaprogramm haette dieselben zwei Zeilen schreiben muessen,
+/// und eine Zeile, die jeder abschreibt, ist eine Zeile, die niemand liest.
+fn gleitkommaannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
+    fn im_typ(t: &TypExpr) -> bool {
+        match t {
+            TypExpr::Float(_) => true,
+            TypExpr::Feld(a) => im_typ(&a.element),
+            TypExpr::Zeiger(z) => im_typ(&z.ziel),
+            TypExpr::Verbund(fs, _) => fs.iter().any(|f| im_typ(&f.typ.typ)),
+            _ => false,
+        }
+    }
+    let mut ja = false;
+    crate::fuer_jedes_item(baum, &mut |i| match &i.art {
+        ItemArt::Konst(k) => ja |= im_typ(&k.typ),
+        ItemArt::Statisch(st) => ja |= im_typ(&st.typ),
+        ItemArt::Typ(t) => {
+            if let Some(r) = &t.rumpf {
+                ja |= im_typ(r);
+            }
+        }
+        ItemArt::Funktion(f) => {
+            ja |= f.parameter.iter().any(|p| im_typ(&p.typ));
+            ja |= f.ergebnis.as_ref().is_some_and(im_typ);
+        }
+        ItemArt::Accumulates(a) => ja |= im_typ(&a.typ),
+        _ => {}
+    });
+    if !ja {
+        return;
+    }
+    out.push(Eintrag {
+        name: "gleitkomma_rundungsmodus_ist_rne".into(),
+        art: "assume",
+        klasse: Klasse::Falsifizierbar {
+            sonde: "sonde_mxcsr_rne".into(),
+        },
+        aussage: "Der Rundungsmodus ist round-to-nearest-even. Er ist GLOBALER Zustand \
+                  (MXCSR/FPCR) und damit ein impliziter Eingang jeder Operation -- die Sonde \
+                  liest ihn und faellt, wenn er ein anderer ist."
+            .into(),
+    });
+    out.push(Eintrag {
+        name: "gleitkomma_x86_rechnet_mit_sse2".into(),
+        art: "assume",
+        klasse: Klasse::Falsifizierbar {
+            sonde: "sonde_keine_ueberbreite".into(),
+        },
+        aussage: "Auf x86 rechnet der erzeugte Code mit SSE2 und nicht auf dem x87-Stapel. \
+                  Der x87 rechnet mit 80 Bit und RUNDET DOPPELT; jede Schranke, die der \
+                  Pruefer gerechnet hat, gilt dann nicht. Die Sonde rechnet einen Ausdruck, \
+                  dessen Ergebnis sich zwischen 64 und 80 Bit unterscheidet."
+            .into(),
+    });
+}
+
 /// Sammelt die Annahmenmenge eines Baums.
 pub fn sammle(baum: &Programm) -> Vec<Eintrag> {
     let mut out = Vec::new();
+    gleitkommaannahmen(baum, &mut out);
     sammle_items(&baum.items, &mut out);
     out.sort_by(|a, b| a.name.cmp(&b.name));
     out

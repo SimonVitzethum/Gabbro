@@ -1,0 +1,14 @@
+-- erwartet: F002
+-- **`16777217.0` ist `2^24 + 1`: in `f64` exakt, in `f32` nicht.**
+--
+-- `FBereich::mantisse()` stand fuer genau diese Frage da und wurde bis 2026-08-18 **von
+-- niemandem gelesen** -- eine Methode ohne Leser, einen Tag alt, in dem Ordner, der seinen
+-- Klauselwaechter gegen genau diese Klasse gebaut hat. *Und der Waechter hat sie nicht
+-- gefunden, weil er AST-Felder misst und keine Prueferhilfen.*
+module gift::mantisse {
+
+impl fn zu_breit() -> f32 effects { pure } costs <= 1 ops {
+    return 16777217.0;
+}
+
+}

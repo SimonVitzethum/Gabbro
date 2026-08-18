@@ -510,7 +510,7 @@ int main(void) {
 #      `%.1f` druckt `nan` oder `-nan`. **Kein Literal nennt NaN** -- es entsteht.
 lauf "beispiel26" "$W/beispiele/26-gleitkomma.gab" "$TREIBER26" "0.2 0.5 0.5 0.8 1.0" \
      's/if (!isfinite(x))/if (isfinite(x))/' \
-     "0 Annahmen, 0 Schablonen (0 davon UNBEWIESEN), 6 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "2 Annahmen, 0 Schablonen (0 davon UNBEWIESEN), 6 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
 # -- 10. `accumulates`: eine Zelle je Kern, und der Test misst die SCHABLONE ---------------
 #

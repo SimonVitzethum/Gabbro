@@ -1,0 +1,15 @@
+-- erwartet: F006
+-- **Die Weigerung ist die Antwort, und sie bringt ihren Grund mit.**
+--
+-- Ohne eine benannte Absage bekaeme der Schreiber „unbekannter Typ", und daraus liest
+-- niemand, dass es eine ENTSCHEIDUNG war. Der Grund kommt aus dem Korpus («F0»/FF2): in der
+-- Domaene, die Extragenauigkeit wirklich braucht, ist `long double` eine Sprosse von sieben
+-- -- darueber liegen Softwaretypen. *Wer mehr als `f64` braucht, will keinen
+-- plattformabhaengigen 80-Bit-Typ, sondern eine BENANNTE Genauigkeit.*
+module gift::lotterie {
+
+impl fn breiter(x : longdouble) -> f64 effects { pure } costs <= 1 ops {
+    return 0.0;
+}
+
+}
