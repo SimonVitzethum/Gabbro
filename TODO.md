@@ -586,15 +586,13 @@ zuerst** -- sonst entwirft man fuer eine vorgestellte Verwendung.
       einer Differenzeinheit statt von einem Eindruck. *Wer dort etwas verschiebt, beschaedigt
       eine Sprache mit gemessenem Bedarf zugunsten einer mit entschiedenem.*
 
-- [ ] **`index into T` im Slotfeld verliert seinen Typ, wenn `T` noch nicht fertig ist**
-      *(gemessen 2026-08-18, fuenf Proben)*. Nicht `option`, nicht die Selbstbezueglichkeit --
-      die DEKLARATIONSREIHENFOLGE. Quer ueber zwei Tabellen sauber, vorwaerts `M103`, auf die
-      eigene Tabelle `M101`. **Selbstbezueglichkeit ist der Fall, der IMMER faellt**: eine
-      Tabelle ist beim Aufloesen ihrer eigenen Slotfelder nie fertig. *Damit ist jede
-      verkettete Struktur unschreibbar* -- Freiliste, CDT, Objektgraph. Genau diese Form steht
-      im Korpus (`FRAGMENTE.md`:158-161) und ist die Struktur, ueber die
-      `Table_Induktion.thy` seine Saetze fuehrt. **Es faellt sicher, nicht still** -- der
-      Pruefer weigert sich, statt einen ungeprueften Index durchzulassen.
+- [ ] **Punkt 1 (b) und (c): `backed` als Wert, und `M103` gegen ihn statt gegen `count`**
+      *(2026-08-18)*. Teil (a) steht -- die Freiliste ist schreibbar. Offen bleibt die
+      Trennung von **Adressraum und Speicher**: `count N` ist die Reserve, `backed k` waere
+      die Hinterlegung, und das Tor ist keine neue Pruefung, sondern **dieselbe gegen die
+      richtige Zahl**. Gemessen: `narrow i to 0 ..< k` wird von der Grammatik angenommen und
+      M1 laesst die Tatsache fallen -- es fehlt der Traeger, nicht die Form. *Und die Gefahr
+      ist nicht das Wachsen, sondern das Schrumpfen.*
 - [ ] **`i < N` ist nicht `i ist hinterlegt`** *(2026-08-18)*. Eine `table count 1000000000`
       geht sauber durch und senkt zu einem Feld von knapp 30 GiB ab. Was Gabbro NICHT sagen
       kann: dass nur die ersten `k` Plaetze hinterlegt sind. Ein Zugriff auf einen nicht

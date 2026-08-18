@@ -1,0 +1,52 @@
+-- 27 -- Die Freiliste. **Bis 2026-08-18 war sie nicht schreibbar.**
+--
+-- `index into T` in einem Slotfeld verlor seine Schranke, wenn `T` beim Aufloesen noch nicht
+-- fertig war -- bei Selbstbezueglichkeit also IMMER, denn eine Tabelle ist beim Aufloesen
+-- ihrer eigenen Slotfelder nie fertig. Damit war jede verkettete Struktur unschreibbar:
+-- keine Freiliste, keine CDT, kein Objektgraph.
+--
+-- *Es war die Reihenfolge, nicht die Bezueglichkeit: ein Vorwaertsverweis fiel genauso.*
+-- Genau diese Form steht im Korpus (`FRAGMENTE.md`) und ist die Struktur, ueber die
+-- `Table_Induktion.thy` seine Saetze fuehrt -- **der Beweis handelte von einer Form, die der
+-- Pruefer nicht typisieren konnte.**
+
+module beispiel::freiliste {
+
+const NOBJ : u32 = 1024;
+
+-- Der Platzvorrat. **`option index into Halde` ist genau ein Zeiger, der `None` sein kann**
+-- -- und er senkt zum Sonderwert `N` ab, bewiesen (`option.sonderwert`).
+table Halde count 1024 {
+    slot {
+        kopf    : u64,
+        naechst : option index into Halde,
+    }
+}
+
+-- Der Kopf der Freiliste. Ein `static`, kein Zeiger: eine Tabelle IST Speicher.
+static mut frei : option index into Halde = None;
+
+-- BELEGEN -- nimm den Kopf der Liste.
+impl fn belegen(h : ptr<normal, rw> Halde) -> option index into Halde
+    effects { reads frei, writes frei, reads h.slots }
+    costs   <= 6 ops
+{
+    match frei {
+        None    => { return None; }
+        Some(i) => {
+            frei = h.slots[i].naechst;
+            return Some(i);
+        }
+    }
+}
+
+-- FREIGEBEN -- haeng ihn wieder vorn ein.
+impl fn freigeben(h : ptr<normal, rw> Halde, i : index into Halde)
+    effects { reads frei, writes frei, writes h.slots }
+    costs   <= 5 ops
+{
+    h.slots[i].naechst = frei;
+    frei = Some(i);
+}
+
+}

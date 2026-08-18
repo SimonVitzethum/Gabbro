@@ -1,0 +1,19 @@
+-- erwartet: M103
+-- **Die Schranke aus dem verketteten Feld ist ECHT, und diese Probe misst es.**
+--
+-- Bis 2026-08-18 fiel ein `index into T` im Slot von `T` auf blankes `u32` zurueck -- und
+-- dann faellt nicht diese Probe, sondern die verkettete Struktur ueberhaupt. *Der Unterschied
+-- zwischen „die Schranke ist da" und „es gibt keine Schranke" sieht an einer sauberen Datei
+-- gleich aus; erst hier wird er sichtbar.*
+module gift::verkettung {
+
+table Gross count 1024 { slot { naechst : index into Gross, } }
+table Klein count 8    { slot { wert : u32, } }
+
+impl fn falsch(g : ptr<normal, r> Gross, k : ptr<normal, r> Klein, i : index into Gross) -> u32
+    effects { reads g.slots, reads k.slots } costs <= 4 ops
+{
+    return k.slots[g.slots[i].naechst].wert;
+}
+
+}

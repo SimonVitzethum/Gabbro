@@ -123,8 +123,46 @@ impl Umgebung {
             let t = u.typ_aufloesen(modul_von(&n), kurzname(&n), &mut unterwegs);
             u.typen.insert(n, t);
         }
+        // **Die Kapazitaeten VOR den Traegern, und das ist ein Fund vom 2026-08-18.**
+        //
+        // `sammle_traeger` loest die Slotfelder einer Tabelle auf und traegt ihre Kapazitaet
+        // DANACH ein. Ein `index into T` im Slot von T fand die Zahl also nie -- die Schranke
+        // fiel auf blankes `u32` zurueck, und der naechste Zugriff wurde abgelehnt.
+        //
+        // **Damit war jede verkettete Struktur unschreibbar**: keine Freiliste, keine CDT,
+        // kein Objektgraph -- genau die Form, die im Korpus steht (`FRAGMENTE.md`:158-161)
+        // und ueber die `Table_Induktion.thy` seine Saetze fuehrt. *Der Beweis handelte von
+        // einer Form, die der Pruefer nicht typisieren konnte.*
+        //
+        // Selbstbezueglichkeit war dabei nur der Fall, der IMMER faellt; ein VORWAERTSverweis
+        // fiel genauso. Es ist die Reihenfolge, nicht die Bezueglichkeit.
+        u.sammle_kapazitaeten(&baum.items, "");
         u.sammle_traeger(&baum.items, "");
         u
+    }
+
+    /// Nur die Kapazitaeten, und zwar zuerst -- siehe `sammle`.
+    fn sammle_kapazitaeten(&mut self, items: &[Item], pfad: &str) {
+        for i in items {
+            match &i.art {
+                ItemArt::Modul(m) => {
+                    let innen = qualifiziere(pfad, &m.pfad.text());
+                    self.sammle_kapazitaeten(&m.items, &innen);
+                }
+                ItemArt::Tabelle(t) => {
+                    if let Some(n) = t
+                        .kapazitaet
+                        .as_ref()
+                        .and_then(|e| self.konst_wert(pfad, e))
+                        .filter(|n| *n > 0)
+                    {
+                        self.kapazitaeten
+                            .insert(qualifiziere(pfad, &t.name.text), n as u128);
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 
     /// **Namensaufloesung.** Ein Name gilt zuerst im eigenen Modul, dann in den umgebenden,
