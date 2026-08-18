@@ -375,6 +375,16 @@ pub enum Typ {
     Benannt {
         name: String,
         undurchsichtig: bool,
+        /// **Das Modul, das ihn erklaert.**
+        ///
+        /// D1 sagt *„opaque new types without implicit conversion"* -- und die Liste der
+        /// C-Dinge, die bleiben, nennt *„explicit conversion between compatible types"*.
+        /// Beides zusammen heisst: **die Umwandlung gibt es, und sie hat einen Ort.** Der Ort
+        /// ist das erklaerende Modul, denn dort ist die Darstellung bekannt; ausserhalb ist
+        /// sie es nicht.
+        ///
+        /// *Damit bekommt die Modulgrenze ihre erste Bedeutung in diesem Pruefer.*
+        heimat: String,
         unter: Box<Typ>,
     },
     Summe {

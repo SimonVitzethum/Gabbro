@@ -536,6 +536,12 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **`D004` hat auf diesem Korpus NULL Biss** *(gemessen 2026-08-18)*. Alle zwoelf
+      `opaque`-Deklarationen der Beispiele erklaeren und benutzen im **selben Modul**, also
+      greift die Modulgrenze zu Recht nicht. **Dieselbe Lage wie `E010`**, und derselbe
+      Beleg: die Regel ist an Giftproben gemessen, nicht am Korpus. *Eine Eigenschaft des
+      Korpus, nicht der Regel -- und ein weiteres Argument fuer den zweiten.*
+
 - [ ] **Die zwei Gleitkommasonden gibt es als NAMEN, nicht als Programm**
       *(2026-08-18)*. `sonde_mxcsr_rne` und `sonde_keine_ueberbreite` stehen im Manifest, und
       damit ist die Annahme falsifizierbar ERKLAERT. **Geschrieben ist keine von beiden.**

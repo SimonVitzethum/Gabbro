@@ -1,0 +1,20 @@
+-- erwartet: D004
+-- **Ein undurchsichtiger Typ, der sich stillschweigend umwandeln laesst, ist ein `typedef`.**
+--
+-- Bis 2026-08-18 ging genau das durch: `opaque` biss an der Rechnung (`D003`) und schwieg an
+-- der ZUWEISUNG -- in beide Richtungen. Damit war D1, die erste der beiden
+-- Deklarationsregeln, gar nicht durchgesetzt.
+module gift::wand {
+
+module heim {
+    opaque type Pa = u64;
+}
+
+module fremd {
+    use gift::wand::heim::Pa;
+    impl fn hinein(z : u64) -> Pa effects { pure } costs <= 2 ops {
+        return z;
+    }
+}
+
+}

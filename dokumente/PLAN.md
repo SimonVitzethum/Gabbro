@@ -2333,11 +2333,27 @@ etwas gebaut werden soll, ist teurer als ein großer, der allein steht.**
    ist zyklensicheres Markieren, `table.induktion` gibt die Terminierung, die Kosten sind
    beschränkt.*
 
-2. **`opaque` bekommt eine Tür.** Es beißt seit `5e9f31e` — aber ein Verbot ohne
-   Umwandlungsform ist eine Sackgasse. Die wertgetragenen Indextypen sind das **vierte**
-   Konstrukt, das auf Undurchsichtigkeit baut; der `rank`-Fund hat diese Reihenfolge schon
-   einmal gelehrt. **Und Punkt 1 macht ihn dringender**, denn `backed` ist ein wertgetragener
-   Indextyp.
+2. **`opaque`** — ~~bekommt eine Tür~~ **Wand UND Tür, 2026-08-18.** Beim Bauen fiel auf,
+   dass die Diagnose falsch war: es fehlte nicht die Tür, sondern die **Wand**. Gemessen:
+
+   ```gabbro
+   opaque type Pa = u64;
+   impl fn hinein(x : u64) -> Pa { return x; }   -- 0 Fehler
+   impl fn hinaus(p : Pa) -> u64 { return p; }   -- 0 Fehler
+   ```
+
+   **D1 — die erste der beiden Deklarationsregeln — war gar nicht durchgesetzt.** `D003` biss
+   an der Rechnung, die Zuweisung ging in beide Richtungen still durch. *Eine Tür in einer
+   Wand, die es nicht gibt, ist keine.*
+
+   `D004` schließt sie, und die Tür steht da, wo die Dokumente sie hinstellen — *„opaque, one
+   generator"* mit **Modulgrenze**: im erklärenden Modul ist die Darstellung bekannt,
+   außerhalb nicht. **Damit bekommt die Modulgrenze ihre erste Bedeutung in diesem Prüfer.**
+
+   > **Und die Regel hat auf diesem Korpus NULL Biss** — dieselbe Lage wie bei `E010`. Alle
+   > zwölf `opaque`-Deklarationen der Beispiele erklären und benutzen im selben Modul. *Das
+   > ist eine Eigenschaft des Korpus, nicht der Regel — und ein weiteres Argument für den
+   > zweiten.*
 3. **`ensures` wird gelesen.** Keine Kleinigkeit: eine Zusage, die im Zeugnis erscheint, in der
    Bibliotheks-ABI getragen werden soll und heute nirgends gegen den Rumpf **oder auch nur
    gegen die Wohlgeformtheit** geprüft wird. Der Wächter hat siebzehn Geschwister dazu benannt.

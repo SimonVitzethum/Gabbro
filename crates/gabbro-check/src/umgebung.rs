@@ -752,6 +752,7 @@ impl Umgebung {
         }
         Typ::Benannt {
             name: name.to_string(),
+            heimat: von.to_string(),
             undurchsichtig: d.opaque,
             unter: Box::new(unter),
         }
@@ -868,6 +869,7 @@ impl Umgebung {
                     .unwrap_or_else(|| IntBereich::voll(32, false));
                 Typ::Benannt {
                     name: format!("index into {}", tabelle.text),
+                    heimat: String::new(),
                     undurchsichtig: false,
                     unter: Box::new(Typ::Ganzzahl(bereich)),
                 }

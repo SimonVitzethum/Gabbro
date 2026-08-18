@@ -1358,7 +1358,73 @@ impl<'a> Pruefer<'a> {
         }
     }
 
+    /// **`D004`: die Wand vor der Tuer.**
+    ///
+    /// `opaque` biss seit `5e9f31e` an der RECHNUNG (`D003`) -- und die implizite Umwandlung
+    /// ging in BEIDE Richtungen still durch. Gemessen 2026-08-18:
+    ///
+    /// ```gabbro
+    /// opaque type Pa = u64;
+    /// impl fn hinein(x : u64) -> Pa { return x; }   -- 0 Fehler
+    /// impl fn hinaus(p : Pa) -> u64 { return p; }   -- 0 Fehler
+    /// ```
+    ///
+    /// **Damit war D1 -- der erste der beiden Deklarationsregeln -- gar nicht durchgesetzt.**
+    /// Es fehlte nicht die Tuer, sondern die Wand; eine Tuer in einer Wand, die es nicht
+    /// gibt, ist keine.
+    ///
+    /// Und die Tuer steht da, wo die Dokumente sie hinstellen: *„opaque, one generator"* mit
+    /// **Modulgrenze**. Im erklaerenden Modul ist die Darstellung bekannt und die Umwandlung
+    /// erlaubt; ausserhalb ist sie es nicht. *Damit bekommt die Modulgrenze ihre erste
+    /// Bedeutung in diesem Pruefer -- und `pub` seine zweite Aufgabe, wenn es je eine
+    /// bekommt.*
+    fn undurchsichtigkeit_pruefen(&mut self, quelle: &Typ, ziel: &Typ, span: Span, was: &str) {
+        let wand = |t: &Typ, anderer: &Typ| -> Option<(String, String)> {
+            let Typ::Benannt {
+                name,
+                undurchsichtig: true,
+                heimat,
+                ..
+            } = t
+            else {
+                return None;
+            };
+            // Derselbe Typ auf beiden Seiten ist keine Umwandlung.
+            if let Typ::Benannt { name: n2, .. } = anderer {
+                if n2 == name {
+                    return None;
+                }
+            }
+            if matches!(anderer, Typ::Unbekannt) {
+                return None;
+            }
+            Some((name.clone(), heimat.clone()))
+        };
+        let Some((name, heimat)) = wand(quelle, ziel).or_else(|| wand(ziel, quelle)) else {
+            return;
+        };
+        if self.modul == heimat {
+            return;
+        }
+        self.absagen.schiebe(
+            Absage::fehler(
+                "D004",
+                span,
+                format!("{was} wandelt `{name}` stillschweigend um"),
+            )
+            .mit_notiz(
+                "D1: ein undurchsichtiger Neutyp hat KEINE implizite Umwandlung -- sonst ist \
+                 er ein `typedef`, und genau das ist das Loch, gegen das er steht",
+            )
+            .mit_notiz(format!(
+                "die Umwandlung gehoert in `{heimat}`, das den Typ erklaert -- dort ist die \
+                 Darstellung bekannt. *Ein Erzeuger je Typ, an der Modulgrenze*",
+            )),
+        );
+    }
+
     fn passt(&mut self, quelle: &Typ, ziel: &Typ, span: Span, was: &str) {
+        self.undurchsichtigkeit_pruefen(quelle, ziel, span, was);
         // **«F»: die zwei Bits, und sie sind der Abnehmer der Faktenmaschine.**
         //
         // Ohne diese Zeilen waere `Fakt::Endlich` gebaut und von nichts gelesen -- genau die
