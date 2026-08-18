@@ -2143,8 +2143,13 @@ kostet.**
    Laufzeitprüfung. *Der Träger ist die Breite, der Bereich ist die Zusage.* Offen bleibt der
    Nebenbefund: **eine Zwischenbreite lässt sich nicht NENNEN** — dieselbe Bauart wie `opaque`
    ohne Tür.
-5. **Gleitkomma als Memo mit Bedarfszählung**, nicht als Bau. *Und das Memo hat jetzt seinen
-   Kernsatz: die Kosten sind eine zweite Faktenlogik, nicht ein zweiter Zahlentyp.*
+5. **Gleitkomma** — ~~als Memo~~ **geschrieben und beschlossen, 2026-08-18**
+   ([`MEMO-GLEITKOMMA.md`](MEMO-GLEITKOMMA.md)): **nicht bauen.** Die Bedarfszählung ergab
+   **0 rechnende Stellen in 139 Kerneldateien**; beide `f64`-Erwähnungen stehen in
+   Kommentaren, und die erste verneint den Bedarf ausdrücklich. Was gebraucht wird — eine
+   Nachkommastelle — ist seit derselben Messung schreibbar. *Der teuerste Fund ist ein
+   anderer: Gleitkomma ändert die AUFRUFKONVENTION, und das trifft die Bibliotheks-ABI, auch
+   wenn Gabbro nie eine Gleitkommazahl kennt.*
 
 ---
 

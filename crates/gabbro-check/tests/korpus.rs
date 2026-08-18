@@ -56,7 +56,9 @@ const BENANNT: &[&str] = &[
 
 #[test]
 fn der_korpus_bringt_nur_benannte_absagen() {
-    for datei in ["dokumente/FRAGMENTE.md", "dokumente/SYNTAX.md", "dokumente/SPRACHE.md", "README.md"] {
+    for datei in ["dokumente/FRAGMENTE.md", "dokumente/SYNTAX.md", "dokumente/SPRACHE.md", "README.md",
+                  // Der Memo BEHAUPTET „heute schreibbar" -- dann wird sein Block auch gemessen.
+                  "dokumente/MEMO-GLEITKOMMA.md"] {
         let md = lies(datei);
         for b in korpus::messe(datei, &md) {
             for (code, zeile) in b.fehler.iter().chain(b.hinweise.iter()) {

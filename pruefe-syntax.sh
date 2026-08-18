@@ -31,8 +31,8 @@ pruefe_prosa() {
 }
 
 echo "== Beispiele gegen dokumente/SYNTAX.md =="
-if pruefe dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md dokumente/FRAGMENTE.md && \
-   pruefe_prosa dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md TODO.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md; then
+if pruefe dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md dokumente/MEMO-GLEITKOMMA.md && \
+   pruefe_prosa dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md TODO.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md dokumente/MEMO-GLEITKOMMA.md; then
   echo "  keine verbotene Form in Beispielen, keine zweite Schluesselwortsprache in Prosa"
 else
   echo "== SYNTAX: FEHLER =="; exit 1
