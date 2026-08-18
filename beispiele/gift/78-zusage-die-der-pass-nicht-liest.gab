@@ -1,0 +1,17 @@
+-- erwartet: K005
+-- **Gift 78 -- eine Zusage in einer Form, die der Pass nicht liest.**
+--
+-- `n * m` ist ein Produkt zweier Symbole: koeffizientenweise nicht vergleichbar. **Und das
+-- steht als Absage da, nicht als Schweigen** -- der Unterschied ist der ganze Punkt.
+--
+-- *Ein Vergleich, den der Pass nicht ENTSCHEIDET, ist dasselbe Schweigen in neuer
+-- Verpackung.*
+
+module gift78 {
+
+impl fn s(n : u32 in 0 .. 100, m : u32 in 0 .. 100) -> u32
+    effects { pure }
+    costs   <= n * m ops
+{ return n; }
+
+}

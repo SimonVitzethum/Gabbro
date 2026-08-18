@@ -1,0 +1,20 @@
+-- erwartet: K001
+-- **Gift 77 -- eine parametrische Zusage, die bei `n = 0` nicht haelt.**
+--
+-- Bis zum 2026-08-18 ging **jede** nicht-konstante `costs`-Zeile durch: der Pass konnte sie
+-- nicht auswerten und kehrte zurueck. `costs <= 0 * n ops` an einem Rumpf, der eine Operation
+-- kostet, meldete **0 Fehler**.
+--
+-- > *Ein Vertrag, den niemand liest, ist keine Zusage, sondern eine Zeile.*
+--
+-- Verglichen wird gegen die KLEINSTE Belegung -- alle Symbole null --, denn dort ist die
+-- Zusage am kleinsten und muss genau dort halten. `40 * n` ist bei `n = 0` gleich null.
+
+module gift77 {
+
+impl fn schleife(n : u32 in 0 .. 1000) -> u32
+    effects { pure }
+    costs   <= 40 * n ops
+{ return n; }
+
+}

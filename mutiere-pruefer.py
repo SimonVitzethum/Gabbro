@@ -1199,6 +1199,27 @@ MUTATIONEN = [
         "B7 -- ein Verbundkonstruktor zaehlt als Aufruf; `P` wird unbekannter Gerufener "
         "und jede Huelle darueber untere Schranke",
     ),
+    # -- Die parametrische Kostenzusage ------------------------------------------------------
+    #
+    # **Bis 2026-08-18 stand dort ein `return`**, und jede nicht-konstante `costs`-Zeile fiel
+    # lautlos weg. Nimmt man den Vergleich gegen die kleinste Belegung heraus, ist die Zusage
+    # wieder eine Zeile ohne Wirkung.
+    Mutation(
+        "parametrische-zusage-faellt-wieder-weg",
+        "kosten.rs",
+        "        let zusage_min = zusage.fest;",
+        "        let zusage_min = i128::MAX;",
+        "K001 -- eine parametrische Zusage wird wieder beliebig gross gelesen; "
+        "`costs <= 0 * n` geht durch",
+    ),
+    Mutation(
+        "negativer-faktor-gilt-als-schranke",
+        "kosten.rs",
+        "            if k < 0 {\n                return None;\n            }",
+        "            if false {\n                return None;\n            }",
+        "K005 -- ein negativer Faktor macht die Zusage bei wachsender Eingabe KLEINER; "
+        "das ist keine Schranke",
+    ),
     # -- `accumulates`: die Darstellung von `min`/`and` -------------------------------------
     #
     # **C nullt statische Felder, und null ist nicht das Neutrale von `min`.** Der erste Lauf

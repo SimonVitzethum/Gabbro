@@ -1432,3 +1432,59 @@ impl fn l() -> u64 effects { reads tief } costs <= 64 ops { return tief; } }";
         "eine Deklaration, die ihre eigene Groesse nicht nennt, ist keine"
     );
 }
+
+/// **Die parametrische Zusage wird GELESEN, nicht fallengelassen.**
+///
+/// Bis zum 2026-08-18 stand im Kostenpass ein `return`, wenn die Zusage nicht konstant
+/// auswertbar war. Gemessen:
+///
+/// ```text
+/// impl fn schleife(n : u32 in 0 .. 1000) -> u32 costs <= 0 * n ops { return n; }
+/// -> 3 Items, 0 Fehler, 0 Hinweise        (der Rumpf kostet 1)
+/// ```
+///
+/// > *Ein Vertrag, den niemand liest, ist keine Zusage, sondern eine Zeile.*
+///
+/// **Verglichen wird gegen die KLEINSTE Belegung** — alle Symbole null. Dort ist die Zusage
+/// am kleinsten und muss genau dort halten. *`40 * n` ist bei `n = 0` gleich null.*
+#[test]
+fn eine_parametrische_kostenzusage_wird_entschieden() {
+    let faellt = |q: &str, code: &str| {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        let _ = gabbro_check::pruefe(&b, &mut a);
+        let c: Vec<&str> = a.absagen.iter().map(|x| x.code).collect();
+        assert!(c.contains(&code), "erwartet {code}, gefallen {c:?}\n{q}");
+    };
+    let geht = |q: &str| {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        let _ = gabbro_check::pruefe(&b, &mut a);
+        assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    };
+
+    // **`0 * n` ist null, und ein Rumpf, der eine Operation kostet, verletzt das.**
+    faellt(
+        "module t { impl fn s(n : u32 in 0 .. 9) -> u32 effects { pure } costs <= 0 * n ops \
+         { return n; } }",
+        "K001",
+    );
+    // Dasselbe fuer `40 * n` -- bei `n = 0` ist auch das null.
+    faellt(
+        "module t { impl fn s(n : u32 in 0 .. 9) -> u32 effects { pure } costs <= 40 * n ops \
+         { return n; } }",
+        "K001",
+    );
+    // **Mit einem konstanten Glied haelt sie** -- und das ist die Form, die ein Programm
+    // wirklich zusagen kann.
+    geht(
+        "module t { impl fn s(n : u32 in 0 .. 9) -> u32 effects { pure } \
+         costs <= 1 + 40 * n ops { return n; } }",
+    );
+    // **Ein Produkt zweier Symbole ist nicht lesbar -- und das steht als ABSAGE da.**
+    faellt(
+        "module t { impl fn s(n : u32 in 0 .. 9, m : u32 in 0 .. 9) -> u32 effects { pure } \
+         costs <= n * m ops { return n; } }",
+        "K005",
+    );
+    // Und die Konstante bleibt, was sie war -- die haeufigste Form darf nicht teurer werden.
+    geht("module t { impl fn s() -> u32 effects { pure } costs <= 2 ops { return 1; } }");
+}

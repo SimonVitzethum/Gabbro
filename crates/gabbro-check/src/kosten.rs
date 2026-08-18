@@ -20,6 +20,7 @@
 //! | `K001` | der Rumpf kostet mehr, als die Funktion deklariert |
 //! | `K002` | ein `locks`-Block kostet mehr, als die Sperre als `held` deklariert |
 //! | `K003` | ein Aufruf nennt eine Funktion **ohne** `costs` in einem Rumpf, der welche zusagt -- die Zusage waere dann eine Zahl ueber Unbekanntem |
+//! | `K005` | die Zusage hat eine Form, die der Pass nicht liest -- **statt sie fallenzulassen** |
 //!
 //! ## Was der Pass NICHT tut
 //!
@@ -31,6 +32,33 @@
 //! * **`per_pass` gegen den Rumpf einer `forever`** wird geprueft; die Schranke **darf von
 //!   Eingaben abhaengen** (§9.3, `64 + 12 * lenof(msg)`), und dann ist sie nicht konstant
 //!   auswertbar. In dem Fall schweigt der Pass -- und zaehlt es.
+//!
+//! ## Die parametrische Zusage -- seit dem 2026-08-18 GELESEN statt fallengelassen
+//!
+//! `costs <= 4 + 12 * lenof(m) ops` war bis dahin eine Zeile ohne Wirkung: die Zusage war
+//! nicht konstant auswertbar, und der Pass kehrte zurueck. Gemessen:
+//!
+//! ```text
+//! impl fn schleife(n : u32 in 0 .. 1000) -> u32 costs <= 0 * n ops { return n; }
+//! -> 3 Items, 0 Fehler, 0 Hinweise        (der Rumpf kostet 1)
+//! ```
+//!
+//! > *Ein Vertrag, den niemand liest, ist keine Zusage, sondern eine Zeile.*
+//!
+//! Gelesen wird eine **Summe aus einer Konstanten und Vielfachen nichtnegativer Groessen**.
+//! Verglichen wird gegen die **kleinste Belegung** -- alle Symbole null --, denn dort ist die
+//! Zusage am kleinsten und muss GENAU DORT halten. *`costs <= 40 * n` ist bei `n = 0` gleich
+//! null; ein Rumpf, der eine Operation kostet, verletzt sie, und das ist keine Haerte,
+//! sondern die Wahrheit.*
+//!
+//! **Die Nichtnegativitaet ist eine Praemisse und wird geprueft** (`K005`): ohne sie gaebe es
+//! keine kleinste Belegung. Ein Produkt zweier Symbole ist nicht lesbar -- und **das steht
+//! als Absage da, nicht als Schweigen.**
+//!
+//! **Was damit noch NICHT geht:** ein Rumpf, dessen Kosten selbst symbolisch sind (eine
+//! Schleife ueber `n`). Er rechnet heute `Unbekannt`, nicht `40 * n`. *Die Zusage ist
+//! lesbar; die Rechnung dagegen ist die naechste Schicht* (`PLAN.md`, wertgetragene
+//! Schranke).
 
 use crate::typen::Typ;
 use crate::umgebung::Umgebung;
@@ -38,6 +66,92 @@ use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
 use std::collections::HashMap;
+
+/// **Eine Zusage als SUMME: eine Konstante plus Vielfache nichtnegativer Groessen.**
+///
+/// `costs <= 4 + 12 * lenof(m)` ist `Term { fest: 4, glieder: {"lenof(m)": 12} }`.
+///
+/// **Die Form ist mit Absicht klein.** Ein Produkt zweier Symbole (`n * m`) waere nicht mehr
+/// koeffizientenweise vergleichbar, und ein Vergleich, den der Pass nicht ENTSCHEIDET, ist
+/// dasselbe Schweigen in neuer Verpackung.
+#[derive(Debug, Clone, Default)]
+struct Term {
+    fest: i128,
+    glieder: std::collections::BTreeMap<String, i128>,
+}
+
+/// Liest eine `costs`-Zusage als Summe. `None`, wenn sie diese Form nicht hat -- **und dann
+/// sagt der Rufer es, statt zu schweigen.**
+///
+/// **Nichtnegativitaet ist eine PRAEMISSE und wird geprueft:** ein Symbol darf nur stehen,
+/// wenn sein Typ vorzeichenlos ist oder es ein `lenof` ist. *Mit einer vorzeichenbehafteten
+/// Groesse waere `40 * n` nach unten unbeschraenkt, und die kleinste Belegung gaebe es nicht.*
+fn symbolisch(
+    u: &Umgebung,
+    modul: &str,
+    lokal: &HashMap<String, Typ>,
+    e: &Expr,
+) -> Option<Term> {
+    // Eine Konstante zuerst -- der haeufigste Fall, und er bleibt eine Zahl.
+    if let Some(n) = u.konst_wert(modul, e) {
+        return Some(Term { fest: n, glieder: Default::default() });
+    }
+    match &e.art {
+        ExprArt::Klammer(i) => symbolisch(u, modul, lokal, i),
+        ExprArt::Binaer(BinOp::Plus, a, b) => {
+            let (x, y) = (symbolisch(u, modul, lokal, a)?, symbolisch(u, modul, lokal, b)?);
+            let mut g = x.glieder;
+            for (k, v) in y.glieder {
+                *g.entry(k).or_insert(0) += v;
+            }
+            Some(Term { fest: x.fest.checked_add(y.fest)?, glieder: g })
+        }
+        // **Ein Produkt braucht eine konstante Seite.** `n * m` ist nicht lesbar, und das
+        // steht in der Absage statt in einem Schweigen.
+        ExprArt::Binaer(BinOp::Mal, a, b) => {
+            let (ka, kb) = (u.konst_wert(modul, a), u.konst_wert(modul, b));
+            let (k, rest) = match (ka, kb) {
+                (Some(k), None) => (k, b),
+                (None, Some(k)) => (k, a),
+                _ => return None,
+            };
+            // Ein negativer Faktor macht die Zusage bei wachsender Eingabe KLEINER --
+            // das ist keine Schranke.
+            if k < 0 {
+                return None;
+            }
+            let t = symbolisch(u, modul, lokal, rest)?;
+            let mut g = std::collections::BTreeMap::new();
+            for (name, v) in t.glieder {
+                g.insert(name, v.checked_mul(k)?);
+            }
+            Some(Term { fest: t.fest.checked_mul(k)?, glieder: g })
+        }
+        // Ein blanker Ort ist ein Symbol -- **wenn er nichtnegativ ist.**
+        ExprArt::Ort(o) => {
+            let t = u.typ_von_ort(modul, o, lokal);
+            let vorzeichenlos = match t.bereich() {
+                Some(b) => b.min >= 0,
+                // Ohne bekannten Bereich wird nichts angenommen.
+                None => false,
+            };
+            if !vorzeichenlos {
+                return None;
+            }
+            Some(Term { fest: 0, glieder: [(o.text(), 1)].into_iter().collect() })
+        }
+        // `lenof(x)` ist eine Laenge, also nichtnegativ -- das ist keine Annahme, sondern
+        // die Bedeutung des Wortes.
+        ExprArt::Eingebaut(b) => match b.as_ref() {
+            Eingebaut::Lenof(TypOderOrt::Ort(o)) => Some(Term {
+                fest: 0,
+                glieder: [(format!("lenof({})", o.text()), 1)].into_iter().collect(),
+            }),
+            _ => None,
+        },
+        _ => None,
+    }
+}
 
 /// Was der Pass nachrechnen konnte -- die Zahl steht neben dem Ergebnis.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -87,11 +201,16 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         let FnRumpf::Block(b) = &f.rumpf else {
             return;
         };
-        let lokal = f
+        let lokal: HashMap<String, Typ> = f
             .parameter
             .iter()
             .map(|p| (p.name.text.clone(), u.typ_von_ausdruck_decl(modul, &p.typ)))
             .collect();
+        // **Die Parameter gehoeren in die symbolische Lesart.** Ohne sie ist `n` ein Ort
+        // ohne Bereich, also nicht nachweislich nichtnegativ -- und der Pass sagt ab, wo er
+        // rechnen koennte. *Ein Waechter, der die Haelfte der Karte nicht sieht, verbietet
+        // statt zu pruefen.*
+        let sym_lokal = lokal.clone();
         let r = Rechner {
             u: &u,
             modul,
@@ -107,9 +226,47 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         let Some(zusage_expr) = &f.costs else {
             return;
         };
-        let Some(zusage) = u.konst_wert(modul, zusage_expr) else {
-            return;
+        // **Bis zum 2026-08-18 stand hier ein `return`** -- eine Zusage, die nicht konstant
+        // auswertbar war, wurde stillschweigend fallengelassen. Gemessen:
+        //
+        // ```gabbro
+        // impl fn schleife(n : u32 in 0 .. 1000) -> u32 costs <= 0 * n ops { return n; }
+        // -> 3 Items, 0 Fehler, 0 Hinweise      (der Rumpf kostet 1)
+        // ```
+        //
+        // > *Ein Vertrag, den niemand liest, ist keine Zusage, sondern eine Zeile.*
+        let zusage = match symbolisch(&u, modul, &sym_lokal, zusage_expr) {
+            Some(t) => t,
+            None => {
+                z.offen += 1;
+                absagen.schiebe(
+                    Absage::fehler(
+                        "K005",
+                        zusage_expr.span,
+                        format!(
+                            "`{}` sagt Kosten zu, die der Pass nicht lesen kann",
+                            f.name.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "lesbar ist eine Summe aus Konstanten und Vielfachen von \
+                         NICHTNEGATIVEN Groessen (`4 + 12 * n`, `lenof(m)`) -- ein Produkt \
+                         zweier Symbole oder eine vorzeichenbehaftete Groesse nicht",
+                    )
+                    .mit_notiz(
+                        "eine Zusage, die der Pass nicht liest, wurde bis 2026-08-18 \
+                         stillschweigend fallengelassen -- `costs <= 0 * n ops` ging durch",
+                    ),
+                );
+                return;
+            }
         };
+        // **Die kleinste Belegung ist die entscheidende.** Alle Symbole sind nichtnegativ
+        // (das prueft `symbolisch`), also wird die Zusage bei `n = 0` am kleinsten -- und
+        // eine Schranke muss GENAU DORT halten. *`costs <= 40 * n` ist bei `n = 0` gleich
+        // null; ein Rumpf, der eine Operation kostet, verletzt sie.*
+        let zusage_min = zusage.fest;
+        let zusage = zusage_min;
         match r.block(b) {
             Kosten::Zahl(n) => {
                 z.gerechnet += 1;
@@ -692,7 +849,7 @@ pub fn bericht(baum: &Programm) -> String {
         let FnRumpf::Block(b) = &f.rumpf else {
             return;
         };
-        let lokal = f
+        let lokal: HashMap<String, Typ> = f
             .parameter
             .iter()
             .map(|p| (p.name.text.clone(), u.typ_von_ausdruck_decl(modul, &p.typ)))
@@ -705,6 +862,9 @@ pub fn bericht(baum: &Programm) -> String {
             geteilte_haltezeiten: &geteilte_haltezeiten,
             lokal,
         };
+        // **Der BERICHT zeigt weiter `--` fuer eine parametrische Zusage**, und das bleibt
+        // richtig: es gibt dort keine einzelne Zahl zum Danebenstellen. *Entschieden wird sie
+        // trotzdem* -- vom Tor oben, gegen die kleinste Belegung (`K001`/`K005`).
         let zugesagt = f.costs.as_ref().and_then(|c| u.konst_wert(modul, c));
         match r.block(b) {
             Kosten::Zahl(n) => {
@@ -724,6 +884,9 @@ pub fn bericht(baum: &Programm) -> String {
     });
     out.push_str(&format!(
         "-- {mit} Ruempfe ausgerechnet, {ohne} offen.\n\
+         -- Eine PARAMETRISCHE Zusage (`4 + 12 * n`) steht hier als `--`: es gibt keine\n\
+         -- einzelne Zahl zum Danebenstellen. **Entschieden wird sie trotzdem** -- gegen die\n\
+         -- kleinste Belegung, seit 2026-08-18 (`K001`/`K005`).\n\
          -- `Luft` ist eine Differenz, kein Urteil: bei `costs` ist sie oft richtig (eine\n\
          -- Signatur soll nicht bei jeder Rumpfaenderung brechen), bei `held` fast immer\n\
          -- falsch -- die Latenzaussage rechnet mit der ZUSAGE, nicht mit der Rechnung.\n"
