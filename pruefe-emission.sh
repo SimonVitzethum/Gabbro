@@ -482,6 +482,36 @@ lauf "beispiel14" "$W/beispiele/14-paarung-ueber-zwischenfunktion.gab" "$TREIBER
      "0 Annahmen, 0 Schablonen (0 davon UNBEWIESEN), 6 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
 
+# -- 12. «F»: Gleitkomma -- und der Test misst, dass das C WIRKLICH RECHNET -----------------
+#
+# **Die Zeugniszeile behauptet etwas ueber die Aufrufkonvention.** Eine Zeile ueber eine
+# Eigenschaft, die niemand ausgefuehrt hat, waere die teuerste Fassung desselben Fehlers, den
+# dieser Ordner an `rank` und `ensures` schon zweimal bezahlt hat.
+#
+# Gemessen wird die Klemmung an drei Stellen, darunter NaN -- der Fall, um dessentwillen die
+# ganze Faktenmaschine gebaut wurde. `0.0/0.0` erzeugt ihn, ohne dass ein Literal ihn nennt.
+TREIBER26='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    double null = 0.0;
+    printf("%.1f %.1f %.1f %.1f %.1f\n",
+           klemmen(0.25), klemmen(2.5), nur_endlich(null/null),
+           klemmen_ohne_narrow(0.75), voll());
+    return 0;
+}
+'
+#    Erwartet:  0.2 0.5 0.5 0.8 1.0
+#      Das ZWEITE ist der Ausstieg: `klemmen` KLEMMT nicht, es verengt oder steigt aus --
+#      2.5 liegt nicht in [0,1], also gibt es `HALB`. *Die erste Fassung dieses Treibers
+#      erwartete 1.0 und hatte damit die Sprache falsch gelesen, nicht den Code.*
+#
+#      Das DRITTE ist die Falle: `0.0/0.0` ist NaN, und `isfinite` faengt es -- der
+#      `else`-Zweig gibt `HALB`. Das Gift dreht die Pruefung um; dann laeuft NaN durch und
+#      `%.1f` druckt `nan` oder `-nan`. **Kein Literal nennt NaN** -- es entsteht.
+lauf "beispiel26" "$W/beispiele/26-gleitkomma.gab" "$TREIBER26" "0.2 0.5 0.5 0.8 1.0" \
+     's/if (!isfinite(x))/if (isfinite(x))/' \
+     "0 Annahmen, 0 Schablonen (0 davon UNBEWIESEN), 6 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+
 # -- 10. `accumulates`: eine Zelle je Kern, und der Test misst die SCHABLONE ---------------
 #
 # **Der Beweis lag VOR dem Konstrukt** (`beweise/Accumulates_Monoid.thy`, 2026-08-17), und er
@@ -547,7 +577,7 @@ lauf "beispiel24" "$W/beispiele/24-ip-kopf.gab" "$TREIBER24" "4 5 10 0 2 0 6" \
      's/>> 4) & 15u/>> 0) \& 15u/' \
      "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 0 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
-echo "== EMISSION: ALL PASS -- 11 Uebersetzungseinheiten durchgestochen =="
+echo "== EMISSION: ALL PASS -- 12 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser elf Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Elf Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser zwoelf Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Zwoelf Ja-Aussagen sind keine ueber die Sprache."

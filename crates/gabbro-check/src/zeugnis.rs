@@ -273,6 +273,15 @@ pub struct Erhebung {
     /// der gar nichts tut, erfuellt sie. **Was der Rufer wirklich annimmt, steht dann
     /// nirgends.** Eine Sperre bringt keine mit; sie ist die Bauart selbst.
     pub fremde_mit_pflicht: usize,
+    /// **«F»: rechnet diese Einheit mit Gleitkomma?**
+    ///
+    /// Sie steht im Zeugnis, weil sie **keine Aussage ueber Zahlen** ist: Gleitkomma aendert
+    /// die Aufrufkonvention (dieselbe Funktion uebergibt in `xmm0` oder in `rdi`), und fuer
+    /// einen Kernel aendert sie den Kontextwechsel -- FPU-Zustand ist Kontext, lazy switching
+    /// hat eine eigene Leckklasse, und Preemption wird teurer.
+    ///
+    /// *Der Leser des Zeugnisses muss es sehen, ohne den Quelltext zu lesen.*
+    pub gleitkomma: bool,
 }
 
 fn zaehle(e: &mut Erhebung, was: &'static str) {
@@ -286,6 +295,32 @@ fn zaehle(e: &mut Erhebung, was: &'static str) {
 /// Die zweite Lesung: was steht in dieser Datei?
 pub fn erhebe(baum: &Programm) -> Erhebung {
     let mut e = Erhebung::default();
+    // **Syntaktisch beantwortet, ueber die Typausdruecke** -- eine Frage an den Baum, keine
+    // an den Pruefer. *Sie muss auch dann stimmen, wenn M1 geschwiegen hat.*
+    fn im_typ(t: &TypExpr) -> bool {
+        match t {
+            TypExpr::Float(_) => true,
+            TypExpr::Feld(a) => im_typ(&a.element),
+            TypExpr::Zeiger(z) => im_typ(&z.ziel),
+            TypExpr::Verbund(fs, _) => fs.iter().any(|f| im_typ(&f.typ.typ)),
+            _ => false,
+        }
+    }
+    crate::fuer_jedes_item(baum, &mut |i| match &i.art {
+        ItemArt::Konst(k) => e.gleitkomma |= im_typ(&k.typ),
+        ItemArt::Statisch(st) => e.gleitkomma |= im_typ(&st.typ),
+        ItemArt::Typ(t) => {
+            if let Some(r) = &t.rumpf {
+                e.gleitkomma |= im_typ(r);
+            }
+        }
+        ItemArt::Funktion(f) => {
+            e.gleitkomma |= f.parameter.iter().any(|p| im_typ(&p.typ));
+            e.gleitkomma |= f.ergebnis.as_ref().is_some_and(im_typ);
+        }
+        ItemArt::Accumulates(a) => e.gleitkomma |= im_typ(&a.typ),
+        _ => {}
+    });
     let mut geister: Vec<String> = Vec::new();
     crate::fuer_jedes_item(baum, &mut |i| {
         if let ItemArt::Typ(t) = &i.art {
@@ -625,6 +660,24 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     }
 
     // -- Der Befund --------------------------------------------------------------------
+    if e.gleitkomma {
+        aus.push_str("\n-- GLEITKOMMA -- und das ist KEINE Aussage ueber Zahlen\n");
+        aus.push_str(
+            "     Diese Einheit rechnet mit Gleitkomma. Damit aendert sich die\n\
+             \x20    AUFRUFKONVENTION (dieselbe Signatur uebergibt in `xmm0` oder in `rdi`),\n\
+             \x20    und fuer einen Kernel der KONTEXTWECHSEL: FPU-Zustand ist Kontext,\n\
+             \x20    lazy switching hat eine eigene Leckklasse, Preemption wird teurer.\n",
+        );
+        aus.push_str(
+            "     Was der Erzeuger dafuer verlangt: KEIN -ffast-math (es erlaubt\n\
+             \x20    Umsortierungen, und die Addition ist nicht assoziativ), auf x86 SSE2\n\
+             \x20    (der x87 rechnet mit 80 Bit und rundet doppelt), Rundungsmodus RNE.\n",
+        );
+        aus.push_str(
+            "     Was NICHT dasteht: numerische Genauigkeit. Der Pruefer traegt Intervall\n\
+             \x20    und zwei Bits (NaN, unendlich) -- keine Fehlerschranke.\n",
+        );
+    }
     aus.push_str("\n-- BEFUND\n");
     if !e.unzugeordnet.is_empty() {
         let mut u = e.unzugeordnet.clone();

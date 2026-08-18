@@ -536,13 +536,11 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
-- [ ] **Die ABSENKUNG und die Zeugniszeile fuer «F»** *(2026-08-18)*. Der Pruefer traegt
-      jetzt Bereich und die zwei Bits; der Erzeuger weigert sich weiterhin benannt (`C001`).
-      Was die Absenkung mitbringen muss: `float`/`double`, **niemals `-ffast-math`**, SSE2 als
-      Annahme mit Falsifikator (Excess precision am x87) -- und eine Zeugniszeile *diese
-      Einheit rechnet mit Gleitkomma*. **Fuer einen Kernel ist das eine Aussage ueber
-      Preemption und Kontextgroesse, nicht ueber Zahlen**, und der Leser des Zeugnisses muss
-      sie sehen, ohne den Quelltext zu lesen.
+- [ ] **SSE2 als Annahme mit FALSIFIKATOR, nicht als Kommentar** *(2026-08-18)*. Der
+      erzeugte Kopf nennt sie, das Zeugnis nennt sie -- aber sie steht in keiner
+      `assume`-Deklaration, also **in keinem Manifest und mit keiner Sonde**. *Genau die
+      Klasse, gegen die `S003`/`N004` stehen: ein Name, den niemand erklaert hat.* Dasselbe
+      fuer den Rundungsmodus.
 - [ ] **`F003` (Rundungsmodus im Typ) und `F006` (`long double`/`f16`)** *(2026-08-18)*. Die
       beiden letzten Absagen der Familie. `f64<RNE>` waere die vierte Instanz eines
       vorhandenen Musters (`ptr<…>`, `atomic … seq`, `format … endian`); `long double` wird

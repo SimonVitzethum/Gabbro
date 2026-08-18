@@ -209,7 +209,60 @@ pub const KOPF: &str = "\
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdatomic.h>
+#include <math.h>
 ";
+
+/// **«F»: der Zusatz, wenn eine Einheit mit Gleitkomma rechnet.**
+///
+/// Er steht im erzeugten C und nicht bloss in einem Memo, weil er den Uebersetzer betrifft
+/// und nicht den Leser. *Ein `-ffast-math` macht jede Aussage dieses Prueferlaufs ungueltig:
+/// es erlaubt Umsortierungen, und Gleitkommaaddition ist nicht assoziativ.*
+pub const KOPF_GLEITKOMMA: &str = "\
+/* Diese Einheit rechnet mit Gleitkomma.
+ *
+ *   -ffast-math ist VERBOTEN. Es erlaubt Umsortierungen, und die Addition ist nicht
+ *   assoziativ -- jede Schranke, die der Pruefer gerechnet hat, faellt damit.
+ *
+ *   Auf x86 wird SSE2 vorausgesetzt (die x87-Register rechnen mit 80 Bit und runden
+ *   doppelt). Das steht als Annahme mit Falsifikator im Zeugnis.
+ *
+ *   Der Rundungsmodus ist round-to-nearest-even. Er ist globaler Zustand (MXCSR/FPCR);
+ *   dass er gilt, ist eine Annahme und keine Zusage dieses Erzeugers.
+ */
+";
+
+/// **«F»: benutzt diese Uebersetzungseinheit ueberhaupt Gleitkomma?**
+///
+/// Syntaktisch beantwortet, ueber die Typausdruecke -- *eine Frage an den Baum, keine an den
+/// Pruefer.* Sie muss auch dann stimmen, wenn M1 geschwiegen hat.
+fn rechnet_mit_gleitkomma(baum: &Programm) -> bool {
+    fn im_typ(t: &TypExpr) -> bool {
+        match t {
+            TypExpr::Float(_) => true,
+            TypExpr::Feld(a) => im_typ(&a.element),
+            TypExpr::Zeiger(z) => im_typ(&z.ziel),
+            TypExpr::Verbund(fs, _) => fs.iter().any(|f| im_typ(&f.typ.typ)),
+            _ => false,
+        }
+    }
+    let mut ja = false;
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Konst(k) => ja |= im_typ(&k.typ),
+        ItemArt::Statisch(st) => ja |= im_typ(&st.typ),
+        ItemArt::Typ(t) => {
+            if let Some(r) = &t.rumpf {
+                ja |= im_typ(r);
+            }
+        }
+        ItemArt::Funktion(f) => {
+            ja |= f.parameter.iter().any(|p| im_typ(&p.typ));
+            ja |= f.ergebnis.as_ref().is_some_and(im_typ);
+        }
+        ItemArt::Accumulates(a) => ja |= im_typ(&a.typ),
+        _ => {}
+    });
+    ja
+}
 
 /// Emits C for a tree, or refuses by name.
 pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
@@ -496,6 +549,12 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
     });
 
     let mut aus = String::from(KOPF);
+    // **Die Einheit sagt selbst an, dass sie mit Gleitkomma rechnet.** Der Uebersetzer muss
+    // es wissen (`-ffast-math`, SSE2), und fuer einen Kernel ist es eine Aussage ueber
+    // Preemption und Kontextgroesse -- nicht ueber Zahlen.
+    if rechnet_mit_gleitkomma(baum) {
+        aus.push_str(KOPF_GLEITKOMMA);
+    }
     let annahmen = crate::manifest::sammle(baum);
     if !annahmen.is_empty() {
         let (menge, _) = crate::manifest::vereinige(annahmen);
@@ -542,6 +601,17 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         ItemArt::Konst(k) => {
             if let Some(w) = konst_zahl(&k.wert) {
                 aus.push_str(&format!("\n#define {} {}u\n", k.name.text, w));
+            // **«F»: eine Gleitkommakonstante ist ein `#define` ohne `u`.**
+            //
+            // *Das `u` waere hier nicht bloss ueberfluessig, sondern falsch* -- es macht aus
+            // dem Literal eine vorzeichenlose Ganzzahl, und der Uebersetzer wuerde es
+            // wortlos annehmen.
+            } else if let ExprArt::Gleitkomma { bits, .. } = &k.wert.art {
+                aus.push_str(&format!(
+                    "\n#define {} {}\n",
+                    k.name.text,
+                    gleitkommatext(*bits)
+                ));
             } else {
                 weigere(absagen, k.name.span, "const with a non-constant value");
             }
@@ -1636,6 +1706,16 @@ fn zahltext(e: &Expr, absagen: &mut Absagen) -> String {
 fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
     match t {
         TypExpr::Int(i) => Some(intty(i)),
+        // **«F»: `f32`/`f64` senken zu `float`/`double` ab -- und mehr sagt der Erzeuger
+        // nicht.** Der Bereich ist ein M1-Faktum und lebt im Pruefer, genau wie beim
+        // Ganzzahlbereich; die zwei Bits ebenso.
+        TypExpr::Float(f) => Some(
+            if f.wort == gabbro_syntax::kw::Kw::F32 {
+                "float".into()
+            } else {
+                "double".into()
+            },
+        ),
         TypExpr::Bool(_) => Some("bool".into()),
         TypExpr::Pfad(p) => {
             let n = p.teile.last()?.text.clone();
@@ -1649,6 +1729,8 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                 "i16" => "int16_t".into(),
                 "i32" => "int32_t".into(),
                 "i64" => "int64_t".into(),
+                "f32" => "float".into(),
+                "f64" => "double".into(),
                 // **A path naming a table IS the struct.** The first version lowered it to
                 // `uint32_t` and called that a coarsening in the safe direction -- it was not
                 // coarse, it was wrong: `ptr<normal, r> Objekte` became `const uint32_t *`,
@@ -2013,12 +2095,26 @@ fn anweisung(
         // DEFINIERT, nicht weil M1 versagt haette. *W6 gilt in die andere Richtung: was M1
         // traegt, wird weggelassen; was `narrow` heisst, bleibt stehen.*
         StmtArt::Narrow(n) => {
-            // **«F»: `narrow … to finite` senkt NICHT ab.** Der Erzeuger traegt heute keine
-            // Gleitkommaform, und er weigert sich benannt, statt etwas Plausibles zu
-            // schreiben -- dieselbe Haltung wie bei `entrust`.
-            let NarrowZiel::Bereich(bereich) = &n.ziel else {
-                weigere(absagen, n.ort.basis.span, "`narrow … to finite` (Gleitkomma)");
-                return;
+            // **«F»: `finite` senkt zu `isfinite` ab, und die Pruefung BLEIBT.**
+            //
+            // Sie ist genau das, was `narrow` in dieser Sprache bedeutet -- eine Anweisung
+            // mit benanntem Ausgang, deren Pruefung im C stehen bleibt (W6 gilt in die
+            // andere Richtung: was M1 traegt, wird weggelassen; was `narrow` heisst, bleibt).
+            //
+            // `isfinite` deckt beide Bits auf einmal: NaN ist nicht endlich, und die
+            // Unendlichkeiten sind es auch nicht. *Ein Makro, zwei Zusagen -- dieselbe
+            // Rechnung wie im Pruefer.*
+            let bereich = match &n.ziel {
+                NarrowZiel::Bereich(b) => b,
+                NarrowZiel::Endlich(_) => {
+                    let o = ort(&n.ort, u, absagen);
+                    aus.push_str(&format!("{e}if (!isfinite({o})) {{\n"));
+                    for k in &n.sonst.anweisungen {
+                        anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+                    }
+                    aus.push_str(&format!("{e}}}\n"));
+                    return;
+                }
             };
             let o = ort(&n.ort, u, absagen);
             let von = ausdruck(&bereich.von, u, absagen);
@@ -2555,9 +2651,27 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
 /// Until 2026-08-17 the fallback here read `"/* NOT LOWERED */ 0"` — *it compiled, and it
 /// computed zero.* A fail-open path in the one component whose whole design is "refuse rather
 /// than guess", and a comment nobody reads is not a refusal.
+/// **«F»: das Literal geht als KUERZESTE RUECKLESBARE Form hinaus.**
+///
+/// `{:?}` einer `f64` ist genau das: die kuerzeste Dezimalzahl, die auf dasselbe Bitmuster
+/// zurueckliest. *Eine gekuerzte Form waere ein zweites Runden -- und zwar eines, von dem im
+/// Quelltext nichts steht.*
+///
+/// Ohne Suffix, also ein `double`-Literal. Trifft es auf ein `float`, wandelt C um.
+fn gleitkommatext(bits: u64) -> String {
+    let w = f64::from_bits(bits);
+    let t = format!("{w:?}");
+    if t.contains('.') || t.contains('e') || t.contains("inf") || t.contains("NaN") {
+        t
+    } else {
+        format!("{t}.0")
+    }
+}
+
 fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
     match &e.art {
         ExprArt::Zahl(n) => n.to_string(),
+        ExprArt::Gleitkomma { bits, .. } => gleitkommatext(*bits),
         ExprArt::Wahr => "true".into(),
         ExprArt::Falsch => "false".into(),
         ExprArt::Ort(o) => ort(o, u, absagen),
