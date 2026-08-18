@@ -147,6 +147,31 @@ of items that are neither code nor a run — what remains is building and measur
       0 Fehler) -- *und kein Pass liest es.* Die Schicht hat damit zwei Haelften: die sieben
       Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
       tragen lassen (PL-Arbeit).
+- [ ] **`opaque` beisst nicht -- gemessen 2026-08-18, und es ist der Preis von
+      „Gleitkomma nur auf der GPU".** `opaque type F32 = u32;` und `return a & b;`:
+      **3 Items, 0 Fehler.** Bitweises Und behaelt die Breite, also schweigt die
+      Ueberlaufregel, und der undurchsichtige Typ wird als sein TRAEGER gerechnet. *Dass
+      `a + b` faellt, ist Zufall* -- es faellt an `M104`, nicht an der Undurchsichtigkeit;
+      wo die Breiten aufgehen, geht der Unsinn durch. Die Passliste fuehrt es (D1/D2,
+      teilgebaut), **aber was es kostet, ist hier zum ersten Mal gemessen.** Ein
+      undurchsichtiger Typ hat KEINE Operationen seines Traegers, bis eine Umwandlung
+      dasteht -- und das faellt fuer alle zugleich.
+- [ ] **`entrust` -- ein `code`-Raum, dessen Inhalt Gabbro nicht kennt.** Der Sprung ins
+      Ungezeugte ist ein ADRESSRAUMWECHSEL, kein Kontrollflusssprung: eigener `code`-Raum
+      ohne Schreibrecht (W^X, `mappings of` prueft es), eigene PD, eigener CapSpace, Rueckweg
+      als `entry`. **Gabbro schuldet dem Gast nichts** -- fuer den JIT-*Compiler* gilt die
+      Zusage vollstaendig (Byteemission plus Tabellen plus `recurse bounded`), fuer den Gast
+      gilt Isolation statt Beweis. *Das ist keine Luecke, sondern der Zweck eines
+      Mikrokernels.* Was fehlt: ein Wort, ein deklarierter Eintrittsvertrag (Register, Stapel,
+      Caps) und ein `assume`-Eintrag im Zeugnis. **Kein neuer Pass.**
+- [ ] **Gleitkomma-Memo: die Kosten sind eine ZWEITE FAKTENLOGIK, nicht ein zweiter
+      Zahlentyp** *(2026-08-18)*. Intervallarithmetik ueber IEEE-754 ist gebaut und bekannt.
+      **Was bricht, ist die NEGATION einer Vergleichsbedingung:** ist ein Operand NaN, sind
+      alle Vergleiche falsch, und `!(x < y)` folgt `x >= y` nicht. `m1::fakten_aus(…,
+      negiert = true)` waere unsicher -- *das ist die Maschinerie, mit der jede Verengung in
+      dieser Sprache arbeitet.* Zwei Auswege, beide teuer: NaN durch Konstruktion ausschliessen
+      (Laufzeitpruefung, W6) oder die Negation kein Faktum liefern lassen (sicher, und dann
+      ungeprueft genau dort, wo man pruefen wollte). **Bedarf zaehlen, bevor gebaut wird.**
 - [ ] **«B24» hat die beste Hebelwirkung aller offenen Posten** *(bewertet 2026-08-18)*.
       Ein Netzwerkstack ist bis auf EINE Entscheidung schreibbar: Verbindungstabelle
       (`count NCONN`), Paketpool, Pruefsumme ueber `<= MTU`, Neuuebertragung (`retry

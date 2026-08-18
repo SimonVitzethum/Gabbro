@@ -2051,3 +2051,92 @@ ist ein Feld aus Bytes. **Der Sprung nicht:** was danach läuft, hat keine `effe
 alles, dessen Größen jemand *bei der Erzeugung* aufschreiben kann. **Nie: alles, was keinen
 Punkt hat, an dem „es reicht nicht" gesagt wird** — plus Gleitkomma, plus alles hinter einem
 Sprung ins Ungezeugte.
+
+---
+
+# Gleitkomma: was wirklich bricht — und „nur auf der GPU" ist keine Erweiterung, sondern eine Ablesung
+
+## Was an Gleitkomma bricht, ist **nicht** M1
+
+Der Einwand hat recht, dass „für immer draußen" einen Grad zu absolut war — aber der Grund
+liegt anderswo, als beide Fassungen vermuteten. **Intervallarithmetik über IEEE-754 ist
+gebaut und bekannt**; jede Operation weitet um ein ulp, das ist Handwerk.
+
+**Was bricht, ist die NEGATION einer Vergleichsbedingung** — und damit V1–V3.
+
+```gabbro
+if x < y { … } else { … }
+```
+
+Über ganzen Zahlen gibt der `else`-Zweig `x >= y`. **Über Gleitkomma gibt er nichts**: ist
+eines von beiden NaN, sind *alle* Vergleiche falsch, und `!(x < y)` folgt `x >= y` nicht.
+Trichotomie hat vier Ausgänge statt drei.
+
+> **`m1::fakten_aus(bedingung, negiert = true)` ist genau diese Operation, und sie wäre
+> unsicher.** Das ist keine Ungenauigkeit im Randbereich — *es ist die Maschinerie, mit der
+> jede Verengung in dieser Sprache arbeitet.*
+
+Zwei Auswege, beide teuer: NaN durch Konstruktion ausschließen (Prüfung an jeder Operation —
+und W6 verbietet eine Laufzeitprüfung, die nicht M1-begründet ist), oder die Negation eines
+Gleitkommavergleichs **kein Faktum** liefern lassen (sicher, und dann ist Gleitkomma genau
+dort ungeprüft, wo man es prüfen wollte).
+
+*Die ehrliche Fassung ist damit nicht „unmöglich", sondern:* **eine zweite Faktenlogik neben
+V1–V3, kein zweiter Zahlentyp.**
+
+## „Nur auf der GPU" trifft — und es ist **schon so**, gemessen
+
+Der Vorschlag ist keine Spracherweiterung. Er ist die Feststellung, dass ein Treiber
+Gleitkommazahlen **bewegt und nicht ausrechnet** — und das braucht **keine Arithmetik**:
+
+```gabbro
+opaque type F32 = u32;
+table Eckpunkte count 4096 { slot { x : F32, y : F32, z : F32, } }
+→ 4 Items, 0 Fehler, 0 Hinweise
+```
+
+**Das geht heute, ohne eine Zeile Änderung.** Ein Gleitkommawort ist vier Bytes; wer es nur
+in einen Puffer legt, braucht keinen Zahlbegriff. *Es `f32` zu nennen wäre die schlechtere
+Wahl — der Name verspricht Arithmetik, die es nicht gibt.*
+
+**Und die Trennlinie liegt genau dort, wo sie hingehört:** was der Renderer selbst ausrechnen
+müsste (Transformationsmatrizen), rechnet dann die GPU im Shader — *und der Shader ist
+Gastcode, also dieselbe Konstruktion wie der JIT: Isolation statt Beweis.*
+
+## Aber: der Vorschlag verlangt, dass `opaque` HÄLT — und es hält nicht
+
+```gabbro
+opaque type F32 = u32;
+impl fn unsinn(a : F32, b : F32) -> F32 { return a & b; }
+→ 3 Items, 0 Fehler, 0 Hinweise
+```
+
+**Bitweises Und behält die Breite, also schweigt die Überlaufregel — und der undurchsichtige
+Typ wird als sein Träger gerechnet.** Zwei Gleitkommazahlen bitweise zu verunden ergibt
+Unsinn, und nichts sagt es.
+
+Dass `a + b` fällt, ist **Zufall**: es fällt an `M104` (die Breite läuft über), nicht daran,
+dass der Typ undurchsichtig ist. *Wo die Breiten aufgehen, geht der Unsinn durch.*
+
+Die Passliste sagt es selbst — D1/D2, teilgebaut: *„undurchsichtige Neutypen ohne Umwandlung
+ebenfalls nicht [gebaut]."* **Der Posten war gebucht; hier ist zum ersten Mal gemessen, was er
+kostet.**
+
+> **Damit hat „Gleitkomma nur auf der GPU" einen Preis, und er ist klein und benannt:**
+> `opaque` muss beißen. Ein undurchsichtiger Typ hat **keine** Operationen seines Trägers —
+> weder Rechnung noch Vergleich noch Bitverknüpfung —, bis eine Umwandlung dasteht. *Das ist
+> D1/D2, nicht Gleitkomma; es fällt für jeden undurchsichtigen Typ zugleich.*
+
+## Die Reihenfolge, wie vorgeschlagen — mit einem Einschub
+
+1. **«B24»** — billigste Entscheidung, größter Ertrag (Netzwerkstack). *Und die Anmerkung
+   trifft: `embeds [hi:lo]` gibt es, `device`-Register nehmen Mehrbitfelder längst. Es ist
+   eine Vereinheitlichung zweier vorhandener Formen.*
+2. **`entrust`** — ein Wort, öffnet JVM/JIT/jedes Gastmodul. *Der Einwand hat recht: der
+   Sprung ins Ungezeugte ist ein Adressraumwechsel, kein Kontrollflusssprung, und Gabbro
+   schuldet dem Gast nichts.*
+3. **`opaque` zum Beißen bringen** — **eingeschoben**, weil Punkt 4 sonst auf einem Typ ruht,
+   der seine Zusage nicht hält. Klein, D1/D2, und es fällt für alle undurchsichtigen Typen.
+4. **Festkomma als Fragment** — misst nebenbei, ob M1 die doppelte Zwischenbreite trägt.
+5. **Gleitkomma als Memo mit Bedarfszählung**, nicht als Bau. *Und das Memo hat jetzt seinen
+   Kernsatz: die Kosten sind eine zweite Faktenlogik, nicht ein zweiter Zahlentyp.*
