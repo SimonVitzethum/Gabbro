@@ -193,6 +193,72 @@ Isolation statt Beweis. *Dafür ist seit heute ein Wort da, und es braucht keine
 
 ---
 
+## 6. Was volle Unterstützung kostet — an der Berührungsfläche gemessen
+
+*Eine Aufwandszahl wäre eine Schätzung. Die Berührungsfläche ist abzählbar, also steht sie
+hier statt einer Zahl.*
+
+### Der Code ist NICHT der Preis
+
+```
+16  Stellen treffen auf `Typ::Ganzzahl` / `Typ::Umlaufend`   (umgebung 6, m1 6, typen 4)
+ 8  Stellen fragen `ist_intty`                               (parse 6, umgebung 1, kw 1)
+ 1  Zahlvariante im ganzen Typmodell -- und sie trägt einen BEREICH
+```
+
+**Das Typmodell hat genau eine Zahlform**, und jede Zahlaussage läuft durch ihren Bereich.
+Eine zweite Variante einzuziehen und an sechzehn Stellen zu entscheiden, was sie dort tut, ist
+Arbeit vom Umfang einer «B24»-Entscheidung — *nicht das, was diese Frage teuer macht.*
+
+### Teuer sind vier Blöcke, und der erste ist ein Teilprojekt
+
+**(1) Die Faktenlogik.** `fakten_aus(…, negiert = true)` für Gleitkomma zu sperren ist **ein
+Wächter, eine Zeile**. Danach liefert jede Verengung über einer Gleitkommazahl nichts — und
+damit ist der Typ genau dort unbrauchbar, wo geprüft werden sollte. Brauchbar wird er erst mit
+Intervall und Rundung, und das ist die zweite Faktenlogik. *Der Gegenstand hat den Umfang von
+M1 selbst — 1240 Zeilen, der größte Pass des Ordners.*
+
+**(2) `M104` hat kein Gegenstück.** Gleitkomma läuft nicht über, es geht nach ±∞. Die
+interessante Absage heißt nicht mehr *die Breite läuft über*, sondern *diese Operation kann
+NaN oder ∞ erzeugen* — **eine neue Regel, keine angepasste.**
+
+**(3) Die Beweisschicht — gemessen, was lokal dasteht:**
+
+| | |
+|---|---|
+| `HOL-Library.Float` | **dyadische Rationalzahlen**, unbeschränkter Exponent — kein NaN, kein ∞, keine Rundungsmodi |
+| `Interval_Float` | Intervallarithmetik darüber |
+| IEEE-754 in Isabelle | **nicht installiert** — die AFP fehlt |
+
+*Also: die Ebene „reell + Fehlerschranke" ist mit dem Vorhandenen baubar, die bitgenaue nicht.*
+Das ist keine Kleinigkeit der Einrichtung, sondern eine Richtungsentscheidung, denn die beiden
+Ebenen beweisen **verschiedene Sätze**.
+
+**(4) Die Schablonen und die ABI.** `accumulates.monoid` bricht in der Prämisse (§1a). Und die
+Aufrufkonvention ändert sich (§4) — das trifft die Bibliotheks-ABI, nicht den Typprüfer.
+
+### Und die vier Typen sind nicht vier gleiche Posten
+
+| | |
+|---|---|
+| **f32 / f64** | die eigentliche Arbeit; alles oben gilt für sie |
+| **f16** | auf den meisten Zielen **Speicherform plus Umwandlung**, keine native Rechnung. „Vollständig" hieße Emulation oder Rechnen in f32 — und dann ist **Doppelrundung** f16→f32→f16 eine *neue* Landmine, nicht eine kleinere Ausgabe derselben. *Als reine Speicherform gehört f16 ohnehin zu `format`, nicht zum Zahlmodell.* |
+| **long double** | **weigern.** Es ist kein Typ, sondern eine Plattformlotterie: 80 Bit x87 auf x86-Linux, 128 Bit auf anderen, gleich `double` auf wieder anderen. Und es *ist* das Excess-precision-Loch aus §1a. |
+
+> **Die Weigerung bei `long double` ist dieselbe Form wie bei `@[66:64]`: sie ist die
+> Antwort.** Wer 80-Bit-Genauigkeit braucht, nennt sie — und dann ist es ein anderer Typ mit
+> einer anderen Zusage, nicht ein Wort, dessen Bedeutung vom Ziel abhängt.
+
+### Die ehrliche Einordnung
+
+Der Ordner hat eine Regel dafür, und sie greift hier: **kein Bau ohne gemessenen Bedarf**
+(W3). Der Bedarf ist gemessen null (§2). Damit ist die Aufwandsfrage nicht falsch, sondern
+**verfrüht** — sie würde beantwortet, wenn ein Fragment sie stellte, so wie jedes andere
+Konstrukt dieses Ordners aus einer Fundstelle kam und nicht aus einem Entwurf.
+
+*Was heute schon entschieden werden kann, ohne irgendetwas davon: der Rundungsmodus im Typ
+(§4b) und die Weigerung bei `long double`.*
+
 ## Beschluss
 
 **Die erste Fassung hat zwei Entscheidungen vermengt.** Sie sind zu trennen:
