@@ -1787,3 +1787,126 @@ dieselbe Begründung, und darum kein neues Muster.**
 | **`long double`** | die Weigerung ist eine Ablesung, keine Härte: echte Programme bauen eine Leiter |
 | **F004** belegt | die Gleitkommareduktion kommt wirklich vor |
 | **kein fast-math** | ein leistungskritischer Renderer verzichtet freiwillig darauf |
+
+---
+
+# «K2» — zwei Fragmente aus fremder Autorenlinie, geschnitten und gemessen
+
+> **2026-08-18.** Die Zählung («K2» in `MESSUNGEN.md`) zählte Formen. *Der Unterschied
+> zwischen „`format` gibt es" und „das Fragment geht durch" ist derselbe, den dieser Ordner
+> schon einmal bezahlt hat* — also hier zwei geschnittene Fragmente, und was der Prüfer dazu
+> sagt.
+
+## K2-F1 — `setpriority`, und die zwei Sprungmarken
+
+```c
+		if (!uid_eq(uid, cred->uid)) {
+			user = find_user(uid);
+			if (!user)
+				goto out_unlock;	/* No processes for this user */
+		}
+		…
+out_unlock:
+	rcu_read_unlock();
+out:
+	return error;
+```
+
+**Befund.** Zwei Sprungmarken, und die erste existiert **nur zum Freigeben**. In Gabbro gibt
+es sie nicht: `locks { … }` nimmt und gibt auf jedem Pfad, und der Fehlerweg ist
+`let … else`. *Die Marke verschwindet nicht, weil man sie umschreibt, sondern weil das
+Problem nicht auftritt.*
+
+**Verdikt: blockiert — `rcu_read_unlock`.** Und zwar nicht am `goto`, sondern an dem, was die
+Marke freigibt.
+
+## K2-F2 — `acct_get`, und `goto again` ist ein `retry`
+
+```c
+again:
+	smp_rmb();
+	rcu_read_lock();
+	res = to_acct(READ_ONCE(ns->bacct));
+	if (!res) { rcu_read_unlock(); return NULL; }
+	if (!atomic_long_inc_not_zero(&res->count)) {
+		rcu_read_unlock();
+		cpu_relax();
+		goto again;
+	}
+	rcu_read_unlock();
+```
+
+**Befund, und er hat drei Teile.**
+
+**(1) `goto again` IST ein `retry`** — und in Gabbro trägt es eine Schranke und einen
+benannten Überlauf. Das Original hat beides nicht: die Schleife ist **unbeschränkt**, und
+wenn der Zähler nie freikommt, dreht sie für immer. *Der `on_exceeded`-Zweig ist kein Zusatz,
+er ist die Stelle, an der aus einer Hoffnung eine Aussage wird.*
+
+**(2) `rcu_read_unlock` steht DREIMAL** — einmal je Ausgang. Genau die Bauart, die
+`locks { … }` unnötig macht; nur ist RCU keine Sperre, und Gabbro hat kein Wort dafür.
+
+**(3) Und M1 fand beim ersten Lauf einen Überlauf, den das Original nicht prüft.**
+`atomic_long_inc_not_zero` schützt gegen **null**, nicht gegen die obere Schranke:
+
+```
+die Zuweisung requires `u32 in 0 .. 65535`, the value has `u32 in 2 .. 65536`   -- M101
+```
+
+*Das ist die Zählerüberlaufklasse, und sie fiel aus einem fremden Fragment beim ersten
+Rendern heraus.* Die Antwort steht in derselben Sprache — eine zweite Schranke im `if`, und
+der Prüfer schweigt.
+
+## Nachgebildet, RCU durch eine Sperre ersetzt: der Rest TRÄGT
+
+```gabbro
+module k2::acct {
+
+const MAXVERSUCHE : u32 = 64;
+
+table Konten count 256 {
+    slot { zaehler : u32 in 0 .. 65535, }
+}
+
+lock NSLOCK protects { Konten } rank 10 held <= 400 ops;
+
+extern fn cpu_relax() effects { pure } costs <= 1 ops;
+
+impl fn holen(k : ptr<normal, rw> Konten, i : index into Konten) -> u32
+    effects { locks NSLOCK, reads k.slots, writes k.slots }
+    costs   <= 600 ops
+{
+    retry hole until k.slots[i].zaehler > 0
+        bounded 512 ops
+        progress halter_gibt_frei
+        on_exceeded konto_verschwunden
+        effects { locks NSLOCK, reads k.slots, writes k.slots }
+    {
+        locks NSLOCK {
+            -- **Die Schranke, die das Original nicht hat.**
+            if k.slots[i].zaehler > 0 && k.slots[i].zaehler < 65535 {
+                k.slots[i].zaehler += 1;
+            }
+        }
+        cpu_relax();
+    }
+    return 1;
+}
+
+assume halter_gibt_frei
+    "Ein Halter gibt seinen Zaehler in endlicher Zeit frei."
+    falsifier sonde_halter_haengt;
+
+extern fn konto_verschwunden() -> never effects { diverges };
+
+}
+```
+
+**0 Fehler, 0 Hinweise.** Das ist das eigentliche Ergebnis der ersten zwei Fragmente:
+**ein einziges fehlendes Konstrukt blockiert beide, und der ganze Rest trägt** — Sperre,
+Rang, Haltezeit, beschränkte Wiederholung, benannter Überlauf, Fortschrittsannahme mit
+Falsifikator, Indexschranke.
+
+> **Und es ist eine NACHBILDUNG, keine Übersetzung.** Die Tabelle ist erfunden, weil
+> `struct bsd_acct_struct` nicht mitgeschnitten ist. Gemessen ist damit die FORM des
+> Fragments und nicht sein Rumpf — derselbe Unterschied wie oben, eine Ebene tiefer.

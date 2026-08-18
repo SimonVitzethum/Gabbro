@@ -543,12 +543,18 @@ of items that are neither code nor a run — what remains is building and measur
       tauscht einen Zeiger und wartet auf eine Gnadenfrist. `lock`/`protects`/`rank`/`held`
       beschreibt gegenseitigen Ausschluss; hier gibt es keinen. *Die Paarung trifft die
       Zeigerveroeffentlichung, die Gnadenfrist trifft sie nicht.*
-- [ ] **«K2»: die Zaehlung ist keine Uebersetzung** *(2026-08-18)*. Gemessen sind FORMEN
-      (`goto` 2669, `BUG_ON` 2034, `spin_lock` 808 …), nicht Uebersetzbarkeit -- kein Fragment
-      ist geschnitten, kein Pruefer ist darueber gelaufen. **Der Unterschied ist derselbe wie
-      zwischen „`format` gibt es" und „das Fragment geht durch"**, und dieser Ordner hat ihn
-      schon einmal bezahlt. Naechster Schritt: drei bis fuenf Fragmente schneiden und den
-      Pruefer darueber laufen lassen -- wie bei «F0».
+- [ ] **«K2»: zwei Fragmente stehen, drei fehlen** *(2026-08-18)*. K2-F1 und K2-F2 sind
+      geschnitten und gemessen; **beide sind vom selben einen Konstrukt blockiert (RCU), und
+      der ganze Rest traegt** -- Sperre, Rang, Haltezeit, beschraenkte Wiederholung, benannter
+      Ueberlauf, Fortschrittsannahme, Indexschranke. *Und die Nachbildung ist keine
+      Uebersetzung:* die Tabelle ist erfunden, weil die fremde Struktur nicht mitgeschnitten
+      ist. Gemessen ist die FORM, nicht der Rumpf.
+- [ ] **Die Zaehlerueberlaufklasse gehoert in die Messungen, nicht nur in ein Fragment**
+      *(2026-08-18)*. `M101` fand in K2-F2 einen Ueberlauf, den das Original nicht prueft --
+      `atomic_long_inc_not_zero` schuetzt gegen NULL, nicht gegen die obere Schranke. **Wie
+      viele der 637 `atomic_*()`-Stellen des zweiten Korpus sind Zaehler ohne obere
+      Schranke?** Das ist eine Zaehlung, und sie waere die erste Zahl dieses Ordners, die
+      einen FREMDEN Fehler misst statt eine eigene Deckung.
 
 - [ ] **`D004` hat auf diesem Korpus NULL Biss** *(gemessen 2026-08-18)*. Alle zwoelf
       `opaque`-Deklarationen der Beispiele erklaeren und benutzen im **selben Modul**, also
