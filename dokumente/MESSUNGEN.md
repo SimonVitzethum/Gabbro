@@ -7547,3 +7547,32 @@ Hand gegengelesen, und genau das war der Einwand.
 aufgeschrieben hat. Gegen einen Satz, den niemand als überholt erkannt hat, hilft er nicht —
 *und die zwei Fundstellen in der Spezifikation zeigen, dass genau das der wahrscheinliche Fall
 ist.*
+
+## Nachtrag desselben Tages: acht falsche Zahlen im README
+
+**Beim Nachzählen für die Mutationsquote gefunden.** Der README trägt eine Kennzahlentafel —
+*die Datei, die ein Fremder zuerst liest* — und **acht ihrer Zahlen standen falsch da**:
+
+| stand | ist | Quelle |
+|---|---|---|
+| 90 diagnostics | **124** | `./pruefe-kennungen.py` |
+| 130 EBNF rules | **139** | `./pruefe-syntax.sh` |
+| 195 / 195 terminals | **206 / 206** | dasselbe |
+| 19 templates, 4 machine-checked | **20, 9** | `gabbro schablonen` |
+| 8 guardians | **10** | `ls pruefe-*` |
+| 19 clean examples | **31** | `beispiele/*.gab` |
+| 69 poison files | **104** | `beispiele/gift/*.gab` |
+| 79 tests | **126** | `cargo test` |
+
+**Alle acht in die für den Ordner schmeichelhafte Richtung falsch — nach UNTEN.** Der Ordner
+hat sich schlechter gerechnet, als er ist; dieselbe Richtung wie bei den fünf Notationslücken,
+die längst zu waren. *Das ist die harmlosere Hälfte der Klasse und immer noch eine
+uneinlösbare Zahl.*
+
+**Geschlossen wurde es nicht von Hand, sondern mechanisch:** `pruefe-todo.py` hält jetzt auch
+`README.md` — sechs der acht ohne Übersetzerlauf zählbar, mit Sprechprobe in beide Richtungen
+(eine verstellte Zahl fällt, die echte Tafel nicht). **Die zwei, die einen Lauf brauchen —
+Testzahl und Mutationsquote —, tragen ihr Messdatum im Text.**
+
+**Mutationsquote, gemessen 2026-08-19:** `151 von 152 gültigen Mutationen gefangen (99 %)`,
+ein Überlebender (`negativer-faktor-gilt-als-schranke`, `K005`), drei mit mehrdeutigem Anker.

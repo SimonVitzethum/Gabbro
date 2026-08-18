@@ -212,6 +212,63 @@ def heutige_zahlen():
     ]
 
 
+def pruefe_readme(text=None):
+    """**Der README traegt eine Kennzahlentafel, und niemand hielt sie nach.**
+
+    Gefunden 2026-08-19: acht Zahlen standen falsch da -- *90 Absagen* (124), *130 Regeln*
+    (139), *195 / 195* (206), *19 Schablonen, 4 bewiesen* (20 / 9), *8 Waechter* (10),
+    *19 saubere Beispiele* (31), *69 Giftdateien* (104), *79 Tests* (126).
+
+    **Dieselbe Klasse wie die sechs `gap:`-Zeilen und die acht widerrufenen Saetze:** die
+    Zahl wurde gepflegt, die Quelle nicht. *Und der README ist die Datei, die ein Fremder
+    ZUERST liest.*
+
+    Geprueft wird nur, was sich ohne Uebersetzerlauf zaehlen laesst. Testzahl und
+    Mutationsquote kommen aus einem Lauf und tragen darum ihr Messdatum im Text.
+    """
+    r = WURZEL / "README.md"
+    if text is None:
+        if not r.is_file():
+            return []
+        text = r.read_text()
+    befunde = []
+
+    n_bsp = len(list((WURZEL / "beispiele").glob("*.gab")))
+    n_gift = len(list((WURZEL / "beispiele/gift").glob("*.gab")))
+    n_waechter = len(list(WURZEL.glob("pruefe-*.py"))) + len(list(WURZEL.glob("pruefe-*.sh")))
+
+    k = subprocess.run(["./pruefe-kennungen.py"], cwd=WURZEL, capture_output=True, text=True)
+    m = re.search(r"Kennungen: (\d+) vergeben", k.stdout)
+    n_kenn = m.group(1) if m else "?"
+
+    s = subprocess.run(["cargo", "run", "--quiet", "--bin", "gabbro", "--", "schablonen"],
+                       cwd=WURZEL, capture_output=True, text=True)
+    m = re.search(r"(\d+) Schablonen, \d+ davon unbewiesen, (\d+) maschinell bewiesen", s.stdout)
+    n_schab, n_bew = (m.group(1), m.group(2)) if m else ("?", "?")
+
+    y = subprocess.run(["./pruefe-syntax.sh"], cwd=WURZEL, capture_output=True, text=True)
+    m = re.search(r"EBNF: (\d+) Regeln", y.stdout)
+    n_regeln = m.group(1) if m else "?"
+    m = re.search(r"Wortschatz: (\d+) EBNF-Terminale, (\d+) Tabellenwoerter", y.stdout)
+    n_term, n_tab = (m.group(1), m.group(2)) if m else ("?", "?")
+
+    fuer = [
+        (r"(\d+) diagnostics", n_kenn, "Absagekennungen"),
+        (r"\*\*(\d+) EBNF rules\*\*", n_regeln, "EBNF-Regeln"),
+        (r"(\d+) / (?:\d+)\s*\|", n_term, "EBNF-Terminale"),
+        (r"\*\*(\d+), of which \d+ are machine-checked\*\*", n_schab, "Schablonen"),
+        (r"\*\*\d+, of which (\d+) are machine-checked\*\*", n_bew, "bewiesene Schablonen"),
+        (r"\| \*\*Guardians\*\* \| (\d+),", str(n_waechter), "Waechter"),
+        (r"(\d+) clean examples", str(n_bsp), "saubere Beispiele"),
+        (r"(\d+) poison files", str(n_gift), "Giftdateien"),
+    ]
+    for muster, heute, was in fuer:
+        for t in re.finditer(muster, text):
+            if t.group(1) != str(heute):
+                befunde.append(f"README: '{t.group(1)}' als {was} -- es sind {heute}")
+    return befunde
+
+
 def sprechprobe(zahlen):
     """In beide Richtungen: eine kaputte Liste MUSS fallen, eine saubere NICHT."""
     gift = """# Probe
@@ -245,7 +302,19 @@ Stehengebliebene Zahlen aus P1: 117 Regeln, 187 Terminale (heute 1 / 1)
         print(f"     {b}")
     print(f"  Saubere Liste: {len(b_sauber)} Befunde", end="")
     print(" -- ok" if not b_sauber else " -- GESCHEITERT (falsches Rot)")
-    return len(b_gift) >= 5 and not b_sauber
+
+    # **Und die README-Haelfte, in beide Richtungen.** Eine Kennzahlentafel, die keiner
+    # nachhaelt, faellt sonst genauso lautlos aus wie die acht Zahlen, die sie ersetzt hat.
+    echt = (WURZEL / "README.md").read_text()
+    verstellt = echt.replace("31 clean examples", "17 clean examples")
+    r_gift = pruefe_readme(verstellt)
+    r_sauber = pruefe_readme(echt)
+    print(f"  README-Gift:   {len(r_gift)} Befunde", end="")
+    print(" -- ok" if r_gift else " -- GESCHEITERT (verstellte Zahl kam durch)")
+    print(f"  README sauber: {len(r_sauber)} Befunde", end="")
+    print(" -- ok" if not r_sauber else " -- GESCHEITERT (falsches Rot)")
+
+    return len(b_gift) >= 5 and not b_sauber and bool(r_gift) and not r_sauber
 
 
 def main():
@@ -256,10 +325,19 @@ def main():
     if "--probe" in sys.argv:
         return 0
 
+    r_befunde = pruefe_readme()
+    print("\n== README.md ==")
+    if r_befunde:
+        for b in r_befunde:
+            print(f"  {b}")
+        print(f"== README: {len(r_befunde)} stehengebliebene Zahlen ==")
+    else:
+        print("  Kennzahlentafel deckt sich mit dem Gegenstand.")
+
     text = (WURZEL / "TODO.md").read_text()
     befunde = pruefe(text, zahlen)
     print("\n== TODO.md ==")
-    if not befunde:
+    if not befunde and not r_befunde:
         offen = len(re.findall(r"^- \[ \]", text, re.M))
         print(f"  {offen} offene Punkte, keine Doppelung, keine Etikettenkollision,")
         print("  kein Erledigtes, keine stehengebliebene Zahl.")
@@ -267,7 +345,7 @@ def main():
         return 0
     for b in befunde:
         print(f"  {b}")
-    print(f"== TODO: {len(befunde)} BEFUNDE ==")
+    print(f"== TODO: {len(befunde) + len(r_befunde)} BEFUNDE ==")
     return 1
 
 

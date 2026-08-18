@@ -52,11 +52,17 @@ denominator that shines instead of the one that costs.*
 
 | | | |
 |---|---|---|
-| **Compiler** | 10 passes, 3 complete, 7 partial, **0 open** | 90 diagnostics · `gabbro paesse` |
-| **Grammar** | **130 EBNF rules**, closed and reachable | vocabulary covers every terminal, 195 / 195 |
-| **Proof templates** | **19, of which 4 are machine-checked** | Isabelle2025-2, `beweise/` |
-| **Guardians** | 8, each with a two-way speech test | **65 of 65 mutations caught** |
-| **Corpus** | 19 clean examples, 69 poison files, 79 tests | `cargo test` |
+| **Compiler** | 10 passes, 3 complete, 7 partial, **0 open** | 124 diagnostics · `gabbro paesse` |
+| **Grammar** | **139 EBNF rules**, closed and reachable | vocabulary covers every terminal, 206 / 206 |
+| **Proof templates** | **20, of which 9 are machine-checked** | Isabelle2025-2, `beweise/` |
+| **Guardians** | 10, each with a two-way speech test | **151 of 152 mutations caught** *(run 2026-08-19)* |
+| **Corpus** | 31 clean examples, 104 poison files, 126 tests *(run 2026-08-19)* | `cargo test` |
+
+> **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
+> them was extended on the day it found them. *The number was maintained, the source was
+> not* — the same class as the six closed `gap:` lines and the eight revoked sentences.
+> Everything countable without a compiler run is now held mechanically by `pruefe-todo.py`;
+> the two that need a run carry their measurement date.
 
 **The templates are the number to watch, not the passes.** They are the surface onto which
 every rescue is deferred — *a template falls once, not per program* — and until 2026-08-16 that
@@ -89,8 +95,8 @@ in one day. When you find a number here, you can re-run it.
 cargo run --bin gabbro -- pruefe beispiele/*.gab     # check files
 cargo run --bin gabbro -- paesse                     # what each pass does and does NOT do
 cargo run --bin gabbro -- schablonen                 # the proof-template register
-cargo test                                           # 79 tests
-./mutiere-pruefer.py                                 # damage one rule at a time: 65 of 65
+cargo test                                           # 126 tests
+./mutiere-pruefer.py                                 # damage one rule at a time: 151 of 152
 ./pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
 ./pruefe-klauseln.py                                 # declared, exported, never read
 ./pruefe-widerruf.py                                 # sentences the folder has revoked, still standing
