@@ -2369,7 +2369,14 @@ etwas gebaut werden soll, ist teurer als ein großer, der allein steht.**
    Keine Kleinigkeit: eine Zusage, die im Zeugnis erscheint, in der
    Bibliotheks-ABI getragen werden soll und heute nirgends gegen den Rumpf **oder auch nur
    gegen die Wohlgeformtheit** geprüft wird. Der Wächter hat siebzehn Geschwister dazu benannt.
-4. **Der zweite Korpus** — **angefangen 2026-08-18**, und er hat beim ersten Hinsehen
+4. **Der zweite Korpus** — **abgeschlossen 2026-08-18: fünf Fragmente, vier tragen ohne
+   Rest.** Drei Funde, die ein eigener Korpus nicht geliefert hätte: **RCU als Klasse**
+   (gebaut), **ein Zählerüberlauf** im fremden Code (`M101` beim ersten Rendern), und **der
+   Fortschrittszeuge als Kommentar** (`free_pid() will awaken this task` — Gabbro macht daraus
+   eine Annahme mit Falsifikator). Der eine Rest ist ein Befund über die Sprache: `atomic` ist
+   ein Item und kein Slotfeld, also ist ein Zähler *im* Objekt nicht atomar deklarierbar.
+   *Fünf Fragmente sind keine Aussage über 64 000 Dateien — es sind Nachbildungen, und
+   gemessen ist die Form, nicht der Rumpf.* — angefangen hatte er beim ersten Hinsehen
    geliefert, wofür er da ist: einen **Konstruktfund**. RCU (578 Leseseiten in `kernel/`+`mm/`
    eines Linux-Baums) hat in Gabbro kein Wort — *keine Nachlässigkeit, sondern die Klasse,
    die der erste Korpus nie zeigte.* Dazu die zwei Zielgrößen an fremdem Code: `BUG_ON`/

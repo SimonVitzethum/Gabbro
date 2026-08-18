@@ -554,12 +554,11 @@ of items that are neither code nor a run — what remains is building and measur
       Absenkung waere zwei fremde Ruempfe wie bei `lock` (`_beobachten`/`_freigeben`), und die
       Zeugniszeile muesste sagen, dass diese Einheit eine RCU-Domaene liest -- **eine Aussage
       ueber die Rueckgewinnung, nicht ueber Zahlen.**
-- [ ] **«K2»: zwei Fragmente stehen, drei fehlen** *(2026-08-18)*. K2-F1 und K2-F2 sind
-      geschnitten und gemessen; **beide sind vom selben einen Konstrukt blockiert (RCU), und
-      der ganze Rest traegt** -- Sperre, Rang, Haltezeit, beschraenkte Wiederholung, benannter
-      Ueberlauf, Fortschrittsannahme, Indexschranke. *Und die Nachbildung ist keine
-      Uebersetzung:* die Tabelle ist erfunden, weil die fremde Struktur nicht mitgeschnitten
-      ist. Gemessen ist die FORM, nicht der Rumpf.
+- [ ] **«K2» ist abgeschlossen -- und fuenf Fragmente sind keine Aussage ueber 64 000
+      Dateien** *(2026-08-18)*. Vier von fuenf tragen ohne Rest; die Nachbildungen sind keine
+      Uebersetzungen, denn die Strukturen sind erfunden, wo sie nicht mitgeschnitten waren.
+      **Gemessen ist die FORM, nicht der Rumpf.** Wer die Zahl als Deckung liest, liest sie
+      falsch -- *dieselbe Warnung, die schon bei den elf Uebersetzungseinheiten steht.*
 - [ ] **Die Zaehlerueberlaufklasse gehoert in die Messungen, nicht nur in ein Fragment**
       *(2026-08-18)*. `M101` fand in K2-F2 einen Ueberlauf, den das Original nicht prueft --
       `atomic_long_inc_not_zero` schuetzt gegen NULL, nicht gegen die obere Schranke. **Wie

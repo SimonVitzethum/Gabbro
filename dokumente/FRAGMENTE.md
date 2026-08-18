@@ -1910,3 +1910,98 @@ Falsifikator, Indexschranke.
 > **Und es ist eine NACHBILDUNG, keine Übersetzung.** Die Tabelle ist erfunden, weil
 > `struct bsd_acct_struct` nicht mitgeschnitten ist. Gemessen ist damit die FORM des
 > Fragments und nicht sein Rumpf — derselbe Unterschied wie oben, eine Ebene tiefer.
+
+---
+
+# «K2» abgeschlossen — fünf Fragmente, und vier tragen ohne Rest
+
+> **2026-08-18, nach RCU.** K2-F1 und K2-F2 waren an einem Konstrukt blockiert; es gibt es
+> jetzt. Drei weitere sind dazugekommen, jedes für eine andere Klasse.
+
+## K2-F1 — `setpriority`: **beide Sprungmarken entfallen**
+
+```gabbro
+observes TASKLIST {
+    match nutzer_suchen(wer) {
+        None    => { return 1; }
+        Some(i) => { return Prozesse.slots[i].nice; }
+    }
+}
+```
+
+Im Original `out_unlock:` (gibt RCU frei) und `out:` (kehrt zurück). **Der Bereich endet mit
+dem Block, der Fehlerweg ist `match`.** *Die Marken verschwinden nicht, weil man sie
+umschreibt, sondern weil das Problem nicht auftritt.* — **0 Fehler.**
+
+## K2-F2 — `acct_get`: trägt, und ist strenger als das Vorbild
+
+Bereits gemessen: `goto again` ist ein `retry` mit Schranke und benanntem Überlauf, den das
+Original nicht hat; und **M1 fand einen Zählerüberlauf**, gegen den nur `!= 0` schützte.
+
+**Nach RCU bleibt ein Befund**, und er ist ein Befund über die Sprache: das Original benutzt
+`atomic_long_inc_not_zero` — *ein atomares RMW ist seine eigene Wechselseitigkeit.* In Gabbro
+ist `atomic` ein **Item und kein Slotfeld**, ein Zähler *im* Objekt also nicht atomar
+deklarierbar. `H010` verlangt dort eine Sperre, die das Vorbild nicht braucht.
+
+## K2-F3 — `sum_mthp_stat`: **dreizehn Zeilen werden eine Deklaration**
+
+```gabbro
+accumulates mthp_summe : u64 merge add per cpu 64;
+```
+
+Die Schleife über alle Kerne verschwindet, und die Reihenfolgeunabhängigkeit, auf die sie sich
+stillschweigend verlässt, ist **bewiesen** (`accumulates.monoid`). — **0 Fehler.**
+
+## K2-F4 — `pid_namespace`: der Fortschrittszeuge stand als KOMMENTAR da
+
+```c
+	/* Once all of the other tasks are gone from the pid_namespace
+	 * free_pid() will awaken this task. */
+	for (;;) { … schedule(); }
+```
+
+```gabbro
+forever warten
+    per_pass bounded 64 ops
+    on_exceeded wachhund_schlug_an
+    effects  { reads belegt }
+    progress free_pid_weckt_uns
+{ … }
+
+assume free_pid_weckt_uns
+    "Sind alle anderen Aufgaben aus dem Namensraum verschwunden, weckt `free_pid` diese hier."
+    falsifier sonde_kein_aufwecken;
+```
+
+**Der Kommentar IST die Annahme.** Gabbro macht aus ihm eine Deklaration mit Falsifikator, und
+dazu kommen die Schranke je Durchgang und der benannte Überlauf, die das Original nicht hat.
+— **0 Fehler.**
+
+## K2-F5 — `BUG_ON(addr >= end)`: die Zusicherung wird nicht geprüft, sie wird VERLANGT
+
+Dreimal dieselbe Zeile in einer Datei. In Gabbro steht die Aussage im Typ, und die Beziehung
+wird **einmal** geprüft, mit benanntem Ausgang.
+
+**Und die Gegenprobe ist die eigentliche Messung:** nimmt man den Vergleich heraus, fällt die
+Subtraktion.
+
+```
+`u32 in 0 .. 65535 - u32 in 0 .. 65535` leaves the width of the result type   -- M104
+die Rueckgabe requires `u32`, the value has `u32 in -65535 .. 65535`          -- M101
+```
+
+> *Die Zusicherung wird nicht geglaubt, sie wird erzwungen* — und zwar zur Übersetzungszeit.
+> Das ist die Zielgröße `BUG_ON`/`WARN_ON` **2034**, an einem Fall.
+
+## Stand von «K2»
+
+| | |
+|---|---|
+| **fünf Fragmente**, fünf Klassen | Sprungmarken · Wiederholung · per-Kern-Summe · unbeschränkte Schleife · Zusicherung |
+| **vier tragen ohne Rest** | F1, F3, F4, F5 |
+| **einer bleibt** | F2 — und der Rest ist ein Befund über die Sprache: kein Atomar im Slot |
+| **drei Funde**, die kein eigener Korpus geliefert hätte | RCU als Klasse · der Zählerüberlauf · der Fortschrittszeuge als Kommentar |
+
+**Und was das NICHT heißt:** fünf Fragmente sind keine Aussage über 64 000 Dateien. Es sind
+Nachbildungen, keine Übersetzungen — die Strukturen sind erfunden, wo sie nicht mitgeschnitten
+waren. *Gemessen ist die Form, nicht der Rumpf.*
