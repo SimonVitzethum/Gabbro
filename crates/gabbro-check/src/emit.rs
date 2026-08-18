@@ -1343,14 +1343,31 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     ));
     let mut versatz: u32 = 0;
     let mut pruefungen: Vec<String> = Vec::new();
-    for feld in &f.felder {
-        if feld.bitpos.is_some() || feld.typ.embeds.is_some() {
-            weigere(
-                absagen,
-                feld.span,
-                "`format` field with a bit position -- «B24» is open: what a position beyond \
-                 the word width refers to, and how it interacts with `endian`, is unsaid",
-            );
+    // **«B24» entschieden 2026-08-18: die Bitlage liegt IM EIGENEN WORT des Feldes.**
+    //
+    // Der Befund fragte zweierlei, und beides wird hier beantwortet statt umgangen:
+    //
+    // 1. *„Worauf bezieht sich eine Position jenseits der Wortbreite?"* -- **auf nichts.**
+    //    `hi >= breite(typ)` ist eine Absage, keine Bedeutung. Das ist die engere Antwort,
+    //    und sie erfindet nichts.
+    // 2. *„Wie wirkt sie mit `endian` zusammen?"* -- **das Wort wird zuerst in der erklaerten
+    //    Bytereihenfolge gelesen, dann werden die Bits aus dem WERT gezogen.** Bitnummern
+    //    zaehlen ueber den Wert, nicht ueber die Bytes. *Anders komponiert es nicht: ein
+    //    16-Bit-Feld hat in beiden Reihenfolgen dasselbe Bit 15.*
+    //
+    // **Und die Belegung eines Wortes muss es GENAU KACHELN** -- keine Luecke, keine
+    // Ueberlappung. Eine Luecke heisst `reserved`, und das Wort gibt es schon.
+    //
+    // > *Damit gibt es keine implizite Buchhaltung.* Ein Format sagt, welche Bits existieren;
+    // > der Erzeuger zaehlt nicht mit, wann ein Wort „voll" ist.
+    //
+    // Das ist genau die Mechanik, die `device`-Register seit dem 2026-08-14 tragen -- eine
+    // Vereinheitlichung zweier vorhandener Formen, kein neues Konstrukt.
+    let mut i_feld = 0usize;
+    while i_feld < f.felder.len() {
+        let feld = &f.felder[i_feld];
+        if feld.typ.embeds.is_some() {
+            weigere(absagen, feld.span, "`embeds` in a `format` -- that is a pointer form");
             return;
         }
         let TypExpr::Int(i) = &feld.typ.typ else {
@@ -1365,18 +1382,113 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         };
         let c = intty(i);
         let leser = lesewort(breite, gross);
-        if !feld.reserviert {
-            aus.push_str(&format!(
-                "static inline {c} {n}_{f2}(const {n} *v) {{ return ({c}){leser}(v->bytes + {versatz}); }}\n",
-                f2 = feld.name.text
-            ));
+
+        if feld.bitpos.is_none() {
+            if !feld.reserviert {
+                aus.push_str(&format!(
+                    "static inline {c} {n}_{f2}(const {n} *v) {{ return ({c}){leser}(v->bytes + {versatz}); }}\n",
+                    f2 = feld.name.text
+                ));
+            }
+            if let Some(b) = &feld.bedingung {
+                match pred_c_format(b, n, u, absagen) {
+                    Some(x) => pruefungen.push(x),
+                    None => {
+                        weigere(absagen, feld.span, "`where` clause form in a `format`");
+                        return;
+                    }
+                }
+            }
+            versatz += breite;
+            i_feld += 1;
+            continue;
         }
-        if let Some(b) = &feld.bedingung {
-            match pred_c_format(b, n, u, absagen) {
-                Some(x) => pruefungen.push(x),
-                None => {
-                    weigere(absagen, feld.span, "`where` clause form in a `format`");
-                    return;
+
+        // **Eine Bitgruppe: alle folgenden Felder mit Lage, gleicher Breite, ein Wort.**
+        let bits = breite * 8;
+        let mut belegt: u64 = 0;
+        let mut gruppe = Vec::new();
+        while i_feld < f.felder.len() {
+            let g = &f.felder[i_feld];
+            let Some(bp) = &g.bitpos else { break };
+            let TypExpr::Int(gi) = &g.typ.typ else { break };
+            if intty(gi) != c {
+                break;
+            }
+            let (hi, lo) = match bp {
+                BitPos::Bit(b) => (*b, *b),
+                BitPos::Bereich(h, l) => (*h, *l),
+            };
+            if hi < lo || hi >= bits as u128 {
+                weigere(
+                    absagen,
+                    g.span,
+                    "bit position beyond the word width -- «B24» is decided: a position lies \
+                     inside the field's OWN word, and beyond it there is nothing to mean",
+                );
+                return;
+            }
+            let maske: u64 = if hi - lo + 1 >= 64 {
+                u64::MAX
+            } else {
+                (((1u128 << (hi - lo + 1)) - 1) << lo) as u64
+            };
+            if belegt & maske != 0 {
+                weigere(
+                    absagen,
+                    g.span,
+                    "two bit positions overlap -- a word says which bits exist, and twice is \
+                     not an answer",
+                );
+                return;
+            }
+            belegt |= maske;
+            gruppe.push((g, hi, lo));
+            i_feld += 1;
+            // **Ein Wort endet, wenn seine Bits vollstaendig sind** -- und genau das macht
+            // die Gruppenbildung deterministisch, ohne vorauszuzaehlen.
+            //
+            // *Der erste Anlauf las alle aufeinanderfolgenden Bitfelder gleicher Breite als
+            // EIN Wort und meldete an `dscp @[7:2]` eine Ueberlappung mit `version @[7:4]`
+            // -- zwei Bytes des IP-Kopfs, als eines gelesen.* Die Kachelung ist damit nicht
+            // nur eine Pruefung, sondern die Wortgrenze selbst.
+            let voll_hier: u64 = if bits >= 64 { u64::MAX } else { (1u64 << bits) - 1 };
+            if belegt == voll_hier {
+                break;
+            }
+        }
+        // **Die Kachelung ist die Zusage.** Ohne sie waere die Wortgrenze geraten.
+        let voll: u64 = if bits >= 64 { u64::MAX } else { (1u64 << bits) - 1 };
+        if belegt != voll {
+            weigere(
+                absagen,
+                feld.span,
+                "the bit positions of this word leave a gap -- name it `reserved`; a format \
+                 says which bits EXIST, and the emitter does not count along",
+            );
+            return;
+        }
+        for (g, hi, lo) in gruppe {
+            if g.reserviert {
+                continue;
+            }
+            let maske: u128 = if hi - lo + 1 >= 64 {
+                u64::MAX as u128
+            } else {
+                (1u128 << (hi - lo + 1)) - 1
+            };
+            aus.push_str(&format!(
+                "static inline {c} {n}_{f2}(const {n} *v) {{ \
+                 return ({c})((({c}){leser}(v->bytes + {versatz}) >> {lo}) & {maske}u); }}\n",
+                f2 = g.name.text
+            ));
+            if let Some(b) = &g.bedingung {
+                match pred_c_format(b, n, u, absagen) {
+                    Some(x) => pruefungen.push(x),
+                    None => {
+                        weigere(absagen, g.span, "`where` clause form in a `format`");
+                        return;
+                    }
                 }
             }
         }

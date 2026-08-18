@@ -1,0 +1,56 @@
+-- 24 -- «B24» entschieden: die Bitlage liegt im EIGENEN WORT des Feldes.
+--
+-- **Der Befund fragte zweierlei**, und beides wird hier beantwortet statt umgangen:
+--
+--   „Worauf bezieht sich eine Position jenseits der Wortbreite?"  -> auf NICHTS. Absage.
+--   „Wie wirkt sie mit `endian` zusammen?"  -> das Wort wird zuerst in der erklaerten
+--                                             Bytereihenfolge gelesen, dann die Bits aus
+--                                             dem WERT gezogen.
+--
+-- *Bitnummern zaehlen ueber den Wert, nicht ueber die Bytes.* Anders komponiert es nicht:
+-- ein 16-Bit-Feld hat in beiden Reihenfolgen dasselbe Bit 15.
+--
+-- ## Die Kachelung ist die Wortgrenze
+--
+-- **Die Belegung eines Wortes muss es GENAU kacheln** -- keine Luecke, keine Ueberlappung.
+-- Eine Luecke heisst `reserved`, und das Wort gibt es schon.
+--
+-- Das ist nicht nur eine Pruefung, sondern die Wortgrenze SELBST: eine Bitgruppe endet, wenn
+-- ihre Bits vollstaendig sind. *Der erste Anlauf las alle aufeinanderfolgenden Bitfelder
+-- gleicher Breite als EIN Wort und meldete an `dscp @[7:2]` eine Ueberlappung mit
+-- `version @[7:4]` -- zwei Bytes des IP-Kopfs, als eines gelesen.*
+--
+-- **Damit gibt es keine implizite Buchhaltung.** Ein Format sagt, welche Bits existieren; der
+-- Erzeuger zaehlt nicht mit, wann ein Wort „voll" ist.
+--
+-- ## Und es ist kein neues Konstrukt
+--
+-- `device`-Register tragen dieselbe Mechanik seit dem 2026-08-14: typisierter Wert in einem
+-- Bitbereich, Maske und Schiebung zur Uebersetzungszeit. **Eine Vereinheitlichung zweier
+-- vorhandener Formen.**
+--
+-- *Der Ertrag ist der IP-Kopf -- und damit die eine Entscheidung zwischen Gabbro und einem
+-- Netzwerkstack.*
+
+module beispiel::ipkopf {
+
+format IpKopf endian big {
+    -- Byte 0: zwei Halbbytes, die es genau kacheln.
+    version      : u8  @[7:4],
+    ihl          : u8  @[3:0],
+    -- Byte 1: sechs Bits Dienstklasse, zwei Bits Staukennzeichen.
+    dscp         : u8  @[7:2],
+    ecn          : u8  @[1:0],
+    gesamtlaenge : u16,
+    kennung      : u16,
+    -- Bytes 6-7: drei Flaggen und dreizehn Bits Bruchstueckversatz in EINEM Wort.
+    flags        : u16 @[15:13],
+    fragment     : u16 @[12:0],
+    ttl          : u8,
+    protokoll    : u8,
+    pruefsumme   : u16,
+    quelle       : u32,
+    ziel         : u32,
+}
+
+}

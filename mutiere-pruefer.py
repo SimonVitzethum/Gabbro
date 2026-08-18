@@ -1199,6 +1199,27 @@ MUTATIONEN = [
         "B7 -- ein Verbundkonstruktor zaehlt als Aufruf; `P` wird unbekannter Gerufener "
         "und jede Huelle darueber untere Schranke",
     ),
+    # -- «B24»: die Kachelung IST die Wortgrenze ---------------------------------------------
+    #
+    # Ohne den Abbruch bei vollem Wort liest der Erzeuger alle aufeinanderfolgenden Bitfelder
+    # gleicher Breite als EIN Wort -- und meldet am zweiten Byte des IP-Kopfs eine
+    # Ueberlappung, die keine ist.
+    Mutation(
+        "bitgruppe-endet-nicht-am-vollen-wort",
+        "emit.rs",
+        "            if belegt == voll_hier {\n                break;\n            }",
+        "            if false {\n                break;\n            }",
+        "B24 -- die Bitgruppe frisst das naechste Wort mit; der IP-Kopf faellt an einer "
+        "Ueberlappung, die keine ist",
+    ),
+    Mutation(
+        "bitlage-jenseits-des-wortes-geht-durch",
+        "emit.rs",
+        "            if hi < lo || hi >= bits as u128 {",
+        "            if hi < lo {",
+        "B24 -- eine Bitlage jenseits der Wortbreite wird gelesen statt abgesagt; "
+        "die Maske greift ins Leere",
+    ),
     # -- `opaque` beisst ---------------------------------------------------------------------
     #
     # **Ohne diese Zeile wird ein undurchsichtiger Typ wieder als sein TRAEGER gerechnet**, und

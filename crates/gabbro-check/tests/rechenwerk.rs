@@ -1553,3 +1553,61 @@ impl fn setze(i : index into Ecken, v : F32) effects { writes Ecken } costs <= 4
     let _ = gabbro_check::pruefe(&b, &mut a);
     assert_eq!(a.fehler_zahl(), 0, "ein Treiber bewegt, er rechnet nicht:\n{}", a.zeige(bewegt));
 }
+
+/// **«B24» entschieden: die Bitlage liegt im EIGENEN WORT des Feldes.**
+///
+/// Der Befund fragte zweierlei, und beides wird beantwortet statt umgangen:
+///
+/// | Frage | Antwort |
+/// |---|---|
+/// | worauf bezieht sich eine Position jenseits der Wortbreite? | **auf nichts** — eine Absage |
+/// | wie wirkt sie mit `endian` zusammen? | das Wort wird zuerst gelesen, dann die Bits aus dem **Wert** gezogen |
+///
+/// **Die Kachelung ist nicht nur eine Prüfung, sondern die Wortgrenze selbst.** *Der erste
+/// Anlauf las alle aufeinanderfolgenden Bitfelder gleicher Breite als EIN Wort und meldete an
+/// `dscp @[7:2]` eine Überlappung mit `version @[7:4]` — zwei Bytes des IP-Kopfs, als eines
+/// gelesen.*
+#[test]
+fn eine_bitlage_liegt_im_eigenen_wort() {
+    let c_von = |q: &str| -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.text.clone()).collect())
+    };
+
+    // **Zwei Bytes, vier Felder** — und die Wortgrenze fällt aus der Kachelung.
+    let (c, f) = c_von(
+        "module t { format K endian big { a : u8 @[7:4], b : u8 @[3:0], \
+         c : u8 @[7:2], d : u8 @[1:0], } }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    assert!(c.contains("(v->bytes + 0) >> 4) & 15u"), "a liegt in Byte 0, oben:\n{c}");
+    assert!(c.contains("(v->bytes + 1) >> 2) & 63u"), "c liegt in Byte 1:\n{c}");
+
+    // Ein 16-Bit-Wort mit drei Flaggen und dreizehn Bits — der Fall des IP-Kopfs.
+    let (c, f) = c_von(
+        "module t { format K endian big { f : u16 @[15:13], g : u16 @[12:0], } }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    assert!(c.contains("gabbro_be16(v->bytes + 0) >> 13) & 7u"), "{c}");
+
+    // **Jenseits der Wortbreite ist nichts.**
+    let (_, f) = c_von("module t { format K endian big { w : u8 @[9:8], r : u8 @[7:0], } }");
+    assert!(
+        f.iter().any(|s| s.contains("beyond the word width")),
+        "eine Lage jenseits des Wortes ist eine Absage, keine Bedeutung: {f:?}"
+    );
+
+    // **Eine Lücke heisst `reserved`** — und ohne sie ist die Wortgrenze geraten.
+    let (_, f) = c_von("module t { format K endian big { o : u8 @[7:4], u : u8 @[1:0], } }");
+    assert!(f.iter().any(|s| s.contains("leave a gap")), "{f:?}");
+
+    // Und `reserved` schliesst sie: das Feld existiert, sein Leser nicht.
+    let (c, f) = c_von(
+        "module t { format K endian big { o : u8 @[7:4], m : u8 @[3:2] reserved, \
+         u : u8 @[1:0], } }",
+    );
+    assert!(f.is_empty(), "`reserved` fuellt die Luecke: {f:?}");
+    assert!(!c.contains("K_m("), "ein reserviertes Feld bekommt keinen Leser:\n{c}");
+}

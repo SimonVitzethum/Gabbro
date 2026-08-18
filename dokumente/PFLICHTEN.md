@@ -138,7 +138,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 403–419 | a `class r` register is never written, a `class w` never read | K | `R002`/`R003` |
 | 425–426 | FSTS is MIXED: 7:0 are RW1C, 15:8 (FRI) are r | K | **gap: «B23» — `regdecl` carries ONE class. FRI is untypable, and FRI is how the driver finds the record at all** |
 | 436 | the computed bank location lies inside the register file | K | `M103` via `count 256` |
-| 438–442 | a bit position beyond 64 — which word does it mean? | K | **gap: «B24» — `bitpos` says nothing about it, nor about the interaction with `endian`** |
+| 438–442 | a bit position beyond 64 — which word does it mean? | K | `@[hi:lo]` in a `format` — **«B24» decided 2026-08-18.** A position lies inside the field's **own word**; beyond it there is **nothing to mean** (refusal, not a meaning). The word is read in the declared byte order **first**, then the bits are taken from the *value*. **And the tiling IS the word boundary**: a bit group ends when its bits are complete, a gap must be `reserved`. *A unification of two existing forms — `device` registers have carried this mechanic since 2026-08-14* |
 | 444 | IOTLB likewise | K | `M103` |
 | 450–453 | the pre-state of a `transition` at `GCMD.TE` comes from `GSTS.TES` | K | **gap: «B26» — half resolved; `mirrors` says where the carried bits come from, not whether it also supplies the pre-state** |
 | 454–455 | `setze_rtp` — TE off or RTPS already set | L | the human — *the remapping unit's protocol* |
@@ -152,7 +152,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 493–499 | the reason code lies in 0x01..0x0c | K | `M101` — **and only because the codes happen to be contiguous: «B25», `intty` carries an interval, not a value set** |
 | 498 | an empty fault register is REFUSED, not reported empty | K | **gap: «B22-near» — `format` knows only refusal. In the original that is the difference between "no fault" and "record unreadable"** |
 | 505–510 | the second-level PTE layout | K | `format` |
-| 512–518 | the context entry layout, `AW @[66:64]` crosses the word | K | `format`; «B24» again |
+| 512–518 | the context entry layout, `AW @[66:64]` crosses the word | K | **«B24» decided 2026-08-18 — and the decision REFUSES this notation.** A position lies inside the field's own word; `u64` has bits 0…63, so `@[66:64]` names nothing. *The layout stays writable — as a second `u64` field with `@[2:0]`.* **The programmer names the second word instead of the emitter guessing it**, and that is the point: a 128-bit entry is two words, and saying so is cheaper than a rule about crossing |
 | 520–522 | TE arms translation; DMA without a context entry faults | K | `assume` **with a falsifier** |
 | 524–526 | GCMD is written whole | K | `assume` — **expressly `unfalsifiable`, with the reason: a probe would have to open the very window the mechanism is built against** |
 | 528–530 | after FSTS.PFO further faults are dropped | K | `assume` **with a falsifier** |
@@ -412,7 +412,7 @@ carries and the Rust original did not — because it does not write them down.*
 | **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
 | **Plumbing (K)** | **171** | 72 % |
 | **Logic (L)** | **67** | 28 % |
-| **hanging** | **34** | of which **`H = 19` are K** — **12 anchored at a line, 7 lowerings.** Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
+| **hanging** | **34** | of which **`H = 18` are K** — **11 anchored at a line, 7 lowerings.** Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
 **L : K = 0,38 : 1.**
@@ -472,12 +472,12 @@ ausdrücklich verlangt hatte.
 | **«B26» — der Vorzustand einer `transition`** | *„ob `mirrors` auch den Vorzustand einer `transition` an `GCMD.TE` aus `GSTS.TES` bezieht, sagt `SYNTAX.md` nicht"* — **der Erzeuger beantwortet es mit ja und misst es**: `1 1 1 1`, und die zweite und vierte Zahl sind die Falle. *Die Antwort gehört jetzt in `SYNTAX.md`, nicht in den Erzeuger* |
 | **«B33» — die V-Regeln verengen keinen Registerort** | Der Ordner schrieb: *„Ob das Absicht ist (ein Register kann sich zwischen Prüfung und Rechnung ändern!) oder eine Lücke, entscheidet der Ordner. **Wenn es Absicht ist, gehört die Begründung aufgeschrieben** — sie wäre ein starkes Argument."* **Sie ist es, und sie steht jetzt im erzeugten C:** ein Registerzugriff wird `volatile`, und `volatile` IST die Aussage *„dieser Ort kann sich zwischen zwei Lesungen ändern"*. Eine Verengung wäre an dieser Stelle falsch, nicht bloß fehlend |
 
-### Offen — **`H = 19`**, abgelesen mit `./zaehle-pflichten.py --haengend`, und die Spalte rechts sagt, wem sie gehören
+### Offen — **`H = 18`**, abgelesen mit `./zaehle-pflichten.py --haengend`, und die Spalte rechts sagt, wem sie gehören
 
 | Ursache | # | wem |
 |---|---:|---|
 | **die Absenkung** | 7 | F1–F6, F9 — davon **fünf durch Befunde gesperrt**, nicht durch Arbeit |
-| **Gerätenotation** | 5 | «B23» gemischte Registerklasse · «B24» Bitlage jenseits des Wortes (×2) · «B26» `QUEUE_SIZE` ohne benannten Ausgang · «B18» Phasen am `device` |
+| **Gerätenotation** | 3 | «B23» gemischte Registerklasse · «B26» `QUEUE_SIZE` ohne benannten Ausgang · «B18» Phasen am `device` — *«B24» geschlossen 2026-08-18, beide Stellen* |
 | **handgeschriebenes `narrow`** | **1** | nur `F6:1100` — **der Zweig kann nicht genommen werden und muss dastehen.** *K100.1 (2026-08-17) hat die drei Stellen getrennt: F10:1660 (feindliches DTB) und F1:268 (das zweite Netz) sind **Logik**, nicht Klempnerrest* |
 | **`format`/Verbund** | 1 | «B22-nah» Absage statt Abwesenheit — *«B7» geschlossen 2026-08-17, **drei** Stellen (F4:892, F5:988, F6:1106), nicht zwei; die dritte stand unter «B6»+«B7» und beide sind jetzt zu* |
 | ~~**die Reihenfolgezusage**~~ | **0** | **«B37» geschlossen 2026-08-17** — `order`/`advances`, Pass 11, fünf Absagecodes, vier Giftproben. *Der Ausweg stand in der Befundzeile selbst; gebaut ist der, der den Wortschatz nicht je Schritt wachsen lässt* |

@@ -515,7 +515,39 @@ lauf "beispiel23" "$W/beispiele/23-akkumulatoren.gab" "$TREIBER23" "19 3 3" \
      's/return (uint64_t)~z;/return z;/' \
      "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 4 direkte Formen, 3 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
-echo "== EMISSION: ALL PASS -- 10 Uebersetzungseinheiten durchgestochen =="
+
+# -- 11. «B24» entschieden: der IP-Kopf, an einem echten Paket gemessen ------------------
+#
+# **Die Bitlage liegt im EIGENEN WORT des Feldes**, und das Wort wird zuerst in der erklaerten
+# Bytereihenfolge gelesen. Der Treiber legt einen echten IPv4-Kopf hin und liest ihn zurueck.
+#
+# *Das Gift dreht die Schiebung um -- dann liest `version` die unteren vier Bits statt der
+# oberen, und aus 4 wird 5.*
+TREIBER24='#include <stdio.h>
+#include "@ERZEUGT@"
+static const unsigned char paket[20] = {
+    0x45, 0x28, 0x00, 0x54,      /* v=4 ihl=5 | dscp=10 ecn=0 | len=84 */
+    0x1c, 0x46, 0x40, 0x00,      /* id | flags=2 frag=0            */
+    0x40, 0x06, 0xb1, 0xe6,      /* ttl=64 proto=6 | pruefsumme    */
+    0xac, 0x10, 0x0a, 0x63,
+    0xac, 0x10, 0x0a, 0x0c
+};
+int main(void) {
+    IpKopf k = { paket, 20 };
+    printf("%u %u %u %u %u %u %u\n",
+           IpKopf_version(&k), IpKopf_ihl(&k), IpKopf_dscp(&k), IpKopf_ecn(&k),
+           IpKopf_flags(&k), IpKopf_fragment(&k), IpKopf_protokoll(&k));
+    return 0;
+}
+'
+#    Erwartet:  4 5 10 0 2 0 6
+#      Die ERSTEN ZWEI sind die Falle: `version` und `ihl` teilen Byte 0. Wer die Schiebung
+#      vertauscht, liest 5 und 4 -- beides gueltige Zahlen, und kein Typ sagt etwas.
+lauf "beispiel24" "$W/beispiele/24-ip-kopf.gab" "$TREIBER24" "4 5 10 0 2 0 6" \
+     's/>> 4) & 15u/>> 0) \& 15u/' \
+     "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 0 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+
+echo "== EMISSION: ALL PASS -- 11 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser zehn Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Zehn Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser elf Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Elf Ja-Aussagen sind keine ueber die Sprache."
