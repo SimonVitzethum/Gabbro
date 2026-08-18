@@ -11,10 +11,74 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     geltungsbereich(&baum.items, absagen);
+    entrust_annahme(baum, absagen);
+}
+
+/// **`entrust` nennt eine Annahme, und sie muss es GEBEN.**
+///
+/// Dieselbe Frage wie bei `progress` (`S003`/`S004`), an einem anderen Konstrukt -- und
+/// darum steht sie hier und nicht dort: *ob ein Name auf etwas Erklaertes zeigt, ist die
+/// Frage des Namenspasses.* Der Sammler ist derselbe (`crate::annahmen`), damit die Antwort
+/// es auch ist.
+///
+/// **Und sie ist der einzige Leser, den `entrust` bekommt.** Ueber den Rumpf des Gastes sagt
+/// Gabbro nichts -- keine Kosten, keine Wirkungen, keine Terminierung. *Was bliebe, wenn auch
+/// die Annahme ungeprueft waere, ist eine Deklaration, die nichts behauptet.*
+fn entrust_annahme(baum: &Programm, absagen: &mut Absagen) {
+    let annahmen = crate::annahmen(baum);
+    let mut erklaert: HashSet<String> = HashSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let Some(n) = item.art.name() {
+            erklaert.insert(n.text.clone());
+        }
+    });
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Entrust(t) = &item.art else { return };
+        if !erklaert.contains(&t.raum.text) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N006",
+                    t.raum.span,
+                    format!("`entrust {} at {}` -- the space is not declared here", t.name.text, t.raum.text),
+                )
+                .mit_notiz(
+                    "`at` nimmt einen NAMEN und keinen Ausdruck: der Raum ist ein deklariertes \
+                     Ding. Ein `entrust` auf einen gerechneten Wert waere ein Sprung an eine \
+                     ausgerechnete Adresse",
+                ),
+            );
+        }
+        match annahmen.get(&t.annahme.text) {
+            None => absagen.schiebe(
+                Absage::fehler(
+                    "N004",
+                    t.annahme.span,
+                    format!("`entrust {}` names no declared assumption", t.name.text),
+                )
+                .mit_notiz(
+                    "der Gast bekommt Register, einen Stapel und einen `code`-Raum; DASS er \
+                     seinen Vertrag haelt, ist eine Aussage ueber die Umgebung und gehoert \
+                     in die Annahmenschicht -- sonst steht sie in keinem Manifest",
+                ),
+            ),
+            Some(false) => absagen.schiebe(
+                Absage::fehler(
+                    "N005",
+                    t.annahme.span,
+                    format!("`entrust {}` rests on an unfalsifiable assumption", t.name.text),
+                )
+                .mit_notiz(
+                    "eine Annahme ueber fremden Code, der keine Sonde je widersprechen kann, \
+                     ist keine Isolation, sondern ein Wunsch",
+                ),
+            ),
+            Some(true) => {}
+        }
+    });
 }
 
 fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {

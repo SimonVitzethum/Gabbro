@@ -2362,3 +2362,65 @@ In `02-geraet.gab` war der Zeuge ein **Synonym**: `geraet_quittiert` meinte die 
 > Und die Ratsche des Klauselwächters hat beim nächsten Lauf **nach oben** angeschlagen:
 > `fortschritt` ist gestiegen, der Eintrag war veraltet. *Genau dafür klemmt sie in beide
 > Richtungen.*
+
+---
+
+# `entrust` steht — ein Wort, ein Item, eine Zeugniszeile, drei Absagen
+
+Der Vorschlag lautete: *„ein `code`-Raum, dessen Inhalt Gabbro nicht kennt, mit deklariertem
+Eintrittsvertrag und einem `assume`-Eintrag im Zeugnis. Ein Wort, eine Zeile Zeugnisformat,
+kein neuer Pass."* So steht es, mit einer Abweichung und einem Fund.
+
+```gabbro
+entrust jitpuffer at Gastbild arch x86_64 {
+    regs in { eintritt : rdi, kappe : rsi, }
+    stack  gaststapel
+    assume gast_bleibt_in_seinem_raum;
+}
+```
+
+**Bewusst kleiner als `entry`:** kein `regs out`, kein `preserves`, kein `clobbers`, kein
+`dispatch`. *Über das, was der Gast zurückgibt, kann Gabbro nichts sagen — eine Klausel dafür
+wäre eine Zusage über ein Programm, das der Übersetzer nie sieht.*
+
+## Die Abweichung: `at` nimmt einen NAMEN, keinen Ausdruck
+
+Der erste Entwurf ließ dort einen Ausdruck zu. Dann wäre `raum` sofort die einundfünfzigste
+ungelesene Klausel gewesen — an dem Tag, an dem der Wächter dafür gebaut wurde. **Ein Name
+ist prüfbar** (`N006`), und die Begründung ist keine Bequemlichkeit: *ein `entrust` auf einen
+gerechneten Wert wäre ein Sprung an eine ausgerechnete Adresse* — genau das, was nicht
+nennbar sein soll.
+
+## Der einzige Leser, den `entrust` bekommt — und er ist derselbe wie bei `progress`
+
+| | |
+|---|---|
+| `N004` | die Annahme ist **nicht erklärt** — sie steht in keinem Manifest, kommt in kein Zeugnis |
+| `N005` | die Annahme ist `unfalsifiable` — *keine Isolation, sondern ein Wunsch* |
+| `N006` | der Raum ist hier nicht deklariert |
+
+Derselbe Sammler wie `S003`/`S004`, damit die Antwort dieselbe ist. **Über den Rumpf des
+Gastes sagt Gabbro nichts** — keine Kosten, keine Wirkungen, keine Terminierung. *Was bliebe,
+wenn auch die Annahme ungeprüft wäre, ist eine Deklaration, die nichts behauptet.*
+
+## Und eine vierte Klausel-Klasse, mit scharfem Kriterium
+
+`regs_gast` und `stapel` liest kein Pass — und das ist richtig, denn der Gast steht nicht im
+Baum. Sie sind **FREMD**, nicht ZUSAGE. Damit die Klasse keine Ausnahmeliste wird, hat sie
+eine Bedingung:
+
+> **FREMD ist nur zulässig, wenn das Zeugnis die Klausel DRUCKT.** Wer nicht prüfen kann,
+> exportiert. *„Kann man nicht prüfen" ist keine Buchung.*
+
+Die `entrust`-Zeile in Abschnitt E trägt den ganzen Vertrag:
+
+```
+jitpuffer   GAST auf `x86_64`, Stapel `gaststapel`, Register { eintritt: rdi, kappe: rsi }
+            -- Gabbro sagt ueber den Rumpf NICHTS; es gilt `assume gast_bleibt_in_seinem_raum`
+```
+
+## Was NICHT dasteht: die Absenkung
+
+Der Erzeuger weigert sich benannt (`C001`). Die Übergabe ist ein Registervertrag plus Sprung —
+**dieselbe Baustelle wie `entry`, und die ist gemessen leer.** *Wer `entrust` absenkt, senkt
+den Eintrittsvertrag zum ersten Mal ab.*

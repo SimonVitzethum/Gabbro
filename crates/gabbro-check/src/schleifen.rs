@@ -26,7 +26,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let div = divergierende(baum);
     let lg = Lage {
         div: &div,
-        annahmen: annahmen(baum),
+        annahmen: crate::annahmen(baum),
     };
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         ItemArt::Funktion(f) => {
@@ -199,27 +199,6 @@ fn ziel_pruefen(ziel: &Ident, marken: &[String], wort: &str, absagen: &mut Absag
         a = a.mit_notiz(format!("im Geltungsbereich: {}", marken.join(", ")));
     }
     absagen.schiebe(a);
-}
-
-/// Sammelt die Annahmenschicht: Name -> ist sie falsifizierbar?
-///
-/// `assume` und `axiom` fuehren dieselbe Klasse (`AnnahmeKlasse`), und beide duerfen einen
-/// Fortschritt tragen -- *wer die Schleife beendet, kann eine Umgebungszusage sein oder eine
-/// Maschineneigenschaft.*
-fn annahmen(baum: &Programm) -> std::collections::BTreeMap<String, bool> {
-    let mut aus = std::collections::BTreeMap::new();
-    crate::fuer_jedes_item(baum, &mut |item| {
-        let (name, klasse) = match &item.art {
-            ItemArt::Assume(a) => (&a.name, &a.klasse),
-            ItemArt::Axiom(a) => (&a.name, &a.klasse),
-            _ => return,
-        };
-        aus.insert(
-            name.text.clone(),
-            matches!(klasse, AnnahmeKlasse::Falsifizierbar(_)),
-        );
-    });
-    aus
 }
 
 /// **`progress` hatte bis 2026-08-18 keinen Leser** -- ausgewiesen von `pruefe-klauseln.py`.

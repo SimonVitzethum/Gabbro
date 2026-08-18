@@ -280,6 +280,27 @@ pub(crate) fn fuer_jedes_item(baum: &Programm, f: &mut impl FnMut(&Item)) {
 /// Wie oben, aber **mit dem Modulpfad**. Ohne ihn kann ein Pass einen Namen nicht
 /// aufloesen -- er sieht `nimm` und weiss nicht, ob `eins::nimm` oder `zwei::nimm` gemeint
 /// ist. Genau daran loeschte M1 bis zum 2026-08-14 Bereichspruefungen stillschweigend.
+/// Sammelt die Annahmenschicht: Name -> ist sie falsifizierbar?
+///
+/// `assume` und `axiom` fuehren dieselbe Klasse (`AnnahmeKlasse`), und beide duerfen einen
+/// Fortschritt tragen -- *wer die Schleife beendet, kann eine Umgebungszusage sein oder eine
+/// Maschineneigenschaft.*
+pub fn annahmen(baum: &Programm) -> std::collections::BTreeMap<String, bool> {
+    let mut aus = std::collections::BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let (name, klasse) = match &item.art {
+            ItemArt::Assume(a) => (&a.name, &a.klasse),
+            ItemArt::Axiom(a) => (&a.name, &a.klasse),
+            _ => return,
+        };
+        aus.insert(
+            name.text.clone(),
+            matches!(klasse, AnnahmeKlasse::Falsifizierbar(_)),
+        );
+    });
+    aus
+}
+
 pub fn fuer_jedes_item_im_modul(baum: &Programm, f: &mut impl FnMut(&Item, &str)) {
     fn geh(items: &[Item], pfad: &str, f: &mut impl FnMut(&Item, &str)) {
         for i in items {

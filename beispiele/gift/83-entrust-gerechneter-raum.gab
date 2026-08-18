@@ -1,0 +1,13 @@
+-- erwartet: N006
+-- **Ein `entrust` auf einen Namen, den diese Einheit nicht kennt.** `at` nimmt einen NAMEN
+-- und keinen Ausdruck: der Raum ist ein deklariertes Ding. Wer hier einen unbekannten Namen
+-- schreibt, springt an eine Adresse, die in dieser Uebersetzungseinheit nirgends steht.
+assume gast_bleibt_drin
+    "Der Gast bleibt in seinem Raum."
+    falsifier sonde_ausbruch;
+
+entrust jitpuffer at irgendwohin arch x86_64 {
+    regs in { eintritt : rdi, }
+    stack  gaststapel
+    assume gast_bleibt_drin;
+}

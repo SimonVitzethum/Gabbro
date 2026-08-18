@@ -235,6 +235,13 @@ pub const EINORDNUNG: &[Posten] = &[
         grund: "eine beschraenkte `for`-Schleife; die Schranke kommt aus `count N`",
     },
     Posten {
+        konstrukt: "entrust",
+        traegt: Traegt::Fremd,
+        grund: "der Raum, dessen INHALT Gabbro nicht kennt -- keine Kosten, keine Wirkungen, \
+                keine Terminierung. Was dasteht, ist der Vertrag am EINTRITT und die Annahme, \
+                unter der er gilt",
+    },
+    Posten {
         konstrukt: "retry",
         traegt: Traegt::Schablone("table.induktion"),
         grund: "Budget geteilt durch Kosten je Durchgang — die Zahl steht im C, nicht im Kopf",
@@ -328,6 +335,28 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             ));
         }
         ItemArt::Assume(_) | ItemArt::Axiom(_) => zaehle(&mut e, "assume / axiom"),
+        // **«entrust» -- die eine Zeile, um derentwillen das Wort existiert.**
+        //
+        // Sie nennt den ganzen Vertrag, nicht bloss den Namen: *wer das Zeugnis liest, muss
+        // sehen, was der Gast beim Eintritt hat, und unter welcher Annahme.* Ein `entrust`
+        // ohne diese Zeile waere ein Sprung ins Ungezeugte, den das Zeugnis verschweigt.
+        ItemArt::Entrust(t) => {
+            zaehle(&mut e, "entrust");
+            let regs = t
+                .regs_gast
+                .iter()
+                .map(|(r, ty)| format!("{}: {}", r.text, ty.text))
+                .collect::<Vec<_>>()
+                .join(", ");
+            e.fremde.push((
+                t.name.text.clone(),
+                format!(
+                    "GAST auf `{}`, Stapel `{}`, Register {{ {} }} -- \
+                     Gabbro sagt ueber den Rumpf NICHTS; es gilt `assume {}`",
+                    t.arch.text, t.stapel.text, regs, t.annahme.text
+                ),
+            ));
+        }
         ItemArt::Funktion(f) => {
             if matches!(f.klasse, Some(FnKlasse::Spec)) {
                 zaehle(&mut e, "fn (spec)");
@@ -417,6 +446,7 @@ fn art_name(a: &ItemArt) -> &'static str {
         ItemArt::Accumulates(_) => "accumulates",
         ItemArt::Walk(_) => "walk",
         ItemArt::Entry(_) => "entry",
+        ItemArt::Entrust(_) => "entrust",
         ItemArt::Boot(_) => "boot",
     }
 }

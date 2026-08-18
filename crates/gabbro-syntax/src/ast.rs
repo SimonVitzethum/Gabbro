@@ -80,6 +80,7 @@ pub enum ItemArt {
     Accumulates(AccDecl),
     Walk(WalkDecl),
     Entry(EntryDecl),
+    Entrust(EntrustDecl),
     Boot(BootDecl),
 }
 
@@ -107,6 +108,7 @@ impl ItemArt {
             ItemArt::Accumulates(a) => Some(&a.name),
             ItemArt::Walk(w) => Some(&w.name),
             ItemArt::Entry(e) => Some(&e.name),
+            ItemArt::Entrust(e) => Some(&e.name),
             ItemArt::Boot(b) => Some(&b.name),
         }
     }
@@ -134,6 +136,7 @@ impl ItemArt {
             ItemArt::Accumulates(_) => "accumulates",
             ItemArt::Walk(_) => "walk",
             ItemArt::Entry(_) => "entry",
+            ItemArt::Entrust(_) => "entrust",
             ItemArt::Boot(_) => "boot",
         }
     }
@@ -1326,6 +1329,36 @@ pub enum Verschachtelt {
     Nie,
     Maskiert,
     Begrenzt(Expr),
+}
+
+/// **«entrust» -- der Raum, dessen INHALT Gabbro nicht kennt** (2026-08-18).
+///
+/// Gabbro sagt ueber den Gast **nichts**: keine Kosten, keine Wirkungen, keine Terminierung,
+/// keine Blattheit. Was es sagt, ist der **Vertrag am Eintritt**. *Das ist keine Luecke,
+/// sondern der Zweck eines Mikrokernels -- fuer den Gast gilt Isolation statt Beweis.*
+///
+/// **Der Vertrag ist derselbe wie bei `entry`** -- und der war am Tag, an dem dieses Item
+/// entstand, gemessen leer: zwoelf Felder, und keine Datei ausserhalb des Lesers nannte
+/// `EntryDecl` (`pruefe-klauseln.py`). *Wer `entrust` baut, baut ihn zum ersten Mal.*
+#[derive(Debug, Clone)]
+pub struct EntrustDecl {
+    pub name: Ident,
+    /// Der `code`-Raum -- ein **Name**, kein Ausdruck.
+    ///
+    /// *Ein `entrust` auf einen gerechneten Wert waere ein Sprung an eine ausgerechnete
+    /// Adresse* -- genau das, was nicht nennbar sein soll. `N006` haelt ihn gegen die
+    /// Deklarationen dieser Einheit.
+    pub raum: Ident,
+    pub arch: Ident,
+    /// Was der Gast beim Eintritt in den Registern hat.
+    pub regs_gast: Vec<(Ident, Ident)>,
+    /// Auf welchem Stapel er laeuft.
+    pub stapel: Ident,
+    /// **Pflicht, und nicht schmueckend.** Dass der Gast seinen Vertrag haelt, ist eine
+    /// Aussage ueber die Umgebung; sie muss erklaert und FALSIFIZIERBAR sein
+    /// (`N004`/`N005`) -- dieselbe Regel wie `progress` (`S003`/`S004`).
+    pub annahme: Ident,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]

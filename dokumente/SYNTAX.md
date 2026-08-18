@@ -100,7 +100,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
              atomic acquire release seq relaxed nothing accumulates merge
              max min add or and held protects rank shared
              embeds scale walk levels node down leaf mappings
-             entry vector regs out preserves clobbers stack dispatch
+             entry entrust vector regs out preserves clobbers stack dispatch
              per cpu ist nested masked awaits port step via
   Domaenen   slots of chain descendants ancestors queue elems fields threads
              reaches via
@@ -166,7 +166,7 @@ program    = { item } ;
 item       = [ "when" constexpr ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | reason | state | device | assume | axiom | check
-             | atomicdecl | lockdecl | gruppedecl | accdecl | walkdecl | entrydecl
+             | atomicdecl | lockdecl | gruppedecl | accdecl | walkdecl | entrydecl | entrustdecl
              | bootdecl ) ;
 bootdecl   = "boot" ident "arch" ident "{"
                { bootstep }
@@ -182,6 +182,27 @@ entrydecl  = "entry" ident [ "vector" constexpr ] [ "via" ident ] "arch" ident "
                entryextra
                "dispatch" path ";"
              "}" ;
+entrustdecl = "entrust" ident "at" ident "arch" ident "{"
+                "regs" "in" "{" [ regbind { "," regbind } [ "," ] ] "}"
+                "stack"  ident
+                "assume" ident ";"
+              "}" ;
+(* «entrust» -- der Raum, dessen INHALT Gabbro nicht kennt (2026-08-18).
+
+   Gabbro sagt ueber den Gast NICHTS: keine Kosten, keine Wirkungen, keine Terminierung.
+   Was es sagt, ist der VERTRAG AM EINTRITT -- welche Register der Gast bekommt, auf welchem
+   Stapel er laeuft, und in welchem `code`-Raum er liegt.
+
+   `at` nimmt einen NAMEN, keinen Ausdruck. Der Raum ist ein deklariertes Ding; ein `entrust`
+   auf einen gerechneten Wert waere ein Sprung an eine ausgerechnete Adresse -- genau das,
+   was nicht nennbar sein soll. Der Namenspass haelt ihn (`N006`).
+
+   `assume` ist PFLICHT und nicht schmueckend: dass der Gast seinen Vertrag haelt, ist eine
+   Aussage ueber die Umgebung. Sie muss erklaert und FALSIFIZIERBAR sein -- dieselbe Regel
+   wie bei `progress` (`S003`/`S004`), hier `N004`/`N005`.
+
+   *Kein neuer Pass, kein `effects`, kein `costs`: Isolation statt Beweis. Das ist keine
+   Luecke, sondern der Zweck eines Mikrokernels.* *)
 entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
 accdecl    = "accumulates" ident ":" typeexpr

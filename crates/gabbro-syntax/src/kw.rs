@@ -209,6 +209,13 @@ wortschatz! {
     Leaf          => "leaf",          res;
     Mappings      => "mappings",      res;
     Entry         => "entry",         res;
+    // **«entrust» -- ein `code`-Raum, dessen INHALT Gabbro nicht kennt.**
+    //
+    // Das eine Wort, das JIT, JVM und jedes Gastmodul oeffnet. Es erbt den Eintrittsvertrag
+    // von `entry` -- und der war bis 2026-08-18 gemessen LEER: zwoelf Felder, und keine
+    // Datei ausserhalb des Lesers nannte `EntryDecl`. *Wer `entrust` baut, baut ihn zum
+    // ersten Mal.*
+    Entrust       => "entrust",       res;
     Vector        => "vector",        res;
     Regs          => "regs",          res;
     Out           => "out",           res;

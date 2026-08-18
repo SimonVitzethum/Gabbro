@@ -1,0 +1,14 @@
+-- erwartet: N005
+-- **Eine Annahme ueber fremden Code, der keine Sonde je widersprechen kann, ist keine
+-- Isolation, sondern ein Wunsch.** Die Gegenrichtung zu «81»: hier IST sie erklaert.
+type Gastbild = { eintritt : u64, };
+
+assume gast_ist_brav
+    "Der Gast tut nichts Boeses."
+    unfalsifiable "man sieht es ihm nicht an";
+
+entrust jitpuffer at Gastbild arch x86_64 {
+    regs in { eintritt : rdi, }
+    stack  gaststapel
+    assume gast_ist_brav;
+}

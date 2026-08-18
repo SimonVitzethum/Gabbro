@@ -466,6 +466,7 @@ impl<'a> Parser<'a> {
             Art::Wort(Kw::Accumulates) => ItemArt::Accumulates(self.accdecl()?),
             Art::Wort(Kw::Walk) => ItemArt::Walk(self.walkdecl()?),
             Art::Wort(Kw::Entry) => ItemArt::Entry(self.entrydecl()?),
+            Art::Wort(Kw::Entrust) => ItemArt::Entrust(self.entrustdecl()?),
             Art::Wort(Kw::Boot) => ItemArt::Boot(self.bootdecl()?),
             _ => {
                 let gefunden = t.benennung(self.quelle);
@@ -3394,6 +3395,40 @@ impl<'a> Parser<'a> {
 
     // -- 14. Entry and boot ------------------------------------------------------------
 
+    /// **«entrust» -- ein Wort, ein Item, kein neuer Pass.**
+    ///
+    /// Bewusst KLEINER als `entrydecl`: kein `regs out`, kein `preserves`, kein `clobbers`,
+    /// kein `dispatch`. *Ueber das, was der Gast zurueckgibt, kann Gabbro nichts sagen --
+    /// eine Klausel dafuer waere eine Zusage ueber ein Programm, das der Uebersetzer nie
+    /// sieht.* Was bleibt, ist die Uebergabe: Raum, Register, Stapel, Annahme.
+    fn entrustdecl(&mut self) -> Erg<EntrustDecl> {
+        let anfang = self.erwarte_kw(Kw::Entrust)?;
+        let name = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::At)?;
+        let raum = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::Arch)?;
+        let arch = self.erwarte_ident()?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        self.erwarte_kw(Kw::Regs)?;
+        self.erwarte_kw(Kw::In)?;
+        let regs_gast = self.regsliste()?;
+        self.erwarte_kw(Kw::Stack)?;
+        let stapel = self.erwarte_ident()?;
+        self.erwarte_kw(Kw::Assume)?;
+        let annahme = self.erwarte_ident()?;
+        self.erwarte_z(Z::Semi)?;
+        let ende = self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(EntrustDecl {
+            name,
+            raum,
+            arch,
+            regs_gast,
+            stapel,
+            annahme,
+            span: anfang.bis_zu(ende),
+        })
+    }
+
     fn entrydecl(&mut self) -> Erg<EntryDecl> {
         let anfang = self.erwarte_kw(Kw::Entry)?;
         let name = self.erwarte_ident()?;
@@ -3596,6 +3631,7 @@ pub fn faengt_item_an(k: Kw) -> bool {
             | Kw::Accumulates
             | Kw::Walk
             | Kw::Entry
+            | Kw::Entrust
             | Kw::Boot
             | Kw::Pub
             | Kw::When

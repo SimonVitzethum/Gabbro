@@ -79,6 +79,14 @@ ERWARTET = {
     "touches":      ("ZUSAGE", "Die Wirkungsmenge eines `traverse`; deklariert, nie gegen den Rumpf gehalten."),
     "verlaesst":    ("ZUSAGE", "`leaves` an `forever` -- welche Wege die Schleife verlassen darf; ungelesen."),
 
+    # -- FREMD: die Klausel beschreibt etwas AUSSERHALB dieser Uebersetzungseinheit -------
+    #
+    # **Und die Klasse ist nur zulaessig, wenn das ZEUGNIS die Klausel druckt.** Sonst waere
+    # sie eine Ausnahmeliste: „kann man nicht pruefen" ist keine Buchung. Wer nicht pruefen
+    # kann, EXPORTIERT -- und genau das tut die `entrust`-Zeile in Abschnitt E.
+    "regs_gast":    ("FREMD", "Welche Register der GAST beim Eintritt hat. Der Gast steht nicht im Baum; das Zeugnis druckt den Vertrag."),
+    "stapel":       ("FREMD", "Auf welchem Stapel der Gast laeuft. Wie `regs_gast` -- gedruckt statt geprueft. OFFEN: ob der Stapel wie der Raum an eine Deklaration gebunden werden sollte (`N006`)."),
+
     # -- ABSENKUNG: der Erzeuger ist ihr richtiger und einziger Leser ---------------------
     "endian":       ("ABSENKUNG", "Die Byteordnung ist eine Absenkungsaussage; emit ist ihr richtiger Leser."),
     "section":      ("ABSENKUNG", "Platzierung -- eine Aussage an den Binder, nicht an den Pruefer."),
@@ -235,6 +243,7 @@ def main():
     print("-- Die Klassen. Die STUFE oben ist gemessen, die Klasse hier ist ein URTEIL. --")
     for k, satz in (
         ("ZUSAGE", "eine Aussage ueber Verhalten, die kein Pass haelt -- **die Klasse**"),
+        ("FREMD", "beschreibt etwas AUSSERHALB der Einheit -- gedruckt statt geprueft"),
         ("ABSENKUNG", "der Erzeuger ist ihr richtiger und einziger Leser"),
         ("TOT", "das Bauteil ist gelesen und sonst nirgends"),
     ):
