@@ -1199,6 +1199,18 @@ MUTATIONEN = [
         "B7 -- ein Verbundkonstruktor zaehlt als Aufruf; `P` wird unbekannter Gerufener "
         "und jede Huelle darueber untere Schranke",
     ),
+    # -- `opaque` beisst ---------------------------------------------------------------------
+    #
+    # **Ohne diese Zeile wird ein undurchsichtiger Typ wieder als sein TRAEGER gerechnet**, und
+    # `a & b` auf zwei Gleitkommawoertern ergibt Unsinn, den niemand meldet.
+    Mutation(
+        "undurchsichtig-rechnet-wie-der-traeger",
+        "m1.rs",
+        "            if let Typ::Benannt { name, undurchsichtig: true, .. } = t {",
+        "            if let Typ::Benannt { name, undurchsichtig: false, .. } = t {",
+        "D003 -- die Undurchsichtigkeit dreht sich um; wo die Breiten aufgehen, geht der "
+        "Unsinn wieder durch",
+    ),
     # -- Die parametrische Kostenzusage ------------------------------------------------------
     #
     # **Bis 2026-08-18 stand dort ein `return`**, und jede nicht-konstante `costs`-Zeile fiel

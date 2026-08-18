@@ -1488,3 +1488,68 @@ fn eine_parametrische_kostenzusage_wird_entschieden() {
     // Und die Konstante bleibt, was sie war -- die haeufigste Form darf nicht teurer werden.
     geht("module t { impl fn s() -> u32 effects { pure } costs <= 2 ops { return 1; } }");
 }
+
+/// **`opaque` beisst — und der Fund ist grösser als sein Anlass.**
+///
+/// ```gabbro
+/// opaque type F32 = u32;
+/// impl fn unsinn(a : F32, b : F32) -> F32 { return a & b; }
+/// → 3 Items, 0 Fehler, 0 Hinweise          (bis 2026-08-18)
+/// ```
+///
+/// Bitweises Und behält die Breite, also schwieg die Überlaufregel. **Dass `a + b` fiel, war
+/// Zufall** — es fiel an `M104`, nicht an der Undurchsichtigkeit. *Wo die Breiten aufgingen,
+/// ging der Unsinn durch.*
+///
+/// > Es trifft nicht nur `F32`, sondern **jeden Zeugen- und Neutyp der Sprache**: `Pa` gegen
+/// > `Va`, zwei `index into` verschiedener Instanzen, einen Rang mit einer Zellenzahl.
+///
+/// **Die Probe trifft drei Operatoren, nicht einen** — eine Regel, die nur `&` fängt, ist eine
+/// Regel über `&`.
+#[test]
+fn ein_undurchsichtiger_typ_hat_die_rechnung_seines_traegers_nicht() {
+    let kopf = "module t { opaque type F32 = u32; type Zaehler = u32 in 0 .. 9;\n";
+    for op in ["&", "|", "^"] {
+        let q = format!(
+            "{kopf}impl fn f(a : F32, b : F32) -> F32 effects {{ pure }} costs <= 4 ops \
+             {{ return a {op} b; }} }}"
+        );
+        let (b, mut a) = gabbro_syntax::lies("p.gab", &q);
+        let _ = gabbro_check::pruefe(&b, &mut a);
+        assert!(
+            a.absagen.iter().any(|x| x.code == "D003"),
+            "`{op}` auf einem undurchsichtigen Typ: {:?}",
+            a.absagen.iter().map(|x| x.code).collect::<Vec<_>>()
+        );
+    }
+
+    // **Die Positivrichtung, und ohne sie wäre die Regel nur ein Verbot:** ein Neutyp, der
+    // NICHT undurchsichtig ist, rechnet weiter.
+    let klar = format!(
+        "{kopf}impl fn s(a : Zaehler, b : Zaehler) -> u32 effects {{ pure }} costs <= 4 ops \
+         {{ return a + b; }} }}"
+    );
+    let (b, mut a) = gabbro_syntax::lies("p.gab", &klar);
+    let _ = gabbro_check::pruefe(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(&klar));
+
+    // **Und Vergleiche bleiben erlaubt.** Zwei Adressen zu vergleichen deutet den Träger
+    // nicht um — es ordnet Werte desselben Typs. *Verboten ist das Rechnen.*
+    let vgl = format!(
+        "{kopf}impl fn g(x : F32, y : F32) -> bool effects {{ pure }} costs <= 4 ops \
+         {{ return x == y; }} }}"
+    );
+    let (b, mut a) = gabbro_syntax::lies("p.gab", &vgl);
+    let _ = gabbro_check::pruefe(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "ein Vergleich ordnet, er rechnet nicht:\n{}", a.zeige(&vgl));
+
+    // **Und die Ablesung, um derentwillen der Fund entstand:** ein Gleitkommawort, das
+    // Gabbro nur BEWEGT, braucht keine Arithmetik — und geht damit heute schon.
+    let bewegt = "module t { opaque type F32 = u32;
+table Ecken count 64 { slot { x : F32, } }
+impl fn setze(i : index into Ecken, v : F32) effects { writes Ecken } costs <= 4 ops
+{ Ecken.slots[i].x = v; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", bewegt);
+    let _ = gabbro_check::pruefe(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "ein Treiber bewegt, er rechnet nicht:\n{}", a.zeige(bewegt));
+}

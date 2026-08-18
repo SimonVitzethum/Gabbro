@@ -147,15 +147,13 @@ of items that are neither code nor a run — what remains is building and measur
       0 Fehler) -- *und kein Pass liest es.* Die Schicht hat damit zwei Haelften: die sieben
       Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
       tragen lassen (PL-Arbeit).
-- [ ] **`opaque` beisst nicht -- gemessen 2026-08-18, und es ist der Preis von
-      „Gleitkomma nur auf der GPU".** `opaque type F32 = u32;` und `return a & b;`:
-      **3 Items, 0 Fehler.** Bitweises Und behaelt die Breite, also schweigt die
-      Ueberlaufregel, und der undurchsichtige Typ wird als sein TRAEGER gerechnet. *Dass
-      `a + b` faellt, ist Zufall* -- es faellt an `M104`, nicht an der Undurchsichtigkeit;
-      wo die Breiten aufgehen, geht der Unsinn durch. Die Passliste fuehrt es (D1/D2,
-      teilgebaut), **aber was es kostet, ist hier zum ersten Mal gemessen.** Ein
-      undurchsichtiger Typ hat KEINE Operationen seines Traegers, bis eine Umwandlung
-      dasteht -- und das faellt fuer alle zugleich.
+- [ ] **`opaque` beisst -- aber es gibt keine UMWANDLUNG** *(gebaut 2026-08-18, `D003`)*.
+      Ein undurchsichtiger Typ hat die Rechnung seines Traegers nicht; Vergleiche bleiben
+      erlaubt. **Null Korpusstellen fielen** -- der Beleg kommt aus Gift 79 (drei Operatoren)
+      und vier Sprechproben, nicht vom Korpus. *Was jetzt fehlt, ist der Ausweg:* heute gibt
+      es keine Form, einen undurchsichtigen Typ ABSICHTLICH zu oeffnen, also ist die Regel ein
+      Verbot ohne Tuer. **Solange kein Korpusstueck sie braucht, ist das richtig** -- aber es
+      gehoert benannt, bevor jemand `opaque` deshalb weglaesst.
 - [ ] **`entrust` -- ein `code`-Raum, dessen Inhalt Gabbro nicht kennt.** Der Sprung ins
       Ungezeugte ist ein ADRESSRAUMWECHSEL, kein Kontrollflusssprung: eigener `code`-Raum
       ohne Schreibrecht (W^X, `mappings of` prueft es), eigene PD, eigener CapSpace, Rueckweg

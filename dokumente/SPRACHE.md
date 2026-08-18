@@ -662,6 +662,24 @@ traversal does that, §9).
 | **V2** | a checked **relation between two places** becomes a branch fact; under the fact `a >= b`, `a - b` has type `0 .. a.max − b.min`, under `a > b` type `1 .. a.max − b.min`. Comparison facts only, directly checked places only | `if a >= b { let d = a - b; }` — the **102 sites** all fall under this form |
 | **V3** | a `match` on a `tagged` type narrows in the branch to the variant including its payload | exhaustive, no catch-all branch |
 
+> **VORBEDINGUNG an V1 und V2, aufgeschrieben 2026-08-18 — sie war immer da und stand nirgends.**
+>
+> Die Verengung im `else`-Zweig setzt voraus, dass **die Negation einer Vergleichsbedingung
+> selbst eine Vergleichsbedingung ist** — also eine **totale Ordnung ohne unvergleichbare
+> Elemente**. Über ganzen Zahlen gibt `!(x < y)` das Faktum `x >= y`; das ist Trichotomie, und
+> sie gilt dort.
+>
+> **Gleitkomma ist ihr erster Verletzer, nicht ihr einziger:** ist ein Operand NaN, sind *alle*
+> Vergleiche falsch, und der `else`-Zweig gibt **nichts**. Vier Ausgänge statt drei. **Jeder
+> partiell geordnete Träger, den die Sprache je bekäme, bräche dieselbe Maschinerie** — und
+> `m1::fakten_aus(…, negiert = true)` ist genau die Stelle.
+>
+> *Die Regel ist damit sichtbar falsifizierbar, statt an ihrem ersten Gegenbeispiel zu
+> zerbrechen.* Die praktische Folge, falls je ein solcher Träger käme, ist klein: **`else` gibt
+> dort keinen Fakt, und wer Verengung will, schreibt beide Zweige positiv** —
+> `if x < y … if x >= y … else /* unvergleichbar */`. **Vier Ausgänge sind schreibbar, sie sind
+> nur nicht kostenlos.**
+
 What does **not** fall under V1–V3 needs `narrow place to range else { … }` — a statement with a
 named exit, not a proof line. **The yardstick stays:** if `narrow` grows beyond the remainder of
 the counter-measurement (**≤ 24 sites** in today's tree), the rule set has been chosen too small

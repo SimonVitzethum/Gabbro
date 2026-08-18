@@ -1,0 +1,25 @@
+-- erwartet: D003
+-- **Gift 79 -- ein undurchsichtiger Typ, bitweise gerechnet.**
+--
+-- Bis zum 2026-08-18 ging das mit **0 Fehlern** durch. Bitweises Und behaelt die Breite, also
+-- schwieg die Ueberlaufregel -- und der undurchsichtige Typ wurde als sein TRAEGER gerechnet.
+--
+-- **Dass `a + b` fiel, war Zufall:** es fiel an `M104` (die Breite laeuft ueber), nicht an der
+-- Undurchsichtigkeit. *Wo die Breiten aufgehen, ging der Unsinn durch.*
+--
+-- Und es trifft nicht nur `F32`, sondern **jeden Zeugen- und Neutyp der Sprache**: `Pa` gegen
+-- `Va`, zwei `index into` verschiedener Instanzen, einen Rang mit einer Zellenzahl. Dieselbe
+-- Klasse wie `protects`, das deklariert war und nie geprueft wurde.
+--
+-- Die Probe trifft drei Operatoren, nicht einen -- **eine Regel, die nur `&` faengt, ist eine
+-- Regel ueber `&`.**
+
+module gift79 {
+
+opaque type F32 = u32;
+
+impl fn und(a : F32, b : F32) -> F32 effects { pure } costs <= 4 ops { return a & b; }
+impl fn oder(a : F32, b : F32) -> F32 effects { pure } costs <= 4 ops { return a | b; }
+impl fn xor(a : F32, b : F32) -> F32 effects { pure } costs <= 4 ops { return a ^ b; }
+
+}

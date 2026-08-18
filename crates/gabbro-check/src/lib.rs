@@ -82,8 +82,13 @@ pub fn passliste() -> Vec<Pass> {
                      erschoepfende Aufzaehlung",
             zustand: Zustand::Teilgebaut(
                 "die K-Bedingung ist gebaut (`D001`: keine Handmutation an einer `table` \
-                 mit `ops`) -- **erschoepfendes `match` ueber `tagged` nicht**, und \
-                 undurchsichtige Neutypen ohne Umwandlung ebenfalls nicht",
+                 mit `ops`), und seit dem 2026-08-18 BEISST die Undurchsichtigkeit: ein \
+                 `opaque type` hat die Rechnung seines Traegers nicht (`D003`). *Vorher fiel \
+                 `a + b` nur zufaellig -- an `M104`, nicht an der Undurchsichtigkeit; wo die \
+                 Breiten aufgingen, ging der Unsinn durch.* **NICHT gebaut: erschoepfendes \
+                 `match` ueber `tagged`, und die UMWANDLUNG** -- heute gibt es keine Form, \
+                 einen undurchsichtigen Typ absichtlich zu oeffnen, also ist die Regel bisher \
+                 ein Verbot ohne Ausweg",
             ),
         },
         Pass {

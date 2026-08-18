@@ -481,6 +481,50 @@ impl<'a> Pruefer<'a> {
         if op.ist_vergleich() {
             return Typ::Wahrheit;
         }
+        // **`D003` -- ein undurchsichtiger Typ hat KEINE Rechnung seines Traegers.**
+        //
+        // Gemessen am 2026-08-18, und der Fund ist groesser als sein Anlass:
+        //
+        // ```gabbro
+        // opaque type F32 = u32;
+        // impl fn unsinn(a : F32, b : F32) -> F32 { return a & b; }
+        // -> 3 Items, 0 Fehler, 0 Hinweise
+        // ```
+        //
+        // Bitweises Und behaelt die Breite, also schwieg die Ueberlaufregel -- und der
+        // undurchsichtige Typ wurde als sein TRAEGER gerechnet. **Dass `a + b` fiel, war
+        // Zufall:** es fiel an `M104`, nicht an der Undurchsichtigkeit. *Wo die Breiten
+        // aufgehen, ging der Unsinn durch.*
+        //
+        // > **Und es trifft nicht nur `F32`, sondern jeden Zeugen- und Neutyp der Sprache**:
+        // > `Pa` gegen `Va`, zwei `index into` verschiedener Instanzen, einen Rang mit einer
+        // > Zellenzahl. Dieselbe Klasse wie `protects`, das deklariert war und nie geprueft
+        // > wurde.
+        //
+        // **VERGLEICHE bleiben zulaessig** (der `return` oben steht davor, mit Absicht): zwei
+        // Adressen zu vergleichen deutet den Traeger nicht um, es ordnet Werte desselben
+        // Typs. *Was verboten ist, ist das RECHNEN* -- eine Summe zweier Adressen ist keine
+        // Adresse, und ein bitweises Und zweier Gleitkommazahlen ist gar nichts.
+        for (t, e) in [(&ta, a), (&tb, b)] {
+            if let Typ::Benannt { name, undurchsichtig: true, .. } = t {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "D003",
+                        e.span,
+                        format!("`{name}` ist undurchsichtig -- es hat die Rechnung seines Traegers nicht"),
+                    )
+                    .mit_notiz(
+                        "ein `opaque type` sagt: dieser Typ IST nicht sein Traeger. Wer mit \
+                         ihm rechnen will, wandelt ihn um -- und die Umwandlung steht dann da",
+                    )
+                    .mit_notiz(
+                        "Vergleiche bleiben erlaubt: sie ordnen Werte desselben Typs, statt \
+                         den Traeger umzudeuten",
+                    ),
+                );
+                return Typ::Unbekannt;
+            }
+        }
         let (Some(ba), Some(bb)) = (ta.bereich(), tb.bereich()) else {
             return Typ::Unbekannt;
         };
@@ -673,6 +717,21 @@ impl<'a> Pruefer<'a> {
     // -- Fakten -------------------------------------------------------------------------
 
     /// V1/V2 aus einer geprueften Bedingung. `negiert` gilt fuer den `else`-Zweig.
+    ///
+    /// **VORBEDINGUNG, aufgeschrieben 2026-08-18 -- sie war immer da und stand nirgends:**
+    /// der `negiert`-Zweig setzt voraus, dass die Negation einer Vergleichsbedingung selbst
+    /// eine Vergleichsbedingung ist -- also eine **totale Ordnung ohne unvergleichbare
+    /// Elemente**. Ueber ganzen Zahlen gibt `!(x < y)` das Faktum `x >= y`; das ist
+    /// Trichotomie.
+    ///
+    /// > **Gleitkomma waere ihr erster Verletzer, nicht ihr einziger.** Ist ein Operand NaN,
+    /// > sind ALLE Vergleiche falsch, und der `else`-Zweig gibt nichts -- vier Ausgaenge statt
+    /// > drei. *Jeder partiell geordnete Traeger braeche dieselbe Maschinerie, und dies hier
+    /// > ist die Stelle.*
+    ///
+    /// Heute traegt jeder Typ dieser Sprache eine totale Ordnung (`IntBereich`, `bool`), also
+    /// gilt die Vorbedingung. **Sie steht hier, damit ein kuenftiger Traeger sie BRICHT statt
+    /// sie stillschweigend zu unterlaufen** -- `SPRACHE.md` §3.2 fuehrt sie ausgeschrieben.
     fn fakten_aus(&mut self, bedingung: &Expr, negiert: bool, lage: &mut Lage) {
         match &bedingung.art {
             ExprArt::Klammer(i) => self.fakten_aus(i, negiert, lage),
