@@ -536,12 +536,6 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
-- [ ] **`F002` beisst im Rumpf, aber NICHT in einer `const`-Deklaration**
-      *(gemessen 2026-08-18)*. `const B : f64 = 0.1;` geht durch, `return 0.1;` faellt. M1
-      typisiert Konstanteninitialisierer nicht -- **dieselbe Klasse wie die 17 ZUSAGEN**: eine
-      Regel, die an einer Stelle beisst und an einer anderen schweigt, ist keine Regel,
-      sondern eine Stichprobe.
-
 ### «F» — f32 und f64, geplant 2026-08-18 (`PLAN.md`, „«F» — f32 und f64, vollstaendig")
 
 **Der Beschluss weicht von W3 ab und sagt es:** der Bedarf ist gemessen null, die Entscheidung

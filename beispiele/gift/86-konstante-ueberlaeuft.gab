@@ -1,0 +1,9 @@
+-- erwartet: M101
+-- **Der neue Gang misst auch dort, wo es nicht um Gleitkomma geht.** `const X : u8 = 300;`
+-- ging bis 2026-08-18 durch, weil M1 Initialisierer nie ansah. Diese Probe haelt die
+-- Erweiterung fest -- *ohne sie waere die Reichweite ein Nebeneffekt und keine Zusage.*
+module gift::konstante2 {
+
+const ZU_GROSS : u8 = 300;
+
+}

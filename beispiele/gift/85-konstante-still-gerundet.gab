@@ -1,0 +1,12 @@
+-- erwartet: F002
+-- **Der Hauptschauplatz, nicht der Randfall.**
+--
+-- «F0»/FF4 hat 340 Literale eines echten Renderers gemessen: 16 % inexakt, namentlich ln 2
+-- und 2 pi. Wo stehen die? In `const`-Deklarationen. Bis 2026-08-18 sah M1 **nur
+-- Funktionsruempfe** -- die Regel biss also ueberall ausser dort, wo ihr Bedarfsbeleg
+-- herkam. *Das ist keine Stichprobe, das ist umgekehrt gemessen.*
+module gift::konstante {
+
+const LN2 : f64 = 0.6931471805599453;
+
+}

@@ -107,6 +107,31 @@ struct Lage {
 impl<'a> Pruefer<'a> {
     fn programm(&mut self, baum: &Programm) {
         crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+            // **M1 sah bis 2026-08-18 NUR Funktionsruempfe.** Das fiel an «F» auf, und zwar
+            // an der teuersten denkbaren Stelle: `F002` biss im Rumpf und schwieg in der
+            // `const`-Deklaration -- *also genau dort, wo der Bedarfsbeleg herkam.*
+            //
+            // Die 53 inexakten Literale, die F0 an einem echten Renderer gemessen hat, sind
+            // ln 2, 2 pi, Schwellwerte. **Die leben in Konstanten.** Eine Regel, die ueberall
+            // beisst ausser am Hauptschauplatz, ist keine Stichprobe -- sie ist umgekehrt
+            // gemessen.
+            //
+            // *Ein Initialisierer wird mit LEERER Lage geprueft: er hat keine Parameter und
+            // keine Fakten, nur die Umgebung.*
+            if let ItemArt::Konst(k) = &item.art {
+                self.modul = modul.to_string();
+                let ziel = self.u.typ_von_ausdruck_decl(modul, &k.typ);
+                let mut lage = Lage::default();
+                let quelle = self.ausdruck(&k.wert, &mut lage);
+                self.passt(&quelle, &ziel, k.wert.span, "die Konstante");
+            }
+            if let ItemArt::Statisch(st) = &item.art {
+                self.modul = modul.to_string();
+                let ziel = self.u.typ_von_ausdruck_decl(modul, &st.typ);
+                let mut lage = Lage::default();
+                let quelle = self.ausdruck(&st.wert, &mut lage);
+                self.passt(&quelle, &ziel, st.wert.span, "der statische Wert");
+            }
             if let ItemArt::Funktion(f) = &item.art {
                 // Nur Ruempfe: Praedikate haben keine Laufzeitwirkung.
                 if let FnRumpf::Block(b) = &f.rumpf {

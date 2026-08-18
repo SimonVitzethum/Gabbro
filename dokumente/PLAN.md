@@ -2564,6 +2564,58 @@ Faktenmaschine. *Ein Verbot wäre eine Härtung ohne gemessenen Bedarf.*
 bricht die Prämisse einer **bewiesenen** Schablone (`accumulates.monoid`: `add` ist nicht
 assoziativ, `max` mit NaN ist kein Verband). `F004`, und die Prämisse ist bereits geteilt.
 
+## F1a — Das F002-Loch, und warum es VOR `narrow` fiel
+
+**Die Regel biss überall außer am Hauptschauplatz.** `F002` fiel im Funktionsrumpf und schwieg
+in der `const`-Deklaration — und die 53 inexakten Literale, die F0 gemessen hat, sind ln 2,
+2π und Schwellwerte. *Die leben in Konstanten.* Eine Regel, deren Bedarfsbeleg aus genau der
+Deklarationsform kommt, die sie nicht erreicht, ist nicht stichprobenhaft, sondern **umgekehrt
+gemessen**.
+
+**Gemessen war die Ursache größer als der Befund:** M1 lief bis 2026-08-18 **nur über
+Funktionsrümpfe**. `const`, `static`, alles andere sah er nie.
+
+```
+vorher   M1 = Funktionsrümpfe
+nachher  M1 = Funktionsrümpfe + const/static-Initialisierer (leere Lage, volle Umgebung)
+```
+
+**Der Bestand hat die Erweiterung unverändert überlebt** — 126 Proben, keine neue Absage. Und
+sie misst, statt nur zu schweigen: `const ZU_GROSS : u8 = 300;` fällt jetzt an `M101` und tat
+es vorher nicht. *Ohne diese Gegenprobe wäre die Reichweite ein Nebeneffekt und keine Zusage.*
+
+## F1b — Die Faktenart für `finite`, und der Entwurf steht vor dem Bau
+
+**Der Bedarfsbeleg ist eine DISJUNKTION, kein einzelnes Prädikat.** FF1 lautet:
+
+```c
+if (Zz2 < ER2 || isnan(de.x) || isinf(de.x) || isnan(de.y) || isinf(de.y))
+```
+
+Im `else`-Zweig von `a || b` gelten `¬a` **und** `¬b` — beide Bits fallen gleichzeitig. Wer nur
+das einzelne Prädikat verengt, deckt genau den Fall nicht ab, den F0 als Bedarfsbeleg gefunden
+hat.
+
+**Gemessen: der Zweig dafür EXISTIERT bereits.**
+
+```rust
+ExprArt::Binaer(BinOp::Oder, a, b) if negiert => {
+    self.fakten_aus(a, true, lage);
+    self.fakten_aus(b, true, lage);
+}
+```
+
+Was fehlt, ist nicht der Weg durch die Disjunktion, sondern **die Faktenart am Ende**. Und die
+darf keine Bereichsverfeinerung sein:
+
+> **Endlichkeit ist im Gitter kein Intervall.** `kann_nan` und `kann_unendlich` sind zwei Bits,
+> die **unabhängig** gelöscht werden — `isnan(x)` löscht das eine, `isinf(x)` das andere, und
+> die Disjunktion löscht beide. Ein Intervall kann das nicht ausdrücken: NaN liegt in *keinem*
+> Intervall, und dieselbe Aussage ist trotzdem nicht „der Bereich ist enger".
+
+Daraus die Form: `Fakt::Endlich { schluessel, indizes, nan: bool, unendlich: bool }` — zwei
+Flanken, einzeln setzbar, und `narrow … to finite` setzt beide auf einmal.
+
 ## F2 — Wortschatz und Grammatik
 
 | | |
