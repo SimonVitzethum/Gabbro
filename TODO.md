@@ -147,6 +147,13 @@ of items that are neither code nor a run — what remains is building and measur
       0 Fehler) -- *und kein Pass liest es.* Die Schicht hat damit zwei Haelften: die sieben
       Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
       tragen lassen (PL-Arbeit).
+- [ ] **«B24» hat die beste Hebelwirkung aller offenen Posten** *(bewertet 2026-08-18)*.
+      Ein Netzwerkstack ist bis auf EINE Entscheidung schreibbar: Verbindungstabelle
+      (`count NCONN`), Paketpool, Pruefsumme ueber `<= MTU`, Neuuebertragung (`retry
+      bounded`), Zeitgeber (`forever per_pass`) -- alles vorhanden. **Was blockiert, ist der
+      IP-Kopf**, und der ist ein Feld aus Bitlagen (`version:4 IHL:4 DSCP:6 ECN:2 flags:3
+      fragment_offset:13`). `format` weigert sich fuer jede davon. *Keine Bauarbeit, keine
+      Beweisarbeit -- eine Entscheidung.*
 - [ ] **Eine parametrische `costs`-Zusage ist heute schreibbar und VOLLSTAENDIG LEER**
       *(gemessen 2026-08-18)*. `costs <= 0 * n ops` an einem Rumpf, der 1 op kostet:
       **3 Items, 0 Fehler, 0 Hinweise.** `kosten.rs` sagt es im eigenen Kopf (*„die Schranke

@@ -1967,3 +1967,87 @@ Rekursion ohne Maß · ein impliziter Haufen · Selbst-Bootstrap.
 
 *„Beliebig viel" ist zulässig. „Beliebig viel, ohne je einen Erschöpfungszweig zu sehen" nicht
 — denn dieser Zweig IST die Stelle, an der der Rahmen die Wirklichkeit berührt.*
+
+---
+
+# Was an WIRKLICHEN Programmen unmöglich ist — drei Spalten, nicht eine
+
+**Die Frage nach Compiler, Laufzeit, Renderer, Netzwerkstack lässt sich nicht mit einer Liste
+beantworten**, weil drei sehr verschiedene Gründe „geht nicht" heißen können: *heute nicht
+gebaut* · *nach den Plänen möglich* · *nie, weil eine Klasse daran hängt.*
+
+| System | heute | nach der Erweiterung | für immer draußen |
+|---|---|---|---|
+| **Netzwerkstack** (TCP/IP) | **fast** — blockiert an **einer** Entscheidung | ✓ | — |
+| **Renderer**, 2D, Festkomma, über Syscalls | teilweise | ✓ | — |
+| **Renderer**, 3D mit Gleitkomma | ✗ | ✗ | **Gleitkomma** |
+| **Sprachlaufzeit** mit Pool-Halde | ✗ | ✓ | — |
+| **Sprachlaufzeit** mit wachsender Halde | ✗ | ✗ | **kein Erschöpfungszweig** |
+| **Compiler** | ✗ | ✓ *(schreibbar, nicht angenehm)* | — |
+| **JIT** | ✗ | ✗ | **erzeugter Code trägt keine Zusage** |
+
+## Der Netzwerkstack ist am nächsten dran — und hängt an «B24»
+
+**Alles Übrige ist schon da:** eine Verbindungstabelle ist `table … count NCONN` (jeder
+ernsthafte Kernel hat diese Konstante ohnehin), Paketpuffer sind ein Pool, die Prüfsumme
+läuft über eine Länge ≤ MTU, Neuübertragung ist `retry … bounded`, und die Zeitgeber sind
+`forever … per_pass`.
+
+**Was blockiert, ist der IP-Kopf.** Er ist ein Feld aus Bitlagen:
+
+```
+version:4 · IHL:4 · DSCP:6 · ECN:2 · flags:3 · fragment offset:13
+```
+
+`format` weigert sich für jede davon (`C001`, drei Stellen im Korpus gemessen) — **«B24»:
+was eine Bitposition jenseits der Wortbreite bedeutet und wie sie mit `endian`
+zusammenwirkt, sagt die Spezifikation nicht.**
+
+> *Das ist keine Bauarbeit und keine Beweisarbeit — es ist eine Entscheidung, und sie ist die
+> einzige zwischen Gabbro und einem Netzwerkstack.* **Von allen offenen Posten hat dieser die
+> beste Hebelwirkung.**
+
+## Der Renderer: die Trennlinie läuft durch ihn hindurch, nicht um ihn herum
+
+Ein Bildspeicher ist eine Region, ein Blitter eine beschränkte Schleife, die Syscalls sind
+`extern fn` — **fremde Rümpfe, die das Zeugnis zählt.** Ein 2D-Renderer mit Festkomma ist nach
+§1 schreibbar.
+
+**Ein 3D-Renderer ist es nicht, und der Grund ist eine Zeile in `SYNTAX.md`:** *„No floating
+point in the core."* M1 ist über Intervallen **ganzer** Zahlen gebaut; `IntBereich` hat
+`min`, `max` und eine Breite. Eine Gleitkommazahl hat keinen Bereich, den `M101` vergleichen
+könnte — **die Überlaufklasse hätte über ihr keinen Inhalt.**
+
+*Festkomma ist ganzzahlig und geht. Wer Gleitkomma braucht, ruft eine fremde Bibliothek — und
+bekommt dafür einen Eintrag in Abschnitt E des Zeugnisses statt einer Zusage.*
+
+## Compiler und Laufzeit: schreibbar heißt nicht angenehm
+
+Die Erweiterung macht beide möglich — **und teuer.** Jede Tabelle nennt ein `count`, jede
+Rekursion ein Maß, jede Allokation einen Erschöpfungszweig, jede Funktion ihre `costs`.
+
+> **Ein Compiler in Gabbro wäre nicht falscher als einer in Rust — er wäre länger, und jede
+> zusätzliche Zeile wäre eine Zahl, die heute in einem Kommentar steht.** *Ob das ein guter
+> Tausch ist, entscheidet, wie sehr einen ein Absturz im Compiler stört.*
+
+**Der GC ist der interessante Fall:** eine markierende Sammlung über einen Pool ist über die
+Poolgröße beschränkt, die Markierungstiefe ebenso — also `recurse bounded pool.count`. *Ein GC
+mit fester Halde ist schreibbar; einer, der die Halde wachsen lässt, ist es nie, weil das
+Wachsen der Punkt ohne Erschöpfungszweig wäre.*
+
+## Der JIT ist die schärfste Grenze, und sie ist keine der elf Klassen
+
+Ein JIT schreibt Maschinencode in einen Puffer und springt hinein. **Das Schreiben geht** — es
+ist ein Feld aus Bytes. **Der Sprung nicht:** was danach läuft, hat keine `effects`, keine
+`costs`, keinen Rahmen, kein Zeugnis.
+
+> *Es ist nicht so, dass Gabbro den Sprung verböte — es ist so, dass ab dort keine einzige
+> Aussage dieses Ordners noch etwas bedeutet.* **Dasselbe gilt für jedes nachgeladene Modul
+> ohne Zeugnis**, und das ist genau der Grund, warum die Bibliotheks-ABI ein eigener Posten ist.
+
+## Die kürzeste Fassung
+
+**Gabbro kann heute alles, dessen Größen jemand aufschreiben kann.** Nach der Erweiterung
+alles, dessen Größen jemand *bei der Erzeugung* aufschreiben kann. **Nie: alles, was keinen
+Punkt hat, an dem „es reicht nicht" gesagt wird** — plus Gleitkomma, plus alles hinter einem
+Sprung ins Ungezeugte.
