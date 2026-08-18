@@ -411,6 +411,30 @@ impl<'a> Pruefer<'a> {
                             }
                             return;
                         }
+                        // **Eine WERTGETRAGENE obere Schranke** -- `narrow i to 0 ..< k`.
+                        //
+                        // `konst_wert` findet dort nichts, denn `k` ist keine Konstante. Die
+                        // Aussage ist aber genau die, die M1 seit jeher als `Fakt::Beziehung`
+                        // fuehrt: der Vergleich zweier STELLEN. *Es fehlte der Traeger, nicht
+                        // die Form.*
+                        if self.u.konst_wert(&self.modul, &bereich.bis).is_none() {
+                            if let (ExprArt::Ort(ziel), Some((links, indizes))) =
+                                (&bereich.bis.art, schluessel_und_indizes(&n.ort))
+                            {
+                                if let Some((rechts, _)) = schluessel_und_indizes(ziel) {
+                                    lage.fakten.push(Fakt::Beziehung {
+                                        links,
+                                        op: if bereich.exklusiv {
+                                            BinOp::Kleiner
+                                        } else {
+                                            BinOp::KleinerGleich
+                                        },
+                                        rechts,
+                                        indizes,
+                                    });
+                                }
+                            }
+                        }
                         let von = self.u.konst_wert(&self.modul, &bereich.von);
                         let bis = self.u.konst_wert(&self.modul, &bereich.bis);
                         if let (Some(lo), Some(hi), Some((schluessel, indizes))) =
@@ -1488,6 +1512,32 @@ impl<'a> Pruefer<'a> {
         );
     }
 
+    /// **Zeigt eine Tatsache diesen Index unter der Hinterlegung?**
+    ///
+    /// Gesucht wird `Fakt::Beziehung` mit `<index> < <hinterlegung>`. *Ein Schreiben auf die
+    /// Hinterlegung loescht diese Tatsache automatisch* (dieselbe Regel wie fuer jeden
+    /// anderen Fakt) -- damit ist ein SCHRUMPFEN sicher, ohne dass eine Monotonieregel
+    /// noetig waere. **Die Gefahr war nie das Wachsen.**
+    fn unter_hinterlegung(&mut self, idx: &Expr, k: &str, lage: &Lage) -> bool {
+        let ExprArt::Ort(o) = &idx.art else {
+            // Ein Literal ist genau dann sicher, wenn es unter der Hinterlegung liegt -- und
+            // die ist ein Wert, also weiss der Pruefer es nicht. *Er weigert sich.*
+            return false;
+        };
+        let Some((schluessel, _)) = schluessel_und_indizes(o) else {
+            return false;
+        };
+        lage.fakten.iter().any(|f| match f {
+            Fakt::Beziehung {
+                links,
+                op,
+                rechts,
+                ..
+            } => *links == schluessel && *op == BinOp::Kleiner && rechts == k,
+            _ => false,
+        })
+    }
+
     /// M4 an der Stelle, an der M1 die Zahl hat: ein Index gegen die Laenge seines Feldes.
     fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {
         // **`suche` und nicht `get`, und das war ein Loch in der ERSTEN getragenen Klasse.**
@@ -1520,6 +1570,12 @@ impl<'a> Pruefer<'a> {
                     .cloned()
             })
             .unwrap_or(Typ::Unbekannt);
+        // **Welche Tabelle ist das?** Fuer `backed` gebraucht: die Hinterlegung haengt an der
+        // TABELLE, nicht am Feld.
+        let tabelle = match traeger.durchgreifen() {
+            Typ::Tabelle(q) => Some(q.clone()),
+            _ => None,
+        };
         for suffix in &o.suffixe {
             match suffix {
                 OrtSuffix::Index(idx) => {
@@ -1545,6 +1601,45 @@ impl<'a> Pruefer<'a> {
                                         "M4: kein ungeprueftes Indizieren -- die Schranke \
                                          faellt aus dem Typ des Index, nicht aus einer Pruefung \
                                          zur Laufzeit",
+                                    ),
+                                );
+                            }
+                        }
+                        // **`M108`: im Adressraum, aber nicht im Speicher.**
+                        //
+                        // `count N` sagt, wie viele Plaetze der Typ kennt; `backed k` nennt
+                        // den Wert, bis zu dem sie hinterlegt sind. *Ein Zugriff auf einen
+                        // nicht hinterlegten Platz ist typkorrekt und trotzdem ein
+                        // Fehlzugriff* -- und in einem Kernel ist das besonders scharf, weil
+                        // er selbst die Instanz ist, die Seiten hinterlegt.
+                        //
+                        // **Das Tor ist keine neue Pruefung, sondern dieselbe gegen die
+                        // richtige Zahl.** Die Tatsache `i < k` ist ein Vergleich zweier
+                        // Stellen, und den fuehrt M1 als `Fakt::Beziehung` seit jeher --
+                        // `narrow i to 0 ..< k` und `if i < k` liefern ihn gleichermassen.
+                        if let Some(k) = tabelle
+                            .as_ref()
+                            .and_then(|t| self.u.hinterlegungen.get(t))
+                        {
+                            if !self.unter_hinterlegung(idx, k, lage) {
+                                self.absagen.schiebe(
+                                    Absage::fehler(
+                                        "M108",
+                                        idx.span,
+                                        format!(
+                                            "der Index liegt im Adressraum, aber nichts zeigt \
+                                             ihn unter `{k}`"
+                                        ),
+                                    )
+                                    .mit_notiz(
+                                        "`count` ist der Adressraum, `backed` der Speicher -- \
+                                         ein Zugriff auf einen nicht hinterlegten Platz ist \
+                                         typkorrekt und trotzdem ein Fehlzugriff",
+                                    )
+                                    .mit_notiz(
+                                        "`narrow <index> to 0 ..< <hinterlegung> else { … }` \
+                                         stellt die Tatsache her; ein `if` mit demselben \
+                                         Vergleich tut es auch",
                                     ),
                                 );
                             }

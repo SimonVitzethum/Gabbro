@@ -149,6 +149,12 @@ wortschatz! {
     At            => "at",            res;
     Stride        => "stride",        res;
     Count         => "count",         res;
+    // **Punkt 1: `count` ist ADRESSRAUM, `backed` ist SPEICHER.**
+    //
+    // Bis 2026-08-18 fiel beides zusammen, und damit war „30 GiB deklarieren, 100 MiB
+    // hinterlegen" keine Aussage der Sprache, sondern eine Hoffnung an den Seitenfehlerpfad.
+    // *Der Indextyp sagte `i < N`; gebraucht wird `i ist HINTERLEGT`.*
+    Backed        => "backed",        res;
     Mirrors       => "mirrors",       res;
     From          => "from",          res;
     Assume        => "assume",        res;

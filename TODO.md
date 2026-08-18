@@ -586,13 +586,16 @@ zuerst** -- sonst entwirft man fuer eine vorgestellte Verwendung.
       einer Differenzeinheit statt von einem Eindruck. *Wer dort etwas verschiebt, beschaedigt
       eine Sprache mit gemessenem Bedarf zugunsten einer mit entschiedenem.*
 
-- [ ] **Punkt 1 (b) und (c): `backed` als Wert, und `M103` gegen ihn statt gegen `count`**
-      *(2026-08-18)*. Teil (a) steht -- die Freiliste ist schreibbar. Offen bleibt die
-      Trennung von **Adressraum und Speicher**: `count N` ist die Reserve, `backed k` waere
-      die Hinterlegung, und das Tor ist keine neue Pruefung, sondern **dieselbe gegen die
-      richtige Zahl**. Gemessen: `narrow i to 0 ..< k` wird von der Grammatik angenommen und
-      M1 laesst die Tatsache fallen -- es fehlt der Traeger, nicht die Form. *Und die Gefahr
-      ist nicht das Wachsen, sondern das Schrumpfen.*
+- [ ] **`backed` steht im Pruefer und noch nicht im ZEUGNIS** *(2026-08-18)*. Eine Einheit,
+      die Adressraum von Speicher trennt, sagt damit etwas ueber ihren Speicherbedarf --
+      **und das Zeugnis nennt es nicht.** Dieselbe Klasse wie die Gleitkommazeile: der Leser
+      muss es sehen, ohne den Quelltext zu lesen. *Dazu die Frage, ob der Erzeuger die
+      Reserve als Feld anlegen soll oder ob sie eine Aussage an den Binder ist.*
+- [ ] **Wer die Hinterlegung ERHOEHT, verspricht die Seiten** *(2026-08-18)*. `M108` haelt
+      jeden Zugriff unter `backed`; dass die Seiten dahinter wirklich eingehaengt sind, ist
+      eine Aussage ueber den Verwalter und steht in keiner Annahme. **Der Kernel ist selbst
+      die Instanz, die sie einhaengt** -- die Zusage gehoert damit in die Axiomschicht, mit
+      Sonde, oder an eine `ensures`-Klausel der einhaengenden Funktion.
 - [ ] **`i < N` ist nicht `i ist hinterlegt`** *(2026-08-18)*. Eine `table count 1000000000`
       geht sauber durch und senkt zu einem Feld von knapp 30 GiB ab. Was Gabbro NICHT sagen
       kann: dass nur die ersten `k` Plaetze hinterlegt sind. Ein Zugriff auf einen nicht
@@ -1003,7 +1006,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 137 / 202) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 138 / 203) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |

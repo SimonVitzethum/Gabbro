@@ -64,6 +64,11 @@ pub struct Umgebung {
     pub tabellen: HashMap<String, Vec<(String, Typ)>>,
     /// Tabellenname -> `count N`, wenn die Deklaration sie nennt.
     pub kapazitaeten: HashMap<String, u128>,
+    /// **Tabelle -> der Name des Werts, bis zu dem sie HINTERLEGT ist** (`backed k`).
+    ///
+    /// `count` ist Adressraum, `backed` ist Speicher. Steht hier ein Eintrag, reicht `i < N`
+    /// nicht mehr -- es braucht `i < k`, und das ist ein Vergleich zweier STELLEN.
+    pub hinterlegungen: HashMap<String, String>,
     /// **`walk`-Name -> `levels` x Knotenlaenge.** Die Schranke der Domaene `mappings of`
     /// steht in der Deklaration und nirgends sonst -- ohne sie kann der Kostenpass eine
     /// Seitentabellen-Traversierung nicht rechnen und sagt das (`K003`).
@@ -158,6 +163,10 @@ impl Umgebung {
                     {
                         self.kapazitaeten
                             .insert(qualifiziere(pfad, &t.name.text), n as u128);
+                    }
+                    if let Some(k) = &t.hinterlegt {
+                        self.hinterlegungen
+                            .insert(qualifiziere(pfad, &t.name.text), k.text.clone());
                     }
                 }
                 _ => {}

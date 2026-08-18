@@ -1,0 +1,20 @@
+-- erwartet: M108
+-- **Im Adressraum, aber nicht im Speicher.**
+--
+-- `count 1048576` sagt, wie viele Plaetze der Typ kennt; `backed hinterlegt` nennt den Wert,
+-- bis zu dem sie hinterlegt sind. *Ein Zugriff auf einen nicht hinterlegten Platz ist
+-- typkorrekt und trotzdem ein Fehlzugriff* -- und in einem Kernel ist das besonders scharf,
+-- weil er selbst die Instanz ist, die Seiten hinterlegt.
+module gift::hinterlegung {
+
+static mut hinterlegt : u32 in 0 .. 1048576 = 0;
+
+table Halde count 1048576 backed hinterlegt { slot { kopf : u64, } }
+
+impl fn lesen(h : ptr<normal, r> Halde, i : index into Halde) -> u64
+    effects { reads h.slots } costs <= 2 ops
+{
+    return h.slots[i].kopf;
+}
+
+}

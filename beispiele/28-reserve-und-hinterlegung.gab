@@ -1,0 +1,60 @@
+-- 28 -- **`count` ist ADRESSRAUM, `backed` ist SPEICHER.**
+--
+-- Die Frage, aus der das kam: *laesst sich ein GC schreiben, der 100 MiB belegt und bis
+-- 30 GiB waechst, ohne 30 GiB dauerhaft zu belegen?* Gemessen war die Antwort: der Indextyp
+-- sagt `i < N`, gebraucht wird `i ist HINTERLEGT` -- und die zweite Aussage konnte Gabbro
+-- nicht formulieren. Ein Zugriff auf einen nicht hinterlegten Platz war typkorrekt und
+-- trotzdem ein Fehlzugriff.
+--
+-- **In einem Kernel ist das besonders scharf**, denn er ist selbst die Instanz, die Seiten
+-- hinterlegt -- er kann sich nicht darauf verlassen, dass jemand anders sein BSS
+-- bedarfsweise fuellt.
+
+module beispiel::halde {
+
+-- Die HINTERLEGUNG: ein Wert, kein Typ. Sie waechst, wenn der Verwalter Seiten einhaengt.
+static mut hinterlegt : u32 in 0 .. 1048576 = 0;
+
+-- Die RESERVE: eine Million Plaetze. Das ist Adressraum und noch kein Speicher.
+table Halde count 1048576 backed hinterlegt {
+    slot {
+        kopf    : u64,
+        naechst : option index into Halde,
+    }
+}
+
+-- **Das Tor ist keine neue Pruefung, sondern dieselbe gegen die richtige Zahl.**
+--
+-- `M103` haelt jeden Index gegen die deklarierte Schranke; mit `backed` kommt `M108` daneben
+-- und haelt ihn gegen die hinterlegte. Die Tatsache `i < hinterlegt` ist ein Vergleich
+-- zweier STELLEN -- und den fuehrt M1 seit jeher.
+impl fn lesen(h : ptr<normal, r> Halde, i : index into Halde) -> u64
+    effects { reads h.slots, reads hinterlegt }
+    costs   <= 6 ops
+{
+    narrow i to 0 ..< hinterlegt else { return 0; }
+    return h.slots[i].kopf;
+}
+
+-- Ein `if` mit demselben Vergleich tut es auch -- es ist dieselbe Tatsache.
+impl fn lesen_mit_wenn(h : ptr<normal, r> Halde, i : index into Halde) -> u64
+    effects { reads h.slots, reads hinterlegt }
+    costs   <= 6 ops
+{
+    if i < hinterlegt { return h.slots[i].kopf; }
+    return 0;
+}
+
+-- **Und die Gefahr ist nicht das Wachsen, sondern das SCHRUMPFEN.**
+--
+-- Eine Tatsache `i < hinterlegt`, die vor einer Verkleinerung gewonnen wurde, ist danach
+-- falsch. Es braucht dafuer KEINE Monotonieregel: ein Schreiben auf die Hinterlegung loescht
+-- jede Tatsache, die auf ihr ruht -- dieselbe Regel wie fuer jeden anderen Fakt.
+impl fn einhaengen(neu : u32 in 0 .. 1048576)
+    effects { writes hinterlegt }
+    costs   <= 2 ops
+{
+    hinterlegt = neu;
+}
+
+}

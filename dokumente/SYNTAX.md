@@ -92,7 +92,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
              exchange update returns
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
-             class fields bank at stride count mirrors from
+             class fields bank at stride count backed mirrors from
              assume falsifier unfalsifiable axiom lock protects rank group
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
@@ -651,8 +651,23 @@ forever
 ## 9. Tables, traversals, formats
 
 ```ebnf
-table      = "table" ident [ "count" constexpr ] "{"
+table      = "table" ident [ "count" constexpr ] [ "backed" ident ] "{"
                { constdecl | slotdecl | invariant | opdecl } "}" ;
+(* `count` ist der ADRESSRAUM, `backed` der SPEICHER (Punkt 1, 2026-08-18).
+
+   `count N` sagt, wie viele Plaetze der Typ kennt; `backed k` nennt den WERT, bis zu dem
+   sie hinterlegt sind. Ohne die Trennung fiel beides zusammen -- und dann ist "30 GiB
+   deklarieren, 100 MiB hinterlegen" keine Aussage der Sprache, sondern eine Hoffnung an den
+   Seitenfehlerpfad.
+
+   **Das Tor ist keine neue Pruefung, sondern dieselbe gegen die richtige Zahl:** `M103`
+   haelt jeden Index gegen die deklarierte Schranke, und mit `backed` ist das `k` statt `N`.
+   Die Tatsache `i < k` kommt aus `narrow i to 0 ..< k` -- ein Vergleich zweier STELLEN, und
+   den fuehrt M1 als `Fakt::Beziehung` seit jeher.
+
+   Ein Schreiben auf `k` loescht jede Tatsache, die auf ihm ruht -- damit ist ein
+   SCHRUMPFEN sicher, ohne dass eine Monotonieregel noetig waere. *Die Gefahr war nie das
+   Wachsen.* *)
 opdecl     = "ops" identlist ";" ;
 walkdecl   = "walk" ident "levels" constexpr "{"
                "node" ":" array ","

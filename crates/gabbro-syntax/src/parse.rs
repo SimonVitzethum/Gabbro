@@ -2632,6 +2632,14 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // **`backed k` -- der Wert, bis zu dem die Plaetze hinterlegt sind.** Ein NAME, kein
+        // Ausdruck: die Hinterlegung ist ein Ding, das sich aendert, und ein gerechneter
+        // Ausdruck haette keinen Ort, an dem eine Aenderung ihn ungueltig macht.
+        let hinterlegt = if self.friss_kw(Kw::Backed) {
+            Some(self.erwarte_ident()?)
+        } else {
+            None
+        };
         self.erwarte_z(Z::GeschweiftAuf)?;
         let mut konstanten = Vec::new();
         let mut slot = None;
@@ -2684,6 +2692,7 @@ impl<'a> Parser<'a> {
         Ok(Tabelle {
             name,
             kapazitaet,
+            hinterlegt,
             konstanten,
             slot,
             invarianten,

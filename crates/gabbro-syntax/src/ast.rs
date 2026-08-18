@@ -1032,6 +1032,13 @@ pub struct Tabelle {
     /// the declaration**, and "no unchecked indexing" rests on the convention that someone
     /// picked a fitting index type by hand (finding G8).
     pub kapazitaet: Option<Expr>,
+    /// **`backed k` -- der WERT, bis zu dem die Plaetze hinterlegt sind.**
+    ///
+    /// `count` ist Adressraum, `backed` ist Speicher. Ohne die Trennung sagt der Indextyp
+    /// `i < N` -- und gebraucht wird `i ist HINTERLEGT`. *Ein Zugriff auf einen nicht
+    /// hinterlegten Platz ist sonst typkorrekt und trotzdem ein Fehlzugriff, und in einem
+    /// Kernel ist das besonders scharf: er ist selbst die Instanz, die Seiten hinterlegt.*
+    pub hinterlegt: Option<Ident>,
     pub konstanten: Vec<KonstDecl>,
     pub slot: Option<SlotDecl>,
     pub invarianten: Vec<Invariante>,
