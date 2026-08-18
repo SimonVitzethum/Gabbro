@@ -252,6 +252,17 @@ wortschatz! {
     I16           => "i16",           res;
     I32           => "i32",           res;
     I64           => "i64",           res;
+    // -- «F»: f32 und f64. Der Wortschatz waechst um DREI Woerter, nicht um zwei --------
+    //
+    // `rounded` kam aus dem Korpus (F0): an 340 Literalen eines echten Renderers gemessen
+    // waeren 53 abgelehnt worden, darunter ln 2 und 2 pi. Verboten ist nicht das Inexakte,
+    // sondern das STILLSCHWEIGEND Inexakte -- und `wrapping` sagt dieselbe Sorte Satz ueber
+    // den Ueberlauf. *Dieselbe Form, dieselbe Begruendung, kein neues Muster.*
+    F32           => "f32",           res;
+    F64           => "f64",           res;
+    Rounded       => "rounded",       res;
+    // Die Verengung, die Nicht-NaN-Sein herstellt: `narrow x to finite else { … }`.
+    Finite        => "finite",        res;
     Bool          => "bool",          res;
     Never         => "never",         res;
     W1c           => "w1c",           res;
@@ -308,6 +319,20 @@ pub fn ersatzvorschlag(k: Kw) -> Option<&'static str> {
 
 impl Kw {
     /// The integer type words -- `intty` in the grammar.
+    /// Die Gleitkommawoerter -- `floatty` in der Grammatik.
+    pub const fn ist_floatty(self) -> bool {
+        matches!(self, Kw::F32 | Kw::F64)
+    }
+
+    /// Die Breite in Bits. **Getrennt gefuehrt, weil die Mantisse daran haengt:** 24 Bit bei
+    /// `f32`, 53 bei `f64` (je einschliesslich des impliziten Bits).
+    pub const fn mantisse(self) -> u32 {
+        match self {
+            Kw::F32 => 24,
+            _ => 53,
+        }
+    }
+
     pub const fn ist_intty(self) -> bool {
         matches!(
             self,

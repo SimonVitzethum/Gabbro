@@ -120,10 +120,73 @@ fn gemeinsame_form(a: &IntBereich, b: &IntBereich) -> Option<(u8, bool)> {
     None
 }
 
+/// **«F»: die Gleitkommatatsache -- die Ganzzahltatsache PLUS ZWEI BITS.**
+///
+/// Ein Intervall ueber den reellen Zahlen, dazu `kann_nan` und `kann_unendlich`. *Das ist
+/// kein Loeser*, sondern Intervallfortpflanzung -- dieselbe Bauart wie `IntBereich`, den M1
+/// laengst traegt. Die Kante gilt unveraendert: geschlossene Form, keine freie Arithmetik.
+///
+/// **Warum die zwei Bits und nicht nur das Intervall:** ist ein Operand NaN, sind ALLE
+/// Vergleiche falsch, und aus `!(x < y)` folgt `x >= y` nicht. Die Negation liefert ihre
+/// Tatsache darum genau dann, wenn beide Seiten als nicht-NaN bekannt sind -- und das steht
+/// hier.
+///
+/// *Ein deklarierter Wert kann alles sein; ein LITERAL ist bekannt endlich.* Deshalb ist die
+/// Voreinstellung fuer eine Deklaration `true/true` und fuer ein Literal `false/false`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FBereich {
+    /// 32 oder 64.
+    pub breite: u8,
+    pub lo: f64,
+    pub hi: f64,
+    pub kann_nan: bool,
+    pub kann_unendlich: bool,
+    /// Wie bei `IntBereich`: ein Literal hat keine eigene Breite.
+    pub literal: bool,
+}
+
+impl FBereich {
+    /// Der volle Bereich eines deklarierten Typs -- alles ist moeglich, NaN eingeschlossen.
+    pub fn voll(breite: u8) -> Self {
+        FBereich {
+            breite,
+            lo: f64::NEG_INFINITY,
+            hi: f64::INFINITY,
+            kann_nan: true,
+            kann_unendlich: true,
+            literal: false,
+        }
+    }
+
+    /// Ein Literal: ein Punkt, endlich, kein NaN.
+    pub fn punkt(wert: f64) -> Self {
+        FBereich {
+            breite: 64,
+            lo: wert,
+            hi: wert,
+            kann_nan: false,
+            kann_unendlich: false,
+            literal: true,
+        }
+    }
+
+    /// **Die Mantissenbreite -- daran haengt die Exaktheit eines Literals.**
+    pub fn mantisse(self) -> u32 {
+        if self.breite == 32 { 24 } else { 53 }
+    }
+
+    /// Endlich UND nicht NaN -- die Tatsache, die `narrow … to finite` herstellt.
+    pub fn ist_sicher(self) -> bool {
+        !self.kann_nan && !self.kann_unendlich
+    }
+}
+
 /// Ein Typ, so weit dieser Pass ihn kennt.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Typ {
     Ganzzahl(IntBereich),
+    /// **«F»** -- siehe `FBereich`.
+    Gleitkomma(FBereich),
     /// `u32 wrapping` an einem Slot: der Ueberlauf ist deklariert und damit kein Befund.
     Umlaufend(IntBereich),
     Wahrheit,
@@ -199,6 +262,20 @@ impl Typ {
     pub fn text(&self) -> String {
         match self {
             Typ::Ganzzahl(b) => b.text(),
+            Typ::Gleitkomma(f) => {
+                let art = if f.kann_nan {
+                    " (kann NaN)"
+                } else if f.kann_unendlich {
+                    " (kann unendlich)"
+                } else {
+                    ""
+                };
+                if f.lo == f64::NEG_INFINITY && f.hi == f64::INFINITY {
+                    format!("f{}{art}", f.breite)
+                } else {
+                    format!("f{} in {} .. {}{art}", f.breite, f.lo, f.hi)
+                }
+            }
             Typ::Umlaufend(b) => format!("{} wrapping", b.text()),
             Typ::Wahrheit => "bool".to_string(),
             Typ::Nie => "never".to_string(),

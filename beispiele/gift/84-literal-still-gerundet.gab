@@ -1,0 +1,17 @@
+-- erwartet: F002
+-- **Verboten ist nicht das Inexakte, sondern das STILLSCHWEIGEND Inexakte.**
+--
+-- Die Regel kam aus dem Korpus und nicht aus dem Entwurf («F0»/FF4): an 340 Literalen eines
+-- echten Renderers gemessen waeren mit der geplanten Fassung („exakt, sonst Absage") 53
+-- gefallen, darunter ln 2 und 2 pi. Eine transzendente Konstante ist in KEINER binaeren
+-- Breite exakt -- ihre Dezimalform ist schon eine Naeherung.
+--
+-- *`rounded` sagt ueber die Rundung, was `wrapping` ueber den Ueberlauf sagt: sie ist
+-- erklaert und darum kein Befund.*
+module gift::literal {
+
+impl fn ln2() -> f64 effects { pure } costs <= 1 ops {
+    return 0.6931471805599453;
+}
+
+}

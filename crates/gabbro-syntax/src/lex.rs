@@ -107,8 +107,15 @@ pub enum Art {
     Ident,
     /// A word of the closed vocabulary.
     Wort(Kw),
-    /// An integer. There is no floating point in the core.
+    /// An integer.
     Zahl(u128),
+    /// **«F»: eine Gleitkommazahl** -- die Bits einer `f64` und die Frage, ob der
+    /// Dezimalbruch DYADISCH ist (`m/10^d` mit `5^d | m`).
+    ///
+    /// *Die Dyadizitaet steht hier, weil nur der Leser die Ziffern hat.* Ob der Wert im
+    /// ZIELTYP exakt liegt, ist eine zweite Frage -- sie haengt an der Mantissenbreite und
+    /// gehoert M1.
+    Gleitkomma(u64, bool),
     /// A string, without the quotes.
     Text,
     Zeichen(Z),
@@ -137,6 +144,7 @@ impl Token {
             Art::Ident => format!("Bezeichner `{}`", self.text(quelle)),
             Art::Wort(k) => format!("`{}`", k.text()),
             Art::Zahl(_) => format!("Zahl `{}`", self.text(quelle)),
+            Art::Gleitkomma(..) => format!("Gleitkommazahl `{}`", self.text(quelle)),
             Art::Text => "Zeichenkette".to_string(),
             Art::Zeichen(z) => format!("`{}`", z.text()),
             Art::Ende => "Dateiende".to_string(),
@@ -261,6 +269,89 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
                 schiebe(&mut out, Art::Zahl(0), von, i);
                 continue;
             }
+            // **«F»: eine Gleitkommazahl -- und der Punkt ist GEMESSEN mehrdeutig.**
+            //
+            // `0..100` ist heute gueltiger Bereich, also entscheidet maximal munch: `..`
+            // frisst zuerst. Darum die Bedingung „Punkt UND dahinter eine Ziffer" -- damit
+            // bleibt `1..5` ein Bereich und `1.5` eine Zahl. Ein Punkt ohne Ziffer dahinter
+            // faellt in den gewoehnlichen Zweig und wird dort zum Zeichen `.`.
+            if basis == 10 && i + 1 < b.len() && b[i] == b'.' && b[i + 1].is_ascii_digit() {
+                i += 1;
+                let mut nachkomma = String::new();
+                while i < b.len() && (b[i].is_ascii_digit() || b[i] == b'_') {
+                    if b[i] != b'_' {
+                        nachkomma.push(b[i] as char);
+                    }
+                    i += 1;
+                }
+                // Exponent -- NUR kleines `e`. Der Leser lehnt `0X`/`0B` seit jeher ab
+                // (`L004`); eine Schreibweise, nicht zwei.
+                let mut exp: i64 = 0;
+                let mut exptext = String::new();
+                if i < b.len() && b[i] == b'e' {
+                    let merk = i;
+                    i += 1;
+                    let mut vorzeichen = 1i64;
+                    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+                        if b[i] == b'-' {
+                            vorzeichen = -1;
+                        }
+                        exptext.push(b[i] as char);
+                        i += 1;
+                    }
+                    let anfang = i;
+                    while i < b.len() && b[i].is_ascii_digit() {
+                        exptext.push(b[i] as char);
+                        i += 1;
+                    }
+                    if i == anfang {
+                        // `1.5e` ohne Ziffern -- kein Exponent, zurueck.
+                        i = merk;
+                        exptext.clear();
+                    } else {
+                        exp = vorzeichen
+                            * exptext.trim_start_matches(['+', '-']).parse::<i64>().unwrap_or(0);
+                    }
+                }
+                let text = if exptext.is_empty() {
+                    format!("{ziffern}.{nachkomma}")
+                } else {
+                    format!("{ziffern}.{nachkomma}e{exptext}")
+                };
+                let wert: f64 = text.parse().unwrap_or(f64::NAN);
+                if !wert.is_finite() {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "L007",
+                            Span::neu(von as u32, i as u32),
+                            "floating point literal is out of range",
+                        )
+                        .mit_notiz("the largest type is `f64`"),
+                    );
+                    schiebe(&mut out, Art::Gleitkomma(0, true), von, i);
+                    continue;
+                }
+                // **Dyadisch?** `m / 10^d` ist ein Dyadenbruch genau dann, wenn `5^d` die
+                // Mantisse teilt. Ein positiver Exponent hilft: er multipliziert mit `5^e`,
+                // und das bleibt ganzzahlig.
+                let netto = nachkomma.len() as i64 - exp;
+                let dyadisch = if netto <= 0 {
+                    true
+                } else {
+                    let ganze = format!("{ziffern}{nachkomma}");
+                    match ganze.parse::<u128>() {
+                        Ok(m) => (0..netto).try_fold(m, |acc, _| {
+                            if acc % 5 == 0 { Some(acc / 5) } else { None }
+                        }).is_some(),
+                        // Zu viele Ziffern, um es auszurechnen -- dann ist die Antwort NEIN,
+                        // und das ist die sichere Richtung: sie verlangt `rounded`.
+                        Err(_) => false,
+                    }
+                };
+                schiebe(&mut out, Art::Gleitkomma(wert.to_bits(), dyadisch), von, i);
+                continue;
+            }
+
             // A digit run adjoining a number is a trap: `0b12` would otherwise be `0b1`
             // followed by `2`. Refuse, never interpret.
             if i < b.len() && (ist_buchstabe(b[i] as char) || b[i].is_ascii_digit()) {

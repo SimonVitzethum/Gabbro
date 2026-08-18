@@ -607,7 +607,11 @@ impl<'a> Rechner<'a> {
             return Kosten::Zahl(0);
         }
         match &e.art {
-            ExprArt::Zahl(_) | ExprArt::Wahr | ExprArt::Falsch | ExprArt::Ergebnis => {
+            ExprArt::Zahl(_)
+            | ExprArt::Gleitkomma { .. }
+            | ExprArt::Wahr
+            | ExprArt::Falsch
+            | ExprArt::Ergebnis => {
                 Kosten::Zahl(0)
             }
             // Ein Laden ist eine Primitive.

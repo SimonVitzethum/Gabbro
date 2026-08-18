@@ -440,6 +440,40 @@ impl<'a> Pruefer<'a> {
                 Ok(w) => Typ::Ganzzahl(IntBereich::konstante(w)),
                 Err(_) => Typ::Unbekannt,
             },
+            // **«F»: ein Literal ist bekannt ENDLICH und nicht NaN.** Das ist der
+            // Unterschied zu einem deklarierten Wert, und er ist der Grund, warum `narrow …
+            // to finite` nur dort noetig ist, wo etwas GERECHNET oder UEBERGEBEN wurde.
+            ExprArt::Gleitkomma {
+                bits,
+                dyadisch,
+                gerundet,
+            } => {
+                // **`F002` -- und die Regel kam aus dem Korpus, nicht aus dem Entwurf.**
+                //
+                // Die geplante Fassung hiess „exakt darstellbar, sonst Absage". An 340
+                // Literalen eines echten Renderers gemessen waeren damit 53 gefallen,
+                // darunter ln 2 und 2 pi (`FRAGMENTE.md`, «F0»/FF4). Eine transzendente
+                // Konstante ist in KEINER binaeren Breite exakt; ihre Dezimalform ist schon
+                // eine Naeherung.
+                //
+                // *Verboten ist darum nicht das Inexakte, sondern das STILLSCHWEIGEND
+                // Inexakte* -- genau der Satz, den `wrapping` ueber den Ueberlauf sagt.
+                if !dyadisch && !gerundet {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "F002",
+                            e.span,
+                            "this literal is not exactly representable in binary",
+                        )
+                        .mit_notiz(
+                            "schreibe `rounded` dahinter, wenn die Rundung gemeint ist -- \
+                             wie `wrapping` am Typ sagt sie: der Verlust ist ERKLAERT und \
+                             darum kein Befund",
+                        ),
+                    );
+                }
+                Typ::Gleitkomma(crate::typen::FBereich::punkt(f64::from_bits(*bits)))
+            }
             ExprArt::Wahr | ExprArt::Falsch => Typ::Wahrheit,
             ExprArt::Ergebnis => Typ::Unbekannt,
             ExprArt::Klammer(i) => self.ausdruck_roh(i, lage),

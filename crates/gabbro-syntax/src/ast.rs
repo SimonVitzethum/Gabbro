@@ -217,6 +217,7 @@ pub struct TypDecl {
 #[derive(Debug, Clone)]
 pub enum TypExpr {
     Int(IntTy),
+    Float(FloatTy),
     Bool(Span),
     Never(Span),
     Pfad(Pfad),
@@ -237,6 +238,7 @@ impl TypExpr {
     pub fn span(&self) -> Span {
         match self {
             TypExpr::Int(i) => i.span,
+            TypExpr::Float(f) => f.span,
             TypExpr::Bool(s) | TypExpr::Never(s) => *s,
             TypExpr::Pfad(p) => p.span,
             TypExpr::Feld(a) => a.span,
@@ -247,6 +249,19 @@ impl TypExpr {
             TypExpr::Index { span, .. } => *span,
         }
     }
+}
+
+/// **«F»: `f32` / `f64`, mit optionalem Bereich.**
+///
+/// Bewusst dieselbe Gestalt wie `IntTy` -- Wort plus Bereich. *Ein Gleitkommatyp ist im
+/// Prueferblick eine Zahl mit einer Schranke; was ihn unterscheidet, sind zwei Bits
+/// (`kann_nan`, `kann_unendlich`) und die Rundung, und beide gehoeren ins Typmodell, nicht
+/// in die Grammatik.*
+#[derive(Debug, Clone)]
+pub struct FloatTy {
+    pub wort: Kw,
+    pub bereich: Option<Bereich>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]
@@ -359,6 +374,18 @@ pub struct Expr {
 #[derive(Debug, Clone)]
 pub enum ExprArt {
     Zahl(u128),
+    /// **«F»: ein Gleitkommaliteral.** Bits einer `f64`, ob der Dezimalbruch dyadisch ist,
+    /// und ob `rounded` dahinterstand.
+    ///
+    /// **`rounded` kam aus dem Korpus, nicht aus dem Entwurf** (`FRAGMENTE.md`, «F0»): an
+    /// 340 Literalen eines echten Renderers waeren ohne dieses Wort 53 abgelehnt worden,
+    /// darunter ln 2 und 2 pi. *Verboten ist nicht das Inexakte, sondern das
+    /// STILLSCHWEIGEND Inexakte.*
+    Gleitkomma {
+        bits: u64,
+        dyadisch: bool,
+        gerundet: bool,
+    },
     Wahr,
     Falsch,
     Ort(Ort),

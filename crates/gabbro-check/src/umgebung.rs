@@ -690,9 +690,43 @@ impl Umgebung {
         self.typexpr(von, t, &mut unterwegs)
     }
 
+    /// **«F»: der Wert einer Bereichsgrenze eines Gleitkommatyps.**
+    ///
+    /// Nimmt ein Gleitkommaliteral und eine Ganzzahl (`f64 in 0 .. 1` soll schreibbar sein).
+    /// *Ein Ausdruck, der erst gerechnet werden muesste, gibt `None` -- und dann bleibt der
+    /// volle Bereich stehen, was die sichere Richtung ist.*
+    fn gleitwert(&self, e: &Expr) -> Option<f64> {
+        match &e.art {
+            ExprArt::Gleitkomma { bits, .. } => Some(f64::from_bits(*bits)),
+            ExprArt::Zahl(v) => Some(*v as f64),
+            ExprArt::Unaer(UnOp::Negativ, i) => self.gleitwert(i).map(|w| -w),
+            ExprArt::Klammer(i) => self.gleitwert(i),
+            _ => None,
+        }
+    }
+
     fn typexpr(&self, von: &str, t: &TypExpr, unterwegs: &mut HashSet<String>) -> Typ {
         match t {
             TypExpr::Int(i) => Typ::Ganzzahl(self.intbereich(von, i, unterwegs)),
+            // **«F»:** ein deklarierter Gleitkommawert kann ALLES sein, NaN eingeschlossen.
+            // *Der Bereich am Typ verengt das Intervall, nicht die zwei Bits* -- wer NaN
+            // ausschliessen will, tut es mit `narrow … to finite`, und dort steht dann auch
+            // die Laufzeitpruefung (W6).
+            TypExpr::Float(f) => {
+                let breite = if f.wort == gabbro_syntax::kw::Kw::F32 { 32 } else { 64 };
+                let mut b = crate::typen::FBereich::voll(breite);
+                if let Some(r) = &f.bereich {
+                    if let (Some(lo), Some(hi)) = (self.gleitwert(&r.von), self.gleitwert(&r.bis)) {
+                        b.lo = lo;
+                        b.hi = hi;
+                        b.kann_unendlich = lo.is_infinite() || hi.is_infinite();
+                        // Ein GENANNTER Bereich schliesst NaN aus: NaN liegt in keinem
+                        // Intervall, weil jeder Vergleich mit ihm falsch ist.
+                        b.kann_nan = false;
+                    }
+                }
+                Typ::Gleitkomma(b)
+            }
             TypExpr::Bool(_) => Typ::Wahrheit,
             TypExpr::Never(_) => Typ::Nie,
             TypExpr::Pfad(p) => {

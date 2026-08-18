@@ -104,7 +104,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
              per cpu ist nested masked awaits port step via
   Domaenen   slots of chain descendants ancestors queue elems fields threads
              reaches via
-  Typen      u8 u16 u32 u64 i8 i16 i32 i64 bool never w1c rc
+  Typen      u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 rounded finite bool never w1c rc
   Eingebaut  sizeof lenof aligned forall exists true false Self Some None
   Sonderform O @version Held    (KEINE Wortschatzwoerter -- s. Fussnote G6)
 ```
@@ -125,6 +125,13 @@ int        = dec | hex | bin ;
 dec        = digit { digit | "_" } ;
 hex        = "0x" hexdigit { hexdigit | "_" } ;
 bin        = "0b" ( "0" | "1" ) { "0" | "1" | "_" } ;
+float      = dec "." dec [ "e" [ "+" | "-" ] dec ] ;           (* «F», 2026-08-18 *)
+(* Der Punkt ist mehrdeutig, und zwar GEMESSEN: `0..100` ist heute gueltiger Bereich. Die
+   Regel ist maximal munch -- `..` frisst zuerst, also ist `1..5` ein Bereich und `1.5` eine
+   Gleitkommazahl. Ein Punkt ohne Ziffer dahinter (`1.`) wird abgelehnt.
+
+   NUR KLEINES `e` im Exponenten. Der Leser lehnt `0X`/`0B` seit jeher ab (`L004`) -- eine
+   Schreibweise, nicht zwei, und die Regel stand schon da. *)
 string     = quote { char } quote { quote { char } quote } ;   (* «B22» *)
 char       = ? jedes Zeichen ausser quote und newline ? ;
 quote      = ? das Zeichen U+0022 ? ;
@@ -254,7 +261,7 @@ markorder  = "order" "{" identlist "}" ;
    `order` steht VOR dem `=`, weil es kein Rumpf ist: eine Ordnung sagt nichts darueber,
    woraus der Wert besteht, sondern welche Schritte auf ihm zulaessig sind. Ein
    `linear ghost type` hat ohnehin keinen Rumpf. *)
-typeexpr   = intty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants
+typeexpr   = intty | floatty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants
            | indexty ;
 indexty    = [ "option" ] "index" "into" ident ;
              (* Der ERZEUGTE Indextyp einer Tabelle: `0 ..< count`. Er steht als `typeexpr`,
@@ -262,6 +269,20 @@ indexty    = [ "option" ] "index" "into" ident ;
                 Schranke doch wieder ein von Hand geschriebener Typ neben der Tabelle. *)
 nevertype  = "never" ;                             (* Rueckgabetyp von prim/divergent *)
 intty      = ( "u8"|"u16"|"u32"|"u64"|"i8"|"i16"|"i32"|"i64" ) [ "in" range ] ;
+floatty    = ( "f32" | "f64" ) [ "in" frange ] ;                    (* «F», 2026-08-18 *)
+frange     = fexpr ( ".." | "..=" | "..<" ) fexpr ;
+fexpr      = float [ "rounded" ] | ident | int ;
+(* «F» -- f32 und f64.
+
+   `rounded` ist PFLICHT an einem Literal, das nicht exakt darstellbar ist, und dort auch
+   die einzige Form. Gemessen an 340 Literalen eines echten Renderers waeren ohne es 53
+   abgelehnt worden, darunter ln 2 und 2 pi (FRAGMENTE.md, «F0»). Verboten ist nicht das
+   Inexakte, sondern das STILLSCHWEIGEND Inexakte -- genau der Satz, den `wrapping` ueber
+   den Ueberlauf sagt.
+
+   `finite` steht nur hinter `narrow … to` und stellt Nicht-NaN-Sein her. Ohne diese
+   Tatsache liefert die Negation eines Gleitkommavergleichs NICHTS -- mit ihr rechnet man
+   gewoehnlich weiter. *)
 boolty     = "bool" ;
 range      = expr ".." expr | expr "..<" expr ;
 array      = "[" typeexpr ";" constexpr "]" ;
@@ -553,7 +574,17 @@ assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;
 exprstmt   = call ";" ;
 ifstmt     = "if" expr block { "else" "if" expr block } [ "else" block ] ;
 matchstmt  = "match" expr "{" { ident [ "(" ident ")" ] "=>" block } "}" ;
-narrowstmt = "narrow" place "to" range "else" block ;
+narrowstmt = "narrow" place "to" ( range | "finite" ) "else" block ;
+(* «F»: `finite` stellt NICHT-NaN-SEIN her, und es ist die einzige Form dafuer.
+
+   Ohne diese Tatsache liefert die Negation eines Gleitkommavergleichs nichts: ist ein
+   Operand NaN, sind alle Vergleiche falsch, und aus `!(x < y)` folgt `x >= y` nicht. Mit
+   ihr rechnet man gewoehnlich weiter -- die Verengungsmaschinerie ist damit BEDINGT statt
+   abgeschaltet.
+
+   Der Korpus zeigt dieselbe Bewegung von Hand (FRAGMENTE.md, «F0»/FF1): dort steht
+   `isnan(de.x) || isinf(de.x) || …` neben dem Vergleich, weil der Vergleich allein den Fall
+   nicht abdeckt. *)
 ```
 
 **`match` is exhaustive** — there is no catch-all branch; a new variant breaks the

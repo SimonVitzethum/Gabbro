@@ -662,6 +662,20 @@ impl<'a> Parser<'a> {
                 self.pos += 1;
                 Ok(TypExpr::Never(t.span))
             }
+            Art::Wort(w) if w.ist_floatty() => {
+                let anfang = t.span;
+                self.pos += 1;
+                let bereich = if self.friss_kw(Kw::In) {
+                    Some(self.range()?)
+                } else {
+                    None
+                };
+                let span = match &bereich {
+                    Some(b) => anfang.bis_zu(b.span),
+                    None => anfang,
+                };
+                Ok(TypExpr::Float(FloatTy { wort: w, bereich, span }))
+            }
             Art::Wort(Kw::Ptr) => Ok(TypExpr::Zeiger(Box::new(self.ptrty()?))),
             Art::Wort(Kw::Fn) => Ok(TypExpr::FnZeiger(Box::new(self.fnptr()?))),
             Art::Wort(Kw::SelfWort) => {
@@ -1199,6 +1213,29 @@ impl<'a> Parser<'a> {
                 Ok(Expr {
                     art: ExprArt::Zahl(v),
                     span: t.span,
+                })
+            }
+            // **«F»: das Gleitkommaliteral, und `rounded` steht DAHINTER.**
+            //
+            // Nachgestellt wie `wrapping` am Typ, und aus demselben Grund: das Wort sagt
+            // etwas ueber den Wert, der davor steht. *Es kam aus dem Korpus und nicht aus dem
+            // Entwurf* -- an 340 Literalen eines echten Renderers waeren ohne es 53
+            // abgelehnt worden, darunter ln 2 und 2 pi.
+            Art::Gleitkomma(bits, dyadisch) => {
+                self.pos += 1;
+                let gerundet = self.friss_kw(Kw::Rounded);
+                let span = if gerundet {
+                    t.span.bis_zu(self.vorheriger_span())
+                } else {
+                    t.span
+                };
+                Ok(Expr {
+                    art: ExprArt::Gleitkomma {
+                        bits,
+                        dyadisch,
+                        gerundet,
+                    },
+                    span,
                 })
             }
             Art::Wort(Kw::True) => {
