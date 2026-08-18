@@ -2137,7 +2137,12 @@ kostet.**
    schuldet dem Gast nichts.*
 3. **`opaque` zum Beißen bringen** — **eingeschoben**, weil Punkt 4 sonst auf einem Typ ruht,
    der seine Zusage nicht hält. Klein, D1/D2, und es fällt für alle undurchsichtigen Typen.
-4. **Festkomma als Fragment** — misst nebenbei, ob M1 die doppelte Zwischenbreite trägt.
+4. **Festkomma** — ~~als Fragment~~ **gemessen und geschlossen, 2026-08-18.** M1 trägt die
+   doppelte Zwischenbreite nicht und muss es nicht: es rechnet mit dem deklarierten BEREICH.
+   `type Q16 = i64 in -2147483648 .. 2147483647` mit `(a*b) >> 16` geht sauber durch, ohne
+   Laufzeitprüfung. *Der Träger ist die Breite, der Bereich ist die Zusage.* Offen bleibt der
+   Nebenbefund: **eine Zwischenbreite lässt sich nicht NENNEN** — dieselbe Bauart wie `opaque`
+   ohne Tür.
 5. **Gleitkomma als Memo mit Bedarfszählung**, nicht als Bau. *Und das Memo hat jetzt seinen
    Kernsatz: die Kosten sind eine zweite Faktenlogik, nicht ein zweiter Zahlentyp.*
 

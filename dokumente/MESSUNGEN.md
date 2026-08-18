@@ -7244,3 +7244,39 @@ damit nicht bloß unhergestellt, sondern unherstellbar, solange niemand das Kons
 | Beweise | 9 Theorien, gemessen grün (`Finished Gabbro 0:00:22`) |
 | Proben | 126, davon 80 Gift |
 | Ratsche | drei Zähne: Bedarf · Marke · **Rückrichtung** |
+
+---
+
+# Festkomma, gemessen statt gebaut — und es braucht keine Erweiterung
+
+Der Posten stand als *„Festkomma als Fragment — misst nebenbei, ob M1 die doppelte
+Zwischenbreite trägt."* Vier Messungen, und die Antwort ist besser als die Frage.
+
+| Probe | Ergebnis |
+|---|---|
+| `Q = i32` über den vollen i32-Bereich, `(a*b) >> 16` | **`M104`** — die Breite läuft über |
+| `let p : i64 = a * b;` mit i32-Operanden | **`M104`** — der ZIELTYP verbreitert nicht |
+| `Klein = i32 in -32768..32767`, `a * b` | **sauber** |
+| `Q16 = i64 in -2147483648..2147483647`, `(a*b) >> 16` und `a + b` | **sauber, 0 Fehler** |
+
+**M1 rechnet mit dem deklarierten BEREICH, nicht mit der Typbreite.** Das ist die ganze
+Antwort: die doppelte Zwischenbreite wird nicht *getragen* und muss es nicht — sie wird
+**deklariert**, indem der Träger `i64` ist und der Bereich der einer Q16.16-Zahl.
+
+```c
+int64_t mal(int64_t a, int64_t b) {
+    return (a * b) >> 16;
+}
+```
+
+Keine Laufzeitprüfung, und zwar zu Recht: **der Bereich beweist sie weg.**
+
+Gegenprobe (R11), denn ein Muster, das beim ersten Versuch durchgeht, ist verdächtig: mit
+einem Bereich, der den Träger sprengt (`i64 in -2^62 .. 2^62`), fällt `M104` — und die
+Meldung nennt beide Bereiche, nicht bloß die Typnamen.
+
+> **Der Posten schließt sich damit als Messung, nicht als Bau.** Was fehlt, ist kein Typ,
+> sondern eine Zeile Dokumentation: *der Träger ist die Breite, der Bereich ist die Zusage.*
+> Und der Nebenbefund ist der interessantere — **es gibt keine Form, eine Zwischenbreite zu
+> NENNEN.** Wo der Bereich nicht reicht, weigert sich M1, und eine Verbreiterungsform gibt es
+> nicht. *Dieselbe Bauart wie `opaque` ohne Tür: eine Regel ohne Ausweg.*
