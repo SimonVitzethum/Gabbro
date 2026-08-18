@@ -85,10 +85,13 @@ pub fn passliste() -> Vec<Pass> {
                  mit `ops`), und seit dem 2026-08-18 BEISST die Undurchsichtigkeit: ein \
                  `opaque type` hat die Rechnung seines Traegers nicht (`D003`). *Vorher fiel \
                  `a + b` nur zufaellig -- an `M104`, nicht an der Undurchsichtigkeit; wo die \
-                 Breiten aufgingen, ging der Unsinn durch.* **NICHT gebaut: erschoepfendes \
-                 `match` ueber `tagged`, und die UMWANDLUNG** -- heute gibt es keine Form, \
-                 einen undurchsichtigen Typ absichtlich zu oeffnen, also ist die Regel bisher \
-                 ein Verbot ohne Ausweg",
+                 Breiten aufgingen, ging der Unsinn durch.* **Und seit demselben Tag steht die \
+                 WAND dahinter** (`D004`): die implizite Umwandlung ging vorher in BEIDE \
+                 Richtungen still durch, damit war D1 gar nicht durchgesetzt. Die Tuer ist die \
+                 MODULGRENZE -- im erklaerenden Modul ist die Darstellung bekannt, ausserhalb \
+                 nicht. *Auf diesem Korpus hat sie null Biss: alle zwoelf Deklarationen \
+                 erklaeren und benutzen im selben Modul.* **NICHT gebaut: erschoepfendes \
+                 `match` ueber `tagged`**",
             ),
         },
         Pass {
