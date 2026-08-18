@@ -1882,3 +1882,88 @@ Sperrränge — **mit denselben Weigerungen, die es innerhalb einer Einheit scho
 
 *Das ist der erste Posten, bei dem Gabbro etwas gewinnt, das es heute nicht hat, ohne eine
 Klasse zurückzugeben.*
+
+---
+
+# BERICHTIGUNG zu §1 der Erweiterung — der Rahmen ist der der Maschine
+
+**Der Einwand trifft, und er trifft eine Überstrenge, die ich selbst eingebaut hatte.** Das
+`1 ..= 65_536` an `count` war eine erfundene Konstante an einer Stelle, an der zwei Kanten
+ohnehin existieren. Der Bereich wird **optional** (Voreinstellung: Darstellungsbreite), die
+Pflicht wandert an den **Erzeugungsort**, und §7 verliert seine erste Zeile.
+
+**Aber die beiden Kanten tun verschiedene Arbeit, und nur eine ist geschenkt:**
+
+| Kante | wovor sie schützt | wer sie liefert |
+|---|---|---|
+| **Darstellungsbreite** | dass die Index*rechnung* überläuft | die Maschine — **gratis**, M1 rechnet ohnehin mit `IntBereich::voll(breite, …)` |
+| **Regionskapazität** | dass der *Speicher* reicht | der Erzeugungsort — **nicht gratis**, das ist der eine `narrow` |
+
+*Sie zusammenzuziehen („mehr als der Adressraum passt ohnehin in keine Struktur") verdeckt,
+dass nur die erste umsonst ist.* Die zweite ist genau der Punkt, an dem der Rahmen die
+Wirklichkeit berührt — und der Einwand sagt das an anderer Stelle selbst.
+
+## Und der Kern der Sache ist bereits gemessen, mit einem unbequemen Ergebnis
+
+Die parametrische Zusage ist **heute schon schreibbar** — und **vollständig leer**:
+
+```gabbro
+impl fn schleife(n : u32 in 0 .. 1000) -> u32 effects { pure } costs <= 0 * n ops
+{ return n; }
+
+→ 3 Items, 0 Fehler, 0 Hinweise          (der Rumpf kostet 1)
+```
+
+`kosten.rs` sagt es im eigenen Kopf: *„die Schranke **darf von Eingaben abhängen** … in dem
+Fall **schweigt der Pass**."* Und `gabbro kosten` druckt ehrlich `zugesagt --`.
+
+> **Die Erweiterung führt den parametrischen Vertrag also nicht ein — sie macht ihn tragend.**
+> Ihr eigentlicher Preis steht damit nicht in der Grammatik, sondern in **Pass 9: er muss
+> symbolische Ausdrücke VERGLEICHEN, statt zu schweigen.** *Ein Vertrag, den niemand liest,
+> ist keine Zusage, sondern eine Zeile.*
+
+**Was dabei bereits passt:** `Kosten::Zahl(i128)` — `40 · 2⁶⁴ ≈ 7,4·10²⁰` liegt weit unter
+`i128::MAX`. Die im Einwand vermutete Prüferzeile ist schon geschrieben.
+
+**Und was ebenfalls schon passt:** `beweise/Table_Absenkung.thy` ist über **natürlichen
+Zahlen** formuliert, nicht über Konstanten — `feldindizes m = indextyp N ⟷ m = N` gilt
+unverändert, wenn beide Werte statt Literale sind. *Der Satz war allgemeiner gefasst, als das
+Konstrukt ihn brauchte.*
+
+## Die eine Stelle, an der der Rahmen NICHT wachsen darf
+
+**Innerhalb eines `locks`-Blocks muss er zu einer Zahl zusammenfallen.**
+
+`held <= N ops` ist keine Kostenaussage, sondern eine **Latenzaussage**: sie sagt, wie lange
+ein anderer Kern höchstens wartet. Ein `held <= 40 · n` mit symbolischem `n` ist eine Sperre,
+die **unbeschränkt lange gehalten wird** — und damit ist die Aussage, um derentwillen `rank`,
+`held` und `K002` existieren, leer.
+
+> Der Prüfer sagt es selbst, in derselben Ausgabe: *„`Luft` ist bei `costs` oft richtig, bei
+> `held` fast immer falsch — die Latenzaussage rechnet mit der ZUSAGE, nicht mit der Rechnung."*
+
+**Also die Regel, die die Erweiterung mitbringen muss:** parametrisch überall, **außer unter
+einer Sperre**. Dort muss `n` durch eine Konstante gebunden sein, sonst fällt `K002`. *Das ist
+keine Ausnahme, sondern dieselbe Trennung noch einmal: die Kostenklasse verträgt Symbole, die
+Sperrklasse nicht.*
+
+## Und die Konstante verschwindet nicht, sie zieht um
+
+`costs <= 40 · n` bei einem Rufer, der `costs <= 500` zusagt, verlangt eine Schranke für `n`.
+**Parametrische Verträge entfernen die Zahl nicht — sie schieben sie nach außen**, bis an den
+Rand: den `entry`-Stapel, die Region, den `per_pass`-Rahmen einer Dienstschleife.
+
+*Das ist die richtige Stelle.* Der Einwand sagt es für die Stapeltiefe schon; es gilt für die
+Ops genauso. **Am Rand steht ohnehin ein `narrow` mit benanntem Ausgang — dort landet der
+Rahmen, und dort gehört er hin.**
+
+## §7, berichtigt
+
+**Alt:** *„Echt Unbeschränktes (eine Struktur ohne deklarierte Obergrenze)."*
+
+**Neu:** **Rahmenloses bleibt unmöglich — aber der Rahmen ist der der Maschine, nicht der der
+Sprache.** Unmöglich bleibt: eine Struktur, deren Erzeugung *keinen* Erschöpfungszweig hat ·
+Rekursion ohne Maß · ein impliziter Haufen · Selbst-Bootstrap.
+
+*„Beliebig viel" ist zulässig. „Beliebig viel, ohne je einen Erschöpfungszweig zu sehen" nicht
+— denn dieser Zweig IST die Stelle, an der der Rahmen die Wirklichkeit berührt.*

@@ -147,6 +147,19 @@ of items that are neither code nor a run — what remains is building and measur
       0 Fehler) -- *und kein Pass liest es.* Die Schicht hat damit zwei Haelften: die sieben
       Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
       tragen lassen (PL-Arbeit).
+- [ ] **Eine parametrische `costs`-Zusage ist heute schreibbar und VOLLSTAENDIG LEER**
+      *(gemessen 2026-08-18)*. `costs <= 0 * n ops` an einem Rumpf, der 1 op kostet:
+      **3 Items, 0 Fehler, 0 Hinweise.** `kosten.rs` sagt es im eigenen Kopf (*„die Schranke
+      darf von Eingaben abhaengen … in dem Fall schweigt der Pass"*), und `gabbro kosten`
+      druckt ehrlich `zugesagt --`. **Damit steht der Preis der wertgetragenen Schranke nicht
+      in der Grammatik, sondern in Pass 9: er muss symbolische Ausdruecke VERGLEICHEN statt
+      zu schweigen.** *Was schon passt: `Kosten::Zahl(i128)` traegt `40 * 2^64` muehelos.*
+- [ ] **Unter einer Sperre darf der Rahmen NICHT parametrisch sein.** `held <= N ops` ist eine
+      LATENZaussage -- wie lange ein anderer Kern hoechstens wartet. Ein `held <= 40 * n` mit
+      symbolischem `n` ist eine Sperre, die unbeschraenkt lange gehalten wird, und damit ist
+      `rank`/`held`/`K002` leer. *Dieselbe Trennung noch einmal: die Kostenklasse vertraegt
+      Symbole, die Sperrklasse nicht.* **Die Regel gehoert in die Erweiterung, bevor sie
+      Grammatik wird.**
 - [ ] **Eine Bibliotheks-ABI, und das Format steht schon** *(bewertet 2026-08-18,
       `PLAN.md`: „Zwei Fragen, die die Grenzen beschreiben")*. **Gabbros ganze Zusage ist eine
       Aussage ueber EINE Uebersetzungseinheit** -- jede der elf Klassen wird an einem Baum
