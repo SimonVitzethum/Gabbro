@@ -64,7 +64,7 @@ impl fn scharfschalten(v : ptr<mmio, rw> Vtd, wurzel : Pa)
     wurzel_setzen(v);
     retry warten until v.GSTS.RTPS == 1
         bounded 1024 ops
-        progress geraet_quittiert
+        progress vtd_srtp_quittiert
         on_exceeded geraet_haengt
         effects { reads v.GSTS }
     { }

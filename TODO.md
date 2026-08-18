@@ -527,19 +527,31 @@ of items that are neither code nor a run — what remains is building and measur
 ### Deklariert, exportiert, nie gelesen — die Klasse hat einen Namen und einen Waechter
 
 **Gemessen 2026-08-18** mit `./pruefe-klauseln.py`: 131 Feldnamen aus `ast.rs` gegen 23
-Leserdateien. **49 Felder gebucht** -- 21 nur getragen (nur `emit.rs`/`zeugnis.rs`/`cli`),
-28 ungelesen. Nach Urteil: **18 ZUSAGE**, 6 ABSENKUNG, 25 TOT. *Die Stufe ist gemessen, die
+Leserdateien. **48 Felder gebucht** -- 21 nur getragen (nur `emit.rs`/`zeugnis.rs`/`cli`),
+27 ungelesen. Nach Urteil: **17 ZUSAGE**, 6 ABSENKUNG, 25 TOT. *Die Stufe ist gemessen, die
 Klasse ist ein Urteil, und das Werkzeug sagt beides getrennt an.*
 
 Der Waechter klemmt in beide Richtungen und weist seine Messfaehigkeit nach (R14: `span` muss
 als gelesen herauskommen, `section` nicht). **Die Liste unten ist eine UNTERE Schranke** --
 gemessen wird je Name, nicht je Struktur (W10).
 
-- [ ] **`progress` liest niemand** *(gemessen 2026-08-18)*. `schleifen.rs` steigt in den Rumpf
-      jeder `forever`- und `retry`-Schleife und sieht `fortschritt` nicht an. **Das ist die
-      Zusage, an der ein Kernel haengt, der Jahre laeuft** -- und sie ist heute ein Wort ohne
-      Leser. Dasselbe gilt fuer `verlaesst` (`leaves`) und `abstieg` (die Terminierung des
-      `traverse`).
+- [ ] **`leaves` und der Abstieg des `traverse` haben weiter keinen Leser**
+      *(gemessen 2026-08-18)*. `progress` hat seit heute einen (`S003`/`S004`); die beiden
+      anderen Schleifenzusagen nicht. **`leaves` nennt, was den Ausgang verlaesst** -- das ist
+      eine Linearitaetsaussage, und M2 liest sie nicht. **Der Abstieg traegt die Terminierung
+      des `traverse`**, und `schleifen.rs` steigt in den Rumpf, ohne ihn anzusehen.
+- [ ] **Zahn 3: acht Praemissen ohne Hersteller** *(gemessen 2026-08-18,
+      `gabbro schablonen`)*. Neun bewiesene Schablonen, siebzehn Praemissen, **acht davon
+      stellt niemand her**. Die schaerfste: `device.konstruktor` ist bewiesen, und sein
+      Hauptsatz setzt `getrennt r s` voraus -- *wer das Zeugnis liest, schliesst aus
+      „bewiesen" auf Ueberlappungsfreiheit.* **Das ist die Umkehrung der Klausel-Klasse und
+      teurer als sie:** bei einer ungelesenen Klausel weiss niemand etwas, hier weiss man
+      etwas Falsches. Die Marke steht auf 8 und geht nach unten.
+- [ ] **`by consuming` liest kein Pass** *(gemessen 2026-08-18)*. Beide Praemissen von
+      `consuming.ordnung` -- *die Mutation ist ein ENTFERNEN* und *die Auswahl ist MINIMAL* --
+      sind damit nicht bloss unhergestellt, sondern unherstellbar, solange niemand das
+      Konstrukt ansieht. **`Consuming.thy` K-2 fuehrt fuer die erste ein Gegenbeispiel**: EIN
+      Umhaengen macht aus einem wohlfundierten Zustand eine Schlinge.
 - [ ] **`versatz`: der bewiesene Satz hat keine Prueferzeile** *(gemessen 2026-08-18)*. Dass
       zwei `reg` einander nicht ueberlappen, ist der HAUPTSATZ von `Device_Konstruktor.thy`;
       gelesen wird das Feld nur von `emit.rs`. Gleich daneben: `schritt` -- **`stride 0` macht

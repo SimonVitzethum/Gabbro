@@ -109,4 +109,20 @@ extern fn abschaltung_angefordert() -> bool effects { reads schalter };
 extern fn zeitablauf() -> never effects { diverges };
 extern fn watchdog_schlug_an() -> never effects { diverges };
 
+-- **Die drei Zeugen -- und bis 2026-08-18 stand hier keiner.** Der Abschnitt oben ERKLAERT
+-- die Regel (*„eine Annahme mit Falsifikator, und der Watchdog IST der Falsifikator"*), und
+-- dieselbe Datei nannte drei Namen, die nirgends erklaert waren. `S003` hat es gefunden, am
+-- ersten Tag, an dem `progress` einen Leser hatte.
+assume geraet_antwortet
+    "Ein Statusregister, das `fertig` setzt, tut es innerhalb der zugesagten Leseoperationen."
+    falsifier sonde_geraet_antwortet;
+
+assume zeitgeber_tickt
+    "Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund."
+    falsifier sonde_zeitgeber_tickt;
+
+assume eingabe_endet
+    "Ein Manifest traegt endlich viele Saetze, und `lenof` nennt ihre Zahl."
+    falsifier sonde_eingabe_endet;
+
 }

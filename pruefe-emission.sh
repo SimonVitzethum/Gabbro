@@ -287,7 +287,7 @@ int main(void) {
 #    und die Probe hat es gemeldet.*
 lauf "fragment10" "$ARB/f10.gab" "$TREIBER10" "1 0 0 0 0 65" \
      's/(uint32_t)p\[0\] << 24/(uint32_t)p[3] << 24/' \
-     "0 Annahmen, 2 Schablonen (0 davon UNBEWIESEN), 7 direkte Formen, 2 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "1 Annahmen, 2 Schablonen (0 davon UNBEWIESEN), 7 direkte Formen, 2 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
 # -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
 #

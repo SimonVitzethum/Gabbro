@@ -60,6 +60,30 @@ impl Stand {
     }
 }
 
+/// **Eine Praemisse des Satzes -- und WER sie herstellt.**
+///
+/// Der dritte Zahn, seit 2026-08-18, und er kam aus einem Fund: `device.konstruktor` ist
+/// BEWIESEN, und sein Hauptsatz setzt `getrennt r s` voraus -- *dass zwei Register getrennte
+/// Lagen haben.* Kein Pass rechnet das nach (`pruefe-klauseln.py`: `versatz` wird nur
+/// abgesenkt).
+///
+/// > **Das ist gefaehrlicher als eine ungelesene Klausel.** Bei der weiss niemand etwas; hier
+/// > steht ein Isabelle-Beweis, und wer das Zeugnis liest, schliesst auf Ueberlappungsfreiheit.
+/// > *Ein Beweis deckt die Luecke zu, statt sie zu zeigen.*
+///
+/// `durch` nennt, was die Praemisse herstellt, und die beiden Sorten sind nicht gleich stark:
+///
+/// ```text
+/// ein PASS            deckt jedes Programm, das der Uebersetzer je sieht
+/// eine MUTATIONSPROBE deckt den ERZEUGER, einmal -- die Bruecke aus PLAN.md PL.3
+/// None                NIEMAND. Der Satz haengt in der Luft.
+/// ```
+#[derive(Clone)]
+pub struct Voraussetzung {
+    pub was: &'static str,
+    pub durch: Option<&'static str>,
+}
+
 #[derive(Clone)]
 pub struct Schablone {
     pub name: &'static str,
@@ -76,6 +100,11 @@ pub struct Schablone {
     /// **Was genau einmal gezeigt werden muss.** Ohne diesen Satz ist ein Eintrag ein Name.
     pub pflicht: &'static str,
     pub stand: Stand,
+    /// **Die Rueckrichtung: welche Praemisse stellt welcher Pass her?**
+    ///
+    /// Pflicht fuer jeden `Bewiesen`-Eintrag (Zahn 3). Leer bei `Entworfen`/`Getragen` --
+    /// dort ist der Satz noch nicht gefuehrt, also gibt es auch keine Praemisse zu binden.
+    pub voraussetzungen: &'static [Voraussetzung],
     pub fundstelle: &'static str,
 }
 
@@ -138,6 +167,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   fuer `None` als Ausdruck, und *solange er das tut*, kann keine Rechnung ihn \
                   erzeugen.",
         stand: Stand::Getragen,
+        voraussetzungen: &[],
         fundstelle: "FRAGMENTE.md F1 (vier CDT-Felder), F8 (`aufloesen`); MESSUNGEN.md B3, \
                      `while i != NIL`; beweise/Option_Sonderwert.thy",
     },
@@ -161,6 +191,10 @@ pub const SCHABLONEN: &[Schablone] = &[
                   ist wohlfundiert. **Die Blattheit zum Verbrauchszeitpunkt folgt daraus \
                   NICHT**; sie verlangt zusaetzlich, dass die Auswahl MINIMAL ist.",
         stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "die erzeugte Mutation ist ein ENTFERNEN und kein Umhaengen", durch: None },
+            Voraussetzung { was: "die Auswahl des Zeugen ist MINIMAL (`waehlt_minimal`)", durch: None },
+        ],
         fundstelle: "SPRACHE.md §9.2",
     },
     Schablone {
@@ -179,6 +213,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   NICHT durch `wf_subset` gedeckt, sondern je Mutation einzeln zu zeigen. \
                   **Die pauschale Fassung ist widerlegt**, nicht offen.",
         stand: Stand::Entworfen,
+        voraussetzungen: &[],
         fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), Befund K-2; B3, Marke Nb2",
     },
     Schablone {
@@ -199,6 +234,9 @@ pub const SCHABLONEN: &[Schablone] = &[
                   dann total, aber nicht erschoepfend. **Ohne den genannten Zustand ist der \
                   Satz in einer verbrauchenden Traversierung mehrdeutig.**",
         stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "der Zustand, an dem die Leerheit behauptet wird, ist GENANNT -- leer WANN?", durch: None },
+        ],
         fundstelle: "SPRACHE.md §9.2",
     },
     Schablone {
@@ -215,6 +253,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   **Invarianten UEBER Traegern sind ausdruecklich nicht gedeckt**; sie sind \
                   `gruppe.ops`.",
         stand: Stand::Entworfen,
+        voraussetzungen: &[],
         fundstelle: "SPRACHE.md §10.2",
     },
     Schablone {
@@ -253,6 +292,10 @@ pub const SCHABLONEN: &[Schablone] = &[
                   **Wohlfundiertheit ist HYPOTHESE, nicht Ergebnis** -- die Deklaration muss \
                   die tragende Invariante nennen (`invariant acyclic`).",
         stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "die Traegermenge ist endlich: die Verkettungsfelder bleiben in der Tabelle", durch: Some("M103, ueber `table.indexschranke`") },
+            Voraussetzung { was: "je Verkettungsfeld eine Kantenpraemisse -- der Erzeuger schreibt ZWEI, nicht eine", durch: None },
+        ],
         fundstelle: "SYNTAX.md §5, SPRACHE.md Teil V",
     },
     Schablone {
@@ -268,6 +311,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   mehreren jeder Kern, der die Sperre des Zuges nicht haelt. **Ohne \
                   benannten Beobachter ist die Zusage auf einem Mehrkerner leer.**",
         stand: Stand::Entworfen,
+        voraussetzungen: &[],
         fundstelle: "SYNTAX.md §10",
     },
     Schablone {
@@ -282,6 +326,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   Atomaritaet der Lese-Aendere-Schreibe-Folge ist KEINE Schablonenpflicht, \
                   sondern eine Annahme der Axiomschicht** -- sie steht dort und nicht hier.",
         stand: Stand::Entworfen,
+        voraussetzungen: &[],
         fundstelle: "SPRACHE.md Teil III §1",
     },
     Schablone {
@@ -309,6 +354,11 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Falle, die der Eintrag nicht nannte und die beim Nachweis der Instanzen abfiel --
         // ueber `nat` gibt es kein Neutrales fuer `min`, ueber einem Maschinenwort schon.
         stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "die Verknuepfung stammt aus max/min/add/or/and", durch: Some("der geschlossene Wortschatz: `MergeOp` laesst nichts anderes zu") },
+            Voraussetzung { was: "je Kern eine Zelle, mit dem richtigen Neutralen angelegt", durch: Some("Mutationsprobe `min-akkumulator-ohne-umkehr`, Einheit `beispiel23`") },
+            Voraussetzung { was: "der RUHEPUNKT -- kein Kern schreibt mehr, waehrend gefaltet wird", durch: None },
+        ],
         fundstelle: "SPRACHE.md §11.4; beweise/Accumulates_Monoid.thy",
     },
     Schablone {
@@ -324,6 +374,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   wie `Blatteintrag`:** eine grosse Seite bildet oberhalb der vollen Tiefe \
                   ab. *Ob die Domaene sie heute trifft, ist ungeprueft.*",
         stand: Stand::Entworfen,
+        voraussetzungen: &[],
         fundstelle: "SPRACHE.md §5.4, §6",
     },
     Schablone {
@@ -348,6 +399,10 @@ pub const SCHABLONEN: &[Schablone] = &[
         // das andere nicht zerstoert (`schreiben_stoert_getrennte_felder_nicht`) -- **und
         // genau das ist die Stelle, an der ein Erzeuger zwei Versaetze ueberlappen laesst.**
         stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "der geschriebene Wert passt in die deklarierte Breite", durch: Some("M101 (m1.rs)") },
+            Voraussetzung { was: "die Felder liegen GETRENNT (`trennt f g`)", durch: None },
+        ],
         fundstelle: "SPRACHE.md §10.1; beweise/Format_Roundtrip.thy",
     },
     Schablone {
@@ -364,6 +419,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   eine Stapelinvariante dasteht. **Kein nachgelagerter Beweiser** -- das \
                   Vertrauen schrumpft auf eine Stelle, es verschwindet nicht.",
         stand: Stand::Entworfen,
+        voraussetzungen: &[],
         fundstelle: "SPRACHE.md Teil II §2",
     },
     Schablone {
@@ -392,6 +448,11 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Zellen, der Satz gilt trivial, und der Erzeuger sollte sie ablehnen statt sie
         // leerlaufen zu lassen. *Richtig und nutzlos ist keine bestandene Pruefung.*
         stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "zwei `reg` haben getrennte Lagen (`getrennt r s`)", durch: None },
+            Voraussetzung { was: "`stride` ist nicht null -- sonst ist jede Bankzelle leer", durch: None },
+            Voraussetzung { was: "die deklarierten Lagen sind die des Geraets", durch: Some("Axiomschicht: `assume` mit Falsifikator, `gabbro annahmen`") },
+        ],
         fundstelle: "MESSUNGEN.md, Der Ursprung, 2026-08-14; beweise/Device_Konstruktor.thy",
     },
     Schablone {
@@ -418,6 +479,9 @@ pub const SCHABLONEN: &[Schablone] = &[
                   in den Typ (`schreibstellen_im_typ`, `kette_bleibt_im_typ`). Daraus faellt \
                   `im_bereich` fuer `table.induktion` (`im_bereich_folgt_aus_indexschranke`).",
         stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "jede erzeugte Schreibstelle bleibt im Typ (`schreibstellen_im_typ`)", durch: Some("M103 (m1.rs)") },
+        ],
         fundstelle: "MESSUNGEN.md, A3, 2026-08-14",
     },
     Schablone {
@@ -454,6 +518,10 @@ pub const SCHABLONEN: &[Schablone] = &[
         // > *`lebend_ungedeckt()` faellt damit von 4 auf 3* -- und das ist die einzige Zahl
         // > dieses Ordners, die kleiner zu werden ETWAS kostet.
         stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "jeder Index liegt im Typ (`i : indextyp N`)", durch: Some("M103 (m1.rs)") },
+            Voraussetzung { was: "`count N` steht da -- sonst haette das Feld keine Groesse", durch: Some("C001, emit.rs:938") },
+        ],
         fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), Befund M-3; \
                      beweise/Table_Absenkung.thy",
     },
@@ -471,6 +539,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   **Fuer Domaenen mit mehreren Kantenarten (`chain(a,b) in`) ist diese \
                   Reihenfolge zusaetzlich festzulegen** -- sie faellt nicht aus der Domaene.",
         stand: Stand::Entworfen,
+        voraussetzungen: &[],
         fundstelle: "MESSUNGEN.md, B13-Nachpruefung",
     },
     Schablone {
@@ -486,6 +555,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   `transset`. *Aus einem Zustand mit gehaltenem linearem Wert ist er ein \
                   Leck und muss abgelehnt werden -- M2, nicht diese Schablone.*",
         stand: Stand::Entworfen,
+        voraussetzungen: &[],
         fundstelle: "MESSUNGEN.md, B13-Nachpruefung",
     },
     Schablone {
@@ -516,6 +586,9 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Beweis lag VORHER -- so verlangt es das zweite Tor von K100, und deshalb bewegt
         // dieser Schritt `lebend_ungedeckt()` nicht.
         stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "`deckt`: die Zuordnung hat genau die Feldliste als Schluesselfolge", durch: Some("M106/M107") },
+        ],
         fundstelle: "MESSUNGEN.md, B13-Nachpruefung; beweise/Verbund_Konstruktor.thy; \
                      m1.rs::marken_pruefen; emit.rs::verbund",
     },
@@ -545,6 +618,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   fehlt -- und eine Emission koennte die Bereichspruefung weglassen, WEIL \
                   der Beweis sagt, es koenne nicht negativ werden.",
         stand: Stand::Entworfen,
+        voraussetzungen: &[],
         fundstelle: "MESSUNGEN.md, Papiertest CapSpace/CDT, 2026-08-14",
     },
     Schablone {
@@ -577,6 +651,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   *Eine Gruppe mit deklariertem Abdruck haette diesen Kommentar ueberfluessig \
                   gemacht; das ist der gemessene Bedarf, nicht ein Entwurfswunsch.*",
         stand: Stand::Entworfen,
+        voraussetzungen: &[],
         fundstelle: "MESSUNGEN.md, SWEEP der Verbindungs-Invarianten, 2026-08-16 (V4)",
     },
 ];
@@ -699,6 +774,50 @@ pub fn lebend_ungedeckt() -> usize {
         .count()
 }
 
+/// **ZAHN 3 -- die RUECKRICHTUNG, seit 2026-08-18.**
+///
+/// Zahn 1 zaehlt Eintraege (kein Eintrag ohne gemessenen Bedarf), Zahn 2 begrenzt die
+/// unbewiesenen. **Beide sehen nach VORNE.** Was keiner von beiden fragt: *ein Satz ist
+/// gefuehrt -- und wer stellt seine Praemissen her?*
+///
+/// Der Fund, der den Zahn erzwungen hat: `device.konstruktor` ist bewiesen, und
+/// `getrennte_register_treffen_getrennte_zellen` setzt `getrennt r s` voraus. **Kein Pass
+/// rechnet das nach.** Wer das Zeugnis liest, sieht die Schablone als bewiesen und schliesst
+/// auf Ueberlappungsfreiheit -- *der Beweis deckt die Luecke zu, statt sie zu zeigen.*
+///
+/// > Bei einer ungelesenen Klausel weiss niemand etwas. Hier weiss man etwas Falsches.
+pub fn ohne_rueckrichtung_in(liste: &[Schablone]) -> Vec<&'static str> {
+    liste
+        .iter()
+        .filter(|s| s.stand == Stand::Bewiesen && s.voraussetzungen.is_empty())
+        .map(|s| s.name)
+        .collect()
+}
+
+pub fn ohne_rueckrichtung() -> Vec<&'static str> {
+    ohne_rueckrichtung_in(SCHABLONEN)
+}
+
+/// **Die Praemissen, die NIEMAND herstellt** -- Schablone und Praemisse.
+///
+/// Das ist die Zahl neben `lebend_ungedeckt()`, und sie misst die andere Richtung: dort ein
+/// Satz ohne Beweis, hier ein Beweis ohne Pass. *Sie darf fallen und nicht steigen.*
+pub fn in_der_luft_in(liste: &[Schablone]) -> Vec<(&'static str, &'static str)> {
+    liste
+        .iter()
+        .flat_map(|s| {
+            s.voraussetzungen
+                .iter()
+                .filter(|v| v.durch.is_none())
+                .map(move |v| (s.name, v.was))
+        })
+        .collect()
+}
+
+pub fn in_der_luft() -> Vec<(&'static str, &'static str)> {
+    in_der_luft_in(SCHABLONEN)
+}
+
 /// Wieviele Schablonen tragen heute, ohne bewiesen zu sein?
 pub fn ungedeckt() -> usize {
     SCHABLONEN
@@ -732,6 +851,14 @@ pub fn zeige() -> String {
         bewiesen(),
         lebend_ungedeckt()
     ));
+    let luft = in_der_luft();
+    out.push_str(&format!(
+        "--   davon PRAEMISSEN OHNE PASS (Zahn 3): {} -- ein Beweis, den nichts herstellt.\n",
+        luft.len()
+    ));
+    for (schablone, was) in &luft {
+        out.push_str(&format!("--     {schablone}: {was}\n"));
+    }
     out.push_str(&format!(
         "-- Der eine Isabelle-Posten ist damit keine Zahl 1, sondern diese Liste.\n\
          -- Waechst sie, waechst die Vertrauensbasis -- auch wenn die Kennzahl glaenzt.\n\
@@ -740,7 +867,8 @@ pub fn zeige() -> String {
          --   Heute: {} Eintraege, {} zulaessig. Jeder weitere kostet einen Beweis.\n\
          --   Der Ausweg ist nicht, die Marke zu heben -- er ist, die naechste zu beweisen.\n\
          -- Ein Eintrag verlaesst die Liste nur BEWIESEN oder MITSAMT SEINEM KONSTRUKT.\n\
-         --   Nicht durch Umformulierung, nicht durch Zusammenfassen.\n",
+         --   Nicht durch Umformulierung, nicht durch Zusammenfassen.\n\
+         -- RATSCHE, ZAHN 3: jede BEWIESENE Schablone bindet ihre Praemissen an einen Pass.\n",
         MARKE_OHNE_BEWEIS,
         SCHABLONEN.len(),
         zulaessig()

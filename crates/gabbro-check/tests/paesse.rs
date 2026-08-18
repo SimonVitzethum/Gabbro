@@ -357,7 +357,7 @@ fn jede_schablone_nennt_ihre_pflicht() {
 }
 
 
-// -- Die Schablonen-Ratsche, zwei Zaehne ------------------------------------------------
+// -- Die Schablonen-Ratsche, DREI Zaehne -------------------------------------------------
 
 #[test]
 fn kein_schablonen_eintrag_ohne_fundstelle() {
@@ -401,6 +401,7 @@ fn probe(name: &'static str, fundstelle: &'static str, stand: Stand) -> Schablon
         konstrukt: "Probe",
         pflicht: "Ein Satz, der lang genug ist, um die Pflichtpruefung zu passieren, und zwar deutlich.",
         stand,
+        voraussetzungen: &[],
         fundstelle,
     }
 }
@@ -509,5 +510,66 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
         entworfen + lebend_ungedeckt() + bewiesen(),
         SCHABLONEN.len(),
         "entworfen + getragen + bewiesen muss die ganze Liste sein"
+    );
+}
+
+// -- Zahn 3: die Rueckrichtung ------------------------------------------------------------
+
+#[test]
+fn jede_bewiesene_schablone_bindet_ihre_praemissen() {
+    let ohne = gabbro_check::schablonen::ohne_rueckrichtung();
+    assert!(
+        ohne.is_empty(),
+        "bewiesene Schablonen ohne Rueckrichtung: {ohne:?} -- **ein Beweis, der nicht sagt, \
+         welcher Pass seine Praemissen herstellt, haengt in der Luft.** Er sieht im Zeugnis \
+         aus wie Deckung und ist keine"
+    );
+}
+
+#[test]
+fn der_dritte_zahn_spricht() {
+    use gabbro_check::schablonen::{in_der_luft_in, ohne_rueckrichtung_in, Voraussetzung};
+    // Gesund: bewiesen UND gebunden.
+    let mut gesund = probe("a", "MESSUNGEN.md", Stand::Bewiesen);
+    gesund.voraussetzungen = &[Voraussetzung { was: "x", durch: Some("M103 (m1.rs)") }];
+    assert!(ohne_rueckrichtung_in(&[gesund.clone()]).is_empty());
+    assert!(in_der_luft_in(&[gesund]).is_empty());
+
+    // Krank I: bewiesen, aber gar keine Praemisse genannt.
+    let krank = probe("stumm", "MESSUNGEN.md", Stand::Bewiesen);
+    assert_eq!(
+        ohne_rueckrichtung_in(&[krank]),
+        vec!["stumm"],
+        "**der dritte Zahn greift nicht.** Ein bewiesener Eintrag ohne Rueckrichtung ist \
+         genau das, wogegen er gebaut ist"
+    );
+
+    // Krank II: die Praemisse steht da, und NIEMAND stellt sie her.
+    let mut luftig = probe("luftig", "MESSUNGEN.md", Stand::Bewiesen);
+    luftig.voraussetzungen = &[Voraussetzung { was: "getrennt r s", durch: None }];
+    assert_eq!(
+        in_der_luft_in(&[luftig]),
+        vec![("luftig", "getrennt r s")],
+        "eine Praemisse ohne Hersteller muss beim Namen genannt werden"
+    );
+
+    // Und ein ENTWORFENER Eintrag darf schweigen -- sein Satz ist nicht gefuehrt.
+    let entworfen = probe("entwurf", "MESSUNGEN.md", Stand::Entworfen);
+    assert!(ohne_rueckrichtung_in(&[entworfen]).is_empty());
+}
+
+#[test]
+fn die_praemissen_ohne_pass_sind_gezaehlt() {
+    // **Die Marke, und sie darf nur FALLEN.** Am 2026-08-18 gemessen: neun bewiesene
+    // Schablonen, siebzehn Praemissen, und diese hier stellt niemand her.
+    let luft = gabbro_check::schablonen::in_der_luft();
+    assert!(
+        luft.len() <= 8,
+        "Praemissen ohne Pass: {} -- die Marke ist 8 und sie geht nach unten:\n{luft:#?}",
+        luft.len()
+    );
+    assert!(
+        luft.iter().any(|(s, _)| *s == "device.konstruktor"),
+        "der Fund, der Zahn 3 erzwungen hat, muss in der Zahl stehen"
     );
 }

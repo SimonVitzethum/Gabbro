@@ -7,6 +7,11 @@ Dreimal in zwei Wochen dasselbe Muster, und jedes Mal von Hand gefunden:
     `opaque`    deklariert, ein VERBOT -- und es biss an keiner Rechenstelle
     `ensures`   deklariert, im Zeugnis GEZAEHLT, gegen keinen Rumpf gehalten
 
+**Der erste Aufstieg, 2026-08-18:** `progress` hatte keinen Leser -- gefunden von diesem
+Werkzeug, nicht von Hand. `schleifen.rs` liest ihn jetzt (`S003`/`S004`), und die Ratsche hat
+die Zeile beim naechsten Lauf als VERALTET gemeldet. *Genau dafuer klemmt sie in beide
+Richtungen.*
+
 Ein Muster, das dreimal von Hand gefunden wird, ist kein Zufall, sondern ein fehlendes
 Werkzeug. **Und die vierte Fundstelle ist teurer als die dritte**, weil auf ihr dann schon
 etwas steht: wertgetragene Indextypen bauen auf `opaque`, die Bibliotheks-ABI baut auf
@@ -58,7 +63,6 @@ ERWARTET = {
     # -- ZUSAGE: eine Aussage ueber Verhalten, die kein Pass gegen etwas haelt ------------
     "ensures":      ("ZUSAGE", "Was der Rumpf herstellen muss. Das Zeugnis ZAEHLT es; kein Pass haelt es gegen den Rumpf. **Der benannte Fall.**"),
     "maintains":    ("ZUSAGE", "Wie `ensures`: gezaehlt, nie gehalten."),
-    "fortschritt":  ("ZUSAGE", "`progress` -- der Zeuge, der eine unbeschraenkte Schleife tragbar macht. `schleifen.rs` geht in den Rumpf und liest ihn nicht. Daran haengt ein Kernel, der Jahre laeuft."),
     "versatz":      ("ZUSAGE", "Registerlage. Dass zwei Register einander nicht ueberlappen, ist der HAUPTSATZ von `Device_Konstruktor.thy` -- und kein Pass rechnet ihn nach."),
     "schritt":      ("ZUSAGE", "`stride`. `stride 0` macht die Bank leer; `Device_Konstruktor.thy` sagt es und nennt es selbst eine Fundstelle."),
     "ghost":        ("ZUSAGE", "Ein Geisttyp darf im erzeugten C nicht vorkommen. Ein Verbot, das kein Pass durchsetzt -- dieselbe Bauart wie `opaque`."),

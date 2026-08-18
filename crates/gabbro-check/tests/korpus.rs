@@ -29,6 +29,11 @@ const BENANNT: &[&str] = &[
     "M101", "M102", "M103", "M104", "M105", // M1 + V1-V3
     "N001", "N002", "N003", // Namen
     "S001", "S002", // Schleifen und Kontrollfluss
+    // **`progress` bekam am 2026-08-18 seinen ersten Leser** -- und `S003` faellt sofort im
+    // Korpus (`FRAGMENTE.md`:887, die `virtq`-Wartestelle). Das ist KEINE Fehlmessung: ein
+    // Fragment traegt keine Annahmenschicht, also nennt sein `progress` einen Zeugen, den
+    // niemand erklaert. *In einem ganzen Programm waere genau das der Fehler.*
+    "S003", "S004",
     "K001", "K002", "K003", // Kosten
     "E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008", "E009",
     "E010", // Wirkungen -- E010 ist die Lesehaelfte (Lesart A, 2026-08-16)

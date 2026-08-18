@@ -7147,3 +7147,100 @@ Schablonen           20, davon 6 bewiesen
 | **K11.2.3** Ordnung absenken | ✓ unter A10, 9. Übersetzungseinheit |
 | **K11.3.1** Breite | teilweise — `static`, `publishes`, `awaits` gebaut; die fünf befundgesperrten offen |
 | **K11.3.2** Tiefe | 1 von 4 — `table.absenkung` bewiesen |
+
+---
+
+# 2026-08-18 — drei Messungen, und alle drei kamen von einem Werkzeug statt von einem Leser
+
+## I. Der Klauselwächter: die Klasse ist 48 groß, nicht 4
+
+`./pruefe-klauseln.py`, 131 Feldnamen aus `ast.rs` gegen 23 Leserdateien:
+
+| | | |
+|---|---|---|
+| **nur getragen** | 21 | nur `emit.rs`/`zeugnis.rs`/`cli` |
+| **ungelesen** | 27 | der Leser füllt sie, niemand sieht hin |
+| ZUSAGE | **17** | eine Aussage über Verhalten, die kein Pass hält |
+| ABSENKUNG | 6 | der Erzeuger ist ihr richtiger und einziger Leser |
+| TOT | 25 | das Bauteil ist gelesen und sonst nirgends |
+
+**Die Aufteilung ist die eigentliche Zahl, nicht die Summe.** 25 TOT sind Aufräumarbeit,
+6 ABSENKUNG sind Buchführung — **17 sind Substanz.** Und das Wachstum der Aufgabenliste
+(86 → 94) ist kein Rückschritt, sondern die Umwandlung unbekannter Schuld in benannte:
+*die 48 waren die ganze Zeit da.*
+
+## II. Das Zahlenpaar: „9 Theorien" gemeldet, 0 Sitzungen gebaut
+
+`pruefe-beweise.sh` rief `isabelle build -D .`. Das wählt **keine Sitzung aus**, baut nichts
+und endet mit 0. Darüber meldete das Skript:
+
+```
+== BEWEISE: ALL PASS -- 9 Theorien ==
+```
+
+Die 9 kam aus `grep -c` über `ROOT` — **aus der Absicht, nicht aus dem Beleg** (R3), und das
+Werkzeug konnte nicht zeigen, dass es misst (R14). Es gehört neben die anderen Paare dieses
+Ordners, und es ist das unangenehmste von ihnen: **es war der Beweiswächter** — die Instanz,
+die die Vertrauensfläche abtragen soll.
+
+Seitdem: die Sitzung wird benannt, ein Nachweis verlangt, `ROOT` gegen den Ordner gehalten.
+Vier Proben, vier Bisse. Der grüne Lauf trägt seinen Nachweis im Text
+(`Finished Gabbro (0:00:22)` oder *„unverändert seit …, keine Quelle ist jünger"*).
+
+## III. `progress` bekam seinen ersten Leser — und fiel sofort an fünf Stellen
+
+`S003`/`S004` in `schleifen.rs`. **Was NICHT geprüft wird, ist Lebendigkeit** — D8 steht
+unverändert. Geprüft wird, was die Sprache verspricht: `progress` nennt eine **Annahme mit
+Falsifikator**.
+
+| Fundstelle | was dastand |
+|---|---|
+| `02-geraet.gab:67` | `progress geraet_quittiert` — ein **Synonym** für die erklärte `vtd_srtp_quittiert` |
+| `04-schleifen.gab:50,70,99` | drei Zeugen, **keiner erklärt** — in der Datei, die die Regel erklärt |
+| `09-ohne-zeiger.gab:108` | derselbe Fall wie 02, ohne Annahmenschicht |
+| `FRAGMENTE.md:887` | die `virtq`-Wartestelle — **richtig**, ein Fragment trägt keine Annahmenschicht |
+| `FRAGMENTE.md:1656` | der DTB-Leser, und er ist die **11. Übersetzungseinheit** — er musste die Annahme bekommen |
+
+**Und die letzte Zeile hat den Beleg mitgeliefert.** Kaum stand `assume token_verbraucht` da,
+meldete der Zeugnis-Abgleich `ANDERS ALS GEBUCHT`: *gebucht 0 Annahmen, bekommen 1*. Genau
+das sagt `S003` — *„ohne `assume` steht der Name in keinem Manifest und kommt in kein
+Zeugnis"* —, und hier ist es einmal in beide Richtungen gemessen.
+
+> **Die zweite Zeile ist die, die zählt.** `04-schleifen.gab` schreibt im Kommentar *„`progress`
+> nennt, WER sie beendet — eine Annahme mit Falsifikator, und der Watchdog IST der
+> Falsifikator"* und nennt dann drei Namen, die nirgends stehen. *Ein Beispiel, das seine
+> eigene Regel erklärt und nicht befolgt, ist genau die Lage, die ein Wort ohne Leser erzeugt.*
+
+## IV. Zahn 3: 9 bewiesene Schablonen, 17 Prämissen — **8 ohne Hersteller**
+
+Die neue Klasse, und sie kehrt das Muster um: nicht *deklariert und nie gelesen*, sondern
+**bewiesen und von nichts hergestellt.**
+
+```
+consuming.ordnung     die Mutation ist ein ENTFERNEN und kein Umhängen
+consuming.ordnung     die Auswahl des Zeugen ist MINIMAL
+consuming.leermenge   der Zustand ist GENANNT -- leer WANN?
+table.induktion       je Verkettungsfeld eine Kantenprämisse
+accumulates.monoid    der RUHEPUNKT -- kein Kern schreibt mehr
+format.roundtrip      die Felder liegen GETRENNT
+device.konstruktor    zwei `reg` haben getrennte Lagen
+device.konstruktor    `stride` ist nicht null
+```
+
+**Sie ist gefährlicher als eine ungelesene Klausel.** Bei der weiß niemand etwas; hier steht
+ein Isabelle-Beweis, und wer das Zeugnis liest, schließt aus `device.konstruktor: bewiesen`
+auf Überlappungsfreiheit. *Der Beweis deckt die Lücke zu, statt sie zu zeigen.*
+
+Und `by consuming` liest **kein Pass** — die beiden Prämissen von `consuming.ordnung` sind
+damit nicht bloß unhergestellt, sondern unherstellbar, solange niemand das Konstrukt ansieht.
+`Consuming.thy` K-2 führt für die eine ein **Gegenbeispiel**.
+
+## Stand
+
+| | |
+|---|---|
+| Klauseln gebucht | 48 — davon 17 ZUSAGE, 6 ABSENKUNG, 25 TOT |
+| Prämissen ohne Pass | **8** von 17, über 9 bewiesene Schablonen |
+| Beweise | 9 Theorien, gemessen grün (`Finished Gabbro 0:00:22`) |
+| Proben | 126, davon 80 Gift |
+| Ratsche | drei Zähne: Bedarf · Marke · **Rückrichtung** |

@@ -1665,6 +1665,12 @@ impl fn kerne_zaehlen(k : ptr<normal, r> DtbKopf) -> u32
 
 extern fn baum_unlesbar() -> never effects { diverges } costs <= 0 ops;
 
+-- **Der Zeuge, und bis 2026-08-18 stand er nicht da.** `progress` nennt eine Annahme mit
+-- Falsifikator; ohne `assume` steht der Name in keinem Manifest. `S003` hat es gefunden.
+assume token_verbraucht
+    "Jeder Durchgang verbraucht mindestens ein Token, und ein DTB hat endlich viele."
+    falsifier sonde_dtb_endlich;
+
 }
 ```
 

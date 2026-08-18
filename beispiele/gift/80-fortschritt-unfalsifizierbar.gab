@@ -1,0 +1,22 @@
+-- erwartet: S004
+-- **Eine Annahme, der keine Sonde je widersprechen kann, beendet die Schleife nur auf dem
+-- Papier.** `SYNTAX.md` §8.3 sagt es genau andersherum: *„der Watchdog IST der
+-- Falsifikator"*. Nimmt man ihm seinen Gegenstand, bleibt von `progress` ein Wunsch.
+--
+-- *Die Gegenrichtung zu «79»: hier IST der Zeuge erklaert -- nur eben unwiderlegbar.*
+type Zustand = { fertig : u32, };
+
+assume geraet_antwortet_immer
+    "Das Geraet antwortet."
+    unfalsifiable "es laesst sich nicht pruefen, weil kein Ausbleiben je beobachtet wird";
+
+impl fn warten(g : ptr<mmio, r> Zustand) effects { reads g } costs <= 1025 ops {
+    retry warten until g.fertig == 1
+        bounded 1024 ops
+        progress geraet_antwortet_immer
+        on_exceeded zeitablauf
+        effects { reads g }
+    { }
+}
+
+extern fn zeitablauf() -> never effects { diverges };

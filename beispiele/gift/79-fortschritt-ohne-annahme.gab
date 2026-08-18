@@ -1,0 +1,19 @@
+-- erwartet: S003
+-- **Der Zeuge, den niemand erklaert hat.** `progress` nennt WER die Schleife beendet -- und
+-- wenn dieser Name in keiner Annahme steht, endet die Schleife laut Quelltext durch etwas,
+-- das in keinem Manifest auftaucht und in kein Zeugnis kommt.
+--
+-- *Gemessen an echtem Text: genau so stand es in `02-geraet.gab`, `04-schleifen.gab` und
+-- `09-ohne-zeiger.gab`, bis `progress` am 2026-08-18 seinen ersten Leser bekam.*
+type Zustand = { fertig : u32, };
+
+impl fn warten(g : ptr<mmio, r> Zustand) effects { reads g } costs <= 1025 ops {
+    retry warten until g.fertig == 1
+        bounded 1024 ops
+        progress geraet_antwortet_schon
+        on_exceeded zeitablauf
+        effects { reads g }
+    { }
+}
+
+extern fn zeitablauf() -> never effects { diverges };

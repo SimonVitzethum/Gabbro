@@ -11,51 +11,66 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 
+/// Was der Pass beim Absteigen mitfuehrt.
+///
+/// **Bis 2026-08-18 war das nur `div`.** `progress` kam dazu, weil `pruefe-klauseln.py` das
+/// Feld als ungelesen ausgewiesen hat -- *gefunden von einem Werkzeug, nicht von Hand.*
+struct Lage<'a> {
+    /// Die Namen, die `-> never` oder `diverges` erklaeren.
+    div: &'a [String],
+    /// Annahme -> ist sie falsifizierbar?
+    annahmen: std::collections::BTreeMap<String, bool>,
+}
+
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let div = divergierende(baum);
+    let lg = Lage {
+        div: &div,
+        annahmen: annahmen(baum),
+    };
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         ItemArt::Funktion(f) => {
             if let FnRumpf::Block(b) = &f.rumpf {
-                block(b, &mut Vec::new(), &div, absagen);
+                block(b, &mut Vec::new(), &lg, absagen);
             }
         }
-        ItemArt::Check(c) => block(&c.can_fail, &mut Vec::new(), &div, absagen),
+        ItemArt::Check(c) => block(&c.can_fail, &mut Vec::new(), &lg, absagen),
         _ => {}
     });
 }
 
-fn block(b: &Block, marken: &mut Vec<String>, div: &[String], absagen: &mut Absagen) {
+fn block(b: &Block, marken: &mut Vec<String>, lg: &Lage, absagen: &mut Absagen) {
     for s in &b.anweisungen {
-        anweisung(s, marken, div, absagen);
+        anweisung(s, marken, lg, absagen);
     }
 }
 
-fn anweisung(s: &Stmt, marken: &mut Vec<String>, div: &[String], absagen: &mut Absagen) {
+fn anweisung(s: &Stmt, marken: &mut Vec<String>, lg: &Lage, absagen: &mut Absagen) {
     match &s.art {
         StmtArt::Leave(ziel) => ziel_pruefen(ziel, marken, "leave", absagen),
         StmtArt::Next(ziel) => ziel_pruefen(ziel, marken, "next", absagen),
         StmtArt::Wenn(w) => {
             for (_, b) in &w.zweige {
-                block(b, marken, div, absagen);
+                block(b, marken, lg, absagen);
             }
             if let Some(b) = &w.sonst {
-                block(b, marken, div, absagen);
+                block(b, marken, lg, absagen);
             }
         }
         StmtArt::Match(m) => {
             for z in &m.zweige {
-                block(&z.rumpf, marken, div, absagen);
+                block(&z.rumpf, marken, lg, absagen);
             }
         }
-        StmtArt::Bricht(b) => block(&b.rumpf, marken, div, absagen),
-        StmtArt::Narrow(n) => block(&n.sonst, marken, div, absagen),
-        StmtArt::Sperrt(l) => block(&l.rumpf, marken, div, absagen),
+        StmtArt::Bricht(b) => block(&b.rumpf, marken, lg, absagen),
+        StmtArt::Narrow(n) => block(&n.sonst, marken, lg, absagen),
+        StmtArt::Sperrt(l) => block(&l.rumpf, marken, lg, absagen),
         StmtArt::LetSonst(l) => {
             // **U7.** `SYNTAX.md` §7: *„der `else`-Zweig muss divergieren oder
             // zurueckkehren"*. Faellt er durch, ist `let … else` genau der verborgene
             // Kontrollfluss, gegen den es geschrieben wurde -- der Name waere danach
             // gebunden, ohne dass je ein Wert entstand.
-            if !endet_immer(&l.sonst, div) {
+            if !endet_immer(&l.sonst, lg.div) {
                 absagen.schiebe(
                     Absage::fehler(
                         "S002",
@@ -71,21 +86,23 @@ fn anweisung(s: &Stmt, marken: &mut Vec<String>, div: &[String], absagen: &mut A
                     ),
                 );
             }
-            block(&l.sonst, marken, div, absagen);
+            block(&l.sonst, marken, lg, absagen);
         }
         StmtArt::Exchange(e) => {
             if let XForm::Update { rumpf, .. } = &e.form {
-                block(rumpf, marken, div, absagen);
+                block(rumpf, marken, lg, absagen);
             }
         }
         StmtArt::Schleife(sch) => match sch.as_ref() {
             // `traverse` traegt keine Marke -- die Grammatik gibt ihr keine Stelle dafuer.
-            Schleife::Traverse(t) => block(&t.rumpf, marken, div, absagen),
+            Schleife::Traverse(t) => block(&t.rumpf, marken, lg, absagen),
             Schleife::Retry(r) => {
-                mit_marke(r.marke.as_ref(), &r.rumpf, marken, div, absagen);
+                fortschritt_pruefen(r.fortschritt.as_ref(), lg, absagen);
+                mit_marke(r.marke.as_ref(), &r.rumpf, marken, lg, absagen);
             }
             Schleife::Forever(f) => {
-                mit_marke(f.marke.as_ref(), &f.rumpf, marken, div, absagen);
+                fortschritt_pruefen(f.fortschritt.as_ref(), lg, absagen);
+                mit_marke(f.marke.as_ref(), &f.rumpf, marken, lg, absagen);
             }
         },
         _ => {}
@@ -96,15 +113,15 @@ fn mit_marke(
     marke: Option<&Ident>,
     rumpf: &Block,
     marken: &mut Vec<String>,
-    div: &[String],
+    lg: &Lage,
     absagen: &mut Absagen,
 ) {
     if let Some(m) = marke {
         marken.push(m.text.clone());
-        block(rumpf, marken, div, absagen);
+        block(rumpf, marken, lg, absagen);
         marken.pop();
     } else {
-        block(rumpf, marken, div, absagen);
+        block(rumpf, marken, lg, absagen);
     }
 }
 
@@ -182,4 +199,74 @@ fn ziel_pruefen(ziel: &Ident, marken: &[String], wort: &str, absagen: &mut Absag
         a = a.mit_notiz(format!("im Geltungsbereich: {}", marken.join(", ")));
     }
     absagen.schiebe(a);
+}
+
+/// Sammelt die Annahmenschicht: Name -> ist sie falsifizierbar?
+///
+/// `assume` und `axiom` fuehren dieselbe Klasse (`AnnahmeKlasse`), und beide duerfen einen
+/// Fortschritt tragen -- *wer die Schleife beendet, kann eine Umgebungszusage sein oder eine
+/// Maschineneigenschaft.*
+fn annahmen(baum: &Programm) -> std::collections::BTreeMap<String, bool> {
+    let mut aus = std::collections::BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let (name, klasse) = match &item.art {
+            ItemArt::Assume(a) => (&a.name, &a.klasse),
+            ItemArt::Axiom(a) => (&a.name, &a.klasse),
+            _ => return,
+        };
+        aus.insert(
+            name.text.clone(),
+            matches!(klasse, AnnahmeKlasse::Falsifizierbar(_)),
+        );
+    });
+    aus
+}
+
+/// **`progress` hatte bis 2026-08-18 keinen Leser** -- ausgewiesen von `pruefe-klauseln.py`.
+///
+/// **Was hier NICHT geprueft wird, ist Lebendigkeit.** D8 sagt es und behaelt recht:
+/// *„`progress` nennt Annahmen, beweist keine Lebendigkeit. Kein Konstrukt behauptet eine."*
+/// Ein Pass, der hier mehr verspraeche, waere genau die Sorte Zusage, gegen die dieser Ordner
+/// gebaut ist.
+///
+/// **Geprueft wird, was die Sprache verspricht**, nicht mehr: `progress` nennt WER die
+/// Schleife beendet, und zwar als **Annahme mit Falsifikator** (`SYNTAX.md` §8.3: *„The
+/// watchdog IS the falsifier"*). Zwei Weisen, wie dieses Versprechen leer sein kann:
+///
+/// ```text
+/// S003   der Name gehoert keiner Annahme -- die Schleife ruht auf einem Wort,
+///        das niemand aufgeschrieben hat, und im Zeugnis steht es nirgends
+/// S004   die Annahme ist `unfalsifiable` -- dann endet die Schleife, weil es
+///        dasteht, und keine Sonde kann je widersprechen
+/// ```
+///
+/// *Eine unfalsifizierbare Fortschrittsannahme nimmt dem Wachhund seinen Gegenstand.*
+fn fortschritt_pruefen(zeuge: Option<&Ident>, lg: &Lage, absagen: &mut Absagen) {
+    let Some(z) = zeuge else { return };
+    match lg.annahmen.get(&z.text) {
+        None => absagen.schiebe(
+            Absage::fehler(
+                "S003",
+                z.span,
+                format!("`progress {}` names no declared assumption", z.text),
+            )
+            .mit_notiz(
+                "SYNTAX.md §8.3: `progress` nennt WER die Schleife beendet -- eine Annahme \
+                 ueber die Umgebung. Ohne `assume`/`axiom` steht der Name in keinem Manifest \
+                 und kommt in kein Zeugnis",
+            ),
+        ),
+        Some(false) => absagen.schiebe(
+            Absage::fehler(
+                "S004",
+                z.span,
+                format!("`progress {}` rests on an unfalsifiable assumption", z.text),
+            )
+            .mit_notiz(
+                "der Wachhund IST der Falsifikator (`on_exceeded`); eine Annahme, der keine \
+                 Sonde je widersprechen kann, beendet die Schleife nur auf dem Papier",
+            ),
+        ),
+        Some(true) => {}
+    }
 }

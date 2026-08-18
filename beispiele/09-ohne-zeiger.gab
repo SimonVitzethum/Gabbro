@@ -114,6 +114,13 @@ impl fn scharfschalten(basis : Pa, wurzel : Pa)
 
 extern fn geraet_haengt() -> never effects { diverges } costs <= 1 ops;
 
+-- **Der Zeuge, der hier fehlte.** Dieselbe Wartestelle wie in `02-geraet.gab`, und dieselbe
+-- Luecke: `progress` nannte einen Namen, den keine Annahme trug. *Ein Zeuge ohne Erklaerung
+-- steht in keinem Manifest -- und `gabbro annahmen` haette ihn nie aufgezaehlt.*
+assume geraet_quittiert
+    "Nach SRTP=1 steht RTPS=1, bevor TE gesetzt werden darf."
+    falsifier sonde_vtd_srtp;
+
 -- ---------------------------------------------------------------------------------------
 -- **Was danach an Zeigern uebrigbleibt** -- und nur dort ist Trennung ueberhaupt eine Frage:
 -- DMA-Puffer, belegte Regionen, fremder Speicher. Dort ist der Ursprung eine Funktion, die

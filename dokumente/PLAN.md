@@ -2293,3 +2293,67 @@ etwas gebaut werden soll, ist teurer als ein großer, der allein steht.**
 
 `entrust`, Festkomma und das Gleitkomma-Memo bleiben, wo sie standen — sie tragen nichts, was
 vorher fallen müsste.
+
+---
+
+# Die sechste Klasse: **bewiesen, und von nichts hergestellt**
+
+Die fünfte Klasse hieß *deklariert, exportiert, nie gelesen*. Die sechste kehrt sie um, und
+sie ist teurer:
+
+| | |
+|---|---|
+| **fünfte** | eine Klausel steht da, kein Pass liest sie — *niemand weiß etwas* |
+| **sechste** | ein Satz ist **bewiesen**, und seine Prämisse stellt niemand her — *man weiß etwas Falsches* |
+
+`device.konstruktor` steht als **bewiesen** im Register. Sein Hauptsatz
+`getrennte_register_treffen_getrennte_zellen` setzt `getrennt r s` voraus. Kein Pass rechnet
+das nach — `versatz` wird nur abgesenkt. **Wer das Zeugnis liest, schließt aus „bewiesen" auf
+Überlappungsfreiheit**, und der Beweis deckt die Lücke zu, statt sie zu zeigen.
+
+## Zahn 3 — jede bewiesene Schablone bindet ihre Prämissen
+
+Zahn 1 zählt Einträge, Zahn 2 begrenzt die unbewiesenen; **beide sehen nach vorn.** Der dritte
+fragt zurück: *welche Prämisse stellt welcher Pass her?* Jede `Bewiesen`-Zeile trägt jetzt
+ihre Liste, und `durch` unterscheidet zwei Stärken:
+
+```
+ein PASS            deckt jedes Programm, das der Übersetzer je sieht
+eine MUTATIONSPROBE deckt den ERZEUGER, einmal -- die Brücke aus PL.3
+None                NIEMAND -- der Satz hängt in der Luft
+```
+
+**Gemessen bei 9 bewiesenen Schablonen: 17 Prämissen, 8 ohne Hersteller.** Der Zeitpunkt ist
+richtig gewählt — bei zwanzig bewiesenen wäre die Spalte Nacharbeit an zwanzig Sätzen.
+
+Der schärfste Nebenfund: **`by consuming` liest kein Pass.** Beide Prämissen von
+`consuming.ordnung` sind damit nicht bloß unhergestellt, sondern unherstellbar — und für die
+erste (*Entfernen, nicht Umhängen*) führt `Consuming.thy` K-2 ein **Gegenbeispiel**.
+
+---
+
+# `progress` hat einen Leser — und was dabei NICHT versprochen wird
+
+`S003`/`S004` in `schleifen.rs`. **D8 steht unverändert**: *„`progress` nennt Annahmen,
+beweist keine Lebendigkeit."* Ein Pass, der hier mehr verspräche, wäre genau die Sorte Zusage,
+gegen die dieser Ordner gebaut ist.
+
+Geprüft wird, was die Sprache verspricht — `progress` nennt eine **Annahme mit Falsifikator**:
+
+```
+S003   der Name gehört keiner Annahme -- die Schleife ruht auf einem Wort,
+       das niemand aufgeschrieben hat, und im Zeugnis steht es nirgends
+S004   die Annahme ist `unfalsifiable` -- dann endet die Schleife, weil es
+       dasteht, und keine Sonde kann je widersprechen
+```
+
+**Am ersten Tag fiel er an fünf Stellen des eigenen Korpus**, darunter dreimal in
+`04-schleifen.gab` — der Datei, deren Kommentar die Regel erklärt. *Ein Beispiel, das seine
+eigene Regel erklärt und nicht befolgt, ist die Lage, die ein Wort ohne Leser erzeugt.*
+
+In `02-geraet.gab` war der Zeuge ein **Synonym**: `geraet_quittiert` meinte die erklärte
+`vtd_srtp_quittiert`, und nichts verband die beiden.
+
+> Und die Ratsche des Klauselwächters hat beim nächsten Lauf **nach oben** angeschlagen:
+> `fortschritt` ist gestiegen, der Eintrag war veraltet. *Genau dafür klemmt sie in beide
+> Richtungen.*
