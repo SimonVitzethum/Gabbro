@@ -1,0 +1,17 @@
+-- erwartet: F001
+-- **Eine Schranke allein macht kein endliches Intervall.**
+--
+-- `x >= 0.0` gibt `[0, inf]` -- und `inf` ist darin. Erst der Schnitt zweier Vergleiche
+-- schliesst beide Bits aus. *Die zwei Bits sind nicht die kleinere Schwester der
+-- Bereichspruefung, sondern ihre Voraussetzung: mit NaN im Wertebereich ist der Vergleich
+-- keine totale Ordnung, und ohne totale Ordnung ist ein Intervallverband kein Verband.*
+module gift::halb {
+
+type Anteil = f64 in 0.0 .. 1.0;
+
+impl fn halb(x : f64) -> Anteil effects { pure } costs <= 4 ops {
+    if x >= 0.0 { return x; }
+    return 0.0;
+}
+
+}

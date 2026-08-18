@@ -34,6 +34,21 @@ impl fn klemmen(x : f64) -> Anteil
     return x;
 }
 
+-- **Und dasselbe ohne `narrow`, weil der VERGLEICH die Schranke traegt.**
+--
+-- Zwei Vergleiche geben zwei halboffene Fakten; erst ihr Schnitt ist endlich -- und ein
+-- endliches Intervall schliesst NaN und Unendlich mit aus. *NaN liegt in keinem Intervall,
+-- weil jeder Vergleich mit ihm falsch ist.*
+--
+-- Eine Schranke allein reicht dafuer nicht: `x >= 0.0` laesst `inf` zu.
+impl fn klemmen_ohne_narrow(x : f64) -> Anteil
+    effects { pure }
+    costs   <= 6 ops
+{
+    if x >= 0.0 && x <= 1.0 { return x; }
+    return HALB;
+}
+
 -- **Und `finite` ALLEIN reicht nicht, sobald der Zieltyp einen Bereich nennt.**
 --
 -- 2.5 ist endlich und liegt trotzdem nicht in `0.0 .. 1.0`. Die erste Fassung dieses

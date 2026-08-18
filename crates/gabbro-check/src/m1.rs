@@ -1040,6 +1040,20 @@ impl<'a> Pruefer<'a> {
     }
 
     fn vergleichsfakt(&mut self, op: BinOp, a: &Expr, b: &Expr, lage: &mut Lage) {
+        // **«F»: derselbe Satz, andere Zahlen.** Bis 2026-08-18 lief hier nur `konst_wert`,
+        // und das ist ganzzahlig -- ein Gleitkommavergleich loeschte das NaN-Bit und liess
+        // die SCHRANKE offen. *Damit war `narrow … to <fbereich>` die einzige Quelle eines
+        // Intervalls, und `if x < 1.0` sagte nichts ueber `x`.*
+        if let (ExprArt::Ort(o), Some(w)) = (&a.art, self.u.gleitwert(b)) {
+            if self.ist_gleitort(o, lage) {
+                self.fintervallfakt(o, op, w, lage);
+            }
+        }
+        if let (Some(w), ExprArt::Ort(o)) = (self.u.gleitwert(a), &b.art) {
+            if self.ist_gleitort(o, lage) {
+                self.fintervallfakt(o, spiegle(op), w, lage);
+            }
+        }
         // V1 -- Stelle gegen Konstante, in beiden Schreibrichtungen.
         if let (ExprArt::Ort(o), Some(wert)) = (&a.art, self.u.konst_wert(&self.modul, b)) {
             self.bereichsfakt(o, op, wert, lage);
@@ -1061,6 +1075,44 @@ impl<'a> Pruefer<'a> {
                 });
             }
         }
+    }
+
+    fn ist_gleitort(&self, o: &Ort, lage: &Lage) -> bool {
+        matches!(
+            self.u
+                .typ_von_ort(&self.modul, o, &lage.lokal)
+                .durchgreifen(),
+            Typ::Gleitkomma(_)
+        )
+    }
+
+    /// **Die Schranke aus einem Gleitkommavergleich.**
+    ///
+    /// `x < w` heisst `x <= vorheriger(w)` -- und *das* ist die Stelle, an der die
+    /// Nachbarschaft der Gleitkommazahlen zaehlt: eine offene Schranke ist hier keine
+    /// Naeherung, sondern ein benannter Nachbar.
+    ///
+    /// **Die Null bleibt die Ausnahme, die sie ist:** `nextDown(+0)` ist die groesste
+    /// negative Zahl und nicht `-0.0`, denn `-0.0` ist nicht KLEINER als `+0.0`, sondern
+    /// gleich. Damit faellt `x < 0.0` fuer `-0.0` zu Recht aus.
+    fn fintervallfakt(&mut self, o: &Ort, op: BinOp, wert: f64, lage: &mut Lage) {
+        let Some((schluessel, indizes)) = schluessel_und_indizes(o) else {
+            return;
+        };
+        let (lo, hi) = match op {
+            BinOp::GroesserGleich => (wert, f64::INFINITY),
+            BinOp::Groesser => (wert.next_up(), f64::INFINITY),
+            BinOp::KleinerGleich => (f64::NEG_INFINITY, wert),
+            BinOp::Kleiner => (f64::NEG_INFINITY, wert.next_down()),
+            BinOp::Gleich => (wert, wert),
+            _ => return,
+        };
+        lage.fakten.push(Fakt::FIntervall {
+            schluessel,
+            indizes,
+            lo,
+            hi,
+        });
     }
 
     fn bereichsfakt(&mut self, o: &Ort, op: BinOp, wert: i128, lage: &mut Lage) {
@@ -1116,13 +1168,19 @@ impl<'a> Pruefer<'a> {
                         if *s == schluessel {
                             f.lo = f.lo.max(*lo);
                             f.hi = f.hi.min(*hi);
-                            // Ein genanntes endliches Intervall schliesst beides aus.
-                            if lo.is_finite() && hi.is_finite() {
-                                f.kann_nan = false;
-                                f.kann_unendlich = false;
-                            }
                         }
                     }
+                }
+                // **Am SCHNITT, nicht je Fakt.** `x >= 0.0 && x <= 1.0` gibt zwei Fakten,
+                // und jeder fuer sich ist halboffen -- erst zusammen sind sie endlich.
+                // *Die erste Fassung pruefte je Fakt und liess die Bits stehen, obwohl das
+                // Ergebnis sie ausschloss.*
+                //
+                // Und die Aussage ist scharf: **NaN liegt in KEINEM Intervall**, weil jeder
+                // Vergleich mit ihm falsch ist, und unendlich liegt in keinem endlichen.
+                if f.lo.is_finite() && f.hi.is_finite() {
+                    f.kann_nan = false;
+                    f.kann_unendlich = false;
                 }
             }
             return Typ::Gleitkomma(f);

@@ -536,11 +536,17 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
-- [ ] **Der Vergleich ist noch keine Faktenquelle fuer Gleitkommagrenzen**
-      *(2026-08-18)*. `if x < 1.0 { … }` loescht das NaN-Bit, verengt aber die SCHRANKE nicht
-      -- `vergleichsfakt` laeuft ueber `konst_wert`, und das ist ganzzahlig. Damit bleibt
-      `narrow … to <fbereich>` die einzige Quelle eines Gleitkommaintervalls. *Die
-      Fortpflanzung selbst steht seit heute (nach aussen gerundet, `-0.0` beim Kehrwert).*
+- [ ] **Die ABSENKUNG und die Zeugniszeile fuer «F»** *(2026-08-18)*. Der Pruefer traegt
+      jetzt Bereich und die zwei Bits; der Erzeuger weigert sich weiterhin benannt (`C001`).
+      Was die Absenkung mitbringen muss: `float`/`double`, **niemals `-ffast-math`**, SSE2 als
+      Annahme mit Falsifikator (Excess precision am x87) -- und eine Zeugniszeile *diese
+      Einheit rechnet mit Gleitkomma*. **Fuer einen Kernel ist das eine Aussage ueber
+      Preemption und Kontextgroesse, nicht ueber Zahlen**, und der Leser des Zeugnisses muss
+      sie sehen, ohne den Quelltext zu lesen.
+- [ ] **`F003` (Rundungsmodus im Typ) und `F006` (`long double`/`f16`)** *(2026-08-18)*. Die
+      beiden letzten Absagen der Familie. `f64<RNE>` waere die vierte Instanz eines
+      vorhandenen Musters (`ptr<…>`, `atomic … seq`, `format … endian`); `long double` wird
+      benannt abgelehnt, und der Korpus begruendet es (FF2: eine Sprosse von sieben).
 
 ### «F» — f32 und f64, geplant 2026-08-18 (`PLAN.md`, „«F» — f32 und f64, vollstaendig")
 
