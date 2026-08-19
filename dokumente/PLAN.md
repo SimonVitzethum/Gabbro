@@ -4051,3 +4051,150 @@ Tor nicht steht, wird über die Geschwindigkeit des erzeugten C **nichts** behau
 
 *Ein Erzeuger, der schnelles C liefert, das manchmal etwas anderes rechnet, ist schlimmer als
 einer, der langsames liefert — er sieht aus wie ein Ergebnis.*
+
+---
+
+# «ABI» — Bibliotheken, die sich mischen lassen
+
+> **Der Satz, der den ganzen Block trägt:** *eine Bibliotheksgrenze ist kein Riegel, sondern
+> eine **Brücke mit Maut**.* Was über sie geht, wird an derselben Stelle geprüft wie
+> innerhalb einer Einheit — oder es geht nicht. **Eine ABI, die Zusagen ungeprüft
+> weiterreicht, macht aus elf geprüften Klassen elf behauptete.**
+
+## Der Stand, gemessen am 2026-08-20
+
+```gabbro
+module bib { pub impl fn tu() effects { writes z } … }
+module app { use bib::tu; impl fn ruft() effects { pure } costs <= 4 ops { tu(); } }
+```
+
+```
+E009  `tu` is unknown to the graph                     (Hinweis)
+K003  promises costs, but `tu` is not declared here    (FEHLER)
+```
+
+**Die Datei geht nicht durch.** Der ältere Eintrag im `TODO.md` sagte, die Zusage falle
+„lautlos auf eine untere Schranke zurück" — *gemessen fällt sie nicht durch, sie fällt.*
+**Es fehlt kein Riegel, es fehlt eine Brücke.** Und `pub` hat seit dem 2026-08-19 einen Leser
+(`N025`), also steht die Sichtbarkeitshälfte bereits.
+
+## Das Artefakt: `.gabi` — das Zeugnis, maschinenlesbar
+
+`gabbro zeugnis` schreibt heute **für Menschen**, was die Übersetzung trägt. Die ABI ist
+dieselbe Aussage in einer Form, die `gabbro pruefe` **liest**:
+
+```
+lib caprock::cap  @abi 1  arch x86_64
+  signatur  aushaengen(c : ptr<normal, rw> CapSpace, s : index into CapSpace)
+            requires Held(KAPPEN), …   ensures …
+            effects  { writes c.slots, locks KAPPEN }   costs <= 200 ops
+  darstellung  CapSpace  count 1048576  option-sonderwert 1048576
+  sperre    KAPPEN  protects { … }  vor { OBJEKTE }        -- ORDNUNG, keine Zahl
+  annahme   mmu_folgt_ihrem_modell  "…"  falsifier sonde_pf_bei_p0
+  schablone option.sonderwert  BEWIESEN  praemisse N < 2^w
+  fremd     rust_eintritt  effects { consumes t, diverges }
+  asm       3 Ruempfe, 7 Befehlszeilen
+```
+
+**Fünf Dinge müssen sich vereinigen lassen, und jedes hat seine eigene Falle.**
+
+### 1. Signaturen — das ist der einfache Teil
+
+`effects`, `costs`, `requires`, `ensures` sind schon heute die Sprache der Aufrufgrenze. Der
+Rufer trägt sie, wie er die eines `extern fn` trägt — mit dem Unterschied, dass hier ein
+**geprüfter** Rumpf dahintersteht und nicht ein angenommener. *Das ist der einzige Posten,
+bei dem eine Bibliothek die Vertrauensfläche VERKLEINERT.*
+
+### 2. Sperrränge — der schärfste Posten, und er verlangt eine Änderung der Sprache
+
+`lock KAPPEN … rank 0` ist eine **absolute Zahl**. Zwei unabhängig geschriebene Bibliotheken
+vergeben beide `rank 0`, und beim Mischen ist die Ordnung entweder willkürlich oder
+widersprüchlich. **Absolute Zahlen komponieren nicht.**
+
+> Die ABI trägt deshalb **keine Ränge, sondern eine ORDNUNG**: `KAPPEN vor OBJEKTE`. Beim
+> Vereinigen entsteht ein gerichteter Graph über allen Sperren aller Bibliotheken, und
+> `H006`/`H012` rechnen auf ihm weiter wie heute. **Ein Zyklus ist eine Absage** — und zwar
+> genau die, *die keine der beiden Bibliotheken allein sehen kann.*
+
+Innerhalb einer Einheit bleibt `rank N` schreibbar und wird beim Export in die Ordnung
+übersetzt. *Eine Zahl ist eine Ordnung mit einer willkürlichen Einbettung; die Einbettung
+gehört nicht über die Grenze.*
+
+### 3. Darstellungen — zwei Bibliotheken, ein Typ, zwei Bilder
+
+`option index into T` senkt auf den Sonderwert `count` ab (`Option_Sonderwert.thy`). Trägt
+Bibliothek A `count 1048576` und B einen anderen Wert für denselben Typ, sind die abgesenkten
+Bilder **nicht dasselbe**, und ein Zeiger von A nach B ist Unsinn. Die ABI nennt die
+Darstellung, und **Ungleichheit ist eine Absage, keine Umrechnung.**
+
+### 4. Schablonen mit Beweisstand — die Vereinigung ist die Vereinigung
+
+Ein `UNPROVED` in irgendeiner Bibliothek färbt das ganze Erzeugnis. *Das ist kein
+Pessimismus, sondern Arithmetik: die Vertrauensfläche einer Mischung ist die Vereinigung, nie
+der Durchschnitt.*
+
+### 5. `arch` — verschieden heisst Absage
+
+Zwei Bibliotheken mit verschiedenem `arch` mischen nicht. `asm`-Rümpfe machen es scharf, aber
+es gilt auch ohne sie: die Axiomschicht ist bogenweise.
+
+## Die Annahmen, und was ein `override` WIRKLICH ist
+
+Der Wunsch: *Hardwareannahmen sollen beim Import je Bibliothek gestellt werden können und die
+der Bibliothek überschreiben; sonst gelten deren eigene.* Die Vorgabe ist damit klar — **die
+Annahme der Bibliothek gilt, bis jemand etwas anderes hinschreibt.**
+
+```gabbro
+use caprock::cap
+    annimmt {
+        mmu_folgt_ihrem_modell = kein_mmu   -- diese Maschine hat gar keine MMU
+        tlb_ist_nach_cr3_leer  entfaellt    -- hier BEWIESEN, nicht angenommen
+    };
+```
+
+**Und jetzt der Satz, an dem der ganze Entwurf hängt:**
+
+> Eine Bibliothek wurde **unter** ihrer Annahme geprüft. Wer die Annahme austauscht, tauscht
+> die Voraussetzung ihrer Beweise aus — **die Beweise wandern nicht mit.**
+
+Ein `override` ist deshalb **keine Ersetzung, sondern eine Beweispflicht.** Drei Fälle, und
+sie werden unterschieden, nicht zusammengeworfen:
+
+| Fall | was der Übersetzer tut |
+|---|---|
+| **wortgleich** (derselbe Text, derselbe `falsifier`) | nichts. Die Annahme wandert unverändert in die vereinigte Menge. |
+| **stärker** — die neue Annahme impliziert die alte | die alte verlässt die Annahmenmenge, und `A_neu ⟹ A_alt` wird eine **gezählte Pflicht** in `gabbro pflichten`. *Die Implikation ist nicht mechanisch entscheidbar; also wird sie gezählt und nicht geraten.* |
+| **`entfaellt`** — der Importeur behauptet, sie sei hier bewiesen | dieselbe Pflicht, nur ohne Ersatzannahme: `⊢ A_alt`. Sie steht mit Namen im Zeugnis, damit niemand sie für erledigt hält. |
+| **schwächer oder unvergleichbar** | **Absage.** Wer das will, schreibt `reopens { … }` und nennt **einzeln**, welche Zusagen der Bibliothek damit auf *unbewiesen* zurückfallen. |
+
+**`reopens` ist der Riegel gegen die bequeme Bewegung.** Ohne ihn wäre ein `override` das
+perfekte Werkzeug, um eine unbequeme Annahme wegzudefinieren — *und das Erzeugnis sähe
+danach besser aus als vorher.*
+
+### Der `falsifier` ist der Teil, der nicht verhandelbar ist
+
+Jede Annahme trägt eine Sonde (`falsifier sonde_pf_bei_p0`). **Eine überschreibende Annahme
+ohne Sonde ist eine Absage** — nicht weil die Sonde beweist, sondern weil sie *widerlegbar*
+macht. Eine unfalsifizierbare Annahme darf nur, wer `unfalsifiable` hinschreibt, und das ist
+im Zeugnis eine eigene Zeile (wie `A10` heute).
+
+## Die Reihenfolge
+
+| | Arbeit | was sie freischaltet |
+|---|---|---|
+| **ABI0** | `gabbro zeugnis --gabi` schreibt maschinenlesbar; ein Test liest es zurück | alles Weitere |
+| **ABI1** | `gabbro pruefe --mit lib.gabi` löst Namen auf und trägt Signaturen | `E009`/`K003` verschwinden **weil geprüft**, nicht weil geschwiegen wird |
+| **ABI2** | **Ordnung statt Rang** in Sprache und ABI | Mischen ohne Zyklus |
+| **ABI3** | die Vereinigung: Annahmen, Schablonen, Darstellungen, `arch` | `gabbro zeugnis` über die Mischung |
+| **ABI4** | `annimmt { … }` mit den drei Fällen und `reopens` | der Wunsch dieses Abschnitts |
+
+**ABI2 steht vor ABI3, weil es die Sprache ändert** — und eine Sprachänderung, die man nach
+dem Bau der Vereinigung macht, bricht jede schon geschriebene ABI-Datei.
+
+## Die Abbruchbedingung
+
+**Wenn die Vereinigung eine Klasse nur noch behaupten statt prüfen kann, wird die Brücke
+nicht gebaut.** Lieber elf geprüfte Klassen in einer Einheit als elf behauptete über eine
+Bibliotheksgrenze hinweg. *Der Gewinn einer ABI ist, dass eine Bibliothek die
+Vertrauensfläche VERKLEINERT — schafft sie das nicht, ist ein `extern fn` mit Vertrag die
+ehrlichere Form, und die gibt es längst.*

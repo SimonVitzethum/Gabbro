@@ -526,6 +526,40 @@ as a record of what the closure cost; the details are in
 | `own` is a synonym for `rw` | **the specification was wrong, not the pass** — `SYNTAX.md` §3 now carries the measurement |
 | lexer panic · licence entry | **`P038`** (measured depth limit) · `license = "AGPL-3.0-only"` |
 
+### «ABI» — Bibliotheken, die sich mischen lassen, entworfen 2026-08-20 ([`dokumente/PLAN.md`](dokumente/PLAN.md))
+
+*Eine Bibliotheksgrenze ist kein Riegel, sondern eine **Brücke mit Maut**. Eine ABI, die
+Zusagen ungeprüft weiterreicht, macht aus elf geprüften Klassen elf behauptete.*
+
+- [ ] **ABI0/ABI1 — `.gabi`: das Zeugnis, maschinenlesbar, und `gabbro pruefe --mit`.**
+      `gabbro zeugnis` schreibt heute für Menschen, was die Übersetzung trägt; die ABI ist
+      dieselbe Aussage in einer Form, die der Prüfer liest. Danach verschwinden `E009` und
+      `K003` an der Dateigrenze — **weil geprüft wird, nicht weil geschwiegen wird.**
+- [ ] **ABI2 — ORDNUNG statt RANG, und das ist eine SPRACHÄNDERUNG.** `lock … rank 0` ist
+      eine absolute Zahl; zwei unabhängig geschriebene Bibliotheken vergeben beide `rank 0`.
+      **Absolute Zahlen komponieren nicht.** Die ABI trägt `KAPPEN vor OBJEKTE`, und beim
+      Vereinigen rechnen `H006`/`H012` auf dem Graphen weiter — *ein Zyklus ist die Absage,
+      die keine der beiden Bibliotheken allein sehen kann.* **Steht vor ABI3**, weil eine
+      Sprachänderung nach dem Bau der Vereinigung jede geschriebene ABI-Datei bricht.
+- [ ] **ABI3 — die Vereinigung ist die VEREINIGUNG.** Ein `UNPROVED` in irgendeiner
+      Bibliothek färbt das ganze Erzeugnis; verschiedene Darstellungen desselben Typs
+      (`option`-Sonderwert, `count`) sind eine Absage und keine Umrechnung; verschiedenes
+      `arch` mischt nicht. *Die Vertrauensfläche einer Mischung ist die Vereinigung, nie der
+      Durchschnitt.*
+- [ ] **ABI4 — `annimmt { … }`: ein `override` ist eine BEWEISPFLICHT, keine Ersetzung.**
+      Eine Bibliothek wurde **unter** ihrer Annahme geprüft; wer die Annahme austauscht,
+      tauscht die Voraussetzung ihrer Beweise aus — **die Beweise wandern nicht mit.** Drei
+      Fälle, getrennt: *wortgleich* → nichts; *stärker* → `A_neu ⟹ A_alt` wird eine gezählte
+      Pflicht (die Implikation ist nicht mechanisch entscheidbar, also wird sie gezählt und
+      nicht geraten); *`entfaellt`* → dieselbe Pflicht ohne Ersatz. **Schwächer oder
+      unvergleichbar ist eine Absage**, es sei denn, der Importeur schreibt `reopens { … }`
+      und nennt einzeln, welche Zusagen damit auf unbewiesen zurückfallen. *Ohne diesen
+      Riegel wäre ein `override` das perfekte Werkzeug, eine unbequeme Annahme
+      wegzudefinieren — und das Erzeugnis sähe danach besser aus als vorher.*
+- [ ] **Eine überschreibende Annahme OHNE `falsifier` ist eine Absage** — nicht weil die
+      Sonde beweist, sondern weil sie **widerlegbar** macht. Wer ohne sie will, schreibt
+      `unfalsifiable`, und das ist im Zeugnis eine eigene Zeile (wie `A10`).
+
 ### «OPT» — schnelles und sicheres C, geplant 2026-08-19 ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
 *Gemessen, `cc -O2`: die Schrankenprüfung ist **nie da** — `M103` beweist sie zur
