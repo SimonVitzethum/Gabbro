@@ -156,9 +156,16 @@ pub fn passliste() -> Vec<Pass> {
                     at the call boundary (`H005`), the recomputed rank order (`H006`) -- and \
                     since K11.2.1 `protects` bites: every access to a protected place stands \
                     under its lock (`H007`), and a lock that is never taken shows up\
-                    (`H008`). **NOT built: the execution contexts** -- who runs concurrently \
-                    is something Gabbro does not say, and without it `every place two \
-                    contexts touch is locked or atomic` cannot be stated (PLAN.md, K11.2.2)",
+                    (`H008`). **And since «K5» the whole discipline**: a `locks` effect \
+                    that nobody redeems (`H011`), the rank order THROUGH calls (`H012`), a \
+                    rank that is not constant-evaluable (`H014`), and the EXECUTION \
+                    CONTEXTS -- an `entry ... dispatch` names one, and a place written \
+                    through it that nothing declares shared falls (`H013`). *The sentence \
+                    \"Gabbro does not say who runs concurrently\" was overtaken by its own \
+                    `entry` construct.* **NOT built: the finer half** -- `masks IRQ`, \
+                    `per cpu` and `nested never` only exempt under `assume ein_kern`, and \
+                    on this corpus `H013` has ZERO bite (all four context roots dispatch \
+                    to an `extern fn`): `gabbro kontexte` prints the count beside it",
             ),
         },
         Pass {
