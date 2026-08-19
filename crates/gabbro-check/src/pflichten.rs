@@ -138,3 +138,33 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     }
     s
 }
+
+/// **Wie viele Rufe ruhen auf einem fremden Vertrag? -- Punkt 4, 2026-08-19.**
+///
+/// Seit heute verengt die Nachbedingung eines Gerufenen sein Ergebnis beim Rufer
+/// (`m1::aus_ensures`). Bei einem `impl fn` ist das eine Ableitung, die Gabbro einmal selbst
+/// nachrechnen wird; **bei einem `extern fn` ist es Glaube.**
+///
+/// > *Wer nicht pruefen kann, EXPORTIERT.* Dieselbe Konstruktion wie die `entrust`-Zeile in
+/// > Abschnitt E des Zeugnisses -- eine Vertrauensflaeche, die gezaehlt dasteht statt
+/// > stillschweigend zu wirken.
+pub fn fremde_vertraege(baum: &Programm) -> Vec<String> {
+    let mut aus = Vec::new();
+    sammle_vertraege(&baum.items, &mut aus);
+    aus
+}
+
+fn sammle_vertraege(items: &[Item], aus: &mut Vec<String>) {
+    for item in items {
+        match &item.art {
+            ItemArt::Modul(m) => sammle_vertraege(&m.items, aus),
+            ItemArt::Funktion(f) => {
+                if matches!(f.rumpf, FnRumpf::Block(_)) || f.ensures.is_empty() {
+                    continue;
+                }
+                aus.push(f.name.text.clone());
+            }
+            _ => {}
+        }
+    }
+}

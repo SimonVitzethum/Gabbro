@@ -1,0 +1,18 @@
+-- erwartet: M115
+-- **Ein Vertrag an einem fremden Rumpf war in BEIDEN Richtungen wirkungslos.**
+-- Gemessen 2026-08-19: `ensures result <= 100` gab dem Rufer nichts, `requires bereit == 1`
+-- kostete ihn nichts. *51 fremde Ruempfe im Korpus, sieben sprechen ihre Pflicht aus -- und
+-- der Grund war nicht Nachlaessigkeit: Hinschreiben kostete nichts und brachte nichts.*
+--
+-- `M115` nimmt die sichere Haelfte: eine Vorbedingung, die der BEREICH des Arguments
+-- ausschliesst, faellt. Was nur unbewiesen ist, faellt nicht -- W10, und die starke Fassung
+-- braucht eine Entscheidungsprozedur, die M1 nicht hat.
+module gift::vorbedingung {
+
+extern fn nimm(x : u32) -> unit
+    requires x >= 1
+    effects { pure } costs <= 8 ops;
+
+impl fn ruf() -> unit effects { pure } costs <= 16 ops { nimm(0); return; }
+
+}

@@ -541,6 +541,27 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **Die HAEUFIGERE Haelfte von Punkt 4 fehlt: `ensures` ueber WELTZUSTAND**
+      *(gemessen 2026-08-19)*. Von 28 fremden Deklarationen liefern nur **4** eine Ganzzahl;
+      die Mehrheit spricht ueber Plaetze (`ensures mmu_an_zahl == 1`, siebenmal in
+      `beispiele/22`). **Die Wiederherstellung einer Tatsache ueber einen globalen Platz nach
+      einem Ruf kollidiert mit U4/U5** -- *ein Aufruf toetet jeden nichtlokalen Fakt*, und
+      `mutiere-pruefer.py` fuehrt dafuer eine eigene Mutation. *Sie waere die erste Ausnahme
+      von dieser Regel und gehoert gemessen, bevor sie gebaut wird.*
+- [ ] **Die STARKE Fassung von `M115` braucht eine Entscheidungsprozedur** *(2026-08-19)*.
+      Heute faellt nur, was der Bereich des Arguments AUSSCHLIESST; dass der Rufer die
+      Vorbedingung HERSTELLT, prueft niemand. **M1 stellt Fakten her und entscheidet keine
+      Praedikate** -- die starke Fassung ist ein eigenes Stueck Maschinerie und zerlegte
+      ausserdem den Korpus. *Vorher zaehlen, an wie vielen Rufstellen eine Vorbedingung heute
+      unbewiesen bleibt.*
+- [ ] **Gabbro unterdrueckt FOLGEFEHLER nicht, und niemand hat das je aufgeschrieben**
+      *(gefunden 2026-08-19 an `M112`)*. Der Ausschnitt `SYNTAX.md`:533 scheitert am Parser
+      («B8»: ein Ruf in einem `place`), damit wird seine `spec fn` nie erklaert, und
+      `maintains` meldet einen Namen, den es sehr wohl gibt. **Nach einem `P001` laufen alle
+      Paesse weiter, und was sie melden, kann Rauschen sein.** *Entweder die Paesse
+      anhalten, oder die Entscheidung aufschreiben -- heute steht sie nur in einer
+      Testliste.*
+
 - [ ] **Drei der sieben haengenden Praemissen brauchen keine Pruefarbeit, sondern eine
       SPRACHFORM** *(gemessen 2026-08-19 beim Fuellen von `braeuchte`)*. `ops` braucht eine
       Wortmenge, `by consuming` einen genannten Zeitpunkt fuer die Leerheit,

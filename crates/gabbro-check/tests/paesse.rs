@@ -531,7 +531,7 @@ fn der_dritte_zahn_spricht() {
     use gabbro_check::schablonen::{in_der_luft_in, ohne_rueckrichtung_in, Voraussetzung};
     // Gesund: bewiesen UND gebunden.
     let mut gesund = probe("a", "MESSUNGEN.md", Stand::Bewiesen);
-    gesund.voraussetzungen = &[Voraussetzung { was: "x", durch: Some("M103 (m1.rs)") }];
+    gesund.voraussetzungen = &[Voraussetzung { was: "x", durch: Some("M103 (m1.rs)"), braeuchte: None }];
     assert!(ohne_rueckrichtung_in(&[gesund.clone()]).is_empty());
     assert!(in_der_luft_in(&[gesund]).is_empty());
 
@@ -546,7 +546,7 @@ fn der_dritte_zahn_spricht() {
 
     // Krank II: die Praemisse steht da, und NIEMAND stellt sie her.
     let mut luftig = probe("luftig", "MESSUNGEN.md", Stand::Bewiesen);
-    luftig.voraussetzungen = &[Voraussetzung { was: "getrennt r s", durch: None }];
+    luftig.voraussetzungen = &[Voraussetzung { was: "getrennt r s", durch: None, braeuchte: Some("N009") }];
     assert_eq!(
         in_der_luft_in(&[luftig]),
         vec![("luftig", "getrennt r s")],
@@ -561,15 +561,25 @@ fn der_dritte_zahn_spricht() {
 #[test]
 fn die_praemissen_ohne_pass_sind_gezaehlt() {
     // **Die Marke, und sie darf nur FALLEN.** Am 2026-08-18 gemessen: neun bewiesene
-    // Schablonen, siebzehn Praemissen, und diese hier stellt niemand her.
+    // Schablonen, siebzehn Praemissen, und `device.konstruktor` stellte niemand her.
+    //
+    // **2026-08-19: die Marke faellt von 8 auf 7** -- und die zweite Zusicherung dreht sich
+    // um. Der Fund, der Zahn 3 erzwungen hat (*„zwei `reg` haben getrennte Lagen"* -- der
+    // HAUPTSATZ von `Device_Konstruktor.thy` ohne Prueferzeile), ist geschlossen: `N009`
+    // rechnet die Byte-Bereiche nach, `N010` faellt `stride 0`.
+    //
+    // > *Eine Zusicherung, die ein Loch bewacht, muss umgedreht werden, wenn es zu ist --
+    // > sonst haelt sie es offen.* Und der Wechsel steht hier, damit er nicht als
+    // > Testkosmetik durchgeht.
     let luft = gabbro_check::schablonen::in_der_luft();
     assert!(
-        luft.len() <= 8,
-        "Praemissen ohne Pass: {} -- die Marke ist 8 und sie geht nach unten:\n{luft:#?}",
+        luft.len() <= 7,
+        "Praemissen ohne Pass: {} -- die Marke ist 7 und sie geht nach unten:\n{luft:#?}",
         luft.len()
     );
     assert!(
-        luft.iter().any(|(s, _)| *s == "device.konstruktor"),
-        "der Fund, der Zahn 3 erzwungen hat, muss in der Zahl stehen"
+        !luft.iter().any(|(s, _)| *s == "device.konstruktor"),
+        "`device.konstruktor` ist seit 2026-08-19 gedeckt (N009/N010) -- \
+         steht er wieder in der Luft, ist eine Regel zurueckgegangen"
     );
 }

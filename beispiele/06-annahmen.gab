@@ -56,7 +56,15 @@ check stapel_wasserstand {
         expects sonde_tiefer_stapel
 }
 
-extern fn groesse_gemessen() -> u64 effects { reads stapel };
+-- **Die Pflicht des fremden Rumpfes, ausgesprochen** (Punkt 4, 2026-08-19). Eine gemessene
+-- Stapelgroesse ist positiv; ohne die Zeile weiss der Rufer es nicht, und seit heute traegt
+-- sie: `m1::aus_ensures` verengt das Ergebnis am Rufort.
+--
+-- *Sie ist eine ANNAHME ueber fremden Code und keine Ableitung -- deshalb zaehlt
+-- `gabbro pflichten` sie als `F` und das Zeugnis nennt sie.*
+extern fn groesse_gemessen() -> u64
+    ensures result >= 1
+    effects { reads stapel };
 
 -- ==========================================================================================
 -- K100.2 -- die fuenf UMGEBUCHTEN Klempnereipflichten (2026-08-17)

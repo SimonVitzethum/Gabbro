@@ -8073,3 +8073,87 @@ Klauseln  49 -> 46      ZUSAGE  16 -> 13
 `versatz` und `schritt` sind aufgestiegen — vierter und fünfter Aufstieg seit dem 2026-08-18
 (`progress`, `ensures`, `maintains`, jetzt diese zwei). **Jedes Mal hat das Werkzeug es
 gemeldet, nicht der Autor.**
+
+---
+
+# Punkt 4 — der Vertrag am fremden Rumpf war in BEIDEN Richtungen wirkungslos
+
+**Gemessen 2026-08-19, und die Messung ist die Begründung.** Der Ordner führte seit dem
+2026-08-17: *48 fremde Rümpfe im Korpus, NULL sprechen ihre Pflicht aus.* Warum niemand sie
+schrieb, stand nirgends. Hier ist es:
+
+```gabbro
+extern fn hole() -> u32 ensures result <= 100 …;
+impl fn nutze() -> u32 in 0 .. 100 { let x = hole(); return x; }
+→ M101: die Rueckgabe verlangt `u32 in 0 .. 100`, der Wert hat `u32`
+
+extern fn nimm(x : u32) requires bereit == 1 …;
+impl fn ruf() { nimm(7); }
+→ 0 Fehler
+```
+
+> **Hinschreiben kostete nichts und brachte nichts.** *Eine Klausel, die niemand liest,
+> schreibt niemand* — der Befund war nie Nachlässigkeit, sondern eine leere Mechanik.
+
+## Beide Richtungen gebaut
+
+| | |
+|---|---|
+| **`m1::aus_ensures`** | die Nachbedingung des Gerufenen **verengt sein Ergebnis** beim Rufer |
+| **`M115`** | eine Vorbedingung, die der **Bereich des Arguments ausschließt**, fällt |
+
+**Vier Richtungen gemessen, nicht eine:** mit `ensures result <= 100` geht es durch · ohne die
+Zeile fällt `M101` · mit einem *zu schwachen* `<= 200` fällt es ebenfalls · die gespiegelte
+Form `100 >= result` trägt genauso. *Ohne die dritte wäre nicht gemessen, ob die Verengung
+**rechnet** oder bloß durchlässt.*
+
+## `M115` nimmt ausdrücklich nur die sichere Hälfte
+
+Die starke Fassung — *der Rufer **beweist** die Vorbedingung* — braucht eine
+Entscheidungsprozedur über Tatsachen, **und M1 hat keine**: er stellt Fakten her
+(`fakten_aus`), er entscheidet keine Prädikate. Sie zerlegte außerdem den Korpus.
+
+> **W10: nicht abgewiesen ist nicht bestätigt.** `M115` weist ab, wo der Bereich des Arguments
+> die Bedingung *ausschließt*, und schweigt sonst. **Eine untere Schranke, und sie steht als
+> solche da.**
+
+## Und die Grenze der gebauten Hälfte ist gemessen, nicht geschätzt
+
+```
+28 fremde Deklarationen im Beispielkorpus
+   4  mit Ganzzahlergebnis   <- hier kann `aus_ensures` ueberhaupt wirken
+  10  ohne Ergebnis
+  14  never · ptr · bool · BootPhase · opaker Typ
+```
+
+**Nur vier von 28.** Die Mehrheit der fremden Rümpfe spricht nicht über Zahlen, sondern über
+**Weltzustand** — `ensures mmu_an_zahl == 1`, wie es `beispiele/22-bootstrecke.gab` siebenmal
+schreibt. *Die gebaute Hälfte trägt die numerische Form; die häufigere ist die andere.*
+
+**Warum sie nicht mitgebaut ist, und das ist eine Entscheidung:** eine Tatsache über einen
+globalen Platz nach einem Ruf wiederherzustellen kollidiert mit U4/U5 — *ein Aufruf tötet
+jeden nichtlokalen Fakt*, und das ist eine der Regeln, gegen die `mutiere-pruefer.py` eine
+eigene Mutation führt. **Die Wiederherstellung aus `ensures` wäre die erste Ausnahme davon**,
+und sie gehört gemessen, bevor sie gebaut wird.
+
+## Eine Pflicht ist ausgesprochen worden, und nur eine
+
+`beispiele/06-annahmen.gab`: `groesse_gemessen() -> u64 ensures result >= 1` — *eine gemessene
+Stapelgröße ist positiv.* **Mehr wurde nicht geschrieben, und das ist Absicht:** für die
+übrigen 27 steht die Pflicht nirgends, und sie zu erfinden wäre genau die Bewegung, gegen die
+R7 und W3 stehen.
+
+```
+fremde Ruempfe, die ihre Pflicht aussprechen:   7  ->  8
+erzeugte Pflichten im Beispielkorpus:          17  -> 18  (davon fremd 7 -> 8)
+```
+
+## Und ein Test musste umgedreht werden
+
+`die_praemissen_ohne_pass_sind_gezaehlt` verlangte, dass `device.konstruktor` **in** der Zahl
+steht — *„der Fund, der Zahn 3 erzwungen hat, muss in der Zahl stehen."* Seit `N009`/`N010`
+steht er nicht mehr darin, und der Test fiel.
+
+> **Eine Zusicherung, die ein Loch bewacht, muss umgedreht werden, wenn es zu ist — sonst hält
+> sie es offen.** Sie lautet jetzt umgekehrt: *steht `device.konstruktor` wieder in der Luft,
+> ist eine Regel zurückgegangen.* Marke von 8 auf **7**.

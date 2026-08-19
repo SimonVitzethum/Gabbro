@@ -923,7 +923,134 @@ impl<'a> Pruefer<'a> {
         for ((t, span), (pname, pt)) in argtypen.iter().zip(sig.parameter.iter()) {
             self.passt(t, pt, *span, &format!("das Argument `{pname}`"));
         }
-        sig.ergebnis.clone().unwrap_or(Typ::Unbekannt)
+        self.requires_pruefen(r, &sig, &argtypen);
+        let roh = sig.ergebnis.clone().unwrap_or(Typ::Unbekannt);
+        self.aus_ensures(&roh, &sig.ensures)
+    }
+
+    /// **`M115` -- eine Vorbedingung, die am Rufort NACHWEISLICH falsch ist (2026-08-19).**
+    ///
+    /// Gemessen am selben Tag: `extern fn nimm(x : u32) requires bereit == 1;` gerufen mit
+    /// unerfuelltem `bereit` -- **0 Fehler.** Der Vertrag kostete den Rufer nichts.
+    ///
+    /// ## Warum nur „nachweislich falsch" und nicht „nachweislich wahr"
+    ///
+    /// Die starke Fassung -- *der Rufer BEWEIST die Vorbedingung* -- braucht eine
+    /// Entscheidungsprozedur ueber Tatsachen, und M1 hat keine: er stellt Fakten HER
+    /// (`fakten_aus`), er entscheidet keine Praedikate. **Und sie zerlegte den Korpus**, denn
+    /// an keiner der 51 fremden Deklarationen steht heute eine Vorbedingung, die ein Rufer
+    /// hergeleitet haette.
+    ///
+    /// > **W10: nicht abgewiesen ist nicht bestaetigt.** Diese Regel weist ab, wo der Bereich
+    /// > des Arguments die Bedingung AUSSCHLIESST, und schweigt sonst. *Eine untere Schranke,
+    /// > und sie steht als solche da.*
+    ///
+    /// Gedeckt ist die Form `<parameter> <op> <zahl>` -- dieselbe, die `aus_ensures` in der
+    /// Gegenrichtung liest. Alles Uebrige (Weltzustand, Quantoren) bleibt liegen und ist im
+    /// TODO als die staerkere Haelfte gebucht.
+    fn requires_pruefen(&mut self, r: &Ruf, sig: &crate::umgebung::Signatur, argtypen: &[(Typ, Span)]) {
+        for p in &sig.requires {
+            let PredArt::Vergleich(e) = &p.art else { continue };
+            let ExprArt::Binaer(op, a, c) = &e.art else { continue };
+            let (name, op, zahl) = match (&a.art, &c.art) {
+                (ExprArt::Ort(o), ExprArt::Zahl(n)) if o.suffixe.is_empty() => {
+                    (o.basis.text.clone(), *op, *n as i128)
+                }
+                (ExprArt::Zahl(n), ExprArt::Ort(o)) if o.suffixe.is_empty() => {
+                    (o.basis.text.clone(), gespiegelt(*op), *n as i128)
+                }
+                _ => continue,
+            };
+            let Some(i) = sig.parameter.iter().position(|(pn, _)| *pn == name) else { continue };
+            let Some((t, span)) = argtypen.get(i) else { continue };
+            let Some(b) = t.bereich() else { continue };
+            // **Unmoeglich heisst: KEIN Wert des Bereichs erfuellt sie.**
+            let unmoeglich = match op {
+                BinOp::Kleiner => b.min >= zahl,
+                BinOp::KleinerGleich => b.min > zahl,
+                BinOp::Groesser => b.max <= zahl,
+                BinOp::GroesserGleich => b.max < zahl,
+                BinOp::Gleich => zahl < b.min || zahl > b.max,
+                _ => false,
+            };
+            if unmoeglich {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "M115",
+                        *span,
+                        format!(
+                            "`{}` verlangt `{name} {} {zahl}`, und das Argument liegt in {} .. {}",
+                            r.pfad.text(),
+                            zeichen(op),
+                            b.min,
+                            b.max
+                        ),
+                    )
+                    .mit_notiz(
+                        "die Vorbedingung des Gerufenen ist an dieser Stelle nicht bloss \
+                         unbewiesen, sondern durch den Bereich des Arguments AUSGESCHLOSSEN",
+                    ),
+                );
+            }
+        }
+    }
+
+    /// **Punkt 4 -- die Nachbedingung des Gerufenen verengt sein Ergebnis (2026-08-19).**
+    ///
+    /// Gemessen am selben Tag, und der Befund war die Begruendung: ein Vertrag an einem
+    /// fremden Rumpf war in BEIDEN Richtungen wirkungslos.
+    ///
+    /// ```gabbro
+    /// extern fn hole() -> u32 ensures result <= 100 …;
+    /// impl fn nutze() -> u32 in 0 .. 100 { let x = hole(); return x; }
+    /// --> M101: die Rueckgabe verlangt `u32 in 0 .. 100`, der Wert hat `u32`
+    /// ```
+    ///
+    /// **48 fremde Ruempfe im Korpus, NULL sprechen ihre Pflicht aus** -- und der Grund war
+    /// nicht Nachlaessigkeit: *Hinschreiben kostete nichts und brachte nichts.* Eine Klausel,
+    /// die niemand liest, schreibt niemand.
+    ///
+    /// ## Was hier passiert, und was ausdruecklich nicht
+    ///
+    /// Verengt wird nur aus Vergleichen `result <op> <Zahl>` -- die Form, die 14 der
+    /// 17 Pflichten des Beispielkorpus haben. Alles Uebrige (Quantoren, Weltzustand,
+    /// `old`) bleibt liegen: es waere eine Aussage ueber ORTE, und die Tatsachenmaschinerie
+    /// haengt an Namen, die der Rufer nicht kennt.
+    ///
+    /// > **Und die Richtung ist eine ANNAHME, keine Ableitung.** Bei einem `extern fn` glaubt
+    /// > Gabbro dem fremden Rumpf; das ist der Zweck eines Vertrags und trotzdem
+    /// > Vertrauensflaeche. *Deshalb zaehlt `gabbro pflichten` sie als `F` und das Zeugnis
+    /// > nennt sie -- wer nicht pruefen kann, EXPORTIERT.*
+    fn aus_ensures(&self, roh: &Typ, ensures: &[Pred]) -> Typ {
+        let Some(b) = roh.bereich() else { return roh.clone() };
+        let (mut min, mut max) = (b.min, b.max);
+        for p in ensures {
+            let PredArt::Vergleich(e) = &p.art else { continue };
+            let ExprArt::Binaer(op, a, c) = &e.art else { continue };
+            // `result <op> zahl` -- und die gespiegelte Form `zahl <op> result`.
+            let (op, zahl) = match (&a.art, &c.art) {
+                (ExprArt::Ergebnis, ExprArt::Zahl(n)) => (*op, *n as i128),
+                (ExprArt::Zahl(n), ExprArt::Ergebnis) => (gespiegelt(*op), *n as i128),
+                _ => continue,
+            };
+            match op {
+                BinOp::Kleiner => max = max.min(zahl - 1),
+                BinOp::KleinerGleich => max = max.min(zahl),
+                BinOp::Groesser => min = min.max(zahl + 1),
+                BinOp::GroesserGleich => min = min.max(zahl),
+                BinOp::Gleich => {
+                    min = min.max(zahl);
+                    max = max.min(zahl);
+                }
+                _ => {}
+            }
+        }
+        if min > max || (min == b.min && max == b.max) {
+            // **Ein leerer Bereich ist kein Fortschritt, sondern ein Widerspruch** -- und den
+            // meldet nicht diese Funktion. *Sie verengt oder schweigt.*
+            return roh.clone();
+        }
+        Typ::Ganzzahl(IntBereich::genau(b.breite, b.vorzeichen, min, max))
     }
 
     /// **`M106` IST `deckt` aus `beweise/Verbund_Konstruktor.thy`, und `M107` ist die Frage,
@@ -2216,5 +2343,27 @@ fn sammle_namen_pred_geb(p: &Pred, gebunden: &mut Vec<String>, out: &mut Vec<Str
             gebunden.pop();
         }
         _ => {}
+    }
+}
+
+/// Die gespiegelte Form eines Vergleichs: `3 <= result` ist `result >= 3`.
+fn gespiegelt(op: BinOp) -> BinOp {
+    match op {
+        BinOp::Kleiner => BinOp::Groesser,
+        BinOp::KleinerGleich => BinOp::GroesserGleich,
+        BinOp::Groesser => BinOp::Kleiner,
+        BinOp::GroesserGleich => BinOp::KleinerGleich,
+        x => x,
+    }
+}
+
+fn zeichen(op: BinOp) -> &'static str {
+    match op {
+        BinOp::Kleiner => "<",
+        BinOp::KleinerGleich => "<=",
+        BinOp::Groesser => ">",
+        BinOp::GroesserGleich => ">=",
+        BinOp::Gleich => "==",
+        _ => "?",
     }
 }

@@ -1,0 +1,18 @@
+-- erwartet: M101
+-- **Die Gegenprobe zur Verengung aus `ensures`.** Seit dem 2026-08-19 verengt die
+-- Nachbedingung des Gerufenen sein Ergebnis beim Rufer -- aber nur so weit, wie sie reicht.
+-- Hier sagt sie `<= 200`, gebraucht wird `<= 100`, und `M101` faellt.
+--
+-- *Ohne diese Probe waere nicht gemessen, ob die Verengung RECHNET oder bloss durchlaesst.*
+module gift::nachbedingung_schwach {
+
+type Klein = u32 in 0 .. 100;
+
+extern fn hole() -> u32
+    ensures result <= 200
+    effects { pure } costs <= 8 ops;
+
+impl fn nutze() -> Klein effects { pure } costs <= 16 ops
+{ let x = hole(); return x; }
+
+}

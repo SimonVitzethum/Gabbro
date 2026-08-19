@@ -16,6 +16,20 @@ use std::collections::{HashMap, HashSet};
 pub struct Signatur {
     pub parameter: Vec<(String, Typ)>,
     pub ergebnis: Option<Typ>,
+    /// **Die Nachbedingungen des Gerufenen -- Punkt 4, 2026-08-19.**
+    ///
+    /// Gemessen am selben Tag: ein Vertrag an einem fremden Rumpf war in BEIDEN Richtungen
+    /// wirkungslos. `extern fn hole() -> u32 ensures result <= 100` gab dem Rufer nichts
+    /// (`M101` fiel), und `requires bereit == 1` kostete ihn nichts (0 Fehler).
+    ///
+    /// > *48 fremde Ruempfe im Korpus, NULL sprechen ihre Pflicht aus* -- und der Grund war
+    /// > nicht Nachlaessigkeit: **Hinschreiben kostete nichts und brachte nichts.**
+    pub ensures: Vec<gabbro_syntax::ast::Pred>,
+    /// Die Vorbedingungen -- die andere Richtung desselben Vertrags.
+    pub requires: Vec<gabbro_syntax::ast::Pred>,
+    /// Hat Gabbro den Rumpf? *Ohne ihn ist jede Verengung aus `ensures` eine ANNAHME ueber
+    /// fremden Code und gehoert ins Zeugnis, nicht in ein stilles Zutrauen.*
+    pub rumpf_da: bool,
     pub span: gabbro_syntax::span::Span,
 }
 
@@ -426,6 +440,9 @@ impl Umgebung {
                             Signatur {
                                 parameter: Vec::new(),
                                 ergebnis: None,
+                                ensures: Vec::new(),
+                        requires: Vec::new(),
+                                rumpf_da: false,
                                 span: t.span,
                             },
                         );
@@ -447,6 +464,9 @@ impl Umgebung {
                                 })
                                 .collect(),
                             ergebnis: Some(Typ::Verbundname(q(&d.name.text))),
+                            ensures: Vec::new(),
+                            requires: Vec::new(),
+                            rumpf_da: true,
                             span: d.span,
                         },
                     );
@@ -477,6 +497,9 @@ impl Umgebung {
                             let sig = Signatur {
                                 parameter: felder.clone(),
                                 ergebnis: Some(Typ::Verbund(felder.clone())),
+                                ensures: Vec::new(),
+                                requires: Vec::new(),
+                                rumpf_da: false,
                                 span: t.span,
                             };
                             self.funktionen.insert(q(&t.name.text), sig);
@@ -495,6 +518,9 @@ impl Umgebung {
                             .map(|p| (p.name.text.clone(), self.typ_von_ausdruck_decl(pfad, &p.typ)))
                             .collect(),
                         ergebnis: f.ergebnis.as_ref().map(|t| self.typ_von_ausdruck_decl(pfad, t)),
+                        ensures: f.ensures.clone(),
+                        requires: f.requires.clone(),
+                        rumpf_da: matches!(f.rumpf, gabbro_syntax::ast::FnRumpf::Block(_)),
                         span: f.span,
                     };
                     self.funktionen.insert(q(&f.name.text), sig);
@@ -507,6 +533,9 @@ impl Umgebung {
                             .map(|p| (p.name.text.clone(), self.typ_von_ausdruck_decl(pfad, &p.typ)))
                             .collect(),
                         ergebnis: None,
+                        ensures: Vec::new(),
+                        requires: Vec::new(),
+                        rumpf_da: false,
                         span: a.span,
                     };
                     self.funktionen.insert(q(&a.name.text), sig);

@@ -54,6 +54,16 @@ const BENANNT: &[&str] = &[
     "M106", "M107", "M108", "P036", "P037",
     // Punkt 3: `ensures` wird gelesen -- Wohlgeformtheit, nicht Beweis.
     "M109", "M110", "M111",
+    // **P6, 2026-08-19: `maintains` wird gelesen.** `M112` steht hier als FOLGEFEHLER, und
+    // der Grund gehoert dazu: der Ausschnitt in `SYNTAX.md`:533 erklaert `cdt_wellformed`
+    // als `spec fn`, und die Zeile scheitert am Parser -- `c.parent_chain(s)` ist ein Ruf in
+    // einem `place`, und «B8» verbietet das. *Die Deklaration wird nie erklaert, also nennt
+    // `maintains` ins Leere.*
+    //
+    // > **Gabbro unterdrueckt Folgefehler nicht**, und das ist eine Entscheidung, die vor
+    // > heute niemand aufgeschrieben hat: nach einem `P001` laufen die Paesse weiter. Was
+    // > sie dann melden, kann Rauschen sein.
+    "M112", "M113", "M114", "M115",
     "K004", "K005", "D001", "D002", "D003", "D004", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet
