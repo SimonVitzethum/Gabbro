@@ -517,6 +517,27 @@ as a record of what the closure cost; the details are in
 | `own` is a synonym for `rw` | **the specification was wrong, not the pass** — `SYNTAX.md` §3 now carries the measurement |
 | lexer panic · licence entry | **`P038`** (measured depth limit) · `license = "AGPL-3.0-only"` |
 
+### «K5» — full coverage of the five plumbing classes ([`dokumente/PLAN.md`](dokumente/PLAN.md))
+
+*Planned 2026-08-19 on a fore-measurement of 7 targeted probes. **Three of them are silent
+holes**, and silence is what the order below sorts by — an `E009` is an entry, a silence is a
+false promise.*
+
+- [ ] **K5.1 — the payload is written AFTER the release store** (`V006`), **and read BEFORE
+      the acquire load** (`V007`). Both measured **STILL** today. *A10 says release/acquire
+      establish visibility; nobody checks that the program has the shape the axiom needs.*
+- [ ] **K5.2 — a `rank` that is not constant-evaluable is silently skipped** by `H006` AND
+      `H012` (`rang: Option<i128>`, both `continue` on `None`). Measured: an inverted nesting
+      under such a lock gives **0 errors**. → `H014`, at the declaration, not at the site.
+- [ ] **K5.5 — the argument mapping carries only the BASE name.** `f(g(x))` and `f(a.b)` keep
+      the callee's parameter name. Not unsafe — coarse in the safe direction — but the
+      inherited foreign name stands in the message and nobody finds it in their own body.
+- [ ] **K5.3 — the context matrix.** `masks IRQ`, `per cpu`, `nested never` all say which
+      contexts exclude each other, and `H013` reads none of them. Needs a **named assumption**
+      (`ein_kern` / `mehrere_kerne`) — on more than one core `masks IRQ` excludes nothing.
+- [ ] **K5.4 — `decreases` for recursion.** Today `K001`+`E009` NAME it; `costs` on a
+      recursive function is an assumption. The only column that widens the language, hence last.
+
 - [ ] **The full argument mapping is only one level deep.** `writes p.slots` becomes
       `writes q.slots` through the base name; an argument that is itself an expression
       (`f(g(x))`) keeps the callee's name. *Coarse in the safe direction, and named here so

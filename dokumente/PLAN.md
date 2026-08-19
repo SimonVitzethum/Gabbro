@@ -3327,3 +3327,158 @@ Datei fest, die es gar nicht erst erzeugt.
    niemand angesehen hat.
 3. **Die funktionale Korrektheit fällt nicht.** Sie ist der Zweck des Ziels, nicht sein Opfer:
    *am Ende von «NL» beweist der Nutzer seine Logik — und nur die.*
+
+---
+
+# «K5» — vollständige Abdeckung der fünf Klempnereiklassen
+
+> **Was „vollständig" hier heißt, und es ist eine strenge Fassung:** *jede Verletzung der
+> Klasse ist ein Übersetzungsfehler, und was nicht fällt, ist **benannt** — als Axiom, als
+> Entscheidung oder als unentscheidbarer dritter Zustand.* **Ein stiller Durchlass zählt
+> gegen die Abdeckung, ein `E009` nicht.**
+
+Der Anlass war eine Rezension, die fünf Klassen als *nicht getragen* führte. Nach elf
+Schliessungen am 2026-08-19 fielen vier von fünf an allen Proben. **Dieser Plan handelt vom
+Rest — und der Rest ist gemessen, nicht erinnert.**
+
+## Die Vorabmessung, 24 + 7 Programme
+
+Die Batterie steht in [`MESSUNGEN.md`](MESSUNGEN.md) (dritter Durchgang). Sieben weitere
+Proben suchten gezielt nach dem, was die Batterie nicht abfragte:
+
+| Probe | Ergebnis | Urteil |
+|---|---|---|
+| Nutzlast wird **nach** dem release-Speichern geschrieben | **STILL** | **Loch** |
+| Nutzlast wird **vor** dem acquire-Laden gelesen | **STILL** | **Loch** |
+| Rang nicht konstant auswertbar | **STILL** | **Loch** |
+| Sperrzyklus über zwei getrennte Ketten | `H012` | trägt |
+| Ruf über einen Funktionszeiger | `E009` `K003` | **benannt** — kein Loch |
+| Wechselrekursion | `E009` `K001` | **benannt** — kein Loch |
+| `masks IRQ` statt einer Sperre | `H013` | trägt, **zu grob** |
+
+> **Die drei Löcher sind alle von derselben Bauart:** eine Zusage, deren *Reihenfolge* oder
+> *Vorbedingung* niemand nachrechnet. Das ist nicht die Bauart der elf Befunde vom Vormittag
+> (dort fehlte die Weiterreichung eines fertigen Werkzeugs) — **hier fehlt die Regel selbst.**
+
+---
+
+## K5.1 — Publikation: die Reihenfolge *innerhalb* der Funktion *(zuerst, weil still)*
+
+Die Paarung prüft seit dem 2026-08-19 `(Atomic, Nutzlast)` über das ganze Programm. Was sie
+**nicht** prüft, ist die Stelle, an der die Ordnung entsteht:
+
+```gabbro
+F = true publishes { n };   -- das release-Speichern
+n = v;                      -- ... und die Nutzlast DANACH
+```
+
+**Ein release-Speichern veröffentlicht, was vor ihm geschah.** Was danach geschrieben wird,
+sieht der Leser nicht — die Zeile `publishes { n }` ist dann eine Zusage über eine Schreibung,
+die zum Zeitpunkt der Zusage nicht existiert. *Spiegelbildlich auf der Leseseite:* ein `let
+vorher = n;` **vor** dem `awaits` liest an der Erwerbung vorbei.
+
+* **Was gebaut wird.** Zwei Regeln über demselben Rumpf, beide rein syntaktisch und beide
+  ohne Speichermodell:
+  * `V006` — jede Stelle der Nutzlast eines `publishes` wird im selben Rumpf **vor** dem
+    Speichern geschrieben. *Wird sie gar nicht geschrieben, ist das kein Fehler: sie kann von
+    einem Gerufenen kommen — dann muss der Ruf davor stehen.*
+  * `V007` — jede Stelle der Nutzlast eines `awaits` wird im selben Rumpf **nach** dem Laden
+    gelesen. Ein Lesen davor fällt.
+* **Warum das keine Aussage über das Speichermodell ist.** A10 (`release_stellt_sichtbarkeit_her`)
+  sagt, *dass* release/acquire die Sichtbarkeit herstellen. Diese beiden Regeln sagen, dass
+  das Programm die Form hat, für die A10 überhaupt gilt. **Das Axiom trägt eine Voraussetzung,
+  und niemand prüfte, ob sie erfüllt ist.**
+* **Tor:** beide Proben fallen, beide Gegenproben (richtige Reihenfolge) schweigen, Korpus 0.
+* **Preis:** klein. Der Rumpf wird ohnehin in Reihenfolge durchlaufen.
+
+## K5.2 — Sperre: ein Rang, den niemand ausrechnen kann, ist keine Ordnung
+
+`H006` und `H012` überspringen beide eine Sperre, deren `rank` nicht konstant auswertbar ist
+(`rang: Option<i128>`, und beide `continue` bei `None`). Gemessen: `lock LA … rank woher()`
+neben `lock LB … rank 1`, verschachtelt in der falschen Richtung — **null Fehler.**
+
+* **Was gebaut wird.** `H014`: eine `lock`-Deklaration, deren `rank` nicht feststeht, fällt an
+  der Deklaration. **Nicht am Zugriff** — dort wäre es eine Meldung je Fundstelle für einen
+  Fehler, der einmal gemacht wurde.
+* **Warum ein Fehler und kein Hinweis.** Der Rang *ist* die Ordnung; ohne ihn gibt es keine.
+  Eine Sperre ohne auswertbaren Rang ist dieselbe Klasse wie `bounded` ohne Zahl. *Die
+  Grammatik verlangt `rank` schon heute — was fehlt, ist, dass er etwas bedeutet.*
+* **Tor:** die Probe fällt, `rank 0`/`rank NKERNE` schweigen, Korpus 0.
+
+## K5.3 — Rennen: die Kontexte schliessen einander aus, und `H013` weiss es nicht
+
+`H013` nimmt die grobe Antwort — *jeder Eintritt ist ein Kontext* — und die ist in die sichere
+Richtung grob. **Zu grob an drei Stellen**, und alle drei stehen schon in der Grammatik:
+
+| Form | was sie sagt | was `H013` daraus macht |
+|---|---|---|
+| `masks IRQ` | schliesst den Interruptkontext aus | nichts |
+| `per cpu` | gehört genau einem Kern | nichts |
+| `nested never` | der Eintritt unterbricht sich nicht selbst | nichts |
+
+* **Was gebaut wird.** Eine **Kontextmatrix**: je Paar von Kontexten steht da, ob sie
+  gleichzeitig laufen können. `masks IRQ` streicht die Interrupteinträge, `nested never`
+  streicht die Diagonale, `per cpu` streicht alles ausser dem eigenen Kern. `H013` fragt
+  danach statt „irgendein Eintritt".
+* **Und die Zeile, die dabei ehrlich bleiben muss:** *auf mehr als einem Kern schliesst
+  `masks IRQ` gar nichts aus.* Die Matrix braucht darum eine **Annahme mit Namen** —
+  `ein_kern` bzw. `mehrere_kerne` — und die gehört in die Axiomschicht, nicht in den Pass.
+* **Tor:** je Platz wird die Kontextmenge gedruckt (`gabbro kontexte`), und **die Zahl der
+  berührten Plätze steht daneben** — sonst sieht ein leerer Lauf aus wie ein bestandener (W1).
+* **Vorbedingung, unverändert:** `H013` hat am Korpus **null Biss**, weil alle vier
+  Kontextwurzeln `extern fn` sind. **K5.3 ist ohne den zweiten Korpus nicht messbar** — das
+  ist dieselbe Bedingung wie über K11.2.2, und sie ist die einzige in diesem Plan, die nicht
+  an Bauarbeit hängt.
+
+## K5.4 — Termination: die Rekursion bekommt ein Mass
+
+Heute nennt `K001` die Rekursion und `E009` die Unentscheidbarkeit — **das ist ehrlich und
+nicht vollständig.** `costs` an einer rekursiven Funktion ist eine Annahme.
+
+* **Was gebaut wird.** `decreases <expr>` an der Signatur, geprüft wie das Abstiegsmass einer
+  `traverse` (`S005` prüft heute schon die *notwendige* Bedingung: das Mass muss sich bewegen
+  können). Für den Zyklus im Aufrufgraphen: jede Kante muss das Mass echt verkleinern.
+* **Was das NICHT liefert:** *dass* es fällt, bleibt Beweisersache (`consuming.ordnung`) —
+  dieselbe Trennung wie bei `S005`. **Die Notation trägt, der Beweis bleibt beim Nutzer**, und
+  genau das ist die Zielform.
+* **Preis:** eine Grammatikzeile, ein Pass, eine Schablone. *Die einzige Spalte dieses Plans,
+  die die Sprache verbreitert* — und darum die letzte.
+
+## K5.5 — Rahmen: die Argumentabbildung, eine Ebene tiefer
+
+Seit dem 2026-08-19 bildet der Graph Parameternamen auf Argumente ab — **über den Grundnamen,
+und nur den.** `f(g(x))` und `f(a.b)` behalten den Namen des Gerufenen.
+
+* **Was gebaut wird.** Die Abbildung nimmt den ganzen Ortsausdruck statt der Basis; ein
+  Argument, das kein Ort ist, macht die Hülle an dieser Kante **unvollständig** statt sie
+  stillschweigend grob zu lassen (`E009` statt eines geerbten Namens).
+* **Warum das kleiner ist, als es klingt:** die heutige Grobheit ist *in die sichere Richtung*
+  — sie sieht mehr Wirkungen als da sind. **Was fehlt, ist nicht Sicherheit, sondern
+  Brauchbarkeit:** ein geerbter fremder Parametername steht in der Meldung und niemand findet
+  ihn im eigenen Rumpf wieder.
+
+---
+
+## Die Reihenfolge, und die Begründung ist die Stille
+
+```
+K5.1  Publikation, Reihenfolge     zuerst -- zwei STILLE Loecher, klein zu bauen
+K5.2  Rang ohne Wert               danach -- ein STILLES Loch, eine Zeile
+K5.5  Argumentabbildung            danach -- kein Loch, aber jede Meldung wird lesbar
+K5.3  Kontextmatrix                danach -- braucht eine Annahme mit Namen
+K5.4  decreases                    zuletzt -- verbreitert als einzige die Sprache
+```
+
+**Zuerst fällt, was still ist.** Ein `E009` ist ein Eintrag; ein Schweigen ist eine falsche
+Zusage — und die drei Löcher oben stehen heute in einer Datei, die *„0 Fehler"* meldet.
+
+## Was «K5» ausdrücklich NICHT liefert
+
+1. **A10 fällt nicht.** Dass `release`/`acquire` die Sichtbarkeit *herstellen*, ist eine
+   Aussage über die Maschine. K5.1 prüft, ob die **Voraussetzung** des Axioms erfüllt ist —
+   das ist die andere Hälfte und nicht dieselbe.
+2. **`protects` bleibt eine Angabe.** Ob eine Sperre die *richtigen* Plätze nennt, kann kein
+   Pass wissen; er kann nur nachhalten, dass die genannten eingehalten werden (`H007`, `H011`).
+3. **Ohne den zweiten Korpus ist die Abdeckung von *Rennen* eine Zahl über Giftproben.**
+   `H013` fällt heute an genau einer Datei, und die habe ich selbst geschrieben. *Das ist
+   Falle 80, und es steht hier, damit es nicht später als Fund verkauft wird.*
