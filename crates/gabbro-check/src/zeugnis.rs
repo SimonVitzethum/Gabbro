@@ -273,6 +273,15 @@ pub struct Erhebung {
     /// der gar nichts tut, erfuellt sie. **Was der Rufer wirklich annimmt, steht dann
     /// nirgends.** Eine Sperre bringt keine mit; sie ist die Bauart selbst.
     pub fremde_mit_pflicht: usize,
+    /// **Die `asm`-Ruempfe, mit der Zahl ihrer Befehlszeilen** («OPT3», 2026-08-19).
+    ///
+    /// Ein Assemblerblock ist ein Loch in jedem der zwoelf Paesse — Gabbro liest den
+    /// Befehlstext **nicht**. `arch`, `effects`, `costs` und `clobbers` daneben sind
+    /// Annahmen, keine Messungen, und sie stehen deshalb hier bei den anderen Annahmen.
+    ///
+    /// > **Die Zahl ist die eigentliche Aussage:** *wie viele Zeilen Assembler traegt ein in
+    /// > Gabbro geschriebener Kern?* Sie ist die Flaeche, ueber die dieser Ordner nichts sagt.
+    pub asm: Vec<(String, usize)>,
     /// **«F»: rechnet diese Einheit mit Gleitkomma?**
     ///
     /// Sie steht im Zeugnis, weil sie **keine Aussage ueber Zahlen** ist: Gleitkomma aendert
@@ -408,6 +417,16 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
                         e.fremde_mit_pflicht += 1;
                     }
                     e.fremde.push((f.name.text.clone(), vertrag(f)))
+                }
+                // **Ein `asm`-Rumpf ist BEIDES**: er steht hier in der Einheit, und trotzdem
+                // ist alles an ihm eine Annahme. Er zaehlt deshalb als fremder Vertrag UND
+                // wird eigens aufgefuehrt — *wer nicht pruefen kann, exportiert.*
+                FnRumpf::Asm(a) => {
+                    e.asm.push((f.name.text.clone(), a.zeilen.len()));
+                    if spricht_seine_pflicht_aus(f) {
+                        e.fremde_mit_pflicht += 1;
+                    }
+                    e.fremde.push((f.name.text.clone(), vertrag(f)));
                 }
                 FnRumpf::Pred(_) => {}
             }
@@ -660,6 +679,19 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
             aus.push_str("     the checker uses to reason about them:\n");
             for (n, v) in &e.fremde {
                 aus.push_str(&format!("       {n:<26} {v}\n"));
+            }
+        }
+        // **Die `asm`-Ruempfe eigens** («OPT3»): sie stehen IN dieser Einheit, und trotzdem
+        // ist alles an ihnen Annahme -- Gabbro liest den Befehlstext nicht. *Die Zahl ist die
+        // eigentliche Aussage: wie viele Zeilen Assembler traegt dieser Kern?*
+        if !e.asm.is_empty() {
+            let zeilen: usize = e.asm.iter().map(|(_, n)| n).sum();
+            aus.push_str(&format!(
+                "\n     ASSEMBLY -- {} bodies, {zeilen} instruction lines. Gabbro does NOT read them:\n",
+                e.asm.len()
+            ));
+            for (n, z) in &e.asm {
+                aus.push_str(&format!("       {n:<26} {z} lines\n"));
             }
         }
     }

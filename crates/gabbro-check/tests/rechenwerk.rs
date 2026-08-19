@@ -1660,3 +1660,38 @@ impl fn ruft() -> u32 effects { reads z } costs <= 4 ops { return fremd(); }
         zeile("ruft")
     );
 }
+
+/// **Ein `asm`-Block wird `__volatile__` abgesenkt** («OPT3», 2026-08-19).
+///
+/// Der Block hat **per Konstruktion** eine Wirkung, die Gabbro nicht liest — der Prüfer
+/// kennt den Befehlstext nicht. Ohne `__volatile__` darf der C-Übersetzer ihn streichen,
+/// wenn er kein Ergebnis benutzt sieht.
+///
+/// > *Wer den Text nicht liest, darf ihn auch nicht für entbehrlich halten.*
+///
+/// Der Test steht hier und nicht nur im Emissionswächter, weil `mutiere-pruefer.py` nur
+/// `cargo test` fährt.
+#[test]
+fn ein_asm_block_ist_volatile_und_traegt_seine_operanden() {
+    let q = r#"
+module m {
+static mut GERAET : u32 = 0;
+impl fn ausgeben(tor : u16, wert : u8)
+    effects { writes GERAET } costs <= 1 ops arch x86_64
+    = asm { "outb %[wert], %[tor]" in { wert : "a", tor : "d" } clobbers { memory } };
+}
+"#;
+    let (baum, mut absagen) = gabbro_syntax::lies("asm.gab", q);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    assert_eq!(absagen.fehler_zahl(), 0, "der versiegelte Block ist sauber");
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert!(
+        c.contains("__asm__ __volatile__("),
+        "ohne `__volatile__` darf der C-Uebersetzer den Block streichen:\n{c}"
+    );
+    assert!(
+        c.contains("[wert] \"a\" (wert)") && c.contains("[tor] \"d\" (tor)"),
+        "die Operanden stehen mit ihrer Nebenbedingung da:\n{c}"
+    );
+    assert!(c.contains(": \"memory\");"), "`clobbers memory` steht im C:\n{c}");
+}

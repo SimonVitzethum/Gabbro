@@ -713,8 +713,33 @@ pub enum FnRumpf {
     Block(Block),
     /// `= pred ;` -- only for `spec fn`.
     Pred(Pred),
+    /// `= asm { … } ;` -- **ein VERSIEGELTES Loch** («OPT3»).
+    ///
+    /// Ein Assemblerblock ist ein Loch in jedem der zwoelf Paesse: M1 kennt die Bereiche
+    /// nicht, `effects` sieht die Beruehrungen nicht, `costs` kennt die Zahl nicht, M2 sieht
+    /// den Verbrauch nicht. Deshalb steht er **als Rumpf einer Funktion** und nicht als
+    /// Anweisung: `effects`, `costs` und `arch` stehen dann dort, wo die Paesse sie ohnehin
+    /// lesen, und der Rumpf ist -- wie bei einem `extern fn` -- eine ANNAHME.
+    ///
+    /// *Wer nicht pruefen kann, exportiert:* jeder `asm`-Rumpf gehoert ins Zeugnis.
+    Asm(AsmRumpf),
     /// `;` -- declaration without a body.
     Keiner,
+}
+
+/// Der Inhalt eines `asm`-Rumpfes. **Jede Zeile darin ist eine Pflicht, keine Verzierung.**
+#[derive(Debug, Clone)]
+pub struct AsmRumpf {
+    /// Die Befehlszeilen, woertlich. **Gabbro liest sie nicht** -- das ist der Kern der
+    /// Versiegelung: was hier steht, ist Annahme und keine Aussage.
+    pub zeilen: Vec<Textliteral>,
+    /// `in { name : "constraint" }` -- die Namen muessen Parameter der Funktion sein.
+    pub ein: Vec<(Ident, Textliteral)>,
+    /// `out { name : "constraint" }`
+    pub aus: Vec<(Ident, Textliteral)>,
+    /// `clobbers { memory, rax }` -- **`memory` ist die Vorgabe, nicht die Ausnahme.**
+    pub zerstoert: Vec<Ident>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]

@@ -1,0 +1,26 @@
+-- erwartet: A004
+-- **Ein `asm`-Operand nennt einen Namen, den es nicht gibt.**
+--
+-- Der Block ist sonst vollstaendig versiegelt: `arch`, `effects`, `costs`, `clobbers memory`
+-- stehen da. Was fehlt, ist die eine Zuordnung, die Gabbro ueberhaupt pruefen KANN --
+-- **den Befehlstext liest es nicht**, und ein Operandenname ist das einzige Stueck darin,
+-- das eine Stelle des Rufers bezeichnet.
+--
+-- *Faellt diese Regel aus, uebergibt der Erzeuger einen Namen an den C-Uebersetzer, den die
+-- Funktion nicht hat -- und der Fehler taucht erst im erzeugten C auf, wo ihn niemand
+-- geschrieben hat.*
+module gift::asm_operand {
+
+static mut GERAET : u32 = 0;
+
+impl fn ausgeben(tor : u16)
+    effects { writes GERAET }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm {
+        "outb %[wert], %[tor]"
+        in { wert : "a", tor : "d" }
+        clobbers { memory }
+    };
+
+}

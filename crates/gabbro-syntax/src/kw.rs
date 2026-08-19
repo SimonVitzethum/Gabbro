@@ -250,6 +250,7 @@ wortschatz! {
     Out           => "out",           res;
     Preserves     => "preserves",     res;
     Clobbers      => "clobbers",      res;
+    Asm           => "asm",           res;
     Stack         => "stack",         res;
     Dispatch      => "dispatch",      res;
     Per           => "per",           res;

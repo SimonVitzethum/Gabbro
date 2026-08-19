@@ -1,0 +1,22 @@
+-- erwartet: A001
+-- **Ein `asm`-Block ist ein Loch in JEDEM der zwoelf Paesse.**
+--
+-- M1 kennt die Bereiche nicht, `effects` sieht die Beruehrungen nicht, `costs` kennt die
+-- Zahl nicht, M2 sieht den Verbrauch nicht. Wer ihn ohne Pflichten einlaesst, macht jede
+-- Zusage des Uebersetzers zu einer Aussage ueber das, was VOR dem Block stand.
+--
+-- Geprueft wird deshalb nicht der Befehlstext -- **den liest Gabbro nicht, und das ist der
+-- Kern der Versiegelung** -- sondern DASS die Pflichten dastehen:
+--
+--   A001  kein `arch`     -- derselbe Text tut auf einer anderen Maschine still etwas anderes
+--   A002  kein `effects`  -- der Rufer traegt nichts, und der Rahmen endet hier
+--   A003  kein `costs`    -- die Terminierungskette reisst
+--   A004  ein Operand, der kein Parameter ist
+--   N026  kein `clobbers memory` -- die VORGABE, nicht die Ausnahme (Hinweis)
+--
+-- *`aarch64` bleibt versiegelt: ein `arch aarch64` ist ein Fehler und keine Luecke.*
+module gift::asm_nackt {
+
+impl fn nackt(tor : u16) = asm { "hlt" in { fremd : "r" } };
+
+}

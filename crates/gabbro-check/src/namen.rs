@@ -15,6 +15,7 @@ use std::collections::{HashMap, HashSet};
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     sichtbarkeit(baum, absagen);
+    asm_versiegelt(baum, absagen);
     geltungsbereich(&baum.items, absagen);
     entrust_annahme(baum, absagen);
     verweigerte_zahltypen(baum, absagen);
@@ -1584,4 +1585,103 @@ fn sammle_qualifizierte_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
             sammle_qualifizierte_rufe(k, aus);
         }
     }
+}
+
+
+/// **`A001`–`A004` — die Versiegelung eines `asm`-Rumpfes** («OPT3», 2026-08-19).
+///
+/// Ein Assemblerblock ist ein **Loch in jedem der zwölf Pässe**: M1 kennt die Bereiche
+/// nicht, `effects` sieht die Berührungen nicht, `costs` kennt die Zahl nicht, M2 sieht den
+/// Verbrauch nicht. Wer ihn ohne Pflichten einlässt, macht jede Zusage des Übersetzers zu
+/// einer Aussage über das, was **vor** dem Block stand.
+///
+/// Geprüft wird deshalb nicht der Befehlstext — *den liest Gabbro nicht, und das ist der Kern
+/// der Versiegelung* — sondern **dass die Pflichten dastehen**:
+///
+/// | | |
+/// |---|---|
+/// | `A001` | kein `arch` — auf einer anderen Maschine tut derselbe Text still etwas anderes |
+/// | `A002` | kein `effects` — der Rufer trägt nichts, und der Rahmen endet hier |
+/// | `A003` | kein `costs` — die Terminierungskette reisst |
+/// | `A004` | ein Operand, der kein Parameter ist |
+///
+/// **`clobbers memory` ist die Vorgabe und keine Ausnahme** (`N026` als Hinweis): wer sie
+/// weglässt, spart eine Zeile und verliert eine Zusage.
+fn asm_versiegelt(baum: &Programm, absagen: &mut Absagen) {
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Asm(a) = &f.rumpf else {
+            return;
+        };
+        if f.arch.is_none() {
+            absagen.schiebe(
+                Absage::fehler(
+                    "A001",
+                    f.name.span,
+                    format!("`{}` has an `asm` body but names no `arch`", f.name.text),
+                )
+                .mit_notiz(
+                    "the same instruction text does something else on another machine -- \
+                     without `arch` this unit is silently wrong there",
+                )
+                .mit_notiz("`aarch64` is sealed in this folder: `arch aarch64` is an error, not a gap"),
+            );
+        }
+        if f.effects.is_none() {
+            absagen.schiebe(
+                Absage::fehler(
+                    "A002",
+                    f.name.span,
+                    format!("`{}` has an `asm` body but no `effects`", f.name.text),
+                )
+                .mit_notiz(
+                    "the caller carries the effects of a call -- without the clause the frame \
+                     ends at this function and every `pure` above it means nothing",
+                ),
+            );
+        }
+        if f.costs.is_none() {
+            absagen.schiebe(
+                Absage::fehler(
+                    "A003",
+                    f.name.span,
+                    format!("`{}` has an `asm` body but no `costs`", f.name.text),
+                )
+                .mit_notiz("without it the termination chain tears at this call"),
+            );
+        }
+        for (n, _) in a.ein.iter().chain(a.aus.iter()) {
+            if !f.parameter.iter().any(|p| p.name.text == n.text) {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "A004",
+                        n.span,
+                        format!("`{}` is not a parameter of `{}`", n.text, f.name.text),
+                    )
+                    .mit_notiz(
+                        "an `asm` operand names a place the caller handed in; Gabbro does not \
+                         read the instruction text and can check nothing else here",
+                    ),
+                );
+            }
+        }
+        // **Die Vorgabe ist `memory`, nicht ihr Fehlen.** Ein Hinweis und keine Absage: es
+        // gibt Befehle, die wirklich nichts anfassen -- aber wer das behauptet, soll es
+        // sehen. *Wer die Vorgabe umdreht, spart eine Zeile und verliert eine Zusage.*
+        if !a.zerstoert.iter().any(|z| z.text == "memory") {
+            absagen.schiebe(
+                Absage::hinweis(
+                    "N026",
+                    a.span,
+                    "this `asm` block declares no `clobbers memory`".to_string(),
+                )
+                .mit_notiz(
+                    "`memory` is the DEFAULT here, not the exception -- without it the C \
+                     compiler may move memory accesses across the block",
+                ),
+            );
+        }
+    });
 }

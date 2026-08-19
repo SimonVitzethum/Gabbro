@@ -554,7 +554,7 @@ pub fn teile(a: &IntBereich, b: &IntBereich) -> Rechnung {
             laeuft_ueber: false,
         };
     }
-    if a.min >= 0 && b.min > 0 {
+    if a.min >= 0 && b.min >= 0 {
         return ergebnis(breite, vz, a.min / b.max, a.max / b.min);
     }
     // Vorzeichenbehaftet: die vier Ecken, konservativ.

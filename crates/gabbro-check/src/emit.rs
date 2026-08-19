@@ -1937,6 +1937,15 @@ fn wirkungsattribut(f: &FnDecl) -> &'static str {
     }
 }
 
+/// **Text, der in einem C-Literal landet** — Anführungszeichen und Rückstriche entschärft.
+///
+/// Dieselbe Klasse wie `kommentartext`: eine Zeichenkette aus der Quelle geht ins Erzeugnis,
+/// und ohne diese Zeile kann sie das Literal schliessen. *Ein `claim` hat genau das am
+/// 2026-08-19 schon einmal getan.*
+fn ctext(t: &str) -> String {
+    t.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
 fn funktion(
     f: &FnDecl,
     aus: &mut String,
@@ -1991,6 +2000,42 @@ fn funktion(
         f.name.text,
         wirkungsattribut(f)
     ));
+    // **Ein `asm`-Rumpf wird zu erweitertem GCC-Assembler** («OPT3», 2026-08-19).
+    //
+    // `__volatile__` steht IMMER da: der Block hat per Konstruktion eine Wirkung, die Gabbro
+    // nicht liest, also darf der C-Uebersetzer ihn nicht wegen unbenutzten Ergebnisses
+    // streichen. *Wer den Text nicht liest, darf ihn auch nicht fuer entbehrlich halten.*
+    if let FnRumpf::Asm(a) = &f.rumpf {
+        // **Ein Ergebnis kann diese Fassung noch nicht.** Der Rueckgabewert braeuchte einen
+        // Ausgangsoperanden ohne Namen in der Quelle -- eine Form, die es nicht gibt. `C001`
+        // mit Grund statt einer geratenen Zuordnung.
+        if f.ergebnis.is_some() {
+            weigere(absagen, f.name.span, "`asm` body with a return value");
+            return;
+        }
+        let a2 = rumpf_aus;
+        a2.push_str(&format!("\n{rueck} {}({liste}) {{\n", f.name.text));
+        a2.push_str("    __asm__ __volatile__(\n");
+        for z in &a.zeilen {
+            a2.push_str(&format!("        \"{}\\n\"\n", ctext(&z.text)));
+        }
+        let ops = |v: &Vec<(Ident, Textliteral)>| -> String {
+            v.iter()
+                .map(|(n, c)| format!("[{}] \"{}\" ({})", n.text, ctext(&c.text), n.text))
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        a2.push_str(&format!("        : {}\n", ops(&a.aus)));
+        a2.push_str(&format!("        : {}\n", ops(&a.ein)));
+        let zer: Vec<String> = a
+            .zerstoert
+            .iter()
+            .map(|z| format!("\"{}\"", ctext(&z.text)))
+            .collect();
+        a2.push_str(&format!("        : {});\n", zer.join(", ")));
+        a2.push_str("}\n");
+        return;
+    }
     let FnRumpf::Block(b) = &f.rumpf else { return };
     let aus = rumpf_aus;
     aus.push_str(&format!("\n{rueck} {}({liste}) {{\n", f.name.text));

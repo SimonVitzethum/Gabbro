@@ -1098,6 +1098,66 @@ impl<'a> Parser<'a> {
     /// **Ein Abstieg mit Boden.** Zaehlt hinein, prueft, zaehlt heraus — auf JEDEM Weg, auch
     /// dem mit `?`. *Ein Zaehler, der bei einem Abbruch stehenbliebe, waere ein zweiter
     /// Fehler an derselben Stelle.*
+    /// **`asm { "zeile" … in { n : "c" } out { … } clobbers { … } }`** («OPT3»).
+    ///
+    /// Gabbro liest den Befehlstext **nicht** — das ist der Kern der Versiegelung. Was hier
+    /// geprüft wird, ist die **Form**: dass die Pflichten dastehen. Ob sie stimmen, sagt das
+    /// Zeugnis, nicht der Prüfer.
+    fn asmrumpf(&mut self) -> Erg<AsmRumpf> {
+        let von = self.span();
+        self.erwarte_kw(Kw::Asm)?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut zeilen = Vec::new();
+        while self.blick().art == Art::Text {
+            zeilen.push(self.erwarte_text()?);
+        }
+        let mut ein = Vec::new();
+        let mut aus = Vec::new();
+        let mut zerstoert = Vec::new();
+        if self.friss_kw(Kw::In) {
+            ein = self.asmops()?;
+        }
+        if self.friss_kw(Kw::Out) {
+            aus = self.asmops()?;
+        }
+        if self.friss_kw(Kw::Clobbers) {
+            self.erwarte_z(Z::GeschweiftAuf)?;
+            while !self.ist_z(Z::GeschweiftZu) {
+                zerstoert.push(self.erwarte_ident()?);
+                if !self.friss_z(Z::Komma) {
+                    break;
+                }
+            }
+            self.erwarte_z(Z::GeschweiftZu)?;
+        }
+        self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(AsmRumpf {
+            zeilen,
+            ein,
+            aus,
+            zerstoert,
+            span: von,
+        })
+    }
+
+    /// `{ name : "constraint", … }` — der Name ist ein Parameter, die Zeichenkette ist die
+    /// C-Nebenbedingung. **Beides ungeprüft**, und genau darum steht der Block im Zeugnis.
+    fn asmops(&mut self) -> Erg<Vec<(Ident, Textliteral)>> {
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let mut aus = Vec::new();
+        while !self.ist_z(Z::GeschweiftZu) {
+            let n = self.erwarte_ident()?;
+            self.erwarte_z(Z::Kolon)?;
+            let c = self.erwarte_text()?;
+            aus.push((n, c));
+            if !self.friss_z(Z::Komma) {
+                break;
+            }
+        }
+        self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(aus)
+    }
+
     fn tiefer<T>(&mut self, was: impl FnOnce(&mut Self) -> Erg<T>) -> Erg<T> {
         self.tiefe += 1;
         let erg = if self.tiefe > TIEFE_MAX {
@@ -1998,9 +2058,18 @@ impl<'a> Parser<'a> {
         let rumpf = if self.ist_z(Z::GeschweiftAuf) {
             FnRumpf::Block(self.block()?)
         } else if self.friss_z(Z::Gleich) {
-            let p = self.pred()?;
-            self.erwarte_z(Z::Semi)?;
-            FnRumpf::Pred(p)
+            // **`= asm { … }` -- der versiegelte Rumpf** («OPT3», 2026-08-19). Er steht hier
+            // und nicht als Anweisung, damit `arch`, `effects` und `costs` an der Funktion
+            // stehen, wo die Paesse sie ohnehin lesen.
+            if self.ist_kw(Kw::Asm) {
+                let a = self.asmrumpf()?;
+                self.erwarte_z(Z::Semi)?;
+                FnRumpf::Asm(a)
+            } else {
+                let p = self.pred()?;
+                self.erwarte_z(Z::Semi)?;
+                FnRumpf::Pred(p)
+            }
         } else {
             self.erwarte_z(Z::Semi)?;
             FnRumpf::Keiner

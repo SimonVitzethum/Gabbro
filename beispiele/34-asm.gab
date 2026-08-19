@@ -1,0 +1,31 @@
+-- 34 -- **Der Assembler als versiegeltes Loch.** Ein `asm`-Rumpf steht IN dieser Einheit,
+-- und trotzdem ist alles an ihm eine Annahme: Gabbro liest den Befehlstext nicht.
+--
+-- Deshalb steht er als RUMPF einer Funktion und nicht als Anweisung -- `arch`, `effects` und
+-- `costs` stehen dann dort, wo die Paesse sie ohnehin lesen, und der Rufer traegt die
+-- Wirkungen wie bei jedem anderen Ruf.
+--
+-- **`clobbers memory` ist die Vorgabe, nicht die Ausnahme.** Wer sie umdreht, spart eine
+-- Zeile und verliert eine Zusage (`N026`).
+--
+-- *Wer nicht pruefen kann, exportiert:* `gabbro zeugnis` fuehrt jeden `asm`-Rumpf mit der
+-- Zahl seiner Befehlszeilen. **Das ist die eigentliche Aussage** -- wie viele Zeilen
+-- Assembler traegt ein in Gabbro geschriebener Kern?
+module beispiel::asm {
+
+static mut GERAET : u32 = 0;
+
+impl fn ausgeben(tor : u16, wert : u8)
+    effects { writes GERAET }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm {
+        "outb %[wert], %[tor]"
+        in { wert : "a", tor : "d" }
+        clobbers { memory }
+    };
+
+-- Der Rufer traegt die Wirkung, ganz gewoehnlich.
+impl fn melden(w : u8) effects { writes GERAET } costs <= 4 ops { ausgeben(112, w); }
+
+}

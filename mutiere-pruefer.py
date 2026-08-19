@@ -704,6 +704,28 @@ MUTATIONEN = [
         "M1 -- ein Loch in der MITTE gilt als untere Schranke; das ist UNSOUND, nicht bloss grob",
     ),
     Mutation(
+        "asm-ohne-arch-egal",
+        "namen.rs",
+        "        if f.arch.is_none() {",
+        "        if false && f.arch.is_none() {",
+        "A001 -- ein `asm`-Rumpf ohne `arch` kommt durch; auf einer anderen Maschine tut er still etwas anderes",
+    ),
+    Mutation(
+        "asm-operand-frei",
+        "namen.rs",
+        "            if !f.parameter.iter().any(|p| p.name.text == n.text) {",
+        "            if false && !f.parameter.iter().any(|p| p.name.text == n.text) {",
+        "A004 -- ein `asm`-Operand darf wieder einen Namen nennen, den es nicht gibt",
+    ),
+    Mutation(
+        "asm-nicht-volatile",
+        "emit.rs",
+        '        a2.push_str("    __asm__ __volatile__(\\n");',
+        '        a2.push_str("    __asm__ (\\n");',
+        "OPT3 -- der Assemblerblock verliert `__volatile__` und darf wegoptimiert werden",
+        flaeche="code",
+    ),
+    Mutation(
         "until-praedikat-unsichtbar",
         "lib.rs",
         "            Schleife::Retry(r) => r.bis.iter().collect(),",

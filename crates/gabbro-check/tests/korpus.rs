@@ -89,6 +89,10 @@ const BENANNT: &[&str] = &[
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet
     "R001", "R002", "R003", "R004", // M3, Raeume, Rechte -- und zweimal `own` auf denselben Ort
+    // **Die Versiegelung eines `asm`-Rumpfes** («OPT3»): `arch`, `effects`, `costs`, und ein
+    // Operand, der ein Parameter sein muss. Geprueft wird die FORM, nicht der Befehlstext --
+    // den liest Gabbro nicht, und das ist der Kern der Sache.
+    "A001", "A002", "A003", "A004", "N026",
     "U001", "U002", "U003", "U004", "U005", "U006", "U007", // Traegergruppe: Sperrabdruck, Zug und Verbindungsaussage
 ];
 

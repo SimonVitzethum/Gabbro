@@ -100,7 +100,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
              atomic acquire release seq relaxed nothing accumulates merge decreases
              max min add or and held protects rank shared
              embeds scale walk levels node down leaf mappings
-             entry entrust vector regs out preserves clobbers stack dispatch
+             entry entrust vector regs out preserves clobbers stack dispatch asm
              per cpu ist nested masked awaits port step via
   Domaenen   slots of chain descendants ancestors queue elems fields threads
              reaches via
@@ -529,7 +529,13 @@ fndecl   = [ "pub" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" 
            [ "decreases" expr ]                                 (* «K5.4» *)
            [ "by"        inductlist ]
            [ "section" string ] [ "arch" ident ] [ "when" constexpr ]
-           ( block | "=" pred ";" | ";" ) ;      (* "=" pred: nur fuer spec fn *)
+           ( block | "=" pred ";" | "=" asmrumpf ";" | ";" ) ;
+                                                 (* "=" pred: nur fuer spec fn *)
+asmrumpf = "asm" "{" { string }
+             [ "in"  "{" asmops "}" ]
+             [ "out" "{" asmops "}" ]
+             [ "clobbers" "{" identlist "}" ] "}" ;
+asmops   = ident ":" string { "," ident ":" string } ;
 (* `const fn` -- comptime, das WERTE rechnet, 2026-08-17. Die Linie, an der es haengt:
 
      comptime, das WERTE rechnet   ->  kostet keine Schablone

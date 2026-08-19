@@ -9809,3 +9809,75 @@ Test steht jetzt in `rechenwerk.rs`.
 166 Kennungen · 170 Gifte · 129 Tests · 164 von 164 Mutationen
 12 Einheiten, jede durch ACHT Stufen statt sechs · 13 Waechter gruen
 ```
+
+## 2026-08-19, fünfter Teil — «OPT3»: der Assembler als **versiegeltes** Loch
+
+Es gab kein `asm` in der Sprache, und `entry`/`boot`/`entrust` brauchen es: `iretq`, `lgdt`,
+`in`/`out`, Barrieren.
+
+**Die Form ist die ganze Entscheidung.** Ein `asm`-Block ist ein Loch in *jedem* der zwölf
+Pässe — M1 kennt die Bereiche nicht, `effects` sieht die Berührungen nicht, `costs` kennt die
+Zahl nicht, M2 sieht den Verbrauch nicht. Wer ihn ohne Pflichten einlässt, macht jede Zusage
+des Übersetzers zu einer Aussage über das, was **vor** dem Block stand.
+
+Deshalb steht er als **Rumpf einer Funktion** und nicht als Anweisung:
+
+```gabbro
+impl fn ausgeben(tor : u16, wert : u8)
+    effects { writes GERAET }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm { "outb %[wert], %[tor]"
+            in { wert : "a", tor : "d" }
+            clobbers { memory } };
+```
+
+*`arch`, `effects` und `costs` stehen damit dort, wo die Pässe sie ohnehin lesen*, und der
+Rufer trägt die Wirkungen wie bei jedem anderen Ruf — ohne eine einzige neue Zeile im
+Wirkungspass.
+
+### Geprüft wird die FORM, nicht der Text
+
+**Gabbro liest den Befehlstext nicht, und das ist der Kern der Versiegelung.**
+
+| | |
+|---|---|
+| `A001` | kein `arch` — derselbe Text tut auf einer anderen Maschine still etwas anderes |
+| `A002` | kein `effects` — der Rufer trägt nichts, und der Rahmen endet hier |
+| `A003` | kein `costs` — die Terminierungskette reisst |
+| `A004` | ein Operand, der kein Parameter ist — *das einzige Stück im Block, das eine Stelle des Rufers bezeichnet* |
+| `N026` | kein `clobbers memory` — **die Vorgabe, nicht die Ausnahme** (Hinweis, weil es Befehle gibt, die wirklich nichts anfassen) |
+
+Die Absenkung ist erweiterter GCC-Assembler, und `__volatile__` steht **immer** da: der Block
+hat per Konstruktion eine Wirkung, die Gabbro nicht liest. *Wer den Text nicht liest, darf
+ihn auch nicht für entbehrlich halten.*
+
+### Und das Zeugnis bekommt eine neue Zeile
+
+```
+     ASSEMBLY -- 1 bodies, 1 instruction lines. Gabbro does NOT read them:
+       ausgeben                   1 lines
+```
+
+**Die Zahl ist die eigentliche Aussage:** *wie viele Zeilen Assembler trägt ein in Gabbro
+geschriebener Kern?* Sie ist die Fläche, über die dieser Ordner nichts sagt — und ein
+`asm`-Rumpf zählt zugleich als fremder Vertrag, obwohl er in der Einheit steht.
+
+### Zwei Mutationen überlebten, und beide aus demselben Grund
+
+`asm-operand-frei` und `asm-nicht-volatile` kamen durch: **die Regel stand da, die Probe
+nicht.** Die eine brauchte eine Giftprobe, die `A004` *allein* auslöst (die erste löste `A001`
+aus und wäre auch ohne `A004` gefallen), die andere einen Rust-Test — *`mutiere-pruefer.py`
+fährt nur `cargo test`, und eine Regel, deren einzige Probe ein Shell-Wächter ist, kann keine
+Mutation fangen.*
+
+### Was «OPT3» NICHT liefert
+
+Ein `asm`-Rumpf mit **Rückgabewert** fällt an `C001` mit Grund: der Rückgabewert bräuchte
+einen Ausgangsoperanden ohne Namen in der Quelle, und diese Form gibt es nicht. *Eine
+geratene Zuordnung wäre schlimmer als eine benannte Weigerung.*
+
+```
+171 Kennungen · 172 Gifte · 130 Tests · 34 Beispiele sauber
+167 von 167 Mutationen · 142 EBNF-Regeln · 211/211 Wortschatz · 13 Waechter gruen
+```
