@@ -1,0 +1,18 @@
+-- erwartet: N017
+-- **Was erhalten bleibt, wird nicht zerstoert.**
+-- Ein Register in `preserves` UND `clobbers` waere ein Eintrittsvertrag, der beides zugleich
+-- verspricht. Bis zum 2026-08-19 pruefte es niemand -- `entry` hatte ueberhaupt keine Probe.
+module gift::entry_beides {
+
+entry e vector 1 arch x86_64 {
+    regs in  { a : rax, }
+    regs out { r : rax, }
+    preserves { rbx, rcx }
+    clobbers  { rcx }
+    stack s per cpu nested never
+    dispatch gift::entry_beides::ziel;
+}
+
+extern fn ziel() -> never effects { diverges } costs <= 1 ops;
+
+}

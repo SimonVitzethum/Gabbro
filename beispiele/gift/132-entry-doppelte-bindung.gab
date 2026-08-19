@@ -1,0 +1,27 @@
+-- erwartet: N001
+-- **`entry` hatte zwoelf Felder und keine Giftprobe.**
+-- Gefunden 2026-08-19 an `pruefe-konstrukte.py`: `regs in { a : rax, a : rdi, }` ging mit
+-- 0 Fehlern durch -- zwei Namen fuer dasselbe Register im Rumpf des Eintritts, und der
+-- Erzeuger haette einen davon still gewaehlt.
+--
+-- *Dieselbe `doppelt`-Maschinerie wie an `table` und `device`; sie war nur nie an dieses
+-- Konstrukt gehalten worden.*
+--
+-- **Und der Korpus hat die Regel dabei berichtigt:** der erste Anlauf prueste NAMEN und
+-- REGISTER zusammen und meldete `rax` an `beispiele/07` -- der Syscall nimmt die Nummer in
+-- `rax` und gibt das Ergebnis dort zurueck. Dasselbe Register, verschiedene Richtungen, und
+-- beides richtig. *Die Namen teilen einen Geltungsbereich, die Register nicht.*
+module gift::entry_doppelt {
+
+entry e vector 1 arch x86_64 {
+    regs in  { a : rax, a : rdi, }
+    regs out { r : rax, }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack s per cpu nested never
+    dispatch gift::entry_doppelt::ziel;
+}
+
+extern fn ziel() -> never effects { diverges } costs <= 1 ops;
+
+}

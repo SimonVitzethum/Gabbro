@@ -1,0 +1,31 @@
+-- erwartet: N001
+-- **`walk` hatte die Pruefung nicht, die `table` hat.**
+-- Gefunden 2026-08-19, weil `pruefe-konstrukte.py` `walk` als Konstrukt OHNE JEDE GIFTPROBE
+-- meldete: zwei gleichnamige Invarianten gingen mit 0 Fehlern durch, waehrend dieselbe Form
+-- an einer `table` an `N001` faellt.
+--
+-- *Dieselbe Regel, ein Konstrukt weiter -- und niemandem aufgefallen, weil nie jemand daran
+-- geruettelt hat.* **Genau das misst Mass 2: nicht wer liest, sondern ob je etwas gefallen
+-- ist.**
+module gift::walk_doppelt {
+format Pte endian little {
+    praesent   : bool @0,
+    schreibbar : bool @1,
+    nutzer     : bool @2,
+    gross      : bool @7,
+    rahmen     : u64 embeds [51:12] scale 4096,
+    nx         : bool @63,
+}
+walk Seitentabelle levels 4 {
+    node : [Pte; 512],
+    down : rahmen when it.praesent && !it.gross,
+    leaf : it.praesent && it.gross,
+
+    invariant wx_getrennt cost O(n) runs online :
+        forall m in mappings of Self : !(m.schreibbar && !m.nx);
+
+    invariant wx_getrennt cost O(n) runs offline :
+        forall m in mappings of Self : m.va < 0xFFFF_8000_0000_0000 || !m.nutzer;
+}
+
+}

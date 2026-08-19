@@ -8961,3 +8961,73 @@ Fläche der Sprache, und **keine Probe berührt sie.**
 > **Und die Grenze im selben Satz:** eine Probe zu haben ist nicht, geprüft zu sein. `ops` hat
 > **drei** und trotzdem keinen Erzeuger — die Proben fallen an `D001`, nicht an der Erhaltung.
 > *Der Wächter verpflichtet, er spricht nicht frei.*
+
+---
+
+# «W13/W14» und die sieben Konstrukte — 2026-08-19
+
+## Zwei Regeln in den Werkzeugkasten
+
+**`W13` — Berührung ist keine Prüfung.** Ein Pass, der ein Konstrukt anfasst, prüft es nicht.
+Die *Feldstufe* hatte die Unterscheidung längst (ZUSAGE gegen ABSENKUNG); **Maß 1 des
+Konstruktwächters hat sie auf der Item-Ebene wieder verloren** und meldete `ops` und `check`
+als „gelesen" — die zwei Fundstellen, für die er gebaut war.
+
+**`W14` — die eigene Deckung wird um eine Größenordnung zu hoch geschätzt.** Drei Messungen,
+dieselbe Form:
+
+| | erwartet | gemessen |
+|---|---:|---:|
+| Felder ohne Leser | 4 | **48** |
+| deutsche Meldungstexte | 41 | **151** |
+| Konstrukte ohne Probe | 2 | **7** |
+
+> *Man zählt, woran man sich erinnert, und man erinnert sich an das, was man gebaut hat.*
+> **Was nie gebaut wurde, hinterlässt keine Erinnerung** — und genau das messen die drei.
+
+## Sieben auf eins — und sechs fielen durch eine Regel, die am ZWILLING schon stand
+
+| | |
+|---|---|
+| **`axiom`** | `requires Has(RDTSCP)` war **Dekoration** — ein Axiom mit Merkmalsvoraussetzung ließ sich rufen, ohne dass irgendwo stand, dass die Maschine es hat. **`N016`** trägt die Forderung durch den Aufrufgraphen, genau wie `Held(…)` es seit jeher tut |
+| **`walk`** | zwei gleichnamige Invarianten — **`table` fällt dabei an `N001`, `walk` nicht** |
+| **`state`** | zwei gleichnamige `transition` — **`device` fällt, `state` nicht.** `SYNTAX.md`:775: *„dasselbe Konstrukt auf zwei Ebenen"* |
+| **`entry`** | `regs in { a : rax, a : rdi, }` — doppelte Bindung, 0 Fehler. Dazu **`N017`**: ein Register in `preserves` **und** `clobbers` |
+| **`boot`** | **`N018`** — `dispatch` zeigte ins Leere |
+| **`reason`** | die Regel stand seit jeher, die Probe fehlte |
+
+**Vier von sechs sind derselbe Befund:** *eine Regel, die an einem Konstrukt steht und am
+Zwilling fehlt.* **Das ist die Form, die Maß 2 sichtbar macht und Maß 1 nicht.**
+
+### `axiom` war der teuerste, wie vorhergesagt
+
+Die Axiomschicht ist die Fläche, auf der die ganze relative Zusage ruht — *„bewiesen unter
+A1…An"*. **Und die Vorbedingung eines Axioms hing an nichts:** im Zeugnis erschien
+`Has(RDTSCP)` nirgends, weil es an keiner Zusage hing.
+
+> **Es fehlte nicht die Form, sondern ihre Anwendung auf das zweite Prädikat derselben
+> Bauart.** `requires Held(L)` läuft seit dem 2026-08-15 durch den Aufrufgraphen; `Has(X)` ist
+> dieselbe Konstruktion und wurde nie angeschlossen.
+
+### Und der Korpus hat mich zum dritten Mal an einem Tag berichtigt
+
+Der erste Anlauf von `N001` an `entry` prüfte **Namen und Register zusammen** und meldete `rax`
+an `beispiele/07`. **Der Syscall nimmt die Nummer in `rax` und gibt das Ergebnis dort zurück** —
+dasselbe Register, verschiedene Richtungen, und beides richtig.
+
+*Die Namen teilen einen Geltungsbereich, die Register nicht.* **Der Korpus hat die Regel
+berichtigt, nicht umgekehrt.**
+
+## Fünf Klauseln fielen als Nebenwirkung
+
+`regs_in`, `regs_out`, `preserves`, `clobbers`, `dispatch` standen als TOT mit *„keine Datei
+außerhalb des Lesers nennt `EntryDecl` — zwölf Felder, ein Bauteil"*. **Ausgelöst hat es der
+Konstruktwächter, nicht die Hand.**
+
+```
+Klauseln 36 -> 31   ·   ZUSAGE 4   ·   Konstrukte ohne Probe 7 -> 1
+144 Kennungen · 135 Gifte (0 ohne Biss) · 126 Tests · zehn Waechter gruen
+```
+
+**`check` bleibt als einziges ohne Probe, und mit Grund:** eine Probe fiele dort an nichts,
+solange die `Duty` nicht erzeugt wird. *Erst der Erzeuger, dann die Probe.*

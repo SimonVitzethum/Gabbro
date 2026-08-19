@@ -70,6 +70,11 @@ const BENANNT: &[&str] = &[
     // would need an error-return convention, and that is not decided". **Das Fragment hat den
     // Bedarf vorweggenommen, und die Sprache hat ihn nicht.** Gebucht in `TODO.md`.
     "S006",
+    // **`N016`-`N018`, 2026-08-19: die Axiomschicht und der Eintritt.** Ausgeloest von
+    // `pruefe-konstrukte.py`, das sieben Konstrukte ohne Giftprobe meldete. `N018` faellt in
+    // `SPRACHE.md`:1382 an einem AUSSCHNITT, dessen `dispatch`-Ziel er nicht deklariert --
+    // *dieselbe Lage wie bei jedem Ausschnitt: der Name loest auf, nur nicht hier.*
+    "N016", "N017", "N018",
     "K004", "K005", "D001", "D002", "D003", "D004", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet

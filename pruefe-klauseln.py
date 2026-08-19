@@ -168,18 +168,21 @@ ERWARTET = {
     "claim":        ("ABSENKUNG", "Der Anspruchstext eines `check` -- Prosa, die kein Pass widerlegen kann."),
 
     # -- TOT: das Bauteil ist gelesen und sonst nirgends ----------------------------------
+    #
+    # FUENF sind am 2026-08-19 AUFGESTIEGEN und darum hier geloescht: regs_in, regs_out,
+    # preserves, clobbers, dispatch. Sie standen mit dem Satz *keine Datei ausserhalb des
+    # Lesers nennt EntryDecl -- zwoelf Felder, ein Bauteil*. `N001` haelt jetzt die
+    # Bindungen, `N017` preserves gegen clobbers, `N018` den dispatch.
+    #
+    # *Ausgeloest hat es `pruefe-konstrukte.py`, nicht die Hand -- `entry` war eines der
+    # sieben Konstrukte ohne Giftprobe, und die Felder fielen als Nebenwirkung.*
     "oeffentlich":  ("TOT", "`pub`. Keine Datei ausserhalb des Lesers liest es -- Sichtbarkeit wird weder geprueft noch abgesenkt."),
     "by":           ("TOT", "Der Induktionshinweis. Nichts liest ihn -- und `Table_Induktion.thy` fuehrt genau ihn als Praemisse OHNE Erzeuger (`je Verkettungsfeld eine Kantenpraemisse`). Die beiden gehoeren zusammen."),
-    "regs_in":      ("TOT", "`entry`: der Eintrittsvertrag. KEINE Datei ausserhalb des Lesers nennt `EntryDecl` -- zwoelf Felder, ein Bauteil."),
-    "regs_out":     ("TOT", "siehe `regs_in` -- `EntryDecl`."),
-    "preserves":    ("TOT", "siehe `regs_in` -- `EntryDecl`."),
-    "clobbers":     ("TOT", "siehe `regs_in` -- `EntryDecl`."),
     "stack":        ("TOT", "siehe `regs_in` -- `EntryDecl`."),
     "vektor":       ("TOT", "siehe `regs_in` -- `EntryDecl`."),
     "via":          ("TOT", "siehe `regs_in` -- `EntryDecl`."),
     "ist":          ("TOT", "siehe `regs_in` -- `EntryDecl`."),
     "verschachtelt":("TOT", "siehe `regs_in` -- `EntryDecl`."),
-    "dispatch":     ("TOT", "`entry` und `boot` -- der Weiterweg, den niemand liest."),
     "ab":           ("TOT", "`walk` ist gelesen und sonst nichts: kein Pass, kein Erzeuger kennt `WalkDecl`."),
     "ab_wenn":      ("TOT", "siehe `ab` -- `WalkDecl`."),
     "blatt":        ("TOT", "siehe `ab` -- `WalkDecl`."),

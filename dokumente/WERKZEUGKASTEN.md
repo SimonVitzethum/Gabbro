@@ -403,3 +403,56 @@ instead of in the nesting of an `if-else` chain.
 **The flip side, and it is the price:** `Typ::Unbekannt` remains admissible as a *result* — a
 name no declaration carries is unknown, and that is right. What is no longer possible is **being
 unknown because nobody looked.**
+
+---
+
+## W13 — Berührung ist keine Prüfung
+
+**Ein Pass, der ein Konstrukt anfasst, prüft es nicht.** `schleifen.rs` liest
+`ItemArt::Check` — aber nur, um in `can_fail` hineinzulaufen. `kbedingung.rs` liest `ops` — als
+`!t.ops.is_empty()`, also als **boolesche** Frage, nie als Menge. **Beide Konstrukte gelten
+damit als „gelesen", und keine ihrer Zusagen fällt je.**
+
+**Die Feldstufe hatte die Unterscheidung schon.** `pruefe-klauseln.py` trennt seit jeher
+**ZUSAGE** (eine Aussage, die kein Pass hält) von **ABSENKUNG** (der Erzeuger ist ihr richtiger
+Leser) — genau, weil ein Feld, das nur in einer Absenkung auftaucht, nicht geprüft ist.
+
+> **Maß 1 des Konstruktwächters hat diese Unterscheidung auf der Item-Ebene wieder verloren**
+> und meldete 21 von 23 als gelesen — `ops` und `check` darunter, also die zwei Fundstellen,
+> für die er gebaut wurde.
+
+**Die Regel.** Wer Deckung misst, fragt nicht *„greift jemand zu"*, sondern **„ist daran je
+etwas gefallen"**. Für ein Konstrukt heißt das: *gibt es eine Giftprobe, die es zum Fallen
+bringt?* — 7 von 19 hatten keine.
+
+**Und die neue Frage wird NEU abgeleitet, nicht die alte gedehnt.** Maß 1 zu erweitern hätte
+geheißen, „gelesen" umzudefinieren, bis es passt; Maß 2 fragt etwas anderes und misst darum
+etwas anderes.
+
+---
+
+## W14 — Die eigene Deckung wird systematisch um eine Größenordnung zu hoch geschätzt
+
+**Drei Wächter, drei Messungen, dieselbe Form:**
+
+| Werkzeug | erwartet | gemessen |
+|---|---:|---:|
+| `pruefe-klauseln.py` — Felder ohne Leser | **4** | **48** |
+| `pruefe-englisch.py` — deutsche Meldungstexte | **41** *(erste Schätzung)* | **151** |
+| `pruefe-konstrukte.py` — Konstrukte ohne Probe | **2** | **7** |
+
+**Das ist inzwischen selbst ein Datum**, und es sagt etwas Unbequemes: *die Intuition über die
+**eigene** Deckung liegt um etwa eine Größenordnung zu optimistisch.* **Nicht über fremden
+Code — über den eigenen.**
+
+**Die Regel.** Wer eine Erwartung aufschreibt, bevor er misst (und das verlangt R11 ohnehin),
+rechnet mit dem **Faktor**, nicht mit der Zahl: *eine Schätzung von vier heißt „vermutlich
+einige Dutzend".*
+
+> **Und der Grund, warum es keine Nachlässigkeit ist:** man zählt, woran man sich erinnert, und
+> man erinnert sich an das, was man gebaut hat. **Was nie gebaut wurde, hinterlässt keine
+> Erinnerung** — und genau das ist die Klasse, die diese drei Werkzeuge messen.
+
+**Der Preis der Regel, damit sie nicht zur Ausrede wird:** sie rechtfertigt keine Schätzung
+nach oben statt einer Messung. *Sie sagt nur, welche Größenordnung eine Überraschung ist und
+welche keine.*

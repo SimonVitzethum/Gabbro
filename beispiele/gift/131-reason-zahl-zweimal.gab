@@ -1,0 +1,16 @@
+-- erwartet: N002
+-- **`reason` hatte keine Giftprobe**, obwohl die Regel seit jeher da ist: ein Grund ist ueber
+-- seine ZAHL unterscheidbar, sonst ist der Bericht mehrdeutig (Regel 3: abweisen, nie deuten).
+--
+-- Die Probe steht hier, weil `pruefe-konstrukte.py` sieben Konstrukte ohne Probe meldete.
+-- *Eine Regel ohne Probe ist nicht falsch -- sie ist unbewacht: sie koennte ausfallen, ohne
+-- dass etwas rot wird.*
+module gift::reason_zahl_zweimal {
+
+reason F {
+    A = 1 "eins"
+    B = 1 "auch eins"
+    exhaustive
+}
+
+}

@@ -45,13 +45,17 @@ TRAGEND = {"emit.rs", "zeugnis.rs"}
 # ist ein Eintrag keine Ausnahme, sondern eine Buchung -- und die Ratsche klemmt in beide
 # Richtungen: eine Zeile, die STEIGT, laesst dieses Werkzeug ebenfalls anschlagen.
 OHNE_PROBE = {
-    "check":  "Vier Uebersetzungsfehler versprochen (SYNTAX.md:979), KEINER existiert -- die `Duty` wird nirgends erzeugt.",
-    "entry":  "Der Eintrittsvertrag. Zwoelf Felder, und `EntryDecl` nennt ausser dem Leser niemand.",
-    "boot":   "Der Systemstart -- dieselbe Lage wie `entry`.",
-    "walk":   "`WalkDecl` kennt kein Pass und kein Erzeuger; die Domaenenschranke kommt aus `walkschranken`, nicht aus dem Item.",
-    "state":  "`state`/`transition` -- der Erzeuger senkt ab, gefallen ist an ihm noch nichts.",
-    "axiom":  "Die Axiomschicht: die groesste unbewiesene Flaeche, und keine Probe beruehrt sie.",
-    "reason": "`exhaustive` an einem `reason` -- ungelesen, und ohne Probe.",
+    # **Sechs sind am 2026-08-19 gefallen** -- `axiom`, `boot`, `entry`, `reason`, `state`,
+    # `walk` -- und vier davon durch eine Regel, die am ZWILLING schon stand: `walk` gegen
+    # `table` (doppelte Invariante), `state` gegen `device` (doppelter Uebergang), `entry`
+    # gegen beide (doppelte Bindung), `dispatch` gegen gar nichts.
+    #
+    # *Dieselbe Regel an einem Konstrukt und am Zwilling nicht -- das ist die Form, die Mass 2
+    # sichtbar macht und Mass 1 nicht.*
+    "check": "Vier Uebersetzungsfehler versprochen (SYNTAX.md:979), KEINER existiert -- die "
+             "`linear ghost Duty(check)` wird nirgends erzeugt. **Eine Probe waere hier "
+             "sinnlos, solange die Ursache steht**: sie fiele an nichts. Erst der Erzeuger, "
+             "dann die Probe -- gebucht in TODO.md.",
 }
 
 # Nur getragen: von emit/zeugnis angefasst, von keinem Pass.

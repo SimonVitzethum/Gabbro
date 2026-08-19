@@ -19,6 +19,162 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     verweigerte_zahltypen(baum, absagen);
     geister_haben_keinen_speicher(baum, absagen);
     pro_kern_und_gegenprobe(baum, absagen);
+    dispatch_loest_auf(baum, absagen);
+    maschineneigenschaft(baum, absagen);
+}
+
+/// **`N016` -- `requires Has(X)` wird am RUFORT verlangt («NL.2», 2026-08-19).**
+///
+/// Gefunden, weil `pruefe-konstrukte.py` `axiom` als Konstrukt **ohne jede Giftprobe** meldete
+/// -- und die Axiomschicht ist die Flaeche, auf der die ganze relative Zusage ruht
+/// (*„bewiesen unter A1…An"*).
+///
+/// ```gabbro
+/// axiom rdtscp() -> u64 requires Has(RDTSCP) effects { pure } falsifier sonde_rdtscp;
+/// impl fn f() -> u64 … { return rdtscp(); }     -- 0 Fehler
+/// ```
+///
+/// **Die Vorbedingung war Dekoration.** Ein Axiom mit Merkmalsvoraussetzung liesz sich rufen,
+/// ohne dass irgendwo stand, dass die Maschine das Merkmal hat -- und im Zeugnis erscheint
+/// `Has(RDTSCP)` nirgends, weil es an keiner Zusage haengt.
+///
+/// ## Die Regel ist die von `Held(…)`, an einem anderen Praedikat
+///
+/// **Wer ruft, traegt die Forderung weiter**, bis jemand sie erklaert. Genau so laeuft
+/// `requires Held(L)` durch den Aufrufgraphen (`H005`) -- *es fehlte nicht die Form, sondern
+/// die Anwendung auf das zweite Praedikat derselben Bauart.*
+///
+/// > **Und wo sie endet, ist eine Entscheidung, die noch nicht getroffen ist:** heute muss der
+/// > Rufer sie DEKLARIEREN. Dass ein `check` oder eine `assume` sie HERSTELLT, ist eine Form,
+/// > die es nicht gibt -- gebucht in `TODO.md`.
+fn maschineneigenschaft(baum: &Programm, absagen: &mut Absagen) {
+    let mut fordert: HashMap<String, Vec<String>> = HashMap::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let (name, req) = match &i.art {
+            ItemArt::Axiom(a) => (&a.name, &a.requires),
+            ItemArt::Funktion(f) => (&f.name, &f.requires),
+            _ => return,
+        };
+        let mut m = Vec::new();
+        for p in req {
+            has_aus_pred(p, &mut m);
+        }
+        if !m.is_empty() {
+            fordert.insert(name.text.clone(), m);
+        }
+    });
+    if fordert.is_empty() {
+        return;
+    }
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        let eigene = fordert.get(&f.name.text).cloned().unwrap_or_default();
+        let mut rufe = Vec::new();
+        sammle_rufe(b, &mut rufe);
+        for (ziel, span) in rufe {
+            let Some(verlangt) = fordert.get(&ziel) else { continue };
+            for m in verlangt {
+                if eigene.iter().any(|e| e == m) {
+                    continue;
+                }
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N016",
+                        span,
+                        format!("`{ziel}` requires `Has({m})`, and `{}` does not carry it", f.name.text),
+                    )
+                    .mit_notiz(
+                        "a machine feature is not established by calling -- whoever calls                          carries the demand on, until somebody declares it",
+                    )
+                    .mit_notiz(
+                        "the same rule `requires Held(L)` runs through the call graph with                          (`H005`); it is the second predicate of the same shape",
+                    ),
+                );
+            }
+        }
+    });
+}
+
+fn has_aus_pred(p: &Pred, aus: &mut Vec<String>) {
+    fn e(x: &Expr, aus: &mut Vec<String>) {
+        match &x.art {
+            ExprArt::Ruf(r) if r.pfad.teile.last().is_some_and(|i| i.text == "Has") => {
+                if let Some(ExprArt::Ort(o)) = r.argumente.first().map(|a| &a.art) {
+                    aus.push(o.text());
+                }
+            }
+            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => e(i, aus),
+            ExprArt::Binaer(_, a, b) => {
+                e(a, aus);
+                e(b, aus);
+            }
+            _ => {}
+        }
+    }
+    match &p.art {
+        PredArt::Vergleich(x) | PredArt::Element(x, _) => e(x, aus),
+        PredArt::Quantor(q) => has_aus_pred(&q.rumpf, aus),
+        _ => {}
+    }
+}
+
+fn sammle_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
+    fn ex(x: &Expr, aus: &mut Vec<(String, Span)>) {
+        match &x.art {
+            ExprArt::Ruf(r) => {
+                if let Some(n) = r.pfad.teile.last() {
+                    aus.push((n.text.clone(), x.span));
+                }
+                for a in &r.argumente {
+                    ex(a, aus);
+                }
+            }
+            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => ex(i, aus),
+            ExprArt::Binaer(_, a, b) => {
+                ex(a, aus);
+                ex(b, aus);
+            }
+            _ => {}
+        }
+    }
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Let(l) => ex(&l.wert, aus),
+            StmtArt::Zuweisung(z) => ex(&z.wert, aus),
+            StmtArt::Return(Some(x)) => ex(x, aus),
+            StmtArt::Ruf(r) => {
+                if let Some(n) = r.pfad.teile.last() {
+                    aus.push((n.text.clone(), r.span));
+                }
+            }
+            StmtArt::Wenn(w) => {
+                for (c, x) in &w.zweige {
+                    ex(c, aus);
+                    sammle_rufe(x, aus);
+                }
+                if let Some(x) = &w.sonst {
+                    sammle_rufe(x, aus);
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    sammle_rufe(&z.rumpf, aus);
+                }
+            }
+            StmtArt::Bricht(x) => sammle_rufe(&x.rumpf, aus),
+            StmtArt::Sperrt(x) => sammle_rufe(&x.rumpf, aus),
+            StmtArt::Observiert(x) => sammle_rufe(&x.rumpf, aus),
+            StmtArt::Narrow(x) => sammle_rufe(&x.sonst, aus),
+            StmtArt::LetSonst(x) => sammle_rufe(&x.sonst, aus),
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Traverse(t) => sammle_rufe(&t.rumpf, aus),
+                Schleife::Retry(r) => sammle_rufe(&r.rumpf, aus),
+                Schleife::Forever(f) => sammle_rufe(&f.rumpf, aus),
+            },
+            _ => {}
+        }
+    }
 }
 
 /// **`N014`/`N015` -- `per cpu N` und `counterprobe` («NL.2.8», 2026-08-19).**
@@ -387,6 +543,71 @@ fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
         match &item.art {
             ItemArt::Modul(m) => geltungsbereich(&m.items, absagen),
             ItemArt::Tabelle(t) => tabelle(t, absagen),
+            // **`walk` hatte die Pruefung nicht, die `table` hat.** Gefunden 2026-08-19, weil
+            // `pruefe-konstrukte.py` `walk` als Konstrukt ohne jede Giftprobe meldete: zwei
+            // gleichnamige Invarianten gingen mit 0 Fehlern durch, waehrend dieselbe Form an
+            // einer `table` an `N001` faellt. *Dieselbe Regel, ein Konstrukt weiter -- und
+            // niemandem aufgefallen, weil nie jemand daran geruettelt hat.*
+            // **`entry` und `boot` -- zwoelf Felder, und niemand las sie.**
+            //
+            // Gefunden 2026-08-19 an `pruefe-konstrukte.py`: `entry` hatte keine Giftprobe,
+            // und `regs in { a : rax, a : rdi, }` ging mit 0 Fehlern durch. **Zwei Namen fuer
+            // dasselbe Register im Rumpf des Eintritts**, und der Erzeuger haette einen davon
+            // still gewaehlt.
+            //
+            // *Dieselbe `doppelt`-Maschinerie wie an `table` und `device`; sie war nur nie an
+            // dieses Konstrukt gehalten worden.* Und die zweite Haelfte -- dass ein Register
+            // nicht zugleich `preserves` und `clobbers` sein darf -- ist derselbe Satz, eine
+            // Zeile weiter: *was erhalten bleibt, wird nicht zerstoert.*
+            ItemArt::Entry(e) => {
+                // **Die NAMEN teilen einen Geltungsbereich, die REGISTER nicht.**
+                //
+                // *Erster Anlauf am 2026-08-19 pruefte beide zusammen und meldete `rax` an
+                // `beispiele/07` -- der Syscall nimmt die Nummer in `rax` und gibt das
+                // Ergebnis dort zurueck.* **Dasselbe Register, verschiedene Richtungen, und
+                // beides richtig.** Der Korpus hat die Regel berichtigt, nicht umgekehrt.
+                let mut namen = HashMap::new();
+                for (n, _) in e.regs_in.iter().chain(e.regs_out.iter()) {
+                    doppelt(&mut namen, &n.text, n.span, "Registerbindung", absagen);
+                }
+                for liste in [&e.regs_in, &e.regs_out] {
+                    let mut register = HashMap::new();
+                    for (_, r) in liste.iter() {
+                        doppelt(&mut register, &r.text, r.span, "Register", absagen);
+                    }
+                }
+                for c in &e.clobbers {
+                    if let Some(p) = e.preserves.iter().find(|p| p.text == c.text) {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "N017",
+                                c.span,
+                                format!("`{}` stands in both `preserves` and `clobbers`", c.text),
+                            )
+                            .mit_notiz(
+                                "what is preserved is not destroyed -- the entry contract                                  would promise both at once",
+                            )
+                            .mit_notiz(format!("first at `preserves` {}", p.text)),
+                        );
+                    }
+                }
+            }
+            // **`state` hatte die Pruefung nicht, die `device` hat** -- zwei gleichnamige
+            // `transition` gingen mit 0 Fehlern durch. *`state` und `device`s `transition`
+            // sind dasselbe Konstrukt auf zwei Ebenen (`SYNTAX.md`:775); nur eine der beiden
+            // hatte die Regel.*
+            ItemArt::State(s) => {
+                let mut gesehen = HashMap::new();
+                for u in &s.uebergaenge {
+                    doppelt(&mut gesehen, &u.name.text, u.name.span, "Uebergang", absagen);
+                }
+            }
+            ItemArt::Walk(w) => {
+                let mut gesehen = HashMap::new();
+                for i in &w.invarianten {
+                    doppelt(&mut gesehen, &i.name.text, i.name.span, "Invariante", absagen);
+                }
+            }
             ItemArt::Reason(r) => reason(r, absagen),
             ItemArt::Device(d) => device(d, absagen),
             ItemArt::Typ(t) => typdecl(t, absagen),
@@ -824,4 +1045,46 @@ fn embeds_passt_ins_wort(f: &Format, absagen: &mut Absagen) {
             );
         }
     }
+}
+
+/// **`N018` -- `dispatch` muss auf etwas Erklaertes zeigen («NL.2», 2026-08-19).**
+///
+/// Gefunden an `pruefe-konstrukte.py`: `entry` und `boot` hatten keine Giftprobe, und
+/// `dispatch t::gibt_es_nicht;` ging mit **0 Fehlern** durch.
+///
+/// **`dispatch` ist der Weiterweg** -- die eine Zeile, an der ein Eintritt oder der
+/// Systemstart in gewoehnlichen Code uebergeht. *Zeigt sie ins Leere, ist der Eintritt eine
+/// Deklaration ohne Fortsetzung, und der Erzeuger schriebe einen Sprung auf ein Symbol, das
+/// der Binder sucht und nicht findet.*
+fn dispatch_loest_auf(baum: &Programm, absagen: &mut Absagen) {
+    let mut funktionen = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        if let ItemArt::Funktion(f) = &i.art {
+            funktionen.push(f.name.text.clone());
+        }
+    });
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let (pfad, wo) = match &i.art {
+            ItemArt::Entry(e) => (&e.dispatch, &e.name),
+            ItemArt::Boot(b) => (&b.dispatch, &b.name),
+            _ => return,
+        };
+        let Some(letzt) = pfad.teile.last() else { return };
+        if funktionen.iter().any(|f| *f == letzt.text) {
+            return;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "N018",
+                letzt.span,
+                format!("`dispatch {}` of `{}` names no declared function", pfad.text(), wo.text),
+            )
+            .mit_notiz(
+                "`dispatch` is the way onward -- the one line at which an entry or the boot                  path hands over to ordinary code",
+            )
+            .mit_notiz(
+                "pointing nowhere makes the entry a declaration without a continuation, and                  the generator would emit a jump to a symbol the linker looks for in vain",
+            ),
+        );
+    });
 }

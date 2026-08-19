@@ -1,0 +1,13 @@
+-- erwartet: N018
+-- **`boot` hatte keine Giftprobe, und `dispatch` loeste nirgends auf.**
+-- `dispatch` ist der Weiterweg -- die eine Zeile, an der der Systemstart in gewoehnlichen
+-- Code uebergeht. *Zeigt sie ins Leere, ist der Start eine Deklaration ohne Fortsetzung, und
+-- der Erzeuger schriebe einen Sprung auf ein Symbol, das der Binder vergeblich sucht.*
+module gift::dispatch_leer {
+
+boot b arch x86_64 {
+    step x = 1;
+    dispatch gift::dispatch_leer::gibt_es_nicht;
+}
+
+}

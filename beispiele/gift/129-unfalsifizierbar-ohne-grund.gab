@@ -1,0 +1,11 @@
+-- erwartet: P005
+-- **Eine unfalsifizierbare Annahme muss einen GRUND tragen.** `unfalsifiable` ohne Text ist
+-- die Form, in der eine Annahme sich der Widerlegung entzieht, ohne zu sagen, warum -- und
+-- genau das ist der Unterschied zwischen einer benannten Grenze und einem Schweigen.
+--
+-- Auch diese Regel traegt die Grammatik. Die Probe misst, DASS sie sie traegt.
+module gift::unfalsifizierbar_ohne_grund {
+
+axiom wbinvd() effects { pure } unfalsifiable;
+
+}

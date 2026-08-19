@@ -1,0 +1,12 @@
+-- erwartet: P029
+-- **Eine nicht gefahrene Annahme ist ein Uebersetzungsfehler**, und die Grammatik setzt es
+-- durch: `AnnahmeKlasse` hat zwei Varianten, und *nicht gefahren* ist die ABWESENHEIT beider.
+--
+-- Die Probe steht hier, weil `pruefe-konstrukte.py` `axiom` als Konstrukt ohne jede Giftprobe
+-- meldete. *Dass eine Regel von der Grammatik getragen wird, macht sie nicht ueberfluessig --
+-- es macht die Probe billig.*
+module gift::axiom_ohne_klasse {
+
+axiom wbinvd() effects { pure };
+
+}

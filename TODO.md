@@ -541,11 +541,16 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
-- [ ] **SIEBEN Konstrukte haben keine Giftprobe** *(gemessen 2026-08-19, `pruefe-konstrukte.py`)*:
-      `axiom`, `boot`, `check`, `entry`, `reason`, `state`, `walk`. **An keinem von ihnen ist je
-      etwas gefallen.** *`axiom` ist der teuerste Eintrag: die Axiomschicht ist die groesste
-      unbewiesene Flaeche der Sprache, und keine Probe beruehrt sie.* Je Konstrukt eine Probe,
-      und wo keine schreibbar ist, steht der Grund dabei.
+- [ ] **EIN Konstrukt hat keine Giftprobe: `check`** *(7 am 2026-08-19, sechs gefallen)*.
+      Und mit Grund: **eine Probe fiele dort an nichts**, solange die `linear ghost
+      Duty(check)` nicht erzeugt wird. *Erst der Erzeuger, dann die Probe.* Die anderen sechs
+      -- `axiom`, `boot`, `entry`, `reason`, `state`, `walk` -- haben je eine, und **vier
+      davon fielen durch eine Regel, die am ZWILLING schon stand.**
+- [ ] **Wo endet die Forderung `Has(X)`?** *(2026-08-19, offen gelassen bei `N016`)*. Heute
+      muss der Rufer sie DEKLARIEREN, und die Kette endet an der aeussersten Funktion. **Dass
+      ein `check` oder eine `assume` sie HERSTELLT, ist eine Form, die es nicht gibt** -- und
+      ohne sie steht am Rand jeder Kette ein `requires Has(X)`, das niemand einloest.
+      *Dieselbe Frage wie bei `Held(…)`, nur ohne die Sperre, die man nehmen kann.*
 - [ ] **Das GROBE Mass (greift ein Pass die Item-Art an?) findet die falsche Sache**
       *(2026-08-19)*. 21 von 23 Item-Arten sind „gelesen" -- **`ops` und `check` darunter**,
       obwohl keine ihrer Zusagen geprueft wird. `ItemArt::Check` wird nur angefasst, um in

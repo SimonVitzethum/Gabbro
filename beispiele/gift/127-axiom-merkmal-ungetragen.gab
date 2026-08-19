@@ -1,0 +1,22 @@
+-- erwartet: N016
+-- **Der Fund, den `pruefe-konstrukte.py` erzwungen hat.** Der Waechter meldete `axiom` als
+-- Konstrukt OHNE JEDE GIFTPROBE -- und die Axiomschicht ist die Flaeche, auf der die ganze
+-- relative Zusage ruht (*„bewiesen unter A1…An"*).
+--
+-- Gemessen 2026-08-19: ein Axiom mit `requires Has(RDTSCP)` liesz sich rufen, ohne dass
+-- irgendwo stand, dass die Maschine das Merkmal hat. **Die Vorbedingung war Dekoration**, und
+-- im Zeugnis erschien sie nirgends, weil sie an keiner Zusage hing.
+--
+-- Die Regel ist die von `Held(…)`, an einem anderen Praedikat: **wer ruft, traegt die
+-- Forderung weiter**, bis jemand sie erklaert. *Es fehlte nicht die Form, sondern ihre
+-- Anwendung auf das zweite Praedikat derselben Bauart.*
+module gift::axiom_merkmal {
+
+axiom rdtscp() -> u64
+    requires Has(RDTSCP)
+    effects  { pure }
+    falsifier sonde_rdtscp;
+
+impl fn zeit() -> u64 effects { pure } costs <= 4 ops { return rdtscp(); }
+
+}

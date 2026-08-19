@@ -1,0 +1,17 @@
+-- erwartet: N001
+-- **`state` hatte die Pruefung nicht, die `device` hat.**
+-- `SYNTAX.md`:775: *„`state` and `device`'s `transition` are the same construct on two levels."*
+-- Nur eine der beiden Ebenen hatte die Regel -- zwei gleichnamige `transition` gingen mit
+-- 0 Fehlern durch.
+--
+-- *Dritter Fall desselben Musters an einem Tag: eine Regel, die an einem Konstrukt steht und
+-- am Zwilling fehlt (`walk` gegen `table`, `state` gegen `device`, `on_exceeded` im Erzeuger
+-- gegen den Pruefer).*
+module gift::state_doppelt {
+
+state S {
+    transition a { x : 0 -> 1 }
+    transition a { x : 1 -> 0 }
+}
+
+}
