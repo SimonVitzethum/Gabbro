@@ -22,6 +22,15 @@ Abbruch aus Speichermangel ist kein Befund.*
 Leichtes bleibt lokal: `cargo build`, `cargo test`, die Wächter, ein `gabbro pruefe` über den
 Korpus. Die Grenze ist die Rechenzeit, nicht die Gewohnheit.
 
+**Der Mutationslauf misst sich selbst**: `./mutiere-pruefer.py` über alle 159 Mutationen
+braucht **2 min 20 s** lokal (gemessen 2026-08-19) und bleibt damit diesseits der Grenze.
+`--anker` kostet gar nichts — reines Textzählen, kein Bau. *Vor dem Lauf muss `crates/`
+sauber sein; die Probe schreibt in Quellen, und zwei Läufe auf denselben Dateien
+zerstören einander.*
+
+Seit dem 2026-08-19 liegt auch eine **Rust-Kette auf `ki-pc-fisch-101`**
+(`~/.cargo/bin`, rustup, ohne `sudo` installiert — der Rechner hatte vorher kein `cargo`).
+
 ## Was sonst gilt
 
 * **Commit-Nachrichten nur über `arbeitsprotokoll/.commitmsg` + `./commit.sh`** (R19).
