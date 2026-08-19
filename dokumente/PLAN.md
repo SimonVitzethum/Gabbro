@@ -2964,3 +2964,193 @@ gegenseitigen Ausschluss, Fortschritt und die Rangordnung — *keine Zeile sagt 
 
 3. **«B24»** — die Entscheidung, hinter der ein Netzwerkstack liegt. *Sie rückt damit auf
    Platz zwei nach.*
+
+---
+
+# «H2» — die zwei letzten handbewiesenen Klempnereipflichten
+
+> **Stand 2026-08-19:** `H = 17` (10 verankert + 7 Absenkungen). **Acht der zehn verankerten
+> sind Notationslücken** — die Sprache kann es nicht *sagen* (`«B23»`, `«B9»`, `«B18»`,
+> `«B27»`, …). **Zwei sind echte Handarbeit**, und nur um die geht es hier.
+>
+> *Die verbleibende Klempnerei ist überwiegend ein Notationsproblem, kein Beweisproblem — und
+> genau deshalb ist diese Liste kurz.*
+
+## H2.1 — Der Traversierungszähler erbt die Schranke seiner Domäne
+
+### Die zwei Fundstellen, und sie haben dieselbe Form
+
+```gabbro
+-- FRAGMENTE.md:1110                         beispiele/19-traversierung.gab:53
+let mut i : u64 in 0 .. STACK_MAX = 0;       let mut n : u32 in 0 .. NSLOTS = 0;
+traverse w of s over elems of s.worte …      traverse i over slots of w by unvisited …
+{                                            {
+    narrow i to 0 .. 65535 else { … }            narrow n to 0 ..< NSLOTS else { return n; }
+    i += 1;                                      n += 1;
+}                                            }
+```
+
+**Gemessen: zwei Stellen im ganzen Korpus** — 21 Traversierungen, davon zwei mit einem Zähler
+im Rumpf. *Eine Regel für zwei Stellen ist wenig; sie schließt aber die letzte handbewiesene
+Bereichspflicht, und das ist der Punkt.*
+
+### Was die Regel sagt
+
+**Ein Zähler, der in einer beschränkten Traversierung höchstens einmal je Durchgang wächst,
+ist durch die Domänenschranke gebunden.**
+
+```
+n vor der Schleife auf c gesetzt (Konstante)
+im Rumpf NUR `n += k`, k > 0 konstant, Summe je Pfad <= K
+Domänenschranke B (kosten::domaenenschranke -- gibt es bereits)
+--------------------------------------------------------------
+an jeder Zuwachsstelle:   n <= c + (B − 1) · K
+nach der Schleife:        n <= c + B · K
+```
+
+Die Zahl `B − 1` an der Zuwachsstelle ist die schärfere und die richtige: *vor dem k-ten
+Zuwachs sind höchstens k−1 geschehen.* **Genau sie macht die beiden `narrow` überflüssig** —
+`n ∈ [0, NSLOTS−1]` vor `n += 1`, also `n+1 ∈ [1, NSLOTS]`, und das ist der deklarierte
+Bereich.
+
+### Und es ist eine AUSNAHME von einer aufgeschriebenen Regel
+
+[`SPRACHE.md`](SPRACHE.md):657 sagt: **„Loops carry no facts inward."** Diese Regel wäre die
+erste Ausnahme, und sie darf nicht stillschweigend danebengestellt werden.
+
+> **Die Rechtfertigung, und sie ist der Unterschied zwischen Ausnahme und Loch:** die Tatsache
+> wird nicht von *außen* hereingetragen. Sie wird von der Schleife **selbst erzeugt** — aus
+> ihrer Domänenschranke und der Form ihres Rumpfes. *Was verboten bleibt, ist unverändert: ein
+> Fakt über einen Platz, der vor der Schleife galt, gilt drinnen nicht weiter.*
+>
+> Die Zeile in `SPRACHE.md` bekommt darum einen Zusatz, **bevor** die Regel gebaut wird:
+> *keine Tatsache von außen; eine aus der Schleifenform selbst.*
+
+### Die Bedingungen, und jede ist eine Absage, wenn sie fehlt
+
+| | |
+|---|---|
+| 1 | `n` ist eine **lokale** Skalarbindung, vor der Traversierung mit einer Konstante gesetzt |
+| 2 | im Rumpf ist `n` **ausschließlich** Ziel von `n += k`, `k` konstant `> 0` |
+| 3 | die Domäne hat eine berechenbare Schranke (`kosten::domaenenschranke`) |
+| 4 | die Traversierung liegt **nicht** in einer weiteren Schleife — sonst multipliziert sich `B`, und der Pass schweigt (W10) |
+| 5 | kein `n` in einer `spec`-Position, keine Adresse darauf — *Gabbro hat kein Adress-von auf Lokalen, die Bedingung ist geschenkt und steht trotzdem da* |
+
+**Fällt eine, gilt die Regel nicht — und der Pass sagt nichts, statt zu raten.**
+
+### Der Bau
+
+1. **Zuerst der Zusatz in `SPRACHE.md`:** die Ausnahme wird aufgeschrieben, bevor sie existiert
+   (R7).
+2. `m1.rs`: beim Betreten eines `traverse` den Rumpf **einmal vorab lesen** (die
+   Zuwachsform), dann die Tatsache in die `Lage` legen.
+3. Die Domänenschranke kommt aus `kosten::domaenenschranke` — **sie existiert und wird
+   wiederverwendet, nicht nachgebaut.** *Zwei Stellen, dieselbe Rechnung, wäre genau der
+   Einwand, den dieser Ordner dreimal gegen sich selbst erhoben hat.*
+4. **Zwei Giftproben:** ein Zähler, der zweimal je Durchgang wächst (Bedingung 2 fällt); eine
+   verschachtelte Traversierung (Bedingung 4 fällt). *Beide müssen weiter `M101` bekommen.*
+5. **Die Gegenprobe ist die eigentliche Messung:** beide `narrow` werden entfernt, und die
+   zwei Dateien müssen mit **0 Fehlern** durchgehen. Bleibt eine rot, ist die Regel zu schwach
+   und die Zeile bleibt stehen.
+
+### Das Tor
+
+```
+H2.1 erreicht:   die zwei `narrow` sind FORT, beide Dateien gruen,
+                 zwei Giftproben beissen, `H` faellt von 17 auf 16
+```
+
+---
+
+## H2.2 — `(g − f)` unterläuft nicht, und die Fundstelle ist nicht, was sie zu sein schien
+
+### Was dasteht
+
+```gabbro
+let g = groesse_gemessen()  else (e1) { return false; }
+let f = frei_min_gemessen() else (e2) { return false; }
+if f < g / MIND_RESERVE_NENNER { return false; }
+return (g - f) + irq.tiefe_max + g / MIND_RESERVE_NENNER <= g;
+```
+
+`PFLICHTEN.md` notiert: *„`f < g / N` gibt `f < g` nur über die Division; die V-Regeln rechnen
+nicht."*
+
+### Und die Notiz beschreibt den falschen Zweig
+
+**Nachgerechnet 2026-08-19.** Der Vergleich `f < g / N` steht in einem `if`, das
+**zurückkehrt**. Auf dem Weg, der die Subtraktion erreicht, gilt das **Gegenteil**:
+`f >= g / N`. Das ist eine **untere** Schranke für `f` — und `g − f` braucht eine **obere**.
+
+> **Die Pflicht ist damit nicht durch eine schärfere V-Regel zu schließen.** Division durch
+> eine positive Konstante zu monotonisieren (`g/N <= g`) hilft am *genommenen* Zweig und nicht
+> an dem, der weiterläuft. *Der Befund vom 2026-08-15 hat die Richtung verwechselt, und das ist
+> hier zum ersten Mal nachgerechnet.*
+
+### Drei Wege, und sie sind nicht gleich viel wert
+
+| | Weg | Preis |
+|---|---|---|
+| **(a)** | **Die Formulierung ändern.** `(g−f) + irq + g/N <= g` ist unter `f <= g` äquivalent zu **`irq.tiefe_max + g / MIND_RESERVE_NENNER <= f`** — *keine Subtraktion, keine Pflicht* | eine Zeile; **aber `FRAGMENTE.md` trägt einen Einfriersatz**, und die Nachbildung zu ändern, um eine Messung zu verbessern, ist die Bewegung, gegen die Falle 80 steht |
+| **(b)** | **Die Weltzustandshälfte von Punkt 4.** `frei_min_gemessen` spricht seine Pflicht aus: *das freie Minimum übersteigt die Größe nie* | die Hälfte, die heute nicht gebaut ist — und sie kollidiert mit U4/U5 |
+| **(c)** | **Eine Prüfung hinschreiben.** `if f > g { return false; }` | M1-begründet, also W6-konform — **aber es ist genau die Handklempnerei, die hier verschwinden soll** |
+
+### Der empfohlene Weg ist (a), und die Begründung ist unbequem
+
+**Die Pflicht ist ein Artefakt der Schreibweise, nicht der Sprache.** Dieselbe Aussage ohne
+Subtraktion hat keine Unterlaufpflicht — und **das ist ein Befund über die Nachbildung, nicht
+über Gabbro.**
+
+> *Dieselbe Klasse wie `revoke` (200 zugesagt, 16 452 480 gerechnet) und A4 (4 096 gegen
+> 831 488): **ein Mensch hat den typischen Fall geschrieben statt die Schranke.** Zweimal fing
+> es der Pass; hier ist es die Formulierung selbst.*
+
+**Und der Einfriersatz wird nicht gebrochen, sondern beachtet:** die Zeile bleibt stehen. Was
+danebentritt, ist eine **zweite Fassung mit Datum und Grund** — dieselbe Form, die der Ordner
+für Widerrufe benutzt. *Die Messung von 2026-08-14 bleibt lesbar; sie hört nur auf, als
+Gabbro-Pflicht gezählt zu werden.*
+
+**Was (b) trotzdem wert bleibt:** es ist der Weg, der die Pflicht *als Pflicht* schließt statt
+sie wegzuschreiben. Er bleibt im TODO — **aber nicht als Bedingung für H2**, sonst hängt eine
+kleine Pflicht an einer großen Baustelle.
+
+### Das Tor
+
+```
+H2.2 erreicht:   die zweite Fassung steht mit Datum und Grund daneben,
+                 die Zeile ist als Gabbro-Pflicht abgebucht,
+                 `H` faellt von 16 auf 15
+```
+
+---
+
+## Was danach gilt — und was ausdrücklich NICHT
+
+**Erreicht:**
+
+```
+H = 15    -- 8 verankert (ALLE Notationsluecken) + 7 Absenkungen
+N_ritus = 0  -- keine `narrow`-Zeile mehr, deren else-Zweig nicht genommen werden kann
+```
+
+**Und dann ist die handbewiesene Klempnerei über den zehn Fragmenten NULL.** Das ist ein Boden,
+und er ist echt: die zehn sind nach ihrer *Schwierigkeit* gewählt, nicht nach ihrer
+Bequemlichkeit.
+
+> **Aber es ist der Boden der MESSUNG, nicht der Boden der Sprache**, und der Unterschied hat
+> drei Namen:
+>
+> 1. **Die acht Notationslücken bleiben.** Sie sind keine Handarbeit — sie sind Stellen, an
+>    denen der Mensch etwas **anderes** schreibt, weil er das Richtige nicht schreiben kann.
+>    *Null Handbeweise heißt nicht, dass alles ausdrückbar ist.*
+> 2. **Der zweite Korpus hat gar keine `H`-Messung.** Fünf Linux-Fragmente stehen daneben, und
+>    über ihnen ist nichts gezählt. **`H = 0` über zehn selbstgewählten Fragmenten ist Falle 80
+>    in Reinform**, solange die Zahl nicht über einem Korpus steht, den beim Bauen niemand
+>    angesehen hat.
+> 3. **Die 13 ZUSAGE-Klauseln bleiben.** Was die Grammatik zu versprechen erlaubt und niemand
+>    nachhält, ist Klempnerei, die der Nutzer aufschreibt und **allein trägt** — sie taucht in
+>    `H` nicht auf, weil `H` die Fragmente misst und nicht die Sprache.
+
+**Die ehrliche Überschrift für das Ergebnis lautet deshalb nicht *„am Boden"*, sondern:
+*über diesen zehn Fragmenten beweist kein Mensch mehr Klempnerei von Hand.*** Alles Weitere ist
+der zweite Korpus.

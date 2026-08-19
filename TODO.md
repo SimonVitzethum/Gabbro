@@ -541,6 +541,26 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+### «H2» — die zwei letzten handbewiesenen Klempnereipflichten ([`dokumente/PLAN.md`](dokumente/PLAN.md))
+
+- [ ] **H2.1 — ein Traversierungszaehler erbt die Schranke seiner Domaene.** Zwei Fundstellen
+      (`FRAGMENTE.md`:1110, `beispiele/19`:53), dieselbe Form: `narrow n to …` unmittelbar vor
+      `n += 1`. **Die Regel:** ein Zaehler, der in einer beschraenkten Traversierung hoechstens
+      einmal je Durchgang waechst, ist durch die Domaenenschranke gebunden -- an der
+      Zuwachsstelle `n <= c + (B-1)*K`. *`kosten::domaenenschranke` gibt es bereits und wird
+      wiederverwendet.* **Und es ist die erste AUSNAHME von `SPRACHE.md`:657** (*„Loops carry
+      no facts inward"*): die Tatsache kommt nicht von aussen, sondern aus der Schleifenform
+      selbst -- **der Zusatz wird aufgeschrieben, BEVOR die Regel gebaut wird** (R7).
+      Tor: beide `narrow` fort, zwei Giftproben beissen, `H` 17 -> 16.
+- [ ] **H2.2 — `(g - f)` unterlaeuft nicht, und die Notiz beschreibt den FALSCHEN ZWEIG**
+      *(nachgerechnet 2026-08-19)*. `PFLICHTEN.md` sagt *„`f < g / N` gibt `f < g` nur ueber
+      die Division"* -- aber der Vergleich steht in einem `if`, das ZURUECKKEHRT. Auf dem Weg
+      zur Subtraktion gilt `f >= g / N`, eine UNTERE Schranke, und `g - f` braucht eine obere.
+      **Keine schaerfere V-Regel schliesst das.** Drei Wege in `PLAN.md`; empfohlen ist die
+      Umformulierung (`irq + g/N <= f`, aequivalent und ohne Subtraktion), als zweite Fassung
+      mit Datum NEBEN der eingefrorenen Zeile. *Die Pflicht ist ein Artefakt der Schreibweise
+      -- dieselbe Klasse wie `revoke` 200 gegen 16 452 480.* Tor: `H` 16 -> 15.
+
 - [ ] **Die Axiomschicht schuldet einen Satz ueber den SPERRABDRUCK** *(benannt 2026-08-19
       von `Gruppe_Erhaltung.thy`)*. Das Locale `zug` nimmt `voll i` als *„der Abdruck ist
       gehalten"* und schliesst daraus, dass niemand hinsieht. **Dass ein gehaltener Abdruck
