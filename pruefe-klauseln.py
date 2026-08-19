@@ -74,8 +74,14 @@ ERWARTET = {
     # es an einer `spec fn`, `M114` merkt an, wenn die Funktion nichts schreibt.
     # *Eingeloest wird die Erhaltung damit nicht -- sie wird GEZAEHLT, `gabbro pflichten`,
     # und das ist P6s erster Schritt.*
-    "versatz":      ("ZUSAGE", "Registerlage. Dass zwei Register einander nicht ueberlappen, ist der HAUPTSATZ von `Device_Konstruktor.thy` -- und kein Pass rechnet ihn nach."),
-    "schritt":      ("ZUSAGE", "`stride`. `stride 0` macht die Bank leer; `Device_Konstruktor.thy` sagt es und nennt es selbst eine Fundstelle."),
+    # **`versatz` und `schritt` sind am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** --
+    # vierter und fuenfter Aufstieg, und wieder hat die Ratsche sie gemeldet.
+    #
+    # `versatz` war der schaerfste Eintrag der ganzen Tabelle: *„Dass zwei Register einander
+    # nicht ueberlappen, ist der HAUPTSATZ von `Device_Konstruktor.thy` -- und kein Pass
+    # rechnet ihn nach."* Jetzt tut es `N009`. `schritt` faellt mit `N010`: `stride 0` macht
+    # jede Bankzelle leer, und der Satz gilt dann trivial. *Richtig und nutzlos ist keine
+    # bestandene Pruefung.*
     "ghost":        ("ZUSAGE", "Ein Geisttyp darf im erzeugten C nicht vorkommen. Ein Verbot, das kein Pass durchsetzt -- dieselbe Bauart wie `opaque`."),
     "veraenderlich":("ZUSAGE", "`mut`. Eine Zuweisung an ein unveraenderliches Band faellt bei keinem Pass -- ein Verbot ohne Biss."),
     "obermenge":    ("ZUSAGE", "Die Obermenge der Nutzlast (SPRACHE.md 11.3) -- eine Enthaltensaussage, die niemand nachrechnet."),

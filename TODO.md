@@ -541,6 +541,23 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **Drei der sieben haengenden Praemissen brauchen keine Pruefarbeit, sondern eine
+      SPRACHFORM** *(gemessen 2026-08-19 beim Fuellen von `braeuchte`)*. `ops` braucht eine
+      Wortmenge, `by consuming` einen genannten Zeitpunkt fuer die Leerheit,
+      `accumulates.monoid` die Ausfuehrungskontexte. **Die haengenden Praemissen sind
+      mehrheitlich keine vergessene Pruefarbeit, sondern nicht getroffene Entscheidungen** --
+      und das aendert, wer sie schliessen kann.
+- [ ] **`N009` sieht nur ZAHLLITERALE** *(2026-08-19)*. Ein berechneter Registerversatz
+      (`CAP.FRO * 16`) bleibt stumm, und `bank`-Register werden nicht gegen die Hauptebene
+      gehalten -- die Basis waere zu raten. **W10: der Bericht verpflichtet, er spricht
+      nicht frei.** *Was fehlt, ist die Zaehlung, an wie vielen Korpusstellen ein Versatz
+      NICHT literal ist.*
+- [ ] **Der Beweis, dass `bitlage::lies` die Lagen trennt, hat kein Register**
+      *(2026-08-19)*. Die Praemisse `trennt f g` von `format.roundtrip` ist durch die
+      KONSTRUKTION erfuellt -- sequentielle Byte-Lagen, monoton wachsender Versatz. **Das ist
+      eine Aussage ueber den PRUEFER, und fuer die gibt es kein Register**; dieselbe Lage wie
+      `Intervall_Aussen.thy`. *Heute steht der Grund in `durch:` als Prosa.*
+
 - [ ] **`ops` hat keine WORTMENGE, und das ist der Rest von Punkt 2** *(gemessen 2026-08-19)*.
       `opdecl = "ops" identlist ";"` nimmt beliebige Bezeichner; `insert, remove, relabel,
       delete_leaf` sind in `SPRACHE.md` 10.2 ein BEISPIEL, keine Menge. **Ein Erzeuger kann

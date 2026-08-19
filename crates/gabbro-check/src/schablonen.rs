@@ -82,6 +82,17 @@ impl Stand {
 pub struct Voraussetzung {
     pub was: &'static str,
     pub durch: Option<&'static str>,
+    /// **Was sie herstellen WUERDE -- der dritte Zahn, geschaerft am 2026-08-19.**
+    ///
+    /// `durch: None` sagte bisher nur *„niemand"*. Eine Liste von Loechern ohne die Angabe,
+    /// womit man sie fuellt, ist eine Klage und kein Arbeitsauftrag -- *derselbe Satz, den
+    /// das Tor von P6 ueber die Kennzahl schreibt: „eine Zahl ohne diese Aufschluesselung
+    /// ist wertlos, weil sie keinen Arbeitsauftrag enthaelt."*
+    ///
+    /// **Und es ist ausdruecklich kein Ersatz fuer `durch`.** Eine Praemisse mit `braeuchte`
+    /// und ohne `durch` steht weiter in `in_der_luft()`; sie zaehlt als offen. *Der
+    /// Unterschied ist, dass jetzt dabeisteht, was fehlt.*
+    pub braeuchte: Option<&'static str>,
 }
 
 #[derive(Clone)]
@@ -192,8 +203,8 @@ pub const SCHABLONEN: &[Schablone] = &[
                   NICHT**; sie verlangt zusaetzlich, dass die Auswahl MINIMAL ist.",
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "die erzeugte Mutation ist ein ENTFERNEN und kein Umhaengen", durch: None },
-            Voraussetzung { was: "die Auswahl des Zeugen ist MINIMAL (`waehlt_minimal`)", durch: None },
+            Voraussetzung { was: "die erzeugte Mutation ist ein ENTFERNEN und kein Umhaengen", durch: None, braeuchte: Some("ein Erzeuger fuer `by consuming` -- heute gibt es keinen; `umhaengen_faellt` (Table_Ops_Erhaltung) zeigt das Gegenbeispiel") },
+            Voraussetzung { was: "die Auswahl des Zeugen ist MINIMAL (`waehlt_minimal`)", durch: None, braeuchte: Some("eine Regel in `schleifen.rs`: der `traverse`-Abstieg liefert das minimale Element der Ordnung -- `abstieg` ist heute eine ZUSAGE ohne Leser") },
         ],
         fundstelle: "SPRACHE.md §9.2",
     },
@@ -235,7 +246,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   Satz in einer verbrauchenden Traversierung mehrdeutig.**",
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "der Zustand, an dem die Leerheit behauptet wird, ist GENANNT -- leer WANN?", durch: None },
+            Voraussetzung { was: "der Zustand, an dem die Leerheit behauptet wird, ist GENANNT -- leer WANN?", durch: None, braeuchte: Some("eine Grammatikzeile: `by consuming` nennt keinen Zeitpunkt. Erst die Form, dann der Pass") },
         ],
         fundstelle: "SPRACHE.md §9.2",
     },
@@ -284,9 +295,9 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Konstrukt benutzt wird.*
         stand: Stand::Entworfen,
         voraussetzungen: &[
-            Voraussetzung { was: "jede ERZEUGTE Operation erhaelt die Invariante -- Teil I ist parametrisch, und es gibt keinen Erzeuger", durch: None },
-            Voraussetzung { was: "beim Einfuegen ist der Platz FRISCH und der Elter erreichbar", durch: None },
-            Voraussetzung { was: "beim Loeschen ist der Platz ein BLATT", durch: Some("das `requires ist_blatt(c, s)` des Rufers, gehalten von M1") },
+            Voraussetzung { was: "jede ERZEUGTE Operation erhaelt die Invariante -- Teil I ist parametrisch, und es gibt keinen Erzeuger", durch: None, braeuchte: Some("eine WORTMENGE fuer `ops` mit je definierter Wirkung -- heute nimmt `opdecl` beliebige Bezeichner, und aus einem Namen faellt keine Wirkung") },
+            Voraussetzung { was: "beim Einfuegen ist der Platz FRISCH und der Elter erreichbar", durch: None, braeuchte: Some("zwei `requires`-Zeilen am erzeugten `einfuegen`, wie sie `blatt_loeschen` mit `ist_blatt(c, s)` schon hat") },
+            Voraussetzung { was: "beim Loeschen ist der Platz ein BLATT", durch: Some("das `requires ist_blatt(c, s)` des Rufers, gehalten von M1"), braeuchte: None },
         ],
         fundstelle: "SPRACHE.md §10.2",
     },
@@ -327,8 +338,8 @@ pub const SCHABLONEN: &[Schablone] = &[
                   die tragende Invariante nennen (`invariant acyclic`).",
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "die Traegermenge ist endlich: die Verkettungsfelder bleiben in der Tabelle", durch: Some("M103, ueber `table.indexschranke`") },
-            Voraussetzung { was: "je Verkettungsfeld eine Kantenpraemisse -- der Erzeuger schreibt ZWEI, nicht eine", durch: None },
+            Voraussetzung { was: "die Traegermenge ist endlich: die Verkettungsfelder bleiben in der Tabelle", durch: Some("M103, ueber `table.indexschranke`"), braeuchte: None },
+            Voraussetzung { was: "je Verkettungsfeld eine Kantenpraemisse -- der Erzeuger schreibt ZWEI, nicht eine", durch: None, braeuchte: Some("ein Erzeuger fuer das Induktionsschema; ersatzweise eine Regel, die `chain(a,b)` gegen die Zahl der Kantenpraemissen haelt") },
         ],
         fundstelle: "SYNTAX.md §5, SPRACHE.md Teil V",
     },
@@ -397,10 +408,10 @@ pub const SCHABLONEN: &[Schablone] = &[
             //
             // *Der Satz bliebe wahr und seine Praemisse wuerde falsch* -- genau die Bewegung,
             // gegen die Zahn 3 steht.
-            Voraussetzung { was: "die Verknuepfung stammt aus max/min/add/or/and", durch: Some("der geschlossene Wortschatz: `MergeOp` laesst nichts anderes zu") },
-            Voraussetzung { was: "und alle Zahlentypen sind GANZZAHLIG -- sonst ist `add` nicht assoziativ", durch: Some("es gibt keinen Gleitkommatyp (MEMO-GLEITKOMMA.md); mit einem muesste `merge` mechanisch einschraenken") },
-            Voraussetzung { was: "je Kern eine Zelle, mit dem richtigen Neutralen angelegt", durch: Some("Mutationsprobe `min-akkumulator-ohne-umkehr`, Einheit `beispiel23`") },
-            Voraussetzung { was: "der RUHEPUNKT -- kein Kern schreibt mehr, waehrend gefaltet wird", durch: None },
+            Voraussetzung { was: "die Verknuepfung stammt aus max/min/add/or/and", durch: Some("der geschlossene Wortschatz: `MergeOp` laesst nichts anderes zu"), braeuchte: None },
+            Voraussetzung { was: "und alle Zahlentypen sind GANZZAHLIG -- sonst ist `add` nicht assoziativ", durch: Some("es gibt keinen Gleitkommatyp (MEMO-GLEITKOMMA.md); mit einem muesste `merge` mechanisch einschraenken"), braeuchte: None },
+            Voraussetzung { was: "je Kern eine Zelle, mit dem richtigen Neutralen angelegt", durch: Some("Mutationsprobe `min-akkumulator-ohne-umkehr`, Einheit `beispiel23`"), braeuchte: None },
+            Voraussetzung { was: "der RUHEPUNKT -- kein Kern schreibt mehr, waehrend gefaltet wird", durch: None, braeuchte: Some("die AUSFUEHRUNGSKONTEXTE (K11.2.2) -- ohne sie sagt Gabbro nicht, wer nebenlaeufig laeuft, und keine Regel kann den Ruhepunkt feststellen") },
         ],
         fundstelle: "SPRACHE.md §11.4; beweise/Accumulates_Monoid.thy",
     },
@@ -443,8 +454,8 @@ pub const SCHABLONEN: &[Schablone] = &[
         // genau das ist die Stelle, an der ein Erzeuger zwei Versaetze ueberlappen laesst.**
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "der geschriebene Wert passt in die deklarierte Breite", durch: Some("M101 (m1.rs)") },
-            Voraussetzung { was: "die Felder liegen GETRENNT (`trennt f g`)", durch: None },
+            Voraussetzung { was: "der geschriebene Wert passt in die deklarierte Breite", durch: Some("M101 (m1.rs)"), braeuchte: None },
+            Voraussetzung { was: "die Felder liegen GETRENNT (`trennt f g`)", durch: Some("die Lage selbst, `bitlage::lies` -- je Feld ohne Bitlage ein eigenes Wort, je Bitgruppe eines, und der Versatz waechst monoton. Zwei Felder koennen nur INNERHALB einer Gruppe kollidieren, und dort haelt `N008`"), braeuchte: None },
         ],
         fundstelle: "SPRACHE.md §10.1; beweise/Format_Roundtrip.thy",
     },
@@ -492,9 +503,9 @@ pub const SCHABLONEN: &[Schablone] = &[
         // leerlaufen zu lassen. *Richtig und nutzlos ist keine bestandene Pruefung.*
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "zwei `reg` haben getrennte Lagen (`getrennt r s`)", durch: None },
-            Voraussetzung { was: "`stride` ist nicht null -- sonst ist jede Bankzelle leer", durch: None },
-            Voraussetzung { was: "die deklarierten Lagen sind die des Geraets", durch: Some("Axiomschicht: `assume` mit Falsifikator, `gabbro annahmen`") },
+            Voraussetzung { was: "zwei `reg` haben getrennte Lagen (`getrennt r s`)", durch: Some("N009, seit 2026-08-19 -- die Byte-Bereiche zweier Register ueberlappen nicht"), braeuchte: None },
+            Voraussetzung { was: "`stride` ist nicht null -- sonst ist jede Bankzelle leer", durch: Some("N010, seit 2026-08-19 -- `stride 0` faellt am Pass statt im Kommentar"), braeuchte: None },
+            Voraussetzung { was: "die deklarierten Lagen sind die des Geraets", durch: Some("Axiomschicht: `assume` mit Falsifikator, `gabbro annahmen`"), braeuchte: None },
         ],
         fundstelle: "MESSUNGEN.md, Der Ursprung, 2026-08-14; beweise/Device_Konstruktor.thy",
     },
@@ -523,7 +534,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   `im_bereich` fuer `table.induktion` (`im_bereich_folgt_aus_indexschranke`).",
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "jede erzeugte Schreibstelle bleibt im Typ (`schreibstellen_im_typ`)", durch: Some("M103 (m1.rs)") },
+            Voraussetzung { was: "jede erzeugte Schreibstelle bleibt im Typ (`schreibstellen_im_typ`)", durch: Some("M103 (m1.rs)"), braeuchte: None },
         ],
         fundstelle: "MESSUNGEN.md, A3, 2026-08-14",
     },
@@ -562,8 +573,8 @@ pub const SCHABLONEN: &[Schablone] = &[
         // > dieses Ordners, die kleiner zu werden ETWAS kostet.
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "jeder Index liegt im Typ (`i : indextyp N`)", durch: Some("M103 (m1.rs)") },
-            Voraussetzung { was: "`count N` steht da -- sonst haette das Feld keine Groesse", durch: Some("C001, emit.rs:938") },
+            Voraussetzung { was: "jeder Index liegt im Typ (`i : indextyp N`)", durch: Some("M103 (m1.rs)"), braeuchte: None },
+            Voraussetzung { was: "`count N` steht da -- sonst haette das Feld keine Groesse", durch: Some("C001, emit.rs:938"), braeuchte: None },
         ],
         fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), Befund M-3; \
                      beweise/Table_Absenkung.thy",
@@ -630,7 +641,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         // dieser Schritt `lebend_ungedeckt()` nicht.
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "`deckt`: die Zuordnung hat genau die Feldliste als Schluesselfolge", durch: Some("M106/M107") },
+            Voraussetzung { was: "`deckt`: die Zuordnung hat genau die Feldliste als Schluesselfolge", durch: Some("M106/M107"), braeuchte: None },
         ],
         fundstelle: "MESSUNGEN.md, B13-Nachpruefung; beweise/Verbund_Konstruktor.thy; \
                      m1.rs::marken_pruefen; emit.rs::verbund",
@@ -901,6 +912,17 @@ pub fn zeige() -> String {
     ));
     for (schablone, was) in &luft {
         out.push_str(&format!("--     {schablone}: {was}\n"));
+        // **Und was sie herstellen WUERDE.** Eine Liste von Loechern ohne die Angabe, womit
+        // man sie fuellt, ist eine Klage und kein Arbeitsauftrag.
+        if let Some(b) = SCHABLONEN
+            .iter()
+            .filter(|s| s.name == *schablone)
+            .flat_map(|s| s.voraussetzungen.iter())
+            .find(|v| v.was == *was)
+            .and_then(|v| v.braeuchte)
+        {
+            out.push_str(&format!("--       braeuchte: {b}\n"));
+        }
     }
     out.push_str(&format!(
         "-- Der eine Isabelle-Posten ist damit keine Zahl 1, sondern diese Liste.\n\

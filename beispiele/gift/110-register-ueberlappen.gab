@@ -1,0 +1,19 @@
+-- erwartet: N009
+-- **Der HAUPTSATZ einer bewiesenen Theorie bekommt seine Pruefzeile.**
+-- `Device_Konstruktor.thy` beweist `getrennte_register_treffen_getrennte_zellen` -- UNTER
+-- der Praemisse `getrennt r s`, dass zwei `reg` einander nicht ueberlappen. Bis zum
+-- 2026-08-19 rechnete das kein Pass nach: `pruefe-klauseln.py` fuehrte `versatz` als ZUSAGE
+-- mit genau diesem Satz.
+--
+-- *Ein bewiesener Satz, dessen Praemisse nichts herstellt, hat die Vertrauensbasis
+-- verschoben und nicht verkleinert.* Hier faellt die erste von zehn Instanzen.
+module gift::register_ueberlappen {
+
+opaque type Pa = u64;
+
+device D(basis : Pa) at mmio {
+    reg A : u64 @0x10 class r
+    reg B : u32 @0x14 class r
+}
+
+}

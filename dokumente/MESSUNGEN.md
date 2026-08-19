@@ -7988,3 +7988,88 @@ Blatt*, hat einen Produzenten — das `requires ist_blatt(c, s)` des Rufers.
 ehrliche Verhalten der Kennzahl: sie fällt, wenn ein bewiesenes Konstrukt benutzt wird, und
 steigt, wenn eines vor seiner Benutzung bewiesen wird.* **Beweis vor Konstrukt ist die eigene
 Regel des Ordners (K11.3.2) — dies ist, was sie auf der Anzeigetafel kostet.**
+
+---
+
+# Punkt 3 — die Prämissen ohne Pass: von zehn auf sieben, und die acht bekommen einen Arbeitsauftrag
+
+**2026-08-19.** Zahn 3 verlangt, dass jede bewiesene Schablone ihre Prämissen an einen Pass
+bindet. Zehn hingen in der Luft — *ein Beweis, den nichts herstellt.*
+
+## Zwei sind gefallen, und die erste ist die sechste Klasse in Reinform
+
+| | |
+|---|---|
+| **`N009`** | zwei `reg` überlappen nicht in ihren Bytes |
+| **`N010`** | `stride 0` fällt am Pass |
+
+**`N009` ist der Hauptsatz einer bewiesenen Theorie, der bis heute keine Prüferzeile hatte.**
+`Device_Konstruktor.thy` beweist `getrennte_register_treffen_getrennte_zellen` — **unter der
+Prämisse `getrennt r s`**. Der Klauselwächter führte `versatz` mit genau diesem Satz als
+ZUSAGE:
+
+> *„Registerlage. Dass zwei Register einander nicht überlappen, ist der **Hauptsatz** von
+> `Device_Konstruktor.thy` — und kein Pass rechnet ihn nach."*
+
+*Ein bewiesener Satz, dessen Prämisse nichts herstellt, hat die Vertrauensbasis verschoben und
+nicht verkleinert.*
+
+**`N010`** kommt aus einem Fund des Beweises selbst: `bankeintraege_ueberlappen_nicht` braucht
+`stride > 0` **nicht** als Prämisse — bei null ist jede Bankzelle leer, und leere Mengen
+schneiden sich nicht. **Richtig und nutzlos ist keine bestandene Prüfung.**
+
+**Die Grenze steht im Code:** verglichen wird nur, was als **Zahlliteral** dasteht. Ein
+berechneter Versatz (`CAP.FRO * 16`) bleibt stumm — W10. Und verglichen wird *innerhalb* einer
+Ebene: die Register eines `device` unter sich, die einer `bank` unter sich. *Eine Bank liegt an
+einer berechneten Basis; sie gegen die Hauptebene zu halten hieße, die Basis zu raten.*
+
+## Eine dritte fiel **ohne** Pass — und das ist der interessantere Fall
+
+`format.roundtrip` setzt voraus, dass zwei Felder **getrennt** liegen (`trennt f g`). Die
+naheliegende Antwort wäre ein `N009` am `format` gewesen. **Sie wäre vakuum:** `bitlage::lies`
+vergibt die Byte-Lagen sequentiell — je Feld ohne Bitlage ein eigenes Wort, je Bitgruppe eines,
+und der Versatz wächst monoton. **Zwei Felder können nur *innerhalb* einer Gruppe kollidieren,
+und dort hält `N008`.**
+
+> **Die Prämisse ist damit durch die KONSTRUKTION erfüllt, nicht durch eine Prüfung** — und
+> genau darum darf keine Prüfung dastehen. *Eine Regel zu bauen, die nie feuern kann, ist
+> derselbe Fehler wie `stride 0`: richtig und nutzlos.*
+
+Die starke Fassung wäre ein **Satz über `bitlage::lies`** — und die gehört in das zweite
+Register, das dieser Ordner seit `Intervall_Aussen.thy` als fehlend führt: *der Prüfer hat
+keins.*
+
+## Und die sieben übrigen bekommen ein Feld: `braeuchte`
+
+`durch: None` sagte bisher nur *„niemand"*. **Eine Liste von Löchern ohne die Angabe, womit man
+sie füllt, ist eine Klage und kein Arbeitsauftrag** — derselbe Satz, den das Tor von P6 über
+die Kennzahl schreibt.
+
+```
+consuming.ordnung   ENTFERNEN statt Umhaengen   braeuchte: einen Erzeuger fuer `by consuming`
+consuming.ordnung   Zeuge ist MINIMAL           braeuchte: eine Regel in `schleifen.rs` -- `abstieg` ist ZUSAGE ohne Leser
+consuming.leermenge leer WANN?                  braeuchte: eine GRAMMATIKZEILE -- erst die Form, dann der Pass
+table.ops.erhaltung jede erzeugte Op erhaelt I  braeuchte: eine WORTMENGE fuer `ops`
+table.ops.erhaltung frisch und erreichbar       braeuchte: zwei `requires` am erzeugten `einfuegen`
+table.induktion     ZWEI Kantenpraemissen       braeuchte: einen Erzeuger fuer das Schema
+accumulates.monoid  der RUHEPUNKT               braeuchte: die AUSFUEHRUNGSKONTEXTE (K11.2.2)
+```
+
+**Drei der sieben brauchen keinen Pass, sondern eine SPRACHFORM** — eine Wortmenge, eine
+Grammatikzeile, die Ausführungskontexte. *Das ist ein Befund über die Verteilung: die
+hängenden Prämissen sind mehrheitlich keine vergessene Prüfarbeit, sondern nicht getroffene
+Entscheidungen.*
+
+**Und `braeuchte` ersetzt `durch` ausdrücklich nicht.** Eine Prämisse mit `braeuchte` und ohne
+`durch` steht weiter in `in_der_luft()` und zählt als offen. *Der Unterschied ist nur, dass
+jetzt dabeisteht, was fehlt.*
+
+## Die Ratsche hat zweimal gefeuert, und wieder ohne mich
+
+```
+Klauseln  49 -> 46      ZUSAGE  16 -> 13
+```
+
+`versatz` und `schritt` sind aufgestiegen — vierter und fünfter Aufstieg seit dem 2026-08-18
+(`progress`, `ensures`, `maintains`, jetzt diese zwei). **Jedes Mal hat das Werkzeug es
+gemeldet, nicht der Autor.**

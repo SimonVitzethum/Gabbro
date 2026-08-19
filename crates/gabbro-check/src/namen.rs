@@ -330,6 +330,7 @@ fn device(d: &Device, absagen: &mut Absagen) {
         doppelt(&mut gesehen, &r.name.text, r.name.span, "Register", absagen);
         regfelder(r, absagen);
     }
+    registerlagen(&d.register, &d.name.text, absagen);
     for b in &d.baenke {
         doppelt(&mut gesehen, &b.name.text, b.name.span, "Bank", absagen);
         let mut innen = HashMap::new();
@@ -337,6 +338,8 @@ fn device(d: &Device, absagen: &mut Absagen) {
             doppelt(&mut innen, &r.name.text, r.name.span, "Register", absagen);
             regfelder(r, absagen);
         }
+        registerlagen(&b.register, &b.name.text, absagen);
+        schritt_pruefen(b, absagen);
     }
     let mut uebergaenge = HashMap::new();
     for u in &d.uebergaenge {
@@ -415,5 +418,78 @@ fn formatbitlagen(f: &Format, absagen: &mut Absagen) {
             None => b.text.clone(),
         };
         absagen.schiebe(Absage::fehler(b.kennung, span, text).mit_notiz(b.notiz));
+    }
+}
+
+/// **`N009` -- der HAUPTSATZ von `Device_Konstruktor.thy` bekommt seine Pruefzeile.**
+///
+/// Der Satz heisst `getrennte_register_treffen_getrennte_zellen`, und er setzt
+/// `getrennt r s` VORAUS: dass zwei `reg` einander nicht ueberlappen. **Bis zum 2026-08-19
+/// rechnete das kein Pass nach** -- `pruefe-klauseln.py` fuehrte `versatz` als ZUSAGE mit
+/// genau diesem Satz, und der Schablonenregister-Eintrag als Praemisse ohne Erzeuger.
+///
+/// *Ein bewiesener Satz, dessen Praemisse nichts herstellt, hat die Vertrauensbasis
+/// verschoben und nicht verkleinert.* Das ist die sechste Klasse in Reinform, und hier faellt
+/// die erste ihrer zehn Instanzen.
+///
+/// **Die Grenze steht im Code, nicht in einer Fussnote:** verglichen wird nur, was als
+/// ZAHLLITERAL dasteht. Ein berechneter Versatz (`CAP.FRO * 16`) bleibt stumm -- W10, eine
+/// untere Schranke weist weder zurueck noch bestaetigt sie. Und verglichen wird **innerhalb**
+/// einer Ebene: die Register eines `device` unter sich, die einer `bank` unter sich. *Eine
+/// Bank liegt an einer berechneten Basis; sie gegen die Hauptebene zu halten hiesse, die
+/// Basis zu raten.*
+fn registerlagen(regs: &[RegDecl], wo: &str, absagen: &mut Absagen) {
+    let mut belegt: Vec<(i128, i128, &Ident)> = Vec::new();
+    for r in regs {
+        let ExprArt::Zahl(v) = &r.versatz.art else { continue };
+        let von = *v as i128;
+        let breite = crate::bitlage::aus_intty(&r.typ).0 as i128;
+        let bis = von + breite;
+        for (v2, b2, andere) in &belegt {
+            if von < *b2 && *v2 < bis {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N009",
+                        r.name.span,
+                        format!(
+                            "`{}` at {von:#x}..{bis:#x} overlaps `{}` at {v2:#x}..{b2:#x} in `{wo}`",
+                            r.name.text, andere.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "`Device_Konstruktor.thy` proves that separate registers hit separate \
+                         cells -- UNDER the premise `getrennt r s`. Overlapping ones make the \
+                         theorem vacuous, not false",
+                    ),
+                );
+                break;
+            }
+        }
+        belegt.push((von, bis, &r.name));
+    }
+}
+
+/// **`N010` -- `stride 0` macht jede Bankzelle LEER, und der Satz gilt dann trivial.**
+///
+/// Ausgespuelt beim Beweis von `device.konstruktor` am 2026-08-17:
+/// `bankeintraege_ueberlappen_nicht` braucht `stride > 0` nicht als Praemisse -- bei null ist
+/// jede Bankzelle leer, und leere Mengen schneiden sich nicht.
+///
+/// > *Richtig und nutzlos ist keine bestandene Pruefung.* **Ein Beweis, der einen Fall trivial
+/// > macht statt ihn zu decken, hat ihn gefunden** -- und seit heute faellt der Fall am Pass
+/// > statt im Kommentar.
+fn schritt_pruefen(b: &Bank, absagen: &mut Absagen) {
+    if let ExprArt::Zahl(0) = &b.schritt.art {
+        absagen.schiebe(
+            Absage::fehler(
+                "N010",
+                b.name.span,
+                format!("bank `{}` has `stride 0` -- every cell is empty", b.name.text),
+            )
+            .mit_notiz(
+                "`Device_Konstruktor.thy` then proves non-overlap VACUOUSLY: empty sets do \
+                 not intersect. Right and useless is not a passed check",
+            ),
+        );
     }
 }
