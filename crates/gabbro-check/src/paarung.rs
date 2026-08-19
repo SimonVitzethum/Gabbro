@@ -69,9 +69,19 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let u = crate::umgebung::Umgebung::sammle(baum);
     let g = crate::aufrufgraph::erhebe_mit(baum, &u);
     let mut ordnungen: Vec<(String, Option<Ordnung>)> = Vec::new();
+    // **Die erklärte Obermenge der Nutzlast** (`SPRACHE.md` §11.3) — bis 2026-08-19 eine
+    // Zeile ohne Leser. Sie stand als ZUSAGE in `pruefe-klauseln.py`: *„eine
+    // Enthaltensaussage, die niemand nachrechnet."*
+    let mut obermengen: Vec<(String, Vec<String>)> = Vec::new();
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Atomic(a) = &item.art {
             ordnungen.push((a.name.text.clone(), a.ordnung));
+            if let Some(Nutzlast::Orte(liste)) = &a.obermenge {
+                obermengen.push((
+                    a.name.text.clone(),
+                    liste.iter().map(|o| form(&o.text())).collect(),
+                ));
+            }
         }
     });
 
@@ -122,6 +132,35 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 ),
             );
             continue;
+        }
+        // **`V008` — was gespeichert wird, steht in der erklärten Obermenge.**
+        //
+        // Die Obermenge ist freiwillig; steht sie da, ist sie eine **Zusage über das ganze
+        // Programm**: *mehr als DAS wird über dieses Atomic nie veröffentlicht.* Ein Leser
+        // darf sich darauf verlassen, ohne jede Schreibstelle zu kennen — und darum ist eine
+        // Zeile, die niemand nachrechnet, hier gefährlicher als keine.
+        for (at, o, span) in &h.publiziert {
+            let Some((_, erlaubt)) = obermengen.iter().find(|(n, _)| n == at) else {
+                continue;
+            };
+            if !erlaubt.contains(o) {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "V008",
+                        *span,
+                        format!(
+                            "`{at}` publishes `{o}` here, and its declared superset does not \
+                             contain it"
+                        ),
+                    )
+                    .mit_notiz(format!("declared at the `atomic`: {{ {} }}", erlaubt.join(", ")))
+                    .mit_notiz(
+                        "the superset is voluntary -- but where it stands it is a promise \
+                         about the WHOLE program: a reader relies on it without knowing \
+                         every store",
+                    ),
+                );
+            }
         }
         for (at, o, span) in &h.publiziert {
             if !alle_erwartet.contains(&(at.clone(), o.clone())) {

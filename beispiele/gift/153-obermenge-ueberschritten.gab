@@ -1,0 +1,20 @@
+-- erwartet: V008
+-- **Die erklaerte Obermenge der Nutzlast** (`SPRACHE.md` §11.3) -- bis 2026-08-19 eine Zeile
+-- ohne Leser: *„eine Enthaltensaussage, die niemand nachrechnet."*
+--
+-- Sie ist freiwillig; steht sie da, ist sie eine Zusage ueber das GANZE Programm. Ein Leser
+-- darf sich darauf verlassen, ohne jede Schreibstelle zu kennen -- **und darum ist eine
+-- Zeile, die niemand nachrechnet, hier gefaehrlicher als keine.**
+module gift::obermenge {
+
+static mut n : u32 = 0;
+static mut m : u32 = 0;
+atomic F : bool publishes { n } release;
+
+impl fn w(v : u32) effects { writes n, writes m, publishes F } costs <= 12 ops
+{ n = v; m = v; F = true publishes { n, m }; }
+
+impl fn r() -> u32 effects { reads F, reads n, reads m } costs <= 8 ops
+{ let f = F awaits { n, m }; if f { return n; } return 0; }
+
+}

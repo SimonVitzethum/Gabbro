@@ -1,0 +1,22 @@
+-- erwartet: N020
+-- **`gates` nennt niemanden, der die Pflicht verbrauchen koennte.**
+--
+-- `SYNTAX.md` §13 verspricht vier Uebersetzungsfehler aus dem `check`. Keiner existierte, weil
+-- die `linear ghost Duty(check)` nirgends erzeugt wird -- das ganze Konstrukt war wirkungslos
+-- und als einziges ohne Giftprobe, *weil eine Probe an nichts gefallen waere.*
+--
+-- **`N020` hat seinen ersten Fall im eigenen Korpus gefunden:** `beispiele/06` nannte
+-- `gates abnahme, freigabe`, und beide standen nirgends in der Datei.
+module gift::gates_ins_leere {
+
+static mut k : u32 = 0;
+
+check c {
+    claim    "Eine Pflicht, die niemand verbrauchen kann."
+    measures k
+    gates    gibt_es_nicht
+    can_fail { if k >= 2 { return; } }
+    floor    k >= 1
+}
+
+}

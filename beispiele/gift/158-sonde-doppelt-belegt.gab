@@ -1,0 +1,26 @@
+-- erwartet: N024
+-- **Eine Sonde traegt zwei Verpflichtungen.**
+--
+-- `expects` nennt eine AEUSSERE Sonde, genau wie `assume … falsifier` -- entschieden am
+-- 2026-08-19, weil `SYNTAX.md`:975 es offen liess und `counterprobe` deshalb als Zusage ohne
+-- Leser dastand. *Sie steht nicht in Gabbro, weil sie LAEUFT.*
+--
+-- Was Gabbro ueber sie sagen kann: sie gehoert **genau einer** Pflicht. Zwei an einer Sonde
+-- heisst, ein gruener Lauf entlastet beide -- und eine davon hat nie jemand geprueft.
+module gift::sonde_doppelt {
+
+static mut k : u32 = 0;
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+
+assume a1 "Eine Annahme mit Falsifikator." falsifier sonde_x;
+
+check c1 {
+    claim    "Dieselbe Sonde noch einmal."
+    measures k
+    gates    tor
+    can_fail { if k >= 2 { return; } }
+    floor    k >= 1
+    counterprobe "Und sie soll beide tragen." expects sonde_x
+}
+
+}

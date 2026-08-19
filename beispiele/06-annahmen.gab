@@ -41,6 +41,22 @@ axiom wbinvd()          effects { writes cache }
 -- -> die Pflicht wird nie verbraucht; `can_fail` fehlt -> dito; eine Groesse unter
 -- `measures`, die der gemessene Pfad schreibt -> Schreibrecht; einseitige Schwelle ohne
 -- `floor` -> die Groesse hat keinen Bereich.
+-- **Die beiden Torfunktionen -- bis zum 2026-08-19 standen sie NIRGENDS.**
+--
+-- `gates abnahme, freigabe` nannte zwei Namen, hinter denen nichts stand, und damit konnte
+-- die Pflicht von niemandem verbraucht werden. *Das ist der erste der vier oben versprochenen
+-- Uebersetzungsfehler* -- und er fiel nicht, weil `gates` keinen Leser hatte. `N020`, seit
+-- heute, hat ihn im eigenen Beispiel gefunden.
+impl fn abnahme()
+    effects { reads kerne_gemessen }
+    costs   <= 4 ops
+{ return; }
+
+impl fn freigabe()
+    effects { reads tiefe_max }
+    costs   <= 4 ops
+{ return; }
+
 check stapel_wasserstand {
     claim        "Kein Kern hat je mehr als 3/4 seines Stapels benutzt."
     measures     tiefe_max, tiefe_lebend, kerne_gemessen

@@ -22,6 +22,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     dispatch_loest_auf(baum, absagen);
     maschineneigenschaft(baum, absagen);
     verbund_ohne_groesse(baum, absagen);
+    check_traegt_seine_pflicht(baum, absagen);
+    spiegel_und_sonde(baum, absagen);
 }
 
 /// **`N016` -- `requires Has(X)` wird am RUFORT verlangt («NL.2», 2026-08-19).**
@@ -1183,5 +1185,282 @@ fn wertnamen(t: &TypExpr, aus: &mut Vec<Ident>) {
         | TypExpr::Bool(_)
         | TypExpr::Never(_)
         | TypExpr::FnZeiger(_) => {}
+    }
+}
+
+/// **`N020`–`N022` — das `check`-Konstrukt bekommt seine Übersetzungsfehler.**
+///
+/// `SYNTAX.md` §13 verspricht **vier**: *„`gates` fehlt → die Pflicht wird nie verbraucht;
+/// `can_fail` fehlt → dito; eine Grösse unter `measures`, die der gemessene Pfad SCHREIBT →
+/// Schreibrecht; eine einseitige Schwelle ohne `floor` → die Grösse hat keinen Bereich."*
+///
+/// **Keiner davon existierte**, weil die `linear ghost Duty(check)` nirgends erzeugt wird —
+/// `pruefe-klauseln.py` führte `gates` deshalb als ZUSAGE, und das ganze Konstrukt war das
+/// einzige ohne Giftprobe: *eine Probe fiele an nichts.*
+///
+/// Die ersten beiden fallen heute schon **im Parser** — die Grammatik macht `gates` und
+/// `can_fail` pflichtig (keine eckigen Klammern). Was fehlte, sind die anderen zwei und die
+/// Frage, ob `gates` überhaupt jemanden nennt:
+///
+/// * **`N020`** — ein `gates`-Name, hinter dem keine Funktion steht. *Dann kann die Pflicht
+///   von niemandem verbraucht werden, und das ist der erste der vier Fehler in der Form, in
+///   der er ohne erzeugte `Duty` überhaupt fallen kann.*
+/// * **`N021`** — eine Grösse unter `measures`, die der `can_fail`-Block **schreibt**.
+///   *Der gemessene Pfad verändert seine eigene Messung.*
+/// * **`N022`** — eine Grösse, gegen die der Block **einseitig** vergleicht, ohne dass
+///   `floor` sie nennt. Dann hat sie nach unten keinen Bereich, und die Schwelle sagt nichts.
+fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
+    // **Ein `gates`-Name ist eine Funktion ODER ein anderer `check`** -- und das hat der
+    // Korpus berichtigt, nicht ich. Der erste Anlauf verlangte eine Funktion und meldete
+    // `FRAGMENTE.md`:1167: `check kstack_eichung { … gates kstack }` gattert die EICHUNG des
+    // Messgeraets vor die Messung. *Eine Pflicht kann von einer anderen Pflicht verbraucht
+    // werden -- und genau so liest sich die Zeile: erst eichen, dann messen.*
+    let mut traeger: Vec<String> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |i| match &i.art {
+        ItemArt::Funktion(f) => traeger.push(f.name.text.clone()),
+        ItemArt::Check(c) => traeger.push(c.name.text.clone()),
+        _ => {}
+    });
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Check(c) = &i.art else { return };
+
+        // -- N020: wer verbraucht die Pflicht?
+        for g in &c.gates {
+            if !traeger.iter().any(|f| f == &g.text) {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N020",
+                        g.span,
+                        format!("`gates {}` names no declared function and no `check`", g.text),
+                    )
+                    .mit_notiz(
+                        "the compiler generates a `linear ghost Duty(check)`, and `gates` \
+                         names who consumes it -- a name behind which nothing stands means \
+                         the obligation is never discharged",
+                    )
+                    .mit_notiz(
+                        "a `check` may gate another one: `gates kstack` at the calibration \
+                         says CALIBRATE FIRST, THEN MEASURE (`FRAGMENTE.md`:1167)",
+                    ),
+                );
+            }
+        }
+
+        // -- N021: schreibt der gemessene Pfad seine eigene Messung?
+        let mut ziele: Vec<Ort> = Vec::new();
+        for s in &c.can_fail.anweisungen {
+            crate::schreibziele(s, &mut ziele);
+        }
+        for m in &c.measures {
+            let name = m.basis.text.clone();
+            if let Some(z) = ziele.iter().find(|z| z.basis.text == name) {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N021",
+                        z.span,
+                        format!("`{name}` stands under `measures` and the measured path writes it"),
+                    )
+                    .mit_notiz(
+                        "then the check changes what it is measuring -- the report line \
+                         would describe a state the run itself produced",
+                    ),
+                );
+            }
+        }
+
+        // -- N022: eine einseitige Schwelle ohne `floor`.
+        let mut verglichen: Vec<(String, Span)> = Vec::new();
+        for s in &c.can_fail.anweisungen {
+            einseitige_vergleiche(s, &mut verglichen);
+        }
+        for (name, span) in &verglichen {
+            if !c.measures.iter().any(|m| &m.basis.text == name) {
+                continue;
+            }
+            let genannt = c.floor.iter().any(|p| {
+                let mut n = Vec::new();
+                crate::gruppe::pred_namen_oeffentlich(p, &mut n);
+                n.contains(name)
+            });
+            if !genannt {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N022",
+                        *span,
+                        format!("`{name}` is compared one-sidedly and no `floor` names it"),
+                    )
+                    .mit_notiz(
+                        "a one-sided threshold says nothing without a lower bound -- the \
+                         quantity has no range, and `0 >= 0` passes every check",
+                    ),
+                );
+            }
+        }
+    });
+}
+
+/// Die Grundnamen, gegen die ein Block **einseitig** vergleicht (`>=`, `>`, `<=`, `<`).
+fn einseitige_vergleiche(s: &Stmt, aus: &mut Vec<(String, Span)>) {
+    fn ex(e: &Expr, aus: &mut Vec<(String, Span)>) {
+        if let ExprArt::Binaer(op, a, b) = &e.art {
+            if matches!(
+                op,
+                BinOp::Kleiner | BinOp::KleinerGleich | BinOp::Groesser | BinOp::GroesserGleich
+            ) {
+                for seite in [a, b] {
+                    let mut n = Vec::new();
+                    namen_flach(seite, &mut n);
+                    for x in n {
+                        aus.push((x, e.span));
+                    }
+                }
+            }
+            ex(a, aus);
+            ex(b, aus);
+        }
+    }
+    for e in crate::eigene_ausdruecke(s) {
+        ex(e, aus);
+    }
+    for k in crate::unterbloecke(s) {
+        for i in &k.anweisungen {
+            einseitige_vergleiche(i, aus);
+        }
+    }
+}
+
+fn namen_flach(e: &Expr, aus: &mut Vec<String>) {
+    match &e.art {
+        ExprArt::Ort(o) => aus.push(o.basis.text.clone()),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => namen_flach(x, aus),
+        ExprArt::Binaer(_, a, b) => {
+            namen_flach(a, aus);
+            namen_flach(b, aus);
+        }
+        _ => {}
+    }
+}
+
+/// **`N023`/`N024` — `mirrors` und `counterprobe` bekommen ihre Leser.**
+///
+/// Die letzten zwei ZUSAGE-Klauseln aus `pruefe-klauseln.py`.
+///
+/// ## `mirrors` — die x86-Fassung von Falle 4
+///
+/// `mirrors GCMD from GSTS;` sagt: *der Zustand dieses Registers steht in jenem.* Der Grund
+/// steht in `MESSUNGEN.md`: **ein Schreiben auf ein einzelnes Bit ist ein Lese-Ändere-Schreib-
+/// Zug auf dem GANZEN Register** — und bei `class w` ist das unmöglich, weil sich das
+/// Register nicht lesen lässt.
+///
+/// Damit ist die Zeile nur dann eine Aussage, wenn die **Richtung stimmt**:
+///
+/// * **`N023`** — beide Namen sind Register **dieses** Geräts, das gespiegelte ist **nicht
+///   lesbar** und die Quelle **ist es**. *Steht es andersherum, sagt die Zeile nichts: ein
+///   lesbares Register braucht keinen Spiegel, und aus einem unlesbaren kann keiner lesen.*
+///
+/// ## `counterprobe` — und hier stand zuerst eine ENTSCHEIDUNG
+///
+/// `SYNTAX.md`:975 sagte nicht, **wo** der `ident` hinter `expects` deklariert wird, und
+/// darum stand die Klausel als ZUSAGE. *Erst die Entscheidung, dann der Pass* — sie lautet:
+///
+/// > **`expects` nennt eine äussere Sonde, genau wie `assume … falsifier`.** Sie steht nicht
+/// > in Gabbro, weil sie LÄUFT; was Gabbro über sie sagen kann, ist, dass sie **genau einer**
+/// > Verpflichtung gehört.
+///
+/// * **`N024`** — ein Sondenname trägt genau eine Verpflichtung. *Zwei Pflichten an einer
+///   Sonde heisst: ein grüner Lauf entlastet beide, und eine davon hat nie jemand geprüft.*
+///   Dieselbe Bauart wie die Doppelnamen an `walk`, `state` und `entry`.
+fn spiegel_und_sonde(baum: &Programm, absagen: &mut Absagen) {
+    // -- N023
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Device(d) = &i.art else { return };
+        let Some(m) = &d.mirrors else { return };
+        let klasse = |o: &Ort| {
+            d.register
+                .iter()
+                .find(|r| r.name.text == o.basis.text)
+                .map(|r| r.klasse)
+        };
+        for (o, wort) in [(&m.ziel, "mirrors"), (&m.quelle, "from")] {
+            if klasse(o).is_none() {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N023",
+                        o.span,
+                        format!("`{wort} {}` names no register of this device", o.text()),
+                    )
+                    .mit_notiz("`mirrors <reg> from <reg>` stands once per device and speaks about ITS registers"),
+                );
+            }
+        }
+        let lesbar = |k: RegKlasse| matches!(k, RegKlasse::Lesen | RegKlasse::LesenSchreiben | RegKlasse::Rc);
+        if let (Some(z), Some(q)) = (klasse(&m.ziel), klasse(&m.quelle)) {
+            if lesbar(z) {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N023",
+                        m.ziel.span,
+                        format!("`{}` is readable and needs no mirror", m.ziel.text()),
+                    )
+                    .mit_notiz(
+                        "`mirrors` exists for the write-only case: a single-bit write is a \
+                         read-modify-write on the WHOLE register, and `class w` cannot be read",
+                    ),
+                );
+            }
+            if !lesbar(q) {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N023",
+                        m.quelle.span,
+                        format!("`{}` is not readable, so nothing can be mirrored FROM it", m.quelle.text()),
+                    )
+                    .mit_notiz("the source of a mirror is the register that carries the state and can be read"),
+                );
+            }
+        }
+    });
+
+    // -- N024: eine Sonde traegt genau eine Verpflichtung.
+    let mut sonden: Vec<(String, Span, &'static str)> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |i| match &i.art {
+        ItemArt::Assume(a) => {
+            if let AnnahmeKlasse::Falsifizierbar(n) = &a.klasse {
+                sonden.push((n.text.clone(), n.span, "falsifier"));
+            }
+        }
+        ItemArt::Axiom(a) => {
+            if let AnnahmeKlasse::Falsifizierbar(n) = &a.klasse {
+                sonden.push((n.text.clone(), n.span, "falsifier"));
+            }
+        }
+        ItemArt::Check(c) => {
+            if let Some((_, n)) = &c.counterprobe {
+                sonden.push((n.text.clone(), n.span, "counterprobe"));
+            }
+        }
+        _ => {}
+    });
+    for i in 0..sonden.len() {
+        if let Some(j) = (0..i).find(|j| sonden[*j].0 == sonden[i].0) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N024",
+                    sonden[i].1,
+                    format!(
+                        "the probe `{}` already carries a {} obligation",
+                        sonden[i].0, sonden[j].2
+                    ),
+                )
+                .mit_notiz(
+                    "a probe belongs to exactly ONE obligation -- two on one probe means a \
+                     green run discharges both, and one of them nobody ever checked",
+                )
+                .mit_notiz(
+                    "`expects` names an EXTERNAL probe, like `assume … falsifier`: it does \
+                     not stand in Gabbro because it RUNS (SYNTAX.md §13, decided 2026-08-19)",
+                ),
+            );
+        }
     }
 }

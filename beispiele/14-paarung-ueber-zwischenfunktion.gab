@@ -9,7 +9,17 @@
 
 module beispiel::paarung {
 
-atomic FERTIG : bool publishes { farbbericht } release;
+-- **Ohne erklaerte Obermenge, und das ist seit dem 2026-08-19 eine Aussage.**
+--
+-- Hier stand `publishes { farbbericht }` -- ein Name, den diese Datei gar nicht kennt, waehrend
+-- der Speicher unten `{ b.daten }` veroeffentlicht. Solange die Obermenge keinen Leser hatte,
+-- fiel das niemandem auf; `V008` hat es beim ersten Lauf gemeldet.
+--
+-- **Und die Berichtigung zeigt eine Grenze der Notation:** die Nutzlast heisst hier
+-- `b.daten`, also RELATIV ZU EINEM PARAMETER -- an der Deklaration des Atomics gibt es
+-- kein `b`. *Eine Obermenge ueber eine parameterrelative Nutzlast ist nicht schreibbar*,
+-- und weil sie freiwillig ist, steht hier keine.
+atomic FERTIG : bool release;
 
 -- Die veroeffentlichende Haelfte.
 impl fn melden(b : ptr<normal, rw> Bericht)

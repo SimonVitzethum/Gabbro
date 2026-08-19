@@ -1,0 +1,19 @@
+-- erwartet: N021
+-- **Der gemessene Pfad schreibt seine eigene Messung.**
+--
+-- Dann beschreibt die Berichtszeile einen Zustand, den der Lauf selbst hergestellt hat.
+-- *Der dritte der vier in SYNTAX.md §13 versprochenen Fehler.*
+module gift::messung_schreibt {
+
+static mut k : u32 = 0;
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+
+check c {
+    claim    "Die Messung veraendert, was sie misst."
+    measures k
+    gates    tor
+    can_fail { k = 1; if k >= 3 { return; } }
+    floor    k >= 1
+}
+
+}

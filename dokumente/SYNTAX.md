@@ -1024,6 +1024,19 @@ M1/M2/M3, not out of special rules:** `gates` missing → the obligation is neve
 `can_fail` missing → likewise; a quantity under `measures` that the **measured path** writes →
 write right; a one-sided threshold without `floor` → the quantity has no range.
 
+**`expects` names an EXTERNAL probe — decided 2026-08-19.** Until then this line said nothing
+about where the identifier is declared, and `counterprobe` therefore stood in
+`pruefe-klauseln.py` as a promise nobody read. The decision is the same one `assume … falsifier`
+already made: **the probe does not stand in Gabbro because it RUNS.** What Gabbro can say about
+it is that it belongs to **exactly one** obligation — `N024` falls when a name carries two.
+*Two obligations on one probe means a green run discharges both, and one of them nobody ever
+checked.*
+
+**And the four errors above now fall.** The first two are the parser's — the grammar makes
+`gates` and `can_fail` compulsory. The other two, and the question whether `gates` names anybody
+at all, are `N020`–`N022`. *`N020` found its first case in `beispiele/06`: `gates abnahme,
+freigabe` named two functions that stood nowhere in the file.*
+
 **The `measures` list IS the report line** — the formatting arises out of it, without
 formatting existing in the language core.
 

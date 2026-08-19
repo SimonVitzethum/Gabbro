@@ -16,6 +16,14 @@ sondern ein **Item der Grammatik ohne Wirkung**. Zwei Fundstellen standen am 202
 sechste Instanz derselben Klasse -- und wie beim Feldskript ist zu erwarten, dass die
 mechanische Zaehlung mehr findet als die Hand.
 
+**`check` ist am 2026-08-19 gefallen, und der Weg war ein anderer als hier angenommen.** Der
+Eintrag sagte *„eine Probe waere sinnlos, solange die Ursache steht: sie fiele an nichts --
+erst der Erzeuger, dann die Probe."* Die `Duty` wird weiterhin nirgends erzeugt. Was fiel, sind
+die vier versprochenen Fehler auf einem ANDEREN Weg: zwei stehen laengst im Parser (die
+Grammatik macht `gates` und `can_fail` pflichtig), die anderen zwei sind `N021`/`N022`, und
+`N020` fragt, ob `gates` ueberhaupt jemanden nennt. *Die Ursache war nicht die Bedingung fuer
+die Wirkung, fuer die ich sie gehalten habe.*
+
 DAS MASS
 --------
 Quelle ist mechanisch: **jede Variante von `ItemArt` in `ast.rs`** -- die ganze Menge dessen,
@@ -52,10 +60,6 @@ OHNE_PROBE = {
     #
     # *Dieselbe Regel an einem Konstrukt und am Zwilling nicht -- das ist die Form, die Mass 2
     # sichtbar macht und Mass 1 nicht.*
-    "check": "Vier Uebersetzungsfehler versprochen (SYNTAX.md:979), KEINER existiert -- die "
-             "`linear ghost Duty(check)` wird nirgends erzeugt. **Eine Probe waere hier "
-             "sinnlos, solange die Ursache steht**: sie fiele an nichts. Erst der Erzeuger, "
-             "dann die Probe -- gebucht in TODO.md.",
 }
 
 # Nur getragen: von emit/zeugnis angefasst, von keinem Pass.

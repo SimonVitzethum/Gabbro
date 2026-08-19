@@ -1,0 +1,20 @@
+-- erwartet: N023
+-- **`mirrors` verkehrt herum.**
+--
+-- `mirrors <reg> from <reg>` ist die x86-Fassung von Falle 4: **ein Schreiben auf ein
+-- einzelnes Bit ist ein Lese-Aendere-Schreib-Zug auf dem GANZEN Register**, und bei `class w`
+-- ist das unmoeglich. Der Spiegel sagt, WOHER der Vorzustand kommt.
+--
+-- *Steht er andersherum, sagt die Zeile nichts:* ein lesbares Register braucht keinen
+-- Spiegel, und aus einem unlesbaren kann keiner lesen.
+module gift::spiegel_verkehrt {
+
+type Pa = u64;
+
+device V(basis : Pa) at mmio {
+    mirrors GSTS from GCMD;
+    reg GCMD : u32 @0x18 class w fields { TE @31 }
+    reg GSTS : u32 @0x1c class r fields { TES @31 }
+}
+
+}

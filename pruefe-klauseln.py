@@ -66,67 +66,6 @@ TRAGEND_DATEIEN = {"emit.rs", "zeugnis.rs"}
 # ebenfalls anschlagen -- *eine Tabelle, die nur waechst, ist eine Ausnahmeliste; eine, die
 # in beide Richtungen klemmt, ist eine Ratsche.*
 ERWARTET = {
-    # -- ZUSAGE: eine Aussage ueber Verhalten, die kein Pass gegen etwas haelt ------------
-    # **`maintains` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- der dritte
-    # Aufstieg, und wieder hat die Ratsche ihn gemeldet statt ich. `M112` haelt den Namen
-    # gegen die erklaerten `spec fn` UND Invarianten (der erste Anlauf liess nur `spec fn`
-    # gelten und faellte eine gueltige Korpuszeile -- beim Messen gefangen), `M113` verbietet
-    # es an einer `spec fn`, `M114` merkt an, wenn die Funktion nichts schreibt.
-    # *Eingeloest wird die Erhaltung damit nicht -- sie wird GEZAEHLT, `gabbro pflichten`,
-    # und das ist P6s erster Schritt.*
-    # **`versatz` und `schritt` sind am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** --
-    # vierter und fuenfter Aufstieg, und wieder hat die Ratsche sie gemeldet.
-    #
-    # `versatz` war der schaerfste Eintrag der ganzen Tabelle: *„Dass zwei Register einander
-    # nicht ueberlappen, ist der HAUPTSATZ von `Device_Konstruktor.thy` -- und kein Pass
-    # rechnet ihn nach."* Jetzt tut es `N009`. `schritt` faellt mit `N010`: `stride 0` macht
-    # jede Bankzelle leer, und der Satz gilt dann trivial. *Richtig und nutzlos ist keine
-    # bestandene Pruefung.*
-    # **`ghost` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- neunter Aufstieg,
-    # vierter Posten von «NL.2». `N011` verbietet einen Geisttyp dort, wo SPEICHER ist: ein
-    # `slot`-Feld, ein Verbundfeld, ein `static`, ein `format`-Feld. *Nicht getroffen sind
-    # Parameter, Rueckgabe und `let` -- dort faedelt der Pruefer den Wert, und genau das ist
-    # der Zweck eines Geisttyps.* Korpuspreis: null.
-    # **`veraenderlich` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- der
-    # sechste Aufstieg, und der erste Posten von «NL.2». `M116` faellt an einer Zuweisung an
-    # ein Band ohne `mut`. *Es war keine Buchhaltung, sondern eine Sicherheitsluecke: M1
-    # rechnet mit `mut` -- eine Tatsache stirbt beim Schreiben, und ohne Schreibrecht stirbt
-    # sie gar nicht erst.* Korpuspreis: null.
-    "obermenge":    ("ZUSAGE", "Die Obermenge der Nutzlast (SPRACHE.md 11.3) -- eine Enthaltensaussage, die niemand nachrechnet."),
-    # **`embeds` ist am 2026-08-19 AUFGESTIEGEN** -- «B24» ist seit dem 18. entschieden, und
-    # `N013` stellt die Frage jetzt auch hier. *Dieselbe Zeile wie `N007` am `@[hi:lo]`, und
-    # sie stand an zwei Konstrukten, von denen nur eines sie hatte.* Korpuspreis: null.
-    # **`offset_into` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- zehnter
-    # Aufstieg, fuenfter Posten von «NL.2». `N012` verlangt eine `where`-Klausel, die das Feld
-    # SELBST und `lenof` nennt. **Zwei Korpusstellen fielen** (`e_shoff`, `p_offset` in
-    # `beispiele/03`) -- sie waren unterbestimmt, nicht die Regel falsch, und sind nachgezogen.
-    "mirrors":      ("ZUSAGE", "Gespiegelte Register (Falle 4). Abgesenkt, nicht geprueft."),
-    # **`bedingung` ist am 2026-08-19 aufgestiegen -- und es ist ein AUFSTIEG AUS VERSEHEN.**
-    #
-    # `N012` liest die `where`-Klausel, um zu sehen, ob sie einen `offset_into` beschraenkt.
-    # Damit gilt sie mechanisch als gelesen und verlaesst die Klasse. **Was sie verspricht --
-    # dass die Bedingung HAELT -- prueft weiterhin niemand.**
-    #
-    # > *Das Mass dieses Waechters ist „ein Pass greift zu", nicht „ein Pass haelt es nach".*
-    # > Die Vergroeberung stand von Anfang an im Kopf, und hier zahlt sie zum ersten Mal:
-    # > **eine Klausel kann die Klasse verlassen, weil sie zu einem ANDEREN Zweck gelesen
-    # > wird.** Der Rest steht darum in `TODO.md` weiter, wo ihn keine Ratsche mehr traegt.
-    # **`pro_kern` ist am 2026-08-19 AUFGESTIEGEN, und der Satz wurde dabei berichtigt.**
-    # Ob N zu NCORES passt, KANN kein Pass wissen: welche Konstante die Kernzahl ist, ist
-    # eine Konvention und keine Tatsache. `N014` prueft, was pruefbar ist -- **dass N
-    # ueberhaupt eine bekannte positive Zahl ist.** Ein `per cpu` ueber einer unbekannten
-    # Groesse hat keine Zellenzahl, und die Absenkung koennte sie nur raten.
-    # **Berichtigt 2026-08-19: der Satz nannte den falschen Grund.** Nicht *„kein Pass
-    # fuehrt sie aus"* -- ausfuehren kann sie keiner, sie ist ein Laufzeitversuch. Der Grund
-    # ist schaerfer: **`SYNTAX.md`:975 sagt nicht, WORAUF der `ident` hinter `expects`
-    # zeigt.** Ein `N015` haette die Frage still beantwortet.
-    "counterprobe": ("ZUSAGE", "`expects <ident>` -- die Spezifikation sagt nicht, wo dieser Name deklariert wird. Erst die Entscheidung, dann der Pass."),
-    # **Berichtigt 2026-08-19 bei der Handpruefung.** Der Satz *„ungelesen"* war wahr und zu
-    # duenn: `SYNTAX.md`:979-982 verspricht VIER Uebersetzungsfehler aus dem `check`-Konstrukt
-    # -- `gates` fehlt, `can_fail` fehlt, eine `measures`-Groesse wird vom gemessenen Pfad
-    # geschrieben, eine einseitige Schwelle ohne `floor`. **Keiner davon existiert**, weil die
-    # `linear ghost Duty(check)` nirgends erzeugt wird. *Das ganze Konstrukt ist wirkungslos.*
-    "gates":        ("ZUSAGE", "Der `check` erzeugt keine `Duty` -- damit fehlen alle VIER Uebersetzungsfehler, die SYNTAX.md:979 verspricht."),
     # **`abstieg` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- achter Aufstieg,
     # dritter Posten von «NL.2», und die schaerfste der Liste: an ihm hing die TERMINIERUNG.
     # `S005` prueft die NOTWENDIGE Bedingung -- ein Mass, das weder die Traversierungsvariable
@@ -186,8 +125,6 @@ ERWARTET = {
     "blatt":        ("TOT", "siehe `ab` -- `WalkDecl`."),
     "kosten":       ("TOT", "Feld der `invariant`; ungelesen."),
     "laeuft":       ("TOT", "Feld der `invariant`; ungelesen."),
-    "floor":        ("TOT", "Feld des `check`. Ungelesen -- und `SYNTAX.md`:982 verspricht dafuer einen Fehler, den es nicht gibt (siehe `gates`)."),
-    "measures":     ("TOT", "Feld des `check`. Ungelesen -- `SYNTAX.md`:981 verlangt Schreibrecht fuer den gemessenen Pfad, und niemand prueft es (siehe `gates`)."),
     "maskiert":     ("TOT", "`masks` an einer Sperre. Ungelesen -- und es traegt die UNTERBRECHBARKEIT (`SPRACHE.md`:275), eine Sorge, die in keiner der elf Klempnereiklassen steht."),
     "erschoepfend": ("TOT", "`exhaustive` an einem `reason`; ungelesen."),
     "fehlername":   ("TOT", "Der Name der Fehlerbindung im `let … else`; ungelesen."),

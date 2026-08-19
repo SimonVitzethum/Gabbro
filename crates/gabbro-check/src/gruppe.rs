@@ -394,6 +394,11 @@ fn sammle(b: &Block, schreibt: &mut Vec<String>, haelt: &mut Vec<String>) {
     }
 }
 
+/// Wie `pred_namen`, öffentlich — `N022` stellt dieselbe Frage an ein `floor`.
+pub fn pred_namen_oeffentlich(p: &Pred, aus: &mut Vec<String>) {
+    pred_namen(p, aus)
+}
+
 /// Alle **Grundnamen**, die ein Praedikat nennt -- fuer `U007`.
 fn pred_namen(p: &Pred, aus: &mut Vec<String>) {
     match &p.art {

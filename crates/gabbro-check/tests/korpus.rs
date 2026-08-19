@@ -75,6 +75,11 @@ const BENANNT: &[&str] = &[
     // `SPRACHE.md`:1382 an einem AUSSCHNITT, dessen `dispatch`-Ziel er nicht deklariert --
     // *dieselbe Lage wie bei jedem Ausschnitt: der Name loest auf, nur nicht hier.*
     "N016", "N017", "N018",
+    // **`N020` -- `gates` nennt niemanden**, und am Ausschnitt ist das dieselbe Lage wie oben:
+    // `FRAGMENTE.md`:1184 gattert auf `all_done`, und der Name steht in diesem Ausschnitt
+    // genau EINMAL, naemlich dort. *In der vollen Uebersetzungseinheit loest er auf; hier
+    // nicht, und der Waechter sagt es statt es zu raten.*
+    "N020",
     "K004", "K005", "D001", "D002", "D003", "D004", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet
