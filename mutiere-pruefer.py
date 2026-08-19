@@ -24,6 +24,7 @@ wiederhergestellt** -- gegen Hash geprueft. Bei jedem Abbruch ebenso.
 
     ./mutiere-pruefer.py              alle Mutationen
     ./mutiere-pruefer.py --schnell    nur die Sprechprobe des Geruests
+    ./mutiere-pruefer.py --anker      nur der Ankerstand -- ohne Bau, ohne sauberen Baum
 """
 import hashlib
 import pathlib
@@ -209,9 +210,8 @@ MUTATIONEN = [
     Mutation(
         "let-verdeckt-nicht",
         "m1.rs",
-        "                lage.fakten\n                    .retain(|f| !nennt_namen(f, &l.name.text));\n"
-        "                lage.lokal\n                    .insert(l.name.text.clone(), ziel.unwrap_or(wert));",
-        "                lage.lokal\n                    .insert(l.name.text.clone(), ziel.unwrap_or(wert));",
+        '                lage.fakten\n                    .retain(|f| !nennt_namen(f, &l.name.text));\n',
+        '',
         "U2 -- eine neue Bindung erbt den Fakt ihres Vorgaengers",
     ),
     Mutation(
@@ -250,8 +250,8 @@ MUTATIONEN = [
     Mutation(
         "let-else-darf-durchfallen",
         "schleifen.rs",
-        "            if !endet_immer(&l.sonst, div) {",
-        "            if false && !endet_immer(&l.sonst, div) {",
+        '            if !crate::endet_immer(&l.sonst, lg.div) {',
+        '            if false && !crate::endet_immer(&l.sonst, lg.div) {',
         "U7/S002 -- der `else`-Zweig darf durchfallen",
     ),
     Mutation(
@@ -315,9 +315,9 @@ MUTATIONEN = [
     ),
     Mutation(
         "vorfahren-ohne-schranke",
-        "kosten.rs",
-        "            | Domaene::VorfahrenVon(o)\n",
-        "",
+        "domaene.rs",
+        '            | Domaene::VorfahrenVon(o)\n',
+        '',
         "K003 -- `ancestors of` erbt die Schranke von `descendants of` nicht mehr",
     ),
     Mutation(
@@ -325,7 +325,7 @@ MUTATIONEN = [
         # `descendants of` schon vorher: der Tabellenname aus `index into T` ist
         # unqualifiziert, die Kapazitaetentabelle schluesselt qualifiziert.
         "indextyp-nennt-seine-tabelle-nicht",
-        "kosten.rs",
+        "domaene.rs",
         '            crate::typen::Typ::Benannt { ref name, .. } if name.starts_with("index into ") => {',
         '            crate::typen::Typ::Benannt { ref name, .. } if name.starts_with("XXindex into ") => {',
         "K003 -- ein `index into T` benennt seine Tabelle nicht mehr",
@@ -333,8 +333,8 @@ MUTATIONEN = [
     Mutation(
         "rangordnung-egal",
         "geteilt.rs",
-        "            if *alt >= neu {",
-        "            if false && *alt >= neu {",
+        '            let Some(alt) = alt else { continue };\n            if *alt >= neu {\n                absagen.schiebe(\n                    Absage::fehler(\n                        "H006",',
+        '            let Some(alt) = alt else { continue };\n            if false && *alt >= neu {\n                absagen.schiebe(\n                    Absage::fehler(\n                        "H006",',
         "H006 -- die Sperrordnung darf absteigen",
     ),
     Mutation(
@@ -344,8 +344,8 @@ MUTATIONEN = [
         # Verklemmung.
         "rangordnung-gleich-erlaubt",
         "geteilt.rs",
-        "            if *alt >= neu {",
-        "            if *alt > neu {",
+        '            let Some(alt) = alt else { continue };\n            if *alt >= neu {\n                absagen.schiebe(\n                    Absage::fehler(\n                        "H006",',
+        '            let Some(alt) = alt else { continue };\n            if *alt > neu {\n                absagen.schiebe(\n                    Absage::fehler(\n                        "H006",',
         "H006 -- gleicher Rang gilt als Ordnung",
     ),
     Mutation(
@@ -429,8 +429,8 @@ MUTATIONEN = [
     Mutation(
         "kosten-egal",
         "kosten.rs",
-        "                if n > zusage {",
-        "                if false && n > zusage {",
+        '                z.gerechnet += 1;\n                if n > zusage {',
+        '                z.gerechnet += 1;\n                if false && n > zusage {',
         "K001 -- ein Rumpf darf jede Kostenzusage ueberschreiten",
     ),
     Mutation(
@@ -443,8 +443,8 @@ MUTATIONEN = [
     Mutation(
         "traversierung-kostenlos",
         "kosten.rs",
-        "                (Kosten::Zahl(rumpf), Some(n)) => Kosten::Zahl(rumpf * n),",
-        "                (Kosten::Zahl(rumpf), Some(_)) => Kosten::Zahl(rumpf),",
+        '                (Kosten::Zahl(rumpf), Some(n)) => Kosten::Zahl(rumpf).mal(n, Some(t.span)),',
+        '                (Kosten::Zahl(rumpf), Some(_)) => Kosten::Zahl(rumpf),',
         "eine Traversierung zaehlt nicht Rumpfkosten x Domaenenschranke",
     ),
     Mutation(
@@ -509,8 +509,8 @@ MUTATIONEN = [
     Mutation(
         "divergenz-endet-nicht",
         "schleifen.rs",
-        "            .is_some_and(|n| div.iter().any(|d| d == &n.text)),",
-        "            .is_some_and(|n| div.iter().any(|d| d == &n.text) && false),",
+        '    if lg.div.iter().any(|d| *d == a.text) {',
+        '    if false && lg.div.iter().any(|d| *d == a.text) {',
         "S002 -- ein `else`-Zweig, der auf einem `-> never`-Aufruf endet, gilt als durchfallend",
     ),
     Mutation(
@@ -523,22 +523,22 @@ MUTATIONEN = [
     Mutation(
         "paarung-je-funktion",
         "paarung.rs",
-        "            if !alle_erwartet.contains(o) {",
-        "            if !h.erwartet.iter().any(|(x, _)| x == o) {",
+        '    let alle_erwartet: BTreeSet<(String, String)> = je_funktion\n        .iter()\n',
+        '    let alle_erwartet: BTreeSet<(String, String)> = je_funktion\n        .iter()\n        .take(1)\n',
         "V001 -- die Paarung sieht nur die EIGENE Funktion, nicht die vereinigte Menge",
     ),
     Mutation(
         "verwaistes-awaits-egal",
         "paarung.rs",
-        "            if !alle_publiziert.contains(o) {",
-        "            if false && !alle_publiziert.contains(o) {",
+        '            if !alle_publiziert.contains(&(at.clone(), o.clone())) {',
+        '            if false && !alle_publiziert.contains(&(at.clone(), o.clone())) {',
         "V002 -- ein `awaits` ohne Gegenstueck darf stehen (liest gueltigen Muell)",
     ),
     Mutation(
         "relaxed-darf-tragen",
         "paarung.rs",
-        "                        if ist_relaxed {",
-        "                        if false && ist_relaxed {",
+        '        for (o, span, erklaert) in &h.relaxed_mit_last {',
+        '        for (o, span, erklaert) in h.relaxed_mit_last.iter().take(0) {',
         "V004 -- `relaxed` darf eine Nutzlast tragen, die es nicht ordnet",
     ),
     Mutation(
@@ -671,22 +671,22 @@ MUTATIONEN = [
     Mutation(
         "huelle-bleibt-flach",
         "aufrufgraph.rs",
-        "        for g in &k.ruft {\n            self.gehe(g, gesehen, menge, offen);\n        }",
-        "        let _ = &k.ruft;",
+        '        lauf.pfad.insert(name.to_string());\n',
+        '        lauf.pfad.insert(name.to_string());\n        if true {\n            return (k.eigen.iter().cloned().collect(), None, false);\n        }\n',
         "E008 -- `effects` deckt wieder nur die ERSTE Ebene",
     ),
     Mutation(
         "zyklus-schweigt",
         "aufrufgraph.rs",
-        "            if offen.is_none() {\n                *offen = Some(format!(\"cycle over `{name}`\"));\n            }\n            return;",
-        "            return;",
+        '            return (BTreeSet::new(), Some(format!("cycle over `{name}`")), true);',
+        '            return (BTreeSet::new(), None, true);',
         "R16 -- ein Zyklus liefert eine untere Schranke und nennt sich nicht mehr so",
     ),
     Mutation(
         "gerufener-ohne-effects-egal",
         "aufrufgraph.rs",
-        "        if !k.hat_effects {",
-        "        if false && !k.hat_effects {",
+        '        let mut offen = if k.hat_effects {\n            None\n        } else {\n            Some(format!("`{name}` declares no `effects`"))\n        };',
+        '        let mut offen = None;',
         "E009 -- ein Gerufener ohne `effects` macht die Menge nicht mehr zur unteren Schranke",
     ),
     Mutation(
@@ -698,30 +698,30 @@ MUTATIONEN = [
     ),
     Mutation(
         "match-zweige-unsichtbar",
-        "aufrufgraph.rs",
-        "            StmtArt::Match(m) => {\n                for z in &m.zweige {\n                    sammle_rufe(&z.rumpf, aus);\n                }\n            }",
-        "            StmtArt::Match(m) => { let _ = m; }",
+        "lib.rs",
+        '        StmtArt::Match(m) => m.zweige.iter().map(|z| &z.rumpf).collect(),',
+        '        StmtArt::Match(m) => {\n            let _ = m;\n            Vec::new()\n        }',
         "E008 -- Rufe in `match`-Zweigen sind unsichtbar (delete_leaf ruft dort dreimal)",
     ),
     Mutation(
         "locks-block-versteckt-rufe",
-        "aufrufgraph.rs",
-        "            StmtArt::Sperrt(x) => sammle_rufe(&x.rumpf, aus),",
-        "            StmtArt::Sperrt(x) => { let _ = x; }",
+        "lib.rs",
+        '        StmtArt::Sperrt(x) => vec![&x.rumpf],',
+        '        StmtArt::Sperrt(x) => {\n            let _ = x;\n            Vec::new()\n        }',
         "E008 -- ein `locks`-Block versteckt seine Rufe, und genau dort sitzt H005",
     ),
     Mutation(
         "schleifenrumpf-versteckt-rufe",
-        "aufrufgraph.rs",
-        "                Schleife::Traverse(x) => sammle_rufe(&x.rumpf, aus),",
-        "                Schleife::Traverse(x) => { let _ = x; }",
+        "lib.rs",
+        '            Schleife::Traverse(x) => &x.rumpf,\n            Schleife::Retry(x) => &x.rumpf,',
+        '            Schleife::Retry(x) => &x.rumpf,\n            Schleife::Traverse(x) => &x.rumpf,',
         "E008 -- ein `traverse`-Rumpf versteckt seine Rufe (revoke ruft dort delete_leaf)",
     ),
     Mutation(
         "some-ist-ein-ruf",
         "aufrufgraph.rs",
-        "        if n.text != \"Some\" && n.text != \"None\" && !r.ist_verbundwert() {",
-        "        if true {",
+        '        // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).\n        if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {',
+        '        // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).\n        if true {',
         "B35 -- `Some`/`None` gelten als unbekannte Gerufene; jede option-Huelle wird untere Schranke",
     ),
     # -- manifest.rs: die Ratsche, die als Vorbild zitiert wurde -------------------------
@@ -910,9 +910,8 @@ MUTATIONEN = [
     Mutation(
         "narrow-schranke-inklusiv",
         "emit.rs",
-        "            let oben = if n.bereich.exklusiv { \"<\" } else { \"<=\" };",
-        "            let oben = \"<=\";",
-        "C-Absenkung -- `..<` wird `..`; genau der eine Wert kommt durch, gegen den die Schranke steht",
+        '            let oben = if bereich.exklusiv { "<" } else { "<=" };',
+        '            let oben = "<=";',
         "code",
     ),
     Mutation(
@@ -959,9 +958,8 @@ MUTATIONEN = [
     Mutation(
         "format-versatz-waechst-nicht",
         "emit.rs",
-        "        versatz += breite;",
-        "        versatz += 0 * breite;",
-        "C-Absenkung -- jedes Formatfeld liest bei Versatz 0; alle Felder liefern dasselbe",
+        '            versatz += breite;\n            i_feld += 1;',
+        '            versatz += 0 * breite;\n            i_feld += 1;',
         "code",
     ),
     Mutation(
@@ -1154,9 +1152,8 @@ MUTATIONEN = [
     Mutation(
         "check-ohne-behauptung",
         "emit.rs",
-        "        \"\\n/* check {}\\n * claim: {}\\n\",\n        c.name.text, c.claim.text",
-        "        \"\\n/* check {}\\n * claim: {}\\n\",\n        c.name.text, \"\"",
-        "C-Absenkung -- eine Probe faehrt ohne ihre Behauptung aus; eine Zahl ohne Gegenstand",
+        '        "\\n/* check {}\\n * claim: {}\\n",\n        kommentartext(&c.name.text),\n        kommentartext(&c.claim.text)',
+        '        "\\n/* check {}\\n * claim: {}\\n",\n        kommentartext(&c.name.text),\n        kommentartext("")',
         "code",
     ),
     Mutation(
@@ -1194,9 +1191,8 @@ MUTATIONEN = [
     Mutation(
         "konstruktor-gilt-als-aufruf",
         "aufrufgraph.rs",
-        'if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {',
-        'if n.text != "Some" && n.text != "None" {',
-        "B7 -- ein Verbundkonstruktor zaehlt als Aufruf; `P` wird unbekannter Gerufener "
+        '        // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).\n        if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {',
+        '        // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).\n        if n.text != "Some" && n.text != "None" {',
         "und jede Huelle darueber untere Schranke",
     ),
     # -- «B24»: die Kachelung IST die Wortgrenze ---------------------------------------------
@@ -1358,17 +1354,15 @@ MUTATIONEN = [
     Mutation(
         "phasenschritt-in-der-schleife-geht-durch",
         "phasen.rs",
-        "                if enthaelt_schritt(s, schritte) {",
-        "                if false {",
-        "K11.1 -- ein Schritt in einer Schleife faellt nicht mehr; er geschieht einmal, "
+        '                if enthaelt_schritt(s, u, modul, schritte) {',
+        '                if false {',
         "die Schleife oft",
     ),
     Mutation(
         "endender-zweig-zaehlt-mit",
         "phasen.rs",
-        "                    if !endet_immer(r) {\n                        zweige.push((k, r.span));\n                    }\n                }\n                // **Ein `if` ohne `else`",
-        "                    zweige.push((k, r.span));\n                }\n                // **Ein `if` ohne `else`",
-        "K11.1 -- ein Zweig, der mit `return` endet, wird in die Einigung genommen; "
+        '                    if !crate::endet_immer(r, &[]) {\n                        zweige.push((k, r.span));\n                    }\n                }\n                // **Ein `if` ohne `else`',
+        '                    zweige.push((k, r.span));\n                }\n                // **Ein `if` ohne `else`',
         "der haeufigste saubere Fall faellt",
     ),
     # -- K100.4: die Kreuzprobe des Uebersetzungszeugnisses --------------------------------
@@ -1448,6 +1442,38 @@ def fahre(m):
     return ("UEBERLEBT" if gruen else "gefangen"), gruen
 
 
+def anker_stand():
+    """**Greift jeder Anker noch?** Reines Textzaehlen -- kein Bau, keine Sekunde.
+
+    *Das ist die Stelle, an der der Katalog still verwittert.* Ein Anker, den der umgebaute
+    Quelltext nicht mehr enthaelt, faellt in `fahre` unter `ungueltig` und damit unter
+    "zaehlt nicht mit" -- und die Quote `131 von 132` liest sich weiter wie Deckung, obwohl
+    sie ueber einer SCHRUMPFENDEN Bezugsgroesse gerechnet ist. Genau W14: *die eigene
+    Deckung wird um eine Groessenordnung zu hoch geschaetzt.*
+
+    Gemessen 2026-08-19: **25 von 155 Ankern waren tot** (19 fehlten, 6 mehrdeutig), sechs
+    davon durch den Umbau desselben Tages. Der volle Lauf haette das gemeldet -- nach
+    Minuten, in einer Fussnote, ohne den Rueckgabewert zu beruehren.
+    """
+    tot = []
+    for m in MUTATIONEN:
+        n = m.pfad.read_text().count(m.alt)
+        if n != 1:
+            tot.append((m, "FEHLT" if n == 0 else f"MEHRDEUTIG ({n}x)"))
+    return tot
+
+
+def anker_sprechprobe():
+    """In beide Richtungen: ein toter Anker MUSS auffallen, ein lebender NICHT."""
+    echt = anker_stand()
+    gift = Mutation("SPRECHPROBE", "typen.rs", "diese Zeile steht nirgends", "", "")
+    n = gift.pfad.read_text().count(gift.alt)
+    print("  toter Anker faellt auf:  ", "ok" if n != 1 else "GESCHEITERT")
+    print(f"  lebender Katalog still:  {'ok' if not echt else 'GESCHEITERT'}")
+    return n != 1
+
+
+
 def sauberer_baum():
     r = subprocess.run(
         ["git", "status", "--porcelain", "crates/"],
@@ -1459,9 +1485,36 @@ def sauberer_baum():
 
 
 def main():
+    # **Der Ankerstand zuerst, und er kostet nichts.** Er braucht weder Bau noch sauberen
+    # Baum -- und weil er der Teil ist, der still verwittert, laeuft er VOR allem anderen.
+    if "--anker" in sys.argv:
+        print("== Sprechprobe des Ankerpruefers ==")
+        if not anker_sprechprobe():
+            return 1
+        tot = anker_stand()
+        print(f"\n== {len(MUTATIONEN) - len(tot)} von {len(MUTATIONEN)} Ankern greifen ==")
+        for m, warum in tot:
+            print(f"  !! {warum:<16} {m.name:<44} {m.pfad.name}")
+        if tot:
+            print(f"\n  {len(tot)} Mutationen messen NICHTS. Die Quote laeuft sonst ueber")
+            print("  einer schrumpfenden Bezugsgroesse und liest sich wie Deckung.")
+            return 1
+        print("  ALL PASS")
+        return 0
+
     if not sauberer_baum():
         print("crates/ ist nicht sauber -- erst committen. Diese Probe schreibt in Quellen.")
         return 2
+
+    tot = anker_stand()
+    if tot:
+        print(f"== {len(tot)} von {len(MUTATIONEN)} Ankern greifen ins Leere ==")
+        for m, warum in tot:
+            print(f"  !! {warum:<16} {m.name:<44} {m.pfad.name}")
+        print("\n  Ein toter Anker misst nichts, faellt aber unter `ungueltig` und damit")
+        print("  aus der Quote heraus -- sie wuerde ueber einer schrumpfenden Bezugsgroesse")
+        print("  gerechnet und laese sich wie Deckung. `--anker` sagt dasselbe ohne Bau.")
+        return 1
 
     print("== Sprechprobe des Geruests ==")
     zustand, _ = fahre(NULLMUTATION)
