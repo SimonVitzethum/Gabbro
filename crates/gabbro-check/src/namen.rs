@@ -193,7 +193,14 @@ fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
             ItemArt::Reason(r) => reason(r, absagen),
             ItemArt::Device(d) => device(d, absagen),
             ItemArt::Typ(t) => typdecl(t, absagen),
-            ItemArt::Format(f) => felder(&f.felder, "Format", absagen),
+            ItemArt::Format(f) => {
+                felder(&f.felder, "Format", absagen);
+                // **«B24» im Pruefer, seit 2026-08-19.** Die Regel gab es seit dem 18. --
+                // im ERZEUGER, und `gabbro pruefe` senkt nicht ab. Sechs Giftformen, sechsmal
+                // Schweigen. *Eine Regel auf einer Flaeche, die die meisten Programme nie
+                // beruehren, hat keinen Biss.*
+                formatbitlagen(f, absagen);
+            }
             _ => {}
         }
     }
@@ -351,6 +358,19 @@ fn regfelder(r: &RegDecl, absagen: &mut Absagen) {
     for (name, _) in &r.felder {
         doppelt(&mut gesehen, &name.text, name.span, "Registerfeld", absagen);
     }
+    // **Und die andere Haelfte von «B24», seit 2026-08-19: liegt das Bit im Register?**
+    //
+    // `N003` prueft die Ueberlappung seit dem 2026-08-14 -- dass ein Bit ueberhaupt IN sein
+    // Wort passt, prueft bis heute niemand. Gemessen: `reg R : u32 fields { A @40, }` ging
+    // mit 0 Fehlern durch. *Dieselbe Zeile, die am `format` `N007` heisst.*
+    let (breite, wort) = crate::bitlage::aus_intty(&r.typ);
+    let wortname = format!("{wort:?}").to_lowercase();
+    for (i, (name, bp)) in r.felder.iter().enumerate() {
+        if let Some(b) = crate::bitlage::lage_pruefen(bp, breite * 8, i, &name.text, &wortname) {
+            absagen.schiebe(Absage::fehler(b.kennung, name.span, b.text).mit_notiz(b.notiz));
+        }
+    }
+
     // Ueberlappung der Bitlagen.
     let mut belegt: Vec<(u128, u128, &Ident)> = Vec::new();
     for (name, bp) in &r.felder {
@@ -375,5 +395,25 @@ fn regfelder(r: &RegDecl, absagen: &mut Absagen) {
             }
         }
         belegt.push((hoch, tief, name));
+    }
+}
+
+/// **«B24» am `format`: `N007` und `N008`.**
+///
+/// Der dritte Teil der Entscheidung -- *eine Luecke im Wort* -- bleibt beim Erzeuger. Der
+/// Schnitt ist die Antwort auf „warum nicht alles hier": **eine Luecke macht das Wort fuer
+/// den Erzeuger UNENTSCHEIDBAR; eine Lage jenseits der Breite und eine Ueberlappung sind
+/// fuer jeden FALSCH.** *Und der Korpus haengt an genau diesem Schnitt:* `format Elf64Ph`
+/// laesst mit `p_flags : u32 @[2:0]` neunundzwanzig Bits unbenannt und geht durch, weil
+/// niemand es absenkt.
+fn formatbitlagen(f: &Format, absagen: &mut Absagen) {
+    let (_, befunde) = crate::bitlage::lies(&f.felder);
+    for b in befunde {
+        let span = f.felder[b.feld].name.span;
+        let text = match b.anderes {
+            Some(a) => format!("{} (with `{}`)", b.text, f.felder[a].name.text),
+            None => b.text.clone(),
+        };
+        absagen.schiebe(Absage::fehler(b.kennung, span, text).mit_notiz(b.notiz));
     }
 }

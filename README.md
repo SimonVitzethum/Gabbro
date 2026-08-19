@@ -36,7 +36,44 @@ away — is about **0,5 : 1**, the abstract specification itself.
 | | |
 |---|---|
 | **measured today** | **≥ 1,90**, open — and it hangs almost entirely on the **W column** |
+| **with PLAN and TODO finished** | **≥ 2,03** — *and the reason it does not fall is the thesis itself* |
 | **target** | **0,5 : 1** |
+
+**The second row is the uncomfortable one, so it carries its arithmetic** (2026-08-19, the
+folder's own weight formula, no new inputs):
+
+```
+Ueberschlag = w · 5,0 + (1 − w) · 0,3            w = W_zeilen / F
+
+w        = 0,358          population 73, measured -- K 28 · A 7 · W 38
+                          0,341 for population 81; the 73 is the corrected one
+obligation side          = 0,358 · 5,0 + 0,642 · 0,3   = 1,98
+surcharge from B3        = p_B3 · 5,0 = 0,0096 · 5,0   = +0,05
+                                                        ------
+                                                          2,03
+```
+
+> **Finishing the plan does not move the number, and that is not a defect of the plan.** The
+> factor **0,3** is already the *finished-language* price of a K or an A obligation — it was
+> written down on 2026-08-13 under the assumption that memory safety, frame conditions, race
+> freedom, invariant preservation and refinement all go to **zero**. *That assumption IS the
+> plan.* What the plan closes is the K and A columns; the metric hangs on **W**, and W is by
+> definition what Gabbro never takes away.
+
+**Read plainly: `2,03` is the price of the word "except" in *"Gabbro proves everything except
+functional correctness"*.** The distance to `0,5` is not unfinished work — it is the abstract
+specification plus the 38 value statements a human still owes. *A plan that closed that distance
+would be a plan to prove functional correctness, and this folder does not have one.*
+
+**And the `≥` survives the assumption**, for one reason of the two:
+
+| reason for `≥` | does finishing PLAN/TODO remove it? |
+|---|---|
+| **population bias** — the 81 bodies are the areas somebody *did* prove in Verus, hence the well-understood ones, which carry **fewer** value statements | **no.** The direction is known: the true `w` is higher, so 2,03 is a floor |
+| **the Gabbro-side line shares are unmeasured** | **yes** — it is a TODO item, and closing it replaces the estimate with a measurement whose value nobody can predict from here |
+
+*So the honest form of the second row is: **≥ 2,03 as an estimate, and the number that replaces
+it is a measurement nobody has run.*** W7 — it is quoted with its basis or not at all.
 
 **The measurement that produced that number also produced the sentence that matters more:**
 
@@ -52,11 +89,11 @@ denominator that shines instead of the one that costs.*
 
 | | | |
 |---|---|---|
-| **Compiler** | 10 passes, 3 complete, 7 partial, **0 open** | 124 diagnostics · `gabbro paesse` |
+| **Compiler** | 10 passes, 3 complete, 7 partial, **0 open** | 126 diagnostics · `gabbro paesse` |
 | **Grammar** | **139 EBNF rules**, closed and reachable | vocabulary covers every terminal, 206 / 206 |
 | **Proof templates** | **20, of which 9 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Guardians** | 10, each with a two-way speech test | **151 of 152 mutations caught** *(run 2026-08-19)* |
-| **Corpus** | 31 clean examples, 104 poison files, 126 tests *(run 2026-08-19)* | `cargo test` |
+| **Corpus** | 31 clean examples, 107 poison files, 126 tests *(run 2026-08-19)* | `cargo test` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was

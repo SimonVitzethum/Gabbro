@@ -5880,7 +5880,8 @@ static inline bool     DtbKopf_gueltig(const DtbKopf *v) { … every `where` cla
 tool). The word readers are **generated, not assumed**: an artefact that needs a library is not
 an artefact.
 
-**Lowered today is the byte-aligned case. Bit positions are refused by name** — «B24» is an open
+~~**Lowered today is the byte-aligned case. Bit positions are refused by name**~~ *(überholt
+2026-08-18: «B24» entschieden und gebaut, `emit.rs`:1416)* — «B24» was an open
 finding of the folder itself: what a position beyond the word width refers to, and how it
 interacts with `endian`, is unsaid. *Building a lowering while the meaning is open would answer
 the question silently.*
@@ -5913,7 +5914,7 @@ narrower one. *Two bounds on one loop, and the measurement says which one bites.
 |---|---|---|
 | **`traverse`** | F1 · F3 · F5 · F6 · F9 | reported as `loop form` — every domain iterates differently |
 | **`device`** | F2 · F4 · F9 | register class, `mirrors`, `transition`, computed bank |
-| **`format` bit positions** | F2 · F9 | **«B24» is open in the folder** — not a build item but a decision |
+| ~~**`format` bit positions**~~ | F2 · F9 | ~~«B24» is open~~ — **decided and built 2026-08-18**, and in the CHECKER since 2026-08-19 (`N007`/`N008`) |
 | **`atomic` / `check`** | F6 | memory ordering; a test harness is not a program |
 | **`option` as a VALUE** | F1 · F3 | the sentinel carries the type; `x = None` needs the target's table, which the emitter does not track |
 
@@ -7576,3 +7577,138 @@ Testzahl und Mutationsquote —, tragen ihr Messdatum im Text.**
 
 **Mutationsquote, gemessen 2026-08-19:** `151 von 152 gültigen Mutationen gefangen (99 %)`,
 ein Überlebender (`negativer-faktor-gilt-als-schranke`, `K005`), drei mit mehrdeutigem Anker.
+
+---
+
+# Punkt 3 — «B24»: die Entscheidung war getroffen, gebaut, und **auf der falschen Fläche**
+
+**Gemessen 2026-08-19.** Der Plan führte «B24» als *„die einzige Entscheidung zwischen Gabbro
+und einem Netzwerkstack"*. Beim Nachsehen: **entschieden am 2026-08-18** (`PFLICHTEN.md`:141,
+:155), **gebaut am selben Tag** (`emit.rs`:1416), **Beispiel vorhanden**
+(`beispiele/24-ip-kopf.gab`). *Der IP-Kopf geht durch — 2 Items, 0 Fehler.*
+
+## Und dann die Gegenprobe, denn Schweigen ist keine Prüfung
+
+```
+gabbro pruefe:                              gabbro emit:
+  a : u8  @[9:4]     0 Fehler                 C001  bit position beyond the word width
+  Lücke 3:2          0 Fehler                 C001  the bit positions leave a gap
+  a @[7:4] b @[5:2]  0 Fehler                 C001  two bit positions overlap
+  a : u64 @[66:64]   0 Fehler                 C001  bit position beyond the word width
+  a : u8  @[3:7]     0 Fehler
+  a : bool @9        0 Fehler
+```
+
+**Sechs Giftformen, sechsmal Schweigen** — die Kante `@[66:64]` aus `PFLICHTEN.md`:155
+eingeschlossen, also genau der Fall, den die Entscheidung **namentlich** ablehnt.
+
+> **Die Regel lebte nur im Erzeuger, und `gabbro pruefe` senkt nicht ab.** Zwölf von 31
+> Beispielen werden je abgesenkt; für alles Übrige stand «B24» als Absicht ohne Wirkung da.
+> *Dieselbe Lage wie `D004` und `E010` auf diesem Korpus — nur schärfer, weil hier die Absage
+> schon geschrieben war.*
+
+**Und `C001` heißt „keine Absenkung".** Eine falsche Bitlage ist kein *„das können wir noch
+nicht"*, sondern ein *„das ist falsch"*. Eine Kennung, die beides sagt, sagt keines von beidem.
+
+## Der Schnitt — und er ist die Antwort auf „warum nicht alles im Prüfer"
+
+| | wo | Grund |
+|---|---|---|
+| Lage jenseits der Wortbreite | **Prüfer**, `N007` | falsch, ob jemand absenkt oder nicht |
+| zwei Lagen überlappen | **Prüfer**, `N008` | dito — und `N003` sagt es für ein Register seit dem 2026-08-14 |
+| eine Lücke im Wort | **Erzeuger**, `C001` | erst die Absenkung braucht eine *bestimmte* Wortgrenze |
+
+**Eine Lücke macht das Wort für den Erzeuger UNENTSCHEIDBAR; eine Lage jenseits der Breite und
+eine Überlappung sind für jeden FALSCH.** *Und der Korpus hängt an genau diesem Schnitt:*
+`format Elf64Ph` lässt mit `p_flags : u32 @[2:0]` neunundzwanzig Bits unbenannt und geht durch,
+weil niemand es absenkt. **Ein `N009` hätte den eigenen Korpus zerlegt.**
+
+## Eine Stelle, zwei Leser
+
+`crates/gabbro-check/src/bitlage.rs` — die Gruppenbildung liegt jetzt **einmal** da. Der
+Namenspass sagt ab, der Erzeuger rechnet damit. *Genau der Einwand, den dieser Ordner dreimal
+gegen sich selbst erhoben hat: dieselbe Mechanik an zwei Orten, und nur einer geprüft.*
+
+## Und die zweite Hälfte fand die Regel am `device`
+
+```gabbro
+reg R : u32 @0x00 class r fields { A @40, }   -- gabbro pruefe: 0 Fehler
+```
+
+**`N003` prüft die Überlappung seit dem 2026-08-14; dass ein Bit überhaupt IN sein Register
+passt, prüfte bis heute niemand.** Dieselbe Zeile, die am `format` `N007` heißt.
+
+## Der Korpuspreis: sieben Stellen, und eine davon war ein Widerspruch in derselben Datei
+
+`gabbro fragmente` meldete **sieben** `N007` in drei `format`-Blöcken von `FRAGMENTE.md` —
+sämtlich Bitlagen, die auf ein 64-Bit-Wort gemeint waren und als `u8`/`u16` deklariert
+standen. *Der Kommentar darüber sagte es selbst:* **„Die Bitlagen unten sind auf das jeweilige
+Wort bezogen, weil `format` keine Wortbreite kennt."** Sie kennt sie — seit «B24» ist die
+Wortbreite **der Feldtyp**.
+
+**Und einer der sieben war ein Widerspruch innerhalb einer Datei:**
+
+| | |
+|---|---|
+| `format FaultRecordHi` | `typ : u8 @[13:12]` — hätte mit `sid @[15:0]` überlappt |
+| `device … reg FR_HI` | `TYPE @[29:28]` — dieselbe Aufzeichnung, dieselbe Datei |
+
+*Die zweite Zahl ist die gemessene.* **Nachgezogen, nicht geraten** — die Quelle stand acht
+Zeilen weiter oben.
+
+`ContextEntry` mit `AW @[66:64]` ist in zwei Formate zerlegt, genau wie `PFLICHTEN.md`:155 es
+vorschreibt: *„der Schreiber nennt das zweite Wort, statt dass der Erzeuger es rät."*
+
+**Tor P2 vor und nach der Regel: 11 von 13.** Die Regel hat den Korpus nicht bewegt, sie hat
+ihn eingeholt.
+
+---
+
+# Die Kennzahl unter der Annahme „PLAN und TODO sind fertig" — 2026-08-19
+
+**Die Frage war: was wird aus `≥ 1,90`, wenn die Pläne aufgehen?** Gerechnet mit der eigenen
+Gewichtsformel des Ordners, ohne eine einzige neue Eingabe:
+
+```
+Ueberschlag = w · 5,0 + (1 − w) · 0,3            w = W_zeilen / F
+
+w        = 0,358                  Population 73, gemessen -- K 28 · A 7 · W 38
+                                  (0,341 fuer Population 81; die 73 ist die berichtigte)
+Pflichtseite  = 0,358 · 5,0 + 0,642 · 0,3        = 1,98
+Aufschlag B3  = p_B3 · 5,0 = 0,0096 · 5,0        = +0,05
+                                                   ------
+                                                     2,03
+```
+
+## Die Antwort ist unbequem: **die Zahl bewegt sich nicht**
+
+**Der Faktor `0,3` ist bereits der Preis einer K- oder A-Pflicht in einer FERTIGEN Sprache.**
+Er wurde am 2026-08-13 unter der Annahme aufgeschrieben, dass Speichersicherheit,
+Rahmenbedingungen, Rennfreiheit, Invariantenerhaltung und Verfeinerung **auf null** gehen —
+*und genau diese Annahme IST der Plan.*
+
+> **Was der Plan schließt, ist die K- und die A-Spalte. Die Kennzahl hängt an W** — und W ist
+> per Definition das, was Gabbro nie abnimmt.
+
+**Im Klartext: `2,03` ist der Preis des Wortes „außer"** in *„Gabbro beweist alles außer
+funktionaler Korrektheit"*. Der Abstand zu `0,5` ist keine unerledigte Arbeit, sondern die
+abstrakte Spezifikation plus die 38 Wertaussagen, die ein Mensch weiter schuldet. *Ein Plan,
+der diesen Abstand schlösse, wäre ein Plan zum Beweis funktionaler Korrektheit, und den hat
+dieser Ordner nicht.*
+
+## Und das `≥` überlebt die Annahme — aus einem der beiden Gründe
+
+| Grund für `≥` | fällt er mit PLAN/TODO? |
+|---|---|
+| **Populationsverzerrung** — die 81 Rümpfe sind die Bereiche, für die jemand einen Verus-Beweis geschrieben hat, also die gut verstandenen; die tragen **weniger** Wertaussagen | **nein.** Die Richtung ist bekannt: das wahre `w` liegt höher, also ist 2,03 ein Boden |
+| **die Gabbro-seitigen Zeilenanteile sind ungemessen** | **ja** — es ist ein TODO-Posten, und ihn zu schließen ersetzt die Schätzung durch eine Messung, deren Wert von hier aus niemand vorhersagt |
+
+**Die ehrliche Form ist deshalb: `≥ 2,03` als Schätzung, und die Zahl, die sie ablöst, ist
+eine Messung, die niemand gefahren hat.** *W7 — sie wird mit ihrer Grundlage zitiert oder gar
+nicht.*
+
+## Was das für die zweite Kennzahl heißt
+
+`W`-Pflichten je tausend Zeilen bleibt bei **≥ 0,63** und **bewegt sich noch weniger**: sie
+zählt genau die Spalte, die der Plan nicht anfasst. *Die zweite Zahl ist damit die
+plan-unabhängige — und sie ist die, die bei jeder Änderung wieder kostet.*

@@ -484,18 +484,25 @@ reason VtdFehler {
 -- «B25» `grund` soll genau die zwoelf Werte von FaultGrund tragen. `intty` traegt ein
 -- INTERVALL (:139), keine Wertemenge. Hier geht es nur, weil 0x01..0x0c zufaellig
 -- zusammenhaengend ist; bei einem geloecherten Code waere das Feld nicht bindbar.
--- «B24» Zweitens: der Satz besteht aus zwei 64-Bit-Woertern. Die Bitlagen unten sind auf
--- das jeweilige Wort bezogen, weil `format` (:393) keine Wortbreite kennt.
+-- «B24» Zweitens: der Satz besteht aus zwei 64-Bit-Woertern -- **und seit dem 2026-08-18
+-- steht das im Traegertyp statt im Kommentar.** Der urspruengliche Text las: *„Die Bitlagen
+-- unten sind auf das jeweilige Wort bezogen, weil `format` keine Wortbreite kennt."* Sie
+-- kennt sie: die Wortbreite IST der Feldtyp, und eine Lage jenseits davon bedeutet nichts.
+--
+-- **Nachgezogen am 2026-08-19, als `N007` in den Pruefer kam.** Sieben Stellen fielen, und
+-- eine davon war ein Widerspruch INNERHALB dieser Datei: `typ` stand hier als `@[13:12]`,
+-- das Register `FR_HI` derselben Einheit fuehrt `TYPE @[29:28]`. *Die zweite Zahl ist die
+-- gemessene; die erste haette mit `sid @[15:0]` ueberlappt.*
 format FaultRecordLo @version 1 endian little {
     input_addr : u64 @[63:12] where (input_addr & 0xfff) == 0,
 }
 
 format FaultRecordHi @version 1 endian little {
-    sid    : u16 @[15:0],
-    typ    : u8  @[13:12],
-    grund  : u8 in 0x01 .. 0x0c @[39:32],
-    at     : u8  @[61:60],
-    f_bit  : u8 in 1 .. 1 @63,
+    sid    : u64 @[15:0],
+    typ    : u64 @[29:28],
+    grund  : u64 in 0x01 .. 0x0c @[39:32],
+    at     : u64 @[61:60],
+    f_bit  : u64 in 1 .. 1 @63,
 }
 -- «B22-nah, eigener Fall» `where f_bit == 1` WEIST ein leeres Register AB, statt „leer" zu
 -- MELDEN. Das ist der Unterschied zwischen Absage und Abwesenheit, und `format` kennt nur
@@ -503,18 +510,25 @@ format FaultRecordHi @version 1 endian little {
 -- „Aufzeichnung nicht lesbar" (vtd.rs:451).
 
 format Slpte @version 1 endian little {
-    R    : u8  @0,
-    W    : u8  @1,
-    SNP  : u8  @11,
+    R    : u64 @0,
+    W    : u64 @1,
+    SNP  : u64 @11,
     ADDR : u64 @[63:12],
 }
 
-format ContextEntry @version 1 endian little {
-    P        : u8  @0,
-    FPD      : u8  @1,
+-- «B24» Der Kontexteintrag ist 128 Bit breit, und **die Entscheidung verweigert `@[66:64]`
+-- ausdruecklich**: eine Lage liegt im eigenen Wort, `u64` hat die Bits 0 bis 63, also nennt
+-- `@[66:64]` nichts. *Der Ausweg steht in derselben Zeile von `PFLICHTEN.md`:* zwei Woerter,
+-- und der Schreiber nennt das zweite, statt dass der Erzeuger es raet.
+format ContextEntryLo @version 1 endian little {
+    P        : u64 @0,
+    FPD      : u64 @1,
     SLPTPTR  : u64 @[63:12],
-    AW       : u8  @[66:64],
-    DID      : u16 @[87:72],
+}
+
+format ContextEntryHi @version 1 endian little {
+    AW       : u64 @[2:0],
+    DID      : u64 @[23:8],
 }
 
 assume vtd_te_wirkt

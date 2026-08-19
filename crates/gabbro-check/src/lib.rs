@@ -18,6 +18,8 @@ use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::Absagen;
 
 pub mod aufrufgraph;
+// **«B24» an EINER Stelle** -- der Namenspass sagt ab, der Erzeuger rechnet damit.
+pub mod bitlage;
 pub mod m2;
 pub mod m3;
 pub mod paarung;

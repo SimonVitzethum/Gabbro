@@ -1993,15 +1993,23 @@ ernsthafte Kernel hat diese Konstante ohnehin), Paketpuffer sind ein Pool, die P
 läuft über eine Länge ≤ MTU, Neuübertragung ist `retry … bounded`, und die Zeitgeber sind
 `forever … per_pass`.
 
-**Was blockiert, ist der IP-Kopf.** Er ist ein Feld aus Bitlagen:
+~~**Was blockiert, ist der IP-Kopf.**~~ **Entschieden und gebaut am 2026-08-18**
+(`beispiele/24-ip-kopf.gab`, «B24»); seit dem **2026-08-19** auch im Prüfer statt nur im
+Erzeuger (`N007`/`N008`). Was hier stand, war der Stand davor — er ist ein Feld aus Bitlagen:
 
 ```
 version:4 · IHL:4 · DSCP:6 · ECN:2 · flags:3 · fragment offset:13
 ```
 
-`format` weigert sich für jede davon (`C001`, drei Stellen im Korpus gemessen) — **«B24»:
-was eine Bitposition jenseits der Wortbreite bedeutet und wie sie mit `endian`
-zusammenwirkt, sagt die Spezifikation nicht.**
+~~`format` weigert sich für jede davon~~ — **es trägt sie.** Die Entscheidung lautet: *eine
+Lage liegt im **eigenen Wort** des Feldes; jenseits davon gibt es nichts zu bedeuten*, und
+*das Wort wird zuerst in der erklärten Bytereihenfolge gelesen, dann werden die Bits aus dem
+**Wert** gezogen* — Bitnummern zählen über den Wert, nicht über die Bytes.
+
+> **Und die Kachelung ist die Wortgrenze selbst, nicht eine Prüfung darüber:** ein Wort endet,
+> wenn seine Bits vollständig sind. *Der erste Anlauf las alle aufeinanderfolgenden Bitfelder
+> gleicher Breite als EIN Wort und meldete an `dscp @[7:2]` eine Überlappung mit
+> `version @[7:4]` — zwei Bytes des IP-Kopfs, als eines gelesen.*
 
 > *Das ist keine Bauarbeit und keine Beweisarbeit — es ist eine Entscheidung, und sie ist die
 > einzige zwischen Gabbro und einem Netzwerkstack.* **Von allen offenen Posten hat dieser die

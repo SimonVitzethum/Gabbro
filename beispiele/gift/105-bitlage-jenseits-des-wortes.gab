@@ -1,0 +1,15 @@
+-- erwartet: N007
+-- **«B24» stand seit dem 2026-08-18 entschieden -- im ERZEUGER.**
+-- `gabbro pruefe` senkt nicht ab, also feuerte die Regel dort nie. Gemessen am 2026-08-19:
+-- sechs Giftformen, sechsmal Schweigen -- die Kante `@[66:64]` aus `PFLICHTEN.md`:155
+-- eingeschlossen, also genau der Fall, den die Entscheidung namentlich ablehnt.
+--
+-- *Eine Regel auf einer Flaeche, die die meisten Programme nie beruehren, hat keinen Biss.*
+module gift::bitlage_jenseits {
+
+format Kopf endian big {
+    a : u8 @[9:4],
+    b : u8 @[3:0],
+}
+
+}

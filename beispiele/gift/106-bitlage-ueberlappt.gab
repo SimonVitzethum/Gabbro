@@ -1,0 +1,15 @@
+-- erwartet: N008
+-- **`N003` sagt es fuer ein `device`-Register seit dem 2026-08-14, `format` sagte es nicht.**
+-- Dieselbe Mechanik an zwei Konstrukten, und nur eines war geprueft.
+--
+-- *Die Wortgrenze ist die Kachelung selbst: ein Wort endet, wenn seine Bits vollstaendig
+-- sind. Deshalb ist `version @[7:4]` / `dscp @[7:2]` KEINE Ueberlappung -- das sind zwei
+-- Bytes -- und `a @[7:4]` / `b @[5:2]` eine.*
+module gift::bitlage_ueberlappt {
+
+format Kopf endian big {
+    a : u8 @[7:4],
+    b : u8 @[5:2],
+}
+
+}

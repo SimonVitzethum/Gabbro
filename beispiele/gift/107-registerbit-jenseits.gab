@@ -1,0 +1,14 @@
+-- erwartet: N007
+-- **Die andere Haelfte derselben Regel, am `device`.** `N003` prueft seit dem 2026-08-14, ob
+-- zwei Registerfelder einander ueberschneiden -- dass ein Bit ueberhaupt IN sein Register
+-- passt, prueft bis zum 2026-08-19 niemand. `reg R : u32 fields { A @40, }` ging mit
+-- 0 Fehlern durch.
+module gift::registerbit_jenseits {
+
+opaque type Pa = u64;
+
+device D(basis : Pa) at mmio {
+    reg R : u32 @0x00 class r fields { A @40, }
+}
+
+}

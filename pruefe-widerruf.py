@@ -75,6 +75,14 @@ WIDERRUFE = [
          datum="2026-08-18", grund="`m1.rs`: `ensures_pruefen` -- `M109`/`M110`/`M111`",
          ersatz="die WOHLGEFORMTHEIT wird geprueft (Namen, `result`, Herstellbarkeit); "
                 "was offen bleibt, ist die EINLOESUNG durch den Rumpf"),
+    dict(kennung="WB1",
+         muster=r"«B24»[^\n]{0,80}(?:ist offen|bleibt offen|blockiert|eine Entscheidung, und sie ist die einzige)"
+                r"|[Ww]as blockiert, ist der IP-Kopf"
+                r"|«B24» is (?:an )?open"
+                r"|`format` weigert sich f[uü]r jede davon",
+         datum="2026-08-18", grund="`PFLICHTEN.md`:141/:155 -- entschieden; "
+                                   "`beispiele/24-ip-kopf.gab` und `emit.rs`:1416 -- gebaut",
+         ersatz="entschieden UND gebaut; seit 2026-08-19 auch im Pruefer (`N007`/`N008`)"),
     dict(kennung="WD2",
          muster=r"`opaque` zum Bei[sß]en bringen[^\n]{0,30}\*\*eingeschoben\*\*",
          datum="2026-08-18", grund="`m1.rs`:745, Gift 79 und vier Sprechproben",

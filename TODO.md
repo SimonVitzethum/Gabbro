@@ -536,6 +536,24 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **`C001` sagt „keine Absenkung" und wird fuer FALSCHES mitbenutzt** *(gefunden
+      2026-08-19 an «B24»)*. Eine Bitlage jenseits der Wortbreite ist kein *„das koennen wir
+      noch nicht"*, sondern ein *„das ist falsch"* -- bis heute trug beides dieselbe Kennung.
+      Zwei der drei Faelle sind mit `N007`/`N008` in den Pruefer gezogen; **die Luecke im Wort
+      bleibt bewusst `C001`**, weil erst die Absenkung eine bestimmte Wortgrenze braucht.
+      *Was offen bleibt: wie viele der uebrigen `C001`-Stellen dieselbe Verwechslung tragen.*
+- [ ] **`bool @N` in einem `format` ist ungeprueft, und zwar benannt** *(2026-08-19)*.
+      `bitlage.rs` bucht es als `Unklar`: die Wortbreite steht ohne ganzzahligen Traeger nicht
+      fest -- die 63 in `nx : bool @63` kommt aus dem Wort der Gruppe, nicht aus `bool`.
+      **W10: eine untere Schranke weist weder zurueck noch bestaetigt sie.** *`format Pte`
+      lebt genau davon, und ein Fehlalarm dort waere teurer als das Schweigen.*
+- [ ] **Die Kachelungsluecke (`N009`) ist NICHT gebaut, und der Grund ist der Korpus**
+      *(gemessen 2026-08-19)*. `format Elf64Ph` laesst mit `p_flags : u32 @[2:0]`
+      neunundzwanzig Bits unbenannt; die Regel im Pruefer haette den eigenen Korpus zerlegt.
+      **Der Erzeuger sagt sie ab, und dort ist sie richtig** -- eine Luecke macht das Wort
+      unentscheidbar, sobald jemand Bytes anfassen will. *Offen ist, ob `Elf64Ph` seine
+      uebrigen 29 Bits `reserved` nennen sollte -- dann faellt die Ausnahme mit.*
+
 - [ ] **Ein Waechter, der jeden Pass-Walker gegen die blockfuehrenden Anweisungsarten haelt**
       *(fuenfte Instanz am 2026-08-19)*. Vier blinde Walker an einem Tag (`H007` in
       `observes`, der RCU-Walker in Schleifen, `typ_von_ort` gegen `index_pruefen`, und der
