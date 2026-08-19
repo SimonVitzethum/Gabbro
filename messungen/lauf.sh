@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# **BEIDE Seiten in DERSELBEN Uebersetzungseinheit** (berichtigt 2026-08-20).
+#
+# Der erste Aufbau zog Gabbros C per `#include` in den Treiber und uebersetzte die
+# Handschrift als eigene Einheit. Damit war die eine Seite inlinebar und die andere nicht --
+# **das misst die Bauart, nicht die Sprache**, und es bevorteilte systematisch die eigene.
+# Aufgefallen ist es am `accumulates`-Lauf, wo Gabbro 3,5-mal schneller aussah.
+#
 # **Die Vergleichsmessung, die P5s Tor verlangt:** „erzeugt <= Handschrift + Rauschen".
 #
 # Zwei Lasten, je dieselbe Rechnung auf beiden Seiten -- und die GLEICHHEIT der Ergebnisse
@@ -16,10 +23,18 @@ set -euo pipefail
 W="$(cd "$(dirname "$0")" && pwd)"
 command -v cc > /dev/null || { echo "KEIN CC -- nichts gemessen"; exit 1; }
 echo "== IP-Kopf: Bitfelder, Byteordnung, 20 000 Koepfe x 2 000 Runden =="
-cc -std=c11 -O2 -Wall -Wextra -I"$W" -o "$W/.ip" "$W/treiber-ipkopf.c" "$W/hand-ipkopf.c"
+cc -std=c11 -O2 -Wall -Wextra -I"$W" -o "$W/.ip" "$W/treiber-ipkopf.c"
 "$W/.ip"
 echo
 echo "== Tabelle: 4 096 Plaetze, Index aus einem undurchsichtigen Feld =="
-cc -std=c11 -O2 -Wall -Wextra -I"$W" -o "$W/.tab" "$W/treiber-tabelle.c" "$W/hand-tabelle.c"
+cc -std=c11 -O2 -Wall -Wextra -I"$W" -o "$W/.tab" "$W/treiber-tabelle.c"
 "$W/.tab"
-rm -f "$W/.ip" "$W/.tab"
+echo
+echo "== narrow: eine GEPRUEFTE Schranke gegen gar keine =="
+cc -std=c11 -O2 -Wall -Wextra -I"$W" -o "$W/.nar" "$W/treiber-narrow.c"
+"$W/.nar"
+echo
+echo "== accumulates min: das KOMPLEMENT gegen ein vorbelegtes Feld =="
+cc -std=c11 -O2 -Wall -Wextra -I"$W" -o "$W/.akk" "$W/treiber-akku.c"
+"$W/.akk"
+rm -f "$W/.ip" "$W/.tab" "$W/.nar" "$W/.akk"

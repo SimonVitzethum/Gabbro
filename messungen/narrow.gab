@@ -1,0 +1,21 @@
+-- **Die Klasse, in der Gabbro plausibel VERLIERT:** eine geprüfte Schranke.
+--
+-- `narrow` ist genau ein Vergleich mit benanntem Ausgang -- und die Handschrift schreibt
+-- ihn nicht hin. *Was das kostet, gehoert gemessen und nicht behauptet.*
+module messung::narrow {
+
+const K : u32 = 4096;
+
+static mut hinterlegt : u32 in 0 .. K = 4096;
+
+table Halde count K backed hinterlegt { slot { kopf : u64, } }
+
+impl fn lesen(h : ptr<normal, r> Halde, i : index into Halde) -> u64
+    effects { reads h.slots, reads hinterlegt }
+    costs   <= 4 ops
+{
+    narrow i to 0 ..< hinterlegt else { return 0; }
+    return h.slots[i].kopf;
+}
+
+}

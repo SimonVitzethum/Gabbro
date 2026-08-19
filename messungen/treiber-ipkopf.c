@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "erzeugt-ipkopf.c"
+#include "hand-ipkopf.c"
 
 uint64_t hand_summe(const uint8_t *puffer, uint32_t n, uint32_t schritt);
 

@@ -10016,3 +10016,45 @@ ist — dafür bräuchte es Caprock, und der ist nicht abgesenkt.
 > **P5s Tor lautet „erzeugt ≤ Handschrift + Rauschen".** Bei der Tabelle ist es passiert.
 > Beim IP-Kopf auf einer der beiden Maschinen **nicht** — und bis die Ursache benannt ist,
 > gilt das Tor als **nicht bestanden**.
+
+## 2026-08-20, zweiter Teil — vier Lasten, und **nichts** über 25 %
+
+Die Frage war: *wo verliert Gabbro heute mehr als ein Viertel gegen handgeschriebenes C?*
+Die Antwort, gemessen: **nirgends — aber knapp.**
+
+Alle Zahlen auf `ki-pc-fisch-101` (Ryzen 9 9950X, GCC 13.3, `-O2`), fünf Runden je Last,
+Gleichheit der Ergebnisse vor der Zeit geprüft.
+
+| Last | Gabbro/Hand | was den Unterschied macht |
+|---|---:|---|
+| **`format`-Leser** (IPv4-Kopf) | **1,244** | *nicht gefunden* — zwei Hypothesen widerlegt |
+| `narrow … else` | **1,062** | **eine geprüfte Schranke gegen gar keine** |
+| `accumulates min` | **1,02** | das Komplement statt eines vorbelegten Feldes |
+| Tabellenzugriff | **0,99** | `restrict` + `pure`, die die Handschrift nicht hat |
+
+**Der `format`-Leser ist die einzige Stelle, die nennenswert verliert** — und mit 24,4 % steht
+er *unter* der Schwelle, nach der gefragt war. Auf der anderen Konfiguration (i7-13650HX,
+GCC 16.2) steht dieselbe Last bei **1,02**. *Eine Maschine ist keine Aussage über die
+Sprache, und dieselbe Last auf zwei Maschinen ist zwei Aussagen.*
+
+### Zwei Strohmänner an einem Tag, beide von mir
+
+**Der Aufbau war zweimal unfair, und beide Male zu meinen Gunsten.**
+
+1. Die Handschrift für den IP-Kopf kopierte jeden Kopf mit `memcpy` → Gabbro sah **3,5-mal
+   schneller** aus. Behoben: das `struct` wird überlagert, wie Linux es tut.
+2. **Gabbros C wurde per `#include` in den Treiber gezogen, die Handschrift als eigene
+   Übersetzungseinheit gebaut** — die eine Seite inlinebar, die andere nicht. *Das misst die
+   Bauart, nicht die Sprache.* Aufgefallen am `accumulates`-Lauf, wo Gabbro wieder 3,5-mal
+   schneller aussah; nach der Berichtigung steht er bei **1,02**, und `narrow` stieg von
+   1,034 auf **1,062**.
+
+> **Beide Male war das Erkennungszeichen dasselbe: die eigene Seite gewann zu deutlich.**
+> R11 sagt es für Proben — *eine Messung, die auf Anhieb das erhoffte Ergebnis liefert, ist
+> verdächtig*, und bei einer Vergleichsmessung heisst „erhofft" **haushoch gewinnen**.
+
+### Was damit gesagt ist und was nicht
+
+Gesagt ist: **vier Lasten, keine über 25 %, drei unter 7 %.** Nicht gesagt ist irgendetwas
+über einen Kern — dafür bräuchte es Caprock, und der ist nicht abgesenkt (17 von 33
+Beispielen). *Vier Lasten sind keine Sprache.*
