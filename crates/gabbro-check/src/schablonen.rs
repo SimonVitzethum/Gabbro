@@ -171,8 +171,13 @@ pub const SCHABLONEN: &[Schablone] = &[
         // *Die Angabe, die C wirklich fehlt, ist die andere: ZWEI Zeiger desselben Typs, und
         // die verlangt die `own`-Entscheidung.*
         pflicht: "UNTER DEN HYPOTHESEN H1 (der Rahmen ist vollstaendig -- `E008` ueber den                   ORT, `E010` fuer das Lesen) und H2 (keine andere Wurzel trifft denselben                   Ort): jeder Zugriff des Rumpfes auf das Objekt hinter `p` laeuft ueber `p`,                   also gilt die C11-6.7.3.1-Bedingung -- **maschinell geprueft**                   (`restrict_gerechtfertigt`). H2a weist der Pruefer syntaktisch nach                   (hoechstens EIN Zeigerparameter je Traegertyp); H2b haelt die SPRACHE: ohne                   `cast` (G9) und ohne Adressoperator laesst sich ein Zeiger auf eine globale                   Tabelle nicht bilden. **NICHT bewiesen ist, dass `own` Exklusivitaet                   bedeutet** -- das ist eine Sprachentscheidung, und sie ist genau die, die                   H2a fuer zwei Zeiger desselben Typs liefern wuerde.",
-        stand: Stand::Getragen,
-        voraussetzungen: &[],
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "H1 -- der Rahmen ist VOLLSTAENDIG: jeder Zugriff des Rumpfes hat eine Wurzel aus der deklarierten Menge", durch: Some("`E008` (kompositional ueber die Huelle, seit 2026-08-19 ueber den ORT und nicht die ART) und `E010` fuer das Lesen"), braeuchte: None },
+            Voraussetzung { was: "H2a -- kein zweiter Zeigerparameter desselben Traegertyps", durch: Some("`emit::darf_restrict`, syntaktisch ueber die Signatur; Mutation `restrict-auch-bei-zwei-zeigern`"), braeuchte: None },
+            Voraussetzung { was: "H2b -- kein globaler Traeger desselben Typs ist erreichbar", durch: Some("die SPRACHE: kein `cast` (G9), kein Adressoperator -- ein Zeiger auf eine globale Tabelle laesst sich nicht bilden; `darf_restrict` prueft die Wirkungsliste zusaetzlich"), braeuchte: None },
+            Voraussetzung { was: "ZWEI `own`-Zeiger desselben Typs zeigen auf Verschiedenes -- das waere der Fall mit 2,85", durch: None, braeuchte: Some("die `own`-ENTSCHEIDUNG: `own` als Freigabeoperation (der Rufer gibt ab und behaelt nichts) traegt `restrict`, `own` als Signaturvermerk nicht") },
+        ],
         fundstelle: "beweise/Restrict_Alleinzugriff.thy; MESSUNGEN.md «OPT1» (2,85 gegen                      1,00); PLAN.md «OPT»",
     },
     Schablone {

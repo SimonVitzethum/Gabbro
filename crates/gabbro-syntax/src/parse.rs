@@ -332,6 +332,30 @@ impl<'a> Parser<'a> {
     /// claim "Am Fuss jedes EL0-Stacks bleibt ein Achtel unberuehrt,"
     ///       "und tiefste Kette plus IRQ-Handler passen zusammen in die Groesse."
     /// ```
+    /// **EINE Zeichenkette, ohne die Nachbarn** — für `asm`-Befehlszeilen.
+    ///
+    /// `erwarte_text` fügt benachbarte Literale mit einem Leerzeichen zusammen; das ist für
+    /// mehrzeilige Prosa in `claim`/`assume` richtig und für Assembler **falsch**: aus
+    /// `"mov $1, %%eax"` und `"syscall"` würde `mov $1, %%eax syscall`, und das ist kein
+    /// Befehl mehr. *Gemessen 2026-08-20 am ersten Systemaufruf, den jemand schreiben wollte.*
+    fn erwarte_text_einzeln(&mut self) -> Erg<Textliteral> {
+        let t = self.blick();
+        if t.art == Art::Text {
+            self.pos += 1;
+            Ok(Textliteral {
+                text: t.text(self.quelle).to_string(),
+                span: t.span,
+            })
+        } else {
+            self.absage(Absage::fehler(
+                "P005",
+                t.span,
+                "Zeichenkette erwartet".to_string(),
+            ));
+            Err(Abbruch)
+        }
+    }
+
     fn erwarte_text(&mut self) -> Erg<Textliteral> {
         let t = self.blick();
         if t.art == Art::Text {
@@ -1109,7 +1133,7 @@ impl<'a> Parser<'a> {
         self.erwarte_z(Z::GeschweiftAuf)?;
         let mut zeilen = Vec::new();
         while self.blick().art == Art::Text {
-            zeilen.push(self.erwarte_text()?);
+            zeilen.push(self.erwarte_text_einzeln()?);
         }
         let mut ein = Vec::new();
         let mut aus = Vec::new();
@@ -1146,7 +1170,16 @@ impl<'a> Parser<'a> {
         self.erwarte_z(Z::GeschweiftAuf)?;
         let mut aus = Vec::new();
         while !self.ist_z(Z::GeschweiftZu) {
-            let n = self.erwarte_ident()?;
+            // **`result` ist der Name des Rueckgabewerts** und ein Schluesselwort -- er muss
+            // hier durch, sonst kann ein `asm`-Rumpf kein Ergebnis liefern. *Ein
+            // Systemaufruf, dessen Rueckgabe man nicht lesen kann, ist ein halber.*
+            let n = if self.ist_kw(Kw::Result) {
+                let t = self.blick();
+                self.vor();
+                Ident { text: "result".into(), span: t.span }
+            } else {
+                self.erwarte_ident()?
+            };
             self.erwarte_z(Z::Kolon)?;
             let c = self.erwarte_text()?;
             aus.push((n, c));

@@ -1731,3 +1731,39 @@ impl fn setzen(d : ptr<normal, rw> T, i : index into T)
         "ein einziger Zeiger auf diesen Traeger -- restrict:\n{c}"
     );
 }
+
+/// **Ein `asm`-Rumpf liefert sein Ergebnis über `out { result : … }`** (2026-08-20).
+///
+/// Bis dahin weigerte sich der Erzeuger für jeden `asm`-Rumpf mit Rückgabewert, und damit war
+/// ein Systemaufruf nur halb schreibbar: **absetzen ging, die Rückgabe lesen nicht.**
+/// *`result` steht als Wort längst in der Grammatik (`primary`), also brauchte es kein neues.*
+///
+/// Der Test hält auch fest, was daran fast schiefgegangen wäre: `erwarte_text` fügt
+/// benachbarte Zeichenketten mit einem **Leerzeichen** zusammen (richtig für Prosa in
+/// `claim`), und damit wurde aus zwei Befehlszeilen `mov $1, %eax syscall` — kein Befehl mehr.
+#[test]
+fn ein_asm_rumpf_liefert_sein_ergebnis() {
+    let q = r#"
+module m {
+static mut GERAET : u32 = 0;
+impl fn schreiben(fd : u64, puffer : u64, laenge : u64) -> u64
+    effects { writes GERAET } costs <= 1 ops arch x86_64
+    = asm { "mov $1, %eax" "syscall"
+            in  { fd : "D", puffer : "S", laenge : "d" }
+            out { result : "=a" }
+            clobbers { memory } };
+}
+"#;
+    let (baum, mut absagen) = gabbro_syntax::lies("syscall.gab", q);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    assert_eq!(absagen.fehler_zahl(), 0, "der versiegelte Aufruf ist sauber");
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert!(c.contains("uint64_t result;"), "das Ergebnis bekommt eine Stelle:\n{c}");
+    assert!(c.contains("[result] \"=a\" (result)"), "und einen Ausgangsoperanden:\n{c}");
+    assert!(c.contains("    return result;\n"), "und wird zurueckgegeben:\n{c}");
+    // **Zwei Befehlszeilen bleiben ZWEI.**
+    assert!(
+        c.contains("\"mov $1, %eax\\n\"") && c.contains("\"syscall\\n\""),
+        "benachbarte Zeichenketten duerfen hier NICHT zusammenfallen:\n{c}"
+    );
+}

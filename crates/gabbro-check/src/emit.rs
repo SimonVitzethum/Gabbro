@@ -2082,15 +2082,22 @@ fn funktion(
     // nicht liest, also darf der C-Uebersetzer ihn nicht wegen unbenutzten Ergebnisses
     // streichen. *Wer den Text nicht liest, darf ihn auch nicht fuer entbehrlich halten.*
     if let FnRumpf::Asm(a) = &f.rumpf {
-        // **Ein Ergebnis kann diese Fassung noch nicht.** Der Rueckgabewert braeuchte einen
-        // Ausgangsoperanden ohne Namen in der Quelle -- eine Form, die es nicht gibt. `C001`
-        // mit Grund statt einer geratenen Zuordnung.
-        if f.ergebnis.is_some() {
-            weigere(absagen, f.name.span, "`asm` body with a return value");
+        // **Der Rueckgabewert heisst `result`, und er ist ein AUSGANGSOPERAND** (2026-08-20).
+        //
+        // Bis dahin weigerte sich der Erzeuger fuer jeden `asm`-Rumpf mit Ergebnis -- und
+        // damit war ein Systemaufruf nur halb schreibbar: absetzen ging, die Rueckgabe lesen
+        // nicht. *`result` steht als Wort laengst in der Grammatik (`primary`), also braucht
+        // es kein neues.*
+        let hat_ergebnis = f.ergebnis.is_some();
+        if hat_ergebnis && !a.aus.iter().any(|(n, _)| n.text == "result") {
+            weigere(absagen, f.name.span, "`asm` body returns a value but names no `out { result : … }`");
             return;
         }
         let a2 = rumpf_aus;
         a2.push_str(&format!("\n{rueck} {}({liste}) {{\n", f.name.text));
+        if hat_ergebnis {
+            a2.push_str(&format!("    {rueck} result;\n"));
+        }
         a2.push_str("    __asm__ __volatile__(\n");
         for z in &a.zeilen {
             a2.push_str(&format!("        \"{}\\n\"\n", ctext(&z.text)));
@@ -2109,6 +2116,9 @@ fn funktion(
             .map(|z| format!("\"{}\"", ctext(&z.text)))
             .collect();
         a2.push_str(&format!("        : {});\n", zer.join(", ")));
+        if hat_ergebnis {
+            a2.push_str("    return result;\n");
+        }
         a2.push_str("}\n");
         return;
     }

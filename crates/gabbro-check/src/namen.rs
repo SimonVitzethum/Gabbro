@@ -1653,6 +1653,20 @@ fn asm_versiegelt(baum: &Programm, absagen: &mut Absagen) {
             );
         }
         for (n, _) in a.ein.iter().chain(a.aus.iter()) {
+            // **`result` ist der Rueckgabewert** -- gueltig genau dann, wenn es einen gibt.
+            if n.text == "result" {
+                if f.ergebnis.is_none() {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "A004",
+                            n.span,
+                            format!("`{}` names `result` but returns nothing", f.name.text),
+                        )
+                        .mit_notiz("an `asm` operand named `result` needs a return type"),
+                    );
+                }
+                continue;
+            }
             if !f.parameter.iter().any(|p| p.name.text == n.text) {
                 absagen.schiebe(
                     Absage::fehler(

@@ -535,7 +535,10 @@ asmrumpf = "asm" "{" { string }
              [ "in"  "{" asmops "}" ]
              [ "out" "{" asmops "}" ]
              [ "clobbers" "{" identlist "}" ] "}" ;
-asmops   = ident ":" string { "," ident ":" string } ;
+asmops   = asmop { "," asmop } ;
+asmop    = ( ident | "result" ) ":" string ;
+         (* `result` ist der Rueckgabewert -- ein Systemaufruf, dessen Rueckgabe
+            man nicht lesen kann, ist ein halber (2026-08-20). *)
 (* `const fn` -- comptime, das WERTE rechnet, 2026-08-17. Die Linie, an der es haengt:
 
      comptime, das WERTE rechnet   ->  kostet keine Schablone

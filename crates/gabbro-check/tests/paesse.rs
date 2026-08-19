@@ -501,7 +501,8 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
          die LEBENDE Vertrauensbasis -- und das gehoert hierher UND in BEWEIS.md"
     );
     assert_eq!(ungedeckt(), 11);
-    assert_eq!(bewiesen(), 9);
+    // **10 seit dem 2026-08-20** -- `restrict.alleinzugriff` ist in Isabelle und baut.
+    assert_eq!(bewiesen(), 10);
 
     // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
     // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.
@@ -582,8 +583,12 @@ fn die_praemissen_ohne_pass_sind_gezaehlt() {
     // > verdaechtige. *Was verboten bleibt, ist ein Anstieg ohne neuen Beweis.*
     let luft = gabbro_check::schablonen::in_der_luft();
     assert!(
-        luft.len() <= 8,
-        "Praemissen ohne Pass: {} -- die Marke ist 8. Sie faellt durch einen PASS \
+        // **9 seit dem 2026-08-20**, und sie ist genau so gestiegen, wie die Regel es
+        // erlaubt: `restrict.alleinzugriff` benennt die `own`-Entscheidung als offene
+        // Praemisse. *Ein Beweis, der die Zahl der offenen Praemissen erhoeht, hat
+        // gearbeitet.*
+        luft.len() <= 9,
+        "Praemissen ohne Pass: {} -- die Marke ist 9. Sie faellt durch einen PASS \
          und steigt nur durch einen BEWEIS, der eine neue Praemisse benennt:\n{luft:#?}",
         luft.len()
     );
