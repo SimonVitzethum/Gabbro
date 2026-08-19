@@ -541,6 +541,27 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **Das `check`-Konstrukt ist WIRKUNGSLOS -- alle vier versprochenen Fehler fehlen**
+      *(gefunden 2026-08-19 bei der Handpruefung der 37 Klauseleintraege)*.
+      `SYNTAX.md`:979-982 verspricht: `gates` fehlt -> die Pflicht wird nie verbraucht;
+      `can_fail` fehlt -> dito; eine `measures`-Groesse, die der gemessene Pfad SCHREIBT ->
+      Schreibrecht; eine einseitige Schwelle ohne `floor` -> die Groesse hat keinen Bereich.
+      **Keiner davon existiert.** Der Grund ist EINER: die `linear ghost Duty(check)`, aus der
+      sie alle fallen sollen, **wird nirgends erzeugt** -- `Duty` steht in `m2.rs` in einem
+      Kommentar und sonst nirgends. *Drei Klauselzeilen (`gates`, `measures`, `floor`) sagten
+      jeweils nur ihren eigenen kleinen Teil davon.*
+- [ ] **`masks` traegt die UNTERBRECHBARKEIT, und die ist keine der elf Klassen**
+      *(2026-08-19)*. `SPRACHE.md`:275: *„ein Effekt: `masks irqs` bzw. seine Abwesenheit. Ein
+      Handler ist kein Aufruf -- er kann zwischen zwei beliebigen Anweisungen laufen."* Die
+      Zeile stand als TOT mit *„ungelesen"*. **Eine zwoelfte Sorge in einer TOT-Zeile.**
+      *Entweder sie wird eine Klasse, oder es steht dabei, warum nicht.*
+- [ ] **`on_exceeded <reason>` ist ein gemessener Bedarf, den die Sprache nicht hat**
+      *(2026-08-19)*. `FRAGMENTE.md`:902 schreibt `on_exceeded DeviceSilent`. Der Erzeuger:
+      *„a `reason` value would need an error-return convention, and that is not decided."*
+      **`S006` schweigt dort**, weil es „Reason-Variante" nicht von „unbekannter Name"
+      unterscheiden kann (W10) -- *nur der Erzeuger faellt.* Erst die Entscheidung ueber die
+      Fehlerrueckgabe, dann die Regel.
+
 - [ ] **Ein WAECHTER, der die Ausgabe eines Werkzeugs liest, gehoert zu dessen Sprache**
       *(gefunden 2026-08-19 beim Uebersetzen der Berichte)*. Drei haetten es nicht ueberlebt
       und waeren STUMM gruen geblieben: `pruefe-emission.sh` (die Zeugniszeile per `sed`),

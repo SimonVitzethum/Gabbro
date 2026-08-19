@@ -64,6 +64,12 @@ const BENANNT: &[&str] = &[
     // > heute niemand aufgeschrieben hat: nach einem `P001` laufen die Paesse weiter. Was
     // > sie dann melden, kann Rauschen sein.
     "M112", "M113", "M114", "M115",
+    // **`S006`, 2026-08-19: `on_exceeded` muss divergieren.** Die Fundstelle in
+    // `FRAGMENTE.md`:902 schreibt `on_exceeded DeviceSilent` -- eine `reason`-VARIANTE, nicht
+    // eine Funktion. *Der Erzeuger sagt seit jeher, warum das nicht geht:* „a `reason` value
+    // would need an error-return convention, and that is not decided". **Das Fragment hat den
+    // Bedarf vorweggenommen, und die Sprache hat ihn nicht.** Gebucht in `TODO.md`.
+    "S006",
     "K004", "K005", "D001", "D002", "D003", "D004", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet

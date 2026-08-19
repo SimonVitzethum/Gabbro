@@ -18,14 +18,25 @@ use gabbro_syntax::diag::{Absage, Absagen};
 struct Lage<'a> {
     /// Die Namen, die `-> never` oder `diverges` erklaeren.
     div: &'a [String],
+    /// **Alle erklaerten Funktionsnamen.** Ohne sie kann `S006` nicht zwischen *„kehrt
+    /// zurueck"* und *„gibt es hier nicht"* unterscheiden -- und der zweite Fall gehoert dem
+    /// Namenspass.
+    bekannt: &'a [String],
     /// Annahme -> ist sie falsifizierbar?
     annahmen: std::collections::BTreeMap<String, bool>,
 }
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let div = divergierende(baum);
+    let mut bekannt = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        if let ItemArt::Funktion(f) = &i.art {
+            bekannt.push(f.name.text.clone());
+        }
+    });
     let lg = Lage {
         div: &div,
+        bekannt: &bekannt,
         annahmen: crate::annahmen(baum),
     };
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
@@ -101,10 +112,12 @@ fn anweisung(s: &Stmt, marken: &mut Vec<String>, lg: &Lage, absagen: &mut Absage
                 block(&t.rumpf, marken, lg, absagen)
             }
             Schleife::Retry(r) => {
+                ausgang_pruefen(&r.bei_ueberschreitung, lg, absagen);
                 fortschritt_pruefen(r.fortschritt.as_ref(), lg, absagen);
                 mit_marke(r.marke.as_ref(), &r.rumpf, marken, lg, absagen);
             }
             Schleife::Forever(f) => {
+                ausgang_pruefen(&f.bei_ueberschreitung, lg, absagen);
                 fortschritt_pruefen(f.fortschritt.as_ref(), lg, absagen);
                 mit_marke(f.marke.as_ref(), &f.rumpf, marken, lg, absagen);
             }
@@ -386,4 +399,53 @@ fn geschriebene_namen(b: &Block, aus: &mut Vec<String>) {
             _ => {}
         }
     }
+}
+
+/// **`S006` -- `on_exceeded` muss divergieren, und der Pruefer sagte es nicht.**
+///
+/// Gefunden 2026-08-19 bei der Handpruefung der 37 Klauseleintraege. Die Tabelle fuehrte
+/// `bei_ueberschreitung` als ABSENKUNG mit dem Satz *„Der Zweig bei ueberschrittener Schranke
+/// ist Code, keine Zusage."* **Das ist falsch:** es IST eine Zusage, und `emit.rs`:2310 haelt
+/// sie -- *„`on_exceeded` must name a function returning `never`"*.
+///
+/// ```gabbro
+/// retry bounded 8 ops on_exceeded kehrt_zurueck { … }   -- gabbro pruefe: 0 Fehler
+///                                                       -- gabbro emit:   C001
+/// ```
+///
+/// > **Dieselbe Klasse wie «B24» vor dem 2026-08-19:** eine Regel, die nur auf der
+/// > Erzeugerflaeche steht, und die beruehren die meisten Programme nie.
+///
+/// *Warum die Zusage noetig ist:* der Wachhund ist der Ausgang, an dem die Schranke ihre
+/// Wirklichkeit beruehrt. Kehrte er zurueck, liefe die Schleife weiter -- und die Schranke
+/// waere eine Zahl ohne Folge.
+fn ausgang_pruefen(a: &Ident, lg: &Lage, absagen: &mut Absagen) {
+    if lg.div.iter().any(|d| *d == a.text) {
+        return;
+    }
+    // **Ein UNBEKANNTER Name gehoert dem Namenspass, nicht dieser Regel** -- W10.
+    //
+    // *Gefunden an der eigenen Testliste:* `on_exceeded w` in einem Ausschnitt, in dem `w`
+    // nirgends deklariert ist. Die erste Fassung meldete *„names a function that returns"*,
+    // und das war zweimal falsch: der Name nennt keine Funktion, und ob sie zurueckkehrt,
+    // weisz hier niemand. **Was nicht genau gemeldet werden kann, setzt kein Pass durch** --
+    // dieselbe Begruendung, an der Lesart B gestorben ist.
+    if !lg.bekannt.iter().any(|f| *f == a.text) {
+        return;
+    }
+    absagen.schiebe(
+        Absage::fehler(
+            "S006",
+            a.span,
+            format!("`on_exceeded {}` names a function that returns", a.text),
+        )
+        .mit_notiz(
+            "the watchdog is the exit at which the bound touches reality -- if it returned, \
+             the loop would carry on and the bound would be a number without a consequence",
+        )
+        .mit_notiz(
+            "declare it `-> never` or `effects { diverges }`; a `reason` value would need an \
+             error-return convention, and that is not decided",
+        ),
+    );
 }

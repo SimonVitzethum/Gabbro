@@ -121,7 +121,12 @@ ERWARTET = {
     # ist schaerfer: **`SYNTAX.md`:975 sagt nicht, WORAUF der `ident` hinter `expects`
     # zeigt.** Ein `N015` haette die Frage still beantwortet.
     "counterprobe": ("ZUSAGE", "`expects <ident>` -- die Spezifikation sagt nicht, wo dieser Name deklariert wird. Erst die Entscheidung, dann der Pass."),
-    "gates":        ("ZUSAGE", "Welche Tore ein `check` oeffnet; ungelesen."),
+    # **Berichtigt 2026-08-19 bei der Handpruefung.** Der Satz *„ungelesen"* war wahr und zu
+    # duenn: `SYNTAX.md`:979-982 verspricht VIER Uebersetzungsfehler aus dem `check`-Konstrukt
+    # -- `gates` fehlt, `can_fail` fehlt, eine `measures`-Groesse wird vom gemessenen Pfad
+    # geschrieben, eine einseitige Schwelle ohne `floor`. **Keiner davon existiert**, weil die
+    # `linear ghost Duty(check)` nirgends erzeugt wird. *Das ganze Konstrukt ist wirkungslos.*
+    "gates":        ("ZUSAGE", "Der `check` erzeugt keine `Duty` -- damit fehlen alle VIER Uebersetzungsfehler, die SYNTAX.md:979 verspricht."),
     # **`abstieg` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- achter Aufstieg,
     # dritter Posten von «NL.2», und die schaerfste der Liste: an ihm hing die TERMINIERUNG.
     # `S005` prueft die NOTWENDIGE Bedingung -- ein Mass, das weder die Traversierungsvariable
@@ -155,12 +160,16 @@ ERWARTET = {
     "section":      ("ABSENKUNG", "Platzierung -- eine Aussage an den Binder, nicht an den Pruefer."),
     "reserviert":   ("ABSENKUNG", "Reservierte Bits; «B24» laesst den Erzeuger die Kachelung pruefen."),
     "merge":        ("ABSENKUNG", "Die Verknuepfung ist durch den geschlossenen Wortschatz eingegrenzt; `Accumulates_Monoid.thy` deckt die Menge."),
-    "bei_ueberschreitung": ("ABSENKUNG", "Der Zweig bei ueberschrittener Schranke ist Code, keine Zusage."),
+    # **`bei_ueberschreitung` ist am 2026-08-19 AUFGESTIEGEN, und der Satz war FALSCH.**
+    # Er lautete *„der Zweig ist Code, keine Zusage"* -- es IST eine Zusage: `on_exceeded`
+    # muss eine Funktion nennen, die `never` liefert, und `emit.rs`:2310 hielt sie. Der
+    # PRUEFER tat es nicht. `S006` seit heute. *Dieselbe Klasse wie «B24»: eine Regel, die
+    # nur auf der Erzeugerflaeche stand.*
     "claim":        ("ABSENKUNG", "Der Anspruchstext eines `check` -- Prosa, die kein Pass widerlegen kann."),
 
     # -- TOT: das Bauteil ist gelesen und sonst nirgends ----------------------------------
     "oeffentlich":  ("TOT", "`pub`. Keine Datei ausserhalb des Lesers liest es -- Sichtbarkeit wird weder geprueft noch abgesenkt."),
-    "by":           ("TOT", "Der Induktionshinweis. Nichts liest ihn -- die Beweisrichtung, die der Schreiber angibt, verfaellt."),
+    "by":           ("TOT", "Der Induktionshinweis. Nichts liest ihn -- und `Table_Induktion.thy` fuehrt genau ihn als Praemisse OHNE Erzeuger (`je Verkettungsfeld eine Kantenpraemisse`). Die beiden gehoeren zusammen."),
     "regs_in":      ("TOT", "`entry`: der Eintrittsvertrag. KEINE Datei ausserhalb des Lesers nennt `EntryDecl` -- zwoelf Felder, ein Bauteil."),
     "regs_out":     ("TOT", "siehe `regs_in` -- `EntryDecl`."),
     "preserves":    ("TOT", "siehe `regs_in` -- `EntryDecl`."),
@@ -176,9 +185,9 @@ ERWARTET = {
     "blatt":        ("TOT", "siehe `ab` -- `WalkDecl`."),
     "kosten":       ("TOT", "Feld der `invariant`; ungelesen."),
     "laeuft":       ("TOT", "Feld der `invariant`; ungelesen."),
-    "floor":        ("TOT", "Feld des `check`; ungelesen."),
-    "measures":     ("TOT", "Feld des `check`; ungelesen."),
-    "maskiert":     ("TOT", "`masked` an einer Sperre; ungelesen."),
+    "floor":        ("TOT", "Feld des `check`. Ungelesen -- und `SYNTAX.md`:982 verspricht dafuer einen Fehler, den es nicht gibt (siehe `gates`)."),
+    "measures":     ("TOT", "Feld des `check`. Ungelesen -- `SYNTAX.md`:981 verlangt Schreibrecht fuer den gemessenen Pfad, und niemand prueft es (siehe `gates`)."),
+    "maskiert":     ("TOT", "`masks` an einer Sperre. Ungelesen -- und es traegt die UNTERBRECHBARKEIT (`SPRACHE.md`:275), eine Sorge, die in keiner der elf Klempnereiklassen steht."),
     "erschoepfend": ("TOT", "`exhaustive` an einem `reason`; ungelesen."),
     "fehlername":   ("TOT", "Der Name der Fehlerbindung im `let … else`; ungelesen."),
     "rueckgabe":    ("TOT", "Der Ergebnistyp eines `axiom` (G2); ungelesen."),

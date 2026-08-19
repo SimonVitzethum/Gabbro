@@ -1,0 +1,25 @@
+-- erwartet: S006
+-- **Gefunden bei der HANDPRUEFUNG der 37 Klauseleintraege, 2026-08-19.**
+-- Die Tabelle fuehrte `bei_ueberschreitung` als ABSENKUNG mit dem Satz: *„Der Zweig bei
+-- ueberschrittener Schranke ist Code, keine Zusage."* **Das ist falsch:** es IST eine Zusage,
+-- und `emit.rs`:2310 haelt sie -- der Pruefer tat es nicht.
+--
+--     gabbro pruefe   0 Fehler
+--     gabbro emit     C001: `on_exceeded` must name a function returning `never`
+--
+-- *Dieselbe Klasse wie «B24» vor dem 2026-08-19: eine Regel, die nur auf der Erzeugerflaeche
+-- steht, und die beruehren die meisten Programme nie.*
+--
+-- Warum die Zusage noetig ist: der Wachhund ist der Ausgang, an dem die Schranke ihre
+-- Wirklichkeit beruehrt. Kehrte er zurueck, liefe die Schleife weiter -- und die Schranke
+-- waere eine Zahl ohne Folge.
+module gift::on_exceeded_kehrt_zurueck {
+
+extern fn kehrt_zurueck() -> u32 effects { pure } costs <= 1 ops;
+
+impl fn f() -> u32 effects { pure } costs <= 200 ops {
+    retry bounded 8 ops on_exceeded kehrt_zurueck { return 1; }
+    return 0;
+}
+
+}

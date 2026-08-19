@@ -8790,3 +8790,89 @@ Klauseln 40 -> 37      ZUSAGE 7 -> 4
 
 **Vier bleiben**, und drei davon sind Entscheidungen und keine Bauarbeit: `counterprobe` (wo
 wird der Name erklärt?), `gates`, `mirrors`, `obermenge`.
+
+---
+
+# Die Handprüfung der 37 Klauseleinträge — 2026-08-19
+
+**Der Anlass war ein gebuchter Posten:** zweimal an einem Tag hatte die Klauseltabelle mich in
+eine falsche Regel geführt (`leaves`, `counterprobe`). *Wie viele der Zeilen beschreiben ihre
+Klausel falsch?* — **Jede ist eine Regel, die jemand danach bauen könnte.**
+
+Geprüft wurde jeder Eintrag gegen `SYNTAX.md`, `SPRACHE.md` **und den Gegenstand**, nicht gegen
+die Erinnerung.
+
+## Ergebnis: 30 richtig, 7 nicht
+
+| | Eintrag | was falsch war |
+|---|---|---|
+| **falsch** | `bei_ueberschreitung` | *„der Zweig ist Code, keine Zusage"* — **es IST eine Zusage** |
+| **zu dünn** | `gates` · `measures` · `floor` | *„ungelesen"* — der Grund ist größer |
+| **zu dünn** | `masks` | trägt die **Unterbrechbarkeit**, eine zwölfte Sorge |
+| **zu dünn** | `by` | ist genau die Prämisse ohne Erzeuger aus `Table_Induktion.thy` |
+| *(zuvor)* | `counterprobe` | am selben Tag berichtigt |
+
+## Der eine echte Fehler — und er wurde sofort zur Regel
+
+```gabbro
+retry bounded 8 ops on_exceeded kehrt_zurueck { … }
+    gabbro pruefe   0 Fehler
+    gabbro emit     C001: `on_exceeded` must name a function returning `never`
+```
+
+**`emit.rs`:2310 hielt die Zusage seit jeher, der Prüfer nicht.** *Dieselbe Klasse wie «B24» vor
+dem 2026-08-19: eine Regel, die nur auf der Erzeugerfläche steht — und die berühren die meisten
+Programme nie.* **`S006`** seit heute, Korpuspreis null.
+
+> *Warum die Zusage nötig ist:* der Wachhund ist der Ausgang, an dem die Schranke ihre
+> **Wirklichkeit** berührt. Kehrte er zurück, liefe die Schleife weiter — und die Schranke wäre
+> eine Zahl ohne Folge.
+
+**Und die Regel schweigt bei einem UNBEKANNTEN Namen** (W10). Gefunden an der eigenen
+Testliste: `on_exceeded w` in einem Ausschnitt ohne `w`. Die erste Fassung meldete *„names a
+function that returns"* — **zweimal falsch**: der Name nennt keine Funktion, und ob sie
+zurückkehrt, weiß dort niemand. *Was nicht genau gemeldet werden kann, setzt kein Pass durch.*
+
+## Der größte Fund ist keiner der sieben Sätze, sondern was hinter dreien steht
+
+**`SYNTAX.md`:979-982 verspricht VIER Übersetzungsfehler aus dem `check`-Konstrukt:**
+
+```
+gates fehlt                                 -> die Pflicht wird nie verbraucht
+can_fail fehlt                              -> dito
+eine `measures`-Groesse, die der Pfad SCHREIBT -> Schreibrecht
+eine einseitige Schwelle ohne `floor`       -> die Groesse hat keinen Bereich
+```
+
+**Gemessen: keiner davon existiert.** Ein `check`, dessen `can_fail` die gemessene Größe
+schreibt und dessen `gates` ins Leere nennt, geht mit **0 Fehlern** durch.
+
+> **Der Grund ist einer, nicht vier:** die `linear ghost Duty(check)`, aus der sie alle fallen
+> sollen, **wird nirgends erzeugt.** `Duty` steht in `m2.rs` in einem Kommentar und sonst
+> nirgends im Prüfer. *Das ganze Konstrukt ist wirkungslos, und drei Klauselzeilen sagten
+> jeweils nur ihren eigenen kleinen Teil davon.*
+
+## Zwei Sätze, die etwas Größeres verdeckten
+
+**`masks`** — die Zeile lautete *„an einer Sperre; ungelesen."* `SPRACHE.md`:275 gibt ihm eine
+Aufgabe: **Unterbrechbarkeit**, *„ein Effekt: `masks irqs` bzw. seine Abwesenheit"*. **Das ist
+keine der elf Klempnereiklassen.** Eine zwölfte Sorge, die in einer TOT-Zeile steckt.
+
+**`by`** — *„Nichts liest ihn."* Wahr — und `Table_Induktion.thy` führt **genau ihn** als
+Prämisse ohne Erzeuger: *„je Verkettungsfeld eine Kantenprämisse — der Erzeuger schreibt ZWEI,
+nicht eine."* **Die beiden gehören zusammen, und keine der zwei Listen sagte es.**
+
+## Und ein Fragmentfund, den W10 wieder verstummen ließ
+
+`FRAGMENTE.md`:902 schreibt `on_exceeded DeviceSilent` — eine **`reason`-Variante**, keine
+Funktion. Der Erzeuger sagt seit jeher, warum das nicht geht: *„a `reason` value would need an
+error-return convention, and that is not decided."* **Das Fragment hat den Bedarf
+vorweggenommen, und die Sprache hat ihn nicht.**
+
+`S006` schweigt dort, weil `DeviceSilent` keine bekannte Funktion ist — *die Regel kann
+„Reason-Variante" nicht von „unbekannter Name" unterscheiden.* **Der Emitter refüsiert weiter.**
+
+```
+Klauseln 37 -> 36      ZUSAGE 4      141 Kennungen · 124 Gifte (0 ohne Biss)
+126 Tests · neun Waechter gruen
+```
