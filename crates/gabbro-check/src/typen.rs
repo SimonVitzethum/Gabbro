@@ -534,7 +534,7 @@ pub fn multipliziere(a: &IntBereich, b: &IntBereich) -> Rechnung {
         };
     };
     let ecken = [a.min * b.min, a.min * b.max, a.max * b.min, a.max * b.max];
-    let min = ecken.iter().copied().min().unwrap_or(0);
+    let min = ecken.iter().copied().min().unwrap_or(1);
     let max = ecken.iter().copied().max().unwrap_or(0);
     ergebnis(breite, vz, min, max)
 }

@@ -15,7 +15,8 @@ beinahe "15 von 15" berichtet, waehrend die Testdatei gar nicht uebersetzte: `ca
 liefert dann denselben Rueckgabewert wie bei einer gefangenen Mutation. Ein Beleg, der nicht
 laeuft, ist keiner (WERKZEUGKASTEN.md W1).
 """
-import pathlib, subprocess, re
+import hashlib
+import pathlib, subprocess, re, sys
 W = pathlib.Path("/home/simon/Dokumente/Gabbro"); C = W/"crates/gabbro-check/src"
 # (Datei, alte Zeile aus Lauf 1, Verdrehung) -- ueber den INHALT gesucht, nicht ueber die Nummer.
 LUECKEN = [
@@ -70,6 +71,25 @@ def lauf(d, alt, neu):
 # gefangen, sobald der Baum aus einem ANDEREN Grund rot ist -- genau so kam am 2026-08-19
 # ein "14 von 14" zustande, waehrend drei neue Giftdateien den Lauf rot faerbten und mit den
 # Luecken nichts zu tun hatten. *Ein Nullauf, der schon faellt, misst nichts mehr.*
+def hashes():
+    """Der Zustand aller Quellen, die dieses Werkzeug anfassen darf."""
+    return {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(C.glob("*.rs"))}
+
+
+# **Ein sauberer Baum ist die Vorbedingung, und der Nachweis der Wiederherstellung die
+# Nachbedingung** (2026-08-19). Dieses Werkzeug SCHREIBT in Quellen. `mutiere-pruefer.py`
+# traegt beide Riegel seit jeher; hier fehlten sie -- und am 2026-08-19 stand `typen.rs`
+# hinterher veraendert da, ohne dass sich sagen liess, welcher Lauf es war.
+#
+# *Ein Werkzeug, das Quellen veraendert und die Rueckgabe nicht nachweist, verschiebt seine
+# eigenen Fehler in die Arbeit des naechsten.*
+_status = subprocess.run(["git", "status", "--porcelain", "crates/"], cwd=W,
+                         capture_output=True, text=True)
+if _status.stdout.strip():
+    print("  crates/ ist nicht sauber -- erst committen. Dieses Werkzeug schreibt in Quellen.")
+    raise SystemExit(2)
+VORHER = hashes()
+
 print("== Sprechprobe ==")
 _r = subprocess.run(["cargo", "test", "--quiet"], cwd=W, capture_output=True)
 if _r.returncode != 0:
@@ -111,7 +131,16 @@ if null:
 # **Der Rueckgabewert, seit 2026-08-19.** Bis dahin endete diese Datei mit einer ZAHL und
 # `rc = 0` -- ein Bericht, den ein Waechterlauf als "gruen" las, ganz gleich was drinstand.
 # *Dieselbe Klasse wie die vier Klauseln ohne Leser.*
+# **Der Nachweis, byteweise.** Kein "war wohl in Ordnung": jede Datei, die dieses Werkzeug
+# anfassen darf, muss hinterher dieselbe sein.
+NACHHER = hashes()
+_verschoben = [n for n in VORHER if VORHER[n] != NACHHER.get(n)]
+if _verschoben:
+    print(f"\n== WIEDERHERSTELLUNG FEHLGESCHLAGEN: {', '.join(_verschoben)} ==")
+    print("   Diese Dateien stehen veraendert da. Ein Werkzeug, das Quellen anfasst und die")
+    print("   Rueckgabe nicht nachweist, verschiebt seine Fehler in die Arbeit des naechsten.")
+    raise SystemExit(2)
 if offen or weg:
     print("\n== LUECKEN: FEHLER ==")
     raise SystemExit(1)
-print("== LUECKEN: ALL PASS ==")
+print("== LUECKEN: ALL PASS -- und alle Quellen byteidentisch zurueck ==")
