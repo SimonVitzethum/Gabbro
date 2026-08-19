@@ -535,6 +535,21 @@ Zusagen ungeprüft weiterreicht, macht aus elf geprüften Klassen elf behauptete
       `gabbro zeugnis` schreibt heute für Menschen, was die Übersetzung trägt; die ABI ist
       dieselbe Aussage in einer Form, die der Prüfer liest. Danach verschwinden `E009` und
       `K003` an der Dateigrenze — **weil geprüft wird, nicht weil geschwiegen wird.**
+- [ ] **Ein unbekannter TYPNAME fällt nirgends** *(gemessen 2026-08-20, beim Merge)*.
+      `pub extern fn f(x : GibtsNicht)` gibt **null Fehler**; `table T count FEHLT { slot { a :
+      AuchNicht, } }` ebenso — weder der Typ noch die `count`-Konstante wird aufgelöst.
+      **Gefunden nicht durch Nachdenken, sondern weil `gabbro abi` eine Schnittstelle schrieb,
+      die zwei Namen nannte und keinen erklärte** — und die Selbstprobe schwieg dazu.
+      *Ein Namenspass, der unbekannte Namen durchlässt, ist an einer Bibliotheksgrenze mehr
+      als eine Lücke: dort kommt JEDER Name von woanders.* Die mechanische Hälfte ist zu
+      (die Schnittstelle sammelt bis zum Fixpunkt), die Regel fehlt. **Vor ABI3**, denn die
+      Vereinigung zweier Zeugnisse ruht darauf, dass beide Seiten dieselben Namen meinen.
+- [ ] **Darf eine `pub`-Signatur einen privaten Namen nennen?** Heute ja — und `gabbro abi`
+      zieht den privaten Typ dann in die Schnittstelle nach, weil die Alternative eine
+      Schnittstelle mit toten Namen wäre. **Das ist die ehrliche Folge einer Entscheidung,
+      die niemand getroffen hat.** Die andere Lesart wäre eine Absage im Namenspass (wie
+      Rusts `private_interfaces`). *Eine Sprachentscheidung, keine Bauarbeit* — sie steht
+      hier, damit die Nachziehschleife nicht als Absicht durchgeht.
 - [ ] **ABI2 — ORDNUNG statt RANG, und das ist eine SPRACHÄNDERUNG.** `lock … rank 0` ist
       eine absolute Zahl; zwei unabhängig geschriebene Bibliotheken vergeben beide `rank 0`.
       **Absolute Zahlen komponieren nicht.** Die ABI trägt `KAPPEN vor OBJEKTE`, und beim

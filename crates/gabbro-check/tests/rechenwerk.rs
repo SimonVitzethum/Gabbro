@@ -2152,3 +2152,81 @@ impl fn setze(p : Pa) effects { writes v.R } costs <= 8 ops
     assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
     assert!(c.contains("V v = (V){ (volatile uint8_t *)(uintptr_t)p };"), "{c}");
 }
+
+/// **Eine Schnittstelle ist ein FIXPUNKT, und sie nennt keinen Namen, den sie nicht erklärt**
+/// («ABI1», nachgezogen 2026-08-20 beim Merge zweier paralleler Bäume).
+///
+/// `table` und `atomic` haben kein `pub` — die Grammatik kennt keins — und standen darum als
+/// einzige Item-Arten **unbedingt** im `.gabi`. Gemessen an `beispiele/34-markierter-wert.gab`,
+/// wo *nichts* öffentlich ist: die Schnittstelle trug die Tabelle samt `count NANFRAGEN` und
+/// `was : Nachricht` hinaus — zwei Namen, die sie selbst nicht erklärt.
+///
+/// > *Eine Schnittstelle, die einen Namen nennt und nicht erklärt, ist keine.*
+///
+/// Und ein Durchgang reicht nicht: `T` kommt mit, weil ein `index into T` es nennt — dann
+/// nennt `T` seinerseits `count N`, und `N` muss ebenfalls mit.
+///
+/// **Warum das hier steht und nicht nur in einer Wächterschleife:** `mutiere-pruefer.py`
+/// fährt `cargo test`. Eine Regel, deren einzige Probe eine Shell-Schleife ist, kann keine
+/// Mutation fangen — dieselbe Lehre wie beim Wirkungsattribut.
+#[test]
+fn eine_schnittstelle_erklaert_jeden_namen_den_sie_nennt() {
+    let q = r#"
+module bib {
+const N : u32 = 8;
+table T count N { slot { a : u32, } }
+atomic zaehler : u32;
+table Ungenannt count N { slot { b : u32, } }
+pub impl fn tu(i : index into T) -> u32 effects { reads T, writes zaehler } costs <= 3 ops { return 1; }
+}
+"#;
+    let (baum, _) = gabbro_syntax::lies("bib.gab", q);
+    let gabi = gabbro_check::abi::schreibe(&baum, q);
+
+    assert!(gabi.contains("table T count N"), "der genannte Traeger kommt mit:\n{gabi}");
+    assert!(gabi.contains("atomic zaehler"), "das genannte Atomic kommt mit:\n{gabi}");
+    // Der Fixpunkt: `N` nennt niemand direkt -- es steht im `count` des Traegers, der
+    // mitkommt. Ein einzelner Durchgang laesst es zurueck.
+    assert!(gabi.contains("const N"), "und die Konstante, die der Traeger braucht:\n{gabi}");
+    assert!(
+        !gabi.contains("Ungenannt"),
+        "was die exportierte Flaeche NICHT nennt, bleibt daheim:\n{gabi}"
+    );
+
+    // **Und die Schnittstelle liest sich selbst.** Das ist die Aussage, auf der alles ruht:
+    // ein `.gabi` ist gueltiger Gabbro-Quelltext, kein zweites Format.
+    let (b2, mut a2) = gabbro_syntax::lies("bib.gabi", &gabi);
+    gabbro_check::pruefe(&b2, &mut a2);
+    assert_eq!(a2.fehler_zahl(), 0, "das eigene .gabi prueft sich:\n{}", a2.zeige(&gabi));
+}
+
+/// **Ein `extern fn` bekommt kein zweites `extern`, und ein `use` gehört in die Schnittstelle**
+/// (gefunden 2026-08-20 an `beispiele/29-undurchsichtig.gab`, dem einzigen Beispiel mit *zwei*
+/// Modulen).
+///
+/// Beides in einem Test, weil es derselbe Befund war: das doppelte `extern` gab `P001` und
+/// **deckte damit zu**, dass der zweite Modulblock `Pa` nannte, ohne es zu importieren. *Ein
+/// Parserfehler, der einen Namensfehler verbirgt* — die Reihenfolge der Pässe als Versteck.
+#[test]
+fn ein_extern_bleibt_einfach_und_ein_use_geht_mit() {
+    let q = r#"
+module a {
+pub opaque type Pa = u64;
+pub impl fn mach() -> Pa effects { pure } costs <= 2 ops { return Pa(1); }
+}
+module b {
+use a::Pa;
+extern fn mach() -> Pa effects { pure } costs <= 2 ops;
+pub impl fn nutze() -> Pa effects { pure } costs <= 4 ops { return mach(); }
+}
+"#;
+    let (baum, _) = gabbro_syntax::lies("zwei.gab", q);
+    let gabi = gabbro_check::abi::schreibe(&baum, q);
+
+    assert!(!gabi.contains("extern extern"), "kein zweites `extern`:\n{gabi}");
+    assert!(gabi.contains("use a::Pa;"), "der Import gehoert in die Schnittstelle:\n{gabi}");
+
+    let (b2, mut a2) = gabbro_syntax::lies("zwei.gabi", &gabi);
+    gabbro_check::pruefe(&b2, &mut a2);
+    assert_eq!(a2.fehler_zahl(), 0, "zwei Module, eine Schnittstelle:\n{}", a2.zeige(&gabi));
+}

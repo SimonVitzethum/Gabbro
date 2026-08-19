@@ -10443,3 +10443,166 @@ Fünf sind Bauarbeit, und jede hat eine Adresse.
 180 von 180 Mutationen · 180/180 Anker
 21 Weigerungen (war 46), alle C001, keine stille
 ```
+
+---
+
+# 2026-08-20 — Der Merge zweier paralleler Bäume, und was git NICHT gemeldet hat
+
+Zwei Arbeitsbäume, derselbe Tag, je rund 2500 bewegte Zeilen: «OPT0–OPT3» und «ABI0/ABI1»
+im Hauptbaum, «C1»–«C5» im Baum des Agenten. Acht Dateien wurden von beiden Seiten
+angefasst.
+
+## Die fünf gemeldeten Konflikte — und einer davon ist ein Befund
+
+| Datei | Art | Auflösung |
+|---|---|---|
+| `pruefe-luecken.py` | beide Seiten hatten **recht** | `import hashlib`/`sys` von hier, Wurzel aus `__file__` von dort |
+| `README.md` | fünf Kennzahlen | keine geraten — `pruefe-todo.py` hat hinterher jede gegen den Gegenstand gehalten |
+| `rechenwerk.rs` | reines Anhängen | beide Sätze, 48 Tests |
+| `MESSUNGEN.md` | reines Anhängen | beide, mit einer Brücke: die Abschnitte entstanden **parallel** |
+| `pruefe-emission.sh` | **ein zweites Register** | siehe unten |
+
+**Beide Zweige hatten Stufe 1b unabhängig voneinander gebaut** — zweimal erzeugen, Byte
+gegen Byte, mit fast derselben Begründung («Z2» hier, «C, Die Sprechprobe» dort). Das ist
+`WERKZEUGKASTEN.md` W7 in Reinform: *zwei Register über dieselbe Sache*, und keiner der
+beiden Bäume konnte es sehen. **Erst der Merge hat es gezeigt.**
+
+Genommen wurde die Fassung mit den besseren Diagnosen. Meine hatte beide Fehlerpfade in
+eine Bedingung gezogen (`! cargo run … || ! cmp -s …`) — ein *gescheiterter* zweiter Lauf
+hätte damit „zwei verschiedene Dateien" gemeldet. Das ist eine falsche Aussage über einen
+echten Fehler.
+
+## Die drei Kollisionen, die git NICHT gemeldet hat
+
+Weil die **Dateinamen** verschieden waren, ging beides stumm durch:
+
+```
+beispiele/34-asm.gab                    beispiele/34-markierter-wert.gab
+beispiele/gift/170-ruf-im-until.gab     beispiele/gift/170-sonderwert-als-index.gab
+beispiele/gift/171-asm-ohne-pflichten.gab   beispiele/gift/171-option-als-index.gab
+beispiele/gift/172-asm-operand-…gab     beispiele/gift/172-some-binder-ohne-schranke.gab
+```
+
+**Die Nummer ist der Index des Korpus.** `MESSUNGEN.md` schreibt an zwei Stellen
+„`beispiele/gift/170` fällt an `M101`" — mit zwei Dateien unter der 170 zeigt dieser Satz
+auf nichts Bestimmtes mehr. Gewichen sind meine, weil auf die des Agenten **namentlich**
+verwiesen wird und auf meine nur über den Verzeichnislauf: `36-asm`, `gift/173`, `174`,
+`175`.
+
+> *Ein Merge-Werkzeug prüft Inhalte, keine Ordnungen. Wo die Ordnung im Dateinamen steckt,
+> prüft sie niemand.*
+
+## Und einer, der länger dalag
+
+`__pycache__/pruefe-todo.cpython-314.pyc` war **versioniert** — ein Kompilat, das jeder
+Wächterlauf neu schreibt und das darum in jedem Diff stand. Ausgetragen, `.gitignore`
+ergänzt. Nicht vom Merge verursacht, aber vom Merge sichtbar gemacht: der Zweig des
+Agenten hatte es „geändert", ohne es anzufassen.
+
+## Die stumme Zusammenführung, und ob sie trägt
+
+`emit.rs` — 913 Zeilen von dort, 239 von hier — hat git **ohne Konflikt** zusammengeführt.
+Genau dort hätte ein Schaden gewohnt, den kein Marker anzeigt. Er tut es nicht:
+
+```
+cargo test                    142 gruen, ohne RUST_MIN_STACK
+pruefe-emission.sh            17 Uebersetzungseinheiten, alle acht Stufen
+mutiere-pruefer.py            186 von 186 gefangen (100 %), 186/186 Anker
+pruefe-luecken.py             13 von 13 zu, alle Quellen byteidentisch zurueck
+isabelle build -c -D .        13 Theorien FRISCH gebaut auf fisch, 5 s
+13 Waechter                   gruen
+```
+
+**Eine Klammer fehlte.** Beide Seiten teilten sich das schließende `}` des jeweils letzten
+Tests; die Verkettung ließ es einmal stehen statt zweimal. Der Übersetzer hat es gesagt —
+aber *ein Merge, der nur textuell aufgeht, ist nicht fertig*, und die drei
+Nummernkollisionen hätte kein Übersetzer gemeldet.
+
+## Zwei Zahlen, die der Merge bewegt hat
+
+`pruefe-todo.py` hielt die Kennzahlentafel gegen den Gegenstand und fand genau zwei:
+34 → **36** saubere Beispiele, 172 → **175** Giftdateien. Alle übrigen (171 Absagen,
+143 EBNF-Regeln, 211 Terminale, 21/10 Schablonen, 13 Wächter) waren im Hauptbaum bereits
+richtig und im Zweig des Agenten veraltet — er hatte von der gemeinsamen Basis abgezweigt.
+
+**Was das NICHT heißt:** dass die beiden Arbeiten *inhaltlich* zueinander passen. Geprüft
+ist, dass jede Zusage beider Seiten weiter hält. Ob «C» und «ABI» dieselbe Absenkung
+meinen — ob ein `.gabi` die Formen aus «C1»–«C5» überhaupt tragen kann — ist nicht
+gemessen und steht als eigener Punkt.
+
+## Nachtrag am selben Tag: die Merge-Probe fand drei Löcher in der eigenen ABI
+
+Der letzte Satz oben — *„ob ein `.gabi` die Formen aus «C1»–«C5» überhaupt tragen kann, ist
+nicht gemessen"* — stand keine zehn Minuten. Er ließ sich messen, und die Antwort war
+dreimal nein.
+
+**Der Anlass war der Merge.** «ABI0/ABI1» wurde gegen einen Korpus von 34 Beispielen
+gebaut; der Zweig des Agenten brachte zwei neue mit, und eines davon (`34-markierter-wert`)
+ist das erste, in dem **nichts `pub`** ist.
+
+### 1. `table` und `atomic` standen unbedingt im `.gabi`
+
+Sie haben kein `pub` — *die Grammatik kennt keins* — und waren darum die einzigen
+Item-Arten ohne Sichtbarkeitsprüfung. Ergebnis an `34-markierter-wert.gab`:
+
+```
+module beispiel::markierter_wert {
+table Anfragen count NANFRAGEN {   ← NANFRAGEN wird nicht erklärt
+    slot { benutzt : bool, was : Nachricht }   ← Nachricht wird nicht erklärt
+}
+}
+```
+
+**Eine Schnittstelle, die einen Namen nennt und nicht erklärt, ist keine.** Die Bedingung
+ist jetzt nicht `pub`, sondern *genannt*: ein `writes T` oder ein `index into T` in einem
+exportierten Kopf braucht `T`, sonst hätte `E010` beziehungsweise die Indexschranke recht.
+Was niemand nennt, bleibt daheim.
+
+Und **ein Durchgang reicht nicht**: `T` kommt mit, weil ein `index into T` es nennt — dann
+nennt `T` seinerseits `count N`. Gesammelt wird bis zum Stillstand.
+
+### 2. `extern extern fn`
+
+`kopf_von` schnitt `pub`/`impl`/`raw`/`prim`/`divergent`/`const` weg und setzte `extern`
+davor — bei einer Deklaration, die **schon** `extern` war, also zweimal. `P001`.
+
+### 3. Und der Parserfehler deckte einen Namensfehler zu
+
+`beispiele/29-undurchsichtig.gab` ist das einzige Beispiel mit **zwei Modulen**. Sein
+`use beispiel::adressen::Pa;` ging gar nicht mit — `ItemArt::Use` war nicht behandelt. Der
+zweite Modulblock nannte `Pa`, ohne es zu importieren. *Das sah man erst, nachdem (2)
+behoben war.*
+
+> **Die Reihenfolge der Pässe als Versteck:** ein Fehler, der früh fällt, verhindert die
+> Meldung des Fehlers dahinter. Beide Löcher standen in derselben Datei, und die Zählung
+> „1 Fehler" war richtig und vollständig irreführend.
+
+### Der Befund, der größer ist als die ABI
+
+Warum schwieg die Selbstprobe zu den toten Namen? Gemessen:
+
+```
+pub extern fn f(x : GibtsNicht) -> u32 …          →  0 Fehler
+table T count FEHLT { slot { a : AuchNicht, } }   →  0 Fehler
+```
+
+**Ein unbekannter Typname fällt nirgends.** Nicht in einer Signatur, nicht in einem
+Tabellenfeld, nicht als `count`-Konstante. Das ist keine ABI-Lücke, sondern eine des
+Namenspasses — *aber an einer Bibliotheksgrenze wiegt sie schwerer als sonst irgendwo,
+denn dort kommt jeder Name von woanders.* Gebucht in `TODO.md`, **vor ABI3**: die
+Vereinigung zweier Zeugnisse ruht darauf, dass beide Seiten dieselben Namen meinen.
+
+Und eine Entscheidung, die niemand getroffen hat, steht jetzt wenigstens da: **darf eine
+`pub`-Signatur einen privaten Namen nennen?** Heute ja, und die Nachziehschleife macht die
+Folge nur ehrlich. Die andere Lesart wäre eine Absage im Namenspass.
+
+### Was jetzt gemessen ist
+
+```
+alle 36 Beispiele -> gabbro abi -> gabbro pruefe      36 von 36 mit 0 Fehlern
+Sprechprobe: ein von Hand verdorbenes .gabi           faellt an P001
+zwei neue Tests in rechenwerk.rs                      144 Tests gruen
+```
+
+Die Sprechprobe steht dabei, weil „36 von 36 grün" ohne sie auch dann dastünde, wenn die
+Selbstprobe gar nichts prüfte — und genau das war sie für unbekannte Namen ja.

@@ -42,6 +42,9 @@
 
 use gabbro_syntax::ast::*;
 
+/// Ein Item ohne eigenen Namen (ein `use`) -- es wird nie ueber seinen Namen geholt.
+static LEER: String = String::new();
+
 /// Die Kopfzeile, an der ein `.gabi` erkennbar ist.
 pub const MARKE: &str = "-- @gabi 1";
 
@@ -59,26 +62,84 @@ pub fn schreibe(baum: &Programm, quelle: &str) -> String {
     aus.push_str("\n-- Written by `gabbro abi`. Do not edit: the source is the `.gab`, and a\n");
     aus.push_str("-- second register over the same thing is the very class this folder is\n");
     aus.push_str("-- written against.\n");
+    // **Die Schnittstelle ist ein FIXPUNKT, kein Durchgang** (2026-08-20).
+    //
+    // `table` und `atomic` haben kein `pub` -- die Grammatik kennt keins -- und standen
+    // darum als einzige Item-Arten UNBEDINGT im `.gabi`. Gemessen an
+    // `beispiele/34-markierter-wert.gab`, wo nichts oeffentlich ist: die Schnittstelle trug
+    // die Tabelle samt `count NANFRAGEN` und `was : Nachricht` hinaus -- **zwei Namen, die
+    // sie selbst nicht erklaert.**
+    //
+    // > *Eine Schnittstelle, die einen Namen nennt und nicht erklaert, ist keine.*
+    //
+    // Und ein Durchgang reicht nicht: `T` kommt mit, weil ein `index into T` es nennt --
+    // dann nennt `T` seinerseits `count N`, und `N` muss ebenfalls mit. Darum wird bis zum
+    // Stillstand gesammelt statt einmal gefiltert.
+    //
+    // **Was das NICHT heisst:** dass eine oeffentliche Signatur einen privaten Namen nennen
+    // DARF. Sie tut es heute, und diese Schleife macht die Folge nur ehrlich; die Frage, ob
+    // die Sprache es abweisen sollte, steht in `TODO.md` und ist eine Sprachentscheidung.
+    struct Anwaerter {
+        modul: String,
+        name: String,
+        text: String,
+        von_anfang: bool,
+    }
+    let mut alle: Vec<Anwaerter> = Vec::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
-        let zeile = match &item.art {
+        let (name, text, von_anfang) = match &item.art {
             ItemArt::Funktion(f) => {
-                if !f.oeffentlich || matches!(f.klasse, Some(FnKlasse::Spec)) {
+                if matches!(f.klasse, Some(FnKlasse::Spec)) {
                     return;
                 }
-                Some(kopf_von(f, quelle))
+                (&f.name.text, kopf_von(f, quelle), f.oeffentlich)
             }
             // **Die Welt, die eine `effects`-Liste nennen darf.** Ohne sie zeigt `writes z`
             // beim Importeur auf nichts, und `E010` haette recht.
-            ItemArt::Statisch(x) if x.oeffentlich => Some(text_von(item, quelle)),
-            ItemArt::Konst(k) if k.oeffentlich => Some(text_von(item, quelle)),
-            ItemArt::Tabelle(_) | ItemArt::Atomic(_) => Some(text_von(item, quelle)),
-            ItemArt::Typ(t) if t.oeffentlich => Some(text_von(item, quelle)),
-            _ => None,
+            ItemArt::Statisch(x) => (&x.name.text, text_von(item, quelle), x.oeffentlich),
+            ItemArt::Konst(k) => (&k.name.text, text_von(item, quelle), k.oeffentlich),
+            ItemArt::Typ(y) => (&y.name.text, text_von(item, quelle), y.oeffentlich),
+            ItemArt::Tabelle(y) => (&y.name.text, text_von(item, quelle), false),
+            ItemArt::Atomic(y) => (&y.name.text, text_von(item, quelle), y.oeffentlich),
+            // **Ein `use` ist Teil der Schnittstelle, nicht des Rumpfs.** Ohne es nennt der
+            // Kopf `Pa`, und `Pa` ist in DIESEM Modul kein Name. *Gefunden am selben
+            // Beispiel: der Parserfehler hat den fehlenden Namen zugedeckt.*
+            ItemArt::Use(_) => (&LEER, text_von(item, quelle), true),
+            _ => return,
         };
-        if let Some(z) = zeile {
-            nach_modul.entry(modul.to_string()).or_default().push(z);
-        }
+        alle.push(Anwaerter {
+            modul: modul.to_string(),
+            name: name.clone(),
+            text,
+            von_anfang,
+        });
     });
+    let mut drin: Vec<bool> = alle.iter().map(|a| a.von_anfang).collect();
+    loop {
+        let flaeche: String = alle
+            .iter()
+            .zip(&drin)
+            .filter(|(_, d)| **d)
+            .map(|(a, _)| a.text.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        let mut gewachsen = false;
+        for i in 0..alle.len() {
+            if !drin[i] && nennt(&flaeche, &alle[i].name) {
+                drin[i] = true;
+                gewachsen = true;
+            }
+        }
+        if !gewachsen {
+            break;
+        }
+    }
+    for (a, _) in alle.iter().zip(&drin).filter(|(_, d)| **d) {
+        nach_modul
+            .entry(a.modul.clone())
+            .or_default()
+            .push(a.text.clone());
+    }
     // **EIN Block je Modul.** Die erste Fassung schrieb je ITEM einen -- und `N001` (*„`bib`
     // is declared twice in this scope"*) hatte recht. *Gefunden vom eigenen Namenspass, an
     // der eigenen Schnittstelle.*
@@ -86,6 +147,17 @@ pub fn schreibe(baum: &Programm, quelle: &str) -> String {
         aus.push_str(&format!("\nmodule {modul} {{\n{}\n}}\n", zeilen.join("\n")));
     }
     aus
+}
+
+/// **Nennt die exportierte Flaeche diesen Namen?** Als WORT, nicht als Teilzeichenkette --
+/// sonst zoege ein `Anfragen` auch ein `Anfragenzaehler` mit herein.
+fn nennt(flaeche: &str, name: &str) -> bool {
+    let grenze = |c: char| !(c.is_alphanumeric() || c == '_');
+    flaeche.match_indices(name).any(|(i, _)| {
+        let davor = flaeche[..i].chars().next_back().is_none_or(grenze);
+        let danach = flaeche[i + name.len()..].chars().next().is_none_or(grenze);
+        davor && danach
+    })
 }
 
 /// Der Quelltext eines Items, wörtlich — der Parser hat ihn schon gelesen, also gibt es
@@ -113,7 +185,11 @@ fn kopf_von(f: &FnDecl, quelle: &str) -> String {
     // `pub` (das Wort steht im Flag, nicht in der Spanne) -- gemessen am ersten `.gabi`, das
     // `extern impl fn` schrieb.
     let mut ohne_klasse = kopf.trim_start();
-    for w in ["pub ", "impl ", "raw ", "prim ", "divergent ", "const "] {
+    // `"extern "` steht mit in der Liste: eine Deklaration, die schon `extern` IST -- ein
+    // Import ueber die Modulgrenze -- bekam sonst ein zweites davor, und `P001` sagte
+    // *„`fn` erwartet, `extern` gefunden"*. Gefunden 2026-08-20 an
+    // `beispiele/29-undurchsichtig.gab`, dem einzigen Beispiel mit zwei Modulen.
+    for w in ["pub ", "impl ", "raw ", "prim ", "divergent ", "const ", "extern "] {
         if let Some(r) = ohne_klasse.strip_prefix(w) {
             ohne_klasse = r.trim_start();
         }
