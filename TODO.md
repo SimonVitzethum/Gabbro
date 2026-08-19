@@ -536,6 +536,14 @@ Neither was a rule that was too weak — both were measuring apparatus that coul
 | `on_exceeded` on an undeclared name stays silent | **`S007`**, the third state — the name pass never took the responsibility that was handed to it |
 | the poison corpus accepts only errors | `-- erwartet: Hinweis S007`; until then **no hint code had a probe**, not even `E009` |
 
+*Three entries below this table were removed on 2026-08-19 because they had been closed the
+day before and nobody struck them: `check` has four poison probes (`pruefe-konstrukte`: **0
+without a probe**), its four promised errors are `N020`–`N022` plus a grammar that makes
+`can_fail` obligatory, and NL.2's four clauses without readers are `V008`/`N020`/`N023`/`N024`
+(**`ZUSAGE 0`**). **A list of open items that carries closed ones is the same second register
+as a stale figure** — and `pruefe-todo.py` cannot see it, because the prose is right about a
+world that no longer exists.*
+
 ### «K5» — **executed 2026-08-19, all five columns** ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
 | column | built | evidence |
@@ -636,11 +644,6 @@ was building work is done; what is not has an ADDRESS.*
 
 # BUILDING — needs code
 
-- [ ] **EIN Konstrukt hat keine Giftprobe: `check`** *(7 am 2026-08-19, sechs gefallen)*.
-      Und mit Grund: **eine Probe fiele dort an nichts**, solange die `linear ghost
-      Duty(check)` nicht erzeugt wird. *Erst der Erzeuger, dann die Probe.* Die anderen sechs
-      -- `axiom`, `boot`, `entry`, `reason`, `state`, `walk` -- haben je eine, und **vier
-      davon fielen durch eine Regel, die am ZWILLING schon stand.**
 - [ ] **Wo endet die Forderung `Has(X)`?** *(2026-08-19, offen gelassen bei `N016`)*. Heute
       muss der Rufer sie DEKLARIEREN, und die Kette endet an der aeussersten Funktion. **Dass
       ein `check` oder eine `assume` sie HERSTELLT, ist eine Form, die es nicht gibt** -- und
@@ -658,15 +661,6 @@ was building work is done; what is not has an ADDRESS.*
       prueft die SPRACHE eines Textes, nicht seine Lesbarkeit. *Eine Probe waere billig: kein
       Meldungstext enthaelt zwei Woerter ohne Trennung.*
 
-- [ ] **Das `check`-Konstrukt ist WIRKUNGSLOS -- alle vier versprochenen Fehler fehlen**
-      *(gefunden 2026-08-19 bei der Handpruefung der 37 Klauseleintraege)*.
-      `SYNTAX.md`:979-982 verspricht: `gates` fehlt -> die Pflicht wird nie verbraucht;
-      `can_fail` fehlt -> dito; eine `measures`-Groesse, die der gemessene Pfad SCHREIBT ->
-      Schreibrecht; eine einseitige Schwelle ohne `floor` -> die Groesse hat keinen Bereich.
-      **Keiner davon existiert.** Der Grund ist EINER: die `linear ghost Duty(check)`, aus der
-      sie alle fallen sollen, **wird nirgends erzeugt** -- `Duty` steht in `m2.rs` in einem
-      Kommentar und sonst nirgends. *Drei Klauselzeilen (`gates`, `measures`, `floor`) sagten
-      jeweils nur ihren eigenen kleinen Teil davon.*
 - [ ] **`masks` traegt die UNTERBRECHBARKEIT, und die ist keine der elf Klassen**
       *(2026-08-19)*. `SPRACHE.md`:275: *„ein Effekt: `masks irqs` bzw. seine Abwesenheit. Ein
       Handler ist kein Aufruf -- er kann zwischen zwei beliebigen Anweisungen laufen."* Die
@@ -708,12 +702,6 @@ was building work is done; what is not has an ADDRESS.*
       und `umhaengen` steht an 127 Stellen, also genau die Operation, fuer die
       `Table_Ops_Erhaltung.thy` das GEGENBEISPIEL fuehrt.** *Der Korpus braucht die Operation,
       von der der Beweis sagt, dass sie bricht.* Die Entscheidung steht damit mit Zahlen da.
-- [ ] **NL.2 -- VIER Zusagen ohne Leser, und drei davon sind ENTSCHEIDUNGEN** *(13 am
-      2026-08-19; neun gefallen)*. Was bleibt: **`counterprobe`** -- `SYNTAX.md`:975 sagt
-      nicht, wo der `ident` hinter `expects` deklariert wird; **`gates`** -- welche Tore ein
-      `check` oeffnet, und was ein Tor ist; **`mirrors`** -- die gespiegelten Register;
-      **`obermenge`** -- die Enthaltensaussage ueber der Nutzlast. *Nur `mirrors` und
-      `obermenge` sind Bauarbeit; die anderen zwei brauchen zuerst eine Entscheidung.*
 - [ ] **Zweimal an einem Tag war die KLAUSELTABELLE keine Quelle** *(2026-08-19)*. Bei
       `leaves` sagte sie *„welche Wege die Schleife verlassen darf"* -- `SPRACHE.md`:730 sagt
       *lineare Werte*, und die danach gebaute Regel meldete zwei Befunde an einem RICHTIGEN
