@@ -842,8 +842,22 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 Some(t) => format!(" __attribute__((section(\"{}\")))", t.text),
                 None => String::new(),
             };
+            // **`unused` -- und das ist derselbe Befund wie beim `(void)k;` oben**
+            // (2026-08-20).
+            //
+            // `beispiele/36-asm.gab` hat `static mut GERAET` und schreibt es in einem
+            // `asm`-Block: auf Gabbro-Ebene steht `effects { writes GERAET }`, im C steht
+            // kein einziger Zugriff, denn den Befehl liest Gabbro nicht. `cc -Wunused`
+            // meldet daraufhin einen Platz, der sehr wohl benutzt wird.
+            //
+            // > *Die Warnung gilt dem ERZEUGNIS, nicht dem Anwender.* Er hat die Zeile nicht
+            // > geschrieben, und ob ein Weltzustand tot ist, ist eine Gabbro-Frage.
+            //
+            // **Und dafuer gibt es heute keinen Pass** -- ein `static`, den niemand nennt,
+            // faellt nirgends auf. In `TODO.md` gebucht; hier stillgelegt, nicht
+            // verschwiegen.
             aus.push_str(&format!(
-                "\nstatic {konst}{c} {}{abschnitt} = {w};\n",
+                "\nstatic {konst}{c} {}{abschnitt} __attribute__((unused)) = {w};\n",
                 st.name.text
             ));
         }
@@ -2303,6 +2317,33 @@ fn ctext(t: &str) -> String {
     t.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
+/// **Der Assemblertext braucht eine ZWEITE Fluchtregel, und ohne sie faellt `cc`.**
+///
+/// Gemessen 2026-08-20 an `beispiele/36-asm.gab`: `"mov $1, %eax"` ging woertlich in einen
+/// **erweiterten** `__asm__`-Block, und GCC sagte *„ungueltiges »asm«: Operandennummer fehlt
+/// hinter %-Buchstabe"*. In erweitertem Assembler ist `%` das Einleitungszeichen fuer einen
+/// Operanden; ein literales Prozent muss verdoppelt werden.
+///
+/// Stehen bleibt allein `%[`, denn das IST die Operandenform, die Gabbro schreibt.
+///
+/// > **Warum das hier besonders weh tut:** bei `asm` sagt die Sprache ausdruecklich, dass sie
+/// > den Inhalt nicht liest. Damit ist der C-Uebersetzer die einzige Pruefung, die es
+/// > ueberhaupt gibt -- und genau der wurde nicht gefragt, weil `pruefe-emission.sh` diese
+/// > Datei nicht deckte. *Ein versiegeltes Loch, dessen einziger Waechter nicht hinsah.*
+fn asmtext(t: &str) -> String {
+    let roh = ctext(t);
+    let mut aus = String::with_capacity(roh.len());
+    let mut zs = roh.chars().peekable();
+    while let Some(c) = zs.next() {
+        if c == '%' && zs.peek() != Some(&'[') {
+            aus.push_str("%%");
+        } else {
+            aus.push(c);
+        }
+    }
+    aus
+}
+
 /// **`restrict` — und die Hypothesen stehen in `beweise/Restrict_Alleinzugriff.thy`.**
 ///
 /// Gemessen 2026-08-19, `cc -O2`: **2,85** dort, wo der C-Übersetzer die Herkunft der Zeiger
@@ -2457,7 +2498,7 @@ fn funktion(
         }
         a2.push_str("    __asm__ __volatile__(\n");
         for z in &a.zeilen {
-            a2.push_str(&format!("        \"{}\\n\"\n", ctext(&z.text)));
+            a2.push_str(&format!("        \"{}\\n\"\n", asmtext(&z.text)));
         }
         let ops = |v: &Vec<(Ident, Textliteral)>| -> String {
             v.iter()

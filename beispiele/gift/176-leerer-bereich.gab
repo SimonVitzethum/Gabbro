@@ -1,0 +1,21 @@
+-- erwartet: M117
+-- **Ein Bereich, dessen untere Grenze ueber der oberen liegt -- er enthaelt KEINEN Wert.**
+--
+-- Gefunden 2026-08-20 in einer Rezension, und zwar als ABSTURZ: `a / n` mit `n : Verdreht`
+-- gab *„panicked at typen.rs:558: attempt to divide by zero"*. Der Waechter davor war
+-- `enthaelt_null()` = `min <= 0 && max >= 0`; bei `min = 5, max = 0` ist das falsch, also
+-- lief `a.min / b.max` in die Null.
+--
+-- **Die Ursache ist aber nicht die Division.** Diese Deklaration ging ALLEIN mit null
+-- Fehlern durch, und mit `%` statt `/` ging auch die Rechnung still durch. Ein Typ ohne
+-- jeden Wert galt damit als Nachweis, dass der Divisor nicht null ist -- *aus dem Leeren
+-- folgt jede Aussage*, und deshalb muss die Absage an der DEKLARATION stehen und nicht
+-- an der Rechnung.
+--
+-- > Ein Absturz ist besser als ein stilles Ja. Beides ist falsch.
+
+module gift {
+
+type Verdreht = u32 in 5 .. 0;
+
+}

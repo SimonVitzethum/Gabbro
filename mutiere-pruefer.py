@@ -85,10 +85,40 @@ MUTATIONEN = [
         "breite-passt-immer",
         "typen.rs",
         "        let (lo, hi) = grenzen(self.breite, self.vorzeichen);\n"
-        "        self.min >= lo && self.max <= hi\n    }\n\n    pub fn enthaelt_null",
+        "        self.min >= lo && self.max <= hi\n    }\n\n    /// **Ein Bereich, der KEINEN Wert",
         "        let (lo, hi) = grenzen(self.breite, self.vorzeichen);\n"
-        "        let _ = (lo, hi);\n        true\n    }\n\n    pub fn enthaelt_null",
+        "        let _ = (lo, hi);\n        true\n    }\n\n    /// **Ein Bereich, der KEINEN Wert",
         "M104 -- kein Ueberlauf verlaesst je die Breite",
+    ),
+    # **Zwei Regeln aus der Rezension vom 2026-08-20.** Beide waren ABSTUERZE oder stille
+    # Ja-Aussagen, also gehoeren sie hierher: was keine Mutation faengt, ist ungedeckte
+    # Flaeche, egal wie frisch der Test daneben ist.
+    Mutation(
+        "prozent-im-assembler-bleibt-einfach",
+        "emit.rs",
+        "        if c == '%' && zs.peek() != Some(&'[') {",
+        "        if false && c == '%' && zs.peek() != Some(&'[') {",
+        "der Assemblertext geht woertlich in einen ERWEITERTEN `__asm__`-Block; `%eax` "
+        "statt `%%eax`, und `cc` lehnt die Uebersetzungseinheit ab. Bei `asm` liest die "
+        "Sprache den Inhalt ausdruecklich NICHT -- der C-Uebersetzer ist die einzige "
+        "Pruefung, die es gibt",
+        "code",
+    ),
+    Mutation(
+        "leerer-bereich-geht-durch",
+        "m1.rs",
+        "if b.min > b.max {",
+        "if false && b.min > b.max {",
+        "M117 -- ein Bereich ohne jeden Wert wird nicht mehr abgesagt; aus dem Leeren "
+        "folgt jede Aussage, also auch dass ein Divisor nicht null ist",
+    ),
+    Mutation(
+        "leerer-bereich-rechnet-doch",
+        "typen.rs",
+        "    pub fn ist_leer(&self) -> bool {\n        self.min > self.max",
+        "    pub fn ist_leer(&self) -> bool {\n        false && self.min > self.max",
+        "der Riegel hinter M117 faellt weg -- `a.min / b.max` teilt bei `5 .. 0` durch die "
+        "Null und der Pruefer stirbt an einer Deklaration",
     ),
     Mutation(
         "nenner-nie-null",

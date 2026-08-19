@@ -1763,7 +1763,7 @@ impl fn schreiben(fd : u64, puffer : u64, laenge : u64) -> u64
     assert!(c.contains("    return result;\n"), "und wird zurueckgegeben:\n{c}");
     // **Zwei Befehlszeilen bleiben ZWEI.**
     assert!(
-        c.contains("\"mov $1, %eax\\n\"") && c.contains("\"syscall\\n\""),
+        c.contains("\"mov $1, %%eax\\n\"") && c.contains("\"syscall\\n\""),
         "benachbarte Zeichenketten duerfen hier NICHT zusammenfallen:\n{c}"
     );
 }
@@ -1846,7 +1846,7 @@ impl fn kopf(h : ptr<normal, r> H, i : index into H) -> u64
     // Der Sonderwert IST die Laenge -- der erste Index, den es nicht gibt.
     assert!(c.contains("#define H_NONE (8)"), "der Sonderwert ist `count`:\n{c}");
     // Ein `static` faengt bei ihm an, nicht bei null.
-    assert!(c.contains("static uint32_t frei = H_NONE;"), "{c}");
+    assert!(c.contains("static uint32_t frei __attribute__((unused)) = H_NONE;"), "{c}");
     // Ein `match` ueber einem Ort wird der Vergleich gegen ihn.
     assert!(c.contains("!= H_NONE"), "das `match` vergleicht gegen den Sonderwert:\n{c}");
     // `return None` haengt am RUECKGABETYP -- ohne ihn stuende hier ein Bezeichner `None`.
@@ -2229,4 +2229,84 @@ pub impl fn nutze() -> Pa effects { pure } costs <= 4 ops { return mach(); }
     let (b2, mut a2) = gabbro_syntax::lies("zwei.gabi", &gabi);
     gabbro_check::pruefe(&b2, &mut a2);
     assert_eq!(a2.fehler_zahl(), 0, "zwei Module, eine Schnittstelle:\n{}", a2.zeige(&gabi));
+}
+
+/// **Ein leerer Bereich sagt ab — und rechnet nicht** («M117», Rezension 2026-08-20).
+///
+/// ```gabbro
+/// type Verdreht = u32 in 5 .. 0;
+/// impl fn teile(a : u32, n : Verdreht) -> u32 { return a / n; }
+/// ```
+///
+/// gab `panicked at typen.rs:558: attempt to divide by zero`. Der Wächter davor ist
+/// `enthaelt_null()` = `min <= 0 && max >= 0`; bei `min = 5, max = 0` ist das **falsch**,
+/// also lief `a.min / b.max` in die Null.
+///
+/// **Die Ursache war nicht die Division**, sondern die fehlende Zusicherung an der
+/// Deklaration: allein ging sie mit null Fehlern durch, und mit `%` statt `/` ging auch die
+/// Rechnung still durch. *Aus einem leeren Bereich folgt jede Aussage* — er hätte einen
+/// Divisor als nicht-null und einen Index als in Schranken bewiesen.
+///
+/// Zwei Aussagen, darum zwei Hälften: `M117` an der Deklaration **und** der Riegel in
+/// `typen.rs`, denn eine Absage hält den Rumpf nicht an.
+#[test]
+fn ein_leerer_bereich_sagt_ab_und_bringt_niemanden_um() {
+    for op in ["/", "%"] {
+        let q = format!(
+            "module m {{\n\
+             type Verdreht = u32 in 5 .. 0;\n\
+             impl fn teile(a : u32, n : Verdreht) -> u32 effects {{ pure }} costs <= 4 ops \
+             {{ return a {op} n; }}\n\
+             }}\n"
+        );
+        let (baum, mut absagen) = gabbro_syntax::lies("leer.gab", &q);
+        gabbro_check::pruefe(&baum, &mut absagen);
+        let text = absagen.zeige(&q);
+        assert!(text.contains("M117"), "`{op}`: die Deklaration muss absagen:\n{text}");
+    }
+
+    // Und der Riegel darunter, direkt: aus einem leeren Bereich kommt KEINE Rechnung.
+    // `bereich: None` heisst „hierueber weiss M1 nichts" -- die einzige ehrliche Antwort.
+    let leer = gabbro_check::typen::IntBereich::genau(32, false, 5, 0);
+    let voll = gabbro_check::typen::IntBereich::genau(32, false, 1, 10);
+    assert!(leer.ist_leer(), "5 .. 0 ist leer");
+    assert!(!voll.ist_leer(), "1 .. 10 ist es nicht");
+    assert!(gabbro_check::typen::teile(&voll, &leer).bereich.is_none());
+    assert!(gabbro_check::typen::rest(&voll, &leer).bereich.is_none());
+}
+
+/// **Ein literales `%` im Assemblertext wird verdoppelt — sonst nimmt `cc` den Block nicht**
+/// (Rezension 2026-08-20).
+///
+/// `beispiele/36-asm.gab` schreibt `"mov $1, %eax"`, und der Erzeuger reichte den Text
+/// wörtlich in einen **erweiterten** `__asm__`-Block durch. Dort ist `%` das
+/// Einleitungszeichen für einen Operanden; GCC sagte *„ungültiges »asm«: Operandennummer
+/// fehlt hinter %-Buchstabe"*.
+///
+/// > **Warum das die teuerste Stelle ist:** bei `asm` sagt die Sprache ausdrücklich, dass sie
+/// > den Inhalt nicht liest. Damit ist der C-Übersetzer die **einzige** Prüfung, die es
+/// > überhaupt gibt — und `pruefe-emission.sh` deckte diese Datei nicht.
+#[test]
+fn ein_prozent_im_assembler_wird_verdoppelt_ausser_beim_operanden() {
+    let q = r#"
+module m {
+static mut GERAET : u32 = 0;
+impl fn schreiben(fd : u64) -> u64
+    effects { writes GERAET }
+    costs   <= 1 ops
+    arch    x86_64
+    = asm {
+        "mov $1, %eax"
+        "syscall"
+        in  { fd : "D" }
+        out { result : "=a" }
+        clobbers { memory }
+    };
+}
+"#;
+    let (baum, mut absagen) = gabbro_syntax::lies("asm.gab", q);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert!(c.contains("mov $1, %%eax"), "das literale Prozent wird verdoppelt:\n{c}");
+    assert!(!c.contains("%%["), "die Operandenform `%[…]` bleibt, wie sie ist:\n{c}");
 }

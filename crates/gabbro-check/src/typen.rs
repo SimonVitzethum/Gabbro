@@ -75,6 +75,23 @@ impl IntBereich {
         self.min >= lo && self.max <= hi
     }
 
+    /// **Ein Bereich, der KEINEN Wert enthaelt** — `min > max`.
+    ///
+    /// Er entsteht aus `u32 in 5 .. 0` und aus `0 ..< 0`. `M117` sagt ihn an der Deklaration
+    /// ab; dieser Riegel steht dahinter, weil die Absage den Rumpf nicht anhaelt und weil
+    /// `M117` nur die aeussere Typform eines Items liest.
+    pub fn ist_leer(&self) -> bool {
+        self.min > self.max
+    }
+
+    /// **Enthaelt der Bereich die Null?** — und ein LEERER Bereich enthaelt sie nicht,
+    /// sagt aber trotzdem nichts.
+    ///
+    /// Bis 2026-08-20 stand hier nur `min <= 0 && max >= 0`. Bei `min = 5, max = 0` ist das
+    /// `false`, und der Anrufer las daraus *„der Divisor ist nicht null"* — dann teilte
+    /// `a.min / b.max` durch die Null und der Pruefer starb. **Die Antwort `false` war
+    /// formal richtig und als Auskunft falsch**; wer hier `false` bekommt, muss auch
+    /// `ist_leer()` gefragt haben.
     pub fn enthaelt_null(&self) -> bool {
         self.min <= 0 && self.max >= 0
     }
@@ -548,7 +565,10 @@ pub fn teile(a: &IntBereich, b: &IntBereich) -> Rechnung {
             laeuft_ueber: false,
         };
     };
-    if b.enthaelt_null() {
+    // **Leer ODER null.** Aus einem leeren Bereich folgt jede Aussage, also darf er keine
+    // tragen: `bereich: None` heisst „hierueber weiss M1 nichts", und das ist die einzige
+    // ehrliche Antwort. *Ohne diese Zeile lief `a.min / b.max` bei `5 .. 0` in die Null.*
+    if b.ist_leer() || a.ist_leer() || b.enthaelt_null() {
         return Rechnung {
             bereich: None,
             laeuft_ueber: false,
@@ -571,7 +591,9 @@ pub fn rest(a: &IntBereich, b: &IntBereich) -> Rechnung {
             laeuft_ueber: false,
         };
     };
-    if b.enthaelt_null() {
+    // Leer ODER null -- wie bei der Division. Mit `%` statt `/` ging die Rechnung bei
+    // `5 .. 0` sogar STILL durch: kein Absturz, aber ein Bereich, der aus dem Nichts folgt.
+    if b.ist_leer() || a.ist_leer() || b.enthaelt_null() {
         return Rechnung {
             bereich: None,
             laeuft_ueber: false,
@@ -797,6 +819,11 @@ mod wertetabellen {
         // `b.enthaelt_null()` (`min <= 0 && max >= 0`) steht davor und faengt jedes `b` mit
         // `min == 0 && max >= 0` ab; ist `max < 0`, so ist auch `min < 0`, und beide
         // Bedingungen sind falsch. **Es gibt kein `b`, das die zwei Fassungen trennt.**
+        //
+        // *Der Schluss „ist `max < 0`, so ist auch `min < 0`" setzt `min <= max` voraus* --
+        // und genau diese Voraussetzung fehlte bis zum 2026-08-20: bei `5 .. 0` war sie
+        // verletzt, `enthaelt_null()` sagte `false`, und die Division starb an der Null.
+        // Seither steht `ist_leer()` davor, und das Argument traegt wieder.
         //
         // Der erzeugte Mutationslauf zaehlt diese Stelle als „entkommen". Das ist richtig
         // gezaehlt und trotzdem kein Loch -- und der Unterschied gehoert aufgeschrieben,

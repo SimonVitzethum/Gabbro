@@ -206,6 +206,67 @@ impl<'a> Pruefer<'a> {
             //
             // *Ein Initialisierer wird mit LEERER Lage geprueft: er hat keine Parameter und
             // keine Fakten, nur die Umgebung.*
+            // **`M117` -- ein LEERER Bereich, und er hat den Pruefer umgebracht**
+            // (2026-08-20).
+            //
+            // ```gabbro
+            // type Verdreht = u32 in 5 .. 0;
+            // impl fn teile(a : u32, n : Verdreht) -> u32 { return a / n; }
+            // ```
+            //
+            // gab *„panicked at typen.rs:558: attempt to divide by zero"*. Der Waechter
+            // davor ist `enthaelt_null()` = `min <= 0 && max >= 0`; bei `min = 5, max = 0`
+            // ist das FALSCH, also lief `a.min / b.max` in die Null.
+            //
+            // **Aber die Ursache ist nicht die Division.** `type Verdreht = u32 in 5 .. 0;`
+            // ging allein mit null Fehlern durch -- und mit `%` statt `/` ging auch die
+            // Rechnung still durch. *Ein Typ, der keinen Wert enthaelt, galt damit als
+            // Nachweis, dass der Divisor nicht null ist:* aus einem leeren Bereich folgt
+            // jede Aussage, und genau darum darf er nicht dastehen duerfen.
+            //
+            // > Ein Absturz ist besser als ein stilles Ja -- aber beides ist falsch.
+            //
+            // **Wie weit das reicht:** geprueft wird der Bereich, den die AEUSSERE Typform
+            // eines Items traegt (Typdeklaration, Parameter, Rueckgabe, `const`, `static`).
+            // Ein Bereich tief in einem Feld eines Verbunds faellt hier NICHT auf -- dagegen
+            // steht der Riegel in `typen.rs`, der aus einem leeren Bereich `None` macht
+            // statt zu rechnen.
+            let mut leer = |u: &Umgebung, modul: &str, tx: &TypExpr, span, was: &str| {
+                if let Some(b) = u.typ_von_ausdruck_decl(modul, tx).bereich() {
+                    if b.min > b.max {
+                        self.absagen.schiebe(
+                            Absage::fehler(
+                                "M117",
+                                span,
+                                format!("{was} has an EMPTY range: {} .. {}", b.min, b.max),
+                            )
+                            .mit_notiz(
+                                "a range whose lower bound exceeds its upper one contains no value at all \
+                                 -- and from that every statement follows: it would \
+                                 prove a divisor non-zero, an index in bounds, anything",
+                            ),
+                        );
+                    }
+                }
+            };
+            match &item.art {
+                ItemArt::Typ(td) => {
+                    if let Some(r) = &td.rumpf {
+                        leer(self.u, modul, r, td.name.span, "this type");
+                    }
+                }
+                ItemArt::Konst(k) => leer(self.u, modul, &k.typ, k.name.span, "this constant"),
+                ItemArt::Statisch(s) => leer(self.u, modul, &s.typ, s.name.span, "this static"),
+                ItemArt::Funktion(f) => {
+                    for pa in &f.parameter {
+                        leer(self.u, modul, &pa.typ, pa.name.span, "this parameter");
+                    }
+                    if let Some(e) = &f.ergebnis {
+                        leer(self.u, modul, e, f.name.span, "this result");
+                    }
+                }
+                _ => {}
+            }
             if let ItemArt::Konst(k) = &item.art {
                 self.modul = modul.to_string();
                 let ziel = self.u.typ_von_ausdruck_decl(modul, &k.typ);

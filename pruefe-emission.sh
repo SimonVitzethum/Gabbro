@@ -909,7 +909,78 @@ lauf "beispiel35" "$W/beispiele/35-tausch.gab" "$TREIBER35" "1 0 0 1 0" \
      's/uint32_t _cx1 = (uint32_t)(NIEMAND);/uint32_t _cx1 = (uint32_t)(f);/' \
      "0 assumptions, 0 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty)"
 
-echo "== EMISSION: ALL PASS -- 17 Uebersetzungseinheiten durchgestochen =="
-echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser siebzehn Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Siebzehn Ja-Aussagen sind keine ueber die Sprache."
+# =======================================================================================
+# **Stufe 9: die REGEL, nicht die Liste** (2026-08-20).
+#
+# Bis heute war dieser Waechter eine gepflegte Liste von Dateien. Er wuchs von 12 auf 17
+# Einheiten, weil eine Rezension die Luecke benannte -- und der NAECHSTE neue Konstrukttyp
+# lief wieder daran vorbei: `beispiele/36-asm.gab` erzeugte C, das `gcc` ablehnt
+# (`%eax` statt `%%eax` in erweitertem Assembler), und keine Stufe hat gefragt.
+#
+# > *Bei `asm` sagt die Sprache ausdruecklich, dass sie den Inhalt nicht liest. Damit ist
+# > der C-Uebersetzer die einzige Pruefung, die es ueberhaupt gibt -- und genau der wurde
+# > nicht gefragt.*
+#
+# Eine Liste deckt, was jemand eingetragen hat. Eine REGEL deckt, was da ist:
+#
+#     JEDE Datei, die durch `emit` kommt, MUSS `cc -Werror` bestehen.
+#
+# Die Ausnahmen stehen einzeln und mit Grund da -- und **eine Ausnahme, die nicht mehr
+# noetig ist, faellt ebenfalls auf.** Sonst waechst hier eine zweite Liste nach.
+echo
+echo "== Stufe 9: jede Datei, die emittiert, muss auch uebersetzen =="
+
+# Datei -> Grund. Eine Ausnahme ist ein BEFUND mit Adresse, kein Freibrief.
+ausnahme_grund() {
+    case "$1" in
+    02-geraet.gab)          echo "Namensschema-Bruch: definiert \`Vtd_wurzel_setzen\`, ruft \`wurzel_setzen\`" ;;
+    13-zeuge-mit-staerke.gab) echo "unvollstaendiges \`struct Zaehlwerk\` -- der Verbund wird nicht mitemittiert" ;;
+    23-akkumulatoren.gab)   echo "ruft \`gabbro_kern()\` ohne Prototyp -- ein FREMDER Rumpf, den der Treiber liefert (Absicht, aber die Ausgabe ist nicht selbsttragend)" ;;
+    *) return 1 ;;
+    esac
+}
+
+n_emit=0; n_ok=0; n_aus=0; schlecht=0
+for q in "$W"/beispiele/*.gab; do
+    d="$(basename "$q")"
+    if ! cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- emit "$q" \
+            > "$ARB/regel.c" 2>/dev/null || [ ! -s "$ARB/regel.c" ]; then
+        continue          # `C001` weigert sich -- eine Weigerung ist eine ehrliche Antwort.
+    fi
+    n_emit=$((n_emit + 1))
+    if cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/regel.c" 2> "$ARB/regelerr"; then
+        n_ok=$((n_ok + 1))
+        if grund="$(ausnahme_grund "$d")"; then
+            echo "  ABGELAUFENE AUSNAHME: $d uebersetzt jetzt -- der Eintrag gehoert geloescht"
+            echo "                        (stand da als: $grund)"
+            schlecht=1
+        fi
+    elif grund="$(ausnahme_grund "$d")"; then
+        n_aus=$((n_aus + 1))
+        echo "  ausgenommen  $d -- $grund"
+    else
+        echo "  UEBERSETZT NICHT: $d"
+        head -3 "$ARB/regelerr" | sed 's/^/      /'
+        schlecht=1
+    fi
+done
+echo "  $n_ok von $n_emit emittierenden Dateien uebersetzen; $n_aus benannte Ausnahmen"
+if [ "$schlecht" != "0" ]; then
+    echo "== EMISSION: die REGEL haelt nicht -- eine neue Form ist am C-Uebersetzer vorbei =="
+    exit 1
+fi
+
+# **Die Sprechprobe der Regel.** Ein Waechter, der nur gruen kann, misst nichts: hier faellt
+# absichtlich erzeugtes C durch, damit „$n_ok von $n_emit" eine Aussage ist und kein Ritual.
+printf 'int fehlt(void) { return nicht_da(); }\n' > "$ARB/sprech9.c"
+if cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/sprech9.c" 2>/dev/null; then
+    echo "== EMISSION: Sprechprobe 9 haelt nicht -- cc -Werror laesst alles durch =="
+    exit 1
+fi
+echo "  Sprechprobe:  ok (ein fehlender Prototyp faellt an cc -Werror)"
+
+echo "== EMISSION: ALL PASS -- 17 durchgestochen, $n_ok von $n_emit uebersetzen =="
+echo "  Und was das NICHT heisst: DURCHGESTOCHEN sind siebzehn -- erzeugt, uebersetzt,"
+echo "  AUSGEFUEHRT und mit einer Handschrift verglichen. Die Regel darueber ist"
+echo "  schwaecher: sie fragt nur, ob der C-Uebersetzer die Ausgabe annimmt. Ein"
+echo "  Programm, das uebersetzt und falsch rechnet, faellt ihr nicht auf."
