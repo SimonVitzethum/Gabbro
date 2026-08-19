@@ -191,6 +191,19 @@ pub const EINORDNUNG: &[Posten] = &[
         grund: "eine Spezifikationsfunktion hat kein C — sie ist Beweisersache",
     },
     Posten {
+        konstrukt: "reason",
+        traegt: Traegt::Direkt,
+        grund: "ein `enum` mit den DEKLARIERTEN Zahlen; der Text wandert als Kommentar mit. \
+                Wie ein Fehler zurueckkommt, steht nirgends -- `let … else` bleibt `C001`",
+    },
+    Posten {
+        konstrukt: "group",
+        traegt: Traegt::Geloescht,
+        grund: "eine Gruppe erzeugt NICHTS und darf nichts erzeugen: sie ist die \
+                Verbindungsaussage ueber zwei Traegern, und ihr Sperrabdruck (`U001`-`U006`) \
+                wird zur Uebersetzungszeit nachgerechnet (W6)",
+    },
+    Posten {
         konstrukt: "assume / axiom",
         traegt: Traegt::Geloescht,
         grund: "steht als Annahme im Kopf des Erzeugnisses, nicht als Code (SYNTAX.md 12)",
@@ -386,6 +399,8 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             ));
         }
         ItemArt::Assume(_) | ItemArt::Axiom(_) => zaehle(&mut e, "assume / axiom"),
+        ItemArt::Reason(_) => zaehle(&mut e, "reason"),
+        ItemArt::Gruppe(_) => zaehle(&mut e, "group"),
         // **«entrust» -- die eine Zeile, um derentwillen das Wort existiert.**
         //
         // Sie nennt den ganzen Vertrag, nicht bloss den Namen: *wer das Zeugnis liest, muss

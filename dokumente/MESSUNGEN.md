@@ -9874,3 +9874,59 @@ verdrehte er damit Zeilen im **fremden** Baum, baute ihn, prüfte ihn — und me
 170 von 170 Mutationen · 170/170 Anker
 31 Weigerungen (war 46), alle C001, keine stille
 ```
+
+---
+
+# «C3a» und «C3c» ausgeführt — und eine Entscheidung wurde GEBUCHT, nicht getroffen (2026-08-19)
+
+**31 Weigerungen → 28.** `reason` (2) und `group` (1). Dazu die fünfzehnte durchgestochene
+Übersetzungseinheit.
+
+## `reason` ist Handwerk — die Zahlen stehen in der Quelle
+
+`KeinSlot = 1 "kein freier Slot mehr"` nennt seinen Wert selbst; der Erzeuger wählt keinen.
+Die Absenkung ist ein `enum` mit ausgeschriebenen Werten, der Text fährt als Kommentar mit —
+*er ist die Erklärung, die ein Leser des Erzeugnisses sonst nirgends findet.*
+
+## `let … else (e) { … }` bleibt `C001`, und das ist die Abbruchbedingung des Plans
+
+Die Form braucht eine **Fehlerrückgabe-Konvention**, und **keine Zeile der Grammatik nennt
+eine**: `extern fn hol() -> u32` hat keinen Fehlerkanal, und nichts bindet eine Funktion an
+ein `reason`. Der Erzeuger müsste beides erfinden — *wie* ein Ruf scheitert und *was* `e`
+trägt.
+
+> **Eine Sprachentscheidung, die nur der Absenkung dient, wird nicht getroffen.** Die
+> Absage nennt seit heute genau diesen Grund statt „statement kind". *Dieselbe offene Stelle
+> steht seit jeher am `on_exceeded` eines `retry` auf einen `reason`-Wert: zwei Fundstellen,
+> eine Entscheidung.* Gebucht in `TODO.md`.
+
+## `group` erzeugt nichts — und der Lauf legte sofort etwas anderes frei
+
+Die billigste Zeile des Plans. Aber `beispiele/17` war die erste Datei, die dadurch **auf 0
+Weigerungen fiel** — und ihr erzeugtes C lautete:
+
+```c
+Endpunkte->slots[e].wartet = t;      /* ein Pfeil auf einen TYPNAMEN */
+```
+
+Eine Tabelle, die über ihren eigenen Namen adressiert wird (`beispiele/09`: *„die Tabelle ist
+der Speicher, ihr Name der Ort"*), hatte gar kein Objekt im C. **Es war nicht still, sondern
+an `cc` delegiert** — und folgenlos, solange jede solche Datei aus einem anderen Grund `C001`
+sagte. *Genau die Klasse, die dieser Ordner „eine Weigerung, auf die man baut, ist eine
+Zusage" nennt.*
+
+Der Erzeuger gibt der Tabelle jetzt ihren Speicher (`T_speicher`), **und nur dort, wo die
+Quelle sie beim Namen nennt** — eine ungenutzte Grösse im erzeugten C wäre ein Befund über
+den Erzeuger. Entschieden wird dabei nichts: der C-Name ist in Gabbro unaussprechlich.
+
+## Und eine Gegenprobe wurde durch den Fortschritt ihres Gegenstands stumm
+
+`das_zeugnis_meldet_was_es_nicht_einordnen_kann` benutzte `group` als die Form, die
+`UNZUGEORDNET` sein muss. Mit «C3c» ist sie eingeordnet — *die Gegenprobe hätte ab jetzt
+immer geschwiegen, ohne rot zu werden.* Sie steht jetzt auf `state`.
+
+```
+166 Kennungen · 172 Gifte · 138 Tests · 34 Beispiele sauber · 15 Einheiten durchgestochen
+173 von 173 Mutationen · 173/173 Anker
+28 Weigerungen (war 46), alle C001, keine stille
+```

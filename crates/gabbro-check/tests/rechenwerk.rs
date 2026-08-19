@@ -1752,3 +1752,55 @@ impl fn g(m : N) -> u32 effects { pure } costs <= 9 ops
         a.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
     );
 }
+
+/// **«C3a/c»: `reason` senkt ab, `group` erzeugt NICHTS, und `let … else` bleibt `C001`.**
+///
+/// Die drei gehoeren zusammen, weil sie die Grenze dieses Plans zeigen: zwei Formen sind
+/// Handwerk, die dritte waere eine **Sprachentscheidung** -- und die wird nicht getroffen,
+/// sondern gebucht.
+#[test]
+fn reason_gruppe_und_die_gezogene_linie() {
+    let q = "module t {
+reason E { KeinSlot = 1 \"kein freier Slot mehr\" Ungueltig = 7 \"abgelaufen\" exhaustive }
+table A count 4 { slot { a : u32, } }
+table B count 4 { slot { b : u32, } }
+group Zustellung over { A, B } { invariant beides cost O(n) runs offline :
+    forall i in slots of A : A.slots[i].a >= B.slots[i].b; }
+impl fn setze(i : index into A) effects { writes A.slots } costs <= 4 ops
+{ A.slots[i].a = 3; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    // **Die Zahlen STEHEN DA** -- der Erzeuger waehlt keine.
+    assert!(c.contains("E_KeinSlot = 1,"), "der Wert kommt aus der Quelle:\n{c}");
+    assert!(c.contains("E_Ungueltig = 7,"), "auch der zweite, und er ist nicht 2:\n{c}");
+    // Und der Text faehrt mit: er ist die Erklaerung, die sonst nirgends steht.
+    assert!(c.contains("kein freier Slot mehr"), "{c}");
+
+    // **Eine `group` erzeugt nichts.** Kein Typ, kein Name, keine Zeile.
+    assert!(!c.contains("Zustellung"), "eine Gruppe erzeugt NICHTS:\n{c}");
+    assert!(!c.contains("beides"), "auch ihre Invariante nicht:\n{c}");
+
+    // **Die Tabelle IST der Speicher, wo die Quelle sie beim Namen nennt** -- und nur dort.
+    assert!(c.contains("static A A_speicher;"), "`A` wird beim Namen genannt:\n{c}");
+    assert!(c.contains("A_speicher.slots[i].a = 3;"), "kein Pfeil auf einen Typnamen:\n{c}");
+    assert!(!c.contains("B_speicher"), "`B` wird nur in der Invariante genannt:\n{c}");
+
+    // **Und `let … else` bleibt eine Absage MIT ADRESSE.** Sie braeuchte eine
+    // Fehlerrueckgabe-Konvention, und keine Zeile der Grammatik nennt eine.
+    let l = "module t { extern fn hol() -> u32 effects { pure } costs <= 1 ops;
+extern fn weg() -> never effects { diverges } costs <= 1 ops;
+impl fn f() -> u32 effects { pure } costs <= 8 ops
+{ let x = hol() else (e) { weg(); } return x; } }";
+    let (b2, mut a2) = gabbro_syntax::lies("p.gab", l);
+    let _ = gabbro_check::emit::emittiere(&b2, &mut a2);
+    assert!(
+        a2.absagen
+            .iter()
+            .any(|x| x.code == "C001" && x.text.contains("ERROR-RETURN CONVENTION")),
+        "die Absage nennt ihren Grund: {:?}",
+        a2.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
+    );
+}

@@ -96,6 +96,11 @@ struct Namen {
     /// Namen, die einen Verbund als **Wert** tragen (Parameter oder `let`). Ihr Feldzugriff
     /// ist `.`, nicht `->` -- siehe `ort`.
     werte: BTreeSet<String>,
+    /// **Die Tabellen, die ueber ihren eigenen NAMEN adressiert werden** -- `beispiele/09`:
+    /// *„die Tabelle ist der Speicher, ihr Name der Ort."* Sie bekommen ein Objekt
+    /// (`T_speicher`); die anderen nicht, denn *eine ungenutzte Groesse im erzeugten C ist
+    /// ein Befund ueber den Erzeuger.*
+    tabellenglobal: BTreeSet<String>,
     /// `linear ghost type BootPhase;` — a value that **does not exist at run time**.
     geister: Vec<String>,
     funktionen: HashMap<String, Signatur>,
@@ -600,6 +605,35 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         namen.tabellenzeiger = eindeutig;
     }
 
+    // **Welche Tabelle wird ueber ihren eigenen NAMEN adressiert?**
+    //
+    // Bis zum 2026-08-19 senkte `Kappenraum.slots[s]` zu `Kappenraum->slots[s]` ab -- ein
+    // Pfeil auf einen Typnamen. **Das war nicht still, sondern an `cc` delegiert**, und
+    // folgenlos, solange jede solche Datei aus einem anderen Grund `C001` sagte. Mit «C3c»
+    // sagt `beispiele/17` keinen mehr, und die Zeile stuende im Erzeugnis.
+    //
+    // *Es ist keine Sprachentscheidung:* `beispiele/09` sagt den Satz selbst -- die Tabelle
+    // IST der Speicher, ihr Name der Ort. Der Erzeuger gibt ihm einen C-Namen, und der ist
+    // in Gabbro unaussprechlich; entschieden wird nichts.
+    {
+        let mut benutzt: BTreeSet<String> = BTreeSet::new();
+        crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+            ItemArt::Funktion(f) => {
+                if let FnRumpf::Block(b) = &f.rumpf {
+                    benutzte_namen(b, &mut benutzt);
+                }
+            }
+            ItemArt::Check(c) => benutzte_namen(&c.can_fail, &mut benutzt),
+            _ => {}
+        });
+        namen.tabellenglobal = namen
+            .tabellen
+            .iter()
+            .filter(|t| benutzt.contains(*t) && !namen.tabellenzeiger.contains_key(*t))
+            .cloned()
+            .collect();
+    }
+
     namen.retry_schranke = retry_schranken(baum);
 
     // **Die Wortleser werden MITERZEUGT, nicht vorausgesetzt** -- ein Erzeugnis, das eine
@@ -959,6 +993,42 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         // > *Eine Zusage, die nur in einem Werkzeugaufruf steht, faehrt nicht mit dem Code
         // > mit.* Sie steht jetzt im Kopf der erzeugten Datei -- dort, wo auch der
         // > Lizenzhinweis steht, und aus demselben Grund.
+        // **«C3a»: ein `reason` ist eine benannte Zahlenmenge, und die Zahlen STEHEN DA.**
+        //
+        // `KeinSlot = 1 "kein freier Slot mehr"` nennt den Wert selbst -- der Erzeuger
+        // waehlt keinen. Damit ist die Absenkung ein `enum` mit ausgeschriebenen Werten,
+        // und der Text wandert als Kommentar mit: *er ist die Erklaerung, die ein Leser des
+        // Erzeugnisses sonst nirgends findet.*
+        //
+        // > **Was hier NICHT entschieden wird: wie ein Fehler ZURUECKKOMMT.** Ein
+        // > `let x = f() else (e) { … }` braeuchte eine Fehlerrueckgabe-Konvention, und die
+        // > steht in keiner Zeile der Grammatik -- `f() -> u32` hat keinen Fehlerkanal.
+        // > *Die Grammatik ist fuer den Menschen da, der Gabbro schreibt; wo sie und der
+        // > Erzeuger auseinandergehen, gewinnt der Mensch und der Erzeuger sagt `C001`.*
+        // > Dieselbe Absage steht seit jeher am `on_exceeded` eines `retry`.
+        ItemArt::Reason(r) => {
+            aus.push_str(&format!("\n/* reason {} */\ntypedef enum {{\n", r.name.text));
+            for f in &r.faelle {
+                aus.push_str(&format!(
+                    "    {}_{} = {}, /* {} */\n",
+                    r.name.text,
+                    f.name.text,
+                    f.wert,
+                    kommentartext(&f.text.text)
+                ));
+            }
+            aus.push_str(&format!("}} {};\n", r.name.text));
+        }
+        // **«C3c»: eine `group` erzeugt NICHTS, und sie darf nichts erzeugen.**
+        //
+        // Sie ist die Verbindungsaussage ueber zwei Traegern -- eine Invariante, die keine
+        // `table` sagen kann, weil eine Tabelle nur ueber ihrem eigenen Traeger
+        // quantifiziert (`U007`). **Was sie zur Laufzeit kostet, ist null.**
+        //
+        // *Der Sperrabdruck, den sie verlangt (`U001`-`U006`), ist eine Aussage ueber das
+        // PROGRAMM und wird zur Uebersetzungszeit nachgerechnet* -- W6: was der Pruefer
+        // entschieden hat, prueft die Maschine nicht noch einmal.
+        ItemArt::Gruppe(_) => {}
         ItemArt::Assume(_) | ItemArt::Axiom(_) => {}
         ItemArt::Modul(_) | ItemArt::Use(_) => {}
         _ => weigere(
@@ -1182,6 +1252,16 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         "    {}_slot slots[{}];\n}} {};\n",
         t.name.text, laenge, t.name.text
     ));
+    // **Und wo die Quelle die Tabelle bei ihrem NAMEN nennt, bekommt sie ihren Speicher.**
+    // *Nur dort*: eine ungenutzte Groesse im erzeugten C waere ein Befund ueber den
+    // Erzeuger, nicht ueber den Anwender.
+    if u.tabellenglobal.contains(&t.name.text) {
+        aus.push_str(&format!(
+            "/* `{n}` is addressed by NAME: the table IS the storage (beispiele/09). */\n\
+             static {n} {n}_speicher;\n",
+            n = t.name.text
+        ));
+    }
     // **Der Sonderwert fuer `option index into T`, und er hat eine PRAEMISSE.**
     //
     // Er ist die Laenge selbst -- der eine Wert, den ein gueltiger Index nach `count N` und
@@ -2490,6 +2570,26 @@ fn anweisung(
                  (MESSUNGEN.md: \"a ritual\"); «B11»: there is no exit either",
             ),
         },
+        // **«C3a»: `let … else (e) { … }` bleibt `C001`, und das ist eine gezogene Linie.**
+        //
+        // Die Form braucht eine **Fehlerrueckgabe-Konvention**, und die steht in keiner
+        // Zeile der Grammatik: `extern fn hol() -> u32` hat gar keinen Fehlerkanal, und
+        // nichts bindet eine Funktion an ein `reason`. Der Erzeuger muesste also erfinden,
+        // *wie* ein Ruf scheitert (Ausgabeparameter? Sonderwert? globale Zelle?) und *was*
+        // `e` traegt.
+        //
+        // > **Eine Sprachentscheidung, die nur der Absenkung dient, wird nicht getroffen.**
+        // > Die Grammatik ist fuer den Menschen da, der Gabbro schreibt, nicht fuer den
+        // > Erzeuger, der es liest. Dieselbe Absage steht seit jeher am `on_exceeded` eines
+        // > `retry` -- *und dort wie hier ist sie im TODO gebucht, nicht verschwiegen.*
+        StmtArt::LetSonst(_) => weigere(
+            absagen,
+            s.span,
+            "`let … else (e) { … }` -- the form needs an ERROR-RETURN CONVENTION, and none \
+             is decided: `-> u32` carries no error channel, and nothing binds a function to \
+             a `reason`. What `e` holds and how a call reports failure would both have to be \
+             invented here (the same refusal as `retry … on_exceeded` on a `reason` value)",
+        ),
         _ => weigere(absagen, s.span, "statement kind"),
     }
 }
@@ -3035,6 +3135,12 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // The base of a place in a function is a pointer parameter -- **unless it is a record
     // value bound here** («B7»). `c->len` on a `let c : Completion` is simply wrong.
     let mut zeiger = !u.werte.contains(&o.basis.text);
+    // **Und ausser wenn die Basis eine TABELLE ist.** Ihr Name ist der Ort, nicht ein
+    // Zeiger auf ihn -- `Kappenraum.slots[s]` greift den Speicher selbst.
+    if u.tabellenglobal.contains(&o.basis.text) {
+        t = format!("{}_speicher", o.basis.text);
+        zeiger = false;
+    }
     for suf in &o.suffixe {
         match suf {
             OrtSuffix::Feld(f) => {

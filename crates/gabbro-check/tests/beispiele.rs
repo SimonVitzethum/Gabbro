@@ -177,15 +177,16 @@ fn was_der_erzeuger_absenkt_steht_im_zeugnis() {
 /// `UNZUGEORDNET` herausfallen.
 #[test]
 fn das_zeugnis_meldet_was_es_nicht_einordnen_kann() {
-    let q = "module t { table A count 4 { slot { a : u32, } } \
-             table B count 4 { slot { b : u32, } } \
-             group G over { A, B } { invariant beides cost O(n) runs offline : \
-             forall i in slots of A : A.slots[i].a >= B.slots[i].b; } }";
+    // **`group` stand hier bis zum 2026-08-19** und wurde mit «C3c» eingeordnet -- sie
+    // erzeugt nichts, und das ist eine Buchung. *Eine Gegenprobe, die durch den Fortschritt
+    // ihres Gegenstands stumm wird, ist keine mehr*: sie steht jetzt auf `state`, das
+    // weder der Erzeuger noch die Einordnung kennt.
+    let q = "module t { state S { transition a { x : 0 -> 1 } } }";
     let (baum, a) = gabbro_syntax::lies("p.gab", q);
     assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
     let e = gabbro_check::zeugnis::erhebe(&baum);
     assert!(
-        e.unzugeordnet.iter().any(|u| u.contains("group")),
+        e.unzugeordnet.iter().any(|u| u.contains("state")),
         "eine Form, die niemand eingeordnet hat, muss auffallen: {:?}",
         e.unzugeordnet
     );

@@ -1183,6 +1183,40 @@ MUTATIONEN = [
         "das keinen Sonderwert hat",
         "code",
     ),
+    # -- emit.rs: «C3a/c» -- `reason`, `group`, und der Speicher einer Tabelle -------------
+    #
+    # Zwei Absenkungen und eine gezogene Linie. Die dritte Mutation ist die interessanteste:
+    # sie nimmt der Tabelle ihren eigenen Speicher, und dann steht wieder ein Pfeil auf einem
+    # Typnamen im Erzeugnis -- die Form, die bis zum 2026-08-19 an `cc` delegiert war.
+    Mutation(
+        "reason-erfindet-seine-zahlen",
+        "emit.rs",
+        "                    f.wert,\n                    kommentartext(&f.text.text)",
+        "                    0,\n                    kommentartext(&f.text.text)",
+        "C-Absenkung -- die Fehlerwerte kommen nicht mehr aus der Quelle; zwei Faelle "
+        "tragen dieselbe Zahl",
+        "code",
+    ),
+    Mutation(
+        "gruppe-erzeugt-doch-etwas",
+        "emit.rs",
+        "        ItemArt::Gruppe(_) => {}",
+        '        ItemArt::Gruppe(g) => aus.push_str(&format!("\\nstatic int {};\\n", g.name.text)),',
+        "C-Absenkung -- eine `group` kostet zur Laufzeit etwas; sie ist eine Beweisaussage "
+        "und darf nichts erzeugen",
+        "code",
+    ),
+    Mutation(
+        "tabelle-ohne-eigenen-speicher",
+        "emit.rs",
+        "    if u.tabellenglobal.contains(&o.basis.text) {\n"
+        '        t = format!("{}_speicher", o.basis.text);',
+        "    if false && u.tabellenglobal.contains(&o.basis.text) {\n"
+        '        t = format!("{}_speicher", o.basis.text);',
+        "C-Absenkung -- eine ueber ihren Namen adressierte Tabelle wird wieder ein Pfeil auf "
+        "einen Typnamen",
+        "code",
+    ),
     # -- emit.rs: «C2» -- der markierte Wert -----------------------------------------------
     #
     # Drei Stellen tragen die Absenkung, und jede kann still danebengehen: der `switch` liest

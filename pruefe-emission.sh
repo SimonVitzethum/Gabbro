@@ -685,7 +685,47 @@ lauf "beispiel34" "$W/beispiele/34-markierter-wert.gab" "$TREIBER34" \
      's/= m.last.Lang;/= m.last.Kurz;/' \
      "0 assumptions, 1 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty)"
 
-echo "== EMISSION: ALL PASS -- 14 Uebersetzungseinheiten durchgestochen =="
+# -- 14. «C3c»: die Gruppe erzeugt NICHTS -- und die Tabelle IST der Speicher -----------
+#
+# **Die billigste Zeile des ganzen Plans, und sie ist trotzdem eine Aussage:** eine `group`
+# ist die Verbindungsinvariante ueber zwei Traegern, und was sie zur Laufzeit kostet, ist
+# null. Ihr Sperrabdruck (`U001`-`U006`) wird zur Uebersetzungszeit nachgerechnet -- W6.
+#
+# **Und der Lauf hat sofort etwas anderes freigelegt:** `Endpunkte.slots[e]` senkte zu
+# `Endpunkte->slots[e]` ab -- ein Pfeil auf einen Typnamen. Es war an `cc` delegiert und
+# folgenlos, solange jede solche Datei aus einem anderen Grund `C001` sagte. *Seit «C3c»
+# sagt diese hier keinen mehr.* `beispiele/09` nennt die Regel selbst: die Tabelle IST der
+# Speicher, ihr Name der Ort.
+#
+# *Das Gift nimmt die INNERE Sperre weg. Der Rumpf rechnet dasselbe -- aber der Zaehler, den
+# der Treiber fuehrt, bleibt stehen: eine Gruppe verlangt BEIDE Sperren, und das ist die
+# Aussage, um derentwillen `U003` existiert.*
+TREIBER17='#include <stdio.h>
+#include "@ERZEUGT@"
+static int genommen_punkte = 0, genommen_plan = 0, offen = 0;
+void PUNKTE_nimm(void) { genommen_punkte++; offen++; }
+void PUNKTE_gib(void)  { offen--; }
+void PLAN_nimm(void)   { genommen_plan++; offen++; }
+void PLAN_gib(void)    { offen--; }
+int main(void) {
+    einreihen(5, 9);
+    printf("%u %u %d %d %d %d\n",
+           Endpunkte_speicher.slots[5].wartet,
+           Faeden_speicher.slots[9].gruende,
+           genommen_punkte, genommen_plan, offen,
+           (int)(sizeof(Endpunkte_speicher.slots) / sizeof(Endpunkte_speicher.slots[0])));
+    return 0;
+}
+'
+#    Erwartet:  9 1  -- beide Traeger geschrieben, jeder ueber SEINEN Speicher
+#                1 1 -- beide Sperren genau einmal genommen
+#                  0 -- und beide wieder gegeben: kein Pfad laesst eine stehen
+#                 64 -- `count NPUNKTE` traegt das Feld
+lauf "beispiel17" "$W/beispiele/17-gruppe-ueber-zwei-sperren.gab" "$TREIBER17" "9 1 1 1 0 64" \
+     's/        PLAN_nimm();//' \
+     "0 assumptions, 2 templates (1 of them UNPROVED), 3 direct forms, 2 foreign bodies (0 state their duty)"
+
+echo "== EMISSION: ALL PASS -- 15 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser vierzehn Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Vierzehn Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser fuenfzehn Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Fuenfzehn Ja-Aussagen sind keine ueber die Sprache."
