@@ -1804,3 +1804,41 @@ impl fn f() -> u32 effects { pure } costs <= 8 ops
         a2.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
     );
 }
+
+/// **«C3b»: `rcu` und `observes` -- und der Unterschied zur Sperre ist das, was FEHLT.**
+///
+/// Ein `rcu` senkt ab wie ein `lock`: zwei Prototypen, keine Zeile Rumpf. Im Erzeugnis steht
+/// dann kein `_nimm`, das jemanden aufhaelt -- der Lesebereich wird betreten und verlassen,
+/// **ausgeschlossen wird niemand.** *Das ist die ganze Substanz des Konstrukts.*
+#[test]
+fn rcu_und_observes_senken_ab() {
+    let q = "module t {
+table K count 8 { slot { z : u32, } }
+rcu D protects { K } reclaims frei;
+static mut frei : option index into K = None;
+lock S protects { K, frei } rank 3 held <= 100 ops;
+impl fn lies(i : index into K) -> u32 effects { reads K.slots } costs <= 4 ops
+{ observes D { return K.slots[i].z; } return 0; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    // Zwei Prototypen, kein Rumpf -- der kommt von aussen.
+    assert!(c.contains("void D_lese_start(void);"), "{c}");
+    assert!(c.contains("void D_lese_ende(void);"), "{c}");
+    // **Und KEIN `_nimm`.** Was RCU von einer Sperre unterscheidet, steht als das da, was fehlt.
+    assert!(!c.contains("D_nimm"), "RCU schliesst niemanden aus:\n{c}");
+    // `reclaims` erzeugt nichts -- wo zurueckgegeben werden darf, rechnet H011/H012 nach.
+    assert!(c.contains("reclaims frei"), "der Ort steht als Kommentar daneben:\n{c}");
+
+    // **Der Lesebereich wird auf JEDEM Pfad verlassen** -- auch dem mit `return` darin.
+    let vor_return = c
+        .find("D_lese_ende();\n        return")
+        .or_else(|| c.find("D_lese_ende();\n            return"));
+    assert!(vor_return.is_some(), "vor dem `return` wird der Bereich verlassen:\n{c}");
+    assert_eq!(c.matches("D_lese_ende();").count(), 2, "einmal am `return`, einmal am Ende:\n{c}");
+
+    // Und der Parameter, den nur der Lesebereich liest, gilt nicht als tot.
+    assert!(!c.contains("(void)i;"), "`i` wird im `observes` gelesen:\n{c}");
+}

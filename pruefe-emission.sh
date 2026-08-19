@@ -725,7 +725,46 @@ lauf "beispiel17" "$W/beispiele/17-gruppe-ueber-zwei-sperren.gab" "$TREIBER17" "
      's/        PLAN_nimm();//' \
      "0 assumptions, 2 templates (1 of them UNPROVED), 3 direct forms, 2 foreign bodies (0 state their duty)"
 
-echo "== EMISSION: ALL PASS -- 15 Uebersetzungseinheiten durchgestochen =="
+# -- 15. «C3b»: RCU -- und der Unterschied zur Sperre ist das, was FEHLT ----------------
+#
+# `rcu` senkt ab wie ein `lock`: zwei Prototypen, keine Zeile Rumpf. **Und genau daran wird
+# sichtbar, was RCU ist** -- es gibt kein `_nimm`, das jemanden aufhaelt. Der Lesebereich
+# wird betreten und verlassen; ausgeschlossen wird niemand. *Die Leseseite braucht die
+# Schreibersperre nicht, und das ist die ganze Substanz des Konstrukts.*
+#
+# Der Treiber zaehlt beide Seiten mit und misst die Aussage direkt:
+#
+#   * `lesen` betritt den Lesebereich und nimmt KEINE Sperre,
+#   * `setzen` und `zurueckgeben` nehmen die Schreibersperre und betreten KEINEN Lesebereich,
+#   * und der Lesebereich wird auf JEDEM Pfad verlassen -- auch dem mit `return` darin.
+#
+# *Das Gift streicht das Verlassen am Rueckkehrpfad. Der Rumpf rechnet dasselbe, und der
+# Zaehler bleibt offen stehen -- woertlich die Klasse, gegen die die Austrittsliste steht.*
+TREIBER31='#include <stdio.h>
+#include "@ERZEUGT@"
+static int drin = 0, tiefstand = 0, schreibsperre = 0;
+void BACCT_lese_start(void) { drin++; }
+void BACCT_lese_ende(void)  { drin--; if (drin < tiefstand) tiefstand = drin; }
+void SCHREIBER_nimm(void)   { schreibsperre++; }
+void SCHREIBER_gib(void)    { schreibsperre--; }
+int main(void) {
+    setzen(4, 55);
+    unsigned w = lesen(4);
+    zurueckgeben(4);
+    printf("%u %d %d %d %d\n", w, drin, tiefstand, schreibsperre, (int)(frei == 4u));
+    return 0;
+}
+'
+#    Erwartet:  55 -- der Leser sieht, was der Schreiber unter seiner Sperre schrieb
+#                0 -- der Lesebereich ist wieder zu, obwohl der Rumpf ein `return` enthaelt
+#                0 -- und er wurde nie ZWEIMAL verlassen (der Tiefstand bleibt bei null)
+#                0 -- die Schreibersperre ist gegeben
+#                1 -- `reclaims frei` steht als `Some(i)` im Kopf der Freiliste
+lauf "beispiel31" "$W/beispiele/31-rcu.gab" "$TREIBER31" "55 0 0 0 1" \
+     's/^        BACCT_lese_ende();$//' \
+     "1 assumptions, 2 templates (1 of them UNPROVED), 4 direct forms, 2 foreign bodies (0 state their duty)"
+
+echo "== EMISSION: ALL PASS -- 16 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser fuenfzehn Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Fuenfzehn Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser sechzehn Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Sechzehn Ja-Aussagen sind keine ueber die Sprache."

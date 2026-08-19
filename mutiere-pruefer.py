@@ -1183,6 +1183,24 @@ MUTATIONEN = [
         "das keinen Sonderwert hat",
         "code",
     ),
+    # -- emit.rs: «C3b» -- RCU, und der Unterschied zur Sperre ist das, was FEHLT ----------
+    Mutation(
+        "rcu-ohne-prototypen",
+        "emit.rs",
+        '                "void {n}_lese_start(void);\\nvoid {n}_lese_ende(void);\\n"',
+        '                "/* {n} */\\n"',
+        "C-Absenkung -- ein RCU-Lesebereich wird betreten, ohne dass sein Primitiv erklaert ist",
+        "code",
+    ),
+    Mutation(
+        "lesebereich-bleibt-beim-return-offen",
+        "emit.rs",
+        '            innen.freigaben.push(format!("{n}_lese_ende()"));',
+        "            let _ = &innen;",
+        "C-Absenkung -- ein `return` aus einem `observes` laesst den Lesebereich offen; "
+        "die Gnadenfrist haengt genau daran",
+        "code",
+    ),
     # -- emit.rs: «C3a/c» -- `reason`, `group`, und der Speicher einer Tabelle -------------
     #
     # Zwei Absenkungen und eine gezogene Linie. Die dritte Mutation ist die interessanteste:

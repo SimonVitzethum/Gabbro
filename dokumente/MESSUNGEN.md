@@ -9930,3 +9930,43 @@ immer geschwiegen, ohne rot zu werden.* Sie steht jetzt auf `state`.
 173 von 173 Mutationen · 173/173 Anker
 28 Weigerungen (war 46), alle C001, keine stille
 ```
+
+---
+
+# «C3b» ausgeführt — RCU senkt ab, und der Unterschied zur Sperre ist das, was FEHLT (2026-08-19)
+
+**28 Weigerungen → 26.** `rcu` (1) und `observes` (1). `beispiele/31-rcu.gab` ist die
+sechzehnte durchgestochene Übersetzungseinheit.
+
+Ein `rcu` senkt ab **wie ein `lock`**: zwei Prototypen, keine Zeile Rumpf. *Und genau daran
+wird sichtbar, was RCU ist* — im erzeugten C steht **kein `_nimm`**, das jemanden aufhält:
+
+```c
+void BACCT_lese_start(void);
+void BACCT_lese_ende(void);
+```
+
+Der Treiber misst die Aussage direkt: `lesen` betritt den Lesebereich und nimmt **keine**
+Sperre; `setzen` und `zurueckgeben` nehmen die Schreibersperre und betreten **keinen**
+Lesebereich. *Die Leseseite braucht die Schreibersperre nicht — ohne diese Ausnahme kaufte
+`observes` nichts, und RCU wäre eine Sperre mit einem zweiten Namen.*
+
+**Die Gnadenfrist bleibt eine Annahme.** Dass nach der Rücknahme des Zeigers kein Leser mehr
+in einem `observes` steht, stellt kein statischer Pass her — `beispiele/31` sagt es selbst
+und schreibt `assume gnadenfrist_ist_abgelaufen` daneben. Das Zeugnis führt sie unter den
+Annahmen (1 assumption) und die zwei Rümpfe unter den fremden.
+
+**Und `reclaims` erzeugt nichts.** Wo zurückgegeben werden darf, rechnen `H011` und `H012`
+zur Übersetzungszeit nach — W6. Der Ort steht als Kommentar daneben, damit ein Leser des C
+ihn findet.
+
+*Dritter Fund derselben Klasse an einem Tag:* `benutzte_namen` kannte den `observes`-Zweig
+nicht, also bekam `lesen(i)` ein `(void)i;` neben ein `K.slots[i]`. Nach `narrow` (17.),
+`if` (19.) und `observes` (19.) ist die Liste jetzt vollständig für jede Form, die der
+Erzeuger absenkt.
+
+```
+166 Kennungen · 172 Gifte · 139 Tests · 34 Beispiele sauber · 16 Einheiten durchgestochen
+175 von 175 Mutationen · 175/175 Anker
+26 Weigerungen (war 46), alle C001, keine stille
+```

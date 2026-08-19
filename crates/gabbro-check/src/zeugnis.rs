@@ -247,6 +247,20 @@ pub const EINORDNUNG: &[Posten] = &[
                 Glied, das die Marke nennt, und nur daraus",
     },
     Posten {
+        konstrukt: "rcu",
+        traegt: Traegt::Fremd,
+        grund: "zwei Prototypen (`_lese_start`, `_lese_ende`) und die Gnadenfrist -- der \
+                RUMPF kommt von aussen. Dass nach der Ruecknahme des Zeigers kein Leser mehr \
+                drin ist, ist eine Aussage ueber die UMGEBUNG und steht als `assume` daneben",
+    },
+    Posten {
+        konstrukt: "observes",
+        traegt: Traegt::Fremd,
+        grund: "Betreten und Verlassen des Lesebereichs, auf JEDEM Pfad -- wie `locks`, nur \
+                ohne Ausschluss. Wo zurueckgegeben werden darf, rechnet `H011`/`H012` zur \
+                Uebersetzungszeit nach (W6)",
+    },
+    Posten {
         konstrukt: "locks",
         traegt: Traegt::Schablone("gruppe.sperrabdruck"),
         grund: "Nehmen und Geben, auf JEDEM Pfad; Rang und Haltezeit bleiben im Pruefer (W6)",
@@ -400,6 +414,16 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
         }
         ItemArt::Assume(_) | ItemArt::Axiom(_) => zaehle(&mut e, "assume / axiom"),
         ItemArt::Reason(_) => zaehle(&mut e, "reason"),
+        ItemArt::Rcu(r) => {
+            zaehle(&mut e, "rcu");
+            e.fremde.push((
+                format!("{}_lese_start / _lese_ende", r.name.text),
+                "der Rumpf eines RCU-Lesebereichs -- und die GNADENFRIST: dass nach der \
+                 Ruecknahme des Zeigers kein Leser mehr drin ist, stellt kein statischer \
+                 Pass her"
+                    .into(),
+            ));
+        }
         ItemArt::Gruppe(_) => zaehle(&mut e, "group"),
         // **«entrust» -- die eine Zeile, um derentwillen das Wort existiert.**
         //

@@ -1029,6 +1029,38 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         // PROGRAMM und wird zur Uebersetzungszeit nachgerechnet* -- W6: was der Pruefer
         // entschieden hat, prueft die Maschine nicht noch einmal.
         ItemArt::Gruppe(_) => {}
+        // **«C3b»: `rcu` erzeugt zwei Prototypen und keine Zeile Rumpf** -- genau wie eine
+        // Sperre, und aus genau demselben Grund.
+        //
+        // Was RCU von einer Sperre unterscheidet, steht im Erzeugnis dann als das, was
+        // FEHLT: es gibt kein `_nimm`, das jemanden aufhaelt. Der Lesebereich wird betreten
+        // und verlassen; **ausgeschlossen wird niemand.** *Das ist die ganze Substanz des
+        // Konstrukts, und die Absenkung macht sie sichtbar.*
+        //
+        // > **Die Gnadenfrist ist eine ANNAHME und keine Prüfung.** Dass nach der Ruecknahme
+        // > des Zeigers kein Leser mehr in einem `observes` steht, stellt kein statischer
+        // > Pass her -- `beispiele/31` sagt es selbst und schreibt `assume
+        // > gnadenfrist_ist_abgelaufen` daneben. Der Erzeuger nennt das Primitiv und
+        // > definiert es nicht.
+        //
+        // `reclaims` erzeugt nichts: **wo zurueckgegeben werden darf, rechnen `H011` und
+        // `H012` zur Uebersetzungszeit nach** (W6). Der Ort steht als Kommentar daneben,
+        // damit ein Leser des C ihn findet.
+        ItemArt::Rcu(r) => {
+            let n = &r.name.text;
+            if let Some(o) = &r.gibt_zurueck {
+                aus.push_str(&format!(
+                    "\n/* rcu {n} reclaims {} -- WHERE a slot may be given back is checked at\n\
+                     \x20* compile time (H011, H012); nothing of it is left for the run. */\n",
+                    kommentartext(&o.text())
+                ));
+            } else {
+                aus.push_str(&format!("\n/* rcu {n} */\n"));
+            }
+            aus.push_str(&format!(
+                "void {n}_lese_start(void);\nvoid {n}_lese_ende(void);\n"
+            ));
+        }
         ItemArt::Assume(_) | ItemArt::Axiom(_) => {}
         ItemArt::Modul(_) | ItemArt::Use(_) => {}
         _ => weigere(
@@ -2291,6 +2323,7 @@ fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
                 benutzte_namen(&l.sonst, aus);
             }
             StmtArt::Publish(p) => e(&p.wert, aus),
+            StmtArt::Observiert(o) => benutzte_namen(&o.rumpf, aus),
             _ => {}
         }
     }
@@ -2509,6 +2542,27 @@ fn anweisung(
                  {e}{typ} {} = atomic_load_explicit(&{quelle}, {ordnung});\n",
                 al.name.text
             ));
+        }
+        // **«C3b»: `observes D { … }` -- dieselbe Gestalt wie `locks`, und der Unterschied
+        // ist genau das, was FEHLT.**
+        //
+        // Betreten und Verlassen, auf JEDEM Pfad -- der Austritt wird durchgereicht, sonst
+        // laesst ein `return` im Rumpf den Lesebereich offen. *Was hier NICHT steht, ist
+        // eine Nahme: RCU serialisiert Leser gegen die Ruckgewinnung, nicht Schreiber
+        // gegeneinander.* Der Schreiber braucht seine eigene Sperre, und dass er sie hat,
+        // rechnet `H010`/`H012` zur Uebersetzungszeit nach.
+        StmtArt::Observiert(o) => {
+            let n = &o.domaene.text;
+            aus.push_str(&format!(
+                "{e}/* observes {n} -- READ side: no exclusion, only a region */\n\
+                 {e}{n}_lese_start();\n{e}{{\n"
+            ));
+            let mut innen = austritt.clone();
+            innen.freigaben.push(format!("{n}_lese_ende()"));
+            for k in &o.rumpf.anweisungen {
+                anweisung(k, aus, u, absagen, tiefe + 1, &innen);
+            }
+            aus.push_str(&format!("{e}}}\n{e}{n}_lese_ende();\n"));
         }
         StmtArt::Sperrt(x) => {
             let name = x.sperre.text();
