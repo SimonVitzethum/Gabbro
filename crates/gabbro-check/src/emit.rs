@@ -57,9 +57,14 @@ struct Namen {
     geraetezeiger: HashMap<String, String>,
     /// Name -> Tabelle, fuer Zeigerparameter. Konservativ wie `geraetezeiger`.
     tabellenzeiger: HashMap<String, String>,
-    /// (Tabelle, Slotfeld) -> Zieltabelle, fuer `option index into T`-Felder. **Ohne das
-    /// weiss der Erzeuger bei `x = None` nicht, WELCHER Sonderwert gemeint ist.**
-    optionfeld: HashMap<(String, String), String>,
+    /// (Tabelle, Slotfeld) -> der erklaerte Typ des Slotfeldes. **Er ist die einzige
+    /// Quelle, aus der ein `let obj = c.slots[s].objekt` seinen Typ bekommt** -- und der
+    /// Erzeuger raet ihn nicht, er liest ihn ab.
+    slotfeld: HashMap<(String, String), TypExpr>,
+    /// Die `static`-Namen mit ihrem erklaerten Typ. Ein `static mut frei : option index
+    /// into Halde` ist ein Ort wie ein Slotfeld -- **ohne den Typ wuesste `frei = Some(i)`
+    /// nicht, gegen welchen Sonderwert es schreibt.**
+    statiken: HashMap<String, TypExpr>,
     /// Je Tabelle ihr aufgeloester `count`-Wert. **Der Sonderwert haengt daran** -- siehe
     /// `beweise/Option_Sonderwert.thy`, M-1.
     kapazitaet: HashMap<String, i128>,
@@ -488,16 +493,19 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         }
     }
 
-    // Optionfelder und Tabellenzeiger -- fuer `x = None`.
+    // Optionfelder, Slotfeldtypen, `static`-Typen und Tabellenzeiger -- fuer `x = None`
+    // und fuer jeden Ort, dessen Typ ein `option index into T` ist.
     crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Statisch(st) = &item.art {
+            namen.statiken.insert(st.name.text.clone(), st.typ.clone());
+        }
         if let ItemArt::Tabelle(tb) = &item.art {
             if let Some(slot) = &tb.slot {
                 for f in &slot.felder {
-                    if let SlotTyp::Typ(TypExpr::Index { tabelle, optional: true, .. }) = &f.typ {
-                        namen.optionfeld.insert(
-                            (tb.name.text.clone(), f.name.text.clone()),
-                            tabelle.text.clone(),
-                        );
+                    if let SlotTyp::Typ(t) = &f.typ {
+                        namen
+                            .slotfeld
+                            .insert((tb.name.text.clone(), f.name.text.clone()), t.clone());
                     }
                 }
             }
@@ -655,9 +663,29 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 weigere(absagen, st.name.span, "`static` of an unresolvable type");
                 return;
             };
-            let Some(w) = konst_zahl(&st.wert) else {
-                weigere(absagen, st.name.span, "`static` with a non-constant initialiser");
-                return;
+            // **Ein `static mut frei : option index into Halde = None;`** -- der
+            // Anfangswert ist der Sonderwert, und der steht als `#define` ueber der
+            // Tabelle. *Ohne diesen Zweig war die Freiliste nicht absenkbar, obwohl der
+            // Beweis dafuer seit dem 2026-08-17 dalag.*
+            let anfang = match &st.typ {
+                TypExpr::Index { tabelle, optional: true, .. } => {
+                    option_wert(&st.wert, &tabelle.text, &namen, absagen)
+                }
+                _ => None,
+            };
+            let w = match anfang {
+                Some(x) => x,
+                None => match konst_zahl(&st.wert) {
+                    Some(n) => n.to_string(),
+                    None => {
+                        weigere(
+                            absagen,
+                            st.name.span,
+                            "`static` with a non-constant initialiser",
+                        );
+                        return;
+                    }
+                },
             };
             let konst = if st.veraenderlich { "" } else { "const " };
             let abschnitt = match &st.section {
@@ -1253,7 +1281,7 @@ fn pruefkoerper(
     rumpf_aus.push_str(" */\n");
     rumpf_aus.push_str(&format!("bool pruefe_{}(void) {{\n", c.name.text));
     for s in &c.can_fail.anweisungen {
-        anweisung(s, rumpf_aus, u, absagen, 1, &Vec::new());
+        anweisung(s, rumpf_aus, u, absagen, 1, &Austritt::default());
     }
     rumpf_aus.push_str("}\n");
 }
@@ -1908,8 +1936,16 @@ fn funktion(
             aus.push_str(&format!("    (void){};\n", p.name.text));
         }
     }
+    // **Der Rueckgabetyp reist mit in den Rumpf** -- ein `return None` haengt an ihm.
+    let rahmen = Austritt {
+        freigaben: Vec::new(),
+        rueck_option: match &f.ergebnis {
+            Some(TypExpr::Index { tabelle, optional: true, .. }) => Some(tabelle.text.clone()),
+            _ => None,
+        },
+    };
     for s in &b.anweisungen {
-        anweisung(s, aus, u, absagen, 1, &Vec::new());
+        anweisung(s, aus, u, absagen, 1, &rahmen);
     }
     aus.push_str("}\n");
 }
@@ -2040,7 +2076,18 @@ fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
 ///
 /// > *Das ist woertlich die Klasse, die C8 bezahlt hat:* ein neuer Abweispfad erbt die
 /// > Aufraeumpflicht des alten nicht. Hier erbt er sie, weil nicht der Schreiber sie ausgibt.
-type Austritt = Vec<String>;
+///
+/// **Und die zweite Zeile gehoert aus demselben Grund hierher**: ein `return None` weiss
+/// nur an dieser Stelle, WELCHER Sonderwert gemeint ist -- er haengt am Rueckgabetyp der
+/// umgebenden Funktion, nicht am Ausdruck. *Ohne ihn stuende im C ein Bezeichner `None`,
+/// den niemand erklaert hat.*
+#[derive(Default, Clone)]
+struct Austritt {
+    /// Die Freigaben der offenen `locks`-Bloecke, innerste zuletzt.
+    freigaben: Vec<String>,
+    /// Die Zieltabelle des `option index into T`-Rueckgabetyps dieser Funktion.
+    rueck_option: Option<String>,
+}
 
 fn einzug(n: usize) -> String {
     "    ".repeat(n)
@@ -2059,11 +2106,20 @@ fn anweisung(
     match &s.art {
         StmtArt::Return(w) => {
             // **Erst freigeben, dann zurueckkehren** -- und zwar fuer JEDEN offenen Block.
-            for freigabe in austritt.iter().rev() {
+            for freigabe in austritt.freigaben.iter().rev() {
                 aus.push_str(&format!("{e}{freigabe};\n"));
             }
             match w {
-                Some(x) => aus.push_str(&format!("{e}return {};\n", ausdruck(x, u, absagen))),
+                // **`return None` / `return Some(i)`** -- der Sonderwert kommt aus dem
+                // Rueckgabetyp der Funktion, nicht aus dem Ausdruck.
+                Some(x) => {
+                    let t = austritt
+                        .rueck_option
+                        .as_deref()
+                        .and_then(|tab| option_wert(x, tab, u, absagen))
+                        .unwrap_or_else(|| ausdruck(x, u, absagen));
+                    aus.push_str(&format!("{e}return {t};\n"));
+                }
                 None => aus.push_str(&format!("{e}return;\n")),
             }
         }
@@ -2087,25 +2143,9 @@ fn anweisung(
             // Sonderwert gemeint ist.** Bis zum 2026-08-17 weigerte er sich hier; jetzt loest
             // er das Feld auf -- und weigert sich weiterhin, wenn er es NICHT kann.
             let wert = match option_ziel(&z.ziel, u) {
-                Some(tab) => match &z.wert.art {
-                    // `None` kommt als Ruf ohne Argumente an -- es IST ein Konstruktor.
-                    ExprArt::Ruf(r) if r.pfad.teile.last().is_some_and(|i| i.text == "None") => {
-                        format!("{tab}_NONE")
-                    }
-                    ExprArt::Ort(o) if o.suffixe.is_empty() && o.basis.text == "None" => {
-                        format!("{tab}_NONE")
-                    }
-                    ExprArt::Ruf(r) if r.pfad.teile.last().is_some_and(|i| i.text == "Some") => {
-                        match r.argumente.first() {
-                            Some(a) => ausdruck(a, u, absagen),
-                            None => {
-                                weigere(absagen, s.span, "`Some` without an argument");
-                                return;
-                            }
-                        }
-                    }
-                    _ => ausdruck(&z.wert, u, absagen),
-                },
+                // `None` kommt als Ruf ohne Argumente an -- es IST ein Konstruktor.
+                Some(tab) => option_wert(&z.wert, &tab, u, absagen)
+                    .unwrap_or_else(|| ausdruck(&z.wert, u, absagen)),
                 None => ausdruck(&z.wert, u, absagen),
             };
             aus.push_str(&format!(
@@ -2174,7 +2214,20 @@ fn anweisung(
             // A non-ghost `let` needs a type, and the emitter does not guess one. The first
             // version wrote `uint32_t` unconditionally -- correct for the one file it was
             // built against and wrong for every other.
-            match l.typ.as_ref().and_then(|t| ctyp(t, u)) {
+            //
+            // **Steht keiner da, wird er ABGELESEN und nicht geraten**: die rechte Seite ist
+            // ein Ort, und der Ort hat einen erklaerten Typ (`ort_typ`). *`let obj =
+            // c.slots[s].objekt` ist die Form, an der ein halbes Dutzend Weigerungen hing --
+            // und der Typ stand die ganze Zeit in der Tabellendeklaration.*
+            let typ = match l.typ.as_ref().and_then(|t| ctyp(t, u)) {
+                Some(c) => Some(c),
+                None if l.typ.is_none() => match &l.wert.art {
+                    ExprArt::Ort(o) => ort_typ(o, u).and_then(|t| ctyp(&t, u)),
+                    _ => None,
+                },
+                None => None,
+            };
+            match typ {
                 Some(c) => aus.push_str(&format!(
                     "{e}{c} {} = {};\n",
                     l.name.text,
@@ -2238,7 +2291,7 @@ fn anweisung(
             };
             aus.push_str(&format!("{e}{nimm};\n{e}{{\n"));
             let mut innen = austritt.clone();
-            innen.push(gib.clone());
+            innen.freigaben.push(gib.clone());
             for k in &x.rumpf.anweisungen {
                 anweisung(k, aus, u, absagen, tiefe + 1, &innen);
             }
@@ -2514,15 +2567,51 @@ fn match_option(
     aus.push_str(&format!("{e}    }}\n{e}}}\n"));
 }
 
-/// Ist dieser Ort ein `option index into T`-Feld? Dann die Zieltabelle.
+/// **Der erklaerte Typ eines Ortes -- abgelesen, nicht geraten.**
 ///
-/// Erkannt wird die Form `<zeiger>.slots[<i>].<feld>` -- die einzige, in der ein Slotfeld
-/// ueberhaupt vorkommt. **Alles andere liefert `None`, und dann weigert sich der Erzeuger**
-/// statt einen Sonderwert zu raten.
+/// Drei Wurzeln, und mehr gibt es in dieser Sprache nicht: ein Zeigerparameter auf eine
+/// Tabelle, der **Name einer Tabelle selbst** (`beispiele/09`: die Tabelle IST der Speicher)
+/// und ein `static`. Von dort aus traegt genau ein Weg weiter: `.slots[i].<feld>`.
+///
+/// > **Jede andere Gestalt liefert `None`, und dann weigert sich der Erzeuger.** Ein
+/// > geratener Typ waere hier besonders teuer: an ihm haengt der Sonderwert, und ein
+/// > falscher Sonderwert macht aus `None` einen gueltigen Index.
+fn ort_typ(o: &Ort, u: &Namen) -> Option<TypExpr> {
+    let tabelle = u
+        .tabellenzeiger
+        .get(&o.basis.text)
+        .cloned()
+        .or_else(|| u.tabellen.iter().find(|t| **t == o.basis.text).cloned());
+    if let Some(tab) = tabelle {
+        // `h.slots[i].naechst` -- Feld, Index, Feld. Alles andere ist kein Slotfeld.
+        if o.suffixe.len() != 3 {
+            return None;
+        }
+        let (OrtSuffix::Feld(slots), OrtSuffix::Index(_), OrtSuffix::Feld(f)) =
+            (&o.suffixe[0], &o.suffixe[1], &o.suffixe[2])
+        else {
+            return None;
+        };
+        if slots.text != "slots" {
+            return None;
+        }
+        return u.slotfeld.get(&(tab, f.text.clone())).cloned();
+    }
+    if o.suffixe.is_empty() {
+        return u.statiken.get(&o.basis.text).cloned();
+    }
+    None
+}
+
+/// Ist dieser Ort ein `option index into T`? Dann die Zieltabelle.
+///
+/// **Alles andere liefert `None`, und dann weigert sich der Erzeuger** statt einen
+/// Sonderwert zu raten.
 fn option_ziel(o: &Ort, u: &Namen) -> Option<String> {
-    let tab = u.tabellenzeiger.get(&o.basis.text)?;
-    let OrtSuffix::Feld(feld) = o.suffixe.last()? else { return None };
-    u.optionfeld.get(&(tab.clone(), feld.text.clone())).cloned()
+    match ort_typ(o, u) {
+        Some(TypExpr::Index { tabelle, optional: true, .. }) => Some(tabelle.text),
+        _ => None,
+    }
 }
 
 /// Liefert den Tabellennamen, wenn dieser Ausdruck ein `option index into T` ist.
@@ -2533,6 +2622,42 @@ fn option_quelle(e: &Expr, u: &Namen) -> Option<String> {
             .get(&r.pfad.teile.last()?.text)?
             .option_rueck
             .clone(),
+        ExprArt::Ort(o) => option_ziel(o, u),
+        _ => None,
+    }
+}
+
+/// **`None` und `Some(i)` als WERT -- und der Sonderwert kommt von der Zieltabelle.**
+///
+/// Die Absenkung steht in `beweise/Option_Sonderwert.thy`: `None` ist `count` selbst, der
+/// erste Index, den es nicht gibt (`sonderwert_ausserhalb`), und die Kodierung ist auf dem
+/// gueltigen Bereich injektiv (`kodiere_injektiv`). **Die Praemisse des dritten Satzes
+/// prueft `tabelle`**, wo das `#define` entsteht -- ein volles Wort hat keinen Platz fuer
+/// „keine", und das ist dort eine Absage.
+///
+/// Liefert `None`, wenn der Ausdruck gar kein Konstruktor ist -- dann uebersetzt der Rufer
+/// ihn gewoehnlich.
+fn option_wert(e: &Expr, tab: &str, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    let name = match &e.art {
+        ExprArt::Ruf(r) => r.pfad.teile.last()?.text.clone(),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => o.basis.text.clone(),
+        _ => return None,
+    };
+    match name.as_str() {
+        "None" => Some(format!("{tab}_NONE")),
+        "Some" => {
+            let ExprArt::Ruf(r) = &e.art else {
+                weigere(absagen, e.span, "`Some` without an argument");
+                return Some(String::new());
+            };
+            match r.argumente.first() {
+                Some(a) => Some(ausdruck(a, u, absagen)),
+                None => {
+                    weigere(absagen, e.span, "`Some` without an argument");
+                    Some(String::new())
+                }
+            }
+        }
         _ => None,
     }
 }
@@ -2600,6 +2725,21 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
 }
 
 fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
+    // **Ein blankes `None` an einer Stelle, die keine Option ist, wird ABGELEHNT.**
+    //
+    // Bis zum 2026-08-19 fiel es hier durch und wurde der C-Bezeichner `None` -- ein Name,
+    // den niemand erklaert hat. *Er waere an `cc` gefallen, und darauf zu bauen hiesse, die
+    // Weigerung zu delegieren, wo die Antwort hier steht.* Wo die Zieltabelle bekannt ist,
+    // kommt dieser Ort gar nicht erst dran (`option_wert`).
+    if o.suffixe.is_empty() && o.basis.text == "None" {
+        weigere(
+            absagen,
+            o.span,
+            "`None` where the emitter cannot see WHICH table's sentinel is meant -- the \
+             sentinel is `count` itself (beweise/Option_Sonderwert.thy), so it needs the table",
+        );
+        return String::new();
+    }
     // **Ein Geraeteregister ist kein Feld, sondern ein volatiler Zugriff an `basis + Versatz`.**
     // Der C-Uebersetzer darf ihn nicht wegoptimieren, und `volatile` ist die eine Stelle, an
     // der die Absenkung ihm etwas VERBIETEN muss.

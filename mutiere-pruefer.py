@@ -218,11 +218,9 @@ MUTATIONEN = [
         "wrapping-ueberall",
         "m1.rs",
         "                if !ziel.laeuft_um() {\n"
-        "                    self.passt(&ergebnis_typ, &ziel, z.wert.span, \"die Zuweisung\");\n"
-        "                }",
+        "                    self.passt_wert(",
         "                if ziel.laeuft_um() {\n"
-        "                    self.passt(&ergebnis_typ, &ziel, z.wert.span, \"die Zuweisung\");\n"
-        "                }",
+        "                    self.passt_wert(",
         "jede Zuweisung gilt als `wrapping`",
     ),
     # -- namen.rs, schleifen.rs, wirkungen.rs --------------------------------------------
@@ -276,10 +274,20 @@ MUTATIONEN = [
         "index-erbt-nicht",
         "umgebung.rs",
         "                    .find_map(|k| self.kapazitaeten.get(&k).copied())\n"
-        "                    .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1))",
+        "                    .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1 + sonderwert))",
         "                    .find_map(|k| self.kapazitaeten.get(&k).copied())\n"
         "                    .map(|_| IntBereich::voll(32, false))",
         "A3 -- `index into T` erbt die Schranke aus `count` nicht",
+    ),
+    # **«C1», 2026-08-19.** `option index into T` reicht bis `N`, `index into T` bis `N-1` --
+    # der Unterschied IST der Sonderwert. Ohne ihn ist ein Optionswert von einem gueltigen
+    # Index nicht zu unterscheiden, und `h.slots[frei]` greift einen Slot hinter das Feld.
+    Mutation(
+        "option-ohne-sonderwert",
+        "umgebung.rs",
+        "                let sonderwert = i128::from(*optional);",
+        "                let sonderwert = 0;",
+        "der Bereich eines `option index into T` enthaelt den Sonderwert nicht mehr",
     ),
     Mutation(
         "rumpf-egal",
@@ -911,8 +919,8 @@ MUTATIONEN = [
     Mutation(
         "sperre-bleibt-beim-return-liegen",
         "emit.rs",
-        "            for freigabe in austritt.iter().rev() {\n                aus.push_str(&format!(\"{e}{freigabe};\\n\"));\n            }",
-        "            for freigabe in austritt.iter().rev() {\n                let _ = freigabe;\n            }",
+        "            for freigabe in austritt.freigaben.iter().rev() {\n                aus.push_str(&format!(\"{e}{freigabe};\\n\"));\n            }",
+        "            for freigabe in austritt.freigaben.iter().rev() {\n                let _ = freigabe;\n            }",
         "C-Absenkung -- ein `return` aus einem `locks`-Block laesst die Sperre stehen (C8)",
         "code",
     ),
@@ -1169,10 +1177,41 @@ MUTATIONEN = [
     Mutation(
         "none-nimmt-die-falsche-tabelle",
         "emit.rs",
-        "    u.optionfeld.get(&(tab.clone(), feld.text.clone())).cloned()",
-        "    { let _ = feld; Some(tab.clone()) }",
-        "C-Absenkung -- `x = None` nimmt den Sonderwert der EIGENEN statt der Zieltabelle",
+        "        Some(TypExpr::Index { tabelle, optional: true, .. }) => Some(tabelle.text),",
+        "        Some(TypExpr::Index { tabelle, .. }) => Some(tabelle.text),",
+        "C-Absenkung -- ein `index into T` gilt als Option, und `= None` schreibt in ein Feld, "
+        "das keinen Sonderwert hat",
         "code",
+    ),
+    # -- emit.rs / m1.rs: «C1» -- der Sonderwert, ausgeschrieben ---------------------------
+    #
+    # Der Beweis lag seit dem 2026-08-17 in `beweise/Option_Sonderwert.thy` und **kein
+    # Erzeuger benutzte ihn**. Seit «C1» steht er im C -- und damit muss beschaedigbar sein,
+    # was ihn traegt: der Wert selbst, die Nutzlastpruefung und der Typ des `Some`-Binders.
+    Mutation(
+        "none-wird-null",
+        "emit.rs",
+        '        "None" => Some(format!("{tab}_NONE")),',
+        '        "None" => Some(format!("0*{tab}_NONE")),',
+        "C-Absenkung -- `None` senkt zu 0 ab und ist von `Some(0)` nicht zu unterscheiden",
+        "code",
+    ),
+    Mutation(
+        "some-gegen-den-optionstyp",
+        "m1.rs",
+        "            (true, Some(nutzlast)) => self.passt(quelle, &nutzlast, span, was),",
+        "            (true, Some(nutzlast)) => {\n"
+        "                let _ = nutzlast;\n"
+        "                self.passt(quelle, ziel, span, was)\n"
+        "            }",
+        "`Some(N)` wird gegen den OPTIONSTYP geprueft, also passt der Sonderwert hinein",
+    ),
+    Mutation(
+        "some-binder-ohne-nutzlast",
+        "m1.rs",
+        "                            innen.lokal.insert(binder.text.clone(), nutz);",
+        "                            innen.lokal.insert(binder.text.clone(), Typ::Unbekannt);",
+        "V3 an der Option -- der `Some`-Binder traegt seinen Indexbereich nicht mehr",
     ),
     Mutation(
         "bank-ohne-schritt",

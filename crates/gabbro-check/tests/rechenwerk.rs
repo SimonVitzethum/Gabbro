@@ -1611,3 +1611,78 @@ fn eine_bitlage_liegt_im_eigenen_wort() {
     assert!(f.is_empty(), "`reserved` fuellt die Luecke: {f:?}");
     assert!(!c.contains("K_m("), "ein reserviertes Feld bekommt keinen Leser:\n{c}");
 }
+
+/// **«C1»: `option index into T` senkt zum SONDERWERT ab — und der Sonderwert ist `count`.**
+///
+/// Der Beweis lag seit dem 2026-08-17 in `beweise/Option_Sonderwert.thy`
+/// (`sonderwert_ausserhalb`, `kodiere_injektiv`, `kodiere_wort_injektiv`) und **kein Erzeuger
+/// benutzte ihn**: `None`, `Some(i)`, ein `static … = None` und ein `match` ueber einem Ort
+/// waren zehn Weigerungen. *Ein Satz ohne Leser ist die Haelfte, die «NL» beklagt.*
+///
+/// Vier Stellen tragen die Absenkung, und jede ist hier gemessen:
+///
+/// * die Zieltabelle kommt aus dem TYP des Ortes, nicht aus seinem Namen (`ort_typ`),
+/// * `None` wird `T_NONE` und **nur dort, wo die Zieltabelle feststeht**,
+/// * `return None` haengt am Rueckgabetyp der Funktion, nicht am Ausdruck,
+/// * ein `let` ohne erklaerten Typ liest ihn vom Slotfeld ab, statt ihn zu raten.
+#[test]
+fn option_senkt_zum_sonderwert_ab() {
+    let q = "module t {
+table H count 8 { slot { kopf : u64, naechst : option index into H, } }
+static mut frei : option index into H = None;
+impl fn belegen(h : ptr<normal, rw> H) -> option index into H
+    effects { reads frei, writes frei, reads h.slots } costs <= 6 ops
+{ match frei { None => { return None; } Some(i) => { frei = h.slots[i].naechst; return Some(i); } } }
+impl fn freigeben(h : ptr<normal, rw> H, i : index into H)
+    effects { reads frei, writes frei, writes h.slots } costs <= 5 ops
+{ h.slots[i].naechst = frei; frei = Some(i); }
+impl fn kopf(h : ptr<normal, r> H, i : index into H) -> u64
+    effects { reads h.slots } costs <= 3 ops
+{ let k = h.slots[i].kopf; return k; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    // Der Sonderwert IST die Laenge -- der erste Index, den es nicht gibt.
+    assert!(c.contains("#define H_NONE (8)"), "der Sonderwert ist `count`:\n{c}");
+    // Ein `static` faengt bei ihm an, nicht bei null.
+    assert!(c.contains("static uint32_t frei = H_NONE;"), "{c}");
+    // Ein `match` ueber einem Ort wird der Vergleich gegen ihn.
+    assert!(c.contains("!= H_NONE"), "das `match` vergleicht gegen den Sonderwert:\n{c}");
+    // `return None` haengt am RUECKGABETYP -- ohne ihn stuende hier ein Bezeichner `None`.
+    assert!(c.contains("return H_NONE;"), "`return None` kennt seine Tabelle:\n{c}");
+    assert!(!c.contains(" None"), "kein blankes `None` im C:\n{c}");
+    // `frei = Some(i)` ist der Wert selbst, kein Zusatzwort.
+    assert!(c.contains("frei = i;"), "`Some(i)` ist der Index selbst:\n{c}");
+    // Und ein `let` ohne erklaerten Typ liest ihn vom Slotfeld ab.
+    assert!(c.contains("uint64_t k = h->slots[i].kopf;"), "der Typ wird abgelesen:\n{c}");
+
+    // **Wo die Zieltabelle NICHT feststeht, weigert er sich** -- er raet keinen Sonderwert.
+    let ohne = "module t { extern fn nimm(x : u32) costs <= 1 ops;
+impl fn f() costs <= 2 ops { nimm(None); } }";
+    let (b2, mut a2) = gabbro_syntax::lies("p.gab", ohne);
+    let _ = gabbro_check::emit::emittiere(&b2, &mut a2);
+    assert!(
+        a2.absagen.iter().any(|x| x.code == "C001"),
+        "ein `None` ohne Tabelle ist keine Absenkung, sondern ein Bezeichner"
+    );
+}
+
+/// **Und die PRAEMISSE des Beweises wird geprueft, nicht angenommen.**
+///
+/// `sonderwert_kollidiert_bei_vollem_wort`: fuellt `count N` das Indexwort genau aus, faellt
+/// der Sonderwert mit einem gueltigen Index zusammen. *Wer `count 2^32` schreibt, hat keinen
+/// Platz mehr fuer „keine" — und das ist eine Absage, keine stille Verbreiterung.*
+#[test]
+fn der_sonderwert_prueft_seine_praemisse() {
+    let q = "module t { const N : u64 = 4294967296;
+table H count N { slot { naechst : option index into H, } } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    let _ = gabbro_check::emit::emittiere(&b, &mut a);
+    assert!(
+        a.absagen.iter().any(|x| x.code == "C001" && x.text.contains("fills the index word")),
+        "die Praemisse des dritten Satzes wird GEPRUEFT: {:?}",
+        a.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
+    );
+}

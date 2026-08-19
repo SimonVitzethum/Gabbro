@@ -425,7 +425,13 @@ impl<'a> Pruefer<'a> {
                 };
                 // Ein `wrapping`-Slot hat seinen Ueberlauf DEKLARIERT; dort ist er kein Befund.
                 if !ziel.laeuft_um() {
-                    self.passt(&ergebnis_typ, &ziel, z.wert.span, "die Zuweisung");
+                    self.passt_wert(
+                        &z.wert,
+                        &ergebnis_typ,
+                        &ziel,
+                        z.wert.span,
+                        "die Zuweisung",
+                    );
                 }
                 self.schreiben_toetet_fakten(&z.ziel, lage);
             }
@@ -474,6 +480,21 @@ impl<'a> Pruefer<'a> {
                 let gegenstand = self.ausdruck(&m.gegenstand, lage);
                 for zweig in &m.zweige {
                     let mut innen = lage.clone();
+                    // **V3 gilt auch fuer die Option, und bis zum 2026-08-19 tat sie es
+                    // nicht.** Ein `match` ueber `option index into T` band `Some(i)` als
+                    // `Unbekannt` -- und damit war `h.slots[i]` im `Some`-Zweig ungeprueft,
+                    // obwohl gerade dieser Zweig weiss, dass `i` ein gueltiger Index ist.
+                    // *Die Nutzlast von `Some` ist `index into T`, ohne den Sonderwert.*
+                    if let (Some(binder), Some(nutz)) =
+                        (&zweig.binder, option_nutzlast(&gegenstand))
+                    {
+                        if zweig.variante.text == "Some" {
+                            innen.lokal.insert(binder.text.clone(), nutz);
+                            self.block(&zweig.rumpf, &mut innen, ergebnis);
+                            self.geschriebenes_toeten(&zweig.rumpf, lage);
+                            continue;
+                        }
+                    }
                     // V3: der Binder traegt die Nutzlast SEINER Variante.
                     if let (Some(binder), Typ::Summe { varianten, .. }) =
                         (&zweig.binder, gegenstand.durchgreifen())
@@ -631,7 +652,8 @@ impl<'a> Pruefer<'a> {
                 let t = self.ausdruck(e, lage);
                 self.rufe_im_ausdruck(e, lage);
                 if let Some(z) = ergebnis {
-                    self.passt(&t, z, e.span, "die Rueckgabe");
+                    let z = z.clone();
+                    self.passt_wert(e, &t, &z, e.span, "die Rueckgabe");
                 }
             }
             StmtArt::Ruf(r) => {
@@ -991,6 +1013,24 @@ impl<'a> Pruefer<'a> {
             argtypen.push((self.ausdruck(a, lage), a.span));
         }
         self.marken_pruefen(r);
+        // **`Some(i)` TRAEGT den Typ seines Arguments -- und ohne diese Zeile hatte der
+        // Sonderwert keinen Waechter.**
+        //
+        // Gemessen 2026-08-19: `frei = Some(8)` auf einer `table … count 8` ging mit **null
+        // Fehlern** durch. Der Wert `8` ist aber genau der Sonderwert, zu dem `None`
+        // absenkt (`beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`) -- *damit waere
+        // `None` von einem gueltigen Index nicht mehr zu unterscheiden, und
+        // `kodiere_injektiv` haette keine Praemisse mehr.*
+        //
+        // > **Der Beweis lag seit dem 2026-08-17 da; geprueft hat seine Bedingung niemand.**
+        // > Das ist genau die Haelfte, die «NL» beklagt -- ein Satz ohne Leser.
+        //
+        // `Some` und `None` sind reservierte Woerter (`kw.rs`), also kann diese Zeile keine
+        // benutzerdeklarierte Funktion treffen. `None` bleibt ohne Typ: es IST der
+        // Sonderwert und liegt bauartbedingt ausserhalb.
+        if r.pfad.teile.last().is_some_and(|n| n.text == "Some") {
+            return argtypen.first().map(|(t, _)| t.clone()).unwrap_or(Typ::Unbekannt);
+        }
         let Some(sig) = signatur else {
             return Typ::Unbekannt;
         };
@@ -1758,6 +1798,23 @@ impl<'a> Pruefer<'a> {
         );
     }
 
+    /// **`Some(i)` wird gegen die NUTZLAST geprueft, nicht gegen den Optionstyp.**
+    ///
+    /// Der Optionstyp enthaelt den Sonderwert -- das ist seine ganze Bauart, und sein
+    /// Bereich reicht deshalb bis `N`. Die Nutzlast enthaelt ihn nicht: `Some i` steht fuer
+    /// einen **gueltigen** Index, `0 ..< N`.
+    ///
+    /// > *Wer `Some(N)` schreiben darf, hat `None` geloescht* -- `kodiere_injektiv` in
+    /// > `beweise/Option_Sonderwert.thy` haengt genau an dieser Trennung.
+    ///
+    /// Ueberall sonst faellt der Aufruf auf `passt` zurueck.
+    fn passt_wert(&mut self, wert: &Expr, quelle: &Typ, ziel: &Typ, span: Span, was: &str) {
+        match (ist_some(wert), option_nutzlast(ziel)) {
+            (true, Some(nutzlast)) => self.passt(quelle, &nutzlast, span, was),
+            _ => self.passt(quelle, ziel, span, was),
+        }
+    }
+
     fn passt(&mut self, quelle: &Typ, ziel: &Typ, span: Span, was: &str) {
         self.undurchsichtigkeit_pruefen(quelle, ziel, span, was);
         // **«F»: die zwei Bits, und sie sind der Abnehmer der Faktenmaschine.**
@@ -2471,6 +2528,39 @@ fn enthaelt_ruf(e: &Expr) -> bool {
         },
         _ => false,
     }
+}
+
+/// Ist dieser Ausdruck der Konstruktor `Some(…)`? **`Some` ist ein reserviertes Wort**
+/// (`kw.rs`), also kann diese Frage keine benutzerdeklarierte Funktion treffen.
+fn ist_some(e: &Expr) -> bool {
+    match &e.art {
+        ExprArt::Ruf(r) => r.pfad.teile.last().is_some_and(|n| n.text == "Some"),
+        _ => false,
+    }
+}
+
+/// **Die Nutzlast eines `option index into T`: `index into T`.**
+///
+/// Der Optionsbereich ist `0 ..= N`, die Nutzlast `0 ..< N` -- der Unterschied ist genau
+/// der Sonderwert. *Er wird hier abgezogen und nicht neu ausgerechnet: eine zweite
+/// Kapazitaetsrechnung neben `umgebung.rs` waere das zweite Register ueber derselben Sache
+/// (W7).*
+fn option_nutzlast(t: &Typ) -> Option<Typ> {
+    let Typ::Benannt { name, heimat, undurchsichtig, unter } = t else {
+        return None;
+    };
+    let ohne = name.strip_prefix("option ")?;
+    let Typ::Ganzzahl(b) = unter.as_ref() else {
+        return None;
+    };
+    let mut eng = *b;
+    eng.max -= 1;
+    Some(Typ::Benannt {
+        name: ohne.to_string(),
+        heimat: heimat.clone(),
+        undurchsichtig: *undurchsichtig,
+        unter: Box::new(Typ::Ganzzahl(eng)),
+    })
 }
 
 /// Nennt der Fakt diesen Namen -- als Grundname oder in einem Index?

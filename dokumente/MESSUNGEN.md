@@ -9722,3 +9722,90 @@ Prüferplan und sah deshalb **die grösste Zweitvergabe des Ordners nicht.** Er 
 162 von 162 Mutationen · 162/162 Anker · 13/13 Luecken · 13 Waechter gruen
 Klauseln 22 gebucht (war 23), UNGELESEN 16 -> 15
 ```
+
+---
+
+# «C1» ausgeführt — `option` senkt ab, und der Beweis hatte zwei Tage lang keinen Leser (2026-08-19)
+
+**Der Stand davor:** 17 von 33 Beispielen senkten ab, **46 Weigerungen, alle `C001`**, zwölf
+Übersetzungseinheiten stachen bis zum ausgeführten Ergebnis durch.
+
+**Der Stand danach:** 18 von 33, **36 Weigerungen** — zehn geschlossen, dreizehn Einheiten.
+
+| Weigerung | Datei | war |
+|---|---|---|
+| `match` über `option index into T` (Ort) | 01 (2x), 27 | „`match` over something other than an `option index into T`" |
+| `let` ohne auflösbaren Typ | 01, 09 | der Typ stand die ganze Zeit in der Slotdeklaration |
+| `option`-Konstruktor `None`/`Some` | 09, 27, 31 | „`option` has no representation yet" |
+| `static … : option index into T = None` | 27, 31 | „non-constant initialiser" |
+
+Die Absenkung ist der **Sonderwert** `count` selbst, und sie stand seit dem 2026-08-17
+maschinell geprüft in `beweise/Option_Sonderwert.thy`. *Der Satz lag da, und kein Erzeuger
+benutzte ihn* — genau die Hälfte, die «NL» beklagt. Die Arbeit war die Verdrahtung.
+
+## Und die Verdrahtung legte ZWEI stille Löcher frei, beide im Prüfer
+
+**Sie sind nicht durch die Absenkung entstanden — sie waren durch sie folgenlos.** Solange
+sich der Erzeuger für `None` weigerte, konnte kein erzeugtes C den Sonderwert berühren. Seit
+«C1» steht `T_NONE` wirklich im C, und damit wurden beide lebendig:
+
+### 1. `Some(count)` ging durch — null Fehler
+
+```gabbro
+table Halde count 8 { slot { naechst : option index into Halde, } }
+static mut frei : option index into Halde = None;
+frei = Some(8);          -- 0 Fehler, gemessen 2026-08-19
+```
+
+`8` **ist** der Sonderwert. Wäre er ein gültiger Wert, ist `None` von `Some(8)` nicht mehr zu
+unterscheiden — und `kodiere_injektiv` hätte keine Prämisse mehr. Der Grund: `Some(e)` hatte
+gar keinen Typ; M1 sah einen Ruf auf eine Funktion, die es nicht gibt, und schwieg.
+**Seit heute trägt `Some(i)` den Typ seines Arguments und wird gegen die NUTZLAST geprüft**,
+nicht gegen den Optionstyp. `beispiele/gift/170` fällt an `M101`.
+
+### 2. Ein `option index into T` war als Index brauchbar
+
+```gabbro
+return h.slots[frei].kopf;      -- 0 Fehler, gemessen 2026-08-19
+```
+
+`umgebung.rs` gab `index into T` und `option index into T` **denselben Namen und denselben
+Bereich** `0 ..< N`. Damit war der Sonderwert im Typmodell unsichtbar, und ein Optionswert
+durfte überall stehen, wo ein Index stehen darf. Im erzeugten C wäre das ein Zugriff **einen
+Slot hinter dem Feld**.
+
+Die Korrektur ist eine Zeile und braucht keine neue Kennung: der Optionsbereich reicht bis
+`N`, der Indexbereich bis `N-1`. Damit fällt der Gebrauch an **`M103`** und jedes `Some(N)`
+an **`M101`** — an denselben Regeln wie jeder andere Wert ausserhalb seines Bereichs.
+
+### 3. Und V3 traf die Option nicht
+
+*„Der Binder trägt die Nutzlast SEINER Variante"* war für `tagged type` gebaut. Ein `match`
+über `option index into T` band `Some(i)` als **`Unbekannt`** — also war jeder Zugriff mit `i`
+ungeprüft, ausgerechnet in dem Zweig, der weiss, dass `i` gültig ist.
+`beispiele/gift/172` fällt an `M103`.
+
+## Der Widerruf, den das erzwingt
+
+`option.sonderwert` führte seine zweite Hälfte als OFFEN, mit der Begründung: *„heute weigert
+sich der Erzeuger für `None` als Ausdruck, und **solange er das tut**, kann keine Rechnung ihn
+erzeugen."* **Die Begründung ist mit «C1» verbraucht.** Sie steht jetzt als Pass da, nicht als
+Weigerung — und das ist der Unterschied zwischen einer Buchung und einem Versprechen.
+
+## Die neue Übersetzungseinheit — und was ihr Treiber wirklich misst
+
+`beispiele/27-freiliste.gab` sticht durch: erzeugen → `cc -std=c11 -Wall -Wextra -Werror` →
+ausführen → vergleichen → verfälschtes C fällt. Die zwei letzten Zahlen der Erwartung sind die
+Aussage: die leere Liste liefert `Halde_NONE` (= 1024) und **nicht 0**. *Wer den Sonderwert
+auf 0 legt, dreht genau diese zwei Zahlen um* — und das Gift tut es.
+
+## Dazu die Zeile, die `pruefe-emission.sh` fehlte
+
+**Zweimal erzeugen, Hashes vergleichen.** Die Reproduzierbarkeit war über 25 Läufe *gemessen*
+und nirgends *zugesagt* — und eine gemessene Eigenschaft ohne Wächter verschwindet still beim
+nächsten `HashMap` über Namen. Jetzt läuft sie für alle dreizehn Einheiten.
+
+```
+166 Kennungen · 172 Gifte · 130 Tests · 33 Beispiele sauber · 13 Einheiten durchgestochen
+36 Weigerungen (war 46), alle C001, keine stille
+```
