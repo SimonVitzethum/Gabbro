@@ -8662,3 +8662,67 @@ Liste nicht.** Von Hand übersetzt (`Preservation`, `Postcondition`, `Foreign du
 424 Texte, 0 deutsch · 9 Waechter gruen · 126 Tests · 118 Gifte (0 ohne Biss)
 12 Theorien · EBNF 140 / 209 · 144 offene Punkte
 ```
+
+---
+
+# «NL.2» weiter: `ghost` und `offset_into` — und ein Aufstieg aus Versehen
+
+**2026-08-19, Fortsetzung.** ZUSAGE **10 → 7**.
+
+## `N011` — ein Geisttyp darf nicht in Speicher liegen
+
+```gabbro
+linear ghost type Marke;
+table W count 4 { slot { m : Marke, a : u32 in 0 .. 10, } }
+→ 5 Items, 0 Fehler, 0 Hinweise
+```
+
+**Der Erzeuger merkte sich die Geisternamen und löschte sie** — und nichts verbot, sie dorthin
+zu legen, wo Speicher ist. *Ein gelöschtes Feld in einem Verbund verschiebt jedes folgende; ein
+gelöschter Slot ändert die Schrittweite der Tabelle.* **Was der Erzeuger still tut, tut er an
+einer Stelle, an der der Nutzer eine Zahl erwartet.**
+
+| | |
+|---|---|
+| **Speicher** | `slot`-Feld · Verbundfeld · `static` · `format`-Feld |
+| **kein Speicher** | Parameter · Rückgabe · `let` — *dort fädelt der Prüfer den Wert, und genau das ist der Zweck eines Geisttyps* |
+
+Die Regel trifft die zweite Spalte ausdrücklich nicht: `beispiele/07` fädelt fünf Geister
+durch Parameter und Rückgaben. **Korpuspreis: null.**
+
+## `N012` — ein `offset_into` ohne Schranke ist eine Zusage ohne Halter
+
+`offset_into Self` sagt: *dieser Wert ist ein Versatz in **diesen** Puffer.* Der Wert kommt aus
+dem Draht — **ein feindlicher ELF-Kopf setzt ihn, wohin er will.**
+
+```
+5 Fundstellen im Korpus, 2 ohne `where`:  e_shoff, p_offset  (beispiele/03)
+```
+
+**Die zwei waren unterbestimmt und nicht die Regel falsch** — dieselbe Lage wie bei `E010`, wo
+zwei eigene Beispiele fielen und es *„eine Eigenschaft meiner Sorgfalt war, nicht der Lesart"*.
+Beide sind nachgezogen.
+
+**Verlangt wird, dass die Klausel das Feld SELBST und `lenof` nennt** — genau die Form, die die
+drei guten Stellen schreiben. *Ein `where` über irgendetwas wäre ein Haken zum Abhaken.*
+
+## Und ein AUFSTIEG AUS VERSEHEN — der erste seiner Art
+
+`N012` liest die `where`-Klausel, um die Schranke zu finden. **Damit gilt `bedingung`
+mechanisch als gelesen und verlässt die Klasse** — obwohl das, was sie verspricht (*dass die
+Bedingung hält*), weiterhin niemand prüft.
+
+> **Das Maß dieses Wächters ist „ein Pass greift zu", nicht „ein Pass hält es nach".** Die
+> Vergröberung stand von Anfang an in seinem Kopf, und **hier zahlt sie zum ersten Mal**: eine
+> Klausel kann die Klasse verlassen, weil sie zu einem *anderen* Zweck gelesen wird.
+
+*Der Rest steht darum in `TODO.md` weiter — dort, wo ihn keine Ratsche mehr trägt.* **Ein
+Wächter, der eine Zeile aus seiner eigenen Liste verliert, muss sagen, wohin sie geht.**
+
+```
+Klauseln 43 -> 40      ZUSAGE 10 -> 7
+137 Kennungen · 120 Gifte (0 ohne Biss) · 126 Tests · neun Waechter gruen
+```
+
+**Sieben bleiben:** `counterprobe`, `embeds`, `gates`, `mirrors`, `obermenge`, `pro_kern`,
+`verlaesst`.

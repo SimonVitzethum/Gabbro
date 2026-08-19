@@ -1,0 +1,20 @@
+-- erwartet: N011
+-- **«NL.2.4» -- `ghost` war ein Verbot ohne Durchsetzung.**
+-- `pruefe-klauseln.py` fuehrte es mit dem Satz: *„Ein Geisttyp darf im erzeugten C nicht
+-- vorkommen. Ein Verbot, das kein Pass durchsetzt -- dieselbe Bauart wie `opaque`."*
+--
+-- Der Erzeuger merkte sich die Geisternamen und LOESCHTE sie -- und nichts verbot, sie
+-- dorthin zu legen, wo Speicher ist. *Ein geloeschtes Feld in einem Verbund verschiebt jedes
+-- folgende; ein geloeschter Slot aendert die Schrittweite der Tabelle.* Was der Erzeuger
+-- still tut, tut er an einer Stelle, an der der Nutzer eine Zahl erwartet.
+--
+-- Und die Gegenrichtung steht in `beispiele/07`: dort faedeln `BootPhase` und vier weitere
+-- Geister durch Parameter und Rueckgaben, und genau das ist ihr Zweck.
+module gift::geist_im_speicher {
+
+linear ghost type Marke;
+
+const N : u32 = 4;
+table W count N { slot { m : Marke, a : u32 in 0 .. 10, } }
+
+}

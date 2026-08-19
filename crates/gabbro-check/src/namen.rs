@@ -17,6 +17,118 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     geltungsbereich(&baum.items, absagen);
     entrust_annahme(baum, absagen);
     verweigerte_zahltypen(baum, absagen);
+    geister_haben_keinen_speicher(baum, absagen);
+}
+
+/// **`N011` -- ein Geisttyp darf nicht in Speicher liegen («NL.2.4», 2026-08-19).**
+///
+/// `pruefe-klauseln.py` fuehrte `ghost` als ZUSAGE mit dem Satz: *„Ein Geisttyp darf im
+/// erzeugten C nicht vorkommen. Ein Verbot, das kein Pass durchsetzt -- dieselbe Bauart wie
+/// `opaque`."* Gemessen am selben Tag:
+///
+/// ```gabbro
+/// linear ghost type Marke;
+/// table W count 4 { slot { m : Marke, a : u32 in 0 .. 10, } }
+/// type P = { m : Marke, a : u32, };
+/// --> 5 Items, 0 Fehler, 0 Hinweise
+/// ```
+///
+/// **Der Erzeuger merkte sich die Geisternamen und loeschte sie** -- und nichts verbot, sie
+/// dorthin zu legen, wo Speicher ist. *Ein geloeschtes Feld in einem Verbund verschiebt jedes
+/// folgende; ein geloeschter Slot aendert die Schrittweite der Tabelle.* Was der Erzeuger
+/// still tut, tut er an einer Stelle, an der der Nutzer eine Zahl erwartet.
+///
+/// ## Wo Speicher ist, und wo nicht
+///
+/// **Speicher:** ein `slot`-Feld, ein Verbundfeld, ein `static`, ein `format`-Feld.
+/// **Kein Speicher:** ein Parameter, ein Rueckgabetyp, ein `let` -- dort faedelt der Pruefer
+/// den Wert, und M2 haelt ihn linear. *Genau das ist der Zweck eines Geisttyps, und die Regel
+/// darf ihn nicht treffen.*
+fn geister_haben_keinen_speicher(baum: &Programm, absagen: &mut Absagen) {
+    let mut geister = Vec::new();
+    sammle_geister(&baum.items, &mut geister);
+    if geister.is_empty() {
+        return;
+    }
+    pruefe_speicher(&baum.items, &geister, absagen);
+}
+
+fn sammle_geister(items: &[Item], aus: &mut Vec<String>) {
+    for i in items {
+        match &i.art {
+            ItemArt::Typ(t) if t.ghost => aus.push(t.name.text.clone()),
+            ItemArt::Modul(m) => sammle_geister(&m.items, aus),
+            _ => {}
+        }
+    }
+}
+
+/// Nennt dieser Typausdruck einen Geist? *Auch durch ein Feld hindurch -- `[Marke; 8]` ist
+/// acht Mal nichts, und das ist kein Feld, sondern ein Fehler.*
+fn nennt_geist(t: &TypExpr, geister: &[String]) -> Option<String> {
+    match t {
+        TypExpr::Pfad(p) => {
+            let n = p.text();
+            let kurz = n.rsplit("::").next().unwrap_or(&n).to_string();
+            geister.iter().find(|g| **g == kurz).cloned()
+        }
+        TypExpr::Feld(a) => nennt_geist(&a.element, geister),
+        _ => None,
+    }
+}
+
+fn pruefe_speicher(items: &[Item], geister: &[String], absagen: &mut Absagen) {
+    fn melde(absagen: &mut Absagen, g: &str, span: Span, wo: &str) {
+        absagen.schiebe(
+            Absage::fehler("N011", span, format!("`{g}` is a ghost type and cannot lie in {wo}"))
+                .mit_notiz(
+                    "a ghost value does not exist at run time -- the generator erases it, and \
+                     an erased field shifts every field after it",
+                )
+                .mit_notiz(
+                    "a ghost belongs where the checker threads it: a parameter, a result, a \
+                     `let`. There M2 holds it linear, and that is its purpose",
+                ),
+        );
+    }
+    for i in items {
+        match &i.art {
+            ItemArt::Modul(m) => pruefe_speicher(&m.items, geister, absagen),
+            ItemArt::Tabelle(t) => {
+                if let Some(s) = &t.slot {
+                    for f in &s.felder {
+                        if let SlotTyp::Typ(x) = &f.typ {
+                            if let Some(g) = nennt_geist(x, geister) {
+                                melde(absagen, &g, f.name.span, "a `slot` field");
+                            }
+                        }
+                    }
+                }
+            }
+            ItemArt::Typ(t) => {
+                if let Some(TypExpr::Verbund(felder, _)) = &t.rumpf {
+                    for f in felder {
+                        if let Some(g) = nennt_geist(&f.typ.typ, geister) {
+                            melde(absagen, &g, f.name.span, "a struct field");
+                        }
+                    }
+                }
+            }
+            ItemArt::Statisch(s) => {
+                if let Some(g) = nennt_geist(&s.typ, geister) {
+                    melde(absagen, &g, s.name.span, "a `static`");
+                }
+            }
+            ItemArt::Format(f) => {
+                for x in &f.felder {
+                    if let Some(g) = nennt_geist(&x.typ.typ, geister) {
+                        melde(absagen, &g, x.name.span, "a `format` field");
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 /// **`F006`: `long double`, `f16` und `float128` werden BENANNT abgelehnt.**
@@ -198,6 +310,7 @@ fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
                 // Schweigen. *Eine Regel auf einer Flaeche, die die meisten Programme nie
                 // beruehren, hat keinen Biss.*
                 formatbitlagen(f, absagen);
+                versatz_ist_beschraenkt(f, absagen);
             }
             _ => {}
         }
@@ -489,5 +602,92 @@ fn schritt_pruefen(b: &Bank, absagen: &mut Absagen) {
                  not intersect. Right and useless is not a passed check",
             ),
         );
+    }
+}
+
+/// **`N012` -- ein `offset_into` ohne Schranke ist eine Zusage ohne Halter («NL.2.5»).**
+///
+/// `pruefe-klauseln.py` fuehrte `offset_into` als ZUSAGE: *„Ein Feld als Versatz in ein
+/// anderes; die Schranke wird nicht geprueft."*
+///
+/// `offset_into Self` sagt: **dieser Wert ist ein Versatz in DIESEN Puffer.** Der Wert kommt
+/// aus dem Draht -- ein feindlicher ELF-Kopf setzt ihn, wohin er will. *Ohne eine Schranke ist
+/// die Klausel Dokumentation, und der erste Zugriff darauf ist ein Fehlzugriff.*
+///
+/// Gemessen 2026-08-19: **fuenf Fundstellen, zwei ohne `where`** -- `e_shoff` und `p_offset`
+/// in `beispiele/03`. *Die zwei sind unterbestimmt und nicht die Regel falsch; dieselbe Lage
+/// wie bei `E010`, wo zwei eigene Beispiele fielen und es eine Eigenschaft meiner Sorgfalt
+/// war, nicht der Lesart.*
+///
+/// **Verlangt wird, dass die `where`-Klausel das Feld SELBST und `lenof` nennt** -- genau die
+/// Form, die die drei guten Stellen schreiben. *Ein `where` ueber irgendetwas waere ein Haken
+/// zum Abhaken.*
+fn versatz_ist_beschraenkt(f: &Format, absagen: &mut Absagen) {
+    for x in &f.felder {
+        let Some(ziel) = &x.offset_into else { continue };
+        let genannt = x.bedingung.as_ref().map(|p| {
+            let mut n = Vec::new();
+            namen_im_praedikat(p, &mut n);
+            (n.iter().any(|y| *y == x.name.text), n.iter().any(|y| y == "lenof"))
+        });
+        match genannt {
+            Some((true, true)) => {}
+            _ => absagen.schiebe(
+                Absage::fehler(
+                    "N012",
+                    x.name.span,
+                    format!(
+                        "`{}` is an `offset_into {}` and carries no bound",
+                        x.name.text, ziel.text
+                    ),
+                )
+                .mit_notiz(
+                    "the value comes off the wire -- a hostile header sets it wherever it \
+                     likes, and without a bound the first access through it is out of buffer",
+                )
+                .mit_notiz(
+                    "the form is `where <field> + … <= lenof(Self)`: the clause has to name \
+                     the field ITSELF and `lenof`, otherwise it is a box to tick",
+                ),
+            ),
+        }
+    }
+}
+
+/// Die Namen eines Praedikats, `lenof` eingeschlossen -- es ist die Schranke, um die es geht.
+fn namen_im_praedikat(p: &Pred, aus: &mut Vec<String>) {
+    fn e(x: &Expr, aus: &mut Vec<String>) {
+        match &x.art {
+            ExprArt::Ort(o) => aus.push(o.basis.text.clone()),
+            ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => e(i, aus),
+            ExprArt::Binaer(_, a, b) => {
+                e(a, aus);
+                e(b, aus);
+            }
+            ExprArt::Ruf(r) => {
+                for a in &r.argumente {
+                    e(a, aus);
+                }
+            }
+            ExprArt::Eingebaut(b) => match b.as_ref() {
+                Eingebaut::Lenof(t) => {
+                    aus.push("lenof".into());
+                    if let TypOderOrt::Ort(o) = t {
+                        aus.push(o.basis.text.clone());
+                    }
+                }
+                Eingebaut::Sizeof(_) => aus.push("sizeof".into()),
+                Eingebaut::Aligned(a, c) => {
+                    e(a, aus);
+                    e(c, aus);
+                }
+            },
+            _ => {}
+        }
+    }
+    match &p.art {
+        PredArt::Vergleich(x) | PredArt::Element(x, _) => e(x, aus),
+        PredArt::Quantor(q) => namen_im_praedikat(&q.rumpf, aus),
+        _ => {}
     }
 }

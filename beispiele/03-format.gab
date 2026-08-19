@@ -17,7 +17,10 @@ format Elf64Kopf endian little {
     e_eintritt    : u64,
     e_phoff       : u64 offset_into Self
                     where e_phoff + e_phentsize * e_phnum <= lenof(Self),
-    e_shoff       : u64 offset_into Self,
+    -- **Nachgezogen 2026-08-19 mit `N012`.** Hier stand `offset_into Self` OHNE
+    -- Schranke -- eine Zusage, die niemand haelt: der Wert kommt aus dem Draht, und ein
+    -- feindlicher ELF-Kopf setzt ihn, wohin er will.
+    e_shoff       : u64 offset_into Self where e_shoff <= lenof(Self),
     e_flags       : u32 reserved,
     e_ehsize      : u16 in 64 .. 64,
     e_phentsize   : u16 in 56 .. 56,
@@ -29,7 +32,8 @@ format Elf64Kopf endian little {
 format Elf64Ph endian little {
     p_typ    : u32 in 0 .. 7,
     p_flags  : u32 @[2:0],
-    p_offset : u64 offset_into Self,
+    -- Ebenso nachgezogen: `N012` verlangt, dass die Klausel das Feld SELBST und `lenof` nennt.
+    p_offset : u64 offset_into Self where p_offset <= lenof(Self),
     p_vaddr  : u64,
     p_paddr  : u64,
     p_filesz : u64,

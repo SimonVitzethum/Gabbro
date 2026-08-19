@@ -570,17 +570,19 @@ of items that are neither code nor a run — what remains is building and measur
       und `umhaengen` steht an 127 Stellen, also genau die Operation, fuer die
       `Table_Ops_Erhaltung.thy` das GEGENBEISPIEL fuehrt.** *Der Korpus braucht die Operation,
       von der der Beweis sagt, dass sie bricht.* Die Entscheidung steht damit mit Zahlen da.
-- [ ] **NL.2 -- ZEHN Zusagen ohne Leser** *(13 am 2026-08-19, drei gefallen: `M116` fuer
-      `mut`, `E011` fuer `touches`, `S005` fuer `abstieg`)*. Als naechste `ghost` (ein
-      Geisttyp darf im erzeugten C nicht vorkommen), `pro_kern` (`per cpu N` gegen NCORES),
-      `offset_into` (die Schranke wird nicht geprueft). Dann `obermenge`, `bedingung`,
-      `embeds`, `mirrors`, `verlaesst`, `gates`, `counterprobe`. *Jede einzeln, jede mit
-      Giftprobe, jede mit Korpusmessung VORHER.*
-- [ ] **`S005` prueft die NOTWENDIGE Bedingung des Abstiegs, nicht die hinreichende**
-      *(2026-08-19)*. Dass das Mass sich bewegen KANN, haelt der Pass; DASS es faellt, bleibt
-      `consuming.ordnung`. **Der Schritt dazwischen waere die Richtung:** bei `by decreasing
-      (lenof(s.worte) - i)` muesste `i` WACHSEN, damit das Mass faellt -- heute genuegt, dass
-      der Rumpf `i` ueberhaupt schreibt. *Ein `i -= 1` kaeme durch.*
+- [ ] **NL.2 -- SIEBEN Zusagen ohne Leser** *(13 am 2026-08-19; sechs gefallen: `M116` fuer
+      `mut`, `E011` fuer `touches`, `S005` fuer `abstieg`, `N011` fuer `ghost`, `N012` fuer
+      `offset_into` -- und `bedingung` durch einen AUFSTIEG AUS VERSEHEN)*. Was bleibt:
+      `counterprobe`, `embeds`, `gates`, `mirrors`, `obermenge`, `pro_kern`, `verlaesst`.
+      *Jede einzeln, jede mit Giftprobe, jede mit Korpusmessung VORHER.*
+- [ ] **`bedingung` hat die Klasse verlassen, ohne dass ihre Zusage gehalten wuerde**
+      *(2026-08-19, und es ist ein Befund ueber den WAECHTER)*. `N012` liest die
+      `where`-Klausel, um die Schranke eines `offset_into` zu finden -- damit gilt sie
+      mechanisch als gelesen. **Ob die Bedingung HAELT, prueft weiterhin niemand.** *Das Mass
+      des Waechters ist „ein Pass greift zu", nicht „ein Pass haelt es nach"; die
+      Vergroeberung stand in seinem Kopf und zahlt hier zum ersten Mal.* Der Posten steht
+      jetzt hier, wo ihn keine Ratsche traegt -- **ein Waechter, der eine Zeile aus seiner
+      eigenen Liste verliert, muss sagen, wohin sie geht.**
 - [ ] **NL.3 -- `ensures` ueber WELTZUSTAND, die haeufigere Form** *(2026-08-19)*. Numerisch
       und relational tragen seit heute; `ensures mmu_an_zahl == 1` steht siebenmal in
       `beispiele/22` und traegt nicht. **Sie kollidiert mit U4/U5** -- ein Aufruf toetet jeden

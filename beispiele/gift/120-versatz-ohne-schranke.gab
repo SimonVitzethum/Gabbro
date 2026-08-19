@@ -1,0 +1,20 @@
+-- erwartet: N012
+-- **«NL.2.5» -- `offset_into` war eine Zusage ohne Halter.**
+-- `pruefe-klauseln.py` fuehrte es mit dem Satz: *„Ein Feld als Versatz in ein anderes; die
+-- Schranke wird nicht geprueft."*
+--
+-- `offset_into Self` sagt: dieser Wert ist ein Versatz in DIESEN Puffer. Der Wert kommt aus
+-- dem Draht -- ein feindlicher Kopf setzt ihn, wohin er will. *Ohne Schranke ist die Klausel
+-- Dokumentation, und der erste Zugriff darauf ist ein Fehlzugriff.*
+--
+-- Gemessen: fuenf Fundstellen im Korpus, ZWEI ohne `where` (`e_shoff`, `p_offset` in
+-- `beispiele/03`). Die zwei waren unterbestimmt und nicht die Regel falsch -- dieselbe Lage
+-- wie bei `E010`, wo zwei eigene Beispiele fielen.
+module gift::versatz_ohne_schranke {
+
+format Kopf endian little {
+    magie   : u32 in 0x7F45_4C46 .. 0x7F45_4C46,
+    versatz : u64 offset_into Self,
+}
+
+}

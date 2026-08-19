@@ -82,7 +82,11 @@ ERWARTET = {
     # rechnet ihn nach."* Jetzt tut es `N009`. `schritt` faellt mit `N010`: `stride 0` macht
     # jede Bankzelle leer, und der Satz gilt dann trivial. *Richtig und nutzlos ist keine
     # bestandene Pruefung.*
-    "ghost":        ("ZUSAGE", "Ein Geisttyp darf im erzeugten C nicht vorkommen. Ein Verbot, das kein Pass durchsetzt -- dieselbe Bauart wie `opaque`."),
+    # **`ghost` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- neunter Aufstieg,
+    # vierter Posten von «NL.2». `N011` verbietet einen Geisttyp dort, wo SPEICHER ist: ein
+    # `slot`-Feld, ein Verbundfeld, ein `static`, ein `format`-Feld. *Nicht getroffen sind
+    # Parameter, Rueckgabe und `let` -- dort faedelt der Pruefer den Wert, und genau das ist
+    # der Zweck eines Geisttyps.* Korpuspreis: null.
     # **`veraenderlich` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- der
     # sechste Aufstieg, und der erste Posten von «NL.2». `M116` faellt an einer Zuweisung an
     # ein Band ohne `mut`. *Es war keine Buchhaltung, sondern eine Sicherheitsluecke: M1
@@ -90,9 +94,21 @@ ERWARTET = {
     # sie gar nicht erst.* Korpuspreis: null.
     "obermenge":    ("ZUSAGE", "Die Obermenge der Nutzlast (SPRACHE.md 11.3) -- eine Enthaltensaussage, die niemand nachrechnet."),
     "embeds":       ("ZUSAGE", "Ein Zeiger, der zugleich Bitfeld ist. Ob das Bitfeld ins Wort passt, ist «B24»s Frage -- und sie wird hier nicht gestellt."),
-    "offset_into":  ("ZUSAGE", "Ein Feld als Versatz in ein anderes; die Schranke wird nicht geprueft."),
+    # **`offset_into` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- zehnter
+    # Aufstieg, fuenfter Posten von «NL.2». `N012` verlangt eine `where`-Klausel, die das Feld
+    # SELBST und `lenof` nennt. **Zwei Korpusstellen fielen** (`e_shoff`, `p_offset` in
+    # `beispiele/03`) -- sie waren unterbestimmt, nicht die Regel falsch, und sind nachgezogen.
     "mirrors":      ("ZUSAGE", "Gespiegelte Register (Falle 4). Abgesenkt, nicht geprueft."),
-    "bedingung":    ("ZUSAGE", "Bedingtes Feld eines `format`; ob die Bedingung haelt, prueft niemand."),
+    # **`bedingung` ist am 2026-08-19 aufgestiegen -- und es ist ein AUFSTIEG AUS VERSEHEN.**
+    #
+    # `N012` liest die `where`-Klausel, um zu sehen, ob sie einen `offset_into` beschraenkt.
+    # Damit gilt sie mechanisch als gelesen und verlaesst die Klasse. **Was sie verspricht --
+    # dass die Bedingung HAELT -- prueft weiterhin niemand.**
+    #
+    # > *Das Mass dieses Waechters ist „ein Pass greift zu", nicht „ein Pass haelt es nach".*
+    # > Die Vergroeberung stand von Anfang an im Kopf, und hier zahlt sie zum ersten Mal:
+    # > **eine Klausel kann die Klasse verlassen, weil sie zu einem ANDEREN Zweck gelesen
+    # > wird.** Der Rest steht darum in `TODO.md` weiter, wo ihn keine Ratsche mehr traegt.
     "pro_kern":     ("ZUSAGE", "`per cpu N` -- dass N zu NCORES passt, prueft kein Pass."),
     "counterprobe": ("ZUSAGE", "Die Gegenprobe soll FALLEN. Kein Pass fuehrt sie aus."),
     "gates":        ("ZUSAGE", "Welche Tore ein `check` oeffnet; ungelesen."),
