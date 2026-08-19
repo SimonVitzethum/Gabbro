@@ -1745,6 +1745,25 @@ Gabbro **absichtlich ausgeschlossen**:
 > **Das ist ein Regler, kein Mangel.** *Gabbros Alltagstauglichkeit und seine
 > Klempnereiabdeckung sind dieselbe Stellschraube* — jede Lockerung gibt genau eine der elf
 > Klassen zurück, und zwar die, deren Beweis sie trug.
+>
+> ## Und die Ausnahme gehört dazu, sonst wird der Satz zum Verbotsprinzip
+>
+> **Es gibt einen dritten Ausgang, und er lockert, ohne zurückzugeben:** die Pflicht wird in
+> eine **erzeugte Form** verlegt. *Pools, `ops`, `recurse bounded` sind alle von dieser Art* —
+> der Nutzer bekommt die Freiheit, und die Beweislast wandert in den Erzeuger.
+>
+> **Der Preis ist dann keine zurückgegebene Klasse, sondern ein Schabloneneintrag.** Und das
+> ist die Stellschraube, die in der Kurzfassung fehlte.
+>
+> **Vollständig:**
+>
+> > **Jede Lockerung kostet entweder eine KLASSE oder eine SCHABLONE — und nur die zweite
+> > Sorte ist abtragbar.**
+>
+> *Eine zurückgegebene Klasse ist fort; eine Schablone fällt einmal und dann nie wieder.*
+> **Genau deshalb ist die Schablonenratsche die schärfste Buchführung dieses Ordners** — sie
+> zählt den Preis der zweiten Sorte, und ohne sie sähe „in eine erzeugte Form verlegt" wie
+> ein Geschenk aus.
 
 **Wofür Gabbro taugen wird, wenn die Pläne aufgehen:** Kernel, Treiber, Bootstrecken,
 Interruptbehandler, Protokollzustandsmaschinen, alles mit einer harten Latenzaussage —
@@ -1822,7 +1841,7 @@ Trennlinie ist scharf und liegt nicht dort, wo man sie vermutet:
 |---|---|
 | **alles mit unbekannt vielen Objekten** — Compiler, Datenbank, Editor, Webserver mit Verbindungen nach Bedarf | `table … count N` **ist** die Indexschranke. Ohne feste Zahl fällt die Klasse *Index*, und mit ihr `M103` |
 | **Rekursion über Daten** — Baumtraversierung, Parser, Auswerter | der Kostenpass rechnet Rümpfe und Rufe; Rekursion trägt eine **Annahme statt einer Rechnung**. `descendants of` gibt es, aber über einer Tabelle mit Schranke |
-| **allgemeine Zeichenketten** | eine Zeichenkette ist ein Feld unbekannter Länge. `format` deckt **feste** Längen; variable sind offen und würden die Einmalprüfung am Eintritt kosten |
+| ~~**allgemeine Zeichenketten**~~ **gefallen 2026-08-19** | Der Satz vermengte zwei Dinge. Ein Puffer mit einer Länge daneben ist schreibbar (`beispiele/32-zeichenkette.gab`) — es hing an einer VERGRÖBERUNG in M1, nicht an der Sprache. *Offen bleibt nur die zweite Hälfte: variable Längen in einem `format`* |
 | ~~**Gleitkomma-Numerik**~~ — **die einzige Zeile dieser Tabelle, die gefallen ist** *(«F», 2026-08-18)* | M1 trägt `FBereich` mit außen gerundeter Arithmetik. **Was bleibt, ist kleiner und benannt:** Produkt, Quotient und die Null haben ihren Satz noch nicht |
 | **alles, was Speicher anfordert und freigibt** | `allocs` **benennt** eine Wirkung, mehr nicht. Eine zwölfte Klasse gibt es nicht |
 | **Selbstbeherbergung** — Gabbro in Gabbro | steht schon unter *„What deliberately does not exist"*. Ein Übersetzer ist ein Baumverarbeiter mit Rekursion und dynamischem Speicher — **also die drei Zeilen oben zusammen** |

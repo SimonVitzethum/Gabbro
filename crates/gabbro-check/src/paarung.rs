@@ -110,7 +110,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     format!("the pairing in `{name}` is undecidable: the call graph is incomplete here"),
                 )
                 .mit_notiz(
-                    "the payload sets are only a LOWER bound -- no completeness follows\
+                    "the payload sets are only a LOWER bound -- no completeness follows \
                         from them",
                 ),
             );
@@ -125,7 +125,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                         format!("`publishes {o}` in `{name}` -- nothing awaits this payload"),
                     )
                     .mit_notiz(
-                        "SPRACHE.md part II §1: ordering is PAIRED, not declared -- a\
+                        "SPRACHE.md part II §1: ordering is PAIRED, not declared -- a \
                             publication without a counterpart orders nothing",
                     )
                     .mit_notiz("`publishes nothing` says expressly that there is none"),
@@ -141,7 +141,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                         format!("`awaits {o}` in `{name}` -- nothing publishes this payload"),
                     )
                     .mit_notiz(
-                        "the dangerous half: an `awaits` without a counterpart reads a\
+                        "the dangerous half: an `awaits` without a counterpart reads a \
                             value whose visibility nobody establishes",
                     ),
                 );
@@ -155,7 +155,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     format!("`{o}` is `relaxed` and carries a payload anyway"),
                 )
                 .mit_notiz(
-                    "`relaxed` orders nothing -- a payload on it is a promise without a\
+                    "`relaxed` orders nothing -- a payload on it is a promise without a \
                         mechanism",
                 ),
             );

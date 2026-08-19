@@ -135,7 +135,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     if f > 0 {
         s.push_str(&format!(
             "   The {f} foreign ones sit at bodies Gabbro never sees: they are\n\x20\
-                ASSUMPTIONS about foreign code and do not dissolve even under\n\x20  \"all\
+                ASSUMPTIONS about foreign code and do not dissolve even under\n\x20  \"all \
                 of Gabbro verified\".\n"
         ));
     }

@@ -238,19 +238,19 @@ impl<'a> Pruefer<'a> {
                             "F004",
                             a.name.span,
                             format!(
-                                "`accumulates {}` over a floating-point type -- the fold\
+                                "`accumulates {}` over a floating-point type -- the fold \
                                     has no order",
                                 a.name.text
                             ),
                         )
                         .mit_notiz(
-                            "the lowering folds one cell per core in an order nobody\
-                                fixes; `add` is not associative over floating point, and\
+                            "the lowering folds one cell per core in an order nobody \
+                                fixes; `add` is not associative over floating point, and \
                                 `max` with NaN is no lattice",
                         )
                         .mit_notiz(
-                            "`accumulates.monoid` is PROVED -- under the premise that the\
-                                merge set is a commutative monoid. Here it would not be, and\
+                            "`accumulates.monoid` is PROVED -- under the premise that the \
+                                merge set is a commutative monoid. Here it would not be, and \
                                 the theorem would have a false premise",
                         ),
                     );
@@ -508,7 +508,7 @@ impl<'a> Pruefer<'a> {
                             "the `else` branch of a `narrow` must return or diverge",
                         )
                         .mit_notiz(
-                            "SYNTAX.md §7: `narrow place to range else { … }` is a\
+                            "SYNTAX.md §7: `narrow place to range else { … }` is a \
                                 checked narrowing with a named exit",
                         ),
                     );
@@ -759,7 +759,7 @@ impl<'a> Pruefer<'a> {
                             "this literal is not exactly representable in binary",
                         )
                         .mit_notiz(
-                            "write `rounded` after it if the rounding is meant -- what is\
+                            "write `rounded` after it if the rounding is meant -- what is \
                                 forbidden is not the inexact but the SILENTLY inexact",
                         ),
                     );
@@ -835,8 +835,8 @@ impl<'a> Pruefer<'a> {
                                     "this operation does not exist for floating point",
                                 )
                                 .mit_notiz(
-                                    "bitwise operations, shifts and remainder are\
-                                        statements about a BIT PATTERN, and a floating-point\
+                                    "bitwise operations, shifts and remainder are \
+                                        statements about a BIT PATTERN, and a floating-point \
                                         number is not one",
                                 ),
                             );
@@ -855,7 +855,7 @@ impl<'a> Pruefer<'a> {
                             "floating point and integer in one operation",
                         )
                         .mit_notiz(
-                            "there is no conversion form; a silent one would be exactly\
+                            "there is no conversion form; a silent one would be exactly \
                                 the hidden rounding this language refuses",
                         ),
                     );
@@ -900,11 +900,11 @@ impl<'a> Pruefer<'a> {
                         format!("`{name}` is opaque -- it does not have the arithmetic of its carrier"),
                     )
                     .mit_notiz(
-                        "an `opaque type` says: this type IS not its carrier. Whoever\
+                        "an `opaque type` says: this type IS not its carrier. Whoever \
                             wants to compute needs a conversion, and there is none",
                     )
                     .mit_notiz(
-                        "comparisons stay allowed: they order values of the same type and\
+                        "comparisons stay allowed: they order values of the same type and \
                             produce no new one",
                     ),
                 );
@@ -945,11 +945,11 @@ impl<'a> Pruefer<'a> {
                             ),
                         )
                         .mit_notiz(
-                            "SPRACHE.md §3: division and remainder require a denominator\
+                            "SPRACHE.md §3: division and remainder require a denominator \
                                 whose range excludes zero",
                         )
                         .mit_notiz(
-                            "a check `if n >= 1 { … }` narrows it (V1), otherwise `narrow\
+                            "a check `if n >= 1 { … }` narrows it (V1), otherwise `narrow \
                                 n to 1 .. … else { … }`",
                         ),
                     );
@@ -1063,7 +1063,7 @@ impl<'a> Pruefer<'a> {
                         ),
                     )
                     .mit_notiz(
-                        "the callee's precondition is not merely unproved at this site\
+                        "the callee's precondition is not merely unproved at this site \
                             but EXCLUDED by the range of the argument",
                     ),
                 );
@@ -1170,7 +1170,7 @@ impl<'a> Pruefer<'a> {
                             ),
                         )
                         .mit_notiz(
-                            "the labels must be the field list -- in order, each exactly\
+                            "the labels must be the field list -- in order, each exactly \
                                 once, none left out",
                         )
                         .mit_notiz(
@@ -1204,7 +1204,7 @@ impl<'a> Pruefer<'a> {
                             .join(", ")
                     ))
                     .mit_notiz(
-                        "two fields of the same type in sequence are interchangeable\
+                        "two fields of the same type in sequence are interchangeable \
                             without a label, and nothing would say so",
                     ),
                 );
@@ -1219,7 +1219,7 @@ impl<'a> Pruefer<'a> {
                         format!("`{}` is not a struct; labels exist only at a constructor", r.pfad.text()),
                     )
                     .mit_notiz(
-                        "the order of a function's parameters stands in its declaration;\
+                        "the order of a function's parameters stands in its declaration; \
                             a second, labelled order would be a second truth",
                     ),
                 );
@@ -1562,13 +1562,37 @@ impl<'a> Pruefer<'a> {
         });
         // Ein Schreiben durch einen Zeiger kann alles Nichtlokale treffen -- ohne M3 gibt es
         // keine Aliasaussage, also faellt hier alles Nichtlokale mit.
+        //
+        // **Mit EINER Ausnahme, seit 2026-08-19: zwei verschiedene Felder desselben Objekts.**
+        //
+        // ```gabbro
+        // narrow s.len to 0 ..< KAP else { … }
+        // s.bytes[s.len] = b;      -- toetete bis dahin die Tatsache ueber `s.len`
+        // s.len += 1;              -- und damit fiel M101
+        // ```
+        //
+        // *Das ist die gewoehnlichste Form, die es gibt -- ein Puffer mit einer Laenge
+        // daneben* -- und der Ordner fuehrte „allgemeine Zeichenketten" darum als nicht
+        // schreibbar. **Der Grund war nicht die Sprache, sondern diese Vergroeberung.**
+        //
+        // `s.bytes` und `s.len` liegen im SELBEN Objekt an verschiedenen Versaetzen; ein
+        // Schreiben auf das eine kann das andere nicht treffen. *Ein zweiter Zeiger auf
+        // dasselbe `Text` aendert daran nichts -- er traefe `t.len`, und dessen Basis ist ein
+        // anderer Name.*
+        //
+        // > **Die Ausnahme gilt NICHT fuer Varianten.** Bei einem `tagged` liegen die Felder
+        // > uebereinander, und genau dann ist die grobe Regel die richtige.
         if k.contains('.') || k.contains("->") || k.contains('[') {
+            let lage_kopie = &Lage { lokal: lage.lokal.clone(), fakten: Vec::new() };
             lage.fakten.retain(|f| match f {
                 Fakt::Endlich { schluessel, .. }
             | Fakt::FIntervall { schluessel, .. }
-            | Fakt::Bereich { schluessel, .. } => self.ist_lokal(schluessel),
+            | Fakt::Bereich { schluessel, .. } => {
+                    self.ist_lokal(schluessel) || self.getrenntes_feld(schluessel, &k, lage_kopie)
+                }
                 Fakt::Beziehung { links, rechts, .. } => {
-                    self.ist_lokal(links) && self.ist_lokal(rechts)
+                    (self.ist_lokal(links) || self.getrenntes_feld(links, &k, lage_kopie))
+                        && (self.ist_lokal(rechts) || self.getrenntes_feld(rechts, &k, lage_kopie))
                 }
             });
         }
@@ -1599,6 +1623,35 @@ impl<'a> Pruefer<'a> {
     /// **U4.** Eine Stelle ist lokal, wenn sie weder Feld noch Index traegt **und kein
     /// globaler Name ist**. `static mut g` erfuellt die erste Haelfte -- ohne die zweite
     /// ueberlebt jeder Fakt ueber einen globalen Zaehler jeden Aufruf.
+    /// **Liegen zwei Schluessel in verschiedenen Feldern DESSELBEN Objekts?**
+    ///
+    /// `s.bytes[i]` und `s.len` tun es: gleiche Basis, verschiedene erste Felder. Sie koennen
+    /// einander nicht treffen, denn sie liegen an verschiedenen Versaetzen im selben Objekt.
+    ///
+    /// **Nicht fuer Varianten:** bei einem `tagged` liegen die Felder uebereinander. Der Typ
+    /// der Basis muss ein Verbund sein, sonst gilt die grobe Regel.
+    fn getrenntes_feld(&self, fakt: &str, geschrieben: &str, lage: &Lage) -> bool {
+        let (fb, ff) = erstes_feld(fakt);
+        let (gb, gf) = erstes_feld(geschrieben);
+        match (ff, gf) {
+            (Some(a), Some(b)) if fb == gb && a != b => {
+                let ort = Ort {
+                    basis: gabbro_syntax::ast::Ident {
+                        text: fb.to_string(),
+                        span: gabbro_syntax::span::Span::neu(0, 0),
+                    },
+                    suffixe: Vec::new(),
+                    span: gabbro_syntax::span::Span::neu(0, 0),
+                };
+                matches!(
+                    self.u.typ_von_ort(&self.modul, &ort, &lage.lokal).durchgreifen(),
+                    Typ::Verbund(_)
+                )
+            }
+            _ => false,
+        }
+    }
+
     fn ist_lokal(&self, schluessel: &str) -> bool {
         if schluessel.contains('.') || schluessel.contains('[') || schluessel.contains("->") {
             return false;
@@ -1674,7 +1727,7 @@ impl<'a> Pruefer<'a> {
                 "D1: an opaque newtype has NO implicit conversion to its carrier",
             )
             .mit_notiz(format!(
-                "the conversion belongs in `{heimat}`, which declares the type -- outside\
+                "the conversion belongs in `{heimat}`, which declares the type -- outside \
                     it the representation is unknown",
             )),
         );
@@ -1718,7 +1771,7 @@ impl<'a> Pruefer<'a> {
                         ),
                     )
                     .mit_notiz(
-                        "`f32` carries 24 mantissa bits, `f64` carries 53 -- write\
+                        "`f32` carries 24 mantissa bits, `f64` carries 53 -- write \
                             `rounded` if the rounding is meant",
                     ),
                 );
@@ -1738,7 +1791,7 @@ impl<'a> Pruefer<'a> {
                         ),
                     )
                     .mit_notiz(
-                        "`narrow <place> to <lo> .. <hi> else { … }` narrows the range\
+                        "`narrow <place> to <lo> .. <hi> else { … }` narrows the range \
                             and names the exit",
                     ),
                 );
@@ -1757,7 +1810,7 @@ impl<'a> Pruefer<'a> {
                         "`narrow <place> to finite else { … }` establishes both at once",
                     )
                     .mit_notiz(
-                        "without the fact even the negation of a comparison yields\
+                        "without the fact even the negation of a comparison yields \
                             nothing -- over floating point `!(x < y)` does not follow `x >=\
                             y`",
                     ),
@@ -1781,12 +1834,12 @@ impl<'a> Pruefer<'a> {
             ),
         )
         .mit_notiz(
-            "M1: every operation must stay inside the range of its result type -- that is\
+            "M1: every operation must stay inside the range of its result type -- that is \
                 a compile error, not a runtime check",
         );
         if q.min < z.min || q.max > z.max {
             a = a.mit_notiz(format!(
-                "what is missing is the proof that the value lies in {} .. {}; a check\
+                "what is missing is the proof that the value lies in {} .. {}; a check \
                     before it narrows the range (V1/V2), otherwise `narrow … to … else {{ … }}`",
                 z.min, z.max
             ));
@@ -1810,7 +1863,7 @@ impl<'a> Pruefer<'a> {
                 "the overflow is a compile error, not a runtime check",
             )
             .mit_notiz(
-                "a check before it narrows the range (V1), a relation between two places\
+                "a check before it narrows the range (V1), a relation between two places \
                     carries too (V2)",
             ),
         );
@@ -1828,7 +1881,7 @@ impl<'a> Pruefer<'a> {
                 ),
             )
             .mit_notiz(
-                "SYNTAX.md §4: if the result range does not fit, it is a compile error\
+                "SYNTAX.md §4: if the result range does not fit, it is a compile error \
                     and not a wrap-around",
             ),
         );
@@ -1909,7 +1962,7 @@ impl<'a> Pruefer<'a> {
                                 format!("`{}` names `result` and returns none", f.name.text),
                             )
                             .mit_notiz(
-                                "a postcondition about a result that does not exist\
+                                "a postcondition about a result that does not exist \
                                     speaks about nothing",
                             ),
                         );
@@ -1932,7 +1985,7 @@ impl<'a> Pruefer<'a> {
                             format!("`{n}` in `ensures` is not declared here"),
                         )
                         .mit_notiz(
-                            "a postcondition whose names do not resolve stands in the\
+                            "a postcondition whose names do not resolve stands in the \
                                 certificate and in the library ABI -- and says nothing",
                         ),
                     );
@@ -1949,8 +2002,8 @@ impl<'a> Pruefer<'a> {
                         ),
                     )
                     .mit_notiz(
-                        "it names neither `result` nor a place the function writes\
-                            according to `effects` -- then it is a `requires` or a\
+                        "it names neither `result` nor a place the function writes \
+                            according to `effects` -- then it is a `requires` or a \
                             `maintains` in the wrong place",
                     ),
                 );
@@ -1989,7 +2042,7 @@ impl<'a> Pruefer<'a> {
                     format!("`{}` is a `spec fn` and maintains nothing", f.name.text),
                 )
                 .mit_notiz(
-                    "a specification IS the statement -- `maintains` on it is an\
+                    "a specification IS the statement -- `maintains` on it is an \
                         obligation no body owes",
                 ),
             );
@@ -2019,7 +2072,7 @@ impl<'a> Pruefer<'a> {
                         format!("`{}` in `maintains` is neither a `spec fn` nor a declared invariant", i.text),
                     )
                     .mit_notiz(
-                        "a maintained invariant whose name does not resolve stands in the\
+                        "a maintained invariant whose name does not resolve stands in the \
                             certificate and in the library ABI -- and says nothing",
                     ),
                 );
@@ -2038,7 +2091,7 @@ impl<'a> Pruefer<'a> {
                         ),
                     )
                     .mit_notiz(
-                        "what writes nothing maintains every invariant -- the frame gives\
+                        "what writes nothing maintains every invariant -- the frame gives \
                             it already, and the line promises more than it says",
                     ),
                 );
@@ -2244,7 +2297,7 @@ impl<'a> Pruefer<'a> {
                                         ),
                                     )
                                     .mit_notiz(
-                                        "M4: no unchecked indexing -- the bound comes\
+                                        "M4: no unchecked indexing -- the bound comes \
                                             from the declaration of the carrier",
                                     ),
                                 );
@@ -2272,13 +2325,13 @@ impl<'a> Pruefer<'a> {
                                         "M108",
                                         idx.span,
                                         format!(
-                                            "the index lies inside the address space, but\
+                                            "the index lies inside the address space, but \
                                                 nothing shows it is BACKED"
                                         ),
                                     )
                                     .mit_notiz(
-                                        "`count` is the address space, `backed` the\
-                                            memory -- an index into an unbacked place is\
+                                        "`count` is the address space, `backed` the \
+                                            memory -- an index into an unbacked place is \
                                             type-correct and still a fault",
                                     )
                                     .mit_notiz(
@@ -2332,6 +2385,31 @@ fn schluessel_und_indizes(o: &Ort) -> Option<(String, Vec<String>)> {
                 ExprArt::Ort(inner) if inner.suffixe.is_empty() => {
                     s.push_str(&format!("[{}]", inner.basis.text));
                     indizes.push(inner.basis.text.clone());
+                }
+                // **Ein Index mit Suffixen -- die Zeichenkettenform, 2026-08-19.**
+                //
+                // `s.bytes[s.len] = x` fiel bis dahin auf `None`, und `None` heisst hier
+                // `lage.fakten.clear()`: **jede Tatsache des Blocks stirbt.** Damit war
+                //
+                // ```gabbro
+                // narrow s.len to 0 ..< KAP else { return false; }
+                // s.bytes[s.len] = b;
+                // s.len += 1;              -- M101: der Bereich der Verengung ist fort
+                // ```
+                //
+                // nicht schreibbar -- und das ist die gewoehnlichste Form, die es gibt:
+                // *ein Puffer mit einer Laenge daneben.* Der Ordner fuehrte
+                // „allgemeine Zeichenketten" darum als nicht schreibbar, und der Grund war
+                // nicht die Sprache, sondern diese Zeile.
+                //
+                // > **Die Vergroeberung war sicher und unnoetig teuer.** Ein Schreiben auf
+                // > `s.bytes[…]` trifft `s.bytes` und alles, was ueber `s.len` indiziert --
+                // > nicht `s.len` selbst.
+                ExprArt::Ort(inner) => {
+                    let (innen, mut tiefer) = schluessel_und_indizes(inner)?;
+                    s.push_str(&format!("[{innen}]"));
+                    indizes.append(&mut tiefer);
+                    indizes.push(innen);
                 }
                 _ => return None,
             },
@@ -2647,5 +2725,18 @@ fn sammle_zuwaechse(b: &Block, aus: &mut HashMap<String, Option<i128>>) {
             }
             _ => {}
         }
+    }
+}
+
+/// Basis und erstes Feld eines Ortsschluessels: `s.bytes[i].x` -> `("s", Some("bytes"))`.
+fn erstes_feld(k: &str) -> (&str, Option<&str>) {
+    let ende = k.find(['.', '[']).unwrap_or(k.len());
+    let basis = &k[..ende];
+    let rest = &k[ende..];
+    if let Some(r) = rest.strip_prefix('.') {
+        let e = r.find(['.', '[']).unwrap_or(r.len());
+        (basis, Some(&r[..e]))
+    } else {
+        (basis, None)
     }
 }

@@ -282,7 +282,7 @@ fn der_erzeuger_weigert_sich_statt_offen_auszufallen() {
 
     // **2. Eine unbekannte Ausdrucksform wird abgelehnt, nicht zu null.**
     let unaer = absagen_von(
-        "module t { table T count 8 { slot { benutzt : bool, } }\n\
+        "module t { table T count 8 { slot { benutzt : bool, } }\n \
          impl fn f(t : ptr<normal, r> T, i : index into T) -> bool \
          effects { reads t.slots } costs <= 4 ops { return !t.slots[i].benutzt; } }",
     );
@@ -293,7 +293,7 @@ fn der_erzeuger_weigert_sich_statt_offen_auszufallen() {
 
     // **3. `Some`/`None` sind Konstruktoren, keine Rufe** («B35»).
     let konstruktor = absagen_von(
-        "module t { table T count 8 { slot { eltern : index into T, } }\n\
+        "module t { table T count 8 { slot { eltern : index into T, } }\n \
          impl fn f(t : ptr<normal, rw> T, i : index into T) \
          effects { writes t.slots } costs <= 4 ops { t.slots[i].eltern = None; } }",
     );

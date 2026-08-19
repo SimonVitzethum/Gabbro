@@ -8876,3 +8876,88 @@ vorweggenommen, und die Sprache hat ihn nicht.**
 Klauseln 37 -> 36      ZUSAGE 4      141 Kennungen · 124 Gifte (0 ohne Biss)
 126 Tests · neun Waechter gruen
 ```
+
+---
+
+# Allgemeine Zeichenketten waren schreibbar — es hing an einer Vergröberung
+
+**2026-08-19.** `PLAN.md` führte *„allgemeine Zeichenketten"* in der Spalte **für immer
+draußen** mit dem Satz: *„eine Zeichenkette ist ein Feld unbekannter Länge."*
+
+**Der Satz vermengte zwei Dinge**, und nur eines stimmt:
+
+| | |
+|---|---|
+| ein Puffer mit einer **Länge daneben** | schreibbar — `beispiele/32-zeichenkette.gab` |
+| ein **variables Feld in einem `format`** | offen, und ein eigener Posten («variable Längen») |
+
+## Woran es wirklich hing
+
+```gabbro
+narrow s.len to 0 ..< KAP else { return false; }
+s.bytes[s.len] = b;      -- toetete die Tatsache ueber `s.len`
+s.len += 1;              -- und damit fiel M101
+```
+
+**M1 löschte beim Schreiben durch einen Zeiger jede nichtlokale Tatsache** — ohne Aliasanalyse
+war das sicher. *Aber `s.bytes` und `s.len` liegen im **selben** Objekt an verschiedenen
+Versätzen; ein Schreiben auf das eine kann das andere nicht treffen.*
+
+**Die Ausnahme, und ihre zwei Grenzen stehen als Giftprobe:**
+
+| | |
+|---|---|
+| **Gift 125** | ein **zweiter Zeiger** schreibt — er träfe `t.len`, andere Basis, grobe Regel bleibt |
+| **Gift 126** | **dasselbe Feld** überschrieben — die älteste Regel der Faktenmenge |
+
+Und sie gilt **nicht für Varianten**: bei einem `tagged` liegen die Felder übereinander.
+
+> **Der Grund war nicht die Sprache, sondern eine Vergröberung — und die Zeile im Plan las die
+> Vergröberung als Grenze.** *Das ist dieselbe Klasse wie die acht widerrufenen Sätze, nur
+> tiefer: nicht eine Zahl, die nicht nachgezogen wurde, sondern eine Grenze, die aus einer
+> Implementierungsentscheidung abgeschrieben war.*
+
+## Und beim Übersetzen hatte ich 161 Meldungen zerbrochen
+
+Die Zeilenfortsetzungen der englischen Fassung verloren das Leerzeichen: *„that is a compile
+error"* wurde *„that isa compile error"*. **Gefunden, weil ich eine Meldung im Zeichenkettenbau
+gelesen habe** — kein Wächter sieht so etwas. Alle 161 geheilt.
+
+---
+
+# Der Wächter eine Ebene höher — und das grobe Maß findet die falsche Sache
+
+**`pruefe-konstrukte.py`.** Der Gedanke: dieselbe Klasse wie beim Feldwächter, nur eine Ebene
+darüber — *nicht ein Feld ohne Leser, sondern ein Konstrukt ohne Wirkung.*
+
+## Maß 1 — greift ein Pass die Item-Art an? **Zu grob, und das ist der Befund**
+
+```
+23 Item-Arten · 21 gelesen · 2 nur getragen (Entry, Boot) · 0 ungelesen
+```
+
+**Es findet `ops` und `check` NICHT** — und beide sind die Fundstellen, für die der Wächter
+gedacht war. `ItemArt::Check` wird von `schleifen.rs` angefasst, aber nur, um in `can_fail`
+hineinzulaufen; `ops` steht als `!t.ops.is_empty()` da, also als **boolesche** Frage, nie als
+Menge.
+
+> **Ein Konstrukt kann berührt werden, ohne dass eine einzige seiner Zusagen fällt.**
+
+## Maß 2 — ist an dem Konstrukt je etwas GEFALLEN?
+
+Nicht *wer liest es*, sondern **ob eine Giftprobe es je zum Fallen gebracht hat**:
+
+```
+7 von 19 Konstrukten haben KEINE Giftprobe
+   axiom · boot · check · entry · reason · state · walk
+```
+
+**Das ist die Klasse**, und sie ist größer als die zwei, die von Hand feststanden. *Dieselbe
+Bewegung wie beim Feldskript: 48 statt der erwarteten vier — hier sieben statt zwei.*
+
+**`axiom` ist der teuerste Eintrag der Liste:** die Axiomschicht ist die größte unbewiesene
+Fläche der Sprache, und **keine Probe berührt sie.**
+
+> **Und die Grenze im selben Satz:** eine Probe zu haben ist nicht, geprüft zu sein. `ops` hat
+> **drei** und trotzdem keinen Erzeuger — die Proben fallen an `D001`, nicht an der Erhaltung.
+> *Der Wächter verpflichtet, er spricht nicht frei.*

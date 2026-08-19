@@ -199,7 +199,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                         ),
                     )
                     .mit_notiz(
-                        "the steps of the body must compose into the promise -- otherwise\
+                        "the steps of the body must compose into the promise -- otherwise \
                             the declaration says something the body does not do",
                     ),
                 );
@@ -309,7 +309,7 @@ fn fluss(
                             "a phase step stands inside a loop",
                         )
                         .mit_notiz(
-                            "a step happens once, a loop often -- after two passes the\
+                            "a step happens once, a loop often -- after two passes the \
                                 mark would stand two stages further",
                         ),
                     );
@@ -428,7 +428,7 @@ fn anwenden(
                 ),
             )
             .mit_notiz(
-                "a linear value forces a CHAIN, but not WHICH -- the stage is what says\
+                "a linear value forces a CHAIN, but not WHICH -- the stage is what says \
                     where in the chain one stands",
             ),
         );

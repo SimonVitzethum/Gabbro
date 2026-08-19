@@ -236,8 +236,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                      `requires Held(…)` names it",
                 )
                 .mit_notiz(
-                    "if the place is synchronised some other way -- through\
-                        `publishes`/`awaits` -- the lock does not belong here; otherwise the\
+                    "if the place is synchronised some other way -- through \
+                        `publishes`/`awaits` -- the lock does not belong here; otherwise the \
                         taking is missing",
                 ),
             );
@@ -255,8 +255,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     format!("`{name}` declares `shared held` but is never taken shared"),
                 )
                 .mit_notiz(
-                    "a promise with no site at which it can fail is a claim -- and\
-                        `protects` is the promise that this place is only touched under this\
+                    "a promise with no site at which it can fail is a claim -- and \
+                        `protects` is the promise that this place is only touched under this \
                         lock",
                 ),
             );
@@ -531,11 +531,11 @@ fn block(
                                 ),
                             )
                             .mit_notiz(
-                                "an upgrade from shared to exclusive waits on its own\
+                                "an upgrade from shared to exclusive waits on its own \
                                     read side -- that is a self-deadlock, not a race",
                             )
                             .mit_notiz(
-                                "the honest form is hand-over with revalidation: release,\
+                                "the honest form is hand-over with revalidation: release, \
                                     take exclusively, check the precondition again",
                             ),
                         );
@@ -620,11 +620,11 @@ fn schreibprobe(
                 format!("`{ort}` is written while `{name}` is held only shared"),
             )
             .mit_notiz(format!(
-                "`{name}` protects `{platz}` -- holding it shared means: the place is\
+                "`{name}` protects `{platz}` -- holding it shared means: the place is \
                     only read"
             ))
             .mit_notiz(
-                "exactly this match is what makes `locks shared` a construct instead of a\
+                "exactly this match is what makes `locks shared` a construct instead of a \
                     comment",
             ),
         );
@@ -673,17 +673,17 @@ fn rufprobe(
                 "H005",
                 span,
                 format!(
-                    "`{}` requires `Held({sperre})` exclusively but is called here while\
+                    "`{}` requires `Held({sperre})` exclusively but is called here while \
                         it is held shared",
                     name.text
                 ),
             )
             .mit_notiz(
-                "the callee writes with exclusive authority, the caller holds only a read\
+                "the callee writes with exclusive authority, the caller holds only a read \
                     right -- and nothing between the two says so",
             )
             .mit_notiz(
-                "`requires Held(L, shared)` would be admissible here -- the strength\
+                "`requires Held(L, shared)` would be admissible here -- the strength \
                     belongs at the declaration, not at the call",
             ),
         );
@@ -756,7 +756,7 @@ fn rangprobe(
                         ),
                     )
                     .mit_notiz(
-                        "the lock order runs UPWARDS: a lock is only taken while a\
+                        "the lock order runs UPWARDS: a lock is only taken while a \
                             strictly smaller rank is held",
                     )
                     .mit_notiz(if *alt == neu {
@@ -869,11 +869,11 @@ fn rcu_schutz(
                 Absage::fehler(
                     "H009",
                     o.span,
-                    format!("`{t}` belongs to the RCU domain `{d}`, and `{wo}` does not stand in\
+                    format!("`{t}` belongs to the RCU domain `{d}`, and `{wo}` does not stand in \
                         `observes`"),
                 )
                 .mit_notiz(
-                    "the read side takes nothing -- but it must be NAMED, otherwise the\
+                    "the read side takes nothing -- but it must be NAMED, otherwise the \
                         grace period has no place it refers to",
                 ),
             );
@@ -895,7 +895,7 @@ fn rcu_schutz(
                             format!("`{t}` reclaims while `{wo}` stands in `observes`"),
                         )
                         .mit_notiz(
-                            "whoever reclaims is not a reader -- a reclaim inside one's\
+                            "whoever reclaims is not a reader -- a reclaim inside one's \
                                 own read region frees a place one still holds",
                         ),
                     );
@@ -915,7 +915,7 @@ fn rcu_schutz(
                             format!("`{t}` reclaims without holding the writer lock of `{d}`"),
                         )
                         .mit_notiz(
-                            "reclaiming is the write side -- and RCU serialises readers\
+                            "reclaiming is the write side -- and RCU serialises readers \
                                 against it, not writers against each other",
                         ),
                     );
@@ -938,7 +938,7 @@ fn rcu_schutz(
                     format!("`{t}` is written in `{wo}` without a lock (RCU domain `{d}`)"),
                 )
                 .mit_notiz(
-                    "RCU serialises readers against RECLAIM, not writers against each\
+                    "RCU serialises readers against RECLAIM, not writers against each \
                         other -- the write side needs its own mutual exclusion",
                 ),
             );

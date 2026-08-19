@@ -319,7 +319,12 @@ Stehengebliebene Zahlen aus P1: 117 Regeln, 187 Terminale (heute 1 / 1)
     # **Und die README-Haelfte, in beide Richtungen.** Eine Kennzahlentafel, die keiner
     # nachhaelt, faellt sonst genauso lautlos aus wie die acht Zahlen, die sie ersetzt hat.
     echt = (WURZEL / "README.md").read_text()
-    verstellt = echt.replace("31 clean examples", "17 clean examples")
+    # **Die Sprechprobe muss die HEUTIGE Zahl verstellen, nicht eine von gestern.**
+    # *Gefunden 2026-08-19: der Korpus wuchs auf 32, und die Probe verstellte weiter „31" --
+    # sie fand nichts und meldete damit, sie koenne nicht messen.* Der Waechter faengt seinen
+    # eigenen Fall, weil er in BEIDE Richtungen prueft.
+    n_bsp_heute = len(list((WURZEL / "beispiele").glob("*.gab")))
+    verstellt = echt.replace("%d clean examples" % n_bsp_heute, "17 clean examples")
     r_gift = pruefe_readme(verstellt)
     r_sauber = pruefe_readme(echt)
     print(f"  README-Gift:   {len(r_gift)} Befunde", end="")

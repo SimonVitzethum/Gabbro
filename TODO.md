@@ -541,6 +541,23 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **SIEBEN Konstrukte haben keine Giftprobe** *(gemessen 2026-08-19, `pruefe-konstrukte.py`)*:
+      `axiom`, `boot`, `check`, `entry`, `reason`, `state`, `walk`. **An keinem von ihnen ist je
+      etwas gefallen.** *`axiom` ist der teuerste Eintrag: die Axiomschicht ist die groesste
+      unbewiesene Flaeche der Sprache, und keine Probe beruehrt sie.* Je Konstrukt eine Probe,
+      und wo keine schreibbar ist, steht der Grund dabei.
+- [ ] **Das GROBE Mass (greift ein Pass die Item-Art an?) findet die falsche Sache**
+      *(2026-08-19)*. 21 von 23 Item-Arten sind „gelesen" -- **`ops` und `check` darunter**,
+      obwohl keine ihrer Zusagen geprueft wird. `ItemArt::Check` wird nur angefasst, um in
+      `can_fail` hineinzulaufen; `ops` steht als `!is_empty()` da. **Ein Konstrukt kann
+      beruehrt werden, ohne dass eine einzige seiner Zusagen faellt.** *Ein Mass, das Zugriff
+      mit Wirkung verwechselt, misst die Verdrahtung und nicht die Regel.*
+- [ ] **Die 161 zerbrochenen Meldungen hat kein Waechter gesehen** *(2026-08-19)*. Beim
+      Uebersetzen ins Englische verloren die Zeilenfortsetzungen ihr Leerzeichen -- *„that isa
+      compile error"*. **Gefunden, weil ich eine Meldung gelesen habe.** `pruefe-englisch.py`
+      prueft die SPRACHE eines Textes, nicht seine Lesbarkeit. *Eine Probe waere billig: kein
+      Meldungstext enthaelt zwei Woerter ohne Trennung.*
+
 - [ ] **Das `check`-Konstrukt ist WIRKUNGSLOS -- alle vier versprochenen Fehler fehlen**
       *(gefunden 2026-08-19 bei der Handpruefung der 37 Klauseleintraege)*.
       `SYNTAX.md`:979-982 verspricht: `gates` fehlt -> die Pflicht wird nie verbraucht;

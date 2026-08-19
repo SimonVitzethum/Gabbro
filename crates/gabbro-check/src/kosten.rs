@@ -249,12 +249,12 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
                         ),
                     )
                     .mit_notiz(
-                        "readable is a sum of constants and multiples of declared\
+                        "readable is a sum of constants and multiples of declared \
                             quantities -- `40`, `NSLOTS * 8`, `64 + 12 * lenof(m)`",
                     )
                     .mit_notiz(
-                        "a promise the pass does not read was, until 2026-08-18, an empty\
-                            line: `costs <= 0 * n ops` on a body costing 1 op went through\
+                        "a promise the pass does not read was, until 2026-08-18, an empty \
+                            line: `costs <= 0 * n ops` on a body costing 1 op went through \
                             with 0 errors",
                     ),
                 );
@@ -281,11 +281,11 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
                             ),
                         )
                         .mit_notiz(
-                            "SPRACHE.md §7: 1 op = one Gabbro primitive; a call counts\
+                            "SPRACHE.md §7: 1 op = one Gabbro primitive; a call counts \
                                 the declared costs of the callee",
                         )
                         .mit_notiz(
-                            "the number is computed statically -- lowering it means\
+                            "the number is computed statically -- lowering it means \
                                 writing fewer operations, not promising more",
                         ),
                     );
@@ -304,7 +304,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
                             ),
                         )
                         .mit_notiz(
-                            "a cost promise over an unknown quantity is a promise nobody\
+                            "a cost promise over an unknown quantity is a promise nobody \
                                 can check",
                         ),
                     );
@@ -626,7 +626,7 @@ impl<'a> Rechner<'a> {
                                     ),
                                 )
                                 .mit_notiz(
-                                    "SPRACHE.md §9.3: the latency statement of every\
+                                    "SPRACHE.md §9.3: the latency statement of every \
                                         other core hangs on this number",
                                 ),
                             );

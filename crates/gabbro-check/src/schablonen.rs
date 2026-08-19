@@ -921,7 +921,7 @@ pub fn ungedeckt() -> usize {
 pub fn zeige() -> String {
     let mut out = String::new();
     out.push_str(
-        "-- The generator templates: the third counting column beside vocabulary and\
+        "-- The generator templates: the third counting column beside vocabulary and \
             axiom layer.\n",
     );
     for (n, s) in SCHABLONEN.iter().enumerate() {

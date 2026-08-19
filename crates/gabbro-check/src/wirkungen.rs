@@ -380,7 +380,7 @@ fn pruefe_touches(
                 ),
             )
             .mit_notiz(
-                "`touches` is the NARROWER, local promise beside `effects` -- whoever\
+                "`touches` is the NARROWER, local promise beside `effects` -- whoever \
                     reads it counts on less contact than the body has",
             ),
         );
@@ -463,7 +463,7 @@ fn rumpf_gegen_wirkungen(
                     ),
                 )
                 .mit_notiz(
-                    "SPRACHE.md §7: `effects` is obligatory and not fail-open -- a\
+                    "SPRACHE.md §7: `effects` is obligatory and not fail-open -- a \
                         missing clause is a missing promise, not an empty one",
                 )
                 .mit_notiz(format!(
@@ -546,8 +546,8 @@ fn rumpf_gegen_wirkungen(
                     ),
                 )
                 .mit_notiz(
-                    "reading A: reads are declared as completely as writes -- a frame\
-                        promise that knows only the write side says nothing about WHAT the\
+                    "reading A: reads are declared as completely as writes -- a frame \
+                        promise that knows only the write side says nothing about WHAT the \
                         function saw",
                 )
                 .mit_notiz(format!(
@@ -583,8 +583,8 @@ fn rumpf_gegen_wirkungen(
                     ),
                 )
                 .mit_notiz(
-                    "declaring shared and taking exclusively is the dangerous direction:\
-                        whoever reads the signature counts on concurrency that does not\
+                    "declaring shared and taking exclusively is the dangerous direction: \
+                        whoever reads the signature counts on concurrency that does not \
                         exist",
                 )
                 .mit_notiz("the converse is allowed -- declaring exclusive covers the shared acquisition"),
@@ -627,7 +627,7 @@ fn funktion(
                         "SPRACHE.md §7: `effects` is obligatory and not fail-open",
                     )
                     .mit_notiz(
-                        "the omission was at once the strongest promise and the cheapest\
+                        "the omission was at once the strongest promise and the cheapest \
                             one to write",
                     ),
                 );
@@ -814,7 +814,7 @@ fn aufrufwirkungen(
                     ),
                 )
                 .mit_notiz(
-                    "`effects` is compositional: the effects of the callees belong to the\
+                    "`effects` is compositional: the effects of the callees belong to the \
                         caller",
                 ),
             );
@@ -831,7 +831,7 @@ fn aufrufwirkungen(
                     ),
                 )
                 .mit_notiz(
-                    "the effect comes from a callee -- `effects` covered only the first\
+                    "the effect comes from a callee -- `effects` covered only the first \
                         level until 2026-08-15",
                 )
                 .mit_notiz(format!(

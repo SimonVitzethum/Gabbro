@@ -48,11 +48,11 @@ fn zwei_architekturen_sind_keine_doppelung() {
     // FRAGMENTE.md F5 deklariert `invoke` zweimal -- einmal je Architektur. Wer das als
     // Doppelung meldet, verbietet die bedingte Uebersetzung, die `arch`/`when` tragen.
     faellt_nicht(
-        "prim fn invoke(nr : u64) -> u64 effects { writes maschine } arch x86_64;\n\
+        "prim fn invoke(nr : u64) -> u64 effects { writes maschine } arch x86_64;\n \
          prim fn invoke(nr : u64) -> u64 effects { writes maschine } arch aarch64;",
     );
     faellt_mit(
-        "prim fn invoke(nr : u64) -> u64 effects { writes maschine } arch x86_64;\n\
+        "prim fn invoke(nr : u64) -> u64 effects { writes maschine } arch x86_64;\n \
          prim fn invoke(nr : u64) -> u64 effects { writes maschine } arch x86_64;",
         "N001",
     );
@@ -128,7 +128,7 @@ fn ein_fakt_stirbt_beim_schreiben() {
     // ist einmal zu viel.
     faellt_mit(
         &format!(
-            "{RAHMEN}type Zelle = {{ w : Z, }};\n\
+            "{RAHMEN}type Zelle = {{ w : Z, }};\n \
              impl fn f(z : ptr<normal, rw> Zelle) effects {{ writes z }} \
              {{ if z.w >= 1 {{ z.w -= 1; z.w -= 1; }} }}"
         ),
@@ -140,7 +140,7 @@ fn ein_fakt_stirbt_beim_schreiben() {
 fn schleifen_tragen_keine_fakten_hinein() {
     faellt_mit(
         &format!(
-            "{RAHMEN}type Zelle = {{ w : Z, }};\n\
+            "{RAHMEN}type Zelle = {{ w : Z, }};\n \
              impl fn f(z : ptr<normal, rw> Zelle, c : ptr<normal, rw> T) \
              effects {{ writes z, writes c }} \
              {{ if z.w >= 1 {{ traverse s over slots of c by unvisited {{ z.w -= 1; }} }} }}"
@@ -152,7 +152,7 @@ fn schleifen_tragen_keine_fakten_hinein() {
 #[test]
 fn wrapping_ist_der_erlaubte_ueberlauf() {
     faellt_nicht(
-        "table T { slot { m : u32 wrapping, } }\n\
+        "table T { slot { m : u32 wrapping, } }\n \
          impl fn f(t : ptr<normal, rw> T, i : u32) effects { writes t.slots } \
          { t.slots[i].m += 1; }",
     );
@@ -161,8 +161,8 @@ fn wrapping_ist_der_erlaubte_ueberlauf() {
 #[test]
 fn v3_bindet_die_nutzlast_der_variante() {
     faellt_nicht(
-        "const G : u32 = 65535;\ntype Z = u32 in 0 .. G;\n\
-         tagged type A = { Eins(Z), Zwei(Z) };\n\
+        "const G : u32 = 65535;\ntype Z = u32 in 0 .. G;\n \
+         tagged type A = { Eins(Z), Zwei(Z) };\n \
          impl fn f(a : A) -> Z effects { pure } \
          { match a { Eins(x) => { return x; } Zwei(y) => { return y; } } return 0; }",
     );
@@ -171,12 +171,12 @@ fn v3_bindet_die_nutzlast_der_variante() {
 #[test]
 fn index_gegen_die_laenge_des_feldes() {
     faellt_mit(
-        "type W = u32 in 0 .. 127;\nstatic mut f : [u32; 64] = 0;\n\
+        "type W = u32 in 0 .. 127;\nstatic mut f : [u32; 64] = 0;\n \
          impl fn g(i : W) -> u32 effects { reads f } { return f[i]; }",
         "M103",
     );
     faellt_nicht(
-        "type W = u32 in 0 .. 63;\nstatic mut f : [u32; 64] = 0;\n\
+        "type W = u32 in 0 .. 63;\nstatic mut f : [u32; 64] = 0;\n \
          impl fn g(i : W) -> u32 effects { reads f } { return f[i]; }",
     );
 }
@@ -286,7 +286,7 @@ fn jeder_gebaute_pass_kann_fallen() {
         ),
         (
             "M1 + V1–V3",
-            "const G : u32 = 65535;\ntype Z = u32 in 0 .. G;\n\
+            "const G : u32 = 65535;\ntype Z = u32 in 0 .. G;\n \
              impl fn f(a : Z) -> Z effects { pure } { return a + 1; }",
         ),
         ("effects", "impl fn f() { }"),

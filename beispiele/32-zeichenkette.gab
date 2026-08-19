@@ -1,0 +1,51 @@
+-- 32 -- Eine Zeichenkette, und warum sie bis zum 2026-08-19 nicht schreibbar war.
+--
+-- `PLAN.md` fuehrte **allgemeine Zeichenketten** in der Spalte *fuer immer draussen* mit dem
+-- Satz: *„eine Zeichenkette ist ein Feld unbekannter Laenge."* **Der Satz vermengte zwei
+-- Dinge**, und nur eines davon stimmt:
+--
+--   * ein Puffer mit einer LAENGE daneben  -- das hier, und es geht
+--   * ein variables Feld in einem `format` -- das ist «variable Laengen», ein anderer Posten
+--
+-- ## Woran es wirklich hing
+--
+--     narrow s.len to 0 ..< KAP else { return false; }
+--     s.bytes[s.len] = b;      -- toetete die Tatsache ueber `s.len`
+--     s.len += 1;              -- und damit fiel M101
+--
+-- M1 loeschte beim Schreiben durch einen Zeiger **jede nichtlokale Tatsache** -- ohne
+-- Aliasanalyse war das sicher. *Aber `s.bytes` und `s.len` liegen im SELBEN Objekt an
+-- verschiedenen Versaetzen; ein Schreiben auf das eine kann das andere nicht treffen.*
+--
+-- **Die Ausnahme gilt nicht fuer Varianten** (bei `tagged` liegen die Felder uebereinander)
+-- und nicht fuer einen ZWEITEN Zeiger -- der traefe `t.len`, und dessen Basis ist ein anderer
+-- Name. Beide Richtungen stehen als Giftprobe.
+--
+-- *Der Grund war nicht die Sprache, sondern eine Vergroeberung -- und die Zeile im Plan las
+-- die Vergroeberung als Grenze.*
+
+module t {
+
+const KAP : u32 = 64;
+
+type Text = { bytes : [u8; KAP], len : u32 in 0 .. KAP, };
+
+impl fn laenge(s : ptr<normal, r> Text) -> u32 in 0 .. KAP
+    effects { reads s } costs <= 4 ops
+{ return s.len; }
+
+impl fn byte_an(s : ptr<normal, r> Text, i : u32 in 0 ..< KAP) -> u8
+    requires i < s.len
+    effects  { reads s } costs <= 4 ops
+{ return s.bytes[i]; }
+
+impl fn anhaengen(s : ptr<normal, rw> Text, b : u8) -> bool
+    effects { reads s, writes s } costs <= 12 ops
+{
+    narrow s.len to 0 ..< KAP else { return false; }
+    s.bytes[s.len] = b;
+    s.len += 1;
+    return true;
+}
+
+}

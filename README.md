@@ -126,8 +126,8 @@ denominator that shines instead of the one that costs.*
 | **Compiler** | 12 passes, 3 complete, 9 partial, **0 open** | 141 diagnostics · `gabbro paesse` |
 | **Grammar** | **140 EBNF rules**, closed and reachable | vocabulary covers every terminal, 209 / 209 |
 | **Proof templates** | **20, of which 9 are machine-checked** | Isabelle2025-2, `beweise/` |
-| **Guardians** | 11, each with a two-way speech test | **151 of 152 mutations caught** *(run 2026-08-19)* |
-| **Corpus** | 31 clean examples, 124 poison files, 126 tests *(run 2026-08-19)* | `cargo test` |
+| **Guardians** | 12, each with a two-way speech test | **151 of 152 mutations caught** *(run 2026-08-19)* |
+| **Corpus** | 32 clean examples, 126 poison files, 126 tests *(run 2026-08-19)* | `cargo test` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was
@@ -172,6 +172,7 @@ cargo test                                           # 126 tests
 ./pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
 ./pruefe-klauseln.py                                 # declared, exported, never read
 ./pruefe-widerruf.py                                 # sentences the folder has revoked, still standing
+./pruefe-konstrukte.py                               # constructs at which nothing has ever fallen
 ./pruefe-englisch.py                                 # the surface of Gabbro is English
 isabelle build -d beweise -c Gabbro                  # the machine-checked templates
 ```

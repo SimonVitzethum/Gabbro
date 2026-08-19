@@ -204,16 +204,16 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                                 "D002",
                                 *span,
                                 format!(
-                                    "`{text}` carries `by ops` in `{tab}` and is mutated\
+                                    "`{text}` carries `by ops` in `{tab}` and is mutated \
                                         by hand here"
                                 ),
                             )
                             .mit_notiz(
-                                "`by ops` means: only the generated operations of the\
+                                "`by ops` means: only the generated operations of the \
                                     table write this field",
                             )
                             .mit_notiz(
-                                "that is exactly what makes `refcount -= 1` by hand\
+                                "that is exactly what makes `refcount -= 1` by hand \
                                     unwritable, and it is the point of the clause",
                             ),
                         );
@@ -237,11 +237,11 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     ),
                 )
                 .mit_notiz(
-                    "SPRACHE.md §10.2: a hand-written mutation on a `table` with `ops` is\
+                    "SPRACHE.md §10.2: a hand-written mutation on a `table` with `ops` is \
                         a compile error",
                 )
                 .mit_notiz(
-                    "otherwise the K condition of the measurement protocol falls: it\
+                    "otherwise the K condition of the measurement protocol falls: it \
                         holds only if ALL mutations of the carrier are generated operations",
                 ),
             );

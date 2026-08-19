@@ -733,9 +733,9 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                  \x20* The merge set is a commutative monoid, so the fold is order-independent\n\
                  \x20* (beweise/Accumulates_Monoid.thy). AT A QUIESCENT POINT this equals an\n\
                  \x20* atomic RMW chain -- read while others write, it does not, and that is\n\
-                 \x20* the price of the lowering, not an inaccuracy. */\n\
+                 \x20* the price of the lowering, not an inaccuracy. */\n \
                  static _Atomic {c} {nm}_zellen[{n}];\n\
-                 \n\
+                 \n \
                  static {c} {nm}_lies(void) {{\n\
                  \x20   {c} z = ({c}){neutral};\n\
                  \x20   for (uint32_t k = 0; k < (uint32_t)({n}); k++) {{\n\
@@ -744,7 +744,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                  \x20   }}\n\
                  \x20   return {ab}z;\n\
                  }}\n\
-                 \n\
+                 \n \
                  static void {nm}_melde({c} roh) {{\n\
                  \x20   {c} v = {auf}roh;\n\
                  \x20   uint32_t k = gabbro_kern();\n\

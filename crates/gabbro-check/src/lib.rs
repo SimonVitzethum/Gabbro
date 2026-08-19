@@ -87,16 +87,16 @@ pub fn passliste() -> Vec<Pass> {
             quelle: "SPRACHE.md §3: undurchsichtige Neutypen, vollstaendige Layouts, \
                      erschoepfende Aufzaehlung",
             zustand: Zustand::Teilgebaut(
-                "the K condition is built (`D001`: no hand mutation on a `table` with\
-                    `ops`), and since 2026-08-18 opacity BITES: an `opaque type` does not\
-                    have the arithmetic of its carrier (`D003`). *Before that `a + b` fell\
-                    only by accident -- at `M104`, not at the opacity; wherever the widths\
-                    worked out, the nonsense went through.* **And since the same day the\
-                    WALL stands behind it** (`D004`): the implicit conversion went through\
-                    silently in BOTH directions, so D1 was not enforced at all. The door is\
-                    the MODULE BOUNDARY -- inside the declaring module the representation is\
-                    known, outside it is not. *On this corpus it has zero bite: all twelve\
-                    declarations declare and use in the same module.* **NOT built:\
+                "the K condition is built (`D001`: no hand mutation on a `table` with \
+                    `ops`), and since 2026-08-18 opacity BITES: an `opaque type` does not \
+                    have the arithmetic of its carrier (`D003`). *Before that `a + b` fell \
+                    only by accident -- at `M104`, not at the opacity; wherever the widths \
+                    worked out, the nonsense went through.* **And since the same day the \
+                    WALL stands behind it** (`D004`): the implicit conversion went through \
+                    silently in BOTH directions, so D1 was not enforced at all. The door is \
+                    the MODULE BOUNDARY -- inside the declaring module the representation is \
+                    known, outside it is not. *On this corpus it has zero bite: all twelve \
+                    declarations declare and use in the same module.* **NOT built: \
                     exhaustive `match` over `tagged`**",
             ),
         },
@@ -111,11 +111,11 @@ pub fn passliste() -> Vec<Pass> {
             name: "M3",
             quelle: "SYNTAX.md §3: Adressraeume und Zugriffsrechte am Zeiger",
             zustand: Zustand::Teilgebaut(
-                "built: rights checking at reads and writes, the placement rule that an\
-                    `ops` carrier is not in the `dma` space (`R001`-`R003`). **NOT built:\
-                    the barrier from the space** -- which barrier a `dma` access demands is\
-                    a statement about the memory model, the same axiom layer as at the\
-                    pairing. **And no alias analysis**: two `ptr<normal, rw>` to the same\
+                "built: rights checking at reads and writes, the placement rule that an \
+                    `ops` carrier is not in the `dma` space (`R001`-`R003`). **NOT built: \
+                    the barrier from the space** -- which barrier a `dma` access demands is \
+                    a statement about the memory model, the same axiom layer as at the \
+                    pairing. **And no alias analysis**: two `ptr<normal, rw>` to the same \
                     object stay indistinguishable, and `own` is what stands for that",
             ),
         },
@@ -124,10 +124,10 @@ pub fn passliste() -> Vec<Pass> {
             name: "M2",
             quelle: "SPRACHE.md §4: lineare und geisterhafte Werte",
             zustand: Zustand::Teilgebaut(
-                "built: exactly-once per path, branch matching, `consumes` against\
+                "built: exactly-once per path, branch matching, `consumes` against \
                     borrowed (`L101`-`L105`). **NOT built: the ghost erasure** -- a `ghost`\
-                    value does not exist at run time, its linearity is a statement about the\
-                    PROOF, and the alias question belongs to M3. **Since 2026-08-17 the\
+                    value does not exist at run time, its linearity is a statement about the \
+                    PROOF, and the alias question belongs to M3. **Since 2026-08-17 the \
                     ORDER stands beside it** (pass 11) -- M2 sees the chain, not which one",
             ),
         },
@@ -151,12 +151,12 @@ pub fn passliste() -> Vec<Pass> {
             name: "Sperren",
             quelle: "SPRACHE.md §9: `rank`, `held`, `protects` -- die Sperrdisziplin",
             zustand: Zustand::Teilgebaut(
-                "built: shared against exclusive (`H001`-`H004`), the intermediate rule\
-                    at the call boundary (`H005`), the recomputed rank order (`H006`) -- and\
-                    since K11.2.1 `protects` bites: every access to a protected place stands\
+                "built: shared against exclusive (`H001`-`H004`), the intermediate rule \
+                    at the call boundary (`H005`), the recomputed rank order (`H006`) -- and \
+                    since K11.2.1 `protects` bites: every access to a protected place stands \
                     under its lock (`H007`), and a lock that is never taken shows up\
-                    (`H008`). **NOT built: the execution contexts** -- who runs concurrently\
-                    is something Gabbro does not say, and without it `every place two\
+                    (`H008`). **NOT built: the execution contexts** -- who runs concurrently \
+                    is something Gabbro does not say, and without it `every place two \
                     contexts touch is locked or atomic` cannot be stated (PLAN.md, K11.2.2)",
             ),
         },
@@ -167,12 +167,12 @@ pub fn passliste() -> Vec<Pass> {
             zustand: Zustand::Teilgebaut(
                 "built: the stages of an `order` exist and `advances` goes FORWARD\
                     (`O001`/`O002`), the mark stands at its source stage at the call\
-                    (`O003`), and the body composes into its own promise (`O004`). **And\
+                    (`O003`), and the body composes into its own promise (`O004`). **And \
                     since K11.1 the branch**: all branches must reach the same stage\
-                    (`O006`); a branch that ENDS with `return` does not join, and a step in\
-                    a LOOP is refused -- a step happens once, a loop often. **NOT built: the\
-                    softer reading** -- carrying a set of stages and letting all of them\
-                    accept the next step. *From the strict reading one can loosen, never the\
+                    (`O006`); a branch that ENDS with `return` does not join, and a step in \
+                    a LOOP is refused -- a step happens once, a loop often. **NOT built: the \
+                    softer reading** -- carrying a set of stages and letting all of them \
+                    accept the next step. *From the strict reading one can loosen, never the \
                     other way* (PLAN.md, K11.1)",
             ),
         },
@@ -187,10 +187,10 @@ pub fn passliste() -> Vec<Pass> {
             name: "Paarung",
             quelle: "SPRACHE.md part II §1: ordering is PAIRED, not declared",
             zustand: Zustand::Teilgebaut(
-                "built: `publishes`/`awaits`/`exchange` over the united set, name\
-                    equality after index substitution (`V001`-`V004`). **NOT built: the\
-                    statement about the MEMORY MODEL** -- that `release`/`acquire` establish\
-                    the visibility the pairing claims falls into the axiom layer and not\
+                "built: `publishes`/`awaits`/`exchange` over the united set, name \
+                    equality after index substitution (`V001`-`V004`). **NOT built: the \
+                    statement about the MEMORY MODEL** -- that `release`/`acquire` establish \
+                    the visibility the pairing claims falls into the axiom layer and not \
                     into this pass",
             ),
         },
@@ -199,12 +199,12 @@ pub fn passliste() -> Vec<Pass> {
             name: "effects",
             quelle: "SPRACHE.md §7: `effects` is mandatory and not fail-open",
             zustand: Zustand::Teilgebaut(
-                "writes, `locks` **and since 2026-08-16 reads** (reading A, `E010`) are\
-                    held against the list. **What is missing is the reach of `E010`:** it\
-                    speaks only about known world state (`static`, `atomic`, `table`,\
-                    `device`, `state`), because a variant is not a place and an EXCERPT does\
+                "writes, `locks` **and since 2026-08-16 reads** (reading A, `E010`) are \
+                    held against the list. **What is missing is the reach of `E010`:** it \
+                    speaks only about known world state (`static`, `atomic`, `table`, \
+                    `device`, `state`), because a variant is not a place and an EXCERPT does \
                     not declare its names -- on the fragment corpus the rule therefore has\
-                    **zero bite**, and its evidence comes from poison 62 and two mutations,\
+                    **zero bite**, and its evidence comes from poison 62 and two mutations, \
                     not from the corpus",
             ),
         },
@@ -222,11 +222,11 @@ pub fn passliste() -> Vec<Pass> {
             name: "Gruppe",
             quelle: "MESSUNGEN.md, SWEEP der Verbindungs-Invarianten (2026-08-16), V4",
             zustand: Zustand::Teilgebaut(
-                "built: the LOCK FOOTPRINT (`U001`-`U005`), the MOVE (`U006`) and the\
-                    CONNECTING STATEMENT as a form (`U007`: a group invariant names at least\
-                    two carriers, otherwise it belongs at the table). **NOT built: the\
-                    preservation** -- that the invariant HOLDS under an operation is the\
-                    prover's business and falls to S16/S17, not to this pass. It checks the\
+                "built: the LOCK FOOTPRINT (`U001`-`U005`), the MOVE (`U006`) and the \
+                    CONNECTING STATEMENT as a form (`U007`: a group invariant names at least \
+                    two carriers, otherwise it belongs at the table). **NOT built: the \
+                    preservation** -- that the invariant HOLDS under an operation is the \
+                    prover's business and falls to S16/S17, not to this pass. It checks the \
                     three conditions under which the question can be asked at all",
             ),
         },
@@ -235,8 +235,8 @@ pub fn passliste() -> Vec<Pass> {
             name: "costs",
             quelle: "SPRACHE.md §7: 1 op = one Gabbro primitive, computed statically",
             zustand: Zustand::Teilgebaut(
-                "bodies, `locks` blocks against `held` and calls over the DECLARED costs\
-                    of the callee are computed -- **recursion therefore carries an\
+                "bodies, `locks` blocks against `held` and calls over the DECLARED costs \
+                    of the callee are computed -- **recursion therefore carries an \
                     assumption instead of a computation**, and `per_pass` with an input-\
                     dependent bound is not settled",
             ),

@@ -207,7 +207,7 @@ fn ziel_pruefen(ziel: &Ident, marken: &[String], wort: &str, absagen: &mut Absag
         ),
     )
     .mit_notiz(
-        "SPRACHE.md §8.2: there is no unnamed `break`/`continue` -- with nested loops the\
+        "SPRACHE.md §8.2: there is no unnamed `break`/`continue` -- with nested loops the \
             target would be convention",
     );
     if marken.is_empty() {
@@ -247,7 +247,7 @@ fn fortschritt_pruefen(zeuge: Option<&Ident>, lg: &Lage, absagen: &mut Absagen) 
                 format!("`progress {}` names no declared assumption", z.text),
             )
             .mit_notiz(
-                "SYNTAX.md §8.3: `progress` names WHO ends the loop, and that must be a\
+                "SYNTAX.md §8.3: `progress` names WHO ends the loop, and that must be a \
                     declared assumption -- otherwise it is a hope with a keyword in front",
             ),
         ),
@@ -258,7 +258,7 @@ fn fortschritt_pruefen(zeuge: Option<&Ident>, lg: &Lage, absagen: &mut Absagen) 
                 format!("`progress {}` rests on an unfalsifiable assumption", z.text),
             )
             .mit_notiz(
-                "the watchdog IS the falsifier (`on_exceeded`); an assumption without one\
+                "the watchdog IS the falsifier (`on_exceeded`); an assumption without one \
                     is a claim",
             ),
         ),
@@ -316,17 +316,17 @@ fn melde(t: &Traverse, span: gabbro_syntax::span::Span, absagen: &mut Absagen) {
         Absage::fehler(
             "S005",
             span,
-            "the descent measure names neither the traversal variable nor a name the body\
+            "the descent measure names neither the traversal variable nor a name the body \
                 writes"
                 .to_string(),
         )
         .mit_notiz(format!(
-            "`{}` therefore does not move across the passes -- and a constant measure\
+            "`{}` therefore does not move across the passes -- and a constant measure \
                 never falls",
             t.variable.text
         ))
         .mit_notiz(
-            "checked is the NECESSARY condition, not the sufficient one: THAT it falls is\
+            "checked is the NECESSARY condition, not the sufficient one: THAT it falls is \
                 the prover's business (`consuming.ordnung`)",
         ),
     );

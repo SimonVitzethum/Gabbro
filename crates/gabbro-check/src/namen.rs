@@ -321,7 +321,7 @@ fn entrust_annahme(baum: &Programm, absagen: &mut Absagen) {
                     format!("`entrust {} at {}` -- the space is not declared here", t.name.text, t.raum.text),
                 )
                 .mit_notiz(
-                    "`at` takes a NAME and not an expression: the space is a declaration,\
+                    "`at` takes a NAME and not an expression: the space is a declaration, \
                         not a computation",
                 ),
             );
@@ -334,7 +334,7 @@ fn entrust_annahme(baum: &Programm, absagen: &mut Absagen) {
                     format!("`entrust {}` names no declared assumption", t.name.text),
                 )
                 .mit_notiz(
-                    "the guest gets registers, a stack and a `code` space -- and Gabbro\
+                    "the guest gets registers, a stack and a `code` space -- and Gabbro \
                         owes it no proof, only isolation",
                 ),
             ),
@@ -345,7 +345,7 @@ fn entrust_annahme(baum: &Programm, absagen: &mut Absagen) {
                     format!("`entrust {}` rests on an unfalsifiable assumption", t.name.text),
                 )
                 .mit_notiz(
-                    "an assumption about foreign code that no probe can ever refute\
+                    "an assumption about foreign code that no probe can ever refute \
                         belongs in the certificate, not in a pass",
                 ),
             ),
@@ -513,7 +513,7 @@ fn reason(r: &Reason, absagen: &mut Absagen) {
                 )
                 .mit_notiz(format!("first at offset {}", erste.von))
                 .mit_notiz(
-                    "rule 3 (reject, never interpret): a reason is distinguishable by its\
+                    "rule 3 (reject, never interpret): a reason is distinguishable by its \
                         number, otherwise the report is ambiguous",
                 ),
             );

@@ -253,11 +253,11 @@ fn abgleich(
                     format!("`{name}` is not treated the same on every path"),
                 )
                 .mit_notiz(
-                    "linear means EXACTLY once, not at most once: a value that survives\
+                    "linear means EXACTLY once, not at most once: a value that survives \
                         on one path is a leak on that path",
                 )
                 .mit_notiz(
-                    "a branch that diverges or returns does not count -- not every path\
+                    "a branch that diverges or returns does not count -- not every path \
                         has to consume, only every path that ends normally",
                 ),
             );

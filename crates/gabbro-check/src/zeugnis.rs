@@ -668,16 +668,16 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     if e.gleitkomma {
         aus.push_str("\n-- FLOATING POINT -- and this is NOT a statement about numbers\n");
         aus.push_str(
-            "     This unit computes with floating point. That changes the calling\
-                convention\n     and the context size -- a statement about preemption, not\
+            "     This unit computes with floating point. That changes the calling \
+                convention\n     and the context size -- a statement about preemption, not \
                 about digits.\n",
         );
         aus.push_str(
-            "     What the generator demands for it: NO -ffast-math (it would break\
+            "     What the generator demands for it: NO -ffast-math (it would break \
                 every\n     interval), SSE2, and round-to-nearest-even pinned.\n",
         );
         aus.push_str(
-            "     What does NOT stand here: numerical accuracy. The checker carries\
+            "     What does NOT stand here: numerical accuracy. The checker carries \
                 ranges,\n     not error bounds.\n",
         );
     }
@@ -692,7 +692,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
         ));
         aus.push_str(
             "     These forms occur in the file and stand in NO classification.\n\x20\
-                Either the generator refuses them (then the refusal already stands\
+                Either the generator refuses them (then the refusal already stands \
                 there)\n\x20    -- or it lowers them, and nobody booked what on.\n",
         );
     }
@@ -729,7 +729,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     }
     aus.push_str(
         "\n-- And what does NOT stand here:\n\x20  it does not say that the C is correct.\
-            It says what it rests on --\n\x20  and every line of that is a place somebody\
+            It says what it rests on --\n\x20  and every line of that is a place somebody \
             can look at.\n",
     );
     aus

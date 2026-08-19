@@ -1,0 +1,23 @@
+-- erwartet: M101
+-- **Die Gegenrichtung zur Ausnahme von 2026-08-19.**
+-- Ein Schreiben durch einen Zeiger toetet jede nichtlokale Tatsache -- ausser sie steht in
+-- einem ANDEREN Feld DESSELBEN Objekts. Hier schreibt ein ZWEITER Zeiger, und `u` koennte
+-- auf dasselbe `Text` zeigen wie `s`: die Basis ist ein anderer Name, also greift die
+-- Ausnahme nicht und die grobe Regel bleibt.
+--
+-- *Ohne diese Probe waere nicht gemessen, ob die Ausnahme die Aliasfrage umgeht.*
+module gift::fremder_zeiger {
+
+const KAP : u32 = 64;
+type Text = { bytes : [u8; KAP], len : u32 in 0 .. KAP, };
+
+impl fn a(s : ptr<normal, rw> Text, u : ptr<normal, rw> Text) -> bool
+    effects { reads s, reads u, writes u } costs <= 12 ops
+{
+    narrow s.len to 0 ..< KAP else { return false; }
+    u.bytes[0] = 1;
+    s.len += 1;
+    return true;
+}
+
+}
