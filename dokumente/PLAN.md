@@ -3852,3 +3852,202 @@ Dazu die zwei Zeilen, die `pruefe-emission.sh` heute fehlen:
 nicht getroffen.** Die Grammatik ist für den Menschen da, der Gabbro schreibt, nicht für den
 Erzeuger, der es liest. *Wo beides auseinandergeht, gewinnt der Mensch und der Erzeuger sagt
 `C001`* — mit Begründung, wie an den drei Linien oben.
+
+---
+
+# «OPT» — schnelles und sicheres C, und der Assembler als versiegeltes Loch
+
+> **Die Regel, die diesen Block trägt:** *eine Optimierung darf keine Zusage verbrauchen.*
+> Jede Zeile hier gibt dem C-Übersetzer etwas, **das ein Gabbro-Pass hält** — und wo kein
+> Pass es hält, wird es nicht hingeschrieben. **Ein `restrict`, das nicht stimmt, ist keine
+> Optimierung, sondern eine stille Fehlübersetzung.**
+
+## Die Messung zuerst, und sie dreht die Frage um
+
+Gemessen 2026-08-19, `cc -O2`, dieselbe Maschine, jede Zahl über mehrere Runden stabil.
+
+### Was der Erzeuger heute schon tut
+
+```c
+uint32_t stand(const Objekte *o, uint32_t i) {
+    return o->slots[i].zaehler;          /* KEINE Schrankenpruefung */
+}
+```
+
+**Die Schrankenprüfung ist nicht wegoptimiert — sie war nie da.** `M103` hat `i < count`
+zur Übersetzungszeit bewiesen; was nicht bewiesen werden kann, ist ein `M103`-Fehler und
+kein Laufzeitzweig. Und `effects { reads o }` wird `const Objekte *o` — *die Wirkungsliste
+ist schon heute eine Optimierungsangabe.*
+
+Der eine Fall, in dem eine Prüfung dasteht, ist der gewollte:
+
+```c
+if (!(i < hinterlegt)) { return 0; }     /* aus `narrow i to 0 .. hinterlegt else { … }` */
+```
+
+**Genau ein Vergleich, mit benanntem Ausgang.** *Eine geprüfte Schranke ist keine
+Nachlässigkeit, sondern die Stelle, an der der Mensch entschieden hat, was bei Verletzung
+passiert.*
+
+### Was die Schrankenprüfung wirklich kostet
+
+| Gestalt | ohne Prüfung | mit Prüfung | Faktor |
+|---|---:|---:|---:|
+| Index, den `cc` selbst beweist (`k & (N-1)`) | 117 ms | 117 ms | **1,00** |
+| Index aus einem undurchsichtigen Feld | 156 ms | 210 ms | **1,34** |
+
+> **Der erste Messwert ist der wichtigere.** Wo der C-Übersetzer die Schranke selbst
+> beweist, löscht er die Prüfung — und Gabbros statischer Beweis kauft **nichts**. Der
+> Gewinn entsteht **nur dort, wo `cc` es nicht gekonnt hätte**, und dann sind es 34 %.
+> *Ein Vorteil, den man nicht so einschränkt, ist eine Werbeaussage.*
+
+### Und was der wirklich grosse Hebel ist
+
+| Gestalt | ohne `restrict` | mit `restrict` | Faktor |
+|---|---:|---:|---:|
+| Zeiger, deren Herkunft `cc` sieht | 23,0 ms | 23,1 ms | **1,00** |
+| Zeiger aus einer anderen Übersetzungseinheit | 66,0 ms | 23,2 ms | **2,85** |
+
+**2,85 gegen 1,34.** Die Aliasfrage ist der grösste ungenutzte Hebel des Erzeugers, und
+Gabbro hat genau die Angabe, die C fehlt. *Der erste Anlauf an dieser Messung ergab 1,15 /
+1,69 / 1,00 über drei Runden — kein Messwert, sondern Rauschen, weil das Zielfeld in place
+verändert wurde und die zweite Runde andere Daten sah. Erst mit frischen Daten je Runde
+steht die Zahl.*
+
+## OPT1 — `restrict`, und was es voraussetzt
+
+**Der Gewinn ist gemessen, die Voraussetzung ist offen, und das ist die ganze Nachricht.**
+
+`restrict` sagt dem C-Übersetzer: über diesen Zeiger allein wird dieses Objekt in diesem
+Bereich erreicht. Gabbro **darf das heute nicht behaupten**: `own` kauft keine Exklusivität
+(`R004` deckt nur die syntaktische Hälfte — derselbe Ort an zwei `own`-Stellen eines Rufs),
+und zwei `ptr<normal, rw>` auf dasselbe Objekt sind ununterscheidbar. **Das ist M3s offener
+Rest, und er hat ab heute einen Preis: 2,85.**
+
+Die Stufen, von der billigsten zur teuersten:
+
+| | Wann `restrict` gesetzt werden **darf** | trägt es heute ein Pass? |
+|---|---|---|
+| a | Ein Parameter ist `own` **und** kein zweiter Parameter derselben Signatur ist es | **`R004`, halb** — der Ruf ist geprüft, die Herkunft nicht |
+| b | Zwei Parameter, deren `effects` **disjunkte** Orte nennen (`writes a` gegen `reads b`) | **nein** — der Rahmen nennt Orte, nicht Objekte |
+| c | Ein Zeiger auf eine `table`, die kein anderer Parameter erreicht | **nein** — braucht Erreichbarkeit |
+
+* **a ist der einzige Schritt, der ohne neue Analyse geht** — und selbst er braucht die
+  Zusicherung, dass ein `own`-Argument nicht *anderswoher* schon zeigt. Das ist die
+  Sprachentscheidung, die «K5» als `own`-Rest gebucht hat: `own` als **Freigabeoperation**
+  (der Rufer gibt ab und behält nichts) trägt `restrict`; `own` als blosser
+  Signaturvermerk trägt es **nicht**.
+* **Die Gegenprobe ist Pflicht und sie ist unangenehm:** ein falsches `restrict` erzeugt
+  Code, der *manchmal* richtig ist. Ein Differenztest, der einmal läuft, findet es nicht.
+  **Deshalb: je `restrict`-Regel eine Giftprobe in C, die unter `-O2` ein ANDERES Ergebnis
+  liefert als unter `-O0`** — genau das ist der Fingerabdruck einer falschen
+  Alias-Zusicherung.
+
+> **Solange kein Pass die Bedingung hält, schreibt der Erzeuger kein `restrict`.** Die 2,85
+> stehen als *Preisschild an einer offenen Entscheidung*, nicht als Versprechen.
+
+## OPT2 — was Gabbro sonst weiss und heute verschenkt
+
+Alles hier ist **ohne neue Analyse** zu haben, weil ein Pass es bereits hält:
+
+| Angabe | woher | C-Form | was sie bringt |
+|---|---|---|---|
+| `effects { pure }` | `E008`, kompositional geprüft | `__attribute__((const))` | Rufe werden zusammengefasst und aus Schleifen gezogen |
+| `effects { reads X }` ohne `writes` | derselbe Pass | `__attribute__((pure))` | dito, eine Stufe schwächer |
+| `-> never` / `effects { diverges }` | `S006`, `E00x` | `_Noreturn` | der Rückweg entfällt, Register bleiben frei |
+| `tagged type` | `D005`, erschöpfend | `switch` **ohne `default`** | Sprungtabelle statt Kette |
+| Wertebereich `u32 in 0 .. 63` | `M101`/`M104` | der **kleinste** C-Typ | schmalere Felder, bessere Cachelage |
+| `costs <= N ops` | Pass 9 | *nichts* | **siehe unten** |
+
+**`costs` gehört ausdrücklich nicht dazu.** Die Zusage ist eine Aussage über das *Programm*,
+keine über die *Maschine*; sie in eine `#pragma unroll` zu übersetzen hiesse, eine
+Iterationszahl für eine Zeitmessung zu halten. *Der Ordner trennt das seit «B24», und ein
+Erzeuger darf die Trennung nicht kassieren.*
+
+**Und `const`/`pure` haben eine Falle**, die genannt gehört: GCCs `const` verbietet **jedes**
+Lesen von Speicher, auch von Parametern über Zeiger. `effects { pure }` in Gabbro erlaubt das
+Lesen von Parametern. **Die richtige Zuordnung ist deshalb `pure` → `__attribute__((pure))`
+und nur eine Funktion ganz ohne Zeigerparameter → `((const))`.** *Zwei Wörter, die dasselbe
+heissen und Verschiedenes bedeuten — genau die Klasse, in der `kandidaten_oeffentlich` stand.*
+
+## OPT3 — der Assembler als **versiegeltes** Loch
+
+Es gibt heute **kein `asm`** in der Sprache; `entry`, `boot` und `entrust` senken nach «C3»
+in die Axiomschicht ab und brauchen dort Maschinenbefehle: `iretq`, `lgdt`, `wrmsr`, `in`/`out`,
+Barrieren.
+
+**Ein `asm`-Block ist ein Loch in JEDEM Pass.** M1 kennt die Bereiche nicht, `effects` sieht
+die Berührungen nicht, `costs` kennt die Zahl nicht, M2 sieht den Verbrauch nicht. Wer ihn
+ohne Versiegelung einlässt, macht alle zwölf Pässe zu einer Aussage über das, was *vor* dem
+Block stand.
+
+Deshalb die Form — **jede Zeile davon ist eine Pflicht, keine Verzierung**:
+
+```gabbro
+asm x86_64 {
+    "outb %[wert], %[tor]"
+    in     { tor : u16, wert : u8 }
+    out    { }
+    clobbers { memory }
+    effects  { writes GERAET }
+    costs    <= 1 ops
+}
+```
+
+* **`arch` ist pflichtig** — ein `asm` ohne Bogen ist eine Übersetzungseinheit, die auf einer
+  anderen Maschine still etwas anderes tut. *`aarch64` bleibt versiegelt; ein `asm aarch64`
+  ist damit ein Fehler und keine Lücke.*
+* **`effects` ist pflichtig** und wird vom Rufer wie jeder andere Ruf getragen — das ist die
+  Zeile, die den Rahmen rettet. Ohne sie ist der Block ein `E009` auf ewig.
+* **`costs` ist pflichtig**, sonst reisst die Terminierungskette.
+* **`clobbers memory` ist die Vorgabe**, nicht die Ausnahme. *Wer die Vorgabe umdreht, spart
+  eine Zeile und verliert eine Zusage.*
+* **Und alles davon ist eine ANNAHME**, keine Prüfung: Gabbro liest den Befehlstext nicht.
+  Deshalb gehört jeder `asm`-Block **ins Zeugnis**, in denselben Abschnitt wie `extern fn`
+  und `entrust` — *wer nicht prüfen kann, exportiert.*
+
+> **Die Zahl, die dabei entsteht, ist die eigentliche Aussage:** *wie viele Zeilen Assembler
+> trägt ein in Gabbro geschriebener Kern?* Sie gehört neben die Kennzahl, denn sie ist die
+> Fläche, über die der Ordner **nichts** sagt.
+
+## Was die Sprechprobe dafür braucht — und heute nicht hat
+
+`pruefe-emission.sh` übersetzt mit `-Wall -Wextra -Werror` und **ohne `-O`**. Nachgemessen:
+die erzeugte Einheit liefert bei `-O0`, `-O2` und `-O3` dasselbe Ergebnis und läuft sauber
+unter `-fsanitize=undefined`. **Aber gemessen habe ich das, nicht der Wächter.**
+
+Drei Zeilen fehlen ihm, und jede fängt eine eigene Klasse:
+
+1. **Jede Einheit bei `-O0` UND `-O2`, und die Ergebnisse müssen gleich sein.** Eine
+   Abweichung ist der Fingerabdruck von undefiniertem Verhalten — und **die einzige
+   Probe, die ein falsches `restrict` findet.**
+2. **`-fsanitize=undefined,signed-integer-overflow` auf jede Einheit.** Gabbro beweist
+   Überlauffreiheit; *dann darf der Sanitizer nichts finden, und wenn doch, ist es ein
+   Befund über M1, nicht über C.* (`address` läuft auf diesem Rechner nicht — der gehärtete
+   Kern kollidiert mit dem Schattenspeicher. **Das ist keine bestandene Probe, sondern eine
+   nicht gefahrene**, und sie gehört so gebucht.)
+3. **Die Vergleichsmessung, die P5s Tor verlangt** — *„erzeugt ≤ Handschrift + Rauschen"*.
+   Sie existiert bis heute **nicht**, und ohne sie ist jede Aussage über die
+   Geschwindigkeit des Erzeugnisses eine Vermutung.
+
+## Die Reihenfolge, und warum sie so herum steht
+
+| | Arbeit | gemessener Gewinn | Voraussetzung |
+|---|---|---|---|
+| **OPT0** | `-O0`/`-O2`-Gleichheit + UBSan in den Wächter | **0** (es ist die Probe) | keine |
+| **OPT2** | `pure`/`const`/`_Noreturn`/`switch`/schmale Typen | ungemessen — *zuerst OPT0* | keine |
+| **OPT3** | `asm`, versiegelt | ermöglicht «C3e/f/g» | Zeugnisfläche |
+| **OPT1** | `restrict` | **2,85** in der harten Gestalt | **Aliasanalyse / `own`-Entscheidung** |
+
+**Die stärkste Optimierung steht zuletzt, weil sie die einzige ist, die etwas kaputt machen
+kann.** Und OPT0 steht zuerst, obwohl es nichts beschleunigt: *ohne die Probe ist jede
+folgende Zeile eine Behauptung.*
+
+## Die Abbruchbedingung
+
+**Keine Optimierung ohne einen Pass, der ihre Bedingung hält.** Nicht „meistens richtig",
+nicht „im Korpus richtig" — gehalten. Und **keine Zahl ohne Vergleichsmessung**: solange P5s
+Tor nicht steht, wird über die Geschwindigkeit des erzeugten C **nichts** behauptet.
+
+*Ein Erzeuger, der schnelles C liefert, das manchmal etwas anderes rechnet, ist schlimmer als
+einer, der langsames liefert — er sieht aus wie ein Ergebnis.*

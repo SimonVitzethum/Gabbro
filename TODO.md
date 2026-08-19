@@ -517,6 +517,43 @@ as a record of what the closure cost; the details are in
 | `own` is a synonym for `rw` | **the specification was wrong, not the pass** — `SYNTAX.md` §3 now carries the measurement |
 | lexer panic · licence entry | **`P038`** (measured depth limit) · `license = "AGPL-3.0-only"` |
 
+### «OPT» — schnelles und sicheres C, geplant 2026-08-19 ([`dokumente/PLAN.md`](dokumente/PLAN.md))
+
+*Gemessen, `cc -O2`: die Schrankenprüfung ist **nie da** — `M103` beweist sie zur
+Übersetzungszeit, und `effects { reads o }` ist schon heute `const Objekte *o`.*
+
+- [ ] **OPT0 — der Wächter muss OPTIMIERT übersetzen.** `pruefe-emission.sh` fährt
+      `-Wall -Wextra -Werror` und **ohne `-O`**. Nachgemessen liefert die Einheit bei
+      `-O0`/`-O2`/`-O3` dasselbe und läuft sauber unter `-fsanitize=undefined` — **aber
+      gemessen habe ich das, nicht der Wächter.** Eine Abweichung zwischen `-O0` und `-O2`
+      ist der Fingerabdruck von undefiniertem Verhalten und **die einzige Probe, die ein
+      falsches `restrict` findet**. *`address` läuft auf diesem Rechner nicht (gehärteter
+      Kern, Schattenspeicher-Kollision): keine bestandene Probe, sondern eine nicht
+      gefahrene.*
+- [ ] **OPT1 — `restrict` ist der grösste Hebel, und er ist gesperrt.** Gemessen: **2,85**
+      wo `cc` die Herkunft nicht sieht, **1,00** wo doch. Zum Vergleich kostet die
+      Schrankenprüfung **1,34** bzw. **1,00**. *Die Aliasfrage ist über dreimal so viel wert
+      wie die Schranken.* Gabbro darf `restrict` heute **nicht** setzen: `own` kauft keine
+      Exklusivität (`R004` deckt nur die syntaktische Hälfte). **M3s offener Rest hat damit
+      einen Preis**, und die Sprachentscheidung lautet: `own` als Freigabeoperation trägt
+      `restrict`, `own` als Signaturvermerk nicht.
+- [ ] **OPT2 — fünf Angaben, die ein Pass schon hält und der Erzeuger verschenkt.**
+      `pure` → `__attribute__((pure))`, `-> never` → `_Noreturn`, `tagged` → `switch` **ohne
+      `default`**, `u32 in 0 .. 63` → der kleinste C-Typ. **`costs` gehört NICHT dazu** — eine
+      Iterationszahl ist eine Eigenschaft des Programms, eine Zeitmessung nicht («B24»). Und
+      die Falle: GCCs `const` verbietet **jedes** Lesen von Speicher, Gabbros `pure` erlaubt
+      Parameterlesen — *zwei Wörter, die dasselbe heissen und Verschiedenes bedeuten.*
+- [ ] **OPT3 — `asm` als VERSIEGELTES Loch, mit pflichtigem `arch`, `effects`, `costs`,
+      `clobbers`.** Ein `asm`-Block ist ein Loch in jedem der zwölf Pässe; ohne Versiegelung
+      wird jede Zusage zu einer Aussage über das, was *vor* dem Block stand. Alles daran ist
+      **Annahme**, nicht Prüfung — Gabbro liest den Befehlstext nicht —, also gehört jeder
+      Block **ins Zeugnis**, neben `extern fn` und `entrust`. **Und die entstehende Zahl ist
+      die eigentliche Aussage: wie viele Zeilen Assembler trägt ein Gabbro-Kern?**
+- [ ] **Die Vergleichsmessung aus P5s Tor („erzeugt ≤ Handschrift + Rauschen") EXISTIERT
+      NICHT.** Solange sie fehlt, wird über die Geschwindigkeit des erzeugten C **nichts**
+      behauptet. *Ein Erzeuger, der schnelles C liefert, das manchmal etwas anderes rechnet,
+      ist schlimmer als einer, der langsames liefert — er sieht aus wie ein Ergebnis.*
+
 ### «C» — vollständige Absenkung nach C, geplant 2026-08-19 ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
 *Stand: 17 von 33 Beispielen senken ab, **12 Einheiten stechen bis zum ausgeführten Ergebnis
