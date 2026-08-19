@@ -1,0 +1,35 @@
+-- erwartet: H013
+-- **K11.2.2 -- die Ausfuehrungskontexte standen die ganze Zeit im Ordner.**
+--
+-- `PLAN.md` fuehrte die Klasse *Rennen* als nicht baubar: *„wer nebenlaeufig laeuft, sagt
+-- Gabbro nicht."* **Der Satz war ueberholt und niemand hat es gemerkt** -- `entry … dispatch`
+-- IST die Aufzaehlung der Kontexte, und seit dem 2026-08-19 traegt der Aufrufgraph die
+-- Wirkungen modulbewusst und ueber `observes` hinweg.
+--
+-- *Die Zutaten lagen nebeneinander; es fehlte die Zeile, die sie zusammenbringt.*
+module gift::eintritt_ungeschuetzt {
+
+static mut zaehler : u32 = 0;
+
+impl fn a() effects { writes zaehler } costs <= 4 ops { zaehler = 1; }
+impl fn b() effects { writes zaehler } costs <= 4 ops { zaehler = 2; }
+
+entry syscall_a vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ka per cpu nested never
+    dispatch gift::eintritt_ungeschuetzt::a;
+}
+
+entry syscall_b vector 0x81 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack kb per cpu nested never
+    dispatch gift::eintritt_ungeschuetzt::b;
+}
+
+}

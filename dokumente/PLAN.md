@@ -1596,9 +1596,24 @@ Zwischenregel an der Aufrufgrenze, und die Hülle ist gebaut.*
 
 ### K11.2.2 — Die Ausführungskontexte benennen
 
-**Rennfreiheit ist eine Aussage über NEBENLÄUFIGKEIT, und Gabbro sagt heute nicht, wer
-nebenläufig ist.** `entry vector … per cpu ist nested masked`, `boot`, `fn` stehen als
-Deklarationen da; **kein Pass leitet daraus ab, welche Kontexte einen Platz anfassen.**
+> **Die erste Hälfte steht seit dem 2026-08-19 (`H013`) — und der Satz, der hier stand, war
+> von seinem eigenen Konstrukt überholt.** Er lautete: *„Gabbro sagt heute nicht, wer
+> nebenläufig ist."* **`entry … dispatch f` sagt es**: jeder Eintritt ist ein Weg, auf dem der
+> Kern von aussen betreten wird, und seit demselben Tag trägt der Aufrufgraph die Wirkungen
+> modulbewusst, über `observes` hinweg und mit Argumentabbildung. *Die Zutaten lagen
+> nebeneinander; es fehlte die Zeile, die sie zusammenbringt.*
+>
+> Was `H013` prüft: **ein Platz, den ein Eintritt schreibt und den kein `lock … protects`,
+> `rcu … protects`, `atomic` oder `accumulates … per cpu` als geteilt ausweist, fällt.**
+> Und **ein** Eintritt reicht — auf mehreren Kernen stehen zwei Kerne im selben Syscall.
+>
+> **Was NICHT gefallen ist, ist die Vorbedingung unten**, und sie ist der Grund, warum diese
+> Phase offen bleibt: *auf diesem Korpus hat die Regel **null Biss**.*
+
+**Rennfreiheit ist eine Aussage über NEBENLÄUFIGKEIT.** Was Gabbro heute nicht sagt, ist die
+FEINERE Hälfte: welche Kontexte einander ausschliessen (`masks IRQ`, `per cpu`, `ist nested`)
+und welche wirklich gleichzeitig laufen. `H013` nimmt die grobe Antwort — *jeder Eintritt ist
+ein Kontext* — und die ist in die sichere Richtung grob.
 
 Ohne das lässt sich der eigentliche Satz nicht sagen:
 
@@ -1624,6 +1639,12 @@ Ohne das lässt sich der eigentliche Satz nicht sagen:
   **Damit hat diese Phase eine Vorbedingung, die vorher nicht sichtbar war:** ohne einen
   Korpus, in dem eine Kontextwurzel einen Rumpf hat, ist K11.2.2 nicht messbar. *Sie hängt
   am zweiten Korpus, und der steht ohnehin als Bedingung über K11.*
+
+  > **Am 2026-08-19 nachgemessen, und die Zahl steht unverändert: 4 Kontextwurzeln, davon 0
+  > mit einem Rumpf.** `H013` ist gebaut und fällt an Giftprobe 146 — **am Korpus fällt es
+  > kein einziges Mal.** *Das ist genau der Fall, vor dem der Absatz darüber warnt, und er
+  > hat ihn zwei Tage vorher benannt.* Die Regel ist damit gebaut und **unbelegt**, und beides
+  > steht so im Zeugnis.
 
 * **Tor:** je geteiltem Platz ist die Kontextmenge ableitbar und wird gedruckt; ein Platz, den
   zwei Kontexte ohne Sperre/Atomic/`per cpu` berührt, fällt — **und die Zahl der berührten

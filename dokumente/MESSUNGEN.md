@@ -9209,3 +9209,79 @@ steht bei **128** — 18-fach über dem Korpus (7), dreifach unter dem gemessene
 150 Kennungen · 145 Gifte (0 ohne Biss) · 127 Tests · 32 Beispiele sauber
 13 Waechter gruen · Abstieg: ALL PASS · 12 Isabelle-Theorien (auf fisch, 8 s)
 ```
+
+---
+
+# 2026-08-19, dritter Durchgang — die fünf Klassen, gemessen statt erinnert
+
+Die Rezension nannte **Rennen, Rahmen, Sperre, Publikation, Termination** als *heute nicht
+getragen*. Nach den elf Schliessungen war die Frage, was davon noch stimmt — und die Antwort
+ist eine Batterie, kein Rückblick. **24 kleine Programme, je Klasse vier bis fünf.**
+
+| Klasse | Probe | fällt an |
+|---|---|---|
+| **Rahmen** | Wirkung zwei Ebenen tief | `E008` |
+| | Schreiben durch ein Zeigerargument | `E008` |
+| | Argument mit Zusatzparameter | `E008` |
+| | Ruf **im `observes`-Block** | `E008` |
+| **Sperre** | Zugriff ohne Nahme | `H007` |
+| | `locks` erklärt, nie genommen | `H011` |
+| | Rangordnung über **drei** Funktionen | `H012` |
+| | Schreiben unter geteilter Nahme | `H001` |
+| **Publikation** | `atomic` ohne Ordnungswort | `V005` |
+| | `publishes` ohne Gegenseite | `V001` |
+| | `awaits` ohne Quelle | `V002` |
+| | Paarung über **zwei** Atomics | `V001`+`V002` |
+| | `relaxed` mit Nutzlast | `V004` |
+| **Termination** | `retry`-Rumpf über der Schranke | `K006` |
+| | `forever`-Durchgang über der Zusage | `K007` |
+| | Kostenüberlauf | `K003` |
+| | Rekursion | `K001`+`E009` |
+| | Abstiegsmass steht still | `S005` |
+| **Rennen** | zwei Eintritte, ungeschützte Stelle | **`H013`** *(neu)* |
+| | ein Eintritt, lost update | **`H013`** |
+| | geschützte Stelle umgangen | `H007` |
+| | dieselbe Stelle **unter Sperre** | still *(richtig)* |
+
+## Die Klasse *Rennen* war nicht unbaubar — der Satz war überholt
+
+`PLAN.md`, K11.2.2 stand seit dem 2026-08-16 so da:
+
+> *„Gabbro sagt heute nicht, wer nebenläufig ist."*
+
+**`entry … dispatch f` sagt es.** Jeder Eintritt ist ein Weg, auf dem der Kern von aussen
+betreten wird, und seit heute trägt der Aufrufgraph die Wirkungen modulbewusst, über
+`observes` hinweg und mit Argumentabbildung. *Die drei Zutaten lagen nebeneinander; es fehlte
+die Zeile, die sie zusammenbringt.* → **`H013`**.
+
+**Und ein Eintritt reicht:** auf mehreren Kernen stehen zwei Kerne im selben Syscall. *Die
+Regel auf „zwei verschiedene Eintritte" zu beschränken hiesse, Einprozessorbetrieb
+anzunehmen — und das ist genau die Annahme, die Caprocks D0 gekostet hat.*
+
+## Aber sie hat null Biss, und der Plan hat es zwei Tage vorher gesagt
+
+```
+Kontextwurzeln im Korpus:                 4   (3 x entry, 1 x boot)
+davon mit einem Rumpf, den Gabbro sieht:  0   — unverändert seit 2026-08-17
+```
+
+**Alle vier `dispatch`-Ziele sind `extern fn`**, die Hülle darüber ist leer, und `H013` fällt
+am Korpus **kein einziges Mal**. Sein ganzer Beleg ist Giftprobe 146.
+
+> *Das ist genau der Fall, vor dem `PLAN.md` an dieser Stelle warnt — und die Warnung stand
+> dort, bevor die Regel gebaut war.* **Die Regel ist gebaut und unbelegt, und beides steht
+> so im Zeugnis.** Ein Ordner, der das zweite verschweigt, hat eine Zahl gebaut, die grün
+> aussieht und nichts misst (W1).
+
+## Der eine stille Rest, und er ist richtig still
+
+`rennen-2` — Lesen, Rechnen, Schreiben ohne Atomarität, **ohne Eintritt und ohne
+`protects`** — bleibt still. *Nichts in der Datei sagt, dass die Stelle geteilt ist.* Sobald
+ein Eintritt sie erreicht, fällt sie (`rennen-2b`). **Das ist keine Lücke, sondern die
+Grenze der Angabe**: Rennfreiheit ist eine Aussage über Nebenläufigkeit, und wer keine
+erklärt, bekommt keine geprüft.
+
+```
+151 Kennungen · 146 Gifte (0 ohne Biss) · 127 Tests · 32 Beispiele sauber
+13 Waechter gruen · Abstieg: ALL PASS
+```

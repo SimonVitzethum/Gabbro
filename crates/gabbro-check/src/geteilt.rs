@@ -344,6 +344,112 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         }
     });
 
+    // **H013 -- K11.2.2: die Ausfuehrungskontexte stehen im Ordner, seit es `entry` gibt.**
+    //
+    // `PLAN.md` fuehrt die Klasse *Rennen* seit dem 2026-08-16 als **nicht baubar**: *„wer
+    // nebenlaeufig laeuft, sagt Gabbro nicht, und ohne das kann `jede Stelle, die zwei
+    // Kontexte anfassen, ist gesperrt oder atomar` nicht ausgesprochen werden."*
+    //
+    // **Der Satz war ueberholt und niemand hat es gemerkt.** `entry … dispatch f` IST die
+    // Aufzaehlung der Kontexte -- jeder Eintritt ist ein Weg, auf dem der Kern von aussen
+    // betreten wird -- und seit heute traegt der Aufrufgraph die Wirkungen modulbewusst und
+    // ueber `observes` hinweg. *Die Zutaten lagen nebeneinander; es fehlte die Zeile, die
+    // sie zusammenbringt.*
+    //
+    // Gemessen vor dem Bau: zwei `entry`, beide auf eine Funktion, die denselben
+    // ungeschuetzten `static mut` schreibt -- **null Fehler**.
+    //
+    // ## Was gilt als gedeckt
+    //
+    // Eine Sperre (`protects`), eine RCU-Domaene (`protects`), ein `atomic` und ein
+    // `accumulates … per cpu` -- die vier Formen, in denen die Sprache geteilten Zustand
+    // ueberhaupt ausspricht. **`boot` zaehlt NICHT als Kontext**: der Systemstart laeuft vor
+    // den Eintritten, und dafuer stehen `order`/`advances` da, nicht eine Sperre.
+    //
+    // ## Und warum EIN Eintritt schon reicht
+    //
+    // Auf einer Maschine mit mehreren Kernen sind zwei Kerne im selben Syscall zwei
+    // Kontexte. *Die Regel auf „zwei verschiedene Eintritte" zu beschraenken hiesse,
+    // Einprozessorbetrieb anzunehmen -- und das ist genau die Annahme, die Caprocks D0
+    // gekostet hat.*
+    {
+        let mut geschuetzt: Vec<String> = Vec::new();
+        for sp in sperren.values() {
+            geschuetzt.extend(sp.schuetzt.iter().cloned());
+        }
+        crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+            ItemArt::Rcu(r) => geschuetzt.extend(r.schuetzt.iter().map(|o| o.text())),
+            ItemArt::Atomic(a) => geschuetzt.push(a.name.text.clone()),
+            // `accumulates … per cpu` hat je Kern eine Zelle -- es gibt nichts zu teilen.
+            ItemArt::Accumulates(a) => geschuetzt.push(a.name.text.clone()),
+            _ => {}
+        });
+        // **Nur BEKANNTER, veraenderlicher Weltzustand** -- dieselbe Einschraenkung, die
+        // `E010` am 2026-08-16 gelernt hat. Der erste Lauf meldete `beispiele/07` mit
+        // `kernzustand`: ein Name, den nur die Wirkungsliste eines FREMDEN Rumpfes nennt und
+        // den diese Uebersetzungseinheit gar nicht deklariert. *Eine Absage darueber waere
+        // Laerm, der die echten zudeckt* -- und in einer vollstaendigen Einheit kostet die
+        // Einschraenkung nichts, weil dort jeder Name aufloest.
+        //
+        // Ein `static` OHNE `mut` ist unveraenderlich: es gibt nichts zu teilen.
+        let mut welt: Vec<String> = Vec::new();
+        crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+            ItemArt::Statisch(x) if x.veraenderlich => welt.push(x.name.text.clone()),
+            ItemArt::Tabelle(x) => welt.push(x.name.text.clone()),
+            ItemArt::State(x) => welt.push(x.name.text.clone()),
+            _ => {}
+        });
+        let mut eintritte: Vec<(String, gabbro_syntax::span::Span, String)> = Vec::new();
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+            if let ItemArt::Entry(e) = &item.art {
+                eintritte.push((e.dispatch.text(), e.name.span, modul.to_string()));
+            }
+        });
+        let mut gemeldet: Vec<String> = Vec::new();
+        for (ziel, span, modul) in &eintritte {
+            let Some(voll) = g.aufloesen(&u, modul, ziel) else {
+                continue;
+            };
+            let h = g.huelle(&voll);
+            // **Ueber einer unvollstaendigen Huelle wird nicht abgesagt** (R16).
+            if h.unvollstaendig.is_some() {
+                continue;
+            }
+            for w in &h.wirkungen {
+                let Some(ort) = w.strip_prefix("writes ") else { continue };
+                let grund = ort.split(['.', '[']).next().unwrap_or(ort).to_string();
+                if !welt.contains(&grund) {
+                    continue;
+                }
+                if geschuetzt.iter().any(|p| beruehrt(p, &grund) || beruehrt(&grund, p)) {
+                    continue;
+                }
+                if gemeldet.contains(&grund) {
+                    continue;
+                }
+                gemeldet.push(grund.clone());
+                absagen.schiebe(
+                    Absage::fehler(
+                        "H013",
+                        *span,
+                        format!(
+                            "this entry writes `{grund}`, and nothing declares it shared"
+                        ),
+                    )
+                    .mit_notiz(
+                        "an `entry` is an execution context, and on more than one core two \
+                         cores stand in the SAME one -- a place written there is touched \
+                         concurrently",
+                    )
+                    .mit_notiz(
+                        "declared shared by: a `lock … protects`, an `rcu … protects`, an \
+                         `atomic`, or `accumulates … per cpu`",
+                    ),
+                );
+            }
+        }
+    }
+
     // **H008 -- die Gegenrichtung von H007, und sie haette den Befund zuerst gefunden.**
     //
     // `lock BERICHT protects { farbbericht } rank 2 held <= 50 ops;` stand seit dem Bestehen
