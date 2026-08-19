@@ -1,0 +1,28 @@
+-- erwartet: K007
+-- **Eine `per_pass`-Schranke, die von einer EINGABE abhaengt.**
+--
+-- Bis 2026-08-19 liess der Pass sie fallen: `konst_wert` gab `None`, und die Zusage war eine
+-- Zeile ohne Wirkung. Jetzt wird sie SYMBOLISCH gelesen und gegen die **kleinste Belegung**
+-- entschieden -- alle Symbole sind nichtnegativ, also ist `1 + 12 * n` bei `n = 0` gleich 1,
+-- und dort muss die Schranke halten.
+--
+-- *Dieselbe Lesart wie bei `costs` (`K001`/`K005`), und derselbe Grund.*
+module gift::per_pass_symbolisch {
+
+static mut a : u32 = 0;
+
+extern fn wd() -> never effects { diverges };
+assume tk "Der Zeitgeber unterbricht." falsifier sonde_t;
+
+divergent fn d(n : u32 in 0 .. 100)
+    effects { diverges, writes a }
+{
+    forever s
+        per_pass bounded 1 + 12 * n ops
+        on_exceeded wd
+        effects  { writes a }
+        progress tk
+    { a = 1; a = 2; }
+}
+
+}

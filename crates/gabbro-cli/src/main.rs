@@ -222,6 +222,7 @@ fn befehl_paesse() {
         let (marke, note) = match p.zustand {
             Zustand::Gebaut => ("built ", String::new()),
             Zustand::Teilgebaut(w) => ("PART  ", format!("\n         gets through: {w}")),
+            Zustand::Getragen(w) => ("CARRY ", format!("\n         the rest, NAMED: {w}")),
             Zustand::Offen(w) => ("OPEN  ", format!("\n         unchecked: {w}")),
         };
         println!("  {} {}  {:<14} {}{}", marke, p.nummer, p.name, p.quelle, note);
@@ -234,12 +235,18 @@ fn befehl_paesse() {
         .iter()
         .filter(|p| matches!(p.zustand, Zustand::Teilgebaut(_)))
         .count();
+    let getragen = passliste()
+        .iter()
+        .filter(|p| matches!(p.zustand, Zustand::Getragen(_)))
+        .count();
     println!(
-        "\n  {voll} of {} passes are fully built, {teil} partial. What is OPEN is",
+        "\n  {voll} of {} passes fully built, {getragen} CARRIED, {teil} partial.",
         passliste().len()
     );
-    println!("  NOT checked, and what is PARTIAL only as far as the text beside it says --");
-    println!("  a green run is therefore not a proof but the absence of the findings");
+    println!("  CARRIED means: what a pass can say, it says -- and where the rest lies");
+    println!("  stands beside it, WITH AN ADDRESS (axiom layer, template, decision).");
+    println!("  PARTIAL means something gets through that ought to fall. OPEN is unchecked.");
+    println!("  A green run is therefore not a proof but the absence of the findings");
     println!("  that the built passes are able to see.");
 }
 
@@ -288,6 +295,9 @@ fn befehl_pruefe(dateien: &[String]) -> std::process::ExitCode {
     for p in gabbro_check::ungeprueft() {
         match p.zustand {
             Zustand::Offen(w) => println!("  {} {:<14} {w}", p.nummer, p.name),
+            Zustand::Getragen(w) => {
+                println!("  {} {:<14} CARRIED -- the rest is NAMED: {w}", p.nummer, p.name)
+            }
             Zustand::Teilgebaut(w) => {
                 println!("  {} {:<14} ONLY PARTIAL -- {w}", p.nummer, p.name)
             }

@@ -1,0 +1,27 @@
+-- erwartet: D005
+-- **Ein `match` ueber einen `tagged type` nennt jede Variante.**
+--
+-- Die letzte offene Zeile an Pass 2, und sie stand dort seit dem ersten Tag. Ein `tagged type`
+-- ist die einzige Form, in der die Sprache eine ABGESCHLOSSENE Fallunterscheidung ausspricht,
+-- und einen Sammelzweig gibt es nicht (`SYNTAX.md`, *„was ausdruecklich nicht existiert"*).
+--
+-- *Ohne diese Regel war die Abgeschlossenheit eine Zusage der Grammatik, die kein Pass
+-- einloest -- und eine fehlende Variante faellt dann erst dort auf, wo sie zur LAUFZEIT
+-- vorkommt.* Dieselbe Bauart wie `unterbloecke`: ein `match` ohne alle Zweige ist genau der
+-- `_ => {}`-Zweig, den der Pruefer sich selbst verboten hat (W15).
+module gift::match_nicht_erschoepfend {
+
+type Pa = u64;
+tagged type Art = { Speicher(Pa), Endpunkt(u32), Leer };
+
+static mut z : u32 = 0;
+
+impl fn f(a : Art) effects { writes z } costs <= 8 ops
+{
+    match a {
+        Speicher(p) => { z = 1; }
+        Endpunkt(e) => { z = 2; }
+    }
+}
+
+}

@@ -9347,3 +9347,88 @@ deklariert, und darum schweigt `H013` zu Recht. *Die vorherige Fassung dieses Sa
 156 Kennungen · 152 Gifte (0 ohne Biss) · 127 Tests · 33 Beispiele sauber
 13 Waechter gruen · Abstieg: ALL PASS
 ```
+
+---
+
+# 2026-08-19, fünfter Durchgang — ZUSAGE = 0, und neun Pässe bekommen eine Adresse
+
+## Die vier Klauseln ohne Leser sind zu — und drei Nachbarn fielen mit
+
+| Klausel | Leser | wie sie fiel |
+|---|---|---|
+| `obermenge` | `V008` | die erklärte Nutzlast-Obermenge wird nachgerechnet |
+| `gates` | `N020` | ein Name, hinter dem nichts steht |
+| — | `N021` | eine `measures`-Grösse, die der gemessene Pfad schreibt |
+| — | `N022` | eine einseitige Schwelle ohne `floor` |
+| `mirrors` | `N023` | Spiegel verkehrt herum |
+| `counterprobe` | `N024` | eine Sonde trägt zwei Verpflichtungen |
+
+**Bei `counterprobe` stand zuerst eine Entscheidung, nicht ein Pass.** `SYNTAX.md`:975 sagte
+nicht, wo der Name deklariert wird, und darum stand die Klausel jahrelang als Zusage da. Sie
+lautet jetzt: *`expects` nennt eine äussere Sonde, genau wie `assume … falsifier` — sie steht
+nicht in Gabbro, weil sie LÄUFT.* Was Gabbro über sie sagen kann, ist, dass sie **genau einer**
+Pflicht gehört.
+
+## Der Korpus hat zweimal berichtigt, beide Male in dieselbe Richtung
+
+* **`beispiele/06`** nannte `gates abnahme, freigabe` — und beide standen **nirgends** in der
+  Datei. *Der erste der vier in `SYNTAX.md` §13 versprochenen Fehler, im eigenen Beispiel.*
+* **`FRAGMENTE.md`:1167** gattert auf `check kstack`. Ein `gates`-Name ist eine Funktion
+  **oder ein anderer `check`**: erst eichen, dann messen. Meine erste Fassung verlangte eine
+  Funktion und lag falsch.
+
+Und `beispiele/14` erklärte die Obermenge `{ farbbericht }`, während der Speicher `{ b.daten }`
+veröffentlicht. **Die Berichtigung zeigt eine Notationsgrenze:** `b` ist ein PARAMETER, und an
+der Deklaration des Atomics gibt es keins — *eine Obermenge über eine parameterrelative Nutzlast
+ist nicht schreibbar.*
+
+## Und `check` fiel auf einem anderen Weg als der Eintrag annahm
+
+`pruefe-konstrukte.py` führte `check` als einziges Konstrukt ohne Giftprobe, mit der Begründung
+*„eine Probe wäre sinnlos, solange die Ursache steht: sie fiele an nichts — erst der Erzeuger,
+dann die Probe."*
+
+> **Die `Duty` wird weiterhin nirgends erzeugt, und die vier Fehler fielen trotzdem.** Zwei
+> stehen längst im Parser (die Grammatik macht `gates` und `can_fail` pflichtig), die anderen
+> zwei sind `N021`/`N022`. *Die Ursache war nicht die Bedingung für die Wirkung, für die ich
+> sie gehalten habe.*
+
+## Die neun Pässe: drei gebaut, und der Rest bekommt eine ADRESSE
+
+Die Frage *„mache alle neun Pässe fertig"* stiess auf eine Antwort, die keine Bauarbeit ist.
+**Drei Reste waren wirklich Bauarbeit:**
+
+| Pass | war offen | jetzt |
+|---|---|---|
+| D1/D2 | erschöpfendes `match` über `tagged` | **`D005`** |
+| M2 | „die Geistlöschung" | **war gebaut** — im ERZEUGER, nachgemessen: `f(m : Marke, v : u32)` senkt zu `uint32_t f(uint32_t v)` ab |
+| costs | `per_pass` mit eingabeabhängiger Schranke | **symbolisch**, gegen die kleinste Belegung |
+
+**Sechs Reste sind keine Passarbeit**, und das zu sagen ist die ehrliche Fertigstellung:
+
+```
+M3        die Barriere aus dem Adressraum   -> AXIOMSCHICHT, neben A10
+M3        die Aliasfrage                    -> SPRACHENTSCHEIDUNG (`own`)
+Paarung   das Speichermodell                -> A10, schon gebucht
+Gruppe    die Erhaltung                     -> SCHABLONEN S16/S17
+costs     DASS das Mass faellt              -> `consuming.ordnung`
+Phasen    die weichere Lesart               -> ENTSCHEIDUNG (aus streng kann man lockern)
+effects   die Reichweite von `E010`         -> gezogene LINIE, kein Loch
+```
+
+Dafür gibt es eine vierte Stufe: **`CARRY`**.
+
+> **`PART` und `CARRY` sind zwei verschiedene Aussagen, und sie zusammenzuwerfen war die
+> Ungenauigkeit.** *Teilgebaut* heisst: hier kommt etwas durch, das fallen müsste. *Getragen*
+> heisst: was ein Pass sagen kann, sagt er — und wo der Rest liegt, steht daneben, **mit
+> Namen**. Ein Rest ohne Adresse gehört weiter in `PART`. **Die Stufe ist keine Beförderung,
+> sondern eine Adresse.**
+
+`pruefe-todo.py` musste mitwachsen: es zählte `OPEN` und `PART`, meldete nach der Umstufung
+drei Pässe statt zwölf und hatte damit **recht in der Rechnung und unrecht in der Frage**.
+
+```
+163 Kennungen · 160 Gifte (0 ohne Biss) · 127 Tests · 33 Beispiele sauber
+ZUSAGE 0 · Konstrukte ohne Probe 0 · 12 Paesse: 3 gebaut, 9 getragen, 0 teil, 0 offen
+13 Waechter gruen
+```

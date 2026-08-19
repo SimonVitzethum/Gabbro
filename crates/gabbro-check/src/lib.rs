@@ -60,6 +60,23 @@ pub enum Zustand {
     /// durchkommt. *Ein teilgebauter Pass, der sich als gebaut meldet, ist ein falsches
     /// Gruen -- und genau das war er, bis diese Stufe dazukam.*
     Teilgebaut(&'static str),
+    /// **Getragen, soweit ein Pass reicht — und der Rest ist BENANNT.**
+    ///
+    /// Die vierte Stufe, seit 2026-08-19. Sie kam, als die Frage *„mache alle neun Pässe
+    /// fertig"* auf eine Antwort stiess, die keine Bauarbeit ist: **mehrere Reste sind
+    /// überhaupt keine Passarbeit.** Sie liegen in der Axiomschicht (das Speichermodell), bei
+    /// den Schablonen (die Erhaltung einer Invariante), in einer ENTSCHEIDUNG (die weichere
+    /// Phasenlesart, und aus der strengen kann man lockern, aus der weichen nie) oder in einer
+    /// bewusst gezogenen Grenze (`E010` spricht nur über bekannten Weltzustand).
+    ///
+    /// > **`PART` und `CARRIED` sind zwei verschiedene Aussagen, und sie zusammenzuwerfen war
+    /// > die Ungenauigkeit.** *Teilgebaut* heisst: hier kommt etwas durch, das fallen müsste.
+    /// > *Getragen* heisst: was ein Pass sagen kann, sagt er — und wo der Rest liegt, steht
+    /// > daneben, mit Namen.
+    ///
+    /// Ein Rest ohne Adresse gehört weiter in `Teilgebaut`. **Diese Stufe ist keine
+    /// Beförderung, sondern eine Adresse.**
+    Getragen(&'static str),
     /// Nicht gebaut. Der Text nennt, was fehlt -- und was damit **ungeprueft** ist.
     Offen(&'static str),
 }
@@ -87,7 +104,7 @@ pub fn passliste() -> Vec<Pass> {
             name: "D1/D2",
             quelle: "SPRACHE.md §3: undurchsichtige Neutypen, vollstaendige Layouts, \
                      erschoepfende Aufzaehlung",
-            zustand: Zustand::Teilgebaut(
+            zustand: Zustand::Getragen(
                 "the K condition is built (`D001`: no hand mutation on a `table` with \
                     `ops`), and since 2026-08-18 opacity BITES: an `opaque type` does not \
                     have the arithmetic of its carrier (`D003`). *Before that `a + b` fell \
@@ -97,8 +114,12 @@ pub fn passliste() -> Vec<Pass> {
                     silently in BOTH directions, so D1 was not enforced at all. The door is \
                     the MODULE BOUNDARY -- inside the declaring module the representation is \
                     known, outside it is not. *On this corpus it has zero bite: all twelve \
-                    declarations declare and use in the same module.* **NOT built: \
-                    exhaustive `match` over `tagged`**",
+                    declarations declare and use in the same module.* **And since 2026-08-19 \
+                    the exhaustive `match` over `tagged`** (`D005`): a `tagged type` is the \
+                    one form in which the language states a CLOSED case distinction, and \
+                    there is no catch-all branch -- *until then the closedness was a promise \
+                    of the grammar that no pass redeemed.* The residue is a CORPUS \
+                    statement, not pass work",
             ),
         },
         Pass {
@@ -111,9 +132,9 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 4,
             name: "M3",
             quelle: "SYNTAX.md §3: Adressraeume und Zugriffsrechte am Zeiger",
-            zustand: Zustand::Teilgebaut(
+            zustand: Zustand::Getragen(
                 "built: rights checking at reads and writes, the placement rule that an \
-                    `ops` carrier is not in the `dma` space (`R001`-`R003`). **NOT built: \
+                    `ops` carrier is not in the `dma` space (`R001`-`R003`). **The rest, with an ADDRESS: \
                     the barrier from the space** -- which barrier a `dma` access demands is \
                     a statement about the memory model, the same axiom layer as at the \
                     pairing. **And no alias analysis**: two `ptr<normal, rw>` to the same \
@@ -124,9 +145,9 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 5,
             name: "M2",
             quelle: "SPRACHE.md §4: lineare und geisterhafte Werte",
-            zustand: Zustand::Teilgebaut(
+            zustand: Zustand::Getragen(
                 "built: exactly-once per path, branch matching, `consumes` against \
-                    borrowed (`L101`-`L105`). **NOT built: the ghost erasure** -- a `ghost`\
+                    borrowed (`L101`-`L105`). **And since K5 a value that arises in the BODY** (`L107`); the ghost erasure itself is built and sits in the EMITTER, verified 2026-08-19. The rest has an address -- a `ghost`\
                     value does not exist at run time, its linearity is a statement about the \
                     PROOF, and the alias question belongs to M3. **Since 2026-08-17 the \
                     ORDER stands beside it** (pass 11) -- M2 sees the chain, not which one",
@@ -151,7 +172,7 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 12,
             name: "Sperren",
             quelle: "SPRACHE.md §9: `rank`, `held`, `protects` -- die Sperrdisziplin",
-            zustand: Zustand::Teilgebaut(
+            zustand: Zustand::Getragen(
                 "built: shared against exclusive (`H001`-`H004`), the intermediate rule \
                     at the call boundary (`H005`), the recomputed rank order (`H006`) -- and \
                     since K11.2.1 `protects` bites: every access to a protected place stands \
@@ -162,7 +183,7 @@ pub fn passliste() -> Vec<Pass> {
                     CONTEXTS -- an `entry ... dispatch` names one, and a place written \
                     through it that nothing declares shared falls (`H013`). *The sentence \
                     \"Gabbro does not say who runs concurrently\" was overtaken by its own \
-                    `entry` construct.* **NOT built: the finer half** -- `masks IRQ`, \
+                    `entry` construct.* **The rest, with an ADDRESS: the finer half** -- `masks IRQ`, \
                     `per cpu` and `nested never` only exempt under `assume ein_kern`, and \
                     on this corpus `H013` has ZERO bite (all four context roots dispatch \
                     to an `extern fn`): `gabbro kontexte` prints the count beside it",
@@ -172,13 +193,13 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 11,
             name: "Phasen",
             quelle: "MESSUNGEN.md, «B37»: Linearitaet ist keine Ordnung",
-            zustand: Zustand::Teilgebaut(
+            zustand: Zustand::Getragen(
                 "built: the stages of an `order` exist and `advances` goes FORWARD\
                     (`O001`/`O002`), the mark stands at its source stage at the call\
                     (`O003`), and the body composes into its own promise (`O004`). **And \
                     since K11.1 the branch**: all branches must reach the same stage\
                     (`O006`); a branch that ENDS with `return` does not join, and a step in \
-                    a LOOP is refused -- a step happens once, a loop often. **NOT built: the \
+                    a LOOP is refused -- a step happens once, a loop often. **The rest is a DECISION, not a gap: the \
                     softer reading** -- carrying a set of stages and letting all of them \
                     accept the next step. *From the strict reading one can loosen, never the \
                     other way* (PLAN.md, K11.1)",
@@ -194,9 +215,9 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 7,
             name: "Paarung",
             quelle: "SPRACHE.md part II §1: ordering is PAIRED, not declared",
-            zustand: Zustand::Teilgebaut(
+            zustand: Zustand::Getragen(
                 "built: `publishes`/`awaits`/`exchange` over the united set, name \
-                    equality after index substitution (`V001`-`V004`). **NOT built: the \
+                    equality after index substitution (`V001`-`V004`). **The rest has a NAME -- A10: the \
                     statement about the MEMORY MODEL** -- that `release`/`acquire` establish \
                     the visibility the pairing claims falls into the axiom layer and not \
                     into this pass",
@@ -206,7 +227,7 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 8,
             name: "effects",
             quelle: "SPRACHE.md §7: `effects` is mandatory and not fail-open",
-            zustand: Zustand::Teilgebaut(
+            zustand: Zustand::Getragen(
                 "writes, `locks` **and since 2026-08-16 reads** (reading A, `E010`) are \
                     held against the list. **What is missing is the reach of `E010`:** it \
                     speaks only about known world state (`static`, `atomic`, `table`, \
@@ -229,10 +250,10 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 10,
             name: "Gruppe",
             quelle: "MESSUNGEN.md, SWEEP der Verbindungs-Invarianten (2026-08-16), V4",
-            zustand: Zustand::Teilgebaut(
+            zustand: Zustand::Getragen(
                 "built: the LOCK FOOTPRINT (`U001`-`U005`), the MOVE (`U006`) and the \
                     CONNECTING STATEMENT as a form (`U007`: a group invariant names at least \
-                    two carriers, otherwise it belongs at the table). **NOT built: the \
+                    two carriers, otherwise it belongs at the table). **The rest is the PROVER's: the \
                     preservation** -- that the invariant HOLDS under an operation is the \
                     prover's business and falls to S16/S17, not to this pass. It checks the \
                     three conditions under which the question can be asked at all",
@@ -242,7 +263,7 @@ pub fn passliste() -> Vec<Pass> {
             nummer: 9,
             name: "costs",
             quelle: "SPRACHE.md §7: 1 op = one Gabbro primitive, computed statically",
-            zustand: Zustand::Teilgebaut(
+            zustand: Zustand::Getragen(
                 "bodies, `locks` blocks against `held` and calls over the DECLARED costs \
                     of the callee are computed -- **recursion therefore carries an \
                     assumption instead of a computation**, and `per_pass` with an input-\
@@ -300,7 +321,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
 pub fn ungeprueft() -> Vec<Pass> {
     passliste()
         .into_iter()
-        .filter(|p| matches!(p.zustand, Zustand::Offen(_) | Zustand::Teilgebaut(_)))
+        .filter(|p| matches!(p.zustand, Zustand::Offen(_) | Zustand::Getragen(_)))
         .collect()
 }
 

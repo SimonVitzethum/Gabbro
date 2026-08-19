@@ -696,10 +696,17 @@ impl<'a> Rechner<'a> {
                         continue;
                     }
                 };
-                if let (Some(zusage), Kosten::Zahl(n)) = (
-                    self.u.konst_wert(self.modul, zusage_expr),
-                    self.block(rumpf),
-                ) {
+                // **Die Zusage darf von EINGABEN abhaengen** (§9.3, `64 + 12 * lenof(msg)`)
+                // -- seit 2026-08-19 wird sie dann SYMBOLISCH gelesen statt fallengelassen.
+                //
+                // Entschieden wird gegen die **kleinste Belegung**: alle Symbole sind
+                // nichtnegativ, also ist die Schranke bei `n = 0` am kleinsten, und dort muss
+                // sie halten. *Dieselbe Lesart wie bei `costs` (`K001`/`K005`), und derselbe
+                // Grund: `per_pass bounded 12 * n` ist bei `n = 0` gleich null.*
+                let zahl = self.u.konst_wert(self.modul, zusage_expr).or_else(|| {
+                    symbolisch(self.u, self.modul, &self.lokal, zusage_expr).map(|t| t.fest)
+                });
+                if let (Some(zusage), Kosten::Zahl(n)) = (zahl, self.block(rumpf)) {
                     if n > zusage {
                         absagen.schiebe(
                             Absage::fehler(

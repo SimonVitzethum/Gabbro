@@ -533,6 +533,32 @@ necessarily exceeds its own promise. `K001` fell on every correct recursive func
 is why the corpus contained none.** *That looked like a style choice and was a language limit
 nobody had marked as one.* With a `decreases`, `costs` is the promise of ONE pass.
 
+### The nine partial passes — **3 built, 9 CARRIED, 0 partial** (2026-08-19)
+
+*Asked to finish all nine, the answer turned out not to be building work for six of them. What
+was building work is done; what is not has an ADDRESS.*
+
+| built | | |
+|---|---|---|
+| D1/D2 | exhaustive `match` over `tagged` | **`D005`** |
+| M2 | the ghost erasure | **was already built** — in the EMITTER; `f(m : Marke, v : u32)` lowers to `uint32_t f(uint32_t v)` |
+| costs | `per_pass` with an input-dependent bound | **read symbolically**, decided against the smallest assignment |
+
+| carried, with an address | |
+|---|---|
+| M3 — the barrier from the space | axiom layer, beside A10 |
+| M3 — the alias question | a LANGUAGE decision (`own`) |
+| Paarung — the memory model | A10, already booked |
+| Gruppe — the preservation | templates S16/S17 |
+| costs — THAT the measure falls | `consuming.ordnung` |
+| Phasen — the softer reading | a DECISION: from the strict one can loosen, never the other way |
+| effects — the reach of `E010` | a drawn LINE: only known world state |
+
+- [ ] **`CARRY` is an address, not a promotion.** A residue without an address belongs back in
+      `PART`. *The guardian `pruefe-todo.py` had to grow with it — it counted `OPEN` and
+      `PART`, reported three passes instead of twelve, and was right in the arithmetic and
+      wrong in the question.*
+
 - [ ] **`H013` still has zero bite on the corpus.** `gabbro kontexte beispiele/07` prints it:
       4 context roots, 2 with a visible body, 1 place touched, **0 of them declared in this
       unit.** The rule's whole evidence is poison 146/152. *Falle 80 until the second corpus.*

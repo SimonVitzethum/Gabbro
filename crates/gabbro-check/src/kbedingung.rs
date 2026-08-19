@@ -164,6 +164,7 @@ fn nur_ops_felder(baum: &Programm) -> Vec<(String, String)> {
 
 /// **Die Sprachform:** eine `table` mit `ops` duldet keine Handmutation (`SPRACHE.md` §10.2).
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
+    erschoepfendes_match(baum, absagen);
     // **D002 -- `by ops` am Feld.** Schärfer als `D001`: es trifft auch dort, wo die Tabelle
     // als Ganzes Handmutationen duldet, das EINE Feld aber nicht.
     let geschuetzt = nur_ops_felder(baum);
@@ -265,4 +266,119 @@ pub fn zeige(traeger: &[Traeger]) -> String {
         brueche.len()
     ));
     out
+}
+
+/// **`D005` — ein `match` über einen `tagged type` nennt jede Variante.**
+///
+/// Die letzte offene Zeile an Pass 2, und sie stand seit dem ersten Tag so da:
+/// *„NOT built: exhaustive `match` over `tagged`."*
+///
+/// **Warum das zu D1/D2 gehört und nicht zu M1:** ein `tagged type` ist die einzige Form, in
+/// der die Sprache eine ABGESCHLOSSENE Fallunterscheidung ausspricht. `SYNTAX.md`, *„was
+/// ausdrücklich nicht existiert"*: **kein Sammelzweig.** Ohne diese Regel ist die
+/// Abgeschlossenheit eine Zusage der Grammatik, die kein Pass einlöst — und eine fehlende
+/// Variante fällt dann erst dort auf, wo sie zur Laufzeit vorkommt.
+///
+/// > *Dieselbe Bauart wie `unterbloecke`: ein `match` ohne alle Zweige ist genau der
+/// > `_ => {}`-Zweig, den der Prüfer sich selbst verboten hat* (W15).
+fn erschoepfendes_match(baum: &Programm, absagen: &mut Absagen) {
+    let mut varianten: std::collections::BTreeMap<String, Vec<String>> =
+        std::collections::BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Typ(t) = &i.art else { return };
+        if !t.tagged {
+            return;
+        }
+        if let Some(TypExpr::Varianten(v, _)) = &t.rumpf {
+            varianten.insert(
+                t.name.text.clone(),
+                v.iter().map(|x| x.name.text.clone()).collect(),
+            );
+        }
+    });
+    if varianten.is_empty() {
+        return;
+    }
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        let lokal: std::collections::HashMap<String, crate::typen::Typ> = f
+            .parameter
+            .iter()
+            .map(|p| (p.name.text.clone(), u.typ_von_ausdruck_decl(modul, &p.typ)))
+            .collect();
+        matchpruefen(b, &u, modul, &lokal, &varianten, absagen);
+    });
+}
+
+fn matchpruefen(
+    b: &Block,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
+    lokal: &std::collections::HashMap<String, crate::typen::Typ>,
+    varianten: &std::collections::BTreeMap<String, Vec<String>>,
+    absagen: &mut Absagen,
+) {
+    for s in &b.anweisungen {
+        if let StmtArt::Match(m) = &s.art {
+            if let ExprArt::Ort(o) = &m.gegenstand.art {
+                let t = u.typ_von_ort(modul, o, lokal);
+                // **Der Name des Summentyps, nicht seine Struktur.** Ein `tagged` löst auf
+                // `Typ::Summe { name, .. }` auf; nur über den Namen finden wir die
+                // Deklaration wieder, und nur sie kennt die vollständige Liste.
+                // **Der Schluessel der Deklaration ist QUALIFIZIERT** (`tg::Art`), die
+                // Variantentabelle steht unter dem kurzen Namen. *Der erste Anlauf verglich
+                // beide direkt und traf nie -- die Probe war still, und still ist hier
+                // dasselbe wie kaputt* (R11).
+                let name = match t.durchgreifen() {
+                    crate::typen::Typ::Summe { name, .. } if !name.is_empty() => {
+                        crate::umgebung::kurzname(name).to_string()
+                    }
+                    _ => match &t {
+                        crate::typen::Typ::Benannt { name, .. } => {
+                            crate::umgebung::kurzname(name).to_string()
+                        }
+                        _ => String::new(),
+                    },
+                };
+                if let Some(alle) = varianten.get(&name) {
+                    let genannt: Vec<&str> =
+                        m.zweige.iter().map(|z| z.variante.text.as_str()).collect();
+                    let fehlt: Vec<&String> =
+                        alle.iter().filter(|v| !genannt.contains(&v.as_str())).collect();
+                    if !fehlt.is_empty() {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "D005",
+                                s.span,
+                                format!(
+                                    "this `match` over `{name}` does not name: {}",
+                                    fehlt
+                                        .iter()
+                                        .map(|x| format!("`{x}`"))
+                                        .collect::<Vec<_>>()
+                                        .join(", ")
+                                ),
+                            )
+                            .mit_notiz(
+                                "a `tagged type` is the one form in which the language \
+                                 states a CLOSED case distinction -- and there is no \
+                                 catch-all branch (SYNTAX.md, \"what deliberately does not \
+                                 exist\")",
+                            )
+                            .mit_notiz(
+                                "without this the closedness is a promise of the grammar \
+                                 that no pass redeems, and a missing variant shows up where \
+                                 it occurs at RUN time",
+                            ),
+                        );
+                    }
+                }
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            matchpruefen(k, u, modul, lokal, varianten, absagen);
+        }
+    }
 }

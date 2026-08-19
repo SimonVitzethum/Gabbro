@@ -88,7 +88,7 @@ def pruefe(text, zahlen):
     # 5. **Passzahlen gegen `gabbro paesse`.** Der Abgleich vom 2026-08-14 fand „Sechs der
     #    neun Paesse fehlen", wo es fuenf ganze und zwei halbe waren. Eine Zahl ueber den
     #    eigenen Uebersetzer, die niemand gegen den Uebersetzer haelt, ist Falle 80.
-    ganz, halb = paesse_heute()
+    ganz, halb, getragen = paesse_heute()
     if ganz is not None:
         for muster in (r"\*\*(\w+) der neun Paesse fehlen ganz\*\*",
                        r"\*\*\"?(\w+) of the nine passes are missing entirely\"?\*\*"):
@@ -176,15 +176,20 @@ def paesse_heute():
         cwd=WURZEL, capture_output=True, text=True,
     )
     if r.returncode != 0:
-        return None, None
+        return None, None, None
     # `gabbro paesse` markiert die Zeilen mit `OFFEN` bzw. `TEIL` -- die Zahlen aus
     # der Ausgabe zu nehmen statt aus der Prosa ist der ganze Zweck dieser Pruefung.
     # **`OPEN`/`PART` seit 2026-08-19** -- die Sprachflaeche ist englisch. *Dieser Leser hing
     # an `OFFEN`/`TEIL` und haette nach der Uebersetzung stumm null gezaehlt: kein Fehler,
     # keine Meldung, und die Passzahlen im TODO waeren unbewacht gewesen.*
+    # **`CARRY` seit 2026-08-19, und der Waechter musste mitwachsen.** Als die neun
+    # teilgebauten Paesse auf *getragen mit benanntem Rest* umgestuft wurden, zaehlte dieser
+    # Leser nur noch drei Paesse und meldete den README als falsch. *Er hatte recht in der
+    # Rechnung und unrecht in der Frage:* die Gesamtzahl ist gebaut + offen + teil + getragen.
     return (
         len(re.findall(r"^  OPEN  ", r.stdout, re.M)),
         len(re.findall(r"^  PART  ", r.stdout, re.M)),
+        len(re.findall(r"^  CARRY ", r.stdout, re.M)),
     )
 
 
@@ -262,10 +267,12 @@ def pruefe_readme(text=None):
     # verglich gegen die PROSA von `TODO.md`; die Kennzahlentafel des README pruefte ihn
     # niemand. *Beim Nachziehen der englischen Ausgabe kam heraus, dass dort 10 Paesse mit
     # 7 teilgebauten standen -- es sind 12 mit 9.*
-    ganz, halb = paesse_heute()
+    ganz, halb, getragen = paesse_heute()
     fuer = [
-        (r"\| \*\*Compiler\*\* \| (\d+) passes", str(12 if ganz is None else 3 + ganz + halb), "Paesse"),
-        (r"\| \*\*Compiler\*\* \| \d+ passes, \d+ complete, (\d+) partial", str(halb), "teilgebaute Paesse"),
+        (r"\| \*\*Compiler\*\* \| (\d+) passes",
+         str(12 if ganz is None else 3 + ganz + halb + getragen), "Paesse"),
+        (r"\| \*\*Compiler\*\* \| \d+ passes, \d+ complete, \*\*(\d+) carried",
+         str(getragen), "getragene Paesse"),
         (r"(\d+) diagnostics", n_kenn, "Absagekennungen"),
         (r"\*\*(\d+) EBNF rules\*\*", n_regeln, "EBNF-Regeln"),
         (r"(\d+) / (?:\d+)\s*\|", n_term, "EBNF-Terminale"),
