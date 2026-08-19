@@ -244,18 +244,18 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
                         "K005",
                         zusage_expr.span,
                         format!(
-                            "`{}` sagt Kosten zu, die der Pass nicht lesen kann",
+                            "`{}` promises costs the pass cannot read",
                             f.name.text
                         ),
                     )
                     .mit_notiz(
-                        "lesbar ist eine Summe aus Konstanten und Vielfachen von \
-                         NICHTNEGATIVEN Groessen (`4 + 12 * n`, `lenof(m)`) -- ein Produkt \
-                         zweier Symbole oder eine vorzeichenbehaftete Groesse nicht",
+                        "readable is a sum of constants and multiples of declared\
+                            quantities -- `40`, `NSLOTS * 8`, `64 + 12 * lenof(m)`",
                     )
                     .mit_notiz(
-                        "eine Zusage, die der Pass nicht liest, wurde bis 2026-08-18 \
-                         stillschweigend fallengelassen -- `costs <= 0 * n ops` ging durch",
+                        "a promise the pass does not read was, until 2026-08-18, an empty\
+                            line: `costs <= 0 * n ops` on a body costing 1 op went through\
+                            with 0 errors",
                     ),
                 );
                 return;
@@ -281,13 +281,12 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
                             ),
                         )
                         .mit_notiz(
-                            "SPRACHE.md §7: 1 op = eine Gabbro-Primitive; ein Aufruf zaehlt \
-                             die deklarierten `costs` des Gerufenen, eine Traversierung \
-                             Rumpfkosten x Domaenenschranke, Zweige das Maximum",
+                            "SPRACHE.md §7: 1 op = one Gabbro primitive; a call counts\
+                                the declared costs of the callee",
                         )
                         .mit_notiz(
-                            "die Zahl ist statisch ausgerechnet -- sie zu senken heisst, \
-                             den Rumpf zu aendern, nicht die Zusage",
+                            "the number is computed statically -- lowering it means\
+                                writing fewer operations, not promising more",
                         ),
                     );
                 }
@@ -300,14 +299,13 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
                             "K003",
                             span,
                             format!(
-                                "`{}` sagt Kosten zu, aber {grund}",
+                                "`{}` promises costs, but {grund}",
                                 f.name.text
                             ),
                         )
                         .mit_notiz(
-                            "eine Kostenzusage ueber einer unbekannten Groesse ist eine Zahl \
-                             ueber Unbekanntem -- entweder der Gerufene bekommt `costs`, \
-                             oder der Rufer gibt seine Zusage auf",
+                            "a cost promise over an unknown quantity is a promise nobody\
+                                can check",
                         ),
                     );
                 }
@@ -622,15 +620,14 @@ impl<'a> Rechner<'a> {
                                     code,
                                     l.sperre.span,
                                     format!(
-                                        "der Block haelt `{}`{} fuer {n} ops, die Sperre sagt \
-                                         `{wort} <= {zusage} ops` zu",
-                                        l.sperre.text(),
-                                        if l.geteilt { " geteilt" } else { "" }
+                                        "the block holds `{}` for {n} ops, the lock \
+                                         promises `{wort} <= {zusage} ops`",
+                                        l.sperre.text()
                                     ),
                                 )
                                 .mit_notiz(
-                                    "SPRACHE.md §9.3: an dieser Zahl haengt die Latenzaussage \
-                                     je Wartestelle -- Ranghoehere halten <= ihrer `held`-Summe",
+                                    "SPRACHE.md §9.3: the latency statement of every\
+                                        other core hangs on this number",
                                 ),
                             );
                         }

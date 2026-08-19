@@ -117,9 +117,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                         ),
                     )
                     .mit_notiz(
-                        "`consumes` ist eine Zusage an den Aufrufer: der Wert ist danach weg. \
-                         Haelt der Rumpf sie nicht, ist der Wert beim Aufrufer verloren, ohne \
-                         verbraucht zu sein",
+                        "`consumes` is a promise to the caller: the value is gone afterwards",
                     ),
                 ),
                 (Zustand::Verbraucht, false) => absagen.schiebe(
@@ -129,9 +127,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                         format!("`{name}` is borrowed and is consumed anyway"),
                     )
                     .mit_notiz(
-                        "ein Parameter ist verbraucht, wenn `effects` ihn unter `consumes` \
-                         nennt -- sonst geliehen. Wer einen geliehenen Wert verbraucht, nimmt \
-                         dem Aufrufer etwas, das er noch hat",
+                        "a parameter is consumed when `effects` names it under `consumes`",
                     ),
                 ),
                 _ => {}
@@ -246,12 +242,12 @@ fn abgleich(
                     format!("`{name}` is not treated the same on every path"),
                 )
                 .mit_notiz(
-                    "linear heisst GENAU einmal, nicht hoechstens einmal: ein Wert, der nur \
-                     in einem Zweig verbraucht wird, ist auf dem anderen Weg ein Leck",
+                    "linear means EXACTLY once, not at most once: a value that survives\
+                        on one path is a leak on that path",
                 )
                 .mit_notiz(
-                    "ein Zweig, der divergiert oder zurueckkehrt, zaehlt nicht mit -- sonst \
-                     waere jede Fehlerbehandlung ein Leck",
+                    "a branch that diverges or returns does not count -- not every path\
+                        has to consume, only every path that ends normally",
                 ),
             );
         }
@@ -294,8 +290,7 @@ fn ruf(
                         format!("`{arg}` is consumed a second time"),
                     )
                     .mit_notiz(
-                        "linear heisst genau einmal -- der erste Verbrauch hat den Wert \
-                         weggenommen",
+                        "linear means exactly once -- the first consumption took the value",
                     )
                     .mit_notiz("the first consumption is further up in the same body"),
                 );

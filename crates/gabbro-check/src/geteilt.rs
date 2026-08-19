@@ -229,15 +229,16 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 Absage::hinweis(
                     "H008",
                     sp.span,
-                    format!("`{name}` schuetzt {:?}, wird aber nirgends genommen", sp.schuetzt),
+                    format!("`{name}` protects {:?} but is taken nowhere", sp.schuetzt),
                 )
                 .mit_notiz(
-                    "weder ein `locks`-Block noch ein `effects { locks … }` noch ein \
-                     `requires Held(…)` nennt sie",
+                    "neither a `locks` block nor an `effects { locks … }` nor a \
+                     `requires Held(…)` names it",
                 )
                 .mit_notiz(
-                    "ist der Platz anders synchronisiert -- etwa ueber `publishes`/`awaits` \
-                     --, gehoert die Sperre weg; sonst fehlt die Nahme",
+                    "if the place is synchronised some other way -- through\
+                        `publishes`/`awaits` -- the lock does not belong here; otherwise the\
+                        taking is missing",
                 ),
             );
         }
@@ -254,8 +255,9 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     format!("`{name}` declares `shared held` but is never taken shared"),
                 )
                 .mit_notiz(
-                    "eine Zusage ohne Stelle, an der sie faellt, ist eine Behauptung -- \
-                     dieselbe Regel, an der `locks ordered` gestorben ist",
+                    "a promise with no site at which it can fail is a claim -- and\
+                        `protects` is the promise that this place is only touched under this\
+                        lock",
                 ),
             );
         }
@@ -367,16 +369,15 @@ fn schutz(
             Absage::fehler(
                 "H007",
                 o.span,
-                format!("`{t}` ist von `{sperre}` geschuetzt, `{wo}` haelt sie nicht"),
+                format!("`{t}` is protected by `{sperre}`, and `{wo}` does not hold it"),
             )
             .mit_notiz(
-                "als gehalten gilt: ein umschliessender `locks`-Block, ein \
-                 `effects { locks … }` (dann ist die Nahme die Pflicht des Rufers) oder ein \
-                 `requires Held(…)`",
+                "held counts as: an enclosing `locks` block, an `effects { locks … }` (then taking it \
+                 is the caller's duty), or a `requires Held(…)`",
             )
             .mit_notiz(
-                "`protects` nannte die Plaetze schon; bis K11.2.1 pruefte niemand, dass die \
-                 Sperre auch GENOMMEN wird",
+                "`protects` named the places all along; until K11.2.1 nobody checked that the lock \
+                 is actually TAKEN",
             ),
         );
     };
@@ -497,18 +498,18 @@ fn block(
                                 "H002",
                                 l.sperre.span,
                                 format!(
-                                    "`{name}` wird geteilt genommen, erklaert aber kein \
+                                    "`{name}` is taken shared but declares no \
                                      `shared held <= … ops`"
                                 ),
                             )
                             .mit_notiz(
-                                "`held` ist fuer EXKLUSIVE Halter gedacht; auf der geteilten \
-                                 Seite ist die Rechengroesse die Schreiberwartezeit unter \
-                                 Leserdruck, nicht die Haltezeit eines Lesers",
+                                "`held` is meant for EXCLUSIVE holders; on the shared side the quantity that \
+                                 counts is the writer's wait under reader pressure, not \
+                                 how long one reader holds",
                             )
                             .mit_notiz(
-                                "ohne diese Zahl hat die Latenzaussage aus SPRACHE.md §9.3 \
-                                 fuer diese Sperre keinen Zweig",
+                                "without that number the latency statement of SPRACHE.md §9.3 has no \
+                                 branch for this lock",
                             ),
                         ),
                         _ => {}
@@ -525,18 +526,17 @@ fn block(
                                 "H003",
                                 l.sperre.span,
                                 format!(
-                                    "`{name}` wird exklusiv genommen, obwohl sie hier schon \
-                                     geteilt gehalten wird"
+                                    "`{name}` is taken exclusively although it is already held \
+                                     shared here"
                                 ),
                             )
                             .mit_notiz(
-                                "eine Hochstufung von geteilt nach exklusiv wartet auf die \
-                                 eigene Lesernahme -- auf einer Drehsperre ist das ein \
-                                 Deadlock, kein Stilfehler",
+                                "an upgrade from shared to exclusive waits on its own\
+                                    read side -- that is a self-deadlock, not a race",
                             )
                             .mit_notiz(
-                                "die ehrliche Form ist Uebergabe mit Neuvalidierung: freigeben, \
-                                 exklusiv nehmen, die tragende Bedingung ERNEUT pruefen",
+                                "the honest form is hand-over with revalidation: release,\
+                                    take exclusively, check the precondition again",
                             ),
                         );
                     }
@@ -620,12 +620,12 @@ fn schreibprobe(
                 format!("`{ort}` is written while `{name}` is held only shared"),
             )
             .mit_notiz(format!(
-                "`{name}` schuetzt `{platz}` -- geteilt halten heisst: die geschuetzten \
-                 Plaetze lesen, sie nicht schreiben"
+                "`{name}` protects `{platz}` -- holding it shared means: the place is\
+                    only read"
             ))
             .mit_notiz(
-                "genau dieser Abgleich macht `locks shared` zu einem Konstrukt und nicht zu \
-                 einem Kommentar: `protects` nennt die Plaetze, der Rumpf nennt seine Ziele",
+                "exactly this match is what makes `locks shared` a construct instead of a\
+                    comment",
             ),
         );
         return;
@@ -673,18 +673,18 @@ fn rufprobe(
                 "H005",
                 span,
                 format!(
-                    "`{}` verlangt `Held({sperre})` exklusiv, wird hier aber unter geteilter \
-                     Nahme von `{sperre}` gerufen",
+                    "`{}` requires `Held({sperre})` exclusively but is called here while\
+                        it is held shared",
                     name.text
                 ),
             )
             .mit_notiz(
-                "der Gerufene schreibt exklusiv-berechtigt, der Rufer haelt nur geteilt -- \
-                 das waere H001 durch die Hintertuer",
+                "the callee writes with exclusive authority, the caller holds only a read\
+                    right -- and nothing between the two says so",
             )
             .mit_notiz(
-                "`requires Held(L, shared)` waere hier zulaessig -- die Staerke des Zeugen \
-                 entscheidet, seit der Aufrufgraph steht",
+                "`requires Held(L, shared)` would be admissible here -- the strength\
+                    belongs at the declaration, not at the call",
             ),
         );
     }
@@ -756,9 +756,8 @@ fn rangprobe(
                         ),
                     )
                     .mit_notiz(
-                        "die Sperrordnung laeuft AUFSTEIGEND: eine Sperre wird nur unter \
-                         Sperren KLEINEREN Rangs genommen -- sonst gibt es einen Zyklus, und \
-                         der ist die Verklemmung",
+                        "the lock order runs UPWARDS: a lock is only taken while a\
+                            strictly smaller rank is held",
                     )
                     .mit_notiz(if *alt == neu {
                         "gleicher Rang ist keine Ordnung: zwei Halter koennen sie in zwei \
@@ -870,11 +869,12 @@ fn rcu_schutz(
                 Absage::fehler(
                     "H009",
                     o.span,
-                    format!("`{t}` gehoert zur RCU-Domaene `{d}`, `{wo}` steht nicht in `observes {d}`"),
+                    format!("`{t}` belongs to the RCU domain `{d}`, and `{wo}` does not stand in\
+                        `observes`"),
                 )
                 .mit_notiz(
-                    "die Leseseite nimmt nichts -- aber sie muss BENANNT sein, sonst gibt es \
-                     keinen Punkt, an dem eine Gnadenfrist enden koennte",
+                    "the read side takes nothing -- but it must be NAMED, otherwise the\
+                        grace period has no place it refers to",
                 ),
             );
         }
@@ -892,11 +892,11 @@ fn rcu_schutz(
                         Absage::fehler(
                             "H011",
                             o.span,
-                            format!("`{t}` gibt zurueck, waehrend `{wo}` in `observes` steht"),
+                            format!("`{t}` reclaims while `{wo}` stands in `observes`"),
                         )
                         .mit_notiz(
-                            "wer zurueckgibt, ist nicht Leser -- eine Rueckgabe im eigenen \
-                             Lesebereich gibt einen Platz frei, den man selbst noch haelt",
+                            "whoever reclaims is not a reader -- a reclaim inside one's\
+                                own read region frees a place one still holds",
                         ),
                     );
                 }
@@ -912,11 +912,11 @@ fn rcu_schutz(
                         Absage::fehler(
                             "H012",
                             o.span,
-                            format!("`{t}` gibt zurueck, ohne die Schreibersperre von `{d}` zu halten"),
+                            format!("`{t}` reclaims without holding the writer lock of `{d}`"),
                         )
                         .mit_notiz(
-                            "die Rueckgabe ist die Schreibseite -- und RCU serialisiert \
-                             Schreiber nicht gegeneinander",
+                            "reclaiming is the write side -- and RCU serialises readers\
+                                against it, not writers against each other",
                         ),
                     );
                 }
@@ -935,11 +935,11 @@ fn rcu_schutz(
                 Absage::fehler(
                     "H010",
                     o.span,
-                    format!("`{t}` wird in `{wo}` ohne Sperre geschrieben (RCU-Domaene `{d}`)"),
+                    format!("`{t}` is written in `{wo}` without a lock (RCU domain `{d}`)"),
                 )
                 .mit_notiz(
-                    "RCU serialisiert Leser gegen die RUECKGEWINNUNG, nicht Schreiber \
-                     gegeneinander -- die Schreibseite braucht ihre eigene Wechselseitigkeit",
+                    "RCU serialises readers against RECLAIM, not writers against each\
+                        other -- the write side needs its own mutual exclusion",
                 ),
             );
         }

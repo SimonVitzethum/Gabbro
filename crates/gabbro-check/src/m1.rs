@@ -238,20 +238,20 @@ impl<'a> Pruefer<'a> {
                             "F004",
                             a.name.span,
                             format!(
-                                "`accumulates {}` ueber einem Gleitkommatyp -- die Faltung \
-                                 waere reihenfolgeabhaengig",
+                                "`accumulates {}` over a floating-point type -- the fold\
+                                    has no order",
                                 a.name.text
                             ),
                         )
                         .mit_notiz(
-                            "die Absenkung faltet eine Zelle je Kern in einer Reihenfolge, \
-                             die niemand festlegt; `add` ist ueber Gleitkomma nicht \
-                             assoziativ und `max` mit NaN kein Verband",
+                            "the lowering folds one cell per core in an order nobody\
+                                fixes; `add` is not associative over floating point, and\
+                                `max` with NaN is no lattice",
                         )
                         .mit_notiz(
-                            "`accumulates.monoid` ist BEWIESEN -- unter der Praemisse, dass \
-                             die Merge-Menge ein kommutatives Monoid ist. Hier waere sie es \
-                             nicht, und der Satz haette eine falsche Praemisse",
+                            "`accumulates.monoid` is PROVED -- under the premise that the\
+                                merge set is a commutative monoid. Here it would not be, and\
+                                the theorem would have a false premise",
                         ),
                     );
                 }
@@ -397,12 +397,12 @@ impl<'a> Pruefer<'a> {
                         Absage::fehler(
                             "M116",
                             z.ziel.span,
-                            format!("`{}` ist ohne `mut` gebunden", z.ziel.basis.text),
+                            format!("`{}` is bound without `mut`", z.ziel.basis.text),
                         )
                         .mit_notiz(
-                            "eine Bindung ohne `mut` sagt zu, dass der Name sich nicht \
-                             bewegt -- und M1 rechnet damit: eine Tatsache ueber ihn stirbt \
-                             sonst bei jedem Schreiben",
+                            "a binding without `mut` promises that the name does not move\
+                                -- and M1 counts on that: a fact about it would otherwise be \
+                                killed by every write",
                         ),
                     );
                 }
@@ -508,9 +508,8 @@ impl<'a> Pruefer<'a> {
                             "the `else` branch of a `narrow` must return or diverge",
                         )
                         .mit_notiz(
-                            "SYNTAX.md §7: `narrow place to range else { … }` ist eine \
-                             Anweisung mit BENANNTEM Ausgang -- faellt der Zweig durch, \
-                             gilt der eingeengte Bereich auf einem Weg, der ihn nie geprueft hat",
+                            "SYNTAX.md §7: `narrow place to range else { … }` is a\
+                                checked narrowing with a named exit",
                         ),
                     );
                 }
@@ -760,9 +759,8 @@ impl<'a> Pruefer<'a> {
                             "this literal is not exactly representable in binary",
                         )
                         .mit_notiz(
-                            "schreibe `rounded` dahinter, wenn die Rundung gemeint ist -- \
-                             wie `wrapping` am Typ sagt sie: der Verlust ist ERKLAERT und \
-                             darum kein Befund",
+                            "write `rounded` after it if the rounding is meant -- what is\
+                                forbidden is not the inexact but the SILENTLY inexact",
                         ),
                     );
                 }
@@ -834,12 +832,12 @@ impl<'a> Pruefer<'a> {
                                 Absage::fehler(
                                     "F005",
                                     span,
-                                    "diese Verknuepfung gibt es fuer Gleitkomma nicht",
+                                    "this operation does not exist for floating point",
                                 )
                                 .mit_notiz(
-                                    "Bitverknuepfung, Schieben und Rest sind Aussagen ueber \
-                                     ein Bitmuster; ein Gleitkommawert IST eines, aber seine \
-                                     Bedeutung ist keine",
+                                    "bitwise operations, shifts and remainder are\
+                                        statements about a BIT PATTERN, and a floating-point\
+                                        number is not one",
                                 ),
                             );
                             Typ::Unbekannt
@@ -854,11 +852,11 @@ impl<'a> Pruefer<'a> {
                         Absage::fehler(
                             "F005",
                             span,
-                            "Gleitkomma und Ganzzahl in einer Verknuepfung",
+                            "floating point and integer in one operation",
                         )
                         .mit_notiz(
-                            "es gibt keine Umwandlungsform; eine stillschweigende waere \
-                             genau die Stelle, an der nicht dransteht, dass gerundet wurde",
+                            "there is no conversion form; a silent one would be exactly\
+                                the hidden rounding this language refuses",
                         ),
                     );
                     return Typ::Unbekannt;
@@ -899,15 +897,15 @@ impl<'a> Pruefer<'a> {
                     Absage::fehler(
                         "D003",
                         e.span,
-                        format!("`{name}` ist undurchsichtig -- es hat die Rechnung seines Traegers nicht"),
+                        format!("`{name}` is opaque -- it does not have the arithmetic of its carrier"),
                     )
                     .mit_notiz(
-                        "ein `opaque type` sagt: dieser Typ IST nicht sein Traeger. Wer mit \
-                         ihm rechnen will, wandelt ihn um -- und die Umwandlung steht dann da",
+                        "an `opaque type` says: this type IS not its carrier. Whoever\
+                            wants to compute needs a conversion, and there is none",
                     )
                     .mit_notiz(
-                        "Vergleiche bleiben erlaubt: sie ordnen Werte desselben Typs, statt \
-                         den Traeger umzudeuten",
+                        "comparisons stay allowed: they order values of the same type and\
+                            produce no new one",
                     ),
                 );
                 return Typ::Unbekannt;
@@ -947,12 +945,12 @@ impl<'a> Pruefer<'a> {
                             ),
                         )
                         .mit_notiz(
-                            "SPRACHE.md §3: Division und Rest verlangen einen Nenner, dessen \
-                             Bereich die Null ausschliesst",
+                            "SPRACHE.md §3: division and remainder require a denominator\
+                                whose range excludes zero",
                         )
                         .mit_notiz(
-                            "eine Pruefung `if n >= 1 { … }` verengt ihn (V1), sonst \
-                             `narrow n to 1 .. … else { … }`",
+                            "a check `if n >= 1 { … }` narrows it (V1), otherwise `narrow\
+                                n to 1 .. … else { … }`",
                         ),
                     );
                     return Typ::Unbekannt;
@@ -1056,7 +1054,8 @@ impl<'a> Pruefer<'a> {
                         "M115",
                         *span,
                         format!(
-                            "`{}` verlangt `{name} {} {zahl}`, und das Argument liegt in {} .. {}",
+                            "`{}` requires `{name} {} {zahl}`, and the argument lies in\
+                                {} .. {}",
                             r.pfad.text(),
                             zeichen(op),
                             b.min,
@@ -1064,8 +1063,8 @@ impl<'a> Pruefer<'a> {
                         ),
                     )
                     .mit_notiz(
-                        "die Vorbedingung des Gerufenen ist an dieser Stelle nicht bloss \
-                         unbewiesen, sondern durch den Bereich des Arguments AUSGESCHLOSSEN",
+                        "the callee's precondition is not merely unproved at this site\
+                            but EXCLUDED by the range of the argument",
                     ),
                 );
             }
@@ -1164,15 +1163,15 @@ impl<'a> Pruefer<'a> {
                             "M106",
                             r.span,
                             format!(
-                                "`{}` hat die Felder ({}), der Konstruktor nennt ({})",
+                                "`{}` has the fields ({}), the constructor names ({})",
                                 r.pfad.text(),
                                 felder.join(", "),
                                 gegeben.join(", ")
                             ),
                         )
                         .mit_notiz(
-                            "die Marken muessen die Felderliste sein -- in der Reihenfolge der \
-                             Deklaration, jedes Feld genau einmal, keins ausgelassen",
+                            "the labels must be the field list -- in order, each exactly\
+                                once, none left out",
                         )
                         .mit_notiz(
                             "Schablone `verbund.konstruktor`, bewiesen: \
@@ -1191,7 +1190,7 @@ impl<'a> Pruefer<'a> {
                         "M107",
                         r.span,
                         format!(
-                            "`{}` ist ein Verbund; sein Konstruktor nennt seine Felder",
+                            "`{}` is a struct; its constructor names its fields",
                             r.pfad.text()
                         ),
                     )
@@ -1205,8 +1204,8 @@ impl<'a> Pruefer<'a> {
                             .join(", ")
                     ))
                     .mit_notiz(
-                        "zwei gleichtypige Felder in Reihung sind vertauschbar, ohne dass ein \
-                         Typ dagegen spricht -- der Name ist die einzige Unterscheidung",
+                        "two fields of the same type in sequence are interchangeable\
+                            without a label, and nothing would say so",
                     ),
                 );
             }
@@ -1217,11 +1216,11 @@ impl<'a> Pruefer<'a> {
                     Absage::fehler(
                         "M107",
                         r.span,
-                        format!("`{}` ist kein Verbund; Marken gibt es nur am Konstruktor", r.pfad.text()),
+                        format!("`{}` is not a struct; labels exist only at a constructor", r.pfad.text()),
                     )
                     .mit_notiz(
-                        "die Reihenfolge der Parameter einer Funktion steht in ihrer \
-                         Deklaration -- eine Marke am Aufruf waere eine zweite Wahrheit daneben",
+                        "the order of a function's parameters stands in its declaration;\
+                            a second, labelled order would be a second truth",
                     ),
                 );
             }
@@ -1672,12 +1671,11 @@ impl<'a> Pruefer<'a> {
                 format!("{was} wandelt `{name}` stillschweigend um"),
             )
             .mit_notiz(
-                "D1: ein undurchsichtiger Neutyp hat KEINE implizite Umwandlung -- sonst ist \
-                 er ein `typedef`, und genau das ist das Loch, gegen das er steht",
+                "D1: an opaque newtype has NO implicit conversion to its carrier",
             )
             .mit_notiz(format!(
-                "die Umwandlung gehoert in `{heimat}`, das den Typ erklaert -- dort ist die \
-                 Darstellung bekannt. *Ein Erzeuger je Typ, an der Modulgrenze*",
+                "the conversion belongs in `{heimat}`, which declares the type -- outside\
+                    it the representation is unknown",
             )),
         );
     }
@@ -1715,13 +1713,13 @@ impl<'a> Pruefer<'a> {
                         "F002",
                         span,
                         format!(
-                            "das Literal liegt in `f{}` nicht exakt (in `f64` schon)",
+                            "the literal is not exact in `f{}` (it is in `f64`)",
                             z.breite
                         ),
                     )
                     .mit_notiz(
-                        "`f32` traegt 24 Mantissenbits, `f64` traegt 53 -- schreibe \
-                         `rounded` dahinter, wenn die Rundung gemeint ist",
+                        "`f32` carries 24 mantissa bits, `f64` carries 53 -- write\
+                            `rounded` if the rounding is meant",
                     ),
                 );
             }
@@ -1740,8 +1738,8 @@ impl<'a> Pruefer<'a> {
                         ),
                     )
                     .mit_notiz(
-                        "`narrow <ort> to <von> .. <bis> else { … }` verengt den Bereich; \
-                         `finite` allein loescht nur NaN und Unendlich",
+                        "`narrow <place> to <lo> .. <hi> else { … }` narrows the range\
+                            and names the exit",
                     ),
                 );
             }
@@ -1751,17 +1749,17 @@ impl<'a> Pruefer<'a> {
                         "F001",
                         span,
                         format!(
-                            "{was} vertraegt kein {}, der Wert kann es sein",
+                            "{was} admits no {}, and the value may be one",
                             fehlt.join(" und kein ")
                         ),
                     )
                     .mit_notiz(
-                        "`narrow <ort> to finite else { … }` stellt beides auf einmal her; \
-                         der `else`-Zweig IST der NaN-Weg",
+                        "`narrow <place> to finite else { … }` establishes both at once",
                     )
                     .mit_notiz(
-                        "ohne die Tatsache liefert auch die Negation eines Vergleichs \
-                         nichts: ist ein Operand NaN, sind alle Vergleiche falsch",
+                        "without the fact even the negation of a comparison yields\
+                            nothing -- over floating point `!(x < y)` does not follow `x >=\
+                            y`",
                     ),
                 );
             }
@@ -1783,13 +1781,13 @@ impl<'a> Pruefer<'a> {
             ),
         )
         .mit_notiz(
-            "M1: jede Operation muss im Bereich ihres Ergebnistyps bleiben -- \
-             das ist ein Uebersetzungsfehler, keine Laufzeitpruefung",
+            "M1: every operation must stay inside the range of its result type -- that is\
+                a compile error, not a runtime check",
         );
         if q.min < z.min || q.max > z.max {
             a = a.mit_notiz(format!(
-                "es fehlt der Nachweis, dass der Wert in {} .. {} liegt; \
-                 eine Pruefung davor verengt ihn (V1/V2), sonst `narrow … to … else {{ … }}`",
+                "what is missing is the proof that the value lies in {} .. {}; a check\
+                    before it narrows the range (V1/V2), otherwise `narrow … to … else {{ … }}`",
                 z.min, z.max
             ));
         }
@@ -1802,19 +1800,18 @@ impl<'a> Pruefer<'a> {
                 "M104",
                 span,
                 format!(
-                    "`{}` {wort} verlaesst den Bereich: `{}` gegen `{}`",
+                    "`{}` {wort} leaves the range: `{}` against `{}`",
                     ort.text(),
                     a.text(),
                     b.text()
                 ),
             )
             .mit_notiz(
-                "der Ueberlauf ist ein Uebersetzungsfehler, keine Laufzeitpruefung -- \
-                 wer ihn will, deklariert den Slot als `wrapping`",
+                "the overflow is a compile error, not a runtime check",
             )
             .mit_notiz(
-                "eine Pruefung davor verengt den Bereich (V1), eine Beziehung zweier \
-                 Stellen ebenso (V2)",
+                "a check before it narrows the range (V1), a relation between two places\
+                    carries too (V2)",
             ),
         );
     }
@@ -1831,8 +1828,8 @@ impl<'a> Pruefer<'a> {
                 ),
             )
             .mit_notiz(
-                "SYNTAX.md §4: passt der Ergebnisbereich nicht, ist es ein \
-                 Uebersetzungsfehler -- keine Laufzeitpruefung",
+                "SYNTAX.md §4: if the result range does not fit, it is a compile error\
+                    and not a wrap-around",
             ),
         );
     }
@@ -1909,11 +1906,11 @@ impl<'a> Pruefer<'a> {
                             Absage::fehler(
                                 "M110",
                                 p.span,
-                                format!("`{}` nennt `result` und liefert keins", f.name.text),
+                                format!("`{}` names `result` and returns none", f.name.text),
                             )
                             .mit_notiz(
-                                "eine Nachbedingung ueber ein Ergebnis, das es nicht gibt, \
-                                 spricht ueber nichts",
+                                "a postcondition about a result that does not exist\
+                                    speaks about nothing",
                             ),
                         );
                     }
@@ -1932,11 +1929,11 @@ impl<'a> Pruefer<'a> {
                         Absage::fehler(
                             "M109",
                             p.span,
-                            format!("`{n}` in `ensures` ist hier nicht erklaert"),
+                            format!("`{n}` in `ensures` is not declared here"),
                         )
                         .mit_notiz(
-                            "eine Nachbedingung, deren Namen nicht aufloesen, steht im \
-                             Zeugnis und in der Bibliotheks-ABI -- und sagt nichts",
+                            "a postcondition whose names do not resolve stands in the\
+                                certificate and in the library ABI -- and says nothing",
                         ),
                     );
                 }
@@ -1947,14 +1944,14 @@ impl<'a> Pruefer<'a> {
                         "M111",
                         p.span,
                         format!(
-                            "`{}` kann diese Nachbedingung nicht herstellen",
+                            "`{}` cannot establish this postcondition",
                             f.name.text
                         ),
                     )
                     .mit_notiz(
-                        "sie nennt weder `result` noch einen Ort, den die Funktion laut \
-                         `effects` schreibt -- dann ist sie ein `requires` oder ein \
-                         `maintains` am falschen Platz",
+                        "it names neither `result` nor a place the function writes\
+                            according to `effects` -- then it is a `requires` or a\
+                            `maintains` in the wrong place",
                     ),
                 );
             }
@@ -1989,11 +1986,11 @@ impl<'a> Pruefer<'a> {
                 Absage::fehler(
                     "M113",
                     f.maintains[0].span,
-                    format!("`{}` ist eine `spec fn` und erhaelt nichts", f.name.text),
+                    format!("`{}` is a `spec fn` and maintains nothing", f.name.text),
                 )
                 .mit_notiz(
-                    "eine Spezifikation IST die Aussage -- `maintains` an ihr ist eine \
-                     Pflicht, die kein Rumpf schuldet",
+                    "a specification IS the statement -- `maintains` on it is an\
+                        obligation no body owes",
                 ),
             );
             return;
@@ -2019,11 +2016,11 @@ impl<'a> Pruefer<'a> {
                     Absage::fehler(
                         "M112",
                         i.span,
-                        format!("`{}` in `maintains` ist weder `spec fn` noch erklaerte Invariante", i.text),
+                        format!("`{}` in `maintains` is neither a `spec fn` nor a declared invariant", i.text),
                     )
                     .mit_notiz(
-                        "eine erhaltene Invariante, deren Name nicht aufloest, steht im \
-                         Zeugnis und in der Bibliotheks-ABI -- und sagt nichts",
+                        "a maintained invariant whose name does not resolve stands in the\
+                            certificate and in the library ABI -- and says nothing",
                     ),
                 );
                 continue;
@@ -2036,13 +2033,13 @@ impl<'a> Pruefer<'a> {
                         "M114",
                         i.span,
                         format!(
-                            "`{}` erhaelt `{}` und schreibt nichts",
+                            "`{}` maintains `{}` and writes nothing",
                             f.name.text, i.text
                         ),
                     )
                     .mit_notiz(
-                        "was nichts schreibt, erhaelt jede Invariante -- der Rahmen gibt es \
-                         schon, und die Zeile verspricht mehr als sie sagt",
+                        "what writes nothing maintains every invariant -- the frame gives\
+                            it already, and the line promises more than it says",
                     ),
                 );
             }
@@ -2247,9 +2244,8 @@ impl<'a> Pruefer<'a> {
                                         ),
                                     )
                                     .mit_notiz(
-                                        "M4: kein ungeprueftes Indizieren -- die Schranke \
-                                         faellt aus dem Typ des Index, nicht aus einer Pruefung \
-                                         zur Laufzeit",
+                                        "M4: no unchecked indexing -- the bound comes\
+                                            from the declaration of the carrier",
                                     ),
                                 );
                             }
@@ -2276,19 +2272,18 @@ impl<'a> Pruefer<'a> {
                                         "M108",
                                         idx.span,
                                         format!(
-                                            "der Index liegt im Adressraum, aber nichts zeigt \
-                                             ihn unter `{k}`"
+                                            "the index lies inside the address space, but\
+                                                nothing shows it is BACKED"
                                         ),
                                     )
                                     .mit_notiz(
-                                        "`count` ist der Adressraum, `backed` der Speicher -- \
-                                         ein Zugriff auf einen nicht hinterlegten Platz ist \
-                                         typkorrekt und trotzdem ein Fehlzugriff",
+                                        "`count` is the address space, `backed` the\
+                                            memory -- an index into an unbacked place is\
+                                            type-correct and still a fault",
                                     )
                                     .mit_notiz(
-                                        "`narrow <index> to 0 ..< <hinterlegung> else { … }` \
-                                         stellt die Tatsache her; ein `if` mit demselben \
-                                         Vergleich tut es auch",
+                                        "`narrow <index> to 0 ..< <backing> else { … }`\
+                                            carries it too, like every other bound",
                                     ),
                                 );
                             }

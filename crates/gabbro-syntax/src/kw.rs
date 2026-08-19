@@ -115,6 +115,16 @@ wortschatz! {
     Leaves        => "leaves",        res;
     Next          => "next",          res;
     Ops           => "ops",           res;
+    // **«NL.1», 2026-08-19: die geschlossene Operationsmenge.** `opdecl` nahm bis dahin
+    // beliebige Bezeichner, und damit war `table.ops.erhaltung` unbeweisbar in dem einen
+    // Sinn, auf den es ankommt: aus einem NAMEN faellt keine Wirkung.
+    //
+    // Gemessen am zweiten Korpus (`kernel/` + `mm/`, 659 Dateien) vor der Entscheidung:
+    // remove 479 · insert 448 · relabel 127 · replace 11. *`init` ist bewusst KEIN Wort --
+    // `table … count N` konstruiert, und `table.absenkung` beweist es.*
+    Insert        => "insert",        res;
+    Remove        => "remove",        res;
+    Relabel       => "relabel",       res;
     Result        => "result",        res;
     Exchange      => "exchange",      res;
     Update        => "update",        res;

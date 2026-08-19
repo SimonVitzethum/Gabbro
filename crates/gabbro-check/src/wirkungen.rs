@@ -380,8 +380,8 @@ fn pruefe_touches(
                 ),
             )
             .mit_notiz(
-                "`touches` ist die ENGERE, oertliche Zusage neben `effects` -- wer sie liest, \
-                 rechnet mit weniger Beruehrung, als der Rumpf hat",
+                "`touches` is the NARROWER, local promise beside `effects` -- whoever\
+                    reads it counts on less contact than the body has",
             ),
         );
     }
@@ -448,7 +448,7 @@ fn rumpf_gegen_wirkungen(
                     *span,
                     format!("`{}` writes `{ort}` but declares `pure`", f.name.text),
                 )
-                .mit_notiz("`pure` heisst: fasst nichts an"),
+                .mit_notiz("`pure` means: touches nothing -- not even by reading"),
             );
             continue;
         }
@@ -463,8 +463,8 @@ fn rumpf_gegen_wirkungen(
                     ),
                 )
                 .mit_notiz(
-                    "SPRACHE.md §7: `effects` ist Pflicht und nicht fail-open -- eine Liste, \
-                     die der Rumpf ueberschreitet, ist dieselbe Auslassung mit mehr Zeichen",
+                    "SPRACHE.md §7: `effects` is obligatory and not fail-open -- a\
+                        missing clause is a missing promise, not an empty one",
                 )
                 .mit_notiz(format!(
                     "declared are: {}",
@@ -546,9 +546,9 @@ fn rumpf_gegen_wirkungen(
                     ),
                 )
                 .mit_notiz(
-                    "Lesart A: das Lesen wird genauso vollstaendig deklariert wie das \
-                     Schreiben -- eine Rahmenzusage, die nur die Schreibseite kennt, sagt \
-                     nichts darueber, WAS die Funktion gesehen hat",
+                    "reading A: reads are declared as completely as writes -- a frame\
+                        promise that knows only the write side says nothing about WHAT the\
+                        function saw",
                 )
                 .mit_notiz(format!(
                     "declared are: {}",
@@ -583,9 +583,9 @@ fn rumpf_gegen_wirkungen(
                     ),
                 )
                 .mit_notiz(
-                    "geteilt erklaeren und exklusiv nehmen ist die gefaehrliche Richtung: der \
-                     Aufrufer rechnet mit Nebenlaeufigkeit, die es nicht gibt, und legt seine \
-                     Latenzrechnung darauf an",
+                    "declaring shared and taking exclusively is the dangerous direction:\
+                        whoever reads the signature counts on concurrency that does not\
+                        exist",
                 )
                 .mit_notiz("the converse is allowed -- declaring exclusive covers the shared acquisition"),
             );
@@ -624,12 +624,11 @@ fn funktion(
                         format!("`{}` has no `effects` clause", f.name.text),
                     )
                     .mit_notiz(
-                        "SPRACHE.md §7: `effects` ist Pflicht und nicht fail-open -- \
-                         wer nichts anfasst, schreibt `effects { pure }`",
+                        "SPRACHE.md §7: `effects` is obligatory and not fail-open",
                     )
                     .mit_notiz(
-                        "die Auslassung war zugleich die staerkste Zusage und die kuerzeste \
-                         Spezifikation; der Anreiz stand gegen die Vollstaendigkeit",
+                        "the omission was at once the strongest promise and the cheapest\
+                            one to write",
                     ),
                 );
             }
@@ -660,8 +659,8 @@ fn funktion(
                     ),
                 )
                 .mit_notiz(
-                    "SYNTAX.md §14 schreibt `divergent fn idle() effects { diverges };` -- \
-                     die ausgesprochene Nichtterminierung gehoert in die Wirkungsliste",
+                    "SYNTAX.md §14 writes `divergent fn idle() effects { diverges }` --\
+                        the clause carries the divergence",
                 ),
             );
         }
@@ -676,7 +675,7 @@ fn funktion(
                     p.span,
                     "a predicate as a body is allowed only for a `spec fn`",
                 )
-                .mit_notiz("`fndecl`: `= pred ;` nur fuer `spec fn`"),
+                .mit_notiz("`fndecl`: `= pred ;` only for `spec fn`"),
             );
         }
     }
@@ -768,12 +767,10 @@ fn aufrufwirkungen(
                 ),
             )
             .mit_notiz(
-                "die Wirkungsmenge ist hier nur eine UNTERE Schranke -- aus ihr wird weder \
-                 abgesagt noch bestaetigt",
+                "the effect set is only a LOWER bound here -- no completeness follows from it",
             )
             .mit_notiz(
-                "insbesondere ist eine `pure`-Zusage an dieser Stelle NICHT geprueft; sie \
-                 stillschweigend durchzulassen waere eine Zusicherung ohne Inhalt",
+                "in particular a `pure` promise is NOT checkable at this site",
             ),
         );
         return;
@@ -817,9 +814,8 @@ fn aufrufwirkungen(
                     ),
                 )
                 .mit_notiz(
-                    "`effects` ist kompositional: die Wirkungen der Gerufenen gehoeren in \
-                     die Liste des Rufers -- sonst endet die Rahmenaussage an der ersten \
-                     Aufrufgrenze",
+                    "`effects` is compositional: the effects of the callees belong to the\
+                        caller",
                 ),
             );
             return;
@@ -835,11 +831,11 @@ fn aufrufwirkungen(
                     ),
                 )
                 .mit_notiz(
-                    "die Wirkung stammt aus einem Gerufenen -- `effects` deckte bis \
-                     2026-08-15 nur die erste Ebene",
+                    "the effect comes from a callee -- `effects` covered only the first\
+                        level until 2026-08-15",
                 )
                 .mit_notiz(format!(
-                    "erklaert sind: {}",
+                    "declared are: {}",
                     if eigene.is_empty() { "nichts".into() } else { eigene.join(", ") }
                 )),
             );

@@ -8530,3 +8530,70 @@ Klauseln 49 -> 43      ZUSAGE 16 -> 10
 ```
 
 *Jedes Mal hat das Werkzeug es gemeldet, nicht der Autor.*
+
+---
+
+# Zwei Entscheidungen: die Operationsmenge, und die Sprachfläche ist englisch
+
+## «NL.1» entschieden — `ops insert, remove, relabel`
+
+**Die Wortmenge ist geschlossen, und die Wörter sind englisch wie jedes andere
+Schlüsselwort.** Bis dahin nahm `opdecl` beliebige Bezeichner, und damit war
+`table.ops.erhaltung` unbeweisbar in dem einen Sinn, auf den es ankommt: *aus einem Namen
+fällt keine Wirkung.*
+
+**Gemessen vor der Entscheidung** (zweiter Korpus, `kernel/` + `mm/`, 659 Dateien): `remove`
+479 · `insert` 448 · *(init 408)* · `relabel` 127 · `replace` 11.
+
+| | |
+|---|---|
+| **`insert`/`remove`** | tragen 63 % der Stellen |
+| **`relabel`** | 127 Stellen — **und genau die Operation, für die `Table_Ops_Erhaltung.thy` das Gegenbeispiel führt** |
+| **`init`** | bewusst **kein** Wort: `table … count N` konstruiert, und `table.absenkung` beweist es |
+
+> **`relabel` ist aufgenommen, und die Bedingung kommt mit.** *Eine Sprache, die nur die
+> leichten Operationen deckt, verschiebt die Arbeit, sie nimmt sie nicht weg.*
+
+## Und die zweite: **die Sprachfläche von Gabbro ist englisch**
+
+**Die Schlüsselwörter waren es von Anfang an**, aus dem Grund, der in `TODO.md` steht: *das
+ist, was der vorhandene Code ist.* **Alles andere, was ein Nutzer von Gabbro liest, war nie
+entschieden** — und es war gewandert.
+
+```
+Gemessen am Tag der Entscheidung:  151 von 242 Meldungstexten deutsch
+Danach:                              0
+```
+
+Die Mischung lief durch **einzelne Sätze**: `M101` sagte *„die Rueckgabe requires `u32 in 0 ..
+100`, the value has `u32`"*.
+
+**Die Linie:** englisch sind Schlüsselwörter, Absagetexte und ihre Notizen, die Berichte von
+`paesse`/`schablonen`/`pflichten`/`zeugnis`. Deutsch bleiben die Arbeitsdokumente dieses
+Ordners, die Quellkommentare und **jeder Bezeichner, den ein Nutzer wählt** — *`beispiele/01`
+darf einen Platz weiter `Kappenraum` nennen.*
+
+> **Was Gabbro sagt, ist englisch; was der Ordner über Gabbro sagt, nicht.**
+
+## Der Wächter fand drei Dinge, die die Übersetzung allein nicht gefunden hätte
+
+**Erstens: `<von> .. <bis>`.** `narrow <ort> to <von> .. <bis> else { … }` stand in einer
+Meldung — **die Sprache lehrte dem Nutzer deutsche Metavariablen** in einem sonst englischen
+Satz. Jetzt `<place> to <lo> .. <hi>`.
+
+**Zweitens: `{von:#x}` ist keine Prosa.** Ein Formatplatzhalter nennt eine *Rust*-Variable, und
+die steht unter Quelltext. Zwei vollständig englische Meldungen blieben an ihren eigenen
+Platzhaltern hängen — der Wächter überspringt `{…}` seither.
+
+**Drittens, und es ist der hübscheste: `die` und `war` durften nicht in die Wortliste.** Beide
+sind *auch englische Wörter* (*to die*, *a war*), und eine Erkennungsliste, die auf englischem
+Text läuft, darf keine englischen Wörter enthalten.
+
+> *Der Preis ist eine Lücke, und sie geht in die sichere Richtung: **der Wächter verpflichtet,
+> er spricht nicht frei.*** Er misst gegen **86** geschlossene Funktionswörter — was er nicht
+> nennt, kann trotzdem deutsch sein (W10).
+
+```
+EBNF 139 -> 140 Regeln · 206 -> 209 Terminale · Waechter 10 -> 11
+242 Meldungstexte, 0 deutsch · 126 Tests · 118 Gifte (0 ohne Biss)
+```

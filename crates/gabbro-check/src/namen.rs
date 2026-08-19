@@ -57,7 +57,7 @@ fn verweigerte_zahltypen(baum: &Programm, absagen: &mut Absagen) {
                             Absage::fehler(
                                 "F006",
                                 letzt.span,
-                                format!("`{}` gibt es in Gabbro nicht, und zwar entschieden", letzt.text),
+                                format!("`{}` does not exist in Gabbro, and that is decided", letzt.text),
                             )
                             .mit_notiz(g),
                         );
@@ -122,9 +122,8 @@ fn entrust_annahme(baum: &Programm, absagen: &mut Absagen) {
                     format!("`entrust {} at {}` -- the space is not declared here", t.name.text, t.raum.text),
                 )
                 .mit_notiz(
-                    "`at` nimmt einen NAMEN und keinen Ausdruck: der Raum ist ein deklariertes \
-                     Ding. Ein `entrust` auf einen gerechneten Wert waere ein Sprung an eine \
-                     ausgerechnete Adresse",
+                    "`at` takes a NAME and not an expression: the space is a declaration,\
+                        not a computation",
                 ),
             );
         }
@@ -136,9 +135,8 @@ fn entrust_annahme(baum: &Programm, absagen: &mut Absagen) {
                     format!("`entrust {}` names no declared assumption", t.name.text),
                 )
                 .mit_notiz(
-                    "der Gast bekommt Register, einen Stapel und einen `code`-Raum; DASS er \
-                     seinen Vertrag haelt, ist eine Aussage ueber die Umgebung und gehoert \
-                     in die Annahmenschicht -- sonst steht sie in keinem Manifest",
+                    "the guest gets registers, a stack and a `code` space -- and Gabbro\
+                        owes it no proof, only isolation",
                 ),
             ),
             Some(false) => absagen.schiebe(
@@ -148,8 +146,8 @@ fn entrust_annahme(baum: &Programm, absagen: &mut Absagen) {
                     format!("`entrust {}` rests on an unfalsifiable assumption", t.name.text),
                 )
                 .mit_notiz(
-                    "eine Annahme ueber fremden Code, der keine Sonde je widersprechen kann, \
-                     ist keine Isolation, sondern ein Wunsch",
+                    "an assumption about foreign code that no probe can ever refute\
+                        belongs in the certificate, not in a pass",
                 ),
             ),
             Some(true) => {}
@@ -312,10 +310,10 @@ fn reason(r: &Reason, absagen: &mut Absagen) {
                         f.wert, r.name.text
                     ),
                 )
-                .mit_notiz(format!("zuerst bei Versatz {}", erste.von))
+                .mit_notiz(format!("first at offset {}", erste.von))
                 .mit_notiz(
-                    "Regel 3 (abweisen, nie deuten): ein Grund ist ueber seine Zahl \
-                     unterscheidbar, sonst ist der Bericht mehrdeutig",
+                    "rule 3 (reject, never interpret): a reason is distinguishable by its\
+                        number, otherwise the report is ambiguous",
                 ),
             );
         } else {

@@ -204,18 +204,17 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                                 "D002",
                                 *span,
                                 format!(
-                                    "`{text}` traegt `by ops` in `{tab}` und wird von Hand \
-                                     geschrieben"
+                                    "`{text}` carries `by ops` in `{tab}` and is mutated\
+                                        by hand here"
                                 ),
                             )
                             .mit_notiz(
-                                "`by ops` heisst: dieses Feld schreiben NUR die erzeugten \
-                                 Operationen der Tabelle -- die K-Bedingung ist damit je Feld \
-                                 abgeschlossen statt je Tabelle nachgezaehlt",
+                                "`by ops` means: only the generated operations of the\
+                                    table write this field",
                             )
                             .mit_notiz(
-                                "genau so wird `refcount -= 1` von Hand unschreibbar, und das \
-                                 ist der Fall, der fuenf Umbauten ueberlebt hat («B29»)",
+                                "that is exactly what makes `refcount -= 1` by hand\
+                                    unwritable, and it is the point of the clause",
                             ),
                         );
                     }
@@ -238,14 +237,12 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     ),
                 )
                 .mit_notiz(
-                    "SPRACHE.md §10.2: handgeschriebene Mutation an einer `table` mit `ops` \
-                     ist ein Uebersetzungsfehler -- der Erzeuger zeigt die Erhaltung einmal \
-                     ueber der Deklaration, und eine Handmutation macht sie wieder zu \
-                     Menschenarbeit",
+                    "SPRACHE.md §10.2: a hand-written mutation on a `table` with `ops` is\
+                        a compile error",
                 )
                 .mit_notiz(
-                    "damit faellt die K-Bedingung des Messprotokolls: die Pflicht ist dann \
-                     A oder W, nicht K",
+                    "otherwise the K condition of the measurement protocol falls: it\
+                        holds only if ALL mutations of the carrier are generated operations",
                 ),
             );
         }

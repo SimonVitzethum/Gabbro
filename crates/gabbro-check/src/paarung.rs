@@ -110,8 +110,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     format!("the pairing in `{name}` is undecidable: the call graph is incomplete here"),
                 )
                 .mit_notiz(
-                    "die Nutzlastmengen sind nur eine UNTERE Schranke -- aus ihr wird weder \
-                     eine verwaiste Haelfte gemeldet noch eine Paarung bestaetigt",
+                    "the payload sets are only a LOWER bound -- no completeness follows\
+                        from them",
                 ),
             );
             continue;
@@ -122,13 +122,13 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     Absage::fehler(
                         "V001",
                         *span,
-                        format!("`publishes {o}` in `{name}` -- nichts erwartet diese Nutzlast"),
+                        format!("`publishes {o}` in `{name}` -- nothing awaits this payload"),
                     )
                     .mit_notiz(
-                        "SPRACHE.md Teil II §1: Ordering wird GEPAART, nicht deklariert -- \
-                         eine Barriere ohne Gegenstueck ist teuer und irrefuehrend",
+                        "SPRACHE.md part II §1: ordering is PAIRED, not declared -- a\
+                            publication without a counterpart orders nothing",
                     )
-                    .mit_notiz("`publishes nothing` sagt ausdruecklich, dass es keine gibt"),
+                    .mit_notiz("`publishes nothing` says expressly that there is none"),
                 );
             }
         }
@@ -138,11 +138,11 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     Absage::fehler(
                         "V002",
                         *span,
-                        format!("`awaits {o}` in `{name}` -- nichts veroeffentlicht diese Nutzlast"),
+                        format!("`awaits {o}` in `{name}` -- nothing publishes this payload"),
                     )
                     .mit_notiz(
-                        "die gefaehrliche Haelfte: ein `awaits` ohne Gegenstueck liest \
-                         gueltigen Muell, und kein Typ sagt etwas dazu",
+                        "the dangerous half: an `awaits` without a counterpart reads a\
+                            value whose visibility nobody establishes",
                     ),
                 );
             }
@@ -155,8 +155,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     format!("`{o}` is `relaxed` and carries a payload anyway"),
                 )
                 .mit_notiz(
-                    "`relaxed` ordnet nichts -- eine Nutzlast daran ist eine Zusage, die die \
-                     Ordnung nicht haelt. `release` traegt sie, `relaxed` nicht",
+                    "`relaxed` orders nothing -- a payload on it is a promise without a\
+                        mechanism",
                 ),
             );
         }

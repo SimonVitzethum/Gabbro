@@ -89,7 +89,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
   Ablauf     if else match traverse over by touches retry forever until
              bounded progress on_exceeded per_pass return let mut
              unvisited consuming decreasing leave leaves next ops result
-             exchange update returns
+             exchange update returns insert remove relabel
   Zeiger     ptr normal mmio dma code boot r w rw x own
   Bibliothek format table slot invariant reason state transition device reg
              class fields bank at stride count backed mirrors from
@@ -161,6 +161,29 @@ regbind    = ident ":" ident ;                                 (* G4 *)
 > silently fell (capital letter, leading `@`). Now it counts them, names
 > them and carries them in a class of their own. *A named exception is a
 > promise; an invisible one is a hole.*
+
+
+> ## The surface of Gabbro is English — decided 2026-08-19
+>
+> **Keywords were English from the start**, for the reason written down in `TODO.md`: *that is
+> what the existing code is.* What was never decided is everything **else a user of Gabbro
+> reads** — and it had drifted.
+>
+> **Measured on the day of the decision: 41 of 100 refusal messages were German**, and the
+> mixture ran through single sentences (`M101`: *„die Rueckgabe requires `u32 in 0 .. 100`, the
+> value has `u32`"*).
+>
+> | | |
+> |---|---|
+> | **English** | keywords · refusal messages and their notes · the reports of `gabbro paesse`, `schablonen`, `pflichten`, `zeugnis` · the vocabulary table |
+> | **German stays** | the working documents of this folder (`PLAN.md`, `MESSUNGEN.md`, `TODO.md`), source comments, and every identifier a *user* chooses |
+>
+> **The line is: what Gabbro says is English; what the folder says about Gabbro is not.** *An
+> identifier is the user's word, not the language's* — `beispiele/01` may keep calling a slot
+> `Kappenraum`.
+>
+> **And a rule of this kind needs a guardian, or it drifts back** — `pruefe-englisch.py` holds
+> the refusal texts against a German word list, in both directions.
 
 ~~**No floating point in the core.**~~ **Revoked 2026-08-18 by «F».** `f32` and `f64` are
 core types: a declared range, a NaN bit and an infinity bit, arithmetic rounded outward,
@@ -674,7 +697,35 @@ table      = "table" ident [ "count" constexpr ] [ "backed" ident ] "{"
    Ein Schreiben auf `k` loescht jede Tatsache, die auf ihm ruht -- damit ist ein
    SCHRUMPFEN sicher, ohne dass eine Monotonieregel noetig waere. *Die Gefahr war nie das
    Wachsen.* *)
-opdecl     = "ops" identlist ";" ;
+opdecl     = "ops" opname { "," opname } ";" ;
+opname     = "insert" | "remove" | "relabel" ;
+             (* «NL.1», decided 2026-08-19: the operation set is CLOSED, and the words are
+                English like every other keyword.
+
+                Until then `opdecl` took arbitrary identifiers, and that made
+                `table.ops.erhaltung` unprovable in the only sense that matters: **from a name
+                no effect follows.** A generator cannot emit `insert` if nothing says what
+                `insert` does.
+
+                MEASURED BEFORE DECIDED (second corpus, `kernel/` + `mm/`, 659 files):
+
+                    remove     479 sites in 151 files
+                    insert     448 in 161
+                    (init)     408 in 132   -- construction, not mutation: `count N` does it
+                    relabel    127 in  43
+                    replace     11 in   7   -- marginal, folded into `relabel`
+
+                Insert and remove carry 63 % of the sites. **`relabel` is the uncomfortable
+                one:** it is re-parenting, and `Table_Ops_Erhaltung.thy` proves the
+                COUNTEREXAMPLE for it (`umhaengen_faellt` — hang one node under the other and
+                *neither* reaches a root any more). Leaving it out would leave 127 measured
+                sites as hand work; taking it in means the generator owes a condition the
+                other two do not.
+
+                **It is taken in, and the condition comes with it** — that is the decision:
+                a language that only covers the easy operations moves the work, it does not
+                remove it. *`init` is deliberately NOT a word: `table … count N` constructs,
+                and `table.absenkung` proves it.* *)
 walkdecl   = "walk" ident "levels" constexpr "{"
                "node" ":" array ","
                "down" ":" ident "when" pred ","

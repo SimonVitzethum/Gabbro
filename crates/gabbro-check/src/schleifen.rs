@@ -82,8 +82,8 @@ fn anweisung(s: &Stmt, marken: &mut Vec<String>, lg: &Lage, absagen: &mut Absage
                         ),
                     )
                     .mit_notiz(
-                        "SYNTAX.md §7: die einzige Fehlerfortpflanzung ist `let … else (e) \
-                         { … }`, und ihr Zweig muss divergieren oder zurueckkehren",
+                        "SYNTAX.md §7: the only error propagation is `let … else (e) { …\
+                            }`, and its branch must diverge or return",
                     ),
                 );
             }
@@ -194,8 +194,8 @@ fn ziel_pruefen(ziel: &Ident, marken: &[String], wort: &str, absagen: &mut Absag
         ),
     )
     .mit_notiz(
-        "SPRACHE.md §8.2: `break`/`continue` ohne Namen gibt es nicht -- \
-         bei geschachtelten Schleifen waere das Ziel sonst Konvention statt Syntax",
+        "SPRACHE.md §8.2: there is no unnamed `break`/`continue` -- with nested loops the\
+            target would be convention",
     );
     if marken.is_empty() {
         a = a.mit_notiz("no label is in scope here; `retry`/`forever` take one");
@@ -234,9 +234,8 @@ fn fortschritt_pruefen(zeuge: Option<&Ident>, lg: &Lage, absagen: &mut Absagen) 
                 format!("`progress {}` names no declared assumption", z.text),
             )
             .mit_notiz(
-                "SYNTAX.md §8.3: `progress` nennt WER die Schleife beendet -- eine Annahme \
-                 ueber die Umgebung. Ohne `assume`/`axiom` steht der Name in keinem Manifest \
-                 und kommt in kein Zeugnis",
+                "SYNTAX.md §8.3: `progress` names WHO ends the loop, and that must be a\
+                    declared assumption -- otherwise it is a hope with a keyword in front",
             ),
         ),
         Some(false) => absagen.schiebe(
@@ -246,8 +245,8 @@ fn fortschritt_pruefen(zeuge: Option<&Ident>, lg: &Lage, absagen: &mut Absagen) 
                 format!("`progress {}` rests on an unfalsifiable assumption", z.text),
             )
             .mit_notiz(
-                "der Wachhund IST der Falsifikator (`on_exceeded`); eine Annahme, der keine \
-                 Sonde je widersprechen kann, beendet die Schleife nur auf dem Papier",
+                "the watchdog IS the falsifier (`on_exceeded`); an assumption without one\
+                    is a claim",
             ),
         ),
         Some(true) => {}
@@ -304,15 +303,18 @@ fn melde(t: &Traverse, span: gabbro_syntax::span::Span, absagen: &mut Absagen) {
         Absage::fehler(
             "S005",
             span,
-            "das Abstiegsmass nennt weder die Traversierungsvariable noch einen Namen,              den der Rumpf schreibt"
+            "the descent measure names neither the traversal variable nor a name the body\
+                writes"
                 .to_string(),
         )
         .mit_notiz(format!(
-            "`{}` bewegt sich damit ueber alle Durchgaenge nicht -- und ein konstantes Mass              faellt nie",
+            "`{}` therefore does not move across the passes -- and a constant measure\
+                never falls",
             t.variable.text
         ))
         .mit_notiz(
-            "geprueft wird die NOTWENDIGE Bedingung, nicht die hinreichende: DASS es faellt,              ist Beweisersache (`consuming.ordnung`)",
+            "checked is the NECESSARY condition, not the sufficient one: THAT it falls is\
+                the prover's business (`consuming.ordnung`)",
         ),
     );
 }

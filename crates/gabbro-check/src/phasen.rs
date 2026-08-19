@@ -105,13 +105,14 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     "O001",
                     f.name.span,
                     format!(
-                        "`{}` sagt `advances` zu, hat aber keinen Parameter mit einer `order`",
+                        "`{}` promises `advances` but has no parameter of a stage-\
+                            carrying type",
                         f.name.text
                     ),
                 )
                 .mit_notiz(
-                    "eine Stufe ist eine Stufe VON ETWAS -- `linear ghost type P \
-                     order { … };`",
+                    "a stage is a stage OF SOMETHING -- `linear ghost type` plus `order`\
+                        is what carries it",
                 ),
             );
             return;
@@ -125,9 +126,9 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                         Absage::fehler(
                             "O001",
                             n.span,
-                            format!("`{}` hat keine Stufe `{}`", marke, n.text),
+                            format!("`{}` has no stage `{}`", marke, n.text),
                         )
-                        .mit_notiz(format!("die Stufen sind: {}", stufen.join(", "))),
+                        .mit_notiz(format!("the stages are: {}", stufen.join(", "))),
                     );
                 }
             }
@@ -140,14 +141,13 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     "O002",
                     f.name.span,
                     format!(
-                        "`{}` geht von `{}` nach `{}` -- das ist kein Schritt vorwaerts",
+                        "`{}` goes from `{}` to `{}` -- that is not a step forward",
                         f.name.text, von.text, nach.text
                     ),
                 )
-                .mit_notiz(format!("die Ordnung ist: {}", stufen.join(" -> ")))
+                .mit_notiz(format!("the order is: {}", stufen.join(" -> ")))
                 .mit_notiz(
-                    "ohne diese Pruefung waere `order` eine Liste und keine Ordnung -- \
-                     und genau das war «B37»",
+                    "without this check `order` would be a list and not an order",
                 ),
             );
             return;
@@ -194,13 +194,13 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                         "O004",
                         f.name.span,
                         format!(
-                            "`{}` sagt `{} -> {}` zu, der Rumpf kommt bis `{}`",
+                            "`{}` promises `{} -> {}`, the body reaches `{}`",
                             f.name.text, eigen.von, eigen.nach, letzte
                         ),
                     )
                     .mit_notiz(
-                        "die Schritte des Rumpfes muessen sich zu der Zusage zusammensetzen, \
-                         die darueber steht",
+                        "the steps of the body must compose into the promise -- otherwise\
+                            the declaration says something the body does not do",
                     ),
                 );
             }
@@ -306,12 +306,11 @@ fn fluss(
                         Absage::fehler(
                             "O006",
                             s.span,
-                            "ein Phasenschritt steht in einer Schleife",
+                            "a phase step stands inside a loop",
                         )
                         .mit_notiz(
-                            "ein Schritt geschieht einmal, eine Schleife oft -- nach zwei \
-                             Durchgaengen steht die Marke woanders, und wie viele es sind, \
-                             entscheidet die Laufzeit",
+                            "a step happens once, a loop often -- after two passes the\
+                                mark would stand two stages further",
                         ),
                     );
                 } else {
@@ -379,13 +378,13 @@ fn einigen(
                 Absage::fehler(
                     "O006",
                     *wo,
-                    format!("die {was} bringen die Marke auf verschiedene Stufen"),
+                    format!("the {was} bring the mark to different stages"),
                 )
-                .mit_notiz(format!("hier: {}", zeig(k)))
+                .mit_notiz(format!("here: {}", zeig(k)))
                 .mit_notiz(format!("anderswo: {}", zeig(erster)))
                 .mit_notiz(
-                    "gewaehlt ist die strenge Fassung: alle Zweige erreichen dieselbe \
-                     Stufe. Ein Pfad, der je nach Zweig woanders endet, ist zwei Pfade",
+                    "the strict reading is chosen: all branches reach the same stage.\
+                        From strict one can loosen, never the other way",
                 ),
             );
             let _ = span;
@@ -424,13 +423,13 @@ fn anwenden(
                 "O003",
                 span,
                 format!(
-                    "`{name}` setzt `{}` voraus, `{marke}` steht auf `{ist}`",
+                    "`{name}` presupposes `{}`, `{marke}` stands at `{ist}`",
                     sch.von
                 ),
             )
             .mit_notiz(
-                "ein linearer Wert erzwingt eine KETTE, aber nicht WELCHE -- diese Zeile \
-                 sagt, welche",
+                "a linear value forces a CHAIN, but not WHICH -- the stage is what says\
+                    where in the chain one stands",
             ),
         );
         return None;
