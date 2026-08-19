@@ -204,6 +204,15 @@ of items that are neither code nor a run — what remains is building and measur
       `rank`/`held`/`K002` leer. *Dieselbe Trennung noch einmal: die Kostenklasse vertraegt
       Symbole, die Sperrklasse nicht.* **Die Regel gehoert in die Erweiterung, bevor sie
       Grammatik wird.**
+- [ ] **Nachgemessen 2026-08-20: die Schnittstelle faellt LAUT, nicht lautlos.** Zwei
+      Dateien in EINEM Lauf werden weiter getrennt geprueft — jede ist ihre eigene
+      Uebersetzungseinheit. Ein `use bib::tu;` ueber die Dateigrenze ergibt **`E009`**
+      (*„`tu` is unknown to the graph"*) und **`K003`** (*„promises costs, but `tu` is not
+      declared here"*), also einen FEHLER. *Der Eintrag oben sagt „faellt lautlos auf untere
+      Schranke zurueck" — gemessen faellt sie nicht durch, sie faellt.* **Was fehlt, ist
+      nicht der Riegel, sondern die Bruecke.** Und `pub` hat seit dem 2026-08-19 einen Leser
+      (`N025`) — die Sichtbarkeitshaelfte einer API steht damit. Der Erzeuger schreibt
+      weiterhin **keinen Kopf**: eine `.c` je Einheit, Prototypen inline.
 - [ ] **Eine Bibliotheks-ABI, und das Format steht schon** *(bewertet 2026-08-18,
       `PLAN.md`: „Zwei Fragen, die die Grenzen beschreiben")*. **Gabbros ganze Zusage ist eine
       Aussage ueber EINE Uebersetzungseinheit** -- jede der elf Klassen wird an einem Baum

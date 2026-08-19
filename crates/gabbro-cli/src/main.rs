@@ -211,6 +211,10 @@ fn hilfe() {
   gabbro k-bedingung <file.gab>…    per carrier: are ALL write sites generated? (measurement 2)
   gabbro pflichten  <file.gab>…     what a HUMAN still owes -- counted, not discharged
   gabbro kontexte   <file.gab>…     execution contexts per place -- and the COUNT beside it
+  gabbro emit       <file.gab>…     lower to C -- and REFUSE by name (`C001`) for every
+                                    form this emitter does not know
+  gabbro zeugnis    <file.gab>…     what the translation RESTS ON: assumptions, templates
+                                    with proof state, foreign bodies, `asm` lines
 
 Exit: 0 when there is no error, 1 on errors, 2 on a wrong call."
     );
