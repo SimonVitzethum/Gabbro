@@ -10058,3 +10058,58 @@ Sprache, und dieselbe Last auf zwei Maschinen ist zwei Aussagen.*
 Gesagt ist: **vier Lasten, keine über 25 %, drei unter 7 %.** Nicht gesagt ist irgendetwas
 über einen Kern — dafür bräuchte es Caprock, und der ist nicht abgesenkt (17 von 33
 Beispielen). *Vier Lasten sind keine Sprache.*
+
+## 2026-08-20, dritter Teil — «ABI0/ABI1»: die Brücke steht
+
+**Ohne Brücke fällt eine Zusage an der Dateigrenze laut** (`E009` + `K003`) — *es fehlte
+kein Riegel, es fehlte eine Brücke.* Sie steht jetzt, und sie ist billiger als der Entwurf
+dachte:
+
+> **Ein `.gabi` ist gültiger Gabbro-Quelltext.** Die exportierten Deklarationen, ohne Rümpfe.
+> Damit liest ihn derselbe Parser, prüfen ihn dieselben Pässe, und **es gibt kein zweites
+> Format, das auseinanderlaufen kann** — genau die Klasse, die dieser Ordner „zwei Register
+> über derselben Sache" nennt.
+
+```
+gabbro abi   bib.gab > bib.gabi
+gabbro pruefe --with bib.gabi app.gab
+```
+
+Und die Messung in **beide** Richtungen:
+
+| `app` sagt | vorher | jetzt |
+|---|---|---|
+| `effects { pure }` bei schreibendem Ruf | `E009` + `K003` | **`E008`** — die Lüge fällt |
+| `effects { writes z }` | `E009` + `K003` | **0 Fehler** |
+
+*Der Unterschied zwischen „schweigt" und „prüft" ist der ganze Sinn der Sache.*
+
+### Was NICHT mitgeht, und das ist Absicht
+
+**Keine Hardwareannahmen** und **keine Sperrränge.** Eine Bibliothek, die ihre `assume`-Zeilen
+mitschickt, zwingt jedem Importeur ihre Maschine auf — und ein `override` beim Import ist
+keine Ersetzung, sondern eine **Beweispflicht** («ABI4»). *Solange die Pflicht nicht gezählt
+wird, ist es ehrlicher, die Annahmen gar nicht erst über die Grenze zu tragen.* Und
+`rank 0` ist eine absolute Zahl; **absolute Zahlen komponieren nicht** («ABI2»).
+
+Ein Test hält beides fest — er prüft ausdrücklich, dass `assume` und `rank` **nicht** im
+`.gabi` stehen.
+
+### Die C-Seite ist keine
+
+Das Erzeugnis benutzt die **gewöhnliche C-ABI**: Prototyp, äusserer Bindungsname, sonst
+nichts. Keine Gabbro-Aufrufkonvention, keine Laufzeit. *Eine Bibliothek, die man nur mit
+ihrem eigenen Übersetzer benutzen kann, ist keine Bibliothek.*
+
+### Drei Fehler, alle von den eigenen Pässen gefunden
+
+| | wer fand es |
+|---|---|
+| `extern impl fn` — die Klasse blieb stehen | der Parser des nächsten Laufs |
+| dem Export fehlte `pub` → der Import wies sich selbst ab | **`N025`**, gestern gebaut |
+| je Item ein eigener `module`-Block | **`N001`**: *„`bib` is declared twice"* |
+
+Und der schlimmste war meiner: die erste Fassung **filterte alle Meldungen aus dem
+Vorspann** — damit war das `N001` in der eigenen Schnittstelle unsichtbar, und ein Importeur
+hätte eine kaputte Bibliothek als sauber geliefert bekommen. Jetzt gilt: **ein FEHLER im
+Vorspann bricht den Lauf**, nur Hinweise werden gefiltert.

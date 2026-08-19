@@ -17,6 +17,32 @@ fn main() -> std::process::ExitCode {
     }
     let (befehl, rest) = args.split_first().expect("nicht leer");
     match befehl.as_str() {
+        // **«ABI0»: die Schnittstelle schreiben.** Gueltiger Gabbro-Quelltext, kein zweites
+        // Format -- derselbe Parser, dieselben Paesse, kein Register, das auseinanderlaufen
+        // kann.
+        "abi" => {
+            if rest.is_empty() {
+                eprintln!("gabbro abi: no file named");
+                return std::process::ExitCode::from(2);
+            }
+            for datei in rest {
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} not readable");
+                    return std::process::ExitCode::from(2);
+                };
+                let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+                gabbro_check::pruefe(&baum, &mut absagen);
+                // **Eine Schnittstelle aus einer Einheit mit Fehlern ist ein Versprechen,
+                // das die Einheit selbst nicht haelt.**
+                if absagen.fehler_zahl() > 0 {
+                    eprint!("{}", absagen.zeige(&quelle));
+                    eprintln!("gabbro abi: {datei} has errors -- no interface written");
+                    return std::process::ExitCode::from(1);
+                }
+                print!("{}", gabbro_check::abi::schreibe(&baum, &quelle));
+            }
+            std::process::ExitCode::SUCCESS
+        }
         "pruefe" => befehl_pruefe(rest),
         // **The emitter, since 2026-08-17.** It covers one fragment, not ten, and refuses by
         // name (`C001`) for every form it does not know -- a generator that guesses undoes
@@ -203,7 +229,10 @@ fn hilfe() {
     eprintln!(
         "gabbro -- compiler and checker for Gabbro (stage P2 + three passes)
 
-  gabbro pruefe     <file.gab>…     read, parse and run the built passes
+  gabbro pruefe [--with L.gabi]… <file.gab>…
+                                    read, parse and run the built passes
+  gabbro abi        <file.gab>…     write the library interface: `pub` declarations,
+                                    no bodies -- valid Gabbro, no second format
   gabbro fragmente  <file.md>…      every ```gabbro block of a markdown file, one by one
   gabbro annahmen   <file.gab>…     the assumption manifest: proved under A1…An
   gabbro paesse                     the pass list -- built AND open
@@ -254,13 +283,54 @@ fn befehl_paesse() {
     println!("  that the built passes are able to see.");
 }
 
-fn befehl_pruefe(dateien: &[String]) -> std::process::ExitCode {
+fn befehl_pruefe(argumente: &[String]) -> std::process::ExitCode {
+    // **«ABI1»: `--with <lib.gabi>` zieht eine Schnittstelle HINZU.**
+    //
+    // Die Datei ist Gabbro-Quelltext; sie wird vor die zu pruefende Einheit gestellt, und
+    // damit loesen die Namen auf. *`E009` und `K003` verschwinden dann, WEIL geprueft wird
+    // -- nicht, weil geschwiegen wird.*
+    let mut dateien: Vec<String> = Vec::new();
+    let mut mit: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < argumente.len() {
+        if argumente[i] == "--with" {
+            match argumente.get(i + 1) {
+                Some(n) => mit.push(n.clone()),
+                None => {
+                    eprintln!("gabbro pruefe: `--with` needs a `.gabi` file");
+                    return std::process::ExitCode::from(2);
+                }
+            }
+            i += 2;
+        } else {
+            dateien.push(argumente[i].clone());
+            i += 1;
+        }
+    }
     if dateien.is_empty() {
         eprintln!("gabbro pruefe: no file named");
         return std::process::ExitCode::from(2);
     }
+    let mut vorspann = String::new();
+    for m in &mit {
+        match std::fs::read_to_string(m) {
+            Ok(q) => {
+                if !q.starts_with(gabbro_check::abi::MARKE) {
+                    eprintln!("gabbro pruefe: {m} is not a `.gabi` (missing `{}`)",
+                              gabbro_check::abi::MARKE);
+                    return std::process::ExitCode::from(2);
+                }
+                vorspann.push_str(&q);
+                vorspann.push('\n');
+            }
+            Err(e) => {
+                eprintln!("gabbro: {m}: {e}");
+                return std::process::ExitCode::from(2);
+            }
+        }
+    }
     let mut fehler = 0usize;
-    for datei in dateien {
+    for datei in &dateien {
         let quelle = match std::fs::read_to_string(datei) {
             Ok(q) => q,
             Err(e) => {
@@ -269,10 +339,36 @@ fn befehl_pruefe(dateien: &[String]) -> std::process::ExitCode {
                 continue;
             }
         };
-        let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+        // **Der Vorspann steht VOR der Einheit**, damit die Spannen der Einheit stimmen --
+        // sonst zeigt jede Meldung auf die falsche Zeile.
+        let ganz = if vorspann.is_empty() {
+            quelle.clone()
+        } else {
+            format!("{vorspann}\n{quelle}")
+        };
+        let versatz = ganz.len() - quelle.len();
+        let (baum, mut absagen) = gabbro_syntax::lies(datei, &ganz);
         let bericht = pruefe(&baum, &mut absagen);
+        // Meldungen, die in den Vorspann zeigen, gehoeren der Bibliothek und nicht dieser
+        // Einheit -- sie werden hier nicht gedruckt.
+        // **Aber nur HINWEISE.** Ein FEHLER im Vorspann heisst, dass die Schnittstelle selbst
+        // nicht traegt -- den zu verschlucken hiesse, dem Importeur eine kaputte Bibliothek
+        // als sauber zu verkaufen. *Die erste Fassung filterte beides und hat damit ein
+        // `N001` in der eigenen `.gabi` verdeckt.*
+        if versatz > 0 {
+            let kaputt = absagen
+                .absagen
+                .iter()
+                .any(|a| (a.span.von as usize) < versatz && a.stufe == gabbro_syntax::Stufe::Fehler);
+            if kaputt {
+                print!("{}", absagen.zeige(&ganz));
+                eprintln!("gabbro pruefe: the interface itself does not hold -- nothing checked");
+                return std::process::ExitCode::from(1);
+            }
+            absagen.absagen.retain(|a| a.span.von as usize >= versatz);
+        }
         if !absagen.leer() {
-            print!("{}", absagen.zeige(&quelle));
+            print!("{}", absagen.zeige(&ganz));
         }
         let f = absagen.fehler_zahl();
         let h = absagen.absagen.len() - f;

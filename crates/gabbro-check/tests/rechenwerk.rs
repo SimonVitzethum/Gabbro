@@ -1767,3 +1767,46 @@ impl fn schreiben(fd : u64, puffer : u64, laenge : u64) -> u64
         "benachbarte Zeichenketten duerfen hier NICHT zusammenfallen:\n{c}"
     );
 }
+
+/// **«ABI0/ABI1» — die Brücke trägt, in BEIDE Richtungen** (2026-08-20).
+///
+/// Ohne sie fällt eine Zusage an der Dateigrenze laut, aber sie fällt: `E009`
+/// (*„unknown to the graph"*) und `K003`. **Es fehlte kein Riegel, es fehlte eine Brücke.**
+///
+/// Mit ihr wird geprüft: ein falsches `pure` über die Grenze gibt `E008`, und eine richtige
+/// Wirkungsliste geht durch. *Der Unterschied zwischen „schweigt" und „prüft" ist der ganze
+/// Sinn der Sache.*
+#[test]
+fn eine_schnittstelle_traegt_die_zusage_ueber_die_dateigrenze() {
+    let lib = r#"
+module bib {
+pub static mut z : u32 = 0;
+pub impl fn tu() effects { writes z } costs <= 1 ops { z = 1; }
+}
+"#;
+    let (lb, mut la) = gabbro_syntax::lies("bib.gab", lib);
+    gabbro_check::pruefe(&lb, &mut la);
+    assert_eq!(la.fehler_zahl(), 0, "die Bibliothek selbst ist sauber");
+    let gabi = gabbro_check::abi::schreibe(&lb, lib);
+    assert!(gabi.starts_with(gabbro_check::abi::MARKE), "die Marke steht oben:\n{gabi}");
+    assert!(gabi.contains("pub extern fn tu()"), "die Signatur ohne Rumpf, mit `pub`:\n{gabi}");
+    assert!(!gabi.contains("z = 1;"), "der RUMPF geht nicht mit:\n{gabi}");
+    // **Und ausdruecklich nicht:** Hardwareannahmen und Sperrraenge. Absolute Raenge
+    // komponieren nicht («ABI2»), und eine Annahme ueber die Grenze zu tragen, ohne die
+    // Beweispflicht zu zaehlen, waere die stille Bewegung («ABI4»).
+    assert!(!gabi.contains("assume"), "keine Annahmen in dieser Fassung:\n{gabi}");
+    assert!(!gabi.contains("rank"), "keine Raenge in dieser Fassung:\n{gabi}");
+
+    let falsch = format!("{gabi}\nmodule app {{\nuse bib::tu;\nimpl fn ruft() effects {{ pure }} costs <= 4 ops {{ tu(); }}\n}}\n");
+    let (b1, mut a1) = gabbro_syntax::lies("app.gab", &falsch);
+    gabbro_check::pruefe(&b1, &mut a1);
+    assert!(
+        a1.absagen.iter().any(|a| a.code == "E008"),
+        "ein falsches `pure` ueber die Grenze muss FALLEN, nicht zu `E009` absinken"
+    );
+
+    let richtig = format!("{gabi}\nmodule app {{\nuse bib::tu;\nimpl fn ruft() effects {{ writes z }} costs <= 4 ops {{ tu(); }}\n}}\n");
+    let (b2, mut a2) = gabbro_syntax::lies("app.gab", &richtig);
+    gabbro_check::pruefe(&b2, &mut a2);
+    assert_eq!(a2.fehler_zahl(), 0, "und die richtige Zusage geht durch:\n{}", a2.zeige(&richtig));
+}
