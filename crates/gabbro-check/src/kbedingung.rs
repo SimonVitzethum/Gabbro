@@ -126,28 +126,12 @@ fn sammle(b: &Block, ziele: &mut Vec<(Ort, Span)>, brueche: &mut Vec<(String, Sp
                 }
                 sammle(&x.rumpf, ziele, brueche);
             }
-            StmtArt::Wenn(w) => {
-                for (_, r) in &w.zweige {
-                    sammle(r, ziele, brueche);
-                }
-                if let Some(r) = &w.sonst {
-                    sammle(r, ziele, brueche);
-                }
-            }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    sammle(&z.rumpf, ziele, brueche);
-                }
-            }
-            StmtArt::Sperrt(x) => sammle(&x.rumpf, ziele, brueche),
-            StmtArt::Narrow(x) => sammle(&x.sonst, ziele, brueche),
-            StmtArt::LetSonst(x) => sammle(&x.sonst, ziele, brueche),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(x) => sammle(&x.rumpf, ziele, brueche),
-                Schleife::Retry(x) => sammle(&x.rumpf, ziele, brueche),
-                Schleife::Forever(x) => sammle(&x.rumpf, ziele, brueche),
-            },
             _ => {}
+        }
+        // **Der Abstieg über `crate::unterbloecke`** — vorher fehlte `observes`: eine
+        // Handmutation an einer `ops`-Tabelle in einem RCU-Leseblock fiel nicht.
+        for k in crate::unterbloecke(s) {
+            sammle(k, ziele, brueche);
         }
     }
 }

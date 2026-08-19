@@ -1,0 +1,28 @@
+-- erwartet: K007
+-- **`per_pass` stand seit dem 2026-08-14 als geprueft im Kopf des Kostenpasses, und es gab
+-- im ganzen Pruefer keinen Leser.** Der Satz war die Behauptung, nicht die Pruefung.
+--
+-- *Die Zusage traegt die Latenz einer Schleife, die nie endet* -- sie ist die einzige Zahl,
+-- die ueber eine `forever` ueberhaupt etwas sagt.
+module gift::forever_durchgang {
+
+static mut a : u32 = 0;
+
+extern fn watchdog_schlug_an() -> never effects { diverges };
+assume zeitgeber_tickt "Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund."
+    falsifier sonde_zeitgeber_tickt;
+
+divergent fn dienst()
+    effects { diverges, writes a }
+{
+    forever d
+        per_pass bounded 3 ops
+        on_exceeded watchdog_schlug_an
+        effects  { writes a }
+        progress zeitgeber_tickt
+    {
+        a = 1; a = 2; a = 3; a = 4; a = 5;
+    }
+}
+
+}

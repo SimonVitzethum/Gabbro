@@ -47,8 +47,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         ItemArt::State(x) => weltnamen.push(x.name.text.clone()),
         _ => {}
     });
-    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
-        ItemArt::Funktion(f) => funktion(f, &g, &konstanten, &weltnamen, absagen),
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
+        ItemArt::Funktion(f) => funktion(f, modul, &g, &konstanten, &weltnamen, absagen),
         ItemArt::Axiom(a) => rein_allein(&a.effects, absagen),
         _ => {}
     });
@@ -72,20 +72,8 @@ fn lokale(b: &Block, aus: &mut Vec<String>) {
                 aus.push(e.name.text.clone());
                 // Der Binder von `update(v)` ist der ALTE Wert -- ein Name des Rumpfes,
                 // keine Stelle der Welt.
-                if let XForm::Update { binder, rumpf } = &e.form {
+                if let XForm::Update { binder, .. } = &e.form {
                     aus.push(binder.text.clone());
-                    lokale(rumpf, aus);
-                }
-            }
-            StmtArt::Narrow(x) => lokale(&x.sonst, aus),
-            StmtArt::Sperrt(x) => lokale(&x.rumpf, aus),
-            StmtArt::Bricht(x) => lokale(&x.rumpf, aus),
-            StmtArt::Wenn(w) => {
-                for (_, r) in &w.zweige {
-                    lokale(r, aus);
-                }
-                if let Some(r) = &w.sonst {
-                    lokale(r, aus);
                 }
             }
             StmtArt::Match(m) => {
@@ -99,18 +87,17 @@ fn lokale(b: &Block, aus: &mut Vec<String>) {
                     if let Some(bi) = &z.binder {
                         aus.push(bi.text.clone());
                     }
-                    lokale(&z.rumpf, aus);
                 }
             }
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(x) => {
+            StmtArt::Schleife(sch) => {
+                if let Schleife::Traverse(x) = sch.as_ref() {
                     aus.push(x.variable.text.clone());
-                    lokale(&x.rumpf, aus);
                 }
-                Schleife::Retry(x) => lokale(&x.rumpf, aus),
-                Schleife::Forever(x) => lokale(&x.rumpf, aus),
-            },
+            }
             _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            lokale(k, aus);
         }
     }
 }
@@ -202,47 +189,27 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
             StmtArt::Exchange(e) => {
                 t.schreibt.push((e.ort.text(), e.ort.span));
                 t.liest.push((e.ort.text(), e.ort.span));
-                if let XForm::Update { rumpf, .. } = &e.form {
-                    sammle_taten(rumpf, t);
-                }
             }
-            StmtArt::Sperrt(l) => {
-                t.sperrt.push((l.sperre.text(), l.sperre.span, l.geteilt));
-                sammle_taten(&l.rumpf, t);
-            }
+            StmtArt::Sperrt(l) => t.sperrt.push((l.sperre.text(), l.sperre.span, l.geteilt)),
             StmtArt::Wenn(w) => {
-                for (bed, r) in &w.zweige {
+                for (bed, _) in &w.zweige {
                     liest_expr(bed, t);
-                    sammle_taten(r, t);
-                }
-                if let Some(r) = &w.sonst {
-                    sammle_taten(r, t);
                 }
             }
-            StmtArt::Match(m) => {
-                liest_expr(&m.gegenstand, t);
-                for z in &m.zweige {
-                    sammle_taten(&z.rumpf, t);
-                }
-            }
-            StmtArt::Narrow(x) => {
-                t.liest.push((x.ort.text(), x.ort.span));
-                sammle_taten(&x.sonst, t);
-            }
-            StmtArt::Bricht(x) => sammle_taten(&x.rumpf, t),
-            StmtArt::LetSonst(x) => sammle_taten(&x.sonst, t),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
+            StmtArt::Match(m) => liest_expr(&m.gegenstand, t),
+            StmtArt::Narrow(x) => t.liest.push((x.ort.text(), x.ort.span)),
+            StmtArt::Schleife(sch) => {
                 // Eine `traverse` mit `touches` traegt ihre eigene Wirkungsliste; sie muss
                 // trotzdem von der Funktion gedeckt sein, also zaehlt der Rumpf mit.
                 // **Die Domaene selbst wird gelesen** -- `slots of c` liest `c`.
-                Schleife::Traverse(x) => {
+                if let Schleife::Traverse(x) = sch.as_ref() {
                     domaene_liest(&x.domaene, t);
-                    sammle_taten(&x.rumpf, t);
                 }
-                Schleife::Retry(x) => sammle_taten(&x.rumpf, t),
-                Schleife::Forever(x) => sammle_taten(&x.rumpf, t),
-            },
+            }
             _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_taten(k, t);
         }
     }
 }
@@ -290,31 +257,14 @@ fn traverse_gegen_touches(
     absagen: &mut Absagen,
 ) {
     for s in &b.anweisungen {
-        let unter: Vec<&Block> = match &s.art {
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(t) => {
-                    if let Some(w) = &t.touches {
-                        pruefe_touches(t, w, fname, konstanten, weltnamen, absagen);
-                    }
-                    vec![&t.rumpf]
+        if let StmtArt::Schleife(sch) = &s.art {
+            if let Schleife::Traverse(t) = sch.as_ref() {
+                if let Some(w) = &t.touches {
+                    pruefe_touches(t, w, fname, konstanten, weltnamen, absagen);
                 }
-                Schleife::Retry(r) => vec![&r.rumpf],
-                Schleife::Forever(f) => vec![&f.rumpf],
-            },
-            StmtArt::Wenn(w) => {
-                let mut v: Vec<&Block> = w.zweige.iter().map(|(_, b)| b).collect();
-                if let Some(x) = &w.sonst {
-                    v.push(x);
-                }
-                v
             }
-            StmtArt::Bricht(x) => vec![&x.rumpf],
-            StmtArt::Sperrt(x) => vec![&x.rumpf],
-            StmtArt::Observiert(x) => vec![&x.rumpf],
-            StmtArt::LetSonst(x) => vec![&x.sonst],
-            StmtArt::Match(m) => m.zweige.iter().map(|a| &a.rumpf).collect(),
-            _ => Vec::new(),
-        };
+        }
+        let unter = crate::unterbloecke(s);
         for u in unter {
             traverse_gegen_touches(u, fname, konstanten, weltnamen, absagen);
         }
@@ -608,6 +558,7 @@ fn rumpf_gegen_wirkungen(
 
 fn funktion(
     f: &FnDecl,
+    modul: &str,
     g: &crate::aufrufgraph::Graph,
     konstanten: &[String],
     weltnamen: &[String],
@@ -637,7 +588,7 @@ fn funktion(
             rein_allein(w, absagen);
             if let FnRumpf::Block(b) = &f.rumpf {
                 rumpf_gegen_wirkungen(f, w, b, konstanten, weltnamen, absagen);
-                aufrufwirkungen(f, w, g, absagen);
+                aufrufwirkungen(f, modul, w, g, absagen);
             }
         }
     }
@@ -750,11 +701,12 @@ fn rein_allein(w: &Wirkungen, absagen: &mut Absagen) {
 /// **`E009` — unentscheidbar**, und er ist sichtbar, nicht gruen.
 fn aufrufwirkungen(
     f: &FnDecl,
+    modul: &str,
     w: &Wirkungen,
     g: &crate::aufrufgraph::Graph,
     absagen: &mut Absagen,
 ) {
-    let h = g.huelle(&f.name.text);
+    let h = g.huelle(&g.schluessel_von(modul, &f.name.text));
     if let Some(grund) = &h.unvollstaendig {
         // Weder Absage noch Bestaetigung: der dritte Zustand, und er steht da.
         absagen.schiebe(

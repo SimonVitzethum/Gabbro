@@ -50,6 +50,25 @@ enum Zustand {
     Verbraucht,
 }
 
+/// **Die `consumes`-Listen der Gerufenen -- modulbewusst seit 2026-08-19.**
+///
+/// Vorher war der Schlüssel der kurze Name: zwei `uebergeben` in zwei Modulen waren EIN
+/// Vertrag, und die Linearitätsprüfung las am Aufrufrand die Liste der falschen Funktion.
+struct Vertraege<'a> {
+    u: &'a crate::umgebung::Umgebung,
+    param: &'a BTreeMap<String, BTreeSet<String>>,
+    modul: &'a str,
+}
+
+impl Vertraege<'_> {
+    fn verbraucht(&self, pfad: &str) -> Option<&BTreeSet<String>> {
+        self.u
+            .kandidaten_oeffentlich(self.modul, pfad)
+            .into_iter()
+            .find_map(|k| self.param.get(&k))
+    }
+}
+
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // 1. Welche Typen sind linear?
     let mut linear: BTreeSet<String> = BTreeSet::new();
@@ -76,8 +95,9 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     }
 
     // 2. Welcher Parameter welcher Funktion wird verbraucht? Aus `effects { consumes … }`.
+    let u = crate::umgebung::Umgebung::sammle(baum);
     let mut verbraucht_param: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-    crate::fuer_jedes_item(baum, &mut |item| {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Funktion(f) = &item.art {
             let mut menge = BTreeSet::new();
             if let Some(w) = &f.effects {
@@ -87,20 +107,24 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     }
                 }
             }
-            verbraucht_param.insert(f.name.text.clone(), menge);
+            verbraucht_param.insert(crate::umgebung::qualifiziere(modul, &f.name.text), menge);
         }
     });
 
-    crate::fuer_jedes_item(baum, &mut |item| {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else {
             return;
         };
         let FnRumpf::Block(b) = &f.rumpf else {
             return;
         };
+        let v = Vertraege { u: &u, param: &verbraucht_param, modul };
         // Lineare Parameter, die die Funktion NICHT unter `consumes` nennt, sind geliehen --
         // sie muessen am Ende noch leben. Die genannten muessen weg sein.
-        let eigene = verbraucht_param.get(&f.name.text).cloned().unwrap_or_default();
+        let eigene = v
+            .verbraucht(&f.name.text)
+            .cloned()
+            .unwrap_or_default();
         let mut zust: BTreeMap<String, (Zustand, Span, bool)> = BTreeMap::new();
         for p in &f.parameter {
             if let TypExpr::Pfad(pf) = &p.typ {
@@ -115,7 +139,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         if zust.is_empty() {
             return;
         }
-        gehe(b, &linear, &verbraucht_param, &mut zust, absagen);
+        gehe(b, &linear, &v, &mut zust, absagen);
         // Am Ende: geliehene leben, verbrauchte sind weg.
         for (name, (z, span, soll_weg)) in &zust {
             match (z, soll_weg) {
@@ -150,22 +174,21 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 fn gehe(
     b: &Block,
     linear: &BTreeSet<String>,
-    verbraucht_param: &BTreeMap<String, BTreeSet<String>>,
+    v: &Vertraege,
     zust: &mut BTreeMap<String, (Zustand, Span, bool)>,
     absagen: &mut Absagen,
 ) {
     for s in &b.anweisungen {
         match &s.art {
-            StmtArt::Ruf(r) => ruf(r, s.span, verbraucht_param, zust, absagen),
-            StmtArt::Let(l) => ausdruck(&l.wert, s.span, verbraucht_param, zust, absagen),
+            StmtArt::Ruf(r) => ruf(r, s.span, v, zust, absagen),
+            StmtArt::Let(l) => ausdruck(&l.wert, s.span, v, zust, absagen),
             StmtArt::LetSonst(l) => {
                 if let Some(r) = l.als_ruf() {
-                    ruf(r, s.span, verbraucht_param, zust, absagen);
+                    ruf(r, s.span, v, zust, absagen);
                 }
-                gehe(&l.sonst, linear, verbraucht_param, zust, absagen);
             }
-            StmtArt::Return(Some(e)) => ausdruck(e, s.span, verbraucht_param, zust, absagen),
-            StmtArt::Zuweisung(z) => ausdruck(&z.wert, s.span, verbraucht_param, zust, absagen),
+            StmtArt::Return(Some(e)) => ausdruck(e, s.span, v, zust, absagen),
+            StmtArt::Zuweisung(z) => ausdruck(&z.wert, s.span, v, zust, absagen),
             StmtArt::Wenn(w) => {
                 // **Jeder Zweig einzeln, dann Abgleich** -- ein Wert, der nur in einem Zweig
                 // verbraucht wird, ist auf dem anderen Weg noch da. Das ist ein Leck.
@@ -173,14 +196,14 @@ fn gehe(
                 let mut ergebnisse = Vec::new();
                 for (bed, r) in &w.zweige {
                     let mut z = vorher.clone();
-                    ausdruck(bed, s.span, verbraucht_param, &mut z, absagen);
-                    gehe(r, linear, verbraucht_param, &mut z, absagen);
-                    ergebnisse.push((z, endet(r, verbraucht_param)));
+                    ausdruck(bed, s.span, v, &mut z, absagen);
+                    gehe(r, linear, v, &mut z, absagen);
+                    ergebnisse.push((z, endet(r, v)));
                 }
                 if let Some(r) = &w.sonst {
                     let mut z = vorher.clone();
-                    gehe(r, linear, verbraucht_param, &mut z, absagen);
-                    ergebnisse.push((z, endet(r, verbraucht_param)));
+                    gehe(r, linear, v, &mut z, absagen);
+                    ergebnisse.push((z, endet(r, v)));
                 } else {
                     ergebnisse.push((vorher.clone(), false));
                 }
@@ -191,15 +214,12 @@ fn gehe(
                 let mut ergebnisse = Vec::new();
                 for zw in &m.zweige {
                     let mut z = vorher.clone();
-                    gehe(&zw.rumpf, linear, verbraucht_param, &mut z, absagen);
-                    ergebnisse.push((z, endet(&zw.rumpf, verbraucht_param)));
+                    gehe(&zw.rumpf, linear, v, &mut z, absagen);
+                    ergebnisse.push((z, endet(&zw.rumpf, v)));
                 }
                 abgleich(&ergebnisse, s.span, zust, absagen);
             }
-            StmtArt::Sperrt(x) => gehe(&x.rumpf, linear, verbraucht_param, zust, absagen),
-            StmtArt::Bricht(x) => gehe(&x.rumpf, linear, verbraucht_param, zust, absagen),
-            StmtArt::Narrow(x) => gehe(&x.sonst, linear, verbraucht_param, zust, absagen),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
+            StmtArt::Schleife(_) => {
                 // **`leaves` verbraucht NICHT.** `SPRACHE.md`:858: *„die `leaves`-Klausel
                 // nennt die linearen Werte, die den Ausgang VERLASSEN"* -- sie ueberleben die
                 // Schleife, sie enden nicht in ihr.
@@ -209,19 +229,26 @@ fn gehe(
                 // und er hatte es an der Stelle, an der die Sprache ihre eigene Klausel am
                 // genauesten erklaert. *Ein Pass, der eine Klausel umdeutet, statt sie zu
                 // lesen, ist gefaehrlicher als einer, der sie ignoriert.*
-                Schleife::Forever(x) => {
-                    gehe(&x.rumpf, linear, verbraucht_param, zust, absagen);
-                }
-                Schleife::Traverse(x) => gehe(&x.rumpf, linear, verbraucht_param, zust, absagen),
-                Schleife::Retry(x) => gehe(&x.rumpf, linear, verbraucht_param, zust, absagen),
-            },
+            }
             _ => {}
+        }
+        // **Die zustandsLINEAREN Rümpfe über `crate::unterbloecke`** — `locks`, `breaking`,
+        // `narrow … else`, `observes`, `let … else`, der `exchange`-`update`-Rumpf und jeder
+        // Schleifenrumpf laufen in der Reihenfolge des Rumpfs und nicht als Zweige.
+        // *`if` und `match` bleiben oben: dort wird abgeglichen, nicht fortgeschrieben.*
+        //
+        // Vorher fehlte `exchange`: ein linearer Wert, der in einem `update(x) { … }`
+        // verbraucht wird, war für die Linearität nicht verbraucht.
+        if !matches!(&s.art, StmtArt::Wenn(_) | StmtArt::Match(_)) {
+            for k in crate::unterbloecke(s) {
+                gehe(k, linear, v, zust, absagen);
+            }
         }
     }
 }
 
 /// Endet der Block auf jedem Weg? Dann traegt er nichts zum Abgleich bei.
-fn endet(b: &Block, _v: &BTreeMap<String, BTreeSet<String>>) -> bool {
+fn endet(b: &Block, _v: &Vertraege) -> bool {
     matches!(
         b.anweisungen.last().map(|s| &s.art),
         Some(StmtArt::Return(_)) | Some(StmtArt::Leave(_)) | Some(StmtArt::Next(_))
@@ -271,15 +298,15 @@ fn abgleich(
 fn ruf(
     r: &Ruf,
     span: Span,
-    verbraucht_param: &BTreeMap<String, BTreeSet<String>>,
+    v: &Vertraege,
     zust: &mut BTreeMap<String, (Zustand, Span, bool)>,
     absagen: &mut Absagen,
 ) {
-    let Some(name) = r.pfad.teile.last() else {
+    let Some(_name) = r.pfad.teile.last() else {
         return;
     };
     let leer = BTreeSet::new();
-    let verbraucht = verbraucht_param.get(&name.text).unwrap_or(&leer);
+    let verbraucht = v.verbraucht(&r.pfad.text()).unwrap_or(&leer);
     // Die Parameternamen des Gerufenen auf die Argumente abbilden: Position fuer Position.
     let sig: Vec<String> = verbraucht.iter().cloned().collect();
     for (i, a) in r.argumente.iter().enumerate() {
@@ -323,7 +350,7 @@ fn ruf(
 fn ausdruck(
     e: &Expr,
     span: Span,
-    v: &BTreeMap<String, BTreeSet<String>>,
+    v: &Vertraege,
     zust: &mut BTreeMap<String, (Zustand, Span, bool)>,
     absagen: &mut Absagen,
 ) {
@@ -401,32 +428,13 @@ fn leaves_pruefen(
 
 fn sammle_forever<'a>(b: &'a Block, aus: &mut Vec<&'a Forever>) {
     for s in &b.anweisungen {
-        match &s.art {
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Forever(f) => {
-                    aus.push(f);
-                    sammle_forever(&f.rumpf, aus);
-                }
-                Schleife::Traverse(t) => sammle_forever(&t.rumpf, aus),
-                Schleife::Retry(r) => sammle_forever(&r.rumpf, aus),
-            },
-            StmtArt::Wenn(w) => {
-                for (_, x) in &w.zweige {
-                    sammle_forever(x, aus);
-                }
-                if let Some(x) = &w.sonst {
-                    sammle_forever(x, aus);
-                }
+        if let StmtArt::Schleife(sch) = &s.art {
+            if let Schleife::Forever(f) = sch.as_ref() {
+                aus.push(f);
             }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    sammle_forever(&z.rumpf, aus);
-                }
-            }
-            StmtArt::Bricht(x) => sammle_forever(&x.rumpf, aus),
-            StmtArt::Sperrt(x) => sammle_forever(&x.rumpf, aus),
-            StmtArt::Observiert(x) => sammle_forever(&x.rumpf, aus),
-            _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_forever(k, aus);
         }
     }
 }

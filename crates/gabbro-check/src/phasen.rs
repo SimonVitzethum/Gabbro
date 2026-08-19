@@ -72,6 +72,10 @@ struct Schritt {
 }
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
+    // **Modulbewusst seit 2026-08-19.** Zwei `oeffnen` in zwei Modulen waren EIN Schritt,
+    // und welcher galt, entschied die Reihenfolge im Quelltext -- derselbe Fehler wie im
+    // Aufrufgraphen, in einem siebten Pass.
+    let u = crate::umgebung::Umgebung::sammle(baum);
     // 1. Die Ordnungen. Typname -> Stufen in Reihenfolge.
     let mut ordnungen: BTreeMap<String, Vec<String>> = BTreeMap::new();
     crate::fuer_jedes_item(baum, &mut |i| {
@@ -87,7 +91,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 
     // 2. Die Schritte, und dabei faellt Stufe 1.
     let mut schritte: BTreeMap<String, Schritt> = BTreeMap::new();
-    crate::fuer_jedes_item(baum, &mut |i| {
+    crate::fuer_jedes_item_im_modul(baum, &mut |i, modul| {
         let ItemArt::Funktion(f) = &i.art else { return };
         let Some((von, nach)) = &f.advances else { return };
         // Welche Marke? Der erste Parameter, dessen Typ eine Ordnung hat.
@@ -153,7 +157,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             return;
         }
         schritte.insert(
-            f.name.text.clone(),
+            crate::umgebung::qualifiziere(modul, &f.name.text),
             Schritt {
                 marke,
                 von: von.text.clone(),
@@ -167,14 +171,14 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     }
 
     // 3. Der Fluss, je Rumpf.
-    crate::fuer_jedes_item(baum, &mut |i| {
+    crate::fuer_jedes_item_im_modul(baum, &mut |i, modul| {
         let ItemArt::Funktion(f) = &i.art else { return };
         let FnRumpf::Block(rumpf) = &f.rumpf else { return };
-        let Some(eigen) = schritte.get(&f.name.text) else {
+        let Some(eigen) = schritte.get(&crate::umgebung::qualifiziere(modul, &f.name.text)) else {
             // Ein Rumpf ohne eigene `advances`-Zeile darf trotzdem Schritte tun -- dann ist
             // nur nichts zugesagt, was am Ende zu erreichen waere.
             let mut stand = BTreeMap::new();
-            fluss(rumpf, &schritte, &mut stand, absagen, false);
+            fluss(rumpf, &u, modul, &schritte, &mut stand, absagen, false);
             return;
         };
         let mut stand: BTreeMap<String, String> = BTreeMap::new();
@@ -185,7 +189,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 }
             }
         }
-        let erreicht = fluss(rumpf, &schritte, &mut stand, absagen, true);
+        let erreicht = fluss(rumpf, &u, modul, &schritte, &mut stand, absagen, true);
         // **`O004`.** Eine Strecke, die unterwegs aufhoert, ist keine Strecke.
         if let Some(letzte) = erreicht {
             if letzte != eigen.nach {
@@ -211,6 +215,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 /// Verfolgt die Stufe je Marke durch einen Block. Gibt die zuletzt erreichte Stufe zurueck.
 fn fluss(
     b: &Block,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
     schritte: &BTreeMap<String, Schritt>,
     stand: &mut BTreeMap<String, String>,
     absagen: &mut Absagen,
@@ -221,21 +227,37 @@ fn fluss(
         match &s.art {
             StmtArt::Let(l) => {
                 if let ExprArt::Ruf(r) = &l.wert.art {
-                    if let Some(neu) = anwenden(r, schritte, stand, absagen) {
+                    if let Some(neu) = anwenden(r, u, modul, schritte, stand, absagen) {
                         stand.insert(l.name.text.clone(), neu.clone());
                         zuletzt = Some(neu);
                     }
                 }
             }
             StmtArt::Ruf(r) => {
-                if let Some(neu) = anwenden(r, schritte, stand, absagen) {
+                if let Some(neu) = anwenden(r, u, modul, schritte, stand, absagen) {
                     zuletzt = Some(neu);
                 }
             }
-            // **Ein `locks`-Block ist kein Zweig.** Er wird durchlaufen wie gerader Code.
-            StmtArt::Sperrt(x) => {
-                if let Some(n) = fluss(&x.rumpf, schritte, stand, absagen, melden) {
-                    zuletzt = Some(n);
+            // **Ein `locks`-Block ist kein Zweig.** Er wird durchlaufen wie gerader Code --
+            // und mit ihm `breaking`, `observes` und der `update`-Rumpf eines `exchange`.
+            // *Vier Formen, eine Aussage; bis 2026-08-19 stand nur die erste hier.*
+            StmtArt::Sperrt(_)
+            | StmtArt::Bricht(_)
+            | StmtArt::Observiert(_)
+            | StmtArt::Exchange(_) => {
+                for k in crate::unterbloecke(s) {
+                    if let Some(n) = fluss(k, u, modul, schritte, stand, absagen, melden) {
+                        zuletzt = Some(n);
+                    }
+                }
+            }
+            // **Ein `else`-Zweig ist ein AUSWEG, kein Weiterweg.** `narrow … else` und
+            // `let … else` verlassen den Hauptpfad; ihr Stand joint nicht zurück, und ein
+            // Schritt darin wird trotzdem geprüft -- vorher wurde er gar nicht angesehen.
+            StmtArt::Narrow(_) | StmtArt::LetSonst(_) => {
+                for k in crate::unterbloecke(s) {
+                    let mut ausweg = stand.clone();
+                    fluss(k, u, modul, schritte, &mut ausweg, absagen, melden);
                 }
             }
             // **K11.1: die Zweige muessen sich EINIGEN** (`O006`).
@@ -255,8 +277,8 @@ fn fluss(
                 let mut zweige: Vec<(BTreeMap<String, String>, Span)> = Vec::new();
                 for (_, r) in &w.zweige {
                     let mut k = stand.clone();
-                    fluss(r, schritte, &mut k, absagen, melden);
-                    if !endet_immer(r) {
+                    fluss(r, u, modul, schritte, &mut k, absagen, melden);
+                    if !crate::endet_immer(r, &[]) {
                         zweige.push((k, r.span));
                     }
                 }
@@ -265,8 +287,8 @@ fn fluss(
                 match &w.sonst {
                     Some(r) => {
                         let mut k = stand.clone();
-                        fluss(r, schritte, &mut k, absagen, melden);
-                        if !endet_immer(r) {
+                        fluss(r, u, modul, schritte, &mut k, absagen, melden);
+                        if !crate::endet_immer(r, &[]) {
                             zweige.push((k, r.span));
                         }
                     }
@@ -283,8 +305,8 @@ fn fluss(
                 let mut zweige: Vec<(BTreeMap<String, String>, Span)> = Vec::new();
                 for z in &m.zweige {
                     let mut k = stand.clone();
-                    fluss(&z.rumpf, schritte, &mut k, absagen, melden);
-                    if !endet_immer(&z.rumpf) {
+                    fluss(&z.rumpf, u, modul, schritte, &mut k, absagen, melden);
+                    if !crate::endet_immer(&z.rumpf, &[]) {
                         zweige.push((k, z.rumpf.span));
                     }
                 }
@@ -301,7 +323,7 @@ fn fluss(
                     Schleife::Retry(r) => &r.rumpf,
                     Schleife::Forever(f) => &f.rumpf,
                 };
-                if enthaelt_schritt(s, schritte) {
+                if enthaelt_schritt(s, u, modul, schritte) {
                     absagen.schiebe(
                         Absage::fehler(
                             "O006",
@@ -315,7 +337,7 @@ fn fluss(
                     );
                 } else {
                     let mut k = stand.clone();
-                    fluss(rumpf, schritte, &mut k, absagen, melden);
+                    fluss(rumpf, u, modul, schritte, &mut k, absagen, melden);
                 }
             }
             _ => {}
@@ -333,19 +355,6 @@ fn fluss(
 /// > **Das fand die erste Probe, und zwar in der GEGENRICHTUNG:** die Giftprobe fiel wie
 /// > gewollt, und die SAUBERE fiel mit. *Ein Tor, das nur in eine Richtung geprueft wird,
 /// > misst die Haelfte.*
-fn endet_immer(b: &Block) -> bool {
-    let Some(letzte) = b.anweisungen.last() else {
-        return false;
-    };
-    match &letzte.art {
-        StmtArt::Return(_) | StmtArt::Leave(_) | StmtArt::Next(_) => true,
-        StmtArt::Wenn(w) => {
-            w.sonst.as_ref().is_some_and(endet_immer) && w.zweige.iter().all(|(_, r)| endet_immer(r))
-        }
-        StmtArt::Match(m) => m.zweige.iter().all(|z| endet_immer(&z.rumpf)),
-        _ => false,
-    }
-}
 
 /// **Die Einigung der Zweige** (`O006`) -- K11.1.
 ///
@@ -397,12 +406,17 @@ fn einigen(
 /// Wendet einen Ruf auf den Stand an. `None`, wenn er kein Schritt ist.
 fn anwenden(
     r: &Ruf,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
     schritte: &BTreeMap<String, Schritt>,
     stand: &mut BTreeMap<String, String>,
     absagen: &mut Absagen,
 ) -> Option<String> {
     let name = r.pfad.teile.last()?.text.clone();
-    let sch = schritte.get(&name)?;
+    let sch = u
+        .kandidaten_oeffentlich(modul, &r.pfad.text())
+        .into_iter()
+        .find_map(|k| schritte.get(&k))?;
     // Welches Argument ist die Marke? Das erste, dessen Name einen Stand hat.
     let arg = r.argumente.iter().find_map(|a| match &a.art {
         ExprArt::Ort(o) if o.suffixe.is_empty() => stand
@@ -438,37 +452,24 @@ fn anwenden(
     Some(sch.nach.clone())
 }
 
-fn enthaelt_schritt(s: &Stmt, schritte: &BTreeMap<String, Schritt>) -> bool {
+fn enthaelt_schritt(
+    s: &Stmt,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
+    schritte: &BTreeMap<String, Schritt>,
+) -> bool {
     let mut gefunden = false;
     let mut sieh = |r: &Ruf| {
-        if let Some(n) = r.pfad.teile.last() {
-            if schritte.contains_key(&n.text) {
-                gefunden = true;
-            }
+        if u.kandidaten_oeffentlich(modul, &r.pfad.text())
+            .into_iter()
+            .any(|k| schritte.contains_key(&k))
+        {
+            gefunden = true;
         }
     };
     fn bloecke(s: &Stmt, f: &mut impl FnMut(&Block)) {
-        match &s.art {
-            StmtArt::Wenn(w) => {
-                for (_, r) in &w.zweige {
-                    f(r);
-                }
-                if let Some(r) = &w.sonst {
-                    f(r);
-                }
-            }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    f(&z.rumpf);
-                }
-            }
-            StmtArt::Sperrt(x) => f(&x.rumpf),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(t) => f(&t.rumpf),
-                Schleife::Retry(r) => f(&r.rumpf),
-                Schleife::Forever(x) => f(&x.rumpf),
-            },
-            _ => {}
+        for b in crate::unterbloecke(s) {
+            f(b);
         }
     }
     bloecke(s, &mut |b| {

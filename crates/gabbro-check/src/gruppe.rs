@@ -357,35 +357,18 @@ fn ereignisse(b: &Block, traeger: &[String], aus: &mut Vec<Ereignis>) {
             StmtArt::Exchange(e) => merke(&e.ort.basis.text, s.span, traeger, aus),
             StmtArt::Return(_) => aus.push(Ereignis::Austritt("return", s.span)),
             StmtArt::Leave(_) => aus.push(Ereignis::Austritt("leave", s.span)),
-            StmtArt::LetSonst(x) => {
+            StmtArt::LetSonst(_) => {
                 // **Die stillste der drei.** `let x = f() else (e) { … }` sieht wie eine
                 // Zuweisung aus und ist ein Austritt -- die einzige Fehlerfortpflanzung der
                 // Sprache. Genau deshalb steht sie hier einzeln.
                 aus.push(Ereignis::Austritt("let … else", s.span));
-                ereignisse(&x.sonst, traeger, aus);
             }
-            StmtArt::Sperrt(l) => ereignisse(&l.rumpf, traeger, aus),
-            StmtArt::Wenn(w) => {
-                for (_, r) in &w.zweige {
-                    ereignisse(r, traeger, aus);
-                }
-                if let Some(r) = &w.sonst {
-                    ereignisse(r, traeger, aus);
-                }
-            }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    ereignisse(&z.rumpf, traeger, aus);
-                }
-            }
-            StmtArt::Bricht(x) => ereignisse(&x.rumpf, traeger, aus),
-            StmtArt::Narrow(x) => ereignisse(&x.sonst, traeger, aus),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(x) => ereignisse(&x.rumpf, traeger, aus),
-                Schleife::Retry(x) => ereignisse(&x.rumpf, traeger, aus),
-                Schleife::Forever(x) => ereignisse(&x.rumpf, traeger, aus),
-            },
             _ => {}
+        }
+        // **Der Abstieg über `crate::unterbloecke`** — vorher fehlte `observes`, und ein
+        // Schreiben an einem Gruppenträger in einem RCU-Leseblock kam im Abdruck nicht an.
+        for k in crate::unterbloecke(s) {
+            ereignisse(k, traeger, aus);
         }
     }
 }
@@ -402,32 +385,11 @@ fn sammle(b: &Block, schreibt: &mut Vec<String>, haelt: &mut Vec<String>) {
             StmtArt::Zuweisung(z) => schreibt.push(z.ziel.basis.text.clone()),
             StmtArt::Publish(p) => schreibt.push(p.ziel.basis.text.clone()),
             StmtArt::Exchange(e) => schreibt.push(e.ort.basis.text.clone()),
-            StmtArt::Sperrt(l) => {
-                haelt.push(l.sperre.basis.text.clone());
-                sammle(&l.rumpf, schreibt, haelt);
-            }
-            StmtArt::Wenn(w) => {
-                for (_, r) in &w.zweige {
-                    sammle(r, schreibt, haelt);
-                }
-                if let Some(r) = &w.sonst {
-                    sammle(r, schreibt, haelt);
-                }
-            }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    sammle(&z.rumpf, schreibt, haelt);
-                }
-            }
-            StmtArt::Bricht(x) => sammle(&x.rumpf, schreibt, haelt),
-            StmtArt::Narrow(x) => sammle(&x.sonst, schreibt, haelt),
-            StmtArt::LetSonst(x) => sammle(&x.sonst, schreibt, haelt),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(x) => sammle(&x.rumpf, schreibt, haelt),
-                Schleife::Retry(x) => sammle(&x.rumpf, schreibt, haelt),
-                Schleife::Forever(x) => sammle(&x.rumpf, schreibt, haelt),
-            },
+            StmtArt::Sperrt(l) => haelt.push(l.sperre.basis.text.clone()),
             _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            sammle(k, schreibt, haelt);
         }
     }
 }

@@ -148,31 +148,15 @@ fn sammle_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
                     aus.push((n.text.clone(), r.span));
                 }
             }
-            StmtArt::Wenn(w) => {
-                for (c, x) in &w.zweige {
-                    ex(c, aus);
-                    sammle_rufe(x, aus);
-                }
-                if let Some(x) = &w.sonst {
-                    sammle_rufe(x, aus);
-                }
-            }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    sammle_rufe(&z.rumpf, aus);
-                }
-            }
-            StmtArt::Bricht(x) => sammle_rufe(&x.rumpf, aus),
-            StmtArt::Sperrt(x) => sammle_rufe(&x.rumpf, aus),
-            StmtArt::Observiert(x) => sammle_rufe(&x.rumpf, aus),
-            StmtArt::Narrow(x) => sammle_rufe(&x.sonst, aus),
-            StmtArt::LetSonst(x) => sammle_rufe(&x.sonst, aus),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(t) => sammle_rufe(&t.rumpf, aus),
-                Schleife::Retry(r) => sammle_rufe(&r.rumpf, aus),
-                Schleife::Forever(f) => sammle_rufe(&f.rumpf, aus),
-            },
             _ => {}
+        }
+        // **Der Abstieg über `crate::unterbloecke`** — erschöpfend über `StmtArt`. Vorher
+        // fehlte der `exchange`-Rumpf: ein Ruf in einem `update(x) { … }` war unsichtbar.
+        for e in crate::eigene_ausdruecke(s) {
+            ex(e, aus);
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_rufe(k, aus);
         }
     }
 }

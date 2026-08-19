@@ -82,7 +82,7 @@ fn anweisung(s: &Stmt, marken: &mut Vec<String>, lg: &Lage, absagen: &mut Absage
             // zurueckkehren"*. Faellt er durch, ist `let … else` genau der verborgene
             // Kontrollfluss, gegen den es geschrieben wurde -- der Name waere danach
             // gebunden, ohne dass je ein Wert entstand.
-            if !endet_immer(&l.sonst, lg.div) {
+            if !crate::endet_immer(&l.sonst, lg.div) {
                 absagen.schiebe(
                     Absage::fehler(
                         "S002",
@@ -174,25 +174,6 @@ fn divergierende(baum: &Programm) -> Vec<String> {
     aus
 }
 
-fn endet_immer(b: &Block, div: &[String]) -> bool {
-    let Some(letzte) = b.anweisungen.last() else {
-        return false;
-    };
-    match &letzte.art {
-        StmtArt::Return(_) | StmtArt::Leave(_) | StmtArt::Next(_) => true,
-        StmtArt::Ruf(r) => r
-            .pfad
-            .teile
-            .last()
-            .is_some_and(|n| div.iter().any(|d| d == &n.text)),
-        StmtArt::Wenn(w) => {
-            w.sonst.as_ref().is_some_and(|r| endet_immer(r, div))
-                && w.zweige.iter().all(|(_, r)| endet_immer(r, div))
-        }
-        StmtArt::Match(m) => m.zweige.iter().all(|z| endet_immer(&z.rumpf, div)),
-        _ => false,
-    }
-}
 
 fn ziel_pruefen(ziel: &Ident, marken: &[String], wort: &str, absagen: &mut Absagen) {
     if marken.iter().any(|m| m == &ziel.text) {
@@ -374,29 +355,10 @@ fn geschriebene_namen(b: &Block, aus: &mut Vec<String>) {
             StmtArt::Zuweisung(z) => aus.push(z.ziel.basis.text.clone()),
             StmtArt::Publish(p) => aus.push(p.ziel.basis.text.clone()),
             StmtArt::Exchange(e) => aus.push(e.ort.basis.text.clone()),
-            StmtArt::Wenn(w) => {
-                for (_, x) in &w.zweige {
-                    geschriebene_namen(x, aus);
-                }
-                if let Some(x) = &w.sonst {
-                    geschriebene_namen(x, aus);
-                }
-            }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    geschriebene_namen(&z.rumpf, aus);
-                }
-            }
-            StmtArt::Bricht(x) => geschriebene_namen(&x.rumpf, aus),
-            StmtArt::Sperrt(x) => geschriebene_namen(&x.rumpf, aus),
-            StmtArt::Observiert(x) => geschriebene_namen(&x.rumpf, aus),
-            StmtArt::Narrow(x) => geschriebene_namen(&x.sonst, aus),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(t) => geschriebene_namen(&t.rumpf, aus),
-                Schleife::Retry(r) => geschriebene_namen(&r.rumpf, aus),
-                Schleife::Forever(f) => geschriebene_namen(&f.rumpf, aus),
-            },
             _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            geschriebene_namen(k, aus);
         }
     }
 }

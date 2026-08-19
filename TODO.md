@@ -499,6 +499,39 @@ of items that are neither code nor a run — what remains is building and measur
 
 ---
 
+### From the review of 2026-08-19 — what is NOT yet closed
+
+*Four root causes were reproduced and closed the same day (module-qualified keys, the silent
+`relaxed`, the unchecked loop bound, the wrapping cost arithmetic; see
+[`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md)). **These are the ones that stand.** Each
+comes with a measured output, so none of them is a suspicion.*
+
+- [ ] **`effects { locks L }` is never redeemed.** The line covers every access to `L`'s
+      protected places without anybody ever TAKING the lock. `H007` counts a declared effect as
+      *held*, and that is right at the call boundary and wrong inside the declaring body —
+      **there the promise is the duty, not the evidence.**
+- [ ] **M2 tracks only linear PARAMETERS.** A linear value created inside the body is invisible,
+      and loops run once. *Exactly-once per path is therefore a statement about arguments, not
+      about values.*
+- [ ] **The pairing compares payload NAMES, not the atomic.** Two atomics that publish a
+      same-named place pair with each other. The set is united over the program (that is
+      intended); the key is the payload and should be the pair.
+- [ ] **The frame ends at the argument boundary.** `writes p.slots` at the callee is seen at the
+      caller as `writes p.slots` — **with the callee's parameter name.** The graph says so
+      (`aufrufgraph.rs` head) and it is coarse in the safe direction; what is missing is the
+      MAPPING, and without it `touches` at a call is unusable.
+- [ ] **The lock order is checked only intraprocedurally.** `H006` recomputes the rank order
+      inside one body; a cycle over two functions is not seen. *The graph now resolves names
+      module-aware — the rank walk over it is the missing piece, not the resolution.*
+- [ ] **`claim` injects C.** `emit.rs`:1214 writes the claim text into the output; verified
+      through to a smuggled token in the object. **The emitter must escape or refuse** — it
+      refuses everywhere else by name (`C001`), and this is the one place it does not.
+- [ ] **A recursive type overflows the stack** in `umgebung.rs`:938 — the `unterwegs` set does
+      not reach through on every path.
+- [ ] **`own` is a synonym for `rw`.** It carries both rights and no exclusivity; M3 says so
+      itself (*"no alias analysis"*), but the SPECIFICATION reads as if `own` were more.
+- [ ] **A lexer panic and a contradictory licence entry** — both small, both found from outside.
+
 # MEASUREMENTS — need a run
 
 - [ ] **Acceptance of the third addition** (§6): catalogue against count — **every counted instruction

@@ -60,12 +60,14 @@ struct Haelften {
     publiziert: Vec<(String, Span)>,
     /// Was erwartet wird.
     erwartet: Vec<(String, Span)>,
-    /// Ein `relaxed`-Store mit Nutzlast: die Ordnung trägt sie nicht.
-    relaxed_mit_last: Vec<(String, Span)>,
+    /// Ein `relaxed`-Store mit Nutzlast: die Ordnung trägt sie nicht. Das `bool` sagt, ob
+    /// `relaxed` **dastand** -- die schweigende Fassung ist die gefährlichere.
+    relaxed_mit_last: Vec<(String, Span, bool)>,
 }
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
-    let g = crate::aufrufgraph::erhebe(baum);
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let g = crate::aufrufgraph::erhebe_mit(baum, &u);
     let mut ordnungen: Vec<(String, Option<Ordnung>)> = Vec::new();
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Atomic(a) = &item.art {
@@ -75,7 +77,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 
     // **Erst die eigenen Hälften je Funktion, dann die transitive Vereinigung.**
     let mut je_funktion: Vec<(String, Haelften, bool)> = Vec::new();
-    crate::fuer_jedes_item(baum, &mut |item| {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else {
             return;
         };
@@ -84,7 +86,10 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         };
         let mut h = Haelften::default();
         sammle(b, &ordnungen, &mut h);
-        let unvollstaendig = g.huelle(&f.name.text).unvollstaendig.is_some();
+        let unvollstaendig = g
+            .huelle(&g.schluessel_von(modul, &f.name.text))
+            .unvollstaendig
+            .is_some();
         je_funktion.push((f.name.text.clone(), h, unvollstaendig));
     });
 
@@ -147,18 +152,32 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 );
             }
         }
-        for (o, span) in &h.relaxed_mit_last {
-            absagen.schiebe(
+        for (o, span, erklaert) in &h.relaxed_mit_last {
+            let absage = if *erklaert {
                 Absage::fehler(
                     "V004",
                     *span,
                     format!("`{o}` is `relaxed` and carries a payload anyway"),
                 )
+            } else {
+                Absage::fehler(
+                    "V005",
+                    *span,
+                    format!("`{o}` declares no ordering and carries a payload anyway"),
+                )
                 .mit_notiz(
-                    "`relaxed` orders nothing -- a payload on it is a promise without a \
-                        mechanism",
-                ),
-            );
+                    "an `atomic` without an ordering word becomes \
+                        `memory_order_relaxed` in C -- on BOTH sides",
+                )
+                .mit_notiz(
+                    "`release` at the declaration is what makes the payload visible; \
+                        without it the pairing promises what the machine does not do",
+                )
+            };
+            absagen.schiebe(absage.mit_notiz(
+                "`relaxed` orders nothing -- a payload on it is a promise without a \
+                    mechanism",
+            ));
         }
     }
 }
@@ -168,16 +187,27 @@ fn sammle(b: &Block, ordnungen: &[(String, Option<Ordnung>)], h: &mut Haelften) 
         match &s.art {
             StmtArt::Publish(p) => {
                 let ziel = p.ziel.text();
-                let ist_relaxed = ordnungen.iter().any(|(n, o)| {
-                    ziel.split(['.', '[']).next() == Some(n.as_str())
-                        && matches!(o, Some(Ordnung::Relaxed))
+                // **Ein fehlendes Ordnungswort IST `relaxed`** -- und zwar im Erzeugnis,
+                // nicht nur im Modell. Gemessen am 2026-08-19: `atomic FERTIG : bool;` mit
+                // `publishes`/`awaits` ging mit **0 Fehlern** durch, und im C standen auf
+                // BEIDEN Seiten `memory_order_relaxed`. *Die Publikation, die die Klasse
+                // trägt, verdampfte ohne eine einzige Meldung.*
+                //
+                // `matches!(o, Some(Ordnung::Relaxed))` prüfte das geschriebene Wort und
+                // liess das ungeschriebene durch -- die Vorgabe ist dieselbe Ordnung und war
+                // die einzige, über die niemand sprach.
+                let stille = ordnungen.iter().find_map(|(n, o)| {
+                    (ziel.split(['.', '[']).next() == Some(n.as_str())
+                        && matches!(o, Some(Ordnung::Relaxed) | None))
+                    .then_some(o.is_some())
                 });
                 if let Nutzlast::Orte(liste) = &p.nutzlast {
                     for o in liste {
-                        if ist_relaxed {
-                            h.relaxed_mit_last.push((ziel.clone(), s.span));
-                        } else {
-                            h.publiziert.push((form(&o.text()), s.span));
+                        match stille {
+                            Some(erklaert) => {
+                                h.relaxed_mit_last.push((ziel.clone(), s.span, erklaert))
+                            }
+                            None => h.publiziert.push((form(&o.text()), s.span)),
                         }
                     }
                 }
@@ -196,33 +226,14 @@ fn sammle(b: &Block, ordnungen: &[(String, Option<Ordnung>)], h: &mut Haelften) 
                 for o in e.erwartet.iter().flatten() {
                     h.erwartet.push((form(&o.text()), s.span));
                 }
-                if let XForm::Update { rumpf, .. } = &e.form {
-                    sammle(rumpf, ordnungen, h);
-                }
             }
-            StmtArt::Wenn(w) => {
-                for (_, r) in &w.zweige {
-                    sammle(r, ordnungen, h);
-                }
-                if let Some(r) = &w.sonst {
-                    sammle(r, ordnungen, h);
-                }
-            }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    sammle(&z.rumpf, ordnungen, h);
-                }
-            }
-            StmtArt::Sperrt(x) => sammle(&x.rumpf, ordnungen, h),
-            StmtArt::Bricht(x) => sammle(&x.rumpf, ordnungen, h),
-            StmtArt::Narrow(x) => sammle(&x.sonst, ordnungen, h),
-            StmtArt::LetSonst(x) => sammle(&x.sonst, ordnungen, h),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(x) => sammle(&x.rumpf, ordnungen, h),
-                Schleife::Retry(x) => sammle(&x.rumpf, ordnungen, h),
-                Schleife::Forever(x) => sammle(&x.rumpf, ordnungen, h),
-            },
             _ => {}
+        }
+        // **Der Abstieg geht über `crate::unterbloecke`** — erschöpfend über `StmtArt`.
+        // Vorher fehlte `observes`: eine Paarungshälfte in einem RCU-Leseblock war für
+        // diesen Pass nicht da, und die Gegenseite galt als unbeantwortet.
+        for k in crate::unterbloecke(s) {
+            sammle(k, ordnungen, h);
         }
     }
 }

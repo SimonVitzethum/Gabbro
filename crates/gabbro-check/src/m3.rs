@@ -130,37 +130,21 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
+/// **Der Abstieg geht über `crate::unterbloecke`** — erschöpfend über `StmtArt`, ohne
+/// `_`-Zweig. Vorher fehlten `observes` und `exchange`: ein Lesen über einen `ptr<…, r>` in
+/// einem RCU-Leseblock oder in einem `update`-Rumpf war für die Rechteprüfung unsichtbar.
 fn block(b: &Block, zeiger: &BTreeMap<String, Zeiger>, absagen: &mut Absagen) {
     for s in &b.anweisungen {
         match &s.art {
             StmtArt::Zuweisung(z) => schreibt(&z.ziel, s.span, zeiger, absagen),
             StmtArt::Publish(p) => schreibt(&p.ziel, s.span, zeiger, absagen),
-            StmtArt::Let(l) => liest_expr(&l.wert, s.span, zeiger, absagen),
-            StmtArt::Return(Some(e)) => liest_expr(e, s.span, zeiger, absagen),
-            StmtArt::Wenn(w) => {
-                for (bed, r) in &w.zweige {
-                    liest_expr(bed, s.span, zeiger, absagen);
-                    block(r, zeiger, absagen);
-                }
-                if let Some(r) = &w.sonst {
-                    block(r, zeiger, absagen);
-                }
-            }
-            StmtArt::Match(m) => {
-                for zw in &m.zweige {
-                    block(&zw.rumpf, zeiger, absagen);
-                }
-            }
-            StmtArt::Sperrt(x) => block(&x.rumpf, zeiger, absagen),
-            StmtArt::Bricht(x) => block(&x.rumpf, zeiger, absagen),
-            StmtArt::Narrow(x) => block(&x.sonst, zeiger, absagen),
-            StmtArt::LetSonst(x) => block(&x.sonst, zeiger, absagen),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(x) => block(&x.rumpf, zeiger, absagen),
-                Schleife::Retry(x) => block(&x.rumpf, zeiger, absagen),
-                Schleife::Forever(x) => block(&x.rumpf, zeiger, absagen),
-            },
             _ => {}
+        }
+        for e in crate::eigene_ausdruecke(s) {
+            liest_expr(e, s.span, zeiger, absagen);
+        }
+        for k in crate::unterbloecke(s) {
+            block(k, zeiger, absagen);
         }
     }
 }

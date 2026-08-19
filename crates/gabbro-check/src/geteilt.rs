@@ -87,6 +87,25 @@ struct Sperre {
     span: Span,
 }
 
+/// **Was am Aufrufrand über den Gerufenen bekannt ist -- modulbewusst.**
+///
+/// Bis 2026-08-19 schlug `H005` den KURZEN Namen nach. In einem `module`-Block traf das
+/// nie, und die Zwischenregel schwieg über jeden Aufruf ausserhalb der Wurzel.
+struct Rufwissen<'a> {
+    u: &'a crate::umgebung::Umgebung,
+    verlangt: &'a BTreeMap<String, Vec<(String, bool)>>,
+    modul: &'a str,
+}
+
+impl Rufwissen<'_> {
+    fn forderungen(&self, pfad: &str) -> Option<&Vec<(String, bool)>> {
+        self.u
+            .kandidaten_oeffentlich(self.modul, pfad)
+            .into_iter()
+            .find_map(|k| self.verlangt.get(&k))
+    }
+}
+
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let u = crate::umgebung::Umgebung::sammle(baum);
     let mut sperren: BTreeMap<String, Sperre> = BTreeMap::new();
@@ -108,7 +127,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // werden -- bis Pass 8 die Staerke des Zeugen wirklich prueft (S005).
     // **Aus dem Aufrufgraphen, nicht aus einem eigenen Durchgang.** Er traegt die Staerke
     // je Forderung -- genau das, was die Zwischenregel nicht hatte.
-    let g = crate::aufrufgraph::erhebe(baum);
+    let g = crate::aufrufgraph::erhebe_mit(baum, &u);
     let verlangt: BTreeMap<String, Vec<(String, bool)>> = g
         .knoten
         .iter()
@@ -118,14 +137,15 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 
     let mut geteilt_genommen: Vec<String> = Vec::new();
     let mut ueberhaupt_genommen: Vec<String> = Vec::new();
-    crate::fuer_jedes_item(baum, &mut |item| {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else {
             return;
         };
         let FnRumpf::Block(b) = &f.rumpf else {
             return;
         };
-        block(b, &[], &[], &[], &sperren, &verlangt, &mut geteilt_genommen, absagen);
+        let rw = Rufwissen { u: &u, verlangt: &verlangt, modul };
+        block(b, &[], &[], &[], &sperren, &rw, &mut geteilt_genommen, absagen);
     });
 
     // **Die RCU-Domaenen -- vor H007 gesammelt, weil H007 sie BRAUCHT.**
@@ -268,36 +288,14 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 /// Alle Sperren, die ein Rumpf nimmt -- fuer `H008`.
 fn sperrnahmen(b: &Block, aus: &mut Vec<String>) {
     for s in &b.anweisungen {
-        match &s.art {
-            StmtArt::Sperrt(l) => {
-                let n = l.sperre.text();
-                if !aus.contains(&n) {
-                    aus.push(n);
-                }
-                sperrnahmen(&l.rumpf, aus);
+        if let StmtArt::Sperrt(l) = &s.art {
+            let n = l.sperre.text();
+            if !aus.contains(&n) {
+                aus.push(n);
             }
-            StmtArt::Wenn(w) => {
-                for (_, r) in &w.zweige {
-                    sperrnahmen(r, aus);
-                }
-                if let Some(r) = &w.sonst {
-                    sperrnahmen(r, aus);
-                }
-            }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    sperrnahmen(&z.rumpf, aus);
-                }
-            }
-            StmtArt::Bricht(x) => sperrnahmen(&x.rumpf, aus),
-            StmtArt::Narrow(x) => sperrnahmen(&x.sonst, aus),
-            StmtArt::LetSonst(x) => sperrnahmen(&x.sonst, aus),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(t) => sperrnahmen(&t.rumpf, aus),
-                Schleife::Retry(r) => sperrnahmen(&r.rumpf, aus),
-                Schleife::Forever(f) => sperrnahmen(&f.rumpf, aus),
-            },
-            _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            sperrnahmen(k, aus);
         }
     }
 }
@@ -415,28 +413,18 @@ fn schutz(
                 }
             }
             StmtArt::Wenn(w) => {
-                for (bed, r) in &w.zweige {
+                for (bed, _) in &w.zweige {
                     orte_in(bed, &mut |o| pruefe(o, absagen));
-                    schutz(r, da, sperren, rcu, beobachtet, wo, absagen);
-                }
-                if let Some(r) = &w.sonst {
-                    schutz(r, da, sperren, rcu, beobachtet, wo, absagen);
                 }
             }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    schutz(&z.rumpf, da, sperren, rcu, beobachtet, wo, absagen);
-                }
-            }
-            StmtArt::Bricht(x) => schutz(&x.rumpf, da, sperren, rcu, beobachtet, wo, absagen),
-            StmtArt::Narrow(x) => schutz(&x.sonst, da, sperren, rcu, beobachtet, wo, absagen),
-            StmtArt::LetSonst(x) => schutz(&x.sonst, da, sperren, rcu, beobachtet, wo, absagen),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(t) => schutz(&t.rumpf, da, sperren, rcu, beobachtet, wo, absagen),
-                Schleife::Retry(r) => schutz(&r.rumpf, da, sperren, rcu, beobachtet, wo, absagen),
-                Schleife::Forever(f) => schutz(&f.rumpf, da, sperren, rcu, beobachtet, wo, absagen),
-            },
             _ => {}
+        }
+        // **Der Abstieg über `crate::unterbloecke`** — `locks` und `observes` haben ihn oben
+        // schon getan, weil beide den mitgeführten Stand ändern.
+        if !matches!(&s.art, StmtArt::Sperrt(_) | StmtArt::Observiert(_)) {
+            for k in crate::unterbloecke(s) {
+                schutz(k, da, sperren, rcu, beobachtet, wo, absagen);
+            }
         }
     }
 }
@@ -480,7 +468,7 @@ fn block(
     // nach sich zieht, laesst den Leser den Fehler an der falschen Stelle suchen.
     exklusiv: &[String],
     sperren: &BTreeMap<String, Sperre>,
-    verlangt: &BTreeMap<String, Vec<(String, bool)>>,
+    rw: &Rufwissen,
     genommen: &mut Vec<String>,
     absagen: &mut Absagen,
 ) {
@@ -517,7 +505,7 @@ fn block(
                     let mut tiefer = offen.to_vec();
                     tiefer.push(name.clone());
                     let kette2 = rangprobe(&name, l.sperre.span, kette, sperren, absagen);
-                    block(&l.rumpf, &tiefer, &kette2, exklusiv, sperren, verlangt, genommen, absagen);
+                    block(&l.rumpf, &tiefer, &kette2, exklusiv, sperren, rw, genommen, absagen);
                 } else {
                     // S003 -- Hochstufung. Auf einer Drehsperre ist das kein Stilfehler.
                     if offen.contains(&name) {
@@ -543,53 +531,39 @@ fn block(
                     let mut tiefer = exklusiv.to_vec();
                     tiefer.push(name.clone());
                     let kette2 = rangprobe(&name, l.sperre.span, kette, sperren, absagen);
-                    block(&l.rumpf, offen, &kette2, &tiefer, sperren, verlangt, genommen, absagen);
+                    block(&l.rumpf, offen, &kette2, &tiefer, sperren, rw, genommen, absagen);
                 }
             }
             StmtArt::Zuweisung(z) => {
                 schreibprobe(&z.ziel, s.span, offen, exklusiv, sperren, absagen);
-                rufprobe_expr(&z.wert, s.span, offen, verlangt, absagen);
+                rufprobe_expr(&z.wert, s.span, offen, rw, absagen);
             }
-            StmtArt::Ruf(r) => rufprobe(r, s.span, offen, verlangt, absagen),
-            StmtArt::Let(l) => rufprobe_expr(&l.wert, s.span, offen, verlangt, absagen),
-            StmtArt::Return(Some(e)) => rufprobe_expr(e, s.span, offen, verlangt, absagen),
+            StmtArt::Ruf(r) => rufprobe(r, s.span, offen, rw, absagen),
+            StmtArt::Let(l) => rufprobe_expr(&l.wert, s.span, offen, rw, absagen),
+            StmtArt::Return(Some(e)) => rufprobe_expr(e, s.span, offen, rw, absagen),
             StmtArt::Publish(p) => schreibprobe(&p.ziel, s.span, offen, exklusiv, sperren, absagen),
             StmtArt::Exchange(e) => {
-                schreibprobe(&e.ort, s.span, offen, exklusiv, sperren, absagen);
-                if let XForm::Update { rumpf, .. } = &e.form {
-                    block(rumpf, offen, kette, exklusiv, sperren, verlangt, genommen, absagen);
-                }
+                schreibprobe(&e.ort, s.span, offen, exklusiv, sperren, absagen)
             }
             StmtArt::Wenn(w) => {
                 for (b, _) in &w.zweige {
-                    rufprobe_expr(b, s.span, offen, verlangt, absagen);
-                }
-                for (_, r) in &w.zweige {
-                    block(r, offen, kette, exklusiv, sperren, verlangt, genommen, absagen);
-                }
-                if let Some(r) = &w.sonst {
-                    block(r, offen, kette, exklusiv, sperren, verlangt, genommen, absagen);
+                    rufprobe_expr(b, s.span, offen, rw, absagen);
                 }
             }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    block(&z.rumpf, offen, kette, exklusiv, sperren, verlangt, genommen, absagen);
-                }
-            }
-            StmtArt::Bricht(x) => block(&x.rumpf, offen, kette, exklusiv, sperren, verlangt, genommen, absagen),
-            StmtArt::Narrow(x) => block(&x.sonst, offen, kette, exklusiv, sperren, verlangt, genommen, absagen),
             StmtArt::LetSonst(x) => {
                 if let Some(r) = x.als_ruf() {
-                    rufprobe(r, s.span, offen, verlangt, absagen);
+                    rufprobe(r, s.span, offen, rw, absagen);
                 }
-                block(&x.sonst, offen, kette, exklusiv, sperren, verlangt, genommen, absagen);
             }
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(x) => block(&x.rumpf, offen, kette, exklusiv, sperren, verlangt, genommen, absagen),
-                Schleife::Retry(x) => block(&x.rumpf, offen, kette, exklusiv, sperren, verlangt, genommen, absagen),
-                Schleife::Forever(x) => block(&x.rumpf, offen, kette, exklusiv, sperren, verlangt, genommen, absagen),
-            },
             _ => {}
+        }
+        // **Der Abstieg über `crate::unterbloecke`** — nur `locks` bleibt oben, weil es die
+        // offene Sperrmenge ändert. Vorher fehlte `observes`: ein Aufruf mit
+        // `requires Held(L)` aus einem RCU-Leseblock heraus wurde nicht geprüft.
+        if !matches!(&s.art, StmtArt::Sperrt(_)) {
+            for k in crate::unterbloecke(s) {
+                block(k, offen, kette, exklusiv, sperren, rw, genommen, absagen);
+            }
         }
     }
 }
@@ -652,7 +626,7 @@ fn rufprobe(
     r: &Ruf,
     span: Span,
     offen: &[String],
-    verlangt: &BTreeMap<String, Vec<(String, bool)>>,
+    rw: &Rufwissen,
     absagen: &mut Absagen,
 ) {
     if offen.is_empty() {
@@ -661,7 +635,7 @@ fn rufprobe(
     let Some(name) = r.pfad.teile.last() else {
         return;
     };
-    let Some(forderungen) = verlangt.get(&name.text) else {
+    let Some(forderungen) = rw.forderungen(&r.pfad.text()) else {
         return;
     };
     for (sperre, geteilt) in forderungen {
@@ -694,22 +668,22 @@ fn rufprobe_expr(
     e: &Expr,
     span: Span,
     offen: &[String],
-    verlangt: &BTreeMap<String, Vec<(String, bool)>>,
+    rw: &Rufwissen,
     absagen: &mut Absagen,
 ) {
     match &e.art {
         ExprArt::Ruf(r) => {
-            rufprobe(r, span, offen, verlangt, absagen);
+            rufprobe(r, span, offen, rw, absagen);
             for a in &r.argumente {
-                rufprobe_expr(a, span, offen, verlangt, absagen);
+                rufprobe_expr(a, span, offen, rw, absagen);
             }
         }
         ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => {
-            rufprobe_expr(x, span, offen, verlangt, absagen)
+            rufprobe_expr(x, span, offen, rw, absagen)
         }
         ExprArt::Binaer(_, a, b) => {
-            rufprobe_expr(a, span, offen, verlangt, absagen);
-            rufprobe_expr(b, span, offen, verlangt, absagen);
+            rufprobe_expr(a, span, offen, rw, absagen);
+            rufprobe_expr(b, span, offen, rw, absagen);
         }
         _ => {}
     }
@@ -811,46 +785,16 @@ fn rcu_schutz(
                 tiefer.push(l.sperre.text());
                 rcu_schutz(&l.rumpf, beobachtet, &tiefer, domaenen, rueckgaben, sperren, wo, absagen);
             }
-            StmtArt::Wenn(w) => {
-                for (_, r) in &w.zweige {
-                    rcu_schutz(r, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen);
-                }
-                if let Some(r) = &w.sonst {
-                    rcu_schutz(r, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen);
-                }
+            _ => {}
+        }
+        // **Der Abstieg über `crate::unterbloecke`** — `observes` und `locks` bleiben oben,
+        // weil beide den mitgeführten Stand ändern. Vorher fehlte der `exchange`-Rumpf.
+        if !matches!(&s.art, StmtArt::Observiert(_) | StmtArt::Sperrt(_)) {
+            for k in crate::unterbloecke(s) {
+                rcu_schutz(k, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen);
             }
-            // **Die Bloecke, die die erste Fassung uebersah -- und der Fund kam vom
-            // KORPUS, nicht vom Nachdenken.**
-            //
-            // K2-F2 noch einmal gerendert, diesmal mit RCU: 0 Fehler. Falsch -- der Zaehler
-            // wird ohne Sperre erhoeht, nur steht die Zeile in einem `retry`, und dort sah
-            // dieser Waechter nicht hinein. *`schutz` daneben tut es seit jeher; ich habe
-            // seine Arme nicht zu Ende gelesen.*
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    rcu_schutz(&z.rumpf, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen);
-                }
-            }
-            StmtArt::Bricht(x) => {
-                rcu_schutz(&x.rumpf, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen)
-            }
-            StmtArt::Narrow(x) => {
-                rcu_schutz(&x.sonst, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen)
-            }
-            StmtArt::LetSonst(x) => {
-                rcu_schutz(&x.sonst, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen)
-            }
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(t) => {
-                    rcu_schutz(&t.rumpf, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen)
-                }
-                Schleife::Retry(r) => {
-                    rcu_schutz(&r.rumpf, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen)
-                }
-                Schleife::Forever(f) => {
-                    rcu_schutz(&f.rumpf, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen)
-                }
-            },
+        }
+        match &s.art {
             StmtArt::Publish(p) => geschrieben.push(&p.ziel),
             StmtArt::Ruf(r) => {
                 for a in &r.argumente {

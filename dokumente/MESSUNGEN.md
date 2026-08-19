@@ -9031,3 +9031,96 @@ Klauseln 36 -> 31   ·   ZUSAGE 4   ·   Konstrukte ohne Probe 7 -> 1
 
 **`check` bleibt als einziges ohne Probe, und mit Grund:** eine Probe fiele dort an nichts,
 solange die `Duty` nicht erzeugt wird. *Erst der Erzeuger, dann die Probe.*
+
+---
+
+# 2026-08-19 — Eine Rezension, vier reproduzierte Löcher, eine gemeinsame Ursache
+
+**Vier Befunde von aussen, alle selbst nachgestellt, alle gehalten.** Einer war **schlimmer**
+als gemeldet.
+
+## 1. Der Aufrufgraph schlüsselte nach dem KURZEN Namen
+
+Sieben Pässe (`aufrufgraph`, `kosten`, `geteilt`, `m2`, `phasen`, `paarung`, und über sie
+`wirkungen`) trugen ihre Karten unter `f.name.text`. **Zwei gleichnamige Funktionen in zwei
+Modulen überschrieben einander**, und welche gewann, entschied die Reihenfolge im Quelltext.
+Dieselbe Datei, nur die Module getauscht:
+
+| Reihenfolge | Ergebnis |
+|---|---|
+| `boese` zuerst | **0 Fehler** — ein `pure` mit `costs <= 8 ops` ruft etwas, das schreibt, sperrt und 900 kostet |
+| `harmlos` zuerst | 3 Fehler, **einer an der falschen Funktion**: `harmlos::hilf` mit dem Rumpf `return x;` wurde beschuldigt, etwas mit `locks SPERRE` zu rufen |
+
+Damit fielen **Rahmen, Sperre, Kosten und Phase gleichzeitig**, sobald ein Kernel zwei `init`
+oder zwei `reset` in verschiedenen Modulen hat — im echten Code der Normalfall.
+
+> **Der Kommentar an `lib.rs::fuer_jedes_item_im_modul` beschreibt genau diesen Fehler seit dem
+> 2026-08-14** und nennt den Tag, an dem M1 daran Bereichsprüfungen verlor. *M1 wurde
+> nachgezogen, die sechs anderen Pässe nicht.* Die Auflösung stand die ganze Zeit da
+> (`kandidaten_oeffentlich`); es fehlte nur ihre Anwendung.
+
+## 2. Ein `atomic` ohne Ordnungswort wird still `relaxed` — auf BEIDEN Seiten
+
+`atomic FERTIG : bool;` mit `publishes`/`awaits`: **0 Fehler**, und im Erzeugnis stand
+`memory_order_relaxed` am Speichern *und* am Laden. `V004` prüfte das **geschriebene**
+`relaxed` und liess das **ungeschriebene** durch — und die Vorgabe war dieselbe Ordnung.
+
+*Die Publikation, die die README als tragend führt, verdampfte ohne eine einzige Meldung.*
+Neu: **`V005`**.
+
+## 3. `retry … bounded N ops` rechnete den Rumpf nicht nach
+
+`bounded 2 ops` mit zehn Zuweisungen im Rumpf: **0 Fehler**. Die Schranke *war* die Zusage.
+Und `kosten.rs`:32 behauptete seit dem 2026-08-14 wörtlich, `per_pass` werde gegen den Rumpf
+geprüft — **es gab im ganzen Prüfer keinen Leser.**
+
+> Damit hatte **die einzige Schleifenform, die unendlich laufen darf**, keine geprüfte
+> Kostenaussage. Neu: **`K006`** (`retry`) und **`K007`** (`forever`), beide gegen *einen*
+> Durchgang.
+
+## 4. Die Kostenarithmetik lief still über — und das ist schlimmer als die gemeldete Panik
+
+Vier geschachtelte `traverse` über `count 4294967295`. Im **Testbau** (mit `overflow-checks`)
+hält der Prüfer an, `exit 101` — so kam der Befund herein. Im **Auslieferungsbau** läuft er
+durch:
+
+```
+3 Ebenen  ->  K001: die Zusage <= 4 ops, der Rumpf kostet 79228162458924105385300197375
+4 Ebenen  ->  0 Fehler
+```
+
+Das Produkt läuft über `i128` und wird **negativ**; `n > zusage` ist damit falsch. **`costs <= 4
+ops` galt für einen Rumpf mit 10³⁸ Schritten, mit null Meldungen.** *Der lautere der beiden
+Fälle war der harmlosere.* Jetzt: `checked_mul`/`checked_add`, und ein Überlauf ist eine
+**benannte unbekannte Zahl** (`K003`), keine kleine.
+
+## Die gemeinsame Ursache — und sie hat einen Wächter bekommen
+
+**78 `_ => {}`-Zweige über `StmtArt`.** Jeder Pass stieg selbst ab, jeder vergass einen anderen
+Arm. Der teuerste: ein Ruf **in** einem `observes`-Block kam im Aufrufgraphen nicht an — zwei
+`E008` verschwanden, dieselbe Zeile eine Ebene höher fiel.
+
+`pruefe-abstieg.py` misst es, und **die Schärfung des Wächters ist selbst ein W14-Datum**:
+
+| Ebene der Messung | Lücken |
+|---|---:|
+| erwartet (vor der Messung) | **2** |
+| je Datei | **7** |
+| je **Funktion** | **15** |
+
+Die Dateiebene zählte `m2` als gedeckt, weil `sammle_forever` nannte, was `gehe` fehlte —
+**dieselbe Vergröberung, die der Wächter an den Pässen misst, hatte er selbst.**
+
+Geschlossen über `lib.rs::unterbloecke` (erschöpfend, ohne `_`) und
+`lib.rs::endet_immer` — letzteres stand **dreimal** im Prüfer, jedes Mal unvollständig und
+jedes Mal anders; alle drei hielten `locks L { return x; }` für *fällt durch*.
+
+**Ein Nebenbefund in die andere Richtung:** `m1::sammle_zuwaechse` sah einen Zuwachs in einer
+geschachtelten Schleife **gar nicht**, statt ihn zu verwerfen. Für «H2.1» heisst das: nicht
+*„ich weiss es nicht"*, sondern *„ich habe es nicht gesehen"* — die Vergröberung ging in die
+gefährliche Richtung. Jetzt disqualifiziert sie den Kandidaten.
+
+```
+147 Kennungen · 140 Gifte (0 ohne Biss) · 127 Tests · 32 Beispiele sauber
+13 Waechter gruen · Abstieg: ALL PASS
+```

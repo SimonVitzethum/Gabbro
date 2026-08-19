@@ -456,3 +456,43 @@ einige Dutzend".*
 **Der Preis der Regel, damit sie nicht zur Ausrede wird:** sie rechtfertigt keine Schätzung
 nach oben statt einer Messung. *Sie sagt nur, welche Größenordnung eine Überraschung ist und
 welche keine.*
+
+---
+
+## W15 — Ein Sammelzweig ist eine stille Zusage, kein Vorbehalt
+
+**Der Befund.** Der Prüfer hatte **78 `_ => {}`-Zweige** über `StmtArt`. Jeder Pass stieg
+selbst in die Anweisungen ab, jeder schloss mit einem Sammelzweig — und **jeder vergaß einen
+anderen Arm**. Gemessen:
+
+| Anweisungsart | war unsichtbar für |
+|---|---|
+| `observes` | `m3`, `phasen`, `paarung`, `gruppe`, `kbedingung`, **`aufrufgraph`** |
+| `exchange` | `m1`, `m2`, `m3`, `namen`, `geteilt` |
+| `narrow … else` | `m1`, `wirkungen` |
+
+**Die Zeile, die es zeigte:** ein Ruf **in** einem `observes`-Block kam im Aufrufgraphen nicht
+an. Damit verschwanden zwei `E008` — `masks IRQ` und `writes G` standen im Gerufenen und in
+keiner Wirkungsliste. *Derselbe Ruf eine Zeile höher fiel.*
+
+**Warum `_ => {}` schlimmer ist als eine fehlende Regel.** Es liest sich wie ein Vorbehalt
+(*„damit befasse ich mich nicht"*) und wirkt wie eine Zusage (*„hier steht nichts, was mich
+angeht"*). **Niemand prüft sie nach, wenn eine Anweisungsart dazukommt** — und die neue Art
+erbt schweigend so viele Löcher, wie es Sammelzweige gibt.
+
+> **Der Unterschied zwischen einem Sammelzweig und einer Weigerung ist der Unterschied
+> zwischen einer Lücke und einem Eintrag.** `emit.rs` schliesst mit `_ => weigere(…, "statement
+> kind")` und nennt jede Form, die es nicht kann, beim Namen (`C001`). *Derselbe Zweig, die
+> andere Richtung* — und darum steht der Erzeuger in `pruefe-abstieg.py` als gedeckt da.
+
+**Die Regel.** Was über einen Baum absteigt, matcht **erschöpfend, ohne `_`** — an **einer**
+Stelle (`lib.rs::unterbloecke`, `lib.rs::endet_immer`), und alle anderen nehmen sie. Dann ist
+eine neue Anweisungsart ein **Übersetzungsfehler an jeder Kette, die sie nicht behandelt.**
+
+**Und der Nebenbefund, der die Regel bezahlt:** `endet_immer` stand **dreimal** im Prüfer,
+jedes Mal unvollständig und jedes Mal anders. Alle drei hielten `locks L { return x; }` für
+*fällt durch*. Eine Zusammenlegung schloss drei Löcher mit einer Funktion.
+
+*Gemessen von `pruefe-abstieg.py` — und zuerst zu grob: die Dateiebene zählte `m2` als gedeckt,
+weil `sammle_forever` nannte, was `gehe` fehlte. **Auf Funktionsebene wurden aus 7 Lücken 15**
+(W14, zum vierten Mal).*

@@ -29,9 +29,11 @@
 //!   die Terminierung, nicht die Rechnung. Das ist die Absicht (§7: *„ein Aufruf zaehlt die
 //!   deklarierten `costs`"*), aber es heisst: **`costs` an einer rekursiven Funktion ist eine
 //!   Annahme**, kein Ergebnis.
-//! * **`per_pass` gegen den Rumpf einer `forever`** wird geprueft; die Schranke **darf von
-//!   Eingaben abhaengen** (§9.3, `64 + 12 * lenof(msg)`), und dann ist sie nicht konstant
-//!   auswertbar. In dem Fall schweigt der Pass -- und zaehlt es.
+//! * **`per_pass` gegen den Rumpf einer `forever`** wird seit dem 2026-08-19 geprueft
+//!   (`K007`), und `bounded` an einem `retry` ebenso (`K006`). *Bis dahin stand dieser
+//!   Absatz hier und behauptete es -- ohne dass es im ganzen Pruefer einen Leser gab.* Die
+//!   Schranke **darf von Eingaben abhaengen** (§9.3, `64 + 12 * lenof(msg)`), und dann ist
+//!   sie nicht konstant auswertbar. In dem Fall schweigt der Pass -- und zaehlt es.
 //!
 //! ## Die parametrische Zusage -- seit dem 2026-08-18 GELESEN statt fallengelassen
 //!
@@ -174,19 +176,19 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         ItemArt::Funktion(f) => {
             if let Some(c) = &f.costs {
                 if let Some(n) = u.konst_wert(modul, c) {
-                    deklariert.insert(f.name.text.clone(), n);
+                    deklariert.insert(crate::umgebung::qualifiziere(modul, &f.name.text), n);
                 }
             }
         }
         ItemArt::Lock(l) => {
             if let Some(h) = &l.haltezeit {
                 if let Some(n) = u.konst_wert(modul, h) {
-                    haltezeiten.insert(l.name.text.clone(), n);
+                    haltezeiten.insert(crate::umgebung::qualifiziere(modul, &l.name.text), n);
                 }
             }
             if let Some(h) = &l.geteilte_haltezeit {
                 if let Some(n) = u.konst_wert(modul, h) {
-                    geteilte_haltezeiten.insert(l.name.text.clone(), n);
+                    geteilte_haltezeiten.insert(crate::umgebung::qualifiziere(modul, &l.name.text), n);
                 }
             }
         }
@@ -222,6 +224,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
 
         // -- K002: jeder `locks`-Block gegen die `held`-Zusage seiner Sperre.
         r.sperrbloecke(b, absagen);
+        // -- K006/K007: jede Schleifenzusage gegen ihren eigenen Rumpf.
+        r.schleifenzusagen(b, absagen);
 
         let Some(zusage_expr) = &f.costs else {
             return;
@@ -324,9 +328,44 @@ enum Kosten {
 impl Kosten {
     fn plus(self, andere: Kosten) -> Kosten {
         match (self, andere) {
-            (Kosten::Zahl(a), Kosten::Zahl(b)) => Kosten::Zahl(a + b),
+            (Kosten::Zahl(a), Kosten::Zahl(b)) => match a.checked_add(b) {
+                Some(n) => Kosten::Zahl(n),
+                None => Kosten::ueberlauf(None),
+            },
             (Kosten::Unbekannt(g, s), _) => Kosten::Unbekannt(g, s),
             (_, u) => u,
+        }
+    }
+
+    /// **Ein Ueberlauf ist eine unbekannte Zahl, keine kleine.**
+    ///
+    /// Bis 2026-08-19 rechnete der Pass mit blankem `*` und `+` ueber `i128`. Vier
+    /// geschachtelte `traverse` ueber `count 4294967295` ergaben ein NEGATIVES Produkt, und
+    /// `n > zusage` war damit falsch: **`costs <= 4 ops` galt fuer einen Rumpf mit
+    /// 10^38 Schritten, mit null Meldungen.**
+    ///
+    /// > *Im Testbau (mit `overflow-checks`) hielt das Programm an; im Auslieferungsbau lief
+    /// > es durch. Der lautere der beiden Faelle war der harmlosere.*
+    ///
+    /// Die Absage heisst `K003` wie jede andere unbekannte Zahl -- der Pass hoert auf zu
+    /// rechnen und sagt das, statt eine Zahl zu erfinden (R16).
+    fn ueberlauf(span: Option<Span>) -> Kosten {
+        Kosten::Unbekannt(
+            "the cost calculation overflows -- the bound is beyond what the pass can represent, \
+             so nothing is promised here"
+                .to_string(),
+            span,
+        )
+    }
+
+    /// Rumpfkosten x Schranke, ohne stillen Ueberlauf.
+    fn mal(self, faktor: i128, span: Option<Span>) -> Kosten {
+        match self {
+            Kosten::Zahl(a) => match a.checked_mul(faktor) {
+                Some(n) => Kosten::Zahl(n),
+                None => Kosten::ueberlauf(span),
+            },
+            u => u,
         }
     }
 }
@@ -357,7 +396,7 @@ impl<'a> Rechner<'a> {
             if let StmtArt::Wenn(w) = &s.art {
                 if w.sonst.is_none() && w.zweige.len() == 1 {
                     let (bed, rumpf) = &w.zweige[0];
-                    if endet_immer(rumpf) {
+                    if crate::endet_immer(rumpf, &[]) {
                         // Zwei Wege: durch den Zweig, oder daran vorbei und weiter.
                         let durch = self.ausdruck(bed).plus(self.block(rumpf));
                         let vorbei = self.ausdruck(bed).plus(self.rest(&b.anweisungen[i + 1..]));
@@ -376,7 +415,7 @@ impl<'a> Rechner<'a> {
             if let StmtArt::Wenn(w) = &s.art {
                 if w.sonst.is_none() && w.zweige.len() == 1 {
                     let (bed, rumpf) = &w.zweige[0];
-                    if endet_immer(rumpf) {
+                    if crate::endet_immer(rumpf, &[]) {
                         let durch = self.ausdruck(bed).plus(self.block(rumpf));
                         let vorbei = self.ausdruck(bed).plus(self.rest(&anweisungen[i + 1..]));
                         return summe.plus(groesser(durch, vorbei));
@@ -455,7 +494,7 @@ impl<'a> Rechner<'a> {
             // die Kostenzusage nicht fest -- und dann sagt der Pass das.
             Schleife::Traverse(t) => match (self.block(&t.rumpf), self.domaenenschranke(&t.domaene))
             {
-                (Kosten::Zahl(rumpf), Some(n)) => Kosten::Zahl(rumpf * n),
+                (Kosten::Zahl(rumpf), Some(n)) => Kosten::Zahl(rumpf).mal(n, Some(t.span)),
                 (Kosten::Unbekannt(g, s), _) => Kosten::Unbekannt(g, s),
                 (_, None) => Kosten::Unbekannt(
                     format!(
@@ -571,7 +610,15 @@ impl<'a> Rechner<'a> {
             .kandidaten_oeffentlich(self.modul, &name)
             .into_iter()
             .find_map(|k| self.u.uebergangskosten.get(&k).copied());
-        let mut summe = match self.deklariert.get(&name).copied().or(uebergang) {
+        // **Modulbewusst seit 2026-08-19.** Vorher gewann der zuletzt eingetragene
+        // gleichnamige Name: `a::hilf costs <= 900` und `b::hilf costs <= 1` waren EIN
+        // Eintrag, und welcher galt, entschied die Reihenfolge im Quelltext.
+        let erklaert = self
+            .u
+            .kandidaten_oeffentlich(self.modul, &r.pfad.text())
+            .into_iter()
+            .find_map(|k| self.deklariert.get(&k).copied());
+        let mut summe = match erklaert.or(uebergang) {
             Some(n) => Kosten::Zahl(n),
             None => {
                 // Kennt die Umgebung die Funktion ueberhaupt? Ein Aufruf ins Unbekannte
@@ -595,6 +642,86 @@ impl<'a> Rechner<'a> {
         summe
     }
 
+    /// **K006/K007 -- die Schleifenzusage gegen ihren eigenen Rumpf.**
+    ///
+    /// Bis 2026-08-19 rechnete der Pass fuer ein `retry` schlicht die Schranke: `bounded N
+    /// ops` WAR die Zusage, und der Rumpf wurde nie angesehen. Gemessen: `bounded 2 ops` mit
+    /// zehn Zuweisungen im Rumpf ergab **0 Fehler**.
+    ///
+    /// Dasselbe an `forever`: der Kopf dieses Moduls behauptete seit dem 2026-08-14, `per_pass`
+    /// werde gegen den Rumpf geprueft. **Es gab im ganzen Pruefer keinen Leser.** Damit hatte
+    /// genau die Schleifenform, die unendlich laufen darf, keine geprüfte Kostenaussage.
+    ///
+    /// Geprueft wird das, was sicher gilt: **EIN Durchgang muss in die Zusage passen.** Wie
+    /// viele es werden, entscheidet die Bedingung -- aber schon der erste, der nicht passt,
+    /// macht die Zeile falsch. *Ist die Schranke eingabeabhaengig, schweigt der Pass; das ist
+    /// dieselbe Stelle, an der `costs <= 4 + 12 * lenof(m)` symbolisch gelesen wird.*
+    fn schleifenzusagen(&self, b: &Block, absagen: &mut Absagen) {
+        for s in &b.anweisungen {
+            if let StmtArt::Schleife(sch) = &s.art {
+                let (rumpf, zusage_expr, wort, code, span) = match sch.as_ref() {
+                    Schleife::Retry(r) => (&r.rumpf, &r.schranke, "bounded", "K006", r.span),
+                    Schleife::Forever(f) => {
+                        (&f.rumpf, &f.je_durchgang, "per_pass bounded", "K007", f.span)
+                    }
+                    Schleife::Traverse(t) => {
+                        self.schleifenzusagen(&t.rumpf, absagen);
+                        continue;
+                    }
+                };
+                if let (Some(zusage), Kosten::Zahl(n)) = (
+                    self.u.konst_wert(self.modul, zusage_expr),
+                    self.block(rumpf),
+                ) {
+                    if n > zusage {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                code,
+                                span,
+                                format!(
+                                    "one pass of this loop costs {n} ops, the loop \
+                                     promises `{wort} {zusage} ops`"
+                                ),
+                            )
+                            .mit_notiz(
+                                "the bound is a promise about the loop, and one pass \
+                                 already exceeds it -- how often it runs does not matter \
+                                 any more",
+                            ),
+                        );
+                    }
+                }
+                self.schleifenzusagen(rumpf, absagen);
+            } else {
+                match &s.art {
+                    StmtArt::Sperrt(l) => self.schleifenzusagen(&l.rumpf, absagen),
+                    StmtArt::Bricht(x) => self.schleifenzusagen(&x.rumpf, absagen),
+                    StmtArt::Narrow(x) => self.schleifenzusagen(&x.sonst, absagen),
+                    StmtArt::LetSonst(x) => self.schleifenzusagen(&x.sonst, absagen),
+                    StmtArt::Wenn(w) => {
+                        for (_, r) in &w.zweige {
+                            self.schleifenzusagen(r, absagen);
+                        }
+                        if let Some(r) = &w.sonst {
+                            self.schleifenzusagen(r, absagen);
+                        }
+                    }
+                    StmtArt::Match(m) => {
+                        for z in &m.zweige {
+                            self.schleifenzusagen(&z.rumpf, absagen);
+                        }
+                    }
+                    StmtArt::Exchange(e) => {
+                        if let XForm::Update { rumpf, .. } = &e.form {
+                            self.schleifenzusagen(rumpf, absagen);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
     /// **K002.** Ein `locks`-Block, dessen Rumpfkosten die `held`-Zusage der Sperre
     /// uebersteigen, ist ein Uebersetzungsfehler (`SPRACHE.md` §9.3, Punkt 1). Daran haengt
     /// die Latenzaussage je Wartestelle -- ohne diese Pruefung ist sie eine Behauptung.
@@ -611,9 +738,12 @@ impl<'a> Rechner<'a> {
                     } else {
                         (self.haltezeiten, "held", "K002")
                     };
-                    if let (Some(zusage), Kosten::Zahl(n)) =
-                        (topf.get(&l.sperre.text()), self.block(&l.rumpf))
-                    {
+                    let zeit = self
+                        .u
+                        .kandidaten_oeffentlich(self.modul, &l.sperre.text())
+                        .into_iter()
+                        .find_map(|k| topf.get(&k));
+                    if let (Some(zusage), Kosten::Zahl(n)) = (zeit, self.block(&l.rumpf)) {
                         if n > *zusage {
                             absagen.schiebe(
                                 Absage::fehler(
@@ -663,19 +793,6 @@ impl<'a> Rechner<'a> {
 
 /// Verlaesst der Block seinen Weg immer? Dieselbe syntaktische Frage, die M1 fuer die
 /// V1-Verneinung stellt -- hier entscheidet sie, welche Wege sich addieren.
-fn endet_immer(b: &Block) -> bool {
-    let Some(letzte) = b.anweisungen.last() else {
-        return false;
-    };
-    match &letzte.art {
-        StmtArt::Return(_) | StmtArt::Leave(_) | StmtArt::Next(_) => true,
-        StmtArt::Wenn(w) => {
-            w.sonst.as_ref().is_some_and(endet_immer) && w.zweige.iter().all(|(_, r)| endet_immer(r))
-        }
-        StmtArt::Match(m) => m.zweige.iter().all(|z| endet_immer(&z.rumpf)),
-        _ => false,
-    }
-}
 
 fn groesser(a: Kosten, b: Kosten) -> Kosten {
     match (a, b) {
@@ -711,20 +828,20 @@ pub fn bericht(baum: &Programm) -> String {
         ItemArt::Funktion(f) => {
             if let Some(c) = &f.costs {
                 if let Some(n) = u.konst_wert(modul, c) {
-                    deklariert.insert(f.name.text.clone(), n);
+                    deklariert.insert(crate::umgebung::qualifiziere(modul, &f.name.text), n);
                 }
             }
         }
         ItemArt::Lock(l) => {
             if let Some(n) = l.haltezeit.as_ref().and_then(|h| u.konst_wert(modul, h)) {
-                haltezeiten.insert(l.name.text.clone(), n);
+                haltezeiten.insert(crate::umgebung::qualifiziere(modul, &l.name.text), n);
             }
             if let Some(n) = l
                 .geteilte_haltezeit
                 .as_ref()
                 .and_then(|h| u.konst_wert(modul, h))
             {
-                geteilte_haltezeiten.insert(l.name.text.clone(), n);
+                geteilte_haltezeiten.insert(crate::umgebung::qualifiziere(modul, &l.name.text), n);
             }
         }
         _ => {}
@@ -801,10 +918,15 @@ impl Rechner<'_> {
                 } else {
                     (self.haltezeiten, "held")
                 };
+                let zeit = self
+                    .u
+                    .kandidaten_oeffentlich(self.modul, &name)
+                    .into_iter()
+                    .find_map(|k| topf.get(&k).copied());
                 if let Kosten::Zahl(n) = self.block(&l.rumpf) {
                     out.push_str(&format!(
                         "  {wo} / {wort} {name}\t{n}\t{}\n",
-                        spalte(topf.get(&name).copied(), n)
+                        spalte(zeit, n)
                     ));
                 }
                 self.bloecke_zeigen(&l.rumpf, wo, out);
@@ -834,7 +956,7 @@ pub fn durchgangskosten(
         if let ItemArt::Funktion(f) = &item.art {
             if let Some(c) = &f.costs {
                 if let Some(n) = u.konst_wert(m, c) {
-                    deklariert.insert(f.name.text.clone(), n);
+                    deklariert.insert(crate::umgebung::qualifiziere(modul, &f.name.text), n);
                 }
             }
         }

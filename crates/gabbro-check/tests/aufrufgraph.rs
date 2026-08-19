@@ -6,6 +6,8 @@
 
 use gabbro_check::aufrufgraph;
 
+/// **Die Schluessel sind qualifiziert** (2026-08-19). Ein Test, der `huelle("oben")` sagt,
+/// misst nicht mehr, was er zu messen glaubt -- `t::oben` ist der Name.
 fn graph(q: &str) -> aufrufgraph::Graph {
     aufrufgraph::erhebe(&gabbro_syntax::lies("probe.gab", q).0)
 }
@@ -17,7 +19,7 @@ extern fn tief(p : ptr<normal, rw> T) effects { writes p.slots } costs <= 1 ops;
 impl fn mitte(p : ptr<normal, rw> T) effects { writes p.slots } costs <= 4 ops { tief(p); }
 impl fn oben(p : ptr<normal, rw> T) effects { writes p.slots } costs <= 8 ops { mitte(p); }
 }";
-    let h = graph(q).huelle("oben");
+    let h = graph(q).huelle("t::oben");
     assert!(h.wirkungen.contains("writes p.slots"), "{:?}", h.wirkungen);
     assert!(h.unvollstaendig.is_none(), "kein Zyklus, keine Luecke: {:?}", h.unvollstaendig);
 }
@@ -31,7 +33,7 @@ extern fn ganz_tief() effects { masks IRQ } costs <= 1 ops;
 impl fn mitte() effects { pure } costs <= 4 ops { ganz_tief(); }
 impl fn oben() effects { pure } costs <= 8 ops { mitte(); }
 }";
-    let h = graph(q).huelle("oben");
+    let h = graph(q).huelle("t::oben");
     assert!(
         h.wirkungen.contains("masks IRQ"),
         "zwei Ebenen tiefer und trotzdem sichtbar -- sonst deckt `effects` nur die erste: {:?}",
@@ -45,7 +47,7 @@ fn ein_zyklus_endet_und_sagt_dass_er_einer_war() {
 impl fn a() effects { pure } costs <= 4 ops { b(); }
 impl fn b() effects { pure } costs <= 4 ops { a(); }
 }";
-    let h = graph(q).huelle("a");
+    let h = graph(q).huelle("t::a");
     assert!(
         h.unvollstaendig.as_deref().is_some_and(|s| s.contains("cycle")),
         "ein Zyklus liefert eine UNTERE SCHRANKE und heisst so: {:?}",
@@ -59,7 +61,7 @@ fn ein_gerufener_ohne_effects_macht_die_menge_zur_unteren_schranke() {
 spec fn stumm() -> bool { true }
 impl fn oben() effects { pure } costs <= 4 ops { stumm(); }
 }";
-    let h = graph(q).huelle("oben");
+    let h = graph(q).huelle("t::oben");
     assert!(
         h.unvollstaendig.is_some(),
         "ohne `effects` beim Gerufenen ist nichts ableitbar -- das muss dastehen"
@@ -74,8 +76,8 @@ impl fn exklusiv(p : ptr<normal, rw> T) requires Held(L) effects { writes p.slot
 impl fn geteilt(p : ptr<normal, r> T) requires Held(L, shared) effects { reads p.slots } costs <= 1 ops { }
 }";
     let g = graph(q);
-    assert_eq!(g.verlangt("exklusiv"), &[("L".to_string(), false)][..], "exklusiv");
-    assert_eq!(g.verlangt("geteilt"), &[("L".to_string(), true)][..], "geteilt");
+    assert_eq!(g.verlangt("t::exklusiv"), &[("L".to_string(), false)][..], "exklusiv");
+    assert_eq!(g.verlangt("t::geteilt"), &[("L".to_string(), true)][..], "geteilt");
 }
 
 #[test]
@@ -115,7 +117,7 @@ device D(basis : u64) at mmio {
 }
 impl fn schalte(d : ptr<mmio, rw> D) effects { writes d.G } costs <= 4 ops { an(d); }
 }";
-    let h = graph(q).huelle("schalte");
+    let h = graph(q).huelle("t::schalte");
     assert!(h.unvollstaendig.is_none(), "der Uebergang ist bekannt: {:?}", h.unvollstaendig);
     assert!(h.wirkungen.contains("writes G"), "seine Wirkung kommt an: {:?}", h.wirkungen);
 }
@@ -138,7 +140,7 @@ extern fn tief(p : ptr<normal, rw> T) effects { masks IRQ } costs <= 1 ops;
 impl fn oben(p : ptr<normal, rw> T, a : A) effects { pure } costs <= 8 ops
 { match a { Eins(x) => { tief(p); } Zwei(y) => { } } }
 }";
-    let h = graph(q).huelle("oben");
+    let h = graph(q).huelle("t::oben");
     assert!(
         h.wirkungen.contains("masks IRQ"),
         "ein Ruf in einem `match`-Zweig ist ein Ruf: {:?}",
@@ -154,7 +156,7 @@ extern fn tief(p : ptr<normal, rw> T) effects { masks IRQ } costs <= 1 ops;
 impl fn oben(p : ptr<normal, rw> T) effects { pure } costs <= 8 ops
 { locks L { traverse s over slots of p by unvisited { tief(p); } } }
 }";
-    let h = graph(q).huelle("oben");
+    let h = graph(q).huelle("t::oben");
     assert!(
         h.wirkungen.contains("masks IRQ"),
         "weder ein `locks`-Block noch ein Schleifenrumpf versteckt einen Ruf: {:?}",
@@ -173,10 +175,45 @@ table T count 8 { slot { eltern : option index into T, } }
 impl fn setze(p : ptr<normal, rw> T, i : index into T) effects { writes p.slots } costs <= 4 ops
 { p.slots[i].eltern = None; }
 }";
-    let h = graph(q).huelle("setze");
+    let h = graph(q).huelle("t::setze");
     assert!(
         h.unvollstaendig.is_none(),
         "`None` ist ein Konstruktor, kein unbekannter Gerufener: {:?}",
         h.unvollstaendig
+    );
+}
+
+#[test]
+fn zwei_gleichnamige_in_zwei_modulen_sind_zwei_funktionen() {
+    // **Der Fund vom 2026-08-19, als Probe.** Bis dahin war der Schluessel der KURZE Name:
+    // `boese::hilf` und `harmlos::hilf` waren EIN Knoten, und welcher gewann, entschied die
+    // Reihenfolge im Quelltext. Gemessen ergab dieselbe Datei einmal 0 Fehler fuer ein
+    // `pure`, das etwas Schreibendes ruft, und einmal drei -- davon einer an der FALSCHEN
+    // Funktion.
+    let q = "module boese {
+impl fn hilf() effects { masks IRQ } costs <= 900 ops { }
+}
+module harmlos {
+impl fn hilf() effects { pure } costs <= 1 ops { }
+impl fn ruft() effects { pure } costs <= 8 ops { hilf(); }
+}";
+    let g = graph(q);
+    // Beide stehen im Graphen, unter ihren eigenen Namen.
+    assert!(g.knoten.contains_key("boese::hilf"), "{:?}", g.knoten.keys());
+    assert!(g.knoten.contains_key("harmlos::hilf"), "{:?}", g.knoten.keys());
+    // Und der Ruf im HARMLOSEN Modul trifft den harmlosen Nachbarn.
+    let h = g.huelle("harmlos::ruft");
+    assert!(
+        !h.wirkungen.contains("masks IRQ"),
+        "ein `hilf` im eigenen Modul ist naeher als ein gleichnamiges in einem fremden: {:?}",
+        h.wirkungen
+    );
+    // **Die Gegenprobe, sonst ist gruen nur gruen** (R14b): der QUALIFIZIERTE Ruf trifft.
+    let q2 = q.replace("{ hilf(); }", "{ boese::hilf(); }");
+    let h2 = graph(&q2).huelle("harmlos::ruft");
+    assert!(
+        h2.wirkungen.contains("masks IRQ"),
+        "wer `boese::hilf` schreibt, ruft `boese::hilf`: {:?}",
+        h2.wirkungen
     );
 }

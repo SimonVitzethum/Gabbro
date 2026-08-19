@@ -1,0 +1,30 @@
+-- erwartet: E008
+-- **Ein Ruf in einem `observes`-Block war für den Rahmenpass unsichtbar.**
+--
+-- `aufrufgraph::sammle_rufe` zählte seine Anweisungsarten selbst auf und schloss mit
+-- `_ => {}`; `observes` fehlte. Gemessen am 2026-08-19: derselbe Ruf eine Zeile HÖHER fiel
+-- mit zwei `E008`, hier drin mit keinem. *Der RCU-Leseblock war ein Versteck.*
+module gift::ruf_im_observes {
+
+table Konten count 8 { slot { zaehler : u32, } }
+static mut frei : option index into Konten = None;
+static mut G : u32 = 0;
+rcu BACCT protects { Konten } reclaims frei;
+
+impl fn schreibt_heimlich() -> u32
+    effects { writes G, masks IRQ }
+    costs   <= 4 ops
+{ G = 1; return 0; }
+
+impl fn lesen(i : index into Konten) -> u32
+    effects { reads Konten.slots }
+    costs   <= 900 ops
+{
+    observes BACCT {
+        let x = schreibt_heimlich();
+        return Konten.slots[i].zaehler;
+    }
+    return 0;
+}
+
+}

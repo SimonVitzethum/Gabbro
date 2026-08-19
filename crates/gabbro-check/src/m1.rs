@@ -2483,16 +2483,10 @@ fn sammle_schreibziele(b: &Block, out: &mut Vec<Ort>) {
                     sammle_schreibziele(&z.rumpf, out);
                 }
             }
-            StmtArt::Bricht(x) => sammle_schreibziele(&x.rumpf, out),
-            StmtArt::Sperrt(x) => sammle_schreibziele(&x.rumpf, out),
-            StmtArt::Narrow(x) => sammle_schreibziele(&x.sonst, out),
-            StmtArt::LetSonst(x) => sammle_schreibziele(&x.sonst, out),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(t) => sammle_schreibziele(&t.rumpf, out),
-                Schleife::Retry(r) => sammle_schreibziele(&r.rumpf, out),
-                Schleife::Forever(f) => sammle_schreibziele(&f.rumpf, out),
-            },
             _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_schreibziele(k, out);
         }
     }
 }
@@ -2661,16 +2655,7 @@ fn zeichen(op: BinOp) -> &'static str {
 fn enthaelt_schleife(b: &Block) -> bool {
     b.anweisungen.iter().any(|s| match &s.art {
         StmtArt::Schleife(_) => true,
-        StmtArt::Wenn(w) => {
-            w.zweige.iter().any(|(_, b)| enthaelt_schleife(b))
-                || w.sonst.as_ref().is_some_and(enthaelt_schleife)
-        }
-        StmtArt::Bricht(x) => enthaelt_schleife(&x.rumpf),
-        StmtArt::Sperrt(x) => enthaelt_schleife(&x.rumpf),
-        StmtArt::Observiert(x) => enthaelt_schleife(&x.rumpf),
-        StmtArt::LetSonst(x) => enthaelt_schleife(&x.sonst),
-        StmtArt::Match(m) => m.zweige.iter().any(|a| enthaelt_schleife(&a.rumpf)),
-        _ => false,
+        _ => crate::unterbloecke(s).into_iter().any(enthaelt_schleife),
     })
 }
 
@@ -2707,23 +2692,33 @@ fn sammle_zuwaechse(b: &Block, aus: &mut HashMap<String, Option<i128>>) {
             StmtArt::Let(l) => {
                 aus.insert(l.name.text.clone(), None);
             }
-            StmtArt::Wenn(w) => {
-                for (_, b) in &w.zweige {
-                    sammle_zuwaechse(b, aus);
+            // **Ein Zuwachs in einer GESCHACHTELTEN Schleife ist keine Zahl** -- und bis
+            // 2026-08-19 war er nicht einmal sichtbar. «H2.1» leitet aus
+            // `n += k` die Schranke `n <= c + (B-1)*k` ab; laeuft derselbe Zuwachs in einer
+            // inneren Schleife, gilt sie **nicht**, und der Pass sagte trotzdem ja.
+            //
+            // > *Die Vergroeberung ging in die gefaehrliche Richtung:* nicht „ich weiss es
+            // > nicht", sondern „ich habe es nicht gesehen". Dasselbe gilt fuer die Auswege
+            // > (`narrow … else`, `let … else`) und den `exchange`-Rumpf, der bei einem
+            // > Fehlschlag mehrfach laeuft.
+            StmtArt::Schleife(_)
+            | StmtArt::Narrow(_)
+            | StmtArt::LetSonst(_)
+            | StmtArt::Exchange(_) => {
+                let mut innen = HashMap::new();
+                for k in crate::unterbloecke(s) {
+                    sammle_zuwaechse(k, &mut innen);
                 }
-                if let Some(s) = &w.sonst {
-                    sammle_zuwaechse(s, aus);
+                for n in innen.into_keys() {
+                    aus.insert(n, None);
                 }
             }
-            StmtArt::Bricht(x) => sammle_zuwaechse(&x.rumpf, aus),
-            StmtArt::Sperrt(x) => sammle_zuwaechse(&x.rumpf, aus),
-            StmtArt::Observiert(x) => sammle_zuwaechse(&x.rumpf, aus),
-            StmtArt::Match(m) => {
-                for a in &m.zweige {
-                    sammle_zuwaechse(&a.rumpf, aus);
+            _ => {
+                // Gerader Code in Klammern: `locks`, `breaking`, `observes`, die Zweige.
+                for k in crate::unterbloecke(s) {
+                    sammle_zuwaechse(k, aus);
                 }
             }
-            _ => {}
         }
     }
 }

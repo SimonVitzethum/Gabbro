@@ -994,7 +994,7 @@ impl fn f() -> bool effects { reads g } costs <= 4 ops
 
     // **Ein Ort ruft nichts.** Der Aufrufgraph darf daraus keine Kante machen -- sonst
     // waere `g` ein unbekannter Gerufener und JEDE Huelle darueber eine untere Schranke.
-    let h = gabbro_check::aufrufgraph::erhebe(&baum).huelle("f");
+    let h = gabbro_check::aufrufgraph::erhebe(&baum).huelle("t::f");
     assert!(
         h.unvollstaendig.is_none(),
         "ein ausgepackter Ort ist kein Ruf: {:?}",
@@ -1036,7 +1036,7 @@ impl fn f(x : u32) -> P requires x < 8 effects { pure } costs <= 4 ops
     // **Ein Konstruktor ruft nichts** -- dieselbe Aussage wie bei «B14b», und hier die
     // wichtigste: eine Kante auf `P` machte den Gerufenen unbekannt, und ueber einem
     // unbekannten Gerufenen ist jede Huelle nur noch eine untere Schranke.
-    let h = gabbro_check::aufrufgraph::erhebe(&baum).huelle("f");
+    let h = gabbro_check::aufrufgraph::erhebe(&baum).huelle("t::f");
     assert!(
         h.unvollstaendig.is_none(),
         "ein Verbundkonstruktor ist kein Aufruf: {:?}",

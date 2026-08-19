@@ -33,8 +33,12 @@ use std::collections::{BTreeMap, BTreeSet};
 pub struct Knoten {
     /// Die Wirkungen, die der Rumpf **selbst** nennt (aus der `effects`-Klausel).
     pub eigen: BTreeSet<String>,
-    /// Die Namen, die der Rumpf ruft — kurz, wie im Quelltext.
+    /// Die Pfade, die der Rumpf ruft — **wie im Quelltext geschrieben**, also `f` oder
+    /// `a::f`. Aufgelöst wird erst beim Gehen, relativ zum Modul des Rufers.
     pub ruft: BTreeSet<String>,
+    /// **Das Modul, in dem die Funktion steht.** Ohne es ist `ruft` nicht auflösbar: zwei
+    /// `hilf` in zwei Modulen sind zwei Funktionen, und der kurze Name nennt beide.
+    pub modul: String,
     /// `requires Held(X)` — welche Sperren verlangt die Funktion, und geteilt oder exklusiv?
     pub verlangt: Vec<(String, bool)>,
     /// Hat sie überhaupt eine `effects`-Klausel? Ohne sie ist nichts ableitbar.
@@ -55,32 +59,49 @@ pub struct Huelle {
     pub unvollstaendig: Option<String>,
 }
 
+use crate::umgebung::qualifiziere as schluessel;
+
+/// Baut die Umgebung selbst. Wer schon eine hat, nimmt `erhebe_mit`.
 pub fn erhebe(baum: &Programm) -> Graph {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    erhebe_mit(baum, &u)
+}
+
+/// **Modulbewusst seit 2026-08-19.** Bis dahin war der Schlüssel der KURZE Name, und zwei
+/// gleichnamige Funktionen in zwei Modulen überschrieben einander -- die zweite gewann, und
+/// welche das war, entschied die Reihenfolge im Quelltext. Gemessen: dieselbe Datei, nur die
+/// Modulreihenfolge getauscht, ergab einmal **0 Fehler** für ein `pure`, das etwas
+/// Schreibendes ruft, und einmal drei Fehler, davon einer an der **falschen** Funktion.
+///
+/// `lib.rs::fuer_jedes_item_im_modul` beschreibt genau diesen Fehler seit dem 2026-08-14 --
+/// M1 wurde damals nachgezogen, die sechs anderen Pässe nicht.
+pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
     let mut g = Graph::default();
     // **Uebergaenge sind Gerufene mit erklaerten Wirkungen.** Ohne sie meldete der Graph
     // `uebersetzung_an ist unbekannt` und die Aufrufwirkungen von `scharfschalten` galten
     // als unentscheidbar -- eine Luecke im GRAPHEN, nicht im Programm. Gefunden am eigenen
     // Beispiel 02, eine Minute nachdem der dritte Zustand sichtbar wurde.
-    crate::fuer_jedes_item(baum, &mut |item| {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Device(d) = &item.art {
-            for u in &d.uebergaenge {
+            for ue in &d.uebergaenge {
                 let mut k = Knoten {
                     eigen: BTreeSet::new(),
                     ruft: BTreeSet::new(),
                     verlangt: Vec::new(),
-                    hat_effects: u.effects.is_some(),
-                    span: u.name.span,
+                    hat_effects: ue.effects.is_some(),
+                    modul: modul.to_string(),
+                    span: ue.name.span,
                 };
-                if let Some(w) = &u.effects {
+                if let Some(w) = &ue.effects {
                     for e in &w.liste {
                         k.eigen.insert(e.art.text());
                     }
                 }
-                g.knoten.insert(u.name.text.clone(), k);
+                g.knoten.insert(schluessel(modul, &ue.name.text), k);
             }
         }
     });
-    crate::fuer_jedes_item(baum, &mut |item| {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else {
             return;
         };
@@ -89,6 +110,7 @@ pub fn erhebe(baum: &Programm) -> Graph {
             ruft: BTreeSet::new(),
             verlangt: Vec::new(),
             hat_effects: f.effects.is_some(),
+            modul: modul.to_string(),
             span: f.name.span,
         };
         if let Some(w) = &f.effects {
@@ -102,8 +124,26 @@ pub fn erhebe(baum: &Programm) -> Graph {
         if let FnRumpf::Block(b) = &f.rumpf {
             sammle_rufe(b, &mut k.ruft);
         }
-        g.knoten.insert(f.name.text.clone(), k);
+        g.knoten.insert(schluessel(modul, &f.name.text), k);
     });
+    // **Dritte Phase: die Kanten aufloesen.** Erst jetzt stehen alle Schluessel fest. Ein
+    // Pfad wird relativ zum Modul des RUFERS gesucht, mit derselben Ordnung, die M1 seit
+    // dem 2026-08-14 benutzt (eigenes Modul, umgebende, Wurzel, `use`-Zeile). Was sich nicht
+    // aufloesen laesst, bleibt stehen wie geschrieben -- und macht die Huelle unvollstaendig,
+    // statt still auf einen fremden Namen zu treffen.
+    let schluessel_alle: BTreeSet<String> = g.knoten.keys().cloned().collect();
+    for k in g.knoten.values_mut() {
+        k.ruft = k
+            .ruft
+            .iter()
+            .map(|pfad| {
+                u.kandidaten_oeffentlich(&k.modul, pfad)
+                    .into_iter()
+                    .find(|kand| schluessel_alle.contains(kand))
+                    .unwrap_or_else(|| pfad.clone())
+            })
+            .collect();
+    }
     g
 }
 
@@ -155,6 +195,19 @@ impl Graph {
         }
     }
 
+    /// Der qualifizierte Schlüssel einer Funktion — die Form, die `huelle` und `verlangt`
+    /// erwarten. **Ein kurzer Name reicht dort nicht mehr** (2026-08-19).
+    pub fn schluessel_von(&self, modul: &str, name: &str) -> String {
+        schluessel(modul, name)
+    }
+
+    /// Löst einen Rufpfad auf, wie ihn der Rumpf schreibt, relativ zum rufenden Modul.
+    pub fn aufloesen(&self, u: &crate::umgebung::Umgebung, von: &str, pfad: &str) -> Option<String> {
+        u.kandidaten_oeffentlich(von, pfad)
+            .into_iter()
+            .find(|k| self.knoten.contains_key(k))
+    }
+
     /// Welche Sperren verlangt der Gerufene — und **geteilt oder exklusiv?**
     ///
     /// Das ist die Frage, die `H005` durch eine echte Pruefung ersetzt: ein geteilter Block
@@ -199,49 +252,31 @@ fn held_aus_expr(e: &Expr, aus: &mut Vec<(String, bool)>) {
     }
 }
 
+/// **Der Abstieg geht über `crate::unterbloecke`** — erschöpfend über `StmtArt`.
+///
+/// Bis 2026-08-19 zählte dieser Weg seine Arme selbst auf und schloss mit `_ => {}`.
+/// `observes` fehlte, und damit war **jeder Ruf in einem RCU-Leseblock für den Rahmenpass
+/// unsichtbar**: gemessen verschwanden zwei `E008` (`masks IRQ`, `writes G`), sobald man
+/// denselben Ruf eine Zeile tiefer schrieb.
 fn sammle_rufe(b: &Block, aus: &mut BTreeSet<String>) {
     for s in &b.anweisungen {
+        // Was die Anweisung selbst auswertet.
+        for e in crate::eigene_ausdruecke(s) {
+            aus_expr(e, aus);
+        }
+        // Die zwei Rufe, die in keinem `Expr` stehen.
         match &s.art {
             StmtArt::Ruf(r) => nimm(r, aus),
-            StmtArt::Let(l) => aus_expr(&l.wert, aus),
+            // «B14b»: eine Quelle, die ein `place` ist, ruft nichts.
             StmtArt::LetSonst(l) => {
-                // «B14b»: eine Quelle, die ein `place` ist, ruft nichts.
                 if let Some(r) = l.als_ruf() {
                     nimm(r, aus);
                 }
-                sammle_rufe(&l.sonst, aus);
             }
-            StmtArt::Zuweisung(z) => aus_expr(&z.wert, aus),
-            StmtArt::Return(Some(e)) => aus_expr(e, aus),
-            StmtArt::Publish(p) => aus_expr(&p.wert, aus),
-            StmtArt::Wenn(w) => {
-                for (b1, r) in &w.zweige {
-                    aus_expr(b1, aus);
-                    sammle_rufe(r, aus);
-                }
-                if let Some(r) = &w.sonst {
-                    sammle_rufe(r, aus);
-                }
-            }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    sammle_rufe(&z.rumpf, aus);
-                }
-            }
-            StmtArt::Sperrt(x) => sammle_rufe(&x.rumpf, aus),
-            StmtArt::Bricht(x) => sammle_rufe(&x.rumpf, aus),
-            StmtArt::Narrow(x) => sammle_rufe(&x.sonst, aus),
-            StmtArt::Exchange(e) => {
-                if let XForm::Update { rumpf, .. } = &e.form {
-                    sammle_rufe(rumpf, aus);
-                }
-            }
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(x) => sammle_rufe(&x.rumpf, aus),
-                Schleife::Retry(x) => sammle_rufe(&x.rumpf, aus),
-                Schleife::Forever(x) => sammle_rufe(&x.rumpf, aus),
-            },
             _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_rufe(k, aus);
         }
     }
 }
@@ -255,12 +290,16 @@ fn nimm(r: &Ruf, aus: &mut BTreeSet<String>) {
     // > *Der Pass haette dann nicht falsch gerechnet, sondern aufgehoert zu rechnen -- und
     // > das Aufhoeren steht als Hinweis da, nicht als Fehler.*
     //
-    // Der Unterscheider ist SYNTAKTISCH (`ist_verbundwert`, die Marken): dieser Pass hat
-    // keine Umgebung, und ein Nachschlagen, das ins Leere geht, waere genau der stille Fall.
+    // Der Unterscheider ist SYNTAKTISCH (`ist_verbundwert`, die Marken) und bleibt es: er
+    // trennt Konstruktor von Aufruf, bevor irgendein Name aufgeloest wird. Die AUFLOESUNG
+    // dagegen braucht die Umgebung und hat sie seit 2026-08-19 -- vorher gewann der zuletzt
+    // eingetragene gleichnamige Knoten, still.
     if let Some(n) = r.pfad.teile.last() {
         // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).
         if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
-            aus.insert(n.text.clone());
+            // **Der ganze Pfad, nicht nur sein letztes Stueck.** `a::hilf()` und `b::hilf()`
+            // waren bis 2026-08-19 derselbe Name; aufgeloest wird spaeter, in `erhebe_mit`.
+            aus.insert(r.pfad.text());
         }
     }
     for a in &r.argumente {

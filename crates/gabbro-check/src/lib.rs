@@ -325,3 +325,134 @@ pub fn fuer_jedes_item_im_modul(baum: &Programm, f: &mut impl FnMut(&Item, &str)
     }
     geh(&baum.items, "", f);
 }
+
+/// **Die Unterblöcke einer Anweisung — erschöpfend über `StmtArt`, ohne `_`-Zweig.**
+///
+/// Der teuerste Einzelbefund vom 2026-08-19, und er war kein Loch, sondern **78 Löcher
+/// derselben Bauart**: jeder Pass stieg selbst in die Anweisungen ab, jeder mit einem
+/// `_ => {}` am Ende, und **jeder vergass einen anderen Arm**. Gemessen:
+///
+/// | Anweisungsart | unsichtbar für |
+/// |---|---|
+/// | `observes` | `m3`, `phasen`, `paarung`, `gruppe`, **`aufrufgraph`** |
+/// | `awaits`-Laden | sieben Pässe |
+/// | `exchange` | `m2`, `m3`, `phasen` |
+///
+/// Die Zeile, die es zeigte: ein Ruf **in** einem `observes`-Block kam im Aufrufgraphen
+/// nicht an, und damit verschwanden zwei `E008` — `masks IRQ` und `writes G` standen im
+/// Gerufenen und in keiner Wirkungsliste. *Derselbe Ruf eine Zeile höher fiel.*
+///
+/// > **Ein `_`-Zweig ist kein Vorbehalt, sondern eine stille Zusage:** *„hier steht nichts,
+/// > was mich angeht"* — und niemand prüft sie nach, wenn eine Anweisungsart dazukommt.
+///
+/// Wer hier absteigt, bekommt einen **Übersetzungsfehler**, sobald `StmtArt` wächst. Das ist
+/// der Unterschied zwischen einer Lücke, die man findet, und einer, die man erbt.
+pub fn unterbloecke(s: &Stmt) -> Vec<&Block> {
+    match &s.art {
+        StmtArt::Wenn(w) => {
+            let mut v: Vec<&Block> = w.zweige.iter().map(|(_, b)| b).collect();
+            v.extend(w.sonst.as_ref());
+            v
+        }
+        StmtArt::Match(m) => m.zweige.iter().map(|z| &z.rumpf).collect(),
+        StmtArt::Schleife(sch) => vec![match sch.as_ref() {
+            Schleife::Traverse(x) => &x.rumpf,
+            Schleife::Retry(x) => &x.rumpf,
+            Schleife::Forever(x) => &x.rumpf,
+        }],
+        StmtArt::Bricht(x) => vec![&x.rumpf],
+        StmtArt::Narrow(x) => vec![&x.sonst],
+        StmtArt::Sperrt(x) => vec![&x.rumpf],
+        StmtArt::Observiert(x) => vec![&x.rumpf],
+        StmtArt::LetSonst(x) => vec![&x.sonst],
+        StmtArt::Exchange(e) => match &e.form {
+            XForm::Update { rumpf, .. } => vec![rumpf],
+            XForm::Vergleich { .. } => Vec::new(),
+        },
+        // Die blattartigen Formen — und sie stehen **einzeln** da, damit eine neue Art hier
+        // auffällt statt in einem Sammelzweig zu verschwinden.
+        StmtArt::Let(_)
+        | StmtArt::Zuweisung(_)
+        | StmtArt::Leave(_)
+        | StmtArt::Next(_)
+        | StmtArt::Publish(_)
+        | StmtArt::AwaitLoad(_)
+        | StmtArt::Return(_)
+        | StmtArt::Ruf(_) => Vec::new(),
+    }
+}
+
+/// **Die Ausdrücke, die eine Anweisung SELBST auswertet** — erschöpfend, wie oben.
+///
+/// Nicht die der Unterblöcke: wer beides will, nimmt beide Helfer. Getrennt, weil die
+/// meisten Pässe für einen Rumpf einen eigenen Zustand führen (ein Zweig hat seinen).
+pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
+    match &s.art {
+        StmtArt::Let(l) => vec![&l.wert],
+        StmtArt::Zuweisung(z) => vec![&z.wert],
+        StmtArt::Return(e) => e.iter().collect(),
+        StmtArt::Publish(p) => vec![&p.wert],
+        StmtArt::Wenn(w) => w.zweige.iter().map(|(b, _)| b).collect(),
+        StmtArt::Match(m) => vec![&m.gegenstand],
+        StmtArt::Exchange(e) => match &e.form {
+            XForm::Vergleich { wert, .. } => vec![wert],
+            XForm::Update { .. } => Vec::new(),
+        },
+        // `let x = f() else …` trägt seinen Ruf in der Quelle, nicht in einem `Expr`.
+        StmtArt::LetSonst(_)
+        | StmtArt::Ruf(_)
+        | StmtArt::Schleife(_)
+        | StmtArt::Bricht(_)
+        | StmtArt::Narrow(_)
+        | StmtArt::Sperrt(_)
+        | StmtArt::Observiert(_)
+        | StmtArt::Leave(_)
+        | StmtArt::Next(_)
+        | StmtArt::AwaitLoad(_) => Vec::new(),
+    }
+}
+
+/// **Endet der Block auf jedem Weg?** — erschöpfend über `StmtArt`, ohne `_`-Zweig.
+///
+/// Stand dreimal im Prüfer (`kosten`, `phasen`, `schleifen`), **jedes Mal unvollständig und
+/// jedes Mal anders**: alle drei schlossen mit `_ => false`, und damit galt
+/// `locks L { return x; }` als *fällt durch* — obwohl es die Funktion verlässt. Für `M2` und
+/// die Phasen heisst das: ein Zweig, der über eine Klammer endet, wurde in den Abgleich
+/// genommen und musste sich mit den anderen einigen.
+///
+/// `divergent` nennt die Funktionen, deren Aufruf nicht zurückkehrt (`-> never`); ohne die
+/// Liste ist ein `zeitablauf();` als letzte Anweisung nur ein Ruf.
+pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
+    let Some(letzte) = b.anweisungen.last() else {
+        return false;
+    };
+    match &letzte.art {
+        StmtArt::Return(_) | StmtArt::Leave(_) | StmtArt::Next(_) => true,
+        StmtArt::Ruf(r) => r
+            .pfad
+            .teile
+            .last()
+            .is_some_and(|n| divergent.iter().any(|d| d == &n.text)),
+        StmtArt::Wenn(w) => {
+            w.sonst.as_ref().is_some_and(|r| endet_immer(r, divergent))
+                && w.zweige.iter().all(|(_, r)| endet_immer(r, divergent))
+        }
+        StmtArt::Match(m) => m.zweige.iter().all(|z| endet_immer(&z.rumpf, divergent)),
+        // **Eine Klammer ist keine Weiche.** Wer im `locks`-, `observes`- oder
+        // `breaking`-Rumpf auf jedem Weg endet, endet auch danach.
+        StmtArt::Sperrt(x) => endet_immer(&x.rumpf, divergent),
+        StmtArt::Observiert(x) => endet_immer(&x.rumpf, divergent),
+        StmtArt::Bricht(x) => endet_immer(&x.rumpf, divergent),
+        // **Der `else`-Zweig ist der AUSWEG, nicht der Weiterweg** — der Hauptpfad läuft
+        // weiter, gleichgültig was darin steht.
+        StmtArt::Narrow(_) | StmtArt::LetSonst(_) => false,
+        // **Eine Schleife fällt durch.** `forever` tut das nicht, aber ob sie überhaupt
+        // beendet wird, entscheidet Pass 6 aus `leave`/`on_exceeded` — nicht diese Zeile.
+        StmtArt::Schleife(_) => false,
+        StmtArt::Let(_)
+        | StmtArt::Zuweisung(_)
+        | StmtArt::Publish(_)
+        | StmtArt::AwaitLoad(_)
+        | StmtArt::Exchange(_) => false,
+    }
+}

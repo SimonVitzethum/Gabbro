@@ -1,0 +1,35 @@
+-- erwartet: E008
+-- **Zwei gleichnamige Funktionen in zwei Modulen waren EIN Knoten.**
+--
+-- Der Aufrufgraph, der Kostenpass, die Sperren, die Phasen und die Linearität schlüsselten
+-- alle nach dem KURZEN Namen. Welcher der beiden `hilf` galt, entschied die Reihenfolge im
+-- Quelltext: dieselbe Datei ergab einmal null Fehler für ein `pure`, das etwas Schreibendes
+-- ruft, und einmal drei -- davon einer an der **falschen** Funktion.
+--
+-- *`lib.rs::fuer_jedes_item_im_modul` beschrieb genau diesen Fehler seit dem 2026-08-14;
+-- M1 wurde damals nachgezogen, die sechs anderen Pässe nicht.*
+module gift::boese {
+
+static mut G : u32 = 0;
+
+impl fn hilf(x : u32) -> u32
+    effects { writes G, masks IRQ }
+    costs   <= 900 ops
+{ G = x; return 0; }
+
+}
+
+module gift::harmlos {
+
+impl fn hilf(x : u32) -> u32
+    effects { pure }
+    costs   <= 1 ops
+{ return x; }
+
+-- Der QUALIFIZIERTE Ruf trifft den fremden Nachbarn -- und der maskiert und schreibt.
+impl fn ruft(x : u32) -> u32
+    effects { pure }
+    costs   <= 8 ops
+{ return gift::boese::hilf(x); }
+
+}

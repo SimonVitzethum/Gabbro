@@ -116,7 +116,7 @@ pub fn kurzname(qualifiziert: &str) -> &str {
 }
 
 /// `""` + `x` = `x`; `a::b` + `x` = `a::b::x`.
-fn qualifiziere(pfad: &str, name: &str) -> String {
+pub fn qualifiziere(pfad: &str, name: &str) -> String {
     if pfad.is_empty() {
         name.to_string()
     } else {
