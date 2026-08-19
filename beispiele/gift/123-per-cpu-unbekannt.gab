@@ -1,0 +1,14 @@
+-- erwartet: N014
+-- **«NL.2.8» -- `per cpu N` ohne bekannte Zellenzahl.**
+-- `pruefe-klauseln.py` fuehrte `pro_kern` mit: *„dass N zu NCORES passt, prueft kein Pass."*
+--
+-- Ob es zu `NCORES` passt, KANN kein Pass wissen: welche Konstante die Kernzahl ist, ist eine
+-- Konvention und keine Tatsache. Was er wissen kann und bis heute nicht prueft: **dass N
+-- ueberhaupt eine bekannte positive Zahl ist.** Ein `per cpu` ueber einer unbekannten Groesse
+-- hat keine Zellenzahl, und die Absenkung koennte sie nur raten -- genau das Raten, gegen das
+-- `C001` steht.
+module gift::per_cpu_unbekannt {
+
+accumulates hoechststand : u64 merge max per cpu UNBEKANNT;
+
+}

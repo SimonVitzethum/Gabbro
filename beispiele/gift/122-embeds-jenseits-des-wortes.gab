@@ -1,0 +1,16 @@
+-- erwartet: N013
+-- **«NL.2.7» -- `embeds` ist ein Bitfeld, und «B24» gilt fuer es genauso.**
+-- `pruefe-klauseln.py` fuehrte es mit: *„Ein Zeiger, der zugleich Bitfeld ist. Ob das Bitfeld
+-- ins Wort passt, ist «B24»s Frage -- und sie wird hier nicht gestellt."*
+--
+-- «B24» ist seit dem 2026-08-18 entschieden: eine Bitlage liegt im EIGENEN Wort des Feldes.
+-- *Es ist dieselbe Zeile wie `N007` am `@[hi:lo]` -- und sie stand an zwei Konstrukten, von
+-- denen nur eines sie hatte.*
+module gift::embeds_jenseits {
+
+format Pte endian little {
+    praesent : bool @0,
+    rahmen   : u32 embeds [51:12] scale 4096,
+}
+
+}

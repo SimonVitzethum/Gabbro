@@ -93,7 +93,9 @@ ERWARTET = {
     # rechnet mit `mut` -- eine Tatsache stirbt beim Schreiben, und ohne Schreibrecht stirbt
     # sie gar nicht erst.* Korpuspreis: null.
     "obermenge":    ("ZUSAGE", "Die Obermenge der Nutzlast (SPRACHE.md 11.3) -- eine Enthaltensaussage, die niemand nachrechnet."),
-    "embeds":       ("ZUSAGE", "Ein Zeiger, der zugleich Bitfeld ist. Ob das Bitfeld ins Wort passt, ist «B24»s Frage -- und sie wird hier nicht gestellt."),
+    # **`embeds` ist am 2026-08-19 AUFGESTIEGEN** -- «B24» ist seit dem 18. entschieden, und
+    # `N013` stellt die Frage jetzt auch hier. *Dieselbe Zeile wie `N007` am `@[hi:lo]`, und
+    # sie stand an zwei Konstrukten, von denen nur eines sie hatte.* Korpuspreis: null.
     # **`offset_into` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- zehnter
     # Aufstieg, fuenfter Posten von «NL.2». `N012` verlangt eine `where`-Klausel, die das Feld
     # SELBST und `lenof` nennt. **Zwei Korpusstellen fielen** (`e_shoff`, `p_offset` in
@@ -109,8 +111,16 @@ ERWARTET = {
     # > Die Vergroeberung stand von Anfang an im Kopf, und hier zahlt sie zum ersten Mal:
     # > **eine Klausel kann die Klasse verlassen, weil sie zu einem ANDEREN Zweck gelesen
     # > wird.** Der Rest steht darum in `TODO.md` weiter, wo ihn keine Ratsche mehr traegt.
-    "pro_kern":     ("ZUSAGE", "`per cpu N` -- dass N zu NCORES passt, prueft kein Pass."),
-    "counterprobe": ("ZUSAGE", "Die Gegenprobe soll FALLEN. Kein Pass fuehrt sie aus."),
+    # **`pro_kern` ist am 2026-08-19 AUFGESTIEGEN, und der Satz wurde dabei berichtigt.**
+    # Ob N zu NCORES passt, KANN kein Pass wissen: welche Konstante die Kernzahl ist, ist
+    # eine Konvention und keine Tatsache. `N014` prueft, was pruefbar ist -- **dass N
+    # ueberhaupt eine bekannte positive Zahl ist.** Ein `per cpu` ueber einer unbekannten
+    # Groesse hat keine Zellenzahl, und die Absenkung koennte sie nur raten.
+    # **Berichtigt 2026-08-19: der Satz nannte den falschen Grund.** Nicht *„kein Pass
+    # fuehrt sie aus"* -- ausfuehren kann sie keiner, sie ist ein Laufzeitversuch. Der Grund
+    # ist schaerfer: **`SYNTAX.md`:975 sagt nicht, WORAUF der `ident` hinter `expects`
+    # zeigt.** Ein `N015` haette die Frage still beantwortet.
+    "counterprobe": ("ZUSAGE", "`expects <ident>` -- die Spezifikation sagt nicht, wo dieser Name deklariert wird. Erst die Entscheidung, dann der Pass."),
     "gates":        ("ZUSAGE", "Welche Tore ein `check` oeffnet; ungelesen."),
     # **`abstieg` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- achter Aufstieg,
     # dritter Posten von «NL.2», und die schaerfste der Liste: an ihm hing die TERMINIERUNG.
@@ -122,7 +132,15 @@ ERWARTET = {
     # genannten Orte, mit derselben `deckt`-Funktion wie `E005`/`E010`. *`touches` ist die
     # ENGERE Zusage neben `effects`, und eine engere, die niemand haelt, ist schlimmer als
     # keine.* Korpuspreis: null.
-    "verlaesst":    ("ZUSAGE", "`leaves` an `forever` -- welche Wege die Schleife verlassen darf; ungelesen."),
+    # **`verlaesst` ist am 2026-08-19 AUFGESTIEGEN -- und der Satz, der hier stand, war
+    # FALSCH.** Er lautete: *„welche Wege die Schleife verlassen darf"*. `SPRACHE.md`:730 sagt
+    # etwas anderes: `leave`/`return` aus einem Bereich, der LINEARE Werte haelt, verlangt,
+    # dass sie genannt werden. **`leaves` nennt die Werte, nicht die Ausgaenge** -- die nennt
+    # `leave <schleife>`, eine Schleifenmarke.
+    #
+    # > *Der erste Anlauf baute die Regel nach DIESER Zeile und meldete zwei Befunde an einem
+    # > richtigen Korpus.* **Eine Klauselbeschreibung in dieser Tabelle ist keine Quelle.**
+    # `L106` prueft jetzt die Wohlgeformtheit: der Name ist eine Bindung, und sie ist linear.
 
     # -- FREMD: die Klausel beschreibt etwas AUSSERHALB dieser Uebersetzungseinheit -------
     #

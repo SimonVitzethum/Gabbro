@@ -18,6 +18,93 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     entrust_annahme(baum, absagen);
     verweigerte_zahltypen(baum, absagen);
     geister_haben_keinen_speicher(baum, absagen);
+    pro_kern_und_gegenprobe(baum, absagen);
+}
+
+/// **`N014`/`N015` -- `per cpu N` und `counterprobe` («NL.2.8», 2026-08-19).**
+///
+/// Zwei Zusagen, ein Pass, weil beide dieselbe Bauart haben: **ein Name oder eine Zahl, die
+/// niemand nachschlaegt.**
+///
+/// * **`N014` -- `per cpu N`.** `pruefe-klauseln.py`: *„dass N zu NCORES passt, prueft kein
+///   Pass."* Ob es zu `NCORES` passt, kann kein Pass wissen -- **welche Konstante die
+///   Kernzahl ist, ist eine Konvention und keine Tatsache.** Was er wissen kann und heute
+///   nicht prueft: *dass N ueberhaupt eine bekannte positive Zahl ist.* Ein `per cpu` ueber
+///   einer unbekannten Groesse hat keine Zellenzahl, und die Absenkung koennte sie nur raten.
+/// * **`N015` -- `counterprobe … expects <sonde>`.** *„Die Gegenprobe soll FALLEN. Kein Pass
+///   fuehrt sie aus."* **Ausfuehren kann sie kein Pass** -- sie ist ein Laufzeitversuch. Was
+///   er kann: den genannten Namen gegen die erklaerten Sonden halten, **dieselbe Regel wie
+///   `S003` bei `progress`.** *Eine Gegenprobe, deren Sonde niemand erklaert hat, ist eine
+///   Zeile ueber ein Programm, das es nicht gibt.*
+fn pro_kern_und_gegenprobe(baum: &Programm, absagen: &mut Absagen) {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let mut sonden = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        if let ItemArt::Assume(a) = &i.art {
+            if let AnnahmeKlasse::Falsifizierbar(f) = &a.klasse {
+                sonden.push(f.text.clone());
+            }
+        }
+    });
+    lauf_pro_kern(&baum.items, "", &u, &sonden, absagen);
+}
+
+/// **Der Modulpfad muss mitlaufen, und das war ein Fehler beim ersten Anlauf.**
+///
+/// `konst_wert("", e)` fand `NKERNE` nicht, weil die Konstante als
+/// `beispiel::akkumulatoren::NKERNE` gebucht ist -- und meldete `N014` an einer richtigen
+/// Zeile. *Dieselbe Klasse wie der `typ_von_ort`-Fund vom 2026-08-17: ein Blick in die Karte,
+/// der den Modulweg wegliesz.*
+fn lauf_pro_kern(
+    items: &[Item],
+    pfad: &str,
+    u: &crate::umgebung::Umgebung,
+    sonden: &[String],
+    absagen: &mut Absagen,
+) {
+    for i in items {
+        match &i.art {
+            ItemArt::Modul(m) => {
+                let unter = if pfad.is_empty() {
+                    m.pfad.text()
+                } else {
+                    format!("{pfad}::{}", m.pfad.text())
+                };
+                lauf_pro_kern(&m.items, &unter, u, sonden, absagen);
+            }
+            ItemArt::Accumulates(a) => {
+                let Some(e) = &a.pro_kern else { continue };
+                match u.konst_wert(pfad, e) {
+                    Some(n) if n > 0 => {}
+                    _ => absagen.schiebe(
+                        Absage::fehler(
+                            "N014",
+                            a.name.span,
+                            format!("`per cpu` of `{}` is not a known positive number", a.name.text),
+                        )
+                        .mit_notiz(
+                            "the lowering folds one cell per core -- without a cell count it \
+                             would have to guess one, and that is what `C001` stands against",
+                        ),
+                    ),
+                }
+            }
+            // **`counterprobe … expects <ident>` bleibt UNGEPRUEFT, und das ist ein Befund
+            // ueber die Spezifikation.**
+            //
+            // Der erste Anlauf am 2026-08-19 baute `N015`: der Name muesse eine erklaerte
+            // Sonde nennen, wie `S003` es fuer `progress` verlangt. **`SYNTAX.md`:975 sagt
+            // nichts dergleichen** -- die Produktion lautet `"counterprobe" string "expects"
+            // ident`, und **wo dieser `ident` deklariert wird, steht nirgends.**
+            //
+            // > *Zweiter Fall an einem Tag, in dem die Beschreibung einer Klausel als Quelle
+            // > gelesen wurde und keine war* -- der erste war `leaves`. **Eine Regel zu bauen,
+            // > waehrend die Bedeutung offen ist, hiesse die Frage still zu beantworten.**
+            //
+            // Der Posten steht in `TODO.md`: erst die Entscheidung, dann der Pass.
+            _ => {}
+        }
+    }
 }
 
 /// **`N011` -- ein Geisttyp darf nicht in Speicher liegen («NL.2.4», 2026-08-19).**
@@ -311,6 +398,7 @@ fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
                 // beruehren, hat keinen Biss.*
                 formatbitlagen(f, absagen);
                 versatz_ist_beschraenkt(f, absagen);
+                embeds_passt_ins_wort(f, absagen);
             }
             _ => {}
         }
@@ -689,5 +777,51 @@ fn namen_im_praedikat(p: &Pred, aus: &mut Vec<String>) {
         PredArt::Vergleich(x) | PredArt::Element(x, _) => e(x, aus),
         PredArt::Quantor(q) => namen_im_praedikat(&q.rumpf, aus),
         _ => {}
+    }
+}
+
+/// **`N013` -- ein `embeds` muss ins Wort seines Traegers passen («NL.2.7», 2026-08-19).**
+///
+/// `pruefe-klauseln.py` fuehrte `embeds` als ZUSAGE: *„Ein Zeiger, der zugleich Bitfeld ist.
+/// Ob das Bitfeld ins Wort passt, ist «B24»s Frage -- und sie wird hier nicht gestellt."*
+///
+/// **«B24» ist seit dem 2026-08-18 entschieden**, und die Antwort gilt hier genauso: eine
+/// Bitlage liegt im EIGENEN Wort des Feldes; jenseits davon gibt es nichts zu bedeuten.
+/// `rahmen : u64 embeds [51:12] scale 4096` ist gut, `u32 embeds [51:12]` nicht.
+///
+/// *Es ist dieselbe Zeile wie `N007` am `@[hi:lo]` -- und sie stand an zwei Konstrukten, von
+/// denen nur eines sie hatte.*
+fn embeds_passt_ins_wort(f: &Format, absagen: &mut Absagen) {
+    for x in &f.felder {
+        let Some((hi, lo)) = x.typ.embeds else { continue };
+        let Some((breite, wort)) = crate::bitlage::wortbreite(&x.typ.typ) else { continue };
+        let bits = breite * 8;
+        if hi < lo {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N013",
+                    x.name.span,
+                    format!("`{}` writes `embeds [{hi}:{lo}]` -- the high bit is below the low one", x.name.text),
+                )
+                .mit_notiz("a bit range runs from high to low, and `[3:7]` names none"),
+            );
+        } else if hi >= bits as u128 {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N013",
+                    x.name.span,
+                    format!(
+                        "bit {hi} of `embeds` in `{}` lies outside its own word ({} has bits 0..{})",
+                        x.name.text,
+                        format!("{wort:?}").to_lowercase(),
+                        bits - 1
+                    ),
+                )
+                .mit_notiz(
+                    "«B24», decided 2026-08-18: a position lies inside the field's OWN word -- \
+                     and an embedded pointer is a bit field like any other",
+                ),
+            );
+        }
     }
 }

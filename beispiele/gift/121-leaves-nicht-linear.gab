@@ -1,0 +1,36 @@
+-- erwartet: L106
+-- **«NL.2.6» -- und der eigentliche Fund ist der Satz der Klausel selbst.**
+--
+-- `pruefe-klauseln.py` fuehrte `verlaesst` mit: *„`leaves` an `forever` -- welche Wege die
+-- Schleife verlassen darf; ungelesen."* **Das ist falsch.** `SPRACHE.md`:730 sagt:
+-- *„`leave`/`return` from a scope holding linear values demands that they be named
+-- (`leaves`)."* `leaves` nennt die linearen WERTE; die Ausgaenge nennt `leave <schleife>`,
+-- und das ist eine Schleifenmarke.
+--
+-- *Der erste Anlauf baute die falsche Regel und meldete an `beispiele/04-schleifen.gab` zwei
+-- Befunde -- `leaves marke` gegen `leave dienst`. Beide waren richtig, und die Regel war es
+-- nicht.* **Eine Klauselbeschreibung in einer Waechtertabelle ist keine Quelle; die
+-- Spezifikation ist eine.**
+module gift::leaves_nicht_linear {
+
+const NFAEDEN : u32 = 8;
+table Q count NFAEDEN { slot { aktiv : bool, } }
+
+extern fn watchdog() -> never effects { diverges } costs <= 1 ops;
+assume zeitgeber_tickt
+    "Der Zeitgeber tickt und beendet den Durchgang."
+    falsifier sonde_kein_tick;
+
+divergent fn dienst(q : ptr<normal, rw> Q) -> never
+    effects { diverges, reads q.slots, writes q.slots }
+{
+    forever schleife
+        per_pass bounded 64 ops
+        on_exceeded watchdog
+        effects  { reads q.slots, writes q.slots }
+        progress zeitgeber_tickt
+        leaves   q
+    { }
+}
+
+}

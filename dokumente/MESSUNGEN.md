@@ -8726,3 +8726,67 @@ Klauseln 43 -> 40      ZUSAGE 10 -> 7
 
 **Sieben bleiben:** `counterprobe`, `embeds`, `gates`, `mirrors`, `obermenge`, `pro_kern`,
 `verlaesst`.
+
+---
+
+# «NL.2» — sieben angefasst, drei gebaut, und zweimal war die Klauseltabelle keine Quelle
+
+**2026-08-19, Fortsetzung.** ZUSAGE **7 → 4**.
+
+## Gebaut
+
+| | | |
+|---|---|---|
+| **`L106`** | `verlaesst` | `leaves` nennt LINEARE Werte — der Name muss eine Bindung sein, und sie muss linear sein |
+| **`N013`** | `embeds` | «B24» am eingebetteten Zeiger: die Bitlage liegt im eigenen Wort |
+| **`N014`** | `pro_kern` | `per cpu N` — N muss eine **bekannte positive Zahl** sein |
+
+## Und zweimal hätte die Klauseltabelle mich in eine falsche Regel geführt
+
+**Erstens: `leaves`.** Die Tabelle sagte *„welche Wege die Schleife verlassen darf"*. Ich baute
+`S006`/`S007` danach — und die Regel meldete an `beispiele/04-schleifen.gab` **zwei Befunde an
+einem richtigen Korpus**: `leaves marke` gegen `leave dienst`.
+
+> `SPRACHE.md`:730 sagt etwas anderes: *„`leave`/`return` from a scope holding **linear
+> values** demands that they be named (`leaves`)."* **`leaves` nennt die Werte, nicht die
+> Ausgänge** — die nennt `leave <schleife>`, und das ist eine Schleifenmarke. *Zwei
+> verschiedene Dinge, die einen Wortstamm teilen.*
+
+Zurückgebaut, richtig gebaut: **`L106`** prüft die Wohlgeformtheit — der Name ist eine Bindung,
+und ihr Typ ist linear.
+
+**Zweitens: `counterprobe`.** Die Tabelle sagte *„kein Pass führt sie aus"*. Ich baute `N015`
+nach dem Muster von `S003`: der Name müsse eine erklärte Sonde nennen. **`SYNTAX.md`:975 sagt
+das nicht** — die Produktion lautet `"counterprobe" string "expects" ident`, und **wo dieser
+`ident` deklariert wird, steht nirgends.**
+
+> **Eine Regel zu bauen, während die Bedeutung offen ist, hieße die Frage still zu
+> beantworten.** Zurückgebaut; der Satz der Klausel ist berichtigt, und der Posten steht als
+> Entscheidung.
+
+**Zweimal an einem Tag dieselbe Bewegung:** *eine Klauselbeschreibung in einer Wächtertabelle
+ist keine Quelle — die Spezifikation ist eine.*
+
+## Und ein Loch im eigenen Bau, gefunden von der eigenen Giftprobe
+
+`L106` lief hinter M2s frühem Ausstieg (*keine linearen Typen → zurück*). **Damit war `leaves`
+genau in der Datei ungeprüft, in der es am ehesten falsch ist** — Gift 121 ging durch. Der
+Aufruf steht jetzt **vor** dem Ausstieg.
+
+## Zwei berichtigte Sätze
+
+**`pro_kern`:** *„dass N zu NCORES passt, prüft kein Pass"* — **kann kein Pass wissen.** Welche
+Konstante die Kernzahl ist, ist eine Konvention und keine Tatsache. `N014` prüft, was prüfbar
+ist.
+
+**Und `N014` fiel beim ersten Lauf auf eine richtige Zeile**: `konst_wert("", e)` fand `NKERNE`
+nicht, weil die Konstante als `beispiel::akkumulatoren::NKERNE` gebucht ist. *Dieselbe Klasse
+wie der `typ_von_ort`-Fund vom 2026-08-17 — ein Blick in die Karte, der den Modulweg wegließ.*
+
+```
+Klauseln 40 -> 37      ZUSAGE 7 -> 4
+140 Kennungen · 123 Gifte (0 ohne Biss) · 126 Tests · neun Waechter gruen
+```
+
+**Vier bleiben**, und drei davon sind Entscheidungen und keine Bauarbeit: `counterprobe` (wo
+wird der Name erklärt?), `gates`, `mirrors`, `obermenge`.

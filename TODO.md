@@ -570,11 +570,19 @@ of items that are neither code nor a run — what remains is building and measur
       und `umhaengen` steht an 127 Stellen, also genau die Operation, fuer die
       `Table_Ops_Erhaltung.thy` das GEGENBEISPIEL fuehrt.** *Der Korpus braucht die Operation,
       von der der Beweis sagt, dass sie bricht.* Die Entscheidung steht damit mit Zahlen da.
-- [ ] **NL.2 -- SIEBEN Zusagen ohne Leser** *(13 am 2026-08-19; sechs gefallen: `M116` fuer
-      `mut`, `E011` fuer `touches`, `S005` fuer `abstieg`, `N011` fuer `ghost`, `N012` fuer
-      `offset_into` -- und `bedingung` durch einen AUFSTIEG AUS VERSEHEN)*. Was bleibt:
-      `counterprobe`, `embeds`, `gates`, `mirrors`, `obermenge`, `pro_kern`, `verlaesst`.
-      *Jede einzeln, jede mit Giftprobe, jede mit Korpusmessung VORHER.*
+- [ ] **NL.2 -- VIER Zusagen ohne Leser, und drei davon sind ENTSCHEIDUNGEN** *(13 am
+      2026-08-19; neun gefallen)*. Was bleibt: **`counterprobe`** -- `SYNTAX.md`:975 sagt
+      nicht, wo der `ident` hinter `expects` deklariert wird; **`gates`** -- welche Tore ein
+      `check` oeffnet, und was ein Tor ist; **`mirrors`** -- die gespiegelten Register;
+      **`obermenge`** -- die Enthaltensaussage ueber der Nutzlast. *Nur `mirrors` und
+      `obermenge` sind Bauarbeit; die anderen zwei brauchen zuerst eine Entscheidung.*
+- [ ] **Zweimal an einem Tag war die KLAUSELTABELLE keine Quelle** *(2026-08-19)*. Bei
+      `leaves` sagte sie *„welche Wege die Schleife verlassen darf"* -- `SPRACHE.md`:730 sagt
+      *lineare Werte*, und die danach gebaute Regel meldete zwei Befunde an einem RICHTIGEN
+      Korpus. Bei `counterprobe` sagte sie *„kein Pass fuehrt sie aus"* -- der Grund ist, dass
+      die Spezifikation den Namen nicht bindet. **Beide Saetze sind berichtigt.** *Was fehlt,
+      ist die allgemeine Frage: wie viele der 37 Zeilen beschreiben ihre Klausel falsch?
+      Jede ist eine Regel, die jemand danach bauen koennte.*
 - [ ] **`bedingung` hat die Klasse verlassen, ohne dass ihre Zusage gehalten wuerde**
       *(2026-08-19, und es ist ein Befund ueber den WAECHTER)*. `N012` liest die
       `where`-Klausel, um die Schranke eines `offset_into` zu finden -- damit gilt sie

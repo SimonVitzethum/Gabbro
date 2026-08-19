@@ -60,6 +60,17 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             }
         }
     });
+    // **`L106` laeuft VOR dem fruehen Ausstieg, und das war ein Loch.**
+    //
+    // M2 kehrt zurueck, wenn die Einheit keinen linearen Typ hat -- richtig fuer die
+    // Linearitaetspruefung, falsch fuer diese: **`leaves q` in einer Datei ganz ohne lineare
+    // Typen ist der Fall, in dem die Klausel am ehesten falsch ist.** *Gefunden an der
+    // eigenen Giftprobe, die durchging.*
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            leaves_pruefen(f, &linear, absagen);
+        }
+    });
     if linear.is_empty() {
         return;
     }
@@ -324,5 +335,98 @@ fn ausdruck(
             ausdruck(b, span, v, zust, absagen);
         }
         _ => {}
+    }
+}
+
+/// **`L106` -- `leaves` nennt LINEARE Werte, und sie muessen es sein («NL.2.6», 2026-08-19).**
+///
+/// `pruefe-klauseln.py` fuehrte `verlaesst` als ZUSAGE: *„`leaves` an `forever` -- welche Wege
+/// die Schleife verlassen darf; ungelesen."*
+///
+/// **Der Satz der Klausel war falsch, und das ist der eigentliche Fund.** `SPRACHE.md`:730
+/// sagt es: *„`leave`/`return` from a scope holding linear values demands that they be named
+/// (`leaves`)."* **`leaves` nennt die linearen WERTE, die den Geltungsbereich verlassen** --
+/// nicht die Ausgaenge. Die Ausgaenge nennt `leave <schleife>`, und das ist eine
+/// Schleifenmarke.
+///
+/// > *Der erste Anlauf am 2026-08-19 baute die falsche Regel und meldete an
+/// > `beispiele/04-schleifen.gab` zwei Befunde -- `leaves marke` gegen `leave dienst`. Beide
+/// > waren richtig, und die Regel war es nicht.* **Eine Klauselbeschreibung, die seit Wochen
+/// > in der Waechtertabelle steht, ist keine Quelle -- die Spezifikation ist eine.**
+///
+/// Geprueft wird die Wohlgeformtheit: **der genannte Name ist eine Bindung dieser Funktion,
+/// und ihr Typ ist linear.** Dass er den Bereich tatsaechlich verlaesst, ist M2s uebrige
+/// Arbeit.
+fn leaves_pruefen(
+    f: &FnDecl,
+    linear: &BTreeSet<String>,
+    absagen: &mut gabbro_syntax::diag::Absagen,
+) {
+    let FnRumpf::Block(b) = &f.rumpf else { return };
+    let mut schleifen = Vec::new();
+    sammle_forever(b, &mut schleifen);
+    for fo in schleifen {
+        for v in &fo.verlaesst {
+            let typ = f
+                .parameter
+                .iter()
+                .find(|p| p.name.text == v.text)
+                .map(|p| &p.typ);
+            let ist_linear = matches!(typ, Some(TypExpr::Pfad(pf))
+                if pf.teile.last().is_some_and(|n| linear.contains(&n.text)));
+            if ist_linear {
+                continue;
+            }
+            absagen.schiebe(
+                gabbro_syntax::diag::Absage::fehler(
+                    "L106",
+                    v.span,
+                    match typ {
+                        None => format!("`leaves {}` names no binding of `{}`", v.text, f.name.text),
+                        Some(_) => format!("`leaves {}` names a value that is not linear", v.text),
+                    },
+                )
+                .mit_notiz(
+                    "SPRACHE.md:730: leaving a scope that holds LINEAR values demands that \
+                     they be named -- `leaves` names the values, not the exits",
+                )
+                .mit_notiz(
+                    "the exits are named by `leave <loop>`, and that is a loop label -- two \
+                     different things that share a word stem",
+                ),
+            );
+        }
+    }
+}
+
+fn sammle_forever<'a>(b: &'a Block, aus: &mut Vec<&'a Forever>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Forever(f) => {
+                    aus.push(f);
+                    sammle_forever(&f.rumpf, aus);
+                }
+                Schleife::Traverse(t) => sammle_forever(&t.rumpf, aus),
+                Schleife::Retry(r) => sammle_forever(&r.rumpf, aus),
+            },
+            StmtArt::Wenn(w) => {
+                for (_, x) in &w.zweige {
+                    sammle_forever(x, aus);
+                }
+                if let Some(x) = &w.sonst {
+                    sammle_forever(x, aus);
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    sammle_forever(&z.rumpf, aus);
+                }
+            }
+            StmtArt::Bricht(x) => sammle_forever(&x.rumpf, aus),
+            StmtArt::Sperrt(x) => sammle_forever(&x.rumpf, aus),
+            StmtArt::Observiert(x) => sammle_forever(&x.rumpf, aus),
+            _ => {}
+        }
     }
 }
