@@ -7,3 +7,8 @@ arbeitsprotokoll/
 
 # Worktrees paralleler Agenten -- fremde Repos, kein Inhalt dieses hier.
 .claude/
+
+# Python-Kompilate -- werden bei jedem Waechterlauf neu geschrieben und
+# standen darum in jedem Diff (gefunden beim Merge, 2026-08-20).
+__pycache__/
+*.pyc

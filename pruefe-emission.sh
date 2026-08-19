@@ -112,18 +112,25 @@ lauf() {          # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     fi
     echo "  1. erzeugen:   ok ($(grep -c '' "$c") Zeilen C)"
 
-    # 1b. **Reproduzierbar -- als ZUSAGE, nicht als Beobachtung** («Z2», 2026-08-19).
-    #     Jeder Zwischenspeicher stromabwaerts (`ccache`, ein Bausystem, ein Wiederholbau)
-    #     ruht darauf, dass derselbe Quelltext dasselbe C ergibt. *Gemessen war das; gehalten
-    #     hat es niemand.* Rusts `HashMap` wuerfelt je Prozess einen anderen Startwert -- ein
-    #     Erzeuger, der irgendwo darueber laeuft, wackelt genau hier.
+    # 1b. **Zweimal erzeugen, Byte gegen Byte.** Die Reproduzierbarkeit war ueber 25 Laeufe
+    #     GEMESSEN und nirgends ZUGESAGT -- und eine gemessene Eigenschaft ohne Waechter ist
+    #     eine, die beim naechsten `HashMap` ueber Namen still verschwindet: Rust wuerfelt je
+    #     Prozess einen anderen Startwert. Jeder Zwischenspeicher stromabwaerts (`ccache`, ein
+    #     Bausystem, ein Wiederholbau) ruht darauf, dass derselbe Quelltext dasselbe C ergibt;
+    #     *ein Erzeugnis, das sich zwischen zwei Laeufen unterscheidet, macht jeden Vergleich
+    #     zweier Baeume wertlos.* («C», Die Sprechprobe; «Z2»)
+    #
+    #     **Diese Stufe stand zweimal da** -- beide Zweige haben sie unabhaengig gebaut, und
+    #     erst der Merge hat es gezeigt (WERKZEUGKASTEN.md W7).
     if ! cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- emit "$quelle" \
-            > "$ARB/$name.c2" 2>/dev/null || ! cmp -s "$c" "$ARB/$name.c2"; then
-        echo "  1b. wiederholbar: NEIN -- zweimal erzeugen gibt zwei verschiedene Dateien"
-        diff "$c" "$ARB/$name.c2" | head -10
-        exit 1
+            > "$ARB/$name-zweitlauf.c" 2> /dev/null; then
+        echo "  1b. zweitlauf: GESCHEITERT"; exit 1
     fi
-    echo "  1b. wiederholbar: ok (zweiter Lauf byteidentisch)"
+    if ! cmp -s "$c" "$ARB/$name-zweitlauf.c"; then
+        echo "  1b. zweitlauf: VERSCHIEDEN -- zwei Laeufe, zwei Erzeugnisse"
+        diff "$c" "$ARB/$name-zweitlauf.c" | head -10; exit 1
+    fi
+    echo "  1b. zweitlauf: ok (bitgleich)"
 
     # 2. Der Lizenzhinweis. `LIZENZ-ZUSATZ.md` knuepft die zusaetzliche Erlaubnis an ihn --
     #    eine Bedingung, die niemand prueft, ist eine Bitte.
@@ -702,7 +709,207 @@ lauf "beispiel24" "$W/beispiele/24-ip-kopf.gab" "$TREIBER24" "4 5 10 0 2 0 6" \
      's/>> 4) & 15u/>> 0) \& 15u/' \
      "0 assumptions, 1 templates (0 of them UNPROVED), 0 direct forms, 0 foreign bodies (0 state their duty)"
 
-echo "== EMISSION: ALL PASS -- 12 Uebersetzungseinheiten durchgestochen =="
+# -- 12. «C1»: die Freiliste -- der SONDERWERT, und der Beweis lag seit zwei Tagen da ------
+#
+# `option index into T` senkt zu einem Sonderwert ab, und der Sonderwert ist `count` selbst
+# (`beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`/`kodiere_injektiv`). Bis zum
+# 2026-08-19 weigerte sich der Erzeuger dafuer -- **der Satz stand da und kein Erzeuger
+# benutzte ihn**, und die Freiliste war die Datei, die daran haengenblieb.
+#
+#     static mut frei : option index into Halde = None;   ->   static uint32_t frei = Halde_NONE;
+#     match frei { Some(i) => …, None => … }              ->   if (_o1 != Halde_NONE) …
+#
+# **Der Treiber laeuft die Liste einmal leer und einmal voll**, und der letzte Wert ist der,
+# auf den es ankommt: nach dem letzten `belegen` ist der Kopf `Halde_NONE` -- *nicht 0, nicht
+# irgendein Slot.* Genau das ist der Unterschied zwischen einer Option und einem `uint32_t`.
+#
+# *Das Gift setzt den Sonderwert auf 0 -- dann ist `None` von `Some(0)` nicht mehr zu
+# unterscheiden, und die Liste haelt sich fuer leer, sobald Slot 0 der Kopf ist.*
+TREIBER27='#include <stdio.h>
+#include "@ERZEUGT@"
+extern uint32_t frei_lesen(void);
+int main(void) {
+    static Halde h;
+    /* Drei Plaetze einhaengen: 7, dann 3, dann 0 -- der Kopf ist zuletzt 0. */
+    freigeben(&h, 7);
+    freigeben(&h, 3);
+    freigeben(&h, 0);
+    uint32_t a = belegen(&h);
+    uint32_t b = belegen(&h);
+    uint32_t c = belegen(&h);
+    uint32_t d = belegen(&h);      /* jetzt ist sie leer: der Sonderwert */
+    printf("%u %u %u %d %d\n", a, b, c, (int)(d == 1024u), (int)(d == 0u));
+    return 0;
+}
+'
+#    Erwartet:  0 3 7  -- LIFO: zuletzt eingehaengt, zuerst herausgenommen
+#                    1  -- die leere Liste liefert `Halde_NONE`, und das ist `count` = 1024
+#                    0  -- und sie liefert NICHT 0. **Das ist die ganze Aussage des
+#                          Sonderwerts:** `None` ist kein gueltiger Index, und Slot 0 ist
+#                          einer. Wer den Sonderwert auf 0 legt, dreht diese zwei Zahlen um.
+lauf "beispiel27" "$W/beispiele/27-freiliste.gab" "$TREIBER27" "0 3 7 1 0" \
+     's/#define Halde_NONE (1024)/#define Halde_NONE (0)/' \
+     "0 assumptions, 2 templates (1 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty)"
+
+# -- 13. «C2»: der markierte Wert -- `struct { marke; union }`, und `-Wswitch` liest mit ---
+#
+# Ein `tagged type` war bis zum 2026-08-19 reine Prueferangelegenheit: `D005` verlangt das
+# erschoepfende `match` ohne Sammelzweig, und ABGESENKT wurde er gar nicht. Die Absenkung ist
+# `struct { marke; union { … } }`, und die eine Entscheidung darin ist der Typ der Marke.
+#
+# **Sie wird ein `enum`, damit `switch` OHNE `default` unter `-Wswitch` ein zweiter Leser von
+# `D005` ist** -- derselbe Bau wie `-Wmissing-field-initializers` beim Verbundkonstruktor.
+# Stufe 3 dieses Laufs ist damit nicht nur eine Uebersetzung, sondern eine Pruefung: ein
+# fehlender Fall waere hier ein Fehler, kein stiller Durchfall.
+#
+# *Das Gift vertauscht zwei Glieder der Vereinigung -- dann liest `Kurz` das Wort von `Lang`.
+# Beides sind gueltige Zahlen, und kein C-Typ spricht dagegen: genau die Klasse, gegen die
+# die Marke steht.*
+TREIBER34='#include <stdio.h>
+#include <inttypes.h>
+#include "@ERZEUGT@"
+int main(void) {
+    Nachricht leer = { .marke = Nachricht_Leer, { 0 } };
+    Nachricht kurz = { .marke = Nachricht_Kurz, { .Kurz = 41u } };
+    /* Passt NICHT in 32 Bit -- wer das falsche Glied liest, bekommt 2. */
+    Nachricht lang = { .marke = Nachricht_Lang, { .Lang = 4294967298ull } };
+    Nachricht antw = { .marke = Nachricht_Antwort, { .Antwort = 7u } };
+    static Anfragen a;
+    a.slots[3].was = lang;
+    printf("%" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %u %u %" PRIu64 " %d\n",
+           gewicht(leer), gewicht(kurz), gewicht(lang), gewicht(antw),
+           art_von(leer), art_von(lang),
+           gewicht_im_slot(&a, 3),
+           (int)(sizeof(a.slots) / sizeof(a.slots[0])));
+    return 0;
+}
+'
+#    Erwartet:  0 41 4294967298 7  -- je Variante ihr EIGENES Glied der Vereinigung
+#                          0 2     -- und die Marke allein, ohne die Nutzlast zu lesen
+#                4294967298       -- dasselbe `switch` ueber einem Slotfeld
+#                         8       -- `count NANFRAGEN` traegt das Feld
+#
+# *Das Gift laesst den `Lang`-Zweig das `Kurz`-Glied lesen. Es uebersetzt, es rechnet -- und
+# es liefert 2 statt 4294967298. Genau die Klasse, gegen die eine Marke steht: ohne sie ist
+# jedes Glied so gut wie jedes andere.*
+lauf "beispiel34" "$W/beispiele/34-markierter-wert.gab" "$TREIBER34" \
+     "0 41 4294967298 7 0 2 4294967298 8" \
+     's/= m.last.Lang;/= m.last.Kurz;/' \
+     "0 assumptions, 1 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty)"
+
+# -- 14. «C3c»: die Gruppe erzeugt NICHTS -- und die Tabelle IST der Speicher -----------
+#
+# **Die billigste Zeile des ganzen Plans, und sie ist trotzdem eine Aussage:** eine `group`
+# ist die Verbindungsinvariante ueber zwei Traegern, und was sie zur Laufzeit kostet, ist
+# null. Ihr Sperrabdruck (`U001`-`U006`) wird zur Uebersetzungszeit nachgerechnet -- W6.
+#
+# **Und der Lauf hat sofort etwas anderes freigelegt:** `Endpunkte.slots[e]` senkte zu
+# `Endpunkte->slots[e]` ab -- ein Pfeil auf einen Typnamen. Es war an `cc` delegiert und
+# folgenlos, solange jede solche Datei aus einem anderen Grund `C001` sagte. *Seit «C3c»
+# sagt diese hier keinen mehr.* `beispiele/09` nennt die Regel selbst: die Tabelle IST der
+# Speicher, ihr Name der Ort.
+#
+# *Das Gift nimmt die INNERE Sperre weg. Der Rumpf rechnet dasselbe -- aber der Zaehler, den
+# der Treiber fuehrt, bleibt stehen: eine Gruppe verlangt BEIDE Sperren, und das ist die
+# Aussage, um derentwillen `U003` existiert.*
+TREIBER17='#include <stdio.h>
+#include "@ERZEUGT@"
+static int genommen_punkte = 0, genommen_plan = 0, offen = 0;
+void PUNKTE_nimm(void) { genommen_punkte++; offen++; }
+void PUNKTE_gib(void)  { offen--; }
+void PLAN_nimm(void)   { genommen_plan++; offen++; }
+void PLAN_gib(void)    { offen--; }
+int main(void) {
+    einreihen(5, 9);
+    printf("%u %u %d %d %d %d\n",
+           Endpunkte_speicher.slots[5].wartet,
+           Faeden_speicher.slots[9].gruende,
+           genommen_punkte, genommen_plan, offen,
+           (int)(sizeof(Endpunkte_speicher.slots) / sizeof(Endpunkte_speicher.slots[0])));
+    return 0;
+}
+'
+#    Erwartet:  9 1  -- beide Traeger geschrieben, jeder ueber SEINEN Speicher
+#                1 1 -- beide Sperren genau einmal genommen
+#                  0 -- und beide wieder gegeben: kein Pfad laesst eine stehen
+#                 64 -- `count NPUNKTE` traegt das Feld
+lauf "beispiel17" "$W/beispiele/17-gruppe-ueber-zwei-sperren.gab" "$TREIBER17" "9 1 1 1 0 64" \
+     's/        PLAN_nimm();//' \
+     "0 assumptions, 2 templates (1 of them UNPROVED), 3 direct forms, 2 foreign bodies (0 state their duty)"
+
+# -- 15. «C3b»: RCU -- und der Unterschied zur Sperre ist das, was FEHLT ----------------
+#
+# `rcu` senkt ab wie ein `lock`: zwei Prototypen, keine Zeile Rumpf. **Und genau daran wird
+# sichtbar, was RCU ist** -- es gibt kein `_nimm`, das jemanden aufhaelt. Der Lesebereich
+# wird betreten und verlassen; ausgeschlossen wird niemand. *Die Leseseite braucht die
+# Schreibersperre nicht, und das ist die ganze Substanz des Konstrukts.*
+#
+# Der Treiber zaehlt beide Seiten mit und misst die Aussage direkt:
+#
+#   * `lesen` betritt den Lesebereich und nimmt KEINE Sperre,
+#   * `setzen` und `zurueckgeben` nehmen die Schreibersperre und betreten KEINEN Lesebereich,
+#   * und der Lesebereich wird auf JEDEM Pfad verlassen -- auch dem mit `return` darin.
+#
+# *Das Gift streicht das Verlassen am Rueckkehrpfad. Der Rumpf rechnet dasselbe, und der
+# Zaehler bleibt offen stehen -- woertlich die Klasse, gegen die die Austrittsliste steht.*
+TREIBER31='#include <stdio.h>
+#include "@ERZEUGT@"
+static int drin = 0, tiefstand = 0, schreibsperre = 0;
+void BACCT_lese_start(void) { drin++; }
+void BACCT_lese_ende(void)  { drin--; if (drin < tiefstand) tiefstand = drin; }
+void SCHREIBER_nimm(void)   { schreibsperre++; }
+void SCHREIBER_gib(void)    { schreibsperre--; }
+int main(void) {
+    setzen(4, 55);
+    unsigned w = lesen(4);
+    zurueckgeben(4);
+    printf("%u %d %d %d %d\n", w, drin, tiefstand, schreibsperre, (int)(frei == 4u));
+    return 0;
+}
+'
+#    Erwartet:  55 -- der Leser sieht, was der Schreiber unter seiner Sperre schrieb
+#                0 -- der Lesebereich ist wieder zu, obwohl der Rumpf ein `return` enthaelt
+#                0 -- und er wurde nie ZWEIMAL verlassen (der Tiefstand bleibt bei null)
+#                0 -- die Schreibersperre ist gegeben
+#                1 -- `reclaims frei` steht als `Some(i)` im Kopf der Freiliste
+lauf "beispiel31" "$W/beispiele/31-rcu.gab" "$TREIBER31" "55 0 0 0 1" \
+     's/^        BACCT_lese_ende();$//' \
+     "1 assumptions, 2 templates (1 of them UNPROVED), 4 direct forms, 2 foreign bodies (0 state their duty)"
+
+# -- 16. «C4»: der Tausch, und die ORDNUNG ist die Falle --------------------------------
+#
+# Ein compare-exchange ist `publishes` und `awaits` in EINEM Befehl. Die Absenkung ist
+# `atomic_compare_exchange_strong_explicit` mit der **deklarierten** Ordnung -- und genau hier
+# hat dieser Erzeuger schon einmal geschummelt: der Mutationskatalog fuehrt
+# `veroeffentlichung-nimmt-die-vorgabeordnung`, weil ein `=` auf einem `_Atomic` in C
+# `seq_cst` bedeutet.
+#
+# **Was dieser Lauf NICHT zeigen kann, steht hier, damit es niemand hineinliest:** eine
+# Ordnung ist an einem Faden nicht messbar. Der Differenztest misst die LOGIK des Tausches
+# (er gelingt genau dann, wenn der alte Wert der erwartete war); dass die Ordnung die
+# deklarierte ist, haelt eine Probe im Rechenwerk und eine Mutation daneben.
+#
+# *Das Gift setzt den erwarteten Wert auf den neuen. Dann gelingt die Uebernahme nie, und die
+# erste Zahl kippt -- der Vergleich ist die ganze Substanz der Form.*
+TREIBER35='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    int a = besitz_nehmen(7);      /* frei -> gelingt   */
+    int b = besitz_nehmen(9);      /* belegt -> scheitert */
+    int c = besitz_geben(9);       /* nicht seiner -> scheitert */
+    int d = besitz_geben(7);       /* seiner -> gelingt */
+    printf("%d %d %d %d %u\n", a, b, c, d,
+           (unsigned)atomic_load_explicit(&BESITZER, memory_order_acquire));
+    return 0;
+}
+'
+#    Erwartet:  1 0 0 1  -- der Tausch gelingt genau dann, wenn der ALTE Wert der erwartete war
+#                    0   -- und am Ende ist der Platz wieder frei
+lauf "beispiel35" "$W/beispiele/35-tausch.gab" "$TREIBER35" "1 0 0 1 0" \
+     's/uint32_t _cx1 = (uint32_t)(NIEMAND);/uint32_t _cx1 = (uint32_t)(f);/' \
+     "0 assumptions, 0 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty)"
+
+echo "== EMISSION: ALL PASS -- 17 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser zwoelf Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Zwoelf Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser siebzehn Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Siebzehn Ja-Aussagen sind keine ueber die Sprache."

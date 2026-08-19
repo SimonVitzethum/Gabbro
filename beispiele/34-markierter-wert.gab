@@ -1,0 +1,89 @@
+-- 34 -- Der markierte Wert: `tagged type` als WERT, nicht nur als Zusage («C2»).
+--
+-- Bis zum 2026-08-19 war ein `tagged type` eine reine Prueferangelegenheit: `D005` verlangt
+-- das erschoepfende `match` ohne Sammelzweig, und **abgesenkt wurde er gar nicht** -- weder
+-- als Slotfeld noch als Parameter. Fuenf Weigerungen im Korpus hingen daran, und keine davon
+-- war eine Sprachfrage: die Absenkung ist `struct { marke; union { … } }`, und mehr steht
+-- dort nicht zur Wahl.
+--
+-- **Die eine Entscheidung, die dabei faellt, ist der Typ der Marke.** Sie wird ein `enum`,
+-- nicht das schmalste Wort -- damit ist `switch` ohne `default` unter `-Wswitch` ein
+-- **zweiter Leser von `D005`**: der Pruefer verlangt die Erschoepfung, und der C-Uebersetzer
+-- prueft dieselbe Zusage noch einmal. *Dieselbe Bauart wie
+-- `-Wmissing-field-initializers` beim Verbundkonstruktor -- zwei unabhaengige Leser einer
+-- Zusage.* Die Breite kostet dabei nichts: die Vereinigung richtet ohnehin auf ihr breitestes
+-- Glied aus.
+--
+-- Und was hier NICHT entschieden wird: ob eine C-`union` das Typrecht verletzt. Sie tut es
+-- nicht, solange nur das zuletzt geschriebene Glied gelesen wird -- und **genau das erzwingt
+-- `D005` eine Ebene hoeher.** Der Erzeuger darf sich darauf berufen, weil ein Pass es haelt.
+--
+-- **Die Breiten sind hier nicht beliebig gewaehlt.** `Kurz` traegt 32 Bit, `Lang` 64 -- und
+-- der Differenztest legt in `Lang` eine Zahl, die in 32 Bit nicht passt. *Wer das falsche
+-- Glied der Vereinigung liest, bekommt eine gueltige Zahl und keinen Fehler; genau dagegen
+-- steht die Marke.*
+
+module beispiel::markierter_wert {
+
+const NANFRAGEN : u32 = 8;
+
+type Zaehler = u32 in 0 .. 65535;
+
+-- Die Fallunterscheidung. **`Leer` traegt keine Nutzlast** -- es steht in der Marke und in
+-- keinem Glied der Vereinigung.
+tagged type Nachricht = { Leer, Kurz(u32), Lang(u64), Antwort(Zaehler) };
+
+-- Als SLOTFELD: eine Tabelle traegt den markierten Wert wie jeden anderen.
+table Anfragen count NANFRAGEN {
+    slot {
+        benutzt : bool,
+        was     : Nachricht,
+    }
+}
+
+-- Als PARAMETER: der markierte Wert wird uebergeben, nicht ueber einen Zeiger gereicht.
+-- Jeder Zweig liest die Nutzlast SEINER Variante -- und keine andere.
+impl fn gewicht(m : Nachricht) -> u64
+    effects { pure }
+    costs   <= 12 ops
+{
+    match m {
+        Leer       => { return 0; }
+        Kurz(k)    => { return k; }
+        Lang(p)    => { return p; }
+        Antwort(z) => { return z; }
+    }
+    return 0;
+}
+
+-- **Und der Zweig, der seine Nutzlast NICHT liest.** Das ist kein Sonderfall, sondern die
+-- Form, die die Absenkung tragen muss: der Binder steht da, weil die Variante eine Nutzlast
+-- hat, und `-Wextra` spraeche sonst ueber eine Zeile, die der Anwender nicht geschrieben hat.
+impl fn art_von(m : Nachricht) -> u32
+    effects { pure }
+    costs   <= 12 ops
+{
+    match m {
+        Leer       => { return 0; }
+        Kurz(k)    => { return 1; }
+        Lang(p)    => { return 2; }
+        Antwort(z) => { return 3; }
+    }
+    return 0;
+}
+
+-- Ueber den Traeger: dasselbe `switch`, nur ist der Gegenstand ein Slotfeld.
+impl fn gewicht_im_slot(a : ptr<normal, r> Anfragen, i : index into Anfragen) -> u64
+    effects { reads a.slots }
+    costs   <= 16 ops
+{
+    match a.slots[i].was {
+        Leer       => { return 0; }
+        Kurz(k)    => { return k; }
+        Lang(p)    => { return p; }
+        Antwort(z) => { return z; }
+    }
+    return 0;
+}
+
+}

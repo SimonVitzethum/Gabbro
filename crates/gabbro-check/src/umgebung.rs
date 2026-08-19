@@ -905,15 +905,33 @@ impl Umgebung {
             TypExpr::FnZeiger(_) => Typ::Unbekannt,
             // **A3.** `index into T` erbt die Schranke aus `T`s `count`. Ohne `count` bleibt
             // sie offen -- und das ist dann eine Aussage der Deklaration, keine Konvention.
-            TypExpr::Index { tabelle, .. } => {
+            // **Und `option index into T` ist ein ANDERER Typ, nicht derselbe mit einem
+            // Zusatz** (2026-08-19, «C1»). Bis hierher bekamen beide denselben Namen und
+            // denselben Bereich `0 ..< N` -- und damit war der Sonderwert unsichtbar:
+            //
+            // ```gabbro
+            // static mut frei : option index into Halde = None;
+            // return h.slots[frei].kopf;      -- null Fehler, und `frei` kann N sein
+            // ```
+            //
+            // > *Der Sonderwert ist `N` selbst* (`beweise/Option_Sonderwert.thy`,
+            // > `sonderwert_ausserhalb`). Ein Optionswert nimmt ihn an -- also reicht sein
+            // > Bereich bis `N`, und genau daran faellt `M103`, wenn jemand ihn als Index
+            // > benutzt, statt ihn vorher zu `match`en.
+            //
+            // **Die Absenkung haengt daran**: seit «C1» steht `T_NONE` wirklich im erzeugten
+            // C. Solange der Erzeuger sich weigerte, war die Luecke folgenlos; heute nicht.
+            TypExpr::Index { tabelle, optional, .. } => {
+                let sonderwert = i128::from(*optional);
                 let bereich = self
                     .kandidaten(von, &tabelle.text)
                     .into_iter()
                     .find_map(|k| self.kapazitaeten.get(&k).copied())
-                    .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1))
+                    .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1 + sonderwert))
                     .unwrap_or_else(|| IntBereich::voll(32, false));
+                let vorsatz = if *optional { "option " } else { "" };
                 Typ::Benannt {
-                    name: format!("index into {}", tabelle.text),
+                    name: format!("{vorsatz}index into {}", tabelle.text),
                     heimat: String::new(),
                     undurchsichtig: false,
                     unter: Box::new(Typ::Ganzzahl(bereich)),

@@ -1,0 +1,35 @@
+-- erwartet: M101
+-- **«C1» -- der Sonderwert wird als gueltiger Index geschrieben.**
+--
+-- `option index into T` senkt zu einem Sonderwert ab, und der Sonderwert ist `count` selbst
+-- (`beweise/Option_Sonderwert.thy`, `sonderwert_ausserhalb`). Die Absenkung steht und faellt
+-- damit, dass **kein gueltiger Index diesen Wert annimmt** -- `kodiere_injektiv` sagt genau
+-- das, und es ist eine PRAEMISSE, keine Folgerung.
+--
+-- Gemessen am 2026-08-19: `frei = Some(8)` auf einer `table … count 8` ging mit **null
+-- Fehlern** durch. Der Beweis lag seit dem 2026-08-17 da; seine Bedingung pruefte niemand.
+-- *Ein Satz ohne Leser ist die Haelfte, die «NL» beklagt.*
+--
+-- Seit heute traegt `Some(i)` den Typ seines Arguments, und damit faellt die Zeile an M1 --
+-- an derselben Regel, an der jeder andere Wert ausserhalb seines Bereichs faellt.
+module gift::sonderwert_als_index {
+
+table Halde count 8 {
+    slot {
+        kopf    : u64,
+        naechst : option index into Halde,
+    }
+}
+
+static mut frei : option index into Halde = None;
+
+impl fn setzen()
+    effects { writes frei }
+    costs   <= 2 ops
+{
+    -- 8 ist der Sonderwert: `Halde_NONE`. Waere er ein gueltiger Index, dann liesse sich
+    -- `None` von `Some(8)` nicht mehr unterscheiden.
+    frei = Some(8);
+}
+
+}

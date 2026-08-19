@@ -112,6 +112,13 @@ pub const EINORDNUNG: &[Posten] = &[
         grund: "`typedef struct` plus `(P){ .a = … }` — der Konstruktor ist ERZEUGT («B7»)",
     },
     Posten {
+        konstrukt: "type (tagged)",
+        traegt: Traegt::Direkt,
+        grund: "`struct { marke; union { … } }`, und die Marke ist ein `enum` — damit wird \
+                `-Wswitch` ein ZWEITER Leser von `D005`. Dass die `union` das Typrecht nicht \
+                verletzt, haelt derselbe Pass: gelesen wird nur, was die Marke nennt",
+    },
+    Posten {
         konstrukt: "type (ghost)",
         traegt: Traegt::Geloescht,
         grund: "ein `linear ghost type` existiert zur Laufzeit nicht -- die Loeschung wirkt \
@@ -184,6 +191,19 @@ pub const EINORDNUNG: &[Posten] = &[
         grund: "eine Spezifikationsfunktion hat kein C — sie ist Beweisersache",
     },
     Posten {
+        konstrukt: "reason",
+        traegt: Traegt::Direkt,
+        grund: "ein `enum` mit den DEKLARIERTEN Zahlen; der Text wandert als Kommentar mit. \
+                Wie ein Fehler zurueckkommt, steht nirgends -- `let … else` bleibt `C001`",
+    },
+    Posten {
+        konstrukt: "group",
+        traegt: Traegt::Geloescht,
+        grund: "eine Gruppe erzeugt NICHTS und darf nichts erzeugen: sie ist die \
+                Verbindungsaussage ueber zwei Traegern, und ihr Sperrabdruck (`U001`-`U006`) \
+                wird zur Uebersetzungszeit nachgerechnet (W6)",
+    },
+    Posten {
         konstrukt: "assume / axiom",
         traegt: Traegt::Geloescht,
         grund: "steht als Annahme im Kopf des Erzeugnisses, nicht als Code (SYNTAX.md 12)",
@@ -218,6 +238,34 @@ pub const EINORDNUNG: &[Posten] = &[
         konstrukt: "match (option)",
         traegt: Traegt::Schablone("option.sonderwert"),
         grund: "ein Vergleich gegen den Sonderwert `N`; die Bindung des `Some`-Zweigs ist der Wert",
+    },
+    Posten {
+        konstrukt: "match (tagged)",
+        traegt: Traegt::Direkt,
+        grund: "ein `switch` OHNE `default` — der fehlende Sammelzweig IST die Aussage, und \
+                `-Wswitch` liest `D005` damit ein zweites Mal. Die Nutzlast kommt aus dem \
+                Glied, das die Marke nennt, und nur daraus",
+    },
+    Posten {
+        konstrukt: "rcu",
+        traegt: Traegt::Fremd,
+        grund: "zwei Prototypen (`_lese_start`, `_lese_ende`) und die Gnadenfrist -- der \
+                RUMPF kommt von aussen. Dass nach der Ruecknahme des Zeigers kein Leser mehr \
+                drin ist, ist eine Aussage ueber die UMGEBUNG und steht als `assume` daneben",
+    },
+    Posten {
+        konstrukt: "observes",
+        traegt: Traegt::Fremd,
+        grund: "Betreten und Verlassen des Lesebereichs, auf JEDEM Pfad -- wie `locks`, nur \
+                ohne Ausschluss. Wo zurueckgegeben werden darf, rechnet `H011`/`H012` zur \
+                Uebersetzungszeit nach (W6)",
+    },
+    Posten {
+        konstrukt: "exchange (compare)",
+        traegt: Traegt::Direkt,
+        grund: "`atomic_compare_exchange_strong_explicit` mit der DEKLARIERTEN Ordnung -- ein \
+                `=` waere in C `seq_cst`, also eine andere und teurere als die, die dasteht. \
+                Die `update`-Form bleibt `C001`: ihre Schranke braucht `NCORES`",
     },
     Posten {
         konstrukt: "locks",
@@ -344,6 +392,8 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
         ItemArt::Typ(t) => {
             if t.ghost {
                 zaehle(&mut e, "type (ghost)")
+            } else if t.tagged {
+                zaehle(&mut e, "type (tagged)")
             } else if matches!(&t.rumpf, Some(TypExpr::Verbund(f, _)) if !f.is_empty()) {
                 zaehle(&mut e, "type (Verbund)")
             } else {
@@ -379,6 +429,18 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
             ));
         }
         ItemArt::Assume(_) | ItemArt::Axiom(_) => zaehle(&mut e, "assume / axiom"),
+        ItemArt::Reason(_) => zaehle(&mut e, "reason"),
+        ItemArt::Rcu(r) => {
+            zaehle(&mut e, "rcu");
+            e.fremde.push((
+                format!("{}_lese_start / _lese_ende", r.name.text),
+                "der Rumpf eines RCU-Lesebereichs -- und die GNADENFRIST: dass nach der \
+                 Ruecknahme des Zeigers kein Leser mehr drin ist, stellt kein statischer \
+                 Pass her"
+                    .into(),
+            ));
+        }
+        ItemArt::Gruppe(_) => zaehle(&mut e, "group"),
         // **«entrust» -- die eine Zeile, um derentwillen das Wort existiert.**
         //
         // Sie nennt den ganzen Vertrag, nicht bloss den Namen: *wer das Zeugnis liest, muss
@@ -523,7 +585,14 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
                 }
             }
             StmtArt::Match(m) => {
-                zaehle(e, "match (option)");
+                // **Zwei Absenkungen, zwei Buchungen** («C2»). Unterschieden wird
+                // SYNTAKTISCH, an den Zweignamen -- diese Lesung wird ausdruecklich
+                // unabhaengig vom Erzeuger gefuehrt, sonst deckt sie sich mit ihm, weil
+                // sie ihn abschreibt.
+                let option = m.zweige.len() == 2
+                    && m.zweige.iter().any(|z| z.variante.text == "Some")
+                    && m.zweige.iter().any(|z| z.variante.text == "None");
+                zaehle(e, if option { "match (option)" } else { "match (tagged)" });
                 for z in &m.zweige {
                     block(&z.rumpf, e, geister);
                 }
@@ -558,7 +627,13 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
             StmtArt::Bricht(_) => e.unzugeordnet.push("breaking".into()),
             StmtArt::Publish(_) => zaehle(e, "publishes"),
             StmtArt::AwaitLoad(_) => zaehle(e, "awaits"),
-            StmtArt::Exchange(_) => e.unzugeordnet.push("exchange".into()),
+            // **«C4», 2026-08-19.** Nur die VERGLEICHSform senkt ab; `update` bleibt eine
+            // Absage und darf darum auch keine Buchung bekommen -- sonst stuende im Zeugnis
+            // eine Absenkung, die es nicht gibt.
+            StmtArt::Exchange(x) => match &x.form {
+                XForm::Vergleich { .. } => zaehle(e, "exchange (compare)"),
+                XForm::Update { .. } => e.unzugeordnet.push("exchange update".into()),
+            },
             StmtArt::Leave(_) => e.unzugeordnet.push("leave".into()),
             StmtArt::Next(_) => e.unzugeordnet.push("next".into()),
         }

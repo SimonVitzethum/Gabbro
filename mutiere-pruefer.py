@@ -218,11 +218,9 @@ MUTATIONEN = [
         "wrapping-ueberall",
         "m1.rs",
         "                if !ziel.laeuft_um() {\n"
-        "                    self.passt(&ergebnis_typ, &ziel, z.wert.span, \"die Zuweisung\");\n"
-        "                }",
+        "                    self.passt_wert(",
         "                if ziel.laeuft_um() {\n"
-        "                    self.passt(&ergebnis_typ, &ziel, z.wert.span, \"die Zuweisung\");\n"
-        "                }",
+        "                    self.passt_wert(",
         "jede Zuweisung gilt als `wrapping`",
     ),
     # -- namen.rs, schleifen.rs, wirkungen.rs --------------------------------------------
@@ -276,10 +274,20 @@ MUTATIONEN = [
         "index-erbt-nicht",
         "umgebung.rs",
         "                    .find_map(|k| self.kapazitaeten.get(&k).copied())\n"
-        "                    .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1))",
+        "                    .map(|n| IntBereich::genau(32, false, 0, n as i128 - 1 + sonderwert))",
         "                    .find_map(|k| self.kapazitaeten.get(&k).copied())\n"
         "                    .map(|_| IntBereich::voll(32, false))",
         "A3 -- `index into T` erbt die Schranke aus `count` nicht",
+    ),
+    # **«C1», 2026-08-19.** `option index into T` reicht bis `N`, `index into T` bis `N-1` --
+    # der Unterschied IST der Sonderwert. Ohne ihn ist ein Optionswert von einem gueltigen
+    # Index nicht zu unterscheiden, und `h.slots[frei]` greift einen Slot hinter das Feld.
+    Mutation(
+        "option-ohne-sonderwert",
+        "umgebung.rs",
+        "                let sonderwert = i128::from(*optional);",
+        "                let sonderwert = 0;",
+        "der Bereich eines `option index into T` enthaelt den Sonderwert nicht mehr",
     ),
     Mutation(
         "rumpf-egal",
@@ -956,8 +964,8 @@ MUTATIONEN = [
     Mutation(
         "sperre-bleibt-beim-return-liegen",
         "emit.rs",
-        "            for freigabe in austritt.iter().rev() {\n                aus.push_str(&format!(\"{e}{freigabe};\\n\"));\n            }",
-        "            for freigabe in austritt.iter().rev() {\n                let _ = freigabe;\n            }",
+        "            for freigabe in austritt.freigaben.iter().rev() {\n                aus.push_str(&format!(\"{e}{freigabe};\\n\"));\n            }",
+        "            for freigabe in austritt.freigaben.iter().rev() {\n                let _ = freigabe;\n            }",
         "C-Absenkung -- ein `return` aus einem `locks`-Block laesst die Sperre stehen (C8)",
         "code",
     ),
@@ -1075,7 +1083,7 @@ MUTATIONEN = [
     Mutation(
         "untere-schranke-faellt-immer-weg",
         "emit.rs",
-        "            let bedingung = if untere_ist_null && vorzeichenlos.contains(&n.ort.basis.text) {",
+        "            let bedingung = if untere_ist_null && vorzeichenlos {",
         "            let bedingung = if untere_ist_null {",
         "C-Absenkung -- die untere `narrow`-Pruefung faellt auch fuer vorzeichenbehaftete Werte weg",
         "code",
@@ -1117,7 +1125,7 @@ MUTATIONEN = [
         "if-zweig-ohne-austritt",
         "emit.rs",
         "                for k in &rumpf.anweisungen {\n                    anweisung(k, aus, u, absagen, tiefe + 1, austritt);\n                }\n            }\n            if let Some(sonst) = &w.sonst {",
-        "                for k in &rumpf.anweisungen {\n                    anweisung(k, aus, u, absagen, tiefe + 1, &Vec::new());\n                }\n            }\n            if let Some(sonst) = &w.sonst {",
+        "                for k in &rumpf.anweisungen {\n                    anweisung(k, aus, u, absagen, tiefe + 1, &Austritt::default());\n                }\n            }\n            if let Some(sonst) = &w.sonst {",
         "C-Absenkung -- ein `return` aus einem `if` im `locks`-Block laesst die Sperre stehen",
         "code",
     ),
@@ -1214,10 +1222,189 @@ MUTATIONEN = [
     Mutation(
         "none-nimmt-die-falsche-tabelle",
         "emit.rs",
-        "    u.optionfeld.get(&(tab.clone(), feld.text.clone())).cloned()",
-        "    { let _ = feld; Some(tab.clone()) }",
-        "C-Absenkung -- `x = None` nimmt den Sonderwert der EIGENEN statt der Zieltabelle",
+        "        Some(TypExpr::Index { tabelle, optional: true, .. }) => Some(tabelle.text),",
+        "        Some(TypExpr::Index { tabelle, .. }) => Some(tabelle.text),",
+        "C-Absenkung -- ein `index into T` gilt als Option, und `= None` schreibt in ein Feld, "
+        "das keinen Sonderwert hat",
         "code",
+    ),
+    # -- emit.rs: «C4»/«C5» -- der Tausch, das `const`, das Feld, der Griff ---------------
+    #
+    # Die erste ist die, gegen die der Katalog schon zwei Eintraege fuehrt: ein `=` auf einem
+    # `_Atomic` ist in C `seq_cst`, also eine ANDERE Ordnung als die deklarierte. *Ein
+    # Differenztest kann das an einem Faden nicht zeigen -- diese Mutation kann es.*
+    Mutation(
+        "tausch-nimmt-die-vorgabeordnung",
+        "emit.rs",
+        "{e}        &{ziel}, &{h}, ({typ})({}), {speichern}, {laden});\\n{e}}}\\n",
+        "{e}        &{ziel}, &{h}, ({typ})({}), memory_order_seq_cst, memory_order_seq_cst);"
+        "\\n{e}}}\\n",
+        "C-Absenkung -- der Tausch nimmt seq_cst statt der deklarierten Ordnung",
+        "code",
+    ),
+    Mutation(
+        "tausch-ohne-erwarteten-wert",
+        "emit.rs",
+        '{e}bool {};\\n{e}{{\\n{e}    {typ} {h} = ({typ})({erwartet});\\n',
+        '{e}bool {};\\n{e}{{\\n{e}    {typ} {h} = ({typ})0;\\n',
+        "C-Absenkung -- der erwartete Wert der `when`-Bedingung faellt weg; der Tausch "
+        "vergleicht gegen null",
+        "code",
+    ),
+    Mutation(
+        "const-nimmt-wieder-den-schwachen-auswerter",
+        "emit.rs",
+        "            } else if let Some(n) = namen.konstwert.get(&k.name.text) {",
+        "            } else if let Some(n) = None::<&i128> {",
+        "C-Absenkung -- `u64::max` faellt wieder auf den schwaecheren der zwei Auswerter "
+        "zurueck (W7)",
+        "code",
+    ),
+    Mutation(
+        "feldlaenge-wird-geraten",
+        "emit.rs",
+        '            aus.push_str(&format!("    {el} {}[{n}];\\n", f.name.text));',
+        '            aus.push_str(&format!("    {el} {}[1];\\n", f.name.text));',
+        "C-Absenkung -- die Laenge eines Feldtyps wird geraten statt abgelesen",
+        "code",
+    ),
+    Mutation(
+        "geraetegriff-ohne-basis",
+        "emit.rs",
+        '            "({name}){{ (volatile uint8_t *)(uintptr_t){} }}",',
+        '            "({name}){{ (volatile uint8_t *)(uintptr_t)0*{} }}",',
+        "C-Absenkung -- der Geraetegriff zeigt auf null statt auf seine erklaerte Basis",
+        "code",
+    ),
+    # -- emit.rs: «C3b» -- RCU, und der Unterschied zur Sperre ist das, was FEHLT ----------
+    Mutation(
+        "rcu-ohne-prototypen",
+        "emit.rs",
+        '                "void {n}_lese_start(void);\\nvoid {n}_lese_ende(void);\\n"',
+        '                "/* {n} */\\n"',
+        "C-Absenkung -- ein RCU-Lesebereich wird betreten, ohne dass sein Primitiv erklaert ist",
+        "code",
+    ),
+    Mutation(
+        "lesebereich-bleibt-beim-return-offen",
+        "emit.rs",
+        '            innen.freigaben.push(format!("{n}_lese_ende()"));',
+        "            let _ = &innen;",
+        "C-Absenkung -- ein `return` aus einem `observes` laesst den Lesebereich offen; "
+        "die Gnadenfrist haengt genau daran",
+        "code",
+    ),
+    # -- emit.rs: «C3a/c» -- `reason`, `group`, und der Speicher einer Tabelle -------------
+    #
+    # Zwei Absenkungen und eine gezogene Linie. Die dritte Mutation ist die interessanteste:
+    # sie nimmt der Tabelle ihren eigenen Speicher, und dann steht wieder ein Pfeil auf einem
+    # Typnamen im Erzeugnis -- die Form, die bis zum 2026-08-19 an `cc` delegiert war.
+    Mutation(
+        "reason-erfindet-seine-zahlen",
+        "emit.rs",
+        "                    f.wert,\n                    kommentartext(&f.text.text)",
+        "                    0,\n                    kommentartext(&f.text.text)",
+        "C-Absenkung -- die Fehlerwerte kommen nicht mehr aus der Quelle; zwei Faelle "
+        "tragen dieselbe Zahl",
+        "code",
+    ),
+    Mutation(
+        "gruppe-erzeugt-doch-etwas",
+        "emit.rs",
+        "        ItemArt::Gruppe(_) => {}",
+        '        ItemArt::Gruppe(g) => aus.push_str(&format!("\\nstatic int {};\\n", g.name.text)),',
+        "C-Absenkung -- eine `group` kostet zur Laufzeit etwas; sie ist eine Beweisaussage "
+        "und darf nichts erzeugen",
+        "code",
+    ),
+    Mutation(
+        "tabelle-ohne-eigenen-speicher",
+        "emit.rs",
+        "    if u.tabellenglobal.contains(&o.basis.text) {\n"
+        '        t = format!("{}_speicher", o.basis.text);',
+        "    if false && u.tabellenglobal.contains(&o.basis.text) {\n"
+        '        t = format!("{}_speicher", o.basis.text);',
+        "C-Absenkung -- eine ueber ihren Namen adressierte Tabelle wird wieder ein Pfeil auf "
+        "einen Typnamen",
+        "code",
+    ),
+    # -- emit.rs: «C2» -- der markierte Wert -----------------------------------------------
+    #
+    # Drei Stellen tragen die Absenkung, und jede kann still danebengehen: der `switch` liest
+    # die MARKE (nicht den Wert), jeder Zweig liest das Glied SEINER Variante, und es gibt
+    # keinen Sammelzweig. *Der dritte ist der unscheinbarste und der teuerste: ein `default:`
+    # legt `-Wswitch` still, also genau den zweiten Leser von `D005`.*
+    Mutation(
+        "markiertes-match-liest-den-wert",
+        "emit.rs",
+        '    aus.push_str(&format!("{e}switch ({gegenstand}.marke) {{\\n"));',
+        '    aus.push_str(&format!("{e}switch ({gegenstand}.marke + 0*1) {{\\n"));',
+        "C-Absenkung -- der `switch` liest nicht mehr die Marke selbst",
+        "code",
+    ),
+    Mutation(
+        "variantenzweig-liest-fremdes-glied",
+        "emit.rs",
+        '                        "{e}    {c} {} = {gegenstand}.last.{};\\n",\n'
+        "                        b.text, v.name.text",
+        '                        "{e}    {c} {} = {gegenstand}.last.{};\\n",\n'
+        "                        b.text, varianten[0].name.text",
+        "C-Absenkung -- ein Zweig liest ein FREMDES Glied der Vereinigung; die Marke sagt "
+        "dann nichts mehr",
+        "code",
+    ),
+    Mutation(
+        "markiertes-match-bekommt-einen-sammelzweig",
+        "emit.rs",
+        '    aus.push_str(&format!("{e}}}\\n"));\n}\n\n/// Welchen `tagged type`',
+        '    aus.push_str(&format!("{e}default: break;\\n{e}}}\\n"));\n}\n\n'
+        "/// Welchen `tagged type`",
+        "C-Absenkung -- der `switch` bekommt einen Sammelzweig und legt `-Wswitch` still, "
+        "also den zweiten Leser von D005",
+        "code",
+    ),
+    Mutation(
+        "markiertes-match-muss-nicht-erschoepfen",
+        "emit.rs",
+        "    if m.zweige.len() != varianten.len()\n"
+        "        || !varianten\n"
+        "            .iter()\n"
+        "            .all(|v| m.zweige.iter().any(|z| z.variante.text == v.name.text))\n"
+        "    {",
+        "    if false {",
+        "C-Absenkung -- ein `match` ohne jede Variante wird ein `switch`, der durchfaellt "
+        "und NICHTS tut",
+        "code",
+    ),
+    # -- emit.rs / m1.rs: «C1» -- der Sonderwert, ausgeschrieben ---------------------------
+    #
+    # Der Beweis lag seit dem 2026-08-17 in `beweise/Option_Sonderwert.thy` und **kein
+    # Erzeuger benutzte ihn**. Seit «C1» steht er im C -- und damit muss beschaedigbar sein,
+    # was ihn traegt: der Wert selbst, die Nutzlastpruefung und der Typ des `Some`-Binders.
+    Mutation(
+        "none-wird-null",
+        "emit.rs",
+        '        "None" => Some(format!("{tab}_NONE")),',
+        '        "None" => Some(format!("0*{tab}_NONE")),',
+        "C-Absenkung -- `None` senkt zu 0 ab und ist von `Some(0)` nicht zu unterscheiden",
+        "code",
+    ),
+    Mutation(
+        "some-gegen-den-optionstyp",
+        "m1.rs",
+        "            (true, Some(nutzlast)) => self.passt(quelle, &nutzlast, span, was),",
+        "            (true, Some(nutzlast)) => {\n"
+        "                let _ = nutzlast;\n"
+        "                self.passt(quelle, ziel, span, was)\n"
+        "            }",
+        "`Some(N)` wird gegen den OPTIONSTYP geprueft, also passt der Sonderwert hinein",
+    ),
+    Mutation(
+        "some-binder-ohne-nutzlast",
+        "m1.rs",
+        "                            innen.lokal.insert(binder.text.clone(), nutz);",
+        "                            innen.lokal.insert(binder.text.clone(), Typ::Unbekannt);",
+        "V3 an der Option -- der `Some`-Binder traegt seinen Indexbereich nicht mehr",
     ),
     Mutation(
         "bank-ohne-schritt",

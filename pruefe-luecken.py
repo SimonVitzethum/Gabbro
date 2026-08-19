@@ -17,7 +17,16 @@ laeuft, ist keiner (WERKZEUGKASTEN.md W1).
 """
 import hashlib
 import pathlib, subprocess, re, sys
-W = pathlib.Path("/home/simon/Dokumente/Gabbro"); C = W/"crates/gabbro-check/src"
+# **Die Wurzel kommt aus der DATEI, nicht aus einem absoluten Pfad** (2026-08-19).
+#
+# Hier stand `/home/simon/Dokumente/Gabbro` fest verdrahtet -- als einziger der dreizehn
+# Waechter. In einem git-Arbeitsbaum baute und prueffte er damit **den fremden Baum**: er
+# verdrehte Zeilen in Quellen, die gar nicht die gerade bearbeiteten waren, und meldete
+# „13 von 13" ueber eine Messung, die mit dem Stand vor ihm nichts zu tun hatte.
+#
+# > *Ein Waechter, der etwas anderes misst, als er sagt, ist schlimmer als keiner* -- und
+# > dieser hier SCHREIBT in die Quellen, die er misst.
+W = pathlib.Path(__file__).resolve().parent; C = W/"crates/gabbro-check/src"
 # (Datei, alte Zeile aus Lauf 1, Verdrehung) -- ueber den INHALT gesucht, nicht ueber die Nummer.
 LUECKEN = [
  # **NULLMUTATION, bewiesen** (2026-08-19) -- keine Luecke, sondern eine Verdrehung ohne

@@ -1,0 +1,32 @@
+-- erwartet: M103
+-- **«C1» -- der `Some`-Binder traegt seinen Indexbereich, und bis heute tat er es nicht.**
+--
+-- V3 sagt: *der Binder traegt die Nutzlast SEINER Variante.* Die Regel war fuer `tagged type`
+-- gebaut und traf die Option nicht: ein `match` ueber `option index into T` band `Some(i)` als
+-- `Unbekannt`, und damit war **jeder Zugriff mit `i` im `Some`-Zweig ungeprueft** -- ausgerechnet
+-- in dem Zweig, der weiss, dass `i` ein gueltiger Index ist.
+--
+-- Hier steht `i + 1`, und das reicht bis `count` selbst. Mit dem Binderbereich `0 ..< 8` faellt
+-- die Zeile an `M103`; ohne ihn sagt niemand etwas.
+module gift::some_binder_ohne_schranke {
+
+table Halde count 8 {
+    slot {
+        kopf    : u64,
+        naechst : option index into Halde,
+    }
+}
+
+static mut frei : option index into Halde = None;
+
+impl fn nachbar(h : ptr<normal, r> Halde) -> u64
+    effects { reads frei, reads h.slots }
+    costs   <= 6 ops
+{
+    match frei {
+        Some(i) => { return h.slots[i + 1].kopf; }
+        None    => { return 0; }
+    }
+}
+
+}

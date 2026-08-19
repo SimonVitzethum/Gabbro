@@ -191,16 +191,25 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Die Praemisse `N < 2^w` stand in keiner der drei Fassungen des Satzes -- weder hier
         // noch in `SPRACHE.md` noch im Erzeuger. Sie kam aus dem Beweis und steht jetzt als
         // Pruefung im Erzeuger.
+        // **Der Widerruf, 2026-08-19 («C1»).** Die zweite Haelfte stand hier als OFFEN, mit
+        // der Begruendung *„heute weigert sich der Erzeuger fuer `None` als Ausdruck, und
+        // solange er das tut, kann keine Rechnung ihn erzeugen"*. **Seit «C1» weigert er
+        // sich nicht mehr** -- `T_NONE` steht wirklich im erzeugten C. *Damit war die
+        // Begruendung verbraucht und die Luecke lebendig*, und sie wurde am selben Tag
+        // gemessen: `h.slots[frei].kopf` ging mit null Fehlern durch.
         pflicht: "UNTER DER PRAEMISSE `N < 2^w` (w = Breite des Indexworts, heute 32): der \
                   Sonderwert `N` liegt ausserhalb der Indexdomaene `0 ..< N`, und die \
                   Kodierung `None -> N`, `Some i -> i` ist injektiv -- **maschinell geprueft** \
                   (`kodiere_wort_injektiv`). Bei `N = 2^w` faellt sie zusammen, und `None` ist \
                   von `Some 0` nicht mehr zu unterscheiden \
-                  (`sonderwert_kollidiert_bei_vollem_wort`). **OFFEN bleibt die zweite \
-                  Haelfte:** dass keine erzeugte Rechnung den Sonderwert HERSTELLT. Ihr \
-                  Gegenstand ist `emit.rs`, nicht eine Menge; heute weigert sich der Erzeuger \
-                  fuer `None` als Ausdruck, und *solange er das tut*, kann keine Rechnung ihn \
-                  erzeugen.",
+                  (`sonderwert_kollidiert_bei_vollem_wort`). **Die zweite Haelfte traegt seit \
+                  «C1» ein PASS statt einer Weigerung:** `option index into T` reicht bis `N`, \
+                  `index into T` bis `N-1` (umgebung.rs), also faellt jeder Gebrauch eines \
+                  Optionswertes als Index an `M103` und jedes `Some(N)` an `M101`. **OFFEN \
+                  bleibt die Arithmetik AUF einem Index** -- `i + 1` auf `index into T` \
+                  rechnet M1 im Indexbereich nach, aber dass keine erzeugte Rechnung den \
+                  Sonderwert TRIFFT, ist eine Aussage ueber `emit.rs` und keine ueber eine \
+                  Menge.",
         stand: Stand::Getragen,
         voraussetzungen: &[],
         fundstelle: "FRAGMENTE.md F1 (vier CDT-Felder), F8 (`aufloesen`); MESSUNGEN.md B3, \

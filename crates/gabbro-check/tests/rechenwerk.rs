@@ -1810,3 +1810,345 @@ pub impl fn tu() effects { writes z } costs <= 1 ops { z = 1; }
     gabbro_check::pruefe(&b2, &mut a2);
     assert_eq!(a2.fehler_zahl(), 0, "und die richtige Zusage geht durch:\n{}", a2.zeige(&richtig));
 }
+
+/// **«C1»: `option index into T` senkt zum SONDERWERT ab — und der Sonderwert ist `count`.**
+///
+/// Der Beweis lag seit dem 2026-08-17 in `beweise/Option_Sonderwert.thy`
+/// (`sonderwert_ausserhalb`, `kodiere_injektiv`, `kodiere_wort_injektiv`) und **kein Erzeuger
+/// benutzte ihn**: `None`, `Some(i)`, ein `static … = None` und ein `match` ueber einem Ort
+/// waren zehn Weigerungen. *Ein Satz ohne Leser ist die Haelfte, die «NL» beklagt.*
+///
+/// Vier Stellen tragen die Absenkung, und jede ist hier gemessen:
+///
+/// * die Zieltabelle kommt aus dem TYP des Ortes, nicht aus seinem Namen (`ort_typ`),
+/// * `None` wird `T_NONE` und **nur dort, wo die Zieltabelle feststeht**,
+/// * `return None` haengt am Rueckgabetyp der Funktion, nicht am Ausdruck,
+/// * ein `let` ohne erklaerten Typ liest ihn vom Slotfeld ab, statt ihn zu raten.
+#[test]
+fn option_senkt_zum_sonderwert_ab() {
+    let q = "module t {
+table H count 8 { slot { kopf : u64, naechst : option index into H, } }
+static mut frei : option index into H = None;
+impl fn belegen(h : ptr<normal, rw> H) -> option index into H
+    effects { reads frei, writes frei, reads h.slots } costs <= 6 ops
+{ match frei { None => { return None; } Some(i) => { frei = h.slots[i].naechst; return Some(i); } } }
+impl fn freigeben(h : ptr<normal, rw> H, i : index into H)
+    effects { reads frei, writes frei, writes h.slots } costs <= 5 ops
+{ h.slots[i].naechst = frei; frei = Some(i); }
+impl fn kopf(h : ptr<normal, r> H, i : index into H) -> u64
+    effects { reads h.slots } costs <= 3 ops
+{ let k = h.slots[i].kopf; return k; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    // Der Sonderwert IST die Laenge -- der erste Index, den es nicht gibt.
+    assert!(c.contains("#define H_NONE (8)"), "der Sonderwert ist `count`:\n{c}");
+    // Ein `static` faengt bei ihm an, nicht bei null.
+    assert!(c.contains("static uint32_t frei = H_NONE;"), "{c}");
+    // Ein `match` ueber einem Ort wird der Vergleich gegen ihn.
+    assert!(c.contains("!= H_NONE"), "das `match` vergleicht gegen den Sonderwert:\n{c}");
+    // `return None` haengt am RUECKGABETYP -- ohne ihn stuende hier ein Bezeichner `None`.
+    assert!(c.contains("return H_NONE;"), "`return None` kennt seine Tabelle:\n{c}");
+    assert!(!c.contains(" None"), "kein blankes `None` im C:\n{c}");
+    // `frei = Some(i)` ist der Wert selbst, kein Zusatzwort.
+    assert!(c.contains("frei = i;"), "`Some(i)` ist der Index selbst:\n{c}");
+    // Und ein `let` ohne erklaerten Typ liest ihn vom Slotfeld ab.
+    assert!(c.contains("uint64_t k = h->slots[i].kopf;"), "der Typ wird abgelesen:\n{c}");
+
+    // **Wo die Zieltabelle NICHT feststeht, weigert er sich** -- er raet keinen Sonderwert.
+    let ohne = "module t { extern fn nimm(x : u32) costs <= 1 ops;
+impl fn f() costs <= 2 ops { nimm(None); } }";
+    let (b2, mut a2) = gabbro_syntax::lies("p.gab", ohne);
+    let _ = gabbro_check::emit::emittiere(&b2, &mut a2);
+    assert!(
+        a2.absagen.iter().any(|x| x.code == "C001"),
+        "ein `None` ohne Tabelle ist keine Absenkung, sondern ein Bezeichner"
+    );
+}
+
+/// **Und die PRAEMISSE des Beweises wird geprueft, nicht angenommen.**
+///
+/// `sonderwert_kollidiert_bei_vollem_wort`: fuellt `count N` das Indexwort genau aus, faellt
+/// der Sonderwert mit einem gueltigen Index zusammen. *Wer `count 2^32` schreibt, hat keinen
+/// Platz mehr fuer „keine" — und das ist eine Absage, keine stille Verbreiterung.*
+#[test]
+fn der_sonderwert_prueft_seine_praemisse() {
+    let q = "module t { const N : u64 = 4294967296;
+table H count N { slot { naechst : option index into H, } } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    let _ = gabbro_check::emit::emittiere(&b, &mut a);
+    assert!(
+        a.absagen.iter().any(|x| x.code == "C001" && x.text.contains("fills the index word")),
+        "die Praemisse des dritten Satzes wird GEPRUEFT: {:?}",
+        a.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
+    );
+}
+
+/// **«C2»: ein `tagged type` senkt zu `struct { marke; union { … } }` ab.**
+///
+/// Fuenf Weigerungen im Korpus hingen daran, und keine war eine Sprachfrage. Die eine
+/// Entscheidung ist der TYP der Marke: sie wird ein `enum`, damit `switch` ohne `default`
+/// unter `-Wswitch` ein **zweiter Leser von `D005`** ist. *Zwei unabhaengige Leser derselben
+/// Zusage -- dieselbe Bauart wie `-Wmissing-field-initializers` beim Verbundkonstruktor.*
+#[test]
+fn tagged_senkt_zu_marke_und_vereinigung_ab() {
+    let q = "module t {
+tagged type N = { Leer, Kurz(u32), Lang(u64) };
+table A count 4 { slot { was : N, } }
+impl fn gewicht(m : N) -> u64 effects { pure } costs <= 9 ops
+{ match m { Leer => { return 0; } Kurz(k) => { return k; } Lang(p) => { return p; } } return 0; }
+impl fn art(m : N) -> u32 effects { pure } costs <= 9 ops
+{ match m { Leer => { return 0; } Kurz(k) => { return 1; } Lang(p) => { return 2; } } return 0; }
+impl fn im_slot(a : ptr<normal, r> A, i : index into A) -> u64
+    effects { reads a.slots } costs <= 12 ops
+{ match a.slots[i].was { Leer => { return 0; } Kurz(k) => { return k; } Lang(p) => { return p; } }
+  return 0; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    // Die Marke ist ein `enum` -- ohne ihn haette `-Wswitch` nichts zu lesen.
+    assert!(c.contains("typedef enum {"), "die Marke ist ein `enum`:\n{c}");
+    assert!(c.contains("    N_Kurz,"), "je Variante ein Wert:\n{c}");
+    // Eine Variante ohne Nutzlast steht in der Marke und in KEINEM Glied.
+    assert!(!c.contains("Leer;"), "`Leer` hat kein Glied der Vereinigung:\n{c}");
+    assert!(c.contains("    union {"), "{c}");
+    assert!(c.contains("        uint64_t Lang;"), "je Nutzlast ein Glied:\n{c}");
+    // Der `switch` liest die MARKE, nicht den Wert.
+    assert!(c.contains("switch (m.marke) {"), "der `switch` liest die Marke:\n{c}");
+    assert!(c.contains("switch (a->slots[i].was.marke) {"), "auch ueber einem Slotfeld:\n{c}");
+    // **Kein Sammelzweig.** Er wuerde genau den Leser stilllegen, um dessentwillen die
+    // Marke ein `enum` ist.
+    assert!(!c.contains("default:"), "ein `switch` ohne `default`:\n{c}");
+    // Jeder Zweig liest das Glied SEINER Variante -- und nur das.
+    assert!(c.contains("uint32_t k = m.last.Kurz;"), "{c}");
+    assert!(c.contains("uint64_t p = m.last.Lang;"), "{c}");
+    // Und der Binder, den ein Zweig nicht liest, wird stillgelegt statt weggelassen.
+    assert!(c.contains("(void)k;"), "ein ungelesener Binder wird stillgelegt:\n{c}");
+    // *Aber nur der ungelesene:* `art` liest `k` nicht, `gewicht` sehr wohl.
+    assert_eq!(c.matches("(void)k;").count(), 1, "nur der ungelesene:\n{c}");
+}
+
+/// **Und der Erzeuger prueft die Erschoepfung SELBST -- als zweiter Leser, nicht als erster.**
+///
+/// `D005` haelt sie eine Ebene hoeher. Steht hier trotzdem eine Pruefung, dann weil ein
+/// `switch` mit einem fehlenden Fall **durchfaellt und NICHTS tut** — die eine Gestalt, in
+/// der ein Erzeugnis stillschweigend etwas anderes rechnet als die Quelle sagt.
+#[test]
+fn markiertes_match_ohne_jede_variante_faellt() {
+    let q = "module t {
+tagged type N = { Leer, Kurz(u32), Lang(u64) };
+impl fn g(m : N) -> u32 effects { pure } costs <= 9 ops
+{ match m { Leer => { return 0; } Kurz(k) => { return k; } } return 0; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    let _ = gabbro_check::emit::emittiere(&b, &mut a);
+    assert!(
+        a.absagen.iter().any(|x| x.code == "C001" && x.text.contains("every variant")),
+        "ein `switch` mit fehlendem Fall faellt durch und tut nichts: {:?}",
+        a.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
+    );
+}
+
+/// **«C3a/c»: `reason` senkt ab, `group` erzeugt NICHTS, und `let … else` bleibt `C001`.**
+///
+/// Die drei gehoeren zusammen, weil sie die Grenze dieses Plans zeigen: zwei Formen sind
+/// Handwerk, die dritte waere eine **Sprachentscheidung** -- und die wird nicht getroffen,
+/// sondern gebucht.
+#[test]
+fn reason_gruppe_und_die_gezogene_linie() {
+    let q = "module t {
+reason E { KeinSlot = 1 \"kein freier Slot mehr\" Ungueltig = 7 \"abgelaufen\" exhaustive }
+table A count 4 { slot { a : u32, } }
+table B count 4 { slot { b : u32, } }
+group Zustellung over { A, B } { invariant beides cost O(n) runs offline :
+    forall i in slots of A : A.slots[i].a >= B.slots[i].b; }
+impl fn setze(i : index into A) effects { writes A.slots } costs <= 4 ops
+{ A.slots[i].a = 3; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    // **Die Zahlen STEHEN DA** -- der Erzeuger waehlt keine.
+    assert!(c.contains("E_KeinSlot = 1,"), "der Wert kommt aus der Quelle:\n{c}");
+    assert!(c.contains("E_Ungueltig = 7,"), "auch der zweite, und er ist nicht 2:\n{c}");
+    // Und der Text faehrt mit: er ist die Erklaerung, die sonst nirgends steht.
+    assert!(c.contains("kein freier Slot mehr"), "{c}");
+
+    // **Eine `group` erzeugt nichts.** Kein Typ, kein Name, keine Zeile.
+    assert!(!c.contains("Zustellung"), "eine Gruppe erzeugt NICHTS:\n{c}");
+    assert!(!c.contains("beides"), "auch ihre Invariante nicht:\n{c}");
+
+    // **Die Tabelle IST der Speicher, wo die Quelle sie beim Namen nennt** -- und nur dort.
+    assert!(c.contains("static A A_speicher;"), "`A` wird beim Namen genannt:\n{c}");
+    assert!(c.contains("A_speicher.slots[i].a = 3;"), "kein Pfeil auf einen Typnamen:\n{c}");
+    assert!(!c.contains("B_speicher"), "`B` wird nur in der Invariante genannt:\n{c}");
+
+    // **Und `let … else` bleibt eine Absage MIT ADRESSE.** Sie braeuchte eine
+    // Fehlerrueckgabe-Konvention, und keine Zeile der Grammatik nennt eine.
+    let l = "module t { extern fn hol() -> u32 effects { pure } costs <= 1 ops;
+extern fn weg() -> never effects { diverges } costs <= 1 ops;
+impl fn f() -> u32 effects { pure } costs <= 8 ops
+{ let x = hol() else (e) { weg(); } return x; } }";
+    let (b2, mut a2) = gabbro_syntax::lies("p.gab", l);
+    let _ = gabbro_check::emit::emittiere(&b2, &mut a2);
+    assert!(
+        a2.absagen
+            .iter()
+            .any(|x| x.code == "C001" && x.text.contains("ERROR-RETURN CONVENTION")),
+        "die Absage nennt ihren Grund: {:?}",
+        a2.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
+    );
+}
+
+/// **«C3b»: `rcu` und `observes` -- und der Unterschied zur Sperre ist das, was FEHLT.**
+///
+/// Ein `rcu` senkt ab wie ein `lock`: zwei Prototypen, keine Zeile Rumpf. Im Erzeugnis steht
+/// dann kein `_nimm`, das jemanden aufhaelt -- der Lesebereich wird betreten und verlassen,
+/// **ausgeschlossen wird niemand.** *Das ist die ganze Substanz des Konstrukts.*
+#[test]
+fn rcu_und_observes_senken_ab() {
+    let q = "module t {
+table K count 8 { slot { z : u32, } }
+rcu D protects { K } reclaims frei;
+static mut frei : option index into K = None;
+lock S protects { K, frei } rank 3 held <= 100 ops;
+impl fn lies(i : index into K) -> u32 effects { reads K.slots } costs <= 4 ops
+{ observes D { return K.slots[i].z; } return 0; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    // Zwei Prototypen, kein Rumpf -- der kommt von aussen.
+    assert!(c.contains("void D_lese_start(void);"), "{c}");
+    assert!(c.contains("void D_lese_ende(void);"), "{c}");
+    // **Und KEIN `_nimm`.** Was RCU von einer Sperre unterscheidet, steht als das da, was fehlt.
+    assert!(!c.contains("D_nimm"), "RCU schliesst niemanden aus:\n{c}");
+    // `reclaims` erzeugt nichts -- wo zurueckgegeben werden darf, rechnet H011/H012 nach.
+    assert!(c.contains("reclaims frei"), "der Ort steht als Kommentar daneben:\n{c}");
+
+    // **Der Lesebereich wird auf JEDEM Pfad verlassen** -- auch dem mit `return` darin.
+    let vor_return = c
+        .find("D_lese_ende();\n        return")
+        .or_else(|| c.find("D_lese_ende();\n            return"));
+    assert!(vor_return.is_some(), "vor dem `return` wird der Bereich verlassen:\n{c}");
+    assert_eq!(c.matches("D_lese_ende();").count(), 2, "einmal am `return`, einmal am Ende:\n{c}");
+
+    // Und der Parameter, den nur der Lesebereich liest, gilt nicht als tot.
+    assert!(!c.contains("(void)i;"), "`i` wird im `observes` gelesen:\n{c}");
+}
+
+/// **«C4»: der Tausch, und die ORDNUNG ist die Falle.**
+///
+/// Ein `=` auf einem `_Atomic` bedeutet in C `seq_cst` -- *eine andere und teurere Ordnung
+/// als die, die dasteht.* Ein Differenztest kann das an einem Faden nicht zeigen; diese
+/// Probe zeigt es am erzeugten Text, und eine Mutation daneben beschaedigt sie.
+///
+/// **Und `update` bleibt eine Absage mit zwei Gruenden:** der Platz im Korpus ist gar kein
+/// `atomic`, und selbst an einem waere die Absenkung ohne `NCORES` eine unbeschraenkte
+/// CAS-Schleife -- *die Sprache emittiert nichts, was sie verbietet.*
+#[test]
+fn compare_exchange_nimmt_die_deklarierte_ordnung() {
+    let q = "module t {
+const NIEMAND : u32 = 0;
+atomic B : u32 release;
+impl fn nimm(f : u32) -> bool requires f > 0
+    effects { writes B, publishes B } costs <= 16 ops
+{ let g = B exchange f when old(B) == NIEMAND returns erfolg publishes nothing; return g; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    assert!(c.contains("atomic_compare_exchange_strong_explicit"), "{c}");
+    // **Die DEKLARIERTE Ordnung, nicht die Vorgabe.**
+    assert!(c.contains("memory_order_release, memory_order_acquire"), "{c}");
+    assert!(!c.contains("memory_order_seq_cst"), "ein `=` waere seq_cst:\n{c}");
+    // Der erwartete Wert steht in einer eigenen Zelle -- C schreibt bei Misserfolg hinein.
+    assert!(c.contains("uint32_t _cx1 = (uint32_t)(NIEMAND);"), "{c}");
+    // Und der Parameter, den nur der Tausch liest, gilt nicht als tot.
+    assert!(!c.contains("(void)f;"), "`f` ist der neue Wert:\n{c}");
+
+    // **`update` bleibt `C001`, und die Absage nennt ihren Grund.**
+    let u = "module t {
+atomic Z : u64 relaxed;
+impl fn hoch() -> u64 effects { writes Z } costs <= 12 ops
+{ let alt = Z exchange update(v) { return v + 1; } publishes nothing; return alt; } }";
+    let (b2, mut a2) = gabbro_syntax::lies("p.gab", u);
+    let _ = gabbro_check::emit::emittiere(&b2, &mut a2);
+    assert!(
+        a2.absagen.iter().any(|x| x.code == "C001" && x.text.contains("BOUNDED CAS loop")),
+        "die Schranke braucht `NCORES`: {:?}",
+        a2.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
+    );
+}
+
+/// **«C5»: der Kleinkram, und zwei Stuecke davon waren KEINE Bauarbeit, sondern ein zweites
+/// Register.**
+///
+/// `u64::max` war in `umgebung.rs` seit jeher eine Zahl; der Erzeuger hatte daneben seinen
+/// eigenen, schwaecheren Auswerter und weigerte sich. *Zwei Register ueber derselben Sache,
+/// und das schwaechere hat entschieden* (W7). Dasselbe eine Zeile weiter: `s.len >= 0` stand
+/// im C, weil der Erzeuger nur BASISNAMEN als vorzeichenlos kannte, nicht Felder.
+#[test]
+fn kleinkram_const_feld_und_geraetegriff() {
+    let q = "module t {
+const KAP : u32 = 64;
+const OBEN : u64 = u64::max;
+type Text = { bytes : [u8; KAP], len : u32 in 0 .. KAP, };
+impl fn anhaengen(s : ptr<normal, rw> Text, w : u8) -> bool
+    effects { reads s, writes s } costs <= 12 ops
+{ narrow s.len to 0 ..< KAP else { return false; } s.bytes[s.len] = w; s.len += 1; return true; }
+impl fn diff(a : u32 in 0 .. 100, b : u32 in 0 .. 100) -> u32
+    requires a >= b
+    effects { pure } costs <= 8 ops
+{ let d = a - b; return d; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    // `u64::max` ist eine Zahl -- und zwar die, die `umgebung.rs` schon kannte.
+    assert!(c.contains("#define OBEN 18446744073709551615u"), "{c}");
+    // Ein Feldtyp, der ein FELD ist: die Laenge steht in C hinter dem Namen.
+    assert!(c.contains("uint8_t bytes[KAP];"), "{c}");
+    // **Die untere Pruefung faellt weg, weil das FELD nachweislich vorzeichenlos ist.**
+    assert!(c.contains("if (!(s->len < KAP))"), "{c}");
+    assert!(!c.contains("s->len >= 0"), "`>= 0` auf `uint32_t` ist immer wahr:\n{c}");
+    // Und ein `let` ohne erklaerten Typ liest ihn von den Parametern ab.
+    assert!(c.contains("uint32_t d = a - b;"), "der Typ wird abgelesen:\n{c}");
+
+    // **Und die Karte ist KONSERVATIV: ein Name, der zweimal verschieden erklaert ist,
+    // faellt heraus** -- dann weigert sich der Erzeuger, statt eine der beiden Erklaerungen
+    // zu waehlen. *Unwissen faellt nach lautstark, wie bei `geraetezeiger`.*
+    let zwei = "module t {
+impl fn eins(b : u8) -> u8 effects { pure } costs <= 4 ops { return b; }
+impl fn zwei(a : u32, b : u32) -> u32 effects { pure } costs <= 8 ops
+{ let d = a | b; return d; } }";
+    let (b3, mut a3) = gabbro_syntax::lies("p.gab", zwei);
+    let _ = gabbro_check::emit::emittiere(&b3, &mut a3);
+    assert!(
+        a3.absagen.iter().any(|x| x.code == "C001" && x.text.contains("`let` without")),
+        "ein zweimal erklaerter Name traegt keinen Typ mehr: {:?}",
+        a3.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
+    );
+}
+
+/// **Und der Geraetegriff: die Parameterliste der Deklaration IST der Konstruktor.**
+#[test]
+fn geraetegriff_ist_ein_zusammengesetztes_literal() {
+    let q = "module t {
+opaque type Pa = u64;
+device V(basis : Pa) at mmio { reg R : u32 @0x10 class rw }
+impl fn setze(p : Pa) effects { writes v.R } costs <= 8 ops
+{ let v = V(p); v.R = 1; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+    assert!(c.contains("V v = (V){ (volatile uint8_t *)(uintptr_t)p };"), "{c}");
+}

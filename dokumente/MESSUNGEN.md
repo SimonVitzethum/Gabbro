@@ -10113,3 +10113,333 @@ Und der schlimmste war meiner: die erste Fassung **filterte alle Meldungen aus d
 Vorspann** — damit war das `N001` in der eigenen Schnittstelle unsichtbar, und ein Importeur
 hätte eine kaputte Bibliothek als sauber geliefert bekommen. Jetzt gilt: **ein FEHLER im
 Vorspann bricht den Lauf**, nur Hinweise werden gefiltert.
+
+---
+
+*Die folgenden Abschnitte entstanden **parallel** zu den vorstehenden, in einem eigenen
+Arbeitsbaum, und wurden am 2026-08-20 zusammengefuehrt. Sie tragen dieselben Daten, weil
+sie derselbe Tag sind -- nicht, weil eine Reihenfolge behauptet wuerde.*
+
+---
+
+# «C1» ausgeführt — `option` senkt ab, und der Beweis hatte zwei Tage lang keinen Leser (2026-08-19)
+
+**Der Stand davor:** 17 von 33 Beispielen senkten ab, **46 Weigerungen, alle `C001`**, zwölf
+Übersetzungseinheiten stachen bis zum ausgeführten Ergebnis durch.
+
+**Der Stand danach:** 18 von 33, **36 Weigerungen** — zehn geschlossen, dreizehn Einheiten.
+
+| Weigerung | Datei | war |
+|---|---|---|
+| `match` über `option index into T` (Ort) | 01 (2x), 27 | „`match` over something other than an `option index into T`" |
+| `let` ohne auflösbaren Typ | 01, 09 | der Typ stand die ganze Zeit in der Slotdeklaration |
+| `option`-Konstruktor `None`/`Some` | 09, 27, 31 | „`option` has no representation yet" |
+| `static … : option index into T = None` | 27, 31 | „non-constant initialiser" |
+
+Die Absenkung ist der **Sonderwert** `count` selbst, und sie stand seit dem 2026-08-17
+maschinell geprüft in `beweise/Option_Sonderwert.thy`. *Der Satz lag da, und kein Erzeuger
+benutzte ihn* — genau die Hälfte, die «NL» beklagt. Die Arbeit war die Verdrahtung.
+
+## Und die Verdrahtung legte ZWEI stille Löcher frei, beide im Prüfer
+
+**Sie sind nicht durch die Absenkung entstanden — sie waren durch sie folgenlos.** Solange
+sich der Erzeuger für `None` weigerte, konnte kein erzeugtes C den Sonderwert berühren. Seit
+«C1» steht `T_NONE` wirklich im C, und damit wurden beide lebendig:
+
+### 1. `Some(count)` ging durch — null Fehler
+
+```gabbro
+table Halde count 8 { slot { naechst : option index into Halde, } }
+static mut frei : option index into Halde = None;
+frei = Some(8);          -- 0 Fehler, gemessen 2026-08-19
+```
+
+`8` **ist** der Sonderwert. Wäre er ein gültiger Wert, ist `None` von `Some(8)` nicht mehr zu
+unterscheiden — und `kodiere_injektiv` hätte keine Prämisse mehr. Der Grund: `Some(e)` hatte
+gar keinen Typ; M1 sah einen Ruf auf eine Funktion, die es nicht gibt, und schwieg.
+**Seit heute trägt `Some(i)` den Typ seines Arguments und wird gegen die NUTZLAST geprüft**,
+nicht gegen den Optionstyp. `beispiele/gift/170` fällt an `M101`.
+
+### 2. Ein `option index into T` war als Index brauchbar
+
+```gabbro
+return h.slots[frei].kopf;      -- 0 Fehler, gemessen 2026-08-19
+```
+
+`umgebung.rs` gab `index into T` und `option index into T` **denselben Namen und denselben
+Bereich** `0 ..< N`. Damit war der Sonderwert im Typmodell unsichtbar, und ein Optionswert
+durfte überall stehen, wo ein Index stehen darf. Im erzeugten C wäre das ein Zugriff **einen
+Slot hinter dem Feld**.
+
+Die Korrektur ist eine Zeile und braucht keine neue Kennung: der Optionsbereich reicht bis
+`N`, der Indexbereich bis `N-1`. Damit fällt der Gebrauch an **`M103`** und jedes `Some(N)`
+an **`M101`** — an denselben Regeln wie jeder andere Wert ausserhalb seines Bereichs.
+
+### 3. Und V3 traf die Option nicht
+
+*„Der Binder trägt die Nutzlast SEINER Variante"* war für `tagged type` gebaut. Ein `match`
+über `option index into T` band `Some(i)` als **`Unbekannt`** — also war jeder Zugriff mit `i`
+ungeprüft, ausgerechnet in dem Zweig, der weiss, dass `i` gültig ist.
+`beispiele/gift/172` fällt an `M103`.
+
+## Der Widerruf, den das erzwingt
+
+`option.sonderwert` führte seine zweite Hälfte als OFFEN, mit der Begründung: *„heute weigert
+sich der Erzeuger für `None` als Ausdruck, und **solange er das tut**, kann keine Rechnung ihn
+erzeugen."* **Die Begründung ist mit «C1» verbraucht.** Sie steht jetzt als Pass da, nicht als
+Weigerung — und das ist der Unterschied zwischen einer Buchung und einem Versprechen.
+
+## Die neue Übersetzungseinheit — und was ihr Treiber wirklich misst
+
+`beispiele/27-freiliste.gab` sticht durch: erzeugen → `cc -std=c11 -Wall -Wextra -Werror` →
+ausführen → vergleichen → verfälschtes C fällt. Die zwei letzten Zahlen der Erwartung sind die
+Aussage: die leere Liste liefert `Halde_NONE` (= 1024) und **nicht 0**. *Wer den Sonderwert
+auf 0 legt, dreht genau diese zwei Zahlen um* — und das Gift tut es.
+
+## Dazu die Zeile, die `pruefe-emission.sh` fehlte
+
+**Zweimal erzeugen, Hashes vergleichen.** Die Reproduzierbarkeit war über 25 Läufe *gemessen*
+und nirgends *zugesagt* — und eine gemessene Eigenschaft ohne Wächter verschwindet still beim
+nächsten `HashMap` über Namen. Jetzt läuft sie für alle dreizehn Einheiten.
+
+```
+166 Kennungen · 172 Gifte · 130 Tests · 33 Beispiele sauber · 13 Einheiten durchgestochen
+36 Weigerungen (war 46), alle C001, keine stille
+```
+
+---
+
+# «C2» ausgeführt — `tagged type` als Wert, und die Marke wird ein `enum` (2026-08-19)
+
+**36 Weigerungen → 31.** Fünf geschlossen: zwei Feldtypen (`ObjektArt` in `beispiele/01` und
+`/09`), ein Parametertyp (`Nachricht` in `/08`) und zwei `match`. Die Absenkung ist
+`struct { marke; union { … } }`, und dabei war **genau eine Entscheidung zu treffen**.
+
+## Die Marke ist ein `enum`, nicht das schmalste Wort — und das ist keine Bequemlichkeit
+
+Der Plan nannte als Handwerksfrage *„die Breite der Marke (kleinster Typ, der die Varianten
+fasst)"*. Gewählt ist der `enum`, und der Grund ist ein zweiter Leser:
+
+| | schmalstes Wort (`uint8_t`) | `enum` |
+|---|---|---|
+| Verbundgrösse | dieselbe (die Vereinigung richtet aus) | dieselbe |
+| `switch` ohne `default` unter `-Wswitch` | **kein Leser** | **`D005` wird zweimal geprüft** |
+
+*Dieselbe Bauart wie `-Wmissing-field-initializers` beim Verbundkonstruktor: zwei
+unabhängige Leser derselben Zusage.* Die Breite kostet hier nichts — deshalb fällt die Wahl
+so und nicht anders.
+
+**Und der Erzeuger prüft die Erschöpfung selbst, als ZWEITER und nicht als erster.** Grund:
+ein `switch` mit fehlendem Fall **fällt durch und tut nichts** — genau die Gestalt, in der
+ein Erzeugnis stillschweigend etwas anderes rechnet als die Quelle sagt.
+
+## Was dabei auffiel: `benutzte_namen` kannte den `if`-Zweig nicht
+
+Beim Stilllegen ungelesener Binder (`(void)k;`) stand plötzlich ein `(void)k;` neben einem
+`if (k <= 65535)`. Die Ursache lag zwei Tage tiefer: `benutzte_namen` hatte **keinen Zweig
+für `StmtArt::Wenn`** — ein Parameter, der nur in einem `if` gelesen wird, galt als tot.
+*Dieselbe Klasse wie das fehlende `narrow` zwei Tage vorher, und derselbe Fund: die Liste
+war nicht falsch, sie war unvollständig.* `Wenn`, `LetSonst` und `Publish` stehen jetzt drin.
+
+## Und die Kreuzprobe des Zeugnisses hat sofort gesprochen
+
+`beispiele/34` meldete `match (option) 2x` und `type (Bereich) 3x` für einen markierten
+Wert — **die Einordnung nannte die neue Form beim Namen einer alten.** Genau dafür wird sie
+unabhängig vom Erzeuger geführt: sie unterscheidet jetzt syntaktisch (`Some`/`None` gegen
+alles andere) und trägt `type (tagged)` und `match (tagged)` als eigene Posten.
+
+## Die neue Übersetzungseinheit — und ihr Gift ist das eigentliche Argument
+
+`beispiele/34-markierter-wert.gab` sticht durch (14 von 14). **Die Breiten sind nicht
+beliebig gewählt:** `Kurz` trägt 32 Bit, `Lang` 64, und der Treiber legt in `Lang` eine Zahl,
+die in 32 Bit nicht passt. Das Gift lässt den `Lang`-Zweig das `Kurz`-Glied lesen — *es
+übersetzt, es rechnet, und es liefert 2 statt 4 294 967 298.* Genau die Klasse, gegen die
+eine Marke steht: ohne sie ist jedes Glied so gut wie jedes andere.
+
+## Ein Wächter mass den falschen Baum
+
+`pruefe-luecken.py` trug als **einziger der dreizehn** seine Wurzel als absoluten Pfad
+(`/home/simon/Dokumente/Gabbro`) statt sie aus `__file__` abzuleiten. In einem git-Arbeitsbaum
+verdrehte er damit Zeilen im **fremden** Baum, baute ihn, prüfte ihn — und meldete
+*„13 von 13"* über eine Messung, die mit dem Stand vor ihm nichts zu tun hatte.
+
+> *Ein Wächter, der etwas anderes misst, als er sagt, ist schlimmer als keiner* — und dieser
+> hier **schreibt** in die Quellen, die er misst.
+
+```
+166 Kennungen · 172 Gifte · 137 Tests · 34 Beispiele sauber · 14 Einheiten durchgestochen
+170 von 170 Mutationen · 170/170 Anker
+31 Weigerungen (war 46), alle C001, keine stille
+```
+
+---
+
+# «C3a» und «C3c» ausgeführt — und eine Entscheidung wurde GEBUCHT, nicht getroffen (2026-08-19)
+
+**31 Weigerungen → 28.** `reason` (2) und `group` (1). Dazu die fünfzehnte durchgestochene
+Übersetzungseinheit.
+
+## `reason` ist Handwerk — die Zahlen stehen in der Quelle
+
+`KeinSlot = 1 "kein freier Slot mehr"` nennt seinen Wert selbst; der Erzeuger wählt keinen.
+Die Absenkung ist ein `enum` mit ausgeschriebenen Werten, der Text fährt als Kommentar mit —
+*er ist die Erklärung, die ein Leser des Erzeugnisses sonst nirgends findet.*
+
+## `let … else (e) { … }` bleibt `C001`, und das ist die Abbruchbedingung des Plans
+
+Die Form braucht eine **Fehlerrückgabe-Konvention**, und **keine Zeile der Grammatik nennt
+eine**: `extern fn hol() -> u32` hat keinen Fehlerkanal, und nichts bindet eine Funktion an
+ein `reason`. Der Erzeuger müsste beides erfinden — *wie* ein Ruf scheitert und *was* `e`
+trägt.
+
+> **Eine Sprachentscheidung, die nur der Absenkung dient, wird nicht getroffen.** Die
+> Absage nennt seit heute genau diesen Grund statt „statement kind". *Dieselbe offene Stelle
+> steht seit jeher am `on_exceeded` eines `retry` auf einen `reason`-Wert: zwei Fundstellen,
+> eine Entscheidung.* Gebucht in `TODO.md`.
+
+## `group` erzeugt nichts — und der Lauf legte sofort etwas anderes frei
+
+Die billigste Zeile des Plans. Aber `beispiele/17` war die erste Datei, die dadurch **auf 0
+Weigerungen fiel** — und ihr erzeugtes C lautete:
+
+```c
+Endpunkte->slots[e].wartet = t;      /* ein Pfeil auf einen TYPNAMEN */
+```
+
+Eine Tabelle, die über ihren eigenen Namen adressiert wird (`beispiele/09`: *„die Tabelle ist
+der Speicher, ihr Name der Ort"*), hatte gar kein Objekt im C. **Es war nicht still, sondern
+an `cc` delegiert** — und folgenlos, solange jede solche Datei aus einem anderen Grund `C001`
+sagte. *Genau die Klasse, die dieser Ordner „eine Weigerung, auf die man baut, ist eine
+Zusage" nennt.*
+
+Der Erzeuger gibt der Tabelle jetzt ihren Speicher (`T_speicher`), **und nur dort, wo die
+Quelle sie beim Namen nennt** — eine ungenutzte Grösse im erzeugten C wäre ein Befund über
+den Erzeuger. Entschieden wird dabei nichts: der C-Name ist in Gabbro unaussprechlich.
+
+## Und eine Gegenprobe wurde durch den Fortschritt ihres Gegenstands stumm
+
+`das_zeugnis_meldet_was_es_nicht_einordnen_kann` benutzte `group` als die Form, die
+`UNZUGEORDNET` sein muss. Mit «C3c» ist sie eingeordnet — *die Gegenprobe hätte ab jetzt
+immer geschwiegen, ohne rot zu werden.* Sie steht jetzt auf `state`.
+
+```
+166 Kennungen · 172 Gifte · 138 Tests · 34 Beispiele sauber · 15 Einheiten durchgestochen
+173 von 173 Mutationen · 173/173 Anker
+28 Weigerungen (war 46), alle C001, keine stille
+```
+
+---
+
+# «C3b» ausgeführt — RCU senkt ab, und der Unterschied zur Sperre ist das, was FEHLT (2026-08-19)
+
+**28 Weigerungen → 26.** `rcu` (1) und `observes` (1). `beispiele/31-rcu.gab` ist die
+sechzehnte durchgestochene Übersetzungseinheit.
+
+Ein `rcu` senkt ab **wie ein `lock`**: zwei Prototypen, keine Zeile Rumpf. *Und genau daran
+wird sichtbar, was RCU ist* — im erzeugten C steht **kein `_nimm`**, das jemanden aufhält:
+
+```c
+void BACCT_lese_start(void);
+void BACCT_lese_ende(void);
+```
+
+Der Treiber misst die Aussage direkt: `lesen` betritt den Lesebereich und nimmt **keine**
+Sperre; `setzen` und `zurueckgeben` nehmen die Schreibersperre und betreten **keinen**
+Lesebereich. *Die Leseseite braucht die Schreibersperre nicht — ohne diese Ausnahme kaufte
+`observes` nichts, und RCU wäre eine Sperre mit einem zweiten Namen.*
+
+**Die Gnadenfrist bleibt eine Annahme.** Dass nach der Rücknahme des Zeigers kein Leser mehr
+in einem `observes` steht, stellt kein statischer Pass her — `beispiele/31` sagt es selbst
+und schreibt `assume gnadenfrist_ist_abgelaufen` daneben. Das Zeugnis führt sie unter den
+Annahmen (1 assumption) und die zwei Rümpfe unter den fremden.
+
+**Und `reclaims` erzeugt nichts.** Wo zurückgegeben werden darf, rechnen `H011` und `H012`
+zur Übersetzungszeit nach — W6. Der Ort steht als Kommentar daneben, damit ein Leser des C
+ihn findet.
+
+*Dritter Fund derselben Klasse an einem Tag:* `benutzte_namen` kannte den `observes`-Zweig
+nicht, also bekam `lesen(i)` ein `(void)i;` neben ein `K.slots[i]`. Nach `narrow` (17.),
+`if` (19.) und `observes` (19.) ist die Liste jetzt vollständig für jede Form, die der
+Erzeuger absenkt.
+
+```
+166 Kennungen · 172 Gifte · 139 Tests · 34 Beispiele sauber · 16 Einheiten durchgestochen
+175 von 175 Mutationen · 175/175 Anker
+26 Weigerungen (war 46), alle C001, keine stille
+```
+
+---
+
+# «C4» und «C5» ausgeführt — der Tausch, und zwei Löcher waren ein ZWEITES REGISTER (2026-08-19)
+
+**26 Weigerungen → 21.** Dazu die siebzehnte durchgestochene Übersetzungseinheit.
+
+## C4 — und der Korpus trägt nur EINE der beiden Formen an einem Atomic
+
+Der Plan sagte: *„Zwei Anweisungen im Korpus, **beide auf `atomic`**."* **Das stimmt nicht.**
+`beispiele/05` schreibt `z.wert exchange update(v) { … }`, und `z.wert` ist ein Feld eines
+gewöhnlichen `type Zelle = { wert : Zaehlerwert, }` — **kein `atomic`**. Ohne Deklaration
+gibt es keine Ordnung, und eine zu wählen hiesse, sie zu erfinden.
+
+Und der zweite Grund ist unabhängig davon und steht in `SPRACHE.md` selbst (RMW, die dritte
+Form der Paarung):
+
+> *„`atomic_fetch_*`, wenn der `update`-Rumpf einer Grundform entspricht (`t+1`, `t-1`,
+> `t|m`, `t&m`), sonst die **beschränkte** CAS-Schleife — beschränkt, weil sie im Übersetzer
+> als `retry bounded NCORES * K ops on_exceeded contention` emittiert wird: die Sprache
+> emittiert nichts, was sie verbietet."*
+
+Der Rumpf im Korpus **sättigt** (`if v < GRENZE { return v + 1; } return v;`) und ist keine
+Grundform. Also die Schleife — und deren Schranke braucht `NCORES`, **dieselbe unentschiedene
+Grösse wie `accumulates` ohne `per cpu N`**, dazu einen `on_exceeded`-Namen, den niemand
+nennt. *`update` bleibt `C001` mit zwei Gründen statt keinem.*
+
+Die **Vergleichsform** senkt ab: `atomic_compare_exchange_strong_explicit` mit der
+deklarierten Ordnung. `beispiele/35-tausch.gab` sticht durch — und die ehrliche Zeile steht
+in der Datei: *eine Ordnung ist an einem Faden nicht messbar.* Der Differenztest misst die
+**Logik** des Tausches; dass die Ordnung die deklarierte ist, hält eine Probe im Rechenwerk
+und eine Mutation daneben (`tausch-nimmt-die-vorgabeordnung`).
+
+## C5 — und zwei der fünf Stücke waren gar keine Bauarbeit
+
+| war | ist |
+|---|---|
+| `const OBERGRENZE : u64 = u64::max` → `C001` | **`umgebung.rs` kannte die Zahl seit jeher.** Der Erzeuger hatte daneben seinen eigenen, schwächeren Auswerter (`konst_zahl`, nur Literale) — *zwei Register über derselben Sache, und das schwächere hat entschieden* (W7) |
+| `if (s->len >= 0 && …)` im erzeugten C | **`-Wtype-limits` hätte es gesagt.** Der Erzeuger kannte nur BASISNAMEN als vorzeichenlos, nicht Felder; `s.len : u32 in 0 .. KAP` steht in der Deklaration |
+
+Dazu drei Stücke echtes Handwerk: ein Feldtyp, der ein **Feld** ist (`bytes : [u8; KAP]` →
+`uint8_t bytes[KAP];` — die Länge steht in C hinter dem Namen), ein `let` ohne erklärten Typ,
+der ihn von den **Parametern** abliest, und der **Gerätegriff** (`beispiele/09`: *„die
+Parameterliste der Deklaration IST der Konstruktor"*).
+
+*Die Parameterkarte ist konservativ wie `geraetezeiger`: ein Name, der zweimal verschieden
+erklärt ist, fällt heraus — dann weigert sich der Erzeuger, statt eine der beiden Erklärungen
+zu wählen.*
+
+## Der Stand, und was die 21 wirklich sind
+
+```
+Beispiele 35, absenkend 23, 17 Einheiten durchgestochen, 21 Weigerungen
+```
+
+| Ursache | Zahl | Art |
+|---|---:|---|
+| `entry` / `boot` / `entrust` | 5 | **Axiomschicht** — ausdrücklich nicht angefasst (`asm`) |
+| `descendants of` / `ancestors of` | 3 | ENTSCHEIDUNG (Grammatik nennt keine Kante) |
+| `let … else (e)` | 2 | ENTSCHEIDUNG (Fehlerrückgabe-Konvention) |
+| `accumulates` ohne `per cpu N` | 2 | ENTSCHEIDUNG (Kernzahl) |
+| `format`-Feld `bool @0` | 2 | Bauarbeit, offen |
+| `walk` | 1 | Bauarbeit, offen |
+| `static mut … : [T; N] = 0` | 1 | ENTSCHEIDUNG (`= 0` heisst „alle"?) |
+| `exchange update` | 1 | ENTSCHEIDUNG (`NCORES`, s. o.) |
+| `parameter type` (`Angemeldet`) | 1 | Bauarbeit, offen |
+| **gezogene Linien** | **3** | bleiben `C001` |
+
+**Sechzehn der einundzwanzig sind benannt** — Axiomschicht, Entscheidung oder gezogene Linie.
+Fünf sind Bauarbeit, und jede hat eine Adresse.
+
+```
+166 Kennungen · 172 Gifte · 137 Tests · 35 Beispiele sauber · 17 Einheiten durchgestochen
+180 von 180 Mutationen · 180/180 Anker
+21 Weigerungen (war 46), alle C001, keine stille
+```

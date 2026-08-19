@@ -57,9 +57,14 @@ struct Namen {
     geraetezeiger: HashMap<String, String>,
     /// Name -> Tabelle, fuer Zeigerparameter. Konservativ wie `geraetezeiger`.
     tabellenzeiger: HashMap<String, String>,
-    /// (Tabelle, Slotfeld) -> Zieltabelle, fuer `option index into T`-Felder. **Ohne das
-    /// weiss der Erzeuger bei `x = None` nicht, WELCHER Sonderwert gemeint ist.**
-    optionfeld: HashMap<(String, String), String>,
+    /// (Tabelle, Slotfeld) -> der erklaerte Typ des Slotfeldes. **Er ist die einzige
+    /// Quelle, aus der ein `let obj = c.slots[s].objekt` seinen Typ bekommt** -- und der
+    /// Erzeuger raet ihn nicht, er liest ihn ab.
+    slotfeld: HashMap<(String, String), TypExpr>,
+    /// Die `static`-Namen mit ihrem erklaerten Typ. Ein `static mut frei : option index
+    /// into Halde` ist ein Ort wie ein Slotfeld -- **ohne den Typ wuesste `frei = Some(i)`
+    /// nicht, gegen welchen Sonderwert es schreibt.**
+    statiken: HashMap<String, TypExpr>,
     /// Je Tabelle ihr aufgeloester `count`-Wert. **Der Sonderwert haengt daran** -- siehe
     /// `beweise/Option_Sonderwert.thy`, M-1.
     kapazitaet: HashMap<String, i128>,
@@ -68,6 +73,14 @@ struct Namen {
     /// Sie werden zu einem C-`typedef struct`, und ihr Konstruktor zu einem
     /// zusammengesetzten Literal. *`fs` aus `beweise/Verbund_Konstruktor.thy`.*
     verbunde: BTreeSet<String>,
+    /// **Die `tagged type`-Namen mit ihren Varianten** («C2»). Sie werden `struct { marke;
+    /// union { … } }` -- und die Marke ist ein `enum`, damit `-Wswitch` ein **zweiter
+    /// Leser von `D005`** wird.
+    markierte: HashMap<String, Vec<Variante>>,
+    /// Name -> markierter Typ, fuer Parameter und `let`. Konservativ wie `tabellenzeiger`:
+    /// wer irgendwo anders erklaert ist, faellt heraus. **Ohne das weiss ein `match m`
+    /// nicht, WELCHE Variantenmenge erschoepfend sein muss.**
+    markenwerte: HashMap<String, String>,
     /// Die `accumulates`-Namen. **Ein Lesen wird ein Ruf, ein Schreiben auch** -- sonst
     /// stuende im C ein Zugriff auf eine Zelle, die es nicht gibt.
     akkus: BTreeSet<String>,
@@ -83,6 +96,11 @@ struct Namen {
     /// Namen, die einen Verbund als **Wert** tragen (Parameter oder `let`). Ihr Feldzugriff
     /// ist `.`, nicht `->` -- siehe `ort`.
     werte: BTreeSet<String>,
+    /// **Die Tabellen, die ueber ihren eigenen NAMEN adressiert werden** -- `beispiele/09`:
+    /// *„die Tabelle ist der Speicher, ihr Name der Ort."* Sie bekommen ein Objekt
+    /// (`T_speicher`); die anderen nicht, denn *eine ungenutzte Groesse im erzeugten C ist
+    /// ein Befund ueber den Erzeuger.*
+    tabellenglobal: BTreeSet<String>,
     /// `linear ghost type BootPhase;` — a value that **does not exist at run time**.
     geister: Vec<String>,
     funktionen: HashMap<String, Signatur>,
@@ -94,6 +112,17 @@ struct Namen {
     retry_schranke: HashMap<u32, i128>,
     /// Die `const`-Namen -- in einer `where`-Klausel ist ein blanker Name sonst ein FELD.
     konstanten: BTreeSet<String>,
+    /// Je `const` sein ausgerechneter Wert -- **von `umgebung.rs` und nicht hier**.
+    /// `u64::max` ist dort seit jeher eine Zahl; der Erzeuger hatte daneben seinen eigenen,
+    /// schwaecheren Auswerter (`konst_zahl`) und weigerte sich. *Zwei Register ueber
+    /// derselben Sache, und das schwaechere hat entschieden* (W7).
+    konstwert: HashMap<String, i128>,
+    /// Name -> erklaerter Parametertyp, konservativ ueber alle Funktionen. **Nur damit
+    /// bekommt ein `let d = a - b;` seinen Typ**, ohne dass ihn jemand raet.
+    parametertyp: HashMap<String, TypExpr>,
+    /// (Verbund, Feld) -> erklaerter Feldtyp. Dieselbe Rolle wie `slotfeld`, eine Ebene
+    /// daneben: **ohne ihn weiss der Erzeuger von `s.len` nur, dass es ein Feld ist.**
+    verbundfeld: HashMap<(String, String), TypExpr>,
     /// Namen, deren Typ der Erzeuger als VORZEICHENLOS kennt. Nur fuer sie darf die untere
     /// Schranke eines `narrow` bei null wegfallen -- Unwissen faellt nach lautstark.
     vorzeichenlos: BTreeSet<String>,
@@ -303,6 +332,23 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 if matches!(unter, TypExpr::Verbund(f, _) if !f.is_empty()) && !t.opaque {
                     namen.verbunde.insert(t.name.text.clone());
                 }
+                // **«C2»: ein `tagged type` ist ein WERT und kein Bereichstyp.** Er steht
+                // hier VOR `typen`, weil `ctyp` dort in den Rumpf absteigen und an
+                // `TypExpr::Varianten` scheitern wuerde -- also eine Weigerung fuer einen
+                // Typ, den diese Einheit gerade selbst erklaert.
+                if let TypExpr::Varianten(v, _) = unter {
+                    if t.tagged && !v.is_empty() {
+                        namen.markierte.insert(t.name.text.clone(), v.clone());
+                    }
+                }
+                if let TypExpr::Verbund(felder, _) = unter {
+                    for f in felder {
+                        namen.verbundfeld.insert(
+                            (t.name.text.clone(), f.name.text.clone()),
+                            f.typ.typ.clone(),
+                        );
+                    }
+                }
                 namen.typen.insert(t.name.text.clone(), unter.clone());
             }
         }
@@ -385,7 +431,38 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                     }
                 }
             }
+            // **Der Wert eines `const` kommt aus `umgebung.rs`, nicht aus einem zweiten
+            // Auswerter hier.** `u64::max` war dort seit jeher eine Zahl; der Erzeuger
+            // weigerte sich trotzdem, weil `konst_zahl` nur Literale kennt. *Das schwaechere
+            // von zwei Registern ueber derselben Sache hat entschieden* (W7).
+            if let ItemArt::Konst(k) = &item.art {
+                if let Some(n) = umg.konst_wert(modul, &k.wert) {
+                    namen.konstwert.insert(k.name.text.clone(), n);
+                }
+            }
         });
+    }
+    // Die Parametertypen, konservativ: wer irgendwo anders erklaert ist, faellt heraus.
+    {
+        let mut eindeutig: HashMap<String, TypExpr> = HashMap::new();
+        let mut strittig: BTreeSet<String> = BTreeSet::new();
+        crate::fuer_jedes_item(baum, &mut |item| {
+            let ItemArt::Funktion(f) = &item.art else { return };
+            for p in &f.parameter {
+                match eindeutig.get(&p.name.text) {
+                    Some(vorher) if typtext(vorher) != typtext(&p.typ) => {
+                        strittig.insert(p.name.text.clone());
+                    }
+                    _ => {
+                        eindeutig.insert(p.name.text.clone(), p.typ.clone());
+                    }
+                }
+            }
+        });
+        for s in &strittig {
+            eindeutig.remove(s);
+        }
+        namen.parametertyp = eindeutig;
     }
 
     {
@@ -472,6 +549,50 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         namen.werte.extend(gefunden);
     });
 
+    // **«C2»: welcher Name traegt welchen `tagged type`?** Konservativ ueber alle
+    // Funktionen, dieselbe Bauart wie `geraetezeiger` -- *Unwissen faellt nach lautstark,*
+    // und dann weigert sich das `match` statt eine Variantenmenge zu raten.
+    {
+        let mut eindeutig: HashMap<String, String> = HashMap::new();
+        let mut strittig: BTreeSet<String> = BTreeSet::new();
+        let mut merke = |name: &str, typ: &TypExpr, markierte: &HashMap<String, Vec<Variante>>| {
+            let TypExpr::Pfad(p) = typ else { return };
+            let Some(n) = p.teile.last() else { return };
+            if !markierte.contains_key(&n.text) {
+                return;
+            }
+            match eindeutig.get(name) {
+                Some(vorher) if *vorher != n.text => {
+                    strittig.insert(name.to_string());
+                }
+                _ => {
+                    eindeutig.insert(name.to_string(), n.text.clone());
+                }
+            }
+        };
+        crate::fuer_jedes_item(baum, &mut |item| {
+            let ItemArt::Funktion(f) = &item.art else { return };
+            for p in &f.parameter {
+                merke(&p.name.text, &p.typ, &namen.markierte);
+            }
+            if let FnRumpf::Block(b) = &f.rumpf {
+                for s in &b.anweisungen {
+                    if let StmtArt::Let(l) = &s.art {
+                        if let Some(t) = &l.typ {
+                            merke(&l.name.text, t, &namen.markierte);
+                        }
+                    }
+                }
+            }
+        });
+        for s in &strittig {
+            eindeutig.remove(s);
+        }
+        // Ein markierter Wert ist ein WERT: sein Feldzugriff ist `.`, nicht `->`.
+        namen.werte.extend(eindeutig.keys().cloned());
+        namen.markenwerte = eindeutig;
+    }
+
     {
         let mut typen: Vec<(String, String)> = Vec::new();
         crate::fuer_jedes_item(baum, &mut |item| {
@@ -488,16 +609,19 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         }
     }
 
-    // Optionfelder und Tabellenzeiger -- fuer `x = None`.
+    // Optionfelder, Slotfeldtypen, `static`-Typen und Tabellenzeiger -- fuer `x = None`
+    // und fuer jeden Ort, dessen Typ ein `option index into T` ist.
     crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Statisch(st) = &item.art {
+            namen.statiken.insert(st.name.text.clone(), st.typ.clone());
+        }
         if let ItemArt::Tabelle(tb) = &item.art {
             if let Some(slot) = &tb.slot {
                 for f in &slot.felder {
-                    if let SlotTyp::Typ(TypExpr::Index { tabelle, optional: true, .. }) = &f.typ {
-                        namen.optionfeld.insert(
-                            (tb.name.text.clone(), f.name.text.clone()),
-                            tabelle.text.clone(),
-                        );
+                    if let SlotTyp::Typ(t) = &f.typ {
+                        namen
+                            .slotfeld
+                            .insert((tb.name.text.clone(), f.name.text.clone()), t.clone());
                     }
                 }
             }
@@ -529,6 +653,35 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             eindeutig.remove(s);
         }
         namen.tabellenzeiger = eindeutig;
+    }
+
+    // **Welche Tabelle wird ueber ihren eigenen NAMEN adressiert?**
+    //
+    // Bis zum 2026-08-19 senkte `Kappenraum.slots[s]` zu `Kappenraum->slots[s]` ab -- ein
+    // Pfeil auf einen Typnamen. **Das war nicht still, sondern an `cc` delegiert**, und
+    // folgenlos, solange jede solche Datei aus einem anderen Grund `C001` sagte. Mit «C3c»
+    // sagt `beispiele/17` keinen mehr, und die Zeile stuende im Erzeugnis.
+    //
+    // *Es ist keine Sprachentscheidung:* `beispiele/09` sagt den Satz selbst -- die Tabelle
+    // IST der Speicher, ihr Name der Ort. Der Erzeuger gibt ihm einen C-Namen, und der ist
+    // in Gabbro unaussprechlich; entschieden wird nichts.
+    {
+        let mut benutzt: BTreeSet<String> = BTreeSet::new();
+        crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+            ItemArt::Funktion(f) => {
+                if let FnRumpf::Block(b) = &f.rumpf {
+                    benutzte_namen(b, &mut benutzt);
+                }
+            }
+            ItemArt::Check(c) => benutzte_namen(&c.can_fail, &mut benutzt),
+            _ => {}
+        });
+        namen.tabellenglobal = namen
+            .tabellen
+            .iter()
+            .filter(|t| benutzt.contains(*t) && !namen.tabellenzeiger.contains_key(*t))
+            .cloned()
+            .collect();
     }
 
     namen.retry_schranke = retry_schranken(baum);
@@ -617,6 +770,8 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                     k.name.text,
                     gleitkommatext(*bits)
                 ));
+            } else if let Some(n) = namen.konstwert.get(&k.name.text) {
+                aus.push_str(&format!("\n#define {} {}u\n", k.name.text, n));
             } else {
                 weigere(absagen, k.name.span, "const with a non-constant value");
             }
@@ -625,6 +780,9 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         ItemArt::Typ(t) => {
             if namen.verbunde.contains(&t.name.text) {
                 verbund(t, &mut aus, &namen, absagen);
+            }
+            if namen.markierte.contains_key(&t.name.text) {
+                markiert(t, &mut aus, &namen, absagen);
             }
         }
         ItemArt::Tabelle(t) => tabelle(t, &mut aus, &namen, absagen),
@@ -655,9 +813,29 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 weigere(absagen, st.name.span, "`static` of an unresolvable type");
                 return;
             };
-            let Some(w) = konst_zahl(&st.wert) else {
-                weigere(absagen, st.name.span, "`static` with a non-constant initialiser");
-                return;
+            // **Ein `static mut frei : option index into Halde = None;`** -- der
+            // Anfangswert ist der Sonderwert, und der steht als `#define` ueber der
+            // Tabelle. *Ohne diesen Zweig war die Freiliste nicht absenkbar, obwohl der
+            // Beweis dafuer seit dem 2026-08-17 dalag.*
+            let anfang = match &st.typ {
+                TypExpr::Index { tabelle, optional: true, .. } => {
+                    option_wert(&st.wert, &tabelle.text, &namen, absagen)
+                }
+                _ => None,
+            };
+            let w = match anfang {
+                Some(x) => x,
+                None => match konst_zahl(&st.wert) {
+                    Some(n) => n.to_string(),
+                    None => {
+                        weigere(
+                            absagen,
+                            st.name.span,
+                            "`static` with a non-constant initialiser",
+                        );
+                        return;
+                    }
+                },
             };
             let konst = if st.veraenderlich { "" } else { "const " };
             let abschnitt = match &st.section {
@@ -867,6 +1045,74 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         // > *Eine Zusage, die nur in einem Werkzeugaufruf steht, faehrt nicht mit dem Code
         // > mit.* Sie steht jetzt im Kopf der erzeugten Datei -- dort, wo auch der
         // > Lizenzhinweis steht, und aus demselben Grund.
+        // **«C3a»: ein `reason` ist eine benannte Zahlenmenge, und die Zahlen STEHEN DA.**
+        //
+        // `KeinSlot = 1 "kein freier Slot mehr"` nennt den Wert selbst -- der Erzeuger
+        // waehlt keinen. Damit ist die Absenkung ein `enum` mit ausgeschriebenen Werten,
+        // und der Text wandert als Kommentar mit: *er ist die Erklaerung, die ein Leser des
+        // Erzeugnisses sonst nirgends findet.*
+        //
+        // > **Was hier NICHT entschieden wird: wie ein Fehler ZURUECKKOMMT.** Ein
+        // > `let x = f() else (e) { … }` braeuchte eine Fehlerrueckgabe-Konvention, und die
+        // > steht in keiner Zeile der Grammatik -- `f() -> u32` hat keinen Fehlerkanal.
+        // > *Die Grammatik ist fuer den Menschen da, der Gabbro schreibt; wo sie und der
+        // > Erzeuger auseinandergehen, gewinnt der Mensch und der Erzeuger sagt `C001`.*
+        // > Dieselbe Absage steht seit jeher am `on_exceeded` eines `retry`.
+        ItemArt::Reason(r) => {
+            aus.push_str(&format!("\n/* reason {} */\ntypedef enum {{\n", r.name.text));
+            for f in &r.faelle {
+                aus.push_str(&format!(
+                    "    {}_{} = {}, /* {} */\n",
+                    r.name.text,
+                    f.name.text,
+                    f.wert,
+                    kommentartext(&f.text.text)
+                ));
+            }
+            aus.push_str(&format!("}} {};\n", r.name.text));
+        }
+        // **«C3c»: eine `group` erzeugt NICHTS, und sie darf nichts erzeugen.**
+        //
+        // Sie ist die Verbindungsaussage ueber zwei Traegern -- eine Invariante, die keine
+        // `table` sagen kann, weil eine Tabelle nur ueber ihrem eigenen Traeger
+        // quantifiziert (`U007`). **Was sie zur Laufzeit kostet, ist null.**
+        //
+        // *Der Sperrabdruck, den sie verlangt (`U001`-`U006`), ist eine Aussage ueber das
+        // PROGRAMM und wird zur Uebersetzungszeit nachgerechnet* -- W6: was der Pruefer
+        // entschieden hat, prueft die Maschine nicht noch einmal.
+        ItemArt::Gruppe(_) => {}
+        // **«C3b»: `rcu` erzeugt zwei Prototypen und keine Zeile Rumpf** -- genau wie eine
+        // Sperre, und aus genau demselben Grund.
+        //
+        // Was RCU von einer Sperre unterscheidet, steht im Erzeugnis dann als das, was
+        // FEHLT: es gibt kein `_nimm`, das jemanden aufhaelt. Der Lesebereich wird betreten
+        // und verlassen; **ausgeschlossen wird niemand.** *Das ist die ganze Substanz des
+        // Konstrukts, und die Absenkung macht sie sichtbar.*
+        //
+        // > **Die Gnadenfrist ist eine ANNAHME und keine Prüfung.** Dass nach der Ruecknahme
+        // > des Zeigers kein Leser mehr in einem `observes` steht, stellt kein statischer
+        // > Pass her -- `beispiele/31` sagt es selbst und schreibt `assume
+        // > gnadenfrist_ist_abgelaufen` daneben. Der Erzeuger nennt das Primitiv und
+        // > definiert es nicht.
+        //
+        // `reclaims` erzeugt nichts: **wo zurueckgegeben werden darf, rechnen `H011` und
+        // `H012` zur Uebersetzungszeit nach** (W6). Der Ort steht als Kommentar daneben,
+        // damit ein Leser des C ihn findet.
+        ItemArt::Rcu(r) => {
+            let n = &r.name.text;
+            if let Some(o) = &r.gibt_zurueck {
+                aus.push_str(&format!(
+                    "\n/* rcu {n} reclaims {} -- WHERE a slot may be given back is checked at\n\
+                     \x20* compile time (H011, H012); nothing of it is left for the run. */\n",
+                    kommentartext(&o.text())
+                ));
+            } else {
+                aus.push_str(&format!("\n/* rcu {n} */\n"));
+            }
+            aus.push_str(&format!(
+                "void {n}_lese_start(void);\nvoid {n}_lese_ende(void);\n"
+            ));
+        }
         ItemArt::Assume(_) | ItemArt::Axiom(_) => {}
         ItemArt::Modul(_) | ItemArt::Use(_) => {}
         _ => weigere(
@@ -962,6 +1208,22 @@ fn konst_zahl(e: &Expr) -> Option<i128> {
     }
 }
 
+/// Ein Typausdruck als Text -- **nur zum VERGLEICHEN zweier Deklarationen**, nicht zum
+/// Absenken. `TypExpr` traegt Spannen und ist darum nicht vergleichbar.
+fn typtext(t: &TypExpr) -> String {
+    match t {
+        TypExpr::Int(i) => intty(i),
+        TypExpr::Bool(_) => "bool".into(),
+        TypExpr::Pfad(p) => p.teile.iter().map(|i| i.text.clone()).collect::<Vec<_>>().join("::"),
+        TypExpr::Index { tabelle, optional, .. } => {
+            format!("{}index into {}", if *optional { "option " } else { "" }, tabelle.text)
+        }
+        TypExpr::Zeiger(z) => format!("ptr {}", typtext(&z.ziel)),
+        TypExpr::Feld(a) => format!("[{}]", typtext(&a.element)),
+        andere => format!("?{:?}", std::mem::discriminant(andere)),
+    }
+}
+
 /// **Ein `type P = { a : u32, b : bool }` wird ein C-Verbund -- und HIER ist es einer.**
 ///
 /// Bei `format` steht die entgegengesetzte Entscheidung, mit ihrem Grund: *ein Format ist
@@ -995,12 +1257,92 @@ fn verbund(t: &TypDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             );
             continue;
         }
+        // **Ein Feldtyp, der ein FELD ist** -- `bytes : [u8; KAP]`. In C steht die Laenge
+        // hinter dem Namen und nicht beim Typ, also gibt es dafuer keinen `ctyp`.
+        // *Die Laenge kommt aus der Deklaration, wie bei `count N` -- geraten wird sie
+        // nicht.*
+        if let TypExpr::Feld(a) = &f.typ.typ {
+            let (Some(el), Some(n)) = (ctyp(&a.element, u), feldlaenge(&a.laenge, u)) else {
+                weigere(absagen, f.name.span, "array field type -- element or length");
+                continue;
+            };
+            aus.push_str(&format!("    {el} {}[{n}];\n", f.name.text));
+            continue;
+        }
         match ctyp(&f.typ.typ, u) {
             Some(c) => aus.push_str(&format!("    {c} {};\n", f.name.text)),
             None => weigere(absagen, f.name.span, "field type"),
         }
     }
     aus.push_str(&format!("}} {};\n", t.name.text));
+}
+
+/// Die Laenge eines Feldtyps: eine Zahl oder ein `const`-Name (der als `#define` schon im
+/// Kopf des Erzeugnisses steht). **Alles andere ist keine Laenge, die dieser Erzeuger kennt.**
+fn feldlaenge(e: &Expr, u: &Namen) -> Option<String> {
+    match &e.art {
+        ExprArt::Zahl(n) => Some(n.to_string()),
+        ExprArt::Ort(o) if o.suffixe.is_empty() && u.konstanten.contains(&o.basis.text) => {
+            Some(o.basis.text.clone())
+        }
+        _ => None,
+    }
+}
+
+/// **«C2»: ein `tagged type` wird `struct { marke; union { … } }` -- und die Marke ist ein
+/// `enum`.**
+///
+/// ```c
+/// typedef enum { ObjektArt_Speicher, ObjektArt_Endpunkt } ObjektArt_marke;
+/// typedef struct { ObjektArt_marke marke; union { uint64_t Speicher; uint32_t Endpunkt; } last; } ObjektArt;
+/// ```
+///
+/// ## Warum ein `enum` und nicht das schmalste Wort
+///
+/// Die Breite der Marke ist Handwerk; **welcher Typ sie traegt, ist es nicht.** Mit einem
+/// `enum` wird `switch` ohne `default` unter `-Wswitch` zu einem **zweiten Leser von
+/// `D005`**: der Pruefer verlangt das erschoepfende `match` ohne Sammelzweig, und der
+/// C-Uebersetzer prueft dieselbe Zusage noch einmal. *Zwei unabhaengige Leser derselben
+/// Zusage -- dieselbe Bauart wie `-Wmissing-field-initializers` beim Verbundkonstruktor.*
+///
+/// Und die Breite kostet nichts: die Vereinigung richtet ohnehin auf ihr breitestes Glied
+/// aus. **Ein `uint8_t` haette dieselbe Verbundgroesse und keinen zweiten Leser.**
+///
+/// ## Was das Typrecht angeht -- und warum es hier NICHT entschieden wird
+///
+/// Eine C-`union` ist wohldefiniert, solange nur das ZULETZT GESCHRIEBENE Glied gelesen
+/// wird. Genau das erzwingt `D005` eine Ebene hoeher: das `match` liest das Glied, das die
+/// Marke nennt. *Der Erzeuger darf sich darauf berufen, weil ein Pass es haelt* -- er
+/// entscheidet die Frage nicht selbst.
+fn markiert(t: &TypDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
+    let Some(varianten) = u.markierte.get(&t.name.text) else {
+        return;
+    };
+    let n = &t.name.text;
+    aus.push_str(&format!("\ntypedef enum {{\n"));
+    for v in varianten {
+        aus.push_str(&format!("    {n}_{},\n", v.name.text));
+    }
+    aus.push_str(&format!("}} {n}_marke;\n\ntypedef struct {{\n    {n}_marke marke;\n"));
+    // **Eine Vereinigung nur, wenn es etwas zu vereinigen gibt.** Ein `tagged type`, dessen
+    // Varianten alle ohne Nutzlast sind, ist eine reine Fallunterscheidung -- und eine
+    // leere `union` gibt es in C nicht.
+    let mit_last: Vec<&Variante> = varianten.iter().filter(|v| v.nutzlast.is_some()).collect();
+    if !mit_last.is_empty() {
+        aus.push_str("    union {\n");
+        for v in mit_last {
+            let Some(nl) = &v.nutzlast else { continue };
+            match ctyp(nl, u) {
+                Some(c) => aus.push_str(&format!("        {c} {};\n", v.name.text)),
+                None => {
+                    weigere(absagen, v.name.span, "`tagged` variant payload type");
+                    return;
+                }
+            }
+        }
+        aus.push_str("    } last;\n");
+    }
+    aus.push_str(&format!("}} {n};\n"));
 }
 
 /// A table becomes a slot struct plus a carrier struct with a fixed-size array.
@@ -1034,6 +1376,16 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         "    {}_slot slots[{}];\n}} {};\n",
         t.name.text, laenge, t.name.text
     ));
+    // **Und wo die Quelle die Tabelle bei ihrem NAMEN nennt, bekommt sie ihren Speicher.**
+    // *Nur dort*: eine ungenutzte Groesse im erzeugten C waere ein Befund ueber den
+    // Erzeuger, nicht ueber den Anwender.
+    if u.tabellenglobal.contains(&t.name.text) {
+        aus.push_str(&format!(
+            "/* `{n}` is addressed by NAME: the table IS the storage (beispiele/09). */\n\
+             static {n} {n}_speicher;\n",
+            n = t.name.text
+        ));
+    }
     // **Der Sonderwert fuer `option index into T`, und er hat eine PRAEMISSE.**
     //
     // Er ist die Laenge selbst -- der eine Wert, den ein gueltiger Index nach `count N` und
@@ -1253,7 +1605,7 @@ fn pruefkoerper(
     rumpf_aus.push_str(" */\n");
     rumpf_aus.push_str(&format!("bool pruefe_{}(void) {{\n", c.name.text));
     for s in &c.can_fail.anweisungen {
-        anweisung(s, rumpf_aus, u, absagen, 1, &Vec::new());
+        anweisung(s, rumpf_aus, u, absagen, 1, &Austritt::default());
     }
     rumpf_aus.push_str("}\n");
 }
@@ -1773,6 +2125,11 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                 // -- also `None`, also eine Weigerung fuer einen Typ, den diese Einheit
                 // gerade selbst deklariert hat.
                 _ if u.verbunde.contains(&n) => n,
+                // **Ein Pfad, der einen `tagged type` nennt, IST der markierte Verbund**
+                // («C2»). Er steht aus demselben Grund vor der Bereichstypzeile wie der
+                // Verbund darueber: `u.typen` enthaelt ihn auch, und dort waere sein Rumpf
+                // ein `TypExpr::Varianten`, an dem `ctyp` scheitert.
+                _ if u.markierte.contains_key(&n) => n,
                 // **A named range type lowers to its carrier.** `type Zaehler = u32 in
                 // 0 .. 65535` becomes `uint32_t`; the range itself is an M1 fact and stays in
                 // the checker -- W6: what is left out of the C is left out because M1 carries
@@ -2143,8 +2500,16 @@ fn funktion(
             aus.push_str(&format!("    (void){};\n", p.name.text));
         }
     }
+    // **Der Rueckgabetyp reist mit in den Rumpf** -- ein `return None` haengt an ihm.
+    let rahmen = Austritt {
+        freigaben: Vec::new(),
+        rueck_option: match &f.ergebnis {
+            Some(TypExpr::Index { tabelle, optional: true, .. }) => Some(tabelle.text.clone()),
+            _ => None,
+        },
+    };
     for s in &b.anweisungen {
-        anweisung(s, aus, u, absagen, 1, &Vec::new());
+        anweisung(s, aus, u, absagen, 1, &rahmen);
     }
     aus.push_str("}\n");
 }
@@ -2262,6 +2627,37 @@ fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
                     benutzte_namen(&z.rumpf, aus);
                 }
             }
+            // **Der `if`-Zweig fehlte bis zum 2026-08-19**, und die Folge war dieselbe wie
+            // beim `narrow` zwei Tage vorher: ein `(void)k;` ueber einem Namen, den der
+            // Rumpf sehr wohl liest -- nur eben in einem Zweig. *Gefunden, als «C2» den
+            // Binder eines `match`-Zweiges nach derselben Regel stilllegte:
+            // `Kurz(k) => { if k <= 65535 { … } }` bekam ein `(void)k;` neben ein `k`.*
+            StmtArt::Wenn(w) => {
+                for (bed, rumpf) in &w.zweige {
+                    e(bed, aus);
+                    benutzte_namen(rumpf, aus);
+                }
+                if let Some(sonst) = &w.sonst {
+                    benutzte_namen(sonst, aus);
+                }
+            }
+            StmtArt::LetSonst(l) => {
+                if let Some(r) = l.als_ruf() {
+                    for a in &r.argumente {
+                        e(a, aus);
+                    }
+                }
+                benutzte_namen(&l.sonst, aus);
+            }
+            StmtArt::Publish(p) => e(&p.wert, aus),
+            StmtArt::Observiert(o) => benutzte_namen(&o.rumpf, aus),
+            StmtArt::Exchange(x) => match &x.form {
+                XForm::Update { rumpf, .. } => benutzte_namen(rumpf, aus),
+                XForm::Vergleich { wert, bedingung, .. } => {
+                    e(wert, aus);
+                    pred_namen(bedingung, aus);
+                }
+            },
             _ => {}
         }
     }
@@ -2275,7 +2671,18 @@ fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
 ///
 /// > *Das ist woertlich die Klasse, die C8 bezahlt hat:* ein neuer Abweispfad erbt die
 /// > Aufraeumpflicht des alten nicht. Hier erbt er sie, weil nicht der Schreiber sie ausgibt.
-type Austritt = Vec<String>;
+///
+/// **Und die zweite Zeile gehoert aus demselben Grund hierher**: ein `return None` weiss
+/// nur an dieser Stelle, WELCHER Sonderwert gemeint ist -- er haengt am Rueckgabetyp der
+/// umgebenden Funktion, nicht am Ausdruck. *Ohne ihn stuende im C ein Bezeichner `None`,
+/// den niemand erklaert hat.*
+#[derive(Default, Clone)]
+struct Austritt {
+    /// Die Freigaben der offenen `locks`-Bloecke, innerste zuletzt.
+    freigaben: Vec<String>,
+    /// Die Zieltabelle des `option index into T`-Rueckgabetyps dieser Funktion.
+    rueck_option: Option<String>,
+}
 
 fn einzug(n: usize) -> String {
     "    ".repeat(n)
@@ -2294,11 +2701,20 @@ fn anweisung(
     match &s.art {
         StmtArt::Return(w) => {
             // **Erst freigeben, dann zurueckkehren** -- und zwar fuer JEDEN offenen Block.
-            for freigabe in austritt.iter().rev() {
+            for freigabe in austritt.freigaben.iter().rev() {
                 aus.push_str(&format!("{e}{freigabe};\n"));
             }
             match w {
-                Some(x) => aus.push_str(&format!("{e}return {};\n", ausdruck(x, u, absagen))),
+                // **`return None` / `return Some(i)`** -- der Sonderwert kommt aus dem
+                // Rueckgabetyp der Funktion, nicht aus dem Ausdruck.
+                Some(x) => {
+                    let t = austritt
+                        .rueck_option
+                        .as_deref()
+                        .and_then(|tab| option_wert(x, tab, u, absagen))
+                        .unwrap_or_else(|| ausdruck(x, u, absagen));
+                    aus.push_str(&format!("{e}return {t};\n"));
+                }
                 None => aus.push_str(&format!("{e}return;\n")),
             }
         }
@@ -2322,25 +2738,9 @@ fn anweisung(
             // Sonderwert gemeint ist.** Bis zum 2026-08-17 weigerte er sich hier; jetzt loest
             // er das Feld auf -- und weigert sich weiterhin, wenn er es NICHT kann.
             let wert = match option_ziel(&z.ziel, u) {
-                Some(tab) => match &z.wert.art {
-                    // `None` kommt als Ruf ohne Argumente an -- es IST ein Konstruktor.
-                    ExprArt::Ruf(r) if r.pfad.teile.last().is_some_and(|i| i.text == "None") => {
-                        format!("{tab}_NONE")
-                    }
-                    ExprArt::Ort(o) if o.suffixe.is_empty() && o.basis.text == "None" => {
-                        format!("{tab}_NONE")
-                    }
-                    ExprArt::Ruf(r) if r.pfad.teile.last().is_some_and(|i| i.text == "Some") => {
-                        match r.argumente.first() {
-                            Some(a) => ausdruck(a, u, absagen),
-                            None => {
-                                weigere(absagen, s.span, "`Some` without an argument");
-                                return;
-                            }
-                        }
-                    }
-                    _ => ausdruck(&z.wert, u, absagen),
-                },
+                // `None` kommt als Ruf ohne Argumente an -- es IST ein Konstruktor.
+                Some(tab) => option_wert(&z.wert, &tab, u, absagen)
+                    .unwrap_or_else(|| ausdruck(&z.wert, u, absagen)),
                 None => ausdruck(&z.wert, u, absagen),
             };
             aus.push_str(&format!(
@@ -2386,7 +2786,13 @@ fn anweisung(
             // nicht, gibt er sie aus und nimmt die Warnung in Kauf: *dann wird der Waechter
             // rot, statt dass eine Pruefung still verschwindet.*
             let untere_ist_null = matches!(&bereich.von.art, ExprArt::Zahl(0));
-            let bedingung = if untere_ist_null && vorzeichenlos.contains(&n.ort.basis.text) {
+            // **Und seit «C5» reicht der Blick bis zum FELD.** `s.len : u32 in 0 .. KAP` ist
+            // nachweislich vorzeichenlos, und `s->len >= 0` waere unter `-Wtype-limits` eine
+            // Warnung ueber eine Zeile, die der Anwender nicht geschrieben hat. *Der Weg
+            // bleibt derselbe: Unwissen faellt nach lautstark, die Pruefung bleibt stehen.*
+            let vorzeichenlos = vorzeichenlos.contains(&n.ort.basis.text)
+                || ort_typ(&n.ort, u).is_some_and(|t| vorzeichen(&t, u) == Some(true));
+            let bedingung = if untere_ist_null && vorzeichenlos {
                 format!("{o} {oben} {bis}")
             } else {
                 format!("{o} >= {von} && {o} {oben} {bis}")
@@ -2409,7 +2815,17 @@ fn anweisung(
             // A non-ghost `let` needs a type, and the emitter does not guess one. The first
             // version wrote `uint32_t` unconditionally -- correct for the one file it was
             // built against and wrong for every other.
-            match l.typ.as_ref().and_then(|t| ctyp(t, u)) {
+            //
+            // **Steht keiner da, wird er ABGELESEN und nicht geraten**: die rechte Seite ist
+            // ein Ort, und der Ort hat einen erklaerten Typ (`ort_typ`). *`let obj =
+            // c.slots[s].objekt` ist die Form, an der ein halbes Dutzend Weigerungen hing --
+            // und der Typ stand die ganze Zeit in der Tabellendeklaration.*
+            let typ = match l.typ.as_ref().and_then(|t| ctyp(t, u)) {
+                Some(c) => Some(c),
+                None if l.typ.is_none() => wert_ctyp(&l.wert, u),
+                None => None,
+            };
+            match typ {
                 Some(c) => aus.push_str(&format!(
                     "{e}{c} {} = {};\n",
                     l.name.text,
@@ -2464,6 +2880,111 @@ fn anweisung(
                 al.name.text
             ));
         }
+        // **«C3b»: `observes D { … }` -- dieselbe Gestalt wie `locks`, und der Unterschied
+        // ist genau das, was FEHLT.**
+        //
+        // Betreten und Verlassen, auf JEDEM Pfad -- der Austritt wird durchgereicht, sonst
+        // laesst ein `return` im Rumpf den Lesebereich offen. *Was hier NICHT steht, ist
+        // eine Nahme: RCU serialisiert Leser gegen die Ruckgewinnung, nicht Schreiber
+        // gegeneinander.* Der Schreiber braucht seine eigene Sperre, und dass er sie hat,
+        // rechnet `H010`/`H012` zur Uebersetzungszeit nach.
+        StmtArt::Observiert(o) => {
+            let n = &o.domaene.text;
+            aus.push_str(&format!(
+                "{e}/* observes {n} -- READ side: no exclusion, only a region */\n\
+                 {e}{n}_lese_start();\n{e}{{\n"
+            ));
+            let mut innen = austritt.clone();
+            innen.freigaben.push(format!("{n}_lese_ende()"));
+            for k in &o.rumpf.anweisungen {
+                anweisung(k, aus, u, absagen, tiefe + 1, &innen);
+            }
+            aus.push_str(&format!("{e}}}\n{e}{n}_lese_ende();\n"));
+        }
+        // **«C4»: `exchange`, und der Korpus trägt nur EINE der beiden Formen an einem
+        // Atomic.**
+        //
+        // `compare-exchange` senkt ab: `atomic_compare_exchange_strong_explicit` mit der
+        // **deklarierten** Ordnung. Genau hier hat dieser Erzeuger schon einmal geschummelt
+        // -- der Mutationskatalog fuehrt `veroeffentlichung-nimmt-die-vorgabeordnung`, weil
+        // ein `=` statt der Ordnung `seq_cst` bedeutet und *das erzeugte Programm dann etwas
+        // anderes sagt als die Quelle.*
+        //
+        // ## Und `update` bleibt `C001`, mit ZWEI Gruenden statt einem
+        //
+        // 1. **Der Platz ist im Korpus gar kein `atomic`** (`beispiele/05`: `z.wert` ist ein
+        //    Feld eines gewoehnlichen Verbundes). Ohne Deklaration gibt es keine Ordnung, und
+        //    eine zu waehlen hiesse, sie zu erfinden.
+        // 2. **Und selbst an einem Atomic:** `SPRACHE.md` (RMW, die dritte Form der Paarung)
+        //    sagt die Absenkung ausdruecklich -- `atomic_fetch_*`, wenn der Rumpf einer
+        //    Grundform entspricht (`t+1`, `t-1`, `t|m`, `t&m`), *sonst die **beschraenkte**
+        //    CAS-Schleife, „emittiert als `retry bounded NCORES * K ops on_exceeded
+        //    contention`"*. Der Rumpf im Korpus saettigt (`if v < GRENZE { … }`) und ist
+        //    keine Grundform; die Schranke braucht `NCORES` -- **dieselbe unentschiedene
+        //    Groesse wie `accumulates` ohne `per cpu N`** -- und `on_exceeded` einen Namen,
+        //    den niemand nennt.
+        //
+        // > *Die Sprache emittiert nichts, was sie verbietet* (die `accumulates`-Lehre). Eine
+        // > unbeschraenkte CAS-Schleife waere genau das.
+        StmtArt::Exchange(x) => {
+            let ziel = x.ort.text();
+            let Some((typ, speichern, laden)) = u.atomics.get(&ziel).cloned() else {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`exchange` on something that is not a declared `atomic` -- without a \
+                     declaration there is no memory ordering, and choosing one would mean \
+                     inventing it",
+                );
+                return;
+            };
+            let XForm::Vergleich { wert, bedingung, .. } = &x.form else {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`exchange update(v) { … }` -- SPRACHE.md lowers it to `atomic_fetch_*` \
+                     for a primitive body (`t+1`, `t-1`, `t|m`, `t&m`) and otherwise to a \
+                     BOUNDED CAS loop (`retry bounded NCORES * K ops on_exceeded \
+                     contention`). This body is not primitive, `NCORES` is the same undecided \
+                     quantity as `accumulates` without `per cpu N`, and nothing names the \
+                     exit -- the language emits nothing it forbids",
+                );
+                return;
+            };
+            // `old(X) == <expr>` -- die einzige Gestalt, in der der ERWARTETE Wert dasteht.
+            let erwartet = match &bedingung.art {
+                PredArt::Vergleich(e) => match &e.art {
+                    ExprArt::Binaer(BinOp::Gleich, a, b)
+                        if matches!(&a.art, ExprArt::Alt(_)) =>
+                    {
+                        ausdruck(b, u, absagen)
+                    }
+                    _ => String::new(),
+                },
+                _ => String::new(),
+            };
+            if erwartet.is_empty() {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`when` condition form -- a compare-exchange compares the OLD value \
+                     against one expected value (`old(X) == <expr>`); anything else would \
+                     need a loop, and that is the `update` case",
+                );
+                return;
+            }
+            let h = format!("_cx{tiefe}");
+            aus.push_str(&format!(
+                "{e}bool {};\n{e}{{\n{e}    {typ} {h} = ({typ})({erwartet});\n\
+                 {e}    /* compare-exchange under the DECLARED ordering -- a plain `=` would \
+                 be seq_cst */\n\
+                 {e}    {} = atomic_compare_exchange_strong_explicit(\n\
+                 {e}        &{ziel}, &{h}, ({typ})({}), {speichern}, {laden});\n{e}}}\n",
+                x.name.text,
+                x.name.text,
+                ausdruck(wert, u, absagen)
+            ));
+        }
         StmtArt::Sperrt(x) => {
             let name = x.sperre.text();
             let (nimm, gib) = if x.geteilt {
@@ -2473,7 +2994,7 @@ fn anweisung(
             };
             aus.push_str(&format!("{e}{nimm};\n{e}{{\n"));
             let mut innen = austritt.clone();
-            innen.push(gib.clone());
+            innen.freigaben.push(gib.clone());
             for k in &x.rumpf.anweisungen {
                 anweisung(k, aus, u, absagen, tiefe + 1, &innen);
             }
@@ -2524,6 +3045,26 @@ fn anweisung(
                  (MESSUNGEN.md: \"a ritual\"); «B11»: there is no exit either",
             ),
         },
+        // **«C3a»: `let … else (e) { … }` bleibt `C001`, und das ist eine gezogene Linie.**
+        //
+        // Die Form braucht eine **Fehlerrueckgabe-Konvention**, und die steht in keiner
+        // Zeile der Grammatik: `extern fn hol() -> u32` hat gar keinen Fehlerkanal, und
+        // nichts bindet eine Funktion an ein `reason`. Der Erzeuger muesste also erfinden,
+        // *wie* ein Ruf scheitert (Ausgabeparameter? Sonderwert? globale Zelle?) und *was*
+        // `e` traegt.
+        //
+        // > **Eine Sprachentscheidung, die nur der Absenkung dient, wird nicht getroffen.**
+        // > Die Grammatik ist fuer den Menschen da, der Gabbro schreibt, nicht fuer den
+        // > Erzeuger, der es liest. Dieselbe Absage steht seit jeher am `on_exceeded` eines
+        // > `retry` -- *und dort wie hier ist sie im TODO gebucht, nicht verschwiegen.*
+        StmtArt::LetSonst(_) => weigere(
+            absagen,
+            s.span,
+            "`let … else (e) { … }` -- the form needs an ERROR-RETURN CONVENTION, and none \
+             is decided: `-> u32` carries no error channel, and nothing binds a function to \
+             a `reason`. What `e` holds and how a call reports failure would both have to be \
+             invented here (the same refusal as `retry … on_exceeded` on a `reason` value)",
+        ),
         _ => weigere(absagen, s.span, "statement kind"),
     }
 }
@@ -2706,9 +3247,101 @@ fn traverse(
     weigere(absagen, s.span, grund);
 }
 
-/// Nur `match` ueber einer Option wird abgesenkt. **Ein `match` ueber einem `tagged type` ist
-/// eine eigene Entwurfsfrage** (markierter Verbund, Variantennummern, Nutzlast) und wird
-/// abgelehnt statt geraten.
+/// **«C2»: `match` ueber einem `tagged type` wird ein `switch` OHNE `default`.**
+///
+/// Der fehlende Sammelzweig ist die ganze Aussage: `D005` verlangt seit dem 2026-08-19 das
+/// erschoepfende `match` ohne Auffangzweig, und **`-Wswitch` liest dieselbe Zusage ein
+/// zweites Mal**. *Ein `default:` hier wuerde genau den Leser stilllegen, um dessentwillen
+/// die Marke ein `enum` ist.*
+///
+/// Die Nutzlast des Zweiges kommt aus dem Glied, das die Marke nennt -- und **nur daraus**:
+/// ein anderes Glied zu lesen waere der eine Fall, in dem eine C-`union` das Typrecht
+/// verletzt, und der Pass davor schliesst ihn aus.
+fn match_markiert(
+    m: &MatchStmt,
+    s: &Stmt,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+    austritt: &Austritt,
+    typ: &str,
+) {
+    let e = einzug(tiefe);
+    let Some(varianten) = u.markierte.get(typ).cloned() else { return };
+    // **Erschoepfend, ohne Sammelzweig -- und der Erzeuger prueft es selbst.** `D005` haelt
+    // es eine Ebene hoeher; hier faellt es auf, falls der Pass es je nicht mehr taete.
+    // *Ein `switch` mit fehlenden Faellen faellt sonst durch und tut NICHTS.*
+    if m.zweige.len() != varianten.len()
+        || !varianten
+            .iter()
+            .all(|v| m.zweige.iter().any(|z| z.variante.text == v.name.text))
+    {
+        weigere(
+            absagen,
+            s.span,
+            "`match` over a `tagged type` must name every variant exactly once -- there is \
+             no catch-all branch, and a `switch` with a missing case falls through and does \
+             NOTHING",
+        );
+        return;
+    }
+    let gegenstand = ausdruck(&m.gegenstand, u, absagen);
+    aus.push_str(&format!("{e}switch ({gegenstand}.marke) {{\n"));
+    for v in &varianten {
+        let Some(z) = m.zweige.iter().find(|z| z.variante.text == v.name.text) else {
+            continue;
+        };
+        aus.push_str(&format!("{e}case {typ}_{}: {{\n", v.name.text));
+        if let (Some(b), Some(nl)) = (&z.binder, &v.nutzlast) {
+            match ctyp(nl, u) {
+                Some(c) => {
+                    aus.push_str(&format!(
+                        "{e}    {c} {} = {gegenstand}.last.{};\n",
+                        b.text, v.name.text
+                    ));
+                    // **`(void)x;` fuer einen Binder, den der Zweig nicht liest** -- der
+                    // Anwender hat die erzeugte Zeile nicht geschrieben, und `-Wextra`
+                    // spraeche sonst ueber ihn. Dieselbe Buchung wie beim toten Parameter.
+                    let mut gelesen = BTreeSet::new();
+                    benutzte_namen(&z.rumpf, &mut gelesen);
+                    if !gelesen.contains(&b.text) {
+                        aus.push_str(&format!("{e}    (void){};\n", b.text));
+                    }
+                }
+                None => {
+                    weigere(absagen, b.span, "`tagged` variant payload type");
+                    return;
+                }
+            }
+        }
+        for k in &z.rumpf.anweisungen {
+            anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+        }
+        aus.push_str(&format!("{e}}} break;\n"));
+    }
+    aus.push_str(&format!("{e}}}\n"));
+}
+
+/// Welchen `tagged type` traegt dieser Ausdruck? **Ueber den erklaerten Typ, nicht ueber die
+/// Variantennamen** -- zwei Typen duerfen gleichnamige Varianten haben.
+fn marken_quelle(e: &Expr, u: &Namen) -> Option<String> {
+    let ExprArt::Ort(o) = &e.art else { return None };
+    if o.suffixe.is_empty() {
+        if let Some(t) = u.markenwerte.get(&o.basis.text) {
+            return Some(t.clone());
+        }
+    }
+    match ort_typ(o, u)? {
+        TypExpr::Pfad(p) => {
+            let n = p.teile.last()?.text.clone();
+            u.markierte.contains_key(&n).then_some(n)
+        }
+        _ => None,
+    }
+}
+
+/// Nur `match` ueber einer Option und ueber einem `tagged type` wird abgesenkt.
 fn match_option(
     m: &MatchStmt,
     s: &Stmt,
@@ -2719,6 +3352,10 @@ fn match_option(
     austritt: &Austritt,
 ) {
     let e = einzug(tiefe);
+    if let Some(typ) = marken_quelle(&m.gegenstand, u) {
+        match_markiert(m, s, aus, u, absagen, tiefe, austritt, &typ);
+        return;
+    }
     let Some(tabelle) = option_quelle(&m.gegenstand, u) else {
         weigere(absagen, s.span, "`match` over something other than an `option index into T`");
         return;
@@ -2749,15 +3386,119 @@ fn match_option(
     aus.push_str(&format!("{e}    }}\n{e}}}\n"));
 }
 
-/// Ist dieser Ort ein `option index into T`-Feld? Dann die Zieltabelle.
+/// **Der erklaerte Typ eines Ortes -- abgelesen, nicht geraten.**
 ///
-/// Erkannt wird die Form `<zeiger>.slots[<i>].<feld>` -- die einzige, in der ein Slotfeld
-/// ueberhaupt vorkommt. **Alles andere liefert `None`, und dann weigert sich der Erzeuger**
-/// statt einen Sonderwert zu raten.
+/// Drei Wurzeln, und mehr gibt es in dieser Sprache nicht: ein Zeigerparameter auf eine
+/// Tabelle, der **Name einer Tabelle selbst** (`beispiele/09`: die Tabelle IST der Speicher)
+/// und ein `static`. Von dort aus traegt genau ein Weg weiter: `.slots[i].<feld>`.
+///
+/// > **Jede andere Gestalt liefert `None`, und dann weigert sich der Erzeuger.** Ein
+/// > geratener Typ waere hier besonders teuer: an ihm haengt der Sonderwert, und ein
+/// > falscher Sonderwert macht aus `None` einen gueltigen Index.
+fn ort_typ(o: &Ort, u: &Namen) -> Option<TypExpr> {
+    let tabelle = u
+        .tabellenzeiger
+        .get(&o.basis.text)
+        .cloned()
+        .or_else(|| u.tabellen.iter().find(|t| **t == o.basis.text).cloned());
+    if let Some(tab) = tabelle {
+        // `h.slots[i].naechst` -- Feld, Index, Feld. Alles andere ist kein Slotfeld.
+        if o.suffixe.len() != 3 {
+            return None;
+        }
+        let (OrtSuffix::Feld(slots), OrtSuffix::Index(_), OrtSuffix::Feld(f)) =
+            (&o.suffixe[0], &o.suffixe[1], &o.suffixe[2])
+        else {
+            return None;
+        };
+        if slots.text != "slots" {
+            return None;
+        }
+        return u.slotfeld.get(&(tab, f.text.clone())).cloned();
+    }
+    if o.suffixe.is_empty() {
+        return u
+            .statiken
+            .get(&o.basis.text)
+            .or_else(|| u.parametertyp.get(&o.basis.text))
+            .cloned();
+    }
+    // `s.len` -- ein Feld eines VERBUNDES, ueber einen Zeiger oder als Wert.
+    if o.suffixe.len() == 1 {
+        let OrtSuffix::Feld(f) = &o.suffixe[0] else { return None };
+        let basis = u.parametertyp.get(&o.basis.text)?;
+        let ziel = match basis {
+            TypExpr::Zeiger(z) => &z.ziel,
+            andere => andere,
+        };
+        let TypExpr::Pfad(p) = ziel else { return None };
+        let n = &p.teile.last()?.text;
+        return u.verbundfeld.get(&(n.clone(), f.text.clone())).cloned();
+    }
+    None
+}
+
+/// **Der C-Typ eines Ausdrucks -- ABGELESEN, und nur wo er eindeutig dasteht.**
+///
+/// Drei Quellen, und jede ist eine Deklaration: ein Ort (Slotfeld, `static`, Parameter), ein
+/// Ruf (der Rueckgabetyp des Gerufenen, samt dem Geraetegriff eines `Vtd(basis)`) und eine
+/// Rechnung ueber zweien davon, **die denselben Typ haben**.
+///
+/// > *Wo zwei Seiten verschieden erklaert sind, liefert diese Funktion nichts* -- und dann
+/// > weigert sich der Erzeuger, statt eine der beiden zu waehlen.
+fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
+    match &e.art {
+        ExprArt::Ort(o) if o.suffixe.is_empty() => match u.parametertyp.get(&o.basis.text) {
+            Some(t) => ctyp(t, u),
+            None => ort_typ(o, u).and_then(|t| ctyp(&t, u)),
+        },
+        ExprArt::Ort(o) => ort_typ(o, u).and_then(|t| ctyp(&t, u)),
+        ExprArt::Klammer(x) => wert_ctyp(x, u),
+        ExprArt::Binaer(op, a, b) => {
+            // Ein Vergleich ist `bool`, egal worueber; eine Rechnung traegt den Typ ihrer
+            // Seiten -- und nur, wenn beide denselben nennen.
+            if matches!(
+                op,
+                BinOp::Gleich
+                    | BinOp::Ungleich
+                    | BinOp::Kleiner
+                    | BinOp::Groesser
+                    | BinOp::KleinerGleich
+                    | BinOp::GroesserGleich
+                    | BinOp::Und
+                    | BinOp::Oder
+            ) {
+                return Some("bool".into());
+            }
+            let (x, y) = (wert_ctyp(a, u), wert_ctyp(b, u));
+            match (x, y) {
+                (Some(x), Some(y)) if x == y => Some(x),
+                (Some(x), None) if matches!(b.art, ExprArt::Zahl(_)) => Some(x),
+                (None, Some(y)) if matches!(a.art, ExprArt::Zahl(_)) => Some(y),
+                _ => None,
+            }
+        }
+        // **`Vtd(basis)` ist der GRIFF eines Geraets, kein Ruf** -- siehe `ruf`.
+        ExprArt::Ruf(r) => {
+            let n = &r.pfad.teile.last()?.text;
+            if u.geraete.contains_key(n) {
+                return Some(n.clone());
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+/// Ist dieser Ort ein `option index into T`? Dann die Zieltabelle.
+///
+/// **Alles andere liefert `None`, und dann weigert sich der Erzeuger** statt einen
+/// Sonderwert zu raten.
 fn option_ziel(o: &Ort, u: &Namen) -> Option<String> {
-    let tab = u.tabellenzeiger.get(&o.basis.text)?;
-    let OrtSuffix::Feld(feld) = o.suffixe.last()? else { return None };
-    u.optionfeld.get(&(tab.clone(), feld.text.clone())).cloned()
+    match ort_typ(o, u) {
+        Some(TypExpr::Index { tabelle, optional: true, .. }) => Some(tabelle.text),
+        _ => None,
+    }
 }
 
 /// Liefert den Tabellennamen, wenn dieser Ausdruck ein `option index into T` ist.
@@ -2768,6 +3509,42 @@ fn option_quelle(e: &Expr, u: &Namen) -> Option<String> {
             .get(&r.pfad.teile.last()?.text)?
             .option_rueck
             .clone(),
+        ExprArt::Ort(o) => option_ziel(o, u),
+        _ => None,
+    }
+}
+
+/// **`None` und `Some(i)` als WERT -- und der Sonderwert kommt von der Zieltabelle.**
+///
+/// Die Absenkung steht in `beweise/Option_Sonderwert.thy`: `None` ist `count` selbst, der
+/// erste Index, den es nicht gibt (`sonderwert_ausserhalb`), und die Kodierung ist auf dem
+/// gueltigen Bereich injektiv (`kodiere_injektiv`). **Die Praemisse des dritten Satzes
+/// prueft `tabelle`**, wo das `#define` entsteht -- ein volles Wort hat keinen Platz fuer
+/// „keine", und das ist dort eine Absage.
+///
+/// Liefert `None`, wenn der Ausdruck gar kein Konstruktor ist -- dann uebersetzt der Rufer
+/// ihn gewoehnlich.
+fn option_wert(e: &Expr, tab: &str, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    let name = match &e.art {
+        ExprArt::Ruf(r) => r.pfad.teile.last()?.text.clone(),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => o.basis.text.clone(),
+        _ => return None,
+    };
+    match name.as_str() {
+        "None" => Some(format!("{tab}_NONE")),
+        "Some" => {
+            let ExprArt::Ruf(r) = &e.art else {
+                weigere(absagen, e.span, "`Some` without an argument");
+                return Some(String::new());
+            };
+            match r.argumente.first() {
+                Some(a) => Some(ausdruck(a, u, absagen)),
+                None => {
+                    weigere(absagen, e.span, "`Some` without an argument");
+                    Some(String::new())
+                }
+            }
+        }
         _ => None,
     }
 }
@@ -2823,6 +3600,23 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         }
         return format!("({name}){{ {} }}", felder.join(", "));
     }
+    // **«C5»: `Vtd(basis)` ist der GRIFF eines Geraets, kein Ruf** -- `beispiele/09` sagt
+    // den Satz selbst: *„die Parameterliste der Deklaration IST der Konstruktor."* Aus einer
+    // physischen Adresse wird ein Griff, und mehr steht in `device Vtd(basis : Pa)` nicht.
+    //
+    // *Die Umwandlung nach `volatile uint8_t *` ist die eine Stelle, an der der Erzeuger
+    // eine Adresse zu einem Zeiger macht* -- sie steht hier, weil die Deklaration sie sagt
+    // (`at mmio`), und nicht, weil sie bequem waere.
+    if u.geraete.contains_key(&name) {
+        if r.argumente.len() != 1 {
+            weigere(absagen, r.span, "a device handle takes exactly its declared base");
+            return String::new();
+        }
+        return format!(
+            "({name}){{ (volatile uint8_t *)(uintptr_t){} }}",
+            ausdruck(&r.argumente[0], u, absagen)
+        );
+    }
     let geist = u.funktionen.get(&name).map(|s| s.geist_param.clone());
     let args: Vec<String> = r
         .argumente
@@ -2835,6 +3629,21 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
 }
 
 fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
+    // **Ein blankes `None` an einer Stelle, die keine Option ist, wird ABGELEHNT.**
+    //
+    // Bis zum 2026-08-19 fiel es hier durch und wurde der C-Bezeichner `None` -- ein Name,
+    // den niemand erklaert hat. *Er waere an `cc` gefallen, und darauf zu bauen hiesse, die
+    // Weigerung zu delegieren, wo die Antwort hier steht.* Wo die Zieltabelle bekannt ist,
+    // kommt dieser Ort gar nicht erst dran (`option_wert`).
+    if o.suffixe.is_empty() && o.basis.text == "None" {
+        weigere(
+            absagen,
+            o.span,
+            "`None` where the emitter cannot see WHICH table's sentinel is meant -- the \
+             sentinel is `count` itself (beweise/Option_Sonderwert.thy), so it needs the table",
+        );
+        return String::new();
+    }
     // **Ein Geraeteregister ist kein Feld, sondern ein volatiler Zugriff an `basis + Versatz`.**
     // Der C-Uebersetzer darf ihn nicht wegoptimieren, und `volatile` ist die eine Stelle, an
     // der die Absenkung ihm etwas VERBIETEN muss.
@@ -2886,6 +3695,12 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // The base of a place in a function is a pointer parameter -- **unless it is a record
     // value bound here** («B7»). `c->len` on a `let c : Completion` is simply wrong.
     let mut zeiger = !u.werte.contains(&o.basis.text);
+    // **Und ausser wenn die Basis eine TABELLE ist.** Ihr Name ist der Ort, nicht ein
+    // Zeiger auf ihn -- `Kappenraum.slots[s]` greift den Speicher selbst.
+    if u.tabellenglobal.contains(&o.basis.text) {
+        t = format!("{}_speicher", o.basis.text);
+        zeiger = false;
+    }
     for suf in &o.suffixe {
         match suf {
             OrtSuffix::Feld(f) => {
