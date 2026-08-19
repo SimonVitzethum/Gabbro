@@ -8237,3 +8237,44 @@ Theorien   11 -> 12       Isar je Korpusstelle  12,6 -> 14,1
 **Die Amortisationszahl steigt zum zweiten Mal an einem Tag:** 217 neue Beweiszeilen gegen
 **eine** Korpusstelle (`beispiele/17-gruppe-ueber-zwei-sperren.gab`). *Beweis vor Konstrukt
 kostet genau das.*
+
+---
+
+# `H = 18 → 17` — eine geschlossene Lücke, die weitergezählt wurde
+
+**Gefunden 2026-08-19 beim Ablesen der Frage „was muss ein Nutzer noch an Klempnerei
+machen".** `PFLICHTEN.md`:274 führte `«B21» — no accumulates max/min/+` als hängende
+K-Pflicht. Gemessen:
+
+```gabbro
+module t { accumulates hoch : u64 merge max; }
+→ 2 Items, 0 Fehler, 0 Hinweise
+```
+
+`pruefe-notation.py` bucht B21 seit jeher als **zu**, und `Accumulates_Monoid.thy` beweist die
+Schablone dazu. **Das Konstrukt kam mit `accumulates`; die Zeile wurde nicht mitgenommen.**
+
+> **Dieselbe Klasse wie die sechs Zeilen vom 2026-08-17, nur spiegelverkehrt:** dort wurde die
+> Summe gepflegt und die Quelle nicht — hier blieb die Quelle offen, **während das Werkzeug,
+> das sie prüft, grün meldet.**
+
+`H = 17` (10 verankert + 7 Absenkungen).
+
+## Und ein Fehlalarm meinerseits, weil er hierher gehört
+
+Beim Nachrechnen hielt ich `H` für zerstört: meine Bearbeitung von `FRAGMENTE.md` hat Zeilen
+verschoben, und die Anker sahen wie Zeilennummern dieser Datei aus. **Sie zeigen in Caprocks
+Quelle** — `vtd.rs`:425–426 trifft dort `FSTS_PPF`, nachgeprüft in `../caprock-messbasis`. *Die
+Verwechslung war möglich, weil das Fragment das Original spiegelt: an Zeile 425 steht in beiden
+Dateien `FSTS`.*
+
+## Der Nebenbefund: ein Zähler bricht ab, und niemand merkt es
+
+`./zaehle-pflichten.py` **ohne** `--haengend` meldet seit mindestens dem 2026-08-18:
+
+```
+ABBRUCH: 15 Bloecke statt 10 -- die Grundgesamtheit hat sich bewegt
+```
+
+**Gefahren wird nur der `--haengend`-Zweig**, also fällt es niemandem auf. *Ein Werkzeug, das
+in einem Modus abbricht, den keiner benutzt, ist kein Werkzeug — es ist eine Datei.*

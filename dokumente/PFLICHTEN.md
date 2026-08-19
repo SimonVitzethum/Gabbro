@@ -271,7 +271,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 1056 | every `Bytes` lies in 0 .. 65536 | K | `M101` |
 | 1058 | the reserve divisor is not zero | K | `M101` — **`u32 in 1 .. 64` is what makes `g / MIND_RESERVE_NENNER` legal** |
 | 1061–1064 | the ten `atomic` declarations are reachable from `program` | K | `item` (`SYNTAX.md`:169) — **«B2» is CLOSED; the frozen text records it as hanging** |
-| 1065–1069 | the high-water mark is writable | K | **gap: «B21» — no `accumulates max`/`min`/`+`. 213 RMW sites tree-wide, 19 of them `fetch_max`/`fetch_min`. The measurand of this fragment is not writable, and `SYNTAX.md` names it the first candidate for "two demanded properties contradict each other"** |
+| 1065–1069 | the high-water mark is writable | ~~K~~ **zu** | **«B21» geschlossen — und bis zum 2026-08-19 hier weitergezählt.** `accumulates hoch : u64 merge max;` geht mit **0 Fehlern** durch, `pruefe-notation.py` bucht B21 als geschlossen, und `Accumulates_Monoid.thy` beweist die Schablone. *Das Konstrukt kam mit `accumulates`; diese Zeile wurde nicht mitgenommen.* **Dieselbe Klasse wie die sechs Zeilen vom 2026-08-17, nur spiegelverkehrt:** dort wurde die Summe gepflegt und die Quelle nicht, hier blieb die Quelle offen, während das Werkzeug, das sie prüft, grün meldet. `H` fällt damit von 18 auf **17** |
 | 1070–1072 | "never measured" is distinguishable from zero | L | **gap: «B14», the same as F5** |
 | 1073–1082 | the ten counters carry no payload | K | `V001`–`V004`, `publishes nothing relaxed` |
 | 1084–1085 | the returned depth does not exceed the stack | K | **notation gap «B6» — the line helps itself with the function name, and that is guessed, not written** |
@@ -412,7 +412,7 @@ carries and the Rust original did not — because it does not write them down.*
 | **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
 | **Plumbing (K)** | **171** | 72 % |
 | **Logic (L)** | **67** | 28 % |
-| **hanging** | **34** | of which **`H = 18` are K** — **11 anchored at a line, 7 lowerings.** Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
+| **hanging** | **33** | of which **`H = 17` are K** — **10 anchored at a line, 7 lowerings** *(«B21» closed 2026-08-19)*. Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
 **L : K = 0,38 : 1.**
@@ -472,7 +472,7 @@ ausdrücklich verlangt hatte.
 | **«B26» — der Vorzustand einer `transition`** | *„ob `mirrors` auch den Vorzustand einer `transition` an `GCMD.TE` aus `GSTS.TES` bezieht, sagt `SYNTAX.md` nicht"* — **der Erzeuger beantwortet es mit ja und misst es**: `1 1 1 1`, und die zweite und vierte Zahl sind die Falle. *Die Antwort gehört jetzt in `SYNTAX.md`, nicht in den Erzeuger* |
 | **«B33» — die V-Regeln verengen keinen Registerort** | Der Ordner schrieb: *„Ob das Absicht ist (ein Register kann sich zwischen Prüfung und Rechnung ändern!) oder eine Lücke, entscheidet der Ordner. **Wenn es Absicht ist, gehört die Begründung aufgeschrieben** — sie wäre ein starkes Argument."* **Sie ist es, und sie steht jetzt im erzeugten C:** ein Registerzugriff wird `volatile`, und `volatile` IST die Aussage *„dieser Ort kann sich zwischen zwei Lesungen ändern"*. Eine Verengung wäre an dieser Stelle falsch, nicht bloß fehlend |
 
-### Offen — **`H = 18`**, abgelesen mit `./zaehle-pflichten.py --haengend`, und die Spalte rechts sagt, wem sie gehören
+### Offen — **`H = 17`**, abgelesen mit `./zaehle-pflichten.py --haengend`, und die Spalte rechts sagt, wem sie gehören
 
 | Ursache | # | wem |
 |---|---:|---|
