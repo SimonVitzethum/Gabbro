@@ -161,52 +161,106 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
     g
 }
 
+/// **Wie viele Knotenbesuche eine Hülle kosten darf, bevor der Pass sie ABSAGT.**
+///
+/// Mit `fertig` ist ein zyklenfreier Graph linear; in einer stark verzahnten Rekursion kann
+/// derselbe Knoten aber auf mehreren Wegen neu gerechnet werden. Statt zu hoffen, dass das
+/// nicht vorkommt, steht hier eine Zahl — und wird sie überschritten, heisst die Hülle
+/// *unvollständig* **mit Grund** (R16). Der Korpus braucht weniger als hundert Schritte.
+const SCHRITTE_MAX: usize = 100_000;
+
+/// Der Zustand EINER Hüllenberechnung. Zwei Mengen, zwei verschiedene Fragen — siehe `gehe`.
+#[derive(Default)]
+struct Lauf {
+    /// Wer liegt gerade unter mir? **Nur das ist ein Zyklus.**
+    pfad: BTreeSet<String>,
+    /// Wer ist zyklusfrei fertig gerechnet? Nur damit bleibt ein Diamant linear.
+    fertig: BTreeMap<String, (BTreeSet<String>, Option<String>)>,
+    schritte: usize,
+}
+
 impl Graph {
     /// **Die transitive Wirkungsmenge.** Eigene Wirkungen plus die aller Gerufenen.
     ///
-    /// Der Weg endet an drei Stellen, und jede wird **benannt** statt geraten: an einem
-    /// Zyklus, an einem Gerufenen ohne `effects`, und an einem Namen, den der Graph nicht
-    /// kennt (extern über Modulgrenzen hinweg, Konstruktoren, `Some`/`None`).
+    /// Der Weg endet an vier Stellen, und jede wird **benannt** statt geraten: an einem
+    /// Zyklus, an einem Gerufenen ohne `effects`, an einem Namen, den der Graph nicht kennt
+    /// (extern über Modulgrenzen hinweg, Konstruktoren, `Some`/`None`), und an einem Graphen,
+    /// der größer ist als `SCHRITTE_MAX`.
     pub fn huelle(&self, start: &str) -> Huelle {
-        let mut gesehen = BTreeSet::new();
-        let mut menge = BTreeSet::new();
-        let mut offen = None;
-        self.gehe(start, &mut gesehen, &mut menge, &mut offen);
+        let mut lauf = Lauf::default();
+        let (menge, offen, _) = self.gehe(start, &mut lauf);
         Huelle {
             wirkungen: menge,
             unvollstaendig: offen,
         }
     }
 
-    fn gehe(
-        &self,
-        name: &str,
-        gesehen: &mut BTreeSet<String>,
-        menge: &mut BTreeSet<String>,
-        offen: &mut Option<String>,
-    ) {
-        if !gesehen.insert(name.to_string()) {
-            // Zyklus. Die Menge ist ab hier eine untere Schranke -- und sagt das.
-            if offen.is_none() {
-                *offen = Some(format!("cycle over `{name}`"));
-            }
-            return;
+    /// **Der Weg — mit einem PFAD, nicht mit einer Besuchsliste.**
+    ///
+    /// Bis zum 2026-08-19 stand hier *eine* Menge `gesehen`, die beim Rückweg nie geleert
+    /// wurde und trotzdem als Zyklusmerkmal diente. Jeder ZWEITE Besuch desselben Knotens
+    /// hiess damit „cycle over X", ganz gleich, ob er auf demselben Weg lag. Ein gewöhnlicher
+    /// Diamant reicht:
+    ///
+    /// ```text
+    /// f -> g -> k
+    /// f -> h -> k      meldete «cycle over `m::k`»
+    /// ```
+    ///
+    /// Die Folge war **kein falscher Alarm, sondern Schweigen**: eine Hülle mit `cycle` ist
+    /// nur eine UNTERE Schranke, `E008` (*„promises `pure` but …"*) darf daraus nichts
+    /// schliessen — und ein falsches `pure` kam durch. *Genau der Pass, dessen Modulkopf mit
+    /// „effects ist NICHT fail-open" anfängt.* Dieselbe Klasse wie die 83 `_ => {}`-Zweige,
+    /// nur diesmal in einer Tiefensuche, die eine Besuchsmenge für eine Stapelmenge hielt.
+    ///
+    /// Getrennt sind es zwei Mengen mit zwei Aufgaben:
+    ///
+    /// * **`pfad`** — wer gerade UNTER mir liegt. Nur das ist ein Zyklus.
+    /// * **`fertig`** — wer schon fertig gerechnet ist. Nur damit bleibt der Diamant linear;
+    ///   ein reiner Pfadschnitt allein wäre exponentiell, und diese Falle stand in derselben
+    ///   Woche schon einmal (`m1::sammle_schreibziele`, 2ⁿ).
+    ///
+    /// Gemerkt wird **nur, was zyklusfrei zustande kam**: ein Ergebnis, das an einem
+    /// Pfadschnitt hängt, gilt für diesen Weg und für keinen anderen.
+    fn gehe(&self, name: &str, lauf: &mut Lauf) -> (BTreeSet<String>, Option<String>, bool) {
+        if let Some((m, o)) = lauf.fertig.get(name) {
+            return (m.clone(), o.clone(), false);
+        }
+        if lauf.pfad.contains(name) {
+            // Ein Zyklus. Die Menge ist ab hier eine untere Schranke -- und sagt das.
+            return (BTreeSet::new(), Some(format!("cycle over `{name}`")), true);
+        }
+        lauf.schritte += 1;
+        if lauf.schritte > SCHRITTE_MAX {
+            let o = format!(
+                "the call graph around `{name}` needs more than {SCHRITTE_MAX} steps to expand"
+            );
+            return (BTreeSet::new(), Some(o), true);
         }
         let Some(k) = self.knoten.get(name) else {
-            if offen.is_none() {
-                *offen = Some(format!("`{name}` is unknown to the graph"));
-            }
-            return;
+            let o = Some(format!("`{name}` is unknown to the graph"));
+            // Haengt nicht vom Weg ab: merkbar.
+            lauf.fertig
+                .insert(name.to_string(), (BTreeSet::new(), o.clone()));
+            return (BTreeSet::new(), o, false);
         };
-        if !k.hat_effects {
+        lauf.pfad.insert(name.to_string());
+        let mut menge: BTreeSet<String> = k.eigen.iter().cloned().collect();
+        let mut offen = if k.hat_effects {
+            None
+        } else {
+            Some(format!("`{name}` declares no `effects`"))
+        };
+        let mut zyklisch = false;
+        let aufnehmen = |offen: &mut Option<String>, grund: Option<String>| {
             if offen.is_none() {
-                *offen = Some(format!("`{name}` declares no `effects`"));
+                *offen = grund;
             }
-        }
-        menge.extend(k.eigen.iter().cloned());
+        };
         for (ziel, args) in &k.rufe {
-            let mut tiefer = BTreeSet::new();
-            self.gehe(ziel, gesehen, &mut tiefer, offen);
+            let (tiefer, grund, z) = self.gehe(ziel, lauf);
+            zyklisch |= z;
+            aufnehmen(&mut offen, grund);
             // **Die Bruecke ueber den Aufrufrand** (2026-08-19). Bis dahin sah der Rufer
             // `consumes p` mit dem PARAMETERNAMEN des Gerufenen und musste ihn woertlich in
             // seiner eigenen Liste fuehren, obwohl `p` bei ihm gar nicht existiert. Gemessen
@@ -220,19 +274,31 @@ impl Graph {
             let ziel_par = self.knoten.get(ziel).map(|z| &z.parameter).unwrap_or(&leer);
             for w in tiefer {
                 let (neu, unklar) = ersetze(&w, ziel_par, args);
-                if unklar && offen.is_none() {
-                    *offen = Some(format!(
-                        "an argument of the call to `{ziel}` is not a place, so `{w}` \
-                         cannot be carried across"
-                    ));
+                if unklar {
+                    aufnehmen(
+                        &mut offen,
+                        Some(format!(
+                            "an argument of the call to `{ziel}` is not a place, so `{w}` \
+                             cannot be carried across"
+                        )),
+                    );
                 }
                 menge.insert(neu);
             }
         }
         // Kanten ohne Argumentwissen (`transition`-Uebergaenge) laufen weiter wie bisher.
         for g in k.ruft.iter().filter(|g| !k.rufe.iter().any(|(z, _)| &z == g)) {
-            self.gehe(g, gesehen, menge, offen);
+            let (tiefer, grund, z) = self.gehe(g, lauf);
+            zyklisch |= z;
+            aufnehmen(&mut offen, grund);
+            menge.extend(tiefer);
         }
+        lauf.pfad.remove(name);
+        if !zyklisch {
+            lauf.fertig
+                .insert(name.to_string(), (menge.clone(), offen.clone()));
+        }
+        (menge, offen, zyklisch)
     }
 
     /// **Steht diese Funktion in einem Rekursionszyklus?** Erreicht sie sich selbst?
@@ -284,11 +350,16 @@ impl Graph {
                 unvollstaendig: Some(format!("`{start}` is unknown to the graph")),
             };
         };
-        let mut gesehen = BTreeSet::from([start.to_string()]);
+        let mut lauf = Lauf::default();
+        lauf.pfad.insert(start.to_string());
         let mut menge = BTreeSet::new();
         let mut offen = None;
         for g in &k.ruft {
-            self.gehe(g, &mut gesehen, &mut menge, &mut offen);
+            let (tiefer, grund, _) = self.gehe(g, &mut lauf);
+            menge.extend(tiefer);
+            if offen.is_none() {
+                offen = grund;
+            }
         }
         Huelle {
             wirkungen: menge,

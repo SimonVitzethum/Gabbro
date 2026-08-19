@@ -160,6 +160,14 @@ fn ist_folgezeichen(c: char) -> bool {
     ist_buchstabe(c) || c.is_ascii_digit() || c == '_'
 }
 
+/// **Das Zeichen an der Byte-Stelle `i` — als ZEICHEN, nicht als Byte.**
+///
+/// `quelle.as_bytes()[i] as char` deutet ein Byte als Latin-1-Codepunkt. Bei ASCII ist das
+/// dasselbe, ab `0x80` etwas anderes — und mitten in einer Mehrbyte-Folge ist es nichts.
+fn zeichen_bei(quelle: &str, i: usize) -> Option<char> {
+    quelle.get(i..).and_then(|r| r.chars().next())
+}
+
 /// Splits the source. Refusals accumulate; the stream does not abort, so that one run shows
 /// more than a single finding.
 pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
@@ -354,11 +362,25 @@ pub fn zerlege(quelle: &str, absagen: &mut Absagen) -> Vec<Token> {
 
             // A digit run adjoining a number is a trap: `0b12` would otherwise be `0b1`
             // followed by `2`. Refuse, never interpret.
-            if i < b.len() && (ist_buchstabe(b[i] as char) || b[i].is_ascii_digit()) {
+            //
+            // **`b[i] as char` war hier ein Absturz** (behoben 2026-08-19). Ein Byte ist kein
+            // Zeichen: bei `0` gefolgt von einem Mehrbytezeichen steht an `i` dessen ERSTES
+            // Byte, und `0xE4 as char` ist `ae` -- ein Buchstabe. Der Lauf trat damit MITTEN
+            // in die Folge, `ende` landete auf keiner Zeichengrenze, und `&quelle[i..ende]`
+            // riss den Uebersetzer mit *"is not a char boundary"* um. *Ein Absturz ist keine
+            // Absage: er hat keine Stelle, keinen Code und keinen Grund.*
+            //
+            // Derselbe Fehler machte die Umlaute in `ist_buchstabe` wirkungslos: sie sind in
+            // UTF-8 ZWEI Bytes, und keines davon ist fuer sich ein Buchstabe. Die Zeile las
+            // also nie das, was sie zu lesen glaubte.
+            if zeichen_bei(quelle, i).is_some_and(|c| ist_buchstabe(c) || c.is_ascii_digit()) {
                 let ende = {
                     let mut j = i;
-                    while j < b.len() && ist_folgezeichen(b[j] as char) {
-                        j += 1;
+                    while let Some(c) = zeichen_bei(quelle, j) {
+                        if !ist_folgezeichen(c) {
+                            break;
+                        }
+                        j += c.len_utf8();
                     }
                     j
                 };

@@ -1,0 +1,26 @@
+-- erwartet: E008
+-- **Ein Diamant im Aufrufgraphen galt als Zyklus** -- und damit war `pure` unpruefbar.
+--
+-- Die Tiefensuche in `aufrufgraph::gehe` fuehrte EINE Menge `gesehen`, leerte sie beim
+-- Rueckweg nie und benutzte sie trotzdem als Zyklusmerkmal. Jeder ZWEITE Besuch desselben
+-- Knotens hiess damit «cycle over X», ganz gleich, ob er auf demselben Weg lag.
+--
+-- `f -> g -> k` und `f -> h -> k` reicht schon. Die Folge war **kein falscher Alarm, sondern
+-- SCHWEIGEN**: eine Huelle mit `cycle` ist nur eine UNTERE Schranke, `E008` darf daraus
+-- nichts schliessen, und das falsche `pure` kam mit `0 Fehler` durch.
+--
+-- Dieselbe Klasse wie die 83 `_ => {}`-Zweige, nur in einer Tiefensuche, die eine
+-- Besuchsmenge fuer eine Stapelmenge hielt. *Gemessen 2026-08-19.*
+module gift::diamant {
+
+static mut z : u32 = 0;
+
+impl fn k() effects { writes z } costs <= 1 ops { z = 1; }
+
+impl fn g() effects { writes z } costs <= 2 ops { k(); }
+impl fn h() effects { writes z } costs <= 2 ops { k(); }
+
+-- Beide Wege enden bei `k`. Der zweite Besuch war der erfundene Zyklus.
+impl fn f() effects { pure } costs <= 5 ops { g(); h(); }
+
+}

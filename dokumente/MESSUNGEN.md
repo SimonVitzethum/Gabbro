@@ -9432,3 +9432,101 @@ drei Pässe statt zwölf und hatte damit **recht in der Rechnung und unrecht in 
 ZUSAGE 0 · Konstrukte ohne Probe 0 · 12 Paesse: 3 gebaut, 9 getragen, 0 teil, 0 offen
 13 Waechter gruen
 ```
+
+## 2026-08-19 — Zwei stille Fail-open-Stellen, und beide sassen im Werkzeug, nicht in der Regel
+
+Der zweite Durchgang eines Prüfagenten hob die Note auf 2−, hielt sie dort aber mit zwei
+Sätzen fest. Beide sind nachgestellt worden, bevor eine Zeile geändert wurde.
+
+### Der Diamant galt als Zyklus
+
+`aufrufgraph::gehe` führte **eine** Menge `gesehen`, leerte sie beim Rückweg nie und benutzte
+sie trotzdem als Zyklusmerkmal. Jeder **zweite** Besuch desselben Knotens hiess damit
+«cycle over X», ganz gleich, ob er auf demselben Weg lag.
+
+```
+impl fn f() effects { pure } { g(); h(); }   -- g -> k, h -> k
+```
+
+gab **0 Fehler** und einen `E009`-Hinweis. Die Folge war kein falscher Alarm, sondern
+**Schweigen**: eine Hülle mit `cycle` ist nur eine *untere* Schranke, und `E008` darf aus
+einer unteren Schranke nichts schliessen. Dieselbe Verletzung in zwei Schreibweisen:
+
+| Rumpf | vorher | jetzt |
+|---|---|---|
+| `{ tu(); }` | `E008` | `E008` |
+| `{ tu(); tu(); }` | **0 Fehler** | `E008` |
+
+*Ein Verstoss, der sich durch Wiederholung unsichtbar macht, ist die schlimmste Sorte: der
+zweite Ruf macht die Lüge grösser, nicht kleiner.* Dieselbe Klasse wie die 83
+`_ => {}`-Zweige — nur diesmal in einer Tiefensuche, die eine **Besuchsmenge für eine
+Stapelmenge** hielt.
+
+Getrennt sind es zwei Mengen mit zwei Aufgaben: `pfad` (wer liegt gerade *unter* mir — nur
+das ist ein Zyklus) und `fertig` (wer ist zyklusfrei fertig — nur damit bleibt der Diamant
+linear). **Ein reiner Pfadschnitt allein wäre exponentiell gewesen**, und genau diese Falle
+stand in derselben Woche schon einmal (`m1::sammle_schreibziele`, 2ⁿ). Gemerkt wird nur, was
+zyklusfrei zustande kam: ein Ergebnis, das an einem Schnitt hängt, gilt für diesen Weg und
+für keinen anderen. Der echte Zyklus meldet weiter `E009`.
+
+### Die Tiefenschranke, dritter Anlauf
+
+`cargo test` starb ohne gesetztes `RUST_MIN_STACK` — an genau der Giftprobe, die die
+Schranke beweisen sollte. **Zum zweiten Mal.**
+
+| Anlauf | Zahl | gemessen woran | Ergebnis |
+|---|---:|---|---|
+| 1 | 512 | Hauptfaden, 8 MiB | Testläufer stirbt |
+| 2 | 128 | 2 MiB, aber `lies` **allein** | Testläufer stirbt |
+| 3 | **32** | 2 MiB, **ganze Kette**, debug | hält |
+
+Der zweite Anlauf berief sich auf eine Messung auf 2 MiB — aber `tiefenmass.rs` rief
+`gabbro_syntax::lies`, also den **Parser allein**. Die Giftprobe läuft durch Parser *und*
+Prüfer, und jeder Pass steigt noch einmal über denselben Baum. *Eine Messung der halben
+Kette ist keine Messung.*
+
+Nachgemessen, ganze Kette:
+
+| Tiefe | 2 MiB debug | 2 MiB release | 8 MiB debug |
+|---:|---|---|---|
+| 80 | läuft | läuft | läuft |
+| 88 | **stirbt** | läuft | läuft |
+| 384 | stirbt | läuft | — |
+
+**Das Profil ist der Unterschied, nicht der Stapel.** Debug-Rahmen sind ein Vielfaches
+fetter, und Debug ist es, was der Testläufer fährt. 32 steht viermal über dem Korpus (der
+kommt auf 7) und zweieinhalbfach unter dem gemessenen Tod im schlechtesten Fall.
+
+Und weil die Zahl zweimal über ihren Stapel gewandert ist, hält sie jetzt ein **Test** fest:
+`die_tiefenschranke_haelt_auf_zwei_mebibyte` fährt die ganze Kette auf einem eigens 2 MiB
+grossen Faden, am tiefsten Baum, den der Parser noch **annimmt** — ein abgewiesener Baum
+sagt nichts über den Stapel, denn der Parser steigt gar nicht erst hinab.
+
+> Ein „grüner Lauf", der an einer Umgebungsvariablen hängt, die nirgends steht, ist keine
+> Aussage über den Prüfer, sondern über den Läufer.
+
+### Und ein Absturz aus derselben Woche
+
+`0` gefolgt von einem Mehrbytezeichen riss den Übersetzer um: `lex.rs` las `b[i] as char` —
+ein **Byte** als Zeichen. Das erste Byte von `䀀` ist `0xE4`, und `0xE4 as char` ist `ä`,
+also ein Buchstabe; der Lauf trat mitten in die Folge, und `&quelle[i..ende]` schlug mit
+*„is not a char boundary"* fehl. Jetzt sagt `L006`, was los ist.
+
+Derselbe Fehler machte die Umlaute in `ist_buchstabe` **wirkungslos**: `ä` sind in UTF-8 zwei
+Bytes, und keines davon ist für sich ein Buchstabe. *Die Zeile las nie das, was sie zu lesen
+glaubte.* `0ä` fällt seitdem mit `L003`, wie `0b12` es immer tat.
+
+### Die MSRV war eine Zahl ohne Leser
+
+`rust-version` stand auf `1.75`. Gemessen:
+
+```
+cargo +1.75.0 build -> E0658: use of unstable library feature 'float_next_up_down'
+cargo +1.80.0 build -> E0658: dasselbe
+cargo +1.86.0 build -> gruen
+```
+
+`f64::next_up`/`next_down` (die Randrechnung der Gleitkommabereiche in `typen.rs` und
+`m1.rs`) wurde erst in **1.86.0** stabil. Steht jetzt auf `1.86` — **gemessen, nicht
+geschätzt**, dieselbe Klasse wie die vier Klauseln, die `ZUSAGE` hiessen und keinen Pass
+hatten.

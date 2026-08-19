@@ -59,17 +59,30 @@ pub struct Parser<'a> {
 /// Testlaeufer gibt jedem Testfaden **2 MiB**, und dort starb genau die Giftprobe, die die
 /// Grenze beweisen sollte -- *das Werkzeug fiel an seiner eigenen Probe.*
 ///
-/// Nachgemessen auf 2 MiB (`crates/gabbro-cli/examples/tiefenmass.rs`):
+/// **Der zweite Anlauf traf sie auch nicht** (2026-08-19). Er setzte 128 und berief sich auf
+/// eine Messung auf 2 MiB -- aber `tiefenmass.rs` rief `gabbro_syntax::lies`, also den
+/// **Parser allein**. Die Giftprobe laeuft durch Parser UND Pruefer, und jeder Pass steigt
+/// noch einmal ueber denselben Baum. *Eine Messung der halben Kette ist keine Messung.*
 ///
-/// | Tiefe | 2 MiB |
-/// |---:|---|
-/// | 384 | laeuft |
-/// | 512 | **stirbt** |
+/// Nachgemessen, ganze Kette, `tiefenmass.rs <Tiefe> <KiB>`:
 ///
-/// 128 steht damit **18-mal ueber allem, was ein Mensch schreibt** (der Korpus kommt auf
-/// **7**) und **dreifach unter** dem gemessenen Tod auf dem kleinsten Stapel, auf dem der
-/// Parser laufen soll. *Eine Grenze, die nur auf dem groessten Stapel haelt, ist keine.*
-const TIEFE_MAX: usize = 128;
+/// | Tiefe | 2 MiB debug | 2 MiB release | 8 MiB debug |
+/// |---:|---|---|---|
+/// | 32 | laeuft | laeuft | laeuft |
+/// | 80 | laeuft | laeuft | laeuft |
+/// | 88 | **stirbt** | laeuft | laeuft |
+/// | 384 | stirbt | laeuft | — |
+///
+/// **Das Profil ist der Unterschied, nicht der Stapel**: Debug-Rahmen sind ein Vielfaches
+/// fetter, und Debug ist es, was der Testlaeufer und `cargo run` fahren. Gemessen wird
+/// deshalb der SCHLECHTESTE Fall, nicht der bequemste.
+///
+/// 32 steht damit **viermal ueber dem Korpus** (der kommt auf **7**) und **zweieinhalbfach
+/// unter** dem gemessenen Tod auf dem duennsten Stapel im fettesten Profil. *Eine Grenze,
+/// die nur auf dem groessten Stapel im schlanksten Profil haelt, ist keine* -- und dass sie
+/// haelt, prueft seit heute ein Test auf einem eigens 2 MiB grossen Faden nach, damit die
+/// Zahl nicht wieder ueber den Stapel wandern kann.
+pub const TIEFE_MAX: usize = 32;
 
 /// Lexes and parses a source. Refusals accumulate in `absagen`.
 pub fn parse(quelle: &str, absagen: &mut Absagen) -> Programm {

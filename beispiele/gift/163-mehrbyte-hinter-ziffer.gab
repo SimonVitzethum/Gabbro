@@ -1,0 +1,21 @@
+-- erwartet: L006
+-- **Ein Mehrbytezeichen hinter einer Ziffer riss den Uebersetzer um.**
+--
+-- `lex.rs` las an dieser Stelle `b[i] as char` -- ein BYTE als Zeichen. Das erste Byte von
+-- `䀀` ist `0xE4`, und `0xE4 as char` ist `ä`, also ein Buchstabe. Der Lauf trat damit mitten
+-- in die Mehrbyte-Folge, das Ende landete auf keiner Zeichengrenze, und `&quelle[i..ende]`
+-- schlug fehl:
+--
+--     panicked at lex.rs:371: end byte index 29 is not a char boundary
+--
+-- **Ein Absturz ist keine Absage**: keine Stelle, kein Code, kein Grund -- und ueber die
+-- Eingabe sagt er gar nichts. Jetzt sagt `L006`, was los ist.
+--
+-- Derselbe Fehler machte die Umlaute in `ist_buchstabe` wirkungslos: `ä` sind in UTF-8 zwei
+-- Bytes, und keines davon ist fuer sich ein Buchstabe. *Die Zeile las nie das, was sie zu
+-- lesen glaubte.* `0ä` faellt seitdem mit `L003`, wie `0b12` es immer tat.
+module gift::mehrbyte {
+
+const A : u32 = 0䀀;
+
+}

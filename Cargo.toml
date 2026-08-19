@@ -14,7 +14,17 @@ members = [
 [workspace.package]
 version = "0.0.1"
 edition = "2021"
-rust-version = "1.75"
+# **1.86 ist GEMESSEN, nicht geschaetzt** (2026-08-19). Bis dahin stand hier `1.75` -- eine
+# Zusage an jeden, der den Uebersetzer baut, und sie war falsch: `f64::next_up`/`next_down`
+# (`typen.rs`, `m1.rs`, die Randrechnung der Gleitkommabereiche) wurde erst in **1.86.0**
+# stabil. Auf 1.75 und 1.80 endet der Bau mit `E0658: use of unstable library feature
+# 'float_next_up_down'`.
+#
+#     rustup toolchain install 1.86.0 --profile minimal && cargo +1.86.0 build
+#
+# *Eine MSRV, die niemand baut, ist eine Zahl ohne Leser* -- dieselbe Klasse wie die vier
+# Klauseln, die ZUSAGE hiessen und keinen Pass hatten.
+rust-version = "1.86"
 # **AGPL-3.0, nicht MIT/Apache.** Der Eintrag stand bis 2026-08-19 auf `MIT OR Apache-2.0`
 # und widersprach damit DREI Stellen: `LICENSE` (AGPL-3.0), `LIZENZ-ZUSATZ.md` (AGPL mit zwei
 # Zusaetzen) und dem Kopf jedes erzeugten C ("Gabbro is AGPL-3.0 with an additional

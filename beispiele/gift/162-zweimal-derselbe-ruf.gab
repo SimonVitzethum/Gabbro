@@ -1,0 +1,24 @@
+-- erwartet: E008
+-- **Zweimal denselben Ruf schreiben schaltete die Wirkungspruefung ab.**
+--
+-- Die zweite Schreibweise desselben Verstosses: nicht zwei Wege auf einen Knoten, sondern
+-- zwei Kanten auf denselben. `gesehen` sah beim zweiten `tu()` einen bekannten Namen und
+-- meldete einen Zyklus -- und `E008` schweigt an einer Huelle, die nur eine untere Schranke
+-- ist.
+--
+-- ```
+-- impl fn luegt_einmal()  effects { pure } { tu(); }        -> E008
+-- impl fn luegt_zweimal() effects { pure } { tu(); tu(); }  -> 0 Fehler
+-- ```
+--
+-- *Ein Verstoss, der sich durch WIEDERHOLUNG unsichtbar macht, ist die schlimmste Sorte:
+-- der zweite Ruf macht die Luege groesser, nicht kleiner.*
+module gift::zweimal {
+
+static mut z : u32 = 0;
+
+impl fn tu() effects { writes z } costs <= 1 ops { z = 1; }
+
+impl fn luegt_zweimal() effects { pure } costs <= 3 ops { tu(); tu(); }
+
+}

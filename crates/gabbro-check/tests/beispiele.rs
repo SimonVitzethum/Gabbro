@@ -244,3 +244,48 @@ fn eine_ausgesprochene_pflicht_wird_gezaehlt() {
         "eine ausgesprochene Pflicht muss ankommen -- sonst zaehlt die Spalte nichts"
     );
 }
+
+/// **Die Tiefenschranke haelt auf dem duennsten Stapel** — und zwar gemessen, nicht geglaubt.
+///
+/// Zweimal stand hier eine Zahl, die nur auf einem groesseren Stapel hielt: 512 (gemessen am
+/// Hauptfaden mit 8 MiB) und danach 128 (gemessen an `lies` allein, also am halben Weg). Beide
+/// Male fiel der TESTLAEUFER, nicht die Eingabe — *das Werkzeug fiel an seiner eigenen Probe*,
+/// und ein „gruener Lauf" hing an einem `RUST_MIN_STACK`, das nirgends stand.
+///
+/// Dieser Test faehrt die ganze Kette auf **2 MiB** — dem Vorgabewert eines Rust-Testfadens,
+/// dem duennsten Stapel, auf dem der Pruefer laufen soll — und zwar am **tiefsten Baum, den
+/// der Parser noch ANNIMMT**. Ein abgewiesener Baum sagt nichts ueber den Stapel: der Parser
+/// steigt gar nicht erst hinab.
+///
+/// Reisst der Stapel, bricht der Lauf mit `stack overflow` ab und nennt diesen Faden.
+/// *Das ist die Absicht:* eine Grenze, die ueber ihren Stapel wandert, soll das nicht
+/// heimlich koennen.
+#[test]
+fn die_tiefenschranke_haelt_auf_zwei_mebibyte() {
+    let h = std::thread::Builder::new()
+        .stack_size(2 * 1024 * 1024)
+        .name("tiefenschranke".into())
+        .spawn(|| {
+            for n in (1..=gabbro_syntax::parse::TIEFE_MAX).rev() {
+                let q = format!(
+                    "module d {{ impl fn f() -> u32 effects {{ pure }} costs <= 1 ops \
+                     {{ return {}1{}; }} }}",
+                    "(".repeat(n),
+                    ")".repeat(n)
+                );
+                let (baum, mut absagen) = gabbro_syntax::lies("tiefe.gab", &q);
+                let _ = gabbro_check::pruefe(&baum, &mut absagen);
+                if !absagen.absagen.iter().any(|a| a.code == "P038") {
+                    return n;
+                }
+            }
+            0
+        })
+        .unwrap();
+    let tiefste = h.join().unwrap();
+    assert!(
+        tiefste >= gabbro_syntax::parse::TIEFE_MAX / 2,
+        "der tiefste angenommene Baum liegt bei {tiefste} -- die Schranke laesst weniger \
+         als die Haelfte ihrer eigenen Zahl durch"
+    );
+}
