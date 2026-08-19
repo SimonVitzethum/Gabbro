@@ -1,0 +1,22 @@
+-- erwartet: K005
+-- **Ein negativer Faktor macht die Zusage bei wachsender Eingabe KLEINER.**
+--
+-- `costs <= NEG * n ops` mit `NEG = -2` sagt: je groesser die Eingabe, desto weniger darf
+-- die Funktion kosten -- und ab `n = 1` ist die Schranke negativ, also von keiner
+-- Ausfuehrung einzuhalten. **Das ist keine Schranke, sondern eine Zusage, die sich selbst
+-- widerlegt**, und der Pass liest sie erst gar nicht: `K005`.
+--
+-- *Diese Datei schliesst die letzte ueberlebende Mutation des Katalogs* (`K005 --
+-- negativer-faktor-gilt-als-schranke`, gemeldet seit dem 2026-08-14). Sie ueberlebte nicht,
+-- weil die Regel fehlte, sondern weil **keine einzige Probe je einen negativen Faktor
+-- hinschrieb** -- die Regel stand da und wurde nie beruehrt. W13: Beruehrung ist keine
+-- Pruefung, und Nichtberuehrung ist erst recht keine.
+module gift::negativer_faktor {
+
+const NEG : i32 = -2;
+
+static mut s : u32 = 0;
+
+impl fn f(n : u32 in 0 .. 100) effects { writes s } costs <= NEG * n ops { s = n; }
+
+}

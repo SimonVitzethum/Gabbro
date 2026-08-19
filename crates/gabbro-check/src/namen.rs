@@ -14,6 +14,7 @@ use gabbro_syntax::span::Span;
 use std::collections::{HashMap, HashSet};
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
+    sichtbarkeit(baum, absagen);
     geltungsbereich(&baum.items, absagen);
     entrust_annahme(baum, absagen);
     verweigerte_zahltypen(baum, absagen);
@@ -1461,6 +1462,126 @@ fn spiegel_und_sonde(baum: &Programm, absagen: &mut Absagen) {
                      not stand in Gabbro because it RUNS (SYNTAX.md §13, decided 2026-08-19)",
                 ),
             );
+        }
+    }
+}
+
+
+/// **`N025` — `pub` war Zierde.**
+///
+/// `Umgebung::kandidaten_aufloesbar` trägt das Wort im Namen und reicht an `kandidaten`
+/// durch, **ohne das Flag je anzusehen**. Gemessen 2026-08-19:
+///
+/// ```gabbro
+/// module a { impl fn heimlich() … }        -- kein `pub`
+/// module b { use a::heimlich; … }          -- 0 Fehler
+/// ```
+///
+/// Sieben Deklarationsarten tragen `oeffentlich`, und **keine einzige Stelle las es**. Das
+/// ist nicht nur eine tote Klausel: `D004` — die Wand um einen `opaque type` — begründet sich
+/// ausdrücklich mit *„die Tür ist die MODULGRENZE"*. **Eine Grenze, die niemand prüft, ist
+/// keine**, und die Regel darüber stand auf einem Wort, das nichts hielt.
+///
+/// Die Sichtbarkeitsregel, wie sie jeder erwartet: ein Item aus Modul `M` ist sichtbar in `M`
+/// selbst und in allem, was **in** `M` liegt; nach draussen nur mit `pub`.
+///
+/// *Gemeldet wird an der Bezugsstelle, nicht an der Deklaration* — dort steht der Fehler.
+fn sichtbarkeit(baum: &Programm, absagen: &mut Absagen) {
+    // Wer ist öffentlich? Schlüssel qualifiziert, wie überall.
+    let mut offen: std::collections::HashMap<String, bool> = std::collections::HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let (name, oeff) = match &item.art {
+            ItemArt::Funktion(f) => (&f.name, f.oeffentlich),
+            ItemArt::Konst(k) => (&k.name, k.oeffentlich),
+            ItemArt::Statisch(x) => (&x.name, x.oeffentlich),
+            ItemArt::Typ(t) => (&t.name, t.oeffentlich),
+            ItemArt::Atomic(a) => (&a.name, a.oeffentlich),
+            _ => return,
+        };
+        offen.insert(crate::umgebung::qualifiziere(modul, &name.text), oeff);
+    });
+
+    // Sichtbar in `von`? Im eigenen Modul und in allem, was DARIN liegt.
+    let sieht = |offen: &std::collections::HashMap<String, bool>, ziel: &str, von: &str| {
+        if offen.get(ziel).copied().unwrap_or(true) {
+            return true;
+        }
+        let heim = crate::umgebung::modul_von(ziel);
+        von == heim || von.starts_with(&format!("{heim}::"))
+    };
+
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let mut melde = |ziel: &str, span: Span, wie: &str| {
+            if sieht(&offen, ziel, modul) {
+                return;
+            }
+            absagen.schiebe(
+                Absage::fehler(
+                    "N025",
+                    span,
+                    format!(
+                        "`{ziel}` is not `pub`, and `{}` is outside `{}`",
+                        if modul.is_empty() { "the root" } else { modul },
+                        crate::umgebung::modul_von(ziel)
+                    ),
+                )
+                .mit_notiz(wie)
+                .mit_notiz(
+                    "an item is visible in its own module and in everything nested INSIDE it; \
+                     outward only with `pub`",
+                ),
+            );
+        };
+        match &item.art {
+            ItemArt::Use(u) => melde(&u.pfad.text(), u.pfad.teile[0].span, "a `use` line names it"),
+            ItemArt::Funktion(f) => {
+                if let FnRumpf::Block(b) = &f.rumpf {
+                    let mut rufe: Vec<(String, Span)> = Vec::new();
+                    sammle_qualifizierte_rufe(b, &mut rufe);
+                    for (pfad, span) in rufe {
+                        melde(&pfad, span, "this call names it");
+                    }
+                }
+            }
+            _ => {}
+        }
+    });
+}
+
+/// Die Rufe mit einem QUALIFIZIERTEN Pfad — nur die können eine Modulgrenze überschreiten.
+fn sammle_qualifizierte_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
+    fn aus_expr(e: &Expr, aus: &mut Vec<(String, Span)>) {
+        if let ExprArt::Ruf(r) = &e.art {
+            if r.pfad.teile.len() > 1 {
+                aus.push((r.pfad.text(), r.pfad.teile[0].span));
+            }
+            for a in &r.argumente {
+                aus_expr(a, aus);
+            }
+        }
+        match &e.art {
+            ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => aus_expr(x, aus),
+            ExprArt::Binaer(_, a, b) => {
+                aus_expr(a, aus);
+                aus_expr(b, aus);
+            }
+            _ => {}
+        }
+    }
+    for s in &b.anweisungen {
+        for e in crate::eigene_ausdruecke(s) {
+            aus_expr(e, aus);
+        }
+        if let StmtArt::Ruf(r) = &s.art {
+            if r.pfad.teile.len() > 1 {
+                aus.push((r.pfad.text(), r.pfad.teile[0].span));
+            }
+            for a in &r.argumente {
+                aus_expr(a, aus);
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_qualifizierte_rufe(k, aus);
         }
     }
 }

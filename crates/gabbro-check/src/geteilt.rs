@@ -108,7 +108,7 @@ impl Rufwissen<'_> {
     fn nimmt(&self, pfad: &str) -> Vec<String> {
         let Some(voll) = self
             .u
-            .kandidaten_oeffentlich(self.modul, pfad)
+            .kandidaten_aufloesbar(self.modul, pfad)
             .into_iter()
             .find(|k| self.g.knoten.contains_key(k))
         else {
@@ -131,7 +131,7 @@ impl Rufwissen<'_> {
 
     fn forderungen(&self, pfad: &str) -> Option<&Vec<(String, bool)>> {
         self.u
-            .kandidaten_oeffentlich(self.modul, pfad)
+            .kandidaten_aufloesbar(self.modul, pfad)
             .into_iter()
             .find_map(|k| self.verlangt.get(&k))
     }

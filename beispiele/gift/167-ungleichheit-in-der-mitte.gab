@@ -1,0 +1,21 @@
+-- erwartet: M104
+-- **Ein Loch in der MITTE eines Bereichs ist kein Bereich.**
+--
+-- Seit dem 2026-08-19 verengt eine Ungleichheit am RAND: aus `n != 0` auf `u32` wird
+-- `n >= 1`, und der haeufigste Wachtposten der Sprache kommt endlich durch.
+--
+-- Diese Datei steht fuer die GEGENRICHTUNG. `n != 5` auf `0 .. 10` sagt nichts, was ein
+-- Intervall ausdruecken koennte: der Bereich zerfaellt in `0 .. 4` und `6 .. 10`, und wer
+-- daraus `6 .. 10` macht, verwirft die Haelfte der Wirklichkeit. **Das waere nicht grob,
+-- sondern falsch** -- `n` kann hier 0 sein, und `n - 1` laeuft unter.
+--
+-- *Was nicht als Bereich gesagt werden kann, sagt dieser Pass nicht.* Darum steht dort eine
+-- Fallunterscheidung und keine Verallgemeinerung.
+module gift::ungleichheit {
+
+impl fn mitte(n : u32 in 0 .. 10) -> u32 effects { pure } costs <= 8 ops {
+    if n == 5 { return 0; }
+    return n - 1;
+}
+
+}

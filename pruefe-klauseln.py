@@ -115,7 +115,6 @@ ERWARTET = {
     #
     # *Ausgeloest hat es `pruefe-konstrukte.py`, nicht die Hand -- `entry` war eines der
     # sieben Konstrukte ohne Giftprobe, und die Felder fielen als Nebenwirkung.*
-    "oeffentlich":  ("TOT", "`pub`. Keine Datei ausserhalb des Lesers liest es -- Sichtbarkeit wird weder geprueft noch abgesenkt."),
     "by":           ("TOT", "Der Induktionshinweis. Nichts liest ihn -- und `Table_Induktion.thy` fuehrt genau ihn als Praemisse OHNE Erzeuger (`je Verkettungsfeld eine Kantenpraemisse`). Die beiden gehoeren zusammen."),
     "stack":        ("TOT", "siehe `regs_in` -- `EntryDecl`."),
     "vektor":       ("TOT", "siehe `regs_in` -- `EntryDecl`."),

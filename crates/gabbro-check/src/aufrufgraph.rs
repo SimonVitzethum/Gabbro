@@ -146,7 +146,7 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
     for k in g.knoten.values_mut() {
         let modul = k.modul.clone();
         let aufloesen = |pfad: &str| {
-            u.kandidaten_oeffentlich(&modul, pfad)
+            u.kandidaten_aufloesbar(&modul, pfad)
                 .into_iter()
                 .find(|kand| schluessel_alle.contains(kand))
                 .unwrap_or_else(|| pfad.to_string())
@@ -333,7 +333,7 @@ impl Graph {
 
     /// Löst einen Rufpfad auf, wie ihn der Rumpf schreibt, relativ zum rufenden Modul.
     pub fn aufloesen(&self, u: &crate::umgebung::Umgebung, von: &str, pfad: &str) -> Option<String> {
-        u.kandidaten_oeffentlich(von, pfad)
+        u.kandidaten_aufloesbar(von, pfad)
             .into_iter()
             .find(|k| self.knoten.contains_key(k))
     }
@@ -409,6 +409,26 @@ pub fn kanten_von(b: &Block, aus: &mut Vec<(String, Vec<Option<String>>)>) {
     sammle_kanten(b, aus)
 }
 
+/// **Der Ort unter beliebig vielen Klammern.**
+///
+/// `f(q)` und `f((q))` sind derselbe Ruf mit demselben Argument; nur der Baum ist ein anderer.
+/// Bis 2026-08-19 sah die Argumentabbildung im zweiten Fall **keinen Ort** und meldete
+/// *„an argument … is not a place"* — ein `E009` an einer Stelle, an der gar nichts unklar
+/// ist. **Eine Klammer ist keine Rechnung.**
+///
+/// Weiter geht es nicht, und das ist keine Lücke: ein Argument wie `f(g(x))` oder `f(a + 1)`
+/// ist ein **Wert**, kein Ort — beim Rufer gibt es nichts, worauf `writes p.slots` abgebildet
+/// werden könnte. *`E009` ist dort die Antwort, nicht ein Notbehelf.*
+fn ort_unter_klammern(e: &Expr) -> Option<&Ort> {
+    match &e.art {
+        // **Der ganze Ortsausdruck** («K5.5»), nicht nur seine Basis:
+        // `f(a.b)` traegt `a.b`, und `writes p.slots` wird `writes a.b.slots`.
+        ExprArt::Ort(o) => Some(o),
+        ExprArt::Klammer(i) => ort_unter_klammern(i),
+        _ => None,
+    }
+}
+
 fn sammle_kanten(b: &Block, aus: &mut Vec<(String, Vec<Option<String>>)>) {
     fn nimm_ruf(r: &Ruf, aus: &mut Vec<(String, Vec<Option<String>>)>) {
         if let Some(n) = r.pfad.teile.last() {
@@ -416,12 +436,7 @@ fn sammle_kanten(b: &Block, aus: &mut Vec<(String, Vec<Option<String>>)>) {
                 let args = r
                     .argumente
                     .iter()
-                    .map(|a| match &a.art {
-                        // **Der ganze Ortsausdruck** («K5.5»), nicht nur seine Basis:
-                        // `f(a.b)` traegt `a.b`, und `writes p.slots` wird `writes a.b.slots`.
-                        ExprArt::Ort(o) => Some(o.text()),
-                        _ => None,
-                    })
+                    .map(|a| ort_unter_klammern(a).map(|o| o.text()))
                     .collect();
                 aus.push((r.pfad.text(), args));
             }

@@ -683,6 +683,27 @@ MUTATIONEN = [
         "R16 -- ein Zyklus liefert eine untere Schranke und nennt sich nicht mehr so",
     ),
     Mutation(
+        "privat-ist-oeffentlich",
+        "namen.rs",
+        "        if offen.get(ziel).copied().unwrap_or(true) {\n            return true;\n        }",
+        "        if true {\n            return true;\n        }",
+        "N025 -- `pub` ist wieder Zierde; ein privates Item kommt ueber die Modulgrenze",
+    ),
+    Mutation(
+        "ungleichheit-verengt-nicht",
+        "m1.rs",
+        "                if wert == b.min {\n                    (wert + 1, i128::MAX)",
+        "                if false {\n                    (wert + 1, i128::MAX)",
+        "M104 -- eine Ungleichheit am unteren Rand verengt nicht mehr; `if n == 0 {…} n - 1` faellt wieder",
+    ),
+    Mutation(
+        "ungleichheit-verengt-die-mitte",
+        "m1.rs",
+        "                } else {\n                    return None;\n                }\n            }\n            _ => return None,",
+        "                } else {\n                    (wert + 1, i128::MAX)\n                }\n            }\n            _ => return None,",
+        "M1 -- ein Loch in der MITTE gilt als untere Schranke; das ist UNSOUND, nicht bloss grob",
+    ),
+    Mutation(
         "rahmen-endet-am-aufruf",
         "wirkungen.rs",
         "            if !weltnamen.iter().any(|k| k == grund) {\n                continue; // kein bekannter Weltzustand -- der Pass sagt nichts\n            }",

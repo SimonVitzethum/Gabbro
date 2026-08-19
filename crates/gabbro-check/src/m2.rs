@@ -69,7 +69,7 @@ impl Vertraege<'_> {
         let ExprArt::Ruf(r) = &e.art else { return None };
         let name = self
             .u
-            .kandidaten_oeffentlich(self.modul, &r.pfad.text())
+            .kandidaten_aufloesbar(self.modul, &r.pfad.text())
             .into_iter()
             .find_map(|k| self.ergebnis.get(&k))?;
         self.linear.contains(name).then(|| name.clone())
@@ -77,7 +77,7 @@ impl Vertraege<'_> {
 
     fn verbraucht(&self, pfad: &str) -> Option<&BTreeSet<String>> {
         self.u
-            .kandidaten_oeffentlich(self.modul, pfad)
+            .kandidaten_aufloesbar(self.modul, pfad)
             .into_iter()
             .find_map(|k| self.param.get(&k))
     }

@@ -27,16 +27,19 @@ table Knoten count 1024 {
 static mut summe : u32 = 0;
 
 -- Der Zaehler faellt, und `decreases` sagt WELCHE Groesse es ist.
+--
+-- **Der Wachtposten steht hier in seiner natuerlichen Form** -- `if n == 0 { return 0; }`,
+-- und danach `n - 1`. Bis zum 2026-08-19 ging das NICHT: eine Ungleichheit verengte den
+-- Bereich nicht, `n` blieb `0 .. TIEFE`, und `n - 1` fiel an `M104`. Diese Datei stand
+-- deshalb mit `if n >= 1 { … }` da -- *die Umschreibung war die Spur der Luecke.*
 impl fn absteigen(n : u32 in 0 .. TIEFE) -> u32
     effects { writes summe }
     costs   <= 64 ops
     decreases n
 {
     summe = n;
-    if n >= 1 {
-        return absteigen(n - 1);
-    }
-    return 0;
+    if n == 0 { return 0; }
+    return absteigen(n - 1);
 }
 
 -- **Wechselseitige Rekursion traegt es genauso** -- der Zyklus geht ueber zwei Namen, und

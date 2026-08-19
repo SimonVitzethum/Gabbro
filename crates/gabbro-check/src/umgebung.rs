@@ -192,7 +192,15 @@ impl Umgebung {
     /// dann an der Wurzel, zuletzt ueber eine `use`-Zeile. *Ohne diese Ordnung verdeckt ein
     /// gleichnamiges `fn` in einem fremden Modul die Deklaration -- und mit ihr die
     /// Bereichspruefung, still.*
-    pub fn kandidaten_oeffentlich(&self, von: &str, pfad: &str) -> Vec<String> {
+    /// **Die Namen, unter denen ein Pfad von `von` aus AUFLOESBAR ist** — eigenes Modul,
+    /// jedes umgebende, und die `use`-Zeilen.
+    ///
+    /// *Hiess bis 2026-08-19 `kandidaten_oeffentlich` und sah `oeffentlich` nie an.* Ein Name,
+    /// der eine Prüfung verspricht und an eine durchreicht, die sie nicht tut, ist schlimmer
+    /// als gar keiner: er beruhigt jeden Leser. **Die Sichtbarkeit prüft `N025`**, an der
+    /// Bezugsstelle, wo der Fehler steht — nicht hier, wo eine stille Nichtauflösung nur zu
+    /// einem „unbekannter Name" weiter oben würde.
+    pub fn kandidaten_aufloesbar(&self, von: &str, pfad: &str) -> Vec<String> {
         self.kandidaten(von, pfad)
     }
 

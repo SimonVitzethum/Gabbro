@@ -11,7 +11,12 @@
 
 module beispiel::adressen {
 
-opaque type Pa = u64;
+-- **`pub` stand hier nicht** und musste stehen (2026-08-19): dieses Beispiel LEBT von der
+-- Modulgrenze, und `beispiel::nutzer` fuehrt `use beispiel::adressen::Pa;`. Bis `N025`
+-- gebaut war, las das Wort niemand -- sieben Deklarationsarten tragen `oeffentlich`, und
+-- keine einzige Stelle sah es an. *Die Wand, mit der sich `D004` begruendet, stand auf einem
+-- Wort ohne Leser.*
+pub opaque type Pa = u64;
 
 -- **Der eine Erzeuger.** Hier ist die Darstellung bekannt, also ist die Umwandlung erlaubt --
 -- und sie steht an EINER Stelle statt an jeder Rufstelle.

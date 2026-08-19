@@ -107,7 +107,7 @@ impl<'a> Sicht<'a> {
             .copied()
             .or_else(|| {
                 self.u
-                    .kandidaten_oeffentlich(self.modul, &tabelle)
+                    .kandidaten_aufloesbar(self.modul, &tabelle)
                     .into_iter()
                     .find_map(|k| self.u.kapazitaeten.get(&k).copied())
             })

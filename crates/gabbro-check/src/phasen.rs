@@ -414,7 +414,7 @@ fn anwenden(
 ) -> Option<String> {
     let name = r.pfad.teile.last()?.text.clone();
     let sch = u
-        .kandidaten_oeffentlich(modul, &r.pfad.text())
+        .kandidaten_aufloesbar(modul, &r.pfad.text())
         .into_iter()
         .find_map(|k| schritte.get(&k))?;
     // Welches Argument ist die Marke? Das erste, dessen Name einen Stand hat.
@@ -460,7 +460,7 @@ fn enthaelt_schritt(
 ) -> bool {
     let mut gefunden = false;
     let mut sieh = |r: &Ruf| {
-        if u.kandidaten_oeffentlich(modul, &r.pfad.text())
+        if u.kandidaten_aufloesbar(modul, &r.pfad.text())
             .into_iter()
             .any(|k| schritte.contains_key(&k))
         {

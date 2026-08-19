@@ -1340,10 +1340,10 @@ impl<'a> Pruefer<'a> {
         }
         // V1 -- Stelle gegen Konstante, in beiden Schreibrichtungen.
         if let (ExprArt::Ort(o), Some(wert)) = (&a.art, self.u.konst_wert(&self.modul, b)) {
-            self.bereichsfakt(o, op, wert, lage);
+            let _ = self.bereichsfakt(o, op, wert, lage);
         }
         if let (Some(wert), ExprArt::Ort(o)) = (self.u.konst_wert(&self.modul, a), &b.art) {
-            self.bereichsfakt(o, spiegle(op), wert, lage);
+            let _ = self.bereichsfakt(o, spiegle(op), wert, lage);
         }
         // V2 -- Stelle gegen Stelle, ausschliesslich als Vergleichsfakt.
         if let (ExprArt::Ort(oa), ExprArt::Ort(ob)) = (&a.art, &b.art) {
@@ -1399,17 +1399,41 @@ impl<'a> Pruefer<'a> {
         });
     }
 
-    fn bereichsfakt(&mut self, o: &Ort, op: BinOp, wert: i128, lage: &mut Lage) {
-        let Some((schluessel, indizes)) = schluessel_und_indizes(o) else {
-            return;
-        };
+    fn bereichsfakt(&mut self, o: &Ort, op: BinOp, wert: i128, lage: &mut Lage) -> Option<()> {
+        let (schluessel, indizes) = schluessel_und_indizes(o)?;
         let (min, max) = match op {
             BinOp::GroesserGleich => (wert, i128::MAX),
             BinOp::Groesser => (wert + 1, i128::MAX),
             BinOp::KleinerGleich => (i128::MIN, wert),
             BinOp::Kleiner => (i128::MIN, wert - 1),
             BinOp::Gleich => (wert, wert),
-            _ => return,
+            // **Eine UNGLEICHHEIT an der Bereichsgrenze verengt** (2026-08-19).
+            //
+            // Bis hierher stand `!=` im `_`-Zweig, und der haeufigste Wachtposten der Sprache
+            // kam nicht durch:
+            //
+            // ```gabbro
+            // if n == 0 { return 0; }
+            // return n - 1;              -- `M104`: verlaesst die Breite
+            // ```
+            //
+            // *Die Negation floss laengst durch* -- `if n < 1 { return 0; }` war sauber. Was
+            // fehlte, war der Schritt von `n != 0` auf `n >= 1`, und der ist **nur an einem
+            // RAND** moeglich: ein Loch in der Mitte eines Intervalls ist kein Intervall.
+            // Genau darum steht hier eine Fallunterscheidung und keine Verallgemeinerung --
+            // *was nicht als Bereich gesagt werden kann, sagt dieser Pass nicht.*
+            BinOp::Ungleich => {
+                let grund = self.u.typ_von_ort(&self.modul, o, &lage.lokal);
+                let b = self.mit_fakt(o, grund, lage).bereich()?;
+                if wert == b.min {
+                    (wert + 1, i128::MAX)
+                } else if wert == b.max {
+                    (i128::MIN, wert - 1)
+                } else {
+                    return None;
+                }
+            }
+            _ => return None,
         };
         lage.fakten.push(Fakt::Bereich {
             schluessel,
@@ -1417,6 +1441,7 @@ impl<'a> Pruefer<'a> {
             min,
             max,
         });
+        Some(())
     }
 
     /// Der Typ eines Ortes, verengt durch die Fakten, die ueber ihn gelten.
@@ -1974,7 +1999,7 @@ impl<'a> Pruefer<'a> {
                 }
                 let bekannt = f.parameter.iter().any(|x| x.name.text == *n)
                     || self.u.suche_global(&self.modul, n).is_some()
-                    || self.u.kandidaten_oeffentlich(&self.modul, n).iter().any(|k| {
+                    || self.u.kandidaten_aufloesbar(&self.modul, n).iter().any(|k| {
                         self.u.typen.contains_key(k) || self.u.konstanten.contains_key(k)
                     });
                 if !bekannt {

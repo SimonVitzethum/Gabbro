@@ -1,0 +1,34 @@
+-- erwartet: N025
+-- **`pub` war Zierde -- sieben Deklarationsarten tragen es, und keine Stelle las es.**
+--
+-- `Umgebung::kandidaten_oeffentlich` traegt das Wort im Namen und reicht an `kandidaten`
+-- durch, ohne das Flag je anzusehen. Gemessen 2026-08-19: `use a::heimlich;` auf eine
+-- private Funktion -- **0 Fehler**.
+--
+-- Das ist nicht nur eine tote Klausel. `D004`, die Wand um einen `opaque type`, begruendet
+-- sich ausdruecklich mit *„die Tuer ist die MODULGRENZE"*. **Eine Grenze, die niemand
+-- prueft, ist keine** -- die Regel darueber stand auf einem Wort, das nichts hielt.
+--
+-- *Der Korpus hat sofort berichtigt:* `beispiele/29` erklaert `opaque type Pa` ohne `pub`
+-- und benutzt es im Nachbarmodul. Das Beispiel LEBT von der Grenze, und die Zeile, die sie
+-- oeffnet, fehlte.
+module gift::sichtbarkeit {
+
+module a {
+
+static mut z : u32 = 0;
+
+-- Kein `pub`: privat fuer `a`.
+impl fn heimlich() effects { writes z } costs <= 1 ops { z = 1; }
+
+}
+
+module b {
+
+use gift::sichtbarkeit::a::heimlich;
+
+impl fn nutzt() effects { writes z } costs <= 4 ops { heimlich(); }
+
+}
+
+}

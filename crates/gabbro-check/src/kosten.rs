@@ -622,7 +622,7 @@ impl<'a> Rechner<'a> {
         }
         let uebergang = self
             .u
-            .kandidaten_oeffentlich(self.modul, &name)
+            .kandidaten_aufloesbar(self.modul, &name)
             .into_iter()
             .find_map(|k| self.u.uebergangskosten.get(&k).copied());
         // **Modulbewusst seit 2026-08-19.** Vorher gewann der zuletzt eingetragene
@@ -630,7 +630,7 @@ impl<'a> Rechner<'a> {
         // Eintrag, und welcher galt, entschied die Reihenfolge im Quelltext.
         let erklaert = self
             .u
-            .kandidaten_oeffentlich(self.modul, &r.pfad.text())
+            .kandidaten_aufloesbar(self.modul, &r.pfad.text())
             .into_iter()
             .find_map(|k| self.deklariert.get(&k).copied());
         // **Ein rekursiver Ruf unter einem `decreases` kostet hier NICHTS** («K5.4»): die
@@ -774,7 +774,7 @@ impl<'a> Rechner<'a> {
                     };
                     let zeit = self
                         .u
-                        .kandidaten_oeffentlich(self.modul, &l.sperre.text())
+                        .kandidaten_aufloesbar(self.modul, &l.sperre.text())
                         .into_iter()
                         .find_map(|k| topf.get(&k));
                     if let (Some(zusage), Kosten::Zahl(n)) = (zeit, self.block(&l.rumpf)) {
@@ -956,7 +956,7 @@ impl Rechner<'_> {
                 };
                 let zeit = self
                     .u
-                    .kandidaten_oeffentlich(self.modul, &name)
+                    .kandidaten_aufloesbar(self.modul, &name)
                     .into_iter()
                     .find_map(|k| topf.get(&k).copied());
                 if let Kosten::Zahl(n) = self.block(&l.rumpf) {
