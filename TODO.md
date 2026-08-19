@@ -517,6 +517,30 @@ as a record of what the closure cost; the details are in
 | `own` is a synonym for `rw` | **the specification was wrong, not the pass** — `SYNTAX.md` §3 now carries the measurement |
 | lexer panic · licence entry | **`P038`** (measured depth limit) · `license = "AGPL-3.0-only"` |
 
+### «Z» — Zwischenspeicher, geplant 2026-08-19 ([`dokumente/PLAN.md`](dokumente/PLAN.md))
+
+- [ ] **Z0 — Umgebung und Aufrufgraph EINMAL bauen.** Gemessen: 14 Module rufen
+      `Umgebung::sammle` (18 Aufrufe je Lauf, 358 ms auf 120 k Zeilen), sechs bauen den
+      Aufrufgraphen (6 Aufrufe, 252 ms). **610 der 672 ms Passzeit sind der Neubau
+      derselben zwei Strukturen**; die eigentliche Passlogik kostet ~60 ms. Erwartet:
+      899 → ~290 ms. *Der Preis ist echt:* die Pässe hören auf, einzeln fahrbar zu sein,
+      und die Mutationsproben nutzen das heute.
+- [ ] **Z1 — der Speicher je Übersetzungseinheit, und sein Schlüssel.** Heute ist eine
+      Datei eine ganze Einheit (gemessen: die CLI schleift über Dateien, kein Binden über
+      Dateigrenzen), also ist der Schlüssel trivial vollständig. **Der Satz wird als
+      erster falsch**, sobald `use` über Dateigrenzen greift — und dann liefert ein
+      Schlüssel, der nur die eine Datei hasht, veraltete Urteile. Ins Bauzeichen gehört
+      ein Hash über die Prüferquellen, sonst antwortet ein NEUER Prüfer mit ALTEN Absagen.
+- [ ] **Z2 — die Emission muss REPRODUZIERBAR ZUGESAGT sein, nicht beobachtet.** Gemessen
+      ist sie es (25 Läufe, ein SHA-256, kein Zeitstempel im Kopf), aber `pruefe-emission.sh`
+      hält es nicht: ihm fehlt die Zeile *zweimal erzeugen, Hashes vergleichen*. Ohne sie
+      ruht jeder `ccache`-Treffer auf meinem Gedächtnis.
+- [ ] **Die Abbruchbedingung ist ernst gemeint: prüft Caprock nach Z0 unter einer Sekunde,
+      wird Z1 NICHT gebaut.** Der Durchsatz ist linear (~7,5 µs je Zeile), Caprock hat
+      75 294 Zeilen, das sind ~570 ms heute und ~190 ms nach Z0. *Ein Speicher, der eine
+      Sekunde spart und eine Klasse stiller Fehlurteile eröffnet, ist ein schlechtes
+      Geschäft.*
+
 ### From the SECOND review of 2026-08-19 — two blocking findings, and both sat in the TOOL
 
 *The grade rose to 2− and was held there by two sentences: the test suite did not run without

@@ -3482,3 +3482,151 @@ Zusage — und die drei Löcher oben stehen heute in einer Datei, die *„0 Fehl
 3. **Ohne den zweiten Korpus ist die Abdeckung von *Rennen* eine Zahl über Giftproben.**
    `H013` fällt heute an genau einer Datei, und die habe ich selbst geschrieben. *Das ist
    Falle 80, und es steht hier, damit es nicht später als Fund verkauft wird.*
+
+---
+
+# «Z» — Zwischenspeicher für Prüfen und Erzeugen
+
+> **Die Regel, die diesen ganzen Block trägt:** *ein Zwischenspeicher ist ein stiller
+> Fail-open.* Trifft der Schlüssel nicht, was die Antwort bestimmt, liefert er **„0 Fehler"
+> für ein Programm, das fallen würde** — und das ist genau die Bewegung, gegen die dieser
+> Ordner sonst schreibt. Ein Cache ohne Sprechprobe ist schlimmer als kein Cache.
+
+## Die Messung zuerst, damit der Plan nicht geraten ist
+
+Gemessen 2026-08-19, Release, ein Faden, synthetische Einheit mit **120 005 Zeilen**
+(20 000 Funktionen; `crates/gabbro-cli/examples/umgebungsmass.rs`):
+
+| Größe | Zeit |
+|---|---:|
+| Lesen (Lexer + Parser) | 183 ms |
+| **Alle zwölf Pässe** | **672 ms** |
+| davon: *eine* `Umgebung::sammle` | 20 ms |
+| davon: *ein* Aufrufgraph | 42 ms |
+| Ganzer Lauf `gabbro pruefe` | ~899 ms |
+
+Der Durchsatz ist **linear** — 6 k / 30 k / 60 k / 120 k Zeilen ergeben 24 / 231 / 440 /
+899 ms, also **~7,5 µs je Zeile, 133 000 Zeilen/s**. Caprock hat 75 294 Zeilen Rust; die
+ganze Einheit läge damit bei **~570 ms**.
+
+**Und jetzt der Befund, der die Reihenfolge dieses Plans bestimmt:**
+
+```
+14 Module rufen Umgebung::sammle   ->  18 Aufrufe je Lauf  ->  358 ms
+ 6 Module bauen den Aufrufgraphen  ->   6 Aufrufe je Lauf  ->  252 ms
+                                                    zusammen  610 ms
+```
+
+**610 der 672 ms Passzeit sind der Neubau derselben zwei Datenstrukturen.** Die eigentliche
+Passlogik kostet ~60 ms. *Ein Zwischenspeicher über einer Arbeit, die man auch weglassen
+kann, ist die teurere Lösung* — deshalb steht «Z0» vor «Z1».
+
+## Z0 — teilen, bevor gespeichert wird
+
+Eine `Umgebung` und einen `Graph` je Übersetzungseinheit bauen und **allen Pässen
+durchreichen**. Nichts wird gespeichert, nichts kann veralten, die Frage der
+Schlüsselvollständigkeit stellt sich gar nicht.
+
+* **Erwartete Wirkung:** 899 ms → **~290 ms**, Faktor 3. *Erwartet, nicht gemessen* — die
+  Zahl gilt erst, wenn sie nach dem Umbau dasteht.
+* **Der Preis:** `pruefe` bekommt eine Signatur mit zwei Argumenten mehr, und die Pässe
+  hören auf, für sich allein aufrufbar zu sein. Das ist eine echte Einbusse: heute lässt
+  sich jeder Pass einzeln fahren, und die Mutationsproben nutzen das.
+* **Die Gegenprobe:** die Ausgabe muss über den ganzen Korpus **bitgleich** bleiben. Ein
+  geteilter Zustand, der zwischen Pässen mitwandert, ist die klassische Stelle, an der ein
+  Pass den nächsten beeinflusst.
+
+## Z1 — der Zwischenspeicher je Übersetzungseinheit
+
+### Was ihn heute billig macht — und was das kostet, wenn es sich ändert
+
+Gemessen: **eine Datei ist heute eine ganze Übersetzungseinheit.** `gabbro pruefe` und
+`gabbro emit` schleifen über die Dateien und behandeln jede für sich; Module sind *in* der
+Datei geschachtelt, es gibt kein Binden über Dateigrenzen. **Damit hat eine Einheit keine
+Abhängigkeiten**, und der Schlüssel ist trivial vollständig.
+
+> **Das ist der Satz, der zuerst falsch wird.** Sobald `use` über Dateigrenzen greift, ist
+> der Inhalt einer Datei nicht mehr die ganze Eingabe, und ein Schlüssel, der nur sie
+> hasht, liefert veraltete Antworten. *Dieser Absatz gehört in denselben Commit wie die
+> erste dateiübergreifende Auflösung — nicht danach.*
+
+### Der Schlüssel, vollständig
+
+```
+SHA-256( Quelltext der Einheit )
+       + Bauzeichen des Prüfers      -- sonst antwortet ein NEUER Prüfer mit ALTEN Absagen
+       + Name des Unterbefehls       -- `pruefe` und `emit` sind zwei Antworten
+       + [später] die Hashes aller Einheiten, aus denen die Einheit liest
+```
+
+**Das Bauzeichen ist der Teil, den man vergisst.** Wer heute eine Regel schärft und morgen
+den Korpus prüft, bekommt aus dem Speicher das Urteil von gestern — und der Korpus ist
+grün, weil die neue Regel nie lief. Genau die Klasse, in der an diesem Ordner schon
+`pruefe-luecken`, der Mutationskatalog und die MSRV standen: **eine Zahl, die niemand
+nachhält.**
+
+Mechanisch: `option_env!("GABBRO_BAU")` reicht nicht (nur gesetzt, wenn jemand daran denkt).
+Tragfähig ist ein Hash über die eigenen Quellen, im `build.rs` gerechnet und als Konstante
+eingebacken — *der Prüfer trägt sein eigenes Prüfsummenzeichen.*
+
+### Was gespeichert wird
+
+Die **Absagenliste** (Code, Stufe, Spanne, Text, Notizen) und der **erzeugte C-Text**. Beide
+sind reine Funktionen der Eingabe: gemessen ist der Prüfer frei von Uhr und Dateisystem —
+die einzige Umgebungsberührung im ganzen `gabbro-check` ist `GABBRO_ZEIT`, und die schreibt
+nur auf `stderr`.
+
+Und die Ausgabe hängt **nicht an `HashMap`-Reihenfolge**: 25 Läufe von `pruefe` über eine
+Giftdatei, 25 von `emit` über ein Beispiel und 15 über `01-tabelle` ergaben je **einen**
+SHA-256. *Rusts `HashMap` hat je Prozess einen anderen Startwert; wäre eine Ausgabe daran
+gebunden, hätte diese Probe es gezeigt.*
+
+### Wo er liegt
+
+`.gabbro-cache/<zwei Hexziffern>/<Rest des Hashes>` im Arbeitsbaum, wie `ccache`. Kein
+Netz, kein Dämon, kein Sperrprotokoll: das Schreiben geht über eine temporäre Datei und
+`rename`, das ist auf jedem POSIX-Dateisystem atomar. Alt wird nichts — bei zwei Bytes je
+Absage ist Aufräumen ein Problem, das dieser Ordner in Jahren nicht bekommt.
+
+## Z2 — die C-Seite
+
+Hier ist **nichts zu bauen**, und das ist eine gute Nachricht: `ccache` erledigt es, wenn
+das erzeugte C sich nicht bewegt. Gemessen ist es das — kein Zeitstempel, kein absoluter
+Pfad, kein Zufall im Kopf, und derselbe SHA-256 über 25 Läufe.
+
+Was Gabbro dafür schuldet, ist eine **Zusage statt einer Beobachtung**: dass die Emission
+reproduzierbar ist, muss ein Wächter halten, nicht mein Gedächtnis. `pruefe-emission.sh`
+schreibt heute C und übersetzt es; ihm fehlt eine Zeile — *zweimal erzeugen und die Hashes
+vergleichen.*
+
+## Die Sprechprobe, ohne die der Speicher nicht geglaubt wird
+
+Für **jeden** der drei Schritte, in beide Richtungen:
+
+1. `--kein-speicher` fährt ohne Zwischenspeicher. Der Korpus muss **bitgleich** dieselbe
+   Ausgabe liefern wie der Lauf mit — sonst ist der Speicher ein zweites Register.
+2. **Die Gegenrichtung, und sie ist die eigentliche Probe:** eine Regel schärfen, ohne den
+   Quelltext des Korpus anzufassen. Der Speicher **muss** verfehlen. Trifft er, ist das
+   Bauzeichen nicht im Schlüssel — und der Wächter hat gerade den Fehler gefunden, für den
+   es ihn gibt.
+3. Ein Eintrag von Hand verfälscht → der Lauf muss fallen, nicht die verfälschte Antwort
+   ausgeben. *Ein Speicher, der seinem Inhalt glaubt, ist ein Erzeuger fremder Urteile.*
+
+## Die Reihenfolge, und warum sie so herum steht
+
+| | Arbeit | erwarteter Gewinn | Risiko |
+|---|---|---|---|
+| **Z0** | Umgebung und Graph teilen | 899 → ~290 ms | keins: nichts wird gespeichert |
+| **Z1** | Speicher je Einheit | ~290 → ~2 ms bei Treffer | **stiller Fail-open** |
+| **Z2** | `ccache` + Reproduzierbarkeitswächter | Sache von `cc` | keins |
+
+**Z0 bringt den Faktor 3 ohne jedes Risiko, Z1 den Rest mit dem ganzen Risiko.** Wer Z1
+zuerst baut, hat einen Speicher über einer Rechnung, die zu 85 % überflüssig ist — und
+misst danach nie mehr, wie teuer sie eigentlich war.
+
+## Die Abbruchbedingung
+
+**Wenn der ganze Caprock-Korpus nach Z0 unter einer Sekunde prüft, wird Z1 nicht gebaut.**
+Ein Zwischenspeicher, der eine Sekunde spart und eine Klasse stiller Fehlurteile eröffnet,
+ist ein schlechtes Geschäft. *Die Zahl entscheidet, nicht der Wunsch nach einem Cache* —
+und heute deutet sie auf **~190 ms für ganz Caprock nach Z0**, also auf ein Nein.
