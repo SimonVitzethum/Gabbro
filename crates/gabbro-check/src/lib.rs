@@ -443,10 +443,23 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
             XForm::Vergleich { wert, .. } => vec![wert],
             XForm::Update { .. } => Vec::new(),
         },
+        // **Eine Schleife wertet aus, bevor sie läuft** (2026-08-19). `traverse x over <ort>`
+        // liest den Gegenstand, und `by falling <mass>` rechnet das Mass. *Die Schranke
+        // (`bounded N ops`, `per_pass N ops`) steht NICHT hier* — sie ist eine Aussage über
+        // die Übersetzungszeit und wird nie ausgeführt.
+        StmtArt::Schleife(sch) => match sch.as_ref() {
+            Schleife::Traverse(t) => {
+                let mut v: Vec<&Expr> = t.gegenstand.iter().collect();
+                if let Abstieg::Fallend(m) = &t.abstieg {
+                    v.push(m);
+                }
+                v
+            }
+            Schleife::Retry(_) | Schleife::Forever(_) => Vec::new(),
+        },
         // `let x = f() else …` trägt seinen Ruf in der Quelle, nicht in einem `Expr`.
         StmtArt::LetSonst(_)
         | StmtArt::Ruf(_)
-        | StmtArt::Schleife(_)
         | StmtArt::Bricht(_)
         | StmtArt::Narrow(_)
         | StmtArt::Sperrt(_)
@@ -455,6 +468,68 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
         | StmtArt::Next(_)
         | StmtArt::AwaitLoad(_) => Vec::new(),
     }
+}
+
+/// **Die Prädikate, die eine Anweisung SELBST auswertet** — erschöpfend über `StmtArt`, ohne
+/// `_`-Zweig, wie `unterbloecke` und `eigene_ausdruecke`.
+///
+/// **Der Grund, aus dem es diese Funktion gibt** (2026-08-19): ein `retry … until f()` wertet
+/// `f()` bei **jedem** Durchgang aus, und kein Pass sah den Ruf. Gemessen:
+///
+/// ```gabbro
+/// impl fn luegt() effects { pure } {
+///     retry warten until tu() == 9 … { }        -- `tu` schreibt. 0 Fehler.
+/// }
+/// ```
+///
+/// Der Aufrufgraph stieg über `eigene_ausdruecke` ab, und dort stand `Schleife => Vec::new()`.
+/// **Damit war `effects` an dieser Stelle fail-open** — dritte Stelle derselben Klasse an
+/// einem Tag, nach dem Diamanten und den 83 `_ => {}`-Zweigen. *Gefunden nicht durch eine
+/// Prüfung, sondern durch eine OPTIMIERUNG*: `pruefe-emission.sh` sah unter `-O1`, wie der
+/// C-Übersetzer 65 Rufe strich, die ein falsches `__attribute__((pure))` für wirkungslos
+/// erklärt hatte.
+pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
+    match &s.art {
+        StmtArt::Schleife(sch) => match sch.as_ref() {
+            Schleife::Retry(r) => r.bis.iter().collect(),
+            Schleife::Traverse(_) | Schleife::Forever(_) => Vec::new(),
+        },
+        // Die Formen ohne eigenes Prädikat — **einzeln**, damit eine neue Art hier auffällt.
+        StmtArt::Let(_)
+        | StmtArt::LetSonst(_)
+        | StmtArt::Zuweisung(_)
+        | StmtArt::Return(_)
+        | StmtArt::Publish(_)
+        | StmtArt::Wenn(_)
+        | StmtArt::Match(_)
+        | StmtArt::Exchange(_)
+        | StmtArt::Ruf(_)
+        | StmtArt::Bricht(_)
+        | StmtArt::Narrow(_)
+        | StmtArt::Sperrt(_)
+        | StmtArt::Observiert(_)
+        | StmtArt::Leave(_)
+        | StmtArt::Next(_)
+        | StmtArt::AwaitLoad(_) => Vec::new(),
+    }
+}
+
+/// Die Ausdrücke in einem Prädikat — ein `until` liest ebenso wie ein Rumpf.
+pub fn ausdruecke_im_praedikat(p: &Pred) -> Vec<&Expr> {
+    let mut aus = Vec::new();
+    fn geh<'a>(p: &'a Pred, aus: &mut Vec<&'a Expr>) {
+        match &p.art {
+            PredArt::Vergleich(e) | PredArt::Element(e, _) => aus.push(e),
+            PredArt::Klammer(x) | PredArt::Nicht(x) => geh(x, aus),
+            PredArt::Und(a, b) | PredArt::Oder(a, b) => {
+                geh(a, aus);
+                geh(b, aus);
+            }
+            _ => {}
+        }
+    }
+    geh(p, &mut aus);
+    aus
 }
 
 /// **Endet der Block auf jedem Weg?** — erschöpfend über `StmtArt`, ohne `_`-Zweig.

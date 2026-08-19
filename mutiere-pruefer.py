@@ -704,6 +704,21 @@ MUTATIONEN = [
         "M1 -- ein Loch in der MITTE gilt als untere Schranke; das ist UNSOUND, nicht bloss grob",
     ),
     Mutation(
+        "until-praedikat-unsichtbar",
+        "lib.rs",
+        "            Schleife::Retry(r) => r.bis.iter().collect(),",
+        "            Schleife::Retry(_) => Vec::new(),",
+        "E008 -- ein Ruf im `until` einer `retry`-Schleife wird wieder unsichtbar",
+    ),
+    Mutation(
+        "attribut-ohne-rufpruefung",
+        "emit.rs",
+        "    if ruft_irgendwas(b) {\n        return \"\";\n    }",
+        "    if false && ruft_irgendwas(b) {\n        return \"\";\n    }",
+        "OPT2 -- `pure` wird auch an eine Funktion gehaengt, die einen FREMDEN Rumpf ruft",
+        flaeche="code",
+    ),
+    Mutation(
         "rahmen-endet-am-aufruf",
         "wirkungen.rs",
         "            if !weltnamen.iter().any(|k| k == grund) {\n                continue; // kein bekannter Weltzustand -- der Pass sagt nichts\n            }",

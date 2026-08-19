@@ -462,6 +462,16 @@ fn sammle_kanten(b: &Block, aus: &mut Vec<(String, Vec<Option<String>>)>) {
         for e in crate::eigene_ausdruecke(s) {
             aus_expr(e, aus);
         }
+        for pr in crate::eigene_praedikate(s) {
+            for e in crate::ausdruecke_im_praedikat(pr) {
+                aus_expr(e, aus);
+            }
+        }
+        for pr in crate::eigene_praedikate(s) {
+            for e in crate::ausdruecke_im_praedikat(pr) {
+                aus_expr(e, aus);
+            }
+        }
         match &s.art {
             StmtArt::Ruf(r) => nimm_ruf(r, aus),
             StmtArt::LetSonst(l) => {
@@ -520,9 +530,17 @@ fn held_aus_expr(e: &Expr, aus: &mut Vec<(String, bool)>) {
 /// denselben Ruf eine Zeile tiefer schrieb.
 fn sammle_rufe(b: &Block, aus: &mut BTreeSet<String>) {
     for s in &b.anweisungen {
-        // Was die Anweisung selbst auswertet.
+        // Was die Anweisung selbst auswertet -- Ausdruecke UND Praedikate. **Das `until`
+        // einer `retry`-Schleife fehlte bis 2026-08-19**, und damit war `E008` dort
+        // fail-open: `retry warten until tu() == 9` mit schreibendem `tu` kam unter
+        // `effects { pure }` mit 0 Fehlern durch.
         for e in crate::eigene_ausdruecke(s) {
             aus_expr(e, aus);
+        }
+        for pr in crate::eigene_praedikate(s) {
+            for e in crate::ausdruecke_im_praedikat(pr) {
+                aus_expr(e, aus);
+            }
         }
         // Die zwei Rufe, die in keinem `Expr` stehen.
         match &s.art {

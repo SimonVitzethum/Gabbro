@@ -1611,3 +1611,52 @@ fn eine_bitlage_liegt_im_eigenen_wort() {
     assert!(f.is_empty(), "`reserved` fuellt die Luecke: {f:?}");
     assert!(!c.contains("K_m("), "ein reserviertes Feld bekommt keinen Leser:\n{c}");
 }
+
+/// **Ein Wirkungsattribut darf nicht an eine Funktion, die etwas RUFT** («OPT2», 2026-08-19).
+///
+/// `effects` ist geprüft — aber gegen die **deklarierten** Wirkungen der Gerufenen, und bei
+/// einem `extern fn` ist diese Deklaration eine Annahme über fremden Code. Ein
+/// `__attribute__((pure))` ist keine Buchung, sondern eine **Anweisung an den Übersetzer**.
+///
+/// Gemessen am selben Tag, in `pruefe-emission.sh`: Fragment 10 zählte 65 Rufe bei `-O0` und
+/// **null** unter `-O1` — GCC strich sie, weil das Attribut sie für wirkungslos erklärte.
+///
+/// *Dieser Test steht hier und nicht nur im Emissionswächter, weil `mutiere-pruefer.py` nur
+/// `cargo test` fährt: eine Regel, deren einzige Probe ein Shell-Wächter ist, kann keine
+/// Mutation fangen.*
+#[test]
+fn ein_wirkungsattribut_geht_nur_an_wen_nichts_ruft() {
+    let q = r#"
+module m {
+static mut z : u32 = 0;
+extern fn fremd() -> u32 effects { reads z } costs <= 1 ops;
+impl fn blatt(a : u32 in 0 .. 10) -> u32 effects { pure } costs <= 1 ops { return a; }
+impl fn liest() -> u32 effects { reads z } costs <= 1 ops { return z; }
+impl fn ruft() -> u32 effects { reads z } costs <= 4 ops { return fremd(); }
+}
+"#;
+    let (baum, mut absagen) = gabbro_syntax::lies("attribut.gab", q);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    let zeile = |name: &str| -> String {
+        c.lines()
+            .find(|z| z.contains(&format!("{name}(")) && z.trim_end().ends_with(';'))
+            .unwrap_or_else(|| panic!("kein Prototyp fuer `{name}` in:\n{c}"))
+            .to_string()
+    };
+    assert!(
+        zeile("blatt").contains("__attribute__((const))"),
+        "ein `pure`-Blatt ohne Zeigerparameter bekommt `const`: {}",
+        zeile("blatt")
+    );
+    assert!(
+        zeile("liest").contains("__attribute__((pure))"),
+        "ein reiner Leser bekommt `pure`: {}",
+        zeile("liest")
+    );
+    assert!(
+        !zeile("ruft").contains("__attribute__"),
+        "wer RUFT, bekommt KEINS -- unter dem Ruf kann ein fremder Rumpf liegen: {}",
+        zeile("ruft")
+    );
+}

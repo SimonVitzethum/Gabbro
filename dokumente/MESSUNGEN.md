@@ -9722,3 +9722,90 @@ Prüferplan und sah deshalb **die grösste Zweitvergabe des Ordners nicht.** Er 
 162 von 162 Mutationen · 162/162 Anker · 13/13 Luecken · 13 Waechter gruen
 Klauseln 22 gebucht (war 23), UNGELESEN 16 -> 15
 ```
+
+## 2026-08-19, vierter Teil — «OPT0» und «OPT2», und eine OPTIMIERUNG fand einen Pass-Fehler
+
+### Der Emissionswächter übersetzte ohne `-O`
+
+`pruefe-emission.sh` fuhr `-Wall -Wextra -Werror` und **kein `-O`**. Damit lief die eine Probe
+nie, die undefiniertes Verhalten fängt: *der Übersetzer legt UB zu seinen Gunsten aus, also
+tut er es erst, wenn er optimiert.* Ein Erzeugnis, das nur ungeoptimiert stimmt, sieht bei
+jeder Abnahme richtig aus und ist es nicht.
+
+Drei Stufen dazu, für alle zwölf Einheiten: **wiederholbar** (zweimal erzeugen,
+byteidentisch — «Z2»s Zusage statt Beobachtung), **`-O0` gegen `-O2`** und
+**`-fsanitize=undefined`**.
+
+Und weil ein Wächter, der beim ersten Versuch grün ist, eine Verzierung wäre (R11), steht
+davor eine **Sprechprobe der neuen Stufen**. Sie hat mich zweimal korrigiert:
+
+| erster Anlauf | was passierte |
+|---|---|
+| `x + 1 > x` bei `INT_MAX` | GCC faltet es in der Vorderseite weg — weder `-O2` noch UBSan sahen etwas |
+| `restrict`-Verletzung in einer Additionsschleife | `-O0` und `-O2` rechneten **gleich** |
+
+Erst ein Überlauf mit undurchsichtiger Eingabe löst UBSan aus (`rc=1`), und erst eine
+**Typverletzung** zeigt den `-O0`/`-O2`-Unterschied (0 gegen 1). *Beide Proben stehen jetzt
+im Wächter; kann die Maschine sie nicht zeigen, färbt er sich rot, bevor er eine Einheit
+anfasst.*
+
+### Die Wirkungsliste als Optimierungsangabe — und ihre Grenze
+
+`effects { pure }` → `__attribute__((const))`, `reads` → `((pure))`. **Die zwei Wörter
+heissen dasselbe und bedeuten Verschiedenes**: GCCs `const` verbietet *jedes* Lesen von
+Speicher, auch durch einen Parameterzeiger — deshalb gibt es `((const))` nur für eine
+Funktion **ganz ohne Zeigerparameter**.
+
+**Der erste Anlauf verlangte nur einen Rumpf, und der neue Wächter hat ihn am selben Tag
+gefangen.** Fragment 10 zählte 65 Aufrufe bei `-O0` und **null** unter `-O1`:
+
+```
+1 0 0 0 0 65   /   1 0 0 0 0 0
+```
+
+Der Grund ist tiefer als der eine Fall: `E008` prüft einen Rumpf gegen die **deklarierten**
+Wirkungen der Gerufenen, und bei einem `extern fn` ist das eine **Annahme über fremden
+Code** — der Korpus trägt 48 solcher Rümpfe. *Ein Attribut ist aber keine Buchung, sondern
+eine Anweisung an den Übersetzer.* Die Schranke heisst deshalb: **wer ruft, bekommt keins.**
+Was nicht ruft, kann keinen fremden Rumpf unter sich haben.
+
+### Und dabei fiel ein Fail-open auf, das keine Prüfung gefunden hatte
+
+Fragment 10 rief `naechstes_token` **im `until`-Prädikat** einer `retry`-Schleife. Nachgestellt:
+
+```gabbro
+impl fn luegt() effects { pure } {
+    retry warten until tu() == 9 … { }        -- `tu` schreibt.   0 Fehler.
+}
+```
+
+`eigene_ausdruecke` führte `StmtArt::Schleife => Vec::new()`, und der Aufrufgraph stieg über
+diese Funktion ab. **Damit war `effects` an dieser Stelle fail-open** — dritte Stelle
+derselben Klasse an einem Tag, nach dem Diamanten und den 83 `_ => {}`-Zweigen.
+
+> **Gefunden hat es nicht eine Prüfung, sondern eine OPTIMIERUNG.** Der C-Übersetzer strich
+> 65 Rufe, weil ein falsches Attribut sie für wirkungslos erklärte — und genau das machte den
+> unsichtbaren Ruf sichtbar. *Eine Zusage, die niemand ausnutzt, wird auch nicht geprüft.*
+
+Zwei neue Abstiegsfunktionen, beide erschöpfend über `StmtArt` ohne `_`-Zweig:
+`eigene_praedikate` (das `until` einer `retry`) und `ausdruecke_im_praedikat`. Dazu wertet
+`eigene_ausdruecke` jetzt auch, was eine `traverse` auswertet: `over <ort>` und `by falling
+<mass>`. *Die Schranke `bounded N ops` steht ausdrücklich nicht dabei — sie ist eine Aussage
+über die Übersetzungszeit und wird nie ausgeführt.*
+
+### Und die Mutation musste dreimal umziehen
+
+* Erst traf ihr Anker zwei Stellen (`sammle_rufe` **und** `sammle_kanten`).
+* Dann beschädigte sie nur eine davon — der Ruf kam über die andere weiterhin an, und sie
+  **überlebte**, ohne dass ein Loch dagewesen wäre.
+* Erst am geteilten `lib.rs::eigene_praedikate` beschädigt sie wirklich.
+
+Und `attribut-ohne-rufpruefung` überlebte zunächst aus einem anderen Grund: **`mutiere-pruefer.py`
+fährt nur `cargo test`**, und die einzige Probe für das Attribut stand im Shell-Wächter.
+*Eine Regel, deren einzige Probe ein Shell-Wächter ist, kann keine Mutation fangen* — der
+Test steht jetzt in `rechenwerk.rs`.
+
+```
+166 Kennungen · 170 Gifte · 129 Tests · 164 von 164 Mutationen
+12 Einheiten, jede durch ACHT Stufen statt sechs · 13 Waechter gruen
+```

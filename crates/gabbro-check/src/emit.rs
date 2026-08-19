@@ -1837,6 +1837,106 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
 /// **A `spec fn` is specification and has no C.** Everything else with a body becomes a
 /// definition; everything else *without* one becomes a **prototype** — without it a call in
 /// C11 is an implicit declaration, and `-Werror` stops there.
+/// **Ruft dieser Rumpf irgendetwas?** Erschöpfend über `unterbloecke`/`eigene_ausdruecke`,
+/// also ohne die Sammelzweig-Blindheit, an der `sammle_rufe` bis 2026-08-19 litt.
+fn ruft_irgendwas(b: &Block) -> bool {
+    fn in_expr(e: &Expr) -> bool {
+        match &e.art {
+            ExprArt::Ruf(_) => true,
+            ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => in_expr(x),
+            ExprArt::Binaer(_, a, b) => in_expr(a) || in_expr(b),
+            _ => false,
+        }
+    }
+    b.anweisungen.iter().any(|s| {
+        matches!(s.art, StmtArt::Ruf(_) | StmtArt::LetSonst(_))
+            || crate::eigene_ausdruecke(s).into_iter().any(in_expr)
+            // **Das `until` einer `retry`-Schleife** -- genau die Stelle, an der dieses
+            // Attribut am 2026-08-19 falsch gesetzt wurde und der Uebersetzer 65 Rufe strich.
+            || crate::eigene_praedikate(s)
+                .into_iter()
+                .flat_map(crate::ausdruecke_im_praedikat)
+                .any(in_expr)
+            || crate::unterbloecke(s).into_iter().any(ruft_irgendwas)
+    })
+}
+
+/// **Die Wirkungsliste IST eine Optimierungsangabe** («OPT2», 2026-08-19).
+///
+/// `effects` steht ohnehin da, ein Pass hält sie (`E008` kompositional über die Hülle,
+/// `E010` für das Lesen), und C hat für genau diese Aussage zwei Wörter. Sie nicht
+/// hinzuschreiben heisst, eine geprüfte Eigenschaft zu verschenken.
+///
+/// **Die zwei Wörter heissen dasselbe und bedeuten Verschiedenes**, und das ist die Falle:
+///
+/// | | GCC | Gabbro |
+/// |---|---|---|
+/// | `const` | liest **gar keinen** Speicher — auch nicht über einen Parameterzeiger | — |
+/// | `pure` | darf Speicher lesen, ändert nichts | `reads`/`pure` |
+///
+/// Ein Gabbro-`pure` darf seine Parameter lesen, auch durch einen Zeiger. **`((const))` gibt
+/// es deshalb nur für eine Funktion ganz ohne Zeigerparameter** — sonst wäre die Zusage
+/// stärker als die geprüfte Aussage, und der C-Übersetzer dürfte einen Ruf löschen, dessen
+/// Ergebnis vom Speicher abhängt.
+///
+/// **Und nur für Funktionen mit Rumpf, DIE NICHTS RUFEN.**
+///
+/// *Der erste Anlauf verlangte nur einen Rumpf, und der Wächter hat ihn am selben Tag
+/// gefangen* (`pruefe-emission.sh`, Stufe 6): Fragment 10 zählte 65 Aufrufe von
+/// `naechstes_token` bei `-O0` und **null** unter `-O1` — der Übersetzer strich die Rufe, weil
+/// das Attribut sie für wirkungslos erklärte.
+///
+/// Der Grund ist tiefer als der eine Fall: `E008` prüft die Wirkungen eines Rumpfes gegen die
+/// **deklarierten** Wirkungen der Gerufenen. Bei einem `extern fn` ist diese Deklaration eine
+/// **Annahme über fremden Code** — der Korpus trägt 48 solcher Rümpfe. Ein Attribut ist aber
+/// keine Buchung, sondern eine **Anweisung an den Übersetzer**, und eine Annahme in eine
+/// Anweisung zu verwandeln ist genau die Bewegung, gegen die das Zeugnis steht.
+///
+/// > **Was nicht ruft, kann keinen fremden Rumpf unter sich haben.** Das ist die einzige
+/// > Schranke, die ohne Hüllenrechnung hält — und sie trifft die Gestalt, in der `pure`
+/// > überhaupt etwas bringt: den kleinen Leser.
+fn wirkungsattribut(f: &FnDecl) -> &'static str {
+    let FnRumpf::Block(b) = &f.rumpf else {
+        return "";
+    };
+    if ruft_irgendwas(b) {
+        return "";
+    }
+    let Some(w) = &f.effects else {
+        return "";
+    };
+    // Eine Funktion ohne Ergebnis hat nichts, was sich zusammenfassen liesse.
+    if f.ergebnis.is_none() {
+        return "";
+    }
+    let mut nur_lesend = true;
+    let mut ganz_rein = true;
+    for e in &w.liste {
+        match &e.art {
+            WirkungArt::Rein => {}
+            WirkungArt::Liest(_) => ganz_rein = false,
+            // Alles andere -- Schreiben, Sperren, Verbrauchen, Veröffentlichen, Divergieren,
+            // Maskieren, Belegen -- ist eine Wirkung, und dann gilt keins der zwei Wörter.
+            _ => {
+                nur_lesend = false;
+                ganz_rein = false;
+            }
+        }
+    }
+    if !nur_lesend {
+        return "";
+    }
+    let zeigt_irgendwohin = f
+        .parameter
+        .iter()
+        .any(|p| matches!(&p.typ, TypExpr::Zeiger(_)));
+    if ganz_rein && !zeigt_irgendwohin {
+        " __attribute__((const))"
+    } else {
+        " __attribute__((pure))"
+    }
+}
+
 fn funktion(
     f: &FnDecl,
     aus: &mut String,
@@ -1886,7 +1986,11 @@ fn funktion(
         params.join(", ")
     };
     // Der Prototyp steht IMMER oben -- auch fuer eine Funktion mit Rumpf.
-    aus.push_str(&format!("\n{rueck} {}({liste});\n", f.name.text));
+    aus.push_str(&format!(
+        "\n{rueck} {}({liste}){};\n",
+        f.name.text,
+        wirkungsattribut(f)
+    ));
     let FnRumpf::Block(b) = &f.rumpf else { return };
     let aus = rumpf_aus;
     aus.push_str(&format!("\n{rueck} {}({liste}) {{\n", f.name.text));

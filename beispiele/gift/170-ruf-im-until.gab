@@ -1,0 +1,34 @@
+-- erwartet: E008
+-- **Ein Ruf im `until`-Praedikat war fuer JEDEN Pass unsichtbar.**
+--
+-- `retry … until f()` wertet `f()` bei jedem Durchgang aus. Der Aufrufgraph stieg ueber
+-- `eigene_ausdruecke` ab, und dort stand `StmtArt::Schleife => Vec::new()` -- also sah
+-- `E008` den Ruf nicht, und `effects { pure }` kam mit 0 Fehlern durch.
+--
+-- Dritte Stelle derselben Klasse an einem Tag, nach dem Diamanten und den 83
+-- `_ => {}`-Zweigen: **eine Abstiegsfunktion, die eine Form auslaesst.**
+--
+-- *Gefunden nicht durch eine Pruefung, sondern durch eine OPTIMIERUNG*: `pruefe-emission.sh`
+-- sah unter `-O1`, wie der C-Uebersetzer 65 Rufe strich, die ein falsches
+-- `__attribute__((pure))` fuer wirkungslos erklaert hatte. **Die Optimierung hat den Pass
+-- gefunden, nicht umgekehrt.**
+module gift::ruf_im_until {
+
+static mut z : u32 = 0;
+
+assume etwas "Der Zaehler waechst." falsifier zaehler_faellt;
+
+extern fn wd() -> never effects { diverges };
+
+impl fn tu() -> u32 effects { writes z } costs <= 1 ops { z = 1; return 9; }
+
+impl fn luegt() effects { pure } costs <= 100 ops {
+    retry warten until tu() == 9
+        bounded 8 ops
+        progress etwas
+        on_exceeded wd
+        effects { pure }
+    { }
+}
+
+}
