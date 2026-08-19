@@ -86,6 +86,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         };
         let mut h = Haelften::default();
         sammle(b, &ordnungen, &mut h);
+        // «K5.1» -- die Reihenfolge INNERHALB des Rumpfes.
+        reihenfolge(b, &[], &[], &f.name.text, absagen);
         let unvollstaendig = g
             .huelle(&g.schluessel_von(modul, &f.name.text))
             .unvollstaendig
@@ -251,5 +253,145 @@ fn sammle(b: &Block, ordnungen: &[(String, Option<Ordnung>)], h: &mut Haelften) 
         for k in crate::unterbloecke(s) {
             sammle(k, ordnungen, h);
         }
+    }
+}
+
+/// **«K5.1» — die Reihenfolge, in der die Ordnung entsteht** (`V006`/`V007`).
+///
+/// Die Paarung prüft seit dem 2026-08-19 `(Atomic, Nutzlast)` über das ganze Programm. Was
+/// sie **nicht** prüfte, ist die Stelle, an der die Ordnung überhaupt entsteht:
+///
+/// ```gabbro
+/// F = true publishes { n };   -- das release-Speichern
+/// n = v;                      -- ... und die Nutzlast DANACH
+/// ```
+///
+/// **Ein release-Speichern veröffentlicht, was VOR ihm geschah.** Was danach geschrieben
+/// wird, sieht der Leser nicht — die Zeile `publishes { n }` ist dann eine Zusage über eine
+/// Schreibung, die es zum Zeitpunkt der Zusage nicht gibt. Gemessen: **still.**
+///
+/// Spiegelbildlich auf der Leseseite (`V007`): ein `let vorher = n;` **vor** dem `awaits`
+/// liest an der Erwerbung vorbei.
+///
+/// ## Warum das keine Aussage über das Speichermodell ist
+///
+/// **A10** (`release_stellt_sichtbarkeit_her`) sagt, *dass* release/acquire die Sichtbarkeit
+/// herstellen. Diese beiden Regeln sagen, dass das Programm die **Form** hat, für die A10
+/// überhaupt gilt. *Das Axiom trug eine Voraussetzung, und niemand prüfte, ob sie erfüllt
+/// ist.*
+///
+/// ## Und was ausdrücklich NICHT fällt
+///
+/// Eine Nutzlast, die im Rumpf **gar nicht** geschrieben wird, ist kein Fehler — sie kann von
+/// einem Gerufenen kommen. Gemeldet wird nur die Umkehrung: geschrieben, aber **danach**.
+fn reihenfolge(
+    b: &Block,
+    vorher_geschrieben: &[String],
+    vorher_gelesen: &[String],
+    wo: &str,
+    absagen: &mut Absagen,
+) {
+    let mut geschrieben: Vec<String> = vorher_geschrieben.to_vec();
+    let mut gelesen: Vec<String> = vorher_gelesen.to_vec();
+    for (i, s) in b.anweisungen.iter().enumerate() {
+        match &s.art {
+            StmtArt::Publish(p) => {
+                // Was schreibt der REST dieses Blocks -- einschliesslich seiner Unterblöcke?
+                let mut danach: Vec<Ort> = Vec::new();
+                for spaeter in &b.anweisungen[i + 1..] {
+                    crate::schreibziele(spaeter, &mut danach);
+                }
+                if let Nutzlast::Orte(liste) = &p.nutzlast {
+                    for o in liste {
+                        let name = grundname(&o.text());
+                        if geschrieben.contains(&name) {
+                            continue;
+                        }
+                        if !danach.iter().any(|z| grundname(&z.text()) == name) {
+                            continue;
+                        }
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "V006",
+                                s.span,
+                                format!(
+                                    "`{}` publishes `{name}` in `{wo}`, and `{name}` is \
+                                     written AFTERWARDS",
+                                    p.ziel.text()
+                                ),
+                            )
+                            .mit_notiz(
+                                "a release store publishes what happened BEFORE it -- a \
+                                 write after it is invisible to the reader",
+                            )
+                            .mit_notiz(
+                                "A10 (`release_stellt_sichtbarkeit_her`) says THAT \
+                                 release/acquire establish visibility; this rule says the \
+                                 program has the shape the axiom needs",
+                            ),
+                        );
+                    }
+                }
+            }
+            StmtArt::AwaitLoad(a) => {
+                for o in &a.erwartet {
+                    let name = grundname(&o.text());
+                    if !gelesen.contains(&name) {
+                        continue;
+                    }
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "V007",
+                            s.span,
+                            format!(
+                                "`{wo}` reads `{name}` BEFORE the `awaits` on `{}`",
+                                a.quelle.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "an acquire load makes the payload visible from that point on \
+                             -- a read before it sees the old value",
+                        ),
+                    );
+                }
+            }
+            _ => {}
+        }
+        // Diese Anweisung SELBST trägt zu beidem bei -- erst danach, damit sie sich nicht
+        // selbst deckt.
+        let mut z: Vec<Ort> = Vec::new();
+        crate::schreibziele(s, &mut z);
+        geschrieben.extend(z.iter().map(|o| grundname(&o.text())));
+        for e in crate::eigene_ausdruecke(s) {
+            orte_gelesen(e, &mut gelesen);
+        }
+        if let StmtArt::AwaitLoad(a) = &s.art {
+            gelesen.extend(a.erwartet.iter().map(|o| grundname(&o.text())));
+        }
+        for k in crate::unterbloecke(s) {
+            reihenfolge(k, &geschrieben, &gelesen, wo, absagen);
+        }
+    }
+}
+
+/// `s.bytes[i].x` -> `s`.
+fn grundname(k: &str) -> String {
+    k.split(['.', '[']).next().unwrap_or(k).to_string()
+}
+
+fn orte_gelesen(e: &Expr, aus: &mut Vec<String>) {
+    match &e.art {
+        ExprArt::Ort(o) => aus.push(grundname(&o.text())),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => orte_gelesen(x, aus),
+        ExprArt::Binaer(_, a, b) => {
+            orte_gelesen(a, aus);
+            orte_gelesen(b, aus);
+        }
+        ExprArt::Ruf(r) => {
+            for a in &r.argumente {
+                orte_gelesen(a, aus);
+            }
+        }
+        _ => {}
     }
 }

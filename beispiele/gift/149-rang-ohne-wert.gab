@@ -1,0 +1,22 @@
+-- erwartet: H014
+-- **Ein Rang, den niemand ausrechnen kann, ist keine Ordnung.**
+--
+-- `H006` und `H012` uebersprangen beide eine Sperre mit unbekanntem Rang, jeder mit einem
+-- stillen `continue`. Verschachtelung in der falschen Richtung darunter: null Fehler.
+--
+-- *Dieselbe Klasse wie `bounded` ohne Zahl -- eine Klausel, die die Grammatik verlangt und
+-- die niemand lesen kann.*
+module gift::rang_ohne_wert {
+
+static mut a : u32 = 0;
+static mut b : u32 = 0;
+
+extern fn woher() -> u32 effects { pure } costs <= 1 ops;
+
+lock LA protects { a } rank woher() held <= 100 ops;
+lock LB protects { b } rank 1 held <= 100 ops;
+
+impl fn f() effects { writes a, writes b, locks LA, locks LB } costs <= 64 ops
+{ locks LB { b = 1; locks LA { a = 1; } } }
+
+}

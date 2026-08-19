@@ -1,0 +1,16 @@
+-- erwartet: K009
+-- **Das Mass steht still.**
+--
+-- `decreases n`, und der rekursive Ruf reicht `n` unveraendert durch. Dann ist das Mass auf
+-- jeder Ebene dasselbe -- und ein konstantes Mass faellt nie.
+--
+-- *Geprueft wird die NOTWENDIGE Bedingung, genau wie `S005` am Abstiegsmass einer
+-- Traversierung. DASS es faellt, bleibt Beweisersache.*
+module gift::mass_steht_still {
+
+static mut a : u32 = 0;
+
+impl fn f(n : u32) -> u32 effects { writes a } costs <= 8 ops decreases n
+{ a = n; if n == 0 { return 0; } return f(n); }
+
+}

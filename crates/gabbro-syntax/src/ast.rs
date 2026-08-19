@@ -646,6 +646,16 @@ pub struct FnDecl {
     /// -- `effects` is not fail-open.
     pub effects: Option<Wirkungen>,
     pub costs: Option<Expr>,
+    /// **`decreases <expr>` — das Abstiegsmass der REKURSION** («K5.4», 2026-08-19).
+    ///
+    /// `costs` an einer rekursiven Funktion war bis dahin eine **Annahme**: ein Aufruf zaehlt
+    /// die DEKLARIERTEN Kosten des Gerufenen, und bei einem Zyklus zaehlt jede Kante einmal.
+    /// `K001` und `E009` benannten das ehrlich — *ehrlich ist nicht vollstaendig.*
+    ///
+    /// Geprueft wird die **notwendige** Bedingung, wie bei `S005` am Abstiegsmass einer
+    /// `traverse`: das Mass muss etwas nennen, das der rekursive Ruf aendert. **DASS es
+    /// faellt, bleibt Beweisersache** — dieselbe Trennung, und sie ist die Zielform.
+    pub decreases: Option<Expr>,
     pub by: Vec<Induktion>,
     pub section: Option<Textliteral>,
     pub arch: Option<Ident>,

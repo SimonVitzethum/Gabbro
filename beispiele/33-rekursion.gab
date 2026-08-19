@@ -1,0 +1,68 @@
+-- 33 -- **`decreases`: die Rekursion bekommt ein Mass** («K5.4», 2026-08-19).
+--
+-- Bis dahin stand im ganzen Korpus **keine einzige rekursive Funktion**, und der Grund war
+-- kein Stilentscheid: `K001` fiel an jeder. Ein Aufruf zaehlt die DEKLARIERTEN `costs` des
+-- Gerufenen (`SPRACHE.md` §7), bei einem Zyklus also die eigenen -- und damit lag der Rumpf
+-- immer ueber seiner eigenen Zusage. *Die Sprache erlaubte eine Form, die der Pruefer
+-- unweigerlich ablehnte.*
+--
+-- Mit einem `decreases` aendert sich die Lesart: **`costs` ist die Zusage EINES Durchgangs**,
+-- und die Tiefe steht im Mass.
+--
+--     K008   eine Funktion, die sich selbst erreicht, traegt ein `decreases`
+--     K009   das Mass nennt eine Groesse, die der rekursive Ruf AENDERT
+--
+-- **DASS es faellt, bleibt Beweisersache** -- dieselbe Trennung wie bei `S005` am
+-- Abstiegsmass einer Traversierung, und sie ist die Zielform: die Notation traegt, der
+-- Beweis bleibt beim Nutzer.
+
+module beispiel::rekursion {
+
+const TIEFE : u32 = 512;
+
+table Knoten count 1024 {
+    slot { elter : option index into Knoten, tiefe : u32 in 0 .. TIEFE, }
+}
+
+static mut summe : u32 = 0;
+
+-- Der Zaehler faellt, und `decreases` sagt WELCHE Groesse es ist.
+impl fn absteigen(n : u32 in 0 .. TIEFE) -> u32
+    effects { writes summe }
+    costs   <= 64 ops
+    decreases n
+{
+    summe = n;
+    if n >= 1 {
+        return absteigen(n - 1);
+    }
+    return 0;
+}
+
+-- **Wechselseitige Rekursion traegt es genauso** -- der Zyklus geht ueber zwei Namen, und
+-- beide brauchen ihr Mass.
+impl fn gerade(n : u32 in 0 .. TIEFE) -> u32
+    effects { writes summe }
+    costs   <= 64 ops
+    decreases n
+{
+    summe = n;
+    if n >= 1 {
+        return ungerade(n - 1);
+    }
+    return 0;
+}
+
+impl fn ungerade(n : u32 in 0 .. TIEFE) -> u32
+    effects { writes summe }
+    costs   <= 64 ops
+    decreases n
+{
+    summe = n;
+    if n >= 1 {
+        return gerade(n - 1);
+    }
+    return 0;
+}
+
+}

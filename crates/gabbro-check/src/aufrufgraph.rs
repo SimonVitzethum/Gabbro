@@ -38,8 +38,10 @@ pub struct Knoten {
     pub ruft: BTreeSet<String>,
     /// **Die Parameternamen, in Reihenfolge** — die Brücke über den Aufrufrand.
     pub parameter: Vec<String>,
-    /// Je Rufkante: der aufgelöste Schlüssel und die **Basisnamen der Argumente**.
-    pub rufe: Vec<(String, Vec<String>)>,
+    /// Je Rufkante: der aufgelöste Schlüssel und die **Ortsausdrücke der Argumente** —
+    /// `None`, wo das Argument kein Ort ist. *`None` macht die Hülle an dieser Kante
+    /// unvollständig, statt den Namen des Gerufenen stillschweigend zu erben.*
+    pub rufe: Vec<(String, Vec<Option<String>>)>,
     /// **Das Modul, in dem die Funktion steht.** Ohne es ist `ruft` nicht auflösbar: zwei
     /// `hilf` in zwei Modulen sind zwei Funktionen, und der kurze Name nennt beide.
     pub modul: String,
@@ -216,12 +218,45 @@ impl Graph {
             // uebrig, bleibt der Name stehen -- **grob, und in die sichere Richtung grob.**
             let leer: Vec<String> = Vec::new();
             let ziel_par = self.knoten.get(ziel).map(|z| &z.parameter).unwrap_or(&leer);
-            menge.extend(tiefer.into_iter().map(|w| ersetze(&w, ziel_par, args)));
+            for w in tiefer {
+                let (neu, unklar) = ersetze(&w, ziel_par, args);
+                if unklar && offen.is_none() {
+                    *offen = Some(format!(
+                        "an argument of the call to `{ziel}` is not a place, so `{w}` \
+                         cannot be carried across"
+                    ));
+                }
+                menge.insert(neu);
+            }
         }
         // Kanten ohne Argumentwissen (`transition`-Uebergaenge) laufen weiter wie bisher.
         for g in k.ruft.iter().filter(|g| !k.rufe.iter().any(|(z, _)| &z == g)) {
             self.gehe(g, gesehen, menge, offen);
         }
+    }
+
+    /// **Steht diese Funktion in einem Rekursionszyklus?** Erreicht sie sich selbst?
+    ///
+    /// Die Frage, die «K5.4» stellt: bei einem Zyklus zählt der Kostenpass jede Kante einmal,
+    /// und `costs` ist dort eine **Annahme**. Erst ein `decreases` macht daraus eine Aussage.
+    pub fn im_zyklus(&self, start: &str) -> bool {
+        let mut gesehen = BTreeSet::new();
+        let mut offen: Vec<&str> = match self.knoten.get(start) {
+            Some(k) => k.ruft.iter().map(String::as_str).collect(),
+            None => return false,
+        };
+        while let Some(n) = offen.pop() {
+            if n == start {
+                return true;
+            }
+            if !gesehen.insert(n.to_string()) {
+                continue;
+            }
+            if let Some(k) = self.knoten.get(n) {
+                offen.extend(k.ruft.iter().map(String::as_str));
+            }
+        }
+        false
     }
 
     /// Der qualifizierte Schlüssel einer Funktion — die Form, die `huelle` und `verlangt`
@@ -270,35 +305,51 @@ impl Graph {
     }
 }
 
-/// **Einen Wirkungsnamen über den Aufrufrand tragen.**
-fn ersetze(wirkung: &str, parameter: &[String], argumente: &[String]) -> String {
+/// **Einen Wirkungsnamen über den Aufrufrand tragen** («K5.5»).
+///
+/// `writes p.slots` mit `p` als erstem Parameter und `a.b` als erstem Argument wird
+/// `writes a.b.slots` — **der ganze Ortsausdruck**, nicht nur seine Basis.
+///
+/// Das zweite Feld sagt, ob die Übersetzung **unklar** war: der Name gehört einem Parameter
+/// des Gerufenen, und das Argument an dieser Stelle ist kein Ort (`f(g(x))`, ein Literal).
+/// *Dann erbt der Rufer einen Namen, den es bei ihm nicht gibt* — und statt ihn
+/// stillschweigend stehen zu lassen, macht das die Hülle unvollständig (`E009`).
+fn ersetze(wirkung: &str, parameter: &[String], argumente: &[Option<String>]) -> (String, bool) {
     // `locks shared X` ist zweiwortig; der Ort ist immer das LETZTE Wort.
     let Some((kopf, ort)) = wirkung.rsplit_once(' ') else {
-        return wirkung.to_string();
+        return (wirkung.to_string(), false);
     };
     let (grund, rest) = match ort.find(['.', '[']) {
         Some(i) => (&ort[..i], &ort[i..]),
         None => (ort, ""),
     };
     match parameter.iter().position(|p| p == grund) {
-        Some(i) if i < argumente.len() && !argumente[i].is_empty() => {
-            format!("{kopf} {}{rest}", argumente[i])
-        }
-        _ => wirkung.to_string(),
+        Some(i) if i < argumente.len() => match &argumente[i] {
+            Some(a) => (format!("{kopf} {a}{rest}"), false),
+            None => (wirkung.to_string(), true),
+        },
+        // Kein Parametername -- eine globale Stelle, sie heisst ueberall gleich.
+        _ => (wirkung.to_string(), false),
     }
 }
 
-/// Je Rufstelle: der geschriebene Pfad und die Basisnamen seiner Argumente.
-fn sammle_kanten(b: &Block, aus: &mut Vec<(String, Vec<String>)>) {
-    fn nimm_ruf(r: &Ruf, aus: &mut Vec<(String, Vec<String>)>) {
+/// Je Rufstelle: der geschriebene Pfad und die Ortsausdrücke seiner Argumente.
+pub fn kanten_von(b: &Block, aus: &mut Vec<(String, Vec<Option<String>>)>) {
+    sammle_kanten(b, aus)
+}
+
+fn sammle_kanten(b: &Block, aus: &mut Vec<(String, Vec<Option<String>>)>) {
+    fn nimm_ruf(r: &Ruf, aus: &mut Vec<(String, Vec<Option<String>>)>) {
         if let Some(n) = r.pfad.teile.last() {
             if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
                 let args = r
                     .argumente
                     .iter()
                     .map(|a| match &a.art {
-                        ExprArt::Ort(o) => o.basis.text.clone(),
-                        _ => String::new(),
+                        // **Der ganze Ortsausdruck** («K5.5»), nicht nur seine Basis:
+                        // `f(a.b)` traegt `a.b`, und `writes p.slots` wird `writes a.b.slots`.
+                        ExprArt::Ort(o) => Some(o.text()),
+                        _ => None,
                     })
                     .collect();
                 aus.push((r.pfad.text(), args));
@@ -310,7 +361,7 @@ fn sammle_kanten(b: &Block, aus: &mut Vec<(String, Vec<String>)>) {
             }
         }
     }
-    fn aus_expr(e: &Expr, aus: &mut Vec<(String, Vec<String>)>) {
+    fn aus_expr(e: &Expr, aus: &mut Vec<(String, Vec<Option<String>>)>) {
         match &e.art {
             ExprArt::Ruf(r) => nimm_ruf(r, aus),
             ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => aus_expr(x, aus),

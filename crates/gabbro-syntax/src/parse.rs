@@ -1955,6 +1955,13 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // «K5.4» -- das Abstiegsmass der Rekursion, direkt hinter den Kosten: beide sagen
+        // etwas ueber die Terminierung, und `costs` allein kann es bei einem Zyklus nicht.
+        let decreases = if self.friss_kw(Kw::Decreases) {
+            Some(self.expr()?)
+        } else {
+            None
+        };
         let by = if self.friss_kw(Kw::By) {
             self.inductlist()?
         } else {
@@ -1997,6 +2004,7 @@ impl<'a> Parser<'a> {
             advances,
             effects,
             costs,
+            decreases,
             by,
             section,
             arch,

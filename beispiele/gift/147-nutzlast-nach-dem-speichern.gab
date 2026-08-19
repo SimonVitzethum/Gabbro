@@ -1,0 +1,25 @@
+-- erwartet: V006
+-- **Ein release-Speichern veroeffentlicht, was VOR ihm geschah.**
+--
+-- Die Paarung prueft `(Atomic, Nutzlast)` ueber das ganze Programm -- und prueft nicht die
+-- Stelle, an der die Ordnung ueberhaupt entsteht. Hier steht die Nutzlast DANACH, und der
+-- Leser sieht sie nie.
+--
+-- *A10 sagt, DASS release/acquire die Sichtbarkeit herstellen. Diese Regel sagt, dass das
+-- Programm die Form hat, fuer die das Axiom ueberhaupt gilt -- das Axiom trug eine
+-- Voraussetzung, und niemand pruefte sie.*
+module gift::nutzlast_danach {
+
+static mut n : u32 = 0;
+atomic F : bool release;
+
+impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
+{
+    F = true publishes { n };
+    n = v;
+}
+
+impl fn r() -> u32 effects { reads F, reads n } costs <= 8 ops
+{ let f = F awaits { n }; if f { return n; } return 0; }
+
+}

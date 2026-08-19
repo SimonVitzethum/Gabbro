@@ -1,0 +1,22 @@
+-- erwartet: V007
+-- **Die Spiegelseite: gelesen VOR der Erwerbung.**
+--
+-- Ein acquire-Laden macht die Nutzlast von dort an sichtbar. Ein Lesen davor sieht den alten
+-- Wert -- und die `awaits`-Zeile behauptet das Gegenteil.
+module gift::nutzlast_vorher {
+
+static mut n : u32 = 0;
+atomic F : bool release;
+
+impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
+{ n = v; F = true publishes { n }; }
+
+impl fn r() -> u32 effects { reads F, reads n } costs <= 8 ops
+{
+    let vorher = n;
+    let f = F awaits { n };
+    if f { return vorher; }
+    return 0;
+}
+
+}

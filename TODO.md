@@ -517,26 +517,29 @@ as a record of what the closure cost; the details are in
 | `own` is a synonym for `rw` | **the specification was wrong, not the pass** — `SYNTAX.md` §3 now carries the measurement |
 | lexer panic · licence entry | **`P038`** (measured depth limit) · `license = "AGPL-3.0-only"` |
 
-### «K5» — full coverage of the five plumbing classes ([`dokumente/PLAN.md`](dokumente/PLAN.md))
+### «K5» — **executed 2026-08-19, all five columns** ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
-*Planned 2026-08-19 on a fore-measurement of 7 targeted probes. **Three of them are silent
-holes**, and silence is what the order below sorts by — an `E009` is an entry, a silence is a
-false promise.*
+| column | built | evidence |
+|---|---|---|
+| K5.1 publication ordering | `V006` `V007` | poison 147, 148 |
+| K5.2 rank without a value | `H014` | poison 149 |
+| K5.5 argument mapping | — | the message names the caller's own place; a non-place argument gives `E009` |
+| K5.3 context matrix | `gabbro kontexte` | poison 152 · exemptions only under `assume ein_kern` |
+| K5.4 `decreases` | `K008` `K009` | poison 150, 151 · `beispiele/33` |
 
-- [ ] **K5.1 — the payload is written AFTER the release store** (`V006`), **and read BEFORE
-      the acquire load** (`V007`). Both measured **STILL** today. *A10 says release/acquire
-      establish visibility; nobody checks that the program has the shape the axiom needs.*
-- [ ] **K5.2 — a `rank` that is not constant-evaluable is silently skipped** by `H006` AND
-      `H012` (`rang: Option<i128>`, both `continue` on `None`). Measured: an inverted nesting
-      under such a lock gives **0 errors**. → `H014`, at the declaration, not at the site.
-- [ ] **K5.5 — the argument mapping carries only the BASE name.** `f(g(x))` and `f(a.b)` keep
-      the callee's parameter name. Not unsafe — coarse in the safe direction — but the
-      inherited foreign name stands in the message and nobody finds it in their own body.
-- [ ] **K5.3 — the context matrix.** `masks IRQ`, `per cpu`, `nested never` all say which
-      contexts exclude each other, and `H013` reads none of them. Needs a **named assumption**
-      (`ein_kern` / `mehrere_kerne`) — on more than one core `masks IRQ` excludes nothing.
-- [ ] **K5.4 — `decreases` for recursion.** Today `K001`+`E009` NAME it; `costs` on a
-      recursive function is an assumption. The only column that widens the language, hence last.
+**And a find that only the building showed:** `costs` was *unsatisfiable* for recursion — a
+call counts the callee's DECLARED cost, so on a cycle it counts its own, and the body
+necessarily exceeds its own promise. `K001` fell on every correct recursive function, **which
+is why the corpus contained none.** *That looked like a style choice and was a language limit
+nobody had marked as one.* With a `decreases`, `costs` is the promise of ONE pass.
+
+- [ ] **`H013` still has zero bite on the corpus.** `gabbro kontexte beispiele/07` prints it:
+      4 context roots, 2 with a visible body, 1 place touched, **0 of them declared in this
+      unit.** The rule's whole evidence is poison 146/152. *Falle 80 until the second corpus.*
+- [ ] **A disequality at the range boundary does not narrow.** Found while writing
+      `beispiele/33`: `if n == 0 { return 0; }` followed by `n - 1` still reports `M104`,
+      because `n != 0` is not turned into `n >= 1` although `0` is the lower bound of the
+      declared range. *Small, and it costs a `narrow` line at every recursion.*
 
 - [ ] **The full argument mapping is only one level deep.** `writes p.slots` becomes
       `writes q.slots` through the base name; an argument that is itself an expression
@@ -1342,7 +1345,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 140 / 209) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 140 / 210) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |

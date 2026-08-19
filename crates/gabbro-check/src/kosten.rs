@@ -195,6 +195,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         _ => {}
     });
 
+    let g = crate::aufrufgraph::erhebe_mit(baum, &u);
     let mut z = Zaehlung::default();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else {
@@ -216,6 +217,10 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         let r = Rechner {
             u: &u,
             modul,
+            mit_mass: f
+                .decreases
+                .as_ref()
+                .map(|_| (&g, g.schluessel_von(modul, &f.name.text))),
             deklariert: &deklariert,
             haltezeiten: &haltezeiten,
             geteilte_haltezeiten: &geteilte_haltezeiten,
@@ -226,6 +231,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         r.sperrbloecke(b, absagen);
         // -- K006/K007: jede Schleifenzusage gegen ihren eigenen Rumpf.
         r.schleifenzusagen(b, absagen);
+        // -- K008/K009 («K5.4»): die Rekursion bekommt ein Mass.
+        rekursionsmass(f, b, modul, &u, &g, absagen);
 
         let Some(zusage_expr) = &f.costs else {
             return;
@@ -373,6 +380,14 @@ impl Kosten {
 struct Rechner<'a> {
     u: &'a Umgebung,
     modul: &'a str,
+    /// **Der eigene qualifizierte Name, wenn die Funktion ein `decreases` trägt** («K5.4»).
+    ///
+    /// Mit einem Mass ist `costs` die Zusage **eines Durchgangs**, nicht der ganzen Rekursion
+    /// — die Tiefe steht im Mass. *Ohne diese Lesart wäre die Zeile unerfüllbar:* ein
+    /// rekursiver Ruf zählt die deklarierten Kosten des Gerufenen, also seine eigenen, und
+    /// der Rumpf käme immer über die eigene Zusage. **`K001` fiel an jeder korrekten
+    /// rekursiven Funktion**, und das war der Grund, warum niemand eine schrieb.
+    mit_mass: Option<(&'a crate::aufrufgraph::Graph, String)>,
     deklariert: &'a HashMap<String, i128>,
     haltezeiten: &'a HashMap<String, i128>,
     /// **Der eigene Zweig der geteilten Seite** (MESSUNGEN.md, Nebenbefund N3): `held` ist
@@ -618,6 +633,18 @@ impl<'a> Rechner<'a> {
             .kandidaten_oeffentlich(self.modul, &r.pfad.text())
             .into_iter()
             .find_map(|k| self.deklariert.get(&k).copied());
+        // **Ein rekursiver Ruf unter einem `decreases` kostet hier NICHTS** («K5.4»): die
+        // Tiefe trägt das Mass, die Zusage gilt je Durchgang.
+        if let Some((g, selbst)) = &self.mit_mass {
+            if let Some(ziel) = g.aufloesen(self.u, self.modul, &r.pfad.text()) {
+                if &ziel == selbst || g.im_zyklus(&ziel) {
+                    return r
+                        .argumente
+                        .iter()
+                        .fold(Kosten::Zahl(0), |a, e| a.plus(self.ausdruck(e)));
+                }
+            }
+        }
         let mut summe = match erklaert.or(uebergang) {
             Some(n) => Kosten::Zahl(n),
             None => {
@@ -869,6 +896,8 @@ pub fn bericht(baum: &Programm) -> String {
         let r = Rechner {
             u: &u,
             modul,
+            // Der Bericht rechnet ohne Mass -- er zeigt Zahlen, er entscheidet nicht.
+            mit_mass: None,
             deklariert: &deklariert,
             haltezeiten: &haltezeiten,
             geteilte_haltezeiten: &geteilte_haltezeiten,
@@ -965,6 +994,7 @@ pub fn durchgangskosten(
     let rechner = Rechner {
         u: &u,
         modul,
+        mit_mass: None,
         deklariert: &deklariert,
         haltezeiten: &leer,
         geteilte_haltezeiten: &leer,
@@ -991,5 +1021,138 @@ fn pred_kosten(r: &Rechner, p: &Pred) -> Kosten {
         PredArt::Klammer(x) | PredArt::Nicht(x) => pred_kosten(r, x),
         PredArt::Und(a, b) | PredArt::Oder(a, b) => pred_kosten(r, a).plus(pred_kosten(r, b)),
         _ => Kosten::Zahl(1),
+    }
+}
+
+/// **«K5.4» — die Rekursion bekommt ein Mass** (`K008`/`K009`).
+///
+/// `SPRACHE.md` §7: *„ein Aufruf zählt die **deklarierten** `costs` des Gerufenen."* Bei einem
+/// Zyklus zählt damit jede Kante **einmal**, und die Zusage einer rekursiven Funktion ist eine
+/// **Annahme**, kein Ergebnis. `K001` und `E009` benannten das ehrlich — *und ehrlich ist
+/// nicht vollständig.*
+///
+/// * **`K008`** — eine Funktion, die sich selbst erreicht, trägt ein `decreases`.
+/// * **`K009`** — an jeder rekursiven Rufstelle ändert sich mindestens eine der Grössen, die
+///   das Mass nennt. **Wird jede unverändert durchgereicht, kann das Mass nicht fallen.**
+///
+/// Geprüft wird die **notwendige** Bedingung, genau wie `S005` am Abstiegsmass einer
+/// `traverse`. *DASS es fällt, bleibt Beweisersache (`consuming.ordnung`)* — und diese
+/// Trennung ist die Zielform: **die Notation trägt, der Beweis bleibt beim Nutzer.**
+fn rekursionsmass(
+    f: &FnDecl,
+    b: &Block,
+    modul: &str,
+    u: &Umgebung,
+    g: &crate::aufrufgraph::Graph,
+    absagen: &mut Absagen,
+) {
+    let voll = g.schluessel_von(modul, &f.name.text);
+    if !g.im_zyklus(&voll) {
+        return;
+    }
+    let Some(mass) = &f.decreases else {
+        absagen.schiebe(
+            Absage::fehler(
+                "K008",
+                f.name.span,
+                format!("`{}` reaches itself and declares no `decreases`", f.name.text),
+            )
+            .mit_notiz(
+                "a call counts the DECLARED `costs` of the callee, so on a cycle every edge \
+                 counts once -- the promise is an assumption, not a result",
+            )
+            .mit_notiz("`decreases <expr>` names the measure that falls along the recursion"),
+        );
+        return;
+    };
+    // Welche Parameter nennt das Mass?
+    let mut genannt = Vec::new();
+    namen_im_ausdruck(mass, &mut genannt);
+    let stellen: Vec<usize> = f
+        .parameter
+        .iter()
+        .enumerate()
+        .filter(|(_, p)| genannt.contains(&p.name.text))
+        .map(|(i, _)| i)
+        .collect();
+    if stellen.is_empty() {
+        absagen.schiebe(
+            Absage::fehler(
+                "K009",
+                mass.span,
+                format!(
+                    "the `decreases` of `{}` names no parameter of it",
+                    f.name.text
+                ),
+            )
+            .mit_notiz(
+                "a measure over something the recursive call cannot change is constant -- \
+                 and a constant measure never falls",
+            )
+            .mit_notiz(
+                "checked is the NECESSARY condition, not the sufficient one: THAT it falls \
+                 is the prover's business (`consuming.ordnung`)",
+            ),
+        );
+        return;
+    }
+    // An jeder rekursiven Rufstelle: aendert sich wenigstens eine der genannten Groessen?
+    let mut rufe: Vec<(String, Vec<Option<String>>)> = Vec::new();
+    crate::aufrufgraph::kanten_von(b, &mut rufe);
+    for (pfad, args) in &rufe {
+        let Some(ziel) = g.aufloesen(u, modul, pfad) else {
+            continue;
+        };
+        // Nur ZURUECK in den Zyklus: ein Ruf auf etwas, das uns wieder erreicht.
+        if ziel != voll && !g.im_zyklus(&ziel) {
+            continue;
+        }
+        let bewegt = stellen.iter().any(|i| match args.get(*i) {
+            // Derselbe Name durchgereicht -- diese Groesse aendert sich nicht.
+            Some(Some(a)) => *a != f.parameter[*i].name.text,
+            // Kein Ort: irgendein gerechneter Ausdruck. Das ZAEHLT als Bewegung -- was er
+            // rechnet, kann dieser Pass nicht sagen, und Schweigen ist hier die richtige
+            // Antwort (W10).
+            Some(None) => true,
+            None => false,
+        });
+        if !bewegt {
+            absagen.schiebe(
+                Absage::fehler(
+                    "K009",
+                    f.name.span,
+                    format!(
+                        "the recursive call to `{pfad}` passes every size of the \
+                         `decreases` of `{}` through unchanged",
+                        f.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "then the measure is the same at every level -- and a constant measure \
+                     never falls",
+                )
+                .mit_notiz(
+                    "checked is the NECESSARY condition: THAT it falls is the prover's \
+                     business (`consuming.ordnung`)",
+                ),
+            );
+        }
+    }
+}
+
+fn namen_im_ausdruck(e: &Expr, aus: &mut Vec<String>) {
+    match &e.art {
+        ExprArt::Ort(o) => aus.push(o.basis.text.clone()),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => namen_im_ausdruck(x, aus),
+        ExprArt::Binaer(_, a, b) => {
+            namen_im_ausdruck(a, aus);
+            namen_im_ausdruck(b, aus);
+        }
+        ExprArt::Ruf(r) => {
+            for a in &r.argumente {
+                namen_im_ausdruck(a, aus);
+            }
+        }
+        _ => {}
     }
 }

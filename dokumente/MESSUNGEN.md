@@ -9285,3 +9285,65 @@ erklärt, bekommt keine geprüft.
 151 Kennungen · 146 Gifte (0 ohne Biss) · 127 Tests · 32 Beispiele sauber
 13 Waechter gruen · Abstieg: ALL PASS
 ```
+
+---
+
+# 2026-08-19, vierter Durchgang — «K5» ausgeführt, alle fünf Spalten
+
+**Der Plan sortierte nach Stille, und die Ausführung ist ihm gefolgt.**
+
+| Spalte | gebaut | Beleg |
+|---|---|---|
+| **K5.1** Publikation, Reihenfolge | `V006` `V007` | Gift 147, 148 · beide Gegenproben schweigen |
+| **K5.2** Rang ohne Wert | `H014` | Gift 149 |
+| **K5.5** Argumentabbildung | — | die Meldung nennt `q.slots` statt `p.slots`; ein Argument, das kein Ort ist, gibt `E009` |
+| **K5.3** Kontextmatrix | `gabbro kontexte` | Gift 152 · `assume ein_kern` nimmt aus, ohne sie nichts |
+| **K5.4** `decreases` | `K008` `K009` | Gift 150, 151 · `beispiele/33` |
+
+## Der Fund, den erst das Bauen zeigte: `costs` war für Rekursion unerfüllbar
+
+`SPRACHE.md` §7 sagt: *„ein Aufruf zählt die **deklarierten** `costs` des Gerufenen."* Bei
+einem Zyklus zählt er damit **seine eigenen**, und der Rumpf liegt notwendig über seiner
+eigenen Zusage. **`K001` fiel an jeder korrekten rekursiven Funktion.**
+
+> *Und deshalb stand im ganzen Korpus keine einzige.* Das sah aus wie eine Stilentscheidung
+> und war eine **Sprachgrenze, die niemand als Wahl markiert hatte** — genau die Klasse, die
+> bei den Zeichenketten schon einmal fiel.
+
+Mit einem `decreases` ändert sich die Lesart: **`costs` ist die Zusage EINES Durchgangs**, die
+Tiefe steht im Mass. `beispiele/33` schreibt jetzt einfache *und* wechselseitige Rekursion,
+mit **0 Fehlern** — und drei `E009`, die ehrlich sagen, dass die Wirkungshülle über einem
+Zyklus eine untere Schranke ist.
+
+## Zwei Klauseln sind als Nebenwirkung aufgestiegen
+
+`pruefe-klauseln.py` meldete `via` und `verschachtelt` als **GESTIEGEN** — die Kontextmatrix
+liest beide (`via idt` unterscheidet den Interruptkontext, `nested never` die Selbstverschachtelung).
+*Gemeldet hat es die Ratsche, nicht die Hand* — zum vierten Mal.
+
+## Und die Zeile, die ehrlich bleiben musste
+
+`masks IRQ` schliesst auf mehr als **einem** Kern gar nichts aus. Die Ausnahmen der Matrix
+gelten darum nur unter `assume ein_kern`, und ohne die Zeile bleibt `H013`, was es war.
+
+> **Das ist der Unterschied zwischen einer Lockerung, die man sieht, und einer, die der Prüfer
+> sich selbst erlaubt:** die Annahme steht im Zeugnis unter *„bewiesen unter A1…An"*, und ihr
+> Falsifikator ist eine Probe, die auf zwei Kernen bootet. *`ein_kern` ist falsifizierbar und
+> A10 ist es nicht — ein zweiter Kern ist herstellbar, eine Umordnung im Speichermodell nicht.*
+
+## Was `H013` weiterhin NICHT belegt
+
+```
+Kontextwurzeln im Korpus:    4      davon mit sichtbarem Rumpf: 2
+beruehrte Plaetze:           1      davon in dieser Einheit deklariert: 0
+```
+
+`gabbro kontexte beispiele/07` druckt es. **Die Hülle ist nicht leer** — der `extern fn`
+erklärt `writes kernzustand` —, aber der Platz ist in dieser Übersetzungseinheit nicht
+deklariert, und darum schweigt `H013` zu Recht. *Die vorherige Fassung dieses Satzes
+(„die Hülle ist leer") war zu grob; der Bericht hat sie berichtigt.*
+
+```
+156 Kennungen · 152 Gifte (0 ohne Biss) · 127 Tests · 33 Beispiele sauber
+13 Waechter gruen · Abstieg: ALL PASS
+```

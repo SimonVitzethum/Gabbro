@@ -1,0 +1,26 @@
+-- erwartet: H013
+-- **`masks IRQ` schliesst auf mehr als EINEM Kern gar nichts aus.**
+--
+-- Die Kontextmatrix («K5.3») nimmt `masks IRQ` und `nested never` als Ausschluss -- **aber
+-- nur unter der Annahme `ein_kern`**, und die steht hier nicht. Ein zweiter Kern laeuft
+-- weiter, gleichgueltig wie die Interruptmaske DIESES Kerns steht.
+--
+-- *Das ist der Unterschied zwischen einer Lockerung, die man sieht, und einer, die der
+-- Pruefer sich selbst erlaubt:* mit `assume ein_kern "…" falsifier …` steht sie im Zeugnis
+-- und hat einen Falsifikator -- eine Probe, die auf zwei Kernen bootet.
+module gift::maskiert_ohne_annahme {
+
+static mut z : u32 = 0;
+
+impl fn a() effects { writes z, masks IRQ } costs <= 4 ops { z = 1; }
+
+entry sc vector 0x80 via idt arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ks per cpu nested never
+    dispatch gift::maskiert_ohne_annahme::a;
+}
+
+}

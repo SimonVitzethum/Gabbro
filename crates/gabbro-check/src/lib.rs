@@ -29,6 +29,7 @@ pub mod gruppe;
 pub mod emit;
 pub mod geteilt;
 pub mod kbedingung;
+pub mod kontexte;
 pub mod kosten;
 mod m1;
 mod namen;
@@ -470,5 +471,24 @@ pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
         | StmtArt::Publish(_)
         | StmtArt::AwaitLoad(_)
         | StmtArt::Exchange(_) => false,
+    }
+}
+
+/// **Wohin eine Anweisung schreibt — sie selbst und alles unter ihr.**
+///
+/// Stand als `m1::sammle_schreibziele` an einer Stelle und wurde ab «K5.1» an zweien
+/// gebraucht. *Eine zweite Kopie wäre die Bauart gewesen, die `endet_immer` dreimal ergeben
+/// hat.*
+pub fn schreibziele(s: &Stmt, out: &mut Vec<Ort>) {
+    match &s.art {
+        StmtArt::Zuweisung(z) => out.push(z.ziel.clone()),
+        StmtArt::Publish(p) => out.push(p.ziel.clone()),
+        StmtArt::Exchange(e) => out.push(e.ort.clone()),
+        _ => {}
+    }
+    for k in unterbloecke(s) {
+        for i in &k.anweisungen {
+            schreibziele(i, out);
+        }
     }
 }

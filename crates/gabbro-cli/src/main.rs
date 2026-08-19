@@ -97,6 +97,33 @@ fn main() -> std::process::ExitCode {
         // Verus-Zeilen gemessen war. Was sie ersetzt, braucht eine Beweispflicht, die
         // ENTSTANDEN ist statt erfunden -- und dieses Register zaehlt sie. Der Pruefer laeuft
         // davor, aus demselben Grund wie bei `emit`.
+        "kontexte" => {
+            if rest.is_empty() {
+                eprintln!("gabbro kontexte: no file named");
+                return std::process::ExitCode::from(2);
+            }
+            let mut schlecht = false;
+            for datei in rest {
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} not readable");
+                    schlecht = true;
+                    continue;
+                };
+                let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+                gabbro_check::pruefe(&baum, &mut absagen);
+                if absagen.fehler_zahl() > 0 {
+                    eprint!("{}", absagen.zeige(&quelle));
+                    eprintln!("gabbro kontexte: {datei} has errors -- no register");
+                    schlecht = true;
+                    continue;
+                }
+                print!("{}", gabbro_check::kontexte::zeige(&baum, datei));
+            }
+            if schlecht {
+                return std::process::ExitCode::from(1);
+            }
+            std::process::ExitCode::SUCCESS
+        }
         "pflichten" => {
             if rest.is_empty() {
                 eprintln!("gabbro pflichten: no file named");
@@ -183,6 +210,7 @@ fn hilfe() {
   gabbro schablonen                 the generator templates: the third counting column
   gabbro k-bedingung <file.gab>…    per carrier: are ALL write sites generated? (measurement 2)
   gabbro pflichten  <file.gab>…     what a HUMAN still owes -- counted, not discharged
+  gabbro kontexte   <file.gab>…     execution contexts per place -- and the COUNT beside it
 
 Exit: 0 when there is no error, 1 on errors, 2 on a wrong call."
     );

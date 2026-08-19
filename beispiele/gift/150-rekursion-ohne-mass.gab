@@ -1,0 +1,14 @@
+-- erwartet: K008
+-- **Eine Funktion, die sich selbst erreicht, ohne Abstiegsmass.**
+--
+-- `SPRACHE.md` §7: *„ein Aufruf zaehlt die DEKLARIERTEN `costs` des Gerufenen."* Bei einem
+-- Zyklus zaehlt damit jede Kante einmal, und die Zusage ist eine **Annahme**, kein Ergebnis.
+-- `K001` und `E009` benannten das ehrlich -- *ehrlich ist nicht vollstaendig.*
+module gift::rekursion_ohne_mass {
+
+static mut a : u32 = 0;
+
+impl fn f(n : u32) -> u32 effects { writes a } costs <= 8 ops
+{ a = n; if n == 0 { return 0; } return f(n); }
+
+}

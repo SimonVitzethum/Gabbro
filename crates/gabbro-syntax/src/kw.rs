@@ -71,6 +71,7 @@ wortschatz! {
     Breaking      => "breaking",      res;
     Effects       => "effects",       res;
     Costs         => "costs",         res;
+    Decreases     => "decreases",     res;
     Where         => "where",         res;
     In            => "in",            res;
     Exhaustive    => "exhaustive",    res;

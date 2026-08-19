@@ -140,14 +140,45 @@ impl Rufwissen<'_> {
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let u = crate::umgebung::Umgebung::sammle(baum);
     let mut sperren: BTreeMap<String, Sperre> = BTreeMap::new();
-    crate::fuer_jedes_item(baum, &mut |item| {
+    // **Der Modulpfad statt `""`** («K5.2», 2026-08-19). `rank NKERNE` in einem
+    // `module`-Block loeste nie auf -- derselbe Fehler wie im Aufrufgraphen am Vormittag,
+    // eine Ebene tiefer.
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Lock(l) = &item.art {
+            let rang = u.konst_wert(modul, &l.rang);
+            // **`H014` -- ein Rang, den niemand ausrechnen kann, ist keine Ordnung.**
+            //
+            // `H006` und `H012` uebersprangen beide eine Sperre mit `rang: None`, jeder mit
+            // einem stillen `continue`. Gemessen: `lock LA … rank woher()` neben
+            // `lock LB … rank 1`, verschachtelt in der falschen Richtung -- **null Fehler.**
+            //
+            // *Der Rang IST die Ordnung; ohne ihn gibt es keine.* Dieselbe Klasse wie
+            // `bounded` ohne Zahl -- und die Absage steht an der DEKLARATION, nicht an jedem
+            // Zugriff: dort waere sie eine Meldung je Fundstelle fuer einen Fehler, der
+            // einmal gemacht wurde.
+            if rang.is_none() {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "H014",
+                        l.rang.span,
+                        format!("the `rank` of `{}` is not fixed at compile time", l.name.text),
+                    )
+                    .mit_notiz(
+                        "the rank IS the lock order -- without it `H006` and `H012` have \
+                         nothing to compare, and both stayed silent",
+                    )
+                    .mit_notiz(
+                        "same class as a `bounded` without a number: a clause the grammar \
+                         demands and nobody can read",
+                    ),
+                );
+            }
             sperren.insert(
                 l.name.text.clone(),
                 Sperre {
                     schuetzt: l.schuetzt.iter().map(|o| o.text()).collect(),
                     hat_geteilte_zeit: l.geteilte_haltezeit.is_some(),
-                    rang: u.konst_wert("", &l.rang),
+                    rang,
                     span: l.name.span,
                 },
             );
@@ -399,18 +430,28 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             ItemArt::State(x) => welt.push(x.name.text.clone()),
             _ => {}
         });
-        let mut eintritte: Vec<(String, gabbro_syntax::span::Span, String)> = Vec::new();
-        crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
-            if let ItemArt::Entry(e) = &item.art {
-                eintritte.push((e.dispatch.text(), e.name.span, modul.to_string()));
-            }
-        });
+        // **«K5.3» -- die Kontextmatrix statt „irgendein Eintritt".**
+        //
+        // Die Ausnahmen gelten NUR unter der Annahme `ein_kern`: auf mehr als einem Kern
+        // schliesst `masks IRQ` gar nichts aus, ein zweiter Kern laeuft weiter. *Die Annahme
+        // steht damit im Zeugnis und hat einen Falsifikator -- eine Probe, die auf zwei
+        // Kernen bootet.* Ohne die Zeile wird nichts ausgenommen.
+        let kontexte = crate::kontexte::erhebe(baum);
+        let ein_kern = crate::annahmen(baum).contains_key("ein_kern");
         let mut gemeldet: Vec<String> = Vec::new();
-        for (ziel, span, modul) in &eintritte {
-            let Some(voll) = g.aufloesen(&u, modul, ziel) else {
+        for k in &kontexte {
+            let Some(voll) = g.aufloesen(&u, &k.modul, &k.wurzel) else {
                 continue;
             };
+            let (span, ziel) = (&k.span, &k.wurzel);
             let h = g.huelle(&voll);
+            // Maskiert der Weg die Interrupts? Dann kann ihn auf EINEM Kern nichts
+            // unterbrechen -- und nur dann.
+            let maskiert = h.wirkungen.iter().any(|w| w.starts_with("masks "));
+            if ein_kern && crate::kontexte::ein_kern_deckt(maskiert, k) {
+                continue;
+            }
+            let _ = ziel;
             // **Ueber einer unvollstaendigen Huelle wird nicht abgesagt** (R16).
             if h.unvollstaendig.is_some() {
                 continue;

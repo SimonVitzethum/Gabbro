@@ -2466,15 +2466,7 @@ fn nennt_namen(f: &Fakt, name: &str) -> bool {
 /// Sammelt jedes Ziel, auf das ein Block schreibt -- auch in seinen Unterbloecken.
 fn sammle_schreibziele(b: &Block, out: &mut Vec<Ort>) {
     for s in &b.anweisungen {
-        match &s.art {
-            StmtArt::Zuweisung(z) => out.push(z.ziel.clone()),
-            StmtArt::Publish(p) => out.push(p.ziel.clone()),
-            StmtArt::Exchange(e) => out.push(e.ort.clone()),
-            _ => {}
-        }
-        for k in crate::unterbloecke(s) {
-            sammle_schreibziele(k, out);
-        }
+        crate::schreibziele(s, out);
     }
 }
 

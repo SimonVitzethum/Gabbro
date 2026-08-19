@@ -97,7 +97,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
              check claim measures gates can_fail floor counterprobe expects
              endian little big reserved cost runs online offline
              offset_into index into option chain wrapping
-             atomic acquire release seq relaxed nothing accumulates merge
+             atomic acquire release seq relaxed nothing accumulates merge decreases
              max min add or and held protects rank shared
              embeds scale walk levels node down leaf mappings
              entry entrust vector regs out preserves clobbers stack dispatch
@@ -526,6 +526,7 @@ fndecl   = [ "pub" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" 
            [ "advances"  ident "->" ident ]
            [ "effects"   "{" efflist "}" ]
            [ "costs"     "<=" expr "ops" ]
+           [ "decreases" expr ]                                 (* «K5.4» *)
            [ "by"        inductlist ]
            [ "section" string ] [ "arch" ident ] [ "when" constexpr ]
            ( block | "=" pred ";" | ";" ) ;      (* "=" pred: nur fuer spec fn *)
@@ -567,6 +568,27 @@ eff      = "reads" place | "writes" place | "locks" [ "shared" ] place | "masks"
          | "allocs" ident | "consumes" place | "publishes" place | "diverges"
          | "pure" ;
 ```
+
+**`decreases <expr>` — das Abstiegsmass der REKURSION** («K5.4», 2026-08-19). Bis dahin war
+`costs` an einer rekursiven Funktion eine **Annahme**: *„ein Aufruf zählt die deklarierten
+`costs` des Gerufenen"* (§7), und bei einem Zyklus zählt jede Kante einmal. `K001` und `E009`
+benannten das ehrlich — und ehrlich ist nicht vollständig.
+
+Mit einem `decreases` ändert sich **die Lesart von `costs`**: es ist die Zusage **eines
+Durchgangs**, und die Tiefe steht im Mass. *Ohne diese Lesart wäre die Zeile unerfüllbar* — der
+rekursive Ruf zählte die eigenen deklarierten Kosten, und der Rumpf käme immer darüber.
+**`K001` fiel an jeder korrekten rekursiven Funktion**, und das ist der Grund, warum im ganzen
+Korpus keine steht.
+
+Geprüft wird die **notwendige** Bedingung, wie bei `S005` am Abstiegsmass einer `traverse`:
+
+* **`K008`** — eine Funktion, die sich selbst erreicht, trägt ein `decreases`.
+* **`K009`** — das Mass nennt eine Grösse, die der rekursive Ruf **ändert**. Wird jede
+  unverändert durchgereicht, ist das Mass auf jeder Ebene dasselbe.
+
+> **DASS es fällt, bleibt Beweisersache** (`consuming.ordnung`) — dieselbe Trennung wie bei
+> `S005`, und sie ist die Zielform: *die Notation trägt, der Beweis bleibt beim Nutzer.*
+
 
 > **`effects` is NOT fail-open.** A function **without** `effects` is a compile error;
 > whoever touches nothing writes `effects { pure }`. The omission that was formerly possible was at once
