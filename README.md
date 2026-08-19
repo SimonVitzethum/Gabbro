@@ -59,8 +59,8 @@ folder.*
 
 ## Why no Isabelle-anchored number replaces it yet
 
-The ten theories in [`beweise/`](beweise/) are **entirely the (1 − w) side** — six K, three A,
-one about the checker, **zero W**. An Isabelle-anchored `w` would have numerator **0** by
+The eleven theories in [`beweise/`](beweise/) are **entirely the (1 − w) side** — seven K,
+three A, one about the checker, **zero W**. An Isabelle-anchored `w` would have numerator **0** by
 construction, and the formula would return **0,30** — *below the seL4 anchor, hence a triumph,
 and false.* That is the error class this folder already booked once, when `p_B3` was read as a
 kernel-side `w` and produced 0,345.
@@ -75,9 +75,15 @@ exist to prevent.
 ## What IS anchored on Isabelle today, and it is the carried side
 
 ```
-1 479 lines of Isar  ·  9 proved generator templates  ·  142 corpus sites
-                        → 10,4 lines per site, and the figure FALLS with every program
+1 790 lines of Isar  ·  9 proved generator templates  ·  142 corpus sites
+                        → 12,6 lines per site (1 950 across all eleven theories)
 ```
+
+> **It ROSE on 2026-08-19, from 10,4** — `Table_Ops_Erhaltung.thy` came in at 311 lines and
+> `ops` has **zero** corpus sites, so the numerator grew and the denominator did not. *That is
+> the honest behaviour of the figure and worth stating out loud: it falls when a proved
+> construct gets used, and rises when one gets proved ahead of use.* **Proving before building
+> is the folder's own rule (K11.3.2), and this is what it costs on the dashboard.**
 
 **The only figure in this folder resting on the prover it actually uses.** It says nothing
 about functional correctness — it says the amortisation argument as a *measurement* rather than

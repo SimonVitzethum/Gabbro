@@ -252,8 +252,42 @@ pub const SCHABLONEN: &[Schablone] = &[
                   erhalten -- einmal ueber der Deklaration, nicht je Aufrufstelle. \
                   **Invarianten UEBER Traegern sind ausdruecklich nicht gedeckt**; sie sind \
                   `gruppe.ops`.",
+        // **Maschinell geprueft am 2026-08-19 -- und der Gegenstand fehlte.**
+        //
+        // Beim Ansetzen gemessen: `ops` steht an NULL Korpusstellen, und
+        // `opdecl = "ops" identlist ";"` nimmt beliebige Bezeichner. **Nirgends stand, WAS
+        // eine erzeugte Mutation tut** -- der Satz hatte kein Subjekt. Er ist aus dem Korpus
+        // geholt statt erfunden: `beispiele/01-tabelle.gab` schreibt `blatt_loeschen` mit
+        // `maintains baum_wohlgeformt`, und `aushaengen` daneben.
+        //
+        // Zuordnung Satz -> Zeile:
+        //   Amortisation ("einmal je Operation")  -> `folge_erhaelt`, `erreichbares_erhaelt`
+        //   einfuegen erhaelt                     -> `einfuegen_erhaelt` (zwei Bedingungen)
+        //   blatt_loeschen erhaelt                -> `blatt_loeschen_erhaelt`
+        //   Umhaengen faellt                      -> `umhaengen_faellt` (GEGENBEISPIEL)
+        //   Verbindungsinvariante nicht gedeckt   -> `verbindung_nicht_gedeckt`
+        //
+        // **Und der Stand bleibt ENTWORFEN, obwohl eine Theorie danebensteht.** Drei Gruende,
+        // und der dritte ist der bindende:
+        //
+        // 1. `Getragen` hiesse *„der Uebersetzer stuetzt sich heute darauf"* -- er tut es
+        //    nicht: `ops` steht an null Korpusstellen und hat keinen Erzeuger.
+        // 2. `Bewiesen` hiesse, die Pflicht sei eingeloest. Teil I traegt die Amortisation
+        //    nur unter der Hypothese *„jede erzeugte Operation erhaelt I"*, und die stellt
+        //    kein Pass her. Teil II loest sie fuer ZWEI Operationen VON HAND ein.
+        // 3. **Ein Eintrag verlaesst die Liste nur bewiesen oder mitsamt seinem Konstrukt.**
+        //    Ihn jetzt hochzubuchen, weil eine Theorie danebenliegt, waere das Verkleinern
+        //    durch Umschreiben, das die Ratsche verbietet.
+        //
+        // *Bewiesen ist die Mathematik der Schablone, nicht ihre Auslieferung -- derselbe
+        // Satz wie bei `table.induktion`, nur schaerfer, weil hier nicht einmal das
+        // Konstrukt benutzt wird.*
         stand: Stand::Entworfen,
-        voraussetzungen: &[],
+        voraussetzungen: &[
+            Voraussetzung { was: "jede ERZEUGTE Operation erhaelt die Invariante -- Teil I ist parametrisch, und es gibt keinen Erzeuger", durch: None },
+            Voraussetzung { was: "beim Einfuegen ist der Platz FRISCH und der Elter erreichbar", durch: None },
+            Voraussetzung { was: "beim Loeschen ist der Platz ein BLATT", durch: Some("das `requires ist_blatt(c, s)` des Rufers, gehalten von M1") },
+        ],
         fundstelle: "SPRACHE.md §10.2",
     },
     Schablone {

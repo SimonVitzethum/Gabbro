@@ -541,6 +541,20 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **`ops` hat keine WORTMENGE, und das ist der Rest von Punkt 2** *(gemessen 2026-08-19)*.
+      `opdecl = "ops" identlist ";"` nimmt beliebige Bezeichner; `insert, remove, relabel,
+      delete_leaf` sind in `SPRACHE.md` 10.2 ein BEISPIEL, keine Menge. **Ein Erzeuger kann
+      aus einem Namen keine Wirkung ableiten.** Zwei Auswege: eine geschlossene Wortmenge mit
+      je definierter Wirkung (wie `merge add|max|min`), oder der Nutzer schreibt die Wirkung
+      und der Erzeuger prueft sie -- *dann ist es aber keine ERZEUGTE Mutation mehr, und
+      Zuschnitt (c) faellt.* **Vorher zaehlen, welche Operationen der zweite Korpus
+      braucht** -- der erste hat null.
+- [ ] **`einfuegen` braucht ZWEI Bedingungen, und keine hat einen Pass** *(2026-08-19,
+      `Table_Ops_Erhaltung.thy`)*. Der Platz ist FRISCH, der Elter ERREICHBAR. Beim Loeschen
+      traegt das `requires ist_blatt(c, s)` des Rufers die Bedingung -- beim Einfuegen gibt
+      es keine solche Zeile. *Ein Erzeuger, der `einfuegen` ausliefert, muesste sie
+      herstellen oder verlangen.*
+
 - [ ] **P6 ist EROEFFNET, nicht erledigt** *(2026-08-19)*. `maintains` hat einen Leser
       (`M112`-`M114`), und `gabbro pflichten` zaehlt die erzeugten Pflichten: **17 ueber 31
       Beispiele, davon 7 fremd.** *Was fehlt, ist die zweite Haelfte:* die Pflicht muss in

@@ -7906,3 +7906,85 @@ klemmt in beide Richtungen; sie meldete beim nächsten Lauf *„GESTIEGEN — Ei
 49 Klauseln gebucht  ->  48
 16 ZUSAGE            ->  15
 ```
+
+---
+
+# Punkt 2 — `table.ops.erhaltung`: der Satz hatte kein Subjekt
+
+**2026-08-19.** S5 trägt die **K-Spalte** — 28 von 73 Pflichten, das größte einzelne
+Versprechen des Plans (*„Invariantenerhaltung: mutations generated → near 0"*, Schnitt (c)).
+Beim Ansetzen gemessen:
+
+```
+ops im Korpus:   0 Stellen  (beispiele/*.gab und FRAGMENTE.md)
+opdecl        =  "ops" identlist ";"        -- beliebige Bezeichner
+```
+
+**Nirgends steht, WAS eine erzeugte Mutation tut.** `insert, remove, relabel, delete_leaf` sind
+in `SPRACHE.md` §10.2 ein *Beispiel*, keine Wortmenge; nichts verbindet den Namen `insert` mit
+einer Wirkung. *Ein Satz über „jede erzeugte Mutation" hat damit kein Subjekt.*
+
+> **Das ist dieselbe Klasse wie «B24»**, nur an der teuersten Stelle des Ordners: eine
+> Zusage, deren Gegenstand nirgends definiert ist. **Und der Ausweg war nicht, ihn zu
+> erfinden.**
+
+## Der Gegenstand kommt aus dem Korpus
+
+`beispiele/01-tabelle.gab` schreibt `blatt_loeschen` mit `maintains baum_wohlgeformt` und
+`aushaengen` daneben — **zwei der vier Operationen, die §10.2 nennt, existieren als
+handgeschriebene `impl fn`.** Sie sind das Modell.
+
+## `beweise/Table_Ops_Erhaltung.thy` — elfte Theorie, 311 Zeilen, maschinell geprüft
+
+| Teil | Satz | Inhalt |
+|---|---|---|
+| **I** | `folge_erhaelt` · `erreichbares_erhaelt` | das **Amortisationsgesetz** — die Lizenz für *„einmal je Operation, nicht je Aufrufstelle"* |
+| **II** | `einfuegen_erhaelt` | ein **frischer** Platz unter einem **erreichbaren** Elter erhält die Baumform |
+| **II** | `blatt_loeschen_erhaelt` | ein **Blatt** zu löschen erhält sie |
+| **III** | `umhaengen_faellt` | **Gegenbeispiel**: Umhängen erzeugt einen Zyklus, und dann erreicht *keiner* der beiden eine Wurzel |
+| **III** | `verbindung_nicht_gedeckt` | eine Operation erhält jede Invariante **ihres** Trägers und bricht die verbindende |
+
+**Teil I ist billig und trotzdem der Punkt.** `folge_erhaelt` ist eine Induktion über die
+Operationsfolge — aber sie ist genau die Aussage, auf der Schnitt (c) ruht, und sie stand
+bisher als Prosa da.
+
+**Teil III macht aus zwei Behauptungen zwei Sätze.** Der Registereintrag sagte
+*„Invarianten ÜBER Trägern sind ausdrücklich nicht gedeckt"* — das ist jetzt bewiesen statt
+gesetzt, und `gruppe.ops` ist damit **notwendig** und keine Bequemlichkeit. Ebenso ist
+`consuming.umhaengen` (S3) nicht länger aus Vorsicht offen, sondern weil das Gegenbeispiel
+dasteht.
+
+## Und der Stand bleibt **entworfen** — mit drei Gründen
+
+1. **`Getragen`** hieße *„der Übersetzer stützt sich heute darauf"* — er tut es nicht.
+2. **`Bewiesen`** hieße, die Pflicht sei eingelöst. Teil I trägt nur unter der Hypothese
+   *„jede erzeugte Operation erhält I"*; Teil II löst sie für **zwei** Operationen **von
+   Hand** ein.
+3. **Ein Eintrag verlässt die Liste nur bewiesen oder mitsamt seinem Konstrukt.** Ihn
+   hochzubuchen, weil eine Theorie danebenliegt, wäre das Verkleinern durch Umschreiben, das
+   die Ratsche verbietet.
+
+## Die Zahl ging in die unbequeme Richtung, und das ist richtig so
+
+```
+Praemissen ohne Pass (Zahn 3):   8  ->  10
+```
+
+S5 führte bis heute `voraussetzungen: &[]` — **es behauptete, keine zu haben.** Der Beweis hat
+sie nicht erzeugt, er hat sie **benannt**: *jede erzeugte Operation erhält I* (kein Erzeuger)
+und *der Platz ist frisch, der Elter erreichbar* (kein Pass). Die dritte, *der Platz ist ein
+Blatt*, hat einen Produzenten — das `requires ist_blatt(c, s)` des Rufers.
+
+> **Ein Beweis, der die Zahl der offenen Prämissen erhöht, hat gearbeitet.** Der umgekehrte
+> Fall wäre der verdächtige.
+
+## Und die Amortisationszahl STEIGT
+
+```
+10,4  ->  12,6 Zeilen Isar je Korpusstelle
+```
+
+311 neue Beweiszeilen, **null neue Korpusstellen** — `ops` wird nirgends benutzt. *Das ist das
+ehrliche Verhalten der Kennzahl: sie fällt, wenn ein bewiesenes Konstrukt benutzt wird, und
+steigt, wenn eines vor seiner Benutzung bewiesen wird.* **Beweis vor Konstrukt ist die eigene
+Regel des Ordners (K11.3.2) — dies ist, was sie auf der Anzeigetafel kostet.**
