@@ -1978,7 +1978,7 @@ gebaut* · *nach den Plänen möglich* · *nie, weil eine Klasse daran hängt.*
 
 | System | heute | nach der Erweiterung | für immer draußen |
 |---|---|---|---|
-| **Netzwerkstack** (TCP/IP) | **fast** — blockiert an **einer** Entscheidung | ✓ | — |
+| **Netzwerkstack** (TCP/IP) | ~~blockiert an **einer** Entscheidung~~ **schreibbar seit 2026-08-19** — «B24» entschieden, gebaut und abgesenkt (`beispiele/24-ip-kopf.gab`, 36 Zeilen C) | ✓ | — |
 | **Renderer**, 2D, Festkomma, über Syscalls | teilweise | ✓ | — |
 | **Renderer**, 3D mit Gleitkomma | **teilweise** — die Zahlen gehen, die Matrizen sind Bauarbeit | ✓ | ~~Gleitkomma~~ *(gefallen 2026-08-18)* |
 | **Sprachlaufzeit** mit Pool-Halde | ✗ | ✓ | — |
