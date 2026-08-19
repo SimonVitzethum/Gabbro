@@ -3536,7 +3536,37 @@ Schlüsselvollständigkeit stellt sich gar nicht.
   geteilter Zustand, der zwischen Pässen mitwandert, ist die klassische Stelle, an der ein
   Pass den nächsten beeinflusst.
 
-## Z1 — der Zwischenspeicher je Übersetzungseinheit
+## Z1 — der Zwischenspeicher je Übersetzungseinheit — **optionales Merkmal, später**
+
+> **Entschieden 2026-08-19: Z1 wird ein `cargo`-Merkmal, standardmässig AUS.** Nicht weil er
+> schwer wäre, sondern weil er eine Klasse eröffnet, die dieser Ordner sonst jagt — und weil
+> die Zahl ihn heute nicht verlangt: Caprock prüft nach «Z0» in ~190 ms.
+>
+> ```toml
+> [features]
+> default = []
+> speicher = []     # gabbro build --features speicher
+> ```
+>
+> **Ein Merkmal, das aus ist, ist keine Vorstufe, sondern eine Wahl mit Adresse.** Wer es
+> anschaltet, bekommt die Geschwindigkeit *und* das Risiko, und beides steht an derselben
+> Zeile. Die Voreinstellung entscheidet, was ein *unbedarfter* Lauf tut — und der soll
+> rechnen, nicht glauben.
+
+### Woran man erkennt, dass die Zeit für Z1 gekommen ist
+
+Drei Auslöser, und **jeder einzelne** genügt. *Sie stehen hier, damit sie nicht im Moment
+des Wunsches erfunden werden* (R7):
+
+1. **Ein Lauf über den gemeinten Korpus dauert > 3 s.** Das ist die Schwelle, ab der ein
+   Mensch beim Tippen wartet, und sie ist gemessen worden, nicht gefühlt.
+2. **Dateiübergreifende Übersetzungseinheiten sind da.** Dann rechnet ein Lauf über 100
+   Dateien 100-mal dieselben Nachbarn durch, und der Gewinn wächst mit dem Quadrat.
+3. **Der Prüfer läuft in einem Wächter, der bei jedem Commit fährt.** Dort zählt nicht die
+   einzelne Sekunde, sondern die dreihundertste.
+
+Bis dahin ist Z1 **geplant und nicht gebaut**, und das ist der Zustand, den «CARRY» meint:
+*was ein Plan sagen kann, sagt er — und wo der Rest liegt, steht daneben, mit Namen.*
 
 ### Was ihn heute billig macht — und was das kostet, wenn es sich ändert
 
@@ -3617,16 +3647,208 @@ Für **jeden** der drei Schritte, in beide Richtungen:
 | | Arbeit | erwarteter Gewinn | Risiko |
 |---|---|---|---|
 | **Z0** | Umgebung und Graph teilen | 899 → ~290 ms | keins: nichts wird gespeichert |
-| **Z1** | Speicher je Einheit | ~290 → ~2 ms bei Treffer | **stiller Fail-open** |
+| **Z1** | Speicher je Einheit — **Merkmal, aus** | ~290 → ~2 ms bei Treffer | **stiller Fail-open** |
 | **Z2** | `ccache` + Reproduzierbarkeitswächter | Sache von `cc` | keins |
 
 **Z0 bringt den Faktor 3 ohne jedes Risiko, Z1 den Rest mit dem ganzen Risiko.** Wer Z1
 zuerst baut, hat einen Speicher über einer Rechnung, die zu 85 % überflüssig ist — und
 misst danach nie mehr, wie teuer sie eigentlich war.
 
+## Die Abbruchbedingung — und sie hat schon gegriffen
+
+**Wenn der ganze Caprock-Korpus nach Z0 unter einer Sekunde prüft, wird Z1 nicht
+eingeschaltet.** Ein Zwischenspeicher, der eine Sekunde spart und eine Klasse stiller
+Fehlurteile eröffnet, ist ein schlechtes Geschäft. *Die Zahl entscheidet, nicht der Wunsch
+nach einem Cache* — und heute deutet sie auf **~190 ms für ganz Caprock nach Z0**.
+
+Also: **Z0 wird gebaut, Z1 wird geschrieben und ausgeschaltet ausgeliefert.** Der Unterschied
+zwischen „nicht gebaut" und „gebaut und aus" ist nicht Kosmetik — ein Merkmal, das nie
+übersetzt wurde, verrottet lautlos, während eines, das im Bau steht und in der Sprechprobe
+läuft, sich meldet, sobald es bricht. *Dieselbe Erfahrung wie mit dem Mutationskatalog: was
+nicht mitgefahren wird, misst irgendwann nichts mehr.*
+
+**Deshalb gehört zu Z1 von Anfang an ein Wächterlauf `--features speicher`**, der die drei
+Sprechproben oben fährt. Ohne ihn ist das ausgeschaltete Merkmal genau der tote Anker, den
+dieser Ordner am 2026-08-19 fünfundzwanzigmal aus dem Katalog gezogen hat.
+
+---
+
+# «C» — vollständige Absenkung nach C
+
+> **Was „vollständig" hier heisst, und es ist dieselbe strenge Fassung wie bei «K5»:** *jede
+> Form, die die Grammatik erlaubt, senkt ab — und was nicht absenkt, ist **benannt**: als
+> Sprachentscheidung, als Axiomschicht oder als **gezogene Linie**.* **Ein `C001` ohne
+> Adresse zählt gegen die Abdeckung, ein `C001` mit Begründung nicht.**
+
+## Der Stand, gemessen am 2026-08-19
+
+**17 von 33 Beispielen senken ab. Zwölf Übersetzungseinheiten gehen die ganze Kette** —
+`.gab` → C → `cc -Werror` → **ausgeführt** → Ergebnis verglichen, dazu die Sprechprobe, dass
+verfälschtes C fällt (`pruefe-emission.sh`). **46 Weigerungen, alle `C001`, keine stille.**
+
+Und zwei Zusagen, die eine Absenkung erst brauchbar machen, sind gemessen statt geglaubt:
+das erzeugte C ist über **25 Läufe bitgleich**, ohne Zeitstempel und ohne absoluten Pfad.
+
+## Die 46, nach dem, was sie WIRKLICH blockiert
+
+Die Klassen aus der Fehlerausgabe verdecken die Abhängigkeiten. Nach Ursache sortiert:
+
+| Ursache | Weigerungen | Art |
+|---|---:|---|
+| **`option` hat keine Darstellung** | **≈ 13** | ENTSCHEIDUNG — und sie ist bewiesen |
+| **`tagged type` als Wert** | **5** | Bauarbeit |
+| sieben Item-Arten ohne Absenkung | 10 | Bauarbeit + Axiomschicht |
+| drei Anweisungsarten | 5 | folgt aus `rcu` und `reason` |
+| `descendants of` / `ancestors of` | 3 | ENTSCHEIDUNG — Grammatik |
+| `accumulates` ohne `per cpu N` | 2 | ENTSCHEIDUNG |
+| Kleinkram (`u64::max`, `[T; N]`-Static) | 3 | Bauarbeit |
+| **gezogene Linien, kein Loch** | **3** | bleiben `C001` |
+
+### Die drei, die Linien sind und bleiben
+
+Sie zählen **nicht** gegen die Abdeckung, und sie stehen zuerst, damit niemand sie später
+als Rest liest:
+
+* `forever` mit `per_pass … ops` — die Schranke ist eine **Übersetzungszeit**-Aussage, also
+  hat `on_exceeded` keinen Auslöser zur Laufzeit; die Klausel wegzulassen verwürfe sie
+  still. *«B11»: es gibt dort auch keinen Ausgang.*
+* Eine Bitlücke in einem `format` — *ein Format sagt, welche Bits EXISTIEREN.* Wer die Lücke
+  will, nennt sie `reserved`; der Erzeuger zählt nicht mit.
+* `table` ohne `count` — das Feld hätte keine Grösse. **Eine Zahl, die niemand nennt, wird
+  nicht geraten.**
+
+## C1 — `option`, und der Beweis liegt schon da
+
+**Die grösste einzelne Ursache**, und die Entscheidung ist keine offene Frage: `beweise/`
+trägt seit jeher **`Option_Sonderwert.thy`**. Die Absenkung ist ein **Sonderwert** im
+Indexraum — `count` selbst, also der erste Index, den es nicht gibt —, und der Satz, dass
+das injektiv ist, steht in Isabelle.
+
+Die Theorie sagt es in vier Sätzen, und **einer davon ist die Preisklausel**:
+
+| Satz | Aussage |
+|---|---|
+| `sonderwert_ausserhalb` | `N ∉ indextyp N` — der Sonderwert ist kein gültiger Index |
+| `kodiere_injektiv` | die Kodierung ist auf dem gültigen Bereich **injektiv** |
+| `sonderwert_kollidiert_bei_vollem_wort` | **bei vollem Wort KOLLIDIERT er** |
+| `kodiere_wort_injektiv` | injektiv, sofern das Wort nicht voll ist |
+
+> *Ein Beweis, der dasteht und den kein Erzeuger benutzt, ist genau die Hälfte, die «NL»
+> beklagt.* Hier ist er die ganze Begründung, und die Arbeit ist die Verdrahtung — **samt
+> der Bedingung, die der dritte Satz nennt: der Erzeuger muss sie prüfen, nicht annehmen.**
+
+Was daran hängt: 3 Konstruktoren (`None`, `Some(i)`), 2 `static … = None`, 3 `match` über
+`option index into T`, und die `let`-Bindungen, deren Typ heute unauflösbar ist, weil das
+Feld ein `option` trägt. **Eine Entscheidung, ein Dutzend Weigerungen.**
+
+* **Preis der Wahl:** `count` als Sonderwert kostet einen Index des Adressraums. Füllt
+  `count N` das Wort genau aus (`N = 2^k`), **kollidiert der Sonderwert mit einem gültigen
+  Index** — `sonderwert_kollidiert_bei_vollem_wort`. Der Erzeuger muss dann eine Breite
+  weiter gehen, und **das ist eine Absage wert, keine stille Verbreiterung**: wer `count 256`
+  auf `u8` schreibt, hat 256 Zellen und keinen Platz für „keine". *Die Alternative — ein
+  Beiflag — kostet ein Byte je Zelle und bricht die Bitlage; deshalb der Sonderwert.*
+* **Gegenprobe:** eine Giftprobe, in der `Some(count)` geschrieben wird, muss fallen. Sonst
+  ist der Sonderwert ein gültiger Wert, und die Injektivität ist weg.
+
+## C2 — `tagged type` als Wert: Marke plus Vereinigung
+
+`ObjektArt`, `Nachricht`. Blockiert 2 Feldtypen, 1 Parametertyp, 2 `match`. Die Prüferseite
+ist **fertig**: `D005` verlangt seit dem 2026-08-19 das erschöpfende `match` über `tagged`,
+und ohne Sammelzweig. Was fehlt, ist die Absenkung nach `struct { tag; union { … } }`.
+
+* **Was dabei zu entscheiden ist:** die Breite der Marke (kleinster Typ, der die Varianten
+  fasst) und ob die Vereinigung **benannt** oder anonym ist. Beides ist Handwerk, keine
+  Sprachfrage.
+* **Was NICHT dabei entschieden wird:** ob C's `union` das Typrecht verletzt. Es tut es
+  nicht, solange nur das zuletzt geschriebene Feld gelesen wird — und genau das erzwingt
+  `D005` eine Ebene höher. *Der Erzeuger darf sich darauf berufen, weil ein Pass es hält.*
+
+## C3 — die sieben Item-Arten, in der Reihenfolge ihrer Abhängigkeit
+
+| | Item | was es braucht | zieht nach sich |
+|---|---|---|---|
+| a | `reason` | eine Fehlerwert-Darstellung (Marke + Nutzlast) | **`let … else (e) { … }`** (2 Anweisungen) |
+| b | `rcu` | Zeigertausch + Gnadenfrist als **benannte Fremdform** | **`observes`** (1 Anweisung) |
+| c | `group` | nichts zur Laufzeit — die Gruppe ist eine Beweisaussage | — |
+| d | `walk` | die Schrittfunktion aus `levels`/`node`/`down` | — |
+| e | `entry` | **Axiomschicht**: Vektor, Stapel, `iretq` | 3 Weigerungen |
+| f | `boot` | dito, plus Multiboot-Kopf als `format` | — |
+| g | `entrust` | dito, plus die Vertrauensfläche im Zeugnis | — |
+
+**c ist der billigste Posten des ganzen Plans**: eine `group` erzeugt nichts. Sie *darf*
+nichts erzeugen — sie ist die Verbindungsaussage über zwei Trägern, und was sie zur Laufzeit
+kostet, ist null. **Eine Zeile, die heute `C001` sagt, muss morgen schweigend durchgehen.**
+
+**e/f/g gehören zusammen und liegen NICHT in diesem Plan allein**: ein `entry` senkt in eine
+IDT-Zeile ab, und dass eine IDT-Zeile tut, was sie tut, ist die **Axiomschicht** — dieselbe
+Klasse wie `A10`. *Die Absenkung ist Handwerk, die Zusage darunter ist ein Axiom, und es
+gehört gezählt, nicht versteckt.*
+
+## C4 — `exchange`, beide Formen
+
+`let alt = z.wert exchange update(v) { … }` und
+`let g = BESITZER exchange f when old(BESITZER) == 0 returns erfolg`. Zwei Anweisungen im
+Korpus, beide auf `atomic`. Absenkung: `atomic_exchange_explicit` bzw.
+`atomic_compare_exchange_strong_explicit` mit **der deklarierten Ordnung** — und das ist die
+Stelle, an der der Erzeuger schon einmal geschummelt hat: der Mutationskatalog führt
+`veroeffentlichung-nimmt-die-vorgabeordnung` und `laden-nimmt-die-speicherordnung`, weil ein
+`=` statt der Ordnung `seq_cst` bedeutet und *das erzeugte Programm dann etwas anderes sagt
+als die Quelle.*
+
+## C5 — die drei Entscheidungen, die keine Bauarbeit sind
+
+1. **`descendants of` nennt seine KANTE nicht.** `CapSpace` trägt vier Kandidaten (`parent`,
+   `first_child`, `next_sibling`, `prev_sibling`), und `chain(a, b) in` zeigt, dass die
+   Grammatik eine Kante zu benennen **schon kann**. *Das ist eine Asymmetrie der Grammatik,
+   kein fehlender Erzeugercode* — und ihre Auflösung ist eine Grammatikzeile, keine
+   Erzeugerzeile.
+2. **`accumulates` ohne `per cpu N`.** Die Absenkung ist eine Zelle je Kern; wie viele Kerne
+   es gibt, steht nicht in der Deklaration. Entweder wird `per cpu` pflichtig, oder es gibt
+   einen Vorgabewert — und ein Vorgabewert für die Kernzahl ist **eine Annahme über die
+   Maschine** und gehört dann ins Zeugnis.
+3. **`u64::max` als `const`-Wert** und `static mut kernlast : [Zaehler; 64] = 0;`. Der erste
+   ist Handwerk (der Auswerter kennt die Grenzen bereits, `typen.rs`); der zweite fragt, ob
+   ein skalarer Anfangswert ein ganzes Feld füllt. *In C tut `= {0}` genau das — aber es
+   hinzuschreiben heisst zu entscheiden, dass `0` hier „alle" meint.*
+
+## Die Reihenfolge, und was jede Stufe an Weigerungen schliesst
+
+| Stufe | schliesst | kumulativ von 46 | Art |
+|---|---:|---:|---|
+| **C1** `option` | ≈ 13 | 13 | Verdrahtung eines vorhandenen Beweises |
+| **C2** `tagged` | 5 | 18 | Bauarbeit |
+| **C3a/b** `reason`, `rcu` | 4 + 2 Anw. | 24 | Bauarbeit |
+| **C3c/d** `group`, `walk` | 2 | 26 | `group` erzeugt NICHTS |
+| **C4** `exchange` | 2 | 28 | Bauarbeit, Ordnung ist die Falle |
+| **C5** die drei Entscheidungen | 6 | 34 | ENTSCHEIDUNG, dann Handwerk |
+| **C3e/f/g** `entry`, `boot`, `entrust` | 5 | 39 | **Axiomschicht** |
+| Kleinkram | 4 | 43 | Handwerk |
+| **gezogene Linien** | 3 | **46** | bleiben `C001` |
+
+**Die Zielaussage ist damit nicht „0 Weigerungen", sondern „3 Weigerungen, und jede ist eine
+Linie mit einem Satz Begründung."** *Eine Absenkung, die alles frisst, hat keine Meinung
+mehr — und `C001` ist die einzige Stelle, an der der Erzeuger noch nein sagen kann.*
+
+## Die Sprechprobe, und sie muss mitwachsen
+
+Heute stechen **zwölf** Übersetzungseinheiten durch. Jede Stufe oben schuldet **mindestens
+eine weitere**, und zwar nach demselben Muster: erzeugen → `cc -Werror` → **ausführen** →
+Ergebnis vergleichen → verfälschtes C muss fallen.
+
+> **Ein Erzeuger, der übersetzbares C liefert, das etwas anderes rechnet, ist schlimmer als
+> einer, der nichts liefert — er sieht aus wie ein Ergebnis.**
+
+Dazu die zwei Zeilen, die `pruefe-emission.sh` heute fehlen:
+
+* **zweimal erzeugen, Hashes vergleichen** (die Reproduzierbarkeit ist gemessen, aber nicht
+  zugesagt — s. «Z2»),
+* **je Stufe eine Mutation** in `mutiere-pruefer.py` auf die neue Absenkung. Die
+  Emissionsfläche stand am 2026-08-17 bei 0 Mutationen und ist heute bei 44; *was 0
+  Mutationen hat, ist nicht gedeckt, sondern unbeschädigbar.*
+
 ## Die Abbruchbedingung
 
-**Wenn der ganze Caprock-Korpus nach Z0 unter einer Sekunde prüft, wird Z1 nicht gebaut.**
-Ein Zwischenspeicher, der eine Sekunde spart und eine Klasse stiller Fehlurteile eröffnet,
-ist ein schlechtes Geschäft. *Die Zahl entscheidet, nicht der Wunsch nach einem Cache* —
-und heute deutet sie auf **~190 ms für ganz Caprock nach Z0**, also auf ein Nein.
+**Wenn eine Stufe eine Sprachentscheidung erzwingt, die nur der Absenkung dient, wird sie
+nicht getroffen.** Die Grammatik ist für den Menschen da, der Gabbro schreibt, nicht für den
+Erzeuger, der es liest. *Wo beides auseinandergeht, gewinnt der Mensch und der Erzeuger sagt
+`C001`* — mit Begründung, wie an den drei Linien oben.

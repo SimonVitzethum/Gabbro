@@ -517,6 +517,49 @@ as a record of what the closure cost; the details are in
 | `own` is a synonym for `rw` | **the specification was wrong, not the pass** — `SYNTAX.md` §3 now carries the measurement |
 | lexer panic · licence entry | **`P038`** (measured depth limit) · `license = "AGPL-3.0-only"` |
 
+### «C» — vollständige Absenkung nach C, geplant 2026-08-19 ([`dokumente/PLAN.md`](dokumente/PLAN.md))
+
+*Stand: 17 von 33 Beispielen senken ab, **12 Einheiten stechen bis zum ausgeführten Ergebnis
+durch**, 46 Weigerungen — alle `C001`, keine stille. Die Zielaussage ist nicht „0
+Weigerungen", sondern **„3 Weigerungen, und jede ist eine Linie mit einem Satz Begründung".***
+
+- [ ] **C1 — `option`: den vorhandenen BEWEIS verdrahten.** Grösste Einzelursache (≈ 13 der
+      46). `beweise/Option_Sonderwert.thy` trägt `sonderwert_ausserhalb`, `kodiere_injektiv`
+      und — als Preisklausel — `sonderwert_kollidiert_bei_vollem_wort`. **Der Erzeuger muss
+      die Bedingung des dritten Satzes prüfen, nicht annehmen**: `count 256` auf `u8` hat
+      keinen Platz für „keine", und das ist eine Absage wert, keine stille Verbreiterung.
+      *Ein Beweis, den kein Erzeuger benutzt, ist die Hälfte, die «NL» beklagt.*
+- [ ] **C2 — `tagged type` als Wert.** 5 Weigerungen. Die Prüferseite ist FERTIG (`D005`,
+      erschöpfendes `match` ohne Sammelzweig); es fehlt `struct { tag; union { … } }`. Der
+      Erzeuger darf sich auf „nur das zuletzt geschriebene Feld wird gelesen" berufen,
+      **weil ein Pass es hält** — nicht, weil es meistens stimmt.
+- [ ] **C3 — die sieben Item-Arten.** `reason` zieht `let … else (e)` nach, `rcu` zieht
+      `observes` nach; `group` erzeugt **nichts** und muss schweigend durchgehen (die
+      billigste Zeile des Plans); `walk` braucht die Schrittfunktion. **`entry`, `boot` und
+      `entrust` senken in die AXIOMSCHICHT ab** — eine IDT-Zeile tut, was sie tut, und das
+      ist ein Axiom der Klasse `A10`. *Gezählt, nicht versteckt.*
+- [ ] **C4 — `exchange`, beide Formen, mit der DEKLARIERTEN Ordnung.** Genau hier hat der
+      Erzeuger schon einmal geschummelt: `veroeffentlichung-nimmt-die-vorgabeordnung` und
+      `laden-nimmt-die-speicherordnung` stehen im Mutationskatalog, weil ein `=` statt der
+      Ordnung `seq_cst` bedeutet — *und das erzeugte Programm dann etwas anderes sagt als die
+      Quelle.*
+- [ ] **C5 — drei Entscheidungen, die keine Bauarbeit sind.** `descendants of` nennt seine
+      KANTE nicht (vier Kandidaten in `CapSpace`, und `chain(a, b) in` zeigt, dass die
+      Grammatik eine Kante benennen KANN — eine Asymmetrie der Grammatik, kein fehlender
+      Erzeugercode); `accumulates` ohne `per cpu N` (ein Vorgabewert für die Kernzahl ist
+      **eine Annahme über die Maschine** und gehört dann ins Zeugnis); `= 0` für ein ganzes
+      Feld heisst zu entscheiden, dass `0` hier „alle" meint.
+- [ ] **Die Sprechprobe muss MITWACHSEN: je Stufe eine weitere durchgestochene Einheit.**
+      Heute zwölf. Erzeugen → `cc -Werror` → **ausführen** → vergleichen → verfälschtes C
+      muss fallen. Dazu je Stufe eine Mutation: die Emissionsfläche stand am 2026-08-17 bei
+      **0** Mutationen, *und was 0 Mutationen hat, ist nicht gedeckt, sondern
+      unbeschädigbar.*
+- [ ] **Drei Weigerungen bleiben, und sie zählen NICHT gegen die Abdeckung:** `forever` mit
+      `per_pass` (Übersetzungszeit-Aussage, also kein Laufzeitauslöser — «B11»), eine
+      Bitlücke in einem `format` (*ein Format sagt, welche Bits EXISTIEREN* — sie heisst
+      `reserved` oder gar nicht), `table` ohne `count` (eine Zahl, die niemand nennt, wird
+      nicht geraten).
+
 ### «Z» — Zwischenspeicher, geplant 2026-08-19 ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
 - [ ] **Z0 — Umgebung und Aufrufgraph EINMAL bauen.** Gemessen: 14 Module rufen
@@ -525,6 +568,15 @@ as a record of what the closure cost; the details are in
       derselben zwei Strukturen**; die eigentliche Passlogik kostet ~60 ms. Erwartet:
       899 → ~290 ms. *Der Preis ist echt:* die Pässe hören auf, einzeln fahrbar zu sein,
       und die Mutationsproben nutzen das heute.
+- [ ] **Z1 ist ein `cargo`-MERKMAL, standardmässig AUS** *(entschieden 2026-08-19)*. Nicht
+      weil er schwer wäre, sondern weil er eine Klasse stiller Fehlurteile eröffnet und die
+      Zahl ihn heute nicht verlangt (~190 ms für ganz Caprock nach Z0). **Ein Merkmal, das
+      aus ist, ist keine Vorstufe, sondern eine Wahl mit Adresse.** Drei Auslöser, jeder
+      einzeln genügend, stehen im Plan, *damit sie nicht im Moment des Wunsches erfunden
+      werden*: ein Lauf > 3 s, dateiübergreifende Einheiten, oder ein Wächter bei jedem
+      Commit. **Und ein Wächterlauf `--features speicher` gehört in denselben Commit** —
+      sonst ist das ausgeschaltete Merkmal genau der tote Anker, den dieser Ordner am
+      2026-08-19 fünfundzwanzigmal aus dem Mutationskatalog gezogen hat.
 - [ ] **Z1 — der Speicher je Übersetzungseinheit, und sein Schlüssel.** Heute ist eine
       Datei eine ganze Einheit (gemessen: die CLI schleift über Dateien, kein Binden über
       Dateigrenzen), also ist der Schlüssel trivial vollständig. **Der Satz wird als
