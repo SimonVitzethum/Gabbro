@@ -1,0 +1,28 @@
+-- erwartet: S005
+-- **«NL.2.3» -- `abstieg` war die schaerfste der elf verbliebenen Zusagen.**
+-- `pruefe-klauseln.py` fuehrte sie mit dem Satz: *„Wie der `traverse` absteigt.
+-- `schleifen.rs` geht in den Rumpf, liest den Abstieg aber nicht -- UND AN IHM HAENGT DIE
+-- TERMINIERUNG."*
+--
+-- Geprueft wird die NOTWENDIGE Bedingung, nicht die hinreichende: nicht DASS das Mass faellt
+-- (das ist Beweisersache, `consuming.ordnung`), sondern dass es sich ueberhaupt bewegen KANN.
+-- Ein Mass, das weder die Traversierungsvariable noch einen Namen nennt, den der Rumpf
+-- schreibt, ist ueber alle Durchgaenge konstant -- und ein konstantes Mass faellt nie.
+--
+-- *Eine notwendige Bedingung, die ein Pass halten kann, ist mehr wert als eine hinreichende,
+-- die niemand haelt.*
+module gift::abstieg_konstant {
+
+const GRENZE : u32 = 8;
+table W count GRENZE { slot { a : u32 in 0 .. 10, } }
+
+impl fn f(w : ptr<normal, r> W) -> unit
+    effects { reads w.slots } costs <= 200 ops
+{
+    traverse i over slots of w by decreasing GRENZE
+        touches reads w.slots
+    { }
+    return;
+}
+
+}

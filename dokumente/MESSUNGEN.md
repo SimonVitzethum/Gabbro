@@ -8449,3 +8449,84 @@ nimmt. *Aus einem Namen fällt keine Wirkung.*
 
 **Welche Operationen die Wortmenge führt, ist eine Messung am zweiten Korpus** — der erste hat
 null `ops`-Stellen und kann sie nicht liefern.
+
+---
+
+# «NL.1» vermessen und «NL.2» dreimal gebaut — 2026-08-19
+
+## Die Messung, die NL.1 entsperrt: welche Operationen braucht ein echter Kernel?
+
+**`opdecl = "ops" identlist ";"` nimmt beliebige Bezeichner, und der erste Korpus hat null
+`ops`-Stellen** — er kann die Wortmenge nicht liefern. Also am **zweiten** gemessen,
+`kernel/` + `mm/`, 659 Dateien:
+
+```
+Operation     Stellen  Dateien
+entfernen         479      151
+einfuegen         448      161
+anlegen           408      132
+umhaengen         127       43
+ersetzen           11        7
+              ---------
+zusammen         1473
+```
+
+*(`list_add`/`hlist_add_head`/`rb_insert_color`/`idr_alloc` gegen `list_del`/`hlist_del`/
+`rb_erase`/`idr_remove` gegen `list_move`/`list_splice`/`rb_replace_node`; generisches `swap`
+ist bewusst draußen — das ist kein Tabellenzug, und die erste Zählung hatte 932 davon.)*
+
+### Drei Befunde, und der dritte ist der unbequeme
+
+1. **Einfügen und Entfernen tragen den Fall** — 927 von 1473 (63 %), in rund einem Viertel
+   aller Dateien. *Die zwei Namen, die `SPRACHE.md` §10.2 als Beispiel nennt, sind auch die
+   gemessenen.*
+2. **`anlegen` ist die drittgrößte und vermutlich gar keine Operation.** `INIT_LIST_HEAD`
+   *konstruiert*, es mutiert keine belegte Struktur — und Gabbros `table … count N` konstruiert
+   schon, bewiesen durch `table.absenkung`.
+3. **`umhaengen` steht an 127 Stellen — und es ist genau die Operation, für die
+   `Table_Ops_Erhaltung.thy` das Gegenbeispiel führt.** `umhaengen_faellt`: zwei Plätze, einer
+   unter den anderen gehängt, und **keiner** erreicht mehr eine Wurzel.
+
+> **Der Korpus braucht die Operation, von der der Beweis sagt, dass sie bricht.** Sie
+> wegzulassen hieße, 127 Stellen ungedeckt zu lassen; sie aufzunehmen heißt, dem Erzeuger eine
+> Bedingung abzuverlangen, die `einfuegen` und `blatt_loeschen` nicht brauchen. *Das ist keine
+> Schwierigkeit der Messung, sondern die Entscheidung selbst — und sie steht jetzt mit Zahlen
+> da statt mit einer Vermutung.*
+
+## «NL.2» — drei Zusagen gefallen, ZUSAGE 13 → 10
+
+| | | |
+|---|---|---|
+| **`M116`** | `mut` | `let x = 1; x = 2;` ging mit 0 Fehlern durch. *Keine Buchhaltung, sondern eine Sicherheitslücke: eine Tatsache über `x` stirbt beim Schreiben — ohne Schreibrecht stirbt sie gar nicht erst.* |
+| **`E011`** | `touches` | die **engere, örtliche** Zusage neben `effects`, nie gegen den Rumpf gehalten. Dieselbe `deckt`-Funktion wie `E005`/`E010` — keine zweite Mechanik |
+| **`S005`** | `abstieg` | **die schärfste der Liste: an ihm hing die Terminierung** |
+
+### `S005` prüft die notwendige Bedingung, und das ist die Pointe
+
+**Nicht**, dass das Maß fällt — das ist eine Aussage über Werte und gehört `consuming.ordnung`.
+**Sondern**, dass es sich überhaupt *bewegen kann*: ein `by decreasing E`, in dem weder die
+Traversierungsvariable noch ein vom Rumpf geschriebener Name vorkommt, ist über alle Durchgänge
+**konstant** — und ein konstantes Maß fällt nie.
+
+```gabbro
+by decreasing v                        -- die Traversierungsvariable        ok
+by decreasing (lenof(s.worte) - i)     -- `i` schreibt der Rumpf            ok
+by decreasing GRENZE                   -- KONSTANT                          S005
+```
+
+> **Eine notwendige Bedingung, die ein Pass halten kann, ist mehr wert als eine hinreichende,
+> die niemand hält.**
+
+**Korpuspreis aller drei: null.** 31 Beispiele, 13 Fragmenteinheiten, 118 Giftproben ohne
+einen Ausfall.
+
+## Und der Klauselwächter hat alle drei gemeldet
+
+Sechster, siebter und achter Aufstieg seit dem 2026-08-18 — `progress`, `ensures`, `maintains`,
+`versatz`, `schritt`, `veraenderlich`, `touches`, `abstieg`.
+
+```
+Klauseln 49 -> 43      ZUSAGE 16 -> 10
+```
+
+*Jedes Mal hat das Werkzeug es gemeldet, nicht der Autor.*

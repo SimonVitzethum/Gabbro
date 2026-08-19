@@ -548,11 +548,22 @@ of items that are neither code nor a run — what remains is building and measur
       `entworfen`, weil `opdecl` beliebige Bezeichner nimmt. **Der zweite Ausweg (der Nutzer
       schreibt die Wirkung) ist keiner: dann faellt Schnitt (c).** *Welche Operationen die
       Menge fuehrt, ist eine Messung am ZWEITEN Korpus -- der erste hat null `ops`-Stellen.*
-- [ ] **NL.2 -- elf Zusagen ohne Leser** *(13 am 2026-08-19, zwei gefallen: `M116` fuer `mut`,
-      `E011` fuer `touches`)*. **Die schaerfste ist `abstieg`:** an ihm haengt die
-      TERMINIERUNG eines `traverse`, und `schleifen.rs` geht in den Rumpf, ohne ihn zu lesen.
-      Danach `ghost`, `pro_kern`, `offset_into`, und der Rest je mit eigener Fundstelle.
-      *Jede einzeln, jede mit Giftprobe, jede mit Korpusmessung VORHER.*
+      **Gemessen 2026-08-19** (`kernel/` + `mm/`, 659 Dateien): entfernen 479 · einfuegen 448
+      · anlegen 408 · umhaengen 127 · ersetzen 11. **Einfuegen und Entfernen tragen 63 % --
+      und `umhaengen` steht an 127 Stellen, also genau die Operation, fuer die
+      `Table_Ops_Erhaltung.thy` das GEGENBEISPIEL fuehrt.** *Der Korpus braucht die Operation,
+      von der der Beweis sagt, dass sie bricht.* Die Entscheidung steht damit mit Zahlen da.
+- [ ] **NL.2 -- ZEHN Zusagen ohne Leser** *(13 am 2026-08-19, drei gefallen: `M116` fuer
+      `mut`, `E011` fuer `touches`, `S005` fuer `abstieg`)*. Als naechste `ghost` (ein
+      Geisttyp darf im erzeugten C nicht vorkommen), `pro_kern` (`per cpu N` gegen NCORES),
+      `offset_into` (die Schranke wird nicht geprueft). Dann `obermenge`, `bedingung`,
+      `embeds`, `mirrors`, `verlaesst`, `gates`, `counterprobe`. *Jede einzeln, jede mit
+      Giftprobe, jede mit Korpusmessung VORHER.*
+- [ ] **`S005` prueft die NOTWENDIGE Bedingung des Abstiegs, nicht die hinreichende**
+      *(2026-08-19)*. Dass das Mass sich bewegen KANN, haelt der Pass; DASS es faellt, bleibt
+      `consuming.ordnung`. **Der Schritt dazwischen waere die Richtung:** bei `by decreasing
+      (lenof(s.worte) - i)` muesste `i` WACHSEN, damit das Mass faellt -- heute genuegt, dass
+      der Rumpf `i` ueberhaupt schreibt. *Ein `i -= 1` kaeme durch.*
 - [ ] **NL.3 -- `ensures` ueber WELTZUSTAND, die haeufigere Form** *(2026-08-19)*. Numerisch
       und relational tragen seit heute; `ensures mmu_an_zahl == 1` steht siebenmal in
       `beispiele/22` und traegt nicht. **Sie kollidiert mit U4/U5** -- ein Aufruf toetet jeden

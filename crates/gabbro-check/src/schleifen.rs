@@ -96,7 +96,10 @@ fn anweisung(s: &Stmt, marken: &mut Vec<String>, lg: &Lage, absagen: &mut Absage
         }
         StmtArt::Schleife(sch) => match sch.as_ref() {
             // `traverse` traegt keine Marke -- die Grammatik gibt ihr keine Stelle dafuer.
-            Schleife::Traverse(t) => block(&t.rumpf, marken, lg, absagen),
+            Schleife::Traverse(t) => {
+                abstieg_pruefen(t, absagen);
+                block(&t.rumpf, marken, lg, absagen)
+            }
             Schleife::Retry(r) => {
                 fortschritt_pruefen(r.fortschritt.as_ref(), lg, absagen);
                 mit_marke(r.marke.as_ref(), &r.rumpf, marken, lg, absagen);
@@ -248,5 +251,137 @@ fn fortschritt_pruefen(zeuge: Option<&Ident>, lg: &Lage, absagen: &mut Absagen) 
             ),
         ),
         Some(true) => {}
+    }
+}
+
+/// **`S005` -- das Abstiegsmass muss sich bewegen koennen («NL.2.3», 2026-08-19).**
+///
+/// `pruefe-klauseln.py` fuehrte `abstieg` als schaerfste der elf verbliebenen Zusagen:
+/// *„Wie der `traverse` absteigt. `schleifen.rs` geht in den Rumpf, liest den Abstieg aber
+/// nicht -- **und an ihm haengt die Terminierung.**"*
+///
+/// ## Was geprueft wird, und was ausdruecklich nicht
+///
+/// **Nicht:** dass das Mass faellt. Das ist eine Aussage ueber Werte und gehoert dem
+/// Beweiser -- `consuming.ordnung` (S1) fuehrt sie als Schablone.
+///
+/// **Sondern:** dass es sich ueberhaupt bewegen KANN. Ein `by decreasing E`, in dem weder die
+/// Traversierungsvariable noch ein Name vorkommt, den der Rumpf schreibt, ist ueber alle
+/// Durchgaenge KONSTANT -- und ein konstantes Mass faellt nie.
+///
+/// ```gabbro
+/// traverse v of g over ancestors of g by decreasing v         -- die Variable, ok
+/// traverse w of s over elems of s.worte by decreasing (lenof(s.worte) - i)
+///                                                              -- `i` schreibt der Rumpf, ok
+/// traverse i over slots of w by unvisited by decreasing GRENZE -- KONSTANT
+/// ```
+///
+/// > **Es ist die notwendige Bedingung, nicht die hinreichende** -- und genau darum steht sie
+/// > hier statt beim Beweiser. *Eine notwendige Bedingung, die ein Pass halten kann, ist mehr
+/// > wert als eine hinreichende, die niemand haelt.*
+fn abstieg_pruefen(t: &Traverse, absagen: &mut Absagen) {
+    let Abstieg::Fallend(e) = &t.abstieg else { return };
+    let mut namen = Vec::new();
+    namen_im_ausdruck(e, &mut namen);
+    if namen.is_empty() {
+        // Ein Mass ohne jeden Namen ist eine Zahl -- dasselbe Urteil, anderer Weg dorthin.
+        melde(t, e.span, absagen);
+        return;
+    }
+    if namen.iter().any(|n| *n == t.variable.text) {
+        return; // die Traversierung bewegt sie selbst
+    }
+    let mut geschrieben = Vec::new();
+    geschriebene_namen(&t.rumpf, &mut geschrieben);
+    if namen.iter().any(|n| geschrieben.contains(n)) {
+        return;
+    }
+    melde(t, e.span, absagen);
+}
+
+fn melde(t: &Traverse, span: gabbro_syntax::span::Span, absagen: &mut Absagen) {
+    absagen.schiebe(
+        Absage::fehler(
+            "S005",
+            span,
+            "das Abstiegsmass nennt weder die Traversierungsvariable noch einen Namen,              den der Rumpf schreibt"
+                .to_string(),
+        )
+        .mit_notiz(format!(
+            "`{}` bewegt sich damit ueber alle Durchgaenge nicht -- und ein konstantes Mass              faellt nie",
+            t.variable.text
+        ))
+        .mit_notiz(
+            "geprueft wird die NOTWENDIGE Bedingung, nicht die hinreichende: DASS es faellt,              ist Beweisersache (`consuming.ordnung`)",
+        ),
+    );
+}
+
+fn namen_im_ausdruck(e: &Expr, aus: &mut Vec<String>) {
+    match &e.art {
+        ExprArt::Ort(o) => {
+            aus.push(o.basis.text.clone());
+            for s in &o.suffixe {
+                if let OrtSuffix::Index(i) = s {
+                    namen_im_ausdruck(i, aus);
+                }
+            }
+        }
+        ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => namen_im_ausdruck(i, aus),
+        ExprArt::Binaer(_, a, b) => {
+            namen_im_ausdruck(a, aus);
+            namen_im_ausdruck(b, aus);
+        }
+        ExprArt::Ruf(r) => {
+            for a in &r.argumente {
+                namen_im_ausdruck(a, aus);
+            }
+        }
+        ExprArt::Eingebaut(b) => match b.as_ref() {
+            // **`lenof(s.worte)` nennt einen Ort, und der zaehlt.** Ohne diesen Zweig
+            // saehe das Mass aus `FRAGMENTE.md`:1110 wie eine Konstante aus.
+            Eingebaut::Sizeof(TypOderOrt::Ort(o)) | Eingebaut::Lenof(TypOderOrt::Ort(o)) => {
+                aus.push(o.basis.text.clone())
+            }
+            Eingebaut::Aligned(a, c) => {
+                namen_im_ausdruck(a, aus);
+                namen_im_ausdruck(c, aus);
+            }
+            _ => {}
+        },
+        _ => {}
+    }
+}
+
+fn geschriebene_namen(b: &Block, aus: &mut Vec<String>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Zuweisung(z) => aus.push(z.ziel.basis.text.clone()),
+            StmtArt::Publish(p) => aus.push(p.ziel.basis.text.clone()),
+            StmtArt::Exchange(e) => aus.push(e.ort.basis.text.clone()),
+            StmtArt::Wenn(w) => {
+                for (_, x) in &w.zweige {
+                    geschriebene_namen(x, aus);
+                }
+                if let Some(x) = &w.sonst {
+                    geschriebene_namen(x, aus);
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    geschriebene_namen(&z.rumpf, aus);
+                }
+            }
+            StmtArt::Bricht(x) => geschriebene_namen(&x.rumpf, aus),
+            StmtArt::Sperrt(x) => geschriebene_namen(&x.rumpf, aus),
+            StmtArt::Observiert(x) => geschriebene_namen(&x.rumpf, aus),
+            StmtArt::Narrow(x) => geschriebene_namen(&x.sonst, aus),
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Traverse(t) => geschriebene_namen(&t.rumpf, aus),
+                Schleife::Retry(r) => geschriebene_namen(&r.rumpf, aus),
+                Schleife::Forever(f) => geschriebene_namen(&f.rumpf, aus),
+            },
+            _ => {}
+        }
     }
 }

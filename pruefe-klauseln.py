@@ -96,7 +96,11 @@ ERWARTET = {
     "pro_kern":     ("ZUSAGE", "`per cpu N` -- dass N zu NCORES passt, prueft kein Pass."),
     "counterprobe": ("ZUSAGE", "Die Gegenprobe soll FALLEN. Kein Pass fuehrt sie aus."),
     "gates":        ("ZUSAGE", "Welche Tore ein `check` oeffnet; ungelesen."),
-    "abstieg":      ("ZUSAGE", "Wie der `traverse` absteigt. `schleifen.rs` geht in den Rumpf, liest den Abstieg aber nicht -- und an ihm haengt die Terminierung."),
+    # **`abstieg` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- achter Aufstieg,
+    # dritter Posten von «NL.2», und die schaerfste der Liste: an ihm hing die TERMINIERUNG.
+    # `S005` prueft die NOTWENDIGE Bedingung -- ein Mass, das weder die Traversierungsvariable
+    # noch einen vom Rumpf geschriebenen Namen nennt, ist konstant und faellt nie. *DASS es
+    # faellt, bleibt Beweisersache (`consuming.ordnung`).* Korpuspreis: null.
     # **`touches` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- siebter
     # Aufstieg, zweiter Posten von «NL.2». `E011` haelt den Rumpf der Traversierung gegen die
     # genannten Orte, mit derselben `deckt`-Funktion wie `E005`/`E010`. *`touches` ist die
