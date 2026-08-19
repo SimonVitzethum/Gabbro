@@ -258,6 +258,135 @@ fn sammle_taten(b: &Block, t: &mut Taten) {
 /// oder die gemeinte Bedeutung, entscheidet nicht dieser Pass. **Aufrufwirkungen ebenso
 /// nicht:** dazu muessten die Wirkungen des Gerufenen auf die Argumente des Aufrufers
 /// abgebildet werden, und das ist ein eigener Posten.
+/// **`E011` -- `touches` wird gegen den Rumpf gehalten («NL.2.2», 2026-08-19).**
+///
+/// `pruefe-klauseln.py` fuehrte `touches` als ZUSAGE mit dem Satz *„die Wirkungsmenge eines
+/// `traverse`; deklariert, nie gegen den Rumpf gehalten."* Gemessen am selben Tag:
+///
+/// ```gabbro
+/// traverse i over slots of w by unvisited
+///     touches reads w.slots
+/// { fremd = 1; }              -- 0 Fehler
+/// ```
+///
+/// ## Warum die Zeile ueberhaupt dasteht, wenn `effects` sie schon deckt
+///
+/// Die `effects` der Funktion decken den ganzen Rumpf, Schleifen eingeschlossen. `touches`
+/// ist die **engere, oertliche** Zusage: *diese Traversierung fasst genau DAS an.* Sie ist
+/// die Grundlage der Kostenrechnung und der Sperrargumente -- und sie war bis heute
+/// unverbindlich.
+///
+/// > **Eine engere Zusage, die niemand haelt, ist schlimmer als keine:** wer sie liest,
+/// > rechnet mit weniger Beruehrung, als der Rumpf hat.
+///
+/// **Gedeckt wird `writes` und `reads` gegen die genannten Orte**, mit derselben `deckt`
+/// -Funktion wie `E005`/`E010`. *Konstanten und lokale Namen zaehlen nicht* -- dieselbe
+/// Ausnahme, aus demselben Grund.
+fn traverse_gegen_touches(
+    b: &Block,
+    fname: &str,
+    konstanten: &[String],
+    weltnamen: &[String],
+    absagen: &mut Absagen,
+) {
+    for s in &b.anweisungen {
+        let unter: Vec<&Block> = match &s.art {
+            StmtArt::Schleife(sch) => match sch.as_ref() {
+                Schleife::Traverse(t) => {
+                    if let Some(w) = &t.touches {
+                        pruefe_touches(t, w, fname, konstanten, weltnamen, absagen);
+                    }
+                    vec![&t.rumpf]
+                }
+                Schleife::Retry(r) => vec![&r.rumpf],
+                Schleife::Forever(f) => vec![&f.rumpf],
+            },
+            StmtArt::Wenn(w) => {
+                let mut v: Vec<&Block> = w.zweige.iter().map(|(_, b)| b).collect();
+                if let Some(x) = &w.sonst {
+                    v.push(x);
+                }
+                v
+            }
+            StmtArt::Bricht(x) => vec![&x.rumpf],
+            StmtArt::Sperrt(x) => vec![&x.rumpf],
+            StmtArt::Observiert(x) => vec![&x.rumpf],
+            StmtArt::LetSonst(x) => vec![&x.sonst],
+            StmtArt::Match(m) => m.zweige.iter().map(|a| &a.rumpf).collect(),
+            _ => Vec::new(),
+        };
+        for u in unter {
+            traverse_gegen_touches(u, fname, konstanten, weltnamen, absagen);
+        }
+    }
+}
+
+fn pruefe_touches(
+    t: &Traverse,
+    w: &Wirkungen,
+    fname: &str,
+    konstanten: &[String],
+    weltnamen: &[String],
+    absagen: &mut Absagen,
+) {
+    let mut taten = Taten::default();
+    sammle_taten(&t.rumpf, &mut taten);
+    let schreibt: Vec<String> = w
+        .liste
+        .iter()
+        .filter_map(|e| match &e.art {
+            WirkungArt::Schreibt(o) | WirkungArt::Verbraucht(o) | WirkungArt::Veroeffentlicht(o) => {
+                Some(o.text())
+            }
+            _ => None,
+        })
+        .collect();
+    let liest: Vec<String> = w
+        .liste
+        .iter()
+        .filter_map(|e| match &e.art {
+            WirkungArt::Liest(o) => Some(o.text()),
+            WirkungArt::Schreibt(o) => Some(o.text()), // schreiben deckt lesen
+            _ => None,
+        })
+        .collect();
+    let bekannt = |o: &String| {
+        !konstanten.iter().any(|k| k == o)
+            && weltnamen
+                .iter()
+                .any(|n| o == n || o.starts_with(&format!("{n}.")) || o.starts_with(&format!("{n}[")))
+    };
+    let mut gemeldet: Vec<String> = Vec::new();
+    for (ort, span) in taten.schreibt.iter().chain(taten.liest.iter()) {
+        if !bekannt(ort) || gemeldet.contains(ort) {
+            continue;
+        }
+        let schreibend = taten.schreibt.iter().any(|(o, _)| o == ort);
+        let gedeckt = if schreibend {
+            schreibt.iter().any(|e| deckt(e, ort))
+        } else {
+            liest.iter().any(|e| deckt(e, ort))
+        };
+        if gedeckt {
+            continue;
+        }
+        gemeldet.push(ort.clone());
+        absagen.schiebe(
+            Absage::fehler(
+                "E011",
+                *span,
+                format!(
+                    "`{ort}` is touched by this `traverse` in `{fname}` but stands in no `touches` effect"
+                ),
+            )
+            .mit_notiz(
+                "`touches` ist die ENGERE, oertliche Zusage neben `effects` -- wer sie liest, \
+                 rechnet mit weniger Beruehrung, als der Rumpf hat",
+            ),
+        );
+    }
+}
+
 fn rumpf_gegen_wirkungen(
     f: &FnDecl,
     w: &Wirkungen,
@@ -268,6 +397,7 @@ fn rumpf_gegen_wirkungen(
 ) {
     let mut taten = Taten::default();
     sammle_taten(b, &mut taten);
+    traverse_gegen_touches(b, &f.name.text, konstanten, weltnamen, absagen);
 
     let ist_rein = w.liste.iter().any(|e| matches!(e.art, WirkungArt::Rein));
     let schreibrechte: Vec<String> = w

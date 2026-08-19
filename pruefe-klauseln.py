@@ -83,7 +83,11 @@ ERWARTET = {
     # jede Bankzelle leer, und der Satz gilt dann trivial. *Richtig und nutzlos ist keine
     # bestandene Pruefung.*
     "ghost":        ("ZUSAGE", "Ein Geisttyp darf im erzeugten C nicht vorkommen. Ein Verbot, das kein Pass durchsetzt -- dieselbe Bauart wie `opaque`."),
-    "veraenderlich":("ZUSAGE", "`mut`. Eine Zuweisung an ein unveraenderliches Band faellt bei keinem Pass -- ein Verbot ohne Biss."),
+    # **`veraenderlich` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- der
+    # sechste Aufstieg, und der erste Posten von «NL.2». `M116` faellt an einer Zuweisung an
+    # ein Band ohne `mut`. *Es war keine Buchhaltung, sondern eine Sicherheitsluecke: M1
+    # rechnet mit `mut` -- eine Tatsache stirbt beim Schreiben, und ohne Schreibrecht stirbt
+    # sie gar nicht erst.* Korpuspreis: null.
     "obermenge":    ("ZUSAGE", "Die Obermenge der Nutzlast (SPRACHE.md 11.3) -- eine Enthaltensaussage, die niemand nachrechnet."),
     "embeds":       ("ZUSAGE", "Ein Zeiger, der zugleich Bitfeld ist. Ob das Bitfeld ins Wort passt, ist «B24»s Frage -- und sie wird hier nicht gestellt."),
     "offset_into":  ("ZUSAGE", "Ein Feld als Versatz in ein anderes; die Schranke wird nicht geprueft."),
@@ -93,7 +97,11 @@ ERWARTET = {
     "counterprobe": ("ZUSAGE", "Die Gegenprobe soll FALLEN. Kein Pass fuehrt sie aus."),
     "gates":        ("ZUSAGE", "Welche Tore ein `check` oeffnet; ungelesen."),
     "abstieg":      ("ZUSAGE", "Wie der `traverse` absteigt. `schleifen.rs` geht in den Rumpf, liest den Abstieg aber nicht -- und an ihm haengt die Terminierung."),
-    "touches":      ("ZUSAGE", "Die Wirkungsmenge eines `traverse`; deklariert, nie gegen den Rumpf gehalten."),
+    # **`touches` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- siebter
+    # Aufstieg, zweiter Posten von «NL.2». `E011` haelt den Rumpf der Traversierung gegen die
+    # genannten Orte, mit derselben `deckt`-Funktion wie `E005`/`E010`. *`touches` ist die
+    # ENGERE Zusage neben `effects`, und eine engere, die niemand haelt, ist schlimmer als
+    # keine.* Korpuspreis: null.
     "verlaesst":    ("ZUSAGE", "`leaves` an `forever` -- welche Wege die Schleife verlassen darf; ungelesen."),
 
     # -- FREMD: die Klausel beschreibt etwas AUSSERHALB dieser Uebersetzungseinheit -------

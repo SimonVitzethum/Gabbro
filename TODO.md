@@ -541,6 +541,24 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+### «NL» — der Weg zu „nur noch eigene Logik" ([`dokumente/PLAN.md`](dokumente/PLAN.md)) — **PUNKT 1**
+
+- [ ] **NL.1 -- `ops` braucht eine WORTMENGE, und das ist der groesste Posten** *(2026-08-19)*.
+      `table.ops.erhaltung` traegt die K-Spalte -- **28 von 73 Pflichten** -- und ist
+      `entworfen`, weil `opdecl` beliebige Bezeichner nimmt. **Der zweite Ausweg (der Nutzer
+      schreibt die Wirkung) ist keiner: dann faellt Schnitt (c).** *Welche Operationen die
+      Menge fuehrt, ist eine Messung am ZWEITEN Korpus -- der erste hat null `ops`-Stellen.*
+- [ ] **NL.2 -- elf Zusagen ohne Leser** *(13 am 2026-08-19, zwei gefallen: `M116` fuer `mut`,
+      `E011` fuer `touches`)*. **Die schaerfste ist `abstieg`:** an ihm haengt die
+      TERMINIERUNG eines `traverse`, und `schleifen.rs` geht in den Rumpf, ohne ihn zu lesen.
+      Danach `ghost`, `pro_kern`, `offset_into`, und der Rest je mit eigener Fundstelle.
+      *Jede einzeln, jede mit Giftprobe, jede mit Korpusmessung VORHER.*
+- [ ] **NL.3 -- `ensures` ueber WELTZUSTAND, die haeufigere Form** *(2026-08-19)*. Numerisch
+      und relational tragen seit heute; `ensures mmu_an_zahl == 1` steht siebenmal in
+      `beispiele/22` und traegt nicht. **Sie kollidiert mit U4/U5** -- ein Aufruf toetet jeden
+      nichtlokalen Fakt -- und waere die erste Ausnahme davon. *Aufschreiben, bevor gebaut
+      wird, wie bei «H2.1».*
+
 ### «H2» — AUSGEFUEHRT 2026-08-19, `H = 17 -> 15`
 
 **H2.1** (Zaehlerregel, `domaene.rs`, `elems of <Feld>`, Gift 114/115) und **H2.2** (die alte

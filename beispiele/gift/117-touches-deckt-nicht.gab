@@ -1,0 +1,25 @@
+-- erwartet: E011
+-- **«NL.2.2» -- `touches` war deklariert und nie gegen den Rumpf gehalten.**
+--
+-- Warum die Zeile ueberhaupt dasteht, wenn `effects` den Rumpf schon deckt: `touches` ist die
+-- ENGERE, oertliche Zusage -- *diese Traversierung fasst genau DAS an.* Sie traegt die
+-- Kostenrechnung und die Sperrargumente.
+--
+-- *Eine engere Zusage, die niemand haelt, ist schlimmer als keine: wer sie liest, rechnet mit
+-- weniger Beruehrung, als der Rumpf hat.*
+module gift::touches_deckt_nicht {
+
+const N : u32 = 8;
+table W count N { slot { a : u32 in 0 .. 10, } }
+static mut fremd : u32 = 0;
+
+impl fn f(w : ptr<normal, rw> W) -> unit
+    effects { reads w.slots, writes w.slots, writes fremd } costs <= 200 ops
+{
+    traverse i over slots of w by unvisited
+        touches reads w.slots
+    { fremd = 1; }
+    return;
+}
+
+}

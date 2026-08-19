@@ -3154,3 +3154,136 @@ Bequemlichkeit.
 **Die ehrliche Überschrift für das Ergebnis lautet deshalb nicht *„am Boden"*, sondern:
 *über diesen zehn Fragmenten beweist kein Mensch mehr Klempnerei von Hand.*** Alles Weitere ist
 der zweite Korpus.
+
+---
+
+# «NL» — der Weg, an dessen Ende der Nutzer nur noch seine eigene Logik beweist
+
+> **Das ist Punkt 1 dieses Ordners, ab 2026-08-19.** Alles Übrige — der zweite Korpus, die
+> Bibliotheks-ABI, `entrust`, die Notationslücken — steht dahinter, weil es die These nicht
+> berührt. *Die These lautet: Gabbro beweist alles außer funktionaler Korrektheit. Solange ein
+> Nutzer Klempnerei von Hand trägt, ist sie unbelegt.*
+
+## Wo wir stehen, gemessen und nicht behauptet
+
+```
+H = 15        ueber den zehn Fragmenten kein Handbeweis mehr  («H2», 2026-08-19)
+```
+
+**Und `H` beantwortet die Frage nicht.** Es misst die *Fragmente*, nicht die *Sprache*. Was der
+Nutzer weiter trägt:
+
+| | Zahl | was es heißt |
+|---|---:|---|
+| **Erhaltungspflichten** | **3** | `maintains I` ist auf Wohlgeformtheit geprüft; dass der Rumpf sie **einlöst**, prüft niemand |
+| **ZUSAGE ohne Leser** | **13** | die Grammatik erlaubt es zu versprechen, kein Pass hält es nach |
+| **Fremdpflichten** | **8** | Annahmen über Rümpfe, die Gabbro nie sieht |
+| **Prämissen ohne Pass** | **7** | ein Beweis, den nichts herstellt |
+| **Absenkungspflichten** | **7** | in `H` enthalten, nicht in den Fragmenten |
+
+## Das Ziel, in prüfbarer Form
+
+**„Nur noch eigene Logik" heißt:** jede Pflicht, die `gabbro pflichten` druckt, ist eine
+**Wertaussage** — keine Erhaltung, keine stille Unterstellung —, und keine Klausel der Grammatik
+steht ohne Leser da.
+
+```
+NL erreicht:
+  ./pruefe-klauseln.py        ZUSAGE = 0
+  gabbro pflichten            Erhaltung = 0        (erzeugt statt bewiesen)
+                              fremd nur mit AUSGESPROCHENER Pflicht
+  gabbro schablonen           Praemissen ohne Pass = 0
+```
+
+**Und die Gegenrichtung gehört ins Tor, sonst misst es sich selbst grün:** eine Zusage darf die
+Liste **nur verlassen, indem ein Pass sie liest oder ihr Konstrukt fällt** — nicht durch
+Umbuchung. *Das ist Zahn 2 der Klauselratsche, und sie klemmt bereits in beide Richtungen.*
+
+---
+
+## NL.1 — `ops` bekommt eine Wortmenge *(die größte Spalte: K = 28 von 73)*
+
+`table.ops.erhaltung` ist bewiesen, was die Mathematik angeht
+(`beweise/Table_Ops_Erhaltung.thy`), und **`entworfen`, was die Auslieferung angeht: es gibt
+keinen Erzeuger.** Der Grund steht seit dem 2026-08-19 gemessen da:
+
+```
+opdecl = "ops" identlist ";"      -- beliebige Bezeichner, null Korpusstellen
+```
+
+**Aus einem Namen fällt keine Wirkung.** Zwei Auswege, und sie sind nicht gleich viel wert:
+
+| | |
+|---|---|
+| **(a)** eine **geschlossene Wortmenge** mit je definierter Wirkung — wie `merge add\|max\|min` | der Erzeuger kann emittieren, S5 fällt, K wird getragen |
+| **(b)** der Nutzer schreibt die Wirkung, der Erzeuger prüft sie | **dann ist es keine ERZEUGTE Mutation mehr, und Schnitt (c) fällt** |
+
+> **(b) ist kein Ausweg, sondern die Aufgabe des Ziels.** Der ganze Ertrag von Schnitt (c) ist,
+> dass der Beweis *einmal je Operation im Erzeuger* fällt statt je Aufrufstelle. Schreibt der
+> Nutzer den Rumpf, schreibt er auch den Beweis.
+
+**Diese Entscheidung gehört dem Ordner und nicht mir** — welche Operationen die Wortmenge führt,
+ist eine Messung am zweiten Korpus (*welche braucht ein echter Kernel?*) und danach ein Urteil.
+*Der erste Korpus hat null `ops`-Stellen und kann sie nicht liefern.*
+
+---
+
+## NL.2 — die dreizehn Zusagen bekommen Leser oder fallen
+
+**Nach Biss geordnet, und die Reihenfolge ist die Bauarbeit:**
+
+| | Zusage | was heute durchgeht |
+|---|---|---|
+| 1 | **`veraenderlich`** (`mut`) | `let x = 1; x = 2;` — **0 Fehler.** Ein Verbot ohne Biss, und es ist eine Sicherheitslücke, keine Buchhaltung |
+| 2 | **`touches`** | die Wirkungsmenge eines `traverse`, nie gegen den Rumpf gehalten — dieselbe Maschinerie wie `E010` |
+| 3 | **`abstieg`** | **an ihm hängt die Terminierung**; `schleifen.rs` geht in den Rumpf und liest ihn nicht |
+| 4 | **`ghost`** | ein Geisttyp darf im erzeugten C nicht vorkommen — ein Verbot, das kein Pass durchsetzt |
+| 5 | **`pro_kern`** | `per cpu N` gegen `NCORES` |
+| 6 | **`offset_into`** | die Schranke wird nicht geprüft |
+| 7 | **`obermenge`** · **`bedingung`** · **`embeds`** · **`mirrors`** · **`verlaesst`** · **`gates`** · **`counterprobe`** | der Rest, je mit eigener Fundstelle |
+
+**Jede einzeln, jede mit Giftprobe, jede mit Korpusmessung vorher.** *Eine Regel, die den
+eigenen Korpus zerlegt, ist ein Befund und keine Regel.*
+
+---
+
+## NL.3 — der fremde Rumpf spricht seine Pflicht, und der Rufer trägt sie
+
+Gebaut (Punkt 4, 2026-08-19): die numerische Nachbedingung (`aus_ensures`), die relationale
+(`beziehung_aus_ensures`), die nachweislich falsche Vorbedingung (`M115`).
+
+**Was fehlt, ist die häufigere Form: `ensures` über WELTZUSTAND.** `ensures mmu_an_zahl == 1`
+steht siebenmal in `beispiele/22`, und keine Zeile trägt.
+
+> **Sie kollidiert mit U4/U5** — *ein Aufruf tötet jeden nichtlokalen Fakt*, eine Regel mit
+> eigener Mutation. **Die Wiederherstellung aus `ensures` wäre die erste Ausnahme davon**, und
+> sie gehört gemessen, bevor sie gebaut wird — genau wie «H2.1» die Ausnahme von
+> `SPRACHE.md`:657 vorher aufgeschrieben hat.
+
+Dazu die zweite Hälfte: **28 fremde Deklarationen, eine spricht.** Solange sie schweigen,
+unterstellt der Rufer.
+
+---
+
+## NL.4 und NL.5 — die Prämissen und die Absenkungen
+
+**Sieben Prämissen ohne Pass**, und seit dem 2026-08-19 sagt jede, *womit* man sie füllt. **Drei
+der sieben brauchen keine Prüfarbeit, sondern eine Sprachform** — eine Wortmenge (NL.1), eine
+Grammatikzeile, die Ausführungskontexte. *Sie fallen mit NL.1 und K11.2.2, nicht einzeln.*
+
+**Sieben Absenkungspflichten** sind der Rest von `H`: Formen, für die der Erzeuger sich weigert.
+Sie kosten keinen Beweis, aber sie halten die Zusage *„dieses C erhält dieses Gabbro"* an einer
+Datei fest, die es gar nicht erst erzeugt.
+
+---
+
+## Was «NL» ausdrücklich NICHT liefert
+
+1. **Die acht Notationslücken bleiben.** Sie sind keine Handarbeit — sie sind Stellen, an denen
+   der Nutzer etwas **anderes** schreibt, weil er das Richtige nicht schreiben kann. *Null
+   Handbeweise heißt nicht, dass alles ausdrückbar ist.*
+2. **Der zweite Korpus bleibt die Bedingung über allem.** `ZUSAGE = 0` über einer selbst
+   geschriebenen Sprache ist Falle 80, solange kein Korpus daneben steht, den beim Bauen
+   niemand angesehen hat.
+3. **Die funktionale Korrektheit fällt nicht.** Sie ist der Zweck des Ziels, nicht sein Opfer:
+   *am Ende von «NL» beweist der Nutzer seine Logik — und nur die.*

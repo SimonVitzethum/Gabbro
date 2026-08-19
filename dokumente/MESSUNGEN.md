@@ -8376,3 +8376,76 @@ H = 15   (8 verankert + 7 Absenkungen)     F6 hat keine Zeile mehr
 > bleiben — *null Handbeweise heißt nicht, dass alles ausdrückbar ist*; der zweite Korpus hat
 > gar keine `H`-Messung; und die 13 ZUSAGE-Klauseln tauchen in `H` nicht auf, weil `H` die
 > Fragmente misst und nicht die Sprache.
+
+---
+
+# «NL» eröffnet — und zwei der dreizehn Zusagen sind gefallen
+
+**2026-08-19.** Die Frage war: *muss ein Gabbro-Nutzer jetzt nur noch seine eigene Logik
+beweisen?* **Nein** — und `H = 15` beantwortet sie nicht, weil es die *Fragmente* misst und
+nicht die *Sprache*.
+
+## Der Unterschied, in Zahlen
+
+| | |
+|---|---|
+| `H = 15` | über den zehn Fragmenten kein Handbeweis mehr |
+| **3 Erhaltungspflichten** | `maintains I` ist wohlgeformt geprüft; dass der Rumpf sie **einlöst**, prüft niemand |
+| **13 → 11 ZUSAGE** | die Grammatik erlaubt es zu versprechen, kein Pass hält es nach |
+| **8 Fremdpflichten** | Annahmen über Rümpfe, die Gabbro nie sieht |
+| **7 Prämissen ohne Pass** | ein Beweis, den nichts herstellt |
+
+## NL.2.1 — `mut` war ein Verbot ohne Biss
+
+```gabbro
+let x : u32 in 0 .. 10 = 1;
+x = 2;                         -- 0 Fehler
+```
+
+**Es ist keine Buchhaltung, sondern eine Sicherheitslücke, und der Grund liegt in M1 selbst:**
+eine Tatsache über `x` stirbt beim Schreiben — *ohne Schreibrecht stirbt sie gar nicht erst*,
+und genau darauf ruht jede Verengung (V1/V2). **`M116`**, Korpuspreis null.
+
+## NL.2.2 — `touches` war deklariert und nie gehalten
+
+```gabbro
+traverse i over slots of w by unvisited
+    touches reads w.slots
+{ fremd = 1; }                 -- 0 Fehler
+```
+
+**Warum die Zeile überhaupt dasteht, wenn `effects` den Rumpf schon deckt:** `touches` ist die
+**engere, örtliche** Zusage — *diese Traversierung fasst genau das an.* Sie trägt die
+Kostenrechnung und die Sperrargumente.
+
+> **Eine engere Zusage, die niemand hält, ist schlimmer als keine:** wer sie liest, rechnet mit
+> weniger Berührung, als der Rumpf hat.
+
+**`E011`**, mit derselben `deckt`-Funktion wie `E005`/`E010` — *keine zweite Mechanik.*
+Korpuspreis null, an 14 `touches`-Stellen.
+
+## Und der Klauselwächter hat beide gemeldet
+
+Sechster und siebter Aufstieg seit dem 2026-08-18 (`progress`, `ensures`, `maintains`,
+`versatz`, `schritt`, jetzt `veraenderlich` und `touches`).
+
+```
+Klauseln 46      ZUSAGE 13 -> 11
+```
+
+**Elf bleiben**, und die schärfste ist `abstieg`: *an ihm hängt die Terminierung eines
+`traverse`, und `schleifen.rs` geht in den Rumpf, ohne ihn zu lesen.*
+
+## Was «NL» noch braucht — und der größte Posten ist keine Bauarbeit
+
+**NL.1: `ops` braucht eine Wortmenge.** `table.ops.erhaltung` trägt die K-Spalte — **28 von 73
+Pflichten** — und ist `entworfen`, weil `opdecl = "ops" identlist ";"` beliebige Bezeichner
+nimmt. *Aus einem Namen fällt keine Wirkung.*
+
+> **Und der zweite Ausweg ist keiner:** ließe man den Nutzer den Rumpf schreiben und den
+> Erzeuger nur prüfen, fiele Schnitt (c) — *der ganze Ertrag ist, dass der Beweis einmal je
+> Operation im Erzeuger fällt statt je Aufrufstelle.* Schreibt der Nutzer den Rumpf, schreibt
+> er auch den Beweis.
+
+**Welche Operationen die Wortmenge führt, ist eine Messung am zweiten Korpus** — der erste hat
+null `ops`-Stellen und kann sie nicht liefern.

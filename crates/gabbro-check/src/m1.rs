@@ -113,6 +113,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         zaehlung: Zaehlung::default(),
         modul: String::new(),
         spezifikationen,
+        unveraenderlich: std::collections::HashSet::new(),
     };
     p.programm(baum);
     p.zaehlung
@@ -168,6 +169,16 @@ struct Pruefer<'a> {
     /// `maintains I` nennt eine davon, und bis zum 2026-08-19 nannte es sie ins Leere:
     /// sieben Korpusstellen, kein Leser. *Dieselbe Bauart wie `ensures` vor `M109`.*
     spezifikationen: std::collections::HashMap<String, usize>,
+    /// **Die unveraenderlichen Bindungen des laufenden Rumpfes -- «NL.2.1», 2026-08-19.**
+    ///
+    /// `let x = 1; x = 2;` ging bis dahin mit **0 Fehlern** durch. `pruefe-klauseln.py`
+    /// fuehrte `veraenderlich` als ZUSAGE mit dem Satz *„eine Zuweisung an ein
+    /// unveraenderliches Band faellt bei keinem Pass -- ein Verbot ohne Biss."*
+    ///
+    /// *Es ist keine Buchhaltung, sondern eine Sicherheitsluecke: `mut` ist die Zusage, dass
+    /// dieser Name sich nicht bewegt, und M1 rechnet mit ihr* -- eine Tatsache ueber `x`
+    /// stirbt beim Schreiben, aber ohne Schreibrecht stirbt sie gar nicht erst.
+    unveraenderlich: std::collections::HashSet<String>,
     /// Das Modul, in dem der gerade gepruefte Rumpf steht. **Ohne ihn loest der Pass Namen
     /// im Blindflug auf** -- und ein gleichnamiges `fn` in einem fremden Modul loescht eine
     /// Bereichspruefung, ohne dass jemand es sieht (Gegenpruefung 2026-08-14, U11/U12).
@@ -355,6 +366,11 @@ impl<'a> Pruefer<'a> {
                 if let ExprArt::Ruf(r) = &l.wert.art {
                     self.beziehung_aus_ensures(&l.name.text, r, lage);
                 }
+                if l.veraenderlich {
+                    self.unveraenderlich.remove(&l.name.text);
+                } else {
+                    self.unveraenderlich.insert(l.name.text.clone());
+                }
                 lage.lokal
                     .insert(l.name.text.clone(), ziel.unwrap_or(wert));
             }
@@ -369,6 +385,27 @@ impl<'a> Pruefer<'a> {
                 self.unterblock(&l.sonst, lage, ergebnis);
             }
             StmtArt::Zuweisung(z) => {
+                // **`M116` -- eine Zuweisung an ein unveraenderliches Band («NL.2.1»).**
+                //
+                // `mut` war bis zum 2026-08-19 ein Verbot ohne Biss. *Und M1 rechnet mit ihm:*
+                // eine Tatsache ueber `x` stirbt beim Schreiben -- ohne Schreibrecht stirbt
+                // sie gar nicht erst, und genau darauf ruht jede Verengung.
+                if z.ziel.suffixe.is_empty()
+                    && self.unveraenderlich.contains(&z.ziel.basis.text)
+                {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M116",
+                            z.ziel.span,
+                            format!("`{}` ist ohne `mut` gebunden", z.ziel.basis.text),
+                        )
+                        .mit_notiz(
+                            "eine Bindung ohne `mut` sagt zu, dass der Name sich nicht \
+                             bewegt -- und M1 rechnet damit: eine Tatsache ueber ihn stirbt \
+                             sonst bei jedem Schreiben",
+                        ),
+                    );
+                }
                 // U9: M4 gilt auf BEIDEN Seiten. Ein Schreiben ausserhalb der Schranken ist
                 // die gefaehrlichere Richtung, und sie lief hier am Index vorbei.
                 self.index_pruefen(&z.ziel, lage);

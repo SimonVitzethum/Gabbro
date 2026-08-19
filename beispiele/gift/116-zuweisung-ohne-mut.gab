@@ -1,0 +1,20 @@
+-- erwartet: M116
+-- **«NL.2.1» -- `mut` war ein Verbot ohne Biss.**
+-- `pruefe-klauseln.py` fuehrte `veraenderlich` als ZUSAGE mit genau diesem Satz: *„eine
+-- Zuweisung an ein unveraenderliches Band faellt bei keinem Pass."* Gemessen 2026-08-19:
+-- `let x = 1; x = 2;` ging mit 0 Fehlern durch.
+--
+-- *Es ist keine Buchhaltung, sondern eine Sicherheitsluecke: M1 RECHNET mit `mut`.* Eine
+-- Tatsache ueber `x` stirbt beim Schreiben -- ohne Schreibrecht stirbt sie gar nicht erst,
+-- und genau darauf ruht jede Verengung (V1/V2).
+module gift::ohne_mut {
+
+impl fn f() -> u32 in 0 .. 10
+    effects { pure } costs <= 8 ops
+{
+    let x : u32 in 0 .. 10 = 1;
+    x = 2;
+    return x;
+}
+
+}
