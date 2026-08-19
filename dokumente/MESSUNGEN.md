@@ -9634,5 +9634,5 @@ dritte Zustand wie bei `E009`: **`S007`**, weder abgesagt noch bestätigt, aber 
 ```
 165 Kennungen · 166 Gifte · 128 Tests · 33 Beispiele sauber
 158 von 159 Mutationen gefangen · 159/159 Anker · 13/13 Luecken zu
-12 Waechter gruen, alle mit Rueckgabewert
+13 Waechter gruen -- und `pruefe-luecken` hat seit heute ueberhaupt einen Rueckgabewert
 ```
