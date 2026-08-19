@@ -124,7 +124,6 @@ fn sammle(b: &Block, ziele: &mut Vec<(Ort, Span)>, brueche: &mut Vec<(String, Sp
                 for i in &x.invarianten {
                     brueche.push((i.text.clone(), s.span));
                 }
-                sammle(&x.rumpf, ziele, brueche);
             }
             _ => {}
         }

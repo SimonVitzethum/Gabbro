@@ -706,6 +706,19 @@ fn aufrufwirkungen(
     g: &crate::aufrufgraph::Graph,
     absagen: &mut Absagen,
 ) {
+    // **Eine Wirkung auf einen EIGENEN lokalen Namen ist hier eingelöst** (2026-08-19).
+    //
+    // Seit der Aufrufgraph die Parameternamen des Gerufenen durch die Argumente des Rufers
+    // ersetzt, kommt `consumes p` beim Rufer als `consumes y` an — und `y` ist ein Name, den
+    // niemand ausserhalb dieser Funktion kennt. **Ihn in der eigenen `effects`-Liste zu
+    // verlangen hiesse, über eine Stelle zu sprechen, die es draussen nicht gibt.**
+    //
+    // *Vorher war beides falsch:* der Rufer musste `consumes p` schreiben — den Parameter
+    // des GERUFENEN — und `E008` fiel auf sauberem Code.
+    let mut hier: Vec<String> = Vec::new();
+    if let FnRumpf::Block(b) = &f.rumpf {
+        lokale(b, &mut hier);
+    }
     let h = g.huelle(&g.schluessel_von(modul, &f.name.text));
     if let Some(grund) = &h.unvollstaendig {
         // Weder Absage noch Bestaetigung: der dritte Zustand, und er steht da.
@@ -730,6 +743,13 @@ fn aufrufwirkungen(
     let ist_rein = w.liste.iter().any(|e| matches!(e.art, WirkungArt::Rein));
     let eigene: Vec<String> = w.liste.iter().map(|e| e.art.benennung().to_string()).collect();
     for wirkung in &h.wirkungen {
+        // Der Ort steht am Ende; `y.slots` und `y` zaehlen beide.
+        if let Some((_, ort)) = wirkung.rsplit_once(' ') {
+            let grund = ort.split(['.', '[']).next().unwrap_or(ort);
+            if hier.iter().any(|l| l == grund) {
+                continue;
+            }
+        }
         // **Die Benennung ist zweiwortig, wo sie es ist.** `locks shared X` heisst
         // `locks shared`, nicht `locks` -- ein Vergleich am ersten Leerzeichen liess eine
         // Funktion an ihrer EIGENEN Wirkung scheitern. Gefunden an `beispiele/10`, sofort

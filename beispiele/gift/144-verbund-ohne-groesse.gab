@@ -1,0 +1,15 @@
+-- erwartet: N019
+-- **Ein Verbund, der sich selbst dem Wert nach enthaelt.**
+--
+-- Der Befund hatte zwei Haelften: erst starb der Pruefer daran (*„thread 'main' has
+-- overflowed its stack"*), und nach der Reparatur war es SCHLIMMER -- null Fehler, und der
+-- Erzeuger schrieb `typedef struct { uint32_t a; Knoten b; } Knoten;`, **kein gueltiges C**.
+--
+-- *Der Absturz war laut und der Nachfolger still.*
+module gift::verbund_ohne_groesse {
+
+type Knoten = { a : u32, b : Knoten, };
+
+impl fn f(k : Knoten) -> u32 effects { pure } costs <= 1 ops { return k.a; }
+
+}

@@ -15,7 +15,18 @@ members = [
 version = "0.0.1"
 edition = "2021"
 rust-version = "1.75"
-license = "MIT OR Apache-2.0"
+# **AGPL-3.0, nicht MIT/Apache.** Der Eintrag stand bis 2026-08-19 auf `MIT OR Apache-2.0`
+# und widersprach damit DREI Stellen: `LICENSE` (AGPL-3.0), `LIZENZ-ZUSATZ.md` (AGPL mit zwei
+# Zusaetzen) und dem Kopf jedes erzeugten C ("Gabbro is AGPL-3.0 with an additional
+# permission"). *Der Kopf des Erzeugnisses berief sich auf eine Lizenz, die das Manifest
+# bestritt* -- und das Manifest ist die Stelle, die `cargo`, `crates.io` und jeder
+# Abhaengigkeitspruefer liest.
+#
+# Beides steht da: `license` als SPDX-Ausdruck, damit jedes Werkzeug ihn lesen kann, und
+# `license-file` daneben -- die Zusatzerlaubnis nach AGPL §7 ist KEIN SPDX-Ausdruck, und
+# `AGPL-3.0-only` allein waere wieder eine halbe Aussage.
+license = "AGPL-3.0-only"
+license-file = "LICENSE"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

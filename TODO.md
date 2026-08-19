@@ -499,38 +499,31 @@ of items that are neither code nor a run — what remains is building and measur
 
 ---
 
-### From the review of 2026-08-19 — what is NOT yet closed
+### From the review of 2026-08-19 — **all nine closed the same day**
 
-*Four root causes were reproduced and closed the same day (module-qualified keys, the silent
-`relaxed`, the unchecked loop bound, the wrapping cost arithmetic; see
-[`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md)). **These are the ones that stand.** Each
-comes with a measured output, so none of them is a suspicion.*
+*Each came with a measured output and each leaves a poison probe behind. The list stays here
+as a record of what the closure cost; the details are in
+[`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md).*
 
-- [ ] **`effects { locks L }` is never redeemed.** The line covers every access to `L`'s
-      protected places without anybody ever TAKING the lock. `H007` counts a declared effect as
-      *held*, and that is right at the call boundary and wrong inside the declaring body —
-      **there the promise is the duty, not the evidence.**
-- [ ] **M2 tracks only linear PARAMETERS.** A linear value created inside the body is invisible,
-      and loops run once. *Exactly-once per path is therefore a statement about arguments, not
-      about values.*
-- [ ] **The pairing compares payload NAMES, not the atomic.** Two atomics that publish a
-      same-named place pair with each other. The set is united over the program (that is
-      intended); the key is the payload and should be the pair.
-- [ ] **The frame ends at the argument boundary.** `writes p.slots` at the callee is seen at the
-      caller as `writes p.slots` — **with the callee's parameter name.** The graph says so
-      (`aufrufgraph.rs` head) and it is coarse in the safe direction; what is missing is the
-      MAPPING, and without it `touches` at a call is unusable.
-- [ ] **The lock order is checked only intraprocedurally.** `H006` recomputes the rank order
-      inside one body; a cycle over two functions is not seen. *The graph now resolves names
-      module-aware — the rank walk over it is the missing piece, not the resolution.*
-- [ ] **`claim` injects C.** `emit.rs`:1214 writes the claim text into the output; verified
-      through to a smuggled token in the object. **The emitter must escape or refuse** — it
-      refuses everywhere else by name (`C001`), and this is the one place it does not.
-- [ ] **A recursive type overflows the stack** in `umgebung.rs`:938 — the `unterwegs` set does
-      not reach through on every path.
-- [ ] **`own` is a synonym for `rw`.** It carries both rights and no exclusivity; M3 says so
-      itself (*"no alias analysis"*), but the SPECIFICATION reads as if `own` were more.
-- [ ] **A lexer panic and a contradictory licence entry** — both small, both found from outside.
+| was open | closed as |
+|---|---|
+| `effects { locks L }` never redeemed | **`H011`** — redeemed by a `locks` block, a callee's hull, or `requires Held(…)` |
+| M2 tracks only linear PARAMETERS | **`L107`** — a value that arises in the body is consumed or leaves through `return` |
+| the pairing compares payload NAMES | the key is now **`(atomic, payload)`** — and it found a real error in `beispiele/05` |
+| the frame ends at the argument boundary | the graph **maps callee parameters to caller arguments**; `wirkungen` drops what is discharged locally |
+| the lock order is intraprocedural | **`H012`** — the rank order runs THROUGH calls, over the callee's hull |
+| `claim` injects C | `emit::kommentartext` at one place — verified to `nm` finding no injected symbol |
+| a recursive type overflows the stack | the guard is threaded through compound fields, and **`N019`** names the type that has no size |
+| `own` is a synonym for `rw` | **the specification was wrong, not the pass** — `SYNTAX.md` §3 now carries the measurement |
+| lexer panic · licence entry | **`P038`** (measured depth limit) · `license = "AGPL-3.0-only"` |
+
+- [ ] **The full argument mapping is only one level deep.** `writes p.slots` becomes
+      `writes q.slots` through the base name; an argument that is itself an expression
+      (`f(g(x))`) keeps the callee's name. *Coarse in the safe direction, and named here so
+      the next reader does not read it as complete.*
+- [ ] **`own` still buys no exclusivity, and cannot without alias analysis.** What is open is
+      not a pass but a decision: does Gabbro get a release operation (then `own` carries it),
+      or does the right stay a signature annotation? `own @ident` has no reader either way.
 
 # MEASUREMENTS — need a run
 

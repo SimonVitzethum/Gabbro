@@ -880,10 +880,18 @@ impl Umgebung {
                 laenge: self.konst_wert(von, &a.laenge).map(|v| v.max(0) as u128),
             },
             TypExpr::Zeiger(p) => Typ::Zeiger(Box::new(self.typexpr(von, &p.ziel, unterwegs))),
+            // **Der Rekursionsschutz wird DURCHGEREICHT** (2026-08-19). Vorher legte
+            // `typ_von_feld` hier einen frischen an, und ein selbstbezueglicher Verbund
+            // liess den Pruefer den Stapel ueberlaufen.
             TypExpr::Verbund(felder, _) => Typ::Verbund(
                 felder
                     .iter()
-                    .map(|f| (f.name.text.clone(), self.typ_von_feld(von, f)))
+                    .map(|f| {
+                        (
+                            f.name.text.clone(),
+                            self.typ_von_feld_mit(von, f, unterwegs),
+                        )
+                    })
                     .collect(),
             ),
             TypExpr::FnZeiger(_) => Typ::Unbekannt,
@@ -937,7 +945,27 @@ impl Umgebung {
 
     fn typ_von_feld(&self, von: &str, f: &FeldDecl) -> Typ {
         let mut unterwegs = HashSet::new();
-        let grund = self.typexpr(von, &f.typ.typ, &mut unterwegs);
+        self.typ_von_feld_mit(von, f, &mut unterwegs)
+    }
+
+    /// **Mit mitgefuehrtem Rekursionsschutz — und das war 2026-08-19 ein Stapelueberlauf.**
+    ///
+    /// `typ_von_feld` legte ein FRISCHES `unterwegs` an. Damit endete der Schutz an jedem
+    /// Verbundfeld, und
+    ///
+    /// ```gabbro
+    /// type Knoten = { a : u32, b : Knoten, };
+    /// ```
+    ///
+    /// liess den Pruefer mit *„thread 'main' has overflowed its stack"* sterben. **Ein
+    /// Uebersetzer, der an einer Deklaration abstuerzt, sagt ueber sie gar nichts** — und
+    /// gerade die selbstbezuegliche Form ist die, die `Table_Induktion.thy` traegt.
+    ///
+    /// *Der Schutz selbst stand die ganze Zeit da* (`typ_aufloesen`, Zeile 760); er wurde nur
+    /// an dieser einen Kante fallengelassen. **Dieselbe Bauart wie der kurze Name im
+    /// Aufrufgraphen: das Werkzeug war fertig, die Weiterreichung fehlte.**
+    fn typ_von_feld_mit(&self, von: &str, f: &FeldDecl, unterwegs: &mut HashSet<String>) -> Typ {
+        let grund = self.typexpr(von, &f.typ.typ, unterwegs);
         match (&f.bitpos, grund.bereich()) {
             // Ein Bitfeld traegt den Bereich seiner Bits, nicht den seines Grundtyps.
             (Some(BitPos::Bit(_)), Some(b)) => {

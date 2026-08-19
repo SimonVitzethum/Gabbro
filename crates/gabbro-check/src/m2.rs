@@ -57,10 +57,24 @@ enum Zustand {
 struct Vertraege<'a> {
     u: &'a crate::umgebung::Umgebung,
     param: &'a BTreeMap<String, BTreeSet<String>>,
+    ergebnis: &'a BTreeMap<String, String>,
+    linear: &'a BTreeSet<String>,
     modul: &'a str,
 }
 
 impl Vertraege<'_> {
+    /// **Liefert dieser Ausdruck einen linearen Wert?** Ein Ruf, dessen erklaertes Ergebnis
+    /// einen `linear`-Typ nennt.
+    fn linearer_ruf(&self, e: &Expr) -> Option<String> {
+        let ExprArt::Ruf(r) = &e.art else { return None };
+        let name = self
+            .u
+            .kandidaten_oeffentlich(self.modul, &r.pfad.text())
+            .into_iter()
+            .find_map(|k| self.ergebnis.get(&k))?;
+        self.linear.contains(name).then(|| name.clone())
+    }
+
     fn verbraucht(&self, pfad: &str) -> Option<&BTreeSet<String>> {
         self.u
             .kandidaten_oeffentlich(self.modul, pfad)
@@ -97,6 +111,10 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // 2. Welcher Parameter welcher Funktion wird verbraucht? Aus `effects { consumes … }`.
     let u = crate::umgebung::Umgebung::sammle(baum);
     let mut verbraucht_param: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    // **Der ERKLAERTE Ergebnistypname, kurz** -- so, wie `linear` seine Namen fuehrt. Der
+    // aufgeloeste `Typ` taugt hier nicht: ein `linear ghost type P;` hat keinen Rumpf und
+    // loest auf `Unbekannt` auf.
+    let mut ergebnistyp: BTreeMap<String, String> = BTreeMap::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Funktion(f) = &item.art {
             let mut menge = BTreeSet::new();
@@ -107,7 +125,13 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     }
                 }
             }
-            verbraucht_param.insert(crate::umgebung::qualifiziere(modul, &f.name.text), menge);
+            let q = crate::umgebung::qualifiziere(modul, &f.name.text);
+            if let Some(TypExpr::Pfad(pf)) = &f.ergebnis {
+                if let Some(n) = pf.teile.last() {
+                    ergebnistyp.insert(q.clone(), n.text.clone());
+                }
+            }
+            verbraucht_param.insert(q, menge);
         }
     });
 
@@ -118,31 +142,52 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         let FnRumpf::Block(b) = &f.rumpf else {
             return;
         };
-        let v = Vertraege { u: &u, param: &verbraucht_param, modul };
+        let v = Vertraege {
+            u: &u,
+            param: &verbraucht_param,
+            ergebnis: &ergebnistyp,
+            linear: &linear,
+            modul,
+        };
         // Lineare Parameter, die die Funktion NICHT unter `consumes` nennt, sind geliehen --
         // sie muessen am Ende noch leben. Die genannten muessen weg sein.
         let eigene = v
             .verbraucht(&f.name.text)
             .cloned()
             .unwrap_or_default();
-        let mut zust: BTreeMap<String, (Zustand, Span, bool)> = BTreeMap::new();
+        let mut zust: BTreeMap<String, (Zustand, Span, bool, bool)> = BTreeMap::new();
         for p in &f.parameter {
             if let TypExpr::Pfad(pf) = &p.typ {
                 if let Some(n) = pf.teile.last() {
                     if linear.contains(&n.text) {
                         let soll_weg = eigene.contains(&p.name.text);
-                        zust.insert(p.name.text.clone(), (Zustand::Lebt, p.name.span, soll_weg));
+                        zust.insert(p.name.text.clone(), (Zustand::Lebt, p.name.span, soll_weg, false));
                     }
                 }
             }
         }
-        if zust.is_empty() {
-            return;
-        }
+        // **Kein frueher Rueckstieg mehr, wenn kein PARAMETER linear ist** -- der Wert kann
+        // im Rumpf entstehen. Genau diese Zeile machte die Erweiterung oben unwirksam.
         gehe(b, &linear, &v, &mut zust, absagen);
         // Am Ende: geliehene leben, verbrauchte sind weg.
-        for (name, (z, span, soll_weg)) in &zust {
+        for (name, (z, span, soll_weg, lokal)) in &zust {
             match (z, soll_weg) {
+                // **`L107` -- ein im Rumpf entstandener linearer Wert, der liegen bleibt.**
+                //
+                // Der Fall, den M2 bis 2026-08-19 gar nicht sah: es verfolgte lineare
+                // PARAMETER, und ein `let x = erzeuge();` war unsichtbar. *Genau-einmal war
+                // damit eine Aussage ueber Argumente und nicht ueber Werte.*
+                (Zustand::Lebt, true) if *lokal => absagen.schiebe(
+                    Absage::fehler(
+                        "L107",
+                        *span,
+                        format!("`{name}` is created here and consumed on no path"),
+                    )
+                    .mit_notiz(
+                        "a linear value that arises in the body belongs to nobody else -- \
+                         it is consumed, or it leaves through `return`",
+                    ),
+                ),
                 (Zustand::Lebt, true) => absagen.schiebe(
                     Absage::fehler(
                         "L101",
@@ -175,19 +220,50 @@ fn gehe(
     b: &Block,
     linear: &BTreeSet<String>,
     v: &Vertraege,
-    zust: &mut BTreeMap<String, (Zustand, Span, bool)>,
+    zust: &mut BTreeMap<String, (Zustand, Span, bool, bool)>,
     absagen: &mut Absagen,
 ) {
     for s in &b.anweisungen {
         match &s.art {
             StmtArt::Ruf(r) => ruf(r, s.span, v, zust, absagen),
-            StmtArt::Let(l) => ausdruck(&l.wert, s.span, v, zust, absagen),
+            StmtArt::Let(l) => {
+                ausdruck(&l.wert, s.span, v, zust, absagen);
+                // **Ein linearer Wert, der im RUMPF entsteht** (2026-08-19). Bis dahin
+                // verfolgte M2 ausschliesslich lineare PARAMETER, und
+                //
+                // ```gabbro
+                // let x = erzeuge();   -- erzeuge() -> P, P ist `linear`
+                // return;              -- x wird nie verbraucht
+                // ```
+                //
+                // ging mit null Fehlern durch. *Genau-einmal war damit eine Aussage ueber
+                // Argumente, nicht ueber Werte.*
+                //
+                // `soll_weg` ist hier IMMER wahr: ein hier entstandener Wert gehoert
+                // niemandem sonst, also muss er auf jedem Weg verbraucht werden oder die
+                // Funktion verlassen (`return`, s. unten).
+                if let Some(t) = v.linearer_ruf(&l.wert) {
+                    let _ = t;
+                    zust.insert(l.name.text.clone(), (Zustand::Lebt, l.name.span, true, true));
+                }
+            }
             StmtArt::LetSonst(l) => {
                 if let Some(r) = l.als_ruf() {
                     ruf(r, s.span, v, zust, absagen);
                 }
             }
-            StmtArt::Return(Some(e)) => ausdruck(e, s.span, v, zust, absagen),
+            StmtArt::Return(Some(e)) => {
+                ausdruck(e, s.span, v, zust, absagen);
+                // **Wer zurueckgibt, verbraucht nicht -- er reicht WEITER.** Fuer diese
+                // Buchhaltung ist beides dasselbe: der Wert ist hier nicht mehr offen.
+                if let ExprArt::Ort(o) = &e.art {
+                    if o.suffixe.is_empty() {
+                        if let Some((z, _, _, _)) = zust.get_mut(&o.basis.text) {
+                            *z = Zustand::Verbraucht;
+                        }
+                    }
+                }
+            }
             StmtArt::Zuweisung(z) => ausdruck(&z.wert, s.span, v, zust, absagen),
             StmtArt::Wenn(w) => {
                 // **Jeder Zweig einzeln, dann Abgleich** -- ein Wert, der nur in einem Zweig
@@ -258,9 +334,9 @@ fn endet(b: &Block, _v: &Vertraege) -> bool {
 /// **L103 — die Zweige müssen dasselbe tun.** Ein Wert, der nur auf einem Weg verbraucht
 /// wird, ist auf dem anderen ein Leck; einer, der auf beiden verbraucht wird, ist keins.
 fn abgleich(
-    ergebnisse: &[(BTreeMap<String, (Zustand, Span, bool)>, bool)],
+    ergebnisse: &[(BTreeMap<String, (Zustand, Span, bool, bool)>, bool)],
     span: Span,
-    zust: &mut BTreeMap<String, (Zustand, Span, bool)>,
+    zust: &mut BTreeMap<String, (Zustand, Span, bool, bool)>,
     absagen: &mut Absagen,
 ) {
     let lebendige: Vec<_> = ergebnisse.iter().filter(|(_, endet)| !endet).collect();
@@ -299,7 +375,7 @@ fn ruf(
     r: &Ruf,
     span: Span,
     v: &Vertraege,
-    zust: &mut BTreeMap<String, (Zustand, Span, bool)>,
+    zust: &mut BTreeMap<String, (Zustand, Span, bool, bool)>,
     absagen: &mut Absagen,
 ) {
     let Some(_name) = r.pfad.teile.last() else {
@@ -312,7 +388,7 @@ fn ruf(
     for (i, a) in r.argumente.iter().enumerate() {
         let ExprArt::Ort(o) = &a.art else { continue };
         let arg = o.basis.text.clone();
-        let Some((z, _, _)) = zust.get_mut(&arg) else {
+        let Some((z, _, _, _)) = zust.get_mut(&arg) else {
             continue;
         };
         // Wird dieses Argument verbraucht? Nur wenn der Gerufene den Parameter an DIESER
@@ -351,7 +427,7 @@ fn ausdruck(
     e: &Expr,
     span: Span,
     v: &Vertraege,
-    zust: &mut BTreeMap<String, (Zustand, Span, bool)>,
+    zust: &mut BTreeMap<String, (Zustand, Span, bool, bool)>,
     absagen: &mut Absagen,
 ) {
     match &e.art {

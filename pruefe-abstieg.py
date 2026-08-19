@@ -55,6 +55,35 @@ def funktionen(s):
     return aus
 
 
+def doppelt(name, rumpf, arten):
+    """Arme, die neben `unterbloecke` noch **ungeschuetzt** selbst rekursieren.
+
+    Zwei Feinheiten, und beide waren beim ersten Lauf falsch:
+
+    * **Nur der Text VOR dem gemeinsamen Abstieg zaehlt.** Sonst laeuft der letzte Arm ueber
+      das Ende des `match` hinaus und liest den Abstieg selbst als seine eigene Rekursion.
+    * **Eine `!matches!`-Wache ist die Antwort, nicht der Fehler.** Wer `if` und `match`
+      oben eigenstaendig behandelt (weil dort abgeglichen und nicht fortgeschrieben wird)
+      und den gemeinsamen Abstieg dagegen absichert, laeuft nichts zweimal.
+    """
+    schnitt = rumpf.find("crate::unterbloecke(")
+    kopf = rumpf[:schnitt] if schnitt > 0 else rumpf
+    # Die Arten, die die Wache ausdruecklich ausnimmt.
+    wache = set()
+    for zeile in rumpf.split("\n"):
+        if "!matches!(&s.art," in zeile:
+            wache |= set(re.findall(r"StmtArt::([A-Za-z]+)", zeile))
+    aus = []
+    teile = re.split(r"(StmtArt::[A-Za-z]+)", kopf)
+    for i in range(1, len(teile), 2):
+        art = teile[i][len("StmtArt::"):]
+        if art not in arten or art in wache:
+            continue
+        if re.search(r"\b" + re.escape(name) + r"\s*\(", teile[i + 1]):
+            aus.append(art)
+    return aus
+
+
 def messe():
     arten = mit_block()
     zeilen, offen = [], 0
@@ -75,7 +104,20 @@ def messe():
         # *Dieselbe Vergroeberung, die der Waechter an den Paessen misst, hatte er selbst.*
         luecken = []
         for name, rumpf in funktionen(ganz):
-            if "StmtArt::" not in rumpf or "unterbloecke(" in rumpf:
+            if "StmtArt::" not in rumpf:
+                continue
+            # **Die Gegenrichtung, und sie hat sofort gebissen** (2026-08-19): wer den
+            # gemeinsamen Absteiger nimmt UND daneben noch einen eigenen Arm stehen laesst,
+            # laeuft jeden Unterblock ZWEIMAL -- und das ist 2^Tiefe.
+            #
+            # Gemessen an `m1::sammle_schreibziele`, wo genau das passiert war: 26
+            # geschachtelte `if` brauchten **1,88 s**, danach **0,003 s**; bei 50 lief der
+            # Pruefer laenger als anderthalb Minuten. *Ein Waechter, der nur eine Richtung
+            # prueft, misst die Haelfte* -- und diese Haelfte hat er selbst durchgelassen.
+            if "unterbloecke(" in rumpf:
+                for arm in doppelt(name, rumpf, arten):
+                    offen += 1
+                    zeilen.append(f"  {p}::{name:<20} DOPPELTER ABSTIEG in: {arm}")
                 continue
             # Nur Wege, die ueberhaupt absteigen wollen: wer keinen einzigen Unterblock
             # anfasst, ist ein Blattpruefer und keine Luecke.
@@ -107,7 +149,23 @@ def main():
     fehlt_jetzt = [a for a in arten if not re.search(r"StmtArt::" + a + r"\b", probe)]
     if "Observiert" not in fehlt_jetzt:
         sys.exit("SPRECHPROBE GESCHEITERT: der Waechter sieht ein entferntes `Observiert` nicht")
-    print("  (Sprechprobe: ein entferntes `Observiert` wird gemeldet -- ok)")
+    # **Und die zweite Richtung**, weil genau sie am 2026-08-19 durchgerutscht ist: ein Arm,
+    # der neben `unterbloecke` noch selbst rekursiert, laeuft jeden Unterblock zweimal.
+    gift = """fn probe(b: &Block) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Sperrt(x) => probe(&x.rumpf),
+            _ => {}
+        }
+        for k in crate::unterbloecke(s) { probe(k); }
+    }
+}"""
+    if "Sperrt" not in doppelt("probe", gift, arten):
+        sys.exit("SPRECHPROBE GESCHEITERT: der Waechter sieht einen doppelten Abstieg nicht")
+    sauber = gift.replace("StmtArt::Sperrt(x) => probe(&x.rumpf),", "StmtArt::Sperrt(_) => {}")
+    if doppelt("probe", sauber, arten):
+        sys.exit("SPRECHPROBE GESCHEITERT: falsches Rot am einfachen Abstieg")
+    print("  (Sprechprobe: fehlender UND doppelter Abstieg werden gemeldet -- ok)")
     if offen:
         print(f"== ABSTIEG: {offen} Paesse mit Luecke ==")
         return 1

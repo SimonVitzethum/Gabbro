@@ -42,7 +42,34 @@ pub struct Parser<'a> {
     /// place suffix -- the place before it may carry one. Without this rule `FRAGMENTE.md`'s
     /// `transition drv { DEVICE_STATUS: ACK -> ACK | DRIVER }` is unreadable.
     pfeil_ist_suffix: bool,
+    /// **Die Schachtelungstiefe — seit 2026-08-19, weil der Parser sonst STIRBT.**
+    ///
+    /// Gemessen: `return ((((…1…))));` mit **5000** Klammern ergab
+    /// *„thread 'main' has overflowed its stack"*, `rc = 134`. Bei 1000 lief es durch.
+    ///
+    /// > **Ein Uebersetzer, der an einer Eingabe abstuerzt, sagt ueber sie gar nichts** — und
+    /// > ein Absturz ist keine Absage: er hat keine Stelle, keinen Code und keinen Grund.
+    tiefe: usize,
 }
+
+/// **Die Grenze, und sie ist GEMESSEN, nicht geschaetzt.**
+///
+/// Der erste Anlauf setzte 512 mit der Begruendung *„weit unter dem, was den Stapel kostet --
+/// bei 1000 lief der Parser noch"*. **Das galt fuer den Hauptfaden mit 8 MiB.** Der
+/// Testlaeufer gibt jedem Testfaden **2 MiB**, und dort starb genau die Giftprobe, die die
+/// Grenze beweisen sollte -- *das Werkzeug fiel an seiner eigenen Probe.*
+///
+/// Nachgemessen auf 2 MiB (`crates/gabbro-cli/examples/tiefenmass.rs`):
+///
+/// | Tiefe | 2 MiB |
+/// |---:|---|
+/// | 384 | laeuft |
+/// | 512 | **stirbt** |
+///
+/// 128 steht damit **18-mal ueber allem, was ein Mensch schreibt** (der Korpus kommt auf
+/// **7**) und **dreifach unter** dem gemessenen Tod auf dem kleinsten Stapel, auf dem der
+/// Parser laufen soll. *Eine Grenze, die nur auf dem groessten Stapel haelt, ist keine.*
+const TIEFE_MAX: usize = 128;
 
 /// Lexes and parses a source. Refusals accumulate in `absagen`.
 pub fn parse(quelle: &str, absagen: &mut Absagen) -> Programm {
@@ -54,6 +81,7 @@ pub fn parse(quelle: &str, absagen: &mut Absagen) -> Programm {
         absagen,
         stumm: 0,
         pfeil_ist_suffix: true,
+        tiefe: 0,
     };
     p.programm()
 }
@@ -1051,7 +1079,35 @@ impl<'a> Parser<'a> {
     // -- 4. Expressions --------------------------------------------------------------------
 
     fn expr(&mut self) -> Erg<Expr> {
-        self.orexpr()
+        self.tiefer(|p| p.orexpr())
+    }
+
+    /// **Ein Abstieg mit Boden.** Zaehlt hinein, prueft, zaehlt heraus — auf JEDEM Weg, auch
+    /// dem mit `?`. *Ein Zaehler, der bei einem Abbruch stehenbliebe, waere ein zweiter
+    /// Fehler an derselben Stelle.*
+    fn tiefer<T>(&mut self, was: impl FnOnce(&mut Self) -> Erg<T>) -> Erg<T> {
+        self.tiefe += 1;
+        let erg = if self.tiefe > TIEFE_MAX {
+            let sp = self.blick().span;
+            self.absage(
+                Absage::fehler(
+                    "P038",
+                    sp,
+                    format!(
+                        "nesting deeper than {TIEFE_MAX} -- the parser refuses instead of dying"
+                    ),
+                )
+                .mit_notiz(
+                    "a compiler that crashes on an input says NOTHING about it -- a crash \
+                     has no place, no code and no reason",
+                ),
+            );
+            Err(Abbruch)
+        } else {
+            was(self)
+        };
+        self.tiefe -= 1;
+        erg
     }
 
     fn orexpr(&mut self) -> Erg<Expr> {
@@ -1590,7 +1646,7 @@ impl<'a> Parser<'a> {
     // -- 5. Predicates --------------------------------------------------------------------
 
     fn pred(&mut self) -> Erg<Pred> {
-        self.orpred()
+        self.tiefer(|p| p.orpred())
     }
 
     fn orpred(&mut self) -> Erg<Pred> {
@@ -2054,6 +2110,10 @@ impl<'a> Parser<'a> {
     // -- 7. Statements -------------------------------------------------------------------
 
     fn block(&mut self) -> Erg<Block> {
+        self.tiefer(|p| p.block_innen())
+    }
+
+    fn block_innen(&mut self) -> Erg<Block> {
         let anfang = self.erwarte_z(Z::GeschweiftAuf)?;
         let mut anweisungen = Vec::new();
         while !self.ist_z(Z::GeschweiftZu) && !self.ende() {

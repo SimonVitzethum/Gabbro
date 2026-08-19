@@ -365,8 +365,29 @@ rights = right { "+" right } ;
 right  = "r" | "w" | "rw" | "x" | "own" [ "@" ident ] ;
 ```
 
-`own` is the ownership right: whoever holds it may release — with that `Finalized` is expressible
-without lifetimes. The barrier follows from the **space**, not from the architecture.
+**`own` is the ownership right — and what it does TODAY is less than that sentence used to
+promise.** Measured 2026-08-19, prompted by a review from outside:
+
+| | |
+|---|---|
+| what the checker reads | **read + write**, in three `matches!` arms next to `rw` (`m3.rs`, `emit.rs`) |
+| `own @ident` — the origin | **no reader anywhere**; parsed, stored, never asked |
+| occurrences in the corpus | **one** (`beispiele/15`, a file that exists so the rights check gives no false red) |
+| the release it was justified by | **does not exist in the grammar** |
+
+> The old sentence here read *"whoever holds it may release — with that `Finalized` is
+> expressible without lifetimes."* **The release is not writable in Gabbro**, so the sentence
+> described a language that was planned and not one that is.
+
+**The exclusivity the word stands for is not decidable at any single site without alias
+analysis** — `m3.rs` says so itself (*"no alias analysis: two `ptr<normal, rw>` to the same
+object stay indistinguishable"*). Two `own` parameters of the same carrier are **not** an
+error: `own` asserts they are different objects, which is exactly the case that must stay
+writable. *A rule that only looked like a check would be worse than none.*
+
+**What `own` is good for as it stands:** it says in the signature what a `rw` does not — that
+this handle is the owner — and it is the one right a future release rule can attach to. The
+barrier follows from the **space**, not from the architecture.
 
 ---
 

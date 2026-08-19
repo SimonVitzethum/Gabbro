@@ -1,0 +1,22 @@
+-- erwartet: L107
+-- **M2 verfolgte nur lineare PARAMETER.**
+--
+-- Ein Wert, der im Rumpf entsteht, war unsichtbar -- *genau-einmal war damit eine Aussage
+-- ueber Argumente und nicht ueber Werte.* Hier bleibt `x` liegen und niemand merkte es.
+module gift::linear_im_rumpf {
+
+linear ghost type P;
+static mut w : u32 = 0;
+
+extern fn erzeuge() -> P effects { writes w } costs <= 8 ops;
+extern fn ende(p : P) effects { consumes p, writes w } costs <= 8 ops;
+
+impl fn leckt()
+    effects { writes w }
+    costs   <= 32 ops
+{
+    let x = erzeuge();
+    return;
+}
+
+}

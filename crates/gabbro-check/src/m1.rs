@@ -2470,19 +2470,6 @@ fn sammle_schreibziele(b: &Block, out: &mut Vec<Ort>) {
             StmtArt::Zuweisung(z) => out.push(z.ziel.clone()),
             StmtArt::Publish(p) => out.push(p.ziel.clone()),
             StmtArt::Exchange(e) => out.push(e.ort.clone()),
-            StmtArt::Wenn(w) => {
-                for (_, r) in &w.zweige {
-                    sammle_schreibziele(r, out);
-                }
-                if let Some(r) = &w.sonst {
-                    sammle_schreibziele(r, out);
-                }
-            }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    sammle_schreibziele(&z.rumpf, out);
-                }
-            }
             _ => {}
         }
         for k in crate::unterbloecke(s) {

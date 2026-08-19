@@ -1,0 +1,28 @@
+-- erwartet: H011
+-- **Eine `locks`-Wirkung, die niemand einloest.**
+--
+-- `H007` zaehlt eine deklarierte `locks L`-Wirkung als GEHALTEN -- am Aufrufrand richtig,
+-- im deklarierenden Rumpf falsch. Gemessen: diese Datei ging mit **null Fehlern** durch, und
+-- die Zeile deckte jeden Zugriff, ohne dass irgendwer die Sperre nimmt.
+--
+-- *Die Wirkungsliste war der Beleg fuer sich selbst.*
+module gift::locks_nie_genommen {
+
+table T count 8 { slot { x : u32, } }
+lock L protects { T } rank 0 held <= 100 ops;
+
+impl fn schreibt(i : index into T)
+    effects { writes T.slots, locks L }
+    costs   <= 4 ops
+{
+    T.slots[i].x = 1;
+}
+
+impl fn nimmt_sie()
+    effects { locks L, reads T.slots }
+    costs   <= 8 ops
+{
+    locks L { let a = T.slots[0].x; }
+}
+
+}

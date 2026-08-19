@@ -254,6 +254,22 @@ pub struct Bericht {
 
 /// Fahrt aller **gebauten** Paesse ueber einen Baum, in der Reihenfolge der Liste.
 pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
+    if std::env::var("GABBRO_ZEIT").is_ok() {
+        macro_rules! z { ($n:expr, $e:expr) => {{ let t = std::time::Instant::now(); $e; eprintln!("{:>10} {:?}", $n, t.elapsed()); }} }
+        z!("namen", namen::pass(baum, absagen));
+        z!("kbed", kbedingung::pass(baum, absagen));
+        let m1 = { let t = std::time::Instant::now(); let r = m1::pass(baum, absagen); eprintln!("{:>10} {:?}", "m1", t.elapsed()); r };
+        z!("schleifen", schleifen::pass(baum, absagen));
+        z!("wirkungen", wirkungen::pass(baum, absagen));
+        z!("geteilt", geteilt::pass(baum, absagen));
+        z!("m3", m3::pass(baum, absagen));
+        z!("m2", m2::pass(baum, absagen));
+        z!("phasen", phasen::pass(baum, absagen));
+        z!("paarung", paarung::pass(baum, absagen));
+        z!("gruppe", gruppe::pass(baum, absagen));
+        let kosten = { let t = std::time::Instant::now(); let r = kosten::pass(baum, absagen); eprintln!("{:>10} {:?}", "kosten", t.elapsed()); r };
+        return Bericht { m1, kosten };
+    }
     namen::pass(baum, absagen);
     kbedingung::pass(baum, absagen);
     let m1 = m1::pass(baum, absagen);

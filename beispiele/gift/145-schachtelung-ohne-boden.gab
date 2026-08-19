@@ -1,0 +1,18 @@
+-- erwartet: P038
+-- **Der Parser starb an tiefer Schachtelung** -- `rc = 134`, *„thread 'main' has overflowed
+-- its stack"*, ohne Stelle, ohne Kennung, ohne Grund.
+--
+-- Gemessen 2026-08-19: bei 1000 Klammern lief er noch, bei 5000 starb er. **Ein Uebersetzer,
+-- der an einer Eingabe abstuerzt, sagt ueber sie gar nichts** -- und ein Absturz ist keine
+-- Absage.
+--
+-- Die Grenze steht bei 128 und ist GEMESSEN: auf einem 2-MiB-Stapel (so gross ist ein
+-- Testfaden) laeuft der Parser bis 384 und stirbt bei 512. Der Korpus kommt auf **7**.
+--
+-- *Der erste Anlauf setzte 512 -- gemessen am Hauptfaden mit 8 MiB. Diese Datei brachte
+-- daraufhin den TESTLAEUFER um: das Werkzeug fiel an seiner eigenen Probe.*
+module gift::schachtelung {
+
+impl fn tief() -> u32 effects { pure } costs <= 1 ops { return ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((1)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))); }
+
+}

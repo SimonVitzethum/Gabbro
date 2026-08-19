@@ -93,11 +93,42 @@ struct Sperre {
 /// nie, und die Zwischenregel schwieg über jeden Aufruf ausserhalb der Wurzel.
 struct Rufwissen<'a> {
     u: &'a crate::umgebung::Umgebung,
+    g: &'a crate::aufrufgraph::Graph,
     verlangt: &'a BTreeMap<String, Vec<(String, bool)>>,
     modul: &'a str,
 }
 
 impl Rufwissen<'_> {
+    /// **Welche Sperren nimmt der Gerufene — er selbst oder einer SEINER Gerufenen?**
+    ///
+    /// Die Frage, die `H006` bis 2026-08-19 nicht stellen konnte: sie prüfte die Rangordnung
+    /// nur INNERPROZEDURAL. Gemessen: `locks L2 { … nimmt_l1(); }` mit `L1` auf Rang 1 und
+    /// `L2` auf Rang 2 ging mit **null Fehlern** durch — *ein Zyklus über zwei Funktionen,
+    /// und das ist genau die Form, in der ein Deadlock im echten Kernel steht.*
+    fn nimmt(&self, pfad: &str) -> Vec<String> {
+        let Some(voll) = self
+            .u
+            .kandidaten_oeffentlich(self.modul, pfad)
+            .into_iter()
+            .find(|k| self.g.knoten.contains_key(k))
+        else {
+            return Vec::new();
+        };
+        let h = self.g.huelle(&voll);
+        // **Über einer unvollständigen Hülle wird nicht abgesagt** (R16).
+        if h.unvollstaendig.is_some() {
+            return Vec::new();
+        }
+        h.wirkungen
+            .iter()
+            .filter_map(|w| {
+                w.strip_prefix("locks shared ")
+                    .or_else(|| w.strip_prefix("locks "))
+                    .map(str::to_string)
+            })
+            .collect()
+    }
+
     fn forderungen(&self, pfad: &str) -> Option<&Vec<(String, bool)>> {
         self.u
             .kandidaten_oeffentlich(self.modul, pfad)
@@ -144,7 +175,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         let FnRumpf::Block(b) = &f.rumpf else {
             return;
         };
-        let rw = Rufwissen { u: &u, verlangt: &verlangt, modul };
+        let rw = Rufwissen { u: &u, g: &g, verlangt: &verlangt, modul };
         block(b, &[], &[], &[], &sperren, &rw, &mut geteilt_genommen, absagen);
     });
 
@@ -231,6 +262,87 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             rcu_schutz(b, &[], &aussen, &domaenen, &rueckgaben, &sperren, &f.name.text, absagen);
         });
     }
+
+    // **H011 -- eine `locks`-Wirkung, die niemand einloest** (2026-08-19).
+    //
+    // Der Befund kam von aussen und ist die dritte Richtung derselben Frage. `H007` zaehlt
+    // eine deklarierte `locks L`-Wirkung als GEHALTEN -- und das ist am Aufrufrand richtig
+    // (dort ist die Zeile die Pflicht des Rufers) und im deklarierenden Rumpf falsch:
+    //
+    // ```gabbro
+    // impl fn schreibt(i : index into T)
+    //     effects { writes T.slots, locks L }   -- genommen wird sie NIRGENDS
+    // { T.slots[i].x = 1; }
+    // ```
+    //
+    // ging mit **null Fehlern** durch, und `H007` deckte jeden Zugriff mit einer Zeile, die
+    // nichts tat. *Die Wirkungsliste war der Beleg fuer sich selbst.*
+    //
+    // **Eingeloest ist sie auf zwei Wegen**, und beide zaehlen: ein `locks L`-Block im
+    // eigenen Rumpf, oder ein Gerufener, dessen Huelle `locks L` traegt (seit
+    // 2026-08-15 schliesst eine Wirkungsliste die der Gerufenen ein, `E008`).
+    //
+    // **Und `requires Held(L)` nimmt aus**: wer die Sperre vom Rufer verlangt, nimmt sie
+    // nicht -- `beispiele/09` schreibt genau so (`requires Held(KAPPEN)` neben
+    // `locks KAPPEN`), und das ist die haeufigste richtige Form im Korpus.
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        let Some(w) = &f.effects else { return };
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        let mut eigene = Vec::new();
+        sperrnahmen(b, &mut eigene);
+        let mut verlangte = Vec::new();
+        for p in &f.requires {
+            crate::aufrufgraph::held_aus_pred(p, &mut verlangte);
+        }
+        // **Die Huelle der GERUFENEN, nicht die eigene.** `huelle(f)` enthaelt `f`s eigene
+        // Wirkungsliste -- die Zeile haette sich damit selbst belegt, und der Waechter
+        // schwieg beim ersten Lauf ueber genau das Gift, fuer das er gebaut wurde. *R11: eine
+        // Probe, die auf Anhieb gruen ist, ist verdaechtig; hier war sie es zu Recht.*
+        let huelle = g.huelle_der_gerufenen(&g.schluessel_von(modul, &f.name.text));
+        for e in &w.liste {
+            let (name, wort) = match &e.art {
+                WirkungArt::Sperrt(o) => (o.text(), "locks"),
+                WirkungArt::SperrtGeteilt(o) => (o.text(), "locks shared"),
+                _ => continue,
+            };
+            if eigene.contains(&name) || verlangte.iter().any(|(n, _)| n == &name) {
+                continue;
+            }
+            // Ein Gerufener, der sie nimmt, loest sie ebenso ein.
+            if huelle
+                .wirkungen
+                .iter()
+                .any(|x| x == &format!("locks {name}") || x == &format!("locks shared {name}"))
+            {
+                continue;
+            }
+            // **Ueber einer unvollstaendigen Huelle wird nicht abgesagt** (R16): ein Zyklus
+            // oder ein Gerufener ohne `effects` macht die Menge zu einer unteren Schranke,
+            // und eine Absage daraus waere eine Behauptung.
+            if huelle.unvollstaendig.is_some() {
+                continue;
+            }
+            absagen.schiebe(
+                Absage::fehler(
+                    "H011",
+                    e.span,
+                    format!(
+                        "`{}` declares `{wort} {name}` but never takes it",
+                        f.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "`H007` counts a declared `locks` effect as HELD -- so this line covers \
+                     every access to the protected places while nothing protects them",
+                )
+                .mit_notiz(
+                    "redeemed by a `locks` block in this body, by a callee whose hull \
+                     carries it, or by `requires Held(…)` -- the caller's duty",
+                ),
+            );
+        }
+    });
 
     // **H008 -- die Gegenrichtung von H007, und sie haette den Befund zuerst gefunden.**
     //
@@ -536,23 +648,23 @@ fn block(
             }
             StmtArt::Zuweisung(z) => {
                 schreibprobe(&z.ziel, s.span, offen, exklusiv, sperren, absagen);
-                rufprobe_expr(&z.wert, s.span, offen, rw, absagen);
+                rufprobe_expr(&z.wert, s.span, offen, kette, sperren, rw, absagen);
             }
-            StmtArt::Ruf(r) => rufprobe(r, s.span, offen, rw, absagen),
-            StmtArt::Let(l) => rufprobe_expr(&l.wert, s.span, offen, rw, absagen),
-            StmtArt::Return(Some(e)) => rufprobe_expr(e, s.span, offen, rw, absagen),
+            StmtArt::Ruf(r) => rufprobe(r, s.span, offen, kette, sperren, rw, absagen),
+            StmtArt::Let(l) => rufprobe_expr(&l.wert, s.span, offen, kette, sperren, rw, absagen),
+            StmtArt::Return(Some(e)) => rufprobe_expr(e, s.span, offen, kette, sperren, rw, absagen),
             StmtArt::Publish(p) => schreibprobe(&p.ziel, s.span, offen, exklusiv, sperren, absagen),
             StmtArt::Exchange(e) => {
                 schreibprobe(&e.ort, s.span, offen, exklusiv, sperren, absagen)
             }
             StmtArt::Wenn(w) => {
                 for (b, _) in &w.zweige {
-                    rufprobe_expr(b, s.span, offen, rw, absagen);
+                    rufprobe_expr(b, s.span, offen, kette, sperren, rw, absagen);
                 }
             }
             StmtArt::LetSonst(x) => {
                 if let Some(r) = x.als_ruf() {
-                    rufprobe(r, s.span, offen, rw, absagen);
+                    rufprobe(r, s.span, offen, kette, sperren, rw, absagen);
                 }
             }
             _ => {}
@@ -626,9 +738,54 @@ fn rufprobe(
     r: &Ruf,
     span: Span,
     offen: &[String],
+    kette: &[(String, Option<i128>)],
+    sperren: &BTreeMap<String, Sperre>,
     rw: &Rufwissen,
     absagen: &mut Absagen,
 ) {
+    // **`H012` -- die Rangordnung ueber die Aufrufgrenze** (2026-08-19).
+    //
+    // `H006` rechnete die Ordnung im eigenen Rumpf nach und sah einen Ring ueber zwei
+    // Funktionen nicht. Gemessen: `locks L2 { … nimmt_l1(); }` mit `L1` auf Rang 1 --
+    // **null Fehler**, und das ist ein Deadlock, kein Stilfehler.
+    //
+    // Geprueft wird gegen die HUELLE des Gerufenen, also auch ueber mehrere Ebenen. Die
+    // Meldung heisst `H012` und nicht `H006`, weil der Ort ein anderer ist: dort steht ein
+    // `locks`-Block, hier ein Aufruf -- und die Abhilfe ist eine andere.
+    if !kette.is_empty() {
+        for genommen in rw.nimmt(&r.pfad.text()) {
+            let Some(neu) = sperren.get(&genommen).and_then(|x| x.rang) else {
+                continue;
+            };
+            for (aussen, alt) in kette {
+                if aussen == &genommen {
+                    continue;
+                }
+                let Some(alt) = alt else { continue };
+                if *alt >= neu {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "H012",
+                            span,
+                            format!(
+                                "this call takes `{genommen}` (rank {neu}) while \
+                                 `{aussen}` (rank {alt}) is held here"
+                            ),
+                        )
+                        .mit_notiz(
+                            "the lock order runs UPWARDS, and it runs THROUGH calls -- \
+                             `H006` only ever recomputed it inside one body",
+                        )
+                        .mit_notiz(
+                            "the callee's effect hull names the lock; the honest form is \
+                             to release the outer lock first and re-check the carrying \
+                             condition afterwards",
+                        ),
+                    );
+                }
+            }
+        }
+    }
     if offen.is_empty() {
         return;
     }
@@ -668,22 +825,24 @@ fn rufprobe_expr(
     e: &Expr,
     span: Span,
     offen: &[String],
+    kette: &[(String, Option<i128>)],
+    sperren: &BTreeMap<String, Sperre>,
     rw: &Rufwissen,
     absagen: &mut Absagen,
 ) {
     match &e.art {
         ExprArt::Ruf(r) => {
-            rufprobe(r, span, offen, rw, absagen);
+            rufprobe(r, span, offen, kette, sperren, rw, absagen);
             for a in &r.argumente {
-                rufprobe_expr(a, span, offen, rw, absagen);
+                rufprobe_expr(a, span, offen, kette, sperren, rw, absagen);
             }
         }
         ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => {
-            rufprobe_expr(x, span, offen, rw, absagen)
+            rufprobe_expr(x, span, offen, kette, sperren, rw, absagen)
         }
         ExprArt::Binaer(_, a, b) => {
-            rufprobe_expr(a, span, offen, rw, absagen);
-            rufprobe_expr(b, span, offen, rw, absagen);
+            rufprobe_expr(a, span, offen, kette, sperren, rw, absagen);
+            rufprobe_expr(b, span, offen, kette, sperren, rw, absagen);
         }
         _ => {}
     }

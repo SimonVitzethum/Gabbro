@@ -570,7 +570,12 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                     format!("UNFALSIFIABLE -- {grund}")
                 }
             };
-            aus.push_str(&format!(" *   {} ({}): {}\n", a.name, a.art, wie));
+            aus.push_str(&format!(
+            " *   {} ({}): {}\n",
+            kommentartext(&a.name),
+            a.art,
+            kommentartext(&wie)
+        ));
         }
         aus.push_str(" */\n");
     }
@@ -1202,6 +1207,24 @@ fn ausdruck_geraet(e: &Expr, d: &Device, u: &Namen, absagen: &mut Absagen) -> St
 }
 
 /// **`check` -- die Probe wird eine Funktion, ihre Behauptung ein Kommentar.**
+/// **Quelltext, der in einen C-Kommentar geht — an EINER Stelle entschärft.**
+///
+/// Gefunden am 2026-08-19 von aussen, nachgestellt bis ins Objekt: ein `claim` mit der Folge
+/// `*/` schliesst den Kommentar und schreibt danach C. `nm` fand
+/// `0000000000000000 D EINGESCHLEUST` — **eine Zeichenkette aus der Quelle wurde ein
+/// Datensymbol im Objekt.**
+///
+/// *Der Grund, warum ausgerechnet diese Folge trägt:* der Lexer kennt **keine Escapes**
+/// (`L006`), eine Zeichenkette kann also kein `"` enthalten — damit war der `section`-Kanal
+/// nie offen. `*/` braucht keins.
+///
+/// **Warum entschärfen und nicht weigern:** der Kommentar ist Prosa für einen Leser, und
+/// eine Prosa mit `*/` darin ist keine Zusage, die falsch würde. Die Folge wird sichtbar
+/// getrennt (`* /`), nicht entfernt — *wer sie geschrieben hat, findet sie wieder.*
+fn kommentartext(t: &str) -> String {
+    t.replace("*/", "* /").replace("/*", "/ *")
+}
+
 fn pruefkoerper(
     c: &Check,
     aus: &mut String,
@@ -1212,17 +1235,19 @@ fn pruefkoerper(
     aus.push_str(&format!("\nbool pruefe_{}(void);\n", c.name.text));
     rumpf_aus.push_str(&format!(
         "\n/* check {}\n * claim: {}\n",
-        c.name.text, c.claim.text
+        kommentartext(&c.name.text),
+        kommentartext(&c.claim.text)
     ));
     for g in &c.gates {
-        rumpf_aus.push_str(&format!(" * gates: {}\n", g.text));
+        rumpf_aus.push_str(&format!(" * gates: {}\n", kommentartext(&g.text)));
     }
     if let Some((was, erwartet)) = &c.counterprobe {
         // **Die Gegenprobe ist die Zeile, die die Probe erst zu einer macht** -- sie sagt,
         // wie die Probe ROT werden koennte. Eine Probe ohne sie ist eine Zusage.
         rumpf_aus.push_str(&format!(
             " * counterprobe: \"{}\" expects {}\n",
-            was.text, erwartet.text
+            kommentartext(&was.text),
+            kommentartext(&erwartet.text)
         ));
     }
     rumpf_aus.push_str(" */\n");

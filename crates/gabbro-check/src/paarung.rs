@@ -57,9 +57,9 @@ fn form(o: &str) -> String {
 #[derive(Default)]
 struct Haelften {
     /// Was veröffentlicht wird — Form, Fundstelle.
-    publiziert: Vec<(String, Span)>,
-    /// Was erwartet wird.
-    erwartet: Vec<(String, Span)>,
+    publiziert: Vec<(String, String, Span)>,
+    /// Was erwartet wird — ebenfalls `(Atomic, Nutzlast)`.
+    erwartet: Vec<(String, String, Span)>,
     /// Ein `relaxed`-Store mit Nutzlast: die Ordnung trägt sie nicht. Das `bool` sagt, ob
     /// `relaxed` **dastand** -- die schweigende Fassung ist die gefährlichere.
     relaxed_mit_last: Vec<(String, Span, bool)>,
@@ -96,13 +96,13 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // Die vereinigte Menge über den ganzen Baum -- die Paarung ist eine Aussage über das
     // PROGRAMM, nicht über eine Funktion: wer publiziert und wer erwartet, sind fast nie
     // dieselbe Funktion.
-    let alle_publiziert: BTreeSet<String> = je_funktion
+    let alle_publiziert: BTreeSet<(String, String)> = je_funktion
         .iter()
-        .flat_map(|(_, h, _)| h.publiziert.iter().map(|(o, _)| o.clone()))
+        .flat_map(|(_, h, _)| h.publiziert.iter().map(|(a, o, _)| (a.clone(), o.clone())))
         .collect();
-    let alle_erwartet: BTreeSet<String> = je_funktion
+    let alle_erwartet: BTreeSet<(String, String)> = je_funktion
         .iter()
-        .flat_map(|(_, h, _)| h.erwartet.iter().map(|(o, _)| o.clone()))
+        .flat_map(|(_, h, _)| h.erwartet.iter().map(|(a, o, _)| (a.clone(), o.clone())))
         .collect();
 
     for (name, h, unvollstaendig) in &je_funktion {
@@ -111,7 +111,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             absagen.schiebe(
                 Absage::hinweis(
                     "V003",
-                    h.publiziert[0].1,
+                    h.publiziert[0].2,
                     format!("the pairing in `{name}` is undecidable: the call graph is incomplete here"),
                 )
                 .mit_notiz(
@@ -121,13 +121,20 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             );
             continue;
         }
-        for (o, span) in &h.publiziert {
-            if !alle_erwartet.contains(o) {
+        for (at, o, span) in &h.publiziert {
+            if !alle_erwartet.contains(&(at.clone(), o.clone())) {
                 absagen.schiebe(
                     Absage::fehler(
                         "V001",
                         *span,
-                        format!("`publishes {o}` in `{name}` -- nothing awaits this payload"),
+                        format!(
+                            "`publishes {o}` on `{at}` in `{name}` -- nothing awaits this \
+                             payload ON THIS ATOMIC"
+                        ),
+                    )
+                    .mit_notiz(
+                        "the pair is (atomic, payload): a counterpart on a DIFFERENT atomic \
+                         establishes nothing here",
                     )
                     .mit_notiz(
                         "SPRACHE.md part II §1: ordering is PAIRED, not declared -- a \
@@ -137,13 +144,20 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 );
             }
         }
-        for (o, span) in &h.erwartet {
-            if !alle_publiziert.contains(o) {
+        for (at, o, span) in &h.erwartet {
+            if !alle_publiziert.contains(&(at.clone(), o.clone())) {
                 absagen.schiebe(
                     Absage::fehler(
                         "V002",
                         *span,
-                        format!("`awaits {o}` in `{name}` -- nothing publishes this payload"),
+                        format!(
+                            "`awaits {o}` on `{at}` in `{name}` -- nothing publishes this \
+                             payload ON THIS ATOMIC"
+                        ),
+                    )
+                    .mit_notiz(
+                        "the pair is (atomic, payload): a publication on a DIFFERENT atomic \
+                         establishes nothing here",
                     )
                     .mit_notiz(
                         "the dangerous half: an `awaits` without a counterpart reads a \
@@ -207,24 +221,26 @@ fn sammle(b: &Block, ordnungen: &[(String, Option<Ordnung>)], h: &mut Haelften) 
                             Some(erklaert) => {
                                 h.relaxed_mit_last.push((ziel.clone(), s.span, erklaert))
                             }
-                            None => h.publiziert.push((form(&o.text()), s.span)),
+                            None => h.publiziert.push((ziel.clone(), form(&o.text()), s.span)),
                         }
                     }
                 }
             }
             StmtArt::AwaitLoad(a) => {
+                let quelle = a.quelle.text();
                 for o in &a.erwartet {
-                    h.erwartet.push((form(&o.text()), s.span));
+                    h.erwartet.push((quelle.clone(), form(&o.text()), s.span));
                 }
             }
             StmtArt::Exchange(e) => {
+                let ort = e.ort.text();
                 if let Some(Nutzlast::Orte(liste)) = &e.nutzlast {
                     for o in liste {
-                        h.publiziert.push((form(&o.text()), s.span));
+                        h.publiziert.push((ort.clone(), form(&o.text()), s.span));
                     }
                 }
                 for o in e.erwartet.iter().flatten() {
-                    h.erwartet.push((form(&o.text()), s.span));
+                    h.erwartet.push((ort.clone(), form(&o.text()), s.span));
                 }
             }
             _ => {}

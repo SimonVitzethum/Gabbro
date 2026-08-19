@@ -21,6 +21,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     pro_kern_und_gegenprobe(baum, absagen);
     dispatch_loest_auf(baum, absagen);
     maschineneigenschaft(baum, absagen);
+    verbund_ohne_groesse(baum, absagen);
 }
 
 /// **`N016` -- `requires Has(X)` wird am RUFORT verlangt («NL.2», 2026-08-19).**
@@ -1071,4 +1072,116 @@ fn dispatch_loest_auf(baum: &Programm, absagen: &mut Absagen) {
             ),
         );
     });
+}
+
+/// **`N019` — ein Verbund, der sich selbst DEM WERT NACH enthält, hat keine Größe.**
+///
+/// Gefunden am 2026-08-19 von aussen, und der Befund hatte zwei Hälften:
+///
+/// ```gabbro
+/// type Knoten = { a : u32, b : Knoten, };
+/// ```
+///
+/// 1. Der Prüfer starb daran — *„thread 'main' has overflowed its stack"*. `typ_von_feld`
+///    legte einen frischen Rekursionsschutz an, statt den mitgeführten zu nehmen.
+/// 2. **Nach der Reparatur war es schlimmer:** null Fehler, und der Erzeuger schrieb
+///    `typedef struct { uint32_t a; Knoten b; } Knoten;` — **kein gültiges C**. Ein
+///    unvollständiger Typ in seinem eigenen `typedef`.
+///
+/// > *Der Absturz war laut und der Nachfolger still* — dieselbe Bewegung wie bei der
+/// > Kostenarithmetik am selben Tag. **Ein Erzeuger, der etwas Unübersetzbares schreibt,
+/// > macht jede Zusage der zwölf Pässe davor wertlos.**
+///
+/// **Der Zeiger ist die Ausnahme, und er ist die Antwort:** `b : ptr<normal, rw> Knoten`
+/// hat eine Größe, `index into T` auch. Was hier fällt, ist ausschliesslich die Einbettung
+/// DEM WERT NACH — und in Gabbro ist die verkettete Struktur ohnehin die Tabelle mit
+/// `index into`, nicht der Zeigerknoten (`beispiele/09`).
+fn verbund_ohne_groesse(baum: &Programm, absagen: &mut Absagen) {
+    // Name -> die Typnamen, die seine Felder DEM WERT NACH nennen.
+    let mut wert_kanten: std::collections::BTreeMap<String, Vec<Ident>> = std::collections::BTreeMap::new();
+    let mut orte: std::collections::BTreeMap<String, Span> = std::collections::BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Typ(t) = &i.art else { return };
+        let Some(TypExpr::Verbund(felder, _)) = &t.rumpf else {
+            return;
+        };
+        orte.insert(t.name.text.clone(), t.name.span);
+        let mut kanten = Vec::new();
+        for f in felder {
+            wertnamen(&f.typ.typ, &mut kanten);
+        }
+        wert_kanten.insert(t.name.text.clone(), kanten);
+    });
+
+    for (start, span) in &orte {
+        // Erreicht der Typ sich selbst über lauter Wertkanten? Breitensuche, damit auch der
+        // Ring über zwei und drei Namen fällt -- **ein Zyklus ist nicht nur Selbstbezug.**
+        let mut offen = vec![start.clone()];
+        let mut gesehen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        let mut weg: Option<String> = None;
+        while let Some(n) = offen.pop() {
+            for k in wert_kanten.get(&n).into_iter().flatten() {
+                if &k.text == start {
+                    weg = Some(n.clone());
+                    offen.clear();
+                    break;
+                }
+                if gesehen.insert(k.text.clone()) {
+                    offen.push(k.text.clone());
+                }
+            }
+        }
+        let Some(ueber) = weg else { continue };
+        let wie = if &ueber == start {
+            format!("`{start}` contains itself")
+        } else {
+            format!("`{start}` contains itself through `{ueber}`")
+        };
+        absagen.schiebe(
+            Absage::fehler("N019", *span, format!("{wie} by value -- that has no size"))
+                .mit_notiz(
+                    "a field of this type would have to be as large as the type it stands \
+                     in -- there is no layout, and C has no way to write one",
+                )
+                .mit_notiz(
+                    "the pointer is the exception: `ptr<…> T` and `index into T` have a \
+                     size -- and in Gabbro the linked structure is the TABLE with `index \
+                     into`, not the pointer node (`beispiele/09`)",
+                ),
+        );
+    }
+}
+
+/// Die Typnamen, die ein Typausdruck **dem Wert nach** nennt — Zeiger und Index enden hier.
+fn wertnamen(t: &TypExpr, aus: &mut Vec<Ident>) {
+    match t {
+        TypExpr::Pfad(p) => {
+            if let Some(n) = p.teile.last() {
+                aus.push(n.clone());
+            }
+        }
+        // Ein Feld traegt seine Elemente dem Wert nach; `[Knoten; 4]` ist genauso unmoeglich.
+        TypExpr::Feld(a) => wertnamen(&a.element, aus),
+        TypExpr::Verbund(felder, _) => {
+            for f in felder {
+                wertnamen(&f.typ.typ, aus);
+            }
+        }
+        TypExpr::Varianten(v, _) => {
+            for va in v {
+                if let Some(n) = &va.nutzlast {
+                    wertnamen(n, aus);
+                }
+            }
+        }
+        // **Hier endet der Wert.** Ein Zeiger und ein Index haben eine Groesse, gleich was
+        // am anderen Ende steht -- und das ist der ganze Unterschied.
+        TypExpr::Zeiger(_)
+        | TypExpr::Index { .. }
+        | TypExpr::Int(_)
+        | TypExpr::Float(_)
+        | TypExpr::Bool(_)
+        | TypExpr::Never(_)
+        | TypExpr::FnZeiger(_) => {}
+    }
 }

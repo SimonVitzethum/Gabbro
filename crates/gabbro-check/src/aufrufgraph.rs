@@ -36,6 +36,10 @@ pub struct Knoten {
     /// Die Pfade, die der Rumpf ruft — **wie im Quelltext geschrieben**, also `f` oder
     /// `a::f`. Aufgelöst wird erst beim Gehen, relativ zum Modul des Rufers.
     pub ruft: BTreeSet<String>,
+    /// **Die Parameternamen, in Reihenfolge** — die Brücke über den Aufrufrand.
+    pub parameter: Vec<String>,
+    /// Je Rufkante: der aufgelöste Schlüssel und die **Basisnamen der Argumente**.
+    pub rufe: Vec<(String, Vec<String>)>,
     /// **Das Modul, in dem die Funktion steht.** Ohne es ist `ruft` nicht auflösbar: zwei
     /// `hilf` in zwei Modulen sind zwei Funktionen, und der kurze Name nennt beide.
     pub modul: String,
@@ -89,6 +93,8 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
                     ruft: BTreeSet::new(),
                     verlangt: Vec::new(),
                     hat_effects: ue.effects.is_some(),
+                    parameter: Vec::new(),
+                    rufe: Vec::new(),
                     modul: modul.to_string(),
                     span: ue.name.span,
                 };
@@ -110,6 +116,8 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
             ruft: BTreeSet::new(),
             verlangt: Vec::new(),
             hat_effects: f.effects.is_some(),
+            parameter: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
+            rufe: Vec::new(),
             modul: modul.to_string(),
             span: f.name.span,
         };
@@ -123,6 +131,7 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
         }
         if let FnRumpf::Block(b) = &f.rumpf {
             sammle_rufe(b, &mut k.ruft);
+            sammle_kanten(b, &mut k.rufe);
         }
         g.knoten.insert(schluessel(modul, &f.name.text), k);
     });
@@ -133,15 +142,18 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
     // statt still auf einen fremden Namen zu treffen.
     let schluessel_alle: BTreeSet<String> = g.knoten.keys().cloned().collect();
     for k in g.knoten.values_mut() {
-        k.ruft = k
-            .ruft
+        let modul = k.modul.clone();
+        let aufloesen = |pfad: &str| {
+            u.kandidaten_oeffentlich(&modul, pfad)
+                .into_iter()
+                .find(|kand| schluessel_alle.contains(kand))
+                .unwrap_or_else(|| pfad.to_string())
+        };
+        k.ruft = k.ruft.iter().map(|p| aufloesen(p)).collect();
+        k.rufe = k
+            .rufe
             .iter()
-            .map(|pfad| {
-                u.kandidaten_oeffentlich(&k.modul, pfad)
-                    .into_iter()
-                    .find(|kand| schluessel_alle.contains(kand))
-                    .unwrap_or_else(|| pfad.clone())
-            })
+            .map(|(p, args)| (aufloesen(p), args.clone()))
             .collect();
     }
     g
@@ -190,7 +202,24 @@ impl Graph {
             }
         }
         menge.extend(k.eigen.iter().cloned());
-        for g in &k.ruft {
+        for (ziel, args) in &k.rufe {
+            let mut tiefer = BTreeSet::new();
+            self.gehe(ziel, gesehen, &mut tiefer, offen);
+            // **Die Bruecke ueber den Aufrufrand** (2026-08-19). Bis dahin sah der Rufer
+            // `consumes p` mit dem PARAMETERNAMEN des Gerufenen und musste ihn woertlich in
+            // seiner eigenen Liste fuehren, obwohl `p` bei ihm gar nicht existiert. Gemessen
+            // an sauberem Code: `let y = erzeuge(); ende(y);` gab **`E008`: calls something
+            // with `consumes p` but names no `consumes`**.
+            //
+            // *Ersetzt wird nur der GRUNDname:* `writes p.slots` beim Gerufenen wird
+            // `writes q.slots` beim Rufer, wenn `q` das Argument war. Bleibt kein Argument
+            // uebrig, bleibt der Name stehen -- **grob, und in die sichere Richtung grob.**
+            let leer: Vec<String> = Vec::new();
+            let ziel_par = self.knoten.get(ziel).map(|z| &z.parameter).unwrap_or(&leer);
+            menge.extend(tiefer.into_iter().map(|w| ersetze(&w, ziel_par, args)));
+        }
+        // Kanten ohne Argumentwissen (`transition`-Uebergaenge) laufen weiter wie bisher.
+        for g in k.ruft.iter().filter(|g| !k.rufe.iter().any(|(z, _)| &z == g)) {
             self.gehe(g, gesehen, menge, offen);
         }
     }
@@ -208,12 +237,106 @@ impl Graph {
             .find(|k| self.knoten.contains_key(k))
     }
 
+    /// **Die Hülle OHNE die eigenen Wirkungen** — was allein aus den Gerufenen kommt.
+    ///
+    /// `huelle` schliesst die eigene `effects`-Liste ein, und für die Frage *„löst ein
+    /// Gerufener diese Zusage ein?"* ist das genau die falsche Menge: die Zeile belegte
+    /// sich selbst.
+    pub fn huelle_der_gerufenen(&self, start: &str) -> Huelle {
+        let Some(k) = self.knoten.get(start) else {
+            return Huelle {
+                wirkungen: BTreeSet::new(),
+                unvollstaendig: Some(format!("`{start}` is unknown to the graph")),
+            };
+        };
+        let mut gesehen = BTreeSet::from([start.to_string()]);
+        let mut menge = BTreeSet::new();
+        let mut offen = None;
+        for g in &k.ruft {
+            self.gehe(g, &mut gesehen, &mut menge, &mut offen);
+        }
+        Huelle {
+            wirkungen: menge,
+            unvollstaendig: offen,
+        }
+    }
+
     /// Welche Sperren verlangt der Gerufene — und **geteilt oder exklusiv?**
     ///
     /// Das ist die Frage, die `H005` durch eine echte Pruefung ersetzt: ein geteilter Block
     /// darf `requires Held-shared` rufen, eine exklusive Forderung bleibt gesperrt.
     pub fn verlangt(&self, name: &str) -> &[(String, bool)] {
         self.knoten.get(name).map_or(&[], |k| &k.verlangt)
+    }
+}
+
+/// **Einen Wirkungsnamen über den Aufrufrand tragen.**
+fn ersetze(wirkung: &str, parameter: &[String], argumente: &[String]) -> String {
+    // `locks shared X` ist zweiwortig; der Ort ist immer das LETZTE Wort.
+    let Some((kopf, ort)) = wirkung.rsplit_once(' ') else {
+        return wirkung.to_string();
+    };
+    let (grund, rest) = match ort.find(['.', '[']) {
+        Some(i) => (&ort[..i], &ort[i..]),
+        None => (ort, ""),
+    };
+    match parameter.iter().position(|p| p == grund) {
+        Some(i) if i < argumente.len() && !argumente[i].is_empty() => {
+            format!("{kopf} {}{rest}", argumente[i])
+        }
+        _ => wirkung.to_string(),
+    }
+}
+
+/// Je Rufstelle: der geschriebene Pfad und die Basisnamen seiner Argumente.
+fn sammle_kanten(b: &Block, aus: &mut Vec<(String, Vec<String>)>) {
+    fn nimm_ruf(r: &Ruf, aus: &mut Vec<(String, Vec<String>)>) {
+        if let Some(n) = r.pfad.teile.last() {
+            if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
+                let args = r
+                    .argumente
+                    .iter()
+                    .map(|a| match &a.art {
+                        ExprArt::Ort(o) => o.basis.text.clone(),
+                        _ => String::new(),
+                    })
+                    .collect();
+                aus.push((r.pfad.text(), args));
+            }
+        }
+        for a in &r.argumente {
+            if let ExprArt::Ruf(x) = &a.art {
+                nimm_ruf(x, aus);
+            }
+        }
+    }
+    fn aus_expr(e: &Expr, aus: &mut Vec<(String, Vec<String>)>) {
+        match &e.art {
+            ExprArt::Ruf(r) => nimm_ruf(r, aus),
+            ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => aus_expr(x, aus),
+            ExprArt::Binaer(_, a, b) => {
+                aus_expr(a, aus);
+                aus_expr(b, aus);
+            }
+            _ => {}
+        }
+    }
+    for s in &b.anweisungen {
+        for e in crate::eigene_ausdruecke(s) {
+            aus_expr(e, aus);
+        }
+        match &s.art {
+            StmtArt::Ruf(r) => nimm_ruf(r, aus),
+            StmtArt::LetSonst(l) => {
+                if let Some(r) = l.als_ruf() {
+                    nimm_ruf(r, aus);
+                }
+            }
+            _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_kanten(k, aus);
+        }
     }
 }
 

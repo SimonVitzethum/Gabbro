@@ -9124,3 +9124,88 @@ gefährliche Richtung. Jetzt disqualifiziert sie den Kandidaten.
 147 Kennungen · 140 Gifte (0 ohne Biss) · 127 Tests · 32 Beispiele sauber
 13 Waechter gruen · Abstieg: ALL PASS
 ```
+
+---
+
+# 2026-08-19, zweiter Durchgang — die neun offenen Befunde der Rezension, alle geschlossen
+
+**Jeder wurde zuerst nachgestellt.** Zwei davon waren beim Nachstellen *anders*, als die
+Meldung sagte, und beide Male in die unangenehme Richtung.
+
+## Die C-Einschleusung geht bis ins Objekt
+
+```gabbro
+check boese { claim "harmlos */ int EINGESCHLEUST = 1; /* wieder drin" … }
+```
+
+```
+$ nm e5.o
+0000000000000000 D EINGESCHLEUST
+```
+
+**Eine Zeichenkette aus der Quelle wurde ein Datensymbol im Objekt.** Der Grund, warum
+ausgerechnet `*/` trägt: **der Lexer kennt keine Escapes** (`L006`), eine Zeichenkette kann
+also gar kein `"` enthalten — damit war der `section`-Kanal (`__attribute__((section("…"))`)
+nie offen. `*/` braucht keins. Geschlossen an **einer** Stelle (`emit::kommentartext`).
+
+## Der rekursive Typ: der Absturz war laut, sein Nachfolger still
+
+`type Knoten = { a : u32, b : Knoten, };` — *„thread 'main' has overflowed its stack"*.
+`typ_von_feld` legte einen **frischen** Rekursionsschutz an, statt den mitgeführten zu nehmen;
+der Schutz selbst stand seit jeher zwanzig Zeilen weiter oben.
+
+> **Nach der Reparatur war es schlimmer:** null Fehler, und der Erzeuger schrieb
+> `typedef struct { uint32_t a; Knoten b; } Knoten;` — **kein gültiges C.** *Ein Erzeuger, der
+> Unübersetzbares schreibt, macht jede Zusage der zwölf Pässe davor wertlos.* → `N019`.
+
+**Dieselbe Bewegung wie bei der Kostenarithmetik am selben Tag**, und dieselbe Bauart wie der
+kurze Name im Aufrufgraphen: *das Werkzeug war fertig, die Weiterreichung fehlte.*
+
+## Die Paarung fand einen Fehler im eigenen Korpus
+
+Der Schlüssel war die **Nutzlast allein**, also paarte sich jede Veröffentlichung mit jeder
+Erwartung desselben Namens — auch über zwei verschiedene Atomics. Neu ist er
+**`(Atomic, Nutzlast)`**, und der erste Lauf meldete `beispiele/05`:
+
+> `besitz_nehmen` veröffentlichte `farbbericht` über `BESITZER`, und **über `BESITZER`
+> erwartet niemand etwas.** Die Nutzlast war abgeschrieben, nicht gemeint — der Tausch
+> überträgt den Besitz. Korrigiert auf `publishes nothing`.
+
+## Der Rahmen endete am Argumentrand — und das ergab eine Absage auf sauberem Code
+
+```gabbro
+let y = erzeuge();
+ende(y);            -- `ende` erklaert `consumes p`
+```
+
+gab **`E008`: calls something with `consumes p` but names no `consumes`** — `p` ist der
+Parameter des **Gerufenen** und existiert beim Rufer nicht. Zwei Hälften: der Graph ersetzt
+jetzt Parameternamen durch die Argumente des Rufers, und `wirkungen` lässt fallen, was einen
+**eigenen lokalen** Namen nennt — dort ist die Wirkung eingelöst.
+
+## Und zwei Befunde, die nicht in der Liste standen
+
+**Der teuerste ist meiner.** Der Umbau auf `unterbloecke` liess in `m1::sammle_schreibziele`
+die alten `Wenn`/`Match`-Arme stehen **und** setzte den gemeinsamen Abstieg dazu. Jeder
+Unterblock lief zweimal:
+
+| geschachtelte `if` | vorher | nachher |
+|---:|---:|---:|
+| 26 | **1,88 s** | 0,003 s |
+| 50 | **> 90 s** | — |
+| 400 | — | 0,008 s |
+
+*Ausgeliefert in `6df82a2`, gefunden erst beim Suchen nach der gemeldeten Lexer-Panik.* Der
+Wächter hat es durchgelassen, weil er **nur eine Richtung** prüfte: fehlenden Abstieg, nicht
+doppelten. Beide stehen jetzt drin, mit Sprechprobe in beide Richtungen.
+
+**Die Tiefengrenze war am falschen Stapel gemessen.** Der erste Anlauf setzte 512 —
+begründet am Hauptfaden mit 8 MiB. Ein Rust-**Testfaden** hat 2 MiB, und dort starb genau die
+Giftprobe, die die Grenze beweisen sollte: *das Werkzeug fiel an seiner eigenen Probe.*
+Nachgemessen (`crates/gabbro-cli/examples/tiefenmass.rs`): 384 läuft, 512 stirbt. Die Grenze
+steht bei **128** — 18-fach über dem Korpus (7), dreifach unter dem gemessenen Tod.
+
+```
+150 Kennungen · 145 Gifte (0 ohne Biss) · 127 Tests · 32 Beispiele sauber
+13 Waechter gruen · Abstieg: ALL PASS · 12 Isabelle-Theorien (auf fisch, 8 s)
+```

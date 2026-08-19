@@ -1,0 +1,24 @@
+-- erwartet: H012
+-- **Die Rangordnung endete an der Aufrufgrenze.**
+--
+-- `H006` rechnete sie im eigenen Rumpf nach und sah einen Ring ueber ZWEI Funktionen nicht.
+-- `locks L2 { … nimmt_l1(); }` mit `L1` auf Rang 1 und `L2` auf Rang 2 ging mit null Fehlern
+-- durch -- *und das ist ein Deadlock, kein Stilfehler.*
+module gift::sperrordnung_ruf {
+
+static mut a : u32 = 0;
+static mut b : u32 = 0;
+lock L1 protects { a } rank 1 held <= 100 ops;
+lock L2 protects { b } rank 2 held <= 100 ops;
+
+impl fn nimmt_l1()
+    effects { writes a, locks L1 }
+    costs   <= 8 ops
+{ locks L1 { a = 2; } }
+
+impl fn falsch()
+    effects { writes a, writes b, locks L1, locks L2 }
+    costs   <= 32 ops
+{ locks L2 { b = 2; nimmt_l1(); } }
+
+}
