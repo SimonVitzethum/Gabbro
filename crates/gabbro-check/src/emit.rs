@@ -1946,6 +1946,81 @@ fn ctext(t: &str) -> String {
     t.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
+/// **`restrict` — und die Hypothesen stehen in `beweise/Restrict_Alleinzugriff.thy`.**
+///
+/// Gemessen 2026-08-19, `cc -O2`: **2,85** dort, wo der C-Übersetzer die Herkunft der Zeiger
+/// nicht sieht, **1,00** dort, wo er sie sieht. Das ist der grösste Hebel des Erzeugers — und
+/// der einzige, der etwas **kaputt** machen kann: eine falsche Alias-Zusicherung erzeugt
+/// Code, der bei `-O0` stimmt und bei `-O2` nicht.
+///
+/// C11 6.7.3.1 sagt, was zugesichert wird: wird das Objekt X im Block B über den
+/// `restrict`-Zeiger P erreicht, muss **jeder** Zugriff auf X in B über einen aus P
+/// abgeleiteten Zeiger laufen.
+///
+/// Der Satz `restrict_gerechtfertigt` führt das auf zwei Hypothesen zurück, und diese
+/// Funktion weist genau sie nach:
+///
+/// | | Hypothese | wer sie hält |
+/// |---|---|---|
+/// | **H1** | der Rahmen ist vollständig | `E008` (seit heute über den ORT) + `E010` |
+/// | **H2a** | kein zweiter Zeigerparameter desselben Trägertyps | **hier**, syntaktisch |
+/// | **H2b** | kein globaler Träger desselben Typs erreichbar | **die SPRACHE**: kein `cast` (G9), kein Adressoperator — ein Zeiger auf eine globale Tabelle lässt sich in Gabbro nicht bilden |
+///
+/// **Und was hier NICHT behauptet wird:** dass `own` Exklusivität bedeutet. Das ist eine
+/// Sprachentscheidung; sie würde H2a auch für **zwei** Zeiger desselben Typs liefern — genau
+/// den Fall, in dem die 2,85 gemessen wurden. Solange sie nicht getroffen ist, gilt die
+/// stärkere, entscheidungsfreie Bedingung: *höchstens ein Zeigerparameter je Trägertyp.*
+///
+/// > Die Aussage, die dann bleibt, ist trotzdem keine leere: **der C-Übersetzer weiss nicht,
+/// > dass eine globale Tabelle in Gabbro nicht adressierbar ist.** Für ihn können
+/// > `Kappenraum *c` und das globale `Kappenraum`-Objekt dasselbe sein; für Gabbro nicht.
+/// > *Das ist die Angabe, die C fehlt.*
+fn darf_restrict(f: &FnDecl, p: &Parameter, u: &Namen) -> bool {
+    // Ohne Rumpf gibt es keinen Block, über den die C-Bedingung überhaupt spricht — und die
+    // `effects` eines `extern fn` sind eine Annahme über fremden Code, keine geprüfte Aussage.
+    let FnRumpf::Block(_) = &f.rumpf else {
+        return false;
+    };
+    let TypExpr::Zeiger(z) = &p.typ else {
+        return false;
+    };
+    let Some(traeger) = zeigerziel(&z.ziel) else {
+        return false;
+    };
+    // **H2a**, syntaktisch: kein zweiter Zeigerparameter mit demselben Träger.
+    let andere = f.parameter.iter().filter(|q| q.name.text != p.name.text);
+    for q in andere {
+        if let TypExpr::Zeiger(zq) = &q.typ {
+            if zeigerziel(&zq.ziel).as_deref() == Some(traeger.as_str()) {
+                return false;
+            }
+        }
+    }
+    // **H2b**, doppelt genäht: nennt die eigene Wirkungsliste einen globalen Träger dieses
+    // Namens, wird nichts behauptet. Die Sprache schliesst den Fall schon aus (kein `cast`,
+    // kein Adressoperator) — *aber eine Hypothese, die man prüfen kann, prüft man.*
+    if let Some(w) = &f.effects {
+        for e in &w.liste {
+            let t = e.art.text();
+            if let Some((_, ort)) = t.rsplit_once(' ') {
+                let grund = ort.split(['.', '[']).next().unwrap_or(ort);
+                if grund == traeger && u.tabellen.iter().any(|n| n == &traeger) {
+                    return false;
+                }
+            }
+        }
+    }
+    true
+}
+
+/// Der Name des Trägers, auf den ein Zeiger zeigt.
+fn zeigerziel(t: &TypExpr) -> Option<String> {
+    match t {
+        TypExpr::Pfad(p) => p.teile.last().map(|i| i.text.clone()),
+        _ => None,
+    }
+}
+
 fn funktion(
     f: &FnDecl,
     aus: &mut String,
@@ -1981,7 +2056,8 @@ fn funktion(
         match ctyp(&p.typ, u) {
             Some(c) => {
                 let luecke = if c.ends_with('*') { "" } else { " " };
-                params.push(format!("{c}{luecke}{}", p.name.text))
+                let r = if darf_restrict(f, p, u) { "restrict " } else { "" };
+                params.push(format!("{c}{luecke}{r}{}", p.name.text))
             }
             None => {
                 weigere(absagen, p.name.span, "parameter type");

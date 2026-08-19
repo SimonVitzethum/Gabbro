@@ -171,11 +171,16 @@ fn der_erzeuger_senkt_die_formen_dieses_fragments_ab() {
     // Ein Pfad, der eine TABELLE nennt, IST die Struktur. Die erste Fassung senkte ihn zu
     // `uint32_t` ab und nannte das eine Vergroeberung in die sichere Richtung -- sie war
     // nicht grob, sie war falsch.
-    assert!(c.contains("const Objekte *o"), "{c}");
+    // **Und `restrict` steht dabei** («OPT1», 2026-08-19): `o` ist der einzige Zeiger auf
+    // einen `Objekte`-Traeger in dieser Signatur, und ein Zeiger auf die GLOBALE Tabelle
+    // laesst sich in Gabbro nicht bilden (kein `cast` -- G9 --, kein Adressoperator). Das
+    // ist die Angabe, die C fehlt: fuer den C-Uebersetzer koennen `Objekte *o` und das
+    // globale `Objekte`-Objekt dasselbe sein.
+    assert!(c.contains("const Objekte *restrict o"), "{c}");
     assert!(c.contains("uint32_t stand("), "{c}");
 
     // `r` ohne `w` wird `const`; `rw` nicht. Die Rechte am Zeiger stehen im C.
-    assert!(c.contains("void belegen(Objekte *o"), "{c}");
+    assert!(c.contains("void belegen(Objekte *restrict o"), "{c}");
 
     // Der benannte Bereichstyp senkt zu seinem Traeger ab; der Bereich bleibt M1-Sache.
     assert!(c.contains("uint32_t zaehler;"), "{c}");
@@ -1694,4 +1699,35 @@ impl fn ausgeben(tor : u16, wert : u8)
         "die Operanden stehen mit ihrer Nebenbedingung da:\n{c}"
     );
     assert!(c.contains(": \"memory\");"), "`clobbers memory` steht im C:\n{c}");
+}
+
+/// **`restrict` nur bei genau EINEM Zeiger je Trägertyp** («OPT1», 2026-08-19).
+///
+/// Das ist Hypothese **H2a** aus `beweise/Restrict_Alleinzugriff.thy`. Fällt sie, fällt der
+/// Satz — `ohne_trennung_kein_restrict` sagt es in der Gegenrichtung —, und was der Erzeuger
+/// dann hinschreibt, ist **undefiniertes Verhalten**: Code, der bei `-O0` stimmt und bei
+/// `-O2` nicht.
+#[test]
+fn restrict_nur_bei_einem_zeiger_je_traeger() {
+    let q = r#"
+module m {
+const N : u32 = 4;
+table T count N { slot { a : u32, } }
+impl fn kopieren(d : ptr<normal, rw> T, s : ptr<normal, r> T, i : index into T)
+    effects { reads s.slots, writes d.slots } costs <= 4 ops { d.slots[i].a = s.slots[i].a; }
+impl fn setzen(d : ptr<normal, rw> T, i : index into T)
+    effects { writes d.slots } costs <= 2 ops { d.slots[i].a = 1; }
+}
+"#;
+    let (baum, mut absagen) = gabbro_syntax::lies("restrict.gab", q);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert!(
+        c.contains("void kopieren(T *d, const T *s,"),
+        "zwei Zeiger desselben Traegers koennen dasselbe sein -- KEIN restrict:\n{c}"
+    );
+    assert!(
+        c.contains("void setzen(T *restrict d,"),
+        "ein einziger Zeiger auf diesen Traeger -- restrict:\n{c}"
+    );
 }

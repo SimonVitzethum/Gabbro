@@ -704,6 +704,14 @@ MUTATIONEN = [
         "M1 -- ein Loch in der MITTE gilt als untere Schranke; das ist UNSOUND, nicht bloss grob",
     ),
     Mutation(
+        "restrict-auch-bei-zwei-zeigern",
+        "emit.rs",
+        "            if zeigerziel(&zq.ziel).as_deref() == Some(traeger.as_str()) {\n                return false;\n            }",
+        "            if false && zeigerziel(&zq.ziel).as_deref() == Some(traeger.as_str()) {\n                return false;\n            }",
+        "OPT1 -- `restrict` auch bei ZWEI Zeigern desselben Traegers; H2a des Satzes faellt, und das ist UB",
+        flaeche="code",
+    ),
+    Mutation(
         "asm-ohne-arch-egal",
         "namen.rs",
         "        if f.arch.is_none() {",

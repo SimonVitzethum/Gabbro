@@ -9881,3 +9881,67 @@ geratene Zuordnung wäre schlimmer als eine benannte Weigerung.*
 171 Kennungen · 172 Gifte · 130 Tests · 34 Beispiele sauber
 167 von 167 Mutationen · 142 EBNF-Regeln · 211/211 Wortschatz · 13 Waechter gruen
 ```
+
+## 2026-08-19, sechster Teil — «OPT1»: bewiesen, gebaut — und **ohne gemessenen Gewinn**
+
+### Der Satz zuerst
+
+`beweise/Restrict_Alleinzugriff.thy` (13 Theorien bauen auf `ki-pc-fisch-101` in 8 s).
+Modelliert wird das Wenigste, was reicht: ein Zugriff nennt eine **Wurzel** und einen **Ort**.
+
+```
+restrict_bedingung B p  ≡  ∀ w ∈ zugriffe B. ort(w) = ort(p) ⟶ w = p
+```
+
+**Satz `restrict_gerechtfertigt`:** aus `rahmen_vollstaendig B W` und `wurzeln_getrennt B W p`
+folgt `restrict_bedingung B p` — genau die Zusicherung aus C11 6.7.3.1.
+
+Und die Gegenrichtung steht daneben, weil sie die wichtigere ist:
+`ohne_trennung_kein_restrict` und `unvollstaendiger_rahmen_traegt_nichts` sagen, dass
+**beide** Hypothesen nötig sind. *Der Prüfer darf keine davon „meistens" annehmen.*
+
+| Hypothese | wer sie hält |
+|---|---|
+| **H1** Rahmen vollständig | `E008` (seit heute über den ORT) + `E010` |
+| **H2a** kein zweiter Zeigerparameter desselben Trägers | der Prüfer, syntaktisch |
+| **H2b** kein globaler Träger erreichbar | **die Sprache**: kein `cast` (G9), kein Adressoperator |
+
+**Was der Satz NICHT beweist:** dass `own` Exklusivität bedeutet. Das ist eine
+Sprachentscheidung und steht als benannte Annahme da, nicht als Satz.
+
+### Und dann die Messung, die das Ergebnis umdreht
+
+Gebaut, 36 `restrict` über den Korpus, alle zwölf Einheiten weiter grün — auch unter der
+`-O0`/`-O2`-Gleichheit, die als **einzige** ein falsches `restrict` findet.
+
+Gemessen aber, an genau der Gestalt, die diese Regel freischaltet — **ein** Zeiger gegen eine
+globale Tabelle desselben Typs:
+
+| | ohne `restrict` | mit | Faktor |
+|---|---:|---:|---:|
+| Zeiger gegen globale Tabelle | 16,4 ms | 16,3 ms | **1,00** |
+
+**Null.** Der Grund ist gut und gehört gesagt: *GCC weiss längst, dass ein `static`, dessen
+Adresse nie genommen wird, von keinem Zeiger erreicht werden kann.* Die Angabe, die ich für
+„das, was C fehlt" gehalten habe, fehlt C gar nicht.
+
+> **Die 2,85 gelten für den anderen Fall** — zwei Zeiger **desselben** Typs —, und der ist
+> genau der, den H2a heute ausschliesst. *Das Preisschild hängt damit nicht an der Analyse,
+> sondern an der `own`-Entscheidung.*
+
+### Warum die Regel trotzdem bleibt
+
+Sie ist bewiesen, geprüft, durch eine Mutation gedeckt und kostet zur Laufzeit nichts. **Und
+sie ist die Maschinerie, die die `own`-Entscheidung in dem Augenblick nutzbar macht, in dem
+sie getroffen wird** — H2a von „ein Zeiger" auf „zwei `own`-Zeiger" zu erweitern ist eine
+Zeile. *Bewiesene Maschinerie wieder auszubauen, weil sie heute nichts einbringt, wäre die
+teurere Bewegung.*
+
+Was sie **nicht** darf: als Geschwindigkeitsaussage gebucht werden. `168 von 168` misst den
+Prüfer; über die Geschwindigkeit des Erzeugnisses sagt bis heute **nichts** etwas — P5s Tor
+(*„erzeugt ≤ Handschrift + Rauschen"*) steht weiter aus.
+
+```
+171 Kennungen · 172 Gifte · 131 Tests · 34 Beispiele · 168 von 168 Mutationen
+21 Schablonen (9 maschinell geprueft) · 13 Theorien gruen · 13 Waechter gruen
+```

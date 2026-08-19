@@ -150,12 +150,31 @@ pub const RATSCHE: &[&str] = &[
     "gruppe.ops",
     "gruppe.sperrabdruck",
     "option.sonderwert",
+    "restrict.alleinzugriff",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
 /// nicht je Aufrufstelle. Ein neues Konstrukt mit erzeugter Form **gehoert hierher, bevor es
 /// in die Grammatik kommt**.
 pub const SCHABLONEN: &[Schablone] = &[
+    Schablone {
+        name: "restrict.alleinzugriff",
+        haengt_an: &[],
+        konstrukt: "ptr<…> T als Parameter (Absenkung mit `restrict`)",
+        // **Eingetragen 2026-08-19, als der Erzeuger `restrict` schrieb.** Der Anlass war eine
+        // MESSUNG: 2,85 dort, wo der C-Uebersetzer die Herkunft der Zeiger nicht sieht.
+        //
+        // Und die zweite Messung am selben Tag hat den Eintrag sofort wieder eingeschraenkt:
+        // der Fall, den die heutige Regel freischaltet -- EIN Zeiger gegen eine globale
+        // Tabelle desselben Typs -- bringt **1,00**. GCC weiss laengst, dass ein `static`,
+        // dessen Adresse nie genommen wird, von keinem Zeiger erreicht werden kann.
+        // *Die Angabe, die C wirklich fehlt, ist die andere: ZWEI Zeiger desselben Typs, und
+        // die verlangt die `own`-Entscheidung.*
+        pflicht: "UNTER DEN HYPOTHESEN H1 (der Rahmen ist vollstaendig -- `E008` ueber den                   ORT, `E010` fuer das Lesen) und H2 (keine andere Wurzel trifft denselben                   Ort): jeder Zugriff des Rumpfes auf das Objekt hinter `p` laeuft ueber `p`,                   also gilt die C11-6.7.3.1-Bedingung -- **maschinell geprueft**                   (`restrict_gerechtfertigt`). H2a weist der Pruefer syntaktisch nach                   (hoechstens EIN Zeigerparameter je Traegertyp); H2b haelt die SPRACHE: ohne                   `cast` (G9) und ohne Adressoperator laesst sich ein Zeiger auf eine globale                   Tabelle nicht bilden. **NICHT bewiesen ist, dass `own` Exklusivitaet                   bedeutet** -- das ist eine Sprachentscheidung, und sie ist genau die, die                   H2a fuer zwei Zeiger desselben Typs liefern wuerde.",
+        stand: Stand::Getragen,
+        voraussetzungen: &[],
+        fundstelle: "beweise/Restrict_Alleinzugriff.thy; MESSUNGEN.md «OPT1» (2,85 gegen                      1,00); PLAN.md «OPT»",
+    },
     Schablone {
         name: "option.sonderwert",
         haengt_an: &["table.indexschranke"],
