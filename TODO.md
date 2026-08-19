@@ -550,6 +550,17 @@ Zusagen ungeprüft weiterreicht, macht aus elf geprüften Klassen elf behauptete
       die niemand getroffen hat.** Die andere Lesart wäre eine Absage im Namenspass (wie
       Rusts `private_interfaces`). *Eine Sprachentscheidung, keine Bauarbeit* — sie steht
       hier, damit die Nachziehschleife nicht als Absicht durchgeht.
+- [ ] **Ein `static`, den niemand nennt, fällt nirgends auf** *(2026-08-20)*. Der Erzeuger
+      setzt seit heute `__attribute__((unused))` an jeden — richtig, weil `36-asm.gab` sein
+      `GERAET` **im `asm`-Block** schreibt und der C-Übersetzer das nicht sehen kann.
+      **Damit ist aber auch der echte Fall stillgelegt:** ein Weltzustand, den kein
+      `effects` und kein Rumpf nennt. *Die Warnung gehört auf die Gabbro-Ebene* — dieselbe
+      Klasse wie das `(void)k;` beim ungelesenen Parameter, und derselbe fehlende Pass.
+- [ ] **`M117` liest nur die ÄUSSERE Typform eines Items.** Typ, Parameter, Rückgabe,
+      `const`, `static` — ein leerer Bereich tief in einem Verbundfeld oder einem
+      Array-Element fällt nicht auf. Dahinter steht `IntBereich::ist_leer()` als Riegel, der
+      aus dem Leeren `None` macht statt zu rechnen; *ein Riegel ist aber keine Absage*, und
+      der Anwender erfährt nichts.
 - [ ] **ABI2 — ORDNUNG statt RANG, und das ist eine SPRACHÄNDERUNG.** `lock … rank 0` ist
       eine absolute Zahl; zwei unabhängig geschriebene Bibliotheken vergeben beide `rank 0`.
       **Absolute Zahlen komponieren nicht.** Die ABI trägt `KAPPEN vor OBJEKTE`, und beim

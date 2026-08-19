@@ -10606,3 +10606,124 @@ zwei neue Tests in rechenwerk.rs                      144 Tests gruen
 
 Die Sprechprobe steht dabei, weil „36 von 36 grün" ohne sie auch dann dastünde, wenn die
 Selbstprobe gar nichts prüfte — und genau das war sie für unbekannte Namen ja.
+
+---
+
+# 2026-08-20, Rezension: zwei Befunde, und der zweite war ein MUSTER
+
+## 1 — Ein leerer Bereich brachte den Prüfer um
+
+```gabbro
+type Verdreht = u32 in 5 .. 0;
+impl fn teile(a : u32, n : Verdreht) -> u32 { return a / n; }
+```
+```
+panicked at typen.rs:558: attempt to divide by zero
+```
+
+Der Wächter davor ist `enthaelt_null()` = `min <= 0 && max >= 0`. Bei `min = 5, max = 0`
+ist das **falsch** — also lief `a.min / b.max` in die Null.
+
+**Die Ursache ist nicht die Division.** Gemessen, beide Richtungen:
+
+| Form | vorher |
+|---|---|
+| `type Verdreht = u32 in 5 .. 0;` allein | **0 Fehler** |
+| dieselbe Deklaration mit `%` statt `/` | **0 Fehler**, Rechnung geht still durch |
+| mit `/` | Absturz |
+
+Ein Typ ohne jeden Wert galt damit als Nachweis, dass der Divisor nicht null ist. *Aus dem
+Leeren folgt jede Aussage* — er hätte auch einen Index als in Schranken bewiesen.
+
+> **Ein Absturz ist besser als ein stilles Ja. Beides ist falsch.**
+
+Zwei Hälften, denn **eine Absage hält den Rumpf nicht an** — das war die Überraschung beim
+Bauen: `M117` stand, und der Absturz blieb, weil M1 danach weiterprüft.
+
+* `M117` an der **Deklaration** — Typ, Parameter, Rückgabe, `const`, `static`. Die Reichweite
+  steht dabei: die *äussere* Typform eines Items. Ein Bereich tief in einem Verbundfeld
+  fällt hier nicht auf.
+* `IntBereich::ist_leer()` als **Riegel** in `teile` und `rest`.
+
+Und ein alter Kommentar wurde dabei falsch. Er begründet, warum `b.min > 0` gegen
+`b.min >= 0` ein *äquivalenter* Mutant ist, mit: *„ist `max < 0`, so ist auch `min < 0`"* —
+das setzt `min <= max` voraus. **Genau diese Voraussetzung fehlte.** Seit `ist_leer()`
+davorsteht, trägt das Argument wieder; der Satz steht jetzt dabei.
+
+## 2 — Der Assemblerzweig erzeugte C, das `gcc` ablehnt
+
+`"mov $1, %eax"` ging wörtlich in einen **erweiterten** `__asm__`-Block. Dort ist `%` das
+Einleitungszeichen für einen Operanden:
+
+```
+error: ungültiges »asm«: Operandennummer fehlt hinter %-Buchstabe
+```
+
+Verdoppelt wird jetzt jedes `%`, das nicht `%[` einleitet — denn `%[` *ist* die
+Operandenform, die Gabbro schreibt. Dieselbe Datei brachte eine zweite Zeile mit:
+`static mut GERAET` wird **im asm-Block** geschrieben, auf Gabbro-Ebene steht
+`effects { writes GERAET }`, im C steht kein Zugriff — und `-Wunused` meldete einen Platz,
+der sehr wohl benutzt wird. `__attribute__((unused))`, mit demselben Grund wie beim
+`(void)k;`: *die Warnung gilt dem Erzeugnis, nicht dem Anwender.*
+
+## 3 — Und das eigentliche: eine LISTE wird eine REGEL
+
+`pruefe-emission.sh` war eine gepflegte Liste. Sie wuchs von 12 auf 17 Einheiten, weil eine
+Rezension die Lücke benannte — **und der nächste neue Konstrukttyp lief wieder daran
+vorbei.**
+
+> Bei `asm` sagt die Sprache ausdrücklich, dass sie den Inhalt **nicht liest**. Damit ist der
+> C-Übersetzer die einzige Prüfung, die es überhaupt gibt — und genau der wurde nicht
+> gefragt.
+
+Stufe 9 fragt nicht mehr die Liste, sondern den Bestand:
+
+```
+JEDE Datei, die durch `emit` kommt, MUSS `cc -Werror` bestehen.
+```
+
+Die drei Ausnahmen stehen einzeln und mit Grund da — und eine Ausnahme, die **nicht mehr
+nötig ist**, fällt ebenfalls auf (`ABGELAUFENE AUSNAHME`). Sonst wächst hier eine zweite
+Liste nach.
+
+### Die Gegenprobe, weil eine Regel ohne sie ein Ritual ist
+
+Die `%%`-Reparatur zurückgedreht, Wächter gefahren:
+
+```
+UEBERSETZT NICHT: 36-asm.gab
+    error: ungültiges »asm«: Operandennummer fehlt hinter %-Buchstabe
+20 von 24 emittierenden Dateien uebersetzen; 3 benannte Ausnahmen
+== EMISSION: die REGEL haelt nicht -- eine neue Form ist am C-Uebersetzer vorbei ==   (exit 1)
+```
+
+**`20 von 24` ist genau die Zahl der Rezension.** Die Regel hätte den Befund gefangen, den
+die Liste durchgelassen hat.
+
+## Und der Ankertest hat über sich selbst gesprochen
+
+`ist_leer()` in `typen.rs` einzuschieben **zerriss** den Anker von `breite-passt-immer`, der
+auf `pub fn enthaelt_null` als Nachbarn zeigte:
+
+```
+== 185 von 186 Ankern greifen ==
+  !! FEHLT   breite-passt-immer   typen.rs
+```
+
+Gemeldet, nicht stillgeschwiegen — und das ist der Unterschied zwischen 189 als Deckung und
+189 als Zahl.
+
+## Der Stand
+
+```
+cargo test                    146 gruen, ohne RUST_MIN_STACK
+mutiere-pruefer.py            189 von 189 (100 %), auf fisch
+pruefe-emission.sh            17 durchgestochen, 21 von 24 uebersetzen
+pruefe-luecken.py             13 von 13 zu, Quellen byteidentisch zurueck
+isabelle build -c             13 Theorien frisch, 5 s
+13 Waechter                   gruen
+```
+
+**Was das nicht heisst:** Stufe 9 fragt nur, ob der C-Übersetzer die Ausgabe *annimmt*. Ein
+Programm, das übersetzt und falsch rechnet, fällt ihr nicht auf — dafür stehen die
+siebzehn durchgestochenen Einheiten, und die sind weiter eine Liste.
