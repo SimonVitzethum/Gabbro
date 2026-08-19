@@ -541,25 +541,23 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
-### «H2» — die zwei letzten handbewiesenen Klempnereipflichten ([`dokumente/PLAN.md`](dokumente/PLAN.md))
+### «H2» — AUSGEFUEHRT 2026-08-19, `H = 17 -> 15`
 
-- [ ] **H2.1 — ein Traversierungszaehler erbt die Schranke seiner Domaene.** Zwei Fundstellen
-      (`FRAGMENTE.md`:1110, `beispiele/19`:53), dieselbe Form: `narrow n to …` unmittelbar vor
-      `n += 1`. **Die Regel:** ein Zaehler, der in einer beschraenkten Traversierung hoechstens
-      einmal je Durchgang waechst, ist durch die Domaenenschranke gebunden -- an der
-      Zuwachsstelle `n <= c + (B-1)*K`. *`kosten::domaenenschranke` gibt es bereits und wird
-      wiederverwendet.* **Und es ist die erste AUSNAHME von `SPRACHE.md`:657** (*„Loops carry
-      no facts inward"*): die Tatsache kommt nicht von aussen, sondern aus der Schleifenform
-      selbst -- **der Zusatz wird aufgeschrieben, BEVOR die Regel gebaut wird** (R7).
-      Tor: beide `narrow` fort, zwei Giftproben beissen, `H` 17 -> 16.
-- [ ] **H2.2 — `(g - f)` unterlaeuft nicht, und die Notiz beschreibt den FALSCHEN ZWEIG**
-      *(nachgerechnet 2026-08-19)*. `PFLICHTEN.md` sagt *„`f < g / N` gibt `f < g` nur ueber
-      die Division"* -- aber der Vergleich steht in einem `if`, das ZURUECKKEHRT. Auf dem Weg
-      zur Subtraktion gilt `f >= g / N`, eine UNTERE Schranke, und `g - f` braucht eine obere.
-      **Keine schaerfere V-Regel schliesst das.** Drei Wege in `PLAN.md`; empfohlen ist die
-      Umformulierung (`irq + g/N <= f`, aequivalent und ohne Subtraktion), als zweite Fassung
-      mit Datum NEBEN der eingefrorenen Zeile. *Die Pflicht ist ein Artefakt der Schreibweise
-      -- dieselbe Klasse wie `revoke` 200 gegen 16 452 480.* Tor: `H` 16 -> 15.
+**H2.1** (Zaehlerregel, `domaene.rs`, `elems of <Feld>`, Gift 114/115) und **H2.2** (die alte
+Begruendung beschrieb den falschen Zweig) sind gebaut; beide `narrow` sind fort, beide
+`PFLICHTEN.md`-Zeilen zu. **Alle acht verbleibenden verankerten Pflichten sind
+NOTATIONSLUECKEN -- nicht eine ist ein Handbeweis.** Was daraus offen bleibt:
+
+- [ ] **Der zweite Korpus hat keine `H`-Messung, und ohne sie ist `H = 15` Falle 80**
+      *(2026-08-19)*. Ueber den zehn Fragmenten beweist kein Mensch mehr Klempnerei von Hand
+      -- **aber die zehn sind selbst gewaehlt.** Fuenf Linux-Fragmente stehen daneben, und
+      ueber ihnen ist nichts gezaehlt. *Das ist der eine Posten, der zwischen „Boden der
+      Messung" und „Boden der Sprache" steht.*
+- [ ] **`FRAGMENTE.md` benutzte `Stack`, ohne ihn je zu deklarieren** *(gefunden 2026-08-19)*.
+      Nachgetragen wie `STACK_MAX` am 2026-08-15, mit abgeleiteter Wortzahl. **Wie viele
+      weitere Traeger benutzt der Ausschnitt, ohne sie zu nennen?** Jeder davon macht eine
+      Pflicht unsichtbar -- die zweite fiel hier sofort auf (`s.len - frei`, geschlossen mit
+      der relationalen Nachbedingung). *Eine Zaehlung, und sie ist klein.*
 
 - [ ] **Die Axiomschicht schuldet einen Satz ueber den SPERRABDRUCK** *(benannt 2026-08-19
       von `Gruppe_Erhaltung.thy`)*. Das Locale `zug` nimmt `voll i` als *„der Abdruck ist

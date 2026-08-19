@@ -316,6 +316,45 @@ impl<'a> Pruefer<'a> {
                 // stirbt, sonst erbt die Verdeckung die Verengung ihres Vorgaengers.
                 lage.fakten
                     .retain(|f| !nennt_namen(f, &l.name.text));
+                // **V1 an der Bindung -- «H2.1», 2026-08-19.**
+                //
+                // `let mut n : u32 in 0 .. NSLOTS = 0;` setzte den Namen bisher auf den
+                // DEKLARIERTEN Bereich und warf weg, was der Anfangswert sagt. *Der Wert
+                // steht daneben, und niemand las ihn.*
+                //
+                // Die Tatsache ist sound wie jede andere: unmittelbar nach der Bindung IST
+                // der Wert der Anfangswert, und sie stirbt beim ersten Schreiben. **Sie
+                // kann nur mehr durchlassen, nie weniger** -- der Korpuspreis ist damit
+                // hoechstens null.
+                //
+                // Gebraucht wird sie fuer den Zaehler einer Traversierung: ohne den
+                // Anfangswert hat `n <= c + (B-1)*k` kein `c`.
+                if let (Some(w), Some(z)) = (wert.bereich(), ziel.as_ref().and_then(|z| z.bereich())) {
+                    if w.min > z.min || w.max < z.max {
+                        lage.fakten.push(Fakt::Bereich {
+                            schluessel: l.name.text.clone(),
+                            indizes: Vec::new(),
+                            min: w.min,
+                            max: w.max,
+                        });
+                    }
+                }
+                // **Punkt 4, zweite Haelfte: die RELATIONALE Nachbedingung (2026-08-19).**
+                //
+                // `aus_ensures` verengt aus `result <op> <Zahl>`. Die haeufigere Form nennt
+                // einen ORT: `ensures result <= s.len`. `FRAGMENTE.md`:1152 sagt es selbst --
+                // *„Das kommt durch, weil das `ensures` von `unberuehrt` `<= s.len` sagt: aus
+                // dem VERTRAG der gerufenen Funktion, nicht aus einer Flussregel."*
+                //
+                // **Die Zeile stand da und kam NICHT durch**, weil der Ort im Vertrag den
+                // PARAMETER des Gerufenen nennt und der Rufer sein Argument. Uebersetzt wird
+                // hier: Parametername -> Argumentort.
+                //
+                // > *Es ist V2, nicht V1* -- eine Beziehung zweier Stellen, und die
+                // > Maschinerie dafuer gibt es seit jeher (`Fakt::Beziehung`).
+                if let ExprArt::Ruf(r) = &l.wert.art {
+                    self.beziehung_aus_ensures(&l.name.text, r, lage);
+                }
                 lage.lokal
                     .insert(l.name.text.clone(), ziel.unwrap_or(wert));
             }
@@ -537,6 +576,7 @@ impl<'a> Pruefer<'a> {
                         if let Some(g) = &t.gegenstand {
                             let _ = self.ausdruck(g, lage);
                         }
+                        self.zaehler_erbt_die_schranke(t, lage, &mut innen);
                         &t.rumpf
                     }
                     Schleife::Retry(r) => {
@@ -1972,6 +2012,144 @@ impl<'a> Pruefer<'a> {
         }
     }
 
+    /// **Die relationale Nachbedingung eines Rufs (Punkt 4, zweite Haelfte).**
+    ///
+    /// `ensures result <= s.len` an der Deklaration nennt den **Parameter** `s`; der Rufer
+    /// schreibt `unberuehrt(x)`. Uebersetzt wird der Ort: `s.len` -> `x.len`.
+    ///
+    /// **Gedeckt ist die einfache Form** -- `result <op> <ort>`, wobei `<ort>` an einem
+    /// Parameter haengt und das zugehoerige Argument selbst ein schlichter Ort ist. *Ein
+    /// Argument, das gerechnet wird (`f(a + 1)`), hat keinen Ort, und dann schweigt die
+    /// Regel* -- W10.
+    fn beziehung_aus_ensures(&mut self, binder: &str, r: &Ruf, lage: &mut Lage) {
+        let Some(sig) = self.u.funktion(&self.modul, &r.pfad).cloned() else { return };
+        for p in &sig.ensures {
+            let PredArt::Vergleich(e) = &p.art else { continue };
+            let ExprArt::Binaer(op, a, c) = &e.art else { continue };
+            let (op, ort) = match (&a.art, &c.art) {
+                (ExprArt::Ergebnis, ExprArt::Ort(o)) => (*op, o),
+                (ExprArt::Ort(o), ExprArt::Ergebnis) => (gespiegelt(*op), o),
+                _ => continue,
+            };
+            // Welcher Parameter ist die Wurzel des genannten Orts?
+            let Some(i) = sig.parameter.iter().position(|(n, _)| *n == ort.basis.text) else {
+                continue;
+            };
+            let Some(arg) = r.argumente.get(i) else { continue };
+            let ExprArt::Ort(argort) = &arg.art else { continue };
+            if !argort.suffixe.is_empty() {
+                continue;
+            }
+            // `s.len` am Vertrag wird `x.len` beim Rufer.
+            let mut ziel = argort.clone();
+            ziel.suffixe = ort.suffixe.clone();
+            let (Some((links, _)), Some((rechts, indizes))) = (
+                schluessel_und_indizes(&Ort {
+                    basis: gabbro_syntax::ast::Ident { text: binder.to_string(), span: r.span },
+                    suffixe: Vec::new(),
+                    span: r.span,
+                }),
+                schluessel_und_indizes(&ziel),
+            ) else {
+                continue;
+            };
+            lage.fakten.push(Fakt::Beziehung { links, op, rechts, indizes });
+        }
+    }
+
+    /// **«H2.1» -- ein Traversierungszaehler erbt die Schranke seiner Domaene (2026-08-19).**
+    ///
+    /// Zwei Fundstellen im ganzen Korpus, dieselbe Form:
+    ///
+    /// ```gabbro
+    /// let mut n : u32 in 0 .. NSLOTS = 0;
+    /// traverse i over slots of w by unvisited {
+    ///     narrow n to 0 ..< NSLOTS else { return n; }   -- der else-Zweig kann NICHT
+    ///     n += 1;                                       -- genommen werden
+    /// }
+    /// ```
+    ///
+    /// *Die Schranke faellt aus der Domaene -- aber M1 sah sie nicht, weil der Zaehler eine
+    /// gewoehnliche lokale Variable ist.* Die `narrow`-Zeile ist damit die letzte
+    /// handbewiesene Bereichspflicht des Korpus, und ihr `else` ist ein Ritual.
+    ///
+    /// ## Die Rechnung
+    ///
+    /// ```text
+    /// c = obere Schranke von `n` beim Betreten (aus der Bindung, V1)
+    /// B = Domaenenschranke                     (`domaene::Sicht`, DIESELBE wie kosten.rs)
+    /// k = der konstante Zuwachs
+    /// -----------------------------------------------------------------------------
+    /// an der Zuwachsstelle:  n <= c + (B - 1) * k
+    /// ```
+    ///
+    /// **Die `B - 1` ist die schaerfere und die richtige:** vor dem k-ten Zuwachs sind
+    /// hoechstens k-1 geschehen. Genau sie macht die `narrow`-Zeile ueberfluessig.
+    ///
+    /// ## Und es ist die einzige Ausnahme von `SPRACHE.md`:657
+    ///
+    /// > *„Loops carry no facts inward."*
+    ///
+    /// **Der Unterschied zwischen Ausnahme und Loch liegt in der Richtung.** Nichts, was VOR
+    /// der Schleife galt, gilt darin weiter -- die Regel ist unangetastet. Neu ist eine
+    /// Tatsache, die die Schleife aus ihrer EIGENEN Form erzeugt: Domaenenschranke plus
+    /// Zuwachsform. *Es ist die Induktionsvariable, und sie ist die eine Stelle, an der die
+    /// Schleife etwas weiss, das eine Faktenmenge nicht hineintragen kann.*
+    ///
+    /// ## Fuenf Bedingungen, und jede ist ein Schweigen, wenn sie fehlt
+    ///
+    /// Der Zaehler ist lokal und skalar · im Rumpf **genau eine** Zuwachsstelle der Form
+    /// `n += k` mit konstantem `k > 0` · die Domaene hat eine Schranke · die Traversierung
+    /// liegt in keiner weiteren Schleife · niemand nimmt seine Adresse (in Gabbro geschenkt).
+    ///
+    /// **Faellt eine, sagt der Pass nichts** -- W10, und die `narrow`-Zeile bleibt noetig.
+    fn zaehler_erbt_die_schranke(&mut self, t: &Traverse, aussen: &Lage, innen: &mut Lage) {
+        let Some(b) = (crate::domaene::Sicht {
+            u: self.u,
+            modul: &self.modul,
+            lokal: &aussen.lokal,
+        })
+        .domaenenschranke(&t.domaene) else {
+            return;
+        };
+        if b <= 0 {
+            return;
+        }
+        // **Bedingung 4: keine verschachtelte Schleife.** Sonst multipliziert sich `B`, und
+        // eine Schranke, die zu klein ist, waere schlimmer als keine.
+        if enthaelt_schleife(&t.rumpf) {
+            return;
+        }
+        for (name, k) in zuwaechse(&t.rumpf) {
+            // Bedingung 1: lokal und skalar.
+            let Some(typ) = innen.lokal.get(&name).cloned() else { continue };
+            let Some(dekl) = typ.bereich() else { continue };
+            let ort = Ort {
+                basis: gabbro_syntax::ast::Ident { text: name.clone(), span: t.span },
+                suffixe: Vec::new(),
+                span: t.span,
+            };
+            // `c` -- was der Zaehler beim Betreten hoechstens ist. Ohne die Tatsache aus der
+            // Bindung waere das der deklarierte Hoechstwert, und die Rechnung nutzlos.
+            let Some(c) = self.mit_fakt(&ort, typ.clone(), aussen).bereich().map(|x| x.max) else {
+                continue;
+            };
+            if c >= dekl.max {
+                continue;
+            }
+            let obergrenze = c.saturating_add((b - 1).saturating_mul(k));
+            if obergrenze >= dekl.max {
+                continue;
+            }
+            innen.fakten.push(Fakt::Bereich {
+                schluessel: name,
+                indizes: Vec::new(),
+                min: dekl.min,
+                max: obergrenze,
+            });
+        }
+    }
+
     /// M4 an der Stelle, an der M1 die Zahl hat: ein Index gegen die Laenge seines Feldes.
     fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {
         // **`suche` und nicht `get`, und das war ein Loch in der ERSTEN getragenen Klasse.**
@@ -2365,5 +2543,77 @@ fn zeichen(op: BinOp) -> &'static str {
         BinOp::GroesserGleich => ">=",
         BinOp::Gleich => "==",
         _ => "?",
+    }
+}
+
+/// **Bedingung 4:** liegt in diesem Rumpf eine weitere Schleife? Dann multipliziert sich die
+/// Domaenenschranke, und «H2.1» schweigt.
+fn enthaelt_schleife(b: &Block) -> bool {
+    b.anweisungen.iter().any(|s| match &s.art {
+        StmtArt::Schleife(_) => true,
+        StmtArt::Wenn(w) => {
+            w.zweige.iter().any(|(_, b)| enthaelt_schleife(b))
+                || w.sonst.as_ref().is_some_and(enthaelt_schleife)
+        }
+        StmtArt::Bricht(x) => enthaelt_schleife(&x.rumpf),
+        StmtArt::Sperrt(x) => enthaelt_schleife(&x.rumpf),
+        StmtArt::Observiert(x) => enthaelt_schleife(&x.rumpf),
+        StmtArt::LetSonst(x) => enthaelt_schleife(&x.sonst),
+        StmtArt::Match(m) => m.zweige.iter().any(|a| enthaelt_schleife(&a.rumpf)),
+        _ => false,
+    })
+}
+
+/// **Die Zuwaechse eines Rumpfes: Name auf konstanten Zuwachs.**
+///
+/// Bedingung 2 in Reinform -- ein Name, der irgendwo ANDERS geschrieben wird als durch
+/// `n += <Zahl>`, faellt heraus. *Zwei Zuwachsstellen fuer denselben Namen ebenfalls: nach
+/// dem ersten Schreiben ist die Tatsache tot, und eine Regel, die das nicht mitrechnet,
+/// waere eine, die den zweiten Zuwachs uebersieht.*
+fn zuwaechse(b: &Block) -> Vec<(String, i128)> {
+    let mut kandidaten: HashMap<String, Option<i128>> = HashMap::new();
+    sammle_zuwaechse(b, &mut kandidaten);
+    kandidaten
+        .into_iter()
+        .filter_map(|(n, k)| k.map(|k| (n, k)))
+        .collect()
+}
+
+fn sammle_zuwaechse(b: &Block, aus: &mut HashMap<String, Option<i128>>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Zuweisung(z) => {
+                let name = z.ziel.basis.text.clone();
+                let gut = z.ziel.suffixe.is_empty()
+                    && z.op == ZuwOp::Plus
+                    && matches!(&z.wert.art, ExprArt::Zahl(n) if *n > 0);
+                let k = match (&z.wert.art, gut) {
+                    (ExprArt::Zahl(n), true) => Some(*n as i128),
+                    _ => None,
+                };
+                // Zweite Schreibstelle desselben Namens -> heraus.
+                aus.entry(name).and_modify(|e| *e = None).or_insert(k);
+            }
+            StmtArt::Let(l) => {
+                aus.insert(l.name.text.clone(), None);
+            }
+            StmtArt::Wenn(w) => {
+                for (_, b) in &w.zweige {
+                    sammle_zuwaechse(b, aus);
+                }
+                if let Some(s) = &w.sonst {
+                    sammle_zuwaechse(s, aus);
+                }
+            }
+            StmtArt::Bricht(x) => sammle_zuwaechse(&x.rumpf, aus),
+            StmtArt::Sperrt(x) => sammle_zuwaechse(&x.rumpf, aus),
+            StmtArt::Observiert(x) => sammle_zuwaechse(&x.rumpf, aus),
+            StmtArt::Match(m) => {
+                for a in &m.zweige {
+                    sammle_zuwaechse(&a.rumpf, aus);
+                }
+            }
+            _ => {}
+        }
     }
 }

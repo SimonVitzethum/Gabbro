@@ -1069,6 +1069,17 @@ reason Stackart {
 const STACK_MAX : u64 = 65536;   -- nachgetragen 2026-08-15: benutzt, nie erklaert
 type Bytes = u64 in 0 .. STACK_MAX;
 
+-- **Nachgetragen 2026-08-19, wie `STACK_MAX` am 2026-08-15: benutzt, nie erklaert.**
+-- Der Rumpf unten liest `s.worte`, `s.len` und rechnet `i * 8` -- ein Wort ist acht Bytes,
+-- also traegt ein Stack von `STACK_MAX` Bytes `STACK_MAX / 8` Worte. **Die Zahl ist
+-- ABGELEITET und nicht erfunden**; sie steht dreimal im Rumpf und stand nirgends.
+--
+-- *Ohne diese Zeile hat `elems of s.worte` keine Schranke, und «H2.1» kann nicht greifen --
+-- nicht weil die Regel zu schwach waere, sondern weil der Ausschnitt seinen Traeger nicht
+-- nennt.* Der Befund gehoert zum Ausschnitt, nicht zu Gabbro.
+const STACK_WORTE : u64 = 8192;
+type Stack = { worte : [u64; STACK_WORTE], len : Bytes, };
+
 const MIND_RESERVE_NENNER : u32 in 1 .. 64 = 8;
 const MIND_MESSUNGEN      : u32 = 2;
 
@@ -1111,12 +1122,17 @@ impl fn unberuehrt(s : ptr<normal, r+own> Stack) -> u64
         touches reads s
     {
         if w != MUSTER { return i * 8; }
-        -- Nachgezogen 2026-08-15: die Schranke faellt zwar aus der Domaene (die
+        -- ~~Nachgezogen 2026-08-15: die Schranke faellt zwar aus der Domaene (die
         -- Traversierung laeuft ueber `s.worte`), **aber M1 sieht das nicht** -- der
-        -- Zaehler ist eine gewoehnliche lokale Variable. Die Pruefung VOR der Rechnung
-        -- ist genau das, was die Zaehlerregel verlangt; der `else`-Zweig kann nicht
-        -- genommen werden und muss trotzdem dastehen.
-        narrow i to 0 .. 65535 else { return i * 8; }
+        -- Zaehler ist eine gewoehnliche lokale Variable. Der `else`-Zweig kann nicht
+        -- genommen werden und muss trotzdem dastehen.~~ *(2026-08-15)*
+        --
+        -- **Entfallen am 2026-08-19 mit «H2.1».** M1 sieht es jetzt: ein Zaehler, der in
+        -- einer beschraenkten Traversierung hoechstens einmal je Durchgang waechst, erbt
+        -- die Schranke seiner Domaene -- an der Zuwachsstelle `i <= c + (B-1)*k`.
+        -- *Die Regel ist die einzige Ausnahme von `SPRACHE.md`:657 („Loops carry no facts
+        -- inward"), und der Unterschied zwischen Ausnahme und Loch liegt in der Richtung:
+        -- die Tatsache kommt nicht von aussen, sondern aus der Schleifenform selbst.*
         i += 1;
     }
     return i * 8;
@@ -1173,7 +1189,22 @@ check kstack {
         let g = groesse_gemessen() else (e1) { return false; }
         let f = frei_min_gemessen() else (e2) { return false; }
         if f < g / MIND_RESERVE_NENNER { return false; }
-        return (g - f) + irq.tiefe_max + g / MIND_RESERVE_NENNER <= g;
+        -- **Zweite Fassung, 2026-08-19 («H2.2»).** Hier stand:
+        --
+        --     return (g - f) + irq.tiefe_max + g / MIND_RESERVE_NENNER <= g;
+        --
+        -- `PFLICHTEN.md` fuehrte dazu die Pflicht *„`(g - f)` unterlaeuft nicht"* mit der
+        -- Begruendung *„`f < g / N` gibt `f < g` nur ueber die Division; die V-Regeln rechnen
+        -- nicht."* **Nachgerechnet: die Begruendung beschreibt den falschen Zweig.** Der
+        -- Vergleich steht in einem `if`, das ZURUECKKEHRT -- auf dem Weg hierher gilt
+        -- `f >= g / N`, eine UNTERE Schranke, und `g - f` braucht eine obere. Keine
+        -- schaerfere V-Regel schliesst das.
+        --
+        -- Die Aussage ohne Subtraktion ist unter `f <= g` aequivalent und hat keine
+        -- Unterlaufpflicht. **Die Pflicht war ein Artefakt der Schreibweise, nicht der
+        -- Sprache** -- dieselbe Klasse wie `revoke` (200 zugesagt, 16 452 480 gerechnet):
+        -- *ein Mensch hat den typischen Fall geschrieben statt die Schranke.*
+        return irq.tiefe_max + g / MIND_RESERVE_NENNER <= f;
     }
     floor    gemessen_tod >= MIND_MESSUNGEN, groesse >= 1, irq.n >= 1
     counterprobe "Fuellung ausgehaengt" expects erschoepft_waechst

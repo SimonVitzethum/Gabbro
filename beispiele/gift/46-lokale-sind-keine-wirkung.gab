@@ -8,13 +8,23 @@
 --
 -- Was BLEIBEN muss, ist die Zaehlerregel (SPRACHE.md §1): `in 0 .. GRENZE` allein reicht
 -- nicht, denn `+ 1` reicht bis GRENZE + 1. Diese Datei faellt deshalb genau einmal.
+--
+-- **BERICHTIGT 2026-08-19, und der Grund ist ein Fund ueber die Probe selbst.** Hier stand
+-- `let mut i : u64 in 0 .. MAXI = 0; i += 1;` -- und seit «H2.1» eine Bindung mit konstantem
+-- Wert ihre Tatsache hinterlaesst, geht das durch. **Zu Recht:** `i` ist null, `i + 1` ist
+-- eins, und das liegt im Bereich. *Das Programm war die ganze Zeit korrekt; die Probe hat
+-- M1s BLINDHEIT gemessen und nicht einen Fehler.*
+--
+-- > Eine Giftprobe, die aufhoert zu beissen, weil der Pruefer schaerfer wurde, ist kein
+-- > Rueckschritt -- sie war die falsche Probe. Der Anfangswert kommt jetzt von aussen, und
+-- > damit misst sie, was ihr Text behauptet.
 module gift {
 const MAXI : u64 = 100;
-impl fn zaehlt() -> u64
+impl fn zaehlt(start : u64 in 0 .. MAXI) -> u64
     effects { pure }
     costs   <= 8 ops
 {
-    let mut i : u64 in 0 .. MAXI = 0;
+    let mut i : u64 in 0 .. MAXI = start;
     i += 1;
     return i;
 }

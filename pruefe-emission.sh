@@ -321,9 +321,12 @@ int main(void) {
 #            16 hinaus
 #      0  -- nach dem Loeschen ist keiner mehr aktiv
 #      0  -- und der LETZTE Slot ist mitgeloescht: die Grenze ist `< n`, nicht `< n-1`
+# **8 -> 7 direkte Formen am 2026-08-19.** Mit «H2.1» ist das `narrow` aus `beispiele/19`
+# entfallen -- ein Zaehler erbt die Schranke seiner Domaene, und die Zeile war ein Ritual.
+# *Eine direkte Form weniger heisst hier: eine Klempnereizeile weniger, nicht eine Luecke.*
 lauf "beispiel19" "$W/beispiele/19-traversierung.gab" "$TREIBER19" "16 6 0 0" \
      's/; i++)/; i += 2)/' \
-     "0 Annahmen, 2 Schablonen (0 davon UNBEWIESEN), 8 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "0 Annahmen, 2 Schablonen (0 davon UNBEWIESEN), 7 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
 
 # -- 6. Das Geraet: ein Register ist KEIN Feld ------------------------------------------
 #

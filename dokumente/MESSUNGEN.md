@@ -8278,3 +8278,101 @@ ABBRUCH: 15 Bloecke statt 10 -- die Grundgesamtheit hat sich bewegt
 
 **Gefahren wird nur der `--haengend`-Zweig**, also fällt es niemandem auf. *Ein Werkzeug, das
 in einem Modus abbricht, den keiner benutzt, ist kein Werkzeug — es ist eine Datei.*
+
+---
+
+# «H2» ausgeführt — `H = 17 → 15`, und keine der acht übrigen ist ein Handbeweis
+
+**2026-08-19.** Der Plan stand am Morgen, gebaut wurde am selben Tag.
+
+## H2.1 — der Traversierungszähler
+
+**Die Regel:** ein Zähler, der in einer beschränkten Traversierung höchstens einmal je
+Durchgang wächst, erbt die Schranke seiner Domäne — an der Zuwachsstelle `n <= c + (B−1)·k`.
+
+**Drei Bausteine, und zwei davon waren selbst Funde:**
+
+| | |
+|---|---|
+| **Die Tatsache aus der Bindung** | `let mut n : u32 in 0 .. NSLOTS = 0;` setzte den Namen auf den **deklarierten** Bereich und warf weg, was der Anfangswert sagt. *Ohne `c` hat die Rechnung kein `c`.* |
+| **`domaene.rs`** | die Domänenschranke lag in `kosten.rs` — **umgezogen statt nachgebaut**, eine Stelle, zwei Leser |
+| **`elems of <Feld>`** | hatte **keine** Schranke: `tabellenname` sucht nach einer Tabelle, `s.worte` ist ein Feld. *Der Fall stand nie auf, weil `unberuehrt` keine `costs`-Zeile trägt — erst der Zähler hat ihn ausgelöst.* |
+
+**Beide `narrow` sind entfernt**, und beide Dateien gehen mit 0 Fehlern durch. Zwei Giftproben
+halten die Bedingungen: zwei Zuwachsstellen (114), verschachtelte Schleife (115).
+
+### Und der Ausschnitt musste seinen Träger nennen
+
+`FRAGMENTE.md` benutzte `s.worte`, `s.len` und `lenof(s.worte)` — **`Stack` war nie
+deklariert.** Ohne Typ keine Feldlänge, ohne Feldlänge keine Domänenschranke.
+
+> **Nachgetragen wie `STACK_MAX` am 2026-08-15**, und die Zahl ist *abgeleitet*: `i * 8` steht
+> dreimal im Rumpf, ein Wort ist acht Bytes, also trägt ein Stack von `STACK_MAX` Bytes
+> `STACK_MAX / 8` Worte. *Der Befund gehört zum Ausschnitt, nicht zu Gabbro.*
+
+### Die Deklaration hat sofort eine zweite Pflicht sichtbar gemacht
+
+```gabbro
+let benutzt = s.len - frei;      -- M101: u64 in -18446744073709551615 .. 65536
+```
+
+Der Kommentar daneben sagte es seit dem Schnitt: *„Das kommt durch, weil das `ensures` von
+`unberuehrt` `<= s.len` sagt — aus dem **Vertrag** der gerufenen Funktion, nicht aus einer
+Flussregel."* **Es kam nicht durch.** Der Vertrag nennt den *Parameter*, der Rufer sein
+*Argument*, und niemand übersetzte zwischen beiden.
+
+**Gebaut als zweite Hälfte von Punkt 4:** `beziehung_aus_ensures` übersetzt `s.len` am Vertrag
+in `x.len` beim Rufer und legt es als `Fakt::Beziehung` ab — **V2, nicht V1**, und die
+Maschinerie dafür gibt es seit jeher.
+
+### Eine Giftprobe hörte auf, Gift zu sein
+
+`46-lokale-sind-keine-wirkung` erwartete `M101` an `let mut i : u64 in 0 .. MAXI = 0; i += 1;`.
+Seit die Bindung ihre Tatsache hinterlässt, geht das durch — **zu Recht: `i` ist null, `i + 1`
+ist eins.**
+
+> *Das Programm war die ganze Zeit korrekt; die Probe hat M1s **Blindheit** gemessen und nicht
+> einen Fehler.* **Eine Giftprobe, die aufhört zu beißen, weil der Prüfer schärfer wurde, ist
+> kein Rückschritt — sie war die falsche Probe.** Der Anfangswert kommt jetzt von außen.
+
+### Der zweite Ertrag stand im Plan nicht
+
+```
+beispiele/19  costs <= 82 ops  ->  50 ops
+```
+
+**Eine Klempnereizeile, die niemand braucht, kostet auch Laufzeit.** Und das Zeugnis derselben
+Datei führt eine direkte Form weniger — *eine Klempnereizeile weniger, nicht eine Lücke.*
+
+## H2.2 — und die alte Begründung beschrieb den falschen Zweig
+
+`PFLICHTEN.md` sagte: *„`f < g / N` gibt `f < g` nur über die Division; die V-Regeln rechnen
+nicht."* **Der Vergleich steht in einem `if`, das zurückkehrt.** Auf dem Weg zur Subtraktion
+gilt `f >= g / N` — eine **untere** Schranke, wo eine obere gebraucht wird.
+
+Die Aussage ohne Subtraktion ist unter `f <= g` äquivalent:
+
+```gabbro
+return irq.tiefe_max + g / MIND_RESERVE_NENNER <= f;
+```
+
+> **Die Pflicht war ein Artefakt der Schreibweise, nicht der Sprache** — dieselbe Klasse wie
+> `revoke` (200 zugesagt, 16 452 480 gerechnet): *ein Mensch hat den typischen Fall geschrieben
+> statt die Schranke.* Zweimal fing es der Pass; hier war es die Formulierung.
+
+## Das Ergebnis, und was es nicht ist
+
+```
+H = 15   (8 verankert + 7 Absenkungen)     F6 hat keine Zeile mehr
+```
+
+**Alle acht verbleibenden sind Notationslücken** — `«B23»`, `«B26»`, `«B22-nah»`, `«B9»`,
+`«B18»`, `«B33»`, `«B27»`. **Nicht eine davon ist ein Handbeweis.**
+
+> **Über den zehn Fragmenten beweist kein Mensch mehr Klempnerei von Hand.** Das ist ein
+> Boden, und er ist echt: die zehn sind nach ihrer *Schwierigkeit* gewählt.
+>
+> **Aber es ist der Boden der Messung und nicht der der Sprache.** Die acht Notationslücken
+> bleiben — *null Handbeweise heißt nicht, dass alles ausdrückbar ist*; der zweite Korpus hat
+> gar keine `H`-Messung; und die 13 ZUSAGE-Klauseln tauchen in `H` nicht auf, weil `H` die
+> Fragmente misst und nicht die Sprache.

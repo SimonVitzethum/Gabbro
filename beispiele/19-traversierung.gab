@@ -45,17 +45,25 @@ impl fn aktive_loeschen(w : ptr<normal, rw> Werte)
 -- Dieselbe Domaene, lesend: die Schranke ist dieselbe, die Wirkung eine andere.
 impl fn aktive_zaehlen(w : ptr<normal, r> Werte) -> u32
     effects { reads w.slots }
-    -- **82, nicht 64.** Die Zahl ist mit `gabbro kosten` abgelesen, nicht geschaetzt (W2):
-    -- der `narrow`-Zweig und die Zaehlung kosten mehr als das blosse Schreiben oben. Der
-    -- Pass rechnet nach, und eine zu kleine Zusage faellt an `K001`.
-    costs   <= 82 ops
+    -- **50, und die Zahl ist am 2026-08-19 GEFALLEN.** Sie stand auf 82, weil der
+    -- `narrow`-Zweig mitzaehlte; mit «H2.1» ist er fort, und `gabbro kosten` liest 50.
+    -- *Abgelesen, nicht geschaetzt (W2) -- eine `costs`-Zeile ist eine Messung.*
+    --
+    -- **Und das ist der zweite Ertrag der Regel, der im Plan nicht stand:** eine
+    -- Klempnereizeile, die niemand braucht, kostet auch Laufzeit. Der Pass rechnet nach,
+    -- und eine zu kleine Zusage faellt an `K001`.
+    costs   <= 50 ops
 {
     let mut n : u32 in 0 .. NSLOTS = 0;
     traverse i over slots of w by unvisited
         touches reads w.slots
     {
         if w.slots[i].aktiv {
-            narrow n to 0 ..< NSLOTS else { return n; }
+            -- **Hier stand ein `narrow n to 0 ..< NSLOTS else { return n; }`, und sein
+            -- else-Zweig konnte nicht genommen werden.** Entfallen am 2026-08-19 mit «H2.1»:
+            -- ein Zaehler, der in einer beschraenkten Traversierung hoechstens einmal je
+            -- Durchgang waechst, erbt die Schranke seiner Domaene -- an der Zuwachsstelle
+            -- `n <= c + (B-1)*k`. *Die letzte handbewiesene Bereichspflicht des Korpus.*
             n += 1;
         }
     }

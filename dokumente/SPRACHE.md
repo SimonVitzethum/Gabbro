@@ -657,6 +657,28 @@ checker keeps a **fact set** per block that grows only at the three named places
 every write to a participating place**. Loops carry no facts inward (the invariant of the
 traversal does that, §9).
 
+> **Exception, and it is the only one — «H2.1», 2026-08-19.** A loop carries no fact **inward**;
+> it may however **generate** one. A counter that is set to a constant before a bounded
+> traversal and inside the body is *only* ever the target of `n += k` with a positive constant
+> `k` is bounded by the domain: at each increment site `n ≤ c + (B−1)·k`, after the loop
+> `n ≤ c + B·k`.
+>
+> **The difference between an exception and a hole lies in the direction.** Nothing that held
+> *before* the loop holds inside it — that rule is untouched. What is new is a fact the loop's
+> **own shape** yields: its declared domain bound plus the form of its body. *It is the
+> induction variable, and it is the one place where the loop knows something a fact set cannot
+> carry there.*
+>
+> Five conditions, each a refusal if it is missing: the counter is a **local** scalar, set from
+> a constant before the loop · inside the body it is **only** the target of `n += k`, `k` a
+> positive constant · the domain has a computable bound · the traversal is **not nested** in
+> another loop (otherwise `B` multiplies, and the pass **stays silent**) · nothing takes its
+> address (free in Gabbro — there is no address-of on locals — and stated anyway).
+>
+> **Measured before it was built:** 21 traversals in the corpus, **two** with a counter in the
+> body. *A rule for two sites is little; it closes the last hand-written range obligation, and
+> that is the point.*
+
 | | Rule | Example |
 |---|---|---|
 | **V1** | a checked **range condition** narrows the range of the checked place in the branch after it | `if x >= 1 { … }` → `x : u32 in 1..max` |

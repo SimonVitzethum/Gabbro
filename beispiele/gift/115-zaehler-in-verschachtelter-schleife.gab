@@ -1,0 +1,27 @@
+-- erwartet: M101
+-- **Bedingung 4 von «H2.1»: keine verschachtelte Schleife.**
+-- Liegt eine zweite Schleife im Rumpf, MULTIPLIZIERT sich die Domaenenschranke -- und eine
+-- Schranke, die zu klein ist, waere schlimmer als keine. *Der Pass schweigt und laesst die
+-- Bereichspruefung fallen.*
+module gift::zaehler_verschachtelt {
+
+const NSLOTS : u32 = 16;
+table W count NSLOTS { slot { aktiv : bool, } }
+
+impl fn zaehlen(w : ptr<normal, r> W) -> u32
+    effects { reads w.slots } costs <= 4000 ops
+{
+    let mut n : u32 in 0 .. NSLOTS = 0;
+    traverse i over slots of w by unvisited
+        touches reads w.slots
+    {
+        traverse j over slots of w by unvisited
+            touches reads w.slots
+        {
+            n += 1;
+        }
+    }
+    return n;
+}
+
+}

@@ -1,0 +1,27 @@
+-- erwartet: M101
+-- **Bedingung 2 von «H2.1»: GENAU EINE Zuwachsstelle.**
+-- Ein Zaehler, der auf einem Pfad zweimal waechst, ist nicht durch `c + (B-1)*k` gebunden --
+-- und nach dem ersten Schreiben ist die Tatsache ohnehin tot. *Eine Regel, die das nicht
+-- mitrechnet, uebersieht den zweiten Zuwachs.*
+--
+-- Der Pass SCHWEIGT hier (W10) und laesst `M101` fallen, statt eine zu kleine Schranke zu
+-- behaupten.
+module gift::zaehler_zweimal {
+
+const NSLOTS : u32 = 16;
+table W count NSLOTS { slot { aktiv : bool, } }
+
+impl fn zaehlen(w : ptr<normal, r> W) -> u32
+    effects { reads w.slots } costs <= 200 ops
+{
+    let mut n : u32 in 0 .. NSLOTS = 0;
+    traverse i over slots of w by unvisited
+        touches reads w.slots
+    {
+        n += 1;
+        n += 1;
+    }
+    return n;
+}
+
+}

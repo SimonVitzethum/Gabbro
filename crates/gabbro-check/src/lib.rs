@@ -20,6 +20,8 @@ use gabbro_syntax::diag::Absagen;
 pub mod aufrufgraph;
 // **«B24» an EINER Stelle** -- der Namenspass sagt ab, der Erzeuger rechnet damit.
 pub mod bitlage;
+// Die Domaenenschranke -- kosten.rs und m1.rs lesen dieselbe.
+pub mod domaene;
 pub mod m2;
 pub mod m3;
 pub mod paarung;

@@ -280,7 +280,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 1091–1092 | the traversal terminates | K | `S001` — **notation wart «B30»: `touches` takes an `efflist` without braces while `effects` is braced everywhere else** |
 | 1094 | the first untouched word marks the depth | L | the human |
 | 1094/1103 | `i * 8` does not overflow | K | `M101`/`M104` |
-| 1100 | the counter stays below 65 536 | K | **gap: the bound falls out of the domain, but M1 does not see it — the counter is an ordinary local. `narrow … else` is hand-written, and its else branch CANNOT BE TAKEN and must stand there anyway** |
+| 1100 | the counter stays below 65 536 | ~~K~~ **zu** | **«H2.1» gebaut 2026-08-19.** Ein Zähler, der in einer beschränkten Traversierung höchstens einmal je Durchgang wächst, erbt die Schranke seiner Domäne: an der Zuwachsstelle `n <= c + (B-1)*k`. *Die einzige Ausnahme von `SPRACHE.md`:657 — der Unterschied zwischen Ausnahme und Loch liegt in der Richtung: die Tatsache kommt aus der Schleifenform selbst.* Das `narrow` ist an beiden Fundstellen ENTFERNT. **Und der Ausschnitt musste dafür seinen Träger nennen** — `Stack` war benutzt und nie erklärt, wie `STACK_MAX` am 2026-08-15; die Wortzahl ist aus `i * 8` und `STACK_MAX` ABGELEITET |
 | 1106–1112 | a function may return a pair | K | `P(a: …, b: …)` + `ensures result` — **both closed**; «B6» was already, «B7» on 2026-08-17. *The double traversal was the price of two gaps that met* |
 | 1113–1114 | `s.len >= 8` | K | `M101` |
 | 1115 | only the named atomics change | K | `E005`/`E010` |
@@ -290,7 +290,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 1142 | the calibration ran at least once | K | `floor` |
 | 1145–1158 | at the foot of every EL0 kernel stack an eighth stays untouched | L | the human |
 | 1151–1155 | an `option`-valued `place` can be unpacked | K | `let … else` on a `place` — **«B14b» closed 2026-08-17.** *An unpacked place calls nothing:* the call graph sees no edge, M2 consumes nothing, the cost pass counts one |
-| 1157 | `(g - f)` does not underflow | K | **gap: `f < g / N` gives `f < g` only through the division; the V rules do no arithmetic** |
+| 1157 | `(g - f)` does not underflow | ~~K~~ **zu** | **«H2.2», 2026-08-19 — und die alte Begründung beschrieb den FALSCHEN ZWEIG.** Sie lautete, `f < g / N` gebe `f < g` nur über die Division; der Vergleich steht aber in einem `if`, das ZURÜCKKEHRT, und auf dem Weg zur Subtraktion gilt `f >= g / N` — eine UNTERE Schranke, wo eine obere gebraucht wird. **Keine schärfere V-Regel schließt das.** Die Aussage ohne Subtraktion (`irq + g/N <= f`) ist unter `f <= g` äquivalent und hat keine Unterlaufpflicht: *die Pflicht war ein Artefakt der Schreibweise, nicht der Sprache* |
 | 1159 | the measurement has a floor | K | `floor` |
 | 1160 | the check can go RED | L | `counterprobe` — **the speech test as a language construct** |
 
@@ -412,7 +412,7 @@ carries and the Rust original did not — because it does not write them down.*
 | **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
 | **Plumbing (K)** | **171** | 72 % |
 | **Logic (L)** | **67** | 28 % |
-| **hanging** | **33** | of which **`H = 17` are K** — **10 anchored at a line, 7 lowerings** *(«B21» closed 2026-08-19)*. Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
+| **hanging** | **31** | of which **`H = 15` are K** — **8 anchored at a line, 7 lowerings** *(«B21», «H2.1», «H2.2» closed 2026-08-19)*. **All eight remaining are NOTATION gaps: not one is a hand-written proof.** Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
 **L : K = 0,38 : 1.**
@@ -472,7 +472,7 @@ ausdrücklich verlangt hatte.
 | **«B26» — der Vorzustand einer `transition`** | *„ob `mirrors` auch den Vorzustand einer `transition` an `GCMD.TE` aus `GSTS.TES` bezieht, sagt `SYNTAX.md` nicht"* — **der Erzeuger beantwortet es mit ja und misst es**: `1 1 1 1`, und die zweite und vierte Zahl sind die Falle. *Die Antwort gehört jetzt in `SYNTAX.md`, nicht in den Erzeuger* |
 | **«B33» — die V-Regeln verengen keinen Registerort** | Der Ordner schrieb: *„Ob das Absicht ist (ein Register kann sich zwischen Prüfung und Rechnung ändern!) oder eine Lücke, entscheidet der Ordner. **Wenn es Absicht ist, gehört die Begründung aufgeschrieben** — sie wäre ein starkes Argument."* **Sie ist es, und sie steht jetzt im erzeugten C:** ein Registerzugriff wird `volatile`, und `volatile` IST die Aussage *„dieser Ort kann sich zwischen zwei Lesungen ändern"*. Eine Verengung wäre an dieser Stelle falsch, nicht bloß fehlend |
 
-### Offen — **`H = 17`**, abgelesen mit `./zaehle-pflichten.py --haengend`, und die Spalte rechts sagt, wem sie gehören
+### Offen — **`H = 15`**, abgelesen mit `./zaehle-pflichten.py --haengend`, und die Spalte rechts sagt, wem sie gehören
 
 | Ursache | # | wem |
 |---|---:|---|
