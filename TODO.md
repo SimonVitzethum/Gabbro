@@ -517,6 +517,25 @@ as a record of what the closure cost; the details are in
 | `own` is a synonym for `rw` | **the specification was wrong, not the pass** — `SYNTAX.md` §3 now carries the measurement |
 | lexer panic · licence entry | **`P038`** (measured depth limit) · `license = "AGPL-3.0-only"` |
 
+### From the SECOND review of 2026-08-19 — two blocking findings, and both sat in the TOOL
+
+*The grade rose to 2− and was held there by two sentences: the test suite did not run without
+a `RUST_MIN_STACK` that stood nowhere, and a diamond in the call graph counted as a cycle.
+Neither was a rule that was too weak — both were measuring apparatus that could not measure.*
+
+| was open | closed as |
+|---|---|
+| a diamond `f → g,h → k` reported «cycle over k», and `E008` fell silent | `pfad` (who lies UNDER me — only that is a cycle) split from `fertig` (memo, so the diamond stays linear); poison 161/162 |
+| `cargo test` died without `RUST_MIN_STACK` — the third attempt at the depth limit | **32**, measured on the whole chain on 2 MiB in **debug**; a test on its own 2 MiB thread now holds the number |
+| `0` plus a multibyte character killed the compiler | `lex.rs` read a **byte** as a character; now `L006` — and the umlauts in `ist_buchstabe` were never read either |
+| `rust-version = "1.75"` | measured: 1.75 and 1.80 end with `E0658 float_next_up_down`, **1.86.0** builds |
+| a sixth of the mutation catalogue measured nothing | 25 dead anchors repaired; `--anker` checks it **without a build**, and the full run now FAILS on one |
+| `pruefe-luecken.py` always returned 0 | a speech test, a null-run precheck and an exit contract — **13 of 13**, plus two entries proven to be NULL mutations |
+| the frame ends at the call boundary | **`E008` compares the PLACE**, not merely the kind — and the corpus corrected for the fifth time (`beispiele/09`) |
+| `own` is only a synonym for `rw` | **`R004`** — the same place at two `own` parameters of one call; the alias question stays M3's |
+| `on_exceeded` on an undeclared name stays silent | **`S007`**, the third state — the name pass never took the responsibility that was handed to it |
+| the poison corpus accepts only errors | `-- erwartet: Hinweis S007`; until then **no hint code had a probe**, not even `E009` |
+
 ### «K5» — **executed 2026-08-19, all five columns** ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
 | column | built | evidence |

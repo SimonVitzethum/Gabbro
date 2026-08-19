@@ -86,15 +86,24 @@ fn jedes_gift_faellt_mit_seinem_code() {
             })
             .trim()
             .to_string();
+        // **Der DRITTE Zustand braucht auch Proben** (2026-08-19). Bis hierher nahm der
+        // Giftkorpus nur Fehler an, und damit hatte keine einzige Hinweis-Kennung eine
+        // Probe -- auch `E009` nicht, obwohl der Unterschied zwischen *„unentscheidbar"*
+        // und *„in Ordnung"* genau die Stelle ist, an der der falsche Zyklus ein falsches
+        // `pure` durchliess. `-- erwartet: Hinweis S007` verlangt die Stufe mit.
+        let (stufe, erwartet) = match erwartet.strip_prefix("Hinweis ") {
+            Some(c) => (Stufe::Hinweis, c.trim().to_string()),
+            None => (Stufe::Fehler, erwartet),
+        };
         let (codes, bericht, name) = absagen_von(&pfad);
         let gefallen: Vec<&str> = codes
             .iter()
-            .filter(|(_, s)| *s == Stufe::Fehler)
+            .filter(|(_, s)| *s == stufe)
             .map(|(c, _)| *c)
             .collect();
         assert!(
             gefallen.contains(&erwartet.as_str()),
-            "{name} sollte mit {erwartet} fallen, gefallen ist {gefallen:?}:\n{bericht}"
+            "{name} sollte mit {erwartet} ({stufe:?}) fallen, gefallen ist {gefallen:?}:\n{bericht}"
         );
     }
 }

@@ -70,6 +70,11 @@ const BENANNT: &[&str] = &[
     // would need an error-return convention, and that is not decided". **Das Fragment hat den
     // Bedarf vorweggenommen, und die Sprache hat ihn nicht.** Gebucht in `TODO.md`.
     "S006",
+    // **`S007` -- der Wachhundname, den dieser Ausschnitt nicht deklariert.**
+    // `FRAGMENTE.md`:902 nennt `on_exceeded DeviceSilent`, und `MESSUNGEN.md` fuehrte diese
+    // Stelle bis 2026-08-19 als das, worueber `S006` SCHWEIGT. Sie schweigt nicht mehr:
+    // weder abgesagt noch bestaetigt, aber sichtbar -- der dritte Zustand.
+    "S007",
     // **`N016`-`N018`, 2026-08-19: die Axiomschicht und der Eintritt.** Ausgeloest von
     // `pruefe-konstrukte.py`, das sieben Konstrukte ohne Giftprobe meldete. `N018` faellt in
     // `SPRACHE.md`:1382 an einem AUSSCHNITT, dessen `dispatch`-Ziel er nicht deklariert --
@@ -83,7 +88,7 @@ const BENANNT: &[&str] = &[
     "K004", "K005", "D001", "D002", "D003", "D004", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet
-    "R001", "R002", "R003", // M3, Raeume und Rechte
+    "R001", "R002", "R003", "R004", // M3, Raeume, Rechte -- und zweimal `own` auf denselben Ort
     "U001", "U002", "U003", "U004", "U005", "U006", "U007", // Traegergruppe: Sperrabdruck, Zug und Verbindungsaussage
 ];
 

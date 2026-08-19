@@ -683,6 +683,34 @@ MUTATIONEN = [
         "R16 -- ein Zyklus liefert eine untere Schranke und nennt sich nicht mehr so",
     ),
     Mutation(
+        "rahmen-endet-am-aufruf",
+        "wirkungen.rs",
+        "            if !weltnamen.iter().any(|k| k == grund) {\n                continue; // kein bekannter Weltzustand -- der Pass sagt nichts\n            }",
+        "            if true {\n                continue; // kein bekannter Weltzustand -- der Pass sagt nichts\n            }",
+        "E008 -- der Rahmen endet wieder an der Aufrufgrenze: `writes a` deckt jedes fremde `writes`",
+    ),
+    Mutation(
+        "verbrauchen-deckt-nicht-mehr",
+        "wirkungen.rs",
+        '        if art == "writes" {',
+        '        if false && art == "writes" {',
+        "E008 -- `consumes X` deckt `writes X` nicht mehr; `consumes` stuende dann nie fuer sich",
+    ),
+    Mutation(
+        "zweimal-own-egal",
+        "m3.rs",
+        "                if gesehen.iter().any(|g| *g == ort) {",
+        "                if false && gesehen.iter().any(|g| *g == ort) {",
+        "R004 -- zwei `own`-Parameter duerfen wieder denselben Ort bekommen",
+    ),
+    Mutation(
+        "wachhund-ohne-namen-schweigt",
+        "schleifen.rs",
+        '        absagen.schiebe(\n            Absage::hinweis(\n                "S007",',
+        '        if true {\n            return;\n        }\n        absagen.schiebe(\n            Absage::hinweis(\n                "S007",',
+        "S007 -- der dritte Zustand schweigt wieder; ein unbekannter Wachhundname geht durch",
+    ),
+    Mutation(
         "gerufener-ohne-effects-egal",
         "aufrufgraph.rs",
         '        let mut offen = if k.hat_effects {\n            None\n        } else {\n            Some(format!("`{name}` declares no `effects`"))\n        };',
@@ -713,8 +741,8 @@ MUTATIONEN = [
     Mutation(
         "schleifenrumpf-versteckt-rufe",
         "lib.rs",
-        '            Schleife::Traverse(x) => &x.rumpf,\n            Schleife::Retry(x) => &x.rumpf,',
-        '            Schleife::Retry(x) => &x.rumpf,\n            Schleife::Traverse(x) => &x.rumpf,',
+        '        StmtArt::Schleife(sch) => vec![match sch.as_ref() {\n            Schleife::Traverse(x) => &x.rumpf,\n            Schleife::Retry(x) => &x.rumpf,\n            Schleife::Forever(x) => &x.rumpf,\n        }],',
+        '        StmtArt::Schleife(sch) => match sch.as_ref() {\n            Schleife::Traverse(_) => Vec::new(),\n            Schleife::Retry(x) => vec![&x.rumpf],\n            Schleife::Forever(x) => vec![&x.rumpf],\n        },',
         "E008 -- ein `traverse`-Rumpf versteckt seine Rufe (revoke ruft dort delete_leaf)",
     ),
     Mutation(
@@ -1570,7 +1598,13 @@ def main():
         for m, z in ungueltig:
             print(f"     {m.name}: {z}")
     if ueberlebt:
-        print("\n== UEBERLEBT -- jede dieser Regeln ist heute unbewacht ==")
+        print("\n== UEBERLEBT -- eine VERMUTUNG, dass diese Regel unbewacht ist ==")
+        # **Ein Ueberlebender ist eine Hypothese, kein Befund** (W13). Gemessen 2026-08-19:
+        # eine reparierte Mutation vertauschte zwei `match`-Zweige ueber verschiedene
+        # Varianten -- also gar keine Beschaedigung. Sie "ueberlebte" zwangslaeufig und las
+        # sich wie ein Loch im Pruefer. **Eine Mutation, die nichts beschaedigt, ist
+        # schlimmer als ein toter Anker**: der tote Anker sagt nichts, der Scheinbefund sagt
+        # etwas Falsches. Jeder Ueberlebende wird von Hand gelesen, bevor er gebucht wird.
         for m in ueberlebt:
             print(f"  {m.name:<28} {m.regel}")
         print("\n  Eine ueberlebende Mutation heisst: die Regel koennte ausfallen, ohne dass")

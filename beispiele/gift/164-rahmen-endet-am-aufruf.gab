@@ -1,0 +1,26 @@
+-- erwartet: E008
+-- **Der Rahmen endete an der Aufrufgrenze.**
+--
+-- `E008` verglich bis 2026-08-19 nur die ART der Wirkung, nicht ihren ORT: `writes a`
+-- deckte ein `writes b` des Gerufenen, weil beides "writes" heisst. Ein Rahmen, der nur
+-- sagt, WIE beruehrt wird, und nicht WAS, ist kein Rahmen -- ein einziges `writes` deckte
+-- damit jede Stelle des Programms.
+--
+-- Die Begruendung im Modulkopf sagte, die Grobheit sei zulaessig, weil sie "mehr Wirkungen
+-- sieht als da sind, nie weniger". **Das gilt fuer die Huelle, nicht fuer diesen
+-- Vergleich** -- er sieht weniger. *Dieselbe Frage, die der Kopf zu stellen verlangt, und an
+-- dieser Stelle nicht gestellt.*
+--
+-- Verglichen wird, wo der Ort vergleichbar ist: bei bekanntem Weltzustand -- dieselbe Linie
+-- wie `E010`. Ein unaufloesbarer Parametername faellt bei `E009`, nicht hier.
+module gift::rahmen {
+
+static mut a : u32 = 0;
+static mut b : u32 = 0;
+
+impl fn schreibt_b() effects { writes b } costs <= 1 ops { b = 1; }
+
+-- Der Rahmen nennt `a`. Der Gerufene schreibt `b`.
+impl fn eng() effects { writes a } costs <= 3 ops { a = 1; schreibt_b(); }
+
+}

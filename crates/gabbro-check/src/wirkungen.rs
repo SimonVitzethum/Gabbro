@@ -588,7 +588,7 @@ fn funktion(
             rein_allein(w, absagen);
             if let FnRumpf::Block(b) = &f.rumpf {
                 rumpf_gegen_wirkungen(f, w, b, konstanten, weltnamen, absagen);
-                aufrufwirkungen(f, modul, w, g, absagen);
+                aufrufwirkungen(f, modul, w, g, weltnamen, absagen);
             }
         }
     }
@@ -704,6 +704,7 @@ fn aufrufwirkungen(
     modul: &str,
     w: &Wirkungen,
     g: &crate::aufrufgraph::Graph,
+    weltnamen: &[String],
     absagen: &mut Absagen,
 ) {
     // **Eine Wirkung auf einen EIGENEN lokalen Namen ist hier eingelöst** (2026-08-19).
@@ -742,6 +743,8 @@ fn aufrufwirkungen(
     }
     let ist_rein = w.liste.iter().any(|e| matches!(e.art, WirkungArt::Rein));
     let eigene: Vec<String> = w.liste.iter().map(|e| e.art.benennung().to_string()).collect();
+    // Dieselben Wirkungen, aber MIT ihrem Ort -- `writes c.slots`, nicht bloss `writes`.
+    let eigene_orte: Vec<String> = w.liste.iter().map(|e| e.art.text()).collect();
     for wirkung in &h.wirkungen {
         // Der Ort steht am Ende; `y.slots` und `y` zaehlen beide.
         if let Some((_, ort)) = wirkung.rsplit_once(' ') {
@@ -775,6 +778,27 @@ fn aufrufwirkungen(
         if art == "locks shared" && eigene.iter().any(|e| e == "locks") {
             continue;
         }
+        // **`consumes X` deckt `writes X`** -- dieselbe Asymmetrie, eine Klasse weiter.
+        //
+        // Wer eine Stelle VERBRAUCHT, sagt ueber sie mehr, als wer sie beschreibt: sie ist
+        // danach nicht mehr da. Der Rahmen soll dem Leser sagen, was ein Ruf mit der Welt
+        // machen darf, und `consumes` beantwortet diese Frage strenger als `writes`.
+        //
+        // *Der Korpus liest es auch so:* `einsammeln` fuehrt `consumes Kappenraum.slots`
+        // und kein `writes` daneben (`beispiele/09`), waehrend der Gerufene
+        // `writes Kappenraum.slots` fuehrt. Ohne diese Zeile muesste jedes `consumes` ein
+        // `writes` neben sich haben -- **und stuende dann nie fuer sich.**
+        if art == "writes" {
+            if let Some((_, ort)) = wirkung.rsplit_once(' ') {
+                let grund = ort.split(['.', '[']).next().unwrap_or(ort);
+                if eigene_orte.iter().any(|e| {
+                    e.strip_prefix("consumes ")
+                        .is_some_and(|o| o.split(['.', '[']).next().unwrap_or(o) == grund)
+                }) {
+                    continue;
+                }
+            }
+        }
         if ist_rein {
             absagen.schiebe(
                 Absage::fehler(
@@ -788,6 +812,57 @@ fn aufrufwirkungen(
                 .mit_notiz(
                     "`effects` is compositional: the effects of the callees belong to the \
                         caller",
+                ),
+            );
+            return;
+        }
+        // **Der Rahmen endete an der Aufrufgrenze** (behoben 2026-08-19). Bis hier verglich
+        // dieser Pass nur die ART: `effects { writes a }` deckte ein `writes b` des
+        // Gerufenen, weil beides „writes" heisst.
+        //
+        // ```gabbro
+        // impl fn schreibt_b() effects { writes b } { b = 1; }
+        // impl fn eng() effects { writes a } { a = 1; schreibt_b(); }   -- 0 Fehler
+        // ```
+        //
+        // Die Begruendung im Modulkopf -- *„sieht mehr Wirkungen als da sind, nie weniger"* --
+        // gilt fuer die HUELLE, nicht fuer diesen Vergleich. **Er sieht weniger**, und damit
+        // zeigte die Grobheit in die unsichere Richtung: genau die Frage, die der Kopf zu
+        // stellen verlangt und hier nicht gestellt wurde.
+        //
+        // Verglichen wird, **wo der Ort ueberhaupt vergleichbar ist**: bei bekanntem
+        // Weltzustand (`static`, `atomic`, `table`, `device`, `state`) -- dieselbe Linie wie
+        // `E010`, und aus demselben Grund. Ein Parametername des Gerufenen, den kein Argument
+        // aufloest, macht die Huelle `unvollstaendig` und faellt bei `E009`, nicht hier.
+        if eigene.iter().any(|e| e == art) {
+            let Some((_, ort)) = wirkung.rsplit_once(' ') else {
+                continue;
+            };
+            let grund = ort.split(['.', '[']).next().unwrap_or(ort);
+            if !weltnamen.iter().any(|k| k == grund) {
+                continue; // kein bekannter Weltzustand -- der Pass sagt nichts
+            }
+            if eigene_orte.iter().any(|e| {
+                let Some((a, o)) = e.rsplit_once(' ') else {
+                    return false;
+                };
+                a == art && o.split(['.', '[']).next().unwrap_or(o) == grund
+            }) {
+                continue;
+            }
+            absagen.schiebe(
+                Absage::fehler(
+                    "E008",
+                    f.name.span,
+                    format!(
+                        "`{}` declares `{art}` but calls something with `{wirkung}` -- \
+                         a different place",
+                        f.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "`effects` is the FRAME: it names the places, not merely the kind of \
+                     touch -- otherwise one `writes` covers every place in the program",
                 ),
             );
             return;

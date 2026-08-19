@@ -393,6 +393,31 @@ fn ausgang_pruefen(a: &Ident, lg: &Lage, absagen: &mut Absagen) {
     // weisz hier niemand. **Was nicht genau gemeldet werden kann, setzt kein Pass durch** --
     // dieselbe Begruendung, an der Lesart B gestorben ist.
     if !lg.bekannt.iter().any(|f| *f == a.text) {
+        // **Und dann steht da der DRITTE Zustand, nicht Schweigen** (2026-08-19).
+        //
+        // *„Ein unbekannter Name gehoert dem Namenspass"* war eine Zusage an einen Leser,
+        // den es nicht gibt: `on_exceeded nirgends` ging mit **0 Fehlern** durch, und kein
+        // Pass sagte ein Wort. **Eine Zustaendigkeit, die man weiterreicht, ohne dass jemand
+        // sie annimmt, ist ein Loch mit einer Adresse darauf.**
+        //
+        // Eine ABSAGE bleibt falsch -- in einem Ausschnitt ist ein fremder Name normal, und
+        // ob er zurueckkehrt, weiss hier niemand. Genau dafuer gibt es den dritten Zustand,
+        // wie bei `E009`: **weder abgesagt noch bestaetigt, aber sichtbar.**
+        absagen.schiebe(
+            Absage::hinweis(
+                "S007",
+                a.span,
+                format!("`on_exceeded {}` names nothing this unit declares", a.text),
+            )
+            .mit_notiz(
+                "the promise that the watchdog diverges is NOT checkable here -- not \
+                 fulfilled, just unchecked",
+            )
+            .mit_notiz(
+                "in an excerpt this is normal; in a whole unit it is a name that stands \
+                 nowhere",
+            ),
+        );
         return;
     }
     absagen.schiebe(

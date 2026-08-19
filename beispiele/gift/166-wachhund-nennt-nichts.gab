@@ -1,0 +1,22 @@
+-- erwartet: Hinweis S007
+-- **`on_exceeded` auf einen Namen, den niemand deklariert, blieb stumm.**
+--
+-- `S006` verlangt, dass der Wachhund divergiert, und weigerte sich bei einem unbekannten
+-- Namen zu sprechen -- mit der Begruendung, der gehoere dem Namenspass. **Den Leser gab es
+-- nicht**: `on_exceeded nirgends` ging mit 0 Fehlern durch, und kein Pass sagte ein Wort.
+--
+-- *Eine Zustaendigkeit, die man weiterreicht, ohne dass jemand sie annimmt, ist ein Loch mit
+-- einer Adresse darauf.*
+--
+-- Eine ABSAGE bleibt falsch: in einem Ausschnitt ist ein fremder Name normal, und ob er
+-- zurueckkehrt, weiss hier niemand. Deshalb der dritte Zustand wie bei `E009` -- weder
+-- abgesagt noch bestaetigt, aber SICHTBAR.
+module gift::wachhund {
+
+static mut n : u32 in 0 .. 100 = 0;
+
+impl fn f() effects { reads n, writes n } costs <= 200 ops {
+    retry bounded 8 ops on_exceeded nirgends { n = 1; }
+}
+
+}

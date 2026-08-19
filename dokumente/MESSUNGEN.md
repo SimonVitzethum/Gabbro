@@ -9530,3 +9530,109 @@ cargo +1.86.0 build -> gruen
 `m1.rs`) wurde erst in **1.86.0** stabil. Steht jetzt auf `1.86` — **gemessen, nicht
 geschätzt**, dieselbe Klasse wie die vier Klauseln, die `ZUSAGE` hiessen und keinen Pass
 hatten.
+
+## 2026-08-19, zweiter Teil — die Zahlen, die niemand las
+
+Vier Befunde derselben Klasse, und drei davon in den **Messwerkzeugen** statt im Prüfer.
+
+### Ein Sechstel des Mutationskatalogs mass nichts
+
+25 von 155 Ankern waren tot: 19 fehlten, 6 waren mehrdeutig geworden. Ein toter Anker fällt
+in `fahre` unter `ungueltig`, landet in der Fussnote *„zählt nicht mit"* — und **berührt den
+Rückgabewert nicht.** Die Quote lief damit über einer schrumpfenden Bezugsgrösse und las sich
+weiter wie Deckung.
+
+Sechs der toten Anker hatte der Umbau desselben Tages gerissen (`aufrufgraph::gehe`). *Ein
+Katalog, der beim Umbau verwittert, misst am lautesten dort, wo sich nichts mehr bewegt.*
+
+Der Riegel dagegen kostet keinen Bau: `./mutiere-pruefer.py --anker` ist reines Textzählen,
+mit Sprechprobe in beide Richtungen, und der volle Lauf **fällt** jetzt an einem toten Anker,
+statt ihn zu erwähnen.
+
+### Und eine reparierte Mutation beschädigte nichts
+
+`schleifenrumpf-versteckt-rufe` überlebte den ersten Lauf danach — meine eigene Reparatur
+hatte zwei `match`-Zweige über **verschiedene Varianten** vertauscht. Das ist keine
+Beschädigung. Sie überlebte zwangsläufig und las sich wie ein Loch im Prüfer.
+
+> **Eine Mutation, die nichts beschädigt, ist schlimmer als ein toter Anker.** Der tote Anker
+> sagt nichts; der Scheinbefund sagt etwas Falsches. Ein Überlebender ist eine **Vermutung**,
+> kein Befund — W13, eine Ebene höher.
+
+### `pruefe-luecken.py` kehrte immer 0 zurück
+
+Es endete mit einer Zahl und `rc = 0` — ein Bericht, den jeder Wächterlauf als grün las, ganz
+gleich was drinstand. *Dieselbe Klasse wie die vier Klauseln ohne Leser.*
+
+Und es hatte keine Sprechprobe. Ohne sie zählt **jede** Verdrehung als gefangen, sobald der
+Baum aus einem anderen Grund rot ist — genau so kam an diesem Tag ein „14 von 14" zustande,
+während drei neue Giftdateien den Lauf röteten und mit den Lücken nichts zu tun hatten.
+
+Sauber gemessen sind es **13 von 13**, und zwei Einträge sind **gar keine Lücken**:
+
+| Eintrag | warum keine |
+|---|---|
+| `if a.min >= 0 && b.min > 0` → `>= 0` | zwei Zeilen darüber steht `if b.enthaelt_null() { return }`; wer hier ankommt und `b.min >= 0` hat, hat `b.min > 0` |
+| `min().unwrap_or(0)` → `(1)` | `ecken` ist ein Feld **fester** Länge; `min()` darüber ist nie `None` — das `unwrap_or` ist toter Code |
+
+Beides ist beweisbar wirkungslos. *Dieselbe Falle, am selben Tag, in zwei verschiedenen
+Werkzeugen.*
+
+### Die MSRV, der Giftkorpus und der dritte Zustand
+
+`rust-version` stand auf `1.75`; gemessen baut erst **1.86.0** (`f64::next_up` wurde dort
+stabil). Und der Giftkorpus nahm bis heute **nur Fehler** an — damit hatte keine einzige
+Hinweis-Kennung eine Probe, auch `E009` nicht, obwohl der Unterschied zwischen
+*„unentscheidbar"* und *„in Ordnung"* genau die Stelle ist, an der der falsche Zyklus ein
+falsches `pure` durchliess. `-- erwartet: Hinweis S007` verlangt die Stufe jetzt mit.
+
+## Drei Regeln, die aus der Rezension folgten
+
+### `E008` verglich die ART, nicht den ORT
+
+```gabbro
+impl fn schreibt_b() effects { writes b } { b = 1; }
+impl fn eng() effects { writes a } { a = 1; schreibt_b(); }   -- 0 Fehler
+```
+
+Ein Rahmen, der nur sagt, **wie** berührt wird, und nicht **was**, ist kein Rahmen: ein
+einziges `writes` deckte jede Stelle des Programms. Die Begründung im Modulkopf — *„sieht
+mehr Wirkungen als da sind, nie weniger"* — gilt für die **Hülle**, nicht für diesen
+Vergleich. **Er sieht weniger.** *Dieselbe Frage, die der Kopf zu stellen verlangt, und an
+dieser Stelle nicht gestellt.*
+
+Verglichen wird, wo der Ort vergleichbar ist: bei bekanntem Weltzustand — dieselbe Linie wie
+`E010`. Ein unauflösbarer Parametername fällt bei `E009`, nicht hier.
+
+**Der Korpus hat zum fünften Mal berichtigt**: `einsammeln` (`beispiele/09`) ruft
+`blatt_loeschen`, das `Objekte.slots[obj].zaehler` liest — und führte kein `reads
+Objekte.slots`. Dazu kam eine Asymmetrie, die dieselbe Form hat wie `locks shared` unter
+`locks`: **`consumes X` deckt `writes X`.** Wer eine Stelle verbraucht, sagt über sie mehr als
+wer sie beschreibt. *Ohne diese Zeile stünde `consumes` nie für sich.*
+
+### `own` hatte seine erste Beissstelle
+
+Drei Lesestellen, alle drei behandeln `Recht::Eigen` genau wie `Recht::LesenSchreiben`:
+`zwei(q, q)` auf zwei `own`-Parameter ging mit 0 Fehlern durch. `R004` steht jetzt für die
+Hälfte, die **keine Entscheidung braucht**: derselbe Ort, syntaktisch, an zwei `own`-Stellen
+desselben Rufs. *Unter jeder Lesart von `own` ist das ein Widerspruch.* Die Aliasfrage — zwei
+verschiedene Namen auf dasselbe Ding — bleibt M3s offener Rest.
+
+### Eine Zuständigkeit, die niemand annahm
+
+`S006` schwieg bei einem unbekannten `on_exceeded`-Namen mit der Begründung, der gehöre dem
+Namenspass. **Den Leser gab es nicht**: `on_exceeded nirgends` ging mit 0 Fehlern durch.
+`MESSUNGEN.md` führte diese Stelle sogar schon als das, worüber `S006` schweigt
+(`FRAGMENTE.md`:902, `on_exceeded DeviceSilent`).
+
+> *Eine Zuständigkeit, die man weiterreicht, ohne dass jemand sie annimmt, ist ein Loch mit
+> einer Adresse darauf.*
+
+Eine Absage bleibt falsch — in einem Ausschnitt ist ein fremder Name normal. Deshalb der
+dritte Zustand wie bei `E009`: **`S007`**, weder abgesagt noch bestätigt, aber sichtbar.
+
+```
+165 Kennungen · 166 Gifte · 128 Tests · 33 Beispiele sauber
+158 von 159 Mutationen gefangen · 159/159 Anker · 13/13 Luecken zu
+12 Waechter gruen, alle mit Rueckgabewert
+```

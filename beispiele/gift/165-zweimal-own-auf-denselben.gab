@@ -1,0 +1,21 @@
+-- erwartet: R004
+-- **`own` war ein Synonym fuer `rw`** -- drei Lesestellen, alle drei behandeln
+-- `Recht::Eigen` genau wie `Recht::LesenSchreiben`. `zwei(q, q)` auf zwei `own`-Parameter
+-- ging mit 0 Fehlern durch: *zwei Besitzer derselben Region*, und `m2.rs`s Modulkopf fuehrt
+-- genau diesen Satz als das, wogegen die Linearitaet steht.
+--
+-- Was diese Regel NICHT tut: eine Aliasanalyse. Zwei verschiedene Namen auf dasselbe Ding
+-- bleiben ununterscheidbar -- das ist M3s offener Rest und eine SPRACHENTSCHEIDUNG (`own`
+-- als Freigabeoperation oder als Signaturvermerk). Hier steht die Haelfte, die **keine
+-- Entscheidung braucht**: derselbe Ort, syntaktisch, an zwei `own`-Stellen desselben Rufs.
+-- *Unter jeder Lesart von `own` ist das ein Widerspruch.*
+module gift::eigen {
+
+static mut r : u32 = 0;
+
+impl fn zwei(x : ptr<normal, own> u32, y : ptr<normal, own> u32)
+    effects { writes r } costs <= 1 ops { r = 1; }
+
+impl fn ruft(q : ptr<normal, own> u32) effects { writes r } costs <= 4 ops { zwei(q, q); }
+
+}

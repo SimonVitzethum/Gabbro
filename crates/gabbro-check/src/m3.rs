@@ -63,7 +63,91 @@ fn raumname(r: &Raum) -> String {
     }
 }
 
+/// **`R004` — zweimal `own` auf denselben Gegenstand.**
+///
+/// `own` war bis 2026-08-19 ein Synonym für `rw`: drei Lesestellen, alle drei behandeln
+/// `Recht::Eigen` genau wie `Recht::LesenSchreiben`. Ein Ruf `zwei(q, q)` auf zwei
+/// `own`-Parameter ging mit **0 Fehlern** durch — *zwei Besitzer derselben Region*, und
+/// `m2.rs`s Modulkopf führt genau diesen Satz als das, wogegen die Linearität steht.
+///
+/// **Was diese Regel NICHT tut: eine Aliasanalyse.** Zwei verschiedene Namen, die auf
+/// dasselbe zeigen, bleiben ununterscheidbar — das ist M3s offener Rest und eine
+/// Sprachentscheidung (`own` als Freigabeoperation oder als Signaturvermerk). Hier steht
+/// die Hälfte, die **keine Entscheidung braucht**: derselbe Ort, syntaktisch, an zwei
+/// `own`-Stellen desselben Rufs. *Unter jeder Lesart von `own` ist das ein Widerspruch.*
+///
+/// > **Die erste Beissstelle von `own`** — bis hierher war es eine Klausel ohne Leser,
+/// > dieselbe Klasse wie `obermenge`, `gates`, `mirrors` und `counterprobe` vor «K5».
+fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    // Welche Parameter einer Funktion tragen `own`? Der Schlüssel ist qualifiziert.
+    let mut eigen: BTreeMap<String, Vec<bool>> = BTreeMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Funktion(f) = &item.art {
+            eigen.insert(
+                crate::umgebung::qualifiziere(modul, &f.name.text),
+                f.parameter
+                    .iter()
+                    .map(|p| match &p.typ {
+                        TypExpr::Zeiger(z) => {
+                            z.rechte.iter().any(|r| matches!(r, Recht::Eigen(_)))
+                        }
+                        _ => false,
+                    })
+                    .collect(),
+            );
+        }
+    });
+    let g = crate::aufrufgraph::erhebe_mit(baum, &u);
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let Some(k) = g.knoten.get(&crate::umgebung::qualifiziere(modul, &f.name.text)) else {
+            return;
+        };
+        for (ziel, args) in &k.rufe {
+            let Some(marken) = eigen.get(ziel) else {
+                continue;
+            };
+            // Nur die Argumente, die auf einem `own`-Parameter landen und ein ORT sind.
+            let mut gesehen: Vec<&String> = Vec::new();
+            for (i, a) in args.iter().enumerate() {
+                if !marken.get(i).copied().unwrap_or(false) {
+                    continue;
+                }
+                let Some(ort) = a else { continue };
+                if gesehen.iter().any(|g| *g == ort) {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "R004",
+                            f.name.span,
+                            format!(
+                                "`{}` passes `{ort}` to two `own` parameters of `{}`",
+                                f.name.text,
+                                crate::umgebung::kurzname(ziel)
+                            ),
+                        )
+                        .mit_notiz(
+                            "`own` says: this is the one owner -- two of them on the same \
+                             object is two owners of the same region",
+                        )
+                        .mit_notiz(
+                            "this is the syntactic half; two DIFFERENT names pointing at the \
+                             same object stay indistinguishable (M3's open alias question)",
+                        ),
+                    );
+                    break;
+                }
+                gesehen.push(ort);
+            }
+        }
+    });
+}
+
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
+    eigen_doppelt(baum, absagen);
+
     // **Die Platzierungsregel zuerst** -- sie betrifft Deklarationen, nicht Rümpfe.
     let mut mit_ops: Vec<String> = Vec::new();
     crate::fuer_jedes_item(baum, &mut |item| {

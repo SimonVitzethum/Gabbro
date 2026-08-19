@@ -63,7 +63,11 @@ impl fn blatt_loeschen(s : index into Kappenraum)
 
 impl fn einsammeln(s : index into Kappenraum)
     requires Held(KAPPEN)
-    effects  { reads Kappenraum.slots,
+    -- **`reads Objekte.slots` stand hier nicht** und musste stehen (2026-08-19): der
+    -- Rumpf ruft `blatt_loeschen`, und das liest `Objekte.slots[obj].zaehler`. Bis der
+    -- Rahmen die Aufrufgrenze ueberquerte, deckte ein `reads Kappenraum.slots` jedes
+    -- fremde Lesen mit -- verglichen wurde nur die ART, nicht der ORT.
+    effects  { reads Kappenraum.slots, reads Objekte.slots,
                consumes Kappenraum.slots, writes Objekte.slots, locks KAPPEN }
     costs    <= 16371840 ops
 {
