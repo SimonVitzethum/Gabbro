@@ -921,9 +921,8 @@ pub fn ungedeckt() -> usize {
 pub fn zeige() -> String {
     let mut out = String::new();
     out.push_str(
-        "-- Die Erzeuger-Schablonen: die dritte Zaehlspalte neben Wortschatz und Axiomschicht.\n\
-         -- Jede Zeile ist eine Beweispflicht des ERZEUGERS -- einmal, nicht je Aufrufstelle.\n\
-         -- Nr\tName\tStand\tKonstrukt\n",
+        "-- The generator templates: the third counting column beside vocabulary and\
+            axiom layer.\n",
     );
     for (n, s) in SCHABLONEN.iter().enumerate() {
         out.push_str(&format!(
@@ -935,9 +934,8 @@ pub fn zeige() -> String {
         ));
     }
     out.push_str(&format!(
-        "-- {} Schablonen, {} davon unbewiesen, {} maschinell bewiesen.\n\
-         --   davon LEBEND unbewiesen (der Uebersetzer stuetzt sich darauf): {}\n\
-         --   der Rest ist entworfen -- benannt, aber ohne Erzeugercode.\n",
+        "-- {} templates, {} of them unproved, {} machine-checked.\n\
+         --   of those CARRIED unproved (the compiler rests on them): {}\n",
         SCHABLONEN.len(),
         ungedeckt(),
         bewiesen(),
@@ -945,7 +943,8 @@ pub fn zeige() -> String {
     ));
     let luft = in_der_luft();
     out.push_str(&format!(
-        "--   davon PRAEMISSEN OHNE PASS (Zahn 3): {} -- ein Beweis, den nichts herstellt.\n",
+        "--   of those PREMISES WITHOUT A PASS (tooth 3): {} -- a proof nothing \
+         establishes.\n",
         luft.len()
     ));
     for (schablone, was) in &luft {
@@ -963,15 +962,15 @@ pub fn zeige() -> String {
         }
     }
     out.push_str(&format!(
-        "-- Der eine Isabelle-Posten ist damit keine Zahl 1, sondern diese Liste.\n\
-         -- Waechst sie, waechst die Vertrauensbasis -- auch wenn die Kennzahl glaenzt.\n\
-         -- RATSCHE, ZAHN 1: kein Eintrag ohne gemessenen Bedarf (Fundstelle pflichtig).\n\
-         -- RATSCHE, ZAHN 2: Grundmarke {} plus je ein Platz je BEWIESENER Schablone.\n\
-         --   Heute: {} Eintraege, {} zulaessig. Jeder weitere kostet einen Beweis.\n\
-         --   Der Ausweg ist nicht, die Marke zu heben -- er ist, die naechste zu beweisen.\n\
-         -- Ein Eintrag verlaesst die Liste nur BEWIESEN oder MITSAMT SEINEM KONSTRUKT.\n\
-         --   Nicht durch Umformulierung, nicht durch Zusammenfassen.\n\
-         -- RATSCHE, ZAHN 3: jede BEWIESENE Schablone bindet ihre Praemissen an einen Pass.\n",
+        "-- The one Isabelle item is therefore not a number 1 but this list.\n\
+         -- If it grows, the trust base grows -- however well the metric reads.\n\
+         -- RATCHET, TOOTH 1: no entry without a measured need (a site is obligatory).\n\
+         -- RATCHET, TOOTH 2: base mark {} plus one seat per PROVED template.\n\
+         --   Today: {} entries, {} admissible. Every further one costs a proof.\n\
+         --   The way out is not to raise the mark -- it is to prove the next one.\n\
+         -- An entry leaves this list only PROVED or TOGETHER WITH ITS CONSTRUCT.\n\
+         --   Not by rewording, not by merging.\n\
+         -- RATCHET, TOOTH 3: every PROVED template binds its premises to a pass.\n",
         MARKE_OHNE_BEWEIS,
         SCHABLONEN.len(),
         zulaessig()

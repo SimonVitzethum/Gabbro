@@ -179,9 +179,12 @@ def paesse_heute():
         return None, None
     # `gabbro paesse` markiert die Zeilen mit `OFFEN` bzw. `TEIL` -- die Zahlen aus
     # der Ausgabe zu nehmen statt aus der Prosa ist der ganze Zweck dieser Pruefung.
+    # **`OPEN`/`PART` seit 2026-08-19** -- die Sprachflaeche ist englisch. *Dieser Leser hing
+    # an `OFFEN`/`TEIL` und haette nach der Uebersetzung stumm null gezaehlt: kein Fehler,
+    # keine Meldung, und die Passzahlen im TODO waeren unbewacht gewesen.*
     return (
-        len(re.findall(r"^  OFFEN ", r.stdout, re.M)),
-        len(re.findall(r"^  TEIL  ", r.stdout, re.M)),
+        len(re.findall(r"^  OPEN  ", r.stdout, re.M)),
+        len(re.findall(r"^  PART  ", r.stdout, re.M)),
     )
 
 
@@ -243,7 +246,10 @@ def pruefe_readme(text=None):
 
     s = subprocess.run(["cargo", "run", "--quiet", "--bin", "gabbro", "--", "schablonen"],
                        cwd=WURZEL, capture_output=True, text=True)
-    m = re.search(r"(\d+) Schablonen, \d+ davon unbewiesen, (\d+) maschinell bewiesen", s.stdout)
+    # **Englisch seit 2026-08-19** -- die Sprachflaeche von Gabbro ist es, und dieser Leser
+    # hing an der deutschen Fassung. *Ein Waechter, der die Ausgabe eines Werkzeugs liest,
+    # gehoert zu dessen Sprache; er hat sie hier zwei Stunden lang nicht gehabt.*
+    m = re.search(r"(\d+) templates, \d+ of them unproved, (\d+) machine-checked", s.stdout)
     n_schab, n_bew = (m.group(1), m.group(2)) if m else ("?", "?")
 
     y = subprocess.run(["./pruefe-syntax.sh"], cwd=WURZEL, capture_output=True, text=True)
@@ -252,7 +258,14 @@ def pruefe_readme(text=None):
     m = re.search(r"Wortschatz: (\d+) EBNF-Terminale, (\d+) Tabellenwoerter", y.stdout)
     n_term, n_tab = (m.group(1), m.group(2)) if m else ("?", "?")
 
+    # **Und die Passzahlen, seit 2026-08-19.** Der Leser dafuer stand seit jeher da und
+    # verglich gegen die PROSA von `TODO.md`; die Kennzahlentafel des README pruefte ihn
+    # niemand. *Beim Nachziehen der englischen Ausgabe kam heraus, dass dort 10 Paesse mit
+    # 7 teilgebauten standen -- es sind 12 mit 9.*
+    ganz, halb = paesse_heute()
     fuer = [
+        (r"\| \*\*Compiler\*\* \| (\d+) passes", str(12 if ganz is None else 3 + ganz + halb), "Paesse"),
+        (r"\| \*\*Compiler\*\* \| \d+ passes, \d+ complete, (\d+) partial", str(halb), "teilgebaute Paesse"),
         (r"(\d+) diagnostics", n_kenn, "Absagekennungen"),
         (r"\*\*(\d+) EBNF rules\*\*", n_regeln, "EBNF-Regeln"),
         (r"(\d+) / (?:\d+)\s*\|", n_term, "EBNF-Terminale"),

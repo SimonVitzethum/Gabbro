@@ -103,7 +103,9 @@ lauf() {          # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     #    **Und der Befund wird VERGLICHEN, nicht gedruckt.** Ein Zeugnis, das man nur ansieht,
     #    ist ein Bericht; eines, gegen das ein Tor steht, ist eine Buchung. Wer eine Form
     #    umklassifiziert -- eine Schablone zur direkten Absenkung erklaert -- faellt hier.
-    local zist; zist="$(sed -n 's/^     \(.*Schablonen.*\)$/\1/p' "$ARB/$name.zeugnis")"
+    # **`templates` statt `Schablonen` seit 2026-08-19** -- die Sprachflaeche von Gabbro ist
+    # englisch, und diese Zeile liest sie ab.
+    local zist; zist="$(sed -n 's/^     \(.*templates.*\)$/\1/p' "$ARB/$name.zeugnis")"
     if [ "$zist" != "$zeugnis" ]; then
         echo "  5. Zeugnis:    ANDERS ALS GEBUCHT"
         echo "     gebucht:    $zeugnis"
@@ -145,7 +147,7 @@ int main(void) {
 '
 lauf "beispiel16" "$W/beispiele/16-by-ops-am-feld.gab" "$TREIBER16" "42 1 8 0" \
      's/\.benutzt = true/.benutzt = false/' \
-     "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 5 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "0 assumptions, 1 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty)"
 
 # -- 2. Das Fragment: die Geistloeschung -------------------------------------------------
 #
@@ -184,7 +186,7 @@ int main(void) {
 '
 lauf "fragment7" "$ARB/f7.gab" "$TREIBER7" "123456" \
      's/    ipc_tabellen();/    \/* geloescht *\//' \
-     "0 Annahmen, 0 Schablonen (0 davon UNBEWIESEN), 3 direkte Formen, 7 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "0 assumptions, 0 templates (0 of them UNPROVED), 3 direct forms, 7 foreign bodies (0 state their duty)"
 
 # -- 3. Das Fragment F8: die Sperre wird auf JEDEM Pfad gegeben --------------------------
 #
@@ -235,7 +237,7 @@ int main(void) {
 #      1  -- und der Slot ist unberuehrt: der None-Zweig fasst nichts an
 lauf "fragment8" "$ARB/f8.gab" "$TREIBER8" "1 1 1 0 0 1 1 1" \
      '0,/^                SCHEDS_gib();$/s///' \
-     "0 Annahmen, 3 Schablonen (2 davon UNBEWIESEN), 5 direkte Formen, 2 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "0 assumptions, 3 templates (2 of them UNPROVED), 5 direct forms, 2 foreign bodies (0 state their duty)"
 
 # -- 4. Das Fragment F10: das Format und das Operationsbudget ----------------------------
 #
@@ -287,7 +289,7 @@ int main(void) {
 #    und die Probe hat es gemeldet.*
 lauf "fragment10" "$ARB/f10.gab" "$TREIBER10" "1 0 0 0 0 65" \
      's/(uint32_t)p\[0\] << 24/(uint32_t)p[3] << 24/' \
-     "1 Annahmen, 2 Schablonen (0 davon UNBEWIESEN), 7 direkte Formen, 2 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "1 assumptions, 2 templates (0 of them UNPROVED), 7 direct forms, 2 foreign bodies (0 state their duty)"
 
 # -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
 #
@@ -326,7 +328,7 @@ int main(void) {
 # *Eine direkte Form weniger heisst hier: eine Klempnereizeile weniger, nicht eine Luecke.*
 lauf "beispiel19" "$W/beispiele/19-traversierung.gab" "$TREIBER19" "16 6 0 0" \
      's/; i++)/; i += 2)/' \
-     "0 Annahmen, 2 Schablonen (0 davon UNBEWIESEN), 7 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "0 assumptions, 2 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty)"
 
 # -- 6. Das Geraet: ein Register ist KEIN Feld ------------------------------------------
 #
@@ -364,7 +366,7 @@ int main(void) {
 #            Fuellung, ueber die der Uebersetzer entscheidet
 lauf "beispiel12" "$W/beispiele/12-umlaufendes-register.gab" "$TREIBER12" "8 0 64 8" \
      's/+ 258/+ 260/' \
-     "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 2 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "0 assumptions, 1 templates (0 of them UNPROVED), 2 direct forms, 0 foreign bodies (0 state their duty)"
 
 # -- 7. FALLE 4: `mirrors`, und der Test misst genau die bezahlte Falle -----------------
 #
@@ -411,7 +413,7 @@ int main(void) {
 #      Maske und eine Kommentarwand; hier ist es eine Zeile.*
 lauf "beispiel20" "$W/beispiele/20-falle-vier.gab" "$TREIBER20" "1 1 1 1" \
      's/(_s \& /(0*_s \& /' \
-     "0 Annahmen, 2 Schablonen (0 davon UNBEWIESEN), 1 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "0 assumptions, 2 templates (0 of them UNPROVED), 1 direct forms, 0 foreign bodies (0 state their duty)"
 
 
 # -- 8. «B7»: der Verbundwert, und der Test misst genau das, wofuer die Marken Pflicht sind --
@@ -439,7 +441,7 @@ int main(void) {
 #      Typ haette etwas dagegen gehabt. Das Gift unten vertauscht genau die zwei Bestimmer.
 lauf "beispiel21" "$W/beispiele/21-verbundwert.gab" "$TREIBER21" "5 300 7 9 1" \
      's/\.id = k, \.len = n/.id = n, .len = k/' \
-     "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 4 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "0 assumptions, 1 templates (0 of them UNPROVED), 4 direct forms, 0 foreign bodies (0 state their duty)"
 
 
 # -- 9. K11.2.3: `release`/`acquire` senken ab -- und was der Test NICHT zeigen kann ------
@@ -482,7 +484,7 @@ int main(void) {
 #    > Mutationen. *Hier faellt der Wert; die Ordnung faellt dort.*
 lauf "beispiel14" "$W/beispiele/14-paarung-ueber-zwischenfunktion.gab" "$TREIBER14" "0 1" \
      's/atomic_store_explicit(&FERTIG, true,/atomic_store_explicit(\&FERTIG, false,/' \
-     "0 Annahmen, 0 Schablonen (0 davon UNBEWIESEN), 6 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "0 assumptions, 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty)"
 
 
 # -- 12. «F»: Gleitkomma -- und der Test misst, dass das C WIRKLICH RECHNET -----------------
@@ -513,7 +515,7 @@ int main(void) {
 #      `%.1f` druckt `nan` oder `-nan`. **Kein Literal nennt NaN** -- es entsteht.
 lauf "beispiel26" "$W/beispiele/26-gleitkomma.gab" "$TREIBER26" "0.2 0.5 0.5 0.8 1.0" \
      's/if (!isfinite(x))/if (isfinite(x))/' \
-     "2 Annahmen, 0 Schablonen (0 davon UNBEWIESEN), 6 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "2 assumptions, 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty)"
 
 # -- 10. `accumulates`: eine Zelle je Kern, und der Test misst die SCHABLONE ---------------
 #
@@ -546,7 +548,7 @@ int main(void) {
 #      Das Gift nimmt die Ruecknahme heraus -- dann steht dort das Komplement statt der Zahl.
 lauf "beispiel23" "$W/beispiele/23-akkumulatoren.gab" "$TREIBER23" "19 3 3" \
      's/return (uint64_t)~z;/return z;/' \
-     "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 4 direkte Formen, 3 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "0 assumptions, 1 templates (0 of them UNPROVED), 4 direct forms, 3 foreign bodies (0 state their duty)"
 
 
 # -- 11. «B24» entschieden: der IP-Kopf, an einem echten Paket gemessen ------------------
@@ -578,7 +580,7 @@ int main(void) {
 #      vertauscht, liest 5 und 4 -- beides gueltige Zahlen, und kein Typ sagt etwas.
 lauf "beispiel24" "$W/beispiele/24-ip-kopf.gab" "$TREIBER24" "4 5 10 0 2 0 6" \
      's/>> 4) & 15u/>> 0) \& 15u/' \
-     "0 Annahmen, 1 Schablonen (0 davon UNBEWIESEN), 0 direkte Formen, 0 fremde Ruempfe (0 sprechen ihre Pflicht aus)"
+     "0 assumptions, 1 templates (0 of them UNPROVED), 0 direct forms, 0 foreign bodies (0 state their duty)"
 
 echo "== EMISSION: ALL PASS -- 12 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"

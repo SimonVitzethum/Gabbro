@@ -179,7 +179,7 @@ fn klasse(k: &AnnahmeKlasse) -> Klasse {
 /// `A<n>\t<name>\t<art>\t<klasse>\t<sonde|grund>\t<aussage>`
 pub fn zeige(eintraege: &[Eintrag]) -> String {
     let mut out = String::new();
-    out.push_str("-- Annahmenmenge. Die Zusage lautet: bewiesen unter A1…An.\n");
+    out.push_str("-- The assumption set. The promise reads: proved under A1…An.\n");
     out.push_str("-- Nr\tName\tArt\tKlasse\tSonde/Grund\tAussage\n");
     for (n, e) in eintraege.iter().enumerate() {
         let (kl, wie) = match &e.klasse {

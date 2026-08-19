@@ -123,7 +123,7 @@ denominator that shines instead of the one that costs.*
 
 | | | |
 |---|---|---|
-| **Compiler** | 10 passes, 3 complete, 7 partial, **0 open** | 135 diagnostics · `gabbro paesse` |
+| **Compiler** | 12 passes, 3 complete, 9 partial, **0 open** | 135 diagnostics · `gabbro paesse` |
 | **Grammar** | **140 EBNF rules**, closed and reachable | vocabulary covers every terminal, 209 / 209 |
 | **Proof templates** | **20, of which 9 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Guardians** | 11, each with a two-way speech test | **151 of 152 mutations caught** *(run 2026-08-19)* |

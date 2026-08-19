@@ -778,13 +778,7 @@ pub fn bericht(baum: &Programm) -> String {
         r.bloecke_zeigen(b, &f.name.text, &mut out);
     });
     out.push_str(&format!(
-        "-- {mit} Ruempfe ausgerechnet, {ohne} offen.\n\
-         -- Eine PARAMETRISCHE Zusage (`4 + 12 * n`) steht hier als `--`: es gibt keine\n\
-         -- einzelne Zahl zum Danebenstellen. **Entschieden wird sie trotzdem** -- gegen die\n\
-         -- kleinste Belegung, seit 2026-08-18 (`K001`/`K005`).\n\
-         -- `Luft` ist eine Differenz, kein Urteil: bei `costs` ist sie oft richtig (eine\n\
-         -- Signatur soll nicht bei jeder Rumpfaenderung brechen), bei `held` fast immer\n\
-         -- falsch -- die Latenzaussage rechnet mit der ZUSAGE, nicht mit der Rechnung.\n"
+        "-- {mit} bodies computed, {ohne} open.\n"
     ));
     out
 }

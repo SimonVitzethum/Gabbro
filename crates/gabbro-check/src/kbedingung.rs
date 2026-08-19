@@ -253,9 +253,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 pub fn zeige(traeger: &[Traeger]) -> String {
     let mut out = String::new();
     out.push_str(
-        "-- Die K-Bedingung je Traeger: sind ALLE Schreibstellen erzeugte Operationen?\n\
-         -- Nur wo K haelt, darf eine Pflicht als 'durch Konstruktion' gebucht werden.\n\
-         -- Traeger\tops\tHandschrift\tbreaking\tK\n",
+        "-- The K condition per carrier: are ALL write sites generated? Only then may a\n",
     );
     let (mut haelt, mut faellt) = (0, 0);
     for t in traeger {

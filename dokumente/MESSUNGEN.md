@@ -8597,3 +8597,68 @@ Text läuft, darf keine englischen Wörter enthalten.
 EBNF 139 -> 140 Regeln · 206 -> 209 Terminale · Waechter 10 -> 11
 242 Meldungstexte, 0 deutsch · 126 Tests · 118 Gifte (0 ohne Biss)
 ```
+
+---
+
+# Die Sprachfläche ganz — und drei Wächter hingen an der deutschen Fassung
+
+**2026-08-19, Fortsetzung.** Der erste Lauf von `pruefe-englisch.py` meldete `ALL PASS`,
+während `gabbro paesse` und `gabbro zeugnis` deutsch ausgaben. *Eine Regel, die nur die Hälfte
+ihrer Fläche misst, ist eine halbe Regel* — der Satz stand im TODO, bevor er eingelöst wurde.
+
+## Der Wächter deckt jetzt alle fünf Formen
+
+```
+Absage::fehler/hinweis   die Meldung
+.mit_notiz               ihre Notiz
+push_str                 die Berichte (zeugnis, schablonen, pflichten, manifest, kosten)
+println!/eprintln!       die CLI
+Zustand::Teilgebaut/Offen  die Passliste
+```
+
+```
+242  ->  424 gemessene Texte      55 deutsch  ->  0
+```
+
+## Und das Nachziehen fand drei Wächter, die stumm geworden wären
+
+**Erstens: `pruefe-emission.sh` liest die Zeugniszeile mit `sed`.** Die gebuchte Zeile lautete
+*„… Schablonen (… davon UNBEWIESEN) …"*; nach der Übersetzung hätte das Muster **nichts**
+gefunden — und ein leerer Vergleich gegen eine leere Buchung ist grün.
+
+**Zweitens: `pruefe-todo.py` zählt die Pässe aus `gabbro paesse`** über die Marken `OFFEN`/`TEIL`.
+Nach der Übersetzung hätte er **stumm null** gezählt: kein Fehler, keine Meldung, und die
+Passzahlen wären unbewacht gewesen.
+
+**Drittens: derselbe Wächter liest die Schablonenzahl** aus *„… Schablonen, … davon
+unbewiesen"*.
+
+> **Ein Wächter, der die Ausgabe eines Werkzeugs liest, gehört zu dessen Sprache** — und drei
+> hatten sie zwei Stunden lang nicht. *Alle drei wären grün geblieben, weil ein Muster, das
+> nichts findet, nichts meldet.*
+
+## Und dabei fiel eine falsche Zahl auf, die niemand bewachte
+
+Der stumm gewordene Passzähler lieferte nach der Reparatur **12 Pässe, 9 teilgebaute** — der
+README behauptete seit jeher **10 und 7**.
+
+```
+| **Compiler** | 10 passes, 3 complete, 7 partial |   ->   | 12 passes, 3 complete, 9 partial |
+```
+
+**Der Leser dafür stand seit jeher da und verglich gegen die Prosa von `TODO.md`; die
+Kennzahlentafel des README prüfte ihn niemand.** Seit heute tut er es — *zwei Zeilen, und sie
+kamen aus einer Reparatur, nicht aus einer Suche.*
+
+## Die Grenze des Wächters, an einer echten Stelle
+
+`Art::Erhaltung => "Erhaltung"` blieb stehen: **ein Etikett ohne Funktionswort erkennt die
+Liste nicht.** Von Hand übersetzt (`Preservation`, `Postcondition`, `Foreign duty`).
+
+> *Genau das sagt der Wächter über sich selbst:* er misst gegen 86 geschlossene
+> Funktionswörter, **er verpflichtet und spricht nicht frei** (W10).
+
+```
+424 Texte, 0 deutsch · 9 Waechter gruen · 126 Tests · 118 Gifte (0 ohne Biss)
+12 Theorien · EBNF 140 / 209 · 144 offene Punkte
+```

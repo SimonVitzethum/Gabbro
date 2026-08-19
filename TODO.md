@@ -541,11 +541,16 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
-- [ ] **Die Sprachflaeche ist englisch -- die BERICHTE sind es noch nicht ganz**
-      *(2026-08-19)*. `pruefe-englisch.py` haelt die 242 Absagetexte; **die Ausgaben von
-      `gabbro paesse`, `schablonen`, `pflichten` und `zeugnis` misst er nicht.** Sie stehen in
-      derselben Linie -- was Gabbro SAGT, ist englisch -- und sind heute deutsch. *Eine Regel,
-      die nur die Haelfte ihrer Flaeche misst, ist eine halbe Regel.*
+- [ ] **Ein WAECHTER, der die Ausgabe eines Werkzeugs liest, gehoert zu dessen Sprache**
+      *(gefunden 2026-08-19 beim Uebersetzen der Berichte)*. Drei haetten es nicht ueberlebt
+      und waeren STUMM gruen geblieben: `pruefe-emission.sh` (die Zeugniszeile per `sed`),
+      `pruefe-todo.py` zweimal (`OFFEN`/`TEIL` aus `gabbro paesse`, und die Schablonenzahl).
+      **Ein Muster, das nichts findet, meldet nichts.** *Was fehlt, ist die allgemeine Frage:
+      wie viele Waechter lesen Werkzeugausgaben mit einem Muster, das keine Sprechprobe hat?*
+- [ ] **Der Waechter erkennt ETIKETTEN nicht** *(2026-08-19)*. `Art::Erhaltung => "Erhaltung"`
+      blieb stehen -- ein Wort ohne Funktionswort faellt durch die geschlossene Liste. Von
+      Hand uebersetzt. **Der Waechter sagt es ueber sich selbst** (86 Woerter, W10), *und die
+      Stelle ist der Beleg, dass die Selbstauskunft keine Floskel ist.*
 - [ ] **`ops insert, remove, relabel` ist ENTSCHIEDEN und nicht gebaut** *(2026-08-19)*. Die
       drei Woerter stehen im Lexer, in der EBNF und in der Wortschatztabelle. **Was fehlt, ist
       der Erzeuger** -- und mit `relabel` schuldet er eine Bedingung, die `insert` und `remove`

@@ -38,7 +38,9 @@ import re
 import sys
 
 W = pathlib.Path(__file__).resolve().parent
-QUELLEN = sorted((W / "crates" / "gabbro-check" / "src").glob("*.rs"))
+QUELLEN = sorted((W / "crates" / "gabbro-check" / "src").glob("*.rs")) + [
+    W / "crates" / "gabbro-cli" / "src" / "main.rs",
+]
 
 # **Geschlossene Liste deutscher FUNKTIONSWOERTER.** Keine Fachwoerter -- `Bereich`, `Schranke`
 # und `Traeger` koennten Bezeichner eines Nutzers sein und stehen darum nicht drin.
@@ -59,9 +61,19 @@ DEUTSCH = {
     "wenn", "dann", "schon", "noch", "nur", "auch", "sonst", "immer", "nie",
 }
 WORT = re.compile(r"[A-Za-zÄÖÜäöüß_]+")
-# Meldungstext, Notiz, Format-Fassung -- die drei Formen, in denen ein Text beim Nutzer ankommt.
+# **Die Flaechen, auf denen ein Text beim Nutzer ankommt -- alle, seit 2026-08-19.**
+#
+# Der erste Lauf sah nur die ABSAGEN und meldete `ALL PASS`, waehrend `gabbro paesse` und
+# `gabbro zeugnis` deutsch ausgaben. *Eine Regel, die nur die Haelfte ihrer Flaeche misst, ist
+# eine halbe Regel* -- der Satz stand im TODO, bevor er hier eingeloest wurde.
 STELLEN = re.compile(
-    r'(?:Absage::(?:fehler|hinweis)\([^,]+,[^,]+,\s*(?:format!\()?|\.mit_notiz\(\s*(?:format!\()?)'
+    r"(?:"
+    r"Absage::(?:fehler|hinweis)\([^,]+,[^,]+,\s*(?:format!\()?"   # die Meldung
+    r"|\.mit_notiz\(\s*(?:format!\()?"                            # ihre Notiz
+    r"|push_str\(&?(?:format!\()?"                                 # die Berichte
+    r"|(?:e?println!)\(\s*"                                        # die CLI
+    r"|Zustand::(?:Teilgebaut|Offen)\(\s*"                         # die Passliste
+    r")"
     r'\s*"((?:[^"\\]|\\.)*)"',
     re.S,
 )

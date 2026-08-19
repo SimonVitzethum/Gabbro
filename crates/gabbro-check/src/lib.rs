@@ -87,17 +87,17 @@ pub fn passliste() -> Vec<Pass> {
             quelle: "SPRACHE.md §3: undurchsichtige Neutypen, vollstaendige Layouts, \
                      erschoepfende Aufzaehlung",
             zustand: Zustand::Teilgebaut(
-                "die K-Bedingung ist gebaut (`D001`: keine Handmutation an einer `table` \
-                 mit `ops`), und seit dem 2026-08-18 BEISST die Undurchsichtigkeit: ein \
-                 `opaque type` hat die Rechnung seines Traegers nicht (`D003`). *Vorher fiel \
-                 `a + b` nur zufaellig -- an `M104`, nicht an der Undurchsichtigkeit; wo die \
-                 Breiten aufgingen, ging der Unsinn durch.* **Und seit demselben Tag steht die \
-                 WAND dahinter** (`D004`): die implizite Umwandlung ging vorher in BEIDE \
-                 Richtungen still durch, damit war D1 gar nicht durchgesetzt. Die Tuer ist die \
-                 MODULGRENZE -- im erklaerenden Modul ist die Darstellung bekannt, ausserhalb \
-                 nicht. *Auf diesem Korpus hat sie null Biss: alle zwoelf Deklarationen \
-                 erklaeren und benutzen im selben Modul.* **NICHT gebaut: erschoepfendes \
-                 `match` ueber `tagged`**",
+                "the K condition is built (`D001`: no hand mutation on a `table` with\
+                    `ops`), and since 2026-08-18 opacity BITES: an `opaque type` does not\
+                    have the arithmetic of its carrier (`D003`). *Before that `a + b` fell\
+                    only by accident -- at `M104`, not at the opacity; wherever the widths\
+                    worked out, the nonsense went through.* **And since the same day the\
+                    WALL stands behind it** (`D004`): the implicit conversion went through\
+                    silently in BOTH directions, so D1 was not enforced at all. The door is\
+                    the MODULE BOUNDARY -- inside the declaring module the representation is\
+                    known, outside it is not. *On this corpus it has zero bite: all twelve\
+                    declarations declare and use in the same module.* **NOT built:\
+                    exhaustive `match` over `tagged`**",
             ),
         },
         Pass {
@@ -111,12 +111,12 @@ pub fn passliste() -> Vec<Pass> {
             name: "M3",
             quelle: "SYNTAX.md §3: Adressraeume und Zugriffsrechte am Zeiger",
             zustand: Zustand::Teilgebaut(
-                "gebaut: Rechtepruefung an Lesen und Schreiben, die Platzierungsregel \
-                 `ops`-Traeger nicht im `dma`-Raum (`R001`-`R003`). **NICHT gebaut: die \
-                 Barriere aus dem Raum** -- welche Barriere ein `dma`-Zugriff verlangt, ist \
-                 eine Aussage ueber das Speichermodell, dieselbe Axiomschicht wie bei der \
-                 Paarung. **Und keine Aliasanalyse**: zwei `ptr<normal, rw>` auf dasselbe \
-                 Objekt bleiben ununterscheidbar, dafuer steht `own`",
+                "built: rights checking at reads and writes, the placement rule that an\
+                    `ops` carrier is not in the `dma` space (`R001`-`R003`). **NOT built:\
+                    the barrier from the space** -- which barrier a `dma` access demands is\
+                    a statement about the memory model, the same axiom layer as at the\
+                    pairing. **And no alias analysis**: two `ptr<normal, rw>` to the same\
+                    object stay indistinguishable, and `own` is what stands for that",
             ),
         },
         Pass {
@@ -124,11 +124,11 @@ pub fn passliste() -> Vec<Pass> {
             name: "M2",
             quelle: "SPRACHE.md §4: lineare und geisterhafte Werte",
             zustand: Zustand::Teilgebaut(
-                "gebaut: genau-einmal je Weg, Zweigabgleich, `consumes` gegen geliehen \
-                 (`L101`-`L105`). **NICHT gebaut: die Ghost-Loeschung** -- ein `ghost`-Wert \
-                 existiert zur Laufzeit nicht, seine Linearitaet ist eine Aussage ueber den \
-                 BEWEIS, und die Aliasfrage gehoert M3. **Seit dem 2026-08-17 steht die \
-                 ORDNUNG daneben** (Pass 11) -- M2 sieht die Kette, nicht welche",
+                "built: exactly-once per path, branch matching, `consumes` against\
+                    borrowed (`L101`-`L105`). **NOT built: the ghost erasure** -- a `ghost`\
+                    value does not exist at run time, its linearity is a statement about the\
+                    PROOF, and the alias question belongs to M3. **Since 2026-08-17 the\
+                    ORDER stands beside it** (pass 11) -- M2 sees the chain, not which one",
             ),
         },
         // **«B37» -- der elfte Pass, und er ist die zweite Haelfte von M2.**
@@ -151,13 +151,13 @@ pub fn passliste() -> Vec<Pass> {
             name: "Sperren",
             quelle: "SPRACHE.md §9: `rank`, `held`, `protects` -- die Sperrdisziplin",
             zustand: Zustand::Teilgebaut(
-                "gebaut: geteilt gegen exklusiv (`H001`-`H004`), die Zwischenregel an der \
-                 Aufrufgrenze (`H005`), die nachgerechnete Rangordnung (`H006`) -- und seit \
-                 K11.2.1 beisst `protects`: jeder Zugriff auf einen geschuetzten Platz steht \
-                 unter seiner Sperre (`H007`), eine nie genommene Sperre faellt auf (`H008`). \
-                 **NICHT gebaut: die Ausfuehrungskontexte** -- wer nebenlaeufig laeuft, sagt \
-                 Gabbro nicht, und ohne das laesst sich `jeder Platz, den zwei Kontexte \
-                 beruehren, ist gesperrt oder atomar` nicht sagen (PLAN.md, K11.2.2)",
+                "built: shared against exclusive (`H001`-`H004`), the intermediate rule\
+                    at the call boundary (`H005`), the recomputed rank order (`H006`) -- and\
+                    since K11.2.1 `protects` bites: every access to a protected place stands\
+                    under its lock (`H007`), and a lock that is never taken shows up\
+                    (`H008`). **NOT built: the execution contexts** -- who runs concurrently\
+                    is something Gabbro does not say, and without it `every place two\
+                    contexts touch is locked or atomic` cannot be stated (PLAN.md, K11.2.2)",
             ),
         },
         Pass {
@@ -165,15 +165,15 @@ pub fn passliste() -> Vec<Pass> {
             name: "Phasen",
             quelle: "MESSUNGEN.md, «B37»: Linearitaet ist keine Ordnung",
             zustand: Zustand::Teilgebaut(
-                "gebaut: die Stufen einer `order` gibt es und `advances` geht VORWAERTS \
-                 (`O001`/`O002`), die Marke steht beim Ruf auf ihrer Ausgangsstufe (`O003`), \
-                 und der Rumpf setzt sich zu seiner eigenen Zusage zusammen (`O004`). \
-                 **Und seit K11.1 der Zweig**: alle Zweige muessen dieselbe Stufe erreichen \
-                 (`O006`); ein Zweig, der mit `return` ENDET, schliesst sich nicht an, und ein \
-                 Schritt in einer SCHLEIFE wird abgelehnt -- ein Schritt geschieht einmal, \
-                 eine Schleife oft. **NICHT gebaut: die weichere Fassung** -- eine Stufenmenge \
-                 zu tragen und den naechsten Schritt alle akzeptieren zu lassen. *Von der \
-                 strengen Fassung aus laesst sich lockern, umgekehrt nie* (PLAN.md, K11.1)",
+                "built: the stages of an `order` exist and `advances` goes FORWARD\
+                    (`O001`/`O002`), the mark stands at its source stage at the call\
+                    (`O003`), and the body composes into its own promise (`O004`). **And\
+                    since K11.1 the branch**: all branches must reach the same stage\
+                    (`O006`); a branch that ENDS with `return` does not join, and a step in\
+                    a LOOP is refused -- a step happens once, a loop often. **NOT built: the\
+                    softer reading** -- carrying a set of stages and letting all of them\
+                    accept the next step. *From the strict reading one can loosen, never the\
+                    other way* (PLAN.md, K11.1)",
             ),
         },
         Pass {
@@ -187,11 +187,11 @@ pub fn passliste() -> Vec<Pass> {
             name: "Paarung",
             quelle: "SPRACHE.md part II §1: ordering is PAIRED, not declared",
             zustand: Zustand::Teilgebaut(
-                "gebaut: `publishes`/`awaits`/`exchange` ueber die vereinigte Menge, \
-                 Namensgleichheit nach Indexsubstitution (`V001`-`V004`). **NICHT gebaut: die \
-                 Aussage ueber das SPEICHERMODELL** -- dass `release`/`acquire` die \
-                 Sichtbarkeit herstellen, die die Paarung behauptet, faellt in die \
-                 Axiomschicht und nicht in diesen Pass",
+                "built: `publishes`/`awaits`/`exchange` over the united set, name\
+                    equality after index substitution (`V001`-`V004`). **NOT built: the\
+                    statement about the MEMORY MODEL** -- that `release`/`acquire` establish\
+                    the visibility the pairing claims falls into the axiom layer and not\
+                    into this pass",
             ),
         },
         Pass {
@@ -199,13 +199,13 @@ pub fn passliste() -> Vec<Pass> {
             name: "effects",
             quelle: "SPRACHE.md §7: `effects` is mandatory and not fail-open",
             zustand: Zustand::Teilgebaut(
-                "Schreiben, `locks` **und seit 2026-08-16 das Lesen** (Lesart A, `E010`) \
-                 werden gegen die Liste gehalten. **Was fehlt, ist die Reichweite von \
-                 `E010`:** es spricht nur ueber bekannten Weltzustand (`static`, `atomic`, \
-                 `table`, `device`, `state`), weil eine Variante kein Ort ist und ein \
-                 AUSSCHNITT seine Namen nicht deklariert -- auf dem Fragmentkorpus hat die \
-                 Regel damit **null Biss**, und ihr Beleg kommt aus Gift 62 und zwei \
-                 Mutationen, nicht vom Korpus",
+                "writes, `locks` **and since 2026-08-16 reads** (reading A, `E010`) are\
+                    held against the list. **What is missing is the reach of `E010`:** it\
+                    speaks only about known world state (`static`, `atomic`, `table`,\
+                    `device`, `state`), because a variant is not a place and an EXCERPT does\
+                    not declare its names -- on the fragment corpus the rule therefore has\
+                    **zero bite**, and its evidence comes from poison 62 and two mutations,\
+                    not from the corpus",
             ),
         },
         // **Pass 10 ist neu, und das ist eine Aenderung an der Spezifikation.**
@@ -222,13 +222,12 @@ pub fn passliste() -> Vec<Pass> {
             name: "Gruppe",
             quelle: "MESSUNGEN.md, SWEEP der Verbindungs-Invarianten (2026-08-16), V4",
             zustand: Zustand::Teilgebaut(
-                "gebaut: der SPERRABDRUCK (`U001`-`U005`), der ZUG (`U006`) und die \
-                 VERBINDUNGSAUSSAGE als Form (`U007`: eine Gruppen-Invariante nennt \
-                 mindestens zwei Traeger, sonst gehoert sie an die Tabelle). **NICHT \
-                 gebaut: die Erhaltung** -- dass die Invariante unter einer Operation HAELT, \
-                 ist Beweisersache und faellt an S16/S17, nicht an diesen Pass. Er prueft \
-                 die drei Bedingungen, unter denen die Frage ueberhaupt gestellt werden \
-                 kann",
+                "built: the LOCK FOOTPRINT (`U001`-`U005`), the MOVE (`U006`) and the\
+                    CONNECTING STATEMENT as a form (`U007`: a group invariant names at least\
+                    two carriers, otherwise it belongs at the table). **NOT built: the\
+                    preservation** -- that the invariant HOLDS under an operation is the\
+                    prover's business and falls to S16/S17, not to this pass. It checks the\
+                    three conditions under which the question can be asked at all",
             ),
         },
         Pass {
@@ -236,10 +235,10 @@ pub fn passliste() -> Vec<Pass> {
             name: "costs",
             quelle: "SPRACHE.md §7: 1 op = one Gabbro primitive, computed statically",
             zustand: Zustand::Teilgebaut(
-                "gerechnet werden Ruempfe, `locks`-Bloecke gegen `held` und Aufrufe ueber \
-                 die DEKLARIERTEN Kosten des Gerufenen -- **Rekursion traegt damit eine \
-                 Annahme statt einer Rechnung**, und `per_pass` mit eingabeabhaengiger \
-                 Schranke steht nicht fest",
+                "bodies, `locks` blocks against `held` and calls over the DECLARED costs\
+                    of the callee are computed -- **recursion therefore carries an\
+                    assumption instead of a computation**, and `per_pass` with an input-\
+                    dependent bound is not settled",
             ),
         },
     ]

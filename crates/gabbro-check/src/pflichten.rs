@@ -58,9 +58,9 @@ impl Art {
     }
     pub fn name(self) -> &'static str {
         match self {
-            Art::Erhaltung => "Erhaltung",
-            Art::Nachbedingung => "Nachbedingung",
-            Art::Fremdpflicht => "Fremdpflicht",
+            Art::Erhaltung => "Preservation",
+            Art::Nachbedingung => "Postcondition",
+            Art::Fremdpflicht => "Foreign duty",
         }
     }
 }
@@ -106,10 +106,10 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
 pub fn zeige(baum: &Programm, datei: &str) -> String {
     let p = sammle(baum);
     let mut s = String::new();
-    s.push_str(&format!("-- Pflichtenregister: {datei}\n"));
-    s.push_str("-- Was ein MENSCH hier noch schuldet. Gezaehlt, nicht eingeloest.\n\n");
+    s.push_str(&format!("-- Obligation register: {datei}\n"));
+    s.push_str("-- What a HUMAN still owes here. Counted, not discharged.\n\n");
     if p.is_empty() {
-        s.push_str("   keine erzeugte Beweispflicht in dieser Einheit\n\n");
+        s.push_str("   no generated proof obligation in this unit\n\n");
     }
     for art in [Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht] {
         let eigene: Vec<&Pflicht> = p.iter().filter(|x| x.art == art).collect();
@@ -125,15 +125,18 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     let e = p.iter().filter(|x| x.art == Art::Erhaltung).count();
     let n = p.iter().filter(|x| x.art == Art::Nachbedingung).count();
     let f = p.iter().filter(|x| x.art == Art::Fremdpflicht).count();
-    s.push_str(&format!("== {} Pflichten: {e} Erhaltung, {n} Nachbedingung, {f} fremd ==\n", p.len()));
-    s.push_str("   Und was das NICHT heisst: eine gezaehlte Pflicht ist keine bewiesene.\n");
-    s.push_str("   Die K/A/W-Einordnung ist ein URTEIL und steht bewusst nicht hier --\n");
-    s.push_str("   die Kipp-Regeln verlangen je Pflicht einen Satz Begruendung.\n");
+    s.push_str(&format!(
+        "== {} obligations: {e} preservation, {n} postcondition, {f} foreign ==\n",
+        p.len()
+    ));
+    s.push_str("   And what that does NOT mean: a counted obligation is not a proved one.\n");
+    s.push_str("   The K/A/W classification is a JUDGEMENT and deliberately does not stand here --\n");
+    s.push_str("   the tipping rules demand one sentence of reasoning per obligation.\n");
     if f > 0 {
         s.push_str(&format!(
-            "   Die {f} fremden stehen an Ruempfen, die Gabbro nie sieht: sie sind\n\
-             \x20  ANNAHMEN ueber fremden Code und loesen sich auch unter\n\
-             \x20  \"ganz Gabbro verifiziert\" nicht auf.\n"
+            "   The {f} foreign ones sit at bodies Gabbro never sees: they are\n\x20\
+                ASSUMPTIONS about foreign code and do not dissolve even under\n\x20  \"all\
+                of Gabbro verified\".\n"
         ));
     }
     s

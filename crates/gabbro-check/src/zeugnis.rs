@@ -552,14 +552,14 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     let mut aus = String::new();
     aus.push_str(&format!("== Uebersetzungszeugnis: {datei} ==\n"));
     aus.push_str(
-        "-- Es beweist die Uebersetzung NICHT. Es zaehlt auf, worauf sie ruht.\n\n",
+        "-- It does NOT prove the translation. It lists what the translation RESTS ON.\n\n",
     );
 
     // -- A: die Annahmen ---------------------------------------------------------------
     let (annahmen, streit) = crate::manifest::vereinige(crate::manifest::sammle(baum));
-    aus.push_str("A  DIE ANNAHMEN -- was die MASCHINE leisten muss\n");
+    aus.push_str("A  THE ASSUMPTIONS -- what the MACHINE has to deliver\n");
     if annahmen.is_empty() {
-        aus.push_str("     keine. Diese Einheit nimmt nichts ueber die Maschine an.\n");
+        aus.push_str("     none. This unit assumes nothing about the machine.\n");
     }
     for (n, a) in annahmen.iter().enumerate() {
         let wie = match &a.klasse {
@@ -585,9 +585,9 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     }
     benutzt.sort();
     benutzt.dedup_by(|a, b| a.0 == b.0 && a.1 == b.1);
-    aus.push_str("\nB  DIE SCHABLONEN -- was der ERZEUGER herstellt, was niemand geschrieben hat\n");
+    aus.push_str("\nB  THE TEMPLATES -- what the GENERATOR produces, which nobody wrote\n");
     if benutzt.is_empty() {
-        aus.push_str("     keine. Diese Einheit senkt nur 1:1 ab.\n");
+        aus.push_str("     none. This unit lowers 1:1 only.\n");
     }
     let mut offen = Vec::new();
     for (s, k, n) in &benutzt {
@@ -600,7 +600,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     }
 
     // -- C: die direkte Absenkung ------------------------------------------------------
-    aus.push_str("\nC  DIE DIREKTE ABSENKUNG -- 1:1, kein erzeugter Code\n");
+    aus.push_str("\nC  THE DIRECT LOWERING -- 1:1, no generated code\n");
     for (k, n) in &e.posten {
         if let Some(p) = EINORDNUNG.iter().find(|p| p.konstrukt == *k) {
             if p.traegt == Traegt::Direkt {
@@ -620,7 +620,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
         })
         .collect();
     if !geloescht.is_empty() {
-        aus.push_str("\nD  GELOESCHT -- existiert zur Laufzeit nicht\n");
+        aus.push_str("\nD  ERASED -- does not exist at run time\n");
         for (k, n) in geloescht {
             let grund = EINORDNUNG
                 .iter()
@@ -642,7 +642,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
         .collect();
     if !fremd.is_empty() || !e.fremde.is_empty() {
         aus.push_str(
-            "\nE  FREMD -- der Erzeuger schreibt den Prototyp, den Rumpf schreibt jemand anderes\n",
+            "\nE  FOREIGN -- the generator writes the prototype, somebody else the body\n",
         );
         for (k, n) in fremd {
             let grund = EINORDNUNG
@@ -656,8 +656,8 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
         // annimmt, dass GANZ Gabbro verifiziert ist -- sie loest sich unter dieser Praemisse
         // nicht auf, weil sie nicht von Gabbro handelt.
         if !e.fremde.is_empty() {
-            aus.push_str("\n     Die Ruempfe, die diese Einheit NICHT schreibt, und der Vertrag,\n");
-            aus.push_str("     mit dem der Pruefer ueber sie rechnet:\n");
+            aus.push_str("\n     The bodies this unit does NOT write, and the contract\n");
+            aus.push_str("     the checker uses to reason about them:\n");
             for (n, v) in &e.fremde {
                 aus.push_str(&format!("       {n:<26} {v}\n"));
             }
@@ -666,21 +666,19 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
 
     // -- Der Befund --------------------------------------------------------------------
     if e.gleitkomma {
-        aus.push_str("\n-- GLEITKOMMA -- und das ist KEINE Aussage ueber Zahlen\n");
+        aus.push_str("\n-- FLOATING POINT -- and this is NOT a statement about numbers\n");
         aus.push_str(
-            "     Diese Einheit rechnet mit Gleitkomma. Damit aendert sich die\n\
-             \x20    AUFRUFKONVENTION (dieselbe Signatur uebergibt in `xmm0` oder in `rdi`),\n\
-             \x20    und fuer einen Kernel der KONTEXTWECHSEL: FPU-Zustand ist Kontext,\n\
-             \x20    lazy switching hat eine eigene Leckklasse, Preemption wird teurer.\n",
+            "     This unit computes with floating point. That changes the calling\
+                convention\n     and the context size -- a statement about preemption, not\
+                about digits.\n",
         );
         aus.push_str(
-            "     Was der Erzeuger dafuer verlangt: KEIN -ffast-math (es erlaubt\n\
-             \x20    Umsortierungen, und die Addition ist nicht assoziativ), auf x86 SSE2\n\
-             \x20    (der x87 rechnet mit 80 Bit und rundet doppelt), Rundungsmodus RNE.\n",
+            "     What the generator demands for it: NO -ffast-math (it would break\
+                every\n     interval), SSE2, and round-to-nearest-even pinned.\n",
         );
         aus.push_str(
-            "     Was NICHT dasteht: numerische Genauigkeit. Der Pruefer traegt Intervall\n\
-             \x20    und zwei Bits (NaN, unendlich) -- keine Fehlerschranke.\n",
+            "     What does NOT stand here: numerical accuracy. The checker carries\
+                ranges,\n     not error bounds.\n",
         );
     }
     aus.push_str("\n-- BEFUND\n");
@@ -693,16 +691,16 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
             u.join(", ")
         ));
         aus.push_str(
-            "     Diese Formen kommen in der Datei vor und stehen in KEINER Einordnung.\n\
-             \x20    Entweder weigert sich der Erzeuger fuer sie (dann steht die Weigerung\n\
-             \x20    schon da) -- oder er senkt sie ab, und niemand hat gebucht, worauf.\n",
+            "     These forms occur in the file and stand in NO classification.\n\x20\
+                Either the generator refuses them (then the refusal already stands\
+                there)\n\x20    -- or it lowers them, and nobody booked what on.\n",
         );
     }
     // **Eine Zeile traegt die Buchung.** Der Waechter vergleicht genau sie; eine zweite Zahl
     // daneben waere eine Gelegenheit, sich zu widersprechen.
     aus.push_str(&format!(
-        "     {} Annahmen, {} Schablonen ({} davon UNBEWIESEN), {} direkte Formen, \
-         {} fremde Ruempfe ({} sprechen ihre Pflicht aus)\n",
+        "     {} assumptions, {} templates ({} of them UNPROVED), {} direct forms, \
+         {} foreign bodies ({} state their duty)\n",
         annahmen.len(),
         benutzt.len(),
         offen.len(),
@@ -717,26 +715,22 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     ));
     if !e.fremde.is_empty() {
         aus.push_str(
-            "     Ein fremder Rumpf loest sich auch dann nicht auf, wenn GANZ Gabbro\n\
-             \x20    verifiziert ist -- sein Beweis faellt dem an, der ihn schreibt.\n",
+            "     A foreign body does not dissolve even when all of Gabbro is verified\
+                --\n\x20    it is the one class that stays.\n",
         );
     }
     if !offen.is_empty() {
         offen.sort();
         offen.dedup();
         aus.push_str(&format!(
-            "     DIE VERTRAUENSFLAECHE DIESER DATEI: {}\n",
+            "     THE TRUST SURFACE OF THIS FILE: {}\n",
             offen.join(", ")
         ));
     }
     aus.push_str(
-        "\n-- Und was hier NICHT steht:\n\
-         \x20  * dass eine Schablone GILT -- nur, welche und ob sie bewiesen ist\n\
-         \x20  * dass die direkte Absenkung stimmt. Sie ruht auf `emit.rs` und den\n\
-         \x20    Differenztests -- gemessene EINZELERGEBNISSE, keine Aussage ueber alle Eingaben\n\
-         \x20  * dass die Annahmen zutreffen -- nur, dass sie benannt sind\n\
-         \x20  * dass eine FREMDE Funktion tut, was ihre Deklaration sagt -- der Rumpf\n\
-         \x20    steht nicht in dieser Uebersetzungseinheit\n",
+        "\n-- And what does NOT stand here:\n\x20  it does not say that the C is correct.\
+            It says what it rests on --\n\x20  and every line of that is a place somebody\
+            can look at.\n",
     );
     aus
 }

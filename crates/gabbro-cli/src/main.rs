@@ -56,7 +56,7 @@ fn main() -> std::process::ExitCode {
         "annahmen" => befehl_annahmen(rest),
         "k-bedingung" => {
             if rest.is_empty() {
-                eprintln!("gabbro k-bedingung: keine Datei genannt");
+                eprintln!("gabbro k-bedingung: no file named");
                 return std::process::ExitCode::from(2);
             }
             for datei in rest {
@@ -75,7 +75,7 @@ fn main() -> std::process::ExitCode {
         }
         "kosten" => {
             if rest.is_empty() {
-                eprintln!("gabbro kosten: keine Datei genannt");
+                eprintln!("gabbro kosten: no file named");
                 return std::process::ExitCode::from(2);
             }
             for datei in rest {
@@ -99,34 +99,7 @@ fn main() -> std::process::ExitCode {
         // davor, aus demselben Grund wie bei `emit`.
         "pflichten" => {
             if rest.is_empty() {
-                eprintln!("gabbro pflichten: keine Datei genannt");
-                return std::process::ExitCode::from(2);
-            }
-            let mut schlecht = false;
-            for datei in rest {
-                let Ok(quelle) = std::fs::read_to_string(datei) else {
-                    eprintln!("gabbro: {datei} nicht lesbar");
-                    schlecht = true;
-                    continue;
-                };
-                let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
-                gabbro_check::pruefe(&baum, &mut absagen);
-                if absagen.fehler_zahl() > 0 {
-                    eprint!("{}", absagen.zeige(&quelle));
-                    eprintln!("gabbro pflichten: {datei} hat Fehler -- kein Register");
-                    schlecht = true;
-                    continue;
-                }
-                print!("{}", gabbro_check::pflichten::zeige(&baum, datei));
-            }
-            if schlecht {
-                return std::process::ExitCode::from(1);
-            }
-            std::process::ExitCode::SUCCESS
-        }
-        "zeugnis" => {
-            if rest.is_empty() {
-                eprintln!("gabbro zeugnis: keine Datei genannt");
+                eprintln!("gabbro pflichten: no file named");
                 return std::process::ExitCode::from(2);
             }
             let mut schlecht = false;
@@ -140,7 +113,34 @@ fn main() -> std::process::ExitCode {
                 gabbro_check::pruefe(&baum, &mut absagen);
                 if absagen.fehler_zahl() > 0 {
                     eprint!("{}", absagen.zeige(&quelle));
-                    eprintln!("gabbro zeugnis: {datei} hat Fehler -- kein Zeugnis");
+                    eprintln!("gabbro pflichten: {datei} has errors -- no register");
+                    schlecht = true;
+                    continue;
+                }
+                print!("{}", gabbro_check::pflichten::zeige(&baum, datei));
+            }
+            if schlecht {
+                return std::process::ExitCode::from(1);
+            }
+            std::process::ExitCode::SUCCESS
+        }
+        "zeugnis" => {
+            if rest.is_empty() {
+                eprintln!("gabbro zeugnis: no file named");
+                return std::process::ExitCode::from(2);
+            }
+            let mut schlecht = false;
+            for datei in rest {
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} not readable");
+                    schlecht = true;
+                    continue;
+                };
+                let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+                gabbro_check::pruefe(&baum, &mut absagen);
+                if absagen.fehler_zahl() > 0 {
+                    eprint!("{}", absagen.zeige(&quelle));
+                    eprintln!("gabbro zeugnis: {datei} has errors -- no certificate");
                     schlecht = true;
                     continue;
                 }
@@ -174,27 +174,27 @@ fn main() -> std::process::ExitCode {
 
 fn hilfe() {
     eprintln!(
-        "gabbro -- Uebersetzer und Pruefer fuer Gabbro (Stufe P2 + drei Paesse)
+        "gabbro -- compiler and checker for Gabbro (stage P2 + three passes)
 
-  gabbro pruefe     <datei.gab>…    liest, parst und faehrt die gebauten Paesse
-  gabbro fragmente  <datei.md>…     jeden ```gabbro-Block einer Markdown-Datei, einzeln
-  gabbro annahmen   <datei.gab>…    das Annahmenmanifest: bewiesen unter A1…An
-  gabbro paesse                     die Passliste -- gebaut UND offen
-  gabbro schablonen                 die Erzeuger-Schablonen: die dritte Zaehlspalte
-  gabbro k-bedingung <datei.gab>…   je Traeger: sind ALLE Schreibstellen erzeugt? (Messung 2)
-  gabbro pflichten  <datei.gab>…    was ein MENSCH noch schuldet -- gezaehlt, nicht eingeloest
+  gabbro pruefe     <file.gab>…     read, parse and run the built passes
+  gabbro fragmente  <file.md>…      every ```gabbro block of a markdown file, one by one
+  gabbro annahmen   <file.gab>…     the assumption manifest: proved under A1…An
+  gabbro paesse                     the pass list -- built AND open
+  gabbro schablonen                 the generator templates: the third counting column
+  gabbro k-bedingung <file.gab>…    per carrier: are ALL write sites generated? (measurement 2)
+  gabbro pflichten  <file.gab>…     what a HUMAN still owes -- counted, not discharged
 
-Rueckgabe: 0 wenn kein Fehler, 1 bei Fehlern, 2 bei falschem Aufruf."
+Exit: 0 when there is no error, 1 on errors, 2 on a wrong call."
     );
 }
 
 fn befehl_paesse() {
-    println!("Die Pruefpaesse in fester Reihenfolge (SPRACHE.md Teil III, §6):\n");
+    println!("The checking passes in fixed order (SPRACHE.md part III, §6):\n");
     for p in passliste() {
         let (marke, note) = match p.zustand {
-            Zustand::Gebaut => ("gebaut", String::new()),
-            Zustand::Teilgebaut(w) => ("TEIL  ", format!("\n         kommt durch: {w}")),
-            Zustand::Offen(w) => ("OFFEN ", format!("\n         ungeprueft: {w}")),
+            Zustand::Gebaut => ("built ", String::new()),
+            Zustand::Teilgebaut(w) => ("PART  ", format!("\n         gets through: {w}")),
+            Zustand::Offen(w) => ("OPEN  ", format!("\n         unchecked: {w}")),
         };
         println!("  {} {}  {:<14} {}{}", marke, p.nummer, p.name, p.quelle, note);
     }
@@ -210,14 +210,14 @@ fn befehl_paesse() {
         "\n  {voll} of {} passes are fully built, {teil} partial. What is OPEN is",
         passliste().len()
     );
-    println!("  NICHT geprueft, und was TEIL ist, nur so weit wie danebensteht --");
+    println!("  NOT checked, and what is PARTIAL only as far as the text beside it says --");
     println!("  a green run is therefore not a proof but the absence of the findings");
     println!("  that the built passes are able to see.");
 }
 
 fn befehl_pruefe(dateien: &[String]) -> std::process::ExitCode {
     if dateien.is_empty() {
-        eprintln!("gabbro pruefe: keine Datei genannt");
+        eprintln!("gabbro pruefe: no file named");
         return std::process::ExitCode::from(2);
     }
     let mut fehler = 0usize;
@@ -248,7 +248,7 @@ fn befehl_pruefe(dateien: &[String]) -> std::process::ExitCode {
             println!("  M1 saw no expression -- this file has no function body");
         } else {
             println!(
-                "  M1 sah {} Ausdruecke, {} davon ohne Typ ({:.0} % Deckung)",
+                "  M1 saw {} expressions, {} of them without a type ({:.0} % coverage)",
                 bericht.m1.gesamt(),
                 bericht.m1.unbekannt,
                 bericht.m1.deckung()
@@ -256,12 +256,12 @@ fn befehl_pruefe(dateien: &[String]) -> std::process::ExitCode {
         }
     }
     println!();
-    println!("Nicht geprueft in diesem Lauf:");
+    println!("Not checked in this run:");
     for p in gabbro_check::ungeprueft() {
         match p.zustand {
             Zustand::Offen(w) => println!("  {} {:<14} {w}", p.nummer, p.name),
             Zustand::Teilgebaut(w) => {
-                println!("  {} {:<14} NUR TEILWEISE -- {w}", p.nummer, p.name)
+                println!("  {} {:<14} ONLY PARTIAL -- {w}", p.nummer, p.name)
             }
             Zustand::Gebaut => {}
         }
@@ -275,7 +275,7 @@ fn befehl_pruefe(dateien: &[String]) -> std::process::ExitCode {
 
 fn befehl_annahmen(dateien: &[String]) -> std::process::ExitCode {
     if dateien.is_empty() {
-        eprintln!("gabbro annahmen: keine Datei genannt");
+        eprintln!("gabbro annahmen: no file named");
         return std::process::ExitCode::from(2);
     }
     let mut alle = Vec::new();
