@@ -541,6 +541,20 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **Die Axiomschicht schuldet einen Satz ueber den SPERRABDRUCK** *(benannt 2026-08-19
+      von `Gruppe_Erhaltung.thy`)*. Das Locale `zug` nimmt `voll i` als *„der Abdruck ist
+      gehalten"* und schliesst daraus, dass niemand hinsieht. **Dass ein gehaltener Abdruck
+      einen fremden Kern wirklich fernhaelt, ist eine Aussage ueber das SPEICHERMODELL** und
+      faellt nicht in diesen Satz -- dieselbe Stelle, an der `paarung` ihre
+      `release`/`acquire`-Sichtbarkeit schuldet. *Vorher war die Praemisse unsichtbar; jetzt
+      steht sie in der Zahl.*
+- [ ] **`group` steht an EINER Korpusstelle** *(2026-08-19)*. `beispiele/17` ist die einzige;
+      die vier Verbindungsinvarianten des Sweeps vom 2026-08-16 (V1-V4) sind gemessen, aber
+      nicht geschrieben. **Zwei bewiesene Schablonen ueber einem Konstrukt mit einer
+      Fundstelle** -- das ist der Grund, warum die Amortisationszahl heute zweimal gestiegen
+      ist. *Solange V1-V4 nicht als `group` dastehen, misst die Zahl den Beweisvorlauf und
+      nicht die Amortisation.*
+
 - [ ] **Die HAEUFIGERE Haelfte von Punkt 4 fehlt: `ensures` ueber WELTZUSTAND**
       *(gemessen 2026-08-19)*. Von 28 fremden Deklarationen liefern nur **4** eine Ganzzahl;
       die Mehrheit spricht ueber Plaetze (`ensures mmu_an_zahl == 1`, siebenmal in

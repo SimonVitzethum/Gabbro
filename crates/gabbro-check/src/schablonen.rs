@@ -671,8 +671,24 @@ pub const SCHABLONEN: &[Schablone] = &[
                   sonst sieht die Pflichtliste vollstaendig aus, waehrend das zweite Netz \
                   fehlt -- und eine Emission koennte die Bereichspruefung weglassen, WEIL \
                   der Beweis sagt, es koenne nicht negativ werden.",
+        // **Maschinell geprueft am 2026-08-19** (`beweise/Gruppe_Erhaltung.thy`), und zwar
+        // an dem Tag, an dem `Table_Ops_Erhaltung.thy` `verbindung_nicht_gedeckt` bewies:
+        // eine Operation erhaelt jede Invariante IHRES Traegers und bricht die verbindende.
+        // *Damit war `gruppe.ops` nicht mehr eine Bequemlichkeit, sondern notwendig -- und
+        // die Frage nicht mehr ob, sondern unter welcher Bedingung.*
+        //
+        // Zuordnung Satz -> Zeile:
+        //   die Invariante gilt, wo sie BEOBACHTET werden kann  -> `beobachtbares_gilt`
+        //   der Zwischenzustand ist erlaubt, weil unsichtbar    -> dasselbe (Locale `zug`)
+        //
+        // **Und der Stand bleibt ENTWORFEN**, aus demselben Grund wie bei
+        // `table.ops.erhaltung`: es gibt keine Gruppen-`ops`. `U001`-`U007` pruefen die
+        // FORM, in der die Frage gestellt werden kann, nicht die Erhaltung.
         stand: Stand::Entworfen,
-        voraussetzungen: &[],
+        voraussetzungen: &[
+            Voraussetzung { was: "der Sperrabdruck steht ueber dem ganzen Zwischenzustand (`abdruck_innen`)", durch: Some("gruppe.sperrabdruck, und im Pass U001-U005"), braeuchte: None },
+            Voraussetzung { was: "ein gehaltener Abdruck haelt einen fremden Kern wirklich fern", durch: None, braeuchte: Some("die AXIOMSCHICHT -- eine Aussage ueber das Speichermodell, nicht ueber Zustaende") },
+        ],
         fundstelle: "MESSUNGEN.md, Papiertest CapSpace/CDT, 2026-08-14",
     },
     Schablone {
@@ -704,8 +720,30 @@ pub const SCHABLONEN: &[Schablone] = &[
                   steht -- naehme sie `EPS` unter `SCHEDS`, drehte sie die Ordnung um. \
                   *Eine Gruppe mit deklariertem Abdruck haette diesen Kommentar ueberfluessig \
                   gemacht; das ist der gemessene Bedarf, nicht ein Entwurfswunsch.*",
+        // **Maschinell geprueft am 2026-08-19** (`beweise/Gruppe_Erhaltung.thy`). Die drei
+        // benannten Teile der Pflicht sind drei Saetze geworden:
+        //
+        //   (a) die Reihenfolge      -> `rangordnung_azyklisch` und, als Gegenrichtung,
+        //                               `eine_kante_gegen_die_ordnung_reicht`
+        //   (b) Anfang und Ende      -> `beobachtbares_gilt` (Locale `zug`)
+        //   (c) kein Zwischenaustritt-> `abgebrochener_ist_kein_zug` -- GEGENBEISPIEL
+        //
+        // **Und (a) traegt mehr als die Invariante**, wie der Eintrag selbst sagt: die
+        // Wartekanten liegen in `less_than`, also ist der Wartegraph wohlfundiert und damit
+        // azyklisch. *Eine einzige Kante gegen die Ordnung genuegt fuer einen Zyklus, und
+        // auch das steht als Satz da statt als Warnung.*
+        //
+        // **Der eigentliche Fund ist S20s Existenzgrund, formal:** `halber_abdruck_ist_kein_zug`.
+        // Unter EINER Sperre steht der Abdruck ab dem ersten Nehmen; unter ZWEIEN steht er
+        // zwischen den beiden Nahmen NICHT, und dann laesst sich das Locale nicht erfuellen
+        // -- nicht weil der Beweis schwerer waere, sondern weil die Voraussetzung falsch ist.
+        //
+        // Stand bleibt ENTWORFEN: es gibt keine Gruppen-`ops`.
         stand: Stand::Entworfen,
-        voraussetzungen: &[],
+        voraussetzungen: &[
+            Voraussetzung { was: "jeder Teilnehmer nimmt in aufsteigender `rank`-Ordnung -- sonst ist der Wartegraph nicht in `less_than`", durch: Some("U003/U005 im Gruppenpass, und H006 an der Sperrordnung"), braeuchte: None },
+            Voraussetzung { was: "kein Zwischenaustritt verlaesst den Zug im Zwischenzustand", durch: Some("U006 -- der Zug hat keinen Zwischenaustritt"), braeuchte: None },
+        ],
         fundstelle: "MESSUNGEN.md, SWEEP der Verbindungs-Invarianten, 2026-08-16 (V4)",
     },
 ];

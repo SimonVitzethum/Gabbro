@@ -571,10 +571,20 @@ fn die_praemissen_ohne_pass_sind_gezaehlt() {
     // > *Eine Zusicherung, die ein Loch bewacht, muss umgedreht werden, wenn es zu ist --
     // > sonst haelt sie es offen.* Und der Wechsel steht hier, damit er nicht als
     // > Testkosmetik durchgeht.
+    //
+    // **Und am selben Tag von 7 auf 8, aus der anderen Richtung.** `Gruppe_Erhaltung.thy`
+    // hat eine Praemisse BENANNT, die vorher unsichtbar war: *ein gehaltener Sperrabdruck
+    // haelt einen fremden Kern wirklich fern* -- eine Aussage der Axiomschicht.
+    //
+    // > **Die Marke faellt durch einen PASS und steigt durch einen BEWEIS.** Das ist keine
+    // > Aufweichung der Ratsche, sondern ihre genauere Fassung: ein Beweis, der die Zahl
+    // > der offenen Praemissen erhoeht, hat gearbeitet -- der umgekehrte Fall waere der
+    // > verdaechtige. *Was verboten bleibt, ist ein Anstieg ohne neuen Beweis.*
     let luft = gabbro_check::schablonen::in_der_luft();
     assert!(
-        luft.len() <= 7,
-        "Praemissen ohne Pass: {} -- die Marke ist 7 und sie geht nach unten:\n{luft:#?}",
+        luft.len() <= 8,
+        "Praemissen ohne Pass: {} -- die Marke ist 8. Sie faellt durch einen PASS \
+         und steigt nur durch einen BEWEIS, der eine neue Praemisse benennt:\n{luft:#?}",
         luft.len()
     );
     assert!(

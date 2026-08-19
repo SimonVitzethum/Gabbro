@@ -8157,3 +8157,83 @@ steht er nicht mehr darin, und der Test fiel.
 > **Eine Zusicherung, die ein Loch bewacht, muss umgedreht werden, wenn es zu ist — sonst hält
 > sie es offen.** Sie lautet jetzt umgekehrt: *steht `device.konstruktor` wieder in der Luft,
 > ist eine Regel zurückgegangen.* Marke von 8 auf **7**.
+
+---
+
+# Punkt 5 — `gruppe.ops` und `gruppe.sperrabdruck`: der Zwischenzustand ist erlaubt, weil er unsichtbar ist
+
+**2026-08-19, dieselbe Sitzung.** `Table_Ops_Erhaltung.thy` hatte Stunden zuvor
+`verbindung_nicht_gedeckt` bewiesen: *eine Operation erhält jede Invariante ihres eigenen
+Trägers und bricht die verbindende.* **Damit war `gruppe.ops` nicht mehr eine Bequemlichkeit,
+sondern notwendig** — und die Frage nicht mehr ob, sondern unter welcher Bedingung.
+
+## Die drei benannten Teile von S20 sind drei Sätze geworden
+
+| Teil | Satz | Inhalt |
+|---|---|---|
+| **(a)** | `rangordnung_azyklisch` | die Wartekanten liegen in `less_than`, also ist der Wartegraph wohlfundiert und damit **azyklisch** |
+| **(a)** | `eine_kante_gegen_die_ordnung_reicht` | **Gegenrichtung** — eine einzige Kante gegen die Ordnung genügt für einen Zyklus |
+| **(b)** | `beobachtbares_gilt` | die Invariante gilt an jeder **beobachtbaren** Stelle |
+| **(c)** | `abgebrochener_ist_kein_zug` | **Gegenbeispiel** — ein Zwischenaustritt endet gebrochen |
+| **S20** | `halber_abdruck_ist_kein_zug` | mit zwei Sperren lässt sich das Locale **nicht erfüllen** |
+
+## Der Kern, und er steht in der Modellierung statt in der Prosa
+
+**Die Invariante wird nicht überall verlangt.** Sie wird dort verlangt, wo jemand hinsehen
+kann:
+
+```isabelle
+beobachtbar i  ⟷  i < length zs ∧ ¬ voll i
+```
+
+`voll i` heißt: der Zieher hält den **ganzen** Sperrabdruck, und dann kann kein anderer Kern
+die Träger zusammen ansehen. Der Satz sagt dann: *jede beobachtbare Stelle ist Anfang oder
+Ende, und dort gilt die Invariante.*
+
+> **Der Zwischenzustand ist erlaubt, weil er unsichtbar ist** — und genau das ist der Grund,
+> warum es eine Gruppenoperation überhaupt gibt. Der Registereintrag sagte es als Prosa; jetzt
+> ist es die Definition, aus der der Satz fällt.
+
+## Und (a) trägt mehr als die Invariante
+
+Der Eintrag sagte: *„sonst ist die Deadlockfreiheit des **Bestands** verloren, nicht bloß die
+Invariante."* Das ist die schärfere Hälfte und jetzt ein Satz: nimmt jeder in aufsteigender
+Rangordnung, liegt jede Wartekante in `less_than`; `less_than` ist wohlfundiert; wohlfundiert
+impliziert azyklisch. **Kein Zyklus, kein Deadlock.**
+
+## S20s Existenzgrund, formal
+
+`halber_abdruck_ist_kein_zug` ist der Satz, der die zweite Schablone rechtfertigt:
+
+* **Unter EINER Sperre** steht der Abdruck ab dem ersten Nehmen — `abdruck_innen` gilt.
+* **Unter ZWEIEN** steht er zwischen den beiden Nahmen **nicht**.
+
+> **Das Locale lässt sich dann nicht erfüllen — nicht weil der Beweis schwerer wäre, sondern
+> weil die Voraussetzung falsch ist.** *Eine Schablone, die beide Fälle als einen führt,
+> versteckt genau den Unterschied, an dem sie scheitern kann.* Der Eintrag hatte recht, und
+> jetzt steht der Grund als Satz statt als Urteil.
+
+## Die Prämissenzahl stieg von 7 auf 8, und die Ratsche wurde dabei genauer
+
+`Gruppe_Erhaltung.thy` hat eine Prämisse **benannt**, die vorher unsichtbar war: *ein
+gehaltener Sperrabdruck hält einen fremden Kern wirklich fern.* Das ist eine Aussage der
+**Axiomschicht** — über das Speichermodell, nicht über Zustände.
+
+> **Die Marke fällt durch einen PASS und steigt durch einen BEWEIS.** Das ist keine
+> Aufweichung der Ratsche, sondern ihre genauere Fassung: *ein Beweis, der die Zahl der
+> offenen Prämissen erhöht, hat gearbeitet.* **Verboten bleibt ein Anstieg ohne neuen
+> Beweis.**
+
+## Und beide bleiben `entworfen`
+
+Es gibt **keine** Gruppen-`ops`. `U001`–`U007` prüfen die **Form**, in der die Frage gestellt
+werden kann — nicht die Erhaltung. *Bewiesen ist die Mathematik der Schablone, nicht ihre
+Auslieferung.*
+
+```
+Theorien   11 -> 12       Isar je Korpusstelle  12,6 -> 14,1
+```
+
+**Die Amortisationszahl steigt zum zweiten Mal an einem Tag:** 217 neue Beweiszeilen gegen
+**eine** Korpusstelle (`beispiele/17-gruppe-ueber-zwei-sperren.gab`). *Beweis vor Konstrukt
+kostet genau das.*
