@@ -112,6 +112,17 @@ struct Namen {
     retry_schranke: HashMap<u32, i128>,
     /// Die `const`-Namen -- in einer `where`-Klausel ist ein blanker Name sonst ein FELD.
     konstanten: BTreeSet<String>,
+    /// Je `const` sein ausgerechneter Wert -- **von `umgebung.rs` und nicht hier**.
+    /// `u64::max` ist dort seit jeher eine Zahl; der Erzeuger hatte daneben seinen eigenen,
+    /// schwaecheren Auswerter (`konst_zahl`) und weigerte sich. *Zwei Register ueber
+    /// derselben Sache, und das schwaechere hat entschieden* (W7).
+    konstwert: HashMap<String, i128>,
+    /// Name -> erklaerter Parametertyp, konservativ ueber alle Funktionen. **Nur damit
+    /// bekommt ein `let d = a - b;` seinen Typ**, ohne dass ihn jemand raet.
+    parametertyp: HashMap<String, TypExpr>,
+    /// (Verbund, Feld) -> erklaerter Feldtyp. Dieselbe Rolle wie `slotfeld`, eine Ebene
+    /// daneben: **ohne ihn weiss der Erzeuger von `s.len` nur, dass es ein Feld ist.**
+    verbundfeld: HashMap<(String, String), TypExpr>,
     /// Namen, deren Typ der Erzeuger als VORZEICHENLOS kennt. Nur fuer sie darf die untere
     /// Schranke eines `narrow` bei null wegfallen -- Unwissen faellt nach lautstark.
     vorzeichenlos: BTreeSet<String>,
@@ -330,6 +341,14 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                         namen.markierte.insert(t.name.text.clone(), v.clone());
                     }
                 }
+                if let TypExpr::Verbund(felder, _) = unter {
+                    for f in felder {
+                        namen.verbundfeld.insert(
+                            (t.name.text.clone(), f.name.text.clone()),
+                            f.typ.typ.clone(),
+                        );
+                    }
+                }
                 namen.typen.insert(t.name.text.clone(), unter.clone());
             }
         }
@@ -412,7 +431,38 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                     }
                 }
             }
+            // **Der Wert eines `const` kommt aus `umgebung.rs`, nicht aus einem zweiten
+            // Auswerter hier.** `u64::max` war dort seit jeher eine Zahl; der Erzeuger
+            // weigerte sich trotzdem, weil `konst_zahl` nur Literale kennt. *Das schwaechere
+            // von zwei Registern ueber derselben Sache hat entschieden* (W7).
+            if let ItemArt::Konst(k) = &item.art {
+                if let Some(n) = umg.konst_wert(modul, &k.wert) {
+                    namen.konstwert.insert(k.name.text.clone(), n);
+                }
+            }
         });
+    }
+    // Die Parametertypen, konservativ: wer irgendwo anders erklaert ist, faellt heraus.
+    {
+        let mut eindeutig: HashMap<String, TypExpr> = HashMap::new();
+        let mut strittig: BTreeSet<String> = BTreeSet::new();
+        crate::fuer_jedes_item(baum, &mut |item| {
+            let ItemArt::Funktion(f) = &item.art else { return };
+            for p in &f.parameter {
+                match eindeutig.get(&p.name.text) {
+                    Some(vorher) if typtext(vorher) != typtext(&p.typ) => {
+                        strittig.insert(p.name.text.clone());
+                    }
+                    _ => {
+                        eindeutig.insert(p.name.text.clone(), p.typ.clone());
+                    }
+                }
+            }
+        });
+        for s in &strittig {
+            eindeutig.remove(s);
+        }
+        namen.parametertyp = eindeutig;
     }
 
     {
@@ -720,6 +770,8 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                     k.name.text,
                     gleitkommatext(*bits)
                 ));
+            } else if let Some(n) = namen.konstwert.get(&k.name.text) {
+                aus.push_str(&format!("\n#define {} {}u\n", k.name.text, n));
             } else {
                 weigere(absagen, k.name.span, "const with a non-constant value");
             }
@@ -1156,6 +1208,22 @@ fn konst_zahl(e: &Expr) -> Option<i128> {
     }
 }
 
+/// Ein Typausdruck als Text -- **nur zum VERGLEICHEN zweier Deklarationen**, nicht zum
+/// Absenken. `TypExpr` traegt Spannen und ist darum nicht vergleichbar.
+fn typtext(t: &TypExpr) -> String {
+    match t {
+        TypExpr::Int(i) => intty(i),
+        TypExpr::Bool(_) => "bool".into(),
+        TypExpr::Pfad(p) => p.teile.iter().map(|i| i.text.clone()).collect::<Vec<_>>().join("::"),
+        TypExpr::Index { tabelle, optional, .. } => {
+            format!("{}index into {}", if *optional { "option " } else { "" }, tabelle.text)
+        }
+        TypExpr::Zeiger(z) => format!("ptr {}", typtext(&z.ziel)),
+        TypExpr::Feld(a) => format!("[{}]", typtext(&a.element)),
+        andere => format!("?{:?}", std::mem::discriminant(andere)),
+    }
+}
+
 /// **Ein `type P = { a : u32, b : bool }` wird ein C-Verbund -- und HIER ist es einer.**
 ///
 /// Bei `format` steht die entgegengesetzte Entscheidung, mit ihrem Grund: *ein Format ist
@@ -1189,12 +1257,36 @@ fn verbund(t: &TypDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             );
             continue;
         }
+        // **Ein Feldtyp, der ein FELD ist** -- `bytes : [u8; KAP]`. In C steht die Laenge
+        // hinter dem Namen und nicht beim Typ, also gibt es dafuer keinen `ctyp`.
+        // *Die Laenge kommt aus der Deklaration, wie bei `count N` -- geraten wird sie
+        // nicht.*
+        if let TypExpr::Feld(a) = &f.typ.typ {
+            let (Some(el), Some(n)) = (ctyp(&a.element, u), feldlaenge(&a.laenge, u)) else {
+                weigere(absagen, f.name.span, "array field type -- element or length");
+                continue;
+            };
+            aus.push_str(&format!("    {el} {}[{n}];\n", f.name.text));
+            continue;
+        }
         match ctyp(&f.typ.typ, u) {
             Some(c) => aus.push_str(&format!("    {c} {};\n", f.name.text)),
             None => weigere(absagen, f.name.span, "field type"),
         }
     }
     aus.push_str(&format!("}} {};\n", t.name.text));
+}
+
+/// Die Laenge eines Feldtyps: eine Zahl oder ein `const`-Name (der als `#define` schon im
+/// Kopf des Erzeugnisses steht). **Alles andere ist keine Laenge, die dieser Erzeuger kennt.**
+fn feldlaenge(e: &Expr, u: &Namen) -> Option<String> {
+    match &e.art {
+        ExprArt::Zahl(n) => Some(n.to_string()),
+        ExprArt::Ort(o) if o.suffixe.is_empty() && u.konstanten.contains(&o.basis.text) => {
+            Some(o.basis.text.clone())
+        }
+        _ => None,
+    }
 }
 
 /// **«C2»: ein `tagged type` wird `struct { marke; union { … } }` -- und die Marke ist ein
@@ -2324,6 +2416,13 @@ fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
             }
             StmtArt::Publish(p) => e(&p.wert, aus),
             StmtArt::Observiert(o) => benutzte_namen(&o.rumpf, aus),
+            StmtArt::Exchange(x) => match &x.form {
+                XForm::Update { rumpf, .. } => benutzte_namen(rumpf, aus),
+                XForm::Vergleich { wert, bedingung, .. } => {
+                    e(wert, aus);
+                    pred_namen(bedingung, aus);
+                }
+            },
             _ => {}
         }
     }
@@ -2452,7 +2551,13 @@ fn anweisung(
             // nicht, gibt er sie aus und nimmt die Warnung in Kauf: *dann wird der Waechter
             // rot, statt dass eine Pruefung still verschwindet.*
             let untere_ist_null = matches!(&bereich.von.art, ExprArt::Zahl(0));
-            let bedingung = if untere_ist_null && vorzeichenlos.contains(&n.ort.basis.text) {
+            // **Und seit «C5» reicht der Blick bis zum FELD.** `s.len : u32 in 0 .. KAP` ist
+            // nachweislich vorzeichenlos, und `s->len >= 0` waere unter `-Wtype-limits` eine
+            // Warnung ueber eine Zeile, die der Anwender nicht geschrieben hat. *Der Weg
+            // bleibt derselbe: Unwissen faellt nach lautstark, die Pruefung bleibt stehen.*
+            let vorzeichenlos = vorzeichenlos.contains(&n.ort.basis.text)
+                || ort_typ(&n.ort, u).is_some_and(|t| vorzeichen(&t, u) == Some(true));
+            let bedingung = if untere_ist_null && vorzeichenlos {
                 format!("{o} {oben} {bis}")
             } else {
                 format!("{o} >= {von} && {o} {oben} {bis}")
@@ -2482,10 +2587,7 @@ fn anweisung(
             // und der Typ stand die ganze Zeit in der Tabellendeklaration.*
             let typ = match l.typ.as_ref().and_then(|t| ctyp(t, u)) {
                 Some(c) => Some(c),
-                None if l.typ.is_none() => match &l.wert.art {
-                    ExprArt::Ort(o) => ort_typ(o, u).and_then(|t| ctyp(&t, u)),
-                    _ => None,
-                },
+                None if l.typ.is_none() => wert_ctyp(&l.wert, u),
                 None => None,
             };
             match typ {
@@ -2563,6 +2665,90 @@ fn anweisung(
                 anweisung(k, aus, u, absagen, tiefe + 1, &innen);
             }
             aus.push_str(&format!("{e}}}\n{e}{n}_lese_ende();\n"));
+        }
+        // **«C4»: `exchange`, und der Korpus trägt nur EINE der beiden Formen an einem
+        // Atomic.**
+        //
+        // `compare-exchange` senkt ab: `atomic_compare_exchange_strong_explicit` mit der
+        // **deklarierten** Ordnung. Genau hier hat dieser Erzeuger schon einmal geschummelt
+        // -- der Mutationskatalog fuehrt `veroeffentlichung-nimmt-die-vorgabeordnung`, weil
+        // ein `=` statt der Ordnung `seq_cst` bedeutet und *das erzeugte Programm dann etwas
+        // anderes sagt als die Quelle.*
+        //
+        // ## Und `update` bleibt `C001`, mit ZWEI Gruenden statt einem
+        //
+        // 1. **Der Platz ist im Korpus gar kein `atomic`** (`beispiele/05`: `z.wert` ist ein
+        //    Feld eines gewoehnlichen Verbundes). Ohne Deklaration gibt es keine Ordnung, und
+        //    eine zu waehlen hiesse, sie zu erfinden.
+        // 2. **Und selbst an einem Atomic:** `SPRACHE.md` (RMW, die dritte Form der Paarung)
+        //    sagt die Absenkung ausdruecklich -- `atomic_fetch_*`, wenn der Rumpf einer
+        //    Grundform entspricht (`t+1`, `t-1`, `t|m`, `t&m`), *sonst die **beschraenkte**
+        //    CAS-Schleife, „emittiert als `retry bounded NCORES * K ops on_exceeded
+        //    contention`"*. Der Rumpf im Korpus saettigt (`if v < GRENZE { … }`) und ist
+        //    keine Grundform; die Schranke braucht `NCORES` -- **dieselbe unentschiedene
+        //    Groesse wie `accumulates` ohne `per cpu N`** -- und `on_exceeded` einen Namen,
+        //    den niemand nennt.
+        //
+        // > *Die Sprache emittiert nichts, was sie verbietet* (die `accumulates`-Lehre). Eine
+        // > unbeschraenkte CAS-Schleife waere genau das.
+        StmtArt::Exchange(x) => {
+            let ziel = x.ort.text();
+            let Some((typ, speichern, laden)) = u.atomics.get(&ziel).cloned() else {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`exchange` on something that is not a declared `atomic` -- without a \
+                     declaration there is no memory ordering, and choosing one would mean \
+                     inventing it",
+                );
+                return;
+            };
+            let XForm::Vergleich { wert, bedingung, .. } = &x.form else {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`exchange update(v) { … }` -- SPRACHE.md lowers it to `atomic_fetch_*` \
+                     for a primitive body (`t+1`, `t-1`, `t|m`, `t&m`) and otherwise to a \
+                     BOUNDED CAS loop (`retry bounded NCORES * K ops on_exceeded \
+                     contention`). This body is not primitive, `NCORES` is the same undecided \
+                     quantity as `accumulates` without `per cpu N`, and nothing names the \
+                     exit -- the language emits nothing it forbids",
+                );
+                return;
+            };
+            // `old(X) == <expr>` -- die einzige Gestalt, in der der ERWARTETE Wert dasteht.
+            let erwartet = match &bedingung.art {
+                PredArt::Vergleich(e) => match &e.art {
+                    ExprArt::Binaer(BinOp::Gleich, a, b)
+                        if matches!(&a.art, ExprArt::Alt(_)) =>
+                    {
+                        ausdruck(b, u, absagen)
+                    }
+                    _ => String::new(),
+                },
+                _ => String::new(),
+            };
+            if erwartet.is_empty() {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`when` condition form -- a compare-exchange compares the OLD value \
+                     against one expected value (`old(X) == <expr>`); anything else would \
+                     need a loop, and that is the `update` case",
+                );
+                return;
+            }
+            let h = format!("_cx{tiefe}");
+            aus.push_str(&format!(
+                "{e}bool {};\n{e}{{\n{e}    {typ} {h} = ({typ})({erwartet});\n\
+                 {e}    /* compare-exchange under the DECLARED ordering -- a plain `=` would \
+                 be seq_cst */\n\
+                 {e}    {} = atomic_compare_exchange_strong_explicit(\n\
+                 {e}        &{ziel}, &{h}, ({typ})({}), {speichern}, {laden});\n{e}}}\n",
+                x.name.text,
+                x.name.text,
+                ausdruck(wert, u, absagen)
+            ));
         }
         StmtArt::Sperrt(x) => {
             let name = x.sperre.text();
@@ -2996,9 +3182,77 @@ fn ort_typ(o: &Ort, u: &Namen) -> Option<TypExpr> {
         return u.slotfeld.get(&(tab, f.text.clone())).cloned();
     }
     if o.suffixe.is_empty() {
-        return u.statiken.get(&o.basis.text).cloned();
+        return u
+            .statiken
+            .get(&o.basis.text)
+            .or_else(|| u.parametertyp.get(&o.basis.text))
+            .cloned();
+    }
+    // `s.len` -- ein Feld eines VERBUNDES, ueber einen Zeiger oder als Wert.
+    if o.suffixe.len() == 1 {
+        let OrtSuffix::Feld(f) = &o.suffixe[0] else { return None };
+        let basis = u.parametertyp.get(&o.basis.text)?;
+        let ziel = match basis {
+            TypExpr::Zeiger(z) => &z.ziel,
+            andere => andere,
+        };
+        let TypExpr::Pfad(p) = ziel else { return None };
+        let n = &p.teile.last()?.text;
+        return u.verbundfeld.get(&(n.clone(), f.text.clone())).cloned();
     }
     None
+}
+
+/// **Der C-Typ eines Ausdrucks -- ABGELESEN, und nur wo er eindeutig dasteht.**
+///
+/// Drei Quellen, und jede ist eine Deklaration: ein Ort (Slotfeld, `static`, Parameter), ein
+/// Ruf (der Rueckgabetyp des Gerufenen, samt dem Geraetegriff eines `Vtd(basis)`) und eine
+/// Rechnung ueber zweien davon, **die denselben Typ haben**.
+///
+/// > *Wo zwei Seiten verschieden erklaert sind, liefert diese Funktion nichts* -- und dann
+/// > weigert sich der Erzeuger, statt eine der beiden zu waehlen.
+fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
+    match &e.art {
+        ExprArt::Ort(o) if o.suffixe.is_empty() => match u.parametertyp.get(&o.basis.text) {
+            Some(t) => ctyp(t, u),
+            None => ort_typ(o, u).and_then(|t| ctyp(&t, u)),
+        },
+        ExprArt::Ort(o) => ort_typ(o, u).and_then(|t| ctyp(&t, u)),
+        ExprArt::Klammer(x) => wert_ctyp(x, u),
+        ExprArt::Binaer(op, a, b) => {
+            // Ein Vergleich ist `bool`, egal worueber; eine Rechnung traegt den Typ ihrer
+            // Seiten -- und nur, wenn beide denselben nennen.
+            if matches!(
+                op,
+                BinOp::Gleich
+                    | BinOp::Ungleich
+                    | BinOp::Kleiner
+                    | BinOp::Groesser
+                    | BinOp::KleinerGleich
+                    | BinOp::GroesserGleich
+                    | BinOp::Und
+                    | BinOp::Oder
+            ) {
+                return Some("bool".into());
+            }
+            let (x, y) = (wert_ctyp(a, u), wert_ctyp(b, u));
+            match (x, y) {
+                (Some(x), Some(y)) if x == y => Some(x),
+                (Some(x), None) if matches!(b.art, ExprArt::Zahl(_)) => Some(x),
+                (None, Some(y)) if matches!(a.art, ExprArt::Zahl(_)) => Some(y),
+                _ => None,
+            }
+        }
+        // **`Vtd(basis)` ist der GRIFF eines Geraets, kein Ruf** -- siehe `ruf`.
+        ExprArt::Ruf(r) => {
+            let n = &r.pfad.teile.last()?.text;
+            if u.geraete.contains_key(n) {
+                return Some(n.clone());
+            }
+            None
+        }
+        _ => None,
+    }
 }
 
 /// Ist dieser Ort ein `option index into T`? Dann die Zieltabelle.
@@ -3110,6 +3364,23 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
             return String::new();
         }
         return format!("({name}){{ {} }}", felder.join(", "));
+    }
+    // **«C5»: `Vtd(basis)` ist der GRIFF eines Geraets, kein Ruf** -- `beispiele/09` sagt
+    // den Satz selbst: *„die Parameterliste der Deklaration IST der Konstruktor."* Aus einer
+    // physischen Adresse wird ein Griff, und mehr steht in `device Vtd(basis : Pa)` nicht.
+    //
+    // *Die Umwandlung nach `volatile uint8_t *` ist die eine Stelle, an der der Erzeuger
+    // eine Adresse zu einem Zeiger macht* -- sie steht hier, weil die Deklaration sie sagt
+    // (`at mmio`), und nicht, weil sie bequem waere.
+    if u.geraete.contains_key(&name) {
+        if r.argumente.len() != 1 {
+            weigere(absagen, r.span, "a device handle takes exactly its declared base");
+            return String::new();
+        }
+        return format!(
+            "({name}){{ (volatile uint8_t *)(uintptr_t){} }}",
+            ausdruck(&r.argumente[0], u, absagen)
+        );
     }
     let geist = u.funktionen.get(&name).map(|s| s.geist_param.clone());
     let args: Vec<String> = r

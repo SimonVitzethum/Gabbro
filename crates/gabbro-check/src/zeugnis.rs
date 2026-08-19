@@ -261,6 +261,13 @@ pub const EINORDNUNG: &[Posten] = &[
                 Uebersetzungszeit nach (W6)",
     },
     Posten {
+        konstrukt: "exchange (compare)",
+        traegt: Traegt::Direkt,
+        grund: "`atomic_compare_exchange_strong_explicit` mit der DEKLARIERTEN Ordnung -- ein \
+                `=` waere in C `seq_cst`, also eine andere und teurere als die, die dasteht. \
+                Die `update`-Form bleibt `C001`: ihre Schranke braucht `NCORES`",
+    },
+    Posten {
         konstrukt: "locks",
         traegt: Traegt::Schablone("gruppe.sperrabdruck"),
         grund: "Nehmen und Geben, auf JEDEM Pfad; Rang und Haltezeit bleiben im Pruefer (W6)",
@@ -601,7 +608,13 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
             StmtArt::Bricht(_) => e.unzugeordnet.push("breaking".into()),
             StmtArt::Publish(_) => zaehle(e, "publishes"),
             StmtArt::AwaitLoad(_) => zaehle(e, "awaits"),
-            StmtArt::Exchange(_) => e.unzugeordnet.push("exchange".into()),
+            // **«C4», 2026-08-19.** Nur die VERGLEICHSform senkt ab; `update` bleibt eine
+            // Absage und darf darum auch keine Buchung bekommen -- sonst stuende im Zeugnis
+            // eine Absenkung, die es nicht gibt.
+            StmtArt::Exchange(x) => match &x.form {
+                XForm::Vergleich { .. } => zaehle(e, "exchange (compare)"),
+                XForm::Update { .. } => e.unzugeordnet.push("exchange update".into()),
+            },
             StmtArt::Leave(_) => e.unzugeordnet.push("leave".into()),
             StmtArt::Next(_) => e.unzugeordnet.push("next".into()),
         }

@@ -9970,3 +9970,79 @@ Erzeuger absenkt.
 175 von 175 Mutationen · 175/175 Anker
 26 Weigerungen (war 46), alle C001, keine stille
 ```
+
+---
+
+# «C4» und «C5» ausgeführt — der Tausch, und zwei Löcher waren ein ZWEITES REGISTER (2026-08-19)
+
+**26 Weigerungen → 21.** Dazu die siebzehnte durchgestochene Übersetzungseinheit.
+
+## C4 — und der Korpus trägt nur EINE der beiden Formen an einem Atomic
+
+Der Plan sagte: *„Zwei Anweisungen im Korpus, **beide auf `atomic`**."* **Das stimmt nicht.**
+`beispiele/05` schreibt `z.wert exchange update(v) { … }`, und `z.wert` ist ein Feld eines
+gewöhnlichen `type Zelle = { wert : Zaehlerwert, }` — **kein `atomic`**. Ohne Deklaration
+gibt es keine Ordnung, und eine zu wählen hiesse, sie zu erfinden.
+
+Und der zweite Grund ist unabhängig davon und steht in `SPRACHE.md` selbst (RMW, die dritte
+Form der Paarung):
+
+> *„`atomic_fetch_*`, wenn der `update`-Rumpf einer Grundform entspricht (`t+1`, `t-1`,
+> `t|m`, `t&m`), sonst die **beschränkte** CAS-Schleife — beschränkt, weil sie im Übersetzer
+> als `retry bounded NCORES * K ops on_exceeded contention` emittiert wird: die Sprache
+> emittiert nichts, was sie verbietet."*
+
+Der Rumpf im Korpus **sättigt** (`if v < GRENZE { return v + 1; } return v;`) und ist keine
+Grundform. Also die Schleife — und deren Schranke braucht `NCORES`, **dieselbe unentschiedene
+Grösse wie `accumulates` ohne `per cpu N`**, dazu einen `on_exceeded`-Namen, den niemand
+nennt. *`update` bleibt `C001` mit zwei Gründen statt keinem.*
+
+Die **Vergleichsform** senkt ab: `atomic_compare_exchange_strong_explicit` mit der
+deklarierten Ordnung. `beispiele/35-tausch.gab` sticht durch — und die ehrliche Zeile steht
+in der Datei: *eine Ordnung ist an einem Faden nicht messbar.* Der Differenztest misst die
+**Logik** des Tausches; dass die Ordnung die deklarierte ist, hält eine Probe im Rechenwerk
+und eine Mutation daneben (`tausch-nimmt-die-vorgabeordnung`).
+
+## C5 — und zwei der fünf Stücke waren gar keine Bauarbeit
+
+| war | ist |
+|---|---|
+| `const OBERGRENZE : u64 = u64::max` → `C001` | **`umgebung.rs` kannte die Zahl seit jeher.** Der Erzeuger hatte daneben seinen eigenen, schwächeren Auswerter (`konst_zahl`, nur Literale) — *zwei Register über derselben Sache, und das schwächere hat entschieden* (W7) |
+| `if (s->len >= 0 && …)` im erzeugten C | **`-Wtype-limits` hätte es gesagt.** Der Erzeuger kannte nur BASISNAMEN als vorzeichenlos, nicht Felder; `s.len : u32 in 0 .. KAP` steht in der Deklaration |
+
+Dazu drei Stücke echtes Handwerk: ein Feldtyp, der ein **Feld** ist (`bytes : [u8; KAP]` →
+`uint8_t bytes[KAP];` — die Länge steht in C hinter dem Namen), ein `let` ohne erklärten Typ,
+der ihn von den **Parametern** abliest, und der **Gerätegriff** (`beispiele/09`: *„die
+Parameterliste der Deklaration IST der Konstruktor"*).
+
+*Die Parameterkarte ist konservativ wie `geraetezeiger`: ein Name, der zweimal verschieden
+erklärt ist, fällt heraus — dann weigert sich der Erzeuger, statt eine der beiden Erklärungen
+zu wählen.*
+
+## Der Stand, und was die 21 wirklich sind
+
+```
+Beispiele 35, absenkend 23, 17 Einheiten durchgestochen, 21 Weigerungen
+```
+
+| Ursache | Zahl | Art |
+|---|---:|---|
+| `entry` / `boot` / `entrust` | 5 | **Axiomschicht** — ausdrücklich nicht angefasst (`asm`) |
+| `descendants of` / `ancestors of` | 3 | ENTSCHEIDUNG (Grammatik nennt keine Kante) |
+| `let … else (e)` | 2 | ENTSCHEIDUNG (Fehlerrückgabe-Konvention) |
+| `accumulates` ohne `per cpu N` | 2 | ENTSCHEIDUNG (Kernzahl) |
+| `format`-Feld `bool @0` | 2 | Bauarbeit, offen |
+| `walk` | 1 | Bauarbeit, offen |
+| `static mut … : [T; N] = 0` | 1 | ENTSCHEIDUNG (`= 0` heisst „alle"?) |
+| `exchange update` | 1 | ENTSCHEIDUNG (`NCORES`, s. o.) |
+| `parameter type` (`Angemeldet`) | 1 | Bauarbeit, offen |
+| **gezogene Linien** | **3** | bleiben `C001` |
+
+**Sechzehn der einundzwanzig sind benannt** — Axiomschicht, Entscheidung oder gezogene Linie.
+Fünf sind Bauarbeit, und jede hat eine Adresse.
+
+```
+166 Kennungen · 172 Gifte · 137 Tests · 35 Beispiele sauber · 17 Einheiten durchgestochen
+180 von 180 Mutationen · 180/180 Anker
+21 Weigerungen (war 46), alle C001, keine stille
+```

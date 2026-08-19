@@ -1842,3 +1842,114 @@ impl fn lies(i : index into K) -> u32 effects { reads K.slots } costs <= 4 ops
     // Und der Parameter, den nur der Lesebereich liest, gilt nicht als tot.
     assert!(!c.contains("(void)i;"), "`i` wird im `observes` gelesen:\n{c}");
 }
+
+/// **«C4»: der Tausch, und die ORDNUNG ist die Falle.**
+///
+/// Ein `=` auf einem `_Atomic` bedeutet in C `seq_cst` -- *eine andere und teurere Ordnung
+/// als die, die dasteht.* Ein Differenztest kann das an einem Faden nicht zeigen; diese
+/// Probe zeigt es am erzeugten Text, und eine Mutation daneben beschaedigt sie.
+///
+/// **Und `update` bleibt eine Absage mit zwei Gruenden:** der Platz im Korpus ist gar kein
+/// `atomic`, und selbst an einem waere die Absenkung ohne `NCORES` eine unbeschraenkte
+/// CAS-Schleife -- *die Sprache emittiert nichts, was sie verbietet.*
+#[test]
+fn compare_exchange_nimmt_die_deklarierte_ordnung() {
+    let q = "module t {
+const NIEMAND : u32 = 0;
+atomic B : u32 release;
+impl fn nimm(f : u32) -> bool requires f > 0
+    effects { writes B, publishes B } costs <= 16 ops
+{ let g = B exchange f when old(B) == NIEMAND returns erfolg publishes nothing; return g; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    assert!(c.contains("atomic_compare_exchange_strong_explicit"), "{c}");
+    // **Die DEKLARIERTE Ordnung, nicht die Vorgabe.**
+    assert!(c.contains("memory_order_release, memory_order_acquire"), "{c}");
+    assert!(!c.contains("memory_order_seq_cst"), "ein `=` waere seq_cst:\n{c}");
+    // Der erwartete Wert steht in einer eigenen Zelle -- C schreibt bei Misserfolg hinein.
+    assert!(c.contains("uint32_t _cx1 = (uint32_t)(NIEMAND);"), "{c}");
+    // Und der Parameter, den nur der Tausch liest, gilt nicht als tot.
+    assert!(!c.contains("(void)f;"), "`f` ist der neue Wert:\n{c}");
+
+    // **`update` bleibt `C001`, und die Absage nennt ihren Grund.**
+    let u = "module t {
+atomic Z : u64 relaxed;
+impl fn hoch() -> u64 effects { writes Z } costs <= 12 ops
+{ let alt = Z exchange update(v) { return v + 1; } publishes nothing; return alt; } }";
+    let (b2, mut a2) = gabbro_syntax::lies("p.gab", u);
+    let _ = gabbro_check::emit::emittiere(&b2, &mut a2);
+    assert!(
+        a2.absagen.iter().any(|x| x.code == "C001" && x.text.contains("BOUNDED CAS loop")),
+        "die Schranke braucht `NCORES`: {:?}",
+        a2.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
+    );
+}
+
+/// **«C5»: der Kleinkram, und zwei Stuecke davon waren KEINE Bauarbeit, sondern ein zweites
+/// Register.**
+///
+/// `u64::max` war in `umgebung.rs` seit jeher eine Zahl; der Erzeuger hatte daneben seinen
+/// eigenen, schwaecheren Auswerter und weigerte sich. *Zwei Register ueber derselben Sache,
+/// und das schwaechere hat entschieden* (W7). Dasselbe eine Zeile weiter: `s.len >= 0` stand
+/// im C, weil der Erzeuger nur BASISNAMEN als vorzeichenlos kannte, nicht Felder.
+#[test]
+fn kleinkram_const_feld_und_geraetegriff() {
+    let q = "module t {
+const KAP : u32 = 64;
+const OBEN : u64 = u64::max;
+type Text = { bytes : [u8; KAP], len : u32 in 0 .. KAP, };
+impl fn anhaengen(s : ptr<normal, rw> Text, w : u8) -> bool
+    effects { reads s, writes s } costs <= 12 ops
+{ narrow s.len to 0 ..< KAP else { return false; } s.bytes[s.len] = w; s.len += 1; return true; }
+impl fn diff(a : u32 in 0 .. 100, b : u32 in 0 .. 100) -> u32
+    requires a >= b
+    effects { pure } costs <= 8 ops
+{ let d = a - b; return d; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    // `u64::max` ist eine Zahl -- und zwar die, die `umgebung.rs` schon kannte.
+    assert!(c.contains("#define OBEN 18446744073709551615u"), "{c}");
+    // Ein Feldtyp, der ein FELD ist: die Laenge steht in C hinter dem Namen.
+    assert!(c.contains("uint8_t bytes[KAP];"), "{c}");
+    // **Die untere Pruefung faellt weg, weil das FELD nachweislich vorzeichenlos ist.**
+    assert!(c.contains("if (!(s->len < KAP))"), "{c}");
+    assert!(!c.contains("s->len >= 0"), "`>= 0` auf `uint32_t` ist immer wahr:\n{c}");
+    // Und ein `let` ohne erklaerten Typ liest ihn von den Parametern ab.
+    assert!(c.contains("uint32_t d = a - b;"), "der Typ wird abgelesen:\n{c}");
+
+    // **Und die Karte ist KONSERVATIV: ein Name, der zweimal verschieden erklaert ist,
+    // faellt heraus** -- dann weigert sich der Erzeuger, statt eine der beiden Erklaerungen
+    // zu waehlen. *Unwissen faellt nach lautstark, wie bei `geraetezeiger`.*
+    let zwei = "module t {
+impl fn eins(b : u8) -> u8 effects { pure } costs <= 4 ops { return b; }
+impl fn zwei(a : u32, b : u32) -> u32 effects { pure } costs <= 8 ops
+{ let d = a | b; return d; } }";
+    let (b3, mut a3) = gabbro_syntax::lies("p.gab", zwei);
+    let _ = gabbro_check::emit::emittiere(&b3, &mut a3);
+    assert!(
+        a3.absagen.iter().any(|x| x.code == "C001" && x.text.contains("`let` without")),
+        "ein zweimal erklaerter Name traegt keinen Typ mehr: {:?}",
+        a3.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
+    );
+}
+
+/// **Und der Geraetegriff: die Parameterliste der Deklaration IST der Konstruktor.**
+#[test]
+fn geraetegriff_ist_ein_zusammengesetztes_literal() {
+    let q = "module t {
+opaque type Pa = u64;
+device V(basis : Pa) at mmio { reg R : u32 @0x10 class rw }
+impl fn setze(p : Pa) effects { writes v.R } costs <= 8 ops
+{ let v = V(p); v.R = 1; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+    assert!(c.contains("V v = (V){ (volatile uint8_t *)(uintptr_t)p };"), "{c}");
+}

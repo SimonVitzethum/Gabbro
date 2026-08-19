@@ -764,7 +764,40 @@ lauf "beispiel31" "$W/beispiele/31-rcu.gab" "$TREIBER31" "55 0 0 0 1" \
      's/^        BACCT_lese_ende();$//' \
      "1 assumptions, 2 templates (1 of them UNPROVED), 4 direct forms, 2 foreign bodies (0 state their duty)"
 
-echo "== EMISSION: ALL PASS -- 16 Uebersetzungseinheiten durchgestochen =="
+# -- 16. «C4»: der Tausch, und die ORDNUNG ist die Falle --------------------------------
+#
+# Ein compare-exchange ist `publishes` und `awaits` in EINEM Befehl. Die Absenkung ist
+# `atomic_compare_exchange_strong_explicit` mit der **deklarierten** Ordnung -- und genau hier
+# hat dieser Erzeuger schon einmal geschummelt: der Mutationskatalog fuehrt
+# `veroeffentlichung-nimmt-die-vorgabeordnung`, weil ein `=` auf einem `_Atomic` in C
+# `seq_cst` bedeutet.
+#
+# **Was dieser Lauf NICHT zeigen kann, steht hier, damit es niemand hineinliest:** eine
+# Ordnung ist an einem Faden nicht messbar. Der Differenztest misst die LOGIK des Tausches
+# (er gelingt genau dann, wenn der alte Wert der erwartete war); dass die Ordnung die
+# deklarierte ist, haelt eine Probe im Rechenwerk und eine Mutation daneben.
+#
+# *Das Gift setzt den erwarteten Wert auf den neuen. Dann gelingt die Uebernahme nie, und die
+# erste Zahl kippt -- der Vergleich ist die ganze Substanz der Form.*
+TREIBER35='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    int a = besitz_nehmen(7);      /* frei -> gelingt   */
+    int b = besitz_nehmen(9);      /* belegt -> scheitert */
+    int c = besitz_geben(9);       /* nicht seiner -> scheitert */
+    int d = besitz_geben(7);       /* seiner -> gelingt */
+    printf("%d %d %d %d %u\n", a, b, c, d,
+           (unsigned)atomic_load_explicit(&BESITZER, memory_order_acquire));
+    return 0;
+}
+'
+#    Erwartet:  1 0 0 1  -- der Tausch gelingt genau dann, wenn der ALTE Wert der erwartete war
+#                    0   -- und am Ende ist der Platz wieder frei
+lauf "beispiel35" "$W/beispiele/35-tausch.gab" "$TREIBER35" "1 0 0 1 0" \
+     's/uint32_t _cx1 = (uint32_t)(NIEMAND);/uint32_t _cx1 = (uint32_t)(f);/' \
+     "0 assumptions, 0 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty)"
+
+echo "== EMISSION: ALL PASS -- 17 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser sechzehn Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Sechzehn Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser siebzehn Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Siebzehn Ja-Aussagen sind keine ueber die Sprache."

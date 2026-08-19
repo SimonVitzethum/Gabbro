@@ -1,0 +1,50 @@
+-- 35 -- `exchange`: der Tausch, und die ORDNUNG ist die Falle («C4»).
+--
+-- RMW ist die dritte Form der Paarung: `publishes` sitzt am Speichern, `awaits` am Laden --
+-- ein compare-exchange ist **beides in einem Befehl**. Die Absenkung ist
+-- `atomic_compare_exchange_strong_explicit`, und die Ordnung darin ist die **deklarierte**.
+--
+-- **Genau hier hat dieser Erzeuger schon einmal geschummelt.** Der Mutationskatalog fuehrt
+-- `veroeffentlichung-nimmt-die-vorgabeordnung` und `laden-nimmt-die-speicherordnung`, weil ein
+-- `=` auf einem `_Atomic` in C `seq_cst` bedeutet -- *eine andere und teurere Ordnung als die,
+-- die dasteht.* Ein Erzeuger, der die deklarierte Ordnung durch eine staerkere ersetzt, ist
+-- nicht auf der sicheren Seite: er erzeugt ein Programm, das die Quelle nicht sagt.
+--
+-- **Was hier NICHT steht, ist die andere Form.** `exchange update(v) { … }` bleibt `C001`,
+-- und der Grund steht in `SPRACHE.md` selbst: die Absenkung ist `atomic_fetch_*` fuer eine
+-- Grundform (`t+1`, `t-1`, `t|m`, `t&m`) und *sonst die **beschraenkte** CAS-Schleife,
+-- „emittiert als `retry bounded NCORES * K ops on_exceeded contention`"*. `NCORES` ist
+-- dieselbe unentschiedene Groesse wie bei `accumulates` ohne `per cpu N`, und den Ausgang
+-- nennt niemand. *Die Sprache emittiert nichts, was sie verbietet.*
+
+module beispiel::tausch {
+
+const NIEMAND : u32 = 0;
+
+-- Die Deklaration nennt die SPEICHERSEITE. Ein compare-exchange bekommt daraus beide
+-- Ordnungen: `release` fuer den gelungenen Tausch, `acquire` fuer das blosse Laden.
+atomic BESITZER : u32 release;
+
+-- Die Uebernahme. `when old(BESITZER) == NIEMAND` ist der erwartete Wert -- genau ein
+-- Vergleich, und das ist der Unterschied zur Schleife.
+impl fn besitz_nehmen(f : u32) -> bool
+    requires f > 0
+    effects { writes BESITZER, publishes BESITZER }
+    costs   <= 16 ops
+{
+    let genommen = BESITZER exchange f when old(BESITZER) == NIEMAND returns erfolg
+        publishes nothing;
+    return genommen;
+}
+
+-- Und die Rueckgabe, damit die Probe zweimal laufen kann.
+impl fn besitz_geben(f : u32) -> bool
+    effects { writes BESITZER, publishes BESITZER }
+    costs   <= 16 ops
+{
+    let gegeben = BESITZER exchange NIEMAND when old(BESITZER) == f returns erfolg
+        publishes nothing;
+    return gegeben;
+}
+
+}

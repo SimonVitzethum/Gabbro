@@ -556,10 +556,12 @@ as a record of what the closure cost; the details are in
 
 ### «C» — vollständige Absenkung nach C, geplant 2026-08-19 ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
-*Stand 2026-08-19, nach C1/C2/C3a/C3c: **20 von 34 Beispielen senken ab, 15 Einheiten
-stechen bis zum ausgeführten Ergebnis durch, 28 Weigerungen** — alle `C001`, keine stille.
-(Ausgang: 17 von 33, 12 Einheiten, 46 Weigerungen.) Die Zielaussage ist nicht „0
-Weigerungen", sondern **„3 Weigerungen, und jede ist eine Linie mit einem Satz Begründung".***
+*Stand 2026-08-19, nach C1/C2/C3a/C3b/C3c/C4/C5: **23 von 35 Beispielen senken ab, 17
+Einheiten stechen bis zum ausgeführten Ergebnis durch, 21 Weigerungen** — alle `C001`, keine
+stille. (Ausgang: 17 von 33, 12 Einheiten, 46 Weigerungen.) **Sechzehn der 21 sind benannt**
+— Axiomschicht (5), Entscheidung (8), gezogene Linie (3); **fünf sind Bauarbeit**, und jede
+hat eine Adresse. Die Zielaussage ist nicht „0 Weigerungen", sondern **„3 Weigerungen, und
+jede ist eine Linie mit einem Satz Begründung".***
 
 - [ ] **Die ENTSCHEIDUNG, die C3a erzwang und die NICHT getroffen wurde: die
       Fehlerrückgabe-Konvention.** `let x = f() else (e) { … }` steht in der Grammatik
@@ -576,19 +578,29 @@ Weigerungen", sondern **„3 Weigerungen, und jede ist eine Linie mit einem Satz
       `observes` nach) und `walk`** (braucht die Schrittfunktion aus `levels`/`node`/`down`).
       **`entry`, `boot` und `entrust` senken in die AXIOMSCHICHT ab** — eine IDT-Zeile tut,
       was sie tut, und das ist ein Axiom der Klasse `A10`. *Gezählt, nicht versteckt.*
-- [ ] **C4 — `exchange`, beide Formen, mit der DEKLARIERTEN Ordnung.** Genau hier hat der
-      Erzeuger schon einmal geschummelt: `veroeffentlichung-nimmt-die-vorgabeordnung` und
-      `laden-nimmt-die-speicherordnung` stehen im Mutationskatalog, weil ein `=` statt der
-      Ordnung `seq_cst` bedeutet — *und das erzeugte Programm dann etwas anderes sagt als die
-      Quelle.*
-- [ ] **C5 — drei Entscheidungen, die keine Bauarbeit sind.** `descendants of` nennt seine
-      KANTE nicht (vier Kandidaten in `CapSpace`, und `chain(a, b) in` zeigt, dass die
-      Grammatik eine Kante benennen KANN — eine Asymmetrie der Grammatik, kein fehlender
-      Erzeugercode); `accumulates` ohne `per cpu N` (ein Vorgabewert für die Kernzahl ist
-      **eine Annahme über die Maschine** und gehört dann ins Zeugnis); `= 0` für ein ganzes
-      Feld heisst zu entscheiden, dass `0` hier „alle" meint.
+- [ ] **C4, offene Hälfte — `exchange update(v) { … }`, und der Plan hatte eine falsche
+      Prämisse.** *„Zwei Anweisungen im Korpus, beide auf `atomic`"* stimmt nicht: `z.wert`
+      in `beispiele/05` ist ein Feld eines gewöhnlichen `type`, also **kein `atomic`** — ohne
+      Deklaration gibt es keine Ordnung. Und unabhängig davon sagt `SPRACHE.md` die
+      Absenkung selbst: `atomic_fetch_*` für eine Grundform (`t+1`, `t-1`, `t|m`, `t&m`),
+      *sonst die **beschränkte** CAS-Schleife, „emittiert als `retry bounded NCORES * K ops
+      on_exceeded contention`"*. Der Rumpf im Korpus sättigt und ist keine Grundform; die
+      Schranke braucht `NCORES` — **dieselbe unentschiedene Grösse wie `accumulates` ohne
+      `per cpu N`** — und den Ausgang nennt niemand. *Die Vergleichsform senkt seit dem
+      2026-08-19 ab.*
+- [ ] **C5 — die drei Entscheidungen stehen weiter offen, der Kleinkram ist zu.**
+      `descendants of` nennt seine KANTE nicht (vier Kandidaten in `CapSpace`, und
+      `chain(a, b) in` zeigt, dass die Grammatik eine Kante benennen KANN — eine Asymmetrie
+      der Grammatik, kein fehlender Erzeugercode); `accumulates` ohne `per cpu N` (ein
+      Vorgabewert für die Kernzahl ist **eine Annahme über die Maschine** und gehört dann ins
+      Zeugnis); `static mut kernlast : [Zaehler; 64] = 0` — `= {0}` hinzuschreiben heisst zu
+      entscheiden, dass `0` hier „alle" meint. **Keine der drei wurde getroffen.**
+- [ ] **Und der Rest an Bauarbeit, benannt** *(2026-08-19)*: ein `format`-Feld `bool @0` (2
+      Fundstellen — welches WORT trägt die Bitlage, wenn der Typ keine Breite nennt?), `walk`
+      (die Schrittfunktion aus `levels`/`node`/`down`) und ein Parametertyp `Angemeldet` in
+      `beispiele/04`.
 - [ ] **Die Sprechprobe muss MITWACHSEN: je Stufe eine weitere durchgestochene Einheit.**
-      Heute fünfzehn (war zwölf). Erzeugen → `cc -Werror` → **ausführen** → vergleichen → verfälschtes C
+      Heute siebzehn (war zwölf). Erzeugen → `cc -Werror` → **ausführen** → vergleichen → verfälschtes C
       muss fallen. Dazu je Stufe eine Mutation: die Emissionsfläche stand am 2026-08-17 bei
       **0** Mutationen, *und was 0 Mutationen hat, ist nicht gedeckt, sondern
       unbeschädigbar.*

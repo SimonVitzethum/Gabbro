@@ -1038,7 +1038,7 @@ MUTATIONEN = [
     Mutation(
         "untere-schranke-faellt-immer-weg",
         "emit.rs",
-        "            let bedingung = if untere_ist_null && vorzeichenlos.contains(&n.ort.basis.text) {",
+        "            let bedingung = if untere_ist_null && vorzeichenlos {",
         "            let bedingung = if untere_ist_null {",
         "C-Absenkung -- die untere `narrow`-Pruefung faellt auch fuer vorzeichenbehaftete Werte weg",
         "code",
@@ -1181,6 +1181,54 @@ MUTATIONEN = [
         "        Some(TypExpr::Index { tabelle, .. }) => Some(tabelle.text),",
         "C-Absenkung -- ein `index into T` gilt als Option, und `= None` schreibt in ein Feld, "
         "das keinen Sonderwert hat",
+        "code",
+    ),
+    # -- emit.rs: «C4»/«C5» -- der Tausch, das `const`, das Feld, der Griff ---------------
+    #
+    # Die erste ist die, gegen die der Katalog schon zwei Eintraege fuehrt: ein `=` auf einem
+    # `_Atomic` ist in C `seq_cst`, also eine ANDERE Ordnung als die deklarierte. *Ein
+    # Differenztest kann das an einem Faden nicht zeigen -- diese Mutation kann es.*
+    Mutation(
+        "tausch-nimmt-die-vorgabeordnung",
+        "emit.rs",
+        "{e}        &{ziel}, &{h}, ({typ})({}), {speichern}, {laden});\\n{e}}}\\n",
+        "{e}        &{ziel}, &{h}, ({typ})({}), memory_order_seq_cst, memory_order_seq_cst);"
+        "\\n{e}}}\\n",
+        "C-Absenkung -- der Tausch nimmt seq_cst statt der deklarierten Ordnung",
+        "code",
+    ),
+    Mutation(
+        "tausch-ohne-erwarteten-wert",
+        "emit.rs",
+        '{e}bool {};\\n{e}{{\\n{e}    {typ} {h} = ({typ})({erwartet});\\n',
+        '{e}bool {};\\n{e}{{\\n{e}    {typ} {h} = ({typ})0;\\n',
+        "C-Absenkung -- der erwartete Wert der `when`-Bedingung faellt weg; der Tausch "
+        "vergleicht gegen null",
+        "code",
+    ),
+    Mutation(
+        "const-nimmt-wieder-den-schwachen-auswerter",
+        "emit.rs",
+        "            } else if let Some(n) = namen.konstwert.get(&k.name.text) {",
+        "            } else if let Some(n) = None::<&i128> {",
+        "C-Absenkung -- `u64::max` faellt wieder auf den schwaecheren der zwei Auswerter "
+        "zurueck (W7)",
+        "code",
+    ),
+    Mutation(
+        "feldlaenge-wird-geraten",
+        "emit.rs",
+        '            aus.push_str(&format!("    {el} {}[{n}];\\n", f.name.text));',
+        '            aus.push_str(&format!("    {el} {}[1];\\n", f.name.text));',
+        "C-Absenkung -- die Laenge eines Feldtyps wird geraten statt abgelesen",
+        "code",
+    ),
+    Mutation(
+        "geraetegriff-ohne-basis",
+        "emit.rs",
+        '            "({name}){{ (volatile uint8_t *)(uintptr_t){} }}",',
+        '            "({name}){{ (volatile uint8_t *)(uintptr_t)0*{} }}",',
+        "C-Absenkung -- der Geraetegriff zeigt auf null statt auf seine erklaerte Basis",
         "code",
     ),
     # -- emit.rs: «C3b» -- RCU, und der Unterschied zur Sperre ist das, was FEHLT ----------
