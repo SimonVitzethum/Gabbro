@@ -807,9 +807,29 @@ NOTATIONSLUECKEN -- nicht eine ist ein Handbeweis.** Was daraus offen bleibt:
       es keine solche Zeile. *Ein Erzeuger, der `einfuegen` ausliefert, muesste sie
       herstellen oder verlangen.*
 
+- [ ] **«P6» heisst ZWEIERLEI, und beide Register sind in Gebrauch** *(gefunden 2026-08-19
+      beim Versuch, P6 fertigzubauen)*. `dokumente/SPRACHE.md` fuehrt eine Baureihenfolge
+      P0–P7, `dokumente/PLAN.md` eine zweite P0–P8 — und **ab P1 bedeutet jedes Etikett etwas
+      anderes**:
+
+      | | SPRACHE.md | PLAN.md |
+      |---|---|---|
+      | P5 | C emission | axiom layer and entry |
+      | **P6** | **pairing pass + `entry` emission** | **the generated refinement obligation** |
+      | P7 | one Caprock module end to end | race freedom |
+
+      Es sind nicht zwei Namen, sondern **zwei Fassungen EINES Plans**: beide fangen mit
+      Papier an und enden beim Strangler-Muster, PLAN.md hat eine Stufe mehr, und ab P1
+      verschiebt sich alles. `pflichten.rs`, `TODO.md` und PLAN.md folgen der einen,
+      `SPRACHE.md` und `pruefe-todo.py` der anderen. *Der Waechter gegen Etiketten-
+      Zweitvergabe sah nur TODO.md-Ueberschriften und deshalb die groesste Zweitvergabe des
+      Ordners nicht* — er sieht seit heute PLAN.md mit, und die neun Abweichungen sind
+      gebucht. **Welche Reihe gilt, ist ein URTEIL und keine Aufraeumarbeit**: 177 Verweise
+      haengen daran.
 - [ ] **P6 ist EROEFFNET, nicht erledigt** *(2026-08-19)*. `maintains` hat einen Leser
-      (`M112`-`M114`), und `gabbro pflichten` zaehlt die erzeugten Pflichten: **17 ueber 31
-      Beispiele, davon 7 fremd.** *Was fehlt, ist die zweite Haelfte:* die Pflicht muss in
+      (`M112`-`M114`), und `gabbro pflichten` zaehlt die erzeugten Pflichten: **18 ueber 33
+      Beispiele** (nachgemessen 2026-08-19; `gabbro pflichten` OHNE Datei druckt „no file
+      named" und keine Null -- *wer den Aufruf fuer die Messung haelt, liest 0 statt 18*). *Was fehlt, ist die zweite Haelfte:* die Pflicht muss in
       einer Form dastehen, die ein Beweiser lesen kann -- heute ist sie eine Zeile im
       Bericht. **Und die K/A/W-Einordnung bleibt Handarbeit**, ausdruecklich: ein Werkzeug,
       das sie raet, waere die stille Antwort, gegen die dieser Ordner sonst schreibt.

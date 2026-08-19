@@ -9636,3 +9636,89 @@ dritte Zustand wie bei `E009`: **`S007`**, weder abgesagt noch bestätigt, aber 
 158 von 159 Mutationen gefangen · 159/159 Anker · 13/13 Luecken zu
 13 Waechter gruen -- und `pruefe-luecken` hat seit heute ueberhaupt einen Rueckgabewert
 ```
+
+## 2026-08-19, dritter Teil — die fünf kleinen Punkte, und einer davon war eine falsche Zahl
+
+### Eine Ungleichheit am Bereichsrand verengt
+
+Der häufigste Wachtposten der Sprache kam nicht durch:
+
+```gabbro
+if n == 0 { return 0; }
+return n - 1;              -- M104: verlässt die Breite
+```
+
+*Die Negation floss längst durch* — `if n < 1 { return 0; }` war sauber. Was fehlte, war der
+Schritt von `n != 0` auf `n >= 1`, und `BinOp::Ungleich` stand im `_`-Zweig von
+`bereichsfakt`.
+
+Der Schritt geht **nur an einem Rand**: ein Loch in der Mitte eines Intervalls ist kein
+Intervall, und wer aus `n != 5` auf `0 .. 10` ein `6 .. 10` macht, verwirft die Hälfte der
+Wirklichkeit. *Das wäre nicht grob, sondern falsch.* Deshalb steht dort eine
+Fallunterscheidung und keine Verallgemeinerung — mit Giftprobe für die Gegenrichtung (167)
+und **zwei** Mutationen, eine je Richtung.
+
+`beispiele/33` stand mit `if n >= 1 { … }` da. **Die Umschreibung war die Spur der Lücke.**
+
+### Eine Klammer ist keine Rechnung
+
+`schreibt(q)` war sauber, `schreibt((q))` gab `E009` — *„an argument … is not a place"* an
+einer Stelle, an der nichts unklar ist. Weiter geht es nicht, und das ist **keine Lücke**: ein
+Argument wie `f(g(x))` ist ein Wert, kein Ort; beim Rufer gibt es nichts, worauf `writes
+p.slots` abgebildet werden könnte. *`E009` ist dort die Antwort, nicht ein Notbehelf.*
+
+### Der letzte Überlebende des Mutationskatalogs
+
+`K005 — negativer-faktor-gilt-als-schranke` überlebte seit dem 2026-08-14. Nicht weil die
+Regel fehlte — sie stand da —, sondern weil **keine einzige Probe je einen negativen Faktor
+hinschrieb.** W13 eine Ebene weiter: Berührung ist keine Prüfung, und Nichtberührung erst
+recht keine. **162 von 162.**
+
+### `pub` war Zierde
+
+`Umgebung::kandidaten_oeffentlich` trug das Wort im Namen und reichte an `kandidaten` durch,
+**ohne das Flag je anzusehen**:
+
+```gabbro
+module a { impl fn heimlich() … }        -- kein `pub`
+module b { use a::heimlich; … }          -- 0 Fehler
+```
+
+Sieben Deklarationsarten tragen `oeffentlich`, und keine Stelle las es. Das ist mehr als eine
+tote Klausel: **`D004`, die Wand um einen `opaque type`, begründet sich ausdrücklich mit
+*„die Tür ist die MODULGRENZE"*.** Eine Grenze, die niemand prüft, ist keine.
+
+`N025` meldet an der Bezugsstelle; die Funktion heisst jetzt `kandidaten_aufloesbar`. *Ein
+Name, der eine Prüfung verspricht und an eine durchreicht, die sie nicht tut, ist schlimmer
+als gar keiner: er beruhigt jeden Leser.*
+
+**Sechster Korpusbefund**: `beispiele/29` erklärt `opaque type Pa` ohne `pub` und benutzt es
+im Nachbarmodul. Das Beispiel *lebt* von der Grenze, und die Zeile, die sie öffnet, fehlte.
+
+### Und der fünfte Punkt war eine falsche Zahl von mir
+
+Ich hatte berichtet, `gabbro pflichten` melde **0** Pflichten über den Korpus. Es sind **18**.
+Der Fehler war der Aufruf: `gabbro pflichten` ohne Datei druckt *„no file named"* — und wer
+das für die Messung hält, liest eine Null, die nie dastand.
+
+Beim Fertigbauen der zweiten Hälfte von P6 kam heraus, dass **«P6» zweierlei heisst**:
+
+| | `SPRACHE.md` | `PLAN.md` |
+|---|---|---|
+| P5 | C emission | axiom layer and entry |
+| **P6** | **pairing pass + `entry` emission** | **the generated refinement obligation** |
+| P7 | one Caprock module end to end | race freedom |
+
+Es sind nicht zwei Namen, sondern **zwei Fassungen eines Plans**: beide fangen mit Papier an,
+beide enden beim Strangler-Muster, PLAN.md hat eine Stufe mehr — und ab P1 verschiebt sich
+alles. Der Wächter gegen Etiketten-Zweitvergabe hielt nur `TODO.md`-Überschriften gegen den
+Prüferplan und sah deshalb **die grösste Zweitvergabe des Ordners nicht.** Er sieht seit heute
+`PLAN.md` mit; die neun Abweichungen sind gebucht, eine zehnte fällt.
+
+> Welche Reihe gilt, ist ein **Urteil** und keine Aufräumarbeit: 177 Verweise hängen daran.
+
+```
+166 Kennungen · 169 Gifte · 128 Tests · 33 Beispiele sauber
+162 von 162 Mutationen · 162/162 Anker · 13/13 Luecken · 13 Waechter gruen
+Klauseln 22 gebucht (war 23), UNGELESEN 16 -> 15
+```

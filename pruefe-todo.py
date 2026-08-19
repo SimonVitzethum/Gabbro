@@ -38,6 +38,63 @@ PRUEFERPLAN = {
     "P7": "one Caprock module end-to-end",
 }
 
+# **Und PLAN.md fuehrt DIESELBEN Etiketten mit anderem Inhalt** (gefunden 2026-08-19).
+#
+# Der Waechter hielt bis heute nur TODO.md-Ueberschriften gegen `PRUEFERPLAN` -- und sah
+# deshalb nicht, dass die groesste Zweitvergabe im Ordner in `dokumente/PLAN.md` steht: eine
+# vollstaendige zweite P-Reihe, P0 bis P8, die von P1 an etwas anderes bedeutet.
+#
+#   SPRACHE.md  P6  Paarungspass + `entry`-Emission
+#   PLAN.md     P6  `spec fn`/`impl fn` und die erzeugte Verfeinerungspflicht
+#
+# Beide sind Baureihenfolgen derselben Sache -- PLAN.md hat eine Stufe mehr, und ab P1
+# verschiebt sich alles. **Das ist keine Namenskollision, sondern zwei Fassungen EINES Plans,
+# die auseinandergelaufen sind**, und `pflichten.rs`, `TODO.md` und PLAN.md folgen der einen,
+# `SPRACHE.md` und dieser Waechter der anderen.
+#
+# *Welche gilt, ist ein Urteil und steht nicht hier.* Gebucht ist der Stand; eine NEUE
+# Abweichung faellt.
+PLAN_ABWEICHUNG_GEBUCHT = {
+    # P0 heisst in beiden "Papier zuerst" und ist die EINZIGE Stufe, die sich noch deckt --
+    # der Wortlaut steht trotzdem hier, denn gebucht wird der Stand, nicht die Absicht.
+    "P0": "Paper. Three questions, each can kill the thesis",
+    "P1": "`check` as a Rust macro library, without a language",
+    "P2": "The core as a CHECKER, without code generation",
+    "P3": "Lowering to C, syntax-directed",
+    "P4": "M3 and `device`",
+    "P5": "Axiom layer and entry",
+    "P6": "`spec fn` / `impl fn` and the generated refinement obligation",
+    "P7": "Race freedom",
+    "P8": "Migration by the strangler pattern",
+}
+
+
+def plan_etiketten():
+    """**Die zweite P-Reihe, gegen die gebuchte Abweichung.** Zwei Wege, ein Waechter.
+
+    Neu abgewichen  -> FEHLER: eine dritte Bedeutung fuer dasselbe Etikett.
+    Angeglichen     -> FEHLER: der Eintrag ist gestiegen und gehoert geloescht (Sperrklinke).
+    """
+    text = (WURZEL / "dokumente" / "PLAN.md").read_text()
+    heute = {}
+    for z in text.splitlines():
+        m = re.match(r"^## (P\d) — (.+)$", z)
+        if m:
+            heute[m.group(1)] = m.group(2).strip()
+    befunde = []
+    for et, titel in sorted(heute.items()):
+        gebucht = PLAN_ABWEICHUNG_GEBUCHT.get(et)
+        if gebucht is None:
+            if et in PRUEFERPLAN:
+                befunde.append(f"PLAN.md '{et} — {titel[:44]}' weicht NEU vom Prueferplan ab")
+            continue
+        if titel != gebucht:
+            befunde.append(f"PLAN.md '{et}' hat sich geaendert: gebucht war '{gebucht[:44]}'")
+    for et, gebucht in sorted(PLAN_ABWEICHUNG_GEBUCHT.items()):
+        if et not in heute:
+            befunde.append(f"PLAN.md '{et}' ist weg -- gebuchte Abweichung geloest? Eintrag loeschen")
+    return befunde
+
 
 def pruefe(text, zahlen):
     """Gibt die Liste der Befunde. Leer heisst: die Liste stimmt ueber sich selbst."""
@@ -349,6 +406,16 @@ def main():
         return 1
     if "--probe" in sys.argv:
         return 0
+
+    p_befunde = plan_etiketten()
+    print("\n== Die zweite P-Reihe (dokumente/PLAN.md) ==")
+    if p_befunde:
+        for b in p_befunde:
+            print(f"  {b}")
+        print("== PLAN: FEHLER ==")
+        return 1
+    print(f"  {len(PLAN_ABWEICHUNG_GEBUCHT)} gebuchte Abweichungen, keine neue.")
+    print("  Zwei Fassungen EINES Plans -- welche gilt, ist ein Urteil und steht im TODO.")
 
     r_befunde = pruefe_readme()
     print("\n== README.md ==")
