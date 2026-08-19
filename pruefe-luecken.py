@@ -25,7 +25,12 @@ LUECKEN = [
  # `enthaelt_null` ist `min <= 0 && max >= 0`. Wer hier ankommt und `b.min >= 0` hat, hat
  # `b.min > 0` -- waere `b.min == 0`, haette `enthaelt_null` schon zurueckgegeben.
  # *Sie kann nicht gefangen werden, weil sie nichts beschaedigt.*
- (None, "typen.rs", "if a.min >= 0 && b.min > 0 {", "if a.min >= 0 && b.min >= 0 {"),
+ # **Und der Anker war MEHRDEUTIG**: dieselbe Zeile steht in `teile` und in `rest`.
+ # `str.replace(alt, neu, 1)` traf stumm die erste -- gemerkt hat es niemand, weil die
+ # Verdrehung ohnehin wirkungslos ist. *Zwei Fehler, die sich gegenseitig verdeckten.*
+ (None, "typen.rs",
+  "    if a.min >= 0 && b.min > 0 {\n        return ergebnis(breite, vz, a.min / b.max, a.max / b.min);",
+  "    if a.min >= 0 && b.min >= 0 {\n        return ergebnis(breite, vz, a.min / b.max, a.max / b.min);"),
  ("typen.rs", "if a.min < 0 || b.min < 0 {", "if a.min < 0 && b.min < 0 {"),
  ("typen.rs", "if bits >= 127 {", "if bits > 127 {"),
  ("typen.rs", "(1i128 << bits) - 1", "(1i128 << bits) - 2"),
@@ -33,7 +38,10 @@ LUECKEN = [
  # **NULLMUTATION, bewiesen.** `ecken` ist ein Feld FESTER Laenge (`[_; 4]`); `min()`
  # darueber ist nie `None`, also ist das `unwrap_or` toter Code. Verdrehen laesst sich nur
  # der Wert, den niemand nimmt.
- (None, "typen.rs", "let min = ecken.iter().copied().min().unwrap_or(0);", "let min = ecken.iter().copied().min().unwrap_or(1);"),
+ # Auch dieser Anker steht zweimal (`multipliziere` und `teile`) -- mit Umgebung eindeutig.
+ (None, "typen.rs",
+  "    let ecken = [a.min * b.min, a.min * b.max, a.max * b.min, a.max * b.max];\n    let min = ecken.iter().copied().min().unwrap_or(0);",
+  "    let ecken = [a.min * b.min, a.min * b.max, a.max * b.min, a.max * b.max];\n    let min = ecken.iter().copied().min().unwrap_or(1);"),
  ("umgebung.rs", "if z.rsplit(\"::\").next() == Some(kurz) {", "if z.rsplit(\"::\").next() != Some(kurz) {"),
  ("umgebung.rs", "BinOp::Und => i128::from(x != 0 && y != 0),", "BinOp::Und => i128::from(x != 0 || y != 0),"),
  ("umgebung.rs", "BinOp::Oder => i128::from(x != 0 || y != 0),", "BinOp::Oder => i128::from(x != 0 && y != 0),"),
