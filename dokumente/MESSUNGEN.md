@@ -9945,3 +9945,74 @@ Prüfer; über die Geschwindigkeit des Erzeugnisses sagt bis heute **nichts** et
 171 Kennungen · 172 Gifte · 131 Tests · 34 Beispiele · 168 von 168 Mutationen
 21 Schablonen (9 maschinell geprueft) · 13 Theorien gruen · 13 Waechter gruen
 ```
+
+## 2026-08-20 — P5s Tor, zum ersten Mal gemessen: erzeugt gegen Handschrift
+
+**Bis heute gab es diese Zahl nicht.** Der Ordner behauptete über die Geschwindigkeit des
+Erzeugnisses nichts — richtigerweise, denn nichts war gemessen. Jetzt ist etwas gemessen,
+und das Ergebnis ist unbequemer als erhofft.
+
+### Der Aufbau
+
+Zwei Lasten, je **dieselbe Rechnung** auf beiden Seiten, und die **Gleichheit der Ergebnisse
+wird vor der Zeit geprüft** — *zwei verschieden schnelle Rechnungen über verschiedene
+Ergebnisse zu vergleichen ist keine Messung.*
+
+Die Handschrift ist die **idiomatische**: für den IP-Kopf ein gepacktes `struct` über dem
+Puffer mit Bitfeldern und Byteordnungstausch (wie `include/uapi/linux/ip.h`), für die Tabelle
+ein Feld fester Länge — **einschliesslich der fehlenden Schrankenprüfung**, denn die schreibt
+ein C-Programmierer auch nicht hin.
+
+> *Der erste Anlauf am IP-Kopf kopierte jeden Kopf mit `memcpy` und liess Gabbro **3,5-mal
+> schneller** aussehen. Ein Vergleich, den die eigene Seite so gewinnt, ist kein Vergleich,
+> sondern ein Strohmann* (R11).
+
+### Die Zahlen — und sie widersprechen sich
+
+| Last | i7-13650HX, GCC 16.2 | Ryzen 9 9950X, GCC 13.3 |
+|---|---:|---:|
+| **IP-Kopf** (Bitfelder, Byteordnung) | **1,02** | **1,24** |
+| **Tabelle** (4 096 Plätze, undurchsichtiger Index) | **0,97** | **1,00** |
+
+**Eine Maschine ist keine Aussage über die Sprache.** Der IP-Kopf steht auf der einen
+Konfiguration bei zwei Prozent und auf der anderen bei **vierundzwanzig** — und die beiden
+unterscheiden sich in *beidem*, CPU und Übersetzerfassung. **Das ist eine doppelte
+Verwechslung, und sie ist nicht auflösbar, solange nicht dieselbe GCC-Fassung auf beiden
+läuft.**
+
+### Zwei Hypothesen zur Lücke, beide widerlegt
+
+| Vermutung | Probe | Ergebnis |
+|---|---|---|
+| Gabbro liest **byteweise**, die Handschrift lädt und dreht | `gabbro_be16/32` auf `memcpy` + `__builtin_bswap` | **1,243 — unverändert** |
+| Jede Zugriffsfunktion lädt erst die **Hülle** `v->bytes` neu | Zugriff direkt über `const uint8_t *` | **1,243 — unverändert** |
+
+*Die Ursache ist damit nicht gefunden, und das steht hier so.* Zwei benannte Vermutungen,
+zwei Gegenproben, zwei Widerlegungen — mehr sagt diese Messung heute nicht.
+
+### Und was `restrict` + `pure` wirklich bringen
+
+Am Tabellenzugriff, dieselbe Gabbro-Datei, nur die Attribute weggenommen (Arbeitsrechner):
+
+| | Gabbro/Hand |
+|---|---:|
+| mit `restrict` **und** `pure` | **0,97** |
+| nur `restrict` | 1,02 |
+| nur `pure` | 1,03 |
+| keins von beiden | 1,03 |
+
+**Nur zusammen.** Das berichtigt, was ich am 2026-08-19 zu «OPT1» geschrieben habe: dort
+stand *„`restrict` bringt nichts"* — gemessen an einem Mikro-Beispiel mit **einem** Zeiger
+gegen ein `static`. In dieser Last bringen die beiden zusammen etwa **sechs Prozent**, und
+jedes für sich nichts. *Eine Optimierung an der falschen Gestalt gemessen ist eine Zahl über
+die falsche Frage.*
+
+### Was diese Messung NICHT sagt
+
+Sie misst **zwei** Lasten, nicht eine Sprache. Sie läuft auf **zwei** Konfigurationen, die
+sich in zwei Dingen unterscheiden. Und sie sagt nichts über den Kern, für den Gabbro gebaut
+ist — dafür bräuchte es Caprock, und der ist nicht abgesenkt.
+
+> **P5s Tor lautet „erzeugt ≤ Handschrift + Rauschen".** Bei der Tabelle ist es passiert.
+> Beim IP-Kopf auf einer der beiden Maschinen **nicht** — und bis die Ursache benannt ist,
+> gilt das Tor als **nicht bestanden**.

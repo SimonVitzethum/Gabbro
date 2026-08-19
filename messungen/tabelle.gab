@@ -1,0 +1,29 @@
+-- **Die Gabbro-Seite der Vergleichsmessung.** Sie entspricht `hand-tabelle.c` Feld fuer
+-- Feld: dieselbe Platzzahl, dieselben zwei Felder, dieselben zwei Funktionen.
+--
+-- *Was hier NICHT steht, ist eine Schrankenpruefung* -- und sie steht auch im Erzeugnis
+-- nicht. Nicht weil sie wegoptimiert waere, sondern weil `M103` sie zur Uebersetzungszeit
+-- gefuehrt hat: `i : index into Objekte` ist per Typ kleiner als `count`.
+module messung::tabelle {
+
+const N : u32 = 4096;
+
+table Objekte count N {
+    slot { benutzt : bool, zaehler : u32, }
+}
+
+impl fn stand(o : ptr<normal, r> Objekte, i : index into Objekte) -> u32
+    effects { reads o.slots }
+    costs   <= 2 ops
+{
+    return o.slots[i].zaehler;
+}
+
+impl fn belegen(o : ptr<normal, rw> Objekte, i : index into Objekte)
+    effects { writes o.slots }
+    costs   <= 2 ops
+{
+    o.slots[i].benutzt = true;
+}
+
+}
