@@ -639,7 +639,53 @@ lauf "beispiel27" "$W/beispiele/27-freiliste.gab" "$TREIBER27" "0 3 7 1 0" \
      's/#define Halde_NONE (1024)/#define Halde_NONE (0)/' \
      "0 assumptions, 2 templates (1 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty)"
 
-echo "== EMISSION: ALL PASS -- 13 Uebersetzungseinheiten durchgestochen =="
+# -- 13. «C2»: der markierte Wert -- `struct { marke; union }`, und `-Wswitch` liest mit ---
+#
+# Ein `tagged type` war bis zum 2026-08-19 reine Prueferangelegenheit: `D005` verlangt das
+# erschoepfende `match` ohne Sammelzweig, und ABGESENKT wurde er gar nicht. Die Absenkung ist
+# `struct { marke; union { … } }`, und die eine Entscheidung darin ist der Typ der Marke.
+#
+# **Sie wird ein `enum`, damit `switch` OHNE `default` unter `-Wswitch` ein zweiter Leser von
+# `D005` ist** -- derselbe Bau wie `-Wmissing-field-initializers` beim Verbundkonstruktor.
+# Stufe 3 dieses Laufs ist damit nicht nur eine Uebersetzung, sondern eine Pruefung: ein
+# fehlender Fall waere hier ein Fehler, kein stiller Durchfall.
+#
+# *Das Gift vertauscht zwei Glieder der Vereinigung -- dann liest `Kurz` das Wort von `Lang`.
+# Beides sind gueltige Zahlen, und kein C-Typ spricht dagegen: genau die Klasse, gegen die
+# die Marke steht.*
+TREIBER34='#include <stdio.h>
+#include <inttypes.h>
+#include "@ERZEUGT@"
+int main(void) {
+    Nachricht leer = { .marke = Nachricht_Leer, { 0 } };
+    Nachricht kurz = { .marke = Nachricht_Kurz, { .Kurz = 41u } };
+    /* Passt NICHT in 32 Bit -- wer das falsche Glied liest, bekommt 2. */
+    Nachricht lang = { .marke = Nachricht_Lang, { .Lang = 4294967298ull } };
+    Nachricht antw = { .marke = Nachricht_Antwort, { .Antwort = 7u } };
+    static Anfragen a;
+    a.slots[3].was = lang;
+    printf("%" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %u %u %" PRIu64 " %d\n",
+           gewicht(leer), gewicht(kurz), gewicht(lang), gewicht(antw),
+           art_von(leer), art_von(lang),
+           gewicht_im_slot(&a, 3),
+           (int)(sizeof(a.slots) / sizeof(a.slots[0])));
+    return 0;
+}
+'
+#    Erwartet:  0 41 4294967298 7  -- je Variante ihr EIGENES Glied der Vereinigung
+#                          0 2     -- und die Marke allein, ohne die Nutzlast zu lesen
+#                4294967298       -- dasselbe `switch` ueber einem Slotfeld
+#                         8       -- `count NANFRAGEN` traegt das Feld
+#
+# *Das Gift laesst den `Lang`-Zweig das `Kurz`-Glied lesen. Es uebersetzt, es rechnet -- und
+# es liefert 2 statt 4294967298. Genau die Klasse, gegen die eine Marke steht: ohne sie ist
+# jedes Glied so gut wie jedes andere.*
+lauf "beispiel34" "$W/beispiele/34-markierter-wert.gab" "$TREIBER34" \
+     "0 41 4294967298 7 0 2 4294967298 8" \
+     's/= m.last.Lang;/= m.last.Kurz;/' \
+     "0 assumptions, 1 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty)"
+
+echo "== EMISSION: ALL PASS -- 14 Uebersetzungseinheiten durchgestochen =="
 echo "  Und was das NICHT heisst: sechs weitere Fragmente sind ungeprueft, der Erzeuger"
-echo '  deckt genau die Formen dieser dreizehn Dateien, und C001 weigert sich fuer jede'
-echo "  andere. Dreizehn Ja-Aussagen sind keine ueber die Sprache."
+echo '  deckt genau die Formen dieser vierzehn Dateien, und C001 weigert sich fuer jede'
+echo "  andere. Vierzehn Ja-Aussagen sind keine ueber die Sprache."

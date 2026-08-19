@@ -9809,3 +9809,68 @@ nächsten `HashMap` über Namen. Jetzt läuft sie für alle dreizehn Einheiten.
 166 Kennungen · 172 Gifte · 130 Tests · 33 Beispiele sauber · 13 Einheiten durchgestochen
 36 Weigerungen (war 46), alle C001, keine stille
 ```
+
+---
+
+# «C2» ausgeführt — `tagged type` als Wert, und die Marke wird ein `enum` (2026-08-19)
+
+**36 Weigerungen → 31.** Fünf geschlossen: zwei Feldtypen (`ObjektArt` in `beispiele/01` und
+`/09`), ein Parametertyp (`Nachricht` in `/08`) und zwei `match`. Die Absenkung ist
+`struct { marke; union { … } }`, und dabei war **genau eine Entscheidung zu treffen**.
+
+## Die Marke ist ein `enum`, nicht das schmalste Wort — und das ist keine Bequemlichkeit
+
+Der Plan nannte als Handwerksfrage *„die Breite der Marke (kleinster Typ, der die Varianten
+fasst)"*. Gewählt ist der `enum`, und der Grund ist ein zweiter Leser:
+
+| | schmalstes Wort (`uint8_t`) | `enum` |
+|---|---|---|
+| Verbundgrösse | dieselbe (die Vereinigung richtet aus) | dieselbe |
+| `switch` ohne `default` unter `-Wswitch` | **kein Leser** | **`D005` wird zweimal geprüft** |
+
+*Dieselbe Bauart wie `-Wmissing-field-initializers` beim Verbundkonstruktor: zwei
+unabhängige Leser derselben Zusage.* Die Breite kostet hier nichts — deshalb fällt die Wahl
+so und nicht anders.
+
+**Und der Erzeuger prüft die Erschöpfung selbst, als ZWEITER und nicht als erster.** Grund:
+ein `switch` mit fehlendem Fall **fällt durch und tut nichts** — genau die Gestalt, in der
+ein Erzeugnis stillschweigend etwas anderes rechnet als die Quelle sagt.
+
+## Was dabei auffiel: `benutzte_namen` kannte den `if`-Zweig nicht
+
+Beim Stilllegen ungelesener Binder (`(void)k;`) stand plötzlich ein `(void)k;` neben einem
+`if (k <= 65535)`. Die Ursache lag zwei Tage tiefer: `benutzte_namen` hatte **keinen Zweig
+für `StmtArt::Wenn`** — ein Parameter, der nur in einem `if` gelesen wird, galt als tot.
+*Dieselbe Klasse wie das fehlende `narrow` zwei Tage vorher, und derselbe Fund: die Liste
+war nicht falsch, sie war unvollständig.* `Wenn`, `LetSonst` und `Publish` stehen jetzt drin.
+
+## Und die Kreuzprobe des Zeugnisses hat sofort gesprochen
+
+`beispiele/34` meldete `match (option) 2x` und `type (Bereich) 3x` für einen markierten
+Wert — **die Einordnung nannte die neue Form beim Namen einer alten.** Genau dafür wird sie
+unabhängig vom Erzeuger geführt: sie unterscheidet jetzt syntaktisch (`Some`/`None` gegen
+alles andere) und trägt `type (tagged)` und `match (tagged)` als eigene Posten.
+
+## Die neue Übersetzungseinheit — und ihr Gift ist das eigentliche Argument
+
+`beispiele/34-markierter-wert.gab` sticht durch (14 von 14). **Die Breiten sind nicht
+beliebig gewählt:** `Kurz` trägt 32 Bit, `Lang` 64, und der Treiber legt in `Lang` eine Zahl,
+die in 32 Bit nicht passt. Das Gift lässt den `Lang`-Zweig das `Kurz`-Glied lesen — *es
+übersetzt, es rechnet, und es liefert 2 statt 4 294 967 298.* Genau die Klasse, gegen die
+eine Marke steht: ohne sie ist jedes Glied so gut wie jedes andere.
+
+## Ein Wächter mass den falschen Baum
+
+`pruefe-luecken.py` trug als **einziger der dreizehn** seine Wurzel als absoluten Pfad
+(`/home/simon/Dokumente/Gabbro`) statt sie aus `__file__` abzuleiten. In einem git-Arbeitsbaum
+verdrehte er damit Zeilen im **fremden** Baum, baute ihn, prüfte ihn — und meldete
+*„13 von 13"* über eine Messung, die mit dem Stand vor ihm nichts zu tun hatte.
+
+> *Ein Wächter, der etwas anderes misst, als er sagt, ist schlimmer als keiner* — und dieser
+> hier **schreibt** in die Quellen, die er misst.
+
+```
+166 Kennungen · 172 Gifte · 137 Tests · 34 Beispiele sauber · 14 Einheiten durchgestochen
+170 von 170 Mutationen · 170/170 Anker
+31 Weigerungen (war 46), alle C001, keine stille
+```

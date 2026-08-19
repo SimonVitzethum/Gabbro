@@ -112,6 +112,13 @@ pub const EINORDNUNG: &[Posten] = &[
         grund: "`typedef struct` plus `(P){ .a = … }` — der Konstruktor ist ERZEUGT («B7»)",
     },
     Posten {
+        konstrukt: "type (tagged)",
+        traegt: Traegt::Direkt,
+        grund: "`struct { marke; union { … } }`, und die Marke ist ein `enum` — damit wird \
+                `-Wswitch` ein ZWEITER Leser von `D005`. Dass die `union` das Typrecht nicht \
+                verletzt, haelt derselbe Pass: gelesen wird nur, was die Marke nennt",
+    },
+    Posten {
         konstrukt: "type (ghost)",
         traegt: Traegt::Geloescht,
         grund: "ein `linear ghost type` existiert zur Laufzeit nicht -- die Loeschung wirkt \
@@ -218,6 +225,13 @@ pub const EINORDNUNG: &[Posten] = &[
         konstrukt: "match (option)",
         traegt: Traegt::Schablone("option.sonderwert"),
         grund: "ein Vergleich gegen den Sonderwert `N`; die Bindung des `Some`-Zweigs ist der Wert",
+    },
+    Posten {
+        konstrukt: "match (tagged)",
+        traegt: Traegt::Direkt,
+        grund: "ein `switch` OHNE `default` — der fehlende Sammelzweig IST die Aussage, und \
+                `-Wswitch` liest `D005` damit ein zweites Mal. Die Nutzlast kommt aus dem \
+                Glied, das die Marke nennt, und nur daraus",
     },
     Posten {
         konstrukt: "locks",
@@ -335,6 +349,8 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
         ItemArt::Typ(t) => {
             if t.ghost {
                 zaehle(&mut e, "type (ghost)")
+            } else if t.tagged {
+                zaehle(&mut e, "type (tagged)")
             } else if matches!(&t.rumpf, Some(TypExpr::Verbund(f, _)) if !f.is_empty()) {
                 zaehle(&mut e, "type (Verbund)")
             } else {
@@ -504,7 +520,14 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
                 }
             }
             StmtArt::Match(m) => {
-                zaehle(e, "match (option)");
+                // **Zwei Absenkungen, zwei Buchungen** («C2»). Unterschieden wird
+                // SYNTAKTISCH, an den Zweignamen -- diese Lesung wird ausdruecklich
+                // unabhaengig vom Erzeuger gefuehrt, sonst deckt sie sich mit ihm, weil
+                // sie ihn abschreibt.
+                let option = m.zweige.len() == 2
+                    && m.zweige.iter().any(|z| z.variante.text == "Some")
+                    && m.zweige.iter().any(|z| z.variante.text == "None");
+                zaehle(e, if option { "match (option)" } else { "match (tagged)" });
                 for z in &m.zweige {
                     block(&z.rumpf, e, geister);
                 }

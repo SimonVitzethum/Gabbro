@@ -1183,6 +1183,54 @@ MUTATIONEN = [
         "das keinen Sonderwert hat",
         "code",
     ),
+    # -- emit.rs: «C2» -- der markierte Wert -----------------------------------------------
+    #
+    # Drei Stellen tragen die Absenkung, und jede kann still danebengehen: der `switch` liest
+    # die MARKE (nicht den Wert), jeder Zweig liest das Glied SEINER Variante, und es gibt
+    # keinen Sammelzweig. *Der dritte ist der unscheinbarste und der teuerste: ein `default:`
+    # legt `-Wswitch` still, also genau den zweiten Leser von `D005`.*
+    Mutation(
+        "markiertes-match-liest-den-wert",
+        "emit.rs",
+        '    aus.push_str(&format!("{e}switch ({gegenstand}.marke) {{\\n"));',
+        '    aus.push_str(&format!("{e}switch ({gegenstand}.marke + 0*1) {{\\n"));',
+        "C-Absenkung -- der `switch` liest nicht mehr die Marke selbst",
+        "code",
+    ),
+    Mutation(
+        "variantenzweig-liest-fremdes-glied",
+        "emit.rs",
+        '                        "{e}    {c} {} = {gegenstand}.last.{};\\n",\n'
+        "                        b.text, v.name.text",
+        '                        "{e}    {c} {} = {gegenstand}.last.{};\\n",\n'
+        "                        b.text, varianten[0].name.text",
+        "C-Absenkung -- ein Zweig liest ein FREMDES Glied der Vereinigung; die Marke sagt "
+        "dann nichts mehr",
+        "code",
+    ),
+    Mutation(
+        "markiertes-match-bekommt-einen-sammelzweig",
+        "emit.rs",
+        '    aus.push_str(&format!("{e}}}\\n"));\n}\n\n/// Welchen `tagged type`',
+        '    aus.push_str(&format!("{e}default: break;\\n{e}}}\\n"));\n}\n\n'
+        "/// Welchen `tagged type`",
+        "C-Absenkung -- der `switch` bekommt einen Sammelzweig und legt `-Wswitch` still, "
+        "also den zweiten Leser von D005",
+        "code",
+    ),
+    Mutation(
+        "markiertes-match-muss-nicht-erschoepfen",
+        "emit.rs",
+        "    if m.zweige.len() != varianten.len()\n"
+        "        || !varianten\n"
+        "            .iter()\n"
+        "            .all(|v| m.zweige.iter().any(|z| z.variante.text == v.name.text))\n"
+        "    {",
+        "    if false {",
+        "C-Absenkung -- ein `match` ohne jede Variante wird ein `switch`, der durchfaellt "
+        "und NICHTS tut",
+        "code",
+    ),
     # -- emit.rs / m1.rs: «C1» -- der Sonderwert, ausgeschrieben ---------------------------
     #
     # Der Beweis lag seit dem 2026-08-17 in `beweise/Option_Sonderwert.thy` und **kein

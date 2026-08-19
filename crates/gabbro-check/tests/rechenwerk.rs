@@ -1686,3 +1686,69 @@ table H count N { slot { naechst : option index into H, } } }";
         a.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
     );
 }
+
+/// **«C2»: ein `tagged type` senkt zu `struct { marke; union { … } }` ab.**
+///
+/// Fuenf Weigerungen im Korpus hingen daran, und keine war eine Sprachfrage. Die eine
+/// Entscheidung ist der TYP der Marke: sie wird ein `enum`, damit `switch` ohne `default`
+/// unter `-Wswitch` ein **zweiter Leser von `D005`** ist. *Zwei unabhaengige Leser derselben
+/// Zusage -- dieselbe Bauart wie `-Wmissing-field-initializers` beim Verbundkonstruktor.*
+#[test]
+fn tagged_senkt_zu_marke_und_vereinigung_ab() {
+    let q = "module t {
+tagged type N = { Leer, Kurz(u32), Lang(u64) };
+table A count 4 { slot { was : N, } }
+impl fn gewicht(m : N) -> u64 effects { pure } costs <= 9 ops
+{ match m { Leer => { return 0; } Kurz(k) => { return k; } Lang(p) => { return p; } } return 0; }
+impl fn art(m : N) -> u32 effects { pure } costs <= 9 ops
+{ match m { Leer => { return 0; } Kurz(k) => { return 1; } Lang(p) => { return 2; } } return 0; }
+impl fn im_slot(a : ptr<normal, r> A, i : index into A) -> u64
+    effects { reads a.slots } costs <= 12 ops
+{ match a.slots[i].was { Leer => { return 0; } Kurz(k) => { return k; } Lang(p) => { return p; } }
+  return 0; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+
+    // Die Marke ist ein `enum` -- ohne ihn haette `-Wswitch` nichts zu lesen.
+    assert!(c.contains("typedef enum {"), "die Marke ist ein `enum`:\n{c}");
+    assert!(c.contains("    N_Kurz,"), "je Variante ein Wert:\n{c}");
+    // Eine Variante ohne Nutzlast steht in der Marke und in KEINEM Glied.
+    assert!(!c.contains("Leer;"), "`Leer` hat kein Glied der Vereinigung:\n{c}");
+    assert!(c.contains("    union {"), "{c}");
+    assert!(c.contains("        uint64_t Lang;"), "je Nutzlast ein Glied:\n{c}");
+    // Der `switch` liest die MARKE, nicht den Wert.
+    assert!(c.contains("switch (m.marke) {"), "der `switch` liest die Marke:\n{c}");
+    assert!(c.contains("switch (a->slots[i].was.marke) {"), "auch ueber einem Slotfeld:\n{c}");
+    // **Kein Sammelzweig.** Er wuerde genau den Leser stilllegen, um dessentwillen die
+    // Marke ein `enum` ist.
+    assert!(!c.contains("default:"), "ein `switch` ohne `default`:\n{c}");
+    // Jeder Zweig liest das Glied SEINER Variante -- und nur das.
+    assert!(c.contains("uint32_t k = m.last.Kurz;"), "{c}");
+    assert!(c.contains("uint64_t p = m.last.Lang;"), "{c}");
+    // Und der Binder, den ein Zweig nicht liest, wird stillgelegt statt weggelassen.
+    assert!(c.contains("(void)k;"), "ein ungelesener Binder wird stillgelegt:\n{c}");
+    // *Aber nur der ungelesene:* `art` liest `k` nicht, `gewicht` sehr wohl.
+    assert_eq!(c.matches("(void)k;").count(), 1, "nur der ungelesene:\n{c}");
+}
+
+/// **Und der Erzeuger prueft die Erschoepfung SELBST -- als zweiter Leser, nicht als erster.**
+///
+/// `D005` haelt sie eine Ebene hoeher. Steht hier trotzdem eine Pruefung, dann weil ein
+/// `switch` mit einem fehlenden Fall **durchfaellt und NICHTS tut** — die eine Gestalt, in
+/// der ein Erzeugnis stillschweigend etwas anderes rechnet als die Quelle sagt.
+#[test]
+fn markiertes_match_ohne_jede_variante_faellt() {
+    let q = "module t {
+tagged type N = { Leer, Kurz(u32), Lang(u64) };
+impl fn g(m : N) -> u32 effects { pure } costs <= 9 ops
+{ match m { Leer => { return 0; } Kurz(k) => { return k; } } return 0; } }";
+    let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+    let _ = gabbro_check::emit::emittiere(&b, &mut a);
+    assert!(
+        a.absagen.iter().any(|x| x.code == "C001" && x.text.contains("every variant")),
+        "ein `switch` mit fehlendem Fall faellt durch und tut nichts: {:?}",
+        a.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
+    );
+}

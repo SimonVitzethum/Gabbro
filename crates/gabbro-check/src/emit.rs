@@ -73,6 +73,14 @@ struct Namen {
     /// Sie werden zu einem C-`typedef struct`, und ihr Konstruktor zu einem
     /// zusammengesetzten Literal. *`fs` aus `beweise/Verbund_Konstruktor.thy`.*
     verbunde: BTreeSet<String>,
+    /// **Die `tagged type`-Namen mit ihren Varianten** («C2»). Sie werden `struct { marke;
+    /// union { … } }` -- und die Marke ist ein `enum`, damit `-Wswitch` ein **zweiter
+    /// Leser von `D005`** wird.
+    markierte: HashMap<String, Vec<Variante>>,
+    /// Name -> markierter Typ, fuer Parameter und `let`. Konservativ wie `tabellenzeiger`:
+    /// wer irgendwo anders erklaert ist, faellt heraus. **Ohne das weiss ein `match m`
+    /// nicht, WELCHE Variantenmenge erschoepfend sein muss.**
+    markenwerte: HashMap<String, String>,
     /// Die `accumulates`-Namen. **Ein Lesen wird ein Ruf, ein Schreiben auch** -- sonst
     /// stuende im C ein Zugriff auf eine Zelle, die es nicht gibt.
     akkus: BTreeSet<String>,
@@ -308,6 +316,15 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 if matches!(unter, TypExpr::Verbund(f, _) if !f.is_empty()) && !t.opaque {
                     namen.verbunde.insert(t.name.text.clone());
                 }
+                // **«C2»: ein `tagged type` ist ein WERT und kein Bereichstyp.** Er steht
+                // hier VOR `typen`, weil `ctyp` dort in den Rumpf absteigen und an
+                // `TypExpr::Varianten` scheitern wuerde -- also eine Weigerung fuer einen
+                // Typ, den diese Einheit gerade selbst erklaert.
+                if let TypExpr::Varianten(v, _) = unter {
+                    if t.tagged && !v.is_empty() {
+                        namen.markierte.insert(t.name.text.clone(), v.clone());
+                    }
+                }
                 namen.typen.insert(t.name.text.clone(), unter.clone());
             }
         }
@@ -477,6 +494,50 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         namen.werte.extend(gefunden);
     });
 
+    // **«C2»: welcher Name traegt welchen `tagged type`?** Konservativ ueber alle
+    // Funktionen, dieselbe Bauart wie `geraetezeiger` -- *Unwissen faellt nach lautstark,*
+    // und dann weigert sich das `match` statt eine Variantenmenge zu raten.
+    {
+        let mut eindeutig: HashMap<String, String> = HashMap::new();
+        let mut strittig: BTreeSet<String> = BTreeSet::new();
+        let mut merke = |name: &str, typ: &TypExpr, markierte: &HashMap<String, Vec<Variante>>| {
+            let TypExpr::Pfad(p) = typ else { return };
+            let Some(n) = p.teile.last() else { return };
+            if !markierte.contains_key(&n.text) {
+                return;
+            }
+            match eindeutig.get(name) {
+                Some(vorher) if *vorher != n.text => {
+                    strittig.insert(name.to_string());
+                }
+                _ => {
+                    eindeutig.insert(name.to_string(), n.text.clone());
+                }
+            }
+        };
+        crate::fuer_jedes_item(baum, &mut |item| {
+            let ItemArt::Funktion(f) = &item.art else { return };
+            for p in &f.parameter {
+                merke(&p.name.text, &p.typ, &namen.markierte);
+            }
+            if let FnRumpf::Block(b) = &f.rumpf {
+                for s in &b.anweisungen {
+                    if let StmtArt::Let(l) = &s.art {
+                        if let Some(t) = &l.typ {
+                            merke(&l.name.text, t, &namen.markierte);
+                        }
+                    }
+                }
+            }
+        });
+        for s in &strittig {
+            eindeutig.remove(s);
+        }
+        // Ein markierter Wert ist ein WERT: sein Feldzugriff ist `.`, nicht `->`.
+        namen.werte.extend(eindeutig.keys().cloned());
+        namen.markenwerte = eindeutig;
+    }
+
     {
         let mut typen: Vec<(String, String)> = Vec::new();
         crate::fuer_jedes_item(baum, &mut |item| {
@@ -633,6 +694,9 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         ItemArt::Typ(t) => {
             if namen.verbunde.contains(&t.name.text) {
                 verbund(t, &mut aus, &namen, absagen);
+            }
+            if namen.markierte.contains_key(&t.name.text) {
+                markiert(t, &mut aus, &namen, absagen);
             }
         }
         ItemArt::Tabelle(t) => tabelle(t, &mut aus, &namen, absagen),
@@ -1029,6 +1093,62 @@ fn verbund(t: &TypDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         }
     }
     aus.push_str(&format!("}} {};\n", t.name.text));
+}
+
+/// **«C2»: ein `tagged type` wird `struct { marke; union { … } }` -- und die Marke ist ein
+/// `enum`.**
+///
+/// ```c
+/// typedef enum { ObjektArt_Speicher, ObjektArt_Endpunkt } ObjektArt_marke;
+/// typedef struct { ObjektArt_marke marke; union { uint64_t Speicher; uint32_t Endpunkt; } last; } ObjektArt;
+/// ```
+///
+/// ## Warum ein `enum` und nicht das schmalste Wort
+///
+/// Die Breite der Marke ist Handwerk; **welcher Typ sie traegt, ist es nicht.** Mit einem
+/// `enum` wird `switch` ohne `default` unter `-Wswitch` zu einem **zweiten Leser von
+/// `D005`**: der Pruefer verlangt das erschoepfende `match` ohne Sammelzweig, und der
+/// C-Uebersetzer prueft dieselbe Zusage noch einmal. *Zwei unabhaengige Leser derselben
+/// Zusage -- dieselbe Bauart wie `-Wmissing-field-initializers` beim Verbundkonstruktor.*
+///
+/// Und die Breite kostet nichts: die Vereinigung richtet ohnehin auf ihr breitestes Glied
+/// aus. **Ein `uint8_t` haette dieselbe Verbundgroesse und keinen zweiten Leser.**
+///
+/// ## Was das Typrecht angeht -- und warum es hier NICHT entschieden wird
+///
+/// Eine C-`union` ist wohldefiniert, solange nur das ZULETZT GESCHRIEBENE Glied gelesen
+/// wird. Genau das erzwingt `D005` eine Ebene hoeher: das `match` liest das Glied, das die
+/// Marke nennt. *Der Erzeuger darf sich darauf berufen, weil ein Pass es haelt* -- er
+/// entscheidet die Frage nicht selbst.
+fn markiert(t: &TypDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
+    let Some(varianten) = u.markierte.get(&t.name.text) else {
+        return;
+    };
+    let n = &t.name.text;
+    aus.push_str(&format!("\ntypedef enum {{\n"));
+    for v in varianten {
+        aus.push_str(&format!("    {n}_{},\n", v.name.text));
+    }
+    aus.push_str(&format!("}} {n}_marke;\n\ntypedef struct {{\n    {n}_marke marke;\n"));
+    // **Eine Vereinigung nur, wenn es etwas zu vereinigen gibt.** Ein `tagged type`, dessen
+    // Varianten alle ohne Nutzlast sind, ist eine reine Fallunterscheidung -- und eine
+    // leere `union` gibt es in C nicht.
+    let mit_last: Vec<&Variante> = varianten.iter().filter(|v| v.nutzlast.is_some()).collect();
+    if !mit_last.is_empty() {
+        aus.push_str("    union {\n");
+        for v in mit_last {
+            let Some(nl) = &v.nutzlast else { continue };
+            match ctyp(nl, u) {
+                Some(c) => aus.push_str(&format!("        {c} {};\n", v.name.text)),
+                None => {
+                    weigere(absagen, v.name.span, "`tagged` variant payload type");
+                    return;
+                }
+            }
+        }
+        aus.push_str("    } last;\n");
+    }
+    aus.push_str(&format!("}} {n};\n"));
 }
 
 /// A table becomes a slot struct plus a carrier struct with a fixed-size array.
@@ -1801,6 +1921,11 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                 // -- also `None`, also eine Weigerung fuer einen Typ, den diese Einheit
                 // gerade selbst deklariert hat.
                 _ if u.verbunde.contains(&n) => n,
+                // **Ein Pfad, der einen `tagged type` nennt, IST der markierte Verbund**
+                // («C2»). Er steht aus demselben Grund vor der Bereichstypzeile wie der
+                // Verbund darueber: `u.typen` enthaelt ihn auch, und dort waere sein Rumpf
+                // ein `TypExpr::Varianten`, an dem `ctyp` scheitert.
+                _ if u.markierte.contains_key(&n) => n,
                 // **A named range type lowers to its carrier.** `type Zaehler = u32 in
                 // 0 .. 65535` becomes `uint32_t`; the range itself is an M1 fact and stays in
                 // the checker -- W6: what is left out of the C is left out because M1 carries
@@ -2063,6 +2188,29 @@ fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
                     benutzte_namen(&z.rumpf, aus);
                 }
             }
+            // **Der `if`-Zweig fehlte bis zum 2026-08-19**, und die Folge war dieselbe wie
+            // beim `narrow` zwei Tage vorher: ein `(void)k;` ueber einem Namen, den der
+            // Rumpf sehr wohl liest -- nur eben in einem Zweig. *Gefunden, als «C2» den
+            // Binder eines `match`-Zweiges nach derselben Regel stilllegte:
+            // `Kurz(k) => { if k <= 65535 { … } }` bekam ein `(void)k;` neben ein `k`.*
+            StmtArt::Wenn(w) => {
+                for (bed, rumpf) in &w.zweige {
+                    e(bed, aus);
+                    benutzte_namen(rumpf, aus);
+                }
+                if let Some(sonst) = &w.sonst {
+                    benutzte_namen(sonst, aus);
+                }
+            }
+            StmtArt::LetSonst(l) => {
+                if let Some(r) = l.als_ruf() {
+                    for a in &r.argumente {
+                        e(a, aus);
+                    }
+                }
+                benutzte_namen(&l.sonst, aus);
+            }
+            StmtArt::Publish(p) => e(&p.wert, aus),
             _ => {}
         }
     }
@@ -2524,9 +2672,101 @@ fn traverse(
     weigere(absagen, s.span, grund);
 }
 
-/// Nur `match` ueber einer Option wird abgesenkt. **Ein `match` ueber einem `tagged type` ist
-/// eine eigene Entwurfsfrage** (markierter Verbund, Variantennummern, Nutzlast) und wird
-/// abgelehnt statt geraten.
+/// **«C2»: `match` ueber einem `tagged type` wird ein `switch` OHNE `default`.**
+///
+/// Der fehlende Sammelzweig ist die ganze Aussage: `D005` verlangt seit dem 2026-08-19 das
+/// erschoepfende `match` ohne Auffangzweig, und **`-Wswitch` liest dieselbe Zusage ein
+/// zweites Mal**. *Ein `default:` hier wuerde genau den Leser stilllegen, um dessentwillen
+/// die Marke ein `enum` ist.*
+///
+/// Die Nutzlast des Zweiges kommt aus dem Glied, das die Marke nennt -- und **nur daraus**:
+/// ein anderes Glied zu lesen waere der eine Fall, in dem eine C-`union` das Typrecht
+/// verletzt, und der Pass davor schliesst ihn aus.
+fn match_markiert(
+    m: &MatchStmt,
+    s: &Stmt,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+    austritt: &Austritt,
+    typ: &str,
+) {
+    let e = einzug(tiefe);
+    let Some(varianten) = u.markierte.get(typ).cloned() else { return };
+    // **Erschoepfend, ohne Sammelzweig -- und der Erzeuger prueft es selbst.** `D005` haelt
+    // es eine Ebene hoeher; hier faellt es auf, falls der Pass es je nicht mehr taete.
+    // *Ein `switch` mit fehlenden Faellen faellt sonst durch und tut NICHTS.*
+    if m.zweige.len() != varianten.len()
+        || !varianten
+            .iter()
+            .all(|v| m.zweige.iter().any(|z| z.variante.text == v.name.text))
+    {
+        weigere(
+            absagen,
+            s.span,
+            "`match` over a `tagged type` must name every variant exactly once -- there is \
+             no catch-all branch, and a `switch` with a missing case falls through and does \
+             NOTHING",
+        );
+        return;
+    }
+    let gegenstand = ausdruck(&m.gegenstand, u, absagen);
+    aus.push_str(&format!("{e}switch ({gegenstand}.marke) {{\n"));
+    for v in &varianten {
+        let Some(z) = m.zweige.iter().find(|z| z.variante.text == v.name.text) else {
+            continue;
+        };
+        aus.push_str(&format!("{e}case {typ}_{}: {{\n", v.name.text));
+        if let (Some(b), Some(nl)) = (&z.binder, &v.nutzlast) {
+            match ctyp(nl, u) {
+                Some(c) => {
+                    aus.push_str(&format!(
+                        "{e}    {c} {} = {gegenstand}.last.{};\n",
+                        b.text, v.name.text
+                    ));
+                    // **`(void)x;` fuer einen Binder, den der Zweig nicht liest** -- der
+                    // Anwender hat die erzeugte Zeile nicht geschrieben, und `-Wextra`
+                    // spraeche sonst ueber ihn. Dieselbe Buchung wie beim toten Parameter.
+                    let mut gelesen = BTreeSet::new();
+                    benutzte_namen(&z.rumpf, &mut gelesen);
+                    if !gelesen.contains(&b.text) {
+                        aus.push_str(&format!("{e}    (void){};\n", b.text));
+                    }
+                }
+                None => {
+                    weigere(absagen, b.span, "`tagged` variant payload type");
+                    return;
+                }
+            }
+        }
+        for k in &z.rumpf.anweisungen {
+            anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+        }
+        aus.push_str(&format!("{e}}} break;\n"));
+    }
+    aus.push_str(&format!("{e}}}\n"));
+}
+
+/// Welchen `tagged type` traegt dieser Ausdruck? **Ueber den erklaerten Typ, nicht ueber die
+/// Variantennamen** -- zwei Typen duerfen gleichnamige Varianten haben.
+fn marken_quelle(e: &Expr, u: &Namen) -> Option<String> {
+    let ExprArt::Ort(o) = &e.art else { return None };
+    if o.suffixe.is_empty() {
+        if let Some(t) = u.markenwerte.get(&o.basis.text) {
+            return Some(t.clone());
+        }
+    }
+    match ort_typ(o, u)? {
+        TypExpr::Pfad(p) => {
+            let n = p.teile.last()?.text.clone();
+            u.markierte.contains_key(&n).then_some(n)
+        }
+        _ => None,
+    }
+}
+
+/// Nur `match` ueber einer Option und ueber einem `tagged type` wird abgesenkt.
 fn match_option(
     m: &MatchStmt,
     s: &Stmt,
@@ -2537,6 +2777,10 @@ fn match_option(
     austritt: &Austritt,
 ) {
     let e = einzug(tiefe);
+    if let Some(typ) = marken_quelle(&m.gegenstand, u) {
+        match_markiert(m, s, aus, u, absagen, tiefe, austritt, &typ);
+        return;
+    }
     let Some(tabelle) = option_quelle(&m.gegenstand, u) else {
         weigere(absagen, s.span, "`match` over something other than an `option index into T`");
         return;
