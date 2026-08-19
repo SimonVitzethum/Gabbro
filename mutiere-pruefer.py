@@ -1080,7 +1080,7 @@ MUTATIONEN = [
         "if-zweig-ohne-austritt",
         "emit.rs",
         "                for k in &rumpf.anweisungen {\n                    anweisung(k, aus, u, absagen, tiefe + 1, austritt);\n                }\n            }\n            if let Some(sonst) = &w.sonst {",
-        "                for k in &rumpf.anweisungen {\n                    anweisung(k, aus, u, absagen, tiefe + 1, &Vec::new());\n                }\n            }\n            if let Some(sonst) = &w.sonst {",
+        "                for k in &rumpf.anweisungen {\n                    anweisung(k, aus, u, absagen, tiefe + 1, &Austritt::default());\n                }\n            }\n            if let Some(sonst) = &w.sonst {",
         "C-Absenkung -- ein `return` aus einem `if` im `locks`-Block laesst die Sperre stehen",
         "code",
     ),
