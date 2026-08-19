@@ -1,0 +1,26 @@
+-- erwartet: M112
+-- **P6, erster Schritt.** `maintains I` ist die kleinste wahre Form der
+-- Verfeinerungspflicht: die Invariante gilt vorher und nachher. Sie steht seit jeher in der
+-- Grammatik, an sieben Korpusstellen -- und bis zum 2026-08-19 las sie kein Pass.
+--
+-- *Erster Anlauf der Regel liess nur `spec fn` gelten und faellte damit
+-- `maintains antwortpflicht_paarig`, eine TABELLENINVARIANTE. Eine Regel, die eine gueltige
+-- Form des Korpus faellt, ist ein Fehlalarm und kein Fund.*
+module gift::maintains_leer {
+
+table W count 8 {
+    slot { a : u32 in 0 .. 10, }
+    invariant klein cost O(n) runs offline :
+        forall s in slots of W : W.slots[s].a <= 10;
+}
+
+impl fn nullen() -> unit
+    maintains gross
+    effects { reads W, writes W }
+    costs <= 64 ops
+{
+    traverse s over slots of W by unvisited { W.slots[s].a = 0; }
+    return;
+}
+
+}

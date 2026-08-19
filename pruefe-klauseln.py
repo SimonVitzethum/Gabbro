@@ -67,7 +67,13 @@ TRAGEND_DATEIEN = {"emit.rs", "zeugnis.rs"}
 # in beide Richtungen klemmt, ist eine Ratsche.*
 ERWARTET = {
     # -- ZUSAGE: eine Aussage ueber Verhalten, die kein Pass gegen etwas haelt ------------
-    "maintains":    ("ZUSAGE", "Wie `ensures`: gezaehlt, nie gehalten."),
+    # **`maintains` ist am 2026-08-19 AUFGESTIEGEN und darum hier geloescht** -- der dritte
+    # Aufstieg, und wieder hat die Ratsche ihn gemeldet statt ich. `M112` haelt den Namen
+    # gegen die erklaerten `spec fn` UND Invarianten (der erste Anlauf liess nur `spec fn`
+    # gelten und faellte eine gueltige Korpuszeile -- beim Messen gefangen), `M113` verbietet
+    # es an einer `spec fn`, `M114` merkt an, wenn die Funktion nichts schreibt.
+    # *Eingeloest wird die Erhaltung damit nicht -- sie wird GEZAEHLT, `gabbro pflichten`,
+    # und das ist P6s erster Schritt.*
     "versatz":      ("ZUSAGE", "Registerlage. Dass zwei Register einander nicht ueberlappen, ist der HAUPTSATZ von `Device_Konstruktor.thy` -- und kein Pass rechnet ihn nach."),
     "schritt":      ("ZUSAGE", "`stride`. `stride 0` macht die Bank leer; `Device_Konstruktor.thy` sagt es und nennt es selbst eine Fundstelle."),
     "ghost":        ("ZUSAGE", "Ein Geisttyp darf im erzeugten C nicht vorkommen. Ein Verbot, das kein Pass durchsetzt -- dieselbe Bauart wie `opaque`."),

@@ -93,6 +93,37 @@ fn main() -> std::process::ExitCode {
         // ihre Absenkung ruht -- Annahmen, Schablonen, direkte Formen. *Es beweist die
         // Uebersetzung nicht; es macht aus „der Erzeuger wird schon" eine Aufzaehlung mit
         // Laenge.* Der Pruefer laeuft davor, aus demselben Grund wie bei `emit`.
+        // **P6, die Messsonde (2026-08-19).** Die Kennzahl ist zurueckgezogen, weil sie an
+        // Verus-Zeilen gemessen war. Was sie ersetzt, braucht eine Beweispflicht, die
+        // ENTSTANDEN ist statt erfunden -- und dieses Register zaehlt sie. Der Pruefer laeuft
+        // davor, aus demselben Grund wie bei `emit`.
+        "pflichten" => {
+            if rest.is_empty() {
+                eprintln!("gabbro pflichten: keine Datei genannt");
+                return std::process::ExitCode::from(2);
+            }
+            let mut schlecht = false;
+            for datei in rest {
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} nicht lesbar");
+                    schlecht = true;
+                    continue;
+                };
+                let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+                gabbro_check::pruefe(&baum, &mut absagen);
+                if absagen.fehler_zahl() > 0 {
+                    eprint!("{}", absagen.zeige(&quelle));
+                    eprintln!("gabbro pflichten: {datei} hat Fehler -- kein Register");
+                    schlecht = true;
+                    continue;
+                }
+                print!("{}", gabbro_check::pflichten::zeige(&baum, datei));
+            }
+            if schlecht {
+                return std::process::ExitCode::from(1);
+            }
+            std::process::ExitCode::SUCCESS
+        }
         "zeugnis" => {
             if rest.is_empty() {
                 eprintln!("gabbro zeugnis: keine Datei genannt");
@@ -151,6 +182,7 @@ fn hilfe() {
   gabbro paesse                     die Passliste -- gebaut UND offen
   gabbro schablonen                 die Erzeuger-Schablonen: die dritte Zaehlspalte
   gabbro k-bedingung <datei.gab>…   je Traeger: sind ALLE Schreibstellen erzeugt? (Messung 2)
+  gabbro pflichten  <datei.gab>…    was ein MENSCH noch schuldet -- gezaehlt, nicht eingeloest
 
 Rueckgabe: 0 wenn kein Fehler, 1 bei Fehlern, 2 bei falschem Aufruf."
     );

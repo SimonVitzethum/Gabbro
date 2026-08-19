@@ -41,6 +41,8 @@ pub use kosten::Zaehlung as Kostenzaehlung;
 
 pub mod korpus;
 pub mod manifest;
+// **P6, die Messsonde** -- was ein Mensch noch schuldet, gezaehlt statt eingeloest.
+pub mod pflichten;
 pub mod phasen;
 pub mod schablonen;
 pub mod zeugnis;

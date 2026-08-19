@@ -7825,3 +7825,84 @@ Die 142: **22** `table … count N` · **60** `index into T` · **22** `option i
 Aufrufstelle. *Damit steht das Amortisationsargument zum ersten Mal als Messung da statt als
 Behauptung.* **Ihre Grenze im selben Satz:** sie misst die **getragene** Seite und nur sie; über
 funktionale Korrektheit sagt sie nichts.
+
+---
+
+# P6, erster Schritt — `maintains` bekommt seinen Leser, und die Pflichten werden gezählt
+
+**2026-08-19.** Die Kennzahl ist zurückgezogen; was zwischen ihr und einer Isabelle-verankerten
+Zahl liegt, ist **eine W-Pflicht, die entstanden ist statt erfunden.** P6 erzeugt sie.
+
+## Die kleinste wahre Form stand schon in der Grammatik
+
+`maintains I` an einem `impl fn` — *die Invariante gilt vorher und nachher.* **Sieben
+Korpusstellen, kein Leser.** Sie stand als vierte in der Klasse *deklariert, exportiert, nie
+gelesen*, und der Klauselwächter führte sie mit dem Satz: *„Wie `ensures`: gezählt, nie
+gehalten."*
+
+| | |
+|---|---|
+| **`M112`** | der genannte Name ist eine erklärte `spec fn` **oder** eine erklärte Invariante |
+| **`M113`** | eine `spec fn` erhält nichts — sie **ist** die Aussage |
+| **`M114`** | *(Hinweis)* die Funktion schreibt nichts; der Rahmen schenkt die Erhaltung |
+
+## Und der erste Anlauf war ein Fehlalarm — gefangen beim Messen
+
+`M112` liess zunächst **nur `spec fn`** gelten und meldete an `FRAGMENTE.md`:647
+`maintains antwortpflicht_paarig` einen Fehler. **Der Name ist eine Tabelleninvariante**
+(`FRAGMENTE.md`:602) — und das ist die legitimere der beiden Formen, weil sie am Träger steht
+statt daneben.
+
+> **Eine Regel, die eine gültige Form des eigenen Korpus fällt, ist ein Fehlalarm und kein
+> Fund.** *Die Vorschrift „vorher messen, wie viele Korpusstellen fallen" hat hier genau das
+> getan, wofür sie da ist — sie hat eine Regel abgefangen, die ich für richtig hielt.*
+
+Nach der Weitung: **Korpuspreis null**, 31 Beispiele und 13 Fragmenteinheiten grün.
+
+## Der Ertrag — das Pflichtenregister
+
+`gabbro pflichten` zählt, was ein **Mensch** noch schuldet. Drei Arten, mechanisch:
+
+```
+E  Erhaltung      je `maintains I`:  I(vorher) und requires  =>  I(nachher)
+N  Nachbedingung  je `ensures P` an einem Rumpf, den Gabbro SIEHT
+F  Fremdpflicht   je `ensures P` an einem Rumpf, den Gabbro NICHT sieht
+```
+
+**Über die 31 Beispiele:**
+
+```
+17 Pflichten  --  3 Erhaltung  ·  7 Nachbedingung  ·  7 fremd
+```
+
+**Das ist die erste Gabbro-seitige Pflichtenzahl dieses Ordners.** Alle bisherigen kamen aus
+Caprocks Verus-Rümpfen.
+
+## Drei Grenzen, im selben Atemzug
+
+**Erstens: eine gezählte Pflicht ist keine bewiesene.** Das Register sagt, was geschuldet wird,
+nicht dass es geleistet ist. *Es ist die Gegenrichtung zum Zeugnis — jenes zählt auf, worauf
+die Übersetzung ruht, dieses, was der Programmierer noch schuldet.*
+
+**Zweitens: die K/A/W-Einordnung steht ausdrücklich NICHT im Werkzeug.** Sie ist ein Urteil;
+die Kipp-Regeln verlangen je Pflicht einen Satz Begründung, und ein Werkzeug, das rät, wäre die
+stille Antwort, gegen die dieser Ordner sonst schreibt. **Gezählt wird die Art, geurteilt von
+Hand.**
+
+**Drittens: 17 Pflichten über 31 Demonstrationsprogramme sind keine Kennzahl.** Der Korpus ist
+geschrieben, um Konstrukte vorzuführen; seine funktionale Last ist dünn. *Die Zahl ist ein
+Messgerät, das zum ersten Mal ausschlägt — nicht ein Messwert.*
+
+**Sieben von siebzehn sind fremd** — Pflichten an Rümpfen, die Gabbro nie sieht. *Die Klasse,
+die sich auch unter „ganz Gabbro verifiziert" nicht auflöst, ist damit zum ersten Mal
+beziffert.*
+
+## Und der Klauselwächter hat den Aufstieg gemeldet, nicht ich
+
+**Dritter Aufstieg seit dem 2026-08-18** (`progress`, `ensures`, jetzt `maintains`). Die Ratsche
+klemmt in beide Richtungen; sie meldete beim nächsten Lauf *„GESTIEGEN — Eintrag löschen"*.
+
+```
+49 Klauseln gebucht  ->  48
+16 ZUSAGE            ->  15
+```

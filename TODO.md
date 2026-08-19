@@ -541,6 +541,19 @@ of items that are neither code nor a run — what remains is building and measur
 
 # BUILDING — needs code
 
+- [ ] **P6 ist EROEFFNET, nicht erledigt** *(2026-08-19)*. `maintains` hat einen Leser
+      (`M112`-`M114`), und `gabbro pflichten` zaehlt die erzeugten Pflichten: **17 ueber 31
+      Beispiele, davon 7 fremd.** *Was fehlt, ist die zweite Haelfte:* die Pflicht muss in
+      einer Form dastehen, die ein Beweiser lesen kann -- heute ist sie eine Zeile im
+      Bericht. **Und die K/A/W-Einordnung bleibt Handarbeit**, ausdruecklich: ein Werkzeug,
+      das sie raet, waere die stille Antwort, gegen die dieser Ordner sonst schreibt.
+- [ ] **`maintains` nennt UNQUALIFIZIERT** *(2026-08-19)*. `M112` sammelt `spec fn` und
+      Invarianten ueber alle Module flach ein, weil der Korpus unqualifiziert schreibt.
+      **Zwei gleichnamige Invarianten in zwei Modulen sind damit ununterscheidbar** --
+      dieselbe Bauart wie `typ_von_ort` vor dem 2026-08-17, nur noch nicht ausgeloest.
+      *Eine Regel, die mehr verlangt als der Korpus schreibt, zerlegt ihn; die Verschaerfung
+      braucht also zuerst eine Messung, wie viele Stellen qualifizieren muessten.*
+
 - [ ] **P6 ist die Grundlage der Kennzahl, nicht ihr Zubehoer** *(geschaerft 2026-08-19)*.
       Die Zahl ist zurueckgezogen (`unbekannt, > 0,5`), weil `w` an VERUS-Zeilen gemessen war.
       Ein Isabelle-verankertes `w` braucht **eine W-Pflicht, die ENTSTANDEN ist** -- und

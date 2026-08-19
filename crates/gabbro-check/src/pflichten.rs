@@ -1,0 +1,140 @@
+//! **Das Pflichtenregister -- P6, die Messsonde (2026-08-19).**
+//!
+//! Die Kennzahl dieses Ordners ist am 2026-08-19 zurueckgezogen worden: sie war an
+//! **Verus**-Zeilen gemessen, und Gabbro beweist in Isabelle/HOL. Die neue Buchung lautet
+//! `unbekannt, > 0,5`. **Was zwischen den beiden Zustaenden liegt, ist nicht ein Ablesefehler,
+//! sondern P6** -- die *erzeugte* Verfeinerungspflicht.
+//!
+//! ## Warum das der erste Schritt ist und nicht der letzte
+//!
+//! Ein Isabelle-verankertes `w` braucht **eine W-Pflicht, die ENTSTANDEN ist.** Ohne P6
+//! muesste man sich eine ausdenken -- und was man erfindet, bevor man es misst, ist die
+//! Bewegung, gegen die R7 und W3 stehen.
+//!
+//! **Dieses Modul loest keine Pflicht ein. Es ZAEHLT sie.** Und Zaehlen ist der Schritt, der
+//! den Abstand zu 0,5 ueberhaupt sichtbar macht:
+//!
+//! ```text
+//! E  Erhaltung     je `maintains I` an einem `impl fn`: I(vorher) und requires  =>  I(nachher)
+//! N  Nachbedingung je `ensures P` an einem Rumpf, den Gabbro sieht
+//! F  Fremdpflicht  je `ensures P` an einem Rumpf, den Gabbro NICHT sieht
+//! ```
+//!
+//! ## Und die Grenze steht im selben Satz
+//!
+//! **Eine gezaehlte Pflicht ist keine bewiesene.** Das Register sagt, was ein Mensch schuldet,
+//! nicht dass er es geleistet hat. *Es ist die Gegenrichtung zum Zeugnis:* jenes zaehlt auf,
+//! worauf die Uebersetzung ruht, dieses, was der Programmierer noch schuldet.
+//!
+//! **Die K/A/W-Einordnung steht ausdruecklich NICHT hier.** Sie ist ein Urteil -- die
+//! Kipp-Regeln verlangen je Pflicht einen Satz Begruendung, und ein Werkzeug, das raet, waere
+//! genau die stille Antwort, gegen die dieser Ordner sonst schreibt. *Gezaehlt wird die ART,
+//! geurteilt wird von Hand.*
+
+use gabbro_syntax::ast::*;
+
+pub struct Pflicht {
+    pub art: Art,
+    pub funktion: String,
+    pub gegenstand: String,
+    /// Hat Gabbro den Rumpf? *Ohne Rumpf ist die Pflicht eine ANNAHME ueber Fremdcode.*
+    pub rumpf_da: bool,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub enum Art {
+    Erhaltung,
+    Nachbedingung,
+    Fremdpflicht,
+}
+
+impl Art {
+    pub fn marke(self) -> &'static str {
+        match self {
+            Art::Erhaltung => "E",
+            Art::Nachbedingung => "N",
+            Art::Fremdpflicht => "F",
+        }
+    }
+    pub fn name(self) -> &'static str {
+        match self {
+            Art::Erhaltung => "Erhaltung",
+            Art::Nachbedingung => "Nachbedingung",
+            Art::Fremdpflicht => "Fremdpflicht",
+        }
+    }
+}
+
+pub fn sammle(baum: &Programm) -> Vec<Pflicht> {
+    let mut aus = Vec::new();
+    lauf(&baum.items, &mut aus);
+    aus
+}
+
+fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
+    for item in items {
+        match &item.art {
+            ItemArt::Modul(m) => lauf(&m.items, aus),
+            ItemArt::Funktion(f) => {
+                // Eine `spec fn` schuldet nichts -- sie IST die Aussage (`M113`).
+                if f.klasse == Some(FnKlasse::Spec) {
+                    continue;
+                }
+                let rumpf_da = matches!(f.rumpf, FnRumpf::Block(_));
+                for i in &f.maintains {
+                    aus.push(Pflicht {
+                        art: Art::Erhaltung,
+                        funktion: f.name.text.clone(),
+                        gegenstand: i.text.clone(),
+                        rumpf_da,
+                    });
+                }
+                for (n, _) in f.ensures.iter().enumerate() {
+                    aus.push(Pflicht {
+                        art: if rumpf_da { Art::Nachbedingung } else { Art::Fremdpflicht },
+                        funktion: f.name.text.clone(),
+                        gegenstand: format!("ensures #{}", n + 1),
+                        rumpf_da,
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+pub fn zeige(baum: &Programm, datei: &str) -> String {
+    let p = sammle(baum);
+    let mut s = String::new();
+    s.push_str(&format!("-- Pflichtenregister: {datei}\n"));
+    s.push_str("-- Was ein MENSCH hier noch schuldet. Gezaehlt, nicht eingeloest.\n\n");
+    if p.is_empty() {
+        s.push_str("   keine erzeugte Beweispflicht in dieser Einheit\n\n");
+    }
+    for art in [Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht] {
+        let eigene: Vec<&Pflicht> = p.iter().filter(|x| x.art == art).collect();
+        if eigene.is_empty() {
+            continue;
+        }
+        s.push_str(&format!("{}  {} ({})\n", art.marke(), art.name(), eigene.len()));
+        for x in &eigene {
+            s.push_str(&format!("     {} :: {}\n", x.funktion, x.gegenstand));
+        }
+        s.push('\n');
+    }
+    let e = p.iter().filter(|x| x.art == Art::Erhaltung).count();
+    let n = p.iter().filter(|x| x.art == Art::Nachbedingung).count();
+    let f = p.iter().filter(|x| x.art == Art::Fremdpflicht).count();
+    s.push_str(&format!("== {} Pflichten: {e} Erhaltung, {n} Nachbedingung, {f} fremd ==\n", p.len()));
+    s.push_str("   Und was das NICHT heisst: eine gezaehlte Pflicht ist keine bewiesene.\n");
+    s.push_str("   Die K/A/W-Einordnung ist ein URTEIL und steht bewusst nicht hier --\n");
+    s.push_str("   die Kipp-Regeln verlangen je Pflicht einen Satz Begruendung.\n");
+    if f > 0 {
+        s.push_str(&format!(
+            "   Die {f} fremden stehen an Ruempfen, die Gabbro nie sieht: sie sind\n\
+             \x20  ANNAHMEN ueber fremden Code und loesen sich auch unter\n\
+             \x20  \"ganz Gabbro verifiziert\" nicht auf.\n"
+        ));
+    }
+    s
+}

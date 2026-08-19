@@ -105,20 +105,69 @@ enum Fakt {
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
     let umgebung = Umgebung::sammle(baum);
+    let mut spezifikationen = std::collections::HashMap::new();
+    sammle_spezifikationen(&baum.items, &mut spezifikationen);
     let mut p = Pruefer {
         u: &umgebung,
         absagen,
         zaehlung: Zaehlung::default(),
         modul: String::new(),
+        spezifikationen,
     };
     p.programm(baum);
     p.zaehlung
+}
+
+/// **Alles, was `maintains` nennen darf** -- und das sind ZWEI Arten, nicht eine.
+///
+/// *Erster Anlauf am 2026-08-19 sammelte nur `spec fn` und meldete an
+/// `maintains antwortpflicht_paarig` einen Fehler.* Der Name ist eine **Tabelleninvariante**
+/// (`FRAGMENTE.md`:602), und das ist die legitimere der beiden Formen: sie steht am Traeger,
+/// nicht daneben. **Eine Regel, die eine gueltige Form des Korpus faellt, ist ein Fehlalarm
+/// und kein Fund** -- und dieser hier wurde beim Messen gefangen, nicht beim Ausliefern.
+///
+/// Unqualifiziert, weil `maintains` heute unqualifiziert schreibt; die Verschaerfung auf
+/// qualifizierte Namen steht im TODO.
+fn sammle_spezifikationen(items: &[Item], aus: &mut std::collections::HashMap<String, usize>) {
+    for item in items {
+        match &item.art {
+            ItemArt::Funktion(f) if f.klasse == Some(FnKlasse::Spec) => {
+                aus.insert(f.name.text.clone(), f.parameter.len());
+            }
+            // Eine `table`-Invariante ist eine benannte Aussage ueber ihren Traeger --
+            // genau das, was `maintains` erhaelt.
+            ItemArt::Tabelle(t) => {
+                for i in &t.invarianten {
+                    aus.insert(i.name.text.clone(), 0);
+                }
+            }
+            ItemArt::Walk(w) => {
+                for i in &w.invarianten {
+                    aus.insert(i.name.text.clone(), 0);
+                }
+            }
+            // Eine Gruppen-Invariante nennt mindestens zwei Traeger (`U007`) und ist
+            // ebenfalls erhaltbar.
+            ItemArt::Gruppe(g) => {
+                for i in &g.invarianten {
+                    aus.insert(i.name.text.clone(), 0);
+                }
+            }
+            ItemArt::Modul(m) => sammle_spezifikationen(&m.items, aus),
+            _ => {}
+        }
+    }
 }
 
 struct Pruefer<'a> {
     u: &'a Umgebung,
     absagen: &'a mut Absagen,
     zaehlung: Zaehlung,
+    /// **Die erklaerten `spec fn` -- Name auf Parameterzahl.**
+    ///
+    /// `maintains I` nennt eine davon, und bis zum 2026-08-19 nannte es sie ins Leere:
+    /// sieben Korpusstellen, kein Leser. *Dieselbe Bauart wie `ensures` vor `M109`.*
+    spezifikationen: std::collections::HashMap<String, usize>,
     /// Das Modul, in dem der gerade gepruefte Rumpf steht. **Ohne ihn loest der Pass Namen
     /// im Blindflug auf** -- und ein gleichnamiges `fn` in einem fremden Modul loescht eine
     /// Bereichspruefung, ohne dass jemand es sieht (Gegenpruefung 2026-08-14, U11/U12).
@@ -206,6 +255,7 @@ impl<'a> Pruefer<'a> {
             if let ItemArt::Funktion(f) = &item.art {
                 self.modul = modul.to_string();
                 self.ensures_pruefen(f);
+                self.maintains_pruefen(f);
             }
             if let ItemArt::Funktion(f) = &item.art {
                 // Nur Ruempfe: Praedikate haben keine Laufzeitwirkung.
@@ -1701,6 +1751,94 @@ impl<'a> Pruefer<'a> {
                         "sie nennt weder `result` noch einen Ort, den die Funktion laut \
                          `effects` schreibt -- dann ist sie ein `requires` oder ein \
                          `maintains` am falschen Platz",
+                    ),
+                );
+            }
+        }
+    }
+
+    /// **`maintains` bekommt seinen Leser -- P6, erster Schritt (2026-08-19).**
+    ///
+    /// `maintains I` an einem `impl fn` ist die kleinste wahre Form der Verfeinerungspflicht,
+    /// die der Plan unter P6 fuehrt: *die Invariante `I` gilt vorher und nachher.* Sie steht
+    /// seit jeher in der Grammatik, an sieben Korpusstellen -- **und kein Pass las sie.**
+    ///
+    /// Drei Regeln, und jede ist Wohlgeformtheit, nicht Beweis:
+    ///
+    /// * **`M112`** -- der genannte Name ist eine erklaerte `spec fn`. *Ein `maintains`, das
+    ///   ins Leere nennt, steht im Zeugnis und in der Bibliotheks-ABI und sagt nichts.*
+    /// * **`M113`** -- eine `spec fn` erhaelt nichts; sie IST die Aussage. `maintains` an
+    ///   einer `spec fn` ist eine Pflicht ohne Rumpf, der sie schuldet.
+    /// * **`M114`** -- die Invariante muss ueber etwas sprechen, das die Funktion ANFASST.
+    ///   Erhaelt sie etwas, das die Funktion nicht schreibt, ist die Pflicht leer -- der
+    ///   Rahmen gibt sie schon. *Dieselbe Linie wie `M111` bei `ensures`.*
+    ///
+    /// **Was hier NICHT geprueft wird: dass der Rumpf sie erhaelt.** Das ist die erzeugte
+    /// Beweispflicht, und sie wird gezaehlt statt eingeloest -- `gabbro pflichten` druckt
+    /// sie. *Zaehlen ist der Schritt, der die Kennzahl ueberhaupt sichtbar macht.*
+    fn maintains_pruefen(&mut self, f: &FnDecl) {
+        if f.maintains.is_empty() {
+            return;
+        }
+        if f.klasse == Some(FnKlasse::Spec) {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "M113",
+                    f.maintains[0].span,
+                    format!("`{}` ist eine `spec fn` und erhaelt nichts", f.name.text),
+                )
+                .mit_notiz(
+                    "eine Spezifikation IST die Aussage -- `maintains` an ihr ist eine \
+                     Pflicht, die kein Rumpf schuldet",
+                ),
+            );
+            return;
+        }
+        let geschrieben: Vec<String> = f
+            .effects
+            .as_ref()
+            .map(|w| {
+                w.liste
+                    .iter()
+                    .filter_map(|x| match &x.art {
+                        WirkungArt::Schreibt(o) | WirkungArt::Veroeffentlicht(o) => {
+                            Some(o.basis.text.clone())
+                        }
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        for i in &f.maintains {
+            if !self.spezifikationen.contains_key(&i.text) {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "M112",
+                        i.span,
+                        format!("`{}` in `maintains` ist weder `spec fn` noch erklaerte Invariante", i.text),
+                    )
+                    .mit_notiz(
+                        "eine erhaltene Invariante, deren Name nicht aufloest, steht im \
+                         Zeugnis und in der Bibliotheks-ABI -- und sagt nichts",
+                    ),
+                );
+                continue;
+            }
+            // **`M114`:** schreibt die Funktion ueberhaupt etwas? Wenn nicht, ist die
+            // Erhaltung vom Rahmen geschenkt und die Pflicht leer.
+            if geschrieben.is_empty() {
+                self.absagen.schiebe(
+                    Absage::hinweis(
+                        "M114",
+                        i.span,
+                        format!(
+                            "`{}` erhaelt `{}` und schreibt nichts",
+                            f.name.text, i.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "was nichts schreibt, erhaelt jede Invariante -- der Rahmen gibt es \
+                         schon, und die Zeile verspricht mehr als sie sagt",
                     ),
                 );
             }

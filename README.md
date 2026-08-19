@@ -116,11 +116,11 @@ denominator that shines instead of the one that costs.*
 
 | | | |
 |---|---|---|
-| **Compiler** | 10 passes, 3 complete, 7 partial, **0 open** | 126 diagnostics · `gabbro paesse` |
+| **Compiler** | 10 passes, 3 complete, 7 partial, **0 open** | 129 diagnostics · `gabbro paesse` |
 | **Grammar** | **139 EBNF rules**, closed and reachable | vocabulary covers every terminal, 206 / 206 |
 | **Proof templates** | **20, of which 9 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Guardians** | 10, each with a two-way speech test | **151 of 152 mutations caught** *(run 2026-08-19)* |
-| **Corpus** | 31 clean examples, 107 poison files, 126 tests *(run 2026-08-19)* | `cargo test` |
+| **Corpus** | 31 clean examples, 109 poison files, 126 tests *(run 2026-08-19)* | `cargo test` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was
@@ -159,6 +159,7 @@ in one day. When you find a number here, you can re-run it.
 cargo run --bin gabbro -- pruefe beispiele/*.gab     # check files
 cargo run --bin gabbro -- paesse                     # what each pass does and does NOT do
 cargo run --bin gabbro -- schablonen                 # the proof-template register
+cargo run --bin gabbro -- pflichten beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
 cargo test                                           # 126 tests
 ./mutiere-pruefer.py                                 # damage one rule at a time: 151 of 152
 ./pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
