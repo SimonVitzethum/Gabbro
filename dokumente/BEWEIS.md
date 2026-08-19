@@ -1225,7 +1225,7 @@ carried beside the line ratio, not beneath it:
 
 | Metric | measures | State |
 |---|---|---|
-| **proof lines : code lines** | **writing cost** — once | **≥ 1,90**, open (obligation side) |
+| **proof lines : code lines** | **writing cost** — once | ~~**≥ 1,90**~~ **unbekannt, > 0,5** *(zurückgezogen 2026-08-19: `w` war an VERUS-Zeilen gemessen, Gabbro beweist in Isabelle/HOL)* |
 | **W obligations per 1 000 lines** | **proof cost** — on **every** change | **≥ 0,63** (38 of 60 756) |
 
 **The second is explicitly a lower bound, and its direction is known.** The denominator is the whole

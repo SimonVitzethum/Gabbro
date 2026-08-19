@@ -3149,12 +3149,20 @@ linearity — and nothing about the 38 value statements that remain standing bes
 
 **Both numbers are lower bounds. The binding one is the larger:**
 
+<!-- widerruf:aus -->
 ```
 Kennzahl  >=  1,90        (Pflichtseite, Population 81; 1,98 mit N_L = 73)
 
 Aufschlag aus B3  =  >= +0,05  UNTER GETRAGENER INDEX-BUCHUNG
                      +1,03     FAELLT SIE
 ```
+<!-- widerruf:an -->
+
+> **ZURUECKGEZOGEN am 2026-08-19.** Die Rechnung bleibt als Rechnung stehen; **ihr Ergebnis
+> ist keine Kennzahl dieses Ordners mehr.** `w = W_zeilen/F` ist an **Verus**-Ruempfen
+> gemessen, und Gabbro beweist in Isabelle/HOL. *Die Formel multipliziert eine
+> prueferUNabhaengige Groesse (welche Pflichten ein Kernel hat) mit einer prueferabhaengigen
+> (was eine Pflicht an Zeilen kostet) -- und der Anker taugt nur fuer die erste.*
 
 > **The surcharge is substituted CONDITIONALLY, not absolutely** — and the condition stands in
 > the formula, not three paragraphs above it. *A substitution that does not carry its condition
@@ -7666,8 +7674,17 @@ ihn eingeholt.
 
 # Die Kennzahl unter der Annahme „PLAN und TODO sind fertig" — 2026-08-19
 
+> **Und noch am selben Tag zurückgezogen, eine Frage später.** Das Ergebnis unten (`2,03`)
+> ruht auf demselben Verus-Anker wie die `1,90` und fällt mit ihr. **Was bestehen bleibt, ist
+> das Argument, nicht die Zahl** — und es ist das wichtigere Stück: *der Faktor 0,3 ist
+> bereits der Preis einer K/A-Pflicht in einer FERTIGEN Sprache, also schließt der Plan die
+> K- und die A-Spalte und bewegt die Kennzahl nicht.* Der Abschnitt bleibt als Rechnung
+> stehen; seine Zahlen sind keine Kennzahlen dieses Ordners mehr.
+
+<!-- widerruf:aus -->
 **Die Frage war: was wird aus `≥ 1,90`, wenn die Pläne aufgehen?** Gerechnet mit der eigenen
 Gewichtsformel des Ordners, ohne eine einzige neue Eingabe:
+<!-- widerruf:an -->
 
 ```
 Ueberschlag = w · 5,0 + (1 − w) · 0,3            w = W_zeilen / F
@@ -7703,12 +7720,108 @@ dieser Ordner nicht.*
 | **Populationsverzerrung** — die 81 Rümpfe sind die Bereiche, für die jemand einen Verus-Beweis geschrieben hat, also die gut verstandenen; die tragen **weniger** Wertaussagen | **nein.** Die Richtung ist bekannt: das wahre `w` liegt höher, also ist 2,03 ein Boden |
 | **die Gabbro-seitigen Zeilenanteile sind ungemessen** | **ja** — es ist ein TODO-Posten, und ihn zu schließen ersetzt die Schätzung durch eine Messung, deren Wert von hier aus niemand vorhersagt |
 
-**Die ehrliche Form ist deshalb: `≥ 2,03` als Schätzung, und die Zahl, die sie ablöst, ist
-eine Messung, die niemand gefahren hat.** *W7 — sie wird mit ihrer Grundlage zitiert oder gar
-nicht.*
+<!-- widerruf:aus -->
+~~**Die ehrliche Form ist deshalb: `≥ 2,03` als Schätzung**, und die Zahl, die sie ablöst, ist
+eine Messung, die niemand gefahren hat.~~
+<!-- widerruf:an -->
+
+**Berichtigt, Stunden später:** die ehrliche Form ist **gar keine Zahl.** *W7 verlangt die
+Grundlage, und die Grundlage ist ein fremder Beweiser* — die Kennzahl lautet seither
+**unbekannt, > 0,5**.
 
 ## Was das für die zweite Kennzahl heißt
 
 `W`-Pflichten je tausend Zeilen bleibt bei **≥ 0,63** und **bewegt sich noch weniger**: sie
 zählt genau die Spalte, die der Plan nicht anfasst. *Die zweite Zahl ist damit die
 plan-unabhängige — und sie ist die, die bei jeder Änderung wieder kostet.*
+
+---
+
+# Die Kennzahl ist zurückgezogen — 2026-08-19, aus einem Einwand von außen
+
+**Der Einwand lautete: *„Man sollte die Zahl an Isabelle/HOL festmachen, Verus hat mit Gabbro
+nichts zu tun."*** Er trifft, und er trifft an der tragenden Stelle.
+
+## Was die Formel zusammenrechnet, gehört nicht zusammen
+
+```
+Ueberschlag = w · 5,0 + (1 − w) · 0,3        w = W_zeilen / F
+```
+
+`F` und `W_zeilen` sind **Zeilen von Verus-Rümpfen in Caprock**. Damit steckt in dem einen
+Faktor `w` zweierlei:
+
+| | prüferabhängig? |
+|---|---|
+| **die Pflichtmischung** — wie viele Pflichten eines Kernels sind Wertaussagen | **nein.** `revoke` ist eine Wertaussage, egal wer sie beweist |
+| **das Zeilengewicht** — wie viele Zeilen jede kostet | **ja, vollständig.** Eine Verus-Zeile ist SMT-gestützt; derselbe Satz in Isar ist ein Vielfaches oder ein `by auto` |
+
+**Verus ist für das Erste ein zulässiger Stellvertreter und für das Zweite keiner** — und die
+Formel benutzt ihn für beides.
+
+## Und die Isabelle-Seite hat den Zähler nicht
+
+Zehn Theorien, 1 639 Zeilen, 48 Sätze, 86 Beweisschritte. Klassifiziert:
+
+| | |
+|---|---|
+| **K** | `Device_Konstruktor` · `Format_Roundtrip` · `Option_Sonderwert` · `Table_Absenkung` · `Table_Indexschranke` · `Verbund_Konstruktor` |
+| **A** | `Consuming` · `Table_Induktion` · `Accumulates_Monoid` |
+| **W** | **keine** |
+| *(weder)* | `Intervall_Aussen` — sie handelt vom **Prüfer** |
+
+**Ein Isabelle-verankertes `w` hätte den Zähler 0 durch Konstruktion**, und die Formel gäbe
+`0,30` — *unter dem seL4-Anker 0,56 und unter dem Boden 0,5, also ein Triumph.* **Dieselbe
+Fehlerklasse, die dieser Ordner schon einmal gebucht hat**, als `p_B3` als kernelseitiges `w`
+gelesen 0,345 ergab.
+
+## Was NICHT fehlt — eine Berichtigung meiner eigenen Zwischenantwort
+
+Ich hatte eine **Isabelle-Semantik von Gabbro** als Voraussetzung genannt. *Das ist falsch,
+und der Einwand hat es benannt:* **die Absenkung nach C ist die Bedeutung.** `spec fn` und
+`impl fn` stehen in **einer** Sprache, die Absenkung ist syntaxgeleitet und durch Schablonen
+gedeckt — eine Wertaussage wird über dem Spezifikationsmodell bewiesen, genau wie es die zehn
+vorhandenen Theorien für Konstrukte tun. *Keine Sprachsemantik nötig; das ist das Gold-3-Argument
+des Plans, und ich hatte es gegen sich selbst gewendet.*
+
+**Was wirklich fehlt, ist P6** — die **erzeugte** Verfeinerungspflicht. Ohne sie gibt es keine
+W-Pflicht, die *entstanden* wäre, sondern nur eine, die jemand erfinden müsste. *Und was man
+erfindet, bevor man es misst, ist die Bewegung, gegen die R7 und W3 stehen.*
+
+## Die neue Buchung
+
+```
+Kennzahl  =  unbekannt, > 0,5
+```
+
+**Die untere Schranke ist ein Argument, keine Messung:** `0,5 : 1` ist die abstrakte
+Spezifikation, Gabbro beansprucht keinen Beweis funktionaler Korrektheit, also ist `W > 0`,
+also liegt die Kennzahl echt darüber. **Eine obere Schranke hat heute niemand.**
+
+## Was die Rücknahme überlebt
+
+| | überlebt? | Grund |
+|---|---|---|
+| **W = 38 von 73** (Kopfzahl) | **ja** | welche Pflichten ein Kernel hat, ist eine Eigenschaft des Kernels |
+| *„viele, aber klein"* (34 % der Zeilen) | **nein** | das „klein" ist in Verus-Zeilen gemessen |
+| **`W` je tausend Zeilen, ≥ 0,63** | **ja** | `38 / 60 756` zählt Pflichten gegen Kernelzeilen und fasst keine Beweiszeile an |
+| **die Amortisation** | **ja, und sie ist neu** | siehe unten |
+
+> **Die zweite Kennzahl war die prüferunabhängige die ganze Zeit**, und es ist niemandem
+> aufgefallen, bis die erste weichen musste.
+
+## Die eine Zahl, die auf dem benutzten Beweiser ruht
+
+```
+1 479 Zeilen Isar  ·  9 bewiesene Erzeugerschablonen  ·  142 Korpusstellen
+                      →  10,4 Zeilen je Stelle
+```
+
+Die 142: **22** `table … count N` · **60** `index into T` · **22** `option index into T` ·
+**8** `by consuming` · **1** `by induction over` · **9** `accumulates … merge` · **12**
+`format` · **8** `device … at`.
+
+**Und sie fällt mit jedem weiteren Programm** — eine Schablone fällt *einmal*, nicht je
+Aufrufstelle. *Damit steht das Amortisationsargument zum ersten Mal als Messung da statt als
+Behauptung.* **Ihre Grenze im selben Satz:** sie misst die **getragene** Seite und nur sie; über
+funktionale Korrektheit sagt sie nichts.

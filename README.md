@@ -35,55 +35,82 @@ away — is about **0,5 : 1**, the abstract specification itself.
 
 | | |
 |---|---|
-| **measured today** | **≥ 1,90**, open — and it hangs almost entirely on the **W column** |
-| **with PLAN and TODO finished** | **≥ 2,03** — *and the reason it does not fall is the thesis itself* |
+| **measured today** | **unknown, and above 0,5** |
 | **target** | **0,5 : 1** |
 
-**The second row is the uncomfortable one, so it carries its arithmetic** (2026-08-19, the
-folder's own weight formula, no new inputs):
+<!-- widerruf:aus -->
+**That is a withdrawal, dated 2026-08-19, and it replaces a number this folder quoted for four
+days.** What stood here was `≥ 1,90`, and it was wrong in a way no rounding fixes.
+<!-- widerruf:an -->
 
-```
-Ueberschlag = w · 5,0 + (1 − w) · 0,3            w = W_zeilen / F
+## Why the number was withdrawn
 
-w        = 0,358          population 73, measured -- K 28 · A 7 · W 38
-                          0,341 for population 81; the 73 is the corrected one
-obligation side          = 0,358 · 5,0 + 0,642 · 0,3   = 1,98
-surcharge from B3        = p_B3 · 5,0 = 0,0096 · 5,0   = +0,05
-                                                        ------
-                                                          2,03
-```
+`Ueberschlag = w · 5,0 + (1 − w) · 0,3` was substituted with **`w` measured on Verus proof
+bodies in Caprock**. That conflates two quantities the formula then multiplies together:
 
-> **Finishing the plan does not move the number, and that is not a defect of the plan.** The
-> factor **0,3** is already the *finished-language* price of a K or an A obligation — it was
-> written down on 2026-08-13 under the assumption that memory safety, frame conditions, race
-> freedom, invariant preservation and refinement all go to **zero**. *That assumption IS the
-> plan.* What the plan closes is the K and A columns; the metric hangs on **W**, and W is by
-> definition what Gabbro never takes away.
-
-**Read plainly: `2,03` is the price of the word "except" in *"Gabbro proves everything except
-functional correctness"*.** The distance to `0,5` is not unfinished work — it is the abstract
-specification plus the 38 value statements a human still owes. *A plan that closed that distance
-would be a plan to prove functional correctness, and this folder does not have one.*
-
-**And the `≥` survives the assumption**, for one reason of the two:
-
-| reason for `≥` | does finishing PLAN/TODO remove it? |
+| | prover-dependent? |
 |---|---|
-| **population bias** — the 81 bodies are the areas somebody *did* prove in Verus, hence the well-understood ones, which carry **fewer** value statements | **no.** The direction is known: the true `w` is higher, so 2,03 is a floor |
-| **the Gabbro-side line shares are unmeasured** | **yes** — it is a TODO item, and closing it replaces the estimate with a measurement whose value nobody can predict from here |
+| **the obligation mix** — how many of a kernel's obligations are value statements | **no.** `revoke` is a value statement no matter who proves it |
+| **the line weight** — how many lines each one costs | **yes, entirely.** A Verus line is SMT-backed; the same theorem in Isar is a multiple, or a `by auto` |
 
-*So the honest form of the second row is: **≥ 2,03 as an estimate, and the number that replaces
-it is a measurement nobody has run.*** W7 — it is quoted with its basis or not at all.
+**Verus is a defensible proxy for the first and none at all for the second** — and Gabbro's
+proofs are Isabelle/HOL. *The number carried a proof economy that appears nowhere in this
+folder.*
 
-**The measurement that produced that number also produced the sentence that matters more:**
+## Why no Isabelle-anchored number replaces it yet
 
-> **The expensive obligations are many, but small.** 38 of 73 by head count (52 %) but only
-> 34 % of the lines — a W obligation is on average **half the size** of a K or an A one. The
-> distance to the floor therefore hangs on the W column, not on loop shapes.
+The ten theories in [`beweise/`](beweise/) are **entirely the (1 − w) side** — six K, three A,
+one about the checker, **zero W**. An Isabelle-anchored `w` would have numerator **0** by
+construction, and the formula would return **0,30** — *below the seL4 anchor, hence a triumph,
+and false.* That is the error class this folder already booked once, when `p_B3` was read as a
+kernel-side `w` and produced 0,345.
+
+**What is missing is not an Isabelle semantics of Gabbro** — the lowering to C is that, and
+`spec fn`/`impl fn` stand in one language, so a value statement is proved over the
+specification model like every existing theory. **What is missing is P6:** the *generated*
+refinement obligation. Until it exists there is no W obligation that arose; there is only one
+somebody would have to invent, and inventing the thing you then measure is the move R7 and W3
+exist to prevent.
+
+## What IS anchored on Isabelle today, and it is the carried side
+
+```
+1 479 lines of Isar  ·  9 proved generator templates  ·  142 corpus sites
+                        → 10,4 lines per site, and the figure FALLS with every program
+```
+
+**The only figure in this folder resting on the prover it actually uses.** It says nothing
+about functional correctness — it says the amortisation argument as a *measurement* rather than
+a claim: *a template falls once, not per program.*
+
+## And why the replacement still says something
+
+**Above 0,5 is not a hedge, it is an argument.** `0,5 : 1` is the abstract specification, and
+Gabbro does not claim to prove functional correctness — so `W > 0`, so the metric is strictly
+above the floor. **What has no bound today is the upper one**, and quoting a number for it
+would be the fourth substitution in a row.
+
+> *W7: a number without a source list does not belong in a document. It is not wrong — it is
+> uncheckable, and that is the more expensive state.*
+
+**What survives the withdrawal is the count, and it is the half that was never Verus's:**
+
+> **38 of 73 obligations are value statements** (52 %) — the ceiling of step assurances covers
+> a **minority**. *Which obligations a kernel has is a property of the kernel; only what each
+> one costs in lines belongs to the prover.* **The head count stands, the line share went with
+> the number.**
+
+> ~~*"many, but small" — 52 % of the obligations, 34 % of the lines*~~ — **withdrawn
+> 2026-08-19 with the metric.** The "small" was measured in Verus lines, and Isar lines are
+> not those. *It may still be true; today nothing supports it.*
 
 **Which is why the dashboard carries a second number**, and it predicts maintenance rather than
 writing: **W obligations per thousand lines, ≥ 0,63**. *Otherwise the folder optimises the
 denominator that shines instead of the one that costs.*
+
+> **And the withdrawal of 2026-08-19 left it standing** — `38 / 60 756` counts obligations
+> against kernel lines and never touches a proof line. *The second number was the
+> prover-independent one all along, and nobody noticed until the first one had to go.*
 
 ## What is built
 

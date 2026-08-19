@@ -83,6 +83,14 @@ WIDERRUFE = [
          datum="2026-08-18", grund="`PFLICHTEN.md`:141/:155 -- entschieden; "
                                    "`beispiele/24-ip-kopf.gab` und `emit.rs`:1416 -- gebaut",
          ersatz="entschieden UND gebaut; seit 2026-08-19 auch im Pruefer (`N007`/`N008`)"),
+    dict(kennung="WM1",
+         muster=r"(?:Kennzahl|metric|kennzahl)[^\n]{0,60}(?:>=|≥)\s*1,9"
+                r"|(?:>=|≥)\s*1,90\b|(?:>=|≥)\s*1,98\b|(?:>=|≥)\s*2,03\b"
+                r"|steht (?:die Kennzahl|the metric)[^\n]{0,30}1,9",
+         datum="2026-08-19", grund="`w` war an VERUS-Zeilen gemessen; Gabbro beweist in "
+                                   "Isabelle/HOL, und dessen zehn Theorien tragen NULL W",
+         ersatz="unbekannt, > 0,5 -- die untere Schranke ist ein Argument (W > 0), "
+                "die obere hat heute niemand"),
     dict(kennung="WD2",
          muster=r"`opaque` zum Bei[sß]en bringen[^\n]{0,30}\*\*eingeschoben\*\*",
          datum="2026-08-18", grund="`m1.rs`:745, Gift 79 und vier Sprechproben",

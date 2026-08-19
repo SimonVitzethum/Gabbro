@@ -51,8 +51,10 @@
 
 **The first two fell on 2026-08-16** (`DONE.md`), and the substitution has **shortened** the path
 rather than lengthened it: `p_B3 = 0,0096`, surcharge `≥ +0,05` — *below the resolution of the
-metric.* **B3 is done as a cost item; the metric stays open at `≥ 1,90`**, because
-it hangs on the **obligation side**, not on the code form. The head position now belongs to the
+metric.* **B3 is done as a cost item; ~~the metric stays open at `≥ 1,90`~~ — die Zahl ist am
+2026-08-19 ZURUECKGEZOGEN und lautet `unbekannt, > 0,5`**, weil `w` an VERUS-Zeilen gemessen
+war und Gabbro in Isabelle/HOL beweist. *Die Pflichtseite bleibt der Ort, an dem sie haengt;
+nur steht dort jetzt keine Zahl.* The head position now belongs to the
 decision, not to the measurement.
 
 > **And the sentence the measurement chain produced belongs at its head:** *the expensive
@@ -458,8 +460,11 @@ of items that are neither code nor a run — what remains is building and measur
       weights proof obligations (`dokumente/MESSUNGEN.md`, *EINSETZUNG*). What is missing: what a
       proof **in Gabbro** costs for the same 73 obligations. **That is no longer a measurement on
       Caprock** — for it the obligations have to be written in Gabbro. Until then
-      the metric stands at `≥ 1,90`, and **every smaller number in circulation is a confusion of
-      the two sides**.
+      ~~the metric stands at `≥ 1,90`~~ **die Kennzahl lautet seit dem 2026-08-19 `unbekannt,
+      > 0,5`**, und **jede kleinere Zahl im Umlauf verwechselt die zwei Seiten**. *Und der
+      Posten hat seither einen genaueren Namen: nicht „ein Beweis in Gabbro", sondern **P6** --
+      die ERZEUGTE Verfeinerungspflicht. Vorher gibt es nichts zu beweisen, das nicht erfunden
+      waere.*
 
 ---
 ### From the inversion of the question ([`dokumente/SPRACHE.md`](dokumente/SPRACHE.md))
@@ -535,6 +540,20 @@ of items that are neither code nor a run — what remains is building and measur
 ---
 
 # BUILDING — needs code
+
+- [ ] **P6 ist die Grundlage der Kennzahl, nicht ihr Zubehoer** *(geschaerft 2026-08-19)*.
+      Die Zahl ist zurueckgezogen (`unbekannt, > 0,5`), weil `w` an VERUS-Zeilen gemessen war.
+      Ein Isabelle-verankertes `w` braucht **eine W-Pflicht, die ENTSTANDEN ist** -- und
+      erzeugt wird sie von P6, der Verfeinerungspflicht aus `spec fn`/`impl fn`. **Keine
+      Sprachsemantik noetig:** die Absenkung nach C ist die Bedeutung, und beide Seiten stehen
+      in einer Sprache. *Solange P6 fehlt, muesste man die Pflicht erfinden, die man dann
+      misst -- genau die Bewegung, gegen die R7 und W3 stehen.*
+- [ ] **Die Zeilenanteile der eigenen zehn Theorien sind gezaehlt, aber nicht KLASSIFIZIERT**
+      *(2026-08-19)*. 1 639 Zeilen, 48 Saetze, 86 Beweisschritte -- was davon ist Prosa, was
+      Modell, was Beweis? **Fuer die Amortisationszahl 10,4 ist es gleich, fuer jeden Vergleich
+      mit einer Verus- oder seL4-Zahl nicht.** *Eine Isar-Datei dieses Ordners ist zu einem
+      grossen Teil Fliesstext, und wer sie gegen eine Verus-Zeilenzahl haelt, vergleicht zwei
+      verschiedene Dinge -- dieselbe Verwechslung eine Ebene tiefer.*
 
 - [ ] **`C001` sagt „keine Absenkung" und wird fuer FALSCHES mitbenutzt** *(gefunden
       2026-08-19 an «B24»)*. Eine Bitlage jenseits der Wortbreite ist kein *„das koennen wir
