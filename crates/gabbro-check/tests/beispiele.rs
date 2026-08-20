@@ -313,3 +313,123 @@ fn die_tiefenschranke_haelt_auf_zwei_mebibyte() {
          als die Haelfte ihrer eigenen Zahl durch"
     );
 }
+
+// ==========================================================================================
+// Die Zusage eines FREMDEN Rumpfes, als eigener Posten im Zeugnis (2026-08-21)
+// ==========================================================================================
+
+/// Das Zeugnis einer echten Korpusdatei, als Text.
+fn zeugnis_von(name: &str) -> String {
+    let p = wurzel().join(name);
+    let quelle = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
+    let (baum, mut absagen) = gabbro_syntax::lies(name, &quelle);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(&quelle));
+    gabbro_check::zeugnis::zeige(&baum, name, &quelle)
+}
+
+/// **Die Stelle steht mit Namen im Zeugnis -- an einer echten Korpusdatei.**
+///
+/// `beispiele/39-auftragsdienst.gab` ist die EINZIGE Datei des ganzen Korpus, in der der
+/// Vertrag eines fremden Rumpfes heute etwas bewegt: `naechste_menge` verspricht
+/// `result >= 1`, sein Ergebnistyp ist `Rest = u32 in 0 .. 4096`, und damit rechnet der
+/// Rufer ab Zeile 127 mit `1 .. 4096`.
+///
+/// > **Das ist eine ANNAHME ueber fremden Code mit Wirkung im Erzeugnis** -- ein engerer
+/// > Bereich besteht Pruefungen, die ein weiterer nicht bestuende. Sie wird nicht
+/// > abgeschaltet; ein Vertrag SOLL wirken. Sie wird gebucht.
+#[test]
+fn eine_fremdverengung_steht_mit_namen_im_zeugnis() {
+    let z = zeugnis_von("39-auftragsdienst.gab");
+    assert!(
+        z.contains("F  FOREIGN CONTRACTS THAT NARROWED"),
+        "der Abschnitt fehlt ganz:\n{z}"
+    );
+    for stueck in [
+        "abarbeiten",
+        "naechste_menge",
+        "result >= 1",
+        "u32 in 0 .. 4096  ->  u32 in 1 .. 4096",
+        "1 narrowings from foreign contracts",
+    ] {
+        assert!(z.contains(stueck), "`{stueck}` fehlt im Zeugnis:\n{z}");
+    }
+}
+
+/// **Und die Gegenrichtung, ohne die die Zahl nichts misst (R14/W17).**
+///
+/// `beispiele/41-handschlag.gab` hat dieselbe Klausel an derselben Bauform -- `extern fn
+/// naechster_puffer() -> Laenge or Quellefehler ensures result >= 1`, gerufen in Zeile 210.
+/// **`Laenge` ist `u32 in 1 .. 4096`, und damit bewegt die Klausel nichts.**
+///
+/// *Sie steht im Zeugnis unter E, weil sie Flaeche ist, und sie steht NICHT unter F, weil sie
+/// niemanden bindet.* Genau diese Unterscheidung ist der Gegenstand des Postens: eine
+/// Zaehlung, die jede vorhandene Klausel zaehlt, faellt hier.
+#[test]
+fn eine_klausel_ohne_wirkung_steht_nicht_unter_f() {
+    let z = zeugnis_von("41-handschlag.gab");
+    assert!(
+        z.contains("6 foreign bodies (1 state their duty), 0 narrowings from foreign contracts"),
+        "die Klausel ist da und bindet niemanden -- Flaeche ja, Verengung nein:\n{z}"
+    );
+    assert!(
+        !z.contains("F  FOREIGN CONTRACTS THAT NARROWED"),
+        "ein leerer Abschnitt F ist eine Zeile, die eine Wirkung behauptet:\n{z}"
+    );
+}
+
+/// **Ein Rumpf, den Gabbro SIEHT, gehoert nicht in diese Buchung.**
+///
+/// Dieselbe Verengung an einem `impl fn` ist eine Ableitung, die Gabbro einmal selbst
+/// nachrechnen wird -- keine Annahme ueber fremden Code. *Ohne diese Probe wuerde jede
+/// Nachbedingung des eigenen Korpus in der Vertrauensflaeche landen, und die Zahl waere
+/// zu gross statt zu klein.*
+#[test]
+fn ein_eigener_rumpf_zaehlt_nicht_als_fremdverengung() {
+    let fremd = "module t { extern fn hole() -> u32 ensures result <= 100 \
+                 effects { pure } costs <= 1 ops; \
+                 impl fn nutze() -> u32 effects { pure } costs <= 4 ops \
+                 { let x = hole(); return x; } }";
+    let eigen = "module t { impl fn hole() -> u32 ensures result <= 100 \
+                 effects { pure } costs <= 1 ops { return 7; } \
+                 impl fn nutze() -> u32 effects { pure } costs <= 4 ops \
+                 { let x = hole(); return x; } }";
+    for (quelle, erwartet) in [(fremd, 1usize), (eigen, 0usize)] {
+        let (baum, a) = gabbro_syntax::lies("p.gab", quelle);
+        assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(quelle));
+        assert_eq!(
+            gabbro_check::fremdverengungen(&baum).len(),
+            erwartet,
+            "erwartet {erwartet} Fremdverengungen in:\n{quelle}"
+        );
+    }
+}
+
+/// **Die zweite Haelfte: die relationale Nachbedingung** (`result <op> <Ort>`).
+///
+/// Sie legt keinen Bereich an, sondern einen `Fakt::Beziehung` -- und ist damit dieselbe
+/// Vertrauensflaeche in einer anderen Gestalt. *Waere nur die Bereichshaelfte gebucht, saehe
+/// die Flaeche kleiner aus, als sie ist.*
+///
+/// **Wirksam heisst hier: eine Tatsache ist ENTSTANDEN**, nicht: sie wird gebraucht. Die Zahl
+/// ist in dieser Richtung eine OBERE Schranke, und das steht in `messung/FREMDVERENGUNG.md`.
+#[test]
+fn auch_die_relationale_nachbedingung_wird_gebucht() {
+    let q = "module t { \
+             type Stapel = { len : u32, }; \
+             extern fn frei(s : ptr<normal, r> Stapel) -> u32 ensures result <= s.len \
+             effects { reads s } costs <= 8 ops; \
+             impl fn nutze(s : ptr<normal, r> Stapel) -> u32 effects { reads s } \
+             costs <= 16 ops { let f = frei(s); return f; } }";
+    let (baum, a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
+    let stellen = gabbro_check::fremdverengungen(&baum);
+    assert_eq!(stellen.len(), 1, "{:?}", stellen);
+    assert!(
+        matches!(stellen[0].wirkung, gabbro_check::fremdverengung::Wirkung::Beziehung),
+        "die relationale Form ist eine Beziehung, kein Bereich: {:?}",
+        stellen[0]
+    );
+    assert_eq!(stellen[0].klausel, "result <= s.len");
+    assert_eq!(stellen[0].rufer, "nutze");
+}

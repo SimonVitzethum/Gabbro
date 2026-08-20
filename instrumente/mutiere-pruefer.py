@@ -2197,6 +2197,46 @@ MUTATIONEN = [
         "B7 -- `P(1, 2)` ohne Feldnamen faellt nicht mehr; zwei gleichtypige Felder "
         "sind vertauschbar, ohne dass ein Typ dagegen spricht",
     ),
+    # -- Die Zusage eines FREMDEN Rumpfes, als Posten im Zeugnis (2026-08-21) -------------
+    #
+    # **Vier Mutationen, weil der Posten vier Stellen hat, an denen er still sterben kann:**
+    # die Unterscheidung wirksam/vorhanden, die zwei Sammelstellen in M1 (Bereich und
+    # Beziehung) und der Abdruck im Zeugnis. *Eine Buchung, die nur an einer davon haengt,
+    # sieht vollstaendig aus.*
+    Mutation(
+        "fremdverengung-zaehlt-jede-klausel",
+        "fremdverengung.rs",
+        "    schritte.retain(|s| s.wirksam);",
+        "    schritte.retain(|s| { let _ = s; true });",
+        "K100/E14 -- das Zeugnis zaehlt jede vorhandene `ensures`-Klausel statt nur die, "
+        "die eine Grenze BEWEGT hat; eine Zeile, die niemanden bindet, sieht dann aus wie "
+        "eine Vertrauensflaeche mit Wirkung",
+    ),
+    Mutation(
+        "fremdverengung-ueberspringt-die-ruempfe-ohne-rumpf",
+        "m1.rs",
+        "        if !sig.rumpf_da {\n            for s in &v.schritte {",
+        "        if false {\n            for s in &v.schritte {",
+        "K100/E14 -- die Bereichsverengung aus einem fremden `ensures` wirkt weiter und "
+        "steht in keinem Zeugnis; genau der Zustand vom 2026-08-20, als `sig.rumpf_da` "
+        "an dieser Rufstelle gar nicht gefragt wurde",
+    ),
+    Mutation(
+        "fremdverengung-vergisst-die-beziehung",
+        "m1.rs",
+        "            if !sig.rumpf_da {\n                self.fremd.push(Stelle {",
+        "            if false {\n                self.fremd.push(Stelle {",
+        "K100/E14 -- die RELATIONALE Haelfte (`ensures result <= s.len`) faellt aus der "
+        "Buchung; die Flaeche sieht kleiner aus, als sie ist",
+    ),
+    Mutation(
+        "zeugnis-druckt-abschnitt-f-nicht",
+        "zeugnis.rs",
+        "    aus.push_str(&crate::fremdverengung::zeige(&stellen, quelle));",
+        "    let _ = quelle;",
+        "K100/E14 -- die Zahl steht in der Befundzeile, die STELLEN stehen nirgends; eine "
+        "Zahl ohne Fundstelle ist ein Rueckstand, kein Ergebnis",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

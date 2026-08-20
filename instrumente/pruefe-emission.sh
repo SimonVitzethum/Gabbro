@@ -306,7 +306,7 @@ int main(void) {
 '
 lauf "beispiel16" "$W/beispiele/16-by-ops-am-feld.gab" "$TREIBER16" "42 1 8 0" \
      's/\.benutzt = true/.benutzt = false/' \
-     "0 assumptions, 1 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty)"
+     "0 assumptions, 1 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 2. Das Fragment: die Geistloeschung -------------------------------------------------
 #
@@ -345,7 +345,7 @@ int main(void) {
 '
 lauf "fragment7" "$ARB/f7.gab" "$TREIBER7" "123456" \
      's/    ipc_tabellen();/    \/* geloescht *\//' \
-     "0 assumptions, 0 templates (0 of them UNPROVED), 3 direct forms, 7 foreign bodies (0 state their duty)"
+     "0 assumptions, 0 templates (0 of them UNPROVED), 3 direct forms, 7 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 3. Das Fragment F8: die Sperre wird auf JEDEM Pfad gegeben --------------------------
 #
@@ -396,7 +396,7 @@ int main(void) {
 #      1  -- und der Slot ist unberuehrt: der None-Zweig fasst nichts an
 lauf "fragment8" "$ARB/f8.gab" "$TREIBER8" "1 1 1 0 0 1 1 1" \
      '0,/^                SCHEDS_gib();$/s///' \
-     "0 assumptions, 3 templates (2 of them UNPROVED), 5 direct forms, 2 foreign bodies (0 state their duty)"
+     "0 assumptions, 3 templates (2 of them UNPROVED), 5 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 4. Das Fragment F10: das Format und das Operationsbudget ----------------------------
 #
@@ -453,7 +453,7 @@ int main(void) {
 #    und die Probe hat es gemeldet.*
 lauf "fragment10" "$ARB/f10.gab" "$TREIBER10" "1 0 0 0 0 65" \
      's/(uint32_t)p\[0\] << 24/(uint32_t)p[3] << 24/' \
-     "1 assumptions, 2 templates (0 of them UNPROVED), 7 direct forms, 2 foreign bodies (0 state their duty)"
+     "1 assumptions, 2 templates (0 of them UNPROVED), 7 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
 #
@@ -492,7 +492,7 @@ int main(void) {
 # *Eine direkte Form weniger heisst hier: eine Klempnereizeile weniger, nicht eine Luecke.*
 lauf "beispiel19" "$W/beispiele/19-traversierung.gab" "$TREIBER19" "16 6 0 0" \
      's/; i++)/; i += 2)/' \
-     "0 assumptions, 2 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty)"
+     "0 assumptions, 2 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 6. Das Geraet: ein Register ist KEIN Feld ------------------------------------------
 #
@@ -530,7 +530,7 @@ int main(void) {
 #            Fuellung, ueber die der Uebersetzer entscheidet
 lauf "beispiel12" "$W/beispiele/12-umlaufendes-register.gab" "$TREIBER12" "8 0 64 8" \
      's/+ 258/+ 260/' \
-     "0 assumptions, 1 templates (0 of them UNPROVED), 2 direct forms, 0 foreign bodies (0 state their duty)"
+     "0 assumptions, 1 templates (0 of them UNPROVED), 2 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 7. FALLE 4: `mirrors`, und der Test misst genau die bezahlte Falle -----------------
 #
@@ -577,7 +577,7 @@ int main(void) {
 #      Maske und eine Kommentarwand; hier ist es eine Zeile.*
 lauf "beispiel20" "$W/beispiele/20-falle-vier.gab" "$TREIBER20" "1 1 1 1" \
      's/(_s \& /(0*_s \& /' \
-     "0 assumptions, 2 templates (0 of them UNPROVED), 1 direct forms, 0 foreign bodies (0 state their duty)"
+     "0 assumptions, 2 templates (0 of them UNPROVED), 1 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 
 # -- 8. «B7»: der Verbundwert, und der Test misst genau das, wofuer die Marken Pflicht sind --
@@ -605,7 +605,7 @@ int main(void) {
 #      Typ haette etwas dagegen gehabt. Das Gift unten vertauscht genau die zwei Bestimmer.
 lauf "beispiel21" "$W/beispiele/21-verbundwert.gab" "$TREIBER21" "5 300 7 9 1" \
      's/\.id = k, \.len = n/.id = n, .len = k/' \
-     "0 assumptions, 1 templates (0 of them UNPROVED), 4 direct forms, 0 foreign bodies (0 state their duty)"
+     "0 assumptions, 1 templates (0 of them UNPROVED), 4 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 
 # -- 9. K11.2.3: `release`/`acquire` senken ab -- und was der Test NICHT zeigen kann ------
@@ -648,7 +648,7 @@ int main(void) {
 #    > Mutationen. *Hier faellt der Wert; die Ordnung faellt dort.*
 lauf "beispiel14" "$W/beispiele/14-paarung-ueber-zwischenfunktion.gab" "$TREIBER14" "0 1" \
      's/atomic_store_explicit(&FERTIG, true,/atomic_store_explicit(\&FERTIG, false,/' \
-     "0 assumptions, 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty)"
+     "0 assumptions, 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 
 # -- 12. «F»: Gleitkomma -- und der Test misst, dass das C WIRKLICH RECHNET -----------------
@@ -679,7 +679,7 @@ int main(void) {
 #      `%.1f` druckt `nan` oder `-nan`. **Kein Literal nennt NaN** -- es entsteht.
 lauf "beispiel26" "$W/beispiele/26-gleitkomma.gab" "$TREIBER26" "0.2 0.5 0.5 0.8 1.0" \
      's/if (!isfinite(x))/if (isfinite(x))/' \
-     "2 assumptions, 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty)"
+     "2 assumptions, 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 10. `accumulates`: eine Zelle je Kern, und der Test misst die SCHABLONE ---------------
 #
@@ -712,7 +712,7 @@ int main(void) {
 #      Das Gift nimmt die Ruecknahme heraus -- dann steht dort das Komplement statt der Zahl.
 lauf "beispiel23" "$W/beispiele/23-akkumulatoren.gab" "$TREIBER23" "19 3 3" \
      's/return (uint64_t)~z;/return z;/' \
-     "0 assumptions, 1 templates (0 of them UNPROVED), 4 direct forms, 3 foreign bodies (0 state their duty)"
+     "0 assumptions, 1 templates (0 of them UNPROVED), 4 direct forms, 3 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 
 # -- 11. «B24» entschieden: der IP-Kopf, an einem echten Paket gemessen ------------------
@@ -744,7 +744,7 @@ int main(void) {
 #      vertauscht, liest 5 und 4 -- beides gueltige Zahlen, und kein Typ sagt etwas.
 lauf "beispiel24" "$W/beispiele/24-ip-kopf.gab" "$TREIBER24" "4 5 10 0 2 0 6" \
      's/>> 4) & 15u/>> 0) \& 15u/' \
-     "0 assumptions, 1 templates (0 of them UNPROVED), 0 direct forms, 0 foreign bodies (0 state their duty)"
+     "0 assumptions, 1 templates (0 of them UNPROVED), 0 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 12. «C1»: die Freiliste -- der SONDERWERT, und der Beweis lag seit zwei Tagen da ------
 #
@@ -786,7 +786,7 @@ int main(void) {
 #                          einer. Wer den Sonderwert auf 0 legt, dreht diese zwei Zahlen um.
 lauf "beispiel27" "$W/beispiele/27-freiliste.gab" "$TREIBER27" "0 3 7 1 0" \
      's/#define Halde_NONE (1024)/#define Halde_NONE (0)/' \
-     "0 assumptions, 2 templates (1 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty)"
+     "0 assumptions, 2 templates (1 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 13. «C2»: der markierte Wert -- `struct { marke; union }`, und `-Wswitch` liest mit ---
 #
@@ -832,7 +832,7 @@ int main(void) {
 lauf "beispiel34" "$W/beispiele/34-markierter-wert.gab" "$TREIBER34" \
      "0 41 4294967298 7 0 2 4294967298 8" \
      's/= m.last.Lang;/= m.last.Kurz;/' \
-     "0 assumptions, 1 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty)"
+     "0 assumptions, 1 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 14. «C3c»: die Gruppe erzeugt NICHTS -- und die Tabelle IST der Speicher -----------
 #
@@ -872,7 +872,7 @@ int main(void) {
 #                 64 -- `count NPUNKTE` traegt das Feld
 lauf "beispiel17" "$W/beispiele/17-gruppe-ueber-zwei-sperren.gab" "$TREIBER17" "9 1 1 1 0 64" \
      's/        PLAN_nimm();//' \
-     "0 assumptions, 2 templates (1 of them UNPROVED), 3 direct forms, 2 foreign bodies (0 state their duty)"
+     "0 assumptions, 2 templates (1 of them UNPROVED), 3 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 15. «C3b»: RCU -- und der Unterschied zur Sperre ist das, was FEHLT ----------------
 #
@@ -911,7 +911,7 @@ int main(void) {
 #                1 -- `reclaims frei` steht als `Some(i)` im Kopf der Freiliste
 lauf "beispiel31" "$W/beispiele/31-rcu.gab" "$TREIBER31" "55 0 0 0 1" \
      's/^        BACCT_lese_ende();$//' \
-     "1 assumptions, 2 templates (1 of them UNPROVED), 4 direct forms, 2 foreign bodies (0 state their duty)"
+     "1 assumptions, 2 templates (1 of them UNPROVED), 4 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 16. «C4»: der Tausch, und die ORDNUNG ist die Falle --------------------------------
 #
@@ -944,7 +944,7 @@ int main(void) {
 #                    0   -- und am Ende ist der Platz wieder frei
 lauf "beispiel35" "$W/beispiele/35-tausch.gab" "$TREIBER35" "1 0 0 1 0" \
      's/uint32_t _cx1 = (uint32_t)(NIEMAND);/uint32_t _cx1 = (uint32_t)(f);/' \
-     "0 assumptions, 0 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty)"
+     "0 assumptions, 0 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # **`wrapping` heisst DEFINIERT -- und diese Einheit misst genau das** (2026-08-20).
 #
@@ -969,7 +969,7 @@ int main(void) {
 '
 lauf "beispiel37" "$W/beispiele/37-umlauf-rechnet.gab" "$TREIBER37" "63744" \
      's/) \* (uint32_t)/) + (uint32_t)/' \
-     "0 assumptions, 2 templates (0 of them UNPROVED), 2 direct forms, 0 foreign bodies (0 state their duty)"
+     "0 assumptions, 2 templates (0 of them UNPROVED), 2 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 19. «B41b»: der BAUMDURCHLAUF, und er ist die Einheit, auf die es hier ankommt ------
 #
@@ -1088,7 +1088,7 @@ int main(void) {
 '
 lauf "baum41" "$ARB/b41.gab" "$TREIBER41" "7 0 0 1" \
      's/\.erstes_kind; _h1 = false/.elter; _h1 = false/' \
-     "0 assumptions, 2 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty)"
+     "0 assumptions, 2 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # =======================================================================================
 # **Stufe 9: die REGEL, nicht die Liste** (2026-08-20).

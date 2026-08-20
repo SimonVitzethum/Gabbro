@@ -773,8 +773,15 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
 }
 
 /// **Das Zeugnis als Text.** Zeilenformat stabil, ohne Werkzeug lesbar.
-pub fn zeige(baum: &Programm, datei: &str) -> String {
+///
+/// `quelle` ist der Quelltext derselben Einheit. **Er kam am 2026-08-21 hinzu**, und zwar
+/// nicht aus Bequemlichkeit: Abschnitt F nennt Fundstellen, und eine Fundstelle ohne
+/// Zeilennummer ist eine Meinung. *Damit liest das Zeugnis nicht mehr nur den Baum, sondern
+/// bekommt zusaetzlich, was der PASS gesehen hat* -- die Alternative waere ein zweiter Leser
+/// derselben Frage gewesen.
+pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
     let e = erhebe(baum);
+    let stellen = crate::fremdverengungen(baum);
     let mut aus = String::new();
     aus.push_str(&format!("== Uebersetzungszeugnis: {datei} ==\n"));
     aus.push_str(
@@ -903,6 +910,14 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
         }
     }
 
+    // -- F: die fremden Vertraege, die GEWIRKT haben -----------------------------------
+    //
+    // **Getrennt von E, und der Unterschied ist der ganze Posten.** E ist die FLAECHE: jeder
+    // fremde Rumpf mit seinem Vertrag. F sind die Stellen, an denen dieser Vertrag im Rufer
+    // zu einer Tatsache geworden ist -- *eine Verengung mit Wirkung im Erzeugnis ist etwas
+    // anderes als eine Zeile, die niemanden bindet.*
+    aus.push_str(&crate::fremdverengung::zeige(&stellen, quelle));
+
     // -- Der Befund --------------------------------------------------------------------
     if e.gleitkomma {
         aus.push_str("\n-- FLOATING POINT -- and this is NOT a statement about numbers\n");
@@ -936,10 +951,11 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
         );
     }
     // **Eine Zeile traegt die Buchung.** Der Waechter vergleicht genau sie; eine zweite Zahl
-    // daneben waere eine Gelegenheit, sich zu widersprechen.
+    // daneben waere eine Gelegenheit, sich zu widersprechen. *Deshalb wuchs sie am
+    // 2026-08-21 um ein Glied, statt eine zweite Zeile danebenzustellen.*
     aus.push_str(&format!(
         "     {} assumptions, {} templates ({} of them UNPROVED), {} direct forms, \
-         {} foreign bodies ({} state their duty)\n",
+         {} foreign bodies ({} state their duty), {} narrowings from foreign contracts\n",
         annahmen.len(),
         benutzt.len(),
         offen.len(),
@@ -950,12 +966,20 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
                 .any(|p| p.konstrukt == **k && p.traegt == Traegt::Direkt))
             .count(),
         e.fremde.len(),
-        e.fremde_mit_pflicht
+        e.fremde_mit_pflicht,
+        stellen.len()
     ));
     if !e.fremde.is_empty() {
         aus.push_str(
             "     A foreign body does not dissolve even when all of Gabbro is verified \
                 --\n\x20    it is the one class that stays.\n",
+        );
+    }
+    if !stellen.is_empty() {
+        aus.push_str(
+            "     And a narrowing from a foreign contract is that same class REACHING \
+                INTO\n\x20    this translation: the checker believes a range it did not \
+                derive.\n",
         );
     }
     if !offen.is_empty() {

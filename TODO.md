@@ -95,7 +95,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **55 Kennzahlen mit Befehl** *(Stand 2026-08-21; 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **58 Kennzahlen mit Befehl** *(Stand 2026-08-21; 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -227,7 +227,7 @@ darunter.
       und ihre Quelle ist eine Tabelle in `PFLICHTEN.md`, deren Zeilen ein Mensch geschrieben
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
-      **`pruefe-zahlen.py` führt heute 55 Kennzahlen mit Befehl und zählt 147 fettgedruckte
+      **`pruefe-zahlen.py` führt heute 58 Kennzahlen mit Befehl und zählt 147 fettgedruckte
       Zahlen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
@@ -468,7 +468,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **807 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **813 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       **Und der Befund ist, dass es nicht null war:** der erste Lauf fand **16** Nahtstellen —
       ein Jahr nachdem die 161 von Hand geflickt worden waren. *Von Hand geflickt heißt: nicht
       bewacht.* Darunter `„…is verified--"`, `„…the rule therefore has**zero bite**"` und
@@ -632,7 +632,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **240 von 240 Ankern** greifen (`--anker`, 2026-08-20) — die
+      fällt. Mutationskatalog: **244 von 244 Ankern** greifen (`--anker`, 2026-08-21) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -947,6 +947,41 @@ Wirklichkeit berührt; kehrte er zurück, wäre sie eine Zahl ohne Folge. Der Fe
       (b) **prüfen, wo die Fakten in Verengungen einfließen, und diese Stellen als EIGENEN
       Posten ins Zeugnis nehmen**, nicht in die allgemeine Annahmenfläche. *Eine Verengung mit
       Wirkung im Erzeugnis ist etwas anderes als eine Zeile, die niemanden bindet.*
+
+      **AUSGEFÜHRT am 2026-08-21.** (a) war keine Lücke — die Fläche steht längst in
+      `zeugnis` E und in `pflichten` als Klasse `F`, an einer Handprobe nachgeprüft.
+      (b) steht: **Abschnitt `F` im Zeugnis**, eine eigene Zahl in der Befundzeile, und
+      [`./instrumente/zaehle-fremdverengung.py`](instrumente/zaehle-fremdverengung.py) über
+      den ganzen Korpus. Bericht: [`messung/FREMDVERENGUNG.md`](messung/FREMDVERENGUNG.md).
+
+      **Und die Verengung ist NICHT abgeschaltet worden** — sie ist sichtbar. Ein Vertrag an
+      einem fremden Rumpf soll wirken; das ist sein Zweck. Was fehlte, war die Buchung.
+
+      ```
+      F  FOREIGN CONTRACTS THAT NARROWED -- a foreign `ensures` became a FACT here
+           127:   abarbeiten -> naechste_menge     range     result >= 1
+                  u32 in 0 .. 4096  ->  u32 in 1 .. 4096
+      ```
+
+      > **Der Satz „aus jedem verengt M1" war falsch, und der Irrtum ist der Ertrag: 1 von
+      > 10.** Sechs Klauseln nennen `result` gar nicht (Weltzustand), zwei nennen es und
+      > bewegen nichts (`result >= 1` auf `u32 in 1 .. 4096`), eine hängt an einer Funktion,
+      > die niemand ruft. *Drei wortgleiche Zeilen an derselben Bauform, und nur eine bindet
+      > jemanden.* Genau diese Unterscheidung — **wirksam** gegen **vorhanden** — trägt eine
+      > einzige Zeile im neuen Modul, und ohne sie hätte der Posten neun Zeilen als
+      > Vertrauensfläche gebucht, die keine sind.
+
+      **Ein Leser, nicht zwei:** `crates/gabbro-check/src/fremdverengung.rs` beantwortet die
+      Frage *„verengt diese Klausel, und wie?"* einmal; `m1` und das Zeugnis rufen dieselbe
+      Funktion. *Das ist die Lehre vom 2026-08-20, an der `verbundwert` zu `c->len` wurde.*
+
+      **Was der Posten NICHT geschlossen hat:** die relationale Hälfte
+      (`ensures result <= s.len` an einem fremden Rumpf) hat im Korpus **null** Fundstellen
+      und ist nur durch Test und Mutation bewacht — **Regel A ist an dieser Hälfte offen.**
+      Und `M115` ist mit Begründung *nicht* als eigener Posten gebucht: eine falsche
+      Vorbedingung kann ein richtiges Programm abweisen, nie ein falsches durchlassen. *Die
+      Begründung steht im Zeugnis und im Bericht — wer sie umstoßen will, findet sie, statt
+      sie zu suchen.*
 
 ### Aus «H2» *(ausgefuehrt 2026-08-19, `H = 17 → 15`)* — der Rest, den der Lauf hinterliess *(Teil)*
 
@@ -2189,8 +2224,24 @@ und ist eine Doppelung.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN
 
-**80 fremde Rümpfe im Korpus, 0 sprechen ihre Pflicht aus.** `ensures` an einer rumpflosen
-Deklaration ist grammatisch seit jeher möglich — **und kein Pass liest es.**
+**80 fremde Rümpfe im Korpus, 10 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
+
+> **Berichtigt am 2026-08-21, und die Überschrift war in BEIDE Richtungen falsch.** Hier stand
+> *„0 sprechen ihre Pflicht aus — und kein Pass liest es"*. Es sind **10**, und ein Pass liest
+> es sehr wohl: `M1` verengt daraus (Entscheidung 14, Stufe 2). *Zu pessimistisch in der
+> Zahl, zu optimistisch im Schluss.* **Die 0 stand als Literal im Suchmuster ihres eigenen
+> Wächters** — eine Zahl, die im Muster ihres Wächters als Konstante steht, ist unbewacht und
+> sieht bewacht aus (W16). Seit heute kommen beide Zahlen aus dem Lauf.
+> ```
+> $ ./instrumente/zaehle-fremdverengung.py
+>   1 wirksame Fremdverengungen aus 10 ausgesprochenen Vertraegen
+>   109 fremde Ruempfe insgesamt (beispiele/ + messung/)
+> ```
+> **Und die schärfere Zahl ist die 1 von 10.** Sechs der zehn Klauseln nennen `result` gar
+> nicht (Weltzustand), zwei nennen es und bewegen nichts, eine hängt an einer Funktion, die
+> niemand ruft. *Neun Verträge, die aussehen wie Pflichten und niemanden binden* — das ist
+> die Lücke dieser Stufe, schärfer gefasst als vorher.
 
 Das ist die eine Klasse, die sich auch unter *„ganz Gabbro verifiziert"* nicht auflöst, und damit
 **genau die Klempnerei, die beim Endnutzer übrig bleibt: Ziel 4 hängt hier stärker als an `H`.**

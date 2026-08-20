@@ -237,12 +237,40 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r"\*\*(\d+) fremde Rümpfe im Korpus, 0 sprechen ihre Pflicht aus\.\*\*",
+        r"\*\*(\d+) fremde Rümpfe im Korpus, \d+ sprechen ihre Pflicht aus",
         ["sh", "-c",
          "cargo run -q --bin gabbro -- zeugnis beispiele/*.gab | "
          "grep -oE '[0-9]+ foreign bodies' | awk '{s+=$1} END {print s\" fremde\"}'"],
         r"^(\d+) fremde",
         "fremde Ruempfe im Korpus",
+    ),
+    # **Die ZWEITE Zahl derselben Zeile stand bis zum 2026-08-21 als Literal im Muster
+    # darueber** -- also unbewacht, und sie sah bewacht aus. Sie war falsch (0 statt 10).
+    # *Dieselbe Klasse wie W16: ein Waechter, dessen Muster die Antwort schon enthaelt,
+    # prueft seine eigene Erwartung.*
+    (
+        "TODO.md",
+        r"fremde Rümpfe im Korpus, (\d+) sprechen ihre Pflicht aus",
+        ["sh", "-c",
+         "cargo run -q --bin gabbro -- zeugnis beispiele/*.gab | "
+         "grep -oE '\\([0-9]+ state their duty\\)' | grep -oE '[0-9]+' | "
+         "awk '{s+=$1} END {print s\" sprechen\"}'"],
+        r"^(\d+) sprechen",
+        "fremde Ruempfe, die ihre Pflicht AUSSPRECHEN",
+    ),
+    (
+        "messung/FREMDVERENGUNG.md",
+        r"\| \*\*(\d+)\*\* \| davon \*\*verengt wirklich\*\*",
+        ["./instrumente/zaehle-fremdverengung.py"],
+        r"== (\d+) wirksame Fremdverengungen",
+        "wirksame Fremdverengungen im Korpus -- die Zahl mit Wirkung im Erzeugnis",
+    ),
+    (
+        "messung/FREMDVERENGUNG.md",
+        r"\| \*\*(\d+)\*\* \| davon \*\*sprechen ihre Pflicht aus\*\*",
+        ["./instrumente/zaehle-fremdverengung.py"],
+        r"aus (\d+) ausgesprochenen Vertr",
+        "fremde Ruempfe, die ihre Pflicht aussprechen",
     ),
     (
         "TODO.md",

@@ -42,6 +42,11 @@ pub mod umgebung;
 
 pub use m1::Zaehlung;
 pub use kosten::Zaehlung as Kostenzaehlung;
+// **Die Zusage eines fremden Rumpfes, als Tatsache im Pruefer** -- der EINE Leser der Frage
+// „verengt diese `ensures`-Klausel, und wie?", und die Buchung der Stellen, an denen sie es
+// getan hat. M1 nimmt den Typ, das Zeugnis nimmt die Stellen.
+pub mod fremdverengung;
+pub use m1::fremdverengungen;
 
 pub mod korpus;
 pub mod manifest;

@@ -927,7 +927,7 @@ reader also read v2 — refusal or migration? **It is the refusal.** Gabbro does
 between format versions, and it never will by default.*
 
 ```
-$ ./zaehle-formate.py
+$ ./instrumente/zaehle-formate.py
   14 @version-Textstellen in Korpus + FRAGMENTE
     12 x @version 1
     2 x @version 17
@@ -966,7 +966,7 @@ Two readings follow, and both are load-bearing:
 
 > **The number is a LOWER bound** (W10): a format that evolved under a **new name** rather
 > than a new number is invisible to the count, and one that evolved **in place** lives in the
-> `git` history, not in the text. `./zaehle-formate.py` prints its own upper bounds beside the
+> `git` history, not in the text. `./instrumente/zaehle-formate.py` prints its own upper bounds beside the
 > 0 and turns **red** the moment a first second version appears — because then the premise of
 > this decision is gone and it has to be argued again.
 
@@ -1314,7 +1314,7 @@ not the silence of one nobody thought about.*
 
 ### And the newest one is a refusal **without a site** — format migration, 2026-08-21
 
-The ground is in §9 at the `format` production and it is a number: `./zaehle-formate.py`
+The ground is in §9 at the `format` production and it is a number: `./instrumente/zaehle-formate.py`
 counts **0 formats with a second version** over corpus and `FRAGMENTE.md`. What is different
 from `P037` is worth saying, because it decides why **no** new diagnostic was built: the
 braced literal is a form somebody would *write*, and without `P037` 76 corpus sites misparse

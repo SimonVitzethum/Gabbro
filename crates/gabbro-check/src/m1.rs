@@ -28,6 +28,7 @@
 //! * **Er zaehlt, was er nicht weiss.** Jeder Ausdruck ohne Typ geht in die Zaehlung; ein
 //!   Lauf ohne diese Zahl sieht aus wie Deckung.
 
+use crate::fremdverengung::{gespiegelt, zeichen, Stelle, Wirkung};
 use crate::typen::{self, IntBereich, Typ};
 use crate::umgebung::Umgebung;
 use gabbro_syntax::ast::*;
@@ -104,6 +105,27 @@ enum Fakt {
 }
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
+    lauf(baum, absagen).0
+}
+
+/// **Die Stellen, an denen der Vertrag eines FREMDEN Rumpfes im Rufer gewirkt hat.**
+///
+/// Fuer das Zeugnis. *Es ist derselbe Lauf und derselbe Leser* -- die Frage „verengt diese
+/// `ensures`-Klausel, und wie?" wird in `fremdverengung::bereich_aus_ensures` genau einmal
+/// beantwortet, und diese Funktion holt die Antwort ab, statt sie ein zweites Mal zu stellen.
+///
+/// > **Ein Zeugnis, das den Baum noch einmal selbst liest, waere der zweite Leser** -- und
+/// > genau diese Bauart hat am 2026-08-20 eine Tatsache verloren, die zwei Leser hatte und
+/// > von der nur einer las.
+///
+/// Die Absagen des Laufs fallen hier auf den Boden: das Zeugnis wird nur gedruckt, wenn der
+/// richtige Lauf fehlerfrei war (`gabbro zeugnis` bricht sonst ab).
+pub fn fremdverengungen(baum: &Programm) -> Vec<Stelle> {
+    let mut fort = Absagen::neu("zeugnis");
+    lauf(baum, &mut fort).1
+}
+
+fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>) {
     let umgebung = Umgebung::sammle(baum);
     let mut spezifikationen = std::collections::HashMap::new();
     sammle_spezifikationen(&baum.items, &mut spezifikationen);
@@ -112,13 +134,15 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         absagen,
         zaehlung: Zaehlung::default(),
         modul: String::new(),
+        rufer: String::new(),
+        fremd: Vec::new(),
         spezifikationen,
         unveraenderlich: std::collections::HashSet::new(),
         unveraenderliche_statiken: std::collections::HashMap::new(),
         schon_gemeldet: std::collections::HashSet::new(),
     };
     p.programm(baum);
-    p.zaehlung
+    (p.zaehlung, p.fremd)
 }
 
 /// **Alles, was `maintains` nennen darf** -- und das sind ZWEI Arten, nicht eine.
@@ -199,6 +223,17 @@ struct Pruefer<'a> {
     /// im Blindflug auf** -- und ein gleichnamiges `fn` in einem fremden Modul loescht eine
     /// Bereichspruefung, ohne dass jemand es sieht (Gegenpruefung 2026-08-14, U11/U12).
     modul: String,
+    /// Der Name des Rumpfes, in dem der Pass gerade steht -- **fuer das Zeugnis, nicht fuer
+    /// eine Absage.** Eine Verengung aus einem fremden Vertrag ohne den Rufer daneben waere
+    /// eine Zahl ohne Fundstelle.
+    rufer: String,
+    /// Die Stellen, an denen der Vertrag eines FREMDEN Rumpfes gewirkt hat.
+    ///
+    /// *Gesammelt wird an genau den zwei Stellen, an denen der Pass aus einem `ensures`
+    /// etwas macht* -- `aus_ensures` (Bereich) und `beziehung_aus_ensures` (Beziehung).
+    /// Wer eine dritte hinzufuegt und hier nichts eintraegt, macht die Flaeche unsichtbar,
+    /// nicht kleiner.
+    fremd: Vec<Stelle>,
 }
 
 /// Die Bindungen und Fakten eines Blocks. Ein Block erbt beide und gibt keins zurueck.
@@ -305,6 +340,7 @@ impl<'a> Pruefer<'a> {
             }
             if let ItemArt::Konst(k) = &item.art {
                 self.modul = modul.to_string();
+                self.rufer = format!("const {}", k.name.text);
                 let ziel = self.u.typ_von_ausdruck_decl(modul, &k.typ);
                 let mut lage = Lage::default();
                 let quelle = self.ausdruck(&k.wert, &mut lage);
@@ -355,6 +391,7 @@ impl<'a> Pruefer<'a> {
             }
             if let ItemArt::Statisch(st) = &item.art {
                 self.modul = modul.to_string();
+                self.rufer = format!("static {}", st.name.text);
                 let ziel = self.u.typ_von_ausdruck_decl(modul, &st.typ);
                 let mut lage = Lage::default();
                 let quelle = self.ausdruck(&st.wert, &mut lage);
@@ -369,6 +406,7 @@ impl<'a> Pruefer<'a> {
                 // Nur Ruempfe: Praedikate haben keine Laufzeitwirkung.
                 if let FnRumpf::Block(b) = &f.rumpf {
                     self.modul = modul.to_string();
+                    self.rufer = f.name.text.clone();
                     let mut lage = Lage::default();
                     for prm in &f.parameter {
                         let t = self.u.typ_von_ausdruck_decl(modul, &prm.typ);
@@ -397,6 +435,7 @@ impl<'a> Pruefer<'a> {
             // -- eine Probe faellt oder haelt.
             if let ItemArt::Check(c) = &item.art {
                 self.modul = modul.to_string();
+                self.rufer = format!("check {}", c.name.text);
                 let mut lage = Lage::default();
                 let bool_typ = Typ::Wahrheit;
                 self.block(&c.can_fail, &mut lage, Some(&bool_typ));
@@ -1219,7 +1258,33 @@ impl<'a> Pruefer<'a> {
         }
         self.requires_pruefen(r, &sig, &argtypen);
         let roh = sig.ergebnis.clone().unwrap_or(Typ::Unbekannt);
-        self.aus_ensures(&roh, &sig.ensures)
+        let v = crate::fremdverengung::bereich_aus_ensures(&roh, &sig.ensures);
+        // **Und hier wird die Annahme GEBUCHT statt still zu wirken (2026-08-21).**
+        //
+        // Bis heute stand an dieser Stelle nur der Ruf; `sig.rumpf_da` wurde nicht gefragt,
+        // obwohl das Feld in seinem eigenen Kopfkommentar sagt, wozu es da ist: *„Ohne ihn
+        // ist jede Verengung aus `ensures` eine ANNAHME ueber fremden Code und gehoert ins
+        // Zeugnis."* **Die Verengung bleibt** -- ein Vertrag an einem fremden Rumpf SOLL
+        // wirken, das ist sein Zweck. Was sich aendert, ist ihre Sichtbarkeit.
+        //
+        // > Gebucht wird die WIRKSAME Verengung: `schritte` ist leer, wenn keine Grenze sich
+        // > bewegt hat. *Eine Klausel, die nichts verengt, ist eine Zeile, die niemanden
+        // > bindet* -- und genau diese Unterscheidung ist der Gegenstand des Postens.
+        if !sig.rumpf_da {
+            for s in &v.schritte {
+                self.fremd.push(Stelle {
+                    rufer: self.rufer.clone(),
+                    gerufener: r.pfad.text(),
+                    span: r.span,
+                    klausel: s.klausel.clone(),
+                    wirkung: Wirkung::Bereich {
+                        vorher: s.vorher.clone(),
+                        nachher: s.nachher.clone(),
+                    },
+                });
+            }
+        }
+        v.typ
     }
 
     /// **`M115` -- eine Vorbedingung, die am Rufort NACHWEISLICH falsch ist (2026-08-19).**
@@ -1288,64 +1353,6 @@ impl<'a> Pruefer<'a> {
                 );
             }
         }
-    }
-
-    /// **Punkt 4 -- die Nachbedingung des Gerufenen verengt sein Ergebnis (2026-08-19).**
-    ///
-    /// Gemessen am selben Tag, und der Befund war die Begruendung: ein Vertrag an einem
-    /// fremden Rumpf war in BEIDEN Richtungen wirkungslos.
-    ///
-    /// ```gabbro
-    /// extern fn hole() -> u32 ensures result <= 100 …;
-    /// impl fn nutze() -> u32 in 0 .. 100 { let x = hole(); return x; }
-    /// --> M101: die Rueckgabe verlangt `u32 in 0 .. 100`, der Wert hat `u32`
-    /// ```
-    ///
-    /// **48 fremde Ruempfe im Korpus, NULL sprechen ihre Pflicht aus** -- und der Grund war
-    /// nicht Nachlaessigkeit: *Hinschreiben kostete nichts und brachte nichts.* Eine Klausel,
-    /// die niemand liest, schreibt niemand.
-    ///
-    /// ## Was hier passiert, und was ausdruecklich nicht
-    ///
-    /// Verengt wird nur aus Vergleichen `result <op> <Zahl>` -- die Form, die 14 der
-    /// 17 Pflichten des Beispielkorpus haben. Alles Uebrige (Quantoren, Weltzustand,
-    /// `old`) bleibt liegen: es waere eine Aussage ueber ORTE, und die Tatsachenmaschinerie
-    /// haengt an Namen, die der Rufer nicht kennt.
-    ///
-    /// > **Und die Richtung ist eine ANNAHME, keine Ableitung.** Bei einem `extern fn` glaubt
-    /// > Gabbro dem fremden Rumpf; das ist der Zweck eines Vertrags und trotzdem
-    /// > Vertrauensflaeche. *Deshalb zaehlt `gabbro pflichten` sie als `F` und das Zeugnis
-    /// > nennt sie -- wer nicht pruefen kann, EXPORTIERT.*
-    fn aus_ensures(&self, roh: &Typ, ensures: &[Pred]) -> Typ {
-        let Some(b) = roh.bereich() else { return roh.clone() };
-        let (mut min, mut max) = (b.min, b.max);
-        for p in ensures {
-            let PredArt::Vergleich(e) = &p.art else { continue };
-            let ExprArt::Binaer(op, a, c) = &e.art else { continue };
-            // `result <op> zahl` -- und die gespiegelte Form `zahl <op> result`.
-            let (op, zahl) = match (&a.art, &c.art) {
-                (ExprArt::Ergebnis, ExprArt::Zahl(n)) => (*op, *n as i128),
-                (ExprArt::Zahl(n), ExprArt::Ergebnis) => (gespiegelt(*op), *n as i128),
-                _ => continue,
-            };
-            match op {
-                BinOp::Kleiner => max = max.min(zahl - 1),
-                BinOp::KleinerGleich => max = max.min(zahl),
-                BinOp::Groesser => min = min.max(zahl + 1),
-                BinOp::GroesserGleich => min = min.max(zahl),
-                BinOp::Gleich => {
-                    min = min.max(zahl);
-                    max = max.min(zahl);
-                }
-                _ => {}
-            }
-        }
-        if min > max || (min == b.min && max == b.max) {
-            // **Ein leerer Bereich ist kein Fortschritt, sondern ein Widerspruch** -- und den
-            // meldet nicht diese Funktion. *Sie verengt oder schweigt.*
-            return roh.clone();
-        }
-        Typ::Ganzzahl(IntBereich::genau(b.breite, b.vorzeichen, min, max))
     }
 
     /// **`M106` IST `deckt` aus `beweise/Verbund_Konstruktor.thy`, und `M107` ist die Frage,
@@ -2408,6 +2415,13 @@ impl<'a> Pruefer<'a> {
     /// Parameter haengt und das zugehoerige Argument selbst ein schlichter Ort ist. *Ein
     /// Argument, das gerechnet wird (`f(a + 1)`), hat keinen Ort, und dann schweigt die
     /// Regel* -- W10.
+    ///
+    /// **Und dies ist die ZWEITE Stelle, an der ein fremder Vertrag zu einer Tatsache wird**
+    /// (2026-08-21). Sie steht deshalb ebenso im Zeugnis wie die Bereichsverengung; *eine
+    /// Flaeche, von der nur eine Haelfte gebucht ist, sieht kleiner aus als sie ist.*
+    /// **Wirksam heisst hier: eine Tatsache ist ENTSTANDEN.** Ob sie irgendwo gebraucht wird,
+    /// entscheidet dieser Pass nicht -- die Zahl ist in dieser Richtung eine OBERE Schranke,
+    /// und sie steht als solche in `messung/FREMDVERENGUNG.md`.
     fn beziehung_aus_ensures(&mut self, binder: &str, r: &Ruf, lage: &mut Lage) {
         let Some(sig) = self.u.funktion(&self.modul, &r.pfad).cloned() else { return };
         for p in &sig.ensures {
@@ -2440,6 +2454,15 @@ impl<'a> Pruefer<'a> {
             ) else {
                 continue;
             };
+            if !sig.rumpf_da {
+                self.fremd.push(Stelle {
+                    rufer: self.rufer.clone(),
+                    gerufener: r.pfad.text(),
+                    span: r.span,
+                    klausel: format!("result {} {}", zeichen(op), ort.text()),
+                    wirkung: Wirkung::Beziehung,
+                });
+            }
             lage.fakten.push(Fakt::Beziehung { links, op, rechts, indizes });
         }
     }
@@ -2984,28 +3007,6 @@ fn sammle_namen_pred_geb(p: &Pred, gebunden: &mut Vec<String>, out: &mut Vec<Str
             gebunden.pop();
         }
         _ => {}
-    }
-}
-
-/// Die gespiegelte Form eines Vergleichs: `3 <= result` ist `result >= 3`.
-fn gespiegelt(op: BinOp) -> BinOp {
-    match op {
-        BinOp::Kleiner => BinOp::Groesser,
-        BinOp::KleinerGleich => BinOp::GroesserGleich,
-        BinOp::Groesser => BinOp::Kleiner,
-        BinOp::GroesserGleich => BinOp::KleinerGleich,
-        x => x,
-    }
-}
-
-fn zeichen(op: BinOp) -> &'static str {
-    match op {
-        BinOp::Kleiner => "<",
-        BinOp::KleinerGleich => "<=",
-        BinOp::Groesser => ">",
-        BinOp::GroesserGleich => ">=",
-        BinOp::Gleich => "==",
-        _ => "?",
     }
 }
 

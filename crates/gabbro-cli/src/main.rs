@@ -243,7 +243,7 @@ fn main() -> std::process::ExitCode {
                     schlecht = true;
                     continue;
                 }
-                print!("{}", gabbro_check::zeugnis::zeige(&baum, datei));
+                print!("{}", gabbro_check::zeugnis::zeige(&baum, datei, &quelle));
             }
             if schlecht {
                 std::process::ExitCode::from(1)
