@@ -48,6 +48,26 @@ BEWEISE = W / "beweise"
 # Ergebnis jetzt im Baum steht. Sie darf fallen, nicht steigen.
 MARKE_EINGEFROREN = 31        # metis + blast + smt
 VERBOTEN = ("sledgehammer", "try0", "nitpick", "quickcheck")
+
+# **Die dritte Haelfte: welche Theorie steht in KEINEM Register?** (2026-08-20)
+#
+# `gabbro schablonen` fuehrt **Erzeugerpflichten** -- *„eine Beweispflicht, die der Erzeuger
+# schuldet"*. `Intervall_Aussen.thy` handelt vom PRUEFER und passt dort nicht hinein; damit
+# gibt es **zwei Vertrauensflaechen und nur eine Buchung** (`TODO.md`, Stufe 5). Der Ordner
+# fuehrte das als Prosa im `durch:`-Feld -- und eine Flaeche, die nur in Prosa steht, waechst
+# unbemerkt.
+#
+# **Gemessen wird die Verknuepfung, nicht das Urteil.** Ob ein zweites Register gebaut werden
+# soll, ist eine Entscheidung und steht im TODO. *Was hier steht, ist die Zahl, ohne die man
+# sie nicht treffen kann.*
+#
+# **Ratsche, keine Zielzahl**: sie darf fallen, nicht steigen. Heute 2 --
+#   * `Intervall_Aussen.thy`  -- handelt vom PRUEFER, und dafuer gibt es kein Register,
+#   * `Table_Induktion.thy`   -- IST eine Schablone (`table.induktion`, S7), und der
+#     Registereintrag nennt seine Datei nicht. *Die andere Richtung derselben Luecke:
+#     nicht die Flaeche fehlt, sondern die Zeile, die sie verknuepft.*
+MARKE_OHNE_REGISTER = 2
+REGISTER = "crates/gabbro-check/src/schablonen.rs"
 EINGEFROREN = ("metis", "blast", "smt")
 
 MODELL = re.compile(r"^\s*(definition|fun|primrec|datatype|type_synonym|abbreviation|record|"
@@ -127,6 +147,18 @@ def taktiken(text):
     return verboten, frost
 
 
+def ohne_register(namen, registertext):
+    """Welche Theorien nennt das Schablonenregister NICHT? -- reine Textmessung.
+
+    Gelesen wird der Dateiname (`Foo.thy`), weil das die einzige Verknuepfung ist, die es
+    heute gibt: das Register nennt seine Theorien in Prosa. *Damit ist diese Zaehlung eine
+    UNTERE Schranke der Buchungsluecke -- ein Eintrag, der die Theorie nur ueber ihren
+    Schablonennamen meint, zaehlt hier als gebucht* (W10).
+    """
+    genannt = set(re.findall(r"([A-Za-z_]+)\.thy", registertext))
+    return sorted(n for n in namen if n not in genannt)
+
+
 def sprechprobe():
     """R14, in beide Richtungen -- an einer ERFUNDENEN Theorie."""
     gift = ("theory G\n  imports Main\nbegin\n\n"
@@ -138,17 +170,22 @@ def sprechprobe():
     v_gift, _ = taktiken(gift)
     v_sauber, _ = taktiken(sauber)
     _, p_s, m_s, b_s, sa, _ = klassifiziere(sauber)
+    # **Und die Registerhaelfte, in beide Richtungen** -- an einem ERFUNDENEN Register.
+    r_gift = ohne_register(["A", "B"], "-- A.thy steht hier")        # B fehlt -> 1 Befund
+    r_sauber = ohne_register(["A", "B"], "A.thy und B.thy stehen hier")
     return (sum(v_gift.values()) == 1, sum(v_sauber.values()) == 0,
-            p_s == 1 and m_s == 1 and b_s == 2 and sa == 1)
+            p_s == 1 and m_s == 1 and b_s == 2 and sa == 1,
+            r_gift == ["B"] and r_sauber == [])
 
 
 def main():
-    g_ok, s_ok, k_ok = sprechprobe()
+    g_ok, s_ok, k_ok, r_ok = sprechprobe()
     print("== Sprechprobe des Zaehlers ==")
     print("  ein `sledgehammer` faellt auf:   %s" % ("ja" if g_ok else "NEIN"))
     print("  eine saubere Theorie bleibt frei: %s" % ("ja" if s_ok else "NEIN"))
     print("  die vier Spalten treffen:         %s" % ("ja" if k_ok else "NEIN"))
-    if not (g_ok and s_ok and k_ok):
+    print("  eine Theorie ohne Register faellt: %s" % ("ja" if r_ok else "NEIN"))
+    if not (g_ok and s_ok and k_ok and r_ok):
         print("== THEORIEN: der Zaehler misst nicht ==")
         return 1
 
@@ -193,6 +230,29 @@ def main():
         for name, (g1, p1, m1, b1, s1, sc1), fr in je:
             print("   %-28s %4d Z   Prosa %3d  Modell %3d  Beweis %3d   %d Saetze, %d eingefroren"
                   % (name, g1 + p1 + m1 + b1, p1, m1, b1, s1, fr))
+
+    # -- Die dritte Haelfte: die Buchung ------------------------------------------------
+    reg = (W / REGISTER)
+    print()
+    if not reg.is_file():
+        print("== THEORIEN: %s nicht gefunden -- die Registerhaelfte wurde NICHT gemessen =="
+              % REGISTER)
+        return 1
+    fehlend = ohne_register([d.stem for d in dateien], reg.read_text())
+    print("== Buchung: %d von %d Theorien nennt das Schablonenregister NICHT =="
+          % (len(fehlend), len(dateien)))
+    for n in fehlend:
+        print("   %s" % n)
+    print("   `gabbro schablonen` fuehrt ERZEUGERpflichten. Eine Theorie ueber den PRUEFER")
+    print("   passt dort nicht hinein -- damit gibt es zwei Vertrauensflaechen und eine")
+    print("   Buchung. *Ob ein zweites Register die Antwort ist, ist eine ENTSCHEIDUNG und")
+    print("   steht im TODO; diese Zahl ist die, ohne die man sie nicht treffen kann.*")
+    if len(fehlend) > MARKE_OHNE_REGISTER:
+        print("== THEORIEN: %d ohne Register gegen die Marke %d =="
+              % (len(fehlend), MARKE_OHNE_REGISTER))
+        print("   **Die Marke ist eine Ratsche**: sie darf fallen, nicht steigen. Eine neue")
+        print("   ungebuchte Theorie waechst sonst still in die Vertrauensflaeche hinein.")
+        return 1
 
     print()
     frost = sum(f_alle.values())

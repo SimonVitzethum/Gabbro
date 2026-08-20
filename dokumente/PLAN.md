@@ -3302,20 +3302,29 @@ H = 12        ueber den zehn Fragmenten kein Handbeweis mehr  (abgelesen, s. u.)
 
 **Und `H` beantwortet die Frage nicht.** Es misst die *Fragmente*, nicht die *Sprache*. Was der
 Nutzer weiter trägt — **jede Zeile am 2026-08-20 gegen ihren Befehl nachgerechnet, und drei
-von fünf standen falsch da**:
+von fünf standen falsch da**. **Am selben Tag kam eine sechste dazu, die vorher NIRGENDS
+stand** — und das ist die schlechtere Sorte Abweichung: eine falsche Zahl widerspricht sich
+irgendwann, eine fehlende nie.
 
 | | Zahl | Befehl | was es heißt |
 |---|---:|---|---|
 | **Erhaltungspflichten** | **3** | `gabbro pflichten` | `maintains I` ist auf Wohlgeformtheit geprüft; dass der Rumpf sie **einlöst**, prüft niemand |
 | **ZUSAGE ohne Leser** | **0** | `./pruefe-klauseln.py` | *stand als 13.* **Das ist das Tor von «NL» selbst, und es ist erreicht** — die Zahl fiel auf null, und die Tafel schrieb es nicht mit |
 | **Fremdpflichten** | **10** | `gabbro pflichten` | *stand als 8.* Annahmen über Rümpfe, die Gabbro nie sieht — **die Zahl ist GESTIEGEN**, mit dem Korpus |
+| **Vorbedingungen am Rufort** | **12** | `gabbro pflichten` | *neu am 2026-08-20, und sie stand vorher NIRGENDS.* `M115` weist ab, wo der Bereich des Arguments die Bedingung ausschliesst, und **schweigt sonst** — das ist der Preis dieses Schweigens, je Rufstelle gezählt |
 | **Prämissen ohne Pass** | **9** | `gabbro schablonen` | *stand als 7.* Ein Beweis, den nichts herstellt |
 | **Absenkungspflichten** | **7** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten |
 
 > **Drei von fünf, und in beide Richtungen** — eine gefallen, eine gestiegen, eine
 > fortgeschrieben. *Eine Buchführung, die in beide Richtungen abweicht, veraltet; sie lügt
-> nicht.* Alle fünf stehen seit dem 2026-08-20 in `./pruefe-zahlen.py` und werden bei jedem
+> nicht.* Alle sechs stehen seit dem 2026-08-20 in `./pruefe-zahlen.py` und werden bei jedem
 > Lauf neu abgeleitet. **`H = 15` im Kasten darüber war die vierte.**
+>
+> **Und die sechste Zeile ist die einzige, die nicht abwich, sondern fehlte.** Die
+> Vorbedingung am Rufort war weder falsch gebucht noch veraltet — sie stand in keinem
+> Register, weil `gabbro pflichten` Pflichten zählte, die eine DEKLARATION erzeugt, und
+> keine, die ein RUF erbt. *Ein Preis, den kein Werkzeug nennt, sieht aus wie null* —
+> dieselbe Richtung wie eine ungelesene Klausel, nur eine Ebene höher.
 
 ## Das Ziel, in prüfbarer Form
 

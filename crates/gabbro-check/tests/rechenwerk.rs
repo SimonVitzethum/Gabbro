@@ -3187,3 +3187,55 @@ fn ein_breaking_oeffnet_den_traeger_nicht() {
     let c = codes(&quelle("", ""));
     assert!(c.is_empty(), "ein `breaking` ohne `ops` faellt: {c:?}");
 }
+
+/// **`V` — die Vorbedingung am Rufort, und sie stand in keinem Register.**
+///
+/// `M115` weist ab, wo der Bereich des Arguments die Vorbedingung **ausschliesst**, und
+/// schweigt sonst — *eine untere Schranke, und sie steht als solche da.* Was nirgends stand,
+/// war die **Gegenseite dieser Schranke**: wie viele Rufstellen eine Bedingung tragen, die
+/// niemand nachhält. `TODO.md` (Stufe 5) verlangte diese Zahl ausdrücklich, bevor die starke
+/// Fassung von `M115` gebaut wird.
+///
+/// **Gemessen 2026-08-20 über `beispiele/*.gab`: 12.** *Ein Preis, den kein Werkzeug nennt,
+/// sieht aus wie null.*
+#[test]
+fn eine_vorbedingung_am_rufort_wird_gezaehlt() {
+    let v = |q: &str| -> usize {
+        let (b, _a) = gabbro_syntax::lies("p.gab", q);
+        gabbro_check::pflichten::sammle(&b)
+            .iter()
+            .filter(|x| x.art == gabbro_check::pflichten::Art::Vorbedingung)
+            .count()
+    };
+
+    // **Die zaehlende Richtung:** ein Ruf auf eine Funktion mit ZWEI `requires` zaehlt zwei.
+    assert_eq!(
+        v("module t { extern fn nimm(x : u32 in 0 .. 9) requires x < 9, x > 0 \
+           effects { pure } costs <= 1 ops; \
+           impl fn ruft(y : u32 in 0 .. 9) effects { pure } costs <= 8 ops \
+           { nimm(y); } }"),
+        2,
+        "zwei Vorbedingungen an einer Rufstelle sind zwei Pflichten"
+    );
+
+    // **Die schweigende Richtung:** dieselbe Funktion ohne `requires` zaehlt nichts. *Ohne
+    // diese Haelfte belegte die obere nur, dass irgendetwas gezaehlt wird.*
+    assert_eq!(
+        v("module t { extern fn nimm(x : u32 in 0 .. 9) effects { pure } costs <= 1 ops; \
+           impl fn ruft(y : u32 in 0 .. 9) effects { pure } costs <= 8 ops \
+           { nimm(y); } }"),
+        0,
+        "ohne `requires` gibt es am Rufort nichts zu schulden"
+    );
+
+    // **Und der Abstieg ist die eigentliche Falle:** ein Ruf unter einer Sperre ist derselbe
+    // Ruf. *Dieselbe Lehre wie `pruefe-abstieg.py`, nur an einer Zaehlung statt an einem Pass.*
+    assert_eq!(
+        v("module t { static mut z : u32 = 0; lock L protects { z } rank 0 held <= 40 ops; \
+           extern fn nimm(x : u32 in 0 .. 9) requires x < 9 effects { pure } costs <= 1 ops; \
+           impl fn ruft(y : u32 in 0 .. 9) effects { locks L } costs <= 8 ops \
+           { locks L { nimm(y); } } }"),
+        1,
+        "ein Ruf unter einer Sperre faellt aus der Zaehlung"
+    );
+}

@@ -95,7 +95,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./pruefe-zahlen.py`** | das Register der Befehle. **47 Kennzahlen mit Befehl** *(Stand 2026-08-20; 12 am Vormittag)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./pruefe-zahlen.py`** | das Register der Befehle. **48 Kennzahlen mit Befehl** *(Stand 2026-08-20; 12 am Vormittag)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **27 von 27 Instrumenten** tragen die drei statischen. `--lauf` führt **23 von 27** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -227,7 +227,7 @@ darunter.
       und ihre Quelle ist eine Tabelle in `PFLICHTEN.md`, deren Zeilen ein Mensch geschrieben
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
-      **`pruefe-zahlen.py` führt heute 47 Kennzahlen mit Befehl und zählt 149 fettgedruckte
+      **`pruefe-zahlen.py` führt heute 48 Kennzahlen mit Befehl und zählt 149 fettgedruckte
       Zahlen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
@@ -390,20 +390,20 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Absage fällt nachweislich"*; eine gedeckte sagt nur *„sie kommt vor, und irgendein Pass
       sieht sie"* — und Maß 2 hat gerade gezeigt, dass **Sehen keine Prüfung ist**.
       **Seit dem 2026-08-20 stehen beide Zahlen im Register und nicht mehr nur im Bericht:**
-      **164 besetzte Zellen** stehen daneben, **26 nur im Gift** — und `gabbro blindstellen`
+      **164 besetzte Zellen** stehen daneben, **27 nur im Gift** — und `gabbro blindstellen`
       druckt die vier Zahlen getrennt, *auf Ausdruck*, weil ein Einzelwert zwei Wochen später
       wie Fortschritt aussieht.
       *Die schärfere Frage bleibt dieselbe wie beim Schablonenregister: fällt an dieser Zelle je
       etwas?* — also **Mutation oder Giftprobe je KOMBINATION, nicht je Konstrukt.**
       **Woran es hängt, jetzt beziffert:** 164 Kombinationen brauchten je eine Probe; der
-      Mutationskatalog trägt heute 235 Anker, also liegt die Größenordnung neben dem, was schon
+      Mutationskatalog trägt heute 236 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
 - [ ] **44 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 98 sind tragend, 2 verdächtig — und **44 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 99 sind tragend, 2 verdächtig — und **44 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       *Wer eine Absage liest und daraus nicht erkennt, worauf sie ruht, kann auch nicht
       prüfen, ob sie weit genug reicht.* Das ist der größere Posten, nicht die zwei.
@@ -468,7 +468,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **793 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **800 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       **Und der Befund ist, dass es nicht null war:** der erste Lauf fand **16** Nahtstellen —
       ein Jahr nachdem die 161 von Hand geflickt worden waren. *Von Hand geflickt heißt: nicht
       bewacht.* Darunter `„…is verified--"`, `„…the rule therefore has**zero bite**"` und
@@ -632,7 +632,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **235 von 235 Ankern** greifen (`--anker`, 2026-08-20) — die
+      fällt. Mutationskatalog: **236 von 236 Ankern** greifen (`--anker`, 2026-08-20) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -685,7 +685,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       erst in der Annotationsemission — derselbe fehlende Kanal wie zwei Punkte tiefer.
 
 - [ ] **The annotation emission needs template entries of its own and mutations of its own.**
-      Der Mutationskatalog misst heute den Prüfer (235 Anker); über den **Wunschform-Kanal**
+      Der Mutationskatalog misst heute den Prüfer (236 Anker); über den **Wunschform-Kanal**
       sagt er nichts — und genau dort wird ein kohärent geschwächter Erzeuger **von keinem
       Beweis** gefangen.
       *Berichtigt 2026-08-20: hier stand „65 von 65", und diese Zahl gibt es nicht mehr.*
@@ -981,7 +981,7 @@ auch der Kostenpass trug.
 Und dieselbe Klasse ein zweites Mal, eine Ebene höher: der Mutationskatalog meldete danach
 **zwei Mutationen, die nichts mehr messen** — ein Anker war verschwunden, einer doppelt. *Ein
 Katalog, dessen Anker unter ihm wegwandern, misst über einer schrumpfenden Bezugsgröße und
-liest sich wie Deckung.* Beide sind umgezogen, 235 von 235 greifen.
+liest sich wie Deckung.* Beide sind umgezogen, 236 von 236 greifen.
 
 ### Was diese Stufe offen lässt
 
@@ -1016,7 +1016,7 @@ liest sich wie Deckung.* Beide sind umgezogen, 235 von 235 greifen.
 # STUFE 4 — PROGRAMME SCHREIBEN, NICHT KONSTRUKTE
 
 **Das Herz des Plans.** Der Korpus ist von der Sprache nach außen geschrieben — eine Datei je
-Konstrukt — und **die Fehler sitzen an den Kombinationen**: 80 blinde Zellen von 285. Jedes echte
+Konstrukt — und **die Fehler sitzen an den Kombinationen**: 79 blinde Zellen von 285. Jedes echte
 Programm hat sofort geliefert: der virtio-net-Treiber fünf Befunde, «K2» drei, die ein eigener
 Korpus nicht gegeben hätte, das Registerbeispiel vom 2026-08-20 vier.
 
@@ -1515,28 +1515,53 @@ tragende, ohne eine Zeile Isabelle.*
       nicht, dass sie haelt.* Die starke Fassung waere ein maschinell geprueftes Zeugnis je
       Uebersetzung -- **und die Vorstufe ist als Vorstufe benannt**, damit die Zahl nicht mehr
       verspricht, als sie misst.
+      **Geschaerft 2026-08-20 — der Posten sagte nicht, was noch DAZWISCHEN steht, und es ist
+      mehr, als „fehlt noch" nahelegt.** Was schon mechanisch ist: die **Kreuzprobe** zwischen
+      Erzeuger und Zeugnis (`beispiele.rs`, „das Zeugnis muss alles verbuchen, was der
+      Erzeuger absenkt" — senkt `emit.rs` etwas ab, das `zeugnis.rs` nicht einordnet, faellt
+      `UNZUGEORDNET`). *Das ist die Zusicherung, dass die Liste VOLLSTAENDIG ist, nicht dass
+      sie stimmt.* Und die vier bewiesenen Absenkungsschablonen (`table.absenkung`,
+      `table.indexschranke`, `option.sonderwert`, `verbund.konstruktor`) sind je EIN Satz
+      ueber die erzeugte Form, nicht ueber den erzeugten Lauf.
+      **Der Preis der starken Fassung, mit Adresse:** ein Zeugnis je Uebersetzung muss ueber
+      dem ERZEUGNIS reden, und in `beweise/` gibt es keine C-Semantik — `Table_Absenkung.thy`
+      kommt genau bis dahin und beruft sich fuer den Rest auf *„die Sprachdefinition von C
+      und keine Annahme dieses Beweises"*. **Damit ist K100.4 dieselbe Baustelle wie P6 im
+      README** (*„was fehlt, ist die ERZEUGTE Verfeinerungspflicht"*), und nicht ein
+      Ausbaustueck des Zeugnisses. *Ein Posten, der nach Werkzeugarbeit klingt und eine
+      Semantik kostet, wird in der falschen Reihenfolge geplant.*
 
-- [ ] **Eine parametrische `costs`-Zusage ist heute schreibbar und VOLLSTAENDIG LEER**
-      *(gemessen 2026-08-18)*. `costs <= 0 * n ops` an einem Rumpf, der 1 op kostet:
-      **3 Items, 0 Fehler, 0 Hinweise.** `kosten.rs` sagt es im eigenen Kopf (*„die Schranke
-      darf von Eingaben abhaengen … in dem Fall schweigt der Pass"*), und `gabbro kosten`
-      druckt ehrlich `zugesagt --`. **Damit steht der Preis der wertgetragenen Schranke nicht
-      in der Grammatik, sondern in Pass 9: er muss symbolische Ausdruecke VERGLEICHEN statt
-      zu schweigen.** *Was schon passt: `Kosten::Zahl(i128)` traegt `40 * 2^64` muehelos.*
+- [ ] **~~Eine parametrische `costs`-Zusage ist heute schreibbar und VOLLSTAENDIG LEER~~**
+      *(gebucht 2026-08-18)* — **beim Nachsehen schon zu, seit demselben Tag.** `kosten.rs`
+      liest die Zusage als **Summe aus einer Konstanten und Vielfachen nichtnegativer
+      Groessen** und vergleicht gegen die **kleinste Belegung**. Nachgemessen 2026-08-20 mit
+      derselben Eingabe, die den Posten begruendet hat: `impl fn schleife(n : u32 in 0 .. 1000)
+      -> u32 costs <= 0 * n ops { return n; }` → **`K001`: „promises <= 0 ops, the body costs
+      1"**. Gift 77 haelt die Richtung, Gift 78 die Gegenrichtung (`K005` statt Schweigen bei
+      `n * m`). *Was offen bleibt, steht im Kopf von `kosten.rs` und ist ein anderer Posten:
+      ein Rumpf, dessen Kosten SELBST symbolisch sind, rechnet `Unbekannt` statt `40 * n`.*
 
-- [ ] **Unter einer Sperre darf der Rahmen NICHT parametrisch sein.** `held <= N ops` ist eine
-      LATENZaussage -- wie lange ein anderer Kern hoechstens wartet. Ein `held <= 40 * n` mit
-      symbolischem `n` ist eine Sperre, die unbeschraenkt lange gehalten wird, und damit ist
-      `rank`/`held`/`K002` leer. *Dieselbe Trennung noch einmal: die Kostenklasse vertraegt
-      Symbole, die Sperrklasse nicht.* **Die Regel gehoert in die Erweiterung, bevor sie
-      Grammatik wird.**
+- [ ] **~~Unter einer Sperre darf der Rahmen NICHT parametrisch sein.~~** **Gebaut am
+      2026-08-20 als `K010`.** Der Befund davor war das Schweigen, nicht die Zeile:
+      `lock KAPPEN … held <= 40 * eintraege ops` ueber einem `locks`-Block mit fuenf
+      Operationen gab **4 Items, 0 Fehler, 0 Hinweise** — `haltezeiten` nahm nur auf, was
+      `konst_wert` hergab, und **mit der Karte fiel `K002`**. *Eine Zusage, die den Waechter
+      abschaltet, den sie fuettern sollte, ist teurer als gar keine.* Belege:
+      `beispiele/gift/75-haltezeit-parametrisch.gab` (genau `K010`), Sprechprobe in vier
+      Richtungen in `rechenwerk.rs` (`held` symbolisch faellt · `shared held` symbolisch
+      faellt · eine Zahl geht durch · **mit der Zahl greift `K002` wieder**), Mutation
+      `haltezeit-darf-symbolisch-sein`. **Und `SPRACHE.md` §11.2 schrieb `held <= constexpr
+      ops`, seit es das Feld gibt** — der Parser nahm jeden Ausdruck. *Eine Grammatikzusage
+      im Kommentar ist keine.*
 
-- [ ] **Eine `bank` mit `stride 0` erzeugt LEERE Zellen, und der Satz gilt trivial**
-      *(ausgespuelt beim Beweis von `device.konstruktor`, 2026-08-17)*. `bankeintraege_
-      ueberlappen_nicht` braucht `stride > 0` nicht als Praemisse -- bei null ist jede
-      Bankzelle leer, und leere Mengen schneiden sich nicht. **Richtig und nutzlos ist keine
-      bestandene Pruefung:** der Erzeuger sollte `stride 0` ablehnen, statt sie leerlaufen zu
-      lassen. *Ein Beweis, der einen Fall trivial macht statt ihn zu decken, hat ihn gefunden.*
+- [ ] **~~Eine `bank` mit `stride 0` erzeugt LEERE Zellen, und der Satz gilt trivial~~**
+      *(ausgespuelt beim Beweis von `device.konstruktor`, 2026-08-17)* — **beim Nachsehen
+      schon zu, `N010` seit dem 2026-08-19** (`namen.rs::schritt_pruefen`). Nachgemessen
+      2026-08-20: eine `bank … stride 0 count 4` gibt **genau eine Absage** —
+      *„bank FRR has `stride 0` -- every cell is empty"*. Auch `gabbro schablonen` fuehrt die
+      Praemisse seither als hergestellt (*„`N010`, seit 2026-08-19 — `stride 0` faellt am
+      Pass statt im Kommentar"*). *Der Posten stand hier, waehrend das Register daneben schon
+      die Gegenaussage trug — zwei Buchungen ueber derselben Sache, und nur eine gepflegt.*
 
 ### The group: three forms stand — what is open is PRESERVATION
 
@@ -1551,31 +1576,78 @@ tragende, ohne eine Zeile Isabelle.*
       establishes the three conditions under which the question can be put at all.
       **The next step is therefore the group operation** (`ops` over the group), and it
       is no longer a preliminary but the recipient of the proof obligation.
+      **Geschaerft 2026-08-20 — die Etiketten sind gewandert, und der Posten haengt an EINER
+      Sache.** „S17" heisst im Register heute `ops.suche`; die Gruppe fuehrt `S20 gruppe.ops`
+      und `S21 gruppe.sperrabdruck`, beide **entworfen**. `U001`–`U007` stehen und sind der
+      Formteil. **Woran die Erhaltung haengt, sagt `gabbro schablonen` in einem Wort:**
+      das `braeuchte` von `gruppe.ops` lautet *„die AXIOMSCHICHT — eine Aussage ueber das
+      Speichermodell, nicht ueber Zustaende"*. *Das ist keine Pruefarbeit und keine
+      Grammatikzeile; es ist dieselbe Schicht, an der `race` und die Paarung (A10) haengen —
+      also EIN Preis fuer drei Posten und nicht drei.*
 
 ### Design — open decisions *(Teil)*
 
-- [ ] **Cost figure per invariant** and at `by unbesucht`: which structure, who resets it,
+- [ ] **Cost figure per invariant** ~~and at `by unbesucht`~~: which structure, who resets it,
       what the reset costs, whether it may live under the lock.
+      **Die zweite Haelfte ist entschieden, und die Antwort ist: gar keine Struktur**
+      *(Stufe 3, 2026-08-20, nachgesehen im Erzeuger)*. `emit.rs:4586` und `:4693` sagen es
+      ausdruecklich: `by unvisited` heisst *jeder Knoten einmal* und ueber die Reihenfolge
+      nichts — **das ist die Laufform selbst**, und die Nachordnung, die `by consuming`
+      ohnehin erzeugt, haelt die staerkere Zusage. *Damit gibt es keine Besuchtmenge, niemanden,
+      der sie zuruecksetzt, und keine Frage, ob sie unter der Sperre leben darf.* Die
+      Zeugenordnung ist ein Beweismittel, kein Laufzeitding.
+      **Was offen bleibt, ist die Kostenzahl je Invariante — und sie haengt an einem Leser:**
+      `./pruefe-klauseln.py` fuehrt das `cost`-Feld der Invariante bis heute unter UNGELESEN,
+      das `runs`-Feld unter NUR GETRAGEN. *Solange `cost O(n)` niemand liest, ist die
+      Frage „passt die Invariante in die `costs` der erzeugten Mutation" nicht einmal
+      stellbar* — derselbe Faden wie der Kleinkram-Posten weiter unten.
 
 ### Induction — entered, and the one number is missing
 
 
-- [ ] **The generated scheme has to go into Isabelle once** — it is a template in the sense of L3 and
-      thereby the item that **shrinks** the trust base.
+- [ ] **~~The generated scheme has to go into Isabelle once~~** — **beim Nachsehen schon zu,
+      seit dem 2026-08-16.** `beweise/Table_Induktion.thy` fuehrt es als `lemma
+      table_induktion` (`assumes wf`, `assumes schritt`, `shows "P s"`, `by
+      (rule wf_induct_rule)`), und `gabbro schablonen` fuehrt `S7 table.induktion` als
+      **bewiesen**. Nachgerechnet 2026-08-20 mit `./zaehle-theorien.py`: 13 Theorien,
+      2 317 Zeilen. *Die Theorie ist ausserdem schaerfer als der Posten: sie zerlegt „wohl-
+      fundiert und vollstaendig" in die vier einzeln dastehenden Nebenbedingungen N-1 bis
+      N-4.*
 
 - [ ] **Well-foundedness hangs on an invariant one wants to prove.** The declaration has to
       name which — and the measure (number of descendants) is a premise, not a result.
+      **Geschaerft 2026-08-20, und der Preis ist EINE Klausel:** `Table_Induktion.thy` sagt
+      es selbst (*„Wohlfundiertheit ist HYPOTHESE, nicht Ergebnis … die Deklaration muss die
+      tragende Invariante nennen"*), und die Grammatik hat den Platz dafuer schon — `by
+      induction over <domain>` an der `invariant`. **Nur nennt sie eine DOMAENE und keine
+      Invariante, und gelesen wird sie von niemandem:** `./pruefe-klauseln.py` fuehrt `by`
+      (FnDecl/Invariante) bis heute unter UNGELESEN. *Damit haengt dieser Posten an demselben
+      Faden wie der `by`-Eintrag im Kleinkram unten — ein Leser fuer `by`, und beide fallen
+      zusammen.*
 
 ### «NL» — der Weg zu „nur noch eigene Logik" ([`dokumente/PLAN.md`](dokumente/PLAN.md)) — **PUNKT 1** *(Teil)*
 
 - [ ] **`bedingung` hat die Klasse verlassen, ohne dass ihre Zusage gehalten wuerde**
       *(2026-08-19, und es ist ein Befund ueber den WAECHTER)*. `N012` liest die
       `where`-Klausel, um die Schranke eines `offset_into` zu finden -- damit gilt sie
-      mechanisch als gelesen. **Ob die Bedingung HAELT, prueft weiterhin niemand.** *Das Mass
-      des Waechters ist „ein Pass greift zu", nicht „ein Pass haelt es nach"; die
+      mechanisch als gelesen. ~~**Ob die Bedingung HAELT, prueft weiterhin niemand.** (2026-08-20)~~ *Das
+      Mass des Waechters ist „ein Pass greift zu", nicht „ein Pass haelt es nach"; die
       Vergroeberung stand in seinem Kopf und zahlt hier zum ersten Mal.* Der Posten steht
       jetzt hier, wo ihn keine Ratsche traegt -- **ein Waechter, der eine Zeile aus seiner
       eigenen Liste verliert, muss sagen, wohin sie geht.**
+      **Nachgesehen 2026-08-20, und die Antwort ist: ein Pass haelt sie nach, nur ein
+      anderer.** `emit.rs:2243` legt jede `where`-Klausel eines `format`-Feldes in
+      `<Format>_gueltig()`, neben die Laengenpruefung (`:2449`) — **eine Funktion, die der
+      Rufer EINMAL stellt, und danach braucht kein Zugriff mehr eine Pruefung.** *Und das ist
+      auch der einzig moegliche Ort:* der Wert kommt vom Draht, ein feindlicher Kopf setzt
+      ihn, wohin er will — statisch ist da nichts zu beweisen.
+      **Was als Befund BLEIBT, ist der ueber den Waechter, und er wird dadurch schaerfer:**
+      die Klausel verliess die Liste wegen `N012`, und `N012` liest sie, um eine **Schranke
+      zu finden** — nicht, um sie einzuloesen. *Der Waechter hat also das Richtige gemeldet
+      und aus dem falschen Grund; haette `emit.rs` die Zeile nicht getragen, waere die
+      Meldung dieselbe gewesen.* **Das Mass „ein Pass greift zu" trennt nicht zwischen
+      lesen und einloesen** — und solange es das nicht tut, ist jeder Abgang aus der Liste
+      von Hand nachzusehen.
 
 ### Aus «H2» *(ausgefuehrt 2026-08-19, `H = 17 → 15`)* — der Rest, den der Lauf hinterliess *(Teil)*
 
@@ -1583,8 +1655,16 @@ tragende, ohne eine Zeile Isabelle.*
       Heute faellt nur, was der Bereich des Arguments AUSSCHLIESST; dass der Rufer die
       Vorbedingung HERSTELLT, prueft niemand. **M1 stellt Fakten her und entscheidet keine
       Praedikate** -- die starke Fassung ist ein eigenes Stueck Maschinerie und zerlegte
-      ausserdem den Korpus. *Vorher zaehlen, an wie vielen Rufstellen eine Vorbedingung heute
-      unbewiesen bleibt.*
+      ausserdem den Korpus. ~~*Vorher zaehlen, an wie vielen Rufstellen eine Vorbedingung
+      heute unbewiesen bleibt.*~~ **Gezaehlt am 2026-08-20: es sind 12** (`gabbro pflichten
+      beispiele/*.gab`, neue Spalte `V`; die Summe steht in `dokumente/PLAN.md` und wird von
+      `./pruefe-zahlen.py` neu abgeleitet). *Der Preis der schwachen Fassung stand bis heute
+      NIRGENDS* — `gabbro pflichten` zaehlte Pflichten, die eine DEKLARATION erzeugt, und
+      keine, die ein RUF erbt. **Ein Preis, den kein Werkzeug nennt, sieht aus wie null.**
+      Die Zahl ist nach oben eine Schranke (eine am Rufort trivial geltende Bedingung zaehlt
+      mit, weil heute nichts sie entscheidet) und nach unten eine (ein Ruf, dessen Pfad sich
+      nicht aufloest, wird nicht gefunden). **Was offen bleibt, ist die Entscheidungsprozedur
+      selbst — jetzt mit ihrem Gegenwert daneben.**
 
 - [ ] **Drei der sieben haengenden Praemissen brauchen keine Pruefarbeit, sondern eine
       SPRACHFORM** *(gemessen 2026-08-19 beim Fuellen von `braeuchte`)*. `ops` braucht eine
@@ -1598,6 +1678,9 @@ tragende, ohne eine Zeile Isabelle.*
       KONSTRUKTION erfuellt -- sequentielle Byte-Lagen, monoton wachsender Versatz. **Das ist
       eine Aussage ueber den PRUEFER, und fuer die gibt es kein Register**; dieselbe Lage wie
       `Intervall_Aussen.thy`. *Heute steht der Grund in `durch:` als Prosa.*
+      **Haengt am selben Faden wie „Der PRUEFER hat kein Register" weiter unten** — seit dem
+      2026-08-20 traegt der Faden eine Zahl (`./zaehle-theorien.py`: 2 von 13 Theorien ohne
+      Register). *Dieser Posten faellt mit jener Entscheidung, nicht vor ihr.*
 
 - [ ] **`einfuegen` braucht ZWEI Bedingungen, und keine hat einen Pass** *(2026-08-19,
       `Table_Ops_Erhaltung.thy`)*. Der Platz ist FRISCH, der Elter ERREICHBAR. Beim Loeschen
@@ -1609,8 +1692,19 @@ tragende, ohne eine Zeile Isabelle.*
       Invarianten ueber alle Module flach ein, weil der Korpus unqualifiziert schreibt.
       **Zwei gleichnamige Invarianten in zwei Modulen sind damit ununterscheidbar** --
       dieselbe Bauart wie `typ_von_ort` vor dem 2026-08-17, nur noch nicht ausgeloest.
-      *Eine Regel, die mehr verlangt als der Korpus schreibt, zerlegt ihn; die Verschaerfung
-      braucht also zuerst eine Messung, wie viele Stellen qualifizieren muessten.*
+      ~~*Eine Regel, die mehr verlangt als der Korpus schreibt, zerlegt ihn; die
+      Verschaerfung braucht also zuerst eine Messung, wie viele Stellen qualifizieren
+      muessten.*~~ **Gemessen 2026-08-20: es sind NULL.** Ueber 277 Einheiten stehen
+      **11 `maintains`-Stellen**, und keine einzige muesste qualifizieren — die Mehrdeutigkeit
+      braucht zwei gleichnamige Invarianten in zwei Modulen **derselben Uebersetzungseinheit**,
+      und nur **6 von 277 Einheiten tragen ueberhaupt mehr als ein `module`**. *Die
+      Verschaerfung zerlegt den Korpus also nicht — sie hat heute auch keinen einzigen
+      Biss, und das ist der andere Befund.* **Ausgeloest wird die Klasse erst von «ABI»:**
+      ein `.gabi` ist gueltiger Gabbro-Quelltext mit eigenem `module`, und der Importeur
+      bekommt damit ein zweites Modul in seine Einheit. *Dort, nicht hier, wird aus der
+      Bauart ein Fall.* (Nachrechnen: `grep -c "^[ \t]*maintains" beispiele/*.gab
+      messung/**/*.gab` und `grep -lc "^module" …` — die Zahlen stammen aus einem
+      Handgang ueber genau diese zwei Muster.)
 
 - [ ] **Der PRUEFER hat kein Register** *(2026-08-18)*. `Intervall_Aussen.thy` ist die erste
       Theorie dieses Ordners, die von M1 handelt statt vom Erzeuger -- und sie steht in
@@ -1619,13 +1713,29 @@ tragende, ohne eine Zeile Isabelle.*
       Vertrauensflaechen und nur eine Buchung.** Die zweite wird bisher nur von
       `mutiere-pruefer.py` gemessen -- Mutationen, nicht Saetze. *Ein zweites Register waere
       die naheliegende Antwort; ob es eines sein soll, ist eine Entscheidung.*
+      **Geschaerft 2026-08-20: die Luecke ist jetzt GEZAEHLT statt beschrieben.**
+      `./zaehle-theorien.py` haelt seit heute jede `.thy` gegen `schablonen.rs` und meldet
+      **2 von 13 ohne Register**, mit einer Ratsche darauf. *Und die zweite ist ein eigener
+      Befund:* `Table_Induktion.thy` IST eine Schablone (`S7`, bewiesen) — nur nennt der
+      Registereintrag seine Datei nicht. **Die andere Richtung derselben Luecke: nicht die
+      Flaeche fehlt, sondern die Zeile, die sie verknuepft.** Die Entscheidung bleibt offen;
+      was sie jetzt hat, ist eine Zahl, die nicht mehr still wachsen kann.
 
 ### Deklariert, exportiert, nie gelesen — die Klasse hat einen Namen und einen Waechter
 
-**Gemessen 2026-08-18** mit `./pruefe-klauseln.py`: 131 Feldnamen aus `ast.rs` gegen 23
-Leserdateien. **48 Felder gebucht** -- 21 nur getragen (nur `emit.rs`/`zeugnis.rs`/`cli`),
-27 ungelesen. Nach Urteil: **17 ZUSAGE**, 6 ABSENKUNG, 25 TOT. *Die Stufe ist gemessen, die
-Klasse ist ein Urteil, und das Werkzeug sagt beides getrennt an.*
+**Neu gemessen 2026-08-20** mit `./pruefe-klauseln.py`: **147 Feldnamen** aus `ast.rs` gegen
+**30 Leserdateien**, davon 5 tragend. **22 Felder gebucht** -- 16 nur getragen (nur
+`emit.rs`/`zeugnis.rs`/`cli`), 6 ungelesen. Nach Urteil: **0 ZUSAGE**, 2 FREMD,
+5 ABSENKUNG, 15 TOT. *Die Stufe ist gemessen, die Klasse ist ein Urteil, und das Werkzeug
+sagt beides getrennt an.*
+
+> ~~*Gemessen 2026-08-18: 131 Feldnamen gegen 23 Leserdateien, 48 Felder gebucht --
+> 21 nur getragen, 27 ungelesen; 17 ZUSAGE, 6 ABSENKUNG, 25 TOT.*~~ **Acht Zahlen, und
+> jede stand am 2026-08-20 falsch da.** Die teuerste ist die erste: **ZUSAGE steht auf
+> null** — *das ist das Tor von «NL» selbst, und es ist erreicht.* `dokumente/PLAN.md`
+> fuehrt die Null seit dem 2026-08-20 und wird von `./pruefe-zahlen.py` nachgerechnet;
+> **dieser Abschnitt fuehrte daneben die 17 weiter.** *Zwei Buchungen ueber derselben
+> Messung, und nur eine hatte einen Leser* — genau die Klasse, gegen die W7 steht.
 
 Der Waechter klemmt in beide Richtungen und weist seine Messfaehigkeit nach (R14: `span` muss
 als gelesen herauskommen, `section` nicht). **Die Liste unten ist eine UNTERE Schranke** --
@@ -1633,11 +1743,15 @@ gemessen wird je Name, nicht je Struktur (W10).
 
 
 
-- [ ] **`leaves` und der Abstieg des `traverse` haben weiter keinen Leser**
-      *(gemessen 2026-08-18)*. `progress` hat seit heute einen (`S003`/`S004`); die beiden
-      anderen Schleifenzusagen nicht. **`leaves` nennt, was den Ausgang verlaesst** -- das ist
-      eine Linearitaetsaussage, und M2 liest sie nicht. **Der Abstieg traegt die Terminierung
-      des `traverse`**, und `schleifen.rs` steigt in den Rumpf, ohne ihn anzusehen.
+- [ ] **~~`leaves` und der Abstieg des `traverse` haben weiter keinen Leser~~**
+      *(gebucht 2026-08-18)* — **beim Nachsehen schon zu, und zwar BEIDE.**
+      `m2.rs:568` liest `verlaesst` (der Doktext nennt den Posten beim Namen: *„`pruefe-
+      klauseln.py` fuehrte `verlaesst` als ZUSAGE"*), und `schleifen.rs:275
+      `abstieg_pruefen`` liest den Abstieg. **Beleg ohne Bau:** `./pruefe-klauseln.py` bucht
+      am 2026-08-20 weder `verlaesst` noch `abstieg` — die 22 gebuchten Felder sind eine
+      andere Liste. *Was daneben stehenbleibt und in `schablonen.rs` steht: das `braeuchte`
+      von `consuming.ordnung` sagt weiter „`abstieg` ist heute eine ZUSAGE ohne Leser". Die
+      Zeile ist ueberholt, und sie gehoert dem Zahn-3-Posten.*
 
 - [ ] **Zahn 3: acht Praemissen ohne Hersteller** *(gemessen 2026-08-18,
       `gabbro schablonen`)*. Neun bewiesene Schablonen, siebzehn Praemissen, **acht davon
@@ -1659,13 +1773,25 @@ gemessen wird je Name, nicht je Struktur (W10).
       die Bank leer**, und die Theorie nennt das selbst eine Fundstelle. *Ein bewiesener Satz
       ohne Pass ist eine Zusage ueber ein Programm, das so nicht geprueft wird.*
 
-- [ ] **`pub` ist wirkungslos** *(gemessen 2026-08-18)*. Kein Pass, kein Erzeuger liest
-      `oeffentlich`. Sichtbarkeit wird weder geprueft noch abgesenkt -- **und eine
-      Bibliotheks-ABI beginnt bei genau diesem Wort.**
+- [ ] **~~`pub` ist wirkungslos~~** *(gebucht 2026-08-18)* — **beim Nachsehen schon zu.**
+      Der Satz endete auf *„eine Bibliotheks-ABI beginnt bei genau diesem Wort"*, und genau
+      dort ist er eingeloest worden: `abi.rs:95,99-103` liest `oeffentlich` und entscheidet
+      daran, was in ein `.gabi` geht. Die Sichtbarkeit selbst prueft `N025` an der
+      Bezugsstelle (`umgebung.rs:215` sagt es im Doktext, samt der Umbenennung von
+      `kandidaten_oeffentlich`, die sie versprach und nicht tat). **Beleg ohne Bau:**
+      `./pruefe-klauseln.py` bucht `oeffentlich` nicht mehr.
 
-- [ ] **`ensures`/`maintains` werden GEZAEHLT, nicht gelesen** *(gemessen 2026-08-18)*.
-      `zeugnis.rs:370,391` ruft `.len()` und `.is_empty()`; kein Pass haelt sie gegen den
-      Rumpf oder auch nur gegen die Wohlgeformtheit. **Die Bibliotheks-ABI soll sie tragen.**
+- [ ] **`ensures`/`maintains` werden GEZAEHLT, nicht gelesen** *(gebucht 2026-08-18)*.
+      ~~`zeugnis.rs:370,391` ruft `.len()` und `.is_empty()`; kein Pass haelt sie gegen den
+      Rumpf oder auch nur gegen die Wohlgeformtheit.~~ **Die zweite Haelfte ist gefallen, die
+      erste steht** *(nachgesehen 2026-08-20)*. Die Wohlgeformtheit prueft M1: `M111` an
+      `ensures`, `M112`/`M113`/`M114` an `maintains` (der Name loest auf · eine `spec fn`
+      erhaelt nichts · die Invariante muss ueber etwas sprechen, das die Funktion anfasst).
+      Die Zeilennummern im Posten sind ausserdem gewandert — es ist `zeugnis.rs:632,653`.
+      **Was offen bleibt, ist die Haelfte, die keine Wohlgeformtheit ist: dass der RUMPF sie
+      einloest.** Das ist P6, und `gabbro pflichten` zaehlt es statt es einzuloesen —
+      3 Erhaltungspflichten und 7 Nachbedingungen ueber `beispiele/*.gab`. *Ein Posten, der
+      zwei Fragen in einem Satz fuehrte, war nur zur Haelfte zu.*
 
 - [ ] **`invariant` und der Kleinkram: gelesen und sonst nirgends** *(gemessen 2026-08-18,
       gekürzt 2026-08-20)*. `cost`/`runs` an der `invariant`, `by` (der Induktionshinweis
@@ -1685,12 +1811,27 @@ gemessen wird je Name, nicht je Struktur (W10).
       `locks ordered` thereby drops out; the one that was found is a different one — two classes with
       an ordering over two crates (V4).*
 
-- [ ] **`by ops` is built — what stays open is ONE breakthrough: `breaking` on a
-      `by ops` field.** The checker answers the question today *implicitly*: `kbedingung.rs`
-      keeps the `breaking` sites per carrier, and `ist_geschlossen` demands that there be none
-      — a `breaking` therefore **opens the carrier again**, instead of being a compile error.
-      **That is a defensible answer and it stands stated nowhere.**
-      *A property whose back door stands only in the code is a promise with a back door.*
+- [ ] **~~`by ops` is built — what stays open is ONE breakthrough: `breaking` on a
+      `by ops` field.~~** — **geschlossen 2026-08-20, und die Buchung sagte das Gegenteil der
+      Messung.** Sie las: *„`ist_geschlossen` verlangt, dass es keine `breaking`-Stellen gibt
+      — ein `breaking` oeffnet den Traeger damit wieder, statt ein Uebersetzungsfehler zu
+      sein."* **Zwei Dinge daran waren falsch, und beide sind messbar:**
+      * `ist_geschlossen` gibt es nicht. Die Funktion heisst `Traeger::k_haelt`.
+      * Ein `breaking` oeffnet nichts. `kbedingung.rs::sammle` steigt ueber
+        `crate::unterbloecke` in den Rumpf ab wie in jeden anderen Unterblock: **die
+        Handmutation faellt an `D001`, am `by ops`-Feld zusaetzlich an `D002`.**
+
+      **Was `breaking` wirklich bewegt, ist die MESSUNG** — der Traeger faellt aus der
+      Zaehlung *„K haelt"*, weil das Messprotokoll verlangt, dass ALLE Mutationen erzeugt
+      sind, und ein Bereich, in dem ein Satz ruht, ist genau der, den *„der Erzeuger zeigt es
+      einmal"* nicht deckt. *Zwei Fragen, die der Ordner zusammengezogen hatte.* Gesagt steht
+      es jetzt in `SPRACHE.md` §10.2.1, gefallen ist es in
+      `beispiele/gift/226-breaking-oeffnet-den-traeger-nicht.gab`, und die Gegenrichtung
+      (ohne `ops` geht dieselbe Handmutation durch) steht in `rechenwerk.rs`.
+      **Und die dritte Bewegung:** `breaking` hatte bis zu diesem Gift **null Korpusstellen**
+      — *ein Satz ueber ein Konstrukt, an dem nie etwas gefallen ist, ist eine Vermutung*
+      (W11). Nebenbefund: `pruefe-konstrukte.py` misst 23 ITEM-Arten und keine
+      Anweisungsarten; `breaking` ist eine, und darum konnte die Luecke dort nicht auffallen.
       (Breakthrough 2 — the `dma` edge — is closed: `R001`, placement rule.)
 
 - [ ] **The group proof sentence: the quantifier is open, the walkthrough is no longer.**
@@ -1707,6 +1848,16 @@ gemessen wird je Name, nicht je Struktur (W10).
       * **The `ops` over the group** — the recipient of the proof obligation from S16/S17.
         The checker today establishes the three conditions under which the question *"does the
         invariant hold?"* can be put at all; **it does not answer it.**
+
+      **Geschaerft 2026-08-20 — die zwei Haelften haben verschiedene Preise, und nur eine ist
+      Arbeit.** Die zweite (`ops` ueber der Gruppe) ist heute `S20 gruppe.ops`, *entworfen*,
+      und haengt an der **AXIOMSCHICHT** — derselbe Preis wie beim Posten „three forms stand"
+      oben. **Die erste — der Quantor — haengt an gar nichts ausser einer Entscheidung:**
+      „vier gefunden heisst vier gefunden" (W12) wird nie zu „alle", solange die Suche ein
+      Kandidatengang ist. *Entweder es gibt ein mechanisches Mass ueber „Verbindungs-
+      invariante" — dann ist es ein Werkzeug und keine Suche —, oder der Satz bekommt sein
+      „soweit gesucht" dazugeschrieben.* **Was er heute NICHT darf, ist als Allaussage
+      dastehen**, und das ist die billigere der beiden Antworten.
 
 ### Group `ops` + `by ops` — the design, BEFORE the first grammar line
 
@@ -1731,6 +1882,18 @@ group Kappen over { Slots, Objekte } locks KAPPEN {
 every generated operation would take exclusive, and the most-travelled path of the kernel would be
 the slowest again. *A construct that makes another one unusable is a
 design error, not a feature backlog.*
+
+**Nachgesehen 2026-08-20: nichts davon steht in der Grammatik, und der Platz dafuer ist
+BESETZT.** `gruppedecl` (`SYNTAX.md`) lautet heute `"group" ident "over" "{" identlist "}"
+( "{" { invariant } "}" | ";" )` — **kein `locks`, kein `op`.** Und eine Zeile darunter steht
+eine Entscheidung, die zu E1 hingehalten werden muss: *„The lock order does NOT stand at the
+group — every carrier lies under a `lock … rank N`, and the ranks give the order; a second
+declaration would be a second truth about the same thing."*
+> **Die zwei widersprechen einander nicht, und genau deshalb ist die Verwechslung billig:**
+> E1 will den **Modus je `op`** (exklusiv/geteilt), die getroffene Entscheidung verbietet den
+> **Rang an der Gruppe**. *Wer E1 baut, muss den Satz daneben stehenlassen und im selben
+> Atemzug sagen, warum er ihn nicht bricht* — sonst liest der naechste den Widerspruch und
+> nicht die Unterscheidung.
 
 ### E2 — The speech test has an obligatory direction, and it is a FILE
 
@@ -1777,6 +1940,13 @@ The existing probe `beispiele/gift/37-b29-unter-ops.gab` covers `ops` on the **t
 (`D001`). The new one covers `by ops` on the **field** — `field : u16 by ops` — and must hit exactly
 this line sequence.
 
+**Eingeloest — beim Nachsehen am 2026-08-20 lag die Datei schon da:**
+`beispiele/gift/60-b29-unter-by-ops.gab` (`-- erwartet: D002`), mit genau der Zeilenfolge
+`zaehler -= 1;` gefolgt von der Null-Pruefung, und mit dem Unterschied zu Gift 37 im Kopf
+notiert: *„dort nennt die TABELLE `ops`, hier nur das FELD."* **Die Pflicht, die E2 als
+FORDERUNG fuehrte, ist damit ein Ort im Korpus** — und seit dem 2026-08-20 steht daneben die
+dritte Frage derselben Ecke beantwortet (`breaking` oeffnet den Traeger nicht, Gift 226).
+
 ### E3 — The Verus template: take over the clause structure, NOT the types
 
 **Re-checked, and the mechanism is a different one than assumed — the warning becomes
@@ -1810,11 +1980,33 @@ instead of one**, and the second is exactly what fell in the speech test as `M10
 
 **The checking line against it, mechanically:** no field generated by a template may carry a
 type without a width. That is checkable at the template itself, not only at the artefact.
+
+**Nachgesehen 2026-08-20 — die Pruefzeile braucht es nicht, und der Grund ist besser als
+sie.** `SYNTAX.md` §`intty` laesst genau `u8|u16|u32|u64|i8|i16|i32|i64 [ "in" range ]` zu:
+**es gibt in Gabbro keinen Ganzzahltyp ohne Breite.** Ein Uebertragen von `nat` ist nicht
+schwer zu entdecken, sondern nicht schreibbar. *Eine Eigenschaft, die die Grammatik traegt,
+braucht keinen Pass — und ein Pass, der sie trotzdem prueft, sieht wie eine Absicherung aus
+und ist eine Doppelung.*
+> **Was von E3 UEBRIG bleibt, ist damit keine Pruefarbeit, sondern eine Sperre gegen eine
+> kuenftige Grammatikzeile:** wer je einen unbeschraenkten Ganzzahltyp einfuehrt, nimmt das
+> zweite Netz weg, und der Verlust faellt nirgends auf — *das erzeugte C liesse die
+> Bereichspruefung weg, weil der Beweis sagt, es koenne nicht negativ werden.*
 ### The four items to the goal — plan with gates in [`dokumente/PLAN.md`](dokumente/PLAN.md) §A *(Teil)*
 
 - [ ] **A4 — `costs` at a RECURSIVE function stays an assumption.** A call counts
       the *declared* costs of the callee; at a cycle nobody recomputes. That is
-      the intention of §7 — but it means that the termination hangs there on a promise.
+      the intention of §7. ~~— but it means that the termination hangs there on a promise.~~
+      **Der zweite Halbsatz ist ueberholt** *(nachgemessen 2026-08-20)*: seit «K5.4» traegt
+      die Rekursion ein Mass. `K008` verlangt an einer Funktion, die sich selbst erreicht,
+      ein `decreases`; `K009` verlangt, dass an jeder rekursiven Rufstelle mindestens eine
+      der genannten Groessen sich aendert. Probe: `impl fn f(n : u32 in 0 .. 1000) … { …
+      return f(n - 1); }` ohne `decreases` gibt **`K008`** (und `E009` als dritten Zustand
+      fuer die Wirkungen). **Die TERMINIERUNG haengt damit an einer geprueften notwendigen
+      Bedingung, nicht mehr an einer Zusage** — *dass das Mass faellt, bleibt Beweisersache,
+      und genau diese Trennung ist die Zielform.* **Was als Posten stehenbleibt, ist die
+      ZAHL:** `costs` an einer rekursiven Funktion ist weiter eine Annahme, weil jede Kante
+      des Zyklus einmal zaehlt. *Ein Posten, der Terminierung und Kostenzahl in einem Satz
+      fuehrte, war nur zur Haelfte offen.*
 
 ---
 
@@ -2112,7 +2304,7 @@ hat kein Feld dafür). **Ohne die Sätze ist „Gabbro formal verifiziert" nicht
 formulierbar** — man wüsste nicht, was zu beweisen wäre.
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (heute 189 Codes, null Sätze).
+sofort: *kein neuer Absagecode ohne seinen Satz* (heute 190 Codes, null Sätze).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
