@@ -88,10 +88,14 @@ echo "== SYNTAX: ALL PASS =="
 # beim dritten Mal war sie schon gepusht. Eine Warnung, die bei jedem Bau mitlaeuft, tarnt
 # die naechste echte; ein Fehler, den man dreimal macht, gehoert in die Waechterkette.
 echo "== Warnungen =="
-W=$(cargo build --tests 2>&1 | grep -cE "^warning: " || true)
+# **Mit Frist**, seit dem 2026-08-20: ein `cargo build`, der nicht endet, sieht in einer
+# Waechterkette aus wie einer, der noch baut. Am selben Tag standen deswegen einundzwanzig
+# `pruefe-emission.sh` nebeneinander. *Eine ueberschrittene Frist ist ein BEFUND, kein Warten.*
+FRIST=${FRIST:-900}
+W=$(timeout "$FRIST" cargo build --tests 2>&1 | grep -cE "^warning: " || true)
 if [ "$W" != "0" ]; then
   echo "  $W WARNUNG(EN) -- der Endzustand verlangt null:"
-  cargo build --tests 2>&1 | grep -E "^warning: " | head -5
+  timeout "$FRIST" cargo build --tests 2>&1 | grep -E "^warning: " | head -5
   echo "== SYNTAX: FEHLER (Warnungen im Bau) =="
   exit 1
 fi

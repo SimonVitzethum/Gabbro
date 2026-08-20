@@ -24,6 +24,11 @@ import tempfile
 
 W = pathlib.Path(__file__).resolve().parent
 
+# **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
+# ein Befund -- am 2026-08-20 standen deswegen einundzwanzig Laeufe von
+# `pruefe-emission.sh` nebeneinander, der aelteste seit dreieinhalb Stunden.
+FRIST = 600
+
 # Je Luecke: (Kennung, was fehlte, das kleinste Programm, das es braucht)
 LUECKEN = [
     ("B3", "`Held(Lock)` -- eine Typliste in den Klammern eines `typedecl`",
@@ -90,8 +95,7 @@ def lauf(pfad, quelle):
     r = subprocess.run(
         ["cargo", "run", "-q", "--manifest-path", str(W / "Cargo.toml"),
          "--bin", "gabbro", "--", "pruefe", str(pfad)],
-        capture_output=True, text=True,
-    )
+        capture_output=True, text=True, timeout=FRIST)
     # **Ein Bauabbruch ist kein geschlossener Befund.** Ohne diese Zeile zaehlte ein
     # kaputter Baum jede Luecke als zu -- und der Waechter meldete Erfolg (W1).
     if "error[E" in r.stderr or "could not compile" in r.stderr:

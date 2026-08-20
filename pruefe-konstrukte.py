@@ -100,7 +100,34 @@ def proben(wort):
     return n
 
 
+def sprechprobe():
+    """**R14: ein Messwerkzeug weist nach, dass es messen kann** -- in beide Richtungen.
+
+    Bis zum 2026-08-20 hatte dieser Waechter keine; gefunden von `pruefe-waechter.py` beim
+    ersten Lauf. Das ist doppelt bitter, weil er selbst Mass 2 nur zaehlt und im eigenen
+    Schlusssatz sagt, dass eine Probe zu haben nicht heisst, geprueft zu sein.
+    """
+    fehler = []
+    if proben("zzsprechprobe") != 0:
+        fehler.append("ein erfundenes Konstrukt hat angeblich Giftproben -- die Suche trifft "
+                      "irgendetwas, nicht das Wort")
+    if proben("module") == 0:
+        fehler.append("`module` hat angeblich keine Giftprobe -- die Suche findet nichts mehr, "
+                      "und dann sagt jede Null hier nichts")
+    vs = varianten()
+    if not vs:
+        fehler.append("`ast.rs` liefert null Item-Arten -- es wurde NICHTS gemessen")
+    return fehler
+
+
 def main():
+    if fehler := sprechprobe():
+        print("ABBRUCH: die Sprechprobe faellt -- es wurde NICHTS gemessen.")
+        for f in fehler:
+            print("  " + f)
+        return 1
+    print("== Sprechprobe: ok (ein erfundenes Konstrukt hat 0 Proben, `module` hat welche) ==\n")
+
     vs = varianten()
     woerter = schluesselwoerter()
     pass_, tragend = leser()

@@ -817,3 +817,10 @@ if __name__ == '__main__':
         if arg.startswith('--json='):
             json.dump({'r': erg, 'ab': ab, 'z_roh': zr, 'z_nl': zn, 'z_test': zt},
                       open(arg[7:], 'w'), ensure_ascii=False, indent=1)
+    # **Ein Abbruch, der mit Ruecklaufwert 0 endet, ist von einem sauberen Lauf nicht zu
+    # unterscheiden** (gefunden 2026-08-20 von `pruefe-waechter.py`). Die Zeile stand hier
+    # seit jeher und wurde GEDRUCKT, nicht gemeldet -- in einer Waechterkette heisst das:
+    # niemand sieht sie. *Dieselbe Richtung wie ein Haenger: nichts wird rot.*
+    if ab:
+        print('  ==> ABGEBROCHEN: die Zahl ist eine untere Schranke, keine Messung.')
+        raise SystemExit(1)

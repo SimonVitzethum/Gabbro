@@ -100,4 +100,36 @@ if fehlt:
     print(f"    NICHT IN DER TABELLE ({len(fehlt)}): " + ", ".join(fehlt))
 if tot:
     print(f"    TOTE WOERTER ({len(tot)}): " + ", ".join(tot))
+# **Die Sprechprobe, und sie ruft sich selbst.**
+#
+# Bis zum 2026-08-20 hatte dieser Waechter keine -- gefunden von `pruefe-waechter.py` beim
+# ersten Lauf. *Ein Waechter, der nicht rot werden kann, misst nichts* (R14), und gerade
+# dieser hier hat seinen eigenen Rand schon DREIMAL uebersehen (G6, die verschmolzenen
+# Regeln, die Spaltenkoepfe). **Wer dreimal am eigenen Rand vorbeisah, schuldet die Probe.**
+#
+# Sie schiebt ein erfundenes Terminal in eine KOPIE der Grammatik und verlangt, dass es als
+# „nicht in der Tabelle" faellt. Die andere Richtung ist der Lauf darueber: er meldet nichts.
+if "--probe" not in sys.argv:
+    import subprocess, tempfile, os
+    kopie = d.replace("```ebnf\n", '```ebnf\nzzprobe = "zzsprechprobe" ;\n', 1)
+    with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as f:
+        f.write(kopie)
+        name = f.name
+    try:
+        r = subprocess.run([sys.executable, __file__, name, "--probe"],
+                           capture_output=True, text=True, timeout=60)
+        gefangen = "zzsprechprobe" in r.stdout
+    except subprocess.TimeoutExpired:
+        gefangen = False
+        r = None
+    finally:
+        os.unlink(name)
+    print()
+    if gefangen:
+        print("    Sprechprobe: ok (ein erfundenes Terminal faellt als „nicht in der Tabelle\")")
+    else:
+        print("    SPRECHPROBE GESCHEITERT: ein erfundenes Terminal geht durch --")
+        print("    dieser Waechter kann nicht rot werden und misst damit nichts.")
+        sys.exit(1)
+
 sys.exit(1 if (fehlt or tot or tot_regel) else 0)

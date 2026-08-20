@@ -32,6 +32,11 @@ import subprocess
 import sys
 
 WURZEL = pathlib.Path(__file__).resolve().parent
+
+# **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
+# ein Befund -- am 2026-08-20 standen deswegen einundzwanzig Laeufe von
+# `pruefe-emission.sh` nebeneinander, der aelteste seit dreieinhalb Stunden.
+FRIST = 900
 CHECK = WURZEL / "crates" / "gabbro-check" / "src"
 
 
@@ -2126,8 +2131,7 @@ def proben_laufen():
         ["cargo", "test", "--quiet"],
         cwd=WURZEL,
         capture_output=True,
-        text=True,
-    )
+        text=True, timeout=FRIST)
     text = r.stdout + r.stderr
     uebersetzt = "error[E" not in text and "could not compile" not in text
     return uebersetzt, r.returncode == 0
@@ -2190,8 +2194,7 @@ def sauberer_baum():
         ["git", "status", "--porcelain", "crates/"],
         cwd=WURZEL,
         capture_output=True,
-        text=True,
-    )
+        text=True, timeout=FRIST)
     return r.stdout.strip() == ""
 
 

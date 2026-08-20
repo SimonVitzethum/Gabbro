@@ -19,6 +19,11 @@ import subprocess
 import sys
 
 WURZEL = pathlib.Path(__file__).parent
+
+# **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
+# ein Befund -- am 2026-08-20 standen deswegen einundzwanzig Laeufe von
+# `pruefe-emission.sh` nebeneinander, der aelteste seit dreieinhalb Stunden.
+FRIST = 600
 KORPUS = WURZEL / "dokumente/FRAGMENTE.md"
 
 
@@ -56,8 +61,7 @@ def messe(quelle):
         ["cargo", "run", "-q", "-p", "gabbro-cli", "--", "fragmente", str(tmp)],
         cwd=WURZEL,
         capture_output=True,
-        text=True,
-    )
+        text=True, timeout=FRIST)
     if r.returncode not in (0, 1) or "Uebersetzungseinheiten" not in r.stdout:
         print("!! ABBRUCH: `gabbro fragmente` lief nicht -- das ist KEINE Zaehlung von null.")
         print((r.stderr or r.stdout)[-800:])

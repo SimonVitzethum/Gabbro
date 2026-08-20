@@ -36,13 +36,51 @@ if [ -n "$FEHLT" ]; then
     exit 1
 fi
 
+# **Sprechprobe, und sie steht VOR dem Lauf.** Ein Wachhund, der nie anschlaegt, ist von
+# einem fehlenden nicht zu unterscheiden -- genau das war er bis zum 2026-08-20 fuer die
+# Zeitgrenze. Hier wird beides gemessen: ein Schlaefer MUSS fallen, ein kurzer Lauf NICHT.
+sprechprobe() {
+    local Z=2 v=0 pid rc
+    sleep 30 & pid=$!
+    while kill -0 $pid 2>/dev/null; do
+        sleep 1; v=$((v + 1))
+        if [ "$v" -ge "$Z" ]; then kill -9 $pid 2>/dev/null; rc=gefangen; break; fi
+    done
+    [ "${rc:-durch}" = gefangen ] || { echo "  SPRECHPROBE GESCHEITERT: der Wachhund laesst einen Schlaefer durch"; return 1; }
+    v=0; sleep 0.1 & pid=$!
+    while kill -0 $pid 2>/dev/null; do
+        sleep 1; v=$((v + 1))
+        if [ "$v" -ge "$Z" ]; then echo "  SPRECHPROBE GESCHEITERT: der Wachhund erschlaegt einen kurzen Lauf"; return 1; fi
+    done
+    echo "  Sprechprobe: ok (ein Schlaefer faellt, ein kurzer Lauf nicht)"
+}
+sprechprobe || exit 1
+
 echo "== Beweise: Sitzung Gabbro, Wachhund bei ${GRENZE_GB} GB / ${ZEIT}s =="
 ( cd "$W/beweise" && "$ISABELLE" build -o threads=1 -d . Gabbro ) > /tmp/gabbro-beweise.log 2>&1 &
 BAU=$!
 
 ANGEHALTEN=0
+VERSTRICHEN=0
 while kill -0 $BAU 2>/dev/null; do
     sleep 5
+    VERSTRICHEN=$((VERSTRICHEN + 5))
+    # **Die ZEITgrenze stand seit jeher in der Kopfzeile und wurde nie durchgesetzt**
+    # (gefunden 2026-08-20 von `pruefe-waechter.py`, beim ersten Lauf). Der Banner sagte
+    # „Wachhund bei N GB / Ms", und der Wachhund sah nur den Speicher.
+    #
+    # > *Ein angekuendigter Riegel, den niemand einlegt, ist schlechter als keiner: er
+    # > beruhigt.* Dieselbe Klasse wie der Haenger in `pruefe-emission.sh` am selben Tag --
+    # > ein Lauf, der nicht endet, sieht aus wie einer, der noch arbeitet.
+    if [ "$VERSTRICHEN" -ge "$ZEIT" ]; then
+        echo "  WACHHUND: ${VERSTRICHEN}s ohne Ende -- angehalten (Grenze ${ZEIT}s)."
+        echo "  **Ein Beweislauf ohne Ende ist kein Beweislauf.** Wer hier landet, teilt die"
+        echo "  Sitzung oder ersetzt den suchenden Schritt durch einen geschriebenen."
+        kill -9 $BAU 2>/dev/null
+        pkill -9 -f poly 2>/dev/null
+        ANGEHALTEN=1
+        break
+    fi
     for p in $(pgrep -f poly 2>/dev/null); do
         # **Feld 2, nicht Feld 1.** Die erste Zahl in `statm` ist die VIRTUELLE Groesse --
         # bei Poly/ML rund 22 GB, und zwar im Normalbetrieb. Die erste Fassung dieses

@@ -203,7 +203,7 @@ def main():
         print("hier sorgt dafuer, dass er nichts uebersieht.")
 
 
-def haengend():
+def haengend(probe=None, still=False):
     """**Die haengenden Klempnereipflichten, aus dem Handgang ABGELESEN statt fortgeschrieben.**
 
     Der Handgang steht in `PFLICHTEN.md` als Tabelle: je Zeile eine Pflicht, Spalte 3 die
@@ -222,8 +222,11 @@ def haengend():
     """
     import re
     quelle = Path(__file__).parent / "dokumente" / "PFLICHTEN.md"
+    text = quelle.read_text(encoding="utf-8")
+    if probe is not None:
+        text = text.replace(probe[0], probe[1], 1)
     frag, offen = None, {}
-    for nr, z in enumerate(quelle.read_text(encoding="utf-8").splitlines(), 1):
+    for nr, z in enumerate(text.splitlines(), 1):
         m = re.match(r"^# (F\d+)", z)
         if m:
             frag = m.group(1)
@@ -231,6 +234,9 @@ def haengend():
             sp = [c.strip() for c in z.strip("|").split("|")]
             if len(sp) >= 4 and sp[2] == "K":
                 offen.setdefault(frag, []).append((nr, sp[0]))
+    n_roh = sum(len(v) for v in offen.values())
+    if still:
+        return n_roh
     print("== Haengende Klempnereipflichten, an einer Zeile verankert ==")
     for f in sorted(offen, key=lambda x: int(x[1:])):
         stellen = ", ".join(s for _, s in offen[f])
@@ -249,6 +255,23 @@ def haengend():
 
 if __name__ == "__main__":
     if "--haengend" in sys.argv:
+        # **Die Sprechprobe, in beide Richtungen** (2026-08-20, gefunden von
+        # `pruefe-waechter.py`). `H` ist die Zahl, auf der K100s erstes Tor definiert ist --
+        # und dieser Modus las sie aus einer handgepflegten Tabelle, ohne je zu zeigen, dass
+        # er eine geaenderte Tabelle bemerkt. *Ein Waechter, der nicht rot werden kann, misst
+        # nichts* (R14).
+        vorher = haengend(still=True)
+        # Eine erfundene `gap:`-Zeile MUSS mitzaehlen.
+        gift = ("| 999 | Sprechprobe | K | **gap: erfunden** |\n"
+                "**F2: 24 obligations")
+        nachher = haengend(probe=("**F2: 24 obligations", gift), still=True)
+        if nachher != vorher + 1:
+            print(f"SPRECHPROBE GESCHEITERT: eine zusaetzliche `gap:`-Zeile aendert die Zahl "
+                  f"nicht ({vorher} -> {nachher}). **Diese Zahl misst nichts.**",
+                  file=sys.stderr)
+            sys.exit(1)
+        print(f"== Sprechprobe: ok (eine erfundene `gap:`-Zeile hebt H von {vorher} auf "
+              f"{nachher}) ==\n")
         haengend()
     else:
         main()

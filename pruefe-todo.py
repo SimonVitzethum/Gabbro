@@ -21,6 +21,11 @@ import sys
 
 WURZEL = pathlib.Path(__file__).resolve().parent
 
+# **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
+# ein Befund -- am 2026-08-20 standen deswegen einundzwanzig Laeufe von
+# `pruefe-emission.sh` nebeneinander, der aelteste seit dreieinhalb Stunden.
+FRIST = 600
+
 # Die Etiketten des Prueferplans. Wer sie zweitvergibt, hat zwei Systeme mit denselben Namen.
 #
 # **Englisch seit der Uebersetzung von `TODO.md` (2026-08-17).** Die Werte werden gegen den
@@ -230,8 +235,7 @@ def paesse_heute():
     """Wieviele Paesse fehlen ganz, wieviele sind halb? Aus `gabbro paesse`, nicht von Hand."""
     r = subprocess.run(
         ["cargo", "run", "-q", "-p", "gabbro-cli", "--", "paesse"],
-        cwd=WURZEL, capture_output=True, text=True,
-    )
+        cwd=WURZEL, capture_output=True, text=True, timeout=FRIST)
     if r.returncode != 0:
         return None, None, None
     # `gabbro paesse` markiert die Zeilen mit `OFFEN` bzw. `TEIL` -- die Zahlen aus
@@ -263,7 +267,7 @@ def heutige_zahlen():
     genaue Fall, fuer den dieser Waechter gebaut wurde -- und er hat ihn zwei Tage lang nicht
     gesehen.*
     """
-    r = subprocess.run(["./pruefe-syntax.sh"], cwd=WURZEL, capture_output=True, text=True)
+    r = subprocess.run(["./pruefe-syntax.sh"], cwd=WURZEL, capture_output=True, text=True, timeout=FRIST)
     aus = r.stdout
     regeln = re.search(r"EBNF: (\d+) Regeln", aus)
     terme = re.search(r"Wortschatz: (\d+) EBNF-Terminale, (\d+) Tabellenwoerter", aus)
@@ -302,19 +306,19 @@ def pruefe_readme(text=None):
     n_gift = len(list((WURZEL / "beispiele/gift").glob("*.gab")))
     n_waechter = len(list(WURZEL.glob("pruefe-*.py"))) + len(list(WURZEL.glob("pruefe-*.sh")))
 
-    k = subprocess.run(["./pruefe-kennungen.py"], cwd=WURZEL, capture_output=True, text=True)
+    k = subprocess.run(["./pruefe-kennungen.py"], cwd=WURZEL, capture_output=True, text=True, timeout=FRIST)
     m = re.search(r"Kennungen: (\d+) vergeben", k.stdout)
     n_kenn = m.group(1) if m else "?"
 
     s = subprocess.run(["cargo", "run", "--quiet", "--bin", "gabbro", "--", "schablonen"],
-                       cwd=WURZEL, capture_output=True, text=True)
+                       cwd=WURZEL, capture_output=True, text=True, timeout=FRIST)
     # **Englisch seit 2026-08-19** -- die Sprachflaeche von Gabbro ist es, und dieser Leser
     # hing an der deutschen Fassung. *Ein Waechter, der die Ausgabe eines Werkzeugs liest,
     # gehoert zu dessen Sprache; er hat sie hier zwei Stunden lang nicht gehabt.*
     m = re.search(r"(\d+) templates, \d+ of them unproved, (\d+) machine-checked", s.stdout)
     n_schab, n_bew = (m.group(1), m.group(2)) if m else ("?", "?")
 
-    y = subprocess.run(["./pruefe-syntax.sh"], cwd=WURZEL, capture_output=True, text=True)
+    y = subprocess.run(["./pruefe-syntax.sh"], cwd=WURZEL, capture_output=True, text=True, timeout=FRIST)
     m = re.search(r"EBNF: (\d+) Regeln", y.stdout)
     n_regeln = m.group(1) if m else "?"
     m = re.search(r"Wortschatz: (\d+) EBNF-Terminale, (\d+) Tabellenwoerter", y.stdout)
@@ -339,6 +343,17 @@ def pruefe_readme(text=None):
         (r"(\d+) clean examples", str(n_bsp), "saubere Beispiele"),
         (r"(\d+) poison files", str(n_gift), "Giftdateien"),
     ]
+    # **Ein Muster, das nichts trifft, meldet nichts -- und sieht aus wie ein Bestehen.**
+    #
+    # Gefunden 2026-08-20, an dieser Zeile selbst: die Waechterzahl stand als
+    # `| **Guardians** | (\d+),` -- mit Komma. Beim Umformulieren auf `| 19 — and …` traf das
+    # Muster nichts mehr, und der Waechter meldete „sauber" ueber einer falschen Zahl.
+    #
+    # > *Dieselbe Richtung wie ein Haenger: nichts wird rot.* Ein Muster, das seinen
+    # > Gegenstand verliert, ist kein Waechter mehr, sondern ein Kommentar.
+    #
+    # Darum ist ein Fehlschlag des Musters seit heute selbst ein BEFUND.
+
     # **Und der Abschnitt UNTER der Tafel** (Rezension 2026-08-20).
     #
     # Dieser Leser hielt die Kennzahlentafel nach -- und nur sie. Eine Bildschirmhoehe
@@ -368,7 +383,17 @@ def pruefe_readme(text=None):
         return str(s).replace(" ", "").replace("\u00a0", "").replace(".", "")
 
     for muster, heute, was in fuer:
-        for t in re.finditer(muster, text):
+        treffer = list(re.finditer(muster, text))
+        # **Ein Muster ohne Treffer ist ein BEFUND, kein Bestehen** (2026-08-20, an der
+        # Waechterzahl selbst gefunden: sie stand als `| **Guardians** | (\d+),` mit Komma,
+        # wurde auf `| 17, and …` umformuliert und war damit unbewacht -- der Waechter meldete
+        # „sauber" ueber einer falschen Zahl). *Dieselbe Richtung wie ein Haenger: nichts wird
+        # rot.*
+        if not treffer:
+            befunde.append(f"README: das Muster fuer {was} trifft nichts mehr -- "
+                           f"die Zahl ist umformuliert und damit UNBEWACHT")
+            continue
+        for t in treffer:
             if blank(t.group(1)) != blank(heute):
                 befunde.append(f"README: '{t.group(1)}' als {was} -- es sind {heute}")
     return befunde

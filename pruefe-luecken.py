@@ -27,6 +27,11 @@ import pathlib, subprocess, re, sys
 # > *Ein Waechter, der etwas anderes misst, als er sagt, ist schlimmer als keiner* -- und
 # > dieser hier SCHREIBT in die Quellen, die er misst.
 W = pathlib.Path(__file__).resolve().parent; C = W/"crates/gabbro-check/src"
+
+# **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
+# ein Befund -- am 2026-08-20 standen deswegen einundzwanzig Laeufe von
+# `pruefe-emission.sh` nebeneinander, der aelteste seit dreieinhalb Stunden.
+FRIST = 1800
 # (Datei, alte Zeile aus Lauf 1, Verdrehung) -- ueber den INHALT gesucht, nicht ueber die Nummer.
 LUECKEN = [
  # **NULLMUTATION, bewiesen** (2026-08-19) -- keine Luecke, sondern eine Verdrehung ohne
@@ -75,11 +80,11 @@ def lauf(d, alt, neu):
     if alt not in t:
         return "WEG", t
     p.write_text(t.replace(alt, neu, 1))
-    b = subprocess.run(["cargo", "build", "--tests", "--quiet"], cwd=W, capture_output=True)
+    b = subprocess.run(["cargo", "build", "--tests", "--quiet"], cwd=W, capture_output=True, timeout=FRIST)
     if b.returncode != 0:
         p.write_text(t)
         return "UNGUELTIG", t
-    r = subprocess.run(["cargo", "test", "--quiet"], cwd=W, capture_output=True)
+    r = subprocess.run(["cargo", "test", "--quiet"], cwd=W, capture_output=True, timeout=FRIST)
     p.write_text(t)
     return ("GEFANGEN" if r.returncode != 0 else "ENTKOMMEN"), t
 
@@ -101,14 +106,14 @@ def hashes():
 # *Ein Werkzeug, das Quellen veraendert und die Rueckgabe nicht nachweist, verschiebt seine
 # eigenen Fehler in die Arbeit des naechsten.*
 _status = subprocess.run(["git", "status", "--porcelain", "crates/"], cwd=W,
-                         capture_output=True, text=True)
+                         capture_output=True, text=True, timeout=FRIST)
 if _status.stdout.strip():
     print("  crates/ ist nicht sauber -- erst committen. Dieses Werkzeug schreibt in Quellen.")
     raise SystemExit(2)
 VORHER = hashes()
 
 print("== Sprechprobe ==")
-_r = subprocess.run(["cargo", "test", "--quiet"], cwd=W, capture_output=True)
+_r = subprocess.run(["cargo", "test", "--quiet"], cwd=W, capture_output=True, timeout=FRIST)
 if _r.returncode != 0:
     print("  GESCHEITERT: der Baum ist schon ohne Verdrehung rot -- dann faengt alles.")
     raise SystemExit(2)
@@ -130,11 +135,11 @@ for eintrag in LUECKEN:
     # aus wie eine gefangene Mutation -- und zaehlt in dieser Fassung als GEFANGEN, obwohl
     # nichts gemessen wurde. Genau so habe ich am 2026-08-15 beinahe "15 von 15" berichtet,
     # waehrend die Testdatei nicht kompilierte. W1: ein Beleg, der nicht laeuft, ist keiner.
-    b = subprocess.run(["cargo","build","--tests","--quiet"], cwd=W, capture_output=True)
+    b = subprocess.run(["cargo","build","--tests","--quiet"], cwd=W, capture_output=True, timeout=FRIST)
     if b.returncode != 0:
         p.write_text(t); weg += 1
         print(f"  -- UNGUELTIG  {d}: uebersetzt nicht"); continue
-    r = subprocess.run(["cargo","test","--quiet"], cwd=W, capture_output=True)
+    r = subprocess.run(["cargo","test","--quiet"], cwd=W, capture_output=True, timeout=FRIST)
     p.write_text(t)
     if r.returncode != 0: zu += 1; print(f"  GEFANGEN     {d}: {alt[:56]}")
     else: offen.append((d,alt)); print(f"  !! ENTKOMMEN {d}: {alt[:56]}")
