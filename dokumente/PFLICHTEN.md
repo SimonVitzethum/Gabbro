@@ -202,7 +202,7 @@ carries and the Rust original did not — because it does not write them down.*
 |---|---|---|---|
 | 753 | every access goes to the `mmio` space | K | `R001` |
 | 754–769 | register classes are respected | K | `R002`/`R003` |
-| 764 | the device's `QUEUE_SIZE` lies below QMAX | K | **gap: «B26» — `regdecl` carries a `requires` but no named exit. "Too big" yields no `reason` value** |
+| 764 | the device's `QUEUE_SIZE` lies below QMAX | K | **gap: «B26» — and it is worse than the row said** *(measured 2026-08-20)*. Not only does the `requires` name no exit: **no pass reads `RegDecl::requires` at all.** The clause parses and is then dropped — the same shape as `ensures` on an `extern fn`. *The cure is not a bigger predicate but a form that LOWERS:* `requires … else <reason>` makes the read fallible, and `let q = d.REG else (e) { … }` is a form the emitter already carries. **A fact from the clause would be the «B33» error again** — the register is volatile, and a hostile device may report anything |
 | 773 | `ack` — from 0 to ACK | L | the human — *the virtio protocol* |
 | 774 | `drv` — ACK to ACK\|DRIVER | L | the human |
 | 775–776 | `featok` | L | the human |
@@ -384,9 +384,31 @@ carries and the Rust original did not — because it does not write them down.*
 | Fragment | Obligation | | discharged by |
 |---|---|---|---|
 | **F7** | **the generated C computes what the fragment says** | K | **carried, measured by execution.** `pruefe-emission.sh` cuts F7 out of the frozen corpus, emits, compiles with `cc -std=c11 -Wall -Wextra -Werror`, runs it and compares: **`123456`** — six boot steps, in order, each exactly once. The `linear ghost type` leaves **no trace** in the C |
-| F1–F6, F8–F10 | same | K | **gap, for nine.** `C001` refuses for every form they need: loops, `match`, `locks`, `publish`, `exchange`, `format`, `walk`, every generated operation |
+| **F8**, **F10** | same | K | **carried, measured by execution** — booked in `pruefe-emission.sh` beside F7 |
+| F1–F6, F9 | same | K | **gap, for seven** *(re-measured 2026-08-20; the row said "nine" long after F8 and F10 were measured)*. And the seven are not one class. **Three are open DECISIONS** — «B10» (`by consuming` drains the whole queue), «B12» (`elems of` binds an element or an index; `SYNTAX.md` uses both readings), `mappings of` (a path or the leaf set — seven orders of magnitude apart). **Two are the axiom layer** — which barrier a `dma` access needs. **And two cannot be reached by any work on Gabbro**: F5 calls `map_window`, `pool_new`, `probe_ecam` and declares none of them, F2 and F9 leave unnamed bit gaps. *An EXCERPT is not a program, and `FRAGMENTE.md` carries a freeze sentence* — see the note below |
 
-**+10 obligations, 10 K, 9 hanging** *(updated 2026-08-17, after F7)*.
+**+10 obligations, 10 K, 7 hanging** *(re-measured 2026-08-20: 5 of the ten check clean, 3 lower and run)*.
+
+> ### The gate `H = 0` has a floor, and it is not made of work
+>
+> **Two of the seven are unreachable in principle.** The tenth-event obligation reads *"the
+> generated C computes what the fragment says"* — **measured by execution**. F5 calls three
+> functions it never declares; F2 and F9 leave bit positions unnamed. Neither is a gap in
+> Gabbro: they are the marks of an EXCERPT, and `FRAGMENTE.md` opens with *"a report from
+> 2026-08-14, and it stays untouched."*
+>
+> *An excerpt cannot be run.* Closing them would mean editing a frozen file — which is not
+> closing an obligation but moving the yardstick.
+>
+> **This is the same move K100.1 made and did not finish.** That phase separated a check
+> from a ritual among three hand-written `narrow`s and said: *a yardstick that cannot tell
+> them apart measures the wrong thing.* The lowering column carries the same confusion one
+> level up — it counts *"Gabbro cannot lower this"* and *"this text is not a program"* in one
+> number. **Five of the seven are Gabbro's; two are the corpus's**, and the honest floor of
+> this gate over this corpus is therefore `H = 2`, not `H = 0`.
+>
+> *The second corpus is where the number can go to zero, and it is the one no one looked at
+> while building.* `./zaehle-pflichten.py` counts it since 2026-08-20.
 
 > *That is the honest connection to the emitter work.* The differential test now shows that
 > **two** lowerings hold for **two** files, measured by execution — and F7's is the first over a

@@ -126,10 +126,34 @@ def main():
     if "--fragment" in sys.argv:
         nur = int(sys.argv[sys.argv.index("--fragment") + 1])
 
-    alle = bloecke(QUELLE.read_text(encoding="utf-8"))
+    text = QUELLE.read_text(encoding="utf-8")
+    alle = bloecke(text)
+    # **Die Grundgesamtheit hat sich bewegt, und das war RICHTIG** (nachgezogen 2026-08-20).
+    #
+    # Bis heute stand hier `len(alle) != 10 -> ABBRUCH`, und seit «F0» und «K2» sind es
+    # fuenfzehn. **Damit verweigerte genau das Werkzeug die Ableitung, auf dem K100s erstes
+    # Tor definiert ist** (*„`H = 0` ueber dem Fragmentkorpus, mit `./zaehle-pflichten.py`
+    # neu abgeleitet"*) -- und `--haengend`, der Modus, der noch antwortete, laeuft VOR
+    # dieser Stelle und liest eine handgepflegte Tabelle.
+    #
+    # > *Eine Zahl ohne Suchweg gehoert nicht in den Ordner* -- und der Suchweg war seit
+    # > Wochen abgeschnitten, ohne dass irgendetwas rot wurde.
+    #
+    # Der Riegel bleibt, er zaehlt nur das Richtige: der EINGEFRORENE Fragmentkorpus sind
+    # die Bloecke vor der «F0»-Ueberschrift. Was danach kommt, ist der ZWEITE Korpus -- und
+    # er ist die Bedingung, unter der `H = 0` ueberhaupt etwas heisst. **Darum wird er
+    # gezaehlt und nicht weggeworfen.**
+    grenze = next((nr for nr, z in enumerate(text.splitlines(), 1)
+                   if z.startswith("# \u00abF0\u00bb")), None)
+    if grenze is None:
+        print("ABBRUCH: die «F0»-Ueberschrift fehlt -- die Grenze zwischen dem eingefrorenen "
+              "Korpus und dem zweiten ist nicht mehr ablesbar.", file=sys.stderr)
+        sys.exit(1)
+    zweiter = [b for b in alle if b[1] > grenze]
+    alle = [b for b in alle if b[1] < grenze]
     if len(alle) != 10:
-        print(f"ABBRUCH: {len(alle)} Bloecke statt 10 -- die Grundgesamtheit hat sich "
-              f"bewegt, und FRAGMENTE.md traegt einen Einfriersatz.", file=sys.stderr)
+        print(f"ABBRUCH: {len(alle)} Bloecke statt 10 VOR «F0» -- der eingefrorene Korpus "
+              f"hat sich bewegt, und FRAGMENTE.md traegt einen Einfriersatz.", file=sys.stderr)
         sys.exit(1)
 
     gesamt = {k: 0 for k, _, _ in EREIGNISSE}
@@ -160,6 +184,16 @@ def main():
               + "  ".join(f"{gesamt[k]:>3}" for k, _, _ in EREIGNISSE)
               + f"  {sum(gesamt.values()):>6}")
         print()
+    print()
+    print(f"== Der ZWEITE Korpus: {len(zweiter)} Bloecke nach «F0» ==")
+    print("  «F0» der Gleitkommakorpus; der Rest aus «K2» -- fuenf Fragmente aus FREMDER")
+    print("  Autorenlinie (setpriority, acct_get, sum_mthp_stat, pid_namespace, BUG_ON),")
+    print("  nachgebildet und geschnitten, nicht uebersetzt.")
+    print("  **Ohne ihn ist `H = 0` Falle 80 in Reinform** -- die zehn oben sind nach ihrer")
+    print("  SCHWIERIGKEIT gewaehlt, nicht zufaellig. Er zaehlt hier mit, damit die Bedingung")
+    print("  im selben Werkzeug steht wie die Zahl, ueber die sie etwas sagt.")
+    print()
+    if False:
         print("H (Absenkung, je Fragment) : 10 -- steht nicht in der Tabelle, weil es")
         print("                                  keine Zeile trifft, sondern eine Datei.")
         print()

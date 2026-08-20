@@ -1414,6 +1414,40 @@ A = 19       Annahmen, jede mit Sonde oder mit Grund
 
 ---
 
+## Stand am 2026-08-20 — und das erste Tor hat einen BODEN
+
+| | Ziel | heute | |
+|---|---|---|---|
+| `H` | 0 | **12** | 5 verankert + 7 Absenkungen; Start war 31 |
+| `L` | ≤ 4 | **1** | getragen und unbewiesen; daneben aber **9 Prämissen ohne Pass** |
+| `A` | 19 | **32** | jede mit Sonde oder mit ausgeschriebenem Grund |
+| zweiter Korpus | vorhanden | **«K2», fünf Fragmente** | fremde Autorenlinie; drei sind ganze Module, alle drei prüfen sauber und senken ab |
+
+**`H = 0` über diesem Korpus ist nicht erreichbar, und der Grund ist kein Arbeitsrest.**
+Die Absenkungspflicht lautet *„das erzeugte C rechnet, was das Fragment sagt"* — **an der
+Ausführung gemessen**. F5 ruft `map_window`, `pool_new`, `probe_ecam` und deklariert keins
+davon; F2 und F9 lassen Bitlagen unbenannt. **Das sind keine Lücken in Gabbro, das sind die
+Merkmale eines AUSSCHNITTS** — und `FRAGMENTE.md` trägt seinen Einfriersatz.
+
+> *Ein Ausschnitt lässt sich nicht ausführen.* Diese zwei zu schließen hieße, eine
+> eingefrorene Datei zu ändern — das ist nicht das Schließen einer Pflicht, sondern das
+> Verschieben des Maßstabs.
+
+**Es ist dieselbe Bewegung wie K100.1, eine Ebene höher und dort nicht zu Ende geführt.**
+Jene Phase trennte unter drei handgeschriebenen `narrow` die Prüfung vom Ritus. Die
+Absenkungsspalte zählt bis heute *„Gabbro kann das nicht"* und *„dieser Text ist kein
+Programm"* in einer Zahl. **Fünf der sieben gehören Gabbro, zwei dem Korpus** — der
+ehrliche Boden dieses Tores über diesem Korpus ist damit `H = 2`.
+
+**Und die drei zuletzt geschlossenen Zeilen sagen zusammen einen Satz, der in den Plan
+gehört:** «B33» stand als *Zusage* im Ordner und der Prüfer tat das Gegenteil; die
+Registerklasse stand als *erledigt durch `R002`/`R003`* und die prüfen Zeigerrechte; «B26»
+an :764 stand als *„kein benannter Ausgang"* und hat in Wahrheit **gar keinen Leser**.
+*Drei Zeilen, drei Mal dieselbe Richtung: die Buchung war optimistischer als der Code.*
+**Eine Zahl, die aus Buchungen summiert wird, misst die Buchungen.**
+
+---
+
 # PL — die LOGIK des Prüfers beweisen
 
 **Der Auftrag sagt „zumindest die Logik des Prüfers", und das ist die richtige Verkleinerung.**

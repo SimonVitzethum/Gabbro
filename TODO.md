@@ -113,6 +113,23 @@ of items that are neither code nor a run — what remains is building and measur
       wertgetragene Schranke eine Stufe schaerfer.
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
+- [ ] **«B26»: `RegDecl::requires` hat KEINEN LESER** *(gemessen 2026-08-20, `PFLICHTEN.md`:764)*.
+      Die Klausel steht seit jeher in der Grammatik, wird geparst und dann fallengelassen --
+      `grep -rn "r.requires" crates/` findet nichts. **Der Ordner fuehrte sie als „traegt eine
+      `requires`, aber keinen benannten Ausgang"; der Befund ist eine Stufe darunter.**
+      *Dieselbe Gestalt wie `ensures` an einem `extern fn`: grammatisch moeglich, und kein Pass
+      liest es.* **Der Ausweg ist keine groessere Bedingung, sondern eine Form, die ABSENKT:**
+      `requires … else <reason>` macht die Lesung fehlbar, und `let q = d.REG else (e) { … }`
+      traegt der Erzeuger schon («B14b»). **Was NICHT geht, ist ein Fakt daraus** -- das waere
+      «B33» ein zweites Mal: das Register ist fluechtig, und ein feindliches Geraet meldet, was
+      es will.
+- [ ] **«B9» braucht einen ERZEUGER, bevor ein Vertrag an `fnptr` etwas heisst**
+      *(bewertet 2026-08-20, `PFLICHTEN.md`:613-624)*. Der Befund verlangt `requires`/`ensures`/
+      `effects` am Funktionszeigertyp. **`fnptr` hat null Korpusstellen, und die Sprache kennt
+      keine Form, einen Funktionszeiger HERZUSTELLEN** -- es gibt kein `&f`. Ein Vertrag an
+      einem Typ, den niemand erzeugen kann, ist eine Zusage ohne Einloeser: genau die
+      Bewegung, gegen die K100s zweites Tor steht. *Erst der Erzeuger, dann der Vertrag.*
+
 - [ ] **Ein Traversierungszaehler erbt die Schranke seiner Domaene** — die letzte
       `narrow`-Klempnereipflicht des Korpus (`FRAGMENTE.md`:1100). Die Traversierung laeuft
       ueber `s.worte`, also kann `i` die Laenge nicht ueberschreiten; **M1 sieht es nicht**,
