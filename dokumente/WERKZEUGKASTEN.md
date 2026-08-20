@@ -535,3 +535,22 @@ zuverlässig Schuldige.*
 
 **Es ist R16 in Textform**: eine untere Schranke, die nicht sagt, dass sie eine ist, liest sich
 als Ergebnis.
+
+### Und die Sippe reicht über Werkzeuge hinaus: ein Bau aus einer MISCHUNG
+
+Am 2026-08-20 meldete `cargo test` auf `ki-pc-fisch-101` einen Test rot, der lokal grün war —
+bei **byteidentischen Quellen** (md5 über den ganzen Baum, beidseitig verglichen). `M107` fiel
+hier und dort nicht.
+
+Die Ursache war nicht der Code: **`rsync -a` erhält Zeitstempel, und `cargo` entscheidet
+Aktualität nach Zeitstempel.** Eine übertragene Datei behält ihre alte `mtime`; ist die älter
+als das Bauartefakt auf dem Server, gilt sie als aktuell — und der Bau ist eine Mischung aus
+neuer Quelle und altem Objekt. Ein `touch` heilte es.
+
+> **Dieselbe Signatur eine Ebene tiefer:** das Werkzeug las nicht die Hälfte seines
+> Gegenstands, es las die Hälfte seines *Zustands*. Und wie dort sah das Ergebnis vollständig
+> aus — eine Zahl, kein Zweifel.
+
+*Die Regel ist dieselbe Frage:* **misst dieser Lauf, was ich glaube, dass er misst — oder
+misst er, was einmal da war?** Der Riegel steht in `CLAUDE.md`: `-rlpgoD` statt `-a`, damit
+jede übertragene Datei die aktuelle Zeit bekommt.

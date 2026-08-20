@@ -133,7 +133,7 @@ denominator that shines instead of the one that costs.*
 | **Grammar** | **145 EBNF rules**, closed and reachable | vocabulary covers every terminal, 216 / 216 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Guardians** | 15, each with a two-way speech test | **229 of 229 mutations caught** *(run 2026-08-20)* |
-| **Corpus** | 43 clean examples, 210 poison files, 158 tests *(run 2026-08-20)* | `cargo test` |
+| **Corpus** | 43 clean examples, 211 poison files, 158 tests *(run 2026-08-20)* | `cargo test` |
 | **Emission** | **43 of 43 examples emit C, and all 43 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
 | **Blind spots** | **79 blind · 166 covered · 25 poison-only · 15 no cell** — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |
 

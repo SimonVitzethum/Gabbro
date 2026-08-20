@@ -163,19 +163,12 @@ of items that are neither code nor a run — what remains is building and measur
       tragen lassen (PL-Arbeit).
 - [ ] **`opaque` beisst -- aber es gibt keine UMWANDLUNG** *(gebaut 2026-08-18, `D003`)*.
       Ein undurchsichtiger Typ hat die Rechnung seines Traegers nicht; Vergleiche bleiben
-      erlaubt. **Null Korpusstellen fielen** -- der Beleg kommt aus Gift 79 (drei Operatoren)
+      erlaubt. **Null Korpusstellen fielen** -- der Beleg kommt aus Gift 211 (drei Operatoren; am 2026-08-20 von `79`
+      umbenannt, weil zwei Dateien die Nummer trugen)
       und vier Sprechproben, nicht vom Korpus. *Was jetzt fehlt, ist der Ausweg:* heute gibt
       es keine Form, einen undurchsichtigen Typ ABSICHTLICH zu oeffnen, also ist die Regel ein
       Verbot ohne Tuer. **Solange kein Korpusstueck sie braucht, ist das richtig** -- aber es
       gehoert benannt, bevor jemand `opaque` deshalb weglaesst.
-- [ ] **`entrust` -- ein `code`-Raum, dessen Inhalt Gabbro nicht kennt.** Der Sprung ins
-      Ungezeugte ist ein ADRESSRAUMWECHSEL, kein Kontrollflusssprung: eigener `code`-Raum
-      ohne Schreibrecht (W^X, `mappings of` prueft es), eigene PD, eigener CapSpace, Rueckweg
-      als `entry`. **Gabbro schuldet dem Gast nichts** -- fuer den JIT-*Compiler* gilt die
-      Zusage vollstaendig (Byteemission plus Tabellen plus `recurse bounded`), fuer den Gast
-      gilt Isolation statt Beweis. *Das ist keine Luecke, sondern der Zweck eines
-      Mikrokernels.* Was fehlt: ein Wort, ein deklarierter Eintrittsvertrag (Register, Stapel,
-      Caps) und ein `assume`-Eintrag im Zeugnis. **Kein neuer Pass.**
 - [ ] **Gleitkomma-Memo: die Kosten sind eine ZWEITE FAKTENLOGIK, nicht ein zweiter
       Zahlentyp** *(2026-08-18)*. Intervallarithmetik ueber IEEE-754 ist gebaut und bekannt.
       **Was bricht, ist die NEGATION einer Vergleichsbedingung:** ist ein Operand NaN, sind
@@ -245,17 +238,6 @@ of items that are neither code nor a run — what remains is building and measur
       *Die Linie: comptime, das Werte rechnet, ist frei; comptime, das CODE erzeugt, kostet
       eine Schablone -- und ein nutzergeschriebener Erzeuger ist einer, dessen Beweispflicht
       niemand aufgeschrieben hat.*
-- [ ] **`accumulates` kann nicht absenken, und es fehlt kein Erzeugercode, sondern ZWEI
-      Entscheidungen** *(gemessen 2026-08-17, nachdem `accumulates.monoid` bewiesen war)*.
-      `SPRACHE.md` §11.4 sagt: *„one cell per core, merged on reading over the
-      NCORES-bounded loop."* **Beide Groessen stehen nirgends:**
-      1. **Die Zellenzahl.** `accdecl` nennt keine. Der Erzeuger muesste `NCORES` raten oder
-         einen Namen suchen -- *genau das Raten, gegen das `C001` steht.* Der kleinste
-         Ausweg ist `per cpu <constexpr>` an der Deklaration; die Woerter gibt es schon.
-      2. **Der aktuelle Kern.** Es gibt in Gabbro KEINEN Ausdruck dafuer. `per cpu` steht
-         allein am `stack` eines `entry`. Ohne ihn laesst sich die Schreibstelle
-         `x = v` nicht in `x_zellen[kern]` absenken.
-      *Die Schablone ist bezahlt (`Accumulates_Monoid.thy`) -- was fehlt, ist die Sprache.*
 - [ ] **Zum ZWEITEN Mal in eine Beweissuche gelaufen -- und die Regel stand schon da**
       *(2026-08-17)*. Erst ein `metis` (9 Minuten, 6,3 GB), dann ein `blast` (12 Minuten,
       4,8 GB). **Eine Regel, die man kennt und trotzdem bricht, braucht keinen weiteren Satz
@@ -282,11 +264,6 @@ of items that are neither code nor a run — what remains is building and measur
       die Zusage HERSTELLT, prueft niemand, und das ist Beweisersache. *Der kleinste naechste
       Schritt ist nicht der Beweis, sondern die Quantorbinder und `Self` -- die zwei
       Namensarten, die `sammle_namen_pred` heute nicht kennt.*
-- [ ] **Die Absenkung fehlt fuer die meisten Formen -- und zwar als WEIGERUNG, nicht als Luecke.**
-      `C001` weigert sich benannt fuer `forever`, `publishes`, `awaits`, `exchange`,
-      `let … else`, `static`, `reason`, `group`, `walk`, `entry`, `boot`, `accumulates`,
-      `descendants of`, `ancestors of`, `format`-Bitlagen und `match` ueber etwas anderem als
-      einer `option`. *Ein verifizierter Erzeuger, der sich weigert, erzeugt nichts.*
 - [ ] **Der ZWEITE Korpus gehoert in denselben Plan wie das letzte Konstrukt.** Die zehn
       Fragmente sind nach ihrer SCHWIERIGKEIT gewaehlt; `H = 0` ueber ihnen ist keine Aussage
       ueber Gabbro. **Ohne einen Korpus, den beim Bauen niemand angesehen hat, ist K100 Falle 80
@@ -508,24 +485,6 @@ of items that are neither code nor a run — what remains is building and measur
 
 ---
 
-### From the review of 2026-08-19 — **all nine closed the same day**
-
-*Each came with a measured output and each leaves a poison probe behind. The list stays here
-as a record of what the closure cost; the details are in
-[`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md).*
-
-| was open | closed as |
-|---|---|
-| `effects { locks L }` never redeemed | **`H011`** — redeemed by a `locks` block, a callee's hull, or `requires Held(…)` |
-| M2 tracks only linear PARAMETERS | **`L107`** — a value that arises in the body is consumed or leaves through `return` |
-| the pairing compares payload NAMES | the key is now **`(atomic, payload)`** — and it found a real error in `beispiele/05` |
-| the frame ends at the argument boundary | the graph **maps callee parameters to caller arguments**; `wirkungen` drops what is discharged locally |
-| the lock order is intraprocedural | **`H012`** — the rank order runs THROUGH calls, over the callee's hull |
-| `claim` injects C | `emit::kommentartext` at one place — verified to `nm` finding no injected symbol |
-| a recursive type overflows the stack | the guard is threaded through compound fields, and **`N019`** names the type that has no size |
-| `own` is a synonym for `rw` | **the specification was wrong, not the pass** — `SYNTAX.md` §3 now carries the measurement |
-| lexer panic · licence entry | **`P038`** (measured depth limit) · `license = "AGPL-3.0-only"` |
-
 ### «ABI» — Bibliotheken, die sich mischen lassen, entworfen 2026-08-20 ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
 *Eine Bibliotheksgrenze ist kein Riegel, sondern eine **Brücke mit Maut**. Eine ABI, die
@@ -627,6 +586,68 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       der Erzeuger benannt: `static mut x : <tagged> = 0;` erzeugte ungültiges C bei 0
       Prüferfehlern, und *welche Variante die Null ist, sagt die Deklaration nicht*. Die
       Alternative — ein Konstruktor in der Anfangswertstellung — ist eine Sprachfrage.
+### Vom zweiten Arbeitslauf über Tafel C, 2026-08-20 — elf Befunde, keiner still
+
+*Jeder gegen HEAD nachgemessen, jeder mit Kleinstfall. Drei weitere aus demselben Lauf sind
+sofort geschlossen worden («V9» in beide Richtungen, der Pfeil im `traverse`, zwei tote
+Mutationsanker) und stehen deshalb nicht hier.*
+
+- [ ] **`breaking` hat überhaupt keine Absenkung — und die Absage nennt das Konstrukt nicht.**
+      `emit.rs::anweisung` hat keinen `StmtArt::Bricht`-Zweig; es fällt in den Sammelzweig
+      `_ => weigere(…, "statement kind")`. **`SPRACHE.md` §8.3 spezifiziert es samt
+      Buchungsregel, und `kbedingung.rs` sammelt seine Stellen für die K-Bedingung — die Liste
+      ist immer leer.** Null Fundstellen im ganzen Ordner; was daran fällt, ist eine einzige
+      Zeichenkette in `tests/beispiele.rs`. *Kein Nullbefund: eine Spezifikation ohne
+      Implementierung.* **Und die Absage widerspricht der eigenen Doktrin des Moduls**
+      (*„refuses by name"*), weil sie das Konstrukt nicht benennt.
+- [ ] **`!x` hat keine Absenkung.** `ausdruck()` kennt `ExprArt::Unaer` nicht — nur
+      `ausdruck_eintrag` im `walk`-Zweig kennt es. `if !b { … }` → `C001 "expression form"`.
+      Im ganzen Korpus steht `!` nur in `ensures`-Prädikaten und `when`-Klauseln, **nie in
+      einer Anweisung**. Betrifft auch das unäre Minus.
+- [ ] **`leave`/`next` auf eine `retry`-Marke: Prüfer ja, Erzeuger nein — mit falschem Grund.**
+      Die Grammatik gibt `retry` eine optionale Marke und `S001` nimmt sie als Sprungziel an;
+      nur `forever` trägt sich in `Austritt::schleifen` ein. Der Erzeuger sagt
+      `"leave/next naming no enclosing loop"` — **die Schleife ist da.** *Eine Regel, die zwei
+      Stellen verschieden beantworten.*
+- [ ] **`retry` ist nur in vier Umgebungen absenkbar.** `sammle_retry` steigt in `Retry`,
+      `Sperrt`, `Match` und `Narrow` ab — **nicht** in `Wenn`, `Traverse`, `Forever`,
+      `Observiert`, `LetSonst`, `Exchange`; und `retry_schranken` läuft nur über
+      `ItemArt::Funktion`, also nie in einen `can_fail`-Rumpf. Die Absage lautet *„the per-pass
+      cost is not fixed"* — **auch das ist der falsche Grund: es hat niemand hingesehen.**
+      *Dieselbe Signatur wie W16: ein Werkzeug ohne Abstiegsschritt.*
+- [ ] **`match` über einem Rufergebnis hat keine Absenkung.** `marken_quelle` kennt nur
+      Parameter, Slot-/Verbundfelder und `let` **mit Typklausel auf oberster Rumpfebene**.
+      `match lage() { … }` → `C001`.
+- [ ] **`option index into T` als lokales `let` gibt es nicht.** Der `Let`-Zweig ruft
+      `ausdruck()` ohne den `option_wert`-Pfad, den die Zuweisung hat. `let mut w : option
+      index into T = None;` → `C001`. **Damit ist eine lokale Suchvariable über einer Tabelle
+      unschreibbar.**
+- [ ] **`let m = <geraet>.<reg>;` hat keinen ablesbaren Typ.** `wert_ctyp` kennt
+      Geräteregister nicht. Mit Typklausel geht es. *Kein Korpusrumpf hat je ein Register
+      gebunden.*
+- [ ] **Ein unbenutzter `Some(j)`-Binder bricht den Bau.** `match_option` schreibt
+      `uint32_t j = _o1;` ohne `(void)`-Absicherung; unter `-Werror=unused-variable` ist das
+      ein Fehler. **Der `tagged`-Zweig macht es richtig** — zwei Fassungen derselben Sache.
+- [ ] **Eine unbegrenzte Schleife in einem begrenzten Durchgang geht mit 0 Fehlern durch.**
+      `forever` in `forever`, in `locks` und in `traverse`: Prüfer 0, `emit` OK, `cc` OK.
+      `SYNTAX.md` §8 nennt ausdrücklich *„a pass that is itself unbounded"* als nicht erlaubt,
+      §9.3 Punkt 1 *„a `locks` block whose body costs exceed K is a compile error"*.
+      **`per_pass bounded 8 ops` über einer endlosen inneren Schleife ist heute eine
+      widerspruchsfreie Zusage.**
+- [ ] **M1 wirft Bereichstatsachen über `static`-Orten an JEDEM Ruf weg — auch an einem
+      `pure`.** Nach `narrow g to 0 ..< 8` und einem `let v = q()` mit `effects { pure }` gibt
+      `g += 1` ein `M101`. Über einem **Parameter** überlebt die Tatsache. *Die Wirkungsliste
+      des Gerufenen wird nicht konsultiert, obwohl `pure` geprüft ist.*
+- [ ] **`N027` deckt seinen eigenen Beispielfall nicht.** Der Regelkommentar zeigt
+      `can_fail { a = 1; schreibt(); }` — die Regel prüft `Zuweisung`, `Sperrt`, `Publish`,
+      `Exchange`, **nicht `StmtArt::Ruf`**. Ein Ruf mit Schreibwirkung in einer Probe geht mit
+      0 Fehlern durch, und weil ein `check` keine Wirkungsliste trägt, sieht ihn sonst kein
+      Pass. *(Nebenbei: `H008` sieht `can_fail`-Rümpfe ebenfalls nicht.)*
+- [ ] **`narrow <lokaler let-Name> to 0 .. X` ist unter `-Werror` nicht baubar.** Der Erzeuger
+      kennt den Vorzeichenstand eines `let`-gebundenen Namens nicht und gibt `alt >= 0 && …`
+      aus — `-Werror=type-limits`. **Die Richtung ist bewusst** (*Unwissen fällt nach
+      lautstark*), macht die Kombination aber unschreibbar.
+
 - [ ] **`K009` prüft eine SYNTAKTISCHE hinreichende Form** — `n - k` und `n / k` mit der
       Massgrösse links. Ein Mass, das über einen `const fn` oder eine gerechnete Grösse
       fällt, wird abgewiesen, obwohl es fällt. *Aus der strengen Lesart kann man lockern,
@@ -716,42 +737,19 @@ jede ist eine Linie mit einem Satz Begründung".***
       genau diesen Grund. *Dieselbe offene Stelle steht seit jeher am `on_exceeded` eines
       `retry`, das auf einen `reason`-Wert zeigt: zwei Fundstellen, eine Entscheidung.*
 
-- [ ] **C3 — die restlichen Item-Arten.** `reason` und `group` sind seit dem 2026-08-19
-      abgesenkt (`group` erzeugt **nichts**, und das ist die Aussage). **Offen: `rcu` (zieht
-      `observes` nach) und `walk`** (braucht die Schrittfunktion aus `levels`/`node`/`down`).
-      **`entry`, `boot` und `entrust` senken in die AXIOMSCHICHT ab** — eine IDT-Zeile tut,
-      was sie tut, und das ist ein Axiom der Klasse `A10`. *Gezählt, nicht versteckt.*
-- [ ] **C4, offene Hälfte — `exchange update(v) { … }`, und der Plan hatte eine falsche
-      Prämisse.** *„Zwei Anweisungen im Korpus, beide auf `atomic`"* stimmt nicht: `z.wert`
-      in `beispiele/05` ist ein Feld eines gewöhnlichen `type`, also **kein `atomic`** — ohne
-      Deklaration gibt es keine Ordnung. Und unabhängig davon sagt `SPRACHE.md` die
-      Absenkung selbst: `atomic_fetch_*` für eine Grundform (`t+1`, `t-1`, `t|m`, `t&m`),
-      *sonst die **beschränkte** CAS-Schleife, „emittiert als `retry bounded NCORES * K ops
-      on_exceeded contention`"*. Der Rumpf im Korpus sättigt und ist keine Grundform; die
-      Schranke braucht `NCORES` — **dieselbe unentschiedene Grösse wie `accumulates` ohne
-      `per cpu N`** — und den Ausgang nennt niemand. *Die Vergleichsform senkt seit dem
-      2026-08-19 ab.*
-- [ ] **C5 — die drei Entscheidungen stehen weiter offen, der Kleinkram ist zu.**
-      `descendants of` nennt seine KANTE nicht (vier Kandidaten in `CapSpace`, und
-      `chain(a, b) in` zeigt, dass die Grammatik eine Kante benennen KANN — eine Asymmetrie
-      der Grammatik, kein fehlender Erzeugercode); `accumulates` ohne `per cpu N` (ein
-      Vorgabewert für die Kernzahl ist **eine Annahme über die Maschine** und gehört dann ins
-      Zeugnis); `static mut kernlast : [Zaehler; 64] = 0` — `= {0}` hinzuschreiben heisst zu
-      entscheiden, dass `0` hier „alle" meint. **Keine der drei wurde getroffen.**
-- [ ] **Und der Rest an Bauarbeit, benannt** *(2026-08-19)*: ein `format`-Feld `bool @0` (2
-      Fundstellen — welches WORT trägt die Bitlage, wenn der Typ keine Breite nennt?), `walk`
-      (die Schrittfunktion aus `levels`/`node`/`down`) und ein Parametertyp `Angemeldet` in
-      `beispiele/04`.
 - [ ] **Die Sprechprobe muss MITWACHSEN: je Stufe eine weitere durchgestochene Einheit.**
       Heute siebzehn (war zwölf). Erzeugen → `cc -Werror` → **ausführen** → vergleichen → verfälschtes C
       muss fallen. Dazu je Stufe eine Mutation: die Emissionsfläche stand am 2026-08-17 bei
       **0** Mutationen, *und was 0 Mutationen hat, ist nicht gedeckt, sondern
       unbeschädigbar.*
-- [ ] **Drei Weigerungen bleiben, und sie zählen NICHT gegen die Abdeckung:** `forever` mit
-      `per_pass` (Übersetzungszeit-Aussage, also kein Laufzeitauslöser — «B11»), eine
-      Bitlücke in einem `format` (*ein Format sagt, welche Bits EXISTIEREN* — sie heisst
-      `reserved` oder gar nicht), `table` ohne `count` (eine Zahl, die niemand nennt, wird
-      nicht geraten).
+- [ ] **Zwei Weigerungen bleiben, und sie zählen NICHT gegen die Abdeckung:** eine Bitlücke
+      in einem `format` (*ein Format sagt, welche Bits EXISTIEREN* — sie heisst `reserved`
+      oder gar nicht) und `table` ohne `count` (eine Zahl, die niemand nennt, wird nicht
+      geraten).
+      *Die dritte ist am 2026-08-20 gefallen:* `forever` senkt ab, und `on_exceeded` bekommt
+      **keinen Zweig, sondern eine geprüfte Bezugnahme** — der C-Übersetzer liest die Klausel
+      ein zweites Mal. Der zweite Grund der alten Weigerung («B11»: kein Ausgang) **war zu dem
+      Zeitpunkt längst nicht mehr wahr**, und die Absage zitierte ihn weiter.
 
 ### «Z» — Zwischenspeicher, geplant 2026-08-19 ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
@@ -785,49 +783,6 @@ jede ist eine Linie mit einem Satz Begründung".***
       75 294 Zeilen, das sind ~570 ms heute und ~190 ms nach Z0. *Ein Speicher, der eine
       Sekunde spart und eine Klasse stiller Fehlurteile eröffnet, ist ein schlechtes
       Geschäft.*
-
-### From the SECOND review of 2026-08-19 — two blocking findings, and both sat in the TOOL
-
-*The grade rose to 2− and was held there by two sentences: the test suite did not run without
-a `RUST_MIN_STACK` that stood nowhere, and a diamond in the call graph counted as a cycle.
-Neither was a rule that was too weak — both were measuring apparatus that could not measure.*
-
-| was open | closed as |
-|---|---|
-| a diamond `f → g,h → k` reported «cycle over k», and `E008` fell silent | `pfad` (who lies UNDER me — only that is a cycle) split from `fertig` (memo, so the diamond stays linear); poison 161/162 |
-| `cargo test` died without `RUST_MIN_STACK` — the third attempt at the depth limit | **32**, measured on the whole chain on 2 MiB in **debug**; a test on its own 2 MiB thread now holds the number |
-| `0` plus a multibyte character killed the compiler | `lex.rs` read a **byte** as a character; now `L006` — and the umlauts in `ist_buchstabe` were never read either |
-| `rust-version = "1.75"` | measured: 1.75 and 1.80 end with `E0658 float_next_up_down`, **1.86.0** builds |
-| a sixth of the mutation catalogue measured nothing | 25 dead anchors repaired; `--anker` checks it **without a build**, and the full run now FAILS on one |
-| `pruefe-luecken.py` always returned 0 | a speech test, a null-run precheck and an exit contract — **13 of 13**, plus two entries proven to be NULL mutations |
-| the frame ends at the call boundary | **`E008` compares the PLACE**, not merely the kind — and the corpus corrected for the fifth time (`beispiele/09`) |
-| `own` is only a synonym for `rw` | **`R004`** — the same place at two `own` parameters of one call; the alias question stays M3's |
-| `on_exceeded` on an undeclared name stays silent | **`S007`**, the third state — the name pass never took the responsibility that was handed to it |
-| the poison corpus accepts only errors | `-- erwartet: Hinweis S007`; until then **no hint code had a probe**, not even `E009` |
-
-*Three entries below this table were removed on 2026-08-19 because they had been closed the
-day before and nobody struck them: `check` has four poison probes (`pruefe-konstrukte`: **0
-without a probe**), its four promised errors are `N020`–`N022` plus a grammar that makes
-`can_fail` obligatory, and NL.2's four clauses without readers are `V008`/`N020`/`N023`/`N024`
-(**`ZUSAGE 0`**). **A list of open items that carries closed ones is the same second register
-as a stale figure** — and `pruefe-todo.py` cannot see it, because the prose is right about a
-world that no longer exists.*
-
-### «K5» — **executed 2026-08-19, all five columns** ([`dokumente/PLAN.md`](dokumente/PLAN.md))
-
-| column | built | evidence |
-|---|---|---|
-| K5.1 publication ordering | `V006` `V007` | poison 147, 148 |
-| K5.2 rank without a value | `H014` | poison 149 |
-| K5.5 argument mapping | — | the message names the caller's own place; a non-place argument gives `E009` |
-| K5.3 context matrix | `gabbro kontexte` | poison 152 · exemptions only under `assume ein_kern` |
-| K5.4 `decreases` | `K008` `K009` | poison 150, 151 · `beispiele/33` |
-
-**And a find that only the building showed:** `costs` was *unsatisfiable* for recursion — a
-call counts the callee's DECLARED cost, so on a cycle it counts its own, and the body
-necessarily exceeds its own promise. `K001` fell on every correct recursive function, **which
-is why the corpus contained none.** *That looked like a style choice and was a language limit
-nobody had marked as one.* With a `decreases`, `costs` is the promise of ONE pass.
 
 ### The nine partial passes — **3 built, 9 CARRIED, 0 partial** (2026-08-19)
 
@@ -1129,11 +1084,13 @@ NOTATIONSLUECKEN -- nicht eine ist ein Handbeweis.** Was daraus offen bleibt:
       Zwei der drei Faelle sind mit `N007`/`N008` in den Pruefer gezogen; **die Luecke im Wort
       bleibt bewusst `C001`**, weil erst die Absenkung eine bestimmte Wortgrenze braucht.
       *Was offen bleibt: wie viele der uebrigen `C001`-Stellen dieselbe Verwechslung tragen.*
-- [ ] **`bool @N` in einem `format` ist ungeprueft, und zwar benannt** *(2026-08-19)*.
-      `bitlage.rs` bucht es als `Unklar`: die Wortbreite steht ohne ganzzahligen Traeger nicht
-      fest -- die 63 in `nx : bool @63` kommt aus dem Wort der Gruppe, nicht aus `bool`.
-      **W10: eine untere Schranke weist weder zurueck noch bestaetigt sie.** *`format Pte`
-      lebt genau davon, und ein Fehlalarm dort waere teurer als das Schweigen.*
+- [ ] **`bool @N`: der ERZEUGER hat entschieden, `bitlage.rs` ist nicht mitgegangen**
+      *(2026-08-19, geschärft 2026-08-20)*. Die Wortbreite einer Bitgruppe kommt seit heute
+      aus ihren **Ganzzahlfeldern** — *ein `bool` sagt, welches BIT, nie welches WORT* — und
+      `format Pte` senkt damit ab. **`bitlage.rs` bucht `bool @N` weiterhin als `Unklar`.**
+      Damit stehen zwei Register über derselben Sache und sind **auseinandergelaufen** (W7):
+      der Erzeuger weiss die Breite, der Prüfer nicht. *Das ist jetzt keine untere Schranke
+      mehr, sondern eine Divergenz — und die gehört aufgelöst, nicht verwaltet.*
 - [ ] **Die Kachelungsluecke (`N009`) ist NICHT gebaut, und der Grund ist der Korpus**
       *(gemessen 2026-08-19)*. `format Elf64Ph` laesst mit `p_flags : u32 @[2:0]`
       neunundzwanzig Bits unbenannt; die Regel im Pruefer haette den eigenen Korpus zerlegt.
@@ -1264,11 +1221,6 @@ zuerst** -- sonst entwirft man fuer eine vorgestellte Verwendung.
       ist das besonders scharf, weil er selbst die Instanz ist, die Seiten hinterlegt.** Das
       ist der Bedarfsbeleg fuer die wertgetragene Schranke.
 
-- [ ] **`entrust` senkt nicht ab** *(2026-08-18)*. Wort, Item, Zeugniszeile und drei Absagen
-      stehen (`N004`/`N005`/`N006`); der Erzeuger weigert sich benannt (`C001`). Die
-      Uebergabe ist ein Registervertrag plus Sprung -- **dieselbe Baustelle wie `entry`**, und
-      die ist gemessen leer. *Wer `entrust` absenkt, senkt den Eintrittsvertrag zum ersten
-      Mal ab.*
 - [ ] **Bindet `stack` an eine Deklaration?** *(offen seit 2026-08-18)*. `entrust … at NAME`
       wird gehalten (`N006`), der Stapel nicht. Ein Gaststapel ist womoeglich ein
       Bindersymbol und keine Gabbro-Deklaration -- **die Frage ist eine Entscheidung, keine
@@ -1307,46 +1259,46 @@ gemessen wird je Name, nicht je Struktur (W10).
       gelesen wird das Feld nur von `emit.rs`. Gleich daneben: `schritt` -- **`stride 0` macht
       die Bank leer**, und die Theorie nennt das selbst eine Fundstelle. *Ein bewiesener Satz
       ohne Pass ist eine Zusage ueber ein Programm, das so nicht geprueft wird.*
-- [ ] **`entry` gibt es nicht** *(gemessen 2026-08-18)*. Zwoelf Felder -- `regs_in`,
-      `regs_out`, `preserves`, `clobbers`, `stack`, `vektor`, `via`, `ist`, `verschachtelt`,
-      `dispatch`, `pro_kern` -- und **keine Datei ausserhalb des Lesers nennt `EntryDecl`**.
-      Der Eintrittsvertrag ist geschriebene Grammatik und sonst nichts. *Das ist der Vertrag,
-      den `entrust` erben soll* -- wer `entrust` baut, baut ihn zum ersten Mal.
 - [ ] **`pub` ist wirkungslos** *(gemessen 2026-08-18)*. Kein Pass, kein Erzeuger liest
       `oeffentlich`. Sichtbarkeit wird weder geprueft noch abgesenkt -- **und eine
       Bibliotheks-ABI beginnt bei genau diesem Wort.**
 - [ ] **`ensures`/`maintains` werden GEZAEHLT, nicht gelesen** *(gemessen 2026-08-18)*.
       `zeugnis.rs:370,391` ruft `.len()` und `.is_empty()`; kein Pass haelt sie gegen den
       Rumpf oder auch nur gegen die Wohlgeformtheit. **Die Bibliotheks-ABI soll sie tragen.**
-- [ ] **`walk`, `check`, `invariant`: gelesen und sonst nirgends** *(gemessen 2026-08-18)*.
-      der Abstieg eines `walk` (`from`/`down`/`leaf`), `floor`/`measures`/`gates`/
-      `counterprobe`, `cost`/`runs` an der `invariant` -- dazu `by` (der Induktionshinweis
-      verfaellt), `masked` an einer Sperre, `exhaustive`, der Ergebnistyp eines `axiom`,
-      `scale`, die Formatversion und der Fehlername im `let … else`. *Kein Fehler, aber auch
-      keine Sprache.*
+- [ ] **`invariant` und der Kleinkram: gelesen und sonst nirgends** *(gemessen 2026-08-18,
+      gekürzt 2026-08-20)*. `cost`/`runs` an der `invariant`, `by` (der Induktionshinweis
+      verfällt), `masked` an einer Sperre, `exhaustive`, der Ergebnistyp eines `axiom` und die
+      Formatversion. *Kein Fehler, aber auch keine Sprache.*
+      **Vier sind am 2026-08-20 gefallen:** der Abstieg eines `walk` (`levels`/`node`/`down`/
+      `leaf` senken ab), `scale` (im `format`-Leser, und ein Setzer wird dafür benannt
+      verweigert), der `can_fail`-Rumpf eines `check` (M1 **und** der Paarungspass lesen ihn)
+      und der Fehlername im `let … else` (er trägt den `reason` aus `-> T or R`).
 
 
-### The emitter: every remaining fragment is blocked by a DECISION, not by work
+### Die Fragmente: von sieben blockierenden Konstrukten sind fünf gebaut
 
-**Measured 2026-08-17** by running `gabbro emit` over all ten blocks of
-[`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md). Three units go through
-(`beispiele/16`, F7, F8); the other seven are blocked by **seven constructs**, and **none of
-the seven is a translation** — each needs a representation the folder has not chosen:
+**Gemessen 2026-08-17, neu gemessen 2026-08-20** über allen ```gabbro-Blöcken von
+[`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md):
 
-| Construct | blocks | the open question |
+```
+16 Blöcke · 8 prüfen sauber · 6 emittieren
+```
+
+*Die Tabelle, die hier stand, führte sieben Konstrukte als blockierend — `traverse`, `format`,
+`device`, `retry`, `forever`, `walk`, `atomic`/`check`.* **Fünf davon senken seit dem
+2026-08-19/20 ab**, `traverse` in drei seiner Domänen, `check` wird von M1 und der Paarung
+gelesen. Was zwei saubere Fragmente noch aufhält, sind **zwei benannte Weigerungen**:
+
+| Fragment | Weigerung | und warum sie richtig ist |
 |---|---|---|
-| **`traverse`** | F1 · F3 · F6 · F9 | each domain iterates differently: `descendants of` is a tree walk with removal, `queue`, `elems of`, `mappings of` from a `walk`. **`slots of … by unvisited` would be mechanical — none of the four uses it** |
-| **`format`** | F2 · F9 · F10 | byte layout, declared endianness, the `where` validator, `offset_into Self`. *Not a C struct — padding and bitfield order are implementation-defined.* Accessors over a byte pointer is the candidate; the register already carries `format.roundtrip` |
-| **`device`** | F2 · F4 · F9 | register accessors per `class r`/`w`/`w1c`, `mirrors`, `transition`, `bank … at expr` |
-| **`retry`** | F4 · F10 | **`bounded N ops` is an OPERATION budget, not an iteration count.** The conversion is `N / cost-per-pass`, which the cost pass knows and the emitter does not — *and whether that conversion is the right reading is a decision, not arithmetic* |
-| **`forever`** | F5 | the same, plus «B11»: it has no exit at all |
-| **`walk`** | F9 | the four-level descent as an iteration |
-| **`atomic` / `check`** | F6 | memory ordering; and `check` is a test harness, not a program |
+| F2 · F9 | die Bitlücke in einem `format` | *ein Format sagt, welche Bits EXISTIEREN* — sie heisst `reserved` oder gar nicht. **Der Erzeuger zählt nicht mit.** |
+| F9 | `device … at dma` — welche Barriere | die **Axiomschicht**, seit jeher; M3 baut sie ausdrücklich nicht |
 
-- [ ] **Decide `retry`'s ops→iterations reading.** It is the cheapest of the seven and it
-      unblocks two fragments. **The emitter refuses today rather than guess.**
-- [ ] **Decide the `format` lowering.** It unblocks three, and the template obligation
-      (`format.roundtrip`) is already entered — *no new ratchet slot needed.*
+- [ ] **Die zwei Fragmente tragen ihre Bitlücken, weil sie AUSSCHNITTE sind.** Ein
+      ausgeschnittener `format`-Block nennt die Bits, um die es dem Ausschnitt geht, und nicht
+      die des ganzen Wortes. *Ob ein Ausschnitt vom Kacheln ausgenommen gehört, ist eine
+      Entscheidung über die Messform und keine über die Sprache* — und sie fällt erst, wenn
+      jemand sagt, was ein Ausschnitt zusagt.
 
 - [ ] **`cc -Wextra` finds a dead parameter and NO Gabbro pass does.** `FRAGMENTE.md` F8 takes
       `toeten(l, t, k)` and never reads `k` — the function resolves `t` instead. The C emitter
@@ -1667,7 +1619,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 145 / 215) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 145 / 216) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |

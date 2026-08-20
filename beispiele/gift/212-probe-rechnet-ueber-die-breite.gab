@@ -1,0 +1,34 @@
+-- erwartet: M104
+-- **Der `can_fail`-Rumpf ist der eine Ort, an dem eine falsifizierbare Aussage steht -- und
+-- bis zum 2026-08-20 hat ihn kein Typpass gelesen.**
+--
+-- M1 meldete ueber `beispiele/06` woertlich *„this file has no function body"*, waehrend im
+-- `can_fail` drei Groessen verrechnet wurden, die nirgends erklaert waren. Seit heute liest
+-- M1 ihn -- **und die Erweiterung hatte keine Probe.** Der Mutationslauf hat es gesagt:
+-- `check-rumpf-hat-wieder-keinen-leser` ueberlebte.
+--
+-- > *Eine Regel, die nur an einer sauberen Datei sichtbar wird, ist eine Regel ohne Probe.*
+-- > Hier steht der Fall, an dem sie faellt: ein volles `u64` mal vier.
+
+module gift {
+
+static mut tiefe : u64 = 0;
+
+impl fn tor() effects { reads tiefe } costs <= 4 ops { return; }
+
+check stapel {
+    claim        "Kein Kern hat je mehr als 3/4 seines Stapels benutzt."
+    measures     tiefe
+    gates        tor
+    can_fail {
+        if tiefe * 4 >= 3000 {
+            return false;
+        }
+        return true;
+    }
+    floor        tiefe >= 1
+    counterprobe "Ein Kern mit kuenstlich tiefem Aufruf muss die Pflicht fallen lassen."
+        expects sonde_tiefer_stapel
+}
+
+}

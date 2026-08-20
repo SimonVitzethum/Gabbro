@@ -24,10 +24,24 @@ Server gehören deshalb auch **`cargo build` und `cargo test`**, `./pruefe-emiss
 `cargo run` je Einheit) und `./pruefe-luecken.py` (baut dreizehnmal neu).
 
 ```bash
-rsync -a --delete --exclude 'target/' --exclude '__pycache__/' --exclude '.claude/worktrees/' \
+# **`-rlpgoD` und NICHT `-a`** -- siehe darunter, das ist kein Schoenheitsfehler.
+rsync -rlpgoD --delete --exclude 'target/' --exclude '__pycache__/' --exclude '.claude/worktrees/' \
       ./ ki-pc-fisch-101:gabbro-baum/
 ssh ki-pc-fisch-101 'cd gabbro-baum && export PATH=$HOME/.cargo/bin:$PATH && cargo test'
 ```
+
+> **`rsync -a` erhaelt Zeitstempel, und `cargo` entscheidet Aktualitaet nach Zeitstempel.**
+> Eine uebertragene Quelle behaelt damit ihre alte `mtime` -- ist die aelter als das
+> Bauartefakt auf dem Server, haelt `cargo` die Datei fuer aktuell und **baut aus einer
+> Mischung**. Am 2026-08-20 hat das einen Test rot gemeldet, der lokal gruen war: `M107` fiel
+> hier und dort nicht, bei **byteidentischen Quellen** (md5 ueber den ganzen Baum verglichen).
+>
+> *Ein `touch crates/gabbro-check/src/m1.rs` auf dem Server hat es geheilt* -- und damit war
+> die Ursache benannt: nicht der Code, sondern die Messapparatur. `-a` ist `-rlptgoD`; ohne
+> das `t` bekommt jede UEBERTRAGENE Datei die aktuelle Zeit, und unveraenderte werden gar
+> nicht erst uebertragen. **Genau die Semantik, die `cargo` braucht.**
+>
+> Dieselbe Klasse wie `W16`: ein Werkzeug, das eine Mischung misst, sieht plausibel aus.
 
 Lokal bleibt, was sicher darunter liegt: ein einzelner `gabbro emit`/`pruefe`-Lauf über ein
 schon gebautes Binärprogramm, ein `cc` auf einer Datei, und die Textwächter

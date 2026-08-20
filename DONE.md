@@ -70,10 +70,10 @@ gabbro blindstellen beispiele/*.gab -- beispiele/gift/*.gab
 
 | state | what it means | work? |
 |---|---|---|
-| **covered** | the clean corpus realises it | no |
-| **poison-only** | empty in the clean corpus, occupied in the poison one | a **hint**, not a proof — see the correction below |
+| covered | the clean corpus realises it | no |
+| poison-only | empty in the clean corpus, occupied in the poison one | a *hint*, not a proof — see the correction below |
 | impossible | the grammar does not allow the pair at all | no — it is not a cell |
-| **BLIND** | legal, meaningful, and nobody wrote it | yes |
+| BLIND | legal, meaningful, and nobody wrote it | yes |
 
 > **And the instrument reported its own miscalibration as work — twice.** The first version
 > ran `atomic` under `read`/`written`; an atomic is neither read nor written, it is awaited,
@@ -172,10 +172,10 @@ failure:
 
 | | separates |
 |---|---|
-| **7** | ALL descendants seen. A descent running along `parent` instead of `child` sees none. |
-| **0** | none seen TWICE. Without the "arrived from below" flag the walk re-enters the same child and never terminates. |
-| **0** | the ROOT is not among them — a node is not its own descendant. |
-| **1** | **post-order**: every child before its parent. That is what `by consuming` promises, and what `blatt_loeschen` demands as `requires ist_blatt`. |
+| 7 | ALL descendants seen. A descent running along `parent` instead of `child` sees none. |
+| 0 | none seen TWICE. Without the "arrived from below" flag the walk re-enters the same child and never terminates. |
+| 0 | the ROOT is not among them — a node is not its own descendant. |
+| 1 | *post-order*: every child before its parent. That is what `by consuming` promises, and what `blatt_loeschen` demands as `requires ist_blatt`. |
 
 > **And the probe fell at the pass it presupposes.** The first version wrote `static mut
 > zaehler : u32` and `zaehler + 1` — a full word plus one, so `M104`. *The emitter's own test
@@ -209,6 +209,80 @@ constructs that had been lowering for weeks, and `rustc` said so in the same min
 > collected.
 
 ---
+
+---
+
+## Moved out of TODO.md on 2026-08-20 — three closure records
+
+> **`TODO.md` carries exclusively what is OPEN**, and these three sections said in their own
+> headings that they were closed: *„all nine closed the same day"*, *„two blocking findings,
+> and both sat in the tool"*, *„executed 2026-08-19, all five columns"*. They stood in the open
+> list as a record of what the closure cost — *and a record in a list of open items is a list
+> that no longer sorts.*
+
+### From the review of 2026-08-19 — **all nine closed the same day**
+
+*Each came with a measured output and each leaves a poison probe behind. The list stays here
+as a record of what the closure cost; the details are in
+[`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md).*
+
+| was open | closed as |
+|---|---|
+| `effects { locks L }` never redeemed | **`H011`** — redeemed by a `locks` block, a callee's hull, or `requires Held(…)` |
+| M2 tracks only linear PARAMETERS | **`L107`** — a value that arises in the body is consumed or leaves through `return` |
+| the pairing compares payload NAMES | the key is now **`(atomic, payload)`** — and it found a real error in `beispiele/05` |
+| the frame ends at the argument boundary | the graph **maps callee parameters to caller arguments**; `wirkungen` drops what is discharged locally |
+| the lock order is intraprocedural | **`H012`** — the rank order runs THROUGH calls, over the callee's hull |
+| `claim` injects C | `emit::kommentartext` at one place — verified to `nm` finding no injected symbol |
+| a recursive type overflows the stack | the guard is threaded through compound fields, and **`N019`** names the type that has no size |
+| `own` is a synonym for `rw` | **the specification was wrong, not the pass** — `SYNTAX.md` §3 now carries the measurement |
+| lexer panic · licence entry | **`P038`** (measured depth limit) · `license = "AGPL-3.0-only"` |
+
+
+### From the SECOND review of 2026-08-19 — two blocking findings, and both sat in the TOOL
+
+*The grade rose to 2− and was held there by two sentences: the test suite did not run without
+a `RUST_MIN_STACK` that stood nowhere, and a diamond in the call graph counted as a cycle.
+Neither was a rule that was too weak — both were measuring apparatus that could not measure.*
+
+| was open | closed as |
+|---|---|
+| a diamond `f → g,h → k` reported «cycle over k», and `E008` fell silent | `pfad` (who lies UNDER me — only that is a cycle) split from `fertig` (memo, so the diamond stays linear); poison 161/162 |
+| `cargo test` died without `RUST_MIN_STACK` — the third attempt at the depth limit | **32**, measured on the whole chain on 2 MiB in **debug**; a test on its own 2 MiB thread now holds the number |
+| `0` plus a multibyte character killed the compiler | `lex.rs` read a **byte** as a character; now `L006` — and the umlauts in `ist_buchstabe` were never read either |
+| `rust-version = "1.75"` | measured: 1.75 and 1.80 end with `E0658 float_next_up_down`, **1.86.0** builds |
+| a sixth of the mutation catalogue measured nothing | 25 dead anchors repaired; `--anker` checks it **without a build**, and the full run now FAILS on one |
+| `pruefe-luecken.py` always returned 0 | a speech test, a null-run precheck and an exit contract — **13 of 13**, plus two entries proven to be NULL mutations |
+| the frame ends at the call boundary | **`E008` compares the PLACE**, not merely the kind — and the corpus corrected for the fifth time (`beispiele/09`) |
+| `own` is only a synonym for `rw` | **`R004`** — the same place at two `own` parameters of one call; the alias question stays M3's |
+| `on_exceeded` on an undeclared name stays silent | **`S007`**, the third state — the name pass never took the responsibility that was handed to it |
+| the poison corpus accepts only errors | `-- erwartet: Hinweis S007`; until then **no hint code had a probe**, not even `E009` |
+
+*Three entries below this table were removed on 2026-08-19 because they had been closed the
+day before and nobody struck them: `check` has four poison probes (`pruefe-konstrukte`: **0
+without a probe**), its four promised errors are `N020`–`N022` plus a grammar that makes
+`can_fail` obligatory, and NL.2's four clauses without readers are `V008`/`N020`/`N023`/`N024`
+(**`ZUSAGE 0`**). **A list of open items that carries closed ones is the same second register
+as a stale figure** — and `pruefe-todo.py` cannot see it, because the prose is right about a
+world that no longer exists.*
+
+
+### «K5» — **executed 2026-08-19, all five columns** ([`dokumente/PLAN.md`](dokumente/PLAN.md))
+
+| column | built | evidence |
+|---|---|---|
+| K5.1 publication ordering | `V006` `V007` | poison 147, 148 |
+| K5.2 rank without a value | `H014` | poison 149 |
+| K5.5 argument mapping | — | the message names the caller's own place; a non-place argument gives `E009` |
+| K5.3 context matrix | `gabbro kontexte` | poison 152 · exemptions only under `assume ein_kern` |
+| K5.4 `decreases` | `K008` `K009` | poison 150, 151 · `beispiele/33` |
+
+**And a find that only the building showed:** `costs` was *unsatisfiable* for recursion — a
+call counts the callee's DECLARED cost, so on a cycle it counts its own, and the body
+necessarily exceeds its own promise. `K001` fell on every correct recursive function, **which
+is why the corpus contained none.** *That looked like a style choice and was a language limit
+nobody had marked as one.* With a `decreases`, `costs` is the promise of ONE pass.
+
 
 ## The compiler — **ten** passes, none open (plus two more: «B37» and the lock discipline)
 
