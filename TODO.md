@@ -589,6 +589,32 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       beiden Befunde, für die ein echter Treiber nötig war: `ghost` in Rückgabestellung einer
       Funktion **mit Rumpf**, und ein Formatfeld in **Schreibstellung**.
       *Die Konsequenz ist keine Passarbeit: mehr Programme schreiben, nicht mehr Konstrukte.*
+- [ ] **Die Nummern der Korpusdateien fallen weg; die Reihenfolge kommt aus einer
+      Indexdatei.** Am 2026-08-20 kollidierten zweimal zwei Dateien in derselben Nummer —
+      beim Zusammenführen zweier Arbeitsbäume und wenige Stunden später zwischen einem Agenten
+      und mir. **`git` meldet es nicht**, weil die Dateinamen sich unterscheiden.
+      *Seit heute findet es ein Test* (`keine_zwei_korpusdateien_teilen_eine_nummer`) — beim
+      Zusammenführen statt danach. **Die stabilere Fassung nimmt die Wahl ganz weg** (R19:
+      *solange die Wahl besteht, bleibt es eine Aufmerksamkeitssache*).
+      Nicht heute gebaut, und der Grund gehört zur Sache: die Umbenennung berührt jede
+      Dateireferenz in zehn Dokumenten, **und sie mitten in einem Lauf zu machen, in dem
+      gerade jemand numerierte Dateien schreibt, wäre die dritte Instanz derselben Kollision.**
+- [ ] **`guarded` und `covered` sind VERSCHIEDENE Stärken, und die Trennung wird verlockend
+      sein zu verwischen.** Eine bewachte Zelle sagt *„diese Kombination ist verboten, und die
+      Absage fällt nachweislich"*; eine gedeckte sagt nur *„sie kommt vor, und irgendein Pass
+      sieht sie"* — und Maß 2 hat gerade gezeigt, dass **Sehen keine Prüfung ist**. Werden die
+      91 später zu „gedeckt" zusammengezählt, sitzt derselbe Optimismus darin wie in Maß 1.
+      *Die schärfere Frage ist dieselbe wie beim Schablonenregister: fällt an dieser Zelle je
+      etwas?* — also **Mutation oder Giftprobe je KOMBINATION, nicht je Konstrukt.** Nicht
+      heute; aber wenn das Muster hält (48 statt 4, 45 statt 4, 7 statt 2), schläft dort die
+      nächste Größenordnung.
+- [ ] **44 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./pruefe-gruende.py`,
+      2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
+      Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
+      Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
+      Pfad"*) nennt. 96 sind tragend, 2 verdächtig — **und 44 sagen es gar nicht.**
+      *Wer eine Absage liest und daraus nicht erkennt, worauf sie ruht, kann auch nicht
+      prüfen, ob sie weit genug reicht.* Das ist der größere Posten, nicht die zwei.
 - [ ] **Welche anderen Regeln stehen auf dem TECHNISCHEN statt auf dem tragenden Grund?**
       Am 2026-08-20 fiel dieselbe Klasse viermal: `diverges`, die Geistlöschung, der Geist im
       Speicher (der *lineare* Wert fiel durch, weil die Regel „hat keine Absenkung" sagte statt

@@ -46,6 +46,32 @@ pruefe-reichweite.py     what 0 passes read is not in order but UNREAD
 a number: **an occupied cell says only that a pass CAN see the form** — that is the sentence
 which keeps `151 → 0` from ever being quoted as coverage.
 
+### And a third class, found the same week: **the half-reading tool**
+
+> **A tool that reads half its subject looks plausible and measures its own reach.**
+
+| | what it read | what it therefore reported |
+|---|---|---|
+| the call-effect hull | top-level statements only | a call in a `match` arm was invisible — and the corpus has exactly that shape |
+| `enthaelt_schritt` | the outermost level of a loop body | one `locks { }` around the step made `O006` silent |
+| `pruefe-gruende.py` | up to the first `\`-continuation of a Rust string | it reported **`N011`** as a suspect — the one rule whose note names the load-bearing reason verbatim |
+
+The third is the sharpest because it inverts the answer instead of losing it. *R16 in text form:*
+a lower bound that does not say it is one reads as a result.
+
+**And the same week produced its mirror image:** a measuring apparatus that produces the
+scatter rather than the subject. `pruefe-gruende.py` first reported thirteen suspects; eleven
+were the substring `word` matching rules that speak about the *vocabulary* — the language of
+the comment, not its subject. **13 → 2 by tightening a word list**, and the number that
+mattered was neither: **44 refusal texts state their reason in neither language at all.**
+
+*A refusal without an articulated reason is not wrongly justified — it is unverifiable for
+reach.* Nobody, not even its author, can tell whether it grips too narrowly or too widely.
+That was the mechanism in all four known instances of the previous class; there a WRONG reason
+stood where here none stands. **The cure is incremental and cheap: every refusal that is
+touched once gets its reason in one of the two languages.** Not a project — a maintenance
+principle.
+
 ---
 
 ## The two overreaches — same class, two weeks apart

@@ -370,3 +370,52 @@ fn jede_korpusdatei_steht_in_einem_modul() {
         ohne.join("\n  ")
     );
 }
+
+/// **Zwei Korpusdateien mit derselben Nummer -- und `git` meldet es nicht.**
+///
+/// Am 2026-08-20 zum ZWEITEN Mal aufgetreten: beim Zusammenfuehren zweier Arbeitsbaeume, und
+/// wenige Stunden spaeter noch einmal, als ein Agent und ich beide `39-…` anlegten. **Git
+/// sieht keinen Konflikt, weil die Dateinamen sich unterscheiden** -- die Kollision sitzt in
+/// der Nummer, nicht im Namen, und die Nummer ist die Leseordnung des Korpus.
+///
+/// > *Beim zweiten Mal hoert es auf, eine Aufmerksamkeitssache zu sein.* Diese Probe findet
+/// > es beim Zusammenfuehren statt danach -- und sie kostet zwoelf Zeilen.
+///
+/// **Die stabilere Fassung waere, die Wahl ganz wegzunehmen** (R19-Logik: die Nummern fallen
+/// weg, die Reihenfolge kommt aus einer Indexdatei). Sie ist im TODO gebucht und nicht hier
+/// gebaut, aus einem Grund, der zur Sache gehoert: die Umbenennung beruehrt jede
+/// Dateireferenz in zehn Dokumenten, **und sie mitten in einem Lauf zu machen, in dem gerade
+/// jemand numerierte Dateien schreibt, waere die dritte Instanz derselben Kollision.**
+#[test]
+fn keine_zwei_korpusdateien_teilen_eine_nummer() {
+    let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("Wurzel")
+        .join("beispiele");
+    for ordner in [wurzel.clone(), wurzel.join("gift")] {
+        let mut nach_nummer: std::collections::BTreeMap<String, Vec<String>> = Default::default();
+        for e in std::fs::read_dir(&ordner).expect("beispiele lesbar") {
+            let p = e.expect("Eintrag").path();
+            if p.extension().is_none_or(|x| x != "gab") {
+                continue;
+            }
+            let name = p.file_name().and_then(|x| x.to_str()).unwrap_or("").to_string();
+            // Das Praefix bis zum ersten `-`; ein Buchstabe dahinter gehoert dazu
+            // (`11a-divergenz-endet.gab` ist die Gegenprobe zu `11-…` und mit Absicht so).
+            let Some(nummer) = name.split('-').next() else { continue };
+            if nummer.is_empty() || !nummer.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+                continue;
+            }
+            nach_nummer.entry(nummer.to_string()).or_default().push(name);
+        }
+        for (nummer, dateien) in &nach_nummer {
+            assert!(
+                dateien.len() == 1,
+                "zwei Korpusdateien tragen die Nummer `{nummer}`: {dateien:?} -- \
+                 git meldet das NICHT, weil die Namen sich unterscheiden. Die Nummer ist \
+                 die Leseordnung des Korpus, und zwei Dateien koennen sie nicht teilen"
+            );
+        }
+    }
+}
