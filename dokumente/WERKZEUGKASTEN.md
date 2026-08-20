@@ -617,6 +617,29 @@ Satz:**
 zwei eigenen Zahlen tragen ihr Datum**, wie jede Zahl aus einem Lauf — ein Register braucht
 einen Gegenstand außerhalb seiner selbst.
 
+### Und der Riegel war EINEN SCHRITT tief — nachgezogen am Nachmittag desselben Tages
+
+Der Riegel suchte den **Namen** des Werkzeugs im Befehl eines Eintrags. Das fängt den Ring der
+Länge eins und **keinen längeren** — und einer der Länge zwei lag unmittelbar bereit:
+
+> `pruefe-zahlen.py` → `./pruefe-waechter.py --lauf` → *jeder leichte Wächter* → `pruefe-zahlen.py`
+
+**Ein einziger Registereintrag mit `--lauf` hätte den Ring geschlossen**, und der Namensriegel
+hätte ihn durchgelassen: im Befehl steht `pruefe-waechter.py` und nicht `pruefe-zahlen.py`.
+
+*Der Fehler ist derselbe wie im Werkzeug, das die Regel gefunden hat:* **eine Prüfung, die aus
+dem naheliegenden Grund gebaut wurde** — hier: „der Zyklus steht im Text" — **deckt nicht, was
+der eigentliche Grund verlangt** — „der Zyklus steht im Prozessbaum".
+
+**Die Fassung, die in jeder Tiefe greift, hängt nicht am Text, sondern an den Kindprozessen:**
+eine Marke in der Umgebung, die an jeden Registerbefehl vererbt wird. *Wer sie beim Start
+vorfindet, ist von sich selbst gerufen worden.* Sie wird an einem echten Kindprozess gemessen
+und nicht behauptet.
+
+> **Die Regel in ihrer allgemeinen Form:** ein Riegel gegen einen Kreis muss an der Kante
+> hängen, die den Kreis WIRKLICH schließt. *Ein Namensvergleich schließt einen Kreis über
+> Namen; ein Prozess schließt einen Kreis über Prozesse.*
+
 **Und der Nebenbefund ist der beste Beleg für die Messschicht selbst:** der Fehler fiel
 **innerhalb einer Minute** auf, weil seit demselben Morgen überall eine Frist steht. *Die
 Reparatur der Messschicht hat an ihrem ersten Tag einen Fehler gefangen, den sie erst
@@ -646,3 +669,46 @@ Nutzbarkeitsinstrument aus Stufe 2 (`gabbro zeremonie`) misst **ableitbar** gege
 — und das ist derselbe Schnitt: was aus einer Deklaration abzulesen ist, gegen das, was
 nirgends sonst steht. *Wer ihn dort nicht zieht, misst die Menge aller Klauseln und drängt
 gegen die Zusage der Sprache.*
+
+---
+
+## W20 — Ein Wächter, dessen Gegenstand woanders liegt, misst den Rechner
+
+**Der Fall.** Am 2026-08-20 war `./pruefe-waechter.py --lauf` auf dem Arbeitsrechner **grün**
+und auf `ki-pc-fisch-101` **rot** — bei byteidentischen Quellen. Der rote Posten war
+`zaehle-narrow.py` mit Rücklaufwert 2, danebengestellt als *„!! OHNE ARBEITSMENGE"*.
+
+**Nicht der Code fehlte, sondern der Gegenstand.** `zaehle-narrow.py` misst den zweiten Korpus
+(`~/Dokumente/SEL4Lake/SEL4Lake`), `zaehle-b3.py` die Caprock-Messbasis — **und beide liegen
+nur auf dem Arbeitsrechner.** Auf dem Rechner, auf den `CLAUDE.md` die ganze Rechenlast legt,
+gibt es sie nicht.
+
+> **Beide Richtungen sind falsch, und das ist der Grund, warum es eine eigene Klasse ist:**
+> ein fehlender Gegenstand kann als **rot ohne Fehler** erscheinen (der Ruf schlägt fehl) oder
+> als **grün ohne Messung** (das Werkzeug zählt null und meldet „keine Befunde"). *Die zweite
+> Richtung ist W17; die erste ist ihr Spiegelbild und genauso wertlos.*
+
+**Und die Sippe reicht bis in den Arbeitsbaum.** `../caprock-messbasis` ist ein **relativer**
+Pfad. In einem `git worktree` zeigt er neben den Arbeitsbaum statt neben die Hauptauscheckung
+— dort ist er ebenfalls weg, auf demselben Rechner. `zaehle-b3.py` lief darüber bis in eine
+`ZeroDivisionError` und meldete Rücklaufwert 1, also *einen Befund*.
+
+**Die Regel:** ein Wächter, dessen Gegenstand außerhalb des Baums liegt, **deklariert den Pfad
+und was dort steht**. Fehlt er, ist das Ergebnis weder rot noch grün, sondern **nicht
+gemessen** — mit seiner Zahl neben dem Urteil.
+
+    FREMDER_KORPUS = {
+        "zaehle-b3.py":     ("../caprock-messbasis", "die Caprock-Messbasis"),
+        "zaehle-narrow.py": ("~/Dokumente/SEL4Lake/SEL4Lake", "der zweite Korpus"),
+    }
+
+*Das ist kein Freibrief.* Der Unterschied zu einem stillen Überspringen ist genau die Zahl:
+**„18 von 19 gelaufenen nennen ihre Arbeitsmenge, 1 weiterer nicht gemessen, weil sein fremder
+Korpus fehlt"** — ein Loch, das sich zählen lässt, ist ein Posten; eines, das grün aussieht,
+ist keiner.
+
+**Und der Nebenbefund gehört zur Messschicht:** dass die Zählung über den zweiten Korpus
+(*„wie viele der 637 `atomic_*()`-Stellen sind Zähler ohne obere Schranke?"*) seit Tagen
+offensteht, hat **keinen** fachlichen Grund. Sie ist **ortsgebunden**, und der erste Schritt
+ist eine Übertragung und kein Werkzeug. *Das stand nirgends, weil niemand den Ort aufgeschrieben
+hatte.*
