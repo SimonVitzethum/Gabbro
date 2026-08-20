@@ -555,24 +555,49 @@ ausdrücklich verlangt hatte.
 | **«B26» — der Vorzustand einer `transition`** | *„ob `mirrors` auch den Vorzustand einer `transition` an `GCMD.TE` aus `GSTS.TES` bezieht, sagt `SYNTAX.md` nicht"* — **der Erzeuger beantwortet es mit ja und misst es**: `1 1 1 1`, und die zweite und vierte Zahl sind die Falle. *Die Antwort gehört jetzt in `SYNTAX.md`, nicht in den Erzeuger* |
 | **«B33» — die V-Regeln verengen keinen Registerort** | Der Ordner schrieb: *„Ob das Absicht ist (ein Register kann sich zwischen Prüfung und Rechnung ändern!) oder eine Lücke, entscheidet der Ordner. **Wenn es Absicht ist, gehört die Begründung aufgeschrieben** — sie wäre ein starkes Argument."* **Sie ist es, und sie steht jetzt im erzeugten C:** ein Registerzugriff wird `volatile`, und `volatile` IST die Aussage *„dieser Ort kann sich zwischen zwei Lesungen ändern"*. Eine Verengung wäre an dieser Stelle falsch, nicht bloß fehlend |
 
-### Offen — **`H = 15`**, abgelesen mit `./zaehle-pflichten.py --haengend`, und die Spalte rechts sagt, wem sie gehören
+### Offen — **`H = 12`**, abgelesen mit `./zaehle-pflichten.py --haengend` — und die Zahlenspalte ist am 2026-08-20 GESTRICHEN
 
-| Ursache | # | wem |
-|---|---:|---|
-| **die Absenkung** | 7 | F1–F6, F9 — davon **fünf durch Befunde gesperrt**, nicht durch Arbeit |
-| **Gerätenotation** | 3 | «B23» gemischte Registerklasse · «B26» `QUEUE_SIZE` ohne benannten Ausgang · «B18» Phasen am `device` — *«B24» geschlossen 2026-08-18, beide Stellen* |
-| **handgeschriebenes `narrow`** | **1** | nur `F6:1100` — **der Zweig kann nicht genommen werden und muss dastehen.** *K100.1 (2026-08-17) hat die drei Stellen getrennt: F10:1660 (feindliches DTB) und F1:268 (das zweite Netz) sind **Logik**, nicht Klempnerrest* |
-| **`format`/Verbund** | 1 | «B22-nah» Absage statt Abwesenheit — *«B7» geschlossen 2026-08-17, **drei** Stellen (F4:892, F5:988, F6:1106), nicht zwei; die dritte stand unter «B6»+«B7» und beide sind jetzt zu* |
-| ~~**die Reihenfolgezusage**~~ | **0** | **«B37» geschlossen 2026-08-17** — `order`/`advances`, Pass 11, fünf Absagecodes, vier Giftproben. *Der Ausweg stand in der Befundzeile selbst; gebaut ist der, der den Wortschatz nicht je Schritt wachsen lässt* |
-| ~~«B19»~~ · ~~«B38»~~ · ~~«B39»~~ · ~~`at dma`~~ · ~~`atomic release`~~ | **0** | **K100.2: in die Axiomschicht umgebucht** (2026-08-17) — `beispiele/06-annahmen.gab`, `gabbro annahmen` meldet 19. *Keine Erledigung: eine Führung beim Namen mit einer Sonde, und zwei davon ohne* |  die sicherheitskritischste Veröffentlichung im Baum ist kein Atomic |
-| **«B21»** `accumulates` | 1 | 213 RMW-Stellen |
-| **«B38»** `masks IRQ` an der Sperrgrenze | 1 | die Wirkung existiert und ist nicht an die Grenze geknüpft |
-| **«B39»** die MMU schreibt `A`/`D` | 1 | ein Schreiber, den keine `effects`-Zeile nennt |
-| **«B27»** Registerbelegung | 1 | 168 `asm!`-Stellen ohne Träger |
-| ~~**«B14b»**~~ · ~~**«B7»**~~ | **0** | **Notation: 8 von 8 zu** (2026-08-17). «B22», «B14b», «B7» geschlossen; «B3», «B6», «B21», «B25» waren **bereits zu**. `./pruefe-notation.py` misst es am Prüfer — und hält seit «B7» sechs **Gegenproben** dagegen: je eine Form, die die Entscheidung verbietet, mit dem Absagecode, den sie auslösen muss |
-| **V-Regeln rechnen nicht** | 1 | F6:1157 — `f < g/N` liefert nicht `f < g` |
+**Dieselbe Auflösung wie einen Abschnitt weiter oben, und aus demselben Grund.** Die Spalte
+`#`, die hier stand, war ein **viertes** Register neben dem Handgang, der Summenzeile und dem
+Befehl:
+
+| | |
+|---|---:|
+| die Überschrift sagte | **15** |
+| die Spalte darunter summierte sich zu | **17** |
+| `./zaehle-pflichten.py --haengend` sagt | **12** |
+
+> **Drei Zahlen über einer Sache — und die, die einen Suchweg nannte, war die falsche.** *Eine
+> Zahl, deren Suchweg ihr widerspricht, ist schlimmer als eine ohne: sie sieht belegt aus.*
+
+Gefunden am 2026-08-20 durch `./pruefe-zahlen.py`, das die Überschrift seither gegen den Befehl
+hält. **Die Ursache ist nicht Nachlässigkeit, sondern Fortschreibung:** «B21», «B23», «B33» und
+«B26»s zweite Hälfte sind seit dem 2026-08-19 geschlossen, «B19»/«B38»/«B39» durch K100.2 in die
+Axiomschicht umgebucht — und jede Schließung wurde in der Summenzeile eingetragen und in dieser
+Liste nicht.
+
+**Die zwölf stehen jetzt nur noch an einer Stelle: im Befehl.** Er druckt sie je Fragment und
+mit der Zeile, an der sie hängen. Was hier bleibt, ist, **wem** sie gehören:
+
+| verankert — fünf | wem |
+|---|---|
+| `F2`:498 | **«B22-nah»** — `format` kennt nur die Absage; *„kein Fehler"* und *„Satz unlesbar"* sind dasselbe |
+| `F3`:613–624 | **«B9»** — `fnptr` trägt kein `requires`, kein `ensures`, kein `effects` |
+| `F4`:764 | **«B26»** — `RegDecl::requires` wird von KEINEM Pass gelesen; die Klausel zerfällt nach dem Parsen |
+| `F4`:785–792 | **«B18»** — `device` kennt keine Phasen |
+| `F5`:938–949 | **«B27»** — `arch ident` gibt es, die Registerbelegung nicht |
+
+**Und die anderen sieben sind die Absenkung** — eine Zeile je Fragment für F1–F6 und F9;
+F7/F8/F10 sind an der Ausführung gemessen (`123456`, `1 1 1 0 0 1 1 1`, `1 0 0 0 0 65`).
+*Sie ist keine Sprachfrage, sondern Arbeit.*
+
+> **Alle fünf verankerten sind NOTATION, keine einzige ist ein handgeschriebener Beweis.** Und
+> die alte Liste führte daneben noch «B21», «B38», «B39», das handgeschriebene `narrow` und
+> *„V-Regeln rechnen nicht"* — **fünf Zeilen für Posten, die schon zu waren.** Eine Liste, die
+> nur wächst, ist kein Register.
 
 > **Und der Satz, der hier ein Jahr lang stand, gilt nicht mehr:** *„die Klempnerei hängt
 > nicht daran, dass ein Pass fehlt — sie hängt daran, dass sich sieben Dinge nicht sagen
-> lassen."* **Sie lassen sich jetzt alle sagen.** Was hängt, sind Gerätenotation, zwei
-> Befunde und die Absenkung — *und die Absenkung ist keine Sprachfrage, sondern Arbeit.*
+> lassen."* **Sie lassen sich jetzt alle sagen.** Was hängt, sind zwei Gerätestellen («B18»,
+> «B26»), drei einzelne Notationslücken («B9», «B22-nah», «B27») und die Absenkung — *und die
+> Absenkung ist keine Sprachfrage, sondern Arbeit.*

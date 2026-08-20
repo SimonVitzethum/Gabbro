@@ -20,6 +20,7 @@ steht dort eine Zahl > 0, ist das Ergebnis eine untere Schranke (R16).
 """
 import os
 import re
+import pathlib
 import sys
 import json
 
@@ -797,8 +798,23 @@ if __name__ == '__main__':
         print(__doc__)
         raise SystemExit(2)
     w = sys.argv[1]
+    # **Ein Baum, den es nicht gibt, ist kein Baum mit null Ruempfen.** Bis zum 2026-08-20
+    # lief der Zaehler ueber ein fehlendes Verzeichnis bis in eine `ZeroDivisionError` --
+    # ein Rueckstau, den niemand als Befund lesen kann. *Und in einem `git worktree` ist der
+    # Standardpfad `../caprock-messbasis` regelmaessig weg: er zeigt relativ zum
+    # Arbeitsbaum, nicht zur Hauptauscheckung.* **Die Arbeitsmenge steht jetzt VOR dem
+    # Urteil** (W17): null Dateien ist eine Absage, kein Ergebnis.
+    if not pathlib.Path(w).is_dir():
+        print('! ABBRUCH  %s ist kein Verzeichnis -- es wurde NICHTS gemessen.' % w)
+        print('  Der Standardpfad `../caprock-messbasis` zeigt relativ zum ARBEITSBAUM.')
+        raise SystemExit(2)
     erg, ab, zr, zn, zt, nd = lauf(w)
     print('Dateien %d | roh %d | nicht leer %d | Testmodule %d\n' % (nd, zr, zn, zt))
+    if nd == 0 or zn == 0:
+        print('! ABBRUCH  %d Dateien, %d nicht-leere Zeilen -- es wurde NICHTS gemessen.' % (nd, zn))
+        print('  Ein Bezug von null macht jede Quote unbestimmt; sie wird hier NICHT als 0')
+        print('  gedruckt. *Erfolg ohne Arbeit ist ein positives Urteil ueber nichts* (W17).')
+        raise SystemExit(2)
     N, B, basis = zeige(erg, ab, zr, zn, zt, nd, prod=False)
     print()
     zeige(erg, ab, zr, zn, zt, nd, prod=True)

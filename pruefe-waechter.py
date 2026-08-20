@@ -49,22 +49,73 @@ Text steht, heisst nicht, dass es an der richtigen Stelle steht. `--lauf` fuehrt
 Waechter wirklich aus und verlangt einen bestimmten Ruecklaufwert innerhalb der Frist -- die
 schweren stehen mit Grund daneben. *Eine Flaeche, die kein Werkzeug erreicht, faellt in keiner
 Statistik auf.*
+
+**Nachgetragen 2026-08-20, und der Befund gehoert dem Waechter selbst:** derselbe `--lauf` war
+hier gruen und auf `ki-pc-fisch-101` rot -- bei identischen Quellen. Nicht der Code, sondern
+der **Gegenstand** fehlte: `zaehle-b3.py` und `zaehle-narrow.py` messen FREMDE Baeume
+(Caprock-Messbasis, SEL4Lake), und die liegen nur auf dem Arbeitsrechner. *Ein Waechter,
+dessen Urteil davon abhaengt, auf welchem Rechner er laeuft, ohne es zu sagen, misst den
+Rechner.* Die zwei stehen jetzt in `FREMDER_KORPUS`, und ein fehlender Baum wird als **nicht
+gemessen** gezaehlt statt als Befund gedruckt -- mit seiner Zahl in der Schlusszeile.
+
+*Dieselbe Falle noch einmal, eine Ebene tiefer:* `../caprock-messbasis` ist ein RELATIVER
+Pfad. In einem `git worktree` zeigt er neben den Arbeitsbaum -- und `zaehle-b3.py` lief bis
+heute darueber bis in eine `ZeroDivisionError`.
 """
 import pathlib
 import re
 import subprocess
 import sys
+import time
 
 W = pathlib.Path(__file__).resolve().parent
 FRIST = 300
 
-# Waechter, die zu schwer fuer einen Lauf hier sind -- mit Grund, nicht als Freibrief.
+# **Waechter, die NICHT im `--lauf` stehen -- und der Grund ist seit dem 2026-08-20 GEMESSEN.**
+#
+# Bis dahin standen hier fuenf Eintraege mit geschaetzten Kosten, und **vier von fuenf waren
+# falsch** -- am schlimmsten `pruefe-emission.sh` mit *„46 Einheiten … ~25 min"*. Gemessen auf
+# `ki-pc-fisch-101`: **13,7 Sekunden.** Die 25 Minuten stammen vom Vormittag desselben Tages,
+# als der Waechter an `baum41` HING; die Frist hat den Haenger beseitigt, und die Zahl, die ihn
+# beschrieb, blieb stehen -- **als Begruendung dafuer, ihn nicht zu messen.**
+#
+# > **Eine Ausnahme, deren Grund niemand nachrechnet, ist dieselbe Klasse wie eine Zahl, die
+# > niemand nachrechnet** -- nur teurer, weil sie eine ganze Messung abschaltet statt sie zu
+# > verfaelschen. *Erfolg ohne Arbeit, eine Ebene ueber dem Urteil: die Arbeit wird gar nicht
+# > erst angeordnet.*
+#
+# Was blieb, steht jetzt mit dem RICHTIGEN Grund da, und der ist in keinem der vier die Zeit:
+# es ist der ORT (Speicher, Rechenlast gehoert auf den Server -- `CLAUDE.md`) oder die
+# WIRKUNG (es schreibt in Quellen). `pruefe-notation.py` ist ganz herausgefallen: 0,56 s, und
+# es ruft kein `cargo` -- **es stand vier Wochen auf einer Liste, auf die es nie gehoerte.**
 SCHWER = {
-    "pruefe-emission.sh": "46 Einheiten, je erzeugen/uebersetzen/ausfuehren/UBSan -- ~25 min",
-    "pruefe-beweise.sh": "zwoelf Isabelle-Theorien; gehoert ohnehin auf den Server",
-    "pruefe-luecken.py": "baut dreizehnmal neu",
-    "mutiere-pruefer.py": "234 Mutationen, je ein Bau -- 2 min 20 s, und es SCHREIBT in Quellen",
-    "pruefe-notation.py": "vierzehn `cargo run` ueber je ein erzeugtes Programm",
+    "mutiere-pruefer.py":
+        "es SCHREIBT in Quellen -- zwei Laeufe zerstoeren einander (2 min 20 s, 2026-08-19)",
+    "pruefe-beweise.sh":
+        "1,45 GB Spitze -- ueber der lokalen 1-GB-Grenze; 8,1 s auf `fisch` (2026-08-20)",
+    "pruefe-emission.sh":
+        "`cargo run` je Einheit -- gehoert auf den Server; 13,7 s dort (2026-08-20)",
+    "pruefe-luecken.py":
+        "baut dreizehnmal neu -- gehoert auf den Server; 10,7 s / 27,8 s CPU dort (2026-08-20)",
+}
+# **Waechter, deren Gegenstand ein FREMDER BAUM ist** -- einer, der nicht in diesem
+# Verzeichnis liegt und den `git` nicht mitbringt. Je Eintrag: der Pfad und was dort steht.
+#
+# **Fehlt er, hat das Werkzeug NICHTS gemessen** -- und dann ist sein Ruecklaufwert ein
+# Fehlaufruf und kein Befund. Bis zum 2026-08-20 wurde daraus ein rotes `--lauf`, und zwar
+# genau auf `ki-pc-fisch-101`: dorthin gehoert die Rechenlast, und dort liegen weder die
+# Caprock-Messbasis noch SEL4Lake. *Ein Waechter, dessen Urteil davon abhaengt, auf welchem
+# Rechner er laeuft, ohne es zu sagen, misst den Rechner.*
+#
+# **Und `../caprock-messbasis` ist zusaetzlich relativ**: in einem `git worktree` zeigt der
+# Pfad neben den Arbeitsbaum statt neben die Hauptauscheckung. Auch dort fehlt er also --
+# lautlos, bis dieser Eintrag es sagt.
+#
+# *Das ist kein Freibrief.* Was hier steht, wird NICHT gruen gebucht, sondern als **nicht
+# gemessen** gezaehlt und in der Schlusszeile mit seiner Zahl genannt (W17).
+FREMDER_KORPUS = {
+    "zaehle-b3.py": ("../caprock-messbasis", "die Caprock-Messbasis (Zweig arch/x86_64)"),
+    "zaehle-narrow.py": ("~/Dokumente/SEL4Lake/SEL4Lake", "der zweite Korpus, SEL4Lake"),
 }
 # Waechter, die ein Argument brauchen.
 ARGUMENTE = {
@@ -72,7 +123,27 @@ ARGUMENTE = {
     # **Ohne Argument endet es mit 2 und hat nichts gemessen** -- und ein Ruecklaufwert 2 in
     # einer Kette sieht aus wie ein Befund. Gefunden 2026-08-20 beim ersten `--lauf`.
     "zaehle-b3.py": ["../caprock-messbasis"],
+    # **`zaehle-narrow.py` nahm bis zum 2026-08-20 den Standardbaum stillschweigend an** und
+    # endete mit 2, wo er fehlt. Jetzt steht der Pfad hier, sichtbar neben dem von `b3`.
+    "zaehle-narrow.py": ["~/Dokumente/SEL4Lake/SEL4Lake"],
 }
+
+
+def korpus_fehlt(name):
+    """Der fremde Baum dieses Waechters -- oder `None`, wenn er keinen braucht/hat.
+
+    Gibt `(pfad, was)` zurueck, wenn der Baum DEKLARIERT ist und FEHLT.
+    """
+    eintrag = FREMDER_KORPUS.get(name)
+    if not eintrag:
+        return None
+    pfad, was = eintrag
+    ort = pathlib.Path(pfad).expanduser()
+    if not ort.is_absolute():
+        ort = (W / pfad).resolve()
+    return None if ort.is_dir() else (str(ort), was)
+
+
 # Werkzeuge, die messen statt zu bewachen: sie duerfen ohne Sprechprobe stehen, brauchen aber
 # Frist und roten Abbruch wie jedes andere.
 ZAEHLER = {"zaehle-b3.py", "zaehle-bereichspflichten.py", "zaehle-narrow.py", "zaehle-fallen.sh"}
@@ -167,17 +238,34 @@ def main():
     if "--lauf" in sys.argv:
         print()
         print("== Und die leichten laufen wirklich, mit Frist -- und mit der vierten Forderung ==")
+        nicht_gemessen = []
+        gesamtzeit = [0.0]
         for p in alle:
             if p.name in SCHWER:
                 print(f"  schwer  {p.name:<28}  {SCHWER[p.name]}")
                 continue
-            befehl = [str(p)] + ARGUMENTE.get(p.name, [])
+            fehlt_korpus = korpus_fehlt(p.name)
+            if fehlt_korpus:
+                ort, was = fehlt_korpus
+                print(f"  KORPUS FEHLT  {p.name:<22}  {was}")
+                print(f"                {'':<22}  {ort}")
+                nicht_gemessen.append(p.name)
+                continue
+            befehl = [str(p)] + [str(pathlib.Path(a).expanduser())
+                                 if a.startswith("~") else a
+                                 for a in ARGUMENTE.get(p.name, [])]
             try:
+                t0 = time.monotonic()
                 r = subprocess.run(befehl, cwd=W, capture_output=True, text=True, timeout=FRIST)
+                dauer = time.monotonic() - t0
                 arbeit = ARBEIT.search(r.stdout)
                 marke = "Ende" if r.returncode in (0, 1) else "USAGE?"
                 zusatz = "" if arbeit else "   !! OHNE ARBEITSMENGE"
-                print(f"  {marke} {r.returncode:<2} {p.name:<28}{zusatz}")
+                # **Die Zeit gehoert neben das Urteil, wie die Arbeitsmenge.** Wer eine
+                # Ausnahme mit Kosten begruendet, muss die Kosten irgendwo ablesen koennen --
+                # sonst wird die Begruendung so alt wie die „~25 min" oben.
+                print(f"  {marke} {r.returncode:<2} {p.name:<28}{dauer:6.2f} s{zusatz}")
+                gesamtzeit[0] += dauer
                 # **Erfolg ohne Arbeit.** Ein gruener Lauf ohne eine Zahl daneben ist von
                 # einem leeren nicht zu unterscheiden -- `isabelle build` waehlte nichts und
                 # endete gruen, dasselbe Muster.
@@ -196,11 +284,23 @@ def main():
 
     if "--lauf" in sys.argv:
         ohne = [n for n, f in befunde if "OHNE-ARBEITSMENGE" in f]
-        gelaufen = len(alle) - len(SCHWER)
+        gelaufen = len(alle) - len(SCHWER) - len(nicht_gemessen)
         print()
         print(f"== {gelaufen - len(ohne)} von {gelaufen} gelaufenen nennen ihre ARBEITSMENGE ==")
         print("   Ein gruener Lauf ohne Zahl daneben ist von einem leeren nicht zu")
-        print("   unterscheiden (W17). Die fuenf schweren sind hier NICHT gemessen.")
+        print(f"   unterscheiden (W17). Die {len(SCHWER)} schweren sind hier NICHT gemessen,")
+        print(f"   und {len(nicht_gemessen)} weitere nicht, weil ihr fremder Korpus fehlt:")
+        print(f"   {', '.join(nicht_gemessen) if nicht_gemessen else '(keiner)'}")
+        print("   **Das ist ein Loch mit einer Zahl, kein gruener Haken.** Ein Waechter,")
+        print("   dessen Gegenstand nicht da ist, hat nichts gemessen -- und das steht hier,")
+        print("   statt sich als roter Ruecklaufwert zu tarnen, den keiner lesen kann.")
+        print()
+        print(f"== {gesamtzeit[0]:.1f} s fuer {gelaufen} Waechter ==")
+        print("   Die Zeit steht hier, weil die AUSNAHMEN mit Kosten begruendet werden. Eine")
+        print("   Ausnahme, deren Grund niemand nachrechnet, ist dieselbe Klasse wie eine Zahl,")
+        print("   die niemand nachrechnet -- nur teurer: sie schaltet eine ganze Messung ab.")
+        print("   *Am 2026-08-20 stand `pruefe-emission.sh` mit ~25 min auf dieser Liste und")
+        print("   braucht 13,7 s; die Schaetzung stammte von dem Vormittag, an dem er HING.*")
 
     print()
     print("== Und was das NICHT heisst ==")

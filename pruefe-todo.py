@@ -385,6 +385,27 @@ def pruefe_readme(text=None):
     # Die Theorienzahl und die Isar-Zeilen lassen sich ohne Uebersetzerlauf zaehlen; die
     # Test- und Mutationszahl nicht -- die stehen im Lauf und tragen darum ihr Datum. Was
     # hier geprueft wird, ist deshalb genau das Zaehlbare.
+    # **Die vier Blindstellenzahlen standen in KEINEM Register** -- gefunden 2026-08-20.
+    # Der README sagte `79 blind · 166 covered · 25 poison-only`, das Werkzeug sagt
+    # `80 · 164 · 26`, und `TODO.md`:642 (bewacht von `pruefe-zahlen.py`) sagte die 80.
+    # *Zwei Dokumente, eine Messung, und nur eines hatte einen Leser.* Sie sind ohne
+    # Uebersetzerlauf nicht zaehlbar -- aber `gabbro` laeuft hier ohnehin schon, also gibt
+    # es keinen Grund, sie unbewacht zu lassen.
+    bl = subprocess.run(["sh", "-c",
+                         "cargo run -q --bin gabbro -- blindstellen beispiele/*.gab "
+                         "-- beispiele/gift/*.gab"],
+                        cwd=WURZEL, capture_output=True, text=True, timeout=FRIST)
+    m = re.search(r"(\d+) blind · (\d+) covered · (\d+) poison-only · (\d+) no cell "
+                  r"\(of (\d+) pairs\)", bl.stdout)
+    n_blind, n_deck, n_gift_only, n_keine, n_paare = m.groups() if m else ("?",) * 5
+    fuer += [
+        (r"\*\*(\d+) blind · \d+ covered", n_blind, "blinde Zellen"),
+        (r"\*\*\d+ blind · (\d+) covered", n_deck, "besetzte Zellen"),
+        (r"covered · (\d+) poison-only", n_gift_only, "nur im Gift besetzte Zellen"),
+        (r"poison-only · (\d+) no cell", n_keine, "Zellen ohne Kombination"),
+        (r"no cell\*\* \*\(of (\d+) pairs\)\*", n_paare, "Zellen der Tafel"),
+    ]
+
     n_thy = len(list((WURZEL / "beweise").glob("*.thy")))
     # `count("\\n")` und nicht `split`: das ist, was `wc -l` zaehlt, und danach wird gefragt.
     n_isar = sum(f.read_text().count("\n") for f in (WURZEL / "beweise").glob("*.thy"))

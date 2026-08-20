@@ -610,7 +610,7 @@ fn funktion(
                     ),
                 )
                 .mit_notiz(
-                    "SYNTAX.md §14 writes `divergent fn idle() effects { diverges }` --\
+                    "SYNTAX.md §14 writes `divergent fn idle() effects { diverges }` -- \
                         the clause carries the divergence",
                 ),
             );

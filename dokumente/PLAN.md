@@ -3297,19 +3297,25 @@ der zweite Korpus.
 ## Wo wir stehen, gemessen und nicht behauptet
 
 ```
-H = 15        ueber den zehn Fragmenten kein Handbeweis mehr  («H2», 2026-08-19)
+H = 12        ueber den zehn Fragmenten kein Handbeweis mehr  (abgelesen, s. u.)
 ```
 
 **Und `H` beantwortet die Frage nicht.** Es misst die *Fragmente*, nicht die *Sprache*. Was der
-Nutzer weiter trägt:
+Nutzer weiter trägt — **jede Zeile am 2026-08-20 gegen ihren Befehl nachgerechnet, und drei
+von fünf standen falsch da**:
 
-| | Zahl | was es heißt |
-|---|---:|---|
-| **Erhaltungspflichten** | **3** | `maintains I` ist auf Wohlgeformtheit geprüft; dass der Rumpf sie **einlöst**, prüft niemand |
-| **ZUSAGE ohne Leser** | **13** | die Grammatik erlaubt es zu versprechen, kein Pass hält es nach |
-| **Fremdpflichten** | **8** | Annahmen über Rümpfe, die Gabbro nie sieht |
-| **Prämissen ohne Pass** | **7** | ein Beweis, den nichts herstellt |
-| **Absenkungspflichten** | **7** | in `H` enthalten, nicht in den Fragmenten |
+| | Zahl | Befehl | was es heißt |
+|---|---:|---|---|
+| **Erhaltungspflichten** | **3** | `gabbro pflichten` | `maintains I` ist auf Wohlgeformtheit geprüft; dass der Rumpf sie **einlöst**, prüft niemand |
+| **ZUSAGE ohne Leser** | **0** | `./pruefe-klauseln.py` | *stand als 13.* **Das ist das Tor von «NL» selbst, und es ist erreicht** — die Zahl fiel auf null, und die Tafel schrieb es nicht mit |
+| **Fremdpflichten** | **10** | `gabbro pflichten` | *stand als 8.* Annahmen über Rümpfe, die Gabbro nie sieht — **die Zahl ist GESTIEGEN**, mit dem Korpus |
+| **Prämissen ohne Pass** | **9** | `gabbro schablonen` | *stand als 7.* Ein Beweis, den nichts herstellt |
+| **Absenkungspflichten** | **7** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten |
+
+> **Drei von fünf, und in beide Richtungen** — eine gefallen, eine gestiegen, eine
+> fortgeschrieben. *Eine Buchführung, die in beide Richtungen abweicht, veraltet; sie lügt
+> nicht.* Alle fünf stehen seit dem 2026-08-20 in `./pruefe-zahlen.py` und werden bei jedem
+> Lauf neu abgeleitet. **`H = 15` im Kasten darüber war die vierte.**
 
 ## Das Ziel, in prüfbarer Form
 

@@ -550,7 +550,7 @@ impl<'a> Pruefer<'a> {
                             format!("`{}` is bound without `mut`", z.ziel.basis.text),
                         )
                         .mit_notiz(
-                            "a binding without `mut` promises that the name does not move\
+                            "a binding without `mut` promises that the name does not move \
                                 -- and M1 counts on that: a fact about it would otherwise be \
                                 killed by every write",
                         ),
@@ -1273,7 +1273,7 @@ impl<'a> Pruefer<'a> {
                         "M115",
                         *span,
                         format!(
-                            "`{}` requires `{name} {} {zahl}`, and the argument lies in\
+                            "`{}` requires `{name} {} {zahl}`, and the argument lies in \
                                 {} .. {}",
                             r.pfad.text(),
                             zeichen(op),
@@ -2111,7 +2111,7 @@ impl<'a> Pruefer<'a> {
                     )
                     .mit_notiz(
                         "without the fact even the negation of a comparison yields \
-                            nothing -- over floating point `!(x < y)` does not follow `x >=\
+                            nothing -- over floating point `!(x < y)` does not follow `x >= \
                             y`",
                     ),
                 );
@@ -2682,7 +2682,7 @@ impl<'a> Pruefer<'a> {
                                             type-correct and still a fault",
                                     )
                                     .mit_notiz(
-                                        "`narrow <index> to 0 ..< <backing> else { … }`\
+                                        "`narrow <index> to 0 ..< <backing> else { … }` \
                                             carries it too, like every other bound",
                                     ),
                                 );

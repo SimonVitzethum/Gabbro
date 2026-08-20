@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""**Die Sprachflaeche von Gabbro ist englisch -- und ohne Waechter driftet sie zurueck.**
+r"""**Die Sprachflaeche von Gabbro ist englisch -- und ohne Waechter driftet sie zurueck.**
 
 Entschieden am 2026-08-19 (`SYNTAX.md`, *„The surface of Gabbro is English"*). Die
 Schluesselwoerter waren es von Anfang an; **alles andere, was ein Nutzer von Gabbro LIEST, war
@@ -30,6 +30,20 @@ Fachwoerter:** `Bereich` koennte ein Bezeichner sein, `nicht` nicht.
 
 > **Die Vergroeberung geht in die sichere Richtung.** Was der Waechter nennt, ist echt; was er
 > nicht nennt, kann trotzdem deutsch sein (W10). *Er darf verpflichten und nicht freisprechen.*
+
+DIE ZWEITE HAELFTE: LESBARKEIT
+------------------------------
+**Eine Meldung kann englisch und trotzdem unlesbar sein.** Am 2026-08-19 verloren beim
+Uebersetzen **161 Meldungen** ihr Leerzeichen an der Zeilenfortsetzung -- *„that isa compile
+error"*. Gefunden wurden sie, **weil ich eine Meldung gelesen habe**; kein Waechter sah sie.
+
+Rusts `\`-Fortsetzung frisst den Zeilenumbruch **und die Einrueckung der naechsten Zeile**.
+Damit haengt die Trennung an genau einem Zeichen: dem letzten vor dem `\`. Steht dort kein
+Leerzeichen, kein `\n`, kein `\x20` und keine Silbentrennung, **kleben zwei Woerter
+zusammen** -- und im Quelltext sieht die Zeile vollkommen normal aus.
+
+*Am 2026-08-20 fand diese Probe bei ihrem ersten Lauf **16 solche Nahtstellen**, ein Jahr
+nachdem die 161 von Hand geflickt worden waren.* **Von Hand geflickt heisst: nicht bewacht.**
 
     ./pruefe-englisch.py
 """
@@ -105,6 +119,57 @@ def messe(quellen):
     return gesamt, gefunden
 
 
+# **Die Naht einer Zeilenfortsetzung.** Rusts `\`-Fortsetzung frisst den Umbruch UND die
+# Einrueckung -- die Trennung haengt am letzten Zeichen davor. Erlaubt sind: ein Leerzeichen,
+# die Escapes `\n`/`\x20`/`\t`, das oeffnende Anfuehrungszeichen (die Zeichenkette faengt
+# erst an) und eine SILBENTRENNUNG (`input-` + `dependent`). Ein doppelter Gedankenstrich
+# zaehlt NICHT als Silbentrennung -- `--` + `the clause` klebt.
+TRENNT = re.compile(r'(?:\s|\\n|\\x20|\\t|"|\w-)$')
+LESBAR_QUELLEN = sorted(W.glob("crates/*/src/*.rs"))
+
+
+def naehte(quellen):
+    """Jede Zeilenfortsetzung in einer Zeichenkette, und ob sie trennt.
+
+    Gibt (Zahl der Fortsetzungen, Liste der klebenden). **Die Arbeitsmenge steht neben dem
+    Urteil** (W17): ein gruener Lauf ueber null Fortsetzungen sieht sonst aus wie ein gruener
+    Lauf ueber alle.
+    """
+    gesamt, klebt = 0, []
+    for f in quellen:
+        zl = f.read_text(encoding="utf-8", errors="replace").split("\n")
+        for i, z in enumerate(zl):
+            if not z.endswith("\\"):
+                continue
+            gesamt += 1
+            vor = z[:-1]
+            if not vor or TRENNT.search(vor):
+                continue
+            nach = zl[i + 1].lstrip() if i + 1 < len(zl) else ""
+            if not nach:
+                continue
+            klebt.append((f.name, i + 1, vor[-30:], nach[:30]))
+    return gesamt, klebt
+
+
+def lesbarkeitsprobe():
+    """R14 fuer die zweite Haelfte, in beide Richtungen -- an ERFUNDENEN Quellen.
+
+    *Ein Waechter, der nur die eigenen Dateien liest, misst, wie gut sie zu ihm passen.*
+    """
+    import tempfile
+    gift = 'let x = "that is\\\n    a compile error";\n'
+    sauber = 'let x = "that is \\\n    a compile error";\n'
+    with tempfile.TemporaryDirectory() as d:
+        a = pathlib.Path(d) / "gift.rs"
+        b = pathlib.Path(d) / "sauber.rs"
+        a.write_text(gift, encoding="utf-8")
+        b.write_text(sauber, encoding="utf-8")
+        _, kg = naehte([a])
+        _, ks = naehte([b])
+    return len(kg) == 1, len(ks) == 0
+
+
 def sprechprobe():
     """R14, in beide Richtungen: ein deutscher Text musz fallen, ein englischer nicht."""
     gift = deutsch("die Rueckgabe requires `u32`, der Wert ist zu gross")
@@ -119,8 +184,26 @@ def main():
     if not sprechprobe():
         print("== ENGLISCH: der Waechter misst nicht ==")
         return 2
+    gift_faellt, sauber_frei = lesbarkeitsprobe()
+    print("  geklebte Naht faellt:    %s" % ("ja" if gift_faellt else "NEIN"))
+    print("  getrennte bleibt frei:   %s" % ("ja" if sauber_frei else "NEIN"))
+    if not (gift_faellt and sauber_frei):
+        print("== LESBARKEIT: der Waechter misst nicht ==")
+        return 2
     gesamt, gefunden = messe(QUELLEN)
+    naht_gesamt, klebt = naehte(LESBAR_QUELLEN)
+    print("\n== Lesbarkeit: %d Zeilenfortsetzungen in %d Quellen ==" % (naht_gesamt, len(LESBAR_QUELLEN)))
+    for datei, zeile, vor, nach in klebt:
+        print("  KLEBT  %s:%d  …%s|%s…" % (datei, zeile, vor, nach))
+    print("  %d von %d Naehten kleben" % (len(klebt), naht_gesamt))
+    print("   Und was das NICHT heisst: gemessen wird die NAHT, nicht der Satz. Eine Meldung,")
+    print("   die aus zwei Zeichenketten zusammengesetzt wird, geht hier nicht durch die")
+    print("   Fortsetzung -- der Waechter verpflichtet, er spricht nicht frei (W10).")
     print("\n== Sprachflaeche: %d Meldungstexte in %d Dateien ==" % (gesamt, len(QUELLEN)))
+    if klebt and not gefunden:
+        print("\n== LESBARKEIT: %d von %d Naehten kleben ==" % (len(klebt), naht_gesamt))
+        print("   Dieselbe Klasse wie die 161 vom 2026-08-19 -- englisch und unlesbar.")
+        return 1
     if not gefunden:
         print("== ENGLISCH: ALL PASS -- kein deutsches Funktionswort in einer Meldung ==")
         print("   Und was das NICHT heisst: gemessen wird gegen eine GESCHLOSSENE Liste von")

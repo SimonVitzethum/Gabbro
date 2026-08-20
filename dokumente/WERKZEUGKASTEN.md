@@ -555,6 +555,35 @@ neuer Quelle und altem Objekt. Ein `touch` heilte es.
 misst er, was einmal da war?** Der Riegel steht in `CLAUDE.md`: `-rlpgoD` statt `-a`, damit
 jede übertragene Datei die aktuelle Zeit bekommt.
 
+### Und derselbe Riegel hat ein SPIEGELBILD — gefunden am 2026-08-20
+
+**`-rlpgoD` heilt `cargo` und bricht `pruefe-beweise.sh`.** Der Beweiswächter verlangt einen
+*Nachweis*, dass wirklich gebaut wurde (W17: `isabelle build` schweigt bei leerer Auswahl),
+und der zweite Weg zu diesem Nachweis lautet: *„kein Bauwerksbuch, das jünger ist als jede
+Quelle."* **Das ist eine Zeitstempelfrage.**
+
+Wer den ganzen Baum mit `-rlpgoD` überträgt, gibt jeder `.thy` die aktuelle Zeit. Isabelle
+rechnet nach **Inhalt**, wählt korrekt nichts aus und schweigt; der Wächter rechnet nach
+**Zeit**, findet keinen Nachweis und meldet `OHNE NACHWEIS` — über einer Sitzung, die
+vollständig aktuell ist.
+
+| | `cargo` | `isabelle build` |
+|---|---|---|
+| entscheidet Aktualität nach | **Zeit** | **Inhalt** |
+| braucht deshalb | `-rlpgoD` (neue Zeiten) | `-a` (erhaltene Zeiten), damit der NACHWEIS trägt |
+
+**`CLAUDE.md` führt beide Übertragungen längst getrennt** — `rsync -a beweise/` und
+`rsync -rlpgoD ./`. *Das sieht nach zwei Gewohnheiten aus und ist eine Bedingung.* Wer sie zu
+einem Befehl zusammenzieht, bekommt einen roten Wächter ohne Fehler.
+
+> **Zwei Begriffe von „aktuell" in einer Kette, und keiner von beiden ist falsch.** Die
+> vorherige Instanz log grün (der Bau aus einer Mischung), diese lässt einen richtigen Lauf
+> durchfallen. *Die Richtung wechselt, die Frage bleibt.*
+
+Der Wächter sagt seit dem 2026-08-20 in seiner Absage, welche der zwei Ursachen die häufigere
+ist und wie man sie unterscheidet — **eine Absage, die ihren wahrscheinlichsten Grund nicht
+nennt, kostet jedes Mal dieselbe halbe Stunde.**
+
 ---
 
 ## W17 — Erfolg ohne Arbeit: ein positives Urteil über nichts
@@ -584,6 +613,38 @@ W11 spricht über das Verhältnis in einem Bericht, W17 über das Urteil eines W
 Forderung** neben Frist, Sprechprobe und rotem Abbruch. Der Lauf mit `--lauf` liest die
 wirkliche Ausgabe und meldet jeden Wächter, der ein Urteil ohne Zahl abgibt. *Wo eine Frist
 steht, fehlt die Zahl daneben oft noch.*
+
+### Und eine Ebene darüber: die AUSNAHMELISTE, deren Grund niemand nachrechnet
+
+**Derselbe Tag, vierter Fall — und der teuerste.** `pruefe-waechter.py` führte fünf
+Instrumente als *„zu schwer für einen Lauf hier"*, jedes mit einem Grund daneben. **Vier der
+fünf Gründe waren falsch:**
+
+| | stand da | gemessen |
+|---|---|---:|
+| `pruefe-emission.sh` | *„46 Einheiten … ~25 min"* | **13,7 s** |
+| `pruefe-luecken.py` | *„baut dreizehnmal neu"* | 10,7 s (27,8 s CPU) |
+| `pruefe-beweise.sh` | *„zwölf Isabelle-Theorien"* | 8,1 s — es sind dreizehn |
+| `pruefe-notation.py` | *„vierzehn `cargo run`"* | **0,56 s, und kein einziges `cargo run`** |
+
+Die 25 Minuten stammen vom **Vormittag desselben Tages**, als derselbe Wächter an `baum41`
+HING — einundzwanzig Läufe nebeneinander. Die Frist hat den Hänger beseitigt; die Zahl, die
+ihn beschrieb, blieb stehen — **als Begründung dafür, ihn nicht mehr zu messen.**
+
+> **Eine Ausnahme, deren Grund niemand nachrechnet, ist dieselbe Klasse wie eine Zahl, die
+> niemand nachrechnet — nur teurer.** Eine falsche Zahl *verfälscht* eine Messung. Eine
+> falsche Ausnahme **ordnet sie gar nicht erst an**, und danach gibt es nichts mehr, das
+> auffallen könnte.
+
+**Die Regel:** eine Ausnahme von der Messung trägt ihren Grund **als Messung**, mit Datum und
+Ort — und wo der Grund eine Zeit ist, steht die Zeit daneben, die der Lauf selbst gemessen
+hat. *Sonst überlebt die Ausnahme genau das Ereignis, das sie gerechtfertigt hat.*
+
+**Der Griff.** `--lauf` druckt seit dem 2026-08-20 die Wanduhrzeit **je Wächter** und die
+Summe darunter (heute: 19 von 25 in 4,4 s). Die vier verbliebenen Ausnahmen stehen mit dem
+Grund da, der wirklich trägt, und keiner davon ist die Zeit: der **Ort** (Speicherspitze über
+der lokalen Grenze; Rechenlast gehört auf den Server) oder die **Wirkung** (es schreibt in
+Quellen, zwei Läufe zerstören einander).
 
 ---
 
@@ -616,6 +677,29 @@ Satz:**
 `pruefe-zahlen.py` prüft das vor jedem Lauf und trägt dafür seine eigene Sprechprobe. **Die
 zwei eigenen Zahlen tragen ihr Datum**, wie jede Zahl aus einem Lauf — ein Register braucht
 einen Gegenstand außerhalb seiner selbst.
+
+### Und der Riegel war EINEN SCHRITT tief — nachgezogen am Nachmittag desselben Tages
+
+Der Riegel suchte den **Namen** des Werkzeugs im Befehl eines Eintrags. Das fängt den Ring der
+Länge eins und **keinen längeren** — und einer der Länge zwei lag unmittelbar bereit:
+
+> `pruefe-zahlen.py` → `./pruefe-waechter.py --lauf` → *jeder leichte Wächter* → `pruefe-zahlen.py`
+
+**Ein einziger Registereintrag mit `--lauf` hätte den Ring geschlossen**, und der Namensriegel
+hätte ihn durchgelassen: im Befehl steht `pruefe-waechter.py` und nicht `pruefe-zahlen.py`.
+
+*Der Fehler ist derselbe wie im Werkzeug, das die Regel gefunden hat:* **eine Prüfung, die aus
+dem naheliegenden Grund gebaut wurde** — hier: „der Zyklus steht im Text" — **deckt nicht, was
+der eigentliche Grund verlangt** — „der Zyklus steht im Prozessbaum".
+
+**Die Fassung, die in jeder Tiefe greift, hängt nicht am Text, sondern an den Kindprozessen:**
+eine Marke in der Umgebung, die an jeden Registerbefehl vererbt wird. *Wer sie beim Start
+vorfindet, ist von sich selbst gerufen worden.* Sie wird an einem echten Kindprozess gemessen
+und nicht behauptet.
+
+> **Die Regel in ihrer allgemeinen Form:** ein Riegel gegen einen Kreis muss an der Kante
+> hängen, die den Kreis WIRKLICH schließt. *Ein Namensvergleich schließt einen Kreis über
+> Namen; ein Prozess schließt einen Kreis über Prozesse.*
 
 **Und der Nebenbefund ist der beste Beleg für die Messschicht selbst:** der Fehler fiel
 **innerhalb einer Minute** auf, weil seit demselben Morgen überall eine Frist steht. *Die
@@ -681,3 +765,45 @@ Lauf **null** redundante Stellen — ein sauberer Korpus und ein blindes Werkzeu
 außen gleich aus (W17). Deshalb: *eine Regel der Tafel, die nirgends einen Treffer hat, ist
 selbst ein Befund*, und was der Korpus nicht auslöst, löst eine absichtlich schlecht
 geschriebene Probe aus.
+---
+
+## W21 — Ein Wächter, dessen Gegenstand woanders liegt, misst den Rechner
+
+**Der Fall.** Am 2026-08-20 war `./pruefe-waechter.py --lauf` auf dem Arbeitsrechner **grün**
+und auf `ki-pc-fisch-101` **rot** — bei byteidentischen Quellen. Der rote Posten war
+`zaehle-narrow.py` mit Rücklaufwert 2, danebengestellt als *„!! OHNE ARBEITSMENGE"*.
+
+**Nicht der Code fehlte, sondern der Gegenstand.** `zaehle-narrow.py` misst den zweiten Korpus
+(`~/Dokumente/SEL4Lake/SEL4Lake`), `zaehle-b3.py` die Caprock-Messbasis — **und beide liegen
+nur auf dem Arbeitsrechner.** Auf dem Rechner, auf den `CLAUDE.md` die ganze Rechenlast legt,
+gibt es sie nicht.
+
+> **Beide Richtungen sind falsch, und das ist der Grund, warum es eine eigene Klasse ist:**
+> ein fehlender Gegenstand kann als **rot ohne Fehler** erscheinen (der Ruf schlägt fehl) oder
+> als **grün ohne Messung** (das Werkzeug zählt null und meldet „keine Befunde"). *Die zweite
+> Richtung ist W17; die erste ist ihr Spiegelbild und genauso wertlos.*
+
+**Und die Sippe reicht bis in den Arbeitsbaum.** `../caprock-messbasis` ist ein **relativer**
+Pfad. In einem `git worktree` zeigt er neben den Arbeitsbaum statt neben die Hauptauscheckung
+— dort ist er ebenfalls weg, auf demselben Rechner. `zaehle-b3.py` lief darüber bis in eine
+`ZeroDivisionError` und meldete Rücklaufwert 1, also *einen Befund*.
+
+**Die Regel:** ein Wächter, dessen Gegenstand außerhalb des Baums liegt, **deklariert den Pfad
+und was dort steht**. Fehlt er, ist das Ergebnis weder rot noch grün, sondern **nicht
+gemessen** — mit seiner Zahl neben dem Urteil.
+
+    FREMDER_KORPUS = {
+        "zaehle-b3.py":     ("../caprock-messbasis", "die Caprock-Messbasis"),
+        "zaehle-narrow.py": ("~/Dokumente/SEL4Lake/SEL4Lake", "der zweite Korpus"),
+    }
+
+*Das ist kein Freibrief.* Der Unterschied zu einem stillen Überspringen ist genau die Zahl:
+**„18 von 19 gelaufenen nennen ihre Arbeitsmenge, 1 weiterer nicht gemessen, weil sein fremder
+Korpus fehlt"** — ein Loch, das sich zählen lässt, ist ein Posten; eines, das grün aussieht,
+ist keiner.
+
+**Und der Nebenbefund gehört zur Messschicht:** dass die Zählung über den zweiten Korpus
+(*„wie viele der 637 `atomic_*()`-Stellen sind Zähler ohne obere Schranke?"*) seit Tagen
+offensteht, hat **keinen** fachlichen Grund. Sie ist **ortsgebunden**, und der erste Schritt
+ist eine Übertragung und kein Werkzeug. *Das stand nirgends, weil niemand den Ort aufgeschrieben
+hatte.*
