@@ -520,11 +520,16 @@ gelesen. Was zwei saubere Fragmente noch aufhält, sind **zwei benannte Weigerun
 
 
 
-- [ ] **Die zwei Fragmente tragen ihre Bitlücken, weil sie AUSSCHNITTE sind.** Ein
-      ausgeschnittener `format`-Block nennt die Bits, um die es dem Ausschnitt geht, und nicht
-      die des ganzen Wortes. *Ob ein Ausschnitt vom Kacheln ausgenommen gehört, ist eine
-      Entscheidung über die Messform und keine über die Sprache* — und sie fällt erst, wenn
-      jemand sagt, was ein Ausschnitt zusagt.
+- [ ] **~~Ob ein Ausschnitt vom Kacheln ausgenommen gehört~~ — entschieden 2026-08-20, und
+      zwar dagegen.** Ein ausgeschnittener `format`-Block nennt die Bits, um die es dem
+      Ausschnitt geht; ein Programm muss auch die nennen, um die es NICHT geht. **Genau darin
+      unterscheidet sich ein Bericht von einem Programm** — also wird nicht die Regel
+      gelockert, sondern der Korpus vervollständigt: sieben `reserved`-Felder in
+      [`messung/fragmente/`](messung/fragmente/), F2 und F9. *Eine Ausnahme für Ausschnitte
+      hätte die Kachelregel für alle geschwächt, um zwei Dateien zu retten.*
+      **Was offen bleibt, ist die andere Hälfte der Frage:** was ein Ausschnitt überhaupt
+      ZUSAGT. Solange das nirgends steht, ist jede Messung über `FRAGMENTE.md` eine Messung
+      über einen Text ohne erklärten Anspruch.
 
 - [ ] **`cc -Wextra` finds a dead parameter and NO Gabbro pass does.** `FRAGMENTE.md` F8 takes
       `toeten(l, t, k)` and never reads `k` — the function resolves `t` instead. The C emitter
@@ -542,10 +547,16 @@ gelesen. Was zwei saubere Fragmente noch aufhält, sind **zwei benannte Weigerun
 
 ### The four items to the goal — plan with gates in [`dokumente/PLAN.md`](dokumente/PLAN.md) §A *(Teil)*
 
-- [ ] **A5 — acceptance:** fragments through the compiler afresh, the count over
-      **Gabbro source text** instead of over Rust (**only then is the mark ≤ 24 really
-      decidable** — see the report of the invalid measurement further below), and the four never
-      written-out areas.
+- [ ] **A5 — Abnahme: die Fragmente frisch durch den Übersetzer.** ~~Fehlt ganz.~~
+      **Seit dem 2026-08-20 gibt es den Lauf**: `./zaehle-fragmente.py` fährt alle zehn
+      vervollständigten Dateien durch `pruefe` und `emit`, mit Frist und Sprechprobe, und die
+      zwei Zahlen stehen im Zahlenregister. *Damit ist die Zählung zum ersten Mal über
+      GABBRO-Quelltext statt über Rust.*
+      **Was fehlt, ist die dritte Stufe: AUSFÜHREN.** `pruefe-emission.sh` misst 19 Einheiten
+      durchgestochen — erzeugt, übersetzt, ausgeführt, gegen eine Handschrift verglichen. Die
+      vier absenkenden Fragmente sind dort **nicht** eingetragen. *Ohne sie sagt „4 von 10
+      senken ab" nichts darüber, ob das erzeugte C rechnet, was das Fragment sagt* — und genau
+      das ist der Wortlaut der Pflicht.
 
 ---
 
@@ -676,6 +687,23 @@ Paketpool, Prüfsumme, Neuübertragung, Zeitgeber — alles vorhanden. Was fehlt
 
 Darunter steht die **Ernte** der bisherigen Programme und Werkzeugläufe: jeder Posten hier ist ein
 Loch, das ein Programm oder ein Messwerkzeug gefunden hat, nicht ein Entwurf.
+
+### Vom vervollständigten Fragmentkorpus, 2026-08-20 *(siehe [`messung/fragmente/`](messung/fragmente/))*
+
+- [ ] **`A::B` parst und wird NIE aufgelöst** *(gemessen 2026-08-20)*.
+      `path = ident { "::" ident }` steht in der Grammatik; der Namenspass liest die **erste
+      Silbe** und schlägt sie als Wert nach. `IpcResult::Ok` fällt als `M119` — gleichgültig
+      ob `IpcResult` ein `module`, ein `reason` oder ein Variantentyp ist; **alle drei
+      geprüft.** *Null Korpusstellen benutzen einen qualifizierten Namen als Wert;* die
+      `::`-Treffer im Korpus sind samt und sonders `module a::b`-Köpfe.
+      **Die Form ist schreibbar und hat keinen Leser** — dieselbe Gestalt wie `ensures` am
+      rumpflosen `extern fn` und wie `RegDecl::requires`. Gefunden an drei der zehn
+      vervollständigten Fragmente, an keiner einzigen Korpusdatei.
+- [ ] **Ein `static` eines Verbunds mit gewöhnlichem Anfangswert senkt nicht ab**
+      *(2026-08-20)*. `static irq : IrqMarke = IrqMarke(tiefe_max: 0, n: 1);` — der Erzeuger
+      sagt `static` of a `tagged` type or a record initialised with a plain … ab. *Die Zeile
+      ist die, die ich selbst in `messung/fragmente/F06.gab` ergänzt habe, und sie steht dort
+      mit ihrem Befund im Kopf, statt weggelassen zu werden.*
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
@@ -1567,6 +1595,17 @@ Einlöser — die Bewegung, gegen die K100s zweites Tor steht.*
 
 Dazu die **ABI** (Bibliotheken, die sich mischen lassen) und die **Generizität** — ohne sie
 braucht jede Tabelle ihr eigenes `traverse`.
+
+- [ ] **Ein `reason`-Wert hat KEINEN ERZEUGER — und das ist «B9» ein zweites Mal**
+      *(gemessen 2026-08-20 am vervollständigten Fragmentkorpus)*. `primary`
+      ([`dokumente/SYNTAX.md`](dokumente/SYNTAX.md):405) kennt keine Produktion für einen
+      Grundwert. **Jede `-> T or R`-Signatur im Korpus steht an einem `extern fn`** — an einem
+      Rumpf, den Gabbro nie sieht; *keine einzige Gabbro-Funktion erzeugt je einen Grund.*
+      Der Fehlerkanal existiert damit an der **Deklaration** und hat keine **Schreibform**.
+      **Dieselbe Reihenfolge wie bei `fnptr`: erst der Erzeuger, dann der Vertrag** — ein
+      Kanal ohne Einlöser ist die Bewegung, gegen die K100s zweites Tor steht.
+      *Gefunden an F1, F3 und F5, sobald die fehlenden Deklarationen dastanden — der
+      eingefrorene Korpus konnte es nicht zeigen.*
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
