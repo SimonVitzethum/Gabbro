@@ -310,12 +310,20 @@ fn der_erzeuger_weigert_sich_statt_offen_auszufallen() {
 
     // **2b. Die Verneinung SENKT AB, das unaere Minus nicht -- und der Unterschied ist
     // begruendet, nicht bequem** (2026-08-20, Regel A).
-    let verneint = absagen_von(
+    let (c, verneint) = c_von(
         "module t { table T count 8 { slot { benutzt : bool, } }\n \
          impl fn f(t : ptr<normal, r> T, i : index into T) -> bool \
          effects { reads t.slots } costs <= 4 ops { return !t.slots[i].benutzt; } }",
     );
     assert!(verneint.is_empty(), "`!` ist gebaut, weil ein Programm es brauchte: {verneint:?}");
+    // **Und das `!` muss im erzeugten C ANKOMMEN.** Die erste Fassung pruefte nur, dass keine
+    // Absage faellt -- und die Mutation `verneinung-verschwindet` ueberlebte: ohne das `!`
+    // faellt auch keine Absage, jede Bedingung ist nur umgedreht. *Zum zweiten Mal an einem
+    // Tag: eine Zusicherung ueber das AUSBLEIBEN einer Absage bewacht keine Absenkung.*
+    assert!(
+        c.contains("return !(p->slots") || c.contains("!(t->slots"),
+        "die Verneinung steht im erzeugten C:\n{c}"
+    );
     let minus = absagen_von(
         "module t { impl fn f(x : i32) -> i32 effects { pure } costs <= 4 ops \
          { return -x; } }",
