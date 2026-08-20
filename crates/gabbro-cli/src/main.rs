@@ -296,8 +296,31 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
+        // **Zahn 3, mechanisch seit 2026-08-20 (Stufe 5).** Bis dahin war die Ratsche ein
+        // Satz im Register: *„jede bewiesene Schablone bindet ihre Praemissen an einen
+        // Pass."* Das Werkzeug druckte die haengenden ehrlich aus und gab **0** zurueck.
+        //
+        // > **Ein Beweis, dessen Voraussetzung niemand herstellt, ist gefaehrlicher als eine
+        // > ungeprueufte Zusage -- weil ein Isabelle-Haekchen darueber steht.** Der
+        // > Registerversatz war genau das: bewiesener Satz, keine Prueferzeile.
+        //
+        // `--tor` faellt, solange eine haengt. Es ist ausdruecklich KEIN Vorgabeverhalten:
+        // ein Werkzeug, das jeden Tag rot ist, wird nicht gelesen -- die tägliche Wache ist
+        // die Ratsche in `pruefe-schablonen.py`, und **dieses Tor ist das ZIEL.**
         "schablonen" => {
             print!("{}", gabbro_check::schablonen::zeige());
+            if rest.iter().any(|x| x == "--tor") {
+                let luft = gabbro_check::schablonen::in_der_luft();
+                if !luft.is_empty() {
+                    eprintln!(
+                        "gabbro schablonen --tor: {} premises of PROVED templates have no \
+                         pass -- a proof nothing establishes",
+                        luft.len()
+                    );
+                    return std::process::ExitCode::from(1);
+                }
+                println!("-- TOOTH 3 REACHED: every proved template binds its premises.");
+            }
             std::process::ExitCode::SUCCESS
         }
         "paesse" => {
@@ -327,7 +350,9 @@ fn hilfe() {
   gabbro fragmente  <file.md>…      every ```gabbro block of a markdown file, one by one
   gabbro annahmen   <file.gab>…     the assumption manifest: proved under A1…An
   gabbro paesse                     the pass list -- built AND open
-  gabbro schablonen                 the generator templates: the third counting column
+  gabbro schablonen [--tor]         the generator templates: the third counting column.
+                                    `--tor` FALLS while a proved template has a premise
+                                    no pass establishes (tooth 3)
   gabbro k-bedingung <file.gab>…    per carrier: are ALL write sites generated? (measurement 2)
   gabbro pflichten  <file.gab>…     what a HUMAN still owes -- counted, not discharged
   gabbro kontexte   <file.gab>…     execution contexts per place -- and the COUNT beside it

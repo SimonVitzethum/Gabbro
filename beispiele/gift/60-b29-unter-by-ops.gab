@@ -18,7 +18,8 @@ table Objekte count N {
         benutzt : bool,
         zaehler : Zaehler by ops,
     }
-    ops einfuegen, entfernen;
+    -- Nachgezogen 2026-08-20: die Wortmenge von `ops` ist geschlossen («NL.1»).
+    ops insert, remove;
 }
 
 impl fn von_hand_senken(o : ptr<normal, rw> Objekte, i : index into Objekte)

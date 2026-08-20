@@ -176,7 +176,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "H1 -- der Rahmen ist VOLLSTAENDIG: jeder Zugriff des Rumpfes hat eine Wurzel aus der deklarierten Menge", durch: Some("`E008` (kompositional ueber die Huelle, seit 2026-08-19 ueber den ORT und nicht die ART) und `E010` fuer das Lesen"), braeuchte: None },
             Voraussetzung { was: "H2a -- kein zweiter Zeigerparameter desselben Traegertyps", durch: Some("`emit::darf_restrict`, syntaktisch ueber die Signatur; Mutation `restrict-auch-bei-zwei-zeigern`"), braeuchte: None },
             Voraussetzung { was: "H2b -- kein globaler Traeger desselben Typs ist erreichbar", durch: Some("die SPRACHE: kein `cast` (G9), kein Adressoperator -- ein Zeiger auf eine globale Tabelle laesst sich nicht bilden; `darf_restrict` prueft die Wirkungsliste zusaetzlich"), braeuchte: None },
-            Voraussetzung { was: "ZWEI `own`-Zeiger desselben Typs zeigen auf Verschiedenes -- das waere der Fall mit 2,85", durch: None, braeuchte: Some("die `own`-ENTSCHEIDUNG: `own` als Freigabeoperation (der Rufer gibt ab und behaelt nichts) traegt `restrict`, `own` als Signaturvermerk nicht") },
+            Voraussetzung { was: "ZWEI `own`-Zeiger desselben Typs zeigen auf Verschiedenes -- das waere der Fall mit 2,85", durch: None, braeuchte: Some("ein PROGRAMM mit zwei besitzenden Zeigern desselben Traegers. *Die ENTSCHEIDUNG ist am 2026-08-20 gefallen -- `own` ist die Freigabeoperation (SPRACHE.md §5); damit koennten zwei `own`-Zeiger desselben Typs beide `restrict` tragen.* Gebaut ist sie NICHT, und der Grund ist gemessen: der ganze Korpus hat EINE Funktion mit zwei Zeigern desselben Traegers (`beispiele/07::wechseln`), und die traegt kein `own`. **Regel A** -- kein Konstrukt ohne ein Programm, das es gebraucht hat") },
         ],
         fundstelle: "beweise/Restrict_Alleinzugriff.thy; MESSUNGEN.md «OPT1» (2,85 gegen                      1,00); PLAN.md «OPT»",
     },
@@ -237,7 +237,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         stand: Stand::Bewiesen,
         voraussetzungen: &[
             Voraussetzung { was: "die erzeugte Mutation ist ein ENTFERNEN und kein Umhaengen", durch: None, braeuchte: Some("ein Erzeuger fuer `by consuming` -- heute gibt es keinen; `umhaengen_faellt` (Table_Ops_Erhaltung) zeigt das Gegenbeispiel") },
-            Voraussetzung { was: "die Auswahl des Zeugen ist MINIMAL (`waehlt_minimal`)", durch: None, braeuchte: Some("eine Regel in `schleifen.rs`: der `traverse`-Abstieg liefert das minimale Element der Ordnung -- `abstieg` ist heute eine ZUSAGE ohne Leser") },
+            Voraussetzung { was: "die Auswahl des Zeugen ist MINIMAL (`waehlt_minimal`)", durch: None, braeuchte: Some("einen ERZEUGER der Zeugenreihenfolge -- an ihm haengt die Minimalitaet, und es gibt keinen. *Berichtigt 2026-08-20: hier stand `abstieg ist eine ZUSAGE ohne Leser`, und das war seit dem 2026-08-19 falsch -- `S005` liest ihn. S005 prueft aber, dass das MASS sich bewegen kann, nicht dass die AUSWAHL minimal ist; zwei verschiedene Aussagen*") },
         ],
         fundstelle: "SPRACHE.md §9.2",
     },
@@ -328,7 +328,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Konstrukt benutzt wird.*
         stand: Stand::Entworfen,
         voraussetzungen: &[
-            Voraussetzung { was: "jede ERZEUGTE Operation erhaelt die Invariante -- Teil I ist parametrisch, und es gibt keinen Erzeuger", durch: None, braeuchte: Some("eine WORTMENGE fuer `ops` mit je definierter Wirkung -- heute nimmt `opdecl` beliebige Bezeichner, und aus einem Namen faellt keine Wirkung") },
+            Voraussetzung { was: "jede ERZEUGTE Operation erhaelt die Invariante -- Teil I ist parametrisch, und es gibt keinen Erzeuger", durch: None, braeuchte: Some("einen ERZEUGER fuer die drei Woerter. *Die WORTMENGE ist seit dem 2026-08-20 nicht mehr das Fehlende: sie war am 2026-08-19 entschieden und stand nur in der EBNF -- der Parser nahm beliebige Bezeichner UND wies die drei gueltigen ab (`P002`), weil sie im Lexer reserviert sind. `P039` haelt sie jetzt, `beispiele/47` schreibt sie zum ersten Mal.* Was fehlt, ist die Auslieferung: aus `insert` faellt eine Wirkung, aber niemand emittiert sie") },
             Voraussetzung { was: "beim Einfuegen ist der Platz FRISCH und der Elter erreichbar", durch: None, braeuchte: Some("zwei `requires`-Zeilen am erzeugten `einfuegen`, wie sie `blatt_loeschen` mit `ist_blatt(c, s)` schon hat") },
             Voraussetzung { was: "beim Loeschen ist der Platz ein BLATT", durch: Some("das `requires ist_blatt(c, s)` des Rufers, gehalten von M1"), braeuchte: None },
         ],

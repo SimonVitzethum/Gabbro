@@ -95,8 +95,8 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./pruefe-zahlen.py`** | das Register der Befehle. **48 Kennzahlen mit Befehl** *(Stand 2026-08-20; 12 am Vormittag)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
-| **`./pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **28 von 28 Instrumenten** tragen die drei statischen. `--lauf` führt **24 von 28** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
+| **`./pruefe-zahlen.py`** | das Register der Befehle. **49 Kennzahlen mit Befehl** *(Stand 2026-08-20; 12 am Vormittag)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
 | **`./zaehle-zeremonie.py`** | neu — das Nutzbarkeitsmaß von Stufe 2, mit seiner Kalibriertafel |
@@ -227,7 +227,7 @@ darunter.
       und ihre Quelle ist eine Tabelle in `PFLICHTEN.md`, deren Zeilen ein Mensch geschrieben
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
-      **`pruefe-zahlen.py` führt heute 48 Kennzahlen mit Befehl und zählt 149 fettgedruckte
+      **`pruefe-zahlen.py` führt heute 49 Kennzahlen mit Befehl und zählt 149 fettgedruckte
       Zahlen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
@@ -331,7 +331,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **9 Widerrufe** über 60 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **9 Widerrufe** über 61 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *Woran es hängt: eine Teilmengenbuchung bräuchte je Zahlenpaar den Satz „A ist Teil von
       B", und den schreibt niemand hin, solange er nicht wehtut.*
 
@@ -396,7 +396,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       *Die schärfere Frage bleibt dieselbe wie beim Schablonenregister: fällt an dieser Zelle je
       etwas?* — also **Mutation oder Giftprobe je KOMBINATION, nicht je Konstrukt.**
       **Woran es hängt, jetzt beziffert:** 164 Kombinationen brauchten je eine Probe; der
-      Mutationskatalog trägt heute 238 Anker, also liegt die Größenordnung neben dem, was schon
+      Mutationskatalog trägt heute 239 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
 - [ ] **44 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./pruefe-gruende.py`,
@@ -468,7 +468,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **796 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **800 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       **Und der Befund ist, dass es nicht null war:** der erste Lauf fand **16** Nahtstellen —
       ein Jahr nachdem die 161 von Hand geflickt worden waren. *Von Hand geflickt heißt: nicht
       bewacht.* Darunter `„…is verified--"`, `„…the rule therefore has**zero bite**"` und
@@ -632,7 +632,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **238 von 238 Ankern** greifen (`--anker`, 2026-08-20) — die
+      fällt. Mutationskatalog: **239 von 239 Ankern** greifen (`--anker`, 2026-08-20) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -685,7 +685,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       erst in der Annotationsemission — derselbe fehlende Kanal wie zwei Punkte tiefer.
 
 - [ ] **The annotation emission needs template entries of its own and mutations of its own.**
-      Der Mutationskatalog misst heute den Prüfer (238 Anker); über den **Wunschform-Kanal**
+      Der Mutationskatalog misst heute den Prüfer (239 Anker); über den **Wunschform-Kanal**
       sagt er nichts — und genau dort wird ein kohärent geschwächter Erzeuger **von keinem
       Beweis** gefangen.
       *Berichtigt 2026-08-20: hier stand „65 von 65", und diese Zahl gibt es nicht mehr.*
@@ -718,7 +718,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **~~Every falsifier needs its own speech test:~~ *can it fail at all?* — GEBAUT
       2026-08-20.** Das ist wörtlich die zweite Forderung von `./pruefe-waechter.py`, und sie
-      wird an **28 von 28** Instrumenten geprüft: eine saubere und eine kaputte Quelle, beide
+      wird an **29 von 29** Instrumenten geprüft: eine saubere und eine kaputte Quelle, beide
       erfunden, und der Wächter muss die eine melden und die andere durchlassen.
       **Was der Punkt meinte und was gemessen wird, ist nicht dasselbe, und der Unterschied
       gehört hierher:** geprüft wird, ob der Wächter *überhaupt* rot werden kann — nicht, ob er
@@ -1553,6 +1553,62 @@ ist das Artefakt, mit dem Gabbro nach außen tritt.**
 `gabbro schablonen` fällt, wenn eine keinen Leser hat. *Verwandelt zehn dekorative Beweise in zehn
 tragende, ohne eine Zeile Isabelle.*
 
+## Das Tor steht seit dem 2026-08-20 — und die Kostenschätzung des Plans war falsch
+
+```
+$ gabbro schablonen --tor
+9 premises of PROVED templates have no pass -- a proof nothing establishes    → 1
+$ ./pruefe-schablonen.py
+Marke 9 — eine Ratsche, keine Zielzahl · 0 ohne Adresse
+```
+
+**Zwei verschiedene Dinge, und sie bleiben getrennt:** `--tor` trägt das *Ziel* und fällt,
+solange eine Prämisse hängt; der Wächter trägt die *Bewegung* und fällt, wenn die Zahl steigt.
+*Ein Werkzeug, das jeden Tag rot ist, wird nicht gelesen.*
+
+**Der Plan sagte „kostet keine Programmierarbeit im Prüfer, nur den Abgleich Prämisse → Pass".
+Das Register selbst widerlegt es:** von den neun brauchen zwei eine **ganze Schicht** (die
+Ausführungskontexte K11.2.2, die Axiomschicht), zwei einen **Erzeuger**, zwei eine
+**Sprachform** — und nur der Rest ist Prüferarbeit. *Die neun sind mehrheitlich keine
+vergessene Prüfarbeit, sondern nicht getroffene Entscheidungen.*
+
+### Und zwei der neun Adressen waren VERALTET
+
+**Das ist der eigentliche Ertrag dieser Stufe.** Der Wächter zählt Adressen, er prüft sie
+nicht — also von Hand am Gegenstand nachgerechnet:
+
+| | stand da | ist heute |
+|---|---|---|
+| `consuming.ordnung` | *„`abstieg` ist heute eine **ZUSAGE ohne Leser**"* | **falsch seit dem 2026-08-19** — `S005` liest ihn. S005 prüft aber, dass das *Maß* sich bewegen kann, nicht dass die *Auswahl* minimal ist: zwei verschiedene Aussagen |
+| `table.ops.erhaltung` | *„eine **WORTMENGE** für `ops` — heute nimmt `opdecl` beliebige Bezeichner"* | die Wortmenge war am 2026-08-19 **entschieden** und stand nur in der EBNF |
+
+**Und die zweite Zeile war in BEIDE Richtungen falsch:**
+
+```
+ops erfundenes_wort;   →  0 Fehler   -- jedes Wort ging durch
+ops insert;            →  P002       -- die drei GÜLTIGEN gingen NICHT
+```
+
+Die drei stehen im Lexer als reservierte Wörter, also konnte die `identlist` des Parsers sie
+gar nicht lesen. *Die Grammatik sagte das eine, der Lexer das zweite, der Parser das dritte* —
+und `opdecl` hatte **null Korpusstellen**, also hat es niemand bemerkt. **Gebaut** (`P039`),
+mit Gegenprobe in [`beispiele/47`](beispiele/47-ops-wortmenge.gab) und
+[`gift/221`](beispiele/gift/221-ops-erfundenes-wort.gab).
+
+> **Dass ausgerechnet die Giftproben erfundene Wörter trugen, ist der Grund, aus dem die Lücke
+> nicht auffiel.** Drei Dateien mussten nachgezogen werden.
+
+### Die `own`-Entscheidung ist gefallen
+
+**`own` ist die FREIGABEOPERATION, kein Signaturvermerk** ([`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §5.1).
+Die andere Lesart war nie tragfähig: ein Signaturvermerk ist eine Klausel ohne Leser, und
+`own` war bis zum 2026-08-19 ein Synonym für `rw`.
+
+*Und sie wird trotzdem nicht gebaut, aus einem gemessenen Grund:* der ganze Korpus hat **eine**
+Funktion mit zwei Zeigern desselben Trägers (`beispiele/07::wechseln`), und die trägt kein
+`own`. **Regel A** — kein Konstrukt ohne ein Programm, das es gebraucht hat. Die Prämisse
+trägt jetzt diese Adresse statt einer fehlenden Entscheidung.
+
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
 - [ ] **K100.4 — die STARKE Fassung von (b) fehlt noch.** `gabbro zeugnis` zaehlt auf, worauf
@@ -2157,7 +2213,7 @@ hat kein Feld dafür). **Ohne die Sätze ist „Gabbro formal verifiziert" nicht
 formulierbar** — man wüsste nicht, was zu beweisen wäre.
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (heute 189 Codes, null Sätze).
+sofort: *kein neuer Absagecode ohne seinen Satz* (heute 190 Codes, null Sätze).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 

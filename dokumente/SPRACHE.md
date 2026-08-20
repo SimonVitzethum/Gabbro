@@ -798,6 +798,28 @@ The barrier follows from the **space**: a store to `dma` emits the publication b
 target architecture, an `mmio` access is volatile and not reorderable. `own` is the ownership
 right (release), which makes `Finalized` expressible without lifetimes.
 
+> **`own` is the RELEASE OPERATION, not a note on the signature — decided 2026-08-20 (stage 5).**
+>
+> The question had a name and a price: `restrict.alleinzugriff` proves alias freedom under
+> **H2a** (at most one pointer parameter per carrier type), and the one figure C really cannot
+> know — **2,85** — sits at the case H2a excludes: *two* pointers of the same type. They may
+> both carry `restrict` **iff two owning pointers cannot denote the same region**, and that is
+> exactly what "release" means: the caller gives it up and keeps nothing.
+>
+> **The other reading was never viable.** A signature note is a clause without a reader, and
+> this folder treats that as a defect — `own` was a synonym for `rw` until 2026-08-19, when
+> `R004` gave it its first bite.
+>
+> **And the price is stated, not hidden:** under the release reading a caller may not use an
+> owning place after passing it on. The residual assumption is named too — owning pointers
+> that come from `extern fn` results are *foreign producers*, and `gabbro zeugnis` counts them
+> as trust surface.
+>
+> *What is decided is not therefore built.* The corpus has **one** function with two pointers
+> of the same carrier (`beispiele/07::wechseln`), and it carries no `own`. **Rule A** — no
+> construct without a program that needed it — so `darf_restrict` keeps refusing, and the
+> template register carries the premise with this address instead of a missing decision.
+
 #### 5.2 Pointer arithmetic has exactly one form
 
 `place[expr]` with an M1-bounded index, and `offset_into` in formats. Otherwise none.

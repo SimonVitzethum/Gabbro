@@ -1752,6 +1752,68 @@ impl<'a> Parser<'a> {
         Ok(liste)
     }
 
+    /// **`opname` -- die GESCHLOSSENE Wortmenge von `ops`** («NL.1», gebaut 2026-08-20).
+    ///
+    /// Die EBNF fuehrt sie seit dem 2026-08-19: `opname = "insert" | "remove" | "relabel"`.
+    /// **Der Parser las bis heute eine `identlist`, und damit war die Zeile in BEIDE
+    /// Richtungen falsch:**
+    ///
+    /// ```text
+    /// ops erfundenes_wort;   ->  0 Fehler       -- jedes Wort ging durch
+    /// ops insert;            ->  P002           -- die drei GUELTIGEN gingen NICHT
+    /// ```
+    ///
+    /// Die drei stehen im Lexer als reservierte Woerter (`kw.rs`), also konnte `identlist`
+    /// sie gar nicht lesen. *Die Grammatik sagte das eine, der Lexer das zweite und der
+    /// Parser das dritte* -- und `opdecl` hat **null Korpusstellen**, also hat es niemand
+    /// bemerkt.
+    ///
+    /// > **Der Grund, aus dem die Menge geschlossen wurde, macht die Luecke scharf:** aus
+    /// > einem NAMEN faellt keine Wirkung. Ein Erzeuger kann `insert` emittieren, weil
+    /// > festliegt, was `insert` tut -- fuer ein erfundenes Wort gibt es nichts zu emittieren,
+    /// > und `table.ops.erhaltung` ist damit in dem einzigen Sinn unbeweisbar, auf den es
+    /// > ankommt.
+    ///
+    /// *Eine Entscheidung, die nur in einem Dokument steht, ist keine.*
+    fn opnamen(&mut self) -> Erg<Vec<Ident>> {
+        let mut aus = Vec::new();
+        loop {
+            let t = self.blick();
+            let name = match t.art {
+                Art::Wort(Kw::Insert) => "insert",
+                Art::Wort(Kw::Remove) => "remove",
+                Art::Wort(Kw::Relabel) => "relabel",
+                _ => {
+                    let gefunden = t.benennung(self.quelle);
+                    self.absage(
+                        Absage::fehler(
+                            "P039",
+                            t.span,
+                            format!(
+                                "`ops` takes a CLOSED set of words -- insert, remove, \
+                                 relabel; {gefunden} found"
+                            ),
+                        )
+                        .mit_notiz(
+                            "from a NAME no effect follows -- a generator can emit `insert` \
+                             because it is laid down what `insert` does",
+                        )
+                        .mit_notiz(
+                            "SYNTAX.md `opname`, decided 2026-08-19 and MEASURED before \
+                             decided: remove 479 sites, insert 448, relabel 127",
+                        ),
+                    );
+                    return Err(Abbruch);
+                }
+            };
+            aus.push(Ident { text: name.to_string(), span: t.span });
+            self.pos += 1;
+            if !self.friss_z(Z::Komma) {
+                return Ok(aus);
+            }
+        }
+    }
+
     fn identlist(&mut self) -> Erg<Vec<Ident>> {
         let mut liste = vec![self.erwarte_ident()?];
         while self.friss_z(Z::Komma) {
@@ -2916,9 +2978,25 @@ impl<'a> Parser<'a> {
                     }
                     baum = Some(t);
                 }
+                // **`P039`: die Wortmenge von `ops` ist GESCHLOSSEN -- und wurde nicht
+                // gehalten** (gebaut 2026-08-20, Stufe 5).
+                //
+                // «NL.1» hat sie am 2026-08-19 entschieden und in die EBNF geschrieben:
+                // `opname = "insert" | "remove" | "relabel"`. **Der Parser nahm weiter
+                // beliebige Bezeichner** -- `ops erfundenes_wort;` ging mit 0 Fehlern durch.
+                //
+                // > *Der Grund, aus dem die Menge geschlossen wurde, macht die Luecke
+                // > scharf:* **aus einem Namen faellt keine Wirkung.** Ein Erzeuger kann
+                // > `insert` emittieren, weil festliegt, was `insert` tut; fuer ein
+                // > erfundenes Wort gibt es nichts zu emittieren -- und `table.ops.erhaltung`
+                // > ist damit in dem einzigen Sinn unbeweisbar, auf den es ankommt.
+                //
+                // **Eine Entscheidung, die nur in einem Dokument steht, ist keine.** Dieselbe
+                // Klasse wie `rank`, `opaque` und `ensures` vor ihren Passzeilen -- nur stand
+                // sie diesmal sogar in der Grammatik.
                 Art::Wort(Kw::Ops) => {
                     self.pos += 1;
-                    ops.extend(self.identlist()?);
+                    ops.extend(self.opnamen()?);
                     self.erwarte_z(Z::Semi)?;
                 }
                 _ => {

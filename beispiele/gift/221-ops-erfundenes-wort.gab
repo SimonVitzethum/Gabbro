@@ -1,0 +1,27 @@
+-- erwartet: P039
+-- **Die Wortmenge von `ops` ist GESCHLOSSEN -- und wurde bis zum 2026-08-20 nicht gehalten.**
+--
+-- «NL.1» hat sie am 2026-08-19 entschieden und in die EBNF geschrieben:
+--
+--     opname = "insert" | "remove" | "relabel" ;
+--
+-- Der Parser nahm weiter beliebige Bezeichner; `ops erfundenes_wort;` ging mit **0 Fehlern**
+-- durch. **Eine Entscheidung, die nur in einem Dokument steht, ist keine** -- dieselbe Klasse
+-- wie `rank`, `opaque` und `ensures` vor ihren Passzeilen, nur stand sie diesmal sogar in der
+-- Grammatik.
+--
+-- *Der Grund, aus dem die Menge geschlossen wurde, macht die Luecke scharf:* **aus einem
+-- Namen faellt keine Wirkung.** Ein Erzeuger kann `insert` emittieren, weil festliegt, was
+-- `insert` tut; fuer ein erfundenes Wort gibt es nichts zu emittieren -- und die Schablone
+-- `table.ops.erhaltung` ist damit in dem einzigen Sinn unbeweisbar, auf den es ankommt.
+--
+-- > Gegenprobe: `beispiele/16-by-ops-am-feld.gab` traegt `ops` mit einem gueltigen Wort.
+
+module gift {
+
+table T count 8 {
+    slot { a : u32, }
+    ops erfundenes_wort;
+}
+
+}

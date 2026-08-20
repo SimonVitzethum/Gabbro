@@ -1,0 +1,61 @@
+-- 47 -- **`ops` schreibt seine drei Wörter zum ersten Mal.**
+--
+-- «NL.1» hat die Wortmenge am 2026-08-19 entschieden und in die EBNF geschrieben:
+--
+--     opname = "insert" | "remove" | "relabel" ;
+--
+-- **Bis zum 2026-08-20 war die Zeile in BEIDE Richtungen falsch**, und `opdecl` hatte null
+-- Korpusstellen, also hat es niemand bemerkt:
+--
+--     ops erfundenes_wort;   ->  0 Fehler     -- jedes Wort ging durch
+--     ops insert;            ->  P002         -- die drei GUELTIGEN gingen NICHT
+--
+-- Die drei stehen im Lexer als reservierte Wörter, also konnte die `identlist` des Parsers
+-- sie gar nicht lesen. *Die Grammatik sagte das eine, der Lexer das zweite, der Parser das
+-- dritte.*
+--
+-- **Warum die Menge geschlossen ist:** aus einem NAMEN fällt keine Wirkung. Ein Erzeuger kann
+-- `insert` emittieren, weil festliegt, was `insert` tut -- für ein erfundenes Wort gibt es
+-- nichts zu emittieren, und die Schablone `table.ops.erhaltung` ist damit in dem einzigen
+-- Sinn unbeweisbar, auf den es ankommt.
+--
+-- > **Und diese Datei ist noch keine Auslieferung.** Der Erzeuger für die drei Wörter fehlt
+-- > weiter; `gabbro schablonen` führt ihn als hängende Prämisse. *Geschlossen ist die FORM,
+-- > nicht der Erzeuger* -- und der Unterschied steht hier, statt in einer Fußnote.
+--
+-- Die Gegenprobe steht in `beispiele/gift/221-ops-erfundenes-wort.gab`.
+
+module beispiel::opswortmenge {
+
+const N : u32 = 16;
+
+-- **`D001`: mit `ops` ist jede Handmutation an dieser Tabelle ein Fehler.** Genau darum
+-- steht unten kein Schreibzugriff -- die Tabelle gehört ab hier den erzeugten Operationen.
+table Verzeichnis count N {
+    slot {
+        benutzt : bool,
+        marke   : u32,
+    }
+
+    ops insert, remove;
+
+    invariant marke_null_wenn_frei cost O(1) runs online :
+        forall s in slots of Self : Self.slots[s].benutzt || Self.slots[s].marke == 0;
+}
+
+-- Lesen bleibt erlaubt: `ops` schliesst die SCHREIBSEITE ab, nicht die Lesesseite.
+impl fn ist_belegt(v : ptr<normal, r> Verzeichnis, i : index into Verzeichnis) -> bool
+    effects { reads v.slots }
+    costs   <= 2 ops
+{
+    return v.slots[i].benutzt;
+}
+
+impl fn marke_von(v : ptr<normal, r> Verzeichnis, i : index into Verzeichnis) -> u32
+    effects { reads v.slots }
+    costs   <= 2 ops
+{
+    return v.slots[i].marke;
+}
+
+}

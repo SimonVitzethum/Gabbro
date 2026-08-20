@@ -1588,6 +1588,20 @@ MUTATIONEN = [
         "code",
     ),
     Mutation(
+        # **Stufe 5, 2026-08-20:** die geschlossene Wortmenge von `ops`. Faellt die Pruefung,
+        # nimmt `opdecl` wieder jedes Wort -- und aus einem Namen faellt keine Wirkung.
+        "ops-nimmt-jedes-wort",
+        "gabbro-syntax/src/parse.rs",
+        "                _ => {\n                    let gefunden = t.benennung(self.quelle);\n"
+        "                    self.absage(\n                        Absage::fehler(\n"
+        "                            \"P039\",",
+        "                _ if false => {\n                    let gefunden = t.benennung(self.quelle);\n"
+        "                    self.absage(\n                        Absage::fehler(\n"
+        "                            \"P039\",",
+        "Parser -- `ops` nimmt wieder beliebige Woerter",
+        "pass",
+    ),
+    Mutation(
         # **Die Verneinung, gebaut weil ein Programm sie brauchte.** Faellt das `!` weg, ist
         # jede Bedingung des Empfangswegs umgedreht -- und `cc` sagt nichts.
         "verneinung-verschwindet",

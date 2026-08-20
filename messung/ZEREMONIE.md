@@ -5,12 +5,12 @@ es eine Meinung — und *„keine Klempnerei beim Endnutzer"* ist eine Nutzbarke
 
 ```
 $ ./zaehle-zeremonie.py
-52 Dateien gemessen, 4 abgelehnt
+53 Dateien gemessen, 4 abgelehnt
   ableitbar       51        A1  4 · A4 47
   redundant        0
-  tragend        831        T1 388 · T2 163 · T6 62 · T10 57 · T3 47 · T11 31 · T12 25 ·
-                            T7 24 · T9 19 · T8 7 · T5 5 · T4 3
-51 von 882 Stellen dürfen sinken
+  tragend        836        T1 390 · T2 165 · T6 62 · T10 57 · T3 47 · T11 31 · T12 25 ·
+                            T7 24 · T9 19 · T8 7 · T5 6 · T4 3
+51 von 887 Stellen dürfen sinken
 ```
 
 ## Die zwei Achsen, und warum sie getrennt bleiben
@@ -41,7 +41,7 @@ vorführt. Also getrennt (W11: jede Quote nennt ihr N):
 
 | | dürfen sinken | Stellen / Zeilen | Dichte |
 |---|---|---|---|
-| **Lehrkorpus** *(46 Beispiele + 6 Fragmente)* | 51 von 882 — **5,8 %** | 882 / 5648 | 15,6 je 100 Z. |
+| **Lehrkorpus** *(47 Beispiele + 6 Fragmente)* | 51 von 887 — **5,7 %** | 887 / 5725 | 15,5 je 100 Z. |
 | **echter Code** *(virtio-net · kapraum · planer)* | 14 von 109 — **12,8 %** | 109 / 519 | 21,0 je 100 Z. |
 
 > **Im echten Code ist der ableitbare Anteil mehr als doppelt so hoch — und er besteht
@@ -54,7 +54,7 @@ Zeile. *Beides zusammen heißt: die Beispiele unterschätzen, was ein Nutzer sch
 
 ## Was die Zahl sagt
 
-**Der Korpus ist mager: 51 von 882 Stellen (5,8 %) dürfen sinken.** Die Klempnerei liegt
+**Der Korpus ist mager: 51 von 887 Stellen (5,7 %) dürfen sinken.** Die Klempnerei liegt
 *nicht* in den Klauseln — 831 Stellen tragen eine Aussage, die nirgends sonst steht.
 
 Und der größte Einzelposten ist `A4` mit 47: **eine Wirkungszeile, die ein Gerufener dieses

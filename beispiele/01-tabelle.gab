@@ -71,7 +71,7 @@ table Kappenraum count NSLOTS {
             => Self.slots[s].vorheriges == None;
 
     -- Ohne `ops` ist diese Tabelle Zuschnitt (a): reine Beschreibung mit erzeugtem
-    -- Pruefer. Mit `ops einfuegen, …` waere jede Handmutation unten ein Fehler --
+    -- Pruefer. Mit `ops insert, remove;` waere jede Handmutation unten ein Fehler --
     -- der Unterschied ist eine Zeile und damit sichtbar gewaehlt.
     invariant baum_bleibt_baum cost O(n) runs offline
         by induction over descendants of Self :

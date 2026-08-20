@@ -77,6 +77,13 @@ EINTRAEGE = [
         "vervollstaendigte Fragmente, die absenken",
     ),
     (
+        "TODO.md",
+        r"Marke (\d+) — eine Ratsche, keine Zielzahl · 0 ohne Adresse",
+        ["./pruefe-schablonen.py"],
+        r"^   Marke (\d+) -- eine Ratsche",
+        "Zahn 3 -- Praemissen bewiesener Schablonen ohne Pass",
+    ),
+    (
         "messung/netz/README.md",
         r"(\d+) von 3 Proben grün",
         ["./zaehle-netz.py"],
