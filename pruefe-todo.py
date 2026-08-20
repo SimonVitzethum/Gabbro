@@ -339,9 +339,37 @@ def pruefe_readme(text=None):
         (r"(\d+) clean examples", str(n_bsp), "saubere Beispiele"),
         (r"(\d+) poison files", str(n_gift), "Giftdateien"),
     ]
+    # **Und der Abschnitt UNTER der Tafel** (Rezension 2026-08-20).
+    #
+    # Dieser Leser hielt die Kennzahlentafel nach -- und nur sie. Eine Bildschirmhoehe
+    # tiefer standen drei Zahlen still: `cargo test  # 126 tests` (es sind ueber 150),
+    # `mutiere-pruefer.py  # 168 of 168` (es sind ueber 190) und „the twelve theories"
+    # (es sind dreizehn).
+    #
+    # > *Dieselbe Klasse, die am 2026-08-19 achtmal bezahlt wurde, eine Bildschirmhoehe
+    # > tiefer.* Ein Waechter, der einen Abschnitt liest und den naechsten nicht, verlagert
+    # > das Problem, statt es zu loesen.
+    #
+    # Die Theorienzahl und die Isar-Zeilen lassen sich ohne Uebersetzerlauf zaehlen; die
+    # Test- und Mutationszahl nicht -- die stehen im Lauf und tragen darum ihr Datum. Was
+    # hier geprueft wird, ist deshalb genau das Zaehlbare.
+    n_thy = len(list((WURZEL / "beweise").glob("*.thy")))
+    # `count("\\n")` und nicht `split`: das ist, was `wc -l` zaehlt, und danach wird gefragt.
+    n_isar = sum(f.read_text().count("\n") for f in (WURZEL / "beweise").glob("*.thy"))
+    fuer += [
+        (r"The (\d+) theories in", str(n_thy), "Theorien (Fliesstext)"),
+        (r"across all (\d+) theories", str(n_thy), "Theorien (Klammer)"),
+        (r"\((\d[\d\s]*) across all \d+ theories\)",
+         str(n_isar), "Isar-Zeilen"),
+    ]
+    # **Tausenderpunkte zaehlen nicht mit.** `2 304` und `2304` sind dieselbe Zahl, und ein
+    # Waechter, der daran scheitert, zwingt den Text in seine Schreibweise statt umgekehrt.
+    def blank(s):
+        return str(s).replace(" ", "").replace("\u00a0", "").replace(".", "")
+
     for muster, heute, was in fuer:
         for t in re.finditer(muster, text):
-            if t.group(1) != str(heute):
+            if blank(t.group(1)) != blank(heute):
                 befunde.append(f"README: '{t.group(1)}' als {was} -- es sind {heute}")
     return befunde
 

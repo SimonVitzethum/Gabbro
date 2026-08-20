@@ -59,7 +59,7 @@ folder.*
 
 ## Why no Isabelle-anchored number replaces it yet
 
-The twelve theories in [`beweise/`](beweise/) are **entirely the (1 − w) side** — eight K,
+The 13 theories in [`beweise/`](beweise/) are **entirely the (1 − w) side** — eight K,
 three A, one about the checker, **zero W**. An Isabelle-anchored `w` would have numerator **0** by
 construction, and the formula would return **0,30** — *below the seL4 anchor, hence a triumph,
 and false.* That is the error class this folder already booked once, when `p_B3` was read as a
@@ -76,7 +76,7 @@ exist to prevent.
 
 ```
 2 007 lines of Isar  ·  9 proved generator templates  ·  142 corpus sites
-                        → 14,1 lines per site (2 167 across all twelve theories)
+                        → 14,1 lines per site (2 304 across all 13 theories)
 ```
 
 > **It ROSE on 2026-08-19, from 10,4** — `Table_Ops_Erhaltung.thy` (311 lines) and
@@ -127,7 +127,7 @@ denominator that shines instead of the one that costs.*
 | **Grammar** | **143 EBNF rules**, closed and reachable | vocabulary covers every terminal, 211 / 211 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Guardians** | 13, each with a two-way speech test | **193 of 193 mutations caught** *(run 2026-08-20)* |
-| **Corpus** | 38 clean examples, 179 poison files, 152 tests *(run 2026-08-20)* | `cargo test` |
+| **Corpus** | 38 clean examples, 179 poison files, 153 tests *(run 2026-08-20)* | `cargo test` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was
@@ -167,8 +167,8 @@ cargo run --bin gabbro -- pruefe beispiele/*.gab     # check files
 cargo run --bin gabbro -- paesse                     # what each pass does and does NOT do
 cargo run --bin gabbro -- schablonen                 # the proof-template register
 cargo run --bin gabbro -- pflichten beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
-cargo test                                           # 126 tests
-./mutiere-pruefer.py                                 # damage one rule at a time: 168 of 168
+cargo test                                           # 153 tests
+./mutiere-pruefer.py                                 # damage one rule at a time: 193 of 193
 ./pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
 ./pruefe-klauseln.py                                 # declared, exported, never read
 ./pruefe-widerruf.py                                 # sentences the folder has revoked, still standing

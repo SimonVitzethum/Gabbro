@@ -562,7 +562,18 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// **Auch hier, seit 2026-08-20.** `TIEFE_MAX` sass an `expr`, `pred` und
+    /// `block_innen` -- drei von SECHS Rekursionsstellen. 300 verschachtelte `module` gaben
+    /// *„fatal runtime error: stack overflow, aborting"*, waehrend 40 verschachtelte
+    /// Klammern ein sauberes `P038` gaben.
+    ///
+    /// > *Die Klasse war benannt und die Haelfte behoben* -- dasselbe Muster, das diese
+    /// > Rezension ueber den ganzen Ordner beschreibt.
     fn moduledecl(&mut self, oeffentlich: bool) -> Erg<Modul> {
+        self.tiefer(|p| p.moduledecl_innen(oeffentlich))
+    }
+
+    fn moduledecl_innen(&mut self, oeffentlich: bool) -> Erg<Modul> {
         self.erwarte_kw(Kw::Module)?;
         let pfad = self.pfad()?;
         self.erwarte_z(Z::GeschweiftAuf)?;
@@ -716,7 +727,12 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Rekursionsstelle Nummer vier: ein `ptr<… ptr<… >>` und ein Verbund im Verbund.
     fn typeexpr(&mut self) -> Erg<TypExpr> {
+        self.tiefer(|p| p.typeexpr_innen())
+    }
+
+    fn typeexpr_innen(&mut self) -> Erg<TypExpr> {
         let t = self.blick();
         match t.art {
             Art::Wort(k) if k.ist_intty() => Ok(TypExpr::Int(self.intty()?)),
@@ -1015,7 +1031,12 @@ impl<'a> Parser<'a> {
 
     /// `field = ident ":" fieldty [ "@" bitpos ] [ "offset_into" ident ] [ "where" pred ]
     ///          [ "reserved" ] ","`
+    /// Und Nummer fuenf: ein Feld traegt einen Typ, der ein Verbund mit Feldern ist.
     fn field(&mut self) -> Erg<FeldDecl> {
+        self.tiefer(|p| p.field_innen())
+    }
+
+    fn field_innen(&mut self) -> Erg<FeldDecl> {
         let name = self.erwarte_feldname()?;
         self.erwarte_z(Z::Kolon)?;
         let typ = self.fieldty()?;

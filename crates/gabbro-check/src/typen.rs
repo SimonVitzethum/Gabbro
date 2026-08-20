@@ -530,7 +530,14 @@ pub fn addiere(a: &IntBereich, b: &IntBereich) -> Rechnung {
             laeuft_ueber: false,
         };
     };
-    ergebnis(breite, vz, a.min + b.min, a.max + b.max)
+    // Dieselbe Klasse wie bei `multipliziere`: `i128` ist weit, aber nicht unendlich.
+    let (Some(lo), Some(hi)) = (a.min.checked_add(b.min), a.max.checked_add(b.max)) else {
+        return Rechnung {
+            bereich: None,
+            laeuft_ueber: true,
+        };
+    };
+    ergebnis(breite, vz, lo, hi)
 }
 
 pub fn subtrahiere(a: &IntBereich, b: &IntBereich) -> Rechnung {
@@ -540,7 +547,13 @@ pub fn subtrahiere(a: &IntBereich, b: &IntBereich) -> Rechnung {
             laeuft_ueber: false,
         };
     };
-    ergebnis(breite, vz, a.min - b.max, a.max - b.min)
+    let (Some(lo), Some(hi)) = (a.min.checked_sub(b.max), a.max.checked_sub(b.min)) else {
+        return Rechnung {
+            bereich: None,
+            laeuft_ueber: true,
+        };
+    };
+    ergebnis(breite, vz, lo, hi)
 }
 
 pub fn multipliziere(a: &IntBereich, b: &IntBereich) -> Rechnung {
@@ -550,7 +563,49 @@ pub fn multipliziere(a: &IntBereich, b: &IntBereich) -> Rechnung {
             laeuft_ueber: false,
         };
     };
-    let ecken = [a.min * b.min, a.min * b.max, a.max * b.min, a.max * b.max];
+    // **`checked_mul`, und das ist keine Vorsicht** (Rezension 2026-08-20).
+    //
+    // Hier stand rohes `i128`-Rechnen. Zwei blanke `u64` multipliziert:
+    //
+    //     return a * b;
+    //     -> debug:   panicked at typen.rs:553: attempt to multiply with overflow
+    //     -> release: u64 in -36893488147419103231 .. 0
+    //
+    // **Eine negative Untergrenze auf einem vorzeichenlosen Typ.** Im Freigabebau fiel es
+    // nur zufaellig noch an `M104` -- *die Domaene, auf der der Ueberlaufbeweis ruht,
+    // rechnete selbst umlaufend.*
+    //
+    // > Ein Ueberlaufpruefer, dessen Arithmetik ueberlaeuft, beweist nichts.
+    //
+    // Kein Ergebnis ist die ehrliche Antwort: `bereich: None` heisst „hierueber weiss M1
+    // nichts", und `M104` faellt dann an der Breite. *Der Korpus hat 58 blanke
+    // `u64`-Parameter und multiplizierte nie zwei davon.*
+    if a.ist_leer() || b.ist_leer() {
+        return Rechnung {
+            bereich: None,
+            laeuft_ueber: false,
+        };
+    }
+    let mut ecken = [0i128; 4];
+    for (i, (x, y)) in [
+        (a.min, b.min),
+        (a.min, b.max),
+        (a.max, b.min),
+        (a.max, b.max),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        match x.checked_mul(y) {
+            Some(v) => ecken[i] = v,
+            None => {
+                return Rechnung {
+                    bereich: None,
+                    laeuft_ueber: true,
+                }
+            }
+        }
+    }
     let min = ecken.iter().copied().min().unwrap_or(0);
     let max = ecken.iter().copied().max().unwrap_or(0);
     ergebnis(breite, vz, min, max)

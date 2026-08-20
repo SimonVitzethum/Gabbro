@@ -63,7 +63,16 @@ FLAECHEN = {
 class Mutation:
     def __init__(self, name, datei, alt, neu, regel, flaeche="pruefer"):
         self.name = name
-        self.pfad = CHECK / datei
+        # **Ein Pfad mit `/` nennt seine Kiste** (2026-08-20).
+        #
+        # Bis heute stand hier nur `CHECK / datei`, und `CHECK` ist `gabbro-check/src`.
+        # **Damit war der ganze PARSER unbeschaedigbar** -- 193 von 193 sagte nichts ueber
+        # `gabbro-syntax`, und die Zahl las sich trotzdem wie Deckung.
+        #
+        # > Aufgefallen erst, als eine Mutation den Tiefenwaechter in `parse.rs` treffen
+        # > sollte und die Datei nicht gefunden wurde. *Eine Flaeche, die kein Werkzeug
+        # > erreicht, faellt in keiner Statistik auf -- sie fehlt einfach.*
+        self.pfad = (WURZEL / "crates" / datei) if "/" in datei else (CHECK / datei)
         self.alt = alt
         self.neu = neu
         self.regel = regel
@@ -95,6 +104,24 @@ MUTATIONEN = [
     # Flaeche, egal wie frisch der Test daneben ist.
     # **Drei Regeln aus der dritten Rezension.** Alle drei waren "eine Klasse richtig
     # diagnostiziert, eine Instanz behoben" -- darum zielen sie auf die GEMEINSAME Stelle.
+    Mutation(
+        "tiefenwaechter-fehlt-am-modul",
+        "gabbro-syntax/src/parse.rs",
+        "        self.tiefer(|p| p.moduledecl_innen(oeffentlich))",
+        "        self.moduledecl_innen(oeffentlich)",
+        "300 verschachtelte `module` toeten den Pruefer mit einem Stapelueberlauf, waehrend "
+        "40 verschachtelte Klammern ein sauberes `P038` geben -- der Waechter sass an drei "
+        "von sechs Rekursionsstellen",
+    ),
+    Mutation(
+        "bereichsarithmetik-laeuft-selbst-ueber",
+        "typen.rs",
+        "        match x.checked_mul(y) {",
+        "        match Some(x.wrapping_mul(y)) {",
+        "die Domaene, auf der der Ueberlaufbeweis ruht, rechnet wieder umlaufend: zwei "
+        "blanke `u64` multipliziert geben im Freigabebau `u64 in -36893488147419103231 .. 0` "
+        "-- eine negative Untergrenze auf einem vorzeichenlosen Typ",
+    ),
     Mutation(
         "ausdruckslaeufer-steigt-nicht-in-den-index",
         "lib.rs",
@@ -201,15 +228,15 @@ MUTATIONEN = [
     Mutation(
         "subtraktion-zu-eng",
         "typen.rs",
-        "    ergebnis(breite, vz, a.min - b.max, a.max - b.min)",
-        "    ergebnis(breite, vz, a.min - b.min, a.max - b.min)",
+        "(a.min.checked_sub(b.max), a.max.checked_sub(b.min))",
+        "(a.min.checked_sub(b.min), a.max.checked_sub(b.min))",
         "die Untergrenze der Subtraktion (Unterlauf wird unsichtbar)",
     ),
     Mutation(
         "addition-zu-eng",
         "typen.rs",
-        "    ergebnis(breite, vz, a.min + b.min, a.max + b.max)",
-        "    ergebnis(breite, vz, a.min + b.min, a.max + b.min)",
+        "(a.min.checked_add(b.min), a.max.checked_add(b.max))",
+        "(a.min.checked_add(b.min), a.max.checked_add(b.min))",
         "die Obergrenze der Addition",
     ),
     Mutation(

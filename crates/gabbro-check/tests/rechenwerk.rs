@@ -2564,3 +2564,61 @@ fn ein_unbekannter_name_faellt_und_zaehlt_gegen_die_deckung() {
     gabbro_check::pruefe(&b2, &mut a2);
     assert!(!a2.zeige(k).contains("M119"), "ein Typwort ist keine Variable:\n{}", a2.zeige(k));
 }
+
+/// **Zwei Wachen, die an drei von sechs Stellen verdrahtet waren** (Rezension 2026-08-20).
+///
+/// `TIEFE_MAX` sass an `expr`, `pred` und `block_innen`. Verschachtelte Klammern bei Tiefe 40
+/// gaben ein sauberes `P038`; **300 verschachtelte `module` gaben
+/// `fatal runtime error: stack overflow, aborting`.**
+///
+/// Und die Bereichsarithmetik rechnete in rohem `i128`:
+///
+/// ```gabbro
+/// return a * b;      -- zwei blanke u64
+/// ```
+/// ```text
+/// debug:   panicked at typen.rs:553: attempt to multiply with overflow
+/// release: u64 in -36893488147419103231 .. 0      ← negative Untergrenze auf u64
+/// ```
+///
+/// > **Ein Überlaufprüfer, dessen Arithmetik überläuft, beweist nichts.** Im Freigabebau fiel
+/// > es nur zufällig noch an `M104`.
+///
+/// *Der Korpus hat 58 blanke `u64`-Parameter und multiplizierte nie zwei davon.*
+#[test]
+fn die_beiden_wachen_sitzen_an_allen_ihren_stellen() {
+    let tief = |q: String| {
+        let (_, a) = gabbro_syntax::lies("t.gab", &q);
+        a.zeige(&q).contains("P038")
+    };
+    // Die drei Stellen, an denen der Wächter fehlte.
+    assert!(
+        tief(format!("module m {{\n{}const X : u32 = 1;\n{}}}\n", "module a {\n".repeat(80), "}\n".repeat(80))),
+        "verschachtelte `module`"
+    );
+    assert!(
+        tief(format!("module m {{\ntype T = {}u32{};\n}}\n", "{ a : ".repeat(60), ", }".repeat(60))),
+        "verschachtelte Verbundtypen"
+    );
+    // Und die drei, an denen er schon sass -- damit die Reparatur keine davon verliert.
+    assert!(
+        tief(format!("module m {{\nconst A : u32 = {}1{};\n}}\n", "(".repeat(200), ")".repeat(200))),
+        "verschachtelte Klammern"
+    );
+
+    // **Die Arithmetik.** `bereich: None` heisst „hierüber weiss M1 nichts" -- die einzige
+    // ehrliche Antwort, wenn die eigene Rechnung nicht mehr trägt.
+    let voll = gabbro_check::typen::IntBereich::voll(64, false);
+    let r = gabbro_check::typen::multipliziere(&voll, &voll);
+    assert!(r.bereich.is_none(), "kein erfundener Bereich");
+    assert!(r.laeuft_ueber, "und der Ueberlauf wird GEMELDET, nicht verschwiegen");
+    // Kein Bereich darf dabei eine negative Untergrenze auf einem vorzeichenlosen Typ tragen.
+    if let Some(b) = gabbro_check::typen::multipliziere(
+        &gabbro_check::typen::IntBereich::genau(64, false, 0, 3),
+        &gabbro_check::typen::IntBereich::genau(64, false, 0, 3),
+    )
+    .bereich
+    {
+        assert!(b.min >= 0, "u64 hat keine negative Untergrenze: {b:?}");
+    }
+}
