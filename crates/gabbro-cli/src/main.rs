@@ -251,6 +251,51 @@ fn main() -> std::process::ExitCode {
                 std::process::ExitCode::SUCCESS
             }
         }
+        // **Stufe 2: das erste Instrument fuer Ziel 3 (2026-08-20).** Von den vier Zielen
+        // hatte „moeglichst gut nutzbar" als einziges keine Zahl. Der Befehl zaehlt jede
+        // Klausel und jede Annotation -- und traegt seine **Kalibrierung mit**: Achse 1 ist
+        // gemessen (steht die Tatsache ein zweites Mal da?), Achse 2 ist erklaert (darf die
+        // Zahl sinken?). *Ohne die zweite misst „Nutzbarkeit" die Menge aller Klauseln und
+        // draengt gegen die Zusage der Sprache.*
+        "zeremonie" => {
+            if rest.iter().any(|x| x == "--tafel") {
+                print!("{}", gabbro_check::zeremonie::tafel());
+                return std::process::ExitCode::SUCCESS;
+            }
+            let ausfuehrlich = rest.iter().any(|x| x == "--je-stelle");
+            let dateien: Vec<&String> = rest.iter().filter(|x| !x.starts_with("--")).collect();
+            if dateien.is_empty() {
+                eprintln!("gabbro zeremonie: no file named");
+                return std::process::ExitCode::from(2);
+            }
+            let mut schlecht = false;
+            for datei in dateien {
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} not readable");
+                    schlecht = true;
+                    continue;
+                };
+                let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
+                // **Der Pruefer laeuft davor, aus demselben Grund wie bei `emit`.** Eine
+                // Zeremoniezahl ueber einem Baum, den die Paesse nicht angenommen haben,
+                // zaehlt Klauseln eines Programms, das Gabbro ablehnt.
+                gabbro_check::pruefe(&baum, &mut absagen);
+                if absagen.fehler_zahl() > 0 {
+                    eprint!("{}", absagen.zeige(&quelle));
+                    eprintln!("gabbro zeremonie: {datei} has errors -- no count");
+                    schlecht = true;
+                    continue;
+                }
+                print!(
+                    "{}",
+                    gabbro_check::zeremonie::zeige(&baum, &quelle, datei, ausfuehrlich)
+                );
+            }
+            if schlecht {
+                return std::process::ExitCode::from(1);
+            }
+            std::process::ExitCode::SUCCESS
+        }
         "schablonen" => {
             print!("{}", gabbro_check::schablonen::zeige());
             std::process::ExitCode::SUCCESS
@@ -293,6 +338,11 @@ fn hilfe() {
                                     What has 0 sites is not checked but UNREACHABLE
   gabbro zeugnis    <file.gab>…     what the translation RESTS ON: assumptions, templates
                                     with proof state, foreign bodies, `asm` lines
+  gabbro zeremonie  [--je-stelle | --tafel] <file.gab>…
+                                    every clause and annotation, in three columns --
+                                    derivable / redundant / load-bearing. The CALIBRATION
+                                    travels with the tool: `--tafel` prints, per rule,
+                                    whether its number may fall AND why
 
 Exit: 0 when there is no error, 1 on errors, 2 on a wrong call."
     );
@@ -426,6 +476,45 @@ fn befehl_pruefe(argumente: &[String]) -> std::process::ExitCode {
             "{datei}: {} Items, {f} Fehler, {h} Hinweise",
             zaehle_items(&baum)
         );
+        // **Folgefehler: die Paesse laufen nach einer Absage des LESERS weiter** -- und
+        // was sie danach melden, kann Truemmer sein. Der Ausschnitt `SYNTAX.md`:533
+        // scheitert am Parser («B8»), damit wird seine `spec fn` nie erklaert, und
+        // `maintains` meldet einen Namen, den es sehr wohl gibt.
+        //
+        // **Entschieden am 2026-08-20 (Stufe 2): NICHT anhalten, aber SAGEN.**
+        //
+        // > Anhalten hiesse, dass ein Lesefehler im dritten Item einen echten `M101` im
+        // > ersten verdeckt -- **Rauschen gegen Schweigen getauscht**, und dieser Ordner
+        // > haelt Schweigen fuer das teurere von beiden. *Die Zeile unten ist der dritte
+        // > Zustand, dieselbe Bauart wie `E009` und `S007`: weder abgesagt noch bestaetigt,
+        // > aber sichtbar.*
+        let lesefehler: Vec<u32> = absagen
+            .absagen
+            .iter()
+            .filter(|a| {
+                a.stufe == gabbro_syntax::Stufe::Fehler
+                    && (a.code.starts_with('P') || a.code.starts_with('L'))
+            })
+            .map(|a| a.span.von)
+            .collect();
+        if let Some(erste) = lesefehler.iter().min() {
+            let danach = absagen
+                .absagen
+                .iter()
+                .filter(|a| {
+                    !(a.code.starts_with('P') || a.code.starts_with('L')) && a.span.von >= *erste
+                })
+                .count();
+            println!(
+                "  {} reader refusal(s), and the passes did NOT stop: {danach} later \
+                 diagnostics may be CONSEQUENCES",
+                lesefehler.len()
+            );
+            println!(
+                "  a body that never parsed declares no names -- what a pass says about it \
+                 is not a finding"
+            );
+        }
         // Die Deckung steht NEBEN dem Ergebnis: „nichts gefunden" und „nichts angesehen"
         // sehen sonst gleich aus.
         if bericht.m1.gesamt() == 0 {

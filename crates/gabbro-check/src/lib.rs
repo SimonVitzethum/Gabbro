@@ -51,6 +51,7 @@ pub mod phasen;
 pub mod schablonen;
 pub mod blindstellen;
 pub mod zeugnis;
+pub mod zeremonie;
 
 /// Was ein Pass heute leistet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

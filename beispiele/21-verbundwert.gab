@@ -60,11 +60,19 @@ impl fn laenge_von(k : u32) -> u32
 {
     -- 4 fuer den Ruf (seine Zusage), 2 fuer die Argumente, 1 fuer die Ablesung.
     --
-    -- **Der Typ steht da, weil der Erzeuger keinen raet.** Er koennte ihn hier aus der
-    -- Signatur des Gerufenen ablesen -- und genau solche Ableitungen sind die Stelle, an
-    -- der ein Erzeuger anfaengt, plausibel zu sein statt richtig. Er weigert sich lieber
-    -- benannt (`C001`).
-    let c : Completion = fertig(k, 7);
+    -- **HIER STAND EINE ANNOTATION, UND SIE WAR ABLEITBAR** (2026-08-20, Stufe 2).
+    --
+    -- `let c : Completion = fertig(k, 7);` -- der Typ stand in der Signatur des Gerufenen
+    -- daneben. `gabbro zeremonie` buchte ihn als die erste ableitbare Stelle des Korpus
+    -- (`A1`), und das Weglassen deckte auf, dass er **zwei Leser** hatte und nur einer ihn
+    -- ablas: `wert_ctyp` senkte richtig zu `Completion c = …` ab, `verbundlokale` kannte
+    -- `c` nicht als Verbund -- und der Feldzugriff wurde `c->len`.
+    --
+    -- > **`gabbro emit` gab 0 zurueck, und `cc` lehnte ab.** Eine stille Absenkung, und
+    -- > gefunden nicht von einem Pass, sondern von der Frage, ob eine Zeile noetig ist.
+    --
+    -- *Beide Formen bleiben abgedeckt:* die annotierte steht in `beispiele/40`.
+    let c = fertig(k, 7);
     return c.len;
 }
 

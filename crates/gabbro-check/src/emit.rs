@@ -174,8 +174,24 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
     };
     for s in &b.anweisungen {
         match &s.art {
-            StmtArt::Let(l) if l.typ.as_ref().is_some_and(|t| ist_verbund(t)) => {
-                aus.push(l.name.text.clone())
+            StmtArt::Let(l) => {
+                // **Steht keine Annotation da, wird der Typ ABGELESEN** -- genau wie in
+                // `wert_ctyp`, und bis zum 2026-08-20 tat das nur der eine der beiden
+                // Sammler. Die Folge war eine STILLE Absenkung: `let c = fertig(k, 7);`
+                // wurde richtig zu `Completion c = fertig(k, 7);`, und der Feldzugriff
+                // darauf zu `c->len` -- weil dieser Sammler `c` nicht als Verbund kannte.
+                // **`gabbro emit` gab 0 zurueck, `cc` lehnte ab.**
+                //
+                // > *Gefunden am 2026-08-20 von der Zeremoniefrage:* die Annotation stand
+                // > im TODO als ableitbare Zeremonie, und der Versuch, sie wegzulassen,
+                // > deckte auf, dass sie zwei Leser hat und nur einer sie ablas.
+                let ist = match &l.typ {
+                    Some(t) => ist_verbund(t),
+                    None => verbundwert(&l.wert, u),
+                };
+                if ist {
+                    aus.push(l.name.text.clone())
+                }
             }
             StmtArt::Wenn(w) => {
                 for (_, r) in &w.zweige {
@@ -201,6 +217,34 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
             },
             _ => {}
         }
+    }
+}
+
+/// **Liefert dieser Ausdruck einen VERBUNDWERT?** -- abgelesen aus der Deklaration des
+/// Gerufenen, nicht geraten.
+///
+/// Dieselbe Quelle wie `wert_ctyp`: der erklaerte Rueckgabetyp. *Zwei Register ueber
+/// derselben Sache laufen auseinander* (W7) -- und genau das war der Fehler, den diese
+/// Funktion schliesst.
+fn verbundwert(e: &Expr, u: &Namen) -> bool {
+    match &e.art {
+        ExprArt::Klammer(x) => verbundwert(x, u),
+        ExprArt::Ruf(r) => {
+            let Some(n) = r.pfad.teile.last() else { return false };
+            // **Ein Verbundkonstruktor ist kein Ruf** («B7»): `Completion(id: …)` nennt den
+            // Typ selbst.
+            if u.verbunde.contains(&n.text) {
+                return true;
+            }
+            match u.funktionen.get(&n.text).and_then(|s| s.rueck.as_ref()) {
+                Some(TypExpr::Pfad(p)) => p
+                    .teile
+                    .last()
+                    .is_some_and(|x| u.verbunde.contains(&x.text)),
+                _ => false,
+            }
+        }
+        _ => false,
     }
 }
 
