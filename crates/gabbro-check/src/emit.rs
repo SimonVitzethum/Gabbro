@@ -4688,12 +4688,23 @@ fn traverse(
             // heisst: jeder Slot einmal -- das ist die Laufform selbst. `by consuming` und
             // `by decreasing` sagen etwas ueber die Erhaltung einer Ordnung und haetten hier
             // eine andere Laufform; sie werden abgelehnt.
-            if !matches!(x.abstieg, Abstieg::Unbesucht) {
+            // **Stufe 3 hat entschieden, was der Abstieg fuer den LAUF heisst** (2026-08-20):
+            //
+            //   `by unvisited`   jedes Element einmal, Reihenfolge offen
+            //   `by decreasing`  DASSELBE -- das Mass ist ein Terminierungszeuge und sagt
+            //                    ueber den Lauf nichts, was `unvisited` nicht schon sagt
+            //   `by consuming`   dasselbe PLUS die Entnahme, und die ist eine Operation
+            //
+            // *Bis dahin stand hier „what it means for the run is not decided" fuer beide --
+            // und das war fuer `by decreasing` eine offene Frage ueber etwas, das gar keine
+            // Laufwirkung hat.* Was bleibt, ist `by consuming`: die Entnahme ist erzeugter
+            // Code (`ops`), und ihn zu erfinden waere ein anderes Programm.
+            if matches!(x.abstieg, Abstieg::Verbrauchend) {
                 weigere(
                     absagen,
                     s.span,
-                    "`slots of … by consuming`/`by decreasing` -- the witness ordering is a \
-                     proof device; what it means for the run is not decided",
+                    "`by consuming` -- the run form is the same walk PLUS the removal, and \
+                     the removal is a generated `ops` operation this emitter does not have",
                 );
                 return;
             }
@@ -4720,6 +4731,50 @@ fn traverse(
             } else {
                 format!("{}->slots", ort(o, u, absagen))
             };
+            let v = &x.variable.text;
+            aus.push_str(&format!(
+                "{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
+            ));
+            for k in &x.rumpf.anweisungen {
+                anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+            }
+            aus.push_str(&format!("{e}}}\n"));
+            return;
+        }
+        // **«B12» ist entschieden: `elems of` bindet einen INDEX** (Stufe 3, 2026-08-20).
+        //
+        // Der Korpus benutzte beide Lesarten, und zwar an tragenden Stellen: F3 schreibt
+        // `forall i in elems of dst.msg : dst.msg[i] == old(src.msg[i])` (Index), F6
+        // schreibt `traverse w over elems of s.worte { if w != MUSTER … }` (Element).
+        //
+        // Drei Gruende, und der erste entscheidet allein:
+        //
+        //   1. **Der Index ist echt maechtiger.** Aus dem Index bekommt man das Element
+        //      (`p[i]`); aus dem Element den Index nicht. Die Aussage *„beide Felder stimmen
+        //      an derselben Stelle ueberein"* -- `msg_kopiert`, die tragende Zusage des
+        //      IPC-Fastpath -- ist unter der Elementlesart NICHT schreibbar.
+        //   2. **Es passt zu den anderen.** `slots of`, `descendants of`, `ancestors of`
+        //      binden alle eine ADRESSE. Nur `mappings of` bindet einen Verbund, und seine
+        //      Deklaration sagt das -- eine Abbildung hat keine einzelne Adresse.
+        //   3. **Es nimmt Zeremonie weg.** F6 fuehrt heute einen Zaehler `i` NEBEN der
+        //      Traversierung mit, nur um die Stelle zu kennen. Unter der Indexlesart ist die
+        //      Laufvariable diese Stelle.
+        //
+        // *Und der Einwand gegen den Namen ist beantwortet, nicht uebergangen:* **eine
+        // Domaene heisst nach dem, WORUEBER sie laeuft, nicht nach dem, was die Variable
+        // haelt.** `slots of` bindet ebenfalls einen Index; das ist ab heute eine Regel und
+        // kein Zufall.
+        Domaene::ElementeVon(o) => {
+            if matches!(x.abstieg, Abstieg::Verbrauchend) {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`elems of … by consuming` -- an array element is not removed; \
+                     consumption needs a carrier with generated `ops`",
+                );
+                return;
+            }
+            let feld = ort(o, u, absagen);
             let v = &x.variable.text;
             aus.push_str(&format!(
                 "{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
@@ -4761,31 +4816,32 @@ fn traverse(
             "`queue` -- «B10»: `traverse` yields no value and knows no `break`, so \
              `by consuming` drains the WHOLE queue; that is a different program"
         }
-        Domaene::ElementeVon(_) => {
-            "`elems of` -- «B12» is open: whether it binds an ELEMENT or an INDEX is used \
-             both ways in the specification and fixed nowhere"
-        }
-        // **UND HIER STEHT KEIN BAUPOSTEN, SONDERN EIN FEHLER IM KOSTENPASS** (2026-08-17).
+
+        // **DIE LESART IST SEIT STUFE 3 ENTSCHIEDEN, DIE ABSENKUNG NICHT** (2026-08-20).
         //
-        // `SPRACHE.md`:786 sagt: *„`mappings of` quantifies over ALL reachable leaf entries
-        // of a `walk` structure."* Der Kostenpass rechnet dafuer `walkschranken` =
-        // **Ebenen mal Knotenlaenge** (`umgebung.rs`, `kosten.rs`:362) -- bei vier Ebenen zu
-        // 512 Eintraegen also **2 048**.
+        // Bis dahin stand hier ein FEHLER IM KOSTENPASS: `SPRACHE.md`:786 sagt *„quantifies
+        // over ALL reachable leaf entries"*, und `walkschranken` rechnete **Ebenen mal
+        // Knotenlaenge** -- 2 048 statt 512^4 = 68 719 476 736. **Sieben Groessenordnungen**,
+        // und der Pass zaehlte EINEN Abstiegspfad und nannte es die Domaene.
         //
-        // > **Die Zahl der erreichbaren Blaetter ist 512^4 = 68 719 476 736.** Sieben
-        // > Groessenordnungen. *Der Pass zaehlt EINEN Abstiegspfad und nennt es die Domaene.*
+        // *Dieselbe Klasse, die dieser Ordner zweimal bezahlt hat* -- `revoke` sagte 200 ops
+        // zu und kostet 16 452 480, A4 sagte 4 096 zu und kostet 831 488. Beide Male war es
+        // ein MENSCH, der den typischen Fall statt der Schranke schrieb, und der Pass hat es
+        // gefangen. **Hier war es der Pass selbst.**
         //
-        // **Das ist dieselbe Klasse, die dieser Ordner zweimal bezahlt hat** -- `revoke` sagte
-        // 200 ops zu und kostet 16 452 480, A4 sagte 4 096 zu und kostet 831 488. Beide Male
-        // war es ein MENSCH, der den typischen Fall statt der Schranke schrieb, und der Pass
-        // hat es gefangen. **Hier ist es der Pass selbst.**
+        // **Entschieden wurde fuer die MENGE**, und der Grund ist aelter als der Pass: die
+        // Domaene wurde gebaut, damit W^X ueber die ganze Tabelle formulierbar wird, und W^X
+        // ist eine Aussage ueber die Menge -- ueber einen Pfad ist sie sinnlos. `umgebung.rs`
+        // rechnet seither `Knotenlaenge ^ levels`.
         //
-        // Absenken hiesse, die kleinere der beiden Lesarten still zu waehlen.
+        // Was bleibt, ist ein BAUPOSTEN und keine offene Frage: eine Laufzeit-Traversierung
+        // ueber die Blattmenge braucht einen **erzeugten rekursiven Abstieg** entlang `down`
+        // und `leaf`. *Und sie wird danach keine Kostenzusage tragen -- das ist die Folge der
+        // Entscheidung und wird ausgehalten, nicht wegdefiniert.*
         Domaene::AbbildungenVon(_) => {
-            "`mappings of` -- SPRACHE.md:786 says it quantifies over ALL reachable leaf \
-             entries, but the cost pass bounds it at levels x node length (2048 for a \
-             four-level table of 512), while the leaves number 512^4. **Seven orders of \
-             magnitude**, and lowering it would silently pick the smaller reading"
+            "`mappings of` -- the reading is DECIDED (the leaf SET, because W^X is a \
+             statement about the set), and the cost bound now says so. What is missing is \
+             the lowering: it needs a generated recursive descent along `down` and `leaf`"
         }
         Domaene::KetteIn { .. } => "`chain in` -- the sibling chain needs its own bound",
         Domaene::FelderVon(_) => "`fields of` -- a register field list is not a runtime domain",

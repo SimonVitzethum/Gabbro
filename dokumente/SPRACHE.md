@@ -869,10 +869,26 @@ domain = "slots" "of" place | "chain" "(" ident "," ident ")" "in" place
 
 **Eight domains, closed. Nesting at most two. `old(place)` only in `ensures`.**
 
+**A domain binds the ADDRESS of an entry** — `slots of`, `elems of`, `descendants of`,
+`ancestors of`, `queue` all bind an index or handle, and the element is `p[i]`. The name says
+what is ranged over, not what the variable holds *(decided 2026-08-20; from an index one gets
+the element, from an element not the index)*. **`mappings of` is the one exception** and the
+next paragraph says why.
+
 `mappings of` quantifies over all reachable leaf entries of a `walk` structure, including virtual
 address and level — with that **W^X over the two-level page table** (`mmu.rs:1283`, the one
 unformulable obligation of the measurement) becomes formulable. The domain is **generated from the
 declaration**, not user-defined: the line stands.
+
+> **And the number is `node length ^ levels`, not `levels × node length`** *(corrected
+> 2026-08-20)*. For four levels of 512 entries that is **68 719 476 736**, not 2 048 — seven
+> orders of magnitude, and the cost pass carried the smaller figure for three days. *It counted
+> one descent PATH and called it the domain.*
+>
+> **The consequence is carried, not defined away:** a RUN-TIME traversal over `mappings of`
+> can therefore hold no cost promise. That is true, and the other reading would have been a
+> promise nobody keeps. The set reading is the one the domain was built for — **W^X is a
+> statement about the set; over a path it is meaningless.**
 
 Unchanged: no user-defined quantifier domains, no recursion in `spec fn`, no handwritten lemmas.
 The one exception remains `by induction over <domain>` — it **names** the generated scheme

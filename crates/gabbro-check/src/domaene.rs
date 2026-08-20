@@ -76,9 +76,15 @@ impl<'a> Sicht<'a> {
             // e.slots[core].receivers` war die letzte Stelle, an der Tor P2 haengte.
             Domaene::Schlange(o) => return self.arraylaenge_im_verbund(o),
             // **`mappings of` -- die Schranke steht in der `walk`-Deklaration.**
-            // `levels` mal Knotenlaenge; sie ist dort ausgesprochen und nirgends sonst.
             // Gefunden am MMU-Fragment: dieselbe Klasse wie `queue` -- eine Schranke, die
             // dasteht und die der Pass nicht las, also `K003` sagte statt zu rechnen.
+            //
+            // **Seit Stufe 3 ist es `Knotenlaenge ^ levels`** und nicht mehr `levels x
+            // Knotenlaenge` -- siehe `umgebung.rs::walkschranken`. Die Lesart ist
+            // entschieden: die Domaene ist die BLATTMENGE, weil sie gebaut wurde, damit W^X
+            // ueber die ganze Tabelle formulierbar wird. *Eine Kostenzusage ueber einer
+            // Laufzeit-Traversierung darueber gibt es damit nicht mehr, und das ist die
+            // wahre Aussage statt der bequemen.*
             Domaene::AbbildungenVon(o) => {
                 // Der Ort nennt den PARAMETER (`mappings of w`), nicht den Walk -- der
                 // Name kommt aus dem Typ, wie bei den Tabellen.

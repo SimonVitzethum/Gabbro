@@ -14,9 +14,26 @@
 --      das SPEICHERMODELL. Sie gehoert in die Axiomschicht, nicht in einen Pass.
 --   2. `walk … levels EBENEN` -- die Stufenzahl ist ein KONSTANTENNAME, keine Zahl, und der
 --      Erzeuger loest ihn nicht auf. *Der Wert steht drei Zeilen weiter oben.*
---   3. `mappings of` -- `SPRACHE.md`:786 sagt, es quantifiziert ueber ALLE erreichbaren
---      Blaetter; der Kostenpass schrankt bei `levels x Knotenlaenge`. **Sieben
---      Groessenordnungen**, und eine Absenkung waehlte stillschweigend die kleinere Lesart.
+--   3. ~~`mappings of` -- `SPRACHE.md`:786 sagt, es quantifiziert ueber ALLE erreichbaren
+--      Blaetter; der Kostenpass schrankt bei `levels x Knotenlaenge`. Sieben
+--      Groessenordnungen.~~ **ENTSCHIEDEN am 2026-08-20 (Stufe 3): es ist die BLATTMENGE.**
+--
+--      *Und diese Datei bezahlt die Entscheidung sofort.* Die Zeile darunter sagt
+--      `costs <= 4096 ops` und nennt als Begruendung `levels` mal Knotenlaenge -- also
+--      genau die kleinere Lesart. Der Kostenpass rechnet seither die Blaetter, und
+--      `rechte_pruefen` faellt mit
+--
+--          [K001] promises <= 4096 ops, the body costs 137438953472
+--
+--      **Der Fehler stand seit dem Schnitt in dieser Datei und war nicht sichtbar, solange
+--      der Pass dieselbe falsche Lesart trug wie der Mensch, der die Zeile schrieb.** Zwei
+--      Register ueber derselben Sache, und beide falsch (W7). *Der Wortlaut des Ausschnitts
+--      bleibt stehen; was hier faellt, ist eine echte Zusage, die niemand haelt.*
+--
+--      Damit prueft F9 nicht mehr sauber -- **6 von 10 statt 7**, und das ist der Preis
+--      einer entschiedenen Lesart. Eine Laufzeit-Traversierung ueber die Blattmenge kann
+--      keine Kostenzusage tragen; die Form, die eine tragen kann, ist ein Abstieg entlang
+--      EINES Pfades, und die hat noch keinen Namen (Stufe 4).
 --
 -- *Das ist der Sinn dieses Korpus:* nach der Vervollstaendigung steht da, was GABBRO fehlt,
 -- und nicht mehr, was dem Ausschnitt fehlt.

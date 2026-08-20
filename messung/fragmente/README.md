@@ -30,8 +30,8 @@ Ergänzt werden **nur** Deklarationen, die der Ausschnitt ruft und nicht nennt. 
 
 ```
 $ ./zaehle-fragmente.py
-7 von 10 prüfen sauber        (vorher: 5)
-4 von 10 senken ab            (vorher: 3)
+6 von 10 prüfen sauber        (über den Ausschnitten: 5; am 2026-08-20 kurz 7)
+4 von 10 senken ab            (über den Ausschnitten: 3)
 ```
 
 | | ergänzt | was danach noch fällt |
@@ -43,7 +43,7 @@ $ ./zaehle-fragmente.py
 | **F5** | neun Konstanten, fünf `extern fn` mit Kanal, ein `assume` | 3× `Status::…` — derselbe Befund wie F1 |
 | **F6** | zwei Konstanten, `IrqMarke`+`static irq`, zwei Kanäle, ein Tor | — *prüft sauber*; Absenkung an «B12» `elems of` |
 | **F7 F8 F10** | nichts | — *waren schon Programme* |
-| **F9** | zwei `reserved`-Felder | — *prüft sauber*; drei Gabbro-Absagen, siehe Kopf der Datei |
+| **F9** | zwei `reserved`-Felder | **`K001`** — die Zusage `costs <= 4096 ops` ist seit Stufe 3 nachrechenbar **falsch** (137 438 953 472). Siehe Kopf der Datei |
 
 ## Der Ertrag: drei Befunde, die der eingefrorene Korpus nicht zeigen konnte
 
@@ -52,6 +52,16 @@ $ ./zaehle-fragmente.py
 **2. Ein `reason`-Wert hat keinen Erzeuger.** `primary` (`SYNTAX.md`:405) kennt keine Produktion dafür. **Jede `-> T or R`-Signatur im Korpus steht an einem `extern fn`** — an einem Rumpf, den Gabbro nie sieht. *Keine einzige Gabbro-Funktion erzeugt je einen Grund.*
 
 > **Dieselbe Gestalt wie «B9» bei `fnptr`:** eine Form, die man deklarieren und nicht herstellen kann. Erst der Erzeuger, dann der Vertrag.
+
+**5. Nachgetragen am 2026-08-20 (Stufe 3): die entschiedene Lesart hat ein Fragment
+GEKOSTET, und das ist der Ertrag.** `mappings of` heißt seither die **Blattmenge**, und F9s
+Zeile `costs <= 4096 ops` — begründet im Ausschnitt mit *„`levels` mal `node`-Länge"* — ist
+damit nachrechenbar falsch: der Rumpf kostet **137 438 953 472**.
+
+> **Der Fehler stand seit dem Schnitt in der Datei und war unsichtbar, solange der Pass
+> dieselbe falsche Lesart trug wie der Mensch, der die Zeile schrieb.** Zwei Register über
+> derselben Sache, und beide falsch (W7). *Eine Zahl fällt von 7 auf 6 — und was fällt, ist
+> eine Zusage, die niemand hält.*
 
 **4. Nachgetragen am 2026-08-20 (Stufe 2): «B11» ist veraltet, und die Korrektur steht im
 Kopf von F5.** `forever` hat sehr wohl einen Ausgang — `leave <marke>` steht in der Grammatik

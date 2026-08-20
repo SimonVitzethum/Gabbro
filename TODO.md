@@ -396,7 +396,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       *Die schärfere Frage bleibt dieselbe wie beim Schablonenregister: fällt an dieser Zelle je
       etwas?* — also **Mutation oder Giftprobe je KOMBINATION, nicht je Konstrukt.**
       **Woran es hängt, jetzt beziffert:** 164 Kombinationen brauchten je eine Probe; der
-      Mutationskatalog trägt heute 234 Anker, also liegt die Größenordnung neben dem, was schon
+      Mutationskatalog trägt heute 235 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
 - [ ] **44 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./pruefe-gruende.py`,
@@ -468,7 +468,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **794 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **793 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       **Und der Befund ist, dass es nicht null war:** der erste Lauf fand **16** Nahtstellen —
       ein Jahr nachdem die 161 von Hand geflickt worden waren. *Von Hand geflickt heißt: nicht
       bewacht.* Darunter `„…is verified--"`, `„…the rule therefore has**zero bite**"` und
@@ -632,7 +632,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **234 von 234 Ankern** greifen (`--anker`, 2026-08-20) — die
+      fällt. Mutationskatalog: **235 von 235 Ankern** greifen (`--anker`, 2026-08-20) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -685,7 +685,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       erst in der Annotationsemission — derselbe fehlende Kanal wie zwei Punkte tiefer.
 
 - [ ] **The annotation emission needs template entries of its own and mutations of its own.**
-      Der Mutationskatalog misst heute den Prüfer (234 Anker); über den **Wunschform-Kanal**
+      Der Mutationskatalog misst heute den Prüfer (235 Anker); über den **Wunschform-Kanal**
       sagt er nichts — und genau dort wird ein kohärent geschwächter Erzeuger **von keinem
       Beweis** gefangen.
       *Berichtigt 2026-08-20: hier stand „65 von 65", und diese Zahl gibt es nicht mehr.*
@@ -939,49 +939,77 @@ Wirklichkeit berührt; kehrte er zurück, wäre sie eine Zahl ohne Folge. Der Fe
 
 # STUFE 3 — DIE OFFENEN LESARTEN ENTSCHEIDEN
 
-**Der billigste Posten des ganzen Plans.** Drei Konstrukte stehen in der Grammatik und werden in
-der Spezifikation in **zwei Lesarten** benutzt. Eine Entscheidung kostet **keine neue Grammatik
-und keine neue Schablone** — also **keine Vertrauensfläche**. Jede entsperrt ein Fragment und
-eine Schleifenfamilie.
+**Der billigste Posten des Plans — und er hat trotzdem etwas gekostet.** Drei Konstrukte
+standen in der Grammatik und wurden in **zwei Lesarten** benutzt. **AUSGEFÜHRT am 2026-08-20**,
+ohne ein neues Terminal und ohne eine neue Schablone:
 
-* **`elems of`** — bindet es ein ELEMENT oder einen INDEX? `SYNTAX.md` benutzt beides («B12»).
-* **`mappings of`** — ein Pfad oder die Blattmenge? Sieben Größenordnungen Unterschied.
-* **`by consuming`** — leert es die ganze Schlange? Heute ja, und das ist ein anderes Programm («B10»).
+| | entschieden | und die Begründung, die allein trägt |
+|---|---|---|
+| **«B12» `elems of`** | bindet einen **INDEX** | *Aus dem Index bekommt man das Element, aus dem Element den Index nicht.* `forall i in elems of dst.msg : dst.msg[i] == old(src.msg[i])` — die tragende Zusage des IPC-Fastpath — ist unter der Elementlesart **nicht schreibbar** |
+| **«B10» `by consuming`** | leert die **ganze** Schlange, *und das ist die Bedeutung* | Der Fastpath will den ersten lebenden Empfänger und hört dann auf. **Das ist eine andere Schleifenform, keine andere Lesart dieser.** `traverse` liefert keinen Wert und trägt keine Marke, kann also nicht verlassen werden |
+| **`mappings of`** | die **Blattmenge** | Die Domäne wurde gebaut, damit **W^X über die ganze Tabelle** formulierbar wird. *W^X ist eine Aussage über die Menge; über einen Pfad ist sie sinnlos* |
 
-*Das ist der einzige Posten, der Ziel 1 und 4 bedient, ohne Ziel 2 zu belasten. Deshalb steht er
-vor allem Bauen.*
+**Und eine Regel statt acht Einzelfälle:** *eine Domäne bindet die **Adresse** eines Eintrags
+und heißt nach dem, **worüber** sie läuft — nicht nach dem, was die Variable hält.* `slots of`
+bindet ebenfalls einen Index; das ist seit heute eine Regel und kein Zufall. Die eine Ausnahme
+ist `mappings of`, dessen Einträge keine einzelne Adresse haben — und dessen Deklaration das
+sagt.
 
-### Die drei Lesarten, je als eigener Punkt
+## Ein vierter Fall fiel beim Entscheiden mit ab
 
-- [ ] **«B12»: bindet `elems of` ein ELEMENT oder einen INDEX?** *(offen seit 2026-08-14,
-      `FRAGMENTE.md`:619-622)*. `SYNTAX.md` **benutzt beide Lesarten und legt keine fest** —
-      und daneben steht `slots of`, das einen Index bindet. *Zwei Domaenen, die gleich
-      aussehen und Verschiedenes binden, sind die stillste Fehlerform, die eine Spezifikation
-      hat.* Der Erzeuger sagt es beim Namen ab (`C001`, F6), also ist der Bedarf gemessen und
-      nicht entworfen. **Kosten der Entscheidung: kein Terminal, keine Schablone.**
-- [ ] **«B10»: `by consuming` leert die GANZE Schlange, und das ist ein anderes Programm**
-      *(gemessen an F3)*. `traverse` liefert keinen Wert und kennt kein `break` — wer eine
-      Nachricht entnehmen will, entnimmt alle. **Die Frage ist nicht, ob das ein Fehler ist,
-      sondern ob es die gewollte Bedeutung ist**; heute steht die Antwort nirgends, und der
-      Erzeuger weigert sich deshalb zu Recht. *Zusammen mit dem Leser-Befund in Stufe 5
-      (`by consuming` liest kein Pass) ist das dieselbe Sache von zwei Seiten: die eine Haelfte
-      fehlt in der Bedeutung, die andere im Pruefer.*
+`by decreasing` wurde zusammen mit `by consuming` abgelehnt, mit *„was es für den Lauf heißt,
+ist nicht entschieden"*. **Für `by decreasing` war das eine offene Frage über etwas, das gar
+keine Laufwirkung hat:** das Maß ist ein Terminierungszeuge. Die drei stehen jetzt getrennt —
+`by unvisited` und `by decreasing` **laufen gleich**, und nur `by consuming` trägt die Entnahme,
+die erzeugter Code ist.
 
-### From the emitter (2026-08-17) — the cost pass carries the typical case
+## Was die Entscheidungen gekostet haben, und warum das der Ertrag ist
 
+```
+messung/fragmente/  7 von 10 prüfen sauber  →  6 von 10
+```
 
-- [ ] **`mappings of`: the cost pass under-counts by seven orders of magnitude.**
-      [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md):786 says it quantifies over **ALL
-      reachable leaf entries** of a `walk`; the pass bounds it at `levels × node length`
-      (`kosten.rs`:362, `walkschranken`) — **2 048** for four levels of 512, where the leaves
-      number **512^4 = 68 719 476 736**. *The pass counts one descent PATH and calls it the
-      domain.*
-      **This is the class the folder has paid for twice** — `revoke` promised 200 ops and costs
-      16 452 480, A4 promised 4 096 and costs 831 488. **Both times a HUMAN wrote the typical
-      case instead of the bound and the pass caught it. Here it is the pass itself.**
-      Either the domain means a path (then `SPRACHE.md`:786 is wrong and the name misleads) or
-      it means the set (then no `walk` traversal can carry a cost promise). *The emitter
-      refuses rather than pick the smaller reading.*
+**F9 sagt `costs <= 4096 ops` zu und der Rumpf kostet 137 438 953 472.** Die Zeile begründet
+sich im Ausschnitt mit *„`levels` mal `node`-Länge"* — also mit genau der kleineren Lesart, die
+auch der Kostenpass trug.
+
+> **Der Fehler stand seit dem Schnitt in der Datei und war unsichtbar, solange der Pass
+> dieselbe falsche Lesart trug wie der Mensch, der die Zeile schrieb.** Zwei Register über
+> derselben Sache, und beide falsch (W7). *Eine entschiedene Lesart macht aus einer
+> unsichtbaren Zusage eine gemessene Absage.*
+
+Und dieselbe Klasse ein zweites Mal, eine Ebene höher: der Mutationskatalog meldete danach
+**zwei Mutationen, die nichts mehr messen** — ein Anker war verschwunden, einer doppelt. *Ein
+Katalog, dessen Anker unter ihm wegwandern, misst über einer schrumpfenden Bezugsgröße und
+liest sich wie Deckung.* Beide sind umgezogen, 235 von 235 greifen.
+
+### Was diese Stufe offen lässt
+
+- [ ] **Eine Laufzeit-Traversierung über `mappings of` trägt keine Kostenzusage — das ist die
+      FOLGE der Entscheidung und wird ausgehalten** *(2026-08-20)*. Die Form, die eine tragen
+      kann, ist ein Abstieg entlang **eines** Pfades — genau die Zahl, die der Kostenpass bis
+      heute geführt hat (`levels × Knotenlänge`). **Sie hat keinen Namen.** *Ihn zu vergeben
+      kostet ein Terminal und gehört damit nicht in diese Stufe*; was er beschreibt, steht
+      dagegen fest, und der Bedarf ist an F9 gemessen statt entworfen.
+
+- [ ] **Die Absenkung von `mappings of` fehlt, und sie ist jetzt ein BAUPOSTEN statt einer
+      Frage** *(2026-08-20)*. Eine Traversierung über die Blattmenge braucht einen **erzeugten
+      rekursiven Abstieg** entlang `down` und `leaf`. Der Erzeuger sagt es beim Namen ab
+      (`C001`), und die Absage nennt seit heute den Bauposten statt der offenen Lesart.
+
+- [ ] **`by consuming` senkt nicht ab, weil die ENTNAHME erzeugter Code ist** *(2026-08-20)*.
+      Die Bedeutung steht fest; was fehlt, ist die `ops`-Operation, die den Eintrag entfernt.
+      *Zusammen mit dem Leser-Befund in Stufe 5 (`by consuming` liest kein Pass) ist das
+      dieselbe Sache von zwei Seiten* — und die Hälfte, die in der **Bedeutung** fehlte, ist
+      jetzt gefüllt.
+
+- [ ] **Drei Domänen binden weiter eine Variable ohne TYP** *(gesehen 2026-08-20 beim
+      Entscheiden von «B12»)*. M1 setzt die Laufvariable einer `traverse` auf `Unbekannt` —
+      für `slots of`, `descendants of` und `ancestors of` genauso wie für `elems of`. **Die
+      Schranke steht in der Deklaration und wird für die Kosten gelesen, für den Wert nicht:**
+      `p[i]` innerhalb der Schleife ist damit nicht nachweislich im Bereich. *Das ist kein
+      Loch der Entscheidung, sondern eines, das sie sichtbar gemacht hat* — und es ist an
+      allen vier Domänen dasselbe, also eine Änderung und nicht vier.
 
 ---
 

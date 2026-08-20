@@ -572,16 +572,43 @@ impl fn loesche(w : ptr<normal, rw> W) effects { writes w.slots } costs <= 64 op
     assert!(c.contains("sizeof(w->slots)"), "durch den Zeiger, nicht mit `.`:\n{c}");
     assert!(!c.contains("(void)w;"), "der traversierte Traeger ist nicht tot:\n{c}");
 
-    // **2. Eine andere Zeugenordnung ist eine andere Laufform.** `by consuming` sagt etwas
-    // ueber die Erhaltung einer Ordnung -- was es fuer den LAUF heisst, ist nicht entschieden.
+    // **2. Der Abstieg ist seit Stufe 3 entschieden, und zwar UNGLEICH** (2026-08-20).
+    //
+    // Bis dahin stand hier *„was es fuer den LAUF heisst, ist nicht entschieden"* -- fuer
+    // BEIDE Ordnungen, und fuer `by decreasing` war das eine offene Frage ueber etwas ohne
+    // Laufwirkung. Die Entscheidung trennt sie:
+    //
+    //   `by decreasing`  ein Terminierungszeuge, LAEUFT wie `by unvisited`
+    //   `by consuming`   derselbe Lauf PLUS die Entnahme -- und die ist erzeugter Code
     let (_, f) = c_von(
         "module t { table W count 16 { slot { a : bool, } }
 impl fn loesche(w : ptr<normal, rw> W) effects { writes w.slots } costs <= 64 ops
 { traverse i over slots of w by consuming touches writes w.slots { w.slots[i].a = false; } } }",
     );
     assert!(
-        f.iter().any(|s| s.contains("witness ordering")),
-        "`by consuming` darf nicht wie `by unvisited` laufen: {f:?}"
+        f.iter().any(|s| s.contains("the removal")),
+        "`by consuming` braucht die Entnahme und darf nicht wie `by unvisited` laufen: {f:?}"
+    );
+    let (c, f) = c_von(
+        "module t { table W count 16 { slot { a : bool, } }
+impl fn loesche(w : ptr<normal, rw> W) effects { writes w.slots } costs <= 64 ops
+{ traverse i over slots of w by decreasing (16 - i) touches writes w.slots { w.slots[i].a = false; } } }",
+    );
+    assert!(f.is_empty(), "`by decreasing` hat keine Laufwirkung und senkt ab: {f:?}");
+    assert!(c.contains("i < (uint32_t)(sizeof("), "dieselbe Laufform wie `by unvisited`:\n{c}");
+
+    // **2b. «B12» ist entschieden: `elems of` bindet einen INDEX.** Aus dem Index bekommt
+    // man das Element, aus dem Element den Index nicht -- und `msg_kopiert` (*„beide Felder
+    // stimmen an derselben Stelle ueberein"*) ist unter der Elementlesart nicht schreibbar.
+    let (c, f) = c_von(
+        "module t { type S = { worte : [u32; 8], };
+impl fn loesche(s : ptr<normal, rw> S) effects { writes s } costs <= 64 ops
+{ traverse i over elems of s.worte by unvisited touches writes s { s.worte[i] = 0; } } }",
+    );
+    assert!(f.is_empty(), "`elems of` senkt ab: {f:?}");
+    assert!(
+        c.contains("sizeof(s->worte)"),
+        "die Schranke kommt aus dem Feld selbst, nicht aus einer Tabelle:\n{c}"
     );
 
     // **3. `forever` senkt ab, und die Klausel wird ein GEPRUEFTER BEZUG** (2026-08-20).

@@ -99,14 +99,14 @@ EINTRAEGE = [
     ),
     (
         "messung/ZEREMONIE.md",
-        r"(\d+) von 882 Stellen dürfen sinken",
+        r"(\d+) von \d+ Stellen dürfen sinken",
         ["./zaehle-zeremonie.py"],
         r"^  (\d+) von \d+ Stellen duerfen sinken",
         "Zeremoniestellen, die sinken duerfen -- Ziel 3",
     ),
     (
         "messung/ZEREMONIE.md",
-        r"51 von (\d+) Stellen dürfen sinken",
+        r"\d+ von (\d+) Stellen dürfen sinken",
         ["./zaehle-zeremonie.py"],
         r"^  \d+ von (\d+) Stellen duerfen sinken",
         "Zeremoniestellen insgesamt -- das N zur Quote (W11)",

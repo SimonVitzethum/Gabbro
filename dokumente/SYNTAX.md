@@ -487,7 +487,9 @@ domain     = "slots" "of" place                  (* die Slots einer Tabelle *)
                 sie braucht von `treedecl` nur `parent` *)
            | "queue" place
            | "fields" "of" path
-           | "elems" "of" place
+           | "elems" "of" place     (* «B12», decided 2026-08-20: binds an INDEX into the
+                array, like `slots of`. A domain is named after WHAT it ranges over, not
+                after what the variable holds -- see the note under the table *)
            | "threads"
            | "mappings" "of" place ;             (* erzeugt aus einer walk-Deklaration;
                 das Element traegt va, level und index[level] -- P0 Teil 4b: der echte W^X-Audit
@@ -496,6 +498,19 @@ member     = expr "in" domain ;
 reach      = place "reaches" place "via" ident ;
 predlist   = pred { "," pred } ;
 ```
+
+> **What a domain BINDS -- decided 2026-08-20 (stage 3), and it is one rule, not eight.**
+>
+> **A domain binds the ADDRESS of an entry, and it is named after what it ranges over.**
+> `slots of`, `elems of`, `descendants of`, `ancestors of` and `queue` all bind an index or
+> handle; the element is then `p[i]`. **The single exception is `mappings of`**, whose
+> entries have no single address -- it binds the record the `walk` declaration generates
+> (`va`, `level`, `index[level]`), and the declaration says so.
+>
+> *The reason is expressiveness, not taste:* from an index one gets the element, from an
+> element not the index. `forall i in elems of dst.msg : dst.msg[i] == old(src.msg[i])` --
+> the load-bearing promise of the IPC fastpath -- **is not writable under the element
+> reading**, and it was the occasion for the domain.
 
 **Eight domains, closed. Nesting at most two.** `old(place)` is permitted in `ensures`
 and nowhere else.
@@ -730,6 +745,21 @@ forever    = "forever" [ ident ]
 | Form | ends? | what discharges the plumbing |
 |---|---|---|
 | **`traverse`** | yes, through the set | range **and** termination; `by consuming` additionally the leafness via the ordering of the domain |
+
+**And what the descent witness means FOR THE RUN — decided 2026-08-20 (stage 3):**
+
+| | proves | run |
+|---|---|---|
+| **`by unvisited`** | each entry once | walk the whole domain, order open |
+| **`by decreasing e`** | `e` falls each pass — termination | **the same walk.** The measure is a witness and says nothing about the run that `unvisited` does not |
+| **`by consuming`** | the entry is removed | the same walk **plus the removal**, and the removal is a generated `ops` operation |
+
+> **«B10» is thereby answered, and the answer is „yes, and that IS the meaning":** `by
+> consuming` empties the whole queue. The IPC fastpath wants *the first live receiver* and
+> then stops — **that is a different loop shape, not a different reading of this one.**
+> `traverse` yields no value and carries no label, so it cannot be left; forcing the fastpath
+> into it turns a rendezvous into a bloodletting. *The exit with a name is open work
+> (stage 4), the meaning of `by consuming` is not.*
 | **`retry`** | yes, through `bounded` | termination as a **number**; the overrun is **named** (`on_exceeded`), not interpreted |
 | **`forever`** | **no — and that is permitted** | every **pass** is bounded, the **frame** stands in `effects` |
 

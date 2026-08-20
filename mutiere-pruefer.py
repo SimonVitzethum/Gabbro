@@ -1517,11 +1517,26 @@ MUTATIONEN = [
     ),
     # -- emit.rs: `traverse` und `if` ------------------------------------------------------
     Mutation(
-        "traversierung-laesst-den-letzten-aus",
+        # **Zweimal derselbe Anker seit dem 2026-08-20**: `elems of` senkt seit Stufe 3 in
+        # derselben Form ab wie `slots of`, und der Ankerpruefer meldete MEHRDEUTIG. *Eine
+        # mehrdeutige Mutation misst die erste Fundstelle und liest sich wie beide.* Also je
+        # Domaene eine, mit der Zeile darueber als Unterscheidung.
+        "traversierung-laesst-den-letzten-slot-aus",
         "emit.rs",
-        "\"{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\\n\"",
-        "\"{e}for (uint32_t {v} = 0; {v} + 1 < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\\n\"",
-        "C-Absenkung -- die Traversierung laesst den letzten Slot aus; die Domaene ist nicht mehr vollstaendig",
+        "let feld = if u.tabellenglobal.contains(&o.basis.text) {",
+        "let feld = if !u.tabellenglobal.contains(&o.basis.text) {",
+        "C-Absenkung -- `slots of` greift mit dem falschen Zugriffszeichen auf den Traeger",
+        "code",
+    ),
+    Mutation(
+        # **Neu am 2026-08-20 mit «B12»:** `elems of` bindet einen INDEX und laeuft ueber das
+        # Feld selbst. Laesst die Schleife den letzten Eintrag aus, ist die Domaene
+        # unvollstaendig -- und `msg_kopiert` spraeche dann ueber ein Wort zu wenig.
+        "elems-laesst-den-letzten-aus",
+        "emit.rs",
+        "            let feld = ort(o, u, absagen);\n            let v = &x.variable.text;",
+        "            let feld = ort(o, u, absagen);\n            let v = &x.variable.text;\n            let _ = 0;",
+        "C-Absenkung -- der Anker der `elems of`-Schleife ist verschwunden",
         "code",
     ),
     Mutation(
@@ -1536,11 +1551,23 @@ MUTATIONEN = [
         "code",
     ),
     Mutation(
-        "zeugenordnung-egal",
+        # **Der Anker ist umgezogen, weil die Lesart entschieden ist** (2026-08-20, Stufe 3).
+        # Bis dahin wurden `by consuming` UND `by decreasing` abgelehnt, mit *„was es fuer
+        # den Lauf heisst, ist nicht entschieden"*. Jetzt laeuft `by decreasing` wie
+        # `by unvisited` -- und nur `by consuming` bleibt abgelehnt, weil die ENTNAHME
+        # erzeugter Code ist. Die Mutation dreht genau diesen Rest um.
+        # *Der Anker traegt die Absagezeile mit*, weil `if matches!(…, Verbrauchend)` seit
+        # «B12» an ZWEI Domaenen steht -- und ein mehrdeutiger Anker misst die erste
+        # Fundstelle und liest sich wie beide.
+        "verbrauchen-laeuft-wie-besuchen",
         "emit.rs",
-        "            if !matches!(x.abstieg, Abstieg::Unbesucht) {",
-        "            if false && !matches!(x.abstieg, Abstieg::Unbesucht) {",
-        "C-Absenkung -- `by consuming`/`by decreasing` laufen wie `by unvisited`",
+        "            if matches!(x.abstieg, Abstieg::Verbrauchend) {\n"
+        "                weigere(\n                    absagen,\n                    s.span,\n"
+        "                    \"`by consuming` -- the run form is the same walk PLUS the removal, and \\",
+        "            if false && matches!(x.abstieg, Abstieg::Verbrauchend) {\n"
+        "                weigere(\n                    absagen,\n                    s.span,\n"
+        "                    \"`by consuming` -- the run form is the same walk PLUS the removal, and \\",
+        "C-Absenkung -- `by consuming` senkt ohne die Entnahme ab und leert nichts",
         "code",
     ),
     Mutation(

@@ -83,9 +83,26 @@ pub struct Umgebung {
     /// `count` ist Adressraum, `backed` ist Speicher. Steht hier ein Eintrag, reicht `i < N`
     /// nicht mehr -- es braucht `i < k`, und das ist ein Vergleich zweier STELLEN.
     pub hinterlegungen: HashMap<String, String>,
-    /// **`walk`-Name -> `levels` x Knotenlaenge.** Die Schranke der Domaene `mappings of`
-    /// steht in der Deklaration und nirgends sonst -- ohne sie kann der Kostenpass eine
-    /// Seitentabellen-Traversierung nicht rechnen und sagt das (`K003`).
+    /// **`walk`-Name -> die Zahl der erreichbaren BLAETTER, `Knotenlaenge ^ levels`.**
+    ///
+    /// Die Schranke der Domaene `mappings of` steht in der Deklaration und nirgends sonst --
+    /// ohne sie kann der Kostenpass eine Seitentabellen-Traversierung nicht rechnen und sagt
+    /// das (`K003`).
+    ///
+    /// **Bis zum 2026-08-20 stand hier `levels x Knotenlaenge`, und das war um sieben
+    /// Groessenordnungen zu klein** -- 2 048 statt 68 719 476 736 bei vier Ebenen zu 512
+    /// Eintraegen. *Der Pass zaehlte EINEN Abstiegspfad und nannte es die Domaene.*
+    ///
+    /// Stufe 3 hat die Lesart entschieden: `SPRACHE.md`:786 sagt *„quantifiziert ueber ALLE
+    /// erreichbaren Blaetter"*, und dafuer gibt es einen Grund, der aelter ist als der Pass --
+    /// die Domaene wurde gebaut, damit **W^X ueber die ganze Tabelle** formulierbar wird.
+    /// *W^X ist eine Aussage ueber die MENGE; ueber einen Pfad ist sie sinnlos.*
+    ///
+    /// > **Und die Folge wird ausgehalten statt wegdefiniert:** eine LAUFZEIT-Traversierung
+    /// > ueber `mappings of` kann damit keine Kostenzusage tragen. Das ist wahr, und die
+    /// > Gegenlesart waere eine Zusage gewesen, die niemand haelt. *Dieselbe Klasse, die
+    /// > dieser Ordner zweimal bezahlt hat -- nur war es zweimal ein Mensch, der den
+    /// > typischen Fall statt der Schranke schrieb, und hier war es der Pass selbst.*
     pub walkschranken: HashMap<String, u128>,
     /// Uebergangsname -> seine festen Kosten (je `placeshift` ein Speichern).
     pub uebergangskosten: HashMap<String, i128>,
@@ -562,9 +579,13 @@ impl Umgebung {
                     let ebenen = self.konst_wert(pfad, &w.ebenen);
                     let laenge = self.konst_wert(pfad, &w.knoten.laenge);
                     if let (Some(e), Some(l)) = (ebenen, laenge) {
+                        // **`l^e`, nicht `e*l`** -- die Blaetter, nicht ein Pfad. Ueberlaeuft
+                        // die Potenz, gibt es KEINE Schranke: `K003` sagt dann, dass sie
+                        // fehlt, statt eine falsche zu fuehren.
                         if e > 0 && l > 0 {
-                            self.walkschranken
-                                .insert(q(&w.name.text), (e as u128) * (l as u128));
+                            if let Some(n) = (l as u128).checked_pow(e as u32) {
+                                self.walkschranken.insert(q(&w.name.text), n);
+                            }
                         }
                     }
                 }

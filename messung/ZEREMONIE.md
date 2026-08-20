@@ -5,12 +5,12 @@ es eine Meinung — und *„keine Klempnerei beim Endnutzer"* ist eine Nutzbarke
 
 ```
 $ ./zaehle-zeremonie.py
-52 Dateien gemessen, 3 abgelehnt
+51 Dateien gemessen, 4 abgelehnt
   ableitbar       51        A1  4 · A4 47
   redundant        0
-  tragend        831        T1 387 · T2 162 · T6 62 · T10 58 · T3 47 · T11 31 · T12 25 ·
-                            T7 24 · T9 21 · T8 6 · T5 5 · T4 3
-51 von 882 Stellen dürfen sinken
+  tragend        825        T1 386 · T2 161 · T6 62 · T10 57 · T3 47 · T11 31 · T12 25 ·
+                            T7 23 · T9 19 · T8 6 · T5 5 · T4 3
+51 von 876 Stellen dürfen sinken
 ```
 
 ## Die zwei Achsen, und warum sie getrennt bleiben
@@ -41,7 +41,7 @@ vorführt. Also getrennt (W11: jede Quote nennt ihr N):
 
 | | dürfen sinken | Stellen / Zeilen | Dichte |
 |---|---|---|---|
-| **Lehrkorpus** *(45 Beispiele + 7 Fragmente)* | 51 von 882 — **5,8 %** | 882 / 5591 | 15,8 je 100 Z. |
+| **Lehrkorpus** *(45 Beispiele + 6 Fragmente)* | 51 von 876 — **5,8 %** | 876 / 5591 | 15,7 je 100 Z. |
 | **echter Code** *(virtio-net · kapraum · planer)* | 14 von 109 — **12,8 %** | 109 / 519 | 21,0 je 100 Z. |
 
 > **Im echten Code ist der ableitbare Anteil mehr als doppelt so hoch — und er besteht
