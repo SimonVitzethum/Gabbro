@@ -194,13 +194,16 @@ of items that are neither code nor a run — what remains is building and measur
       dieser Sprache arbeitet.* Zwei Auswege, beide teuer: NaN durch Konstruktion ausschliessen
       (Laufzeitpruefung, W6) oder die Negation kein Faktum liefern lassen (sicher, und dann
       ungeprueft genau dort, wo man pruefen wollte). **Bedarf zaehlen, bevor gebaut wird.**
-- [ ] **«B24» hat die beste Hebelwirkung aller offenen Posten** *(bewertet 2026-08-18)*.
-      Ein Netzwerkstack ist bis auf EINE Entscheidung schreibbar: Verbindungstabelle
-      (`count NCONN`), Paketpool, Pruefsumme ueber `<= MTU`, Neuuebertragung (`retry
-      bounded`), Zeitgeber (`forever per_pass`) -- alles vorhanden. **Was blockiert, ist der
-      IP-Kopf**, und der ist ein Feld aus Bitlagen (`version:4 IHL:4 DSCP:6 ECN:2 flags:3
-      fragment_offset:13`). `format` weigert sich fuer jede davon. *Keine Bauarbeit, keine
-      Beweisarbeit -- eine Entscheidung.*
+- [ ] **Der Netzwerkstack: die Entscheidung ist gefallen, der STACK ist es nicht**
+      *(nachgemessen 2026-08-20)*. ~~«B24» blockiert den IP-Kopf.~~ **Der Eintrag war seit
+      dem 2026-08-18 falsch, am Tag seiner eigenen Bewertung**: «B24» wurde noch am selben Tag
+      entschieden, und [`beispiele/24-ip-kopf.gab`](beispiele/24-ip-kopf.gab) prueft mit null
+      Fehlern und senkt ab -- `version:4 IHL:4 DSCP:6 ECN:2` stehen da, jede Lage im EIGENEN
+      Wort. *Der Ordner sagte „blockiert", der Gegenstand sagte „offen", und dazwischen lagen
+      zwei Tage.* **Was jetzt fehlt, ist kein Konstrukt, sondern ein PROGRAMM:** niemand hat
+      den Stack geschrieben, und die Befunde kommen erst dabei -- so wie beim ersten echten
+      Treiber und bei «K2». *Ein Posten, der eine Entscheidung verlangt, hat einen Adressaten;
+      dieser hier verlangt Schreibarbeit.*
 - [ ] **Eine parametrische `costs`-Zusage ist heute schreibbar und VOLLSTAENDIG LEER**
       *(gemessen 2026-08-18)*. `costs <= 0 * n ops` an einem Rumpf, der 1 op kostet:
       **3 Items, 0 Fehler, 0 Hinweise.** `kosten.rs` sagt es im eigenen Kopf (*„die Schranke
