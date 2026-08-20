@@ -1,0 +1,32 @@
+-- erwartet: O007
+-- **Das Konstrukt, das fuer die Bootreihenfolge da ist, prueft seine eigene Reihenfolge
+-- nicht** -- bis zum 2026-08-20.
+--
+-- «B37» hat die Ordnung auf linearen Marken gebaut, weil *ein linearer Wert eine Kette
+-- erzwingt, aber nicht WELCHE* -- und genau diese Frage blieb an der Stelle offen, an der sie
+-- herkam. Die Schritte tragen keine Marke; ihre Funktionen tragen `advances`, und die Kette
+-- muss schliessen.
+
+module gift {
+
+linear ghost type BootPhase order { roh, mmu, caps };
+
+static mut welt : u32 = 0;
+
+extern fn mmu_an(p : BootPhase) -> BootPhase
+    advances roh -> mmu
+    effects { consumes p, writes welt } costs <= 4096 ops;
+
+extern fn caps_an(p : BootPhase) -> BootPhase
+    advances mmu -> caps
+    effects { consumes p, writes welt } costs <= 2048 ops;
+
+extern fn weiter() effects { pure } costs <= 1 ops;
+
+boot multiboot1 arch x86_64 {
+    step caps_an();
+    step mmu_an();
+    dispatch weiter;
+}
+
+}

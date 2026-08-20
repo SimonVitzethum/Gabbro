@@ -61,9 +61,9 @@ fn typklassen(baum: &Programm) -> BTreeMap<String, &'static str> {
             } else if t.opaque {
                 "opaque"
             } else if matches!(&t.rumpf, Some(TypExpr::Verbund(f, _)) if !f.is_empty()) {
-                "verbund"
+                "record"
             } else {
-                "bereich"
+                "range"
             };
             aus.insert(t.name.text.clone(), k);
         }
@@ -106,7 +106,7 @@ fn tafel_typen(baum: &Programm, t: &mut Tafel) {
             }
             if let Some(e) = &f.ergebnis {
                 if let Some(c) = klasse_von(e, &k) {
-                    zaehle(t, c, if hat_rumpf { "rueckgabe (rumpf)" } else { "rueckgabe (prototyp)" });
+                    zaehle(t, c, if hat_rumpf { "return (body)" } else { "return (prototype)" });
                 }
             }
             if let FnRumpf::Block(b) = &f.rumpf {
@@ -114,7 +114,7 @@ fn tafel_typen(baum: &Programm, t: &mut Tafel) {
                     for s in &b.anweisungen {
                         if let StmtArt::Let(l) = &s.art {
                             if let Some(c) = l.typ.as_ref().and_then(|x| klasse_von(x, k)) {
-                                zaehle(t, c, "let-klausel");
+                                zaehle(t, c, "let clause");
                             }
                         }
                         for u in crate::unterbloecke(s) {
@@ -134,7 +134,7 @@ fn tafel_typen(baum: &Programm, t: &mut Tafel) {
             for f in tb.slot.iter().flat_map(|s| s.felder.iter()) {
                 if let SlotTyp::Typ(x) = &f.typ {
                     if let Some(c) = klasse_von(x, &k) {
-                        zaehle(t, c, "slotfeld");
+                        zaehle(t, c, "slot field");
                     }
                 }
             }
@@ -169,10 +169,10 @@ fn tafel_orte(baum: &Programm, t: &mut Tafel) {
         let mut lokal = art.clone();
         for p in &f.parameter {
             let a = match klasse_von(&p.typ, &k) {
-                Some("format") => "formatfeld",
-                Some("table") => "slotfeld",
+                Some("format") => "format field",
+                Some("table") => "slot field",
                 Some("device") => "register",
-                Some("verbund") => "verbundfeld",
+                Some("record") => "record field",
                 _ => continue,
             };
             lokal.insert(p.name.text.clone(), a);
@@ -184,14 +184,14 @@ fn tafel_orte(baum: &Programm, t: &mut Tafel) {
                         zaehle(
                             t,
                             a,
-                            if matches!(z.op, ZuwOp::Setzt) { "geschrieben" } else { "+= u.ae." },
+                            if matches!(z.op, ZuwOp::Setzt) { "written" } else { "+= etc." },
                         );
                     }
                 }
                 for e in crate::eigene_ausdruecke(s) {
                     for o in crate::alle_orte(e) {
                         if let Some(a) = lokal.get(&o.basis.text) {
-                            zaehle(t, a, "gelesen");
+                            zaehle(t, a, "read");
                         }
                     }
                 }
@@ -215,7 +215,7 @@ fn tafel_anweisungen(baum: &Programm, t: &mut Tafel) {
         match &s.art {
             StmtArt::Let(_) => "let",
             StmtArt::LetSonst(_) => "let … else",
-            StmtArt::Zuweisung(_) => "zuweisung",
+            StmtArt::Zuweisung(_) => "assignment",
             StmtArt::Wenn(_) => "if",
             StmtArt::Match(_) => "match",
             StmtArt::Sperrt(_) => "locks",
@@ -228,7 +228,7 @@ fn tafel_anweisungen(baum: &Programm, t: &mut Tafel) {
             StmtArt::Return(_) => "return",
             StmtArt::Leave(_) => "leave",
             StmtArt::Next(_) => "next",
-            StmtArt::Ruf(_) => "ruf",
+            StmtArt::Ruf(_) => "call",
             StmtArt::Schleife(sch) => match sch.as_ref() {
                 Schleife::Traverse(_) => "traverse",
                 Schleife::Retry(_) => "retry",
@@ -258,7 +258,7 @@ fn tafel_anweisungen(baum: &Programm, t: &mut Tafel) {
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         ItemArt::Funktion(f) => {
             if let FnRumpf::Block(b) = &f.rumpf {
-                im_block(b, "fn-rumpf", t);
+                im_block(b, "fn body", t);
             }
         }
         ItemArt::Check(c) => im_block(&c.can_fail, "can_fail", t),
@@ -298,7 +298,7 @@ fn zeige_tafel(
         for s in stellungen {
             if !t.contains_key(&(*f, *s)) {
                 *blind += 1;
-                aus.push_str(&format!("   BLIND  {f} in Stellung `{s}`\n"));
+                aus.push_str(&format!("   BLIND  {f} in position `{s}`\n"));
             }
         }
     }
@@ -313,48 +313,48 @@ pub fn zeige(baeume: &[Programm]) -> String {
         tafel_anweisungen(baum, &mut c);
     }
     let mut aus = String::new();
-    aus.push_str("== Blindstellen: eine Form, die der Korpus nicht ausloest ==\n");
+    aus.push_str("== Blind spots: a form the corpus cannot trigger ==\n");
     aus.push_str(
-        "-- Was 0 Fundstellen hat, ist nicht geprueft, sondern UNERREICHBAR: keine Probe,\n\
-         -- kein Waechter und keine Mutation koennen es ausloesen.\n",
+        "-- What has 0 sites is not checked but UNREACHABLE: no probe, no guardian and no\n\
+         -- mutation can trigger it.\n",
     );
     let mut blind = 0;
     zeige_tafel(
-        "A -- Typklasse x Stellung",
-        "Hier fiel am 2026-08-20 der Geist in der Rueckgabe einer Funktion MIT Rumpf.",
-        &["opaque", "linear", "ghost", "tagged", "verbund", "bereich", "format", "table", "device"],
-        &["parameter", "rueckgabe (rumpf)", "rueckgabe (prototyp)", "let-klausel", "slotfeld", "static"],
+        "A -- type class x position",
+        "Here the ghost in the RETURN of a function WITH a body fell on 2026-08-20.",
+        &["opaque", "linear", "ghost", "tagged", "record", "range", "format", "table", "device"],
+        &["parameter", "return (body)", "return (prototype)", "let clause", "slot field", "static"],
         &a,
         &mut aus,
         &mut blind,
     );
     zeige_tafel(
-        "B -- Ortsart x Zugriffsart",
-        "Hier fiel der fehlende `format`-Schreiber: alle Korpusformate sind PARSER.",
-        &["slotfeld", "formatfeld", "register", "verbundfeld", "static", "atomic", "accumulates"],
-        &["gelesen", "geschrieben", "+= u.ae."],
+        "B -- place kind x access kind",
+        "Here the missing `format` writer fell: every corpus format is a PARSER.",
+        &["slot field", "format field", "register", "record field", "static", "atomic", "accumulates"],
+        &["read", "written", "+= etc."],
         &b,
         &mut aus,
         &mut blind,
     );
     zeige_tafel(
-        "C -- Anweisungsart x Rumpf",
-        "Hier faellt, welche Form nur auf der obersten Ebene steht -- `O006` und `H012` sind\n   beide daran gefallen: eine Regel, die an der Einrueckung endet, ist keine ueber den Fluss.",
-        &["let", "let … else", "zuweisung", "if", "match", "locks", "observes", "narrow",
-          "publishes", "awaits", "exchange", "breaking", "return", "leave", "next", "ruf",
+        "C -- statement kind x body",
+        "Here it shows which form stands only at the top level -- `O006` and `H012` both fell\n   on it: a rule that ends at the indentation is no rule about the flow.",
+        &["let", "let … else", "assignment", "if", "match", "locks", "observes", "narrow",
+          "publishes", "awaits", "exchange", "breaking", "return", "leave", "next", "call",
           "traverse", "retry", "forever"],
-        &["fn-rumpf", "can_fail", "in if", "in locks", "in match", "in traverse", "in retry", "in forever"],
+        &["fn body", "can_fail", "in if", "in locks", "in match", "in traverse", "in retry", "in forever"],
         &c,
         &mut aus,
         &mut blind,
     );
-    aus.push_str(&format!("\n== {blind} Blindstellen ==\n"));
+    aus.push_str(&format!("\n== {blind} blind spots ==\n"));
     aus.push_str(
-        "  Und was das NICHT heisst: eine BESETZTE Zelle sagt nur, dass ein Pass die Form\n\
-         \x20 sehen KANN -- nicht, dass er sie richtig behandelt. Zwei der fuenf Befunde vom\n\
-         \x20 2026-08-20 faengt dieses Werkzeug gar nicht: die Geraetegegenseite («V9») war\n\
-         \x20 keine fehlende Form, sondern eine fehlende KATEGORIE, und ein Rumpf, den ein\n\
-         \x20 Pass nicht LIEST, steht im Korpus sehr wohl da.\n",
+        "  And what this does NOT say: an OCCUPIED cell says only that a pass CAN see the\n\
+         \x20 form -- not that it handles it. Two of the five findings of 2026-08-20 this\n\
+         \x20 tool does not catch at all: the device counterpart («V9») was a missing\n\
+         \x20 CATEGORY, not a missing form, and a body a pass does not READ is present in\n\
+         \x20 the corpus all the same. The counterpart for that is `pruefe-reichweite.py`.\n",
     );
     aus
 }

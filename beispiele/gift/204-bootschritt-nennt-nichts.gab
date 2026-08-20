@@ -1,0 +1,18 @@
+-- erwartet: N033
+-- **Ein Bootschritt, der nichts nennt.**
+--
+-- Dieselbe Klasse wie `on_exceeded` ohne Namen (`S007`) und `gates` ohne Torfunktion
+-- (`N020`). Die Gegenprobe steht in `beispiele/07`: dort nennt `step write_cr3(...)` ein
+-- `axiom` mit Falsifikator, und das ist der Normalfall -- ein privilegierter Befehl IST das,
+-- was eine Bootstrecke tut.
+
+module gift {
+
+extern fn weiter() effects { pure } costs <= 1 ops;
+
+boot multiboot1 arch x86_64 {
+    step gibt_es_nicht();
+    dispatch weiter;
+}
+
+}

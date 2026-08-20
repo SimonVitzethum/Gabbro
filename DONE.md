@@ -10,6 +10,33 @@
 
 ---
 
+## The pattern, with its third data point *(2026-08-20)*
+
+> **The corpus is written from the language outward; the faults sit at the combinations.**
+
+That is the same finding as at the hand-written mutations — *dense near the refusals, thin at
+the arithmetic*. **What someone has in mind while writing covers the AXES, not the surface.**
+Two tools, one cause; and the prediction was that it would appear a third time.
+
+**It did, within the hour.** `pruefe-reichweite.py` — the counterpart to `gabbro
+blindstellen`, where the zero means *no pass READS this body* rather than *nobody wrote this
+form* — named exactly two item kinds that carry a body and that **exactly one pass** knew:
+
+| | what it let through |
+|---|---|
+| `format`'s `where` clauses | `where a <= nirgends_erklaert` — a name that stands nowhere — **0 errors**. And the clause is what `PFLICHTEN.md` F10 rests on: *after a `format` access no length check is needed, because the reader NEVER delivers a structure that violates it.* |
+| a `boot`'s steps | a boot sequence in the **wrong phase order** (`caps` before `mmu`) — **0 errors**. *The construct that exists FOR the boot order did not check its own.* |
+
+Closed as `N032`, `N033` and `O007`. **And the first version of `N033` was wrong, not the
+corpus:** it reported two errors in `beispiele/07`, where `step write_cr3(…)` names an `axiom`
+with a falsifier — a privileged instruction is exactly what a boot sequence does.
+
+> **The line for the history:** *the most expensive faults of this project do not sit in what
+> was thought wrongly, but in what nobody read* — and the last three guardians are answers to
+> that sentence.
+
+---
+
 ## `gabbro blindstellen` — the instrument that finds the class *(2026-08-20)*
 
 On 2026-08-20 the first driver that did not come from the design found five faults in an

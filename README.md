@@ -129,11 +129,11 @@ denominator that shines instead of the one that costs.*
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 184 diagnostics · `gabbro paesse` |
-| **Grammar** | **145 EBNF rules**, closed and reachable | vocabulary covers every terminal, 215 / 215 |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 187 diagnostics · `gabbro paesse` |
+| **Grammar** | **145 EBNF rules**, closed and reachable | vocabulary covers every terminal, 216 / 216 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
-| **Guardians** | 13, each with a two-way speech test | **226 of 226 mutations caught** *(run 2026-08-20)* |
-| **Corpus** | 38 clean examples, 202 poison files, 157 tests *(run 2026-08-20)* | `cargo test` |
+| **Guardians** | 14, each with a two-way speech test | **229 of 229 mutations caught** *(run 2026-08-20)* |
+| **Corpus** | 38 clean examples, 205 poison files, 157 tests *(run 2026-08-20)* | `cargo test` |
 | **Emission** | **38 of 38 examples emit C, and all 38 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
 | **Blind spots** | **151 empty cells** in form × position over the corpus — *what has 0 sites is not checked but unreachable* | `gabbro blindstellen` |
 
@@ -176,7 +176,7 @@ cargo run --bin gabbro -- paesse                     # what each pass does and d
 cargo run --bin gabbro -- schablonen                 # the proof-template register
 cargo run --bin gabbro -- pflichten beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
 cargo test                                           # 157 tests
-./mutiere-pruefer.py                                 # damage one rule at a time: 226 of 226
+./mutiere-pruefer.py                                 # damage one rule at a time: 229 of 229
 ./pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
 ./pruefe-klauseln.py                                 # declared, exported, never read
 ./pruefe-widerruf.py                                 # sentences the folder has revoked, still standing

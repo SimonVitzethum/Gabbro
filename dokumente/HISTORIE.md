@@ -7,6 +7,45 @@ had, and the location note "this correction is in line 3" had rotted before anyo
 **The documentary value is the point.** A design folder that deletes its refuted versions ends
 up looking as if it had been right from the start.
 
+
+---
+
+## The most expensive faults sit in what nobody read *(2026-08-20)*
+
+> **The most expensive faults of this project do not sit in what was thought wrongly, but in
+> what nobody read** — and the last three guardians are answers to that sentence.
+
+On one day, five faults fell out of the first driver that did not come from the design, and
+three more out of the two instruments built in response. **Not one of them was a wrong idea.**
+Every one was a sentence the folder had already written down and that no reader held:
+
+| what was written | who did not read it |
+|---|---|
+| `SPRACHE.md`:355 — *„Generates: reader, **writer**"* | the emitter built only the reader |
+| the ghost erasure, specified in three places | the fourth, `return`, was never built |
+| *„**M2**: the waker consumes **exactly its** reason"* | no pass compared the names |
+| `PFLICHTEN.md` F10 — the `where` clause carries the length promise | no pass read the clause |
+| «B37» — the order on a linear mark | the `boot` construct did not check its own order |
+| `beispiele/06`, a file that DEMONSTRATES probes | its `can_fail` body had no type pass |
+
+**And the reason they were invisible is one sentence, measured twice and then a third time:**
+the corpus is written from the language outward, one file per construct, and the faults sit at
+the **combinations**. The same as at the hand-written mutations — *dense near the refusals,
+thin at the arithmetic*. What someone has in mind while writing covers the axes, not the
+surface.
+
+The three answers are instruments, not rules:
+
+```
+mutiere-pruefer.py       what has 0 mutations is not covered but UNDAMAGEABLE
+gabbro blindstellen      what has 0 sites is not checked but UNREACHABLE
+pruefe-reichweite.py     what 0 passes read is not in order but UNREAD
+```
+
+*Each of the three carries its own limit in its own output.* The one that matters most is not
+a number: **an occupied cell says only that a pass CAN see the form** — that is the sentence
+which keeps `151 → 0` from ever being quoted as coverage.
+
 ---
 
 ## The two overreaches — same class, two weeks apart

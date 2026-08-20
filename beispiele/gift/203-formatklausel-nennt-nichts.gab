@@ -1,0 +1,21 @@
+-- erwartet: N032
+-- **Eine `where`-Klausel eines `format`, deren Name nirgends steht.**
+--
+-- Gefunden am 2026-08-20 von `pruefe-reichweite.py` -- dem Gegenstueck zu
+-- `gabbro blindstellen`: dort ist die Null *„diese Form schreibt niemand"*, hier
+-- *„diesen Rumpf liest kein Pass"*. `Format` war eine von zwei Item-Arten mit einem Rumpf,
+-- die genau EIN Pass kannte, und der kannte die Felder, nicht die Klauseln.
+--
+-- > Die Klausel ist keine Verzierung: `PFLICHTEN.md` F10 begruendet mit ihr, warum nach
+-- > einem `format`-Zugriff **keine Laengenpruefung mehr noetig ist** -- der Leser liefere
+-- > NIE eine Struktur, die sie verletzt. Eine Zusage, auf die andere Regeln bauen, und ihr
+-- > Inhalt war ungelesen.
+
+module gift {
+
+format K endian big {
+    a : u32 where a <= nirgends_erklaert,
+    b : u32,
+}
+
+}

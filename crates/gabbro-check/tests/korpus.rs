@@ -62,6 +62,11 @@ const BENANNT: &[&str] = &[
     // Silizium. `N031` haelt die Klausel gegen die Annahmenschicht, damit sie kein
     // Schlupfloch mit einem Namen darauf wird.
     "N031",
+    // 2026-08-20, gefunden von `pruefe-reichweite.py`: zwei Item-Arten mit einem RUMPF, den
+    // genau ein Pass kannte. `N032` die `where`-Klausel eines `format`, `N033`/`O007` die
+    // Schritte einer Bootstrecke -- das Konstrukt, das fuer die Reihenfolge da ist, prueft
+    // seine eigene nicht.
+    "N032", "N033", "O007",
     // «B41b», 2026-08-20: die Baumkante an der `table`. `D006` das Feld, `D007` sein Typ,
     // `D008` seine Tabelle.
     "D006", "D007", "D008",

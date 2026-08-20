@@ -1405,6 +1405,27 @@ MUTATIONEN = [
         "M1 liest den `can_fail`-Rumpf nicht mehr -- der eine Ort, an dem eine falsifizierbare Aussage steht, hat wieder keinen Typpass",
     ),
     Mutation(
+        "formatklausel-darf-nennen-was-sie-will",
+        "namen.rs",
+        "                if felder.contains(n.as_str())",
+        "                if true || felder.contains(n.as_str())",
+        "N032 -- die `where`-Klausel eines `format` darf wieder einen Namen nennen, den es nicht gibt; PFLICHTEN.md F10 baut auf ihr auf",
+    ),
+    Mutation(
+        "bootschritt-darf-nennen-was-er-will",
+        "namen.rs",
+        "            if !bekannt.contains(&n) {",
+        "            if false && !bekannt.contains(&n) {",
+        "N033 -- ein Bootschritt darf wieder eine Funktion nennen, die es nicht gibt",
+    ),
+    Mutation(
+        "bootstrecke-darf-in-jeder-ordnung-stehen",
+        "namen.rs",
+        "                if hier != von {",
+        "                if false && hier != von {",
+        "O007 -- die Schritte einer Bootstrecke duerfen wieder in jeder Reihenfolge stehen; «B37» ist zurueck an der Stelle, an der es herkam",
+    ),
+    Mutation(
         "format-liest-immer-klein",
         "emit.rs",
         "        (4, true) => \"gabbro_be32\",",

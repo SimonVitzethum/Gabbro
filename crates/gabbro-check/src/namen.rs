@@ -18,6 +18,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     fehlerkanal(baum, absagen);
     namenstypen(baum, absagen);
     beobachter(baum, absagen);
+    formatklauseln(baum, absagen);
+    bootschritte(baum, absagen);
     asm_versiegelt(baum, absagen);
     geltungsbereich(&baum.items, absagen);
     entrust_annahme(baum, absagen);
@@ -2123,6 +2125,179 @@ fn beobachter(baum: &Programm, absagen: &mut Absagen) {
                      a loophole with a name on it",
                 ),
             ),
+        }
+    });
+}
+
+/// **`N032` -- eine `where`-Klausel eines `format` nennt einen Namen, den es nicht gibt.**
+///
+/// Gefunden am 2026-08-20 von `pruefe-reichweite.py`, dem Gegenstueck zu
+/// `gabbro blindstellen`: dort ist die Null *„diese Form schreibt niemand"*, hier *„diesen
+/// Rumpf liest kein Pass"*. `Format` war eine von zwei Item-Arten mit Rumpf, die **genau ein
+/// Pass** kannte -- und der kannte die Felder, nicht die Klauseln.
+///
+/// ```gabbro
+/// format K endian big {
+///     a : u32 where a <= nirgends_erklaert,   -- 0 Fehler
+/// }
+/// ```
+///
+/// > Die Klausel ist keine Verzierung: `PFLICHTEN.md` F10 begruendet mit ihr, warum **nach
+/// > einem `format`-Zugriff keine Laengenpruefung mehr noetig ist** -- *„der Leser liefert
+/// > NIE eine Struktur, die sie verletzt."* Eine Zusage, auf die andere Regeln bauen, und ihr
+/// > Inhalt war ungelesen.
+///
+/// Erlaubt sind: die FELDER dieses Formats, `Self`, `lenof`/`sizeof`/`aligned` und die
+/// Konstanten der Einheit. Alles andere steht nirgends.
+fn formatklauseln(baum: &Programm, absagen: &mut Absagen) {
+    let mut konstanten: std::collections::BTreeSet<String> = Default::default();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Konst(k) = &item.art {
+            konstanten.insert(k.name.text.clone());
+        }
+    });
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Format(f) = &item.art else { return };
+        let felder: std::collections::BTreeSet<&str> =
+            f.felder.iter().map(|x| x.name.text.as_str()).collect();
+        for feld in &f.felder {
+            let Some(b) = &feld.bedingung else { continue };
+            // **Erschoepfend ueber das Praedikat** -- `ausdruecke_im_praedikat` ist die
+            // Fassung ohne Sammelzweig-Blindheit, die am 2026-08-20 gebaut wurde.
+            let mut namen: std::collections::BTreeSet<String> = Default::default();
+            for e in crate::ausdruecke_im_praedikat(b) {
+                for x in crate::alle_ausdruecke(e) {
+                    if let ExprArt::Ort(o) = &x.art {
+                        namen.insert(o.basis.text.clone());
+                    }
+                    if let ExprArt::Ruf(r) = &x.art {
+                        namen.insert(r.pfad.text());
+                    }
+                }
+            }
+            for n in &namen {
+                if felder.contains(n.as_str())
+                    || konstanten.contains(n)
+                    || matches!(n.as_str(), "Self" | "lenof" | "sizeof" | "aligned" | "result")
+                {
+                    continue;
+                }
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N032",
+                        feld.span,
+                        format!(
+                            "the `where` clause of `{}.{}` names `{n}`, which is neither a \
+                             field of this format nor a constant",
+                            f.name.text, feld.name.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "the clause is what PFLICHTEN.md F10 rests on -- after a `format` \
+                         access no length check is needed because the reader NEVER delivers \
+                         a structure that violates it. A promise other rules build on",
+                    ),
+                );
+            }
+        }
+    });
+}
+
+/// **`O007` -- die Schritte einer Bootstrecke stehen in der Reihenfolge, die ihre
+/// `advances`-Klauseln vorschreiben.**
+///
+/// Gefunden am selben Tag und vom selben Werkzeug. `Boot` war die zweite Item-Art mit einem
+/// Rumpf, den genau ein Pass kannte -- und der kannte den `dispatch`, nicht die Schritte:
+///
+/// ```gabbro
+/// boot multiboot1 arch x86_64 {
+///     step caps_an();     -- advances mmu -> caps
+///     step mmu_an();      -- advances roh -> mmu
+/// }                       -- 0 Fehler
+/// ```
+///
+/// **Das Konstrukt, das fuer die Bootreihenfolge da ist, prueft seine eigene Reihenfolge
+/// nicht.** «B37» hat die Ordnung auf linearen Marken gebaut, weil *ein linearer Wert eine
+/// Kette erzwingt, aber nicht WELCHE* -- und genau diese Frage blieb an der Stelle offen, an
+/// der sie herkam.
+///
+/// *Fuer die Regel braucht es keine Marke*: die Schritte tragen keine Argumente, aber die von
+/// ihnen gerufenen Funktionen tragen ihre `advances`-Klausel. Die Kette muss schliessen.
+///
+/// Ein Schritt, dessen Funktion diese Einheit nicht erklaert, faellt an **`N033`** -- das ist
+/// dieselbe Klasse wie `on_exceeded` ohne Namen (`S007`) und `gates` ohne Torfunktion
+/// (`N020`).
+fn bootschritte(baum: &Programm, absagen: &mut Absagen) {
+    let mut advances: std::collections::BTreeMap<String, (String, String)> = Default::default();
+    let mut bekannt: std::collections::BTreeSet<String> = Default::default();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        match &item.art {
+            ItemArt::Funktion(f) => {
+                bekannt.insert(f.name.text.clone());
+                if let Some((von, nach)) = &f.advances {
+                    advances.insert(f.name.text.clone(), (von.text.clone(), nach.text.clone()));
+                }
+            }
+            // **Ein Bootschritt darf ein AXIOM nennen, und das ist der Normalfall.**
+            //
+            // `beispiele/07` schreibt `step write_cr3(BOOT_IDENTITAET);` -- und `write_cr3`
+            // ist ein `axiom` mit Falsifikator, kein `fn`. *Ein privilegierter Befehl ist
+            // genau das, was eine Bootstrecke tut*, und `SPRACHE.md` fuehrt ihn als die
+            // groesste unbewiesene Flaeche der Sprache, deshalb zaehlbar.
+            //
+            // > Die erste Fassung dieser Regel meldete darauf zwei Fehler im eigenen
+            // > Korpus -- und die Regel war es, die falsch lag, nicht die Datei.
+            ItemArt::Axiom(a) => {
+                bekannt.insert(a.name.text.clone());
+            }
+            ItemArt::Assume(a) => {
+                bekannt.insert(a.name.text.clone());
+            }
+            _ => {}
+        }
+    });
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Boot(b) = &item.art else { return };
+        let mut stand: Option<String> = None;
+        for s in &b.schritte {
+            let BootSchritt::Ruf(r) = s else { continue };
+            let n = r.pfad.text();
+            if !bekannt.contains(&n) {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N033",
+                        r.span,
+                        format!("`step {n}` names nothing this unit declares"),
+                    )
+                    .mit_notiz(
+                        "the same class as `on_exceeded` without a name (`S007`) and `gates` \
+                         without a gate function (`N020`) -- a clause whose subject stands \
+                         nowhere",
+                    ),
+                );
+                continue;
+            }
+            let Some((von, nach)) = advances.get(&n) else { continue };
+            if let Some(hier) = &stand {
+                if hier != von {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "O007",
+                            r.span,
+                            format!(
+                                "`step {n}` advances `{von} -> {nach}`, and the sequence \
+                                 stands at `{hier}`"
+                            ),
+                        )
+                        .mit_notiz(
+                            "«B37»: a linear value forces a CHAIN but not WHICH one -- the \
+                             order is what the `advances` clauses say, and here they do not \
+                             chain",
+                        ),
+                    );
+                }
+            }
+            stand = Some(nach.clone());
         }
     });
 }
