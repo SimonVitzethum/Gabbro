@@ -93,7 +93,7 @@ fn anweisung(s: &Stmt, marken: &mut Vec<String>, lg: &Lage, absagen: &mut Absage
                         ),
                     )
                     .mit_notiz(
-                        "SYNTAX.md §7: the only error propagation is `let … else (e) { …\
+                        "SYNTAX.md §7: the only error propagation is `let … else (e) { … \
                             }`, and its branch must diverge or return",
                     ),
                 );

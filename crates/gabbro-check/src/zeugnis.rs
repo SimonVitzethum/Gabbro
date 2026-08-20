@@ -954,7 +954,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     ));
     if !e.fremde.is_empty() {
         aus.push_str(
-            "     A foreign body does not dissolve even when all of Gabbro is verified\
+            "     A foreign body does not dissolve even when all of Gabbro is verified \
                 --\n\x20    it is the one class that stays.\n",
         );
     }
@@ -967,7 +967,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
         ));
     }
     aus.push_str(
-        "\n-- And what does NOT stand here:\n\x20  it does not say that the C is correct.\
+        "\n-- And what does NOT stand here:\n\x20  it does not say that the C is correct. \
             It says what it rests on --\n\x20  and every line of that is a place somebody \
             can look at.\n",
     );

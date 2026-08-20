@@ -115,7 +115,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     ),
                 )
                 .mit_notiz(
-                    "a stage is a stage OF SOMETHING -- `linear ghost type` plus `order`\
+                    "a stage is a stage OF SOMETHING -- `linear ghost type` plus `order` \
                         is what carries it",
                 ),
             );
@@ -392,7 +392,7 @@ fn einigen(
                 .mit_notiz(format!("here: {}", zeig(k)))
                 .mit_notiz(format!("anderswo: {}", zeig(erster)))
                 .mit_notiz(
-                    "the strict reading is chosen: all branches reach the same stage.\
+                    "the strict reading is chosen: all branches reach the same stage. \
                         From strict one can loosen, never the other way",
                 ),
             );

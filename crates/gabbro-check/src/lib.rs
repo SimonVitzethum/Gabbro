@@ -154,7 +154,7 @@ pub fn passliste() -> Vec<Pass> {
             quelle: "SPRACHE.md §4: lineare und geisterhafte Werte",
             zustand: Zustand::Getragen(
                 "built: exactly-once per path, branch matching, `consumes` against \
-                    borrowed (`L101`-`L105`). **And since K5 a value that arises in the BODY** (`L107`); the ghost erasure itself is built and sits in the EMITTER, verified 2026-08-19. The rest has an address -- a `ghost`\
+                    borrowed (`L101`-`L105`). **And since K5 a value that arises in the BODY** (`L107`); the ghost erasure itself is built and sits in the EMITTER, verified 2026-08-19. The rest has an address -- a `ghost` \
                     value does not exist at run time, its linearity is a statement about the \
                     PROOF, and the alias question belongs to M3. **Since 2026-08-17 the \
                     ORDER stands beside it** (pass 11) -- M2 sees the chain, not which one",
@@ -183,7 +183,7 @@ pub fn passliste() -> Vec<Pass> {
                 "built: shared against exclusive (`H001`-`H004`), the intermediate rule \
                     at the call boundary (`H005`), the recomputed rank order (`H006`) -- and \
                     since K11.2.1 `protects` bites: every access to a protected place stands \
-                    under its lock (`H007`), and a lock that is never taken shows up\
+                    under its lock (`H007`), and a lock that is never taken shows up \
                     (`H008`). **And since «K5» the whole discipline**: a `locks` effect \
                     that nobody redeems (`H011`), the rank order THROUGH calls (`H012`), a \
                     rank that is not constant-evaluable (`H014`), and the EXECUTION \
@@ -201,10 +201,10 @@ pub fn passliste() -> Vec<Pass> {
             name: "Phasen",
             quelle: "MESSUNGEN.md, «B37»: Linearitaet ist keine Ordnung",
             zustand: Zustand::Getragen(
-                "built: the stages of an `order` exist and `advances` goes FORWARD\
-                    (`O001`/`O002`), the mark stands at its source stage at the call\
+                "built: the stages of an `order` exist and `advances` goes FORWARD \
+                    (`O001`/`O002`), the mark stands at its source stage at the call \
                     (`O003`), and the body composes into its own promise (`O004`). **And \
-                    since K11.1 the branch**: all branches must reach the same stage\
+                    since K11.1 the branch**: all branches must reach the same stage \
                     (`O006`); a branch that ENDS with `return` does not join, and a step in \
                     a LOOP is refused -- a step happens once, a loop often. **The rest is a DECISION, not a gap: the \
                     softer reading** -- carrying a set of stages and letting all of them \
@@ -239,7 +239,7 @@ pub fn passliste() -> Vec<Pass> {
                     held against the list. **What is missing is the reach of `E010`:** it \
                     speaks only about known world state (`static`, `atomic`, `table`, \
                     `device`, `state`), because a variant is not a place and an EXCERPT does \
-                    not declare its names -- on the fragment corpus the rule therefore has\
+                    not declare its names -- on the fragment corpus the rule therefore has \
                     **zero bite**, and its evidence comes from poison 62 and two mutations, \
                     not from the corpus",
             ),
