@@ -132,7 +132,7 @@ denominator that shines instead of the one that costs.*
 | **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 190 diagnostics · `gabbro paesse` |
 | **Grammar** | **146 EBNF rules**, closed and reachable | vocabulary covers every terminal, 216 / 216 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
-| **Guardians** | 17, and **27 of 27 instruments carry all four requirements** — three read statically (deadline · two-way speech test · red on abort), the fourth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./pruefe-waechter.py`. *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **235 of 235 mutations caught** *(run 2026-08-20)* |
+| **Guardians** | 17, and **27 of 27 instruments carry all four requirements** — three read statically (deadline · two-way speech test · red on abort), the fourth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./pruefe-waechter.py`. *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **236 of 236 mutations caught** *(run 2026-08-21)* |
 | **Corpus** | 45 clean examples, 219 poison files, 161 tests *(run 2026-08-20)* | `cargo test` |
 | **Emission** | **45 of 45 examples emit C, and all 45 compile** under `cc -std=c11 -Wall -Wextra -Werror`, at **`-O0` and `-O2`**, with the same result — **19 of them are also run and compared against a handwriting**, and under `-fsanitize=undefined` | `./pruefe-emission.sh` *(run 2026-08-20)* |
 | **Usability** | **5.8 % of the teaching corpus and 12.8 % of REAL code may fall** — 876 and 109 clause sites, split derivable / redundant / load-bearing. The calibration travels with the tool (`--tafel`, per rule a may-fall AND a reason), because an uncalibrated usability number makes `effects` and `costs` the cheapest thing to drop | `gabbro zeremonie` · `./zaehle-zeremonie.py` |
@@ -177,7 +177,7 @@ cargo run --bin gabbro -- paesse                     # what each pass does and d
 cargo run --bin gabbro -- schablonen                 # the proof-template register
 cargo run --bin gabbro -- pflichten beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
 cargo test                                           # 161 tests
-./mutiere-pruefer.py                                 # damage one rule at a time: 229 of 229
+./mutiere-pruefer.py                                 # damage one rule at a time: 236 of 236
 ./pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
 ./pruefe-klauseln.py                                 # declared, exported, never read
 ./pruefe-widerruf.py                                 # sentences the folder has revoked, still standing

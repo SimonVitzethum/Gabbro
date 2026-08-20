@@ -1745,9 +1745,15 @@ gemessen wird je Name, nicht je Struktur (W10).
 
 - [ ] **~~`leaves` und der Abstieg des `traverse` haben weiter keinen Leser~~**
       *(gebucht 2026-08-18)* — **beim Nachsehen schon zu, und zwar BEIDE.**
-      `m2.rs:568` liest `verlaesst` (der Doktext nennt den Posten beim Namen: *„`pruefe-
-      klauseln.py` fuehrte `verlaesst` als ZUSAGE"*), und `schleifen.rs:275
-      `abstieg_pruefen`` liest den Abstieg. **Beleg ohne Bau:** `./pruefe-klauseln.py` bucht
+      **`L106`** liest `leaves` (`m2.rs:565`, seit «NL.2.6», 2026-08-19) und **`S005`** den
+      Abstieg (`schleifen.rs:250`, «NL.2.3», gleicher Tag). *Und der Posten hatte selbst den
+      falschen Satz darin:* `leaves` nennt nicht, „was den Ausgang verlaesst", sondern die
+      **linearen Werte**, die den Geltungsbereich verlassen — die Ausgaenge nennt
+      `leave <marke>`. Der erste Anlauf baute die Regel nach der Waechterbeschreibung und
+      meldete zwei falsche Befunde an `beispiele/04`. **Eine Klauselbeschreibung, die seit
+      Wochen in der Waechtertabelle steht, ist keine Quelle — die Spezifikation ist eine.**
+      Beides ist die **notwendige** Bedingung: dass das Mass FAELLT, bleibt bei
+      `consuming.ordnung`. **Beleg ohne Bau:** `./pruefe-klauseln.py` bucht
       am 2026-08-20 weder `verlaesst` noch `abstieg` — die 22 gebuchten Felder sind eine
       andere Liste. *Was daneben stehenbleibt und in `schablonen.rs` steht: das `braeuchte`
       von `consuming.ordnung` sagt weiter „`abstieg` ist heute eine ZUSAGE ohne Leser". Die
@@ -1801,6 +1807,14 @@ gemessen wird je Name, nicht je Struktur (W10).
       `leaf` senken ab), `scale` (im `format`-Leser, und ein Setzer wird dafür benannt
       verweigert), der `can_fail`-Rumpf eines `check` (M1 **und** der Paarungspass lesen ihn)
       und der Fehlername im `let … else` (er trägt den `reason` aus `-> T or R`).
+      **Nachgezählt 2026-08-20 mit `./pruefe-klauseln.py`: es sind genau diese sechs, und
+      die Liste stimmt** — die Spalte UNGELESEN hat heute sechs Einträge und keinen siebten.
+      *Eine Korrektur an der Aufzählung selbst:* `cost` und `runs` stehen NICHT im selben
+      Zustand. Das `cost`-Feld der Invariante ist ungelesen; das `runs`-Feld wird von
+      `emit.rs:5794` getragen — **der Erzeuger sieht es an, kein Pass hält es nach.** Der
+      Unterschied ist der zwischen *„niemand weiss davon"* und *„einer benutzt es und keiner
+      prüft es"*, und der zweite ist der teurere. **Und `by` trägt zwei Posten**: hier den
+      Kleinkram und oben die Wohlfundiertheit der Induktion — ein Leser, und beide fallen.
 
 ### The write-right line `by ops` — and the group proof sentence that precedes it
 
