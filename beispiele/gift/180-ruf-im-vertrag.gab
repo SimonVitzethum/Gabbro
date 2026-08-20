@@ -1,0 +1,42 @@
+-- erwartet: E008
+-- **Ein Ruf in einer VORBEDINGUNG war fuer den Aufrufgraphen unsichtbar.**
+--
+-- `requires`/`ensures` wurden bis zum 2026-08-20 nur nach `Held(…)` durchsucht. Ein Ruf
+-- darin sah niemand -- also stand `effects { pure }` neben einer Vorbedingung, die eine
+-- globale Groesse schreibt, und der Lauf meldete null Fehler.
+--
+-- > Ein Vertrag, der etwas Wirkendes ruft, ist in beide Richtungen falsch: entweder luegt
+-- > die Wirkungsliste, oder die Vorbedingung hat eine Wirkung. `E008` sagt beides.
+--
+-- **Wie es gefunden wurde, ist der Punkt.** Nicht durch Nachdenken, sondern durch eine
+-- Mutation, die UEBERLEBT hat: `PredArt::Quantor(_) => {}` fiel durch keine einzige Probe.
+-- Die Suche nach einer Probe fand statt ihrer das Loch dahinter.
+--
+-- *Eine ueberlebende Mutation ist keine Panne des Katalogs. Sie ist sein Ertrag.*
+
+module gift {
+
+static mut a : u32 = 0;
+
+table T count 4 {
+    slot {
+        x : u32,
+    }
+}
+
+impl fn schreibt(v : u32) -> bool
+    effects { writes a }
+    costs   <= 2 ops
+{
+    a = v;
+    return true;
+}
+
+impl fn f(t : ptr<normal, rw> T)
+    requires forall s in slots of t : schreibt(t.slots[s].x)
+    effects  { pure }
+    costs    <= 4 ops
+{
+}
+
+}

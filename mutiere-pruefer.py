@@ -134,9 +134,13 @@ MUTATIONEN = [
     Mutation(
         "praedikatlaeufer-vergisst-folgt-und-quantor",
         "lib.rs",
-        "            PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {",
-        "            PredArt::Und(a, b) | PredArt::Oder(a, b) => {",
-        "ein Ruf in einem `a => b` oder im Rumpf eines Quantors wird wieder unsichtbar",
+        "            PredArt::Quantor(q) => geh(&q.rumpf, aus),",
+        "            PredArt::Quantor(_) => {}",
+        "ein Ruf im Rumpf eines Quantors wird wieder unsichtbar. **Die erste Fassung "
+        "dieser Mutation strich `Folgt` aus dem Muster und machte das `match` damit "
+        "nicht-erschoepfend -- sie BAUTE nicht und zaehlte als `ungueltig`.** Genau das "
+        "ist der Preis eines `match` ohne `_`-Zweig, und genau darum ist er richtig: der "
+        "Uebersetzer laesst die Luecke gar nicht erst entstehen",
     ),
     Mutation(
         "unbekannter-name-faellt-nicht",

@@ -131,6 +131,31 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
         for p in &f.requires {
             held_aus_pred(p, &mut k.verlangt);
         }
+        // **Ein VERTRAG ruft auch** (2026-08-20). Bis heute wurden `requires`/`ensures`
+        // nur nach `Held(…)` durchsucht; ein Ruf darin sah niemand.
+        //
+        // ```gabbro
+        // impl fn f(t : ptr<normal, rw> T)
+        //     requires forall s in slots of t : schreibt(t.slots[s].x)
+        //     effects  { pure }                                    -- 0 Fehler
+        // ```
+        //
+        // *Gefunden von einer Mutation, die UEBERLEBT hat* -- `PredArt::Quantor(_) => {}`
+        // fiel durch keine Probe, und die Suche nach einer Probe fand statt ihrer das Loch.
+        //
+        // > Ein Vertrag, der etwas Wirkendes ruft, ist in beide Richtungen falsch: entweder
+        // > luegt die Wirkungsliste, oder die Vorbedingung hat eine Wirkung. `E008` sagt
+        // > beides.
+        for p in f.requires.iter().chain(&f.ensures) {
+            for e in crate::ausdruecke_im_praedikat(p) {
+                for x in crate::alle_ausdruecke(e) {
+                    if let ExprArt::Ruf(r) = &x.art {
+                        nimm(r, &mut k.ruft);
+                        nimm_ruf(r, &mut k.rufe);
+                    }
+                }
+            }
+        }
         if let FnRumpf::Block(b) = &f.rumpf {
             sammle_rufe(b, &mut k.ruft);
             sammle_kanten(b, &mut k.rufe);
@@ -429,24 +454,28 @@ fn ort_unter_klammern(e: &Expr) -> Option<&Ort> {
     }
 }
 
-fn sammle_kanten(b: &Block, aus: &mut Vec<(String, Vec<Option<String>>)>) {
-    fn nimm_ruf(r: &Ruf, aus: &mut Vec<(String, Vec<Option<String>>)>) {
-        if let Some(n) = r.pfad.teile.last() {
-            if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
-                let args = r
-                    .argumente
-                    .iter()
-                    .map(|a| ort_unter_klammern(a).map(|o| o.text()))
-                    .collect();
-                aus.push((r.pfad.text(), args));
-            }
-        }
-        for a in &r.argumente {
-            if let ExprArt::Ruf(x) = &a.art {
-                nimm_ruf(x, aus);
-            }
+/// Aus `sammle_kanten` herausgehoben (2026-08-20): auch ein VERTRAG ruft, und der
+/// Vertragsleser steht eine Ebene hoeher.
+fn nimm_ruf(r: &Ruf, aus: &mut Vec<(String, Vec<Option<String>>)>) {
+    if let Some(n) = r.pfad.teile.last() {
+        if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
+            let args = r
+                .argumente
+                .iter()
+                .map(|a| ort_unter_klammern(a).map(|o| o.text()))
+                .collect();
+            aus.push((r.pfad.text(), args));
         }
     }
+    for a in &r.argumente {
+        if let ExprArt::Ruf(x) = &a.art {
+            nimm_ruf(x, aus);
+        }
+    }
+}
+
+
+fn sammle_kanten(b: &Block, aus: &mut Vec<(String, Vec<Option<String>>)>) {
     // **Ueber `alle_ausdruecke`, nicht von Hand** (2026-08-20). Der Handlaeufer hatte
     // `_ => {}` und sah damit weder einen Ruf in `t.slots[schreibt()]` noch einen in
     // `aligned(schreibt(), 4)`. *Sechzehn solcher Laeufer standen im Pruefer, fuenf davon
