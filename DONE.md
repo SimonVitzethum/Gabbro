@@ -35,6 +35,22 @@ with a falsifier — a privileged instruction is exactly what a boot sequence do
 > was thought wrongly, but in what nobody read* — and the last three guardians are answers to
 > that sentence.
 
+### A second pattern, and it now has four instances
+
+> **A check built for the OBVIOUS reason does not cover what the LOAD-BEARING reason demands.**
+
+| | the obvious reason | what the load-bearing reason demanded |
+|---|---|---|
+| `diverges` | a divergent function does not return | …and therefore `on_exceeded` must name one, or the bound is a number without a consequence |
+| the ghost erasure | a ghost has no lowering | …and therefore the erasure must reach the RETURN too, which no example ever exercised |
+| a ghost in storage | a ghost has no lowering — *technical* | a **linear** value has storage but no PATH: *consumed exactly once* is a statement about a control-flow path, and a field in one of N slots has none. **The sharper reason caught the case the weaker rule missed.** |
+| the call graph | a transition is a callee with declared effects | …and a device CONSTRUCTOR is not a call at all — the hint stood in `beispiele/09` for months |
+
+**The question this leaves open, and it is worth carrying:** *which other rules stand on the
+technical reason rather than the load-bearing one?* The four above were found one at a time,
+by writing programs; a systematic answer would read every rule's stated reason against what it
+actually has to hold.
+
 ---
 
 ## `gabbro blindstellen` — the instrument that finds the class *(2026-08-20)*
@@ -65,6 +81,39 @@ gabbro blindstellen beispiele/*.gab -- beispiele/gift/*.gab
 > the class:* `slot field in position publishes` and eight more stood there afterwards, and
 > they are just as much not cells. **The columns belong to their rows, not to the table.**
 > 151 → 130 without a single line of corpus.
+
+### The four numbers are reported apart, and the tool says them itself
+
+```
+== 154 blind · 91 covered · 25 guarded · 15 no cell (of 285 pairs) ==
+```
+
+`151 → 112` reads like thirty-nine progress. It was twenty-one **written** and eighteen
+**removed** — and a removal improves the figure twice over: it leaves the numerator *and* the
+denominator. As long as every removal carries its reason beside it, that is clean; as long as
+the NUMBER is quoted in one part, it stops being clean in two weeks, when it reads
+"39 closed" and nobody can recompute it. **So nobody recomputes it — the tool says it.**
+
+*And the same output shows the honest direction of travel:* the blind count went **104 → 154**
+when a pointer position was separated from a by-value one. Nothing got worse; the map got
+finer, and the denominator grew with it.
+
+### The exclusion table is falsifiable, and it was refuted within the minute
+
+`no cell` is a list of **judgements** — *this pair is not a question* — and a judgement that
+takes a cell out of the denominator must be refutable. **The corpus is the falsifier:** if the
+combination stands somewhere, the judgement was wrong.
+
+The check fired on its first run, on my own entry:
+
+```
+!! CONTRADICTION  table x `static` is declared no cell -- and the corpus HAS it.
+```
+
+`beispiele/38` writes `static tz : ptr<normal, rw> Platz`. **The reason was right and the
+instrument was wrong:** a table as a VALUE does not exist, a table behind a POINTER is the
+normal case — and the two stood in the same cell. *An exclusion no probe can ever contradict
+is not an exclusion but a convenience.*
 
 **The number must not become a target.** Zeroing it by writing 128 small files would grow the
 corpus *from the instrument outward* — the same mistake as growing it from the language

@@ -1,7 +1,7 @@
 # Gabbro
 
 **A language whose point is to make seL4-style proofs cheap.** One output: **C plus inline
-assembly** — **all 38 corpus examples emit it, and all 38 compile** under `cc -std=c11 -Wall
+assembly** — **all 39 corpus examples emit it, and all 39 compile** under `cc -std=c11 -Wall
 -Wextra -Werror -O2`. Compiler in **safe Rust** (`forbid(unsafe_code)`).
 
 > **Until 2026-08-20 that sentence carried no figure, and twelve of the 38 produced nothing.**
@@ -133,9 +133,9 @@ denominator that shines instead of the one that costs.*
 | **Grammar** | **145 EBNF rules**, closed and reachable | vocabulary covers every terminal, 216 / 216 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Guardians** | 14, each with a two-way speech test | **229 of 229 mutations caught** *(run 2026-08-20)* |
-| **Corpus** | 38 clean examples, 205 poison files, 157 tests *(run 2026-08-20)* | `cargo test` |
-| **Emission** | **38 of 38 examples emit C, and all 38 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
-| **Blind spots** | **130 blind, 22 guarded** in form × position — *what has 0 sites is not checked but unreachable; guarded means a rule forbids it and the poison corpus proves it* | `gabbro blindstellen` |
+| **Corpus** | 39 clean examples, 208 poison files, 157 tests *(run 2026-08-20)* | `cargo test` |
+| **Emission** | **39 of 39 examples emit C, and all 39 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
+| **Blind spots** | **154 blind · 91 covered · 25 guarded · 15 no cell** — reported in four parts on purpose, because a removal leaves numerator *and* denominator | `gabbro blindstellen` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was

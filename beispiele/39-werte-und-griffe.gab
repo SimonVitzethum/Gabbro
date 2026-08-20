@@ -1,0 +1,98 @@
+-- 39 -- **Was in dieser Sprache ein WERT ist, und was nur so aussieht.**
+--
+-- Die Datei kam aus einer Messung, nicht aus dem Entwurf: `gabbro blindstellen` zaehlt Form
+-- mal Stellung ueber dem Korpus, und in Tafel A stand eine ganze Spalte leer. **Sieben
+-- Typklassen, und fuer die Haelfte hatte niemand je aufgeschrieben, ob man sie
+-- zurueckgeben, binden oder ablegen kann.**
+--
+-- Hier steht es, an einem zusammenhaengenden Programm: eine Puffervergabe mit einem Geraet
+-- davor. *Wer nur Zellen fuellt, schreibt ein Ritual; wer ein Programm schreibt, findet
+-- die Fehler.*
+
+module beispiel::werte {
+
+const NPUFFER : u32 = 64;
+const BASIS   : u64 = 4275878400;
+
+opaque type Pa = u64;
+
+-- **Ein `opaque type` als `static`.** Die Basisadresse des Geraets steht einmal, und der
+-- Modulrand verbirgt, dass darunter eine `u64` liegt (`D004`).
+static GERAETEBASIS : Pa = BASIS section ".rodata";
+
+-- **Ein `tagged type` als Rueckgabe und als Bindung.** Er IST ein Wert: eine geschlossene
+-- Fallunterscheidung mit Nutzlast, und `D005` verlangt das erschoepfende `match` darueber.
+--
+-- *Als `static` steht er hier NICHT*, und das ist ein Befund vom 2026-08-20: `static mut
+-- letzte : Vergabe = 0;` ergab `static Vergabe letzte = 0;` -- eine ungueltige
+-- Initialisierung, bei null Fehlern im Pruefer. **Welche Variante die Null ist, sagt die
+-- Deklaration nicht**, und der Erzeuger weigert sich jetzt benannt. Die Alternative -- ein
+-- Variantenkonstruktor als Anfangswert -- ist eine Sprachfrage und im TODO gebucht.
+tagged type Vergabe = { Leer, Belegt(u32), Verweigert(u32) };
+
+-- Ein Verbund ist ein Wert: er wird zurueckgegeben und liegt in einem Slot.
+type Spanne = { anfang : u32, laenge : u32, };
+
+table Puffer count NPUFFER {
+    slot {
+        belegt : bool,
+        lage   : Spanne,
+    }
+}
+
+-- **Ein `device`-Griff: erzeugt, gebunden, zurueckgegeben.** Die Parameterliste der
+-- Deklaration IST der Konstruktor -- aus einer `Pa` wird ein Griff, und mehr steht nicht da.
+device Dma(basis : Pa) at mmio {
+    reg STATUS : u32 @0x00 class r  fields { BEREIT @0, FEHLER @1, }
+    reg START  : u32 @0x04 class rw
+}
+
+-- Der Griff als RUECKGABE einer Funktion mit Rumpf.
+impl fn griff() -> Dma
+    effects { reads GERAETEBASIS }
+    costs   <= 4 ops
+{
+    let g : Dma = Dma(GERAETEBASIS);
+    return g;
+}
+
+-- Ein Verbund als Rueckgabe eines PROTOTYPS -- der Rumpf steht woanders.
+extern fn gemessene_spanne(i : index into Puffer) -> Spanne
+    effects { reads halde }
+    costs   <= 16 ops;
+
+-- Und ein `tagged` als Rueckgabe eines Prototyps.
+extern fn letzte_vergabe() -> Vergabe
+    effects { reads halde }
+    costs   <= 8 ops;
+
+-- **Der Ablauf, an dem alle drei zusammenkommen.** Der Griff wird gebunden, das Register
+-- gelesen, und die Antwort ist ein markierter Wert, ueber den erschoepfend entschieden wird.
+impl fn vergeben(p : ptr<normal, rw> Puffer, i : index into Puffer) -> u32
+    effects { reads p.slots, writes p.slots, reads halde, reads GERAETEBASIS }
+    costs   <= 128 ops
+{
+    let g : Dma = Dma(GERAETEBASIS);
+    if g.STATUS.BEREIT == 0 {
+        return 0;
+    }
+    let s : Spanne = gemessene_spanne(i);
+    p.slots[i].belegt = true;
+    p.slots[i].lage   = s;
+    let v : Vergabe = letzte_vergabe();
+    match v {
+        Leer => {
+            return 0;
+        }
+        Belegt(n) => {
+            return n;
+        }
+        Verweigert(g2) => {
+            return g2;
+        }
+    }
+}
+
+extern fn halde() effects { pure } costs <= 1 ops;
+
+}

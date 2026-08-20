@@ -284,6 +284,24 @@ fn lauf_pro_kern(
 fn geister_haben_keinen_speicher(baum: &Programm, absagen: &mut Absagen) {
     let mut geister = Vec::new();
     sammle_geister(&baum.items, &mut geister);
+    // **Und ein LINEARER Wert gehoert genauso wenig in einen Speicherplatz** (2026-08-20).
+    //
+    // `gabbro blindstellen` nannte `linear in position slot field` als leer in BEIDEN
+    // Korpora -- also weder ausgeloest noch bewacht -- und ein `linear type Parked` in einem
+    // Slot ging mit null Fehlern durch. Die Geisthaelfte fiel seit jeher.
+    //
+    // **Der Grund ist ein anderer als beim Geist, und er ist der schaerfere.** Ein Geist hat
+    // keinen SPEICHER; ein linearer Wert hat welchen (`SPRACHE.md`:721 -- *echte Ressource:
+    // Bytes im Erzeugnis*). Was ihm fehlt, ist der PFAD: *„genau einmal verbraucht" ist eine
+    // Aussage ueber einen Kontrollflusspfad, nicht ueber ein Feld.* Wer ihn in einen von
+    // NSLOTS Plaetzen legt, hat ihn aus der Buchfuehrung genommen -- und M2 sagt darueber
+    // nichts, weil es nichts sagen kann.
+    //
+    // > **Die Alternative steht im Korpus**: `beispiele/27-freiliste.gab` fuehrt Besitz in
+    // > einer Tabelle als `bool` plus `option index into T`, und die Linearitaet lebt an den
+    // > FUNKTIONEN, die den Platz vergeben und zurueckgeben. Das ist die Stelle, an der M2
+    // > sie halten kann.
+    sammle_lineare(&baum.items, &mut geister);
     if geister.is_empty() {
         return;
     }
@@ -317,15 +335,25 @@ fn nennt_geist(t: &TypExpr, geister: &[String]) -> Option<String> {
 fn pruefe_speicher(items: &[Item], geister: &[String], absagen: &mut Absagen) {
     fn melde(absagen: &mut Absagen, g: &str, span: Span, wo: &str) {
         absagen.schiebe(
-            Absage::fehler("N011", span, format!("`{g}` is a ghost type and cannot lie in {wo}"))
-                .mit_notiz(
-                    "a ghost value does not exist at run time -- the generator erases it, and \
-                     an erased field shifts every field after it",
-                )
-                .mit_notiz(
-                    "a ghost belongs where the checker threads it: a parameter, a result, a \
-                     `let`. There M2 holds it linear, and that is its purpose",
-                ),
+            Absage::fehler(
+                "N011",
+                span,
+                format!("`{g}` is a ghost or linear type and cannot lie in {wo}"),
+            )
+            .mit_notiz(
+                "a ghost value does not exist at run time -- the generator erases it, and an \
+                 erased field shifts every field after it",
+            )
+            .mit_notiz(
+                "a LINEAR value has storage but no PATH there: `consumed exactly once` is a \
+                 statement about a control-flow path, not about a field -- in one of N slots \
+                 it is out of the bookkeeping, and M2 says nothing because it CAN say nothing",
+            )
+            .mit_notiz(
+                "both belong where the checker threads them: a parameter, a result, a `let`. \
+                 For ownership IN a table see beispiele/27-freiliste.gab -- a `bool` plus an \
+                 `option index into T`, and the linearity lives at the FUNCTIONS",
+            ),
         );
     }
     for i in items {
@@ -2300,4 +2328,15 @@ fn bootschritte(baum: &Programm, absagen: &mut Absagen) {
             stand = Some(nach.clone());
         }
     });
+}
+
+/// Die **linearen** Typnamen ohne `ghost` -- siehe `geister_haben_keinen_speicher`.
+fn sammle_lineare(items: &[Item], aus: &mut Vec<String>) {
+    for i in items {
+        match &i.art {
+            ItemArt::Modul(m) => sammle_lineare(&m.items, aus),
+            ItemArt::Typ(t) if t.linear && !t.ghost => aus.push(t.name.text.clone()),
+            _ => {}
+        }
+    }
 }

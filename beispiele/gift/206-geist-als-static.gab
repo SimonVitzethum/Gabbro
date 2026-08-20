@@ -1,0 +1,17 @@
+-- erwartet: N011
+-- **Ein Geist hat keinen Speicher, auch nicht als `static`.**
+--
+-- Die Regel steht seit jeher (`geister_haben_keinen_speicher`), und geprueft wurde bis zum
+-- 2026-08-20 nur der Slotfall (`gift/119`). `gabbro blindstellen` hat die zweite Haelfte
+-- genannt: `ghost` in Stellung `static` war leer im sauberen Korpus UND im Gift -- also
+-- weder ausgeloest noch bewacht.
+--
+-- > *Eine Regel mit einer von zwei Fundstellen ist eine Regel mit einer Fundstelle.*
+
+module gift {
+
+linear ghost type BootPhase;
+
+static mut phase : BootPhase = 0;
+
+}

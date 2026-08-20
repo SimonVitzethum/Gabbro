@@ -589,6 +589,18 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       beiden Befunde, für die ein echter Treiber nötig war: `ghost` in Rückgabestellung einer
       Funktion **mit Rumpf**, und ein Formatfeld in **Schreibstellung**.
       *Die Konsequenz ist keine Passarbeit: mehr Programme schreiben, nicht mehr Konstrukte.*
+- [ ] **Welche anderen Regeln stehen auf dem TECHNISCHEN statt auf dem tragenden Grund?**
+      Am 2026-08-20 fiel dieselbe Klasse viermal: `diverges`, die Geistlöschung, der Geist im
+      Speicher (der *lineare* Wert fiel durch, weil die Regel „hat keine Absenkung" sagte statt
+      „hat keinen Pfad") und der Aufrufgraph (ein Konstruktor ist kein Ruf). **Eine Prüfung,
+      die aus dem naheliegenden Grund gebaut wurde, deckt nicht, was der eigentliche Grund
+      verlangt.** Alle vier kamen einzeln heraus, beim Schreiben von Programmen; eine
+      systematische Antwort läse jeden erklärten Regelgrund gegen das, was die Regel wirklich
+      halten muss.
+- [ ] **Ein Variantenkonstruktor als Anfangswert eines `static`.** Seit 2026-08-20 weigert sich
+      der Erzeuger benannt: `static mut x : <tagged> = 0;` erzeugte ungültiges C bei 0
+      Prüferfehlern, und *welche Variante die Null ist, sagt die Deklaration nicht*. Die
+      Alternative — ein Konstruktor in der Anfangswertstellung — ist eine Sprachfrage.
 - [ ] **`K009` prüft eine SYNTAKTISCHE hinreichende Form** — `n - k` und `n / k` mit der
       Massgrösse links. Ein Mass, das über einen `const fn` oder eine gerechnete Grösse
       fällt, wird abgewiesen, obwohl es fällt. *Aus der strengen Lesart kann man lockern,

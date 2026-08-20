@@ -1045,6 +1045,28 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 feldstatisch(st, a, &mut aus, &namen, absagen);
                 return;
             }
+            // **Ein `tagged` oder ein Verbund faengt nicht mit einer ZAHL an** (2026-08-20).
+            //
+            // `static mut letzte : Vergabe = 0;` ergab `static Vergabe letzte = 0;` -- eine
+            // ungueltige Initialisierung, bei null Fehlern im Pruefer. *Wieder eine Form, die
+            // aussah wie eine Absenkung und keine war.*
+            //
+            // Der Erzeuger weigert sich benannt, statt `{0}` zu schreiben und es die
+            // Leervariante zu nennen: **welche Variante die Null ist, sagt die Deklaration
+            // nicht** -- `enum` beginnt bei der ersten, aber dass die erste die gemeinte ist,
+            // steht nirgends. Gefunden beim Abarbeiten der Blindstellen.
+            if let TypExpr::Pfad(p) = &st.typ {
+                if let Some(n) = p.teile.last() {
+                    if namen.markierte.contains_key(&n.text) || namen.verbunde.contains(&n.text) {
+                        weigere(
+                            absagen,
+                            st.name.span,
+                            "`static` of a `tagged` type or a record initialised with a plain                              number -- which variant the zero is, the declaration does not                              say, and a record has no scalar value",
+                        );
+                        return;
+                    }
+                }
+            }
             let Some(c) = ctyp(&st.typ, &namen) else {
                 weigere(absagen, st.name.span, "`static` of an unresolvable type");
                 return;
@@ -1061,7 +1083,21 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             };
             let w = match anfang {
                 Some(x) => x,
-                None => match konst_zahl(&st.wert) {
+                // **Ein `static`, dessen Anfangswert eine KONSTANTE ist** (2026-08-20).
+                //
+                // `static GERAETEBASIS : Pa = BASIS;` fiel an *„`static` with a non-constant
+                // initialiser"* -- und `BASIS` ist so konstant, wie eine Zahl es sein kann.
+                // `konst_zahl` liest eine Ziffernfolge; ein `const`-Name ist keine.
+                //
+                // > *Gefunden beim Abarbeiten der Blindstellen*, an der ersten Datei, die
+                // > einen undurchsichtigen Typ als `static` fuehrt. Der Wert kommt aus
+                // > `namen.konstwert` und wird hier NICHT noch einmal gerechnet (W7).
+                None => match konst_zahl(&st.wert).or_else(|| match &st.wert.art {
+                    ExprArt::Ort(o) if o.suffixe.is_empty() => {
+                        namen.konstwert.get(&o.basis.text).copied()
+                    }
+                    _ => None,
+                }) {
                     Some(n) => n.to_string(),
                     None => {
                         weigere(
@@ -4627,6 +4663,36 @@ fn match_markiert(
         aus.push_str(&format!("{e}}} break;\n"));
     }
     aus.push_str(&format!("{e}}}\n"));
+    // **Wenn JEDER Zweig zurueckkehrt, ist die Stelle danach unerreichbar -- und C weiss es
+    // nicht** (2026-08-20).
+    //
+    // Der `switch` hat keinen `default:`, und das ist Absicht: `-Wswitch` wird damit ein
+    // zweiter Leser von `D005`. Genau deshalb sieht der C-Uebersetzer aber einen Weg um den
+    // `switch` herum und meldet *„control reaches end of non-void function"* -- an einem
+    // Programm, das Gabbro **richtig** findet.
+    //
+    // > **Die Zeile ist keine Erfindung, sondern eine Weitergabe.** `D005` hat entschieden,
+    // > dass die Fallunterscheidung geschlossen ist; W6 sagt, dass die Maschine das nicht
+    // > noch einmal prueft. `__builtin_unreachable()` ist die Form, in der man einem
+    // > C-Uebersetzer genau diese Entscheidung mitteilt -- *und wo er sie nicht kennt, steht
+    // > nichts, denn ohne die Warnung gibt es auch das Problem nicht.*
+    if m.zweige.iter().all(|z| {
+        z.rumpf
+            .anweisungen
+            .last()
+            .is_some_and(|k| matches!(&k.art, StmtArt::Return(_)))
+    }) {
+        aus.push_str(&format!(
+            "{e}/* D005: the case distinction is closed and every arm returns. The `switch`
+             {e} * carries no catch-all branch on purpose -- that is what makes `-Wswitch` a second
+             {e} * reader of the rule. This line hands THAT decision to the C compiler; it
+             {e} * decides nothing of its own. */
+             {e}#if defined(__GNUC__)
+{e}__builtin_unreachable();
+{e}#endif
+"
+        ));
+    }
 }
 
 /// Welchen `tagged type` traegt dieser Ausdruck? **Ueber den erklaerten Typ, nicht ueber die

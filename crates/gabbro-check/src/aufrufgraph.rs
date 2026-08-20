@@ -107,6 +107,31 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
                 }
                 g.knoten.insert(schluessel(modul, &ue.name.text), k);
             }
+            // **Und das GERAET selbst ist ein Knoten -- weil `Vtd(basis)` kein Ruf ist**
+            // (2026-08-20).
+            //
+            // *„Die Parameterliste der Deklaration IST der Konstruktor"* (`beispiele/09`):
+            // aus einer `Pa` wird ein Griff, und dabei passiert nichts. Der Graph hielt es
+            // fuer einen unbekannten Gerufenen und erklaerte daraufhin die Wirkungen JEDER
+            // Funktion, die einen Griff bildet, fuer unentscheidbar -- `E009` an
+            // `beispiele/09` und an `/39`.
+            //
+            // > **Dieselbe Luecke wie bei den Uebergaengen zwei Kommentare weiter oben, und
+            // > derselbe Ort.** Sie stand darueber und ist beim Bauen uebersehen worden;
+            // > gefunden hat sie `gabbro blindstellen`, als eine neue Datei einen Griff
+            // > zurueckgab.
+            let mut k = Knoten {
+                eigen: BTreeSet::new(),
+                ruft: BTreeSet::new(),
+                verlangt: Vec::new(),
+                hat_effects: true,
+                parameter: Vec::new(),
+                rufe: Vec::new(),
+                modul: modul.to_string(),
+                span: d.name.span,
+            };
+            k.eigen.insert("pure".to_string());
+            g.knoten.insert(schluessel(modul, &d.name.text), k);
         }
     });
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {

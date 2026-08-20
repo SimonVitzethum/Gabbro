@@ -1,0 +1,26 @@
+-- erwartet: N011
+-- **Ein linearer Wert in einem Tabellenslot -- und M2 kann ihm dort nicht folgen.**
+--
+-- `gabbro blindstellen` nannte `linear in position slot field` als leer in BEIDEN Korpora.
+-- Der Grund ist keine Nachlaessigkeit: **eine Tabelle hat NSLOTS Plaetze, und „genau einmal
+-- verbraucht" ist eine Aussage ueber einen PFAD, nicht ueber ein Feld.** Wer einen linearen
+-- Wert in einen Slot legt, hat ihn aus der Buchfuehrung genommen -- und M2 sagt darueber
+-- nichts, weil es nichts sagen kann.
+--
+-- > *Dieselbe Begruendung wie beim Geist, ein Stockwerk tiefer:* dort fehlt der Speicher,
+-- > hier fehlt der Pfad.
+
+module gift {
+
+const N : u32 = 8;
+
+linear type Parked;
+
+table Warteschlange count N {
+    slot {
+        aktiv : bool,
+        marke : Parked,
+    }
+}
+
+}

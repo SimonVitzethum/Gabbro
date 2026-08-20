@@ -81,11 +81,41 @@ fn typklassen(baum: &Programm) -> BTreeMap<String, &'static str> {
     aus
 }
 
-fn klasse_von<'a>(t: &TypExpr, k: &'a BTreeMap<String, &'static str>) -> Option<&'static str> {
+/// Die Typklasse und **ob sie hinter einem ZEIGER steht** (2026-08-20, am Abend).
+///
+/// Die erste Fassung packte den Zeiger aus und lieferte die Klasse des Ziels. Damit zaehlte
+/// `static tz : ptr<normal, rw> Platz` als *Tabelle in Stellung `static`* -- und genau das
+/// hatte ich als KEINE ZELLE ausgeschlossen, mit der Begruendung *„eine Tabelle ist kein
+/// Wert"*.
+///
+/// **Die Begruendung stimmt und das Instrument war falsch.** Eine Tabelle als Wert gibt es
+/// nicht; eine Tabelle hinter einem Zeiger ist der Normalfall. *Zwei Stellungen, die nichts
+/// miteinander zu tun haben, standen in derselben Zelle.*
+///
+/// > Gefunden hat es die Gegenprobe des Instruments gegen sich selbst -- eine Minute,
+/// > nachdem sie eingebaut war. **Ein Urteil, das eine Zelle aus dem Nenner nimmt, muss
+/// > falsifizierbar sein, und der Korpus ist der Falsifikator.**
+fn klasse_von<'a>(t: &TypExpr, k: &'a BTreeMap<String, &'static str>) -> Option<(&'static str, bool)> {
     match t {
-        TypExpr::Pfad(p) => p.teile.last().and_then(|i| k.get(&i.text)).copied(),
-        TypExpr::Zeiger(z) => klasse_von(&z.ziel, k),
+        TypExpr::Pfad(p) => p.teile.last().and_then(|i| k.get(&i.text)).map(|c| (*c, false)),
+        TypExpr::Zeiger(z) => klasse_von(&z.ziel, k).map(|(c, _)| (c, true)),
         _ => None,
+    }
+}
+
+/// Die Stellung, und hinter einem Zeiger heisst sie anders.
+fn hinter(stellung: &'static str, zeiger: bool) -> &'static str {
+    if !zeiger {
+        return stellung;
+    }
+    match stellung {
+        "parameter" => "parameter (ptr)",
+        "return (body)" => "return (ptr, body)",
+        "return (prototype)" => "return (ptr, proto)",
+        "let clause" => "let clause (ptr)",
+        "slot field" => "slot field (ptr)",
+        "static" => "static (ptr)",
+        andere => andere,
     }
 }
 
@@ -100,21 +130,22 @@ fn tafel_typen(baum: &Programm, t: &mut Tafel) {
         ItemArt::Funktion(f) => {
             let hat_rumpf = matches!(f.rumpf, FnRumpf::Block(_));
             for p in &f.parameter {
-                if let Some(c) = klasse_von(&p.typ, &k) {
-                    zaehle(t, c, "parameter");
+                if let Some((c, z)) = klasse_von(&p.typ, &k) {
+                    zaehle(t, c, hinter("parameter", z));
                 }
             }
             if let Some(e) = &f.ergebnis {
-                if let Some(c) = klasse_von(e, &k) {
-                    zaehle(t, c, if hat_rumpf { "return (body)" } else { "return (prototype)" });
+                if let Some((c, z)) = klasse_von(e, &k) {
+                    let st = if hat_rumpf { "return (body)" } else { "return (prototype)" };
+                    zaehle(t, c, hinter(st, z));
                 }
             }
             if let FnRumpf::Block(b) = &f.rumpf {
                 fn lets(b: &Block, k: &BTreeMap<String, &'static str>, t: &mut Tafel) {
                     for s in &b.anweisungen {
                         if let StmtArt::Let(l) = &s.art {
-                            if let Some(c) = l.typ.as_ref().and_then(|x| klasse_von(x, k)) {
-                                zaehle(t, c, "let clause");
+                            if let Some((c, z)) = l.typ.as_ref().and_then(|x| klasse_von(x, k)) {
+                                zaehle(t, c, hinter("let clause", z));
                             }
                         }
                         for u in crate::unterbloecke(s) {
@@ -126,15 +157,15 @@ fn tafel_typen(baum: &Programm, t: &mut Tafel) {
             }
         }
         ItemArt::Statisch(s) => {
-            if let Some(c) = klasse_von(&s.typ, &k) {
-                zaehle(t, c, "static");
+            if let Some((c, z)) = klasse_von(&s.typ, &k) {
+                zaehle(t, c, hinter("static", z));
             }
         }
         ItemArt::Tabelle(tb) => {
             for f in tb.slot.iter().flat_map(|s| s.felder.iter()) {
                 if let SlotTyp::Typ(x) = &f.typ {
-                    if let Some(c) = klasse_von(x, &k) {
-                        zaehle(t, c, "slot field");
+                    if let Some((c, z)) = klasse_von(x, &k) {
+                        zaehle(t, c, hinter("slot field", z));
                     }
                 }
             }
@@ -168,7 +199,7 @@ fn tafel_orte(baum: &Programm, t: &mut Tafel) {
         let FnRumpf::Block(b) = &f.rumpf else { return };
         let mut lokal = art.clone();
         for p in &f.parameter {
-            let a = match klasse_von(&p.typ, &k) {
+            let a = match klasse_von(&p.typ, &k).map(|(c, _)| c) {
                 Some("format") => "format field",
                 Some("table") => "slot field",
                 Some("device") => "register",
@@ -301,6 +332,9 @@ fn zeige_tafel(
     aus: &mut String,
     blind: &mut usize,
     bewacht: &mut usize,
+    besetzt: &mut usize,
+    keine: &mut usize,
+    widerspruch: &mut usize,
 ) {
     aus.push_str(&format!("\n== {titel} ==\n   {was}\n\n"));
     let breite = formen.iter().map(|f| f.len()).max().unwrap_or(8).max(8);
@@ -322,7 +356,29 @@ fn zeige_tafel(
     aus.push('\n');
     for f in formen {
         for s in stellungen {
+            // **Die Gegenprobe des Instruments gegen sich selbst** (2026-08-20).
+            //
+            // `keine_zelle` ist eine Liste von URTEILEN -- *dieses Paar ist keine Frage* --
+            // und ein Urteil, das eine Zelle aus dem Nenner nimmt, verbessert die Kennzahl
+            // zweifach. **Also muss es falsifizierbar sein**, und der Korpus ist der
+            // Falsifikator: steht die Kombination irgendwo, war das Urteil falsch.
+            //
+            // > *Dieselbe Bauart wie ueberall hier:* eine Absage, der keine Probe je
+            // > widersprechen kann, ist keine Absage, sondern eine Bequemlichkeit.
+            if let Some(grund) = keine_zelle(f, s) {
+                if t.contains_key(&(*f, *s)) || gift.contains_key(&(*f, *s)) {
+                    *widerspruch += 1;
+                    aus.push_str(&format!(
+                        "   !! CONTRADICTION  {f} x `{s}` is declared no cell -- and the                          corpus HAS it. The judgement is wrong, not the corpus.\n                         \x20                   (it said: {grund})\n"
+                    ));
+                    continue;
+                }
+                *keine += 1;
+                aus.push_str(&format!("   (no cell)  {f} x `{s}` -- {grund}\n"));
+                continue;
+            }
             if t.contains_key(&(*f, *s)) {
+                *besetzt += 1;
                 continue;
             }
             // **Leer im sauberen Korpus, BESETZT im Gift: das ist kein Loch, sondern eine
@@ -367,18 +423,22 @@ pub fn zeige(baeume: &[Programm], gifte: &[Programm]) -> String {
         "-- What has 0 sites is not checked but UNREACHABLE: no probe, no guardian and no\n\
          -- mutation can trigger it.\n",
     );
-    let mut blind = 0;
-    let mut bewacht = 0;
+    let (mut blind, mut bewacht, mut besetzt, mut keine, mut widerspruch) = (0, 0, 0, 0, 0);
     zeige_tafel(
         "A -- type class x position",
         "Here the ghost in the RETURN of a function WITH a body fell on 2026-08-20.",
         &["opaque", "linear", "ghost", "tagged", "record", "range", "format", "table", "device"],
-        &["parameter", "return (body)", "return (prototype)", "let clause", "slot field", "static"],
+        &["parameter", "return (body)", "return (prototype)", "let clause", "slot field", "static",
+          "parameter (ptr)", "return (ptr, body)", "return (ptr, proto)", "let clause (ptr)",
+          "slot field (ptr)", "static (ptr)"],
         &a,
         &ga,
         &mut aus,
         &mut blind,
         &mut bewacht,
+        &mut besetzt,
+        &mut keine,
+        &mut widerspruch,
     );
     // **Zwei Tafeln, weil es ZWEI Fragen sind** (2026-08-20, eine Stunde nach der ersten).
     //
@@ -401,6 +461,9 @@ pub fn zeige(baeume: &[Programm], gifte: &[Programm]) -> String {
         &mut aus,
         &mut blind,
         &mut bewacht,
+        &mut besetzt,
+        &mut keine,
+        &mut widerspruch,
     );
     zeige_tafel(
         "B2 -- the PAIRED places, and only they",
@@ -412,6 +475,9 @@ pub fn zeige(baeume: &[Programm], gifte: &[Programm]) -> String {
         &mut aus,
         &mut blind,
         &mut bewacht,
+        &mut besetzt,
+        &mut keine,
+        &mut widerspruch,
     );
     zeige_tafel(
         "C -- statement kind x body",
@@ -425,10 +491,38 @@ pub fn zeige(baeume: &[Programm], gifte: &[Programm]) -> String {
         &mut aus,
         &mut blind,
         &mut bewacht,
+        &mut besetzt,
+        &mut keine,
+        &mut widerspruch,
     );
-    aus.push_str(&format!("\n== {blind} blind spots, {bewacht} guarded ==\n"));
+    // **Vier Zahlen, nicht eine** (2026-08-20, am Abend desselben Tages).
+    //
+    // `151 -> 112` liest sich wie neununddreissig Fortschritt. Es waren einundzwanzig
+    // geschriebene und achtzehn ENTFERNTE Zellen -- und eine Entfernung verbessert die
+    // Kennzahl auf zwei Arten gleichzeitig: sie nimmt aus dem Zaehler UND aus dem Nenner.
+    //
+    // > *Solange die Begruendungen einzeln danebenstehen, ist das sauber.* Solange die ZAHL
+    // > einteilig berichtet wird, ist es das in zwei Wochen nicht mehr -- dann steht da
+    // > „39 geschlossen", und niemand kann es nachrechnen.
+    //
+    // **Also rechnet niemand es nach, sondern das Werkzeug sagt es selbst.**
+    let gesamt = besetzt + bewacht + keine + blind + widerspruch;
+    aus.push_str(&format!(
+        "\n== {blind} blind · {besetzt} covered · {bewacht} guarded · {keine} no cell \
+         (of {gesamt} pairs) ==\n"
+    ));
+    if widerspruch > 0 {
+        aus.push_str(&format!(
+            "== {widerspruch} CONTRADICTIONS -- an exclusion the corpus refutes ==\n"
+        ));
+    }
     aus.push_str(
-        "  GUARDED means: empty in the clean corpus and OCCUPIED in the poison corpus --\n\
+        "  The four numbers are reported apart ON PURPOSE. Closing a cell by WRITING and\n\
+         \x20 removing one as `no cell` both make the blind count fall, and the second does it\n\
+         \x20 twice -- it leaves the numerator and the denominator. A one-part number reads as\n\
+         \x20 progress two weeks later, and nobody can recompute it.\n\
+         \x20\n\
+         \x20 GUARDED means: empty in the clean corpus and OCCUPIED in the poison corpus --\n\
          \x20 forbidden by a rule, and the poison file proves the rule falls. That is the\n\
          \x20 strongest state a cell can have, and it is NOT work.\n\
          \x20\n\
@@ -439,4 +533,53 @@ pub fn zeige(baeume: &[Programm], gifte: &[Programm]) -> String {
          \x20 the corpus all the same. The counterpart for that is `pruefe-reichweite.py`.\n",
     );
     aus
+}
+
+/// **Welche Paare sind ueberhaupt keine Frage?**
+///
+/// Das Kreuzprodukt zweier Achsen ist nicht die Fragemenge -- **die Spalten gehoeren zu ihren
+/// Zeilen.** Die erste Fassung dieses Werkzeugs meldete `atomic x read` als Blindstelle; ein
+/// Atomic wird weder gelesen noch geschrieben. Ich habe die Instanz behoben und die Klasse
+/// stehen lassen, und danach standen neun weitere da.
+///
+/// *Jeder Eintrag hier ist eine Aussage ueber die SPRACHE, einmal geschrieben* -- und nicht
+/// eine Bequemlichkeit, die eine Zahl senkt. Wo ein Paar erlaubt und bloss ungeschrieben ist,
+/// steht es nicht hier, sondern bleibt BLIND.
+fn keine_zelle(form: &str, stellung: &str) -> Option<&'static str> {
+    // **Eine `table`, ein `format`, ein `device` sind keine WERTE.** Man adressiert sie
+    // durch einen Zeiger: `ptr<normal, rw> T`, `ptr<mmio, rw> Vtd`. Eine Tabelle
+    // zurueckzugeben hiesse, NSLOTS Plaetze zu kopieren, und ein `format` IST eine Sicht auf
+    // fremde Bytes -- sein Wert ist der Zeiger, nicht der Inhalt.
+    if matches!(form, "table") && matches!(stellung, "return (body)" | "return (prototype)" | "let clause" | "slot field" | "static") {
+        return Some("a table is not a value: it is addressed through `ptr<…> T`, and returning one would copy `count` slots");
+    }
+    if matches!(form, "format") && matches!(stellung, "slot field" | "static") {
+        return Some("a `format` is a VIEW on foreign bytes -- what would lie in the slot is the buffer, and its type is the buffer's");
+    }
+    // Ein `device` ist ein Griff auf `basis`; er lebt in einem `let` oder einem Parameter.
+    // In einem Slot oder einem `static` laege eine Kopie der Basisadresse -- **und dann ist
+    // die Frage die Adresse und nicht das Geraet.**
+    if matches!(form, "device") && matches!(stellung, "slot field" | "static") {
+        return Some("a device handle is `basis` and nothing else -- in storage the question is the ADDRESS, and that is a `Pa`");
+    }
+    // **`publishes`/`awaits`/`exchange` gibt es nur an einem `atomic`.** Das ist der ganze
+    // Zweck des Wortes: eine Paarung ohne Ordnung ist keine.
+    if !matches!(form, "atomic") && matches!(stellung, "publishes" | "awaits" | "exchange") {
+        return Some("the three paired forms exist only at an `atomic` -- a pairing without an ordering is none");
+    }
+    // Und umgekehrt: ein `atomic` wird nicht gelesen und nicht geschrieben.
+    if matches!(form, "atomic") && matches!(stellung, "read" | "written" | "+= etc.") {
+        return Some("an atomic is neither read nor written -- it is awaited, published or exchanged, and that is the point of the word");
+    }
+    // Ein `accumulates` meldet und liest gefaltet; es ist kein Paarungsplatz.
+    if matches!(form, "accumulates") && matches!(stellung, "publishes" | "awaits" | "exchange") {
+        return Some("`accumulates` folds on reading and reports on writing -- it needs no pairing, and that is why it exists");
+    }
+    // **Ein `format`-Feld traegt kein `+=`.** Der Erzeuger lehnt es benannt ab: ein
+    // zusammengesetztes Schreiben waere ein Lesen und ein Schreiben durch zwei getrennte
+    // Rufe, und ueber einem Puffer, an dem ein Geraet mitschreibt, ist die Frage genau das.
+    if form == "format field" && stellung == "+= etc." {
+        return Some("refused by name in the emitter: it would be a read and a write through two separate calls, over a buffer a device also writes");
+    }
+    None
 }
