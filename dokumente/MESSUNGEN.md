@@ -11309,3 +11309,139 @@ Verus-Vergleichszahlen** — die stammen aus fremden Veröffentlichungen und sin
 ableitbar, sondern nur zitierbar; für sie ist die richtige Vorkehrung eine Quelle, kein Befehl.
 Die zweite Gruppe sind `total`/`K`/`L` der Pflichtentafel (238 / 171 / 67), und die kommen aus
 einem **Handgang**. *Das ist der nächste Posten, und er gehört in `zaehle-pflichten.py`.*
+
+---
+
+# 2026-08-21, Stufe 5 — zwei Absagen und zwei Preise, die nirgends standen
+
+**Die Stufe heißt „die Beweise tragend machen", und der Ertrag dieses Laufs ist zur einen
+Hälfte eine gebaute Regel und zur anderen eine Zahl, die es vorher nicht gab.** *Der Anteil
+ist kein Zufall: von zwanzig nachgesehenen Posten waren sieben beim Nachsehen schon zu.*
+
+## Das Schweigen unter der Sperre — `K010`
+
+```gabbro
+lock KAPPEN protects { eintraege } rank 0 held <= 40 * eintraege ops;
+impl fn viel() effects { writes eintraege, locks KAPPEN } costs <= 300 ops
+{ locks KAPPEN { eintraege = 1; … eintraege = 5; } }
+```
+
+| | |
+|---|---|
+| **vor der Regel** (2026-08-20) | **4 Items, 0 Fehler, 0 Hinweise** |
+| **nach der Regel** | `K010`, und mit einer Zahl statt des Symbols greift `K002` wieder |
+
+`kosten.rs` nahm in `haltezeiten` nur auf, was `konst_wert` hergab. Eine nicht konstant
+auswertbare Haltezeit fiel aus der Karte — **und mit der Karte fiel `K002`.** *Eine Zusage,
+die den Wächter abschaltet, den sie füttern sollte, ist teurer als gar keine.*
+
+**Die Trennung, die dabei ausfällt, ist die eigentliche Ausbeute:** die Kostenklasse verträgt
+Symbole (`costs <= 40 * n` wird gegen die **kleinste** Belegung gehalten und muss genau dort
+halten), die Sperrklasse verträgt sie nicht — **Latenz lebt an der größten Belegung, und die
+hat ein Symbol nicht.** Dieselbe Form, zwei Klassen, gegensätzliche Antwort.
+
+> **Und `SPRACHE.md` §11.2 schrieb `held <= constexpr ops`, seit es das Feld gibt.** Der
+> Parser nahm jeden Ausdruck. *Eine Grammatikzusage im Kommentar ist keine* — dieselbe Klasse
+> wie eine Klausel ohne Leser, nur eine Ebene höher.
+
+Belege: `beispiele/gift/75-haltezeit-parametrisch.gab` (genau `K010`), Sprechprobe in vier
+Richtungen in `rechenwerk.rs`, Mutation `haltezeit-darf-symbolisch-sein`.
+
+## `breaking` öffnet den Träger nicht — die Buchung sagte das Gegenteil
+
+`TODO.md` führte als offenen Durchstich: *„`ist_geschlossen` verlangt, dass es keine
+`breaking`-Stellen gibt — ein `breaking` öffnet den Träger damit wieder, statt ein
+Übersetzungsfehler zu sein."* **Zwei Dinge daran waren falsch:**
+
+| | |
+|---|---|
+| `ist_geschlossen` | gibt es nicht — die Funktion heißt `Traeger::k_haelt` |
+| die Handmutation im `breaking` | fällt an **`D001`**, am `by ops`-Feld zusätzlich an **`D002`** |
+
+`kbedingung.rs::sammle` steigt über `crate::unterbloecke` in den Rumpf ab wie in jeden anderen
+Unterblock. **Was `breaking` wirklich bewegt, ist die MESSUNG**: der Träger fällt aus der
+Zählung *„K hält"*, weil das Messprotokoll verlangt, dass ALLE Mutationen erzeugt sind.
+
+> *Zwei Fragen, die der Ordner zusammengezogen hatte.* `breaking` sagt „hier ruht ein Satz",
+> `by ops` sagt „dieses Feld gehört den Operationen". Wäre das erste eine Erlaubnis für das
+> zweite, wäre `by ops` ein Vorschlag mit Hintertür.
+
+**Und die dritte Bewegung:** `breaking` hatte **null Korpusstellen** — die Aussage stand über
+einem Konstrukt, an dem nie etwas gefallen ist (W11). Seit heute:
+`beispiele/gift/226-breaking-oeffnet-den-traeger-nicht.gab`, und gesagt steht es in
+`SPRACHE.md` §10.2.1. *Nebenbefund: `pruefe-konstrukte.py` misst 23 ITEM-Arten und keine
+Anweisungsarten — dort konnte die Lücke nicht auffallen.*
+
+## Zwei Preise, die in keinem Register standen
+
+```
+gabbro pflichten beispiele/*.gab   32 Pflichten: 3 Erhaltung, 7 Nachbedingung,
+                                   10 Fremdpflicht, 12 VORBEDINGUNG am Rufort
+./zaehle-theorien.py               13 Theorien, 2 ohne Register
+```
+
+**Die Vorbedingung am Rufort.** `M115` weist ab, wo der Bereich des Arguments die Bedingung
+**ausschließt**, und schweigt sonst — eine untere Schranke, die als solche dasteht. *Was
+nirgends stand, war die Gegenseite:* **12 Rufstellen** tragen eine Bedingung, die der Rufer
+herstellen müsste und die niemand nachhält. `gabbro pflichten` zählte Pflichten, die eine
+DEKLARATION erzeugt, und keine, die ein RUF erbt. **Ein Preis, den kein Werkzeug nennt, sieht
+aus wie null.** Die Spalte `V` steht neben `E`/`N`/`F` und nicht in ihnen; die Summe wird von
+`./pruefe-zahlen.py` gegen `dokumente/PLAN.md` neu abgeleitet.
+
+**Die zweite Vertrauensfläche.** `Intervall_Aussen.thy` handelt vom PRÜFER, und dafür gibt es
+kein Register — das stand seit dem 2026-08-18 als Prosa. `./zaehle-theorien.py` hält jetzt
+jede `.thy` gegen `schablonen.rs`. **Der zweite Fund war neu:** `Table_Induktion.thy` IST eine
+Schablone (`S7`, bewiesen), und der Registereintrag nennt seine Datei nicht — *die andere
+Richtung derselben Lücke: nicht die Fläche fehlt, sondern die Zeile, die sie verknüpft.*
+
+## Und eine Verschärfung, die den Korpus nicht zerlegt und ihn auch nicht anfasst
+
+`maintains` nennt unqualifiziert, und `M112` sammelt flach über alle Module ein. Die Frage war,
+wie viele Stellen unter einer Qualifizierungsregel qualifizieren müssten.
+
+```
+11 maintains-Stellen über 277 Einheiten
+ 0 müssten qualifizieren
+ 6 von 277 Einheiten tragen überhaupt mehr als ein `module`
+```
+
+**Die Verschärfung zerlegt den Korpus also nicht — sie hat heute auch keinen einzigen Biss.**
+Die Mehrdeutigkeit braucht zwei gleichnamige Invarianten in zwei Modulen *derselben*
+Übersetzungseinheit. **Ausgelöst wird die Klasse erst von «ABI»:** ein `.gabi` ist gültiger
+Gabbro-Quelltext mit eigenem `module`, und der Importeur bekommt damit ein zweites Modul in
+seine Einheit. *Dort, nicht hier, wird aus der Bauart ein Fall.*
+
+## Sieben Posten waren beim Nachsehen schon zu
+
+| Posten | seit | Beleg |
+|---|---|---|
+| parametrische `costs`-Zusage ist leer | 2026-08-18 | `costs <= 0 * n ops` gibt `K001` |
+| `bank … stride 0` | 2026-08-19 | `N010`, genau eine Absage |
+| das Induktionsschema muss nach Isabelle | 2026-08-16 | `Table_Induktion.thy`, `lemma table_induktion` |
+| `leaves` hat keinen Leser | 2026-08-19 | `L106` (`m2.rs:565`) |
+| der Abstieg hat keinen Leser | 2026-08-19 | `S005` (`schleifen.rs:250`) |
+| `pub` ist wirkungslos | «ABI» | `abi.rs:95`, und `N025` prüft die Sichtbarkeit |
+| `by unbesucht` braucht eine Struktur | 2026-08-20 | `emit.rs:4586` — es braucht **keine** |
+
+**Und drei waren zur Hälfte zu**, weil sie zwei Fragen in einem Satz führten: `ensures`/
+`maintains` (Wohlgeformtheit fällt an `M111`–`M114`, der RUMPF bleibt P6), `A4` (Terminierung
+trägt seit «K5.4» `K008`/`K009`, die KOSTENZAHL bleibt Annahme) und `bedingung` (die
+`where`-Klausel steht in `<Format>_gueltig()` — der Befund über den WÄCHTER bleibt).
+
+> **Ein Posten, der zwei Fragen in einem Satz führt, ist nie ganz zu und nie ganz offen.**
+> *Das ist die teurere Hälfte dieses Laufs: nicht die veralteten Zahlen, sondern die
+> gebündelten Sätze — eine veraltete Zahl widerspricht sich irgendwann, ein gebündelter Satz
+> bleibt für immer halb wahr.*
+
+## Der Stand
+
+```
+cargo test          161 gruen (auf `fisch`)
+mutiere-pruefer.py  236 von 236 gueltigen Mutationen gefangen (100 %, auf `fisch`)
+                    157 im Pruefer, 76 in der C-Emission, 3 an Schablonen, 0 in der
+                    Annotationsemission -- und eine Flaeche mit 0 ist unbeschaedigbar
+pruefe-zahlen.py    48 von 48 nachgerechnet
+pruefe-kennungen.py 190 Kennungen, jede in genau einer Datei
+zaehle-theorien.py  13 Theorien, 2317 Zeilen, 2 ohne Register
+gabbro pflichten    32 Pflichten ueber `beispiele/*.gab`
+```

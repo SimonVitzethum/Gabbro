@@ -128,6 +128,10 @@ const BENANNT: &[&str] = &[
     // nicht, und der Waechter sagt es statt es zu raten.*
     "N020",
     "K004", "K005", "D001", "D002", "D003", "D004", "M105", // Haltezeit geteilt, K-Bedingung, narrow-Zweig
+    // **`K010`, 2026-08-20** -- eine `held`-Zusage, die keine Zahl ist. Sie fiel bis heute
+    // aus der Karte, und mit der Karte fiel `K002`: die Sperre war unbewacht, und der Lauf
+    // sagte 0 Fehler. *Die Kostenklasse vertraegt Symbole, die Sperrklasse nicht.*
+    "K010",
     "V001", "V002", "V003", "V004", // Paarung
     "L101", "L102", "L103", "L104", "L105", // M2, echte Linearitaet
     "R001", "R002", "R003", "R004", // M3, Raeume, Rechte -- und zweimal `own` auf denselben Ort

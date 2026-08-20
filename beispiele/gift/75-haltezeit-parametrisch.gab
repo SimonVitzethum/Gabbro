@@ -1,0 +1,39 @@
+-- erwartet: K010
+-- **Gift 75 -- eine Haltezeit, die keine Zahl ist, und damit `K002` abschaltet.**
+--
+-- Die Gegenprobe zu Gift 77: dort ist eine parametrische `costs`-Zusage LESBAR und wird
+-- gegen die kleinste Belegung gehalten. **Hier ist dieselbe Form ein Fehler**, und der
+-- Unterschied liegt nicht im Pass, sondern in der Bedeutung des Wortes.
+--
+-- `held` ist eine LATENZaussage -- wie lange ein anderer Kern hoechstens wartet. Ein
+-- `held <= 40 * eintraege` sagt: so lange, wie `eintraege` gross ist. Die Latenz haengt an
+-- der GROESSTEN Belegung, und die hat ein Symbol nicht.
+--
+-- Gemessen am 2026-08-20, vor der Regel: **4 Items, 0 Fehler, 0 Hinweise** -- der Rumpf
+-- unten haelt die Sperre fuenf Operationen lang, und `K002` schwieg, weil `haltezeiten`
+-- nur aufnahm, was konstant auswertbar war. *Eine Zusage, die den Waechter abschaltet, den
+-- sie fuettern sollte, ist teurer als gar keine.*
+--
+-- `ast.rs` schrieb `held <= constexpr ops` in den Kommentar, seit es das Feld gibt. Der
+-- Parser nahm jeden Ausdruck. **Eine Grammatikzusage im Kommentar ist keine.**
+
+module gift75 {
+
+static mut eintraege : u32 in 0 .. 1023 = 0;
+
+lock KAPPEN protects { eintraege } rank 0 held <= 40 * eintraege ops;
+
+impl fn viel()
+    effects { writes eintraege, locks KAPPEN }
+    costs   <= 300 ops
+{
+    locks KAPPEN {
+        eintraege = 1;
+        eintraege = 2;
+        eintraege = 3;
+        eintraege = 4;
+        eintraege = 5;
+    }
+}
+
+}

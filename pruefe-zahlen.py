@@ -54,9 +54,9 @@ FRIST = 180  # Sekunden je Befehl. Ein Waechter ohne Frist meldet einen Haenger 
 PFLICHTEN_SUMME = (
     "cargo run -q --bin gabbro -- pflichten beispiele/*.gab 2>/dev/null | "
     "grep -oE '== [0-9]+ obligations: [0-9]+ preservation, "
-    "[0-9]+ postcondition, [0-9]+ foreign' | "
-    "awk '{o+=$2; p+=$4; q+=$6; f+=$8} END "
-    "{print \"obl\", o, \"erhaltung\", p, \"nachbed\", q, \"fremd\", f}'"
+    "[0-9]+ postcondition, [0-9]+ foreign, [0-9]+ precondition' | "
+    "awk '{o+=$2; p+=$4; q+=$6; f+=$8; v+=$10} END "
+    "{print \"obl\", o, \"erhaltung\", p, \"nachbed\", q, \"fremd\", f, \"vorbed\", v}'"
 )
 
 # Je Eintrag: (Datei, Muster mit EINER Gruppe = die Zahl im Text, Befehl, Auszug mit EINER
@@ -417,6 +417,17 @@ EINTRAEGE = [
         ["sh", "-c", PFLICHTEN_SUMME],
         r"fremd (\d+)",
         "Fremdpflichten ueber dem Korpus",
+    ),
+    # **Neu am 2026-08-20** -- der Preis der SCHWACHEN Fassung von `M115`. Der Pruefer weist
+    # ab, wo der Bereich des Arguments die Vorbedingung ausschliesst, und schweigt sonst; die
+    # Zahl der Rufstellen, an denen er schweigt, stand nirgends. *Ein Preis, der nirgends
+    # steht, sieht aus wie null.*
+    (
+        "dokumente/PLAN.md",
+        r"\| \*\*Vorbedingungen am Rufort\*\* \| \*\*(\d+)\*\*",
+        ["sh", "-c", PFLICHTEN_SUMME],
+        r"vorbed (\d+)",
+        "Vorbedingungen an Rufstellen ueber dem Korpus",
     ),
     (
         "dokumente/PLAN.md",

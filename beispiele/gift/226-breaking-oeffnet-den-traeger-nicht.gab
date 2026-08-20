@@ -1,0 +1,53 @@
+-- erwartet: D002
+-- **Gift 226 -- `breaking` ist kein Schreibrecht.**
+--
+-- Der Durchstich, den `TODO.md` (Stufe 5) als offen fuehrte: *was passiert bei einem
+-- `breaking` an einem `by ops`-Feld?* Die Buchung sagte, der Traeger werde damit **wieder
+-- geoeffnet**, statt dass es ein Uebersetzungsfehler waere -- gelesen aus `k_haelt()`, nicht
+-- gemessen.
+--
+-- **Gemessen 2026-08-20: es ist ein Uebersetzungsfehler**, und zwar zweimal (`D002` am Feld,
+-- `D001` an der Tabelle). `kbedingung.rs::sammle` steigt ueber `crate::unterbloecke` in den
+-- Rumpf des `breaking` ab wie in jeden anderen Unterblock. *Ein ruhender Satz gibt kein
+-- Schreibrecht her.*
+--
+-- **Was `breaking` WIRKLICH tut, ist eine Aussage ueber die MESSUNG:** der Traeger faellt aus
+-- der Zaehlung „K haelt" (`Traeger::k_haelt`), weil das Messprotokoll verlangt, dass ALLE
+-- Mutationen des Traegers erzeugt sind -- und ein Bereich, in dem ein Satz ruht, ist genau
+-- der Bereich, den das Argument „der Erzeuger zeigt es einmal" nicht deckt.
+--
+-- *Zwei Fragen, die der Ordner zusammengezogen hatte: `breaking` sagt „hier ruht ein Satz",
+-- `by ops` sagt „dieses Feld gehoert den Operationen". Waere das erste eine Erlaubnis fuer
+-- das zweite, waere `by ops` ein Vorschlag mit Hintertuer.*
+--
+-- Und die dritte Bewegung dieses Fundes: **`breaking` hatte bis heute NULL Korpusstellen.**
+-- Ein Satz ueber ein Konstrukt, an dem nie etwas gefallen ist, ist eine Vermutung (W11).
+
+module gift226 {
+
+const N : u32 = 8;
+
+table Objekte count N {
+    slot {
+        benutzt : bool,
+        zaehler : u32 in 0 .. 65535 by ops,
+    }
+    invariant zaehler_im_bereich cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s].zaehler >= 0;
+    -- Nachgezogen beim Zusammenfuehren (2026-08-21): die Wortmenge von `ops` ist seit
+    -- `P039` geschlossen. **Diese Datei entstand parallel und trug noch erfundene Woerter**
+    -- -- derselbe Grund, aus dem die Luecke so lange nicht auffiel: die Giftproben trugen
+    -- sie alle.
+    ops insert, remove;
+}
+
+impl fn von_hand(o : ptr<normal, rw> Objekte, i : index into Objekte)
+    effects { writes o.slots }
+    costs   <= 8 ops
+{
+    breaking zaehler_im_bereich {
+        o.slots[i].zaehler = 0;
+    }
+}
+
+}

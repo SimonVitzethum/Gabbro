@@ -164,6 +164,57 @@ pub struct Zaehlung {
     pub offen: usize,
 }
 
+/// **`K010` -- unter einer Sperre darf der Rahmen NICHT parametrisch sein.**
+///
+/// Die Kostenklasse vertraegt Symbole: `costs <= 4 + 12 * lenof(m) ops` ist seit dem
+/// 2026-08-18 lesbar, und verglichen wird gegen die kleinste Belegung. **Die Sperrklasse
+/// vertraegt sie nicht**, und das ist keine Bequemlichkeit, sondern die Bedeutung des Wortes:
+///
+/// > `held` ist eine **LATENZaussage** -- wie lange ein *anderer* Kern hoechstens wartet.
+/// > Ein `held <= 40 * n` mit symbolischem `n` sagt: so lange, wie `n` gross ist. Das ist
+/// > keine Schranke, sondern eine Sperre, die unbeschraenkt lange gehalten wird.
+///
+/// **Und die kleinste Belegung hilft hier gerade NICHT.** Bei `costs` ist sie die scharfe
+/// Lesart -- die Zusage ist bei `n = 0` am kleinsten und muss genau dort halten. Bei `held`
+/// waere sie die falsche Richtung: die Latenz eines wartenden Kerns haengt an der GROESSTEN
+/// Belegung, und die hat ein Symbol nicht.
+///
+/// **Gemessen 2026-08-20, und der Befund ist das Schweigen:**
+///
+/// ```text
+/// lock KAPPEN protects { eintraege } rank 0 held <= 40 * eintraege ops;
+/// impl fn viel() … { locks KAPPEN { <5 Operationen> } }
+/// -> 4 Items, 0 Fehler, 0 Hinweise
+/// ```
+///
+/// `haltezeiten` nahm nur auf, was `konst_wert` hergab; alles andere fiel aus der Karte, und
+/// mit der Karte fiel `K002`. *Eine Zusage, die den Waechter abschaltet, den sie fuettern
+/// sollte, ist teurer als gar keine* -- dieselbe Bauart wie die parametrische `costs`-Zeile
+/// vor dem 2026-08-18, nur in die andere Richtung: dort schwieg der Pass ueber die ZUSAGE,
+/// hier schweigt er ueber den RUMPF.
+fn haltezeit_ist_keine_zahl(l: &LockDecl, wort: &str, span: Span) -> Absage {
+    Absage::fehler(
+        "K010",
+        span,
+        format!(
+            "`{}` promises `{wort}` with a bound that is not constant",
+            l.name.text
+        ),
+    )
+    .mit_notiz(
+        "`held` is a LATENCY statement -- how long another core waits at most. A symbolic \
+         bound is a lock held for an unbounded time",
+    )
+    .mit_notiz(
+        "and it switches the check off silently: `K002`/`K004` compare the block against a \
+         number the pass never got",
+    )
+    .mit_notiz(
+        "the cost class tolerates symbols (`costs <= 40 * n`), the lock class does not -- \
+         `costs` is compared at the SMALLEST assignment, latency lives at the largest",
+    )
+}
+
 pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
     let u = Umgebung::sammle(baum);
     let mut deklariert: HashMap<String, i128> = HashMap::new();
@@ -181,14 +232,18 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
             }
         }
         ItemArt::Lock(l) => {
-            if let Some(h) = &l.haltezeit {
-                if let Some(n) = u.konst_wert(modul, h) {
-                    haltezeiten.insert(crate::umgebung::qualifiziere(modul, &l.name.text), n);
-                }
-            }
-            if let Some(h) = &l.geteilte_haltezeit {
-                if let Some(n) = u.konst_wert(modul, h) {
-                    geteilte_haltezeiten.insert(crate::umgebung::qualifiziere(modul, &l.name.text), n);
+            for (wort, zusage, topf) in [
+                ("held", &l.haltezeit, &mut haltezeiten),
+                ("shared held", &l.geteilte_haltezeit, &mut geteilte_haltezeiten),
+            ] {
+                let Some(h) = zusage else { continue };
+                match u.konst_wert(modul, h) {
+                    Some(n) => {
+                        topf.insert(crate::umgebung::qualifiziere(modul, &l.name.text), n);
+                    }
+                    // **`K010`.** Bis hier stand ein blosses `if let` -- eine nicht konstant
+                    // auswertbare Haltezeit fiel aus der Karte und mit ihr `K002`/`K004`.
+                    None => absagen.schiebe(haltezeit_ist_keine_zahl(l, wort, h.span)),
                 }
             }
         }

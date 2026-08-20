@@ -1680,6 +1680,64 @@ fn eine_parametrische_kostenzusage_wird_entschieden() {
     geht("module t { impl fn s() -> u32 effects { pure } costs <= 2 ops { return 1; } }");
 }
 
+/// **`K010` — dieselbe Form, andere Klasse: unter einer Sperre ist sie ein FEHLER.**
+///
+/// Die Zeile darüber lässt `costs <= 40 * n` zu und hält sie gegen die kleinste Belegung.
+/// **`held <= 40 * n` darf nicht zugelassen werden**, und der Grund steht nicht im Pass,
+/// sondern im Wort: `held` ist eine **Latenzaussage** — wie lange ein *anderer* Kern wartet.
+/// Die Latenz lebt an der GRÖSSTEN Belegung, und die hat ein Symbol nicht.
+///
+/// **Gemessen 2026-08-20, vor der Regel:**
+///
+/// ```text
+/// lock KAPPEN … held <= 40 * eintraege ops;   locks KAPPEN { <5 Operationen> }
+/// → 4 Items, 0 Fehler, 0 Hinweise
+/// ```
+///
+/// `haltezeiten` nahm nur auf, was `konst_wert` hergab — der Rest fiel aus der Karte, **und
+/// mit der Karte fiel `K002`.** *Eine Zusage, die den Wächter abschaltet, den sie füttern
+/// sollte, ist teurer als gar keine.*
+///
+/// **Und `ast.rs` schrieb `held <= constexpr ops` in den Kommentar, seit es das Feld gibt.**
+/// Der Parser nahm jeden Ausdruck. Eine Grammatikzusage im Kommentar ist keine.
+#[test]
+fn eine_haltezeit_muss_eine_zahl_sein() {
+    let codes = |q: &str| -> Vec<String> {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        let _ = gabbro_check::pruefe(&b, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    };
+    // Der Rumpf ist in allen drei Fassungen derselbe: fuenf Zuweisungen unter der Sperre.
+    let quelle = |haltezeit: &str| {
+        format!(
+            "module t {{ static mut e : u32 in 0 .. 1023 = 0; \
+             lock K protects {{ e }} rank 0 {haltezeit}; \
+             impl fn viel() effects {{ writes e, locks K }} costs <= 300 ops \
+             {{ locks K {{ e = 1; e = 2; e = 3; e = 4; e = 5; }} }} }}"
+        )
+    };
+
+    // **Die kaputte Richtung: ein Symbol in der Haltezeit.**
+    let c = codes(&quelle("held <= 40 * e ops"));
+    assert!(c.contains(&"K010".to_string()), "eine symbolische Haltezeit faellt nicht: {c:?}");
+
+    // **Und die geteilte Seite hat denselben Riegel** — `shared held` ist ein eigenes Feld,
+    // und ein Riegel, der nur den einen Zweig kennt, laesst den anderen offen.
+    let c = codes(&quelle("held <= 40 ops shared held <= 40 * e ops"));
+    assert!(c.contains(&"K010".to_string()), "eine symbolische GETEILTE Haltezeit faellt nicht: {c:?}");
+
+    // **Die saubere Richtung: eine Zahl geht durch** -- und `K002` schweigt, weil fuenf
+    // Operationen unter vierzig liegen.
+    let c = codes(&quelle("held <= 40 ops"));
+    assert!(c.is_empty(), "eine konstante Haltezeit faellt: {c:?}");
+
+    // **Die dritte Richtung, und sie ist der eigentliche Ertrag:** mit der Zahl greift
+    // `K002` wieder. *Ohne diese Zeile belegte der Test nur, dass nichts rot wird -- und
+    // eine Zusicherung ueber das AUSBLEIBEN einer Absage bewacht keine Absenkung.*
+    let c = codes(&quelle("held <= 2 ops"));
+    assert!(c.contains(&"K002".to_string()), "die Sperre ist mit einer Zahl wieder bewacht: {c:?}");
+}
+
 /// **`opaque` beisst — und der Fund ist grösser als sein Anlass.**
 ///
 /// ```gabbro
@@ -3125,5 +3183,117 @@ impl fn hoch(i : index into T) -> bool effects { reads T.slots } costs <= 64 ops
     assert!(
         c.contains("for (uint32_t v = T_speicher.slots[i].p; v != 8u; v = T_speicher.slots[v].p)"),
         "die Kette faengt beim Elter an und endet am Sonderwert:\n{c}"
+    );
+}
+
+/// **`breaking` ist kein Schreibrecht — und die Buchung sagte das Gegenteil.**
+///
+/// `TODO.md` (Stufe 5) führte als offenen Durchstich: *„`kbedingung.rs` hält die
+/// `breaking`-Stellen je Träger, und `ist_geschlossen` verlangt, dass es keine gibt — ein
+/// `breaking` **öffnet den Träger damit wieder**, statt ein Übersetzungsfehler zu sein."*
+///
+/// **Zwei Dinge daran waren falsch, und beide sind messbar.**
+///
+/// * `ist_geschlossen` gibt es nicht. Die Funktion heisst `Traeger::k_haelt`.
+/// * Ein `breaking` öffnet gar nichts: `sammle` steigt über `crate::unterbloecke` in den
+///   Rumpf ab wie in jeden anderen Unterblock, und die Handmutation fällt an `D001` — am
+///   `by ops`-Feld zusätzlich an `D002`.
+///
+/// **Was `breaking` wirklich tut, ist eine Aussage über die MESSUNG**: der Träger fällt aus
+/// der Zählung *„K hält"*, weil das Messprotokoll verlangt, dass ALLE Mutationen erzeugt
+/// sind — und ein Bereich, in dem ein Satz ruht, ist genau der, den *„der Erzeuger zeigt es
+/// einmal"* nicht deckt. *Zwei Fragen, die der Ordner zusammengezogen hatte.*
+///
+/// > Und die dritte Bewegung: **`breaking` hatte bis zum 2026-08-20 null Korpusstellen.**
+/// > Ein Satz über ein Konstrukt, an dem nie etwas gefallen ist, ist eine Vermutung (W11).
+#[test]
+fn ein_breaking_oeffnet_den_traeger_nicht() {
+    let codes = |q: &str| -> Vec<String> {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        let _ = gabbro_check::pruefe(&b, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    };
+    // Ein Rumpf, EINE Handmutation -- einmal mit `ops` an der Tabelle und `by ops` am Feld,
+    // einmal ohne beides. Der `breaking`-Block steht in beiden Fassungen.
+    let quelle = |ops: &str, feld: &str| {
+        format!(
+            "module t {{ const N : u32 = 8; \
+             table O count N {{ slot {{ benutzt : bool, z : u32 in 0 .. 65535{feld}, }} \
+             invariant zb cost O(n) runs offline : \
+             forall s in slots of Self : Self.slots[s].z >= 0; {ops} }} \
+             impl fn h(o : ptr<normal, rw> O, i : index into O) \
+             effects {{ writes o.slots }} costs <= 8 ops \
+             {{ breaking zb {{ o.slots[i].z = 0; }} }} }}"
+        )
+    };
+
+    // **Die kaputte Richtung:** `by ops` am Feld, `ops` an der Tabelle, Handmutation im
+    // `breaking`. Beide Riegel greifen -- der `breaking`-Block ist keine Hintertuer.
+    // *Nachgezogen beim Zusammenfuehren (2026-08-21): `P039` haelt die Wortmenge von `ops`
+    // seit demselben Tag geschlossen, und diese Probe entstand parallel mit erfundenen
+    // Woertern -- derselbe Grund, aus dem die Luecke so lange nicht auffiel.*
+    let c = codes(&quelle("ops insert, remove;", " by ops"));
+    assert!(c.contains(&"D002".to_string()), "`by ops` haelt im `breaking` nicht: {c:?}");
+    assert!(c.contains(&"D001".to_string()), "`ops` haelt im `breaking` nicht: {c:?}");
+
+    // **Die saubere Richtung:** ohne `ops` und ohne `by ops` ist dieselbe Handmutation im
+    // selben `breaking`-Block erlaubt -- eine Tabelle ohne erzeugte Operationen ist reine
+    // Beschreibung, und `breaking` bleibt, was es ist: eine sichtbare Ruhezone.
+    //
+    // *Ohne diese Haelfte belegte die obere nur, dass etwas rot wird -- und nicht, dass es
+    // das `ops` ist, das es rot macht.*
+    let c = codes(&quelle("", ""));
+    assert!(c.is_empty(), "ein `breaking` ohne `ops` faellt: {c:?}");
+}
+
+/// **`V` — die Vorbedingung am Rufort, und sie stand in keinem Register.**
+///
+/// `M115` weist ab, wo der Bereich des Arguments die Vorbedingung **ausschliesst**, und
+/// schweigt sonst — *eine untere Schranke, und sie steht als solche da.* Was nirgends stand,
+/// war die **Gegenseite dieser Schranke**: wie viele Rufstellen eine Bedingung tragen, die
+/// niemand nachhält. `TODO.md` (Stufe 5) verlangte diese Zahl ausdrücklich, bevor die starke
+/// Fassung von `M115` gebaut wird.
+///
+/// **Gemessen 2026-08-20 über `beispiele/*.gab`: 12.** *Ein Preis, den kein Werkzeug nennt,
+/// sieht aus wie null.*
+#[test]
+fn eine_vorbedingung_am_rufort_wird_gezaehlt() {
+    let v = |q: &str| -> usize {
+        let (b, _a) = gabbro_syntax::lies("p.gab", q);
+        gabbro_check::pflichten::sammle(&b)
+            .iter()
+            .filter(|x| x.art == gabbro_check::pflichten::Art::Vorbedingung)
+            .count()
+    };
+
+    // **Die zaehlende Richtung:** ein Ruf auf eine Funktion mit ZWEI `requires` zaehlt zwei.
+    assert_eq!(
+        v("module t { extern fn nimm(x : u32 in 0 .. 9) requires x < 9, x > 0 \
+           effects { pure } costs <= 1 ops; \
+           impl fn ruft(y : u32 in 0 .. 9) effects { pure } costs <= 8 ops \
+           { nimm(y); } }"),
+        2,
+        "zwei Vorbedingungen an einer Rufstelle sind zwei Pflichten"
+    );
+
+    // **Die schweigende Richtung:** dieselbe Funktion ohne `requires` zaehlt nichts. *Ohne
+    // diese Haelfte belegte die obere nur, dass irgendetwas gezaehlt wird.*
+    assert_eq!(
+        v("module t { extern fn nimm(x : u32 in 0 .. 9) effects { pure } costs <= 1 ops; \
+           impl fn ruft(y : u32 in 0 .. 9) effects { pure } costs <= 8 ops \
+           { nimm(y); } }"),
+        0,
+        "ohne `requires` gibt es am Rufort nichts zu schulden"
+    );
+
+    // **Und der Abstieg ist die eigentliche Falle:** ein Ruf unter einer Sperre ist derselbe
+    // Ruf. *Dieselbe Lehre wie `pruefe-abstieg.py`, nur an einer Zaehlung statt an einem Pass.*
+    assert_eq!(
+        v("module t { static mut z : u32 = 0; lock L protects { z } rank 0 held <= 40 ops; \
+           extern fn nimm(x : u32 in 0 .. 9) requires x < 9 effects { pure } costs <= 1 ops; \
+           impl fn ruft(y : u32 in 0 .. 9) effects { locks L } costs <= 8 ops \
+           { locks L { nimm(y); } } }"),
+        1,
+        "ein Ruf unter einer Sperre faellt aus der Zaehlung"
     );
 }
