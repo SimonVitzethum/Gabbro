@@ -95,7 +95,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **50 Kennzahlen mit Befehl** *(Stand 2026-08-20; 12 am Vormittag)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **55 Kennzahlen mit Befehl** *(Stand 2026-08-21; 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -227,7 +227,7 @@ darunter.
       und ihre Quelle ist eine Tabelle in `PFLICHTEN.md`, deren Zeilen ein Mensch geschrieben
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
-      **`pruefe-zahlen.py` führt heute 50 Kennzahlen mit Befehl und zählt 149 fettgedruckte
+      **`pruefe-zahlen.py` führt heute 55 Kennzahlen mit Befehl und zählt 147 fettgedruckte
       Zahlen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
@@ -1096,6 +1096,29 @@ Loch, das ein Programm oder ein Messwerkzeug gefunden hat, nicht ein Entwurf.
       der Wechsel ist ein EREIGNIS** — das ist die Gestalt von `state`/`transition`, auf
       Sichten statt auf Zustände angewandt. *Sonst kauft der Posten seine Vollständigkeit mit
       einer stillen Alias-Ausnahme.*
+      **Ausgeschrieben am 2026-08-21** als Vorbedingung eines künftigen Baus, dort wo ein
+      Bauer sie finden muss: [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) §3 und
+      [`messung/netz/README.md`](messung/netz/README.md). **Gegen einen gemessenen Zustand,
+      nicht gegen eine Vermutung:** `m3.rs` sagt im eigenen Modulkopf, dass er kein
+      Alias-Analysator ist; `R004` beißt nur am syntaktisch gleichen Ort an zwei
+      `own`-Parametern; `zwei(r, r)` an zwei `ptr<normal, rw>` gibt **0 Fehler**.
+
+- [ ] **Der Aliasfall ist keine Vorhersage — er steht SCHON im Korpus, und er ist still**
+      *(gemessen 2026-08-21)*. `messung/netz/udp-echo.gab:207` (`echo_beantworten`) liest die
+      IPv4-Prüfsumme über `w : ptr<normal, r> Kopfworte` und schreibt danach `k.ttl = 64`
+      über `k : ptr<normal, rw> IpKopf` — **dieselben zwanzig Bytes**, denn `w` ist
+      `kopfworte_von(k)` (`udp-echo.gab:146`). Ab dieser Zeile ist die über `w` gelesene
+      Prüfsumme veraltet, und **RFC 791 verlangt sie neu gerechnet**. `gabbro pruefe`:
+      **0 Fehler, 0 Hinweise** — *nicht weil es das duldet, sondern weil es nicht weiß, dass
+      die zwei eins sind.*
+
+      > **Die Rechtehälfte stimmt dort schon** — eine Sicht schreibend, die andere lesend.
+      > **Es fehlt die EREIGNISHÄLFTE:** nichts entwertet `w` an der Schreibstelle. *Eine
+      > Bytesicht, die nur die Rechtehälfte übernimmt, erbt dieses Loch und gibt ihm ein
+      > Konstrukt, hinter dem es sich verstecken kann.*
+
+      Das ist die Aliasfrage nicht als Entwurfsfrage, sondern als Loch im **einzigen Programm
+      des Ordners, das gegen eine fremde Vorlage geschrieben ist** — und damit Regel B.
 
 - [ ] **`old(place)` in einem RUMPF: die Regel steht nur auf der Erzeugerfläche**
       *(2026-08-20, [`gift/220`](beispiele/gift/220-old-in-einem-rumpf.gab))*.
@@ -2376,6 +2399,31 @@ braucht jede Tabelle ihr eigenes `traverse`.
       > **Ein Bau ohne Zählung wäre der erste dieser Liste, der ohne gemessenen Bedarf
       > beginnt** — und damit dieselbe Bewegung, die `locks ordered` getötet hat.
 
+      **GEZÄHLT am 2026-08-21, und die Zahl ist NULL**
+      ([`./instrumente/zaehle-traversierungen.py`](instrumente/zaehle-traversierungen.py)):
+
+      ```
+      22 Traversierungsruempfe stehen heute im Korpus
+      22 blieben nach Monomorphisierung
+       0 duplizierte Ruempfe  — streng UND unter der weitesten Lesart, die zu verteidigen ist
+      ```
+
+      Nicht klein, sondern null, und unter **beiden** Normalisierungen. Belegt statt
+      behauptet: 12 Paare liegen über 85 % Ähnlichkeit, jedes einzeln nachgesehen. Das
+      nächste (98,9 %) unterscheidet sich **in einem `!`** — *kein Typparameter der Welt
+      entfernt eine Verneinung*; die vier Widerrufsschleifen unterscheiden sich in der
+      **Argumentliste**, also in einem **Wert**parameter, und was sie zusammenzöge, wäre eine
+      höherstufige Traversierung — ein anderes Konstrukt.
+
+      > **Die Vorhersage trifft auf diesen Korpus nicht zu.** Die 22 Rümpfe sind nicht
+      > verschieden, weil die Tabelle verschieden ist, sondern **weil die Aufgabe verschieden
+      > ist.** *Die Null widerlegt die Begründung, nicht die Entscheidung* — wer Generizität
+      > weiter will, braucht ein anderes Argument als dieses.
+
+      **Und die Gegenrichtung steht im Werkzeug, nicht in einer Fußnote:** ein Rumpf, den
+      jemand *nicht geschrieben hat*, weil ihm Generizität fehlte, hinterlässt im Text keine
+      Spur. Diese Zählung findet ihn nie (W10).
+
 ### «ABI» — Bibliotheken, die sich mischen lassen, entworfen 2026-08-20 ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
 *Eine Bibliotheksgrenze ist kein Riegel, sondern eine **Brücke mit Maut**. Eine ABI, die
@@ -2613,8 +2661,10 @@ was building work is done; what is not has an ADDRESS.*
       ABSAGE**, und sie ist gemessen statt abgewogen.
 
       ```
-      14 `@version`-Angaben in Korpus + FRAGMENTE:  12 × „1", 2 × „17"
-       0 Formate mit einer zweiten Fassung
+      14 `@version`-Textstellen in Korpus + FRAGMENTE:  12 × „1", 2 × „17"
+       7 VERSCHIEDENE Deklarationen — `messung/fragmente/` ist byteidentisch mit FRAGMENTE.md
+       1 weitere in `dokumente/SPRACHE.md`: die einzige `@version 3` des Ordners
+       0 Formate mit einer zweiten Fassung        — `./instrumente/zaehle-formate.py`
       ```
 
       **Null gemessene Formatentwicklungen.** Deklarierte Migration hieße: eine
@@ -2629,9 +2679,33 @@ was building work is done; what is not has an ADDRESS.*
       > der die Empfehlung erledigt hat, gehört daneben: **„Vollständigkeit vor Einfachheit"
       > darf nicht zu „Vollständigkeit vor gemessenem Bedarf" werden.**
 
-      *Was offen bleibt, ist die Zählung selbst als Befehl:* die 14 Angaben sind von Hand
-      genommen (`grep -o "@version [0-9]*"`), also eine Zahl ohne Werkzeug — und damit genau
-      die Sorte, gegen die `pruefe-zahlen.py` steht.
+      ~~*Was offen bleibt, ist die Zählung selbst als Befehl:* die 14 Angaben sind von Hand
+      genommen, also eine Zahl ohne Werkzeug.~~ **Geschlossen am 2026-08-21:
+      [`./instrumente/zaehle-formate.py`](instrumente/zaehle-formate.py) rechnet sie nach, und
+      der Wächter hält sie.** *Die Handzählung stimmte — und sah zwei Dinge nicht:* dass die
+      Korpushälfte dieselben sieben Zeilen ein zweites Mal zählt, und dass die einzige
+      `@version 3` des Ordners **außerhalb der Menge lag, auf die sich die Entscheidung
+      berief**. Beides ändert den Schluss nicht und wäre ohne Werkzeug nie aufgefallen.
+
+      > **Und was beim Messen aufflog, ist mehr wert als die Zahl: `@version` hat KEINEN
+      > LESER.** `grep -rn "\.version" --include=*.rs crates/` findet null Stellen — geparst
+      > (`parse.rs:3225`), gespeichert (`ast.rs:1223`), von keinem Pass, keinem Erzeuger und
+      > keinem Zeugnis gelesen. *Dieselbe Klasse wie `obermenge`/`gates`/`mirrors` vor «K5».*
+      > **Nur ist die Antwort hier nicht „einen Leser bauen":** ein Leser machte `@version` zur
+      > Formatidentität, und das IST die Migration, die diese Entscheidung ablehnt. Der eigene
+      > Posten dafür steht unten.
+
+- [ ] **`@version` wird geparst und von NIEMANDEM gelesen** *(gemessen 2026-08-21, beim
+      Nachrechnen der Entscheidung darüber)*. `pub version: Option<u128>` steht in
+      `ast.rs:1223`, gefüllt von `parse.rs:3225` —
+      `grep -rn "\.version" --include=*.rs crates/` findet **null Lesestellen**. Die Zahl
+      nimmt an keiner Identität, keinem Layout und keinem erzeugten C teil.
+      **Dieselbe Klasse wie `obermenge`/`gates`/`mirrors`/`counterprobe` vor «K5» — eine
+      Klausel ohne Leser.** *Nur ist die übliche Antwort hier die falsche:* einen Leser zu
+      bauen hieße, `@version` zur Formatidentität zu machen, und das **ist** die Migration,
+      die am selben Tag abgesagt wurde. **Was fehlt, ist kein Pass, sondern ein Satz an der
+      Grammatikstelle** — der steht seit dem 2026-08-21 in `SYNTAX.md` §9; offen bleibt, ob
+      ein Wächter ihn hält.
 
 - [ ] **The stock of quantifiers in `spec fn` is undecided — and that is exactly where the line moves**,
       if nobody watches.

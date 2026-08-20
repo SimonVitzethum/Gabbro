@@ -389,6 +389,46 @@ writable. *A rule that only looked like a check would be worse than none.*
 this handle is the owner — and it is the one right a future release rule can attach to. The
 barrier follows from the **space**, not from the architecture.
 
+### **A SECOND VIEW ON THE SAME BYTES — the edge, fixed 2026-08-21, BEFORE anything is built**
+
+*This is a precondition for a construct that does not exist yet, and it stands here because
+that is where whoever builds it has to walk past.* §9's fourth finding from
+[`messung/netz/`](../messung/netz/README.md) — *"read the same bytes as big-endian 16-bit
+words" is not writable* — will one day be closed by a **byte view**. When it is:
+
+> **The byte view may not open an alias question. One view is writable, all others are
+> read-only, and the change of view is an EVENT.**
+
+That is the shape of `state`/`transition`, applied to views instead of to states. The price of
+not doing it is exact: **the item buys its completeness with a silent alias exception.**
+
+**What M3 does today, measured 2026-08-21 by hand probe, not asserted:**
+
+| written | what falls |
+|---|---|
+| `zwei(r, r)` — one place at two `ptr<normal, rw>` parameters | **0 errors, 0 hints** |
+| `zwei(q, q)` — one place at two `own` parameters | `R004`, and its own note names the rest |
+| the byte-view shape: read through view A, then write through view B, same bytes | **0 errors, 0 hints** |
+
+So the claim *"M3's open remainder IS the alias analysis"* holds at the source: `m3.rs`'s
+module header says it (*"it is not an alias analyser"*), and `R004` — the one rule that bites —
+covers only the **syntactically identical place at the same call**. Two different names for
+the same bytes stay indistinguishable.
+
+**And the case is not hypothetical; it is already in the corpus.** In
+[`messung/netz/udp-echo.gab`](../messung/netz/udp-echo.gab), `echo_beantworten` takes
+`k : ptr<normal, rw> IpKopf` and `w : ptr<normal, r> Kopfworte` — and `w` is
+`kopfworte_von(k)`, *the same bytes*. The body reads the checksum through `w`, then writes
+`k.ttl = 64` through `k`. **The answer read through `w` is stale from that line on**, RFC 791
+requires the checksum recomputed, and `effects { reads w, writes k }` claims both accesses are
+declared. Nothing refuses, because nothing knows the two are one.
+
+Note what is *already right* there: the rights half. `w` is read-only, `k` is writable — one
+writable view, all others reading. **What is missing is the second half, the event**: nothing
+marks `w` as invalidated at the write, and nothing forbids using it afterwards. A byte view
+that only copies the rights half of this and skips the event inherits exactly this hole and
+gives it a construct to hide behind.
+
 ---
 
 ## 4. Expressions — `expr`
@@ -880,6 +920,56 @@ format     = "format" ident [ "@version" int ] [ "endian" ( "little" | "big" ) ]
              "{" { field } "}" ;
 ```
 
+### `@version` — **decided 2026-08-21: the REFUSAL, and it is measured, not weighed**
+
+*Until this date the question stood open in [`TODO.md`](../TODO.md): does an `@version 3`
+reader also read v2 — refusal or migration? **It is the refusal.** Gabbro does not migrate
+between format versions, and it never will by default.*
+
+```
+$ ./zaehle-formate.py
+  14 @version-Textstellen in Korpus + FRAGMENTE
+    12 x @version 1
+    2 x @version 17
+   7 verschiedene @version-Deklarationen
+   0 Formate mit einer zweiten Fassung
+```
+
+**Zero measured format evolutions.** Declared migration would mean one mapping rule per field
+pair, a generator for it, and hence a new template — **trust surface for a need with zero
+findings.** That is literally the rule that killed `locks ordered` ([`HISTORIE.md`](HISTORIE.md)):
+*no construct without a measured need.* The objection *"a kernel that finds a v2 device must be
+able to do something"* is correct and does not apply: **"do something" is not "migrate".** A
+named refusal *is* an option for action — the caller decides whether he writes a v2 reader.
+
+**What the checker does today, measured 2026-08-21 by hand probe, not asserted:**
+
+| written | what falls |
+|---|---|
+| two `format`s of one name with **different** `@version`, one scope | `N001` — *"`Kopf` is declared twice in this scope (format)"* |
+| two `format`s of one name with the **same** `@version`, one scope | `N001`, **byte-identical message** |
+| two `format`s of one name in **two modules**, versions differing | **0 errors, 0 hints** |
+
+Two readings follow, and both are load-bearing:
+
+1. **The refusal already exists.** Two versions of one format cannot be written down in one
+   translation unit, so migration has no site to be requested at. No new diagnostic was built
+   for this decision — one would fire exactly where `N001` already fires, and say less.
+2. **`@version` has no reader.** `pub version: Option<u128>`
+   ([`ast.rs:1223`](../crates/gabbro-syntax/src/ast.rs)) is filled by the parser
+   ([`parse.rs:3225`](../crates/gabbro-syntax/src/parse.rs)) and read **nowhere** in
+   `crates/` — `grep -rn "\.version" --include=*.rs crates/` finds nothing. The number is
+   documentation for the human reader; it takes part in no identity, no layout, no emitted C.
+   Two same-named formats in two modules are therefore **two formats**, not two versions of
+   one — and giving the checker the opposite reading would mean making `@version` part of a
+   format's identity, which is the very migration machinery this decision refuses.
+
+> **The number is a LOWER bound** (W10): a format that evolved under a **new name** rather
+> than a new number is invisible to the count, and one that evolved **in place** lives in the
+> `git` history, not in the text. `./zaehle-formate.py` prints its own upper bounds beside the
+> 0 and turns **red** the moment a first second version appears — because then the premise of
+> this decision is gone and it has to be argued again.
+
 **Variable lengths and offsets** — with them ELF is a `format`:
 
 ```gabbro
@@ -1191,7 +1281,7 @@ probe there must fault afterwards; that is the falsifier.
 pointer arithmetic without a basis · catch-all branch · exceptions · inheritance · reflection · GC ·
 floating point in the core · assignment as an expression · forward declaration · self-hosting ·
 user-defined quantifier domains · recursion in `spec fn` · hand-written lemmas ·
-**the braced compound literal**.
+**the braced compound literal** · **migration between format versions**.
 
 ### The last one is the youngest, and it is the one with a price — «B7», 2026-08-17
 
@@ -1221,6 +1311,19 @@ that tells them apart. The rule is `deckt fs zs ⟷ map fst zs = fs`, machine-ch
 Writing the braced form is refused by name (`P037`), not by a follow-on error — the refusal
 carries the reason, because *a form that deliberately does not exist deserves its ground and
 not the silence of one nobody thought about.*
+
+### And the newest one is a refusal **without a site** — format migration, 2026-08-21
+
+The ground is in §9 at the `format` production and it is a number: `./zaehle-formate.py`
+counts **0 formats with a second version** over corpus and `FRAGMENTE.md`. What is different
+from `P037` is worth saying, because it decides why **no** new diagnostic was built: the
+braced literal is a form somebody would *write*, and without `P037` 76 corpus sites misparse
+in silence. **Migration has no spelling.** The one thing that can be written down — the same
+format name twice with two `@version` numbers — is already refused, by `N001`, and a second
+diagnostic there would fire at the same place and say less.
+
+*The price is named: an `@version 3` reader that meets a v2 device refuses. That refusal is a
+decision the caller can act on; a silent migration would not be.*
 
 ---
 

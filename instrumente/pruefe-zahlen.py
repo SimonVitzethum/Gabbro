@@ -90,6 +90,46 @@ EINTRAEGE = [
         r"^== (\d+) von 3 Proben gruen ==",
         "Netzstack gegen veroeffentlichte Vektoren",
     ),
+    # **Entscheidung 12 ruht auf diesen zwei Zahlen** -- und bis zum 2026-08-21 waren sie von
+    # Hand genommen. Die NULL ist die tragende: sie ist der gemessene Bedarf, gegen den
+    # `locks ordered` gestorben ist.
+    (
+        "TODO.md",
+        r"(\d+) `@version`-Textstellen in Korpus \+ FRAGMENTE",
+        ["./instrumente/zaehle-formate.py"],
+        r"^  (\d+) @version-Textstellen in Korpus \+ FRAGMENTE",
+        "`@version`-Textstellen -- die Menge, auf die sich Entscheidung 12 beruft",
+    ),
+    (
+        "TODO.md",
+        r"(\d+) Formate mit einer zweiten Fassung",
+        ["./instrumente/zaehle-formate.py"],
+        r"^  (\d+) Formate mit einer zweiten Fassung",
+        "gemessene Formatentwicklungen -- die NULL, die die Absage traegt",
+    ),
+    (
+        "TODO.md",
+        r"(\d+) VERSCHIEDENE Deklarationen",
+        ["./instrumente/zaehle-formate.py"],
+        r"^  (\d+) verschiedene @version-Deklarationen",
+        "verschiedene `@version`-Deklarationen -- die 14 zaehlt sieben doppelt",
+    ),
+    # **Entscheidung 10 -- die Zaehlung, die vor dem Bau steht.** Sie ist NULL, und eine Null
+    # ohne Befehl ist die leichteste Zahl, die man spaeter stillschweigend anders liest.
+    (
+        "TODO.md",
+        r"(\d+) Traversierungsruempfe stehen heute im Korpus",
+        ["./instrumente/zaehle-traversierungen.py"],
+        r"^  (\d+) Traversierungsruempfe stehen heute im Korpus",
+        "Traversierungsruempfe im Korpus -- das N zur Duplikatzahl (W11)",
+    ),
+    (
+        "TODO.md",
+        r"(\d+) duplizierte Ruempfe",
+        ["./instrumente/zaehle-traversierungen.py"],
+        r"^  (\d+) duplizierte Ruempfe -- das ist der gemessene Bedarf",
+        "duplizierte Traversierungsruempfe -- der gemessene Bedarf fuer Generizitaet",
+    ),
     (
         "README.md",
         r"may fall\*\* — (\d+) and \d+ clause sites",

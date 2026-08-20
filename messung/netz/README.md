@@ -79,6 +79,41 @@ und ein Wert hat keine Stelle in den Bytes"*, und das ist richtig).
 > außen* — und damit liegt genau der Schritt außerhalb der Sprache, den eine Sprache für
 > Netzcode können müsste.
 
+### Und die Kante steht fest, BEVOR gebaut wird *(2026-08-21)*
+
+**Die Bytesicht darf keine Aliasfrage öffnen. Eine Sicht schreibend, alle anderen lesend, und
+der Wechsel ist ein EREIGNIS** — das ist die Gestalt von `state`/`transition`, auf Sichten
+statt auf Zustände angewandt. Die Langfassung steht in
+[`dokumente/SYNTAX.md`](../../dokumente/SYNTAX.md) §3; hier steht, warum dieser Ordner der
+Anlass ist.
+
+**Diese Datei enthält den Fall schon.** `echo_beantworten` nimmt zwei Zeiger:
+
+```gabbro
+impl fn echo_beantworten(e : ptr<normal, r>  EthKopf,
+                         k : ptr<normal, rw> IpKopf,      -- schreibend
+                         w : ptr<normal, r>  Kopfworte,   -- DIESELBEN Bytes, lesend
+                         meine_ip : u32) -> u32 or Verwurf
+    effects { reads e, reads w, writes k }
+```
+
+`w` ist `kopfworte_von(k)` — dieselben zwanzig Bytes, einmal als Felder und einmal als zehn
+16-Bit-Worte. Der Rumpf prüft die Prüfsumme über `w`, und danach schreibt er `k.ttl = 64`.
+**Von dieser Zeile an ist die über `w` gelesene Antwort veraltet**; RFC 791 verlangt die
+Prüfsumme neu gerechnet, und `effects` behauptet, beide Zugriffe seien erklärt.
+
+Gemessen am 2026-08-21 mit einer Handprobe derselben Gestalt: **0 Fehler, 0 Hinweise.**
+Ebenso schweigt `gabbro pruefe` bei `zwei(r, r)` an zwei `ptr<normal, rw>`-Parametern. Nur der
+syntaktisch gleiche Ort an zwei `own`-Parametern fällt (`R004`), und dessen eigene Notiz sagt
+den Rest: *„two DIFFERENT names pointing at the same object stay indistinguishable (M3's open
+alias question)."*
+
+> **Die Rechtehälfte ist hier schon richtig** — `w` liest, `k` schreibt. **Was fehlt, ist die
+> Ereignishälfte:** nichts entwertet `w` an der Schreibstelle, nichts verbietet die Benutzung
+> danach. *Eine Bytesicht, die nur die Rechtehälfte übernimmt, erbt dieses Loch und gibt ihm
+> ein Konstrukt, hinter dem es sich verstecken kann* — dann kauft der Posten seine
+> Vollständigkeit mit einer stillen Alias-Ausnahme.
+
 ## Was hier NICHT steht
 
 Kein TCP, keine Fragmentierung, keine variable Kopflänge (`ihl > 5` wird geprüft und nicht
