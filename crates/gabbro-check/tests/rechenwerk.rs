@@ -2645,8 +2645,7 @@ fn m2_zaehlt_genau_einmal_auf_allen_vier_wegen() {
         extern fn wecken(p : Parked) -> u32 in 0 .. 3 effects { consumes p } costs <= 2 ops;\n\
         extern fn parken() -> Parked effects { pure } costs <= 2 ops;\n\
         extern fn aussen(v : u32 in 0 .. 3) -> u32 in 0 .. 3 effects { pure } costs <= 1 ops;\n\
-        extern fn nimmt(a : u32 in 0 .. 3, p : Parked) -> u32 in 0 .. 3 \
-            effects { consumes p } costs <= 2 ops;\n";
+        extern fn beides(a : Parked, b : Parked) effects { consumes a } costs <= 2 ops;\n";
     let melden = |rumpf: &str| -> String {
         let q = format!("{kopf}{rumpf}}}\n");
         let (b, mut a) = gabbro_syntax::lies("m2.gab", &q);
@@ -2661,12 +2660,20 @@ fn m2_zaehlt_genau_einmal_auf_allen_vier_wegen() {
     );
     assert!(t1.contains("L104"), "geschachtelt ist auch zweimal:\n{t1}");
 
-    // 2. Die POSITION -- ein nicht verbrauchtes Argument darf zweimal stehen.
+    // 2. **Die POSITION -- und dafuer braucht es ZWEI lineare Argumente.**
+    //
+    // Die erste Fassung dieser Probe hatte eines (`nimmt(k, p)` mit `k : u32`), und die
+    // kaputte Regel UEBERLEBTE sie: ein nichtlinearer Name steht gar nicht erst in `zust`.
+    // *Der Mutationslauf hat das gesagt, nicht ich* -- `m2-nimmt-jede-position` kam als
+    // UEBERLEBT zurueck, und die Suche nach dem Grund fand die zu schwache Probe.
+    //
+    // `beides` verbraucht NUR `a`. Mit der kaputten Regel gilt `q` an dieser Rufstelle
+    // trotzdem als verbraucht, und `wecken(q)` gibt ein falsches `L104`.
     let t2 = melden(
-        "impl fn f(p : Parked, k : u32 in 0 .. 3) -> u32 in 0 .. 3 effects { consumes p } \
-         costs <= 16 ops { let x = nimmt(k, p); return k; }\n",
+        "impl fn f(p : Parked, q : Parked) effects { consumes p, consumes q } \
+         costs <= 16 ops { beides(p, q); wecken(q); }\n",
     );
-    assert!(!t2.contains("L104"), "`k` wird nicht verbraucht:\n{t2}");
+    assert!(!t2.contains("L104"), "`q` wird von `beides` nur GELIEHEN:\n{t2}");
 
     // 3. Der Schleifenrumpf laeuft OFT.
     let t3 = melden(
