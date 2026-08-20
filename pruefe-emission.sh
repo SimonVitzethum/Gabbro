@@ -253,10 +253,30 @@ lauf() {          # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     sed "$gift" "$c" > "$ARB/$name-gift.c"
     printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name-gift.c/" > "$ARB/$name-gifttreiber.c"
     cc -std=c11 -w -I"$ARB" -o "$ARB/$name-giftprobe" "$ARB/$name-gifttreiber.c"
-    if [ "$("$ARB/$name-giftprobe")" = "$erwartet" ]; then
+    # **Ein verfaelschtes Erzeugnis darf NICHT ENDEN, und bis 2026-08-20 hing der Waechter
+    # dann fuer immer.**
+    #
+    # `baum41`s Gift lenkt den Abstieg von `erstes_kind` auf `elter` -- der Lauf klettert zur
+    # Wurzel und dreht dort. Ohne Frist blieb `pruefe-emission.sh` an genau dieser Zeile
+    # stehen: kein Fehler, keine Ausgabe, **nur ein Prozess, der laeuft.** Auf
+    # `ki-pc-fisch-101` standen dadurch am 2026-08-20 einundzwanzig Laeufe nebeneinander, der
+    # aelteste seit dreieinhalb Stunden -- und sie stritten sich um denselben Baum.
+    #
+    # > *Ein Haenger sieht aus wie „laeuft noch", nicht wie ein Befund.* Dieselbe Klasse wie
+    # > W16: das Werkzeug misst nicht, und nichts wird rot.
+    #
+    # Eine Frist macht daraus eine Antwort. **Und eine ueberschrittene Frist ist ein
+    # BESTEHEN**: ein Programm, das nicht zu Ende kommt, liefert das erwartete Ergebnis
+    # gewiss nicht.
+    local gausgabe rc
+    gausgabe="$(timeout 10 "$ARB/$name-giftprobe")"; rc=$?
+    if [ "$rc" = 124 ]; then
+        echo "  8. Sprechprobe: ok (verfaelschtes C endet nicht -- Frist 10 s)"
+    elif [ "$gausgabe" = "$erwartet" ]; then
         echo "  8. Sprechprobe: UEBERSEHEN -- ein veraendertes Erzeugnis liefert dasselbe?"; exit 1
+    else
+        echo "  8. Sprechprobe: ok (verfaelschtes C faellt)"
     fi
-    echo "  8. Sprechprobe: ok (verfaelschtes C faellt)"
 }
 
 # -- 1. Das Beispiel: eine Tabelle, ein Feld, eine erzeugte Operation --------------------
