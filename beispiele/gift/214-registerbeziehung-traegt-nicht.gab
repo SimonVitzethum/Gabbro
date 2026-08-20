@@ -1,29 +1,34 @@
--- erwartet: M103
--- **Gift 214 -- dieselbe Luecke eine Regel weiter: V2 statt V1.**
+-- erwartet: M104
+-- **Gift 214 -- dieselbe Luecke in der zweiten Schreibrichtung: V2 statt V1.**
 --
--- «B33» hat zwei Schreibrichtungen, und eine Probe, die nur die erste trifft, ist eine
--- Regel ueber die erste. Hier steht das Register nicht gegen eine Konstante, sondern
--- gegen eine ZWEITE STELLE -- der Weg, den V2 nimmt (`Fakt::Beziehung`).
+-- «B33» hat zwei Regeln, und eine Probe, die nur die erste trifft, ist eine Regel ueber
+-- die erste. V2 ist die Beziehung ZWEIER Stellen, und ihr Ertrag ist die Subtraktion:
+-- unter dem Fakt `a >= b` hat `a - b` den Typ `0 .. a.max - b.min` statt eines Bereichs,
+-- der unter null geht.
 --
--- *Dieselbe Ursache: der Vergleich liest, die Verwendung liest noch einmal.*
+-- Hier steht links ein REGISTER. Der Vergleich liest es einmal, die Subtraktion liest es
+-- ein zweites Mal -- und dazwischen darf die Hardware schreiben, was sie will. **Ohne den
+-- Riegel gaebe V2 die Schranke, und das erzeugte C zoege eine Zahl ab, die groesser sein
+-- darf als die, gegen die geprueft wurde.**
+--
+-- *Die erste Fassung dieser Datei traf V2 gar nicht:* sie prueft einen Index gegen eine
+-- Grenze, und M1 verkettet dort nicht -- die Datei fiel an `M103` und haette es auch ohne
+-- den Riegel getan. **Der Mutationslauf hat es gesagt** (`registerbeziehung-lebt-wieder`
+-- UEBERLEBT), und genau dafuer steht er.
 
 module gift214 {
-
-type Kurz = u32 in 0 .. 8;
 
 device Statusgeraet(basis : u64) at mmio {
     reg ST : u32 @0x00 class r fields { IDX @[7:0] }
 }
 
-table Platz count 8 { slot { wert : u32, } }
+static mut untere : u32 = 0;
 
-static mut grenze : Kurz = 8;
-
-impl fn lesen(d : Statusgeraet) -> u32
-    effects { reads Statusgeraet, reads Platz, reads grenze }
+impl fn abstand(d : Statusgeraet) -> u32
+    effects { reads Statusgeraet, reads untere }
     costs    <= 8 ops
 {
-    if d.ST.IDX < grenze { return Platz.slots[d.ST.IDX].wert; }
+    if d.ST.IDX >= untere { return d.ST.IDX - untere; }
     return 0;
 }
 

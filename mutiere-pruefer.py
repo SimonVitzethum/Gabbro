@@ -123,8 +123,8 @@ MUTATIONEN = [
     Mutation(
         "feldklasse-erbt-immer",
         "m3.rs",
-        "    let (klasse, wo) = match feld.and_then(|f| info.felder.get(&f.text).map(|k| (*k, Some(f)))) {",
-        "    let (klasse, wo) = match None::<(RegKlasse, Option<&&Ident>)>.map(|_| unreachable!()) {",
+        "                .map(|(n, _, k)| (n.text.clone(), k.unwrap_or(r.klasse)))",
+        "                .map(|(n, _, k)| { let _ = k; (n.text.clone(), r.klasse) })",
         "«B23» -- die Klasse je Feld faellt weg, jedes Feld erbt wieder die des Registers; "
         "`FSTS.FRI` ist damit schreibbar, weil `FSTS` es ist",
     ),
