@@ -61,6 +61,11 @@ struct Namen {
     /// Quelle, aus der ein `let obj = c.slots[s].objekt` seinen Typ bekommt** -- und der
     /// Erzeuger raet ihn nicht, er liest ihn ab.
     slotfeld: HashMap<(String, String), TypExpr>,
+    /// **(Tabelle, Slotfeld) -> der erklaerte Umlauf.** `SlotTyp::Wrapping` landete bis zum
+    /// 2026-08-20 NIRGENDS in dieser Tabelle -- der Erzeuger wusste an der Rechnung nicht,
+    /// dass der Slot umlaeuft, und schrieb `a * a` ohne Cast. *Ein Deklarationszeichen, das
+    /// die Sprache traegt und die Absenkung nicht kennt.*
+    umlaeufer: HashMap<(String, String), IntTy>,
     /// Die `static`-Namen mit ihrem erklaerten Typ. Ein `static mut frei : option index
     /// into Halde` ist ein Ort wie ein Slotfeld -- **ohne den Typ wuesste `frei = Some(i)`
     /// nicht, gegen welchen Sonderwert es schreibt.**
@@ -201,6 +206,10 @@ struct Geraet {
     /// liest ihn direkt aus dem Baum, und ein zweites Feld daneben waere das zweite Register
     /// ueber derselben Sache (W7).
     reg: HashMap<String, (i128, String)>,
+    /// **Registername -> der erklaerte Umlauf** («B32»). Ein `reg X : u16 wrapping` traegt
+    /// dieselbe Aussage wie ein umlaufender Slot, und dieselbe Falle: `X = X * X` hebt beide
+    /// Seiten auf `int` und laeuft dort UNDEFINIERT ueber.
+    umlaeufer: HashMap<String, IntTy>,
     /// Registername -> Feldname -> (hoechstes Bit, niedrigstes Bit, Registerbreite in Bit).
     felder: HashMap<String, HashMap<String, (u32, u32, u32)>>,
 }
@@ -306,7 +315,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         ItemArt::Device(d) => {
             namen.geraete.insert(
                 d.name.text.clone(),
-                Geraet { reg: HashMap::new(), felder: HashMap::new() },
+                Geraet { reg: HashMap::new(), felder: HashMap::new(), umlaeufer: HashMap::new() },
             );
         }
         ItemArt::Tabelle(t) => namen.tabellen.push(t.name.text.clone()),
@@ -472,9 +481,13 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 let mut reg = HashMap::new();
                 let mut felder: HashMap<String, HashMap<String, (u32, u32, u32)>> =
                     HashMap::new();
+                let mut umlaeufer = HashMap::new();
                 for r in &d.register {
                     if let Some(v) = umg.konst_wert(modul, &r.versatz) {
                         reg.insert(r.name.text.clone(), (v, intty(&r.typ)));
+                    }
+                    if r.umlaufend {
+                        umlaeufer.insert(r.name.text.clone(), r.typ.clone());
                     }
                     let breite = breite_von(&r.typ) * 8;
                     let mut f = HashMap::new();
@@ -490,6 +503,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 if let Some(g) = namen.geraete.get_mut(&d.name.text) {
                     g.reg = reg;
                     g.felder = felder;
+                    g.umlaeufer = umlaeufer;
                 }
             }
         });
@@ -618,10 +632,17 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         if let ItemArt::Tabelle(tb) = &item.art {
             if let Some(slot) = &tb.slot {
                 for f in &slot.felder {
-                    if let SlotTyp::Typ(t) = &f.typ {
-                        namen
-                            .slotfeld
-                            .insert((tb.name.text.clone(), f.name.text.clone()), t.clone());
+                    match &f.typ {
+                        SlotTyp::Typ(t) => {
+                            namen
+                                .slotfeld
+                                .insert((tb.name.text.clone(), f.name.text.clone()), t.clone());
+                        }
+                        SlotTyp::Wrapping(i) => {
+                            namen
+                                .umlaeufer
+                                .insert((tb.name.text.clone(), f.name.text.clone()), i.clone());
+                        }
                     }
                 }
             }
@@ -3487,6 +3508,47 @@ fn ort_typ(o: &Ort, u: &Namen) -> Option<TypExpr> {
 ///
 /// > *Wo zwei Seiten verschieden erklaert sind, liefert diese Funktion nichts* -- und dann
 /// > weigert sich der Erzeuger, statt eine der beiden zu waehlen.
+/// **Rechnet dieser Operator?** Nur dort kann ein Umlauf entstehen; ein Vergleich oder ein
+/// Bitschnitt bringt keinen Wert ueber die Breite.
+fn rechnet(op: &BinOp) -> bool {
+    matches!(
+        op,
+        BinOp::Plus | BinOp::Minus | BinOp::Mal | BinOp::SchiebLinks
+    )
+}
+
+/// **Der erklaerte Umlauf eines Ausdrucks, wenn er einen hat.** Nur ein Ort und eine Klammer
+/// darum -- tiefer zu suchen hiesse raten, welcher der beiden Umlaeufe gilt.
+fn umlaeufer_typ(e: &Expr, u: &Namen) -> Option<IntTy> {
+    match &e.art {
+        ExprArt::Klammer(x) => umlaeufer_typ(x, u),
+        ExprArt::Ort(o) => {
+            // **Zwei Formen laufen um, und beide muessen hier heraus.** Ein Slotfeld
+            // (`t.slots[i].a`) und ein Register (`r.IDX`) -- die zweite fehlte in der ersten
+            // Fassung, und `r.IDX = r.IDX * r.IDX` hatte damit dasselbe UB wie der Slot.
+            if let Some(tab) = u
+                .tabellenzeiger
+                .get(&o.basis.text)
+                .cloned()
+                .or_else(|| u.tabellen.iter().find(|t| **t == o.basis.text).cloned())
+            {
+                if o.suffixe.len() != 3 {
+                    return None;
+                }
+                let OrtSuffix::Feld(f) = &o.suffixe[2] else { return None };
+                return u.umlaeufer.get(&(tab, f.text.clone())).cloned();
+            }
+            let g = u.geraetezeiger.get(&o.basis.text)?;
+            if o.suffixe.len() != 1 {
+                return None;
+            }
+            let OrtSuffix::Feld(f) = &o.suffixe[0] else { return None };
+            u.geraete.get(g)?.umlaeufer.get(&f.text).cloned()
+        }
+        _ => None,
+    }
+}
+
 fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
     match &e.art {
         ExprArt::Ort(o) if o.suffixe.is_empty() => match u.parametertyp.get(&o.basis.text) {
@@ -3793,6 +3855,46 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
         ExprArt::Ort(o) => ort(o, u, absagen),
         ExprArt::Klammer(x) => format!("({})", ausdruck(x, u, absagen)),
         ExprArt::Binaer(op, a, b) => {
+            // **Ein `wrapping`-Slot rechnet UNSIGNED -- sonst sagt das C etwas anderes als
+            // das Gepruefte** (Rezension 2026-08-20).
+            //
+            // Gabbro sagt ueber `u16 wrapping`: *der Ueberlauf ist deklariert und definiert.*
+            // C sagt etwas anderes: bei `a * a` hebt die ganzzahlige Aufwertung beide
+            // Operanden auf `int`, und ein `int`-Ueberlauf ist **undefiniert**. Mit UBSan
+            // nachgewiesen:
+            //
+            // ```
+            // runtime error: signed integer overflow: 50000 * 50000
+            //                cannot be represented in type 'int'
+            // ```
+            //
+            // Der Wert kam zufaellig richtig heraus (63744). *Garantiert war er nicht* -- ein
+            // Optimierer darf annehmen, dass es nicht ueberlaeuft, und daraus folgt hier
+            // alles.
+            //
+            // > **Das ist die Aussage, auf der das Projekt ruht.** Wo Gabbro `definiert` sagt
+            // > und das Erzeugnis `undefiniert` meint, ist die Uebersetzung nicht mehr das
+            // > Gepruefte.
+            //
+            // Gerechnet wird darum in `uint32_t`/`uint64_t` -- dort ist der Umlauf modulo
+            // 2^n **zugesichert** (C11 6.2.5p9) -- und das Ergebnis faellt auf die erklaerte
+            // Breite zurueck.
+            //
+            // **Warum nur bei `wrapping`:** wo Gabbro den Ueberlauf NICHT erlaubt, hat `M101`
+            // bewiesen, dass das Ergebnis in den erklaerten Bereich passt; ein `u16`-Wert
+            // passt in `int`, und die Aufwertung ist dann harmlos. *Die Absenkung braucht den
+            // Cast genau dort, wo die Sprache den Ueberlauf zulaesst.*
+            if let (true, Some(i)) = (rechnet(op), umlaeufer_typ(a, u).or(umlaeufer_typ(b, u))) {
+                let (breite, vz) = crate::umgebung::breite_von(i.wort);
+                let rechenwort = if breite <= 32 { "uint32_t" } else { "uint64_t" };
+                let zurueck = format!("{}int{}_t", if vz { "" } else { "u" }, breite);
+                return format!(
+                    "({zurueck})(({rechenwort})({}) {} ({rechenwort})({}))",
+                    ausdruck(a, u, absagen),
+                    op_text(op),
+                    ausdruck(b, u, absagen)
+                );
+            }
             format!("{} {} {}", ausdruck(a, u, absagen), op_text(op), ausdruck(b, u, absagen))
         }
         ExprArt::Ruf(r) => ruf(r, u, absagen),

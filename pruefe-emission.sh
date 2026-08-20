@@ -909,6 +909,31 @@ lauf "beispiel35" "$W/beispiele/35-tausch.gab" "$TREIBER35" "1 0 0 1 0" \
      's/uint32_t _cx1 = (uint32_t)(NIEMAND);/uint32_t _cx1 = (uint32_t)(f);/' \
      "0 assumptions, 0 templates (0 of them UNPROVED), 5 direct forms, 0 foreign bodies (0 state their duty)"
 
+# **`wrapping` heisst DEFINIERT -- und diese Einheit misst genau das** (2026-08-20).
+#
+# 50000 * 50000 = 2 500 000 000, modulo 2^16 sind das 63744. Der Wert kam auch VOR der
+# Reparatur heraus -- und war nicht zugesichert: UBSan meldete
+# *„signed integer overflow: 50000 * 50000 cannot be represented in type 'int'"*, weil die
+# ganzzahlige Aufwertung beide Seiten auf `int` hebt.
+#
+# > Stufe 6 ist hier die Stufe, auf die es ankommt. Stufe 4 haette gruen gemeldet.
+#
+# Das Gift macht aus der Multiplikation eine Addition -- 50000 + 50000 = 100000, modulo
+# 2^16 sind das 34464. *Ein Gift, das denselben Wert liefert, misst nichts.*
+TREIBER37='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    Zaehler t = {{{0}}};
+    t.slots[1].a = 50000;
+    quadriere(&t, 1);
+    printf("%u\n", (unsigned)t.slots[1].a);
+    return 0;
+}
+'
+lauf "beispiel37" "$W/beispiele/37-umlauf-rechnet.gab" "$TREIBER37" "63744" \
+     's/) \* (uint32_t)/) + (uint32_t)/' \
+     "0 assumptions, 2 templates (0 of them UNPROVED), 2 direct forms, 0 foreign bodies (0 state their duty)"
+
 # =======================================================================================
 # **Stufe 9: die REGEL, nicht die Liste** (2026-08-20).
 #

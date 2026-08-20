@@ -114,6 +114,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         modul: String::new(),
         spezifikationen,
         unveraenderlich: std::collections::HashSet::new(),
+        unveraenderliche_statiken: std::collections::HashSet::new(),
     };
     p.programm(baum);
     p.zaehlung
@@ -179,6 +180,18 @@ struct Pruefer<'a> {
     /// dieser Name sich nicht bewegt, und M1 rechnet mit ihr* -- eine Tatsache ueber `x`
     /// stirbt beim Schreiben, aber ohne Schreibrecht stirbt sie gar nicht erst.
     unveraenderlich: std::collections::HashSet<String>,
+    /// **Die `static`-Namen OHNE `mut` -- «M118», Rezension 2026-08-20.**
+    ///
+    /// `static zaehler : Z = 0;` und dann `zaehler += 1;` gab **null Fehler**. Der Erzeuger
+    /// ehrte die Deklaration korrekt (`static const uint32_t zaehler`) und schrieb daneben
+    /// `zaehler += 1;` -- erst `gcc` sagte *„Zuweisung der schreibgeschuetzten Variable"*.
+    ///
+    /// > *Ein Deklarationszeichen, das der Erzeuger ehrt und das kein Pass haelt* -- dieselbe
+    /// > Familie, in der `own` eine Woche vorher stand.
+    ///
+    /// Getrennt von `unveraenderlich`, weil das die Bindungen des LAUFENDEN Rumpfes sind:
+    /// eine lokale Bindung darf einen `static` verdecken, und dann gilt sie.
+    unveraenderliche_statiken: std::collections::HashSet<String>,
     /// Das Modul, in dem der gerade gepruefte Rumpf steht. **Ohne ihn loest der Pass Namen
     /// im Blindflug auf** -- und ein gleichnamiges `fn` in einem fremden Modul loescht eine
     /// Bereichspruefung, ohne dass jemand es sieht (Gegenpruefung 2026-08-14, U11/U12).
@@ -194,6 +207,16 @@ struct Lage {
 
 impl<'a> Pruefer<'a> {
     fn programm(&mut self, baum: &Programm) {
+        // **Ein eigener Durchgang, weil ein Rumpf frueher stehen darf als seine Deklaration.**
+        // Wuerde diese Menge im Hauptlauf mitwachsen, haenge die Absage an der Reihenfolge im
+        // Quelltext -- und eine Regel, die von der Reihenfolge abhaengt, ist keine.
+        crate::fuer_jedes_item(baum, &mut |item| {
+            if let ItemArt::Statisch(s) = &item.art {
+                if !s.veraenderlich {
+                    self.unveraenderliche_statiken.insert(s.name.text.clone());
+                }
+            }
+        });
         crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
             // **M1 sah bis 2026-08-18 NUR Funktionsruempfe.** Das fiel an «F» auf, und zwar
             // an der teuersten denkbaren Stelle: `F002` biss im Rumpf und schwieg in der
@@ -451,6 +474,32 @@ impl<'a> Pruefer<'a> {
                 // `mut` war bis zum 2026-08-19 ein Verbot ohne Biss. *Und M1 rechnet mit ihm:*
                 // eine Tatsache ueber `x` stirbt beim Schreiben -- ohne Schreibrecht stirbt
                 // sie gar nicht erst, und genau darauf ruht jede Verengung.
+                // **`M118` -- ein `static` OHNE `mut` wird geschrieben.**
+                //
+                // Der Erzeuger ehrt die Deklaration seit jeher: mit `mut` faellt das `const`
+                // weg und alles uebersetzt, ohne `mut` steht `static const` da -- *die
+                // Unterscheidung existiert also und steuert die Absenkung.* Gehalten hat sie
+                // niemand, und `gcc` war die einzige Instanz.
+                //
+                // Fuer eine Datei ausserhalb von `beispiele/` greift auch Stufe 9 des
+                // Emissionswaechters nicht. Dann bleibt gar keine.
+                if z.ziel.suffixe.is_empty()
+                    && !lage.lokal.contains_key(&z.ziel.basis.text)
+                    && self.unveraenderliche_statiken.contains(&z.ziel.basis.text)
+                {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M118",
+                            z.ziel.span,
+                            format!("`{}` is a `static` without `mut`", z.ziel.basis.text),
+                        )
+                        .mit_notiz(
+                            "the emitter honours this: without `mut` it writes `static \
+                             const`, and the C compiler then refuses the assignment -- the \
+                             refusal belongs here, where the declaration is",
+                        ),
+                    );
+                }
                 if z.ziel.suffixe.is_empty()
                     && self.unveraenderlich.contains(&z.ziel.basis.text)
                 {

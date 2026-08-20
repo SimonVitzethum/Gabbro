@@ -94,6 +94,24 @@ MUTATIONEN = [
     # Ja-Aussagen, also gehoeren sie hierher: was keine Mutation faengt, ist ungedeckte
     # Flaeche, egal wie frisch der Test daneben ist.
     Mutation(
+        "umlauf-rechnet-doch-signiert",
+        "emit.rs",
+        "        BinOp::Plus | BinOp::Minus | BinOp::Mal | BinOp::SchiebLinks",
+        "        BinOp::Minus | BinOp::SchiebLinks",
+        "`u16 wrapping` mal `u16 wrapping` geht wieder ohne Cast ins C; die ganzzahlige "
+        "Aufwertung hebt beide Seiten auf `int`, und dort ist der Ueberlauf UNDEFINIERT -- "
+        "Gabbro sagt `definiert`, das Erzeugnis meint etwas anderes",
+        "code",
+    ),
+    Mutation(
+        "static-ohne-mut-darf-schreiben",
+        "m1.rs",
+        "                    && self.unveraenderliche_statiken.contains(&z.ziel.basis.text)",
+        "                    && false\n                    && self.unveraenderliche_statiken.contains(&z.ziel.basis.text)",
+        "M118 -- auf ein `static` ohne `mut` zu schreiben faellt wieder nirgends; der "
+        "Erzeuger schreibt `static const` daneben, und `gcc` ist die einzige Instanz",
+    ),
+    Mutation(
         "prozent-im-assembler-bleibt-einfach",
         "emit.rs",
         "        if c == '%' && zs.peek() != Some(&'[') {",

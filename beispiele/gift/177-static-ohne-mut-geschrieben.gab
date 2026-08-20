@@ -1,0 +1,29 @@
+-- erwartet: M118
+-- **Auf ein `static` OHNE `mut` zu schreiben sagte kein Pass ab** (Rezension 2026-08-20).
+--
+-- Das ging mit **null Fehlern** durch. Der Erzeuger ehrte die Deklaration die ganze Zeit
+-- korrekt -- `static const uint32_t zaehler` -- und schrieb daneben `zaehler += 1;`. Erst
+-- `gcc` sagte *„Zuweisung der schreibgeschuetzten Variable"*. Mit `static mut` faellt das
+-- `const` weg und alles uebersetzt: **die Unterscheidung existiert also und steuert die
+-- Absenkung, nur hielt sie niemand.**
+--
+-- > Ein Deklarationszeichen, das der Erzeuger ehrt und das kein Pass haelt -- dieselbe
+-- > Familie, in der `own` eine Woche vorher stand.
+--
+-- Und fuer eine Datei ausserhalb von `beispiele/` greift auch Stufe 9 des
+-- Emissionswaechters nicht. Dann bleibt gar keine Instanz.
+
+module gift {
+
+type Z = u32 in 0 .. 1000;
+
+static zaehler : Z = 0;
+
+impl fn tor()
+    effects { reads zaehler, writes zaehler }
+    costs   <= 3 ops
+{
+    if zaehler < 1000 { zaehler += 1; }
+}
+
+}

@@ -2310,3 +2310,101 @@ impl fn schreiben(fd : u64) -> u64
     assert!(c.contains("mov $1, %%eax"), "das literale Prozent wird verdoppelt:\n{c}");
     assert!(!c.contains("%%["), "die Operandenform `%[…]` bleibt, wie sie ist:\n{c}");
 }
+
+/// **`wrapping` heisst DEFINIERT — und im C hiess es undefiniert** (Rezension 2026-08-20).
+///
+/// Gabbro sagt über `u16 wrapping`: der Überlauf ist deklariert und definiert. C sagt etwas
+/// anderes: bei `a * a` hebt die ganzzahlige Aufwertung beide Operanden auf `int`, und ein
+/// `int`-Überlauf ist **undefiniert**. Mit UBSan nachgewiesen:
+///
+/// ```text
+/// runtime error: signed integer overflow: 50000 * 50000 cannot be represented in type 'int'
+/// ```
+///
+/// Der Wert kam zufällig richtig heraus (63744) — *garantiert war er nicht.*
+///
+/// > **Das ist die Aussage, auf der das Projekt ruht.** Wo Gabbro `definiert` sagt und das
+/// > Erzeugnis `undefiniert` meint, ist die Übersetzung nicht mehr das Geprüfte.
+///
+/// **Zwei Formen laufen um**, und die zweite fehlte in der ersten Fassung dieser Reparatur:
+/// ein Slotfeld *und* ein Register (`reg X : u16 wrapping`, «B32»).
+#[test]
+fn eine_umlaufende_rechnung_wird_unsigned_gerechnet() {
+    let q = r#"
+module m {
+table T count 4 { slot { a : u16 wrapping, b : u16, } }
+device Ring(basis : u64) at mmio {
+    reg IDX : u16 wrapping @0x102 class rw
+}
+impl fn quadriere(t : ptr<normal, rw> T, i : index into T)
+    effects { reads t.slots, writes t.slots } costs <= 6 ops
+{ t.slots[i].a = t.slots[i].a * t.slots[i].a; }
+impl fn ring(r : ptr<mmio, rw> Ring)
+    effects { reads r.IDX, writes r.IDX } costs <= 6 ops
+{ r.IDX = r.IDX * r.IDX; }
+}
+"#;
+    let (baum, mut absagen) = gabbro_syntax::lies("umlauf.gab", q);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(q));
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+
+    // Gerechnet wird in `uint32_t` -- dort ist der Umlauf modulo 2^n ZUGESICHERT
+    // (C11 6.2.5p9) -- und das Ergebnis faellt auf die erklaerte Breite zurueck.
+    assert!(
+        c.contains("(uint16_t)((uint32_t)(t->slots[i].a) * (uint32_t)(t->slots[i].a))"),
+        "der umlaufende Slot rechnet unsigned:\n{c}"
+    );
+    assert!(
+        c.contains("(uint16_t)((uint32_t)((*(volatile uint16_t *)(r->basis + 258)))"),
+        "und das umlaufende REGISTER ebenso -- diese Form fehlte zuerst:\n{c}"
+    );
+}
+
+/// **Auf ein `static` ohne `mut` zu schreiben sagt jetzt ab** («M118», Rezension 2026-08-20).
+///
+/// Das ging mit **null Fehlern** durch. Der Erzeuger ehrte die Deklaration die ganze Zeit
+/// korrekt — `static const uint32_t zaehler` — und schrieb daneben `zaehler += 1;`. Erst
+/// `gcc` sagte *„Zuweisung der schreibgeschützten Variable"*. Mit `static mut` fällt das
+/// `const` weg: **die Unterscheidung existiert also und steuert die Absenkung, nur hielt sie
+/// niemand.**
+///
+/// > Ein Deklarationszeichen, das der Erzeuger ehrt und das kein Pass hält — dieselbe
+/// > Familie, in der `own` eine Woche vorher stand.
+#[test]
+fn ein_static_ohne_mut_wird_nicht_beschrieben() {
+    let bau = |mut_wort: &str| {
+        format!(
+            "module m {{\n\
+             type Z = u32 in 0 .. 1000;\n\
+             static {mut_wort}zaehler : Z = 0;\n\
+             impl fn tor() effects {{ reads zaehler, writes zaehler }} costs <= 3 ops \
+             {{ if zaehler < 1000 {{ zaehler += 1; }} }}\n\
+             }}\n"
+        )
+    };
+    let ohne = bau("");
+    let (b1, mut a1) = gabbro_syntax::lies("ohne.gab", &ohne);
+    gabbro_check::pruefe(&b1, &mut a1);
+    assert!(a1.zeige(&ohne).contains("M118"), "ohne `mut` faellt es:\n{}", a1.zeige(&ohne));
+
+    // **Und die andere Richtung** -- sonst wäre die Regel ein Verbot von `static` überhaupt.
+    let mit = bau("mut ");
+    let (b2, mut a2) = gabbro_syntax::lies("mit.gab", &mit);
+    gabbro_check::pruefe(&b2, &mut a2);
+    assert_eq!(a2.fehler_zahl(), 0, "mit `mut` geht es durch:\n{}", a2.zeige(&mit));
+
+    // Eine LOKALE Bindung darf einen `static` verdecken, und dann gilt sie -- nicht er.
+    let schatten = "module m {\n\
+        static zaehler : u32 in 0 .. 10 = 0;\n\
+        impl fn tor() effects { pure } costs <= 4 ops \
+        { let mut zaehler : u32 in 0 .. 10 = 0; zaehler += 1; }\n\
+        }\n";
+    let (b3, mut a3) = gabbro_syntax::lies("schatten.gab", schatten);
+    gabbro_check::pruefe(&b3, &mut a3);
+    assert!(
+        !a3.zeige(schatten).contains("M118"),
+        "die lokale Bindung verdeckt den `static`:\n{}",
+        a3.zeige(schatten)
+    );
+}

@@ -1,0 +1,49 @@
+-- **`wrapping` heisst DEFINIERT -- und im C hiess es bis zum 2026-08-20 undefiniert.**
+--
+-- Gabbro sagt ueber `u16 wrapping`: der Ueberlauf ist deklariert und definiert. C sagt
+-- etwas anderes. Bei `a * a` hebt die ganzzahlige Aufwertung beide Operanden auf `int`,
+-- und ein `int`-Ueberlauf ist **undefiniert Verhalten**. Mit UBSan nachgewiesen:
+--
+--     runtime error: signed integer overflow: 50000 * 50000
+--                    cannot be represented in type 'int'
+--
+-- Der Wert kam zufaellig richtig heraus. *Garantiert war er nicht* -- ein Optimierer darf
+-- annehmen, dass es nicht ueberlaeuft.
+--
+-- > Wo Gabbro `definiert` sagt und das Erzeugnis `undefiniert` meint, ist die Uebersetzung
+-- > nicht mehr das Gepruefte. Das ist die Aussage, auf der dieses Projekt ruht.
+--
+-- **Warum diese Datei existiert:** der Korpus rechnete an keiner umlaufenden Stelle. Zwoelf
+-- Beispiele nannten `wrapping`, keines multiplizierte damit -- und genau darum lief die
+-- Form an jedem Waechter vorbei. *Eine Regel ueber alles, was emittiert, deckt nur, was
+-- da ist.*
+
+module beispiel::umlauf_rechnet {
+
+table Zaehler count 4 {
+    slot {
+        -- Der Umlauf ist der ENTWURF: ein Pruefsummenwort, das modulo 2^16 zaehlt.
+        a : u16 wrapping,
+    }
+}
+
+device Ring(basis : u64) at mmio {
+    reg IDX : u16 wrapping @0x102 class rw
+}
+
+-- Die beiden umlaufenden Formen der Sprache, beide rechnend.
+impl fn quadriere(t : ptr<normal, rw> Zaehler, i : index into Zaehler)
+    effects { reads t.slots, writes t.slots }
+    costs   <= 6 ops
+{
+    t.slots[i].a = t.slots[i].a * t.slots[i].a;
+}
+
+impl fn ring_quadrieren(r : ptr<mmio, rw> Ring)
+    effects { reads r.IDX, writes r.IDX }
+    costs   <= 6 ops
+{
+    r.IDX = r.IDX * r.IDX;
+}
+
+}

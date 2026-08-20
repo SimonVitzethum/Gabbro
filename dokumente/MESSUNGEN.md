@@ -10727,3 +10727,118 @@ isabelle build -c             13 Theorien frisch, 5 s
 **Was das nicht heisst:** Stufe 9 fragt nur, ob der C-Übersetzer die Ausgabe *annimmt*. Ein
 Programm, das übersetzt und falsch rechnet, fällt ihr nicht auf — dafür stehen die
 siebzehn durchgestochenen Einheiten, und die sind weiter eine Liste.
+
+---
+
+# 2026-08-20, dritte Rezension: zwei Löcher im ERZEUGER, und eines davon war das teuerste
+
+## 1 — `wrapping` heisst in Gabbro *definiert* und hiess im C *undefiniert*
+
+```gabbro
+table T count 4 { slot { a : u16 wrapping, } }
+t.slots[i].a = t.slots[i].a * t.slots[i].a;
+```
+```c
+t->slots[i].a = t->slots[i].a * t->slots[i].a;
+```
+```
+runtime error: signed integer overflow: 50000 * 50000 cannot be represented in type 'int'
+```
+
+Die ganzzahlige Aufwertung hebt beide Operanden auf `int`. Der Wert kam zufällig richtig
+heraus — **63744**, und das ist auch der wahre Wert. *Garantiert war er nicht:* ein
+Optimierer darf annehmen, dass es nicht überläuft, und daraus folgt hier alles.
+
+> **Das ist die Aussage, auf der dieses Projekt ruht.** Wo Gabbro `definiert` sagt und das
+> Erzeugnis `undefiniert` meint, ist die Übersetzung nicht mehr das Geprüfte.
+
+Gerechnet wird jetzt in `uint32_t`/`uint64_t` — dort ist der Umlauf modulo 2ⁿ **zugesichert**
+(C11 6.2.5p9) — und das Ergebnis fällt auf die erklärte Breite zurück.
+
+**Warum nur bei `wrapping`:** wo Gabbro den Überlauf *nicht* erlaubt, hat `M101` bewiesen,
+dass das Ergebnis in den erklärten Bereich passt; ein `u16`-Wert passt in `int`, und die
+Aufwertung ist dann harmlos. *Der Cast gehört genau dorthin, wo die Sprache den Überlauf
+zulässt.*
+
+### Die Wurzel, und sie ist dieselbe wie schon zweimal
+
+`SlotTyp::Wrapping` landete **nirgends** in der Namenstabelle des Erzeugers — nur
+`SlotTyp::Typ`. Der Erzeuger *wusste an der Rechnung nicht, dass der Slot umläuft.* Ein
+Deklarationszeichen, das die Sprache trägt und die Absenkung nicht kennt.
+
+### Und die erste Fassung der Reparatur war zu schmal
+
+**Zwei** Formen laufen um: ein Slotfeld **und** ein Register (`reg IDX : u16 wrapping`,
+«B32»). Die erste Fassung deckte nur den Slot; `r.IDX = r.IDX * r.IDX` hatte danach exakt
+dasselbe UB. *Gefunden, weil ich nach der zweiten Form gesucht habe, nicht weil ein Wächter
+sie meldete* — der Korpus rechnete an keiner umlaufenden Stelle.
+
+## 2 — Auf ein `static` ohne `mut` zu schreiben sagte kein Pass ab
+
+```gabbro
+static zaehler : Z = 0;                    -- kein `mut`
+impl fn tor() effects { … } { zaehler += 1; }     →  0 Fehler
+```
+```c
+static const uint32_t zaehler = 0;
+zaehler += 1;                    →  error: Zuweisung der schreibgeschützten Variable
+```
+
+Der Erzeuger ehrte die Deklaration die ganze Zeit: mit `mut` fällt das `const` weg und alles
+übersetzt. **Die Unterscheidung existiert also und steuert die Absenkung — gehalten hat sie
+niemand.** Neu: `M118`, mit der Gegenprobe in beide Richtungen und der dritten, die zählt:
+eine *lokale* Bindung darf einen `static` verdecken, und dann gilt sie.
+
+> Dieselbe Familie, in der `own` eine Woche vorher stand.
+
+## Der Korpus rechnete an keiner umlaufenden Stelle
+
+Zwölf Beispiele nennen `wrapping`, **keines multiplizierte damit**. Darum lief die Form an
+Stufe 9 vorbei, obwohl die Regel über alles läuft: *eine Regel über alles, was emittiert,
+deckt nur, was da ist.* Neu ist `beispiele/37-umlauf-rechnet.gab` — beide umlaufenden Formen,
+beide rechnend — als **achtzehnte durchgestochene Einheit**.
+
+### Die Gegenprobe: welche Stufe hätte gebissen?
+
+Die Reparatur zurückgedreht, Wächter gefahren:
+
+```
+  3. cc -Werror: ok (keine Warnung)
+  4. Ergebnis:   ok (63744)
+  5. -O2:        ok (gleiches Ergebnis wie -O0)
+  6. UBSan:      SCHLAEGT AN -- Gabbro beweist Ueberlauffreiheit, hier faellt sie
+     runtime error: signed integer overflow: 50000 * 50000 …
+```
+
+**Drei Stufen melden grün, und nur die sechste beisst.** Der Wert *ist* richtig — Stufe 4
+kann diese Klasse gar nicht sehen. Das ist der Beleg dafür, dass UBSan im Wächter keine
+Zierde ist.
+
+## Der Stand
+
+```
+cargo test          148 gruen, ohne RUST_MIN_STACK
+mutiere-pruefer.py  191 Anker, alle lebend
+pruefe-emission.sh  18 durchgestochen, 22 von 25 uebersetzen
+13 Waechter         gruen
+```
+
+## Die zweite Reichweite — gemessen statt gebucht
+
+Der Cast greift am **Operanden**, nicht am **Ziel**. Also: was passiert bei gewöhnlichen
+Operanden, deren Ergebnis in einen umlaufenden Platz geht? Gemessen, statt es als Lücke
+einzutragen:
+
+| Fall | Ergebnis |
+|---|---|
+| `u16 * u16` (volle Breite) in umlaufenden Platz | **`M104`** — *„leaves the width of the result type"* |
+| `u16 + u16` (volle Breite) ebenso | **`M104`** |
+| `u16 in 0 .. 100` × dito → umlaufender Platz | geht durch, **ohne Cast** — und das ist richtig: 10 000 passt in `int` |
+
+**Die Lücke gibt es nicht.** Wo ein gewöhnlicher Operand überlaufen könnte, weist `M104` die
+Form ab; wo er es nicht kann, ist die Aufwertung auf `int` harmlos. *Der Eintrag, den ich
+schon geschrieben hatte, ist wieder gelöscht* — eine gebuchte Lücke, die keine ist, kostet
+später jemanden einen Nachmittag.
+
+**Was hingegen bleibt:** `M118` fasst einen `static` ohne Suffixe. Ein Schreiben in ein *Feld*
+eines unveränderlichen `static` fällt nicht auf; gebucht.
