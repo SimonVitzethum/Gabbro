@@ -1,0 +1,194 @@
+-- =======================================================================================
+-- F3 -- der IPC-Fastpath, VERVOLLSTAENDIGT
+--
+-- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:554-704, byteidentisch, plus genau die
+-- Zeilen, die ihn zu einem PROGRAMM machen.**
+--
+-- **ERGAENZT, und nichts sonst:**
+--   * vier Konstanten -- `SYSNO_RESULT`, `EP_BADGE`, `KEIN_SERVER`, `KEIN_FRAME`;
+--   * `reason EpVoll` und `-> u32 or EpVoll` an `enqueue`. Der Ausschnitt schreibt
+--     `enqueue(…) else (fehler) { … }` und nannte den Ausgang nur im Kommentar.
+--
+-- **15 Fehler auf 5. Die fuenf sind GABBROS**, und drei davon sind ein einziger Befund:
+--
+-- > **`A::B` parst und wird nie aufgeloest.** `path = ident { "::" ident }` steht in der
+-- > Grammatik; der Namenspass liest die ERSTE Silbe und schlaegt sie als Wert nach.
+-- > `IpcResult::Ok` faellt damit als `M119`, gleichgueltig ob `IpcResult` ein `module`, ein
+-- > `reason` oder ein Variantentyp ist -- alle drei geprueft am 2026-08-20.
+--
+-- Gemessen: **null Korpusstellen benutzen einen qualifizierten Namen als WERT** -- die
+-- `::`-Treffer im Korpus sind samt und sonders `module a::b`-Koepfe. *Die Form ist
+-- schreibbar und hat keinen Leser* -- dieselbe Gestalt wie `ensures` am rumpflosen
+-- `extern fn` und wie `RegDecl::requires`.
+--
+-- Die zwei uebrigen, ebenfalls Gabbros: `M101` -- `Some(caller)` in einen Slot, dessen
+-- Sonderwert der Erzeuger kennt und M1 nicht; `H011` -- `call` erklaert `locks SCHEDS` und
+-- nimmt die Sperre nie. *Der zweite ist ein echter Befund AM AUSSCHNITT und bleibt darum
+-- stehen: die Wirkungsklausel verspricht mehr, als der Rumpf tut.*
+-- =======================================================================================
+
+module caprock::ipc {
+
+const QUEUE_CAP : u32 = 32;
+const NCORES    : u32 = 64;   -- nachgetragen 2026-08-15
+const MSG_WORDS : u32 = 6;
+
+-- ERGAENZT: vier Namen, die der Ausschnitt ruft und nirgends deklariert.
+-- `SYSNO_RESULT`/`EP_BADGE` sind Registernummern des Rahmens, `KEIN_SERVER`/`KEIN_FRAME`
+-- die Sonderwerte, gegen die der Fastpath vergleicht.
+const SYSNO_RESULT : u32 = 0;
+const EP_BADGE     : u32 = 1;
+const KEIN_SERVER  : u32 = 0xffff_ffff;
+const KEIN_FRAME   : u32 = 0xffff_ffff;
+
+reason IpcResult {
+    Ok           = 0 "Rendezvous vollzogen"
+    ErrBadCap    = 2 "Endpoint nicht belegt"
+    ErrQuiescing = 8 "Endpoint stillgelegt, keine neue Transaktion"
+    ErrEpFull    = 9 "Warteschlange voll, D11: benannt statt still"
+    exhaustive
+}
+
+-- «B15» Monomorph ausgeschrieben. `Queue(T, const N)` ist nicht schreibbar: `typeexpr`
+-- (:137) hat keine Anwendungsform, und `params` (:150) nimmt Werte, keine Typen.
+type TidQueue = {
+    buf   : [u32; 32],
+    head  : u32 in 0 ..< 32,
+    tail  : u32 in 0 ..< 32,
+    count : u32 in 0 .. 32,
+};
+
+table Endpoint count NCORES {
+    slot {
+        used        : bool,
+        quiescing   : bool,
+        senders     : TidQueue,
+        receivers   : TidQueue,
+        caller      : option index into Threads,
+        reply_owner : option index into Threads,
+    }
+
+    invariant antwortpflicht_paarig cost O(1) runs online :
+        forall e in slots of Self :
+            (Self.slots[e].caller == None) == (Self.slots[e].reply_owner == None);
+}
+
+-- «B17» HIER BRICHT DAS FRAGMENT. `transition` (:434) schreibt GENAU EIN `place`:
+--     transition = "transition" ident "{" place ":" expr "->" expr "}" …
+-- Die ganze Aussage des Fragments ist aber, dass `caller` und `reply_owner` NIE HALB
+-- gesetzt werden — zwei Orte in EINEM Zug. In Caprock steht das als Kommentar
+-- ("stets gemeinsam gesetzt/geloescht"); Gabbro sollte es zur Ableitung machen und kann es
+-- nicht. Zweitens nennt `state` (:414) den Typ nicht, ueber dem es steht.
+-- Drittens bindet `Some(cl)` im Zielausdruck einen frischen Namen — dafuer gibt es keine
+-- Produktion. Die drei Zeilen unten sind AUSKOMMENTIERT, weil sie nicht schreibbar sind:
+--     state Rendezvous over Endpoint {
+--         transition open  { caller : None -> Some(cl), reply_owner : None -> Some(sv) }
+--         transition close { caller : Some(c) -> None,  reply_owner : Some(s) -> None }
+--     }
+
+-- «B12» `forall i in 0 ..< MSG_WORDS` ist nicht schreibbar: die sieben Domaenen (:238-244)
+-- enthalten keinen Zahlenbereich. Ersatz ueber `elems of` — und damit steht die zweite
+-- Frage im Raum: bindet `elems of` ein ELEMENT und `slots of` einen INDEX? SYNTAX.md
+-- benutzt beide Lesarten und legt keine fest.
+spec fn msg_kopiert(dst : ptr<normal, r> Frame, src : ptr<normal, r> Frame) -> bool
+    effects { pure }
+    = forall i in elems of dst.msg : dst.msg[i] == old(src.msg[i]);
+
+-- «B9» Der Ersatz fuer `&mut dyn SchedOps`: `fnptr` (:148) traegt KEINEN Vertrag —
+-- kein `requires`, kein `ensures`, kein `effects`. Genau dafuer war der Verbund gedacht
+-- ("der Vertrag des Rueckrufs muss am Zeigertyp stehen"). Er traegt nur noch die Signatur.
+-- «B8» Und gerufen werden kann durch ihn ueberhaupt nicht: `call = path "(" … ")"` (:202);
+-- `ops.current_id(core)` ist kein `call`, weil `ops.current_id` ein `place` ist.
+type SchedOps = {
+    current_id    : fn(u32) -> u32,
+    frame_of      : fn(u32) -> u64,
+    block_current : fn(u32, u64) -> u64,
+    switch_to     : fn(u32, u64, u32) -> u64,
+    unblock       : fn(u32) -> u32,
+};
+
+impl fn call(e    : ptr<normal, rw> Endpoint,
+             dienste : ptr<normal, r> SchedOps,
+             core : index into Endpoint,
+             f    : ptr<normal, rw+own> Frame) -> ptr<normal, rw+own> Frame
+    -- «B6» Die Nachbedingungen des Originals sprechen ueber `result`. `fndecl` (:266-274)
+    -- bindet fuer den Rueckgabewert KEINEN Namen; `old(place)` gibt es, ein `result` nicht.
+    requires  Held(EPS), e.slots[core].used
+    maintains antwortpflicht_paarig
+    -- `reads dienste` steht hier, weil `current_id`/`frame_of` es nennen: seit 2026-08-15
+    -- schliesst eine Wirkungsliste die der Gerufenen ein (`E008`). **Die Zeile war vorher
+    -- unvollstaendig, und kein Werkzeug konnte es sagen** -- genau der Posten, der `effects`
+    -- erst kompositional macht.
+    effects   { writes e.slots, locks SCHEDS, writes frames, consumes e.slots,
+                reads dienste }
+    costs     <= 2000 ops
+{
+    if e.slots[core].quiescing {
+        set_reg(f, SYSNO_RESULT, IpcResult::ErrQuiescing);
+        return f;
+    }
+    let caller = current_id(dienste, core);
+
+    -- «B10» Der Fastpath sucht den ERSTEN lebenden Empfaenger und hoert dann auf. `traverse`
+    -- liefert keinen Wert und kennt kein `break` — mit `by consuming` wird deshalb die
+    -- GANZE Warteschlange geleert, auch die Empfaenger hinter dem gefundenen. Das ist keine
+    -- Wortreichheit, sondern ein anderes Programm: aus einem Rendezvous wird ein Aderlass.
+    let mut picked : u32 = KEIN_SERVER;
+    traverse cand over queue e.slots[core].receivers by consuming
+        touches consumes e.slots, reads sched
+    {
+        if picked == KEIN_SERVER && frame_of(dienste, cand) != KEIN_FRAME {
+            picked = cand;
+        }
+    }
+
+    if picked == KEIN_SERVER {
+        let q = enqueue(e.slots[core].senders, caller) else (fehler) {
+            -- D11 woertlich: der Ueberlaeufer wird NICHT blockiert, sondern benannt
+            -- abgewiesen. Das traegt die Grammatik, und es ist der beste Zug in F3.
+            set_reg(f, SYSNO_RESULT, IpcResult::ErrEpFull);
+            return f;
+        }
+        return block_current(dienste, core, f);
+    }
+
+    transfer(f, frame_of(dienste, picked));
+    set_reg(frame_of(dienste, picked), SYSNO_RESULT, IpcResult::Ok);
+    set_reg(frame_of(dienste, picked), EP_BADGE, 0);
+    -- «B17» hier stuende `open(e, caller, picked);` — der Uebergang, der beide Orte in
+    -- EINEM Zug schreibt. Ohne ihn zwei Zuweisungen, und die Invariante gilt dazwischen nicht.
+    e.slots[core].caller      = Some(caller);
+    e.slots[core].reply_owner = Some(picked);
+    if owner_core(picked) == core {
+        return switch_to(dienste, core, f, picked);
+    }
+    unblock(dienste, picked);
+    return block_current(dienste, core, f);
+}
+
+
+-- Nachgetragen 2026-08-15: `set_reg` wurde zweimal gerufen und nie erklaert.
+extern fn set_reg(f : ptr<normal, rw> Frame, r : RegNr, w : u64) effects { writes f } costs <= 2 ops;
+-- ERGAENZT: `or EpVoll`. Der Ausschnitt schreibt `enqueue(…) else (fehler) { … }`, und ein
+-- `let … else` verlangt einen Fehlerkanal am Gerufenen (`N028`) -- sonst koennte der Zweig
+-- nie genommen werden. Die Vorlage nannte den Ausgang im Kommentar („benannt abgewiesen")
+-- und nicht in der Signatur.
+reason EpVoll { Voll = 1 "die Warteschlange des Endpunkts ist voll" exhaustive }
+extern fn enqueue(q : ptr<normal, rw> TidQueue, t : u32) -> u32 or EpVoll
+    effects { writes q } costs <= 4 ops;
+extern fn block_current(d : ptr<normal, r> SchedOps, core : index into Endpoint,
+                        f : ptr<normal, rw> Frame) -> u32
+    effects { reads d, writes f } costs <= 8 ops;
+extern fn switch_to(d : ptr<normal, r> SchedOps, core : index into Endpoint,
+                    f : ptr<normal, rw> Frame, t : u32) -> u32
+    effects { reads d, writes f } costs <= 12 ops;
+extern fn unblock(d : ptr<normal, r> SchedOps, t : u32) effects { reads d } costs <= 4 ops;
+extern fn owner_core(d : ptr<normal, r> SchedOps, t : u32) -> u32
+    effects { reads d } costs <= 2 ops;
+extern fn transfer(f : ptr<normal, rw> Frame, g : u32) effects { writes f } costs <= 6 ops;
+
+extern fn current_id(d : ptr<normal, r> SchedOps, core : index into Endpoint) -> u32
+    effects { reads d } costs <= 2 ops;
+extern fn frame_of(d : ptr<normal, r> SchedOps, t : u32) -> u32
+    effects { reads d } costs <= 2 ops;
+}

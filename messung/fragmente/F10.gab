@@ -1,0 +1,51 @@
+module caprock::dtb {
+
+const MAGIE : u32 = 0xd00dfeed;
+
+-- Der Kopf ist ein FORMAT: feste Breiten, ausgesprochene Bytereihenfolge, und die
+-- `where`-Klausel bindet jeden Versatz an die Pufferlaenge. **Danach braucht kein
+-- einziger Zugriff mehr eine Laengenpruefung.**
+format DtbKopf @version 17 endian big {
+    magie       : u32 where magie == MAGIE,
+    gesamtlaenge: u32,
+    off_struct  : u32 offset_into Self where off_struct + 4 <= lenof(Self),
+    off_strings : u32 offset_into Self where off_strings + 4 <= lenof(Self),
+}
+
+-- Die Tiefe ist ein Zaehler, und die Zaehlerregel gilt: Schranke in der Deklaration UND
+-- Pruefung vor der Rechnung. Ein DTB mit 2^32 verschachtelten Knoten ist kein Baum mehr,
+-- sondern ein Angriff -- und die Schranke sagt das, statt es zu hoffen.
+const MAXTIEFE : u32 = 64;
+type Tiefe = u32 in 0 .. MAXTIEFE;
+
+extern fn naechstes_token(k : ptr<normal, r> DtbKopf, pos : u32) -> u32
+    effects { reads k } costs <= 4 ops;
+
+impl fn kerne_zaehlen(k : ptr<normal, r> DtbKopf) -> u32
+    effects { reads k }
+    costs   <= 65540 ops
+{
+    let mut tiefe : Tiefe = 0;
+    let mut zahl  : u32 in 0 .. 1024 = 0;
+
+    retry lesen until naechstes_token(k, 0) == 9
+        bounded 65536 ops
+        progress token_verbraucht
+        on_exceeded baum_unlesbar
+        effects { reads k }
+    {
+        narrow tiefe to 0 ..< MAXTIEFE else { return zahl; }
+        tiefe += 1;
+    }
+    return zahl;
+}
+
+extern fn baum_unlesbar() -> never effects { diverges } costs <= 0 ops;
+
+-- **Der Zeuge, und bis 2026-08-18 stand er nicht da.** `progress` nennt eine Annahme mit
+-- Falsifikator; ohne `assume` steht der Name in keinem Manifest. `S003` hat es gefunden.
+assume token_verbraucht
+    "Jeder Durchgang verbraucht mindestens ein Token, und ein DTB hat endlich viele."
+    falsifier sonde_dtb_endlich;
+
+}

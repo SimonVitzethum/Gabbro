@@ -1,0 +1,150 @@
+-- =======================================================================================
+-- F5 -- die Dienstschleife von `virtio-blk`, VERVOLLSTAENDIGT
+--
+-- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:919-1018, byteidentisch, plus genau die
+-- Zeilen, die ihn zu einem PROGRAMM machen.**
+--
+-- **ERGAENZT, und nichts sonst:** neun Konstanten (`CFG`, `BAR`, `DMA`, `SHARED`, `EP`,
+-- `NTFN`, `MAX_POLL`, `MAX_SECTORS`, `SECTOR`) · `reason Aufbau` und fuenf `extern fn` mit
+-- Fehlerkanal (`map_window`, `pool_new`, `probe_ecam`, `recv`, `reply4`) · `assume
+-- client_calls_or_endpoint_revoked` mit Sonde.
+--
+-- **32 Fehler auf 3.** Der Ausschnitt war der unvollstaendigste von allen -- 24 unbekannte
+-- Namen -- und genau darum der beste Beleg fuer diesen Ordner: *nach der Vervollstaendigung
+-- steht da, was GABBRO fehlt.*
+--
+-- Die drei uebrigen sind EIN Befund, und es ist derselbe wie in F1 und F3:
+--
+-- > **`Status::Ok` parst und wird nie aufgeloest.** `Status` ist hier als `reason`
+-- > deklariert, drei Zeilen weiter oben. Der Namenspass liest die erste Silbe eines Pfades
+-- > und schlaegt sie als Wert nach. **Ein `reason`-Wert hat keinen Erzeuger** -- und jede
+-- > `or R`-Signatur im Korpus steht an einem `extern fn`, also an einem Rumpf, den Gabbro
+-- > nie sieht. *Der Fehlerkanal existiert an der Deklaration und hat keine Schreibform.*
+-- =======================================================================================
+
+module programs::virtio_blk {
+
+reason Status {
+    Ok      = 0 "alles gut"
+    Device  = 1 "das Geraet antwortete nicht oder meldete einen Fehler"
+    BadOp   = 2 "unbekannte Operation"
+    Range   = 3 "der Bereich liegt nicht auf der Platte: Fehler des Clients, nicht des Geraets"
+    NoTable = 4 "keine lesbare Partitionstabelle"
+    exhaustive
+}
+
+reason ServiceExit {
+    EndpointGone = 1 "der Endpoint ist stillgelegt oder entzogen, Hot-Reload der alten Fassung"
+    Stopped      = 2 "OP_STOP: der Client hat den Dienst beendet, die Antwort ging noch raus"
+    exhaustive
+}
+
+tagged type Op = { Info, Read, Write, Flush, Scan, Stop };
+
+-- ERGAENZT: die Kapazitaeten und Kennzahlen, die der Ausschnitt ruft und nirgends nennt.
+-- Ein Ausschnitt aus einem Dienst nennt die Griffe, nicht ihre Herkunft; ein Programm muss.
+const CFG    : u64 = 1;
+const BAR    : u64 = 2;
+const DMA    : u64 = 3;
+const SHARED : u64 = 4;
+const EP     : u64 = 5;
+const NTFN   : u64 = 6;
+const MAX_POLL    : u32 = 4096;
+const MAX_SECTORS : u64 = 262144;
+const SECTOR      : u64 = 512;
+
+-- ERGAENZT: die sieben Ruempfe, die der Ausschnitt mit `else` ruft. Ein `let … else`
+-- verlangt einen Fehlerkanal am Gerufenen (`N028`), und keiner davon war deklariert.
+reason Aufbau { Fehlt = 1 "das Fenster oder der Pool liess sich nicht herstellen" exhaustive }
+
+assume client_calls_or_endpoint_revoked
+    "Ein Dienst am Endpunkt bekommt in endlicher Zeit einen Ruf, oder der Endpunkt wird entzogen."
+    falsifier sonde_endpunkt_meldet_sich;
+extern fn map_window(cap : u64) -> u64 or Aufbau effects { reads cap } costs <= 64 ops;
+extern fn pool_new(fenster : u64) -> u64 or Aufbau effects { reads fenster } costs <= 64 ops;
+extern fn probe_ecam(cfg : u64) -> u64 or Aufbau effects { reads cfg } costs <= 64 ops;
+extern fn recv(ep : u64) -> u64 or Aufbau effects { reads ep } costs <= 64 ops;
+extern fn reply4(ep : u64, st : u64, a : u64, b : u64, c : u64)
+    effects { writes ep } costs <= 8 ops;
+
+-- «B27» Der Syscall-Einstieg: `arch ident` gibt es (:273), die REGISTERBELEGUNG nicht.
+-- Die Vorlage schrieb dafuer einen `abi { in rax = nr, …, trap 0x80 }`-Block; `fndecl`
+-- kennt ihn nicht. Damit hat der einzige Ort, an dem 168 gemessene `asm!`-Stellen
+-- zusammenlaufen sollten, in der Grammatik keinen Traeger — die vertrauenswuerdige Flaeche
+-- schrumpft nicht, sie wandert in eine `prim`-Deklaration ohne Inhalt.
+prim fn invoke(nr : u64, cap : u64, m0 : u64, m1 : u64, m2 : u64, m3 : u64, tag : u64) -> u64
+    effects { writes machine_regs }
+    arch x86_64;
+
+prim fn invoke(nr : u64, cap : u64, m0 : u64, m1 : u64, m2 : u64, m3 : u64, tag : u64) -> u64
+    effects { writes machine_regs }
+    arch aarch64;
+
+divergent fn run(startwert : u64) -> never
+    effects { diverges, writes DMA, writes SHARED, reads EP }
+{
+    let cfg    = map_window(CFG)    else (e1) { signal(NTFN, 0xD1A6_0001); exit(); }
+    let bar    = map_window(BAR)    else (e2) { signal(NTFN, 0xD1A6_0002); exit(); }
+    let dmafenster    = map_window(DMA)    else (e3) { signal(NTFN, 0xD1A6_0003); exit(); }
+    let teilfenster = map_window(SHARED) else (e4) { signal(NTFN, 0xD1A6_0004); exit(); }
+
+    let pool      = pool_new(dmafenster)    else (e5) { signal(NTFN, 0xD1A6_0000); exit(); }
+    let transport = probe_ecam(cfg)  else (e6) { signal(NTFN, 0xD1A6_00FF); exit(); }
+
+    signal(NTFN, 0);
+
+    -- «B14» `let mut capacity : option Sectors = none;` ist nicht schreibbar: `option` steht
+    -- nur in `slottype` (:387), nicht in `typeexpr` (:137). Der Fall „noch nie gelesen" wird
+    -- damit wieder eine 0 — genau die Deutung, gegen die das Fragment geschrieben war.
+    let mut capacity : u32 = 0;
+
+    -- «B11» HIER BRICHT F5. `forever` (:350-354) hat KEINEN AUSGANG. Die Vorlage schrieb
+    --     awaits recv(EP)   leaves ServiceExit   …   { … leave EndpointGone; }
+    -- und begruendete es mit D0: der echte Code hat an dieser Stelle
+    -- `if m.result != OK { break; }`, und dass dieser Austritt keinen Namen trug, hat zehn
+    -- Tage gekostet. In der Grammatik von heute gibt es weder `leave` noch `break` noch
+    -- `continue`; SYNTAX.md fuehrt das selbst als offenen Punkt (:603) und vermutet, es sei
+    -- versehentlich. Es ist der Unterschied zwischen „D0 faellt durch Konstruktion" und
+    -- „die Dienstschleife ist nicht schreibbar".
+    forever dienst
+        per_pass bounded MAX_POLL ops
+        on_exceeded watchdog_schlug_an
+        effects  { reads EP, writes SHARED, writes pool }
+        progress    client_calls_or_endpoint_revoked
+    {
+        let m = recv(EP) else (e7) { exit(); }
+        match decode_op(m.op) {
+            Info => {
+                let r = request_flush(transport, pool);
+                capacity = r;
+                -- «B7» `reply(EP, [Ok, r, MAX_SECTORS, SECTOR]);` ist nicht schreibbar:
+                -- `primary` (:200) kennt kein Feldliteral. Vier Argumente statt eines Feldes.
+                reply4(EP, Status::Ok, r, MAX_SECTORS, SECTOR);
+            }
+            Read  => { serve_rw(EP, transport, pool, teilfenster, m, capacity); }
+            Write => { serve_rw(EP, transport, pool, teilfenster, m, capacity); }
+            Flush => {
+                let r2 = request_flush(transport, pool);
+                reply4(EP, Status::Ok, 0, 0, bump_served(pool));
+            }
+            Scan  => { serve_scan(EP, transport, pool); }
+            Stop  => {
+                reply4(EP, Status::Ok, 0, 0, 0);
+                -- «B11» hier stuende `leave Stopped;`. Ohne Ausgang bleibt nur `exit()` —
+                -- also der Sprung aus der ganzen Funktion, und die Aufraeumzusage der
+                -- Funktion wandert an zwei Stellen. Das ist woertlich die Klasse, die C8
+                -- bezahlt hat: ein neuer Abweispfad erbt die Aufraeumpflicht des alten nicht.
+                exit();
+            }
+        }
+    }
+}
+
+-- Nachgetragen 2026-08-15: `exit` und `signal` wurden benutzt und nie erklaert.
+-- Ohne `-> never` an `exit` kann kein Pass sehen, dass die Fehlerzweige nicht
+-- durchfallen -- sechs `S002` kamen allein daher.
+extern fn exit() -> never effects { diverges };
+extern fn signal(n : u64, w : u64) effects { writes NTFN };
+extern fn watchdog_schlug_an() -> never effects { diverges };
+
+}

@@ -43,6 +43,20 @@ FRIST = 180  # Sekunden je Befehl. Ein Waechter ohne Frist meldet einen Haenger 
 # Gruppe = die Zahl aus dem Lauf, was die Zahl bedeutet)
 EINTRAEGE = [
     (
+        "messung/fragmente/README.md",
+        r"(\d+) von 10 prüfen sauber",
+        ["./zaehle-fragmente.py"],
+        r"^  (\d+) von 10 pruefen sauber",
+        "vervollstaendigte Fragmente, die sauber pruefen",
+    ),
+    (
+        "messung/fragmente/README.md",
+        r"(\d+) von 10 senken ab",
+        ["./zaehle-fragmente.py"],
+        r"^  (\d+) von 10 senken ab",
+        "vervollstaendigte Fragmente, die absenken",
+    ),
+    (
         "dokumente/PFLICHTEN.md",
         r"of which \*\*`H = (\d+)` are K\*\*",
         ["./zaehle-pflichten.py", "--haengend"],
@@ -86,7 +100,7 @@ EINTRAEGE = [
     ),
     (
         "README.md",
-        r"\*\*(\d+) of 23 instruments carry all four requirements\*\*",
+        r"\*\*(\d+) of \d+ instruments carry all four requirements\*\*",
         ["./pruefe-waechter.py"],
         r"== (\d+) von \d+ tragen die drei STATISCHEN ==",
         "Instrumente mit Frist, Sprechprobe und rotem Abbruch",

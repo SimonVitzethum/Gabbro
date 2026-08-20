@@ -1468,6 +1468,33 @@ Drei Wege, und nur einer ist ehrlich:
 Bericht in Ruhe, und er sagt in der Kopfzeile der Kopie, was ergänzt wurde — damit bleibt
 nachrechenbar, welcher Teil gemessen und welcher geschrieben ist.
 
+### AUSGEFÜHRT 2026-08-20 — [`messung/fragmente/`](../messung/fragmente/)
+
+```
+$ ./zaehle-fragmente.py
+7 von 10 prüfen sauber        (über den Ausschnitten: 5)
+4 von 10 senken ab            (über den Ausschnitten: 3)
+```
+
+Ergänzt wurden **nur** Deklarationen, die ein Ausschnitt ruft und nicht nennt — 20 Namen, fünf
+`extern fn` mit Fehlerkanal, zwei `assume` mit Sonde, sieben `reserved`-Felder, ein Träger für
+`irq`. Nichts umgeschrieben, nichts weggelassen, keine Absage wegdefiniert.
+
+> **Wo ein Fehler nach der Vervollständigung stehen bleibt, gehört er Gabbro** — und genau das
+> ist der Ertrag. Aus *„der Ausschnitt ist unvollständig"* wird eine Liste mit Adressen.
+
+**Drei Befunde, die der eingefrorene Korpus nicht zeigen konnte**, weil sie erst sichtbar
+werden, wenn die fehlenden Deklarationen da sind:
+
+| | |
+|---|---|
+| **`A::B` parst und wird nie aufgelöst** | Der Namenspass liest die **erste Silbe** eines Pfades und schlägt sie als Wert nach. `IpcResult::Ok` fällt als `M119` — gleichgültig ob `module`, `reason` oder Variantentyp, alle drei gemessen. **Null Korpusstellen benutzen einen qualifizierten Namen als Wert** |
+| **Ein `reason`-Wert hat keinen Erzeuger** | `primary` (`SYNTAX.md`:405) kennt keine Produktion. **Jede `-> T or R`-Signatur im Korpus steht an einem `extern fn`** — an einem Rumpf, den Gabbro nie sieht. *Der Fehlerkanal existiert an der Deklaration und hat keine Schreibform.* **Dieselbe Gestalt wie «B9» bei `fnptr`: erst der Erzeuger, dann der Vertrag** |
+| **Eine Zeile, die ICH ergänzt habe, senkt nicht ab** | `static irq : IrqMarke = IrqMarke(…)` — ein `static` eines Verbunds mit gewöhnlichem Anfangswert. *Steht so im Kopf von F6, statt die Zeile wegzulassen* |
+
+*Damit ist `H`s Absenkungsspalte zum ersten Mal auf einem Korpus messbar, der sie tragen kann
+— und die Zahl, die dort steht, misst Gabbro und nicht die Vollständigkeit eines Berichts.*
+
 **Und die drei zuletzt geschlossenen Zeilen sagen zusammen einen Satz, der in den Plan
 gehört:** «B33» stand als *Zusage* im Ordner und der Prüfer tat das Gegenteil; die
 Registerklasse stand als *erledigt durch `R002`/`R003`* und die prüfen Zeigerrechte; «B26»

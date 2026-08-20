@@ -1,0 +1,53 @@
+module caprock::sched {
+
+const NKERNE  : u32 = 64;
+const NFAEDEN : u32 = 1024;
+
+type KernIdx  = u32 in 0 ..< NKERNE;
+type FadenId  = u32 in 0 ..< NFAEDEN;
+
+table Laufliste count NFAEDEN {
+    slot { belegt : bool, kern : KernIdx, prio : u32 in 0 .. 255, }
+}
+
+lock SCHEDS protects { belegt, kern, prio } rank 2
+    held <= 300 ops
+    shared held <= 32 ops;
+
+-- Der Fall, der TRAEGT: der Wert ueberquert die Grenze, und die Fortsetzung prueft neu.
+-- `resolve` ist genau die Neuvalidierung; ohne sie waere `toeten` ein Rennen.
+extern fn aufloesen(l : ptr<normal, r> Laufliste, t : FadenId)
+    -> option index into Laufliste
+    requires Held(SCHEDS, shared)
+    effects  { reads l.slots } costs <= 8 ops;
+
+impl fn toeten(l : ptr<normal, rw> Laufliste, t : FadenId, k : index into Laufliste) -> bool
+    effects { reads l.slots, writes l.slots, locks SCHEDS }
+    costs   <= 340 ops
+{
+    locks SCHEDS {
+        -- **Die Neuvalidierung.** Der Faden kann zwischen Auswahl und Tat verschwunden
+        -- sein; `aufloesen` sagt es, und der `match` zwingt beide Ausgaenge.
+        match aufloesen(l, t) {
+            Some(i) => { l.slots[i].belegt = false; return true; }
+            None    => { return false; }
+        }
+    }
+    return false;
+}
+
+-- «B38» -- DER FALL, DEN DIE ZWANGSFASSUNG UNSCHREIBBAR MACHT.
+-- Der Wert ueberquert dieselbe Grenze und braucht KEINE Neuvalidierung, weil eine andere
+-- Zusage ihn traegt: die Interruptmaskierung. `masks IRQ` ist in Gabbro bereits eine
+-- Wirkung -- die Begruendung steht also schon in der Sprache, sie ist nur nicht mit der
+-- Sperrgrenze verknuepft.
+impl fn beenden(l : ptr<normal, rw> Laufliste, k : index into Laufliste) -> bool
+    requires Held(SCHEDS)
+    effects  { reads l.slots, writes l.slots, masks IRQ }
+    costs    <= 16 ops
+{
+    l.slots[k].belegt = false;
+    return true;
+}
+
+}

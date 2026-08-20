@@ -455,10 +455,27 @@ niemand deklariert, neun `let … else` rufen Rümpfe, die es nicht gibt, sechs 
 unbenannt. **Die Absenkungsspalte fällt um keinen Punkt**, ohne in eine eingefrorene Datei zu
 schreiben.
 
-**Die Entscheidung:** Weg **(b)** — `messung/fragmente/`, dieselben zehn um ihre ~60 fehlenden
-Zeilen ergänzt, ausführbar, mit einer Kopfzeile, die sagt was ergänzt wurde. `FRAGMENTE.md`
-bleibt Bericht. *Derselbe Zug wie «K2»: nachgebildet, nicht übersetzt — und dort ausdrücklich
-gesagt.*
+**Die Entscheidung ist gefallen und AUSGEFÜHRT (2026-08-20):** Weg **(b)** —
+[`messung/fragmente/`](messung/fragmente/), dieselben zehn um ihre fehlenden Zeilen ergänzt,
+mit einer Kopfzeile je Datei, die sagt was ergänzt wurde. `FRAGMENTE.md` bleibt Bericht.
+
+```
+$ ./zaehle-fragmente.py
+7 von 10 prüfen sauber        (über den Ausschnitten: 5)
+4 von 10 senken ab            (über den Ausschnitten: 3)
+```
+
+**Und der Ertrag sind drei Befunde, die der eingefrorene Korpus nicht zeigen konnte:**
+
+| | |
+|---|---|
+| **`A::B` parst und wird nie aufgelöst** | der Namenspass liest die **erste Silbe** und schlägt sie als Wert nach. `module`, `reason`, Variantentyp — alle drei gemessen. **Null Korpusstellen benutzen einen qualifizierten Namen als Wert** |
+| **Ein `reason`-Wert hat keinen Erzeuger** | `primary` kennt keine Produktion; **jede `or R`-Signatur im Korpus steht an einem `extern fn`**. *Dieselbe Gestalt wie «B9» bei `fnptr` — und damit gehört sie in Stufe 7* |
+| **Ein `static` eines Verbunds senkt nicht ab** | die Zeile, die ich selbst ergänzt habe. *Steht im Kopf von F6, statt weggelassen zu werden* |
+
+*Was bleibt: die vier Dateien, die noch nicht absenken, hängen jetzt an GABBRO-Absagen mit
+Adresse — `dma`-Barriere, «B12» `elems of`, `walk … levels` als Konstantenname, `mappings of`.
+Die stehen in Stufe 3 und 4.*
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 

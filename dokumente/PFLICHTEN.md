@@ -434,6 +434,32 @@ carries and the Rust original did not — because it does not write them down.*
 >
 > *The second corpus is where the number can go to zero, and it is the one no one looked at
 > while building.* `./zaehle-pflichten.py` counts it since 2026-08-20.
+>
+> ### And since 2026-08-20 the obligation has a corpus that CAN carry it
+>
+> [`messung/fragmente/`](../messung/fragmente/) — the same ten, byte-identical, plus exactly
+> the lines that make them **programs**. Per file the head says what was added and what was
+> not; **`FRAGMENTE.md` stays the frozen report.** *The same move as «K2»: rebuilt, not
+> translated — and said so out loud.*
+>
+> ```
+> $ ./zaehle-fragmente.py
+> 7 von 10 pruefen sauber        (over the excerpts: 5)
+> 4 von 10 senken ab             (over the excerpts: 3)
+> ```
+>
+> **And the yield is three findings the frozen corpus could not show**, because they only
+> appear once the missing declarations are there:
+>
+> 1. **`A::B` parses and never resolves.** The name pass reads the FIRST segment of a path
+>    and looks it up as a value — `IpcResult::Ok` falls as `M119` whether `IpcResult` is a
+>    `module`, a `reason` or a variant type. All three measured.
+> 2. **A `reason` value has no producer.** `primary` (`SYNTAX.md`:405) has no production for
+>    it, and **every `-> T or R` in the corpus sits on an `extern fn`** — a body Gabbro never
+>    sees. *The error channel exists at the declaration and has no way to be written.*
+>    **The same shape as «B9» at `fnptr`.**
+> 3. A line *I* added does not lower: `static irq : IrqMarke = IrqMarke(…)` — a `static` of a
+>    record with an ordinary initial value. *That stands there instead of leaving the line out.*
 
 > *That is the honest connection to the emitter work.* The differential test now shows that
 > **two** lowerings hold for **two** files, measured by execution — and F7's is the first over a

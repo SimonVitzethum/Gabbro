@@ -1,0 +1,173 @@
+-- =======================================================================================
+-- F4 -- der virtio-Treiber, VERVOLLSTAENDIGT
+--
+-- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:753-896, byteidentisch, plus genau die
+-- Zeilen, die ihn zu einem PROGRAMM machen.** Die Vorlage ist ein Bericht vom 2026-08-14 und
+-- bleibt unangetastet; ein Bericht laesst sich nicht ausfuehren, und die Absenkungspflicht
+-- lautet *„das erzeugte C rechnet, was das Fragment sagt"* -- an der Ausfuehrung gemessen.
+--
+-- **ERGAENZT, und nichts sonst:**
+--   * `const MAX_POLL` -- die `bounded`-Klausel nannte eine Zahl, die nirgends stand.
+--   * `assume device_completes_or_faults` mit Sonde -- `progress` nannte einen Namen, den
+--     keine Annahme trug (`S003`). Genau die Luecke, die `beispiele/09` schon einmal hatte.
+--   * `extern fn DeviceSilent() -> never` -- `on_exceeded` nannte nichts, was diese Einheit
+--     deklariert (`S007`).
+--
+-- **NICHT ergaenzt und darum weiter offen:** `QMAX` in `requires QUEUE_SIZE <= QMAX` steht
+-- nirgends -- und faellt trotzdem nicht auf, **weil kein Pass `RegDecl::requires` liest**
+-- («B26», gemessen 2026-08-20). *Der Ausschnitt hat die Luecke, und der Pruefer sieht sie
+-- nicht; beides bleibt hier stehen, damit es sichtbar ist.*
+-- =======================================================================================
+
+const MAX_POLL : u32 = 4096;
+
+assume device_completes_or_faults
+    "Ein Geraet, das einen Deskriptor genommen hat, meldet ihn innerhalb der zugesagten Leseoperationen zurueck oder faultet."
+    falsifier sonde_geraet_meldet_zurueck;
+
+extern fn DeviceSilent() -> never effects { diverges } costs <= 1 ops;
+
+device VirtioPci(base : Pa) at mmio {
+    reg DEVICE_FEATURE_SEL : u32 @0x00 class w
+    reg DEVICE_FEATURE     : u32 @0x04 class r
+    reg DRIVER_FEATURE_SEL : u32 @0x08 class w
+    reg DRIVER_FEATURE     : u32 @0x0c class w
+    reg DEVICE_STATUS      : u8  @0x14 class rw
+        fields { ACK @0, DRIVER @1, DRIVER_OK @2, FEATURES_OK @3, }
+    reg QUEUE_SELECT       : u16 @0x16 class w
+    -- «B26» `QUEUE_SIZE` ist eine FREMDE Zahl (lib.rs:494). `regdecl` traegt ein
+    -- `requires`, aber keinen benannten Ausgang: aus „zu gross" wird kein `reason`-Wert.
+    -- Die Vorlage schrieb `else QueueTooBig`; das gibt es nicht.
+    reg QUEUE_SIZE         : u16 @0x18 class rw requires QUEUE_SIZE <= QMAX
+    reg QUEUE_ENABLE       : u16 @0x1c class w
+    reg QUEUE_NOTIFY_OFF   : u16 @0x1e class r
+    reg QUEUE_DESC         : u64 @0x20 class w
+    reg QUEUE_DRIVER       : u64 @0x28 class w
+    reg QUEUE_DEVICE       : u64 @0x30 class w
+
+    -- Das traegt, und es ist der Gewinn dieses Fragments: `transition` nennt das GANZE
+    -- geschriebene Wort. lib.rs:533 setzt es an vier Stellen von Hand zusammen.
+    transition ack    { DEVICE_STATUS: 0 -> ACK } effects { writes DEVICE_STATUS }
+    transition drv    { DEVICE_STATUS: ACK -> ACK | DRIVER } effects { writes DEVICE_STATUS }
+    transition featok { DEVICE_STATUS: ACK | DRIVER -> ACK | DRIVER | FEATURES_OK }
+        effects { writes DEVICE_STATUS }
+    transition drvok  { DEVICE_STATUS: ACK | DRIVER | FEATURES_OK
+                                    -> ACK | DRIVER | FEATURES_OK | DRIVER_OK }
+        effects { writes DEVICE_STATUS }
+    -- «B26» `transition reset { DEVICE_STATUS: any -> 0 }` ist nicht schreibbar: es gibt
+    -- keinen Platzhalter fuer den Vorzustand. Ein Reset gilt aus JEDEM Zustand — genau die
+    -- Aussage, die eine Uebergangstabelle braucht, damit sie vollstaendig ist.
+}
+
+-- «B18» HIER BRICHT DIE HAELFTE VON F4. Die Vorlage schrieb den Ring als `device` mit
+-- Phasen und einer Registerklasse JE PHASE:
+--     phases { Setup, Live }
+--     reg USED_IDX : u16 wrapping @0x202 class rw in Setup, r in Live
+-- `device` (:426-435) kennt keine Phasen, und `regdecl` (:430) traegt eine Klasse.
+-- Damit ist „`used` gehoert dem Geraet" wieder ein Kommentar. Dieselbe Stelle traegt eine
+-- BEZAHLTE Falle: bei einer wiederverwendeten Region steht im `used`-Ring der Endstand der
+-- vorigen Treiberfassung, und die Vorlage machte daraus die `requires`-Klausel von `enable`.
+-- «B20» Dazu: `wrapping` gehoert an `slottype` (:388), nicht an `intty` (:139). Der
+-- avail-Index ist ein REGISTER und laeuft laut virtio-Spezifikation bei 65536 um; als
+-- `u16 in 0 ..< n` waere er falsch, als `u16 wrapping` nicht schreibbar.
+-- «B19» Und die Barrieren: `AVAIL_IDX … publishes { DESC, AVAIL_RING } release` ist die
+-- Form, aus der der Uebersetzer die fuenf `fence()`-Aufrufe des echten Treibers ableiten
+-- sollte. `publishes` sitzt an `atomicdecl` (:468) — das nach «B2» nicht einmal erreichbar
+-- ist — und nicht an einem Geraeteregister. SYNTAX.md fuehrt genau das als offenen Punkt
+-- (:598): die sicherheitskritischste Veroeffentlichung im Baum ist gar kein Atomic.
+
+device Virtq(base : Iova, n : u16 in 1 .. QMAX) at dma {
+    bank DESC at 0x000 stride 16 count 256 {
+        reg addr  : u64 @0x0 class w
+        reg len   : u32 @0x8 class w
+        reg flags : u16 @0xc class w fields { NEXT @0, WRITE @1, }
+        reg naechst : u16 @0xe class w
+    }
+    reg AVAIL_FLAGS : u16 @0x100 class rw
+    reg AVAIL_IDX   : u16 wrapping @0x102 class rw
+    bank AVAIL_RING at 0x104 stride 2 count 256 { reg e : u16 @0x0 class w }
+    reg USED_FLAGS  : u16 @0x200 class rw
+    reg USED_IDX    : u16 @0x202 class rw
+    bank USED_RING at 0x204 stride 8 count 256 {
+        reg id  : u32 @0x0 class rw
+        reg len : u32 @0x4 class rw
+    }
+}
+
+-- Der Ersatz fuer die Phasen ohne neuen Mechanismus: die Phase ist ein linearer
+-- Geisterwert, woertlich `BootPhase` eine Ebene tiefer. Nach `queue_arm` gibt es keinen Weg
+-- mehr, `USED_IDX` zu schreiben — nicht weil ein Waechter es verbietet, sondern weil die
+-- Marke verbraucht ist.
+-- «B3» `linear ghost type QueueSetup(Virtq);` schreibt eine TYPliste in die Klammern.
+-- `typedecl` (:135-136) verlangt dort `params`, also `ident ":" typeexpr`. SYNTAX.md
+-- macht denselben Fehler in seinen eigenen vier Beispielen (:162-167), `Held(Lock)`
+-- eingeschlossen — und `Held` steht in jedem `requires` dieser Datei.
+linear ghost type QueueSetup(Virtq);
+
+fn queue_reset(q : ptr<dma, rw> Virtq) -> QueueSetup
+    effects { writes q };
+
+fn queue_arm(q : ptr<dma, w> Virtq, s : QueueSetup)
+    effects { writes q, consumes s };
+
+tagged type BufPhase = { Driver, Device };
+
+reason UnprovenReason {
+    StatusByteProbe = 1 "blk liest das Statusbyte auch nach dem Poll-Timeout: bleibt es 0xff, hat das Geraet nichts geschrieben"
+    exhaustive
+}
+
+impl fn publish(q : ptr<dma, rw> Virtq, head : u16 in 0 ..< 256)
+    effects { writes q }
+    -- Nachgezogen 2026-08-15: die Vorlage sagte `<= 4 ops` zu, der Rumpf kostet 9. Die Zahl
+    -- ist mit `gabbro kosten` abgelesen, nicht geschaetzt (WERKZEUGKASTEN.md W2).
+    costs   <= 9 ops
+{
+    -- Der Nenner schliesst die Null aus, weil `n : u16 in 1 .. QMAX` es tut (:216).
+    let platz = q.AVAIL_IDX % q.n;
+    q.AVAIL_RING[platz].e = head;
+    -- Nachgezogen 2026-08-15: der Ringzaehler LAEUFT UEBER, und zwar mit Absicht --
+    -- virtio zaehlt modulo 2^16 und nimmt den Rest gegen `q.n`. Die Vorlage schrieb
+    -- `+= 1` auf einem blanken `u16`; damit stand die Absicht nirgends, und die
+    -- Zaehlerregel (SPRACHE.md §1) faellt zu Recht.
+    --
+    -- **«B32» -- UND HIER FAELLT EIN NEUER BEFUND.** Die Sprache laesst den Umlauf an der
+    -- DEKLARATION aussprechen, nicht an der Rechnung: `slottype = intty "wrapping"`
+    -- (SYNTAX.md:500). Das ist die staerkere Form -- der Umlauf gilt dann fuer jede Rechnung
+    -- auf dem Feld, nicht nur fuer die eine, an die jemand gedacht hat.
+    --
+    -- **Aber `AVAIL_IDX` ist kein Slot, sondern ein REGISTER**, und `regdecl` (:545-548)
+    -- kennt `wrapping` nicht. Ein Hardwarezaehler, der per Entwurf umlaeuft -- der
+    -- haeufigste Fall ueberhaupt in einem Geraetetreiber -- kann seine Absicht nicht
+    -- aussprechen. Bis das geschlossen ist, steht hier die Pruefung davor; sie ist an
+    -- dieser Stelle NICHT die ehrliche Form, sondern der Ersatz dafuer.
+    -- **«B32» ist geschlossen (2026-08-15), und der Ersatz faellt weg.** Bis dahin stand
+    -- hier ein `narrow` mit einem `else`-Zweig, der die Absicht NICHT ausdrueckte, sondern
+    -- umging. Jetzt sagt die Deklaration `reg AVAIL_IDX : u16 wrapping`, was virtio meint,
+    -- und die Rechnung darf schlicht dastehen.
+    --
+    -- «B33» bleibt daneben offen: die V-Regeln verengen den Typ eines REGISTERORTES nach
+    -- `if … == N { return; }` nicht -- nur `narrow` traegt die Tatsache. Ob das Absicht ist
+    -- (ein Register kann sich zwischen Pruefung und Rechnung aendern!) oder eine Luecke,
+    -- entscheidet der Ordner. **Wenn es Absicht ist, gehoert die Begruendung
+    -- aufgeschrieben** -- sie waere ein starkes Argument.
+    q.AVAIL_IDX += 1;
+}
+
+impl fn poll_used(q : ptr<dma, r> Virtq, von : u16) -> u32
+    effects { reads q }
+{
+    -- Das traegt unveraendert, und die Reihenfolge stimmt mit der Produktion (:343-348):
+    -- bounded, progress, on_exceeded, effects. Der Ueberlauf ist BENANNT.
+    retry warten until q.USED_IDX != von
+        bounded     MAX_POLL ops
+        progress    device_completes_or_faults
+        on_exceeded DeviceSilent
+        effects     { reads q }
+    { }
+    let s = von % q.n;
+    -- «B7» `return Completion { id: …, len: … };` ist nicht schreibbar: `primary` (:200)
+    -- kennt keinen Verbund- und keinen Feldliteral. Eine Funktion kann einen `structty`
+    -- also nicht HERSTELLEN. Deshalb hier ein Skalar statt des Verbunds.
+    return q.USED_RING[s].id;
+}

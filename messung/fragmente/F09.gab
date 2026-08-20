@@ -1,0 +1,74 @@
+-- =======================================================================================
+-- F9 -- die MMU-Seitentabellen, VERVOLLSTAENDIGT
+--
+-- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:1503-1550, byteidentisch, plus genau die
+-- Zeilen, die ihn zu einem PROGRAMM machen.**
+--
+-- **ERGAENZT, und nichts sonst:** zwei `reserved`-Felder in `Pte` (11:0 und 63:52). Ein
+-- `format` sagt, welche Bits EXISTIEREN; ein Ausschnitt nennt die, um die es geht.
+--
+-- **UND HIER BLEIBT ETWAS OFFEN, DAS GABBRO GEHOERT -- drei Absagen, und sie sind der
+-- eigentliche Ertrag dieser Datei:**
+--
+--   1. `device … at normal` -- welche Barriere ein Zugriff verlangt, ist eine Aussage ueber
+--      das SPEICHERMODELL. Sie gehoert in die Axiomschicht, nicht in einen Pass.
+--   2. `walk … levels EBENEN` -- die Stufenzahl ist ein KONSTANTENNAME, keine Zahl, und der
+--      Erzeuger loest ihn nicht auf. *Der Wert steht drei Zeilen weiter oben.*
+--   3. `mappings of` -- `SPRACHE.md`:786 sagt, es quantifiziert ueber ALLE erreichbaren
+--      Blaetter; der Kostenpass schrankt bei `levels x Knotenlaenge`. **Sieben
+--      Groessenordnungen**, und eine Absenkung waehlte stillschweigend die kleinere Lesart.
+--
+-- *Das ist der Sinn dieses Korpus:* nach der Vervollstaendigung steht da, was GABBRO fehlt,
+-- und nicht mehr, was dem Ausschnitt fehlt.
+-- =======================================================================================
+
+module caprock::mmu {
+
+const EBENEN   : u32 = 4;
+const EINTRAEGE: u32 = 512;
+
+opaque type Pa = u64;
+type Idx   = u32 in 0 ..< EINTRAEGE;
+type Ebene = u32 in 0 ..< EBENEN;
+
+-- **Der Eintrag ist EIN Wort mit zwei Lesarten**, und `embeds` sagt welche. Ohne die
+-- Zeile stünde die Adresse als blanke Zahl da, und `& MASK` wäre Konvention.
+format Pte @version 1 endian little {
+    unten : u64 @[11:0] reserved,          -- ERGAENZT: die Merkmalsbits, hier nicht gelesen
+    roh : u64 embeds [51:12] scale 4096,   -- der Rahmen: Bits 51..12, mal 4096
+    oben  : u64 @[63:52] reserved,         -- ERGAENZT: NX und die reservierten Hochbits
+}
+
+-- Die neun Bits, einzeln benannt. `A` und `D` schreibt die Hardware -- sie stehen als
+-- `reserved`, weil ein Schreiben von uns ein Fehler wäre.
+device Seitentabelle(basis : Pa) at normal {
+    reg EINTRAG : u64 @0x0 class rw fields {
+        P @0, RW @1, US @2, PWT @3, PCD @4, A @5, D @6, PS @7, NX @63,
+    }
+}
+
+-- `walk` erzeugt die Domäne `mappings of`: je Abbildung stehen `va`, `level` und
+-- `index[level]` bereit. **Die vierstufige Kette wird damit EINE Traversierung**, und ihre
+-- Schranke fällt aus der Deklaration statt aus einer Zählung im Rumpf.
+walk Seitenabstieg levels EBENEN {
+    node : [Pte; EINTRAEGE],
+    down : roh when EINTRAG.PS == 0,
+    leaf : EINTRAG.PS == 1,
+}
+
+-- Die Schranke faellt aus `levels` mal `node`-Laenge: 4 Ebenen zu 512 Eintraegen.
+impl fn rechte_pruefen(w : ptr<normal, r> Seitenabstieg) -> bool
+    effects { reads w }
+    costs   <= 4096 ops
+{
+    traverse abbildung over mappings of w by unvisited
+        touches reads w
+    {
+        if abbildung.level == 3 {
+            return true;
+        }
+    }
+    return false;
+}
+
+}

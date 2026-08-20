@@ -1,0 +1,295 @@
+-- =======================================================================================
+-- F1 -- der Kapazitaetsraum, VERVOLLSTAENDIGT
+--
+-- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:92-349, byteidentisch, plus genau die
+-- Zeilen, die ihn zu einem PROGRAMM machen.**
+--
+-- **ERGAENZT, und nichts sonst:** `reason Fehler { Buchfuehrung … }`. Die Zeile
+-- `return Fehler::Buchfuehrung;` ruft einen Grundtyp, den der Ausschnitt nirgends
+-- deklariert -- offenbar eine Umbenennung, die eine Stelle stehen liess; `CapError` ist
+-- `exhaustive` und traegt keine passende Variante.
+--
+-- **UND DANN FIEL DIE ZEILE TROTZDEM -- und das ist der Ertrag dieser Datei:**
+--
+-- > **Ein `reason`-Wert hat KEINEN ERZEUGER.** `Fehler::Buchfuehrung` bleibt `M119`, auch
+-- > mit deklariertem Typ: `primary` (SYNTAX.md:405) kennt keine Produktion dafuer. Der
+-- > Fehlerkanal `-> T or R` existiert an der DEKLARATION, und die Sprache hat keine Form,
+-- > den Fehlerwert HINZUSCHREIBEN.
+--
+-- Gemessen 2026-08-20: **jede `or R`-Signatur im Korpus steht an einem `extern fn`** -- an
+-- einem fremden Rumpf, den Gabbro nie sieht. *Keine einzige Gabbro-Funktion erzeugt je einen
+-- Grund.* **Dieselbe Gestalt wie «B9» bei `fnptr`:** eine Form, die man deklarieren und nicht
+-- herstellen kann. Erst der Erzeuger, dann der Vertrag.
+--
+-- Die Zeile bleibt hier stehen, wie der Ausschnitt sie schrieb. Der verbleibende Fehler
+-- gehoert Gabbro, nicht dem Korpus -- und genau dafuer steht dieser Ordner neben dem
+-- eingefrorenen Bericht.
+-- =======================================================================================
+
+module caprock::cap::space {
+
+use caprock::mem::Rights;
+use caprock::mem::Region;
+use caprock::sched::ThreadId;
+
+const NSLOTS   : u32 = 80256;
+const NOBJECTS : u32 = 4096;
+
+type SlotIdx  = u32 in 0 ..< NSLOTS;
+type Refcount = u32 in 0 ..< NSLOTS;
+
+opaque type Badge   = u64;
+opaque type EpId    = u32;
+opaque type PdId    = u16;
+opaque type Pa      = u64;
+opaque type ByteLen = u64;
+
+reason CapError {
+    NoSlot      = 1 "kein freier Capability-Slot mehr"
+    NoObject    = 2 "kein freier Objekt-Eintrag mehr"
+    Invalid     = 3 "ungueltiges oder abgelaufenes Handle"
+    HasChildren = 4 "Operation auf einem Cap mit Kindern, erst revoke"
+    Unaligned   = 5 "Region verletzt die Granularitaetsbedingung"
+    TooSmall    = 6 "Region zu klein fuer die Zusicherung, die die Cap traegt"
+    exhaustive
+}
+
+-- ERGAENZT: `Fehler` wird an :178 gerufen und nirgends deklariert. Der Ausschnitt hat den
+-- Grundtyp offenbar zwischendurch umbenannt und eine Stelle stehen lassen; `CapError` ist
+-- `exhaustive` und traegt keine passende Variante. Hier steht darum der Typ, den die Zeile
+-- nennt, mit der einen Variante, die sie braucht.
+reason Fehler {
+    Buchfuehrung = 1 "die Buchfuehrungsinvariante ist verletzt -- refcount ausserhalb 1..N"
+    exhaustive
+}
+
+-- «B15» `variants` (SYNTAX.md:147) nimmt je Variante GENAU EINEN typeexpr. Wo Rust eine
+-- Felderliste inline schreibt, braucht Gabbro einen benannten Verbund. Fuenf davon.
+type SchedParams = { budget : u32, period : u32, };
+type ReplyRef    = { ep : EpId, caller : ThreadId, };
+type MmioRange   = { phys : Pa, len : ByteLen, };
+type DmaRef      = { phys : Pa, len : ByteLen, dir : DmaDir, coherence : DmaCoherence, };
+type HandlerRef  = { ep : EpId, pd : PdId, sidecar : Pa, len : ByteLen, };
+
+tagged type ObjectKind = { Memory(Region), Endpoint(EpId), Notification(EpId),
+                           Tcb(ThreadId), SchedContext(SchedParams), Reply(ReplyRef),
+                           PdControl(PdId), Loader(u32), Mmio(MmioRange), Irq(u32),
+                           Dma(DmaRef), SyscallHandler(HandlerRef), FaultHandler(HandlerRef) };
+
+-- «B2» `lockdecl` (SYNTAX.md:471) ist von `program` aus NICHT ERREICHBAR: `item` (:111-112)
+-- fuehrt es nicht auf. Dieselben zwei Zeilen stehen als Beispiel in §11 der Datei, die sie
+-- ausschliesst. Betroffen: jede Sperre in allen sechs Fragmenten.
+lock CAPS protects { plaetze, cdt } rank 0 masks irqs;
+lock MEM  protects { freelist }   rank 9;
+
+-- «B16» Zwei Tabellen, weil `table` genau EIN `slot`-Wort kennt (:385-386). Der Cap-Space hat
+-- Slots UND Objekte; `index into CapObjects` traegt die Verbindung, aber keine Invariante
+-- kann sie noch aussprechen, s. B13 weiter unten.
+table CapObjects count NOBJECTS {
+    slot {
+        used     : bool,
+        gen      : u32 wrapping,
+        kind     : ObjectKind,
+        refcount : Refcount,
+    }
+}
+
+table CapSpace count NSLOTS {
+    slot {
+        used         : bool,
+        gen          : u32 wrapping,
+        object       : index into CapObjects,
+        rights       : Rights,
+        badge        : Badge,
+        parent       : option index into CapSpace,
+        first_child  : option index into CapSpace,
+        next_sibling : option index into CapSpace,
+        prev_sibling : option index into CapSpace,
+    }
+
+    -- «B16» Das `pred` einer `invariant` braucht ein `place` fuer die Tabelle
+    -- (`slots of place`, :239) — die Grammatik bindet aber im `table`-Rumpf keinen Namen.
+    -- `Self` ist hier GERATEN; §2 fuehrt `Self` nur als eingebautes Wort ohne Bindungsregel.
+    invariant wurzel_ohne_vorgaenger cost O(n) runs offline :
+        forall s in slots of Self :
+            Self.slots[s].parent == None => Self.slots[s].prev_sibling == None;
+
+    -- «B14» Die beiden Gegenseitigkeits-Invarianten brauchen die AUFLOESUNG eines
+    -- `option index into` im Praedikat (`slots[s.next_sibling].prev_sibling == s`).
+    -- `match` loest das in einer Anweisung auf, im Praedikat gibt es dafuer nichts.
+    -- «B13» `refcount_matches` braucht eine Zaehlung ueber eine ZWEITE Tabelle
+    -- (`o.refcount == count(s in slots: s.object == o)`). `pred` (:230-247) kennt keine
+    -- Aggregation und keine tabellenuebergreifende Domaene. Der Kern der Buchfuehrung des
+    -- Faehigkeitssystems ist damit nicht formulierbar — das ist der teuerste Befund an F1.
+}
+
+-- «B1» Diese Form — `spec fn … = pred;` — benutzt SYNTAX.md:287 selbst. `fndecl` (:266-274)
+-- laesst als Rumpf nur `block | ";"`. Ueber einen `block` ist ein Quantor NICHT erreichbar:
+-- `return` nimmt `expr`, und `pred` haengt nirgends unter `expr`. Ohne diese Produktion ist
+-- in allen sechs Fragmenten keine einzige `spec fn` schreibbar.
+spec fn ist_blatt(c : ptr<normal, r> CapSpace, s : SlotIdx) -> bool
+    effects { pure }
+    = c.slots[s].used && c.slots[s].first_child == None;
+
+spec fn cdt_wohlgeformt(c : ptr<normal, r> CapSpace) -> bool
+    effects { pure }
+    = forall s in slots of c : c.slots[s] reaches WURZEL via parent;
+
+impl fn unlink(c : ptr<normal, rw> CapSpace, s : SlotIdx)
+    requires  Held(CAPS), c.slots[s].used
+    ensures   c.slots[s].parent == None,
+              c.slots[s].prev_sibling == None,
+              c.slots[s].next_sibling == None
+    maintains cdt_wohlgeformt
+    effects   { writes c.slots, locks CAPS }
+    costs     <= 40 ops
+{
+    match c.slots[s].prev_sibling {
+        Some(p) => { c.slots[p].next_sibling = c.slots[s].next_sibling; }
+        None    => {
+            match c.slots[s].parent {
+                Some(par) => { c.slots[par].first_child = c.slots[s].next_sibling; }
+                None      => { }
+            }
+        }
+    }
+    match c.slots[s].next_sibling {
+        Some(n) => { c.slots[n].prev_sibling = c.slots[s].prev_sibling; }
+        None    => { }
+    }
+    c.slots[s].parent       = None;
+    c.slots[s].first_child  = None;
+    c.slots[s].next_sibling = None;
+    c.slots[s].prev_sibling = None;
+}
+
+impl fn release_slot(c : ptr<normal, rw> CapSpace, s : SlotIdx)
+    requires  Held(CAPS)
+    ensures   !c.slots[s].used
+    effects   { writes c.slots, locks CAPS }
+    costs     <= 20 ops
+{
+    c.slots[s].gen  += 1;
+    c.slots[s].used  = false;
+    c.slots[s].badge = 0;
+}
+
+impl fn delete_leaf(c  : ptr<normal, rw> CapSpace,
+                    o  : ptr<normal, rw> CapObjects,
+                    a  : ptr<normal, rw+own> PhysAllocator,
+                    rf : ptr<normal, rw+own> Finalized,
+                    s  : SlotIdx)
+    requires  Held(CAPS), Held(MEM), c.slots[s].used, ist_blatt(c, s)
+    -- «B31» Die zweite Zeile ist NICHT ABLEITBAR, und zwar keine Fassung von ihr. `oldexpr`
+    -- haengt unter `atompred` (:235-236), nicht unter `primary` (:200): `old(x)` kann als
+    -- Praedikat FUER SICH stehen, aber nirgends in einem Ausdruck vorkommen — also auch
+    -- nicht links oder rechts von `==`. Damit ist keine Differenzaussage schreibbar, und
+    -- SYNTAX.md:292 gibt selbst eine an. Das trifft jede Nachbedingung, die „nachher gegen
+    -- vorher" sagt — die haeufigste Form, die es gibt.
+    ensures   !c.slots[s].used,
+              o.slots[old(c.slots[s].object)].refcount + 1
+                  == old(o.slots[c.slots[s].object].refcount)
+    maintains cdt_wohlgeformt
+    effects   { writes c.slots, writes o.slots, writes rf, allocs a, locks CAPS }
+    costs     <= 200 ops
+{
+    let obj = c.slots[s].object;
+    unlink(c, s);
+    release_slot(c, s);
+
+    -- «B29» -- UND SO SIEHT DIE AUFLOESUNG AUS (nachgezogen 2026-08-15).
+    --
+    -- Die Vorlage schrieb `refcount -= 1;` und prueefte DANACH auf Null. M1 verlangt den
+    -- Nachweis VOR der Rechnung, und die Zaehlerregel (SPRACHE.md §1) sagt warum: ein
+    -- Bereich am Typ sagt nichts darueber, ob die RECHNUNG darin bleibt.
+    --
+    -- Das Argument der Vorlage war: `refcount > 0` faellt aus der Buchfuehrungs-Invariante,
+    -- und die ist nach «B13» nicht aufschreibbar. **Beides stimmt und beides hilft hier
+    -- nicht** -- denn `narrow … else` verlangt keine Invariante, sondern eine PRUEFUNG. Der
+    -- `else`-Zweig ist der Ort, an dem die Verletzung sichtbar wird, statt still zu wrappen.
+    --
+    -- Genau das ist der Unterschied zwischen EINEM Netz und ZWEIEN: die Invariante bleibt
+    -- der Grund, warum der Zweig nie genommen wird; der Typ bleibt der Grund, warum er
+    -- existieren muss.
+    narrow o.slots[obj].refcount to 1 .. 80255 else {
+        return Fehler::Buchfuehrung;
+    }
+    o.slots[obj].refcount -= 1;
+
+    if o.slots[obj].refcount == 0 {
+        -- «B28» Kein Platzhalterbinder: zehn Varianten ohne Nutzlastgebrauch brauchen zehn
+        -- tote Namen. `_ =>` ist mit Absicht verboten, `_` als BINDER ist nicht vorgesehen.
+        match o.slots[obj].kind {
+            Memory(m)          => { free_region(a, m); }
+            Dma(d)             => { push_dma(rf, d); }
+            Reply(r)           => { push_reply(rf, r); }
+            Endpoint(e1)       => { }
+            Notification(n1)   => { }
+            Tcb(t1)            => { }
+            SchedContext(sc1)  => { }
+            PdControl(pd1)     => { }
+            Loader(l1)         => { }
+            Mmio(mm1)          => { }
+            Irq(i1)            => { }
+            SyscallHandler(h1) => { }
+            FaultHandler(f1)   => { }
+        }
+        o.slots[obj].gen  += 1;
+        o.slots[obj].used  = false;
+    }
+}
+
+impl fn revoke(c  : ptr<normal, rw> CapSpace,
+               o  : ptr<normal, rw> CapObjects,
+               a  : ptr<normal, rw+own> PhysAllocator,
+               rf : ptr<normal, rw+own> Finalized,
+               s  : SlotIdx)
+    requires  Held(CAPS), Held(MEM), cdt_wohlgeformt(c)
+    maintains cdt_wohlgeformt
+    effects   { consumes c.slots, writes o.slots, writes rf, allocs a, locks CAPS }
+    -- **«B34» -- DER GROESSTE EINZELBEFUND DIESES FRAGMENTS, und er kam vom Kostenpass.**
+    --
+    -- Die Vorlage sagte `<= 200 ops` zu. Sobald `CapSpace` seine Slotzahl nennt (`count
+    -- NSLOTS`, nachgetragen 2026-08-15) und die Domaenenschranke damit steht, rechnet der
+    -- Pass nach: **16 452 480 ops.** Fuenf Groessenordnungen.
+    --
+    -- Die 200 waren kein Tippfehler, sondern der TYPISCHE Fall -- ein `revoke` mit wenigen
+    -- Nachfahren. `costs` ist aber eine SCHRANKE, und die Schranke eines `revoke` ueber
+    -- einer 80 256-Slot-Tabelle ist die Tabelle. **Genau diese Verwechslung -- typischer
+    -- Fall statt oberer Schranke -- ist der Grund, warum die Zahl nachgerechnet und nicht
+    -- geglaubt wird**, und sie ist hier zum zweiten Mal aufgeschlagen (zuerst bei A4:
+    -- 4 096 zugesagt, 831 488 gerechnet).
+    --
+    -- **BERICHTIGT 2026-08-15.** Hier stand: „Caprock begrenzt `revoke` ueber die
+    -- CDT-Tiefe, und diese Schranke ist in Gabbro nicht ausdrueckbar." **Das war aus dem
+    -- Gedaechtnis geschrieben und ist falsch.** `cdt_step_limit()` liefert
+    -- `self.slots.len()` (`caprock-cap/src/space.rs:932-933`) -- **dieselbe Schranke, die
+    -- Gabbro rechnet.**
+    --
+    -- Und der Kernel nimmt sie ZWEIMAL, innen und aussen (`:635`, `:648`); seine eigene
+    -- obere Schranke ist `slots.len()^2`, also rund 390-mal groesser als diese Zahl.
+    -- **Gabbros Schranke ist die schaerfere.** Es fehlt kein Konstrukt -- die 200 waren
+    -- schlicht der typische Fall statt der Schranke, und genau dagegen ist der Kostenpass
+    -- gebaut (`memos/M-kostenmass.md`).
+    costs     <= 16452480 ops
+{
+    -- «B10» `traverse` liefert KEINEN Wert (:337-341) und es gibt kein `break`. Der
+    -- Hoechststand `peak_revoke_ops` — im Rust-Original der Beleg dafuer, dass die Schranke
+    -- nie gegriffen hat — ist damit nicht erhebbar. Die SCHRANKE faellt durch `by consuming`
+    -- weg, die MESSUNG der Schranke ebenfalls, und nur die erste war beabsichtigt.
+    traverse victim over descendants of c.slots[s] by consuming
+        touches consumes c.slots, writes o.slots, writes rf
+    {
+        delete_leaf(c, o, a, rf, victim);
+    }
+}
+
+-- Nachgetragen 2026-08-15: drei Gerufene wurden benutzt und nie erklaert. Ohne `costs` am
+-- Gerufenen kann der Kostenpass die Zusage des Rufers nicht nachrechnen -- und er SAGT das
+-- (`K003`), statt stillschweigend zu schaetzen. Genau dafuer ist die Absage da.
+extern fn free_region(a : ptr<normal, rw> Allok, m : MemObj) effects { writes a } costs <= 32 ops;
+extern fn push_dma(rf : ptr<normal, rw> Finalized, d : DmaObj) effects { writes rf } costs <= 8 ops;
+extern fn push_reply(rf : ptr<normal, rw> Finalized, r : ReplyObj) effects { writes rf } costs <= 8 ops;
+
+
+}

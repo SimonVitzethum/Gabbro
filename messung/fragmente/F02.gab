@@ -1,0 +1,177 @@
+-- =======================================================================================
+-- F2 -- die VT-d-Einheit, VERVOLLSTAENDIGT
+--
+-- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:397-530, byteidentisch, plus genau die
+-- Zeilen, die ihn zu einem PROGRAMM machen.**
+--
+-- **ERGAENZT, und nichts sonst:** fuenf `reserved`-Felder in den `format`-Bloecken --
+-- `FaultRecordLo` (11:0), `FaultRecordHi` (27:16, 31:30, 59:40, 62), `Slpte` (10:2),
+-- `ContextEntryLo` (11:2), `ContextEntryHi` (7:3, 63:24).
+--
+-- **Warum das keine Nachlaessigkeit der Vorlage war:** ein `format` sagt, welche Bits
+-- EXISTIEREN, und der Erzeuger zaehlt nicht mit. Ein Ausschnitt nennt die Bits, um die es
+-- geht; ein Programm muss auch die nennen, um die es NICHT geht. *Genau darin unterscheidet
+-- sich ein Bericht von einem Programm, und darum steht dieser Korpus neben dem eingefrorenen
+-- und nicht an seiner Stelle.*
+--
+-- Nach der Ergaenzung: **0 Fehler, senkt ab, uebersetzt unter `-Wall -Wextra -Werror -O2`.**
+-- Vorher war F2 ausschliesslich an diesen fuenf Luecken blockiert -- keine Gabbro-Absage.
+-- =======================================================================================
+
+device Vtd(base : Pa) at mmio {
+    -- Falle 4, x86-Fassung: GCMD ist KEIN Read-Modify-Write. Genau eine Zeile, einmal je
+    -- Geraet. Sie ersetzt `GCMD_STATE_MASK` samt der Kommentarwand in vtd.rs:42-52.
+    mirrors GCMD from GSTS;
+
+    reg VER  : u32 @0x000 class r  fields { MIN @[3:0], MAX @[7:4], }
+    reg CAP  : u64 @0x008 class r
+        fields { ND @[2:0], AFL @3, RWBF @4, PLMR @5, PHMR @6, CM @7, SAGAW @[12:8],
+                 MGAW @[21:16], ZLR @22, FRO @[33:24], SLLPS @[37:34], PSI @39,
+                 NFR @[47:40], MAMV @[53:48], DWD @54, DRD @55, FL1GP @56, PI @59,
+                 FL5LP @60, ESIRTPS @62, ESRTPS @63, }
+    reg ECAP : u64 @0x010 class r
+        fields { C @0, QI @1, DT @2, IR @3, EIM @4, PT @6, SC @7, IRO @[17:8], SMTS @43, }
+    reg GCMD : u32 @0x018 class w
+        fields { CFI @23, SIRTP @24, IRE @25, QIE @26, WBF @27, EAFL @28, SFL @29,
+                 SRTP @30, TE @31, }
+    reg GSTS : u32 @0x01c class r
+        fields { CFIS @23, IRTPS @24, IRES @25, QIES @26, WBFS @27, AFLS @28, FLS @29,
+                 RTPS @30, TES @31, }
+    reg RTADDR : u64 @0x020 class rw fields { TTM @[11:10], RTA @[63:12], }
+    reg CCMD   : u64 @0x028 class rw
+        fields { DID @[15:0], SID @[31:16], FM @[33:32], CAIG @[60:59], CIRG @[62:61],
+                 ICC @63, }
+
+    -- «B23» FSTS ist GEMISCHT: 7:0 sind RW1C, 15:8 (FRI, der Index des ersten besetzten
+    -- Fault-Registers) sind r. `regdecl` (:430) traegt EINE Klassenangabe je Register.
+    -- `class w1c` macht das Lesen von FRI untypisierbar — und FRI ist die Groesse, mit der
+    -- der Treiber die Aufzeichnung ueberhaupt findet (vtd.rs:503).
+    reg FSTS : u32 @0x034 class w1c
+        fields { PFO @0, PPF @1, AFO @2, APF @3, IQE @4, ICE @5, ITE @6, PRO @7, FRI @[15:8], }
+
+    reg IQH  : u64 @0x080 class r
+    reg IQT  : u64 @0x088 class rw
+    reg IQA  : u64 @0x090 class rw  fields { DW @11, }
+    reg ICS  : u32 @0x09c class w1c fields { IWC @0, }
+    reg IRTA : u64 @0x0b8 class rw  fields { EIME @11, }
+
+    -- Geschlossen: Registerlage aus einem GELESENEN Feld. Der Index ist ueber `count`
+    -- M1-beschraenkt; `frr_off` (vtd.rs:442) rechnet dieselbe Adresse von Hand aus.
+    bank FRR at CAP.FRO * 16 stride 16 count 256 {
+        reg FR_LO : u64 @0x0 class r
+        -- «B24» Das F-Bit ist Bit 63 des OBEREN Wortes, `grund` liegt in 39:32 desselben.
+        -- `bitpos` (:146) sagt nichts darueber, worauf sich eine Bitlage jenseits von 64
+        -- bezieht und wie sie mit `endian` zusammenwirkt. Hier bezogen auf FR_HI.
+        reg FR_HI : u64 @0x8 class w1c
+            fields { SID @[15:0], TYPE @[29:28], GRUND @[39:32], AT @[61:60], F @63, }
+    }
+    bank IOTLB at ECAP.IRO * 16 stride 16 count 1 {
+        reg IVA : u64 @0x0 class w
+        reg CMD : u64 @0x8 class rw
+            fields { DID @[47:32], DR @49, DW @50, IAIG @[58:57], IIRG @[60:59], IVT @63, }
+    }
+
+    -- «B26» Der Vorzustand steht an einem NICHT LESBAREN Ort. `mirrors` sagt, WOHER die
+    -- mitgefuehrten Bits kommen; ob es damit auch den Vorzustand einer `transition` an
+    -- `GCMD.TE` aus `GSTS.TES` bezieht, sagt SYNTAX.md (:428, :434) nicht. Die Vorlage hat
+    -- diesen Widerspruch als unaufloesbar gefuehrt; er ist jetzt halb aufgeloest.
+    transition setze_rtp { GCMD.SRTP: 0 -> 1 }
+        requires GSTS.TES == 0 || GSTS.RTPS == 1
+        effects  { writes GCMD }
+    transition scharf_te { GCMD.TE: 0 -> 1 }
+        requires GSTS.RTPS == 1
+        effects  { writes GCMD }
+    transition setze_irtp { GCMD.SIRTP: 0 -> 1 }
+        requires GSTS.QIES == 1
+        effects  { writes GCMD }
+    transition scharf_ire { GCMD.IRE: 0 -> 1 }
+        requires GSTS.IRTPS == 1 && GSTS.CFIS == 0
+        effects  { writes GCMD }
+    transition scharf_qie { GCMD.QIE: 0 -> 1 }
+        requires GSTS.QIES == 0
+        effects  { writes GCMD }
+}
+
+reason VtdFehler {
+    KeineEinheit    = 1 "die ACPI-DMAR nennt keine Remapping-Einheit"
+    Stumm           = 2 "deklariert, antwortet aber nicht (CAP == 0 oder alle Bits gesetzt)"
+    Abgeschnitten   = 3 "die DMAR nennt mehr Einheiten als MAX_UNITS"
+    KeineAgaw       = 4 "die Einheit bietet keine unterstuetzte Adressbreite"
+    MgawZuKlein     = 5 "CAP.MGAW deckt die gewaehlte AGAW nicht"
+    QiFehlt         = 6 "ECAP.QI aus, der Interrupt-Entry-Cache ist nicht invalidierbar"
+    KeinSpeicher    = 7 "der Allokator lieferte kein Frame"
+    NichtQuittiert  = 8 "die Einheit bestaetigte das Statusbit nicht"
+    AufzeichnungVoll= 9 "FSTS.PFO, weitere Faults werden verworfen"
+    exhaustive
+}
+
+-- «B25» `grund` soll genau die zwoelf Werte von FaultGrund tragen. `intty` traegt ein
+-- INTERVALL (:139), keine Wertemenge. Hier geht es nur, weil 0x01..0x0c zufaellig
+-- zusammenhaengend ist; bei einem geloecherten Code waere das Feld nicht bindbar.
+-- «B24» Zweitens: der Satz besteht aus zwei 64-Bit-Woertern -- **und seit dem 2026-08-18
+-- steht das im Traegertyp statt im Kommentar.** Der urspruengliche Text las: *„Die Bitlagen
+-- unten sind auf das jeweilige Wort bezogen, weil `format` keine Wortbreite kennt."* Sie
+-- kennt sie: die Wortbreite IST der Feldtyp, und eine Lage jenseits davon bedeutet nichts.
+--
+-- **Nachgezogen am 2026-08-19, als `N007` in den Pruefer kam.** Sieben Stellen fielen, und
+-- eine davon war ein Widerspruch INNERHALB dieser Datei: `typ` stand hier als `@[13:12]`,
+-- das Register `FR_HI` derselben Einheit fuehrt `TYPE @[29:28]`. *Die zweite Zahl ist die
+-- gemessene; die erste haette mit `sid @[15:0]` ueberlappt.*
+format FaultRecordLo @version 1 endian little {
+    reserved_0 : u64 @[11:0] reserved,
+    input_addr : u64 @[63:12] where (input_addr & 0xfff) == 0,
+}
+
+format FaultRecordHi @version 1 endian little {
+    sid    : u64 @[15:0],
+    res_a  : u64 @[27:16] reserved,
+    typ    : u64 @[29:28],
+    res_b  : u64 @[31:30] reserved,
+    grund  : u64 in 0x01 .. 0x0c @[39:32],
+    res_c  : u64 @[59:40] reserved,
+    at     : u64 @[61:60],
+    res_d  : u64 @62 reserved,
+    f_bit  : u64 in 1 .. 1 @63,
+}
+-- «B22-nah, eigener Fall» `where f_bit == 1` WEIST ein leeres Register AB, statt „leer" zu
+-- MELDEN. Das ist der Unterschied zwischen Absage und Abwesenheit, und `format` kennt nur
+-- die Absage. Im Rust-Original ist genau das der Unterschied zwischen „kein Fault" und
+-- „Aufzeichnung nicht lesbar" (vtd.rs:451).
+
+format Slpte @version 1 endian little {
+    R    : u64 @0,
+    W    : u64 @1,
+    res  : u64 @[10:2] reserved,
+    SNP  : u64 @11,
+    ADDR : u64 @[63:12],
+}
+
+-- «B24» Der Kontexteintrag ist 128 Bit breit, und **die Entscheidung verweigert `@[66:64]`
+-- ausdruecklich**: eine Lage liegt im eigenen Wort, `u64` hat die Bits 0 bis 63, also nennt
+-- `@[66:64]` nichts. *Der Ausweg steht in derselben Zeile von `PFLICHTEN.md`:* zwei Woerter,
+-- und der Schreiber nennt das zweite, statt dass der Erzeuger es raet.
+format ContextEntryLo @version 1 endian little {
+    P        : u64 @0,
+    FPD      : u64 @1,
+    res      : u64 @[11:2] reserved,
+    SLPTPTR  : u64 @[63:12],
+}
+
+format ContextEntryHi @version 1 endian little {
+    AW       : u64 @[2:0],
+    res_a    : u64 @[7:3] reserved,
+    DID      : u64 @[23:8],
+    res_b    : u64 @[63:24] reserved,
+}
+
+assume vtd_te_wirkt
+    "GCMD.TE schaltet die Uebersetzung scharf; DMA ohne Kontexteintrag faultet."
+    falsifier probe_vtd_default_block;
+
+assume gcmd_kein_rmw
+    "GCMD wird als Ganzes geschrieben; ein nicht mitgeschriebenes Zustandsbit wird geloescht."
+    unfalsifiable "eine Sonde muesste TE kurzzeitig loeschen, also genau das Fenster oeffnen, gegen das der Mechanismus gebaut ist";
+
+assume fsts_pfo_verwirft
+    "nach FSTS.PFO werden weitere Faults verworfen, bis F-Bit und PFO geloescht sind."
+    falsifier probe_fault_overflow;

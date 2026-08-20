@@ -1,0 +1,199 @@
+-- =======================================================================================
+-- F6 -- das Messgeruest fuer die Stack-Wasserstandsmarke, VERVOLLSTAENDIGT
+--
+-- **Der Ausschnitt aus `dokumente/FRAGMENTE.md`:1047-1163, byteidentisch, plus genau die
+-- Zeilen, die ihn zu einem PROGRAMM machen.**
+--
+-- **ERGAENZT, und nichts sonst:** `MUSTER` und `EICH_TIEFE_WORTE` (zwei Konstanten) ·
+-- `type IrqMarke` + `static irq` (der Ausschnitt MISST `irq.tiefe_max` und `irq.n`, ohne den
+-- Traeger zu nennen) · `reason NichtGemessen` und zwei `extern fn … or NichtGemessen`
+-- (`groesse_gemessen`, `frei_min_gemessen` werden mit `else` gerufen, brauchen also einen
+-- Fehlerkanal) · `extern fn eichung_lief` als Tor fuer `gates all_done`.
+--
+-- **7 Fehler auf 0.** Nach der Vervollstaendigung prueft F6 sauber -- und was jetzt noch
+-- blockiert, ist ausschliesslich Gabbros:
+--
+--   * «B12» `elems of` -- Element oder Index? Die Spezifikation benutzt beide Lesarten.
+--   * `let` ohne ablesbaren Typ, `parameter type`, `expression form` -- Erzeugerluecken.
+--   * `static` eines Verbunds mit gewoehnlichem Anfangswert -- die Zeile, die ICH hier
+--     ergaenzt habe, senkt selbst nicht ab. *Das ist ehrlicher als sie wegzulassen.*
+-- =======================================================================================
+
+module kernel::kstackmark {
+
+reason Stackart {
+    El0  = 0 "der 16-KiB-EL1-Stack eines EL0-Threads"
+    Kern = 1 "der 64-KiB-Stack eines Kernel-Threads"
+    exhaustive
+}
+
+const STACK_MAX : u64 = 65536;   -- nachgetragen 2026-08-15: benutzt, nie erklaert
+type Bytes = u64 in 0 .. STACK_MAX;
+
+-- **Nachgetragen 2026-08-19, wie `STACK_MAX` am 2026-08-15: benutzt, nie erklaert.**
+-- Der Rumpf unten liest `s.worte`, `s.len` und rechnet `i * 8` -- ein Wort ist acht Bytes,
+-- also traegt ein Stack von `STACK_MAX` Bytes `STACK_MAX / 8` Worte. **Die Zahl ist
+-- ABGELEITET und nicht erfunden**; sie steht dreimal im Rumpf und stand nirgends.
+--
+-- *Ohne diese Zeile hat `elems of s.worte` keine Schranke, und «H2.1» kann nicht greifen --
+-- nicht weil die Regel zu schwach waere, sondern weil der Ausschnitt seinen Traeger nicht
+-- nennt.* Der Befund gehoert zum Ausschnitt, nicht zu Gabbro.
+const STACK_WORTE : u64 = 8192;
+type Stack = { worte : [u64; STACK_WORTE], len : Bytes, };
+
+const MIND_RESERVE_NENNER : u32 in 1 .. 64 = 8;
+const MIND_MESSUNGEN      : u32 = 2;
+
+-- ERGAENZT: drei Namen und zwei Leser, die der Ausschnitt ruft und nirgends deklariert.
+const MUSTER           : u64 = 0xdead_beef_dead_beef;  -- das Eichmuster im Stack
+const EICH_TIEFE_WORTE : u64 = 64;                     -- wie tief die Eichung schreibt
+
+-- `irq.tiefe_max` und `irq.n` sind die Wasserstandsmarken des IRQ-Stacks; der Ausschnitt
+-- misst sie, ohne den Traeger zu nennen.
+type IrqMarke = { tiefe_max : u64, n : u32, };
+static mut irq : IrqMarke = IrqMarke(tiefe_max: 0, n: 1);
+
+-- `groesse_gemessen`/`frei_min_gemessen` werden mit `else` gerufen, also brauchen sie einen
+-- Fehlerkanal (`N028`) -- sonst koennte der Zweig nie genommen werden.
+reason NichtGemessen { Fehlt = 1 "die Groesse wurde nie gemessen" exhaustive }
+extern fn groesse_gemessen()  -> u64 or NichtGemessen effects { pure } costs <= 2 ops;
+extern fn frei_min_gemessen() -> u64 or NichtGemessen effects { pure } costs <= 2 ops;
+
+-- `gates all_done` nannte nichts, was diese Einheit deklariert (`N020`).
+extern fn eichung_lief() -> bool effects { pure } costs <= 2 ops;
+check all_done {
+    claim    "Beide Messgroessen liegen vor: mindestens eine Eichung und mindestens ein Tod."
+    measures gemessen, gemessen_tod
+    gates    eichung_lief
+    can_fail { return true; }
+    floor    gemessen >= 1
+}
+
+-- «B2» Alle zehn Zeilen unten sind `atomicdecl` (:468) — von `program` aus NICHT
+-- ERREICHBAR, weil `item` (:111-112) sie nicht auffuehrt. Sie stehen hier trotzdem, weil
+-- sie sonst nirgends stehen koennten; ein Modul, das sie enthaelt, ist heute nicht
+-- ableitbar. Betrifft baumweit 594 Atomic-Deklarationen.
+-- «B21» `accumulates max` / `accumulates min` / `accumulates +` gibt es nicht. Genau sie
+-- SIND die Wasserstandsmarke (`TIEFE_MAX.fetch_max`, kstackmark.rs:199-203); ohne sie ist
+-- die Messgroesse dieses Fragments nicht schreibbar. Baumweit 213 Lese-Aendere-Schreib-
+-- Zugriffe, davon 19 `fetch_max`/`fetch_min`. SYNTAX.md fuehrt den Punkt selbst (:600) und
+-- nennt ihn den ersten Kandidaten fuer „zwei geforderte Eigenschaften widersprechen einander".
+-- «B14» `frei_min : option Bytes` ist nicht schreibbar (`option` nur als `slottype`). Der
+-- echte Code rechnet spaeter `groesse.saturating_sub(frei_min)` und macht damit aus
+-- „nie gemessen" eine 0 — die Deutung, die eine Nullmessung unsichtbar macht.
+atomic gefuellt     : u32 publishes nothing relaxed;
+atomic gemessen     : u32 publishes nothing relaxed;
+atomic gemessen_tod : u32 publishes nothing relaxed;
+atomic tiefe_max    : u64 publishes nothing relaxed;
+atomic tiefe_tod    : u64 publishes nothing relaxed;
+atomic tiefe_lebend : u64 publishes nothing relaxed;
+atomic frei_min     : u64 publishes nothing relaxed;
+atomic erschoepft   : u32 publishes nothing relaxed;
+atomic groesse      : u64 publishes nothing relaxed;
+atomic tiefster     : u32 publishes nothing relaxed;
+
+impl fn unberuehrt(s : ptr<normal, r+own> Stack) -> u64
+    -- **Berichtigt 2026-08-18, gefunden von `M109`.** Hier stand `unberuehrt <= s.len` --
+    -- der FUNKTIONSNAME an der Stelle, an der `result` hingehoert. Gabbro hat das Wort;
+    -- die Vorlage kam aus einer Sprache, in der der Name das Ergebnis bezeichnet.
+    -- *Die Zeile stand seit dem Schnitt da und ist niemandem aufgefallen, weil `ensures`
+    -- von keinem Pass gelesen wurde.*
+    ensures  result <= s.len
+    effects  { reads s }
+{
+    let mut i : u64 in 0 .. STACK_MAX = 0;
+    -- «B30» `touches` nimmt eine `efflist` OHNE Klammern (:340), waehrend `effects`
+    -- ueberall sonst geklammert ist. Die Vorlage schrieb `touches { reads s }`.
+    traverse w of s over elems of s.worte by decreasing (lenof(s.worte) - i)
+        touches reads s
+    {
+        if w != MUSTER { return i * 8; }
+        -- ~~Nachgezogen 2026-08-15: die Schranke faellt zwar aus der Domaene (die
+        -- Traversierung laeuft ueber `s.worte`), **aber M1 sieht das nicht** -- der
+        -- Zaehler ist eine gewoehnliche lokale Variable. Der `else`-Zweig kann nicht
+        -- genommen werden und muss trotzdem dastehen.~~ *(2026-08-15)*
+        --
+        -- **Entfallen am 2026-08-19 mit «H2.1».** M1 sieht es jetzt: ein Zaehler, der in
+        -- einer beschraenkten Traversierung hoechstens einmal je Durchgang waechst, erbt
+        -- die Schranke seiner Domaene -- an der Zuwachsstelle `i <= c + (B-1)*k`.
+        -- *Die Regel ist die einzige Ausnahme von `SPRACHE.md`:657 („Loops carry no facts
+        -- inward"), und der Unterschied zwischen Ausnahme und Loch liegt in der Richtung:
+        -- die Tatsache kommt nicht von aussen, sondern aus der Schleifenform selbst.*
+        i += 1;
+    }
+    return i * 8;
+}
+
+-- «B7» Das Original gibt ein PAAR zurueck (`-> (benutzt, frei)`). `typeexpr` (:137) kennt
+-- kein Tupel; der Ausweg waere ein `structty` — und den kann eine Funktion nach «B7» nicht
+-- HERSTELLEN, weil es kein Verbundliteral gibt. Zwei Befunde, die einander blockieren:
+-- deshalb hier zwei Funktionen und eine doppelte Traversierung.
+-- «B6» `ensures benutzt + frei == s.len` benennt Rueckgabefelder. Es gibt keine Bindung
+-- fuer den Rueckgabewert; oben behilft sich die Zeile mit dem Funktionsnamen, und das ist
+-- geraten, nicht geschrieben.
+impl fn messen_benutzt(s : ptr<normal, r+own> Stack, art : Stackart) -> u64
+    requires  s.len >= 8
+    effects   { reads s, writes tiefe_max, writes gemessen }
+{
+    let frei = unberuehrt(s);
+    -- Das kommt durch, weil das `ensures` von `unberuehrt` `<= s.len` sagt: aus dem VERTRAG
+    -- der gerufenen Funktion, nicht aus einer Flussregel. Kostet eine Zeile Nachbedingung,
+    -- keinen Beweis.
+    let benutzt = s.len - frei;
+    -- «B21» hier stuenden `accumulate tiefe_max by benutzt;` und `accumulate frei_min by frei;`
+    return benutzt;
+}
+
+-- «B22» `claim` nimmt eine Zeichenkette, und `char` (:95) schliesst `newline` aus. Alle drei
+-- echten Behauptungen sind mehrzeilig; hier zusammengezogen. Eine Behauptung, die in eine
+-- Zeile passen muss, wird kuerzer geschrieben, nicht genauer.
+check kstack_eichung {
+    claim    "Das Messgeraet meldet an einem Feld bekannter Tiefe genau diese Tiefe, an einem gefuellten unberuehrten Feld die volle Laenge, und an einem ungefuellten Feld null."
+    measures eich.leer, eich.voll, eich.tiefe, eich.gelaufen
+    gates    kstack
+    can_fail {
+        let f = eichfeld();
+        if unberuehrt(f) != 0 { return false; }
+        muster_schreiben(f);
+        if unberuehrt(f) != f.len { return false; }
+        beruehre(f, EICH_TIEFE_WORTE);
+        if unberuehrt(f) != (lenof(f.worte) - EICH_TIEFE_WORTE) * 8 { return false; }
+        return true;
+    }
+    floor    eich.gelaufen == 1
+}
+
+check kstack {
+    claim    "Am Fuss jedes EL0-Kernel-Stacks bleibt mindestens ein Achtel der Stackgroesse unberuehrt, und tiefste Kette plus tiefster IRQ-Handler plus diese Reserve passen zusammen in die Groesse."
+    measures gefuellt, gemessen_tod, tiefe_max, frei_min, erschoepft, groesse, tiefster,
+             irq.tiefe_max, irq.n
+    gates    all_done
+    can_fail {
+        -- «B14» `let g = groesse else (e) { return false; };` ist nicht schreibbar: die
+        -- `let … else`-Form (:316) verlangt RECHTS einen `call`. Ein `option`-wertiges
+        -- `place` laesst sich damit nicht auspacken — und ein Atomic ist ein `place`.
+        let g = groesse_gemessen() else (e1) { return false; }
+        let f = frei_min_gemessen() else (e2) { return false; }
+        if f < g / MIND_RESERVE_NENNER { return false; }
+        -- **Zweite Fassung, 2026-08-19 («H2.2»).** Hier stand:
+        --
+        --     return (g - f) + irq.tiefe_max + g / MIND_RESERVE_NENNER <= g;
+        --
+        -- `PFLICHTEN.md` fuehrte dazu die Pflicht *„`(g - f)` unterlaeuft nicht"* mit der
+        -- Begruendung *„`f < g / N` gibt `f < g` nur ueber die Division; die V-Regeln rechnen
+        -- nicht."* **Nachgerechnet: die Begruendung beschreibt den falschen Zweig.** Der
+        -- Vergleich steht in einem `if`, das ZURUECKKEHRT -- auf dem Weg hierher gilt
+        -- `f >= g / N`, eine UNTERE Schranke, und `g - f` braucht eine obere. Keine
+        -- schaerfere V-Regel schliesst das.
+        --
+        -- Die Aussage ohne Subtraktion ist unter `f <= g` aequivalent und hat keine
+        -- Unterlaufpflicht. **Die Pflicht war ein Artefakt der Schreibweise, nicht der
+        -- Sprache** -- dieselbe Klasse wie `revoke` (200 zugesagt, 16 452 480 gerechnet):
+        -- *ein Mensch hat den typischen Fall geschrieben statt die Schranke.*
+        return irq.tiefe_max + g / MIND_RESERVE_NENNER <= f;
+    }
+    floor    gemessen_tod >= MIND_MESSUNGEN, groesse >= 1, irq.n >= 1
+    counterprobe "Fuellung ausgehaengt" expects erschoepft_waechst
+}
+
+}
