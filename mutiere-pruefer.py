@@ -93,6 +93,41 @@ MUTATIONEN = [
     # **Zwei Regeln aus der Rezension vom 2026-08-20.** Beide waren ABSTUERZE oder stille
     # Ja-Aussagen, also gehoeren sie hierher: was keine Mutation faengt, ist ungedeckte
     # Flaeche, egal wie frisch der Test daneben ist.
+    # **Drei Regeln aus der dritten Rezension.** Alle drei waren "eine Klasse richtig
+    # diagnostiziert, eine Instanz behoben" -- darum zielen sie auf die GEMEINSAME Stelle.
+    Mutation(
+        "ausdruckslaeufer-steigt-nicht-in-den-index",
+        "lib.rs",
+        "        ExprArt::Ort(o) | ExprArt::Alt(o) => aus.extend(ausdruecke_im_ort(o)),",
+        "        ExprArt::Ort(_) | ExprArt::Alt(_) => {}",
+        "ein Ruf in Indexposition wird wieder unsichtbar: `t.slots[schreibt()].x` unter "
+        "`effects { pure }` faellt nicht mehr an E008, und der Erzeuger setzt `pure` "
+        "darueber -- die Klasse, an der `-O1` einmal 65 Rufe geloescht hat",
+    ),
+    Mutation(
+        "praedikatlaeufer-vergisst-folgt-und-quantor",
+        "lib.rs",
+        "            PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {",
+        "            PredArt::Und(a, b) | PredArt::Oder(a, b) => {",
+        "ein Ruf in einem `a => b` oder im Rumpf eines Quantors wird wieder unsichtbar",
+    ),
+    Mutation(
+        "unbekannter-name-faellt-nicht",
+        "m1.rs",
+        '                Absage::fehler("M119", o.basis.span, format!("`{n}` is declared nowhere"))\n                    .mit_notiz(',
+        '                Absage::hinweis("M119", o.basis.span, format!("`{n}` is declared nowhere"))\n                    .mit_notiz(',
+        "M119 -- ein Tippfehler schaltet die Indexpruefung wieder ab: `t.slots[j].x` mit "
+        "unbekanntem `j` gibt null Fehler, wo `i` ein M103 gaebe",
+    ),
+    Mutation(
+        "globaler-fakt-ueberlebt-den-ruf",
+        "m1.rs",
+        "        self.u.suche_global(&self.modul, schluessel).is_none()",
+        "        !self.u.globale.contains_key(schluessel)",
+        "in jeder Datei mit `module` gilt jede globale Groesse wieder als lokal, also "
+        "loescht `aufruf_toetet_fakten` nie -- ein Fakt ueberlebt einen Ruf, der ihn "
+        "schreibt",
+    ),
     Mutation(
         "umlauf-rechnet-doch-signiert",
         "emit.rs",

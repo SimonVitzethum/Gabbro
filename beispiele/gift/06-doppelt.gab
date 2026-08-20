@@ -1,5 +1,9 @@
 -- erwartet: N001
 -- E5: jede Deklaration ist an genau einer Stelle vollstaendig. Zwei gleiche Namen ohne
 -- `arch` und ohne `when` sind kein Vorrang, sondern ein Fehler.
+module gift {
+
 const SEITE : u32 = 4096;
 const SEITE : u32 = 8192;
+
+}

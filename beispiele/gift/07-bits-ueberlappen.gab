@@ -1,5 +1,9 @@
 -- erwartet: N003
 -- D2: jedes Bit eines Wortes ist benannt -- genau einmal. `TE` und `SRTP` teilen sich Bit 31.
+module gift {
+
 device Vtd at mmio {
     reg GCMD : u32 @0x18 class w fields { TE @[31:28], SRTP @31, }
+}
+
 }

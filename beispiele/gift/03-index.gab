@@ -1,10 +1,14 @@
 -- erwartet: M103
 -- Kein ungeprueftes Indizieren: die Schranke faellt aus dem TYP des Index. `Weit` reicht
 -- bis 127, das Feld hat 64 Elemente -- kein Zweig, kein Test, ein Uebersetzungsfehler.
+module gift {
+
 type Weit = u32 in 0 .. 127;
 
 static mut last : [u32; 64] = 0;
 
 impl fn lesen(i : Weit) -> u32 effects { reads last } {
     return last[i];
+}
+
 }

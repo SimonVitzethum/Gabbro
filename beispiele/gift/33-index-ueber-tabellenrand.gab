@@ -7,6 +7,8 @@
 -- jemand `type SlotIdx = u32 in 0 ..< NSLOTS` passend zur Tabelle schreibt. Nichts band
 -- die beiden aneinander.
 
+module gift {
+
 type Weit = u32 in 0 .. 127;
 
 table Kappenraum count 64 {
@@ -17,4 +19,6 @@ impl fn lesen(c : ptr<normal, r> Kappenraum, i : Weit) -> bool
     effects { reads c }
 {
     return c.slots[i].benutzt;
+}
+
 }

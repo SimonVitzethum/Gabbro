@@ -1,6 +1,10 @@
 -- erwartet: M104
 -- `u32 * u32` verlaesst 32 Bit. Passt der Ergebnisbereich nicht, ist es ein
 -- Uebersetzungsfehler -- keine Laufzeitpruefung, kein stiller Umlauf.
+module gift {
+
 impl fn flaeche(a : u32, b : u32) -> u32 effects { pure } {
     return a * b;
+}
+
 }

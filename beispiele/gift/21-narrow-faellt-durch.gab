@@ -7,8 +7,12 @@
 -- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
 -- MUSS fallen: der else-Zweig faellt durch, also gilt der Bereich danach NICHT.
+module gift {
+
 type Anzahl = u32 in 0 .. 1000;
 impl fn g1(summe : u32, n : Anzahl) -> u32 effects { pure } {
     narrow n to 1 .. 1000 else { }
     return summe / n;
+}
+
 }

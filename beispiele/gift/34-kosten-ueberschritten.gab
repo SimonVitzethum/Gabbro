@@ -6,6 +6,8 @@
 -- Bis Pass 9 stand, war diese Zahl eine Behauptung: `retry … bounded N ops` BEHAUPTETE
 -- Terminierung, es prueft sie nicht.
 
+module gift {
+
 table Tabelle count 1024 { slot { benutzt : bool, } }
 
 impl fn teuer(t : ptr<normal, rw> Tabelle)
@@ -20,3 +22,5 @@ impl fn teuer(t : ptr<normal, rw> Tabelle)
 extern fn arbeiten(t : ptr<normal, rw> Tabelle, s : index into Tabelle)
     effects { writes t.slots }
     costs   <= 200 ops;
+
+}

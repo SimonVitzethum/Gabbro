@@ -1147,19 +1147,8 @@ fn rekursionsmass(
     }
 }
 
+/// Ueber `crate::alle_orte` -- ein Name in Indexposition ist ein genannter Name
+/// (2026-08-20).
 fn namen_im_ausdruck(e: &Expr, aus: &mut Vec<String>) {
-    match &e.art {
-        ExprArt::Ort(o) => aus.push(o.basis.text.clone()),
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => namen_im_ausdruck(x, aus),
-        ExprArt::Binaer(_, a, b) => {
-            namen_im_ausdruck(a, aus);
-            namen_im_ausdruck(b, aus);
-        }
-        ExprArt::Ruf(r) => {
-            for a in &r.argumente {
-                namen_im_ausdruck(a, aus);
-            }
-        }
-        _ => {}
-    }
+    aus.extend(crate::alle_orte(e).into_iter().map(|o| o.basis.text.clone()));
 }

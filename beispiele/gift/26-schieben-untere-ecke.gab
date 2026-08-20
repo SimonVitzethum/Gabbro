@@ -5,8 +5,12 @@
 -- Giftkorpus konnte die halbe Regel nicht von der ganzen unterscheiden.
 --
 -- Gefunden von der Mutationsprobe (`./mutiere-pruefer.py`), nicht von einer Gegenpruefung.
+module gift {
+
 type Klein = i32 in -3000 .. 1;
 
 impl fn schieben(a : Klein) -> i32 effects { pure } {
     return a << 20;
+}
+
 }

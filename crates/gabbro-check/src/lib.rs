@@ -519,17 +519,134 @@ pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
 pub fn ausdruecke_im_praedikat(p: &Pred) -> Vec<&Expr> {
     let mut aus = Vec::new();
     fn geh<'a>(p: &'a Pred, aus: &mut Vec<&'a Expr>) {
+        // **Erschöpfend, ohne `_`-Zweig** — wie `unterbloecke`. Bis 2026-08-20 stand hier
+        // `_ => {}`, und damit war `Folgt` (`a => b`) und der Rumpf eines `Quantor` für
+        // JEDEN Leser unsichtbar. Ein `until schreibt() == 1` unter `effects { pure }` fiel
+        // deshalb nirgends.
         match &p.art {
             PredArt::Vergleich(e) | PredArt::Element(e, _) => aus.push(e),
             PredArt::Klammer(x) | PredArt::Nicht(x) => geh(x, aus),
-            PredArt::Und(a, b) | PredArt::Oder(a, b) => {
+            PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
                 geh(a, aus);
                 geh(b, aus);
             }
-            _ => {}
+            PredArt::Quantor(q) => geh(&q.rumpf, aus),
+            // Diese beiden nennen nur NAMEN, keine Ausdrücke — und sie stehen hier
+            // ausgeschrieben, damit eine neue `PredArt` den Bau bricht statt zu verschwinden.
+            PredArt::Erreicht { .. } | PredArt::Held { .. } => {}
         }
     }
     geh(p, &mut aus);
+    aus
+}
+
+/// **Jeder Unterausdruck eines Ausdrucks — erschöpfend, ohne `_`-Zweig** (2026-08-20).
+///
+/// Auf ANWEISUNGSEBENE stand das längst: `unterbloecke`, `eigene_ausdruecke` und
+/// `endet_immer` sind erschöpfende `match`es, damit eine neue `StmtArt` den Bau bricht.
+/// **Eine Ebene tiefer galt es nirgends** — sechzehn handgerollte Ausdrucksläufer, und nur
+/// fünf stiegen in einen `OrtSuffix::Index` ab. Die Folge, von aussen gemessen:
+///
+/// ```gabbro
+/// return t.slots[schreibt()].x;      -- `schreibt` schreibt eine globale Größe
+/// ```
+///
+/// gab **null Fehler**, derselbe Ruf als Anweisung `E008`. Und der Erzeuger schrieb
+/// `__attribute__((pure))` darüber — *genau die Klasse, an der `-O1` einmal 65 Rufe
+/// gelöscht hat.*
+///
+/// > Dieselbe Lücke trug `until schreibt() == 1` unter `pure`, `aligned(schreibt(), 4)` und
+/// > `H011`/`H012` in Indexposition. **Eine Ursache, fünf Befunde.**
+///
+/// Geliefert werden die DIREKTEN Kinder; wer alles will, ruft rekursiv — `alle_ausdruecke`
+/// tut genau das.
+pub fn unterausdruecke(e: &Expr) -> Vec<&Expr> {
+    let mut aus = Vec::new();
+    match &e.art {
+        ExprArt::Zahl(_)
+        | ExprArt::Gleitkomma { .. }
+        | ExprArt::Wahr
+        | ExprArt::Falsch
+        | ExprArt::Ergebnis => {}
+        // **Ein Ort trägt Ausdrücke** — in jedem `[…]`. Das war die eine vergessene Kante.
+        ExprArt::Ort(o) | ExprArt::Alt(o) => aus.extend(ausdruecke_im_ort(o)),
+        ExprArt::Ruf(r) => aus.extend(r.argumente.iter()),
+        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => aus.push(x),
+        ExprArt::Binaer(_, a, b) => {
+            aus.push(a);
+            aus.push(b);
+        }
+        ExprArt::Eingebaut(g) => match &**g {
+            Eingebaut::Aligned(a, b) => {
+                aus.push(a);
+                aus.push(b);
+            }
+            Eingebaut::Sizeof(t) | Eingebaut::Lenof(t) => {
+                if let TypOderOrt::Ort(o) = t {
+                    aus.extend(ausdruecke_im_ort(o));
+                }
+            }
+        },
+    }
+    aus
+}
+
+/// Die Ausdrücke IN einem Ort — jeder Index. `c.slots[i].x` trägt `i`.
+pub fn ausdruecke_im_ort(o: &Ort) -> Vec<&Expr> {
+    o.suffixe
+        .iter()
+        .filter_map(|s| match s {
+            OrtSuffix::Index(e) => Some(e),
+            OrtSuffix::Feld(_) | OrtSuffix::Ueber(_) => None,
+        })
+        .collect()
+}
+
+/// **Jeder ORT in diesem Ausdruck und allem darunter** — das Gegenstück zu
+/// `alle_ausdruecke`, für die Pässe, die Plätze sammeln statt Rufe.
+///
+/// Sechs Läufer im Prüfer sammelten Orte von Hand, und keiner davon stieg vollständig ab.
+/// *`H007` (`protects`) schwieg deshalb bei einem Zugriff über `narrow`, über ein `until`
+/// und über die Domäne eines `traverse`.*
+///
+/// Der Ort SELBST kommt mit, und die Orte in seinen Indizes ebenso: `c.slots[d.slots[j].k].x`
+/// nennt drei Plätze, und alle drei werden gelesen.
+pub fn alle_orte(e: &Expr) -> Vec<&Ort> {
+    let mut aus = Vec::new();
+    for x in alle_ausdruecke(e) {
+        match &x.art {
+            ExprArt::Ort(o) | ExprArt::Alt(o) => aus.push(o),
+            ExprArt::Eingebaut(g) => {
+                if let Eingebaut::Sizeof(TypOderOrt::Ort(o)) | Eingebaut::Lenof(TypOderOrt::Ort(o)) =
+                    &**g
+                {
+                    aus.push(o);
+                }
+            }
+            ExprArt::Zahl(_)
+            | ExprArt::Gleitkomma { .. }
+            | ExprArt::Wahr
+            | ExprArt::Falsch
+            | ExprArt::Ergebnis
+            | ExprArt::Ruf(_)
+            | ExprArt::Klammer(_)
+            | ExprArt::Unaer(_, _)
+            | ExprArt::Binaer(_, _, _) => {}
+        }
+    }
+    aus
+}
+
+/// **Dieser Ausdruck und alle darunter**, in Präordnung. Der Läufer, den sechzehn Stellen
+/// von Hand gebaut hatten.
+pub fn alle_ausdruecke(e: &Expr) -> Vec<&Expr> {
+    let mut aus = vec![e];
+    let mut i = 0;
+    while i < aus.len() {
+        let kinder = unterausdruecke(aus[i]);
+        aus.extend(kinder);
+        i += 1;
+    }
     aus
 }
 

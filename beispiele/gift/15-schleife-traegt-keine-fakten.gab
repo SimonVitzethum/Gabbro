@@ -2,6 +2,8 @@
 -- **Schleifen tragen keine Fakten hinein.** Was vor der Schleife geprueft wurde, gilt in
 -- ihrem Rumpf nicht -- das traegt die Invariante der Traversierung, und die gehoert dem
 -- Beweiser, nicht M1.
+module gift {
+
 const GRENZE : u32 = 65535;
 type Zaehler = u32 in 0 .. GRENZE;
 
@@ -16,3 +18,5 @@ impl fn schleifen(z : ptr<normal, rw> Zelle, c : ptr<normal, rw> T)
 }
 
 type Zelle = { wert : Zaehler, };
+
+}

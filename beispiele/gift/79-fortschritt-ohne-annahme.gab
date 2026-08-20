@@ -5,6 +5,8 @@
 --
 -- *Gemessen an echtem Text: genau so stand es in `02-geraet.gab`, `04-schleifen.gab` und
 -- `09-ohne-zeiger.gab`, bis `progress` am 2026-08-18 seinen ersten Leser bekam.*
+module gift {
+
 type Zustand = { fertig : u32, };
 
 impl fn warten(g : ptr<mmio, r> Zustand) effects { reads g } costs <= 1025 ops {
@@ -17,3 +19,5 @@ impl fn warten(g : ptr<mmio, r> Zustand) effects { reads g } costs <= 1025 ops {
 }
 
 extern fn zeitablauf() -> never effects { diverges };
+
+}

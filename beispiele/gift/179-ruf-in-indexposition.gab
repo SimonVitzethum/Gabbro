@@ -1,0 +1,41 @@
+-- erwartet: E008
+-- **Ein Ruf in INDEXPOSITION war fuer jeden Pass unsichtbar.**
+--
+-- Auf Anweisungsebene war die Klasse vorbildlich geloest: `unterbloecke`,
+-- `eigene_ausdruecke` und `endet_immer` sind erschoepfende `match`es ohne `_`-Zweig, damit
+-- eine neue `StmtArt` den Bau bricht. **Eine Ebene tiefer galt das nirgends** -- sechzehn
+-- handgerollte Ausdruckslaeufer, und nur fuenf stiegen in einen `OrtSuffix::Index` ab.
+--
+-- Derselbe Ruf als ANWEISUNG gab `E008`. Hier gab er null Fehler -- und der Erzeuger
+-- schrieb `__attribute__((pure))` darueber, also genau die Klasse, an der `-O1` einmal
+-- 65 Rufe geloescht hat.
+--
+-- Dieselbe Ursache trug `until schreibt() == 1` unter `pure`, `aligned(schreibt(), 4)` und
+-- `H011`/`H012` in Indexposition. *Eine Ursache, fuenf Befunde.*
+
+module gift {
+
+static mut a : u32 = 0;
+
+table T count 4 {
+    slot {
+        x : u32,
+    }
+}
+
+impl fn schreibt() -> u32 in 0 .. 3
+    effects { writes a }
+    costs   <= 2 ops
+{
+    a = 1;
+    return 1;
+}
+
+impl fn ueber_index(t : ptr<normal, r> T) -> u32
+    effects { pure }
+    costs   <= 32 ops
+{
+    return t.slots[schreibt()].x;
+}
+
+}

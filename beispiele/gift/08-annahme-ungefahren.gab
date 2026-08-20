@@ -2,4 +2,8 @@
 -- Drei Klassen, und die dritte gibt es syntaktisch nicht: *nicht gefahren* ist die
 -- Abwesenheit beider Angaben. Eine nicht gefahrene Annahme darf nie wie eine
 -- falsifizierte aussehen.
+module gift {
+
 assume mmu_tut_was_sie_soll "Eine Uebersetzung mit P=0 faultet.";
+
+}

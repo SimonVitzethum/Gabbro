@@ -1,6 +1,10 @@
 -- erwartet: E002
 -- `pure` heisst „fasst nichts an". Eine zweite Wirkung daneben ist ein Widerspruch,
 -- kein Zusatz.
+module gift {
+
 impl fn beides(c : ptr<normal, rw> T) effects { pure, writes c } {
     c.x = 1;
+}
+
 }

@@ -1,6 +1,8 @@
 -- erwartet: M104
 -- Der gemessene Fall: `refcount -= 1` ohne Vorpruefung. Er steht in `FRAGMENTE.md` als
 -- Befund «B29» und ist der Grund, warum M1 ueberhaupt gebaut wurde.
+module gift {
+
 const GRENZE : u32 = 65535;
 type Zaehler = u32 in 0 .. GRENZE;
 
@@ -9,3 +11,5 @@ impl fn senken(z : ptr<normal, rw> Zelle) effects { writes z } {
 }
 
 type Zelle = { wert : Zaehler, };
+
+}

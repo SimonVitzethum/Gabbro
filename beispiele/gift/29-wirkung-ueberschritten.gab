@@ -6,8 +6,12 @@
 -- Aus der Gegenpruefung vom 2026-08-14.
 
 -- deklariert `reads g`, schreibt aber.
+module gift {
+
 static mut g : u32 = 0;
 static mut h : u32 = 0;
 impl fn q2() effects { reads g } {
     h = 1;
+}
+
 }

@@ -4,6 +4,8 @@
 -- die Deadlockfreiheit -- faellt aus den ERKLAERTEN Sperren; ein Rumpf, der eine nimmt,
 -- ohne sie zu nennen, nimmt sie ausserhalb der Ordnung.
 
+module gift {
+
 lock KAPPEN protects { eintraege } rank 0 held <= 100 ops;
 
 type Zelle = { wert : u32, };
@@ -14,4 +16,6 @@ impl fn heimlich(c : ptr<normal, rw> Zelle)
     locks KAPPEN {
         c.wert = 0;
     }
+}
+
 }

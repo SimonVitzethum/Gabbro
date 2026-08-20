@@ -6,6 +6,8 @@
 -- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
 -- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
+module gift {
+
 const GRENZE : u32 = 65535;
 type Zaehler = u32 in 0 .. GRENZE;
 static mut g : Zaehler = 5;
@@ -15,4 +17,6 @@ impl fn f1() effects { writes g } {
         null();
         g -= 1;
     }
+}
+
 }

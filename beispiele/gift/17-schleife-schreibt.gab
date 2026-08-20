@@ -6,6 +6,8 @@
 -- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
 -- MUSS fallen (M104): die Schleife setzt z.wert auf 0, danach unterlaeuft `-= 1`.
+module gift {
+
 const GRENZE : u32 = 65535;
 type Zaehler = u32 in 0 .. GRENZE;
 
@@ -21,3 +23,5 @@ impl fn b1(z : ptr<normal, rw> Zelle, c : ptr<normal, rw> T)
 }
 
 type Zelle = { wert : Zaehler, };
+
+}

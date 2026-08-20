@@ -64,6 +64,16 @@ const BENANNT: &[&str] = &[
     // > heute niemand aufgeschrieben hat: nach einem `P001` laufen die Paesse weiter. Was
     // > sie dann melden, kann Rauschen sein.
     "M112", "M113", "M114", "M115",
+    // **`M119`, 2026-08-20: ein Name, den niemand deklariert.** Neu, weil ein Tippfehler die
+    // Indexprüfung abschaltete: `t.slots[j].x` mit unbekanntem `j` gab **null Fehler**,
+    // dieselbe Zeile mit `i` gibt `M103`. *M1 überspringt still, was es nicht typisieren
+    // kann — und druckte dafür „100 % coverage".*
+    //
+    // Auf einem FRAGMENT ist die Absage richtig und trotzdem kein Befund über den Code: ein
+    // Auszug deklariert seine Namen nicht. `FRAGMENTE.md`:269 nennt `obj`, gebunden in einer
+    // Zeile, die nicht im Ausschnitt steht. **Deshalb steht `M119` hier — als benannte
+    // Absage auf einer unvollständigen Hülle, dieselbe Klasse wie `E009` und `K003`.**
+    "M117", "M118", "M119",
     // **`S006`, 2026-08-19: `on_exceeded` muss divergieren.** Die Fundstelle in
     // `FRAGMENTE.md`:902 schreibt `on_exceeded DeviceSilent` -- eine `reason`-VARIANTE, nicht
     // eine Funktion. *Der Erzeuger sagt seit jeher, warum das nicht geht:* „a `reason` value
@@ -279,5 +289,52 @@ fn eine_uebersetzungseinheit_faengt_mit_einem_item_an() {
     assert!(
         !ist_uebersetzungseinheit("const A : u32 = …;"),
         "`…` im Code ist eine Auslassung, kein Programm"
+    );
+}
+
+/// **Jede Korpusdatei steht in einem `module` — und das ist keine Formfrage** (2026-08-20).
+///
+/// Gefunden von aussen: `beispiele/gift/22-globaler-fakt-nach-aufruf.gab` trug die Notiz
+/// *„damit das Loch nicht zurueckkehrt"* und war grün. **Dieselbe Datei in ein `module`
+/// gewickelt gab drei Fehler statt einem** — `m1.rs::ist_lokal` fragte die
+/// modulqualifizierte Karte der globalen Grössen mit einem *unqualifizierten* Schlüssel,
+/// also galt in jeder Datei mit `module` jede globale Grösse als lokal.
+///
+/// > Alle 38 sauberen Beispiele hatten ein `module`, 40 von 177 Giftdateien nicht. **Der
+/// > Korpus prüfte also die Regel in einer Umgebung, in der niemand programmiert.**
+///
+/// *Die Asymmetrie war das Loch, nicht die einzelne Datei.* Ein Gift ohne `module` misst
+/// eine Namensauflösung, die im echten Gebrauch nie vorkommt — und deckt damit genau die
+/// Fehlerklasse zu, gegen die es geschrieben wurde.
+#[test]
+fn jede_korpusdatei_steht_in_einem_modul() {
+    let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("Wurzel")
+        .join("beispiele");
+    let mut ohne = Vec::new();
+    let mut gesehen = 0;
+    for ordner in [wurzel.clone(), wurzel.join("gift")] {
+        for e in std::fs::read_dir(&ordner).expect("beispiele lesbar") {
+            let p = e.expect("Eintrag").path();
+            if p.extension().is_none_or(|x| x != "gab") {
+                continue;
+            }
+            gesehen += 1;
+            let t = std::fs::read_to_string(&p).expect("lesbar");
+            if !t.lines().any(|z| z.starts_with("module ")) {
+                ohne.push(p.file_name().unwrap().to_string_lossy().to_string());
+            }
+        }
+    }
+    assert!(gesehen > 200, "der Waechter hat den Korpus gefunden: {gesehen} Dateien");
+    ohne.sort();
+    assert!(
+        ohne.is_empty(),
+        "{} Datei(en) ohne `module` -- sie messen eine Namensaufloesung, die im echten \
+         Gebrauch nie vorkommt:\n  {}",
+        ohne.len(),
+        ohne.join("\n  ")
     );
 }

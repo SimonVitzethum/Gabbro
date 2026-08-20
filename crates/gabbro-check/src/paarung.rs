@@ -418,19 +418,8 @@ fn grundname(k: &str) -> String {
     k.split(['.', '[']).next().unwrap_or(k).to_string()
 }
 
+/// Ueber `crate::alle_orte` -- der Handlaeufer hier hatte `_ => {}` und stieg nicht in
+/// einen `OrtSuffix::Index` ab (2026-08-20).
 fn orte_gelesen(e: &Expr, aus: &mut Vec<String>) {
-    match &e.art {
-        ExprArt::Ort(o) => aus.push(grundname(&o.text())),
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => orte_gelesen(x, aus),
-        ExprArt::Binaer(_, a, b) => {
-            orte_gelesen(a, aus);
-            orte_gelesen(b, aus);
-        }
-        ExprArt::Ruf(r) => {
-            for a in &r.argumente {
-                orte_gelesen(a, aus);
-            }
-        }
-        _ => {}
-    }
+    aus.extend(crate::alle_orte(e).into_iter().map(|o| grundname(&o.text())));
 }

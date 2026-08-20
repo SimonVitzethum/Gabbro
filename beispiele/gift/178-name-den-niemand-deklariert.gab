@@ -1,0 +1,30 @@
+-- erwartet: M119
+-- **Ein Tippfehler schaltete die Indexpruefung ab -- die Vorzeigeklasse dieses Ordners.**
+--
+-- `namen.rs` prueft DEKLARATIONEN. Eine BENUTZUNG loeste bis zum 2026-08-20 niemand auf, und
+-- M1 uebersprang still, was es nicht typisieren kann -- mit Rueckgabewert 0.
+--
+-- Der Schaden ist genau messbar. Dieselbe Zeile mit `i` statt `j` gibt `M103`:
+-- *„the index has `u32 in 0 .. 127`, the array has 64 elements"*. Mit `j`: null Fehler,
+-- und der Erzeuger schreibt den unbekannten Namen ins C.
+--
+-- > Und M1 druckte dazu „100 % coverage" -- weil es den Ausdruck gar nicht erst gesehen
+-- > hat. Eine Deckungsquote, die einen unbekannten Namen nicht zaehlt, misst nicht die
+-- > Deckung, sondern das Gesehene.
+
+module gift {
+
+table T count 64 {
+    slot {
+        x : u32,
+    }
+}
+
+impl fn liest(t : ptr<normal, r> T, i : u32 in 0 .. 127) -> u32
+    effects { pure }
+    costs   <= 4 ops
+{
+    return t.slots[j].x;
+}
+
+}

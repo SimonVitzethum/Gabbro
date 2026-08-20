@@ -6,10 +6,14 @@
 -- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
 -- MUSS fallen (M102): das `let` verdeckt `x`; der Fakt `x >= 1` gilt fuer die ALTE Bindung.
+module gift {
+
 impl fn l1(x : u8) -> u8 effects { pure } {
     if x >= 1 {
         let x : u8 = 0;
         return 100 / x;
     }
     return 0;
+}
+
 }

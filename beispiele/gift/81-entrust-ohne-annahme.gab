@@ -3,10 +3,14 @@
 -- aufgeschrieben, warum er sich daran haelt.** Genau dieselbe Regel wie `S003` bei
 -- `progress`, an einem anderen Konstrukt: eine Annahme, die nicht erklaert ist, steht in
 -- keinem Manifest und kommt in kein Zeugnis.
+module gift {
+
 type Gastbild = { eintritt : u64, };
 
 entrust jitpuffer at Gastbild arch x86_64 {
     regs in { eintritt : rdi, }
     stack  gaststapel
     assume gast_ist_brav;
+}
+
 }

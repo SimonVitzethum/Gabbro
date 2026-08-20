@@ -6,8 +6,12 @@
 -- Aus der Gegenpruefung vom 2026-08-14: diese Datei kam einmal mit 0 Fehlern
 -- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
+module gift {
+
 impl fn quelle() -> u32 effects { pure } { return 1; }
 impl fn j1() -> u32 effects { pure } {
     let v = quelle() else (e) { }
     return v;
+}
+
 }

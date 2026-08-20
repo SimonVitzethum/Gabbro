@@ -1,7 +1,11 @@
 -- erwartet: P002
 -- Der Wortschatz ist eine geschlossene Tabelle; `slot` steht darin. Alles andere ist ein
 -- Bezeichner -- dieses hier nicht.
+module gift {
+
 impl fn nehmen() -> u32 effects { pure } {
     let slot = 1;
     return slot;
+}
+
 }

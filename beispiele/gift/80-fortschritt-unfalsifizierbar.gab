@@ -4,6 +4,8 @@
 -- Falsifikator"*. Nimmt man ihm seinen Gegenstand, bleibt von `progress` ein Wunsch.
 --
 -- *Die Gegenrichtung zu «79»: hier IST der Zeuge erklaert -- nur eben unwiderlegbar.*
+module gift {
+
 type Zustand = { fertig : u32, };
 
 assume geraet_antwortet_immer
@@ -20,3 +22,5 @@ impl fn warten(g : ptr<mmio, r> Zustand) effects { reads g } costs <= 1025 ops {
 }
 
 extern fn zeitablauf() -> never effects { diverges };
+
+}

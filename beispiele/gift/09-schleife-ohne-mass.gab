@@ -1,8 +1,12 @@
 -- erwartet: P001
 -- Jede Schleife nennt ihr Abstiegsmass. `by unvisited | consuming | decreasing e` ist
 -- Pflicht -- eine Traversierung ohne Mass ist keine.
+module gift {
+
 impl fn gehen(c : ptr<normal, rw> T) effects { writes c } {
     traverse s over slots of c {
         c.slots[s].x = 0;
     }
+}
+
 }

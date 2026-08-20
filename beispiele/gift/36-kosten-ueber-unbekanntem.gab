@@ -4,6 +4,8 @@
 -- Zahl ueber Unbekanntem -- entweder der Gerufene bekommt `costs`, oder der Rufer gibt
 -- seine Zusage auf. Ein drittes gibt es nicht.
 
+module gift {
+
 impl fn verspricht(x : u32) -> u32
     effects { reads welt }
     costs   <= 10 ops
@@ -12,3 +14,5 @@ impl fn verspricht(x : u32) -> u32
 }
 
 extern fn fremd(x : u32) -> u32 effects { reads welt };
+
+}

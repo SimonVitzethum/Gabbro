@@ -2470,3 +2470,97 @@ fn ein_unveraenderlicher_static_und_die_ausnahme_des_zeigers() {
     assert!(c.contains("static T * const tz"), "konstanter ZEIGER:\n{c}");
     assert!(!c.contains("static const T * tz"), "kein Zeiger auf konstantes T:\n{c}");
 }
+
+/// **Ein erschöpfender Ausdrucksläufer — eine Ursache, fünf Befunde** (Rezension 2026-08-20).
+///
+/// Auf **Anweisungsebene** war die Klasse vorbildlich gelöst: `unterbloecke`,
+/// `eigene_ausdruecke` und `endet_immer` sind erschöpfende `match`es ohne `_`-Zweig, damit
+/// eine neue `StmtArt` den Bau bricht. **Eine Ebene tiefer galt das nirgends** — sechzehn
+/// handgerollte Ausdrucksläufer, und nur fünf stiegen in einen `OrtSuffix::Index` ab.
+///
+/// > Dieser Ordner hat die Klasse seiner Fehler richtig diagnostiziert — und dann eine
+/// > Instanz behoben. Der Satz stammt von aussen und er sitzt.
+#[test]
+fn ein_ruf_ist_auch_in_indexposition_ein_ruf() {
+    let bau = |rumpf: &str| {
+        format!(
+            "module m {{\n\
+             static mut a : u32 = 0;\n\
+             table T count 4 {{ slot {{ x : u32, }} }}\n\
+             impl fn schreibt() -> u32 in 0 .. 3 effects {{ writes a }} costs <= 2 ops \
+             {{ a = 1; return 1; }}\n\
+             impl fn f(t : ptr<normal, r> T) -> u32 effects {{ pure }} costs <= 32 ops \
+             {{ {rumpf} }}\n\
+             }}\n"
+        )
+    };
+    let fiel = |q: &str| {
+        let (b, mut a) = gabbro_syntax::lies("x.gab", q);
+        gabbro_check::pruefe(&b, &mut a);
+        a.zeige(q).contains("E008")
+    };
+    // Der Ruf im INDEX -- die Form, die durchging.
+    assert!(fiel(&bau("return t.slots[schreibt()].x;")), "Ruf in Indexposition");
+    // Und in einem eingebauten Ausdruck, derselbe Grund.
+    assert!(
+        fiel(&bau("if aligned(schreibt(), 4) { return 0; } return 1;")),
+        "Ruf in `aligned`"
+    );
+
+    // **Der Läufer selbst, direkt.** `alle_ausdruecke` liefert jeden Unterausdruck; ohne den
+    // Abstieg in den Index fehlte hier einer.
+    let q = bau("return t.slots[schreibt()].x;");
+    let (baum, _) = gabbro_syntax::lies("x.gab", &q);
+    let mut rufe = 0;
+    let mut offen: Vec<&gabbro_syntax::ast::Item> = baum.items.iter().collect();
+    while let Some(item) = offen.pop() {
+        {
+            if let gabbro_syntax::ast::ItemArt::Modul(md) = &item.art {
+                offen.extend(md.items.iter());
+                continue;
+            }
+            let gabbro_syntax::ast::ItemArt::Funktion(f) = &item.art else { continue };
+            let gabbro_syntax::ast::FnRumpf::Block(b) = &f.rumpf else { continue };
+            for s in &b.anweisungen {
+                for e in gabbro_check::eigene_ausdruecke(s) {
+                    for x in gabbro_check::alle_ausdruecke(e) {
+                        if matches!(x.art, gabbro_syntax::ast::ExprArt::Ruf(_)) {
+                            rufe += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(rufe, 1, "der Ruf im Index wird gefunden");
+}
+
+/// **Ein Name, den niemand deklariert, schaltete die Indexprüfung ab** («M119», 2026-08-20).
+///
+/// ```gabbro
+/// return t.slots[j].x;      -- `j` gibt es nicht  ->  0 Fehler
+/// return t.slots[i].x;      -- i : u32 in 0..127  ->  M103
+/// ```
+///
+/// M1 überspringt still, was es nicht typisieren kann — **und druckte dazu „100 % coverage",
+/// weil es den Ausdruck gar nicht erst gesehen hat.**
+#[test]
+fn ein_unbekannter_name_faellt_und_zaehlt_gegen_die_deckung() {
+    let q = "module m {\n\
+        table T count 64 { slot { x : u32, } }\n\
+        impl fn f(t : ptr<normal, r> T, i : u32 in 0 .. 127) -> u32 effects { pure } \
+        costs <= 4 ops { return t.slots[j].x; }\n\
+        }\n";
+    let (b, mut a) = gabbro_syntax::lies("j.gab", q);
+    gabbro_check::pruefe(&b, &mut a);
+    let text = a.zeige(q);
+    assert!(text.contains("M119"), "der unbekannte Name faellt:\n{text}");
+    assert_eq!(text.matches("M119").count(), 1, "und GENAU einmal:\n{text}");
+
+    // **Die andere Richtung, und sie war ein Falschtreffer beim Bauen:** `u64::max` ist ein
+    // Ort, dessen Basis das TYPWORT `u64` ist. Gefunden sofort an `11-grammatikbefunde.gab`.
+    let k = "module m {\nconst A : u64 = u64::max;\n}\n";
+    let (b2, mut a2) = gabbro_syntax::lies("k.gab", k);
+    gabbro_check::pruefe(&b2, &mut a2);
+    assert!(!a2.zeige(k).contains("M119"), "ein Typwort ist keine Variable:\n{}", a2.zeige(k));
+}

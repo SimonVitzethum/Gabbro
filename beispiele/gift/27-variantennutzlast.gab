@@ -5,6 +5,8 @@
 -- unbekannt heisst ungeprueft: die Regel koennte ausfallen, ohne dass etwas faellt.
 --
 -- Gefunden von der Mutationsprobe (`./mutiere-pruefer.py`).
+module gift {
+
 const G : u32 = 65535;
 type Z = u32 in 0 .. G;
 
@@ -16,4 +18,6 @@ impl fn auspacken(m : Nachricht) -> Z effects { pure } {
         Klein(x) => { return x; }
     }
     return 0;
+}
+
 }

@@ -447,25 +447,20 @@ fn sammle_kanten(b: &Block, aus: &mut Vec<(String, Vec<Option<String>>)>) {
             }
         }
     }
+    // **Ueber `alle_ausdruecke`, nicht von Hand** (2026-08-20). Der Handlaeufer hatte
+    // `_ => {}` und sah damit weder einen Ruf in `t.slots[schreibt()]` noch einen in
+    // `aligned(schreibt(), 4)`. *Sechzehn solcher Laeufer standen im Pruefer, fuenf davon
+    // stiegen in einen Index ab.*
     fn aus_expr(e: &Expr, aus: &mut Vec<(String, Vec<Option<String>>)>) {
-        match &e.art {
-            ExprArt::Ruf(r) => nimm_ruf(r, aus),
-            ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => aus_expr(x, aus),
-            ExprArt::Binaer(_, a, b) => {
-                aus_expr(a, aus);
-                aus_expr(b, aus);
+        for x in crate::alle_ausdruecke(e) {
+            if let ExprArt::Ruf(r) = &x.art {
+                nimm_ruf(r, aus);
             }
-            _ => {}
         }
     }
     for s in &b.anweisungen {
         for e in crate::eigene_ausdruecke(s) {
             aus_expr(e, aus);
-        }
-        for pr in crate::eigene_praedikate(s) {
-            for e in crate::ausdruecke_im_praedikat(pr) {
-                aus_expr(e, aus);
-            }
         }
         for pr in crate::eigene_praedikate(s) {
             for e in crate::ausdruecke_im_praedikat(pr) {
@@ -585,14 +580,12 @@ fn nimm(r: &Ruf, aus: &mut BTreeSet<String>) {
     }
 }
 
+/// Jeder Ruf in diesem Ausdruck -- ueber den erschoepfenden Laeufer, damit ein Ruf in
+/// Indexposition nicht unsichtbar bleibt.
 fn aus_expr(e: &Expr, aus: &mut BTreeSet<String>) {
-    match &e.art {
-        ExprArt::Ruf(r) => nimm(r, aus),
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => aus_expr(x, aus),
-        ExprArt::Binaer(_, a, b) => {
-            aus_expr(a, aus);
-            aus_expr(b, aus);
+    for x in crate::alle_ausdruecke(e) {
+        if let ExprArt::Ruf(r) = &x.art {
+            nimm(r, aus);
         }
-        _ => {}
     }
 }

@@ -7,8 +7,12 @@
 -- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
 -- MUSS fallen (M104): 1000000 << 20 = 1048576000000, das ist weit ausserhalb i32.
+module gift {
+
 type Weit = i32 in -1 .. 1000000;
 
 impl fn d1(a : Weit) -> i32 effects { pure } {
     return a << 20;
+}
+
 }

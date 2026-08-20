@@ -1,8 +1,12 @@
 -- erwartet: S001
 -- `break`/`continue` ohne Namen gibt es nicht -- bei geschachtelten Schleifen waere das
 -- Ziel sonst Konvention statt Syntax.
+module gift {
+
 divergent fn dienst() effects { diverges } {
     forever aussen per_pass bounded 64 ops on_exceeded w effects { reads X } {
         leave innen;
     }
+}
+
 }

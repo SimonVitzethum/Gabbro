@@ -7,9 +7,13 @@
 -- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
 -- MUSS fallen (M103): identisch zu gift/03-index.gab, nur SCHREIBEND statt lesend.
+module gift {
+
 static mut last : [u32; 64] = 0;
 type Weit = u32 in 0 .. 127;
 
 impl fn e1(i : Weit) effects { writes last } {
     last[i] = 1;
+}
+
 }

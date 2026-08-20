@@ -9,6 +9,8 @@
 -- durch (MESSUNGEN.md). Sie steht hier, damit das Loch nicht zurueckkehrt.
 
 -- MUSS fallen (M104): auf dem Weg durch `if c` ist z.wert == 0, dann unterlaeuft `-= 1`.
+module gift {
+
 const GRENZE : u32 = 65535;
 type Zaehler = u32 in 0 .. GRENZE;
 
@@ -22,3 +24,5 @@ impl fn a1(z : ptr<normal, rw> Zelle, c : bool) effects { writes z } {
 }
 
 type Zelle = { wert : Zaehler, };
+
+}

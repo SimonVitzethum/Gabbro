@@ -8,6 +8,8 @@
 
 -- MUSS fallen: `nuller(z)` setzt z.wert auf 0. Der Fakt ueber `z.wert` (FELDzugriff!) muss
 -- laut MESSUNGEN.md bei JEDEM Aufruf sterben.
+module gift {
+
 const GRENZE : u32 = 65535;
 type Zaehler = u32 in 0 .. GRENZE;
 
@@ -24,3 +26,5 @@ impl fn m1(z : ptr<normal, rw> Zelle) effects { writes z } {
 }
 
 type Zelle = { wert : Zaehler, };
+
+}

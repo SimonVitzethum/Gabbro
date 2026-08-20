@@ -115,6 +115,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         spezifikationen,
         unveraenderlich: std::collections::HashSet::new(),
         unveraenderliche_statiken: std::collections::HashMap::new(),
+        schon_gemeldet: std::collections::HashSet::new(),
     };
     p.programm(baum);
     p.zaehlung
@@ -192,6 +193,8 @@ struct Pruefer<'a> {
     /// Getrennt von `unveraenderlich`, weil das die Bindungen des LAUFENDEN Rumpfes sind:
     /// eine lokale Bindung darf einen `static` verdecken, und dann gilt sie.
     unveraenderliche_statiken: std::collections::HashMap<String, bool>,
+    /// Welche Spannen `M119` schon getroffen hat -- ein Ort wird auf zwei Wegen besucht.
+    schon_gemeldet: std::collections::HashSet<(u32, u32)>,
     /// Das Modul, in dem der gerade gepruefte Rumpf steht. **Ohne ihn loest der Pass Namen
     /// im Blindflug auf** -- und ein gleichnamiges `fn` in einem fremden Modul loescht eine
     /// Bereichspruefung, ohne dass jemand es sieht (Gegenpruefung 2026-08-14, U11/U12).
@@ -921,6 +924,15 @@ impl<'a> Pruefer<'a> {
             ExprArt::Ergebnis => Typ::Unbekannt,
             ExprArt::Klammer(i) => self.ausdruck_roh(i, lage),
             ExprArt::Ort(o) => {
+                self.name_aufloesen(o, lage);
+                // **Die INDIZES sind Ausdruecke, und M1 zaehlte sie nicht.** `t.slots[j].x`
+                // mit unbekanntem `j` galt als *ein* Ausdruck mit 100 % Deckung.
+                // `index_pruefen` wertet sie fuer die Schranke aus; hier werden sie GEZAEHLT,
+                // damit die Quote nicht das Gesehene misst statt der Deckung.
+                for ix in crate::ausdruecke_im_ort(o) {
+                    let t = self.ausdruck_roh(ix, lage);
+                    self.buche(&t);
+                }
                 self.index_pruefen(o, lage);
                 let grund = self.u.typ_von_ort(&self.modul, o, &lage.lokal);
                 self.mit_fakt(o, grund, lage)
@@ -1844,11 +1856,28 @@ impl<'a> Pruefer<'a> {
         }
     }
 
+    /// **Ist dieser Ort LOKAL -- also einer, den ein fremder Ruf nicht anfassen kann?**
+    ///
+    /// Davon haengt `aufruf_toetet_fakten` ab: ein Fakt ueber einen lokalen Namen ueberlebt
+    /// einen Ruf, ein Fakt ueber eine globale Groesse nicht.
+    ///
+    /// **Bis 2026-08-20 fragte diese Zeile `globale.contains_key(schluessel)` UNQUALIFIZIERT,
+    /// und die Karte ist modulqualifiziert.** Also galt in jeder Datei mit `module` jede
+    /// globale Groesse als lokal, und geloescht wurde nie.
+    ///
+    /// Die eigene Giftprobe dafuer steht seit jeher da -- `gift/22-globaler-fakt-nach-aufruf`,
+    /// mit der Notiz *„damit das Loch nicht zurueckkehrt"* -- und war gruen: sie hat **kein**
+    /// `module`. Dieselbe Datei gewickelt gab drei Fehler weniger. *Alle 38 sauberen
+    /// Beispiele haben ein `module`.*
+    ///
+    /// > Die Umstellung auf qualifizierte Namen wurde am 2026-08-19 in `m2`, `phasen` und
+    /// > `geteilt` gemacht. Diese Stelle blieb stehen -- **die Klasse war benannt und eine
+    /// > Instanz behoben.**
     fn ist_lokal(&self, schluessel: &str) -> bool {
         if schluessel.contains('.') || schluessel.contains('[') || schluessel.contains("->") {
             return false;
         }
-        !self.u.globale.contains_key(schluessel)
+        self.u.suche_global(&self.modul, schluessel).is_none()
     }
 
     // -- Absagen ------------------------------------------------------------------------
@@ -2447,6 +2476,53 @@ impl<'a> Pruefer<'a> {
     }
 
     /// M4 an der Stelle, an der M1 die Zahl hat: ein Index gegen die Laenge seines Feldes.
+    /// **`M119` — ein Name, den niemand deklariert** (Rezension 2026-08-20).
+    ///
+    /// `namen.rs` prüft DEKLARATIONEN. Eine BENUTZUNG löste niemand auf, und M1 überspringt
+    /// still, was es nicht typisieren kann — mit Rückgabewert 0.
+    ///
+    /// ```gabbro
+    /// impl fn liest(t : ptr<normal, r> T, i : u32 in 0 .. 127) -> u32 {
+    ///     return t.slots[j].x;        -- `j` gibt es nicht
+    /// }                               -- 0 Fehler
+    /// ```
+    ///
+    /// **Der Schaden ist genau messbar:** dieselbe Zeile mit `i` gibt `M103` — der Index
+    /// verlässt die Tabelle. *Ein Tippfehler schaltet die Indexprüfung ab, die
+    /// Vorzeigeklasse dieses Ordners.* Und der Erzeuger schreibt den Namen ins C.
+    ///
+    /// > Eine Deckungsquote, die einen unbekannten Namen gar nicht erst zählt, misst nicht
+    /// > die Deckung, sondern das Gesehene.
+    fn name_aufloesen(&mut self, o: &Ort, lage: &Lage) {
+        let n = &o.basis.text;
+        // **Ein QUALIFIZIERTER Name hat keine Basis, die man nachschlagen koennte.**
+        // `u64::max` ist ein Ort, dessen Basis das TYPWORT `u64` ist -- gefunden sofort an
+        // `beispiele/11-grammatikbefunde.gab`. *Ein Namensauflöser, der Typwörter für
+        // Variablen hält, ist schlimmer als keiner.*
+        if o.text().contains("::") || breite_wort(n) {
+            return;
+        }
+        // Zweimal derselbe Ort waere zweimal dieselbe Meldung: `index_pruefen` wertet einen
+        // Index fuer die Schranke aus, und die Zaehlung tut es fuer die Quote.
+        if !self.schon_gemeldet.insert((o.basis.span.von, o.basis.span.bis)) {
+            return;
+        }
+        let bekannt = lage.lokal.contains_key(n)
+            || self.u.suche_global(&self.modul, n).is_some()
+            || self.u.funktionen.contains_key(n)
+            || self.u.tabellen.keys().any(|k| k == n || k.rsplit("::").next() == Some(n.as_str()))
+            || n == "result";
+        if !bekannt {
+            self.absagen.schiebe(
+                Absage::fehler("M119", o.basis.span, format!("`{n}` is declared nowhere"))
+                    .mit_notiz(
+                        "an unknown name has no type, and every range rule silently steps \
+                         aside where the type is missing -- including the index bound",
+                    ),
+            );
+        }
+    }
+
     fn index_pruefen(&mut self, o: &Ort, lage: &Lage) {
         // **`suche` und nicht `get`, und das war ein Loch in der ERSTEN getragenen Klasse.**
         //
@@ -2955,4 +3031,12 @@ fn erstes_feld(k: &str) -> (&str, Option<&str>) {
     } else {
         (basis, None)
     }
+}
+
+/// Ist dieses Wort ein Typwort der Sprache? `u64::max` traegt es als Basis eines Ortes.
+fn breite_wort(n: &str) -> bool {
+    matches!(
+        n,
+        "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" | "bool" | "f32" | "f64"
+    )
 }

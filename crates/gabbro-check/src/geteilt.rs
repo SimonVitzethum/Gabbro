@@ -1196,19 +1196,12 @@ fn rcu_schutz(
     }
 }
 
+/// **Ueber `crate::alle_orte`, nicht von Hand** (2026-08-20).
+///
+/// Der Handlaeufer hatte `_ => {}` und stieg nicht in einen `OrtSuffix::Index` ab. `H007`
+/// (*jeder Zugriff auf einen geschuetzten Platz steht unter seiner Sperre*) schwieg deshalb,
+/// sobald der Zugriff in einer Indexposition, unter `narrow`, in einem `until` oder in der
+/// Domaene eines `traverse` stand.
 fn orte_aus_expr<'a>(e: &'a Expr, out: &mut Vec<&'a Ort>) {
-    match &e.art {
-        ExprArt::Ort(o) => out.push(o),
-        ExprArt::Klammer(i) | ExprArt::Unaer(_, i) => orte_aus_expr(i, out),
-        ExprArt::Binaer(_, a, b) => {
-            orte_aus_expr(a, out);
-            orte_aus_expr(b, out);
-        }
-        ExprArt::Ruf(r) => {
-            for a in &r.argumente {
-                orte_aus_expr(a, out);
-            }
-        }
-        _ => {}
-    }
+    out.extend(crate::alle_orte(e));
 }

@@ -13,6 +13,8 @@
 -- sondern eine Eigenschaft der erzeugten Operation. Das ist der dritte Ausgang, an der
 -- Stelle, an der er zuerst gebraucht wurde.
 
+module gift {
+
 const NOBJEKTE : u32 = 4096;
 type Zaehler = u32 in 0 .. 65535;
 
@@ -30,4 +32,6 @@ impl fn von_hand_senken(o : ptr<normal, rw> Objekte, i : index into Objekte)
     costs   <= 8 ops
 {
     o.slots[i].zaehler -= 1;
+}
+
 }

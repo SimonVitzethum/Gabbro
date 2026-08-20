@@ -273,19 +273,9 @@ fn liest(o: &Ort, span: Span, zeiger: &BTreeMap<String, Zeiger>, absagen: &mut A
     }
 }
 
+/// Ueber `crate::alle_orte` -- ein Lesen in Indexposition ist ein Lesen (2026-08-20).
 fn liest_expr(e: &Expr, span: Span, zeiger: &BTreeMap<String, Zeiger>, absagen: &mut Absagen) {
-    match &e.art {
-        ExprArt::Ort(o) => liest(o, span, zeiger, absagen),
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => liest_expr(x, span, zeiger, absagen),
-        ExprArt::Binaer(_, a, b) => {
-            liest_expr(a, span, zeiger, absagen);
-            liest_expr(b, span, zeiger, absagen);
-        }
-        ExprArt::Ruf(r) => {
-            for a in &r.argumente {
-                liest_expr(a, span, zeiger, absagen);
-            }
-        }
-        _ => {}
+    for o in crate::alle_orte(e) {
+        liest(o, span, zeiger, absagen);
     }
 }
