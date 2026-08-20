@@ -1153,6 +1153,32 @@ Invariants carry `cost O(…)` and `runs online | offline` (stock): `online` run
 mutation path and must fit into its `costs`; `offline` is diagnostics and runs in the check
 harness.
 
+##### 10.2.1 `breaking` is not a write right — the answer, stated (2026-08-20)
+
+**`breaking I { … }` names the region in which invariant `I` rests** (§7). The question the
+folder carried open was what that does to a carrier whose field says `by ops`, and the booking
+answered it from reading the code: *a `breaking` opens the carrier again, instead of being a
+compile error.* **Measured, it is the other way round.**
+
+| | |
+|---|---|
+| a hand mutation inside a `breaking` block, table with `ops` | **`D001`** — the same compile error as outside it |
+| the same on a field with `by ops` | **`D002` as well** — both bolts hold |
+| what `breaking` *does* change | the **measurement**: the carrier drops out of the count *„K holds"* |
+
+The descent is the reason: the K condition reads every sub-block of a statement, and a `breaking`
+block is one. **What `breaking` moves is the K condition of the measurement protocol** — *„it
+holds only if ALL mutations of the carrier are generated"* — and a region in which a statement
+rests is exactly the region the argument *„the generator shows it once"* does not cover.
+
+> **Two questions the folder had pulled together.** `breaking` says *„a statement rests here"*;
+> `by ops` says *„this field belongs to the generated operations"*. If the first were a permission
+> for the second, `by ops` would be a suggestion with a back door — and the whole K condition
+> would rest on a clause anyone can step around by naming an invariant.
+
+*Site: `beispiele/gift/226-breaking-oeffnet-den-traeger-nicht.gab`. Until that file, `breaking`
+had **zero** corpus sites — a sentence about a construct at which nothing ever fell is a guess.*
+
 #### 10.3 `device` (stock)
 
 `class r|w|rw|w1c|rc`, `fields` with bit ranges, `bank … at expr stride … count …` (M1-bounded),
@@ -1183,6 +1209,20 @@ lockstmt = "locks" [ "shared" ] place block ;
 `rank`: taking demands a strictly smaller rank (stock). `held` is the declared hold time in ops;
 every `locks` block is checked against it (`K002`). Without `held` the lock is not takeable in
 service loops (§9.3).
+
+**And `constexpr` in that grammar line is now enforced (`K010`, 2026-08-20).** The word stood
+there from the day the field existed and the parser took any expression — *a grammar promise in a
+comment is not one*. Measured before the rule: `held <= 40 * eintraege ops` over a block holding
+the lock for five operations gave **0 errors**, because a bound that is not constant fell out of
+the pass's map, and with the map fell `K002`. *A promise that switches off the guardian it was
+meant to feed is more expensive than none.*
+
+> **The cost class tolerates symbols, the lock class does not, and that is not a convenience.**
+> `costs <= 40 * n` is compared at the **smallest** assignment — there the promise is smallest and
+> must hold exactly there (§7). `held` is a **latency** statement: how long another core waits at
+> most. Latency lives at the **largest** assignment, and a symbol does not have one. A symbolic
+> `held` is not a bound, it is a lock held for an unbounded time — and `rank`/`held`/`K002` are
+> empty behind it.
 
 ##### 11.2.1 `locks shared` — the shared taking
 

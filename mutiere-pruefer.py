@@ -717,6 +717,15 @@ MUTATIONEN = [
         "K002 -- ein `locks`-Block darf seine `held`-Zusage ueberschreiten",
     ),
     Mutation(
+        "haltezeit-darf-symbolisch-sein",
+        "kosten.rs",
+        "                    None => absagen.schiebe(haltezeit_ist_keine_zahl(l, wort, h.span)),",
+        "                    None => {}",
+        "K010 -- eine `held`-Zusage darf wieder ein Symbol sein, faellt damit aus der Karte "
+        "und schaltet `K002` still ab. Genau der Zustand vom 2026-08-20: 0 Fehler ueber "
+        "einer unbewachten Sperre",
+    ),
+    Mutation(
         "traversierung-kostenlos",
         "kosten.rs",
         '                (Kosten::Zahl(rumpf), Some(n)) => Kosten::Zahl(rumpf).mal(n, Some(t.span)),',
