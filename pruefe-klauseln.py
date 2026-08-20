@@ -57,7 +57,11 @@ from pathlib import Path
 W = Path(__file__).resolve().parent
 AST = W / "crates/gabbro-syntax/src/ast.rs"
 PRUEFER = W / "crates/gabbro-check/src"
-TRAGEND_DATEIEN = {"emit.rs", "zeugnis.rs"}
+# **`zeremonie.rs` gehoert hierher und nicht zu den Paessen** (2026-08-20). Es BERICHTET
+# ueber Klauseln, es prueft keine -- stuende es im anderen Lager, waere jede Klausel, die nur
+# das Zeremonieregister anfasst, als „von einem Pass gelesen" gebucht. *Genau die Bewegung,
+# gegen die dieser Waechter gebaut ist.*
+TRAGEND_DATEIEN = {"emit.rs", "zeugnis.rs", "zeremonie.rs"}
 
 # **Die bekannten Fundstellen -- und jede mit dem Satz, warum sie offen ist.**
 #

@@ -106,6 +106,26 @@ divergent fn run(startwert : u64) -> never
     -- `continue`; SYNTAX.md fuehrt das selbst als offenen Punkt (:603) und vermutet, es sei
     -- versehentlich. Es ist der Unterschied zwischen „D0 faellt durch Konstruktion" und
     -- „die Dienstschleife ist nicht schreibbar".
+    --
+    -- **KORREKTUR 2026-08-20 (Stufe 2) -- der Absatz darueber ist der WORTLAUT DES
+    -- AUSSCHNITTS vom 2026-08-14 und steht deshalb unangetastet da. Er stimmt nicht mehr:**
+    --
+    --   `leave <marke>` GIBT es. `SYNTAX.md`:658 fuehrt `leavestmt`, der Parser liest es,
+    --   `gabbro pruefe` gibt darueber **0 Fehler**, und der Erzeuger senkt es zu
+    --   `goto <marke>_ende;` mit gesetzter Marke ab -- nachgerechnet an einer Handprobe.
+    --
+    -- **«B11» schrumpft damit von „die Dienstschleife ist nicht schreibbar" auf „ihr
+    -- Austritt ist unbenannt".** Was fehlt, ist nicht der Ausgang, sondern ein Ausgang, der
+    -- einen GRUND traegt: die Vorlage schrieb `leaves ServiceExit` / `leave EndpointGone`,
+    -- und `leaves` heisst in Gabbro etwas anderes -- die LINEAREN WERTE, die den Bereich
+    -- verlassen (`SPRACHE.md`:730), nicht die Ausgaenge.
+    --
+    -- **Und der eigentliche Befund ist, WIE der veraltete Satz hierher kam:** `TODO.md`
+    -- fuehrte schon am 2026-08-20, der zweite Grund der alten Weigerung sei *„zu dem
+    -- Zeitpunkt laengst nicht mehr wahr"*. Diese Datei entstand am selben Tag -- und trug
+    -- den Wortlaut des eingefrorenen Berichts vom 2026-08-14 mit. *Ein Korpus, der einen
+    -- Bericht NACHBILDET, erbt dessen Alter mit; ohne einen Blick auf den Gegenstand
+    -- vervielfaeltigt er ihn.*
     forever dienst
         per_pass bounded MAX_POLL ops
         on_exceeded watchdog_schlug_an
@@ -130,7 +150,9 @@ divergent fn run(startwert : u64) -> never
             Scan  => { serve_scan(EP, transport, pool); }
             Stop  => {
                 reply4(EP, Status::Ok, 0, 0, 0);
-                -- «B11» hier stuende `leave Stopped;`. Ohne Ausgang bleibt nur `exit()` —
+                -- «B11» hier stuende `leave Stopped;`. **Den Ausgang selbst gibt es**
+                -- (`leave dienst;`, siehe die Korrektur oben); was fehlt, ist der
+                -- GRUND an ihm. Ohne einen bleibt hier `exit()` —
                 -- also der Sprung aus der ganzen Funktion, und die Aufraeumzusage der
                 -- Funktion wandert an zwei Stellen. Das ist woertlich die Klasse, die C8
                 -- bezahlt hat: ein neuer Abweispfad erbt die Aufraeumpflicht des alten nicht.

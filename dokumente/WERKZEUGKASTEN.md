@@ -646,3 +646,38 @@ Nutzbarkeitsinstrument aus Stufe 2 (`gabbro zeremonie`) misst **ableitbar** gege
 — und das ist derselbe Schnitt: was aus einer Deklaration abzulesen ist, gegen das, was
 nirgends sonst steht. *Wer ihn dort nicht zieht, misst die Menge aller Klauseln und drängt
 gegen die Zusage der Sprache.*
+
+---
+
+## W20 — Eine Kennzahl, die zum Ziel werden kann, trägt ihre Kalibrierung **im Werkzeug**
+
+**W19 sagt, woran man den Fehler erkennt; W20 sagt, was man dagegen baut.**
+
+Ein Nutzbarkeitsmaß wird sofort zum Optimierungsziel. Fällt es unkalibriert, fällt als erstes
+das Billigste — und das Billigste ist hier `effects`, `costs`, die Paarungsklauseln. *Genau
+der Gegenstand der Sprache.* Eine Kalibrierung in einer Fußnote schützt davor nicht: sie wird
+nicht mitgelesen, wenn die Zahl zitiert wird.
+
+**Die Bauform: zwei Achsen, und sie stehen nebeneinander in derselben Ausgabe.**
+
+```text
+ACHSE 1, gemessen    steht diese Tatsache ein ZWEITES Mal in dieser Einheit?
+                     -> ableitbar / redundant / tragend
+ACHSE 2, erklärt     darf die Zahl sinken? -- je Regel ein Ja/Nein MIT GRUND
+```
+
+`gabbro zeremonie --tafel` druckt beide. Ein Waechter liest die Tafel aus dem Werkzeug statt
+sie nachzuschreiben (W7) und **verlangt je Regel einen Grund**: ein Nein ohne Satz wäre ein
+Machtwort, ein Ja ohne Satz eine Einladung.
+
+> **Erst die Trennung erlaubt den Fall, auf den es ankommt: `ableitbar` UND „darf nicht
+> sinken".** `A4` ist so ein Fall — eine Wirkungszeile, die ein Gerufener ohnehin erklärt.
+> Sie *ist* ableitbar; sie einfach zu streichen machte `E008` rückgängig. Mit einer Achse
+> hätte man sich zwischen „nicht messen" und „zum Rückstand erklären" entscheiden müssen, und
+> beides wäre falsch gewesen.
+
+**Und die Sprechprobe wandert von den Mustern auf die Regeln.** Der Korpus meldete beim ersten
+Lauf **null** redundante Stellen — ein sauberer Korpus und ein blindes Werkzeug sehen von
+außen gleich aus (W17). Deshalb: *eine Regel der Tafel, die nirgends einen Treffer hat, ist
+selbst ein Befund*, und was der Korpus nicht auslöst, löst eine absichtlich schlecht
+geschriebene Probe aus.

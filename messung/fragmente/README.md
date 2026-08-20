@@ -53,4 +53,15 @@ $ ./zaehle-fragmente.py
 
 > **Dieselbe Gestalt wie «B9» bei `fnptr`:** eine Form, die man deklarieren und nicht herstellen kann. Erst der Erzeuger, dann der Vertrag.
 
+**4. Nachgetragen am 2026-08-20 (Stufe 2): «B11» ist veraltet, und die Korrektur steht im
+Kopf von F5.** `forever` hat sehr wohl einen Ausgang — `leave <marke>` steht in der Grammatik
+(`SYNTAX.md`:658), prüft mit 0 Fehlern und senkt zu `goto marke_ende;` ab. Was fehlt, ist ein
+Ausgang, der einen **Grund** trägt; `leaves` heißt in Gabbro etwas anderes (die linearen Werte,
+die den Bereich verlassen). *«B11» schrumpft von „die Dienstschleife ist nicht schreibbar" auf
+„ihr Austritt ist unbenannt".*
+
+> **Der Wortlaut des Ausschnitts bleibt trotzdem stehen**, und die Korrektur steht daneben mit
+> Datum. Ein Ausschnitt vom 2026-08-14 ist ein Bericht von diesem Tag — ihn zu überschreiben
+> hieße, den Maßstab zu verschieben statt die Pflicht zu schließen.
+
 **3. Und eine Zeile, die ich selbst ergänzt habe, senkt nicht ab:** `static irq : IrqMarke = IrqMarke(…)` in F6 — ein `static` eines Verbunds mit gewöhnlichem Anfangswert. *Das steht hier, statt die Zeile wegzulassen.*

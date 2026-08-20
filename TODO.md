@@ -95,7 +95,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./pruefe-zahlen.py`** | das Register der Befehle. **12 Kennzahlen mit Befehl** — und es zählt, was es *nicht* bewacht: **156 fettgedruckte Zahlen in Tabellenzellen ohne einen**. Sprechprobe über alle zwölf, in beide Richtungen |
+| **`./pruefe-zahlen.py`** | das Register der Befehle. **20 Kennzahlen mit Befehl** — und es zählt, was es *nicht* bewacht: **156 fettgedruckte Zahlen in Tabellenzellen ohne einen**. Sprechprobe über alle, in beide Richtungen; ein Fixpunktriegel weist jeden Eintrag ab, der das Register selbst nennt (W18) |
 | **`./pruefe-waechter.py`** | der Wächter über den Wächtern. Drei Forderungen, **23 von 23 Instrumenten tragen alle drei** (beim ersten Lauf: 11). `--lauf` führt die leichten wirklich aus, mit Frist; die fünf schweren stehen mit Grund daneben |
 
 **Sechs Befunde beim ersten Lauf, keiner davon gesucht:** `pruefe-beweise.sh` kündigte eine
@@ -131,9 +131,11 @@ das Risiko schneller als die Zahl.* Die übrigen Punkte stehen einzeln darunter.
       **Beide Spalten sind gestrichen** — sie waren ein drittes Register neben dem Handgang
       und dem Befehl, und `./zaehle-pflichten.py --haengend` druckt sie jetzt je Fragment ab.
       *Was offen bleibt, ist der Rest der Tafel:* `total`, `K` und `L` kommen aus dem
-      Handgang, und der ist eine Auszählung ohne Befehl. **`pruefe-zahlen.py` führt heute 11
-      Kennzahlen mit Befehl und zählt 173 fettgedruckte Zahlen ohne einen** — die drei hier
-      sind darunter.
+      Handgang, und der ist eine Auszählung ohne Befehl. **`pruefe-zahlen.py` führt heute 20
+      Kennzahlen mit Befehl und zählt 156 fettgedruckte Zahlen ohne einen** — die drei hier
+      sind darunter. *Und die beiden Zahlen dieses Satzes hält seit dem 2026-08-20
+      `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen, der
+      Fixpunktriegel verbietet es mechanisch (W18) — also tut es ein anderes Werkzeug.*
 - [ ] **Zwei Blicke auf dieselbe Karte gingen auseinander, und nur einer hatte einen Test**
       *(gefunden 2026-08-17 beim Bauen von `const fn`, weil eine Giftprobe nicht fiel, die
       fallen musste -- R11)*. `typ_von_ort` schlug den globalen Traeger modulbewusst nach
@@ -562,57 +564,84 @@ gelesen. Was zwei saubere Fragmente noch aufhält, sind **zwei benannte Weigerun
 
 # STUFE 2 — NUTZBARKEIT BEKOMMT IHR ERSTES INSTRUMENT
 
-**Ziel 3 hat als einziges keine Zahl.** Ohne sie ist „möglichst gut nutzbar" eine Meinung — und
-„keine Klempnerei beim Endnutzer" ist eine Nutzbarkeitsaussage.
+**Ziel 3 hat als einziges keine Zahl gehabt.** Ohne sie ist „möglichst gut nutzbar" eine
+Meinung — und „keine Klempnerei beim Endnutzer" ist eine Nutzbarkeitsaussage.
 
-**`gabbro zeremonie`**, je Datei. Und die Kalibrierung gehört **in** das Instrument, sonst wird
-das erste Nutzbarkeitsmaß sofort zum Optimierungsziel:
+**AUSGEFÜHRT am 2026-08-20.** `gabbro zeremonie` zählt jede Klausel und jede Annotation, und
+die Kalibrierung steht **im Werkzeug** (`--tafel`), nicht in einer Fußnote:
 
-| Spalte | | darf sie sinken? |
+| | | |
 |---|---|---|
-| **ableitbar** | der Typ steht in der Deklaration daneben — `let i = d.ST.IDX` | **ja, das ist echte Zeremonie** |
-| **redundant** | dieselbe Wahrheit zweimal deklariert | **ja** |
-| **tragend** | eine Aussage, die nirgends sonst steht — `effects`, `costs`, die Paarungsklauseln | **NEIN** |
+| **Achse 1** | *gemessen* | steht diese Tatsache ein **zweites Mal** in dieser Einheit? — ableitbar / redundant / tragend |
+| **Achse 2** | *erklärt* | darf die Zahl sinken? — je Regel ein Ja/Nein **mit Grund**, und ein Wächter verlangt den Grund |
 
-> **Ohne die dritte Spalte misst „Nutzbarkeit" die Menge aller Klauseln und drängt langfristig
-> gegen die Zusage der Sprache.** `effects` und `costs` sind nicht Zeremonie, sie sind der
-> *Gegenstand*; ihre Zahl fallen sehen zu wollen wäre, wie die Schablonenfläche als Rückstand zu
-> buchen. **Die dritte Spalte ist der Preis, den die Sprache bewusst nimmt**, und sie gehört
-> ausgewiesen, damit niemand sie später für Rückstand hält.
+```
+$ ./zaehle-zeremonie.py                    → messung/ZEREMONIE.md
+Lehrkorpus     5.8 % dürfen sinken   (882 Stellen auf 5591 Zeilen, Dichte 15,8/100 Z.)
+echter Code   12.8 % dürfen sinken   (109 Stellen auf  519 Zeilen, Dichte 21,0/100 Z.)
+```
 
-Und dieselbe Doktrinzeile wie bei den drei anderen Zählern: *was 0 Befunde hat, ist nicht nutzbar,
-sondern ungemessen.*
+> **Der eigentliche Befund ist der Vergleich.** Im echten Code ist der ableitbare Anteil mehr
+> als doppelt so hoch, und er besteht **ausschließlich aus `A4`** — der Wirkungszeile, die ein
+> Gerufener ohnehin erklärt. *Ein Beispiel ruft wenig; ein Treiber ruft ständig.* Die Beispiele
+> unterschätzen, was ein Nutzer schreibt.
 
-### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
+**Erst die zwei Achsen erlauben den Fall, auf den es ankommt: `ableitbar` UND „darf nicht
+sinken".** Mit einer Achse hätte man zwischen „nicht messen" und „zum Rückstand erklären"
+wählen müssen, und beides wäre falsch gewesen (**W20**).
 
-- [ ] **Der Erzeuger raet den Typ eines `let` nicht, obwohl er ihn ablesen koennte**
-      *(gesehen 2026-08-17 an `beispiele/21`)*. `let c : Completion = fertig(k, 7);` braucht
-      die Annotation, weil `ctyp` nur die geschriebene Form kennt -- die Signatur des
-      Gerufenen stuende daneben. **Die Weigerung (`C001`) ist die sichere Richtung**, aber sie
-      kostet an jeder Bindung eines zusammengesetzten Werts eine Zeile. *Entweder aus der
-      Signatur ablesen (kein Raten, ein Nachschlagen) oder die Zeile als Absicht aufschreiben.*
+**Und die Sprechprobe wandert von den Mustern auf die Regeln.** Der Korpus meldete **null**
+redundante Stellen — ein sauberer Korpus und ein blindes Werkzeug sehen von außen gleich aus
+(W17). Also: *eine Regel der Tafel ohne Treffer ist selbst ein Befund*; 20 Regeln, 14 vom
+Korpus, 6 von einer absichtlich schlecht geschriebenen Probe, **keine stumm**.
+
+## Die vier Punkte dieser Stufe — zwei waren beim Nachsehen schon zu
+
+| | |
+|---|---|
+| **Der Erzeuger liest den `let`-Typ ab** | war **gebaut**; `wert_ctyp` fragt die Signatur des Gerufenen seit dem 2026-08-20. *Und das Weglassen der Annotation in `beispiele/21` deckte auf, dass sie **zwei Leser** hatte und nur einer sie las: `verbundlokale` kannte `c` nicht als Verbund, das erzeugte C wurde `c->len`, `gabbro emit` gab 0 zurück und `cc` lehnte ab.* Geschlossen |
+| **`S006` schweigt bei `on_exceeded <reason>`** | war **überholt**; `S007` — der dritte Zustand, gebaut am 2026-08-19 — meldet es. Nachgerechnet an einer Handprobe |
+| **Fehlerweitergabe: `?` oder nicht** | **entschieden: kein `?`.** Gemessen statt argumentiert — 21 `let … else`-Stellen, **15 verschiedene** Rümpfe, 26 von 5569 Korpuszeilen (0,5 %). Die sechs, die wie Kopien aussehen, unterscheiden sich genau in der Fehlerkennung, *und die ist das Einzige, was `?` löschen würde* |
+| **Folgefehler nach einer Leserabsage** | **entschieden: nicht anhalten, aber sagen.** `gabbro pruefe` druckt seit heute, wie viele spätere Meldungen Folgen sein können. *Anhalten hieße, ein `P001` im dritten Item verdeckt einen echten `M101` im ersten — Rauschen gegen Schweigen getauscht* |
+
+*Und `on_exceeded` behält `-> never`:* der Wachhund ist die Stelle, an der die Schranke ihre
+Wirklichkeit berührt; kehrte er zurück, wäre sie eine Zahl ohne Folge. Der Fehlerkanal
+`-> T or R` ist eine **Rückgabe**konvention, eine überschrittene Schranke keine Rückgabe.
+**Der Grund gehört an den Austritt** — und der ist der offene Punkt unten in Stufe 4.
+
+### Was diese Stufe offen lässt
+
+- [ ] **Das Zeremonieregister misst eine ABGEGRENZTE Grundgesamtheit, und die Grenze ist eine
+      Entscheidung** *(2026-08-20)*. Draußen bleiben `module`/`use`/`pub`, `section`/`arch`/
+      `when`, die Fälle eines `reason`, `entrust`/`boot`/`entry`, die `by`-Beweishinweise und
+      die Typdeklarationen selbst — je mit Grund in `gabbro zeremonie --tafel`. **Was ein
+      Werkzeug nicht misst, muss es sagen**, und gesagt ist es; ob die Grenze richtig liegt,
+      entscheidet erst ein zweiter Korpus. *Die Zahl ist damit eine UNTERE Schranke der
+      Zeremonie, nie eine obere* (W10).
+
+- [ ] **`redundant = 0` über beiden Korpora ist gemessen und trotzdem dünn** *(2026-08-20)*.
+      Die vier R-Regeln feuern **nur an der Probe**, an keiner einzigen echten Stelle. Das ist
+      der ehrlichste Zustand, den ein Zähler haben kann — *und er heisst, dass die Spalte über
+      diesen 55 Dateien nichts unterscheidet.* **Ihr Wert entscheidet sich am zweiten Korpus**,
+      dort wo Code steht, den beim Bauen niemand angesehen hat.
 
 ### Syntax — open decisions (details in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md)) *(Teil)*
 
-- [ ] **Error propagation:** without `?` every call becomes three lines, with `?` there is hidden
-      control flow. Both contradict a design rule.
-
-- [ ] **`on_exceeded <reason>` ist ein gemessener Bedarf, den die Sprache nicht hat**
-      *(2026-08-19)*. `FRAGMENTE.md`:902 schreibt `on_exceeded DeviceSilent`. Der Erzeuger:
-      *„a `reason` value would need an error-return convention, and that is not decided."*
-      **`S006` schweigt dort**, weil es „Reason-Variante" nicht von „unbekannter Name"
-      unterscheiden kann (W10) -- *nur der Erzeuger faellt.* Erst die Entscheidung ueber die
-      Fehlerrueckgabe, dann die Regel.
+- [ ] **`ensures` am rumpflosen `extern fn` bindet niemanden, und `-> T or R` hat daran nichts
+      geändert** *(2026-08-20, gesehen beim Zeremoniemaß)*. `T3` zählt 47 Vertragszeilen im
+      Lehrkorpus und 12 im echten Code als **tragend** — das ist richtig, solange sie einen
+      Leser haben. **48 fremde Rümpfe im Korpus, und die Verengung aus ihrem `ensures` ist
+      Glaube** (`pflichten::fremde_vertraege`). *Eine Zeile, die als tragend gezählt wird und
+      niemanden bindet, ist die teuerste Sorte Zeremonie* — sie gehört zu Stufe 6.
 
 ### Aus «H2» *(ausgefuehrt 2026-08-19, `H = 17 → 15`)* — der Rest, den der Lauf hinterliess *(Teil)*
 
-- [ ] **Gabbro unterdrueckt FOLGEFEHLER nicht, und niemand hat das je aufgeschrieben**
-      *(gefunden 2026-08-19 an `M112`)*. Der Ausschnitt `SYNTAX.md`:533 scheitert am Parser
-      («B8»: ein Ruf in einem `place`), damit wird seine `spec fn` nie erklaert, und
-      `maintains` meldet einen Namen, den es sehr wohl gibt. **Nach einem `P001` laufen alle
-      Paesse weiter, und was sie melden, kann Rauschen sein.** *Entweder die Paesse
-      anhalten, oder die Entscheidung aufschreiben -- heute steht sie nur in einer
-      Testliste.*
+- [ ] **Gabbro unterdrueckt Folgefehler nicht -- und seit dem 2026-08-20 SAGT es das**
+      *(gefunden 2026-08-19 an `M112`)*. Die Entscheidung ist gefallen (nicht anhalten,
+      sondern die Zahl nennen). **Was offen bleibt, ist die Genauigkeit der Zahl:** gezaehlt
+      wird ueber die QUELLPOSITION -- jede Meldung hinter der ersten Leserabsage gilt als
+      moegliche Folge. *Das sieht mehr Folgen als da sind, nie weniger* (W10), und eine
+      schaerfere Zaehlung braeuchte den Bezug von Meldung auf das Item, das nicht las.
 
 ---
 
@@ -699,6 +728,21 @@ Loch, das ein Programm oder ein Messwerkzeug gefunden hat, nicht ein Entwurf.
       **Die Form ist schreibbar und hat keinen Leser** — dieselbe Gestalt wie `ensures` am
       rumpflosen `extern fn` und wie `RegDecl::requires`. Gefunden an drei der zehn
       vervollständigten Fragmente, an keiner einzigen Korpusdatei.
+- [ ] **«B11» schrumpft: `forever` HAT einen Ausgang, aber der Ausgang trägt keinen GRUND**
+      *(nachgerechnet 2026-08-20)*. `leave <marke>` steht in der Grammatik
+      ([`dokumente/SYNTAX.md`](dokumente/SYNTAX.md):658), prüft mit **0 Fehlern** und senkt zu
+      `goto marke_ende;` mit gesetzter Marke ab. **Was fehlt, ist ein Austritt mit Namen:** die
+      Vorlage schreibt `leaves ServiceExit` / `leave EndpointGone`, und `leaves` heißt in
+      Gabbro etwas anderes — die **linearen Werte**, die den Bereich verlassen
+      ([`dokumente/SPRACHE.md`](dokumente/SPRACHE.md):730). *D0 war genau das: dass der
+      Austritt der Dienstschleife keinen Namen trug, hat zehn Tage gekostet* — und die halbe
+      Antwort steht seit heute fest, die andere Hälfte nicht.
+      **Und der zweite Befund ist, wie der veraltete Satz nach `messung/fragmente/F05.gab`
+      kam:** dieser TODO wusste es längst; die Datei entstand am selben Tag und trug den
+      Wortlaut des *eingefrorenen* Berichts vom 2026-08-14 mit. *Ein Korpus, der einen Bericht
+      nachbildet, vervielfältigt sein Alter, wenn niemand auf den Gegenstand sieht.* Die
+      Korrektur steht mit Datum daneben, der Wortlaut des Ausschnitts unangetastet.
+
 - [ ] **Ein `static` eines Verbunds mit gewöhnlichem Anfangswert senkt nicht ab**
       *(2026-08-20)*. `static irq : IrqMarke = IrqMarke(tiefe_max: 0, n: 1);` — der Erzeuger
       sagt `static` of a `tagged` type or a record initialised with a plain … ab. *Die Zeile
@@ -1595,6 +1639,18 @@ Einlöser — die Bewegung, gegen die K100s zweites Tor steht.*
 
 Dazu die **ABI** (Bibliotheken, die sich mischen lassen) und die **Generizität** — ohne sie
 braucht jede Tabelle ihr eigenes `traverse`.
+
+- [ ] **Die Wirkungsliste des Rufers RECHNEN statt verlangen — der größte Einzelposten des
+      Nutzbarkeitsmaßes** *(gemessen 2026-08-20, `A4`)*. **Im echten Code sind 14 von 14
+      ableitbaren Stellen Wirkungszeilen, die ein Gerufener ohnehin erklärt**; im Lehrkorpus
+      47 von 51. `aufrufgraph::huelle_der_gerufenen` trägt sie schon über den Aufrufrand,
+      samt Abbildung auf die Argumente — *die Rechnung existiert, nur verlangt der Prüfer die
+      Zeile trotzdem.*
+      **Und sie darf nur auf EINE Weise fallen:** die Liste wird gerechnet und **gedruckt**
+      (`gabbro abi`), nicht weggelassen. Sie ersatzlos zu streichen machte `E008` rückgängig —
+      den Posten, der `effects` am 2026-08-15 erst kompositional gemacht hat, *als eine
+      `pure`-Zusage noch an der ersten Aufrufgrenze endete.* **Ohne den Druck wandert eine
+      neue Wirkung stillschweigend nach oben durch, und das ist die verbotene Richtung.**
 
 - [ ] **Ein `reason`-Wert hat KEINEN ERZEUGER — und das ist «B9» ein zweites Mal**
       *(gemessen 2026-08-20 am vervollständigten Fragmentkorpus)*. `primary`

@@ -273,7 +273,24 @@ def heutige_zahlen():
     terme = re.search(r"Wortschatz: (\d+) EBNF-Terminale, (\d+) Tabellenwoerter", aus)
     r_heute = regeln.group(1) if regeln else "?"
     t_heute = terme.group(1) if terme else "?"
+    # **Die Reichweite des Zahlenregisters kann das Zahlenregister NICHT bewachen** (W18):
+    # ein Eintrag, der `pruefe-zahlen.py` selbst nennt, waere ein Fixpunkt, und der
+    # Fixpunktriegel dort verbietet ihn mechanisch. **Der Ausweg ist ein ANDERES Werkzeug**,
+    # und das ist dieses hier.
+    #
+    # *Gefunden am 2026-08-20: `TODO.md` fuehrte „12 Kennzahlen mit Befehl" und „11
+    # Kennzahlen … 173 fettgedruckte Zahlen" -- beide Zahlen standen seit Tagen still,
+    # waehrend das Register auf 20 gewachsen war.* Genau die Klasse, gegen die dieser
+    # Waechter gebaut ist, an der einen Zahl, die er nicht ansah.
+    z = subprocess.run(["./pruefe-zahlen.py"], cwd=WURZEL, capture_output=True, text=True,
+                       timeout=FRIST)
+    m = re.search(r"(\d+) Kennzahlen mit Befehl, (\d+) fettgedruckte", z.stdout)
+    k_heute, f_heute = (m.group(1), m.group(2)) if m else ("?", "?")
     return [
+        (r"\*\*(\d+) Kennzahlen mit Befehl\*\*", k_heute, "Kennzahlen mit Befehl"),
+        (r"heute (\d+)\s*\n?\s*Kennzahlen mit Befehl", k_heute, "Kennzahlen mit Befehl (Prosa)"),
+        (r"\*\*(\d+) fettgedruckte Zahlen in Tabellenzellen ohne einen\*\*", f_heute,
+         "unbewachte fettgedruckte Zahlen"),
         (r"\*\*(\d+) (?:Regeln, 0 offen|rules, 0 open)", r_heute, "EBNF-Regeln"),
         (r"(\d+) (?:Terminale gegen|terminals against)", t_heute, "EBNF-Terminale"),
         (r"\((?:heute|today) (\d+) / \d+\)", r_heute, "EBNF-Regeln (heute-Klammer)"),
