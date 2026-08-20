@@ -1,0 +1,191 @@
+-- 39 -- Der Auftragsdienst. **Diese Datei ist von einem Programm nach innen geschrieben.**
+--
+-- Der uebrige Korpus ist von der Sprache nach aussen geschrieben -- eine Datei je Konstrukt,
+-- jedes Konstrukt einmal. Die Befunde des 2026-08-20 sassen aber nicht an den Konstrukten,
+-- sondern an ihren **Kombinationen**: ein `return` in einer Traversierung, ein `match` unter
+-- einer Sperre, ein `next`, das aus zwei Schleifen heraus die aeussere meint. *Eine Form, die
+-- nur an einer Stelle steht, wird nur an einer Stelle geprueft.*
+--
+-- Der Dienst hier nimmt eine Warteschlange entgegen, sucht den dringendsten Auftrag, traegt
+-- ihn aus und meldet die Runde weiter. **Er tut etwas** -- die Verschachtelung faellt dabei
+-- an, statt hingestellt zu werden.
+
+module beispiel::auftragsdienst {
+
+const NAUFTRAEGE : u32 = 64;
+const BLOCK      : u32 = 128;
+
+type Prio = u32 in 0 .. 7;
+type Rest = u32 in 0 .. 4096;
+type Zahl = u32 in 0 .. 65535;
+
+tagged type Art = { Lesen(Rest), Schreiben(Rest), Ruhe };
+
+table Auftraege count NAUFTRAEGE {
+    -- Ein Auftrag kann zu einem Buendel gehoeren, und das Buendel ist sein Elter. **Nur
+    -- `parent`, und die Teilmenge ist eine Aussage:** dieser Dienst steigt nie ab, also ist
+    -- `descendants of Auftraege` danach eine benannte Weigerung und kein fehlendes Stueck.
+    tree { parent buendel }
+
+    slot {
+        belegt  : bool,
+        art     : Art,
+        prio    : Prio,
+        rest    : Rest,
+        buendel : option index into Auftraege,
+    }
+
+    invariant rest_bleibt_im_bereich cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s].rest <= 4096;
+}
+
+lock WARTESCHLANGE protects { auftragsliste } rank 0 held <= 20000 ops;
+
+-- Die Rundenmeldung: `bericht` ist die Nutzlast, `RUNDE_FERTIG` das Tor davor.
+atomic RUNDE_FERTIG : bool release;
+
+static mut bericht  : Zahl = 0;
+static mut erledigt : Zahl = 0;
+
+extern fn wachhund_schlug_an() -> never effects { diverges } costs <= 1 ops;
+extern fn abschaltung_angefordert() -> bool effects { reads schalter } costs <= 2 ops;
+extern fn block_uebertragen(n : Rest) -> Rest effects { writes geraet } costs <= 64 ops;
+
+assume zeitgeber_tickt
+    "Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund."
+    falsifier sonde_zeitgeber_tickt;
+
+-- ---------------------------------------------------------------------------------------
+-- 1. Die Suche. **`let` und `match` liegen IM Schleifenrumpf**, nicht darueber -- und bis
+--    heute band keine Traversierung des Korpus in ihrem Rumpf einen Namen.
+-- ---------------------------------------------------------------------------------------
+
+impl fn erster_dringender(q : ptr<normal, r> Auftraege, schwelle : Prio)
+    -> option index into Auftraege
+    requires Held(WARTESCHLANGE)
+    effects  { reads q.slots, locks WARTESCHLANGE }
+    costs    <= 1000 ops
+{
+    traverse i over slots of q by unvisited
+        touches reads q.slots
+    {
+        let p = q.slots[i].prio;
+        -- Ein `tagged type` ist die eine Form, in der die Sprache eine GESCHLOSSENE
+        -- Fallunterscheidung sagt; `Ruhe` ist kein Auftrag und faellt deshalb durch.
+        match q.slots[i].art {
+            Lesen(n)     => { if p >= schwelle { return Some(i); } }
+            Schreiben(n) => { if p >= schwelle { return Some(i); } }
+            Ruhe         => { }
+        }
+    }
+    return None;
+}
+
+-- **Der erste Zeuge der Vorfahrenkette IST der Elter** -- ein Knoten ist kein Vorfahr von
+-- sich, also faengt die Kette beim Elter an. Genau darum steht das `return` hier im
+-- Schleifenrumpf und nicht in einem Zweig: der Rumpf entscheidet beim ersten Durchgang, und
+-- ist die Kette leer, faellt die Schleife durch auf das `None` darunter.
+impl fn buendel_von(q : ptr<normal, r> Auftraege, i : index into Auftraege)
+    -> option index into Auftraege
+    requires Held(WARTESCHLANGE)
+    effects  { reads q.slots, locks WARTESCHLANGE }
+    costs    <= 600 ops
+{
+    traverse v of i over ancestors of q.slots[i] by decreasing v {
+        return Some(v);
+    }
+    return None;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- 2. Ein Durchgang, der endet, wenn nichts mehr offen ist.
+--
+-- **Der Ausweg eines `let … else` steht auf der Hoehe des `let`**, nicht eine Stufe tiefer --
+-- deshalb ist `return erledigt;` hier eine Anweisung des Schleifenrumpfes und nicht eines
+-- Zweiges. Dieselbe Regel traegt den `narrow`-Ausweg darunter: `next runde;` meint die
+-- Schleife, in der das `narrow` steht.
+-- ---------------------------------------------------------------------------------------
+
+reason Leerlauf {
+    Nichts = 1 "keine offene Arbeit"
+    exhaustive
+}
+
+extern fn naechste_menge() -> Rest or Leerlauf
+    ensures result >= 1
+    effects { reads geraet };
+
+impl fn abarbeiten() -> Zahl
+    effects { reads erledigt, writes erledigt, writes geraet, reads geraet }
+{
+    forever runde
+        per_pass bounded 4096 ops
+        on_exceeded wachhund_schlug_an
+        effects  { reads erledigt, writes erledigt, writes geraet, reads geraet }
+        progress zeitgeber_tickt
+    {
+        let menge = naechste_menge() else (e) { return erledigt; }
+        -- Ist weniger als ein Block offen, lohnt der Weg zum Geraet nicht -- dann faengt
+        -- die naechste Runde an, ohne dass etwas uebertragen wird.
+        narrow menge to BLOCK .. 4096 else { next runde; }
+        let geschafft = block_uebertragen(menge);
+        if geschafft >= 1 {
+            erledigt = 1;
+        }
+    }
+    return erledigt;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- 3. Die Dienstschleife. **Die Sperre liegt IM Durchgang**, und unter ihr steht die ganze
+--    Arbeit an der Warteschlange: erst suchen, dann entscheiden, dann austragen.
+-- ---------------------------------------------------------------------------------------
+
+linear type Angemeldet;
+
+divergent fn dienst(q : ptr<normal, rw> Auftraege, marke : Angemeldet)
+    effects { diverges, reads q.slots, writes q.slots, locks WARTESCHLANGE,
+              reads schalter, writes bericht, reads bericht, publishes RUNDE_FERTIG }
+{
+    forever runde
+        per_pass bounded 60000 ops
+        on_exceeded wachhund_schlug_an
+        effects  { reads q.slots, writes q.slots, locks WARTESCHLANGE, reads schalter,
+                   writes bericht, reads bericht, publishes RUNDE_FERTIG }
+        progress zeitgeber_tickt
+        leaves   marke
+    {
+        locks WARTESCHLANGE {
+            match erster_dringender(q, 7) {
+                None    => { }
+                Some(i) => {
+                    -- Der Auftrag wird ausgetragen; sein Buendel bleibt stehen, denn ein
+                    -- Buendel ist erst leer, wenn sein letztes Kind fort ist.
+                    q.slots[i].belegt = false;
+                    q.slots[i].rest   = 0;
+                    bericht = 1;
+                }
+            }
+        }
+        -- Die Nutzlast steht an der Stelle, an der sie entsteht, mit den dort sichtbaren
+        -- Namen.
+        RUNDE_FERTIG = true publishes { bericht };
+        if abschaltung_angefordert() {
+            leave runde;
+        }
+    }
+}
+
+-- Die Gegenseite der Paarung: wer den Bericht liest, erwartet ihn ueber demselben Tor.
+impl fn bericht_lesen() -> Zahl
+    effects { reads RUNDE_FERTIG, reads bericht }
+    costs   <= 8 ops
+{
+    let fertig = RUNDE_FERTIG awaits { bericht };
+    if fertig {
+        return bericht;
+    }
+    return 0;
+}
+
+}

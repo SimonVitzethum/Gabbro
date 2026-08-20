@@ -1474,11 +1474,14 @@ MUTATIONEN = [
         "code",
     ),
     Mutation(
+        # **Umgezogen am 2026-08-20**: der Pfeil stand hart da, und eine bei NAMEN
+        # adressierte Tabelle ist kein Zeiger. Jetzt entscheidet `tabellenglobal`, und die
+        # Mutation dreht die Entscheidung um -- der Punkt kommt an den Zeiger.
         "traversierung-nimmt-den-punkt",
         "emit.rs",
-        "            let feld = format!(\"{}->slots\", ort(o, u, absagen));",
-        "            let feld = format!(\"{}.slots\", ort(o, u, absagen));",
-        "C-Absenkung -- die Domaene greift durch den Zeiger mit `.` statt `->`",
+        "            let feld = if u.tabellenglobal.contains(&o.basis.text) {",
+        "            let feld = if !u.tabellenglobal.contains(&o.basis.text) {",
+        "C-Absenkung -- die Domaene greift durch den Zeiger mit `.` statt `->` und umgekehrt",
         "code",
     ),
     Mutation(
@@ -1735,9 +1738,11 @@ MUTATIONEN = [
     Mutation(
         "markiertes-match-bekommt-einen-sammelzweig",
         "emit.rs",
-        '    aus.push_str(&format!("{e}}}\\n"));\n}\n\n/// Welchen `tagged type`',
-        '    aus.push_str(&format!("{e}default: break;\\n{e}}}\\n"));\n}\n\n'
-        "/// Welchen `tagged type`",
+        # **Der Anker ist am 2026-08-20 umgezogen** -- hinter dem `switch` steht jetzt der
+        # `__builtin_unreachable`-Zweig fuer den Fall, dass jeder Arm zurueckkehrt, und die
+        # alte Textstelle gibt es nicht mehr. `--anker` hat es gesagt, bevor der Lauf lief.
+        'aus.push_str(&format!("{e}}}\\n"));\n    // **Wenn JEDER Zweig zurueckkehrt',
+        'aus.push_str(&format!("{e}default: break;\\n{e}}}\\n"));\n    // **Wenn JEDER Zweig zurueckkehrt',
         "C-Absenkung -- der `switch` bekommt einen Sammelzweig und legt `-Wswitch` still, "
         "also den zweiten Leser von D005",
         "code",

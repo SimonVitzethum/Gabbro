@@ -4514,7 +4514,29 @@ fn traverse(
                 );
                 return;
             }
-            let feld = format!("{}->slots", ort(o, u, absagen));
+            // **Der Pfeil stand hart da, und eine bei NAMEN adressierte Tabelle ist kein
+            // Zeiger** (2026-08-20).
+            //
+            // `traverse i over slots of T` ueber einer Tabelle, die ihren eigenen Namen
+            // traegt, ergab
+            //
+            // ```c
+            // for (… sizeof(T_speicher->slots) …) { T_speicher.slots[i].a = false; }
+            // ```
+            //
+            // -- **Pfeil in der Kopfzeile, Punkt im Rumpf, in derselben Anweisung**, bei null
+            // Prueferfehlern. Der Rumpf geht durch `ort()` und weiss es; die Kopfzeile hat
+            // es hingeschrieben.
+            //
+            // > *Der Korpus traversiert `slots of` bisher ausschliesslich ueber Zeiger*
+            // > (`04`, `19`); wer bei Namen adressiert (`09`, `18`, `31`), benutzt
+            // > `descendants of`/`ancestors of` -- und die sind richtig. **Die Kombination
+            // > gab es nicht**, und `gabbro blindstellen` hat sie als Zelle gefuehrt.
+            let feld = if u.tabellenglobal.contains(&o.basis.text) {
+                format!("{}.slots", ort(o, u, absagen))
+            } else {
+                format!("{}->slots", ort(o, u, absagen))
+            };
             let v = &x.variable.text;
             aus.push_str(&format!(
                 "{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"

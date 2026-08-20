@@ -1,0 +1,79 @@
+-- erwartet: N027
+-- **Ein `can_fail`-Block ist eine PROBE, kein Programm.**
+--
+-- Ein `check` traegt keine `effects`-Liste, keine `costs`-Zusage und keine `locks`-
+-- Deklaration -- es ist kein Vertrag. Zehn der zwoelf Paesse laufen ueber
+-- `ItemArt::Funktion` und sehen diesen Rumpf nie; was hier steht, ist ungeprueft.
+--
+-- `gift/167` faengt die Zuweisung. **Die drei anderen Formen der Regel hatte bis heute
+-- keine Probe** -- gefunden ueber `gabbro blindstellen`, Tafel C: `locks`, `publishes` und
+-- `exchange` in der Stellung `can_fail` waren leer, im sauberen wie im Giftkorpus.
+module gift {
+
+type Zaehlerwert = u32 in 0 .. 65534;
+
+lock ZAEHLER protects { zaehlwerk } rank 0 held <= 100 ops;
+
+atomic TOR      : bool release;
+atomic ANFRAGEN : Zaehlerwert relaxed;
+
+static mut stand : Zaehlerwert = 0;
+
+extern fn zu_viel_streit() -> never effects { diverges } costs <= 1 ops;
+extern fn zaehlwerk_null() effects { writes zaehlwerk } costs <= 8 ops;
+
+-- Die Sperre wird auch RICHTIG genommen -- sonst faellt `H008` daneben, und eine Giftdatei
+-- mit einem zweiten Befund prueft zwei Dinge auf einmal.
+impl fn zaehlwerk_ruecksetzen()
+    effects { locks ZAEHLER, writes zaehlwerk }
+    costs   <= 24 ops
+{
+    locks ZAEHLER {
+        zaehlwerk_null();
+    }
+}
+
+impl fn abnahme()  effects { reads stand } costs <= 4 ops { return; }
+impl fn freigabe() effects { reads stand } costs <= 4 ops { return; }
+
+impl fn stand_lesen() -> Zaehlerwert
+    effects { reads TOR, reads stand }
+    costs   <= 8 ops
+{
+    let f = TOR awaits { stand };
+    if f {
+        return stand;
+    }
+    return 0;
+}
+
+check standprobe {
+    claim    "Der Stand bleibt unter seiner Schranke."
+    measures stand
+    gates    abnahme, freigabe
+    can_fail {
+        -- 1. Eine Sperre -- und niemand prueft ihren Rang, ihre Haltezeit oder ob sie
+        --    ueberhaupt eingeloest wird.
+        locks ZAEHLER {
+            return false;
+        }
+        -- 2. Eine Veroeffentlichung -- die Schreibhaelfte einer Paarung in einer Messung.
+        TOR = true publishes { stand };
+        -- 3. Und ein Tausch: eine Probe, die ihren eigenen Gegenstand hochzaehlt.
+        let alt = ANFRAGEN exchange update(v)
+            bounded 64 ops
+            on_exceeded zu_viel_streit
+        {
+            if v < 65534 {
+                return v + 1;
+            }
+            return v;
+        } publishes nothing;
+        return alt >= 1;
+    }
+    floor    stand >= 1
+    counterprobe "Ein kuenstlich hoher Stand muss die Pflicht fallen lassen."
+        expects sonde_hoher_stand
+}
+
+}

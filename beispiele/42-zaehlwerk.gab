@@ -1,0 +1,375 @@
+-- 42 -- Das Zaehlwerk: **Sperre, Lesebereich und Paarung -- jeweils IM Zweig.**
+--
+-- `beispiele/31` zeigt `observes` dreimal, jedes Mal als einzige Anweisung eines
+-- Funktionsrumpfes. `beispiele/05` zeigt `publishes`, `awaits` und `exchange` genauso: auf
+-- oberster Ebene, eine Zeile, fertig. **Nur steht ein Lesebereich in einem echten Programm
+-- nie dort:** er steht in dem Zweig, der wirklich liest, in dem Durchgang, der wirklich
+-- misst, und in dem Versuch, der wirklich wiederholt wird.
+--
+-- Diese Datei fuehrt ein Zaehlwerk ueber Konten: die Leseseite nimmt nichts, die
+-- Schreibseite hat ihre eigene Sperre, und der gemeldete Stand ist eine Paarung mit
+-- Nutzlast. **`leave` und `next` aus einem `locks`-Block heraus geben die Sperre frei** --
+-- das ist der Grund, warum sie hier stehen und nicht als Ziererei.
+
+module beispiel::zaehlwerk {
+
+const NKONTEN : u32 = 256;
+const VOLL    : u32 = 65534;
+
+type Zaehlerwert = u32 in 0 .. VOLL;
+type Kontonr     = u32 in 0 ..< NKONTEN;
+
+tagged type Anfrage = { Einzeln(Kontonr), Kette(Kontonr), Melden(Zaehlerwert), Abholen };
+
+table Konten count NKONTEN {
+    -- Ein Konto haengt an einem Oberkonto. **Nur `parent`** -- dieses Zaehlwerk summiert
+    -- nach oben und steigt nie ab.
+    tree { parent oberkonto }
+
+    slot {
+        zaehler   : Zaehlerwert,
+        oberkonto : option index into Konten,
+        aktiv     : bool,
+    }
+}
+
+-- Die Domaene. **Kein `rank`, kein `held`** -- es gibt keine Haltezeit, gegen die eine
+-- Latenzaussage rechnen koennte, und keine Ordnung, in der etwas genommen wuerde.
+rcu BACCT protects { Konten } reclaims frei;
+
+-- Die Schreibseite braucht ihre EIGENE Wechselseitigkeit: RCU serialisiert Leser gegen die
+-- Rueckgewinnung und nicht Schreiber gegeneinander.
+--
+-- **`stand` steht NICHT unter dieser Sperre**, und das ist derselbe Befund, den `H007` am
+-- 2026-08-17 in `beispiele/05` gefunden hat: der Stand ist ueber die PAARUNG
+-- synchronisiert -- `publishes { stand }` am Release-Speichern, `awaits { stand }` am
+-- Acquire-Laden. *Zwei Mechanismen fuer denselben Platz, und einer davon waere Zierde.*
+lock SCHREIBER protects { Konten, frei } rank 3 held <= 20000 ops;
+
+-- Der gemeldete Stand: `stand` ist die Nutzlast, `STAND_FERTIG` das Tor davor.
+atomic STAND_FERTIG : bool release;
+
+-- Zwei Atomics ohne Nutzlast: die Zahl der Anfragen waechst als Lese-Aendere-Schreib-Zug.
+atomic ANFRAGEN : Zaehlerwert relaxed;
+
+static mut stand     : Zaehlerwert              = 0;
+static mut gesehen   : Zaehlerwert              = 0;
+static mut abgeholt  : Zaehlerwert              = 0;
+static mut frei      : option index into Konten = None;
+
+extern fn zaehlwerk_haengt() -> never effects { diverges } costs <= 1 ops;
+extern fn zu_viel_streit()   -> never effects { diverges } costs <= 1 ops;
+extern fn zaehlwerk_anstossen() effects { writes zaehlwerk } costs <= 16 ops;
+
+assume zaehlwerk_antwortet
+    "Das Zaehlwerk stellt innerhalb der zugesagten Leseoperationen einen neuen Stand."
+    falsifier sonde_zaehlwerk_antwortet;
+
+assume leser_holt_ab
+    "Ein angemeldeter Leser holt eine Meldung ab, bevor die Schranke der Wiederholung faellt."
+    falsifier sonde_leser_holt_ab;
+
+assume zeitgeber_tickt
+    "Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund."
+    falsifier sonde_zeitgeber_tickt;
+
+assume gnadenfrist_ist_abgelaufen
+    "Nach der Ruecknahme des Zeigers ist kein Leser mehr in einem `observes BACCT`."
+    falsifier sonde_leser_noch_drin;
+
+reason Anfragefehler {
+    Keine = 1 "es liegt keine Anfrage an"
+    exhaustive
+}
+
+extern fn anfragenzahl() -> Zaehlerwert or Anfragefehler
+    effects { reads zaehlwerk }
+    costs   <= 12 ops;
+
+-- ---------------------------------------------------------------------------------------
+-- 1. Der Zweig, der wirklich liest. **Ein Lesebereich, der immer betreten wird, kauft
+--    nichts** -- hier haengt er an der Frage, ob ueberhaupt etwas abgeholt werden soll.
+-- ---------------------------------------------------------------------------------------
+
+impl fn stand_abholen(dringend : bool) -> Zaehlerwert
+    effects { reads STAND_FERTIG, reads stand, reads ANFRAGEN, writes ANFRAGEN,
+              reads zaehlwerk }
+    costs   <= 200 ops
+{
+    if dringend {
+        -- Die Gegenseite der Paarung: der Ladevorgang nennt, was mit ihm sichtbar wird.
+        let f = STAND_FERTIG awaits { stand };
+        -- Ein Stand von null ist keine Meldung; dann gibt es nichts abzuholen.
+        narrow stand to 1 .. VOLL else { return 0; }
+        -- Liegt gar keine Anfrage an, ist der Stand nicht fuer diesen Rufer.
+        let n = anfragenzahl() else (e) { return 0; }
+        -- Und die Abholung zaehlt sich selbst, beschraenkt wie ein `retry`.
+        let alt = ANFRAGEN exchange update(v)
+            bounded 64 ops
+            on_exceeded zu_viel_streit
+        {
+            if v < VOLL {
+                return v + 1;
+            }
+            return v;
+        } publishes nothing;
+        if f {
+            if n >= alt {
+                return stand;
+            }
+        }
+    }
+    return 0;
+}
+
+-- Und der Zweig, der wirklich MISST: ohne die Frage davor stuende der Lesebereich um einen
+-- Zugriff, den es gar nicht gibt.
+impl fn zaehler_lesen(i : Kontonr, aktiv : bool) -> Zaehlerwert
+    effects { reads Konten.slots }
+    costs   <= 8 ops
+{
+    if aktiv {
+        observes BACCT {
+            return Konten.slots[i].zaehler;
+        }
+    }
+    return 0;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- 2. Die vier Anfragen. **Jeder Zweig hat seine eigene Maschinerie** -- einer liest ein
+--    Konto, einer die Kette darueber, einer meldet, einer holt ab.
+-- ---------------------------------------------------------------------------------------
+
+impl fn anfrage_beantworten(a : Anfrage) -> Zaehlerwert
+    effects { reads Konten.slots, reads stand, writes stand, locks SCHREIBER, writes frei,
+              reads STAND_FERTIG, reads ANFRAGEN, writes ANFRAGEN,
+              publishes STAND_FERTIG, reads zaehlwerk }
+    costs   <= 4000 ops
+{
+    match a {
+        Einzeln(i) => {
+            -- Der Bereich des Slots faellt aus `count`; die Nummer traegt ihn schon.
+            let nr : Kontonr = i;
+            observes BACCT {
+                return Konten.slots[nr].zaehler;
+            }
+        }
+        Kette(i) => {
+            -- **Der ganze Aufstieg steht in EINEM Lesebereich.** Zwei Bereiche
+            -- hintereinander waeren zwei Gnadenfristen, und die Kette koennte zwischen
+            -- ihnen zerfallen.
+            observes BACCT {
+                traverse v of i over ancestors of Konten.slots[i] by decreasing v {
+                    -- **Je Kettenglied wird die Frische neu geholt**: ein Stand, der vor
+                    -- dem Aufstieg gelesen wurde, sagt ueber das gerade besuchte Glied
+                    -- nichts.
+                    let f = STAND_FERTIG awaits { stand };
+                    if f {
+                        return Konten.slots[v].zaehler;
+                    }
+                }
+            }
+        }
+        Melden(w) => {
+            -- Ein Stand von null ist keine Meldung wert; dann bleibt das Tor zu.
+            narrow w to 1 .. VOLL else { return 0; }
+            locks SCHREIBER {
+                -- Eine neue Meldung setzt die Rueckgewinnung zurueck: was gemeldet wird,
+                -- ist gerade in Gebrauch.
+                frei = None;
+            }
+            stand = w;
+            STAND_FERTIG = true publishes { stand };
+            let alt = ANFRAGEN exchange update(v)
+                bounded 64 ops
+                on_exceeded zu_viel_streit
+            {
+                if v < VOLL {
+                    return v + 1;
+                }
+                return v;
+            } publishes nothing;
+            return alt;
+        }
+        Abholen => {
+            let f = STAND_FERTIG awaits { stand };
+            let n = anfragenzahl() else (e) { return 0; }
+            -- Steht noch gar kein Stand, wird kurz gewartet, statt eine Null zu melden --
+            -- **und dieses Warten liegt in dem Zweig, der es braucht**, nicht ueber dem
+            -- ganzen `match`.
+            retry warten until stand >= 1
+                bounded 1024 ops
+                progress zaehlwerk_antwortet
+                on_exceeded zaehlwerk_haengt
+                effects { reads stand }
+            { }
+            if f {
+                return n;
+            }
+        }
+    }
+    return 0;
+}
+
+-- **Je Konto ein eigener Lesebereich -- und HIER ist das die richtige Form.** Die Konten
+-- einer Runde haengen nicht aneinander: die Schleife holt jedes ueber seinen Platz, und kein
+-- Verweis muss ueber die Grenze eines Bereichs hinaus gelten. Ein Bereich um die ganze
+-- Traversierung waere dagegen eine Gnadenfrist, die so lange laeuft wie die Schleife -- und
+-- genau darauf wartet die Rueckgewinnung.
+--
+-- *Der Unterschied zum `Kette`-Zweig oben ist keine Stilfrage:* dort traegt der Aufstieg
+-- Verweise von Glied zu Glied, und die muessen im selben Bereich gueltig bleiben.
+impl fn runde_messen(q : ptr<normal, r> Konten) -> Zaehlerwert
+    effects { reads q.slots, reads gesehen, writes gesehen }
+    costs   <= 4000 ops
+{
+    traverse i over slots of q by unvisited
+        touches reads q.slots, writes gesehen
+    {
+        observes BACCT {
+            gesehen = q.slots[i].zaehler;
+        }
+    }
+    return gesehen;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- 3. Die Meldung, die wiederholt wird, bis jemand sie abholt -- **und die Sperre haelt
+--    dabei durch.** `held <= 20000 ops` sagt zu, wie lange; die Schranke des `retry` ist
+--    die Zahl, an der der Kostenpass es nachrechnet.
+-- ---------------------------------------------------------------------------------------
+
+impl fn platz_melden(j : index into Konten, w : Zaehlerwert)
+    effects { locks SCHREIBER, writes frei, writes stand, reads abgeholt,
+              publishes STAND_FERTIG }
+    costs   <= 2100 ops
+{
+    locks SCHREIBER {
+        -- Der Platz geht in die Rueckgewinnung, und erst DANN wird gemeldet: wer die
+        -- Meldung sieht, darf den Platz schon als frei ansehen.
+        frei = Some(j);
+        retry melden until abgeholt >= 1
+            bounded 1024 ops
+            progress leser_holt_ab
+            on_exceeded zaehlwerk_haengt
+            effects { writes stand, reads abgeholt, publishes STAND_FERTIG }
+        {
+            stand = w;
+            STAND_FERTIG = true publishes { stand };
+        }
+    }
+}
+
+-- ---------------------------------------------------------------------------------------
+-- 4. Der Abgleich: **jeder Versuch liest unter seinem eigenen Lesebereich.** Ein Bereich um
+--    die ganze Wiederholung waere eine Gnadenfrist, die so lange laeuft wie die Schranke --
+--    und genau das ist der Fehler, den RCU nicht verzeiht.
+-- ---------------------------------------------------------------------------------------
+
+impl fn abgleichen(i : index into Konten) -> Zaehlerwert
+    effects { reads Konten.slots, reads gesehen, writes gesehen, reads frei,
+              reads ANFRAGEN, writes ANFRAGEN, reads STAND_FERTIG, reads stand }
+    costs   <= 9000 ops
+{
+    retry abgleich until gesehen >= 1
+        bounded 4096 ops
+        progress zaehlwerk_antwortet
+        on_exceeded zaehlwerk_haengt
+        effects { reads Konten.slots, reads gesehen, writes gesehen, reads frei,
+                  reads ANFRAGEN, writes ANFRAGEN, reads STAND_FERTIG, reads stand }
+    {
+        observes BACCT {
+            -- Die Kette nach oben: ein Konto zaehlt fuer sein Oberkonto mit.
+            traverse v of i over ancestors of Konten.slots[i] by decreasing v {
+                gesehen = Konten.slots[v].zaehler;
+            }
+            -- Und der Platz, den die Rueckgewinnung als naechstes nimmt, wird mitgelesen --
+            -- **im selben Bereich**, sonst koennte er zwischen den beiden Lesevorgaengen
+            -- zurueckgegeben werden.
+            match frei {
+                None    => { }
+                Some(j) => { gesehen = Konten.slots[j].zaehler; }
+            }
+        }
+        let alt = ANFRAGEN exchange update(x)
+            bounded 64 ops
+            on_exceeded zu_viel_streit
+        {
+            if x < VOLL {
+                return x + 1;
+            }
+            return x;
+        } publishes nothing;
+        let f = STAND_FERTIG awaits { stand };
+        if f {
+            gesehen = stand;
+        }
+        -- Hat der Anfragezaehler die Schranke erreicht, sagt ein weiterer Versuch nichts
+        -- mehr: dann gilt, was zuletzt gemessen wurde.
+        if alt >= VOLL {
+            return gesehen;
+        }
+    }
+    return gesehen;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- 5. Der Sammeldienst. **Der Lesebereich liegt IM Durchgang, die Sperre daneben** -- und
+--    `next`/`leave` aus dem Sperrblock heraus geben sie frei, bevor sie springen.
+-- ---------------------------------------------------------------------------------------
+
+divergent fn sammeldienst(i : index into Konten)
+    effects { diverges, writes zaehlwerk, reads Konten.slots, reads gesehen, writes gesehen,
+              reads stand, writes stand, locks SCHREIBER, writes frei, reads ANFRAGEN,
+              writes ANFRAGEN, reads STAND_FERTIG, publishes STAND_FERTIG }
+{
+    forever runde
+        per_pass bounded 40000 ops
+        on_exceeded zaehlwerk_haengt
+        effects { writes zaehlwerk, reads Konten.slots, reads gesehen, writes gesehen,
+                  reads stand, writes stand, locks SCHREIBER, writes frei, reads ANFRAGEN,
+                  writes ANFRAGEN, reads STAND_FERTIG, publishes STAND_FERTIG }
+        progress zeitgeber_tickt
+    {
+        zaehlwerk_anstossen();
+        observes BACCT {
+            gesehen = Konten.slots[i].zaehler;
+        }
+        locks SCHREIBER {
+            -- Was gemessen ist, darf zurueckgegeben werden -- unter der Schreibersperre,
+            -- denn RCU serialisiert Schreiber nicht gegeneinander.
+            frei = Some(i);
+            -- Nichts gezaehlt: dann faengt die naechste Runde an, statt eine leere Meldung
+            -- zu stellen.
+            narrow gesehen to 1 .. VOLL else { next runde; }
+            let f = STAND_FERTIG awaits { stand };
+            let alt = ANFRAGEN exchange update(x)
+                bounded 64 ops
+                on_exceeded zu_viel_streit
+            {
+                if x < VOLL {
+                    return x + 1;
+                }
+                return x;
+            } publishes nothing;
+            -- Steht die vorige Meldung noch und liegen Anfragen an, faengt die naechste
+            -- Runde an: eine Meldung, die niemand gesehen hat, verschwaende sonst.
+            if f {
+                if alt >= 1 {
+                    next runde;
+                }
+            }
+            stand = gesehen;
+            -- **Die Meldung geht unter der Sperre hinaus**, und zwar NACH dem Schreiben des
+            -- Standes: `publishes { stand }` ist die Zusage, dass der Leser den Wert sieht,
+            -- der zum Tor gehoert.
+            STAND_FERTIG = true publishes { stand };
+            -- Und ist der Zaehler voll, hoert der Dienst auf: weiter kann er nicht zaehlen,
+            -- und ein Zaehler, der stehenbleibt, ist eine Luege.
+            narrow gesehen to 0 ..< VOLL else { leave runde; }
+        }
+    }
+}
+
+}

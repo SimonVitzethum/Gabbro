@@ -1,0 +1,43 @@
+-- erwartet: S001
+-- **`leave` und `next` ohne umschliessende Schleife -- an den beiden Stellen, an denen es
+-- gar keine geben KANN.**
+--
+-- `gift/10` faengt den Fall, in dem eine Schleife da ist und die Marke die falsche nennt.
+-- Hier ist ueberhaupt keine da: auf der obersten Ebene eines Funktionsrumpfes und auf der
+-- obersten Ebene eines `can_fail`-Blocks steht per Konstruktion keine Marke im
+-- Geltungsbereich -- **also sind das die einzigen zwei Stellungen dieser Formen, die im
+-- sauberen Korpus niemals vorkommen duerfen.**
+--
+-- Gefunden ueber `gabbro blindstellen`, Tafel C: `leave` und `next` in den Stellungen
+-- `fn body` und `can_fail` waren in beiden Korpora leer.
+module gift {
+
+static mut stand : u32 = 0;
+
+impl fn abnahme()  effects { reads stand } costs <= 4 ops { return; }
+impl fn freigabe() effects { reads stand } costs <= 4 ops { return; }
+
+impl fn ohne_schleife() -> u32
+    effects { reads stand }
+    costs   <= 8 ops
+{
+    leave runde;
+    next runde;
+    return stand;
+}
+
+check standprobe {
+    claim    "Der Stand bleibt unter seiner Schranke."
+    measures stand
+    gates    abnahme, freigabe
+    can_fail {
+        leave runde;
+        next runde;
+        return stand >= 1;
+    }
+    floor    stand >= 1
+    counterprobe "Ein kuenstlich hoher Stand muss die Pflicht fallen lassen."
+        expects sonde_hoher_stand
+}
+
+}

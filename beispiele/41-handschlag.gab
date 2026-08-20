@@ -1,0 +1,292 @@
+-- 41 -- Der Handschlag mit dem Geraet: **Warten, das von etwas umschlossen ist.**
+--
+-- `beispiele/04` stellt die drei Schleifenformen nebeneinander, jede einmal, jede auf
+-- oberster Ebene, jede mit leerem oder einzeiligem Rumpf. Ein Treiber wartet aber nirgends
+-- auf oberster Ebene und mit leerem Rumpf: er prueft im Warten, er bindet im Warten, er
+-- wartet **im** Warten -- und er stellt seinen Ring **je Deskriptor**, mit allem, was dabei
+-- schiefgehen kann.
+--
+-- **Der Ausweg eines `narrow` und der eines `let … else` stehen auf der Hoehe der Anweisung,
+-- zu der sie gehoeren.** `leave runde;` im `else` eines `let … else` in einer Traversierung
+-- verlaesst die Schleife, die die Traversierung UMSCHLIESST -- eine Traversierung selbst
+-- traegt keine Marke, und das ist Absicht («B10»: sie liefert keinen Wert und kennt kein
+-- `break`).
+
+module beispiel::handschlag {
+
+const NDESK   : u32 = 16;
+const BUENDEL : u32 = 8;
+
+opaque type Pa = u64;
+
+type Laenge      = u32 in 1 .. 4096;
+type Merkmal     = u32 in 0 .. 255;
+type Zaehlerwert = u32 in 0 .. 65534;
+type Stellenzahl = u32 in 0 .. BUENDEL;
+
+tagged type Deskart = { Sendet(Laenge), Empfaengt(Laenge), Frei };
+tagged type Rolle   = { Boot, Helfer };
+
+device Karte(basis : Pa) at mmio {
+    reg STATUS  : u32 @0x00 class r  fields { BEREIT @0, LAEUFT @1, }
+    reg STEUER  : u32 @0x04 class rw
+    reg MERKMAL : u32 @0x08 class r
+    reg KLINGEL : u32 @0x0c class w
+}
+
+-- Der Deskriptorring. Der Treiber stellt die Eintraege, die Karte liest sie.
+table Ring count NDESK {
+    slot {
+        art    : Deskart,
+        laenge : Laenge,
+        offen  : bool,
+    }
+}
+
+-- **Die Gegenseite DIESER Paarung steht in Silizium** («V9»): wer den avail-Index liest, ist
+-- die Karte, und ihr `awaits` ist keine Software. Die Klausel schiebt die Zusage in die
+-- Annahmenschicht, wo `N031` eine Sonde daneben verlangt.
+atomic AVAIL_IDX : u32 release observed by karte_liest_nach_dem_index;
+
+-- Die Anmeldung von Arbeit ist dagegen eine Paarung zwischen zwei Stuecken Software, und
+-- beide Haelften stehen in dieser Datei.
+atomic ARBEIT_DA : bool release;
+
+-- Zwei Atomics ohne Nutzlast: ein Zaehler und ein Anrecht. Beide werden getauscht statt
+-- geschrieben -- der eine mit einer Rechnung, der andere mit einem Vergleich.
+atomic GESENDET     : Zaehlerwert relaxed;
+atomic KLINGELRECHT : u32 relaxed;
+
+static mut arbeitsmenge     : Zaehlerwert            = 0;
+static mut deskring_gesehen : Laenge                 = 1;
+static mut gestellt         : Stellenzahl            = 0;
+static mut uebertragen      : Zaehlerwert            = 0;
+static mut frei             : option index into Ring = None;
+
+extern fn karte_haengt() -> never effects { diverges } costs <= 1 ops;
+extern fn zu_viel_streit() -> never effects { diverges } costs <= 1 ops;
+extern fn klingel_ziehen(k : ptr<mmio, rw> Karte) effects { writes k.KLINGEL } costs <= 8 ops;
+
+assume karte_antwortet
+    "Ein Statusregister, das BEREIT setzt, tut es innerhalb der zugesagten Leseoperationen."
+    falsifier sonde_karte_antwortet;
+
+assume karte_liest_nach_dem_index
+    "Die Karte liest den Deskriptor erst, nachdem sie den avail-Index gesehen hat -- virtio 1.1, 2.6.13."
+    falsifier sonde_deskriptor_zu_frueh;
+
+assume quelle_endet
+    "Die Quelle liefert endlich viele Puffer; irgendwann meldet sie `Erschoepft`."
+    falsifier sonde_quelle_endet;
+
+assume zeitgeber_tickt
+    "Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund."
+    falsifier sonde_zeitgeber_tickt;
+
+reason Merkmalfehler {
+    Unbekannt = 1 "die Karte nennt ein Merkmal, das dieser Treiber nicht kennt"
+    exhaustive
+}
+
+reason Quellefehler {
+    Erschoepft = 1 "es gibt nichts mehr zu senden"
+    exhaustive
+}
+
+extern fn merkmalstufe(m : Merkmal) -> u32 or Merkmalfehler
+    effects { pure }
+    costs   <= 8 ops;
+
+extern fn naechster_puffer() -> Laenge or Quellefehler
+    ensures result >= 1
+    effects { reads quelle };
+
+extern fn abschaltung_angefordert() -> bool effects { reads schalter } costs <= 2 ops;
+
+-- ---------------------------------------------------------------------------------------
+-- 1. Der Handschlag. **Fuenf Anweisungen liegen hier IM `retry`-Rumpf** -- ein Zweig, ein
+--    zweites Warten, eine Bindung, eine Verengung und eine Fehlerweiterreichung. Bis heute
+--    trug kein `retry` des Korpus ueberhaupt einen Rumpf.
+-- ---------------------------------------------------------------------------------------
+
+impl fn bereitmachen(k : ptr<mmio, rw> Karte) -> bool
+    effects { reads k.STATUS, reads k.MERKMAL, writes k.STEUER }
+    costs   <= 12500 ops
+{
+    k.STEUER = 1;
+    retry anlauf until k.STATUS.BEREIT == 1
+        bounded 4096 ops
+        progress karte_antwortet
+        on_exceeded karte_haengt
+        effects { reads k.STATUS, reads k.MERKMAL, writes k.STEUER }
+    {
+        -- Solange die Karte laeuft, bekommt sie das Ruhewort; ihr Merkmalsregister ist
+        -- sonst in Bewegung, und ein halb geschriebenes Wort ist kein Merkmal.
+        if k.STATUS.LAEUFT == 1 {
+            k.STEUER = 2;
+        }
+        -- **Ein Warten im Warten**, und die aeussere Schranke rechnet die innere mit: die
+        -- 64 ops des inneren `retry` stehen im Durchgang des aeusseren.
+        retry ruhe until k.STATUS.LAEUFT == 0
+            bounded 64 ops
+            progress karte_antwortet
+            on_exceeded karte_haengt
+            effects { reads k.STATUS }
+        { }
+        let m : u32 = k.MERKMAL;
+        -- Ein Merkmalswort von null heisst: die Karte bietet nichts an, was dieser Treiber
+        -- braucht. Der Handschlag ist damit beendet und nicht gelungen.
+        narrow m to 1 .. 255 else { return false; }
+        -- Und ein Merkmal, das dieser Treiber nicht kennt, ist ein Grund fuer den naechsten
+        -- Durchgang und keiner fuer die Fortsetzung: **der Ausweg eines `let … else` steht
+        -- auf der Hoehe des `let`**, also hier im Rumpf des Wartens.
+        let stufe = merkmalstufe(m) else (e) { return false; }
+        k.STEUER = stufe;
+    }
+    return true;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- 2. Die Uebertragung. **Geklingelt wird am ANFANG der Runde** -- was die letzte Runde
+--    gestellt hat, geht jetzt hinaus. Dadurch ist `next runde` aus der Traversierung heraus
+--    eine Aussage, die etwas bewirkt: der schon gestellte Teil des Rings faehrt los.
+-- ---------------------------------------------------------------------------------------
+
+impl fn uebertragen_lassen(k : ptr<mmio, rw> Karte, r : ptr<dma, rw> Ring) -> Zaehlerwert
+    effects { writes k.KLINGEL, reads r.slots, writes r.slots,
+              reads gestellt, writes gestellt, reads deskring_gesehen,
+              writes deskring_gesehen, reads arbeitsmenge, reads uebertragen,
+              writes uebertragen, reads frei, reads quelle,
+              publishes AVAIL_IDX, reads ARBEIT_DA, reads GESENDET, writes GESENDET,
+              reads KLINGELRECHT, writes KLINGELRECHT }
+{
+    forever runde
+        per_pass bounded 60000 ops
+        on_exceeded karte_haengt
+        effects { writes k.KLINGEL, reads r.slots, writes r.slots,
+                  reads gestellt, writes gestellt, reads deskring_gesehen,
+                  writes deskring_gesehen, reads arbeitsmenge, reads uebertragen,
+                  writes uebertragen, reads frei, reads quelle,
+                  publishes AVAIL_IDX, reads ARBEIT_DA, reads GESENDET, writes GESENDET,
+                  reads KLINGELRECHT, writes KLINGELRECHT }
+        progress quelle_endet
+    {
+        -- Nur ein Faden zieht die Klingel. Der Vergleich IST die Nahme; eine Sperre waere
+        -- hier der zweite Mechanismus fuer denselben Platz.
+        let meins = KLINGELRECHT exchange 1 when old(KLINGELRECHT) == 0 returns erfolg
+            publishes nothing;
+        if meins {
+            klingel_ziehen(k);
+        }
+        -- Die Gegenseite der Anmeldung: der Ladevorgang nennt, was mit ihm sichtbar wird.
+        let da = ARBEIT_DA awaits { arbeitsmenge };
+        if da == false {
+            next runde;
+        }
+        -- **Wo die Runde anfaengt, sagt die Freiliste.** Ist sie leer, hat die Karte nichts
+        -- zurueckgegeben, und die Uebertragung ist fertig.
+        match frei {
+            None    => { leave runde; }
+            Some(j) => { r.slots[j].offen = false; }
+        }
+        gestellt = 0;
+        traverse i over slots of r by unvisited
+            touches reads r.slots, writes r.slots, reads gestellt, writes gestellt,
+                    writes deskring_gesehen, reads uebertragen, writes uebertragen,
+                    reads quelle, reads GESENDET, writes GESENDET, publishes AVAIL_IDX
+        {
+            -- Ein Platz, den die Karte haelt, beendet den Fuellvorgang: alles dahinter ist
+            -- noch nicht zurueck, und die naechste Runde klingelt zuerst.
+            match r.slots[i].art {
+                Sendet(n)    => { next runde; }
+                Empfaengt(n) => { next runde; }
+                Frei         => { }
+            }
+            -- Mehr als ein Buendel je Runde wird nicht gestellt.
+            narrow gestellt to 0 ..< BUENDEL else { next runde; }
+            gestellt += 1;
+            -- Ist die Quelle erschoepft, gibt es nichts mehr zu senden. Der Rest des Rings
+            -- bleibt leer, und die Uebertragung ist fertig.
+            let laenge = naechster_puffer() else (e) { leave runde; }
+            r.slots[i].laenge = laenge;
+            r.slots[i].offen  = true;
+            deskring_gesehen  = laenge;
+            -- Der Sendezaehler waechst als Lese-Aendere-Schreib-Zug, beschraenkt wie ein
+            -- `retry`: es IST einer, nur mit einem CAS als Rumpf.
+            let alt = GESENDET exchange update(v)
+                bounded 64 ops
+                on_exceeded zu_viel_streit
+            {
+                if v < 65534 {
+                    return v + 1;
+                }
+                return v;
+            } publishes nothing;
+            uebertragen = alt;
+            -- **Die Reihenfolge ist die ganze Sache**: der Deskriptor steht, DANN gibt der
+            -- Index ihn frei.
+            AVAIL_IDX = i publishes { deskring_gesehen };
+        }
+    }
+    return uebertragen;
+}
+
+-- Die andere Haelfte der Anmeldung -- ohne sie ordnet das `awaits` oben nichts, und `V002`
+-- sagt genau das.
+impl fn arbeit_anmelden(n : Zaehlerwert)
+    effects { writes arbeitsmenge, publishes ARBEIT_DA }
+    costs   <= 8 ops
+{
+    arbeitsmenge = n;
+    ARBEIT_DA = true publishes { arbeitsmenge };
+}
+
+-- Und die Freiliste, die der Rueckgabepfad fuellt.
+impl fn platz_freigeben(i : index into Ring)
+    effects { writes frei }
+    costs   <= 4 ops
+{
+    frei = Some(i);
+}
+
+-- ---------------------------------------------------------------------------------------
+-- 3. Zwei Kerne, zwei Schleifen. **Welche Schleife ein Kern faehrt, entscheidet sein
+--    Rollenwort** -- damit steht die eine Schleifenform in einem `match`-Zweig und die
+--    andere in einem `if`, statt beide auf oberster Ebene.
+-- ---------------------------------------------------------------------------------------
+
+impl fn kern_starten(rolle : Rolle, k : ptr<mmio, rw> Karte) -> u32
+    effects { reads k.STATUS, reads k.MERKMAL, writes k.STEUER, reads schalter }
+{
+    match rolle {
+        Boot => {
+            forever bootlauf
+                per_pass bounded 12600 ops
+                on_exceeded karte_haengt
+                effects { reads k.STATUS, reads k.MERKMAL, writes k.STEUER }
+                progress karte_antwortet
+            {
+                if bereitmachen(k) {
+                    leave bootlauf;
+                }
+            }
+        }
+        Helfer => {
+            -- Ein Helferkern wartet, bis der Bootkern abschaltet -- und nur dann, denn ohne
+            -- Abschaltsignal hat er nichts, worauf er wartet.
+            if abschaltung_angefordert() {
+                forever leerlauf
+                    per_pass bounded 16 ops
+                    on_exceeded karte_haengt
+                    effects { reads schalter }
+                    progress zeitgeber_tickt
+                {
+                    leave leerlauf;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+}

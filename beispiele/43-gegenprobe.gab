@@ -1,0 +1,110 @@
+-- 43 -- Die Gegenprobe, die wirklich MISST.
+--
+-- `beispiele/06` fuehrt den einzigen `check` des Korpus, und sein `can_fail`-Rumpf besteht
+-- aus drei Anweisungen. **Das ist der Grund, warum M1 diesen Rumpf bis zum 2026-08-20 gar
+-- nicht las** -- *„this file has no function body"* -- und warum der Erzeuger dort drei
+-- unbekannte Typnamen fand, die seit Monaten dastanden. Ein Rumpf, in dem nichts steht,
+-- deckt keinen Pass auf, der ihn nicht liest.
+--
+-- **Was eine Probe darf, steht in `N027`:** lesen, rechnen, vergleichen, zurueckkehren. Kein
+-- `locks`, kein `publishes`, kein `exchange`, keine Zuweisung -- ein `check` traegt keine
+-- Wirkungsliste, keine Kostenzusage und keine Sperrdeklaration, also darf hier nichts
+-- stehen, wofuer es einen Vertrag braeuchte. *Die Welt zu aendern ist das, WORUEBER eine
+-- Probe spricht.*
+--
+-- Alles andere darf: ein Lesebereich, eine Traversierung, ein `match`, eine Verengung, eine
+-- Bindung und die Lesehaelfte einer Paarung. **Diese Datei schreibt sie hin.**
+
+module beispiel::gegenprobe {
+
+const NKONTEN : u32 = 256;
+const VOLL    : u32 = 65534;
+const SCHWELLE : u32 = 49150;
+
+type Zaehlerwert = u32 in 0 .. VOLL;
+
+table Konten count NKONTEN {
+    -- Ein Konto haengt an einem Oberkonto; die Probe steigt die Kette hinauf, denn ein
+    -- Oberkonto traegt die Summe seiner Kinder mit.
+    tree { parent oberkonto }
+
+    slot {
+        zaehler   : Zaehlerwert,
+        oberkonto : option index into Konten,
+    }
+}
+
+-- Die Leseseite nimmt nichts. **Das ist die ganze Substanz des Konstrukts** -- und eine
+-- Probe, die eine Sperre naehme, waere genau die Messung, die ihren Gegenstand veraendert.
+rcu BACCT protects { Konten } reclaims frei;
+
+atomic MESSUNG_FERTIG : bool release;
+
+static mut hoechststand   : Zaehlerwert            = 0;
+static mut kerne_gemessen : u32                    = 0;
+static mut wurzel         : index into Konten      = 0;
+static mut frei           : option index into Konten = None;
+
+-- Die beiden Torfunktionen -- ohne sie wird die erzeugte `linear ghost Duty(kontostand)`
+-- von niemandem verbraucht, und `N020` sagt das.
+impl fn abnahme()
+    effects { reads kerne_gemessen }
+    costs   <= 4 ops
+{ return; }
+
+impl fn freigabe()
+    effects { reads hoechststand }
+    costs   <= 4 ops
+{ return; }
+
+-- Der Messpfad selbst. **Er steht ausserhalb der Probe**, und zwar genau deshalb, weil er
+-- schreibt: `N021` verbietet, dass der gemessene Pfad seine eigene Messung stellt.
+impl fn hoechststand_melden(v : Zaehlerwert)
+    effects { writes hoechststand, publishes MESSUNG_FERTIG }
+    costs   <= 8 ops
+{
+    hoechststand = v;
+    MESSUNG_FERTIG = true publishes { hoechststand };
+}
+
+check kontostand {
+    claim        "Kein Konto hat je mehr als drei Viertel seiner Schranke benutzt."
+    measures     hoechststand, kerne_gemessen
+    gates        abnahme, freigabe
+
+    can_fail {
+        -- **Die Lesehaelfte der Paarung gehoert in eine Probe** und die Schreibhaelfte
+        -- nicht: `awaits` nennt, was mit dem Laden sichtbar wird, und aendert nichts.
+        let fertig = MESSUNG_FERTIG awaits { hoechststand };
+        let schwelle : Zaehlerwert = SCHWELLE;
+        -- Ein Hoechststand von null heisst: es ist nichts gemessen worden. **Eine Probe,
+        -- die dann haelt, haelt ueber nichts** -- also faellt sie.
+        narrow hoechststand to 1 .. VOLL else { return false; }
+        -- Steht noch ein Platz in der Rueckgewinnung, ist die Struktur nicht ruhig, und
+        -- ueber eine unruhige Struktur sagt diese Messung nichts.
+        match frei {
+            None    => { }
+            Some(j) => { return j < NKONTEN; }
+        }
+        -- **Der ganze Aufstieg steht in EINEM Lesebereich**, und die Traversierung darin:
+        -- die Kette traegt Verweise von Glied zu Glied, und die muessen ueber den ganzen
+        -- Aufstieg gueltig bleiben.
+        observes BACCT {
+            traverse v of wurzel over ancestors of Konten.slots[wurzel] by decreasing v {
+                if Konten.slots[v].zaehler > schwelle {
+                    return false;
+                }
+            }
+        }
+        if fertig {
+            return hoechststand <= schwelle;
+        }
+        return false;
+    }
+
+    floor        kerne_gemessen >= 2, hoechststand >= 1
+    counterprobe "Ein Konto mit kuenstlich hohem Zaehler muss die Pflicht fallen lassen."
+        expects sonde_hoher_zaehler
+}
+
+}

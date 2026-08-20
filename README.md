@@ -1,7 +1,7 @@
 # Gabbro
 
 **A language whose point is to make seL4-style proofs cheap.** One output: **C plus inline
-assembly** — **all 39 corpus examples emit it, and all 39 compile** under `cc -std=c11 -Wall
+assembly** — **all 43 corpus examples emit it, and all 43 compile** under `cc -std=c11 -Wall
 -Wextra -Werror -O2`. Compiler in **safe Rust** (`forbid(unsafe_code)`).
 
 > **Until 2026-08-20 that sentence carried no figure, and twelve of the 38 produced nothing.**
@@ -133,9 +133,9 @@ denominator that shines instead of the one that costs.*
 | **Grammar** | **145 EBNF rules**, closed and reachable | vocabulary covers every terminal, 216 / 216 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Guardians** | 15, each with a two-way speech test | **229 of 229 mutations caught** *(run 2026-08-20)* |
-| **Corpus** | 39 clean examples, 208 poison files, 157 tests *(run 2026-08-20)* | `cargo test` |
-| **Emission** | **39 of 39 examples emit C, and all 39 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
-| **Blind spots** | **125 blind · 125 covered · 20 poison-only · 15 no cell** — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |
+| **Corpus** | 43 clean examples, 210 poison files, 158 tests *(run 2026-08-20)* | `cargo test` |
+| **Emission** | **43 of 43 examples emit C, and all 43 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
+| **Blind spots** | **79 blind · 166 covered · 25 poison-only · 15 no cell** — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was
@@ -175,7 +175,7 @@ cargo run --bin gabbro -- pruefe beispiele/*.gab     # check files
 cargo run --bin gabbro -- paesse                     # what each pass does and does NOT do
 cargo run --bin gabbro -- schablonen                 # the proof-template register
 cargo run --bin gabbro -- pflichten beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
-cargo test                                           # 157 tests
+cargo test                                           # 158 tests
 ./mutiere-pruefer.py                                 # damage one rule at a time: 229 of 229
 ./pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
 ./pruefe-klauseln.py                                 # declared, exported, never read

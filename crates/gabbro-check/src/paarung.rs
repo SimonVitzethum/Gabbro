@@ -228,6 +228,24 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             }
         }
         for (at, o, span) in &h.erwartet {
+            // **«V9» gilt in BEIDE Richtungen, und die erste Fassung nahm nur eine**
+            // (2026-08-20, am selben Tag korrigiert).
+            //
+            // `observed by` stand nur in der Veroeffentlichungsschleife. Damit war ein
+            // `atomic X : u32 acquire observed by <assume>` -- genau die Form, die
+            // `messung/treiber/virtio-net.gab` fuer `USED_IDX` deklariert -- **nie lesbar**:
+            // jedes `awaits` darauf fiel an `V002`.
+            //
+            // > *Und im Korpus fiel es nicht auf, weil `USED_IDX` dort deklariert und von
+            // > NIEMANDEM gelesen wird.* Ein Geraet, das SCHREIBT, war damit nicht
+            // > abfragbar -- die Haelfte des Konstrukts, die den Empfangspfad traegt.
+            //
+            // Die Sache ist symmetrisch: bei `AVAIL_IDX` steht der Leser in Silizium, bei
+            // `USED_IDX` der Schreiber. **Eine Klausel, die nur eine Richtung kennt, kennt
+            // die Sache nicht.**
+            if beobachtet.contains(at) {
+                continue;
+            }
             if !alle_publiziert.contains(&(at.clone(), o.clone())) {
                 absagen.schiebe(
                     Absage::fehler(

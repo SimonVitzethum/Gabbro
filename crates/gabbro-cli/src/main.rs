@@ -202,7 +202,7 @@ fn main() -> std::process::ExitCode {
                 (a, b)
             };
             let mut schlecht = false;
-            let mut lies = |dateien: &[&String], schlecht: &mut bool| {
+            let lies = |dateien: &[&String], schlecht: &mut bool| {
                 let mut aus = Vec::new();
                 for datei in dateien {
                     let Ok(quelle) = std::fs::read_to_string(datei) else {
