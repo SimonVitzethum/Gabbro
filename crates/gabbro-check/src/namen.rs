@@ -17,6 +17,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     sichtbarkeit(baum, absagen);
     fehlerkanal(baum, absagen);
     namenstypen(baum, absagen);
+    beobachter(baum, absagen);
     asm_versiegelt(baum, absagen);
     geltungsbereich(&baum.items, absagen);
     entrust_annahme(baum, absagen);
@@ -1965,9 +1966,70 @@ fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
             b: &Block,
             lokal: &BTreeMap<String, String>,
             sig: &BTreeMap<String, (Vec<Option<String>>, Option<String>)>,
+            nam: &dyn Fn(&TypExpr) -> Option<String>,
+            rueck: &Option<String>,
             absagen: &mut Absagen,
         ) {
+            // Der nominale Name eines Ausdrucks -- **nur ein blanker Name**, und sonst
+            // nichts. Eine Rechnung, eine Zahl, ein Feldzugriff liefern keinen, und dann
+            // schweigt die Regel (W10).
+            let von = |e: &Expr| -> Option<String> {
+                let ExprArt::Ort(o) = &e.art else { return None };
+                if !o.suffixe.is_empty() {
+                    return None;
+                }
+                lokal.get(&o.basis.text).cloned()
+            };
+            let melde = |absagen: &mut Absagen, was: &str, hat: &str, erwartet: &str, span| {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N030",
+                        span,
+                        format!("{was}: a `{hat}` where a `{erwartet}` is required"),
+                    )
+                    .mit_notiz(
+                        "`opaque`, `linear`, `ghost` and `tagged` are NOMINAL -- that they \
+                         are not interchangeable is the whole point of the four words. A \
+                         range alias is transparent and is not compared here",
+                    ),
+                );
+            };
             for s in &b.anweisungen {
+                // **`let x : A = b;`** -- die Klausel steht da, also wird sie gehalten.
+                if let StmtArt::Let(l) = &s.art {
+                    if let (Some(erwartet), Some(hat)) =
+                        (l.typ.as_ref().and_then(|t| nam(t)), von(&l.wert))
+                    {
+                        if hat != erwartet {
+                            melde(absagen, "the binding", &hat, &erwartet, l.wert.span);
+                        }
+                    }
+                }
+                // **`return b;`** gegen den erklaerten Rueckgabetyp.
+                if let StmtArt::Return(Some(w)) = &s.art {
+                    if let (Some(erwartet), Some(hat)) = (rueck.clone(), von(w)) {
+                        if hat != erwartet {
+                            melde(absagen, "the return", &hat, &erwartet, w.span);
+                        }
+                    }
+                }
+                // **`a == b` ueber zwei verschiedenen nominalen Typen.** Was zwei
+                // undurchsichtige Werte gemeinsam haben, ist ihr TRAEGER -- und genau den
+                // verbirgt `opaque`. *Ein Vergleich darueber ist die Frage, die die
+                // Deklaration nicht beantwortet.*
+                for e in crate::eigene_ausdruecke(s) {
+                    for x in crate::alle_ausdruecke(e) {
+                        let ExprArt::Binaer(op, a, c) = &x.art else { continue };
+                        if !matches!(op, BinOp::Gleich | BinOp::Ungleich) {
+                            continue;
+                        }
+                        if let (Some(l), Some(r)) = (von(a), von(c)) {
+                            if l != r {
+                                melde(absagen, "the comparison", &l, &r, x.span);
+                            }
+                        }
+                    }
+                }
                 let mut rufe: Vec<&Ruf> = Vec::new();
                 for e in crate::eigene_ausdruecke(s) {
                     for x in crate::alle_ausdruecke(e) {
@@ -2010,10 +2072,57 @@ fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
                     }
                 }
                 for k in crate::unterbloecke(s) {
-                    im_block(k, lokal, sig, absagen);
+                    im_block(k, lokal, sig, nam, rueck, absagen);
                 }
             }
         }
-        im_block(b, &lokal, &sig, absagen);
+        let rueck = f.ergebnis.as_ref().and_then(&nam);
+        im_block(b, &lokal, &sig, &nam, &rueck, absagen);
+    });
+}
+
+/// **`N031` -- `observed by` ist kein Freibrief, sondern eine EINTRAGUNG.**
+///
+/// Die Klausel nimmt einem Atomic die Paarungspflicht ab («V9»), weil seine Gegenseite in
+/// Silizium steht. **Damit wandert die Zusage in die Annahmenschicht, und dort gilt die
+/// Regel, die dort seit jeher gilt:** eine Annahme muss erklaert und FALSIFIZIERBAR sein
+/// (`N004`/`N005`, dieselbe Regel wie an `progress` und an `entrust`).
+///
+/// > *Eine Annahme, der keine Sonde je widersprechen kann, ist keine Isolation, sondern ein
+/// > Wunsch* -- `beispiele/25` sagt den Satz ueber `entrust`, und er gilt hier woertlich.
+///
+/// Ohne diese Regel waere `observed by irgendwas` der bequemste Weg, `V001` loszuwerden --
+/// und die Paarung haette ein Schlupfloch mit einem Namen darauf.
+fn beobachter(baum: &Programm, absagen: &mut Absagen) {
+    let annahmen = crate::annahmen(baum);
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Atomic(a) = &item.art else { return };
+        let Some(b) = &a.beobachtet else { return };
+        match annahmen.get(&b.text) {
+            Some(true) => {}
+            Some(false) => absagen.schiebe(
+                Absage::fehler(
+                    "N031",
+                    b.span,
+                    format!("`observed by {}` names an assumption without a falsifier", b.text),
+                )
+                .mit_notiz(
+                    "the clause moves the pairing obligation into the ASSUMPTION layer, and \
+                     there it must be refutable -- an assumption no probe can ever \
+                     contradict is not isolation but a wish (beispiele/25)",
+                ),
+            ),
+            None => absagen.schiebe(
+                Absage::fehler(
+                    "N031",
+                    b.span,
+                    format!("`observed by {}` names no `assume` and no `axiom`", b.text),
+                )
+                .mit_notiz(
+                    "without it the clause would be the cheapest way to get rid of `V001` -- \
+                     a loophole with a name on it",
+                ),
+            ),
+        }
     });
 }

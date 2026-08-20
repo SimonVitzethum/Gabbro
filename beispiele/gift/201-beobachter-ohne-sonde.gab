@@ -1,0 +1,31 @@
+-- erwartet: N031
+-- **«V9»: `observed by` ist kein Freibrief, sondern eine Eintragung.**
+--
+-- Die Klausel nimmt einem Atomic die Paarungspflicht ab, weil seine Gegenseite in Silizium
+-- steht -- und schiebt die Zusage damit in die Annahmenschicht. Dort gilt, was dort seit
+-- jeher gilt: eine Annahme muss erklaert und FALSIFIZIERBAR sein.
+--
+-- > *Eine Annahme, der keine Sonde je widersprechen kann, ist keine Isolation, sondern ein
+-- > Wunsch* -- `beispiele/25` sagt den Satz ueber `entrust`, und er gilt hier woertlich.
+--
+-- Ohne diese Regel waere `observed by irgendwas` der bequemste Weg, `V001` loszuwerden.
+
+module gift {
+
+assume karte_liest
+    "Die Karte liest den Ring."
+    unfalsifiable "kein Zugriff auf die Karte";
+
+static mut nutzlast : u32 = 0;
+
+atomic IDX : u16 release observed by karte_liest;
+
+impl fn stellen(w : u32)
+    effects { writes nutzlast, publishes IDX }
+    costs   <= 8 ops
+{
+    nutzlast = w;
+    IDX = 1 publishes { nutzlast };
+}
+
+}

@@ -177,6 +177,31 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
+        // **Blindstellen: eine Form, die der Korpus nicht ausloest.** Siehe
+        // `gabbro_check::blindstellen` -- die Bauart von `mutiere-pruefer.py`, eine Ebene
+        // hoeher. *Was 0 Fundstellen hat, ist nicht geprueft, sondern unerreichbar.*
+        "blindstellen" => {
+            if rest.is_empty() {
+                eprintln!("gabbro blindstellen: no file named");
+                return std::process::ExitCode::from(2);
+            }
+            let mut baeume = Vec::new();
+            let mut schlecht = false;
+            for datei in rest {
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} not readable");
+                    schlecht = true;
+                    continue;
+                };
+                let (baum, _) = gabbro_syntax::lies(datei, &quelle);
+                baeume.push(baum);
+            }
+            print!("{}", gabbro_check::blindstellen::zeige(&baeume));
+            if schlecht {
+                return std::process::ExitCode::from(1);
+            }
+            std::process::ExitCode::SUCCESS
+        }
         "zeugnis" => {
             if rest.is_empty() {
                 eprintln!("gabbro zeugnis: no file named");
@@ -242,6 +267,8 @@ fn hilfe() {
   gabbro kontexte   <file.gab>…     execution contexts per place -- and the COUNT beside it
   gabbro emit       <file.gab>…     lower to C -- and REFUSE by name (`C001`) for every
                                     form this emitter does not know
+  gabbro blindstellen <file.gab>…   FORM x POSITION over a corpus -- and the EMPTY cells.
+                                    What has 0 sites is not checked but UNREACHABLE
   gabbro zeugnis    <file.gab>…     what the translation RESTS ON: assumptions, templates
                                     with proof state, foreign bodies, `asm` lines
 

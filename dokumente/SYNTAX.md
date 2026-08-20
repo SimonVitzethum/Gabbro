@@ -103,7 +103,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
              entry entrust vector regs out preserves clobbers stack dispatch asm
              per cpu ist nested masked awaits port step via
   Domaenen   slots of chain descendants ancestors queue elems fields threads
-             reaches via tree parent child sibling
+             reaches via tree parent child sibling observed
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 rounded finite bool never w1c rc
   Eingebaut  sizeof lenof aligned forall exists true false Self Some None
   Sonderform O @version Held    (KEINE Wortschatzwoerter -- s. Fussnote G6)
@@ -943,7 +943,25 @@ device Vtd(base: Pa) at mmio {
 ```ebnf
 atomicdecl  = [ "pub" ] "atomic" ident ":" typeexpr
               [ "publishes" nutzlast ]                          (* G1 *)
-              [ "acquire" | "release" | "seq" | "relaxed" ] ";" ;
+              [ "acquire" | "release" | "seq" | "relaxed" ]
+              [ "observed" "by" ident ] ";" ;
+(* **«V9»: die Gegenseite steht in SILIZIUM** (2026-08-20).
+
+   `V001` verlangt zu jeder Veroeffentlichung ein `awaits` -- *eine Veroeffentlichung ohne
+   Gegenstueck ordnet nichts.* Das ist richtig ZWISCHEN ZWEI STUECKEN SOFTWARE. Bei einem
+   Geraet gibt es kein zweites Programm: wer den avail-Index einer Virtqueue liest, ist die
+   Netzkarte, und ihr `awaits` steht in Silizium.
+
+   Gefunden beim ersten Treiber, der nicht aus dem Entwurf kam. Ohne die Klausel bleibt nur,
+   die Gegenseite als FUNKTION hinzuschreiben -- dann steht das Modell im Erzeugnis, und ein
+   Erzeugnis mit einer Luege darin ist schlechter als eine Weigerung.
+
+   **Die Regel wird nicht gelockert, ihre Praemisse wird sichtbar.** Was die Zusage traegt,
+   ist danach die Annahmenschicht: `gabbro annahmen` zaehlt sie, und `N031` verlangt einen
+   FALSIFIKATOR -- dieselbe Regel wie an `progress` und an `entrust`. *Eine Annahme, der keine
+   Sonde je widersprechen kann, ist keine Isolation, sondern ein Wunsch.*
+
+   Null neue Begriffe: `by` steht schon im Wortschatz, `observed` ist KONTEXTUELL. *)
               (* Reihenfolge nach dem BESTAND, nicht nach dem Entwurf: SYNTAX.md:603 und
                  FRAGMENTE.md F6 (4x) schreiben `publishes` VOR der Ordnung. *)
 publishstmt = place "=" expr "publishes" nutzlast ";" ;

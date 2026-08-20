@@ -58,6 +58,10 @@ const BENANNT: &[&str] = &[
     // Bereich gehalten und der NAME nicht. `N030` -- `opaque`, `linear`, `ghost` und
     // `tagged` sind nominal.
     "N030",
+    // «V9», 2026-08-20: `observed by <assume>` -- die Gegenseite der Paarung steht in
+    // Silizium. `N031` haelt die Klausel gegen die Annahmenschicht, damit sie kein
+    // Schlupfloch mit einem Namen darauf wird.
+    "N031",
     // «B41b», 2026-08-20: die Baumkante an der `table`. `D006` das Feld, `D007` sein Typ,
     // `D008` seine Tabelle.
     "D006", "D007", "D008",

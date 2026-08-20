@@ -3484,6 +3484,13 @@ impl<'a> Parser<'a> {
         if ordnung.is_some() {
             self.pos += 1;
         }
+        // **«V9»: `observed by <assume>`** -- siehe `AtomicDecl::beobachtet`.
+        let beobachtet = if self.friss_kw(Kw::Observed) {
+            self.erwarte_kw(Kw::By)?;
+            Some(self.erwarte_ident()?)
+        } else {
+            None
+        };
         self.erwarte_z(Z::Semi)?;
         Ok(AtomicDecl {
             oeffentlich,
@@ -3491,6 +3498,7 @@ impl<'a> Parser<'a> {
             typ,
             obermenge,
             ordnung,
+            beobachtet,
             span: anfang.bis_zu(self.vorheriger_span()),
         })
     }

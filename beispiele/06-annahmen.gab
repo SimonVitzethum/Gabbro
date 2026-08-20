@@ -64,9 +64,16 @@ impl fn freigabe()
 -- hineinsieht** -- `gabbro pruefe` meldet ueber diese Datei bis heute *„M1 saw no expression
 -- -- this file has no function body"*. Der Erzeuger sah hinein, und dort standen drei
 -- unbekannte Typnamen. *Ein Rumpf, den kein Typpass liest, ist ein Rumpf ohne Leser.*
-static mut tiefe_max      : u64 = 0;
-static mut tiefe_lebend   : u64 = 0;
-static mut kerne_gemessen : u32 = 0;
+-- **Und die Groessen brauchen SCHRANKEN** (2026-08-20, wenige Stunden spaeter). Als M1 den
+-- `can_fail`-Rumpf zum ersten Mal las, fiel sofort `M104`: `tiefe_max * 4` ueber einem vollen
+-- `u64` verlaesst die Breite. *Ein Stapel ist keine 2^64 Byte tief -- die Schranke stand nur
+-- nirgends, weil kein Pass die Zeile las.*
+type Tiefe        = u64 in 0 .. 1048576;
+type Stapelgroesse = u64 in 1 .. 1048576;
+
+static mut tiefe_max      : Tiefe = 0;
+static mut tiefe_lebend   : Tiefe = 0;
+static mut kerne_gemessen : u32   = 0;
 
 check stapel_wasserstand {
     claim        "Kein Kern hat je mehr als 3/4 seines Stapels benutzt."
@@ -104,7 +111,7 @@ reason MessFehler {
     exhaustive
 }
 
-extern fn groesse_gemessen() -> u64 or MessFehler
+extern fn groesse_gemessen() -> Stapelgroesse or MessFehler
     ensures result >= 1
     effects { reads stapel };
 

@@ -104,10 +104,41 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             .is_some();
         je_funktion.push((f.name.text.clone(), h, unvollstaendig));
     });
+    // **Und der `can_fail`-Rumpf einer Probe** (2026-08-20).
+    //
+    // Gefunden beim Schreiben eines virtio-net-Treibers: die Gegenseite einer
+    // Veroeffentlichung an ein GERAET wollte als Probe geschrieben werden -- der richtige
+    // Ort, denn eine falsifizierbare Aussage ueber Hardware IST eine Probe. `V001` fiel
+    // trotzdem, weil dieser Pass ueber `ItemArt::Funktion` laeuft und sonst nichts.
+    //
+    // > **Dieselbe Klasse fiel am selben Tag bei M1**, das ueber `beispiele/06` meldete
+    // > *„this file has no function body"*, waehrend im `can_fail` gerechnet wurde. Ein
+    // > Rumpf, den kein Pass liest, ist ein Rumpf ohne Leser -- und ein `check` ist der eine
+    // > Ort, an dem eine Zusage ueber die Maschine steht.
+    //
+    // *Die Vollstaendigkeit der Rufhuelle steht hier nicht zur Verfuegung* -- eine Probe hat
+    // keinen Eintrag im Rufgraphen. Sie zaehlt darum als vollstaendig: was sie erwartet,
+    // erwartet sie, und was sie veroeffentlicht, wuerde `N027` ohnehin ablehnen.
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Check(c) = &item.art else { return };
+        let mut h = Haelften::default();
+        sammle(&c.can_fail, &ordnungen, &mut h);
+        reihenfolge(&c.can_fail, &[], &[], &[], &c.name.text, absagen);
+        je_funktion.push((c.name.text.clone(), h, false));
+    });
 
     // Die vereinigte Menge über den ganzen Baum -- die Paarung ist eine Aussage über das
     // PROGRAMM, nicht über eine Funktion: wer publiziert und wer erwartet, sind fast nie
     // dieselbe Funktion.
+    // **«V9»: welche Atomics haben ihre Gegenseite AUSSERHALB dieser Einheit?**
+    let mut beobachtet: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Atomic(a) = &item.art {
+            if a.beobachtet.is_some() {
+                beobachtet.insert(a.name.text.clone());
+            }
+        }
+    });
     let alle_publiziert: BTreeSet<(String, String)> = je_funktion
         .iter()
         .flat_map(|(_, h, _)| h.publiziert.iter().map(|(a, o, _)| (a.clone(), o.clone())))
@@ -163,6 +194,17 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             }
         }
         for (at, o, span) in &h.publiziert {
+            // **«V9»: die Gegenseite steht in SILIZIUM, und das sagt die Deklaration.**
+            //
+            // `observed by <assume>` nennt, WER liest -- und das ist kein zweites Programm.
+            // *Die Regel wird nicht gelockert, sondern ihre Praemisse wird sichtbar:* sie
+            // gilt zwischen zwei Stuecken Software, und hier ist nur eines davon Software.
+            //
+            // Was die Zusage traegt, ist damit die Annahmenschicht und nicht dieser Pass --
+            // `gabbro annahmen` zaehlt sie, `N031` verlangt einen Falsifikator dafuer.
+            if beobachtet.contains(at) {
+                continue;
+            }
             if !alle_erwartet.contains(&(at.clone(), o.clone())) {
                 absagen.schiebe(
                     Absage::fehler(

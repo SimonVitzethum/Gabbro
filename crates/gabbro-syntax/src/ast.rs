@@ -1346,6 +1346,12 @@ pub struct AtomicDecl {
     /// It is **not** in the EBNF today -- see refusal `P031`.
     pub obermenge: Option<Nutzlast>,
     pub ordnung: Option<Ordnung>,
+    /// **«V9»: `observed by <assume>` -- die Gegenseite steht nicht in dieser Einheit.**
+    ///
+    /// Siehe `kw.rs`. Der Name muss eine **falsifizierbare** Annahme sein (`N031`): dass ein
+    /// Geraet liest, was der Treiber veroeffentlicht, ist eine Aussage ueber die Maschine --
+    /// und eine Annahme, der keine Sonde je widersprechen kann, ist keine Aussage.
+    pub beobachtet: Option<Ident>,
     pub span: Span,
 }
 

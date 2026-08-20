@@ -1,0 +1,21 @@
+-- erwartet: N031
+-- Dieselbe Regel, die andere Haelfte: der Name steht nirgends.
+--
+-- `S007` sagt es fuer `on_exceeded`, `N020` fuer `gates` -- dieselbe Klasse, und die
+-- Paarungspflicht ist der teuerste Gegenstand, den man so verschwinden lassen koennte.
+
+module gift {
+
+static mut nutzlast : u32 = 0;
+
+atomic IDX : u16 release observed by nirgends;
+
+impl fn stellen(w : u32)
+    effects { writes nutzlast, publishes IDX }
+    costs   <= 8 ops
+{
+    nutzlast = w;
+    IDX = 1 publishes { nutzlast };
+}
+
+}

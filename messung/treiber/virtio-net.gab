@@ -185,46 +185,31 @@ table UsedRing count QGROESSE {
     }
 }
 
-atomic AVAIL_IDX : u16 release;
-atomic USED_IDX  : u16 acquire;
+-- **«V9» geschlossen: die Gegenseite steht in SILIZIUM, und die Deklaration sagt es.**
+--
+-- Dies war BEFUND 1 dieser Messung. `V001` verlangte eine Gegenseite -- *„nothing awaits
+-- this payload ON THIS ATOMIC"* -- und die Regel ist richtig: eine Veroeffentlichung ohne
+-- Gegenstueck ordnet nichts. **Ihre Praemisse gilt hier nicht.** Wer den avail-Index liest,
+-- ist die Netzkarte.
+--
+-- Bis zur Klausel blieb nur, die Gegenseite als FUNKTION hinzuschreiben -- dann stand das
+-- Geraetemodell im Erzeugnis, und ein Erzeugnis mit einer Luege darin ist schlechter als
+-- eine Weigerung. Jetzt steht die Zusage da, wo sie hingehoert: in der Annahmenschicht,
+-- gezaehlt von `gabbro annahmen`, mit einer Sonde daneben, die `N031` verlangt.
 
--- **BEFUND 1: die Gegenseite der Paarung ist das GERAET, und Gabbro sucht sie in Software.**
---
--- `V001` verlangte hier eine Gegenseite: *„nothing awaits this payload ON THIS ATOMIC"*.
--- Die Regel ist richtig -- *eine Veroeffentlichung ohne Gegenstueck ordnet nichts* -- und
--- ihre Praemisse gilt hier nicht: **wer den avail-Index liest, ist die Netzkarte.** Ihr
--- `awaits` steht in Silizium.
---
--- Gabbro kann daraus keine Zusage machen, aber es kann die Gegenseite BENENNEN, und genau
--- das ist die vorhandene Form fuer einen fremden Rumpf: eine Deklaration ohne Koerper, mit
--- ihrem Vertrag daneben. `gabbro zeugnis` fuehrt sie danach in Abschnitt E.
---
--- > *Es ist kein Kunstgriff, sondern die ehrliche Fassung.* Die Alternative waere
--- > `publishes nothing` -- und das waere eine Luege ueber genau die Stelle, an der dieser
--- > Treiber richtig oder falsch ist.
+assume karte_liest_nach_dem_index
+    "Die Netzkarte liest Deskriptor und avail-Eintrag erst, nachdem sie den avail-Index gesehen hat -- virtio 1.1, 2.6.13."
+    falsifier sonde_deskriptor_zu_frueh;
 
--- **BEFUND 2, und er ist derselbe wie heute frueh an M1:** ein `check`-Rumpf hat keinen
--- Leser. Der erste Versuch schrieb die Gegenseite als Probe hin -- der richtige Ort, denn
--- eine falsifizierbare Aussage ueber Hardware IST eine Probe -- und `V001` fiel trotzdem:
--- `paarung::pass` laeuft ueber `ItemArt::Funktion` und sonst nichts. *Genau wie M1, das
--- ueber `beispiele/06` meldete „this file has no function body", waehrend im `can_fail`
--- gerechnet wurde.*
---
--- Also steht die Gegenseite hier als FUNKTION, und damit steht sie im Erzeugnis. **Das
--- Modell wird Code** -- und dass es das wird, ist der Befund, nicht der Treiber.
+assume karte_schreibt_vor_dem_index
+    "Die Netzkarte schreibt den used-Eintrag, bevor sie den used-Index erhoeht -- virtio 1.1, 2.6.8."
+    falsifier sonde_used_zu_frueh;
+
 static mut deskring_gesehen  : u16 = 0;
 static mut availring_gesehen : u16 = 0;
 
-impl fn geraetespiegel() -> u16
-    effects { reads AVAIL_IDX, reads deskring_gesehen, reads availring_gesehen }
-    costs   <= 8 ops
-{
-    let gesehen = AVAIL_IDX awaits { deskring_gesehen, availring_gesehen };
-    if gesehen == 0 {
-        return 0;
-    }
-    return deskring_gesehen;
-}
+atomic AVAIL_IDX : u16 release observed by karte_liest_nach_dem_index;
+atomic USED_IDX  : u16 acquire observed by karte_schreibt_vor_dem_index;
 
 -- ---------------------------------------------------------------------------------------
 -- Einen Puffer armieren und sichtbar machen.

@@ -1391,6 +1391,20 @@ MUTATIONEN = [
         "N030 -- ein `linear ghost`-Zeuge passt wieder an jede Stelle; der Wecker nimmt einen fremden Grund, und `Lost wakeup` ist zurueck",
     ),
     Mutation(
+        "beobachter-braucht-keine-sonde",
+        "namen.rs",
+        "        match annahmen.get(&b.text) {\n            Some(true) => {}",
+        "        match annahmen.get(&b.text) {\n            Some(_) => {}",
+        "N031 -- «V9»: `observed by` nimmt die Paarungspflicht ab, ohne einen Falsifikator zu verlangen; das Schlupfloch bekommt einen Namen darauf",
+    ),
+    Mutation(
+        "check-rumpf-hat-wieder-keinen-leser",
+        "m1.rs",
+        "            if let ItemArt::Check(c) = &item.art {\n                self.modul = modul.to_string();",
+        "            if let ItemArt::Check(c) = &item.art {\n                let _ = c;\n                self.modul = modul.to_string();\n                if true { return; }",
+        "M1 liest den `can_fail`-Rumpf nicht mehr -- der eine Ort, an dem eine falsifizierbare Aussage steht, hat wieder keinen Typpass",
+    ),
+    Mutation(
         "format-liest-immer-klein",
         "emit.rs",
         "        (4, true) => \"gabbro_be32\",",

@@ -284,6 +284,21 @@ wortschatz! {
     //
     // *Vier Woerter, und alle vier sind KONTEXTUELL* -- `parent`, `child`, `sibling` und
     // `tree` bleiben ueberall sonst Bezeichner, auch als Slotfeldnamen.
+    // **«V9»: die Gegenseite steht in SILIZIUM** (2026-08-20).
+    //
+    // `V001` verlangt zu jeder Veroeffentlichung ein `awaits` -- *eine Veroeffentlichung ohne
+    // Gegenstueck ordnet nichts*, und das ist richtig **zwischen zwei Stuecken Software**.
+    // Bei einem Geraet gibt es kein zweites Programm: wer den avail-Index einer Virtqueue
+    // liest, ist die Netzkarte.
+    //
+    // Gefunden beim ersten Treiber, der nicht aus dem Entwurf kam. Ohne die Klausel bleibt
+    // nur, die Gegenseite als Funktion hinzuschreiben -- **dann steht das Modell im
+    // Erzeugnis**, und ein Erzeugnis mit einer Luege darin ist schlechter als eine Weigerung.
+    //
+    // *Null neue Begriffe:* `assume`/`axiom` mit Falsifikator IST Gabbros Wort fuer eine
+    // Aussage ueber die Maschine, und A10 bucht die Ordnungsaussage laengst dort. `by` steht
+    // schon im Wortschatz; `observed` ist KONTEXTUELL.
+    Observed      => "observed",      ctx;
     Tree          => "tree",          ctx;
     Parent        => "parent",        ctx;
     Child         => "child",         ctx;

@@ -1,0 +1,34 @@
+-- erwartet: N030
+-- **Die Klasse, nicht die Instanz** (2026-08-20).
+--
+-- `N030` deckte zuerst nur den RUF -- und damit hatte dieser Ordner seinen eigenen
+-- wiederkehrenden Fehler noch einmal gemacht: *„die Klasse richtig diagnostiziert und dann
+-- eine Instanz behoben."* Die Bindung, die Rueckgabe und der Vergleich standen offen.
+--
+-- Drei Stellen in dieser Datei, und keine davon ist ein Ruf.
+--
+-- > Der Vergleich ist der feinste der drei: was zwei undurchsichtige Werte gemeinsam haben,
+-- > ist ihr TRAEGER -- und genau den verbirgt `opaque`. Ein `==` darueber ist die Frage, die
+-- > die Deklaration nicht beantwortet.
+
+module gift {
+
+opaque type Pa   = u64;
+opaque type EpId = u64;
+
+impl fn bindung(e : EpId) -> Pa
+    effects { pure }
+    costs   <= 8 ops
+{
+    let p : Pa = e;
+    return e;
+}
+
+impl fn vergleich(p : Pa, e : EpId) -> bool
+    effects { pure }
+    costs   <= 8 ops
+{
+    return p == e;
+}
+
+}

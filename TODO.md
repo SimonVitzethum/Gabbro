@@ -570,6 +570,20 @@ REICHWEITE, keine Lücke im Gebauten.*
 *Der erste Punkt ist am **2026-08-20** erledigt und steht in [`DONE.md`](DONE.md): die
 Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
+### Vom ersten echten Treiber, 2026-08-20 *(siehe [`messung/BEFUNDE.md`](messung/BEFUNDE.md))*
+
+- [ ] **Die nominale Gleichheit steht NEBEN dem Typmodell, nicht darin.** `N030` hält
+      `opaque`/`linear`/`ghost`/`tagged` an vier Stellen auseinander (Ruf, Bindung, Rückgabe,
+      Vergleich) — und tut es in `namen.rs`, weil M1s `Typ` ein **Bereichsmodell** ist: es
+      beantwortet *welche Werte passen hier hinein*, nie *was ist das*. **Damit gibt es zwei
+      Typbegriffe in zwei Pässen, und das ist W7.** *Der Fix ist richtig und die Buchung
+      lautet: die nominale Hälfte gehört auf Dauer INS Typmodell, nicht daneben.*
+- [ ] **Der Korpus wächst per Konstrukt, die Fehler sitzen an den KOMBINATIONEN.**
+      `gabbro blindstellen` zählt Form mal Stellung und nennt **151 leere Felder** über den
+      38 Beispielen (2026-08-20). Auf dem Korpus von einen Tag vorher nennt es genau die
+      beiden Befunde, für die ein echter Treiber nötig war: `ghost` in Rückgabestellung einer
+      Funktion **mit Rumpf**, und ein Formatfeld in **Schreibstellung**.
+      *Die Konsequenz ist keine Passarbeit: mehr Programme schreiben, nicht mehr Konstrukte.*
 - [ ] **`K009` prüft eine SYNTAKTISCHE hinreichende Form** — `n - k` und `n / k` mit der
       Massgrösse links. Ein Mass, das über einen `const fn` oder eine gerechnete Grösse
       fällt, wird abgewiesen, obwohl es fällt. *Aus der strengen Lesart kann man lockern,

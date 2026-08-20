@@ -49,6 +49,7 @@ pub mod manifest;
 pub mod pflichten;
 pub mod phasen;
 pub mod schablonen;
+pub mod blindstellen;
 pub mod zeugnis;
 
 /// Was ein Pass heute leistet.

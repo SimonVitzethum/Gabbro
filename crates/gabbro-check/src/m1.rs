@@ -381,6 +381,26 @@ impl<'a> Pruefer<'a> {
                     self.block(b, &mut lage, ergebnis.as_ref());
                 }
             }
+            // **Und der `can_fail`-Rumpf einer Probe** (2026-08-20).
+            //
+            // Bis heute las M1 ihn nicht. `gabbro pruefe beispiele/06` meldete woertlich
+            // *„M1 saw no expression -- this file has no function body"*, waehrend im
+            // `can_fail` drei Groessen verrechnet wurden, die nirgends erklaert waren.
+            // **Gefunden hat es der Erzeuger**, der dort drei unbekannte Typnamen sah.
+            //
+            // > Ein `check` ist der ORT, an dem eine falsifizierbare Aussage steht -- und er
+            // > war der einzige Rumpf, den kein Typpass gelesen hat. *Dieselbe Klasse fiel am
+            // > selben Tag beim Paarungspass, und aus demselben Grund: beide laufen ueber
+            // > `ItemArt::Funktion` und sonst nichts.*
+            //
+            // Der Rumpf hat keine Parameter, also eine leere Lage; sein Ergebnis ist `bool`
+            // -- eine Probe faellt oder haelt.
+            if let ItemArt::Check(c) = &item.art {
+                self.modul = modul.to_string();
+                let mut lage = Lage::default();
+                let bool_typ = Typ::Wahrheit;
+                self.block(&c.can_fail, &mut lage, Some(&bool_typ));
+            }
         });
     }
 

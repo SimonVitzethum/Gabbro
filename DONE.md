@@ -10,6 +10,37 @@
 
 ---
 
+## `gabbro blindstellen` — the instrument that finds the class *(2026-08-20)*
+
+On 2026-08-20 the first driver that did not come from the design found five faults in an
+afternoon. Three were **unbuilt halves** — the model was right and a pass was not finished.
+None had shown up for months, and the reason was the same in all three: **the corpus is
+written from the language outward, one file per construct, and the faults sit at the
+combinations.**
+
+```
+gabbro blindstellen beispiele/*.gab     ->  151 blind spots over 38 examples
+```
+
+It counts **form × position** and names the empty cells. *What has 0 sites is not checked but
+UNREACHABLE:* no probe, no guardian and no mutation can trigger it — the same shape as
+`mutiere-pruefer.py` one level up.
+
+> **The speech test is the point.** Run against the corpus as it stood one day earlier, it
+> names exactly the two findings a real driver was needed for:
+>
+> ```
+> BLIND  ghost in Stellung `rueckgabe (rumpf)`   ->  the ghost return that was never erased
+> BLIND  formatfeld in Stellung `geschrieben`    ->  the `format` writer that did not exist
+> ```
+
+**And what it does NOT say stands in its own output:** an occupied cell says only that a pass
+*can* see the form, not that it handles it. Two of the five it does not catch at all — the
+device counterpart («V9») was a missing CATEGORY, not a missing form, and a body a pass does
+not READ is present in the corpus all the same.
+
+---
+
 ## Emission is COMPLETE — 38 of 38, and all 38 compile *(2026-08-20)*
 
 ```

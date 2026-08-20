@@ -129,12 +129,13 @@ denominator that shines instead of the one that costs.*
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 183 diagnostics · `gabbro paesse` |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 184 diagnostics · `gabbro paesse` |
 | **Grammar** | **145 EBNF rules**, closed and reachable | vocabulary covers every terminal, 215 / 215 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
-| **Guardians** | 13, each with a two-way speech test | **224 of 224 mutations caught** *(run 2026-08-20)* |
-| **Corpus** | 38 clean examples, 199 poison files, 157 tests *(run 2026-08-20)* | `cargo test` |
+| **Guardians** | 13, each with a two-way speech test | **226 of 226 mutations caught** *(run 2026-08-20)* |
+| **Corpus** | 38 clean examples, 202 poison files, 157 tests *(run 2026-08-20)* | `cargo test` |
 | **Emission** | **38 of 38 examples emit C, and all 38 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
+| **Blind spots** | **151 empty cells** in form × position over the corpus — *what has 0 sites is not checked but unreachable* | `gabbro blindstellen` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was
@@ -175,7 +176,7 @@ cargo run --bin gabbro -- paesse                     # what each pass does and d
 cargo run --bin gabbro -- schablonen                 # the proof-template register
 cargo run --bin gabbro -- pflichten beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
 cargo test                                           # 157 tests
-./mutiere-pruefer.py                                 # damage one rule at a time: 224 of 224
+./mutiere-pruefer.py                                 # damage one rule at a time: 226 of 226
 ./pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
 ./pruefe-klauseln.py                                 # declared, exported, never read
 ./pruefe-widerruf.py                                 # sentences the folder has revoked, still standing

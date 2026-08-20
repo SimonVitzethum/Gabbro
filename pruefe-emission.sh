@@ -397,7 +397,12 @@ _Noreturn void baum_unlesbar(void) { printf(" UEBERLAUF"); exit(0); }
 int main(void) {
     static const uint8_t gut[16]    = { 0xd0,0x0d,0xfe,0xed, 0,0,0,64, 0,0,0,40, 0,0,0,50 };
     static const uint8_t falsch[16] = { 0xde,0xad,0xbe,0xef, 0,0,0,64, 0,0,0,40, 0,0,0,50 };
-    DtbKopf a = { gut, 64 }, b = { falsch, 64 }, c = { gut, 8 }, d = { gut, 20 };
+    /* Der Cast steht im TREIBER und nicht im Erzeugnis: seit ein `format` Schreiber hat
+     * (2026-08-20), traegt seine Sicht `uint8_t *`. Wer eine Sicht ueber ein `const`-Feld
+     * baut, sagt hier selbst, dass er sie nur liest -- und `ptr<normal, r>` sagt es auf der
+     * Gabbro-Seite, wo M3 es haelt. */
+    DtbKopf a = { (uint8_t *)gut, 64 }, b = { (uint8_t *)falsch, 64 },
+            c = { (uint8_t *)gut, 8 }, d = { (uint8_t *)gut, 20 };
     rufe = 0;
     unsigned n = kerne_zaehlen(&a);
     printf("%d %d %d %d %u %d\n",
@@ -702,7 +707,7 @@ static const unsigned char paket[20] = {
     0xac, 0x10, 0x0a, 0x0c
 };
 int main(void) {
-    IpKopf k = { paket, 20 };
+    IpKopf k = { (uint8_t *)paket, 20 };
     printf("%u %u %u %u %u %u %u\n",
            IpKopf_version(&k), IpKopf_ihl(&k), IpKopf_dscp(&k), IpKopf_ecn(&k),
            IpKopf_flags(&k), IpKopf_fragment(&k), IpKopf_protokoll(&k));
