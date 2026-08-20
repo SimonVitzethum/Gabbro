@@ -135,7 +135,7 @@ denominator that shines instead of the one that costs.*
 | **Guardians** | 15, each with a two-way speech test | **229 of 229 mutations caught** *(run 2026-08-20)* |
 | **Corpus** | 39 clean examples, 208 poison files, 157 tests *(run 2026-08-20)* | `cargo test` |
 | **Emission** | **39 of 39 examples emit C, and all 39 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
-| **Blind spots** | **154 blind · 91 covered · 25 guarded · 15 no cell** — reported in four parts on purpose, because a removal leaves numerator *and* denominator | `gabbro blindstellen` |
+| **Blind spots** | **125 blind · 125 covered · 20 poison-only · 15 no cell** — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was

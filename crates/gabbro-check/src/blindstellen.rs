@@ -381,20 +381,31 @@ fn zeige_tafel(
                 *besetzt += 1;
                 continue;
             }
-            // **Leer im sauberen Korpus, BESETZT im Gift: das ist kein Loch, sondern eine
-            // Zusage** (2026-08-20).
+            // **Leer im sauberen Korpus, besetzt im GIFT -- und das ist ein HINWEIS, keine
+            // Zusage** (2026-08-20, am selben Abend korrigiert).
             //
-            // `ghost` in einem Slotfeld steht in keinem Beispiel -- und das ist richtig:
-            // `geister_haben_keinen_speicher` verbietet es, und
-            // `gift/119-geist-im-speicher.gab` prueft, dass die Regel faellt. **Der
-            // staerkste Zustand, den eine Zelle haben kann**, und die erste Fassung dieses
-            // Werkzeugs hat ihn als Blindstelle gezaehlt.
+            // Die erste Fassung nannte diesen Zustand `GUARDED` und schrieb daneben: *„der
+            // staerkste Zustand, den eine Zelle haben kann."* **Das war zu viel behauptet**,
+            // und die Abnahme der ersten Agentendateien hat es gezeigt: fuenf Zellen
+            // wanderten von `guarded` nach `covered`, darunter *Zuweisung im `traverse`*.
             //
-            // > *Eine Zahl ohne diese Unterscheidung ist keine Aufgabenliste, sondern eine
-            // > Einladung zur falschen Arbeit.*
+            // Die vier Giftdateien, die diese Zelle besetzen, erwarten `P001`, `M109`,
+            // `E011` und `M101` -- **keine davon verbietet eine Zuweisung in einem
+            // `traverse`.** Die Zuweisung steht dort als GERUEST, nicht als Gegenstand.
+            //
+            // > *Eine Giftdatei prueft EINE Regel; alles andere in ihr ist Beiwerk.* Aus
+            // > „die Gestalt kommt nur im Gift vor" folgt darum nicht „eine Regel verbietet
+            // > sie" -- es folgt nur, dass kein sauberes Programm sie bisher braucht.
+            //
+            // **Was ein echtes `guarded` verlangte, ist genau der gebuchte Posten**: eine
+            // Probe JE KOMBINATION statt je Konstrukt. Solange die nicht da ist, heisst der
+            // Zustand, was er ist.
             if gift.contains_key(&(*f, *s)) {
                 *bewacht += 1;
-                aus.push_str(&format!("   GUARDED  {f} in position `{s}` -- forbidden, and the poison corpus proves it\n"));
+                aus.push_str(&format!(
+                    "   poison-only  {f} in position `{s}` -- occurs ONLY in the poison \
+                     corpus; that is a hint, not a proof that a rule forbids it\n"
+                ));
                 continue;
             }
             *blind += 1;
@@ -508,7 +519,7 @@ pub fn zeige(baeume: &[Programm], gifte: &[Programm]) -> String {
     // **Also rechnet niemand es nach, sondern das Werkzeug sagt es selbst.**
     let gesamt = besetzt + bewacht + keine + blind + widerspruch;
     aus.push_str(&format!(
-        "\n== {blind} blind · {besetzt} covered · {bewacht} guarded · {keine} no cell \
+        "\n== {blind} blind · {besetzt} covered · {bewacht} poison-only · {keine} no cell \
          (of {gesamt} pairs) ==\n"
     ));
     if widerspruch > 0 {
@@ -522,9 +533,11 @@ pub fn zeige(baeume: &[Programm], gifte: &[Programm]) -> String {
          \x20 twice -- it leaves the numerator and the denominator. A one-part number reads as\n\
          \x20 progress two weeks later, and nobody can recompute it.\n\
          \x20\n\
-         \x20 GUARDED means: empty in the clean corpus and OCCUPIED in the poison corpus --\n\
-         \x20 forbidden by a rule, and the poison file proves the rule falls. That is the\n\
-         \x20 strongest state a cell can have, and it is NOT work.\n\
+         \x20 POISON-ONLY means: empty in the clean corpus, occupied in the poison one. That\n\
+         \x20 is a HINT and not a proof -- a poison file tests ONE rule, and everything else\n\
+         \x20 in it is scaffolding. `assignment in traverse` sits in four poison files whose\n\
+         \x20 expected codes are P001, M109, E011 and M101, and none of them forbids it.\n\
+         \x20 A real `guarded` would need a probe PER COMBINATION, not per construct.\n\
          \x20\n\
          \x20 And what this does NOT say: an OCCUPIED cell says only that a pass CAN see the\n\
          \x20 form -- not that it handles it. Two of the five findings of 2026-08-20 this\n\

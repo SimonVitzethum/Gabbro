@@ -71,7 +71,7 @@ gabbro blindstellen beispiele/*.gab -- beispiele/gift/*.gab
 | state | what it means | work? |
 |---|---|---|
 | **covered** | the clean corpus realises it | no |
-| **GUARDED** | empty in the clean corpus, **occupied in the poison corpus** — a rule forbids it and a poison file proves the rule falls | **no** — the empty cell IS the confirmation |
+| **poison-only** | empty in the clean corpus, occupied in the poison one | a **hint**, not a proof — see the correction below |
 | impossible | the grammar does not allow the pair at all | no — it is not a cell |
 | **BLIND** | legal, meaningful, and nobody wrote it | yes |
 
@@ -85,7 +85,7 @@ gabbro blindstellen beispiele/*.gab -- beispiele/gift/*.gab
 ### The four numbers are reported apart, and the tool says them itself
 
 ```
-== 154 blind · 91 covered · 25 guarded · 15 no cell (of 285 pairs) ==
+== 125 blind · 125 covered · 20 poison-only · 15 no cell (of 285 pairs) ==
 ```
 
 `151 → 112` reads like thirty-nine progress. It was twenty-one **written** and eighteen
@@ -97,6 +97,25 @@ the NUMBER is quoted in one part, it stops being clean in two weeks, when it rea
 *And the same output shows the honest direction of travel:* the blind count went **104 → 154**
 when a pointer position was separated from a by-value one. Nothing got worse; the map got
 finer, and the denominator grew with it.
+
+### And the state was over-claimed — the acceptance of the first agent files found it
+
+The first version called it **GUARDED** and wrote beside it: *„the strongest state a cell can
+have."* **That was too much claimed.** Taking in two new corpus files moved five cells from
+`guarded` to `covered`, among them *assignment in a `traverse`* — and the four poison files
+that occupy that cell expect `P001`, `M109`, `E011` and `M101`. **None of them forbids an
+assignment in a traverse.** It stands there as SCAFFOLDING, not as the subject.
+
+> *A poison file tests ONE rule; everything else in it is scaffolding.* From „the shape occurs
+> only in the poison corpus" it does not follow that a rule forbids it — only that no clean
+> program has needed it yet.
+
+**What a real `guarded` would require is exactly the booked item**: a probe *per combination*
+instead of per construct. Until that exists, the state is called what it is — `poison-only`.
+
+*The check that found this is the one worth keeping:* **zero errors on a new corpus file is
+the weaker of the two possible reports.** The question is not whether it compiles but which
+cells it closes — and whether the cells it claims were really empty.
 
 ### The exclusion table is falsifiable, and it was refuted within the minute
 
