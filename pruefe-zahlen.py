@@ -88,14 +88,14 @@ EINTRAEGE = [
         "README.md",
         r"\*\*(\d+) of 23 instruments carry all four requirements\*\*",
         ["./pruefe-waechter.py"],
-        r"== (\d+) von \d+ tragen alle drei ==",
+        r"== (\d+) von \d+ tragen die drei STATISCHEN ==",
         "Instrumente mit Frist, Sprechprobe und rotem Abbruch",
     ),
     (
         "README.md",
         r"of (\d+) instruments carry all four",
         ["./pruefe-waechter.py"],
-        r"von (\d+) tragen alle drei",
+        r"von (\d+) tragen die drei STATISCHEN",
         "Instrumente insgesamt",
     ),
     (

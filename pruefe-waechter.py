@@ -160,11 +160,13 @@ def main():
             befunde.append((p.name, fehlt))
 
     print()
-    print(f"== {len(alle) - len(befunde)} von {len(alle)} tragen alle drei ==")
+    print(f"== {len(alle) - len(befunde)} von {len(alle)} tragen die drei STATISCHEN ==")
+    print("   Die vierte -- die ARBEITSMENGE neben dem Urteil (W17) -- steht in der Ausgabe")
+    print("   und nicht im Quelltext. Sie wird in `--lauf` gemessen, sonst gar nicht.")
 
     if "--lauf" in sys.argv:
         print()
-        print("== Und die leichten laufen wirklich, mit Frist ==")
+        print("== Und die leichten laufen wirklich, mit Frist -- und mit der vierten Forderung ==")
         for p in alle:
             if p.name in SCHWER:
                 print(f"  schwer  {p.name:<28}  {SCHWER[p.name]}")
@@ -191,6 +193,14 @@ def main():
             except PermissionError:
                 print(f"  NICHT AUSFUEHRBAR  {p.name} -- ein Waechter, den niemand starten kann")
                 befunde.append((p.name, ["NICHT-AUSFUEHRBAR"]))
+
+    if "--lauf" in sys.argv:
+        ohne = [n for n, f in befunde if "OHNE-ARBEITSMENGE" in f]
+        gelaufen = len(alle) - len(SCHWER)
+        print()
+        print(f"== {gelaufen - len(ohne)} von {gelaufen} gelaufenen nennen ihre ARBEITSMENGE ==")
+        print("   Ein gruener Lauf ohne Zahl daneben ist von einem leeren nicht zu")
+        print("   unterscheiden (W17). Die fuenf schweren sind hier NICHT gemessen.")
 
     print()
     print("== Und was das NICHT heisst ==")

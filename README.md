@@ -132,7 +132,7 @@ denominator that shines instead of the one that costs.*
 | **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 189 diagnostics · `gabbro paesse` |
 | **Grammar** | **146 EBNF rules**, closed and reachable | vocabulary covers every terminal, 216 / 216 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
-| **Guardians** | 17, and **23 of 23 instruments carry all four requirements** (deadline · two-way speech test · red on abort · **work quantity beside the verdict**), held by `./pruefe-waechter.py`. *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **234 of 234 mutations caught** *(run 2026-08-20)* |
+| **Guardians** | 17, and **23 of 23 instruments carry all four requirements** — three read statically (deadline · two-way speech test · red on abort), the fourth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./pruefe-waechter.py`. *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **234 of 234 mutations caught** *(run 2026-08-20)* |
 | **Corpus** | 45 clean examples, 217 poison files, 158 tests *(run 2026-08-20)* | `cargo test` |
 | **Emission** | **43 of 43 examples emit C, and all 43 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
 | **Blind spots** | **79 blind · 166 covered · 25 poison-only · 15 no cell** — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |
