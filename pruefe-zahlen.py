@@ -78,6 +78,13 @@ EINTRAEGE = [
         "Praemissen ohne Pass (Zahn 3)",
     ),
     (
+        "dokumente/MESSUNGEN.md",
+        r"`N_folgenlos` — ein `narrow`, dessen Entfernung nichts ändert, ist Zierde\. Heute\n> \*\*(\d+)\*\*",
+        ["./zaehle-bereichspflichten.py"],
+        r"N_folgenlos = (\d+)",
+        "N_folgenlos -- folgenlose `narrow`-Stellen",
+    ),
+    (
         "README.md",
         r"\*\*(\d+) of 23 instruments carry all three requirements\*\*",
         ["./pruefe-waechter.py"],

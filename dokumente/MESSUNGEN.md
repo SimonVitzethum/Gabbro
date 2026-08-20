@@ -6414,6 +6414,16 @@ echter Angriffsschutz und ein Ritus gleich viel wiegen.*
 „einer ist zu viel" gewandert, und es ist trotzdem fast erfüllt* — weil die alte Zahl zwei
 verschiedene Dinge summierte.
 
+> **Und diese Zahl ist ein URTEIL, kein Messwert — nachgezogen 2026-08-20.** K100.1 buchte als
+> Tor *„`zaehle-bereichspflichten.py` unterscheidet die drei Fälle"*; das Werkzeug tat es nicht,
+> die Trennung stand hier im Text. **Seit heute misst es die eine Hälfte, die ohne Urteil
+> geht:** `N_folgenlos` — ein `narrow`, dessen Entfernung nichts ändert, ist Zierde. Heute
+> **0**.
+>
+> *`N_folgenlos` ist nicht `N_ritus`.* Eine Stelle mit unerreichbarem `else` trägt sehr wohl
+> eine Pflicht — M1 sieht die Schranke nicht — und fällt dort deshalb nicht auf. **Die
+> Erreichbarkeit bleibt ein Urteil, bis ein Pass sie entscheidet.**
+
 ## Die eine Stelle, und woran sie hängt
 
 ```gabbro

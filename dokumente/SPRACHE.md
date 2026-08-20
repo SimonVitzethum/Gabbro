@@ -682,7 +682,7 @@ traversal does that, §9).
 | | Rule | Example |
 |---|---|---|
 | **V1** | a checked **range condition** narrows the range of the checked place in the branch after it | `if x >= 1 { … }` → `x : u32 in 1..max` |
-| **V2** | a checked **relation between two places** becomes a branch fact; under the fact `a >= b`, `a - b` has type `0 .. a.max − b.min`, under `a > b` type `1 .. a.max − b.min`. Comparison facts only, directly checked places only | `if a >= b { let d = a - b; }` — the **102 sites** all fall under this form |
+| **V2** | a checked **relation between two places** becomes a branch fact; under the fact `a >= b`, `a - b` has type `0 .. a.max − b.min`, under `a > b` type `1 .. a.max − b.min`. Comparison facts only, directly checked places only | `if a >= b { let d = a - b; }` — **54 relational sites**, of the 102 flow-sensitive ones. *Until 2026-08-20 this cell said „the 102 sites", and 102 is the whole flow-sensitive population (V1+V2+V3); the relational half of it is 54* (`MESSUNGEN.md`:370) |
 | **V3** | a `match` on a `tagged` type narrows in the branch to the variant including its payload | exhaustive, no catch-all branch |
 
 > **ZWEITE VORBEDINGUNG an V1 und V2, aufgeschrieben 2026-08-20 — und der Pruefer tat bis
@@ -1383,7 +1383,7 @@ loops as a lowering detail, migration in format versions, cycles as a time unit.
 
 | # | Question | Decision |
 |---|---|---|
-| F1 | 102 relational preconditions | **V2**, closed flow rule; `narrow` yardstick ≤ 24 |
+| F1 | **54** relational preconditions *(of 102 flow-sensitive)* | **V2**, closed flow rule; `narrow` yardstick ≤ 24 |
 | F2 | PTE = pointer AND bitfield | **`embeds [hi:lo] scale`**; root solved, not the domain |
 | F3 | eighth domain (W^X) | **`mappings of`**, generated from `walk` |
 | F4 | `per_pass` ritual | ops instead of cycles, `on_exceeded` obligatory, waiting time compositional via **`held`**, input-dependent bound |

@@ -94,14 +94,15 @@ ab und fällt bei Abweichung (`pruefe-todo.py` tut das für den README — auf `
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
-- [ ] **Die Spalte „of which K" in `PFLICHTEN.md` summiert sich zu 33, die Summenzeile sagt
-      18** *(gefunden 2026-08-17 beim Ablesen von `H`)*. **Beide koennen nicht stimmen.** Die
-      verlaessliche Zahl ist seither die abgelesene (`./zaehle-pflichten.py --haengend`,
-      `H = 21` = 14 verankert + 7 Absenkungen); *bis die Herkunft jeder einzelnen Zahl dieser
-      Spalte geklaert ist, ist sie Urteil und nicht Messung.* **Derselbe Vorgang hat schon
-      sechs `gap:`-Zeilen produziert, die in den Summen laengst geschlossen waren** -- die
-      Summe wurde gepflegt, die Quelle nicht.
-
+- [ ] **Die vier Zahlen der Kennzahlentafel, die kein Befehl ableitet** *(nachgezogen
+      2026-08-20)*. ~~Die Spalte „of which K" summiert sich zu 33, die Summenzeile sagt 18~~
+      *(2026-08-20)*.
+      **Beide Spalten sind gestrichen** — sie waren ein drittes Register neben dem Handgang
+      und dem Befehl, und `./zaehle-pflichten.py --haengend` druckt sie jetzt je Fragment ab.
+      *Was offen bleibt, ist der Rest der Tafel:* `total`, `K` und `L` kommen aus dem
+      Handgang, und der ist eine Auszählung ohne Befehl. **`pruefe-zahlen.py` führt heute 11
+      Kennzahlen mit Befehl und zählt 173 fettgedruckte Zahlen ohne einen** — die drei hier
+      sind darunter.
 - [ ] **Zwei Blicke auf dieselbe Karte gingen auseinander, und nur einer hatte einen Test**
       *(gefunden 2026-08-17 beim Bauen von `const fn`, weil eine Giftprobe nicht fiel, die
       fallen musste -- R11)*. `typ_von_ort` schlug den globalen Traeger modulbewusst nach
@@ -143,18 +144,30 @@ ab und fällt bei Abweichung (`pruefe-todo.py` tut das für den README — auf `
       about what the language cannot SAY.** *Does the folder count on a second axis, or does it
       say why it does not?*
 
-- [ ] **`narrow` sites are not equal, and neither measurement sees it.** `FRAGMENTE.md`:1660 —
-      else branch **reachable** (a hostile DTB takes it). `:1100` — else branch **cannot be
-      taken** and must stand there anyway. **The bar of 24 counts them the same.** A yardstick
-      that cannot tell a check from a ritual measures the wrong thing.
+- [ ] **`narrow`-Stellen sind nicht gleich, und K100.1 hat das nur im URTEIL getrennt**
+      *(nachgemessen 2026-08-20)*. `FRAGMENTE.md`:1660 — der `else`-Zweig ist **erreichbar**
+      (ein feindliches DTB nimmt ihn); `:1100` — er **kann nicht genommen werden** und muss
+      dastehen. K100.1 buchte als Tor: *„`zaehle-bereichspflichten.py` unterscheidet die drei
+      Fälle."* **Es tat es nicht** — die Trennung stand in `PFLICHTEN.md`, also im Urteil.
+      *Sechster Fall an einem Tag, in dem eine Buchung auf etwas zeigte, das anderswo lag.*
+      **Die eine messbare Hälfte ist seit heute gebaut:** `N_folgenlos` — ein `narrow`, dessen
+      Entfernung nichts ändert, ist Zierde (Zwei-Ebenen-Sonde, W8). Heute **0**.
+      **Und sie ist NICHT `N_ritus`:** `MESSUNGEN.md` definiert den über die *Erreichbarkeit*
+      des `else`-Zweigs, und eine unerreichbare trägt sehr wohl eine Pflicht. *Zwei
+      verschiedene Fragen, und bis heute hießen beide `N_ritus`.* **Was offen bleibt, ist die
+      Erreichbarkeit** — und die ist ein Urteil, bis ein Pass sie entscheidet.
 
 ### From the escalation of 2026-08-14 — one number never reconciled
 
 
-- [ ] **54 or 102 relational preconditions?** Part 1 of the design review says 54,
-      [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md):662 and :1222 say 102. **Two numbers for the
-      same population, neither with a search path** — W7. Resolving it means a count against
-      `../caprock-messbasis`, not a decision.
+- [ ] **~~54 or 102 relational preconditions?~~ — aufgelöst 2026-08-20, und es war kein
+      Streit, sondern eine falsche Beschriftung.** Die zwei Zahlen sind **zwei
+      Grundgesamtheiten**: `MESSUNGEN.md`:370 zählt **102 flusssensitive** Subtraktionen und
+      **davon 54 relationale** (`if a >= b { a - b }`). `SPRACHE.md` schrieb an zwei Stellen
+      *„die 102 Stellen fallen alle unter diese Form"* und meinte V2 — also die 54.
+      **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
+      derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
+      ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen.**
 
 ### Design — open decisions
 

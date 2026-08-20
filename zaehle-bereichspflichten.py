@@ -101,8 +101,46 @@ def main():
             print("  aus einem anderen Grund weg. Beides ist berichtenswert.")
         return 0 if ok else 1
 
+    # **`N_ritus` -- das Tor von K100.1, zum ersten Mal GEMESSEN** (2026-08-20).
+    #
+    # K100.1 buchte: *„`zaehle-bereichspflichten.py` unterscheidet die drei Faelle"*. Es tat
+    # es nicht -- die Unterscheidung stand in `PFLICHTEN.md`, also im Urteil, und nicht im
+    # Werkzeug. **Sechster Fall an einem Tag, in dem eine Buchung auf etwas zeigte, das
+    # anderswo lag.**
+    #
+    # Die messbare Haelfte braucht kein Urteil: **ein `narrow`, dessen Entfernung nichts
+    # aendert, ist ein Ritus.** Eines nach dem anderen entfernen und den Unterschied zaehlen
+    # -- die Zwei-Ebenen-Sonde (W8), auf die eigene Quelle angewandt.
+    #
+    # *Was es NICHT entscheidet:* ob ein tragendes `narrow` Logik oder ein Loch in M1 ist.
+    # Das ist die Frage nach der ERREICHBARKEIT des `else`-Zweigs, und die beantwortet
+    # dieses Verfahren nicht. **Ein Ritus dagegen ist ohne Urteil erkennbar.**
+    voll, _, _, _ = messe(urtext)
+    rituale = []
+    zeilen = urtext.splitlines(keepends=True)
+    stellen_narrow = [i for i, z in enumerate(zeilen) if re.match(r"\s*narrow\s", z)]
+    for i in stellen_narrow:
+        eins_weg, n = ohne_narrow("".join(zeilen[i:]))
+        text = "".join(zeilen[:i]) + eins_weg if n == 1 else None
+        if text is None:
+            # `ohne_narrow` hat mehr als eines erwischt -- dann sagt der Lauf nichts.
+            continue
+        s1, _, _, _ = messe(text)
+        if len(s1) == len(voll):
+            rituale.append(i + 1)
+
     stellen, sauber, ganz, roh = messe(gestrichen)
     print(f"== Bereichspflichten im Gabbro-Korpus ==")
+    print(f"  N_folgenlos = {len(rituale)}"
+          + (f" -- Zeilen {', '.join(map(str, rituale))}" if rituale else ""))
+    print( "  Ein `narrow`, dessen Entfernung NICHTS aendert, ist Zierde: M1 traegt die")
+    print( "  Schranke ohnehin.")
+    print()
+    print( "  **Und das ist NICHT `N_ritus`.** `MESSUNGEN.md` definiert `N_ritus` als die")
+    print( "  Stelle, deren `else`-Zweig UNERREICHBAR ist -- die traegt sehr wohl eine")
+    print( "  Pflicht (M1 sieht die Schranke nicht) und faellt hier darum nicht auf.")
+    print( "  *Zwei verschiedene Fragen, und bis zum 2026-08-20 hiessen sie beide `N_ritus`.*")
+    print( "  Die Erreichbarkeit bleibt ein Urteil; dieses Werkzeug misst die Folgenlosigkeit.")
     print(f"  entfernte `narrow`-Anweisungen: {entfernt}")
     print(f"  Tor P2 ohne sie:               {sauber} von {ganz} sauber")
     if sauber == ganz:

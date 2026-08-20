@@ -242,6 +242,22 @@ def haengend(probe=None, still=False):
         stellen = ", ".join(s for _, s in offen[f])
         print(f"  {f:<4} {len(offen[f]):>2}   {stellen}")
     n = sum(len(v) for v in offen.values())
+    # **Die Spalte je Fragment -- ABGELEITET statt gepflegt** (2026-08-20).
+    #
+    # `PFLICHTEN.md` fuehrte eine Tabelle „hanging / of which K" je Fragment. Ihre Spalte
+    # summierte sich zu 33, die Summenzeile sagte 18, und die Fussnoten der Abschnitte sagten
+    # ein Drittes. **Drei Register ueber derselben Sache** (W7) -- und keins davon abgeleitet.
+    #
+    # *Die Absenkungspflicht ist je Fragment bekannt und steht nur als eine Zeile in der
+    # Tabelle:* F1-F6 und F9 sind offen, F7/F8/F10 gemessen. Damit ist die Spalte hier
+    # ableitbar, und die Tabelle drueben braucht sie nicht mehr von Hand.
+    ABSENKUNG_OFFEN = ["F1", "F2", "F3", "F4", "F5", "F6", "F9"]
+    print("\n  je Fragment (verankert + Absenkung):")
+    for f in [f"F{i}" for i in range(1, 11)]:
+        v = len(offen.get(f, []))
+        a = 1 if f in ABSENKUNG_OFFEN else 0
+        if v or a:
+            print(f"    {f:<4} {v} + {a} = {v + a}")
     print(f"\n  verankert       {n:>3}")
     print( "  Absenkung         7   F1-F6 und F9 -- eine Zeile fuer neun, in")
     print( "                        `The tenth event`; F7/F8/F10 sind gemessen")

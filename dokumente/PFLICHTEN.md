@@ -482,28 +482,38 @@ sondern **abgelesen**:
 ./zaehle-pflichten.py --haengend
 ```
 
-**Und dabei fiel eine zweite Unstimmigkeit auf, die hier stehenbleibt, weil sie noch nicht
-aufgelöst ist:** die Spalte *„of which K"* der Tabelle unten summiert sich zu **33**, die
-Summenzeile sagt **18**. Beide können nicht stimmen. *Bis die Herkunft jeder einzelnen Zahl
-dieser Spalte geklärt ist, ist sie Urteil und nicht Messung* — die verlässliche Zahl ist die
-abgelesene oben.
+**Und die zweite Unstimmigkeit ist am 2026-08-20 aufgelöst — durch Streichen, nicht durch
+Rechnen.** Die Tabelle unten führte zwei Spalten `hanging` und `of which K`. Die eine summierte
+sich zu **47** bei einer Summenzeile von **34**, die andere zu **33** bei **18** — und die
+Fußnoten der Fragmentabschnitte sagten ein Drittes.
+
+> **Drei Register über derselben Sache** (W7), und keins davon abgeleitet. *Eine Zahl, deren
+> Suchweg ihr widerspricht, ist schlimmer als eine ohne — sie sieht belegt aus.*
+
+Die beiden Spalten sind fort. **`./zaehle-pflichten.py --haengend` druckt sie jetzt je
+Fragment**, aus den `gap:`-Zeilen dieser Datei abgeleitet plus der einen bekannten
+Absenkungszeile (F1–F6 und F9 offen, F7/F8/F10 gemessen). *Was bleibt, ist der Handgang —
+`total`, `K`, `L` —, und der ist eine Auszählung und keine Summenpflege.*
 
 ## Per fragment
 
-| | total | K | L | hanging | of which K |
-|---|---:|---:|---:|---:|---:|
-| F1 Cap space | 59 | 42 | 17 | 4 | 1 |
-| F2 VT-d | 24 | 19 | 5 | 4 | 4 |
-| F3 IPC | 26 | 13 | 13 | 6 | 1 |
-| F4 Driver | 30 | 24 | 6 | 7 | 6 |
-| F5 Userspace | 18 | 8 | 10 | 5 | 2 |
-| F6 Test scaffold | 26 | 21 | 5 | 8 | 7 |
-| F7 Loader | 9 | 8 | 1 | 2 | 2 |
-| F8 Scheduler | 14 | 12 | 2 | 1 | 1 |
-| F9 MMU | 11 | 7 | 4 | 2 | 1 |
-| F10 Parser | 11 | 9 | 2 | 1 | 1 |
-| Lowering | 10 | 10 | 0 | 7 | 7 |
-| | **238** | **171** | **67** | **34** | **18** |
+| | total | K | L |
+|---|---:|---:|---:|
+| F1 Cap space | 59 | 42 | 17 |
+| F2 VT-d | 24 | 19 | 5 |
+| F3 IPC | 26 | 13 | 13 |
+| F4 Driver | 30 | 24 | 6 |
+| F5 Userspace | 18 | 8 | 10 |
+| F6 Test scaffold | 26 | 21 | 5 |
+| F7 Loader | 9 | 8 | 1 |
+| F8 Scheduler | 14 | 12 | 2 |
+| F9 MMU | 11 | 7 | 4 |
+| F10 Parser | 11 | 9 | 2 |
+| Lowering | 10 | 10 | 0 |
+| | **238** | **171** | **67** |
+
+*Die hängenden Zahlen je Fragment stehen nicht mehr hier, sondern im Befehl:*
+`./zaehle-pflichten.py --haengend`.
 
 ## Die hängenden Klempnereipflichten — nachgezogen 2026-08-17, Posten für Posten
 
