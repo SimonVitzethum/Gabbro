@@ -126,7 +126,7 @@ denominator that shines instead of the one that costs.*
 | **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 173 diagnostics · `gabbro paesse` |
 | **Grammar** | **143 EBNF rules**, closed and reachable | vocabulary covers every terminal, 211 / 211 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
-| **Guardians** | 13, each with a two-way speech test | **189 of 189 mutations caught** *(run 2026-08-20)* |
+| **Guardians** | 13, each with a two-way speech test | **193 of 193 mutations caught** *(run 2026-08-20)* |
 | **Corpus** | 38 clean examples, 177 poison files, 149 tests *(run 2026-08-20)* | `cargo test` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
