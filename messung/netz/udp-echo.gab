@@ -1,0 +1,238 @@
+-- **Der Netzwerkstack in Gabbro -- Stufe 4, und die Vorlage kommt von AUSSEN.**
+--
+-- Gegenstand: Ethernet -> ARP -> IPv4 -> UDP, ein Echodienst. Geschrieben gegen
+-- **RFC 791** (IPv4), **RFC 826** (ARP), **RFC 768** (UDP) und **RFC 1071** (Pruefsumme),
+-- und geprueft gegen **veroeffentlichte Testvektoren**, nicht gegen eigene Pakete:
+--
+--     45 00 00 73 00 00 40 00 40 11 [b8 61] c0 a8 00 01 c0 a8 00 c7
+--     der klassische IPv4-Kopf; die Pruefsumme ist b861 und steht so in der Norm
+--
+--     00 01 f2 03 f4 f5 f6 f7   ->  Summe dd f2      (RFC 1071, Abschnitt 3)
+--
+-- **Warum das dabeisteht:** ein Stack, den derselbe Autor gegen seine eigenen Testpakete
+-- schreibt, misst wieder, wie gut Gabbro zu Gabbro passt (Regel B). Die Vektoren hier hat
+-- niemand fuer Gabbro ausgesucht -- sie standen vorher da.
+--
+-- **Was diese Datei misst, ist nicht der Stack, sondern die Sprache.** Jede Zeile, die hier
+-- nicht steht, steht als Befund daneben.
+
+module netz::udp_echo {
+
+-- ---------------------------------------------------------------------------------------
+-- Die Zahlen. Alle aus den Normen, keine aus einer Schaetzung.
+-- ---------------------------------------------------------------------------------------
+
+const ET_IPV4    : u16 = 2048;      -- 0x0800, RFC 894
+const ET_ARP     : u16 = 2054;      -- 0x0806, RFC 826
+const IPPROTO_UDP: u8  = 17;        -- RFC 790
+const ARP_ANFRAGE: u16 = 1;
+const ARP_ANTWORT: u16 = 2;
+
+const KOPFWORTE  : u32 = 10;        -- 20 Byte IPv4-Mindestkopf, in 16-Bit-Worten
+const ARP_PLAETZE: u32 = 16;
+const MTU        : u16 = 1500;
+
+-- ---------------------------------------------------------------------------------------
+-- Die Koepfe. **`endian big` steht an jedem** -- Netzreihenfolge ist eine Aussage der Norm,
+-- kein Byteschwenk von Hand.
+-- ---------------------------------------------------------------------------------------
+
+format EthKopf endian big {
+    ziel_hi   : u32,
+    ziel_lo   : u16,
+    quell_hi  : u32,
+    quell_lo  : u16,
+    ethertyp  : u16,
+}
+
+-- RFC 791. Byte 0 und Byte 1 kacheln jeweils GENAU -- das ist die Wortgrenze selbst,
+-- nicht eine Buchhaltung darueber («B24», `beispiele/24`).
+format IpKopf endian big {
+    version      : u8  @[7:4],
+    ihl          : u8  @[3:0],
+    dscp         : u8  @[7:2],
+    ecn          : u8  @[1:0],
+    gesamtlaenge : u16,
+    kennung      : u16,
+    flags        : u16 @[15:13],
+    fragment     : u16 @[12:0],
+    ttl          : u8,
+    protokoll    : u8,
+    pruefsumme   : u16,
+    quelle       : u32,
+    ziel         : u32,
+}
+
+format UdpKopf endian big {
+    quellport : u16,
+    zielport  : u16,
+    laenge    : u16,
+    summe     : u16,
+}
+
+-- Der Kopf als WORTFOLGE -- das ist die Sicht, in der RFC 1071 rechnet.
+type Kopfworte = {
+    wort : [u16; 10],
+};
+
+-- ---------------------------------------------------------------------------------------
+-- Die Pruefsumme nach RFC 1071. **Erst seit Stufe 3 schreibbar:** `elems of` bindet einen
+-- INDEX, und ohne den kann eine Summe ueber ein Feld ihre Stelle nicht nennen.
+-- ---------------------------------------------------------------------------------------
+
+impl fn summe_1071(k : ptr<normal, r> Kopfworte) -> u32
+    ensures result <= 4294967295
+    effects { reads k }
+    costs   <= 64 ops
+{
+    let mut s : u32 = 0;
+    traverse i over elems of k.wort by unvisited
+        touches reads k
+    {
+        s += k.wort[i];
+    }
+    return s;
+}
+
+-- Das Falten und Komplementieren, getrennt: die Summe ist die Rechnung, die Faltung die
+-- Norm. **RFC 1071 faltet zweimal** -- einmal reicht nicht, weil der Uebertrag der ersten
+-- Faltung selbst ueberlaufen kann.
+impl fn falte(s : u32) -> u16
+    effects { pure }
+    costs   <= 16 ops
+{
+    let a : u32 = (s & 65535) + (s >> 16);
+    let b : u32 = (a & 65535) + (a >> 16);
+    return (b & 65535) ^ 65535;
+}
+
+impl fn kopfsumme(k : ptr<normal, r> Kopfworte) -> u16
+    effects { reads k }
+    costs   <= 88 ops
+{
+    return falte(summe_1071(k));
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Der ARP-Zwischenspeicher. Eine Tabelle mit einer Invariante, die RFC 826 nur als Satz
+-- fuehrt: **ein belegter Platz hat eine Adresse ungleich null.**
+-- ---------------------------------------------------------------------------------------
+
+table ArpTabelle count ARP_PLAETZE {
+    slot {
+        belegt : bool,
+        ip     : u32,
+        mac_hi : u32,
+        mac_lo : u16,
+        alter  : u16,
+    }
+
+    invariant belegt_hat_adresse cost O(1) runs online :
+        forall s in slots of Self : !Self.slots[s].belegt || Self.slots[s].ip != 0;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Der Empfangsweg.
+-- ---------------------------------------------------------------------------------------
+
+reason Verwurf {
+    ZuKurz      = 1 "der Rahmen ist kuerzer als sein eigener Kopf"
+    FremderTyp  = 2 "kein IPv4 und kein ARP"
+    Pruefsumme  = 3 "die Kopfpruefsumme stimmt nicht"
+    NichtFuerUns= 4 "die Zieladresse ist eine andere"
+    exhaustive
+}
+
+extern fn kopfworte_von(r : ptr<normal, r> IpKopf) -> ptr<normal, r> Kopfworte
+    effects { reads r }
+    costs   <= 4 ops;
+
+impl fn kopf_gueltig(k : ptr<normal, r> IpKopf, w : ptr<normal, r> Kopfworte) -> bool
+    effects { reads k, reads w }
+    costs   <= 128 ops
+{
+    if k.version != 4 { return false; }
+    if k.ihl < 5 { return false; }
+    if kopfsumme(w) != 0 { return false; }
+    return true;
+}
+
+-- **Der Zwischenspeicher wird durchsucht, nicht gehasht.** Sechzehn Plaetze, und die
+-- Schranke faellt aus der Tabellendeklaration statt aus einer Zaehlung im Rumpf.
+impl fn arp_suchen(a : ptr<normal, r> ArpTabelle, ip : u32) -> u32
+    effects  { reads a }
+    costs    <= 256 ops
+{
+    let mut treffer : u32 = 0;
+    traverse s over slots of a by unvisited
+        touches reads a
+    {
+        if a.slots[s].belegt && a.slots[s].ip == ip {
+            treffer = a.slots[s].mac_hi;
+        }
+    }
+    return treffer;
+}
+
+-- **RFC 826, der Lernschritt:** wer eine ARP-Nachricht sieht, traegt den Absender ein --
+-- gleichgueltig ob Anfrage oder Antwort. Die Invariante der Tabelle haelt dabei, und das
+-- steht als `maintains` da statt als Kommentar.
+impl fn arp_lernen(a : ptr<normal, rw> ArpTabelle,
+                   platz : index into ArpTabelle,
+                   ip : u32, hi : u32, lo : u16)
+    requires  ip != 0
+    maintains belegt_hat_adresse
+    effects   { writes a.slots }
+    costs     <= 16 ops
+{
+    a.slots[platz].belegt = true;
+    a.slots[platz].ip     = ip;
+    a.slots[platz].mac_hi = hi;
+    a.slots[platz].mac_lo = lo;
+    a.slots[platz].alter  = 0;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Der Echodienst. **Der Fehlerkanal steht in der Signatur**, und jeder Abweispfad traegt
+-- einen Namen -- D11 woertlich: benannt statt still.
+-- ---------------------------------------------------------------------------------------
+
+extern fn udpkopf_von(k : ptr<normal, r> IpKopf) -> ptr<normal, rw> UdpKopf
+    effects { reads k }
+    costs   <= 4 ops;
+
+extern fn senden(e : ptr<normal, r> EthKopf, laenge : u16) -> u32 or Verwurf
+    effects { reads e }
+    costs   <= 64 ops;
+
+impl fn echo_beantworten(e : ptr<normal, r> EthKopf,
+                         k : ptr<normal, rw> IpKopf,
+                         w : ptr<normal, r> Kopfworte,
+                         meine_ip : u32) -> u32 or Verwurf
+    effects { reads e, reads w, writes k }
+    costs   <= 256 ops
+{
+    if e.ethertyp != ET_IPV4 {
+        return 0;
+    }
+    if !kopf_gueltig(k, w) {
+        return 0;
+    }
+    if k.ziel != meine_ip {
+        return 0;
+    }
+    if k.protokoll != IPPROTO_UDP {
+        return 0;
+    }
+    -- Quelle und Ziel tauschen; der Kopf wird zur Antwort.
+    let alt_quelle : u32 = k.quelle;
+    k.quelle = k.ziel;
+    k.ziel   = alt_quelle;
+    k.ttl    = 64;
+    let gesendet = senden(e, k.gesamtlaenge) else (grund) {
+        return 0;
+    }
+    return gesendet;
+}
+
+}

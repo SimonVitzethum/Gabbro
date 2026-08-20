@@ -1,0 +1,24 @@
+-- erwartet: C001
+-- **In C bleibt `-x` auf einem vorzeichenlosen Operanden VORZEICHENLOS.**
+--
+-- Die ueblichen arithmetischen Umwandlungen befoerdern `uint32_t` nicht nach `int`, weil
+-- `int` seinen Wertebereich nicht fasst. `-x` ist dann ein Umlauf und kein Vorzeichenwechsel
+-- -- **und M1 sagt fuer denselben Ausdruck `i32 in -4294967295 .. 0`.** Zwei Rechnungen,
+-- zwei Ergebnisse, und das erzeugte Programm folgte der stillen.
+--
+-- Der Erzeuger senkt es darum nicht ab, obwohl die Verneinung `!` seit dem 2026-08-20
+-- danebensteht. **Regel A: kein Konstrukt ohne ein Programm, das es gebraucht hat** -- die
+-- Verneinung hat `messung/netz/udp-echo.gab` gebraucht, das Minus niemand.
+--
+-- > Die Gegenprobe steht in `beispiele/46-verneinung.gab`: dort wird `!` abgesenkt.
+
+module gift {
+
+impl fn spiegeln(x : i32) -> i32
+    effects { pure }
+    costs   <= 4 ops
+{
+    return -x;
+}
+
+}

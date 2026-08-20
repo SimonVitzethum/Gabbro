@@ -2792,6 +2792,13 @@ fn ruft_irgendwas(b: &Block) -> bool {
 /// > Schranke, die ohne Hüllenrechnung hält — und sie trifft die Gestalt, in der `pure`
 /// > überhaupt etwas bringt: den kleinen Leser.
 fn wirkungsattribut(f: &FnDecl, u: &Namen) -> &'static str {
+    // **Eine Funktion mit Fehlerkanal SCHREIBT durch `*_wert`** -- `const` verspricht dem
+    // C-Uebersetzer das Gegenteil, und `pure` fast dasselbe. *Gemessen am 2026-08-20: mit
+    // `__attribute__((const))` liess GCC den Speicherschritt weg, und der Rufer sah seinen
+    // alten Wert.* Dieselbe Klasse wie `pure` an einem volatilen Leser, eine Zeile tiefer.
+    if f.fehler.is_some() {
+        return "";
+    }
     let FnRumpf::Block(b) = &f.rumpf else {
         return "";
     };
@@ -3261,6 +3268,18 @@ fn funktion(
         }
     }
     // **Der Rueckgabetyp reist mit in den Rumpf** -- ein `return None` haengt an ihm.
+    // **Der Grund hat keinen Erzeuger, und das steht jetzt IM erzeugten C** (2026-08-20).
+    //
+    // `primary` kennt keine Produktion fuer einen `reason`-Wert -- kein Gabbro-Rumpf kann
+    // je einen herstellen. `*_grund` bleibt darum ungeschrieben, und ohne diese Zeile
+    // scheitert die Uebersetzung unter `-Werror=unused-parameter`. *Die Zeile verschweigt
+    // den Befund nicht, sie schreibt ihn hin.*
+    if f.fehler.is_some() {
+        aus.push_str(
+            "    (void)_grund; /* no Gabbro body can produce a reason -- the channel is \
+             declared, never written */\n",
+        );
+    }
     let rahmen = Austritt {
         freigaben: Vec::new(),
         rueck_option: match &f.ergebnis {
@@ -3268,6 +3287,7 @@ fn funktion(
             _ => None,
         },
         schleifen: Vec::new(),
+        fehlerkanal: f.fehler.is_some(),
     };
     for s in &b.anweisungen {
         anweisung(s, aus, u, absagen, 1, &rahmen);
@@ -3451,6 +3471,9 @@ struct Austritt {
     /// zu viel frei (und der Rufer laeuft ohne seine Sperre weiter) oder zu wenig (und sie
     /// bleibt haengen). *Dieselbe Buchhaltung wie bei `return`, nur an einem naeheren Rand.*
     schleifen: Vec<(String, usize)>,
+    /// **Hat diese Funktion einen Fehlerkanal (`-> T or R`)?** Dann ist der Rueckgabewert
+    /// der ERFOLG, und das Ergebnis geht durch `*_wert`. Siehe `StmtArt::Return`.
+    fehlerkanal: bool,
 }
 
 fn einzug(n: usize) -> String {
@@ -3495,8 +3518,30 @@ fn anweisung(
                         .as_deref()
                         .and_then(|tab| option_wert(x, tab, u, absagen))
                         .unwrap_or_else(|| ausdruck(x, u, absagen));
-                    aus.push_str(&format!("{e}return {t};\n"));
+                    // **`-> T or R`: der Rueckgabewert ist der ERFOLG, das Ergebnis geht
+                    // durch `*_wert`** (2026-08-20, Stufe 4).
+                    //
+                    // Bis heute schrieb der Erzeuger `return <wert>;` in eine Funktion, deren
+                    // C-Signatur `bool` zurueckgibt. **Das Ergebnis war IMMER falsch, und zwar
+                    // auf zwei Arten zugleich:**
+                    //
+                    // ```text
+                    // f(0)  ->  der Ruf meldet MISSERFOLG, obwohl 0 ein gueltiger Wert ist
+                    // f(7)  ->  der Ruf meldet Erfolg und `*_wert` bleibt UNBERUEHRT
+                    // ```
+                    //
+                    // `gabbro pruefe`: 0 Fehler, 0 Hinweise. `gabbro emit`: Ruecklaufwert 0.
+                    // `cc` ohne `-Werror`: uebersetzt. **Gefunden von einem Programm** --
+                    // `messung/netz/udp-echo.gab`, dem ersten mit einem Fehlerkanal an einer
+                    // `impl fn`. *Der ganze Korpus fuehrt `or R` ausschliesslich an `extern
+                    // fn`, also an Ruempfen, die dieser Erzeuger nie sieht.*
+                    if austritt.fehlerkanal {
+                        aus.push_str(&format!("{e}*_wert = {t};\n{e}return true;\n"));
+                    } else {
+                        aus.push_str(&format!("{e}return {t};\n"));
+                    }
                 }
+                None if austritt.fehlerkanal => aus.push_str(&format!("{e}return true;\n")),
                 None => aus.push_str(&format!("{e}return;\n")),
             }
         }
@@ -5557,6 +5602,37 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
             format!("{} {} {}", ausdruck(a, u, absagen), op_text(op), ausdruck(b, u, absagen))
         }
         ExprArt::Ruf(r) => ruf(r, u, absagen),
+        // **Die logische Verneinung -- gebaut, WEIL ein Programm sie gebraucht hat**
+        // (2026-08-20, Stufe 4, `messung/netz/udp-echo.gab`).
+        //
+        // `if !kopf_gueltig(k, w) { … }` -- die gewoehnlichste Zeile eines Empfangswegs.
+        // **`gabbro pruefe` gab 0 Fehler, `gabbro emit` sagte `expression form` ab**, und
+        // die 45 Beispiele hatten die Stelle NIE ausgeloest: kein einziges benutzt ein `!`
+        // oder ein unaeres Minus in einem abgesenkten Rumpf. *Der Korpus ist je Konstrukt
+        // geschrieben, und ein `!` ist kein Konstrukt -- es ist das, was man beim Schreiben
+        // eines Programms tut.*
+        ExprArt::Unaer(UnOp::Nicht, x) => format!("!({})", ausdruck(x, u, absagen)),
+        // **Und das unaere Minus wird NICHT mitgebaut, obwohl es danebensteht** -- Regel A:
+        // kein Konstrukt ohne ein Programm, das es gebraucht hat. Es hat einen zweiten
+        // Grund, und der ist schaerfer:
+        //
+        // > In C bleibt `-x` auf einem `uint32_t` UNSIGNED -- die ueblichen arithmetischen
+        // > Umwandlungen befoerdern es nicht nach `int`, weil `int` den Wertebereich nicht
+        // > fasst. **Das erzeugte Programm rechnete dann etwas anderes als M1 sagt**, und M1
+        // > sagt `i32 in -4294967295 .. 0`.
+        //
+        // *Eine Absenkung, die das stillschweigend anders rechnet, ist genau die Klasse, die
+        // dieser Ordner schon dreimal bezahlt hat.*
+        ExprArt::Unaer(UnOp::Negativ, _) => {
+            weigere(
+                absagen,
+                e.span,
+                "unary minus -- in C `-x` on an unsigned operand stays UNSIGNED (the usual \
+                 conversions do not promote it), so the emitted program would compute \
+                 something other than the checker says. No corpus site needs it",
+            );
+            String::new()
+        }
         _ => {
             weigere(absagen, e.span, "expression form");
             String::new()

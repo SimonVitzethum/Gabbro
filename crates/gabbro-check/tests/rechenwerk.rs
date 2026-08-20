@@ -267,6 +267,12 @@ fn der_erzeuger_weigert_sich_statt_offen_auszufallen() {
         let _ = gabbro_check::emit::emittiere(&baum, &mut a);
         a.absagen.iter().map(|x| x.text.clone()).collect()
     }
+    fn c_von(q: &str) -> (String, Vec<String>) {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe selbst parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        (c, a.absagen.iter().map(|x| x.text.clone()).collect())
+    }
 
     // **1. `option` wurde am selben Tag entschieden, und der Test wird im Gleichschritt
     // nachgezogen.** Beim Fund war die Absage die ehrliche Antwort -- die Darstellung war
@@ -286,14 +292,55 @@ fn der_erzeuger_weigert_sich_statt_offen_auszufallen() {
     assert!(ohne_option.is_empty(), "ein pflichtiger Index traegt: {ohne_option:?}");
 
     // **2. Eine unbekannte Ausdrucksform wird abgelehnt, nicht zu null.**
-    let unaer = absagen_von(
+    //
+    // *Hier stand bis zum 2026-08-20 ein `!`* -- und die Verneinung ist seit Stufe 4 gebaut,
+    // weil ein Programm sie gebraucht hat (`messung/netz/udp-echo.gab`). Der Sammelzweig
+    // bleibt trotzdem geprueft, jetzt an `old(place)` in einem RUMPF: `SPRACHE.md` §6 sagt
+    // *„`old(place)` only in `ensures`"*, **und kein Pass haelt die Zeile** -- nur der
+    // Erzeuger faellt. Dieselbe Klasse wie das `!` davor.
+    let unbekannt = absagen_von(
+        "module t { table T count 8 { slot { benutzt : bool, } }\n \
+         impl fn f(t : ptr<normal, r> T, i : index into T) -> bool \
+         effects { reads t.slots } costs <= 4 ops { return old(t.slots[i].benutzt); } }",
+    );
+    assert!(
+        unbekannt.iter().any(|s| s.contains("expression form")),
+        "eine unbekannte Ausdrucksform muss beim Namen abgelehnt werden: {unbekannt:?}"
+    );
+
+    // **2b. Die Verneinung SENKT AB, das unaere Minus nicht -- und der Unterschied ist
+    // begruendet, nicht bequem** (2026-08-20, Regel A).
+    let verneint = absagen_von(
         "module t { table T count 8 { slot { benutzt : bool, } }\n \
          impl fn f(t : ptr<normal, r> T, i : index into T) -> bool \
          effects { reads t.slots } costs <= 4 ops { return !t.slots[i].benutzt; } }",
     );
+    assert!(verneint.is_empty(), "`!` ist gebaut, weil ein Programm es brauchte: {verneint:?}");
+    let minus = absagen_von(
+        "module t { impl fn f(x : i32) -> i32 effects { pure } costs <= 4 ops \
+         { return -x; } }",
+    );
     assert!(
-        unaer.iter().any(|s| s.contains("expression form")),
-        "eine unbekannte Ausdrucksform muss beim Namen abgelehnt werden: {unaer:?}"
+        minus.iter().any(|s| s.contains("unary minus")),
+        "das unaere Minus wird BEIM NAMEN abgelehnt -- in C bliebe `-x` auf einem \
+         vorzeichenlosen Operanden vorzeichenlos: {minus:?}"
+    );
+
+    // **2c. `-> T or R`: der Rueckgabewert ist der ERFOLG, das Ergebnis geht durch `*_wert`.**
+    //
+    // Bis zum 2026-08-20 schrieb der Erzeuger `return <wert>;` in eine `bool`-Funktion. Das
+    // Ergebnis war IMMER falsch, und zwar auf zwei Arten zugleich: `f(0)` meldete Misserfolg,
+    // `f(7)` liess `*_wert` unberuehrt. *`gabbro pruefe`: 0 Fehler. `cc`: uebersetzt.*
+    let (c, f) = c_von(
+        "module t { reason R { A = 1 \"a\" exhaustive }\n \
+         impl fn hol(x : u32) -> u32 or R effects { pure } costs <= 4 ops { return x; } }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    assert!(c.contains("*_wert = x;"), "das Ergebnis geht durch `_wert`:\n{c}");
+    assert!(c.contains("return true;"), "der Rueckgabewert ist der ERFOLG:\n{c}");
+    assert!(
+        !c.contains("__attribute__((const))") && !c.contains("__attribute__((pure))"),
+        "eine Funktion, die durch `*_wert` schreibt, ist weder `const` noch `pure`:\n{c}"
     );
 
     // **3. `Some`/`None` sind Konstruktoren, keine Rufe** («B35»).

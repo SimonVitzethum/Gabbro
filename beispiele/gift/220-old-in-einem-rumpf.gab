@@ -1,0 +1,28 @@
+-- erwartet: C001
+-- **`old(place)` gehoert in ein `ensures` -- und kein Pass haelt die Zeile.**
+--
+-- `SPRACHE.md` §6 sagt es ausdruecklich: *„`old(place)` only in `ensures`."* Ein Rumpf darf
+-- es trotzdem schreiben, `gabbro pruefe` meldet **0 Fehler und 0 Hinweise**, und erst der
+-- Erzeuger faellt.
+--
+-- **Dieselbe Klasse wie das `!` vor dem 2026-08-20:** eine Regel, die nur auf der
+-- Erzeugerflaeche steht -- und die beruehren die meisten Programme nie. *Der Unterschied ist,
+-- dass beim `!` die Sprache recht hatte und der Erzeuger fehlte; hier hat der Erzeuger recht
+-- und der Pruefer fehlt.*
+--
+-- Gefunden 2026-08-20 beim Nachziehen einer Testzusicherung, die vorher am `!` hing.
+
+module gift {
+
+table T count 8 {
+    slot { benutzt : bool, }
+}
+
+impl fn war_belegt(t : ptr<normal, r> T, i : index into T) -> bool
+    effects { reads t.slots }
+    costs   <= 4 ops
+{
+    return old(t.slots[i].benutzt);
+}
+
+}

@@ -1567,6 +1567,37 @@ MUTATIONEN = [
         # *Der Anker traegt die Absagezeile mit*, weil `if matches!(…, Verbrauchend)` seit
         # «B12» an ZWEI Domaenen steht -- und ein mehrdeutiger Anker misst die erste
         # Fundstelle und liest sich wie beide.
+        # **Stufe 4, 2026-08-20:** der Fehlerkanal an einer `impl fn`. Die Mutation nimmt das
+        # `*_wert =` weg -- genau der Zustand, in dem der Erzeuger bis zu diesem Tag war:
+        # `f(7)` meldete Erfolg und liess den Wert des Rufers unberuehrt.
+        "fehlerkanal-schreibt-den-wert-nicht",
+        "emit.rs",
+        "aus.push_str(&format!(\"{e}*_wert = {t};\\n{e}return true;\\n\"));",
+        "aus.push_str(&format!(\"{e}return true;\\n\"));",
+        "C-Absenkung -- eine Funktion mit Fehlerkanal gibt ihr Ergebnis nicht heraus",
+        "code",
+    ),
+    Mutation(
+        # Und die andere Haelfte desselben Fundes: der Rueckgabewert ist der ERFOLG. Steht
+        # dort der Wert, meldet `f(0)` Misserfolg -- fuer eine gueltige Null.
+        "fehlerkanal-meldet-den-wert-als-erfolg",
+        "emit.rs",
+        "                    if austritt.fehlerkanal {",
+        "                    if false && austritt.fehlerkanal {",
+        "C-Absenkung -- der Wert wird als Erfolgsmerker zurueckgegeben",
+        "code",
+    ),
+    Mutation(
+        # **Die Verneinung, gebaut weil ein Programm sie brauchte.** Faellt das `!` weg, ist
+        # jede Bedingung des Empfangswegs umgedreht -- und `cc` sagt nichts.
+        "verneinung-verschwindet",
+        "emit.rs",
+        "ExprArt::Unaer(UnOp::Nicht, x) => format!(\"!({})\", ausdruck(x, u, absagen)),",
+        "ExprArt::Unaer(UnOp::Nicht, x) => format!(\"({})\", ausdruck(x, u, absagen)),",
+        "C-Absenkung -- die logische Verneinung faellt weg, jede Bedingung ist umgedreht",
+        "code",
+    ),
+    Mutation(
         "verbrauchen-laeuft-wie-besuchen",
         "emit.rs",
         "            if matches!(x.abstieg, Abstieg::Verbrauchend) {\n"

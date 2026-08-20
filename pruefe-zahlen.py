@@ -77,6 +77,13 @@ EINTRAEGE = [
         "vervollstaendigte Fragmente, die absenken",
     ),
     (
+        "messung/netz/README.md",
+        r"(\d+) von 3 Proben grün",
+        ["./zaehle-netz.py"],
+        r"^== (\d+) von 3 Proben gruen ==",
+        "Netzstack gegen veroeffentlichte Vektoren",
+    ),
+    (
         "README.md",
         r"may fall\*\* — (\d+) and \d+ clause sites",
         ["./zaehle-zeremonie.py"],

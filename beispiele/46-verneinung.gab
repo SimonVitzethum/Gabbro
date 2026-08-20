@@ -1,0 +1,56 @@
+-- 46 -- die logische Verneinung, und warum sie erst am 2026-08-20 abgesenkt wurde.
+--
+-- **Fuenfundvierzig Beispiele, und keines schrieb ein `!` in einen Rumpf.** Gemessen an
+-- diesem Tag: null Stellen im ganzen sauberen Korpus. Der Grund liegt in der Bauart des
+-- Korpus -- er ist **je Konstrukt** geschrieben, eine Datei fuer `table`, eine fuer `device`,
+-- eine fuer `walk`. *Ein `!` ist kein Konstrukt; es ist das, was man tut, wenn man ein
+-- Programm schreibt.*
+--
+-- Gefunden hat es der Netzwerkstack (`messung/netz/udp-echo.gab`) an der gewoehnlichsten
+-- Zeile eines Empfangswegs:
+--
+--     if !kopf_gueltig(k, w) { return 0; }
+--
+-- **`gabbro pruefe` gab 0 Fehler; `gabbro emit` sagte `expression form` ab.** Diese Datei ist
+-- die Gegenprobe: sie senkt ab, sie uebersetzt, und sie haelt die Zelle offen, damit die
+-- Luecke nicht ein zweites Mal entsteht.
+--
+-- > **Und das unaere Minus steht ausdruecklich NICHT hier** (`beispiele/gift/219`): in C
+-- > bleibt `-x` auf einem vorzeichenlosen Operanden vorzeichenlos, waehrend M1
+-- > `i32 in -4294967295 .. 0` sagt. Regel A -- kein Konstrukt ohne ein Programm, das es
+-- > gebraucht hat -- und gebraucht hat es keines.
+
+module beispiel::verneinung {
+
+table Plaetze count 8 {
+    slot {
+        belegt : bool,
+        wert   : u32,
+    }
+}
+
+-- Die Verneinung eines Feldzugriffs.
+impl fn ist_frei(p : ptr<normal, r> Plaetze, i : index into Plaetze) -> bool
+    effects { reads p.slots }
+    costs   <= 4 ops
+{
+    return !p.slots[i].belegt;
+}
+
+-- Und die Verneinung eines RUFS -- genau die Form, an der der Stack haengenblieb.
+impl fn zaehle_freie(p : ptr<normal, r> Plaetze) -> u32
+    effects { reads p.slots }
+    costs   <= 128 ops
+{
+    let mut n : u32 = 0;
+    traverse i over slots of p by unvisited
+        touches reads p.slots
+    {
+        if !p.slots[i].belegt {
+            n += 1;
+        }
+    }
+    return n;
+}
+
+}

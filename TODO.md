@@ -95,8 +95,8 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./pruefe-zahlen.py`** | das Register der Befehle. **47 Kennzahlen mit Befehl** *(Stand 2026-08-20; 12 am Vormittag)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
-| **`./pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **27 von 27 Instrumenten** tragen die drei statischen. `--lauf` führt **23 von 27** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
+| **`./pruefe-zahlen.py`** | das Register der Befehle. **48 Kennzahlen mit Befehl** *(Stand 2026-08-20; 12 am Vormittag)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **28 von 28 Instrumenten** tragen die drei statischen. `--lauf` führt **24 von 28** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
 | **`./zaehle-zeremonie.py`** | neu — das Nutzbarkeitsmaß von Stufe 2, mit seiner Kalibriertafel |
@@ -227,7 +227,7 @@ darunter.
       und ihre Quelle ist eine Tabelle in `PFLICHTEN.md`, deren Zeilen ein Mensch geschrieben
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
-      **`pruefe-zahlen.py` führt heute 47 Kennzahlen mit Befehl und zählt 149 fettgedruckte
+      **`pruefe-zahlen.py` führt heute 48 Kennzahlen mit Befehl und zählt 149 fettgedruckte
       Zahlen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
@@ -331,7 +331,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **9 Widerrufe** über 59 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **9 Widerrufe** über 60 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *Woran es hängt: eine Teilmengenbuchung bräuchte je Zahlenpaar den Satz „A ist Teil von
       B", und den schreibt niemand hin, solange er nicht wehtut.*
 
@@ -396,7 +396,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       *Die schärfere Frage bleibt dieselbe wie beim Schablonenregister: fällt an dieser Zelle je
       etwas?* — also **Mutation oder Giftprobe je KOMBINATION, nicht je Konstrukt.**
       **Woran es hängt, jetzt beziffert:** 164 Kombinationen brauchten je eine Probe; der
-      Mutationskatalog trägt heute 235 Anker, also liegt die Größenordnung neben dem, was schon
+      Mutationskatalog trägt heute 238 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
 - [ ] **44 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./pruefe-gruende.py`,
@@ -468,7 +468,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **793 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **796 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       **Und der Befund ist, dass es nicht null war:** der erste Lauf fand **16** Nahtstellen —
       ein Jahr nachdem die 161 von Hand geflickt worden waren. *Von Hand geflickt heißt: nicht
       bewacht.* Darunter `„…is verified--"`, `„…the rule therefore has**zero bite**"` und
@@ -632,7 +632,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **235 von 235 Ankern** greifen (`--anker`, 2026-08-20) — die
+      fällt. Mutationskatalog: **238 von 238 Ankern** greifen (`--anker`, 2026-08-20) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -685,7 +685,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       erst in der Annotationsemission — derselbe fehlende Kanal wie zwei Punkte tiefer.
 
 - [ ] **The annotation emission needs template entries of its own and mutations of its own.**
-      Der Mutationskatalog misst heute den Prüfer (235 Anker); über den **Wunschform-Kanal**
+      Der Mutationskatalog misst heute den Prüfer (238 Anker); über den **Wunschform-Kanal**
       sagt er nichts — und genau dort wird ein kohärent geschwächter Erzeuger **von keinem
       Beweis** gefangen.
       *Berichtigt 2026-08-20: hier stand „65 von 65", und diese Zahl gibt es nicht mehr.*
@@ -718,7 +718,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **~~Every falsifier needs its own speech test:~~ *can it fail at all?* — GEBAUT
       2026-08-20.** Das ist wörtlich die zweite Forderung von `./pruefe-waechter.py`, und sie
-      wird an **27 von 27** Instrumenten geprüft: eine saubere und eine kaputte Quelle, beide
+      wird an **28 von 28** Instrumenten geprüft: eine saubere und eine kaputte Quelle, beide
       erfunden, und der Wächter muss die eine melden und die andere durchlassen.
       **Was der Punkt meinte und was gemessen wird, ist nicht dasselbe, und der Unterschied
       gehört hierher:** geprüft wird, ob der Wächter *überhaupt* rot werden kann — nicht, ob er
@@ -1034,8 +1034,53 @@ Paketpool, Prüfsumme, Neuübertragung, Zeitgeber — alles vorhanden. Was fehlt
 > Gegenüber spricht, ist ein zweiter Korpus im Kleinen; einer, der nur die eigenen Testpakete
 > versteht, misst Passung.*
 
+**AUSGEFÜHRT am 2026-08-20** — [`messung/netz/`](messung/netz/), Ethernet → ARP → IPv4 → UDP,
+238 Zeilen, gegen RFC 791/826/768/1071 und gegen **veröffentlichte Testvektoren**:
+
+```
+$ ./zaehle-netz.py
+ok   ohne   Gabbro b861  Gegenrechnung b861   IPv4-Kopf, Feld genullt (RFC 791)
+ok   mit    Gabbro 0000  Gegenrechnung 0000   derselbe Kopf MIT der Summe — muss 0 sein
+ok   summe  Gabbro ddf2  Gegenrechnung ddf2   RFC 1071, Abschnitt 3
+```
+
+*Die Gegenrechnung kommt aus einer **zweiten Implementierung**, absichtlich anders geschrieben
+— ein Vergleich gegen die eigene Zahl ist kein Vergleich (W7).*
+
+**Und der Ertrag ist genau das, was Regel A verspricht: vier Löcher, die 45 Beispiele nicht
+zeigen konnten** — sie stehen unten als eigene Punkte. Zwei davon sind sofort geschlossen
+worden, weil ein Programm sie gebraucht hat; eines ausdrücklich **nicht**, weil keines es
+gebraucht hat.
+
 Darunter steht die **Ernte** der bisherigen Programme und Werkzeugläufe: jeder Posten hier ist ein
 Loch, das ein Programm oder ein Messwerkzeug gefunden hat, nicht ein Entwurf.
+
+### Vom Netzwerkstack, 2026-08-20 *(siehe [`messung/netz/`](messung/netz/))*
+
+- [ ] **„Lies dieselben Bytes als big-endian 16-Bit-Worte" ist nicht schreibbar**
+      *(gemessen 2026-08-20)*. Ein `format` erklärt die Byteordnung **für seine Felder**; ein
+      Feldtyp `[u16; 10]` darin wird **zweimal** abgesagt — der Feldtyp selbst, und der
+      Zugriff darauf (*„ein Leser liefert einen WERT, und ein Wert hat keine Stelle in den
+      Bytes"* — und das ist richtig). **Die Folge steht im Prüfstand: das Zusammensetzen der
+      Worte aus den Bytes passiert in C, nicht in Gabbro.** *Die Prüfsumme rechnet Gabbro; die
+      zweite Sicht auf dieselben Bytes kommt von außen* — und damit liegt genau der Schritt
+      außerhalb der Sprache, den eine Sprache für Netzcode können müsste. Ohne ihn ist auch
+      eine variable Kopflänge (`ihl > 5`) nicht behandelbar.
+
+- [ ] **`old(place)` in einem RUMPF: die Regel steht nur auf der Erzeugerfläche**
+      *(2026-08-20, [`gift/220`](beispiele/gift/220-old-in-einem-rumpf.gab))*.
+      [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) §6 sagt *„`old(place)` only in
+      `ensures`"*; ein Rumpf darf es trotzdem schreiben, `gabbro pruefe` meldet **0 Fehler und
+      0 Hinweise**, und erst `C001` fällt. **Dieselbe Klasse wie das `!` davor — nur
+      andersherum:** dort hatte die Sprache recht und der Erzeuger fehlte, hier hat der
+      Erzeuger recht und der Prüfer fehlt.
+
+- [ ] **Der Fehlerkanal ist gebaut, der Erzeuger eines Grundes nicht — und jetzt steht es im
+      erzeugten C** *(2026-08-20)*. `*_grund` bleibt ungeschrieben, weil `primary` keine
+      Produktion für einen `reason`-Wert kennt; ohne eine `(void)_grund;`-Zeile scheitert die
+      Übersetzung unter `-Werror=unused-parameter`. **Der Erzeuger schreibt die Zeile mit dem
+      Befund darin**, statt sie zu verschweigen. *Der Posten selbst steht in Stufe 7 — hier
+      steht, dass das erzeugte Artefakt ihn seit heute mitträgt.*
 
 ### Vom vervollständigten Fragmentkorpus, 2026-08-20 *(siehe [`messung/fragmente/`](messung/fragmente/))*
 
