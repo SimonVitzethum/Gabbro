@@ -919,12 +919,34 @@ Wirklichkeit berührt; kehrte er zurück, wäre sie eine Zahl ohne Folge. Der Fe
 
 ### Syntax — open decisions (details in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md)) *(Teil)*
 
-- [ ] **`ensures` am rumpflosen `extern fn` bindet niemanden, und `-> T or R` hat daran nichts
-      geändert** *(2026-08-20, gesehen beim Zeremoniemaß)*. `T3` zählt 47 Vertragszeilen im
-      Lehrkorpus und 12 im echten Code als **tragend** — das ist richtig, solange sie einen
-      Leser haben. **48 fremde Rümpfe im Korpus, und die Verengung aus ihrem `ensures` ist
-      Glaube** (`pflichten::fremde_vertraege`). *Eine Zeile, die als tragend gezählt wird und
-      niemanden bindet, ist die teuerste Sorte Zeremonie* — sie gehört zu Stufe 6.
+- [ ] **Die Zusage eines fremden Rumpfs ist eine TATSACHE im Prüfer — und sie entscheidet**
+      *(gesehen 2026-08-20 beim Zeremoniemaß, nachgemessen 2026-08-21)*. Der Posten stand hier
+      als Buchungsfrage (*„die Verengung ist Glaube"*). **Er ist keine.** Handprobe, in beide
+      Richtungen:
+
+      ```gabbro
+      extern fn hole() -> u32 ensures result <= 100 …   -- ein Rumpf, den Gabbro NIE sieht
+      impl fn nimm() -> Klein { return hole(); }        -- Klein = u32 in 0 .. 100
+      ```
+      ```
+      mit `ensures`   ->  4 Items, 0 Fehler
+      ohne `ensures`  ->  M101: die Rueckgabe requires `u32 in 0 .. 100`, the value has `u32`
+      ```
+
+      `m1.rs`:1222 ruft `aus_ensures(&roh, &sig.ensures)` — **ohne `sig.rumpf_da` zu fragen**,
+      obwohl genau dieses Feld in seinem eigenen Kopfkommentar sagt: *„Ohne ihn ist jede
+      Verengung aus `ensures` eine ANNAHME über fremden Code und gehört ins Zeugnis."*
+      **Gemessen: 89 fremde Rümpfe im Korpus, 10 davon mit `ensures`, und aus jedem verengt M1.**
+
+      > **Das ist «B33» ein zweites Mal:** ein Satz, der beschreibt, was gelten *sollte*, und
+      > ein Pass, der das Gegenteil tut. *Eine Zusage, die kein Pass einlöst, ist die stille
+      > Richtung* — hier löst ein Pass sie ein, den niemand dazu ermächtigt hat.
+
+      **Die Entscheidung ist zweiteilig, und die zweite Hälfte ist die dringende:**
+      (a) die Fläche als Annahme buchen — `gabbro zeugnis` führt sie schon;
+      (b) **prüfen, wo die Fakten in Verengungen einfließen, und diese Stellen als EIGENEN
+      Posten ins Zeugnis nehmen**, nicht in die allgemeine Annahmenfläche. *Eine Verengung mit
+      Wirkung im Erzeugnis ist etwas anderes als eine Zeile, die niemanden bindet.*
 
 ### Aus «H2» *(ausgefuehrt 2026-08-19, `H = 17 → 15`)* — der Rest, den der Lauf hinterliess *(Teil)*
 
@@ -1066,6 +1088,14 @@ Loch, das ein Programm oder ein Messwerkzeug gefunden hat, nicht ein Entwurf.
       zweite Sicht auf dieselben Bytes kommt von außen* — und damit liegt genau der Schritt
       außerhalb der Sprache, den eine Sprache für Netzcode können müsste. Ohne ihn ist auch
       eine variable Kopflänge (`ihl > 5`) nicht behandelbar.
+      **Und die Kante steht fest, BEVOR gebaut wird** *(2026-08-21)*: **die Bytesicht darf
+      keine Aliasfrage öffnen.** Dieselben Bytes unter zwei Sichten sind genau das, was M3
+      sonst ausschließt — und sind beide Sichten gleichzeitig *schreibbar*, ist die Ordnung
+      der Schreibvorgänge eine Aussage, die kein Pass trägt (M3s offener Rest IST die
+      Aliasanalyse). **Die tragfähige Form: eine Sicht schreibend, alle anderen lesend, und
+      der Wechsel ist ein EREIGNIS** — das ist die Gestalt von `state`/`transition`, auf
+      Sichten statt auf Zustände angewandt. *Sonst kauft der Posten seine Vollständigkeit mit
+      einer stillen Alias-Ausnahme.*
 
 - [ ] **`old(place)` in einem RUMPF: die Regel steht nur auf der Erzeugerfläche**
       *(2026-08-20, [`gift/220`](beispiele/gift/220-old-in-einem-rumpf.gab))*.
@@ -2335,6 +2365,16 @@ braucht jede Tabelle ihr eigenes `traverse`.
 
 - [ ] **Genericity** — without it every table needs its own `traverse`; with it the question
       of how contracts are parameterised.
+      **Und vor dem Bau steht eine ZÄHLUNG, nicht eine Reihenfolge** *(2026-08-21)*. *„Sonst
+      braucht jede Tabelle ihr eigenes `traverse`"* ist eine **Vorhersage**, und die Zahl dazu
+      ist erhebbar: **wie viele duplizierte Traversierungsrümpfe stehen heute im Korpus, und
+      wie viele blieben nach Monomorphisierung?**
+      Generizität ist der größte Einzeleingriff der offenen Liste — Grammatik,
+      Vertragsparametrisierung, Monomorphisierung, mindestens zwei Schablonen — und der
+      einzige Posten, bei dem [`dokumente/PLAN.md`](dokumente/PLAN.md) selbst vermutet, dass
+      **zwei geforderte Eigenschaften einander widersprechen.**
+      > **Ein Bau ohne Zählung wäre der erste dieser Liste, der ohne gemessenen Bedarf
+      > beginnt** — und damit dieselbe Bewegung, die `locks ordered` getötet hat.
 
 ### «ABI» — Bibliotheken, die sich mischen lassen, entworfen 2026-08-20 ([`dokumente/PLAN.md`](dokumente/PLAN.md))
 
@@ -2568,8 +2608,30 @@ was building work is done; what is not has an ADDRESS.*
 
 ### Syntax — open decisions (details in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md))
 
-- [ ] **Version evolution:** does an `@version 3` reader also read v2 — **refusal or migration**?
-      Both defensible, neither decided.
+- [ ] **Version evolution:** ~~does an `@version 3` reader also read v2 — refusal or
+      migration? Both defensible, neither decided.~~ **ENTSCHIEDEN am 2026-08-21: die
+      ABSAGE**, und sie ist gemessen statt abgewogen.
+
+      ```
+      14 `@version`-Angaben in Korpus + FRAGMENTE:  12 × „1", 2 × „17"
+       0 Formate mit einer zweiten Fassung
+      ```
+
+      **Null gemessene Formatentwicklungen.** Deklarierte Migration hieße: eine
+      Abbildungsvorschrift je Feldpaar, ein Erzeuger dafür, und damit eine neue Schablone —
+      **Vertrauensfläche für einen Bedarf mit null Fundstellen.**
+      Der Einwand *„ein Kernel, der ein v2-Gerät findet, muss etwas tun können"* stimmt und
+      trifft nicht: **„etwas tun" ist nicht „migrieren".** Eine benannte Absage *ist* eine
+      Handlungsmöglichkeit, und der Rufer entscheidet, ob er einen v2-Leser hat.
+
+      > **Das ist wörtlich die Regel, die `locks ordered` getötet hat** — *kein Konstrukt ohne
+      > gemessenen Bedarf* ([`dokumente/HISTORIE.md`](dokumente/HISTORIE.md)). Und der Satz,
+      > der die Empfehlung erledigt hat, gehört daneben: **„Vollständigkeit vor Einfachheit"
+      > darf nicht zu „Vollständigkeit vor gemessenem Bedarf" werden.**
+
+      *Was offen bleibt, ist die Zählung selbst als Befehl:* die 14 Angaben sind von Hand
+      genommen (`grep -o "@version [0-9]*"`), also eine Zahl ohne Werkzeug — und damit genau
+      die Sorte, gegen die `pruefe-zahlen.py` steht.
 
 - [ ] **The stock of quantifiers in `spec fn` is undecided — and that is exactly where the line moves**,
       if nobody watches.
