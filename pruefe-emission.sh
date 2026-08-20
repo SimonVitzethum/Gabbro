@@ -99,8 +99,15 @@ schneide() {
     ' "$1"
 }
 
+N_DURCHGESTOCHEN=0
+
 lauf() {          # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6 Zeugnis
     local name="$1" quelle="$2" treiber="$3" erwartet="$4" gift="$5" zeugnis="$6"
+    # **Die Zahl wird GEZAEHLT, nicht gepflegt** (2026-08-20). Sie stand als `17` in der
+    # Schlusszeile, waehrend achtzehn Einheiten liefen -- dieselbe Klasse wie die Liste, die
+    # eine Regel wurde, nur eine Ebene hoeher. *Eine Kennzahl, die jemand nachtragen muss,
+    # ist irgendwann falsch.*
+    N_DURCHGESTOCHEN=$((N_DURCHGESTOCHEN + 1))
     local c="$ARB/$name.c"
     echo "== Differenztest: $name =="
 
@@ -1004,8 +1011,8 @@ if cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/sprech9.c" 2>/dev/nul
 fi
 echo "  Sprechprobe:  ok (ein fehlender Prototyp faellt an cc -Werror)"
 
-echo "== EMISSION: ALL PASS -- 17 durchgestochen, $n_ok von $n_emit uebersetzen =="
-echo "  Und was das NICHT heisst: DURCHGESTOCHEN sind siebzehn -- erzeugt, uebersetzt,"
+echo "== EMISSION: ALL PASS -- $N_DURCHGESTOCHEN durchgestochen, $n_ok von $n_emit uebersetzen =="
+echo "  Und was das NICHT heisst: DURCHGESTOCHEN sind $N_DURCHGESTOCHEN -- erzeugt, uebersetzt,"
 echo "  AUSGEFUEHRT und mit einer Handschrift verglichen. Die Regel darueber ist"
 echo "  schwaecher: sie fragt nur, ob der C-Uebersetzer die Ausgabe annimmt. Ein"
 echo "  Programm, das uebersetzt und falsch rechnet, faellt ihr nicht auf."
