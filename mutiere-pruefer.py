@@ -1261,10 +1261,127 @@ MUTATIONEN = [
     Mutation(
         "on-exceeded-darf-zurueckkehren",
         "emit.rs",
+        # **Der Anker war seit dem 2026-08-20 MEHRDEUTIG** -- `forever` prueft dieselbe
+        # Zusage. Der Ankerpruefer hat es gesagt, bevor der Lauf lief; er zeigt jetzt auf den
+        # `retry`-Fall, den die Zeile darueber eindeutig macht.
+        "    let ausgang = &r.bei_ueberschreitung.text;\n"
         "    if !u.funktionen.get(ausgang).is_some_and(|s| s.nie_rueck) {",
+        "    let ausgang = &r.bei_ueberschreitung.text;\n"
         "    if false && !u.funktionen.get(ausgang).is_some_and(|s| s.nie_rueck) {",
         "C-Absenkung -- `on_exceeded` darf auf etwas zeigen, das zurueckkehrt; die Schleife dreht weiter",
         "code",
+    ),
+    # -- Die Emission vom 2026-08-20 ------------------------------------------------------
+    #
+    # Sieben Entscheidungen und fuenf Erzeugerfehler, und **ohne diese Mutationen waere die
+    # neue Flaeche unbeschaedigbar**. Was 0 Mutationen hat, ist nicht gedeckt.
+    Mutation(
+        "baumkante-laeuft-am-elter-hinunter",
+        "emit.rs",
+        "if (!{h} && {basis}[{k}].{kind} != {n}u) {{ {k} = {basis}[{k}].{kind}; {h} = false; continue; }}",
+        "if (!{h} && {basis}[{k}].{elter} != {n}u) {{ {k} = {basis}[{k}].{elter}; {h} = false; continue; }}",
+        "C-Absenkung -- der Abstieg laeuft an `parent` statt an `child`; «B41b» nennt drei Kanten, und welche wohin geht, ist die ganze Aussage",
+        "code",
+    ),
+    Mutation(
+        "wurzel-ist-ihr-eigener-nachfahre",
+        "emit.rs",
+        "if ({k} == {r}) break;",
+        "if (0 && {k} == {r}) break;",
+        "C-Absenkung -- die Wurzel wird mitbesucht; ein Knoten ist kein Nachfahre seiner selbst",
+        "code",
+    ),
+    Mutation(
+        "vorfahr-faengt-bei-sich-selbst-an",
+        "emit.rs",
+        "for (uint32_t {v} = {basis}[{wurzel}].{elter}; {v} != {n}u;",
+        "for (uint32_t {v} = {wurzel}; {v} != {n}u;",
+        "C-Absenkung -- die Kette faengt beim Knoten selbst an; er waere sein eigener Vorfahr",
+        "code",
+    ),
+    Mutation(
+        "marke-wird-wie-ein-geist-geloescht",
+        "emit.rs",
+        "            } else if t.linear && t.rumpf.is_none() && t.parameter.is_none() {",
+        "            } else if false && t.rumpf.is_none() && t.parameter.is_none() {",
+        "C-Absenkung -- ein `linear type` ohne Rumpf traegt keine Bytes mehr; `ghost` waere damit eine Verzierung",
+        "code",
+    ),
+    Mutation(
+        "parametersicht-bleibt-global",
+        "emit.rs",
+        "    let mut lokal = u.clone();\n    for p in &f.parameter {",
+        "    let mut lokal = u.clone();\n    for p in &Vec::new() {",
+        "C-Absenkung -- ein Parameter verdeckt die globale Ablesung seines Namens nicht mehr; ein Punkt steht, wo ein Pfeil hingehoert",
+        "code",
+    ),
+    Mutation(
+        "format-feld-wird-wieder-ein-pfeil",
+        "emit.rs",
+        "    if let Some(fmt) = u.formatwerte.get(&o.basis.text) {",
+        "    if let Some(fmt) = None::<&String> {",
+        "C-Absenkung -- ein `format`-Feld wird ein Feldzugriff statt eines Bytelesers",
+        "code",
+    ),
+    Mutation(
+        "cas-schleife-ohne-schranke",
+        "emit.rs",
+        "if ({i} >= (uint32_t)({gaenge})) {{ {ausgang}(); }}",
+        "if (0 && {i} >= (uint32_t)({gaenge})) {{ {ausgang}(); }}",
+        "C-Absenkung -- «C4b»: eine unbeschraenkte CAS-Schleife ist genau das, was diese Sprache verbietet",
+        "code",
+    ),
+    Mutation(
+        "acht-byte-leser-ohne-seinen-vier-byte-leser",
+        "emit.rs",
+        "                    if b == 8 {\n                        leser.insert(lesewort(4, gross));",
+        "                    if false {\n                        leser.insert(lesewort(4, gross));",
+        "C-Absenkung -- `gabbro_le64` ruft `gabbro_le32`, und der Sammler zaehlt wieder nur die GENANNTEN Leser statt der gebrauchten",
+        "code",
+    ),
+    Mutation(
+        "gabbro-kern-ohne-prototyp",
+        "emit.rs",
+        "    if baum_hat_accumulates(baum) {",
+        "    if false && baum_hat_accumulates(baum) {",
+        "C-Absenkung -- ein FREMDER Rumpf wird gerufen und nirgends erklaert; C11 macht daraus eine implizite Deklaration",
+        "code",
+    ),
+    Mutation(
+        "verbund-steht-wieder-an-seinem-platz",
+        "emit.rs",
+        "        if let ItemArt::Typ(t) = &item.art {\n            if namen.verbunde.contains(&t.name.text) {",
+        "        if let ItemArt::Typ(t) = &item.art {\n            if false && namen.verbunde.contains(&t.name.text) {",
+        "C-Absenkung -- ein spaet erklaerter Verbund steht im C hinter seinem ersten Gebrauch",
+        "code",
+    ),
+    Mutation(
+        "let-else-nimmt-jede-funktion",
+        "namen.rs",
+        "                    if !k.contains_key(&n) {",
+        "                    if false && !k.contains_key(&n) {",
+        "N028 -- ein `else`-Zweig ueber einer Funktion ohne `or <reason>` faellt nicht mehr auf; er koennte nie laufen",
+    ),
+    Mutation(
+        "scheiternder-ruf-ausserhalb-eines-let-else",
+        "namen.rs",
+        "                if let Some(r) = k.get(&n) {",
+        "                if let Some(r) = None::<&String> {",
+        "N029 -- ein Ruf auf eine scheiternde Funktion ausserhalb eines `let … else`; der Grund faellt unbemerkt auf den Boden",
+    ),
+    Mutation(
+        "baumkante-braucht-ihr-feld-nicht",
+        "kbedingung.rs",
+        "            let Some(typ) = felder.get(k.text.as_str()) else {",
+        "            let Some(typ) = felder.get(k.text.as_str()).or_else(|| felder.values().next()) else {",
+        "D006 -- eine `tree`-Kante darf ein Feld nennen, das der Slot nicht hat",
+    ),
+    Mutation(
+        "baumkante-muss-nicht-enden-koennen",
+        "kbedingung.rs",
+        "                TypExpr::Index { tabelle, optional: true, .. } if tabelle.text == t.name.text => {}",
+        "                _ if true => {}\n                #[allow(unreachable_patterns)]\n                TypExpr::Index { tabelle, optional: true, .. } if tabelle.text == t.name.text => {}",
+        "D007/D008 -- eine Kante darf ein `u32` sein oder in eine fremde Tabelle zeigen; enden koennen muss sie dann nicht mehr",
     ),
     Mutation(
         "format-liest-immer-klein",
@@ -1331,11 +1448,14 @@ MUTATIONEN = [
         "code",
     ),
     Mutation(
-        "forever-wird-abgesenkt",
+        # **Der Anker ist umgezogen, weil die Absage weg ist** (2026-08-20). `forever` senkt
+        # ab; zu messen ist jetzt die GEPRUEFTE BEZUGNAHME auf den Wachhund.
+        "forever-wachhund-wird-ein-kommentar",
         "emit.rs",
-        "            Schleife::Forever(_) => weigere(",
-        "            Schleife::Forever(_) => nichts_tun(",
-        "C-Absenkung -- `forever` wird still uebergangen statt abgelehnt; `on_exceeded` faellt weg",
+        "static void (*const {marke}_wachhund)(void) __attribute__((unused)) = {ausgang};",
+        "/* on_exceeded {marke} = {ausgang} */",
+        "C-Absenkung -- `on_exceeded` wird ein Kommentar statt einer Bezugnahme; der "
+        "C-Uebersetzer liest die Klausel nicht mehr nach",
         "code",
     ),
     Mutation(
@@ -1358,8 +1478,8 @@ MUTATIONEN = [
     Mutation(
         "register-ohne-volatile",
         "emit.rs",
-        "                \"(*(volatile {breite} *)({}->basis + {versatz}))\",",
-        "                \"(*({breite} *)({}->basis + {versatz}))\",",
+        "                \"(*(volatile {breite} *)({}{pfeil}basis + {versatz}))\",",
+        "                \"(*({breite} *)({}{pfeil}basis + {versatz}))\",",
         "C-Absenkung -- ein Registerzugriff darf wegoptimiert werden",
         "code",
     ),
@@ -1471,8 +1591,8 @@ MUTATIONEN = [
     Mutation(
         "const-nimmt-wieder-den-schwachen-auswerter",
         "emit.rs",
-        "            } else if let Some(n) = namen.konstwert.get(&k.name.text) {",
-        "            } else if let Some(n) = None::<&i128> {",
+        "            } else if let Some(w) = namen.konstwert.get(&k.name.text).copied() {",
+        "            } else if let Some(w) = None::<i128> {",
         "C-Absenkung -- `u64::max` faellt wieder auf den schwaecheren der zwei Auswerter "
         "zurueck (W7)",
         "code",

@@ -2892,3 +2892,136 @@ fn eine_benannte_konstante_behaelt_ihren_wert() {
     gabbro_check::pruefe(&b, &mut a);
     assert_eq!(a.fehler_zahl(), 0, "die Zahl und ihr Name sind dasselbe:\n{}", a.zeige(q));
 }
+
+
+/// **Die sieben Entscheidungen vom 2026-08-20, jede an ihrer Stelle** -- und die fuenf
+/// Erzeugerfehler, die dabei herausgefallen sind.
+///
+/// *Ohne diese Zusicherungen waere die neue Flaeche unbeschaedigbar:* `mutiere-pruefer.py`
+/// entscheidet allein an `cargo test`, und ein Fehler im ERZEUGTEN TEXT faellt dort nur auf,
+/// wenn jemand den Text liest.
+#[test]
+fn die_emission_traegt_ihre_sieben_entscheidungen() {
+    fn c_von(q: &str) -> String {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+        c
+    }
+
+    // **1. Eine MARKE traegt ein Byte, ein Geist gar nichts** -- und der Unterschied ist die
+    // ganze Bedeutung der zwei Woerter.
+    let c = c_von(
+        "module t {
+linear type Angemeldet;
+linear ghost type Beleg;
+extern fn dienst(a : Angemeldet, b : Beleg) effects { pure } costs <= 1 ops; }",
+    );
+    assert!(c.contains("typedef struct { uint8_t nichts; } Angemeldet;"), "{c}");
+    assert!(c.contains("void dienst(Angemeldet a);"), "der Geist ist geloescht:\n{c}");
+
+    // **2. Die Marke steht VOR ihrem ersten Gebrauch**, auch wenn die Quelle sie zuletzt
+    // erklaert. Dieselbe Regel wie „alle Prototypen vor allen Ruempfen".
+    let c = c_von(
+        "module t {
+extern fn dienst(a : Angemeldet) effects { pure } costs <= 1 ops;
+linear type Angemeldet; }",
+    );
+    let typ = c.find("typedef struct { uint8_t nichts; } Angemeldet;").expect("die Marke");
+    let benutzt = c.find("void dienst(Angemeldet a);").expect("der Prototyp");
+    assert!(typ < benutzt, "der Typ steht hinter seinem Gebrauch:\n{c}");
+
+    // **3. Und dasselbe fuer einen VERBUND** -- `beispiele/05` erklaert seinen als letztes
+    // Item. Dazu: die `#define`s stehen vor den Typen, sonst ist `[u8; KAP]` eine unbekannte
+    // Laenge.
+    let c = c_von(
+        "module t {
+extern fn nimm(z : ptr<normal, rw> Zelle) effects { writes z } costs <= 1 ops;
+const KAP : u32 = 8;
+type Zelle = { bytes : [u8; KAP], }; }",
+    );
+    let d = c.find("#define KAP 8u").expect("das define");
+    let t = c.find("} Zelle;").expect("der typedef");
+    let g = c.find("void nimm(Zelle *").expect("der Prototyp");
+    assert!(d < t && t < g, "Reihenfolge define -> typedef -> Gebrauch:\n{c}");
+
+    // **4. `static` ueber einem Feld: die Laenge steht HINTER dem Namen**, und `= 0` ist
+    // `{0}`, weil beide Lesarten sich genau bei der Null treffen.
+    let c = c_von("module t { type Z = u32 in 0 .. 9; static mut last : [Z; 64] = 0; }");
+    assert!(c.contains("uint32_t last[64]"), "{c}");
+    assert!(c.contains("= {0};"), "die Null belegt das ganze Feld:\n{c}");
+
+    // **5. Ein `format`: `bool @N` ist ein Bitfeld, `embeds` eine LAGE, und die Wortbreite
+    // kommt aus den GANZZAHLFELDERN der Gruppe.** Ein `bool` sagt, welches Bit, nie welches
+    // Wort -- die erste Fassung las die Breite aus dem ersten Feld und haette hier ein Byte
+    // gesehen, wo ein Achtbytewort steht.
+    let c = c_von(
+        "module t { format P endian little {
+    da    : bool @0,
+    frei  : u64 @[62:1] reserved,
+    nx    : bool @63,
+} }",
+    );
+    assert!(c.contains("static inline bool P_da(const P *v)"), "ein `bool` liest sich als bool:\n{c}");
+    assert!(c.contains("gabbro_le64(v->bytes + 0)"), "acht Byte, nicht eines:\n{c}");
+    // **Und der Achtbyteleser bringt seinen Vierbyteleser mit** -- er ist aus ihm gebaut.
+    assert!(c.contains("static inline uint32_t gabbro_le32"), "die Abhaengigkeit fehlt:\n{c}");
+    assert!(!c.contains("P_frei"), "ein `reserved` bekommt keinen Leser:\n{c}");
+
+    // **6. `embeds [hi:lo] scale K` -- der Faktor gehoert IN den Leser.** Ein ungeskalierter
+    // Rohwert waere eine Zahl, die aussieht wie die richtige.
+    let c = c_von(
+        "module t { format Pte endian little {
+    da     : bool @0,
+    lo     : u64 @[11:1] reserved,
+    rahmen : u64 embeds [51:12] scale 4096,
+    hi     : u64 @[63:52] reserved,
+} }",
+    );
+    assert!(c.contains(">> 12"), "{c}");
+    assert!(c.contains("* 4096u"), "der Faktor fehlt:\n{c}");
+
+    // **7. Ein `format`-Feld ist ein RUF, kein Feldzugriff** -- ein Format ist kein
+    // C-Verbund, sondern eine Zusage ueber BYTES.
+    let c = c_von(
+        "module t { format K endian little { w : u32, }
+impl fn lies(p : ptr<normal, r> K) -> u32 effects { reads p } costs <= 4 ops
+{ return p.w; } }",
+    );
+    assert!(c.contains("return K_w(p);"), "{c}");
+    assert!(!c.contains("p->w"), "ein Pfeil auf einen Byteleser:\n{c}");
+
+    // **8. `accumulates` ruft `gabbro_kern()`, und ein fremder Rumpf braucht seinen
+    // Prototypen.** C11 machte daraus sonst eine implizite Deklaration.
+    let c = c_von("module t { const N : u32 = 4; accumulates h : u64 merge max per cpu N; }");
+    let proto = c.find("uint32_t gabbro_kern(void);").expect("der Prototyp");
+    let ruf = c.find("k = gabbro_kern();").expect("der Ruf");
+    assert!(proto < ruf, "der Prototyp steht hinter seinem Ruf:\n{c}");
+
+    // **9. «C4b»: die CAS-Schleife ist BESCHRAENKT, und beschraenkt ist der Punkt.**
+    let c = c_von(
+        "module t {
+const NK : u32 = 8;
+atomic Z : u64 relaxed;
+extern fn streit() -> never effects { diverges } costs <= 1 ops;
+impl fn hoch() -> u64 effects { reads Z, writes Z } costs <= 2048 ops
+{ let alt = Z exchange update(v) bounded NK * 4 ops on_exceeded streit
+  { return v; } publishes nothing;
+  return alt; } }",
+    );
+    assert!(c.contains("atomic_compare_exchange_weak_explicit("), "{c}");
+    assert!(c.contains(">= (uint32_t)(NK * 4)) { streit(); }"), "die Schranke fehlt:\n{c}");
+
+    // **10. `ancestors of` faengt beim ELTER an** -- ein Knoten ist kein Vorfahr seiner
+    // selbst.
+    let c = c_von(
+        "module t { table T count 8 { tree { parent p } slot { p : option index into T, } }
+impl fn hoch(i : index into T) -> bool effects { reads T.slots } costs <= 64 ops
+{ traverse v of i over ancestors of i by unvisited { if v == 0 { return true; } } return false; } }",
+    );
+    assert!(
+        c.contains("for (uint32_t v = T_speicher.slots[i].p; v != 8u; v = T_speicher.slots[v].p)"),
+        "die Kette faengt beim Elter an und endet am Sonderwert:\n{c}"
+    );
+}
