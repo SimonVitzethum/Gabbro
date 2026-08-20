@@ -268,8 +268,13 @@ lauf() {          # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     # Eine Frist macht daraus eine Antwort. **Und eine ueberschrittene Frist ist ein
     # BESTEHEN**: ein Programm, das nicht zu Ende kommt, liefert das erwartete Ergebnis
     # gewiss nicht.
+    # **`set -e` steht in Zeile 28, und eine ueberschrittene Frist ist ein Fehlschlag.**
+    # Ohne das `|| rc=$?` beendete die Frist den ganzen Waechter STILL -- mit Ruecklaufwert 0
+    # und ohne Stufe 9. *Der erste Anlauf tat genau das, und die Ausgabe sah vollstaendig
+    # aus, weil sie mit einem `ok` endete.*
     local gausgabe rc
-    gausgabe="$(timeout 10 "$ARB/$name-giftprobe")"; rc=$?
+    rc=0
+    gausgabe="$(timeout 10 "$ARB/$name-giftprobe")" || rc=$?
     if [ "$rc" = 124 ]; then
         echo "  8. Sprechprobe: ok (verfaelschtes C endet nicht -- Frist 10 s)"
     elif [ "$gausgabe" = "$erwartet" ]; then
