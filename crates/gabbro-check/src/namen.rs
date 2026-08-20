@@ -1226,6 +1226,59 @@ fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item(baum, &mut |i| {
         let ItemArt::Check(c) = &i.art else { return };
 
+        // **`N027` — ein `can_fail`-Block ist eine PROBE, kein Programm** (Rezension
+        // 2026-08-20).
+        //
+        // Ein `check`-Item traegt keine `effects`-Liste, keine `costs`-Zusage und keine
+        // `locks`-Deklaration -- es ist kein Vertrag. Zehn der zwoelf Paesse laufen ueber
+        // `ItemArt::Funktion` und sahen diesen Block darum nie:
+        //
+        // ```gabbro
+        // check c { … can_fail { a = 1; schreibt(); } … }   -- ohne H007/E005/E008
+        // ```
+        //
+        // > **Ein Rumpf ohne Vertrag darf nichts tun, wofuer es einen Vertrag braucht.** Die
+        // > Alternative waere, dem `check` eine Wirkungsliste zu geben -- das ist eine
+        // > Sprachaenderung, und *aus der strengen Lesart kann man lockern, nie umgekehrt.*
+        //
+        // Was bleibt: lesen, rechnen, vergleichen, `return`. Genau das tut der Korpus
+        // (`beispiele/06-annahmen.gab`), und genau das ist eine Gegenprobe.
+        {
+            fn probenrein(b: &Block, absagen: &mut Absagen) {
+                for s in &b.anweisungen {
+                    let (was, span) = match &s.art {
+                        StmtArt::Zuweisung(z) => ("an assignment", z.ziel.span),
+                        StmtArt::Sperrt(l) => ("a `locks` block", l.sperre.span),
+                        StmtArt::Publish(pb) => ("a `publishes`", pb.ziel.span),
+                        StmtArt::Exchange(e) => ("an `exchange`", e.ort.span),
+                        _ => {
+                            for k in crate::unterbloecke(s) {
+                                probenrein(k, absagen);
+                            }
+                            continue;
+                        }
+                    };
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N027",
+                            span,
+                            format!("a `can_fail` block contains {was}"),
+                        )
+                        .mit_notiz(
+                            "a `check` carries no `effects`, no `costs` and no `locks` -- \
+                             ten of the twelve passes walk functions and never see this \
+                             block, so what stands here is unchecked",
+                        )
+                        .mit_notiz(
+                            "a counterprobe reads, computes, compares and returns -- \
+                             changing the world is what it is a probe ABOUT",
+                        ),
+                    );
+                }
+            }
+            probenrein(&c.can_fail, absagen);
+        }
+
         // -- N020: wer verbraucht die Pflicht?
         for g in &c.gates {
             if !traeger.iter().any(|f| f == &g.text) {

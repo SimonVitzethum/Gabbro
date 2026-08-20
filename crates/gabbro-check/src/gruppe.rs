@@ -231,14 +231,31 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             if beruehrt.len() < 2 {
                 continue;
             }
+            // **Der Abdruck gilt JE SCHREIBSTELLE.** Vorher wurde er ueber den ganzen
+            // Rumpf summiert -- zwei `locks`-Bloecke NACHEINANDER sahen damit aus wie zwei
+            // gleichzeitig gehaltene Sperren. *Zwischen ihnen ist die Gruppe offen.*
+            let traeger_namen: Vec<String> = g.traeger.iter().map(|t| t.text.clone()).collect();
+            let mut stellen_sperren: Vec<(String, Span, Vec<String>)> = Vec::new();
+            schreibstellen(b, &traeger_namen, &mut Vec::new(), &mut stellen_sperren);
+            let noetig: Vec<String> = g
+                .traeger
+                .iter()
+                .filter_map(|t| schutz.get(&t.text).map(|(s, _)| s.clone()))
+                .fold(Vec::new(), |mut acc, s| {
+                    if !acc.contains(&s) {
+                        acc.push(s);
+                    }
+                    acc
+                });
             let mut fehlend: Vec<String> = Vec::new();
-            for t in &g.traeger {
-                if let Some((sperre, _)) = schutz.get(&t.text) {
-                    if !gehalten.iter().any(|h| h == sperre) && !fehlend.contains(sperre) {
-                        fehlend.push(sperre.clone());
+            for (_, _, hier) in &stellen_sperren {
+                for s in &noetig {
+                    if !hier.contains(s) && !fehlend.contains(s) {
+                        fehlend.push(s.clone());
                     }
                 }
             }
+            let _ = &gehalten;
             // **U006 -- der Zwischenaustritt.** Erst pruefen, wenn die Gruppe wirklich
             // beruehrt ist (>= 2 Traeger), sonst gibt es keinen Zug, den man verlassen kann.
             let mut ev = Vec::new();
@@ -390,6 +407,56 @@ fn sammle(b: &Block, schreibt: &mut Vec<String>, haelt: &mut Vec<String>) {
         }
         for k in crate::unterbloecke(s) {
             sammle(k, schreibt, haelt);
+        }
+    }
+}
+
+/// **Jeder Schreibzugriff mit den Sperren, die IN DIESEM AUGENBLICK gehalten werden**
+/// (Rezension 2026-08-20).
+///
+/// `sammle` sammelt flach über den ganzen Rumpf. Damit sahen
+///
+/// ```gabbro
+/// locks PUNKTE { Endpunkte.slots[e].wartet = t; }
+/// locks PLAN   { Faeden.slots[t].gruende  = 1; }
+/// ```
+///
+/// aus wie *„beide Sperren gehalten"* — und die Gruppe `over { Endpunkte, Faeden }` ging mit
+/// **null Fehlern** durch. Geschachtelt fiel dieselbe Datei an `U006`.
+///
+/// > **Ein Sperrabdruck ist eine Aussage über einen ZEITPUNKT, nicht über eine Datei.**
+/// > Zwischen den beiden Blöcken ist die Gruppe offen und jeder andere Faden sieht sie so.
+///
+/// *Der Fall lag einen syntaktischen Schritt neben der bestehenden Giftprobe* — genau die
+/// Klasse, die diese Rezension über den ganzen Korpus benennt.
+fn schreibstellen(
+    b: &Block,
+    traeger: &[String],
+    gehalten: &mut Vec<String>,
+    aus: &mut Vec<(String, Span, Vec<String>)>,
+) {
+    for s in &b.anweisungen {
+        let ziel = match &s.art {
+            StmtArt::Zuweisung(z) => Some(&z.ziel.basis.text),
+            StmtArt::Publish(p) => Some(&p.ziel.basis.text),
+            StmtArt::Exchange(e) => Some(&e.ort.basis.text),
+            _ => None,
+        };
+        if let Some(n) = ziel {
+            if traeger.iter().any(|t| t == n) {
+                aus.push((n.clone(), s.span, gehalten.clone()));
+            }
+        }
+        // Ein `locks L { … }` gilt GENAU in seinem Block -- danach ist es wieder weg.
+        let neu = matches!(&s.art, StmtArt::Sperrt(_));
+        if let StmtArt::Sperrt(l) = &s.art {
+            gehalten.push(l.sperre.basis.text.clone());
+        }
+        for k in crate::unterbloecke(s) {
+            schreibstellen(k, traeger, gehalten, aus);
+        }
+        if neu {
+            gehalten.pop();
         }
     }
 }

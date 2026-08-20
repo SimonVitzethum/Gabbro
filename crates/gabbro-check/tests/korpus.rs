@@ -74,6 +74,18 @@ const BENANNT: &[&str] = &[
     // Zeile, die nicht im Ausschnitt steht. **Deshalb steht `M119` hier — als benannte
     // Absage auf einer unvollständigen Hülle, dieselbe Klasse wie `E009` und `K003`.**
     "M117", "M118", "M119",
+    // **Die dritte Rezension, zweite Haelfte** (2026-08-20). Vier neue Absagen, und jede
+    // schliesst eine Umgehung, die einen SYNTAKTISCHEN SCHRITT neben einer bestehenden
+    // Giftprobe lag:
+    //
+    // * `L108` -- ein linearer Wert wird in einem SCHLEIFENRUMPF verbraucht. Der Rumpf lief
+    //   einmal als geradliniger Code; *genau einmal* ist aber eine Aussage ueber die
+    //   Ausfuehrung, nicht ueber den Quelltext.
+    // * `L109` -- ein linearer Wert wird in einem ZWEIG geboren und verlaesst ihn nicht.
+    //   `abgleich` lief ueber den Stand VOR der Verzweigung, also fiel er heraus.
+    // * `N027` -- ein `can_fail`-Block schreibt. Ein `check` traegt keinen Vertrag, und zehn
+    //   der zwoelf Paesse laufen ueber `ItemArt::Funktion` und sahen ihn nie.
+    "L108", "L109", "N027",
     // **`S006`, 2026-08-19: `on_exceeded` muss divergieren.** Die Fundstelle in
     // `FRAGMENTE.md`:902 schreibt `on_exceeded DeviceSilent` -- eine `reason`-VARIANTE, nicht
     // eine Funktion. *Der Erzeuger sagt seit jeher, warum das nicht geht:* „a `reason` value

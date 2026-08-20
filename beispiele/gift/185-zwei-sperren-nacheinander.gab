@@ -1,0 +1,43 @@
+-- erwartet: U003
+-- **Ein Sperrabdruck ist eine Aussage ueber einen ZEITPUNKT, nicht ueber eine Datei.**
+--
+-- Der Abdruck wurde flach ueber den ganzen Rumpf gesammelt. Zwei `locks`-Bloecke
+-- NACHEINANDER sahen damit aus wie zwei gleichzeitig gehaltene Sperren -- und die Gruppe
+-- ging mit null Fehlern durch. GESCHACHTELT fiel dieselbe Form.
+--
+-- *Zwischen den beiden Bloecken ist die Gruppe offen, und jeder andere Faden sieht sie so.*
+--
+-- Der Fall lag einen syntaktischen Schritt neben `gift/65`.
+
+module gift185 {
+
+const NFAEDEN : u32 = 256;
+const NPUNKTE : u32 = 64;
+
+table Faeden count NFAEDEN {
+    slot { gruende : u32, bereit : bool, }
+}
+
+table Endpunkte count NPUNKTE {
+    slot { wartet : u32, offen : bool, }
+}
+
+lock PUNKTE protects { Endpunkte } rank 1 held <= 40 ops;
+lock PLAN   protects { Faeden }    rank 2 held <= 40 ops;
+
+group Zustellung over { Endpunkte, Faeden };
+
+impl fn einreihen(e : index into Endpunkte, t : index into Faeden) -> bool
+    effects { writes Endpunkte.slots, writes Faeden.slots, locks PUNKTE, locks PLAN }
+    costs   <= 60 ops
+{
+    locks PUNKTE {
+        Endpunkte.slots[e].wartet = t;
+    }
+    locks PLAN {
+        Faeden.slots[t].gruende = 1;
+    }
+    return true;
+}
+
+}

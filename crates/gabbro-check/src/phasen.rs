@@ -458,32 +458,69 @@ fn enthaelt_schritt(
     modul: &str,
     schritte: &BTreeMap<String, Schritt>,
 ) -> bool {
-    let mut gefunden = false;
-    let mut sieh = |r: &Ruf| {
-        if u.kandidaten_aufloesbar(modul, &r.pfad.text())
+    // **Tief, und ueber die erschoepfenden Laeufer** (Rezension 2026-08-20).
+    //
+    // Vorher wurden nur die Anweisungen der OBERSTEN Ebene des Schleifenrumpfs angesehen,
+    // und von denen nur `Ruf` und ein `Let` mit direktem Ruf. Ein `locks { }` um denselben
+    // Schritt genuegte, damit `O006` schwieg:
+    //
+    // ```gabbro
+    // retry … { locks L { boot_schritt(); } }      -- 0 Fehler
+    // retry … { boot_schritt(); }                  -- O006
+    // ```
+    //
+    // > *Eine Regel, die an der Einrueckung endet, ist keine Regel ueber den Fluss.*
+    fn ist_schritt(
+        r: &Ruf,
+        u: &crate::umgebung::Umgebung,
+        modul: &str,
+        schritte: &BTreeMap<String, Schritt>,
+    ) -> bool {
+        u.kandidaten_aufloesbar(modul, &r.pfad.text())
             .into_iter()
             .any(|k| schritte.contains_key(&k))
-        {
-            gefunden = true;
-        }
-    };
-    fn bloecke(s: &Stmt, f: &mut impl FnMut(&Block)) {
-        for b in crate::unterbloecke(s) {
-            f(b);
-        }
     }
-    bloecke(s, &mut |b| {
+    fn im_block(
+        b: &Block,
+        u: &crate::umgebung::Umgebung,
+        modul: &str,
+        schritte: &BTreeMap<String, Schritt>,
+    ) -> bool {
         for k in &b.anweisungen {
-            match &k.art {
-                StmtArt::Ruf(r) => sieh(r),
-                StmtArt::Let(l) => {
-                    if let ExprArt::Ruf(r) = &l.wert.art {
-                        sieh(r)
+            if let StmtArt::Ruf(r) = &k.art {
+                if ist_schritt(r, u, modul, schritte) {
+                    return true;
+                }
+            }
+            for e in crate::eigene_ausdruecke(k) {
+                for x in crate::alle_ausdruecke(e) {
+                    if let ExprArt::Ruf(r) = &x.art {
+                        if ist_schritt(r, u, modul, schritte) {
+                            return true;
+                        }
                     }
                 }
-                _ => {}
+            }
+            for pr in crate::eigene_praedikate(k) {
+                for e in crate::ausdruecke_im_praedikat(pr) {
+                    for x in crate::alle_ausdruecke(e) {
+                        if let ExprArt::Ruf(r) = &x.art {
+                            if ist_schritt(r, u, modul, schritte) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            for inner in crate::unterbloecke(k) {
+                if im_block(inner, u, modul, schritte) {
+                    return true;
+                }
             }
         }
-    });
-    gefunden
+        false
+    }
+    crate::unterbloecke(s)
+        .into_iter()
+        .any(|b| im_block(b, u, modul, schritte))
 }

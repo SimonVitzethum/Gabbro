@@ -1,0 +1,34 @@
+-- erwartet: L108
+-- **Ein Schleifenrumpf laeuft OFT, gezaehlt wurde er einmal.**
+--
+-- `wecken(p)` im Rumpf verbraucht `p` bei JEDEM Durchlauf; M2 lief den Rumpf einmal als
+-- geradlinigen Code und buchte eine Verbrauchung.
+--
+-- > *Genau einmal* ist eine Aussage ueber die AUSFUEHRUNG, nicht ueber den Quelltext.
+--
+-- Was ausdruecklich NICHT faellt: ein Wert, der IM Rumpf entsteht und dort verbraucht wird
+-- -- der lebt und stirbt je Durchlauf.
+
+module gift {
+
+linear type Parked;
+
+extern fn wecken(p : Parked)
+    effects { consumes p }
+    costs   <= 2 ops;
+
+impl fn schleife(p : Parked)
+    effects { consumes p }
+    costs   <= 64 ops
+{
+    retry warten until false
+        bounded 32 ops
+        progress irgendwas
+        on_exceeded aufgeben
+        effects { consumes p }
+    {
+        wecken(p);
+    }
+}
+
+}

@@ -1,0 +1,35 @@
+-- erwartet: L104
+-- **Ein Double-Free mit gruenem Haken.**
+--
+-- Beide Rufe auf oberster Ebene gaben `L104`. Einer davon GESCHACHTELT: stumm. Der
+-- Ausdruckslaeufer in `m2.rs` stieg nicht in die Argumente eines Rufes ab und hatte
+-- ausserdem `_ => {}`.
+--
+-- > M2 ist der Pass, den der eigene Modulkopf „das einzige Mittel in diesem Ordner, fuer
+-- > das es keinen Ersatz gibt" nennt.
+--
+-- *Und es trifft nicht nur `ghost`* -- hier steht ein `linear type`, die Form aus
+-- `beispiele/09`, ein echtes Laufzeit-Betriebsmittel.
+
+module gift {
+
+linear type Parked;
+
+extern fn wecken(p : Parked) -> u32 in 0 .. 3
+    effects { consumes p }
+    costs   <= 2 ops;
+
+extern fn aussen(v : u32 in 0 .. 3) -> u32 in 0 .. 3
+    effects { pure }
+    costs   <= 1 ops;
+
+impl fn zweimal(p : Parked) -> u32 in 0 .. 3
+    effects { consumes p }
+    costs   <= 16 ops
+{
+    let a = aussen(wecken(p));
+    let b = wecken(p);
+    return b;
+}
+
+}

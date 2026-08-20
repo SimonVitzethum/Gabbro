@@ -1,0 +1,27 @@
+-- erwartet: K009
+-- **`decreases` war eine Namensprobe, keine Terminierung.**
+--
+-- Die Regel fragte nur, ob sich an einer Massstelle IRGENDETWAS aendert. Eine VERTAUSCHUNG
+-- ist eine Aenderung: `g(m, n)` ging mit null Fehlern durch, wurde emittiert, uebersetzt,
+-- und `g(1,1)` endete mit `SIGSEGV`. Ein STEIGENDES Mass (`g(n + 1, m)`) fiel nur zufaellig,
+-- weil `n + 1` den Bereich verlaesst; mit einem weiteren Typ waere es durchgegangen.
+--
+-- > Der Code sagte ehrlich „die notwendige Bedingung"; der README fuehrte `termination` ohne
+-- > Vorbehalt unter den getragenen Klassen. Von den zwei Antworten -- Regel schaerfen oder
+-- > Zusage zuruecknehmen -- ist dies die erste.
+--
+-- Angenommen werden `n - k` (k >= 1) und `n / k` (k >= 2), mit der Massgroesse links.
+-- *Aus der strengen Lesart kann man lockern, nie umgekehrt.*
+
+module gift {
+
+impl fn g(n : u32 in 0 .. 8, m : u32 in 0 .. 8) -> u32 in 0 .. 8
+    effects { pure }
+    costs   <= 64 ops
+    decreases n
+{
+    if n == 0 { return 0; }
+    return g(m, n);
+}
+
+}

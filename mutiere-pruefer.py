@@ -104,6 +104,90 @@ MUTATIONEN = [
     # Flaeche, egal wie frisch der Test daneben ist.
     # **Drei Regeln aus der dritten Rezension.** Alle drei waren "eine Klasse richtig
     # diagnostiziert, eine Instanz behoben" -- darum zielen sie auf die GEMEINSAME Stelle.
+    # **Die dritte Rezension, zweite Haelfte.** Jede dieser Mutationen macht genau EINE
+    # Umgehung wieder auf -- und jede lag einen syntaktischen Schritt neben einer
+    # bestehenden Giftprobe.
+    Mutation(
+        "m2-steigt-nicht-in-argumente",
+        "m2.rs",
+        "    for x in crate::alle_ausdruecke(e) {\n        if let ExprArt::Ruf(r) = &x.art {",
+        "    for x in [e] {\n        if let ExprArt::Ruf(r) = &x.art {",
+        "L104 -- ein geschachtelter `consumes`-Ruf wird wieder unsichtbar: "
+        "`aussen(wecken(p)); wecken(p);` ist ein Double-Free mit gruenem Haken",
+    ),
+    Mutation(
+        "m2-nimmt-jede-position",
+        "m2.rs",
+        "        let wird_verbraucht = sig.get(i).is_some_and(|n| verbraucht.contains(n));",
+        "        let wird_verbraucht = !sig.is_empty() && !verbraucht.is_empty();",
+        "an einer Rufstelle gilt wieder JEDES lineare Argument als verbraucht, sobald der "
+        "Gerufene irgendeinen Parameter verbraucht -- in beide Richtungen falsch",
+    ),
+    Mutation(
+        "verbrauch-in-der-schleife-zaehlt-einmal",
+        "m2.rs",
+        "            let vor_schleife: Option<BTreeMap<_, _>> =\n                matches!(&s.art, StmtArt::Schleife(_)).then(|| zust.clone());",
+        "            let vor_schleife: Option<BTreeMap<_, _>> = None;",
+        "L108 -- ein Schleifenrumpf verbraucht wieder `genau einmal`, obwohl er oft laeuft",
+    ),
+    Mutation(
+        "im-zweig-geborener-wert-faellt-heraus",
+        "m2.rs",
+        "    if endet_hier {\n        return; // wer den Zweig mit `return` verlaesst",
+        "    if true {\n        return; // wer den Zweig mit `return` verlaesst",
+        "L109 -- ein linearer Wert, der im Zweig geboren wird und ihn nicht verlaesst, "
+        "faellt wieder an der Vereinigung heraus",
+    ),
+    Mutation(
+        "mass-darf-sich-nur-bewegen",
+        "kosten.rs",
+        "        BinOp::Minus => k >= 1,",
+        "        BinOp::Minus | BinOp::Plus => k >= 0,",
+        "K009 -- ein STEIGENDES Rekursionsmass geht wieder durch; `g(n + 1, m)` "
+        "terminiert nicht und wird abgesenkt",
+    ),
+    Mutation(
+        "sperrabdruck-wird-summiert",
+        "gruppe.rs",
+        "        if neu {\n            gehalten.pop();\n        }",
+        "        if false {\n            gehalten.pop();\n        }",
+        "U003 -- der Sperrabdruck gilt wieder kumulativ statt gleichzeitig: zwei "
+        "`locks`-Bloecke NACHEINANDER sehen aus wie zwei gehaltene Sperren, und zwischen "
+        "ihnen ist die Gruppe offen",
+    ),
+    Mutation(
+        "can-fail-darf-schreiben",
+        "namen.rs",
+        '                            format!("a `can_fail` block contains {was}"),',
+        '                            format!("a `can_fail` block is fine with {was}"),',
+        "N027 -- ein `can_fail`-Block darf wieder schreiben und sperren, obwohl das `check` "
+        "keinen Vertrag traegt und zehn der zwoelf Paesse ihn nie sehen",
+    ),
+    Mutation(
+        "schritt-in-locks-bleibt-unsichtbar",
+        "phasen.rs",
+        "            for inner in crate::unterbloecke(k) {\n                if im_block(inner, u, modul, schritte) {",
+        "            for inner in crate::unterbloecke(k).into_iter().take(0) {\n                if im_block(inner, u, modul, schritte) {",
+        "O006 -- ein Phasenschritt in einem `locks { }` innerhalb einer Schleife wird "
+        "wieder unsichtbar",
+    ),
+    Mutation(
+        "v006-endet-an-der-klammer",
+        "paarung.rs",
+        "                danach_namen.extend(spaeter_aussen.iter().cloned());",
+        "                danach_namen.truncate(danach_namen.len());",
+        "V006 -- ein `if` um das release-Speichern macht die Regel wieder stumm; die "
+        "Sichtbarkeitsordnung endet dann an einer Klammer",
+    ),
+    Mutation(
+        "konstante-verliert-ihren-wert",
+        "m1.rs",
+        "                        self.u.konst_wert_von_namen(&self.modul, &o.basis.text),",
+        "                        None::<i128>,",
+        "eine benannte Konstante loest wieder auf den vollen Bereich ihres Typs auf: "
+        "`x + 8` geht durch, `x + RESERVE` faellt an M104 -- ein Pruefer, der das Benennen "
+        "bestraft, erzieht zur magischen Zahl",
+    ),
     Mutation(
         "tiefenwaechter-fehlt-am-modul",
         "gabbro-syntax/src/parse.rs",
@@ -525,8 +609,8 @@ MUTATIONEN = [
         # nebensaechlich haelt -- und die V4 nicht faengt.
         "gruppe-eine-reicht",
         "gruppe.rs",
-        "                    if !gehalten.iter().any(|h| h == sperre) && !fehlend.contains(sperre) {",
-        "                    if gehalten.is_empty() && !fehlend.contains(sperre) {",
+        "                    if !hier.contains(s) && !fehlend.contains(s) {",
+        "                    if hier.is_empty() && !fehlend.contains(s) {",
         "U003 -- eine gehaltene Sperre deckt die ganze Gruppe",
     ),
     Mutation(

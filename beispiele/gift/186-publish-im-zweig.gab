@@ -1,0 +1,28 @@
+-- erwartet: V006
+-- **Ein `if` machte `V006` stumm.**
+--
+-- Steht das release-Speichern in einem ZWEIG, ist `b.anweisungen[i + 1..]` innerhalb des
+-- Zweiges leer -- und was danach im UMGEBENDEN Block geschrieben wird, sah niemand.
+--
+-- > Die Sichtbarkeitsordnung endet nicht an einer Klammer. Der Leser sieht `n` nach dem
+-- > release-Speichern genauso wenig, wenn das Speichern in einem Zweig stand.
+--
+-- Der Fall lag einen syntaktischen Schritt neben `gift/147`.
+
+module gift::nutzlast_im_zweig {
+
+static mut n : u32 = 0;
+atomic F : bool release;
+
+impl fn w(v : u32) effects { writes n, publishes F } costs <= 8 ops
+{
+    if v > 0 {
+        F = true publishes { n };
+    }
+    n = v;
+}
+
+impl fn r() -> u32 effects { reads F, reads n } costs <= 8 ops
+{ let f = F awaits { n }; if f { return n; } return 0; }
+
+}

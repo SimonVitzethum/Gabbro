@@ -97,7 +97,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         let mut h = Haelften::default();
         sammle(b, &ordnungen, &mut h);
         // «K5.1» -- die Reihenfolge INNERHALB des Rumpfes.
-        reihenfolge(b, &[], &[], &f.name.text, absagen);
+        reihenfolge(b, &[], &[], &[], &f.name.text, absagen);
         let unvollstaendig = g
             .huelle(&g.schluessel_von(modul, &f.name.text))
             .unvollstaendig
@@ -323,10 +323,24 @@ fn sammle(b: &Block, ordnungen: &[(String, Option<Ordnung>)], h: &mut Haelften) 
 ///
 /// Eine Nutzlast, die im Rumpf **gar nicht** geschrieben wird, ist kein Fehler — sie kann von
 /// einem Gerufenen kommen. Gemeldet wird nur die Umkehrung: geschrieben, aber **danach**.
+/// `spaeter_aussen`: was der UMGEBENDE Block nach diesem Unterblock noch schreibt.
+///
+/// **Ohne das war `V006` einen `if` weit umgehbar** (Rezension 2026-08-20):
+///
+/// ```gabbro
+/// if v > 0 { F = true publishes { n }; }
+/// n = v;                                    -- 0 Fehler
+/// ```
+///
+/// Innerhalb des Zweiges ist `b.anweisungen[i + 1..]` leer, und was danach im umgebenden
+/// Block steht, sah niemand. *Die Sichtbarkeitsordnung endet aber nicht an einer Klammer* --
+/// der Leser sieht `n` nach dem release-Speichern genauso wenig, wenn das Speichern in einem
+/// Zweig stand.
 fn reihenfolge(
     b: &Block,
     vorher_geschrieben: &[String],
     vorher_gelesen: &[String],
+    spaeter_aussen: &[String],
     wo: &str,
     absagen: &mut Absagen,
 ) {
@@ -340,13 +354,16 @@ fn reihenfolge(
                 for spaeter in &b.anweisungen[i + 1..] {
                     crate::schreibziele(spaeter, &mut danach);
                 }
+                let mut danach_namen: Vec<String> =
+                    danach.iter().map(|z| grundname(&z.text())).collect();
+                danach_namen.extend(spaeter_aussen.iter().cloned());
                 if let Nutzlast::Orte(liste) = &p.nutzlast {
                     for o in liste {
                         let name = grundname(&o.text());
                         if geschrieben.contains(&name) {
                             continue;
                         }
-                        if !danach.iter().any(|z| grundname(&z.text()) == name) {
+                        if !danach_namen.contains(&name) {
                             continue;
                         }
                         absagen.schiebe(
@@ -407,8 +424,16 @@ fn reihenfolge(
         if let StmtArt::AwaitLoad(a) = &s.art {
             gelesen.extend(a.erwartet.iter().map(|o| grundname(&o.text())));
         }
+        // Was der umgebende Block NACH dieser Anweisung noch schreibt -- plus das, was
+        // schon von weiter aussen mitgereicht wurde.
+        let mut spaeter: Vec<String> = spaeter_aussen.to_vec();
+        for nach in &b.anweisungen[i + 1..] {
+            let mut z: Vec<Ort> = Vec::new();
+            crate::schreibziele(nach, &mut z);
+            spaeter.extend(z.iter().map(|o| grundname(&o.text())));
+        }
         for k in crate::unterbloecke(s) {
-            reihenfolge(k, &geschrieben, &gelesen, wo, absagen);
+            reihenfolge(k, &geschrieben, &gelesen, &spaeter, wo, absagen);
         }
     }
 }

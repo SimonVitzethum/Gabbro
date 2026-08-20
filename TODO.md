@@ -561,42 +561,24 @@ Zusagen ungeprüft weiterreicht, macht aus elf geprüften Klassen elf behauptete
       Array-Element fällt nicht auf. Dahinter steht `IntBereich::ist_leer()` als Riegel, der
       aus dem Leeren `None` macht statt zu rechnen; *ein Riegel ist aber keine Absage*, und
       der Anwender erfährt nichts.
-### Die dritte Rezension, offene Hälfte *(2026-08-20)*
+### Die dritte Rezension *(2026-08-20)* — was von ihr NOCH offen ist
 
-*Jeder dieser Punkte liegt einen **syntaktischen Schritt** neben einer bestehenden
-Giftprobe. Der Korpus prüft, dass jede Regel in ihrer kanonischen Gestalt feuert; er prüft
-nicht, dass man um sie herumgehen kann.*
+*Die fünf Punkte der offenen Hälfte sind geschlossen (M2 viermal, `decreases`, `U003`,
+`V006`, `O006`, `N027`, die benannte Konstante). Was bleibt, ist eine Aussage über die
+REICHWEITE, keine Lücke im Gebauten.*
 
-- [ ] **M2 zählt „genau einmal" auf vier Wegen falsch** — und es trifft nicht nur `ghost`.
-      Mit `linear type Region` (die Form aus `beispiele/09`, ein echtes Betriebsmittel):
-      `let a = aussen(freigeben(x)); let b = freigeben(x);` gibt **0 Fehler**, beide Rufe auf
-      oberster Ebene dagegen `L104`. **Ein Double-Free mit grünem Haken.** Dazu drei
-      unabhängige: `m2.rs:397` bindet `i` und benutzt es nie (also gilt jedes lineare
-      Argument als verbraucht, sobald der Gerufene *irgendeinen* Parameter verbraucht);
-      Schleifenrümpfe werden einmal als geradliniger Code gelaufen; ein im Zweig geborener
-      Wert fällt an der Vereinigung heraus. *M2 ist der Pass, den der eigene Modulkopf „das
-      einzige Mittel in diesem Ordner, für das es keinen Ersatz gibt" nennt.*
-- [ ] **`decreases` ist eine Namensprobe, keine Terminierung.** `kosten.rs:1104` fragt nur,
-      ob eine genannte Grösse unter anderem Namen übergeben wird: `decreases n` mit
-      `return g(m, n);` geht durch → `emit` → `cc` → `g(1,1)` endet mit `SIGSEGV`. Ein
-      *steigendes* Mass (`h(n + 1)`) ebenso. **Der Code sagt ehrlich „die notwendige
-      Bedingung"; der README führt `termination` ohne Vorbehalt unter den getragenen
-      Klassen.** Entweder die Regel schärfen oder die Zusage zurücknehmen — beides ist eine
-      Antwort, Schweigen nicht.
-- [ ] **Fünf Ein-Schritt-Umgehungen, alle nachgeprüft.** `H012` (Ruf in `retry … until` statt
-      als Anweisung → Deadlock, 0 Fehler), `U003` (zwei `locks`-Blöcke *nacheinander* statt
-      geschachtelt — **obwohl die Prosa der Original-Giftdatei genau diesen Fall
-      beschreibt**), `O006` (ein `locks { }` dazwischen), `V006` (ein `if` dazwischen), und
-      `check … can_fail { }` schaltet **10 von 12 Pässen** ab. *Jede dieser Umgehungen
-      gehört als Giftdatei neben ihre kanonische Schwester.*
-- [ ] **Eine benannte Konstante verliert in M1 ihren Wert.** `return x + 8;` geht durch,
-      `const RESERVE : u32 = 8; return x + RESERVE;` fällt an `M104`. `konst_wert` steht
-      daneben und wird für Typschranken schon benutzt.
 - [ ] **Die Emission trägt 26 von 38 Beispielen** — und die zwölf, die *nicht* emittieren,
       sind die zentralen: `01-tabelle`, `04-schleifen`, `05-nebenlaeufigkeit`,
-      `07-eintritt-und-boot`, `08-bereiche`. Die Weigerungen sind begründet, **aber das ist
-      ein Fragment, kein Rückgrat**, und der README sagt „One output: C plus inline
-      assembly" ohne diese Zahl.
+      `07-eintritt-und-boot`, `08-bereiche`. Die Weigerungen sind begründet und tragen ihren
+      Namen (`C001`), **aber das ist ein Fragment, kein Rückgrat**, und der README sagt „One
+      output: C plus inline assembly" ohne diese Zahl.
+- [ ] **`K009` prüft eine SYNTAKTISCHE hinreichende Form** — `n - k` und `n / k` mit der
+      Massgrösse links. Ein Mass, das über einen `const fn` oder eine gerechnete Grösse
+      fällt, wird abgewiesen, obwohl es fällt. *Aus der strengen Lesart kann man lockern,
+      und das ist der Weg — aber die Lockerung braucht eine Rechnung, keine Vermutung.*
+- [ ] **`N027` verbietet dem `can_fail`-Block jedes Schreiben.** Die Alternative wäre, dem
+      `check` eine `effects`-Liste zu geben und ihn wie eine Funktion zu prüfen — *eine
+      Sprachänderung*, und damit die teurere und vielleicht richtigere Antwort.
 
 - [ ] **ABI2 — ORDNUNG statt RANG, und das ist eine SPRACHÄNDERUNG.** `lock … rank 0` ist
       eine absolute Zahl; zwei unabhängig geschriebene Bibliotheken vergeben beide `rank 0`.

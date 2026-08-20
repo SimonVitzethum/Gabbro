@@ -1031,6 +1031,76 @@ fn pred_kosten(r: &Rechner, p: &Pred) -> Kosten {
     }
 }
 
+/// **Jeder Ruf im Rumpf, mit seinen Argumentausdruecken.** Ueber die erschoepfenden Laeufer
+/// aus `lib.rs` -- ein Ruf in Indexposition ist auch ein Ruf.
+fn sammle_rufe_roh<'a>(b: &'a Block, aus: &mut Vec<&'a Ruf>) {
+    for s in &b.anweisungen {
+        if let StmtArt::Ruf(r) = &s.art {
+            aus.push(r);
+        }
+        for e in crate::eigene_ausdruecke(s) {
+            for x in crate::alle_ausdruecke(e) {
+                if let ExprArt::Ruf(r) = &x.art {
+                    aus.push(r);
+                }
+            }
+        }
+        for pr in crate::eigene_praedikate(s) {
+            for e in crate::ausdruecke_im_praedikat(pr) {
+                for x in crate::alle_ausdruecke(e) {
+                    if let ExprArt::Ruf(r) = &x.art {
+                        aus.push(r);
+                    }
+                }
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_rufe_roh(k, aus);
+        }
+    }
+}
+
+/// **Faellt das Mass an dieser Stelle NACHWEISLICH?**
+///
+/// Zwei Formen werden angenommen, beide mit der Massgroesse links und einer Konstanten
+/// rechts:
+///
+/// ```text
+/// n - k     mit k >= 1
+/// n / k     mit k >= 2
+/// ```
+///
+/// Alles andere faellt -- auch `m` (eine Vertauschung ist eine Aenderung, aber kein Abstieg)
+/// und `n + 1` (eine Aenderung nach OBEN). *Aus der strengen Lesart kann man lockern, nie
+/// umgekehrt.*
+fn faellt_syntaktisch(arg: Option<&Expr>, mass: &str) -> bool {
+    fn ohne_klammern(e: &Expr) -> &Expr {
+        match &e.art {
+            ExprArt::Klammer(x) => ohne_klammern(x),
+            _ => e,
+        }
+    }
+    let Some(a) = arg else { return false };
+    let ExprArt::Binaer(op, links, rechts) = &ohne_klammern(a).art else {
+        return false;
+    };
+    let links_ist_mass = matches!(
+        &ohne_klammern(links).art,
+        ExprArt::Ort(o) if o.suffixe.is_empty() && o.basis.text == mass
+    );
+    if !links_ist_mass {
+        return false;
+    }
+    let ExprArt::Zahl(k) = ohne_klammern(rechts).art else {
+        return false;
+    };
+    match op {
+        BinOp::Minus => k >= 1,
+        BinOp::Geteilt => k >= 2,
+        _ => false,
+    }
+}
+
 /// **«K5.4» — die Rekursion bekommt ein Mass** (`K008`/`K009`).
 ///
 /// `SPRACHE.md` §7: *„ein Aufruf zählt die **deklarierten** `costs` des Gerufenen."* Bei einem
@@ -1104,9 +1174,14 @@ fn rekursionsmass(
         return;
     }
     // An jeder rekursiven Rufstelle: aendert sich wenigstens eine der genannten Groessen?
-    let mut rufe: Vec<(String, Vec<Option<String>>)> = Vec::new();
-    crate::aufrufgraph::kanten_von(b, &mut rufe);
-    for (pfad, args) in &rufe {
+    // **Die Rufe mit ihren ARGUMENTAUSDRUECKEN**, nicht nur mit deren Namen: `kanten_von`
+    // liefert `Option<String>` je Argument, und `None` heisst dort nur *„irgendein
+    // gerechneter Ausdruck"*. Genau der ist hier die Frage.
+    let mut rufe: Vec<&Ruf> = Vec::new();
+    sammle_rufe_roh(b, &mut rufe);
+    for r in &rufe {
+        let pfad = &r.pfad.text();
+        let argumente = &r.argumente;
         let Some(ziel) = g.aufloesen(u, modul, pfad) else {
             continue;
         };
@@ -1114,14 +1189,33 @@ fn rekursionsmass(
         if ziel != voll && !g.im_zyklus(&ziel) {
             continue;
         }
-        let bewegt = stellen.iter().any(|i| match args.get(*i) {
-            // Derselbe Name durchgereicht -- diese Groesse aendert sich nicht.
-            Some(Some(a)) => *a != f.parameter[*i].name.text,
-            // Kein Ort: irgendein gerechneter Ausdruck. Das ZAEHLT als Bewegung -- was er
-            // rechnet, kann dieser Pass nicht sagen, und Schweigen ist hier die richtige
-            // Antwort (W10).
-            Some(None) => true,
-            None => false,
+        // **`bewegt` war zu wenig, und es war die falsche Frage** (Rezension 2026-08-20).
+        //
+        // Die alte Bedingung fragte nur, ob sich IRGENDETWAS aendert. Eine VERTAUSCHUNG ist
+        // eine Aenderung:
+        //
+        // ```gabbro
+        // impl fn g(n : u32 in 0..8, m : u32 in 0..8) decreases n { … return g(m, n); }
+        // ```
+        //
+        // ging mit null Fehlern durch -- `emit`, `cc`, und `g(1,1)` endete mit `SIGSEGV`.
+        // Ein STEIGENDES Mass (`g(n + 1, m)`) fiel nur zufaellig, weil `n + 1` den Bereich
+        // `0 .. 8` verlaesst; mit einem weiteren Typ waere es durchgegangen.
+        //
+        // > *Der Code sagte ehrlich „die notwendige Bedingung"; der README fuehrte
+        // > `termination` ohne Vorbehalt unter den getragenen Klassen.* Von den zwei
+        // > moeglichen Antworten -- Regel schaerfen oder Zusage zuruecknehmen -- ist dies
+        // > die erste.
+        //
+        // Gefordert wird jetzt eine **pruefbare hinreichende Form**: an mindestens einer
+        // Massstelle steht `n - k` oder `n / k` mit konstantem `k >= 1` bzw. `>= 2`, und
+        // links davon die Massgroesse selbst. Alles andere faellt.
+        //
+        // **Aus der strengen Lesart kann man lockern, nie umgekehrt** (dieselbe Begruendung
+        // wie bei den Phasen, `PLAN.md` K11.1). Der Korpus schreibt ausschliesslich
+        // `f(n - 1)`, also kostet die Strenge dort nichts.
+        let bewegt = stellen.iter().any(|i| {
+            faellt_syntaktisch(argumente.get(*i), &f.parameter[*i].name.text)
         });
         if !bewegt {
             absagen.schiebe(
@@ -1129,14 +1223,15 @@ fn rekursionsmass(
                     "K009",
                     f.name.span,
                     format!(
-                        "the recursive call to `{pfad}` passes every size of the \
-                         `decreases` of `{}` through unchanged",
+                        "the recursive call to `{pfad}` does not visibly LOWER any size of \
+                         the `decreases` of `{}`",
                         f.name.text
                     ),
                 )
                 .mit_notiz(
-                    "then the measure is the same at every level -- and a constant measure \
-                     never falls",
+                    "accepted are `n - k` (k >= 1) and `n / k` (k >= 2) with the measure \
+                     itself on the left -- a swap (`g(m, n)`) changes the argument without \
+                     lowering the measure, and `n + 1` raises it",
                 )
                 .mit_notiz(
                     "checked is the NECESSARY condition: THAT it falls is the prover's \

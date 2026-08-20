@@ -596,6 +596,15 @@ impl Umgebung {
     }
 
     /// Der Wert eines `constexpr`, wenn er zur Uebersetzungszeit feststeht.
+    /// **Der Wert einer benannten `const`, ueber ihren Namen.** Fuer M1: ein Ort, der eine
+    /// Konstante nennt, traegt deren Zahl und nicht den vollen Bereich seines Typs.
+    pub fn konst_wert_von_namen(&self, von: &str, name: &str) -> Option<i128> {
+        self.kandidaten_aufloesbar(von, name)
+            .into_iter()
+            .find_map(|k| self.konstanten.get(&k))
+            .copied()
+    }
+
     pub fn konst_wert(&self, von: &str, e: &Expr) -> Option<i128> {
         let mut unterwegs = HashSet::new();
         self.auswerten(von, e, &mut unterwegs)

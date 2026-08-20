@@ -57,6 +57,11 @@ enum Zustand {
 struct Vertraege<'a> {
     u: &'a crate::umgebung::Umgebung,
     param: &'a BTreeMap<String, BTreeSet<String>>,
+    /// **Die Parameternamen des Gerufenen IN REIHENFOLGE.** Ohne sie ist die Position eines
+    /// Arguments nicht auf einen Parameter abbildbar -- und genau daran fehlte es:
+    /// `ruf` band `i` und benutzte es nie, also galt an einer Rufstelle JEDES lineare
+    /// Argument als verbraucht, sobald der Gerufene IRGENDEINEN Parameter verbraucht.
+    reihenfolge: &'a BTreeMap<String, Vec<String>>,
     ergebnis: &'a BTreeMap<String, String>,
     linear: &'a BTreeSet<String>,
     modul: &'a str,
@@ -80,6 +85,14 @@ impl Vertraege<'_> {
             .kandidaten_aufloesbar(self.modul, pfad)
             .into_iter()
             .find_map(|k| self.param.get(&k))
+    }
+
+    /// Die Parameternamen des Gerufenen, in der Reihenfolge der Deklaration.
+    fn parameter(&self, pfad: &str) -> Option<&Vec<String>> {
+        self.u
+            .kandidaten_aufloesbar(self.modul, pfad)
+            .into_iter()
+            .find_map(|k| self.reihenfolge.get(&k))
     }
 }
 
@@ -115,6 +128,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // aufgeloeste `Typ` taugt hier nicht: ein `linear ghost type P;` hat keinen Rumpf und
     // loest auf `Unbekannt` auf.
     let mut ergebnistyp: BTreeMap<String, String> = BTreeMap::new();
+    let mut reihenfolge: BTreeMap<String, Vec<String>> = BTreeMap::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Funktion(f) = &item.art {
             let mut menge = BTreeSet::new();
@@ -131,6 +145,10 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     ergebnistyp.insert(q.clone(), n.text.clone());
                 }
             }
+            reihenfolge.insert(
+                q.clone(),
+                f.parameter.iter().map(|p| p.name.text.clone()).collect(),
+            );
             verbraucht_param.insert(q, menge);
         }
     });
@@ -145,6 +163,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         let v = Vertraege {
             u: &u,
             param: &verbraucht_param,
+            reihenfolge: &reihenfolge,
             ergebnis: &ergebnistyp,
             linear: &linear,
             modul,
@@ -216,6 +235,46 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
+/// **`L109` — ein linearer Wert, der in einem ZWEIG geboren wird und ihn nicht verlaesst.**
+///
+/// `abgleich` laeuft ueber `zust.keys()` — den Stand VOR der Verzweigung. Ein Wert, der
+/// erst im Zweig entsteht, steht dort nicht und fiel damit an der Vereinigung heraus:
+///
+/// ```gabbro
+/// if k == 1 {
+///     let p = parken();      -- parken() -> Parked, linear
+/// }                          -- 0 Fehler
+/// ```
+///
+/// > `L107` sagt denselben Satz eine Ebene hoeher — *„ein Wert, der im Rumpf entsteht,
+/// > gehoert niemandem sonst"*. Er galt nur nicht fuer den Rumpf eines Zweiges.
+fn zweig_geborene(
+    vorher: &BTreeMap<String, (Zustand, Span, bool, bool)>,
+    nachher: &BTreeMap<String, (Zustand, Span, bool, bool)>,
+    endet_hier: bool,
+    absagen: &mut Absagen,
+) {
+    if endet_hier {
+        return; // wer den Zweig mit `return` verlaesst, reicht weiter -- das bucht `Return`.
+    }
+    for (name, (z, span, soll_weg, _)) in nachher {
+        if vorher.contains_key(name) || !*soll_weg || *z == Zustand::Verbraucht {
+            continue;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "L109",
+                *span,
+                format!("`{name}` arises in this branch and is never consumed in it"),
+            )
+            .mit_notiz(
+                "a linear value born inside a branch cannot survive it -- the branch is the \
+                 whole of its life, and `exactly once` has to happen here",
+            ),
+        );
+    }
+}
+
 fn gehe(
     b: &Block,
     linear: &BTreeSet<String>,
@@ -274,11 +333,13 @@ fn gehe(
                     let mut z = vorher.clone();
                     ausdruck(bed, s.span, v, &mut z, absagen);
                     gehe(r, linear, v, &mut z, absagen);
+                    zweig_geborene(&vorher, &z, endet(r, v), absagen);
                     ergebnisse.push((z, endet(r, v)));
                 }
                 if let Some(r) = &w.sonst {
                     let mut z = vorher.clone();
                     gehe(r, linear, v, &mut z, absagen);
+                    zweig_geborene(&vorher, &z, endet(r, v), absagen);
                     ergebnisse.push((z, endet(r, v)));
                 } else {
                     ergebnisse.push((vorher.clone(), false));
@@ -291,6 +352,7 @@ fn gehe(
                 for zw in &m.zweige {
                     let mut z = vorher.clone();
                     gehe(&zw.rumpf, linear, v, &mut z, absagen);
+                    zweig_geborene(&vorher, &z, endet(&zw.rumpf, v), absagen);
                     ergebnisse.push((z, endet(&zw.rumpf, v)));
                 }
                 abgleich(&ergebnisse, s.span, zust, absagen);
@@ -316,8 +378,43 @@ fn gehe(
         // Vorher fehlte `exchange`: ein linearer Wert, der in einem `update(x) { … }`
         // verbraucht wird, war für die Linearität nicht verbraucht.
         if !matches!(&s.art, StmtArt::Wenn(_) | StmtArt::Match(_)) {
+            // **`L108` — ein Schleifenrumpf laeuft OFT, gezaehlt wird er einmal**
+            // (Rezension 2026-08-20).
+            //
+            // Der Rumpf laeuft hier als geradliniger Code. Fuer `locks`, `narrow … else`
+            // und `update` ist das richtig — sie laufen einmal. **Fuer einen
+            // Schleifenrumpf ist es falsch:** `wecken(p)` darin verbraucht `p` bei jedem
+            // Durchlauf, gezaehlt wurde eine Verbrauchung.
+            //
+            // > *Genau einmal* ist eine Aussage ueber die AUSFUEHRUNG, nicht ueber den
+            // > Quelltext. Ein Rumpf, der zweimal laufen kann, verbraucht zweimal.
+            //
+            // Geprueft wird der Wert, der VOR der Schleife schon da war: einer, der im
+            // Rumpf entsteht und dort verbraucht wird, lebt und stirbt je Durchlauf und
+            // ist in Ordnung.
+            let vor_schleife: Option<BTreeMap<_, _>> =
+                matches!(&s.art, StmtArt::Schleife(_)).then(|| zust.clone());
             for k in crate::unterbloecke(s) {
                 gehe(k, linear, v, zust, absagen);
+            }
+            if let Some(vor) = vor_schleife {
+                for (name, (z, span, _, _)) in zust.iter() {
+                    let war_lebendig = matches!(vor.get(name), Some((Zustand::Lebt, _, _, _)));
+                    if war_lebendig && *z == Zustand::Verbraucht {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "L108",
+                                *span,
+                                format!("`{name}` is consumed inside a LOOP body"),
+                            )
+                            .mit_notiz(
+                                "the body may run more than once, and `exactly once` then \
+                                 becomes `once per pass` -- move the consumption out, or \
+                                 let the value arise inside the body",
+                            ),
+                        );
+                    }
+                }
             }
         }
     }
@@ -383,8 +480,19 @@ fn ruf(
     };
     let leer = BTreeSet::new();
     let verbraucht = v.verbraucht(&r.pfad.text()).unwrap_or(&leer);
-    // Die Parameternamen des Gerufenen auf die Argumente abbilden: Position fuer Position.
-    let sig: Vec<String> = verbraucht.iter().cloned().collect();
+    // **Position fuer Position, und diesmal wirklich** (2026-08-20).
+    //
+    // Hier stand `let sig: Vec<String> = verbraucht.iter().cloned().collect();` -- die
+    // Namen des Gerufenen SORTIERT, nicht in Deklarationsreihenfolge -- und darunter
+    //
+    //     let wird_verbraucht = !sig.is_empty() && i < r.argumente.len()
+    //                           && !verbraucht.is_empty();
+    //
+    // `i` war gebunden und wurde nie gelesen. **Also galt an einer Rufstelle JEDES lineare
+    // Argument als verbraucht, sobald der Gerufene irgendeinen Parameter verbraucht** --
+    // in beide Richtungen falsch: ein zweiter Gebrauch eines NICHT verbrauchten Arguments
+    // gab `L104`, und ein wirklich verbrauchtes wurde nur zufaellig getroffen.
+    let sig: &[String] = v.parameter(&r.pfad.text()).map(|x| &x[..]).unwrap_or(&[]);
     for (i, a) in r.argumente.iter().enumerate() {
         let ExprArt::Ort(o) = &a.art else { continue };
         let arg = o.basis.text.clone();
@@ -394,7 +502,7 @@ fn ruf(
         // Wird dieses Argument verbraucht? Nur wenn der Gerufene den Parameter an DIESER
         // Stelle unter `consumes` fuehrt -- die Namensmenge reicht dafuer nicht, also
         // wird sie hier ueber die Position genommen, so grob wie ehrlich.
-        let wird_verbraucht = !sig.is_empty() && i < r.argumente.len() && !verbraucht.is_empty();
+        let wird_verbraucht = sig.get(i).is_some_and(|n| verbraucht.contains(n));
         if wird_verbraucht {
             if *z == Zustand::Verbraucht {
                 absagen.schiebe(
@@ -430,14 +538,28 @@ fn ausdruck(
     zust: &mut BTreeMap<String, (Zustand, Span, bool, bool)>,
     absagen: &mut Absagen,
 ) {
-    match &e.art {
-        ExprArt::Ruf(r) => ruf(r, span, v, zust, absagen),
-        ExprArt::Klammer(x) | ExprArt::Unaer(_, x) => ausdruck(x, span, v, zust, absagen),
-        ExprArt::Binaer(_, a, b) => {
-            ausdruck(a, span, v, zust, absagen);
-            ausdruck(b, span, v, zust, absagen);
+    // **Ueber `alle_ausdruecke`, und das war ein DOUBLE-FREE mit gruenem Haken**
+    // (Rezension 2026-08-20).
+    //
+    // ```gabbro
+    // let a = aussen(wecken(p));    -- verbraucht p
+    // let b = wecken(p);            -- verbraucht p ein zweites Mal
+    // ```
+    //
+    // gab **null Fehler**. Beide Rufe auf oberster Ebene: `L104`. *Einer davon
+    // geschachtelt: stumm* -- der Handlaeufer stieg nicht in die Argumente eines Rufes ab
+    // und hatte ausserdem `_ => {}`.
+    //
+    // > M2 ist der Pass, den der eigene Modulkopf „das einzige Mittel in diesem Ordner, fuer
+    // > das es keinen Ersatz gibt" nennt.
+    //
+    // **Die Reihenfolge ist die des Baumes, also von aussen nach innen.** Fuer die Frage
+    // *„wurde derselbe Wert zweimal verbraucht"* genuegt das: beide Rufe werden gesehen,
+    // und der zweite trifft auf `Zustand::Verbraucht`.
+    for x in crate::alle_ausdruecke(e) {
+        if let ExprArt::Ruf(r) = &x.art {
+            ruf(r, span, v, zust, absagen);
         }
-        _ => {}
     }
 }
 

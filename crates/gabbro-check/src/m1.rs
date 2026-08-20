@@ -935,6 +935,26 @@ impl<'a> Pruefer<'a> {
                 }
                 self.index_pruefen(o, lage);
                 let grund = self.u.typ_von_ort(&self.modul, o, &lage.lokal);
+                // **Eine benannte Konstante behaelt ihren WERT** (Rezension 2026-08-20).
+                //
+                // `return x + 8;` ging durch, `const RESERVE : u32 = 8; return x + RESERVE;`
+                // fiel an `M104`: der Ort loeste auf den DEKLARIERTEN Typ auf (`u32`, volle
+                // Breite), nicht auf die Zahl. *Der Auswerter stand die ganze Zeit daneben
+                // und wird fuer Typschranken schon benutzt.*
+                //
+                // > Eine Konstante zu benennen ist die Gegenbewegung zur magischen Zahl.
+                // > Ein Pruefer, der sie dafuer bestraft, erzieht zur magischen Zahl.
+                //
+                // Nur ohne Suffixe und nur, wenn der Grundtyp ganzzahlig ist -- ein Feld
+                // einer Konstanten ist eine andere Frage.
+                if o.suffixe.is_empty() && !lage.lokal.contains_key(&o.basis.text) {
+                    if let (Some(b), Some(w)) = (
+                        grund.bereich(),
+                        self.u.konst_wert_von_namen(&self.modul, &o.basis.text),
+                    ) {
+                        return Typ::Ganzzahl(IntBereich::genau(b.breite, b.vorzeichen, w, w));
+                    }
+                }
                 self.mit_fakt(o, grund, lage)
             }
             // `old(x)` ist ein Geisterausdruck: er steht in `ensures`, nicht im Rumpf.

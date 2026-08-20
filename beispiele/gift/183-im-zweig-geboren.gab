@@ -1,0 +1,27 @@
+-- erwartet: L109
+-- **Ein linearer Wert, der in einem ZWEIG geboren wird und ihn nicht verlaesst.**
+--
+-- `abgleich` lief ueber den Stand VOR der Verzweigung. Ein Wert, der erst im Zweig entsteht,
+-- stand dort nicht und fiel damit an der Vereinigung heraus -- null Fehler.
+--
+-- `L107` sagt denselben Satz eine Ebene hoeher: *ein Wert, der im Rumpf entsteht, gehoert
+-- niemandem sonst.* Er galt nur nicht fuer den Rumpf eines Zweiges.
+
+module gift {
+
+linear type Parked;
+
+extern fn parken() -> Parked
+    effects { pure }
+    costs   <= 2 ops;
+
+impl fn zweig(k : u32 in 0 .. 3)
+    effects { pure }
+    costs   <= 32 ops
+{
+    if k == 1 {
+        let p = parken();
+    }
+}
+
+}

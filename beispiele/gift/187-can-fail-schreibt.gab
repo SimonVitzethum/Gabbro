@@ -1,0 +1,125 @@
+-- erwartet: N027
+-- **Ein `can_fail`-Block ist eine PROBE, kein Programm.**
+--
+-- Ein `check`-Item traegt keine `effects`-Liste, keine `costs`-Zusage und keine
+-- `locks`-Deklaration -- es ist kein Vertrag. **Zehn der zwoelf Paesse laufen ueber
+-- `ItemArt::Funktion` und sahen diesen Block darum nie**: `a = 1; schreibt();` darin kam
+-- ohne `H007`, `E005` und `E008` durch.
+--
+-- > Ein Rumpf ohne Vertrag darf nichts tun, wofuer es einen Vertrag braucht.
+--
+-- Die Alternative waere, dem `check` eine Wirkungsliste zu geben -- eine Sprachaenderung.
+-- *Aus der strengen Lesart kann man lockern, nie umgekehrt.*
+
+module gift::probe_schreibt {
+
+opaque type Pa      = u64;
+opaque type FadenId = u32;
+
+assume mmu_folgt_ihrem_modell
+    "Eine Uebersetzung mit P=0 faultet, bevor ein Zugriff die Zeile beruehrt."
+    falsifier sonde_pf_bei_p0;
+
+assume tlb_ist_nach_cr3_leer
+    "Ein Schreiben auf CR3 verwirft die nicht-globalen Eintraege."
+    falsifier sonde_tlb_nach_cr3;
+
+assume x2apic_zweischritt
+    "EN und EXTD in einem Schreibvorgang ist ein verbotener Uebergang."
+    unfalsifiable "qemu64 hat kein x2APIC -- die Sonde hat hier kein Geraet";
+
+assume ipi_kommt_an
+    "Ein gesendetes IPI erreicht den Zielkern in endlicher Zeit."
+    unfalsifiable "Lebendigkeit faellt unter keinen Mechanismus dieser Sprache";
+
+-- Je privilegiertem Befehl ein erklaerter Effekt. Das ist die groesste unbewiesene
+-- Flaeche der Sprache -- groesser als der Uebersetzer -- und deshalb zaehlbar.
+axiom write_cr3(p : Pa) effects { writes tlb, writes aktive_tabelle } falsifier sonde_cr3;
+axiom invlpg(v : u64)   effects { writes tlb }                       falsifier sonde_invlpg;
+axiom rdtsc()           effects { reads zeitzaehler }                falsifier sonde_tsc;
+axiom wbinvd()          effects { writes cache }
+    unfalsifiable "die Wirkung ist auf dieser Maschine nicht beobachtbar";
+
+-- `check` erzeugt eine `linear ghost Duty(name)`: eine Pflicht, die verbraucht werden MUSS.
+-- Vier Uebersetzungsfehler fallen dabei aus M1/M2/M3 statt aus Sonderregeln: `gates` fehlt
+-- -> die Pflicht wird nie verbraucht; `can_fail` fehlt -> dito; eine Groesse unter
+-- `measures`, die der gemessene Pfad schreibt -> Schreibrecht; einseitige Schwelle ohne
+-- `floor` -> die Groesse hat keinen Bereich.
+-- **Die beiden Torfunktionen -- bis zum 2026-08-19 standen sie NIRGENDS.**
+--
+-- `gates abnahme, freigabe` nannte zwei Namen, hinter denen nichts stand, und damit konnte
+-- die Pflicht von niemandem verbraucht werden. *Das ist der erste der vier oben versprochenen
+-- Uebersetzungsfehler* -- und er fiel nicht, weil `gates` keinen Leser hatte. `N020`, seit
+-- heute, hat ihn im eigenen Beispiel gefunden.
+impl fn abnahme()
+    effects { reads kerne_gemessen }
+    costs   <= 4 ops
+{ return; }
+
+impl fn freigabe()
+    effects { reads tiefe_max }
+    costs   <= 4 ops
+{ return; }
+
+check stapel_wasserstand {
+    claim        "Kein Kern hat je mehr als 3/4 seines Stapels benutzt."
+    measures     tiefe_max, tiefe_lebend, kerne_gemessen
+    gates        abnahme, freigabe
+    can_fail {
+        let g = groesse_gemessen() else (e1) { return; }
+        tiefe_max = 1;
+        if tiefe_max * 4 >= g * 3 {
+            return;
+        }
+    }
+    floor        kerne_gemessen >= 2, tiefe_max >= 1
+    counterprobe "Ein Kern mit kuenstlich tiefem Aufruf muss die Pflicht fallen lassen."
+        expects sonde_tiefer_stapel
+}
+
+-- **Die Pflicht des fremden Rumpfes, ausgesprochen** (Punkt 4, 2026-08-19). Eine gemessene
+-- Stapelgroesse ist positiv; ohne die Zeile weiss der Rufer es nicht, und seit heute traegt
+-- sie: `m1::aus_ensures` verengt das Ergebnis am Rufort.
+--
+-- *Sie ist eine ANNAHME ueber fremden Code und keine Ableitung -- deshalb zaehlt
+-- `gabbro pflichten` sie als `F` und das Zeugnis nennt sie.*
+extern fn groesse_gemessen() -> u64
+    ensures result >= 1
+    effects { reads stapel };
+
+-- ==========================================================================================
+-- K100.2 -- die fuenf UMGEBUCHTEN Klempnereipflichten (2026-08-17)
+--
+-- **Eine Umbuchung ist keine Erledigung.** Diese fuenf Saetze standen bis heute als haengende
+-- Klempnereipflichten in `PFLICHTEN.md` -- Stellen, an denen der Mensch etwas von Hand zu
+-- zeigen hatte. Sie sind es nicht: es sind Aussagen ueber die MASCHINE, und dafuer gibt es
+-- den richtigen Ort.
+--
+-- > *Sie hier zu fuehren heisst, sie beim Namen mit einer Sonde zu tragen -- nicht, sie
+-- > erledigt zu haben.* Genau diese Vertrauensform ist gemeint, wenn jemand sagt „im
+-- > Vertrauen auf Gabbro und seine Hardwareannahmen": das Vertrauen bekommt eine Liste.
+--
+-- **Und der Preis steht dabei:** die Vertrauensbasis waechst um fuenf Saetze, zwei davon
+-- ohne Sonde. Wer die Klempnereizahl liest, muss diese Zeile mitlesen.
+
+assume dma_veroeffentlichung_braucht_barriere
+    "Ein Speichern in eine DMA-Region wird fuer das Geraet erst nach der Barriere des Raumes sichtbar; ohne sie liest das Geraet den alten Wert."
+    falsifier sonde_dma_ohne_barriere;
+
+assume masks_irq_schuetzt_wie_eine_sperre
+    "Auf einem Kern mit maskierten Interrupts kann kein anderer Pfad desselben Kerns dazwischentreten; der Wert ueberquert die Grenze unveraendert."
+    falsifier sonde_irq_maskiert;
+
+assume mmu_schreibt_nur_a_und_d
+    "Die MMU setzt in einem Seitentabelleneintrag ausschliesslich die Bits A und D; kein anderes Feld aendert sich ohne Software."
+    unfalsifiable "eine Sonde muesste die MMU anhalten und dabei genau das Fenster oeffnen, in dem sie schreibt";
+
+assume release_stellt_sichtbarkeit_her
+    "Ein Release-Speichern macht jede vorher geschriebene Nutzlast fuer den Leser sichtbar, der dieselbe Zelle mit Acquire liest."
+    unfalsifiable "das Speichermodell ist nicht durch Ausfuehrung widerlegbar -- eine erfolgreiche Probe zeigt nur, dass die Umordnung diesmal ausblieb";
+
+assume geraeteregister_veroeffentlicht_wie_ein_atomic
+    "Ein volatiler Speichervorgang in ein Geraeteregister macht die zuvor geschriebene Nutzlast fuer das Geraet sichtbar, sobald das Register geschrieben ist."
+    falsifier sonde_virtio_avail;
+
+}

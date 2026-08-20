@@ -123,11 +123,11 @@ denominator that shines instead of the one that costs.*
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 174 diagnostics · `gabbro paesse` |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 177 diagnostics · `gabbro paesse` |
 | **Grammar** | **143 EBNF rules**, closed and reachable | vocabulary covers every terminal, 211 / 211 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Guardians** | 13, each with a two-way speech test | **199 of 199 mutations caught** *(run 2026-08-20)* |
-| **Corpus** | 38 clean examples, 180 poison files, 153 tests *(run 2026-08-20)* | `cargo test` |
+| **Corpus** | 38 clean examples, 188 poison files, 156 tests *(run 2026-08-20)* | `cargo test` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was
@@ -167,7 +167,7 @@ cargo run --bin gabbro -- pruefe beispiele/*.gab     # check files
 cargo run --bin gabbro -- paesse                     # what each pass does and does NOT do
 cargo run --bin gabbro -- schablonen                 # the proof-template register
 cargo run --bin gabbro -- pflichten beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
-cargo test                                           # 153 tests
+cargo test                                           # 156 tests
 ./mutiere-pruefer.py                                 # damage one rule at a time: 199 of 199
 ./pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
 ./pruefe-klauseln.py                                 # declared, exported, never read

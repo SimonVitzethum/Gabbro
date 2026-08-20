@@ -2622,3 +2622,130 @@ fn die_beiden_wachen_sitzen_an_allen_ihren_stellen() {
         assert!(b.min >= 0, "u64 hat keine negative Untergrenze: {b:?}");
     }
 }
+
+/// **Die vier M2-Löcher, alle vier** (Rezension 2026-08-20).
+///
+/// M2 ist der Pass, den der eigene Modulkopf *„das einzige Mittel in diesem Ordner, für das
+/// es keinen Ersatz gibt"* nennt — und *genau einmal* stimmte auf vier Wegen nicht. **Es
+/// trifft nicht nur `ghost`:** hier steht ein `linear type`, ein echtes
+/// Laufzeit-Betriebsmittel.
+///
+/// 1. Ein **geschachtelter** Ruf: `aussen(wecken(p))` — der Läufer stieg nicht in Argumente
+///    ab. Beide Rufe auf oberster Ebene gaben `L104`, einer geschachtelt: **stumm.** *Ein
+///    Double-Free mit grünem Haken.*
+/// 2. `ruf` band die Position `i` und benutzte sie nie — also galt an einer Rufstelle jedes
+///    lineare Argument als verbraucht, sobald der Gerufene **irgendeinen** Parameter
+///    verbraucht. In beide Richtungen falsch.
+/// 3. Ein **Schleifenrumpf** lief einmal als geradliniger Code (`L108`).
+/// 4. Ein im **Zweig** geborener Wert fiel an der Vereinigung heraus (`L109`).
+#[test]
+fn m2_zaehlt_genau_einmal_auf_allen_vier_wegen() {
+    let kopf = "module m {\n\
+        linear type Parked;\n\
+        extern fn wecken(p : Parked) -> u32 in 0 .. 3 effects { consumes p } costs <= 2 ops;\n\
+        extern fn parken() -> Parked effects { pure } costs <= 2 ops;\n\
+        extern fn aussen(v : u32 in 0 .. 3) -> u32 in 0 .. 3 effects { pure } costs <= 1 ops;\n\
+        extern fn nimmt(a : u32 in 0 .. 3, p : Parked) -> u32 in 0 .. 3 \
+            effects { consumes p } costs <= 2 ops;\n";
+    let melden = |rumpf: &str| -> String {
+        let q = format!("{kopf}{rumpf}}}\n");
+        let (b, mut a) = gabbro_syntax::lies("m2.gab", &q);
+        gabbro_check::pruefe(&b, &mut a);
+        a.zeige(&q)
+    };
+
+    // 1. Der geschachtelte Verbrauch.
+    let t1 = melden(
+        "impl fn f(p : Parked) -> u32 in 0 .. 3 effects { consumes p } costs <= 16 ops \
+         { let a = aussen(wecken(p)); let b = wecken(p); return b; }\n",
+    );
+    assert!(t1.contains("L104"), "geschachtelt ist auch zweimal:\n{t1}");
+
+    // 2. Die POSITION -- ein nicht verbrauchtes Argument darf zweimal stehen.
+    let t2 = melden(
+        "impl fn f(p : Parked, k : u32 in 0 .. 3) -> u32 in 0 .. 3 effects { consumes p } \
+         costs <= 16 ops { let x = nimmt(k, p); return k; }\n",
+    );
+    assert!(!t2.contains("L104"), "`k` wird nicht verbraucht:\n{t2}");
+
+    // 3. Der Schleifenrumpf laeuft OFT.
+    let t3 = melden(
+        "impl fn f(p : Parked) effects { consumes p } costs <= 64 ops \
+         { retry warten until false bounded 32 ops progress ir on_exceeded auf \
+           effects { consumes p } { wecken(p); } }\n",
+    );
+    assert!(t3.contains("L108"), "einmal gezaehlt, oft gelaufen:\n{t3}");
+
+    // ... und ein Wert, der IM Rumpf entsteht, ist dort in Ordnung.
+    let t3b = melden(
+        "impl fn f() effects { pure } costs <= 64 ops \
+         { retry warten until false bounded 32 ops progress ir on_exceeded auf \
+           effects { pure } { let p = parken(); let x = wecken(p); } }\n",
+    );
+    assert!(!t3b.contains("L108"), "je Durchlauf geboren und gestorben:\n{t3b}");
+
+    // 4. Im Zweig geboren, im Zweig gestorben -- oder eben nicht.
+    let t4 = melden(
+        "impl fn f(k : u32 in 0 .. 3) effects { pure } costs <= 32 ops \
+         { if k == 1 { let p = parken(); } }\n",
+    );
+    assert!(t4.contains("L109"), "der Zweig ist das ganze Leben des Wertes:\n{t4}");
+    let t4b = melden(
+        "impl fn f(k : u32 in 0 .. 3) effects { pure } costs <= 32 ops \
+         { if k == 1 { let p = parken(); let x = wecken(p); } }\n",
+    );
+    assert!(!t4b.contains("L109"), "im Zweig verbraucht ist in Ordnung:\n{t4b}");
+}
+
+/// **`decreases` war eine Namensprobe** («K009» geschärft, Rezension 2026-08-20).
+///
+/// Die alte Bedingung fragte nur, ob sich an einer Massstelle *irgendetwas* ändert. **Eine
+/// Vertauschung ist eine Änderung:** `g(m, n)` ging durch, wurde emittiert, übersetzt, und
+/// `g(1,1)` endete mit `SIGSEGV`. Ein *steigendes* Mass fiel nur zufällig an der
+/// Bereichsgrenze.
+///
+/// > Von den zwei möglichen Antworten — Regel schärfen oder Zusage zurücknehmen — ist dies
+/// > die erste. *Aus der strengen Lesart kann man lockern, nie umgekehrt.*
+#[test]
+fn ein_rekursionsmass_muss_sichtbar_fallen() {
+    let mit = |ruf: &str| -> String {
+        let q = format!(
+            "module m {{\n\
+             impl fn g(n : u32 in 0 .. 8, m : u32 in 0 .. 8) -> u32 in 0 .. 8\n\
+             effects {{ pure }} costs <= 64 ops decreases n\n\
+             {{ if n == 0 {{ return 0; }} return {ruf}; }}\n\
+             }}\n"
+        );
+        let (b, mut a) = gabbro_syntax::lies("d.gab", &q);
+        gabbro_check::pruefe(&b, &mut a);
+        a.zeige(&q)
+    };
+    assert!(mit("g(m, n)").contains("K009"), "eine Vertauschung faellt nicht");
+    assert!(mit("g(n + 1, m)").contains("K009"), "ein steigendes Mass steigt");
+    assert!(mit("g(n, m)").contains("K009"), "unveraendert ist unveraendert");
+    // Die zwei angenommenen Formen -- sonst waere die Regel ein Verbot von `decreases`.
+    assert!(!mit("g(n - 1, m)").contains("K009"), "`n - 1` faellt");
+    assert!(!mit("g(n / 2, m)").contains("K009"), "`n / 2` faellt");
+}
+
+/// **Eine benannte Konstante behält ihren Wert** (Rezension 2026-08-20).
+///
+/// `return x + 8;` ging durch, `const RESERVE : u32 = 8; return x + RESERVE;` fiel an
+/// `M104`: der Ort löste auf den *deklarierten* Typ auf, nicht auf die Zahl. Der Auswerter
+/// stand die ganze Zeit daneben und wird für Typschranken schon benutzt.
+///
+/// > Eine Konstante zu benennen ist die Gegenbewegung zur magischen Zahl. **Ein Prüfer, der
+/// > sie dafür bestraft, erzieht zur magischen Zahl.**
+#[test]
+fn eine_benannte_konstante_behaelt_ihren_wert() {
+    let q = "module m {\n\
+        const RESERVE : u32 = 8;\n\
+        impl fn a(x : u32 in 0 .. 100) -> u32 in 0 .. 200 effects { pure } costs <= 2 ops \
+        { return x + 8; }\n\
+        impl fn b(x : u32 in 0 .. 100) -> u32 in 0 .. 200 effects { pure } costs <= 2 ops \
+        { return x + RESERVE; }\n\
+        }\n";
+    let (b, mut a) = gabbro_syntax::lies("k.gab", q);
+    gabbro_check::pruefe(&b, &mut a);
+    assert_eq!(a.fehler_zahl(), 0, "die Zahl und ihr Name sind dasselbe:\n{}", a.zeige(q));
+}
