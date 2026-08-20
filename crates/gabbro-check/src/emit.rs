@@ -809,6 +809,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
     // Bibliothek braucht, ist kein Erzeugnis. Und nur die gebrauchten: eine ungenutzte
     // Funktion im erzeugten C ist ein Befund ueber den Erzeuger.
     let mut leser: BTreeSet<&'static str> = BTreeSet::new();
+    let mut schreiber: BTreeSet<&'static str> = BTreeSet::new();
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Format(f) = &item.art {
             let gross = matches!(f.endian, Some(Endian::Gross));
@@ -824,6 +825,10 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                     // gebrauchten.*
                     if b == 8 {
                         leser.insert(lesewort(4, gross));
+                    }
+                    schreiber.insert(schreibwort(b, gross));
+                    if b == 8 {
+                        schreiber.insert(schreibwort(4, gross));
                     }
                 }
             }
@@ -872,6 +877,13 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         );
         for l in &leser {
             aus.push_str(LESER_C.iter().find(|(n, _)| n == l).map(|(_, c)| *c).unwrap_or(""));
+        }
+        // **Und die Schreiber daneben** -- `SPRACHE.md`:355 sagt beide zu, und bis zum
+        // 2026-08-20 stand nur die eine Haelfte da.
+        for w in &schreiber {
+            aus.push_str(
+                SCHREIBER_C.iter().find(|(n, _)| n == w).map(|(_, c)| *c).unwrap_or(""),
+            );
         }
     }
     if !namen.fremde.is_empty() {
@@ -2069,7 +2081,15 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     }
     let n = &f.name.text;
     aus.push_str(&format!(
-        "\ntypedef struct {{ const uint8_t *bytes; uint32_t len; }} {n};\n"
+        // **`bytes` ist NICHT `const`, seit es Schreiber gibt** (2026-08-20). Ein Treiber,
+        // der einen Rahmen stellt, schreibt durch dieselbe Sicht, durch die er liest.
+        //
+        // *Das C verliert damit eine Zusage, die es ohnehin nie gehalten hat:* `const` am
+        // Zeiger im Verbund haette nur gesagt, dass `bytes` nicht umgehaengt wird, und ein
+        // `const {n} *` propagiert in C nicht nach innen. **Wer hier schreiben darf,
+        // entscheidet `ptr<…, r>` gegen `ptr<…, rw>`, und das haelt M3** -- W6: was der
+        // Pruefer entschieden hat, prueft die Maschine nicht noch einmal.
+        "\ntypedef struct {{ uint8_t *bytes; uint32_t len; }} {n};\n"
     ));
     let mut versatz: u32 = 0;
     let mut pruefungen: Vec<String> = Vec::new();
@@ -2116,6 +2136,15 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                 aus.push_str(&format!(
                     "static inline {c} {n}_{f2}(const {n} *v) {{ return ({c}){leser}(v->bytes + {versatz}); }}\n",
                     f2 = feld.name.text
+                ));
+                // **Der SCHREIBER, und er heisst `_setz_`** -- `SPRACHE.md`:355 sagt ihn
+                // seit jeher zu. Ohne ihn ist ein `format` nur halb abgesenkt, und ein
+                // Treiber, der einen Rahmen STELLT, faellt auf eine Zuweisung an einen
+                // Funktionsaufruf.
+                aus.push_str(&format!(
+                    "static inline void {n}_setz_{f2}({n} *v, {c} x) {{ {sw}(v->bytes + {versatz}, x); }}\n",
+                    f2 = feld.name.text,
+                    sw = schreibwort(breite, gross)
                 ));
             }
             if let Some(b) = &feld.bedingung {
@@ -2290,6 +2319,25 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                  return ({ergebnis})(((({c}){leser}(v->bytes + {versatz}) >> {lo}) & {maske}u){mal}); }}\n",
                 f2 = g.name.text
             ));
+            // **Ein Bitfeld zu schreiben ist ein Lese-Aendere-Schreib-Zug auf dem GANZEN
+            // Wort**, und deshalb steht die Maske hier zweimal: einmal zum Loeschen der
+            // alten Bits, einmal zum Beschneiden der neuen. *Ein Setzer, der die Nachbarbits
+            // mitnimmt, ist die Registerfalle 4 eine Ebene tiefer.*
+            //
+            // Mit `scale K` gibt es KEINEN Setzer: der Rueckweg waere eine Division, und ob
+            // ein Wert ohne Rest durch `K` teilbar ist, sagt die Deklaration nicht. *Eine
+            // Absenkung, die stillschweigend abrundet, ist genau die, gegen die dieses
+            // Modul steht.*
+            if g.typ.scale.is_none() {
+                aus.push_str(&format!(
+                    "static inline void {n}_setz_{f2}({n} *v, {ergebnis} x) {{ \
+                     {c} w = ({c}){leser}(v->bytes + {versatz}); \
+                     w = ({c})((w & ({c})~(({c}){maske}u << {lo})) | ((({c})x & {maske}u) << {lo})); \
+                     {sw}(v->bytes + {versatz}, w); }}\n",
+                    f2 = g.name.text,
+                    sw = schreibwort(breite, gross)
+                ));
+            }
             if let Some(b) = &g.bedingung {
                 match pred_c_format(b, n, u, absagen) {
                     Some(x) => pruefungen.push(x),
@@ -2352,6 +2400,40 @@ fn breite_von(i: &IntTy) -> u32 {
 
 /// Die Leser selbst. **Byteweise zusammengesetzt, nicht gecastet** -- ein `*(uint32_t*)p`
 /// waere unausgerichtet und haette die Bytereihenfolge der Maschine statt der erklaerten.
+/// **Die SCHREIBER, und sie standen bis zum 2026-08-20 nicht da** -- obwohl `SPRACHE.md`:355
+/// sie seit jeher zusagt (*„Generates: reader, writer, C struct with fixed widths"*).
+///
+/// Gefunden beim ersten Treiber, der nicht aus dem Entwurf kam: ein virtio-net muss einen
+/// ARP-Rahmen **stellen**, nicht bloss lesen. Der Erzeuger machte daraus
+/// `EthArp_ethertyp(r) = 2054;` -- **eine Zuweisung an einen Funktionsaufruf**, und der
+/// Pruefer meldete null Fehler.
+///
+/// > *Das ist die eine Fehlerklasse, gegen die dieses Modul gebaut ist:* es sieht aus wie
+/// > eine Absenkung und ist keine. Dass `cc` es faengt, ist Glueck und keine Zusage -- ein
+/// > `format` ohne Schreiber war eine halbe Absenkung mit einem ganzen Anschein.
+const SCHREIBER_C: &[(&str, &str)] = &[
+    ("gabbro_setz_u8", "static inline void gabbro_setz_u8(uint8_t *p, uint8_t v) { p[0] = v; }\n"),
+    ("gabbro_setz_be16", "static inline void gabbro_setz_be16(uint8_t *p, uint16_t v) { p[0] = (uint8_t)(v >> 8); p[1] = (uint8_t)v; }\n"),
+    ("gabbro_setz_le16", "static inline void gabbro_setz_le16(uint8_t *p, uint16_t v) { p[1] = (uint8_t)(v >> 8); p[0] = (uint8_t)v; }\n"),
+    ("gabbro_setz_be32", "static inline void gabbro_setz_be32(uint8_t *p, uint32_t v) { p[0] = (uint8_t)(v >> 24); p[1] = (uint8_t)(v >> 16); p[2] = (uint8_t)(v >> 8); p[3] = (uint8_t)v; }\n"),
+    ("gabbro_setz_le32", "static inline void gabbro_setz_le32(uint8_t *p, uint32_t v) { p[3] = (uint8_t)(v >> 24); p[2] = (uint8_t)(v >> 16); p[1] = (uint8_t)(v >> 8); p[0] = (uint8_t)v; }\n"),
+    ("gabbro_setz_be64", "static inline void gabbro_setz_be64(uint8_t *p, uint64_t v) { gabbro_setz_be32(p, (uint32_t)(v >> 32)); gabbro_setz_be32(p + 4, (uint32_t)v); }\n"),
+    ("gabbro_setz_le64", "static inline void gabbro_setz_le64(uint8_t *p, uint64_t v) { gabbro_setz_le32(p + 4, (uint32_t)(v >> 32)); gabbro_setz_le32(p, (uint32_t)v); }\n"),
+];
+
+/// Das Schreibwort zu einer Breite und Byteordnung -- Spiegel von `lesewort`.
+fn schreibwort(breite: u32, gross: bool) -> &'static str {
+    match (breite, gross) {
+        (1, _) => "gabbro_setz_u8",
+        (2, true) => "gabbro_setz_be16",
+        (2, false) => "gabbro_setz_le16",
+        (4, true) => "gabbro_setz_be32",
+        (4, false) => "gabbro_setz_le32",
+        (8, true) => "gabbro_setz_be64",
+        _ => "gabbro_setz_le64",
+    }
+}
+
 const LESER_C: &[(&str, &str)] = &[
     ("gabbro_u8", "static inline uint8_t gabbro_u8(const uint8_t *p) { return p[0]; }\n"),
     ("gabbro_be16", "static inline uint16_t gabbro_be16(const uint8_t *p) { return (uint16_t)((uint16_t)p[0] << 8 | p[1]); }\n"),
@@ -3244,6 +3326,19 @@ fn anweisung(
                 aus.push_str(&format!("{e}{freigabe};\n"));
             }
             match w {
+                // **Ein `return` eines GEISTES gibt nichts zurueck** (2026-08-20).
+                //
+                // Die Loeschung nahm bis heute den Parameter und den Rueckgabetyp und liess
+                // die Anweisung stehen: `void stufe_anerkennen(Gemein *g) { … return m; }`
+                // -- ein Name, den die Signatur gerade geloescht hat.
+                //
+                // > *Es ist nie aufgefallen, weil keine `impl fn` im Korpus einen Geist
+                // > zurueckgibt.* `beispiele/22` fuehrt die ganze Bootstrecke als `extern fn`
+                // > -- also Prototypen, also keine Ruempfe. **Die Loeschung war an drei von
+                // > vier Stellen gebaut**, und die vierte hat kein Beispiel je ausgeloest.
+                Some(x) if geist_wert(x, u) => {
+                    aus.push_str(&format!("{e}return;\n"));
+                }
                 // **`return None` / `return Some(i)`** -- der Sonderwert kommt aus dem
                 // Rueckgabetyp der Funktion, nicht aus dem Ausdruck.
                 Some(x) => {
@@ -3282,6 +3377,38 @@ fn anweisung(
                     .unwrap_or_else(|| ausdruck(&z.wert, u, absagen)),
                 None => ausdruck(&z.wert, u, absagen),
             };
+            // **Ein `format`-Feld wird ein SETZER, kein Zuweisungsziel** (2026-08-20).
+            //
+            // `r.ethertyp = 2054;` ergab `EthArp_ethertyp(r) = 2054;` -- eine Zuweisung an
+            // einen Funktionsaufruf, und der Pruefer meldete null Fehler. **Es sah aus wie
+            // eine Absenkung und war keine**; dass `cc` es faengt, war Glueck.
+            //
+            // Gefunden hat es der erste Treiber, der nicht aus dem Entwurf kam: ein
+            // virtio-net muss einen ARP-Rahmen STELLEN.
+            if let Some(fmt) = u.formatwerte.get(&z.ziel.basis.text) {
+                if let Some(OrtSuffix::Feld(f)) = z.ziel.suffixe.first() {
+                    if z.ziel.suffixe.len() != 1 {
+                        weigere(absagen, s.span, "a `format` field followed by more suffixes");
+                        return;
+                    }
+                    // **`+=` auf einem Byteleser waere ein zweiter Zugriff**, und ob die
+                    // beiden dasselbe sehen, sagt niemand -- bei einem Puffer, an dem ein
+                    // Geraet mitschreibt, ist das die Frage selbst.
+                    if !matches!(z.op, ZuwOp::Setzt) {
+                        weigere(
+                            absagen,
+                            s.span,
+                            "a compound assignment to a `format` field -- it would be a read                              and a write through two separate calls, and over a buffer a                              device also writes, whether the two see the same bytes is the                              question itself",
+                        );
+                        return;
+                    }
+                    aus.push_str(&format!(
+                        "{e}{fmt}_setz_{}({}, {wert});\n",
+                        f.text, z.ziel.basis.text
+                    ));
+                    return;
+                }
+            }
             aus.push_str(&format!(
                 "{e}{} {} {};\n",
                 ort(&z.ziel, u, absagen),
@@ -4780,6 +4907,14 @@ fn geist_wert(e: &Expr, u: &Namen) -> bool {
             .last()
             .and_then(|i| u.funktionen.get(&i.text))
             .is_some_and(|s| s.geist_rueck),
+        // **Und ein blanker NAME, dessen Typ ein Geist ist** (2026-08-20). Bis dahin las
+        // diese Funktion nur Rufe -- `let p = mmu_an(p);` war gedeckt, `return p;` nicht.
+        // *Eine Loeschung, die den Wert nur an seiner Herkunft erkennt, uebersieht ihn
+        // ueberall dort, wo er schon gebunden ist.*
+        ExprArt::Ort(o) if o.suffixe.is_empty() => u
+            .parametertyp
+            .get(&o.basis.text)
+            .is_some_and(|t| ist_geist(t, u)),
         _ => false,
     }
 }

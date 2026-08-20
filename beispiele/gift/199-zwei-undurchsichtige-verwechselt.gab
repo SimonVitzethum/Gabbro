@@ -1,0 +1,25 @@
+-- erwartet: N030
+-- **Dieselbe Regel, ohne Geist: zwei `opaque type` ueber demselben Traeger.**
+--
+-- `D003` sagt seit 2026-08-18, dass ein `opaque type` nicht die Arithmetik seines Traegers
+-- hat. Dass er auch nicht an die Stelle eines ANDEREN undurchsichtigen Typs passt, sagte bis
+-- heute niemand -- und `u64` gegen `u64` faellt in keinem Bereichsmodell auf.
+--
+-- > Die Gegenprobe steht daneben: ein Bereichsalias (`type Zaehler = u32 in 0 .. 9`) ist
+-- > bauartbedingt DURCHSICHTIG und wird hier nicht verglichen.
+
+module gift {
+
+opaque type Pa    = u64;
+opaque type EpId  = u64;
+
+extern fn abbilden(p : Pa) effects { pure } costs <= 4 ops;
+
+impl fn falsch(e : EpId)
+    effects { pure }
+    costs   <= 8 ops
+{
+    abbilden(e);
+}
+
+}

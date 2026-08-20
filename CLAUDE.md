@@ -19,8 +19,20 @@ ssh ki-pc-fisch-101 'cd gabbro/beweise && ~/Isabelle2025-2/bin/isabelle build -D
 und ein Beweis, der daran stirbt, sieht aus wie ein Beweis, der nicht durchgeht. *Ein
 Abbruch aus Speichermangel ist kein Befund.*
 
-Leichtes bleibt lokal: `cargo build`, `cargo test`, die Wächter, ein `gabbro pruefe` über den
-Korpus. Die Grenze ist die Rechenzeit, nicht die Gewohnheit.
+**Seit dem 2026-08-20 liegt die Grenze bei 1 GB, und damit fällt `rustc` darunter.** Auf den
+Server gehören deshalb auch **`cargo build` und `cargo test`**, `./pruefe-emission.sh` (ruft
+`cargo run` je Einheit) und `./pruefe-luecken.py` (baut dreizehnmal neu).
+
+```bash
+rsync -a --delete --exclude 'target/' --exclude '__pycache__/' --exclude '.claude/worktrees/' \
+      ./ ki-pc-fisch-101:gabbro-baum/
+ssh ki-pc-fisch-101 'cd gabbro-baum && export PATH=$HOME/.cargo/bin:$PATH && cargo test'
+```
+
+Lokal bleibt, was sicher darunter liegt: ein einzelner `gabbro emit`/`pruefe`-Lauf über ein
+schon gebautes Binärprogramm, ein `cc` auf einer Datei, und die Textwächter
+(`pruefe-todo.py`, `-englisch`, `-kennungen`, `-syntax`). *Die Grenze ist der Speicher, nicht
+die Gewohnheit.*
 
 **Der Mutationslauf misst sich selbst**: `./mutiere-pruefer.py` über alle 159 Mutationen
 braucht **2 min 20 s** lokal (gemessen 2026-08-19) und bleibt damit diesseits der Grenze.

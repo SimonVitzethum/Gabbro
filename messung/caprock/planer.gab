@@ -1,0 +1,115 @@
+-- **Caprocks Blockiergruende in Gabbro** -- gemessen gegen
+-- `../caprock-messbasis/crates/caprock-sched/src/lib.rs`, `BlockReasons` (Zeilen 287-360).
+--
+-- **Der Gegenstand ist D9/Z24: „ein Grund, der zwei Lagen traegt, macht den Wecker
+-- unbestimmbar."** Der Bestand fuehrt sechs Bits in einem `u8` und daneben 40 Zeilen Prosa,
+-- die erklaeren, warum jeder Grund sein eigenes Bit braucht -- und warum `resume` genau
+-- `PAUSE` entfernt, `unpark` genau `PARK`, `handler_reply` genau `HANDLER`:
+--
+--     In der Menge ist genau das **unformulierbar**: `resume` entfernt `PAUSE`, `unpark`
+--     entfernt `PARK`, `unblock` entfernt `IPC` -- keiner von ihnen entfernt `HANDLER`.
+--
+-- **„Unformulierbar" ist dort eine Konvention und hier ein Typfehler.** `SPRACHE.md` sagt
+-- es fuer diesen Fall woertlich: *„Lost wakeup | Z24 (ein Bit fuer vier Gruende) | **M2**:
+-- der Wecker verbraucht **genau seinen** Grund."*
+
+module caprock::planer {
+
+const NFAEDEN : u32 = 1024;
+
+opaque type FadenId = u64;
+
+-- **Sechs Gruende, sechs Zeugen.** Ein Zeuge entsteht beim Blockieren und wird von genau
+-- einem Wecker verbraucht. Wer den falschen nimmt, uebersetzt nicht -- das ist der ganze
+-- Unterschied zu sechs Bits in einem Byte.
+linear ghost type WartetIpc;
+linear ghost type WartetBudget;
+linear ghost type WartetPause;
+linear ghost type WartetPark;
+linear ghost type WartetHandler;
+linear ghost type WartetLoad;
+
+table Faeden count NFAEDEN {
+    slot {
+        lebt     : bool,
+        gruende  : u8,
+        kern     : u8,
+        prio     : u8,
+    }
+}
+
+lock PLANER protects { lebt, gruende, kern, prio } rank 0 held <= 300 ops masks irqs;
+
+-- Die Bitlagen, als Format ueber demselben Byte. **Jedes Bit ist benannt, und die zwei
+-- freien heissen `reserved`** -- eine Luecke waere hier genau die Klasse, gegen die D9 steht.
+format Gruende endian little {
+    ipc      : bool @0,
+    budget   : bool @1,
+    pause    : bool @2,
+    park     : bool @3,
+    handler  : bool @4,
+    load     : bool @5,
+    g_frei   : u8 @[7:6] reserved,
+}
+
+-- **Der Zeuge muss VERBRAUCHT werden, und Gabbro verlangt einen Verbraucher.**
+--
+-- `M2` hat es sofort gesagt: *„`w` is listed under `consumes` but is consumed on no path."*
+-- Ein Grund zu loeschen ist im Bestand ein `&= !PAUSE` -- eine Rechnung, die nichts
+-- verbraucht. Hier ist das Loeschen ein RUF, und der Ruf nimmt den Zeugen.
+--
+-- *Sechs Senken fuer sechs Gruende, und keine nimmt einen fremden.* Sie sind `ghost`, also
+-- kosten sie nichts: im Erzeugnis steht keine einzige Zeile davon.
+extern fn ipc_grund_weg(w : WartetIpc)       effects { consumes w } costs <= 0 ops;
+extern fn pause_grund_weg(w : WartetPause)   effects { consumes w } costs <= 0 ops;
+extern fn park_grund_weg(w : WartetPark)     effects { consumes w } costs <= 0 ops;
+
+extern fn einreihen(f : ptr<normal, rw> Faeden, t : index into Faeden)
+    requires Held(PLANER)
+    effects  { writes f.slots, locks PLANER }
+    costs    <= 32 ops;
+
+-- ---------------------------------------------------------------------------------------
+-- Die drei Wecker. **Jeder nimmt SEINEN Zeugen und keinen anderen.**
+--
+-- Im Bestand ist das eine Zusicherung im Fliesstext; hier ist `resume(w : WartetIpc)` ein
+-- Typfehler, den kein Testlauf braucht.
+-- ---------------------------------------------------------------------------------------
+
+impl fn unblock(f : ptr<normal, rw> Faeden, t : index into Faeden, w : WartetIpc)
+    requires Held(PLANER)
+    effects  { consumes w, reads f.slots, writes f.slots, locks PLANER }
+    costs    <= 64 ops
+{
+    ipc_grund_weg(w);
+    f.slots[t].gruende = f.slots[t].gruende & 254;
+    if f.slots[t].gruende == 0 {
+        einreihen(f, t);
+    }
+}
+
+impl fn resume(f : ptr<normal, rw> Faeden, t : index into Faeden, w : WartetPause)
+    requires Held(PLANER)
+    effects  { consumes w, reads f.slots, writes f.slots, locks PLANER }
+    costs    <= 64 ops
+{
+    pause_grund_weg(w);
+    f.slots[t].gruende = f.slots[t].gruende & 251;
+    if f.slots[t].gruende == 0 {
+        einreihen(f, t);
+    }
+}
+
+impl fn unpark(f : ptr<normal, rw> Faeden, t : index into Faeden, w : WartetPark)
+    requires Held(PLANER)
+    effects  { consumes w, reads f.slots, writes f.slots, locks PLANER }
+    costs    <= 64 ops
+{
+    park_grund_weg(w);
+    f.slots[t].gruende = f.slots[t].gruende & 247;
+    if f.slots[t].gruende == 0 {
+        einreihen(f, t);
+    }
+}
+
+}

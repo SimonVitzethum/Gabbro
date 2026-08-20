@@ -1384,6 +1384,13 @@ MUTATIONEN = [
         "D007/D008 -- eine Kante darf ein `u32` sein oder in eine fremde Tabelle zeigen; enden koennen muss sie dann nicht mehr",
     ),
     Mutation(
+        "nominale-typen-sind-austauschbar",
+        "namen.rs",
+        "                        if hat == erwartet {",
+        "                        if true || hat == erwartet {",
+        "N030 -- ein `linear ghost`-Zeuge passt wieder an jede Stelle; der Wecker nimmt einen fremden Grund, und `Lost wakeup` ist zurueck",
+    ),
+    Mutation(
         "format-liest-immer-klein",
         "emit.rs",
         "        (4, true) => \"gabbro_be32\",",

@@ -1,0 +1,269 @@
+-- **virtio-net in Gabbro** -- der erste Treiber, der nicht aus dem Entwurf kommt.
+--
+-- Gemessen gegen `../caprock-messbasis/crates/caprock-virtio` (Zweig `arch/x86_64`),
+-- 301 Zeilen `net.rs` plus 696 Zeilen Transport. Der Gegenstand ist bewusst gewaehlt: eine
+-- Netzkarte mit ZWEI Warteschlangen entgegengesetzter Richtung, und damit der erste Fall, in
+-- dem `queue_notify_off` je Warteschlange verschieden ist. Ein Treiber, der die
+-- Weckadresse der ersten fuer beide benutzt, weckt das Geraet auf der falschen Seite --
+-- und das faellt bei einem Einqueue-Geraet strukturell nicht auf.
+--
+-- **Was diese Datei misst, ist nicht der Treiber, sondern die Sprache.** Jede Zeile, die
+-- hier nicht steht, steht als Befund daneben.
+
+module treiber::virtio_net {
+
+-- ---------------------------------------------------------------------------------------
+-- Die Groessen. Alle aus der Norm, keine aus einer Schaetzung.
+-- ---------------------------------------------------------------------------------------
+
+const QGROESSE   : u32 = 8;
+const RXPUFFER   : u32 = 2048;
+const RAHMENLAENGE : u32 = 60;
+const KOPFLAENGE : u32 = 12;
+
+opaque type Pa = u64;
+
+-- ---------------------------------------------------------------------------------------
+-- Der Konfigurationsraum als GERAET. Jedes Register mit Lage, Breite und Klasse.
+-- ---------------------------------------------------------------------------------------
+
+device Gemein(basis : Pa) at mmio {
+    reg GERAETEMERKMAL_WAHL : u32 @0x00 class rw
+    reg GERAETEMERKMAL      : u32 @0x04 class r
+    reg TREIBERMERKMAL_WAHL : u32 @0x08 class rw
+    reg TREIBERMERKMAL      : u32 @0x0c class rw
+    reg STATUS              : u8  @0x14 class rw
+        fields { ANERKANNT @0, TREIBER @1, TREIBER_OK @2, MERKMALE_OK @3, GESCHEITERT @7, }
+    reg Q_WAHL              : u16 @0x16 class rw
+    reg Q_GROESSE           : u16 @0x18 class r
+    reg Q_AN                : u16 @0x1c class rw
+    reg Q_WECKVERSATZ       : u16 @0x1e class r
+    reg Q_DESK              : u64 @0x20 class rw
+    reg Q_TREIBER           : u64 @0x28 class rw
+    reg Q_GERAET            : u64 @0x30 class rw
+
+    transition anerkennen   { STATUS.ANERKANNT: 0 -> 1 } effects { writes STATUS }
+    transition treiber_da   { STATUS.TREIBER:   0 -> 1 } effects { writes STATUS }
+    transition merkmale_ok  { STATUS.MERKMALE_OK: 0 -> 1 } effects { writes STATUS }
+    transition treiber_ok   { STATUS.TREIBER_OK: 0 -> 1 }
+        requires STATUS.MERKMALE_OK == 1
+        effects  { writes STATUS }
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Die Ringe. Ein Deskriptor ist ein FORMAT und kein Verbund: seine Bytes liegen im
+-- gemeinsamen Speicher, und wie ein C-Uebersetzer einen `struct` fuellt, entscheidet er.
+-- ---------------------------------------------------------------------------------------
+
+format Deskriptor endian little {
+    adresse : u64,
+    laenge  : u32,
+    weiter  : bool @0,
+    schreibt: bool @1,
+    indirekt: bool @2,
+    d_frei  : u16 @[15:3] reserved,
+    naechst : u16,
+}
+
+format GebrauchtEintrag endian little {
+    kopf    : u32,
+    laenge  : u32,
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Der Rahmen. **Hier steht die Byteordnung ANDERSHERUM**, und das ist der Punkt: virtio
+-- ist klein, das Netz ist gross. Zwei Formate in derselben Datei, jedes mit seinem
+-- `endian` -- und kein Byteschwenk von Hand.
+-- ---------------------------------------------------------------------------------------
+
+format EthArp endian big {
+    ziel_mac_hi   : u32,
+    ziel_mac_lo   : u16,
+    quell_mac_hi  : u32,
+    quell_mac_lo  : u16,
+    ethertyp      : u16 in 2054 .. 2054,
+    hardwaretyp   : u16 in 1 .. 1,
+    protokolltyp  : u16 in 2048 .. 2048,
+    hw_laenge     : u8 in 6 .. 6,
+    pr_laenge     : u8 in 4 .. 4,
+    opcode        : u16 in 1 .. 2,
+    absender_mac_hi : u32,
+    absender_mac_lo : u16,
+    absender_ip   : u32,
+    ziel2_mac_hi  : u32,
+    ziel2_mac_lo  : u16,
+    ziel_ip       : u32,
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Der Handshake. **Die Reihenfolge IST die Sache** -- eine vergessene Zeile
+-- (`MERKMALE_OK` nicht zurueckgelesen) faellt nicht auf, bis ein Geraet die Merkmale
+-- ablehnt. In Caprock ist das ein Kommentar; hier ist es eine lineare Geistmarke.
+-- ---------------------------------------------------------------------------------------
+
+linear ghost type Aufsetzstufe order { roh, anerkannt, treiber, merkmale, laeuft };
+
+extern fn aufsetzen_beginnt() -> Aufsetzstufe
+    effects { pure }
+    costs   <= 1 ops;
+
+assume geraet_quittiert_merkmale
+    "Ein virtio-Geraet, das MERKMALE_OK gesetzt bekommt und es zuruecklieferst, akzeptiert die gewaehlte Merkmalmenge."
+    falsifier sonde_merkmale_abgelehnt;
+
+extern fn merkmale_haengen() -> never effects { diverges } costs <= 1 ops;
+
+-- 1. Anerkennen: der Treiber sagt, dass er das Geraet gesehen hat.
+impl fn stufe_anerkennen(g : ptr<mmio, rw> Gemein, m : Aufsetzstufe) -> Aufsetzstufe
+    advances roh -> anerkannt
+    effects  { consumes m, writes g.STATUS }
+    costs    <= 8 ops
+{
+    anerkennen(g);
+    return m;
+}
+
+-- 2. Der Treiber uebernimmt.
+impl fn stufe_treiber(g : ptr<mmio, rw> Gemein, m : Aufsetzstufe) -> Aufsetzstufe
+    advances anerkannt -> treiber
+    effects  { consumes m, writes g.STATUS }
+    costs    <= 8 ops
+{
+    treiber_da(g);
+    return m;
+}
+
+-- 3. Merkmale waehlen und ZURUECKLESEN. Die Wartestelle ist die eigentliche Zusage.
+impl fn stufe_merkmale(g : ptr<mmio, rw> Gemein, m : Aufsetzstufe) -> Aufsetzstufe
+    advances treiber -> merkmale
+    effects  { consumes m, writes g.STATUS, reads g.STATUS }
+    costs    <= 2048 ops
+{
+    merkmale_ok(g);
+    retry warten until g.STATUS.MERKMALE_OK == 1
+        bounded 1024 ops
+        progress geraet_quittiert_merkmale
+        on_exceeded merkmale_haengen
+        effects { reads g.STATUS }
+    { }
+    return m;
+}
+
+-- 4. Und erst jetzt darf `TREIBER_OK`. Der `transition` traegt die Vorbedingung selbst.
+impl fn stufe_laeuft(g : ptr<mmio, rw> Gemein, m : Aufsetzstufe) -> Aufsetzstufe
+    advances merkmale -> laeuft
+    effects  { consumes m, writes g.STATUS }
+    costs    <= 8 ops
+{
+    treiber_ok(g);
+    return m;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Die Ringe. Ein Deskriptorring ist eine TABELLE im DMA-Raum.
+-- ---------------------------------------------------------------------------------------
+
+table Deskring count QGROESSE {
+    slot {
+        adresse  : u64,
+        laenge   : u32,
+        merkmale : u16,
+        naechst  : u16,
+    }
+}
+
+-- Der verfuegbare Ring: der TREIBER schreibt, das GERAET liest.
+table AvailRing count QGROESSE {
+    slot { kopf : u16, }
+}
+
+-- Der gebrauchte Ring: das GERAET schreibt, der TREIBER liest.
+table UsedRing count QGROESSE {
+    slot {
+        kopf   : u32,
+        laenge : u32,
+    }
+}
+
+atomic AVAIL_IDX : u16 release;
+atomic USED_IDX  : u16 acquire;
+
+-- **BEFUND 1: die Gegenseite der Paarung ist das GERAET, und Gabbro sucht sie in Software.**
+--
+-- `V001` verlangte hier eine Gegenseite: *„nothing awaits this payload ON THIS ATOMIC"*.
+-- Die Regel ist richtig -- *eine Veroeffentlichung ohne Gegenstueck ordnet nichts* -- und
+-- ihre Praemisse gilt hier nicht: **wer den avail-Index liest, ist die Netzkarte.** Ihr
+-- `awaits` steht in Silizium.
+--
+-- Gabbro kann daraus keine Zusage machen, aber es kann die Gegenseite BENENNEN, und genau
+-- das ist die vorhandene Form fuer einen fremden Rumpf: eine Deklaration ohne Koerper, mit
+-- ihrem Vertrag daneben. `gabbro zeugnis` fuehrt sie danach in Abschnitt E.
+--
+-- > *Es ist kein Kunstgriff, sondern die ehrliche Fassung.* Die Alternative waere
+-- > `publishes nothing` -- und das waere eine Luege ueber genau die Stelle, an der dieser
+-- > Treiber richtig oder falsch ist.
+
+-- **BEFUND 2, und er ist derselbe wie heute frueh an M1:** ein `check`-Rumpf hat keinen
+-- Leser. Der erste Versuch schrieb die Gegenseite als Probe hin -- der richtige Ort, denn
+-- eine falsifizierbare Aussage ueber Hardware IST eine Probe -- und `V001` fiel trotzdem:
+-- `paarung::pass` laeuft ueber `ItemArt::Funktion` und sonst nichts. *Genau wie M1, das
+-- ueber `beispiele/06` meldete „this file has no function body", waehrend im `can_fail`
+-- gerechnet wurde.*
+--
+-- Also steht die Gegenseite hier als FUNKTION, und damit steht sie im Erzeugnis. **Das
+-- Modell wird Code** -- und dass es das wird, ist der Befund, nicht der Treiber.
+static mut deskring_gesehen  : u16 = 0;
+static mut availring_gesehen : u16 = 0;
+
+impl fn geraetespiegel() -> u16
+    effects { reads AVAIL_IDX, reads deskring_gesehen, reads availring_gesehen }
+    costs   <= 8 ops
+{
+    let gesehen = AVAIL_IDX awaits { deskring_gesehen, availring_gesehen };
+    if gesehen == 0 {
+        return 0;
+    }
+    return deskring_gesehen;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Einen Puffer armieren und sichtbar machen.
+--
+-- **Die Reihenfolge ist die ganze Sache.** Der Deskriptor muss stehen, BEVOR der Index ihn
+-- freigibt -- sonst liest das Geraet einen Eintrag, der noch nicht da ist. In Caprock steht
+-- daneben ein Kommentar (`fence(); // der Deskriptor muss stehen, BEVOR der Index ihn
+-- freigibt`) und ein hereingereichter Funktionszeiger.
+-- ---------------------------------------------------------------------------------------
+
+impl fn armieren(d : ptr<dma, rw> Deskring,
+                 a : ptr<dma, rw> AvailRing,
+                 i : index into Deskring,
+                 adresse : u64,
+                 laenge : u32,
+                 schreibt : bool)
+    effects { writes d.slots, writes a.slots, publishes AVAIL_IDX }
+    costs   <= 32 ops
+{
+    d.slots[i].adresse  = adresse;
+    d.slots[i].laenge   = laenge;
+    d.slots[i].merkmale = 0;
+    d.slots[i].naechst  = 0;
+    a.slots[i].kopf     = i;
+    AVAIL_IDX = i publishes { deskring_gesehen, availring_gesehen };
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Den ARP-Rahmen SCHREIBEN. Hier faellt der dritte Befund.
+-- ---------------------------------------------------------------------------------------
+
+impl fn arp_stellen(r : ptr<dma, rw> EthArp, meine_ip : u32, ziel_ip : u32)
+    effects { writes r }
+    costs   <= 64 ops
+{
+    r.ethertyp   = 2054;
+    r.opcode     = 1;
+    r.absender_ip = meine_ip;
+    r.ziel_ip    = ziel_ip;
+}
+
+}

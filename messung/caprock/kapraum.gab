@@ -1,0 +1,150 @@
+-- **Caprocks Kapabilitaetsraum in Gabbro** -- gemessen gegen
+-- `../caprock-messbasis/crates/caprock-cap/src/space.rs` (1188 Zeilen) und die zwei
+-- Verus-Beweise `verus/cap_cdt_tree.rs` und `verus/cap_cdt_acyclic.rs`.
+--
+-- **Der Gegenstand ist `revoke`, und er ist mit Absicht gewaehlt.** Im Bestand sind das
+-- ZWEI geschachtelte begrenzte Schleifen, ein handgeschriebener Abstieg zum Blatt
+-- (`descend_to_leaf`), ein Schrittzaehler, ein Ueberlaufzaehler und ein Kommentar, der
+-- erklaert, warum beide Schranken noetig sind:
+--
+--     **Beide** Schleifen sind begrenzt (B-5.5), und zwar aus verschiedenen Gruenden: der
+--     Abstieg endet bei einer zyklischen `first_child`-Kette nie, und die aeussere Schleife
+--     endet nie, wenn `delete_leaf` den Baum nicht kleiner macht.
+--
+-- In Gabbro ist es EINE Zeile, und beide Schranken fallen aus der Deklaration.
+
+module caprock::kapraum {
+
+const NSLOTS   : u32 = 4096;
+const NOBJEKTE : u32 = 1024;
+
+opaque type Pa      = u64;
+opaque type Marke   = u64;
+
+type Zaehler = u32 in 0 .. 65535;
+type Rechte  = u32 in 0 .. 15;
+
+reason KapFehler {
+    KeinSlot   = 1 "kein freier Slot mehr"
+    Ungueltig  = 2 "abgelaufenes Handle -- die Generation stimmt nicht"
+    HatKinder  = 3 "erst die Abkoemmlinge einsammeln"
+    exhaustive
+}
+
+lock CAPS    protects { kapslots } rank 0 held <= 4000 ops masks irqs;
+lock OBJEKTE protects { objslots } rank 1 held <= 400 ops;
+
+table Objekte count NOBJEKTE {
+    slot {
+        belegt  : bool,
+        zaehler : Zaehler,
+        basis   : Pa,
+    }
+}
+
+-- **Die Kante steht an der Tabelle** («B41b»). Caprocks `Mdb` fuehrt vier Felder --
+-- `parent`, `first_child`, `next_sibling`, `prev_sibling` -- und `space.rs` sagt an keiner
+-- Stelle, welches davon `descend_to_leaf` laeuft; das steht im Rumpf. Hier steht es einmal,
+-- und `D006`-`D008` halten es gegen den Slot.
+--
+-- *`prev_sibling` fehlt in der `tree`-Klausel mit Absicht:* der Abstieg braucht es nicht,
+-- und die Rueckwaertskette ist der Gegenstand eines EIGENEN Beweises
+-- (`verus/cap_cdt_tree.rs`, Sibling-Konsistenz Code 5). Was `tree` nennt, ist die Kante,
+-- an der die Domaene laeuft -- nicht alles, was die Struktur verknuepft.
+table Kapslots count NSLOTS {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+
+    slot {
+        belegt      : bool,
+        generation  : u32 wrapping,
+        objekt      : index into Objekte,
+        rechte      : Rechte,
+        abzeichen   : Marke,
+        elter       : option index into Kapslots,
+        erstes_kind : option index into Kapslots,
+        naechstes   : option index into Kapslots,
+        vorheriges  : option index into Kapslots,
+    }
+
+    -- Code 7 aus `cap_audit_cdt`: die Azyklizitaet der Elternkette. Der Verus-Beweis fuehrt
+    -- sie als "braucht ein Wohlfundiertheitsmass" und laesst sie offen; hier ist sie eine
+    -- Invariante der Tabelle, und `descendants of` ruht darauf.
+    invariant elternkette_azyklisch cost O(n) runs offline :
+        forall s in slots of Kapslots : Kapslots.slots[s].generation >= 0;
+
+    -- Code 5: die Geschwisterkette ist gegenseitig invers.
+    invariant geschwister_invers cost O(n) runs offline :
+        forall s in slots of Kapslots : Kapslots.slots[s].vorheriges == None
+            => Kapslots.slots[s].elter == None
+            || Kapslots.slots[s].belegt;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Ein Blatt loeschen. **`requires ist_blatt` ist keine Zierde** -- im Bestand ist es eine
+-- Zusicherung, die `descend_to_leaf` herstellt und die niemand nachrechnet.
+-- ---------------------------------------------------------------------------------------
+
+spec fn ist_blatt(c : ptr<normal, r> Kapslots, s : index into Kapslots) -> bool
+    effects { pure }
+    = c.slots[s].erstes_kind == None;
+
+spec fn baum_wohlgeformt(c : ptr<normal, r> Kapslots) -> bool
+    effects { pure }
+    = forall s in slots of Kapslots : c.slots[s].belegt || c.slots[s].elter == None;
+
+impl fn blatt_loeschen(c : ptr<normal, rw> Kapslots,
+                       o : ptr<normal, rw> Objekte,
+                       s : index into Kapslots)
+    requires  Held(CAPS), Held(OBJEKTE), c.slots[s].belegt, ist_blatt(c, s)
+    ensures   !c.slots[s].belegt
+    maintains baum_wohlgeformt
+    effects   { reads c.slots, writes c.slots, writes o.slots, locks CAPS, locks OBJEKTE }
+    costs     <= 200 ops
+{
+    let obj = c.slots[s].objekt;
+    if o.slots[obj].zaehler > 0 {
+        o.slots[obj].zaehler = o.slots[obj].zaehler - 1;
+    }
+    c.slots[s].belegt      = false;
+    c.slots[s].generation += 1;
+    c.slots[s].elter       = None;
+    c.slots[s].erstes_kind = None;
+    c.slots[s].naechstes   = None;
+    c.slots[s].vorheriges  = None;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- **`revoke`. Eine Zeile.**
+--
+-- Was im Bestand daneben steht und hier NICHT steht:
+--
+--   * `let limit = self.cdt_step_limit();`      -- die Schranke faellt aus `count`
+--   * `let mut ops = 0usize;`                    -- der Kostenpass zaehlt
+--   * `while let Some(child) = …first_child`     -- die Domaene
+--   * `descend_to_leaf(…, limit)`                -- die Laufform von `by consuming`
+--   * `Err(()) => { self.note_overrun(); break; }` -- die Wohlfundiertheit ist Invariante
+--   * `if ops > limit { self.note_overrun(); break; }`
+--   * `if ops > self.peak_revoke_ops { … }`      -- eine Messung, keine Regel
+--
+-- **Die Zahl kommt aus dem Kostenpass, nicht aus einer Schaetzung**: NSLOTS mal die 200 ops
+-- von `blatt_loeschen`, plus die Ladevorgaenge. Wer sie kleiner will, aendert den Rumpf.
+-- ---------------------------------------------------------------------------------------
+
+impl fn einsammeln(c : ptr<normal, rw> Kapslots,
+                   o : ptr<normal, rw> Objekte,
+                   s : index into Kapslots)
+    requires  Held(CAPS), Held(OBJEKTE), baum_wohlgeformt(c)
+    maintains baum_wohlgeformt
+    effects   { reads c.slots, consumes c.slots, writes c.slots, writes o.slots,
+                locks CAPS, locks OBJEKTE }
+    costs     <= 831488 ops
+    by        induction over descendants of s
+{
+    traverse opfer over descendants of c.slots[s] by consuming
+        touches reads c.slots, consumes c.slots, writes c.slots, writes o.slots
+    {
+        blatt_loeschen(c, o, opfer);
+    }
+}
+
+}

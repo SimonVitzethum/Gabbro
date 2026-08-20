@@ -54,6 +54,10 @@ const BENANNT: &[&str] = &[
     // Funktion, die nicht scheitern kann; `N029` -- ein Ruf auf eine, die es kann, ausserhalb
     // eines `let … else`. Die beiden sind einander die Gegenprobe.
     "N028", "N029",
+    // 2026-08-20, gefunden beim SCHREIBEN von Caprocks Blockiergruenden: am Ruf wird der
+    // Bereich gehalten und der NAME nicht. `N030` -- `opaque`, `linear`, `ghost` und
+    // `tagged` sind nominal.
+    "N030",
     // «B41b», 2026-08-20: die Baumkante an der `table`. `D006` das Feld, `D007` sein Typ,
     // `D008` seine Tabelle.
     "D006", "D007", "D008",

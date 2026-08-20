@@ -1,0 +1,28 @@
+-- erwartet: N030
+-- **Der Wecker nimmt den falschen Grund** -- und bis zum 2026-08-20 ging das durch.
+--
+-- Der Fall kommt aus Caprock, nicht aus dem Entwurf: `caprock-sched` fuehrt sechs
+-- Blockiergruende in einem `u8` und daneben vierzig Zeilen Prosa, die erklaeren, warum jeder
+-- Grund sein eigenes Bit braucht -- *„In der Menge ist genau das **unformulierbar**: `resume`
+-- entfernt `PAUSE`, `unpark` entfernt `PARK`."*
+--
+-- `SPRACHE.md` fuehrt denselben Fall als Musterbeispiel: *„Lost wakeup | Z24 | **M2**: der
+-- Wecker verbraucht **genau seinen** Grund."* Sechs Geistzeugen sagen das -- **wenn jemand
+-- die Namen vergleicht.** M1 haelt am Ruf den BEREICH und nicht den NAMEN, und zwei
+-- Geistmarken haben ueberhaupt keinen Bereich.
+
+module gift {
+
+linear ghost type WartetIpc;
+linear ghost type WartetPause;
+
+extern fn pause_grund_weg(w : WartetPause) effects { consumes w } costs <= 0 ops;
+
+impl fn resume(w : WartetIpc)
+    effects { consumes w }
+    costs   <= 4 ops
+{
+    pause_grund_weg(w);
+}
+
+}

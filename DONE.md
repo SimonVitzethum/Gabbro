@@ -13,8 +13,24 @@
 ## Emission is COMPLETE — 38 of 38, and all 38 compile *(2026-08-20)*
 
 ```
-./pruefe-emission.sh     ->  18 durchgestochen, 38 von 38 uebersetzen, 0 benannte Ausnahmen
+./pruefe-emission.sh     ->  19 durchgestochen, 38 von 38 uebersetzen, 0 benannte Ausnahmen
 ```
+
+**The nineteenth unit is the tree walk, and it is the one that mattered here.** *Compilable is
+not correct* — this guardian's own opening says so — and the stackless post-order descent is
+exactly the shape where the difference could hide. Four numbers, each separating a different
+failure:
+
+| | separates |
+|---|---|
+| **7** | ALL descendants seen. A descent running along `parent` instead of `child` sees none. |
+| **0** | none seen TWICE. Without the "arrived from below" flag the walk re-enters the same child and never terminates. |
+| **0** | the ROOT is not among them — a node is not its own descendant. |
+| **1** | **post-order**: every child before its parent. That is what `by consuming` promises, and what `blatt_loeschen` demands as `requires ist_blatt`. |
+
+> **And the probe fell at the pass it presupposes.** The first version wrote `static mut
+> zaehler : u32` and `zaehler + 1` — a full word plus one, so `M104`. *The emitter's own test
+> was caught by M1 before it could test anything.*
 
 Twelve examples produced no C. **Every one of the twelve refusals was named and reasoned**
 (`C001`) — that was the point of the emitter and it stays the point. What closing them cost

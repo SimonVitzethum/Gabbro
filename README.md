@@ -1,7 +1,13 @@
 # Gabbro
 
 **A language whose point is to make seL4-style proofs cheap.** One output: **C plus inline
-assembly**. Compiler in **safe Rust** (`forbid(unsafe_code)`).
+assembly** — **all 38 corpus examples emit it, and all 38 compile** under `cc -std=c11 -Wall
+-Wextra -Werror -O2`. Compiler in **safe Rust** (`forbid(unsafe_code)`).
+
+> **Until 2026-08-20 that sentence carried no figure, and twelve of the 38 produced nothing.**
+> Every one of the twelve refusals was named and reasoned (`C001`) — that was the point of the
+> emitter and it stays the point. But *a claim without its number is a claim about a fragment*,
+> and [`TODO.md`](TODO.md) said so about itself before anyone else did.
 
 The purpose is not to have another language. It is to **write a kernel in it and then verify
 that kernel cheaply** — Caprock in full, with a green acceptance run.
@@ -123,11 +129,11 @@ denominator that shines instead of the one that costs.*
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 182 diagnostics · `gabbro paesse` |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 183 diagnostics · `gabbro paesse` |
 | **Grammar** | **145 EBNF rules**, closed and reachable | vocabulary covers every terminal, 215 / 215 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
-| **Guardians** | 13, each with a two-way speech test | **223 of 223 mutations caught** *(run 2026-08-20)* |
-| **Corpus** | 38 clean examples, 197 poison files, 157 tests *(run 2026-08-20)* | `cargo test` |
+| **Guardians** | 13, each with a two-way speech test | **224 of 224 mutations caught** *(run 2026-08-20)* |
+| **Corpus** | 38 clean examples, 199 poison files, 157 tests *(run 2026-08-20)* | `cargo test` |
 | **Emission** | **38 of 38 examples emit C, and all 38 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
@@ -169,7 +175,7 @@ cargo run --bin gabbro -- paesse                     # what each pass does and d
 cargo run --bin gabbro -- schablonen                 # the proof-template register
 cargo run --bin gabbro -- pflichten beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
 cargo test                                           # 157 tests
-./mutiere-pruefer.py                                 # damage one rule at a time: 223 of 223
+./mutiere-pruefer.py                                 # damage one rule at a time: 224 of 224
 ./pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
 ./pruefe-klauseln.py                                 # declared, exported, never read
 ./pruefe-widerruf.py                                 # sentences the folder has revoked, still standing

@@ -16,6 +16,7 @@ use std::collections::{HashMap, HashSet};
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     sichtbarkeit(baum, absagen);
     fehlerkanal(baum, absagen);
+    namenstypen(baum, absagen);
     asm_versiegelt(baum, absagen);
     geltungsbereich(&baum.items, absagen);
     entrust_annahme(baum, absagen);
@@ -1854,5 +1855,165 @@ fn fehlerkanal(baum: &Programm, absagen: &mut Absagen) {
         if let ItemArt::Check(c) = &item.art {
             im_block(&c.can_fail, &kann_scheitern, absagen);
         }
+    });
+}
+
+/// **`N030` -- am Ruf wird der BEREICH gehalten und der NAME nicht** (2026-08-20).
+///
+/// Gefunden beim Schreiben von Caprocks Blockiergruenden. `SPRACHE.md` fuehrt den Fall als
+/// Musterbeispiel:
+///
+/// > | **Lost wakeup** | **Z24** (ein Bit fuer vier Gruende) | **M2**: der Wecker verbraucht
+/// > **genau seinen** Grund |
+///
+/// Sechs `linear ghost type`-Zeugen, je einer pro Grund, und `resume` nimmt `WartetPause`.
+/// **Ein `resume`, das den IPC-Zeugen nimmt und an `pause_grund_weg` weiterreicht, ging mit
+/// null Fehlern durch.** Dasselbe fuer zwei `opaque type` ueber demselben Traeger und fuer
+/// `u32` an einem `bool`-Parameter.
+///
+/// M1 haelt den Bereich scharf -- `nimm_klein(4000)` faellt an `M101`. Was es nicht hat, ist
+/// die NOMINALE Gleichheit: `Typ` ist ein Bereichsmodell, und zwei Namen ueber demselben
+/// Traeger sind darin dasselbe.
+///
+/// ## Welche Typen nominal sind, und warum nicht alle
+///
+/// **`opaque`, `linear`, `ghost`, `tagged`** -- bei allen vieren ist die Nichtaustauschbarkeit
+/// der ganze Zweck. `D003` sagt es fuer `opaque` schon: *ein `opaque type` hat nicht die
+/// Arithmetik seines Traegers.*
+///
+/// **Ein Bereichsalias nicht.** `type Zaehler = u32 in 0 .. 65535` senkt zu seinem Traeger ab
+/// und ist bauartbedingt durchsichtig; ihn nominal zu nehmen waere eine Sprachaenderung und
+/// keine Luecke. *Aus der strengen Lesart kann man lockern, nie umgekehrt* -- hier steht die
+/// engere Fassung derjenigen Menge, fuer die die Sprache die Unterscheidung behauptet.
+///
+/// ## Und die Regel schweigt, wo sie nichts weiss
+///
+/// Verglichen wird nur, wenn **beide** Seiten einen nominalen Namen tragen. Eine Zahl, eine
+/// Rechnung, ein Feldzugriff liefern keinen -- und **W10: nicht abgewiesen ist nicht
+/// bestaetigt.**
+fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
+    use std::collections::BTreeMap;
+    // Welche Namen sind NOMINAL? Siehe oben.
+    let mut nominal: std::collections::BTreeSet<String> = Default::default();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Typ(t) = &item.art {
+            if t.opaque || t.linear || t.ghost || t.tagged {
+                nominal.insert(t.name.text.clone());
+            }
+        }
+    });
+    if nominal.is_empty() {
+        return;
+    }
+    let nam = |t: &TypExpr| -> Option<String> {
+        match t {
+            TypExpr::Pfad(p) => p
+                .teile
+                .last()
+                .map(|i| i.text.clone())
+                .filter(|n| nominal.contains(n)),
+            _ => None,
+        }
+    };
+    // Je Funktion: die nominalen Typen ihrer Parameter und ihr nominaler Rueckgabetyp.
+    let mut sig: BTreeMap<String, (Vec<Option<String>>, Option<String>)> = BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            sig.insert(
+                f.name.text.clone(),
+                (
+                    f.parameter.iter().map(|p| nam(&p.typ)).collect(),
+                    f.ergebnis.as_ref().and_then(&nam),
+                ),
+            );
+        }
+    });
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        // Die nominalen Bindungen DIESER Funktion -- Parameter und `let`.
+        let mut lokal: BTreeMap<String, String> = BTreeMap::new();
+        for p in &f.parameter {
+            if let Some(n) = nam(&p.typ) {
+                lokal.insert(p.name.text.clone(), n);
+            }
+        }
+        fn sammle_lets(
+            b: &Block,
+            lokal: &mut BTreeMap<String, String>,
+            sig: &BTreeMap<String, (Vec<Option<String>>, Option<String>)>,
+            nam: &dyn Fn(&TypExpr) -> Option<String>,
+        ) {
+            for s in &b.anweisungen {
+                if let StmtArt::Let(l) = &s.art {
+                    let n = l.typ.as_ref().and_then(|t| nam(t)).or_else(|| {
+                        let ExprArt::Ruf(r) = &l.wert.art else { return None };
+                        sig.get(&r.pfad.text()).and_then(|(_, e)| e.clone())
+                    });
+                    if let Some(n) = n {
+                        lokal.insert(l.name.text.clone(), n);
+                    }
+                }
+                for k in crate::unterbloecke(s) {
+                    sammle_lets(k, lokal, sig, nam);
+                }
+            }
+        }
+        sammle_lets(b, &mut lokal, &sig, &nam);
+
+        fn im_block(
+            b: &Block,
+            lokal: &BTreeMap<String, String>,
+            sig: &BTreeMap<String, (Vec<Option<String>>, Option<String>)>,
+            absagen: &mut Absagen,
+        ) {
+            for s in &b.anweisungen {
+                let mut rufe: Vec<&Ruf> = Vec::new();
+                for e in crate::eigene_ausdruecke(s) {
+                    for x in crate::alle_ausdruecke(e) {
+                        if let ExprArt::Ruf(r) = &x.art {
+                            rufe.push(r);
+                        }
+                    }
+                }
+                if let StmtArt::Ruf(r) = &s.art {
+                    rufe.push(r);
+                }
+                for r in rufe {
+                    let Some((ps, _)) = sig.get(&r.pfad.text()) else { continue };
+                    for (i, a) in r.argumente.iter().enumerate() {
+                        let Some(Some(erwartet)) = ps.get(i) else { continue };
+                        let ExprArt::Ort(o) = &a.art else { continue };
+                        if !o.suffixe.is_empty() {
+                            continue;
+                        }
+                        let Some(hat) = lokal.get(&o.basis.text) else { continue };
+                        if hat == erwartet {
+                            continue;
+                        }
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "N030",
+                                a.span,
+                                format!(
+                                    "`{}` is a `{hat}`, and `{}` takes a `{erwartet}` there",
+                                    o.basis.text,
+                                    r.pfad.text()
+                                ),
+                            )
+                            .mit_notiz(
+                                "`opaque`, `linear`, `ghost` and `tagged` are NOMINAL -- that \
+                                 they are not interchangeable is the whole point of the four \
+                                 words. A range alias is transparent and is not compared here",
+                            ),
+                        );
+                    }
+                }
+                for k in crate::unterbloecke(s) {
+                    im_block(k, lokal, sig, absagen);
+                }
+            }
+        }
+        im_block(b, &lokal, &sig, absagen);
     });
 }

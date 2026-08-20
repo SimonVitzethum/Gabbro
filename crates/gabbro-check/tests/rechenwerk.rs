@@ -467,8 +467,13 @@ impl fn zaehle(k : ptr<normal, r> Kopf) -> u32 effects { reads k } costs <= 4096
     let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
     assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
 
-    // **Das Format ist ein Bytezeiger, kein Verbund.**
-    assert!(c.contains("const uint8_t *bytes"), "{c}");
+    // **Das Format ist ein Bytezeiger, kein Verbund** -- und seit dem 2026-08-20 ein
+    // SCHREIBBARER: `SPRACHE.md`:355 sagt Leser **und** Schreiber zu, und der Schreiber
+    // fehlte. *Das `const` am Zeiger hatte ohnehin nie etwas gehalten -- es sagte nur, dass
+    // `bytes` nicht umgehaengt wird, und `const N *` propagiert in C nicht nach innen.*
+    assert!(c.contains("uint8_t *bytes"), "{c}");
+    assert!(c.contains("static inline void Kopf_setz_magie(Kopf *v, uint32_t x)"), "der Schreiber fehlt:\n{c}");
+    assert!(c.contains("gabbro_setz_be32(v->bytes + 0, x)"), "gross geschrieben:\n{c}");
     assert!(!c.contains("uint32_t magie;"), "kein Feld -- ein Zugriff:\n{c}");
     assert!(c.contains("gabbro_be32(v->bytes + 0)"), "Versatz 0, gross gelesen:\n{c}");
     assert!(c.contains("gabbro_be32(v->bytes + 4)"), "Versatz 4:\n{c}");

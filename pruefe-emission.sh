@@ -941,6 +941,125 @@ lauf "beispiel37" "$W/beispiele/37-umlauf-rechnet.gab" "$TREIBER37" "63744" \
      's/) \* (uint32_t)/) + (uint32_t)/' \
      "0 assumptions, 2 templates (0 of them UNPROVED), 2 direct forms, 0 foreign bodies (0 state their duty)"
 
+# -- 19. «B41b»: der BAUMDURCHLAUF, und er ist die Einheit, auf die es hier ankommt ------
+#
+# **Uebersetzbar ist nicht richtig.** Der Kopf dieser Datei sagt es seit jeher -- *ein
+# Erzeuger, der uebersetzbares C liefert, das etwas anderes rechnet, ist schlimmer als einer,
+# der nichts liefert*. Und der Abstieg an `tree { child, sibling, parent }` ist genau die
+# Form, bei der das zutreffen koennte: **kein Stapel, eine Marke fuer „von unten gekommen",
+# Nachordnung, und jede Kante gelesen, BEVOR der Rumpf sie zerstoeren darf.**
+#
+# Vier Zahlen, und jede trennt eine andere Fehlform:
+#
+#      7  -- ALLE Nachfahren gesehen. Ein Abstieg, der an `parent` statt an `child`
+#            hinunterliefe, saehe keinen einzigen.
+#      0  -- keiner ZWEIMAL. Ohne die Marke `_h` stiege der Lauf beim Aufsteigen sofort
+#            wieder in dasselbe Kind hinab und liefe nicht aus.
+#      0  -- die WURZEL ist nicht dabei: ein Knoten ist kein Nachfahre seiner selbst.
+#      1  -- **Nachordnung**: jedes Kind steht vor seinem Elter. Das ist die Zusage, die
+#            `by consuming` gibt, und `blatt_loeschen` verlangt sie als `requires ist_blatt`.
+#
+# > Das Gift dreht `{k} = {basis}[{k}].{kind}` auf `.elter` -- also genau die Verwechslung,
+# > die «B41b» ueberhaupt erst zur Frage gemacht hat.
+read -r -d '' QUELLE41 <<'GABEOF' || true
+module probe::baum {
+
+const NSLOTS : u32 = 4096;
+
+-- **Der Zaehler traegt seine Schranke, und M1 hat es verlangt.** Die erste Fassung schrieb
+-- `static mut zaehler : u32` und `zaehler + 1` -- ein volles Wort plus eins, also `M104`.
+-- *Die Probe des Erzeugers ist an dem Pass gefallen, den sie ueberhaupt erst voraussetzt.*
+type Rang = u32 in 0 .. 8190;
+
+table Kappenraum count NSLOTS {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+
+    slot {
+        gesehen     : u32 wrapping,
+        rang        : u32 wrapping,
+        elter       : option index into Kappenraum,
+        erstes_kind : option index into Kappenraum,
+        naechstes   : option index into Kappenraum,
+    }
+}
+
+static mut zaehler : Rang = 0;
+
+impl fn besuche(c : ptr<normal, rw> Kappenraum, s : index into Kappenraum)
+    effects { reads zaehler, writes zaehler, writes c.slots }
+    costs   <= 16 ops
+{
+    if zaehler < 8190 {
+        zaehler = zaehler + 1;
+    }
+    c.slots[s].gesehen = c.slots[s].gesehen + 1;
+    c.slots[s].rang = zaehler;
+}
+
+impl fn einsammeln(c : ptr<normal, rw> Kappenraum, s : index into Kappenraum)
+    effects { reads zaehler, writes zaehler, consumes c.slots, writes c.slots }
+    costs   <= 81920 ops
+{
+    traverse opfer over descendants of c.slots[s] by consuming
+        touches reads zaehler, writes zaehler, consumes c.slots, writes c.slots
+    {
+        besuche(c, opfer);
+    }
+}
+
+}
+GABEOF
+printf '%s\n' "$QUELLE41" > "$ARB/b41.gab"
+
+TREIBER41='#include <stdio.h>
+#include "@ERZEUGT@"
+#define NIL 4096u
+static void haenge(Kappenraum *t, uint32_t e, uint32_t k) {
+    t->slots[k].elter = e;
+    t->slots[k].erstes_kind = NIL;
+    t->slots[k].naechstes = t->slots[e].erstes_kind;
+    t->slots[e].erstes_kind = k;
+}
+int main(void) {
+    static Kappenraum t;
+    for (uint32_t i = 0; i < 4096; i++) {
+        t.slots[i].elter = NIL; t.slots[i].erstes_kind = NIL; t.slots[i].naechstes = NIL;
+    }
+    /*        0
+     *      / | \
+     *     1  2  3
+     *    /|     |
+     *   4 5     6
+     *           |
+     *           7   */
+    haenge(&t, 0, 3); haenge(&t, 0, 2); haenge(&t, 0, 1);
+    haenge(&t, 1, 5); haenge(&t, 1, 4);
+    haenge(&t, 3, 6); haenge(&t, 6, 7);
+
+    einsammeln(&t, 0);
+
+    unsigned gesehen = 0, doppelt = 0;
+    for (uint32_t i = 1; i <= 7; i++) {
+        if (t.slots[i].gesehen == 1) gesehen++;
+        if (t.slots[i].gesehen > 1) doppelt++;
+    }
+    /* Nachordnung: jedes Kind traegt einen kleineren Rang als sein Elter. */
+    uint32_t paare[6][2] = {{4,1},{5,1},{7,6},{6,3},{1,0},{2,0}};
+    unsigned nachordnung = 1;
+    for (int i = 0; i < 6; i++) {
+        uint32_t k = paare[i][0], e = paare[i][1];
+        if (e == 0) continue;
+        if (t.slots[k].rang > t.slots[e].rang) nachordnung = 0;
+    }
+    printf("%u %u %u %u\n", gesehen, doppelt,
+           (unsigned)t.slots[0].gesehen, nachordnung);
+    return 0;
+}
+'
+lauf "baum41" "$ARB/b41.gab" "$TREIBER41" "7 0 0 1" \
+     's/\.erstes_kind; _h1 = false/.elter; _h1 = false/' \
+     "0 assumptions, 2 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty)"
+
 # =======================================================================================
 # **Stufe 9: die REGEL, nicht die Liste** (2026-08-20).
 #

@@ -6202,12 +6202,23 @@ offen bleibt, steht hier vollständig — **und jeder Posten nennt, wem er gehö
 | Posten | gehört |
 |---|---|
 | «B10» `traverse` liefert keinen Wert, kein `break` (F3) | **dem Ordner** |
-| «B11» `forever` hat keinen Ausgang (F5) | **dem Ordner** |
+| ~~«B11» `forever` hat keinen Ausgang (F5)~~ | **geschlossen 2026-08-20** — s. u. |
 | «B12» `elems of` — Element oder Index (F6) | **dem Ordner** |
 | «B17» `transition` schreibt genau ein `place` (F3) | **dem Ordner** |
 | «B24» Bitlage jenseits der Wortbreite (F2 · F9) | **dem Ordner** |
 | `at dma` — welche Barriere (F4 · F9) | **der Axiomschicht**, M3 baut sie ausdrücklich nicht |
-| `descendants of` (F1) · `mappings of`/`walk` (F9) · `atomic`/`check` (F6) | **noch zu bauen** |
+| ~~`descendants of` (F1) · `mappings of`/`walk` (F9)~~ | **abgesenkt 2026-08-20** («B41b», `walk`) |
+| `atomic`/`check` (F6) | **noch zu bauen** |
+
+> **«B11» war zweimal geschlossen, und niemand hat es gemerkt** (2026-08-20). `leave` und
+> `next` stehen seit Monaten in der Grammatik, `S001` hält ihre Marke gegen die umschliessende
+> Schleife, und `gift/10-marke-fehlt.gab` prüft genau das. **Der Erzeuger wusste es nicht:**
+> seine Weigerung an `forever` zitierte den Befund weiter, wörtlich — *„«B11»: there is no
+> exit either"* — und hinderte damit Programme, für die der Grund längst nicht mehr galt.
+>
+> *Eine Absage, die eine geschlossene Lücke zitiert, sieht aus wie eine Entscheidung.* Sie ist
+> die stillste Form von Veralterung, die dieser Ordner kennt — schlimmer als eine falsche
+> Zahl, denn eine Zahl prüft ein Wächter.
 
 **Fünf offene Befunde des Ordners, eine Axiomschicht, drei Bauposten.** *Von den Sperren, die
 zehn Fragmente heute noch aufhalten, sind sechs von neun keine Bauarbeit.*
@@ -6262,9 +6273,22 @@ einzige, der weder ein Befund noch die Axiomschicht ist.
 
 | | Posten | gehört |
 |---|---|---|
-| 6 | «B10» · «B11» · «B12» · «B17» · «B24» · **die unbenannte Kante** | **dem Ordner** |
+| 3 | «B10» · «B12» · «B17» | **dem Ordner** |
 | 1 | `at dma` · `atomic release` — die Barriere und die Sichtbarkeit | **der Axiomschicht** |
-| 1 | `walk`/`mappings of` | **zu bauen** |
+| 0 | ~~`walk`/`mappings of`~~ | **gebaut 2026-08-20** |
+
+> **Drei der acht sind am 2026-08-20 gefallen** — «B11» (war längst geschlossen und wurde
+> weiterzitiert), «B24» (die Bitlage, und dazu die Wortbreite einer Bitgruppe) und **die
+> unbenannte Kante**, die hier als eigener Posten steht. Letztere wurde nicht so beantwortet,
+> wie `chain(a, b) in` es vormacht — die Kante steht an der **Tabelle** und nicht am Durchlauf,
+> weil ein Baum an vielen Stellen durchlaufen wird und zwei Stellen sonst verschiedene Felder
+> nennen könnten, ohne dass jemand die beiden vergleicht.
+>
+> *Der Satz darunter gilt weiter und schärfer:* der Erzeuger hat die Fragen nicht erzeugt, er
+> ist auf sie aufgelaufen. **Und beim Schliessen ist er auf fünf weitere aufgelaufen, diesmal
+> an sich selbst** — die globale Namensauflösung, das `format`-Feld als Feldzugriff, der
+> fehlende `gabbro_kern`-Prototyp, die Typreihenfolge und der Achtbyteleser ohne seinen
+> Vierbyteleser. Jeder davon lag **hinter** einer Weigerung.
 
 > **Von acht Sperren sind sieben keine Bauarbeit.** *Das ist der Ertrag dieses Erzeugers: er hat
 > die Fragen nicht erzeugt, er ist auf sie aufgelaufen — und jede trägt jetzt einen Namen und
