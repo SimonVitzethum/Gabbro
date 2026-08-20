@@ -188,6 +188,30 @@ fn tafel_orte(baum: &Programm, t: &mut Tafel) {
                         );
                     }
                 }
+                // **Ein `atomic` wird NICHT gelesen und nicht geschrieben** -- es wird
+                // erwartet, veroeffentlicht oder getauscht. Die erste Fassung dieser Tafel
+                // fuehrte es unter `read`/`written` und meldete drei leere Zellen als
+                // Blindstellen. *Ein Instrument, das seine eigene Fehleichung als Luecke
+                // meldet, ist schlimmer als keines* -- und es hat genau die Arbeit
+                // vorgeschlagen, die es nicht gibt.
+                match &s.art {
+                    StmtArt::Publish(x) => {
+                        if let Some(a) = lokal.get(&x.ziel.basis.text) {
+                            zaehle(t, a, "publishes");
+                        }
+                    }
+                    StmtArt::AwaitLoad(x) => {
+                        if let Some(a) = lokal.get(&x.quelle.basis.text) {
+                            zaehle(t, a, "awaits");
+                        }
+                    }
+                    StmtArt::Exchange(x) => {
+                        if let Some(a) = lokal.get(&x.ort.basis.text) {
+                            zaehle(t, a, "exchange");
+                        }
+                    }
+                    _ => {}
+                }
                 for e in crate::eigene_ausdruecke(s) {
                     for o in crate::alle_orte(e) {
                         if let Some(a) = lokal.get(&o.basis.text) {
@@ -273,8 +297,10 @@ fn zeige_tafel(
     formen: &[&'static str],
     stellungen: &[&'static str],
     t: &Tafel,
+    gift: &Tafel,
     aus: &mut String,
     blind: &mut usize,
+    bewacht: &mut usize,
 ) {
     aus.push_str(&format!("\n== {titel} ==\n   {was}\n\n"));
     let breite = formen.iter().map(|f| f.len()).max().unwrap_or(8).max(8);
@@ -296,21 +322,44 @@ fn zeige_tafel(
     aus.push('\n');
     for f in formen {
         for s in stellungen {
-            if !t.contains_key(&(*f, *s)) {
-                *blind += 1;
-                aus.push_str(&format!("   BLIND  {f} in position `{s}`\n"));
+            if t.contains_key(&(*f, *s)) {
+                continue;
             }
+            // **Leer im sauberen Korpus, BESETZT im Gift: das ist kein Loch, sondern eine
+            // Zusage** (2026-08-20).
+            //
+            // `ghost` in einem Slotfeld steht in keinem Beispiel -- und das ist richtig:
+            // `geister_haben_keinen_speicher` verbietet es, und
+            // `gift/119-geist-im-speicher.gab` prueft, dass die Regel faellt. **Der
+            // staerkste Zustand, den eine Zelle haben kann**, und die erste Fassung dieses
+            // Werkzeugs hat ihn als Blindstelle gezaehlt.
+            //
+            // > *Eine Zahl ohne diese Unterscheidung ist keine Aufgabenliste, sondern eine
+            // > Einladung zur falschen Arbeit.*
+            if gift.contains_key(&(*f, *s)) {
+                *bewacht += 1;
+                aus.push_str(&format!("   GUARDED  {f} in position `{s}` -- forbidden, and the poison corpus proves it\n"));
+                continue;
+            }
+            *blind += 1;
+            aus.push_str(&format!("   BLIND  {f} in position `{s}`\n"));
         }
     }
 }
 
 /// **Die Blindstellen einer Dateimenge.**
-pub fn zeige(baeume: &[Programm]) -> String {
+pub fn zeige(baeume: &[Programm], gifte: &[Programm]) -> String {
     let (mut a, mut b, mut c) = (Tafel::new(), Tafel::new(), Tafel::new());
     for baum in baeume {
         tafel_typen(baum, &mut a);
         tafel_orte(baum, &mut b);
         tafel_anweisungen(baum, &mut c);
+    }
+    let (mut ga, mut gb, mut gc) = (Tafel::new(), Tafel::new(), Tafel::new());
+    for baum in gifte {
+        tafel_typen(baum, &mut ga);
+        tafel_orte(baum, &mut gb);
+        tafel_anweisungen(baum, &mut gc);
     }
     let mut aus = String::new();
     aus.push_str("== Blind spots: a form the corpus cannot trigger ==\n");
@@ -319,23 +368,50 @@ pub fn zeige(baeume: &[Programm]) -> String {
          -- mutation can trigger it.\n",
     );
     let mut blind = 0;
+    let mut bewacht = 0;
     zeige_tafel(
         "A -- type class x position",
         "Here the ghost in the RETURN of a function WITH a body fell on 2026-08-20.",
         &["opaque", "linear", "ghost", "tagged", "record", "range", "format", "table", "device"],
         &["parameter", "return (body)", "return (prototype)", "let clause", "slot field", "static"],
         &a,
+        &ga,
         &mut aus,
         &mut blind,
+        &mut bewacht,
     );
+    // **Zwei Tafeln, weil es ZWEI Fragen sind** (2026-08-20, eine Stunde nach der ersten).
+    //
+    // Die erste Fassung fuehrte `atomic` unter `read`/`written` und meldete drei leere Zellen
+    // als Blindstellen -- ein Atomic wird weder gelesen noch geschrieben, es wird erwartet,
+    // veroeffentlicht oder getauscht. **Ich habe die Instanz behoben und die Klasse stehen
+    // lassen:** danach standen `slot field in position publishes` und acht weitere da, und
+    // die sind genauso keine Zellen.
+    //
+    // > *Ein Instrument, das das Kreuzprodukt seiner Achsen fuer die Frage haelt, meldet
+    // > Arbeit, die es nicht gibt* -- und eine Zahl, die falsche Arbeit vorschlaegt, ist
+    // > teurer als keine Zahl. **Die Spalten gehoeren zu ihren Zeilen, nicht zur Tafel.**
     zeige_tafel(
-        "B -- place kind x access kind",
+        "B1 -- ordinary place x access kind",
         "Here the missing `format` writer fell: every corpus format is a PARSER.",
-        &["slot field", "format field", "register", "record field", "static", "atomic", "accumulates"],
+        &["slot field", "format field", "register", "record field", "static"],
         &["read", "written", "+= etc."],
         &b,
+        &gb,
         &mut aus,
         &mut blind,
+        &mut bewacht,
+    );
+    zeige_tafel(
+        "B2 -- the PAIRED places, and only they",
+        "`atomic` and `accumulates` are neither read nor written -- that is the whole point\n   of the two words, and it is why they need a table of their own.",
+        &["atomic", "accumulates"],
+        &["publishes", "awaits", "exchange", "read", "written"],
+        &b,
+        &gb,
+        &mut aus,
+        &mut blind,
+        &mut bewacht,
     );
     zeige_tafel(
         "C -- statement kind x body",
@@ -345,12 +421,18 @@ pub fn zeige(baeume: &[Programm]) -> String {
           "traverse", "retry", "forever"],
         &["fn body", "can_fail", "in if", "in locks", "in match", "in traverse", "in retry", "in forever"],
         &c,
+        &gc,
         &mut aus,
         &mut blind,
+        &mut bewacht,
     );
-    aus.push_str(&format!("\n== {blind} blind spots ==\n"));
+    aus.push_str(&format!("\n== {blind} blind spots, {bewacht} guarded ==\n"));
     aus.push_str(
-        "  And what this does NOT say: an OCCUPIED cell says only that a pass CAN see the\n\
+        "  GUARDED means: empty in the clean corpus and OCCUPIED in the poison corpus --\n\
+         \x20 forbidden by a rule, and the poison file proves the rule falls. That is the\n\
+         \x20 strongest state a cell can have, and it is NOT work.\n\
+         \x20\n\
+         \x20 And what this does NOT say: an OCCUPIED cell says only that a pass CAN see the\n\
          \x20 form -- not that it handles it. Two of the five findings of 2026-08-20 this\n\
          \x20 tool does not catch at all: the device counterpart («V9») was a missing\n\
          \x20 CATEGORY, not a missing form, and a body a pass does not READ is present in\n\

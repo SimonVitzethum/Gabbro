@@ -579,8 +579,13 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Typbegriffe in zwei Pässen, und das ist W7.** *Der Fix ist richtig und die Buchung
       lautet: die nominale Hälfte gehört auf Dauer INS Typmodell, nicht daneben.*
 - [ ] **Der Korpus wächst per Konstrukt, die Fehler sitzen an den KOMBINATIONEN.**
-      `gabbro blindstellen` zählt Form mal Stellung und nennt **151 leere Felder** über den
-      38 Beispielen (2026-08-20). Auf dem Korpus von einen Tag vorher nennt es genau die
+      `gabbro blindstellen` zählt Form mal Stellung und nennt **130 blinde und 22 bewachte**
+      Felder über den 38 Beispielen (2026-08-20). *Bewacht heißt: eine Regel verbietet es, und
+      der Giftkorpus beweist, dass die Regel fällt* — das ist keine Arbeit, sondern die
+      stärkste Zusage, die eine Zelle tragen kann.
+      **Und die Zahl darf kein Ziel werden:** sie durch 130 kleine Dateien auf null zu
+      bringen hiesse, den Korpus VOM INSTRUMENT nach außen wachsen zu lassen — derselbe
+      Fehler eine Ebene höher. Auf dem Korpus von einen Tag vorher nennt es genau die
       beiden Befunde, für die ein echter Treiber nötig war: `ghost` in Rückgabestellung einer
       Funktion **mit Rumpf**, und ein Formatfeld in **Schreibstellung**.
       *Die Konsequenz ist keine Passarbeit: mehr Programme schreiben, nicht mehr Konstrukte.*

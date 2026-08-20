@@ -185,18 +185,39 @@ fn main() -> std::process::ExitCode {
                 eprintln!("gabbro blindstellen: no file named");
                 return std::process::ExitCode::from(2);
             }
-            let mut baeume = Vec::new();
+            // **Zwei Mengen: der saubere Korpus und das Gift.** Eine Zelle, die im
+            // sauberen Korpus leer und im Gift besetzt ist, ist VERBOTEN und bewacht -- der
+            // staerkste Zustand, den sie haben kann, und keine Arbeit.
+            let (sauber, gift): (Vec<&String>, Vec<&String>) = {
+                let mut a = Vec::new();
+                let mut b = Vec::new();
+                let mut nach_gift = false;
+                for d in rest {
+                    if d == "--" {
+                        nach_gift = true;
+                        continue;
+                    }
+                    if nach_gift { b.push(d) } else { a.push(d) }
+                }
+                (a, b)
+            };
             let mut schlecht = false;
-            for datei in rest {
-                let Ok(quelle) = std::fs::read_to_string(datei) else {
-                    eprintln!("gabbro: {datei} not readable");
-                    schlecht = true;
-                    continue;
-                };
-                let (baum, _) = gabbro_syntax::lies(datei, &quelle);
-                baeume.push(baum);
-            }
-            print!("{}", gabbro_check::blindstellen::zeige(&baeume));
+            let mut lies = |dateien: &[&String], schlecht: &mut bool| {
+                let mut aus = Vec::new();
+                for datei in dateien {
+                    let Ok(quelle) = std::fs::read_to_string(datei) else {
+                        eprintln!("gabbro: {datei} not readable");
+                        *schlecht = true;
+                        continue;
+                    };
+                    let (baum, _) = gabbro_syntax::lies(datei, &quelle);
+                    aus.push(baum);
+                }
+                aus
+            };
+            let baeume = lies(&sauber, &mut schlecht);
+            let gifte = lies(&gift, &mut schlecht);
+            print!("{}", gabbro_check::blindstellen::zeige(&baeume, &gifte));
             if schlecht {
                 return std::process::ExitCode::from(1);
             }
@@ -267,7 +288,8 @@ fn hilfe() {
   gabbro kontexte   <file.gab>…     execution contexts per place -- and the COUNT beside it
   gabbro emit       <file.gab>…     lower to C -- and REFUSE by name (`C001`) for every
                                     form this emitter does not know
-  gabbro blindstellen <file.gab>…   FORM x POSITION over a corpus -- and the EMPTY cells.
+  gabbro blindstellen <clean>… [-- <poison>…]
+                                    FORM x POSITION over a corpus -- and the EMPTY cells.
                                     What has 0 sites is not checked but UNREACHABLE
   gabbro zeugnis    <file.gab>…     what the translation RESTS ON: assumptions, templates
                                     with proof state, foreign bodies, `asm` lines

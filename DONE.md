@@ -46,8 +46,31 @@ written from the language outward, one file per construct, and the faults sit at
 combinations.**
 
 ```
-gabbro blindstellen beispiele/*.gab     ->  151 blind spots over 38 examples
+gabbro blindstellen beispiele/*.gab -- beispiele/gift/*.gab
+                                     ->  130 blind, 22 GUARDED over 38 examples
 ```
+
+**A blind spot has three causes and only one of them is work**, and the tool must say which:
+
+| state | what it means | work? |
+|---|---|---|
+| **covered** | the clean corpus realises it | no |
+| **GUARDED** | empty in the clean corpus, **occupied in the poison corpus** — a rule forbids it and a poison file proves the rule falls | **no** — the empty cell IS the confirmation |
+| impossible | the grammar does not allow the pair at all | no — it is not a cell |
+| **BLIND** | legal, meaningful, and nobody wrote it | yes |
+
+> **And the instrument reported its own miscalibration as work — twice.** The first version
+> ran `atomic` under `read`/`written`; an atomic is neither read nor written, it is awaited,
+> published or exchanged — that is the whole point of the word. *I fixed the instance and left
+> the class:* `slot field in position publishes` and eight more stood there afterwards, and
+> they are just as much not cells. **The columns belong to their rows, not to the table.**
+> 151 → 130 without a single line of corpus.
+
+**The number must not become a target.** Zeroing it by writing 128 small files would grow the
+corpus *from the instrument outward* — the same mistake as growing it from the language
+outward, one level up, and the next real driver would still find five faults. *The evidence
+for the right mechanism is already there: writing three real programs closed four cells
+without anyone aiming at one.*
 
 It counts **form × position** and names the empty cells. *What has 0 sites is not checked but
 UNREACHABLE:* no probe, no guardian and no mutation can trigger it — the same shape as

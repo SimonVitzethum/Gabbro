@@ -135,7 +135,7 @@ denominator that shines instead of the one that costs.*
 | **Guardians** | 14, each with a two-way speech test | **229 of 229 mutations caught** *(run 2026-08-20)* |
 | **Corpus** | 38 clean examples, 205 poison files, 157 tests *(run 2026-08-20)* | `cargo test` |
 | **Emission** | **38 of 38 examples emit C, and all 38 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
-| **Blind spots** | **151 empty cells** in form × position over the corpus — *what has 0 sites is not checked but unreachable* | `gabbro blindstellen` |
+| **Blind spots** | **130 blind, 22 guarded** in form × position — *what has 0 sites is not checked but unreachable; guarded means a rule forbids it and the poison corpus proves it* | `gabbro blindstellen` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was
