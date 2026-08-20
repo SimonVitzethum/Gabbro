@@ -3310,18 +3310,10 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn regdecl(&mut self) -> Erg<RegDecl> {
-        let anfang = self.erwarte_kw(Kw::Reg)?;
-        let name = self.erwarte_ident()?;
-        self.erwarte_z(Z::Kolon)?;
-        let typ = self.intty()?;
-        // «B32»: the intended wraparound sits at the declaration, not at the computation.
-        let umlaufend = self.friss_kw(Kw::Wrapping);
-        self.erwarte_z(Z::At)?;
-        let versatz = self.expr()?;
-        self.erwarte_kw(Kw::Class)?;
+    /// Ein Klassenwort -- an einem Register wie an einem seiner Felder («B23»).
+    fn regklasse(&mut self) -> Erg<RegKlasse> {
         let t = self.blick();
-        let klasse = match t.art {
+        let k = match t.art {
             Art::Wort(Kw::R) => RegKlasse::Lesen,
             Art::Wort(Kw::W) => RegKlasse::Schreiben,
             Art::Wort(Kw::Rw) => RegKlasse::LesenSchreiben,
@@ -3341,6 +3333,20 @@ impl<'a> Parser<'a> {
             }
         };
         self.pos += 1;
+        Ok(k)
+    }
+
+    fn regdecl(&mut self) -> Erg<RegDecl> {
+        let anfang = self.erwarte_kw(Kw::Reg)?;
+        let name = self.erwarte_ident()?;
+        self.erwarte_z(Z::Kolon)?;
+        let typ = self.intty()?;
+        // «B32»: the intended wraparound sits at the declaration, not at the computation.
+        let umlaufend = self.friss_kw(Kw::Wrapping);
+        self.erwarte_z(Z::At)?;
+        let versatz = self.expr()?;
+        self.erwarte_kw(Kw::Class)?;
+        let klasse = self.regklasse()?;
         let mut felder = Vec::new();
         if self.friss_kw(Kw::Fields) {
             self.erwarte_z(Z::GeschweiftAuf)?;
@@ -3348,7 +3354,14 @@ impl<'a> Parser<'a> {
                 let fname = self.erwarte_feldname()?;
                 self.erwarte_z(Z::At)?;
                 let bp = self.bitpos()?;
-                felder.push((fname, bp));
+                // «B23»: ein Feld darf seine eigene Klasse tragen; ohne sie gilt die des
+                // Registers. **Kein neues Wort** -- `class` steht schon in der Grammatik.
+                let fklasse = if self.friss_kw(Kw::Class) {
+                    Some(self.regklasse()?)
+                } else {
+                    None
+                };
+                felder.push((fname, bp, fklasse));
                 if !self.friss_z(Z::Komma) {
                     break;
                 }

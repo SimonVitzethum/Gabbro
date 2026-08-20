@@ -800,7 +800,7 @@ fn device(d: &Device, absagen: &mut Absagen) {
 /// „jedes Bit eines Wortes ist benannt" geschrieben wurde.
 fn regfelder(r: &RegDecl, absagen: &mut Absagen) {
     let mut gesehen = HashMap::new();
-    for (name, _) in &r.felder {
+    for (name, _, _) in &r.felder {
         doppelt(&mut gesehen, &name.text, name.span, "Registerfeld", absagen);
     }
     // **Und die andere Haelfte von «B24», seit 2026-08-19: liegt das Bit im Register?**
@@ -810,7 +810,7 @@ fn regfelder(r: &RegDecl, absagen: &mut Absagen) {
     // mit 0 Fehlern durch. *Dieselbe Zeile, die am `format` `N007` heisst.*
     let (breite, wort) = crate::bitlage::aus_intty(&r.typ);
     let wortname = format!("{wort:?}").to_lowercase();
-    for (i, (name, bp)) in r.felder.iter().enumerate() {
+    for (i, (name, bp, _)) in r.felder.iter().enumerate() {
         if let Some(b) = crate::bitlage::lage_pruefen(bp, breite * 8, i, &name.text, &wortname) {
             absagen.schiebe(Absage::fehler(b.kennung, name.span, b.text).mit_notiz(b.notiz));
         }
@@ -818,7 +818,7 @@ fn regfelder(r: &RegDecl, absagen: &mut Absagen) {
 
     // Ueberlappung der Bitlagen.
     let mut belegt: Vec<(u128, u128, &Ident)> = Vec::new();
-    for (name, bp) in &r.felder {
+    for (name, bp, _) in &r.felder {
         let (hoch, tief) = match bp {
             BitPos::Bit(b) => (*b, *b),
             BitPos::Bereich(h, t) => (*h.max(t), *h.min(t)),

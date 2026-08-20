@@ -1298,7 +1298,11 @@ pub struct RegDecl {
     pub umlaufend: bool,
     pub versatz: Expr,
     pub klasse: RegKlasse,
-    pub felder: Vec<(Ident, BitPos)>,
+    /// **«B23»: je Feld eine eigene Klasse, oder keine.** `FSTS` ist gemischt -- 7:0 sind
+    /// RW1C, 15:8 (FRI) sind nur lesbar, und FRI ist die Stelle, an der der Treiber den
+    /// Eintrag ueberhaupt findet. Bis 2026-08-20 trug `regdecl` EINE Klasse, und FRI war
+    /// damit untypisierbar. Ein Feld ohne eigenes Wort erbt die Klasse seines Registers.
+    pub felder: Vec<(Ident, BitPos, Option<RegKlasse>)>,
     pub requires: Option<Pred>,
     pub span: Span,
 }

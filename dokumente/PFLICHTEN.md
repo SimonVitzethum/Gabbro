@@ -135,8 +135,8 @@ carries and the Rust original did not — because it does not write them down.*
 | 397 | every access goes to the `mmio` space | K | `R001` (placement rule) |
 | 400 | a write to GCMD carries the state bits from GSTS | K | `mirrors` — **one line for trap 4's x86 form** |
 | 402–419 | every field access lies inside its register | K | `M101`, `bitpos` |
-| 403–419 | a `class r` register is never written, a `class w` never read | K | `R002`/`R003` |
-| 425–426 | FSTS is MIXED: 7:0 are RW1C, 15:8 (FRI) are r | K | **gap: «B23» — `regdecl` carries ONE class. FRI is untypable, and FRI is how the driver finds the record at all** |
+| 403–419 | a `class r` register is never written, a `class w` never read | K | **`R005`/`R006`, built 2026-08-20 — and this cell said `R002`/`R003`, which check POINTER rights.** The note on `R003` even spoke the sentence (*"`class w` on a register means the same"*); no line of code did it, and `return d.NUR_W.A;` gave 0 errors. *A booking that points at a rule looking elsewhere is worse than an open line: it looks closed* (`gift/216`, `gift/217`) |
+| 425–426 | FSTS is MIXED: 7:0 are RW1C, 15:8 (FRI) are r | K | **«B23» built 2026-08-20** — `regfeld = ident "@" bitpos [ "class" regklasse ]`; a field without a word of its own inherits the register's. No new terminal. `R006` bites at `FSTS.FRI` (`gift/218`), the clean shape is `beispiele/45` |
 | 436 | the computed bank location lies inside the register file | K | `M103` via `count 256` |
 | 438–442 | a bit position beyond 64 — which word does it mean? | K | `@[hi:lo]` in a `format` — **«B24» decided 2026-08-18.** A position lies inside the field's **own word**; beyond it there is **nothing to mean** (refusal, not a meaning). The word is read in the declared byte order **first**, then the bits are taken from the *value*. **And the tiling IS the word boundary**: a bit group ends when its bits are complete, a gap must be `reserved`. *A unification of two existing forms — `device` registers have carried this mechanic since 2026-08-14* |
 | 444 | IOTLB likewise | K | `M103` |
@@ -157,7 +157,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 524–526 | GCMD is written whole | K | `assume` — **expressly `unfalsifiable`, with the reason: a probe would have to open the very window the mechanism is built against** |
 | 528–530 | after FSTS.PFO further faults are dropped | K | `assume` **with a falsifier** |
 
-**F2: 24 obligations — 19 K, 5 L. Hanging: 3, all K** *(«B26»'s second half closed 2026-08-20)*.
+**F2: 24 obligations — 19 K, 5 L. Hanging: 2, all K** *(«B26»'s second half and «B23» closed 2026-08-20; and one cell that read as closed was NOT — see 403–419)*.
 
 ---
 
@@ -412,7 +412,7 @@ carries and the Rust original did not — because it does not write them down.*
 | **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
 | **Plumbing (K)** | **171** | 72 % |
 | **Logic (L)** | **67** | 28 % |
-| **hanging** | **31** | of which **`H = 13` are K** — **6 anchored at a line, 7 lowerings** *(«B21», «H2.1», «H2.2» closed 2026-08-19; «B26»'s second half and «B33» 2026-08-20)*. **All six remaining are NOTATION gaps: not one is a hand-written proof.** Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
+| **hanging** | **31** | of which **`H = 12` are K** — **5 anchored at a line, 7 lowerings** *(«B21», «H2.1», «H2.2» closed 2026-08-19; «B26»'s second half, «B33» and «B23» 2026-08-20)*. **All five remaining are NOTATION gaps: not one is a hand-written proof.** Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
 **L : K = 0,38 : 1.**

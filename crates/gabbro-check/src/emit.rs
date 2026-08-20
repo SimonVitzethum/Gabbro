@@ -561,7 +561,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                     }
                     let breite = breite_von(&r.typ) * 8;
                     let mut f = HashMap::new();
-                    for (name, lage) in &r.felder {
+                    for (name, lage, _) in &r.felder {
                         let (hi, lo) = match lage {
                             BitPos::Bit(b) => (*b as u32, *b as u32),
                             BitPos::Bereich(h, l) => (*h as u32, *l as u32),
@@ -1803,7 +1803,7 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     // eine Lage, die herausragt, ist ein Fehler, kein offener Punkt.
     for r in &d.register {
         let breite = breite_von(&r.typ) * 8;
-        for (name, lage) in &r.felder {
+        for (name, lage, _) in &r.felder {
             let hi = match lage {
                 BitPos::Bit(b) => *b as u32,
                 BitPos::Bereich(h, _) => *h as u32,

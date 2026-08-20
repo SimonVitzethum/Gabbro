@@ -136,7 +136,12 @@ pub fn passliste() -> Vec<Pass> {
             quelle: "SYNTAX.md §3: Adressraeume und Zugriffsrechte am Zeiger",
             zustand: Zustand::Getragen(
                 "built: rights checking at reads and writes, the placement rule that an \
-                    `ops` carrier is not in the `dma` space (`R001`-`R003`). **The rest, with an ADDRESS: \
+                    `ops` carrier is not in the `dma` space (`R001`-`R004`) -- **and since \
+                    2026-08-20 the REGISTER CLASS** (`R005`/`R006`, with «B23»: a class per \
+                    FIELD, because `FSTS` is mixed and `FRI` is how a driver finds the record \
+                    at all). *That one was booked as discharged BY `R002`/`R003`, which check \
+                    pointer rights; the note on `R003` spoke the sentence and no line did it, \
+                    so `return d.NUR_W.A;` gave 0 errors.* **The rest, with an ADDRESS: \
                     the barrier from the space** -- which barrier a `dma` access demands is \
                     a statement about the memory model, the same axiom layer as at the \
                     pairing. **And no alias analysis**: two `ptr<normal, rw>` to the same \

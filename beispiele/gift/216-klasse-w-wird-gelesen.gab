@@ -1,0 +1,28 @@
+-- erwartet: R005
+-- **Gift 216 -- ein `class w`-Register wird gelesen.**
+--
+-- Bis zum 2026-08-20 ging das mit **0 Fehlern** durch. `PFLICHTEN.md` buchte die Pflicht
+-- *„a `class w` register is never read"* als erledigt **durch `R002`/`R003`** -- und die
+-- beiden pruefen ZEIGERRECHTE, nicht Registerklassen.
+--
+-- Die Notiz an `R003` sagte den Satz sogar: *„a `w` pointer is not readable -- `class w` on
+-- a register means the same"*. **Der Satz stand in der Prosa des Prueferpasses und in
+-- keiner Zeile Code.**
+--
+-- *Eine Buchung, die auf eine Regel zeigt, die anderswohin sieht, ist schlimmer als eine
+-- offene Zeile: sie sieht geschlossen aus.* Dieselbe Klasse wie «B33» am selben Tag.
+
+module gift216 {
+
+device Vtd(basis : u64) at mmio {
+    reg GCMD : u32 @0x18 class w fields { TE @31 }
+}
+
+impl fn liest_das_unlesbare(v : ptr<mmio, rw> Vtd) -> u32
+    effects { reads v.GCMD }
+    costs    <= 4 ops
+{
+    return v.GCMD.TE;
+}
+
+}

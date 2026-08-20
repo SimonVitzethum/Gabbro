@@ -145,7 +145,253 @@ fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
+/// **Was eine Registerklasse ERLAUBT** -- und die Lesart steht hier, weil sie sonst nirgends
+/// stand.
+///
+/// `w1c` und `rc` sind die zwei Klassen, bei denen das LESEN oder das SCHREIBEN eine
+/// Nebenwirkung hat, nicht ein Verbot: ein RW1C-Register liest man gewoehnlich und loescht
+/// ein Bit, indem man eine Eins hineinschreibt; ein RC-Register loescht sich beim Lesen und
+/// nimmt kein Schreiben an. *Beide sind damit lesbar; nur `w` ist es nicht.*
+fn darf_lesen_reg(k: RegKlasse) -> bool {
+    !matches!(k, RegKlasse::Schreiben)
+}
+
+fn darf_schreiben_reg(k: RegKlasse) -> bool {
+    matches!(
+        k,
+        RegKlasse::Schreiben | RegKlasse::LesenSchreiben | RegKlasse::W1c
+    )
+}
+
+fn klassenwort(k: RegKlasse) -> &'static str {
+    match k {
+        RegKlasse::Lesen => "r",
+        RegKlasse::Schreiben => "w",
+        RegKlasse::LesenSchreiben => "rw",
+        RegKlasse::W1c => "w1c",
+        RegKlasse::Rc => "rc",
+    }
+}
+
+#[derive(Clone)]
+struct RegInfo {
+    klasse: RegKlasse,
+    /// **«B23»: die Klasse JE FELD.** `FSTS` ist gemischt -- 7:0 sind RW1C, 15:8 (FRI) sind
+    /// nur lesbar, und FRI ist die Stelle, an der der Treiber den Eintrag ueberhaupt findet.
+    /// Ein Feld ohne eigenes Wort erbt die Klasse seines Registers.
+    felder: BTreeMap<String, RegKlasse>,
+}
+
+/// **`class` an einem Register war eine Zusage, die kein Pass eingeloest hat** (2026-08-20).
+///
+/// `PFLICHTEN.md` buchte *„a `class r` register is never written, a `class w` never read"* als
+/// erledigt **durch `R002`/`R003`** -- und die beiden pruefen ZEIGERRECHTE, nicht
+/// Registerklassen. Die Notiz an `R003` sagte den Satz sogar (*„`class w` on a register means
+/// the same"*), und der Code tat ihn nicht:
+///
+/// ```gabbro
+/// reg NUR_W : u32 @0x00 class w fields { A @0 }
+/// return d.NUR_W.A;                       -- 0 Fehler, bis heute
+/// ```
+///
+/// *Dieselbe Klasse wie «B33» eine Stunde vorher: der Ordner beschrieb die Regel, der Pruefer
+/// tat sie nicht.* **Eine Buchung, die auf eine Regel zeigt, die anderswohin sieht, ist
+/// schlimmer als eine offene Zeile -- sie sieht geschlossen aus.**
+fn registerklassen(baum: &Programm, absagen: &mut Absagen) {
+    let mut geraete: BTreeMap<String, BTreeMap<String, RegInfo>> = BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Device(d) = &item.art else {
+            return;
+        };
+        let mut regs: BTreeMap<String, RegInfo> = BTreeMap::new();
+        let nimm = |r: &RegDecl, regs: &mut BTreeMap<String, RegInfo>| {
+            let felder = r
+                .felder
+                .iter()
+                .map(|(n, _, k)| (n.text.clone(), k.unwrap_or(r.klasse)))
+                .collect();
+            regs.insert(
+                r.name.text.clone(),
+                RegInfo { klasse: r.klasse, felder },
+            );
+        };
+        for r in &d.register {
+            nimm(r, &mut regs);
+        }
+        // Ein `bank`-Register wird ueber `d.BANK[i].REG` erreicht und traegt dieselbe Klasse.
+        for b in &d.baenke {
+            for r in &b.register {
+                nimm(r, &mut regs);
+            }
+        }
+        geraete.insert(d.name.text.clone(), regs);
+    });
+    if geraete.is_empty() {
+        return;
+    }
+
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        // Welcher lokale Name traegt welches Geraet? Parameter -- als Zeiger wie als Wert --
+        // und die `let`-gebundenen Griffe (`let v = Vtd(basis);`, `beispiele/09`).
+        let mut griffe: BTreeMap<String, String> = BTreeMap::new();
+        for p in &f.parameter {
+            let ziel = match &p.typ {
+                TypExpr::Pfad(pf) => pf.teile.last(),
+                TypExpr::Zeiger(z) => match &z.ziel {
+                    TypExpr::Pfad(pf) => pf.teile.last(),
+                    _ => None,
+                },
+                _ => None,
+            };
+            if let Some(n) = ziel {
+                if geraete.contains_key(&n.text) {
+                    griffe.insert(p.name.text.clone(), n.text.clone());
+                }
+            }
+        }
+        let FnRumpf::Block(b) = &f.rumpf else {
+            return;
+        };
+        sammle_griffe(b, &geraete, &mut griffe);
+        if griffe.is_empty() {
+            return;
+        }
+        klassenblock(b, &geraete, &griffe, absagen);
+    });
+}
+
+fn sammle_griffe(
+    b: &Block,
+    geraete: &BTreeMap<String, BTreeMap<String, RegInfo>>,
+    griffe: &mut BTreeMap<String, String>,
+) {
+    for s in &b.anweisungen {
+        if let StmtArt::Let(l) = &s.art {
+            if let ExprArt::Ruf(r) = &l.wert.art {
+                if let Some(n) = r.pfad.teile.last() {
+                    if geraete.contains_key(&n.text) {
+                        griffe.insert(l.name.text.clone(), n.text.clone());
+                    }
+                }
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_griffe(k, geraete, griffe);
+        }
+    }
+}
+
+fn klassenblock(
+    b: &Block,
+    geraete: &BTreeMap<String, BTreeMap<String, RegInfo>>,
+    griffe: &BTreeMap<String, String>,
+    absagen: &mut Absagen,
+) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Zuweisung(z) => {
+                klassenpruefung(&z.ziel, s.span, false, geraete, griffe, absagen);
+                // `X |= 1` ist ein Lesen UND ein Schreiben; ein `class w` traegt es nicht.
+                if !matches!(z.op, ZuwOp::Setzt) {
+                    klassenpruefung(&z.ziel, s.span, true, geraete, griffe, absagen);
+                }
+            }
+            StmtArt::Publish(p) => {
+                klassenpruefung(&p.ziel, s.span, false, geraete, griffe, absagen)
+            }
+            _ => {}
+        }
+        for e in crate::eigene_ausdruecke(s) {
+            for o in crate::alle_orte(e) {
+                klassenpruefung(o, s.span, true, geraete, griffe, absagen);
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            klassenblock(k, geraete, griffe, absagen);
+        }
+    }
+}
+
+/// Ein Zugriff auf `d.REG`, `d.REG.FELD` oder `d.BANK[i].REG[.FELD]` -- gegen die Klasse.
+fn klassenpruefung(
+    o: &Ort,
+    span: Span,
+    lesend: bool,
+    geraete: &BTreeMap<String, BTreeMap<String, RegInfo>>,
+    griffe: &BTreeMap<String, String>,
+    absagen: &mut Absagen,
+) {
+    let Some(dev) = griffe.get(&o.basis.text) else {
+        return; // kein Geraetegriff -- der Pass sagt nichts (W9)
+    };
+    let Some(regs) = geraete.get(dev) else { return };
+    // Die Namensfolge ohne Indizes: `[BANK, REG, FELD]` oder `[REG, FELD]` oder `[REG]`.
+    let namen: Vec<&Ident> = o
+        .suffixe
+        .iter()
+        .filter_map(|x| match x {
+            OrtSuffix::Feld(i) | OrtSuffix::Ueber(i) => Some(i),
+            OrtSuffix::Index(_) => None,
+        })
+        .collect();
+    // Der erste Name, den dieses Geraet als Register kennt -- so faellt ein Bankname weg,
+    // ohne dass der Pass die Bankliste ein zweites Mal fuehren muss (W7).
+    let Some(k) = namen.iter().position(|n| regs.contains_key(&n.text)) else {
+        return;
+    };
+    let reg = &namen[k];
+    let info = &regs[&reg.text];
+    let feld = namen.get(k + 1);
+    let (klasse, wo) = match feld.and_then(|f| info.felder.get(&f.text).map(|k| (*k, Some(f)))) {
+        Some((k, f)) => (k, f),
+        None => (info.klasse, None),
+    };
+    let erlaubt = if lesend {
+        darf_lesen_reg(klasse)
+    } else {
+        darf_schreiben_reg(klasse)
+    };
+    if erlaubt {
+        return;
+    }
+    let stelle = match wo {
+        Some(f) => format!("{}.{}", reg.text, f.text),
+        None => reg.text.clone(),
+    };
+    let (code, wort, tat) = if lesend {
+        ("R005", "read", "readable")
+    } else {
+        ("R006", "written", "writable")
+    };
+    let mut a = Absage::fehler(
+        code,
+        span,
+        format!(
+            "`{}` is {wort}, but `{stelle}` is `class {}`",
+            o.text(),
+            klassenwort(klasse)
+        ),
+    )
+    .mit_notiz(format!(
+        "a `class {}` register is not {tat} -- that is a statement about the HARDWARE, and \
+         the compiler is the only place it can be held",
+        klassenwort(klasse)
+    ));
+    if wo.is_some() && klasse != info.klasse {
+        a = a.mit_notiz(format!(
+            "the field carries its own class; the register `{}` is `class {}` (\u{ab}B23\u{bb})",
+            reg.text,
+            klassenwort(info.klasse)
+        ));
+    }
+    absagen.schiebe(a);
+}
+
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
+    registerklassen(baum, absagen);
     eigen_doppelt(baum, absagen);
 
     // **Die Platzierungsregel zuerst** -- sie betrifft Deklarationen, nicht Rümpfe.

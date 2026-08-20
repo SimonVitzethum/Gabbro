@@ -104,6 +104,30 @@ MUTATIONEN = [
         "«B33» in der zweiten Schreibrichtung -- V2 macht aus einem Registervergleich "
         "wieder einen Beziehungsfakt",
     ),
+    # -- m3.rs: die Registerklasse ------------------------------------------------------
+    Mutation(
+        "klasse-w-darf-gelesen-werden",
+        "m3.rs",
+        "fn darf_lesen_reg(k: RegKlasse) -> bool {\n    !matches!(k, RegKlasse::Schreiben)",
+        "fn darf_lesen_reg(k: RegKlasse) -> bool {\n    let _ = k;\n    true",
+        "R005 -- ein `class w`-Register darf wieder gelesen werden; genau so stand es bis "
+        "zum 2026-08-20 im Ordner als ERLEDIGT",
+    ),
+    Mutation(
+        "klasse-r-darf-geschrieben-werden",
+        "m3.rs",
+        "fn darf_schreiben_reg(k: RegKlasse) -> bool {\n    matches!(",
+        "fn darf_schreiben_reg(k: RegKlasse) -> bool {\n    let _ = k;\n    return true;\n    #[allow(unreachable_code)]\n    matches!(",
+        "R006 -- ein `class r`-Register darf wieder geschrieben werden",
+    ),
+    Mutation(
+        "feldklasse-erbt-immer",
+        "m3.rs",
+        "    let (klasse, wo) = match feld.and_then(|f| info.felder.get(&f.text).map(|k| (*k, Some(f)))) {",
+        "    let (klasse, wo) = match None::<(RegKlasse, Option<&&Ident>)>.map(|_| unreachable!()) {",
+        "«B23» -- die Klasse je Feld faellt weg, jedes Feld erbt wieder die des Registers; "
+        "`FSTS.FRI` ist damit schreibbar, weil `FSTS` es ist",
+    ),
     # -- typen.rs: die Bereichsarithmetik ------------------------------------------------
     Mutation(
         "bereich-passt-immer",

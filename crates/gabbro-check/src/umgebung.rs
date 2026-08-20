@@ -1033,7 +1033,7 @@ impl Umgebung {
         let felder = r
             .felder
             .iter()
-            .map(|(name, bp)| {
+            .map(|(name, bp, _)| {
                 let b = match bp {
                     BitPos::Bit(_) => IntBereich::genau(bereich.breite, false, 0, 1),
                     BitPos::Bereich(h, t) => {

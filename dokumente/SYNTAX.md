@@ -890,10 +890,15 @@ regdecl = "reg" ident ":" intty [ "wrapping" ] "@" expr
              2^16 und nimmt den Rest gegen `q.n`). Ohne das Wort stand die Absicht nirgends,
              und die Zaehlerregel faellt zu Recht -- am falschen Programm. Gemessen am
              Fragmentkorpus, nicht entworfen. *)
-          "class" ( "r" | "w" | "rw" | "w1c" | "rc" )
+          "class" regklasse
           [ "fields" "{" [ regfeld { "," regfeld } [ "," ] ] "}" ]
-regfeld = ident "@" bitpos ;
           [ "requires" pred ] ;
+regklasse = "r" | "w" | "rw" | "w1c" | "rc" ;
+regfeld = ident "@" bitpos [ "class" regklasse ] ;
+          (* «B23», 2026-08-20: bis dahin trug `regdecl` EINE Klasse fuer das ganze Wort.
+             FSTS ist gemischt -- 7:0 sind RW1C, 15:8 (FRI) sind nur lesbar, und FRI ist die
+             Stelle, an der der Treiber den Fehlereintrag ueberhaupt FINDET. Ein Feld ohne
+             eigenes Wort erbt die Klasse seines Registers; kein neues Terminal. *)
 transition = "transition" ident "{" transset "}"
              [ "requires" pred ] [ "effects" "{" efflist "}" ] ;
 transset   = placeshift { "," placeshift } ;      (* MEHRERE Orte in EINEM Zug -- s. Grenze *)
