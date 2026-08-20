@@ -963,11 +963,25 @@ echo
 echo "== Stufe 9: jede Datei, die emittiert, muss auch uebersetzen =="
 
 # Datei -> Grund. Eine Ausnahme ist ein BEFUND mit Adresse, kein Freibrief.
+# **Die Liste ist LEER, und das ist der Ertrag des 2026-08-20.**
+#
+# Drei Eintraege standen hier, und alle drei sind an demselben Tag abgelaufen -- gemeldet
+# von diesem Waechter selbst, nicht von einem Leser:
+#
+#   * `02-geraet.gab`  -- Namensschemabruch: definiert `Vtd_wurzel_setzen`, ruft
+#                         `wurzel_setzen`. Der Erzeuger stellt den Bezug jetzt her.
+#   * `13-zeuge-mit-staerke.gab` -- unvollstaendiges `struct Zaehlwerk`. Der Verbund stand
+#                         in der QUELLE nicht; jetzt steht er da.
+#   * `23-akkumulatoren.gab` -- ruft `gabbro_kern()` ohne Prototyp. Der Eintrag nannte es
+#                         Absicht und sagte im selben Satz, dass die Ausgabe damit nicht
+#                         selbsttragend ist. **Ein fremder Rumpf braucht seinen Prototypen**;
+#                         der steht jetzt im Erzeugnis, mit seinem Vertrag daneben.
+#
+# > *Eine Ausnahmeliste, die niemand leert, wird zur Beschreibung des Zustands.* Diese hier
+# > hat sich selbst gemeldet -- die Erkennung abgelaufener Eintraege ist der Teil, auf den es
+# > ankommt, und nicht die Liste.
 ausnahme_grund() {
     case "$1" in
-    02-geraet.gab)          echo "Namensschema-Bruch: definiert \`Vtd_wurzel_setzen\`, ruft \`wurzel_setzen\`" ;;
-    13-zeuge-mit-staerke.gab) echo "unvollstaendiges \`struct Zaehlwerk\` -- der Verbund wird nicht mitemittiert" ;;
-    23-akkumulatoren.gab)   echo "ruft \`gabbro_kern()\` ohne Prototyp -- ein FREMDER Rumpf, den der Treiber liefert (Absicht, aber die Ausgabe ist nicht selbsttragend)" ;;
     *) return 1 ;;
     esac
 }

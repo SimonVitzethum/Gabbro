@@ -123,11 +123,12 @@ denominator that shines instead of the one that costs.*
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 177 diagnostics · `gabbro paesse` |
-| **Grammar** | **143 EBNF rules**, closed and reachable | vocabulary covers every terminal, 211 / 211 |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 182 diagnostics · `gabbro paesse` |
+| **Grammar** | **145 EBNF rules**, closed and reachable | vocabulary covers every terminal, 215 / 215 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Guardians** | 13, each with a two-way speech test | **209 of 209 mutations caught** *(run 2026-08-20)* |
 | **Corpus** | 38 clean examples, 188 poison files, 156 tests *(run 2026-08-20)* | `cargo test` |
+| **Emission** | **38 of 38 examples emit C, and all 38 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was

@@ -10,6 +10,41 @@
 
 ---
 
+## Emission is COMPLETE — 38 of 38, and all 38 compile *(2026-08-20)*
+
+```
+./pruefe-emission.sh     ->  18 durchgestochen, 38 von 38 uebersetzen, 0 benannte Ausnahmen
+```
+
+Twelve examples produced no C. **Every one of the twelve refusals was named and reasoned**
+(`C001`) — that was the point of the emitter and it stays the point. What closing them cost
+was **seven decisions**, and each is written where it can be checked:
+
+| Refusal | Decision | Where |
+|---|---|---|
+| `forever` | `for (;;)`; `on_exceeded` becomes a **checked reference**, not a comment | `emit::forever` |
+| `descendants of` / `ancestors of` | «B41b»: `tree { parent, child, sibling }` at the **table**, checked once (`D006`-`D008`) | `SYNTAX.md`, `kbedingung::baumkanten` |
+| `let … else` | «C3a»: `-> T or R` in the **signature**; `bool f(T *_wert, R *_grund)`. `N028`/`N029` hold both directions | `SPRACHE.md` §8.1 |
+| `exchange update` | «C4b»: the bounded CAS loop, with `bounded … ops on_exceeded …` — the same words a `retry` carries | `ast::XForm::Update` |
+| `format` bit gap | `bool @N` is a bit field, `embeds […] scale K` is a **position**, and the word width comes from the group's integer fields | `emit::format_` |
+| `static` over an array | the length stands **behind** the name in C, so it cannot live in `ctyp`; `= 0` is `{0}`, any other value is written out | `emit::feldstatisch` |
+| `linear type T;` | a **token**: one byte that carries a right and no data. The ghost is erased, the token is not | `emit::Namen::marken` |
+
+Plus the four item kinds `walk`, `entry`, `entrust`, `boot` — and with them **the catch-all
+arm of the item match is gone**. *An `_` arm does not only let new things fall through; it
+lets you forget what is already there:* writing the four out produced three refusals for
+constructs that had been lowering for weeks, and `rustc` said so in the same minute
+(*unreachable pattern*).
+
+> **And the emitter found five faults in ITSELF**, every one of them hidden behind an earlier
+> refusal: the name resolution was GLOBAL (a parameter called `m` in two functions produced a
+> dot where an arrow belongs), a `format` field became a field access instead of a reader
+> call, `gabbro_kern()` was called and never declared, types stood at their place instead of
+> before their first use, and the eight-byte reader called a four-byte reader that nobody
+> collected.
+
+---
+
 ## The compiler — **ten** passes, none open (plus two more: «B37» and the lock discipline)
 
 `cargo run --bin gabbro -- paesse` · **3 fully built, 7 partial, 0 open**

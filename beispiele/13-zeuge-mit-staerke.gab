@@ -18,6 +18,14 @@ table Raum count N {
 lock KAPPEN protects { belegt, rechte } rank 0 held <= 8 ops shared held <= 8 ops;
 lock ANDERE protects { zaehler }        rank 1 held <= 8 ops;
 
+-- **`Zaehlwerk` stand hier nicht** (2026-08-20). Die Datei schrieb `z.wert = 0` und sagte
+-- nirgends, was ein `Zaehlwerk` ist. Der Pruefer ging durch -- ein fremder Name hinter einem
+-- Zeiger ist in einem Auszug normal -- und der Erzeuger reichte die Frage an C weiter, wo sie
+-- als *„falsche Verwendung des undefinierten Typs"* zurueckkam. **Dieselbe Klasse wie
+-- `Statusregister` in `beispiele/04`**, an demselben Tag und aus demselben Grund gefunden:
+-- ein Auszug, der aussah wie eine Uebersetzungseinheit.
+type Zaehlwerk = { wert : u32, };
+
 -- Fordert GETEILT -- darf unter geteilter Nahme gerufen werden.
 impl fn liest(k : ptr<normal, r> Raum, i : index into Raum) -> Rechte
     requires Held(KAPPEN, shared)

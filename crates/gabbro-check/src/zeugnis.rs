@@ -289,6 +289,32 @@ pub const EINORDNUNG: &[Posten] = &[
                 keine Terminierung. Was dasteht, ist der Vertrag am EINTRITT und die Annahme, \
                 unter der er gilt",
     },
+    // -- Die Maschinennaht -------------------------------------------------------------
+    //
+    // **Drei der vier tragen `Fremd`, und das ist die Aussage.** Der Eintrittspfad, die
+    // Uebergabe an einen Gast und die Bootstrecke sind in C nicht ausdrueckbar (`iretq`,
+    // Registerabdruck, Stapelwechsel); der Erzeuger schreibt den Prototyp und die gepruefte
+    // Bezugnahme auf `dispatch`, den Rumpf schreibt jemand anderes. *Genau die Klasse, die
+    // `lock` schon traegt.*
+    Posten {
+        konstrukt: "entry",
+        traegt: Traegt::Fremd,
+        grund: "Prototyp fuer den Stumpf, der Vektor als Zahl und `dispatch` als GEPRUEFTE \
+                Bezugnahme; Registerabdruck, Stapelwechsel und `iretq` schreibt C nicht",
+    },
+    Posten {
+        konstrukt: "boot",
+        traegt: Traegt::Fremd,
+        grund: "die Reihenfolge ist ein Tokenfluss und damit Uebersetzungszeit (W6); im C \
+                stehen der Prototyp der Strecke und je eine gepruefte Bezugnahme auf einen \
+                Schritt, der einen Rumpf hat -- die Modeschritte selbst sind `axiom`e",
+    },
+    Posten {
+        konstrukt: "walk",
+        traegt: Traegt::Direkt,
+        grund: "Knotentyp, `down`/`leaf` als Praedikate ueber dem Eintrag und ein Abstieg, \
+                dessen Schrittzahl aus `levels` kommt -- die Invarianten bleiben M1-Faktum (W6)",
+    },
     Posten {
         konstrukt: "retry",
         traegt: Traegt::Schablone("table.induktion"),
@@ -503,6 +529,48 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
                     "GAST auf `{}`, Stapel `{}`, Register {{ {} }} -- \
                      Gabbro sagt ueber den Rumpf NICHTS; es gilt `assume {}`",
                     t.arch.text, t.stapel.text, regs, t.annahme.text
+                ),
+            ));
+        }
+        // **`walk` -- die einzige der vier, die etwas RECHNET.** Der Abstieg ist C, seine
+        // Schrittzahl kommt aus `levels`; nichts daran ist ein fremder Rumpf.
+        ItemArt::Walk(_) => zaehle(&mut e, "walk"),
+        // **`entry` und `boot` nennen einen Stumpf, den diese Einheit nicht schreibt** -- und
+        // die Zeile sagt, WAS er halten muss. *Ein Eintrittspfad ohne diese Zeile waere ein
+        // fremder Rumpf, den das Zeugnis verschweigt.*
+        ItemArt::Entry(x) => {
+            zaehle(&mut e, "entry");
+            let regs = |l: &[(gabbro_syntax::ast::Ident, gabbro_syntax::ast::Ident)]| {
+                l.iter()
+                    .map(|(a, r)| format!("{}: {}", a.text, r.text))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            };
+            e.fremde.push((
+                format!("gabbro_eintritt_{}", x.name.text),
+                format!(
+                    "EINTRITTSPFAD auf `{}`, Stapel `{}`, regs in {{ {} }}, regs out {{ {} }} \
+                     -- er haelt den Registerabdruck und kehrt mit `iretq` zurueck; C schreibt \
+                     das nicht. Er verteilt an `{}`",
+                    x.arch.text,
+                    x.stack.text,
+                    regs(&x.regs_in),
+                    regs(&x.regs_out),
+                    x.dispatch.text()
+                ),
+            ));
+        }
+        ItemArt::Boot(b) => {
+            zaehle(&mut e, "boot");
+            e.fremde.push((
+                format!("gabbro_boot_{}", b.name.text),
+                format!(
+                    "BOOTSTRECKE auf `{}`, {} Schritte, dann `{}` -- sie setzt und liest \
+                     Maschinenregister, und die Modeschritte sind `axiom`e. Die REIHENFOLGE \
+                     haelt der Pruefer (Tokenfluss), nicht dieser Rumpf",
+                    b.arch.text,
+                    b.schritte.len(),
+                    b.dispatch.text()
                 ),
             ));
         }

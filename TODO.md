@@ -567,11 +567,9 @@ Zusagen ungeprüft weiterreicht, macht aus elf geprüften Klassen elf behauptete
 `V006`, `O006`, `N027`, die benannte Konstante). Was bleibt, ist eine Aussage über die
 REICHWEITE, keine Lücke im Gebauten.*
 
-- [ ] **Die Emission trägt 26 von 38 Beispielen** — und die zwölf, die *nicht* emittieren,
-      sind die zentralen: `01-tabelle`, `04-schleifen`, `05-nebenlaeufigkeit`,
-      `07-eintritt-und-boot`, `08-bereiche`. Die Weigerungen sind begründet und tragen ihren
-      Namen (`C001`), **aber das ist ein Fragment, kein Rückgrat**, und der README sagt „One
-      output: C plus inline assembly" ohne diese Zahl.
+*Der erste Punkt ist am **2026-08-20** erledigt und steht in [`DONE.md`](DONE.md): die
+Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
+
 - [ ] **`K009` prüft eine SYNTAKTISCHE hinreichende Form** — `n - k` und `n / k` mit der
       Massgrösse links. Ein Mass, das über einen `const fn` oder eine gerechnete Grösse
       fällt, wird abgewiesen, obwohl es fällt. *Aus der strengen Lesart kann man lockern,
@@ -1612,7 +1610,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 143 / 211) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 145 / 215) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |

@@ -35,12 +35,24 @@ walk Seitentabelle levels 4 {
         forall m in mappings of Self : m.va < 0xFFFF_8000_0000_0000 || !m.nutzer;
 }
 
+-- **Dieselbe Luecke wie in `beispiele/03`, und sie war hier sechsundzwanzig Bits gross**
+-- (2026-08-20). Der Eintrag ist ein Achtbytewort; benannt waren sechs Stellen davon.
+-- `reserved` ist keine Fuellmasse, sondern eine Aussage: diese Bits existieren, und dieses
+-- Format liest sie nicht.
 format Pte endian little {
     praesent   : bool @0,
     schreibbar : bool @1,
     nutzer     : bool @2,
+    pwt        : bool @3,
+    pcd        : bool @4,
+    benutzt    : bool @5,
+    schmutzig  : bool @6,
     gross      : bool @7,
+    global     : bool @8,
+    pte_frei   : u64 @[11:9]  reserved,
     rahmen     : u64 embeds [51:12] scale 4096,
+    pte_hoch   : u64 @[58:52] reserved,
+    schutz     : u64 @[62:59] reserved,
     nx         : bool @63,
 }
 

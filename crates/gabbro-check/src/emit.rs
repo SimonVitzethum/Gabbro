@@ -814,7 +814,17 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             let gross = matches!(f.endian, Some(Endian::Gross));
             for feld in &f.felder {
                 if let TypExpr::Int(i) = &feld.typ.typ {
-                    leser.insert(lesewort(breite_von(i), gross));
+                    let b = breite_von(i);
+                    leser.insert(lesewort(b, gross));
+                    // **Ein Achtbyteleser ist aus ZWEI Vierbytelesern gebaut**, und der
+                    // Sammler kannte nur den, den ein Feld nennt. Ein `format`, dessen
+                    // einziges Ganzzahlfeld `u64` ist, definiert `gabbro_le64` und ruft darin
+                    // `gabbro_le32`, das nirgends steht. *Eine Abhaengigkeit zwischen zwei
+                    // ERZEUGTEN Ruempfen -- der Sammler zaehlte die genannten, nicht die
+                    // gebrauchten.*
+                    if b == 8 {
+                        leser.insert(lesewort(4, gross));
+                    }
                 }
             }
         }
@@ -874,11 +884,20 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             aus.push_str(&format!("struct {f};\n"));
         }
     }
-    // **Die Marken stehen HIER und nicht an ihrem Item** -- aus demselben Grund, aus dem
-    // alle Prototypen vor allen Ruempfen stehen. `beispiele/04` erklaert `linear type
-    // Angemeldet;` **nach** der Funktion, die den Typ in ihrer Signatur fuehrt; an seinem
-    // Platz erzeugt waere er in C erst nach seinem ersten Gebrauch bekannt. *Die
-    // Quellreihenfolge einer Gabbro-Datei ist frei, und der Erzeuger sortiert.*
+
+    // **Welche Namen haben im Erzeugnis einen Prototyp?** Genau die Funktionen, die keine
+    // `spec fn` sind -- `funktion` schreibt fuer die anderen nichts. *Ohne diese Liste waere
+    // eine gepruefte Bezugnahme auf eine Spezifikationsfunktion ein Uebersetzungsfehler im
+    // erzeugten C, und der Anwender hat die Zeile nicht geschrieben.*
+    let mut ruempfe: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if !matches!(f.klasse, Some(FnKlasse::Spec)) {
+                ruempfe.insert(f.name.text.clone());
+            }
+        }
+    });
+
     // **`gabbro_kern()` ist ein FREMDER Rumpf, und ein fremder Rumpf braucht seinen
     // Prototypen** (2026-08-20).
     //
@@ -896,6 +915,11 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
              \x20* count, and nothing here proves that. */\nuint32_t gabbro_kern(void);\n",
         );
     }
+    // **Die Marken stehen HIER und nicht an ihrem Item** -- aus demselben Grund, aus dem
+    // alle Prototypen vor allen Ruempfen stehen. `beispiele/04` erklaert `linear type
+    // Angemeldet;` **nach** der Funktion, die den Typ in ihrer Signatur fuehrt; an seinem
+    // Platz erzeugt waere er in C erst nach seinem ersten Gebrauch bekannt. *Die
+    // Quellreihenfolge einer Gabbro-Datei ist frei, und der Erzeuger sortiert.*
     if !namen.marken.is_empty() {
         aus.push_str(
             "\n/* `linear type T;` without a body -- a TOKEN: it carries a right, not data.\n\
@@ -920,16 +944,10 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
     // > Es fiel bis heute nicht auf, weil die Dateien, die einen Verbund spaet erklaeren, aus
     // > einem anderen Grund `C001` sagten -- **dieselbe Bauart wie beim `format`-Feldzugriff
     // > und beim fehlenden `gabbro_kern`, am selben Tag, aus demselben Grund.**
-    crate::fuer_jedes_item(baum, &mut |item| {
-        if let ItemArt::Typ(t) = &item.art {
-            if namen.verbunde.contains(&t.name.text) {
-                verbund(t, &mut aus, &namen, absagen);
-            }
-            if namen.markierte.contains_key(&t.name.text) {
-                markiert(t, &mut aus, &namen, absagen);
-            }
-        }
-    });
+    // **Und die `#define`s stehen vor den Typen.** `beispiele/32` fuehrt `[u8; KAP]` in
+    // einem Verbund, und ein `typedef` vor seinem `#define` ist eine unbekannte Laenge.
+    // *Beim ersten Anlauf stand genau das da: die Hochziehung hat einen Fehler geheilt und
+    // beim Nachbarn einen aufgemacht -- und `cc` hat ihn in derselben Minute gemeldet.*
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         ItemArt::Konst(k) => {
             if let Some(w) = konst_zahl(&k.wert) {
@@ -945,12 +963,38 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                     k.name.text,
                     gleitkommatext(*bits)
                 ));
-            } else if let Some(n) = namen.konstwert.get(&k.name.text) {
-                aus.push_str(&format!("\n#define {} {}u\n", k.name.text, n));
+            // **«G5»: `u64::max` IST eine Konstante -- sie steht nur nicht als Ziffernfolge
+            // da.** Die Grenzen einer Breite sind Wortschatzwoerter, und sie hier abzulehnen
+            // hiesse, dem Anwender die Grenzwerte zu verbieten, die die Grammatik ihm seit
+            // dem 2026-08-15 ausdruecklich gibt. *Das Vorzeichen entscheidet ueber das `u`:
+            // ein `#define X -5u` waere nicht bloss haesslich, sondern eine andere Zahl.*
+            //
+            // Der Wert kommt aus `namen.konstwert` und wird hier NICHT noch einmal gerechnet
+            // -- `umgebung.rs` rechnet ihn ohnehin fuer `table … count N`, und ein zweiter
+            // Rechner daneben waere das zweite Register ueber derselben Sache (W7).
+            } else if let Some(w) = namen.konstwert.get(&k.name.text).copied() {
+                let suffix = if w < 0 { "" } else { "u" };
+                aus.push_str(&format!("\n#define {} {w}{suffix}\n", k.name.text));
             } else {
                 weigere(absagen, k.name.span, "const with a non-constant value");
             }
         }
+        _ => {}
+    });
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Typ(t) = &item.art {
+            if namen.verbunde.contains(&t.name.text) {
+                verbund(t, &mut aus, &namen, absagen);
+            }
+            if namen.markierte.contains_key(&t.name.text) {
+                markiert(t, &mut aus, &namen, absagen);
+            }
+        }
+    });
+
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        // **Die Konstanten stehen VOR den Typen** -- siehe dort.
+        ItemArt::Konst(_) => {}
         // Die Typen stehen VOR der Schleife -- siehe dort.
         ItemArt::Typ(_) => {}
         ItemArt::Tabelle(t) => tabelle(t, &mut aus, &namen, absagen),
@@ -1328,10 +1372,36 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         }
         ItemArt::Assume(_) | ItemArt::Axiom(_) => {}
         ItemArt::Modul(_) | ItemArt::Use(_) => {}
-        _ => weigere(
+        // **Die vier Formen der Maschinennaht** -- siehe die Funktionen am Ende dieser Datei.
+        //
+        // Sie schreiben **hinter** die Prototypen und nicht zwischen sie, weil sie auf
+        // Erklaerungen ZUGREIFEN statt welche zu machen: eine gepruefte Bezugnahme auf
+        // `dispatch` braucht dessen Prototyp, und die Quellreihenfolge einer Gabbro-Datei ist
+        // frei -- `beispiele/11` erklaert `behandler` NACH dem `entry`, der ihn nennt.
+        // *Dieselbe Sortierung, aus demselben Grund wie oben bei den Ruempfen.*
+        ItemArt::Walk(w) => walk_(w, &mut rumpf, &namen, absagen),
+        ItemArt::Entry(e) => eintritt(e, &mut rumpf, &ruempfe, absagen),
+        ItemArt::Entrust(t) => anvertrauen(t, &mut rumpf, &namen, absagen),
+        ItemArt::Boot(b) => bootstrecke(b, &mut rumpf, &namen, &ruempfe, absagen),
+        // -- und die vier, die weiter abgelehnt werden, jetzt aber MIT GRUND -----------
+        //
+        // **Der Sammelzweig ist weg, und das ist der eigentliche Ertrag.** Ein `_`-Arm ist
+        // die Stelle, an der ein neues Konstrukt still durchfaellt: wer morgen eine
+        // `ItemArt` hinzufuegt, bekommt hier einen Uebersetzungsfehler statt einer Absage,
+        // die nach einem Bauposten klingt.
+        //
+        // > **Und der Sammelzweig hat beim Verschwinden gleich etwas ueber sich gesagt.**
+        // > Beim Ausschreiben standen zuerst vier Weigerungen hier -- fuer `reason`, `state`,
+        // > `rcu` und `group`. **Drei davon senken laengst ab**, ein paar Dutzend Zeilen
+        // > weiter oben, und `rustc` hat es sofort gemeldet: *unreachable pattern*. Ein
+        // > `_`-Arm laesst nicht nur Neues durchfallen; **er laesst auch vergessen, was schon
+        // > da ist.** Uebrig bleibt die eine, die wirklich offen ist.
+        ItemArt::State(s) => weigere(
             absagen,
-            item.span,
-            "this item kind has no lowering in this emitter yet",
+            s.span,
+            "`state` -- the transitions are a proof device over a carrier that is declared \
+             ELSEWHERE; which C object holds the state, and whether a transition is a check \
+             or an assignment, the declaration does not say",
         ),
     });
     aus.push_str(&rumpf);
@@ -5048,4 +5118,510 @@ fn baum_hat_accumulates(baum: &Programm) -> bool {
         }
     });
     ja
+}
+
+// =========================================================================================
+// Die Maschinennaht: `walk`, `entry`, `entrust`, `boot`
+// =========================================================================================
+//
+// **Vier Formen, und drei davon senken KEINEN Rumpf ab.** Das ist keine Luecke, sondern die
+// Einordnung, die `lock` in dieser Datei schon traegt: der Erzeuger schreibt den Prototyp und
+// die Bezugnahmen, den Rumpf schreibt jemand anderes -- *und dass er tut, was die Klausel
+// sagt, ist keine Aussage dieser Uebersetzung.*
+//
+// > **Der Unterschied zu einer Absage (`C001`) ist scharf und wird hier gehalten.** Eine
+// > Absage sagt: *es gibt kein C fuer diese Form, und ich rate keines.* Eine Vertrauensbasis
+// > sagt: *das C ist ein VERSPRECHEN an einen Rumpf, den diese Einheit nicht schreibt.* Wer
+// > beides vermischt, liefert entweder geratenes C oder verliert eine Form, die es gibt.
+//
+// `beispiele/07` sagt den Grund selbst, in seiner ersten Zeile: *„Der Eintrittspfad ist in C
+// nicht ausdrueckbar (`iretq`, Registerabdruck, Stapelwechsel)."* Ein `__attribute__((naked))`
+// waere die naheliegende Form -- **GCC kennt es auf x86 nicht**, und die `__asm__`-Praeambel
+// darunter muesste entscheiden, wohin der Stapelwechsel greift. Die Deklaration sagt
+// `stack kernstapel per cpu`; **wo dieser Stapel liegt, sagt sie nicht.** Genau dort haette
+// der Erzeuger raten muessen.
+
+/// **Eine gepruefte Bezugnahme auf einen fremden Rumpf -- und darum kein Kommentar.**
+///
+/// Ein `dispatch`, ein `step`: die Klausel nennt einen Namen, und in der Absenkung
+/// verschwaende er spurlos, weil der Rumpf woanders steht. **Ein Kommentar daneben liest
+/// niemand; diese Zeile liest der C-Uebersetzer** -- ein Name, den die Uebersetzungseinheit
+/// nicht kennt, ist dort ein Fehler und keine Notiz.
+///
+/// `__typeof__` steht da, damit die Signatur **nicht zweimal** geschrieben wird: sie einmal
+/// aus der Deklaration abzuleiten und hier ein zweites Mal auszuschreiben waere das zweite
+/// Register ueber derselben Sache (W7) -- *und ein Register, das sich widersprechen kann,
+/// widerspricht sich.*
+fn bezugnahme(marke: &str, ziel: &str) -> String {
+    format!("static __typeof__({ziel}) *const {marke} __attribute__((unused)) = {ziel};\n")
+}
+
+/// Nennt dieses Praedikat die Domaene `mappings of`? **Der Erzeuger muss es WISSEN, ohne es
+/// zu entscheiden** -- siehe `traverse`, wo der Befund ueber den Kostenpass steht.
+fn nennt_abbildungen(p: &Pred) -> bool {
+    match &p.art {
+        PredArt::Quantor(q) => {
+            matches!(q.domaene, Domaene::AbbildungenVon(_)) || nennt_abbildungen(&q.rumpf)
+        }
+        PredArt::Element(_, d) => matches!(d, Domaene::AbbildungenVon(_)),
+        PredArt::Klammer(x) | PredArt::Nicht(x) => nennt_abbildungen(x),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+            nennt_abbildungen(a) || nennt_abbildungen(b)
+        }
+        _ => false,
+    }
+}
+
+/// Ein Praedikat ueber dem EINEN Eintrag eines `walk`-Knotens. `it.praesent` ist dort ein
+/// Zugriff auf das `format` des Knotens, und `it` ist die C-Variable des Abstiegs.
+fn pred_c_eintrag(p: &Pred, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    Some(match &p.art {
+        PredArt::Vergleich(e) => ausdruck_eintrag(e, fmt, u, absagen)?,
+        PredArt::Klammer(x) => format!("({})", pred_c_eintrag(x, fmt, u, absagen)?),
+        PredArt::Nicht(x) => format!("!({})", pred_c_eintrag(x, fmt, u, absagen)?),
+        PredArt::Und(a, b) => format!(
+            "{} && {}",
+            pred_c_eintrag(a, fmt, u, absagen)?,
+            pred_c_eintrag(b, fmt, u, absagen)?
+        ),
+        PredArt::Oder(a, b) => format!(
+            "{} || {}",
+            pred_c_eintrag(a, fmt, u, absagen)?,
+            pred_c_eintrag(b, fmt, u, absagen)?
+        ),
+        _ => return None,
+    })
+}
+
+/// `it.feld` wird `Format_feld(it)`. **Ein anderer Grundname als `it` ist keine Absenkung,
+/// sondern ein Missverstaendnis** -- der Knoteneintrag ist das einzige, worueber `down when`
+/// und `leaf` reden, und wer etwas anderes nennt, bekommt eine Absage statt einer Vermutung.
+fn ausdruck_eintrag(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    Some(match &e.art {
+        ExprArt::Ort(o) if o.basis.text == "it" && o.suffixe.len() == 1 => {
+            let OrtSuffix::Feld(f) = &o.suffixe[0] else { return None };
+            format!("{fmt}_{}(it)", f.text)
+        }
+        ExprArt::Klammer(x) => format!("({})", ausdruck_eintrag(x, fmt, u, absagen)?),
+        ExprArt::Unaer(UnOp::Nicht, x) => {
+            format!("!({})", ausdruck_eintrag(x, fmt, u, absagen)?)
+        }
+        ExprArt::Binaer(op, a, b) => format!(
+            "{} {} {}",
+            ausdruck_eintrag(a, fmt, u, absagen)?,
+            op_text(op),
+            ausdruck_eintrag(b, fmt, u, absagen)?
+        ),
+        ExprArt::Zahl(_) | ExprArt::Wahr | ExprArt::Falsch => ausdruck(e, u, absagen),
+        _ => return None,
+    })
+}
+
+/// **`walk` -- ein Knotentyp, zwei Praedikate und EIN Abstieg, dessen Schrittzahl aus
+/// `levels` kommt.**
+///
+/// Das ist die eine Aussage, die ein `walk` ueber den Lauf macht: *nach `levels` Schritten ist
+/// Schluss.* Sie steht damit im C und nicht nur im Pruefer -- die Schleife hat ihre Grenze aus
+/// der Deklaration, genau wie `traverse` sie aus `count N` hat.
+///
+/// **Die Invarianten werden BENANNT und nicht geprueft** (W6): `wx_getrennt` ist eine Aussage
+/// ueber das Programm, keine ueber den Lauf; sie zur Laufzeit nachzurechnen hiesse, denselben
+/// Satz zweimal zu verlangen. *Und sie quantifizieren ueber `mappings of` -- die Domaene, an
+/// der `traverse` einen Befund ueber den KOSTENPASS stehen hat (Ebenen mal Knotenlaenge statt
+/// 512^4, sieben Groessenordnungen). Der Abstieg hier laeuft EINEN Pfad und behauptet ueber
+/// die Domaene nichts; er entscheidet den Befund also weder so noch so.*
+///
+/// ## Was hier absichtlich NICHT steht: der Weg von der virtuellen Adresse zum Index
+///
+/// Die naheliegende Abstiegsfunktion nimmt eine virtuelle Adresse. **Dafuer muesste der
+/// Erzeuger zwei Dinge erfinden**, die in `walk` nicht stehen: welche Adressbits eine Ebene
+/// auswaehlen, und wie gross das Korn unterhalb der letzten Ebene ist. Der Abstieg nimmt
+/// darum den **Indexpfad** entgegen -- und prueft ihn, weil seine Werte von aussen kommen:
+/// *W6 laesst eine Pruefung nur dort weg, wo M1 sie traegt, und M1 traegt nichts ueber ein
+/// Feld, das der Rufer fuellt.*
+///
+/// Ebenso von aussen kommt die Aufloesung eines Rahmens zu einem lesbaren Knoten. Sie steht
+/// als **Parameter** da und nicht als angenommener fremder Rumpf: *ein `entry` hat keine
+/// Wahl, ein Abstieg schon* -- und ein Parameter ist die Fassung, in der der Rufer sieht, was
+/// er schuldet.
+fn walk_(w: &WalkDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
+    let n = &w.name.text;
+    let Some(ebenen) = konst_zahl(&w.ebenen) else {
+        weigere(
+            absagen,
+            w.span,
+            "`walk … levels` that is not a number -- the descent's step count IS the \
+             declaration's one statement about the run, and it cannot be guessed",
+        );
+        return;
+    };
+    let Some(weite) = konst_zahl(&w.knoten.laenge) else {
+        weigere(
+            absagen,
+            w.span,
+            "`walk` whose `node` array has no constant length -- the index bound would then \
+             come from nowhere",
+        );
+        return;
+    };
+    if ebenen <= 0 || weite <= 0 {
+        weigere(absagen, w.span, "`walk` with a non-positive `levels` or node length");
+        return;
+    }
+    // **Der Knoteneintrag muss ein `format` sein.** `it.praesent` ist dort ein Zugriff mit
+    // erklaerter Bytereihenfolge; ueber einem C-Verbund waere dieselbe Zeile eine
+    // Layoutbehauptung, die die Deklaration nicht macht. *Der Unterschied ist genau der, den
+    // `verbund` und `format_` in dieser Datei schon gegeneinander stellen.*
+    let TypExpr::Pfad(p) = &w.knoten.element else {
+        weigere(absagen, w.span, "`walk` whose `node` element is not a named type");
+        return;
+    };
+    let Some(elem) = p.teile.last().map(|i| i.text.clone()) else {
+        weigere(absagen, w.span, "`walk` whose `node` element has no name");
+        return;
+    };
+    if !u.formate.contains(&elem) {
+        weigere(
+            absagen,
+            w.span,
+            "`walk` whose `node` element is not a `format` -- `down`/`leaf` read FIELDS of an \
+             entry, and only a `format` says which bytes they are",
+        );
+        return;
+    }
+    let Some(ab_wenn) = pred_c_eintrag(&w.ab_wenn, &elem, u, absagen) else {
+        weigere(absagen, w.span, "`walk … down … when` predicate form");
+        return;
+    };
+    let Some(blatt) = pred_c_eintrag(&w.blatt, &elem, u, absagen) else {
+        weigere(absagen, w.span, "`walk … leaf` predicate form");
+        return;
+    };
+
+    aus.push_str(&format!(
+        "\n/* walk {n} levels {ebenen} -- node [{elem}; {weite}], down `{ab}`\n",
+        ab = w.ab.text
+    ));
+    for i in &w.invarianten {
+        let laeuft = match i.laeuft {
+            Laeuft::Online => "online",
+            Laeuft::Offline => "offline",
+        };
+        aus.push_str(&format!(
+            " * invariant {} runs {laeuft} -- COMPILE TIME (W6), not re-checked here{}\n",
+            kommentartext(&i.name.text),
+            if nennt_abbildungen(&i.pred) {
+                ";\n *   it quantifies over `mappings of`, whose bound is an open finding\n\
+                 \x20*   about the COST PASS (see `traverse`). This descent walks ONE path\n\
+                 \x20*   and claims nothing about the domain"
+            } else {
+                ""
+            }
+        ));
+    }
+    aus.push_str(" */\n");
+    aus.push_str(&format!("#define {n}_EBENEN {ebenen}u\n"));
+    aus.push_str(&format!("#define {n}_WEITE {weite}u\n"));
+    aus.push_str(&format!(
+        "\ntypedef struct {{ {elem} eintraege[{weite}]; }} {n}_knoten;\n"
+    ));
+    aus.push_str(&format!(
+        "\nstatic inline bool {n}_ist_blatt(const {elem} *it) {{ return (bool)({blatt}); }}\n"
+    ));
+    aus.push_str(&format!(
+        "static inline bool {n}_steigt_ab(const {elem} *it) {{ return (bool)({ab_wenn}); }}\n"
+    ));
+    // **Der Abstieg. `levels` ist die Schranke, und sie steht als Zahl da.**
+    aus.push_str(&format!(
+        "\nstatic inline bool {n}_absteigen(const {n}_knoten *wurzel, const uint32_t *index,\n\
+         \x20       bool (*knoten_zu)(uint64_t, const {n}_knoten **), const {elem} **blatt) {{\n\
+         \x20   const {n}_knoten *k = wurzel;\n\
+         \x20   for (uint32_t e = 0; e < {n}_EBENEN; e++) {{\n\
+         \x20       /* The bound comes from `node [{elem}; {weite}]`; the VALUE comes from\n\
+         \x20          the caller, and that is why the check stands here (W6). */\n\
+         \x20       if (index[e] >= {n}_WEITE) return false;\n\
+         \x20       const {elem} *it = &k->eintraege[index[e]];\n\
+         \x20       if ({n}_ist_blatt(it)) {{ *blatt = it; return true; }}\n\
+         \x20       if (!{n}_steigt_ab(it)) return false;\n\
+         \x20       if (!knoten_zu({elem}_{ab}(it), &k)) return false;\n\
+         \x20   }}\n\
+         \x20   return false;\n\
+         }}\n",
+        ab = w.ab.text
+    ));
+}
+
+/// **`entry` -- der Vektor, der Vertrag, und ein Prototyp fuer einen Rumpf, den C nicht
+/// schreiben kann.**
+///
+/// `beispiele/07` sagt es in seiner ersten Zeile: *„Der Eintrittspfad ist in C nicht
+/// ausdrueckbar (`iretq`, Registerabdruck, Stapelwechsel)."* **Das ist keine Absage, sondern
+/// eine Einordnung** -- dieselbe, die `lock` hier schon traegt: der Erzeuger nennt das
+/// Primitiv und definiert es nicht.
+///
+/// *Warum nicht `__attribute__((naked))` plus `__asm__`:* GCC kennt `naked` auf x86 gar nicht,
+/// und die Praeambel darunter muesste entscheiden, **wohin** der Stapelwechsel greift.
+/// `stack kernstapel per cpu` sagt, DASS gewechselt wird; wo dieser Stapel liegt, sagt keine
+/// Klausel. Ein Erzeuger, der das erfindet, macht jeden Pass davor zunichte.
+///
+/// **Was er dagegen tut, ist den Vertrag pruefbar machen:** der Vektor wird eine Zahl im C
+/// (die IDT-Einrichtung braucht sie), und `dispatch` wird eine **gepruefte Bezugnahme** --
+/// ein Verteiler, den diese Einheit nicht kennt, ist dort ein Uebersetzungsfehler.
+///
+/// **Eine andere Architektur wird BENANNT abgelehnt.** Registerabdruck, Stapelwechsel und
+/// Verschachtelung sind je Architektur andere; `arch` steht in der Deklaration, damit hier
+/// nicht geraten wird.
+fn eintritt(e: &EntryDecl, aus: &mut String, ruempfe: &BTreeSet<String>, absagen: &mut Absagen) {
+    if e.arch.text != "x86_64" {
+        weigere(
+            absagen,
+            e.span,
+            "`entry` for an architecture other than x86_64 -- register footprint, stack \
+             switch and nesting are different per architecture, and `arch` stands in the \
+             declaration so that nobody has to guess which",
+        );
+        return;
+    }
+    let n = &e.name.text;
+    let regs = |l: &Vec<(Ident, Ident)>| {
+        if l.is_empty() {
+            "(none)".to_string()
+        } else {
+            l.iter()
+                .map(|(x, r)| format!("{}={}", x.text, r.text))
+                .collect::<Vec<_>>()
+                .join(" ")
+        }
+    };
+    // **Die leere Liste ist eine AUSSAGE, kein Fehlen** («G7»). Sie wie ein fehlendes Feld zu
+    // drucken hiesse, die staerkste Zusage unsichtbar zu machen.
+    let liste = |l: &Vec<Ident>| {
+        if l.is_empty() {
+            "(none -- and that is a statement, not an omission)".to_string()
+        } else {
+            l.iter().map(|x| x.text.clone()).collect::<Vec<_>>().join(" ")
+        }
+    };
+    aus.push_str(&format!(
+        "\n/* entry {n} -- arch {}{}\n",
+        e.arch.text,
+        match &e.via {
+            Some(v) => format!(", via {}", v.text),
+            None => String::new(),
+        }
+    ));
+    if let Some(v) = &e.vektor {
+        match konst_zahl(v) {
+            Some(k) => aus.push_str(&format!(" * vector {k}\n")),
+            None => aus.push_str(" * vector: not a constant in this unit\n"),
+        }
+    }
+    aus.push_str(&format!(" * regs in : {}\n", kommentartext(&regs(&e.regs_in))));
+    aus.push_str(&format!(" * regs out: {}\n", kommentartext(&regs(&e.regs_out))));
+    aus.push_str(&format!(" * preserves: {}\n", kommentartext(&liste(&e.preserves))));
+    aus.push_str(&format!(" * clobbers : {}\n", kommentartext(&liste(&e.clobbers))));
+    aus.push_str(&format!(
+        " * stack {}{}{}\n",
+        kommentartext(&e.stack.text),
+        if e.pro_kern { ", per cpu" } else { "" },
+        match e.ist.as_ref().and_then(konst_zahl) {
+            Some(i) => format!(", ist {i}"),
+            None => String::new(),
+        }
+    ));
+    aus.push_str(&format!(
+        " * nesting: {}\n",
+        match &e.verschachtelt {
+            Some(Verschachtelt::Nie) => "never".to_string(),
+            Some(Verschachtelt::Maskiert) => "masked".to_string(),
+            Some(Verschachtelt::Begrenzt(x)) => match konst_zahl(x) {
+                Some(k) => format!("bounded {k}"),
+                None => "bounded (not a constant here)".to_string(),
+            },
+            None => "not declared".to_string(),
+        }
+    ));
+    aus.push_str(
+        " *\n\
+         \x20* THE STUB IS NOT A C FUNCTION. It is entered by hardware, it keeps the register\n\
+         \x20* footprint above and it leaves with `iretq` -- none of which C can write. What\n\
+         \x20* stands here is the PROMISE (a prototype and the vector), the same class `lock`\n\
+         \x20* carries in this file: the emitter names the primitive and does not define it. */\n",
+    );
+    if let Some(k) = e.vektor.as_ref().and_then(konst_zahl) {
+        aus.push_str(&format!("#define gabbro_eintritt_{n}_VEKTOR {k}u\n"));
+    }
+    aus.push_str(&format!("void gabbro_eintritt_{n}(void);\n"));
+    // **`dispatch` waere sonst der eine Name, der spurlos verschwindet.**
+    let ziel = e.dispatch.teile.last().map(|i| i.text.clone()).unwrap_or_default();
+    if ruempfe.contains(&ziel) {
+        aus.push_str(&bezugnahme(&format!("gabbro_eintritt_{n}_verteiler"), &ziel));
+    } else {
+        aus.push_str(&format!(
+            "/* dispatch `{}`: not declared in this unit, so there is nothing here to bind it\n\
+             \x20* to. `N006` holds it against the declarations; this file cannot. */\n",
+            kommentartext(&e.dispatch.text())
+        ));
+    }
+}
+
+/// **`entrust` -- der Raum, dessen INHALT Gabbro nicht kennt.**
+///
+/// *Gabbro sagt ueber den Gast nichts:* keine Kosten, keine Wirkungen, keine Terminierung.
+/// Was es sagt, ist der **Vertrag am Eintritt**, und den traegt das Erzeugnis: ein Prototyp
+/// fuer die Uebergabe, der Raum als **gepruefte Bezugnahme** und die Annahme im Kopf der
+/// Datei, wo die anderen Annahmen stehen (`SYNTAX.md` §12).
+///
+/// **Der Raum wird geprueft und nicht bloss genannt.** `at Gastbild` nimmt einen NAMEN -- *ein
+/// `entrust` auf einen gerechneten Wert waere ein Sprung an eine ausgerechnete Adresse* -- und
+/// ein `_Static_assert` ueber seiner Groesse zwingt den C-Uebersetzer, den Typ vollstaendig zu
+/// kennen. Ein Raum, den diese Einheit nicht erklaert, faellt dort auf.
+///
+/// **Der Sprung selbst ist kein C.** Er setzt einen Registervertrag, wechselt den Stapel und
+/// gibt die Kontrolle an Code ab, ueber den nichts bekannt ist. Dieselbe Naht wie bei `entry`,
+/// mit demselben Ergebnis: Prototyp statt Rumpf, Vertrauensbasis statt Erzeugnis.
+fn anvertrauen(t: &EntrustDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
+    if t.arch.text != "x86_64" {
+        weigere(
+            absagen,
+            t.span,
+            "`entrust` for an architecture other than x86_64 -- the guest's entry contract is \
+             a register contract, and which registers those are is what `arch` says",
+        );
+        return;
+    }
+    let n = &t.name.text;
+    let raum = &t.raum.text;
+    let regs = if t.regs_gast.is_empty() {
+        "(none)".to_string()
+    } else {
+        t.regs_gast
+            .iter()
+            .map(|(x, r)| format!("{}={}", x.text, r.text))
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    aus.push_str(&format!(
+        "\n/* entrust {n} at {raum} -- arch {}\n\
+         \x20* guest regs: {}\n\
+         \x20* stack {}\n\
+         \x20* under `assume {}` -- it stands in the assumption list at the head of this file,\n\
+         \x20*   with the probe that could refute it. An assumption no probe can contradict is\n\
+         \x20*   not isolation but a wish.\n\
+         \x20*\n\
+         \x20* GABBRO SAYS NOTHING ABOUT THE BODY: no cost, no effects, no termination. The\n\
+         \x20* handover sets a register contract and switches stacks, and C writes neither --\n\
+         \x20* so what stands here is the prototype and the contract, not a body. */\n",
+        t.arch.text,
+        kommentartext(&regs),
+        kommentartext(&t.stapel.text),
+        kommentartext(&t.annahme.text)
+    ));
+    // Nur ein Name, den diese Einheit als C-Typ erklaert, kann geprueft werden. Ein
+    // Bereichstyp senkt zu seinem Traeger ab und hat keinen -- dort bliebe nur der Kommentar.
+    if u.verbunde.contains(raum)
+        || u.tabellen.iter().any(|x| x == raum)
+        || u.formate.contains(raum)
+        || u.geraete.contains_key(raum)
+    {
+        aus.push_str(&format!(
+            "_Static_assert(sizeof({raum}) > 0,\n\
+             \x20   \"the space an `entrust` hands over must be a declared, complete type\");\n"
+        ));
+    }
+    aus.push_str(&format!("void gabbro_gast_{n}(void);\n"));
+}
+
+/// **`boot` -- die Reihenfolge ist der Gegenstand, und sie steht im PRUEFER.**
+///
+/// Die Mode-Leiter ist ein Tokenfluss: `write_cr0(PG)` verlangt alle drei Marken, ein
+/// vertauschter Schritt ist ein fehlendes Token und kein Laufzeitfehler. **Damit ist die
+/// Reihenfolge zur Uebersetzungszeit entschieden (W6), und eine zweite Durchsetzung im C waere
+/// derselbe Satz zum zweiten Mal.**
+///
+/// Der Rumpf ist ohnehin keiner: `step stapelzeiger = boot_stapel_oben` setzt ein
+/// Maschinenregister, `step bootinfo_retten(ebx)` liest eines, und die Modeschritte selbst
+/// sind `axiom`e -- Formen, fuer die diese Datei ausdruecklich **kein** C erzeugt. Eine
+/// C-Funktion, die sie der Reihe nach riefe, waere entweder eine implizite Deklaration oder
+/// eine Erfindung.
+///
+/// **Was bleibt, ist pruefbar:** ein Prototyp fuer die Strecke, eine **gepruefte Bezugnahme**
+/// je Schritt, dessen Ziel diese Einheit als Rumpf kennt, und eine fuer `dispatch`. *Ein
+/// Schritt, der auf einen Namen zeigt, den es nicht gibt, faellt damit beim Uebersetzen auf
+/// und nicht beim Booten.*
+///
+/// Ein `step name = wert` wird ein `static const uint64_t`: er nennt einen WERT, den der
+/// Strecke jemand geben muss, und dass er 64 Bit breit ist, sagt `arch x86_64` -- fuer jede
+/// andere Architektur weigert sich diese Funktion, statt eine Breite anzunehmen.
+fn bootstrecke(
+    b: &BootDecl,
+    aus: &mut String,
+    u: &Namen,
+    ruempfe: &BTreeSet<String>,
+    absagen: &mut Absagen,
+) {
+    if b.arch.text != "x86_64" {
+        weigere(
+            absagen,
+            b.span,
+            "`boot` for an architecture other than x86_64 -- a boot step sets machine \
+             registers, and how wide they are is what `arch` says",
+        );
+        return;
+    }
+    let n = &b.name.text;
+    aus.push_str(&format!("\n/* boot {n} -- arch {}\n", b.arch.text));
+    for (i, s) in b.schritte.iter().enumerate() {
+        match s {
+            BootSchritt::Ruf(r) => aus.push_str(&format!(
+                " * step {}: {}\n",
+                i + 1,
+                kommentartext(&r.pfad.text())
+            )),
+            BootSchritt::Setzt { name, .. } => aus.push_str(&format!(
+                " * step {}: {} = <value>\n",
+                i + 1,
+                kommentartext(&name.text)
+            )),
+        }
+    }
+    aus.push_str(&format!(" * dispatch {}\n", kommentartext(&b.dispatch.text())));
+    aus.push_str(
+        " *\n\
+         \x20* THE ORDER IS DECIDED AT COMPILE TIME (W6) and is not enforced again here: the\n\
+         \x20* mode ladder is a token flow, and a swapped step is a MISSING TOKEN, not a\n\
+         \x20* run-time error. The steps themselves set and read machine registers and are\n\
+         \x20* `axiom`s, for which this file deliberately emits no C -- so what stands here is\n\
+         \x20* a prototype for the run and one checked reference per step that has a body. */\n",
+    );
+    aus.push_str(&format!("void gabbro_boot_{n}(void);\n"));
+    for (i, s) in b.schritte.iter().enumerate() {
+        match s {
+            // Ein `axiom` hat keinen Prototyp -- es steht als Annahme im Kopf der Datei, und
+            // eine Bezugnahme darauf waere hier ein Uebersetzungsfehler.
+            BootSchritt::Ruf(r) => {
+                let ziel = r.pfad.teile.last().map(|x| x.text.clone()).unwrap_or_default();
+                if ruempfe.contains(&ziel) {
+                    aus.push_str(&bezugnahme(&format!("gabbro_boot_{n}_s{}", i + 1), &ziel));
+                }
+            }
+            BootSchritt::Setzt { name, wert } => {
+                aus.push_str(&format!(
+                    "static const uint64_t gabbro_boot_{n}_{} __attribute__((unused)) = {};\n",
+                    name.text,
+                    ausdruck(wert, u, absagen)
+                ));
+            }
+        }
+    }
+    let ziel = b.dispatch.teile.last().map(|x| x.text.clone()).unwrap_or_default();
+    if ruempfe.contains(&ziel) {
+        aus.push_str(&bezugnahme(&format!("gabbro_boot_{n}_dispatch"), &ziel));
+    } else {
+        aus.push_str(&format!(
+            "/* dispatch `{}`: not declared in this unit, so there is nothing here to bind it\n\
+             \x20* to. `N006` holds it against the declarations; this file cannot. */\n",
+            kommentartext(&b.dispatch.text())
+        ));
+    }
 }
