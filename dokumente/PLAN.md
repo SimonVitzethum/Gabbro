@@ -3281,7 +3281,7 @@ Nutzer weiter trägt:
 | **Erhaltungspflichten** | **3** | `maintains I` ist auf Wohlgeformtheit geprüft; dass der Rumpf sie **einlöst**, prüft niemand |
 | **ZUSAGE ohne Leser** | **13** | die Grammatik erlaubt es zu versprechen, kein Pass hält es nach |
 | **Fremdpflichten** | **8** | Annahmen über Rümpfe, die Gabbro nie sieht |
-| **Prämissen ohne Pass** | **7** | ein Beweis, den nichts herstellt |
+| **Prämissen ohne Pass** | **9** | ein Beweis, den nichts herstellt — *2026-08-20 gegen `gabbro schablonen` nachgerechnet, es standen 7* |
 | **Absenkungspflichten** | **7** | in `H` enthalten, nicht in den Fragmenten |
 
 ## Das Ziel, in prüfbarer Form
