@@ -496,3 +496,42 @@ jedes Mal unvollständig und jedes Mal anders. Alle drei hielten `locks L { retu
 *Gemessen von `pruefe-abstieg.py` — und zuerst zu grob: die Dateiebene zählte `m2` als gedeckt,
 weil `sammle_forever` nannte, was `gehe` fehlte. **Auf Funktionsebene wurden aus 7 Lücken 15**
 (W14, zum vierten Mal).*
+
+---
+
+## W16 — Ein Messwerkzeug ohne Abstiegsschritt misst seine eigene Leseweite
+
+**Drei Werkzeuge in einer Woche haben plausibel ausgesehen und etwas anderes gemessen als
+ihren Gegenstand.** Die Signatur ist in allen drei Fällen dieselbe, und sie ist so einfach,
+dass sie eine Prüfliste hergibt:
+
+| Werkzeug | stieg **nicht** ab in | und meldete deshalb |
+|---|---|---|
+| die Rufhülle | die Gerufenen | ein Ruf in einem `match`-Zweig war unsichtbar — *und der Korpus hat genau diese Gestalt* |
+| `enthaelt_schritt` | geschachtelte Rümpfe | ein `locks { }` um denselben Schritt machte `O006` stumm |
+| `pruefe-gruende.py` | über die abgeschnittene Zeile hinaus | **`N011` als verdächtig** — die eine Regel, deren Notiz den tragenden Grund wörtlich nennt |
+
+**Die Regel ist eine Frage, und sie wird vor dem ersten Lauf gestellt:**
+
+> *Ist der Gegenstand rekursiv oder mehrzeilig — und steigt das Werkzeug ab?*
+
+Zusammen mit **W8** (die Zweiebenenprobe) ist das eine mechanische Vorabprüfung für jedes neue
+Messwerkzeug: ein Gegenstand mit zwei Ebenen bekommt eine Probe mit zwei Ebenen, und wo keine
+zweite Ebene geprüft wird, ist die erste die ganze Messung.
+
+### Und der teuerste Fall ist nicht der Verlust, sondern die Umkehrung
+
+Die ersten beiden Werkzeuge **verloren** eine Antwort; das dritte **kehrte sie um**. Der
+Unterschied ist der Grund, warum der dritte der schärfste war:
+
+> **Bei einer verlorenen Antwort fehlt etwas. Bei einer umgekehrten steht das Gegenteil da —
+> und sieht vollständig aus.**
+
+Die Umkehrung entsteht genau dort, wo das Abgeschnittene das **entlastende** Material enthält.
+`pruefe-gruende.py` las Rusts `\`-Zeilenfortsetzung nicht und sah damit von jeder Absage nur
+die Meldung, nie die Notizen — und die Notiz ist die Stelle, an der eine Regel ihren tragenden
+Grund nennt. *Ein Werkzeug, das nur die Anklage liest und nie die Entlastung, findet
+zuverlässig Schuldige.*
+
+**Es ist R16 in Textform**: eine untere Schranke, die nicht sagt, dass sie eine ist, liest sich
+als Ergebnis.

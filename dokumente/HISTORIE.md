@@ -59,6 +59,15 @@ which keeps `151 → 0` from ever being quoted as coverage.
 The third is the sharpest because it inverts the answer instead of losing it. *R16 in text form:*
 a lower bound that does not say it is one reads as a result.
 
+**All three share one structural signature: a tool without a descent step** — the hull did not
+descend into callees, `enthaelt_schritt` not into nested bodies, the reason counter not past
+the truncated line. That makes the class detectable in advance, and the question is now
+**W16**: *is the subject recursive or multi-line — and does the tool descend?*
+
+> **A lost answer is missing. An inverted one stands there and looks complete.** The inversion
+> arises exactly where the truncated material carries the EXONERATING evidence — a tool that
+> reads only the charge and never the defence finds culprits reliably.
+
 **And the same week produced its mirror image:** a measuring apparatus that produces the
 scatter rather than the subject. `pruefe-gruende.py` first reported thirteen suspects; eleven
 were the substring `word` matching rules that speak about the *vocabulary* — the language of
