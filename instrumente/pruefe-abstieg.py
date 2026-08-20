@@ -17,7 +17,7 @@ statt eine Luecke zu erben.
 """
 import re, pathlib, sys
 
-WURZEL = pathlib.Path(__file__).parent
+WURZEL = pathlib.Path(__file__).resolve().parent.parent
 QUELLE = WURZEL / "crates/gabbro-check/src"
 
 # Die Arten, die einen Unterblock tragen -- aus `lib.rs::unterbloecke`, und der Waechter

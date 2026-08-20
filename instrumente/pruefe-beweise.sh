@@ -10,12 +10,12 @@
 # **Beim zweiten Mal stand die Regel schon da.** Eine Regel, die man kennt und trotzdem
 # bricht, braucht keinen weiteren Satz -- sie braucht ein Werkzeug.
 #
-#   ./pruefe-beweise.sh          -- baut die Sitzung mit Wachhund
+#   ./instrumente/pruefe-beweise.sh          -- baut die Sitzung mit Wachhund
 #
 # Der Wachhund haelt an, statt die Maschine anzuhalten. *Ein Ordner, der beim Beweisen den
 # Rechner umbringt, misst danach gar nichts mehr.*
 set -uo pipefail
-W="$(cd "$(dirname "$0")" && pwd)"
+W="$(cd "$(dirname "$0")/.." && pwd)"
 GRENZE_GB="${GRENZE_GB:-3}"
 ZEIT="${ZEIT:-600}"
 ISABELLE="${ISABELLE:-$HOME/Isabelle2025-2/bin/isabelle}"

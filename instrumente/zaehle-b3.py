@@ -6,8 +6,8 @@ Erhebt gegen einen Rust-Kernelbaum die Ruempfe, die Gabbros drei Schleifenformen
 (`traverse over <domaene> by`, `retry until bounded N ops`, `forever per_pass
 bounded N ops`) ueber den acht Domaenen NICHT aufnehmen koennen.
 
-    ./zaehle-b3.py ../caprock-messbasis
-    ./zaehle-b3.py ../caprock-messbasis --json=b3.json
+    ./instrumente/zaehle-b3.py ../caprock-messbasis
+    ./instrumente/zaehle-b3.py ../caprock-messbasis --json=b3.json
 
 Marken (Protokoll in dokumente/MESSUNGEN.md, Abschnitt "VORAB -- B3 beziffern"):
   Na   Kettenlauf ohne Domaene (Zeiger-, Index- oder Kantenkette)

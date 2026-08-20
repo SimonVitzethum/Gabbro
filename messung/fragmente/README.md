@@ -29,7 +29,7 @@ Ergänzt werden **nur** Deklarationen, die der Ausschnitt ruft und nicht nennt. 
 ## Der Stand
 
 ```
-$ ./zaehle-fragmente.py
+$ ./instrumente/zaehle-fragmente.py
 6 von 10 prüfen sauber        (über den Ausschnitten: 5; am 2026-08-20 kurz 7)
 4 von 10 senken ab            (über den Ausschnitten: 3)
 ```

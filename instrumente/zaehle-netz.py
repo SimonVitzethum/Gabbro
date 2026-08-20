@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """**Der Netzwerkstack, gegen VEROEFFENTLICHTE Vektoren geprueft -- Stufe 4, Regel B.**
 
-    ./zaehle-netz.py [--zeige-c]
+    ./instrumente/zaehle-netz.py [--zeige-c]
 
 REGEL A UND REGEL B
 -------------------
@@ -32,7 +32,7 @@ import re
 import subprocess
 import sys
 
-W = pathlib.Path(__file__).resolve().parent
+W = pathlib.Path(__file__).resolve().parent.parent
 BIN = W / "target" / "debug" / "gabbro"
 QUELLE = W / "messung" / "netz" / "udp-echo.gab"
 FRIST = 120

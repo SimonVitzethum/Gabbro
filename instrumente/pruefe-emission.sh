@@ -26,7 +26,7 @@
 #      `linear ghost type`, und die Frage, die dieser Lauf beantwortet, lautet **was kostet
 #      die Phasendisziplin zur Laufzeit** -- Antwort: nichts.
 set -euo pipefail
-W="$(cd "$(dirname "$0")" && pwd)"
+W="$(cd "$(dirname "$0")/.." && pwd)"
 ARB="$(mktemp -d)"
 trap 'rm -rf "$ARB"' EXIT
 

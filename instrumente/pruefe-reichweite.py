@@ -37,7 +37,7 @@ import pathlib
 import re
 import sys
 
-WURZEL = pathlib.Path(__file__).resolve().parent
+WURZEL = pathlib.Path(__file__).resolve().parent.parent
 CHECK = WURZEL / "crates" / "gabbro-check" / "src"
 
 # Die Paesse in der Reihenfolge, in der `lib.rs::pruefe` sie faehrt.

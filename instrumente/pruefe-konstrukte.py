@@ -38,13 +38,13 @@ was ein Programm sein kann. Dagegen gehalten: greift irgendein Pass oder der Erz
 > nicht auf, weil ein Pass es anfasst. **Der Waechter verpflichtet, er spricht nicht frei** --
 > was er nennt, ist echt; was er nicht nennt, kann trotzdem wirkungslos sein (W10).
 
-    ./pruefe-konstrukte.py
+    ./instrumente/pruefe-konstrukte.py
 """
 import pathlib
 import re
 import sys
 
-W = pathlib.Path(__file__).resolve().parent
+W = pathlib.Path(__file__).resolve().parent.parent
 AST = W / "crates/gabbro-syntax/src/ast.rs"
 PRUEFER = W / "crates/gabbro-check/src"
 TRAGEND = {"emit.rs", "zeugnis.rs"}

@@ -22,16 +22,16 @@ liefert ein gruenes Nichts.
 **Die Quelle wird nur waehrend eines Laufs veraendert und danach byteweise
 wiederhergestellt** -- gegen Hash geprueft. Bei jedem Abbruch ebenso.
 
-    ./mutiere-pruefer.py              alle Mutationen
-    ./mutiere-pruefer.py --schnell    nur die Sprechprobe des Geruests
-    ./mutiere-pruefer.py --anker      nur der Ankerstand -- ohne Bau, ohne sauberen Baum
+    ./instrumente/mutiere-pruefer.py              alle Mutationen
+    ./instrumente/mutiere-pruefer.py --schnell    nur die Sprechprobe des Geruests
+    ./instrumente/mutiere-pruefer.py --anker      nur der Ankerstand -- ohne Bau, ohne sauberen Baum
 """
 import hashlib
 import pathlib
 import subprocess
 import sys
 
-WURZEL = pathlib.Path(__file__).resolve().parent
+WURZEL = pathlib.Path(__file__).resolve().parent.parent
 
 # **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
 # ein Befund -- am 2026-08-20 standen deswegen einundzwanzig Laeufe von

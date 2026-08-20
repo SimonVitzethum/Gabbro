@@ -11,15 +11,15 @@ Liste, die den Weg vorgibt, gar nichts.
 *Eine Liste, die nicht stimmt, kostet mehr als keine: sie sagt an jeder Stelle „das ist noch
 offen", und der Leser glaubt es.*
 
-    ./pruefe-todo.py            prueft
-    ./pruefe-todo.py --probe    nur die Sprechprobe des Waechters
+    ./instrumente/pruefe-todo.py            prueft
+    ./instrumente/pruefe-todo.py --probe    nur die Sprechprobe des Waechters
 """
 import pathlib
 import re
 import subprocess
 import sys
 
-WURZEL = pathlib.Path(__file__).resolve().parent
+WURZEL = pathlib.Path(__file__).resolve().parent.parent
 
 # **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
 # ein Befund -- am 2026-08-20 standen deswegen einundzwanzig Laeufe von
@@ -267,7 +267,7 @@ def heutige_zahlen():
     genaue Fall, fuer den dieser Waechter gebaut wurde -- und er hat ihn zwei Tage lang nicht
     gesehen.*
     """
-    r = subprocess.run(["./pruefe-syntax.sh"], cwd=WURZEL, capture_output=True, text=True, timeout=FRIST)
+    r = subprocess.run(["./instrumente/pruefe-syntax.sh"], cwd=WURZEL, capture_output=True, text=True, timeout=FRIST)
     aus = r.stdout
     regeln = re.search(r"EBNF: (\d+) Regeln", aus)
     terme = re.search(r"Wortschatz: (\d+) EBNF-Terminale, (\d+) Tabellenwoerter", aus)
@@ -282,7 +282,7 @@ def heutige_zahlen():
     # Kennzahlen … 173 fettgedruckte Zahlen" -- beide Zahlen standen seit Tagen still,
     # waehrend das Register auf 20 gewachsen war.* Genau die Klasse, gegen die dieser
     # Waechter gebaut ist, an der einen Zahl, die er nicht ansah.
-    z = subprocess.run(["./pruefe-zahlen.py"], cwd=WURZEL, capture_output=True, text=True,
+    z = subprocess.run(["./instrumente/pruefe-zahlen.py"], cwd=WURZEL, capture_output=True, text=True,
                        timeout=FRIST)
     m = re.search(r"(\d+) Kennzahlen mit Befehl, (\d+) fettgedruckte", z.stdout)
     k_heute, f_heute = (m.group(1), m.group(2)) if m else ("?", "?")
@@ -321,9 +321,9 @@ def pruefe_readme(text=None):
 
     n_bsp = len(list((WURZEL / "beispiele").glob("*.gab")))
     n_gift = len(list((WURZEL / "beispiele/gift").glob("*.gab")))
-    n_waechter = len(list(WURZEL.glob("pruefe-*.py"))) + len(list(WURZEL.glob("pruefe-*.sh")))
+    n_waechter = len(list(WURZEL.glob("instrumente/pruefe-*.py"))) + len(list(WURZEL.glob("instrumente/pruefe-*.sh")))
 
-    k = subprocess.run(["./pruefe-kennungen.py"], cwd=WURZEL, capture_output=True, text=True, timeout=FRIST)
+    k = subprocess.run(["./instrumente/pruefe-kennungen.py"], cwd=WURZEL, capture_output=True, text=True, timeout=FRIST)
     m = re.search(r"Kennungen: (\d+) vergeben", k.stdout)
     n_kenn = m.group(1) if m else "?"
 
@@ -335,7 +335,7 @@ def pruefe_readme(text=None):
     m = re.search(r"(\d+) templates, \d+ of them unproved, (\d+) machine-checked", s.stdout)
     n_schab, n_bew = (m.group(1), m.group(2)) if m else ("?", "?")
 
-    y = subprocess.run(["./pruefe-syntax.sh"], cwd=WURZEL, capture_output=True, text=True, timeout=FRIST)
+    y = subprocess.run(["./instrumente/pruefe-syntax.sh"], cwd=WURZEL, capture_output=True, text=True, timeout=FRIST)
     m = re.search(r"EBNF: (\d+) Regeln", y.stdout)
     n_regeln = m.group(1) if m else "?"
     m = re.search(r"Wortschatz: (\d+) EBNF-Terminale, (\d+) Tabellenwoerter", y.stdout)

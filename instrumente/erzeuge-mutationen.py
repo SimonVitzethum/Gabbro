@@ -10,7 +10,7 @@ Formklasse**, ohne zu wissen, welche Regel dort haengt.
 Commit `63fd2e0`. Zaehlregel, Kippregel und Tor stehen dort und werden hier nicht wiederholt,
 damit es keine zweite Fassung gibt, die jemand parallel zur Wahrheit fuehrt.
 
-Aufruf: `./erzeuge-mutationen.py [--stichprobe N] [--klasse VERGL,BOOL,…]`
+Aufruf: `./instrumente/erzeuge-mutationen.py [--stichprobe N] [--klasse VERGL,BOOL,…]`
 """
 import hashlib
 import pathlib
@@ -19,7 +19,7 @@ import re
 import subprocess
 import sys
 
-WURZEL = pathlib.Path(__file__).parent
+WURZEL = pathlib.Path(__file__).resolve().parent.parent
 CHECK = WURZEL / "crates/gabbro-check/src"
 ZEIT = 180
 

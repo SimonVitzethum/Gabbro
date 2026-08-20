@@ -4,7 +4,7 @@
 Von den vier Zielen hatte *„moeglichst gut nutzbar"* als einziges keine. Ohne eine ist es
 eine Meinung -- und *„keine Klempnerei beim Endnutzer"* ist eine Nutzbarkeitsaussage.
 
-    ./zaehle-zeremonie.py [--je-datei]
+    ./instrumente/zaehle-zeremonie.py [--je-datei]
 
 DIE ZWEI ACHSEN, UND WARUM SIE GETRENNT BLEIBEN
 -----------------------------------------------
@@ -34,7 +34,7 @@ import re
 import subprocess
 import sys
 
-W = pathlib.Path(__file__).resolve().parent
+W = pathlib.Path(__file__).resolve().parent.parent
 BIN = W / "target" / "debug" / "gabbro"
 FRIST = 300
 

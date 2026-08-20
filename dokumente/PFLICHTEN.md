@@ -433,7 +433,7 @@ carries and the Rust original did not — because it does not write them down.*
 > of it are the corpus's completeness, not Gabbro's coverage.*
 >
 > *The second corpus is where the number can go to zero, and it is the one no one looked at
-> while building.* `./zaehle-pflichten.py` counts it since 2026-08-20.
+> while building.* `./instrumente/zaehle-pflichten.py` counts it since 2026-08-20.
 >
 > ### And since 2026-08-20 the obligation has a corpus that CAN carry it
 >
@@ -443,7 +443,7 @@ carries and the Rust original did not — because it does not write them down.*
 > translated — and said so out loud.*
 >
 > ```
-> $ ./zaehle-fragmente.py
+> $ ./instrumente/zaehle-fragmente.py
 > 7 von 10 pruefen sauber        (over the excerpts: 5)
 > 4 von 10 senken ab             (over the excerpts: 3)
 > ```
@@ -485,7 +485,7 @@ carries and the Rust original did not — because it does not write them down.*
 | **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
 | **Plumbing (K)** | **171** | 72 % |
 | **Logic (L)** | **67** | 28 % |
-| **hanging** | **31** | of which **`H = 12` are K** — **5 anchored at a line, 7 lowerings** *(«B21», «H2.1», «H2.2» closed 2026-08-19; «B26»'s second half, «B33» and «B23» 2026-08-20)*. **All five remaining are NOTATION gaps: not one is a hand-written proof.** Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
+| **hanging** | **31** | of which **`H = 12` are K** — **5 anchored at a line, 7 lowerings** *(«B21», «H2.1», «H2.2» closed 2026-08-19; «B26»'s second half, «B33» and «B23» 2026-08-20)*. **All five remaining are NOTATION gaps: not one is a hand-written proof.** Every one a breach of the thesis at its site. *Read off with `./instrumente/zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
 **L : K = 0,38 : 1.**
@@ -505,7 +505,7 @@ Die sechs Zeilen tragen jetzt ihren Grund, und die Zahl wird nicht mehr fortgesc
 sondern **abgelesen**:
 
 ```
-./zaehle-pflichten.py --haengend
+./instrumente/zaehle-pflichten.py --haengend
 ```
 
 **Und die zweite Unstimmigkeit ist am 2026-08-20 aufgelöst — durch Streichen, nicht durch
@@ -516,7 +516,7 @@ Fußnoten der Fragmentabschnitte sagten ein Drittes.
 > **Drei Register über derselben Sache** (W7), und keins davon abgeleitet. *Eine Zahl, deren
 > Suchweg ihr widerspricht, ist schlimmer als eine ohne — sie sieht belegt aus.*
 
-Die beiden Spalten sind fort. **`./zaehle-pflichten.py --haengend` druckt sie jetzt je
+Die beiden Spalten sind fort. **`./instrumente/zaehle-pflichten.py --haengend` druckt sie jetzt je
 Fragment**, aus den `gap:`-Zeilen dieser Datei abgeleitet plus der einen bekannten
 Absenkungszeile (F1–F6 und F9 offen, F7/F8/F10 gemessen). *Was bleibt, ist der Handgang —
 `total`, `K`, `L` —, und der ist eine Auszählung und keine Summenpflege.*
@@ -539,7 +539,7 @@ Absenkungszeile (F1–F6 und F9 offen, F7/F8/F10 gemessen). *Was bleibt, ist der
 | | **238** | **171** | **67** |
 
 *Die hängenden Zahlen je Fragment stehen nicht mehr hier, sondern im Befehl:*
-`./zaehle-pflichten.py --haengend`.
+`./instrumente/zaehle-pflichten.py --haengend`.
 
 ## Die hängenden Klempnereipflichten — nachgezogen 2026-08-17, Posten für Posten
 
@@ -555,7 +555,7 @@ ausdrücklich verlangt hatte.
 | **«B26» — der Vorzustand einer `transition`** | *„ob `mirrors` auch den Vorzustand einer `transition` an `GCMD.TE` aus `GSTS.TES` bezieht, sagt `SYNTAX.md` nicht"* — **der Erzeuger beantwortet es mit ja und misst es**: `1 1 1 1`, und die zweite und vierte Zahl sind die Falle. *Die Antwort gehört jetzt in `SYNTAX.md`, nicht in den Erzeuger* |
 | **«B33» — die V-Regeln verengen keinen Registerort** | Der Ordner schrieb: *„Ob das Absicht ist (ein Register kann sich zwischen Prüfung und Rechnung ändern!) oder eine Lücke, entscheidet der Ordner. **Wenn es Absicht ist, gehört die Begründung aufgeschrieben** — sie wäre ein starkes Argument."* **Sie ist es, und sie steht jetzt im erzeugten C:** ein Registerzugriff wird `volatile`, und `volatile` IST die Aussage *„dieser Ort kann sich zwischen zwei Lesungen ändern"*. Eine Verengung wäre an dieser Stelle falsch, nicht bloß fehlend |
 
-### Offen — **`H = 12`**, abgelesen mit `./zaehle-pflichten.py --haengend` — und die Zahlenspalte ist am 2026-08-20 GESTRICHEN
+### Offen — **`H = 12`**, abgelesen mit `./instrumente/zaehle-pflichten.py --haengend` — und die Zahlenspalte ist am 2026-08-20 GESTRICHEN
 
 **Dieselbe Auflösung wie einen Abschnitt weiter oben, und aus demselben Grund.** Die Spalte
 `#`, die hier stand, war ein **viertes** Register neben dem Handgang, der Summenzeile und dem
@@ -565,12 +565,12 @@ Befehl:
 |---|---:|
 | die Überschrift sagte | **15** |
 | die Spalte darunter summierte sich zu | **17** |
-| `./zaehle-pflichten.py --haengend` sagt | **12** |
+| `./instrumente/zaehle-pflichten.py --haengend` sagt | **12** |
 
 > **Drei Zahlen über einer Sache — und die, die einen Suchweg nannte, war die falsche.** *Eine
 > Zahl, deren Suchweg ihr widerspricht, ist schlimmer als eine ohne: sie sieht belegt aus.*
 
-Gefunden am 2026-08-20 durch `./pruefe-zahlen.py`, das die Überschrift seither gegen den Befehl
+Gefunden am 2026-08-20 durch `./instrumente/pruefe-zahlen.py`, das die Überschrift seither gegen den Befehl
 hält. **Die Ursache ist nicht Nachlässigkeit, sondern Fortschreibung:** «B21», «B23», «B33» und
 «B26»s zweite Hälfte sind seit dem 2026-08-19 geschlossen, «B19»/«B38»/«B39» durch K100.2 in die
 Axiomschicht umgebucht — und jede Schließung wurde in der Summenzeile eingetragen und in dieser

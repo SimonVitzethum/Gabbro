@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """**Zahn 3: jede bewiesene Schablone bindet ihre Praemissen an einen Pass.**
 
-    ./pruefe-schablonen.py [--je-praemisse]
+    ./instrumente/pruefe-schablonen.py [--je-praemisse]
 
 DAS TOR UND DIE RATSCHE SIND ZWEI VERSCHIEDENE DINGE
 ----------------------------------------------------
@@ -36,7 +36,7 @@ import re
 import subprocess
 import sys
 
-W = pathlib.Path(__file__).resolve().parent
+W = pathlib.Path(__file__).resolve().parent.parent
 BIN = W / "target" / "debug" / "gabbro"
 FRIST = 60
 

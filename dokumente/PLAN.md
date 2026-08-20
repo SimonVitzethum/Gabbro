@@ -78,7 +78,7 @@ A plan made of constructs somebody considers good is a wish list. The constructs
 from the **base rate**: the 100 entries of the list "traps this project has already paid for".
 Every entry is classified individually in
 [`fallen-klassifikation.tsv`](../fallen-klassifikation.tsv); the numbers below are **derived** with
-`./zaehle-fallen.sh`, not written down beside them.
+`./instrumente/zaehle-fallen.sh`, not written down beside them.
 
 | Class | Share | means |
 |---|---|---|
@@ -849,7 +849,7 @@ An autonomous run without a named finish line is the same pattern with more thro
 
 | | Condition | checkable by | State |
 |---|---|---|---|
-| **A1** | The grammar is **closed**: no used, never defined non-terminal | `./pruefe-syntax.sh` | **satisfied** (100 rules, 0 open) |
+| **A1** | The grammar is **closed**: no used, never defined non-terminal | `./instrumente/pruefe-syntax.sh` | **satisfied** (100 rules, 0 open) |
 | **A2** | All open items are **decided or measured** | counting them out | **satisfied** — `SPRACHE.md` §18 decides F1–F9; what remains are measurements |
 | **A3** | **Every Caprock area has a verdict** — expressible / needs construct X / not expressible —, **each with a written-out fragment as evidence** | `FRAGMENTE.md` | **6 of 10** — scheduler, MMU, loader, parser/checkpoint are missing |
 | **A4** | The **logic/plumbing split** is measured on at least five fragments, and **no plumbing obligation is left hanging unnamed** | `BEWEIS.md` | **never measured** |
@@ -1334,7 +1334,7 @@ Die fünf oben, jede mit `assume … falsifier <sonde>` oder `unfalsifiable "<gr
 
 > **AUSGEFÜHRT 2026-08-17. `8 von 8`, und der Ertrag kam anders als geplant.** Fünf der acht
 > waren **bereits zu** — der Plan las den eingefrorenen Befundtext, nicht die Grammatik
-> (`./pruefe-notation.py` misst jetzt am Prüfer). Gebaut wurden «B22», «B14b» und «B7».
+> (`./instrumente/pruefe-notation.py` misst jetzt am Prüfer). Gebaut wurden «B22», «B14b» und «B7».
 >
 > **«B7» war die einzige echte Entscheidung, und sie war keine Notationsfrage:** ein
 > geschweiftes Literal wäre die erste Ausdrucksform, die mit `{` weitergeht, und an 76
@@ -1398,7 +1398,7 @@ K100.3 und den Entscheidungen, nicht mit Erzeugercode.*
 **Erreicht:**
 
 ```
-H = 0        über dem Fragmentkorpus, mit ./zaehle-pflichten.py neu abgeleitet
+H = 0        über dem Fragmentkorpus, mit ./instrumente/zaehle-pflichten.py neu abgeleitet
 L ≤ 4        lebend unbewiesene Schablonen
 A = 19       Annahmen, jede mit Sonde oder mit Grund
 ```
@@ -1471,7 +1471,7 @@ nachrechenbar, welcher Teil gemessen und welcher geschrieben ist.
 ### AUSGEFÜHRT 2026-08-20 — [`messung/fragmente/`](../messung/fragmente/)
 
 ```
-$ ./zaehle-fragmente.py
+$ ./instrumente/zaehle-fragmente.py
 7 von 10 prüfen sauber        (über den Ausschnitten: 5)
 4 von 10 senken ab            (über den Ausschnitten: 3)
 ```
@@ -2329,7 +2329,7 @@ Werkzeug.** Und die vierte Fundstelle ist teurer als die dritte, weil auf ihr da
 steht: die wertgetragenen Indextypen bauen auf `opaque`, die Bibliotheks-ABI baut auf
 `ensures`. *Den Boden reparieren, bevor das Stockwerk kommt, ist billiger als danach.*
 
-`./pruefe-klauseln.py` hält jedes `pub`-Feld jeder `pub struct` aus `ast.rs` — **die ganze
+`./instrumente/pruefe-klauseln.py` hält jedes `pub`-Feld jeder `pub struct` aus `ast.rs` — **die ganze
 Fläche, die der Leser füllt, ohne Auswahl** — gegen die Menge der Felder, auf die irgendein
 Pass zugreift. Die Leser zerfallen in zwei Lager, und die Trennung *ist* die Aussage: unter
 `gabbro-check/src` wird **geprüft**, in `emit.rs`/`zeugnis.rs`/`gabbro-cli` nur **abgesenkt und
@@ -3309,7 +3309,7 @@ irgendwann, eine fehlende nie.
 | | Zahl | Befehl | was es heißt |
 |---|---:|---|---|
 | **Erhaltungspflichten** | **3** | `gabbro pflichten` | `maintains I` ist auf Wohlgeformtheit geprüft; dass der Rumpf sie **einlöst**, prüft niemand |
-| **ZUSAGE ohne Leser** | **0** | `./pruefe-klauseln.py` | *stand als 13.* **Das ist das Tor von «NL» selbst, und es ist erreicht** — die Zahl fiel auf null, und die Tafel schrieb es nicht mit |
+| **ZUSAGE ohne Leser** | **0** | `./instrumente/pruefe-klauseln.py` | *stand als 13.* **Das ist das Tor von «NL» selbst, und es ist erreicht** — die Zahl fiel auf null, und die Tafel schrieb es nicht mit |
 | **Fremdpflichten** | **10** | `gabbro pflichten` | *stand als 8.* Annahmen über Rümpfe, die Gabbro nie sieht — **die Zahl ist GESTIEGEN**, mit dem Korpus |
 | **Vorbedingungen am Rufort** | **12** | `gabbro pflichten` | *neu am 2026-08-20, und sie stand vorher NIRGENDS.* `M115` weist ab, wo der Bereich des Arguments die Bedingung ausschliesst, und **schweigt sonst** — das ist der Preis dieses Schweigens, je Rufstelle gezählt |
 | **Prämissen ohne Pass** | **9** | `gabbro schablonen` | *stand als 7.* Ein Beweis, den nichts herstellt |
@@ -3317,7 +3317,7 @@ irgendwann, eine fehlende nie.
 
 > **Drei von fünf, und in beide Richtungen** — eine gefallen, eine gestiegen, eine
 > fortgeschrieben. *Eine Buchführung, die in beide Richtungen abweicht, veraltet; sie lügt
-> nicht.* Alle sechs stehen seit dem 2026-08-20 in `./pruefe-zahlen.py` und werden bei jedem
+> nicht.* Alle sechs stehen seit dem 2026-08-20 in `./instrumente/pruefe-zahlen.py` und werden bei jedem
 > Lauf neu abgeleitet. **`H = 15` im Kasten darüber war die vierte.**
 >
 > **Und die sechste Zeile ist die einzige, die nicht abwich, sondern fehlte.** Die
@@ -3334,7 +3334,7 @@ steht ohne Leser da.
 
 ```
 NL erreicht:
-  ./pruefe-klauseln.py        ZUSAGE = 0
+  ./instrumente/pruefe-klauseln.py        ZUSAGE = 0
   gabbro pflichten            Erhaltung = 0        (erzeugt statt bewiesen)
                               fremd nur mit AUSGESPROCHENER Pflicht
   gabbro schablonen           Praemissen ohne Pass = 0

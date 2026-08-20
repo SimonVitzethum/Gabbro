@@ -15,14 +15,14 @@ weitergegangen, der Befundtext nicht -- und die Messung hat den Befundtext geles
 Dieses Werkzeug liest den Gegenstand. Es schreibt je Luecke ein winziges Programm und fragt
 den Pruefer, ob es durchgeht.
 
-    ./pruefe-notation.py
+    ./instrumente/pruefe-notation.py
 """
 import pathlib
 import subprocess
 import sys
 import tempfile
 
-W = pathlib.Path(__file__).resolve().parent
+W = pathlib.Path(__file__).resolve().parent.parent
 
 # **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
 # ein Befund -- am 2026-08-20 standen deswegen einundzwanzig Laeufe von

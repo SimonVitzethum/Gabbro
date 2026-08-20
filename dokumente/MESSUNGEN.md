@@ -1495,7 +1495,7 @@ gap: *"There is no test whose failure means 'a real overflow was missed'."*
 got through — because a probe checks **the presence of an expected refusal** and not
 **whether a rule still bites at all**.
 
-`./mutiere-pruefer.py` asks exactly that question: it damages **one rule at a time** of the
+`./instrumente/mutiere-pruefer.py` asks exactly that question: it damages **one rule at a time** of the
 checker, runs the test suite and looks whether something falls.
 
 | | |
@@ -3786,7 +3786,7 @@ metric, 10 % is +0,5"*, hence surcharge = share · 5.
 ### The population
 
 ```
-./zaehle-b3.py ../caprock-messbasis
+./instrumente/zaehle-b3.py ../caprock-messbasis
 find kernel crates -name '*.rs' -exec cat {} + | wc -l              # 69 283 roh
 find kernel crates -name '*.rs' -exec cat {} + | grep -c '[^[:space:]]'   # 65 168 nicht leer
 ```
@@ -4024,7 +4024,7 @@ traversable.
 
 A caveat that couples a number to an **open decision** must quantify the affected
 subset — otherwise it is a warning without a price tag. **The tool has reported it
-since this booking** (`./zaehle-b3.py … ` → section *RUECKRECHNUNG*):
+since this booking** (`./instrumente/zaehle-b3.py … ` → section *RUECKRECHNUNG*):
 
 | | Bodies | Lines | Share | Surcharge | Gate (bar 5 %) |
 |---|---:|---:|---:|---:|---|
@@ -4082,8 +4082,8 @@ more valuable one.
 ### Check path
 
 ```
-./zaehle-b3.py ../caprock-messbasis                 # 26 Ruempfe, 621 Z, 0,953 % / 0,961 %
-./zaehle-b3.py ../caprock-messbasis --json=b3.json  # Marken + Belege je Rumpf
+./instrumente/zaehle-b3.py ../caprock-messbasis                 # 26 Ruempfe, 621 Z, 0,953 % / 0,961 %
+./instrumente/zaehle-b3.py ../caprock-messbasis --json=b3.json  # Marken + Belege je Rumpf
 cd ../caprock-messbasis
 grep -rniE 'fastpath|fast_path' --include=*.rs kernel crates              # 12
 grep -rnE '\.(next|prev|first_child|next_sibling|prev_sibling|head|tail|link|sibling|parent|qnext|qprev)\s*=[^=]' \
@@ -4092,7 +4092,7 @@ find kernel crates -name '*.rs' -exec cat {} + | grep -c '[^[:space:]]'   # 65 1
 git status --porcelain | wc -l                                            # 0 — nur gelesen
 ```
 
-Tool: [`zaehle-b3.py`](../zaehle-b3.py), markers and exceptions in the header comment and
+Tool: [`zaehle-b3.py`](../instrumente/zaehle-b3.py), markers and exceptions in the header comment and
 in the regexes `KETTE`/`IDXKETTE`/`KANTENKETTE`/`CHIR`/`DOM_LINK_ABSTIEG`.
 
 ---
@@ -6451,7 +6451,7 @@ Variable, und keine Regel verbindet sie mit der Domäne, über der ihre Schleife
 
 # K100.3 — und der Ertrag ist eine BERICHTIGUNG, kein Bau
 
-**`./pruefe-notation.py` — 6 von 8 geschlossen** *(Stand dieses Abschnitts; seit «B22», «B14b» und «B7» sind es **8 von 8**)*. Von den sieben Notationslücken, die
+**`./instrumente/pruefe-notation.py` — 6 von 8 geschlossen** *(Stand dieses Abschnitts; seit «B22», «B14b» und «B7» sind es **8 von 8**)*. Von den sieben Notationslücken, die
 `PFLICHTEN.md` als hängende Klempnereipflichten führte, waren **fünf bereits zu**, bevor ich
 eine Zeile schrieb.
 
@@ -6630,7 +6630,7 @@ umgebucht, drei von K100.2 in die Axiomschicht, eine durch «B22».
 > **W7 sagt: eine Zahl ohne Suchweg gehört nicht in den Ordner.** *Eine Zahl, deren Suchweg ihr
 > widerspricht, ist schlimmer — sie sieht belegt aus.*
 
-`./zaehle-pflichten.py --haengend` liest sie jetzt ab statt sie fortzuschreiben:
+`./instrumente/zaehle-pflichten.py --haengend` liest sie jetzt ab statt sie fortzuschreiben:
 
 ```
   verankert        14
@@ -6711,7 +6711,7 @@ sondern eine Bauschuld** — und sie steht in `PFLICHTEN.md` als sieben von 21 h
 
 ### 3. Vierzehn Pflichten hängen, weil die SPRACHE sie nicht sagen kann
 
-`./zaehle-pflichten.py --haengend` liest sie ab. **Kein Beweis über Gabbros Implementierung
+`./instrumente/zaehle-pflichten.py --haengend` liest sie ab. **Kein Beweis über Gabbros Implementierung
 schliesst eine davon** — sie sind Aussagen darüber, was sich hinschreiben lässt:
 
 | | # |
@@ -7015,7 +7015,7 @@ eigenen Korpus zerlegt, ist ein Befund und keine Regel.*
 ## Stand
 
 ```
-H = 21 → 19        ./zaehle-pflichten.py --haengend
+H = 21 → 19        ./instrumente/zaehle-pflichten.py --haengend
 Pässe              10 aus SPRACHE.md + 1 aus «B37»
 Absagecodes        100, davon O001–O005 neu
 Korpus             23 saubere Beispiele, 73 Giftproben
@@ -7207,7 +7207,7 @@ Schablonen           20, davon 6 bewiesen
 
 ## I. Der Klauselwächter: die Klasse ist 48 groß, nicht 4
 
-`./pruefe-klauseln.py`, 131 Feldnamen aus `ast.rs` gegen 23 Leserdateien:
+`./instrumente/pruefe-klauseln.py`, 131 Feldnamen aus `ast.rs` gegen 23 Leserdateien:
 
 | | | |
 |---|---|---|
@@ -7598,8 +7598,8 @@ ist.*
 
 | stand | ist | Quelle |
 |---|---|---|
-| 90 diagnostics | **124** | `./pruefe-kennungen.py` |
-| 130 EBNF rules | **139** | `./pruefe-syntax.sh` |
+| 90 diagnostics | **124** | `./instrumente/pruefe-kennungen.py` |
+| 130 EBNF rules | **139** | `./instrumente/pruefe-syntax.sh` |
 | 195 / 195 terminals | **206 / 206** | dasselbe |
 | 19 templates, 4 machine-checked | **20, 9** | `gabbro schablonen` |
 | 8 guardians | **10** | `ls pruefe-*` |
@@ -8304,7 +8304,7 @@ Dateien `FSTS`.*
 
 ## Der Nebenbefund: ein Zähler bricht ab, und niemand merkt es
 
-`./zaehle-pflichten.py` **ohne** `--haengend` meldet seit mindestens dem 2026-08-18:
+`./instrumente/zaehle-pflichten.py` **ohne** `--haengend` meldet seit mindestens dem 2026-08-18:
 
 ```
 ABBRUCH: 15 Bloecke statt 10 -- die Grundgesamtheit hat sich bewegt
@@ -9579,7 +9579,7 @@ weiter wie Deckung.
 Sechs der toten Anker hatte der Umbau desselben Tages gerissen (`aufrufgraph::gehe`). *Ein
 Katalog, der beim Umbau verwittert, misst am lautesten dort, wo sich nichts mehr bewegt.*
 
-Der Riegel dagegen kostet keinen Bau: `./mutiere-pruefer.py --anker` ist reines Textzählen,
+Der Riegel dagegen kostet keinen Bau: `./instrumente/mutiere-pruefer.py --anker` ist reines Textzählen,
 mit Sprechprobe in beide Richtungen, und der volle Lauf **fällt** jetzt an einem toten Anker,
 statt ihn zu erwähnen.
 
@@ -11204,7 +11204,7 @@ zu geben. Alle drei stehen in `TODO.md`.
 
 # 2026-08-20, Stufe 0 — zweiter Durchgang: elf Zahlen und eine AUSNAHMELISTE
 
-**Der Gegenstand.** Das Zahlenregister (`./pruefe-zahlen.py`) wuchs von 12 auf **39 Einträge**,
+**Der Gegenstand.** Das Zahlenregister (`./instrumente/pruefe-zahlen.py`) wuchs von 12 auf **39 Einträge**,
 gewählt nach `--reichweite` (Traglast zuerst, nicht Aufwand). Die unbewachten fettgedruckten
 Zahlen fallen von **156 auf 140**, die **tragenden von 42 auf 36**.
 
@@ -11215,22 +11215,22 @@ Zahlen fallen von **156 auf 140**, die **tragenden von 42 auf 36**.
 | `H` in der Postenliste | 15 | **12** | `PFLICHTEN.md` | `zaehle-pflichten.py --haengend` |
 | `H` im «NL»-Kasten | 15 | **12** | `PLAN.md` | dito |
 | Prämissen ohne Pass | 7 | **9** | `PLAN.md`, «NL» | `gabbro schablonen` |
-| **ZUSAGE ohne Leser** | 13 | **0** | `PLAN.md`, «NL» | `./pruefe-klauseln.py` |
+| **ZUSAGE ohne Leser** | 13 | **0** | `PLAN.md`, «NL» | `./instrumente/pruefe-klauseln.py` |
 | Fremdpflichten | 8 | **10** | `PLAN.md`, «NL» | `gabbro pflichten` |
-| Absagen mit tragendem Grund | 96 | **98** | `TODO.md` | `./pruefe-gruende.py` |
-| gelesene Item-Arten | 21/23 | **23/23** | `TODO.md` | `./pruefe-konstrukte.py` |
+| Absagen mit tragendem Grund | 96 | **98** | `TODO.md` | `./instrumente/pruefe-gruende.py` |
+| gelesene Item-Arten | 21/23 | **23/23** | `TODO.md` | `./instrumente/pruefe-konstrukte.py` |
 | Schablonen / davon unbewiesen | 20 / 15 | **21 / 11** | `TODO.md` | `gabbro schablonen` |
-| Widerrufe | 7 | **9** | `TODO.md` | `./pruefe-widerruf.py` |
-| direkte Blicke auf die Karten | 13 | **35** | `TODO.md` | `./zaehle-karten.py` (neu) |
+| Widerrufe | 7 | **9** | `TODO.md` | `./instrumente/pruefe-widerruf.py` |
+| direkte Blicke auf die Karten | 13 | **35** | `TODO.md` | `./instrumente/zaehle-karten.py` (neu) |
 | blinde Zellen | 79 / 166 / 25 | **80 / 164 / 26** | `README.md` | `gabbro blindstellen` |
-| emittierende Beispiele | 43 | **45** | `README.md` | `./pruefe-emission.sh` |
+| emittierende Beispiele | 43 | **45** | `README.md` | `./instrumente/pruefe-emission.sh` |
 
 **Vier gefallen, sieben gestiegen — die Richtungsmischung ist wieder die Diagnose.** Eine
 Buchführung, die nur schönte, wäre Selbstbetrug; eine, die in beide Richtungen abweicht,
 **veraltet**. *Dagegen hilft kein Misstrauen, sondern ein Befehl.*
 
 **Die schärfste Einzelstelle ist `ZUSAGE ohne Leser`.** Sie stand als 13; der Zielkasten drei
-Zeilen darunter nennt als Tor von «NL» wörtlich `./pruefe-klauseln.py ZUSAGE = 0`, und das
+Zeilen darunter nennt als Tor von «NL» wörtlich `./instrumente/pruefe-klauseln.py ZUSAGE = 0`, und das
 Werkzeug sagt **0**. *Ein Tor, dessen Erreichen niemand mitschreibt, ist von einem
 unerreichten nicht zu unterscheiden.*
 
@@ -11257,12 +11257,12 @@ Zahl, die niemand nachrechnet — nur teurer** (W17, neuer Abschnitt).
 
 ## Zwei neue Zähler
 
-**`./zaehle-karten.py`** — 16 Karten in `umgebung.rs`, 12 davon öffentlich, 26 Passdateien:
+**`./instrumente/zaehle-karten.py`** — 16 Karten in `umgebung.rs`, 12 davon öffentlich, 26 Passdateien:
 **35 direkte Blicke** (`.get(` und `.contains_key(`), davon 4 in einer Kandidatenschleife,
 **31 unqualifiziert**. Die alte Zahl 13 kannte `.contains_key(` nicht — *ein Werkzeug, das
 eine der beiden Formen nicht liest, misst seine eigene Leseweite* (W16).
 
-**`./zaehle-theorien.py`** — 13 Theorien, 2 317 Zeilen, 70 Sätze, 429 Beweisschritte:
+**`./instrumente/zaehle-theorien.py`** — 13 Theorien, 2 317 Zeilen, 70 Sätze, 429 Beweisschritte:
 
 | | Zeilen | Anteil |
 |---|---:|---:|
@@ -11377,7 +11377,7 @@ Anweisungsarten — dort konnte die Lücke nicht auffallen.*
 ```
 gabbro pflichten beispiele/*.gab   32 Pflichten: 3 Erhaltung, 7 Nachbedingung,
                                    10 Fremdpflicht, 12 VORBEDINGUNG am Rufort
-./zaehle-theorien.py               13 Theorien, 2 ohne Register
+./instrumente/zaehle-theorien.py               13 Theorien, 2 ohne Register
 ```
 
 **Die Vorbedingung am Rufort.** `M115` weist ab, wo der Bereich des Arguments die Bedingung
@@ -11386,10 +11386,10 @@ nirgends stand, war die Gegenseite:* **12 Rufstellen** tragen eine Bedingung, di
 herstellen müsste und die niemand nachhält. `gabbro pflichten` zählte Pflichten, die eine
 DEKLARATION erzeugt, und keine, die ein RUF erbt. **Ein Preis, den kein Werkzeug nennt, sieht
 aus wie null.** Die Spalte `V` steht neben `E`/`N`/`F` und nicht in ihnen; die Summe wird von
-`./pruefe-zahlen.py` gegen `dokumente/PLAN.md` neu abgeleitet.
+`./instrumente/pruefe-zahlen.py` gegen `dokumente/PLAN.md` neu abgeleitet.
 
 **Die zweite Vertrauensfläche.** `Intervall_Aussen.thy` handelt vom PRÜFER, und dafür gibt es
-kein Register — das stand seit dem 2026-08-18 als Prosa. `./zaehle-theorien.py` hält jetzt
+kein Register — das stand seit dem 2026-08-18 als Prosa. `./instrumente/zaehle-theorien.py` hält jetzt
 jede `.thy` gegen `schablonen.rs`. **Der zweite Fund war neu:** `Table_Induktion.thy` IST eine
 Schablone (`S7`, bewiesen), und der Registereintrag nennt seine Datei nicht — *die andere
 Richtung derselben Lücke: nicht die Fläche fehlt, sondern die Zeile, die sie verknüpft.*

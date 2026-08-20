@@ -5,7 +5,7 @@
 nicht gegen eigene Pakete.
 
 ```
-$ ./zaehle-netz.py
+$ ./instrumente/zaehle-netz.py
 ok   ohne   Gabbro b861  Gegenrechnung b861   IPv4-Kopf, Feld genullt (RFC 791)
 ok   mit    Gabbro 0000  Gegenrechnung 0000   derselbe Kopf MIT der Summe — muss 0 sein
 ok   summe  Gabbro ddf2  Gegenrechnung ddf2   RFC 1071, Abschnitt 3: die Summe

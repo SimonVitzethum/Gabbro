@@ -23,7 +23,7 @@ Werkzeug. **Und die vierte Fundstelle ist teurer als die dritte**, weil auf ihr 
 etwas steht: wertgetragene Indextypen bauen auf `opaque`, die Bibliotheks-ABI baut auf
 `ensures`. *Den Boden reparieren, bevor das Stockwerk kommt, ist billiger als danach.*
 
-    ./pruefe-klauseln.py            -- Bericht, Ausgang 1 bei einer NEUEN Fundstelle
+    ./instrumente/pruefe-klauseln.py            -- Bericht, Ausgang 1 bei einer NEUEN Fundstelle
 
 DAS MASS
 --------
@@ -54,7 +54,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-W = Path(__file__).resolve().parent
+W = Path(__file__).resolve().parent.parent
 AST = W / "crates/gabbro-syntax/src/ast.rs"
 PRUEFER = W / "crates/gabbro-check/src"
 # **`zeremonie.rs` gehoert hierher und nicht zu den Paessen** (2026-08-20). Es BERICHTET

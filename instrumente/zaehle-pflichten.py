@@ -16,15 +16,15 @@ Also die Arbeitsteilung, und sie steht so im VORAB:
 Beide Zahlen werden berichtet. Die Differenz ist keine Panne, sondern das Mass dafuer,
 wieviel an dieser Messung Urteil ist -- und die gehoert sichtbar, nicht verrechnet.
 
-    ./zaehle-pflichten.py              -- die Uebersicht je Fragment
-    ./zaehle-pflichten.py --zeilen     -- jede Kandidatenzeile mit FRAGMENTE.md:NNN
-    ./zaehle-pflichten.py --fragment 1 -- nur F1
+    ./instrumente/zaehle-pflichten.py              -- die Uebersicht je Fragment
+    ./instrumente/zaehle-pflichten.py --zeilen     -- jede Kandidatenzeile mit FRAGMENTE.md:NNN
+    ./instrumente/zaehle-pflichten.py --fragment 1 -- nur F1
 """
 import re
 import sys
 from pathlib import Path
 
-QUELLE = Path(__file__).parent / "dokumente" / "FRAGMENTE.md"
+QUELLE = Path(__file__).resolve().parent.parent / "dokumente" / "FRAGMENTE.md"
 
 # Die Ereignisse aus dem VORAB. A bis G sind zeilenweise erkennbar, H ist eine je
 # Fragment und steht darum nicht in dieser Tabelle.
@@ -132,7 +132,7 @@ def main():
     #
     # Bis heute stand hier `len(alle) != 10 -> ABBRUCH`, und seit «F0» und «K2» sind es
     # fuenfzehn. **Damit verweigerte genau das Werkzeug die Ableitung, auf dem K100s erstes
-    # Tor definiert ist** (*„`H = 0` ueber dem Fragmentkorpus, mit `./zaehle-pflichten.py`
+    # Tor definiert ist** (*„`H = 0` ueber dem Fragmentkorpus, mit `./instrumente/zaehle-pflichten.py`
     # neu abgeleitet"*) -- und `--haengend`, der Modus, der noch antwortete, laeuft VOR
     # dieser Stelle und liest eine handgepflegte Tabelle.
     #
@@ -221,7 +221,7 @@ def haengend(probe=None, still=False):
     > SIEHT belegt aus.
     """
     import re
-    quelle = Path(__file__).parent / "dokumente" / "PFLICHTEN.md"
+    quelle = Path(__file__).resolve().parent.parent / "dokumente" / "PFLICHTEN.md"
     text = quelle.read_text(encoding="utf-8")
     if probe is not None:
         text = text.replace(probe[0], probe[1], 1)

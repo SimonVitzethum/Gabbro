@@ -19,7 +19,7 @@ eine Zeile.
 uebersetzt -- und ausdruecklich gesagt.** Je Datei steht im Kopf, was ergaenzt wurde und was
 nicht, und dieser Zaehler haelt die Zahlen dagegen.
 
-    ./zaehle-fragmente.py [--je-datei]
+    ./instrumente/zaehle-fragmente.py [--je-datei]
 
 **Und was das NICHT heisst:** eine Datei, die sauber prueft, ist nicht abgesenkt; eine, die
 absenkt, ist nicht ausgefuehrt. Die drei Zahlen sind drei verschiedene Aussagen, und sie
@@ -30,7 +30,7 @@ import re
 import subprocess
 import sys
 
-W = pathlib.Path(__file__).resolve().parent
+W = pathlib.Path(__file__).resolve().parent.parent
 KORPUS = W / "messung" / "fragmente"
 FRIST = 300
 BIN = W / "target" / "debug" / "gabbro"

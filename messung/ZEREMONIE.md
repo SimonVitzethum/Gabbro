@@ -4,7 +4,7 @@
 es eine Meinung — und *„keine Klempnerei beim Endnutzer"* ist eine Nutzbarkeitsaussage.
 
 ```
-$ ./zaehle-zeremonie.py
+$ ./instrumente/zaehle-zeremonie.py
 53 Dateien gemessen, 4 abgelehnt
   ableitbar       51        A1  4 · A4 47
   redundant        0

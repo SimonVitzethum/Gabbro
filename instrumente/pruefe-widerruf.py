@@ -25,13 +25,13 @@ widerrufenen Satz ZITIEREN kann.
 **Und die Grenze, damit die Zahl nicht mehr verspricht als sie misst:** der Waechter findet
 nur, was jemand als widerrufen aufgeschrieben hat. *Er ist ein Gedaechtnis, kein Urteil.*
 
-    ./pruefe-widerruf.py
+    ./instrumente/pruefe-widerruf.py
 """
 import pathlib
 import re
 import sys
 
-W = pathlib.Path(__file__).resolve().parent
+W = pathlib.Path(__file__).resolve().parent.parent
 
 # Je Eintrag vier Felder, und ohne alle vier wird er nicht angenommen (ZAHN 1):
 #   muster  was nicht mehr dastehen darf

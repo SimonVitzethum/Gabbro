@@ -45,13 +45,13 @@ zusammen** -- und im Quelltext sieht die Zeile vollkommen normal aus.
 *Am 2026-08-20 fand diese Probe bei ihrem ersten Lauf **16 solche Nahtstellen**, ein Jahr
 nachdem die 161 von Hand geflickt worden waren.* **Von Hand geflickt heisst: nicht bewacht.**
 
-    ./pruefe-englisch.py
+    ./instrumente/pruefe-englisch.py
 """
 import pathlib
 import re
 import sys
 
-W = pathlib.Path(__file__).resolve().parent
+W = pathlib.Path(__file__).resolve().parent.parent
 QUELLEN = sorted((W / "crates" / "gabbro-check" / "src").glob("*.rs")) + [
     W / "crates" / "gabbro-cli" / "src" / "main.rs",
 ]

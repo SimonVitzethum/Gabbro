@@ -683,7 +683,7 @@ einen Gegenstand außerhalb seiner selbst.
 Der Riegel suchte den **Namen** des Werkzeugs im Befehl eines Eintrags. Das fängt den Ring der
 Länge eins und **keinen längeren** — und einer der Länge zwei lag unmittelbar bereit:
 
-> `pruefe-zahlen.py` → `./pruefe-waechter.py --lauf` → *jeder leichte Wächter* → `pruefe-zahlen.py`
+> `pruefe-zahlen.py` → `./instrumente/pruefe-waechter.py --lauf` → *jeder leichte Wächter* → `pruefe-zahlen.py`
 
 **Ein einziger Registereintrag mit `--lauf` hätte den Ring geschlossen**, und der Namensriegel
 hätte ihn durchgelassen: im Befehl steht `pruefe-waechter.py` und nicht `pruefe-zahlen.py`.
@@ -769,7 +769,7 @@ geschriebene Probe aus.
 
 ## W21 — Ein Wächter, dessen Gegenstand woanders liegt, misst den Rechner
 
-**Der Fall.** Am 2026-08-20 war `./pruefe-waechter.py --lauf` auf dem Arbeitsrechner **grün**
+**Der Fall.** Am 2026-08-20 war `./instrumente/pruefe-waechter.py --lauf` auf dem Arbeitsrechner **grün**
 und auf `ki-pc-fisch-101` **rot** — bei byteidentischen Quellen. Der rote Posten war
 `zaehle-narrow.py` mit Rücklaufwert 2, danebengestellt als *„!! OHNE ARBEITSMENGE"*.
 

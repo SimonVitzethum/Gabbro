@@ -16,7 +16,7 @@ geschrieben haette, sondern weil `.contains_key(` denselben Blick tut und nie mi
 wurde -- *eine Zaehlung, die eine der beiden Formen nicht kennt, misst ihre eigene Leseweite*
 (W16).
 
-    ./zaehle-karten.py [--stellen]
+    ./instrumente/zaehle-karten.py [--stellen]
 
 DAS MASS
 --------
@@ -36,7 +36,7 @@ import pathlib
 import re
 import sys
 
-W = pathlib.Path(__file__).resolve().parent
+W = pathlib.Path(__file__).resolve().parent.parent
 SRC = W / "crates" / "gabbro-check" / "src"
 
 # **Die gebuchte Marke.** Eine Ratsche, keine Zielzahl: sie darf fallen, nicht steigen. Ein

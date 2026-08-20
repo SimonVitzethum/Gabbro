@@ -20,7 +20,7 @@ kein Misstrauen, sondern ein Befehl, der die Zahl neu ableitet.*
 Dieses Werkzeug ist das Register dieser Befehle. Je Eintrag: die Datei, das Muster, unter dem
 die Zahl dort steht, der Befehl und der Auszug daraus. Weicht eines ab, faellt es hier.
 
-    ./pruefe-zahlen.py [--reichweite]
+    ./instrumente/pruefe-zahlen.py [--reichweite]
 
 **Und die zweite Haelfte, ohne die die erste sich selbst lobt:** das Werkzeug zaehlt die
 Kennzahlen, die es NICHT bewacht. Eine fettgedruckte Zahl in einer Tabellenzelle ist die
@@ -33,7 +33,7 @@ derselben Sache sind W7; dies hier nennt das andere, statt es zu verdoppeln.
 
 **Der Fixpunktriegel reichte einen Schritt weit -- nachgezogen 2026-08-20.** W18 verbietet
 einen Eintrag, dessen Befehl dieses Werkzeug NENNT. Der Ring der Laenge ZWEI lag daneben und
-offen: `./pruefe-waechter.py --lauf` fuehrt jeden leichten Waechter aus, und dieser hier ist
+offen: `./instrumente/pruefe-waechter.py --lauf` fuehrt jeden leichten Waechter aus, und dieser hier ist
 einer davon -- ein einziger Eintrag mit `--lauf` haette den Ring geschlossen, und der
 Namensriegel haette ihn durchgelassen. *Seit heute haengt der Riegel an einer Marke in der
 Prozessumgebung: sie wird an jeden Registerbefehl vererbt, und wer sie beim Start vorfindet,
@@ -46,7 +46,7 @@ import re
 import subprocess
 import sys
 
-W = pathlib.Path(__file__).resolve().parent
+W = pathlib.Path(__file__).resolve().parent.parent
 FRIST = 180  # Sekunden je Befehl. Ein Waechter ohne Frist meldet einen Haenger als „laeuft".
 
 # **Die Pflichten summiert -- `gabbro pflichten` druckt sie JE DATEI.** Eine Zahl ueber dem
@@ -65,84 +65,84 @@ EINTRAEGE = [
     (
         "messung/fragmente/README.md",
         r"(\d+) von 10 prüfen sauber",
-        ["./zaehle-fragmente.py"],
+        ["./instrumente/zaehle-fragmente.py"],
         r"^  (\d+) von 10 pruefen sauber",
         "vervollstaendigte Fragmente, die sauber pruefen",
     ),
     (
         "messung/fragmente/README.md",
         r"(\d+) von 10 senken ab",
-        ["./zaehle-fragmente.py"],
+        ["./instrumente/zaehle-fragmente.py"],
         r"^  (\d+) von 10 senken ab",
         "vervollstaendigte Fragmente, die absenken",
     ),
     (
         "TODO.md",
         r"Marke (\d+) — eine Ratsche, keine Zielzahl · 0 ohne Adresse",
-        ["./pruefe-schablonen.py"],
+        ["./instrumente/pruefe-schablonen.py"],
         r"^   Marke (\d+) -- eine Ratsche",
         "Zahn 3 -- Praemissen bewiesener Schablonen ohne Pass",
     ),
     (
         "messung/netz/README.md",
         r"(\d+) von 3 Proben grün",
-        ["./zaehle-netz.py"],
+        ["./instrumente/zaehle-netz.py"],
         r"^== (\d+) von 3 Proben gruen ==",
         "Netzstack gegen veroeffentlichte Vektoren",
     ),
     (
         "README.md",
         r"may fall\*\* — (\d+) and \d+ clause sites",
-        ["./zaehle-zeremonie.py"],
+        ["./instrumente/zaehle-zeremonie.py"],
         r"^  \d+ von (\d+) Stellen duerfen sinken",
         "Zeremoniestellen des Lehrkorpus, in der Kennzahlentafel",
     ),
     (
         "README.md",
         r"may fall\*\* — \d+ and (\d+) clause sites",
-        ["./zaehle-zeremonie.py"],
+        ["./instrumente/zaehle-zeremonie.py"],
         r"^  echter Code: \d+ von (\d+) Stellen duerfen sinken",
         "Zeremoniestellen des echten Codes, in der Kennzahlentafel",
     ),
     (
         "messung/ZEREMONIE.md",
         r"\| \*\*echter Code\*\* .*?\| (\d+) von 109",
-        ["./zaehle-zeremonie.py"],
+        ["./instrumente/zaehle-zeremonie.py"],
         r"^  echter Code: (\d+) von \d+ Stellen duerfen sinken",
         "Zeremoniestellen im ECHTEN Code, die sinken duerfen",
     ),
     (
         "messung/ZEREMONIE.md",
         r"(\d+) von \d+ Stellen dürfen sinken",
-        ["./zaehle-zeremonie.py"],
+        ["./instrumente/zaehle-zeremonie.py"],
         r"^  (\d+) von \d+ Stellen duerfen sinken",
         "Zeremoniestellen, die sinken duerfen -- Ziel 3",
     ),
     (
         "messung/ZEREMONIE.md",
         r"\d+ von (\d+) Stellen dürfen sinken",
-        ["./zaehle-zeremonie.py"],
+        ["./instrumente/zaehle-zeremonie.py"],
         r"^  \d+ von (\d+) Stellen duerfen sinken",
         "Zeremoniestellen insgesamt -- das N zur Quote (W11)",
     ),
     (
         "messung/ZEREMONIE.md",
         r"\*\*(\d+) Regeln, 14 vom Korpus",
-        ["./zaehle-zeremonie.py"],
+        ["./instrumente/zaehle-zeremonie.py"],
         r"^  (\d+) Regeln in der Tafel",
         "Regeln der Kalibriertafel -- jede mit Grund",
     ),
     (
         "dokumente/PFLICHTEN.md",
         r"of which \*\*`H = (\d+)` are K\*\*",
-        ["./zaehle-pflichten.py", "--haengend"],
+        ["./instrumente/zaehle-pflichten.py", "--haengend"],
         r"^\s+H\s+(\d+)\s*$",
         "H -- haengende Klempnereipflichten",
     ),
     (
         "dokumente/PLAN.md",
         r"\| `H` \| 0 \| \*\*(\d+)\*\*",
-        ["./zaehle-pflichten.py", "--haengend"],
+        ["./instrumente/zaehle-pflichten.py", "--haengend"],
         r"^\s+H\s+(\d+)\s*$",
         "H in der K100-Statustafel",
     ),
@@ -170,28 +170,28 @@ EINTRAEGE = [
     (
         "dokumente/MESSUNGEN.md",
         r"`N_folgenlos` — ein `narrow`, dessen Entfernung nichts ändert, ist Zierde\. Heute\n> \*\*(\d+)\*\*",
-        ["./zaehle-bereichspflichten.py"],
+        ["./instrumente/zaehle-bereichspflichten.py"],
         r"N_folgenlos = (\d+)",
         "N_folgenlos -- folgenlose `narrow`-Stellen",
     ),
     (
         "README.md",
         r"\*\*(\d+) of \d+ instruments carry all four requirements\*\*",
-        ["./pruefe-waechter.py"],
+        ["./instrumente/pruefe-waechter.py"],
         r"== (\d+) von \d+ tragen die drei STATISCHEN ==",
         "Instrumente mit Frist, Sprechprobe und rotem Abbruch",
     ),
     (
         "README.md",
         r"of (\d+) instruments carry all four",
-        ["./pruefe-waechter.py"],
+        ["./instrumente/pruefe-waechter.py"],
         r"von (\d+) tragen die drei STATISCHEN",
         "Instrumente insgesamt",
     ),
     (
         "TODO.md",
         r"heute (\d+) Codes, null Sätze",
-        ["./pruefe-kennungen.py"],
+        ["./instrumente/pruefe-kennungen.py"],
         r"Kennungen: (\d+) vergeben",
         "Absagekennungen",
     ),
@@ -235,21 +235,21 @@ EINTRAEGE = [
     (
         "dokumente/PFLICHTEN.md",
         r"### Offen — \*\*`H = (\d+)`\*\*",
-        ["./zaehle-pflichten.py", "--haengend"],
+        ["./instrumente/zaehle-pflichten.py", "--haengend"],
         r"^\s+H\s+(\d+)\s*$",
         "H in der Postenliste (die UEBERSCHRIFT, nicht die Summenzeile)",
     ),
     (
         "dokumente/PFLICHTEN.md",
         r"\*\*(\d+) anchored at a line, \d+ lowerings\*\*",
-        ["./zaehle-pflichten.py", "--haengend"],
+        ["./instrumente/zaehle-pflichten.py", "--haengend"],
         r"^\s+verankert\s+(\d+)\s*$",
         "haengende Pflichten, an einer Zeile verankert",
     ),
     (
         "dokumente/PFLICHTEN.md",
         r"\*\*\d+ anchored at a line, (\d+) lowerings\*\*",
-        ["./zaehle-pflichten.py", "--haengend"],
+        ["./instrumente/zaehle-pflichten.py", "--haengend"],
         r"^\s+Absenkung\s+(\d+)\s",
         "haengende Pflichten, die an der Absenkung haengen",
     ),
@@ -263,49 +263,49 @@ EINTRAEGE = [
     (
         "TODO.md",
         r"(\d+) sind tragend, \d+ verdächtig",
-        ["./pruefe-gruende.py"],
+        ["./instrumente/pruefe-gruende.py"],
         r"\d+ verdaechtig · (\d+) tragend",
         "Absagen, deren Text den tragenden Grund nennt",
     ),
     (
         "TODO.md",
         r"\d+ sind tragend, (\d+) verdächtig",
-        ["./pruefe-gruende.py"],
+        ["./instrumente/pruefe-gruende.py"],
         r"^\s+(\d+) verdaechtig ·",
         "Absagen, die sich ueber die DARSTELLUNG begruenden",
     ),
     (
         "TODO.md",
         r"\*\*(\d+) Absagetexte sagen ihren Grund in KEINER der beiden Sprachen\*\*",
-        ["./pruefe-gruende.py"],
+        ["./instrumente/pruefe-gruende.py"],
         r"· (\d+) unklar",
         "Absagen ohne erkennbaren Grund",
     ),
     (
         "TODO.md",
         r'\*\*(\d+) von 23 Item-Arten\*\* sind „gelesen"',
-        ["./pruefe-konstrukte.py"],
+        ["./instrumente/pruefe-konstrukte.py"],
         r"^\s+gelesen\s+(\d+)\s*$",
         "Item-Arten, die ein Pass anfasst",
     ),
     (
         "TODO.md",
         r"Mutationskatalog: \*\*(\d+) von \d+ Ankern\*\*",
-        ["./mutiere-pruefer.py", "--anker"],
+        ["./instrumente/mutiere-pruefer.py", "--anker"],
         r"== (\d+) von \d+ Ankern greifen",
         "Mutationsanker, die im Pruefer wirklich sitzen",
     ),
     (
         "TODO.md",
         r"\*\*(\d+) Zeilenfortsetzungen\*\* in den Quellen",
-        ["./pruefe-englisch.py"],
+        ["./instrumente/pruefe-englisch.py"],
         r"== Lesbarkeit: (\d+) Zeilenfortsetzungen",
         "Zeilenfortsetzungen -- die Flaeche der Klebeprobe",
     ),
     (
         "TODO.md",
         r"Zeilenfortsetzungen\*\* in den Quellen, \*\*(\d+) kleben\*\*",
-        ["./pruefe-englisch.py"],
+        ["./instrumente/pruefe-englisch.py"],
         r"^\s+(\d+) von \d+ Naehten kleben",
         "klebende Nahtstellen",
     ),
@@ -326,14 +326,14 @@ EINTRAEGE = [
     (
         "TODO.md",
         r"\*\*(\d+) Widerrufe\*\* über \d+ Dateien",
-        ["./pruefe-widerruf.py"],
+        ["./instrumente/pruefe-widerruf.py"],
         r"== Widerrufene Saetze: (\d+) Eintraege",
         "gebuchte Widerrufe",
     ),
     (
         "TODO.md",
         r"\*\*\d+ Widerrufe\*\* über (\d+) Dateien",
-        ["./pruefe-widerruf.py"],
+        ["./instrumente/pruefe-widerruf.py"],
         r"== Widerrufene Saetze: \d+ Eintraege, (\d+) Dateien",
         "Dateien, die der Widerrufwaechter liest",
     ),
@@ -360,35 +360,35 @@ EINTRAEGE = [
     (
         "TODO.md",
         r"\*\*(\d+) direkte Blicke\*\* auf die Karten",
-        ["./zaehle-karten.py"],
+        ["./instrumente/zaehle-karten.py"],
         r"direkte Blicke\s+(\d+)",
         "direkte Blicke auf die Karten der `Umgebung`",
     ),
     (
         "TODO.md",
         r"direkte Blicke\*\* auf die Karten[^\n]*\n[^\n]*\*\*(\d+) davon unqualifiziert\*\*",
-        ["./zaehle-karten.py"],
+        ["./instrumente/zaehle-karten.py"],
         r"davon UNQUALIFIZIERT\s+(\d+)",
         "Blicke ohne Modulkandidaten -- jeder ein moegliches `M103`-Loch",
     ),
     (
         "TODO.md",
         r"\*\*([0-9  ]+) Zeilen\*\* in dreizehn Theorien",
-        ["./zaehle-theorien.py"],
+        ["./instrumente/zaehle-theorien.py"],
         r"== \d+ Theorien, (\d+) Zeilen",
         "Zeilen der eigenen Isabelle-Theorien",
     ),
     (
         "TODO.md",
         r"\*\*(\d+) Zeilen Modell und Beweis\*\*",
-        ["./zaehle-theorien.py"],
+        ["./instrumente/zaehle-theorien.py"],
         r"Modell \+ Beweis = (\d+) Zeilen",
         "die Haelfte, die einer Verus-Zeilenzahl gegenuebersteht",
     ),
     (
         "TODO.md",
         r"\*\*(\d+) eingefrorene Suchergebnisse\*\*",
-        ["./zaehle-theorien.py"],
+        ["./instrumente/zaehle-theorien.py"],
         r"== Suche: \d+ Suchbefehle, (\d+) eingefrorene",
         "`metis`/`blast`/`smt` -- Suchen, die einmal liefen",
     ),
@@ -407,7 +407,7 @@ EINTRAEGE = [
     (
         "dokumente/PLAN.md",
         r"\| \*\*ZUSAGE ohne Leser\*\* \| \*\*(\d+)\*\*",
-        ["./pruefe-klauseln.py"],
+        ["./instrumente/pruefe-klauseln.py"],
         r"^\s+ZUSAGE\s+(\d+)\s",
         "ZUSAGE-Klauseln ohne Leser -- das Tor von «NL»",
     ),
@@ -432,14 +432,14 @@ EINTRAEGE = [
     (
         "dokumente/PLAN.md",
         r"\| \*\*Absenkungspflichten\*\* \| \*\*(\d+)\*\*",
-        ["./zaehle-pflichten.py", "--haengend"],
+        ["./instrumente/zaehle-pflichten.py", "--haengend"],
         r"^\s+Absenkung\s+(\d+)\s",
         "Absenkungspflichten in der «NL»-Tafel",
     ),
     (
         "dokumente/PLAN.md",
         r"H = (\d+)        ueber den zehn Fragmenten kein Handbeweis mehr",
-        ["./zaehle-pflichten.py", "--haengend"],
+        ["./instrumente/zaehle-pflichten.py", "--haengend"],
         r"^\s+H\s+(\d+)\s*$",
         "H im «NL»-Kasten",
     ),
@@ -504,7 +504,7 @@ def kein_selbstbezug():
 #
 # `kein_selbstbezug()` sucht den Namen dieses Werkzeugs IM BEFEHL eines Eintrags. Das faengt
 # den Zyklus der Laenge eins und **keinen laengeren** -- und einer der Laenge zwei liegt hier
-# unmittelbar bereit: `./pruefe-waechter.py --lauf` fuehrt jeden leichten Waechter aus, und
+# unmittelbar bereit: `./instrumente/pruefe-waechter.py --lauf` fuehrt jeden leichten Waechter aus, und
 # `pruefe-zahlen.py` ist einer davon. **Ein einziger Registereintrag mit `--lauf` schliesst
 # den Ring**, und der Namensriegel laesst ihn durch, weil im Befehl `pruefe-waechter.py`
 # steht und nicht `pruefe-zahlen.py`.

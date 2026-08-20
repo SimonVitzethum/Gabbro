@@ -5,7 +5,7 @@
 **Alles, was rechnet, läuft über SSH auf `ki-pc-fisch-101`** — dort stehen **128 GB RAM**
 (gemessen 2026-08-19: `free -g` meldet 110 GB gesamt, 108 GB frei, **16 Kerne**; Hostname
 `fisch`).
-Das gilt zuerst für **Isabelle/HOL** (`./pruefe-beweise.sh`, `isabelle build`), und ebenso für
+Das gilt zuerst für **Isabelle/HOL** (`./instrumente/pruefe-beweise.sh`, `isabelle build`), und ebenso für
 jede andere Last, die den Arbeitsrechner an seine Grenze bringt: Mutationsläufe über den
 ganzen Prüfer, Fuzzing, ein Lauf über den zweiten Korpus.
 
@@ -20,8 +20,8 @@ und ein Beweis, der daran stirbt, sieht aus wie ein Beweis, der nicht durchgeht.
 Abbruch aus Speichermangel ist kein Befund.*
 
 **Seit dem 2026-08-20 liegt die Grenze bei 1 GB, und damit fällt `rustc` darunter.** Auf den
-Server gehören deshalb auch **`cargo build` und `cargo test`**, `./pruefe-emission.sh` (ruft
-`cargo run` je Einheit) und `./pruefe-luecken.py` (baut dreizehnmal neu).
+Server gehören deshalb auch **`cargo build` und `cargo test`**, `./instrumente/pruefe-emission.sh` (ruft
+`cargo run` je Einheit) und `./instrumente/pruefe-luecken.py` (baut dreizehnmal neu).
 
 ```bash
 # **`-rlpgoD` und NICHT `-a`** -- siehe darunter, das ist kein Schoenheitsfehler.
@@ -48,7 +48,7 @@ schon gebautes Binärprogramm, ein `cc` auf einer Datei, und die Textwächter
 (`pruefe-todo.py`, `-englisch`, `-kennungen`, `-syntax`). *Die Grenze ist der Speicher, nicht
 die Gewohnheit.*
 
-**Der Mutationslauf misst sich selbst**: `./mutiere-pruefer.py` über alle 159 Mutationen
+**Der Mutationslauf misst sich selbst**: `./instrumente/mutiere-pruefer.py` über alle 159 Mutationen
 braucht **2 min 20 s** lokal (gemessen 2026-08-19) und bleibt damit diesseits der Grenze.
 `--anker` kostet gar nichts — reines Textzählen, kein Bau. *Vor dem Lauf muss `crates/`
 sauber sein; die Probe schreibt in Quellen, und zwei Läufe auf denselben Dateien

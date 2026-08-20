@@ -2,7 +2,7 @@
 # Haelt die Beispiele gegen dokumente/SYNTAX.md. Mit Sprechprobe in BEIDE Richtungen --
 # ein Pruefer, der nicht fehlschlagen kann, ist kein Pruefer.
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 # Woerter, die es laut dokumente/SYNTAX.md ABSICHTLICH nicht gibt.
 VERBOTEN='\bwhile\b|\bfor\b|\bgoto\b|\bunion\b|\bswitch\b|_ =>|\bvoid\*'
@@ -55,7 +55,7 @@ PY
 }
 if ! ebnf_geschlossen dokumente/SYNTAX.md; then echo "== SYNTAX: FEHLER (Grammatik nicht geschlossen) =="; exit 1; fi
 
-if ! ./pruefe-wortschatz.py dokumente/SYNTAX.md; then echo "== SYNTAX: FEHLER (Wortschatz deckt die EBNF nicht) =="; exit 1; fi
+if ! ./instrumente/pruefe-wortschatz.py dokumente/SYNTAX.md; then echo "== SYNTAX: FEHLER (Wortschatz deckt die EBNF nicht) =="; exit 1; fi
 
 # --- Sprechprobe: der Pruefer MUSS bei jeder Verletzung fallen ---
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT

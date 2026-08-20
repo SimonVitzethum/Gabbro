@@ -95,11 +95,11 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./pruefe-zahlen.py`** | das Register der Befehle. **50 Kennzahlen mit Befehl** *(Stand 2026-08-20; 12 am Vormittag)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
-| **`./pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
-| **`./zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
-| **`./zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
-| **`./zaehle-zeremonie.py`** | neu — das Nutzbarkeitsmaß von Stufe 2, mit seiner Kalibriertafel |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **50 Kennzahlen mit Befehl** *(Stand 2026-08-20; 12 am Vormittag)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
+| **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
+| **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
+| **`./instrumente/zaehle-zeremonie.py`** | neu — das Nutzbarkeitsmaß von Stufe 2, mit seiner Kalibriertafel |
 
 **Sechs Befunde beim ersten Lauf, keiner davon gesucht:** `pruefe-beweise.sh` kündigte eine
 Zeitgrenze an und setzte sie nie durch (`ZEIT=600` stand in der Kopfzeile, der Wachhund sah nur
@@ -131,7 +131,7 @@ Diagnose — keine Beschönigung, sondern **Fortschreibung**:
 
 > **Drei Register über einer Sache, und das mit dem Suchweg war das falsche.** In
 > `PFLICHTEN.md` stand die Postenliste der hängenden Pflichten unter der Überschrift
-> *„`H = 15`, abgelesen mit `./zaehle-pflichten.py --haengend`"* — die Zahlenspalte darunter
+> *„`H = 15`, abgelesen mit `./instrumente/zaehle-pflichten.py --haengend`"* — die Zahlenspalte darunter
 > summierte sich zu **17**, und der genannte Befehl sagt **12**. *Genau die Form, gegen die
 > die Regel über allem steht: eine Zahl, deren Suchweg ihr widerspricht, sieht belegt aus.*
 > Die Spalte ist gestrichen; die zwölf stehen nur noch im Befehl.
@@ -140,7 +140,7 @@ Diagnose — keine Beschönigung, sondern **Fortschreibung**:
 
 | | |
 |---|---|
-| **Der Fixpunktriegel war einen Schritt tief** | W18 verbietet einen Registereintrag, dessen Befehl `pruefe-zahlen.py` **nennt**. Der Ring der Länge ZWEI lag offen daneben: `./pruefe-waechter.py --lauf` führt jeden leichten Wächter aus, und das Register ist einer davon — **ein einziger Eintrag mit `--lauf` hätte den Ring geschlossen**, und der Namensriegel hätte ihn durchgelassen. Seit heute hängt der Riegel an einer Marke in der Prozessumgebung und greift in **jeder** Tiefe; gemessen an einem echten Kindprozess |
+| **Der Fixpunktriegel war einen Schritt tief** | W18 verbietet einen Registereintrag, dessen Befehl `pruefe-zahlen.py` **nennt**. Der Ring der Länge ZWEI lag offen daneben: `./instrumente/pruefe-waechter.py --lauf` führt jeden leichten Wächter aus, und das Register ist einer davon — **ein einziger Eintrag mit `--lauf` hätte den Ring geschlossen**, und der Namensriegel hätte ihn durchgelassen. Seit heute hängt der Riegel an einer Marke in der Prozessumgebung und greift in **jeder** Tiefe; gemessen an einem echten Kindprozess |
 | **`pruefe-waechter.py --lauf` war hier grün und auf `ki-pc-fisch-101` rot** | bei identischen Quellen. Nicht der Code fehlte, sondern der **Gegenstand**: `zaehle-b3.py` und `zaehle-narrow.py` messen fremde Bäume (Caprock-Messbasis, SEL4Lake), und die liegen nur auf dem Arbeitsrechner. *Ein Wächter, dessen Urteil davon abhängt, auf welchem Rechner er läuft, ohne es zu sagen, misst den Rechner.* Beide stehen jetzt in `FREMDER_KORPUS`; ein fehlender Baum zählt als **nicht gemessen** und steht mit seiner Zahl in der Schlusszeile |
 
 ### Und der teuerste Befund ist die AUSNAHMELISTE, nicht eine Zahl
@@ -238,7 +238,7 @@ darunter.
       (`suche`), `index_pruefen` unqualifiziert (`get`). **`M103` schwieg damit in jedem
       `module`-Block fuer eine Tabelle, die ueber ihren globalen Namen adressiert wird.**
       Behoben und mit Gift 76 belegt.
-      **Die allgemeine Frage hat seit dem 2026-08-20 einen Befehl** (`./zaehle-karten.py`), und
+      **Die allgemeine Frage hat seit dem 2026-08-20 einen Befehl** (`./instrumente/zaehle-karten.py`), und
       die alte Zahl war um den Faktor 2,7 zu klein: 16 Karten, 12 davon öffentlich,
       **36 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
       Kandidatenschleife und **32 davon unqualifiziert**.
@@ -253,9 +253,9 @@ darunter.
 - [ ] **Zum ZWEITEN Mal in eine Beweissuche gelaufen -- und die Regel stand schon da**
       *(2026-08-17)*. Erst ein `metis` (9 Minuten, 6,3 GB), dann ein `blast` (12 Minuten,
       4,8 GB). **Eine Regel, die man kennt und trotzdem bricht, braucht keinen weiteren Satz
-      -- sie braucht ein Werkzeug.** `./pruefe-beweise.sh` haelt jetzt bei 3 GB an.
+      -- sie braucht ein Werkzeug.** `./instrumente/pruefe-beweise.sh` haelt jetzt bei 3 GB an.
       **Die andere Hälfte ist seit dem 2026-08-20 gebaut, und sie ist eine Zählung, kein
-      Wachhund:** `./zaehle-theorien.py` zählt **31 eingefrorene Suchergebnisse**
+      Wachhund:** `./instrumente/zaehle-theorien.py` zählt **31 eingefrorene Suchergebnisse**
       (`metis` 3, `blast` 28) gegen eine Ratsche und verbietet `sledgehammer`, `try0`,
       `nitpick` und `quickcheck` ganz — **heute null, über dreizehn Theorien.**
       *Ein Suchbefehl in einer eingecheckten Theorie ist keine Absicht, sondern ein
@@ -296,7 +296,7 @@ darunter.
       ~~Die Taxonomie ist für das gebaut, was ein Kernel falsch macht; ein Drittel der gemessenen
       Lücken handelt davon, was die Sprache nicht SAGEN kann.~~
       **Nachgemessen 2026-08-20, und die 36 ist eine Zahl vom 2026-08-17: heute sind es zwölf,
-      davon fünf verankert — und alle fünf sind Notationslücken.** `./zaehle-pflichten.py
+      davon fünf verankert — und alle fünf sind Notationslücken.** `./instrumente/zaehle-pflichten.py
       --haengend` nennt sie mit Zeile: `F2`:498 («B22-nah»), `F3`:613–624 («B9»), `F4`:764
       («B26»), `F4`:785–792 («B18»), `F5`:938–949 («B27»).
       **Damit hat die Frage sich umgedreht, und das ist der Befund:** die zweite Achse war nie
@@ -357,7 +357,7 @@ darunter.
       Posten hat seither einen genaueren Namen: nicht „ein Beweis in Gabbro", sondern **P6** --
       die ERZEUGTE Verfeinerungspflicht. Vorher gibt es nichts zu beweisen, das nicht erfunden
       waere.*
-      **Und die Zählerseite hat seit dem 2026-08-20 einen Befehl** (`./zaehle-theorien.py`) —
+      **Und die Zählerseite hat seit dem 2026-08-20 einen Befehl** (`./instrumente/zaehle-theorien.py`) —
       siehe den Punkt *„Zeilenanteile"* weiter unten. Er schließt die Kennzahl nicht, aber er
       nimmt ihr die schlimmste Verwechslung: **eine Isar-Zeile dieses Ordners ist zu 45,8 %
       Prosa.**
@@ -399,7 +399,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **44 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./pruefe-gruende.py`,
+- [ ] **44 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
@@ -457,7 +457,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       **Und die Zahl selbst ist der Beleg:** sie stand hier als *21 von 23* und ist inzwischen
       *23 von 23* — **das Maß ist gestiegen, ohne dass eine Zusage mehr geprüft würde.** Genau
       die Bewegung, vor der der Punkt warnt, und sie ist an ihm selbst passiert. Seit heute
-      hält das Register die Zahl gegen `./pruefe-konstrukte.py`.
+      hält das Register die Zahl gegen `./instrumente/pruefe-konstrukte.py`.
       **Woran das schärfere Maß hängt:** es müsste je Item-Art fragen, ob eine ABSAGE an ihr
       fällt — das ist Maß 2 (Giftprobe je Konstrukt, heute 0 von 19 ohne) *je Zusage* statt
       *je Konstrukt*. **Dieselbe Größenordnung wie die Kombinationstafel oben. Bleibt offen.**
@@ -514,7 +514,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Korpus. Bei `counterprobe` sagte sie *„kein Pass fuehrt sie aus"* -- der Grund ist, dass
       die Spezifikation den Namen nicht bindet. **Beide Saetze sind berichtigt.**
       **Die allgemeine Frage hat einen Befehl, aber er misst die andere Hälfte:**
-      `./pruefe-klauseln.py` liest 147 Feldnamen aus `ast.rs` gegen 29 Leserdateien und bucht
+      `./instrumente/pruefe-klauseln.py` liest 147 Feldnamen aus `ast.rs` gegen 29 Leserdateien und bucht
       22 Klauseln — *er sagt, WER eine Klausel liest, nicht ob die Tabelle sie richtig
       beschreibt.* **Und das ist die Trennung aus W19 an einer neuen Stelle:** die Stufe
       (gelesen / nur getragen / ungelesen) ist gemessen, die Klasse (ZUSAGE / FREMD /
@@ -540,7 +540,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Reihe in jedem Dokument nachgezogen werden muss.*
 
 - [ ] **~~Die Zeilenanteile der eigenen Theorien sind gezaehlt, aber nicht KLASSIFIZIERT~~ —
-      GEBAUT 2026-08-20** (`./zaehle-theorien.py`). Die alte Buchung sagte *„zehn Theorien,
+      GEBAUT 2026-08-20** (`./instrumente/zaehle-theorien.py`). Die alte Buchung sagte *„zehn Theorien,
       1 639 Zeilen, 48 Sätze, 86 Beweisschritte"* und ließ die Frage offen, was davon Prosa
       ist. Heute: **2 317 Zeilen** in dreizehn Theorien, **70 Sätze** darin — und klassifiziert:
 
@@ -565,7 +565,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Zwei der drei Faelle sind mit `N007`/`N008` in den Pruefer gezogen; **die Luecke im Wort
       bleibt bewusst `C001`**, weil erst die Absenkung eine bestimmte Wortgrenze braucht.
       **Nachgezählt 2026-08-20: `C001` steht an sechs Stellen im Prüfer und wird an fünfzehn
-      Stellen im Korpus erwartet** — und `./pruefe-gruende.py` führt `C001` als **verdächtig**
+      Stellen im Korpus erwartet** — und `./instrumente/pruefe-gruende.py` führt `C001` als **verdächtig**
       (*„no lowering, byte, bytes"*), also als eine Regel, die sich über die Darstellung
       begründet. *Das ist derselbe Befund aus der anderen Richtung: die Kennung nennt die
       Absenkung, und gemeint ist teils die Wortbreite.*
@@ -631,7 +631,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       eine Aliasanalyse, die es nicht gibt.* **Das ist der ganze Rest dieses Punktes.**
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
-      `./mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
+      `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
       fällt. Mutationskatalog: **240 von 240 Ankern** greifen (`--anker`, 2026-08-20) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
@@ -656,7 +656,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       the comma rule — `entrydecl`, `slotdecl` and `reg … fields` carried **three different
       rules for the same thing**; now one: separating comma obligatory, trailing comma
       optional.
-      **Und die Messschicht sagt, warum die drei stehenbleiben:** `./pruefe-syntax.sh` hält
+      **Und die Messschicht sagt, warum die drei stehenbleiben:** `./instrumente/pruefe-syntax.sh` hält
       146 EBNF-Regeln und 216 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
       gegen sich selbst, nie den Parser gegen die Grammatik.* Ein Wächter für die Differenz
       bräuchte je Stelle eine Giftdatei, die der Parser **annehmen** und die EBNF **verbieten**
@@ -717,7 +717,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       erzeugten C wieder. **Der kleinste offene Posten dieses Abschnitts.**
 
 - [ ] **~~Every falsifier needs its own speech test:~~ *can it fail at all?* — GEBAUT
-      2026-08-20.** Das ist wörtlich die zweite Forderung von `./pruefe-waechter.py`, und sie
+      2026-08-20.** Das ist wörtlich die zweite Forderung von `./instrumente/pruefe-waechter.py`, und sie
       wird an **29 von 29** Instrumenten geprüft: eine saubere und eine kaputte Quelle, beide
       erfunden, und der Wächter muss die eine melden und die andere durchlassen.
       **Was der Punkt meinte und was gemessen wird, ist nicht dasselbe, und der Unterschied
@@ -732,8 +732,8 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       whose line is too strong. The table has the same prehistory as the two
       overreaches in `dokumente/HISTORIE.md`.
       **Und die Gegenprobe hat seit dem 2026-08-20 zwei Werkzeuge, die sie zur Hälfte fahren:**
-      `./pruefe-reichweite.py` (0 ungelesen, zwei Bauteile von genau einem Pass gelesen) und
-      `./pruefe-klauseln.py` (22 Klauseln gebucht, sechs ungelesen). *Beide finden eine Zeile,
+      `./instrumente/pruefe-reichweite.py` (0 ungelesen, zwei Bauteile von genau einem Pass gelesen) und
+      `./instrumente/pruefe-klauseln.py` (22 Klauseln gebucht, sechs ungelesen). *Beide finden eine Zeile,
       die zu stark ist, nur dann, wenn niemand sie liest — nicht, wenn ein Pass sie liest und
       zu wenig tut.* **Woran der Rest hängt: an W13** (Berührung ist keine Prüfung), und die
       Antwort darauf ist dieselbe wie beim groben Maß oben — eine Probe je ZUSAGE.
@@ -754,7 +754,7 @@ schreiben.
 mit einer Kopfzeile je Datei, die sagt was ergänzt wurde. `FRAGMENTE.md` bleibt Bericht.
 
 ```
-$ ./zaehle-fragmente.py
+$ ./instrumente/zaehle-fragmente.py
 7 von 10 prüfen sauber        (über den Ausschnitten: 5)
 4 von 10 senken ab            (über den Ausschnitten: 3)
 ```
@@ -842,7 +842,7 @@ gelesen. Was zwei saubere Fragmente noch aufhält, sind **zwei benannte Weigerun
 ### The four items to the goal — plan with gates in [`dokumente/PLAN.md`](dokumente/PLAN.md) §A *(Teil)*
 
 - [ ] **A5 — Abnahme: die Fragmente frisch durch den Übersetzer.** ~~Fehlt ganz.~~
-      **Seit dem 2026-08-20 gibt es den Lauf**: `./zaehle-fragmente.py` fährt alle zehn
+      **Seit dem 2026-08-20 gibt es den Lauf**: `./instrumente/zaehle-fragmente.py` fährt alle zehn
       vervollständigten Dateien durch `pruefe` und `emit`, mit Frist und Sprechprobe, und die
       zwei Zahlen stehen im Zahlenregister. *Damit ist die Zählung zum ersten Mal über
       GABBRO-Quelltext statt über Rust.*
@@ -868,7 +868,7 @@ die Kalibrierung steht **im Werkzeug** (`--tafel`), nicht in einer Fußnote:
 | **Achse 2** | *erklärt* | darf die Zahl sinken? — je Regel ein Ja/Nein **mit Grund**, und ein Wächter verlangt den Grund |
 
 ```
-$ ./zaehle-zeremonie.py                    → messung/ZEREMONIE.md
+$ ./instrumente/zaehle-zeremonie.py                    → messung/ZEREMONIE.md
 Lehrkorpus     5.8 % dürfen sinken   (882 Stellen auf 5591 Zeilen, Dichte 15,8/100 Z.)
 echter Code   12.8 % dürfen sinken   (109 Stellen auf  519 Zeilen, Dichte 21,0/100 Z.)
 ```
@@ -1060,7 +1060,7 @@ Paketpool, Prüfsumme, Neuübertragung, Zeitgeber — alles vorhanden. Was fehlt
 238 Zeilen, gegen RFC 791/826/768/1071 und gegen **veröffentlichte Testvektoren**:
 
 ```
-$ ./zaehle-netz.py
+$ ./instrumente/zaehle-netz.py
 ok   ohne   Gabbro b861  Gegenrechnung b861   IPv4-Kopf, Feld genullt (RFC 791)
 ok   mit    Gabbro 0000  Gegenrechnung 0000   derselbe Kopf MIT der Summe — muss 0 sein
 ok   summe  Gabbro ddf2  Gegenrechnung ddf2   RFC 1071, Abschnitt 3
@@ -1588,7 +1588,7 @@ tragende, ohne eine Zeile Isabelle.*
 ```
 $ gabbro schablonen --tor
 9 premises of PROVED templates have no pass -- a proof nothing establishes    → 1
-$ ./pruefe-schablonen.py
+$ ./instrumente/pruefe-schablonen.py
 Marke 9 — eine Ratsche, keine Zielzahl · 0 ohne Adresse
 ```
 
@@ -1728,7 +1728,7 @@ trägt jetzt diese Adresse statt einer fehlenden Entscheidung.
       der sie zuruecksetzt, und keine Frage, ob sie unter der Sperre leben darf.* Die
       Zeugenordnung ist ein Beweismittel, kein Laufzeitding.
       **Was offen bleibt, ist die Kostenzahl je Invariante — und sie haengt an einem Leser:**
-      `./pruefe-klauseln.py` fuehrt das `cost`-Feld der Invariante bis heute unter UNGELESEN,
+      `./instrumente/pruefe-klauseln.py` fuehrt das `cost`-Feld der Invariante bis heute unter UNGELESEN,
       das `runs`-Feld unter NUR GETRAGEN. *Solange `cost O(n)` niemand liest, ist die
       Frage „passt die Invariante in die `costs` der erzeugten Mutation" nicht einmal
       stellbar* — derselbe Faden wie der Kleinkram-Posten weiter unten.
@@ -1740,7 +1740,7 @@ trägt jetzt diese Adresse statt einer fehlenden Entscheidung.
       seit dem 2026-08-16.** `beweise/Table_Induktion.thy` fuehrt es als `lemma
       table_induktion` (`assumes wf`, `assumes schritt`, `shows "P s"`, `by
       (rule wf_induct_rule)`), und `gabbro schablonen` fuehrt `S7 table.induktion` als
-      **bewiesen**. Nachgerechnet 2026-08-20 mit `./zaehle-theorien.py`: 13 Theorien,
+      **bewiesen**. Nachgerechnet 2026-08-20 mit `./instrumente/zaehle-theorien.py`: 13 Theorien,
       2 317 Zeilen. *Die Theorie ist ausserdem schaerfer als der Posten: sie zerlegt „wohl-
       fundiert und vollstaendig" in die vier einzeln dastehenden Nebenbedingungen N-1 bis
       N-4.*
@@ -1751,7 +1751,7 @@ trägt jetzt diese Adresse statt einer fehlenden Entscheidung.
       es selbst (*„Wohlfundiertheit ist HYPOTHESE, nicht Ergebnis … die Deklaration muss die
       tragende Invariante nennen"*), und die Grammatik hat den Platz dafuer schon — `by
       induction over <domain>` an der `invariant`. **Nur nennt sie eine DOMAENE und keine
-      Invariante, und gelesen wird sie von niemandem:** `./pruefe-klauseln.py` fuehrt `by`
+      Invariante, und gelesen wird sie von niemandem:** `./instrumente/pruefe-klauseln.py` fuehrt `by`
       (FnDecl/Invariante) bis heute unter UNGELESEN. *Damit haengt dieser Posten an demselben
       Faden wie der `by`-Eintrag im Kleinkram unten — ein Leser fuer `by`, und beide fallen
       zusammen.*
@@ -1789,7 +1789,7 @@ trägt jetzt diese Adresse statt einer fehlenden Entscheidung.
       ausserdem den Korpus. ~~*Vorher zaehlen, an wie vielen Rufstellen eine Vorbedingung
       heute unbewiesen bleibt.*~~ **Gezaehlt am 2026-08-20: es sind 12** (`gabbro pflichten
       beispiele/*.gab`, neue Spalte `V`; die Summe steht in `dokumente/PLAN.md` und wird von
-      `./pruefe-zahlen.py` neu abgeleitet). *Der Preis der schwachen Fassung stand bis heute
+      `./instrumente/pruefe-zahlen.py` neu abgeleitet). *Der Preis der schwachen Fassung stand bis heute
       NIRGENDS* — `gabbro pflichten` zaehlte Pflichten, die eine DEKLARATION erzeugt, und
       keine, die ein RUF erbt. **Ein Preis, den kein Werkzeug nennt, sieht aus wie null.**
       Die Zahl ist nach oben eine Schranke (eine am Rufort trivial geltende Bedingung zaehlt
@@ -1814,7 +1814,7 @@ trägt jetzt diese Adresse statt einer fehlenden Entscheidung.
       eine Aussage ueber den PRUEFER, und fuer die gibt es kein Register**; dieselbe Lage wie
       `Intervall_Aussen.thy`. *Heute steht der Grund in `durch:` als Prosa.*
       **Haengt am selben Faden wie „Der PRUEFER hat kein Register" weiter unten** — seit dem
-      2026-08-20 traegt der Faden eine Zahl (`./zaehle-theorien.py`: 2 von 13 Theorien ohne
+      2026-08-20 traegt der Faden eine Zahl (`./instrumente/zaehle-theorien.py`: 2 von 13 Theorien ohne
       Register). *Dieser Posten faellt mit jener Entscheidung, nicht vor ihr.*
 
 - [ ] **`einfuegen` braucht ZWEI Bedingungen, und keine hat einen Pass** *(2026-08-19,
@@ -1849,7 +1849,7 @@ trägt jetzt diese Adresse statt einer fehlenden Entscheidung.
       `mutiere-pruefer.py` gemessen -- Mutationen, nicht Saetze. *Ein zweites Register waere
       die naheliegende Antwort; ob es eines sein soll, ist eine Entscheidung.*
       **Geschaerft 2026-08-20: die Luecke ist jetzt GEZAEHLT statt beschrieben.**
-      `./zaehle-theorien.py` haelt seit heute jede `.thy` gegen `schablonen.rs` und meldet
+      `./instrumente/zaehle-theorien.py` haelt seit heute jede `.thy` gegen `schablonen.rs` und meldet
       **2 von 13 ohne Register**, mit einer Ratsche darauf. *Und die zweite ist ein eigener
       Befund:* `Table_Induktion.thy` IST eine Schablone (`S7`, bewiesen) — nur nennt der
       Registereintrag seine Datei nicht. **Die andere Richtung derselben Luecke: nicht die
@@ -1858,7 +1858,7 @@ trägt jetzt diese Adresse statt einer fehlenden Entscheidung.
 
 ### Deklariert, exportiert, nie gelesen — die Klasse hat einen Namen und einen Waechter
 
-**Neu gemessen 2026-08-20** mit `./pruefe-klauseln.py`: **147 Feldnamen** aus `ast.rs` gegen
+**Neu gemessen 2026-08-20** mit `./instrumente/pruefe-klauseln.py`: **147 Feldnamen** aus `ast.rs` gegen
 **30 Leserdateien**, davon 5 tragend. **22 Felder gebucht** -- 16 nur getragen (nur
 `emit.rs`/`zeugnis.rs`/`cli`), 6 ungelesen. Nach Urteil: **0 ZUSAGE**, 2 FREMD,
 5 ABSENKUNG, 15 TOT. *Die Stufe ist gemessen, die Klasse ist ein Urteil, und das Werkzeug
@@ -1868,7 +1868,7 @@ sagt beides getrennt an.*
 > 21 nur getragen, 27 ungelesen; 17 ZUSAGE, 6 ABSENKUNG, 25 TOT.*~~ **Acht Zahlen, und
 > jede stand am 2026-08-20 falsch da.** Die teuerste ist die erste: **ZUSAGE steht auf
 > null** — *das ist das Tor von «NL» selbst, und es ist erreicht.* `dokumente/PLAN.md`
-> fuehrt die Null seit dem 2026-08-20 und wird von `./pruefe-zahlen.py` nachgerechnet;
+> fuehrt die Null seit dem 2026-08-20 und wird von `./instrumente/pruefe-zahlen.py` nachgerechnet;
 > **dieser Abschnitt fuehrte daneben die 17 weiter.** *Zwei Buchungen ueber derselben
 > Messung, und nur eine hatte einen Leser* — genau die Klasse, gegen die W7 steht.
 
@@ -1888,7 +1888,7 @@ gemessen wird je Name, nicht je Struktur (W10).
       meldete zwei falsche Befunde an `beispiele/04`. **Eine Klauselbeschreibung, die seit
       Wochen in der Waechtertabelle steht, ist keine Quelle — die Spezifikation ist eine.**
       Beides ist die **notwendige** Bedingung: dass das Mass FAELLT, bleibt bei
-      `consuming.ordnung`. **Beleg ohne Bau:** `./pruefe-klauseln.py` bucht
+      `consuming.ordnung`. **Beleg ohne Bau:** `./instrumente/pruefe-klauseln.py` bucht
       am 2026-08-20 weder `verlaesst` noch `abstieg` — die 22 gebuchten Felder sind eine
       andere Liste. *Was daneben stehenbleibt und in `schablonen.rs` steht: das `braeuchte`
       von `consuming.ordnung` sagt weiter „`abstieg` ist heute eine ZUSAGE ohne Leser". Die
@@ -1898,7 +1898,7 @@ gemessen wird je Name, nicht je Struktur (W10).
       mechanisch** *(gemessen 2026-08-18, nachgerechnet 2026-08-20)*. **Das ist die Umkehrung
       der Klausel-Klasse und teurer als sie:** bei einer ungelesenen Klausel weiss niemand
       etwas, hier weiss man etwas Falsches.
-      `gabbro schablonen --tor` gibt **1** zurueck, solange eine haengt; `./pruefe-schablonen.py`
+      `gabbro schablonen --tor` gibt **1** zurueck, solange eine haengt; `./instrumente/pruefe-schablonen.py`
       traegt die Ratsche (Marke 9, sie geht nach unten) und verlangt je Praemisse eine
       Adresse. **Was die beiden NICHT koennen: die Adressen nachpruefen** -- zwei von neun
       waren am 2026-08-20 veraltet, und das fiel nur von Hand am Gegenstand auf (W10).
@@ -1925,7 +1925,7 @@ gemessen wird je Name, nicht je Struktur (W10).
       daran, was in ein `.gabi` geht. Die Sichtbarkeit selbst prueft `N025` an der
       Bezugsstelle (`umgebung.rs:215` sagt es im Doktext, samt der Umbenennung von
       `kandidaten_oeffentlich`, die sie versprach und nicht tat). **Beleg ohne Bau:**
-      `./pruefe-klauseln.py` bucht `oeffentlich` nicht mehr.
+      `./instrumente/pruefe-klauseln.py` bucht `oeffentlich` nicht mehr.
 
 - [ ] **`ensures`/`maintains` werden GEZAEHLT, nicht gelesen** *(gebucht 2026-08-18)*.
       ~~`zeugnis.rs:370,391` ruft `.len()` und `.is_empty()`; kein Pass haelt sie gegen den
@@ -1947,7 +1947,7 @@ gemessen wird je Name, nicht je Struktur (W10).
       `leaf` senken ab), `scale` (im `format`-Leser, und ein Setzer wird dafür benannt
       verweigert), der `can_fail`-Rumpf eines `check` (M1 **und** der Paarungspass lesen ihn)
       und der Fehlername im `let … else` (er trägt den `reason` aus `-> T or R`).
-      **Nachgezählt 2026-08-20 mit `./pruefe-klauseln.py`: es sind genau diese sechs, und
+      **Nachgezählt 2026-08-20 mit `./instrumente/pruefe-klauseln.py`: es sind genau diese sechs, und
       die Liste stimmt** — die Spalte UNGELESEN hat heute sechs Einträge und keinen siebten.
       *Eine Korrektur an der Aufzählung selbst:* `cost` und `runs` stehen NICHT im selben
       Zustand. Das `cost`-Feld der Invariante ist ungelesen; das `runs`-Feld wird von

@@ -618,7 +618,7 @@ class. **For the block, countability applies, not correctness:** an axiom of its
 Caprock.** **The block gets no proof, but it gets `check`.**
 
 - [ ] **Not in the grammar yet.** The four words are not in the vocabulary, the two productions not
-      in the EBNF, `./pruefe-syntax.sh` has not been run against it. **Until then the `abi` part is
+      in the EBNF, `./instrumente/pruefe-syntax.sh` has not been run against it. **Until then the `abi` part is
       a sketch, not a rule** — and its justification is **weaker than that of every other
       construct**: a language finding, not a paid-for trap.
 

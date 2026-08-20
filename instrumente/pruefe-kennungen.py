@@ -22,7 +22,7 @@ import pathlib
 import re
 import sys
 
-WURZEL = pathlib.Path(__file__).parent
+WURZEL = pathlib.Path(__file__).resolve().parent.parent
 KENNUNG = re.compile(r'"([A-Z][0-9]{3})"')
 
 

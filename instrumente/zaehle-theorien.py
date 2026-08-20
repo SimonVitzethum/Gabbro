@@ -9,7 +9,7 @@ gegen eine Verus-Zeilenzahl haelt, vergleicht zwei verschiedene Dinge -- *diesel
 Verwechslung, an der die Kennzahl `1,90` am 2026-08-19 zurueckgezogen wurde, eine Ebene
 tiefer.*
 
-    ./zaehle-theorien.py [--je-datei]
+    ./instrumente/zaehle-theorien.py [--je-datei]
 
 DAS MASS -- vier Spalten, und die Grenze zwischen ihnen ist mechanisch
 ----------------------------------------------------------------------
@@ -26,7 +26,7 @@ Parser* (W10).
 DIE ZWEITE HAELFTE: WER HAT DEN SCHRITT GESUCHT?
 -------------------------------------------------
 Am 2026-08-17 lief dieser Ordner **zweimal an einem Tag** in eine Beweissuche: erst ein
-`metis` (9 Minuten, 6,3 GB), dann ein `blast` (12 Minuten, 4,8 GB). `./pruefe-beweise.sh`
+`metis` (9 Minuten, 6,3 GB), dann ein `blast` (12 Minuten, 4,8 GB). `./instrumente/pruefe-beweise.sh`
 haelt seither bei 3 GB an -- **aber der Wachhund greift erst, wenn die Suche schon laeuft.**
 
 *Die andere Haelfte ist eine Zaehlung, und sie steht hier:* jeder `metis`-, `blast`- und
@@ -41,7 +41,7 @@ import pathlib
 import re
 import sys
 
-W = pathlib.Path(__file__).resolve().parent
+W = pathlib.Path(__file__).resolve().parent.parent
 BEWEISE = W / "beweise"
 
 # **Ratsche, keine Zielzahl.** Jeder Aufruf ist eine Suche, die einmal lief und deren

@@ -11,14 +11,14 @@ Verfahren: alle `narrow`-Anweisungen aus dem Korpus entfernen, `gabbro pruefe` f
 **Vorab-Protokoll:** `MESSUNGEN.md`, Abschnitt *VORAB — die `narrow`-Zaehlung*, Commit
 `70053c4`. Zaehlregel, Stichprobenumfang, Fehlerschranke und Tor stehen dort.
 
-Aufruf: `./zaehle-bereichspflichten.py [--selbstprobe]`
+Aufruf: `./instrumente/zaehle-bereichspflichten.py [--selbstprobe]`
 """
 import pathlib
 import re
 import subprocess
 import sys
 
-WURZEL = pathlib.Path(__file__).parent
+WURZEL = pathlib.Path(__file__).resolve().parent.parent
 
 # **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
 # ein Befund -- am 2026-08-20 standen deswegen einundzwanzig Laeufe von

@@ -4,7 +4,7 @@
 -- damit nicht in den Rueckgabetyp -- nur wenn V3 lebt. Ohne V3 waere `k` unbekannt, und
 -- unbekannt heisst ungeprueft: die Regel koennte ausfallen, ohne dass etwas faellt.
 --
--- Gefunden von der Mutationsprobe (`./mutiere-pruefer.py`).
+-- Gefunden von der Mutationsprobe (`./instrumente/mutiere-pruefer.py`).
 module gift {
 
 const G : u32 = 65535;

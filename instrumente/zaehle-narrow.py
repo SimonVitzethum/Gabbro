@@ -10,8 +10,8 @@ genau M1+V1--V3, angewandt auf Rust. Er bleibt hier als **Finder von Kandidaten*
 Das Protokoll steht in MESSUNGEN.md und ist VOR diesem Skript geschrieben und committet.
 Dieses Skript aendert es nicht; wo es etwas nicht entscheiden kann, kippt es nach N.
 
-    ./zaehle-narrow.py [BAUM]        Standard: ~/Dokumente/SEL4Lake/SEL4Lake
-    ./zaehle-narrow.py --sprechprobe Nur die drei bekannten Fundstellen pruefen
+    ./instrumente/zaehle-narrow.py [BAUM]        Standard: ~/Dokumente/SEL4Lake/SEL4Lake
+    ./instrumente/zaehle-narrow.py --sprechprobe Nur die drei bekannten Fundstellen pruefen
 
 DER ZAEHLER IST EINE HEURISTIK UEBER ZEILEN, kein Rust-Parser. Er gilt nur als Messgeraet,
 wenn er die drei Stellen findet, die der Ordner schon kennt -- s. `sprechprobe()`.

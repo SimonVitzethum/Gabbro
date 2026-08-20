@@ -2,7 +2,7 @@
 # Leitet die Zahlen aus fallen-klassifikation.tsv ab, statt sie danebenzuschreiben.
 # Falle 80: eine Zahl, die ein Mensch parallel zur Wahrheit fuehrt.
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 D=fallen-klassifikation.tsv
 n=$(grep -cE '^[0-9]+\s' "$D")
 [ "$n" -eq 100 ] || { echo "ERWARTET 100 Eintraege, gefunden $n -- Quelle und Tabelle sind auseinander."; exit 1; }

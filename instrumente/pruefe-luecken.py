@@ -26,7 +26,7 @@ import pathlib, subprocess, re, sys
 #
 # > *Ein Waechter, der etwas anderes misst, als er sagt, ist schlimmer als keiner* -- und
 # > dieser hier SCHREIBT in die Quellen, die er misst.
-W = pathlib.Path(__file__).resolve().parent; C = W/"crates/gabbro-check/src"
+W = pathlib.Path(__file__).resolve().parent.parent; C = W/"crates/gabbro-check/src"
 
 # **Jede Ausfuehrung mit Frist.** Ein Haenger sieht aus wie „laeuft noch", nicht wie
 # ein Befund -- am 2026-08-20 standen deswegen einundzwanzig Laeufe von

@@ -34,7 +34,7 @@ import pathlib
 import re
 import sys
 
-WURZEL = pathlib.Path(__file__).resolve().parent
+WURZEL = pathlib.Path(__file__).resolve().parent.parent
 CHECK = WURZEL / "crates" / "gabbro-check" / "src"
 
 # **Woerter ueber die DARSTELLUNG.** Wer so begruendet, begruendet ueber das Erzeugnis.

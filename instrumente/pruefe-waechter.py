@@ -42,7 +42,7 @@ Drei Forderungen, und sie stehen hier, weil keine von ihnen sich selbst durchset
 *positives Urteil ueber nichts* -- und das ist gefaehrlicher, weil es wie ein Ergebnis
 aussieht. Die Vorkehrung ist die Zahl neben dem Urteil (W11: jede Quote nennt ihr N).
 
-    ./pruefe-waechter.py [--lauf]
+    ./instrumente/pruefe-waechter.py [--lauf]
 
 **Und was das NICHT heisst:** die statische Haelfte liest QUELLTEXT. Dass ein `timeout` im
 Text steht, heisst nicht, dass es an der richtigen Stelle steht. `--lauf` fuehrt die leichten
@@ -68,7 +68,7 @@ import subprocess
 import sys
 import time
 
-W = pathlib.Path(__file__).resolve().parent
+W = pathlib.Path(__file__).resolve().parent.parent
 FRIST = 300
 
 # **Waechter, die NICHT im `--lauf` stehen -- und der Grund ist seit dem 2026-08-20 GEMESSEN.**
@@ -162,9 +162,9 @@ ARBEIT = re.compile(r"\b\d+\s+(?:von|of)\s+\d+\b|\b\d+\s+[A-Za-zÄÖÜäöüß][
 
 def waechter():
     aus = []
-    for p in sorted(W.glob("pruefe-*.py")) + sorted(W.glob("pruefe-*.sh")) \
-            + sorted(W.glob("zaehle-*.py")) + sorted(W.glob("zaehle-*.sh")) \
-            + sorted(W.glob("mutiere-*.py")):
+    for p in sorted(W.glob("instrumente/pruefe-*.py")) + sorted(W.glob("instrumente/pruefe-*.sh")) \
+            + sorted(W.glob("instrumente/zaehle-*.py")) + sorted(W.glob("instrumente/zaehle-*.sh")) \
+            + sorted(W.glob("instrumente/mutiere-*.py")):
         aus.append(p)
     return aus
 
