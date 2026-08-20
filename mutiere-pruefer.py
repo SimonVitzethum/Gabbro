@@ -1532,11 +1532,19 @@ MUTATIONEN = [
         # **Neu am 2026-08-20 mit «B12»:** `elems of` bindet einen INDEX und laeuft ueber das
         # Feld selbst. Laesst die Schleife den letzten Eintrag aus, ist die Domaene
         # unvollstaendig -- und `msg_kopiert` spraeche dann ueber ein Wort zu wenig.
+        # **Die erste Fassung dieser Mutation MUTIERTE NICHTS** (2026-08-20): sie haengte ein
+        # `let _ = 0;` an und war damit ein No-op -- sie ueberlebte den Lauf und las sich wie
+        # eine unbewachte Regel. *Eine Mutation, die nichts aendert, ist die Umkehrung von
+        # W17: Misserfolg ohne Arbeit, und sie beschuldigt eine Regel, die in Ordnung ist.*
         "elems-laesst-den-letzten-aus",
         "emit.rs",
-        "            let feld = ort(o, u, absagen);\n            let v = &x.variable.text;",
-        "            let feld = ort(o, u, absagen);\n            let v = &x.variable.text;\n            let _ = 0;",
-        "C-Absenkung -- der Anker der `elems of`-Schleife ist verschwunden",
+        "            let feld = ort(o, u, absagen);\n            let v = &x.variable.text;\n"
+        "            aus.push_str(&format!(\n"
+        "                \"{e}for (uint32_t {v} = 0; {v} < (uint32_t)",
+        "            let feld = ort(o, u, absagen);\n            let v = &x.variable.text;\n"
+        "            aus.push_str(&format!(\n"
+        "                \"{e}for (uint32_t {v} = 0; {v} + 1 < (uint32_t)",
+        "C-Absenkung -- die `elems of`-Schleife laesst den letzten Eintrag aus",
         "code",
     ),
     Mutation(

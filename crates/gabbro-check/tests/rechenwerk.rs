@@ -610,6 +610,14 @@ impl fn loesche(s : ptr<normal, rw> S) effects { writes s } costs <= 64 ops
         c.contains("sizeof(s->worte)"),
         "die Schranke kommt aus dem Feld selbst, nicht aus einer Tabelle:\n{c}"
     );
+    // **Und die Grenze ist `< n`, nicht `< n-1`.** Die erste Fassung dieses Tests pruefte nur
+    // den `sizeof`-Traeger -- und die Mutation `elems-laesst-den-letzten-aus` UEBERLEBTE:
+    // `{v} + 1 <` enthaelt denselben Traeger. *Eine Zusicherung, die den Traeger prueft und
+    // nicht die Schranke, faengt genau den Fehler nicht, um den es geht.*
+    assert!(
+        c.contains("i < (uint32_t)(sizeof("),
+        "die Domaene ist vollstaendig -- `< n`, nicht `< n-1`:\n{c}"
+    );
 
     // **3. `forever` senkt ab, und die Klausel wird ein GEPRUEFTER BEZUG** (2026-08-20).
     //
