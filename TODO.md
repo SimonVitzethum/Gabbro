@@ -174,6 +174,26 @@ Pfad. In einem `git worktree` zeigt er neben den Arbeitsbaum — und `zaehle-b3.
 bis in eine `ZeroDivisionError`, mit einer Ausgabe, die mit `Dateien 0` begann. **Null Dateien
 ist eine Absage, kein Ergebnis;** das Werkzeug sagt es jetzt und endet mit 2.
 
+### Und ein dritter Ortsbefund: `-rlpgoD` heilt `cargo` und bricht den Beweiswächter
+
+`pruefe-beweise.sh` verlangt einen **Nachweis**, dass wirklich gebaut wurde — `isabelle build`
+schweigt bei leerer Auswahl (W17). Der zweite Weg zu diesem Nachweis lautet *„kein Bauwerksbuch,
+das jünger ist als jede Quelle"*, und das ist eine **Zeitstempelfrage**.
+
+Wer den ganzen Baum mit `rsync -rlpgoD` überträgt — dem Schalter, den `cargo` braucht —, gibt
+jeder `.thy` die aktuelle Zeit. **Isabelle rechnet nach Inhalt**, wählt korrekt nichts aus und
+schweigt; der Wächter rechnet nach Zeit, findet keinen Nachweis und meldet `OHNE NACHWEIS` über
+einer Sitzung, die vollständig aktuell ist.
+
+> **Zwei Begriffe von „aktuell" in einer Kette, und keiner von beiden ist falsch.** Die
+> bekannte Instanz (W16) log *grün*; diese lässt einen richtigen Lauf *durchfallen*. Die
+> Richtung wechselt, die Frage bleibt: **misst dieser Lauf, was ich glaube, dass er misst?**
+
+`CLAUDE.md` führt beide Übertragungen längst getrennt (`rsync -a beweise/` und
+`rsync -rlpgoD ./`) — *das sieht nach zwei Gewohnheiten aus und ist eine Bedingung.* Die Absage
+des Wächters nennt seit heute die wahrscheinlichere der zwei Ursachen und die Heilung; **eine
+Absage, die ihren häufigsten Grund nicht nennt, kostet jedes Mal dieselbe halbe Stunde.**
+
 **Was von den Punkten darunter erledigt ist:** die Spalte *„of which K"* (gestrichen, nicht
 ausgerechnet) · *54 oder 102* (zwei Grundgesamtheiten, keine zwei Zahlen) · die
 `narrow`-Klassen (`N_folgenlos` gebaut, `N_ritus` als Urteil benannt).

@@ -555,6 +555,35 @@ neuer Quelle und altem Objekt. Ein `touch` heilte es.
 misst er, was einmal da war?** Der Riegel steht in `CLAUDE.md`: `-rlpgoD` statt `-a`, damit
 jede übertragene Datei die aktuelle Zeit bekommt.
 
+### Und derselbe Riegel hat ein SPIEGELBILD — gefunden am 2026-08-20
+
+**`-rlpgoD` heilt `cargo` und bricht `pruefe-beweise.sh`.** Der Beweiswächter verlangt einen
+*Nachweis*, dass wirklich gebaut wurde (W17: `isabelle build` schweigt bei leerer Auswahl),
+und der zweite Weg zu diesem Nachweis lautet: *„kein Bauwerksbuch, das jünger ist als jede
+Quelle."* **Das ist eine Zeitstempelfrage.**
+
+Wer den ganzen Baum mit `-rlpgoD` überträgt, gibt jeder `.thy` die aktuelle Zeit. Isabelle
+rechnet nach **Inhalt**, wählt korrekt nichts aus und schweigt; der Wächter rechnet nach
+**Zeit**, findet keinen Nachweis und meldet `OHNE NACHWEIS` — über einer Sitzung, die
+vollständig aktuell ist.
+
+| | `cargo` | `isabelle build` |
+|---|---|---|
+| entscheidet Aktualität nach | **Zeit** | **Inhalt** |
+| braucht deshalb | `-rlpgoD` (neue Zeiten) | `-a` (erhaltene Zeiten), damit der NACHWEIS trägt |
+
+**`CLAUDE.md` führt beide Übertragungen längst getrennt** — `rsync -a beweise/` und
+`rsync -rlpgoD ./`. *Das sieht nach zwei Gewohnheiten aus und ist eine Bedingung.* Wer sie zu
+einem Befehl zusammenzieht, bekommt einen roten Wächter ohne Fehler.
+
+> **Zwei Begriffe von „aktuell" in einer Kette, und keiner von beiden ist falsch.** Die
+> vorherige Instanz log grün (der Bau aus einer Mischung), diese lässt einen richtigen Lauf
+> durchfallen. *Die Richtung wechselt, die Frage bleibt.*
+
+Der Wächter sagt seit dem 2026-08-20 in seiner Absage, welche der zwei Ursachen die häufigere
+ist und wie man sie unterscheidet — **eine Absage, die ihren wahrscheinlichsten Grund nicht
+nennt, kostet jedes Mal dieselbe halbe Stunde.**
+
 ---
 
 ## W17 — Erfolg ohne Arbeit: ein positives Urteil über nichts

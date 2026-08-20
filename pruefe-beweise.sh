@@ -123,8 +123,28 @@ else
     echo "== BEWEISE: OHNE NACHWEIS =="
     echo "  Der Lauf endete ohne Fehler und ohne Fertigmeldung, und kein Bauwerksbuch ist"
     echo "  juenger als die Quellen. **Das ist kein gruener Lauf, sondern gar keiner.**"
+    echo
+    # **Und die haeufigste Ursache ist keine Aenderung an den Beweisen, sondern der SYNC**
+    # (gefunden 2026-08-20). `CLAUDE.md` fuehrt ZWEI Uebertragungen mit verschiedenen
+    # Schaltern, und das ist kein Schoenheitsfehler:
+    #
+    #     rsync -a       beweise/   -- Zeitstempel ERHALTEN
+    #     rsync -rlpgoD  ./         -- Zeitstempel NEU (`cargo` braucht das)
+    #
+    # Wer den ganzen Baum mit `-rlpgoD` uebertraegt, gibt jeder `.thy` die aktuelle Zeit.
+    # Isabelle rechnet nach INHALT und waehlt korrekt nichts aus; dieser Nachweis rechnet
+    # nach ZEIT und findet keinen. **Zwei Begriffe von „aktuell" in einer Kette** -- dieselbe
+    # Sippe wie der Bau aus einer Mischung (W16), nur mit umgekehrtem Vorzeichen: dort log
+    # ein gruener Lauf, hier faellt ein richtiger durch.
+    echo "  Haeufigste Ursache ist NICHT eine Aenderung an den Beweisen, sondern der Sync:"
+    echo "  \`rsync -rlpgoD\` (fuer \`cargo\`) gibt jeder uebertragenen \`.thy\` die AKTUELLE"
+    echo "  Zeit. Isabelle rechnet nach INHALT und baut nichts; dieser Nachweis rechnet nach"
+    echo "  ZEIT und findet keinen. **CLAUDE.md uebertraegt \`beweise/\` deshalb mit \`-a\`.**"
+    echo "  Heilung: \`rsync -a beweise/ …\` -- oder einmal \`isabelle build -f -d . Gabbro\`,"
+    echo "  und das baut Pure und HOL mit."
     exit 1
 fi
+
 N=$(grep -c "^    [A-Z]" "$W/beweise/ROOT")
 D=$(ls "$W"/beweise/*.thy | wc -l)
 echo "== BEWEISE: ALL PASS -- $N Theorien ($D Dateien) =="

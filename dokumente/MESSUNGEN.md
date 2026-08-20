@@ -11199,3 +11199,113 @@ trägt 26 von 38 Beispielen und die zwölf fehlenden sind die zentralen; `K009` 
 syntaktische hinreichende Form und weist damit auch Masse ab, die fallen; `N027` verbietet
 dem `can_fail`-Block jedes Schreiben, wo die teurere Antwort wäre, dem `check` einen Vertrag
 zu geben. Alle drei stehen in `TODO.md`.
+
+---
+
+# 2026-08-20, Stufe 0 — zweiter Durchgang: elf Zahlen und eine AUSNAHMELISTE
+
+**Der Gegenstand.** Das Zahlenregister (`./pruefe-zahlen.py`) wuchs von 12 auf **39 Einträge**,
+gewählt nach `--reichweite` (Traglast zuerst, nicht Aufwand). Die unbewachten fettgedruckten
+Zahlen fallen von **156 auf 140**, die **tragenden von 42 auf 36**.
+
+## Was beim Eintragen fiel — elf Zahlen, in beide Richtungen
+
+| Zahl | stand | ist | wo | Befehl |
+|---|---:|---:|---|---|
+| `H` in der Postenliste | 15 | **12** | `PFLICHTEN.md` | `zaehle-pflichten.py --haengend` |
+| `H` im «NL»-Kasten | 15 | **12** | `PLAN.md` | dito |
+| Prämissen ohne Pass | 7 | **9** | `PLAN.md`, «NL» | `gabbro schablonen` |
+| **ZUSAGE ohne Leser** | 13 | **0** | `PLAN.md`, «NL» | `./pruefe-klauseln.py` |
+| Fremdpflichten | 8 | **10** | `PLAN.md`, «NL» | `gabbro pflichten` |
+| Absagen mit tragendem Grund | 96 | **98** | `TODO.md` | `./pruefe-gruende.py` |
+| gelesene Item-Arten | 21/23 | **23/23** | `TODO.md` | `./pruefe-konstrukte.py` |
+| Schablonen / davon unbewiesen | 20 / 15 | **21 / 11** | `TODO.md` | `gabbro schablonen` |
+| Widerrufe | 7 | **9** | `TODO.md` | `./pruefe-widerruf.py` |
+| direkte Blicke auf die Karten | 13 | **35** | `TODO.md` | `./zaehle-karten.py` (neu) |
+| blinde Zellen | 79 / 166 / 25 | **80 / 164 / 26** | `README.md` | `gabbro blindstellen` |
+| emittierende Beispiele | 43 | **45** | `README.md` | `./pruefe-emission.sh` |
+
+**Vier gefallen, sieben gestiegen — die Richtungsmischung ist wieder die Diagnose.** Eine
+Buchführung, die nur schönte, wäre Selbstbetrug; eine, die in beide Richtungen abweicht,
+**veraltet**. *Dagegen hilft kein Misstrauen, sondern ein Befehl.*
+
+**Die schärfste Einzelstelle ist `ZUSAGE ohne Leser`.** Sie stand als 13; der Zielkasten drei
+Zeilen darunter nennt als Tor von «NL» wörtlich `./pruefe-klauseln.py ZUSAGE = 0`, und das
+Werkzeug sagt **0**. *Ein Tor, dessen Erreichen niemand mitschreibt, ist von einem
+unerreichten nicht zu unterscheiden.*
+
+**Und die teuerste ist `H` in `PFLICHTEN.md`:** die Überschrift sagte 15, die Zahlenspalte
+darunter summierte sich zu **17**, der von ihr selbst genannte Befehl sagt **12**. Drei Zahlen
+über einer Sache — und die mit dem Suchweg war die falsche. Die Spalte ist gestrichen.
+
+## Die Ausnahmeliste des Wächters — vier von fünf Gründen falsch
+
+| | stand da | gemessen auf `ki-pc-fisch-101` |
+|---|---|---:|
+| `pruefe-emission.sh` | *„46 Einheiten … ~25 min"* | **13,7 s** |
+| `pruefe-luecken.py` | *„baut dreizehnmal neu"* | 10,7 s Wanduhr, 27,8 s CPU |
+| `pruefe-beweise.sh` | *„zwölf Isabelle-Theorien"* | 8,1 s, 1,45 GB Spitze — es sind **dreizehn** |
+| `pruefe-notation.py` | *„vierzehn `cargo run`"* | **0,56 s, und kein einziges `cargo run`** |
+| `mutiere-pruefer.py` | *„2 min 20 s, schreibt in Quellen"* | **stimmt** — der einzige tragende Grund |
+
+Die 25 Minuten stammen vom **Vormittag desselben Tages**, als `pruefe-emission.sh` an `baum41`
+hing. Die Frist beseitigte den Hänger; die Zahl blieb stehen — *als Begründung dafür, ihn nicht
+mehr zu messen.* **Eine Ausnahme, deren Grund niemand nachrechnet, ist dieselbe Klasse wie eine
+Zahl, die niemand nachrechnet — nur teurer** (W17, neuer Abschnitt).
+
+`--lauf` misst jetzt **19 von 25 Wächtern in 4,4 s** und druckt die Zeit je Wächter.
+
+## Zwei neue Zähler
+
+**`./zaehle-karten.py`** — 16 Karten in `umgebung.rs`, 12 davon öffentlich, 26 Passdateien:
+**35 direkte Blicke** (`.get(` und `.contains_key(`), davon 4 in einer Kandidatenschleife,
+**31 unqualifiziert**. Die alte Zahl 13 kannte `.contains_key(` nicht — *ein Werkzeug, das
+eine der beiden Formen nicht liest, misst seine eigene Leseweite* (W16).
+
+**`./zaehle-theorien.py`** — 13 Theorien, 2 317 Zeilen, 70 Sätze, 429 Beweisschritte:
+
+| | Zeilen | Anteil |
+|---|---:|---:|
+| Gerüst | 418 | 18,0 % |
+| **Prosa** | **1 062** | **45,8 %** |
+| Modell | 166 | 7,2 % |
+| Beweis | 671 | 29,0 % |
+
+**Modell + Beweis = 837 Zeilen, 36,1 %.** Wer 2 317 gegen eine Verus-Zeilenzahl hält,
+überschätzt die eigene Seite um den **Faktor 2,8** — dieselbe Verwechslung, an der die Kennzahl
+`1,90` am 2026-08-19 zurückgezogen wurde, eine Ebene tiefer. *Damit ist die alte Buchung
+„zehn Theorien, 1 639 Zeilen" nicht nur veraltet, sondern in ihrer Verwendung falsch.*
+
+Dasselbe Werkzeug trägt die zweite Hälfte des Beweissuchen-Punktes: **0 Suchbefehle**
+(`sledgehammer`/`try0`/`nitpick`/`quickcheck`) und **31 eingefrorene Suchergebnisse**
+(`metis` 3, `blast` 28) gegen eine Ratsche.
+
+## Die Lesbarkeitsprobe — 16 Nahtstellen, ein Jahr nach dem Handflicken
+
+`pruefe-englisch.py` prüfte die *Sprache* einer Meldung, nie ihre *Lesbarkeit*. Rusts
+`\`-Fortsetzung frisst den Umbruch **und die Einrückung**; die Trennung hängt an genau einem
+Zeichen. Erster Lauf: **16 von 778 Nähten kleben** — darunter *„…is verified--"*, *„…the rule
+therefore has**zero bite**"*, *„…reach the same stage.From strict one can loosen"*.
+
+Alle sechzehn repariert. **Von Hand geflickt heißt: nicht bewacht** — die 161 vom 2026-08-19
+waren nie null.
+
+## Der Stand am Ende des Durchgangs
+
+```
+pruefe-zahlen.py    39 von 39 nachgerechnet, 39 Sprechproben in beide Richtungen
+pruefe-waechter.py  25 von 25 statisch, 19 von 19 gelaufenen mit Arbeitsmenge, 4,4 s
+                    2 nicht gemessen (fremder Korpus fehlt auf `fisch`), deklariert
+cargo test          158 gruen
+pruefe-emission.sh  19 durchgestochen, 45 von 45 uebersetzen (-O0 und -O2 gleich, UBSan)
+pruefe-luecken.py   13 von 13, Quellen byteidentisch zurueck
+pruefe-beweise.sh   13 Theorien, 8,1 s
+mutiere-pruefer.py  234 von 234 Ankern greifen
+```
+
+**Und was das NICHT heißt:** 140 fettgedruckte Zahlen haben weiterhin keinen Befehl, 36 davon
+tragen eine Zusage nach außen. Die größte verbliebene Gruppe sind die **seL4- und
+Verus-Vergleichszahlen** — die stammen aus fremden Veröffentlichungen und sind hier nicht
+ableitbar, sondern nur zitierbar; für sie ist die richtige Vorkehrung eine Quelle, kein Befehl.
+Die zweite Gruppe sind `total`/`K`/`L` der Pflichtentafel (238 / 171 / 67), und die kommen aus
+einem **Handgang**. *Das ist der nächste Posten, und er gehört in `zaehle-pflichten.py`.*
