@@ -88,9 +88,28 @@ behauptet, die B22-Sonde maß einen fremden Fehler. **Man kann nicht auf Zahlen 
 messen.**
 
 **Das Tor:** jede Zahl im Ordner nennt den Befehl, der sie ableitet; ein Wächter leitet alle neu
-ab und fällt bei Abweichung (`pruefe-todo.py` tut das für den README — auf `PFLICHTEN.md`,
-`MESSUNGEN.md`, `PLAN.md` ausdehnen). Und jeder Wächter braucht dreierlei: eine **Frist**, eine
+ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist**, eine
 **Sprechprobe in beide Richtungen**, und einen Abbruch, der **rot** ist statt still.
+
+## Stand 2026-08-20 — die zwei Instrumente stehen
+
+| | |
+|---|---|
+| **`./pruefe-zahlen.py`** | das Register der Befehle. **12 Kennzahlen mit Befehl** — und es zählt, was es *nicht* bewacht: **156 fettgedruckte Zahlen in Tabellenzellen ohne einen**. Sprechprobe über alle zwölf, in beide Richtungen |
+| **`./pruefe-waechter.py`** | der Wächter über den Wächtern. Drei Forderungen, **23 von 23 Instrumenten tragen alle drei** (beim ersten Lauf: 11). `--lauf` führt die leichten wirklich aus, mit Frist; die fünf schweren stehen mit Grund daneben |
+
+**Sechs Befunde beim ersten Lauf, keiner davon gesucht:** `pruefe-beweise.sh` kündigte eine
+Zeitgrenze an und setzte sie nie durch (`ZEIT=600` stand in der Kopfzeile, der Wachhund sah nur
+den Speicher) · `zaehle-b3.py` druckte `! ABBRUCH` und endete mit 0 · `pruefe-abstieg.py` war
+nicht ausführbar · drei Wächter hatten keine Sprechprobe · fünf führten `cargo`/`cc` ohne Frist
+aus. **Und einer an mir selbst:** ich formulierte die Wächterzahl im README aus ihrem Muster
+heraus, und `pruefe-todo.py` meldete *„sauber"* über einer falschen Zahl. *Seit heute ist ein
+Muster ohne Treffer selbst ein Befund — in beiden Werkzeugen.*
+
+**Was von den Punkten darunter erledigt ist:** die Spalte *„of which K"* (gestrichen, nicht
+ausgerechnet) · *54 oder 102* (zwei Grundgesamtheiten, keine zwei Zahlen) · die
+`narrow`-Klassen (`N_folgenlos` gebaut, `N_ritus` als Urteil benannt). **Was bleibt, steht
+einzeln da** — und der größte Rest ist die Reichweite: 156 Zahlen ohne Befehl.
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
