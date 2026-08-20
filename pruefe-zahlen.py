@@ -86,14 +86,14 @@ EINTRAEGE = [
     ),
     (
         "README.md",
-        r"\*\*(\d+) of 23 instruments carry all three requirements\*\*",
+        r"\*\*(\d+) of 23 instruments carry all four requirements\*\*",
         ["./pruefe-waechter.py"],
         r"== (\d+) von \d+ tragen alle drei ==",
         "Instrumente mit Frist, Sprechprobe und rotem Abbruch",
     ),
     (
         "README.md",
-        r"of (\d+) instruments carry all three",
+        r"of (\d+) instruments carry all four",
         ["./pruefe-waechter.py"],
         r"von (\d+) tragen alle drei",
         "Instrumente insgesamt",
@@ -143,6 +143,48 @@ BEWACHTE_DATEIEN = [
     "TODO.md",
 ]
 KENNZAHL = re.compile(r"\|\s*\*\*([0-9][0-9  .,]*)\*\*\s*(?:\||$)")
+
+# **Nicht alle unbewachten Zahlen sind gleich viel wert.**
+#
+# Eine Zahl, die in einer ZUSAGE oder einem VERGLEICH steht, traegt eine Behauptung nach
+# aussen -- Vertrauensflaeche, Deckungsgrad, das Verhaeltnis gegen seL4. Eine, die einen
+# Zwischenstand beschreibt, traegt nichts. **Wer die naechsten zwoelf nach diesem Kriterium
+# waehlt statt nach Aufwand, senkt das Risiko schneller als die Zahl.**
+#
+# *Und was diese Einteilung NICHT ist:* eine Messung. Sie liest Stichwoerter in der Zeile und
+# irrt in beide Richtungen -- sie sortiert eine Arbeitsliste, sie spricht nichts frei (W10).
+TRAEGT = re.compile(
+    "seL4|CompCert|Verus|Rust|%|Vertrauen|trust|Zusage|promise|guarantee|bewiesen|proved|"
+    "unproved|Schablone|template|Deckung|coverage|Abdeckung|Anteil|ratio|" + "Verh\u00e4ltnis|"
+    "Annahme|assumption|blind|Mutation|gefangen|caught|Klempnerei|plumbing|"
+    "h\u00e4ngend|hanging|Beweis|proof",
+    re.I,
+)
+
+
+def kein_selbstbezug():
+    """**Ein Register, das seine eigene Ausgabe enthaelt, hat einen FIXPUNKT statt einer
+    Messung.**
+
+    Am 2026-08-20 habe ich die zwei Zahlen, die dieses Werkzeug ueber sich selbst druckt
+    (bewachte und unbewachte Kennzahlen), in sein eigenes Register eingetragen. Der Eintrag
+    ruft das Werkzeug, das Werkzeug prueft den Eintrag.
+
+    **Und der Ruecklauf ist nicht das Schlimme daran.** Ein Fixpunkt, der TERMINIERT, waere
+    gefaehrlicher: die Zahl stimmt dann immer, **unabhaengig davon, ob irgendetwas gemessen
+    wurde**. *Das ist die Ausweg-Zusicherung aus R15 in ihrer reinsten Form -- „erfuellt, weil
+    nichts geschah" -- eine Ebene ueber dem Werkzeug.*
+
+    Die Regel ist mechanisch pruefbar und billig, und darum steht sie hier als Code und nicht
+    als Satz: **kein Registereintrag darf einen Befehl nennen, der das registerfuehrende
+    Werkzeug selbst ist.**
+    """
+    ich = pathlib.Path(__file__).name
+    schlecht = []
+    for datei, _m, befehl, _a, was in EINTRAEGE:
+        if any(ich in str(t) for t in befehl):
+            schlecht.append(f"{datei} / {was}")
+    return schlecht
 
 
 def lauf(befehl):
@@ -204,9 +246,30 @@ def pruefe_eintraege(verstellen=None):
 
 
 def main():
+    # **Der Riegel gegen den Fixpunkt, vor allem anderen.**
+    if schlecht := kein_selbstbezug():
+        print("== SELBSTBEZUG -- das Register nennt sich selbst als Befehl ==")
+        for x in schlecht:
+            print(f"  {x}")
+        print("  **Ein Register, das seine eigene Ausgabe enthaelt, hat einen FIXPUNKT statt")
+        print("  einer Messung**: die Zahl stimmt dann immer, unabhaengig davon, ob irgendetwas")
+        print("  gemessen wurde. *Die Ausweg-Zusicherung aus R15, eine Ebene ueber dem")
+        print("  Werkzeug.* Die zwei eigenen Zahlen tragen ihr Datum, wie jede aus einem Lauf.")
+        return 1
+
     # **Die Sprechprobe zuerst, und in beide Richtungen.** Eine verstellte Zahl MUSS fallen,
     # eine unverstellte NICHT -- sonst misst dieses Werkzeug seine eigene Nachsicht.
     print("== Sprechprobe des Waechters ==")
+    # **Auch der Fixpunktriegel muss beissen koennen.** Ein Riegel, der nie zuschlaegt, ist
+    # von einem fehlenden nicht zu unterscheiden -- genau das war die Zeitgrenze in
+    # `pruefe-beweise.sh` bis heute frueh.
+    EINTRAEGE.append(("TODO.md", r"(\d+)", ["./" + pathlib.Path(__file__).name], r"(\d+)", "Probe"))
+    biss = bool(kein_selbstbezug())
+    EINTRAEGE.pop()
+    print("  Fixpunktriegel: " + ("ok (ein selbstbezueglicher Eintrag faellt)" if biss
+                                  else "GESCHEITERT -- er laesst sich selbst durch"))
+    if not biss:
+        return 1
     stumm = []
     for nr in range(len(EINTRAEGE)):
         b, _, _ = pruefe_eintraege(verstellen=nr)
@@ -236,16 +299,27 @@ def main():
             for m in KENNZAHL.finditer(zeile):
                 z = m.group(1).replace(" ", "").replace(" ", "")
                 if z not in bewacht.get(datei, set()):
-                    offen.append((datei, z, zeile.strip()[:70]))
+                    offen.append((datei, z, zeile.strip()[:70], bool(TRAEGT.search(zeile))))
     print()
     print("== Reichweite: was dieses Register NICHT bewacht ==")
+    traegt = [o for o in offen if o[3]]
     print(f"  {geprueft} Kennzahlen mit Befehl, {len(offen)} fettgedruckte Zahlen in "
           f"Tabellenzellen ohne einen")
+    print(f"  davon TRAGEND (Zusage oder Vergleich): {len(traegt)}   "
+          f"Zwischenstand: {len(offen) - len(traegt)}")
+    print()
+    print("  **Nicht alle unbewachten Zahlen sind gleich viel wert.** Eine, die in einer")
+    print("  ZUSAGE oder einem VERGLEICH steht, traegt eine Behauptung nach aussen; eine, die")
+    print("  einen Zwischenstand beschreibt, traegt nichts. *Wer die naechsten zwoelf nach")
+    print("  diesem Kriterium waehlt statt nach Aufwand, senkt das Risiko schneller als die")
+    print("  Zahl.* Die Einteilung liest Stichwoerter und irrt in beide Richtungen -- sie")
+    print("  sortiert eine Arbeitsliste, sie spricht nichts frei (W10).")
     if "--reichweite" in sys.argv:
-        for d, z, zeile in offen:
-            print(f"     {d}:{z}  {zeile}")
+        print()
+        for d, z, zeile, t in sorted(offen, key=lambda o: (not o[3], o[0])):
+            print(f"     {'TRAEGT' if t else '  --  '}  {d}:{z}  {zeile}")
     else:
-        print("     (`--reichweite` listet sie einzeln)")
+        print("     (`--reichweite` listet sie einzeln, tragende zuerst)")
     print()
     print("  **Und was das NICHT heisst:** eine unbewachte Zahl ist nicht falsch, sie ist")
     print("  unnachrechenbar. Genau das war der Zustand, in dem am 2026-08-20 fuenf Buchungen")

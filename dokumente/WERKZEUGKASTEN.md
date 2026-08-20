@@ -554,3 +554,95 @@ neuer Quelle und altem Objekt. Ein `touch` heilte es.
 *Die Regel ist dieselbe Frage:* **misst dieser Lauf, was ich glaube, dass er misst — oder
 misst er, was einmal da war?** Der Riegel steht in `CLAUDE.md`: `-rlpgoD` statt `-a`, damit
 jede übertragene Datei die aktuelle Zeit bekommt.
+
+---
+
+## W17 — Erfolg ohne Arbeit: ein positives Urteil über nichts
+
+**Am 2026-08-20 hat dieselbe Form dreimal zugeschlagen, in drei ganz verschiedenen
+Werkzeugen:**
+
+| | tat | und meldete |
+|---|---|---|
+| `isabelle build -D .` | wählte **nichts** aus | *„Finished"* — grün |
+| `zaehle-b3.py` | druckte `! ABBRUCH` | Rücklaufwert **0** |
+| `pruefe-todo.py` | ein Muster traf **nichts** mehr | *„Kennzahlentafel deckt sich mit dem Gegenstand"* |
+
+**Das ist nicht ein falsches Urteil, sondern ein *positives Urteil über nichts*** — und das
+ist die gefährlichere Hälfte, weil es wie ein Ergebnis aussieht. Ein falsches Urteil hat einen
+Gegenstand und irrt sich über ihn; dieses hier hat keinen und sagt trotzdem *ja*.
+
+> **Die Regel:** neben dem Urteil steht die **Arbeitsmenge**. Wie viele Dateien, wie viele
+> Stellen, wie viele Treffer. *Ohne sie ist ein grüner Lauf von einem leeren nicht zu
+> unterscheiden.*
+
+**Die Verwandtschaft ist ausdrücklich W11** — *jede Quote nennt ihr N* — nur eine Ebene höher:
+W11 spricht über das Verhältnis in einem Bericht, W17 über das Urteil eines Werkzeugs. **Und
+über beide steht dieselbe Ursache: ein Nenner, den niemand ansieht.**
+
+**Der Griff.** `pruefe-waechter.py` führt die Arbeitsmenge seit dem 2026-08-20 als **vierte
+Forderung** neben Frist, Sprechprobe und rotem Abbruch. Der Lauf mit `--lauf` liest die
+wirkliche Ausgabe und meldet jeden Wächter, der ein Urteil ohne Zahl abgibt. *Wo eine Frist
+steht, fehlt die Zahl daneben oft noch.*
+
+---
+
+## W18 — Ein Register, das seine eigene Ausgabe enthält, hat einen Fixpunkt statt einer Messung
+
+**Der Fall, in Reinform, und er ist mein eigener.** `pruefe-zahlen.py` hält Kennzahlen gegen
+den Befehl, der sie ableitet. Am Tag seiner Entstehung habe ich die zwei Zahlen, die es **über
+sich selbst** druckt — bewachte und unbewachte Kennzahlen — in sein eigenes Register
+eingetragen.
+
+Der Eintrag ruft das Werkzeug, das Werkzeug prüft den Eintrag, der Eintrag ruft das Werkzeug.
+Nach zwei Minuten abgebrochen.
+
+**Und der Rücklauf ist nicht das Schlimme daran.** Ein Fixpunkt, der **terminiert**, wäre
+gefährlicher:
+
+> Die Zahl stimmt dann **immer** — und zwar unabhängig davon, ob irgendetwas gemessen wurde.
+
+*Das ist die Ausweg-Zusicherung aus **R15** in ihrer reinsten Form — „erfüllt, weil nichts
+geschah" — eine Ebene über dem Werkzeug.* W10 hat dieselbe Bewegung eine Ebene tiefer gefunden
+(im Pass); hier steht sie im **Register**, also in der Instanz, die über alle anderen Zahlen
+urteilt.
+
+**Die Regel ist mechanisch prüfbar und billig, und darum steht sie als Code und nicht als
+Satz:**
+
+> **Kein Registereintrag darf einen Befehl nennen, der das registerführende Werkzeug selbst
+> ist.**
+
+`pruefe-zahlen.py` prüft das vor jedem Lauf und trägt dafür seine eigene Sprechprobe. **Die
+zwei eigenen Zahlen tragen ihr Datum**, wie jede Zahl aus einem Lauf — ein Register braucht
+einen Gegenstand außerhalb seiner selbst.
+
+**Und der Nebenbefund ist der beste Beleg für die Messschicht selbst:** der Fehler fiel
+**innerhalb einer Minute** auf, weil seit demselben Morgen überall eine Frist steht. *Die
+Reparatur der Messschicht hat an ihrem ersten Tag einen Fehler gefangen, den sie erst
+ermöglicht hat.*
+
+---
+
+## W19 — Ein Urteil, das sich als Messung liest, bekommt die Autorität der Messung
+
+**`N_ritus` ist der Fall.** K100.1 buchte als Tor: *„`zaehle-bereichspflichten.py`
+unterscheidet die drei Fälle."* **Das Werkzeug tat es nicht** — die Unterscheidung stand in
+`PFLICHTEN.md`, also im Urteil. Die Zahl las sich, als käme sie aus einem Lauf.
+
+Die Auflösung hat zwei Teile, und der zweite ist der wichtigere:
+
+1. **Die Hälfte bauen, die ohne Urteil geht.** `N_folgenlos` — ein `narrow`, dessen Entfernung
+   nichts ändert, ist Zierde. Zweiebenenprobe (W8), heute **0**.
+2. **Sie ANDERS benennen.** Denn `N_ritus` ist über die *Erreichbarkeit* des `else`-Zweigs
+   definiert, und eine unerreichbare Stelle trägt sehr wohl eine Pflicht — M1 sieht die
+   Schranke nicht. **Zwei verschiedene Fragen, und bis dahin hießen beide gleich.**
+
+> **Beide unter einem Namen zu führen hätte die Bewertung mit der Autorität der Messung
+> ausgestattet.** *Ein Name ist kein Etikett, er ist eine Zuständigkeitserklärung.*
+
+**Und dieselbe Trennung wird eine Stufe weiter noch einmal gebraucht.** Das
+Nutzbarkeitsinstrument aus Stufe 2 (`gabbro zeremonie`) misst **ableitbar** gegen **tragend**
+— und das ist derselbe Schnitt: was aus einer Deklaration abzulesen ist, gegen das, was
+nirgends sonst steht. *Wer ihn dort nicht zieht, misst die Menge aller Klauseln und drängt
+gegen die Zusage der Sprache.*

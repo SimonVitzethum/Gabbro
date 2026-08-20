@@ -108,8 +108,20 @@ Muster ohne Treffer selbst ein Befund — in beiden Werkzeugen.*
 
 **Was von den Punkten darunter erledigt ist:** die Spalte *„of which K"* (gestrichen, nicht
 ausgerechnet) · *54 oder 102* (zwei Grundgesamtheiten, keine zwei Zahlen) · die
-`narrow`-Klassen (`N_folgenlos` gebaut, `N_ritus` als Urteil benannt). **Was bleibt, steht
-einzeln da** — und der größte Rest ist die Reichweite: 156 Zahlen ohne Befehl.
+`narrow`-Klassen (`N_folgenlos` gebaut, `N_ritus` als Urteil benannt).
+
+**Drei Klassen sind daraus in den Werkzeugkasten gegangen, weil sie über ihren Anlass hinausreichen:**
+
+| | |
+|---|---|
+| **W17** | *Erfolg ohne Arbeit* — ein **positives Urteil über nichts**. Dreimal an einem Tag: `isabelle build` wählte nichts und endete grün, `zaehle-b3.py` druckte `! ABBRUCH` und endete mit 0, ein README-Muster traf nichts und meldete „sauber". **Die Vorkehrung ist die Arbeitsmenge neben dem Urteil** — seit heute die *vierte* Forderung in `pruefe-waechter.py` |
+| **W18** | *Ein Register, das seine eigene Ausgabe enthält, hat einen **Fixpunkt statt einer Messung***. Nicht der Rücklauf ist das Schlimme — ein Fixpunkt, der **terminiert**, wäre gefährlicher: die Zahl stimmt dann immer, unabhängig davon, ob gemessen wurde. *R15 eine Ebene über dem Werkzeug.* **Als Code geriegelt**, nicht als Satz |
+| **W19** | *Ein Urteil, das sich als Messung liest, bekommt die Autorität der Messung.* Die Auflösung hat zwei Teile, und der zweite wiegt schwerer: die urteilsfreie Hälfte bauen — **und sie anders benennen** |
+
+**Und die Reichweite ist jetzt nach Traglast sortiert, nicht nach Aufwand:** von 156
+unbewachten Zahlen tragen **42** eine Zusage oder einen Vergleich nach außen, **114**
+beschreiben einen Zwischenstand. *Wer die nächsten zwölf nach diesem Kriterium wählt, senkt
+das Risiko schneller als die Zahl.* Die übrigen Punkte stehen einzeln darunter.
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 

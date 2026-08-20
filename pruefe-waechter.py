@@ -27,6 +27,20 @@ Drei Forderungen, und sie stehen hier, weil keine von ihnen sich selbst durchset
    mit `timeout` ist genau die Falle, in die `pruefe-emission.sh` am selben Tag noch lief:
    die Frist beendete den Waechter STILL, mit Ruecklaufwert 0 und einer Ausgabe, die mit `ok`
    endete.
+4. **ARBEITSMENGE** -- neben dem Urteil steht, WIE VIEL angesehen wurde. *Ohne sie ist ein
+   gruener Lauf von einem leeren nicht zu unterscheiden.*
+
+**Zu (4) gehoert eine eigene Klasse, und sie hat am 2026-08-20 dreimal zugeschlagen:**
+
+| | |
+|---|---|
+| `isabelle build -D .` | waehlte NICHTS und endete gruen |
+| `zaehle-b3.py` | druckte `! ABBRUCH` und endete mit 0 |
+| das README-Muster fuer die Waechterzahl | traf nichts mehr und meldete „sauber" |
+
+**Drei Faelle, eine Form: ERFOLG OHNE ARBEIT.** Nicht ein falsches Urteil, sondern ein
+*positives Urteil ueber nichts* -- und das ist gefaehrlicher, weil es wie ein Ergebnis
+aussieht. Die Vorkehrung ist die Zahl neben dem Urteil (W11: jede Quote nennt ihr N).
 
     ./pruefe-waechter.py [--lauf]
 
@@ -70,6 +84,9 @@ FUEHRT_AUS = re.compile(r"subprocess\.|os\.system|check_output|\bcargo\b|\bcc\b|
 HAT_FRIST = re.compile(r"timeout=|\btimeout\b|TimeoutExpired|\bFRIST\b|\bZEIT\b")
 HAT_PROBE = re.compile(r"[Ss]prechprobe|speech test|Gegenprobe|[Ss]elbsttest")
 HAT_ROT = re.compile(r"sys\.exit\(\s*[1-9]|SystemExit\(\s*[1-9]|exit\s+1\b|return\s+1\b|returncode")
+# **Eine ARBEITSMENGE in der Ausgabe**: `N von M`, `N Dateien`, `N Stellen`. Statisch ist das
+# nur ein Hinweis; `--lauf` liest die wirkliche Ausgabe, und das ist die Haelfte, die zaehlt.
+ARBEIT = re.compile(r"\b\d+\s+(?:von|of)\s+\d+\b|\b\d+\s+[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß-]{3,}")
 
 
 def waechter():
@@ -109,17 +126,24 @@ def sprechprobe():
         a.write_text(gut, encoding="utf-8")
         b.write_text(schlecht, encoding="utf-8")
         f_gut, f_schlecht = statisch(a), statisch(b)
-    ok = not f_gut and set(f_schlecht) == {"FRIST", "SPRECHPROBE", "ROT-BEI-ABBRUCH"}
-    return ok, f_gut, f_schlecht
+    # **Und die vierte Forderung, an ihrer eigenen Regex.** Ein gruener Lauf ohne Zahl
+    # daneben MUSS auffallen; einer mit Zahl NICHT.
+    leer_faellt = not ARBEIT.search("== ALL PASS ==\nok\n")
+    voll_faellt = bool(ARBEIT.search("== 23 von 23 tragen alle drei ==\n"))
+    ok = (not f_gut and set(f_schlecht) == {"FRIST", "SPRECHPROBE", "ROT-BEI-ABBRUCH"}
+          and leer_faellt and voll_faellt)
+    return ok, f_gut, f_schlecht, leer_faellt, voll_faellt
 
 
 def main():
-    ok, f_gut, f_schlecht = sprechprobe()
+    ok, f_gut, f_schlecht, leer_faellt, voll_faellt = sprechprobe()
     print("== Sprechprobe des Waechters ==")
     print(f"  saubere Quelle: {len(f_gut)} Verletzungen -- "
           + ("ok" if not f_gut else f"GESCHEITERT (falsches Rot: {f_gut})"))
     print(f"  kaputte Quelle: {len(f_schlecht)} Verletzungen -- "
           + ("ok" if len(f_schlecht) == 3 else f"GESCHEITERT (der Waechter ist stumm: {f_schlecht})"))
+    print("  Arbeitsmenge:   " + ("ok (eine Ausgabe ohne Zahl faellt, eine mit Zahl nicht)"
+                                  if leer_faellt and voll_faellt else "GESCHEITERT"))
     if not ok:
         return 1
 
@@ -148,8 +172,15 @@ def main():
             befehl = [str(p)] + ARGUMENTE.get(p.name, [])
             try:
                 r = subprocess.run(befehl, cwd=W, capture_output=True, text=True, timeout=FRIST)
+                arbeit = ARBEIT.search(r.stdout)
                 marke = "Ende" if r.returncode in (0, 1) else "USAGE?"
-                print(f"  {marke} {r.returncode:<2} {p.name}")
+                zusatz = "" if arbeit else "   !! OHNE ARBEITSMENGE"
+                print(f"  {marke} {r.returncode:<2} {p.name:<28}{zusatz}")
+                # **Erfolg ohne Arbeit.** Ein gruener Lauf ohne eine Zahl daneben ist von
+                # einem leeren nicht zu unterscheiden -- `isabelle build` waehlte nichts und
+                # endete gruen, dasselbe Muster.
+                if not arbeit:
+                    befunde.append((p.name, ["OHNE-ARBEITSMENGE"]))
                 # **Ein Ruecklaufwert ausserhalb {0,1} ist kein Befund, sondern ein
                 # FEHLAUFRUF** -- das Werkzeug hat nichts gemessen und sieht doch rot aus.
                 if r.returncode not in (0, 1):
