@@ -127,7 +127,7 @@ MUTATIONEN = [
         "verbrauch-in-der-schleife-zaehlt-einmal",
         "m2.rs",
         "            let vor_schleife: Option<BTreeMap<_, _>> =\n                matches!(&s.art, StmtArt::Schleife(_)).then(|| zust.clone());",
-        "            let vor_schleife: Option<BTreeMap<_, _>> = None;",
+        "            let vor_schleife: Option<BTreeMap<String, (Zustand, Span, bool, bool)>> = None;",
         "L108 -- ein Schleifenrumpf verbraucht wieder `genau einmal`, obwohl er oft laeuft",
     ),
     Mutation(
@@ -149,17 +149,18 @@ MUTATIONEN = [
     Mutation(
         "sperrabdruck-wird-summiert",
         "gruppe.rs",
-        "        if neu {\n            gehalten.pop();\n        }",
-        "        if false {\n            gehalten.pop();\n        }",
-        "U003 -- der Sperrabdruck gilt wieder kumulativ statt gleichzeitig: zwei "
+        "        for k in crate::unterbloecke(s) {\n            schreibstellen(k, traeger, gehalten, aus);",
+        "        for k in crate::unterbloecke(s).into_iter().take(0) {\n            schreibstellen(k, traeger, gehalten, aus);",
+        "U003 -- die Schreibstellen INNERHALB eines `locks`-Blocks werden nicht mehr "
+        "gefunden, also hat die Gruppe keinen Abdruck mehr: zwei "
         "`locks`-Bloecke NACHEINANDER sehen aus wie zwei gehaltene Sperren, und zwischen "
         "ihnen ist die Gruppe offen",
     ),
     Mutation(
         "can-fail-darf-schreiben",
         "namen.rs",
-        '                            format!("a `can_fail` block contains {was}"),',
-        '                            format!("a `can_fail` block is fine with {was}"),',
+        '                        StmtArt::Zuweisung(z) => ("an assignment", z.ziel.span),',
+        '                        StmtArt::Publish(_) if false => ("an assignment", s.span),',
         "N027 -- ein `can_fail`-Block darf wieder schreiben und sperren, obwohl das `check` "
         "keinen Vertrag traegt und zehn der zwoelf Paesse ihn nie sehen",
     ),
