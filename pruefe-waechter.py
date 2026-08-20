@@ -66,17 +66,37 @@ import pathlib
 import re
 import subprocess
 import sys
+import time
 
 W = pathlib.Path(__file__).resolve().parent
 FRIST = 300
 
-# Waechter, die zu schwer fuer einen Lauf hier sind -- mit Grund, nicht als Freibrief.
+# **Waechter, die NICHT im `--lauf` stehen -- und der Grund ist seit dem 2026-08-20 GEMESSEN.**
+#
+# Bis dahin standen hier fuenf Eintraege mit geschaetzten Kosten, und **vier von fuenf waren
+# falsch** -- am schlimmsten `pruefe-emission.sh` mit *„46 Einheiten … ~25 min"*. Gemessen auf
+# `ki-pc-fisch-101`: **13,7 Sekunden.** Die 25 Minuten stammen vom Vormittag desselben Tages,
+# als der Waechter an `baum41` HING; die Frist hat den Haenger beseitigt, und die Zahl, die ihn
+# beschrieb, blieb stehen -- **als Begruendung dafuer, ihn nicht zu messen.**
+#
+# > **Eine Ausnahme, deren Grund niemand nachrechnet, ist dieselbe Klasse wie eine Zahl, die
+# > niemand nachrechnet** -- nur teurer, weil sie eine ganze Messung abschaltet statt sie zu
+# > verfaelschen. *Erfolg ohne Arbeit, eine Ebene ueber dem Urteil: die Arbeit wird gar nicht
+# > erst angeordnet.*
+#
+# Was blieb, steht jetzt mit dem RICHTIGEN Grund da, und der ist in keinem der vier die Zeit:
+# es ist der ORT (Speicher, Rechenlast gehoert auf den Server -- `CLAUDE.md`) oder die
+# WIRKUNG (es schreibt in Quellen). `pruefe-notation.py` ist ganz herausgefallen: 0,56 s, und
+# es ruft kein `cargo` -- **es stand vier Wochen auf einer Liste, auf die es nie gehoerte.**
 SCHWER = {
-    "pruefe-emission.sh": "46 Einheiten, je erzeugen/uebersetzen/ausfuehren/UBSan -- ~25 min",
-    "pruefe-beweise.sh": "zwoelf Isabelle-Theorien; gehoert ohnehin auf den Server",
-    "pruefe-luecken.py": "baut dreizehnmal neu",
-    "mutiere-pruefer.py": "234 Mutationen, je ein Bau -- 2 min 20 s, und es SCHREIBT in Quellen",
-    "pruefe-notation.py": "vierzehn `cargo run` ueber je ein erzeugtes Programm",
+    "mutiere-pruefer.py":
+        "es SCHREIBT in Quellen -- zwei Laeufe zerstoeren einander (2 min 20 s, 2026-08-19)",
+    "pruefe-beweise.sh":
+        "1,45 GB Spitze -- ueber der lokalen 1-GB-Grenze; 8,1 s auf `fisch` (2026-08-20)",
+    "pruefe-emission.sh":
+        "`cargo run` je Einheit -- gehoert auf den Server; 13,7 s dort (2026-08-20)",
+    "pruefe-luecken.py":
+        "baut dreizehnmal neu -- gehoert auf den Server; 10,7 s / 27,8 s CPU dort (2026-08-20)",
 }
 # **Waechter, deren Gegenstand ein FREMDER BAUM ist** -- einer, der nicht in diesem
 # Verzeichnis liegt und den `git` nicht mitbringt. Je Eintrag: der Pfad und was dort steht.
@@ -219,6 +239,7 @@ def main():
         print()
         print("== Und die leichten laufen wirklich, mit Frist -- und mit der vierten Forderung ==")
         nicht_gemessen = []
+        gesamtzeit = [0.0]
         for p in alle:
             if p.name in SCHWER:
                 print(f"  schwer  {p.name:<28}  {SCHWER[p.name]}")
@@ -234,11 +255,17 @@ def main():
                                  if a.startswith("~") else a
                                  for a in ARGUMENTE.get(p.name, [])]
             try:
+                t0 = time.monotonic()
                 r = subprocess.run(befehl, cwd=W, capture_output=True, text=True, timeout=FRIST)
+                dauer = time.monotonic() - t0
                 arbeit = ARBEIT.search(r.stdout)
                 marke = "Ende" if r.returncode in (0, 1) else "USAGE?"
                 zusatz = "" if arbeit else "   !! OHNE ARBEITSMENGE"
-                print(f"  {marke} {r.returncode:<2} {p.name:<28}{zusatz}")
+                # **Die Zeit gehoert neben das Urteil, wie die Arbeitsmenge.** Wer eine
+                # Ausnahme mit Kosten begruendet, muss die Kosten irgendwo ablesen koennen --
+                # sonst wird die Begruendung so alt wie die „~25 min" oben.
+                print(f"  {marke} {r.returncode:<2} {p.name:<28}{dauer:6.2f} s{zusatz}")
+                gesamtzeit[0] += dauer
                 # **Erfolg ohne Arbeit.** Ein gruener Lauf ohne eine Zahl daneben ist von
                 # einem leeren nicht zu unterscheiden -- `isabelle build` waehlte nichts und
                 # endete gruen, dasselbe Muster.
@@ -267,6 +294,13 @@ def main():
         print("   **Das ist ein Loch mit einer Zahl, kein gruener Haken.** Ein Waechter,")
         print("   dessen Gegenstand nicht da ist, hat nichts gemessen -- und das steht hier,")
         print("   statt sich als roter Ruecklaufwert zu tarnen, den keiner lesen kann.")
+        print()
+        print(f"== {gesamtzeit[0]:.1f} s fuer {gelaufen} Waechter ==")
+        print("   Die Zeit steht hier, weil die AUSNAHMEN mit Kosten begruendet werden. Eine")
+        print("   Ausnahme, deren Grund niemand nachrechnet, ist dieselbe Klasse wie eine Zahl,")
+        print("   die niemand nachrechnet -- nur teurer: sie schaltet eine ganze Messung ab.")
+        print("   *Am 2026-08-20 stand `pruefe-emission.sh` mit ~25 min auf dieser Liste und")
+        print("   braucht 13,7 s; die Schaetzung stammte von dem Vormittag, an dem er HING.*")
 
     print()
     print("== Und was das NICHT heisst ==")

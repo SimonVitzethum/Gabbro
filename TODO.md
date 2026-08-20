@@ -95,8 +95,8 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./pruefe-zahlen.py`** | das Register der Befehle. **34 Kennzahlen mit Befehl** *(Stand 2026-08-20; 12 am Vormittag)* — und die Zahl steht hier OHNE Befehl daneben, mit Bedacht: ein Register, das sich selbst zaehlt, hat einen Fixpunkt (W18). Es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen |
-| **`./pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **25 von 25 Instrumenten** tragen die drei statischen. `--lauf` führt die leichten wirklich aus, mit Frist; die fünf schweren stehen mit Grund daneben, die zwei mit fremdem Korpus ebenso |
+| **`./pruefe-zahlen.py`** | das Register der Befehle. **39 Kennzahlen mit Befehl** *(Stand 2026-08-20; 12 am Vormittag)* — und die Zahl steht hier OHNE Befehl daneben, mit Bedacht: ein Register, das sich selbst zaehlt, hat einen Fixpunkt (W18). Es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen |
+| **`./pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **25 von 25 Instrumenten** tragen die drei statischen. `--lauf` führt **19 von 25** wirklich aus, in **4,4 s** und mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
 
@@ -110,7 +110,7 @@ Muster ohne Treffer selbst ein Befund — in beiden Werkzeugen.*
 
 ### Der zweite Durchgang, am Nachmittag — und er hat mehr gefunden als der erste
 
-Das Register wuchs von 12 auf **34 Einträge**, gewählt nach `--reichweite` (Traglast zuerst).
+Das Register wuchs von 12 auf **39 Einträge**, gewählt nach `--reichweite` (Traglast zuerst).
 **Sieben der neuen Einträge fielen sofort**, und die Richtungsmischung ist wieder die
 Diagnose — keine Beschönigung, sondern **Fortschreibung**:
 
@@ -123,6 +123,10 @@ Diagnose — keine Beschönigung, sondern **Fortschreibung**:
 | Schablonen im Register | 20, 15 unbewiesen | 21, 11 unbewiesen | `TODO.md` |
 | Widerrufe | 7 | 9 | `TODO.md` |
 | direkte Blicke auf die Karten | 13 | 35 | `TODO.md` |
+| ZUSAGE ohne Leser | 13 | 0 | `PLAN.md`, «NL» — *das Tor von «NL» ist ERREICHT* |
+| Fremdpflichten | 8 | 10 | `PLAN.md`, «NL» |
+| emittierende Beispiele | 43 | 45 | `README.md` |
+| Laufzeit von `pruefe-emission.sh` | ~25 min | **13,7 s** | `pruefe-waechter.py`, `SCHWER` |
 
 > **Drei Register über einer Sache, und das mit dem Suchweg war das falsche.** In
 > `PFLICHTEN.md` stand die Postenliste der hängenden Pflichten unter der Überschrift
@@ -137,6 +141,33 @@ Diagnose — keine Beschönigung, sondern **Fortschreibung**:
 |---|---|
 | **Der Fixpunktriegel war einen Schritt tief** | W18 verbietet einen Registereintrag, dessen Befehl `pruefe-zahlen.py` **nennt**. Der Ring der Länge ZWEI lag offen daneben: `./pruefe-waechter.py --lauf` führt jeden leichten Wächter aus, und das Register ist einer davon — **ein einziger Eintrag mit `--lauf` hätte den Ring geschlossen**, und der Namensriegel hätte ihn durchgelassen. Seit heute hängt der Riegel an einer Marke in der Prozessumgebung und greift in **jeder** Tiefe; gemessen an einem echten Kindprozess |
 | **`pruefe-waechter.py --lauf` war hier grün und auf `ki-pc-fisch-101` rot** | bei identischen Quellen. Nicht der Code fehlte, sondern der **Gegenstand**: `zaehle-b3.py` und `zaehle-narrow.py` messen fremde Bäume (Caprock-Messbasis, SEL4Lake), und die liegen nur auf dem Arbeitsrechner. *Ein Wächter, dessen Urteil davon abhängt, auf welchem Rechner er läuft, ohne es zu sagen, misst den Rechner.* Beide stehen jetzt in `FREMDER_KORPUS`; ein fehlender Baum zählt als **nicht gemessen** und steht mit seiner Zahl in der Schlusszeile |
+
+### Und der teuerste Befund ist die AUSNAHMELISTE, nicht eine Zahl
+
+`pruefe-waechter.py` führte fünf Instrumente als *„zu schwer für einen Lauf hier"* — mit
+geschätzten Kosten. **Vier von fünf Schätzungen waren falsch**, und die schlimmste hielt den
+schwersten Wächter des Ordners aus jeder Messung heraus:
+
+| | stand | gemessen auf `fisch` |
+|---|---|---:|
+| `pruefe-emission.sh` | *„46 Einheiten … ~25 min"* | **13,7 s** |
+| `pruefe-luecken.py` | *„baut dreizehnmal neu"* | 10,7 s (27,8 s CPU) |
+| `pruefe-beweise.sh` | *„zwölf Isabelle-Theorien"* | 8,1 s — es sind dreizehn |
+| `pruefe-notation.py` | *„vierzehn `cargo run`"* | **0,56 s, und kein einziges `cargo run`** |
+
+Die 25 Minuten stammen vom **Vormittag desselben Tages**, als der Wächter an `baum41` HING.
+Die Frist hat den Hänger beseitigt — und die Zahl, die ihn beschrieb, blieb stehen, *als
+Begründung dafür, ihn nicht zu messen.*
+
+> **Eine Ausnahme, deren Grund niemand nachrechnet, ist dieselbe Klasse wie eine Zahl, die
+> niemand nachrechnet — nur teurer.** Eine falsche Zahl verfälscht eine Messung; eine falsche
+> Ausnahme **ordnet sie gar nicht erst an.** *Erfolg ohne Arbeit, eine Ebene über dem Urteil.*
+
+Was blieb, steht mit dem richtigen Grund da, und der ist in keinem der vier die Zeit: es ist
+der **Ort** (Speicherspitze, Rechenlast gehört auf den Server) oder die **Wirkung** (es
+schreibt in Quellen). `pruefe-notation.py` ist ganz herausgefallen — *es stand auf einer
+Liste, auf die es nie gehörte.* Der Lauf misst jetzt **19 von 25 in 4,4 s** und druckt die
+Zeit je Wächter, damit die nächste Ausnahme nachrechenbar ist.
 
 *Und dieselbe Falle noch einmal eine Ebene tiefer:* `../caprock-messbasis` ist ein **relativer**
 Pfad. In einem `git worktree` zeigt er neben den Arbeitsbaum — und `zaehle-b3.py` lief darüber
@@ -374,20 +405,22 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 ### «OPT» — schnelles und sicheres C, geplant 2026-08-19 ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
-- [ ] **OPT0 — der Wächter muss OPTIMIERT übersetzen.** `pruefe-emission.sh` fährt
-      `-Wall -Wextra -Werror` und **ohne `-O`**. Nachgemessen liefert die Einheit bei
-      `-O0`/`-O2`/`-O3` dasselbe und läuft sauber unter `-fsanitize=undefined` — **aber
-      gemessen habe ich das, nicht der Wächter.** Eine Abweichung zwischen `-O0` und `-O2`
-      ist der Fingerabdruck von undefiniertem Verhalten und **die einzige Probe, die ein
-      falsches `restrict` findet**. *`address` läuft auf diesem Rechner nicht (gehärteter
-      Kern, Schattenspeicher-Kollision): keine bestandene Probe, sondern eine nicht
-      gefahrene.*
-      **Woran es hängt, beziffert 2026-08-20:** der Wächter fährt 46 Einheiten mit je
-      erzeugen/übersetzen/ausführen/UBSan und braucht dafür rund 25 Minuten. Ein zweiter
-      Übersetzungs- und Laufdurchgang unter `-O2` **verdoppelt das**, und damit fällt er
-      endgültig aus jedem `--lauf` heraus — er steht schon heute unter den fünf schweren.
-      *Die Entscheidung ist deshalb keine Bauarbeit, sondern eine Kostenfrage:* zweiter
-      Durchgang für alle 46, oder `-O2` nur für die Einheiten mit `restrict`. **Bleibt offen.**
+- [ ] **~~OPT0 — der Wächter muss OPTIMIERT übersetzen~~ — WAR SCHON GEBAUT, seit dem
+      2026-08-19.** Der Punkt sagte *„`pruefe-emission.sh` fährt `-Wall -Wextra -Werror` und
+      **ohne `-O`** … gemessen habe ich das, nicht der Wächter."*
+      **Der Wächter tut es.** Stufe 5 übersetzt jede Einheit ein zweites Mal unter
+      `-O2 -Wall -Wextra -Werror`, führt sie aus und verlangt **dasselbe Ergebnis wie unter
+      `-O0`**; Stufe 6 fährt sie unter `-fsanitize=undefined`. Beide tragen eine Sprechprobe,
+      und die von Stufe 5 ist die schärfere: ein absichtlicher Typverstoß **muss** unter `-O0`
+      und `-O2` verschieden rechnen, sonst hat die Stufe nichts gemessen. Der Lauf vom
+      2026-08-20 druckt sie: *„Sprechprobe 5: ok (-O0 0 gegen -O2 1)"*.
+      **Und dass ich ihn beim Durchgehen der Stufe 0 als offen wiederholt habe, gehört zum
+      Befund**: der Punktetext war die einzige Quelle, die ich gelesen habe — *ein Punkt, der
+      seinen eigenen Gegenstand nicht nennt, überlebt seine Erledigung.* Er nennt ihn jetzt.
+      **Was WIRKLICH offen bleibt, ist eine Zeile davon:** `-fsanitize=address` läuft auf
+      diesem Rechner nicht (gehärteter Kern, Schattenspeicher-Kollision). *Keine bestandene
+      Probe, sondern eine nicht gefahrene* — und damit derselbe Fall wie der zweite Korpus
+      zwei Punkte höher: **ortsgebunden, nicht schwer.**
 
 - [ ] **Das GROBE Mass (greift ein Pass die Item-Art an?) findet die falsche Sache**
       *(2026-08-19, nachgemessen 2026-08-20)*. **23 von 23 Item-Arten** sind „gelesen" —
@@ -424,7 +457,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-todo.py` zweimal (`OFFEN`/`TEIL` aus `gabbro paesse`, und die Schablonenzahl).
       **Ein Muster, das nichts findet, meldet nichts.**
       **Die allgemeine Frage ist am 2026-08-20 zur Hälfte beantwortet, und die Antwort ist eine
-      Bauform, keine Zahl:** `pruefe-zahlen.py` liest heute 34 Werkzeugausgaben mit einem
+      Bauform, keine Zahl:** `pruefe-zahlen.py` liest heute 39 Werkzeugausgaben mit einem
       Muster, und **jedes einzelne trägt eine Sprechprobe** — das Werkzeug verstellt die Zahl im
       Text und verlangt, dass der Eintrag fällt. *Ein Muster ohne Treffer ist dort selbst ein
       Befund, in beiden Richtungen.*
@@ -664,7 +697,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       erfunden, und der Wächter muss die eine melden und die andere durchlassen.
       **Was der Punkt meinte und was gemessen wird, ist nicht dasselbe, und der Unterschied
       gehört hierher:** geprüft wird, ob der Wächter *überhaupt* rot werden kann — nicht, ob er
-      an **seinem** Gegenstand rot wird. `pruefe-zahlen.py` schließt diese Lücke für seine 34
+      an **seinem** Gegenstand rot wird. `pruefe-zahlen.py` schließt diese Lücke für seine 39
       Einträge (jede Zahl wird verstellt, jeder Eintrag muss fallen); für die übrigen Wächter
       ist die Sprechprobe eine **Selbstauskunft im Quelltext**, und dass sie dasteht, heißt
       nicht, dass sie an der richtigen Stelle steht. *Das Werkzeug sagt genau das über sich

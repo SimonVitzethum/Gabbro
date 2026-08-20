@@ -134,7 +134,7 @@ denominator that shines instead of the one that costs.*
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Guardians** | 17, and **25 of 25 instruments carry all four requirements** — three read statically (deadline · two-way speech test · red on abort), the fourth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./pruefe-waechter.py`. *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **234 of 234 mutations caught** *(run 2026-08-20)* |
 | **Corpus** | 45 clean examples, 217 poison files, 158 tests *(run 2026-08-20)* | `cargo test` |
-| **Emission** | **43 of 43 examples emit C, and all 43 compile** under `cc -std=c11 -Wall -Wextra -Werror -O2` | `./pruefe-emission.sh` |
+| **Emission** | **45 of 45 examples emit C, and all 45 compile** under `cc -std=c11 -Wall -Wextra -Werror`, at **`-O0` and `-O2`**, with the same result — **19 of them are also run and compared against a handwriting**, and under `-fsanitize=undefined` | `./pruefe-emission.sh` *(run 2026-08-20)* |
 | **Blind spots** | **80 blind · 164 covered · 26 poison-only · 15 no cell** *(of 285 pairs)* — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds

@@ -585,6 +585,38 @@ Forderung** neben Frist, Sprechprobe und rotem Abbruch. Der Lauf mit `--lauf` li
 wirkliche Ausgabe und meldet jeden Wächter, der ein Urteil ohne Zahl abgibt. *Wo eine Frist
 steht, fehlt die Zahl daneben oft noch.*
 
+### Und eine Ebene darüber: die AUSNAHMELISTE, deren Grund niemand nachrechnet
+
+**Derselbe Tag, vierter Fall — und der teuerste.** `pruefe-waechter.py` führte fünf
+Instrumente als *„zu schwer für einen Lauf hier"*, jedes mit einem Grund daneben. **Vier der
+fünf Gründe waren falsch:**
+
+| | stand da | gemessen |
+|---|---|---:|
+| `pruefe-emission.sh` | *„46 Einheiten … ~25 min"* | **13,7 s** |
+| `pruefe-luecken.py` | *„baut dreizehnmal neu"* | 10,7 s (27,8 s CPU) |
+| `pruefe-beweise.sh` | *„zwölf Isabelle-Theorien"* | 8,1 s — es sind dreizehn |
+| `pruefe-notation.py` | *„vierzehn `cargo run`"* | **0,56 s, und kein einziges `cargo run`** |
+
+Die 25 Minuten stammen vom **Vormittag desselben Tages**, als derselbe Wächter an `baum41`
+HING — einundzwanzig Läufe nebeneinander. Die Frist hat den Hänger beseitigt; die Zahl, die
+ihn beschrieb, blieb stehen — **als Begründung dafür, ihn nicht mehr zu messen.**
+
+> **Eine Ausnahme, deren Grund niemand nachrechnet, ist dieselbe Klasse wie eine Zahl, die
+> niemand nachrechnet — nur teurer.** Eine falsche Zahl *verfälscht* eine Messung. Eine
+> falsche Ausnahme **ordnet sie gar nicht erst an**, und danach gibt es nichts mehr, das
+> auffallen könnte.
+
+**Die Regel:** eine Ausnahme von der Messung trägt ihren Grund **als Messung**, mit Datum und
+Ort — und wo der Grund eine Zeit ist, steht die Zeit daneben, die der Lauf selbst gemessen
+hat. *Sonst überlebt die Ausnahme genau das Ereignis, das sie gerechtfertigt hat.*
+
+**Der Griff.** `--lauf` druckt seit dem 2026-08-20 die Wanduhrzeit **je Wächter** und die
+Summe darunter (heute: 19 von 25 in 4,4 s). Die vier verbliebenen Ausnahmen stehen mit dem
+Grund da, der wirklich trägt, und keiner davon ist die Zeit: der **Ort** (Speicherspitze über
+der lokalen Grenze; Rechenlast gehört auf den Server) oder die **Wirkung** (es schreibt in
+Quellen, zwei Läufe zerstören einander).
+
 ---
 
 ## W18 — Ein Register, das seine eigene Ausgabe enthält, hat einen Fixpunkt statt einer Messung

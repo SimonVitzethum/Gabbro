@@ -49,6 +49,16 @@ import sys
 W = pathlib.Path(__file__).resolve().parent
 FRIST = 180  # Sekunden je Befehl. Ein Waechter ohne Frist meldet einen Haenger als „laeuft".
 
+# **Die Pflichten summiert -- `gabbro pflichten` druckt sie JE DATEI.** Eine Zahl ueber dem
+# Korpus muss addiert werden, und diese Zeile ist der Suchweg dorthin.
+PFLICHTEN_SUMME = (
+    "cargo run -q --bin gabbro -- pflichten beispiele/*.gab 2>/dev/null | "
+    "grep -oE '== [0-9]+ obligations: [0-9]+ preservation, "
+    "[0-9]+ postcondition, [0-9]+ foreign' | "
+    "awk '{o+=$2; p+=$4; q+=$6; f+=$8} END "
+    "{print \"obl\", o, \"erhaltung\", p, \"nachbed\", q, \"fremd\", f}'"
+)
+
 # Je Eintrag: (Datei, Muster mit EINER Gruppe = die Zahl im Text, Befehl, Auszug mit EINER
 # Gruppe = die Zahl aus dem Lauf, was die Zahl bedeutet)
 EINTRAEGE = [
@@ -311,6 +321,46 @@ EINTRAEGE = [
         ["./zaehle-theorien.py"],
         r"== Suche: \d+ Suchbefehle, (\d+) eingefrorene",
         "`metis`/`blast`/`smt` -- Suchen, die einmal liefen",
+    ),
+
+    # **Die «NL»-Tafel, Zeile fuer Zeile** -- sie nennt selbst die Befehle, und drei von fuenf
+    # Zahlen standen am 2026-08-20 falsch da. *Eine davon war das Tor von «NL»: `ZUSAGE = 0`
+    # war ERREICHT, und die Tafel fuehrte 13.* Ein Tor, dessen Erreichen niemand mitschreibt,
+    # ist von einem unerreichten nicht zu unterscheiden.
+    (
+        "dokumente/PLAN.md",
+        r"\| \*\*Erhaltungspflichten\*\* \| \*\*(\d+)\*\*",
+        ["sh", "-c", PFLICHTEN_SUMME],
+        r"erhaltung (\d+)",
+        "Erhaltungspflichten ueber dem Korpus",
+    ),
+    (
+        "dokumente/PLAN.md",
+        r"\| \*\*ZUSAGE ohne Leser\*\* \| \*\*(\d+)\*\*",
+        ["./pruefe-klauseln.py"],
+        r"^\s+ZUSAGE\s+(\d+)\s",
+        "ZUSAGE-Klauseln ohne Leser -- das Tor von «NL»",
+    ),
+    (
+        "dokumente/PLAN.md",
+        r"\| \*\*Fremdpflichten\*\* \| \*\*(\d+)\*\*",
+        ["sh", "-c", PFLICHTEN_SUMME],
+        r"fremd (\d+)",
+        "Fremdpflichten ueber dem Korpus",
+    ),
+    (
+        "dokumente/PLAN.md",
+        r"\| \*\*Absenkungspflichten\*\* \| \*\*(\d+)\*\*",
+        ["./zaehle-pflichten.py", "--haengend"],
+        r"^\s+Absenkung\s+(\d+)\s",
+        "Absenkungspflichten in der «NL»-Tafel",
+    ),
+    (
+        "dokumente/PLAN.md",
+        r"H = (\d+)        ueber den zehn Fragmenten kein Handbeweis mehr",
+        ["./zaehle-pflichten.py", "--haengend"],
+        r"^\s+H\s+(\d+)\s*$",
+        "H im «NL»-Kasten",
     ),
 ]
 
