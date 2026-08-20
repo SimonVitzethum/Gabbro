@@ -2408,3 +2408,65 @@ fn ein_static_ohne_mut_wird_nicht_beschrieben() {
         a3.zeige(schatten)
     );
 }
+
+/// **Ein `const` gehört an den ZEIGER, nicht an sein Ziel — und `M118` folgt derselben
+/// Trennung** (nachgezogen 2026-08-20).
+///
+/// Zwei Defekte an einer Deklaration, und der zweite war der schärfere:
+///
+/// 1. `M118` hing an `suffixe.is_empty()`. `punkt.a = 5` auf einem unveränderlichen `static`
+///    ging durch — *die Regel war eine Zeile kürzer als die Deklaration.*
+/// 2. `static tz : ptr<normal, rw> T` ohne `mut` ergab `static const T * tz` — ein Zeiger auf
+///    **konstantes** `T`. Gemeint ist ein **konstanter Zeiger** auf schreibbares `T`. `gcc`
+///    wies damit ein Programm ab, das Gabbro richtig findet.
+///
+/// > Das fehlende `mut` sagt etwas über den Zeiger — dass er nicht umgehängt wird — und
+/// > nichts über das, worauf er zeigt. Das steht in `ptr<…, rw>`, und es steht dort schon.
+///
+/// Fünf Fälle, weil eine Regel ohne ihre Ausnahme keine ist.
+#[test]
+fn ein_unveraenderlicher_static_und_die_ausnahme_des_zeigers() {
+    let pruefe = |q: &str| -> String {
+        let (b, mut a) = gabbro_syntax::lies("s.gab", q);
+        gabbro_check::pruefe(&b, &mut a);
+        a.zeige(q)
+    };
+    let verbund = |mut_wort: &str, rumpf: &str| {
+        format!(
+            "module m {{\n\
+             type P = {{ a : u32 in 0 .. 100, b : u32 in 0 .. 100, }};\n\
+             static {mut_wort}punkt : P = P(a: 0, b: 0);\n\
+             impl fn setz() effects {{ writes punkt }} costs <= 3 ops {{ {rumpf} }}\n\
+             }}\n"
+        )
+    };
+    let zeiger = |mut_wort: &str, wirkung: &str, rumpf: &str| {
+        format!(
+            "module m {{\n\
+             table T count 4 {{ slot {{ a : u32, }} }}\n\
+             static {mut_wort}tz : ptr<normal, rw> T = 0;\n\
+             impl fn f(i : index into T) effects {{ writes {wirkung} }} costs <= 3 ops \
+             {{ {rumpf} }}\n\
+             }}\n"
+        )
+    };
+
+    // Ein FELD eines unveraenderlichen `static` -- das war das Loch.
+    assert!(pruefe(&verbund("", "punkt.a = 5;")).contains("M118"));
+    assert!(!pruefe(&verbund("mut ", "punkt.a = 5;")).contains("M118"));
+
+    // **Die Ausnahme:** durch einen unveraenderlichen Zeiger zu schreiben ist ERLAUBT.
+    let durch = zeiger("", "tz.slots", "tz.slots[i].a = 5;");
+    assert!(!pruefe(&durch).contains("M118"), "durch den Zeiger geht es:\n{}", pruefe(&durch));
+
+    // Ihn UMZUHAENGEN dagegen nicht -- das schreibt den `static` selbst.
+    let umhaengen = zeiger("", "tz", "tz = 0;");
+    assert!(pruefe(&umhaengen).contains("M118"), "umhaengen faellt:\n{}", pruefe(&umhaengen));
+
+    // Und das `const` steht am Zeiger, nicht am Ziel -- sonst weist `cc` die Einheit ab.
+    let (b, mut a) = gabbro_syntax::lies("z.gab", &durch);
+    gabbro_check::pruefe(&b, &mut a);
+    let c = gabbro_check::emit::emittiere(&b, &mut a);
+    assert!(c.contains("static T * const tz"), "konstanter ZEIGER:\n{c}");
+    assert!(!c.contains("static const T * tz"), "kein Zeiger auf konstantes T:\n{c}");
+}

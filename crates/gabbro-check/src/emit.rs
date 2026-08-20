@@ -858,7 +858,24 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                     }
                 },
             };
-            let konst = if st.veraenderlich { "" } else { "const " };
+            // **Ein `const` gehoert an den ZEIGER, nicht an sein Ziel** (2026-08-20).
+            //
+            // `static tz : ptr<normal, rw> T` ergab `static const T * tz` -- ein Zeiger auf
+            // *konstantes* `T`. Gemeint ist ein *konstanter* Zeiger auf schreibbares `T`.
+            // Die Folge war eine abgewiesene Uebersetzungseinheit fuer ein Programm, das
+            // Gabbro **richtig** findet:
+            //
+            //     tz.slots[i].a = 5;
+            //     -> error: Zuweisung von Element »a« in schreibgeschuetztem Objekt
+            //
+            // *Das fehlende `mut` sagt etwas ueber den ZEIGER -- dass er nicht umgehaengt
+            // wird -- und nichts ueber das, worauf er zeigt.* Das steht in `ptr<…, rw>` und
+            // steht dort schon.
+            let (konst, konst_nach) = match (st.veraenderlich, c.trim_end().ends_with('*')) {
+                (true, _) => ("", ""),
+                (false, false) => ("const ", ""),
+                (false, true) => ("", "const "),
+            };
             let abschnitt = match &st.section {
                 Some(t) => format!(" __attribute__((section(\"{}\")))", t.text),
                 None => String::new(),
@@ -878,7 +895,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             // faellt nirgends auf. In `TODO.md` gebucht; hier stillgelegt, nicht
             // verschwiegen.
             aus.push_str(&format!(
-                "\nstatic {konst}{c} {}{abschnitt} __attribute__((unused)) = {w};\n",
+                "\nstatic {konst}{c} {konst_nach}{}{abschnitt} __attribute__((unused)) = {w};\n",
                 st.name.text
             ));
         }

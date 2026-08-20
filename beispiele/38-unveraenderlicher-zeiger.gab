@@ -1,0 +1,39 @@
+-- **Ein `const` gehoert an den ZEIGER, nicht an sein Ziel** (2026-08-20).
+--
+-- `static tz : ptr<normal, rw> T` -- ohne `mut` -- ergab
+--
+--     static const T * tz;          -- ein Zeiger auf KONSTANTES T
+--
+-- und damit wies `gcc` ein Programm ab, das Gabbro **richtig** findet:
+--
+--     tz.slots[i].a = 5;
+--     -> error: Zuweisung von Element »a« in schreibgeschuetztem Objekt
+--
+-- Gemeint war ein KONSTANTER Zeiger auf schreibbares `T`: `static T * const tz`.
+--
+-- > Das fehlende `mut` sagt etwas ueber den Zeiger -- dass er nicht umgehaengt wird -- und
+-- > nichts ueber das, worauf er zeigt. Das steht in `ptr<…, rw>`, und es steht dort schon.
+--
+-- **Dieselbe Unterscheidung traegt `M118`**: durch einen unveraenderlichen Zeiger zu
+-- schreiben ist erlaubt, ihn UMZUHAENGEN nicht. Beide Haelften an einer Stelle, damit
+-- keine ohne die andere wandert.
+
+module beispiel::fester_zeiger {
+
+table Platz count 4 {
+    slot {
+        a : u32 in 0 .. 1000,
+    }
+}
+
+-- Der Zeiger steht fest, sein Ziel nicht.
+static tz : ptr<normal, rw> Platz = 0;
+
+impl fn setz(i : index into Platz)
+    effects { writes tz.slots }
+    costs   <= 3 ops
+{
+    tz.slots[i].a = 5;
+}
+
+}

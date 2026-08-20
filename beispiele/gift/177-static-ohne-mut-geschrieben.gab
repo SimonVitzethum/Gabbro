@@ -12,6 +12,10 @@
 --
 -- Und fuer eine Datei ausserhalb von `beispiele/` greift auch Stufe 9 des
 -- Emissionswaechters nicht. Dann bleibt gar keine Instanz.
+--
+-- **Nachgezogen am selben Tag: ein FELD zaehlt mit.** Die erste Fassung der Regel hing an
+-- `suffixe.is_empty()`, also fiel `zaehler += 1` und `punkt.a = 5` nicht -- *die Regel war
+-- eine Zeile kuerzer als die Deklaration.* Beide Formen stehen darum hier.
 
 module gift {
 
@@ -24,6 +28,18 @@ impl fn tor()
     costs   <= 3 ops
 {
     if zaehler < 1000 { zaehler += 1; }
+}
+
+type P = { a : u32 in 0 .. 100, b : u32 in 0 .. 100, };
+
+static punkt : P = P(a: 0, b: 0);
+
+-- Und dasselbe eine Ebene tiefer: ein FELD eines unveraenderlichen `static`.
+impl fn setz()
+    effects { writes punkt }
+    costs   <= 3 ops
+{
+    punkt.a = 5;
 }
 
 }

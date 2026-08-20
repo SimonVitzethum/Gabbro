@@ -10842,3 +10842,64 @@ später jemanden einen Nachmittag.
 
 **Was hingegen bleibt:** `M118` fasst einen `static` ohne Suffixe. Ein Schreiben in ein *Feld*
 eines unveränderlichen `static` fällt nicht auf; gebucht.
+
+## Nachtrag: die gebuchte Reichweite geschlossen — und dahinter lag der schärfere Fehler
+
+Der eine Punkt, den ich oben als Reichweite gebucht hatte, ist zu. Beim Schliessen kam ein
+zweiter heraus, der **an derselben Deklaration** sass und in die andere Richtung falsch war.
+
+### Die Reichweite
+
+`M118` hing an `suffixe.is_empty()`. `punkt.a = 5` auf einem unveränderlichen `static` ging
+durch — *die Regel war eine Zeile kürzer als die Deklaration.*
+
+### Und dahinter: das `const` stand an der falschen Seite
+
+```gabbro
+static tz : ptr<normal, rw> Platz = 0;      -- ohne `mut`
+```
+```c
+static const Platz * tz;      ← ein Zeiger auf KONSTANTES Platz
+```
+
+Damit wies `gcc` ein Programm ab, das Gabbro **richtig** findet:
+
+```
+tz.slots[i].a = 5;
+  -> error: Zuweisung von Element »a« in schreibgeschütztem Objekt
+```
+
+> **Das fehlende `mut` sagt etwas über den ZEIGER** — dass er nicht umgehängt wird — **und
+> nichts über das, worauf er zeigt.** Das steht in `ptr<…, rw>`, und es steht dort schon.
+
+Richtig ist `static Platz * const tz`. Alle vier Formen nachgemessen:
+
+| Deklaration | erzeugt |
+|---|---|
+| `static tz : ptr<normal, rw> T` | `static T * const tz` |
+| `static tz : ptr<normal, r> T` | `static const T * const tz` |
+| `static mut tz : ptr<normal, rw> T` | `static T * tz` |
+| `static mut z : u32` | `static uint32_t z` |
+
+### Dieselbe Trennung trägt jetzt beide Seiten
+
+Die Ausnahme im Pass ist genau die des Erzeugers — fünf Fälle, weil eine Regel ohne ihre
+Ausnahme keine ist:
+
+| | |
+|---|---|
+| `punkt.a = 5` auf unveränderlichem `static` | **`M118`** |
+| dasselbe mit `mut` | geht durch |
+| `tz.slots[i].a = 5` **durch** unveränderlichen Zeiger | geht durch — *und das ist der Punkt* |
+| dasselbe mit `mut` | geht durch |
+| `tz = 0` — den Zeiger **umhängen**, ohne `mut` | **`M118`** |
+
+Neu im Korpus: `beispiele/38-unveraenderlicher-zeiger.gab` trägt **beide Hälften an einer
+Stelle**, damit keine ohne die andere wandert; Gift 177 trägt jetzt auch den Feldfall.
+
+```
+cargo test          149 gruen
+Anker               193, alle lebend
+pruefe-emission.sh  18 durchgestochen, 23 von 26 uebersetzen
+13 Waechter         gruen
+```

@@ -114,7 +114,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         modul: String::new(),
         spezifikationen,
         unveraenderlich: std::collections::HashSet::new(),
-        unveraenderliche_statiken: std::collections::HashSet::new(),
+        unveraenderliche_statiken: std::collections::HashMap::new(),
     };
     p.programm(baum);
     p.zaehlung
@@ -191,7 +191,7 @@ struct Pruefer<'a> {
     ///
     /// Getrennt von `unveraenderlich`, weil das die Bindungen des LAUFENDEN Rumpfes sind:
     /// eine lokale Bindung darf einen `static` verdecken, und dann gilt sie.
-    unveraenderliche_statiken: std::collections::HashSet<String>,
+    unveraenderliche_statiken: std::collections::HashMap<String, bool>,
     /// Das Modul, in dem der gerade gepruefte Rumpf steht. **Ohne ihn loest der Pass Namen
     /// im Blindflug auf** -- und ein gleichnamiges `fn` in einem fremden Modul loescht eine
     /// Bereichspruefung, ohne dass jemand es sieht (Gegenpruefung 2026-08-14, U11/U12).
@@ -210,10 +210,20 @@ impl<'a> Pruefer<'a> {
         // **Ein eigener Durchgang, weil ein Rumpf frueher stehen darf als seine Deklaration.**
         // Wuerde diese Menge im Hauptlauf mitwachsen, haenge die Absage an der Reihenfolge im
         // Quelltext -- und eine Regel, die von der Reihenfolge abhaengt, ist keine.
-        crate::fuer_jedes_item(baum, &mut |item| {
+        crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
             if let ItemArt::Statisch(s) = &item.art {
                 if !s.veraenderlich {
-                    self.unveraenderliche_statiken.insert(s.name.text.clone());
+                    // **Der Wert `true` heisst: ein ZEIGER, und dann gilt die Regel nur fuer
+                    // ihn selbst.** `static tz : ptr<…, rw> T` ohne `mut` sagt, dass der
+                    // Zeiger nicht umgehaengt wird -- *ueber das, worauf er zeigt, sagt es
+                    // nichts.* Das steht in `ptr<…, rw>`, und `tz.slots[i].a = 5` ist
+                    // richtig. Der Erzeuger schreibt dafuer `T *const tz`.
+                    let ist_zeiger = matches!(
+                        self.u.typ_von_ausdruck_decl(modul, &s.typ),
+                        Typ::Zeiger(_)
+                    );
+                    self.unveraenderliche_statiken
+                        .insert(s.name.text.clone(), ist_zeiger);
                 }
             }
         });
@@ -483,10 +493,17 @@ impl<'a> Pruefer<'a> {
                 //
                 // Fuer eine Datei ausserhalb von `beispiele/` greift auch Stufe 9 des
                 // Emissionswaechters nicht. Dann bleibt gar keine.
-                if z.ziel.suffixe.is_empty()
-                    && !lage.lokal.contains_key(&z.ziel.basis.text)
-                    && self.unveraenderliche_statiken.contains(&z.ziel.basis.text)
-                {
+                // **Und ein FELD davon zaehlt mit** (nachgezogen 2026-08-20). `punkt.a = 5`
+                // auf einem unveraenderlichen `static` ging durch, weil die Bedingung an
+                // `suffixe.is_empty()` hing. *Die Regel war eine Zeile kuerzer als die
+                // Deklaration.* Ausgenommen bleibt der Zeiger: durch ihn zu schreiben ist
+                // erlaubt, ihn UMZUHAENGEN nicht.
+                let statisch_unveraenderlich = !lage.lokal.contains_key(&z.ziel.basis.text)
+                    && match self.unveraenderliche_statiken.get(&z.ziel.basis.text) {
+                        Some(ist_zeiger) => z.ziel.suffixe.is_empty() || !ist_zeiger,
+                        None => false,
+                    };
+                if statisch_unveraenderlich {
                     self.absagen.schiebe(
                         Absage::fehler(
                             "M118",

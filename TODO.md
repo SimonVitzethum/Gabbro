@@ -561,10 +561,6 @@ Zusagen ungeprüft weiterreicht, macht aus elf geprüften Klassen elf behauptete
       Array-Element fällt nicht auf. Dahinter steht `IntBereich::ist_leer()` als Riegel, der
       aus dem Leeren `None` macht statt zu rechnen; *ein Riegel ist aber keine Absage*, und
       der Anwender erfährt nichts.
-- [ ] **`M118` fasst einen `static` ohne Suffixe** *(2026-08-20)*. `zaehler += 1` fällt,
-      `zaehler.feld = 1` auf einem unveränderlichen `static` **nicht** — und der Erzeuger
-      schreibt dort dasselbe `static const` daneben. *Die Regel ist richtig und ihre
-      Reichweite ist eine Zeile kürzer als die Deklaration.*
 - [ ] **ABI2 — ORDNUNG statt RANG, und das ist eine SPRACHÄNDERUNG.** `lock … rank 0` ist
       eine absolute Zahl; zwei unabhängig geschriebene Bibliotheken vergeben beide `rank 0`.
       **Absolute Zahlen komponieren nicht.** Die ABI trägt `KAPPEN vor OBJEKTE`, und beim

@@ -104,10 +104,28 @@ MUTATIONEN = [
         "code",
     ),
     Mutation(
+        "ein-feld-des-static-zaehlt-nicht",
+        "m1.rs",
+        "                        Some(ist_zeiger) => z.ziel.suffixe.is_empty() || !ist_zeiger,",
+        "                        Some(_) => z.ziel.suffixe.is_empty(),",
+        "M118 fasst wieder nur den `static` selbst; `punkt.a = 5` auf einem "
+        "unveraenderlichen Verbund geht durch, und der Erzeuger schreibt `static const` "
+        "daneben",
+    ),
+    Mutation(
+        "const-landet-auf-dem-zeigerziel",
+        "emit.rs",
+        '                (false, true) => ("", "const "),',
+        '                (false, true) => ("const ", ""),',
+        "aus dem konstanten ZEIGER wird ein Zeiger auf konstantes Ziel; `cc` weist damit "
+        "ein Programm ab, das Gabbro richtig findet",
+        "code",
+    ),
+    Mutation(
         "static-ohne-mut-darf-schreiben",
         "m1.rs",
-        "                    && self.unveraenderliche_statiken.contains(&z.ziel.basis.text)",
-        "                    && false\n                    && self.unveraenderliche_statiken.contains(&z.ziel.basis.text)",
+        "                if statisch_unveraenderlich {",
+        "                if false && statisch_unveraenderlich {",
         "M118 -- auf ein `static` ohne `mut` zu schreiben faellt wieder nirgends; der "
         "Erzeuger schreibt `static const` daneben, und `gcc` ist die einzige Instanz",
     ),

@@ -127,7 +127,7 @@ denominator that shines instead of the one that costs.*
 | **Grammar** | **143 EBNF rules**, closed and reachable | vocabulary covers every terminal, 211 / 211 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Guardians** | 13, each with a two-way speech test | **189 of 189 mutations caught** *(run 2026-08-20)* |
-| **Corpus** | 37 clean examples, 177 poison files, 148 tests *(run 2026-08-20)* | `cargo test` |
+| **Corpus** | 38 clean examples, 177 poison files, 149 tests *(run 2026-08-20)* | `cargo test` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was
