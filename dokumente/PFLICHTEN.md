@@ -385,7 +385,7 @@ carries and the Rust original did not — because it does not write them down.*
 |---|---|---|---|
 | **F7** | **the generated C computes what the fragment says** | K | **carried, measured by execution.** `pruefe-emission.sh` cuts F7 out of the frozen corpus, emits, compiles with `cc -std=c11 -Wall -Wextra -Werror`, runs it and compares: **`123456`** — six boot steps, in order, each exactly once. The `linear ghost type` leaves **no trace** in the C |
 | **F8**, **F10** | same | K | **carried, measured by execution** — booked in `pruefe-emission.sh` beside F7 |
-| F1–F6, F9 | same | K | **gap, for seven** *(re-measured 2026-08-20; the row said "nine" long after F8 and F10 were measured)*. And the seven are not one class. **Three are open DECISIONS** — «B10» (`by consuming` drains the whole queue), «B12» (`elems of` binds an element or an index; `SYNTAX.md` uses both readings), `mappings of` (a path or the leaf set — seven orders of magnitude apart). **Two are the axiom layer** — which barrier a `dma` access needs. **And two cannot be reached by any work on Gabbro**: F5 calls `map_window`, `pool_new`, `probe_ecam` and declares none of them, F2 and F9 leave unnamed bit gaps. *An EXCERPT is not a program, and `FRAGMENTE.md` carries a freeze sentence* — see the note below |
+| F1–F6, F9 | same | K | **gap, for seven** *(re-measured 2026-08-20; the row said "nine" long after F8 and F10 were measured)*. And the seven are not one class. **Three are open DECISIONS** — «B10» (`by consuming` drains the whole queue), «B12» (`elems of` binds an element or an index; `SYNTAX.md` uses both readings), `mappings of` (a path or the leaf set — seven orders of magnitude apart). **Two are the axiom layer** — which barrier a `dma` access needs. **And ALL SEVEN carry a corpus-side blocker** *(counted 2026-08-20, one hour after the line below first said "two")*: 41 sites name 20 constants and types nobody declares (`MAX_POLL`, `EP_BADGE`, `SYSNO_RESULT`, `Fehler`, `NTFN`, …), nine `let … else` call bodies this unit does not declare, six bit positions left unnamed, one `table` with no `tree`, one callee with no `or <reason>`. *An EXCERPT is not a program, and `FRAGMENTE.md` carries a freeze sentence* — see the note below |
 
 **+10 obligations, 10 K, 7 hanging** *(re-measured 2026-08-20: 5 of the ten check clean, 3 lower and run)*.
 
@@ -404,8 +404,33 @@ carries and the Rust original did not — because it does not write them down.*
 > from a ritual among three hand-written `narrow`s and said: *a yardstick that cannot tell
 > them apart measures the wrong thing.* The lowering column carries the same confusion one
 > level up — it counts *"Gabbro cannot lower this"* and *"this text is not a program"* in one
-> number. **Five of the seven are Gabbro's; two are the corpus's**, and the honest floor of
-> this gate over this corpus is therefore `H = 2`, not `H = 0`.
+> number.
+>
+> ### And the split is not five-two. It is seven-to-all — measured, after the first reading was wrong
+>
+> **The first version of this note said *"five of the seven are Gabbro's, two are the
+> corpus's"*, and the floor `H = 2`. Both were wrong**, and an hour later the count said so:
+> **every one of the seven carries at least one corpus-side blocker.** F4 — the one that
+> looked purest — needs exactly one line, `MAX_POLL`, and without it the `bounded` clause
+> names nothing.
+>
+> | | Gabbro's half | the corpus's half |
+> |---|---|---|
+> | F1 | field / parameter / `tagged` payload type (9 sites) | `Fehler` is declared nowhere; the `table` names no `tree` |
+> | F2 | — | five bit positions unnamed |
+> | F3 | field / parameter type (6), «B10» to decide | five names; one callee with no `or <reason>` |
+> | F4 | `let` type (2), the `dma` barrier (axiom layer), `bounded … ops` with no fixed per-pass cost | `MAX_POLL` |
+> | F5 | `match` over something other than `option index into T` | ten names, seven call bodies |
+> | F6 | parameter type, `let` type, expression form, «B12» to decide | three names, two call bodies |
+> | F9 | `walk … levels` that is not a number, `mappings of` to decide, the `dma` barrier | one bit position |
+>
+> **Therefore: the floor of `H` from Gabbro's side alone is `7`, not `2`.** The five anchored
+> obligations can be closed by building; **the lowering column cannot fall by a single
+> point** without writing into a file that says it is a report and stays untouched.
+>
+> *And that is the sharper form of the same finding: the number does not measure what it is
+> read as measuring. It was quoted as "how much plumbing is left in Gabbro"; seven twelfths
+> of it are the corpus's completeness, not Gabbro's coverage.*
 >
 > *The second corpus is where the number can go to zero, and it is the one no one looked at
 > while building.* `./zaehle-pflichten.py` counts it since 2026-08-20.

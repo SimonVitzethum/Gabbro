@@ -1436,8 +1436,37 @@ Merkmale eines AUSSCHNITTS** — und `FRAGMENTE.md` trägt seinen Einfriersatz.
 **Es ist dieselbe Bewegung wie K100.1, eine Ebene höher und dort nicht zu Ende geführt.**
 Jene Phase trennte unter drei handgeschriebenen `narrow` die Prüfung vom Ritus. Die
 Absenkungsspalte zählt bis heute *„Gabbro kann das nicht"* und *„dieser Text ist kein
-Programm"* in einer Zahl. **Fünf der sieben gehören Gabbro, zwei dem Korpus** — der
-ehrliche Boden dieses Tores über diesem Korpus ist damit `H = 2`.
+Programm"* in einer Zahl.
+
+> **Und die Aufteilung ist nicht fünf zu zwei — sie ist sieben zu allen.** Der Satz oben
+> stand eine Stunde lang als *„fünf der sieben gehören Gabbro, zwei dem Korpus, der Boden
+> ist `H = 2`"*. **Beides falsch, und die Auszählung hat es gesagt:** *jedes* der sieben
+> trägt mindestens einen korpusseitigen Riegel. 41 Stellen nennen 20 Namen, die niemand
+> deklariert; neun `let … else` rufen Rümpfe, die diese Einheit nicht kennt; sechs Bitlagen
+> sind unbenannt; eine Tabelle nennt kein `tree`. **F4 — das reinste — braucht genau eine
+> Zeile: `MAX_POLL`.**
+>
+> **Der Boden von `H` aus Gabbros Richtung allein ist damit `7`, nicht `2`.** Die fünf
+> verankerten Pflichten lassen sich bauen; **die Absenkungsspalte fällt um keinen einzigen
+> Punkt**, ohne in eine Datei zu schreiben, die von sich sagt, sie sei ein Bericht und bleibe
+> unangetastet.
+>
+> *Das ist die schärfere Fassung desselben Befundes: sieben Zwölftel von `H` messen die
+> Vollständigkeit des Korpus, nicht die Deckung von Gabbro.*
+
+### Und damit steht eine Entscheidung über den MASSSTAB an, nicht über den Prüfer
+
+Drei Wege, und nur einer ist ehrlich:
+
+| | |
+|---|---|
+| **(a) den Einfriersatz aufheben** | dann ist der Bericht kein Bericht mehr, und jede frühere Zahl über ihm wird unnachrechenbar |
+| **(b) die Pflicht auf eine VERVOLLSTÄNDIGTE KOPIE verlegen** | `messung/fragmente/` — dieselben zehn, um ihre fehlenden Deklarationen ergänzt, ausführbar. Die Absenkung wird dort gemessen, `FRAGMENTE.md` bleibt Bericht. **Derselbe Zug, den «K2» schon gemacht hat**: nachgebildet, nicht übersetzt — und dort ausdrücklich gesagt |
+| **(c) die sieben als „nicht anwendbar" buchen** | `H` sinkt, ohne dass etwas geprüft wurde. *Falle 80 in Reinform* |
+
+**(b) ist der Weg.** Er kostet die ~60 fehlenden Zeilen einmal, er lässt den eingefrorenen
+Bericht in Ruhe, und er sagt in der Kopfzeile der Kopie, was ergänzt wurde — damit bleibt
+nachrechenbar, welcher Teil gemessen und welcher geschrieben ist.
 
 **Und die drei zuletzt geschlossenen Zeilen sagen zusammen einen Satz, der in den Plan
 gehört:** «B33» stand als *Zusage* im Ordner und der Prüfer tat das Gegenteil; die
