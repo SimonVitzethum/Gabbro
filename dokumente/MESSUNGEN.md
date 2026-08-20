@@ -11050,3 +11050,118 @@ Korpus              38 sauber, 180 Gifte, jedes mit SEINER Kennung
 (`U003`, `V006`, `check … can_fail`). Alle stehen in `TODO.md` mit Adresse — *und die
 Rezension hat recht, dass jede davon einen syntaktischen Schritt neben einer bestehenden
 Giftprobe liegt.*
+
+---
+
+# 2026-08-20, dritte Rezension: die offene Hälfte, alle sieben
+
+Der Satz, unter dem sie alle standen:
+
+> **Jeder dieser Punkte liegt einen syntaktischen Schritt neben einer bestehenden
+> Giftprobe.** Der Korpus prüft, dass jede Regel in ihrer kanonischen Gestalt feuert; er
+> prüft nicht, dass man um sie herumgehen kann.
+
+## B — M2 zählte „genau einmal" auf vier Wegen falsch
+
+Und **nicht nur über `ghost`**: die Reproduktion steht über einem `linear type`, der Form aus
+`beispiele/09`, einem echten Laufzeit-Betriebsmittel.
+
+```gabbro
+let a = aussen(wecken(p));    -- verbraucht p
+let b = wecken(p);            -- ein zweites Mal
+```
+→ **0 Fehler.** Beide Rufe auf oberster Ebene: `L104`. *Ein Double-Free mit grünem Haken.*
+
+| # | Loch | jetzt |
+|---|---|---|
+| 1 | der Läufer stieg nicht in Argumente eines Rufes ab (`_ => {}`) | über `alle_ausdruecke` |
+| 2 | `ruf` band die Position `i` und benutzte sie **nie** | Karte „Parameter in Reihenfolge", `sig.get(i)` entscheidet |
+| 3 | ein Schleifenrumpf lief einmal als geradliniger Code | **`L108`** |
+| 4 | ein im Zweig geborener Wert fiel an der Vereinigung heraus | **`L109`** |
+
+Zu (2): die alte Bedingung war in **beide** Richtungen falsch — ein zweiter Gebrauch eines
+*nicht* verbrauchten Arguments gab `L104`, und ein wirklich verbrauchtes wurde nur zufällig
+getroffen. Zu (3) und (4) je eine Gegenprobe: ein Wert, der *im* Rumpf bzw. *im* Zweig
+entsteht und dort verbraucht wird, ist in Ordnung.
+
+## E — `decreases` war eine Namensprobe
+
+```gabbro
+impl fn g(n : u32 in 0..8, m : u32 in 0..8) decreases n { … return g(m, n); }
+```
+→ 0 Fehler → `emit` → `cc` → `g(1,1)` endet mit **`SIGSEGV`**. Ein *steigendes* Mass fiel nur
+**zufällig** an der Bereichsgrenze; mit einem weiteren Typ wäre es durchgegangen.
+
+Die Regel fragte, ob sich *irgendetwas* ändert. **Eine Vertauschung ist eine Änderung.**
+Angenommen werden jetzt `n - k` (k ≥ 1) und `n / k` (k ≥ 2), mit der Massgrösse links — eine
+**prüfbare hinreichende Form**. Der Korpus schreibt ausschliesslich `f(n - 1)`, also kostet
+die Strenge dort nichts. *Aus der strengen Lesart kann man lockern, nie umgekehrt.*
+
+> Von den zwei möglichen Antworten — Regel schärfen oder Zusage zurücknehmen — ist dies die
+> erste.
+
+## F — Fünf Ein-Schritt-Umgehungen
+
+| Regel | umgangen durch | Ursache |
+|---|---|---|
+| `U003` | zwei `locks`-Blöcke **nacheinander** | der Abdruck wurde flach über den Rumpf summiert |
+| `O006` | ein `locks { }` um den Schritt | `enthaelt_schritt` sah nur die oberste Ebene |
+| `V006` | ein `if` um das release-Speichern | im Zweig ist `anweisungen[i+1..]` leer |
+| `N027` | `check … can_fail { }` | ein `check` trägt keinen Vertrag, 10 von 12 Pässen sehen ihn nie |
+| `H012` | Ruf im `retry … until` | war mit dem erschöpfenden Läufer schon zu |
+
+Drei Sätze, die dabei entstanden sind:
+
+* **Ein Sperrabdruck ist eine Aussage über einen ZEITPUNKT, nicht über eine Datei.** Zwischen
+  zwei sequentiellen `locks`-Blöcken ist die Gruppe offen, und jeder andere Faden sieht sie so.
+* **Eine Regel, die an der Einrückung endet, ist keine Regel über den Fluss.**
+* **Die Sichtbarkeitsordnung endet nicht an einer Klammer.**
+
+## H — Die benannte Konstante
+
+`return x + 8;` ging durch, `const RESERVE : u32 = 8; return x + RESERVE;` fiel an `M104`.
+Der Auswerter stand die ganze Zeit daneben und wird für Typschranken schon benutzt.
+
+> Eine Konstante zu benennen ist die Gegenbewegung zur magischen Zahl. **Ein Prüfer, der sie
+> dafür bestraft, erzieht zur magischen Zahl.**
+
+## Und der Mutationslauf hat dreimal über mich gesprochen
+
+Von den zehn neuen Mutationen massen **drei nichts**, und der Lauf hat jede einzeln benannt:
+
+```
+verbrauch-in-der-schleife  ungueltig  -- baute nicht (Typinferenz)
+sperrabdruck-wird-summiert UEBERLEBT  -- zu schwach: das `pop` wegzulassen laesst die
+                                         erste Sperre trotzdem fehlen
+can-fail-darf-schreiben    UEBERLEBT  -- sie aenderte nur den MELDETEXT
+```
+
+Nach der Reparatur überlebte noch eine — `m2-nimmt-jede-position` — und **der Grund stand in
+meiner eigenen Probe**: sie hatte *ein* lineares Argument (`nimmt(k, p)` mit `k : u32`). Ein
+nichtlinearer Name steht gar nicht erst in `zust`, also fasst die kaputte Regel ihn nie an.
+Sie schlägt erst bei **zwei** linearen Argumenten durch.
+
+> **Eine Probe, die die Regel nicht trennen kann, ist keine Probe der Regel.** Der
+> Mutationslauf hat den Unterschied gefunden, nicht ich — und das zum zweiten Mal an diesem
+> Tag.
+
+## Der Stand
+
+```
+cargo test          156 gruen, ohne RUST_MIN_STACK
+mutiere-pruefer.py  209 von 209 (100 %), auf fisch
+pruefe-emission.sh  18 durchgestochen, 23 von 26 uebersetzen
+pruefe-luecken.py   13 von 13, Quellen byteidentisch zurueck
+isabelle build -c   13 Theorien frisch, 5 s
+13 Waechter         gruen
+Korpus              38 sauber, 188 Gifte, jedes mit SEINER Kennung
+```
+
+Acht neue Giftdateien (181–188), jede **an der Stelle der Umgehung**; drei neue Kennungen
+(`L108`, `L109`, `N027`); zehn neue Mutationen.
+
+**Was bleibt, ist eine Aussage über die REICHWEITE, keine Lücke im Gebauten:** die Emission
+trägt 26 von 38 Beispielen und die zwölf fehlenden sind die zentralen; `K009` prüft eine
+syntaktische hinreichende Form und weist damit auch Masse ab, die fallen; `N027` verbietet
+dem `can_fail`-Block jedes Schreiben, wo die teurere Antwort wäre, dem `check` einen Vertrag
+zu geben. Alle drei stehen in `TODO.md`.
