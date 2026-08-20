@@ -1,0 +1,30 @@
+-- erwartet: M103
+-- **Gift 214 -- dieselbe Luecke eine Regel weiter: V2 statt V1.**
+--
+-- «B33» hat zwei Schreibrichtungen, und eine Probe, die nur die erste trifft, ist eine
+-- Regel ueber die erste. Hier steht das Register nicht gegen eine Konstante, sondern
+-- gegen eine ZWEITE STELLE -- der Weg, den V2 nimmt (`Fakt::Beziehung`).
+--
+-- *Dieselbe Ursache: der Vergleich liest, die Verwendung liest noch einmal.*
+
+module gift214 {
+
+type Kurz = u32 in 0 .. 8;
+
+device Statusgeraet(basis : u64) at mmio {
+    reg ST : u32 @0x00 class r fields { IDX @[7:0] }
+}
+
+table Platz count 8 { slot { wert : u32, } }
+
+static mut grenze : Kurz = 8;
+
+impl fn lesen(d : Statusgeraet) -> u32
+    effects { reads Statusgeraet, reads Platz, reads grenze }
+    costs    <= 8 ops
+{
+    if d.ST.IDX < grenze { return Platz.slots[d.ST.IDX].wert; }
+    return 0;
+}
+
+}

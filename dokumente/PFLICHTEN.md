@@ -140,7 +140,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 436 | the computed bank location lies inside the register file | K | `M103` via `count 256` |
 | 438–442 | a bit position beyond 64 — which word does it mean? | K | `@[hi:lo]` in a `format` — **«B24» decided 2026-08-18.** A position lies inside the field's **own word**; beyond it there is **nothing to mean** (refusal, not a meaning). The word is read in the declared byte order **first**, then the bits are taken from the *value*. **And the tiling IS the word boundary**: a bit group ends when its bits are complete, a gap must be `reserved`. *A unification of two existing forms — `device` registers have carried this mechanic since 2026-08-14* |
 | 444 | IOTLB likewise | K | `M103` |
-| 450–453 | the pre-state of a `transition` at `GCMD.TE` comes from `GSTS.TES` | K | **gap: «B26» — half resolved; `mirrors` says where the carried bits come from, not whether it also supplies the pre-state** |
+| 450–453 | the pre-state of a `transition` at `GCMD.TE` comes from `GSTS.TES` | K | `mirrors` — **and the other half is answered, 2026-08-20.** It supplies the PRE-STATE too: `scharf_te` reads `GSTS` and writes `GCMD`, carrying every bit but the one the transition names. Measured at `beispiele/20`, written down in `SYNTAX.md`. *An answer that lives only in the generator is a promise that lives only in a tool invocation* |
 | 454–455 | `setze_rtp` — TE off or RTPS already set | L | the human — *the remapping unit's protocol* |
 | 457–458 | `scharf_te` — RTPS is set | L | the human |
 | 460–461 | `setze_irtp` — QIES is set | L | the human |
@@ -157,7 +157,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 524–526 | GCMD is written whole | K | `assume` — **expressly `unfalsifiable`, with the reason: a probe would have to open the very window the mechanism is built against** |
 | 528–530 | after FSTS.PFO further faults are dropped | K | `assume` **with a falsifier** |
 
-**F2: 24 obligations — 19 K, 5 L. Hanging: 4, all K.**
+**F2: 24 obligations — 19 K, 5 L. Hanging: 3, all K** *(«B26»'s second half closed 2026-08-20)*.
 
 ---
 
@@ -223,7 +223,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 847 | `<= 9 ops` | K | `K001` — **the declared 4 was wrong; read off with `gabbro kosten`, not estimated (W2)** |
 | 850 | the divisor is not zero | K | `n : u16 in 1 .. QMAX` |
 | 851 | `q.AVAIL_RING[platz]` in range | K | `M103` |
-| 872–876 | the V rules do not narrow a REGISTER place after a comparison | K | **gap: «B33» — undecided. Either intent (a register may change between check and use) or a hole. If it is intent, the reason belongs written down** |
+| 872–876 | the V rules do not narrow a REGISTER place after a comparison | K | **decided and BUILT, 2026-08-20 — and the folder had it backwards.** The V rules DID narrow one; `if d.ST.IDX < 8 { … d.ST.IDX … }` went through with 0 errors, and the C indexed 8 slots with a value the hardware may reset between the two volatile reads. It is intent: `volatile` IS *"this may change between two reads"*. Now enforced (`SPRACHE.md` beside V1–V3, `gift/213`+`214`, two mutations), with the door open — `let i = d.ST.IDX;` lowers (`beispiele/44`) |
 | 877 | the ring counter wraps intentionally | K | `wrapping` |
 | 880–881 | `poll_used` reads only `q` | K | `E010` |
 | 885–889 | the poll terminates and the overflow is NAMED | K | `S001`/`S002` — **carried unchanged, and the clause order matches the production** |
@@ -232,7 +232,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 892–894 | a function may PRODUCE a compound | K | `P(a: …, b: …)` — **«B7» closed 2026-08-17.** No braced literal: it would have been the first expression form continuing with `{`, and 76 corpus sites have a `{` right after an expression. The marks are mandatory (`M106`/`M107`), because two same-typed fields in a positional list are swappable with no type objecting |
 | 895 | `q.USED_RING[s].id` in range | K | `M103` |
 
-**F4: 30 obligations — 24 K, 6 L. Hanging: 7** (six K, one L).
+**F4: 30 obligations — 24 K, 6 L. Hanging: 6** (five K, one L) *(«B33» decided and built 2026-08-20)*.
 
 ---
 
@@ -412,7 +412,7 @@ carries and the Rust original did not — because it does not write them down.*
 | **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
 | **Plumbing (K)** | **171** | 72 % |
 | **Logic (L)** | **67** | 28 % |
-| **hanging** | **31** | of which **`H = 15` are K** — **8 anchored at a line, 7 lowerings** *(«B21», «H2.1», «H2.2» closed 2026-08-19)*. **All eight remaining are NOTATION gaps: not one is a hand-written proof.** Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
+| **hanging** | **31** | of which **`H = 13` are K** — **6 anchored at a line, 7 lowerings** *(«B21», «H2.1», «H2.2» closed 2026-08-19; «B26»'s second half and «B33» 2026-08-20)*. **All six remaining are NOTATION gaps: not one is a hand-written proof.** Every one a breach of the thesis at its site. *Read off with `./zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
 **L : K = 0,38 : 1.**

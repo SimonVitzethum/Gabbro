@@ -1,0 +1,36 @@
+-- erwartet: C001
+-- **Gift 215 -- ein Registerbitfeld links vom `=`.**
+--
+-- Bis zum 2026-08-20 senkte `d.QUIT.ACK = 1;` zu
+--
+--     (((*(volatile uint32_t *)(d->basis + 4)) >> 0) & 1u) = 1;
+--
+-- ab -- der LESER auf der linken Seite einer Zuweisung. **`gabbro pruefe` meldete null
+-- Fehler, `gabbro emit` gab 0 zurueck, und nur `cc` sagte „L-Wert erfordert".**
+-- *Dass ein fremdes Werkzeug es faengt, ist kein Riegel; es ist Glueck.*
+--
+-- Dieselbe Klasse wie der `format`-Setzer (`r.ethertyp = 2054;`), und dieselbe Ursache:
+-- **der Leser ist mechanisch, der Schreiber nicht.**
+--
+-- Warum der Korpus es nicht fand: er schreibt Registerbits ausschliesslich durch
+-- `transition`, und die hat ihren eigenen Lese-Aendere-Schreibe-Pfad.
+--
+-- Und die Absage ist nicht „noch nicht gebaut", sondern eine ENTSCHEIDUNG: ein Bitfeld zu
+-- setzen heisst, das Wort zu lesen. `class w` gibt keine Lesung her. **Das ist Falle 4**,
+-- und ihre Form heisst `transition` mit `mirrors` (`beispiele/20`). Ein `class rw` senkt
+-- ab -- siehe `beispiele/44`.
+
+module gift215 {
+
+device Quittierer(basis : u64) at mmio {
+    reg QUIT : u32 @0x04 class w fields { ACK @0 }
+}
+
+impl fn quittieren(d : ptr<mmio, rw> Quittierer)
+    effects { writes d.QUIT }
+    costs    <= 4 ops
+{
+    d.QUIT.ACK = 1;
+}
+
+}

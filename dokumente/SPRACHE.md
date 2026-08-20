@@ -685,6 +685,35 @@ traversal does that, §9).
 | **V2** | a checked **relation between two places** becomes a branch fact; under the fact `a >= b`, `a - b` has type `0 .. a.max − b.min`, under `a > b` type `1 .. a.max − b.min`. Comparison facts only, directly checked places only | `if a >= b { let d = a - b; }` — the **102 sites** all fall under this form |
 | **V3** | a `match` on a `tagged` type narrows in the branch to the variant including its payload | exhaustive, no catch-all branch |
 
+> **ZWEITE VORBEDINGUNG an V1 und V2, aufgeschrieben 2026-08-20 — und der Pruefer tat bis
+> dahin das Gegenteil.** Eine Verengung traegt nur, wenn die Stelle zwischen der Pruefung und
+> der Verwendung **dieselbe bleibt**. Ein Geraeteregister bleibt sie nicht: es senkt zu
+> `*(volatile T *)(basis + versatz)` ab, und `volatile` IST die Aussage *„das darf sich
+> zwischen zwei Lesungen aendern."*
+>
+> ```gabbro
+> if d.ST.IDX < 8 { return T.slots[d.ST.IDX].a; }   -- ZWEI Lesungen, eine Schranke
+> ```
+>
+> **Bis zum 2026-08-20 gab V1 hier eine Schranke, und das Programm ging mit null Fehlern
+> durch.** Das erzeugte C indizierte ein Feld mit acht Plaetzen mit einem Wert, den die
+> Hardware zwischen den beiden Zeilen frei setzen darf. *`PFLICHTEN.md` fuehrte «B33» als
+> „die V-Regeln verengen eine Registerstelle nicht" — der Ordner beschrieb, was gelten
+> SOLLTE, und niemand hat den Pruefer gefragt.*
+>
+> **Die Regel:** eine Stelle, die durch ein `device`-Register fuehrt, traegt **keinen** Fakt
+> — weder V1 noch V2, in keiner Schreibrichtung. Der Ausweg ist keine neue Grammatik,
+> sondern die gewoehnliche Form:
+>
+> ```gabbro
+> let i = d.ST.IDX;              -- EINMAL lesen; eine lokale Bindung ist nicht fluechtig
+> if i < 8 { return T.slots[i].a; }
+> ```
+>
+> *Und weil eine Regel, die eine Form erzwingt, die der Erzeuger nicht absenkt, ein Verbot
+> ohne Tuer waere:* der Erzeuger liest seither die Wortbreite aus der `device`-Deklaration ab,
+> und `let i = d.ST.IDX;` senkt ab (`gift/213`, `gift/214`).
+
 > **VORBEDINGUNG an V1 und V2, aufgeschrieben 2026-08-18 — sie war immer da und stand nirgends.**
 >
 > Die Verengung im `else`-Zweig setzt voraus, dass **die Negation einer Vergleichsbedingung

@@ -251,6 +251,11 @@ struct Geraet {
     umlaeufer: HashMap<String, IntTy>,
     /// Registername -> Feldname -> (hoechstes Bit, niedrigstes Bit, Registerbreite in Bit).
     felder: HashMap<String, HashMap<String, (u32, u32, u32)>>,
+    /// Registername -> die erklaerte Zugriffsklasse. **Sie entscheidet, ob ein Bitfeld
+    /// ueberhaupt geschrieben werden DARF:** ein Lese-Aendere-Schreibe braucht eine Lesung,
+    /// und ein `class w` gibt keine her -- das ist Falle 4, und ihre Antwort heisst
+    /// `transition` mit `mirrors`.
+    klassen: HashMap<String, RegKlasse>,
 }
 
 /// **Is this type a ghost — i.e. does it vanish in the C?**
@@ -354,7 +359,12 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         ItemArt::Device(d) => {
             namen.geraete.insert(
                 d.name.text.clone(),
-                Geraet { reg: HashMap::new(), felder: HashMap::new(), umlaeufer: HashMap::new() },
+                Geraet {
+                            reg: HashMap::new(),
+                            felder: HashMap::new(),
+                            umlaeufer: HashMap::new(),
+                            klassen: HashMap::new(),
+                        },
             );
             for x in &d.uebergaenge {
                 namen.uebergaenge.insert(x.name.text.clone(), d.name.text.clone());
@@ -541,6 +551,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 let mut felder: HashMap<String, HashMap<String, (u32, u32, u32)>> =
                     HashMap::new();
                 let mut umlaeufer = HashMap::new();
+                let mut klassen = HashMap::new();
                 for r in &d.register {
                     if let Some(v) = umg.konst_wert(modul, &r.versatz) {
                         reg.insert(r.name.text.clone(), (v, intty(&r.typ)));
@@ -558,11 +569,13 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                         f.insert(name.text.clone(), (hi, lo, breite));
                     }
                     felder.insert(r.name.text.clone(), f);
+                    klassen.insert(r.name.text.clone(), r.klasse);
                 }
                 if let Some(g) = namen.geraete.get_mut(&d.name.text) {
                     g.reg = reg;
                     g.felder = felder;
                     g.umlaeufer = umlaeufer;
+                    g.klassen = klassen;
                 }
             }
         });
@@ -2734,7 +2747,7 @@ fn ruft_irgendwas(b: &Block) -> bool {
 /// > **Was nicht ruft, kann keinen fremden Rumpf unter sich haben.** Das ist die einzige
 /// > Schranke, die ohne Hüllenrechnung hält — und sie trifft die Gestalt, in der `pure`
 /// > überhaupt etwas bringt: den kleinen Leser.
-fn wirkungsattribut(f: &FnDecl) -> &'static str {
+fn wirkungsattribut(f: &FnDecl, u: &Namen) -> &'static str {
     let FnRumpf::Block(b) = &f.rumpf else {
         return "";
     };
@@ -2753,6 +2766,16 @@ fn wirkungsattribut(f: &FnDecl) -> &'static str {
     for e in &w.liste {
         match &e.art {
             WirkungArt::Rein => {}
+            // **Ein VOLATILES Lesen vertraegt weder `pure` noch `const`.**
+            //
+            // GCC erlaubt einer `pure`-Funktion, unveraenderliche globale Objekte zu lesen --
+            // *nicht* volatile. Genau darauf beruht die Optimierung: zwei Rufe mit gleichen
+            // Argumenten duerfen zu einem zusammenfallen. Bei einem Statusregister ist das
+            // die Schleife, die nie endet, weil sie ihr Register nur einmal liest.
+            //
+            // *Dieselbe Klasse wie der `extern`-Fall im Kopf dieser Funktion, und derselbe
+            // Ausgang: das Attribut ist eine ANWEISUNG an den Uebersetzer, keine Buchung.*
+            WirkungArt::Liest(o) if liest_geraet(o, u, f) => return "",
             WirkungArt::Liest(_) => ganz_rein = false,
             // Alles andere -- Schreiben, Sperren, Verbrauchen, Veröffentlichen, Divergieren,
             // Maskieren, Belegen -- ist eine Wirkung, und dann gilt keins der zwei Wörter.
@@ -2774,6 +2797,34 @@ fn wirkungsattribut(f: &FnDecl) -> &'static str {
     } else {
         " __attribute__((pure))"
     }
+}
+
+/// Nennt diese `reads`-Wirkung ein Geraet -- als Typname, als Parameter oder als Griff?
+fn liest_geraet(o: &Ort, u: &Namen, f: &FnDecl) -> bool {
+    let n = &o.basis.text;
+    if u.geraete.contains_key(n) || u.geraetezeiger.contains_key(n) || u.geraetewerte.contains_key(n)
+    {
+        return true;
+    }
+    // Ein Parameter traegt seinen Geraetetyp in der Signatur, auch wenn die Karte des
+    // aeusseren Namensraums ihn nicht kennt.
+    f.parameter.iter().any(|p| {
+        &p.name.text == n
+            && match &p.typ {
+                TypExpr::Pfad(pf) => pf
+                    .teile
+                    .last()
+                    .is_some_and(|t| u.geraete.contains_key(&t.text)),
+                TypExpr::Zeiger(z) => match &z.ziel {
+                    TypExpr::Pfad(pf) => pf
+                        .teile
+                        .last()
+                        .is_some_and(|t| u.geraete.contains_key(&t.text)),
+                    _ => false,
+                },
+                _ => false,
+            }
+    })
 }
 
 /// **Text, der in einem C-Literal landet** — Anführungszeichen und Rückstriche entschärft.
@@ -2924,6 +2975,7 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
         lokal.markenwerte.remove(name);
         lokal.tabellenzeiger.remove(name);
         lokal.geraetezeiger.remove(name);
+        lokal.geraetewerte.remove(name);
         lokal.formatwerte.remove(name);
         lokal.parametertyp.insert(name.clone(), p.typ.clone());
         match &p.typ {
@@ -2941,6 +2993,22 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
                     }
                     // Eine Marke ist ein WERT: ein Byte, das durch die Signatur reist.
                     if u.marken.contains(&n.text) {
+                        lokal.werte.insert(name.clone());
+                    }
+                    // **Ein GERAET als Wertparameter -- die Form, die `beispiele/09` lokal
+                    // schreibt (`let v = Vtd(basis);`) und dann weiterreicht.**
+                    //
+                    // Bis 2026-08-20 stand sie in KEINER der beiden Karten, und damit nahm
+                    // der Erzeuger den gewoehnlichen Ortspfad: `d.ST.IDX` wurde `d->ST.IDX`
+                    // -- ein Feldzugriff auf `typedef struct { volatile uint8_t *basis; }`,
+                    // den es nicht gibt. **`cc` brach ab, `gabbro emit` gab 0 zurueck, und
+                    // `C001` schwieg.** *Eine stille falsche Absenkung ist schlechter als
+                    // eine Absage, denn eine Absage steht im Zeugnis.*
+                    //
+                    // `gabbro blindstellen` fuehrte `device` in Stellung `parameter` als
+                    // BLIND -- die Zelle sagte es voraus, bevor sie jemand nachgerechnet hat.
+                    if u.geraete.contains_key(&n.text) {
+                        lokal.geraetewerte.insert(name.clone(), n.text.clone());
                         lokal.werte.insert(name.clone());
                     }
                 }
@@ -3079,7 +3147,7 @@ fn funktion(
     aus.push_str(&format!(
         "\n{rueck} {}({liste}){};\n",
         f.name.text,
-        wirkungsattribut(f)
+        wirkungsattribut(f, u)
     ));
     // **Ein `asm`-Rumpf wird zu erweitertem GCC-Assembler** («OPT3», 2026-08-19).
     //
@@ -3443,6 +3511,77 @@ fn anweisung(
                         f.text, z.ziel.basis.text
                     ));
                     return;
+                }
+            }
+            // **Ein BITFELD eines Geraeteregisters ist kein Zuweisungsziel** (2026-08-20).
+            //
+            // `d.QUIT.ACK = 1;` ergab
+            //
+            // ```c
+            // (((*(volatile uint32_t *)(d->basis + 4)) >> 0) & 1u) = 1;
+            // ```
+            //
+            // -- der LESER auf der linken Seite einer Zuweisung. `gabbro pruefe` meldete
+            // null Fehler, `gabbro emit` gab 0 zurueck, und nur `cc` sagte *„L-Wert
+            // erfordert."* **Dieselbe Klasse wie der `format`-Setzer zwei Absaetze weiter
+            // oben, und dieselbe Ursache: der Leser ist mechanisch, der Schreiber nicht.**
+            //
+            // *Warum der Korpus es nicht fand:* er schreibt Registerbits ausschliesslich
+            // durch `transition`, und die hat ihren eigenen Lese-Aendere-Schreibe-Pfad.
+            // Ein DIREKTER Bitschreibvorgang ging an ihm vorbei.
+            //
+            // **Und die Entscheidung steht schon in der Sprache:** ein Bitfeld zu schreiben
+            // ist ein Lese-Aendere-Schreibe, das braucht eine Lesung, und ein `class w`
+            // gibt keine her. *Das ist Falle 4.* Ihre Antwort heisst `transition` mit
+            // `mirrors` -- die Bits kommen aus dem Spiegelregister, nicht aus dem
+            // unlesbaren Ziel. Also: `rw` senkt ab, alles andere wird beim Namen abgesagt.
+            if let Some((g, pfeil)) = u
+                .geraetezeiger
+                .get(&z.ziel.basis.text)
+                .map(|g| (g, "->"))
+                .or_else(|| u.geraetewerte.get(&z.ziel.basis.text).map(|g| (g, ".")))
+            {
+                if z.ziel.suffixe.len() == 2 {
+                    if let (Some(OrtSuffix::Feld(r)), Some(OrtSuffix::Feld(f))) =
+                        (z.ziel.suffixe.first(), z.ziel.suffixe.get(1))
+                    {
+                        let dev = u.geraete.get(g);
+                        let lage = dev.and_then(|d| d.reg.get(&r.text));
+                        let bits = dev.and_then(|d| d.felder.get(&r.text)).and_then(|m| m.get(&f.text));
+                        let klasse = dev.and_then(|d| d.klassen.get(&r.text)).copied();
+                        if let (Some((versatz, breite)), Some((hi, lo, _))) = (lage, bits) {
+                            if !matches!(klasse, Some(RegKlasse::LesenSchreiben)) {
+                                weigere(
+                                    absagen,
+                                    s.span,
+                                    "a bit field of a register that is not `class rw` -- \
+                                     writing one bit means reading the word first, and this \
+                                     register does not give a reading. That is trap 4, and \
+                                     its form is `transition` with `mirrors`",
+                                );
+                                return;
+                            }
+                            if !matches!(z.op, ZuwOp::Setzt) {
+                                weigere(
+                                    absagen,
+                                    s.span,
+                                    "a compound assignment to a register bit field -- it \
+                                     would be two accesses to a place the device also writes",
+                                );
+                                return;
+                            }
+                            let n = (hi - lo + 1) as u32;
+                            let maske: u128 = if n >= 128 { u128::MAX } else { ((1u128 << n) - 1) << lo };
+                            let wort =
+                                format!("(*(volatile {breite} *)({}{pfeil}basis + {versatz}))", z.ziel.basis.text);
+                            aus.push_str(&format!(
+                                "{e}{{\n{e}    {breite} _v = {wort};\n\
+                                 {e}    {wort} = ({breite})((_v & ({breite})~({breite}){maske}u) \
+                                 | (({breite})({wert}) << {lo}u & ({breite}){maske}u));\n{e}}}\n"
+                            ));
+                            return;
+                        }
+                    }
                 }
             }
             aus.push_str(&format!(
@@ -4887,7 +5026,9 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
             Some(t) => ctyp(t, u),
             None => ort_typ(o, u).and_then(|t| ctyp(&t, u)),
         },
-        ExprArt::Ort(o) => ort_typ(o, u).and_then(|t| ctyp(&t, u)),
+        ExprArt::Ort(o) => ort_typ(o, u)
+            .and_then(|t| ctyp(&t, u))
+            .or_else(|| register_ctyp(o, u)),
         ExprArt::Klammer(x) => wert_ctyp(x, u),
         ExprArt::Binaer(op, a, b) => {
             // Ein Vergleich ist `bool`, egal worueber; eine Rechnung traegt den Typ ihrer
@@ -4925,6 +5066,30 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
         }
         _ => None,
     }
+}
+
+/// **Die C-Wortbreite eines Registerzugriffs -- ABGELESEN aus der `device`-Deklaration.**
+///
+/// `d.ST` und `d.ST.IDX` senken beide zu einem `*(volatile <breite> *)`-Zugriff ab; ein
+/// Bitfeld wird daraus geschoben und maskiert, also traegt es dieselbe Breite. Die Breite
+/// steht in der Deklaration, und gefragt hat sie hier bis 2026-08-20 niemand.
+///
+/// **Warum das gerade jetzt faellt:** seit «B33» gibt ein Vergleich auf einer Registerstelle
+/// keine Tatsache mehr, und der Ausweg ist `let i = d.ST.IDX;` -- die Bindung einmal lesen
+/// und SIE verengen. *Eine Regel, die eine Form erzwingt, die der Erzeuger nicht absenkt,
+/// waere ein Verbot ohne Tuer gewesen.*
+fn register_ctyp(o: &Ort, u: &Namen) -> Option<String> {
+    let g = u
+        .geraetezeiger
+        .get(&o.basis.text)
+        .or_else(|| u.geraetewerte.get(&o.basis.text))?;
+    let OrtSuffix::Feld(r) = o.suffixe.first()? else {
+        return None;
+    };
+    if o.suffixe.len() > 2 {
+        return None;
+    }
+    u.geraete.get(g)?.reg.get(&r.text).map(|(_, b)| b.clone())
 }
 
 /// Ist dieser Ort ein `option index into T`? Dann die Zieltabelle.

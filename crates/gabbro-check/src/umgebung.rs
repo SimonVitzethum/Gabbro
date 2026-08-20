@@ -1075,6 +1075,60 @@ impl Umgebung {
         aktuell
     }
 
+    /// **Fuehrt dieser Ort durch ein GERAETEREGISTER?**
+    ///
+    /// Ein Registerzugriff senkt zu `*(volatile T *)(basis + versatz)` ab -- und `volatile`
+    /// IST die Aussage *„diese Stelle darf sich zwischen zwei Lesungen aendern."* Damit
+    /// traegt ein Vergleich auf einem Register **keine Tatsache in den Zweig**: die zweite
+    /// Lesung liest, was das Geraet inzwischen hingeschrieben hat.
+    ///
+    /// ```text
+    /// if d.ST.IDX < 8 { return T.slots[d.ST.IDX].a; }   -- ZWEI volatile Lesungen
+    /// ```
+    ///
+    /// Bis 2026-08-20 gab V1 hier eine Schranke, und die erzeugte C-Zeile indizierte ein
+    /// Feld mit acht Plaetzen mit einem Wert, den die Hardware zwischen den beiden Zeilen
+    /// frei aendern darf. **`PFLICHTEN.md` fuehrte «B33» als *"die V-Regeln verengen eine
+    /// Registerstelle nicht"* -- der Ordner beschrieb, was gelten SOLLTE, und der Pruefer
+    /// tat das Gegenteil.** *Eine Zusage, die kein Pass einloest, ist die stille Richtung.*
+    ///
+    /// Der Ausweg ist die gewoehnliche Form und steht so im Korpus: **einmal in eine lokale
+    /// Bindung lesen, dann die Bindung verengen.** Eine lokale Bindung ist nicht fluechtig.
+    pub fn ist_registerort(&self, von: &str, ort: &Ort, lokal: &HashMap<String, Typ>) -> bool {
+        let mut aktuell = lokal
+            .get(&ort.basis.text)
+            .cloned()
+            .or_else(|| self.suche(&self.globale, von, &ort.basis.text).cloned())
+            .unwrap_or(Typ::Unbekannt);
+        if self.ist_geraetetyp(&aktuell) {
+            return true;
+        }
+        for suffix in &ort.suffixe {
+            aktuell = match suffix {
+                OrtSuffix::Feld(f) | OrtSuffix::Ueber(f) => self.feld_von(von, &aktuell, &f.text),
+                OrtSuffix::Index(_) => match aktuell.durchgreifen() {
+                    Typ::Feld { element, .. } => (**element).clone(),
+                    _ => Typ::Unbekannt,
+                },
+            };
+            if matches!(aktuell.durchgreifen(), Typ::Register { .. }) || self.ist_geraetetyp(&aktuell)
+            {
+                return true;
+            }
+            if aktuell.ist_unbekannt() {
+                return false;
+            }
+        }
+        false
+    }
+
+    fn ist_geraetetyp(&self, t: &Typ) -> bool {
+        match t.durchgreifen() {
+            Typ::Verbundname(n) => self.geraete.contains_key(n.as_str()),
+            _ => false,
+        }
+    }
+
     pub fn feld_von(&self, _von: &str, traeger: &Typ, name: &str) -> Typ {
         match traeger.durchgreifen() {
             Typ::Tabelle(t) => {

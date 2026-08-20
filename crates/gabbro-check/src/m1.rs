@@ -1557,15 +1557,37 @@ impl<'a> Pruefer<'a> {
                 self.fintervallfakt(o, spiegle(op), w, lage);
             }
         }
+        // **«B33»: eine FLUECHTIGE Stelle traegt keine Tatsache.**
+        //
+        // Ein Geraeteregister senkt zu `*(volatile T *)(basis + versatz)` ab, und `volatile`
+        // ist genau die Aussage *„zwischen zwei Lesungen darf sich das aendern."* Der
+        // Vergleich liest einmal, die Verwendung liest ein zweites Mal -- die Schranke der
+        // ersten Lesung gilt fuer die zweite nicht. Bis 2026-08-20 gab V1 sie trotzdem, und
+        // `T.slots[d.ST.IDX]` ging mit null Fehlern durch.
+        //
+        // *Der Ausweg ist keine neue Grammatik, sondern die gewoehnliche Form: einmal in eine
+        // lokale Bindung lesen und die Bindung verengen.*
+        let fluechtig = |m1: &Self, e: &Expr| match &e.art {
+            ExprArt::Ort(o) => m1.u.ist_registerort(&m1.modul, o, &lage.lokal),
+            _ => false,
+        };
+        let (fa, fb) = (fluechtig(self, a), fluechtig(self, b));
         // V1 -- Stelle gegen Konstante, in beiden Schreibrichtungen.
         if let (ExprArt::Ort(o), Some(wert)) = (&a.art, self.u.konst_wert(&self.modul, b)) {
-            let _ = self.bereichsfakt(o, op, wert, lage);
+            if !fa {
+                let _ = self.bereichsfakt(o, op, wert, lage);
+            }
         }
         if let (Some(wert), ExprArt::Ort(o)) = (self.u.konst_wert(&self.modul, a), &b.art) {
-            let _ = self.bereichsfakt(o, spiegle(op), wert, lage);
+            if !fb {
+                let _ = self.bereichsfakt(o, spiegle(op), wert, lage);
+            }
         }
         // V2 -- Stelle gegen Stelle, ausschliesslich als Vergleichsfakt.
         if let (ExprArt::Ort(oa), ExprArt::Ort(ob)) = (&a.art, &b.art) {
+            if fa || fb {
+                return;
+            }
             if let (Some((links, mut ia)), Some((rechts, ib))) =
                 (schluessel_und_indizes(oa), schluessel_und_indizes(ob))
             {

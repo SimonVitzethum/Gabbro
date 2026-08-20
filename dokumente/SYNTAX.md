@@ -933,6 +933,24 @@ device Vtd(base: Pa) at mmio {
 > one — and the file's own writing rule says that backticks denote **today's** syntax. A name in
 > backticks that no grammar knows is the same false green as a table word in no production.)*
 >
+> **And `mirrors` supplies the PRE-STATE of a `transition`, not only the carried bits.**
+> «B26» asked exactly this and the file did not say. The answer is yes, and it is measurable:
+> `transition scharf_te { GCMD.TE: 0 -> 1 }` lowers to
+>
+> ```c
+> uint32_t _s = (*(volatile uint32_t *)(d->basis + 28));   /* GSTS -- the mirror */
+> (*(volatile uint32_t *)(d->basis + 24)) =                /* GCMD -- write-only */
+>     (uint32_t)((_s & (uint32_t)~(uint32_t)2147483648u) | (uint32_t)2147483648u);
+> ```
+>
+> **One read, one write, and the read is of the OTHER register.** The `0 ->` half of the
+> transition is therefore not an assertion the generator emits; it is the statement *which*
+> bit the write replaces — every other bit comes from the mirror. Measured at
+> `beispiele/20-falle-vier.gab`.
+>
+> *An answer that lives only in the generator is the same construction as a promise that
+> lives only in a tool invocation.* That is why it stands here.
+
 > **`bank`** covers registers at a run-time-computed base (F6): `FRR` at `CAP.FRO*16`. The index
 > is M1-bounded by `count`.
 

@@ -1,0 +1,67 @@
+-- 44 -- **Ein Register wird EINMAL gelesen, und die Bindung traegt die Schranke.**
+--
+-- Zwei Befunde vom 2026-08-20 stehen hier als ein Programm, weil sie eine Ursache haben:
+-- **eine Registerstelle ist fluechtig, und der Erzeuger wusste bis dahin nicht, dass ein
+-- `device` auch als WERT durch eine Signatur reisen kann.**
+--
+-- 1. «B33». `if d.ST.IDX < 8 { … d.ST.IDX … }` sind ZWEI volatile Lesungen. V1 gab bis
+--    dahin eine Schranke aus der ersten und deckte damit die zweite. `beispiele/gift/213`
+--    und `/214` fallen seither, in beiden Schreibrichtungen.
+--
+-- 2. `device` in Stellung `parameter` war eine BLINDE ZELLE (`gabbro blindstellen`), und die
+--    Zelle hatte recht: der Erzeuger schrieb `d->ST.IDX` -- einen Feldzugriff auf
+--    `typedef struct { volatile uint8_t *basis; }`. **`cc` brach ab, `gabbro emit` gab 0
+--    zurueck, und `C001` schwieg.** *Eine stille falsche Absenkung ist schlechter als eine
+--    Absage: eine Absage steht im Zeugnis.*
+--
+-- Die ehrliche Form kostet eine Zeile und ist die, die jeder Treiber ohnehin schreibt.
+
+module beispiel44 {
+
+type Platznummer = u32 in 0 .. 7;
+
+device Statusgeraet(basis : u64) at mmio {
+    reg ST  : u32 @0x00 class r  fields { IDX @[7:0], BEREIT @31 }
+    reg QUIT : u32 @0x04 class rw fields { ACK @0 }
+}
+
+table Auftrag count 8 {
+    slot { gewicht : u32, }
+}
+
+-- **Der Kern: `let stand = d.ST.IDX;` liest EINMAL.** Danach ist `stand` eine gewoehnliche
+-- lokale Bindung, und V1 verengt sie wie jede andere. Das erzeugte C traegt genau eine
+-- volatile Lesung, und der Index steht auf ihrem Ergebnis.
+impl fn gewicht_des_stands(d : Statusgeraet) -> u32
+    effects { reads Statusgeraet, reads Auftrag }
+    costs    <= 12 ops
+{
+    let bereit = d.ST.BEREIT;
+    if bereit == 0 { return 0; }
+    let stand = d.ST.IDX;
+    if stand < 8 { return Auftrag.slots[stand].gewicht; }
+    return 0;
+}
+
+-- Und die Gegenrichtung: ein Geraet als Wertparameter, dessen BITFELD geschrieben wird.
+-- `class rw` ist hier kein Zufall: ein Bitfeld zu setzen heisst, das Wort zu lesen, zu
+-- aendern und zurueckzuschreiben. Ein `class w` gibt keine Lesung her -- das ist Falle 4,
+-- und ihre Form heisst `transition` mit `mirrors` (beispiele/20). Der Erzeuger sagt seit
+-- dem 2026-08-20 genau das ab, statt den LESER links vom `=` auszugeben.
+impl fn quittieren(d : Statusgeraet)
+    effects { writes d.QUIT }
+    costs    <= 4 ops
+{
+    d.QUIT.ACK = 1;
+}
+
+-- Eine gewoehnliche Verengung auf einem gewoehnlichen Wert -- damit die Probe zeigt, dass
+-- die Regel NUR die fluechtige Stelle trifft und nicht die Verengung ueberhaupt.
+impl fn gewicht_bei(n : Platznummer) -> u32
+    effects { reads Auftrag }
+    costs    <= 4 ops
+{
+    return Auftrag.slots[n].gewicht;
+}
+
+}

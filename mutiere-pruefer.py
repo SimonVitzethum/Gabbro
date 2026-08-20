@@ -82,6 +82,28 @@ class Mutation:
 # Jede Mutation beschaedigt GENAU EINE Regel. Der Text daneben sagt, welche -- wer eine
 # Mutation ueberleben sieht, weiss damit sofort, was heute unbewacht ist.
 MUTATIONEN = [
+    # -- m1.rs: «B33», die fluechtige Stelle ---------------------------------------------
+    Mutation(
+        "register-verengt-sich-wieder",
+        "m1.rs",
+        "        if let (ExprArt::Ort(o), Some(wert)) = (&a.art, self.u.konst_wert(&self.modul, b)) {\n"
+        "            if !fa {",
+        "        if let (ExprArt::Ort(o), Some(wert)) = (&a.art, self.u.konst_wert(&self.modul, b)) {\n"
+        "            if true {",
+        "«B33» -- V1 verengt eine Registerstelle wieder; `if d.ST.IDX < 8` deckt "
+        "`T.slots[d.ST.IDX]`, und zwischen den zwei volatilen Lesungen darf die Hardware "
+        "schreiben, was sie will",
+    ),
+    Mutation(
+        "registerbeziehung-lebt-wieder",
+        "m1.rs",
+        "        if let (ExprArt::Ort(oa), ExprArt::Ort(ob)) = (&a.art, &b.art) {\n"
+        "            if fa || fb {",
+        "        if let (ExprArt::Ort(oa), ExprArt::Ort(ob)) = (&a.art, &b.art) {\n"
+        "            if false {",
+        "«B33» in der zweiten Schreibrichtung -- V2 macht aus einem Registervergleich "
+        "wieder einen Beziehungsfakt",
+    ),
     # -- typen.rs: die Bereichsarithmetik ------------------------------------------------
     Mutation(
         "bereich-passt-immer",

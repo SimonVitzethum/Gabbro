@@ -44,7 +44,7 @@ LUECKEN = [
      "module t { accumulates hoch : u64 merge max; }"),
     ("B22", "ein mehrzeiliges `claim`",
      "module t { extern fn e() -> u32 effects { pure } costs <= 2 ops;\n"
-     "check c { claim \"erste\" \"zweite\" measures n gates g\n"
+     "check c { claim \"erste\" \"zweite\" measures n gates e\n"
      "  can_fail { if e() != 0 { return false; } return true; } floor n >= 1 } }"),
     ("B25", "eine Wertemenge statt eines Intervalls",
      "module t { type G = u8 in 0x01 .. 0x0c; }"),
