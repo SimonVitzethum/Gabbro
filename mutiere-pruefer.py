@@ -1591,13 +1591,12 @@ MUTATIONEN = [
         # **Stufe 5, 2026-08-20:** die geschlossene Wortmenge von `ops`. Faellt die Pruefung,
         # nimmt `opdecl` wieder jedes Wort -- und aus einem Namen faellt keine Wirkung.
         "ops-nimmt-jedes-wort",
+        # *Die erste Fassung schnitt den `_`-Zweig des `match` heraus und war damit
+        # UNGUELTIG -- ein nicht erschoepfendes `match` uebersetzt nicht.* Diese hier stellt
+        # den Zustand vor dem 2026-08-20 wieder her: `identlist` statt `opnamen`.
         "gabbro-syntax/src/parse.rs",
-        "                _ => {\n                    let gefunden = t.benennung(self.quelle);\n"
-        "                    self.absage(\n                        Absage::fehler(\n"
-        "                            \"P039\",",
-        "                _ if false => {\n                    let gefunden = t.benennung(self.quelle);\n"
-        "                    self.absage(\n                        Absage::fehler(\n"
-        "                            \"P039\",",
+        "                    ops.extend(self.opnamen()?);",
+        "                    ops.extend(self.identlist()?);",
         "Parser -- `ops` nimmt wieder beliebige Woerter",
         "pass",
     ),
