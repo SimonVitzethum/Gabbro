@@ -43,7 +43,7 @@ use std::collections::{BTreeSet, HashMap};
 /// What the emitter must resolve: table names (a path naming one IS the struct), named
 /// types (they lower to their carrier), **ghost types (they lower to NOTHING)** and the
 /// signatures it needs in order to erase a ghost at a call site.
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct Namen {
     tabellen: Vec<String>,
     /// Die `format`-Namen. Ein Pfad, der eines nennt, IST der Zugriffsverbund.
@@ -108,6 +108,35 @@ struct Namen {
     tabellenglobal: BTreeSet<String>,
     /// `linear ghost type BootPhase;` — a value that **does not exist at run time**.
     geister: Vec<String>,
+    /// **`linear type Angemeldet;` ohne Rumpf -- eine MARKE** (2026-08-20).
+    ///
+    /// `SPRACHE.md`:721 zieht die Linie selbst: *`linear type Parked;` -- echte Ressource:
+    /// Bytes im Erzeugnis*, gegen *`linear ghost type Held(Lock);` -- Beleg: vor der
+    /// Codeerzeugung geloescht*. Der Geist wird **geloescht**, die Marke nicht. Wer beide
+    /// gleich absenkte, machte `ghost` zur Verzierung.
+    ///
+    /// **Und hier wird nichts geraten.** Der Erzeuger weigert sich, wo mehrere Antworten
+    /// plausibel sind; eine Marke ohne Felder hat keine mehrere -- sie hat keine Felder.
+    /// Dass in C ein Wert eine Adresse und eine Groesse braucht, ist eine Aussage ueber C.
+    /// *Ein Byte ist nicht die kleinste plausible Wahl, sondern die einzige.*
+    marken: BTreeSet<String>,
+    /// **«B41b»: je Tabelle ihre Baumkanten** -- (parent, child, sibling), jede fuer sich
+    /// vorhanden oder nicht. Sie stehen an der `table` und nicht am Durchlauf; `D006`-`D008`
+    /// haben sie dort schon gegen den Slot gehalten, also liest der Erzeuger hier ab.
+    baeume: HashMap<String, (Option<String>, Option<String>, Option<String>)>,
+    /// **Ein Geraetegriff, der aus einem `let` kommt und nicht aus einem Parameter**
+    /// (2026-08-20). `beispiele/09` schreibt `let v = Vtd(basis);` -- *„die Parameterliste
+    /// der Deklaration IST der Konstruktor"* -- und `v` ist danach ein WERT, kein Zeiger.
+    /// Ohne diese Karte wurde `v.RTA` zu `v->RTA`, und `geraetezeiger` half nicht: die Karte
+    /// kennt nur Parameter.
+    geraetewerte: HashMap<String, String>,
+    /// **Name -> `format`, fuer Parameter.** Ein Feld darauf ist ein RUF (`Elf64Kopf_e_eintritt`),
+    /// kein `->`. Funktionslokal wie alles andere in `eigene_sicht`.
+    formatwerte: HashMap<String, String>,
+    /// **Uebergangsname -> sein Geraet.** Ein `transition` heisst im C `Vtd_wurzel_setzen`
+    /// und nimmt einen Zeiger; in Gabbro steht `wurzel_setzen(v)`. *Der Erzeuger stellt den
+    /// Bezug her, statt den Namen so hinzuschreiben, wie er dasteht.*
+    uebergaenge: HashMap<String, String>,
     funktionen: HashMap<String, Signatur>,
     /// Namen, die diese Einheit **nicht deklariert** und die nur hinter einem Zeiger
     /// vorkommen. Sie werden als unvollstaendiger C-Typ vorwaerts deklariert.
@@ -189,6 +218,7 @@ fn fremdes_ziel(t: &TypExpr, u: &Namen) -> Option<String> {
 }
 
 /// What must be known about a callee in order to erase a ghost **at the call site**.
+#[derive(Clone)]
 struct Signatur {
     /// Per parameter: is it a ghost? A ghost argument is dropped from the C call.
     geist_param: Vec<bool>,
@@ -198,9 +228,18 @@ struct Signatur {
     option_rueck: Option<String>,
     /// `-> never`. Ein `on_exceeded` darf nur auf so eine Funktion zeigen.
     nie_rueck: bool,
+    /// **Der erklaerte Rueckgabetyp.** `wert_ctyp` las bis zum 2026-08-20 jeden Ort und jede
+    /// Rechnung ab und **einen Ruf nicht** -- der Typ steht in der Deklaration des Gerufenen
+    /// und war die einzige der drei Quellen, die niemand fragte.
+    rueck: Option<TypExpr>,
+    /// **`-> T or R`: der Name des `reason`.** Wer einen Fehlerkanal hat, hat eine ANDERE
+    /// C-Signatur -- `bool f(T *_wert, R *_grund)` -- und ein Ruf ausserhalb eines
+    /// `let … else` waere derselbe Name mit der falschen Stelligkeit.
+    fehler: Option<String>,
 }
 
 /// Ein Geraet, so wie der Erzeuger es braucht.
+#[derive(Clone)]
 struct Geraet {
     /// Registername -> (Versatz, C-Wortbreite). **Der Raum steht nicht hier** -- `geraet`
     /// liest ihn direkt aus dem Baum, und ein zweites Feld daneben waere das zweite Register
@@ -317,8 +356,23 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 d.name.text.clone(),
                 Geraet { reg: HashMap::new(), felder: HashMap::new(), umlaeufer: HashMap::new() },
             );
+            for x in &d.uebergaenge {
+                namen.uebergaenge.insert(x.name.text.clone(), d.name.text.clone());
+            }
         }
-        ItemArt::Tabelle(t) => namen.tabellen.push(t.name.text.clone()),
+        ItemArt::Tabelle(t) => {
+            namen.tabellen.push(t.name.text.clone());
+            if let Some(b) = &t.baum {
+                namen.baeume.insert(
+                    t.name.text.clone(),
+                    (
+                        b.elter.as_ref().map(|i| i.text.clone()),
+                        b.kind.as_ref().map(|i| i.text.clone()),
+                        b.geschwister.as_ref().map(|i| i.text.clone()),
+                    ),
+                );
+            }
+        }
         ItemArt::Accumulates(ac) => {
             namen.akkus.insert(ac.name.text.clone());
         }
@@ -337,6 +391,9 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             // value the checker threads and the machine never sees.
             if t.ghost {
                 namen.geister.push(t.name.text.clone());
+            } else if t.linear && t.rumpf.is_none() && t.parameter.is_none() {
+                // **Eine Marke.** Siehe `Namen::marken`.
+                namen.marken.insert(t.name.text.clone());
             } else if let Some(unter) = &t.rumpf {
                 if matches!(unter, TypExpr::Verbund(f, _) if !f.is_empty()) && !t.opaque {
                     namen.verbunde.insert(t.name.text.clone());
@@ -371,6 +428,8 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 geist_param: f.parameter.iter().map(|p| ist_geist(&p.typ, &namen)).collect(),
                 geist_rueck: f.ergebnis.as_ref().is_some_and(|t| ist_geist(t, &namen)),
                 nie_rueck: matches!(f.ergebnis, Some(TypExpr::Never(_))),
+                fehler: f.fehler.as_ref().map(|i| i.text.clone()),
+                rueck: f.ergebnis.clone(),
                 option_rueck: match &f.ergebnis {
                     Some(TypExpr::Index { tabelle, optional: true, .. }) => {
                         Some(tabelle.text.clone())
@@ -697,6 +756,45 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             ItemArt::Check(c) => benutzte_namen(&c.can_fail, &mut benutzt),
             _ => {}
         });
+        // **«B41b»: ein Baumdurchlauf ueber einem blanken Index adressiert seine Tabelle
+        // ebenfalls beim Namen** (2026-08-20).
+        //
+        // `traverse v of g over ancestors of g` nennt `Topologie` in keiner Zeile des
+        // Rumpfes -- nur im TYP von `g` und in der Wirkungsliste. `benutzte_namen` sah
+        // deshalb nichts, der Speicher wurde nicht angelegt, und das Erzeugnis las
+        // `Topologie_speicher`, das es nicht gab. *Ein Durchlauf ist ein Zugriff; er steht
+        // nur nicht als einer da.*
+        crate::fuer_jedes_item(baum, &mut |item| {
+            let ItemArt::Funktion(f) = &item.art else { return };
+            let FnRumpf::Block(b) = &f.rumpf else { return };
+            fn im_block(b: &Block, p: &[Parameter], benutzt: &mut BTreeSet<String>) {
+                for s in &b.anweisungen {
+                    if let StmtArt::Schleife(sch) = &s.art {
+                        if let Schleife::Traverse(t) = sch.as_ref() {
+                            let o = match &t.domaene {
+                                Domaene::NachfahrenVon(o) | Domaene::VorfahrenVon(o) => Some(o),
+                                _ => None,
+                            };
+                            if let Some(o) = o {
+                                if o.suffixe.is_empty() {
+                                    if let Some(TypExpr::Index { tabelle, .. }) = p
+                                        .iter()
+                                        .find(|x| x.name.text == o.basis.text)
+                                        .map(|x| &x.typ)
+                                    {
+                                        benutzt.insert(tabelle.text.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    for k in crate::unterbloecke(s) {
+                        im_block(k, p, benutzt);
+                    }
+                }
+            }
+            im_block(b, &f.parameter, &mut benutzt);
+        });
         namen.tabellenglobal = namen
             .tabellen
             .iter()
@@ -776,6 +874,62 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             aus.push_str(&format!("struct {f};\n"));
         }
     }
+    // **Die Marken stehen HIER und nicht an ihrem Item** -- aus demselben Grund, aus dem
+    // alle Prototypen vor allen Ruempfen stehen. `beispiele/04` erklaert `linear type
+    // Angemeldet;` **nach** der Funktion, die den Typ in ihrer Signatur fuehrt; an seinem
+    // Platz erzeugt waere er in C erst nach seinem ersten Gebrauch bekannt. *Die
+    // Quellreihenfolge einer Gabbro-Datei ist frei, und der Erzeuger sortiert.*
+    // **`gabbro_kern()` ist ein FREMDER Rumpf, und ein fremder Rumpf braucht seinen
+    // Prototypen** (2026-08-20).
+    //
+    // Der Kommentar an `accumulates` sagt es seit jeher -- *„Der aktuelle Kern ist ein
+    // FREMDER Rumpf … so steht er da, wo er hingehoert: im Zeugnis, Abschnitt E, mit seinem
+    // Vertrag"* -- und im C stand er nirgends. `_melde` rief ihn, und C11 machte daraus eine
+    // implizite Deklaration. *Es fiel nicht auf, weil die einzige Datei mit `accumulates`
+    // aus einem anderen Grund `C001` sagte.*
+    if baum_hat_accumulates(baum) {
+        aus.push_str(
+            "\n/* The current core. A FOREIGN body: which core is running is a question about\n\
+             \x20* the MACHINE, and lifting it into the language would be an expression for\n\
+             \x20* something the language cannot check. It stands in the certificate,\n\
+             \x20* section E, with its contract: it returns a core number below the `per cpu`\n\
+             \x20* count, and nothing here proves that. */\nuint32_t gabbro_kern(void);\n",
+        );
+    }
+    if !namen.marken.is_empty() {
+        aus.push_str(
+            "\n/* `linear type T;` without a body -- a TOKEN: it carries a right, not data.\n\
+             \x20* The one byte exists so that C can pass and address the value; nothing ever\n\
+             \x20* reads it. That the value is used exactly once is M2's statement, and M2\n\
+             \x20* has already made it. A `linear ghost type` is ERASED instead -- that is the\n\
+             \x20* whole difference between the two words. */\n",
+        );
+        for m in &namen.marken {
+            aus.push_str(&format!("typedef struct {{ uint8_t nichts; }} {m};\n"));
+        }
+    }
+    // **Alle Typen vor allem anderen -- aus demselben Grund wie alle Prototypen vor allen
+    // Ruempfen** (2026-08-20).
+    //
+    // `beispiele/05` erklaert `type Zelle = { wert : Zaehlerwert, };` als **letztes Item** und
+    // fuehrt `ptr<normal, rw> Zelle` in einer Signatur zwanzig Zeilen davor. An seinem Platz
+    // erzeugt stuende der `typedef` hinter seinem ersten Gebrauch, und `cc` saehe einen
+    // unbekannten Typnamen. *Die Quellreihenfolge einer Gabbro-Datei ist frei; der Erzeuger
+    // sortiert, statt sie zu einer C-Reihenfolge zu zwingen.*
+    //
+    // > Es fiel bis heute nicht auf, weil die Dateien, die einen Verbund spaet erklaeren, aus
+    // > einem anderen Grund `C001` sagten -- **dieselbe Bauart wie beim `format`-Feldzugriff
+    // > und beim fehlenden `gabbro_kern`, am selben Tag, aus demselben Grund.**
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Typ(t) = &item.art {
+            if namen.verbunde.contains(&t.name.text) {
+                verbund(t, &mut aus, &namen, absagen);
+            }
+            if namen.markierte.contains_key(&t.name.text) {
+                markiert(t, &mut aus, &namen, absagen);
+            }
+        }
+    });
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         ItemArt::Konst(k) => {
             if let Some(w) = konst_zahl(&k.wert) {
@@ -797,15 +951,8 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 weigere(absagen, k.name.span, "const with a non-constant value");
             }
         }
-        // Range types lower to their carrier (see `ctyp`); a **record** gets a C struct.
-        ItemArt::Typ(t) => {
-            if namen.verbunde.contains(&t.name.text) {
-                verbund(t, &mut aus, &namen, absagen);
-            }
-            if namen.markierte.contains_key(&t.name.text) {
-                markiert(t, &mut aus, &namen, absagen);
-            }
-        }
+        // Die Typen stehen VOR der Schleife -- siehe dort.
+        ItemArt::Typ(_) => {}
         ItemArt::Tabelle(t) => tabelle(t, &mut aus, &namen, absagen),
         ItemArt::Format(f) => format_(f, &mut aus, &namen, absagen),
         ItemArt::Device(d) => geraet(d, &mut aus, &namen, absagen),
@@ -830,6 +977,18 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         // und die gehoert in das Erzeugnis -- ein Kommentar daneben waere genau die Bauart,
         // gegen die `mirrors` gebaut wurde.*
         ItemArt::Statisch(st) => {
+            // **Ein `static` ueber einem FELD -- und der Grund, warum es hier steht und
+            // nicht in `ctyp`** (2026-08-20).
+            //
+            // In C steht die Laenge **hinter dem Namen**: `uint32_t kernlast[64]`, nicht
+            // `uint32_t[64] kernlast`. Ein Typ, den man als Zeichenkette vor den Namen
+            // setzen kann, gibt es dafuer nicht -- `ctyp` liefert genau so eine Zeichenkette,
+            // und darum kann die Feldform dort gar nicht sitzen. *Die C-Deklaratorsyntax ist
+            // keine Eigenheit, die man wegabstrahiert; sie ist der Grund fuer die Fallform.*
+            if let TypExpr::Feld(a) = &st.typ {
+                feldstatisch(st, a, &mut aus, &namen, absagen);
+                return;
+            }
             let Some(c) = ctyp(&st.typ, &namen) else {
                 weigere(absagen, st.name.span, "`static` of an unresolvable type");
                 return;
@@ -971,6 +1130,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                  \x20* the price of the lowering, not an inaccuracy. */\n \
                  static _Atomic {c} {nm}_zellen[{n}];\n\
                  \n \
+                 static {c} {nm}_lies(void) __attribute__((unused));\n\
                  static {c} {nm}_lies(void) {{\n\
                  \x20   {c} z = ({c}){neutral};\n\
                  \x20   for (uint32_t k = 0; k < (uint32_t)({n}); k++) {{\n\
@@ -980,6 +1140,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                  \x20   return {ab}z;\n\
                  }}\n\
                  \n \
+                 static void {nm}_melde({c} roh) __attribute__((unused));\n\
                  static void {nm}_melde({c} roh) {{\n\
                  \x20   {c} v = {auf}roh;\n\
                  \x20   uint32_t k = gabbro_kern();\n\
@@ -1865,24 +2026,22 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     let mut i_feld = 0usize;
     while i_feld < f.felder.len() {
         let feld = &f.felder[i_feld];
-        if feld.typ.embeds.is_some() {
-            weigere(absagen, feld.span, "`embeds` in a `format` -- that is a pointer form");
-            return;
-        }
-        let TypExpr::Int(i) = &feld.typ.typ else {
-            weigere(absagen, feld.span, "`format` field type");
-            return;
-        };
-        let breite = match i.wort {
-            gabbro_syntax::kw::Kw::U8 | gabbro_syntax::kw::Kw::I8 => 1u32,
-            gabbro_syntax::kw::Kw::U16 | gabbro_syntax::kw::Kw::I16 => 2,
-            gabbro_syntax::kw::Kw::U32 | gabbro_syntax::kw::Kw::I32 => 4,
-            _ => 8,
-        };
-        let c = intty(i);
-        let leser = lesewort(breite, gross);
-
-        if feld.bitpos.is_none() {
+        // **Ein Bitfeld ist eines mit LAGE -- und `embeds` ist eine Lage** (2026-08-20).
+        //
+        // Bis heute stand hier *„`embeds` in a `format` -- that is a pointer form"*, und das
+        // war zweimal daneben: `embeds [51:12] scale 4096` nennt eine Bitlage und einen
+        // Faktor, und **was der Rohwert bedeutet, ist keine Frage an den Erzeuger.** Er
+        // liefert die Bits mal dem Faktor; ob daraus eine Adresse wird, entscheidet der
+        // Leser. *Eine Weigerung, die den Gegenstand falsch benennt, hindert ein Programm,
+        // fuer das der Grund nie galt.*
+        if feld.bitpos.is_none() && feld.typ.embeds.is_none() {
+            let TypExpr::Int(i) = &feld.typ.typ else {
+                weigere(absagen, feld.span, "`format` field type");
+                return;
+            };
+            let breite = breite_von(i);
+            let c = intty(i);
+            let leser = lesewort(breite, gross);
             if !feld.reserviert {
                 aus.push_str(&format!(
                     "static inline {c} {n}_{f2}(const {n} *v) {{ return ({c}){leser}(v->bytes + {versatz}); }}\n",
@@ -1903,21 +2062,82 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             continue;
         }
 
-        // **Eine Bitgruppe: alle folgenden Felder mit Lage, gleicher Breite, ein Wort.**
+        // **Die Wortbreite einer Bitgruppe kommt aus IHREN Ganzzahlfeldern, nicht aus dem
+        // ersten Feld** (2026-08-20).
+        //
+        // `format Pte` faengt mit vier `bool @N` an. Ein `bool` sagt ueber die Wortbreite
+        // nichts -- und die alte Fassung las die Breite aus dem ERSTEN Feld der Gruppe und
+        // waere hier auf ein Byte gekommen, wo ein Achtbytewort steht. **Also sagt es das
+        // Feld, das es sagen kann:** `rahmen : u64 embeds [51:12]`.
+        //
+        // > *Und wo keines es sagt, wird geweigert statt geraten.* Acht `bool` in Folge
+        // > koennten ein Byte sein oder die untersten acht Bits von vier -- der Erzeuger hat
+        // > keinen Grund, das eine zu waehlen.
+        let mut breite: Option<u32> = None;
+        let mut ctyp_wort: Option<String> = None;
+        {
+            let mut j = i_feld;
+            while j < f.felder.len() {
+                let g = &f.felder[j];
+                if g.bitpos.is_none() && g.typ.embeds.is_none() {
+                    break;
+                }
+                if let TypExpr::Int(gi) = &g.typ.typ {
+                    match &ctyp_wort {
+                        // Ein anderes Ganzzahlwort faengt ein neues Wort an -- dieselbe
+                        // Regel wie bisher, nur ohne die `bool` mitzuzaehlen.
+                        Some(vorher) if *vorher != intty(gi) => break,
+                        Some(_) => {}
+                        None => {
+                            breite = Some(breite_von(gi));
+                            ctyp_wort = Some(intty(gi));
+                        }
+                    }
+                }
+                j += 1;
+            }
+        }
+        let (Some(breite), Some(c)) = (breite, ctyp_wort) else {
+            weigere(
+                absagen,
+                feld.span,
+                "a bit word of a `format` takes its width from an integer field, and this \
+                 group names none -- a `bool @N` says which BIT, never which WORD",
+            );
+            return;
+        };
+        let leser = lesewort(breite, gross);
         let bits = breite * 8;
         let mut belegt: u64 = 0;
         let mut gruppe = Vec::new();
         while i_feld < f.felder.len() {
             let g = &f.felder[i_feld];
-            let Some(bp) = &g.bitpos else { break };
-            let TypExpr::Int(gi) = &g.typ.typ else { break };
-            if intty(gi) != c {
-                break;
-            }
-            let (hi, lo) = match bp {
-                BitPos::Bit(b) => (*b, *b),
-                BitPos::Bereich(h, l) => (*h, *l),
+            // `@N`, `@[hi:lo]` -- oder `embeds [hi:lo]`, was dieselbe Lage ist.
+            let (hi, lo) = match (&g.bitpos, &g.typ.embeds) {
+                (Some(BitPos::Bit(b)), _) => (*b, *b),
+                (Some(BitPos::Bereich(h, l)), _) => (*h, *l),
+                (None, Some((h, l))) => (*h, *l),
+                (None, None) => break,
             };
+            match &g.typ.typ {
+                TypExpr::Bool(_) => {
+                    if hi != lo {
+                        weigere(
+                            absagen,
+                            g.span,
+                            "a `bool` over more than one bit -- a truth value has one bit, and \
+                             which of several it would be is not a question with an answer",
+                        );
+                        return;
+                    }
+                }
+                TypExpr::Int(gi) if intty(gi) == c => {}
+                TypExpr::Int(_) => break,
+                _ => {
+                    weigere(absagen, g.span, "`format` bit field type");
+                    return;
+                }
+            }
             if hi < lo || hi >= bits as u128 {
                 weigere(
                     absagen,
@@ -1976,9 +2196,28 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             } else {
                 (1u128 << (hi - lo + 1)) - 1
             };
+            // **Ein `bool @N` liest sich als `bool` und nicht als Wortbreite.** Der Typ steht
+            // in der Deklaration; ihn im Erzeugnis zu verbreitern hiesse, den Leser ein Bit
+            // mit einer Zahl verwechseln zu lassen.
+            let ergebnis = if matches!(&g.typ.typ, TypExpr::Bool(_)) { "bool" } else { &c };
+            // **`scale K` gehoert IN den Leser.** Der Rohwert ist um `K` verkuerzt gespeichert
+            // -- ihn ungeskaliert herauszugeben waere eine Zahl, die aussieht wie die richtige.
+            let mal = match &g.typ.scale {
+                Some(e) => match konst_zahl(e).or_else(|| match &e.art {
+                    ExprArt::Ort(o) => u.konstwert.get(&o.text()).copied(),
+                    _ => None,
+                }) {
+                    Some(k) => format!(" * {k}u"),
+                    None => {
+                        weigere(absagen, g.span, "`scale` that is not a constant");
+                        return;
+                    }
+                },
+                None => String::new(),
+            };
             aus.push_str(&format!(
-                "static inline {c} {n}_{f2}(const {n} *v) {{ \
-                 return ({c})((({c}){leser}(v->bytes + {versatz}) >> {lo}) & {maske}u); }}\n",
+                "static inline {ergebnis} {n}_{f2}(const {n} *v) {{ \
+                 return ({ergebnis})(((({c}){leser}(v->bytes + {versatz}) >> {lo}) & {maske}u){mal}); }}\n",
                 f2 = g.name.text
             ));
             if let Some(b) = &g.bedingung {
@@ -2177,6 +2416,9 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                 // -- also `None`, also eine Weigerung fuer einen Typ, den diese Einheit
                 // gerade selbst deklariert hat.
                 _ if u.verbunde.contains(&n) => n,
+                // **Ein Pfad, der eine MARKE nennt, IST ihr Verbund** -- ein Byte, das
+                // niemand liest. Siehe `Namen::marken`.
+                _ if u.marken.contains(&n) => n,
                 // **Ein Pfad, der einen `tagged type` nennt, IST der markierte Verbund**
                 // («C2»). Er steht aus demselben Grund vor der Bereichstypzeile wie der
                 // Verbund darueber: `u.typen` enthaelt ihn auch, und dort waere sein Rumpf
@@ -2457,6 +2699,108 @@ fn zeigerziel(t: &TypExpr) -> Option<String> {
     }
 }
 
+/// **Die Sicht DIESER Funktion auf die Namen -- und der Grund dafuer ist ein Fehler, der
+/// stilles falsches C erzeugt hat** (2026-08-20).
+///
+/// Der Erzeuger liest Namen ueber die ganze Uebersetzungseinheit: `werte`, `markenwerte`,
+/// `tabellenzeiger`, `geraetezeiger`, `parametertyp` sind alle Karten **Name -> Auskunft**,
+/// ohne die Funktion, in der der Name steht. Solange jeder Name in der Einheit dasselbe
+/// bedeutet, geht das gut. `beispiele/08` tut das nicht:
+///
+/// ```gabbro
+/// impl fn v3_auswerten(m : Nachricht) -> Zaehler          -- ein WERT
+/// impl fn marke_weiterdrehen(m : ptr<normal, rw> Marken)  -- ein ZEIGER
+/// ```
+///
+/// > Beide heissen `m`, und das ist voellig normal. Der Erzeuger trug `m` als Wert ein und
+/// > schrieb daraufhin in der ZWEITEN Funktion `m.slots[s].marke += 1;` -- **einen Punkt, wo
+/// > ein Pfeil hingehoert.**
+///
+/// **Konservativ zu werden reicht hier nicht.** Die drei bestehenden Karten fallen bei
+/// Uneinigkeit lautstark aus (*„Unwissen faellt nach lautstark"*), aber `werte` hat kein
+/// neutrales Fehlen: draussen zu sein heisst *Zeiger*, und das ist fuer `v3_auswerten` genau
+/// so falsch wie das Gegenteil fuer `marke_weiterdrehen`. **Eine Karte, deren beide Zustaende
+/// eine Behauptung sind, kann nicht schweigen.**
+///
+/// Also faellt die Entscheidung dort, wo sie hingehoert: **ein Parameter verdeckt jede
+/// globale Ablesung seines Namens** und traegt seine eigene ein. Das ist keine Heuristik,
+/// sondern die Bindungsregel der Sprache -- der Erzeuger holt nur nach, was jeder Pass vor
+/// ihm laengst tut.
+fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
+    let mut lokal = u.clone();
+    for p in &f.parameter {
+        let name = &p.name.text;
+        // **Erst loeschen, dann eintragen.** Was diese Funktion selbst bindet, kommt aus
+        // ihrer eigenen Deklaration und aus keiner anderen.
+        lokal.werte.remove(name);
+        lokal.markenwerte.remove(name);
+        lokal.tabellenzeiger.remove(name);
+        lokal.geraetezeiger.remove(name);
+        lokal.formatwerte.remove(name);
+        lokal.parametertyp.insert(name.clone(), p.typ.clone());
+        match &p.typ {
+            TypExpr::Pfad(pf) => {
+                if let Some(n) = pf.teile.last() {
+                    if u.verbunde.contains(&n.text) {
+                        lokal.werte.insert(name.clone());
+                    }
+                    if u.markierte.contains_key(&n.text) {
+                        lokal.werte.insert(name.clone());
+                        lokal.markenwerte.insert(name.clone(), n.text.clone());
+                    }
+                    if u.formate.contains(&n.text) {
+                        lokal.formatwerte.insert(name.clone(), n.text.clone());
+                    }
+                    // Eine Marke ist ein WERT: ein Byte, das durch die Signatur reist.
+                    if u.marken.contains(&n.text) {
+                        lokal.werte.insert(name.clone());
+                    }
+                }
+            }
+            TypExpr::Zeiger(z) => {
+                if let TypExpr::Pfad(pf) = &z.ziel {
+                    if let Some(n) = pf.teile.last() {
+                        if u.tabellen.iter().any(|t| *t == n.text) {
+                            lokal.tabellenzeiger.insert(name.clone(), n.text.clone());
+                        }
+                        if u.geraete.contains_key(&n.text) {
+                            lokal.geraetezeiger.insert(name.clone(), n.text.clone());
+                        }
+                        if u.formate.contains(&n.text) {
+                            lokal.formatwerte.insert(name.clone(), n.text.clone());
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    // **Und die `let`-gebundenen Geraetegriffe** -- `let v = Vtd(basis);`. Sie sind WERTE,
+    // und der Ruf eines `transition` darauf nimmt ihre Adresse.
+    if let FnRumpf::Block(b) = &f.rumpf {
+        fn im_block(b: &Block, u: &Namen, lokal: &mut Namen) {
+            for s in &b.anweisungen {
+                if let StmtArt::Let(l) = &s.art {
+                    if let ExprArt::Ruf(r) = &l.wert.art {
+                        let n = r.pfad.text();
+                        if u.geraete.contains_key(&n) {
+                            lokal.geraetewerte.insert(l.name.text.clone(), n);
+                            lokal.werte.insert(l.name.text.clone());
+                        }
+                    }
+                }
+                for k in crate::unterbloecke(s) {
+                    im_block(k, u, lokal);
+                }
+            }
+        }
+        let mut gefunden = lokal.clone();
+        im_block(b, u, &mut gefunden);
+        lokal = gefunden;
+    }
+    lokal
+}
+
 fn funktion(
     f: &FnDecl,
     aus: &mut String,
@@ -2467,6 +2811,8 @@ fn funktion(
     if matches!(f.klasse, Some(FnKlasse::Spec)) {
         return;
     }
+    let eigen = eigene_sicht(f, u);
+    let u = &eigen;
     // **The ghost return becomes `void` — not a lowering but an ERASURE.** `mmu_an` hands the
     // boot token on; the token is the checker's argument and nothing the machine can hold.
     let rueck = match &f.ergebnis {
@@ -2484,6 +2830,8 @@ fn funktion(
         },
         None => "void".into(),
     };
+    // Der Fehlerkanal nimmt den Rueckgabeplatz ein; das Ergebnis geht durch `_wert`.
+    let rueck = if f.fehler.is_some() { "bool".to_string() } else { rueck };
     let mut params = Vec::new();
     for p in &f.parameter {
         if ist_geist(&p.typ, u) {
@@ -2500,6 +2848,39 @@ fn funktion(
                 return;
             }
         }
+    }
+    // **`-> T or R` -- der Fehlerkanal, und er aendert die C-Signatur** (2026-08-20).
+    //
+    // ```c
+    // bool hol(uint32_t *_wert, HolFehler *_grund);
+    // ```
+    //
+    // Drei Entscheidungen stecken darin, und alle drei sind hier begruendet und nicht bequem:
+    //
+    // 1. **Der Erfolg ist der Rueckgabewert, nicht der Wert.** Ein Sonderwert im Ergebnis
+    //    haette den Typ verengt (`u32` haette einen Wert weniger), und `option index into T`
+    //    macht genau das schon -- **zweimal dieselbe Sache auf zwei Arten ist W7.**
+    // 2. **Der GRUND geht durch einen eigenen Ausgang und nicht durch den Rueckgabewert.**
+    //    `reason`-Werte sind vom Menschen vergeben (`SPRACHE.md` fuehrt `Keiner = 0` als
+    //    Beispiel), also gibt es kein freies Wort fuer *„kein Fehler"* -- eines zu
+    //    reservieren hiesse, jede bestehende `reason`-Deklaration nachtraeglich zu
+    //    beschraenken.
+    // 3. **`bool` und nicht `int`.** Es gibt genau zwei Ausgaenge, und mehr sagt die
+    //    Grammatik nicht.
+    //
+    // > *Und ein Ruf ausserhalb eines `let … else` ist damit ein Ruf mit der falschen
+    // > Stelligkeit* -- `N029` faengt ihn im Pruefer, der Erzeuger noch einmal.
+    if let Some(r) = &f.fehler {
+        if let Some(t) = &f.ergebnis {
+            match ctyp(t, u) {
+                Some(c) => params.push(format!("{c} *_wert")),
+                None => {
+                    weigere(absagen, f.name.span, "return type");
+                    return;
+                }
+            }
+        }
+        params.push(format!("{} *_grund", r.text));
     }
     let liste = if params.is_empty() {
         "void".to_string()
@@ -2586,6 +2967,7 @@ fn funktion(
             Some(TypExpr::Index { tabelle, optional: true, .. }) => Some(tabelle.text.clone()),
             _ => None,
         },
+        schleifen: Vec::new(),
     };
     for s in &b.anweisungen {
         anweisung(s, aus, u, absagen, 1, &rahmen);
@@ -2761,6 +3143,14 @@ struct Austritt {
     freigaben: Vec<String>,
     /// Die Zieltabelle des `option index into T`-Rueckgabetyps dieser Funktion.
     rueck_option: Option<String>,
+    /// **Je offener benannter Schleife: ihr Name und der Stand von `freigaben` bei ihrem
+    /// Eintritt** (2026-08-20).
+    ///
+    /// `leave dienst` verlaesst die Schleife -- und damit **genau die Sperren, die INNERHALB
+    /// von ihr genommen wurden**, nicht die davor. Ohne diese Zahl gaebe ein `leave` entweder
+    /// zu viel frei (und der Rufer laeuft ohne seine Sperre weiter) oder zu wenig (und sie
+    /// bleibt haengen). *Dieselbe Buchhaltung wie bei `return`, nur an einem naeheren Rand.*
+    schleifen: Vec<(String, usize)>,
 }
 
 fn einzug(n: usize) -> String {
@@ -3017,19 +3407,93 @@ fn anweisung(
                 );
                 return;
             };
-            let XForm::Vergleich { wert, bedingung, .. } = &x.form else {
-                weigere(
-                    absagen,
-                    s.span,
-                    "`exchange update(v) { … }` -- SPRACHE.md lowers it to `atomic_fetch_*` \
-                     for a primitive body (`t+1`, `t-1`, `t|m`, `t&m`) and otherwise to a \
-                     BOUNDED CAS loop (`retry bounded NCORES * K ops on_exceeded \
-                     contention`). This body is not primitive, `NCORES` is the same undecided \
-                     quantity as `accumulates` without `per cpu N`, and nothing names the \
-                     exit -- the language emits nothing it forbids",
-                );
-                return;
-            };
+            let wert;
+            let bedingung;
+            match &x.form {
+                XForm::Vergleich { wert: w, bedingung: b, .. } => {
+                    wert = w;
+                    bedingung = b;
+                }
+                // **«C4b»: der `update`-Fall senkt ab, und die Schranke sagt der Schreiber**
+                // (2026-08-20).
+                //
+                // `SPRACHE.md` hat die Absenkung immer schon gesagt -- *die beschraenkte
+                // CAS-Schleife, „emittiert als `retry bounded NCORES * K ops on_exceeded
+                // contention`"* -- und der Erzeuger hat sich trotzdem geweigert, mit dem
+                // richtigen Grund: **`NCORES` und der Ausgang standen nirgends.**
+                //
+                // Sie stehen jetzt am Konstrukt, in **denselben Woertern wie beim `retry`**.
+                // Das ist keine Verlegenheitsloesung, sondern die Sache: es IST ein `retry`,
+                // nur mit einem CAS als Rumpf. *Wo zwei Formen dasselbe tun, sollen sie
+                // gleich heissen.*
+                XForm::Update { binder, schranke, bei_ueberschreitung, rumpf } => {
+                    let (Some(n), Some(ausgang)) = (schranke, bei_ueberschreitung) else {
+                        weigere(
+                            absagen,
+                            s.span,
+                            "`exchange update(v) { … }` without `bounded … ops on_exceeded …` \
+                             -- SPRACHE.md lowers it to a BOUNDED CAS loop, and an unbounded \
+                             one is exactly what this language forbids. The two clauses are \
+                             the same ones a `retry` carries, and for the same reason",
+                        );
+                        return;
+                    };
+                    if !u.funktionen.get(&ausgang.text).is_some_and(|s| s.nie_rueck) {
+                        weigere(
+                            absagen,
+                            ausgang.span,
+                            "`on_exceeded` must name a function returning `never` -- a bound \
+                             whose exit returns would let the loop run on, and then the bound \
+                             is a number without a consequence",
+                        );
+                        return;
+                    }
+                    // **Die Schranke geht als AUSDRUCK hinaus, nicht als Zahl.** `NKERNE * 4`
+                    // steht im Erzeugnis mit `NKERNE` als `#define` daneben -- *wer die
+                    // Kernzahl aendert, aendert die Schranke mit*, und niemand muss eine
+                    // ausgerechnete Zahl nachziehen.
+                    let gaenge = ausdruck(n, u, absagen);
+                    let (h, neu_, i) =
+                        (format!("_cx{tiefe}"), format!("_cn{tiefe}"), format!("_ci{tiefe}"));
+                    // **Der Rumpf rechnet alt -> neu und ist REIN** -- er wird eine
+                    // `static inline`-Funktion, damit die Schleife ihn je Durchgang neu
+                    // auswertet und der C-Uebersetzer ihn trotzdem einsetzen darf.
+                    aus.push_str(&format!(
+                        "{e}/* {ziel} exchange update({b}) -- a bounded CAS loop, and bounded is\n\
+                         {e} * the point: SPRACHE.md forbids an unbounded one. The body computes\n\
+                         {e} * old -> new and is pure, so re-running it on a lost race is free of\n\
+                         {e} * consequence. `{ausgang}` is the exit at {gaenge} passes. */\n\
+                         {e}{typ} {};\n{e}{{\n\
+                         {e}    uint32_t {i} = 0;\n\
+                         {e}    {typ} {h} = atomic_load_explicit(&{ziel}, {laden});\n\
+                         {e}    for (;;) {{\n\
+                         {e}        {typ} {neu_};\n\
+                         {e}        {{\n\
+                         {e}            const {typ} {b} = {h};\n",
+                        x.name.text,
+                        b = binder.text,
+                        ausgang = ausgang.text,
+                    ));
+                    // Der Rumpf schreibt sein Ergebnis mit `return` -- hier ist das eine
+                    // Zuweisung an `_cn` und ein Sprung aus dem inneren Block.
+                    rumpf_als_wert(rumpf, &neu_, aus, u, absagen, tiefe + 3);
+                    // **Die Marke steht beim RUFER und nicht in der Rekursion** -- sonst
+                    // stuende sie einmal je verschachteltem `if`, und C haette sie doppelt.
+                    aus.push_str(&format!("{e}            {neu_}_fertig: ;\n"));
+                    aus.push_str(&format!(
+                        "{e}        }}\n\
+                         {e}        if (atomic_compare_exchange_weak_explicit(\n\
+                         {e}                &{ziel}, &{h}, {neu_}, {speichern}, {laden})) break;\n\
+                         {e}        if ({i} >= (uint32_t)({gaenge})) {{ {ausgang}(); }}\n\
+                         {e}        {i}++;\n\
+                         {e}    }}\n\
+                         {e}    {} = {h};\n{e}}}\n",
+                        x.name.text,
+                        ausgang = ausgang.text,
+                    ));
+                    return;
+                }
+            }
             // `old(X) == <expr>` -- die einzige Gestalt, in der der ERWARTETE Wert dasteht.
             let erwartet = match &bedingung.art {
                 PredArt::Vergleich(e) => match &e.art {
@@ -3103,47 +3567,127 @@ fn anweisung(
         StmtArt::Schleife(sch) => match sch.as_ref() {
             Schleife::Retry(r) => retry(r, s, aus, u, absagen, tiefe, austritt),
             Schleife::Traverse(x) => traverse(x, s, aus, u, absagen, tiefe, austritt),
-            // **`forever` wird ABGELEHNT, und der Grund ist ein Befund des Ordners selbst.**
-            //
-            // `per_pass bounded N ops` ist eine Aussage ueber EINEN Durchgang, und die
-            // rechnet der Kostenpass zur UEBERSETZUNGSZEIT nach. Zur Laufzeit gibt es
-            // deshalb nichts zu zaehlen -- **und damit hat `on_exceeded` keinen Ausloeser.**
-            //
-            // > *`MESSUNGEN.md` nennt das seit dem 2026-08-14 einen Ritus* (**„`per_pass
-            // > bounded n cycles` ist ein Ritus"**). Die Absenkung bestaetigt den Befund an
-            // > der Maschine: die Klausel liesse sich nur weglassen, und **eine Klausel still
-            // > fallenzulassen ist genau das, was dieser Erzeuger nicht tut.**
-            //
-            // Dazu «B11»: `forever` hat ueberhaupt keinen Ausgang. Beides gehoert entschieden,
-            // bevor hier eine Zeile C entsteht.
-            Schleife::Forever(_) => weigere(
-                absagen,
-                s.span,
-                "`forever` -- `per_pass … ops` is a COMPILE-TIME claim, so `on_exceeded` has \
-                 no runtime trigger, and dropping the clause would discard it silently \
-                 (MESSUNGEN.md: \"a ritual\"); «B11»: there is no exit either",
-            ),
+            Schleife::Forever(x) => forever(x, aus, u, absagen, tiefe, austritt),
         },
-        // **«C3a»: `let … else (e) { … }` bleibt `C001`, und das ist eine gezogene Linie.**
+        // **`leave d` und `next d` -- der benannte Ausgang und der benannte Durchgang.**
         //
-        // Die Form braucht eine **Fehlerrueckgabe-Konvention**, und die steht in keiner
-        // Zeile der Grammatik: `extern fn hol() -> u32` hat gar keinen Fehlerkanal, und
-        // nichts bindet eine Funktion an ein `reason`. Der Erzeuger muesste also erfinden,
-        // *wie* ein Ruf scheitert (Ausgabeparameter? Sonderwert? globale Zelle?) und *was*
-        // `e` traegt.
+        // Beide werden ein `goto` und **nicht** ein `break`/`continue`: die Marke nennt eine
+        // Schleife, und in C bricht ein `break` immer die INNERSTE. Steht das `leave` in
+        // einem `traverse` innerhalb des `forever`, waere `break` still die falsche Schleife
+        // -- genau die Klasse von Fehler, gegen die dieser Erzeuger gebaut ist.
         //
-        // > **Eine Sprachentscheidung, die nur der Absenkung dient, wird nicht getroffen.**
-        // > Die Grammatik ist fuer den Menschen da, der Gabbro schreibt, nicht fuer den
-        // > Erzeuger, der es liest. Dieselbe Absage steht seit jeher am `on_exceeded` eines
-        // > `retry` -- *und dort wie hier ist sie im TODO gebucht, nicht verschwiegen.*
-        StmtArt::LetSonst(_) => weigere(
-            absagen,
-            s.span,
-            "`let … else (e) { … }` -- the form needs an ERROR-RETURN CONVENTION, and none \
-             is decided: `-> u32` carries no error channel, and nothing binds a function to \
-             a `reason`. What `e` holds and how a call reports failure would both have to be \
-             invented here (the same refusal as `retry … on_exceeded` on a `reason` value)",
-        ),
+        // *Und die Sperren, die INNERHALB der Schleife genommen wurden, werden freigegeben*
+        // -- siehe `Austritt::schleifen`.
+        StmtArt::Leave(m) | StmtArt::Next(m) => {
+            let raus = matches!(&s.art, StmtArt::Leave(_));
+            let tiefe_bei_eintritt = austritt
+                .schleifen
+                .iter()
+                .rev()
+                .find(|(n, _)| *n == m.text)
+                .map(|(_, d)| *d);
+            let Some(d) = tiefe_bei_eintritt else {
+                // `S001` hat das schon entschieden; hier kann es nur ein Auszug sein.
+                weigere(absagen, s.span, "`leave`/`next` naming no enclosing loop");
+                return;
+            };
+            for freigabe in austritt.freigaben[d..].iter().rev() {
+                aus.push_str(&format!("{e}{freigabe};\n"));
+            }
+            let ziel = if raus { "ende" } else { "weiter" };
+            aus.push_str(&format!("{e}goto {}_{ziel};\n", m.text));
+        }
+        // **«C3a» ist entschieden: `let x = f() else (e) { … }` senkt ab** (2026-08-20).
+        //
+        // Die Weigerung, die hier stand, nannte zwei Fragen und beantwortete keine: *„What
+        // `e` holds and how a call reports failure would both have to be invented here."*
+        // Beide sind jetzt beantwortet, und zwar **an der Deklaration des Gerufenen**, wo
+        // eine Antwort ueberprueft werden kann:
+        //
+        // ```gabbro
+        // extern fn hol() -> u32 or HolFehler effects { pure } costs <= 1 ops;
+        // ```
+        //
+        // *„Eine Sprachentscheidung, die nur der Absenkung dient, wird nicht getroffen"* --
+        // das galt und gilt. **Diese hier dient nicht der Absenkung**: sie macht sichtbar,
+        // WAS eine Funktion an ihren Rufer zurueckmelden kann, und das war vorher nirgends
+        // schreibbar. Die Absenkung ist die Folge, nicht der Grund.
+        //
+        // Die C-Gestalt steht bei `funktion`; hier ist die Rufseite:
+        //
+        // ```c
+        // uint32_t x;
+        // { HolFehler e; (void)e;
+        //   if (!hol(&x, &e)) { abbruch(); } }
+        // ```
+        //
+        // **`x` steht AUSSERHALB des Blockes** -- es lebt weiter, `e` nicht. Dass der
+        // `else`-Zweig nicht durchfaellt, hat `S002` schon entschieden (`gift/47`), und
+        // deshalb ist `x` danach belegt, ohne dass hier eine Zeile darauf achten muesste.
+        // *W6, an einer Stelle, an der man es leicht nicht bemerkt.*
+        StmtArt::LetSonst(l) => {
+            let Some(r) = l.als_ruf() else {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`let … else` over a PLACE -- «B14b» opened the form for an option-valued \
+                     place, and there the failure is `None`, which carries no reason for `e` \
+                     to hold. That half is open; the call form is decided",
+                );
+                return;
+            };
+            let name = r.pfad.text();
+            let Some(sig) = u.funktionen.get(&name) else {
+                weigere(absagen, s.span, "`let … else` over a call this unit does not declare");
+                return;
+            };
+            let Some(grund) = sig.fehler.clone() else {
+                // `N028` hat das im Pruefer schon gesagt; hier steht es noch einmal, weil
+                // ein Ausschnitt den Pruefer nicht bestanden haben muss.
+                weigere(
+                    absagen,
+                    s.span,
+                    "`let … else` over a function that declares no `or <reason>` -- the `else` \
+                     branch could never run, and `e` would name nothing",
+                );
+                return;
+            };
+            let geist = sig.geist_param.clone();
+            let args: Vec<String> = r
+                .argumente
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| !geist.get(*i).copied().unwrap_or(false))
+                .map(|(_, a)| ausdruck(a, u, absagen))
+                .collect();
+            let mut ruf_args = args;
+            let hat_wert = !sig.geist_rueck;
+            if hat_wert {
+                ruf_args.push(format!("&{}", l.name.text));
+            }
+            ruf_args.push(format!("&{}", l.fehlername.text));
+            if hat_wert {
+                // **Der Typ steht im Gerufenen, nicht am `let`** -- `let … else` traegt
+                // gar keine Typklausel. `wert_ctyp` liest ihn aus derselben Signatur ab,
+                // aus der der Fehlerkanal kommt.
+                let als_expr = Expr { art: ExprArt::Ruf(r.clone()), span: r.span };
+                let Some(t) = wert_ctyp(&als_expr, u) else {
+                    weigere(absagen, s.span, "`let … else` whose call has no resolvable type");
+                    return;
+                };
+                aus.push_str(&format!("{e}{t} {};\n", l.name.text));
+            }
+            aus.push_str(&format!(
+                "{e}{{\n{e}    {grund} {}; (void){};\n{e}    if (!{name}({})) {{\n",
+                l.fehlername.text,
+                l.fehlername.text,
+                ruf_args.join(", ")
+            ));
+            for k in &l.sonst.anweisungen {
+                anweisung(k, aus, u, absagen, tiefe + 2, austritt);
+            }
+            aus.push_str(&format!("{e}    }}\n{e}}}\n"));
+        }
         _ => weigere(absagen, s.span, "statement kind"),
     }
 }
@@ -3207,6 +3751,244 @@ fn retry(
     aus.push_str(&format!("{e}    }}\n{e}}}\n"));
 }
 
+/// **Ein `static` ueber einem Feld: `static mut kernlast : [Zaehler; 64] = 0;`**
+/// (2026-08-20).
+///
+/// Bis heute sagte der Erzeuger dazu *„`static` of an unresolvable type"* -- und das war eine
+/// Weigerung, die den falschen Grund nannte. `[Zaehler; 64]` ist bestens aufloesbar: das
+/// Element ist ein Bereichstyp ueber `u32`, die Laenge eine Konstante. **Was fehlte, war
+/// nicht die Aufloesung, sondern die Deklaratorform.**
+///
+/// **Der Anfangswert ist der Punkt, an dem hier eine Entscheidung faellt.** `= 0` ueber einem
+/// Feld heisst in Gabbro *jeder Platz null*. In C heisst `= {0}` dasselbe -- aber `= {5}`
+/// heisst **nicht** *jeder Platz fuenf*, sondern *der erste fuenf, der Rest null*. Die
+/// beiden Lesarten fallen genau bei der Null zusammen.
+///
+/// > *Also wird die Null als `{0}` geschrieben und jeder andere Wert AUSGESCHRIEBEN.* Beides
+/// > ist exakt; geraten wird nichts. Ein `{5}` hinzuschreiben und es *jeder Platz fuenf* zu
+/// > nennen waere die eine Sorte Fehler, gegen die dieses Modul gebaut ist -- er uebersetzt,
+/// > und er rechnet etwas anderes.
+fn feldstatisch(
+    st: &StatischDecl,
+    a: &ArrayTy,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+) {
+    let Some(elem) = ctyp(&a.element, u) else {
+        weigere(absagen, st.name.span, "`static` array over an unresolvable element type");
+        return;
+    };
+    let Some(n) = konst_zahl(&a.laenge).or_else(|| {
+        // Wie bei `count`: eine Zahl ODER ein `const`-Name, und der Wert steht in `konstwert`.
+        match &a.laenge.art {
+            ExprArt::Ort(o) => u.konstwert.get(&o.text()).copied(),
+            _ => None,
+        }
+    }) else {
+        weigere(absagen, st.name.span, "`static` array whose length is not constant");
+        return;
+    };
+    if n <= 0 {
+        weigere(absagen, st.name.span, "`static` array of length zero -- C has no such object");
+        return;
+    }
+    let Some(w) = konst_zahl(&st.wert) else {
+        weigere(absagen, st.name.span, "`static` array with a non-constant initialiser");
+        return;
+    };
+    let anfang = if w == 0 {
+        "{0}".to_string()
+    } else {
+        format!(
+            "{{{}}}",
+            std::iter::repeat(w.to_string()).take(n as usize).collect::<Vec<_>>().join(", ")
+        )
+    };
+    let konst = if st.veraenderlich { "" } else { "const " };
+    let abschnitt = match &st.section {
+        Some(t) => format!(" __attribute__((section(\"{}\")))", t.text),
+        None => String::new(),
+    };
+    aus.push_str(&format!(
+        "\nstatic {konst}{elem} {}[{n}]{abschnitt} __attribute__((unused)) = {anfang};\n",
+        st.name.text
+    ));
+}
+
+/// **`forever` senkt ab, und «B11» war beim Erzeuger stehengeblieben** (2026-08-20).
+///
+/// Die Weigerung, die bis heute hier stand, nannte zwei Gruende. **Der zweite war nicht mehr
+/// wahr:**
+///
+/// > *«B11»: there is no exit either.*
+///
+/// `leave` und `next` stehen laengst in der Grammatik -- `beispiele/04` schreibt `leave
+/// dienst`, `S001` haelt die Marke gegen die umschliessenden Schleifen, und
+/// `gift/10-marke-fehlt.gab` prueft genau das seit Monaten. **Eine Absage, die eine
+/// geschlossene Luecke zitiert, hindert ein Programm, fuer das der Grund nicht mehr gilt** --
+/// und niemand merkt es, weil die Absage aussieht wie eine Entscheidung.
+///
+/// **Der erste Grund gilt und wird nicht weggeraeumt, sondern eingeloest.** `per_pass bounded
+/// N ops` ist eine Aussage ueber EINEN Durchgang, und die rechnet der Kostenpass zur
+/// Uebersetzungszeit nach (W6). Zur Laufzeit ist da nichts zu zaehlen, also bekommt
+/// `on_exceeded` **keinen Zweig**. Was es bekommt, ist mehr als der Kommentar, den die alte
+/// Weigerung fuerchtete:
+///
+/// ```c
+/// static void (*const dienst_wachhund)(void) __attribute__((unused)) = watchdog_schlug_an;
+/// ```
+///
+/// **Der C-Uebersetzer liest die Klausel damit ein zweites Mal** -- derselbe Griff, mit dem
+/// `-Wswitch` zum zweiten Leser von `D005` wurde. Der Name muss existieren und die Gestalt
+/// eines Ausgangs haben; wer den Wachhund umbenennt, bricht den Bau. *Eine Klausel, die
+/// still fallengelassen wird, ist ein Ritus; eine, die der Uebersetzer nachliest, ist keiner.*
+fn forever(
+    x: &Forever,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+    austritt: &Austritt,
+) {
+    let e = einzug(tiefe);
+    // **Dieselbe Zusage wie beim `retry`, und aus demselben Grund.** Kehrte der Wachhund
+    // zurueck, liefe die Schleife weiter -- die Schranke waere eine Zahl ohne Folge.
+    let ausgang = &x.bei_ueberschreitung.text;
+    if !u.funktionen.get(ausgang).is_some_and(|s| s.nie_rueck) {
+        weigere(
+            absagen,
+            x.bei_ueberschreitung.span,
+            "`on_exceeded` must name a function returning `never` -- a `reason` value would \
+             need an error-return convention, and that is not decided",
+        );
+        return;
+    }
+    // Ohne Marke kann kein `leave` sie nennen; der Wachhund braucht trotzdem einen Namen.
+    let marke = match &x.marke {
+        Some(m) => m.text.clone(),
+        None => format!("_f{}", x.span.von),
+    };
+    aus.push_str(&format!(
+        "{e}/* forever {marke} -- `per_pass … ops` is a claim about ONE pass, and the cost\n\
+         {e} * pass has already checked it (W6). Nothing counts here at run time, so\n\
+         {e} * `on_exceeded` gets no branch -- it gets the line below instead, which makes\n\
+         {e} * the C compiler read the clause a second time.\n"
+    ));
+    if let Some(f) = &x.fortschritt {
+        aus.push_str(&format!(
+            "{e} * `progress {}` is an assumption about the WORLD; nothing static\n\
+             {e} * establishes it, and `{ausgang}` is its falsifier.\n",
+            f.text
+        ));
+    }
+    if !x.verlaesst.is_empty() {
+        aus.push_str(&format!(
+            "{e} * `leaves {}` names the LINEAR values that leave here; that they leave\n\
+             {e} * exactly once is M2's statement, already made.\n",
+            x.verlaesst.iter().map(|i| i.text.clone()).collect::<Vec<_>>().join(", ")
+        ));
+    }
+    aus.push_str(&format!("{e} */\n"));
+    aus.push_str(&format!(
+        "{e}static void (*const {marke}_wachhund)(void) __attribute__((unused)) = {ausgang};\n"
+    ));
+    // **Nur die Marken, die wirklich angesprungen werden** -- `-Wunused-label` ist unter
+    // `-Werror` ein Fehler, und ein Erzeugnis, das nicht uebersetzt, ist keines.
+    let (hat_leave, hat_next) = sprungziele(&x.rumpf, &marke);
+    let mut innen = austritt.clone();
+    innen.schleifen.push((marke.clone(), austritt.freigaben.len()));
+    aus.push_str(&format!("{e}for (;;) {{\n"));
+    for k in &x.rumpf.anweisungen {
+        anweisung(k, aus, u, absagen, tiefe + 1, &innen);
+    }
+    if hat_next {
+        aus.push_str(&format!("{e}    {marke}_weiter: ;\n"));
+    }
+    aus.push_str(&format!("{e}}}\n"));
+    if hat_leave {
+        aus.push_str(&format!("{e}{marke}_ende: ;\n"));
+    }
+}
+
+/// Wird diese Marke im Rumpf ueberhaupt angesprungen -- als `leave`, als `next`?
+///
+/// **Eine Marke, die niemand nennt, darf nicht im C stehen**: `-Wunused-label` faellt unter
+/// `-Werror`. *Der Erzeuger schreibt nur, was gebraucht wird -- und zaehlt es, statt es zu
+/// vermuten.* Eine gleichnamige Schleife weiter innen faengt die Marke ab; darum bricht der
+/// Abstieg dort ab.
+fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
+    let (mut raus, mut weiter) = (false, false);
+    fn im_block(b: &Block, marke: &str, raus: &mut bool, weiter: &mut bool) {
+        for s in &b.anweisungen {
+            match &s.art {
+                StmtArt::Leave(m) if m.text == marke => *raus = true,
+                StmtArt::Next(m) if m.text == marke => *weiter = true,
+                _ => {}
+            }
+            // Eine innere Schleife DERSELBEN Marke verdeckt sie -- `S001` bindet an die
+            // naechste, und das Erzeugnis muss dieselbe Bindung treffen.
+            if let StmtArt::Schleife(sch) = &s.art {
+                let eigen = match sch.as_ref() {
+                    Schleife::Forever(f) => f.marke.as_ref().map(|i| i.text.as_str()),
+                    Schleife::Retry(r) => r.marke.as_ref().map(|i| i.text.as_str()),
+                    Schleife::Traverse(_) => None,
+                };
+                if eigen == Some(marke) {
+                    continue;
+                }
+            }
+            for k in crate::unterbloecke(s) {
+                im_block(k, marke, raus, weiter);
+            }
+        }
+    }
+    im_block(b, marke, &mut raus, &mut weiter);
+    (raus, weiter)
+}
+
+/// **Ein Rumpf, dessen `return` ein WERT ist und kein Austritt.**
+///
+/// Der `update`-Rumpf eines `exchange` rechnet alt -> neu; sein `return v + 1` verlaesst
+/// nicht die Funktion, sondern **liefert den neuen Wert**. Das ist die eine Stelle, an der
+/// `return` in dieser Sprache etwas anderes heisst als sonst -- und darum steht die
+/// Uebersetzung hier und nicht in `anweisung`, wo ein `return` Sperren freigibt und aus der
+/// Funktion springt.
+///
+/// *Abgesenkt werden genau die Formen, die ein reiner Rechenrumpf braucht:* `return <expr>`
+/// und `if <expr> { … }`. Alles andere wird abgelehnt -- **ein Rumpf mit Wirkung waere kein
+/// reiner Rumpf**, und dass er rein ist, ist die Voraussetzung dafuer, ihn bei verlorenem
+/// Wettlauf noch einmal zu rechnen.
+fn rumpf_als_wert(
+    b: &Block,
+    ziel: &str,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+) {
+    let e = einzug(tiefe);
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Return(Some(w)) => {
+                aus.push_str(&format!("{e}{ziel} = {}; goto {ziel}_fertig;\n", ausdruck(w, u, absagen)));
+            }
+            StmtArt::Wenn(w) if w.sonst.is_none() && w.zweige.len() == 1 => {
+                let (bed, rumpf) = &w.zweige[0];
+                aus.push_str(&format!("{e}if ({}) {{\n", ausdruck(bed, u, absagen)));
+                rumpf_als_wert(rumpf, ziel, aus, u, absagen, tiefe + 1);
+                aus.push_str(&format!("{e}}}\n"));
+            }
+            _ => weigere(
+                absagen,
+                s.span,
+                "statement in an `update` body -- it computes old -> new and is PURE; only \
+                 `return <expr>` and `if <expr> { … }` say that",
+            ),
+        }
+    }
+}
+
 /// Ein Praedikat als C-Bedingung. **Nur die Formen, die ein `until` heute braucht** -- jede
 /// andere wird abgelehnt, statt sie plausibel zu uebersetzen.
 fn pred_c(p: &Pred, u: &Namen, absagen: &mut Absagen) -> Option<String> {
@@ -3233,6 +4015,245 @@ fn pred_c(p: &Pred, u: &Namen, absagen: &mut Absagen) -> Option<String> {
 ///
 /// **Jede andere Domaene wird beim Namen abgelehnt, mit ihrem eigenen Grund.** Sie sind
 /// keine Bauarbeit, sondern Entscheidungen -- und zwei von ihnen haengen an offenen Befunden
+/// **Woran ein Baumdurchlauf haengt: die Tabelle, ihr Speicher und der Wurzelindex.**
+///
+/// Drei Gestalten kommen im Korpus vor, und alle drei bedeuten dasselbe:
+///
+/// | Quelle | Tabelle | Speicher | Wurzel |
+/// |---|---|---|---|
+/// | `descendants of c.slots[s]` | `c`s Zeigerziel | `c->slots` | `s` |
+/// | `descendants of Kappenraum.slots[s]` | `Kappenraum` | `Kappenraum_speicher.slots` | `s` |
+/// | `ancestors of g` | aus `g`s Typ | `T_speicher.slots` | `g` |
+///
+/// *Die dritte ist die, an der es sich entscheidet:* ein blanker `index into T` nennt seine
+/// Tabelle nur im TYP, und ohne den Parametertyp waere der Erzeuger hier blind.
+fn baumsicht(o: &Ort, u: &Namen, absagen: &mut Absagen) -> Option<(String, String, String)> {
+    // `<zeiger>.slots[i]` oder `<Tabelle>.slots[i]`
+    if o.suffixe.len() == 2 {
+        if let (OrtSuffix::Feld(f), OrtSuffix::Index(i)) = (&o.suffixe[0], &o.suffixe[1]) {
+            if f.text == "slots" {
+                let tab = u
+                    .tabellenzeiger
+                    .get(&o.basis.text)
+                    .cloned()
+                    .or_else(|| u.tabellen.iter().find(|t| **t == o.basis.text).cloned())?;
+                let basis = if u.tabellenzeiger.contains_key(&o.basis.text) {
+                    format!("{}->slots", o.basis.text)
+                } else {
+                    format!("{}_speicher.slots", o.basis.text)
+                };
+                return Some((tab, basis, ausdruck(i, u, absagen)));
+            }
+        }
+    }
+    // Ein blanker `index into T`.
+    if o.suffixe.is_empty() {
+        if let Some(TypExpr::Index { tabelle, .. }) = u.parametertyp.get(&o.basis.text) {
+            return Some((
+                tabelle.text.clone(),
+                format!("{}_speicher.slots", tabelle.text),
+                o.basis.text.clone(),
+            ));
+        }
+    }
+    None
+}
+
+/// **`ancestors of g` -- die Kette nach oben, und sie ist ein `for` mit drei Teilen.**
+///
+/// ```c
+/// for (uint32_t v = T_speicher.slots[g].elter; v != NIL; v = T_speicher.slots[v].elter)
+/// ```
+///
+/// **Sie faengt beim ELTER an und nicht bei `g` selbst.** *Ein Knoten ist kein Vorfahr von
+/// sich* -- `beispiele/18` heisst `liegt_unter(g, wurzel)`, und dass etwas unter sich selbst
+/// liegt, ist keine Aussage, die jemand haben will. Dieselbe Strenge wie bei `descendants`.
+///
+/// **Was diese Schleife beendet, ist eine HYPOTHESE, und das steht im Erzeugnis.** Der
+/// Sonderwert `count` endet die Kette nur, wenn sie kreisfrei ist; `beispiele/18` sagt es
+/// selbst -- *„Wohlfundiertheit ist HYPOTHESE, nicht Ergebnis"*. Eine erfundene Laufgrenze
+/// waere hier schlimmer als keine: sie liefe still ab und liesse den Rest des Baumes aus.
+///
+/// `by consuming` wird abgelehnt -- **seine Vorfahren zu verbrauchen, waehrend man an ihnen
+/// hochlaeuft, ist ein anderes Programm**, und welches, sagt die Grammatik nicht.
+fn vorfahren(
+    x: &Traverse,
+    o: &Ort,
+    s: &Stmt,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+    austritt: &Austritt,
+) {
+    let e = einzug(tiefe);
+    if matches!(x.abstieg, Abstieg::Verbrauchend) {
+        weigere(
+            absagen,
+            s.span,
+            "`ancestors of … by consuming` -- consuming your ancestors while walking up them \
+             is a different program, and the grammar does not say which",
+        );
+        return;
+    }
+    let Some((tab, basis, wurzel)) = baumsicht(o, u, absagen) else {
+        weigere(absagen, s.span, "`ancestors of` over a place that names no table");
+        return;
+    };
+    let Some((Some(elter), _, _)) = u.baeume.get(&tab).cloned() else {
+        weigere(
+            absagen,
+            s.span,
+            "`ancestors of` over a table whose `tree` names no `parent` edge -- «B41b»: the \
+             edge stands at the table, and a missing one is an ANSWER, not a gap",
+        );
+        return;
+    };
+    let Some(n) = u.kapazitaet.get(&tab) else {
+        weigere(absagen, s.span, "`ancestors of` over a table without `count` -- no sentinel");
+        return;
+    };
+    let v = &x.variable.text;
+    aus.push_str(&format!(
+        "{e}/* ancestors of {wurzel} -- along `{elter}`, up to the sentinel {n}u. A node is\n\
+         {e} * not its own ancestor, so the chain starts at the PARENT. That it ends rests on\n\
+         {e} * well-foundedness, which is a HYPOTHESIS of the table, not a run-time check. */\n\
+         {e}for (uint32_t {v} = {basis}[{wurzel}].{elter}; {v} != {n}u; {v} = {basis}[{v}].{elter}) {{\n"
+    ));
+    for k in &x.rumpf.anweisungen {
+        anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+    }
+    aus.push_str(&format!("{e}}}\n"));
+}
+
+/// **`descendants of s` -- der Abstieg OHNE Stapel, und `by consuming` bestimmt die
+/// Reihenfolge.**
+///
+/// Ein Stapel schied aus, bevor die erste Zeile stand: er muesste so tief sein wie der Baum
+/// hoch ist, also `count` Eintraege -- **16 KiB Kernstapel bei `NSLOTS = 4096`**. Mit den
+/// drei Kanten braucht er keinen: `child` hinunter, `sibling` zur Seite, `parent` zurueck.
+/// *Das ist der Grund, warum `tree` alle drei nennt und nicht nur die zwei, an denen es
+/// abwaerts geht.*
+///
+/// ## `by consuming` ist hier KEIN blosses Beweismittel
+///
+/// Ueber `slots of` lehnt dieser Erzeuger es ab -- *„die Zeugenordnung ist ein Beweismittel;
+/// was sie fuer den Lauf bedeutet, ist nicht entschieden"* -- und das bleibt richtig: ueber
+/// einem Feld sagt eine Ordnung nichts, was ein linearer Durchlauf nicht schon tut.
+///
+/// **Ueber einem BAUM sagt sie die Richtung.** `by consuming` heisst, dass der Rumpf den
+/// Knoten zerstoert, den er bekommt -- also muessen die Kinder zuerst dran sein, sonst laeuft
+/// der Durchlauf an Kanten weiter, die es nicht mehr gibt. Das ist **Nachordnung**, und
+/// `beispiele/01` bestaetigt es aus der anderen Richtung: sein Rumpf ruft `blatt_loeschen`,
+/// und das verlangt `ist_blatt`.
+///
+/// `by unvisited` bekommt dieselbe Laufform und ist damit bedient: es sagt *jeder Knoten
+/// einmal* und ueber die Reihenfolge nichts. **Wer die staerkere Zusage haelt, haelt die
+/// schwaechere** -- und eine zweite Laufform, die der Korpus nie ausloest, waere ein
+/// ungeprueftes Stueck Erzeuger.
+///
+/// > **Und darum wird jede Kante GELESEN, bevor der Rumpf laeuft.** Der Nachfolger steht in
+/// > `_w` fest, ehe der Knoten fallen darf. Ein Erzeuger, der ihn danach liest, erzeugt C,
+/// > das bei `-O0` meistens noch stimmt.
+fn nachfahren(
+    x: &Traverse,
+    o: &Ort,
+    s: &Stmt,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+    austritt: &Austritt,
+) {
+    let e = einzug(tiefe);
+    match x.abstieg {
+        // **Eine Laufform, und `by unvisited` ist damit BEDIENT, nicht uebergangen.**
+        // `unvisited` sagt *jeder Knoten einmal* und ueber die Reihenfolge nichts; die
+        // Nachordnung sagt beides. Wer die staerkere Zusage haelt, haelt die schwaechere --
+        // und zwei Laufformen zu erzeugen, von denen der Korpus eine nie ausloest, waere ein
+        // ungeprueftes Stueck Erzeuger. *Das ist der Unterschied zwischen einer Absenkung
+        // und einer Vorratshaltung.*
+        Abstieg::Verbrauchend | Abstieg::Unbesucht => {}
+        Abstieg::Fallend(_) => {
+            weigere(
+                absagen,
+                s.span,
+                "`descendants of … by decreasing` -- a measure over a tree walk is not \
+                 decided: which of the two orders it constrains is not written anywhere",
+            );
+            return;
+        }
+    }
+    let Some((tab, basis, wurzel)) = baumsicht(o, u, absagen) else {
+        weigere(absagen, s.span, "`descendants of` over a place that names no table");
+        return;
+    };
+    let Some((elter, kind, geschwister)) = u.baeume.get(&tab).cloned() else {
+        weigere(
+            absagen,
+            s.span,
+            "`descendants of` over a table with no `tree` -- «B41b»: the edge stands at the \
+             table, and this one names none",
+        );
+        return;
+    };
+    let (Some(elter), Some(kind), Some(geschwister)) = (elter, kind, geschwister) else {
+        weigere(
+            absagen,
+            s.span,
+            "`descendants of` needs all three edges -- `child` and `sibling` to walk down, \
+             `parent` to come back WITHOUT a stack (one as deep as the tree is high would be \
+             `count` entries of kernel stack)",
+        );
+        return;
+    };
+    let Some(n) = u.kapazitaet.get(&tab) else {
+        weigere(absagen, s.span, "`descendants of` over a table without `count` -- no sentinel");
+        return;
+    };
+    let v = &x.variable.text;
+    let (k, w, h, r) = (
+        format!("_k{tiefe}"),
+        format!("_w{tiefe}"),
+        format!("_h{tiefe}"),
+        format!("_r{tiefe}"),
+    );
+    aus.push_str(&format!(
+        "{e}/* descendants of {wurzel} -- POST-ORDER (leaves first), along `{kind}`/`{geschwister}`, back up\n\
+         {e} * along `{elter}`. NO stack: one as deep as the tree is high would be {n} entries.\n\
+         {e} * `{h}` says the walk arrived from BELOW, which is what keeps it from descending\n\
+         {e} * into a node it has already finished. Every edge is read into `{w}` BEFORE the\n\
+         {e} * body runs -- `by consuming` may destroy the node it is handed.\n\
+         {e} * A node is not its own descendant: the root is walked THROUGH, never visited.\n\
+         {e} * That the walk ends rests on well-foundedness, a HYPOTHESIS of the table. */\n\
+         {e}{{\n\
+         {e}    const uint32_t {r} = {wurzel};\n\
+         {e}    uint32_t {k} = {r};\n\
+         {e}    bool {h} = false;\n\
+         {e}    for (;;) {{\n\
+         {e}        if (!{h} && {basis}[{k}].{kind} != {n}u) {{ {k} = {basis}[{k}].{kind}; {h} = false; continue; }}\n\
+         {e}        if ({k} == {r}) break;\n\
+         {e}        uint32_t {w}; bool {w}_hoch;\n\
+         {e}        if ({basis}[{k}].{geschwister} != {n}u) {{ {w} = {basis}[{k}].{geschwister}; {w}_hoch = false; }}\n\
+         {e}        else {{ {w} = {basis}[{k}].{elter}; {w}_hoch = true; }}\n"
+    ));
+    // **Die Vorordnung besucht auf dem WEG hinunter, die Nachordnung auf dem Weg zurueck.**
+    // Beide Male steht der Nachfolger schon fest -- der Unterschied ist allein, wo der Rumpf
+    // sitzt, und genau das ist die ganze Aussage von `by consuming`.
+    let rumpf_hin = |aus: &mut String, absagen: &mut Absagen| {
+        aus.push_str(&format!("{e}        {{\n{e}            const uint32_t {v} = {k};\n"));
+        aus.push_str(&format!("{e}            (void){v};\n"));
+        for kk in &x.rumpf.anweisungen {
+            anweisung(kk, aus, u, absagen, tiefe + 3, austritt);
+        }
+        aus.push_str(&format!("{e}        }}\n"));
+    };
+    rumpf_hin(aus, absagen);
+    aus.push_str(&format!(
+        "{e}        {k} = {w}; {h} = {w}_hoch;\n{e}    }}\n{e}}}\n"
+    ));
+}
+
 /// des Ordners («B12»: bindet `elems of` ein Element oder einen Index? «B10»: `traverse`
 /// liefert keinen Wert und kennt kein `break`).
 fn traverse(
@@ -3282,13 +4303,22 @@ fn traverse(
         // > `ancestors of` tun es nicht. *Das ist eine Unsymmetrie in der Grammatik, kein
         // > fehlender Erzeugercode* -- und sie faellt erst auf, wenn jemand die Domaene
         // > absenken will.
-        Domaene::NachfahrenVon(_) => {
-            "`descendants of` -- the domain does not name the EDGE it walks. `CapSpace` \
-             carries four candidates (parent, first_child, next_sibling, prev_sibling), and \
-             `chain(a, b) in` shows the grammar already knows how to name one. That is an \
-             asymmetry in the grammar, not missing emitter code"
+        // **«B41b»: die Kante steht jetzt an der TABELLE, und beide Domaenen laufen.**
+        //
+        // Was hier bis zum 2026-08-20 stand, war eine Weigerung mit einem Befund darin:
+        // *„the domain does not name the EDGE it walks … that is an asymmetry in the
+        // grammar, not missing emitter code."* **Der Befund war richtig und ist eingeloest**
+        // -- nicht so, wie `chain(a, b) in` es vormacht (am Durchlauf), sondern an der
+        // `table`: ein Baum wird an vielen Stellen durchlaufen, und zwei Stellen koennten
+        // verschiedene Felder nennen, ohne dass jemand die beiden vergleicht.
+        Domaene::NachfahrenVon(o) => {
+            nachfahren(x, o, s, aus, u, absagen, tiefe, austritt);
+            return;
         }
-        Domaene::VorfahrenVon(_) => "`ancestors of` -- the same as `descendants of`: the edge is not named",
+        Domaene::VorfahrenVon(o) => {
+            vorfahren(x, o, s, aus, u, absagen, tiefe, austritt);
+            return;
+        }
         Domaene::Schlange(_) => {
             "`queue` -- «B10»: `traverse` yields no value and knows no `break`, so \
              `by consuming` drains the WHOLE queue; that is a different program"
@@ -3604,7 +4634,9 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
             if u.geraete.contains_key(n) {
                 return Some(n.clone());
             }
-            None
+            // **Und sonst: der erklaerte Rueckgabetyp des Gerufenen.** Er stand die ganze
+            // Zeit da; gefragt hat ihn niemand.
+            ctyp(u.funktionen.get(n)?.rueck.as_ref()?, u)
         }
         _ => None,
     }
@@ -3737,6 +4769,32 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
             ausdruck(&r.argumente[0], u, absagen)
         );
     }
+    // **Ein `transition` heisst im Erzeugnis anders, als er in der Quelle steht.**
+    //
+    // `wurzel_setzen(v)` ist in Gabbro ein Ruf auf einen Uebergang des Geraets, das `v`
+    // traegt; im C ist es `Vtd_wurzel_setzen(&v)`. *Der Bezug steht in der Deklaration und
+    // nicht im Ruf* -- der Erzeuger stellt ihn her, statt den Namen abzuschreiben und `cc`
+    // eine implizite Deklaration finden zu lassen.
+    if let Some(dev) = u.uebergaenge.get(&name) {
+        if r.argumente.len() == 1 {
+            if let ExprArt::Ort(o) = &r.argumente[0].art {
+                if o.suffixe.is_empty() {
+                    if u.geraetewerte.get(&o.basis.text) == Some(dev) {
+                        return format!("{dev}_{name}(&{})", o.basis.text);
+                    }
+                    if u.geraetezeiger.get(&o.basis.text) == Some(dev) {
+                        return format!("{dev}_{name}({})", o.basis.text);
+                    }
+                }
+            }
+        }
+        weigere(
+            absagen,
+            r.span,
+            "`transition` call whose argument is not a handle of THAT device -- the              transition belongs to a declaration, and which one is not a guess",
+        );
+        return String::new();
+    }
     let geist = u.funktionen.get(&name).map(|s| s.geist_param.clone());
     let args: Vec<String> = r
         .argumente
@@ -3767,12 +4825,15 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
     // **Ein Geraeteregister ist kein Feld, sondern ein volatiler Zugriff an `basis + Versatz`.**
     // Der C-Uebersetzer darf ihn nicht wegoptimieren, und `volatile` ist die eine Stelle, an
     // der die Absenkung ihm etwas VERBIETEN muss.
-    if let (Some(g), Some(OrtSuffix::Feld(f))) =
-        (u.geraetezeiger.get(&o.basis.text), o.suffixe.first())
-    {
+    let griff = u
+        .geraetezeiger
+        .get(&o.basis.text)
+        .map(|g| (g, "->"))
+        .or_else(|| u.geraetewerte.get(&o.basis.text).map(|g| (g, ".")));
+    if let (Some((g, pfeil)), Some(OrtSuffix::Feld(f))) = (griff, o.suffixe.first()) {
         if let Some((versatz, breite)) = u.geraete.get(g).and_then(|d| d.reg.get(&f.text)) {
             let wort = format!(
-                "(*(volatile {breite} *)({}->basis + {versatz}))",
+                "(*(volatile {breite} *)({}{pfeil}basis + {versatz}))",
                 o.basis.text
             );
             if o.suffixe.len() == 1 {
@@ -3802,6 +4863,29 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
                 }
             }
             weigere(absagen, f.span, "device register access form");
+            return String::new();
+        }
+    }
+    // **Ein `format`-Feld ist ein RUF, kein Feldzugriff** (2026-08-20).
+    //
+    // Das ist die ganze Aussage des Konstrukts, und das Zeugnis sagt sie seit jeher:
+    // *„KEIN C-Verbund, sondern Byteleser -- ein Format ist eine Zusage ueber BYTES."*
+    // `format_` erzeugt `Elf64Kopf_e_eintritt(v)`; der Ortsabsenker schrieb daneben
+    // `v->e_eintritt` und traf damit ein Element, das der erzeugte Verbund gar nicht hat.
+    //
+    // > *Es fiel nicht auf, solange jede Datei mit einem `format` aus einem anderen Grund
+    // > `C001` sagte.* Genau die Bauart, die dieser Ordner schon zweimal bezahlt hat: ein
+    // > Fehler, den eine Weigerung davor verdeckt.
+    if let Some(fmt) = u.formatwerte.get(&o.basis.text) {
+        if let Some(OrtSuffix::Feld(f)) = o.suffixe.first() {
+            if o.suffixe.len() == 1 {
+                return format!("{fmt}_{}({})", f.text, o.basis.text);
+            }
+            weigere(
+                absagen,
+                f.span,
+                "a `format` field followed by more suffixes -- a reader returns a VALUE, and                  a value has no place inside the bytes",
+            );
             return String::new();
         }
     }
@@ -3953,4 +5037,15 @@ fn op_text(op: &BinOp) -> &'static str {
         BinOp::KleinerGleich => "<=",
         BinOp::GroesserGleich => ">=",
     }
+}
+
+/// Traegt dieser Baum ein `accumulates`? Dann braucht das Erzeugnis `gabbro_kern`.
+fn baum_hat_accumulates(baum: &Programm) -> bool {
+    let mut ja = false;
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if matches!(item.art, ItemArt::Accumulates(_)) {
+            ja = true;
+        }
+    });
+    ja
 }

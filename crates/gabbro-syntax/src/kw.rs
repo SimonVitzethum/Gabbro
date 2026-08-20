@@ -268,6 +268,26 @@ wortschatz! {
     Of            => "of",            res;
     Descendants   => "descendants",   res;
     Ancestors     => "ancestors"  ,   res;
+    // **«B41b»: die KANTE, an der `descendants of` und `ancestors of` laufen** (2026-08-20).
+    //
+    // Der Erzeuger hat den Befund selbst gestellt und beim Absenken abgelehnt: *„the domain
+    // does not name the EDGE it walks -- `CapSpace` carries four candidates (parent,
+    // first_child, next_sibling, prev_sibling), and `chain(a, b) in` shows the grammar
+    // already knows how to name one. That is an asymmetry in the grammar."*
+    //
+    // **Die Symmetrie wird ANDERSHERUM hergestellt als `chain` es tut.** `chain(a, b) in
+    // <ort>` nennt seine Felder an der Stelle; ein Baum wird aber an vielen Stellen
+    // durchlaufen, und zwei Stellen koennten verschiedene Felder nennen, ohne dass irgendwer
+    // die beiden vergleicht. **Die Kante ist eine Eigenschaft der STRUKTUR, nicht des
+    // Durchlaufs** -- also steht sie einmal an der `table`, wird dort einmal geprueft
+    // (`T001`-`T003`) und gilt fuer jede Domaene, die sie braucht.
+    //
+    // *Vier Woerter, und alle vier sind KONTEXTUELL* -- `parent`, `child`, `sibling` und
+    // `tree` bleiben ueberall sonst Bezeichner, auch als Slotfeldnamen.
+    Tree          => "tree",          ctx;
+    Parent        => "parent",        ctx;
+    Child         => "child",         ctx;
+    Sibling       => "sibling",       ctx;
     Queue         => "queue",         res;
     Elems         => "elems",         res;
     Threads       => "threads",       res;

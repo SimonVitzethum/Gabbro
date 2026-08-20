@@ -165,6 +165,7 @@ fn nur_ops_felder(baum: &Programm) -> Vec<(String, String)> {
 /// **Die Sprachform:** eine `table` mit `ops` duldet keine Handmutation (`SPRACHE.md` §10.2).
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     erschoepfendes_match(baum, absagen);
+    baumkanten(baum, absagen);
     // **D002 -- `by ops` am Feld.** Schärfer als `D001`: es trifft auch dort, wo die Tabelle
     // als Ganzes Handmutationen duldet, das EINE Feld aber nicht.
     let geschuetzt = nur_ops_felder(baum);
@@ -381,4 +382,96 @@ fn matchpruefen(
             matchpruefen(k, u, modul, lokal, varianten, absagen);
         }
     }
+}
+
+/// **«B41b»: die Kante einer Tabelle wird EINMAL geprueft, nicht an jedem Durchlauf.**
+///
+/// `tree { parent elter, child erstes_kind, sibling naechstes }` nennt die Felder, an denen
+/// `descendants of` und `ancestors of` laufen. Drei Regeln halten die Deklaration:
+///
+/// * **`D006`** -- das Feld steht im `slot`. Ein Name, der nirgends steht, ist keine Kante.
+/// * **`D007`** -- es ist `option index into Self`. Die Kante muss ENDEN koennen, und der
+///   Sonderwert dafuer ist `count` selbst (`beweise/Option_Sonderwert.thy`). Ein `index into
+///   T` ohne `option` hat kein Ende, ein `u32` hat nicht einmal eine Schranke.
+/// * **`D008`** -- sie zeigt auf die EIGENE Tabelle. `parent` in eine fremde Tabelle waere
+///   keine Baumkante, sondern eine Fremdschluesselbeziehung, und darueber sagt `descendants
+///   of` nichts.
+///
+/// > **Und diese drei stehen im PRUEFER, nicht im Erzeuger** -- das ist die Lehre aus «B24»:
+/// > *eine Regel, die nur auf der Erzeugerflaeche steht, beruehren die meisten Programme
+/// > nie.* Wer `tree { parent nichtsda }` schreibt, soll es von `gabbro pruefe` hoeren und
+/// > nicht erst von `gabbro emit`.
+fn baumkanten(baum: &Programm, absagen: &mut Absagen) {
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Tabelle(t) = &item.art else { return };
+        let Some(b) = &t.baum else { return };
+        let felder: BTreeMap<&str, &TypExpr> = t
+            .slot
+            .iter()
+            .flat_map(|s| s.felder.iter())
+            .filter_map(|f| match &f.typ {
+                SlotTyp::Typ(x) => Some((f.name.text.as_str(), x)),
+                // Ein umlaufender Ganzzahlslot ist nie `option index into` -- er faellt
+                // gleich hier heraus und dann an `D007`.
+                SlotTyp::Wrapping(_) => None,
+            })
+            .collect();
+        for (wort, kante) in [
+            ("parent", &b.elter),
+            ("child", &b.kind),
+            ("sibling", &b.geschwister),
+        ] {
+            let Some(k) = kante else { continue };
+            let Some(typ) = felder.get(k.text.as_str()) else {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "D006",
+                        k.span,
+                        format!(
+                            "`tree {wort} {}` names no field of `{}`'s slot",
+                            k.text, t.name.text
+                        ),
+                    )
+                    .mit_notiz("an edge is a FIELD of the slot -- a name that stands nowhere is none"),
+                );
+                continue;
+            };
+            match typ {
+                TypExpr::Index { tabelle, optional: true, .. } if tabelle.text == t.name.text => {}
+                TypExpr::Index { tabelle, optional: true, .. } => {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "D008",
+                            k.span,
+                            format!(
+                                "`tree {wort} {}` points into `{}`, not into `{}` itself",
+                                k.text, tabelle.text, t.name.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "a tree edge stays inside its own table -- an edge into another \
+                             one is a foreign key, and `descendants of` says nothing about that",
+                        ),
+                    );
+                }
+                _ => {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "D007",
+                            k.span,
+                            format!(
+                                "`tree {wort} {}` is not `option index into {}`",
+                                k.text, t.name.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "the edge must be able to END, and the sentinel for that is `count` \
+                             itself (beweise/Option_Sonderwert.thy) -- an `index into T` without \
+                             `option` has no end",
+                        ),
+                    );
+                }
+            }
+        }
+    });
 }

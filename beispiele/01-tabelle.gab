@@ -44,6 +44,17 @@ table Objekte count NOBJEKTE {
 table Kappenraum count NSLOTS {
     const WURZEL : u32 = 0;
 
+    -- **«B41b»: die Kante, an der `descendants of` laeuft** (2026-08-20). Sie stand bis
+    -- heute nirgends -- der Slot fuehrt VIER Kandidaten (`elter`, `erstes_kind`,
+    -- `naechstes`, `vorheriges`), und die Domaene nannte keinen. Gefunden hat es der
+    -- ERZEUGER beim Absenken, nicht der Entwurf: *„that is an asymmetry in the grammar, not
+    -- missing emitter code."*
+    --
+    -- Sie steht an der TABELLE und nicht am Durchlauf, weil ein Baum an vielen Stellen
+    -- durchlaufen wird und zwei Stellen sonst verschiedene Felder nennen koennten, ohne dass
+    -- jemand die beiden vergleicht. `D006`-`D008` halten sie gegen den Slot.
+    tree { parent elter, child erstes_kind, sibling naechstes }
+
     slot {
         benutzt      : bool,
         marke        : u32 wrapping,

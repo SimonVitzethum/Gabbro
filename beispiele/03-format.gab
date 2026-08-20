@@ -29,9 +29,19 @@ format Elf64Kopf endian little {
 
 -- Ein Eintrag der Programmkopftabelle. `p_flags` ist ein vollstaendiges Layout: jedes Bit
 -- ist benannt, es gibt keinen Auffangzweig und keine „uebrigen Bits".
+--
+-- **Und bis zum 2026-08-20 stimmte dieser Satz nicht.** Es stand hier `p_flags : u32 @[2:0]`
+-- und sonst nichts -- **drei benannte Bits von zweiunddreissig**, unter einem Kommentar, der
+-- Vollstaendigkeit behauptete. Gefunden hat es der Erzeuger beim Absenken (*„the bit
+-- positions of this word leave a gap"*), nicht der Leser: eine Behauptung im Fliesstext hat
+-- keinen Pruefer. Die ELF-Norm nennt die uebrigen Bits `PF_MASKOS` (27:20) und `PF_MASKPROC`
+-- (31:28); der Rest ist frei. *Jetzt sagt die Deklaration, was der Kommentar behauptet.*
 format Elf64Ph endian little {
     p_typ    : u32 in 0 .. 7,
     p_flags  : u32 @[2:0],
+    p_pf_frei : u32 @[19:3]  reserved,
+    p_pf_os   : u32 @[27:20] reserved,
+    p_pf_proc : u32 @[31:28] reserved,
     -- Ebenso nachgezogen: `N012` verlangt, dass die Klausel das Feld SELBST und `lenof` nennt.
     p_offset : u64 offset_into Self where p_offset <= lenof(Self),
     p_vaddr  : u64,
@@ -43,13 +53,25 @@ format Elf64Ph endian little {
 
 -- Ein eingebetteter Zeiger IST ein Bitfeld: `embeds` nennt die Bits, `scale` den Faktor,
 -- mit dem der Rohwert zur Adresse wird. Das Wurzelproblem der Seitentabellen, als Feld.
+-- **Dieselbe Luecke, und hier war sie sechsundzwanzig Bits gross** (2026-08-20). Der
+-- Eintrag ist ein Achtbytewort; benannt waren sechs Stellen davon. Die Namen unten stehen so
+-- in der Architektur, und **`reserved` ist keine Fuellmasse, sondern eine Aussage**: diese
+-- Bits existieren, und dieses Format liest sie nicht.
 format Pte endian little {
-    praesent  : bool @0,
-    schreibbar: bool @1,
-    nutzer    : bool @2,
-    gross     : bool @7,
-    rahmen    : u64 embeds [51:12] scale 4096,
-    nx        : bool @63,
+    praesent   : bool @0,
+    schreibbar : bool @1,
+    nutzer     : bool @2,
+    pwt        : bool @3,
+    pcd        : bool @4,
+    benutzt    : bool @5,
+    schmutzig  : bool @6,
+    gross      : bool @7,
+    global     : bool @8,
+    pte_frei   : u64 @[11:9]  reserved,
+    rahmen     : u64 embeds [51:12] scale 4096,
+    pte_hoch   : u64 @[58:52] reserved,
+    schutz     : u64 @[62:59] reserved,
+    nx         : bool @63,
 }
 
 reason LeseFehler {

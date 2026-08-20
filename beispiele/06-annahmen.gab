@@ -57,15 +57,31 @@ impl fn freigabe()
     costs   <= 4 ops
 { return; }
 
+-- **Die drei gemessenen Groessen -- und bis zum 2026-08-20 stand keine von ihnen
+-- irgendwo** (`measures tiefe_max, tiefe_lebend, kerne_gemessen`, `floor kerne_gemessen >= 2`,
+-- `effects { reads tiefe_max }`). Vier Klauseln nannten sie, und der `can_fail`-Rumpf rechnete
+-- mit ihnen. **Gesehen hat es niemand, weil M1 in einen `can_fail`-Rumpf gar nicht
+-- hineinsieht** -- `gabbro pruefe` meldet ueber diese Datei bis heute *„M1 saw no expression
+-- -- this file has no function body"*. Der Erzeuger sah hinein, und dort standen drei
+-- unbekannte Typnamen. *Ein Rumpf, den kein Typpass liest, ist ein Rumpf ohne Leser.*
+static mut tiefe_max      : u64 = 0;
+static mut tiefe_lebend   : u64 = 0;
+static mut kerne_gemessen : u32 = 0;
+
 check stapel_wasserstand {
     claim        "Kein Kern hat je mehr als 3/4 seines Stapels benutzt."
     measures     tiefe_max, tiefe_lebend, kerne_gemessen
     gates        abnahme, freigabe
+    -- **Und der Rumpf gab keinen Wert zurueck.** `can_fail` ist eine PROBE: sie faellt oder
+    -- sie haelt, und `return;` sagt weder das eine noch das andere. Im Erzeugnis stand
+    -- daraufhin ein `return;` in einer `bool`-Funktion -- *derselbe Rumpf, denselben Tag
+    -- gefunden, aus demselben Grund: es las ihn niemand.*
     can_fail {
-        let g = groesse_gemessen() else (e1) { return; }
+        let g = groesse_gemessen() else (e1) { return false; }
         if tiefe_max * 4 >= g * 3 {
-            return;
+            return false;
         }
+        return true;
     }
     floor        kerne_gemessen >= 2, tiefe_max >= 1
     counterprobe "Ein Kern mit kuenstlich tiefem Aufruf muss die Pflicht fallen lassen."
@@ -78,7 +94,17 @@ check stapel_wasserstand {
 --
 -- *Sie ist eine ANNAHME ueber fremden Code und keine Ableitung -- deshalb zaehlt
 -- `gabbro pflichten` sie als `F` und das Zeugnis nennt sie.*
-extern fn groesse_gemessen() -> u64
+-- **«C3a» geschlossen 2026-08-20.** Die Zeile stand hier ohne `or` -- und der `can_fail`
+-- Rumpf oben schrieb `else (e1) { return; }`. Damit war der `else`-Zweig unerreichbar und
+-- `e1` ein Name ohne Gegenstand, und keine Zeile sagte es. Eine Messung, die nicht
+-- zustandekommt, IST ein Grund; jetzt heisst er `MessFehler` und steht in der Signatur.
+reason MessFehler {
+    KeinKern  = 1 "kein Kern hat gemeldet"
+    ZuFrueh   = 2 "die Messung lief vor dem ersten Kontextwechsel"
+    exhaustive
+}
+
+extern fn groesse_gemessen() -> u64 or MessFehler
     ensures result >= 1
     effects { reads stapel };
 

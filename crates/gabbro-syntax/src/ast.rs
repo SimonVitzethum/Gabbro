@@ -639,6 +639,16 @@ pub struct FnDecl {
     pub name: Ident,
     pub parameter: Vec<Parameter>,
     pub ergebnis: Option<TypExpr>,
+    /// **`-> T or R` -- der Fehlerkanal, und er steht in der SIGNATUR** (2026-08-20).
+    ///
+    /// `let x = f() else (e) { … }` stand seit jeher in der Grammatik und war nicht
+    /// absenkbar: *„`-> u32` carries no error channel, and nothing binds a function to a
+    /// `reason`. What `e` holds and how a call reports failure would both have to be
+    /// invented here."* **Beide Fragen beantwortet diese Zeile**, und zwar dort, wo eine
+    /// Antwort ueberprueft werden kann -- an der Deklaration des Gerufenen, nicht am Rufer.
+    ///
+    /// *Es kostet kein Wort:* `or` steht schon im Wortschatz (`merge or`).
+    pub fehler: Option<Ident>,
     pub requires: Vec<Pred>,
     pub ensures: Vec<Pred>,
     pub maintains: Vec<Ident>,
@@ -1033,8 +1043,26 @@ pub struct ExchangeStmt {
 
 #[derive(Debug, Clone)]
 pub enum XForm {
-    /// `update(ident) block` -- the body computes old -> new.
-    Update { binder: Ident, rumpf: Block },
+    /// **`update(v) bounded N ops on_exceeded f { … }`** -- der Rumpf rechnet alt -> neu.
+    ///
+    /// `SPRACHE.md` (RMW, die dritte Form der Paarung) hat die Absenkung immer schon gesagt:
+    /// `atomic_fetch_*`, wo der Rumpf einer Grundform entspricht, *sonst die **beschraenkte**
+    /// CAS-Schleife, „emittiert als `retry bounded NCORES * K ops on_exceeded contention`"*.
+    ///
+    /// **Woher die Schranke kommt, stand nirgends** -- und der Erzeuger hat sich deshalb
+    /// geweigert: *„dieselbe unentschiedene Groesse wie `accumulates` ohne `per cpu N`, und
+    /// `on_exceeded` einen Namen, den niemand nennt."* Beides sagt jetzt der Schreiber, mit
+    /// **denselben Woertern wie beim `retry`** -- es ist dieselbe Schleife, und sie soll
+    /// nicht anders beschrieben werden. *Kein neues Wort.*
+    ///
+    /// Fehlen sie, bleibt die Weigerung stehen: eine unbeschraenkte CAS-Schleife ist genau
+    /// das, was die Sprache verbietet, und *die Sprache emittiert nichts, was sie verbietet*.
+    Update {
+        binder: Ident,
+        schranke: Option<Expr>,
+        bei_ueberschreitung: Option<Ident>,
+        rumpf: Block,
+    },
     /// `expr when pred returns ident` -- compare-exchange.
     Vergleich {
         wert: Expr,
@@ -1115,6 +1143,26 @@ pub struct Tabelle {
     pub invarianten: Vec<Invariante>,
     /// `ops identlist ;` -- the **generated** mutations.
     pub ops: Vec<Ident>,
+    /// **«B41b»: die Kante, an der `descendants of` und `ancestors of` laufen.**
+    ///
+    /// Siehe `Baumkanten` -- und `kw.rs`, wo der Befund steht, aus dem das Wort kam.
+    pub baum: Option<Baumkanten>,
+    pub span: Span,
+}
+
+/// **Die Baumkanten einer Tabelle: `tree { parent elter, child erstes_kind, sibling naechstes }`.**
+///
+/// Jede der drei ist einzeln, und **eine Teilmenge ist eine Aussage**: `beispiele/18`
+/// erklaert nur `parent`, seine Geraetetopologie kennt keinen Abstieg -- und `descendants
+/// of` darueber ist dann kein fehlendes Erzeugerstueck, sondern eine benannte Weigerung.
+///
+/// *Welche Domaene welche Kante braucht:* `ancestors of` nur `parent`; `descendants of`
+/// alle drei -- der Abstieg laeuft OHNE Stapel, und dafuer ist der Rueckweg noetig.
+#[derive(Debug, Clone)]
+pub struct Baumkanten {
+    pub elter: Option<Ident>,
+    pub kind: Option<Ident>,
+    pub geschwister: Option<Ident>,
     pub span: Span,
 }
 

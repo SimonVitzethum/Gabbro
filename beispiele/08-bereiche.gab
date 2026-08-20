@@ -146,7 +146,13 @@ impl fn last_lesen(k : KernIdx) -> Zaehler
 -- `wrapping` -- der einzige erlaubte Ueberlauf, und er steht in der Deklaration.
 -- ---------------------------------------------------------------------------------------
 
-table Marken {
+-- **`count NFAEDEN` stand hier nicht -- und das war genau der Befund G8** (2026-08-20).
+-- Die Tabelle wurde mit `FadenIdx` indiziert, einem handgeschriebenen Bereichstyp, und
+-- nichts band die beiden aneinander: haette jemand `NFAEDEN` geaendert, waere der Index
+-- mitgewandert und die Tabelle nicht. Dieselbe Datei erklaert zwoelf Zeilen weiter oben,
+-- warum der Indextyp aus `count` FAELLT. *Der Erzeuger hat es gefunden, nicht der Leser:
+-- ohne `count` hat das Feld im C keine Groesse.*
+table Marken count NFAEDEN {
     slot {
         marke  : u32 wrapping,
         gueltig: bool,

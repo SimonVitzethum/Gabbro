@@ -294,6 +294,49 @@ pub const EINORDNUNG: &[Posten] = &[
         traegt: Traegt::Schablone("table.induktion"),
         grund: "Budget geteilt durch Kosten je Durchgang — die Zahl steht im C, nicht im Kopf",
     },
+    Posten {
+        konstrukt: "forever",
+        traegt: Traegt::Direkt,
+        grund: "`for (;;)` — und `per_pass … ops` ist eine Aussage ueber EINEN Durchgang, die                 der Kostenpass zur Uebersetzungszeit haelt (W6). Zur Laufzeit gibt es nichts                 zu zaehlen, also bekommt `on_exceeded` KEINEN Zweig; es bekommt einen                 geprueften Bezug (`static void (*const …)(void) = <Wachhund>`), damit der                 C-Uebersetzer die Klausel ein zweites Mal liest",
+    },
+    Posten {
+        konstrukt: "leave / next",
+        traegt: Traegt::Direkt,
+        grund: "ein `goto` auf eine benannte Marke und KEIN `break` — die Marke nennt eine                 Schleife, und `break` braeche in C immer die innerste. Die Sperren, die                 INNERHALB der Schleife genommen wurden, werden davor freigegeben",
+    },
+    Posten {
+        konstrukt: "check",
+        traegt: Traegt::Direkt,
+        grund: "`bool pruefe_<name>(void)` -- der Rumpf ist der GESCHRIEBENE `can_fail`-Block \
+                und keine Schablone; erzeugt wird nur seine Huelle. \
+                `claim`, `gates` und `counterprobe` fahren als Kommentar mit: sie sind die \
+                Erklaerung, die ein Leser des Erzeugnisses sonst nirgends findet. Die \
+                Pflicht selbst (`linear ghost Duty`) ist geloescht -- dass sie verbraucht \
+                wird, hat M2 entschieden",
+    },
+    Posten {
+        konstrukt: "exchange (update)",
+        traegt: Traegt::Schablone("table.induktion"),
+        grund: "«C4b»: eine BESCHRAENKTE CAS-Schleife, und beschraenkt ist der Punkt -- eine \
+                unbeschraenkte ist genau das, was diese Sprache verbietet. `bounded … ops \
+                on_exceeded …` stehen in denselben Woertern wie an einem `retry`, weil es \
+                dieselbe Schleife ist. Der Rumpf rechnet alt -> neu und ist REIN: darum darf \
+                ein verlorener Wettlauf ihn folgenlos wiederholen",
+    },
+    Posten {
+        konstrukt: "let … else",
+        traegt: Traegt::Direkt,
+        grund: "«C3a»: `bool f(T *_wert, R *_grund)`, und der `else`-Zweig haengt an dem \
+                `bool`. Der Erfolg ist der Rueckgabewert und nicht ein Sonderwert im \
+                Ergebnis (das taete `option index into T` schon -- W7), und der GRUND geht \
+                durch einen eigenen Ausgang, weil `reason`-Werte vom Menschen vergeben sind \
+                und kein Wort fuer „kein Fehler\" frei ist",
+    },
+    Posten {
+        konstrukt: "traverse (Baum)",
+        traegt: Traegt::Schablone("table.induktion"),
+        grund: "`descendants of` laeuft OHNE Stapel an `tree { child, sibling, parent }` der                 Tabelle, in Nachordnung; `ancestors of` ist die Kette an `parent`. Dass                 beide ENDEN, ruht auf der Wohlfundiertheit -- einer HYPOTHESE der Tabelle,                 nicht einer Laufzeitpruefung, und darum steht es hier",
+    },
 ];
 
 /// Alles, was in dieser Datei vorkommt, mit Fundstellenzahl.
@@ -493,6 +536,12 @@ pub fn erhebe(baum: &Programm) -> Erhebung {
                 FnRumpf::Pred(_) => {}
             }
         }
+        // **Ein `check` ist eine Probe mit einem Rumpf** -- und der Rumpf muss mitgelesen
+        // werden, sonst faellt jede Form darin durch (`beispiele/06`: das `let … else`).
+        ItemArt::Check(c) => {
+            zaehle(&mut e, "check");
+            block(&c.can_fail, &mut e, &geister);
+        }
         // **Kein Auffangzweig.** Ein Item, das hier nicht steht, ist keines, das der Erzeuger
         // stillschweigend mitnimmt — es faellt als `UNZUGEORDNET` auf.
         andere => e.unzugeordnet.push(format!("item `{}`", art_name(andere))),
@@ -611,7 +660,17 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
             }
             StmtArt::Schleife(sch) => match sch.as_ref() {
                 Schleife::Traverse(t) => {
-                    zaehle(e, "traverse");
+                    // **Ein Baumdurchlauf traegt anderes als ein Feldlauf** («B41b»): dort
+                    // steht die Schranke im Typ, hier ruht sie auf einer Invariante.
+                    zaehle(
+                        e,
+                        match &t.domaene {
+                            Domaene::NachfahrenVon(_) | Domaene::VorfahrenVon(_) => {
+                                "traverse (Baum)"
+                            }
+                            _ => "traverse",
+                        },
+                    );
                     block(&t.rumpf, e, geister);
                 }
                 Schleife::Retry(r) => {
@@ -619,11 +678,14 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
                     block(&r.rumpf, e, geister);
                 }
                 Schleife::Forever(f) => {
-                    e.unzugeordnet.push("forever".into());
+                    zaehle(e, "forever");
                     block(&f.rumpf, e, geister);
                 }
             },
-            StmtArt::LetSonst(_) => e.unzugeordnet.push("let … else".into()),
+            StmtArt::LetSonst(l) => {
+                zaehle(e, "let … else");
+                block(&l.sonst, e, geister);
+            }
             StmtArt::Bricht(_) => e.unzugeordnet.push("breaking".into()),
             StmtArt::Publish(_) => zaehle(e, "publishes"),
             StmtArt::AwaitLoad(_) => zaehle(e, "awaits"),
@@ -632,10 +694,12 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
             // eine Absenkung, die es nicht gibt.
             StmtArt::Exchange(x) => match &x.form {
                 XForm::Vergleich { .. } => zaehle(e, "exchange (compare)"),
-                XForm::Update { .. } => e.unzugeordnet.push("exchange update".into()),
+                XForm::Update { rumpf, .. } => {
+                    zaehle(e, "exchange (update)");
+                    block(rumpf, e, geister);
+                }
             },
-            StmtArt::Leave(_) => e.unzugeordnet.push("leave".into()),
-            StmtArt::Next(_) => e.unzugeordnet.push("next".into()),
+            StmtArt::Leave(_) | StmtArt::Next(_) => zaehle(e, "leave / next"),
         }
     }
 }

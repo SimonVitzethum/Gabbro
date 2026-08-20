@@ -799,7 +799,7 @@ impl<'a> Pruefer<'a> {
                 let t = self.u.typ_von_ort(&self.modul, &e.ort, &lage.lokal);
                 self.buche(&t);
                 lage.lokal.insert(e.name.text.clone(), t.clone());
-                if let XForm::Update { binder, rumpf } = &e.form {
+                if let XForm::Update { binder, rumpf, .. } = &e.form {
                     let mut innen = lage.clone();
                     innen.lokal.insert(binder.text.clone(), t);
                     self.block(rumpf, &mut innen, ergebnis);

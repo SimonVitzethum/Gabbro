@@ -15,6 +15,7 @@ use std::collections::{HashMap, HashSet};
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     sichtbarkeit(baum, absagen);
+    fehlerkanal(baum, absagen);
     asm_versiegelt(baum, absagen);
     geltungsbereich(&baum.items, absagen);
     entrust_annahme(baum, absagen);
@@ -1749,6 +1750,109 @@ fn asm_versiegelt(baum: &Programm, absagen: &mut Absagen) {
                      compiler may move memory accesses across the block",
                 ),
             );
+        }
+    });
+}
+
+/// **Der Fehlerkanal, in beide Richtungen** («C3a», 2026-08-20).
+///
+/// `-> T or R` sagt, dass eine Funktion scheitern kann und woran. Zwei Regeln halten die
+/// Aussage zusammen, und sie sind einander die Gegenprobe:
+///
+/// * **`N028`** -- ein `let x = f() else (e) { … }`, dessen `f` **kein** `or R` erklaert.
+///   Der `else`-Zweig koennte nie laufen, und `e` benennt nichts. *Das ist dieselbe Klasse
+///   wie `gates` ohne Torfunktion (`N020`) und `on_exceeded` ohne Namen (`S007`): eine
+///   Klausel, deren Gegenstand nirgends steht.*
+/// * **`N029`** -- ein Ruf auf ein `f` MIT `or R`, das nicht in einem `let … else` steht.
+///   Der Fehler faellt dort auf den Boden. Der Rufer bekommt ihn nicht einmal zu sehen --
+///   *und das ist genau das versteckte Kontrollflussloch, gegen das die Grammatik
+///   `let … else` als EINZIGE Fehlerweitergabe fuehrt* (`SPRACHE.md` §8.1).
+///
+/// > **Ohne `N029` waere `or R` eine Zusage mit einem Schlupfloch daneben.** Der Erzeuger
+/// > faenge den Fall an der Stelligkeit -- aber erst beim Absenken, und das ist die Lehre
+/// > aus «B24»: *eine Regel, die nur auf der Erzeugerflaeche steht, beruehren die meisten
+/// > Programme nie.*
+fn fehlerkanal(baum: &Programm, absagen: &mut Absagen) {
+    let mut kann_scheitern: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if let Some(r) = &f.fehler {
+                kann_scheitern.insert(f.name.text.clone(), r.text.clone());
+            }
+        }
+    });
+    fn im_block(b: &Block, k: &std::collections::BTreeMap<String, String>, absagen: &mut Absagen) {
+        for s in &b.anweisungen {
+            if let StmtArt::LetSonst(l) = &s.art {
+                if let Some(r) = l.als_ruf() {
+                    let n = r.pfad.text();
+                    if !k.contains_key(&n) {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "N028",
+                                s.span,
+                                format!(
+                                    "`{n}` declares no `or <reason>`, so this `else` branch \
+                                     can never run"
+                                ),
+                            )
+                            .mit_notiz(
+                                "`-> T or R` is where a function says that it can fail and at \
+                                 what -- without it `e` names nothing",
+                            ),
+                        );
+                    }
+                }
+            }
+            // **Jeder ANDERE Ruf auf eine scheiternde Funktion faellt.** Auch der in einem
+            // gewoehnlichen `let`, auch der als blosse Anweisung.
+            let mut rufe = Vec::new();
+            for e in crate::eigene_ausdruecke(s) {
+                for x in crate::alle_ausdruecke(e) {
+                    if let ExprArt::Ruf(r) = &x.art {
+                        rufe.push((r.pfad.text(), x.span));
+                    }
+                }
+            }
+            if let StmtArt::Ruf(r) = &s.art {
+                rufe.push((r.pfad.text(), s.span));
+            }
+            for (n, span) in rufe {
+                if let Some(r) = k.get(&n) {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "N029",
+                            span,
+                            format!(
+                                "`{n}` can fail with `{r}`, and this call does not stand in a \
+                                 `let … else`"
+                            ),
+                        )
+                        .mit_notiz(
+                            "`let … else` is the ONE form of error propagation in this \
+                             language (SPRACHE.md 8.1) -- anywhere else the reason falls on \
+                             the floor, unseen",
+                        ),
+                    );
+                }
+            }
+            for u in crate::unterbloecke(s) {
+                im_block(u, k, absagen);
+            }
+        }
+    }
+    // **Kein fruehes Aussteigen, wenn die Karte leer ist** -- `N028` ist gerade DANN faellig:
+    // ein `let … else` in einer Einheit, in der keine Funktion scheitern kann, ist ein
+    // `else`-Zweig ohne jeden Weg dorthin. *Die Abkuerzung haette die Regel um ihren
+    // haeufigsten Fall gebracht.*
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if let FnRumpf::Block(b) = &f.rumpf {
+                im_block(b, &kann_scheitern, absagen);
+            }
+        }
+        if let ItemArt::Check(c) = &item.art {
+            im_block(&c.can_fail, &kann_scheitern, absagen);
         }
     });
 }

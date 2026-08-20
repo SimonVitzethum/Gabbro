@@ -50,6 +50,13 @@ const BENANNT: &[&str] = &[
     // bleibt frei: eine Absage, die heimlich ihre Bedeutung wechselt, ist schlimmer als eine
     // Nummer, die ungenutzt bleibt.
     "O001", "O002", "O003", "O004", "O006",
+    // «C3a», 2026-08-20: der Fehlerkanal `-> T or R`. `N028` -- ein `let … else` ueber einer
+    // Funktion, die nicht scheitern kann; `N029` -- ein Ruf auf eine, die es kann, ausserhalb
+    // eines `let … else`. Die beiden sind einander die Gegenprobe.
+    "N028", "N029",
+    // «B41b», 2026-08-20: die Baumkante an der `table`. `D006` das Feld, `D007` sein Typ,
+    // `D008` seine Tabelle.
+    "D006", "D007", "D008",
     // «B7»: der Verbundkonstruktor.
     "M106", "M107", "M108", "P036", "P037",
     // Punkt 3: `ensures` wird gelesen -- Wohlgeformtheit, nicht Beweis.

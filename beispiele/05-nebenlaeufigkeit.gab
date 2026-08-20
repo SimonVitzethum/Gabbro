@@ -32,8 +32,13 @@ atomic BESITZER     : u32 acquire;
 
 -- Sammelwerte ohne CAS-Schleife: je Kern eine Zelle, Zusammenfuehrung beim Lesen ueber
 -- die NCORES-beschraenkte Schleife. Kein CAS, keine unbegrenzte Schleife.
-accumulates hoechststand : u64 merge max;
-accumulates fehlerzahl   : u32 merge add;
+-- **`per cpu NKERNE` fehlte hier, und `NKERNE` steht seit jeher sechsundzwanzig Zeilen
+-- weiter oben** (2026-08-20). Die Absenkung ist eine Zelle je Kern; wie viele Kerne es gibt,
+-- stand in der Deklaration nicht -- also gab es keine. `beispiele/23`, die Datei ueber
+-- `accumulates`, schreibt die Klausel; diese hier, die das Konstrukt nur BENUTZT, vergass
+-- sie. *Der Erzeuger hat den Unterschied gefunden, kein Leser.*
+accumulates hoechststand : u64 merge max per cpu NKERNE;
+accumulates fehlerzahl   : u32 merge add per cpu NKERNE;
 
 static mut farbbericht : u64 = 0;
 static     KERNZAHL    : u32 = 64 section ".rodata";
@@ -77,11 +82,29 @@ const GRENZE : u64 = 0xFFFF_FFFF_FFFE;
 type Zaehlerwert = u64 in 0 .. GRENZE;
 
 -- RMW ist die dritte Form der Paarung. `update` rechnet alt -> neu und ist rein.
-impl fn zaehler_erhoehen(z : ptr<normal, rw> Zelle) -> Zaehlerwert
-    effects { writes z }
-    costs   <= 12 ops
+--
+-- **Zwei Befunde standen hier bis zum 2026-08-20, und beide kamen aus dem Erzeuger.**
+--
+-- 1. *Der Platz war gar kein `atomic`.* Es stand `z.wert` da -- ein Feld eines gewoehnlichen
+--    Verbundes hinter einem Zeiger. Ein Lese-Aendere-Schreib-Zug auf gewoehnlichem Speicher
+--    ist keine Paarung, sondern ein Wettlauf; **in der Datei ueber Nebenlaeufigkeit.** Ohne
+--    Deklaration gibt es keine Ordnung, und eine zu waehlen hiesse, sie zu erfinden.
+-- 2. *Die Schleife hatte keine Schranke.* `SPRACHE.md` sagt die Absenkung seit jeher -- die
+--    **beschraenkte** CAS-Schleife -- und liess offen, woher `NCORES` und der Ausgang kommen.
+--    Jetzt stehen beide da, in **denselben Woertern wie an einem `retry`**: es IST ein
+--    `retry`, nur mit einem CAS als Rumpf.
+atomic ZAEHLER : Zaehlerwert relaxed;
+
+extern fn zu_viel_streit() -> never effects { diverges } costs <= 1 ops;
+
+impl fn zaehler_erhoehen() -> Zaehlerwert
+    effects { reads ZAEHLER, writes ZAEHLER }
+    costs   <= 2048 ops
 {
-    let alt = z.wert exchange update(v) {
+    let alt = ZAEHLER exchange update(v)
+        bounded NKERNE * 4 ops
+        on_exceeded zu_viel_streit
+    {
         -- V1: die Pruefung verengt `v` im Zweig danach auf `0 .. GRENZE-1`,
         -- und damit passt `v + 1` in `0 .. GRENZE`.
         if v < GRENZE {

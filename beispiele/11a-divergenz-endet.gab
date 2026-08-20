@@ -7,8 +7,19 @@
 
 module beispiel::divergenz {
 
+-- **«C3a» geschlossen 2026-08-20: `-> u32 or HolFehler`.** Bis dahin stand hier
+-- `-> u32` -- und damit sagte die Datei, `hol` koenne scheitern, ohne dass es irgendwo
+-- stand. Der Erzeuger nannte genau das: *„`-> u32` carries no error channel, and nothing
+-- binds a function to a `reason`."* Jetzt bindet die Signatur es, und `N028` haelt die
+-- Gegenrichtung: ein `else`-Zweig ueber einer Funktion ohne `or` kann nie laufen.
+reason HolFehler {
+    Leer   = 1 "die Quelle war leer"
+    Kaputt = 2 "die Quelle war unlesbar"
+    exhaustive
+}
+
 extern fn abbruch() -> never effects { diverges } costs <= 1 ops;
-extern fn hol() -> u32 effects { pure } costs <= 1 ops;
+extern fn hol() -> u32 or HolFehler effects { pure } costs <= 1 ops;
 
 impl fn f() -> u32 effects { pure } costs <= 8 ops {
     let x = hol() else (e) { abbruch(); }

@@ -579,18 +579,48 @@ impl fn loesche(w : ptr<normal, rw> W) effects { writes w.slots } costs <= 64 op
         "`by consuming` darf nicht wie `by unvisited` laufen: {f:?}"
     );
 
-    // **3. `forever` wird abgelehnt, und der Grund ist ein Befund des Ordners.** `per_pass`
-    // ist eine Aussage ueber die UEBERSETZUNGSZEIT, also hat `on_exceeded` keinen Ausloeser --
-    // die Klausel liesse sich nur still fallenlassen.
-    let (_, f) = c_von(
+    // **3. `forever` senkt ab, und die Klausel wird ein GEPRUEFTER BEZUG** (2026-08-20).
+    //
+    // Die Weigerung, die hier stand, nannte zwei Gruende, und der zweite war nicht mehr
+    // wahr: *«B11»: there is no exit either.* `leave` steht laengst in der Grammatik. Der
+    // erste gilt -- `per_pass … ops` ist Uebersetzungszeit, `on_exceeded` hat keinen
+    // Ausloeser -- und wird eingeloest statt weggeraeumt: der C-Uebersetzer liest die
+    // Klausel ein zweites Mal.
+    let (c, f) = c_von(
         "module t {
 extern fn wacht() -> never effects { diverges } costs <= 0 ops;
 divergent fn dienst() -> never effects { diverges }
 { forever d per_pass bounded 64 ops on_exceeded wacht effects { pure } { } } }",
     );
+    assert!(f.is_empty(), "{f:?}");
+    assert!(c.contains("for (;;) {"), "{c}");
     assert!(
-        f.iter().any(|s| s.contains("COMPILE-TIME claim")),
-        "`forever` darf nicht still uebergangen werden: {f:?}"
+        c.contains("static void (*const d_wachhund)(void) __attribute__((unused)) = wacht;"),
+        "der Wachhund muss im Erzeugnis stehen und benannt sein:\n{c}"
+    );
+    // **Eine Marke, die niemand anspringt, steht NICHT da** -- `-Wunused-label` faellt unter
+    // `-Werror`, und ein Erzeugnis, das nicht uebersetzt, ist keines.
+    assert!(!c.contains("d_ende:"), "eine Marke ohne Sprung:\n{c}");
+
+    // **`leave` wird ein `goto`, kein `break`** -- die Marke nennt eine Schleife, und
+    // `break` braeche in C immer die innerste. Und die Sperre, die INNERHALB genommen wurde,
+    // wird davor freigegeben.
+    let (c, f) = c_von(
+        "module t { table W count 16 { slot { a : bool, } }
+lock L protects { W } rank 0 held <= 400 ops;
+extern fn wacht() -> never effects { diverges } costs <= 0 ops;
+extern fn fertig() -> bool effects { pure } costs <= 1 ops;
+impl fn dienst(w : ptr<normal, rw> W) effects { writes w.slots, locks L } costs <= 8 ops
+{ forever d per_pass bounded 64 ops on_exceeded wacht effects { writes w.slots, locks L }
+  { locks L { if fertig() { leave d; } } } } }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    assert!(c.contains("d_ende: ;"), "die Marke steht hinter der Schleife:\n{c}");
+    let sprung = c.find("goto d_ende;").expect("`leave` wird ein goto");
+    let gib = c[..sprung].rfind("L_gib();").expect("die Sperre wird freigegeben");
+    assert!(
+        c[gib..sprung].lines().count() <= 2,
+        "die Freigabe steht nicht unmittelbar vor dem Sprung:\n{c}"
     );
 
     // **4. Ein `return` aus einem `if` INNERHALB eines `locks` gibt die Sperre frei.**
@@ -922,17 +952,78 @@ check eich {
     // **Die Gegenprobe ist die Zeile, die die Probe erst zu einer macht.**
     assert!(c.contains("counterprobe: \"Fuellung ausgehaengt\""), "{c}");
 
-    // **3. `descendants of` ist ein BEFUND, kein Bauposten.** Die Domaene sagt nicht, an
-    // welcher Kante sie laeuft -- und `chain(a, b) in` zeigt, dass die Grammatik es kann.
+    // **3. «B41b»: die Kante steht an der TABELLE, und dann laeuft der Durchlauf.**
+    //
+    // Der Befund kam aus dem Erzeuger -- *„the domain does not name the EDGE it walks"* --
+    // und ist eingeloest: nicht so, wie `chain(a, b) in` es vormacht (am Durchlauf), sondern
+    // an der `table`. Ein Baum wird an vielen Stellen durchlaufen, und zwei Stellen koennten
+    // sonst verschiedene Felder nennen, ohne dass jemand die beiden vergleicht.
+    let (c, f) = c_von(
+        "module t { table T count 8 {
+    tree { parent p, child k, sibling g }
+    slot { p : option index into T, k : option index into T, g : option index into T, } }
+impl fn f(t : ptr<normal, rw> T, s : index into T) effects { writes t.slots } costs <= 64 ops
+{ traverse v over descendants of t.slots[s] by consuming touches writes t.slots { } } }",
+    );
+    assert!(f.is_empty(), "{f:?}");
+    // Ohne Stapel: `k` hinunter, `g` zur Seite, `p` zurueck -- und der Sonderwert ist `count`.
+    assert!(c.contains("t->slots[_k1].k != 8u"), "der Abstieg laeuft an `child`:\n{c}");
+    assert!(c.contains("t->slots[_k1].g != 8u"), "zur Seite an `sibling`:\n{c}");
+    assert!(c.contains("= t->slots[_k1].p;"), "zurueck an `parent`:\n{c}");
+    // **Die Wurzel ist kein Nachfahre ihrer selbst.**
+    assert!(c.contains("if (_k1 == _r1) break;"), "{c}");
+    // **Jede Kante wird gelesen, BEVOR der Rumpf laeuft** -- `by consuming` zerstoert den
+    // Knoten, den es bekommt.
+    let vor = c.find("uint32_t _w1;").expect("der Nachfolger steht fest");
+    let rumpf = c.find("const uint32_t v = _k1;").expect("der Rumpf steht da");
+    assert!(vor < rumpf, "der Nachfolger wird NACH dem Rumpf gelesen:\n{c}");
+
+    // **Und eine Tabelle OHNE `tree` faellt beim Namen** -- die Weigerung ist nicht weg,
+    // sie hat nur ihren richtigen Grund bekommen.
     let (_, f) = c_von(
         "module t { table T count 8 { slot { p : option index into T, k : option index into T, } }
 impl fn f(t : ptr<normal, rw> T, s : index into T) effects { writes t.slots } costs <= 64 ops
 { traverse v over descendants of t.slots[s] by consuming touches writes t.slots { } } }",
     );
     assert!(
-        f.iter().any(|s| s.contains("does not name the EDGE")),
-        "die unbenannte Kante muss beim Namen stehen: {f:?}"
+        f.iter().any(|s| s.contains("with no `tree`")),
+        "eine Tabelle ohne Kante muss beim Namen fallen: {f:?}"
     );
+
+    // **Eine TEILMENGE ist eine Aussage.** Wer nur `parent` erklaert, kann aufwaerts laufen
+    // und abwaerts nicht -- und hoert genau das, statt „noch nicht abgesenkt".
+    let (_, f) = c_von(
+        "module t { table T count 8 {
+    tree { parent p }
+    slot { p : option index into T, } }
+impl fn f(t : ptr<normal, rw> T, s : index into T) effects { reads t.slots } costs <= 64 ops
+{ traverse v over descendants of t.slots[s] by consuming touches reads t.slots { } } }",
+    );
+    assert!(
+        f.iter().any(|s| s.contains("needs all three edges")),
+        "der Abstieg braucht alle drei: {f:?}"
+    );
+
+    // **`D006`-`D008`: die Kante wird am SLOT geprueft, und zwar im Pruefer.** Die Lehre aus
+    // «B24» -- eine Regel, die nur auf der Erzeugerflaeche steht, beruehren die meisten
+    // Programme nie.
+    for (quelle, code) in [
+        ("tree { parent nichtsda }\n    slot { p : option index into T, }", "D006"),
+        ("tree { parent p }\n    slot { p : u32, }", "D007"),
+        ("tree { parent p }\n    slot { p : option index into U, }", "D008"),
+    ] {
+        let q = format!(
+            "module t {{ table U count 4 {{ slot {{ x : bool, }} }}
+table T count 8 {{ {quelle} }} }}"
+        );
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", &q);
+        gabbro_check::pruefe(&baum, &mut a);
+        assert!(
+            a.absagen.iter().any(|x| x.code == code),
+            "{code} muss fallen: {:?}",
+            a.absagen.iter().map(|x| format!("{} {}", x.code, x.text)).collect::<Vec<_>>()
+        );
+    }
 }
 
 /// **«B22» geschlossen: benachbarte Zeichenketten sind EINE.**
@@ -1987,21 +2078,48 @@ impl fn setze(i : index into A) effects { writes A.slots } costs <= 4 ops
     assert!(c.contains("A_speicher.slots[i].a = 3;"), "kein Pfeil auf einen Typnamen:\n{c}");
     assert!(!c.contains("B_speicher"), "`B` wird nur in der Invariante genannt:\n{c}");
 
-    // **Und `let … else` bleibt eine Absage MIT ADRESSE.** Sie braeuchte eine
-    // Fehlerrueckgabe-Konvention, und keine Zeile der Grammatik nennt eine.
-    let l = "module t { extern fn hol() -> u32 effects { pure } costs <= 1 ops;
+    // **«C3a» ist entschieden: `-> T or R`** (2026-08-20). Die Absage, die hier stand,
+    // nannte zwei Fragen -- was `e` traegt und wie ein Ruf sein Scheitern meldet -- und
+    // beide sind jetzt an der DEKLARATION beantwortet, wo eine Antwort ueberprueft werden
+    // kann. *Kein neues Wort: `or` steht schon im Wortschatz.*
+    let l = "module t { reason G { Leer = 1 \"nichts da\" exhaustive }
+extern fn hol() -> u32 or G effects { pure } costs <= 1 ops;
 extern fn weg() -> never effects { diverges } costs <= 1 ops;
 impl fn f() -> u32 effects { pure } costs <= 8 ops
 { let x = hol() else (e) { weg(); } return x; } }";
     let (b2, mut a2) = gabbro_syntax::lies("p.gab", l);
-    let _ = gabbro_check::emit::emittiere(&b2, &mut a2);
-    assert!(
-        a2.absagen
-            .iter()
-            .any(|x| x.code == "C001" && x.text.contains("ERROR-RETURN CONVENTION")),
-        "die Absage nennt ihren Grund: {:?}",
-        a2.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
-    );
+    let c2 = gabbro_check::emit::emittiere(&b2, &mut a2);
+    assert_eq!(a2.fehler_zahl(), 0, "{}", a2.zeige(l));
+    // Der Erfolg ist der Rueckgabewert, der Wert und der Grund gehen durch Ausgaenge.
+    assert!(c2.contains("bool hol(uint32_t *_wert, G *_grund);"), "{c2}");
+    // **`x` lebt AUSSERHALB des Blockes, `e` nicht.**
+    let x = c2.find("uint32_t x;").expect("`x` steht vor dem Block");
+    let e = c2.find("G e;").expect("`e` steht darin");
+    assert!(x < e, "`x` muss den Block ueberleben:\n{c2}");
+    assert!(c2.contains("if (!hol(&x, &e)) {"), "{c2}");
+
+    // **Und die Gegenrichtung faellt im PRUEFER, nicht erst im Erzeuger** («B24»):
+    // ein `let … else` ueber einer Funktion ohne `or`, und ein Ruf auf eine MIT `or`
+    // ausserhalb eines `let … else`.
+    for (quelle, code) in [
+        ("extern fn hol() -> u32 effects { pure } costs <= 1 ops;
+extern fn weg() -> never effects { diverges } costs <= 1 ops;
+impl fn f() -> u32 effects { pure } costs <= 8 ops
+{ let x = hol() else (e) { weg(); } return x; }", "N028"),
+        ("reason G { Leer = 1 \"nichts\" exhaustive }
+extern fn hol() -> u32 or G effects { pure } costs <= 1 ops;
+impl fn f() -> u32 effects { pure } costs <= 8 ops
+{ let x = hol(); return x; }", "N029"),
+    ] {
+        let q = format!("module t {{ {quelle} }}");
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", &q);
+        gabbro_check::pruefe(&baum, &mut a);
+        assert!(
+            a.absagen.iter().any(|x| x.code == code),
+            "{code} muss fallen: {:?}",
+            a.absagen.iter().map(|x| format!("{} {}", x.code, x.text)).collect::<Vec<_>>()
+        );
+    }
 }
 
 /// **«C3b»: `rcu` und `observes` -- und der Unterschied zur Sperre ist das, was FEHLT.**
@@ -2122,20 +2240,38 @@ impl fn diff(a : u32 in 0 .. 100, b : u32 in 0 .. 100) -> u32
     // Und ein `let` ohne erklaerten Typ liest ihn von den Parametern ab.
     assert!(c.contains("uint32_t d = a - b;"), "der Typ wird abgelesen:\n{c}");
 
-    // **Und die Karte ist KONSERVATIV: ein Name, der zweimal verschieden erklaert ist,
-    // faellt heraus** -- dann weigert sich der Erzeuger, statt eine der beiden Erklaerungen
-    // zu waehlen. *Unwissen faellt nach lautstark, wie bei `geraetezeiger`.*
+    // **Ein Name, der zweimal verschieden erklaert ist, wird in SEINER Funktion gelesen**
+    // (2026-08-20).
+    //
+    // Bis heute war die Karte global und konservativ: `b` als `u8` und als `u32` erklaert
+    // liess sie beide fallen, und der Erzeuger weigerte sich. **Das war die harmlose Haelfte
+    // desselben Fehlers.** Die scharfe Haelfte stand bei `werte`, wo Fehlen keine dritte
+    // Antwort ist: draussen zu sein heisst *Zeiger*. `beispiele/08` nennt einen Parameter in
+    // der einen Funktion `m : Nachricht` und in der anderen `m : ptr<normal, rw> Marken` --
+    // beides voellig normal -- und bekam `m.slots[s].marke += 1;`, **einen Punkt, wo ein
+    // Pfeil hingehoert.** *Kein Pass hat das gesehen; der C-Uebersetzer hat es gesehen.*
     let zwei = "module t {
 impl fn eins(b : u8) -> u8 effects { pure } costs <= 4 ops { return b; }
 impl fn zwei(a : u32, b : u32) -> u32 effects { pure } costs <= 8 ops
 { let d = a | b; return d; } }";
     let (b3, mut a3) = gabbro_syntax::lies("p.gab", zwei);
-    let _ = gabbro_check::emit::emittiere(&b3, &mut a3);
-    assert!(
-        a3.absagen.iter().any(|x| x.code == "C001" && x.text.contains("`let` without")),
-        "ein zweimal erklaerter Name traegt keinen Typ mehr: {:?}",
-        a3.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>()
-    );
+    let c3 = gabbro_check::emit::emittiere(&b3, &mut a3);
+    assert_eq!(a3.fehler_zahl(), 0, "{}", a3.zeige(zwei));
+    assert!(c3.contains("uint32_t d = a | b;"), "der Typ kommt aus DIESER Signatur:\n{c3}");
+
+    // **Und dieselbe Probe an der Stelle, die den Fehler getragen hat:** ein Name, der
+    // anderswo ein Wert ist, bleibt hier ein Zeiger.
+    let beides = "module t { table M count 8 { slot { w : u32 wrapping, } }
+tagged type N = { Leer, Kurz(u32) };
+impl fn wert(m : N) -> u32 effects { pure } costs <= 8 ops
+{ match m { Leer => { return 0; } Kurz(k) => { return k; } } }
+impl fn dreh(m : ptr<normal, rw> M, s : index into M) effects { writes m.slots } costs <= 4 ops
+{ m.slots[s].w += 1; } }";
+    let (b4, mut a4) = gabbro_syntax::lies("p.gab", beides);
+    let c4 = gabbro_check::emit::emittiere(&b4, &mut a4);
+    assert_eq!(a4.fehler_zahl(), 0, "{}", a4.zeige(beides));
+    assert!(c4.contains("m->slots[s].w += 1;"), "der Pfeil gehoert dahin:\n{c4}");
+    assert!(!c4.contains("m.slots[s].w"), "ein Punkt auf einem Zeiger:\n{c4}");
 }
 
 /// **Und der Geraetegriff: die Parameterliste der Deklaration IST der Konstruktor.**

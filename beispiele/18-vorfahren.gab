@@ -19,6 +19,12 @@ module beispiel::vorfahren {
 const NGERAETE : u32 = 256;
 
 table Topologie count NGERAETE {
+    -- **«B41b»: nur `parent` -- und die Teilmenge ist eine AUSSAGE.** Diese Topologie kennt
+    -- keinen Abstieg; ein `descendants of Topologie` ist danach kein fehlendes
+    -- Erzeugerstueck, sondern eine benannte Weigerung. *Eine Deklaration, die weniger sagt,
+    -- sagt damit etwas.*
+    tree { parent elter }
+
     slot {
         elter    : option index into Topologie,
         bereich  : u8,

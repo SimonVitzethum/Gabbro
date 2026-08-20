@@ -103,7 +103,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
              entry entrust vector regs out preserves clobbers stack dispatch asm
              per cpu ist nested masked awaits port step via
   Domaenen   slots of chain descendants ancestors queue elems fields threads
-             reaches via
+             reaches via tree parent child sibling
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 rounded finite bool never w1c rc
   Eingebaut  sizeof lenof aligned forall exists true false Self Some None
   Sonderform O @version Held    (KEINE Wortschatzwoerter -- s. Fussnote G6)
@@ -481,8 +481,10 @@ heldpred   = "Held" "(" ident [ "," "shared" ] ")" ;
 quant      = ( "forall" | "exists" ) ident "in" domain ":" pred ;
 domain     = "slots" "of" place                  (* die Slots einer Tabelle *)
            | "chain" "(" ident "," ident ")" "in" place
-           | "descendants" "of" place
-           | "ancestors" "of" place        (* «B41»: dieselbe Kante, andere Richtung *)
+           | "descendants" "of" place      (* laeuft an `tree { child, sibling, parent }`
+                der Tabelle -- «B41b», s. `treedecl` *)
+           | "ancestors" "of" place        (* «B41»: dieselbe Kante, andere Richtung;
+                sie braucht von `treedecl` nur `parent` *)
            | "queue" place
            | "fields" "of" path
            | "elems" "of" place
@@ -733,7 +735,29 @@ forever
 
 ```ebnf
 table      = "table" ident [ "count" constexpr ] [ "backed" ident ] "{"
-               { constdecl | slotdecl | invariant | opdecl } "}" ;
+               { constdecl | slotdecl | invariant | opdecl | treedecl } "}" ;
+treedecl   = "tree" "{" kante { "," kante } [ "," ] "}" ;
+kante      = ( "parent" | "child" | "sibling" ) ident ;
+(* **«B41b»: die Kante, an der `descendants of` und `ancestors of` laufen** (2026-08-20).
+
+   Der Befund kam aus dem ERZEUGER, nicht aus dem Entwurf: beim Absenken von `descendants
+   of c.slots[s]` stand die Frage, an welchem der vier Felder von `CapSpace` die Domaene
+   eigentlich laeuft -- `parent`, `first_child`, `next_sibling`, `prev_sibling` -- und die
+   Domaene nannte keins. `chain(a, b) in <ort>` konnte es an seiner Stelle laengst sagen.
+
+   **Die Symmetrie wird hier ANDERSHERUM hergestellt.** `chain` nennt seine Felder AM
+   DURCHLAUF; ein Baum wird an vielen Stellen durchlaufen, und zwei Stellen koennten
+   verschiedene Felder nennen, ohne dass jemand die beiden vergleicht. Die Kante ist eine
+   Aussage ueber die STRUKTUR -- also steht sie einmal an der `table`, wird dort einmal
+   geprueft (`T001`-`T003`: das Feld existiert, es ist `option index into Self`, und keine
+   Kante steht zweimal) und gilt danach fuer jede Domaene, die sie braucht.
+
+   **Eine Teilmenge ist erlaubt und sagt etwas.** `beispiele/18` erklaert nur `parent`:
+   seine Topologie kennt keinen Abstieg, und `descendants of` darueber ist dann kein
+   fehlendes Erzeugerstueck, sondern eine benannte Weigerung.
+
+   Die drei Woerter `parent`, `child`, `sibling` und `tree` selbst sind KONTEXTUELL --
+   ueberall sonst, auch als Slotfeldname, bleiben sie Bezeichner. *)
 (* `count` ist der ADRESSRAUM, `backed` der SPEICHER (Punkt 1, 2026-08-18).
 
    `count N` sagt, wie viele Plaetze der Typ kennt; `backed k` nennt den WERT, bis zu dem

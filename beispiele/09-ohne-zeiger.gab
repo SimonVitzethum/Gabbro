@@ -24,10 +24,19 @@ table Objekte count NOBJEKTE {
 }
 
 table Kappenraum count NSLOTS {
+    -- **«B41b»: die Kante -- und diese Datei traversierte ABWAERTS ueber einer Struktur,
+    -- die nur AUFWAERTS zeigte** (2026-08-20). `descendants of Kappenraum.slots[s]` stand
+    -- unten seit jeher; im Slot stand `elter` und sonst nichts. Solange die Domaene ihre
+    -- Kante nicht nannte, konnte es niemandem auffallen -- *ein Durchlauf ohne benannte
+    -- Kante ist mit jeder Struktur vertraeglich, auch mit einer, die ihn nicht traegt.*
+    tree { parent elter, child erstes_kind, sibling naechstes }
+
     slot {
-        benutzt : bool,
-        objekt  : index into Objekte,
-        elter   : option index into Kappenraum,
+        benutzt     : bool,
+        objekt      : index into Objekte,
+        elter       : option index into Kappenraum,
+        erstes_kind : option index into Kappenraum,
+        naechstes   : option index into Kappenraum,
     }
 
     invariant wurzel_ohne_vorgaenger cost O(n) runs offline :

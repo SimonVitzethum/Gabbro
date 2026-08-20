@@ -2041,6 +2041,12 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // **`-> T or R` -- der Fehlerkanal.** Siehe `FnDecl::fehler`.
+        let fehler = if self.friss_kw(Kw::Or) {
+            Some(self.erwarte_ident()?)
+        } else {
+            None
+        };
         // E4: the clauses stand in a FIXED order -- a tool that has to sort cannot say
         // "`effects` is missing here".
         let requires = if self.friss_kw(Kw::Requires) {
@@ -2134,6 +2140,7 @@ impl<'a> Parser<'a> {
             name,
             parameter,
             ergebnis,
+            fehler,
             requires,
             ensures,
             maintains,
@@ -2537,8 +2544,22 @@ impl<'a> Parser<'a> {
             self.erwarte_z(Z::RundAuf)?;
             let binder = self.erwarte_ident()?;
             self.erwarte_z(Z::RundZu)?;
+            // **Dieselben Klauseln wie am `retry`, und in derselben Reihenfolge** -- es ist
+            // dieselbe Schleife. Siehe `XForm::Update`.
+            let schranke = if self.friss_kw(Kw::Bounded) {
+                let e = self.expr()?;
+                self.erwarte_kw(Kw::Ops)?;
+                Some(e)
+            } else {
+                None
+            };
+            let bei_ueberschreitung = if self.friss_kw(Kw::OnExceeded) {
+                Some(self.erwarte_ident()?)
+            } else {
+                None
+            };
             let rumpf = self.block()?;
-            Ok(XForm::Update { binder, rumpf })
+            Ok(XForm::Update { binder, schranke, bei_ueberschreitung, rumpf })
         } else {
             let wert = self.expr()?;
             self.erwarte_kw(Kw::When)?;
@@ -2856,6 +2877,7 @@ impl<'a> Parser<'a> {
         let mut slot = None;
         let mut invarianten = Vec::new();
         let mut ops = Vec::new();
+        let mut baum = None;
         while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
             match self.blick().art {
                 // **Too strict, closed (2026-08-15).** The `table` body carries `constdecl`,
@@ -2880,6 +2902,20 @@ impl<'a> Parser<'a> {
                     slot = Some(s);
                 }
                 Art::Wort(Kw::Invariant) => invarianten.push(self.invariant()?),
+                // **«B41b»: `tree { parent elter, child erstes_kind, sibling naechstes }`.**
+                // Die Kante steht an der STRUKTUR, nicht am Durchlauf -- siehe `kw.rs`.
+                Art::Wort(Kw::Tree) => {
+                    let t = self.treedecl()?;
+                    if baum.is_some() {
+                        self.absage(Absage::fehler(
+                            "P022",
+                            t.span,
+                            "`table` kennt genau ein `tree`-Wort",
+                        ));
+                        return Err(Abbruch);
+                    }
+                    baum = Some(t);
+                }
                 Art::Wort(Kw::Ops) => {
                     self.pos += 1;
                     ops.extend(self.identlist()?);
@@ -2908,8 +2944,58 @@ impl<'a> Parser<'a> {
             slot,
             invarianten,
             ops,
+            baum,
             span: anfang.bis_zu(ende),
         })
+    }
+
+    /// **`tree { parent elter, child erstes_kind, sibling naechstes }`** («B41b»).
+    ///
+    /// Die drei Kanten sind BENANNT und nicht der Reihe nach: eine Stellungsliste haette
+    /// bei `beispiele/18` (nur `parent`) eine Luecke lassen muessen, und eine Luecke in
+    /// einer Stellungsliste ist ein Komma, das etwas bedeutet. *Ein Name kostet vier
+    /// Buchstaben und liest sich in zehn Jahren noch.*
+    ///
+    /// Die Kommaregel ist die von `slotdecl` -- ein Schlusskomma ist erlaubt (G4).
+    fn treedecl(&mut self) -> Erg<Baumkanten> {
+        let anfang = self.erwarte_kw(Kw::Tree)?;
+        self.erwarte_z(Z::GeschweiftAuf)?;
+        let (mut elter, mut kind, mut geschwister) = (None, None, None);
+        while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
+            let t = self.blick();
+            let ziel = match t.art {
+                Art::Wort(Kw::Parent) => &mut elter,
+                Art::Wort(Kw::Child) => &mut kind,
+                Art::Wort(Kw::Sibling) => &mut geschwister,
+                _ => {
+                    let gefunden = t.benennung(self.quelle);
+                    self.absage(Absage::fehler(
+                        "P023",
+                        t.span,
+                        format!("im `tree`-Rumpf erwartet: parent, child, sibling -- {gefunden} gefunden"),
+                    ));
+                    return Err(Abbruch);
+                }
+            };
+            self.pos += 1;
+            let feld = self.erwarte_feldname()?;
+            // **Zweimal dieselbe Kante ist keine Antwort** -- dieselbe Begruendung wie bei
+            // zwei Bitlagen, die sich ueberschneiden.
+            if ziel.is_some() {
+                self.absage(Absage::fehler(
+                    "P024",
+                    feld.span,
+                    "diese Kante steht in `tree` zweimal",
+                ));
+                return Err(Abbruch);
+            }
+            *ziel = Some(feld);
+            if !self.friss_z(Z::Komma) {
+                break;
+            }
+        }
+        let ende = self.erwarte_z(Z::GeschweiftZu)?;
+        Ok(Baumkanten { elter, kind, geschwister, span: anfang.bis_zu(ende) })
     }
 
     fn slotdecl(&mut self) -> Erg<SlotDecl> {
