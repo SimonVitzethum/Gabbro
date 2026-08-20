@@ -731,6 +731,22 @@ compile error; `leave`/`return` from a scope holding linear values demands that 
 (`leaves`). There is no copying (E3). Ghost values have **no lowering**: no byte, no heap, no
 cycle.
 
+> **2026-08-20: and a `linear type T;` WITHOUT a body is a token.** The first line above says
+> *"real resource: bytes in the product"* — but a declaration with no fields never says how
+> many. It lowers to one byte:
+>
+> ```c
+> typedef struct { uint8_t nichts; } Angemeldet;
+> ```
+>
+> **Nothing is guessed here.** This emitter refuses wherever several answers are plausible; a
+> token with no fields does not have several — it has no fields. That a value in C needs an
+> address and a size is a statement about C. *One byte is not the smallest plausible choice
+> but the only one.*
+>
+> The ghost is erased, the token is not — **that is the whole difference between the two
+> words**, and an emitter that lowered both the same way would make `ghost` decorative.
+
 **Who may produce witnesses is closed:** `Held` only the `locks` block, `Member` only the
 compiler's domain enumeration, `MayWrite` only the generated cap resolution, `Duty` only `check`,
 `BootPhase` only the entry path. A hand-built token is thereby a **type error** — that is the
@@ -887,6 +903,50 @@ program** (D10), computed statically, not a time measurement — and it is the q
 assignment (not an expression), `if`, exhaustive `match`, `narrow … else`, `locks` block,
 `return`.
 
+##### «C3a», 2026-08-20: **a function that can fail says so — `-> T or R`**
+
+`let x = f() else (e) { … }` stood in the grammar from the beginning and could not be
+lowered. The emitter named the reason and refused:
+
+> *"`-> u32` carries no error channel, and nothing binds a function to a `reason`. What `e`
+> holds and how a call reports failure would both have to be invented here."*
+
+**Both questions are answered at the declaration of the callee**, which is the one place an
+answer can be checked:
+
+```gabbro
+reason HolFehler { Leer = 1 "die Quelle war leer"  Kaputt = 2 "unlesbar"  exhaustive }
+
+extern fn hol() -> u32 or HolFehler effects { pure } costs <= 1 ops;
+```
+
+*No new word:* `or` is already in the vocabulary. The lowering is
+
+```c
+bool hol(uint32_t *_wert, HolFehler *_grund);
+```
+
+and three decisions sit in that line, each with a reason and none of them convenience:
+
+1. **Success is the return value, not the value.** A sentinel inside the result would narrow
+   the type — `option index into T` already does exactly that, and *twice the same thing in
+   two ways is W7*.
+2. **The reason leaves through its own out-parameter.** `reason` values are given by the
+   human (this document's own example carries `Keiner = 0`), so there is no free word for
+   "no error"; reserving one would retroactively constrain every existing declaration.
+3. **`bool`, not `int`.** There are exactly two exits, and the grammar says no more.
+
+Two rules hold the statement together, and each is the other's counter-probe — **both in the
+CHECKER, not only in the emitter** («B24»: a rule that lives only on the emitter surface is
+one most programs never touch):
+
+* **`N028`** — a `let … else` over a function that declares no `or R`. The branch could never
+  run and `e` names nothing. *The same class as `gates` without a gate function (`N020`) and
+  `on_exceeded` without a name (`S007`).*
+* **`N029`** — a call to a function that CAN fail, standing outside a `let … else`. The reason
+  falls on the floor unseen — which is precisely the hidden control flow this construct exists
+  to prevent.
+
 #### 8.2 `leave` and `next`
 
 ```ebnf
@@ -954,6 +1014,40 @@ leaf-upward. The witness thereby carries not only membership but the assurance *
 the order are already consumed"* — and **that is exactly leafness at the moment of consumption**.
 `delete_leaf(it)` demands this assurance as `requires`; it comes from the order, not from a
 runtime check.
+
+> **«B41b», 2026-08-20: the EDGE is now named, once, at the table.** The emitter raised the
+> finding itself while lowering `descendants of c.slots[s]`: the domain does not say along
+> which field it walks. `CapSpace` carries four candidates — `parent`, `first_child`,
+> `next_sibling`, `prev_sibling` — and `chain(a, b) in <place>` shows the grammar has long
+> known how to name one. *That was an asymmetry in the grammar, not missing emitter code.*
+>
+> ```gabbro
+> table Kappenraum count NSLOTS {
+>     tree { parent elter, child erstes_kind, sibling naechstes }
+>     slot { … }
+> }
+> ```
+>
+> **The symmetry is established the other way round than `chain` does it.** `chain` names its
+> fields at the traversal; a tree is traversed at many sites, and two sites could name
+> different fields without anyone comparing them. The edge is a statement about the
+> STRUCTURE — so it stands once, is checked once (`D006`–`D008`: the field exists, it is
+> `option index into Self`, it points at its own table), and holds for every domain that
+> needs it.
+>
+> **A subset is an answer.** `beispiele/18` declares only `parent`: its device topology knows
+> no descent, and `descendants of` over it is then a named refusal, not a missing piece of
+> emitter.
+>
+> *The four words `tree`, `parent`, `child`, `sibling` are CONTEXTUAL* — everywhere else,
+> including as a slot field name, they remain identifiers.
+>
+> **And this paragraph's order is what makes the lowering possible.** *Depth-descending,
+> children before parents* is post-order, and the emitted walk carries no stack — `child`
+> down, `sibling` across, `parent` back. **That is why `tree` names all three and not only
+> the two that go downwards:** a stack as deep as the tree is high would be `count` entries
+> of kernel stack. Every edge is read BEFORE the body runs, because `by consuming` may
+> destroy the node it is handed.
 
 **Booking, honestly:** the correspondence "witness set empty ⇒ set empty" and the order
 preservation under the generated mutation fall due **once per construct in the generator's
@@ -1559,9 +1653,27 @@ if won == NOBODY { -- Erfolgzweig: awaits-Plaetze lesbar, publishes-Zusage aktiv
 
 **Lowering:** `atomic_fetch_*` where the `update` body corresponds to a primitive (matched against
 a closed pattern table: `t+1`, `t-1`, `t|m`, `t&m`, `max` via `accumulates`), otherwise the
-**bounded** CAS loop — bounded because it is emitted in the compiler as `retry bounded NCORES *
-K ops on_exceeded contention`, with K from the `held` calculation: the language emits nothing it
-forbids (the `accumulates` lesson, generalised).
+**bounded** CAS loop: the language emits nothing it forbids (the `accumulates` lesson,
+generalised).
+
+> **«C4b», 2026-08-20: where the bound comes from is now written down.** This paragraph said
+> *"emitted in the compiler as `retry bounded NCORES * K ops on_exceeded contention`, with K
+> from the `held` calculation"* — and the emitter refused, with the right reason: **`NCORES`
+> and the exit stood nowhere.** `NCORES` was the same undecided quantity as `accumulates`
+> without `per cpu N`, and nothing named `contention`.
+>
+> They are now written at the construct, **in the same words a `retry` carries**:
+>
+> ```gabbro
+> let alt = ZAEHLER exchange update(v)
+>     bounded NKERNE * 4 ops
+>     on_exceeded zu_viel_streit
+> { if v < GRENZE { return v + 1; } return v; } publishes nothing;
+> ```
+>
+> *It is the same loop with a CAS for a body; where two forms do the same thing they should be
+> called the same.* No new word. Without the two clauses the refusal stands — an unbounded CAS
+> loop is exactly what this language forbids.
 
 ---
 

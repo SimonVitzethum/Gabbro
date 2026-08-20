@@ -1,0 +1,21 @@
+-- erwartet: D006
+-- **«B41b»: eine Kante ist ein FELD des Slots.**
+--
+-- `tree { parent elter }` nennt ein Feld, das die Tabelle nicht hat. Ein Name, der nirgends
+-- steht, ist keine Kante -- und `descendants of` darueber liefe an einer Adresse, die es
+-- nicht gibt.
+--
+-- > Die Regel steht im PRUEFER, nicht erst im Erzeuger. Das ist die Lehre aus «B24»: eine
+-- > Regel, die nur auf der Erzeugerflaeche steht, beruehren die meisten Programme nie.
+
+module gift {
+
+table T count 8 {
+    tree { parent elter }
+
+    slot {
+        vater : option index into T,
+    }
+}
+
+}

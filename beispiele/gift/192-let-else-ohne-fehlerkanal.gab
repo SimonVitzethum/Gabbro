@@ -1,0 +1,21 @@
+-- erwartet: N028
+-- **«C3a»: ein `else`-Zweig ueber einer Funktion, die nicht scheitern kann.**
+--
+-- `hol` erklaert kein `or <reason>`. Damit koennte der Zweig nie laufen, und `e` benennt
+-- nichts -- dieselbe Klasse wie `gates` ohne Torfunktion (`N020`) und `on_exceeded` ohne
+-- Namen (`S007`): eine Klausel, deren Gegenstand nirgends steht.
+--
+-- > Die Gegenprobe ist `beispiele/11a`: dort steht `-> u32 or HolFehler`, und dieselbe Form
+-- > geht durch.
+
+module gift {
+
+extern fn abbruch() -> never effects { diverges } costs <= 1 ops;
+extern fn hol() -> u32 effects { pure } costs <= 1 ops;
+
+impl fn f() -> u32 effects { pure } costs <= 8 ops {
+    let x = hol() else (e) { abbruch(); }
+    return x;
+}
+
+}

@@ -521,7 +521,19 @@ and nowhere else.
 
 ```ebnf
 fndecl   = [ "pub" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
-           "fn" ident "(" [ params ] ")" [ "->" typeexpr ]
+           "fn" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
+           (* **«C3a»: `or <reason>` -- der Fehlerkanal, und er steht in der SIGNATUR**
+              (2026-08-20).
+
+              `let x = f() else (e) { … }` stand seit jeher in der Grammatik und war nicht
+              absenkbar: *„`-> u32` carries no error channel, and nothing binds a function to
+              a `reason`. What `e` holds and how a call reports failure would both have to be
+              invented here."* Beide Fragen beantwortet diese eine Klausel, und zwar dort, wo
+              eine Antwort ueberprueft werden kann -- an der Deklaration des Gerufenen, nicht
+              am Rufer.
+
+              `N028` und `N029` halten sie in beide Richtungen; die Absenkung steht in
+              SPRACHE.md 8.1. **Kein neues Wort:** `or` steht schon im Wortschatz. *)
            [ "requires"  predlist ]
            [ "ensures"   predlist ]
            [ "maintains" identlist ]
@@ -649,8 +661,18 @@ awaitload  = "let" ident "=" place "awaits" "{" placelist "}" ";" ;
 exchstmt   = "let" ident "=" place "exchange" xform
              [ "publishes" ( placelist | "nothing" ) ]
              [ "awaits" "{" placelist "}" ] ";" ;
-xform      = "update" "(" ident ")" block
+xform      = "update" "(" ident ")"
+             [ "bounded" expr "ops" ] [ "on_exceeded" ident ] block
            | expr "when" pred "returns" ident ;
+(* **«C4b»: dieselben zwei Klauseln wie am `retry`, und aus demselben Grund** (2026-08-20).
+
+   `SPRACHE.md` sagt die Absenkung seit jeher -- die BESCHRAENKTE CAS-Schleife -- und liess
+   offen, woher `NCORES` und der Ausgang kommen. Der Erzeuger hat sich deshalb geweigert, mit
+   dem richtigen Grund: sie standen nirgends. Jetzt sagt sie der Schreiber.
+
+   *Es IST ein `retry`, nur mit einem CAS als Rumpf; wo zwei Formen dasselbe tun, sollen sie
+   gleich heissen.* Kein neues Wort. Fehlen sie, bleibt die Weigerung -- eine unbeschraenkte
+   CAS-Schleife ist genau das, was diese Sprache verbietet. *)
 letstmt    = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
            | "let" ident "=" ( call | place ) "else" "(" ident ")" block ;   (* «B14b» *)
 assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;

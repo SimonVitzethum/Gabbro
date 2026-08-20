@@ -45,6 +45,20 @@ fn absagen_von(pfad: &Path) -> (Vec<(&'static str, Stufe)>, String, String) {
         .to_string();
     let (baum, mut absagen) = gabbro_syntax::lies(&name, &quelle);
     let _ = gabbro_check::pruefe(&baum, &mut absagen);
+    // **Und der ERZEUGER laeuft mit, wenn die Datei ihn meint** (2026-08-20).
+    //
+    // Bis heute lief hier nur `pruefe`, und damit hatte `C001` **keine einzige Giftprobe** --
+    // die Kennung des Erzeugers war die einzige, die der Giftkorpus nicht erreichte. Sie
+    // aufzunehmen kostet eine Zeile und deckt eine Flaeche, die sonst allein an
+    // `pruefe-emission.sh` haengt: *dort faellt auf, was NICHT emittiert; hier faellt auf,
+    // was mit dem falschen GRUND nicht emittiert.*
+    //
+    // > Der Erzeuger laeuft nur fuer die Dateien, die ihn erwarten. Ueber einem Baum, den die
+    // > Paesse abgelehnt haben, waere seine Absage ohnehin keine Aussage -- und die anderen
+    // > Giftdateien sind genau das.
+    if quelle.starts_with("-- erwartet: C001") {
+        let _ = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    }
     let codes = absagen
         .absagen
         .iter()

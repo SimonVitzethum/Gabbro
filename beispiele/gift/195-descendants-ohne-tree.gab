@@ -1,0 +1,24 @@
+-- erwartet: C001
+-- **«B41b»: die Kante steht an der TABELLE, und diese nennt keine.**
+--
+-- Die Weigerung ist nicht weg, sie hat ihren richtigen Grund bekommen. Vorher sagte der
+-- Erzeuger *„the domain does not name the EDGE it walks"* und nannte damit einen Befund ueber
+-- die GRAMMATIK; jetzt sagt er, dass DIESE Tabelle ihre Kante nicht erklaert.
+
+module gift {
+
+table T count 8 {
+    slot {
+        elter : option index into T,
+        kind  : option index into T,
+    }
+}
+
+impl fn raeume(t : ptr<normal, rw> T, s : index into T)
+    effects { writes t.slots }
+    costs   <= 64 ops
+{
+    traverse v over descendants of t.slots[s] by consuming touches writes t.slots { }
+}
+
+}

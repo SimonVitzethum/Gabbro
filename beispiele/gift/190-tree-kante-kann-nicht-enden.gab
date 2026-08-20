@@ -1,0 +1,18 @@
+-- erwartet: D007
+-- **Eine Baumkante muss ENDEN koennen.**
+--
+-- `elter : u32` traegt keinen Sonderwert. Der Sonderwert einer `option index into T` ist
+-- `count` selbst (`beweise/Option_Sonderwert.thy`) -- ein blankes `u32` hat nicht einmal eine
+-- Schranke, und eine aufsteigende Kette darueber endet nie.
+
+module gift {
+
+table T count 8 {
+    tree { parent elter }
+
+    slot {
+        elter : u32,
+    }
+}
+
+}

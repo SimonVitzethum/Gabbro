@@ -1,0 +1,24 @@
+-- erwartet: C001
+-- **Ein `bool @N` sagt, welches BIT -- nie, welches WORT.**
+--
+-- Acht `bool` in Folge koennten ein Byte sein oder die untersten acht Bits von vier. Der
+-- Erzeuger hat keinen Grund, das eine zu waehlen, also weigert er sich: die Wortbreite einer
+-- Bitgruppe kommt aus ihren GANZZAHLFELDERN, und diese Gruppe nennt keines.
+--
+-- > `beispiele/03` ist die Gegenprobe: dort steht `rahmen : u64 embeds [51:12]` in derselben
+-- > Gruppe, und damit ist das Wort acht Byte breit.
+
+module gift {
+
+format W endian little {
+    a : bool @0,
+    b : bool @1,
+    c : bool @2,
+    d : bool @3,
+    e : bool @4,
+    f : bool @5,
+    g : bool @6,
+    h : bool @7,
+}
+
+}

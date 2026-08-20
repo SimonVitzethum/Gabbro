@@ -1,0 +1,21 @@
+-- erwartet: D008
+-- **Eine Baumkante bleibt in ihrer eigenen Tabelle.**
+--
+-- `elter : option index into U` ist ein Fremdschluessel, keine Baumkante -- und ueber einen
+-- Fremdschluessel sagt `descendants of` nichts.
+
+module gift {
+
+table U count 4 {
+    slot { x : bool, }
+}
+
+table T count 8 {
+    tree { parent elter }
+
+    slot {
+        elter : option index into U,
+    }
+}
+
+}

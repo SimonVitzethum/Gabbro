@@ -1311,7 +1311,7 @@ MUTATIONEN = [
         "parametersicht-bleibt-global",
         "emit.rs",
         "    let mut lokal = u.clone();\n    for p in &f.parameter {",
-        "    let mut lokal = u.clone();\n    for p in &Vec::new() {",
+        "    let mut lokal = u.clone();\n    for p in f.parameter.iter().take(0) {",
         "C-Absenkung -- ein Parameter verdeckt die globale Ablesung seines Namens nicht mehr; ein Punkt steht, wo ein Pfeil hingehoert",
         "code",
     ),

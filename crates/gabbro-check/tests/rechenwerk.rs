@@ -3011,7 +3011,14 @@ impl fn hoch() -> u64 effects { reads Z, writes Z } costs <= 2048 ops
   return alt; } }",
     );
     assert!(c.contains("atomic_compare_exchange_weak_explicit("), "{c}");
-    assert!(c.contains(">= (uint32_t)(NK * 4)) { streit(); }"), "die Schranke fehlt:\n{c}");
+    // **Die Zusicherung nennt die GANZE Bedingung, nicht ihr Ende** (2026-08-20).
+    //
+    // Sie stand hier als `>= (uint32_t)(NK * 4)) { streit(); }` -- und `cas-schleife-ohne-
+    // schranke` hat trotzdem UEBERLEBT: die Mutation setzt ein `0 &&` DAVOR, und der Text
+    // enthaelt das Ende danach unveraendert. *Eine Probe, die nur das Ende einer Bedingung
+    // liest, kann eine ausgeschaltete Bedingung nicht von einer geltenden trennen.*
+    let bedingung = format!("if (_ci{} >= (uint32_t)(NK * 4)) {{ streit(); }}", 1);
+    assert!(c.contains(&bedingung), "die Schranke ist nicht wirksam:\n{c}");
 
     // **10. `ancestors of` faengt beim ELTER an** -- ein Knoten ist kein Vorfahr seiner
     // selbst.

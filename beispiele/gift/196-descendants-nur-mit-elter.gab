@@ -1,0 +1,27 @@
+-- erwartet: C001
+-- **Eine TEILMENGE ist eine Aussage, und diese sagt: kein Abstieg.**
+--
+-- `tree { parent elter }` traegt `ancestors of` und traegt `descendants of` nicht. Der
+-- Abstieg braucht alle drei Kanten: `child` hinunter, `sibling` zur Seite, `parent` zurueck
+-- -- **ohne Stapel**, denn einer waere so tief wie der Baum hoch ist.
+--
+-- > `beispiele/18` ist die Gegenprobe: dieselbe Deklaration, und `ancestors of` laeuft.
+
+module gift {
+
+table T count 8 {
+    tree { parent elter }
+
+    slot {
+        elter : option index into T,
+    }
+}
+
+impl fn raeume(t : ptr<normal, r> T, s : index into T)
+    effects { reads t.slots }
+    costs   <= 64 ops
+{
+    traverse v over descendants of t.slots[s] by consuming touches reads t.slots { }
+}
+
+}

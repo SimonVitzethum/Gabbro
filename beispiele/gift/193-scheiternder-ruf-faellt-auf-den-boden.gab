@@ -1,0 +1,22 @@
+-- erwartet: N029
+-- **Die andere Richtung von «C3a»: der Grund faellt unbemerkt auf den Boden.**
+--
+-- `hol` KANN scheitern, und der Ruf steht in einem gewoehnlichen `let`. Der Rufer bekommt den
+-- Grund nicht einmal zu sehen -- und genau das ist der versteckte Kontrollfluss, gegen den
+-- die Grammatik `let … else` als EINZIGE Fehlerweitergabe fuehrt (SPRACHE.md 8.1).
+
+module gift {
+
+reason HolFehler {
+    Leer = 1 "die Quelle war leer"
+    exhaustive
+}
+
+extern fn hol() -> u32 or HolFehler effects { pure } costs <= 1 ops;
+
+impl fn f() -> u32 effects { pure } costs <= 8 ops {
+    let x = hol();
+    return x;
+}
+
+}

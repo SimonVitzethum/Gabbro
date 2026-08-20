@@ -1,0 +1,28 @@
+-- erwartet: C001
+-- **«C4b»: eine unbeschraenkte CAS-Schleife ist genau das, was diese Sprache verbietet.**
+--
+-- `SPRACHE.md` sagt die Absenkung seit jeher -- die BESCHRAENKTE CAS-Schleife -- und liess
+-- offen, woher die Schranke kommt. Sie kommt jetzt vom Schreiber, in denselben Woertern wie
+-- an einem `retry`. Ohne sie bleibt die Weigerung stehen.
+--
+-- > *Die Sprache emittiert nichts, was sie verbietet* -- die `accumulates`-Lehre.
+
+module gift {
+
+const GRENZE : u64 = 1000;
+atomic ZAEHLER : u64 relaxed;
+
+impl fn hoch() -> u64
+    effects { reads ZAEHLER, writes ZAEHLER }
+    costs   <= 2048 ops
+{
+    let alt = ZAEHLER exchange update(v) {
+        if v < GRENZE {
+            return v + 1;
+        }
+        return v;
+    } publishes nothing;
+    return alt;
+}
+
+}
