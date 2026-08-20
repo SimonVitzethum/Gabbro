@@ -10903,3 +10903,150 @@ Anker               193, alle lebend
 pruefe-emission.sh  18 durchgestochen, 23 von 26 uebersetzen
 13 Waechter         gruen
 ```
+
+---
+
+# 2026-08-20, dritte Rezension: ein MUSTER, und die sechs Punkte daraus
+
+Die Rezension nennt das Muster beim Namen, und es sitzt:
+
+> **Dieser Ordner hat die Klasse seiner Fehler wiederholt richtig diagnostiziert — und dann
+> eine Instanz behoben.**
+
+Der Tiefenwächter: 3 von 6 Rekursionsstellen. Der `_ => {}`-Feldzug: 5 von 16
+Ausdrucksläufern. Die Umstellung auf qualifizierte Namen (am 2026-08-19 in `m2`, `phasen`,
+`geteilt` gemacht): zwei Stellen in `m1.rs` blieben stehen. *Jedes Mal benennt der Kommentar
+die allgemeine Regel, und der Code setzt sie stellenweise um.*
+
+## A — Der Ausdrucksläufer: eine Ursache, fünf Befunde
+
+Auf **Anweisungsebene** war es vorbildlich gelöst: `unterbloecke`, `eigene_ausdruecke`,
+`endet_immer` sind erschöpfende `match`es ohne `_`, damit eine neue `StmtArt` den Bau bricht.
+**Eine Ebene tiefer galt es nirgends.**
+
+```gabbro
+return t.slots[schreibt()].x;      -- schreibt() writes a
+```
+→ **null Fehler**, und der Erzeuger schrieb `__attribute__((pure))` darüber. Derselbe Ruf als
+Anweisung: `E008`. *Das ist genau die Klasse, die `emit.rs` selbst als „−O1 löschte 65 Rufe"
+bucht — der Wächter fing sie einmal, die Ursache stand noch.*
+
+Neu in `lib.rs`, alle ohne `_`-Zweig: `unterausdruecke`, `ausdruecke_im_ort`,
+`alle_ausdruecke`, `alle_orte`. Umgestellt: `aufrufgraph` (beide Sammler; dabei fiel eine
+**doppelte Prädikatschleife** auf, zweimal derselbe Block hintereinander), `geteilt`,
+`paarung`, `m3`, `kosten`.
+
+| Form | vorher | jetzt |
+|---|---|---|
+| Ruf im Index | 0 Fehler | **`E008`** |
+| Ruf in `aligned(…)` | 0 Fehler | **`E008`** |
+| Ruf im `retry … until` | 0 Fehler | **`E008`** |
+| Zugriff über Indexposition (`H007`) | stumm | `geteilt` liest jeden Ort |
+
+## C — Kein Namensauflöser an der Benutzungsstelle: `M119`
+
+```gabbro
+return t.slots[j].x;      -- `j` gibt es nicht  →  0 Fehler
+return t.slots[i].x;      -- i : u32 in 0..127  →  M103
+```
+
+**Ein Tippfehler schaltete die Indexprüfung ab** — die Vorzeigeklasse dieses Ordners. Und M1
+druckte dazu „100 % coverage", *weil es den Ausdruck gar nicht erst gesehen hat*: die Indizes
+werden jetzt gezählt, nicht nur für die Schranke ausgewertet.
+
+Zwei Falschtreffer beim Bauen, beide sofort von den eigenen Proben gefangen: `u64::max` trägt
+ein **Typwort** als Basis (`11-grammatikbefunde.gab` fiel binnen Sekunden), und ein Ort wird
+auf zwei Wegen besucht. Auf einem **Fragment** ist die Absage richtig und trotzdem kein
+Befund über den Code — ein Auszug deklariert seine Namen nicht; darum steht `M119` in
+`BENANNT`, dieselbe Klasse wie `E009` und `K003`.
+
+## D — Ein Fakt überlebte den Ruf, der ihn schreibt
+
+`m1.rs::ist_lokal` fragte die **modulqualifizierte** Karte mit einem unqualifizierten
+Schlüssel. Also galt in jeder Datei mit `module` jede globale Grösse als lokal.
+
+**Die eigene Giftprobe dafür steht seit jeher da** — `gift/22`, mit der Notiz *„damit das
+Loch nicht zurueckkehrt"* — und war grün: **sie hat kein `module`.** Dieselbe Datei gewickelt
+gab drei Fehler statt einem.
+
+Und die **Asymmetrie** war das eigentliche Loch:
+
+| | mit `module` | ohne |
+|---|---|---|
+| saubere Beispiele | 38 | **0** |
+| Giftdateien | 137 | **40** |
+
+*Ein Gift ohne `module` misst eine Namensauflösung, die im echten Gebrauch nie vorkommt.*
+Alle 40 gewickelt — vorher geprüft, dass jede weiter mit **ihrer** Kennung fällt: 40 von 40.
+Ein Wächter in `korpus.rs` verlangt es jetzt.
+
+## G — Zwei Wachen an drei von sechs Stellen
+
+```
+40 verschachtelte Klammern  →  P038, sauber
+300 verschachtelte `module` →  fatal runtime error: stack overflow, aborting
+```
+
+Jetzt auch an `moduledecl`, `typeexpr`, `field`.
+
+Und die Bereichsarithmetik rechnete in rohem `i128`:
+
+```
+return a * b;   -- zwei blanke u64
+debug:   panicked at typen.rs:553: attempt to multiply with overflow
+release: u64 in -36893488147419103231 .. 0      ← negative Untergrenze auf u64
+```
+
+> **Ein Überlaufprüfer, dessen Arithmetik überläuft, beweist nichts.**
+
+`checked_mul`/`_add`/`_sub`; bei Überlauf `bereich: None` mit `laeuft_ueber: true`. Debug und
+Release melden jetzt beide `M104`.
+
+## H — Der Zahlenwächter las die Tafel, nicht den Abschnitt darunter
+
+Drei Zahlen standen eine Bildschirmhöhe tiefer still. *Dieselbe Klasse, die am 2026-08-19
+achtmal bezahlt wurde.* Neu gelesen: Theorienzahl (zweimal im Text) und Isar-Zeilen. Und
+Tausendertrenner zählen nicht mehr mit — `2 304` und `2304` sind dieselbe Zahl.
+
+## Und zwei, die beim Bauen von selbst herausfielen
+
+**Der Parser war unbeschädigbar.** `mutiere-pruefer.py` löste jeden Pfad gegen
+`crates/gabbro-check/src` auf; `gabbro-syntax` konnte gar nicht mutiert werden — *199 von 199
+sagte nichts über den Parser, und die Zahl las sich trotzdem wie Deckung.* Aufgefallen erst,
+als eine Mutation `parse.rs` treffen sollte und die Datei nicht gefunden wurde.
+
+> Eine Fläche, die kein Werkzeug erreicht, fällt in keiner Statistik auf — sie fehlt einfach.
+
+**Und eine überlebende Mutation fand das nächste Loch.** `PredArt::Quantor(_) => {}` fiel
+durch keine einzige Probe. Die Suche nach einer Probe fand statt ihrer:
+
+```gabbro
+impl fn f(t : ptr<normal, rw> T)
+    requires forall s in slots of t : schreibt(t.slots[s].x)
+    effects  { pure }                                -- 0 Fehler
+```
+
+`requires`/`ensures` wurden nur nach `Held(…)` durchsucht. **Ein Ruf darin sah niemand.**
+Jetzt gehen sie durch denselben Läufer wie der Rumpf.
+
+*Eine überlebende Mutation ist keine Panne des Katalogs. Sie ist sein Ertrag* — und dies ist
+das erste Mal, dass dieser Satz hier eingelöst wurde.
+
+## Der Stand
+
+```
+cargo test          153 gruen, ohne RUST_MIN_STACK
+mutiere-pruefer.py  199 von 199 (100 %), auf fisch -- erstmals inklusive Parser
+pruefe-emission.sh  18 durchgestochen, 23 von 26 uebersetzen
+pruefe-luecken.py   13 von 13, Quellen byteidentisch zurueck
+isabelle build -c   13 Theorien frisch, 5 s
+13 Waechter         gruen
+Korpus              38 sauber, 180 Gifte, jedes mit SEINER Kennung
+```
+
+**Was NICHT geschlossen ist:** die vier M2-Löcher aus Befund B (geschachtelte
+`consumes`-Rufe, `m2.rs:397`, Schleifenrümpfe einmal gelaufen, ein im Zweig geborener Wert),
+`decreases` als Namensprobe (Befund E), und die restlichen Ein-Schritt-Umgehungen aus F
+(`U003`, `V006`, `check … can_fail`). Alle stehen in `TODO.md` mit Adresse — *und die
+Rezension hat recht, dass jede davon einen syntaktischen Schritt neben einer bestehenden
+Giftprobe liegt.*
