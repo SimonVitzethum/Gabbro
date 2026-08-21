@@ -59,9 +59,14 @@ ZITAT = re.compile(r"`([A-Z][0-9]{3})`")
 FREMD = re.compile(
     r"\b(same class|dieselbe klasse|same shape|dieselbe gestalt|unlike|anders als|"
     r"wie bei|as at|siehe|see |vgl|is caught by|faengt|gefangen von|belongs to|"
-    r"gehoert (zu|in)|lives in|steht in|\.rs\b|siblings?|schwester)", re.I)
+    r"gehoert (zu|in)|lives in|steht in|\.rs\b|siblings?|schwester|"
+    # **Naming the LAYER counts as naming the place.** For `emit.rs` the checker is as
+    # foreign as another file: „die Regel, die im Pruefer `M123` heisst" points somewhere
+    # else just as clearly as a file name does. *Added 2026-08-21 after the guardian flagged
+    # four such lines -- the list was too narrow, not the comments too vague.*
+    r"im pruefer|in the checker|im erzeuger|in the (generator|emitter)|eine ebene)", re.I)
 
-MARKE = 230  # measured 2026-08-21; a ratchet, not a target -- it may fall, not rise
+MARKE = 226  # measured 2026-08-21; a ratchet, not a target -- it may fall, not rise
 
 
 def vergeben():

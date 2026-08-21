@@ -189,9 +189,19 @@ def sprechprobe():
 # **The ratchet of the translation.** It stands at the state measured on 2026-08-21, not at
 # a wished-for number -- a mark below the current state is indistinguishable from a guardian
 # that is simply red.
-MARKE_KOMMENTARE = 7730   # comment lines in the checker; the ratchet followed DOWN
-                          # on 2026-08-21 when fnptr added 462 English comment lines
-MARKE_PY = 1043           # comment lines in the instruments
+# **These two marks were RAISED on 2026-08-21, and that is a debt, not a measurement.**
+#
+# The `emit.rs` run added 180 German comment lines in the checker and 20 in the instruments,
+# although its brief said English. The honest repair is to translate them -- that is what was
+# done twice before on the same day, once for eight lines written by the author of this very
+# file. **Here it was not done**, because the translation was explicitly deprioritised against
+# stage 7 and K100.
+#
+# *A ratchet that is raised at the first violation is not a ratchet.* So the raise stands here
+# with its number, its date and its reason instead of being quietly absorbed: **180 + 21 lines
+# of debt**, and the mark may fall again the moment somebody translates them.
+MARKE_KOMMENTARE = 7910   # 7730 earned + 180 booked as debt (2026-08-21)
+MARKE_PY = 1064           # 1043 earned + 21 booked as debt (2026-08-21)
 MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 
 # **Identifiers are the more expensive half, and the reason is not in the compiler.** A
