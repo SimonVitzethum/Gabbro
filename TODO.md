@@ -241,8 +241,8 @@ darunter.
       Behoben und mit Gift 76 belegt.
       **Die allgemeine Frage hat seit dem 2026-08-20 einen Befehl** (`./instrumente/zaehle-karten.py`), und
       die alte Zahl war um den Faktor 2,7 zu klein: 16 Karten, 12 davon öffentlich,
-      **36 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
-      Kandidatenschleife und **32 davon unqualifiziert**.
+      **37 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
+      Kandidatenschleife und **33 davon unqualifiziert**.
       *Die alte Zählung sagte 13 — sie kannte `.contains_key(` nicht, und das ist derselbe
       Blick.* **Ein Werkzeug, das eine der beiden Formen nicht liest, misst seine eigene
       Leseweite** (W16).
@@ -332,7 +332,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **9 Widerrufe** über 61 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **9 Widerrufe** über 62 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *Woran es hängt: eine Teilmengenbuchung bräuchte je Zahlenpaar den Satz „A ist Teil von
       B", und den schreibt niemand hin, solange er nicht wehtut.*
 
@@ -391,7 +391,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Absage fällt nachweislich"*; eine gedeckte sagt nur *„sie kommt vor, und irgendein Pass
       sieht sie"* — und Maß 2 hat gerade gezeigt, dass **Sehen keine Prüfung ist**.
       **Seit dem 2026-08-20 stehen beide Zahlen im Register und nicht mehr nur im Bericht:**
-      **164 besetzte Zellen** stehen daneben, **27 nur im Gift** — und `gabbro blindstellen`
+      **165 besetzte Zellen** stehen daneben, **26 nur im Gift** — und `gabbro blindstellen`
       druckt die vier Zahlen getrennt, *auf Ausdruck*, weil ein Einzelwert zwei Wochen später
       wie Fortschritt aussieht.
       *Die schärfere Frage bleibt dieselbe wie beim Schablonenregister: fällt an dieser Zelle je
@@ -400,11 +400,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **44 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
+- [ ] **48 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 102 sind tragend, 2 verdächtig — und **44 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 105 sind tragend, 2 verdächtig — und **48 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       *Wer eine Absage liest und daraus nicht erkennt, worauf sie ruht, kann auch nicht
       prüfen, ob sie weit genug reicht.* Das ist der größere Posten, nicht die zwei.
@@ -469,7 +469,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **1329 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **1370 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -637,7 +637,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **254 von 254 Ankern** greifen (`--anker`, 2026-08-21) — die
+      fällt. Mutationskatalog: **264 von 264 Ankern** greifen (`--anker`, 2026-08-21) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -662,7 +662,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       rules for the same thing**; now one: separating comma obligatory, trailing comma
       optional.
       **Und die Messschicht sagt, warum die drei stehenbleiben:** `./instrumente/pruefe-syntax.sh` hält
-      146 EBNF-Regeln und 216 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
+      147 EBNF-Regeln und 216 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
       gegen sich selbst, nie den Parser gegen die Grammatik.* Ein Wächter für die Differenz
       bräuchte je Stelle eine Giftdatei, die der Parser **annehmen** und die EBNF **verbieten**
       muss — **drei Dateien, und der Prüfer müsste dafür rot werden, wo er heute grün ist.**
@@ -2229,7 +2229,7 @@ und ist eine Doppelung.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN
 
-**80 fremde Rümpfe im Korpus, 10 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**82 fremde Rümpfe im Korpus, 10 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
 
 > **Berichtigt am 2026-08-21, und die Überschrift war in BEIDE Richtungen falsch.** Hier stand
@@ -2646,7 +2646,7 @@ hat kein Feld dafür). **Ohne die Sätze ist „Gabbro formal verifiziert" nicht
 formulierbar** — man wüsste nicht, was zu beweisen wäre.
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (heute 194 Codes, null Sätze).
+sofort: *kein neuer Absagecode ohne seinen Satz* (heute 201 Codes, null Sätze).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
@@ -3325,7 +3325,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 146 / 216) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 147 / 216) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |

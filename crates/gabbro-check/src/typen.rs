@@ -427,6 +427,14 @@ pub enum Typ {
     },
     /// Ein `format`-Kopf oder ein `device`-Block.
     Verbundname(String),
+    /// **Der Typ eines `reason`-Werts** (Stufe 7, 2026-08-21) -- der Name der Deklaration.
+    ///
+    /// Er ist absichtlich KEIN `Summe` und kein `Benannt`: ein Grund traegt keine Nutzlast,
+    /// hat keinen Traegertyp, mit dem gerechnet wird, und `bereich()` gibt fuer ihn `None`.
+    /// **Damit faellt jede Arithmetik und jede Zuweisung an eine Zahl von selbst** -- ein
+    /// Grund geht durch genau zwei Tueren: `return` in einer Funktion mit `or R`, und das
+    /// `e` eines `let … else`.
+    Grund(String),
     /// **Der ehrliche Ausgang.** Was hier steht, prueft M1 nicht -- und der Lauf zaehlt es.
     Unbekannt,
 }
@@ -502,6 +510,10 @@ impl Typ {
                 None => format!("[{}; ?]", element.text()),
             },
             Typ::Tabelle(n) | Typ::Verbundname(n) => n.clone(),
+            // **Der Typname steht mit seinem Wort davor** -- `reason HolFehler`. Ohne das
+            // Wort waere die Absage *„expected `u32`, found `HolFehler`"* nicht zu lesen:
+            // ein Leser suchte einen Typ dieses Namens und faende eine Grunddeklaration.
+            Typ::Grund(n) => format!("reason {n}"),
             Typ::Register { bereich, .. } => bereich.text(),
             Typ::Unbekannt => "?".to_string(),
         }

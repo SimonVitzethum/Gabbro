@@ -444,7 +444,33 @@ mulexpr    = unary { ( "*" | "/" | "%" ) unary } ;
 unary      = [ "!" | "-" ] primary ;
 primary    = int | "true" | "false" | place | call | paren | builtin | optionexpr
                                                                 (* G9: kein `cast` *)
-           | oldexpr | "result" ;
+           | oldexpr | "result" | reasonval ;
+reasonval  = ident "::" ident ;
+             (* **Stufe 7, 2026-08-21: der ERZEUGER eines `reason`-Werts.** `-> T or R` steht
+                seit dem 2026-08-20 in der Signatur und `let x = f() else (e) { … }` seit
+                jeher am Rufer -- dazwischen war NICHTS: `primary` kannte keine Produktion
+                fuer einen Grundwert, und alle sieben `or R`-Signaturen des Korpus standen an
+                einem `extern fn`, also an einem Rumpf, den Gabbro nie sieht. *Der Kanal
+                existierte an der Deklaration und hatte keine Schreibform* -- «B9» ein
+                zweites Mal.
+
+                **Der Bedarfsbeleg steht ausserhalb** (Regel B): `FRAGMENTE.md`:269 -- die
+                Freigabe eines Capability-Blattes, aus echtem Code uebernommen -- schreibt
+                `return Fehler::Buchfuehrung;` im `else`-Zweig eines `narrow`. Die Zeile fiel
+                bis heute mit `M119`.
+
+                **Keine neue Anweisung und kein neues Wort:** `return R::F;` IST die
+                Fehlerrueckgabe. Ein Grundwert kann nie den Erfolgstyp haben, also ist die
+                Form eindeutig -- die Bedingung, unter der diese Ersparnis erlaubt ist. Ein
+                Grund geht durch genau ZWEI Tueren: `return` in einer Funktion mit `or R`
+                (`M122`), und der Vergleich gegen einen Grund derselben Deklaration; alles
+                andere sagt `M124` ab, denn die Zahl an einer `reason`-Zeile ist fuer den
+                Bericht da und nicht fuer die Rechnung.
+
+                Die Form parste vorher schon -- als `place` mit Feldsuffix. *Sie war nicht
+                verboten, sie war bedeutungslos.* Zwei Glieder mit Identifier-Basis und ohne
+                `(` kommen im ganzen Korpus null Mal vor (`u64::max` nimmt den Zweig der
+                Integerwoerter), also kostet die Umwidmung keine Stelle. *)
 optionexpr = "Some" "(" expr ")" | "None" ;
              (* «B35», 2026-08-15: `option index into T` hatte KEINEN Konstruktor. Der
                 Bestand schreibt `Some(x)` seit jeher -- in `match`-Mustern (beispiele/01,

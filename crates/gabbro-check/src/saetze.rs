@@ -1107,6 +1107,50 @@ pub const SPERREN: &[Satz] = &[
         gemessen_an: "beispiele/gift/223-225 and 227-229; 6 mutations, all caught.",
         fundstelle: "crates/gabbro-check/src/m1.rs (`sammle_namen_pred`)",
     },
+    // --- Stufe 7: der Grunderzeuger ---------------------------------------------------
+    //
+    // **Die Ratsche hat gebissen, eine Stunde nachdem sie stand.** Sieben neue Kennungen aus
+    // dem `reason`-Erzeuger kamen ohne Satz an; der Waechter meldete 52 gegen Marke 45.
+    // *Das ist der Zweck des zweiten Zahns, gemessen am zweiten Tag.*
+    Satz {
+        name: "v1.grundwert",
+        kennungen: &["M121", "M122", "M123", "M124", "M125", "M126"],
+        aussage: "A reason value that reaches the error exit names a declared case of \
+                  EXACTLY the channel the signature declares, and a `match` over it is \
+                  complete or the reason says `exhaustive`.",
+        vorbehalt: "**The producer was the missing half, not the contract** -- until \
+                    2026-08-21 six `-> T or R` signatures stood in the clean corpus, ALL of \
+                    them at an `extern fn`, and eight `reason` declarations had their case \
+                    names used zero times. *A channel that exists at the declaration and has \
+                    no writing form.* The hand probe passed with 0 errors and the emitter \
+                    wrote `(void)_grund;` with the finding in it — **the hole stood in the \
+                    generated C and in no refusal.**\n\
+                    **And `M124` is deliberately STRUCTURAL, not type-wise:** a reason value \
+                    slipped silently through seven positions, because 53 `match`es over \
+                    `ExprArt` carry a `_` arm while the compiler forced only five. *A rule \
+                    that trusted the type checker would have caught five of the seven.*",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/48-grund-mit-erzeuger.gab through `pruefe`/`emit`/`cc \
+                      -Werror` at -O0 and -O2 and under UBSan; beispiele/gift/232-239; \
+                      10 mutations, all caught. The template comes from outside (Regel B): \
+                      `FRAGMENTE.md`:269 writes `return Fehler::Buchfuehrung;`.",
+        fundstelle: "crates/gabbro-check/src/m1.rs; SYNTAX.md (`reasonval`)",
+    },
+    Satz {
+        name: "namen.kanal_ohne_einloeser",
+        kennungen: &["N034"],
+        aussage: "A function that declares `or R` has a body that can actually produce a \
+                  reason -- a declared error channel with no writing site in its own body is \
+                  a promise nobody can keep.",
+        vorbehalt: "**This is the rule the whole stage is named after** -- *erst der \
+                    Erzeuger, dann der Vertrag.* It bites only where Gabbro SEES the body: \
+                    at an `extern fn` the channel stays a pure assumption, and that is \
+                    exactly where all six corpus sites stood before this run. *So the rule \
+                    is silent on the majority of the surface, and it says so* (W10).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/237-kanal-ohne-einloeser.gab.",
+        fundstelle: "crates/gabbro-check/src/namen.rs",
+    },
 ];
 
 // ===================================================================================

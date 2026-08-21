@@ -1,0 +1,119 @@
+-- 48 -- Der Fehlerkanal, **von beiden Enden**: eine Gabbro-Funktion, die einen Grund
+-- HERSTELLT, und ein Rufer, der ihn auseinandernimmt.
+--
+-- Bis zum 2026-08-21 stand `-> T or R` an sieben Stellen des Korpus, und alle sieben waren
+-- ein `extern fn` -- ein Rumpf, den Gabbro nie sieht. **Keine einzige Gabbro-Funktion
+-- erzeugte je einen Grund**, denn `primary` kannte keine Produktion dafuer. Der Kanal
+-- existierte an der Deklaration und hatte keine Schreibform; der Erzeuger schrieb
+-- `(void)_grund;` und den Befund als Kommentar daneben.
+--
+-- **Die Vorlage steht ausserhalb** (Regel B): `FRAGMENTE.md`:269 -- die Freigabe eines
+-- Capability-Blattes -- schreibt `return Fehler::Buchfuehrung;` mitten im `else`-Zweig
+-- eines `narrow`. Der Ausschnitt kommt aus echtem Code, er meldet einen Buchfuehrungsfehler
+-- an seinen Rufer zurueck, und er schreibt dafuer genau die Form, die die Sprache nicht
+-- hatte. *Er hat den Bedarf vorweggenommen; die Zeile fiel bis heute mit einer Absage.*
+--
+-- Diese Datei fuehrt dieselbe Bewegung an einer Griffetabelle: ein Platz wird freigegeben,
+-- der Zaehler faellt um eins, und **zwei Wege fuehren am Erfolg vorbei** -- der Platz war
+-- gar nicht belegt, oder der Zaehler stand schon auf null. Beides ist ein Grund, und beide
+-- Gruende haben einen Namen.
+
+module beispiel::fehlerkanal {
+
+const NPLAETZE : u32 = 256;
+const HOECHST  : u32 = 65534;
+
+type Zaehler = u32 in 0 .. HOECHST;
+type Platznr = u32 in 0 ..< NPLAETZE;
+
+table Griffe count NPLAETZE {
+    slot {
+        zaehler : Zaehler,
+        belegt  : bool,
+    }
+}
+
+lock GRIFFE protects { Griffe } rank 0 held <= 400 ops;
+
+-- Die zwei Gruende, mit ihren Zahlen und ihren Texten. **Die Zahlen vergibt der Mensch**,
+-- damit ein Bericht sie nennen kann -- nicht, damit jemand mit ihnen rechnet (`M124`).
+reason Buchfehler {
+    Unbelegt     = 1 "der Platz war gar nicht belegt"
+    Buchfuehrung = 2 "der Zaehler stand auf null, und das darf er hier nicht"
+    exhaustive
+}
+
+extern fn buchfuehrung_kaputt() -> never effects { diverges } costs <= 1 ops;
+
+-- ---------------------------------------------------------------------------------------
+-- 1. Der ERZEUGER. Zwei Wege fuehren am Erfolg vorbei, und beide sagen woran.
+-- ---------------------------------------------------------------------------------------
+
+-- **`narrow … else` verlangt keine Invariante, sondern eine PRUEFUNG** -- das ist der Satz,
+-- den `FRAGMENTE.md`:262 an derselben Stelle schreibt. Der `else`-Zweig ist der Ort, an dem
+-- die Verletzung sichtbar wird, statt still umzulaufen; **bis heute konnte er dort nur
+-- zurueckkehren oder divergieren.** Jetzt kann er sagen, warum.
+impl fn platz_freigeben(g : ptr<normal, rw> Griffe, s : Platznr) -> Zaehler or Buchfehler
+    requires  Held(GRIFFE)
+    effects   { reads g.slots, writes g.slots }
+    costs     <= 40 ops
+{
+    if !g.slots[s].belegt {
+        return Buchfehler::Unbelegt;
+    }
+    narrow g.slots[s].zaehler to 1 .. HOECHST else {
+        return Buchfehler::Buchfuehrung;
+    }
+    g.slots[s].zaehler -= 1;
+    if g.slots[s].zaehler == 0 {
+        g.slots[s].belegt = false;
+    }
+    return g.slots[s].zaehler;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- 2. Der VERBRAUCHER. `let … else` ist die einzige Fehlerweitergabe der Sprache, und `e`
+--    traegt seit heute einen Typ -- **bis zum 2026-08-21 stand `fehlername` in genau einer
+--    Datei des Pruefers, naemlich im ERZEUGER.** Kein Pass wusste, dass der Name existiert;
+--    `match e { … }` fiel mit `M119`.
+-- ---------------------------------------------------------------------------------------
+
+impl fn aufraeumen(g : ptr<normal, rw> Griffe, s : Platznr) -> Zaehler
+    effects   { reads g.slots, writes g.slots, locks GRIFFE }
+    costs     <= 500 ops
+{
+    locks GRIFFE {
+        let n = platz_freigeben(g, s) else (e) {
+            -- **Ein `reason` ist eine ABGESCHLOSSENE Aufzaehlung** und hat keinen
+            -- Sammelzweig -- dieselbe Regel, die `D005` ueber einem `tagged type` haelt.
+            -- Hier heisst sie `M123`, und ohne sie waere die Abgeschlossenheit eine Zusage
+            -- der Grammatik, die kein Pass einloest.
+            match e {
+                Unbelegt     => { return 0; }
+                Buchfuehrung => { buchfuehrung_kaputt(); }
+            }
+        }
+        return n;
+    }
+}
+
+-- Und die andere Form, in der ein Grund gelesen wird: der VERGLEICH gegen einen Grund
+-- derselben Deklaration. **Mehr Tueren hat er nicht** -- addieren, verschieben oder gegen
+-- eine Zahl halten sagt `M124` ab, denn die Zahl an einer `reason`-Zeile ist fuer den
+-- Bericht da und nicht fuer die Rechnung.
+impl fn nur_unbelegte_zaehlen(g : ptr<normal, rw> Griffe, s : Platznr) -> Zaehler
+    effects   { reads g.slots, writes g.slots, locks GRIFFE }
+    costs     <= 500 ops
+{
+    locks GRIFFE {
+        let n = platz_freigeben(g, s) else (e) {
+            if e == Buchfehler::Unbelegt {
+                return 1;
+            }
+            return 0;
+        }
+        return n;
+    }
+}
+
+}

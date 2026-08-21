@@ -16,13 +16,13 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # das Regis
 
 | | | Befehl |
 |---|---:|---|
-| Sätze im Register | **46** | `gabbro paesse` |
+| Sätze im Register | **48** | `gabbro paesse` |
 | davon `measured` | **37** | ein Giftprobenfall oder eine gefangene Mutation |
 | davon `CONJECTURED` | **6** | nichts misst sie |
 | davon `PROVED` | **0** | **das ist die Zahl, um die es in PL.2 geht** |
 | Pässe mit mindestens einem Satz | **12 von 12** | `gabbro paesse` |
 | Kennungen im Prüfer | **191** | `./pruefe-kennungen.py` |
-| davon von einem Satz beansprucht | **146** | `./instrumente/pruefe-saetze.py` |
+| davon von einem Satz beansprucht | **156** | `./instrumente/pruefe-saetze.py` |
 | **Kennungen ohne Satz — die Ratsche** | **45** | `./instrumente/pruefe-saetze.py` |
 
 **Die Schätzung im Plan war ~22 Sätze; es sind 43 geworden.** Der Grund ist kein

@@ -213,16 +213,16 @@ impl fn echo_beantworten(e : ptr<normal, r> EthKopf,
     costs   <= 256 ops
 {
     if e.ethertyp != ET_IPV4 {
-        return 0;
+        return Verwurf::FremderTyp;
     }
     if !kopf_gueltig(k, w) {
-        return 0;
+        return Verwurf::Pruefsumme;
     }
     if k.ziel != meine_ip {
-        return 0;
+        return Verwurf::NichtFuerUns;
     }
     if k.protokoll != IPPROTO_UDP {
-        return 0;
+        return Verwurf::FremderTyp;
     }
     -- Quelle und Ziel tauschen; der Kopf wird zur Antwort.
     let alt_quelle : u32 = k.quelle;

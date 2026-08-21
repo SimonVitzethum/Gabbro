@@ -1,0 +1,31 @@
+-- erwartet: N034
+-- **Gift 237 -- ein eigener Rumpf erklaert `or R` und kann nie scheitern.**
+--
+-- Der dritte Zahn der Zange, die `N028` und `N029` aufspannen -- und er fehlte, weil es bis
+-- zum 2026-08-21 gar keine Schreibform gab: *jede `-> T or R`-Signatur des Korpus stand an
+-- einem `extern fn`,* also an einem Rumpf, den Gabbro nie sieht. Gemessen vor dem Bau:
+--
+-- ```text
+-- impl fn hol(x : u32) -> u32 or HolFehler … { return x; }
+--   ->  0 Fehler, 0 Hinweise
+-- ```
+--
+-- Der Erzeuger schrieb dazu `(void)_grund;` mit dem Befund als Kommentar. **Das Loch stand
+-- im erzeugten C und in keiner Absage** -- genau die Bewegung, gegen die K100s zweites Tor
+-- steht: ein Kanal ohne Einloeser.
+--
+-- *`extern fn` bleibt ausgenommen und muss es sein* -- dort IST die Deklaration alles, was
+-- Gabbro hat.
+
+module gift::kanal_ohne_einloeser {
+
+reason Buchfehler {
+    Unbelegt = 1 "der Platz war gar nicht belegt"
+    exhaustive
+}
+
+impl fn f(x : u32) -> u32 or Buchfehler effects { pure } costs <= 4 ops {
+    return x;
+}
+
+}

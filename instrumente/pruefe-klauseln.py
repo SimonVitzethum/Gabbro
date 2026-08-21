@@ -129,8 +129,18 @@ ERWARTET = {
     "kosten":       ("TOT", "Feld der `invariant`; ungelesen."),
     "laeuft":       ("TOT", "Feld der `invariant`; ungelesen."),
     "maskiert":     ("TOT", "`masks` an einer Sperre. Ungelesen -- und es traegt die UNTERBRECHBARKEIT (`SPRACHE.md`:275), eine Sorge, die in keiner der elf Klempnereiklassen steht."),
-    "erschoepfend": ("TOT", "`exhaustive` an einem `reason`; ungelesen."),
-    "fehlername":   ("TOT", "Der Name der Fehlerbindung im `let … else`; ungelesen."),
+    # **`erschoepfend` und `fehlername` sind am 2026-08-21 GESTIEGEN** (Stufe 7) -- und
+    # dieser Waechter hat es gemeldet, bevor jemand daran gedacht hat, die Tabelle
+    # nachzufuehren. *Das ist genau die Richtung, fuer die er gebaut wurde.*
+    #
+    # * `fehlername` -- der Binder eines `let … else` stand bis dahin in EINER Datei des
+    #   Pruefers, naemlich im ERZEUGER: `HolFehler e; (void)e;`. Kein Pass wusste, dass der
+    #   Name existiert, und `match e { … }` fiel mit `M119`. Jetzt traegt `e` den `reason`
+    #   des Gerufenen (M1), und `M123` haelt die Fallunterscheidung darueber geschlossen.
+    # * `erschoepfend` -- `SPRACHE.md`:531 sagt seit langem, was `exhaustive` heisst
+    #   (*„der `switch` hat kein `default`, ein neuer Wert bricht die Uebersetzung"*), und
+    #   keine Zeile tat es. `M125` und der `default`-lose `switch` sind zusammen sein
+    #   erster Leser.
     "rueckgabe":    ("TOT", "Der Ergebnistyp eines `axiom` (G2); ungelesen."),
     "scale":        ("TOT", "`scale` an `embeds`; ungelesen."),
     "version":      ("TOT", "Die Formatversion; ungelesen."),

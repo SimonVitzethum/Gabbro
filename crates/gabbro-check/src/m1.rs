@@ -140,6 +140,7 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>) {
         unveraenderlich: std::collections::HashSet::new(),
         unveraenderliche_statiken: std::collections::HashMap::new(),
         schon_gemeldet: std::collections::HashSet::new(),
+        fehlerkanal: None,
     };
     p.programm(baum);
     (p.zaehlung, p.fremd)
@@ -234,6 +235,13 @@ struct Pruefer<'a> {
     /// Wer eine dritte hinzufuegt und hier nichts eintraegt, macht die Flaeche unsichtbar,
     /// nicht kleiner.
     fremd: Vec<Stelle>,
+    /// **Der Fehlerkanal des laufenden Rumpfes** (Stufe 7, 2026-08-21) -- der `reason` aus
+    /// `-> T or R`, voll qualifiziert.
+    ///
+    /// Er steht hier und nicht als Parameter neben `ergebnis`, weil `block`/`unterblock`/
+    /// `anweisung` ihn nur an EINER Stelle brauchen (`return`) und die Kette sonst vier
+    /// Signaturen breiter waere.
+    fehlerkanal: Option<String>,
 }
 
 /// Die Bindungen und Fakten eines Blocks. Ein Block erbt beide und gibt keins zurueck.
@@ -416,7 +424,14 @@ impl<'a> Pruefer<'a> {
                         .ergebnis
                         .as_ref()
                         .map(|t| self.u.typ_von_ausdruck_decl(modul, t));
+                    // **Der Fehlerkanal reist mit in den Rumpf** (Stufe 7) -- ein
+                    // `return HolFehler::Leer;` haengt an ihm.
+                    self.fehlerkanal = f
+                        .fehler
+                        .as_ref()
+                        .and_then(|r| self.u.grund(modul, &r.text).map(|(q, _)| q));
                     self.block(b, &mut lage, ergebnis.as_ref());
+                    self.fehlerkanal = None;
                 }
             }
             // **Und der `can_fail`-Rumpf einer Probe** (2026-08-20).
@@ -470,7 +485,117 @@ impl<'a> Pruefer<'a> {
         }
     }
 
+    /// **`M124` -- die STELLUNG eines Grundwerts, und sie ist eng** (Stufe 7, 2026-08-21).
+    ///
+    /// Gemessen, nachdem der Erzeuger stand und bevor diese Regel geschrieben war: ein
+    /// Grundwert ging an **sieben** Stellungen still durch --
+    ///
+    /// ```text
+    /// let g = HolFehler::Leer;              nimm(HolFehler::Leer);
+    /// t.slots[HolFehler::Leer].w            z = HolFehler::Leer;
+    /// if HolFehler::Leer { … }              !HolFehler::Leer
+    /// ensures result == HolFehler::Leer
+    /// ```
+    ///
+    /// *`gabbro pruefe`: 13 Items, 0 Fehler, 0 Hinweise.* Die Typregeln davor sahen jedes
+    /// Mal ein `Unbekannt` und schwiegen -- **eine neue Wertart oeffnet jede Stellung, in
+    /// der eine Regel `_ =>` schreibt**, und das sind 53 Stellen in diesem Pruefer.
+    ///
+    /// Deshalb ist die Regel STRUKTURELL und nicht typweise: *ein Grund darf an genau drei
+    /// Stellen stehen*, und alles andere faellt, ohne dass irgendeine der 53 davon wissen
+    /// muss.
+    ///
+    /// | erlaubt | |
+    /// |---|---|
+    /// | `return R::F;` | die Fehlerrueckgabe -- `M122` haelt den Kanal dazu |
+    /// | `match e { … }` | die Fallunterscheidung -- `M123`/`M125` halten sie geschlossen |
+    /// | `a == b` / `a != b` | der Vergleich -- `M124` (Typhaelfte) haelt die Deklaration |
+    ///
+    /// Klammern zaehlen nicht mit: `return (R::F);` ist dieselbe Stellung.
+    fn grundstellung(&mut self, s: &Stmt, lage: &Lage) {
+        // **Ein Grund steht in ZWEI Gestalten da**, und beide muessen erfasst sein:
+        // geschrieben als `R::F`, und gebunden als das `e` eines `let … else`. *Die zweite
+        // haette man leicht uebersehen -- `e + 1` ist genau die Stellung, die die Messung
+        // vom 2026-08-21 als still durchgehend gefunden hat, und dort steht kein `R::F`.*
+        let ist_grund = |e: &Expr| match &e.art {
+            ExprArt::Grund { .. } => true,
+            ExprArt::Ort(o) => {
+                o.suffixe.is_empty()
+                    && matches!(lage.lokal.get(&o.basis.text), Some(Typ::Grund(_)))
+            }
+            _ => false,
+        };
+        /// Steigt in einen Ausdruck ab. `erlaubt` sagt, ob an DIESER Stelle ein Grund
+        /// stehen darf; ein Vergleich macht seine beiden Seiten erlaubt, alles andere
+        /// nicht.
+        fn steige(e: &Expr, erlaubt: bool, ist_grund: &dyn Fn(&Expr) -> bool, aus: &mut Vec<Span>) {
+            if ist_grund(e) {
+                if !erlaubt {
+                    aus.push(e.span);
+                }
+                return;
+            }
+            match &e.art {
+                ExprArt::Klammer(x) => steige(x, erlaubt, ist_grund, aus),
+                ExprArt::Binaer(op, a, b) if op.ist_vergleich() => {
+                    steige(a, true, ist_grund, aus);
+                    steige(b, true, ist_grund, aus);
+                }
+                _ => {
+                    for k in crate::unterausdruecke(e) {
+                        steige(k, false, ist_grund, aus);
+                    }
+                }
+            }
+        }
+        let mut schlecht = Vec::new();
+        for e in crate::eigene_ausdruecke(s) {
+            // **Nur der DIREKTE Gegenstand ist erlaubt.** `return f(R::F);` ist es
+            // nicht -- dort waere der Grund ein Argument.
+            let erlaubt = match &s.art {
+                StmtArt::Return(Some(r)) => std::ptr::eq(r, e),
+                StmtArt::Match(m) => std::ptr::eq(&m.gegenstand, e),
+                _ => false,
+            };
+            steige(e, erlaubt, &ist_grund, &mut schlecht);
+        }
+        // **Die Argumente einer ANWEISUNGSform** -- `eigene_ausdruecke` fuehrt sie nicht,
+        // weil `StmtArt::Ruf` und `StmtArt::LetSonst` ihren Ruf nicht in einem `Expr`
+        // tragen. *Gemessen: ohne diese zwei Zeilen ging `nimm(R::F);` weiter durch, und
+        // zwar als einzige der sieben Stellungen* -- die Regel haette sich mit fuenf von
+        // sieben richtig angefuehlt.
+        let rufe: &[&Ruf] = &match &s.art {
+            StmtArt::Ruf(r) => vec![r],
+            StmtArt::LetSonst(l) => l.als_ruf().into_iter().collect(),
+            _ => Vec::new(),
+        };
+        for r in rufe {
+            for a in &r.argumente {
+                steige(a, false, &ist_grund, &mut schlecht);
+            }
+        }
+        for span in schlecht {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "M124",
+                    span,
+                    "a reason value cannot stand here",
+                )
+                .mit_notiz(
+                    "a reason goes through three doors: `return` in a function that \
+                     declares `or <reason>`, the subject of a `match`, and a comparison \
+                     against a reason of the SAME declaration",
+                )
+                .mit_notiz(
+                    "the number in a `reason` line is there so that a REPORT can name it, \
+                     not so that it can be computed with, indexed by or assigned",
+                ),
+            );
+        }
+    }
+
     fn anweisung(&mut self, s: &Stmt, lage: &mut Lage, ergebnis: Option<&Typ>) {
+        self.grundstellung(s, lage);
         match &s.art {
             StmtArt::Let(l) => {
                 let wert = self.ausdruck(&l.wert, lage);
@@ -538,7 +663,43 @@ impl<'a> Pruefer<'a> {
                 lage.fakten.retain(|f| !nennt_namen(f, &l.name.text));
                 lage.lokal.insert(l.name.text.clone(), t);
                 self.aufruf_toetet_fakten(lage);
+                // **`e` bekommt einen TYP** (Stufe 7, 2026-08-21).
+                //
+                // Bis heute stand `fehlername` in genau EINER Datei des Pruefers -- in
+                // `emit.rs`, wo der Erzeuger `HolFehler e; (void)e;` schrieb. **Kein Pass
+                // wusste, dass der Name existiert:** `match e { … }` im `else`-Zweig fiel
+                // mit `M119` (*„`e` is declared nowhere"*), gemessen am 2026-08-21.
+                //
+                // > *Eine Klausel ohne Leser* -- dieselbe Lochform wie `@version`,
+                // > `nested masked` und `lock … masks irqs`. Der Binder war da, er band
+                // > nichts.
+                //
+                // Der Typ kommt aus dem `or R` des GERUFENEN, nicht aus der Umgebung des
+                // Rufers: wer scheitern kann, sagt woran (`SPRACHE.md` 8.1). Steht dort
+                // keiner, faellt schon `N028` -- hier bleibt der Name dann ungebunden, und
+                // `M119` sagt es ein zweites Mal, statt einen Typ zu erfinden.
+                let grund_typ = l
+                    .als_ruf()
+                    .and_then(|r| {
+                        self.u
+                            .fehlerkanal(&self.modul, &r.pfad.teile.last()?.text)
+                    })
+                    .map(Typ::Grund);
+                //
+                // **Eingetragen und wieder ENTFERNT**, statt in eine eigene Kopie der Lage:
+                // `unterblock` kopiert selbst und traegt die getoeteten Fakten in die
+                // aeussere Lage zurueck. *Eine zweite Kopie hier haette genau diese
+                // Rueckwirkung verschluckt* -- U1, und der Fehler waere ein Fakt gewesen,
+                // der jedes Schreiben im `else`-Zweig ueberlebt.
+                let vorher = grund_typ
+                    .map(|g| lage.lokal.insert(l.fehlername.text.clone(), g));
                 self.unterblock(&l.sonst, lage, ergebnis);
+                if let Some(alt) = vorher {
+                    match alt {
+                        Some(t) => lage.lokal.insert(l.fehlername.text.clone(), t),
+                        None => lage.lokal.remove(&l.fehlername.text),
+                    };
+                }
             }
             StmtArt::Zuweisung(z) => {
                 // **`M116` -- eine Zuweisung an ein unveraenderliches Band («NL.2.1»).**
@@ -667,6 +828,121 @@ impl<'a> Pruefer<'a> {
             }
             StmtArt::Match(m) => {
                 let gegenstand = self.ausdruck(&m.gegenstand, lage);
+                // **`M123` -- ein `match` ueber einen GRUND nennt jede Zeile seiner
+                // Deklaration** (Stufe 7, 2026-08-21).
+                //
+                // *Diese Regel schliesst ein Loch, das der Erzeuger von `e` selbst
+                // aufgemacht hat.* Vor Stufe 7 fiel `match e { … }` mit `M119` -- `e` war
+                // ungebunden, also war die Frage nach den Zweigen nie faellig. Mit dem Typ
+                // wurde sie es, und gemessen am 2026-08-21:
+                //
+                // ```text
+                // match e { GibtsGarNicht => { return 1; } }   ->  0 Fehler
+                // ```
+                //
+                // **Genau die Lochform, gegen die `D005` beim `tagged type` steht**, und die
+                // Begruendung ist woertlich dieselbe: ein `reason` ist eine ABGESCHLOSSENE
+                // Aufzaehlung, und die Sprache kennt keinen Sammelzweig. *Ohne diese Regel
+                // waere die Abgeschlossenheit eine Zusage der Grammatik, die kein Pass
+                // einloest.*
+                //
+                // > **Warum hier und nicht bei `D005`:** jener Pass baut seine Lage aus den
+                // > PARAMETERN einer Funktion. `e` ist keiner -- es entsteht am `let … else`,
+                // > und nur M1 traegt es. *Die Regel dort haette den einzigen Gegenstand
+                // > nicht gesehen, ueber den sie spricht.*
+                if let Typ::Grund(g) = &gegenstand {
+                    // **`M125` -- ein `match` ueber einem Grund OHNE `exhaustive`.**
+                    //
+                    // `SPRACHE.md`:531 sagt, was das Wort heisst: *„der erzeugte
+                    // C-`switch` hat KEIN `default`, und ein neuer Wert bricht die
+                    // Uebersetzung"*. Fehlt es, ist die Aufzaehlung offen -- und dann kann
+                    // eine Fallunterscheidung darueber nicht vollstaendig sein, waehrend
+                    // die Sprache **keinen Sammelzweig kennt** (`SYNTAX.md`:736). *Es
+                    // gaebe keine Form, die durchginge.*
+                    //
+                    // > Bis heute war `erschoepfend` in `pruefe-klauseln.py` als **TOT**
+                    // > gefuehrt: das Wort stand da, der Leser fehlte. **Diese Regel und
+                    // > der `switch` ohne `default:` sind zusammen sein erster.**
+                    if !self.u.erschoepfende_gruende.contains(g) {
+                        let kurz = crate::umgebung::kurzname(g).to_string();
+                        self.absagen.schiebe(
+                            Absage::fehler(
+                                "M125",
+                                m.gegenstand.span,
+                                format!(
+                                    "`reason {kurz}` does not say `exhaustive`, so this \
+                                     `match` cannot be complete"
+                                ),
+                            )
+                            .mit_notiz(
+                                "`exhaustive` means the generated `switch` has no \
+                                 `default` and a new value breaks compilation \
+                                 (SPRACHE.md) -- without it the enumeration is open",
+                            )
+                            .mit_notiz(
+                                "and there is no catch-all branch in this language, so no \
+                                 form of this `match` would go through",
+                            ),
+                        );
+                    }
+                    if let Some(faelle) = self.u.gruende.get(g).cloned() {
+                        let genannt: Vec<&str> =
+                            m.zweige.iter().map(|z| z.variante.text.as_str()).collect();
+                        let kurz = crate::umgebung::kurzname(g).to_string();
+                        let erfunden: Vec<&str> = genannt
+                            .iter()
+                            .copied()
+                            .filter(|n| !faelle.iter().any(|f| f == n))
+                            .collect();
+                        if !erfunden.is_empty() {
+                            let liste = erfunden
+                                .iter()
+                                .map(|x| format!("`{x}`"))
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            self.absagen.schiebe(
+                                Absage::fehler(
+                                    "M123",
+                                    m.gegenstand.span,
+                                    format!(
+                                        "this `match` over `reason {kurz}` names {liste}, \
+                                         which it does not declare"
+                                    ),
+                                )
+                                .mit_notiz(format!(
+                                    "declared are: {}",
+                                    faelle.join(", ")
+                                )),
+                            );
+                        }
+                        let fehlt: Vec<&String> = faelle
+                            .iter()
+                            .filter(|f| !genannt.contains(&f.as_str()))
+                            .collect();
+                        if !fehlt.is_empty() {
+                            let liste = fehlt
+                                .iter()
+                                .map(|x| format!("`{x}`"))
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            self.absagen.schiebe(
+                                Absage::fehler(
+                                    "M123",
+                                    m.gegenstand.span,
+                                    format!(
+                                        "this `match` over `reason {kurz}` does not name: \
+                                         {liste}"
+                                    ),
+                                )
+                                .mit_notiz(
+                                    "a `reason` is a CLOSED enumeration and there is no \
+                                     catch-all branch -- the same rule `D005` holds over a \
+                                     `tagged type`",
+                                ),
+                            );
+                        }
+                    }
+                }
                 for zweig in &m.zweige {
                     let mut innen = lage.clone();
                     // **V3 gilt auch fuer die Option, und bis zum 2026-08-19 tat sie es
@@ -840,6 +1116,55 @@ impl<'a> Pruefer<'a> {
             StmtArt::Return(Some(e)) => {
                 let t = self.ausdruck(e, lage);
                 self.rufe_im_ausdruck(e, lage);
+                // **Ein `return` eines GRUNDES ist die Fehlerrueckgabe** (Stufe 7,
+                // 2026-08-21) -- und sie geht gegen das `or R` der Signatur, nicht gegen
+                // den Erfolgstyp.
+                //
+                // *Es braucht dafuer kein neues Wort und keine neue Anweisung:* ein
+                // Grundwert kann nie den Erfolgstyp haben, also ist die Form eindeutig.
+                // **Das ist die Bedingung, unter der die Ersparnis erlaubt ist** -- ohne sie
+                // waere es ein stiller Verleser, und die kosten in diesem Ordner mehr als
+                // eine fehlende Form (`SYNTAX.md`, zum Verbundliteral).
+                if let Typ::Grund(g) = &t {
+                    let g = g.clone();
+                    match self.fehlerkanal.clone() {
+                        Some(k) if k == g => {}
+                        Some(k) => {
+                            self.absagen.schiebe(
+                                Absage::fehler(
+                                    "M122",
+                                    e.span,
+                                    format!(
+                                        "this returns a `reason {g}`, but the signature \
+                                         declares `or {k}`"
+                                    ),
+                                )
+                                .mit_notiz(
+                                    "a function has exactly one error channel, and it \
+                                     stands in its signature",
+                                ),
+                            );
+                        }
+                        None => {
+                            self.absagen.schiebe(
+                                Absage::fehler(
+                                    "M122",
+                                    e.span,
+                                    format!(
+                                        "this returns a `reason {g}`, but the signature \
+                                         declares no `or <reason>`"
+                                    ),
+                                )
+                                .mit_notiz(
+                                    "`-> T or R` is where a function says that it can fail \
+                                     and at what -- without it there is no channel to \
+                                     return through",
+                                ),
+                            );
+                        }
+                    }
+                    return;
+                }
                 if let Some(z) = ergebnis {
                     let z = z.clone();
                     self.passt_wert(e, &t, &z, e.span, "die Rueckgabe");
@@ -981,6 +1306,45 @@ impl<'a> Pruefer<'a> {
             }
             ExprArt::Wahr | ExprArt::Falsch => Typ::Wahrheit,
             ExprArt::Ergebnis => Typ::Unbekannt,
+            // **`R::F` -- der Grundwert bekommt hier seinen Typ** (Stufe 7, 2026-08-21).
+            //
+            // Bis heute war dieselbe Zeichenfolge ein `Ort` namens `R` mit einem Feld `F`,
+            // und M1 sagte `M119` (*„`R` is declared nowhere"*). **Der Fehlerkanal hatte
+            // damit eine Deklaration und keine Schreibform** -- «B9» ein zweites Mal.
+            //
+            // Zwei Absagen, und sie sind getrennt, weil sie zwei verschiedene Fehler sind:
+            // `M120` sagt, dass es den GRUND nicht gibt, `M121`, dass es den FALL nicht
+            // gibt. *Eine gemeinsame Meldung haette den Tippfehler im Fallnamen wie eine
+            // fehlende Deklaration aussehen lassen.*
+            ExprArt::Grund { grund, fall } => {
+                let Some((voll, faelle)) = self.u.grund(&self.modul, &grund.text) else {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M126",
+                            grund.span,
+                            format!("`{}` is not a declared `reason`", grund.text),
+                        )
+                        .mit_notiz(
+                            "`R::F` is the value of a reason -- the only form in which a \
+                             body produces one",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                };
+                if !faelle.contains(&fall.text) {
+                    let liste = faelle.join(", ");
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M121",
+                            fall.span,
+                            format!("`{}` is not a case of `reason {}`", fall.text, grund.text),
+                        )
+                        .mit_notiz(format!("declared are: {liste}")),
+                    );
+                    return Typ::Unbekannt;
+                }
+                Typ::Grund(voll)
+            }
             ExprArt::Klammer(i) => self.ausdruck_roh(i, lage),
             ExprArt::Ort(o) => {
                 self.name_aufloesen(o, lage);
@@ -1044,6 +1408,42 @@ impl<'a> Pruefer<'a> {
         let ta = self.ausdruck(a, lage);
         let tb = self.ausdruck(b, lage);
         if op == BinOp::Und || op == BinOp::Oder {
+            return Typ::Wahrheit;
+        }
+        // **`M124` -- ein Grund wird nur gegen einen Grund DERSELBEN Deklaration
+        // verglichen** (Stufe 7, 2026-08-21).
+        //
+        // Hier steht nur die Haelfte, die die TYPEN sieht; dass ein Grund ueberhaupt an
+        // dieser Stelle stehen darf, entscheidet `grundstellung` weiter unten. *Die
+        // Trennung ist noetig, weil die Arithmetik hier auf `Unbekannt` zurueckfiele und
+        // `Unbekannt` schweigt* -- ein Riegel ist keine Absage, derselbe Satz, den `M117`
+        // ueber `IntBereich::ist_leer()` stehen hat.
+        let grund_seite = |t: &Typ| matches!(t, Typ::Grund(_));
+        if grund_seite(&ta) || grund_seite(&tb) {
+            if !op.ist_vergleich() {
+                // Die Stellung ist verboten; `grundstellung` sagt es mit der Begruendung,
+                // die zu ihr gehoert. Hier nur der Typ, und der ist keiner.
+                return Typ::Unbekannt;
+            }
+            if matches!((&ta, &tb), (Typ::Grund(x), Typ::Grund(y)) if x == y) {
+                return Typ::Wahrheit;
+            }
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "M124",
+                    span,
+                    format!(
+                        "`{}` and `{}` are not comparable",
+                        ta.text(),
+                        tb.text()
+                    ),
+                )
+                .mit_notiz(
+                    "a reason compares against a reason of the SAME declaration and \
+                     against nothing else -- two declarations may hand out the same \
+                     number for different things",
+                ),
+            );
             return Typ::Wahrheit;
         }
         // **«F»: Gleitkommaarithmetik antwortet heute mit dem VOLLEN Bereich.**

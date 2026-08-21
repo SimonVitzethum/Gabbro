@@ -1,0 +1,33 @@
+-- erwartet: M123
+-- **Gift 235 -- ein `match` ueber einem Grund laesst einen Fall aus.**
+--
+-- Dieselbe Regel, die `D005` ueber einem `tagged type` haelt, und woertlich dieselbe
+-- Begruendung: **ein `reason` ist eine ABGESCHLOSSENE Aufzaehlung, und die Sprache kennt
+-- keinen Sammelzweig.** Ohne diese Absage waere die Abgeschlossenheit eine Zusage der
+-- Grammatik, die kein Pass einloest -- und im erzeugten C faellt ein `switch` ohne den
+-- fehlenden Fall durch und tut NICHTS.
+--
+-- *Diese Regel schliesst ein Loch, das der Erzeuger von `e` selbst aufgemacht hat.* Vor
+-- Stufe 7 fiel `match e { … }` mit `M119`, weil `e` ungebunden war; mit dem Typ wurde die
+-- Frage nach den Zweigen ueberhaupt erst faellig, und sie stand einen Lauf lang offen.
+
+module gift::match_ueber_grund_unvollstaendig {
+
+reason Buchfehler {
+    Unbelegt     = 1 "der Platz war gar nicht belegt"
+    Buchfuehrung = 2 "der Zaehler stand auf null"
+    exhaustive
+}
+
+extern fn hol() -> u32 or Buchfehler effects { pure } costs <= 1 ops;
+
+impl fn f() -> u32 effects { pure } costs <= 12 ops {
+    let v = hol() else (e) {
+        match e {
+            Unbelegt => { return 0; }
+        }
+    }
+    return v;
+}
+
+}

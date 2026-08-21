@@ -2341,6 +2341,104 @@ MUTATIONEN = [
         "B38 -- `nested masked` verliert die H013-Ausnahme, die `nested never` behaelt. "
         "Damit loest die von `H101` verlangte Abhilfe eine ZWEITE Absage aus",
     ),
+    # --- Stufe 7 ---
+    # **Der Grunderzeuger, sechs Regeln, sechs Beschaedigungen.** Jede trifft GENAU EINE:
+    # wer eine davon ueberleben sieht, weiss sofort, welche Haelfte des Fehlerkanals heute
+    # unbewacht ist.
+    Mutation(
+        "grund-ohne-deklaration-geht-durch",
+        "m1.rs",
+        "                let Some((voll, faelle)) = self.u.grund(&self.modul, &grund.text) else {",
+        "                let Some((voll, faelle)) = self.u.grund(&self.modul, &grund.text)\n"
+        "                    .or_else(|| self.u.gruende.iter().next().map(|(k, v)| (k.clone(), v))) else {",
+        "M120 -- ein `R::F` mit unbekanntem `R` nimmt irgendeinen anderen `reason`; "
+        "ein Name, den niemand erklaert, faellt an einer Bibliotheksgrenze nirgends auf",
+    ),
+    Mutation(
+        "grundfall-wird-nicht-geprueft",
+        "m1.rs",
+        "                if !faelle.contains(&fall.text) {",
+        "                if false && !faelle.contains(&fall.text) {",
+        "M121 -- ein erfundener Fallname geht durch; im C entstuende `R_GibtsNicht`, "
+        "und erst `cc` saehe es",
+    ),
+    Mutation(
+        "grund-ohne-kanal-geht-durch",
+        "m1.rs",
+        "                if let Typ::Grund(g) = &t {\n                    let g = g.clone();",
+        "                if let (Typ::Grund(g), Some(_)) = (&t, &self.fehlerkanal) {\n"
+        "                    let g = g.clone();",
+        "M122 -- ein `return R::F` in einer Funktion OHNE `or R` faellt nicht mehr; "
+        "die C-Signatur haette keinen `*_grund`, in den der Wert ginge",
+    ),
+    Mutation(
+        "match-ueber-grund-darf-luecken-haben",
+        "m1.rs",
+        "                        let fehlt: Vec<&String> = faelle\n"
+        "                            .iter()\n"
+        "                            .filter(|f| !genannt.contains(&f.as_str()))\n"
+        "                            .collect();",
+        "                        let fehlt: Vec<&String> = Vec::new();",
+        "M123 -- ein `match` ueber einem Grund darf einen Fall auslassen; der erzeugte "
+        "`switch` faellt dort durch und tut NICHTS",
+    ),
+    # **`M124` hat ZWEI Haelften, und darum zwei Mutationen.** Die STELLUNG entscheidet, wo
+    # ein Grund stehen darf; die TYPEN entscheiden, wogegen er dort gehalten wird. *Eine
+    # einzelne Mutation haette die andere Haelfte gedeckt aussehen lassen* -- gemessen: die
+    # erste Fassung dieser Mutation zielte auf die Typhaelfte, und Gift 236 fiel trotzdem,
+    # weil die Stellungshaelfte es fing.
+    Mutation(
+        "grund-darf-ueberall-stehen",
+        "m1.rs",
+        "                if !erlaubt {\n                    aus.push(e.span);\n                }",
+        "                if false && !erlaubt {\n                    aus.push(e.span);\n                }",
+        "M124 (Stellung) -- `let g = R::F;`, `nimm(R::F)`, `t.slots[e]`, `z = R::F` und "
+        "`e + 1` gehen wieder still durch; sieben Stellungen, gemessen am 2026-08-21",
+    ),
+    Mutation(
+        "grund-gegen-alles-vergleichbar",
+        "m1.rs",
+        "            if matches!((&ta, &tb), (Typ::Grund(x), Typ::Grund(y)) if x == y) {",
+        "            if true {",
+        "M124 (Typen) -- `e == 1` faellt nicht mehr; zwei `reason`-Deklarationen vergeben "
+        "dieselbe Zahl fuer verschiedene Dinge",
+    ),
+    Mutation(
+        "gebundener-grund-wird-nicht-erkannt",
+        "m1.rs",
+        "            ExprArt::Ort(o) => {\n"
+        "                o.suffixe.is_empty()\n"
+        "                    && matches!(lage.lokal.get(&o.basis.text), Some(Typ::Grund(_)))\n"
+        "            }",
+        "            ExprArt::Ort(_) => false,",
+        "M124 (Stellung) -- das `e` eines `let … else` gilt nicht mehr als Grund; nur noch "
+        "das geschriebene `R::F` faellt auf, und `e + 1` ist wieder still",
+    ),
+    Mutation(
+        "kanal-ohne-einloeser-geht-durch",
+        "namen.rs",
+        "        if !scheitert(b) {",
+        "        if false && !scheitert(b) {",
+        "N034 -- eine eigene Funktion erklaert `or R` und kann nie scheitern; der "
+        "Erzeuger gibt ihr einen `*_grund`, den kein Pfad je schreibt",
+    ),
+    Mutation(
+        "offener-grund-darf-gematcht-werden",
+        "m1.rs",
+        "                    if !self.u.erschoepfende_gruende.contains(g) {",
+        "                    if false && !self.u.erschoepfende_gruende.contains(g) {",
+        "M125 -- `exhaustive` verliert seinen einzigen Leser im Pruefer wieder; ein "
+        "offener Grund wird gematcht, und der erzeugte `switch` faellt bei einem neuen "
+        "Wert durch",
+    ),
+    Mutation(
+        "grundwert-wird-wieder-ein-ort",
+        "gabbro-syntax/src/parse.rs",
+        "                    if pfad.teile.len() == 2 {",
+        "                    if false && pfad.teile.len() == 2 {",
+        "Die Produktion `reasonval` selbst -- `R::F` wird wieder ein Ort mit Feldsuffix, "
+        "und der Fehlerkanal hat wieder keine Schreibform",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

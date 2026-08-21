@@ -1,0 +1,34 @@
+-- erwartet: M125
+-- **Gift 238 -- ein `match` ueber einem Grund, der `exhaustive` nicht sagt.**
+--
+-- `SPRACHE.md`:531 sagt seit langem, was das Wort heisst: *„der erzeugte C-`switch` hat
+-- KEIN `default`, und ein neuer Wert bricht die Uebersetzung."* **Und keine Zeile tat es** --
+-- `pruefe-klauseln.py` fuehrte `erschoepfend` als TOT: das Wort stand da, der Leser fehlte.
+--
+-- Fehlt `exhaustive`, ist die Aufzaehlung offen. Dann kann eine Fallunterscheidung darueber
+-- nicht vollstaendig sein, und einen Sammelzweig kennt die Sprache nicht (`SYNTAX.md`:736):
+-- **es gaebe keine Form dieses `match`, die durchginge.** Also faellt er hier, statt an
+-- `M123` mit der falschen Begruendung zu fallen.
+--
+-- *Die Bedeutung ist nachgezogen, nicht erfunden* -- R9: die Regel folgt dem Bestand.
+
+module gift::match_ueber_offenen_grund {
+
+reason Buchfehler {
+    Unbelegt     = 1 "der Platz war gar nicht belegt"
+    Buchfuehrung = 2 "der Zaehler stand auf null"
+}
+
+extern fn hol() -> u32 or Buchfehler effects { pure } costs <= 1 ops;
+
+impl fn f() -> u32 effects { pure } costs <= 12 ops {
+    let v = hol() else (e) {
+        match e {
+            Unbelegt     => { return 0; }
+            Buchfuehrung => { return 1; }
+        }
+    }
+    return v;
+}
+
+}

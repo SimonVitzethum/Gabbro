@@ -598,3 +598,72 @@ fn die_praemissen_ohne_pass_sind_gezaehlt() {
          steht er wieder in der Luft, ist eine Regel zurueckgegangen"
     );
 }
+
+// --- Stufe 7 ---
+
+/// **Ein `reason` eine Modulebene WEITER AUSSEN als die Funktion, die ihn nennt.**
+///
+/// Der Fehlerkanal wird zweimal aufgeloest: erst die FUNKTION vom Rufort aus, dann ihr
+/// `reason` von IHREM Modul aus. **Die erste Fassung von `Umgebung::fehlerkanaele` hat die
+/// zweite Aufloesung vergessen** und den Namen mit `qualifiziere(pfad, …)` an das Modul der
+/// Funktion geheftet -- ein Schluessel, den nichts traegt.
+///
+/// > Der ganze Beispielkorpus deklariert `reason` und Rumpf im SELBEN Modul, und
+/// > `beispiele/48` tut es auch. *Diese Probe ist die einzige Stelle, an der der Fehler
+/// > auffiele* -- und ohne sie waere er ein `M119` an einem Programm, das in Ordnung ist.
+///
+/// Gefunden nicht durch Nachdenken, sondern weil `pruefe-zahlen.py` die Zahl der *„Blicke
+/// ohne Modulkandidaten -- jeder ein moegliches `M103`-Loch"* um eins steigen sah.
+#[test]
+fn ein_grund_aus_dem_umgebenden_modul_loest_auf() {
+    let quelle = r#"
+module probe {
+reason HolFehler { Leer = 1 "leer"  Kaputt = 2 "kaputt"  exhaustive }
+module innen {
+extern fn hol() -> u32 or HolFehler effects { pure } costs <= 1 ops;
+impl fn ruf() -> u32 effects { pure } costs <= 12 ops {
+    let v = hol() else (e) {
+        match e { Leer => { return 1; } Kaputt => { return 2; } }
+    }
+    return v;
+}
+}
+}
+"#;
+    let c = codes(quelle);
+    let fehler: Vec<&str> = c
+        .iter()
+        .filter(|(_, s)| *s == Stufe::Fehler)
+        .map(|(k, _)| *k)
+        .collect();
+    assert!(
+        fehler.is_empty(),
+        "der `reason` steht im umgebenden Modul und loest auf -- gefallen ist {fehler:?}"
+    );
+}
+
+/// **Die Gegenrichtung derselben Probe:** derselbe Aufbau, ein Fall zu wenig im `match`.
+///
+/// *Ohne sie sagte die Probe darueber nur, dass NICHTS faellt* -- und das saehe genauso aus,
+/// wenn `e` gar keinen Typ bekaeme und `M123` deshalb nie faellig wuerde. **W10: nicht
+/// abgewiesen ist nicht bestaetigt.**
+#[test]
+fn ein_grund_aus_dem_umgebenden_modul_haelt_auch_zu() {
+    faellt_mit(
+        r#"
+module probe {
+reason HolFehler { Leer = 1 "leer"  Kaputt = 2 "kaputt"  exhaustive }
+module innen {
+extern fn hol() -> u32 or HolFehler effects { pure } costs <= 1 ops;
+impl fn ruf() -> u32 effects { pure } costs <= 12 ops {
+    let v = hol() else (e) {
+        match e { Leer => { return 1; } }
+    }
+    return v;
+}
+}
+}
+"#,
+        "M123",
+    );
+}
