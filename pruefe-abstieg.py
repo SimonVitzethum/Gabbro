@@ -84,6 +84,54 @@ def doppelt(name, rumpf, arten):
     return aus
 
 
+def je_funktion(ganz, arten):
+    """Zerlegt eine Quelle in (doppelte, luecken, entschuldigt) -- **je FUNKTION**.
+
+    Die Dateiebene war zu grob: `m2::gehe` fehlte `observes`, waehrend `m2::sammle_forever`
+    es nannte, und die Datei galt als gedeckt. *Dieselbe Vergroeberung, die der Waechter an
+    den Paessen misst, hatte er selbst.*
+    """
+    doppelte, luecken, entschuldigt = [], [], []
+    for name, rumpf in funktionen(ganz):
+        if "StmtArt::" not in rumpf:
+            continue
+        # **Die Gegenrichtung, und sie hat sofort gebissen** (2026-08-19): wer den
+        # gemeinsamen Absteiger nimmt UND daneben noch einen eigenen Arm stehen laesst,
+        # laeuft jeden Unterblock ZWEIMAL -- und das ist 2^Tiefe.
+        #
+        # Gemessen an `m1::sammle_schreibziele`, wo genau das passiert war: 26
+        # geschachtelte `if` brauchten **1,88 s**, danach **0,003 s**; bei 50 lief der
+        # Pruefer laenger als anderthalb Minuten. *Ein Waechter, der nur eine Richtung
+        # prueft, misst die Haelfte* -- und diese Haelfte hat er selbst durchgelassen.
+        if "unterbloecke(" in rumpf:
+            for arm in doppelt(name, rumpf, arten):
+                doppelte.append((name, arm))
+            continue
+        # Nur Wege, die ueberhaupt absteigen wollen: wer keinen einzigen Unterblock
+        # anfasst, ist ein Blattpruefer und keine Luecke.
+        if not any(re.search(r"StmtArt::" + a + r"\b", rumpf) for a in arten):
+            continue
+        fehlt = [a for a in arten if not re.search(r"StmtArt::" + a + r"\b", rumpf)]
+        if not fehlt:
+            continue
+        # **Ein Sammelzweig, der WEIGERT, ist keine Luecke** -- der Erzeuger nennt jede
+        # Anweisungsart, die er nicht kann, beim Namen (`C001`).
+        #
+        # **Und diese Entschuldigung gilt seit dem 2026-08-21 je FUNKTION statt je DATEI.**
+        # Bis dahin genuegte EIN `_ => weigere(` irgendwo in `emit.rs`, und damit war die
+        # ganze Datei entschuldigt: `emit` stand als *„weigert sich benannt"* da, waehrend
+        # drei Sammler darin ihre Unterbloecke nicht erreichten (`sammle_retry` sah kein
+        # `if`, `verbundlokale` kein `observes`, `benutzte_namen` kein `breaking`).
+        # *Genau die Vergroeberung, die dieser Waechter zwei Tage vorher an den Paessen
+        # gemessen und bei sich selbst stehen gelassen hatte* -- dieselbe Klasse, eine Ebene
+        # hoeher.
+        if "_ => weigere(" in rumpf:
+            entschuldigt.append((name, fehlt))
+        else:
+            luecken.append((name, fehlt))
+    return doppelte, luecken, entschuldigt
+
+
 def messe():
     arten = mit_block()
     zeilen, offen = [], 0
@@ -94,46 +142,17 @@ def messe():
         ganz = d.read_text()
         if "StmtArt::" not in ganz:
             continue
-        # **Ein Sammelzweig, der WEIGERT, ist keine Luecke.** Der Erzeuger nennt jede
-        # Anweisungsart, die er nicht kann, beim Namen (`C001`) -- gemessen an
-        # `beispiele/31-rcu.gab`: *no lowering: statement kind*. Das ist der Unterschied
-        # zwischen einem Vorbehalt und einer stillen Zusage.
-        weigert = "_ => weigere(" in ganz
-        # **Je FUNKTION, nicht je Datei** -- die Dateiebene war zu grob: `m2::gehe` fehlte
-        # `observes`, waehrend `m2::sammle_forever` es nannte, und die Datei galt als gedeckt.
-        # *Dieselbe Vergroeberung, die der Waechter an den Paessen misst, hatte er selbst.*
-        luecken = []
-        for name, rumpf in funktionen(ganz):
-            if "StmtArt::" not in rumpf:
-                continue
-            # **Die Gegenrichtung, und sie hat sofort gebissen** (2026-08-19): wer den
-            # gemeinsamen Absteiger nimmt UND daneben noch einen eigenen Arm stehen laesst,
-            # laeuft jeden Unterblock ZWEIMAL -- und das ist 2^Tiefe.
-            #
-            # Gemessen an `m1::sammle_schreibziele`, wo genau das passiert war: 26
-            # geschachtelte `if` brauchten **1,88 s**, danach **0,003 s**; bei 50 lief der
-            # Pruefer laenger als anderthalb Minuten. *Ein Waechter, der nur eine Richtung
-            # prueft, misst die Haelfte* -- und diese Haelfte hat er selbst durchgelassen.
-            if "unterbloecke(" in rumpf:
-                for arm in doppelt(name, rumpf, arten):
-                    offen += 1
-                    zeilen.append(f"  {p}::{name:<20} DOPPELTER ABSTIEG in: {arm}")
-                continue
-            # Nur Wege, die ueberhaupt absteigen wollen: wer keinen einzigen Unterblock
-            # anfasst, ist ein Blattpruefer und keine Luecke.
-            if not any(re.search(r"StmtArt::" + a + r"\b", rumpf) for a in arten):
-                continue
-            fehlt = [a for a in arten if not re.search(r"StmtArt::" + a + r"\b", rumpf)]
-            if fehlt:
-                luecken.append((name, fehlt))
-        if not luecken:
+        doppelte, luecken, entschuldigt = je_funktion(ganz, arten)
+        for name, arm in doppelte:
+            offen += 1
+            zeilen.append(f"  {p}::{name:<20} DOPPELTER ABSTIEG in: {arm}")
+        if not luecken and not entschuldigt and not doppelte:
             zeilen.append(f"  {p:<14} gedeckt")
-        elif weigert:
-            zeilen.append(f"  {p:<14} weigert sich benannt")
-        else:
-            offen += len(luecken)
-            for name, fehlt in luecken:
-                zeilen.append(f"  {p}::{name:<20} OHNE ABSTIEG in: {', '.join(fehlt)}")
+        for name, fehlt in entschuldigt:
+            zeilen.append(f"  {p}::{name:<20} weigert sich benannt ({len(fehlt)} Arten)")
+        offen += len(luecken)
+        for name, fehlt in luecken:
+            zeilen.append(f"  {p}::{name:<20} OHNE ABSTIEG in: {', '.join(fehlt)}")
     return arten, zeilen, offen
 
 
@@ -165,7 +184,33 @@ def main():
     sauber = gift.replace("StmtArt::Sperrt(x) => probe(&x.rumpf),", "StmtArt::Sperrt(_) => {}")
     if doppelt("probe", sauber, arten):
         sys.exit("SPRECHPROBE GESCHEITERT: falsches Rot am einfachen Abstieg")
+    # **Und die dritte Richtung, seit dem 2026-08-21: die ENTSCHULDIGUNG darf nicht ueber
+    # die Funktionsgrenze reichen.** Die Probe stellt genau die Lage her, die `emit.rs` bis
+    # heute hatte: eine Funktion weigert sich benannt, die daneben hat eine Luecke.
+    gift2 = """
+fn weigerer(s: &Stmt) {
+    match &s.art {
+        StmtArt::Wenn(_) => {}
+        StmtArt::Match(_) => {}
+        _ => weigere(a, s.span, "no lowering"),
+    }
+}
+
+fn sammler(b: &Block) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Wenn(w) => sammler(w),
+            _ => {}
+        }
+    }
+}"""
+    _, l2, e2 = je_funktion(gift2, arten)
+    if not any(n == "sammler" for n, _ in l2):
+        sys.exit("SPRECHPROBE GESCHEITERT: die Entschuldigung des Nachbarn deckt eine Luecke")
+    if not any(n == "weigerer" for n, _ in e2):
+        sys.exit("SPRECHPROBE GESCHEITERT: eine benannte Weigerung wird nicht mehr entschuldigt")
     print("  (Sprechprobe: fehlender UND doppelter Abstieg werden gemeldet -- ok)")
+    print("  (Sprechprobe: die Weigerung entschuldigt NUR ihre eigene Funktion -- ok)")
     if offen:
         print(f"== ABSTIEG: {offen} Paesse mit Luecke ==")
         return 1

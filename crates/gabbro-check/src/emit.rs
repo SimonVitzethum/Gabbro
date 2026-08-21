@@ -193,29 +193,42 @@ fn verbundlokale(b: &Block, u: &Namen, aus: &mut Vec<String>) {
                     aus.push(l.name.text.clone())
                 }
             }
-            StmtArt::Wenn(w) => {
-                for (_, r) in &w.zweige {
-                    verbundlokale(r, u, aus);
-                }
-                if let Some(r) = &w.sonst {
-                    verbundlokale(r, u, aus);
-                }
-            }
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    verbundlokale(&z.rumpf, u, aus);
-                }
-            }
-            StmtArt::Bricht(x) => verbundlokale(&x.rumpf, u, aus),
-            StmtArt::Sperrt(x) => verbundlokale(&x.rumpf, u, aus),
-            StmtArt::Narrow(x) => verbundlokale(&x.sonst, u, aus),
-            StmtArt::LetSonst(x) => verbundlokale(&x.sonst, u, aus),
-            StmtArt::Schleife(sch) => match sch.as_ref() {
-                Schleife::Traverse(t) => verbundlokale(&t.rumpf, u, aus),
-                Schleife::Retry(r) => verbundlokale(&r.rumpf, u, aus),
-                Schleife::Forever(f) => verbundlokale(&f.rumpf, u, aus),
-            },
-            _ => {}
+            // **`let x = call else (e) { … }` binds a name too, and this collector does not
+            // register it.** The reason is the error channel, not an oversight: a callee
+            // declared `-> T or R` returns the ERROR in C and hands `T` back through
+            // `*_wert`, so whether `x` ends up a value or a pointer is decided at the
+            // lowering of the statement and not here. **Left open on purpose** -- and now it
+            // is written down instead of falling into a catch-all.
+            StmtArt::LetSonst(_) => {}
+            // `let x = place awaits { … }` unwraps an ATOMIC. An atomic carries a scalar
+            // payload -- never a record -- so there is nothing to register.
+            StmtArt::AwaitLoad(_) => {}
+            // `let x = place exchange …` likewise yields the atomic's scalar payload.
+            StmtArt::Exchange(_) => {}
+            // The forms that bind no name at all. **Written out one by one** so that a new
+            // `StmtArt` is a compile error here rather than a silent "binds nothing".
+            StmtArt::Zuweisung(_)
+            | StmtArt::Wenn(_)
+            | StmtArt::Match(_)
+            | StmtArt::Schleife(_)
+            | StmtArt::Bricht(_)
+            | StmtArt::Narrow(_)
+            | StmtArt::Sperrt(_)
+            | StmtArt::Observiert(_)
+            | StmtArt::Leave(_)
+            | StmtArt::Next(_)
+            | StmtArt::Publish(_)
+            | StmtArt::Return(_)
+            | StmtArt::Ruf(_) => {}
+        }
+        // **The descent is not spelled out a second time.** It used to be -- nine arms of
+        // its own -- and the copy had drifted: `observes { … }` and the `update` body of an
+        // `exchange` carry blocks, and neither was visited, so a record local declared in
+        // one of them was lowered with `->` instead of `.`. *Two registers over the same
+        // thing run apart* (W7); `crate::unterbloecke` is the one register, and it matches
+        // over `StmtArt` without a catch-all arm.
+        for k in crate::unterbloecke(s) {
+            verbundlokale(k, u, aus);
         }
     }
 }
@@ -385,7 +398,46 @@ fn rechnet_mit_gleitkomma(baum: &Programm) -> bool {
             ja |= f.ergebnis.as_ref().is_some_and(im_typ);
         }
         ItemArt::Accumulates(a) => ja |= im_typ(&a.typ),
-        _ => {}
+        // **Zwei Traeger, die der Sammelzweig verschwiegen hat** (2026-08-21): ein
+        // `table T { slot { g : f64, } }` und ein `format F { x : f32, }` rechnen mit
+        // Gleitkomma, und die Ansage stand nicht im Erzeugnis. *Die Ansage ist keine
+        // Verzierung* -- sie sagt dem Uebersetzer `-ffast-math ist verboten` und dem
+        // Kerneleser, dass diese Einheit FPU-Zustand anfasst. **Eine Aussage, die fehlt,
+        // ist keine schwaechere Aussage, sondern gar keine.**
+        ItemArt::Tabelle(t) => {
+            if let Some(slot) = &t.slot {
+                for f in &slot.felder {
+                    if let SlotTyp::Typ(x) = &f.typ {
+                        ja |= im_typ(x);
+                    }
+                }
+            }
+            ja |= t.konstanten.iter().any(|k| im_typ(&k.typ));
+        }
+        ItemArt::Format(f) => ja |= f.felder.iter().any(|x| im_typ(&x.typ.typ)),
+        // **Und die Traeger, die KEINEN Gleitkommatyp fuehren koennen -- einzeln, mit dem
+        // Grund.** Ein Register ist ein Wort fester Breite (`intty`), eine `reason` eine
+        // Aufzaehlung, ein `atomic` traegt eine Ganzzahl, und die uebrigen erklaeren
+        // ueberhaupt keinen Typ, sondern eine Beziehung, eine Annahme oder eine Naht.
+        //
+        // *Der Sammelzweig hatte fuer diese dieselbe Antwort und keinen Grund* -- und darum
+        // fielen die zwei darueber genauso durch wie sie.
+        ItemArt::Modul(_)
+        | ItemArt::Use(_)
+        | ItemArt::Device(_)
+        | ItemArt::Reason(_)
+        | ItemArt::State(_)
+        | ItemArt::Assume(_)
+        | ItemArt::Axiom(_)
+        | ItemArt::Check(_)
+        | ItemArt::Atomic(_)
+        | ItemArt::Lock(_)
+        | ItemArt::Rcu(_)
+        | ItemArt::Gruppe(_)
+        | ItemArt::Walk(_)
+        | ItemArt::Entry(_)
+        | ItemArt::Entrust(_)
+        | ItemArt::Boot(_) => {}
     });
     ja
 }
@@ -432,11 +484,22 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         }
         ItemArt::Atomic(a) => {
             // (Speichern, Laden) -- die Deklaration nennt die Speicherseite.
+            // **Written out, because the catch-all here decided a MEMORY MODEL by
+            // default.** `_ => relaxed` covered the declared `relaxed` and the missing
+            // clause -- both right today -- and would have covered a fifth ordering as well,
+            // silently and with the weakest of them all. *A wrong memory order is the one
+            // defect that does not show up in a test run; it shows up on another machine.*
             let (sp, ld) = match a.ordnung {
                 Some(Ordnung::Release) => ("memory_order_release", "memory_order_acquire"),
                 Some(Ordnung::Acquire) => ("memory_order_release", "memory_order_acquire"),
                 Some(Ordnung::Seq) => ("memory_order_seq_cst", "memory_order_seq_cst"),
-                _ => ("memory_order_relaxed", "memory_order_relaxed"),
+                // `atomic x : u32 publishes nothing relaxed;` -- the load-free counter.
+                Some(Ordnung::Relaxed) => ("memory_order_relaxed", "memory_order_relaxed"),
+                // **No clause at all is `relaxed`, and that is a decision, not an absence.**
+                // The declaration promises nothing about visibility, so the emitter must
+                // not promise anything either -- anything stronger would be a guarantee the
+                // checker never gave.
+                None => ("memory_order_relaxed", "memory_order_relaxed"),
             };
             namen.atomics.insert(a.name.text.clone(), (String::new(), sp, ld));
         }
@@ -472,7 +535,41 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 namen.typen.insert(t.name.text.clone(), unter.clone());
             }
         }
-        _ => {}
+        // **Der Namensindex ist die Karte, auf der jede spaetere Absenkung nachschlaegt --
+        // und ein Sammelzweig darin heisst „dieses Konstrukt steht auf keiner Karte".**
+        //
+        // Genau diese Klasse steht drei Bildschirme weiter unten schon aufgeschrieben: ein
+        // `device` als WERTPARAMETER stand bis 2026-08-20 in keiner der beiden Karten, der
+        // Erzeuger nahm den gewoehnlichen Ortspfad, und `d.ST.IDX` wurde `d->ST.IDX` -- ein
+        // Feldzugriff auf etwas, das keine Felder hat. **`cc` brach ab, `C001` schwieg.**
+        //
+        // *Die Karte fehlt nicht laut, sie fehlt still.* Darum stehen die Traeger, die
+        // NICHTS eintragen, hier einzeln: `lock`, `rcu` und `walk` tragen ihren Namen selbst
+        // und werden ueber ihn gefunden; `use`, `module`, `assume`, `axiom`, `check`,
+        // `group`, `reason`, `state`, `entry`, `entrust` und `boot` erklaeren keinen Namen,
+        // den eine Absenkung nachschlagen muesste.
+        //
+        // > **Und `static` steht hier, weil `rustc` beim Ausschreiben danach gefragt hat.**
+        // > Ein `static x : Verbund` traegt keinen Eintrag in `namen.werte` -- der Zugriff
+        // > darauf laeuft ueber den gewoehnlichen Ortspfad. *Ob das reicht, hat vor dem
+        // > Ausschreiben nie jemand gefragt, weil der Sammelzweig die Frage gar nicht
+        // > stellte.* Das Verhalten bleibt; die Frage steht jetzt da.
+        ItemArt::Modul(_)
+        | ItemArt::Use(_)
+        | ItemArt::Funktion(_)
+        | ItemArt::Statisch(_)
+        | ItemArt::Reason(_)
+        | ItemArt::State(_)
+        | ItemArt::Assume(_)
+        | ItemArt::Axiom(_)
+        | ItemArt::Check(_)
+        | ItemArt::Lock(_)
+        | ItemArt::Rcu(_)
+        | ItemArt::Gruppe(_)
+        | ItemArt::Walk(_)
+        | ItemArt::Entry(_)
+        | ItemArt::Entrust(_)
+        | ItemArt::Boot(_) => {}
     });
     // **Second pass, and it needs the first**: whether a parameter is a ghost can only be
     // decided once the ghost names are known.
@@ -811,7 +908,37 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 }
             }
             ItemArt::Check(c) => benutzte_namen(&c.can_fail, &mut benutzt),
-            _ => {}
+            // **Die Traeger OHNE Rumpf -- einzeln, und der Grund ist bei allen derselbe:
+            // nur ein `Block` kann eine Tabelle beim Namen nennen.** `unterbloecke` und
+            // `benutzte_namen` laufen ueber Anweisungen; wo keine stehen, gibt es nichts zu
+            // finden.
+            //
+            // *Zwei davon sind knapp daran vorbei:* ein `device` senkt seine `transition`
+            // ab, aber ueber `d->basis` und nie ueber eine Tabelle; und ein `boot` senkt
+            // `set x = <expr>` als `static const uint64_t` ab, was C zu einem
+            // Konstantenausdruck zwingt -- **ein Tabellenzugriff waere dort schon kein
+            // gueltiges C.** Beide sind damit ausgeschlossen und nicht bloss unbeobachtet.
+            ItemArt::Modul(_)
+            | ItemArt::Use(_)
+            | ItemArt::Typ(_)
+            | ItemArt::Konst(_)
+            | ItemArt::Statisch(_)
+            | ItemArt::Tabelle(_)
+            | ItemArt::Format(_)
+            | ItemArt::Device(_)
+            | ItemArt::Reason(_)
+            | ItemArt::State(_)
+            | ItemArt::Assume(_)
+            | ItemArt::Axiom(_)
+            | ItemArt::Atomic(_)
+            | ItemArt::Lock(_)
+            | ItemArt::Rcu(_)
+            | ItemArt::Gruppe(_)
+            | ItemArt::Accumulates(_)
+            | ItemArt::Walk(_)
+            | ItemArt::Entry(_)
+            | ItemArt::Entrust(_)
+            | ItemArt::Boot(_) => {}
         });
         // **«B41b»: ein Baumdurchlauf ueber einem blanken Index adressiert seine Tabelle
         // ebenfalls beim Namen** (2026-08-20).
@@ -1048,7 +1175,33 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                 weigere(absagen, k.name.span, "const with a non-constant value");
             }
         }
-        _ => {}
+        // **Dieser Gang schreibt NUR `#define`s, und nur ein `const` erklaert einen.**
+        // Alles andere hat seinen eigenen Gang -- die Typen den davor, die Ruempfe den
+        // danach --, und dass die Reihenfolge zwischen ihnen entschieden ist und nicht der
+        // Quellreihenfolge folgt, steht oben. *Ein Sammelzweig hier las sich wie „das
+        // uebrige kommt spaeter"; er sagte aber nur „hier nicht".*
+        ItemArt::Modul(_)
+        | ItemArt::Use(_)
+        | ItemArt::Typ(_)
+        | ItemArt::Statisch(_)
+        | ItemArt::Funktion(_)
+        | ItemArt::Tabelle(_)
+        | ItemArt::Format(_)
+        | ItemArt::Device(_)
+        | ItemArt::Reason(_)
+        | ItemArt::State(_)
+        | ItemArt::Assume(_)
+        | ItemArt::Axiom(_)
+        | ItemArt::Check(_)
+        | ItemArt::Atomic(_)
+        | ItemArt::Lock(_)
+        | ItemArt::Rcu(_)
+        | ItemArt::Gruppe(_)
+        | ItemArt::Accumulates(_)
+        | ItemArt::Walk(_)
+        | ItemArt::Entry(_)
+        | ItemArt::Entrust(_)
+        | ItemArt::Boot(_) => {}
     });
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Typ(t) = &item.art {
@@ -1545,29 +1698,30 @@ fn retry_schranken(baum: &Programm) -> HashMap<u32, i128> {
 
 fn sammle_retry(baum: &Programm, modul: &str, b: &Block, aus: &mut HashMap<u32, i128>) {
     for s in &b.anweisungen {
-        match &s.art {
-            StmtArt::Schleife(sch) => {
-                if let Schleife::Retry(r) = sch.as_ref() {
-                    let budget = crate::umgebung::Umgebung::sammle(baum)
-                        .konst_wert(modul, &r.schranke);
-                    let je_gang =
-                        crate::kosten::durchgangskosten(baum, modul, r, HashMap::new());
-                    if let (Some(n), Some(c)) = (budget, je_gang) {
-                        if c > 0 && n / c > 0 {
-                            aus.insert(r.span.von, n / c);
-                        }
+        // **The one decision this collector makes: does this statement OPEN a `retry`?**
+        if let StmtArt::Schleife(sch) = &s.art {
+            if let Schleife::Retry(r) = sch.as_ref() {
+                let budget = crate::umgebung::Umgebung::sammle(baum)
+                    .konst_wert(modul, &r.schranke);
+                let je_gang = crate::kosten::durchgangskosten(baum, modul, r, HashMap::new());
+                if let (Some(n), Some(c)) = (budget, je_gang) {
+                    if c > 0 && n / c > 0 {
+                        aus.insert(r.span.von, n / c);
                     }
-                    sammle_retry(baum, modul, &r.rumpf, aus);
                 }
             }
-            StmtArt::Sperrt(x) => sammle_retry(baum, modul, &x.rumpf, aus),
-            StmtArt::Match(m) => {
-                for z in &m.zweige {
-                    sammle_retry(baum, modul, &z.rumpf, aus);
-                }
-            }
-            StmtArt::Narrow(n) => sammle_retry(baum, modul, &n.sonst, aus),
-            _ => {}
+        }
+        // **What the catch-all promised here was false.** The four arms it stood behind
+        // reached `locks`, `match`, `narrow` and the body of a `retry` -- and nothing else.
+        // A `retry` inside an `if`, inside a `breaking`, inside an `observes`, inside the
+        // `else` of a `let … else`, inside the `update` body of an `exchange` or inside a
+        // `forever`/`traverse` therefore had **no entry in the bound map at all**, and the
+        // lowering answered that with `C001`: *"`bounded … ops` -- the per-pass cost is not
+        // fixed"*. **The cost was fixed; the collector never got there.** A refusal that
+        // names the wrong reason is the failure this file is built against, one step short
+        // of a silent one.
+        for k in crate::unterbloecke(s) {
+            sammle_retry(baum, modul, k, aus);
         }
     }
 }
@@ -1896,11 +2050,12 @@ fn bank(d: &Device, b: &Bank, aus: &mut String, u: &Namen, absagen: &mut Absagen
     };
     // Die BASIS darf berechnet sein -- das ist der Sinn der Form. Sie muss aber aus Feldern
     // dieses Geraets kommen, sonst kennt der Erzeuger ihren Wert nicht.
-    let lage = ausdruck_geraet(&b.basis, d, u, absagen);
-    if lage.is_empty() {
-        weigere(absagen, b.span, "`bank` base that is not computed from this device's fields");
+    let Some(lage) = ausdruck_geraet(&b.basis, d, u, absagen) else {
+        // Der GRUND steht schon in `ausdruck_geraet`, an der Stelle, die ihn kennt. Hier
+        // bleibt nur der Abbruch -- **eine zweite Absage waere ein zweites Register ueber
+        // derselben Sache** (W7), und der Leser bekaeme zwei Zeilen fuer einen Befund.
         return;
-    }
+    };
     for r in &b.register {
         let Some(off) = konst_zahl(&r.versatz) else {
             weigere(absagen, r.name.span, "`bank` register at a non-constant offset");
@@ -1917,33 +2072,84 @@ fn bank(d: &Device, b: &Bank, aus: &mut String, u: &Namen, absagen: &mut Absagen
 }
 
 /// Ein Ausdruck ueber Feldern DIESES Geraets -- fuer die berechnete Banklage.
-fn ausdruck_geraet(e: &Expr, d: &Device, u: &Namen, absagen: &mut Absagen) -> String {
-    match &e.art {
+///
+/// **Die leere Zeichenkette war das Fehlerzeichen, und sie ueberlebte die Zusammensetzung
+/// nicht** (aufgeraeumt 2026-08-21). `bank` prueft `lage.is_empty()`, und in einem BLATT
+/// stimmte das auch. Sobald das unbekannte Blatt aber in einem `Binaer` oder einer `Klammer`
+/// steckte, kam `" * 16"` oder `"()"` heraus -- **nicht leer**, also durch die Wache. Was
+/// dann in `bank` geschrieben wurde, war `(d->basis + ( * 16) + …)`.
+///
+/// > *Der Fehler faellt bei `cc` und nicht still* -- aber genau darum geht es in diesem
+/// > Modul nicht: **eine Weigerung, auf die man baut, ist eine Zusage.** Der Erzeuger
+/// > entscheidet hier und delegiert nicht an den C-Uebersetzer, dessen Meldung ueber eine
+/// > Zeile spricht, die der Anwender nie geschrieben hat.
+///
+/// `Option` traegt das Scheitern jetzt durch `?` -- und der Sammelzweig ist ausgeschrieben,
+/// damit eine neue Ausdrucksform nicht dieselbe Reise noch einmal macht.
+fn ausdruck_geraet(e: &Expr, d: &Device, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    Some(match &e.art {
         ExprArt::Zahl(n) => n.to_string(),
-        ExprArt::Klammer(x) => format!("({})", ausdruck_geraet(x, d, u, absagen)),
+        ExprArt::Klammer(x) => format!("({})", ausdruck_geraet(x, d, u, absagen)?),
         ExprArt::Binaer(op, a, b) => format!(
             "{} {} {}",
-            ausdruck_geraet(a, d, u, absagen),
+            ausdruck_geraet(a, d, u, absagen)?,
             op_text(op),
-            ausdruck_geraet(b, d, u, absagen)
+            ausdruck_geraet(b, d, u, absagen)?
         ),
         // `CAP.FRO` -- ein Feld dieses Geraets, gelesen ueber `d`.
         ExprArt::Ort(o) if o.suffixe.len() == 1 => {
-            let Some(g) = u.geraete.get(&d.name.text) else { return String::new() };
-            let Some((versatz, breite)) = g.reg.get(&o.basis.text) else { return String::new() };
-            let OrtSuffix::Feld(f) = &o.suffixe[0] else { return String::new() };
+            let (Some(g), OrtSuffix::Feld(f)) = (u.geraete.get(&d.name.text), &o.suffixe[0])
+            else {
+                weigere(
+                    absagen,
+                    o.span,
+                    "`bank` base over a place that is not `REGISTER.field` of this device",
+                );
+                return None;
+            };
+            let Some((versatz, breite)) = g.reg.get(&o.basis.text) else {
+                weigere(absagen, o.basis.span, "`bank` base over a register this device does not declare");
+                return None;
+            };
             let Some((hi, lo, _)) = g.felder.get(&o.basis.text).and_then(|m| m.get(&f.text))
             else {
-                return String::new();
+                weigere(absagen, f.span, "`bank` base over a field this register does not declare");
+                return None;
             };
             let maske: u128 = (1u128 << (hi - lo + 1)) - 1;
             format!("(((*(volatile {breite} *)(d->basis + {versatz})) >> {lo}) & {maske}u)")
         }
-        _ => {
-            let _ = absagen;
-            String::new()
+        // A bare name, a `->`, an index, a chain of more than one suffix: none of them names
+        // a field of THIS device, and the emitter knows no other source for the address.
+        ExprArt::Ort(o) => {
+            weigere(
+                absagen,
+                o.span,
+                "`bank` base over a place that is not `REGISTER.field` of this device -- the \
+                 address has to be computable from this device's own register block",
+            );
+            return None;
         }
-    }
+        // Everything else: a bank address is an ADDRESS. A boolean, a float, a call, a
+        // `sizeof`, an `old(…)`, a `result` -- none of them is one, and none of them is
+        // readable from the register block at the moment the accessor is generated.
+        ExprArt::Wahr
+        | ExprArt::Falsch
+        | ExprArt::Gleitkomma { .. }
+        | ExprArt::Ruf(_)
+        | ExprArt::Eingebaut(_)
+        | ExprArt::Alt(_)
+        | ExprArt::Ergebnis
+        | ExprArt::Unaer(_, _) => {
+            weigere(
+                absagen,
+                e.span,
+                "`bank` base expression form -- only a number, a parenthesis, a binary \
+                 operation and `REGISTER.field` of this device lower to an address",
+            );
+            return None;
+        }
+    })
 }
 
 /// **`check` -- die Probe wird eine Funktion, ihre Behauptung ein Kommentar.**
@@ -2119,8 +2325,40 @@ fn schrittbits(
                 None
             }
         },
-        _ => {
-            weigere(absagen, s.span, "`transition` on an indexed place");
+        // **Der Sammelzweig sagte etwas Falsches, und das war sein eigentlicher Schaden.**
+        // Er stand fuer ZWEI Suffixformen und nannte nur eine: ein `GCMD->SRTP: 0 -> 1`
+        // bekam *"`transition` on an indexed place"* zu lesen -- eine Absage, deren Grund
+        // nicht stimmt. *Eine Weigerung, auf die man baut, ist eine Zusage* (siehe oben);
+        // eine Weigerung mit dem falschen Grund ist eine falsche Zusage.
+        Some(OrtSuffix::Index(_)) => {
+            weigere(
+                absagen,
+                s.span,
+                "`transition` on an indexed place -- a step names ONE bit of ONE register, \
+                 and which register an index picks is a run time question",
+            );
+            None
+        }
+        // **Und dieser Arm ist der Gegenfall: er ist ausgeschrieben und trotzdem
+        // UNERREICHBAR -- nicht aus Versehen, sondern durch die Grammatik.**
+        //
+        // `parse::transition` setzt `pfeil_ist_suffix = false`, solange es den Ort links vom
+        // `:` liest (G3): in `ST: ACK -> ACK` waere `->` sonst zugleich Zeigerzugriff und
+        // Uebergangspfeil. Ein `R->A:` faellt damit schon im Parser an `P001`, und diese
+        // Zeile bekommt es nie zu sehen.
+        //
+        // *Sie steht hier, weil der `match` erschoepfend sein muss, und sie sagt, WORAUF sie
+        // sich verlaesst.* Eine Zusicherung ueber die Kistengrenze ist keine, die der
+        // Uebersetzer haelt -- **darum eine Absage und kein `unreachable!()`**: faellt die
+        // Parserregel, faellt hier eine benannte Weigerung und kein Absturz.
+        Some(OrtSuffix::Ueber(_)) => {
+            weigere(
+                absagen,
+                s.span,
+                "`transition` through a pointer (`->`) -- a step names a field of THIS \
+                 device's register block, and the block is reached through `d->basis`, not \
+                 through a place the author dereferences",
+            );
             None
         }
     }
@@ -2581,7 +2819,42 @@ fn ausdruck_format(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Str
         // `lenof(Self)` ist die Laenge des Puffers -- die Groesse, an der jede
         // `where`-Klausel dieses Formats haengt.
         ExprArt::Eingebaut(b) if matches!(b.as_ref(), Eingebaut::Lenof(_)) => "v->len".into(),
-        _ => ausdruck(e, u, absagen),
+        // **Die Verneinung muss durch DIESEN Leser zurueck, nicht durch den gewoehnlichen**
+        // (2026-08-21). Der Sammelzweig schickte sie an `ausdruck`, und der senkt einen
+        // blanken Namen als ORT ab statt als Feldzugriff: aus `!gueltig` waere `!(gueltig)`
+        // geworden, wo `!(Elf_gueltig(v))` gemeint ist -- **ein Bezeichner, den die erzeugte
+        // Datei nirgends erklaert.** *Der Fehler faellt bei `cc`; entschieden gehoert er
+        // hier.*
+        ExprArt::Unaer(UnOp::Nicht, x) => format!("!({})", ausdruck_format(x, fmt, u, absagen)),
+        // **Ein Ort MIT Suffix hat in einer `where`-Klausel keinen Gegenstand.** In der
+        // erzeugten Pruefkoerperfunktion steht genau ein Objekt: `v`, der Puffer. `a.b` oder
+        // `a[i]` nennt etwas, das dort nicht existiert -- und `ausdruck` haette daraus
+        // klaglos `a->b` gemacht.
+        ExprArt::Ort(o) if !o.suffixe.is_empty() => {
+            weigere(
+                absagen,
+                o.span,
+                "a `where` clause of a `format` names FIELDS of that format -- a place with \
+                 `.`, `->` or `[…]` names something the generated accessor has no object for",
+            );
+            String::new()
+        }
+        // **Und die Formen, die der gewoehnliche Leser richtig beantwortet -- einzeln, mit
+        // ihrem Grund.** Ein Literal ist in jedem Zusammenhang dasselbe; ein blanker Name,
+        // der eine `const` ist, steht als `#define` im Kopf des Erzeugnisses; ein Ruf ist
+        // ein Ruf. Die drei ohne Absenkung (`sizeof`/`aligned`, `old`, `result`) lehnt
+        // `ausdruck` beim Namen ab -- **die Absage gehoert dorthin, wo der Satz dafuer
+        // steht** (W7), nicht ein zweites Mal hierher.
+        ExprArt::Zahl(_)
+        | ExprArt::Gleitkomma { .. }
+        | ExprArt::Wahr
+        | ExprArt::Falsch
+        | ExprArt::Ort(_)
+        | ExprArt::Ruf(_)
+        | ExprArt::Eingebaut(_)
+        | ExprArt::Alt(_)
+        | ExprArt::Ergebnis
+        | ExprArt::Unaer(UnOp::Negativ, _) => ausdruck(e, u, absagen),
     }
 }
 
@@ -2830,7 +3103,22 @@ fn wirkungsattribut(f: &FnDecl, u: &Namen) -> &'static str {
             WirkungArt::Liest(_) => ganz_rein = false,
             // Alles andere -- Schreiben, Sperren, Verbrauchen, Veröffentlichen, Divergieren,
             // Maskieren, Belegen -- ist eine Wirkung, und dann gilt keins der zwei Wörter.
-            _ => {
+            //
+            // **Written out one by one, because the catch-all made a promise about a list
+            // that can grow.** `__attribute__((pure))` and `((const))` are INSTRUCTIONS to
+            // the C compiler, not bookkeeping: a wrong one lets the optimiser fold away
+            // calls that do something. A new `WirkungArt` falling in here silently would
+            // therefore not be a missing entry in a table -- it would be permission to
+            // delete the call. *That is the one direction in which this file must not
+            // guess.*
+            WirkungArt::Schreibt(_)
+            | WirkungArt::Sperrt(_)
+            | WirkungArt::SperrtGeteilt(_)
+            | WirkungArt::Maskiert(_)
+            | WirkungArt::Belegt(_)
+            | WirkungArt::Verbraucht(_)
+            | WirkungArt::Veroeffentlicht(_)
+            | WirkungArt::Divergiert => {
                 nur_lesend = false;
                 ganz_rein = false;
             }
@@ -3079,7 +3367,28 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
                     }
                 }
             }
-            _ => {}
+            // **Die Parametertypen, die keinen EINTRAG in die lokale Sicht verdienen -- und
+            // der Grund je Form, weil die Karte davor schon einmal still leer war.**
+            //
+            // Eine Zahl, ein Gleitkommawert, ein `bool`, ein `never`, ein `index into T`
+            // und ein Funktionszeiger sind SKALARE: sie tragen keinen `.`-Zugriff und keinen
+            // `->`, und die Absenkung eines Ortes darueber ist der gewoehnliche Fall.
+            //
+            // *Zwei sind es nur beinahe:* ein `[T; N]` als Parameter und ein anonymer
+            // Verbund oder eine anonyme Variantenliste in der Signatur. Sie sind keine
+            // Karteneintraege, sondern **Formen ohne Absenkung** -- `ctyp` lehnt sie beim
+            // Namen ab, und ein Eintrag hier wuerde einen Zugriff erlauben, dessen Typ nie
+            // im Erzeugnis steht. Sie stehen darum hier und werden dort abgewiesen, nicht
+            // umgekehrt.
+            TypExpr::Int(_)
+            | TypExpr::Float(_)
+            | TypExpr::Bool(_)
+            | TypExpr::Never(_)
+            | TypExpr::Index { .. }
+            | TypExpr::FnZeiger(_)
+            | TypExpr::Feld(_)
+            | TypExpr::Verbund(_, _)
+            | TypExpr::Varianten(_, _) => {}
         }
     }
     // **Und die `let`-gebundenen Geraetegriffe** -- `let v = Vtd(basis);`. Sie sind WERTE,
@@ -3296,23 +3605,63 @@ fn funktion(
 }
 
 /// Die Namen in einem Praedikat -- ein `until` liest ebenso wie ein Rumpf.
+///
+/// **Written out over every `PredArt`, no catch-all -- and the reason is that there is no
+/// safe side to err on.** The set feeds two consumers that pull in opposite directions:
+///
+/// * too FEW names and a table loses its `T_speicher`, while the emitted C still names it --
+///   the failure of 2026-08-20 («B41b»);
+/// * too MANY names and a dead parameter loses its `(void)k;`, which `cc -Wextra -Werror`
+///   turns into a rejected translation unit.
+///
+/// *An over-approximation is not the cautious answer here; it is the other error.* So every
+/// variant gets the exact answer, and the answer is read off `pred_c`: what that function
+/// refuses never reaches the C, and therefore reads nothing.
 fn pred_namen(p: &Pred, aus: &mut std::collections::BTreeSet<String>) {
     match &p.art {
-        PredArt::Vergleich(e) | PredArt::Element(e, _) => sammle_expr_namen(e, aus),
+        PredArt::Vergleich(e) => sammle_expr_namen(e, aus),
+        // `expr in domain` -- the expression side only. `pred_c` has no `Element` arm and
+        // refuses the whole predicate, so the domain's place never becomes a C read.
+        PredArt::Element(e, _) => sammle_expr_namen(e, aus),
         PredArt::Klammer(x) | PredArt::Nicht(x) => pred_namen(x, aus),
         PredArt::Und(a, b) | PredArt::Oder(a, b) => {
             pred_namen(a, aus);
             pred_namen(b, aus);
         }
-        _ => {}
+        // **The four forms `pred_c` refuses by name -- and the refusal IS the reason they
+        // read nothing.** A quantifier, a `reaches`, a `Held(L)` witness and an implication
+        // are proof devices; the emitter has no lowering for any of them, so counting their
+        // places as read would suppress a `(void)k;` for a parameter that the C never
+        // touches. *This is a catch-all that was right, spelled out so that it stays right.*
+        PredArt::Quantor(_)
+        | PredArt::Erreicht { .. }
+        | PredArt::Held { .. }
+        | PredArt::Folgt(_, _) => {}
+    }
+}
+
+/// The names a PLACE reads: its base, and every expression inside an index suffix.
+///
+/// **One register for two readers.** Until now `sammle_expr_namen` inserted only the base
+/// while `benutzte_namen` had a second, private copy that also descended into the index --
+/// two implementations of one question, and they disagreed (W7). `t.slots[i]` in an `until`
+/// predicate lowers to `t_speicher.slots[i]`, so `i` is read; the predicate reader did not
+/// say so.
+fn ort_namen(o: &Ort, aus: &mut std::collections::BTreeSet<String>) {
+    aus.insert(o.basis.text.clone());
+    for s in &o.suffixe {
+        match s {
+            OrtSuffix::Index(x) => sammle_expr_namen(x, aus),
+            // `.f` and `->f` select a FIELD of the base. A field name is never a parameter
+            // and never a table, so it belongs to no read set.
+            OrtSuffix::Feld(_) | OrtSuffix::Ueber(_) => {}
+        }
     }
 }
 
 fn sammle_expr_namen(x: &Expr, aus: &mut std::collections::BTreeSet<String>) {
     match &x.art {
-        ExprArt::Ort(o) => {
-            aus.insert(o.basis.text.clone());
-        }
+        ExprArt::Ort(o) => ort_namen(o, aus),
         ExprArt::Klammer(y) | ExprArt::Unaer(_, y) => sammle_expr_namen(y, aus),
         ExprArt::Binaer(_, a, b) => {
             sammle_expr_namen(a, aus);
@@ -3323,40 +3672,30 @@ fn sammle_expr_namen(x: &Expr, aus: &mut std::collections::BTreeSet<String>) {
                 sammle_expr_namen(a, aus);
             }
         }
-        _ => {}
+        // A literal names nothing.
+        ExprArt::Zahl(_) | ExprArt::Gleitkomma { .. } | ExprArt::Wahr | ExprArt::Falsch => {}
+        // **The three forms `ausdruck` refuses -- see there.** `sizeof`/`lenof`/`aligned`,
+        // `old(place)` and `result` have no lowering outside a `format` predicate; the unit
+        // that contains one is refused as a whole, so no name of theirs is ever read by
+        // emitted C.
+        ExprArt::Eingebaut(_) | ExprArt::Alt(_) | ExprArt::Ergebnis => {}
     }
 }
 
 /// Welche Namen liest dieser Rumpf? Nur die Formen, die der Erzeuger ueberhaupt absenkt --
 /// jede andere wird ohnehin abgelehnt.
 fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
-    fn e(x: &Expr, aus: &mut std::collections::BTreeSet<String>) {
-        match &x.art {
-            ExprArt::Ort(o) => o_(o, aus),
-            ExprArt::Klammer(y) | ExprArt::Unaer(_, y) => e(y, aus),
-            ExprArt::Binaer(_, a, c) => {
-                e(a, aus);
-                e(c, aus);
-            }
-            ExprArt::Ruf(r) => {
-                for a in &r.argumente {
-                    e(a, aus);
-                }
-            }
-            _ => {}
-        }
-    }
-    fn o_(o: &Ort, aus: &mut std::collections::BTreeSet<String>) {
-        aus.insert(o.basis.text.clone());
-        for s in &o.suffixe {
-            if let OrtSuffix::Index(x) = s {
-                e(x, aus);
-            }
-        }
-    }
+    // **Die zwei privaten Helfer `e` und `o_` sind weg** -- see `sammle_expr_namen` and
+    // `ort_namen`. They were a second implementation of the same question and had already
+    // drifted from the first.
+    let e = sammle_expr_namen;
+    let o_ = ort_namen;
     for s in &b.anweisungen {
         match &s.art {
             StmtArt::Return(Some(x)) => e(x, aus),
+            // `return;` -- the emitted form is the lock releases and a bare `return`, and
+            // neither names anything.
+            StmtArt::Return(None) => {}
             StmtArt::Zuweisung(z) => {
                 o_(&z.ziel, aus);
                 e(&z.wert, aus);
@@ -3430,6 +3769,11 @@ fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
                 }
                 benutzte_namen(&l.sonst, aus);
             }
+            // **Only the value.** The target of a `publishes` is an ATOMIC global -- the
+            // lowering looks it up in `u.atomics` and refuses anything else -- so it is
+            // neither a parameter (no parameter is an atomic) nor a table. It belongs to
+            // neither consumer of this set. The `publishes { … }` payload lands in a
+            // comment; the pairing was decided at compile time (V001-V004).
             StmtArt::Publish(p) => e(&p.wert, aus),
             StmtArt::Observiert(o) => benutzte_namen(&o.rumpf, aus),
             StmtArt::Exchange(x) => match &x.form {
@@ -3439,7 +3783,18 @@ fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
                     pred_namen(bedingung, aus);
                 }
             },
-            _ => {}
+            // `let x = place awaits { … }` -- same as `publishes`, from the other side: the
+            // source is an atomic global, and the `awaits { … }` list lands in a comment.
+            StmtArt::AwaitLoad(_) => {}
+            // **`breaking l { … }` has NO lowering at all** -- `anweisung` refuses it by
+            // name. Descending into its block would count names that the C never reads, and
+            // that is the expensive direction: a parameter read only inside a `breaking`
+            // block would lose its `(void)k;` and `cc -Wextra -Werror` would reject the
+            // unit. *This catch-all arm was right, and it stays -- with its reason.*
+            StmtArt::Bricht(_) => {}
+            // `leave l;` / `next l;` lower to `goto`, `break` or `continue`. A label is not
+            // a name of this set.
+            StmtArt::Leave(_) | StmtArt::Next(_) => {}
         }
     }
 }
@@ -3956,6 +4311,12 @@ fn anweisung(
                 }
             }
             // `old(X) == <expr>` -- die einzige Gestalt, in der der ERWARTETE Wert dasteht.
+            //
+            // **Zwei Entscheidungen fielen hier unter EINEM Satz**, und die leere
+            // Zeichenkette war das Zeichen fuer beide: *„das ist gar kein Vergleich"* und
+            // *„das ist ein Vergleich, aber nicht dieser"*. Sie sind jetzt getrennt -- wer
+            // `when a && b` schreibt, hat ein anderes Problem als wer `when old(X) > 3`
+            // schreibt, und das Zeugnis darf ihm nicht dieselbe Zeile geben.
             let erwartet = match &bedingung.art {
                 PredArt::Vergleich(e) => match &e.art {
                     ExprArt::Binaer(BinOp::Gleich, a, b)
@@ -3963,18 +4324,55 @@ fn anweisung(
                     {
                         ausdruck(b, u, absagen)
                     }
-                    _ => String::new(),
+                    // Ein Vergleich -- aber nicht `old(X) == …`.
+                    ExprArt::Binaer(..)
+                    | ExprArt::Zahl(_)
+                    | ExprArt::Gleitkomma { .. }
+                    | ExprArt::Wahr
+                    | ExprArt::Falsch
+                    | ExprArt::Ort(_)
+                    | ExprArt::Ruf(_)
+                    | ExprArt::Klammer(_)
+                    | ExprArt::Eingebaut(_)
+                    | ExprArt::Alt(_)
+                    | ExprArt::Ergebnis
+                    | ExprArt::Unaer(..) => {
+                        weigere(
+                            absagen,
+                            s.span,
+                            "`when` comparison that is not `old(X) == <expr>` -- a \
+                             compare-exchange swaps on EQUALITY with one expected value; an \
+                             ordering or a bit test would have to re-read and re-compare, \
+                             and that is a loop, which is the `update` case",
+                        );
+                        return;
+                    }
                 },
-                _ => String::new(),
+                // Gar kein Vergleich: eine Verknuepfung, ein Quantor, ein Zeuge.
+                PredArt::Quantor(_)
+                | PredArt::Element(_, _)
+                | PredArt::Erreicht { .. }
+                | PredArt::Held { .. }
+                | PredArt::Klammer(_)
+                | PredArt::Nicht(_)
+                | PredArt::Und(_, _)
+                | PredArt::Oder(_, _)
+                | PredArt::Folgt(_, _) => {
+                    weigere(
+                        absagen,
+                        s.span,
+                        "`when` condition that is not a comparison -- a compare-exchange \
+                         carries ONE expected value into the instruction, and a conjunction, \
+                         a quantifier or a lock witness is not one",
+                    );
+                    return;
+                }
             };
+            // **Und die dritte Moeglichkeit, die vorher mit den beiden anderen zusammenfiel:**
+            // die rechte Seite steht da, `ausdruck` hat sie aber abgelehnt und die leere
+            // Zeichenkette geliefert -- der Grund steht dann schon im Zeugnis, und hier
+            // bleibt nur der Abbruch. *Ohne ihn stuende `({typ})()` im C.*
             if erwartet.is_empty() {
-                weigere(
-                    absagen,
-                    s.span,
-                    "`when` condition form -- a compare-exchange compares the OLD value \
-                     against one expected value (`old(X) == <expr>`); anything else would \
-                     need a loop, and that is the `update` case",
-                );
                 return;
             }
             let h = format!("_cx{tiefe}");
@@ -4149,7 +4547,29 @@ fn anweisung(
             }
             aus.push_str(&format!("{e}    }}\n{e}}}\n"));
         }
-        _ => weigere(absagen, s.span, "statement kind"),
+        // -- und die EINE Form, die weiter abgelehnt wird, jetzt aber MIT GRUND ----------
+        //
+        // **Der Sammelzweig ist weg, und beim Verschwinden hat er dasselbe gesagt wie der
+        // ueber `ItemArt`:** hinter *"no lowering: statement kind"* stand nicht eine offene
+        // Liste, sondern **genau eine** Anweisungsart. Sechzehn der siebzehn senken laengst
+        // ab; die Absage nannte trotzdem keine von ihnen beim Namen, und ein Leser des
+        // Zeugnisses konnte daraus nicht ablesen, was fehlt.
+        //
+        // > *Und die Absage war teurer als sie aussah:* solange sie hier stand, hielt
+        // > `pruefe-abstieg.py` die ganze Datei fuer entschuldigt (*"weigert sich benannt"*),
+        // > und jede fehlende Anweisungsart in jedem Sammler dieser Datei fiel damit aus der
+        // > Messung. **Ein Vorbehalt an einer Stelle deckte Luecken an fuenf anderen.**
+        StmtArt::Bricht(_) => weigere(
+            absagen,
+            s.span,
+            "`breaking I { … }` -- the block is a PROOF region: inside it the invariant is \
+             not available as a premise, and at its end it is either restored by \
+             construction or booked as an obligation in the manifest. At run time it is \
+             nothing but its statements, so the lowering would be a plain block -- and it is \
+             not built because no program asks for it: the single corpus site is a poison \
+             probe. Emitting the block and dropping the region would make the C look like a \
+             program whose obligation nobody carries",
+        ),
     }
 }
 
@@ -4385,7 +4805,30 @@ fn sprungziele(b: &Block, marke: &str) -> (bool, bool) {
             match &s.art {
                 StmtArt::Leave(m) if m.text == marke => *raus = true,
                 StmtArt::Next(m) if m.text == marke => *weiter = true,
-                _ => {}
+                // Ein `leave`/`next` auf eine ANDERE Marke -- es springt, aber nicht hier
+                // heraus. Die Marke, auf die es zielt, fragt sich selbst.
+                StmtArt::Leave(_) | StmtArt::Next(_) => {}
+                // **Und die fuenfzehn, die ueberhaupt nicht springen -- einzeln.** Der
+                // Abstieg darunter kommt von `crate::unterbloecke`, und das erzwingt fuer
+                // eine neue `StmtArt` nur die Frage *„traegst du einen Block?"*. Ob sie
+                // SPRINGT, fragt es nicht -- und ein neues `goto` waere hier stumm
+                // durchgefallen, waehrend `-Wunused-label` dann eine Marke meldet, die sehr
+                // wohl angesprungen wird.
+                StmtArt::Let(_)
+                | StmtArt::LetSonst(_)
+                | StmtArt::Zuweisung(_)
+                | StmtArt::Wenn(_)
+                | StmtArt::Match(_)
+                | StmtArt::Schleife(_)
+                | StmtArt::Bricht(_)
+                | StmtArt::Narrow(_)
+                | StmtArt::Sperrt(_)
+                | StmtArt::Observiert(_)
+                | StmtArt::Publish(_)
+                | StmtArt::AwaitLoad(_)
+                | StmtArt::Exchange(_)
+                | StmtArt::Return(_)
+                | StmtArt::Ruf(_) => {}
             }
             // Eine innere Schleife DERSELBEN Marke verdeckt sie -- `S001` bindet an die
             // naechste, und das Erzeugnis muss dieselbe Bindung treffen.
@@ -4459,7 +4902,21 @@ fn pred_c(p: &Pred, u: &Namen, absagen: &mut Absagen) -> Option<String> {
         PredArt::Nicht(x) => format!("!({})", pred_c(x, u, absagen)?),
         PredArt::Und(a, b) => format!("{} && {}", pred_c(a, u, absagen)?, pred_c(b, u, absagen)?),
         PredArt::Oder(a, b) => format!("{} || {}", pred_c(a, u, absagen)?, pred_c(b, u, absagen)?),
-        _ => return None,
+        // **Die fuenf, die KEINE Laufzeitbedingung sind -- einzeln, damit sie einzeln
+        // gelesen werden koennen.** Der Rufer macht daraus `C001`; hier steht, was er
+        // ablehnt.
+        //
+        // A quantifier and a `reaches` would need a loop -- and a loop inside the condition
+        // of a loop is a cost the `costs` pass never counted. `x in domain` is the same
+        // shape. `Held(L)` is a lock WITNESS: it is proved, not evaluated; emitting a check
+        // for it would be exactly the run time check that W6 forbids. And `a => b` is
+        // material implication -- writable as `!a || b`, but the emitter does not rewrite
+        // what the author wrote (see the head of this file).
+        PredArt::Quantor(_)
+        | PredArt::Element(_, _)
+        | PredArt::Erreicht { .. }
+        | PredArt::Held { .. }
+        | PredArt::Folgt(_, _) => return None,
     })
 }
 
@@ -5313,7 +5770,30 @@ fn geist_wert(e: &Expr, u: &Namen) -> bool {
             .parametertyp
             .get(&o.basis.text)
             .is_some_and(|t| ist_geist(t, u)),
-        _ => false,
+        // **Hier ist der Sammelzweig die richtige Antwort, und zwar aus einem Satz, der
+        // ausserhalb dieser Datei steht: ein Geist ist LINEAR.**
+        //
+        // `linear ghost type` heisst, der Wert wird genau einmal weitergereicht; er hat
+        // keine Felder, keine Elemente und keine Arithmetik. Damit kann keine der uebrigen
+        // Formen einen liefern: ein Literal ist keiner, ein `place` MIT Suffix waere ein
+        // Feld eines Geistes (den es nicht gibt), `!`/`-` und jede binaere Rechnung
+        // brauchen eine Zahl, und `sizeof`/`old`/`result` haben ueberhaupt keine Absenkung.
+        // Eine Klammer ist die einzige, die weiterreichen KOENNTE -- und dass sie es nicht
+        // tut, ist der eine offene Punkt hier: `let p = (mmu_an(p));` wird nicht geloescht.
+        //
+        // > *Das steht hier, weil es vor dem Ausschreiben nirgends stand.* Der
+        // > Sammelzweig gab auf zwoelf Fragen eine Antwort und begruendete keine.
+        ExprArt::Zahl(_)
+        | ExprArt::Gleitkomma { .. }
+        | ExprArt::Wahr
+        | ExprArt::Falsch
+        | ExprArt::Ort(_)
+        | ExprArt::Klammer(_)
+        | ExprArt::Eingebaut(_)
+        | ExprArt::Alt(_)
+        | ExprArt::Ergebnis
+        | ExprArt::Unaer(_, _)
+        | ExprArt::Binaer(_, _, _) => false,
     }
 }
 
@@ -5633,8 +6113,42 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
             );
             String::new()
         }
-        _ => {
-            weigere(absagen, e.span, "expression form");
+        // -- und die drei, die weiter abgelehnt werden, jetzt aber MIT GRUND -------------
+        //
+        // **Hinter *"no lowering: expression form"* standen genau drei Formen, nicht eine
+        // offene Liste.** Die Absage nannte keine von ihnen, und ein Leser des Zeugnisses
+        // konnte daraus nicht ablesen, WAS fehlt -- bei einer Sprache, deren ganzer Wert an
+        // der Nachvollziehbarkeit ihrer Weigerungen haengt.
+        ExprArt::Eingebaut(_) => {
+            weigere(
+                absagen,
+                e.span,
+                "`sizeof` / `lenof` / `aligned` outside a `format` predicate -- inside one \
+                 they lower against the buffer (`v->len`), and outside one there is no \
+                 object to measure: `sizeof(T)` would have to agree with the layout the \
+                 checker computed, and that agreement is not established anywhere",
+            );
+            String::new()
+        }
+        ExprArt::Alt(_) => {
+            weigere(
+                absagen,
+                e.span,
+                "`old(place)` outside a compare-exchange -- it names the value BEFORE the \
+                 call, and nothing in the emitted C keeps it. The one place it does lower is \
+                 the `when old(X) == e` of an `exchange`, where the atomic itself holds the \
+                 old value",
+            );
+            String::new()
+        }
+        ExprArt::Ergebnis => {
+            weigere(
+                absagen,
+                e.span,
+                "`result` -- it names the return value of the surrounding function inside an \
+                 `ensures`, and a contract is checked at compile time (W6). There is no run \
+                 time object for it",
+            );
             String::new()
         }
     }

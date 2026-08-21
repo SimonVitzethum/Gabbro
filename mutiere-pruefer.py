@@ -1220,8 +1220,23 @@ MUTATIONEN = [
     Mutation(
         "ausdruck-faellt-offen-auf-null",
         "emit.rs",
-        "        _ => {\n            weigere(absagen, e.span, \"expression form\");\n            String::new()\n        }",
-        "        _ => \"0\".into(),",
+        # **Der Anker ist am 2026-08-21 umgezogen, und der Umzug ist der Befund.** Er stand
+        # auf `_ => { weigere(…, "expression form") }` -- dem Sammelzweig, der drei Formen
+        # unter EINEM Satz zusammenzog. Der Zweig ist ausgeschrieben; die Mutation zeigt
+        # jetzt auf `old(place)`, weil dort die Probe steht.
+        "        ExprArt::Alt(_) => {\n"
+        "            weigere(\n"
+        "                absagen,\n"
+        "                e.span,\n"
+        "                \"`old(place)` outside a compare-exchange",
+        "        ExprArt::Alt(_) => {\n"
+        "            let _ = absagen;\n"
+        "            return \"0\".into();\n"
+        "            #[allow(unreachable_code)]\n"
+        "            weigere(\n"
+        "                absagen,\n"
+        "                e.span,\n"
+        "                \"`old(place)` outside a compare-exchange",
         "C-Absenkung -- eine unbekannte Ausdrucksform wird zu null statt abgelehnt",
         "code",
     ),
@@ -1313,8 +1328,8 @@ MUTATIONEN = [
     Mutation(
         "budget-ist-schleifenzaehler",
         "emit.rs",
-        "                        if c > 0 && n / c > 0 {\n                            aus.insert(r.span.von, n / c);",
-        "                        if c > 0 && n > 0 {\n                            aus.insert(r.span.von, n);",
+        "                    if c > 0 && n / c > 0 {\n                        aus.insert(r.span.von, n / c);",
+        "                    if c > 0 && n > 0 {\n                        aus.insert(r.span.von, n);",
         "C-Absenkung -- `bounded N ops` wird als Durchgangszahl gelesen statt als Operationsbudget",
         "code",
     ),
@@ -1607,7 +1622,13 @@ MUTATIONEN = [
         "                    ops.extend(self.opnamen()?);",
         "                    ops.extend(self.identlist()?);",
         "Parser -- `ops` nimmt wieder beliebige Woerter",
-        "pass",
+        # **Hier stand `"pass"`, und das ist keine Flaeche** (gefunden 2026-08-21). Die
+        # Aufstellung je Flaeche zaehlt `m.flaeche == name` ueber `FLAECHEN`; ein Name, der
+        # dort nicht steht, faellt aus JEDER Zeile heraus. Die Summe der Flaechen war damit
+        # 239, die Gesamtzahl 240 -- *und niemand hat die zwei Zahlen je nebeneinander
+        # gelegt.* Dieselbe Klasse wie die Kiste im Pfad einen Tag vorher: **eine Flaeche,
+        # die kein Werkzeug erreicht, fehlt nicht laut, sie fehlt still.**
+        "pruefer",
     ),
     Mutation(
         # **Die Verneinung, gebaut weil ein Programm sie brauchte.** Faellt das `!` weg, ist
@@ -2197,6 +2218,60 @@ MUTATIONEN = [
         "B7 -- `P(1, 2)` ohne Feldnamen faellt nicht mehr; zwei gleichtypige Felder "
         "sind vertauschbar, ohne dass ein Typ dagegen spricht",
     ),
+    # --- emit ---
+    #
+    # **Die aufgeloesten Auffangzweige der Emission** (2026-08-21). Jede dieser Mutationen
+    # beschaedigt GENAU EINE Entscheidung, die vorher in einem `_`-Zweig fiel -- und ohne
+    # sie waere die Aufloesung eine Umschreibung ohne Messung. *Ein Zweig, den man
+    # ausschreibt und nicht beschaedigen kann, ist genauso unbeschaedigbar wie der
+    # Sammelzweig davor.*
+    Mutation(
+        "sammler-erreicht-den-zweig-nicht-mehr",
+        "emit.rs",
+        "        for k in crate::unterbloecke(s) {\n            sammle_retry(baum, modul, k, aus);",
+        "        for k in crate::unterbloecke(s)\n            .into_iter()\n"
+        "            .filter(|_| !matches!(&s.art, StmtArt::Wenn(_)))\n"
+        "        {\n            sammle_retry(baum, modul, k, aus);",
+        "C001 -- ein `retry` in einem `if` bekommt wieder keine Schranke, und die Absenkung "
+        "sagt dazu *die Kosten stehen nicht fest* -- eine Absage mit dem falschen Grund",
+        flaeche="code",
+    ),
+    Mutation(
+        "breaking-heisst-wieder-anweisungsart",
+        "emit.rs",
+        '            "`breaking I { … }` -- the block is a PROOF region: inside it the invariant is \\',
+        '            "statement kind -- the block is a PROOF region: inside it the invariant is \\',
+        "C001 -- die eine Anweisungsart ohne Absenkung wird wieder nicht beim Namen genannt; "
+        "ein Leser des Zeugnisses kann nicht ablesen, WAS fehlt",
+        flaeche="code",
+    ),
+    Mutation(
+        "ausdrucksform-heisst-wieder-ausdrucksform",
+        "emit.rs",
+        '                "`sizeof` / `lenof` / `aligned` outside a `format` predicate -- inside one \\',
+        '                "expression form -- inside one \\',
+        "C001 -- die drei Ausdrucksformen ohne Absenkung fallen wieder unter EINEN Satz "
+        "zusammen, und keiner von ihnen nennt die Form",
+        flaeche="code",
+    ),
+    Mutation(
+        "gleitkomma-im-slot-wird-nicht-angesagt",
+        "emit.rs",
+        "                    if let SlotTyp::Typ(x) = &f.typ {\n                        ja |= im_typ(x);",
+        "                    if let SlotTyp::Typ(x) = &f.typ {\n                        let _ = im_typ(x);",
+        "F -- ein `f64` im Slot einer Tabelle laesst die Einheit ihre Gleitkommarechnung "
+        "wieder verschweigen; `-ffast-math ist verboten` und die SSE2-Annahme stehen dann nicht im Erzeugnis",
+        flaeche="code",
+    ),
+    Mutation(
+        "indexuebergang-ohne-grund",
+        "emit.rs",
+        "                 and which register an index picks is a run time question",
+        "                 and that is how it is",
+        "C001 -- die Absage am `transition` ueber einem Index nennt wieder nur die FORM und "
+        "nicht den Grund; die zweite Suffixform blieb darin ohnehin ungenannt",
+        flaeche="code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
@@ -2266,6 +2341,18 @@ def anker_stand():
     return tot
 
 
+def flaechen_stand():
+    """**Traegt jede Mutation eine Flaeche, die es GIBT?**
+
+    Die Aufstellung je Flaeche zaehlt `m.flaeche == name` ueber `FLAECHEN`. Ein Tippfehler
+    darin nimmt die Mutation aus jeder Zeile heraus, ohne irgendwo aufzufallen: die
+    Gesamtzahl stimmt weiter, die Summe der Flaechen nicht -- und die beiden stehen nicht
+    nebeneinander. *Genau so hat `"pass"` ueber Wochen eine Parsermutation aus der
+    Bezugsgroesse gehalten.*
+    """
+    return [m for m in MUTATIONEN if m.flaeche not in FLAECHEN]
+
+
 def anker_sprechprobe():
     """In beide Richtungen: ein toter Anker MUSS auffallen, ein lebender NICHT."""
     echt = anker_stand()
@@ -2289,10 +2376,27 @@ def sauberer_baum():
 def main():
     # **Der Ankerstand zuerst, und er kostet nichts.** Er braucht weder Bau noch sauberen
     # Baum -- und weil er der Teil ist, der still verwittert, laeuft er VOR allem anderen.
+    # **Und die Flaechen zuerst, aus demselben Grund** (2026-08-21): eine Mutation mit einer
+    # Flaeche, die es nicht gibt, faellt aus der Bezugsgroesse und aus keiner anderen Zahl.
+    falsch = flaechen_stand()
+    if falsch:
+        print(f"== {len(falsch)} Mutationen tragen eine Flaeche, die es nicht gibt ==")
+        for m in falsch:
+            print(f"  !! {m.name:<44} flaeche={m.flaeche!r}")
+        print("  Bekannt sind: " + ", ".join(FLAECHEN))
+        print("  Eine unbekannte Flaeche nimmt die Mutation aus JEDER Zeile der Aufstellung.")
+        return 1
+
     if "--anker" in sys.argv:
         print("== Sprechprobe des Ankerpruefers ==")
         if not anker_sprechprobe():
             return 1
+        # **R14 fuer den Flaechenpruefer**: er muss eine erfundene Flaeche sehen.
+        gift = Mutation("SPRECHPROBE", "typen.rs", "x", "y", "z", "keine-flaeche")
+        if gift.flaeche in FLAECHEN:
+            print("  SPRECHPROBE GESCHEITERT: `keine-flaeche` steht in FLAECHEN")
+            return 1
+        print("  erfundene Flaeche faellt:  ok")
         tot = anker_stand()
         print(f"\n== {len(MUTATIONEN) - len(tot)} von {len(MUTATIONEN)} Ankern greifen ==")
         for m, warum in tot:

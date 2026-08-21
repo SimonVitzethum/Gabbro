@@ -303,9 +303,15 @@ fn der_erzeuger_weigert_sich_statt_offen_auszufallen() {
          impl fn f(t : ptr<normal, r> T, i : index into T) -> bool \
          effects { reads t.slots } costs <= 4 ops { return old(t.slots[i].benutzt); } }",
     );
+    // **Und seit dem 2026-08-21 wird die Absage SCHAERFER geprueft.** Hier stand
+    // `contains("expression form")` -- der Text des Sammelzweiges, der alle drei
+    // uebriggebliebenen Formen (`sizeof`/`lenof`/`aligned`, `old(…)`, `result`) unter EINEM
+    // Satz zusammenzog. *Ein Zeugnis, das „expression form" sagt, nennt die Form nicht.*
+    // Der Sammelzweig ist ausgeschrieben, und die Probe verlangt jetzt, dass die Absage die
+    // Form beim Namen nennt.
     assert!(
-        unbekannt.iter().any(|s| s.contains("expression form")),
-        "eine unbekannte Ausdrucksform muss beim Namen abgelehnt werden: {unbekannt:?}"
+        unbekannt.iter().any(|s| s.contains("`old(place)`")),
+        "eine unbekannte Ausdrucksform muss beim NAMEN abgelehnt werden: {unbekannt:?}"
     );
 
     // **2b. Die Verneinung SENKT AB, das unaere Minus nicht -- und der Unterschied ist
@@ -3295,5 +3301,131 @@ fn eine_vorbedingung_am_rufort_wird_gezaehlt() {
            { locks L { nimm(y); } } }"),
         1,
         "ein Ruf unter einer Sperre faellt aus der Zaehlung"
+    );
+}
+
+// --- emit ---
+
+/// **Die aufgeloesten Auffangzweige der Emission -- je Zweig die Entscheidung, die vorher
+/// still fiel.**
+///
+/// `mutiere-pruefer.py` sagt es selbst: *„Eine Flaeche mit 0 Mutationen ist nicht gedeckt,
+/// sondern unbeschaedigbar."* Dieselbe Ueberlegung gilt eine Ebene tiefer -- **ein `_`-Zweig
+/// ueber einem Summentyp ist eine Entscheidung ohne Probe**: er hat eine Antwort, aber die
+/// Antwort steht nirgends, also kann auch nichts an ihr fallen.
+///
+/// Jede Behauptung hier gehoert zu genau einer Mutation in `mutiere-pruefer.py`.
+#[test]
+fn die_aufgeloesten_emissionszweige_tragen_ihre_entscheidung() {
+    fn absagen_von(q: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let _ = gabbro_check::emit::emittiere(&baum, &mut a);
+        a.absagen.iter().map(|x| x.text.clone()).collect()
+    }
+    fn c_ohne_absage(q: &str) -> String {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe parst nicht:\n{}", a.zeige(q));
+        let c = gabbro_check::emit::emittiere(&baum, &mut a);
+        assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
+        c
+    }
+
+    // **1. `sammle_retry` erreicht ein `retry` in einem `if`.**
+    //
+    // Der Sammelzweig stand hinter vier Armen -- `locks`, `match`, `narrow` und dem Rumpf
+    // des `retry` selbst. Ein `retry` unter einem `if` bekam damit **keinen Eintrag in der
+    // Schrankenkarte**, und die Absenkung antwortete darauf mit `C001`: *„`bounded … ops`
+    // -- the per-pass cost is not fixed"*. **Die Kosten standen fest; der Sammler kam nicht
+    // hin.** Eine Absage mit dem falschen Grund ist einen Schritt von einer stillen entfernt.
+    let im_zweig = absagen_von(
+        "module t {
+extern fn weg() -> never effects { diverges } costs <= 0 ops;
+impl fn f(c : bool) effects { pure } costs <= 4096 ops {
+    if c {
+        retry warten until c bounded 1024 ops on_exceeded weg effects { pure } { }
+    }
+}
+}",
+    );
+    assert!(
+        !im_zweig.iter().any(|s| s.contains("per-pass cost is not fixed")),
+        "ein `retry` in einem `if` hat eine Schranke, und der Sammler muss sie finden: {im_zweig:?}"
+    );
+
+    // **2. `breaking` wird beim NAMEN abgelehnt.**
+    //
+    // Hinter *„no lowering: statement kind"* stand nicht eine offene Liste, sondern genau
+    // EINE Anweisungsart. Sechzehn von siebzehn senken ab -- die Absage nannte trotzdem
+    // keine von ihnen.
+    let brechend = absagen_von(
+        "module t {
+table O count 8 {
+    slot { zaehler : u32 in 0 .. 9, }
+    invariant zaehler_klein cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s].zaehler >= 0;
+}
+impl fn f(o : ptr<normal, rw> O, i : index into O) effects { writes o.slots }
+    costs <= 8 ops { breaking zaehler_klein { o.slots[i].zaehler = 0; } }
+}",
+    );
+    assert!(
+        brechend.iter().any(|s| s.contains("`breaking")),
+        "die Absage muss `breaking` beim Namen nennen: {brechend:?}"
+    );
+
+    // **3. Die drei Ausdrucksformen ohne Absenkung tragen DREI Gruende, nicht einen.**
+    //
+    // `sizeof`/`lenof`/`aligned`, `old(place)` und `result` fielen unter *„expression
+    // form"* zusammen. Ein Zeugnis, das das sagt, nennt die Form nicht.
+    let ergebnis = absagen_von(
+        "module t {
+impl fn f(x : u32 in 0 .. 9) -> u32 in 0 .. 9 ensures result == x effects { pure } \
+costs <= 2 ops { return x; }
+impl fn g(x : u32 in 0 .. 9) -> u32 in 0 .. 9 effects { pure } costs <= 2 ops \
+{ return sizeof(u32); }
+}",
+    );
+    assert!(
+        ergebnis.iter().any(|s| s.contains("`sizeof`")),
+        "ein `sizeof` im Rumpf wird beim Namen abgelehnt: {ergebnis:?}"
+    );
+
+    // **4. Ein Gleitkommafeld in einem TRAEGER laesst die Einheit es ansagen.**
+    //
+    // `rechnet_mit_gleitkomma` fragte fuenf Itemarten und liess neunzehn in den
+    // Sammelzweig fallen -- darunter `table` und `format`. Eine Einheit mit `f64` im Slot
+    // rechnete damit mit Gleitkomma **ohne die Ansage**, und die Ansage ist keine
+    // Verzierung: sie sagt `-ffast-math ist verboten` und benennt die SSE2-Annahme.
+    let mit_f64 = c_ohne_absage(
+        "module t { table T count 4 { slot { g : f64, } } }",
+    );
+    assert!(
+        mit_f64.contains("Gleitkomma"),
+        "ein `f64` im Slot ist Gleitkomma, und die Einheit sagt es an:\n{mit_f64}"
+    );
+    // Die schweigende Richtung -- *ohne sie belegte die obere nur, dass irgendetwas steht.*
+    let ohne_f64 = c_ohne_absage("module t { table T count 4 { slot { g : u64, } } }");
+    assert!(
+        !ohne_f64.contains("Diese Einheit rechnet mit Gleitkomma"),
+        "eine Ganzzahltabelle sagt nichts ueber Gleitkomma an:\n{ohne_f64}"
+    );
+
+    // **5. Ein `transition` ueber einem INDEX sagt, warum ein Index dort nicht geht.**
+    //
+    // Der Sammelzweig stand fuer ZWEI Suffixformen (`[…]` und `->`) und nannte nur eine.
+    // Die zweite ist ausgeschrieben und **durch die Grammatik unerreichbar** -- `parse::
+    // transition` schaltet `->` links vom `:` als Suffix ab (G3), ein `R->A:` faellt schon
+    // an `P001`. *Darum hat dieser Zweig keine Probe und darf keine haben;* geprueft wird
+    // der, den ein Programm erreichen kann.
+    let index = absagen_von(
+        "module t { type Pa = u64; device D(basis : Pa) at mmio {
+    reg R : u32 @0x0 class rw fields { A @0, }
+    transition an { R[0]: 0 -> 1 } effects { writes R }
+} }",
+    );
+    assert!(
+        index.iter().any(|s| s.contains("which register an index picks is a run time")),
+        "die Absage nennt den Grund und nicht nur die Form: {index:?}"
     );
 }
