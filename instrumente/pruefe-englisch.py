@@ -189,7 +189,8 @@ def sprechprobe():
 # **The ratchet of the translation.** It stands at the state measured on 2026-08-21, not at
 # a wished-for number -- a mark below the current state is indistinguishable from a guardian
 # that is simply red.
-MARKE_KOMMENTARE = 7731   # comment lines in the checker, measured 2026-08-21
+MARKE_KOMMENTARE = 7730   # comment lines in the checker; the ratchet followed DOWN
+                          # on 2026-08-21 when fnptr added 462 English comment lines
 MARKE_PY = 1043           # comment lines in the instruments
 MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 

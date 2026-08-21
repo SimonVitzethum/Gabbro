@@ -113,12 +113,12 @@ fn vorbedingungen(baum: &Programm, aus: &mut Vec<Pflicht>) {
         let mut rufe = Vec::new();
         rufe_im_block(b, &mut rufe);
         for r in rufe {
-            let Some(sig) = u.funktion(modul, &r.pfad) else { continue };
+            let Some(sig) = r.path().and_then(|p| u.funktion(modul, p)) else { continue };
             for (n, _) in sig.requires.iter().enumerate() {
                 aus.push(Pflicht {
                     art: Art::Vorbedingung,
                     funktion: f.name.text.clone(),
-                    gegenstand: format!("{} requires #{}", r.pfad.text(), n + 1),
+                    gegenstand: format!("{} requires #{}", r.target_text(), n + 1),
                     rumpf_da: sig.rumpf_da,
                 });
             }

@@ -841,9 +841,9 @@ fn typ_der_rechten(
     match &e.art {
         ExprArt::Klammer(x) => typ_der_rechten(x, modul, u, lokal),
         ExprArt::Ruf(r) => {
-            let s = u.funktion(modul, &r.pfad)?;
+            let s = u.funktion(modul, r.path()?)?;
             let t = s.ergebnis.clone()?;
-            Some((t, format!("declared result of `{}`", r.pfad.text())))
+            Some((t, format!("declared result of `{}`", r.target_text())))
         }
         ExprArt::Ort(o) => {
             let t = u.typ_von_ort(modul, o, lokal);

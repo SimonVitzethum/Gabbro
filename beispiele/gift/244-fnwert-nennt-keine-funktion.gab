@@ -1,0 +1,29 @@
+-- erwartet: M127
+-- **Poison 244 -- `&x` where `x` is not a function.**
+--
+-- `&` makes a FUNCTION into a value, and nothing else. There is no address-of for a variable
+-- in Gabbro, and that there is none is the reason `ptr` carries a provenance at all.
+--
+-- *The refusal is `M127` and not `M119`.* `M119` says "declared nowhere" and its fix is a
+-- declaration; here the name exists perfectly well and is simply the wrong kind of thing, and
+-- the fix is a different one. **Two refusals that lead to two different repairs are two
+-- rules** -- see `instrumente/pruefe-vergabe.py`.
+
+module gift::fnwert_nennt_keine_funktion {
+
+static mut ZUSTAND : u32 = 0;
+
+type Treiber = {
+    f : fn() -> bool
+        effects { reads ZUSTAND }
+        costs   <= 4 ops,
+};
+
+impl fn baue() -> Treiber
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Treiber(f: &ZUSTAND);
+}
+
+}

@@ -328,7 +328,27 @@ fieldty    = typeexpr
            | typeexpr "embeds" "[" int ":" int "]" [ "scale" constexpr ] ;
 bitpos     = int | "[" int ":" int "]" ;
 variants   = "{" ident [ "(" typeexpr ")" ] { "," ident [ "(" typeexpr ")" ] } "}" ;
-fnptr      = "fn" "(" [ typelist ] ")" [ "->" typeexpr ] ;
+fnptr      = "fn" "(" [ params ] ")" [ "->" typeexpr ] fncontract ;
+
+             (* «B8», 2026-08-21: bis dahin stand hier `typelist` und KEIN Vertrag -- eine
+                Form mit null Korpusstellen, weil die Sprache keinen Wert kannte, den man
+                hineinschreiben konnte. Beide Aenderungen haengen aneinander:
+
+                * `params` statt `typelist`, weil eine Wirkungszeile einen ORT nennt
+                  (`writes r.slots`) und ein Ort einen Namen braucht;
+                * der Vertrag, weil neun Passdateien den Gerufenen STATISCH aufloesen. An
+                  einer indirekten Rufstelle gibt es keinen Namen -- was bleibt, ist die
+                  Zusage am Typ. Ohne sie endete die Wirkungshuelle wieder an der ersten
+                  Aufrufgrenze, so wie vor dem 2026-08-15.
+
+                Es kostet KEIN neues Wort: `effects` und `costs` stehen schon im Wortschatz
+                und stehen hier in derselben festen Reihenfolge wie an einer `fn`-Deklaration
+                (E4). Welche Wirkungswoerter zulaessig sind, entscheidet `N036` und nicht die
+                Grammatik -- `locks`, `masks`, `consumes` und `publishes` werden gelesen von
+                Paessen, die den Gerufenen benennen. *)
+
+fncontract = [ "requires" predlist ] [ "ensures" predlist ]
+             "effects" "{" efflist "}" "costs" "<=" expr "ops" ;
 typelist   = typeexpr { "," typeexpr } ;
 params     = ident ":" typeexpr { "," ident ":" typeexpr } ;
 ```
@@ -441,7 +461,32 @@ cmpexpr    = bitexpr [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) bitexpr ] ;
 bitexpr    = addexpr { ( "&" | "|" | "^" | "<<" | ">>" ) addexpr } ;
 addexpr    = mulexpr { ( "+" | "-" ) mulexpr } ;
 mulexpr    = unary { ( "*" | "/" | "%" ) unary } ;
-unary      = [ "!" | "-" ] primary ;
+unary      = [ "!" | "-" ] primary | fnvalue ;
+fnvalue    = "&" path ;
+             (* **«B8», 2026-08-21: der ERZEUGER eines Funktionszeigers.** `fnptr` stand seit
+                jeher in der Grammatik und hatte **null Korpusstellen** -- weil es keinen
+                Wert gab, den man hineinschreiben konnte. *Ein Typ, den niemand erzeugen
+                kann, ist eine Zusage ohne Einloeser.*
+
+                Es steht bei `unary` und nicht bei `primary`, und es ist KEIN Operator: `&`
+                erwartet einen `path`, keinen Ausdruck. **Es gibt in Gabbro keine Adresse
+                eines Ausdrucks**, und dass es sie nicht gibt, ist der Grund, warum `ptr`
+                ueberhaupt eine Herkunft traegt.
+
+                **Warum `&f` und nicht der blosse Name `f`** (E3, nichts ist implizit): ein
+                blosser Name an einer Wertstelle ist ein `place`. Gemessen 2026-08-21:
+                `Treiber(bereit: wahr)` ergibt **`M119` -- „`wahr` is declared nowhere"**,
+                weil `wahr` als Variable gesucht wird. Das `&` sagt, dass hier eine Funktion
+                zu einem Wert wird.
+
+                **Der Bedarfsbeleg steht ausserhalb** (Regel B): `caprock-hal/src/konsole.rs`
+                traegt `struct Treiber { bereit: fn() -> bool, senden: fn(u8) }` und wird an
+                zwei Stellen befuellt; ueber die beiden Felder wird viermal gerufen. Der
+                ganze Baum: **11 `fn(…)`-Typstellen, 4 Erzeuger, 4 Rufe hindurch**
+                (`messung/FNPTR.md` nennt die Befehle).
+
+                Caprock schreibt es OHNE `&` -- das ist Rusts Regel, nicht die Gestalt der
+                Sache; C laesst beide Schreibungen zu, Gabbro laesst eine zu. *)
 primary    = int | "true" | "false" | place | call | paren | builtin | optionexpr
                                                                 (* G9: kein `cast` *)
            | oldexpr | "result" | reasonval ;
@@ -479,7 +524,17 @@ optionexpr = "Some" "(" expr ")" | "None" ;
                 gewoehnlicher Aufruf, und der Kostenpass verlangte dafuer eine
                 `costs`-Zeile. Nachgezogen nach R9: die EBNF folgt dem Bestand. *)
 paren      = "(" expr ")" ;
-call       = path "(" [ arglist ] ")" ;
+call       = ( path | place ) "(" [ arglist ] ")" ;
+             (* **«B8», 2026-08-21: der Ruf ueber einen ORT.** `t->senden(b)`. Bis dahin
+                trug `call` nur einen `path`, und ein Ruf ueber ein Feld fiel in
+                Anweisungsstellung als `P017` -- „Zuweisung oder Aufruf erwartet, Klammer
+                gefunden" -- und in Ausdrucksstellung als `P001`. **Eine Absage, die den
+                Aufruf, den sie erwartet, selbst nicht lesen konnte.**
+
+                Der Gerufene ist dann zur Uebersetzungszeit NICHT bekannt. Was ueber ihn
+                feststeht, steht am Typ des Ortes (`fnptr`), und ohne einen Vertrag dort ist
+                der Ruf eine Kante ins Unbekannte: `E009`, nicht Schweigen. Ein Ort, dessen
+                Typ kein Funktionszeiger ist, faellt an `M129`. *)
 arglist    = arg { "," arg } ;
 (* «B7»: `arg` traegt eine MARKE, und damit ist `call` zugleich der Verbundkonstruktor:
    `P(a: 1, b: true)` stellt einen `type P = { a : u32, b : bool }` her.

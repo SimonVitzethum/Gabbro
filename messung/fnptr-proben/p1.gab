@@ -1,0 +1,12 @@
+module probe::eins {
+
+type Treiber = { bereit : fn() -> bool, senden : fn(u8), };
+
+impl fn hart_senden(b : u8) -> bool
+    effects { pure }
+    costs   <= 1 ops
+{
+    return b == 0;
+}
+
+}

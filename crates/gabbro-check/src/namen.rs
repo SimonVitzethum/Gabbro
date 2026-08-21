@@ -31,6 +31,135 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     verbund_ohne_groesse(baum, absagen);
     check_traegt_seine_pflicht(baum, absagen);
     spiegel_und_sonde(baum, absagen);
+    fnptr_traegt_seinen_vertrag(baum, absagen);
+}
+
+/// **The words an effect line may use at a function pointer type -- and why the list is
+/// SHORTER than the one at an `fn` declaration.**
+///
+/// Nine pass files resolve the callee statically. At an indirect call there is no callee to
+/// resolve, so each of them needs an answer -- and the answers are not equally cheap:
+///
+/// | effect | who reads it | does it cross an indirect call? |
+/// |---|---|---|
+/// | `reads` `writes` `allocs` `pure` `diverges` | `wirkungen`, via the hull | **yes** -- `aufrufgraph` folds the contract in and substitutes the arguments |
+/// | `locks` `locks shared` | `geteilt` (`H005`, `H012`) | no -- the rank order is keyed by the callee's NAME |
+/// | `masks` | `kontexte` (`H013`) | no -- same |
+/// | `consumes` | `m2` (`L101`-`L105`) | no -- the position of a linear parameter comes from the callee's signature |
+/// | `publishes` | `paarung` (`V001`-`V004`) | no -- the pairing matches two named sides |
+///
+/// **So the four in the lower half are refused at the TYPE, not ignored at the call.** That
+/// is the whole difference between this and a silent hole: a program that would need the lock
+/// order to cross an indirect call does not pass and is told why. *A gap that refuses is a
+/// gap; a gap that passes is a false green.*
+///
+/// > **This is a measured NO, not an oversight.** Carrying the lock rank across an indirect
+/// > call means ranking a callee that is chosen at run time -- and Caprock's four indirect
+/// > call sites take no lock (`(t.senden)`, `(t.bereit)`, `(self.fence)` ×2, measured
+/// > 2026-08-21). *The construct that would need it does not exist in the measured code.*
+const TRAGBARE_WIRKUNGEN: [&str; 5] = ["reads", "writes", "allocs", "pure", "diverges"];
+
+/// **`N035`/`N036`/`N037` -- a function pointer type carries its contract, or it is refused.**
+///
+/// Three rules, and the first is the one the whole item turns on:
+///
+/// * **`N035` -- no `effects`, or no `costs`.** Without `effects` the effect hull ends at
+///   every indirect call; without `costs` an indirect call costs nothing and `K001` computes
+///   with a number nobody promised. *Measured before the build: a `fn() -> bool` field
+///   typechecked as `u32`, as `bool` and as a pointer in one file, 0 errors* (`probe/p8.gab`).
+/// * **`N036` -- an effect no pass can carry across an indirect call.** See
+///   `TRAGBARE_WIRKUNGEN` for the table and the reason per word.
+/// * **`N037` -- a `requires` at the pointer type.** A precondition has to be checked at the
+///   call site against the caller's state; the passes that do that (`geteilt` for
+///   `Held(…)`, `m1` for the rest) are keyed by the callee's name. *Promising it here and
+///   checking it nowhere is exactly the shape this item stands against.*
+fn fnptr_traegt_seinen_vertrag(baum: &Programm, absagen: &mut Absagen) {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
+        crate::jeder_typausdruck_im_item(item, &mut |t| {
+            let TypExpr::FnZeiger(f) = t else { return };
+            // **One rule, one refusal site** -- the two missing clauses are two halves of
+            // "this type carries no contract", not two rules. See `fnptr_passt` in `m1.rs`
+            // for the same decision and `instrumente/pruefe-vergabe.py` for why it matters.
+            let fehlt = match (f.effects.is_none(), f.costs.is_none()) {
+                (true, true) => Some("`effects` and no `costs`"),
+                (true, false) => Some("`effects`"),
+                (false, true) => Some("`costs`"),
+                (false, false) => None,
+            };
+            if let Some(fehlt) = fehlt {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N035",
+                        f.span,
+                        format!("`{}` declares no {fehlt}", f.shape()),
+                    )
+                    .mit_notiz(
+                        "a call through this pointer would end the effect hull -- `E008` \
+                         became compositional on 2026-08-15, and an indirect call without a \
+                         contract takes that back; without a bound the call would cost \
+                         nothing and `K001` would hold a body against a number nobody \
+                         promised",
+                    )
+                    .mit_notiz(
+                        "the contract stands at the TYPE because that is the only thing a \
+                         call site knows about a callee it cannot name",
+                    ),
+                );
+            }
+            for e in f.effects.iter().flat_map(|w| &w.liste) {
+                let wort = e.art.text();
+                let kopf = wort.split(' ').next().unwrap_or("");
+                if TRAGBARE_WIRKUNGEN.contains(&kopf) {
+                    continue;
+                }
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N036",
+                        e.span,
+                        format!("`{kopf}` cannot be promised at a function pointer type"),
+                    )
+                    .mit_notiz(
+                        "the pass that reads this effect resolves the callee by NAME, and an \
+                         indirect call has none -- `locks`, `masks`, `consumes` and \
+                         `publishes` therefore do not cross one",
+                    )
+                    .mit_notiz(
+                        "this is a refusal and not an omission: the alternative was to let \
+                         the promise through and check it nowhere",
+                    ),
+                );
+            }
+            // **`requires` and `ensures` are refused at a function pointer type -- and
+            // `ensures` was ADDED to this refusal on 2026-08-21, one day after the type was
+            // built.** It parsed, it stood in the grammar, and no pass read it. *A clause
+            // without a reader is the shape this folder found four times in three days*
+            // (`@version`, `nested masked`, `lock … masks irqs`, and this one).
+            //
+            // > **The alternative would have been to build a reader, and that was refused
+            // > with a number**: the four indirect call sites in `caprock-messbasis` do not
+            // > even take a lock, so the measured need for a postcondition at the pointer
+            // > type is ZERO. *Rescuing a clause for a need nobody measured is the movement
+            // > that killed `locks ordered`.*
+            for (wort, span) in [
+                ("requires", f.requires.first().map(|p| p.span)),
+                ("ensures", f.ensures.first().map(|p| p.span)),
+            ] {
+                let Some(s) = span else { continue };
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N037",
+                        s,
+                        format!("a function pointer type carries no `{wort}`"),
+                    )
+                    .mit_notiz(
+                        "a precondition is checked at the CALL SITE and a postcondition \
+                         AFTER the call, and the passes that do either are keyed by the \
+                         callee's name -- written here, both are promises checked nowhere",
+                    ),
+                );
+            }
+        });
+    });
 }
 
 /// **`N016` -- `requires Has(X)` wird am RUFORT verlangt («NL.2», 2026-08-19).**
@@ -109,7 +238,7 @@ fn maschineneigenschaft(baum: &Programm, absagen: &mut Absagen) {
 fn has_aus_pred(p: &Pred, aus: &mut Vec<String>) {
     fn e(x: &Expr, aus: &mut Vec<String>) {
         match &x.art {
-            ExprArt::Ruf(r) if r.pfad.teile.last().is_some_and(|i| i.text == "Has") => {
+            ExprArt::Ruf(r) if r.heisst("Has") => {
                 if let Some(ExprArt::Ort(o)) = r.argumente.first().map(|a| &a.art) {
                     aus.push(o.text());
                 }
@@ -133,7 +262,7 @@ fn sammle_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
     fn ex(x: &Expr, aus: &mut Vec<(String, Span)>) {
         match &x.art {
             ExprArt::Ruf(r) => {
-                if let Some(n) = r.pfad.teile.last() {
+                if let Some(n) = r.path().and_then(|p| p.teile.last()) {
                     aus.push((n.text.clone(), x.span));
                 }
                 for a in &r.argumente {
@@ -154,7 +283,9 @@ fn sammle_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
             StmtArt::Zuweisung(z) => ex(&z.wert, aus),
             StmtArt::Return(Some(x)) => ex(x, aus),
             StmtArt::Ruf(r) => {
-                if let Some(n) = r.pfad.teile.last() {
+                // An indirect call has no NAME here -- what it names is a place, and this
+                // collector is asking after callee names.
+                if let Some(n) = r.path().and_then(|p| p.teile.last()) {
                     aus.push((n.text.clone(), r.span));
                 }
             }
@@ -1639,8 +1770,9 @@ fn sichtbarkeit(baum: &Programm, absagen: &mut Absagen) {
 fn sammle_qualifizierte_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
     fn aus_expr(e: &Expr, aus: &mut Vec<(String, Span)>) {
         if let ExprArt::Ruf(r) = &e.art {
-            if r.pfad.teile.len() > 1 {
-                aus.push((r.pfad.text(), r.pfad.teile[0].span));
+            if r.path().is_some_and(|p| p.teile.len() > 1) {
+                let p = r.path().expect("just checked");
+                aus.push((p.text(), p.teile[0].span));
             }
             for a in &r.argumente {
                 aus_expr(a, aus);
@@ -1660,8 +1792,10 @@ fn sammle_qualifizierte_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
             aus_expr(e, aus);
         }
         if let StmtArt::Ruf(r) = &s.art {
-            if r.pfad.teile.len() > 1 {
-                aus.push((r.pfad.text(), r.pfad.teile[0].span));
+            // A QUALIFIED call is `a::f(…)`; a place is never qualified, so an indirect call
+            // is not one of these.
+            if let Some(p) = r.path().filter(|p| p.teile.len() > 1) {
+                aus.push((p.text(), p.teile[0].span));
             }
             for a in &r.argumente {
                 aus_expr(a, aus);
@@ -1817,7 +1951,7 @@ fn fehlerkanal(baum: &Programm, absagen: &mut Absagen) {
         for s in &b.anweisungen {
             if let StmtArt::LetSonst(l) = &s.art {
                 if let Some(r) = l.als_ruf() {
-                    let n = r.pfad.text();
+                    let Some(n) = r.path().map(|p| p.text()) else { continue };
                     if !k.contains_key(&n) {
                         absagen.schiebe(
                             Absage::fehler(
@@ -1842,12 +1976,12 @@ fn fehlerkanal(baum: &Programm, absagen: &mut Absagen) {
             for e in crate::eigene_ausdruecke(s) {
                 for x in crate::alle_ausdruecke(e) {
                     if let ExprArt::Ruf(r) = &x.art {
-                        rufe.push((r.pfad.text(), x.span));
+                        rufe.push((r.target_text(), x.span));
                     }
                 }
             }
             if let StmtArt::Ruf(r) = &s.art {
-                rufe.push((r.pfad.text(), s.span));
+                rufe.push((r.target_text(), s.span));
             }
             for (n, span) in rufe {
                 if let Some(r) = k.get(&n) {
@@ -2032,7 +2166,7 @@ fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
                 if let StmtArt::Let(l) = &s.art {
                     let n = l.typ.as_ref().and_then(|t| nam(t)).or_else(|| {
                         let ExprArt::Ruf(r) = &l.wert.art else { return None };
-                        sig.get(&r.pfad.text()).and_then(|(_, e)| e.clone())
+                        r.path().and_then(|p| sig.get(&p.text())).and_then(|(_, e)| e.clone())
                     });
                     if let Some(n) = n {
                         lokal.insert(l.name.text.clone(), n);
@@ -2125,7 +2259,7 @@ fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
                     rufe.push(r);
                 }
                 for r in rufe {
-                    let Some((ps, _)) = sig.get(&r.pfad.text()) else { continue };
+                    let Some((ps, _)) = r.path().and_then(|p| sig.get(&p.text())) else { continue };
                     for (i, a) in r.argumente.iter().enumerate() {
                         let Some(Some(erwartet)) = ps.get(i) else { continue };
                         let ExprArt::Ort(o) = &a.art else { continue };
@@ -2143,7 +2277,7 @@ fn namenstypen(baum: &Programm, absagen: &mut Absagen) {
                                 format!(
                                     "`{}` is a `{hat}`, and `{}` takes a `{erwartet}` there",
                                     o.basis.text,
-                                    r.pfad.text()
+                                    r.target_text()
                                 ),
                             )
                             .mit_notiz(
@@ -2252,7 +2386,7 @@ fn formatklauseln(baum: &Programm, absagen: &mut Absagen) {
                         namen.insert(o.basis.text.clone());
                     }
                     if let ExprArt::Ruf(r) = &x.art {
-                        namen.insert(r.pfad.text());
+                        namen.insert(r.target_text());
                     }
                 }
             }
@@ -2342,7 +2476,7 @@ fn bootschritte(baum: &Programm, absagen: &mut Absagen) {
         let mut stand: Option<String> = None;
         for s in &b.schritte {
             let BootSchritt::Ruf(r) = s else { continue };
-            let n = r.pfad.text();
+            let n = r.target_text();
             if !bekannt.contains(&n) {
                 absagen.schiebe(
                     Absage::fehler(

@@ -69,7 +69,15 @@ NICHT = {"saetze.rs"}
 # steht auf dem gemessenen Stand vom 2026-08-21, nicht auf einer Wunschzahl.
 MARKE = 14
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
-MARKE_PROBEN = 39
+# 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
+# `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
+# call. `E008` was already on the candidate list (three emission sites in `wirkungen.rs`,
+# similarity 0.23), so the new probe inherits that identifier's ambiguity: it falls green
+# without proving WHICH of the three rules fell.
+# *The number rises because a correct probe was added, not because a rule was issued twice*
+# -- the candidate count itself stays at 14. **Whoever splits `E008` may lower both marks;
+# as long as ONE identifier carries three statements, this is the honest state.**
+MARKE_PROBEN = 40
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

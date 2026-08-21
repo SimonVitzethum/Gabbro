@@ -1,0 +1,112 @@
+-- 49 -- **A dispatch table: the function pointer gets its producer, its call and its
+-- contract, all four in one program.**
+--
+-- The shape is not invented. It is `crates/caprock-hal/src/konsole.rs`:161-166, measured on
+-- 2026-08-21 in `/home/simon/Dokumente/caprock-messbasis`:
+--
+--     pub(crate) struct Treiber {
+--         pub bereit: fn() -> bool,
+--         pub senden: fn(u8),
+--     }
+--     static TREIBER: konsole::Treiber =
+--         konsole::Treiber { bereit: Uart16550::bereit, senden: Uart16550::put_byte };
+--     ...
+--     (t.senden)(b'\r');
+--
+-- Counted with the commands in `messung/FNPTR.md`: **11 `fn(…)` type sites, 4 producers,
+-- 4 calls through** -- and the two producers above are two of the four.
+--
+-- ## Why all four halves stand in ONE file
+--
+-- Because none of them means anything without the others, and the file is the proof of that:
+--
+-- 1. **the producer** -- `&hart_bereit`, `&hart_senden`. Until 2026-08-21 the language had no
+--    form for making a function pointer; `Treiber(bereit: hart_bereit)` gave `M119`
+--    (*"`hart_bereit` is declared nowhere"*), because a bare name is looked up as a variable.
+-- 2. **the call through a place** -- `t->senden(b)`. Until then that was `P017` as a
+--    statement and `P001` inside an expression.
+-- 3. **the lowering** -- `bool (*bereit)(void);` and `t->senden(b)` in the C. Until then
+--    `gabbro emit` refused the field type by name (`C001`, *"no lowering: field type"*).
+-- 4. **the contract at the type** -- `effects { … } costs <= n ops` at the `fn(…)`.
+--
+-- ## And why the fourth cannot be handed in later
+--
+-- Nine pass files resolve the callee statically. An indirect call without a contract takes
+-- back `E008`: the effect hull would again end at the first call boundary, the way it did
+-- before 2026-08-15. **The contract at the pointer type is the only thing that restores the
+-- hull where the callee has no name** -- `aufrufgraph::Knoten::indirect` folds it in, and
+-- `M128` is what holds `&f` to it, so that what the hull computes with is a fact and not a
+-- wish.
+--
+-- ## What this file does NOT show, and where that is written down
+--
+-- A `fn(…)` contract may name `reads`, `writes`, `allocs`, `pure` and `diverges` -- and not
+-- `locks`, `masks`, `consumes` or `publishes` (`N036`). Those four are read by passes that
+-- key on the callee's NAME, and an indirect call has none. *The refusal is the answer:* a
+-- program that needs the lock order to cross an indirect call does not pass.
+--
+-- The counter-probes are `beispiele/gift/240` through `247`.
+
+module beispiel::dispatchtabelle {
+
+const AUS_BEREIT : u32 = 1;
+
+-- **The driver the architecture hands in -- two function pointers instead of a generic.**
+--
+-- Both fields carry the same contract they carry in the measured code: `bereit` asks the
+-- port and touches nothing, `senden` writes a byte out. *The split is the point of the
+-- shape:* `bereit` may wait arbitrarily long, `senden` is short.
+type Treiber = {
+    bereit : fn() -> bool
+        effects { reads ZUSTAND }
+        costs   <= 4 ops,
+    senden : fn(b : u8)
+        effects { writes ZUSTAND }
+        costs   <= 4 ops,
+};
+
+-- The port, as much of it as this example needs.
+static mut ZUSTAND : u32 = 0;
+
+impl fn hart_bereit() -> bool
+    effects { reads ZUSTAND }
+    costs   <= 3 ops
+{
+    return ZUSTAND == AUS_BEREIT;
+}
+
+impl fn hart_senden(b : u8)
+    effects { writes ZUSTAND }
+    costs   <= 3 ops
+{
+    ZUSTAND = b;
+}
+
+-- **The producer.** `&f` is the one form in which a function becomes a value.
+--
+-- `M128` holds each side against the slot it goes into: `hart_bereit` declares
+-- `reads ZUSTAND` and costs 3, the slot allows `reads ZUSTAND` and promises 4. A function
+-- that wrote where the slot only reads would fall here -- see `gift/241`.
+impl fn baue() -> Treiber
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Treiber(bereit: &hart_bereit, senden: &hart_senden);
+}
+
+-- **The call through a place, in both positions the grammar has.**
+--
+-- The `effects` line below is NOT a repetition of the table's: it is what the hull computes.
+-- `t->bereit()` promises `reads ZUSTAND`, `t->senden(b)` promises `writes ZUSTAND`, and both
+-- travel up through `aufrufgraph::Knoten::indirect`. *Delete either word and `E008` falls* --
+-- which is the whole claim this file makes.
+impl fn ausgeben(t : ptr<normal, r> Treiber, b : u8)
+    effects { reads t, reads ZUSTAND, writes ZUSTAND }
+    costs   <= 12 ops
+{
+    if t->bereit() {
+        t->senden(b);
+    }
+}
+
+}

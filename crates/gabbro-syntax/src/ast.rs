@@ -352,11 +352,61 @@ pub struct Variante {
     pub nutzlast: Option<TypExpr>,
 }
 
+/// **A function pointer type -- and it carries its CONTRACT.**
+///
+/// Until 2026-08-21 this held `parameter: Vec<TypExpr>` and nothing else. The type was a
+/// shape without a promise, and `umgebung.rs` turned it into `Typ::Unbekannt` -- measured:
+/// `let x : u32 = t->bereit;`, `let y : bool = t->bereit;` and
+/// `let z : ptr<normal, r> T = t->bereit;` produced **zero type errors in ONE file**
+/// (`probe/p8.gab`, `gabbro pruefe`). *A form without a reader is not neutral; it is a hole.*
+///
+/// **Why the contract sits at the TYPE and not at the caller.** Nine pass files resolve the
+/// callee statically today (`aufrufgraph::`, `huelle_der_gerufenen`, `u.funktion(&…)`). An
+/// indirect call without a contract undoes `E008`: the effect hull would again end at the
+/// first call boundary, the way it did before 2026-08-15. **The contract at the pointer type
+/// is the only thing that restores the hull at an indirect call site** -- it is the static
+/// promise the producer (`&f`) is checked against, and the one the call reads its effects
+/// and costs from.
+///
+/// **The parameters are NAMED** (`fn(b : u8)`, not `fn(u8)`). An effect line names a place
+/// (`writes r.slots`), and a place needs a name. *The absence of names is exactly what makes
+/// an effect list untranslatable across a call boundary* -- see `aufrufgraph::ersetze`. The
+/// grammar said `typelist` until today; that was the line of a form nobody read.
+///
+/// **It costs no new word.** `requires`, `ensures`, `effects` and `costs` are already in the
+/// vocabulary; the contract at the pointer type uses them in the same order and with the
+/// same meaning as at an `fn` declaration (E4: the clauses stand in a fixed order).
 #[derive(Debug, Clone)]
 pub struct FnZeiger {
-    pub parameter: Vec<TypExpr>,
+    pub parameter: Vec<Parameter>,
     pub ergebnis: Option<TypExpr>,
+    pub requires: Vec<Pred>,
+    pub ensures: Vec<Pred>,
+    /// `None` means the clause is missing. **That is an error** (`N035`) -- a function
+    /// pointer without an effect promise is precisely the case where the hull is lost
+    /// silently.
+    pub effects: Option<Wirkungen>,
+    /// `None` means the clause is missing. **That is an error too** (`N035`) -- otherwise an
+    /// indirect call costs nothing, and `K001` computes with a number nobody promised.
+    pub costs: Option<Expr>,
     pub span: Span,
+}
+
+impl FnZeiger {
+    /// The shape without the contract -- for refusal texts and for comparing two pointer
+    /// types. `fn(b) -> …`.
+    pub fn shape(&self) -> String {
+        let p = self
+            .parameter
+            .iter()
+            .map(|p| p.name.text.clone())
+            .collect::<Vec<_>>()
+            .join(", ");
+        match &self.ergebnis {
+            Some(_) => format!("fn({p}) -> …"),
+            None => format!("fn({p})"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -393,6 +443,24 @@ pub enum ExprArt {
     Wahr,
     Falsch,
     Ort(Ort),
+    /// **`&f` -- the PRODUCER of a function pointer** (2026-08-21).
+    ///
+    /// Until today the language had no form for MAKING a function pointer. `fn(…)` stood in
+    /// the grammar, in `parse.rs` and in `ast.rs` -- and had zero corpus sites, because there
+    /// was no value one could write into it. *A type nobody can produce is a promise without
+    /// a redeemer.*
+    ///
+    /// **Why `&f` and not the bare name `f`.** E3: nothing is implicit. A bare name in value
+    /// position is a `place`, and a `place` carrying a function's name would be the first
+    /// site where the reader needs context to know what is written. *Measured, what the bare
+    /// name does today:* `Treiber(bereit: wahr)` gives **`M119` -- "`wahr` is declared
+    /// nowhere"** (`probe/p7.gab`), because `wahr` is looked up as a variable. The `&` says:
+    /// here a function becomes a value.
+    ///
+    /// **Caprock writes it without `&`** (`konsole::Treiber { bereit: Pl011::bereit }`) --
+    /// that is Rust's rule, not the shape of the thing. C admits both `&f` and `f`; Gabbro
+    /// admits one.
+    FnWert(Pfad),
     Ruf(Ruf),
     Klammer(Box<Expr>),
     Eingebaut(Box<Eingebaut>),
@@ -517,7 +585,7 @@ pub enum OrtSuffix {
 /// direkt auf einen Ausdruck. Der Fehlerfall eines Kontextschalters ist STILL.
 #[derive(Debug, Clone)]
 pub struct Ruf {
-    pub pfad: Pfad,
+    pub ziel: CallTarget,
     pub argumente: Vec<Expr>,
     /// **Invariante: leer, oder genauso lang wie `argumente`.**
     ///
@@ -532,7 +600,89 @@ pub struct Ruf {
     pub span: Span,
 }
 
+/// **Where a call goes -- and whether the callee is a NAME or a PLACE.**
+///
+/// This is why it is an `enum` and not an `Option<Pfad>` beside a flag: **every pass site
+/// that resolves the callee must name both cases**, and the Rust compiler enumerates them.
+/// On 2026-08-21, when `pfad: Pfad` became `ziel: CallTarget`, there were **72 such sites in
+/// 14 files** (`cargo check --message-format short | grep -c 'error'`).
+///
+/// > *A pass that simply stays silent about an unknown callee has given the class back
+/// > without anyone seeing it.* This form stands against exactly that: silence here is not a
+/// > default branch, it is a compile error.
+#[derive(Debug, Clone)]
+pub enum CallTarget {
+    /// `f(…)`, `a::f(…)`, `P(a: 1)` -- the callee stands there as a NAME. Statically
+    /// resolvable.
+    Path(Pfad),
+    /// `t->senden(b)`, `TAB.bereit()` -- the callee stands at a PLACE and is **not** known at
+    /// translation time. What is fixed about it stands at the type of the place: its
+    /// contract (`FnZeiger`).
+    Place(Ort),
+}
+
+impl CallTarget {
+    /// As it stood in the source -- for refusals and for the certificate.
+    pub fn text(&self) -> String {
+        match self {
+            CallTarget::Path(p) => p.text(),
+            CallTarget::Place(o) => o.text(),
+        }
+    }
+
+    pub fn span(&self) -> Span {
+        match self {
+            CallTarget::Path(p) => p.span,
+            CallTarget::Place(o) => o.span,
+        }
+    }
+}
+
 impl Ruf {
+    /// The path, **if** the callee is a name. `None` for an indirect call.
+    ///
+    /// **Whoever short-circuits this with `?` or `let … else return` gives a class back
+    /// silently.** The caller must ANSWER the `None` case -- with a refusal or with a line in
+    /// the certificate.
+    pub fn path(&self) -> Option<&Pfad> {
+        match &self.ziel {
+            CallTarget::Path(p) => Some(p),
+            CallTarget::Place(_) => None,
+        }
+    }
+
+    /// The place, **if** the call is indirect.
+    pub fn place(&self) -> Option<&Ort> {
+        match &self.ziel {
+            CallTarget::Place(o) => Some(o),
+            CallTarget::Path(_) => None,
+        }
+    }
+
+    /// **Does this call go through a place?** The callee is then not statically known.
+    pub fn is_indirect(&self) -> bool {
+        matches!(self.ziel, CallTarget::Place(_))
+    }
+
+    /// The written callee -- name or place.
+    pub fn target_text(&self) -> String {
+        self.ziel.text()
+    }
+
+    /// **Is the last segment of the called path exactly this word?**
+    ///
+    /// The question a dozen sites ask: is this `Some`, `None`, `Held`, `Has` -- a constructor
+    /// or a predicate form rather than an ordinary call? For an **indirect** call the answer
+    /// is always `false`, and that is a statement, not a shortcut: `Some` and `Held` are
+    /// spelled as names in the grammar, and a place can never spell one. *Written as a method
+    /// so the answer is given once, with its reason, instead of at each site by an
+    /// `Option`-chain that could just as easily have been a `?`.*
+    pub fn heisst(&self, wort: &str) -> bool {
+        self.path()
+            .and_then(|p| p.teile.last())
+            .is_some_and(|i| i.text == wort)
+    }
+
     /// **Der syntaktische Unterscheider: ein markierter Ruf ist ein Verbundwert.**
     ///
     /// Er braucht keine Umgebung, keine Namensaufloesung und keine Karte -- und genau das ist

@@ -1,0 +1,37 @@
+-- erwartet: M128
+-- **Poison 241 -- the producer promises MORE than the slot it goes into.**
+--
+-- `schreibt` declares `writes ZUSTAND`; the slot allows only `reads ZUSTAND`. If this passed,
+-- the contract at the pointer type would be a decoration: every caller through the slot
+-- computes with the slot's promise, and the promise would be false.
+--
+-- **The direction is the content.** The reverse -- a `pure` function in a slot that permits
+-- writing -- is admitted on purpose and is what `beispiele/49` does at `bereit`; forbidding it
+-- would force every member of an ops table to declare its widest member's effects.
+
+module gift::fnzeiger_erzeuger_schreibt_mehr {
+
+static mut ZUSTAND : u32 = 0;
+
+type Nur_Lesen = {
+    f : fn() -> bool
+        effects { reads ZUSTAND }
+        costs   <= 4 ops,
+};
+
+impl fn schreibt() -> bool
+    effects { writes ZUSTAND }
+    costs   <= 3 ops
+{
+    ZUSTAND = 1;
+    return true;
+}
+
+impl fn baue() -> Nur_Lesen
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Nur_Lesen(f: &schreibt);
+}
+
+}

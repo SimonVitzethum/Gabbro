@@ -57,6 +57,20 @@ zerstören einander.*
 Seit dem 2026-08-19 liegt auch eine **Rust-Kette auf `ki-pc-fisch-101`**
 (`~/.cargo/bin`, rustup, ohne `sudo` installiert — der Rechner hatte vorher kein `cargo`).
 
+## Wenn ein Agent nebenher rechnet
+
+**Jeder Agent bekommt sein EIGENES Serververzeichnis** (`gabbro-a`, `gabbro-b`, …), nie
+`gabbro-baum`. *Am 2026-08-21 lief ein `rsync` in ein Verzeichnis, in dem gerade ein
+Mutationslauf arbeitete, und zwei grüne Testsammlungen wurden rot* — **kein Befund, eine
+Kollision.** Ein Mutationslauf schreibt in Quellen und stellt sie hinterher byteweise zurück;
+wer ihm dazwischen eine Datei unterschiebt, misst eine Mischung. Dieselbe Klasse wie `W16`,
+nur zwischen zwei Läufen statt in einem.
+
+**Und der Arbeitsbaum eines Agenten steht vor Laufbeginn auf `master`.** Ein Zweig, der drei
+Commits zurückliegt, misst gegen einen Stand, den es nicht mehr gibt — am 2026-08-21 hat das
+dreimal Zahlen erzeugt, die beim Zusammenführen einzeln nachgerechnet werden mussten. *Der
+`--ff-only`-Vorlauf ist kein Commit und kostet nichts; ihn zu vergessen kostet den Merge.*
+
 ## Was sonst gilt
 
 * **Commit-Nachrichten nur über `arbeitsprotokoll/.commitmsg` + `./commit.sh`** (R19).

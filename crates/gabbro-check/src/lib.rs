@@ -406,6 +406,113 @@ pub fn annahmen(baum: &Programm) -> std::collections::BTreeMap<String, bool> {
     aus
 }
 
+/// **Every type expression an item writes down -- exhaustively, without a `_` arm.**
+///
+/// Built on 2026-08-21 for the function pointer contract (`N035`-`N037`): a rule about a
+/// TYPE needs a walk over types, and there was none. Every pass that wanted one descended by
+/// hand, and the house record on hand-written descents is the reason this file already holds
+/// `unterbloecke` and `alle_ausdruecke`: *78 holes of one build, each pass forgetting a
+/// different arm.*
+///
+/// **Both matches below are exhaustive on purpose.** A new `ItemArt` or a new `TypExpr` is a
+/// compile error here, not a type that quietly stops being checked.
+///
+/// It visits **declared** types only -- the type of a place is computed, not written, and
+/// that is `umgebung::typ_von_ort`'s business.
+pub fn jeder_typausdruck_im_item(item: &Item, f: &mut impl FnMut(&TypExpr)) {
+    fn typ(t: &TypExpr, f: &mut impl FnMut(&TypExpr)) {
+        f(t);
+        match t {
+            TypExpr::Feld(a) => typ(&a.element, f),
+            TypExpr::Zeiger(p) => typ(&p.ziel, f),
+            TypExpr::Verbund(felder, _) => {
+                for x in felder {
+                    typ(&x.typ.typ, f);
+                }
+            }
+            TypExpr::Varianten(v, _) => {
+                for x in v {
+                    if let Some(n) = &x.nutzlast {
+                        typ(n, f);
+                    }
+                }
+            }
+            // **A function pointer's own parameter and result types are types too.** A
+            // `fn(g : fn() effects { pure } costs <= 1 ops)` is admitted by the grammar, and
+            // the contract rules have to reach the inner one as well.
+            TypExpr::FnZeiger(z) => {
+                for p in &z.parameter {
+                    typ(&p.typ, f);
+                }
+                if let Some(e) = &z.ergebnis {
+                    typ(e, f);
+                }
+            }
+            TypExpr::Int(_)
+            | TypExpr::Float(_)
+            | TypExpr::Bool(_)
+            | TypExpr::Never(_)
+            | TypExpr::Pfad(_)
+            | TypExpr::Index { .. } => {}
+        }
+    }
+    match &item.art {
+        ItemArt::Typ(d) => {
+            for p in d.parameter.iter().flatten() {
+                typ(p, f);
+            }
+            if let Some(r) = &d.rumpf {
+                typ(r, f);
+            }
+        }
+        ItemArt::Funktion(d) => {
+            for p in &d.parameter {
+                typ(&p.typ, f);
+            }
+            if let Some(e) = &d.ergebnis {
+                typ(e, f);
+            }
+        }
+        ItemArt::Konst(d) => typ(&d.typ, f),
+        ItemArt::Statisch(d) => typ(&d.typ, f),
+        ItemArt::Atomic(d) => typ(&d.typ, f),
+        ItemArt::Format(d) => {
+            for x in &d.felder {
+                typ(&x.typ.typ, f);
+            }
+        }
+        ItemArt::Tabelle(d) => {
+            for k in &d.konstanten {
+                typ(&k.typ, f);
+            }
+            for s in d.slot.iter().flat_map(|s| &s.felder) {
+                match &s.typ {
+                    SlotTyp::Typ(t) => typ(t, f),
+                    SlotTyp::Wrapping(_) => {}
+                }
+            }
+        }
+        // **These declare no type expression**, and each is written out rather than swept
+        // into a `_`: when one of them grows a type, this is the line that must change.
+        ItemArt::Modul(_)
+        | ItemArt::Use(_)
+        | ItemArt::Reason(_)
+        | ItemArt::State(_)
+        | ItemArt::Device(_)
+        | ItemArt::Assume(_)
+        | ItemArt::Axiom(_)
+        | ItemArt::Check(_)
+        | ItemArt::Lock(_)
+        | ItemArt::Rcu(_)
+        | ItemArt::Gruppe(_)
+        | ItemArt::Accumulates(_)
+        | ItemArt::Walk(_)
+        | ItemArt::Entry(_)
+        | ItemArt::Entrust(_)
+        | ItemArt::Boot(_) => {}
+    }
+}
+
 pub fn fuer_jedes_item_im_modul(baum: &Programm, f: &mut impl FnMut(&Item, &str)) {
     fn geh(items: &[Item], pfad: &str, f: &mut impl FnMut(&Item, &str)) {
         for i in items {
@@ -618,6 +725,9 @@ pub fn unterausdruecke(e: &Expr) -> Vec<&Expr> {
         | ExprArt::Gleitkomma { .. }
         | ExprArt::Wahr
         | ExprArt::Falsch
+        // **`&f` carries no sub-expression either** («B8»): the `&` takes a PATH, not an
+        // expression, and that restriction is in the parser on purpose.
+        | ExprArt::FnWert(_)
         // **Ein Grundwert traegt keinen Unterausdruck** (Stufe 7) -- `R::F` ist ein
         // Blatt, wie `true`. Er steht hier ausgeschrieben und nicht in einem `_`-Zweig:
         // *ein schweigender Auffangzweig ist die haeufigste Lochform dieses Ordners.*
@@ -678,7 +788,10 @@ pub fn alle_orte(e: &Expr) -> Vec<&Ort> {
                     aus.push(o);
                 }
             }
-            ExprArt::Zahl(_)
+            // **`&f` is not a place** -- it names a function, and no pass that reads
+            // places (`reads`, `writes`, M3's rights) has anything to do here.
+            ExprArt::FnWert(_)
+            | ExprArt::Zahl(_)
             | ExprArt::Gleitkomma { .. }
             | ExprArt::Wahr
             | ExprArt::Falsch
@@ -725,10 +838,14 @@ pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
     };
     match &letzte.art {
         StmtArt::Return(_) | StmtArt::Leave(_) | StmtArt::Next(_) => true,
+        // **An indirect call never ends a body.** `divergent` lists the functions whose
+        // call does not return (`-> never`), and it is a list of NAMES. A `fn(…)` type may
+        // promise `diverges` as an effect, but that is a statement about what the callee
+        // touches, not about whether control comes back -- *and reading it as the second
+        // would let a body end in a place no pass verified.*
         StmtArt::Ruf(r) => r
-            .pfad
-            .teile
-            .last()
+            .path()
+            .and_then(|p| p.teile.last())
             .is_some_and(|n| divergent.iter().any(|d| d == &n.text)),
         StmtArt::Wenn(w) => {
             w.sonst.as_ref().is_some_and(|r| endet_immer(r, divergent))

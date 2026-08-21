@@ -1,0 +1,15 @@
+module probe::acht {
+
+type Treiber = { bereit : fn() -> bool, };
+
+impl fn nutze(t : ptr<normal, r> Treiber) -> u32
+    effects { reads t }
+    costs   <= 4 ops
+{
+    let x : u32 = t->bereit;
+    let y : bool = t->bereit;
+    let z : ptr<normal, r> Treiber = t->bereit;
+    return x;
+}
+
+}

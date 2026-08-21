@@ -1,0 +1,31 @@
+-- erwartet: N035
+-- **Poison 240 -- a function pointer type that promises no effects.**
+--
+-- This is the probe for the half the whole item turns on. Without an `effects` clause at the
+-- type, a call through this pointer has nothing to contribute to the caller's hull -- and the
+-- hull would quietly go back to ending at the first call boundary, exactly as it did before
+-- 2026-08-15, when `E008` was made compositional.
+--
+-- *The refusal falls at the TYPE and not at the call site*, and that is deliberate: a type
+-- that cannot carry a contract should not be writable, rather than be written once and refuse
+-- at each of its uses.
+--
+-- The counter-probe with the clause present is `beispiele/49-dispatch-tabelle.gab`.
+
+module gift::fnzeiger_ohne_effects {
+
+static mut ZUSTAND : u32 = 0;
+
+type Treiber = {
+    senden : fn(b : u8)
+        costs <= 4 ops,
+};
+
+impl fn nutze(t : ptr<normal, r> Treiber, b : u8)
+    effects { reads t, writes ZUSTAND }
+    costs   <= 8 ops
+{
+    t->senden(b);
+}
+
+}

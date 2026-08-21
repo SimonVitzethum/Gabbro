@@ -332,7 +332,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **9 Widerrufe** über 62 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **9 Widerrufe** über 63 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *Woran es hängt: eine Teilmengenbuchung bräuchte je Zahlenpaar den Satz „A ist Teil von
       B", und den schreibt niemand hin, solange er nicht wehtut.*
 
@@ -404,7 +404,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 105 sind tragend, 2 verdächtig — und **48 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 111 sind tragend, 2 verdächtig — und **48 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       *Wer eine Absage liest und daraus nicht erkennt, worauf sie ruht, kann auch nicht
       prüfen, ob sie weit genug reicht.* Das ist der größere Posten, nicht die zwei.
@@ -469,7 +469,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **1370 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **1418 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -637,7 +637,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **264 von 264 Ankern** greifen (`--anker`, 2026-08-21) — die
+      fällt. Mutationskatalog: **268 von 268 Ankern** greifen (`--anker`, 2026-08-21) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -662,7 +662,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       rules for the same thing**; now one: separating comma obligatory, trailing comma
       optional.
       **Und die Messschicht sagt, warum die drei stehenbleiben:** `./instrumente/pruefe-syntax.sh` hält
-      147 EBNF-Regeln und 216 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
+      149 EBNF-Regeln und 216 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
       gegen sich selbst, nie den Parser gegen die Grammatik.* Ein Wächter für die Differenz
       bräuchte je Stelle eine Giftdatei, die der Parser **annehmen** und die EBNF **verbieten**
       muss — **drei Dateien, und der Prüfer müsste dafür rot werden, wo er heute grün ist.**
@@ -2662,6 +2662,51 @@ what remains is four, and **one of them is not solved but grazed**.
 
 ---
 
+# D2 AUF DEN PRÜFER ANGEWANDT — was der `CallTarget`-Griff verallgemeinert
+
+**Beim Bau von `fnptr` wurde `Ruf.pfad: Pfad` zu `Ruf.ziel: CallTarget` — ein Summentyp ohne
+Auffangzweig.** Der Übersetzer zählte daraufhin **72 Passstellen in 14 Dateien** auf, an denen
+der Gerufene aufgelöst wird. *Schweigen war kein Vorgabezweig, sondern ein Übersetzungsfehler,
+und jede Stelle bekam ihre Antwort mit ihrem Grund im Quelltext.*
+
+> **Das ist D2, auf den Prüfer selbst angewandt** — dieselbe Medizin, die die Sprache ihren
+> Nutzern verschreibt: *undurchsichtige Typen ohne stille Umwandlung.* Und es ist die dritte
+> oder vierte Instanz desselben Musters (der Registerabdruck in `entry`, das erschöpfende
+> `match` mit `-Wswitch` als zweitem Leser).
+
+**Und es steht in scharfem Kontrast zu dem, was der Grunderzeuger fand:** 53 `match`es über
+`ExprArt` mit `_`-Zweig, während der Übersetzer nur fünf erzwang. *Ein Grundwert rutschte
+durch sieben Positionen still.*
+
+- [ ] **Ein Durchgang: wo steht sonst `Option` oder `_`, wo ein Summentyp die
+      VOLLSTÄNDIGKEIT erzwingen würde?** *(gestellt 2026-08-21, nachdem ein einziger
+      `Option → enum`-Wechsel 72 begründete Antworten erzwang)*. Die Fläche, gemessen:
+
+      ```
+      138 `Option<`-Stellen im Prüfer
+      155 Auffangzweige über einem AST-Summentyp
+          parse.rs 32 · emit.rs 28 · namen.rs 17 · m1.rs 15 · wirkungen.rs 9
+      ```
+
+      **Nicht jeder davon ist ein Fund** — ein `_`-Zweig über `Kw` ist richtig, ein `Option`
+      für *„nicht angegeben"* auch. *Die Zahl ist eine obere Schranke und eine Arbeitsliste,
+      kein Urteil.* **Erwartet wird eine Trefferquote wie bei den letzten drei Wächtern**, und
+      die war jedes Mal höher, als vorher jemand geschätzt hätte.
+      **Die Reihenfolge nach Gewicht:** `parse.rs` und `emit.rs` tragen zusammen 60 der 155,
+      und `emit.rs` ist die Fläche, über die `244 von 244` ausdrücklich nichts sagt.
+
+- [ ] **Ein Deckungssprung gegen den Vorlauf ist selbst ein Prüffall** *(2026-08-21)*. Beim
+      `fnptr`-Bau fiel die Deckung einer Handprobe auf **25 %** — und wurde **gedruckt**, statt
+      die Datei abzulehnen. *So ist es richtig gebaut: eine Ablehnung wäre ein Urteil, ein
+      Druck ist eine Messung.* **Aber eine gedruckte 25-%-Deckung, die niemand ansieht, ist
+      ein stiller Ausfall MIT Beleg** — und das ist die schlechteste Sorte, weil sie sich
+      hinterher als „stand doch da" verteidigen lässt.
+      **Gehört zur Arbeitsmengen-Regel (W17):** nicht die Deckung selbst wird bewacht, sondern
+      ihr SPRUNG gegen den vorigen Lauf. *Wer eine Zahl druckt, die niemand vergleicht, hat
+      sie nicht gemessen, sondern nur ausgegeben.*
+
+---
+
 # DIE SPRACHLINIE, NEU GEZOGEN AM 2026-08-21
 
 **Bis heute lief die Linie zwischen dem, was Gabbro SAGT, und dem, was der Ordner ÜBER Gabbro
@@ -2673,7 +2718,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7731 von 10943 Kommentarzeilen** im Pruefer sind deutsch
+**7730 von 11405 Kommentarzeilen** im Pruefer sind deutsch
  1043 von  1280 in den Instrumenten
   273 von   845 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -2751,7 +2796,7 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       Deckungsaussage aller Proben, die darauf zeigen.
 
       ```
-      39 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 237, die
+      40 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 237, die
       ueberhaupt eine Kennung erwarten)
       ```
 
@@ -2769,7 +2814,7 @@ hat kein Feld dafür). **Ohne die Sätze ist „Gabbro formal verifiziert" nicht
 formulierbar** — man wüsste nicht, was zu beweisen wäre.
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (heute 201 Codes, null Sätze).
+sofort: *kein neuer Absagecode ohne seinen Satz* (heute 207 Codes, null Sätze).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
@@ -3448,7 +3493,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 147 / 216) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 149 / 216) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |

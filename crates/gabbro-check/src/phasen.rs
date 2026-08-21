@@ -412,9 +412,12 @@ fn anwenden(
     stand: &mut BTreeMap<String, String>,
     absagen: &mut Absagen,
 ) -> Option<String> {
-    let name = r.pfad.teile.last()?.text.clone();
+    // **An indirect call advances no mark.** `advances a -> b` stands at an `fn`
+    // DECLARATION and has no place in a `fn(…)` type -- the grammar does not admit it, and
+    // this `?` is therefore a fact about the language, not a shortcut past a case.
+    let name = r.path()?.teile.last()?.text.clone();
     let sch = u
-        .kandidaten_aufloesbar(modul, &r.pfad.text())
+        .kandidaten_aufloesbar(modul, &r.path()?.text())
         .into_iter()
         .find_map(|k| schritte.get(&k))?;
     // Welches Argument ist die Marke? Das erste, dessen Name einen Stand hat.
@@ -476,7 +479,14 @@ fn enthaelt_schritt(
         modul: &str,
         schritte: &BTreeMap<String, Schritt>,
     ) -> bool {
-        u.kandidaten_aufloesbar(modul, &r.pfad.text())
+        // **An indirect call is never a phase step.** A step is a function that carries
+        // `advances a -> b`, that clause stands at an `fn` DECLARATION, and the grammar
+        // admits none at a `fn(…)` type. *So `false` here is a fact about the language, not a
+        // pass declining to look.*
+        let Some(p) = r.path() else {
+            return false;
+        };
+        u.kandidaten_aufloesbar(modul, &p.text())
             .into_iter()
             .any(|k| schritte.contains_key(&k))
     }

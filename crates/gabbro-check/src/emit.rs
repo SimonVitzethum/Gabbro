@@ -237,7 +237,7 @@ fn verbundwert(e: &Expr, u: &Namen) -> bool {
     match &e.art {
         ExprArt::Klammer(x) => verbundwert(x, u),
         ExprArt::Ruf(r) => {
-            let Some(n) = r.pfad.teile.last() else { return false };
+            let Some(n) = r.path().and_then(|p| p.teile.last()) else { return false };
             // **Ein Verbundkonstruktor ist kein Ruf** («B7»): `Completion(id: …)` nennt den
             // Typ selbst.
             if u.verbunde.contains(&n.text) {
@@ -1664,6 +1664,19 @@ fn verbund(t: &TypDecl, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             aus.push_str(&format!("    {el} {}[{n}];\n", f.name.text));
             continue;
         }
+        // **A function pointer field, like an array, puts its name INSIDE the type**
+        // («B8», 2026-08-21) -- `bool (*bereit)(void);`, C11 §6.7.6.3.
+        //
+        // *That is why it cannot go through `ctyp`:* `ctyp` answers with a type that a name
+        // is appended to, and a C function pointer declarator has no such form. The same
+        // reason the array branch above exists, and the same shape of answer.
+        if let TypExpr::FnZeiger(z) = &f.typ.typ {
+            match fnzeiger_deklarator(z, &f.name.text, u) {
+                Some(d) => aus.push_str(&format!("    {d};\n")),
+                None => weigere(absagen, f.name.span, "function pointer field type"),
+            }
+            continue;
+        }
         match ctyp(&f.typ.typ, u) {
             Some(c) => aus.push_str(&format!("    {c} {};\n", f.name.text)),
             None => weigere(absagen, f.name.span, "field type"),
@@ -2623,8 +2636,41 @@ fn zahltext(e: &Expr, absagen: &mut Absagen) -> String {
 
 /// The C type for a Gabbro type. **Range types lower to their carrier** -- the range itself is
 /// an M1 fact and lives in the checker, not in the C.
+/// **A C function pointer declarator** -- `bool (*bereit)(void)`, `void (*senden)(uint8_t)`.
+///
+/// C11 §6.7.6.3: the declared name sits between the `*` and the parameter list, so the type
+/// cannot be produced as a string that a name is appended to. Pass an empty `name` for the
+/// abstract form (`bool (*)(void)`), which is what a parameter or a cast needs.
+///
+/// **`(void)` and not `()`.** An empty parameter list in C means *unspecified*, and under
+/// `-Wstrict-prototypes` that is a warning; more to the point, it is a different type. *The
+/// generator writes the type the declaration says, not the one that happens to compile.*
+///
+/// The contract is **not** emitted, and that is the division this whole item rests on: the
+/// effects and the cost bound are checker facts (W6), exactly as a range type's bounds are.
+/// What reaches the C is the shape.
+fn fnzeiger_deklarator(z: &FnZeiger, name: &str, u: &Namen) -> Option<String> {
+    let rueck = match &z.ergebnis {
+        Some(e) => ctyp(e, u)?,
+        None => "void".to_string(),
+    };
+    let params = if z.parameter.is_empty() {
+        "void".to_string()
+    } else {
+        z.parameter
+            .iter()
+            .map(|p| ctyp(&p.typ, u))
+            .collect::<Option<Vec<_>>>()?
+            .join(", ")
+    };
+    Some(format!("{rueck} (*{name})({params})"))
+}
+
 fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
     match t {
+        // The abstract declarator -- a function pointer in a position that has no name of
+        // its own (a parameter, a result). See `fnzeiger_deklarator`.
+        TypExpr::FnZeiger(z) => fnzeiger_deklarator(z, "", u),
         TypExpr::Int(i) => Some(intty(i)),
         // **«F»: `f32`/`f64` senken zu `float`/`double` ab -- und mehr sagt der Erzeuger
         // nicht.** Der Bereich ist ein M1-Faktum und lebt im Pruefer, genau wie beim
@@ -3096,7 +3142,7 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
             for s in &b.anweisungen {
                 if let StmtArt::Let(l) = &s.art {
                     if let ExprArt::Ruf(r) = &l.wert.art {
-                        let n = r.pfad.text();
+                        let Some(n) = r.path().map(|p| p.text()) else { continue };
                         if u.geraete.contains_key(&n) {
                             lokal.geraetewerte.insert(l.name.text.clone(), n);
                             lokal.werte.insert(l.name.text.clone());
@@ -4133,7 +4179,26 @@ fn anweisung(
                 );
                 return;
             };
-            let name = r.pfad.text();
+            // **An INDIRECT `let … else` is refused, by name** (2026-08-21). The `else`
+            // branch binds a `reason`, and a reason comes from the callee's `-> T or R`
+            // signature. A `fn(…)` type carries a contract, **but no error channel** -- so
+            // there is nothing here for `e` to hold. *The refusal is the answer, not a
+            // placeholder:* the emitter does not invent a channel.
+            //
+            // **And it is the ONLY refusal for this shape today** -- no pass says it first.
+            // `N029` speaks about the reverse case (a call that CAN fail and does not stand
+            // in a `let … else`), and no checker rule looks at an indirect one. *A file that
+            // never reaches the emitter therefore hears nothing about it*, which is the
+            // weaker half and is booked as such.
+            let Some(name) = r.path().map(|p| p.text()) else {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`let … else` over an INDIRECT call -- a `fn(…)` type carries a contract \
+                     but no `or R` error channel, so nothing binds `e`",
+                );
+                return;
+            };
             let Some(sig) = u.funktionen.get(&name) else {
                 weigere(absagen, s.span, "`let … else` over a call this unit does not declare");
                 return;
@@ -5315,7 +5380,7 @@ fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
         }
         // **`Vtd(basis)` ist der GRIFF eines Geraets, kein Ruf** -- siehe `ruf`.
         ExprArt::Ruf(r) => {
-            let n = &r.pfad.teile.last()?.text;
+            let n = &r.path()?.teile.last()?.text;
             if u.geraete.contains_key(n) {
                 return Some(n.clone());
             }
@@ -5367,7 +5432,7 @@ fn option_quelle(e: &Expr, u: &Namen) -> Option<String> {
     match &e.art {
         ExprArt::Ruf(r) => u
             .funktionen
-            .get(&r.pfad.teile.last()?.text)?
+            .get(&r.path()?.teile.last()?.text)?
             .option_rueck
             .clone(),
         ExprArt::Ort(o) => option_ziel(o, u),
@@ -5387,7 +5452,7 @@ fn option_quelle(e: &Expr, u: &Namen) -> Option<String> {
 /// ihn gewoehnlich.
 fn option_wert(e: &Expr, tab: &str, u: &Namen, absagen: &mut Absagen) -> Option<String> {
     let name = match &e.art {
-        ExprArt::Ruf(r) => r.pfad.teile.last()?.text.clone(),
+        ExprArt::Ruf(r) => r.path()?.teile.last()?.text.clone(),
         ExprArt::Ort(o) if o.suffixe.is_empty() => o.basis.text.clone(),
         _ => return None,
     };
@@ -5432,9 +5497,8 @@ fn rumpf_scheitert(b: &Block) -> bool {
 fn geist_wert(e: &Expr, u: &Namen) -> bool {
     match &e.art {
         ExprArt::Ruf(r) => r
-            .pfad
-            .teile
-            .last()
+            .path()
+            .and_then(|p| p.teile.last())
             .and_then(|i| u.funktionen.get(&i.text))
             .is_some_and(|s| s.geist_rueck),
         // **Und ein blanker NAME, dessen Typ ein Geist ist** (2026-08-20). Bis dahin las
@@ -5453,7 +5517,30 @@ fn geist_wert(e: &Expr, u: &Namen) -> bool {
 /// signature; an unknown callee keeps every argument, which cannot compile silently — it
 /// fails at `cc`, and that is the direction to fail in.
 fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
-    let name = r.pfad.teile.last().map(|i| i.text.clone()).unwrap_or_default();
+    // **The indirect call lowers to itself** («B8», 2026-08-21). `t->senden(b)` is
+    // `t->senden(b)` in C -- the one construct in this emitter whose C form is its Gabbro
+    // form.
+    //
+    // *No ghost argument is dropped here, and that is not an omission:* a ghost parameter is
+    // erased by position, the positions come from the callee's signature, and an indirect
+    // call has no callee to ask. **A `fn(…)` type carrying a ghost parameter would be a
+    // silent mismatch between the checker and the C** -- and it cannot arise, because the
+    // GRAMMAR excludes it: `params` reads `ident ":" typeexpr` and knows no `ghost`
+    // (`parse.rs::params`). *The guarantee is the parser's, not a rule's; if `params` ever
+    // learns `ghost`, this line becomes a hole and nothing here would say so.*
+    if let Some(o) = r.place() {
+        let args: Vec<String> = r
+            .argumente
+            .iter()
+            .map(|a| ausdruck(a, u, absagen))
+            .collect();
+        return format!("{}({})", ort(o, u, absagen), args.join(", "));
+    }
+    let name = r
+        .path()
+        .and_then(|p| p.teile.last())
+        .map(|i| i.text.clone())
+        .unwrap_or_default();
     // **«B35»: `Some`/`None` are CONSTRUCTORS, not calls.** The old path emitted `None()` —
     // an implicit declaration that `-Werror` happens to catch. *Happening to fail is not
     // refusing.* Their lowering waits on the same decision as `option index into T`.
@@ -5689,6 +5776,19 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
         ExprArt::Wahr => "true".into(),
         ExprArt::Falsch => "false".into(),
         ExprArt::Ort(o) => ort(o, u, absagen),
+        // **`&f` lowers to `&f`** («B8», 2026-08-21).
+        //
+        // C admits the bare name too (a function designator decays), and that is exactly why
+        // the `&` is written: *the two spellings mean the same thing to `cc` and different
+        // things to a reader*, and Gabbro's producer says which one it is at the source. The
+        // ampersand survives into the C for the same reason it exists in the Gabbro.
+        //
+        // Only the LAST segment is emitted: a Gabbro module path is not a C name, and the
+        // rest of this generator resolves callees the same way (`fn ruf`).
+        ExprArt::FnWert(p) => format!(
+            "&{}",
+            p.teile.last().map(|i| i.text.clone()).unwrap_or_default()
+        ),
         // **`R::F` wird `R_F`** (Stufe 7, 2026-08-21) -- genau der Name, den
         // `ItemArt::Reason` weiter oben in sein `typedef enum` schreibt. *Die zwei Stellen
         // muessen dieselbe Regel benutzen, sonst erzeugt der Uebersetzer einen Namen, den
@@ -6277,7 +6377,7 @@ fn bootstrecke(
             BootSchritt::Ruf(r) => aus.push_str(&format!(
                 " * step {}: {}\n",
                 i + 1,
-                kommentartext(&r.pfad.text())
+                kommentartext(&r.target_text())
             )),
             BootSchritt::Setzt { name, .. } => aus.push_str(&format!(
                 " * step {}: {} = <value>\n",
@@ -6301,7 +6401,7 @@ fn bootstrecke(
             // Ein `axiom` hat keinen Prototyp -- es steht als Annahme im Kopf der Datei, und
             // eine Bezugnahme darauf waere hier ein Uebersetzungsfehler.
             BootSchritt::Ruf(r) => {
-                let ziel = r.pfad.teile.last().map(|x| x.text.clone()).unwrap_or_default();
+                let ziel = r.path().and_then(|p| p.teile.last()).map(|x| x.text.clone()).unwrap_or_default();
                 if ruempfe.contains(&ziel) {
                     aus.push_str(&bezugnahme(&format!("gabbro_boot_{n}_s{}", i + 1), &ziel));
                 }

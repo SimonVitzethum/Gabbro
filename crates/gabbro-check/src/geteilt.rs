@@ -921,8 +921,22 @@ fn rufprobe(
     // Geprueft wird gegen die HUELLE des Gerufenen, also auch ueber mehrere Ebenen. Die
     // Meldung heisst `H012` und nicht `H006`, weil der Ort ein anderer ist: dort steht ein
     // `locks`-Block, hier ein Aufruf -- und die Abhilfe ist eine andere.
+    // **An indirect call takes no lock and demands none -- and `N036` is what makes that a
+    // statement rather than a silence** (2026-08-21).
+    //
+    // Both rules below key on the callee's NAME: `H012` looks its lock rank up in `rw.nimmt`,
+    // `H005` its `requires Held(…)` in `rw.forderungen`. A place has no name, so neither can
+    // be answered here. *The answer is therefore given one pass earlier and one level up:* a
+    // `fn(…)` type may not promise `locks`, `locks shared` or `requires`, so a callee reached
+    // through one cannot be holding or taking a lock in the first place.
+    //
+    // > **A program that would need the lock order to cross an indirect call is refused, not
+    // > passed.** That is the difference between a named gap and a false green.
+    let Some(pfad) = r.path() else {
+        return;
+    };
     if !kette.is_empty() {
-        for genommen in rw.nimmt(&r.pfad.text()) {
+        for genommen in rw.nimmt(&pfad.text()) {
             let Some(neu) = sperren.get(&genommen).and_then(|x| x.rang) else {
                 continue;
             };
@@ -958,10 +972,10 @@ fn rufprobe(
     if offen.is_empty() {
         return;
     }
-    let Some(name) = r.pfad.teile.last() else {
+    let Some(name) = pfad.teile.last() else {
         return;
     };
-    let Some(forderungen) = rw.forderungen(&r.pfad.text()) else {
+    let Some(forderungen) = rw.forderungen(&pfad.text()) else {
         return;
     };
     for (sperre, geteilt) in forderungen {

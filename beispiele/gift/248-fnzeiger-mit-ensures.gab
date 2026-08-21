@@ -1,0 +1,30 @@
+-- erwartet: N037
+-- **Poison 248 -- a function pointer type carries an `ensures`.**
+--
+-- Until 2026-08-21 this went through in silence: the clause parsed, it stood in the grammar,
+-- and no pass read it. The sibling `requires` was refused from the first day; the
+-- postcondition was not, and that asymmetry was an oversight rather than a decision.
+--
+-- The alternative -- building a reader -- was refused with a number: the four indirect call
+-- sites in `caprock-messbasis` do not even take a lock, so the measured need for a
+-- postcondition at the pointer type is ZERO.
+
+module gift::fnzeiger_mit_ensures {
+
+static mut ZUSTAND : u32 = 0;
+
+type Treiber = {
+    senden : fn(b : u8) -> bool
+        ensures result == true
+        effects { writes ZUSTAND }
+        costs   <= 4 ops,
+};
+
+impl fn nutze(t : ptr<normal, r> Treiber, b : u8)
+    effects { reads t, writes ZUSTAND }
+    costs   <= 8 ops
+{
+    let ok = t->senden(b);
+}
+
+}

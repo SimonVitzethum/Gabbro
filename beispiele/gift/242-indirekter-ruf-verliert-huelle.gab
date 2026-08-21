@@ -1,0 +1,33 @@
+-- erwartet: E008
+-- **Poison 242 -- the effect hull must cross an INDIRECT call.**
+--
+-- The single most important probe of this item, and the one that says what the failure would
+-- have looked like: `nutze` names only `reads t`, and it calls something whose type promises
+-- `writes ZUSTAND`.
+--
+-- > *An indirect call without a contract undoes `E008`.* Before 2026-08-15 an `effects` line
+-- > covered only the first level, and a `pure` promise ended at the first call boundary. If
+-- > the callee at a place contributed nothing to the hull, every indirect call site would be
+-- > such a boundary again -- **eleven checked classes would become eleven asserted ones.**
+--
+-- What makes it fall is `aufrufgraph::Knoten::indirect`: the contract's effects are folded in
+-- and carried across the boundary by the same substitution a named callee gets.
+
+module gift::indirekter_ruf_verliert_huelle {
+
+static mut ZUSTAND : u32 = 0;
+
+type Treiber = {
+    senden : fn(b : u8)
+        effects { writes ZUSTAND }
+        costs   <= 4 ops,
+};
+
+impl fn nutze(t : ptr<normal, r> Treiber, b : u8)
+    effects { reads t }
+    costs   <= 8 ops
+{
+    t->senden(b);
+}
+
+}

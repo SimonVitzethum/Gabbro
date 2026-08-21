@@ -1,0 +1,20 @@
+module probe::sieben {
+
+type Treiber = { bereit : fn() -> bool, };
+
+impl fn wahr() -> bool
+    effects { pure }
+    costs   <= 1 ops
+{
+    return true;
+}
+
+impl fn baue() -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    let t : Treiber = Treiber(bereit: wahr);
+    return true;
+}
+
+}

@@ -1099,8 +1099,8 @@ MUTATIONEN = [
     Mutation(
         "some-ist-ein-ruf",
         "aufrufgraph.rs",
-        '        // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).\n        if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {',
-        '        // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).\n        if true {',
+        '            // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).\n            if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {',
+        '            // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).\n            if true {',
         "B35 -- `Some`/`None` gelten als unbekannte Gerufene; jede option-Huelle wird untere Schranke",
     ),
     # -- manifest.rs: die Ratsche, die als Vorbild zitiert wurde -------------------------
@@ -1973,7 +1973,12 @@ MUTATIONEN = [
         "ausgepackter-ort-gilt-als-ruf",
         "aufrufgraph.rs",
         "                if let Some(r) = l.als_ruf() {\n                    nimm(r, aus);\n                }",
-        "                nimm(&Ruf { pfad: Pfad { teile: vec![l.name.clone()], span: l.name.span }, argumente: vec![], marken: vec![], span: l.name.span }, aus);",
+        # **«B8», 2026-08-21: `pfad: Pfad` became `ziel: CallTarget`**, and this replacement
+        # snippet BUILDS a `Ruf` by hand. Until it was carried along, the mutation did not
+        # compile and counted as `ungueltig` -- it said nothing, and the quota ran over a
+        # denominator smaller by one. *Exactly the decay of the measuring apparatus this
+        # file's header warns about, only at a replacement snippet instead of an anchor.*
+        "                nimm(&Ruf { ziel: CallTarget::Path(Pfad { teile: vec![l.name.clone()], span: l.name.span }), argumente: vec![], marken: vec![], span: l.name.span }, aus);",
         "B14b -- ein ausgepackter Ort gilt als Ruf; jede Huelle darueber wird untere Schranke",
     ),
     # -- «B7»: der Verbundkonstruktor ------------------------------------------------------
@@ -1995,8 +2000,8 @@ MUTATIONEN = [
     Mutation(
         "konstruktor-gilt-als-aufruf",
         "aufrufgraph.rs",
-        '        // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).\n        if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {',
-        '        // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).\n        if n.text != "Some" && n.text != "None" {',
+        '                if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {\n                    aus.push((p.text(), args));',
+        '                if n.text != "Some" && n.text != "None" {\n                    aus.push((p.text(), args));',
         "und jede Huelle darueber untere Schranke",
     ),
     # -- «B24»: die Kachelung IST die Wortgrenze ---------------------------------------------
@@ -2192,8 +2197,8 @@ MUTATIONEN = [
     Mutation(
         "verbund-ohne-marken-geht-durch",
         "m1.rs",
-        "        let gefunden = self.u.verbundfelder(&self.modul, &r.pfad).cloned();",
-        "        let gefunden = if r.ist_verbundwert() { self.u.verbundfelder(&self.modul, &r.pfad).cloned() } else { None };",
+        "        let gefunden = r.path().and_then(|p| self.u.verbundfelder(&self.modul, p)).cloned();",
+        "        let gefunden = if r.ist_verbundwert() { r.path().and_then(|p| self.u.verbundfelder(&self.modul, p)).cloned() } else { None };",
         "B7 -- `P(1, 2)` ohne Feldnamen faellt nicht mehr; zwei gleichtypige Felder "
         "sind vertauschbar, ohne dass ein Typ dagegen spricht",
     ),
@@ -2438,6 +2443,46 @@ MUTATIONEN = [
         "                    if false && pfad.teile.len() == 2 {",
         "Die Produktion `reasonval` selbst -- `R::F` wird wieder ein Ort mit Feldsuffix, "
         "und der Fehlerkanal hat wieder keine Schreibform",
+    ),
+    # --- fnptr ---
+    #
+    # **«B8», 2026-08-21.** Four mutations, one per half -- and the first is the one that
+    # matters: it restores exactly the state this item removed. *If
+    # `huelle-verliert-indirekten-ruf` survives, the effect hull is silently lost at every
+    # indirect call site, and that is the worst possible outcome.*
+    Mutation(
+        "huelle-verliert-indirekten-ruf",
+        "gabbro-check/src/aufrufgraph.rs",
+        # **The anchor names the third line too**, because the block stands twice -- in
+        # `gehe` and in `huelle_der_gerufenen`. `gehe` is the one hit: `E008` hangs there.
+        "        for i in &k.indirect {\n            if !i.has_contract {\n                aufnehmen(",
+        "        for i in &k.indirect[..0] {\n            if !i.has_contract {\n                aufnehmen(",
+        "Die Wirkungen eines Gerufenen an einem ORT fallen aus der Huelle -- `E008` endet "
+        "wieder an der ersten indirekten Aufrufgrenze, so wie vor dem 2026-08-15",
+    ),
+    Mutation(
+        "fnzeiger-ohne-vertrag-geht-durch",
+        "gabbro-check/src/namen.rs",
+        "            let fehlt = match (f.effects.is_none(), f.costs.is_none()) {",
+        "            let fehlt: Option<&str> = None;\n            let _ = match (f.effects.is_none(), f.costs.is_none()) {",
+        "N035 -- ein `fn(…)`-Typ darf wieder ohne `effects` und ohne `costs` dastehen; "
+        "jeder Ruf hindurch traegt dann nichts zur Huelle bei und kostet null",
+    ),
+    Mutation(
+        "erzeuger-darf-mehr-versprechen",
+        "gabbro-check/src/m1.rs",
+        "            .find(|w| *w != \"pure\" && !z.effects.iter().any(|x| x == *w))",
+        "            .find(|w| *w != \"pure\" && z.effects.iter().any(|x| x == *w))",
+        "M128 -- die Teilmengenrichtung kippt: eine Funktion, die MEHR tut als ihr Slot "
+        "erlaubt, kommt durch, und jeder Rufer rechnet mit der Zusage statt mit der Tatsache",
+    ),
+    Mutation(
+        "indirekter-ruf-kostet-null",
+        "gabbro-check/src/kosten.rs",
+        "                crate::typen::Typ::FnPtr(v) => match v.costs {\n                    Some(n) => args.plus(Kosten::Zahl(n)),",
+        "                crate::typen::Typ::FnPtr(v) => match v.costs {\n                    Some(_) => args.plus(Kosten::Zahl(0)),",
+        "K001 -- die Kostenschranke am Zeigertyp wird nicht mehr addiert; ein Rumpf voller "
+        "indirekter Rufe kommt unter jeder Zusage durch",
     ),
 ]
 

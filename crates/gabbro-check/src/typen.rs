@@ -435,8 +435,63 @@ pub enum Typ {
     /// Grund geht durch genau zwei Tueren: `return` in einer Funktion mit `or R`, und das
     /// `e` eines `let … else`.
     Grund(String),
+    /// **A function pointer -- WITH its contract** (stage 7, 2026-08-21).
+    ///
+    /// Until today nothing stood here: `umgebung.rs` turned `TypExpr::FnZeiger` into
+    /// `Typ::Unbekannt`. **That was not a hole in the knowledge but one in the checking** --
+    /// `Unbekannt` is compatible with everything. Measured on `probe/p8.gab`:
+    ///
+    /// ```gabbro
+    /// let x : u32                    = t->bereit;   -- 0 errors
+    /// let y : bool                   = t->bereit;   -- 0 errors
+    /// let z : ptr<normal, r> Treiber = t->bereit;   -- 0 errors
+    /// ```
+    ///
+    /// Three irreconcilable types for the same expression, in ONE file, without a refusal.
+    /// The coverage number dropped to 25 % and **stood there** (`M1 saw 4 expressions, 3 of
+    /// them without a type`) -- the run counted it, and nothing fell.
+    FnPtr(Box<FnPtrContract>),
     /// **Der ehrliche Ausgang.** Was hier steht, prueft M1 nicht -- und der Lauf zaehlt es.
     Unbekannt,
+}
+
+/// **What is fixed about a callee nobody knows statically.**
+///
+/// The core of this whole item: at an indirect call site there is no node in the call graph
+/// to interrogate. What there is, is the **type of the place** -- and if the type carries the
+/// contract, the effect hull is restored.
+///
+/// > *Without this structure every indirect call would be an edge into the unknown, and
+/// > `E008` would again end at the first call boundary -- the way it did before 2026-08-15.*
+#[derive(Debug, Clone, PartialEq)]
+pub struct FnPtrContract {
+    pub parameters: Vec<(String, Typ)>,
+    pub result: Option<Box<Typ>>,
+    /// The effects, **normalised the way the call graph writes them** (`writes r.slots`), so
+    /// that `aufrufgraph::ersetze` can carry them across the call boundary.
+    pub effects: Vec<String>,
+    /// Was the `effects` clause there at all? `false` means: the hull is a lower bound from
+    /// here on, and it says so (`N026` falls at the type, `E009` at the call site).
+    pub has_effects: bool,
+    /// The cost bound, evaluated. `None` means: not constant-evaluable.
+    pub costs: Option<i128>,
+    pub has_costs: bool,
+}
+
+impl FnPtrContract {
+    /// The shape without the contract -- for refusal texts.
+    pub fn shape(&self) -> String {
+        let p = self
+            .parameters
+            .iter()
+            .map(|(n, t)| format!("{n} : {}", t.text()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        match &self.result {
+            Some(e) => format!("fn({p}) -> {}", e.text()),
+            None => format!("fn({p})"),
+        }
+    }
 }
 
 impl Typ {
@@ -515,6 +570,7 @@ impl Typ {
             // ein Leser suchte einen Typ dieses Namens und faende eine Grunddeklaration.
             Typ::Grund(n) => format!("reason {n}"),
             Typ::Register { bereich, .. } => bereich.text(),
+            Typ::FnPtr(v) => v.shape(),
             Typ::Unbekannt => "?".to_string(),
         }
     }

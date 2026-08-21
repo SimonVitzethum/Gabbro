@@ -612,6 +612,10 @@ impl<'a> Rechner<'a> {
             | ExprArt::Gleitkomma { .. }
             | ExprArt::Wahr
             | ExprArt::Falsch
+            // **`&f` costs NOTHING** («B8», 2026-08-21). It lowers to a link-time address,
+            // and no Gabbro primitive is emitted for it -- the same argument as for a
+            // constant, and it stands written out for the same reason.
+            | ExprArt::FnWert(_)
             // **Ein Grundwert kostet NULL** (Stufe 7). Er wird zu einer
             // `enum`-Konstante -- kein Laden, keine Primitive. *Das ist dieselbe Zeile,
             // die `Some`/`None` hier brauchten, und sie steht aus demselben Grund
@@ -640,12 +644,47 @@ impl<'a> Rechner<'a> {
     }
 
     fn ruf(&self, r: &Ruf) -> Kosten {
+        // **An indirect call costs what its POINTER TYPE promises** («B8», 2026-08-21).
+        //
+        // This is the second half of why the contract sits at the type. The effect half keeps
+        // `E008` compositional; this half keeps `K001` honest -- *without a `costs` clause at
+        // the type an indirect call would cost zero, and a body full of them would come in
+        // under any bound at all.*
+        //
+        // Both failure branches are `Unbekannt` WITH A REASON, never `Zahl(0)`: a cost that is
+        // not known is a cost that is not known, and `K001` reads that as "cannot decide"
+        // rather than as "free".
+        if let Some(o) = r.place() {
+            let args = r
+                .argumente
+                .iter()
+                .fold(Kosten::Zahl(0), |a, e| a.plus(self.ausdruck(e)));
+            return match self.u.typ_von_ort(self.modul, o, &self.lokal) {
+                crate::typen::Typ::FnPtr(v) => match v.costs {
+                    Some(n) => args.plus(Kosten::Zahl(n)),
+                    None => args.plus(Kosten::Unbekannt(
+                        format!(
+                            "the indirect call through `{}` has no constant `costs` bound",
+                            o.text()
+                        ),
+                        Some(r.span),
+                    )),
+                },
+                _ => args.plus(Kosten::Unbekannt(
+                    format!(
+                        "`{}` is not a function pointer here, so the call declares no costs",
+                        o.text()
+                    ),
+                    Some(r.span),
+                )),
+            };
+        }
         let name = r
-            .pfad
-            .teile
-            .last()
+            .path()
+            .and_then(|p| p.teile.last())
             .map(|i| i.text.clone())
             .unwrap_or_default();
+        let pfad_text = r.path().map(|p| p.text()).unwrap_or_default();
         // **«B35»: `Some(x)` und `None` sind KONSTRUKTOREN, keine Aufrufe.** Im Baum sind
         // sie ein `Ruf` (ein Konstruktor ist genau das), aber sie tragen keinen Vertrag und
         // koennen keinen nennen -- `costs` an `None` waere sinnlos. Die Ausnahme steht
@@ -690,13 +729,13 @@ impl<'a> Rechner<'a> {
         // Eintrag, und welcher galt, entschied die Reihenfolge im Quelltext.
         let erklaert = self
             .u
-            .kandidaten_aufloesbar(self.modul, &r.pfad.text())
+            .kandidaten_aufloesbar(self.modul, &pfad_text)
             .into_iter()
             .find_map(|k| self.deklariert.get(&k).copied());
         // **Ein rekursiver Ruf unter einem `decreases` kostet hier NICHTS** («K5.4»): die
         // Tiefe trägt das Mass, die Zusage gilt je Durchgang.
         if let Some((g, selbst)) = &self.mit_mass {
-            if let Some(ziel) = g.aufloesen(self.u, self.modul, &r.pfad.text()) {
+            if let Some(ziel) = g.aufloesen(self.u, self.modul, &pfad_text) {
                 if &ziel == selbst || g.im_zyklus(&ziel) {
                     return r
                         .argumente
@@ -710,7 +749,7 @@ impl<'a> Rechner<'a> {
             None => {
                 // Kennt die Umgebung die Funktion ueberhaupt? Ein Aufruf ins Unbekannte
                 // (extern, prim, Randfunktion) kostet unbekannt viel.
-                if self.u.funktion(self.modul, &r.pfad).is_some() {
+                if r.path().is_some_and(|p| self.u.funktion(self.modul, p).is_some()) {
                     Kosten::Unbekannt(
                         format!("the call to `{name}` declares no `costs`"),
                         Some(r.span),
@@ -1240,7 +1279,15 @@ fn rekursionsmass(
     let mut rufe: Vec<&Ruf> = Vec::new();
     sammle_rufe_roh(b, &mut rufe);
     for r in &rufe {
-        let pfad = &r.pfad.text();
+        // **The descent measure asks after RECURSION, and an indirect call is not one it can
+        // see.** `decreases` is checked at the recursive call site, and which site is
+        // recursive is decided by resolving the callee's name against the cycle. A place has
+        // no name, so this loop skips it -- *and the skip is not free: the cost pass has
+        // already refused an indirect call with no `costs` bound (`Kosten::Unbekannt`), so a
+        // recursion smuggled through a function pointer cannot come in at zero.*
+        let Some(pfad) = &r.path().map(|p| p.text()) else {
+            continue;
+        };
         let argumente = &r.argumente;
         let Some(ziel) = g.aufloesen(u, modul, pfad) else {
             continue;

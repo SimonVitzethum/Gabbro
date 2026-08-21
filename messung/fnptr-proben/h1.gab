@@ -1,0 +1,22 @@
+-- The decisive probe: does the effect hull survive an INDIRECT call?
+-- `ausgeben` promises `pure`, and it calls something that writes through a pointer.
+-- If this gives 0 errors, the whole item failed.
+
+module probe::huelle {
+
+static mut ZUSTAND : u32 = 0;
+
+type Treiber = {
+    senden : fn(b : u8)
+        effects { writes ZUSTAND }
+        costs   <= 4 ops,
+};
+
+impl fn ausgeben(t : ptr<normal, r> Treiber, b : u8)
+    effects { reads t }
+    costs   <= 12 ops
+{
+    t->senden(b);
+}
+
+}

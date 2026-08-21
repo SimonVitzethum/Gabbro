@@ -42,6 +42,13 @@ pub struct Knoten {
     /// `None`, wo das Argument kein Ort ist. *`None` macht die Hülle an dieser Kante
     /// unvollständig, statt den Namen des Gerufenen stillschweigend zu erben.*
     pub rufe: Vec<(String, Vec<Option<String>>)>,
+    /// **The calls that go through a PLACE** («B8», 2026-08-21) — the callee is not
+    /// statically known, and therefore does not appear in `ruft`.
+    ///
+    /// *Without this field there would be exactly the outcome this whole item stands
+    /// against:* the call would vanish from the graph, the hull would still look complete,
+    /// and `E008` would not see the callee's effects — **without a word being said anywhere.**
+    pub indirect: Vec<IndirectCall>,
     /// **Das Modul, in dem die Funktion steht.** Ohne es ist `ruft` nicht auflösbar: zwei
     /// `hilf` in zwei Modulen sind zwei Funktionen, und der kurze Name nennt beide.
     pub modul: String,
@@ -49,6 +56,32 @@ pub struct Knoten {
     pub verlangt: Vec<(String, bool)>,
     /// Hat sie überhaupt eine `effects`-Klausel? Ohne sie ist nichts ableitbar.
     pub hat_effects: bool,
+    pub span: gabbro_syntax::span::Span,
+}
+
+/// **A call whose callee stands at a place.**
+///
+/// What saves the graph here is the **contract at the pointer type**: it says what the callee
+/// may do without saying who it is. `effects` comes from the `effects` clause of the `fn(…)`
+/// type; the parameter names beside it are the TYPE's, and `arguments` are the place
+/// expressions at the call site — so `ersetze` carries the effect across the call boundary
+/// **exactly as it does for a statically known callee.**
+///
+/// `has_contract == false` means: the type of the place is not a function pointer with
+/// `effects`. The hull is then a **lower bound from here on, and says so** (R16) — the caller
+/// gets `E009`, not silence.
+#[derive(Debug, Clone)]
+pub struct IndirectCall {
+    /// The place as it stood in the source: `t->senden`, `TAB.bereit`.
+    pub place: String,
+    /// The effects from the pointer type's contract.
+    pub effects: BTreeSet<String>,
+    /// The parameter names **of the pointer type** — the bridge across the call boundary.
+    pub parameters: Vec<String>,
+    /// The place expressions of the arguments at the call site.
+    pub arguments: Vec<Option<String>>,
+    /// Does the type of the place carry an `effects` clause?
+    pub has_contract: bool,
     pub span: gabbro_syntax::span::Span,
 }
 
@@ -97,6 +130,7 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
                     hat_effects: ue.effects.is_some(),
                     parameter: Vec::new(),
                     rufe: Vec::new(),
+                    indirect: Vec::new(),
                     modul: modul.to_string(),
                     span: ue.name.span,
                 };
@@ -127,6 +161,7 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
                 hat_effects: true,
                 parameter: Vec::new(),
                 rufe: Vec::new(),
+                indirect: Vec::new(),
                 modul: modul.to_string(),
                 span: d.name.span,
             };
@@ -145,6 +180,7 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
             hat_effects: f.effects.is_some(),
             parameter: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
             rufe: Vec::new(),
+            indirect: Vec::new(),
             modul: modul.to_string(),
             span: f.name.span,
         };
@@ -176,14 +212,43 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
                 for x in crate::alle_ausdruecke(e) {
                     if let ExprArt::Ruf(r) = &x.art {
                         nimm(r, &mut k.ruft);
-                        nimm_ruf(r, &mut k.rufe);
+                        // **A contract may not call through a place** (2026-08-21). The
+                        // resolver here says "no contract" for every place, so an indirect
+                        // call inside a `requires`/`ensures` makes the hull a lower bound and
+                        // the caller gets `E009`. *A predicate is checked, not executed; a
+                        // callee that is only known at run time cannot be part of one.*
+                        nimm_ruf(r, &mut k.rufe, &mut k.indirect, &|_| None);
                     }
                 }
             }
         }
         if let FnRumpf::Block(b) = &f.rumpf {
             sammle_rufe(b, &mut k.ruft);
-            sammle_kanten(b, &mut k.rufe);
+            // **The local type picture an indirect call needs** (2026-08-21). A call through
+            // a place can only be read if the type of that place is known -- the parameters
+            // cover `t->senden`, the globals cover `TAB.bereit`, and the annotated `let`
+            // bindings cover `let t : Treiber = …`.
+            //
+            // *The `let` scan is FLAT and knows nothing of shadowing.* Two bindings of one
+            // name in two branches collapse into one entry here. That is coarse, and it is
+            // coarse in the safe direction only as long as both are function pointers; where
+            // they are not, `M1` is the pass that says so, not this one.
+            let mut lokal: std::collections::HashMap<String, crate::typen::Typ> = f
+                .parameter
+                .iter()
+                .map(|p| {
+                    (
+                        p.name.text.clone(),
+                        u.typ_von_ausdruck_decl(modul, &p.typ),
+                    )
+                })
+                .collect();
+            sammle_lets(b, u, modul, &mut lokal);
+            let vertrag = |o: &Ort| match u.typ_von_ort(modul, o, &lokal) {
+                crate::typen::Typ::FnPtr(v) => Some(*v),
+                _ => None,
+            };
+            sammle_kanten(b, &mut k.rufe, &mut k.indirect, &vertrag);
         }
         g.knoten.insert(schluessel(modul, &f.name.text), k);
     });
@@ -343,6 +408,44 @@ impl Graph {
             aufnehmen(&mut offen, grund);
             menge.extend(tiefer);
         }
+        // **The indirect calls -- the callee is not known, the contract is** (2026-08-21).
+        //
+        // There is nothing to descend into: a place carries no key. The effects come from
+        // the pointer type's `effects` clause and are carried across the call boundary by
+        // the same `ersetze` that serves a named callee -- the parameter names are the
+        // TYPE's, the arguments are the call site's.
+        //
+        // **The other branch is the whole point of the item.** Without a contract the hull
+        // does not quietly stay as it is; it becomes a lower bound WITH A REASON, and every
+        // consumer of `unvollstaendig` (`E008`, `E009`, `H012`, the cost pass) sees it. *That
+        // is the difference between a pass that stops computing and one that stops speaking.*
+        for i in &k.indirect {
+            if !i.has_contract {
+                aufnehmen(
+                    &mut offen,
+                    Some(format!(
+                        "the callee at `{}` is not statically known, and its type declares \
+                         no `effects`",
+                        i.place
+                    )),
+                );
+                continue;
+            }
+            for w in &i.effects {
+                let (neu, unklar) = ersetze(w, &i.parameters, &i.arguments);
+                if unklar {
+                    aufnehmen(
+                        &mut offen,
+                        Some(format!(
+                            "an argument of the indirect call at `{}` is not a place, so \
+                             `{w}` cannot be carried across",
+                            i.place
+                        )),
+                    );
+                }
+                menge.insert(neu);
+            }
+        }
         lauf.pfad.remove(name);
         if !zyklisch {
             lauf.fertig
@@ -411,6 +514,33 @@ impl Graph {
                 offen = grund;
             }
         }
+        // **The indirect calls belong to "what comes from the callees" too** (2026-08-21).
+        // This is the set A4 uses to compute a caller's effect line instead of demanding it.
+        // *Leaving the indirect calls out here would compute a line that is too short -- and
+        // a short line is the one direction `effects` must never move.*
+        for i in &k.indirect {
+            if !i.has_contract {
+                if offen.is_none() {
+                    offen = Some(format!(
+                        "the callee at `{}` is not statically known, and its type declares \
+                         no `effects`",
+                        i.place
+                    ));
+                }
+                continue;
+            }
+            for w in &i.effects {
+                let (neu, unklar) = ersetze(w, &i.parameters, &i.arguments);
+                if unklar && offen.is_none() {
+                    offen = Some(format!(
+                        "an argument of the indirect call at `{}` is not a place, so `{w}` \
+                         cannot be carried across",
+                        i.place
+                    ));
+                }
+                menge.insert(neu);
+            }
+        }
         Huelle {
             wirkungen: menge,
             unvollstaendig: offen,
@@ -454,9 +584,49 @@ fn ersetze(wirkung: &str, parameter: &[String], argumente: &[Option<String>]) ->
     }
 }
 
-/// Je Rufstelle: der geschriebene Pfad und die Ortsausdrücke seiner Argumente.
-pub fn kanten_von(b: &Block, aus: &mut Vec<(String, Vec<Option<String>>)>) {
-    sammle_kanten(b, aus)
+/// **Every annotated `let` in a body, flat.** Feeds the local type picture that an indirect
+/// call needs; see the comment at its one call site for what "flat" costs.
+fn sammle_lets(
+    b: &Block,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
+    aus: &mut std::collections::HashMap<String, crate::typen::Typ>,
+) {
+    for s in &b.anweisungen {
+        if let StmtArt::Let(l) = &s.art {
+            if let Some(t) = &l.typ {
+                aus.insert(l.name.text.clone(), u.typ_von_ausdruck_decl(modul, t));
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_lets(k, u, modul, aus);
+        }
+    }
+}
+
+/// **How a call site learns the contract of a callee that stands at a place.**
+///
+/// Given the place (`t->senden`), it answers with the `fn(…)` contract of its type, or with
+/// `None` -- and `None` is not silence: it becomes `has_contract: false`, which makes the
+/// hull a lower bound that names itself (`E009`).
+///
+/// It is a closure and not a method because the two callers hold different amounts of
+/// context: `erhebe_mit` knows the enclosing function's parameters, `kanten_von` (the
+/// certificate path) knows nothing and must say so.
+pub type ContractAt<'a> = &'a dyn Fn(&Ort) -> Option<crate::typen::FnPtrContract>;
+
+/// Per call site: the written path and the place expressions of its arguments.
+///
+/// **The indirect calls come out separately** -- they have no name to be resolved against the
+/// key table, and folding them into the same list would make them look like an edge to a
+/// function called `t->senden`.
+pub fn kanten_von(
+    b: &Block,
+    aus: &mut Vec<(String, Vec<Option<String>>)>,
+    indirect: &mut Vec<IndirectCall>,
+    vertrag: ContractAt<'_>,
+) {
+    sammle_kanten(b, aus, indirect, vertrag)
 }
 
 /// **Der Ort unter beliebig vielen Klammern.**
@@ -481,57 +651,100 @@ fn ort_unter_klammern(e: &Expr) -> Option<&Ort> {
 
 /// Aus `sammle_kanten` herausgehoben (2026-08-20): auch ein VERTRAG ruft, und der
 /// Vertragsleser steht eine Ebene hoeher.
-fn nimm_ruf(r: &Ruf, aus: &mut Vec<(String, Vec<Option<String>>)>) {
-    if let Some(n) = r.pfad.teile.last() {
-        if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
-            let args = r
-                .argumente
-                .iter()
-                .map(|a| ort_unter_klammern(a).map(|o| o.text()))
-                .collect();
-            aus.push((r.pfad.text(), args));
+fn nimm_ruf(
+    r: &Ruf,
+    aus: &mut Vec<(String, Vec<Option<String>>)>,
+    indirect: &mut Vec<IndirectCall>,
+    vertrag: ContractAt<'_>,
+) {
+    let args: Vec<Option<String>> = r
+        .argumente
+        .iter()
+        .map(|a| ort_unter_klammern(a).map(|o| o.text()))
+        .collect();
+    match &r.ziel {
+        CallTarget::Path(p) => {
+            if let Some(n) = p.teile.last() {
+                if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
+                    aus.push((p.text(), args));
+                }
+            }
+        }
+        // **The indirect call, and the one branch this whole item exists for.**
+        //
+        // The callee has no key in the graph, so there is nothing to walk to. What there is,
+        // is the contract at the type of the place -- and `has_contract` decides which of the
+        // two honest answers the hull gives: fold the promised effects in, or become a lower
+        // bound that names itself. **There is no third branch, and in particular no silent
+        // one.**
+        CallTarget::Place(o) => {
+            let v = vertrag(o);
+            indirect.push(IndirectCall {
+                place: o.text(),
+                effects: v
+                    .as_ref()
+                    .map(|v| v.effects.iter().cloned().collect())
+                    .unwrap_or_default(),
+                parameters: v
+                    .as_ref()
+                    .map(|v| v.parameters.iter().map(|(n, _)| n.clone()).collect())
+                    .unwrap_or_default(),
+                arguments: args,
+                has_contract: v.as_ref().is_some_and(|v| v.has_effects),
+                span: r.span,
+            });
         }
     }
     for a in &r.argumente {
         if let ExprArt::Ruf(x) = &a.art {
-            nimm_ruf(x, aus);
+            nimm_ruf(x, aus, indirect, vertrag);
         }
     }
 }
 
 
-fn sammle_kanten(b: &Block, aus: &mut Vec<(String, Vec<Option<String>>)>) {
+fn sammle_kanten(
+    b: &Block,
+    aus: &mut Vec<(String, Vec<Option<String>>)>,
+    indirect: &mut Vec<IndirectCall>,
+    vertrag: ContractAt<'_>,
+) {
     // **Ueber `alle_ausdruecke`, nicht von Hand** (2026-08-20). Der Handlaeufer hatte
     // `_ => {}` und sah damit weder einen Ruf in `t.slots[schreibt()]` noch einen in
     // `aligned(schreibt(), 4)`. *Sechzehn solcher Laeufer standen im Pruefer, fuenf davon
     // stiegen in einen Index ab.*
-    fn aus_expr(e: &Expr, aus: &mut Vec<(String, Vec<Option<String>>)>) {
+    fn aus_expr(
+        e: &Expr,
+        aus: &mut Vec<(String, Vec<Option<String>>)>,
+        indirect: &mut Vec<IndirectCall>,
+        vertrag: ContractAt<'_>,
+    ) {
         for x in crate::alle_ausdruecke(e) {
             if let ExprArt::Ruf(r) = &x.art {
-                nimm_ruf(r, aus);
+                nimm_ruf(r, aus, indirect, vertrag);
             }
         }
     }
     for s in &b.anweisungen {
         for e in crate::eigene_ausdruecke(s) {
-            aus_expr(e, aus);
+            aus_expr(e, aus, indirect, vertrag);
         }
         for pr in crate::eigene_praedikate(s) {
             for e in crate::ausdruecke_im_praedikat(pr) {
-                aus_expr(e, aus);
+                aus_expr(e, aus, indirect, vertrag);
             }
         }
         match &s.art {
-            StmtArt::Ruf(r) => nimm_ruf(r, aus),
+            StmtArt::Ruf(r) => nimm_ruf(r, aus, indirect, vertrag),
             StmtArt::LetSonst(l) => {
                 if let Some(r) = l.als_ruf() {
-                    nimm_ruf(r, aus);
+                    nimm_ruf(r, aus, indirect, vertrag);
                 }
             }
             _ => {}
         }
         for k in crate::unterbloecke(s) {
-            sammle_kanten(k, aus);
+            sammle_kanten(k, aus, indirect, vertrag);
         }
     }
 }
@@ -552,7 +765,7 @@ pub fn held_aus_pred(p: &Pred, aus: &mut Vec<(String, bool)>) {
 
 fn held_aus_expr(e: &Expr, aus: &mut Vec<(String, bool)>) {
     match &e.art {
-        ExprArt::Ruf(r) if r.pfad.teile.last().is_some_and(|i| i.text == "Held") => {
+        ExprArt::Ruf(r) if r.heisst("Held") => {
             let name = match r.argumente.first().map(|a| &a.art) {
                 Some(ExprArt::Ort(o)) => o.text(),
                 _ => "…".to_string(),
@@ -621,12 +834,21 @@ fn nimm(r: &Ruf, aus: &mut BTreeSet<String>) {
     // trennt Konstruktor von Aufruf, bevor irgendein Name aufgeloest wird. Die AUFLOESUNG
     // dagegen braucht die Umgebung und hat sie seit 2026-08-19 -- vorher gewann der zuletzt
     // eingetragene gleichnamige Knoten, still.
-    if let Some(n) = r.pfad.teile.last() {
-        // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).
-        if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
-            // **Der ganze Pfad, nicht nur sein letztes Stueck.** `a::hilf()` und `b::hilf()`
-            // waren bis 2026-08-19 derselbe Name; aufgeloest wird spaeter, in `erhebe_mit`.
-            aus.insert(r.pfad.text());
+    // **An indirect call enters NOTHING here** (2026-08-21). `ruft` is the set of NAMES, and
+    // a call through a place has none. *It does not vanish because of that* -- it stands in
+    // `Knoten::indirect` and is folded in by `gehe`, with its contract.
+    // **This is exactly where the silent hole would have been:** a `_ => {}` at this site
+    // would have dropped the callee's effects without replacement, and `E008` would again
+    // have ended at the first call boundary.
+    if let Some(p) = r.path() {
+        if let Some(n) = p.teile.last() {
+            // `Some`/`None` sind Konstruktoren, keine Aufrufe (s. «B35»).
+            if n.text != "Some" && n.text != "None" && !r.ist_verbundwert() {
+                // **Der ganze Pfad, nicht nur sein letztes Stueck.** `a::hilf()` und
+                // `b::hilf()` waren bis 2026-08-19 derselbe Name; aufgeloest wird spaeter,
+                // in `erhebe_mit`.
+                aus.insert(p.text());
+            }
         }
     }
     for a in &r.argumente {

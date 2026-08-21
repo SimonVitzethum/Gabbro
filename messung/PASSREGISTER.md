@@ -16,7 +16,7 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # das Regis
 
 | | | Befehl |
 |---|---:|---|
-| Sätze im Register | **48** | `gabbro paesse` |
+| Sätze im Register | **50** | `gabbro paesse` |
 | davon `measured` | **37** | ein Giftprobenfall oder eine gefangene Mutation |
 | davon `CONJECTURED` | **6** | nichts misst sie |
 | davon `PROVED` | **0** | **das ist die Zahl, um die es in PL.2 geht** |
