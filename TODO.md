@@ -96,7 +96,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **63 Kennzahlen mit Befehl** *(Stand 2026-08-21; 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **64 Kennzahlen mit Befehl** *(Stand 2026-08-21; 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -228,7 +228,7 @@ darunter.
       und ihre Quelle ist eine Tabelle in `PFLICHTEN.md`, deren Zeilen ein Mensch geschrieben
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
-      **`pruefe-zahlen.py` führt heute 63 Kennzahlen mit Befehl und zählt 144 fettgedruckte
+      **`pruefe-zahlen.py` führt heute 64 Kennzahlen mit Befehl und zählt 144 fettgedruckte
       Zahlen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
@@ -2659,6 +2659,54 @@ what remains is four, and **one of them is not solved but grazed**.
       The two dynamically used traits have ONE implementation each. **New and
       undecided: 64 closures** (`dyn FnMut`/`Fn`) — Gabbro has none, and what becomes of them
       (embedding, pointer plus context, prohibition) stands nowhere.
+
+---
+
+# DIE SPRACHLINIE, NEU GEZOGEN AM 2026-08-21
+
+**Bis heute lief die Linie zwischen dem, was Gabbro SAGT, und dem, was der Ordner ÜBER Gabbro
+sagt** — Absagetexte englisch, Quellkommentare deutsch. *Sie läuft jetzt zwischen QUELLE und
+DOKUMENT:* **Bezeichner und Kommentare der Quellen sind englisch**, die Arbeitsdokumente
+(`TODO.md`, `dokumente/`) bleiben deutsch, und ein Bezeichner in einem `.gab`-Programm bleibt
+das Wort des Nutzers.
+
+**Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
+
+```
+**7731 von 10943 Kommentarzeilen** im Pruefer sind deutsch
+ 1043 von  1280 in den Instrumenten
+  273 von   845 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
+```
+
+Die schwersten: `emit.rs` 1489, `rechenwerk.rs` 802, `m1.rs` 771, `namen.rs` 387.
+
+> **Eine halb übersetzte Quelle ist schlechter als jede der beiden reinen Formen** — das ist
+> wörtlich der Befund, mit dem dieser Wächter gebaut wurde: *41 von 100 Absagetexten waren
+> deutsch, und die Mischung lief durch einzelne Sätze.* Deshalb ist die Zahl eine **Ratsche**
+> und keine Absichtserklärung.
+
+**Und die Entscheidung dazu ist gefallen, am selben Tag: NUR NEUER CODE.** Der Bestand wird
+**nicht** übersetzt, jetzt nicht und nicht nebenbei. *Ein Umbau, der 7731 Zeilen anfasst,
+während vier Stufen offen sind, tauscht Arbeit gegen Gleichmäßigkeit* — und die Ratsche macht
+genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken muss.
+
+- [ ] **Der Bestand wird später übersetzt, Datei für Datei, mit der Ratsche als Beleg.**
+      Reihenfolge nach Gewicht, nicht nach Bequemlichkeit. **Ausdrücklich zurückgestellt am
+      2026-08-21** — *eine stillschweigende Zurückstellung ist von einem Vergessen nicht zu
+      unterscheiden.*
+      Der Auslöser ist kein Termin: **wer eine dieser Dateien ohnehin für eine Stufe
+      aufmacht, übersetzt sie dabei mit.** So fällt der Bestand mit der Arbeit statt neben
+      ihr, und die Ratsche zeigt es.
+
+- [ ] **Die Bezeichner sind die teurere Hälfte, und der Grund steht nicht im Compiler**
+      *(2026-08-21)*. Eine Umbenennung ist mechanisch — aber
+      [`./instrumente/mutiere-pruefer.py`](instrumente/mutiere-pruefer.py) trägt **264 Anker,
+      die WÖRTLICHE Quellzeilen sind.** Wer umbenennt, ohne sie mitzuziehen, macht aus 264
+      Ankern 264 tote. *Der Wächter fängt es — `--anker` fällt sofort —, und darum steht die
+      Warnung in seiner Ausgabe und nicht in einer Fußnote.*
+      Dasselbe gilt für die Dateinamen der Instrumente: sie stehen in ~165 Befehlsverweisen,
+      in `pruefe-zahlen.py` und in zwei Globs. **Ein zweiter Umbau derselben Bauart wie der
+      Ordnerwechsel** — und der hat gezeigt, dass das Verschieben der harmlose Teil ist.
 
 ---
 

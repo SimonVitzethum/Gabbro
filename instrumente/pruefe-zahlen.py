@@ -90,6 +90,17 @@ EINTRAEGE = [
         r"^== (\d+) von 3 Proben gruen ==",
         "Netzstack gegen veroeffentlichte Vektoren",
     ),
+    # --- The translation ratchet: source language, since 2026-08-21 ---
+    #
+    # **A half-translated source is worse than either pure form** -- that is literally the
+    # finding this guardian was built from. So the remainder is measured, not estimated.
+    (
+        "TODO.md",
+        r"\*\*(\d+) von \d+ Kommentarzeilen\*\* im Pruefer sind deutsch",
+        ["./instrumente/pruefe-englisch.py"],
+        r"^== Quellsprache: (\d+) von \d+ Kommentarzeilen",
+        "deutsche Kommentarzeilen im Pruefer -- die Ratsche der Uebersetzung",
+    ),
     # --- Der Vergabewaechter: eine Kennung, eine REGEL ---
     #
     # **Die zweite Zahl ist die teurere.** Sie sagt, wie viele Giftproben ihre

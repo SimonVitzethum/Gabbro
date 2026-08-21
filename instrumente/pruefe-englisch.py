@@ -10,16 +10,22 @@ lief durch einzelne Saetze:
 
     M101   "die Rueckgabe requires `u32 in 0 .. 100`, the value has `u32`"
 
-DIE LINIE
----------
-    englisch    Schluesselwoerter · Absagetexte und ihre Notizen · die Berichte von
-                `gabbro paesse`, `schablonen`, `pflichten`, `zeugnis`
-    deutsch     die Arbeitsdokumente dieses Ordners, Quellkommentare, und jeder
-                Bezeichner, den ein NUTZER waehlt
+DIE LINIE -- NEU GEZOGEN AM 2026-08-21
+--------------------------------------
+    englisch    Schluesselwoerter · Absagetexte und ihre Notizen · die Berichte ·
+                **und seit heute: die BEZEICHNER und KOMMENTARE der Quellen**
+    deutsch     die Arbeitsdokumente dieses Ordners (`TODO.md`, `dokumente/`), und
+                jeder Bezeichner, den ein NUTZER in einem `.gab`-Programm waehlt
 
-**Was Gabbro sagt, ist englisch; was der Ordner ueber Gabbro sagt, nicht.** *Ein Bezeichner ist
-das Wort des Nutzers, nicht das der Sprache* -- `beispiele/01` darf einen Platz weiter
-`Kappenraum` nennen.
+**Bis heute lief die Linie zwischen dem, was Gabbro sagt, und dem, was der Ordner ueber Gabbro
+sagt** -- Quellkommentare waren deutsch. *Sie laeuft jetzt zwischen QUELLE und DOKUMENT.*
+Ein Bezeichner in einem `.gab`-Programm bleibt das Wort des Nutzers: `beispiele/01` darf einen
+Platz weiter `Kappenraum` nennen.
+
+**Und eine halb uebersetzte Quelle ist schlechter als jede der beiden reinen Formen** -- das
+ist woertlich der Befund, mit dem dieser Waechter gebaut wurde (*41 von 100 Absagetexten waren
+deutsch, und die Mischung lief durch einzelne Saetze*). Darum misst er den Rest und fuehrt ihn
+als **Ratsche**: sie darf fallen, nicht steigen.
 
 DAS MASS
 --------
@@ -180,6 +186,67 @@ def sprechprobe():
     return bool(gift) and not sauber
 
 
+# **The ratchet of the translation.** It stands at the state measured on 2026-08-21, not at
+# a wished-for number -- a mark below the current state is indistinguishable from a guardian
+# that is simply red.
+MARKE_KOMMENTARE = 7731   # comment lines in the checker, measured 2026-08-21
+MARKE_PY = 1043           # comment lines in the instruments
+MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
+
+# **Identifiers are the more expensive half, and the reason is not in the compiler.** A
+# rename is mechanical, but `mutiere-pruefer.py` carries 264 anchors that are LITERAL source
+# lines; renaming without carrying them along turns 264 anchors into 264 dead ones.
+# *The guardian catches it -- `--anker` falls at once -- and that is why the number is here.*
+NAMENSMARKER = re.compile(
+    r"\b[a-z_]*(?:ae|oe|ue|sch|zeug|pruef|absag|kenn|regel|saetz|satz|stell|huelle|"
+    r"ruf|wirk|schrank|zaehl|fehl|grund|bereich|klausel|pfad|namen|umgeb|kosten|"
+    r"pass|traeg|lage|fakt|marke|probe)[a-z_0-9]*\b")
+
+
+def quellsprache():
+    """**Die dritte Haelfte: wie viel DEUTSCH steht noch in den Quellen?**
+
+    Gezaehlt werden Kommentarzeilen mit einem Wort aus derselben geschlossenen Liste, mit der
+    dieser Waechter seit jeher die Meldungen misst. *Dieselbe Vergroeberung, dieselbe
+    Richtung:* was er nennt, ist echt; was er nicht nennt, kann trotzdem deutsch sein (W10).
+    """
+    rs_gesamt = rs_deutsch = 0
+    je_datei = {}
+    for q in sorted(W.glob("crates/*/src/*.rs")) + sorted(W.glob("crates/*/tests/*.rs")):
+        n = d = 0
+        for zeile in q.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = zeile.strip()
+            if not (s.startswith("//") or s.startswith("*")):
+                continue
+            n += 1
+            if deutsch(s):
+                d += 1
+        rs_gesamt += n
+        rs_deutsch += d
+        if d:
+            je_datei[q.name] = d
+    py_gesamt = py_deutsch = 0
+    for q in sorted(W.glob("instrumente/*.py")):
+        for zeile in q.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = zeile.strip()
+            if not s.startswith("#"):
+                continue
+            py_gesamt += 1
+            if deutsch(s):
+                py_deutsch += 1
+    # **Identifiers -- and the guardian says itself how coarsely it recognises them.** A
+    # German name almost always carries one of the umlaut transliterations or a German stem;
+    # an English one may contain such a fragment by accident (`pass`, `probe`).
+    # *The number is therefore an UPPER bound, and it stands here as one.*
+    namen = set()
+    for q in sorted(W.glob("crates/*/src/*.rs")):
+        for m in re.finditer(r"\b(?:fn|struct|enum|trait)\s+([A-Za-z_][A-Za-z_0-9]*)",
+                             q.read_text(encoding="utf-8", errors="replace")):
+            namen.add(m.group(1))
+    deutsche_namen = {n for n in namen if NAMENSMARKER.search(n.lower())}
+    return rs_gesamt, rs_deutsch, je_datei, py_gesamt, py_deutsch, namen, deutsche_namen
+
+
 def main():
     if not sprechprobe():
         print("== ENGLISCH: der Waechter misst nicht ==")
@@ -200,9 +267,37 @@ def main():
     print("   die aus zwei Zeichenketten zusammengesetzt wird, geht hier nicht durch die")
     print("   Fortsetzung -- der Waechter verpflichtet, er spricht nicht frei (W10).")
     print("\n== Sprachflaeche: %d Meldungstexte in %d Dateien ==" % (gesamt, len(QUELLEN)))
+
+    rs_n, rs_d, je_datei, py_n, py_d, namen, dt_namen = quellsprache()
+    print("\n== Quellsprache: %d von %d Kommentarzeilen im Pruefer sind deutsch ==" % (rs_d, rs_n))
+    print("   %d von %d in den Instrumenten." % (py_d, py_n))
+    print("   Die Linie wurde am 2026-08-21 neu gezogen: Bezeichner und Kommentare der")
+    print("   QUELLEN sind englisch, die Arbeitsdokumente bleiben deutsch. Diese Zahl ist")
+    print("   eine RATSCHE -- sie darf fallen, nicht steigen.")
+    if je_datei:
+        schwer = sorted(je_datei.items(), key=lambda x: -x[1])[:6]
+        print("   Die schwersten: " + ", ".join("%s %d" % (a, b) for a, b in schwer))
+    print("   %d von %d Bezeichnern (fn/struct/enum/trait) tragen einen deutschen Stamm."
+          % (len(dt_namen), len(namen)))
+    print("   Das ist eine OBERE Schranke: `pass` und `probe` sind auch englische Woerter.")
+    print("   Und was das NICHT heisst: eine englische Kommentarzeile ist nicht dadurch")
+    print("   eine gute. Gemessen wird die SPRACHE, nicht der Inhalt.")
+    print("   **Wer Bezeichner umbenennt, zieht `mutiere-pruefer.py` mit** -- seine 264")
+    print("   Anker sind woertliche Quellzeilen, und `--anker` faellt sofort, wenn nicht.")
     if klebt and not gefunden:
         print("\n== LESBARKEIT: %d von %d Naehten kleben ==" % (len(klebt), naht_gesamt))
         print("   Dieselbe Klasse wie die 161 vom 2026-08-19 -- englisch und unlesbar.")
+        return 1
+    ratsche = 0
+    if rs_d > MARKE_KOMMENTARE:
+        print("\n  RATSCHE GEBROCHEN: %d deutsche Kommentarzeilen, gebucht sind %d."
+              % (rs_d, MARKE_KOMMENTARE))
+        ratsche = 1
+    if py_d > MARKE_PY:
+        print("\n  RATSCHE GEBROCHEN: %d in den Instrumenten, gebucht sind %d."
+              % (py_d, MARKE_PY))
+        ratsche = 1
+    if ratsche:
         return 1
     if not gefunden:
         print("== ENGLISCH: ALL PASS -- kein deutsches Funktionswort in einer Meldung ==")
