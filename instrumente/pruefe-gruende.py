@@ -61,6 +61,20 @@ def texte():
     """(Kennung, Text) je Absage -- Meldung und Notizen zusammen."""
     aus = {}
     for p in sorted(CHECK.glob("*.rs")):
+        # **`saetze.rs` NENNT Kennungen, es vergibt keine** -- und dieser Waechter erkennt
+        # eine Absage an `"XNNN",` im Quelltext. *Ohne diese Zeile las er den SATZ, den ein
+        # Pass schuldet, als den Absagetext, den er druckt.*
+        #
+        # **Zum zweiten Mal dieselbe Klasse aus derselben Datei, am selben Tag** -- in
+        # `pruefe-kennungen.py` meldete sie 146 Doppelbelegungen, hier verschob sie die
+        # Gruende: „ohne erkennbaren Grund" fiel von 44 auf 14, „tragend" stieg von 102 auf
+        # 135. **Und diese Richtung ist die gefaehrliche: es sah aus wie ein Fortschritt, den
+        # niemand verdient hat.**
+        #
+        # *Die Lehre ist allgemeiner als die Zeile:* wer Quellen nach `"XNNN"` durchsucht,
+        # misst NENNUNGEN und nicht VERGABEN, und ein Register ueber Regeln nennt sie alle.
+        if p.name == "saetze.rs":
+            continue
         q = p.read_text(encoding="utf-8")
         # Jede Absage: die Kennung, dann bis zum naechsten `);` auf Absagenebene.
         for m in re.finditer(r'"([A-Z][0-9]{3})"\s*,', q):

@@ -51,6 +51,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — heute 194 Kennungen und null Sätze. Ein Beweisprojekt vor dem Passregister müsste sich seinen Gegenstand ausdenken |
 
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
@@ -95,7 +96,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **60 Kennzahlen mit Befehl** *(Stand 2026-08-21; 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **62 Kennzahlen mit Befehl** *(Stand 2026-08-21; 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -227,7 +228,7 @@ darunter.
       und ihre Quelle ist eine Tabelle in `PFLICHTEN.md`, deren Zeilen ein Mensch geschrieben
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
-      **`pruefe-zahlen.py` führt heute 60 Kennzahlen mit Befehl und zählt 147 fettgedruckte
+      **`pruefe-zahlen.py` führt heute 62 Kennzahlen mit Befehl und zählt 144 fettgedruckte
       Zahlen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
@@ -468,7 +469,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **839 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **1329 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
+      `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
+      hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
+      liest, liest seit heute überwiegend ein Register und nicht mehr den Prüfer.
       **Und der Befund ist, dass es nicht null war:** der erste Lauf fand **16** Nahtstellen —
       ein Jahr nachdem die 161 von Hand geflickt worden waren. *Von Hand geflickt heißt: nicht
       bewacht.* Darunter `„…is verified--"`, `„…the rule therefore has**zero bite**"` und
@@ -2645,14 +2650,49 @@ sofort: *kein neuer Absagecode ohne seinen Satz* (heute 194 Codes, null Sätze).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
-- [ ] **PL.1 — das PASSREGISTER anlegen** ([`dokumente/PLAN.md`](dokumente/PLAN.md), PL).
-      **Zehn Paesse entscheiden ueber jedes Programm, und keiner schuldet einen Satz** --
-      dieselbe Lage, in der die Schablonen vor ihrer Auszaehlung waren. Wie `schablonen.rs`,
-      mit denselben zwei Zaehnen; **~22 Saetze** geschaetzt. Zweiter Zahn sofort: *kein neuer
-      Absagecode ohne seinen Satz* (heute 52 Codes, null Saetze).
+- [ ] ~~**PL.1 — das PASSREGISTER anlegen.**~~ **ANGELEGT am 2026-08-21.** `struct Pass`
+      trägt sein Satzfeld, **46 Sätze über zwölf Pässe**, und der zweite Zahn steht:
+      [`./instrumente/pruefe-saetze.py`](instrumente/pruefe-saetze.py), **Marke 45**, in
+      beide Richtungen von außen rot gefahren. `gabbro paesse [--je-satz]`; Bericht in
+      [`messung/PASSREGISTER.md`](messung/PASSREGISTER.md).
+      **37 gemessen, 6 vermutet, 0 BEWIESEN** — *die dritte Spalte ist leer, und sie ist der
+      ganze Rest.* Geschätzt waren ~22 Sätze; es wurden mehr, weil ein Pass mehrere
+      unabhängige Zusagen trägt.
 
-- [ ] **PL.2 — die drei Saetze mit der groessten Traglast:** `K001` Summation (**hat heute schon
-      einen gemessenen Fehler**), `H006` Rangordnung, V2 relationale Verengung (102 Stellen).
+      > **Und die Ratsche hat sofort gebissen, bevor jemand sie brauchte.** Der Registerbaum
+      > war acht Commits älter als `master`; nach dem Zusammenführen meldete der Wächter
+      > **48 statt 45** — die drei Kennungen aus Stufe 6 (`H015`, `H101`, `M120`) hatten
+      > keinen Satz. *Der Agent hat sie ausdrücklich NICHT vorsorglich eingetragen*, weil das
+      > den Merge künstlich grün gemacht hätte. Nachgetragen, Marke wieder bei 45.
+
+      **Was der Wächter NICHT prüft, und es steht in seiner eigenen Ausgabe:** er zählt
+      **Zuordnungen**, nicht deren Richtigkeit. *Ein falscher Satz zählt wie ein richtiger,
+      und ein Satz, der weniger sagt als sein Pass leistet, fällt gar nicht auf.*
+
+- [ ] **PL.2 — die drei Sätze BEWEISEN.** Aufgeschrieben sind sie seit dem 2026-08-21, **keine
+      Zeile Isabelle.** `K001` ist dabei **geteilt** in `kosten.summation` (*gemessen*) und
+      `kosten.domaenenschranke` (**VERMUTET**) — damit der gemessene Fehler (2 048 gegen
+      512⁴, **sieben Größenordnungen, drei Tage getragen**) im Satz *sichtbar* bleibt, statt
+      von einer glatten Formulierung überschrieben zu werden.
+      **V2 ist der teuerste, und der Grund ist ein Befund über das Geschirr:** die Regel hat
+      **keine eigene Kennung** — sie erweitert, was durchgeht. Eine Giftprobe müsste ein
+      **PAAR** zeigen (ohne Fakt fällt, mit Fakt geht durch), und dafür hat `beispiele/gift`
+      keine Form. *Dasselbe gilt für V3 und `m2.geisterloeschung`.*
+
+- [ ] **NEUN Befunde sind beim AUFSCHREIBEN abgefallen, und keiner ist behoben**
+      *(2026-08-21, Liste in [`messung/PASSREGISTER.md`](messung/PASSREGISTER.md))*.
+      **Der schwerste: `kbedingung.rs` setzt die K-Bedingung nicht durch.** `k_haelt()`
+      verlangt `breaking.is_empty()`; der Pass meldet nur Handschrift, und `breaking` wird
+      gesammelt, gezählt, **gedruckt und nie abgesagt.** *Ein Programm, das Pass 2 passiert,
+      erfüllt die K-Bedingung nicht notwendig.*
+      Dazu: `N028`/`N029` schlüsseln verschieden (Kurzname gegen vollen Pfad, `m::f()` trifft
+      nie), die Paarung ist global statt transitiv, der Adressraum wird außer bei `R001`
+      nirgends geprüft, `melden` in `phasen.rs` ist toter Code, rekursive Funktionen bekommen
+      gar keine Rahmenprüfung.
+
+      > **Keinen davon hat ein Werkzeug gemeldet.** Sie fielen auf, weil jemand den Satz
+      > aufschreiben musste, den der Pass schuldet — *und das ist genau die Wirkung, für die
+      > das Register gebaut wurde, gemessen am ersten Tag.*
 
 - [ ] **PL.3 — die Bruecke: (c) je Satz eine Sprechprobe, die den Rust gegen das Modell faehrt.**
       Das Geschirr steht (`mutiere-pruefer.py`, 148 von 148) -- was fehlt, ist der Satz, der
@@ -2717,6 +2757,104 @@ was building work is done; what is not has an ADDRESS.*
       *(P4 has fallen: M2 stands as `L101`–`L105`, the pairing pass as `V001`–`V004`.
       What stays open at P4 is the **template** for M2 — it stands in the template list,
       not here.)*
+
+---
+
+# STUFE 9 — DER PRÜFER ALS MATHEMATIK, in Lean 4 und unabhängig vom Code
+
+**Die Frage, gestellt am 2026-08-21: früher oder später soll die Mathematik des Prüfers und
+des Erzeugers vollständig bewiesen werden, unabhängig vom Code — und wäre das JETZT
+sinnvoll?**
+
+**Die Antwort ist: ja früher oder später, nein jetzt — und der Grund ist gemessen, nicht
+Geschmack.** Er steht in einer Zeile:
+
+```
+$ grep -n -A6 "^pub struct Pass" crates/gabbro-check/src/lib.rs
+    pub nummer: u32,  pub name: …,  pub quelle: …,  pub zustand: Zustand,
+```
+
+**`struct Pass` hat kein Feld für einen Satz. 194 Absagekennungen, null Sätze.** Einen
+Algorithmus zu beweisen setzt voraus, dass aufgeschrieben ist, *was er entscheiden soll* —
+und genau das ist Stufe 8 (PL.1), die noch nicht angefangen hat.
+
+> **Es ist wörtlich dieselbe Regel, die über Stufe 7 steht: *erst der Erzeuger, dann der
+> Vertrag.*** Hier heißt sie: **erst der Satz, dann der Beweis.** Ein Beweisprojekt vor dem
+> Passregister müsste sich seinen Beweisgegenstand ausdenken — und was man erfindet, bevor man
+> es misst, ist die Bewegung, gegen die R7 und W3 stehen.
+
+## Die drei Zahlen, die heute gegen einen Start sprechen
+
+| | |
+|---|---|
+| **`struct Pass` schuldet keinen Satz** | 194 Kennungen, 0 Sätze — *es gibt nichts zu beweisen, es gibt nur etwas aufzuschreiben* |
+| **Zahn 3 steht auf 8** | acht Prämissen **bewiesener** Schablonen hängen an keinem Pass. *Die vorhandene Beweisschicht ist nicht zu Ende gebunden;* eine zweite danebenzustellen vervielfacht die ungebundene Fläche, statt sie zu schließen |
+| **27 Sonden, keine existiert** | jeder Beweis „unabhängig vom Code" ruht auf der Annahmenmenge (33, davon 6 nicht falsifizierbar). *Solange keine der 27 benannten Sonden ein Programm ist, kauft die Unabhängigkeit weniger, als sie aussieht* |
+
+**Und die vierte, die kein Argument gegen Lean ist, sondern eine Auflage:** eine zweite
+Beweisschicht neben Isabelle ist **W7** — zwei Register über derselben Sache. Heute stehen
+13 Theorien, 2 329 Zeilen, 70 Sätze, 10 von 21 Schablonen maschinell geprüft. *Wer Lean
+danebenstellt, muss sagen, welche Aussage wo lebt, sonst wandert dieselbe Aussage in beide und
+niemand weiß, welche gilt.*
+
+## Warum trotzdem LEAN 4 und nicht mehr Isabelle — der Punkt, an dem es kippt
+
+**PL.3 verlangt schon heute genau das, was Lean 4 kann und dieser Isabelle-Aufbau nicht:**
+
+> *„je Satz eine Sprechprobe, die den Rust gegen das MODELL fährt."*
+
+Ein Lean-4-Modell ist **ausführbar**. Der Prüferalgorithmus — Bereichsverbände, Wirkungshüllen
+über dem Aufrufgraphen, Rangordnung, Linearität — ist endliche Mathematik ohne `mathlib`-Tiefe,
+und ein bewiesenes Lean-Modell kann **neben** dem Rust auf demselben Korpus laufen. *Dann ist
+die Bindung zwischen Modell und Code keine Behauptung, sondern ein Differenztest* — dieselbe
+Bauart wie `pruefe-emission.sh`, nur eine Ebene höher.
+
+Isabelle hier kann das nicht ohne Codeerzeugung, und dieser Ordner hat **kein AFP** und keinen
+eingerichteten Export. *Das ist eine Aussage über diesen Aufbau, nicht über Isabelle.*
+
+**Die Arbeitsteilung, die daraus folgt** — und sie ist die Antwort auf W7:
+
+| | wo | was |
+|---|---|---|
+| **Schablonen** | Isabelle, bleibt | Aussagen über EINE Absenkung: `deckt fs zs ⟷ map fst zs = fs`. Kleine, abgeschlossene Sätze am Erzeugnis |
+| **Passlogik** | Lean 4, neu | die ENTSCHEIDUNGSPROZEDUR: terminiert sie, ist sie monoton, ist sie korrekt gegen die Semantik. Ausführbar, also differenztestbar |
+
+## Der AUSLÖSER, gemessen statt terminiert
+
+*Ein Vorhaben ohne Auslöser ist ein Vorsatz.* Stufe 9 beginnt, wenn **alle drei** gelten:
+
+1. **PL.1 steht** — `struct Pass` trägt ein Satzfeld, und jeder der zwölf Pässe hat einen
+   aufgeschriebenen Satz (~22 geschätzt). *Das ist der Beweisgegenstand; ohne ihn gibt es
+   keinen.*
+2. **Zahn 3 steht auf 0** — oder jede verbliebene Prämisse hat einen benannten Grund, warum
+   sie an keinem Pass hängt. *Sonst erbt Lean eine ungebundene Schicht.*
+3. **Die drei Sätze mit der größten Traglast sind gewählt und formuliert** (PL.2: `K001`
+   Summation — *hat heute schon einen gemessenen Fehler* —, `H006` Rangordnung, V2
+   relationale Verengung mit 102 Stellen). *Ein Beweisprojekt, das mit dem leichtesten Satz
+   anfängt, misst seine eigene Nachsicht.*
+
+## Was JETZT sinnvoll ist, und es ist genau eine Sache
+
+- [ ] **`struct Pass` bekommt sein Satzfeld, bevor die nächste Absagekennung vergeben wird**
+      *(entschieden 2026-08-21)*. Das ist **der zweite Zahn von PL.1**, und er ist das einzige
+      Stück, das teuer wird, wenn man es aufschiebt: *jede Kennung, die zwischen heute und
+      Stufe 8 dazukommt, ist ein Satz mehr, den später jemand rückwärts rekonstruieren muss.*
+      Heute sind es 194 und null Sätze; an einem einzigen Arbeitstag sind drei dazugekommen.
+      **Eine Ratsche kostet nichts, solange sie früh steht** — genau wie Zahn 2 der
+      Schablonenliste. *Der Rest von Stufe 9 wartet auf seinen Auslöser; dieser eine Posten
+      wartet auf nichts.*
+
+## Und was Stufe 9 ausdrücklich NICHT kauft
+
+**Ein Beweis des Algorithmus ist kein Beweis des Codes.** Er sagt: *die Entscheidungsprozedur
+ist richtig* — nicht: *dieses Rust tut sie.* Die Lücke dazwischen ist genau das, was heute
+`mutiere-pruefer.py` mit 254 von 254 misst, und sie bleibt bestehen.
+
+> **Deshalb gehört zu Stufe 9 vom ersten Tag an ein ZAHN 3 für Pässe:** jeder bewiesene Satz
+> bindet sich an einen Pass und an eine Sprechprobe, die den Rust gegen das Modell fährt.
+> *Ohne ihn entsteht eine zweite Beweisschicht, die niemanden bindet — und diese Form hat
+> dieser Ordner schon einmal gebucht* («B33»: ein Satz, der beschreibt, was gelten sollte, und
+> ein Pass, der das Gegenteil tut).
 
 ---
 

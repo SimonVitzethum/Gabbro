@@ -90,6 +90,25 @@ EINTRAEGE = [
         r"^== (\d+) von 3 Proben gruen ==",
         "Netzstack gegen veroeffentlichte Vektoren",
     ),
+    # --- PL.1: das Passregister, und seine Ratsche ---
+    #
+    # **Die Zahl „Kennungen ohne Satz" ist eine RATSCHE**, und eine Ratsche ohne Befehl ist
+    # eine Absicht. *Sie hat am Tag ihrer Entstehung gebissen* -- der Registerbaum war acht
+    # Commits aelter, und drei Kennungen aus Stufe 6 standen ohne Satz da.
+    (
+        "messung/PASSREGISTER.md",
+        r"\| Sätze im Register \| \*\*(\d+)\*\* \|",
+        ["./instrumente/pruefe-saetze.py"],
+        r"^   (\d+) Saetze beanspruchen \d+ Kennungen",
+        "Saetze im Passregister",
+    ),
+    (
+        "messung/PASSREGISTER.md",
+        r"\| \*\*Kennungen ohne Satz — die Ratsche\*\* \| \*\*(\d+)\*\* \|",
+        ["./instrumente/pruefe-saetze.py"],
+        r"^== Zahn 2: (\d+) von \d+ Kennungen ohne Satz ==",
+        "Zahn 2 -- Kennungen ohne Satz",
+    ),
     # --- Stufe 6, Teil E: die drei Zahlen, die den Bau von «B39» VERHINDERT haben ---
     #
     # **Eine Null, die einen Bau verhindert, muss nachrechenbar sein.** Sie ist die

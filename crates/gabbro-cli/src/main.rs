@@ -323,8 +323,14 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
+        // **Das PASSREGISTER haengt hier dran, nicht an einem eigenen Befehl** (PL.1): der
+        // Satz gehoert zum Pass, und zwei Befehle fuer eine Liste waeren zwei Wahrheiten.
         "paesse" => {
             befehl_paesse();
+            print!(
+                "{}",
+                gabbro_check::saetze::zeige(rest.iter().any(|x| x == "--je-satz"))
+            );
             std::process::ExitCode::SUCCESS
         }
         "--hilfe" | "-h" | "hilfe" => {
@@ -349,7 +355,9 @@ fn hilfe() {
                                     no bodies -- valid Gabbro, no second format
   gabbro fragmente  <file.md>…      every ```gabbro block of a markdown file, one by one
   gabbro annahmen   <file.gab>…     the assumption manifest: proved under A1…An
-  gabbro paesse                     the pass list -- built AND open
+  gabbro paesse [--je-satz]         the pass list -- built AND open -- and THE PASS
+                                    REGISTER: the sentence each pass owes, with its
+                                    state. `--je-satz` prints each sentence in full
   gabbro schablonen [--tor]         the generator templates: the third counting column.
                                     `--tor` FALLS while a proved template has a premise
                                     no pass establishes (tooth 3)

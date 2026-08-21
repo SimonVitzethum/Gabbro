@@ -54,6 +54,10 @@ pub mod manifest;
 pub mod pflichten;
 pub mod phasen;
 pub mod schablonen;
+// **Das PASSREGISTER, seit 2026-08-21** (PLAN.md PL.1). Je Pass die Saetze, die er SCHULDET
+// -- die Aussage, die gelten muss, wenn er schweigt. Ohne sie ist „formal verifiziert" nicht
+// einmal formulierbar, denn niemand wuesste, was zu beweisen waere.
+pub mod saetze;
 pub mod blindstellen;
 pub mod zeugnis;
 pub mod zeremonie;
@@ -96,6 +100,17 @@ pub struct Pass {
     /// Fundstelle der Regel, die dieser Pass abnimmt.
     pub quelle: &'static str,
     pub zustand: Zustand,
+    /// **Die Saetze, die dieser Pass SCHULDET** -- was wahr ist an einem Programm, das ihn
+    /// ohne Absage passiert hat (PLAN.md PL.1, seit 2026-08-21).
+    ///
+    /// *Das ist nicht `zustand` und nicht `quelle`.* Jene sagen, wie weit der Pass gebaut ist
+    /// und welche Regel er abnimmt; der Satz sagt, **was danach gilt** -- also genau die
+    /// Aussage, die ein Beweis zu beweisen haette. **Zwoelf Paesse entscheiden ueber jedes
+    /// Programm, und bis zu diesem Feld schuldete keiner einen Satz.**
+    ///
+    /// Die Liste darf leer sein; `instrumente/pruefe-saetze.py` fuehrt darueber die Ratsche
+    /// und meldet jede Kennung, zu der kein Satz gehoert.
+    pub saetze: &'static [saetze::Satz],
 }
 
 /// Die Passliste. **Die Reihenfolge ist Teil der Festlegung, nicht des Geschmacks.**
@@ -106,6 +121,7 @@ pub fn passliste() -> Vec<Pass> {
             name: "Namen",
             quelle: "E5: every declaration is complete in exactly one place",
             zustand: Zustand::Gebaut,
+            saetze: saetze::NAMEN,
         },
         Pass {
             nummer: 2,
@@ -129,12 +145,14 @@ pub fn passliste() -> Vec<Pass> {
                     of the grammar that no pass redeemed.* The residue is a CORPUS \
                     statement, not pass work",
             ),
+            saetze: saetze::D1D2,
         },
         Pass {
             nummer: 3,
             name: "M1 + V1–V3",
             quelle: "SPRACHE.md §3.2: range types and the three flow rules",
             zustand: Zustand::Gebaut,
+            saetze: saetze::M1,
         },
         Pass {
             nummer: 4,
@@ -153,6 +171,7 @@ pub fn passliste() -> Vec<Pass> {
                     pairing. **And no alias analysis**: two `ptr<normal, rw>` to the same \
                     object stay indistinguishable, and `own` is what stands for that",
             ),
+            saetze: saetze::M3,
         },
         Pass {
             nummer: 5,
@@ -165,6 +184,7 @@ pub fn passliste() -> Vec<Pass> {
                     PROOF, and the alias question belongs to M3. **Since 2026-08-17 the \
                     ORDER stands beside it** (pass 11) -- M2 sees the chain, not which one",
             ),
+            saetze: saetze::M2,
         },
         // **«B37» -- der elfte Pass, und er ist die zweite Haelfte von M2.**
         //
@@ -206,6 +226,7 @@ pub fn passliste() -> Vec<Pass> {
                     must declare `nested masked`. *Before that, one word in an effect list \
                     bought the exemption from `H013`.*",
             ),
+            saetze: saetze::SPERREN,
         },
         Pass {
             nummer: 11,
@@ -222,12 +243,14 @@ pub fn passliste() -> Vec<Pass> {
                     accept the next step. *From the strict reading one can loosen, never the \
                     other way* (PLAN.md, K11.1)",
             ),
+            saetze: saetze::PHASEN,
         },
         Pass {
             nummer: 6,
             name: "M4/Schleifen",
             quelle: "SYNTAX.md §8: three loop forms, `leave`/`next` target a label",
             zustand: Zustand::Gebaut,
+            saetze: saetze::SCHLEIFEN,
         },
         Pass {
             nummer: 7,
@@ -240,6 +263,7 @@ pub fn passliste() -> Vec<Pass> {
                     the visibility the pairing claims falls into the axiom layer and not \
                     into this pass",
             ),
+            saetze: saetze::PAARUNG,
         },
         Pass {
             nummer: 8,
@@ -254,6 +278,7 @@ pub fn passliste() -> Vec<Pass> {
                     **zero bite**, and its evidence comes from poison 62 and two mutations, \
                     not from the corpus",
             ),
+            saetze: saetze::WIRKUNGEN,
         },
         // **Pass 10 ist neu, und das ist eine Aenderung an der Spezifikation.**
         //
@@ -276,6 +301,7 @@ pub fn passliste() -> Vec<Pass> {
                     prover's business and falls to S16/S17, not to this pass. It checks the \
                     three conditions under which the question can be asked at all",
             ),
+            saetze: saetze::GRUPPE,
         },
         Pass {
             nummer: 9,
@@ -287,6 +313,7 @@ pub fn passliste() -> Vec<Pass> {
                     assumption instead of a computation**, and `per_pass` with an input-\
                     dependent bound is not settled",
             ),
+            saetze: saetze::KOSTEN,
         },
     ]
 }

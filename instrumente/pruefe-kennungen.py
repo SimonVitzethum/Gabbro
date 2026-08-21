@@ -32,6 +32,12 @@ def erhebe(zusatz=None):
     for q in sorted((WURZEL / "crates").rglob("*.rs")):
         if "/tests/" in str(q):
             continue          # Tests NENNEN Kennungen, sie vergeben keine
+        # **Dasselbe fuer das Passregister** (seit 2026-08-21): `saetze.rs` fuehrt je Satz
+        # die Kennungen auf, mit denen er absagt -- es NENNT sie, es vergibt sie nicht.
+        # *Ohne diese Zeile meldete dieser Waechter 146 Doppelbelegungen, und keine davon
+        # war eine.*
+        if q.name == "saetze.rs":
+            continue
         text = q.read_text()
         if zusatz and q.name == zusatz[0]:
             text += zusatz[1]
