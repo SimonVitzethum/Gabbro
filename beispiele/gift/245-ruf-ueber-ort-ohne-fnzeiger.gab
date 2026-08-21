@@ -1,0 +1,25 @@
+-- erwartet: M129
+-- **Poison 245 -- a call through a place whose type is not a function pointer.**
+--
+-- `t->zaehler` is a `u32`. Calling it has to fall, and it has to fall **by name**: before
+-- 2026-08-21 the parser refused the FORM (`P017`), so the question never reached a pass. Now
+-- the form is admitted, and the type is what decides.
+--
+-- > *This is the probe that guards the new hole the new form could have opened.* Admitting
+-- > `place(…)` syntactically without a rule about the place's type would have let every field
+-- > access grow a call.
+
+module gift::ruf_ueber_ort_ohne_fnzeiger {
+
+type Treiber = {
+    zaehler : u32,
+};
+
+impl fn nutze(t : ptr<normal, r> Treiber) -> u32
+    effects { reads t }
+    costs   <= 8 ops
+{
+    return t->zaehler();
+}
+
+}

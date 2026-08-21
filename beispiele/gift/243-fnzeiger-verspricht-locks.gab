@@ -1,0 +1,36 @@
+-- erwartet: N036
+-- **Poison 243 -- a function pointer type promises `locks`.**
+--
+-- The refusal that keeps this item from having a silent hole. `H012` checks the lock rank
+-- across a call by looking the callee up **by name**, and an indirect call has none. Letting
+-- `locks` through at the type would mean a promise nobody checks -- the exact shape the item
+-- stands against.
+--
+-- *So the answer is a refusal, and the gap is named:* the lock discipline does not cross an
+-- indirect call, and a program that needs it to does not pass. `masks`, `consumes` and
+-- `publishes` fall the same way and for the same reason.
+--
+-- **Measured beside it:** Caprock's four indirect call sites take no lock
+-- (`(t.senden)` ×2, `(self.fence)` ×2, 2026-08-21). The construct that would need this does
+-- not exist in the measured code.
+
+module gift::fnzeiger_verspricht_locks {
+
+static mut ZUSTAND : u32 = 0;
+
+lock L protects { ZUSTAND } rank 0 held <= 8 ops;
+
+type Treiber = {
+    senden : fn(b : u8)
+        effects { locks L, writes ZUSTAND }
+        costs   <= 4 ops,
+};
+
+impl fn nutze(t : ptr<normal, r> Treiber, b : u8)
+    effects { reads t, writes ZUSTAND }
+    costs   <= 8 ops
+{
+    t->senden(b);
+}
+
+}

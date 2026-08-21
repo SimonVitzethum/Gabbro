@@ -69,7 +69,17 @@ NICHT = {"saetze.rs"}
 # steht auf dem gemessenen Stand vom 2026-08-21, nicht auf einer Wunschzahl.
 MARKE = 14
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
-MARKE_PROBEN = 39
+# 2026-08-21, «B8»: **39 -> 40, und die Erhoehung ist gebucht, nicht weggesehen.**
+#
+# `beispiele/gift/242` zeigt auf `E008` -- die Probe, dass die Wirkungshuelle einen INDIREKTEN
+# Ruf ueberquert. `E008` stand schon vorher auf der Kandidatenliste (drei Vergabestellen in
+# `wirkungen.rs`, Aehnlichkeit 0,23), und damit erbt die neue Probe die Mehrdeutigkeit dieser
+# Kennung: sie faellt gruen, ohne zu beweisen, WELCHE der drei Regeln gefallen ist.
+#
+# *Die Zahl steigt, weil eine richtige Probe dazukam, nicht weil eine Regel doppelt vergeben
+# wurde* -- die Kandidatenzahl selbst bleibt bei 14. **Wer `E008` aufteilt, darf beide Marken
+# senken; solange es EINE Kennung fuer drei Saetze ist, ist das hier der ehrliche Stand.**
+MARKE_PROBEN = 40
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

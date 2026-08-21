@@ -74,7 +74,7 @@ impl Vertraege<'_> {
         let ExprArt::Ruf(r) = &e.art else { return None };
         let name = self
             .u
-            .kandidaten_aufloesbar(self.modul, &r.pfad.text())
+            .kandidaten_aufloesbar(self.modul, &r.path()?.text())
             .into_iter()
             .find_map(|k| self.ergebnis.get(&k))?;
         self.linear.contains(name).then(|| name.clone())
@@ -475,11 +475,20 @@ fn ruf(
     zust: &mut BTreeMap<String, (Zustand, Span, bool, bool)>,
     absagen: &mut Absagen,
 ) {
-    let Some(_name) = r.pfad.teile.last() else {
+    // **An indirect call consumes nothing, and `N036` is why that is a statement.**
+    //
+    // `consumes` cannot stand in a `fn(…)` contract: the position of a linear parameter comes
+    // from the callee's signature, and an indirect call has none to read. *So this is not a
+    // pass keeping quiet about a case it cannot handle -- it is a pass relying on a refusal
+    // that already happened one pass earlier.*
+    let Some(pfad) = r.path() else {
+        return;
+    };
+    let Some(_name) = pfad.teile.last() else {
         return;
     };
     let leer = BTreeSet::new();
-    let verbraucht = v.verbraucht(&r.pfad.text()).unwrap_or(&leer);
+    let verbraucht = v.verbraucht(&pfad.text()).unwrap_or(&leer);
     // **Position fuer Position, und diesmal wirklich** (2026-08-20).
     //
     // Hier stand `let sig: Vec<String> = verbraucht.iter().cloned().collect();` -- die
@@ -492,7 +501,7 @@ fn ruf(
     // Argument als verbraucht, sobald der Gerufene irgendeinen Parameter verbraucht** --
     // in beide Richtungen falsch: ein zweiter Gebrauch eines NICHT verbrauchten Arguments
     // gab `L104`, und ein wirklich verbrauchtes wurde nur zufaellig getroffen.
-    let sig: &[String] = v.parameter(&r.pfad.text()).map(|x| &x[..]).unwrap_or(&[]);
+    let sig: &[String] = v.parameter(&pfad.text()).map(|x| &x[..]).unwrap_or(&[]);
     for (i, a) in r.argumente.iter().enumerate() {
         let ExprArt::Ort(o) = &a.art else { continue };
         let arg = o.basis.text.clone();

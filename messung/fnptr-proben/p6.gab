@@ -1,0 +1,16 @@
+module probe::sechs {
+
+type Treiber = { bereit : fn() -> bool, };
+
+static TAB : Treiber;
+
+impl fn nutze() -> u32
+    effects { reads TAB }
+    costs   <= 3 ops
+{
+    let x : bool = TAB.bereit;
+    let y : u32 = TAB.senden;
+    return 1;
+}
+
+}

@@ -1,0 +1,30 @@
+-- The second decisive probe: does `M128` hold the producer to the slot's promise?
+-- `schreibt` writes; the slot only allows reading. If this gives 0 errors, the contract
+-- at the type is a decoration.
+
+module probe::erzeuger {
+
+static mut ZUSTAND : u32 = 0;
+
+type Nur_Lesen = {
+    f : fn() -> bool
+        effects { reads ZUSTAND }
+        costs   <= 4 ops,
+};
+
+impl fn schreibt() -> bool
+    effects { writes ZUSTAND }
+    costs   <= 3 ops
+{
+    ZUSTAND = 1;
+    return true;
+}
+
+impl fn baue() -> Nur_Lesen
+    effects { pure }
+    costs   <= 2 ops
+{
+    return Nur_Lesen(f: &schreibt);
+}
+
+}

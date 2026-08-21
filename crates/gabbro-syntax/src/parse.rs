@@ -942,27 +942,65 @@ impl<'a> Parser<'a> {
         Ok(recht)
     }
 
+    /// **The function pointer type -- with NAMED parameters and with its contract.**
+    ///
+    /// ```text
+    /// fnptr    = "fn" "(" [ params ] ")" [ "->" typeexpr ] fncontract ;
+    /// fncontract = [ "requires" predlist ] [ "ensures" predlist ]
+    ///              "effects" "{" efflist "}" "costs" "<=" expr "ops" ;
+    /// ```
+    ///
+    /// The clauses stand in the **same fixed order** as at an `fn` declaration (E4) and are
+    /// read by the **same** sub-parsers. *Two readers for the same clause would be two
+    /// meanings.*
+    ///
+    /// **Being allowed to omit `effects` and `costs` would be the entire gap.** Whether they
+    /// stand there is not this parser's decision -- `N026` in `namen.rs` makes it, because a
+    /// refusal with a sentence is worth more than a `P001` at a bracket.
     fn fnptr(&mut self) -> Erg<FnZeiger> {
         let anfang = self.erwarte_kw(Kw::Fn)?;
         self.erwarte_z(Z::RundAuf)?;
-        let mut parameter = Vec::new();
-        if !self.ist_z(Z::RundZu) {
-            loop {
-                parameter.push(self.typeexpr()?);
-                if !self.friss_z(Z::Komma) {
-                    break;
-                }
-            }
-        }
+        let parameter = if self.ist_z(Z::RundZu) {
+            Vec::new()
+        } else {
+            self.params()?
+        };
         self.erwarte_z(Z::RundZu)?;
         let ergebnis = if self.friss_z(Z::Pfeil) {
             Some(self.typeexpr()?)
         } else {
             None
         };
+        let requires = if self.friss_kw(Kw::Requires) {
+            self.predlist()?
+        } else {
+            Vec::new()
+        };
+        let ensures = if self.friss_kw(Kw::Ensures) {
+            self.predlist()?
+        } else {
+            Vec::new()
+        };
+        let effects = if self.ist_kw(Kw::Effects) {
+            Some(self.effects_block()?)
+        } else {
+            None
+        };
+        let costs = if self.friss_kw(Kw::Costs) {
+            self.erwarte_z(Z::KleinerGleich)?;
+            let e = self.expr()?;
+            self.erwarte_kw(Kw::Ops)?;
+            Some(e)
+        } else {
+            None
+        };
         Ok(FnZeiger {
             parameter,
             ergebnis,
+            requires,
+            ensures,
+            effects,
+            costs,
             span: anfang.bis_zu(self.vorheriger_span()),
         })
     }
@@ -1341,6 +1379,18 @@ impl<'a> Parser<'a> {
 
     fn unary(&mut self) -> Erg<Expr> {
         let t = self.blick();
+        // **`&f` -- the producer of a function pointer** (2026-08-21). It stands here and not
+        // with the other unary operators because it is NOT an operator: `&` expects a path,
+        // not an expression. *There is no address-of an expression in Gabbro, and that there
+        // is none is the reason `ptr` carries a provenance at all.*
+        if t.art == Art::Zeichen(Z::Und) {
+            self.pos += 1;
+            let pfad = self.pfad()?;
+            return Ok(Expr {
+                span: t.span.bis_zu(pfad.span),
+                art: ExprArt::FnWert(pfad),
+            });
+        }
         let op = match t.art {
             Art::Zeichen(Z::Bang) => Some(UnOp::Nicht),
             Art::Zeichen(Z::Minus) => Some(UnOp::Negativ),
@@ -1374,13 +1424,13 @@ impl<'a> Parser<'a> {
             let span = sp.bis_zu(self.vorheriger_span());
             return Ok(Expr {
                 art: ExprArt::Ruf(Ruf {
-                    pfad: Pfad {
+                    ziel: CallTarget::Path(Pfad {
                         teile: vec![Ident {
                             text: k.text().to_string(),
                             span: sp,
                         }],
                         span: sp,
-                    },
+                    }),
                     argumente,
                     // `Some(x)` traegt keine Marke -- der Variantenname IST die Marke.
                     marken: Vec::new(),
@@ -1515,7 +1565,7 @@ impl<'a> Parser<'a> {
                 let span = t.span.bis_zu(self.vorheriger_span());
                 let pfad = Pfad { teile, span };
                 if self.ist_z(Z::RundAuf) {
-                    let ruf = self.ruf_ab(pfad)?;
+                    let ruf = self.ruf_ab(CallTarget::Path(pfad))?;
                     Ok(Expr {
                         span: ruf.span,
                         art: ExprArt::Ruf(ruf),
@@ -1545,7 +1595,7 @@ impl<'a> Parser<'a> {
                     let span = teile[0].span.bis_zu(self.vorheriger_span());
                     let pfad = Pfad { teile, span };
                     if self.ist_z(Z::RundAuf) {
-                        let ruf = self.ruf_ab(pfad)?;
+                        let ruf = self.ruf_ab(CallTarget::Path(pfad))?;
                         return Ok(Expr {
                             span: ruf.span,
                             art: ExprArt::Ruf(ruf),
@@ -1592,6 +1642,16 @@ impl<'a> Parser<'a> {
                     });
                 }
                 let ort = self.place_ab(erste)?;
+                // **«B8»: the call through a PLACE** (2026-08-21). `t->bereit()` inside an
+                // expression. Until today `P001` fell here -- *"`;` expected, `(` found"* --
+                // and the refusal said nothing about the matter (`probe/p3.gab`).
+                if self.ist_z(Z::RundAuf) {
+                    let ruf = self.ruf_ab(CallTarget::Place(ort))?;
+                    return Ok(Expr {
+                        span: ruf.span,
+                        art: ExprArt::Ruf(ruf),
+                    });
+                }
                 Ok(Expr {
                     span: ort.span,
                     art: ExprArt::Ort(ort),
@@ -1634,7 +1694,7 @@ impl<'a> Parser<'a> {
     /// Ausdruck kann in Gabbro nie mit `ident ":"` anfangen: Pfade trennen mit `::`, Orte mit
     /// `.` und `[`. Deshalb reicht ein Blick auf zwei Zeichen -- **kein Kontextschalter, und
     /// damit auch kein stiller Verleser** («B7»).
-    fn ruf_ab(&mut self, pfad: Pfad) -> Erg<Ruf> {
+    fn ruf_ab(&mut self, ziel: CallTarget) -> Erg<Ruf> {
         self.erwarte_z(Z::RundAuf)?;
         let mut argumente = Vec::new();
         let mut marken: Vec<Ident> = Vec::new();
@@ -1692,8 +1752,8 @@ impl<'a> Parser<'a> {
         }
         let ende = self.erwarte_z(Z::RundZu)?;
         Ok(Ruf {
-            span: pfad.span.bis_zu(ende),
-            pfad,
+            span: ziel.span().bis_zu(ende),
+            ziel,
             argumente,
             marken,
         })
@@ -2691,11 +2751,19 @@ impl<'a> Parser<'a> {
             }
             let span = teile[0].span.bis_zu(self.vorheriger_span());
             let pfad = Pfad { teile, span };
-            let ruf = self.ruf_ab(pfad)?;
+            let ruf = self.ruf_ab(CallTarget::Path(pfad))?;
             self.erwarte_z(Z::Semi)?;
             return Ok(StmtArt::Ruf(ruf));
         }
         let ziel = self.place_ab(erste)?;
+        // **«B8»: the call through a PLACE, as a statement** (2026-08-21). `t->senden(b);`
+        // Until today `P017` fell here -- *"assignment or call expected, `(` found"* -- a
+        // refusal that could not itself read the call it says it expects (`probe/p5.gab`).
+        if self.ist_z(Z::RundAuf) {
+            let ruf = self.ruf_ab(CallTarget::Place(ziel))?;
+            self.erwarte_z(Z::Semi)?;
+            return Ok(StmtArt::Ruf(ruf));
+        }
         let t = self.blick();
         let op = match t.art {
             Art::Zeichen(Z::Gleich) => ZuwOp::Setzt,
@@ -4059,7 +4127,7 @@ impl<'a> Parser<'a> {
                     teile.push(self.erwarte_feldname()?);
                 }
                 let span = teile[0].span.bis_zu(self.vorheriger_span());
-                let ruf = self.ruf_ab(Pfad { teile, span })?;
+                let ruf = self.ruf_ab(CallTarget::Path(Pfad { teile, span }))?;
                 schritte.push(BootSchritt::Ruf(ruf));
             } else {
                 self.erwarte_z(Z::Gleich)?;

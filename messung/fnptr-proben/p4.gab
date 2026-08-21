@@ -1,0 +1,13 @@
+module probe::vier {
+
+type Treiber = { bereit : fn() -> bool, };
+
+impl fn nutze(t : ptr<normal, r> Treiber) -> bool
+    effects { reads t }
+    costs   <= 3 ops
+{
+    let x : bool = t->bereit;
+    return x;
+}
+
+}

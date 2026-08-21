@@ -271,7 +271,7 @@ fn sammle_griffe(
     for s in &b.anweisungen {
         if let StmtArt::Let(l) = &s.art {
             if let ExprArt::Ruf(r) = &l.wert.art {
-                if let Some(n) = r.pfad.teile.last() {
+                if let Some(n) = r.path().and_then(|p| p.teile.last()) {
                     if geraete.contains_key(&n.text) {
                         griffe.insert(l.name.text.clone(), n.text.clone());
                     }

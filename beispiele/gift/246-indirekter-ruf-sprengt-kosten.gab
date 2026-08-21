@@ -1,0 +1,29 @@
+-- erwartet: K001
+-- **Poison 246 -- an indirect call costs what its type promises, and `K001` counts it.**
+--
+-- The second half of why the contract sits at the type. Without a `costs` clause there an
+-- indirect call would cost **zero**, and a body full of them would come in under any bound at
+-- all. `nutze` promises 4 ops and makes two calls of 6 each.
+--
+-- *`N035` forbids a `fn(…)` without `costs`, so the zero case cannot arise* -- this probe
+-- checks the other direction: that the number, once promised, is actually added.
+
+module gift::indirekter_ruf_sprengt_kosten {
+
+static mut ZUSTAND : u32 = 0;
+
+type Treiber = {
+    senden : fn(b : u8)
+        effects { writes ZUSTAND }
+        costs   <= 6 ops,
+};
+
+impl fn nutze(t : ptr<normal, r> Treiber, b : u8)
+    effects { reads t, writes ZUSTAND }
+    costs   <= 4 ops
+{
+    t->senden(b);
+    t->senden(b);
+}
+
+}

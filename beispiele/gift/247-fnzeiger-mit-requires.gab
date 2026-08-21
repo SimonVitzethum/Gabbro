@@ -1,0 +1,29 @@
+-- erwartet: N037
+-- **Poison 247 -- a function pointer type carries a `requires`.**
+--
+-- A precondition is checked at the CALL SITE against the caller's state, and the passes that
+-- do that resolve the callee by name. Written here it would be a promise checked nowhere.
+--
+-- *The same class as `N036`, at the other clause*: `effects` can be carried across an
+-- indirect call because the hull carries sets of places; `requires` cannot, because it is a
+-- statement about one particular caller's state at one particular line.
+
+module gift::fnzeiger_mit_requires {
+
+static mut ZUSTAND : u32 = 0;
+
+type Treiber = {
+    senden : fn(b : u8)
+        requires b > 0
+        effects { writes ZUSTAND }
+        costs   <= 4 ops,
+};
+
+impl fn nutze(t : ptr<normal, r> Treiber, b : u8)
+    effects { reads t, writes ZUSTAND }
+    costs   <= 8 ops
+{
+    t->senden(b);
+}
+
+}

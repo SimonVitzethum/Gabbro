@@ -682,7 +682,7 @@ impl<'a> Pruefer<'a> {
                     .als_ruf()
                     .and_then(|r| {
                         self.u
-                            .fehlerkanal(&self.modul, &r.pfad.teile.last()?.text)
+                            .fehlerkanal(&self.modul, &r.path()?.teile.last()?.text)
                     })
                     .map(Typ::Grund);
                 //
@@ -1203,10 +1203,15 @@ impl<'a> Pruefer<'a> {
             StmtArt::Return(_) | StmtArt::Leave(_) | StmtArt::Next(_) => true,
             // Ein Aufruf einer Funktion nach `never` kehrt nicht zurueck.
             StmtArt::Ruf(r) => {
+                // **An indirect call does not end a body.** `-> never` is read off the
+                // callee's declared result, and a `fn(…)` type can name `never` as its result
+                // too -- but this rule asks whether CONTROL returns, and the passes that live
+                // on that answer (divergence, `S002`) all resolve by name. *Answering `false`
+                // here is the safe direction: a body that does not obviously end must still
+                // end properly, and the rule that says so keeps firing.*
                 let name = r
-                    .pfad
-                    .teile
-                    .last()
+                    .path()
+                    .and_then(|p| p.teile.last())
                     .map(|i| i.text.as_str())
                     .unwrap_or_default();
                 matches!(
@@ -1265,6 +1270,46 @@ impl<'a> Pruefer<'a> {
 
     fn ausdruck_roh(&mut self, e: &Expr, lage: &Lage) -> Typ {
         match &e.art {
+            // **`&f` -- and `M127`, the rule the whole contract rests on** (2026-08-21).
+            //
+            // The type of `&f` is the contract of `f` itself, read off `f`'s declaration and
+            // turned into a `Typ::FnPtr`. **That is what makes the contract at the pointer
+            // type sound rather than decorative:** the assignment to a `fn(…)`-typed field is
+            // an ordinary type comparison, and `M104` then holds the promise the producer
+            // makes against the promise the type demands.
+            //
+            // > *Without this line the contract would be a wish.* A field could declare
+            // > `effects { pure }` and be filled with a function that writes the world, and
+            // > every pass downstream would compute with the wish.
+            //
+            // `M127` fires where `&` names something that is not a declared function at all --
+            // a variable, a type, a typo. **Not `M119`:** `M119` says "declared nowhere", and
+            // the fix there is a declaration; here the name may well exist and simply not be
+            // a function, and the fix is a different one.
+            ExprArt::FnWert(p) => {
+                let Some(sig) = self.u.funktion(&self.modul, p) else {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M127",
+                            e.span,
+                            format!("`&{}` does not name a function", p.text()),
+                        )
+                        .mit_notiz(
+                            "`&` makes a FUNCTION into a value; there is no address-of for a \
+                             variable or a type in Gabbro",
+                        ),
+                    );
+                    return Typ::Unbekannt;
+                };
+                Typ::FnPtr(Box::new(crate::typen::FnPtrContract {
+                    parameters: sig.parameter.clone(),
+                    result: sig.ergebnis.clone().map(Box::new),
+                    effects: sig.effect_list.clone(),
+                    has_effects: !sig.effect_list.is_empty(),
+                    costs: sig.cost_bound,
+                    has_costs: sig.cost_bound.is_some(),
+                }))
+            }
             ExprArt::Zahl(v) => match i128::try_from(*v) {
                 Ok(w) => Typ::Ganzzahl(IntBereich::konstante(w)),
                 Err(_) => Typ::Unbekannt,
@@ -1624,8 +1669,49 @@ impl<'a> Pruefer<'a> {
     }
 
     fn ruf_roh(&mut self, r: &Ruf, lage: &Lage) -> Typ {
+        // **An indirect call is typed from the CONTRACT at the place's type** («B8»,
+        // 2026-08-21) -- the result type and the parameter types both.
+        //
+        // This is what closes the measured hole: `probe/p8.gab` assigned `t->bereit` to a
+        // `u32`, a `bool` and a pointer in one file with **0 errors**, because `fn(…)` became
+        // `Typ::Unbekannt` and `Unbekannt` is compatible with everything. *An untyped
+        // expression is not a neutral one.*
+        //
+        // A place whose type is NOT a function pointer gets `M129`. **Not silence and not
+        // `Unbekannt`:** `Unbekannt` is precisely what made the old hole invisible, and the
+        // run only counted it (`M1 saw 4 expressions, 3 of them without a type`).
+        if let Some(o) = r.place() {
+            let mut argtypen = Vec::new();
+            for a in &r.argumente {
+                argtypen.push((self.ausdruck(a, lage), a.span));
+            }
+            let Typ::FnPtr(v) = self.u.typ_von_ort(&self.modul, o, &lage.lokal) else {
+                self.absagen.schiebe(
+                    Absage::fehler(
+                        "M129",
+                        r.span,
+                        format!("`{}` is not a function pointer, so it cannot be called", o.text()),
+                    )
+                    .mit_notiz(
+                        "a call through a place needs a `fn(…)` type at that place -- that \
+                         type is where the callee's contract stands",
+                    ),
+                );
+                return Typ::Unbekannt;
+            };
+            for ((t, span), (pname, pt)) in argtypen.iter().zip(v.parameters.iter()) {
+                self.passt(t, pt, *span, &format!("das Argument `{pname}`"));
+            }
+            // **A call with no result stays untyped -- exactly as a direct one does.**
+            // The line below is `sig.ergebnis.clone().unwrap_or(Typ::Unbekannt)` with the
+            // contract in place of the signature, and it is deliberately the same: Gabbro has
+            // no unit type, and inventing one here would make the indirect call differ from
+            // the direct call in a way no rule asked for. *The coverage number counts it, in
+            // both paths, and that is a property of `void`, not of this construct.*
+            return v.result.map(|x| *x).unwrap_or(Typ::Unbekannt);
+        }
         // **Aufgeloest wird im Modul des Aufrufs**, nicht ueber den blanken Namen.
-        let signatur = self.u.funktion(&self.modul, &r.pfad).cloned();
+        let signatur = r.path().and_then(|p| self.u.funktion(&self.modul, p)).cloned();
         let mut argtypen = Vec::new();
         for a in &r.argumente {
             argtypen.push((self.ausdruck(a, lage), a.span));
@@ -1646,7 +1732,7 @@ impl<'a> Pruefer<'a> {
         // `Some` und `None` sind reservierte Woerter (`kw.rs`), also kann diese Zeile keine
         // benutzerdeklarierte Funktion treffen. `None` bleibt ohne Typ: es IST der
         // Sonderwert und liegt bauartbedingt ausserhalb.
-        if r.pfad.teile.last().is_some_and(|n| n.text == "Some") {
+        if r.heisst("Some") {
             return argtypen.first().map(|(t, _)| t.clone()).unwrap_or(Typ::Unbekannt);
         }
         let Some(sig) = signatur else {
@@ -1674,7 +1760,7 @@ impl<'a> Pruefer<'a> {
             for s in &v.schritte {
                 self.fremd.push(Stelle {
                     rufer: self.rufer.clone(),
-                    gerufener: r.pfad.text(),
+                    gerufener: r.target_text(),
                     span: r.span,
                     klausel: s.klausel.clone(),
                     wirkung: Wirkung::Bereich {
@@ -1740,7 +1826,7 @@ impl<'a> Pruefer<'a> {
                         format!(
                             "`{}` requires `{name} {} {zahl}`, and the argument lies in \
                                 {} .. {}",
-                            r.pfad.text(),
+                            r.target_text(),
                             zeichen(op),
                             b.min,
                             b.max
@@ -1777,7 +1863,7 @@ impl<'a> Pruefer<'a> {
     /// bewusst gegen `set (map fst zs) = set fs` -- *eine Zuordnung, die nur die Menge trifft,
     /// sieht beim Leser aus wie die Deklaration und ist es nicht.*
     fn marken_pruefen(&mut self, r: &Ruf) {
-        let gefunden = self.u.verbundfelder(&self.modul, &r.pfad).cloned();
+        let gefunden = r.path().and_then(|p| self.u.verbundfelder(&self.modul, p)).cloned();
         let felder = gefunden.clone().unwrap_or_default();
         match (gefunden.is_some(), r.ist_verbundwert()) {
             // Ein Verbund mit Marken: der Schluesselstrom gegen die Felderliste.
@@ -1790,7 +1876,7 @@ impl<'a> Pruefer<'a> {
                             r.span,
                             format!(
                                 "`{}` has the fields ({}), the constructor names ({})",
-                                r.pfad.text(),
+                                r.target_text(),
                                 felder.join(", "),
                                 gegeben.join(", ")
                             ),
@@ -1817,12 +1903,12 @@ impl<'a> Pruefer<'a> {
                         r.span,
                         format!(
                             "`{}` is a struct; its constructor names its fields",
-                            r.pfad.text()
+                            r.target_text()
                         ),
                     )
                     .mit_notiz(format!(
                         "`{}({})`",
-                        r.pfad.text(),
+                        r.target_text(),
                         felder
                             .iter()
                             .map(|f| format!("{f}: …"))
@@ -1842,7 +1928,7 @@ impl<'a> Pruefer<'a> {
                     Absage::fehler(
                         "M107",
                         r.span,
-                        format!("`{}` is not a struct; labels exist only at a constructor", r.pfad.text()),
+                        format!("`{}` is not a struct; labels exist only at a constructor", r.target_text()),
                     )
                     .mit_notiz(
                         "the order of a function's parameters stands in its declaration; \
@@ -2440,7 +2526,73 @@ impl<'a> Pruefer<'a> {
         }
     }
 
+    /// **`M128` -- a function pointer promises no LESS than the slot it goes into.**
+    ///
+    /// The rule that turns the contract at the pointer type from a decoration into a fact.
+    /// Assignment is **subsumption, not equality**: `&f` fits a `fn(…)` slot when
+    ///
+    /// * every effect `f` declares is one the slot allows -- *not the other way round*, and
+    ///   not "the same set": a `pure` function belongs in a slot that permits `writes X`, and
+    ///   forbidding that would make every ops table declare its widest member's effects at
+    ///   every member;
+    /// * `f` costs at most what the slot promises;
+    /// * the shapes agree in arity.
+    ///
+    /// **The direction is the entire content.** Reversed, a slot promising `pure` would accept
+    /// a function that writes the world, and every pass downstream -- the hull, `E008`,
+    /// `K001` -- would compute with the promise instead of the fact. *That is the exact shape
+    /// of a false green, and it is why this comparison could not be left to `PartialEq`.*
+    fn fnptr_passt(&mut self, q: &crate::typen::FnPtrContract, z: &crate::typen::FnPtrContract, span: Span) {
+        // **One rule, one refusal site.** The three ways a pointer can fail to fit -- arity,
+        // an effect the slot forbids, a cost above the bound -- are three readings of one
+        // sentence, so they share one `Absage`. *Three sites would look like three rules to
+        // `instrumente/pruefe-vergabe.py`, and a poison probe on `M128` would stop saying
+        // which of them it caught.*
+        let grund = if q.parameters.len() != z.parameters.len() {
+            Some(format!(
+                "it takes {} parameters, the slot takes {}",
+                q.parameters.len(),
+                z.parameters.len()
+            ))
+        } else if let Some(w) = q
+            .effects
+            .iter()
+            // `pure` promises LESS than anything, so it fits every slot.
+            .find(|w| *w != "pure" && !z.effects.iter().any(|x| x == *w))
+        {
+            Some(format!("it declares `{w}`, which the slot does not allow"))
+        } else {
+            match (q.costs, z.costs) {
+                (Some(a), Some(b)) if a > b => {
+                    Some(format!("it costs {a} ops, the slot promises {b}"))
+                }
+                _ => None,
+            }
+        };
+        let Some(grund) = grund else { return };
+        self.absagen.schiebe(
+            Absage::fehler(
+                "M128",
+                span,
+                format!("`{}` does not fit `{}`: {grund}", q.shape(), z.shape()),
+            )
+            .mit_notiz(
+                "a function pointer may promise LESS than its slot, never more -- the slot's \
+                 promise is what every caller through it computes with, and `E008` and \
+                 `K001` compute with it",
+            )
+            .mit_notiz("either widen the contract at the pointer type, or narrow the function"),
+        );
+    }
+
     fn passt(&mut self, quelle: &Typ, ziel: &Typ, span: Span, was: &str) {
+        // **The function pointer comparison runs FIRST and returns** -- the rules below are
+        // about ranges and widths, and a function pointer has neither.
+        if let (Typ::FnPtr(q), Typ::FnPtr(z)) = (quelle.durchgreifen(), ziel.durchgreifen()) {
+            let (q, z) = (q.clone(), z.clone());
+            self.fnptr_passt(&q, &z, span);
+            return;
+        }
         self.undurchsichtigkeit_pruefen(quelle, ziel, span, was);
         // **«F»: die zwei Bits, und sie sind der Abnehmer der Faktenmaschine.**
         //
@@ -2853,7 +3005,7 @@ impl<'a> Pruefer<'a> {
     /// entscheidet dieser Pass nicht -- die Zahl ist in dieser Richtung eine OBERE Schranke,
     /// und sie steht als solche in `messung/FREMDVERENGUNG.md`.
     fn beziehung_aus_ensures(&mut self, binder: &str, r: &Ruf, lage: &mut Lage) {
-        let Some(sig) = self.u.funktion(&self.modul, &r.pfad).cloned() else { return };
+        let Some(sig) = r.path().and_then(|p| self.u.funktion(&self.modul, p)).cloned() else { return };
         for p in &sig.ensures {
             let PredArt::Vergleich(e) = &p.art else { continue };
             let ExprArt::Binaer(op, a, c) = &e.art else { continue };
@@ -2887,7 +3039,7 @@ impl<'a> Pruefer<'a> {
             if !sig.rumpf_da {
                 self.fremd.push(Stelle {
                     rufer: self.rufer.clone(),
-                    gerufener: r.pfad.text(),
+                    gerufener: r.target_text(),
                     span: r.span,
                     klausel: format!("result {} {}", zeichen(op), ort.text()),
                     wirkung: Wirkung::Beziehung,
@@ -3252,7 +3404,7 @@ fn enthaelt_ruf(e: &Expr) -> bool {
 /// (`kw.rs`), also kann diese Frage keine benutzerdeklarierte Funktion treffen.
 fn ist_some(e: &Expr) -> bool {
     match &e.art {
-        ExprArt::Ruf(r) => r.pfad.teile.last().is_some_and(|n| n.text == "Some"),
+        ExprArt::Ruf(r) => r.heisst("Some"),
         _ => false,
     }
 }

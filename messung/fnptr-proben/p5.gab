@@ -1,0 +1,12 @@
+module probe::fuenf {
+
+type Treiber = { senden : fn(u8), };
+
+impl fn nutze(t : ptr<normal, r> Treiber, b : u8)
+    effects { reads t }
+    costs   <= 3 ops
+{
+    t->senden(b);
+}
+
+}

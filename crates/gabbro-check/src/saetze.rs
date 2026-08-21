@@ -254,6 +254,29 @@ pub const NAMEN: &[Satz] = &[
         gemessen_an: "beispiele/gift: one probe on `O007`.",
         fundstelle: "crates/gabbro-check/src/namen.rs; SPRACHE.md §13",
     },
+    Satz {
+        name: "namen.fnzeigervertrag",
+        kennungen: &["N035", "N036", "N037"],
+        aussage: "Every function pointer type in the tree carries an `effects` clause and a \
+                  `costs` bound, its effect list uses only words that can be carried across a \
+                  call whose callee is not statically known (`reads`, `writes`, `allocs`, \
+                  `pure`, `diverges`), and it carries no `requires`. A program that passes \
+                  this rule therefore has, at every indirect call site, a static promise from \
+                  which the effect hull and the cost sum can be computed.",
+        vorbehalt: "**The rule buys the hull by REFUSING the rest, and the refusal is the \
+                    gap.** `locks`, `locks shared`, `masks`, `consumes` and `publishes` are \
+                    rejected at the type because the passes that read them (`geteilt`, \
+                    `kontexte`, `m2`, `paarung`) resolve the callee by NAME. So the lock \
+                    order, the interrupt-context rule, linearity and the pairing do **not** \
+                    cross an indirect call -- a program needing that does not pass, rather \
+                    than passing unchecked. *Measured beside it: Caprock's four indirect call \
+                    sites take no lock.* And the `let` scan that supplies the local type \
+                    picture is FLAT: two bindings of one name in two branches collapse.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: one probe each on `N035` (240), `N036` (243) and \
+                      `N037` (247); the positive side is beispiele/49.",
+        fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md fnptr",
+    },
 ];
 
 // ===================================================================================
@@ -424,6 +447,30 @@ pub const M1: &[Satz] = &[
         gemessen_an: "No direct probe. The exhaustiveness half is measured (`D005`), the \
                       narrowing half is not.",
         fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md §3.2, V3",
+    },
+    Satz {
+        name: "m1.fnzeiger",
+        kennungen: &["M127", "M128", "M129"],
+        aussage: "A function pointer value comes only from `&f` where `f` is a declared \
+                  function (`M127`), and it goes only into a slot whose contract COVERS the \
+                  function's own: every effect `f` declares is one the slot allows, and `f` \
+                  costs at most what the slot promises (`M128`). A call through a place is \
+                  admitted only where that place has a function pointer type (`M129`), and \
+                  its arguments and result are held against the contract's. **What every \
+                  pass downstream computes with at an indirect call is therefore a fact about \
+                  some real function, not the wish written at the type.**",
+        vorbehalt: "Subsumption is checked on the effect SET and the cost NUMBER, and on the \
+                    arity -- **not on the parameter types**, which are compared only at the \
+                    call. Two pointer types with the same arity and compatible contracts but \
+                    different parameter types are therefore interchangeable here, and the \
+                    mismatch surfaces one level down, at `M104`, or not at all when nobody \
+                    calls through the slot. *`ensures` at the function is not carried into \
+                    the pointer type at all* -- a caller through the pointer learns nothing \
+                    from it.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: one probe each on `M127` (244), `M128` (241) and \
+                      `M129` (245); the positive side is beispiele/49.",
+        fundstelle: "crates/gabbro-check/src/m1.rs; SYNTAX.md fnptr",
     },
     Satz {
         name: "m1.endlichkeit",

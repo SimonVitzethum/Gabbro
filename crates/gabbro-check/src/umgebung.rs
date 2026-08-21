@@ -30,6 +30,15 @@ pub struct Signatur {
     /// Hat Gabbro den Rumpf? *Ohne ihn ist jede Verengung aus `ensures` eine ANNAHME ueber
     /// fremden Code und gehoert ins Zeugnis, nicht in ein stilles Zutrauen.*
     pub rumpf_da: bool,
+    /// **The declared effects, normalised** (`writes c.slots`) -- the half of the contract a
+    /// producer `&f` is held against (2026-08-21).
+    ///
+    /// It was not here before, and it did not need to be: every reader of an effect list went
+    /// through the call graph, which reads the AST itself. **`&f` cannot** -- it has a name
+    /// and needs the promise behind it, at the moment the value is made.
+    pub effect_list: Vec<String>,
+    /// The declared cost bound, evaluated. The other half.
+    pub cost_bound: Option<i128>,
     pub span: gabbro_syntax::span::Span,
 }
 
@@ -525,6 +534,13 @@ impl Umgebung {
                                 ensures: Vec::new(),
                         requires: Vec::new(),
                                 rumpf_da: false,
+                                effect_list: t
+                                    .effects
+                                    .iter()
+                                    .flat_map(|w| &w.liste)
+                                    .map(|e| e.art.text())
+                                    .collect(),
+                                cost_bound: Some(t.schritte.len() as i128 + 1),
                                 span: t.span,
                             },
                         );
@@ -549,6 +565,10 @@ impl Umgebung {
                             ensures: Vec::new(),
                             requires: Vec::new(),
                             rumpf_da: true,
+                            // A device handle is made, and nothing happens: the address IS
+                            // the handle (`beispiele/09`).
+                            effect_list: vec!["pure".to_string()],
+                            cost_bound: Some(0),
                             span: d.span,
                         },
                     );
@@ -582,6 +602,9 @@ impl Umgebung {
                                 ensures: Vec::new(),
                                 requires: Vec::new(),
                                 rumpf_da: false,
+                                // A record constructor touches nothing outside itself.
+                                effect_list: vec!["pure".to_string()],
+                                cost_bound: Some(0),
                                 span: t.span,
                             };
                             self.funktionen.insert(q(&t.name.text), sig);
@@ -610,6 +633,13 @@ impl Umgebung {
                         ensures: f.ensures.clone(),
                         requires: f.requires.clone(),
                         rumpf_da: matches!(f.rumpf, gabbro_syntax::ast::FnRumpf::Block(_)),
+                        effect_list: f
+                            .effects
+                            .iter()
+                            .flat_map(|w| &w.liste)
+                            .map(|e| e.art.text())
+                            .collect(),
+                        cost_bound: f.costs.as_ref().and_then(|e| self.konst_wert(pfad, e)),
                         span: f.span,
                     };
                     self.funktionen.insert(q(&f.name.text), sig);
@@ -625,6 +655,11 @@ impl Umgebung {
                         ensures: Vec::new(),
                         requires: Vec::new(),
                         rumpf_da: false,
+                        // An `axiom` has no body and no effect clause in the grammar; it is
+                        // an assumption, not a callee. **Empty, not `pure`** -- claiming
+                        // purity for something nobody wrote would be the invented promise.
+                        effect_list: Vec::new(),
+                        cost_bound: None,
                         span: a.span,
                     };
                     self.funktionen.insert(q(&a.name.text), sig);
@@ -836,7 +871,7 @@ impl Umgebung {
             // Schranke, die die Sprache ihren Schleifen auferlegt.**
             ExprArt::Ruf(r) => {
                 let name = self
-                    .kandidaten(von, &r.pfad.text())
+                    .kandidaten(von, &r.path()?.text())
                     .into_iter()
                     .find(|k| self.konst_fn.contains_key(k))?;
                 if !unterwegs.insert(format!("constfn:{name}")) {
@@ -1010,7 +1045,31 @@ impl Umgebung {
                     })
                     .collect(),
             ),
-            TypExpr::FnZeiger(_) => Typ::Unbekannt,
+            // **The function pointer carries its contract INTO the type** (2026-08-21).
+            //
+            // Until here this said `Typ::Unbekannt`, and `Unbekannt` is compatible with
+            // everything -- so the form did not merely lack a reader, it had a hole for a
+            // reader. *A field of type `fn() -> bool` passed as `u32`, as `bool` and as a
+            // `ptr`, in one file, without a refusal* (`probe/p8.gab`).
+            TypExpr::FnZeiger(f) => Typ::FnPtr(Box::new(crate::typen::FnPtrContract {
+                parameters: f
+                    .parameter
+                    .iter()
+                    .map(|p| (p.name.text.clone(), self.typexpr(von, &p.typ, unterwegs)))
+                    .collect(),
+                result: f
+                    .ergebnis
+                    .as_ref()
+                    .map(|e| Box::new(self.typexpr(von, e, unterwegs))),
+                effects: f
+                    .effects
+                    .as_ref()
+                    .map(|w| w.liste.iter().map(|e| e.art.text()).collect())
+                    .unwrap_or_default(),
+                has_effects: f.effects.is_some(),
+                costs: f.costs.as_ref().and_then(|e| self.konst_wert(von, e)),
+                has_costs: f.costs.is_some(),
+            })),
             // **A3.** `index into T` erbt die Schranke aus `T`s `count`. Ohne `count` bleibt
             // sie offen -- und das ist dann eine Aussage der Deklaration, keine Konvention.
             // **Und `option index into T` ist ein ANDERER Typ, nicht derselbe mit einem
