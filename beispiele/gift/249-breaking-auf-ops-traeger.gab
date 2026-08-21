@@ -1,0 +1,36 @@
+-- erwartet: D009
+-- **Poison 249 -- a `breaking` block on a carrier that declares `ops`.**
+--
+-- Until 2026-08-21 this passed. `kbedingung.rs` collected the site, counted it, printed it in
+-- its report -- and never refused it, while `k_haelt()` demanded `breaking.is_empty()` from
+-- the first day. **A program could pass pass 2 without satisfying the K condition.**
+--
+-- That condition is not merely a check: it is the mechanical criterion under which the K/A/W
+-- count booked 28 of 73 obligations as "by construction". Measured when the refusal was
+-- built: ZERO `breaking` sites in the clean corpus, so no counted number moved.
+--
+-- Found by writing down the statement this pass owes (PL.1) -- not by a tool.
+
+module gift::breaking_auf_ops_traeger {
+
+table Kappenraum count 8 {
+    slot {
+        belegt : bool,
+    }
+
+    ops insert, remove;
+
+    invariant belegt_zaehlt cost O(1) runs online :
+        forall s in slots of Self : Self.slots[s].belegt || !Self.slots[s].belegt;
+}
+
+impl fn aufraeumen(k : ptr<normal, rw> Kappenraum)
+    effects { writes k }
+    costs   <= 16 ops
+{
+    breaking belegt_zaehlt {
+        let n = k->slots[0].belegt;
+    }
+}
+
+}

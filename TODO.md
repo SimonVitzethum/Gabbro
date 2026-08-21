@@ -400,11 +400,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **48 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
+- [ ] **47 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 111 sind tragend, 2 verdächtig — und **48 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 113 sind tragend, 2 verdächtig — und **47 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       *Wer eine Absage liest und daraus nicht erkennt, worauf sie ruht, kann auch nicht
       prüfen, ob sie weit genug reicht.* Das ist der größere Posten, nicht die zwei.
@@ -469,7 +469,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **1418 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **1438 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -637,7 +637,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **268 von 268 Ankern** greifen (`--anker`, 2026-08-21) — die
+      fällt. Mutationskatalog: **269 von 269 Ankern** greifen (`--anker`, 2026-08-21) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -2814,7 +2814,7 @@ hat kein Feld dafür). **Ohne die Sätze ist „Gabbro formal verifiziert" nicht
 formulierbar** — man wüsste nicht, was zu beweisen wäre.
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (heute 207 Codes, null Sätze).
+sofort: *kein neuer Absagecode ohne seinen Satz* (heute 208 Codes, null Sätze).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
@@ -2847,12 +2847,46 @@ sofort: *kein neuer Absagecode ohne seinen Satz* (heute 207 Codes, null Sätze).
       **PAAR** zeigen (ohne Fakt fällt, mit Fakt geht durch), und dafür hat `beispiele/gift`
       keine Form. *Dasselbe gilt für V3 und `m2.geisterloeschung`.*
 
-- [ ] **NEUN Befunde sind beim AUFSCHREIBEN abgefallen, und keiner ist behoben**
+- [ ] **Die 268 Mutationen sagen an VIERZIG Stellen weniger, als sie drucken**
+      *(2026-08-21)*. 40 Proben zeigen auf eine Kennung mit unähnlichen Vergabestellen;
+      **bis die fünf Kennungen aufgelöst sind, ist eine solche Probe kein Beleg** — sie fällt
+      grün, ohne zu zeigen, welche der Regeln gefallen ist.
+      **Die Reihenfolge ist deshalb festgelegt: erst die Kennungen auflösen, dann die Proben
+      nachziehen.** Nach der eigenen Regel — *Belege statt Versuche* — ist die ehrliche
+      Zwischenmeldung nicht „268 von 268", sondern:
+
+      ```
+      228 belegt · 40 in Klärung
+      ```
+
+      *Die Deckungszahl ist nicht falsch; sie ist an vierzig Stellen unbelegt, und das ist ein
+      Unterschied, den nur die Buchung sichtbar hält.*
+
+- [ ] **NEUN Befunde sind beim AUFSCHREIBEN abgefallen — der erste ist BEHOBEN, acht stehen**
       *(2026-08-21, Liste in [`messung/PASSREGISTER.md`](messung/PASSREGISTER.md))*.
-      **Der schwerste: `kbedingung.rs` setzt die K-Bedingung nicht durch.** `k_haelt()`
-      verlangt `breaking.is_empty()`; der Pass meldet nur Handschrift, und `breaking` wird
-      gesammelt, gezählt, **gedruckt und nie abgesagt.** *Ein Programm, das Pass 2 passiert,
-      erfüllt die K-Bedingung nicht notwendig.*
+
+      ~~**Der schwerste: `kbedingung.rs` setzt die K-Bedingung nicht durch.**~~
+      **GESCHLOSSEN am 2026-08-21 als `D009`.** `k_haelt()` verlangte `breaking.is_empty()`
+      seit dem ersten Tag; der Pass meldete nur Handschrift, und `breaking` wurde gesammelt,
+      gezählt, **gedruckt und nie abgesagt.** *Ein Programm konnte Pass 2 passieren, ohne die
+      K-Bedingung zu erfüllen.*
+
+      > **Und das ist nicht nur ein falsch rechnender Pass, sondern eine Zusage, auf der eine
+      > MESSUNG ruht:** die K-Spalte der K/A/W-Zählung hat **28 von 73** Pflichten als „durch
+      > Konstruktion" gebucht, und die K-Bedingung war das mechanische Kriterium dafür.
+
+      **Die Nachfrage danach ist die wichtigere, und sie ist gemessen statt geschätzt:**
+
+      ```
+      0 `breaking`-Stellen im sauberen Korpus (beispiele/ + messung/)
+      0 Dateien, an denen `D009` heute fällt
+      ```
+
+      **An der Zählung ändert sich nichts** — nicht *„wahrscheinlich nicht", sondern null,
+      mit dem Befehl daneben.* Der ganze Beleg der neuen Regel ist damit Gift
+      (`gift/249`), und das steht in ihrem Satz (W10).
+      *„Wahrscheinlich nicht" ist genau die Formulierung, die dieser Ordner sonst nicht
+      durchgehen lässt.*
       Dazu: `N028`/`N029` schlüsseln verschieden (Kurzname gegen vollen Pfad, `m::f()` trifft
       nie), die Paarung ist global statt transitiv, der Adressraum wird außer bei `R001`
       nirgends geprüft, `melden` in `phasen.rs` ist toter Code, rekursive Funktionen bekommen

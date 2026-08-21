@@ -129,12 +129,12 @@ denominator that shines instead of the one that costs.*
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 207 diagnostics · `gabbro paesse` |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 208 diagnostics · `gabbro paesse` |
 | **Grammar** | **149 EBNF rules**, closed and reachable | vocabulary covers every terminal, 216 / 216 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
-| **Pass register** | **50 statements over 12 passes — 44 measured, 6 conjectured, 0 PROVED.** 45 of 207 diagnostics still owe one, and that number is a **ratchet**: it may fall, not rise. *A written statement is not a proved one — the third column is the whole rest* | `gabbro paesse --je-satz` · `./instrumente/pruefe-saetze.py` |
+| **Pass register** | **51 statements over 12 passes — 45 measured, 6 conjectured, 0 PROVED.** 45 of 208 diagnostics still owe one, and that number is a **ratchet**: it may fall, not rise. *A written statement is not a proved one — the third column is the whole rest* | `gabbro paesse --je-satz` · `./instrumente/pruefe-saetze.py` |
 | **Guardians** | 21, and **36 of 36 instruments carry all four requirements** — three read statically (deadline · two-way speech test · red on abort), the fourth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./instrumente/pruefe-waechter.py`. *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **268 of 268 mutations caught** *(run 2026-08-21)* |
-| **Corpus** | 49 clean examples, 247 poison files, 175 tests *(run 2026-08-21)* | `cargo test` |
+| **Corpus** | 49 clean examples, 248 poison files, 175 tests *(run 2026-08-21)* | `cargo test` |
 | **Emission** | **49 of 49 examples emit C, and all 49 compile** under `cc -std=c11 -Wall -Wextra -Werror`, at **`-O0` and `-O2`**, with the same result — **19 of them are also run and compared against a handwriting**, and under `-fsanitize=undefined` | `./instrumente/pruefe-emission.sh` *(run 2026-08-21)* |
 | **Usability** | **5.8 % of the teaching corpus and 12.8 % of REAL code may fall** — 912 and 109 clause sites, split derivable / redundant / load-bearing. The calibration travels with the tool (`--tafel`, per rule a may-fall AND a reason), because an uncalibrated usability number makes `effects` and `costs` the cheapest thing to drop | `gabbro zeremonie` · `./instrumente/zaehle-zeremonie.py` |
 | **Blind spots** | **79 blind · 165 covered · 26 poison-only · 15 no cell** *(of 285 pairs)* — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |

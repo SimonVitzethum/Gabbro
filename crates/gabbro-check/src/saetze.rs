@@ -1198,6 +1198,32 @@ pub const SPERREN: &[Satz] = &[
         gemessen_an: "beispiele/gift/237-kanal-ohne-einloeser.gab.",
         fundstelle: "crates/gabbro-check/src/namen.rs",
     },
+    // --- The K condition, enforced at last (2026-08-21) --------------------------------
+    Satz {
+        name: "kbedingung.breaking",
+        kennungen: &["D009"],
+        aussage: "On a carrier that declares `ops`, EVERY mutation is a generated \
+                  operation -- a `breaking` block, which lets an invariant rest, is a write \
+                  the generator did not make, and it is refused.",
+        vorbehalt: "**This half was collected, counted, PRINTED -- and never refused.** \
+                    `k_haelt()` demanded `breaking.is_empty()` from the first day; the pass \
+                    reported only `handschrift`. *A program could pass pass 2 without \
+                    satisfying the K condition* -- and that condition is not merely a check: \
+                    it is the mechanical criterion under which the K/A/W count booked 28 of \
+                    73 obligations as by-construction. \
+                    **Measured before the build: ZERO `breaking` sites in the clean \
+                    corpus**, so no counted number moves -- *a measurement, not a probably-\
+                    not*, and this folder does not let the second one through. \
+                    **Found by writing down the statement this pass owes, not by a tool:** \
+                    thirteen text guardians and 268 mutations did not see it. A tool can \
+                    find that a clause has no reader; that a reader reads the WRONG thing \
+                    is found only by whoever writes the sentence the rule must hold.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/249-breaking-auf-ops-traeger.gab; one mutation. The \
+                      corpus count is zero, so the whole evidence is poison -- and it says \
+                      so (W10).",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs; PL.1, finding 1 of 9",
+    },
 ];
 
 // ===================================================================================

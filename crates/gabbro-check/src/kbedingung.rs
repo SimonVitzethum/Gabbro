@@ -211,6 +211,44 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         if !t.hat_ops {
             continue;
         }
+        // **`D009` -- a `breaking` block on an `ops` carrier, 2026-08-21.**
+        //
+        // This half was collected, counted, printed -- and never refused. `k_haelt()`
+        // demanded `breaking.is_empty()` from the first day; the pass reported only
+        // `handschrift`. **A program could pass this pass without satisfying the K
+        // condition**, and that condition is not merely a check: it is the mechanical
+        // criterion under which the K/A/W count booked 28 of 73 obligations as *"by
+        // construction"*.
+        //
+        // > *Found not by a tool but by writing down the statement this pass owes* (PL.1).
+        // > Thirteen text guardians and 268 mutations did not see it: they can find that a
+        // > clause has no reader, not that a reader reads the wrong thing.
+        //
+        // **Measured before the build: ZERO `breaking` sites in the clean corpus**, so the
+        // refusal changes no counted number. *That is the answer to the follow-up question,
+        // and it is a measurement rather than a "probably not".*
+        for (was, span) in &t.breaking {
+            absagen.schiebe(
+                Absage::fehler(
+                    "D009",
+                    *span,
+                    format!(
+                        "`breaking` lets `{was}` rest, and `{}` declares `ops`",
+                        t.name
+                    ),
+                )
+                .mit_notiz(
+                    "the K condition holds only if ALL mutations of the carrier are \
+                        generated operations -- a resting invariant is a write the \
+                        generator did not make",
+                )
+                .mit_notiz(
+                    "until 2026-08-21 this site was counted and printed and never \
+                        refused: the pass reported it while `k_haelt()` demanded its \
+                        absence",
+                ),
+            );
+        }
         for (fn_name, span) in &t.handschrift {
             absagen.schiebe(
                 Absage::fehler(

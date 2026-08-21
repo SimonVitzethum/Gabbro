@@ -2484,6 +2484,19 @@ MUTATIONEN = [
         "K001 -- die Kostenschranke am Zeigertyp wird nicht mehr addiert; ein Rumpf voller "
         "indirekter Rufe kommt unter jeder Zusage durch",
     ),
+    # --- PL.1, finding 1 of 9: the K condition is enforced ---
+    #
+    # **If this mutation survives, the pass is back where it was on 2026-08-21**: the
+    # `breaking` site is collected, counted and printed, and never refused -- while
+    # `k_haelt()` demands its absence. *A guarantee that a measurement rests on.*
+    Mutation(
+        "k-bedingung-verlangt-breaking-nicht",
+        "kbedingung.rs",
+        "        for (was, span) in &t.breaking {",
+        "        for (was, span) in t.breaking.iter().take(0) {",
+        "D009 -- the K condition no longer refuses a `breaking` block on an `ops` carrier; "
+        "a program passes pass 2 without satisfying the condition the K/A/W count rests on",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
