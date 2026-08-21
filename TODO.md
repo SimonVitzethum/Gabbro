@@ -96,7 +96,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **62 Kennzahlen mit Befehl** *(Stand 2026-08-21; 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **63 Kennzahlen mit Befehl** *(Stand 2026-08-21; 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -228,7 +228,7 @@ darunter.
       und ihre Quelle ist eine Tabelle in `PFLICHTEN.md`, deren Zeilen ein Mensch geschrieben
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
-      **`pruefe-zahlen.py` führt heute 62 Kennzahlen mit Befehl und zählt 144 fettgedruckte
+      **`pruefe-zahlen.py` führt heute 63 Kennzahlen mit Befehl und zählt 144 fettgedruckte
       Zahlen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
@@ -2484,12 +2484,35 @@ braucht jede Tabelle ihr eigenes `traverse`.
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
-- [ ] **«B9» braucht einen ERZEUGER, bevor ein Vertrag an `fnptr` etwas heisst**
-      *(bewertet 2026-08-20, `PFLICHTEN.md`:613-624)*. Der Befund verlangt `requires`/`ensures`/
-      `effects` am Funktionszeigertyp. **`fnptr` hat null Korpusstellen, und die Sprache kennt
-      keine Form, einen Funktionszeiger HERZUSTELLEN** -- es gibt kein `&f`. Ein Vertrag an
-      einem Typ, den niemand erzeugen kann, ist eine Zusage ohne Einloeser: genau die
-      Bewegung, gegen die K100s zweites Tor steht. *Erst der Erzeuger, dann der Vertrag.*
+- [ ] **`fnptr` ist BLOCKIERT, nicht bedarfslos — und der Unterschied gehört in die Buchung**
+      *(gemessen 2026-08-21)*. `locks ordered` ist **tot**: die Form gab es, sie kam nur nicht
+      vor. **`fnptr` ist etwas anderes** — der Bedarf steht außen (Caprocks
+      `&mut dyn SchedOps`; **11 `fn(…)`-Typstellen** in `caprock-messbasis`, 4 Erzeuger, 4
+      Rufe hindurch), und was fehlt, ist nicht der Bedarf, sondern die **Konstruierbarkeit.**
+
+      **Vier Hälften, von denen keine ohne die anderen etwas heißt** — jede mit ihrer eigenen
+      Absage, an einer dreizeiligen Handprobe gemessen:
+
+      | # | was fehlt | was heute fällt |
+      |---|---|---|
+      | 1 | **der Erzeuger** — die Sprache kennt kein `&f` | `M119` |
+      | 2 | **der Ruf über einen Ort** («B8») | `P017` |
+      | 3 | **die Absenkung** | `C001` |
+      | 4 | **der Vertrag am Zeigertyp** (`requires`/`ensures`/`effects`) | — |
+
+      **Und die Reihenfolge ist keine Geschmacksfrage, sondern erzwungen:** der Ruf (2)
+      verlangt den Vertrag (4) SOFORT. Neun Passdateien lösen den Gerufenen heute statisch auf
+      (`aufrufgraph`, `huelle_der_gerufenen`, `u.funktion`); ein indirekter Ruf ohne Vertrag
+      macht **`E008` rückgängig** — die Wirkungshülle endete wieder an der ersten
+      Aufrufgrenze, so wie vor dem 2026-08-15.
+
+      > **Das Programm, das Regel A verlangt, lässt sich heute nicht schreiben:** mit dem Ruf
+      > fällt es an `E009`/`K003`, ohne den Ruf ist das Konstrukt unbenutzt. *Keine Null im
+      > Bedarf, eine Null in der Konstruierbarkeit.*
+
+      **Fällig wird es in EINEM Stück**, beim ersten Programm, das eine Dispatch-Tabelle
+      braucht — und dann in dieser Reihenfolge: **Erzeuger → Ruf über einen Ort → Absenkung →
+      Vertrag.** *Damit der spätere Anlauf nicht wieder bei der Frage beginnt.*
 
 - [ ] **Nachgemessen 2026-08-20: die Schnittstelle faellt LAUT, nicht lautlos.** Zwei
       Dateien in EINEM Lauf werden weiter getrennt geprueft — jede ist ihre eigene
@@ -2636,6 +2659,58 @@ what remains is four, and **one of them is not solved but grazed**.
       The two dynamically used traits have ONE implementation each. **New and
       undecided: 64 closures** (`dyn FnMut`/`Fn`) — Gabbro has none, and what becomes of them
       (embedding, pointer plus context, prohibition) stands nowhere.
+
+---
+
+# ZWISCHEN 7 UND 8 — was der `M120`-Fund aufgedeckt hat
+
+- [ ] **Der Kennungswächter löst auf DATEIEBENE auf, und das ist eine Näherung**
+      *(gefunden 2026-08-21 an `M120`)*. Seine Regel lautet *„eine Kennung darf in beliebig
+      vielen Zeilen stehen, aber nur in EINER Datei"* — eine Näherung an **„eine Kennung, eine
+      REGEL"**, und sie war richtig, solange Dateien und Regeln eins zu eins standen.
+      `M120` stand zweimal in `m1.rs`: `Self` im `ensures` und der Grundwert.
+
+      > **Das ist dieselbe Vergröberung wie bei W16 — nur nicht in der TIEFE, sondern in der
+      > AUFLÖSUNG.** Ein Werkzeug, das grob genug auflöst, meldet nichts und sieht aus, als
+      > hätte es nachgesehen.
+
+      **Die naheliegende Verschärfung geht nicht, und das ist gemessen:** *„zähle die
+      Vergabestellen, alles über eins ist ein Befund"* ergäbe **32 Befunde**, von denen
+      **18 dieselbe Regel aus mehreren Zweigen** ausgeben (`erwarte_z`/`erwarte_kw` melden
+      beide `P001`). *In die andere Richtung zu grob.* Was auflöst, ist der **Meldungstext**:
+      eine Regel ist, was sie sagt.
+      **Gebaut als [`./instrumente/pruefe-vergabe.py`](instrumente/pruefe-vergabe.py)** —
+      Kandidatenliste, kein Urteil, mit allen drei Fehlerrichtungen benannt.
+
+- [ ] **`M120` war NICHT der einzige Fall — im Parser stehen vier weitere** *(gemessen
+      2026-08-21)*. Je zwei unverwandte Regeln unter einer Kennung:
+
+      | | die eine Regel | die andere |
+      |---|---|---|
+      | `P022` | „`table` kennt genau ein `tree`-Wort" | „Kostenangabe fängt mit `O` an" |
+      | `P023` | „im `tree`-Rumpf erwartet: parent, child, sibling" | „the `node` of a `walk` declaration is an array" |
+      | `P024` | „diese Kante steht in `tree` zweimal" | „`@version` erwartet" |
+      | `P034` | „`_` on its own is not an identifier" | „`pub` is not in the grammar here" |
+      | `P035` | „is neither a record nor a sum type" | „gibt es in Gabbro nicht" |
+
+      *Alle fünf im Parser, alle in einer Datei* — genau dort, wo der alte Wächter
+      bauartbedingt blind war.
+
+- [ ] **Was eine Doppelvergabe RÜCKWIRKEND kostet, und das ist teurer als der Fund**
+      *(gemessen 2026-08-21)*. Die Giftproben prüfen auf **Kennungen**. Eine doppelt
+      vergebene Kennung macht jede Probe darauf **mehrdeutig: sie fällt grün, während die
+      GEMEINTE Regel ausgefallen sein kann.** Damit entwertet ein Duplikat rückwirkend die
+      Deckungsaussage aller Proben, die darauf zeigen.
+
+      ```
+      39 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 237, die
+      ueberhaupt eine Kennung erwarten)
+      ```
+
+      **Bei `P034` steht der Fall konkret:** `gift/05-auffangzweig` prüft die eine Regel,
+      `gift/45-pub-wo-es-nicht-steht` die andere — *jede der beiden bliebe grün, wenn die
+      Regel der anderen ausfiele.* Was fehlt, ist je Fall die Entscheidung: **zweite Kennung
+      vergeben, oder begründen, dass es eine Regel ist.** Die 39 sind eine Ratsche.
 
 ---
 

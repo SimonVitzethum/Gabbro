@@ -90,6 +90,17 @@ EINTRAEGE = [
         r"^== (\d+) von 3 Proben gruen ==",
         "Netzstack gegen veroeffentlichte Vektoren",
     ),
+    # --- Der Vergabewaechter: eine Kennung, eine REGEL ---
+    #
+    # **Die zweite Zahl ist die teurere.** Sie sagt, wie viele Giftproben ihre
+    # Deckungsaussage heute nicht halten koennen, weil ihre Kennung mehrdeutig ist.
+    (
+        "TODO.md",
+        r"(\d+) Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen",
+        ["./instrumente/pruefe-vergabe.py"],
+        r"^== Was das RUECKWIRKEND kostet: (\d+) von \d+ Giftproben ==",
+        "Giftproben auf einer mehrdeutigen Kennung",
+    ),
     # --- PL.1: das Passregister, und seine Ratsche ---
     #
     # **Die Zahl „Kennungen ohne Satz" ist eine RATSCHE**, und eine Ratsche ohne Befehl ist
