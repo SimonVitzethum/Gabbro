@@ -185,6 +185,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         }
     });
 
+    undeclared_locks(baum, &sperren, absagen);
+
     // Wer einen `Held(…)`-Zeugen verlangt, darf aus einem geteilten Block nicht gerufen
     // werden -- bis Pass 8 die Staerke des Zeugen wirklich prueft (S005).
     // **Aus dem Aufrufgraphen, nicht aus einem eigenen Durchgang.** Er traegt die Staerke
@@ -577,6 +579,133 @@ fn sperrnahmen(b: &Block, aus: &mut Vec<String>) {
         }
         for k in crate::unterbloecke(s) {
             sperrnahmen(k, aus);
+        }
+    }
+}
+
+/// **`H016` -- a lock name that no declaration explains.** The other direction of `H008`
+/// (issued a few lines above), and the more expensive of the two.
+///
+/// `H008` says *"declared, but taken nowhere"* and is a hint. This rule says *"taken, but
+/// declared nowhere"* and is an **error** -- because without a declaration there is no
+/// `rank`, and without a rank the order rules compute nothing.
+///
+/// **Measured 2026-08-21 on a SINGLE unit** (`messung/abi-proben/unbekannte-sperre.gab`):
+///
+/// ```gabbro
+/// pub impl fn f(i : index into T) -> bool effects { writes T.slots, locks NIEDA } costs <= 30 ops
+/// { locks NIEDA { T.slots[i].a = 1; } return true; }
+/// -> 4 Items, 0 Fehler, 0 Hinweise
+/// ```
+///
+/// Both sites -- the effect list and the block -- name a lock that does not exist, and **no
+/// pass looked**. The rank lookup in `rangprobe` above returns `None` and checks nothing; the
+/// call-boundary rule in `rufprobe` does the same with a silent `continue`.
+///
+/// > **At a LIBRARY BOUNDARY this is not an edge case but the normal one:** there every name
+/// > comes from elsewhere. A `.gabi` that carries `effects { locks SPEICHER }` and not
+/// > `lock SPEICHER … rank 0` disarms the whole lock order -- silently.
+///
+/// *Measured on `messung/abi-proben/`: the mixer nests `SPEICHER` under `GERAET` AND `GERAET`
+/// under `SPEICHER` -- a ring, hence a deadlock -- and passed with **0 errors, 0 hints**,
+/// because both names came from `.gabi` files without a `lock` line.* The interface half is
+/// answered in `abi.rs`; this rule is what makes the failure loud when it is not.
+///
+/// Same shape as `H014` (issued in this file, at the declaration): there the rank is present
+/// but not computable, here the whole declaration is gone. Both end in the same silence, and
+/// both now get a refusal.
+fn undeclared_locks(baum: &Programm, sperren: &BTreeMap<String, Sperre>, absagen: &mut Absagen) {
+    // **One refusal per NAME, not per site.** Naming `NIEDA` at five places is one mistake,
+    // not five -- the same decision as at `H014`, whose refusal stands at the declaration and
+    // not at every access.
+    let mut reported: BTreeSet<String> = BTreeSet::new();
+    let mut refuse = |name: String, span: Span, wo: &str, absagen: &mut Absagen| {
+        if sperren.contains_key(&name) || !reported.insert(name.clone()) {
+            return;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "H016",
+                span,
+                format!("{wo} names `{name}`, and no `lock` declaration explains it"),
+            )
+            .mit_notiz(
+                "the rank IS the lock order -- an undeclared lock has none, so the rank \
+                 rules compare nothing and stay silent",
+            )
+            .mit_notiz(
+                "across a library boundary this is the normal case: if the `.gabi` carries \
+                 the `locks` effect but not the `lock … rank N` line, the whole lock order \
+                 is disarmed without a word",
+            ),
+        );
+    };
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        // A `spec fn` touches nothing at run time -- the same exemption as at `H007`, which
+        // is issued in this file and made for the same reason.
+        if matches!(f.klasse, Some(FnKlasse::Spec)) {
+            return;
+        }
+        if let Some(w) = &f.effects {
+            for e in &w.liste {
+                match &e.art {
+                    WirkungArt::Sperrt(o) => {
+                        refuse(o.text(), e.span, "this `locks` effect", absagen)
+                    }
+                    WirkungArt::SperrtGeteilt(o) => {
+                        refuse(o.text(), e.span, "this `locks shared` effect", absagen)
+                    }
+                    // **Written out instead of `_`:** the remaining eight effect kinds name
+                    // no lock. Reads, writes, `consumes` and `publishes` name PLACES,
+                    // `masks` an interrupt, `allocs` a core, and `diverges`/`pure` carry no
+                    // argument at all. *If a ninth is added that names a lock, it fails
+                    // here and not in the field.*
+                    WirkungArt::Liest(_)
+                    | WirkungArt::Schreibt(_)
+                    | WirkungArt::Verbraucht(_)
+                    | WirkungArt::Veroeffentlicht(_)
+                    | WirkungArt::Maskiert(_)
+                    | WirkungArt::Belegt(_)
+                    | WirkungArt::Divergiert
+                    | WirkungArt::Rein => {}
+                }
+            }
+        }
+        // **`requires Held(…)` is NOT checked here, and the reason is a measurement.**
+        //
+        // The first version did check it, and `instrumente/pruefe-emission.sh` went red on
+        // fragment F7: `extern fn melde_roh(…) requires Held(PHASE_ROH)`. `PHASE_ROH` is no
+        // lock at all -- it is a BOOT PHASE, the witness of a `linear ghost type BootPhase`,
+        // and the comment two lines above it in `dokumente/FRAGMENTE.md` says so: *"`roh`
+        // means: before the MMU … and that is a PROPERTY OF THE PHASE, not of the device."*
+        //
+        // > **`Held(…)` carries two readings in this corpus, and nothing distinguishes
+        // > them:** "this lock is held" and "we stand in this phase". A rule that refuses
+        // > every name it cannot find among the locks would refuse the second reading as a
+        // > typo -- *and it would be the rule that is wrong, not the fragment.*
+        //
+        // The two sites below are unambiguous: `locks X` in an effect list and `locks X { … }`
+        // in a body are LOCK positions by grammar, not by convention. **They are also the
+        // ones the library boundary needs** -- a `.gabi` carries effect lists, so nothing is
+        // lost for the bridge. *Which of the two readings `Held` is meant to have is a
+        // language question, and it is booked in `TODO.md` rather than guessed here.*
+        if let FnRumpf::Block(b) = &f.rumpf {
+            lock_blocks(b, &mut |name, span| {
+                refuse(name, span, "this `locks` block", absagen)
+            });
+        }
+    });
+}
+
+/// Every `locks` block of a body with its span -- for `H016`.
+fn lock_blocks(b: &Block, f: &mut impl FnMut(String, Span)) {
+    for s in &b.anweisungen {
+        if let StmtArt::Sperrt(l) = &s.art {
+            f(l.sperre.text(), l.sperre.span);
+        }
+        for k in crate::unterbloecke(s) {
+            lock_blocks(k, f);
         }
     }
 }

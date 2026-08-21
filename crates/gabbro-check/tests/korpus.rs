@@ -45,6 +45,21 @@ const BENANNT: &[&str] = &[
     "H007", "H008",
     // «K2»: RCU ist keine Sperre -- H009 Leseseite benannt, H010 Schreiber braucht eine.
     "H009", "H010", "H011", "H012",
+    // **«ABI», 2026-08-21: `H016` -- a lock name that no declaration explains.** Two sites
+    // in the corpus -- `locks SCHEDS` at `FRAGMENTE.md`:652 and `locks CAPS` at
+    // `SYNTAX.md`:764 -- and **neither is a mismeasurement**: a fragment is an EXCERPT, and
+    // both name locks declared outside the cut. *The same class as `S003` eight lines above
+    // -- and in a whole program it would be the error.*
+    //
+    // It was four until the rule was narrowed the same day: `requires Held(…)` is NOT
+    // checked, because `Held(PHASE_ROH)` in F7 names a BOOT PHASE and not a lock. The
+    // reasoning stands at the site, in `geteilt.rs`.
+    //
+    // > The build came from the other side: at a LIBRARY BOUNDARY a lock name from elsewhere
+    // > is the normal case, and until this rule it was invisible. The rank rules in the
+    // > checker looked the rank up, found nothing and stayed silent -- a ring across two
+    // > libraries passed with zero errors (`messung/ABI.md`).
+    "H016",
     // «B37» und K11.1: die Ordnung auf einer linearen Geistmarke. `O005` ist ZURUECKGEZOGEN --
     // der Hinweis „dieser Pass entscheidet das nicht" ist durch `O006` ersetzt, und der Code
     // bleibt frei: eine Absage, die heimlich ihre Bedeutung wechselt, ist schlimmer als eine

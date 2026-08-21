@@ -521,3 +521,112 @@ fn eine_gruppe_bringt_ihre_sperrabdruckannahme_mit() {
         "ohne `group` ruht nichts auf dem Abdruck:\n{ohne}"
     );
 }
+
+// --- abi ---
+
+/// **The TWO-FILE probe: the lock ring across a real library boundary.**
+///
+/// `beispiele/gift/250` is the union as ONE file -- what the checker gets to see. This test
+/// walks the road a user walks, and it is the only one that measures the BRIDGE itself:
+/// `gabbro abi` over library A and B, the two products put in front of the caller, then
+/// checked.
+///
+/// **Until 2026-08-21 it was green without the ring falling** -- 0 errors, 0 hints, and the
+/// program was a deadlock. `gabbro abi` did not write the `lock` line, so the rank rules in
+/// the checker found no rank at the importer and stepped over it in silence.
+///
+/// > *The worst possible outcome of an ABI is not that it is missing, but that it is silent*
+/// > -- then it has handed a class back without anybody seeing it.
+#[test]
+fn ring_across_two_libraries() {
+    let (union, codes) = abi_union(&["lib-speicher.gab", "lib-geraet.gab"], "mischt.gab");
+    // **The interface must EXPLAIN the lock, not merely name it.** Without that line
+    // everything below is silent, and the assertion after it measures nothing.
+    assert!(
+        union.contains("lock SPEICHER") && union.contains("lock GERAET"),
+        "an interface that carries `locks SPEICHER` and not `lock SPEICHER` is none -- \
+         it names something and does not explain it:\n{union}"
+    );
+    let ring = codes.iter().filter(|c| **c == "H012").count();
+    assert_eq!(
+        ring, 2,
+        "the ring has TWO directions, and both are errors -- fallen is {codes:?}"
+    );
+}
+
+/// The other direction, and without it the one above measures nothing (R14/W17): **the same
+/// bridge carries a program whose ranks fit.** `AUFTRAG` (rank 0) outside, the call takes
+/// `ZAEHLER` (rank 1) inside -- ascending, hence allowed.
+///
+/// *The order `AUFTRAG < ZAEHLER` stands in neither of the two files; it comes into being
+/// only at the union.* If `H016` were too sharp, or the interface carried the lock wrongly,
+/// THIS test falls -- not the one above.
+#[test]
+fn the_same_bridge_carries_the_ascending_order() {
+    let (_, codes) = abi_union(&["zaehlwerk.gab"], "dienst.gab");
+    assert!(
+        codes.is_empty(),
+        "taken in ascending order is allowed, fallen is {codes:?}"
+    );
+}
+
+/// **Without the bridge the same caller falls BY NAME.** The third state is the one that may
+/// not exist: neither refused nor confirmed. `H016` says the lock name is unexplained,
+/// `K003` that the function is not declared here -- both issued in the checker, not here.
+#[test]
+fn without_the_bridge_the_caller_falls_by_name() {
+    let (_, codes) = abi_union(&[], "dienst.gab");
+    for expected in ["H016", "K003"] {
+        assert!(
+            codes.contains(&expected),
+            "without an interface {expected} must fall, fallen is {codes:?}"
+        );
+    }
+}
+
+/// `gabbro abi` over each library, the products in front of the caller, then check.
+/// Returns the united source and the ERROR codes of the unit.
+fn abi_union(libraries: &[&str], caller: &str) -> (String, Vec<&'static str>) {
+    let ordner = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("messung")
+        .join("abi-proben");
+    let mut preamble = String::new();
+    for b in libraries {
+        let pfad = ordner.join(b);
+        let quelle =
+            std::fs::read_to_string(&pfad).unwrap_or_else(|e| panic!("{}: {e}", pfad.display()));
+        let (baum, mut absagen) = gabbro_syntax::lies(b, &quelle);
+        let _ = gabbro_check::pruefe(&baum, &mut absagen);
+        // **An interface out of a unit with errors is a promise about a program the checker
+        // did not accept** -- the same rule as in the command.
+        assert_eq!(
+            absagen.fehler_zahl(),
+            0,
+            "{b} is the library and falls itself:\n{}",
+            absagen.zeige(&quelle)
+        );
+        preamble.push_str(&gabbro_check::abi::schreibe(&baum, &quelle));
+        preamble.push('\n');
+    }
+    let pfad = ordner.join(caller);
+    let quelle =
+        std::fs::read_to_string(&pfad).unwrap_or_else(|e| panic!("{}: {e}", pfad.display()));
+    let ganz = if preamble.is_empty() {
+        quelle.clone()
+    } else {
+        format!("{preamble}\n{quelle}")
+    };
+    let versatz = ganz.len() - quelle.len();
+    let (baum, mut absagen) = gabbro_syntax::lies(caller, &ganz);
+    let _ = gabbro_check::pruefe(&baum, &mut absagen);
+    // Only the refusals of the UNIT -- what stands in the preamble belongs to the library.
+    let codes = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.span.von as usize >= versatz && a.stufe == Stufe::Fehler)
+        .map(|a| a.code)
+        .collect();
+    (ganz, codes)
+}

@@ -77,7 +77,15 @@ MARKE = 14
 # *The number rises because a correct probe was added, not because a rule was issued twice*
 # -- the candidate count itself stays at 14. **Whoever splits `E008` may lower both marks;
 # as long as ONE identifier carries three statements, this is the honest state.**
-MARKE_PROBEN = 40
+# 2026-08-21, «ABI»: **40 -> 41, and the rise is booked, not looked away from.**
+# `beispiele/gift/250` points at `H012` -- the lock ring across TWO libraries, the probe that
+# made the ABI a bridge with a toll instead of an open barrier. `H012` was already on the
+# candidate list (two issuance sites in `geteilt.rs`, similarity 0.27: the rank order THROUGH
+# calls, and the RCU reclaim without the writer lock), so the new probe inherits that
+# identifier's ambiguity -- it falls green without proving WHICH of the two rules fell.
+# *The number rises because a correct probe was added, not because a rule was issued twice*
+# -- the candidate count itself stays at 14. **Whoever splits `H012` may lower both marks.**
+MARKE_PROBEN = 41
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 
