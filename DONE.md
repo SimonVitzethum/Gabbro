@@ -212,6 +212,77 @@ constructs that had been lowering for weeks, and `rustc` said so in the same min
 
 ---
 
+## «B8» — `fnptr`, all four halves *(2026-08-21)*
+
+The item stood in `TODO.md` as *„BLOCKED, not demand-less"* while the build was already
+committed — **the bookkeeping aged inside a single day this time.**
+
+| # | half | before | now |
+|---|---|---|---|
+| 1 | producer `&f` | `P011` / `M119` | `ExprArt::FnWert`, `M127`/`M128` |
+| 2 | call through a place | `P017` / `P001` | `CallTarget::Place`, `M129` |
+| 3 | lowering | `C001` | `bool (*bereit)(void);` · `t->senden(b)` |
+| 4 | contract at the pointer type | — | `effects`+`costs`, `N035`–`N037` |
+
+**The design move matters more than the construct:** `Ruf.pfad: Pfad` became
+`Ruf.ziel: CallTarget` — a sum type **without a catch-all**. The compiler then enumerated
+**72 pass sites in 14 files**; *silence was not a default branch but a compile error.* The
+effect hull survives: `gift/242` falls at `E008` through an **indirect** call, and the
+mutation that removes it is caught.
+
+> **What does NOT cross an indirect call says so instead of staying silent.** `locks`,
+> `masks`, `consumes`, `publishes` are keyed by the callee's name; **`N036` refuses them AT
+> THE TYPE.** The measured justification: Caprock's four indirect call sites take no lock.
+> *The gap refuses rather than passing.*
+
+And the unbooked finding was the more valuable one: **`fn(…)` mapped to `Typ::Unbekannt`,
+which is compatible with everything** — `let x : u32`, `: bool` and `: ptr<…> Treiber` from
+the *same* `t->bereit` gave **zero type errors in one file**. *A type that accepts everything
+is not a type*, and the rule was silent from absence, not from intent.
+
+---
+
+## Three K100 records that had been sitting in the OPEN list *(moved 2026-08-21)*
+
+> **`TODO.md` carries exclusively what is OPEN**, and these three said in their own text that
+> they were closed — two of them since 2026-08-19, one since the same morning. *A record in a
+> list of open items is a list that no longer sorts.*
+
+### `K010` — under a lock the frame may NOT be parametric
+
+The finding before it was the **silence**, not the line: `lock KAPPEN … held <= 40 * eintraege
+ops` over a `locks` block with five operations gave **4 items, 0 errors, 0 hints** —
+`haltezeiten` took only what `konst_wert` yielded, **and with the map `K002` fell too.**
+*A promise that switches off the guardian it was supposed to feed is more expensive than none.*
+Evidence: `beispiele/gift/75`, a four-way speech test in `rechenwerk.rs`, and the mutation
+`haltezeit-darf-symbolisch-sein`.
+
+### `N010` — a `bank` with `stride 0` produces EMPTY cells
+
+Flushed out while proving `device.konstruktor` (2026-08-17), closed on 2026-08-19 in
+`namen::schritt_pruefen`. A `bank … stride 0 count 4` now gives exactly one refusal:
+*„bank FRR has `stride 0` -- every cell is empty"*. **The item stood in the open list while the
+template register beside it already carried the opposite statement** — two books over the same
+thing, and only one of them tended.
+
+### `PL.1` — the pass register, laid down 2026-08-21
+
+`struct Pass` carries its statement field, **51 statements over twelve passes**, and the second
+tooth stands: `./instrumente/pruefe-saetze.py`, mark 45, driven red from the outside in both
+directions. **45 measured, 6 conjectured, 0 PROVED** — *the third column is empty, and it is
+the whole rest.*
+
+> **The ratchet bit before anyone needed it.** The register tree was eight commits older than
+> `master`; after the merge the guardian reported **48 instead of 45** — the three identifiers
+> from stage 6 had no statement. *They were deliberately NOT entered in advance, because that
+> would have made the merge artificially green.*
+
+**And the register's first day produced nine findings that no tool had reported.** A tool can
+find that a clause has no reader; that a reader reads the WRONG thing is found only by whoever
+writes down the sentence the rule must hold. *That is why PL.2 is not a bookkeeping item.*
+
+---
+
 ## Wave 4's two conditions, both settled *(2026-08-21)*
 
 ### «B38» — the side condition on the named carrier, built as `H101`

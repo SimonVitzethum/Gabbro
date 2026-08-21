@@ -1725,41 +1725,13 @@ trägt jetzt diese Adresse statt einer fehlenden Entscheidung.
       Ausbaustueck des Zeugnisses. *Ein Posten, der nach Werkzeugarbeit klingt und eine
       Semantik kostet, wird in der falschen Reihenfolge geplant.*
 
-- [ ] **~~Eine parametrische `costs`-Zusage ist heute schreibbar und VOLLSTAENDIG LEER~~**
-      *(gebucht 2026-08-18)* — **beim Nachsehen schon zu, seit demselben Tag.** `kosten.rs`
-      liest die Zusage als **Summe aus einer Konstanten und Vielfachen nichtnegativer
-      Groessen** und vergleicht gegen die **kleinste Belegung**. Nachgemessen 2026-08-20 mit
-      derselben Eingabe, die den Posten begruendet hat: `impl fn schleife(n : u32 in 0 .. 1000)
-      -> u32 costs <= 0 * n ops { return n; }` → **`K001`: „promises <= 0 ops, the body costs
-      1"**. Gift 77 haelt die Richtung, Gift 78 die Gegenrichtung (`K005` statt Schweigen bei
-      `n * m`). *Was offen bleibt, steht im Kopf von `kosten.rs` und ist ein anderer Posten:
-      ein Rumpf, dessen Kosten SELBST symbolisch sind, rechnet `Unbekannt` statt `40 * n`.*
-
-- [ ] **~~Unter einer Sperre darf der Rahmen NICHT parametrisch sein.~~** **Gebaut am
-      2026-08-20 als `K010`.** Der Befund davor war das Schweigen, nicht die Zeile:
-      `lock KAPPEN … held <= 40 * eintraege ops` ueber einem `locks`-Block mit fuenf
-      Operationen gab **4 Items, 0 Fehler, 0 Hinweise** — `haltezeiten` nahm nur auf, was
-      `konst_wert` hergab, und **mit der Karte fiel `K002`**. *Eine Zusage, die den Waechter
-      abschaltet, den sie fuettern sollte, ist teurer als gar keine.* Belege:
-      `beispiele/gift/75-haltezeit-parametrisch.gab` (genau `K010`), Sprechprobe in vier
-      Richtungen in `rechenwerk.rs` (`held` symbolisch faellt · `shared held` symbolisch
-      faellt · eine Zahl geht durch · **mit der Zahl greift `K002` wieder**), Mutation
-      `haltezeit-darf-symbolisch-sein`. **Und `SPRACHE.md` §11.2 schrieb `held <= constexpr
-      ops`, seit es das Feld gibt** — der Parser nahm jeden Ausdruck. *Eine Grammatikzusage
-      im Kommentar ist keine.*
-
-- [ ] **~~Eine `bank` mit `stride 0` erzeugt LEERE Zellen, und der Satz gilt trivial~~**
-      *(ausgespuelt beim Beweis von `device.konstruktor`, 2026-08-17)* — **beim Nachsehen
-      schon zu, `N010` seit dem 2026-08-19** (`namen.rs::schritt_pruefen`). Nachgemessen
-      2026-08-20: eine `bank … stride 0 count 4` gibt **genau eine Absage** —
-      *„bank FRR has `stride 0` -- every cell is empty"*. Auch `gabbro schablonen` fuehrt die
-      Praemisse seither als hergestellt (*„`N010`, seit 2026-08-19 — `stride 0` faellt am
-      Pass statt im Kommentar"*). *Der Posten stand hier, waehrend das Register daneben schon
-      die Gegenaussage trug — zwei Buchungen ueber derselben Sache, und nur eine gepflegt.*
-
-### The group: three forms stand — what is open is PRESERVATION
-
-
+- [ ] **Ein Rumpf, dessen Kosten SELBST symbolisch sind, rechnet `Unbekannt` statt `40 * n`**
+      *(Rest des Postens „parametrische `costs`-Zusage", der am 2026-08-20 beim Nachsehen
+      schon zu war)*. `kosten.rs` liest eine Zusage als Summe aus einer Konstanten und
+      Vielfachen nichtnegativer Größen und vergleicht gegen die **kleinste** Belegung — das
+      trägt, solange der Rumpf eine Zahl ergibt. *Ergibt er selbst einen Term, fällt die
+      Rechnung auf `Unbekannt` zurück, und die Zusage wird nicht geprüft, sondern
+      übersprungen.* Der Grund steht im Kopf von `kosten.rs`.
 - [ ] **All three S17 obligations stand as FORM. What is missing is the preservation.**
       Built: (a) locks in rank order (`U003`/`U005`), (c) no intermediate exit (`U006`),
       (b) the statement connects (`U007`).
@@ -2484,36 +2456,6 @@ braucht jede Tabelle ihr eigenes `traverse`.
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
-- [ ] **`fnptr` ist BLOCKIERT, nicht bedarfslos — und der Unterschied gehört in die Buchung**
-      *(gemessen 2026-08-21)*. `locks ordered` ist **tot**: die Form gab es, sie kam nur nicht
-      vor. **`fnptr` ist etwas anderes** — der Bedarf steht außen (Caprocks
-      `&mut dyn SchedOps`; **11 `fn(…)`-Typstellen** in `caprock-messbasis`, 4 Erzeuger, 4
-      Rufe hindurch), und was fehlt, ist nicht der Bedarf, sondern die **Konstruierbarkeit.**
-
-      **Vier Hälften, von denen keine ohne die anderen etwas heißt** — jede mit ihrer eigenen
-      Absage, an einer dreizeiligen Handprobe gemessen:
-
-      | # | was fehlt | was heute fällt |
-      |---|---|---|
-      | 1 | **der Erzeuger** — die Sprache kennt kein `&f` | `M119` |
-      | 2 | **der Ruf über einen Ort** («B8») | `P017` |
-      | 3 | **die Absenkung** | `C001` |
-      | 4 | **der Vertrag am Zeigertyp** (`requires`/`ensures`/`effects`) | — |
-
-      **Und die Reihenfolge ist keine Geschmacksfrage, sondern erzwungen:** der Ruf (2)
-      verlangt den Vertrag (4) SOFORT. Neun Passdateien lösen den Gerufenen heute statisch auf
-      (`aufrufgraph`, `huelle_der_gerufenen`, `u.funktion`); ein indirekter Ruf ohne Vertrag
-      macht **`E008` rückgängig** — die Wirkungshülle endete wieder an der ersten
-      Aufrufgrenze, so wie vor dem 2026-08-15.
-
-      > **Das Programm, das Regel A verlangt, lässt sich heute nicht schreiben:** mit dem Ruf
-      > fällt es an `E009`/`K003`, ohne den Ruf ist das Konstrukt unbenutzt. *Keine Null im
-      > Bedarf, eine Null in der Konstruierbarkeit.*
-
-      **Fällig wird es in EINEM Stück**, beim ersten Programm, das eine Dispatch-Tabelle
-      braucht — und dann in dieser Reihenfolge: **Erzeuger → Ruf über einen Ort → Absenkung →
-      Vertrag.** *Damit der spätere Anlauf nicht wieder bei der Frage beginnt.*
-
 - [ ] **Nachgemessen 2026-08-20: die Schnittstelle faellt LAUT, nicht lautlos.** Zwei
       Dateien in EINEM Lauf werden weiter getrennt geprueft — jede ist ihre eigene
       Uebersetzungseinheit. Ein `use bib::tu;` ueber die Dateigrenze ergibt **`E009`**
@@ -2817,25 +2759,6 @@ Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze gesc
 sofort: *kein neuer Absagecode ohne seinen Satz* (heute 208 Codes, null Sätze).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
-
-- [ ] ~~**PL.1 — das PASSREGISTER anlegen.**~~ **ANGELEGT am 2026-08-21.** `struct Pass`
-      trägt sein Satzfeld, **46 Sätze über zwölf Pässe**, und der zweite Zahn steht:
-      [`./instrumente/pruefe-saetze.py`](instrumente/pruefe-saetze.py), **Marke 45**, in
-      beide Richtungen von außen rot gefahren. `gabbro paesse [--je-satz]`; Bericht in
-      [`messung/PASSREGISTER.md`](messung/PASSREGISTER.md).
-      **37 gemessen, 6 vermutet, 0 BEWIESEN** — *die dritte Spalte ist leer, und sie ist der
-      ganze Rest.* Geschätzt waren ~22 Sätze; es wurden mehr, weil ein Pass mehrere
-      unabhängige Zusagen trägt.
-
-      > **Und die Ratsche hat sofort gebissen, bevor jemand sie brauchte.** Der Registerbaum
-      > war acht Commits älter als `master`; nach dem Zusammenführen meldete der Wächter
-      > **48 statt 45** — die drei Kennungen aus Stufe 6 (`H015`, `H101`, `M120`) hatten
-      > keinen Satz. *Der Agent hat sie ausdrücklich NICHT vorsorglich eingetragen*, weil das
-      > den Merge künstlich grün gemacht hätte. Nachgetragen, Marke wieder bei 45.
-
-      **Was der Wächter NICHT prüft, und es steht in seiner eigenen Ausgabe:** er zählt
-      **Zuordnungen**, nicht deren Richtigkeit. *Ein falscher Satz zählt wie ein richtiger,
-      und ein Satz, der weniger sagt als sein Pass leistet, fällt gar nicht auf.*
 
 - [ ] **PL.2 — die drei Sätze BEWEISEN.** Aufgeschrieben sind sie seit dem 2026-08-21, **keine
       Zeile Isabelle.** `K001` ist dabei **geteilt** in `kosten.summation` (*gemessen*) und
