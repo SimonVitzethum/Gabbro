@@ -1,0 +1,39 @@
+-- **Regel A, Datei 1 von 2: die BIBLIOTHEK.**
+--
+-- Sie vergibt ihren Sperrrang fuer sich -- `rank 1` -- und weiss nichts von ihrem Rufer.
+-- Uebersetzt wird sie fuer sich; ihre Schnittstelle geht als `.gabi` hinaus.
+module zaehlwerk {
+
+const NFAECHER : u32 = 32;
+
+table Faecher count NFAECHER {
+    slot { stand : u32, }
+}
+
+lock ZAEHLER protects { Faecher } rank 1 held <= 40 ops shared held <= 20 ops;
+
+pub impl fn setze_stand(i : index into Faecher, s : u32) -> bool
+    effects { writes Faecher.slots, locks ZAEHLER }
+    costs   <= 30 ops
+{
+    locks ZAEHLER {
+        Faecher.slots[i].stand = s;
+    }
+    return true;
+}
+
+-- Der Leser. Er nimmt DIESELBE Sperre geteilt -- damit steht auch die Leseseite unter der
+-- Ordnung, und das gebundene Programm kann nachsehen, ob der Ruf wirklich hinuebergegangen
+-- ist.
+pub impl fn hole_stand(i : index into Faecher) -> u32
+    effects { reads Faecher.slots, locks shared ZAEHLER }
+    costs   <= 30 ops
+{
+    let mut s : u32 = 0;
+    locks shared ZAEHLER {
+        s = Faecher.slots[i].stand;
+    }
+    return s;
+}
+
+}

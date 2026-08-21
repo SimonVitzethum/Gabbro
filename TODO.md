@@ -404,7 +404,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 113 sind tragend, 2 verdächtig — und **47 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 114 sind tragend, 2 verdächtig — und **47 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       *Wer eine Absage liest und daraus nicht erkennt, worauf sie ruht, kann auch nicht
       prüfen, ob sie weit genug reicht.* Das ist der größere Posten, nicht die zwei.
@@ -469,7 +469,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **1461 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **1483 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -2466,21 +2466,55 @@ braucht jede Tabelle ihr eigenes `traverse`.
       (`N025`) — die Sichtbarkeitshaelfte einer API steht damit. Der Erzeuger schreibt
       weiterhin **keinen Kopf**: eine `.c` je Einheit, Prototypen inline.
 
-- [ ] **Eine Bibliotheks-ABI, und das Format steht schon** *(bewertet 2026-08-18,
-      `PLAN.md`: „Zwei Fragen, die die Grenzen beschreiben")*. **Gabbros ganze Zusage ist eine
-      Aussage ueber EINE Uebersetzungseinheit** -- jede der elf Klassen wird an einem Baum
-      geprueft, den ein Lauf ganz sieht. Eine Bibliothek durchschneidet genau das, und ohne
-      ABI faellt die Zusage an der Schnittstelle lautlos auf „untere Schranke" zurueck (`E009`).
-      **`gabbro zeugnis` schreibt bereits, was sie tragen muss:** Annahmenmenge, Schablonen mit
-      Beweisstand, `effects`/`costs`/`Held`, und die SPERRRAENGE -- *der schaerfste Posten:
-      zwei Bibliotheken mit unabhaengig vergebenen Raengen ergeben einen Zyklus, den keine von
-      beiden allein sehen kann.* Was fehlt: `gabbro pruefe` liest die Zeugnisse der gerufenen
-      Bibliotheken mit und vereinigt sie -- mit denselben Weigerungen, die es innerhalb einer
-      Einheit schon gibt. **Der erste Posten, bei dem Gabbro etwas gewinnt, ohne eine Klasse
-      zurueckzugeben.**
+- [ ] ~~**Eine Bibliotheks-ABI, und das Format steht schon**~~ — **GEBAUT am 2026-08-21,
+      und der Befund lag NICHT dort, wo dieser Posten ihn vermutete**
+      ([`messung/ABI.md`](messung/ABI.md)).
 
-### Syntax — open decisions (details in [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md)) *(Teil)*
+      **`ABI0`/`ABI1` waren schon gebaut:** `gabbro abi` schrieb ein `.gabi`, `pruefe --mit`
+      las es. **Was fehlte, war die MAUT.** `abi.rs` trug `ItemArt::Lock` nie — die
+      Schnittstelle exportierte `effects { locks SPEICHER }` und **nicht** `lock SPEICHER …
+      rank 0`. `H012` schlug den Rang nach, fand nichts und **`continue`te im Schweigen.**
 
+      > **Ein Programm aus zwei Bibliotheken, das beide Sperren in beiden Richtungen
+      > schachtelt — ein Deadlock — ging mit `0 Fehler, 0 Hinweise` durch.** Genau der
+      > Ausgang, den der Auftrag schlimmer nennt als gar nicht zu bauen, und er war der
+      > Zustand *vor* dem Bau.
+
+      **Die Wurzel lag eine Ebene tiefer, INNERHALB einer Einheit:** ein undeklarierter
+      Sperrname war für die ganze Sperrdisziplin unsichtbar — eine Datei, die `NIEDA` zweimal
+      nennt, gab **4 Items, 0 Fehler, 0 Hinweise.** Geschlossen als **`H016`**, dem Spiegel
+      von `H008`: *genommen, aber nie erklärt.*
+      Dazu trägt `abi.rs` jetzt die `lock`-Zeile, und `emit --mit` kam dazu — *ohne ihn war
+      die ABI halb: prüfbar, nicht übersetzbar.*
+
+- [ ] **Die schärfste Behauptung dieses Ordners über die ABI war FALSCH** *(nachgerechnet
+      2026-08-21)*. Hier stand: *„zwei Bibliotheken mit unabhängig vergebenen Rängen ergeben
+      einen ZYKLUS, den keine von beiden allein sehen kann."*
+
+      **Unabhängig vergebene ABSOLUTE Ränge können keinen Zyklus erzeugen** — eine
+      Rangfunktion in die ganzen Zahlen ist eine Totalordnung, und eine Totalordnung hat
+      keine Zyklen. Was sie erzeugen, ist eine **willkürliche** Ordnung: falsche Absagen,
+      nicht falsche Freisprüche. *«ABI2» ist damit eine Frage der Ausdruckskraft, nicht der
+      Verklemmungsfreiheit.*
+
+      > **Das eigentliche Loch war schlimmer und von anderer Art:** es überquerten
+      > **gar keine Ränge** die Grenze. *Ein Satz, der die Gefahr an der falschen Stelle
+      > vermutet, ist teurer als keiner — er lenkt die Suche weg.*
+
+      Offen bleibt daraus die echte «ABI2»-Frage: wie zwei unabhängig vergebene Rangskalen
+      zueinander gestellt werden, ohne dass eine Bibliothek die andere umnummeriert.
+
+- [ ] **Der Korpus hat keine ABI, und die beruhigende Zahl misst nichts** *(gemessen
+      2026-08-21)*. Jedes erzeugte `.gabi` durch den Prüfer zurückgefahren gibt *„49 sauber,
+      0 Fehler"* — **48 davon sind LEER**, und keines trägt eine Sperre.
+      *Eine Deckungszahl über einer leeren Menge ist die Form, gegen die W17 steht.* **Der
+      ganze Beleg der ABI ruht auf sechs handgeschriebenen Dateien**, und das steht so im
+      Bericht.
+
+- [ ] **`observes NIEDADOM` ohne `rcu`-Deklaration gibt 0 Fehler** *(gemessen 2026-08-21)*.
+      `H016` hat die Sperr-Instanz eines allgemeineren Lochs geschlossen: **ein genommener
+      Name, den niemand erklärt hat, ist für den zugehörigen Pass unsichtbar.** Dieselbe
+      Gestalt, ein Konstrukt weiter — und dort steht sie noch offen.
 - [ ] **Genericity** — without it every table needs its own `traverse`; with it the question
       of how contracts are parameterised.
       **Und vor dem Bau steht eine ZÄHLUNG, nicht eine Reihenfolge** *(2026-08-21)*. *„Sonst
@@ -2660,7 +2694,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7907 von 11777 Kommentarzeilen** im Pruefer sind deutsch
+**7904 von 11927 Kommentarzeilen** im Pruefer sind deutsch
  1043 von  1280 in den Instrumenten
   273 von   845 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -2748,7 +2782,7 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       Deckungsaussage aller Proben, die darauf zeigen.
 
       ```
-      40 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 237, die
+      41 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 237, die
       ueberhaupt eine Kennung erwarten)
       ```
 
@@ -2766,7 +2800,7 @@ hat kein Feld dafür). **Ohne die Sätze ist „Gabbro formal verifiziert" nicht
 formulierbar** — man wüsste nicht, was zu beweisen wäre.
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (heute 208 Codes, null Sätze).
+sofort: *kein neuer Absagecode ohne seinen Satz* (heute 209 Codes, null Sätze).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
@@ -2789,7 +2823,7 @@ sofort: *kein neuer Absagecode ohne seinen Satz* (heute 208 Codes, null Sätze).
       Zwischenmeldung nicht „268 von 268", sondern:
 
       ```
-      228 belegt · 40 in Klärung
+      227 belegt · 41 in Klärung
       ```
 
       *Die Deckungszahl ist nicht falsch; sie ist an vierzig Stellen unbelegt, und das ist ein

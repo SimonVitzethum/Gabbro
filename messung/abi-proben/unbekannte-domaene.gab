@@ -1,0 +1,22 @@
+-- Die Gegenprobe zu `unbekannte-sperre.gab`, EINE Ebene weiter: eine RCU-Domaene, die
+-- keine Deklaration erklaert. Faellt das? (Gemessen 2026-08-21 fuer `messung/ABI.md`.)
+module unbekdom {
+
+const N : u32 = 8;
+
+table T count N {
+    slot { a : u32, }
+}
+
+pub impl fn liest(i : index into T) -> u32
+    effects { reads T.slots }
+    costs   <= 30 ops
+{
+    let mut v : u32 = 0;
+    observes NIEDADOM {
+        v = T.slots[i].a;
+    }
+    return v;
+}
+
+}

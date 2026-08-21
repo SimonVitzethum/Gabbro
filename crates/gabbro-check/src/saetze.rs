@@ -1010,13 +1010,17 @@ pub const PHASEN: &[Satz] = &[
 pub const SPERREN: &[Satz] = &[
     Satz {
         name: "sperren.rangordnung",
-        kennungen: &["H006", "H012", "H014"],
-        aussage: "Every lock carries a `rank` fixed at compile time (`H014`), and on every \
-                  path a lock is taken ONLY while a strictly smaller rank is held (`H006`). \
-                  Equal rank falls with it: two locks of the same rank have no order, two \
-                  holders can take them in two directions, and that is exactly where a \
-                  deadlock comes from. **By the classical result this makes a circular wait \
-                  impossible, so the program cannot deadlock on declared locks.**",
+        kennungen: &["H006", "H012", "H014", "H016"],
+        aussage: "Every lock NAME is explained by a declaration (`H016`), every lock carries \
+                  a `rank` fixed at compile time (`H014`), and on every path a lock is taken \
+                  ONLY while a strictly smaller rank is held (`H006`), through calls as well \
+                  (`H012`). Equal rank falls with it: two locks of the same rank have no \
+                  order, two holders can take them in two directions, and that is exactly \
+                  where a deadlock comes from. **By the classical result this makes a \
+                  circular wait impossible, so the program cannot deadlock on declared \
+                  locks.** Since 2026-08-21 the sentence survives a LIBRARY BOUNDARY: \
+                  `gabbro abi` carries the `lock … rank N` line into the `.gabi`, and \
+                  `pruefe --with` recomputes the order over the union.",
         vorbehalt: "**Three conditions the sentence needs and the pass does not fully \
                     supply.** (1) It holds INTERPROCEDURALLY only since 2026-08-19; before \
                     that `locks L2 { … nimmt_l1(); }` with `L1` at rank 1 passed with zero \
@@ -1024,12 +1028,27 @@ pub const SPERREN: &[Satz] = &[
                     kernel deadlock has. (2) Over an INCOMPLETE call hull the pass does not \
                     refuse (R16), so a path through an `extern fn` is not covered. (3) The \
                     result covers DECLARED locks only; a wait that is not a `lock` -- a \
-                    hardware handshake, a foreign body's internal lock -- is outside it.",
+                    hardware handshake, a foreign body's internal lock -- is outside it. \
+                    **And the fourth, which the ABI made visible on 2026-08-21:** until \
+                    `H016` an UNDECLARED lock name was invisible to the whole discipline -- \
+                    `H006` and `H012` looked the rank up, found nothing and skipped in \
+                    silence, so `effects { locks NIEDA }` plus `locks NIEDA { … }` gave zero \
+                    errors. Across a library boundary that was not an edge case but the \
+                    normal case. **The ranks are ABSOLUTE numbers, and they do not compose:** \
+                    the union of two independently written libraries is ordered by whichever \
+                    integers the two authors happened to pick, so a legitimate mixing can be \
+                    refused with no repair short of editing the library. *That is a \
+                    completeness gap, not a soundness one -- a rank function into the \
+                    integers cannot produce a cycle -- and «ABI2» (order instead of rank) is \
+                    where it is answered.*",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 2 probes on `H006`, probes on `H012` and `H014`. The \
-                      interprocedural half is measured by the finding that produced it.",
-        fundstelle: "crates/gabbro-check/src/geteilt.rs (`rangprobe`, line 1015); SPRACHE.md \
-                     §9",
+        gemessen_an: "beispiele/gift: 2 probes on `H006`, probes on `H012` and `H014`; \
+                      `gift/250` is the rank ring across TWO libraries and `gift/251` the \
+                      undeclared lock name. The interprocedural half is measured by the \
+                      finding that produced it, the boundary half by `messung/ABI.md`.",
+        fundstelle: "crates/gabbro-check/src/geteilt.rs (`rangprobe`, `unerklaerte_sperren`); \
+                     crates/gabbro-check/src/abi.rs (`ItemArt::Lock`); SPRACHE.md §9; \
+                     messung/ABI.md",
     },
     Satz {
         name: "sperren.geteilt",

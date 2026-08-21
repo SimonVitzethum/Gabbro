@@ -1,0 +1,40 @@
+-- erwartet: H016
+-- 251 -- **Ein Sperrname, den keine Deklaration erklaert.**
+--
+-- Die Gegenrichtung von `H008`, und die teurere von beiden. `H008` sagt *„deklariert, aber
+-- nirgends genommen"* und ist ein Hinweis; hier heisst es *„genommen, aber nirgends
+-- deklariert"*, und das ist ein Fehler.
+--
+-- **Gemessen am 2026-08-21: diese Datei gab `4 Items, 0 Fehler, 0 Hinweise`.** Zwei Stellen
+-- nennen `NIEDA` -- die Wirkungsliste und der Block -- und kein Pass sah hin. `H006` holt
+-- den Rang mit `sperren.get(name)`, bekommt `None` und prueft nichts; `H012` tut dasselbe
+-- mit einem stillen `continue`. *Der Rang IST die Ordnung; ohne Deklaration gibt es keinen,
+-- und ohne Rang rechnet die ganze Sperrordnung nicht.*
+--
+-- **Innerhalb einer Einheit ist das ein Randfall, an einer BIBLIOTHEKSGRENZE der
+-- Normalfall:** dort kommt jeder Name von woanders. Ein `.gabi`, das
+-- `effects { locks SPEICHER }` traegt und `lock SPEICHER … rank 0` nicht, entwaffnet die
+-- Sperrordnung lautlos -- genau der Fall, den `beispiele/gift/250` zeigt.
+--
+-- Dieselbe Bauart wie `H014`: dort ist der Rang da und nicht ausrechenbar, hier ist die
+-- ganze Deklaration weg. Beide enden in derselben Stille, und beide bekommen eine Absage.
+
+module gift251 {
+
+const N : u32 = 8;
+
+table T count N {
+    slot { a : u32, }
+}
+
+pub impl fn f(i : index into T) -> bool
+    effects { writes T.slots, locks NIEDA }
+    costs   <= 30 ops
+{
+    locks NIEDA {
+        T.slots[i].a = 1;
+    }
+    return true;
+}
+
+}

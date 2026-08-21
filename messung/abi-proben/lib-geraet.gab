@@ -1,0 +1,23 @@
+-- Bibliothek B -- das Geraet. Ihr Sperrrang ist ebenfalls FUER SICH vergeben,
+-- und sie hat nie von `speicher` gehoert.
+module geraet {
+
+const NREGISTER : u32 = 16;
+
+table Register count NREGISTER {
+    slot { wert : u32, bereit : bool, }
+}
+
+lock GERAET protects { Register } rank 0 held <= 40 ops;
+
+pub impl fn geraet_setze(i : index into Register, w : u32) -> bool
+    effects { writes Register.slots, locks GERAET }
+    costs   <= 30 ops
+{
+    locks GERAET {
+        Register.slots[i].wert = w;
+    }
+    return true;
+}
+
+}

@@ -1,0 +1,33 @@
+-- **Regel A, Datei 2 von 2: der RUFER.**
+--
+-- Er bringt eine EIGENE Sperre mit, `rank 0`, und nimmt sie AUSSEN. Der Ruf in die
+-- Bibliothek nimmt `ZAEHLER` auf `rank 1` -- also aufsteigend, also erlaubt.
+--
+-- **Das ist die Aussage, um die es geht:** die Ordnung `AUFTRAG < ZAEHLER` steht in keiner
+-- der beiden Dateien. Sie entsteht erst bei der VEREINIGUNG, und `H012` rechnet sie dort
+-- nach. Vertauscht man die Raenge, faellt genau dieser Ruf -- siehe `beispiele/gift/250`.
+module dienst {
+
+use zaehlwerk::setze_stand;
+use zaehlwerk::Faecher;
+
+const NAUFTRAEGE : u32 = 8;
+
+table Auftraege count NAUFTRAEGE {
+    slot { offen : bool, }
+}
+
+lock AUFTRAG protects { Auftraege } rank 0 held <= 80 ops;
+
+pub impl fn erledige(a : index into Auftraege, f : index into Faecher, s : u32) -> bool
+    effects { writes Auftraege.slots, writes Faecher.slots, locks AUFTRAG, locks ZAEHLER }
+    costs   <= 60 ops
+{
+    locks AUFTRAG {
+        Auftraege.slots[a].offen = false;
+        setze_stand(f, s);
+    }
+    return true;
+}
+
+}

@@ -27,9 +27,20 @@
 //! sondern eine **Beweispflicht** (siehe «ABI4» in `PLAN.md`). *Solange die Pflicht nicht
 //! gezählt wird, ist es ehrlicher, die Annahmen gar nicht erst über die Grenze zu tragen.*
 //!
-//! **Und keine Sperrränge.** `lock … rank 0` ist eine **absolute Zahl**; zwei unabhängig
-//! geschriebene Bibliotheken vergeben beide `rank 0`. *Absolute Zahlen komponieren nicht* —
-//! das braucht «ABI2» (Ordnung statt Rang), und das ist eine Sprachänderung.
+//! **The lock ranks DO travel, since 2026-08-21 -- and until then their absence was a false
+//! green.** The first version left them out with the argument that `lock … rank 0` is an
+//! ABSOLUTE number and two independently written libraries both pick `rank 0`. The argument
+//! is right and the conclusion was wrong: leaving the ranks out did not avoid the collision,
+//! it made the whole lock order unenforceable at the boundary. *Measured: a ring across two
+//! libraries -- `SPEICHER` under `GERAET` and `GERAET` under `SPEICHER` -- passed with 0
+//! errors and 0 hints* (`messung/ABI.md`).
+//!
+//! > What remains true is the narrower statement: **absolute numbers do not COMPOSE.** The
+//! > union is ordered by whichever integers the two authors happened to pick, so a
+//! > legitimate mixing can be refused with no repair short of editing the library. That is a
+//! > completeness gap, not a soundness one -- a rank function into the integers cannot
+//! > produce a cycle -- and «ABI2» (order instead of rank) is where it is answered. *A false
+//! > refusal is a bad day; a false green is a deadlock.*
 //!
 //! > **Was eine ABI ausdrücklich nicht darf: eine Klasse von geprüft auf behauptet
 //! > absenken.** Was noch nicht sauber über die Grenze geht, geht gar nicht über sie.
@@ -101,6 +112,24 @@ pub fn schreibe(baum: &Programm, quelle: &str) -> String {
             ItemArt::Typ(y) => (&y.name.text, text_von(item, quelle), y.oeffentlich),
             ItemArt::Tabelle(y) => (&y.name.text, text_von(item, quelle), false),
             ItemArt::Atomic(y) => (&y.name.text, text_von(item, quelle), y.oeffentlich),
+            // **The LOCK, since 2026-08-21 -- and its absence was the most expensive item in
+            // this file.**
+            //
+            // `lock` has no `pub` (the grammar has none), but unlike `table` and `atomic` it
+            // was not in this list at all. A `pub` signature with `effects { locks SPEICHER }`
+            // carried the NAME out and not the declaration -- exactly the shape the fixpoint
+            // above is written against: *an interface that names something and does not
+            // explain it.*
+            //
+            // > **The rank IS the lock order.** Without the `lock` line the importer's rank
+            // > rules (`H006`/`H012`, both issued in `geteilt.rs`) find no rank and stay
+            // > silent -- and a ring across two libraries passed with **0 errors, 0 hints**
+            // > (`messung/ABI.md`). Since `H016`, see `geteilt.rs`, that same case falls
+            // > loudly; this line is what makes the HONEST case possible again.
+            //
+            // `von_anfang: false` -- the lock travels because an exported signature names it,
+            // not on its own. A purely internal lock stays inside.
+            ItemArt::Lock(l) => (&l.name.text, text_von(item, quelle), false),
             // **Ein `use` ist Teil der Schnittstelle, nicht des Rumpfs.** Ohne es nennt der
             // Kopf `Pa`, und `Pa` ist in DIESEM Modul kein Name. *Gefunden am selben
             // Beispiel: der Parserfehler hat den fehlenden Namen zugedeckt.*

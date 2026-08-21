@@ -1,0 +1,22 @@
+-- Bibliothek A -- der Zwischenspeicher. Ihr Sperrrang ist FUER SICH vergeben.
+module speicher {
+
+const NEINTRAEGE : u32 = 64;
+
+table Eintraege count NEINTRAEGE {
+    slot { marke : u32, gueltig : bool, }
+}
+
+lock SPEICHER protects { Eintraege } rank 0 held <= 40 ops;
+
+pub impl fn speicher_setze(i : index into Eintraege, m : u32) -> bool
+    effects { writes Eintraege.slots, locks SPEICHER }
+    costs   <= 30 ops
+{
+    locks SPEICHER {
+        Eintraege.slots[i].marke = m;
+    }
+    return true;
+}
+
+}

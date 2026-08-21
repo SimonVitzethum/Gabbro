@@ -44,40 +44,9 @@ fn main() -> std::process::ExitCode {
             std::process::ExitCode::SUCCESS
         }
         "pruefe" => befehl_pruefe(rest),
-        // **The emitter, since 2026-08-17.** It covers one fragment, not ten, and refuses by
-        // name (`C001`) for every form it does not know -- a generator that guesses undoes
-        // every pass in front of it.
-        "emit" => {
-            if rest.is_empty() {
-                eprintln!("gabbro emit: no file named");
-                return std::process::ExitCode::from(2);
-            }
-            let mut schlecht = false;
-            for datei in rest {
-                let Ok(quelle) = std::fs::read_to_string(datei) else {
-                    eprintln!("gabbro: {datei} not readable");
-                    schlecht = true;
-                    continue;
-                };
-                let (baum, mut absagen) = gabbro_syntax::lies(datei, &quelle);
-                // **The checker runs first, and that is the point.** Emitting from a tree the
-                // passes have not accepted would produce C for a program Gabbro rejects.
-                gabbro_check::pruefe(&baum, &mut absagen);
-                let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
-                if absagen.fehler_zahl() > 0 {
-                    eprint!("{}", absagen.zeige(&quelle));
-                    eprintln!("gabbro emit: {datei} has errors -- no C written");
-                    schlecht = true;
-                    continue;
-                }
-                print!("{c}");
-            }
-            if schlecht {
-                std::process::ExitCode::from(1)
-            } else {
-                std::process::ExitCode::SUCCESS
-            }
-        }
+        // The emitter, since 2026-08-17 -- what it covers and what it refuses stands at
+        // `command_emit` below, where the code is.
+        "emit" => command_emit(rest),
         "fragmente" => fragmente::befehl(rest),
         "annahmen" => befehl_annahmen(rest),
         "k-bedingung" => {
@@ -364,8 +333,10 @@ fn hilfe() {
   gabbro k-bedingung <file.gab>…    per carrier: are ALL write sites generated? (measurement 2)
   gabbro pflichten  <file.gab>…     what a HUMAN still owes -- counted, not discharged
   gabbro kontexte   <file.gab>…     execution contexts per place -- and the COUNT beside it
-  gabbro emit       <file.gab>…     lower to C -- and REFUSE by name (`C001`) for every
-                                    form this emitter does not know
+  gabbro emit [--with L.gabi]… <file.gab>…
+                                    lower to C -- and REFUSE by name (`C001`) for every
+                                    form this emitter does not know. A `.gabi` lowers to a
+                                    C HEADER: typedefs and prototypes, no objects
   gabbro blindstellen <clean>… [-- <poison>…]
                                     FORM x POSITION over a corpus -- and the EMPTY cells.
                                     What has 0 sites is not checked but UNREACHABLE
@@ -415,12 +386,13 @@ fn befehl_paesse() {
     println!("  that the built passes are able to see.");
 }
 
-fn befehl_pruefe(argumente: &[String]) -> std::process::ExitCode {
-    // **«ABI1»: `--with <lib.gabi>` zieht eine Schnittstelle HINZU.**
-    //
-    // Die Datei ist Gabbro-Quelltext; sie wird vor die zu pruefende Einheit gestellt, und
-    // damit loesen die Namen auf. *`E009` und `K003` verschwinden dann, WEIL geprueft wird
-    // -- nicht, weil geschwiegen wird.*
+/// **Split `--with <lib.gabi>` off from the files.** Since 2026-08-21 `pruefe` and `emit`
+/// cross the SAME bridge -- two parsers for one flag would be two registers over the same
+/// thing, and this folder is written against exactly that class.
+fn split_with(
+    befehl: &str,
+    argumente: &[String],
+) -> Result<(Vec<String>, Vec<String>), std::process::ExitCode> {
     let mut dateien: Vec<String> = Vec::new();
     let mut mit: Vec<String> = Vec::new();
     let mut i = 0;
@@ -429,8 +401,8 @@ fn befehl_pruefe(argumente: &[String]) -> std::process::ExitCode {
             match argumente.get(i + 1) {
                 Some(n) => mit.push(n.clone()),
                 None => {
-                    eprintln!("gabbro pruefe: `--with` needs a `.gabi` file");
-                    return std::process::ExitCode::from(2);
+                    eprintln!("gabbro {befehl}: `--with` needs a `.gabi` file");
+                    return Err(std::process::ExitCode::from(2));
                 }
             }
             i += 2;
@@ -440,27 +412,105 @@ fn befehl_pruefe(argumente: &[String]) -> std::process::ExitCode {
         }
     }
     if dateien.is_empty() {
-        eprintln!("gabbro pruefe: no file named");
-        return std::process::ExitCode::from(2);
+        eprintln!("gabbro {befehl}: no file named");
+        return Err(std::process::ExitCode::from(2));
     }
+    Ok((dateien, mit))
+}
+
+/// **The interfaces as ONE preamble.** It is put in front of the unit, so the same parser
+/// reads them and the same passes check them.
+///
+/// *The marker is demanded, not guessed:* taking an arbitrary `.gab` file as `--with` would
+/// mean fusing two translation units and calling the result a library.
+fn read_preamble(befehl: &str, mit: &[String]) -> Result<String, std::process::ExitCode> {
     let mut vorspann = String::new();
-    for m in &mit {
+    for m in mit {
         match std::fs::read_to_string(m) {
             Ok(q) => {
                 if !q.starts_with(gabbro_check::abi::MARKE) {
-                    eprintln!("gabbro pruefe: {m} is not a `.gabi` (missing `{}`)",
-                              gabbro_check::abi::MARKE);
-                    return std::process::ExitCode::from(2);
+                    eprintln!(
+                        "gabbro {befehl}: {m} is not a `.gabi` (missing `{}`)",
+                        gabbro_check::abi::MARKE
+                    );
+                    return Err(std::process::ExitCode::from(2));
                 }
                 vorspann.push_str(&q);
                 vorspann.push('\n');
             }
             Err(e) => {
                 eprintln!("gabbro: {m}: {e}");
-                return std::process::ExitCode::from(2);
+                return Err(std::process::ExitCode::from(2));
             }
         }
     }
+    Ok(vorspann)
+}
+
+/// **The emitter, since 2026-08-17.** It covers one fragment, not ten, and refuses by name
+/// (`C001`) for every form it does not know -- a generator that guesses undoes every pass in
+/// front of it.
+///
+/// **`--with` since 2026-08-21.** Without it the ABI was a half one: `pruefe --with` accepted
+/// the library, `emit` did not -- a program of two files could be checked and not translated.
+/// *Measured: a `.gabi` through the generator is exactly a C HEADER* -- `typedef`, `#define`
+/// and prototypes, **not a single object**. So the preamble in the output is what it would be
+/// in C anyway, and two units link without a duplicate symbol.
+fn command_emit(argumente: &[String]) -> std::process::ExitCode {
+    let (dateien, mit) = match split_with("emit", argumente) {
+        Ok(x) => x,
+        Err(c) => return c,
+    };
+    let vorspann = match read_preamble("emit", &mit) {
+        Ok(v) => v,
+        Err(c) => return c,
+    };
+    let mut schlecht = false;
+    for datei in &dateien {
+        let Ok(quelle) = std::fs::read_to_string(datei) else {
+            eprintln!("gabbro: {datei} not readable");
+            schlecht = true;
+            continue;
+        };
+        let ganz = if vorspann.is_empty() {
+            quelle.clone()
+        } else {
+            format!("{vorspann}\n{quelle}")
+        };
+        let (baum, mut absagen) = gabbro_syntax::lies(datei, &ganz);
+        // **The checker runs first, and that is the point.** Emitting from a tree the
+        // passes have not accepted would produce C for a program Gabbro rejects.
+        gabbro_check::pruefe(&baum, &mut absagen);
+        let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+        if absagen.fehler_zahl() > 0 {
+            eprint!("{}", absagen.zeige(&ganz));
+            eprintln!("gabbro emit: {datei} has errors -- no C written");
+            schlecht = true;
+            continue;
+        }
+        print!("{c}");
+    }
+    if schlecht {
+        std::process::ExitCode::from(1)
+    } else {
+        std::process::ExitCode::SUCCESS
+    }
+}
+
+fn befehl_pruefe(argumente: &[String]) -> std::process::ExitCode {
+    // **«ABI1»: `--with <lib.gabi>` zieht eine Schnittstelle HINZU.**
+    //
+    // Die Datei ist Gabbro-Quelltext; sie wird vor die zu pruefende Einheit gestellt, und
+    // damit loesen die Namen auf. *`E009` und `K003` verschwinden dann, WEIL geprueft wird
+    // -- nicht, weil geschwiegen wird.*
+    let (dateien, mit) = match split_with("pruefe", argumente) {
+        Ok(x) => x,
+        Err(c) => return c,
+    };
+    let vorspann = match read_preamble("pruefe", &mit) {
+        Ok(v) => v,
+        Err(c) => return c,
+    };
     let mut fehler = 0usize;
     for datei in &dateien {
         let quelle = match std::fs::read_to_string(datei) {

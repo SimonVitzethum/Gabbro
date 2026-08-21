@@ -1,0 +1,20 @@
+-- EINE Einheit, ein Sperrname, den niemand deklariert. Faellt das?
+module unbek {
+
+const N : u32 = 8;
+
+table T count N {
+    slot { a : u32, }
+}
+
+pub impl fn f(i : index into T) -> bool
+    effects { writes T.slots, locks NIEDA }
+    costs   <= 30 ops
+{
+    locks NIEDA {
+        T.slots[i].a = 1;
+    }
+    return true;
+}
+
+}
