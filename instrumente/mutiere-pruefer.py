@@ -2319,6 +2319,28 @@ MUTATIONEN = [
         "H015 -- jede beliebige Annahme deckt jede RCU-Domaene; der Satz muss die Domaene "
         "nicht mehr nennen",
     ),
+    # --- Stufe 6, Teil E ---
+    #
+    # **«B38» -- der benannte Traeger und der Zustand am Eintritt.** Beide Haelften einzeln,
+    # denn sie koennen einzeln ausfallen: `H101` kann verstummen (erste), und die Abhilfe,
+    # die `H101` verlangt, kann UNSCHREIBBAR werden (zweite). *Die zweite ist die
+    # unangenehmere: eine Regel, deren Abhilfe eine andere Regel ausloest, ist keine.*
+    Mutation(
+        "traeger-ohne-nested-masked-geht-durch",
+        "kontexte.rs",
+        "        if k.maskiert_verschachtelt {\n            lage.gedeckt += 1;",
+        "        if !k.maskiert_verschachtelt {\n            lage.gedeckt += 1;",
+        "B38 -- `H101` verstummt: ein Eintritt darf `masks IRQ` als Traeger nennen, ohne "
+        "`nested masked` zu tragen. Genau die Zusicherung aus R15",
+    ),
+    Mutation(
+        "nested-masked-deckt-nicht-mehr",
+        "kontexte.rs",
+        "maskiert && (k.nie_verschachtelt || k.maskiert_verschachtelt || !k.unterbricht)",
+        "maskiert && (k.nie_verschachtelt || !k.unterbricht)",
+        "B38 -- `nested masked` verliert die H013-Ausnahme, die `nested never` behaelt. "
+        "Damit loest die von `H101` verlangte Abhilfe eine ZWEITE Absage aus",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

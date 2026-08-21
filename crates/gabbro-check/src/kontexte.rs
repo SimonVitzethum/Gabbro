@@ -28,8 +28,39 @@
 //!
 //! > **Und darum ist `ein_kern` falsifizierbar und A10 nicht.** Ein zweiter Kern ist eine
 //! > Tatsache, die man herstellen kann; eine Umordnung im Speichermodell ist es nicht.
+//!
+//! ## «B38» — die Nebenbedingung am benannten Traeger (`H101`, 2026-08-21)
+//!
+//! `FRAGMENTE.md` F8 misst fuenf Werte, die im Planer eine Sperrgrenze ueberqueren. **Drei
+//! tragen das Muster „die Fortsetzung prueft neu"; zwei nicht** — sie ruhen auf der
+//! Interruptmaskierung, und das ist der heisseste Pfad (`exit_current`, die IPC-Uebergabe).
+//! Die ehrliche Form heisst darum nicht *„jede Fortsetzung prueft neu"*, sondern
+//!
+//! > *„jede Fortsetzung prueft neu **oder nennt, was sie stattdessen traegt** — und ein
+//! > Traeger `masks IRQ` zaehlt nur, wenn der Eintrittskontext `nested masked` traegt."*
+//!
+//! **Warum die zweite Haelfte nicht schmueckend ist, gemessen am 2026-08-21:**
+//!
+//! ```text
+//! $ gabbro pruefe probe-schlupfloch.gab   # masks IRQ + assume ein_kern, entry nested never
+//!   5 Items, 0 Fehler
+//! $ gabbro pruefe probe-ohne-masks.gab    # dieselbe Datei OHNE masks IRQ
+//!   [H013] this entry writes `z`, and nothing declares it shared
+//! ```
+//!
+//! *Ein Wort in der Wirkungsliste kaufte die Ausnahme von `H013`* — ohne jede Kopplung an
+//! den Zustand, in dem der Weg laeuft. **Genau die Zusicherung aus R15: erfuellt, sobald der
+//! Pruefer schweigt.** `H101` schliesst das: wer den Traeger nennt, schreibt den Zustand an
+//! den Eintritt.
+//!
+//! **Und `nested never` ist NICHT dasselbe.** `never` sagt, dass der Vektor sich nicht selbst
+//! wieder betritt; `masked` sagt, in welchem Zustand er laeuft. *Ueber eine Sperrgrenze traegt
+//! der Zustand, nicht die Abwesenheit von Wiedereintritt.* Dieselbe Schnittkante wie bei
+//! `H005`: dort entscheidet die STAERKE des Zeugen, hier der ZUSTAND am Eintritt — beide Male
+//! genuegt das blosse Nennen nicht.
 
 use gabbro_syntax::ast::*;
+use gabbro_syntax::diag::{Absage, Absagen};
 
 /// Ein Ausführungskontext — heute ist das genau ein `entry`.
 pub struct Kontext {
@@ -39,6 +70,13 @@ pub struct Kontext {
     pub modul: String,
     /// `nested never` — der Eintritt unterbricht sich selbst nicht.
     pub nie_verschachtelt: bool,
+    /// `nested masked` — der Eintritt LAEUFT mit maskierten Interrupts.
+    ///
+    /// **Das ist eine andere Aussage als `nested never`**, und «B38» haengt an dem
+    /// Unterschied: `never` sagt, dass dieser Vektor sich nicht selbst wieder betritt;
+    /// `masked` sagt, in welchem ZUSTAND der Weg laeuft. *Nur der Zustand traegt einen Wert
+    /// ueber eine Sperrgrenze.*
+    pub maskiert_verschachtelt: bool,
     /// Ein Eintritt über die IDT ist ein Interruptkontext; er kann preemptieren.
     pub unterbricht: bool,
     pub span: gabbro_syntax::span::Span,
@@ -53,6 +91,10 @@ pub fn erhebe(baum: &Programm) -> Vec<Kontext> {
                 wurzel: e.dispatch.text(),
                 modul: modul.to_string(),
                 nie_verschachtelt: matches!(e.verschachtelt, Some(Verschachtelt::Nie)),
+                maskiert_verschachtelt: matches!(
+                    e.verschachtelt,
+                    Some(Verschachtelt::Maskiert)
+                ),
                 // **Was einen Eintritt zum Interruptkontext macht**, syntaktisch: er kommt
                 // über die IDT. *Ein Syscall auch — aber der wird gerufen, nicht geworfen,
                 // und er preemptiert niemanden.* `via` ist die einzige Stelle, an der die
@@ -69,9 +111,196 @@ pub fn erhebe(baum: &Programm) -> Vec<Kontext> {
 ///
 /// Die Antwort ist eine Aussage über den ZUGRIFF, nicht über den Kontext: greift jeder
 /// schreibende Weg mit maskierten Interrupts zu, kann ihn auf einem Kern nichts unterbrechen.
+/// **Und seit «B38» steht `H101` DAVOR.** Diese Zeile nimmt `masks …` weiterhin als
+/// Ausschluss — aber ein Eintritt, der einen `masks`-Traeger erreicht und **kein**
+/// `nested masked` traegt, wird von `H101` schon abgesagt. Die Ausnahme ist damit nicht mehr
+/// kaeuflich: *wer sie nimmt, hat den Zustand am Eintritt hingeschrieben.*
+///
+/// ## Und `nested masked` fehlte hier — gefunden 2026-08-21 beim Bau von `H101`
+///
+/// `matches!(e.verschachtelt, Some(Verschachtelt::Nie))` war die einzige Stelle, die
+/// `entryextra` je gelesen hat; `Maskiert` und `Begrenzt` kannte ausser dem Erzeuger niemand.
+/// **Die Folge war ein Widerspruch:** `nested never` bekam die Ausnahme, `nested masked`
+/// nicht — obwohl `masked` genau die Praemisse der Ausnahme AUSSPRICHT und `never` sie nur
+/// nahelegt.
+///
+/// > *Eine Regel, deren Abhilfe eine andere Regel ausloest, ist keine Abhilfe.* Ohne diese
+/// > Zeile haette `H101` verlangt, `nested masked` zu schreiben — und `H013` waere daraufhin
+/// > NEU gefallen. Gemessen am 2026-08-21 an `probe-gedeckt.gab`: erst `[H013]`, nach der
+/// > Zeile 0 Fehler.
 pub fn ein_kern_deckt(maskiert: bool, k: &Kontext) -> bool {
-    // Maskiert schliesst jeden Interruptkontext aus; `nested never` den Eintritt selbst.
-    maskiert && (k.nie_verschachtelt || !k.unterbricht)
+    // Maskiert schliesst jeden Interruptkontext aus; `nested never` den Eintritt selbst,
+    // und `nested masked` sagt denselben Ausschluss am Eintritt statt am Weg.
+    maskiert && (k.nie_verschachtelt || k.maskiert_verschachtelt || !k.unterbricht)
+}
+
+/// **Die Lage am benannten Traeger — die Zahlen, die neben dem Urteil stehen.**
+///
+/// Ohne sie weiss niemand, ob `H101` eine Luecke schliesst oder den Korpus zerlegt; und ohne
+/// `unerreicht` liest sich ein stiller Lauf wie ein bestandener (W10).
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Traegerlage {
+    /// Ausfuehrungskontexte insgesamt.
+    pub kontexte: usize,
+    /// Kontexte, deren Huelle mindestens einen `masks …`-Traeger nennt.
+    pub mit_traeger: usize,
+    /// davon: der Eintritt traegt `nested masked` — der Traeger haelt.
+    pub gedeckt: usize,
+    /// davon: er traegt es nicht — hier faellt `H101`.
+    pub ungedeckt: usize,
+    /// Kontexte, deren Huelle unvollstaendig ist (Zyklus oder unbekannter Gerufener).
+    /// **Ueber einer unteren Schranke wird nicht abgesagt** (R16).
+    pub unentscheidbar: usize,
+    /// Funktionen, die `masks …` DEKLARIEREN — der Nenner.
+    pub traeger_erklaert: usize,
+    /// davon: von keinem sichtbaren Kontext erreicht. **Diese sind nicht freigesprochen,
+    /// sondern ungesehen** — in einer Uebersetzungseinheit ohne `entry` fragt niemand.
+    pub traeger_unerreicht: usize,
+}
+
+/// **Welche Knoten erreicht dieser Kontext?** Eine eigene kleine Wanderung, weil der Graph
+/// die HUELLE der Wirkungen liefert und nicht die Menge der Namen.
+///
+/// Der Weg endet an einem Namen, den der Graph nicht kennt — das ist genau die Stelle, an
+/// der `Huelle::unvollstaendig` steht, und darum wird die Zahl daneben mitgefuehrt statt
+/// stillschweigend fuer vollstaendig gehalten.
+fn erreichbare(g: &crate::aufrufgraph::Graph, start: &str) -> Vec<String> {
+    let mut gesehen: Vec<String> = Vec::new();
+    let mut offen = vec![start.to_string()];
+    while let Some(n) = offen.pop() {
+        if gesehen.contains(&n) {
+            continue;
+        }
+        let Some(k) = g.knoten.get(&n) else {
+            gesehen.push(n);
+            continue;
+        };
+        for (ziel, _) in &k.rufe {
+            offen.push(ziel.clone());
+        }
+        gesehen.push(n);
+    }
+    gesehen
+}
+
+/// Nennt diese Funktion einen Traeger `masks …` in ihrer Wirkungsliste?
+fn erklaert_traeger(f: &FnDecl) -> bool {
+    f.effects.as_ref().is_some_and(|w| {
+        w.liste
+            .iter()
+            .any(|x| matches!(x.art, WirkungArt::Maskiert(_)))
+    })
+}
+
+/// **«B38» — die Nebenbedingung am benannten Traeger, gerechnet.**
+///
+/// Liefert die Zahlen und die Absagen in einem Durchgang, damit `pass` und `zeige` nicht
+/// zwei verschiedene Antworten geben koennen. *Zwei Register ueber derselben Sache sind W7.*
+fn erhebe_lage(baum: &Programm) -> (Traegerlage, Vec<Absage>) {
+    let mut lage = Traegerlage::default();
+    let mut absagen = Vec::new();
+
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let g = crate::aufrufgraph::erhebe_mit(baum, &u);
+    let kontexte = erhebe(baum);
+    lage.kontexte = kontexte.len();
+
+    // Welche erklaerten Traeger erreicht ueberhaupt ein Kontext? Der Schluessel ist der
+    // QUALIFIZIERTE Name -- zwei gleichnamige Funktionen in zwei Modulen sind zwei Knoten
+    // (derselbe Fehler, den `140-gleicher-name-fremdes-modul.gab` festhaelt).
+    let mut erklaert: Vec<String> = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Funktion(f) = &item.art {
+            if erklaert_traeger(f) {
+                erklaert.push(crate::umgebung::qualifiziere(modul, &f.name.text));
+            }
+        }
+    });
+    lage.traeger_erklaert = erklaert.len();
+    let mut erreicht: Vec<String> = Vec::new();
+
+    for k in &kontexte {
+        let Some(voll) = g.aufloesen(&u, &k.modul, &k.wurzel) else {
+            continue;
+        };
+        // **Der Nenner zuerst, und fuer JEDEN Kontext.** Wer ihn erst hinter der
+        // Traegerfrage erhoebe, zaehlte einen Traeger als „unerreicht", den ein Kontext sehr
+        // wohl erreicht -- naemlich dann, wenn die Huelle an einer unbekannten Kante abbricht
+        // und die Wirkung darum gar nicht ankommt.
+        for n in erreichbare(&g, &voll) {
+            if erklaert.contains(&n) && !erreicht.contains(&n) {
+                erreicht.push(n);
+            }
+        }
+        let h = g.huelle(&voll);
+        let traeger: Vec<&String> = h
+            .wirkungen
+            .iter()
+            .filter(|w| w.starts_with("masks "))
+            .collect();
+        // **Und ueber einer unvollstaendigen Huelle wird hier sehr wohl abgesagt** -- anders
+        // als bei `H013`, und mit Grund: `H013` loest auf ABWESENHEIT aus (nichts erklaert
+        // den Platz geteilt), und eine untere Schranke darf keine Abwesenheit belegen (R16).
+        // `H101` loest auf ANWESENHEIT aus. Die Wirkungsmenge waechst nur; was in einer
+        // unteren Schranke steht, steht auch in der vollen. *Die Zahl bleibt trotzdem
+        // daneben stehen, weil die Gegenrichtung -- ein Traeger, den die abgeschnittene
+        // Kante verbirgt -- sehr wohl moeglich ist.*
+        if h.unvollstaendig.is_some() {
+            lage.unentscheidbar += 1;
+        }
+        if traeger.is_empty() {
+            continue;
+        }
+        lage.mit_traeger += 1;
+        if k.maskiert_verschachtelt {
+            lage.gedeckt += 1;
+            continue;
+        }
+        lage.ungedeckt += 1;
+        let namen: Vec<&str> = traeger.iter().map(|s| s.as_str()).collect();
+        absagen.push(
+            Absage::fehler(
+                "H101",
+                k.span,
+                format!(
+                    "`{}` reaches a carrier `{}` but does not declare `nested masked`",
+                    k.name,
+                    namen.join("`, `")
+                ),
+            )
+            .mit_notiz(
+                "`masks IRQ` in an effect list says that the function MASKS -- not that \
+                 it RUNS masked; only the entry context states the latter, and `entrydecl` \
+                 has the word for it",
+            )
+            .mit_notiz(
+                "either write `nested masked` at this entry, or let the continuation \
+                 re-check instead of naming a carrier",
+            )
+            .mit_notiz(
+                "`nested never` is NOT this promise -- it says the vector does not \
+                 re-enter itself, and a value across a lock boundary is carried by the \
+                 STATE, not by the absence of re-entry",
+            ),
+        );
+    }
+    lage.traeger_unerreicht = lage.traeger_erklaert.saturating_sub(erreicht.len());
+    (lage, absagen)
+}
+
+/// Die Zahlen allein — fuer Berichte und Proben.
+pub fn lage(baum: &Programm) -> Traegerlage {
+    erhebe_lage(baum).0
+}
+
+/// **Der Pass: «B38», die Kopplung zwischen Traeger und Eintrittszustand.**
+///
+/// Er laeuft in der Familie von Pass 12 (Sperren) und bekommt darum keine eigene Nummer;
+/// die Regel gehoert zur Kontextmatrix, nicht zu einer neuen Spalte.
+pub fn pass(baum: &Programm, absagen: &mut Absagen) {
+    for a in erhebe_lage(baum).1 {
+        absagen.schiebe(a);
+    }
 }
 
 /// **`gabbro kontexte` — je Platz die Kontextmenge, und daneben die ZAHL.**
@@ -96,6 +325,29 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
             "no -- nothing is exempt"
         }
     ));
+    // **«B38» -- die Traegerzeile, und sie steht VOR dem Abbruch bei null Kontexten.**
+    //
+    // Genau dort ist sie am wichtigsten: eine Uebersetzungseinheit ohne `entry` hat erklaerte
+    // Traeger und keinen einzigen Kontext, der sie prueft. *Wer die Zeile hinter den Abbruch
+    // legte, druckte die Zahl nie, wenn sie etwas heisst.*
+    let l = lage(baum);
+    aus.push_str(&format!(
+        "carriers `masks …` declared: {}   ·   reached by a context: {}   ·   \
+         backed by `nested masked`: {}   ·   UNBACKED (H101): {}   ·   \
+         contexts with an incomplete hull: {}\n\n",
+        l.traeger_erklaert,
+        l.traeger_erklaert - l.traeger_unerreicht,
+        l.gedeckt,
+        l.ungedeckt,
+        l.unentscheidbar
+    ));
+    if l.traeger_unerreicht > 0 {
+        aus.push_str(&format!(
+            "  **{} declared carrier(s) are reached by NO visible context.** They are not \n\
+             \x20 cleared, they are unseen -- in a unit without an `entry` nobody asks (W10).\n\n",
+            l.traeger_unerreicht
+        ));
+    }
     if kontexte.is_empty() {
         aus.push_str("  (no `entry` -- without a context root the question is not asked)\n");
         return aus;
@@ -124,11 +376,12 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
             .collect();
         plaetze += geschrieben.len();
         zeilen.push(format!(
-            "  {:<16} {:<32} writes {:>3}{}{}",
+            "  {:<16} {:<32} writes {:>3}{}{}{}",
             k.name,
             k.wurzel,
             geschrieben.len(),
             if maskiert { "  masks" } else { "" },
+            if k.maskiert_verschachtelt { "  nested-masked" } else { "" },
             if k.nie_verschachtelt { "  nested-never" } else { "" },
         ));
         for p in geschrieben {

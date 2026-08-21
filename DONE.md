@@ -212,6 +212,49 @@ constructs that had been lowering for weeks, and `rustc` said so in the same min
 
 ---
 
+## Wave 4's two conditions, both settled *(2026-08-21)*
+
+### «B38» — the side condition on the named carrier, built as `H101`
+
+*„The continuation re-checks **or** names what it carries instead"* got its second half:
+**a carrier `masks IRQ` counts only if the entry context carries `nested masked`**
+(`kontexte.rs`, wired in behind `geteilt`, no new pass number).
+
+**And the price was measurable.** Before it, one word in an effect list bought the exemption
+from `H013` — the same file, with `nested never` at the entry:
+
+```
+gabbro pruefe probe-schlupfloch.gab    # masks IRQ + assume ein_kern  ->  0 errors
+gabbro pruefe probe-ohne-masks.gab     # the same file without it     ->  [H013]
+```
+
+*That is the assurance from R15 in its purest form — satisfied as soon as the checker stays
+silent.* `nested never` does not count: `never` is about re-entry, `masked` about the state.
+
+> **The side finding is the more uncomfortable half:** `Verschachtelt::Maskiert` had no reader
+> outside its producer, so the remedy `H101` demands would have triggered `H013` **anew** —
+> *a rule whose remedy triggers another rule is not a rule.* `ein_kern_deckt` now takes
+> `nested masked` along.
+
+Measured before building: **4** carriers `masks X` in the whole corpus, **0** of them at an
+entry with `nested masked`, and `nested masked` itself had **zero** occurrences although the
+grammar has always carried it. Effect: 2 sites, both in poison, **0 of 47** clean examples.
+
+### «B39» — measured, and deliberately NOT built
+
+`hardware A, D;` was a candidate for a new word. **Measured: the collision does not occur and
+cannot** — `group` has no `ops` clause, `walk` has no `by ops`, and `R001` sees a `walk` in
+**no** address space at all (control probe: `beispiele/gift/58` does fall). *Rule A would have
+forbidden the build*, and it would have been column 1 of the convergence bet.
+
+> **Four measured zeroes are the result, not the absence of one.**
+
+What stayed open is smaller and has an address, and it moved back to `TODO.md`:
+`mmu_schreibt_nur_a_und_d` is tied to nothing — `ein_kern` is the only assumption name any
+pass reads at all.
+
+---
+
 ## Moved out of TODO.md on 2026-08-21 — Stufe 6, three items that closed
 
 > **`TODO.md` carries exclusively what is OPEN.** These three are done with no residue; what

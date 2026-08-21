@@ -3297,3 +3297,122 @@ fn eine_vorbedingung_am_rufort_wird_gezaehlt() {
         "ein Ruf unter einer Sperre faellt aus der Zaehlung"
     );
 }
+
+// --- Stufe 6, Teil E ---
+
+/// **«B38» — `H101`, die Nebenbedingung am benannten Traeger, in BEIDE Richtungen.**
+///
+/// `FRAGMENTE.md` F8 misst fuenf Werte, die im Planer eine Sperrgrenze ueberqueren; zwei
+/// ruhen nicht auf Neuvalidierung, sondern auf der Interruptmaskierung. Die ehrliche Form
+/// ist *„prueft neu ODER nennt, was sie stattdessen traegt"* — **und ein Traeger
+/// `masks IRQ` zaehlt nur, wenn der Eintrittskontext `nested masked` traegt.**
+///
+/// **Was vorher war, gemessen 2026-08-21:** dieselbe Datei ergab **0 Fehler**, und das
+/// `masks IRQ` kaufte sogar die Ausnahme von `H013`. *Ein Wort in der Wirkungsliste, und der
+/// Pruefer schwieg ueber einem ungeschuetzten Weltzustand* — die Zusicherung aus R15.
+#[test]
+fn ein_traeger_masks_irq_verlangt_nested_masked() {
+    fn codes(q: &str) -> Vec<&'static str> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+        assert_eq!(a.fehler_zahl(), 0, "die Probe selbst parst nicht:\n{}", a.zeige(q));
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code).collect()
+    }
+
+    // Ein Eintritt, dessen Weg `masks IRQ` nennt -- einmal mit `nested never`, einmal mit
+    // `nested masked`. Sonst Zeichen fuer Zeichen dieselbe Datei.
+    let quelle = |nested: &str| {
+        format!(
+            "module t {{
+assume ein_kern \"one core\" falsifier sonde;
+static mut z : u32 = 0;
+impl fn a() effects {{ writes z, masks IRQ }} costs <= 4 ops {{ z = 1; }}
+entry sc vector 0x80 via idt arch x86_64 {{
+    regs in  {{ }}
+    regs out {{ }}
+    preserves {{ rbx }}
+    clobbers  {{ rcx }}
+    stack ks per cpu nested {nested}
+    dispatch t::a;
+}}
+}}"
+        )
+    };
+
+    // **1. Die fallende Richtung.** `nested never` ist eine Aussage ueber den WIEDEREINTRITT,
+    // nicht ueber den Zustand -- der Traeger ist damit nicht gedeckt.
+    assert!(
+        codes(&quelle("never")).contains(&"H101"),
+        "`nested never` deckt keinen Traeger `masks IRQ`: {:?}",
+        codes(&quelle("never"))
+    );
+
+    // **2. Die schweigende Richtung, und sie ist die eigentliche Probe.** Eine Regel, deren
+    // Abhilfe eine ANDERE Regel ausloest, ist keine Abhilfe: die Datei mit `nested masked`
+    // muss GANZ sauber sein, nicht nur frei von `H101`. *Vor der Zeile in `ein_kern_deckt`
+    // fiel hier `H013`* -- `Verschachtelt::Maskiert` hat ausser dem Erzeuger niemand gelesen.
+    assert_eq!(
+        codes(&quelle("masked")),
+        Vec::<&str>::new(),
+        "`nested masked` traegt den Traeger -- und darf keine zweite Absage ausloesen"
+    );
+
+    // **3. Und ohne Traeger faellt `H101` nicht**, sonst waere es eine Regel ueber `entry`
+    // statt ueber den Traeger. *Der Weltzustand bleibt ungeschuetzt, also faellt `H013` --
+    // genau das trennt die beiden Regeln.*
+    let ohne = codes(
+        "module t {
+assume ein_kern \"one core\" falsifier sonde;
+static mut z : u32 = 0;
+impl fn a() effects { writes z } costs <= 4 ops { z = 1; }
+entry sc vector 0x80 via idt arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ks per cpu nested never
+    dispatch t::a;
+}
+}",
+    );
+    assert!(!ohne.contains(&"H101"), "ohne Traeger gibt es nichts zu decken: {ohne:?}");
+    assert!(ohne.contains(&"H013"), "der ungeschuetzte Platz faellt weiterhin: {ohne:?}");
+}
+
+/// **Die Zahl neben dem Urteil: ein erklaerter Traeger, den KEIN Kontext erreicht.**
+///
+/// `messung/fragmente/F08.gab` ist genau dieser Fall — ein `masks IRQ` und kein `entry`.
+/// **Er ist nicht freigesprochen, sondern ungesehen** (W10), und `gabbro kontexte` muss das
+/// hinschreiben statt zu schweigen. *Ein stiller Lauf liest sich sonst wie ein bestandener.*
+#[test]
+fn ein_unerreichter_traeger_wird_gezaehlt_statt_verschwiegen() {
+    let mit_kontext = "module t {
+static mut z : u32 = 0;
+impl fn a() effects { writes z, masks IRQ } costs <= 4 ops { z = 1; }
+entry sc vector 0x80 via idt arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ks per cpu nested masked
+    dispatch t::a;
+}
+}";
+    // Dieselbe Einheit OHNE den Eintritt -- eine Bibliothek, wie F08 eine ist.
+    let ohne_kontext = "module t {
+static mut z : u32 = 0;
+impl fn a() effects { writes z, masks IRQ } costs <= 4 ops { z = 1; }
+}";
+
+    let l = |q: &str| gabbro_check::kontexte::lage(&baum(q));
+
+    let a = l(mit_kontext);
+    assert_eq!(a.traeger_erklaert, 1, "ein `masks IRQ` ist ein erklaerter Traeger");
+    assert_eq!(a.traeger_unerreicht, 0, "der Eintritt erreicht ihn");
+    assert_eq!(a.gedeckt, 1, "und `nested masked` deckt ihn");
+
+    let b = l(ohne_kontext);
+    assert_eq!(b.traeger_erklaert, 1, "der Traeger steht auch ohne Eintritt da");
+    assert_eq!(b.traeger_unerreicht, 1, "und ihn erreicht niemand -- das ist die Zahl");
+    assert_eq!(b.ungedeckt, 0, "abgesagt wird hier NICHT: `H101` sieht keinen Kontext");
+}

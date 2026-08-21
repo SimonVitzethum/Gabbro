@@ -95,7 +95,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **58 Kennzahlen mit Befehl** *(Stand 2026-08-21; 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **60 Kennzahlen mit Befehl** *(Stand 2026-08-21; 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -227,7 +227,7 @@ darunter.
       und ihre Quelle ist eine Tabelle in `PFLICHTEN.md`, deren Zeilen ein Mensch geschrieben
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
-      **`pruefe-zahlen.py` führt heute 58 Kennzahlen mit Befehl und zählt 147 fettgedruckte
+      **`pruefe-zahlen.py` führt heute 60 Kennzahlen mit Befehl und zählt 147 fettgedruckte
       Zahlen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
@@ -403,7 +403,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 101 sind tragend, 2 verdächtig — und **44 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 102 sind tragend, 2 verdächtig — und **44 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       *Wer eine Absage liest und daraus nicht erkennt, worauf sie ruht, kann auch nicht
       prüfen, ob sie weit genug reicht.* Das ist der größere Posten, nicht die zwei.
@@ -468,7 +468,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **826 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **839 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       **Und der Befund ist, dass es nicht null war:** der erste Lauf fand **16** Nahtstellen —
       ein Jahr nachdem die 161 von Hand geflickt worden waren. *Von Hand geflickt heißt: nicht
       bewacht.* Darunter `„…is verified--"`, `„…the rule therefore has**zero bite**"` und
@@ -632,7 +632,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **252 von 252 Ankern** greifen (`--anker`, 2026-08-21) — die
+      fällt. Mutationskatalog: **254 von 254 Ankern** greifen (`--anker`, 2026-08-21) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -2410,21 +2410,36 @@ und die Sätze, die ihr noch fehlen.
 
 ### From wave 4 (2026-08-16) — two conditions and one candidate
 
-- [ ] **«B38» — the side condition on the named carrier.** *"The continuation re-checks
-      **or** names what it carries instead"* is the right form — **but a carrier
-      `masks IRQ` holds only if the entry context carries `nested masked`.** Without this
-      coupling *"the masking carries me"* is the assurance from **R15**, which is satisfied
-      as soon as the checker is silent. **Mechanically checkable** via `entrydecl`; to be built.
+- [ ] **«B39» — GEMESSEN am 2026-08-21, und die Antwort war „nicht bauen"**
+      ([`messung/TRAEGER-UND-HARDWARE.md`](messung/TRAEGER-UND-HARDWARE.md)). Die Kollision
+      zwischen Hardwareaxiom und K-Bedingung **tritt nicht ein und kann es nicht:** `group`
+      hat keine `ops`-Klausel und `walk` kein `by ops`. **`R001` sieht einen `walk` in KEINEM
+      Raum** — nicht bloß im `normal`-Raum, wie [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md)
+      schreibt; *der Satz dort ist zu freundlich* (Gegenprobe: `gift/58` fällt sehr wohl).
 
-- [ ] **«B39» — the exception rule to the hardware axiom, and it is a CANDIDATE for a new
-      word.** `A`/`D` are written by the MMU itself — the GDT lesson at the page machinery. **As soon as
-      group `ops` reach the page machinery, the axiom collides with the
-      write-right promise**: the K condition demands that ALL write sites be generated.
-      Which fields of a `walk` declaration are **hardware-writable** belongs at the
-      declaration (candidate line `hardware A, D;`), the way `reserved` belongs at a
-      `format` field. *`R001` does not see the MMU today — it writes past every grammar,
-      only in the `normal` space instead of in the `dma` space.*
-      **It burdens the convergence bet: it would be column 1, not only column 2.**
+      **Was offen BLEIBT, ist kleiner und hat eine Adresse:** `mmu_schreibt_nur_a_und_d` (A7)
+      ist mit nichts verknüpft — **`ein_kern` ist der einzige Annahmenname, den überhaupt ein
+      Pass liest.** *Ein Axiom, das eine Schreibstelle erlaubt, die keine Regel kennt, ist
+      eine stille Ausnahme mit einem Namen darauf.*
+      **Fällig wird der Bau, wenn die Seitenmaschinerie einen erzeugten Träger bekommt** —
+      vorher wäre `hardware A, D;` Spalte 1 der Konvergenzwette ohne gemessenen Bedarf.
+
+- [ ] **`reserved` hat KEINE Prüferregel — es beißt im C-Übersetzer** *(gemessen 2026-08-21,
+      beim Nachrechnen der Begründungsanalogie von «B39»)*. `./instrumente/pruefe-klauseln.py`
+      führt `reserviert / FeldDecl` unter **NUR GETRAGEN**; ein `p.reserviertes_feld = 1;`
+      gibt **0 Fehler**, und `gabbro emit` ruft danach einen Setzer, den `emit.rs`:2228 nie
+      definiert — `cc -Werror` meldet eine implizite Deklaration. **Die falsche Meldung, im
+      falschen Werkzeug, hinter dem Rücken der elf geprüften Klassen.**
+      *Und die Messung kann nicht trennen, ob `reserved` nicht beißt oder ob ein Feldschreiben
+      über einen Zeiger gar nicht aufgelöst wird* — die Kontrollprobe auf ein nicht
+      existierendes Feld fällt genauso wenig. **Dieselbe Klasse wie „ein unbekannter TYPNAME
+      fällt nirgends".**
+
+- [ ] **`lock … masks irqs` liest niemand** *(gemessen 2026-08-21)*.
+      `./instrumente/pruefe-klauseln.py`: `maskiert / LockDecl` steht unter **UNGELESEN** —
+      *„der Leser füllt sie, niemand sieht hin"*. `H101` deckt seit heute den Träger in der
+      **Wirkungsliste**, nicht das Sperrattribut. *Zwei Schreibweisen für dieselbe Sache, und
+      nur eine hat einen Leser.*
 
 ---
 
@@ -2626,7 +2641,7 @@ hat kein Feld dafür). **Ohne die Sätze ist „Gabbro formal verifiziert" nicht
 formulierbar** — man wüsste nicht, was zu beweisen wäre.
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (heute 193 Codes, null Sätze).
+sofort: *kein neuer Absagecode ohne seinen Satz* (heute 194 Codes, null Sätze).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 

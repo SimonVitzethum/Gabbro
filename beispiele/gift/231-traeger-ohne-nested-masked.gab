@@ -1,0 +1,33 @@
+-- erwartet: H101
+-- **«B38» -- ein `masks IRQ` in der Wirkungsliste ist kein Zustand.**
+--
+-- `FRAGMENTE.md` F8: von fuenf Werten, die im Planer eine Sperrgrenze ueberqueren, tragen
+-- zwei NICHT das Muster „die Fortsetzung prueft neu", sondern die Interruptmaskierung. Die
+-- ehrliche Form ist darum *„prueft neu ODER nennt, was sie stattdessen traegt"* -- und dazu
+-- gehoert die Nebenbedingung, sonst ist der Traeger ein Schlupfloch.
+--
+-- **Gemessen am 2026-08-21, vor `H101`:** dieselbe Datei ergab **0 Fehler**. Das `masks IRQ`
+-- kaufte sogar die Ausnahme von `H013` -- ein Wort in der Wirkungsliste, und der Pruefer
+-- schwieg ueber einem ungeschuetzten Weltzustand. *Genau die Zusicherung aus R15.*
+--
+-- Der Eintritt traegt `nested never`. Das sagt, dass der Vektor sich nicht selbst wieder
+-- betritt -- **nicht, dass er maskiert laeuft.** Ueber eine Sperrgrenze traegt der Zustand.
+module gift::traeger_ohne_nested_masked {
+
+assume ein_kern "This kernel runs on exactly one processor."
+    falsifier sonde_zweiter_kern;
+
+static mut z : u32 = 0;
+
+impl fn beenden() effects { writes z, masks IRQ } costs <= 4 ops { z = 1; }
+
+entry sc vector 0x80 via idt arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx }
+    clobbers  { rcx }
+    stack ks per cpu nested never
+    dispatch gift::traeger_ohne_nested_masked::beenden;
+}
+
+}

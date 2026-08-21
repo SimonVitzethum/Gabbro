@@ -199,7 +199,12 @@ pub fn passliste() -> Vec<Pass> {
                     `entry` construct.* **The rest, with an ADDRESS: the finer half** -- `masks IRQ`, \
                     `per cpu` and `nested never` only exempt under `assume ein_kern`, and \
                     on this corpus `H013` has ZERO bite (all four context roots dispatch \
-                    to an `extern fn`): `gabbro kontexte` prints the count beside it",
+                    to an `extern fn`): `gabbro kontexte` prints the count beside it. \
+                    **And since «B38» the CARRIER is coupled to the entry state** \
+                    (`H101`): naming `masks IRQ` in an effect list says that a function \
+                    masks, not that it RUNS masked -- an entry that reaches such a carrier \
+                    must declare `nested masked`. *Before that, one word in an effect list \
+                    bought the exemption from `H013`.*",
             ),
         },
         Pass {
@@ -304,6 +309,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         z!("schleifen", schleifen::pass(baum, absagen));
         z!("wirkungen", wirkungen::pass(baum, absagen));
         z!("geteilt", geteilt::pass(baum, absagen));
+        z!("kontexte", kontexte::pass(baum, absagen));
         z!("m3", m3::pass(baum, absagen));
         z!("m2", m2::pass(baum, absagen));
         z!("phasen", phasen::pass(baum, absagen));
@@ -318,6 +324,12 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     schleifen::pass(baum, absagen);
     wirkungen::pass(baum, absagen);
     geteilt::pass(baum, absagen);
+    // **«B38» -- die Kopplung zwischen benanntem Traeger und Eintrittszustand.**
+    //
+    // Direkt hinter `geteilt`, weil sie zur Kontextmatrix («K5.3») gehoert und dieselbe
+    // Erhebung benutzt. *Sie bekommt keine eigene Passnummer: die Liste ist die Spezifikation,
+    // und dies ist eine Regel derselben Spalte, keine neue.*
+    kontexte::pass(baum, absagen);
     m3::pass(baum, absagen);
     m2::pass(baum, absagen);
     // **«B37», seit 2026-08-17.** M2 sieht, dass eine lineare Marke genau einmal

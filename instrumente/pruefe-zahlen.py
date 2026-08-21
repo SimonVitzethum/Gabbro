@@ -90,6 +90,25 @@ EINTRAEGE = [
         r"^== (\d+) von 3 Proben gruen ==",
         "Netzstack gegen veroeffentlichte Vektoren",
     ),
+    # --- Stufe 6, Teil E: die drei Zahlen, die den Bau von «B39» VERHINDERT haben ---
+    #
+    # **Eine Null, die einen Bau verhindert, muss nachrechenbar sein.** Sie ist die
+    # leichteste Zahl, die spaeter jemand stillschweigend anders liest -- und drei Posten
+    # dieses Ordners sind heute mit „nicht bauen" entschieden worden.
+    (
+        "messung/TRAEGER-UND-HARDWARE.md",
+        r"\| `walk`-Deklarationen im ganzen Korpus \| \*\*(\d+)\*\*",
+        ["sh", "-c", r"grep -rh '^walk \|^ *walk ' --include=*.gab . | wc -l"],
+        r"^\s*(\d+)\s*$",
+        "walk-Deklarationen im Korpus",
+    ),
+    (
+        "messung/TRAEGER-UND-HARDWARE.md",
+        r"\| `group`-Deklarationen \| \*\*(\d+)\*\*",
+        ["sh", "-c", r"grep -rh '^group \|^ *group ' --include=*.gab . | wc -l"],
+        r"^\s*(\d+)\s*$",
+        "group-Deklarationen im Korpus",
+    ),
     # **Entscheidung 12 ruht auf diesen zwei Zahlen** -- und bis zum 2026-08-21 waren sie von
     # Hand genommen. Die NULL ist die tragende: sie ist der gemessene Bedarf, gegen den
     # `locks ordered` gestorben ist.
