@@ -612,6 +612,11 @@ impl<'a> Rechner<'a> {
             | ExprArt::Gleitkomma { .. }
             | ExprArt::Wahr
             | ExprArt::Falsch
+            // **Ein Grundwert kostet NULL** (Stufe 7). Er wird zu einer
+            // `enum`-Konstante -- kein Laden, keine Primitive. *Das ist dieselbe Zeile,
+            // die `Some`/`None` hier brauchten, und sie steht aus demselben Grund
+            // ausgeschrieben.*
+            | ExprArt::Grund { .. }
             | ExprArt::Ergebnis => {
                 Kosten::Zahl(0)
             }

@@ -400,6 +400,28 @@ pub enum ExprArt {
     Alt(Ort),
     /// `result` -- the return value in `ensures`.
     Ergebnis,
+    /// **`R::F` -- der Wert eines `reason`, und damit sein ERZEUGER** (Stufe 7, 2026-08-21).
+    ///
+    /// `-> T or R` steht seit dem 2026-08-20 in der Signatur, `let x = f() else (e) { … }`
+    /// seit jeher am Rufer -- und dazwischen war nichts. **`primary` kannte keine Produktion
+    /// fuer einen Grundwert**, also konnte keine Gabbro-Funktion je einen herstellen: alle
+    /// sieben `or R`-Signaturen des Korpus standen an einem `extern fn`, an einem Rumpf, den
+    /// Gabbro nie sieht. *Der Kanal existierte an der Deklaration und hatte keine
+    /// Schreibform;* der Erzeuger schrieb `(void)_grund;` und den Befund dahinter.
+    ///
+    /// **Kein neues Wort und keine neue Anweisung:** `return HolFehler::Leer;` IST die
+    /// Fehlerrueckgabe, weil ein Grundwert nie den Erfolgstyp haben kann. Die Form `R::F`
+    /// parste bisher schon -- als `Ort` mit Feldsuffix -- und fiel mit `M119`. *Sie war
+    /// nicht verboten, sie war bedeutungslos.*
+    ///
+    /// > **Warum eine eigene Variante und nicht ein `Ruf` wie `Some(x)`:** ein Grundwert
+    /// > traegt keine Argumente und ist niemals ein Ort. Als `Ruf` haette ihn jeder Pass,
+    /// > der Gerufene nachschlaegt, als unbekannte Funktion gefuehrt; als `Ort` haette ihn
+    /// > `effects` als Lesen einer Stelle gezaehlt. **Beide Verwechslungen sind still.**
+    Grund {
+        grund: Ident,
+        fall: Ident,
+    },
     Unaer(UnOp, Box<Expr>),
     Binaer(BinOp, Box<Expr>, Box<Expr>),
 }

@@ -117,6 +117,42 @@ pub struct Umgebung {
     pub verbundtypen: HashMap<String, Vec<String>>,
     /// Je Modulpfad die Pfade seiner `use`-Zeilen.
     verwendet: HashMap<String, Vec<String>>,
+    /// **`reason`-Name -> seine Faelle, in Deklarationsreihenfolge** (Stufe 7, 2026-08-21).
+    ///
+    /// Bis dahin war ein `reason` eine Deklaration, die NUR der Erzeuger las: er schrieb ein
+    /// C-`enum` daraus, und kein Pass wusste, dass die Namen darin existieren. *`primary`
+    /// kannte keine Produktion fuer einen Grundwert* -- `HolFehler::Leer` parste als Ort mit
+    /// Feldsuffix und fiel mit `M119` (*„`HolFehler` is declared nowhere"*).
+    ///
+    /// Diese Karte ist die Gegenseite: mit ihr hat der Grundwert einen Typ, und damit hat
+    /// der Fehlerkanal einen **Erzeuger** statt nur einer Deklaration.
+    pub gruende: HashMap<String, Vec<String>>,
+    /// **Welche davon `exhaustive` sagen** (Stufe 7, 2026-08-21) -- der erste Leser dieses
+    /// Wortes ueberhaupt.
+    ///
+    /// `pruefe-klauseln.py` fuehrte `erschoepfend` als **TOT**: *„`exhaustive` an einem
+    /// `reason`; ungelesen."* `SPRACHE.md`:531 sagt seit langem, was es heisst -- *„der
+    /// erzeugte C-`switch` hat KEIN `default`, und ein neuer Wert bricht die
+    /// Uebersetzung"* -- und keine Zeile tat es.
+    ///
+    /// **Die Bedeutung ist nicht erfunden, sondern nachgezogen:** `M123` verlangt die
+    /// vollstaendige Fallunterscheidung, der Erzeuger schreibt den `switch` ohne `default`.
+    /// *Und fuer einen Grund OHNE das Wort ist ein `match` gar nicht schreibbar* (`M125`):
+    /// er koennte nicht vollstaendig sein, und einen Sammelzweig kennt die Sprache nicht.
+    pub erschoepfende_gruende: std::collections::HashSet<String>,
+    /// **Funktionsname -> (ihr Modul, der `reason` ihres `-> T or R`, wie geschrieben).**
+    ///
+    /// Getrennt von `Signatur` und nicht darin: `Signatur` wird an fuenf Stellen gebaut, von
+    /// denen vier gar keine Funktion beschreiben (`transition`, `device`, `type`, `axiom`) --
+    /// ein Feld dort waere an vier Stellen ein `None`, das nichts sagt.
+    ///
+    /// **Der Name steht hier UNAUFGELOEST, und das ist kein Versehen.** Die erste Fassung
+    /// schrieb `qualifiziere(pfad, &r.text)` und damit den Namen des Moduls, in dem die
+    /// FUNKTION steht -- ein `reason`, der eine Modulebene weiter aussen deklariert ist,
+    /// haette einen Schluessel bekommen, den nichts traegt. *Genau die Klasse, die
+    /// `pruefe-zahlen.py` als „Blicke ohne Modulkandidaten -- jeder ein moegliches
+    /// `M103`-Loch" zaehlt.* Aufgeloest wird beim Nachschlagen, ueber `kandidaten`.
+    pub fehlerkanaele: HashMap<String, (String, String)>,
 }
 
 /// Das Modul, in dem ein qualifizierter Name steht.
@@ -219,6 +255,27 @@ impl Umgebung {
     /// einem „unbekannter Name" weiter oben würde.
     pub fn kandidaten_aufloesbar(&self, von: &str, pfad: &str) -> Vec<String> {
         self.kandidaten(von, pfad)
+    }
+
+    /// **Der `reason` dieses Namens, voll qualifiziert** (Stufe 7) -- oder `None`.
+    pub fn grund(&self, von: &str, name: &str) -> Option<(String, &Vec<String>)> {
+        self.kandidaten(von, name)
+            .into_iter()
+            .find_map(|k| self.gruende.get(&k).map(|f| (k, f)))
+    }
+
+    /// **Der Fehlerkanal dieser Funktion** (Stufe 7) -- der `reason` aus `-> T or R`, voll
+    /// qualifiziert.
+    ///
+    /// Zwei Aufloesungen hintereinander, und beide ueber `kandidaten`: erst die FUNKTION vom
+    /// Rufort aus, dann ihr `reason` von IHREM Modul aus. *Die zweite ist die, die die erste
+    /// Fassung vergessen hat.*
+    pub fn fehlerkanal(&self, von: &str, name: &str) -> Option<String> {
+        let (modul, roh) = self
+            .kandidaten(von, name)
+            .into_iter()
+            .find_map(|k| self.fehlerkanaele.get(&k))?;
+        self.grund(modul, roh).map(|(q, _)| q)
     }
 
     fn kandidaten(&self, von: &str, pfad: &str) -> Vec<String> {
@@ -536,6 +593,13 @@ impl Umgebung {
                     }
                 }
                 ItemArt::Funktion(f) => {
+                    // **`-> T or R`: der Fehlerkanal wandert in die Karte** (Stufe 7).
+                    // Ohne ihn wuesste weder der Rufer, welchen Typ sein `e` hat, noch der
+                    // Rumpf, welchen Grund er zurueckgeben darf.
+                    if let Some(r) = &f.fehler {
+                        self.fehlerkanaele
+                            .insert(q(&f.name.text), (pfad.to_string(), r.text.clone()));
+                    }
                     let sig = Signatur {
                         parameter: f
                             .parameter
@@ -587,6 +651,20 @@ impl Umgebung {
                                 self.walkschranken.insert(q(&w.name.text), n);
                             }
                         }
+                    }
+                }
+                // **Ein `reason` traegt seine Faelle in die Umgebung** (Stufe 7, 2026-08-21).
+                //
+                // *Der Erzeuger las diese Deklaration seit jeher und schrieb ein `enum`
+                // daraus; kein PASS las sie.* Damit war der Fehlerkanal an der Deklaration
+                // vorhanden und im Rumpf unschreibbar -- «B9» ein zweites Mal.
+                ItemArt::Reason(r) => {
+                    self.gruende.insert(
+                        q(&r.name.text),
+                        r.faelle.iter().map(|f| f.name.text.clone()).collect(),
+                    );
+                    if r.erschoepfend {
+                        self.erschoepfende_gruende.insert(q(&r.name.text));
                     }
                 }
                 _ => {}

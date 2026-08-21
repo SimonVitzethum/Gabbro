@@ -1,0 +1,21 @@
+-- erwartet: M120
+-- **Gift 232 -- `R::F`, und `R` ist gar kein `reason`.**
+--
+-- Die Gegenprobe zu `beispiele/48`: dieselbe Form, ein Name, den keine `reason`-Zeile
+-- erklaert. **Ohne diese Absage waere der Grunderzeuger die dritte Stelle, an der ein
+-- unbekannter Name durchfaellt** -- `TODO.md` fuehrt die anderen zwei (`pub extern fn
+-- f(x : GibtsNicht)` und `count FEHLT`) als offenen Posten.
+--
+-- *Bis zum 2026-08-21 fiel diese Zeile mit `M119`*, weil `Buchfehler::Unbelegt` als Ort mit
+-- Feldsuffix gelesen wurde -- die Meldung sprach vom falschen Gegenstand.
+
+module gift::grund_ohne_deklaration {
+
+impl fn f(x : u32) -> u32 effects { pure } costs <= 4 ops {
+    if x == 0 {
+        return Buchfehler::Unbelegt;
+    }
+    return x;
+}
+
+}

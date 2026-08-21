@@ -140,6 +140,36 @@ const BENANNT: &[&str] = &[
     // den liest Gabbro nicht, und das ist der Kern der Sache.
     "A001", "A002", "A003", "A004", "N026",
     "U001", "U002", "U003", "U004", "U005", "U006", "U007", // Traegergruppe: Sperrabdruck, Zug und Verbindungsaussage
+    // --- Stufe 7 ---
+    // **`M120` -- `FRAGMENTE.md`:269 schreibt `return Fehler::Buchfuehrung;`.**
+    //
+    // *Das ist der Bedarfsbeleg fuer den Grunderzeuger, und er stand die ganze Zeit im
+    // Ordner.* Der Ausschnitt kommt aus echtem Code, er meldet einen Fehler an seinen Rufer
+    // zurueck, und er schreibt dafuer genau die Form, die die Sprache bis zum 2026-08-21
+    // nicht kannte. **Bis dahin fiel die Zeile mit `M119`** (*„`Fehler` is declared
+    // nowhere"*) -- eine Absage, die den Namen nicht als GRUND las, sondern als Ort.
+    //
+    // Jetzt liest sie ihn als Grund und sagt, was fehlt: `reason Fehler` ist in diesem
+    // Ausschnitt nicht deklariert. *Dieselbe Lage wie bei `N018` und `N020` -- in der vollen
+    // Uebersetzungseinheit loest der Name auf, im Ausschnitt nicht.*
+    "M120",
+    // **`M124` -- `FRAGMENTE.md`:657 schreibt `set_reg(f, SYSNO_RESULT,
+    // IpcResult::ErrQuiescing);`.**
+    //
+    // Ein Grundwert als ARGUMENT, und das ist eine der Stellungen, die `M124` absagt: ein
+    // Grund geht durch `return`, durch den Gegenstand eines `match` und durch einen
+    // Vergleich, und durch nichts sonst.
+    //
+    // **Die Absage ist richtig und der Bedarf ist echt.** Die Zeile schreibt das
+    // Syscall-Ergebnis in das Nutzerregister -- das ist die **ABI**, nicht Gabbros
+    // Fehlerkanal, und die Zahl an der `reason`-Zeile ist genau das, was dort reisen soll.
+    // *Wie ein Grund die Syscall-Grenze ueberquert, ist nicht entschieden* -- gebucht in
+    // `TODO.md`.
+    //
+    // > Dieselbe Lage wie bei `S006`: **das Fragment hat den Bedarf vorweggenommen, und die
+    // > Sprache hat ihn nicht.** Ihn hier stillschweigend zuzulassen hiesse, die
+    // > Stellungsregel fuer den einen Fall aufzugeben, fuer den sie am wenigsten gilt.
+    "M124",
 ];
 
 #[test]

@@ -1551,6 +1551,33 @@ impl<'a> Parser<'a> {
                             art: ExprArt::Ruf(ruf),
                         });
                     }
+                    // **`R::F` ist ein GRUNDWERT** -- `reasonval` in `SYNTAX.md`
+                    // (Stufe 7, 2026-08-21).
+                    //
+                    // Zwei Glieder, kein `(` dahinter: das ist die Form, in der ein
+                    // `reason`-Fall geschrieben wird. Bis heute wurde daraus ein `Ort` mit
+                    // Feldsuffix -- **also ein Ort namens `HolFehler` mit einem Feld `Leer`**,
+                    // und M1 sagte folgerichtig `M119`.
+                    //
+                    // > *Gemessen vor dem Bau (2026-08-21):* zwei Glieder mit
+                    // > IDENTIFIER-Basis und ohne `(` kommen im ganzen Korpus **null Mal**
+                    // > vor -- `u64::max` nimmt den Zweig darueber (`ist_intty`), und
+                    // > `beispiel::eintritt::syscall_verteiler` steht in einer
+                    // > `dispatch`-Klausel und nicht in einem Ausdruck.
+                    // > `grep -rn "::" beispiele/*.gab | grep -v -e "-- " -e module -e use`
+                    //
+                    // Die Basis ist die einzige Stelle, an der der Parser NICHT entscheiden
+                    // kann, ob ein Grund gemeint ist -- er kennt die Deklarationen nicht.
+                    // **Also entscheidet er nach der Form und M1 nach dem Namen** (`M120`).
+                    if pfad.teile.len() == 2 {
+                        return Ok(Expr {
+                            span,
+                            art: ExprArt::Grund {
+                                grund: pfad.teile[0].clone(),
+                                fall: pfad.teile[1].clone(),
+                            },
+                        });
+                    }
                     let ort = Ort {
                         basis: pfad.teile[0].clone(),
                         suffixe: pfad.teile[1..]

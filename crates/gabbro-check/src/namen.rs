@@ -1873,6 +1873,59 @@ fn fehlerkanal(baum: &Programm, absagen: &mut Absagen) {
             }
         }
     }
+    // **`N034` -- ein eigener Rumpf erklaert `or R` und kann nie scheitern** (Stufe 7,
+    // 2026-08-21).
+    //
+    // Der dritte Zahn derselben Zange, und er fehlte, weil es bis heute gar keine
+    // Schreibform gab: *jede `-> T or R`-Signatur des Korpus stand an einem `extern fn`*,
+    // also an einem Rumpf, den Gabbro nie sieht. Gemessen vor dem Bau:
+    //
+    // ```text
+    // impl fn hol(x : u32) -> u32 or HolFehler … { return x; }
+    //   ->  0 Fehler, 0 Hinweise      (gabbro pruefe, 2026-08-21)
+    // ```
+    //
+    // Der Erzeuger schrieb dazu `(void)_grund;` mit dem Befund als Kommentar -- das Loch
+    // stand im erzeugten C und in keiner Absage. **Jetzt steht es in einer.**
+    //
+    // > `extern fn` und `prim fn` sind ausgenommen und muessen es sein: dort IST die
+    // > Deklaration alles, was Gabbro hat. *Die Regel spricht ueber Ruempfe, die dieser
+    // > Uebersetzer sieht* -- W10, nicht abgewiesen ist nicht bestaetigt.
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        let Some(r) = &f.fehler else { return };
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        fn scheitert(b: &Block) -> bool {
+            b.anweisungen.iter().any(|s| {
+                if let StmtArt::Return(Some(e)) = &s.art {
+                    if matches!(e.art, ExprArt::Grund { .. }) {
+                        return true;
+                    }
+                }
+                crate::unterbloecke(s).into_iter().any(scheitert)
+            })
+        }
+        if !scheitert(b) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N034",
+                    f.name.span,
+                    format!(
+                        "`{}` declares `or {}`, and its body never returns a reason",
+                        f.name.text, r.text
+                    ),
+                )
+                .mit_notiz(
+                    "`return <R>::<case>;` is how a body produces a reason -- without one \
+                     the channel is a promise with no redeemer",
+                )
+                .mit_notiz(
+                    "the lowering gives this function a `*_grund` out-parameter that no \
+                     path ever writes",
+                ),
+            );
+        }
+    });
     // **Kein fruehes Aussteigen, wenn die Karte leer ist** -- `N028` ist gerade DANN faellig:
     // ein `let … else` in einer Einheit, in der keine Funktion scheitern kann, ist ein
     // `else`-Zweig ohne jeden Weg dorthin. *Die Abkuerzung haette die Regel um ihren

@@ -574,6 +574,10 @@ pub fn unterausdruecke(e: &Expr) -> Vec<&Expr> {
         | ExprArt::Gleitkomma { .. }
         | ExprArt::Wahr
         | ExprArt::Falsch
+        // **Ein Grundwert traegt keinen Unterausdruck** (Stufe 7) -- `R::F` ist ein
+        // Blatt, wie `true`. Er steht hier ausgeschrieben und nicht in einem `_`-Zweig:
+        // *ein schweigender Auffangzweig ist die haeufigste Lochform dieses Ordners.*
+        | ExprArt::Grund { .. }
         | ExprArt::Ergebnis => {}
         // **Ein Ort trägt Ausdrücke** — in jedem `[…]`. Das war die eine vergessene Kante.
         ExprArt::Ort(o) | ExprArt::Alt(o) => aus.extend(ausdruecke_im_ort(o)),
@@ -635,6 +639,10 @@ pub fn alle_orte(e: &Expr) -> Vec<&Ort> {
             | ExprArt::Wahr
             | ExprArt::Falsch
             | ExprArt::Ergebnis
+            // **Ein Grundwert ist KEIN Ort** (Stufe 7) -- und genau darum ist er eine
+            // eigene Variante: als `Ort` haette ihn `effects` als Lesen einer Stelle
+            // gezaehlt, die es gar nicht gibt.
+            | ExprArt::Grund { .. }
             | ExprArt::Ruf(_)
             | ExprArt::Klammer(_)
             | ExprArt::Unaer(_, _)

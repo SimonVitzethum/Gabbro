@@ -1,0 +1,33 @@
+-- erwartet: M124
+-- **Gift 236 -- mit einem Grund wird gerechnet.**
+--
+-- Die Zahl an einer `reason`-Zeile ist da, damit ein BERICHT sie nennen kann. Sie zu
+-- addieren macht aus einer Fallunterscheidung eine Arithmetik, und der naechste Fall mit
+-- einer anderen Zahl rechnet dann anders.
+--
+-- **Der Riegel dafuer war da und schwieg:** `Typ::Grund` hat keinen `bereich()`, also fiel
+-- die Arithmetik auf `Unbekannt` zurueck -- gemessen am 2026-08-21 mit *0 Fehlern und zwei
+-- Ausdruecken ohne Typ.* *Ein Riegel ist keine Absage*, derselbe Satz, den `M117` ueber
+-- `IntBereich::ist_leer()` stehen hat.
+--
+-- Der VERGLEICH gegen einen Grund derselben Deklaration bleibt erlaubt -- er steht in
+-- `beispiele/48` und ist die zweite der zwei Tueren.
+
+module gift::mit_einem_grund_gerechnet {
+
+reason Buchfehler {
+    Unbelegt = 1 "der Platz war gar nicht belegt"
+    exhaustive
+}
+
+extern fn hol() -> u32 or Buchfehler effects { pure } costs <= 1 ops;
+
+impl fn f() -> u32 effects { pure } costs <= 20 ops {
+    let v = hol() else (e) {
+        let z = e + 1;
+        return z;
+    }
+    return v;
+}
+
+}

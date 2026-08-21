@@ -86,6 +86,13 @@ struct Namen {
     /// wer irgendwo anders erklaert ist, faellt heraus. **Ohne das weiss ein `match m`
     /// nicht, WELCHE Variantenmenge erschoepfend sein muss.**
     markenwerte: HashMap<String, String>,
+    /// **Name -> `reason`, fuer das `e` eines `let … else`** (Stufe 7, 2026-08-21).
+    ///
+    /// Anders als `markenwerte` ist diese Karte NICHT ueber die Einheit gesammelt, sondern
+    /// wird an genau einer Stelle gesetzt: beim Absenken des `let … else`, fuer die Dauer
+    /// seines `else`-Zweiges. *`e` lebt nur dort, und eine Karte, die laenger lebt als ihr
+    /// Name, ist der Fehler, den `eigene_sicht` weiter unten beschreibt.*
+    gruendewerte: HashMap<String, String>,
     /// Die `accumulates`-Namen. **Ein Lesen wird ein Ruf, ein Schreiben auch** -- sonst
     /// stuende im C ein Zugriff auf eine Zelle, die es nicht gibt.
     akkus: BTreeSet<String>,
@@ -3268,16 +3275,18 @@ fn funktion(
         }
     }
     // **Der Rueckgabetyp reist mit in den Rumpf** -- ein `return None` haengt an ihm.
-    // **Der Grund hat keinen Erzeuger, und das steht jetzt IM erzeugten C** (2026-08-20).
     //
-    // `primary` kennt keine Produktion fuer einen `reason`-Wert -- kein Gabbro-Rumpf kann
-    // je einen herstellen. `*_grund` bleibt darum ungeschrieben, und ohne diese Zeile
-    // scheitert die Uebersetzung unter `-Werror=unused-parameter`. *Die Zeile verschweigt
-    // den Befund nicht, sie schreibt ihn hin.*
-    if f.fehler.is_some() {
+    // **Der Grund hat seit Stufe 7 einen Erzeuger** (2026-08-21). Bis dahin stand hier
+    // bedingungslos `(void)_grund;` mit dem Befund im Kommentar -- *das Loch stand im
+    // erzeugten C und in keiner Absage.* Jetzt schreibt `return R::F;` die Stelle, und die
+    // Ruhigstellung bleibt nur fuer den Rumpf, der es nicht tut.
+    //
+    // > **Und der Fall, in dem sie noch faellig ist, hat einen Namen:** `N034` weist ihn im
+    // > Pruefer ab. Die Zeile ist damit die zweite Flaeche derselben Regel und kein Ersatz
+    // > fuer sie -- «B24». *Steht sie noch da, ist ein Pass durchgerutscht.*
+    if f.fehler.is_some() && !rumpf_scheitert(b) {
         aus.push_str(
-            "    (void)_grund; /* no Gabbro body can produce a reason -- the channel is \
-             declared, never written */\n",
+            "    (void)_grund; /* this body never returns a reason -- N034 */\n",
         );
     }
     let rahmen = Austritt {
@@ -3509,6 +3518,33 @@ fn anweisung(
                 // > vier Stellen gebaut**, und die vierte hat kein Beispiel je ausgeloest.
                 Some(x) if geist_wert(x, u) => {
                     aus.push_str(&format!("{e}return;\n"));
+                }
+                // **`return R::F;` ist die FEHLERrueckgabe** (Stufe 7, 2026-08-21).
+                //
+                // Die Gegenseite der Zeile darunter: dort geht der Erfolg durch `*_wert`
+                // und `true`, hier der Grund durch `*_grund` und `false`. **Damit ist der
+                // Kanal zum ersten Mal in beide Richtungen schreibbar** -- bis heute stand
+                // an seiner Stelle `(void)_grund;` mit dem Befund als Kommentar, weil
+                // `primary` keine Produktion fuer einen Grundwert kannte.
+                //
+                // *Ohne `austritt.fehlerkanal` waere das hier unerreichbar:* M1 sagt `M122`
+                // an einer Funktion ohne `or R`, also kommt ein Grundwert nur hierher, wenn
+                // die Signatur den Ausgang hat. **Der Erzeuger verlaesst sich trotzdem
+                // nicht darauf und weigert sich** -- «B24», eine Regel, die nur auf einer
+                // Flaeche steht, ist eine halbe.
+                Some(x) if matches!(x.art, ExprArt::Grund { .. }) => {
+                    if !austritt.fehlerkanal {
+                        weigere(
+                            absagen,
+                            x.span,
+                            "`return <reason>` in a function that declares no `or <reason>`",
+                        );
+                        return;
+                    }
+                    aus.push_str(&format!(
+                        "{e}*_grund = {};\n{e}return false;\n",
+                        ausdruck(x, u, absagen)
+                    ));
                 }
                 // **`return None` / `return Some(i)`** -- der Sonderwert kommt aus dem
                 // Rueckgabetyp der Funktion, nicht aus dem Ausdruck.
@@ -4138,14 +4174,33 @@ fn anweisung(
                 };
                 aus.push_str(&format!("{e}{t} {};\n", l.name.text));
             }
+            // **`(void)e;` nur, wenn der Zweig `e` nicht liest** (Stufe 7, 2026-08-21).
+            //
+            // Bis heute stand die Zeile immer da, und sie war immer wahr: `e` hatte keinen
+            // Leser, weil kein Pass wusste, dass der Name existiert. *Jetzt hat er einen* --
+            // und eine Ruhigstellung neben einem Gebrauch behauptet etwas Falsches ueber
+            // den Code, der darunter steht. Dieselbe Buchung wie beim toten Parameter.
+            let mut gelesen = BTreeSet::new();
+            benutzte_namen(&l.sonst, &mut gelesen);
+            let stillgelegt = if gelesen.contains(&l.fehlername.text) {
+                String::new()
+            } else {
+                format!(" (void){};", l.fehlername.text)
+            };
             aus.push_str(&format!(
-                "{e}{{\n{e}    {grund} {}; (void){};\n{e}    if (!{name}({})) {{\n",
-                l.fehlername.text,
+                "{e}{{\n{e}    {grund} {};{stillgelegt}\n{e}    if (!{name}({})) {{\n",
                 l.fehlername.text,
                 ruf_args.join(", ")
             ));
+            // **`e` traegt seinen `reason` in die Sicht des `else`-Zweiges** -- und nur
+            // dorthin. Ohne diese Zeile weiss ein `match e { … }` darin nicht, welche
+            // Fallmenge erschoepfend sein muss, und der Erzeuger weigert sich mit `C001`.
+            let mut innen = u.clone();
+            innen
+                .gruendewerte
+                .insert(l.fehlername.text.clone(), grund.clone());
             for k in &l.sonst.anweisungen {
-                anweisung(k, aus, u, absagen, tiefe + 2, austritt);
+                anweisung(k, aus, &innen, absagen, tiefe + 2, austritt);
             }
             aus.push_str(&format!("{e}    }}\n{e}}}\n"));
         }
@@ -5001,6 +5056,47 @@ fn match_markiert(
     }
 }
 
+/// **Der `switch` ueber einem `reason`** (Stufe 7, 2026-08-21).
+///
+/// Kein Binder, keine Nutzlast: ein Grundfall traegt eine Zahl und einen Text, und der Text
+/// steht im erzeugten C schon als Kommentar am `enum`. *Deshalb ist diese Funktion kuerzer
+/// als ihre Schwester `match_markiert`* -- die Abgeschlossenheit prueft `M123`, hier wird sie
+/// nur weitergereicht.
+#[allow(clippy::too_many_arguments)]
+fn match_grund(
+    m: &MatchStmt,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+    austritt: &Austritt,
+    name: &str,
+    grund: &str,
+) {
+    let e = einzug(tiefe);
+    aus.push_str(&format!("{e}switch ({name}) {{\n"));
+    for z in &m.zweige {
+        aus.push_str(&format!("{e}case {grund}_{}: {{\n", z.variante.text));
+        for k in &z.rumpf.anweisungen {
+            anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+        }
+        aus.push_str(&format!("{e}}} break;\n"));
+    }
+    aus.push_str(&format!("{e}}}\n"));
+    // Dieselbe Weitergabe wie bei `D005`: die Fallunterscheidung ist geschlossen, jeder
+    // Zweig kehrt zurueck, und `-Wreturn-type` kennt die Entscheidung nicht.
+    if m.zweige.iter().all(|z| {
+        z.rumpf
+            .anweisungen
+            .last()
+            .is_some_and(|k| matches!(&k.art, StmtArt::Return(_)))
+    }) {
+        aus.push_str(&format!(
+            "{e}#if defined(__GNUC__)\n{e}__builtin_unreachable();\n{e}#endif\n"
+        ));
+    }
+}
+
 /// Welchen `tagged type` traegt dieser Ausdruck? **Ueber den erklaerten Typ, nicht ueber die
 /// Variantennamen** -- zwei Typen duerfen gleichnamige Varianten haben.
 fn marken_quelle(e: &Expr, u: &Namen) -> Option<String> {
@@ -5033,6 +5129,24 @@ fn match_option(
     if let Some(typ) = marken_quelle(&m.gegenstand, u) {
         match_markiert(m, s, aus, u, absagen, tiefe, austritt, &typ);
         return;
+    }
+    // **`match e { … }` ueber einem GRUND** (Stufe 7, 2026-08-21).
+    //
+    // Ein `reason` senkt zu einem `enum` mit ausgeschriebenen Werten ab, also ist der
+    // `match` darueber ein gewoehnlicher `switch` -- **ohne `default:`, und das aus genau
+    // demselben Grund wie beim `tagged type`:** ohne Sammelzweig wird `-Wswitch` ein
+    // zweiter Leser der Regel, die im Pruefer `M123` heisst.
+    //
+    // > *Ohne diese Absenkung waere `match e` eine Form, die `gabbro pruefe` annimmt und
+    // > `gabbro emit` ablehnt* -- und ich haette den Fehlerkanal an einem Ende geoeffnet
+    // > und am anderen zugelassen.
+    if let ExprArt::Ort(o) = &m.gegenstand.art {
+        if o.suffixe.is_empty() {
+            if let Some(g) = u.gruendewerte.get(&o.basis.text).cloned() {
+                match_grund(m, aus, u, absagen, tiefe, austritt, &o.basis.text, &g);
+                return;
+            }
+        }
     }
     let Some(tabelle) = option_quelle(&m.gegenstand, u) else {
         weigere(absagen, s.span, "`match` over something other than an `option index into T`");
@@ -5297,6 +5411,24 @@ fn option_wert(e: &Expr, tab: &str, u: &Namen, absagen: &mut Absagen) -> Option<
 }
 
 /// Does this expression yield a ghost? Today: a call to a function with a ghost return.
+/// **Schreibt dieser Rumpf irgendwo `*_grund`?** (Stufe 7, 2026-08-21)
+///
+/// Genau dann, wenn ein `return R::F;` auf irgendeinem Pfad darin steht. Der Erzeuger
+/// braucht die Antwort fuer eine Zeile, die er sonst zu viel schreibt -- `(void)_grund;`
+/// neben einem `*_grund = …` ist kein Fehler, aber eine Behauptung, die nicht mehr stimmt.
+///
+/// *Dieselbe Frage stellt `N034` im Pruefer, und dort ist sie eine Absage.*
+fn rumpf_scheitert(b: &Block) -> bool {
+    b.anweisungen.iter().any(|s| {
+        if let StmtArt::Return(Some(e)) = &s.art {
+            if matches!(e.art, ExprArt::Grund { .. }) {
+                return true;
+            }
+        }
+        crate::unterbloecke(s).into_iter().any(rumpf_scheitert)
+    })
+}
+
 fn geist_wert(e: &Expr, u: &Namen) -> bool {
     match &e.art {
         ExprArt::Ruf(r) => r
@@ -5557,6 +5689,11 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
         ExprArt::Wahr => "true".into(),
         ExprArt::Falsch => "false".into(),
         ExprArt::Ort(o) => ort(o, u, absagen),
+        // **`R::F` wird `R_F`** (Stufe 7, 2026-08-21) -- genau der Name, den
+        // `ItemArt::Reason` weiter oben in sein `typedef enum` schreibt. *Die zwei Stellen
+        // muessen dieselbe Regel benutzen, sonst erzeugt der Uebersetzer einen Namen, den
+        // er selbst nicht deklariert hat* -- `cc` faengt das, aber erst am Ende.
+        ExprArt::Grund { grund, fall } => format!("{}_{}", grund.text, fall.text),
         ExprArt::Klammer(x) => format!("({})", ausdruck(x, u, absagen)),
         ExprArt::Binaer(op, a, b) => {
             // **Ein `wrapping`-Slot rechnet UNSIGNED -- sonst sagt das C etwas anderes als

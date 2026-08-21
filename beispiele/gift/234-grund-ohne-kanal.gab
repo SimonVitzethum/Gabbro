@@ -1,0 +1,26 @@
+-- erwartet: M122
+-- **Gift 234 -- ein Grund wird zurueckgegeben, und die Signatur hat keinen Ausgang.**
+--
+-- Die Gegenrichtung zu `N034`: dort erklaert eine Funktion einen Kanal und benutzt ihn nie,
+-- hier benutzt sie einen, den sie nicht erklaert hat. **Beide zusammen halten die Aussage
+-- fest, dass `-> T or R` und `return R::F` DASSELBE meinen.**
+--
+-- *Ohne diese Absage waere die Absenkung stillschweigend falsch*: die C-Signatur haette
+-- keinen `*_grund`-Parameter, und der Erzeuger muesste erfinden, wohin der Wert geht. Er
+-- weigert sich dort ein zweites Mal -- «B24», eine Regel auf nur einer Flaeche ist eine halbe.
+
+module gift::grund_ohne_kanal {
+
+reason Buchfehler {
+    Unbelegt = 1 "der Platz war gar nicht belegt"
+    exhaustive
+}
+
+impl fn f(x : u32) -> u32 effects { pure } costs <= 4 ops {
+    if x == 0 {
+        return Buchfehler::Unbelegt;
+    }
+    return x;
+}
+
+}

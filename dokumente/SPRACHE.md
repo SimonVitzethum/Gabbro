@@ -1013,6 +1013,53 @@ one most programs never touch):
 * **`N029`** — a call to a function that CAN fail, standing outside a `let … else`. The reason
   falls on the floor unseen — which is precisely the hidden control flow this construct exists
   to prevent.
+* **`N034`** — a body of ITS OWN that declares `or R` and never returns a reason. The third
+  tooth, and it was missing because until 2026-08-21 there was no way to write one:
+  *every `-> T or R` in the corpus stood at an `extern fn`.* The emitter wrote `(void)_grund;`
+  with the finding as a comment beside it; **the hole stood in the generated C and in no
+  refusal.**
+
+#### 8.1.1 The PRODUCER — `return R::F;` *(Stufe 7, 2026-08-21)*
+
+`primary` knew no production for a reason value, so **no Gabbro function ever produced one**.
+The channel had a declaration and no way to write it — «B9» a second time, and the movement
+K100's second gate stands against: a promise with no redeemer.
+
+```gabbro
+impl fn platz_freigeben(g : ptr<normal, rw> Griffe, s : Platznr) -> Zaehler or Buchfehler … {
+    if !g.slots[s].belegt { return Buchfehler::Unbelegt; }
+    narrow g.slots[s].zaehler to 1 .. HOECHST else { return Buchfehler::Buchfuehrung; }
+    …
+}
+```
+
+**No new word and no new statement.** `return R::F;` is the failure exit, because a reason
+value can never have the success type — that is the condition under which the saving is
+allowed, and where it did not hold this folder pays for a silent misread instead.
+
+```c
+bool platz_freigeben(Griffe *restrict g, uint32_t s, uint32_t *_wert, Buchfehler *_grund) {
+    if (!(g->slots[s].belegt)) { *_grund = Buchfehler_Unbelegt; return false; }
+    …
+    *_wert = g->slots[s].zaehler; return true;
+}
+```
+
+**A reason goes through exactly two doors**, and both are checked:
+
+| door | rule |
+|---|---|
+| `return` in a function that declares `or R` | **`M122`** — a different `R`, or none, is a refusal |
+| a comparison against a reason of the SAME declaration | **`M124`** — everything else; the number in a `reason` line is there so a REPORT can name it |
+
+And the consumer side got what it never had: **`e` carries a type.** Until 2026-08-21
+`fehlername` stood in exactly ONE file of the checker — in the *emitter* — so `match e { … }`
+fell with `M119`, *„`e` is declared nowhere"*. A clause with no reader. Over a reason a
+`match` is now closed the same way `D005` closes one over a `tagged type`: **`M123`**.
+
+> *That last rule closes a hole the producer itself opened.* Before Stufe 7 the question of
+> which arms a `match e` must name was never due, because `e` did not exist. With the type it
+> became due — and stood open for one run.
 
 #### 8.2 `leave` and `next`
 
