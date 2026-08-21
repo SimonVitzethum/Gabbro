@@ -91,10 +91,58 @@ fn gleitkommaannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
     });
 }
 
+/// **Der SPERRABDRUCK -- die Praemisse, die `Gruppe_Erhaltung.thy` unterstellt hat.**
+///
+/// `beweise/Gruppe_Erhaltung.thy`, Locale `zug`, nimmt `voll i` als *„der Abdruck ist
+/// gehalten"* und schliesst daraus, dass niemand hinsieht. **Dass ein gehaltener Abdruck
+/// einen fremden Kern wirklich fernhaelt, ist eine Aussage ueber das SPEICHERMODELL** und
+/// faellt nicht in diesen Satz -- `gabbro schablonen` fuehrte sie bis zum 2026-08-21 als
+/// haengende Praemisse von `gruppe.ops`, mit der Adresse *„braeuchte: die AXIOMSCHICHT"*.
+///
+/// *Vorher war die Praemisse unsichtbar; jetzt steht sie in der Zahl.*
+///
+/// Sie wird **ERZEUGT statt verlangt**, aus demselben Grund wie die zwei
+/// Gleitkommaannahmen darueber: es ist eine Maschinenfrage, keine Programmfrage. Jedes
+/// Programm mit einer Verbindungs-Invariante haette dieselbe Zeile schreiben muessen, und
+/// eine Zeile, die jeder abschreibt, ist eine Zeile, die niemand liest.
+///
+/// **Nicht falsifizierbar, und zwar aus dem Grund von `release_stellt_sichtbarkeit_her`:**
+/// eine Sonde, die den Abdruck haelt und nachsieht, ob jemand hingesehen hat, zeigt nur,
+/// dass diesmal niemand hingesehen hat. *Ein Speichermodell ist durch Ausfuehrung nicht
+/// widerlegbar.*
+fn sperrabdruckannahme(baum: &Programm, out: &mut Vec<Eintrag>) {
+    let mut ja = false;
+    crate::fuer_jedes_item(baum, &mut |i| {
+        if matches!(&i.art, ItemArt::Gruppe(_)) {
+            ja = true;
+        }
+    });
+    if !ja {
+        return;
+    }
+    out.push(Eintrag {
+        name: "sperrabdruck_haelt_fremde_kerne_fern".into(),
+        art: "assume",
+        klasse: Klasse::NichtFalsifizierbar {
+            grund: "das Speichermodell ist nicht durch Ausfuehrung widerlegbar -- eine Sonde, \
+                    die den Abdruck haelt und nachsieht, zeigt nur, dass diesmal niemand \
+                    hingesehen hat"
+                .into(),
+        },
+        aussage: "Solange der Zieher den GANZEN Sperrabdruck einer Gruppe haelt, kann kein \
+                  fremder Kern die Traeger zusammen ansehen. `Gruppe_Erhaltung.thy` nimmt \
+                  genau das im Locale `zug` als `abdruck_innen` an und beweist darauf, dass \
+                  der Zwischenzustand folgenlos ist -- die Annahme selbst faellt nicht in \
+                  den Satz, sondern hierher."
+            .into(),
+    });
+}
+
 /// Sammelt die Annahmenmenge eines Baums.
 pub fn sammle(baum: &Programm) -> Vec<Eintrag> {
     let mut out = Vec::new();
     gleitkommaannahmen(baum, &mut out);
+    sperrabdruckannahme(baum, &mut out);
     sammle_items(&baum.items, &mut out);
     out.sort_by(|a, b| a.name.cmp(&b.name));
     out

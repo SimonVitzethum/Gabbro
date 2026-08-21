@@ -25,7 +25,7 @@ Alles davon gehört auf `ki-pc-fisch-101` (`cargo run`, `CLAUDE.md`).
 | | |
 |---|---|
 | **109** | fremde Rümpfe im Korpus (`beispiele/*.gab` + `messung/*/*.gab`) |
-| **10** | davon **sprechen ihre Pflicht aus** — `ensures` oder `maintains` an einer Deklaration ohne Rumpf |
+| **11** | davon **sprechen ihre Pflicht aus** — `ensures` oder `maintains` an einer Deklaration ohne Rumpf |
 | **1** | davon **verengt wirklich** etwas beim Rufer |
 
 Die eine Stelle:

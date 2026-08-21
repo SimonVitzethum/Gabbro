@@ -47,6 +47,88 @@ names the subject — **logic**, and it belongs written down.
 
 ---
 
+### The first DISPUTED case, and it is not termination *(2026-08-21)*
+
+Termination is the borderline case the rule **decides**. Here is one it does not, and it is a
+real site in foreign code, not a construction: **`caprock`, the reclaim of a dying thread's
+kernel stack.** *(`../caprock-messbasis`, branch `arch/x86_64`, read-only —
+`crates/caprock-sched/src/lib.rs`:183-197 and :1973-1983.)*
+
+```rust
+// `record_zombie` legt die Stack-Region des Sterbenden in den Zombie-Ring; von dort gibt SIE JEDER
+// Kern per `reap_core` an den Allokator zurueck [...]. Beim Selbst-Ende (`exit_current`) ist das
+// aber genau die Region, auf der der Kernel in diesem Moment noch rechnet: der Trap-Handler laeuft
+// auf SP_EL1, und das ist bei einem EL1-Thread SEIN Stack. Zwischen `record_zombie` und dem
+// `mov sp, x0` des Vektor-Epilogs darf ein fremder Kern die Region also holen [...]
+```
+
+**The obligation is:** *when the region enters the zombie ring, no core is still executing on
+it.*
+
+**Apply the rule literally, and it says PLUMBING.** The sentence mentions cores, a stack, a
+memory region, a moment — the machine, and nothing else. No subject-matter concept appears; you
+could not tell from it whether this kernel schedules threads or routes packets. It is the same
+family the table already books as plumbing: *no alias*, *frame condition: what is not touched*.
+
+**And it cannot fall by construction.** The last reader stops being one at `mov sp, x0` in the
+vector epilogue — an instruction below every type system, in a window that opens *before* it and
+closes *after*. There is no ownership discipline that reaches it, because the holder of the
+reference is the hardware stack pointer.
+
+**What caprock actually does is the sharpest part of the case.** It does not discharge the
+obligation. It **counts the opportunity** — `ZOMBIE_UNTER_FUESSEN`, incremented when the current
+frame lies inside the region just released for pickup — and it records that a canary at the
+bottom of the region found *"0 Diebstaehle"* over **4295 windows in 108 runs** before being
+removed.
+
+> That is an assurance drawn from the **absence of a refutation** — **R15** and **W10**, in real
+> kernel code, written by people who knew exactly what they were doing and had nothing better
+> available.
+
+#### The decision
+
+**The dividing line holds. What breaks is a second claim that was riding on it unstated:** that
+*plumbing* and *must fall by construction* are the same set. They are not.
+
+| | discharged by | |
+|---|---|---|
+| **logic** | the programmer writes the proof | as before |
+| **plumbing** | falls by construction | as before |
+| **plumbing that CANNOT fall** | **nobody — it is named, and counted** | *the third outcome* |
+
+The third row is not a loophole; it is what the **axiom layer** has been all along, and it is why
+that layer is countable and ratchetable rather than a footnote. *This case belongs in it, beside
+`release_stellt_sichtbarkeit_her` and `sperrabdruck_haelt_fremde_kerne_fern`.*
+
+#### Does the abort condition fire?
+
+The abort condition reads: *"a **named** plumbing obligation remains **that the programmer has to
+discharge by hand**."* Here the programmer discharges nothing by hand — **nobody discharges it at
+all.** It is assumed, named, and counted. **So it does not fire.**
+
+**But only because the axiom layer exists.** Without a place to name such an obligation, this
+site would be exactly the thesis-ending shape: a plumbing obligation, left to the programmer, in
+the one language construct that was supposed to make plumbing disappear. *The escape is not that
+the case is mild — it is that the layer it lands in is finite, named and ratcheted.*
+
+Gabbro's answer to this specific site is **`H015`** (built 2026-08-21): a `rcu … reclaims` now
+**demands** a named grace-period assumption, the way `S003` demands one at `progress`. It is worth
+being precise about what that buys, because it is less than it sounds: *the assumption is named,
+not established.*
+
+> **And the residue is measured, not estimated.** Of the 27 assumptions in the corpus that name a
+> falsifier, **none exists as a runnable probe** — see [`messung/AXIOMSCHICHT.md`](../messung/AXIOMSCHICHT.md).
+> Naming is not discharging, and the axiom layer is where that debt is visible instead of
+> dissolved.
+
+*Where a static check **can** reach, caprock reaches:* `crates/caprock-sync/src/lib.rs`:198-206
+turns the IRQ-masking assumption into a `const _: () = assert!(…)` that fails the build on a
+bare-metal target without masking. **That is the line.** Findings of the kind above lie on the
+far side of it, and the criterion's job is to say so out loud rather than to count them as
+plumbing that will one day fall.
+
+---
+
 ### What that does to the existing measurements
 
 **The numbers stay, their reading changes** — and both measurements are consequently **not yet

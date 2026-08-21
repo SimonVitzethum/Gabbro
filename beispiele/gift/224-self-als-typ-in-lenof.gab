@@ -1,0 +1,23 @@
+-- erwartet: M120
+-- **Gift 224 -- dasselbe `Self`, die andere Schreibweise, und sie fiel gar nicht.**
+--
+-- `typ_oder_ort` (`parse.rs`) entscheidet am naechsten Zeichen: **`Self` allein ist ein TYP,
+-- `Self.feld` ein ORT.** Gift 223 nimmt den Ort und fiel schon vorher -- diese Zeile nimmt
+-- den Typ, und sie ging bis zum 2026-08-21 mit **0 Fehlern** durch.
+--
+-- Der Grund lag eine Ebene tiefer: `ExprArt::Eingebaut` fiel im Namenssammler in den
+-- Auffangzweig. *Was der Sammler nicht betritt, prueft `M109` nicht* -- und `M111` schwieg
+-- mit, weil seine Bedingung `!namen.is_empty()` traegt: ein blinder Zweig sammelt keine
+-- Namen, also sah die Regel „nichts zu sagen" statt „nichts gesehen".
+--
+-- **Zwei Schreibweisen derselben Aussage, und nur eine fiel.** Genau die Lage, in der eine
+-- Regel bewacht aussieht und es nicht ist.
+
+module gift224 {
+
+extern fn kopf_laenge() -> u32
+    ensures result <= lenof(Self)
+    effects { pure }
+    costs   <= 8 ops;
+
+}

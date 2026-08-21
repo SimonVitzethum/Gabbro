@@ -1,0 +1,22 @@
+-- erwartet: M120
+-- **Gift 223 -- `Self` in einem `ensures`, und es zeigt auf nichts.**
+--
+-- `Self` nennt den TRAEGER einer `table` oder eines `format`. **Eine Funktion ist keiner:**
+-- `ensures` sitzt an einer `fn`, und eine `fn` steht nie in einer `table`.
+--
+-- Bis zum 2026-08-21 fiel diese Zeile an `M109` mit dem Satz „is not declared here" -- und
+-- der schickt den Leser los, ein `Self` zu ERKLAEREN, was die Sprache nicht zulaesst. *Die
+-- Absage war im Urteil richtig und im Rat falsch.* `M120` nennt stattdessen den Ort, an den
+-- die Aussage gehoert: die `invariant` des Traegers.
+--
+-- Die saubere Seite steht in `beispiele/01-tabelle.gab`, Zeile 70: dort steht `Self` in der
+-- `invariant` einer `table`, wo es einen Traeger HAT.
+
+module gift223 {
+
+extern fn rest_melden() -> u32
+    ensures Self.slots[0].rest <= 4096
+    effects { pure }
+    costs   <= 8 ops;
+
+}

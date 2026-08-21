@@ -1,0 +1,24 @@
+-- erwartet: M109
+-- **Gift 225 -- der Tippfehler steht in einem `sizeof`, und dort sah ihn niemand.**
+--
+-- `M109` prueft seit dem 2026-08-18, dass die Namen einer Nachbedingung aufloesen. Es prueft
+-- sie aber nur dort, wo der Namenssammler HINKOMMT -- und `ExprArt::Eingebaut` erreichte er
+-- bis zum 2026-08-21 nicht.
+--
+-- **Drei Formen hingen daran:** `sizeof`, `lenof` und `aligned`. Die teuerste ist `aligned`
+-- (Gift 227): sie traegt ZWEI ganze Ausdruecke, beliebig tief, und keiner davon war
+-- sichtbar.
+--
+-- Hier fehlt dem Namen ein Buchstabe. Der Ort daneben (`puffer_kopf`) gibt es wirklich --
+-- *ein Tippfehler ist die haeufigste Form dieses Fehlers, nicht die erfundene Groesse.*
+
+module gift225 {
+
+static puffer_kopf : u32 = 64;
+
+extern fn puffer_groesse() -> u32
+    ensures result <= sizeof(puffer_kpof)
+    effects { pure }
+    costs   <= 8 ops;
+
+}

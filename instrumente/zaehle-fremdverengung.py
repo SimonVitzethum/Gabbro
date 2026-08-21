@@ -48,7 +48,8 @@ GIFT = "beispiele/gift/*.gab"
 
 KOPF = re.compile(r"^== Uebersetzungszeugnis: (\S+) ==$")
 BEFUND = re.compile(
-    r"^\s+\d+ assumptions, \d+ templates \(\d+ of them UNPROVED\), \d+ direct forms, "
+    r"^\s+\d+ assumptions \(\d+ of them NOT FALSIFIABLE\), "
+    r"\d+ templates \(\d+ of them UNPROVED\), \d+ direct forms, "
     r"(\d+) foreign bodies \((\d+) state their duty\), (\d+) narrowings from foreign "
     r"contracts$"
 )

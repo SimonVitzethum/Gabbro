@@ -403,7 +403,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 99 sind tragend, 2 verdächtig — und **44 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 101 sind tragend, 2 verdächtig — und **44 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       *Wer eine Absage liest und daraus nicht erkennt, worauf sie ruht, kann auch nicht
       prüfen, ob sie weit genug reicht.* Das ist der größere Posten, nicht die zwei.
@@ -468,7 +468,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **813 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **826 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       **Und der Befund ist, dass es nicht null war:** der erste Lauf fand **16** Nahtstellen —
       ein Jahr nachdem die 161 von Hand geflickt worden waren. *Von Hand geflickt heißt: nicht
       bewacht.* Darunter `„…is verified--"`, `„…the rule therefore has**zero bite**"` und
@@ -542,7 +542,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 - [ ] **~~Die Zeilenanteile der eigenen Theorien sind gezaehlt, aber nicht KLASSIFIZIERT~~ —
       GEBAUT 2026-08-20** (`./instrumente/zaehle-theorien.py`). Die alte Buchung sagte *„zehn Theorien,
       1 639 Zeilen, 48 Sätze, 86 Beweisschritte"* und ließ die Frage offen, was davon Prosa
-      ist. Heute: **2 317 Zeilen** in dreizehn Theorien, **70 Sätze** darin — und klassifiziert:
+      ist. Heute: **2 329 Zeilen** in dreizehn Theorien, **70 Sätze** darin — und klassifiziert:
 
       | | | |
       |---|---:|---|
@@ -553,7 +553,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
       **Fast die Hälfte ist Fließtext, und damit ist die Verwechslung beziffert:**
       **837 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
-      **36,1 % statt 100 %.** *Wer 2 317 gegen eine Verus-Zahl hält, überschätzt die eigene
+      **36,1 % statt 100 %.** *Wer 2 329 gegen eine Verus-Zahl hält, überschätzt die eigene
       Seite um den Faktor 2,8.* Dieselbe Verwechslung, an der `1,90` am 2026-08-19
       zurückgezogen wurde, eine Ebene tiefer.
       *Und was das NICHT heißt:* die Einteilung liest Zeilenanfänge; ein `text`-Block über ein
@@ -632,7 +632,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **244 von 244 Ankern** greifen (`--anker`, 2026-08-21) — die
+      fällt. Mutationskatalog: **252 von 252 Ankern** greifen (`--anker`, 2026-08-21) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -709,7 +709,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **Emit the assumption set into the artefact** ("proved under A1…An"), as a **set of names**
       with a class, not as a number. A ratchet over a cardinal number does not bite against exchange.
-      **Halb gebaut, gemessen 2026-08-20:** `gabbro annahmen` druckt 32 Annahmen als **Namen**
+      **Halb gebaut, gemessen 2026-08-20:** `gabbro annahmen` druckt 33 Annahmen als **Namen**
       mit Klasse (`assume`/`axiom`), Falsifizierbarkeit und Sonde — genau die verlangte Form.
       **Was fehlt, ist der zweite Halbsatz: „into the artefact".** Die Namen stehen im Bericht
       des Prüfers, nicht im erzeugten C. *Woran es hängt: an einer Zeile im Erzeuger* — der
@@ -1624,7 +1624,7 @@ NOTATIONSLUECKEN -- nicht eine ist ein Handbeweis.** Was daraus offen bleibt:
 
 # STUFE 5 — DIE BEWEISE TRAGEND MACHEN *(parallel zu Stufe 4)*
 
-**`L = 1` sieht gut aus und heißt wenig.** Daneben stehen **9 Prämissen ohne Pass** — ein Beweis,
+**`L = 1` sieht gut aus und heißt wenig.** Daneben stehen **8 Prämissen ohne Pass** — ein Beweis,
 den nichts einlöst.
 
 > **Das ist nicht Buchhaltung, das ist die schärfste Form der Klasse, die in einer Woche fünfmal
@@ -1647,7 +1647,7 @@ tragende, ohne eine Zeile Isabelle.*
 $ gabbro schablonen --tor
 9 premises of PROVED templates have no pass -- a proof nothing establishes    → 1
 $ ./instrumente/pruefe-schablonen.py
-Marke 9 — eine Ratsche, keine Zielzahl · 0 ohne Adresse
+Marke 8 — eine Ratsche, keine Zielzahl · 0 ohne Adresse
 ```
 
 **Zwei verschiedene Dinge, und sie bleiben getrennt:** `--tor` trägt das *Ziel* und fällt,
@@ -1799,7 +1799,7 @@ trägt jetzt diese Adresse statt einer fehlenden Entscheidung.
       table_induktion` (`assumes wf`, `assumes schritt`, `shows "P s"`, `by
       (rule wf_induct_rule)`), und `gabbro schablonen` fuehrt `S7 table.induktion` als
       **bewiesen**. Nachgerechnet 2026-08-20 mit `./instrumente/zaehle-theorien.py`: 13 Theorien,
-      2 317 Zeilen. *Die Theorie ist ausserdem schaerfer als der Posten: sie zerlegt „wohl-
+      2 329 Zeilen. *Die Theorie ist ausserdem schaerfer als der Posten: sie zerlegt „wohl-
       fundiert und vollstaendig" in die vier einzeln dastehenden Nebenbedingungen N-1 bis
       N-4.*
 
@@ -1957,7 +1957,7 @@ gemessen wird je Name, nicht je Struktur (W10).
       der Klausel-Klasse und teurer als sie:** bei einer ungelesenen Klausel weiss niemand
       etwas, hier weiss man etwas Falsches.
       `gabbro schablonen --tor` gibt **1** zurueck, solange eine haengt; `./instrumente/pruefe-schablonen.py`
-      traegt die Ratsche (Marke 9, sie geht nach unten) und verlangt je Praemisse eine
+      traegt die Ratsche (Marke 8, sie geht nach unten) und verlangt je Praemisse eine
       Adresse. **Was die beiden NICHT koennen: die Adressen nachpruefen** -- zwei von neun
       waren am 2026-08-20 veraltet, und das fiel nur von Hand am Gegenstand auf (W10).
       *Berichtigt: hier stand „acht", und die schaerfste war `device.konstruktor` -- die
@@ -2248,8 +2248,21 @@ Das ist die eine Klasse, die sich auch unter *„ganz Gabbro verifiziert"* nicht
 Eine Sperre schuldet gegenseitigen Ausschluss, Fortschritt und die Rangordnung, und keine Zeile
 sagt das heute.
 
+> **Berichtigt am 2026-08-21 — und diesmal war es kein Zahlenfehler, sondern ein SATZ.**
+> Hier steht *„die Zeilen hinschreiben (kostet nichts)"*. Für **31 der 109** fremden Rümpfe
+> kostet es nicht nichts — **es geht nicht:** `lock`, `rcu`, `guest`, `entry`, `boot` und
+> `gabbro_kern` haben **kein `ensures`-Feld in der Grammatik**, und `zeugnis.rs` schiebt ihren
+> Vertrag als deutschen Fließtext von Hand in die Liste.
+> ```
+> $ ./instrumente/zaehle-fremdpflichten.py
+>   STUMM 31 | SCHWEIGT 67 | UNGELESEN 10 | WIRKT 1     (109 fremde Ruempfe)
+> ```
+> **Die Sperre — das Beispiel, das dieser Posten selbst nennt — ist genau der Fall, der nicht
+> geht.** *Die ehrliche Bezugsgröße ist 78, nicht 109.* Wer diese Zeilen will, ändert die
+> GRAMMATIK, nicht seine Sorgfalt — und das ist ein anderer Posten als der gebuchte.
+
 Zwei Hälften: die Zeilen hinschreiben (kostet nichts) und den Prüfer sie in die Beweispflicht des
-Rufers tragen lassen (Passarbeit). Dazu die Axiomschicht — 32 Annahmen, jede mit Sonde oder Grund,
+Rufers tragen lassen (Passarbeit). Dazu die Axiomschicht — 33 Annahmen, jede mit Sonde oder Grund,
 und die Sätze, die ihr noch fehlen.
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
@@ -2281,8 +2294,21 @@ und die Sätze, die ihr noch fehlen.
 
 - [ ] **Quantify the axiom layer — the x86 half is runnable, the aarch64 half is NOT.**
       **As long as the number is missing, "memory-safe under A1…An" is a form without content.**
-      * **x86:** runnable against `../caprock-messbasis` (= `SEL4Lake/SEL4Lake` @ `arch/x86_64`,
-        `a1bf707`). Open.
+      * **x86: GEMESSEN am 2026-08-21** ([`messung/AXIOMSCHICHT.md`](messung/AXIOMSCHICHT.md)).
+        **33 Annahmen, 6 nicht falsifizierbar** — und deren Gründe sind *nicht eine Währung,
+        sondern vier*: zwei prinzipiell unwiderlegbar (Speichermodell), zwei am Messapparat
+        hängend, eine gilt **nur auf der Testmaschine** (`x2apic_zweischritt`: *„qemu64 hat
+        kein x2APIC"* — auf echter Hardware wäre sie falsifizierbar, und das ist die
+        schwächste der sechs), eine über die Sprache.
+
+        > **Und der Befund, der den Posten trägt: von den 27 benannten Sonden existiert
+        > KEINE als Programm.** Der Ordner buchte das bisher für **zwei**. *Ein `falsifier`,
+        > dessen Sonde nirgends ist, ist eine Zusicherung über das Ausbleiben einer
+        > Widerlegung — R15 an der Axiomschicht.* Die Buchung war nicht falsch, sie war zu
+        > klein, **und in der schmeichelhaften Richtung.**
+
+        **Was bleibt, ist nicht die Zahl, sondern ein ORT FÜR SONDEN.** Solange es ihn nicht
+        gibt, ist „falsifizierbar" eine Eigenschaft des Satzes, nicht des Ordners.
       * **~~aarch64~~ — BLOCKED, and not for reasons of time (2026-08-15).** The
         only aarch64 tree in the folder (`SEL4Lake/ARMTest/stm32mp25-kernel`) is **not a
         second kernel but an older snapshot of THE SAME lineage** — evidenced
@@ -2299,24 +2325,33 @@ und die Sätze, die ihr noch fehlen.
 
 ### Vom zweiten Arbeitslauf über Tafel C, 2026-08-20 — elf Befunde, keiner still *(Teil)*
 
-- [ ] **Eine überschreibende Annahme OHNE `falsifier` ist eine Absage** — nicht weil die
-      Sonde beweist, sondern weil sie **widerlegbar** macht. Wer ohne sie will, schreibt
-      `unfalsifiable`, und das ist im Zeugnis eine eigene Zeile (wie `A10`).
-
 ### From the criterion ([`dokumente/BEWEIS.md`](dokumente/BEWEIS.md))
 
 
 
-- [ ] **Argue the dividing line at a borderline case.** "Names only the machine" is sharp enough for
-      today's cases — the first disputed case belongs in `dokumente/BEWEIS.md`, not in a footnote.
-
 ### «NL» — der Weg zu „nur noch eigene Logik" ([`dokumente/PLAN.md`](dokumente/PLAN.md)) — **PUNKT 1** *(Teil)*
 
-- [ ] **NL.3 -- `ensures` ueber WELTZUSTAND, die haeufigere Form** *(2026-08-19)*. Numerisch
-      und relational tragen seit heute; `ensures mmu_an_zahl == 1` steht siebenmal in
-      `beispiele/22` und traegt nicht. **Sie kollidiert mit U4/U5** -- ein Aufruf toetet jeden
-      nichtlokalen Fakt -- und waere die erste Ausnahme davon. *Aufschreiben, bevor gebaut
-      wird, wie bei «H2.1».*
+- [ ] **NL.3 — `ensures` über WELTZUSTAND: AUFGESCHRIEBEN, nicht gebaut**
+      *(gemessen 2026-08-21, [`messung/FREMDPFLICHTEN.md`](messung/FREMDPFLICHTEN.md))*.
+      Sechs der zehn ausgesprochenen Fremdpflichten reden über Plätze
+      (`ensures mmu_an_zahl == 1`, **sechsmal** in `beispiele/22` — nicht siebenmal, die
+      siebte Klausel nennt `result`). **Sie kollidiert mit U4/U5 und wäre die erste Ausnahme
+      davon.** *Gemessen, bevor gebaut wird:*
+      * **15** nichtlokale Fakten sterben im ganzen Korpus, an **13** von **153** Rufstellen
+        — das ist die **Obergrenze jeder denkbaren Ausnahme.**
+      * **0** davon gäbe die gemeinte Ausnahme zurück: die sechs Klauseln hängen alle an
+        `hochlauf`, und dort sterben an zwölf Rufstellen **null** Fakten. *Die fünf
+        Weltzustandsnamen werden nirgends GELESEN.*
+
+      **Regel A ist nicht erfüllt** — und der Auslöser für den Bau ist benannt und messbar:
+      ein Programm, das einen Weltzustandsnamen nach dem Ruf liest. *Erst dann die Frage nach
+      der FORM* — ein `ensures` über einen globalen Platz gilt nur, solange kein anderer ihn
+      schreibt, und genau diese Rahmenbedingung hat U4/U5 heute nicht, weil es pauschal tötet.
+
+      > **Dieser Posten stand bis zum 2026-08-21 ZWEIMAL da** (hier und unter «H2» als *„Die
+      > häufigere Hälfte von Punkt 4"*) — W7, und der zweite trug als einzigen eigenen Inhalt
+      > eine Zahl, die veraltet war (*„28 fremde Deklarationen"*; es sind 109). Er ist
+      > gelöscht, dieser bleibt.
 
 ### Aus «H2» *(ausgefuehrt 2026-08-19, `H = 17 → 15`)* — der Rest, den der Lauf hinterliess *(Teil)*
 
@@ -2325,21 +2360,25 @@ und die Sätze, die ihr noch fehlen.
       gehalten"* und schliesst daraus, dass niemand hinsieht. **Dass ein gehaltener Abdruck
       einen fremden Kern wirklich fernhaelt, ist eine Aussage ueber das SPEICHERMODELL** und
       faellt nicht in diesen Satz -- dieselbe Stelle, an der `paarung` ihre
-      `release`/`acquire`-Sichtbarkeit schuldet. *Vorher war die Praemisse unsichtbar; jetzt
-      steht sie in der Zahl.*
+      `release`/`acquire`-Sichtbarkeit schuldet.
+      **ERLEDIGT 2026-08-21:** die benannte Annahme `sperrabdruck_haelt_fremde_kerne_fern`
+      steht in der Axiomschicht und ist mit dem Locale `zug` verbunden — **Zahn 3 von 9 auf
+      8.** *Der Satz selbst ist unveraendert; was sich geaendert hat, ist, dass ein Leser die
+      Praemisse SIEHT, statt sie zu unterstellen.*
 
-- [ ] **Die HAEUFIGERE Haelfte von Punkt 4 fehlt: `ensures` ueber WELTZUSTAND**
-      *(gemessen 2026-08-19)*. Von 28 fremden Deklarationen liefern nur **4** eine Ganzzahl;
-      die Mehrheit spricht ueber Plaetze (`ensures mmu_an_zahl == 1`, siebenmal in
-      `beispiele/22`). **Die Wiederherstellung einer Tatsache ueber einen globalen Platz nach
-      einem Ruf kollidiert mit U4/U5** -- *ein Aufruf toetet jeden nichtlokalen Fakt*, und
-      `mutiere-pruefer.py` fuehrt dafuer eine eigene Mutation. *Sie waere die erste Ausnahme
-      von dieser Regel und gehoert gemessen, bevor sie gebaut wird.*
+- [ ] **Die `until`-Bedingung eines `retry` wird NICHT begangen** *(gemessen 2026-08-21,
+      beim Zählen der Fremdpflichten)*. Ein Ruf dort bekommt keine Fremdverengung — und,
+      schärfer: **ein Ruf an eine Funktion, die es gar nicht gibt, fällt dort nicht.**
 
-- [ ] **`Self` in einem `ensures` ist ungemessen** *(2026-08-19)*. `sammle_namen_pred` bindet
-      seit heute Quantorbinder und steigt in Indizes ab; **`Self` kennt es nicht.** Im Korpus
-      steht `Self` nur in `invariant`, wo dieser Pass nicht laeuft -- *also ist es heute kein
-      Fehlalarm und morgen vielleicht einer.* Eine Zeile, sobald ein `ensures` es benutzt.
+      ```
+      if gibtsnicht() == 9 { … }              ->  Fehler: [K003] … is not declared here
+      retry lesen until gibtsnicht() == 9 …   ->  0 Fehler (nur Hinweis E009)
+      ```
+
+      *Dieselbe Bauart wie die fünf blinden `PredArt`-Zweige, ein Konstrukt weiter:* ein
+      Ausdrucksbaum, den kein Pass begeht, sieht von außen aus wie einer ohne Befund.
+      Betrifft `m1.rs` (Verengung) und `kosten.rs` (`K003`). **Eine Giftprobe fehlt noch** —
+      und sie ist die Bedingung dafür, dass der Posten überhaupt gebaut werden darf.
 
 - [ ] **Die GNADENFRIST ist eine ANNAHME, keine Pruefung -- und hat noch keinen Ort**
       *(2026-08-18)*. `H011`/`H012` halten die zwei pruefbaren Haelften (nicht im eigenen
@@ -2348,6 +2387,26 @@ und die Sätze, die ihr noch fehlen.
       Pruefer verlangt sie noch nicht: ein `rcu … reclaims` ohne eine benannte
       Gnadenfristannahme geht heute durch. *Dieselbe Regel wie `S003`, an einem anderen
       Konstrukt.*
+
+      **GEBAUT am 2026-08-21 als `H015`** — und die Handprobe VOR dem Bau bestaetigte den
+      Posten: `beispiele/43-gegenprobe.gab` traegt `rcu … reclaims` ohne Gnadenfrist und ging
+      mit **0 Fehlern** durch. Gift 230, zwei Mutationen, beide gefangen.
+
+      **Was offen bleibt, und es ist die schwaechere Stelle:** `H015` haengt am **Namen im
+      Satz** statt an einem Grammatikplatz. Der saubere Weg braucht **null neue Woerter** --
+      `rcu … reclaims P progress G;` -- kostet aber `ast.rs`, `parse.rs`, `SYNTAX.md` und drei
+      `.gab`-Dateien. *Dann pruefte `H015` wie `S003` gegen die Annahmenliste statt gegen
+      einen Satztext.* Dazu die S004-Haelfte: eine unfalsifizierbare Gnadenfrist.
+
+- [ ] **`N024` endet an der DATEIGRENZE** *(gemessen 2026-08-21, Nebenbefund der
+      Axiomschicht)*. `geraet_quittiert` (`beispiele/02`) und `vtd_srtp_quittiert`
+      (`beispiele/09`) sind zwei Annahmen mit **verschiedenen Namen, identischem Satz und
+      DERSELBEN Sonde** (`sonde_vtd_srtp`) — in einem Lauf über beide Dateien: **0 Fehler.**
+      `N024` läuft je Übersetzungseinheit, und `manifest::vereinige` prüft nur die andere
+      Richtung (gleicher Name → gleicher Inhalt).
+      *Ein grüner Lauf entlastet dann beide, und eine davon hat nie jemand geprüft* — genau
+      der Satz, mit dem `N024` selbst begründet ist. **Der Ort ist da, wo `vereinige` schon
+      steht.**
 
 ### From wave 4 (2026-08-16) — two conditions and one candidate
 
@@ -2567,7 +2626,7 @@ hat kein Feld dafür). **Ohne die Sätze ist „Gabbro formal verifiziert" nicht
 formulierbar** — man wüsste nicht, was zu beweisen wäre.
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (heute 191 Codes, null Sätze).
+sofort: *kein neuer Absagecode ohne seinen Satz* (heute 193 Codes, null Sätze).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 

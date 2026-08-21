@@ -116,6 +116,28 @@ text \<open>
   Sperrabdruck TATSAECHLICH gehalten wird. \<open>abdruck_innen\<close> ist eine Annahme des Locales,
   und sie herzustellen ist Sache des Pruefers -- \<open>U001\<close>-\<open>U005\<close> im Gruppenpass. *Bewiesen
   ist: WENN der Abdruck steht, dann ist der Zwischenzustand folgenlos.*
+
+  **Und die zweite Haelfte, die bis zum 2026-08-21 gar keinen Ort hatte.** \<open>U001\<close>-\<open>U005\<close>
+  stellen her, dass der Zieher die Sperren HAELT. Dass ein gehaltener Abdruck einen fremden
+  Kern wirklich fernhaelt, stellen sie nicht her -- das ist eine Aussage ueber das
+  SPEICHERMODELL, und keine Regel dieser Sprache kann sie pruefen.
+
+  Sie heisst jetzt
+
+    \<^item> \<open>sperrabdruck_haelt_fremde_kerne_fern\<close> -- Annahme der Axiomschicht, NICHT
+      FALSIFIZIERBAR, mit Grund.
+
+  und \<open>gabbro annahmen\<close> druckt sie, sobald eine \<open>group\<close> im Baum steht (\<open>manifest.rs\<close>,
+  \<open>sperrabdruckannahme\<close>). *Damit sieht ein Leser dieses Beweises die Praemisse, statt sie zu
+  unterstellen* -- vorher stand sie in \<open>gabbro schablonen\<close> als haengende Praemisse von
+  \<open>gruppe.ops\<close> mit der Adresse \<^emph>\<open>braeuchte: die AXIOMSCHICHT\<close>, und die Adresse ist damit
+  eingeloest.
+
+  **Nicht falsifizierbar, und der Grund ist derselbe wie bei
+  \<open>release_stellt_sichtbarkeit_her\<close>:** eine Sonde, die den Abdruck haelt und nachsieht, ob
+  jemand hingesehen hat, zeigt nur, dass DIESMAL niemand hingesehen hat. Ein Speichermodell
+  ist durch Ausfuehrung nicht widerlegbar. *Das macht die Annahme nicht kleiner -- es macht
+  sie sichtbar, und genau das ist der Unterschied.*
 \<close>
 
 section \<open>Teil (c) -- der Zwischenaustritt, als Gegenbeispiel\<close>
@@ -209,7 +231,10 @@ text \<open>
     \<open>table.ops.erhaltung\<close>.
   \<^item> **Kein Speichermodell.** \<open>voll i\<close> heisst hier \<open>der Abdruck ist gehalten\<close>. Dass ein
     gehaltener Abdruck einen fremden Kern wirklich fernhaelt, ist eine Aussage der
-    Axiomschicht und faellt nicht in diesen Satz.
+    Axiomschicht und faellt nicht in diesen Satz. **Seit dem 2026-08-21 hat sie dort einen
+    NAMEN** -- \<open>sperrabdruck_haelt_fremde_kerne_fern\<close> -- und steht in der Annahmenmenge
+    jedes Erzeugnisses mit einer \<open>group\<close>. *Der Satz sagt sie weiterhin nicht; er
+    unterstellt sie nur nicht mehr stillschweigend.*
   \<^item> **Keine Aussage ueber die Zahl der Traeger.** Die Gegenbeispiele nehmen zwei; das
     Locale nimmt beliebige Zustaende.
 \<close>

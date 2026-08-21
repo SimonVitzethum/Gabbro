@@ -953,10 +953,27 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
     // **Eine Zeile traegt die Buchung.** Der Waechter vergleicht genau sie; eine zweite Zahl
     // daneben waere eine Gelegenheit, sich zu widersprechen. *Deshalb wuchs sie am
     // 2026-08-21 um ein Glied, statt eine zweite Zeile danebenzustellen.*
+    // **Die Klasse der Annahme stand in der LISTE und nicht in der BUCHUNG** (2026-08-21).
+    //
+    // Jede `A`-Zeile trug seit jeher `Sonde <x>` oder `NICHT FALSIFIZIERBAR -- <grund>`;
+    // die Zeile darunter warf beide in einen Topf. **Eine nicht falsifizierbare Annahme ist
+    // eine andere Waehrung als eine mit benannter Sonde** -- gegen die erste kann keine
+    // Sonde je etwas ausrichten, und `S004` weist genau deshalb eine unfalsifizierbare
+    // Fortschrittsannahme ab.
+    //
+    // *Dieselbe Klasse wie die Fremdverengungen: eine Zahl, in der zwei Waehrungen stecken,
+    // liest sich wie eine.* Die Nachbarn der Zeile fuehren ihre Untermenge laengst mit
+    // (`(N of them UNPROVED)`, `(N state their duty)`); hier fehlte sie.
+    let ohne_sonde = annahmen
+        .iter()
+        .filter(|a| matches!(a.klasse, crate::manifest::Klasse::NichtFalsifizierbar { .. }))
+        .count();
     aus.push_str(&format!(
-        "     {} assumptions, {} templates ({} of them UNPROVED), {} direct forms, \
+        "     {} assumptions ({} of them NOT FALSIFIABLE), {} templates ({} of them UNPROVED), \
+         {} direct forms, \
          {} foreign bodies ({} state their duty), {} narrowings from foreign contracts\n",
         annahmen.len(),
+        ohne_sonde,
         benutzt.len(),
         offen.len(),
         e.posten

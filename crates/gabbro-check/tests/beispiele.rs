@@ -433,3 +433,91 @@ fn auch_die_relationale_nachbedingung_wird_gebucht() {
     assert_eq!(stellen[0].klausel, "result <= s.len");
     assert_eq!(stellen[0].rufer, "nutze");
 }
+
+// --- Stufe 6, Teil D ---
+
+/// **Die BEFUNDZEILE fuehrt die nicht falsifizierbaren Annahmen getrennt** (2026-08-21).
+///
+/// Jede `A`-Zeile trug seit jeher ihre Klasse -- `Sonde <x>` oder `NICHT FALSIFIZIERBAR --
+/// <grund>`. **Die Buchung darunter warf beide in einen Topf.** Eine nicht falsifizierbare
+/// Annahme ist aber eine andere Waehrung: gegen sie kann keine Sonde je etwas ausrichten,
+/// und `S004` weist genau deshalb eine unfalsifizierbare Fortschrittsannahme ab.
+///
+/// *Dieselbe Klasse wie bei den Fremdverengungen -- eine Zahl, in der zwei Waehrungen
+/// stecken, liest sich wie eine.*
+#[test]
+fn die_befundzeile_trennt_die_nicht_falsifizierbaren_annahmen() {
+    let z = zeugnis_von("06-annahmen.gab");
+    // Gezaehlt wird die LISTE, und die Befundzeile muss dieselbe Zahl tragen. *Ein Literal
+    // hier waere ein Muster, das seine eigene Antwort enthaelt* -- die Klasse von W16.
+    let nicht_falsifizierbar = z.matches("NICHT FALSIFIZIERBAR").count();
+    assert!(
+        nicht_falsifizierbar > 0,
+        "diese Datei muss nicht falsifizierbare Annahmen fuehren, sonst misst der Test nichts:\n{z}"
+    );
+    assert!(
+        z.contains(&format!(
+            "assumptions ({nicht_falsifizierbar} of them NOT FALSIFIABLE)"
+        )),
+        "die Befundzeile muss die Klasse mitfuehren, und die Zahl muss die der Liste sein \
+         ({nicht_falsifizierbar}):\n{z}"
+    );
+}
+
+/// **Die GNADENFRIST wird verlangt (`H015`) -- und die Sprechprobe geht in BEIDE Richtungen.**
+///
+/// `beispiele/31-rcu.gab` gibt unter der Schreibersperre zurueck UND nennt die Gnadenfrist;
+/// `beispiele/gift/230` tut alles Pruefbare richtig und nennt sie nicht. *Der Unterschied
+/// zwischen beiden sind drei Zeilen, die kein Pass herstellen kann.*
+#[test]
+fn die_gnadenfrist_wird_verlangt_und_nur_sie() {
+    let (codes, bericht, _) = absagen_von(&wurzel().join("31-rcu.gab"));
+    assert!(
+        !codes.iter().any(|(c, _)| *c == "H015"),
+        "31-rcu.gab NENNT die Gnadenfrist -- H015 darf hier nicht fallen:\n{bericht}"
+    );
+    let (codes, bericht, _) = absagen_von(&wurzel().join("gift").join("230-gnadenfrist-fehlt.gab"));
+    assert!(
+        codes.iter().any(|(c, _)| *c == "H015"),
+        "230 nennt sie nicht -- H015 muss fallen:\n{bericht}"
+    );
+    // **Und NUR sie.** Die Datei ist so gebaut, dass die zwei pruefbaren Haelften zufrieden
+    // sind: unter `SCHREIBER` zurueckgegeben, nicht aus einem `observes` heraus. Faellt hier
+    // zusaetzlich `H011` oder `H012`, misst die Giftprobe etwas anderes als ihren Gegenstand.
+    for unerwuenscht in ["H011", "H012"] {
+        assert!(
+            !codes.iter().any(|(c, _)| *c == unerwuenscht),
+            "230 soll GENAU an der Gnadenfrist fallen, nicht an {unerwuenscht}:\n{bericht}"
+        );
+    }
+}
+
+/// **Der SPERRABDRUCK ist eine benannte Annahme der Axiomschicht** (2026-08-21).
+///
+/// `beweise/Gruppe_Erhaltung.thy`, Locale `zug`, nimmt `abdruck_innen` an und schliesst
+/// daraus, dass niemand hinsieht. Dass ein gehaltener Abdruck einen fremden Kern wirklich
+/// fernhaelt, ist eine Aussage ueber das SPEICHERMODELL -- *vorher war die Praemisse
+/// unsichtbar; jetzt steht sie in der Zahl.*
+#[test]
+fn eine_gruppe_bringt_ihre_sperrabdruckannahme_mit() {
+    let z = zeugnis_von("17-gruppe-ueber-zwei-sperren.gab");
+    assert!(
+        z.contains("sperrabdruck_haelt_fremde_kerne_fern"),
+        "eine `group` ruht auf dem Sperrabdruck -- die Annahme gehoert ins Zeugnis:\n{z}"
+    );
+    // **Nicht falsifizierbar, und das ist die Aussage.** Eine Sonde, die den Abdruck haelt
+    // und nachsieht, zeigt nur, dass diesmal niemand hingesehen hat -- derselbe Grund wie
+    // bei `release_stellt_sichtbarkeit_her`.
+    assert!(
+        z.lines().any(|z| z.contains("sperrabdruck_haelt_fremde_kerne_fern")
+            && z.contains("NICHT FALSIFIZIERBAR")),
+        "sie ist nicht falsifizierbar, und der Grund steht in ihrer Zeile:\n{z}"
+    );
+    // Und die Gegenrichtung: eine Datei OHNE `group` bringt sie nicht mit. *Eine Annahme,
+    // die immer dasteht, unterscheidet nichts.*
+    let ohne = zeugnis_von("31-rcu.gab");
+    assert!(
+        !ohne.contains("sperrabdruck_haelt_fremde_kerne_fern"),
+        "ohne `group` ruht nichts auf dem Abdruck:\n{ohne}"
+    );
+}

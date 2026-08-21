@@ -1,0 +1,23 @@
+-- erwartet: M109
+-- **Gift 227 -- `aligned` traegt zwei ganze Ausdruecke, und beide waren blind.**
+--
+-- `Eingebaut::Aligned(Expr, Expr)` ist die teuerste der drei eingebauten Formen: `sizeof`
+-- und `lenof` tragen je einen Ort, `aligned` zwei vollstaendige Ausdrucksbaeume. Bis zum
+-- 2026-08-21 betrat der Namenssammler keinen davon.
+--
+-- **Eine Ausrichtungszusage ist genau die Sorte Zeile, die man ungeprueft schreibt:** sie
+-- steht am Rand der Signatur, sie sieht wie Buchhaltung aus, und sie entscheidet trotzdem,
+-- was der Rufer glauben darf.
+--
+-- Hier fehlt dem Namen das `e` am Ende. `kopf_adresse` gibt es, `kopf_adress` nicht.
+
+module gift227 {
+
+static mut kopf_adresse : u64 = 0;
+
+extern fn kopf_ausrichten()
+    ensures aligned(kopf_adress, 8)
+    effects { writes kopf_adresse }
+    costs   <= 8 ops;
+
+}

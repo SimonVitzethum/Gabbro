@@ -2237,6 +2237,88 @@ MUTATIONEN = [
         "K100/E14 -- die Zahl steht in der Befundzeile, die STELLEN stehen nirgends; eine "
         "Zahl ohne Fundstelle ist ein Rueckstand, kein Ergebnis",
     ),
+    # --- Stufe 6, Teil C ---
+    #
+    # **Fuenf blinde Zweige im Namenssammler, und alle fuenf sahen aus wie Unbedenklichkeit.**
+    # `sammle_namen_pred_geb` traegt seit dem 2026-08-21 keinen Auffangzweig mehr: die
+    # `match`-Ketten sind vollstaendig, damit die naechste `PredArt`-Variante nicht wieder
+    # still hineinfaellt. Jede Mutation hier nimmt genau EINEN dieser Zweige zurueck.
+    Mutation(
+        "self-im-ensures-geht-durch",
+        "m1.rs",
+        'if n == "Self" {',
+        "if false {",
+        "K100 -- `M120` faellt aus: `ensures Self.slots[0].rest <= 4096` an einer freien "
+        "`fn` geht wieder durch, obwohl `Self` dort auf nichts zeigt (Gift 223)",
+    ),
+    Mutation(
+        "self-als-typ-bleibt-unsichtbar",
+        "m1.rs",
+        'if p.teile.len() == 1 && p.teile[0].text == "Self" {',
+        "if false {",
+        "K100 -- die ZWEITE Schreibweise faellt aus: `lenof(Self)` ist ein Typ, nicht ein "
+        "Ort, und ohne diese Zeile sieht `M120` nur die eine Haelfte (Gift 224)",
+    ),
+    Mutation(
+        "sizeof-und-lenof-bleiben-blind",
+        "m1.rs",
+        "TypOderOrt::Ort(o) => aus_ort(o, gebunden, out),",
+        "TypOderOrt::Ort(_) => {}",
+        "K100 -- ein Tippfehler in `sizeof(...)`/`lenof(...)` einer Nachbedingung faellt "
+        "wieder still durch; `M109` prueft nur, wohin der Sammler kommt (Gift 225)",
+    ),
+    Mutation(
+        "aligned-bleibt-blind",
+        "m1.rs",
+        "Eingebaut::Aligned(a, b) => {\n                    aus_expr(a, gebunden, out);\n"
+        "                    aus_expr(b, gebunden, out);\n                }",
+        "Eingebaut::Aligned(_, _) => {}",
+        "K100 -- `aligned` traegt ZWEI ganze Ausdrucksbaeume; ohne diesen Zweig ist keiner "
+        "von beiden geprueft (Gift 227)",
+    ),
+    Mutation(
+        "und-oder-folgt-bleiben-blind",
+        "m1.rs",
+        "PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {\n"
+        "            sammle_namen_pred_geb(a, gebunden, out);\n"
+        "            sammle_namen_pred_geb(b, gebunden, out);\n        }",
+        "PredArt::Und(_, _) | PredArt::Oder(_, _) | PredArt::Folgt(_, _) => {}",
+        "K100 -- jede ZUSAMMENGESETZTE Nachbedingung wird wieder ungeprueft; die linke "
+        "Haelfte stimmt und die rechte ist ein Tippfehler (Gift 228)",
+    ),
+    Mutation(
+        "negation-und-klammer-bleiben-blind",
+        "m1.rs",
+        "PredArt::Klammer(i) | PredArt::Nicht(i) => sammle_namen_pred_geb(i, gebunden, out),",
+        "PredArt::Klammer(_) | PredArt::Nicht(_) => {}",
+        "K100 -- die Negation ist im Korpus die HAEUFIGERE Verknuepfung (fuenf "
+        "`ensures`-Zeilen fangen mit `!` an) und war bis 2026-08-21 unbesehen (Gift 229)",
+    ),
+    # --- Stufe 6, Teil D ---
+    Mutation(
+        # **`H015` faellt aus, und die Rueckgewinnung sieht weiter geprueft aus.** `H011` und
+        # `H012` bleiben stehen -- sie halten die zwei PRUEFBAREN Haelften -- und genau das
+        # ist die Gefahr: der Lauf ist gruen, die dritte Haelfte hat nie jemand
+        # aufgeschrieben. *Der Zustand vom 2026-08-21, an `beispiele/43-gegenprobe.gab`
+        # gemessen: `rcu … reclaims` ohne Gnadenfrist, 0 Fehler.*
+        "gnadenfrist-wird-nicht-mehr-verlangt",
+        "geteilt.rs",
+        "                if !gnadenfrist.contains(d) {",
+        "                if false && !gnadenfrist.contains(d) {",
+        "H015 -- die GNADENFRIST wird nicht mehr verlangt; ein `rcu … reclaims` geht wieder "
+        "durch, ohne dass eine Annahme sagt, wer garantiert, dass kein Leser mehr drin ist",
+    ),
+    Mutation(
+        # Die andere Richtung derselben Regel: die Annahme muss die Domaene BEIM NAMEN
+        # nennen. Nimmt der Abgleich jede Annahme, deckt eine beliebige Zeile ueber den
+        # Rundungsmodus die Gnadenfrist einer RCU-Domaene mit ab.
+        "gnadenfrist-nimmt-jede-annahme",
+        "geteilt.rs",
+        "            if rcu_domaenen.contains_key(wort) {\n                gnadenfrist.insert(wort.to_string());",
+        "            if true {\n                gnadenfrist.extend(rcu_domaenen.keys().cloned());",
+        "H015 -- jede beliebige Annahme deckt jede RCU-Domaene; der Satz muss die Domaene "
+        "nicht mehr nennen",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

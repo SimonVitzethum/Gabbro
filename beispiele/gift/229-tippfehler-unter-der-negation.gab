@@ -1,0 +1,24 @@
+-- erwartet: M109
+-- **Gift 229 -- eine Verneinung, und darunter ein Name, den es nicht gibt.**
+--
+-- Die Gegenprobe zu Gift 228 an der zweiten blinden Verknuepfung. `PredArt::Nicht` fiel
+-- ebenso in den Auffangzweig -- *und die Negation ist im Korpus die haeufigere Form:* fuenf
+-- `ensures`-Zeilen fangen mit `!` an (`beispiele/01`, `beispiele/09`, `messung/caprock`,
+-- `messung/fragmente/F01` zweimal).
+--
+-- **Dass keine dieser fuenf einen Tippfehler trug, war Glueck und keine Pruefung.** Sie
+-- nennen alle Parameter oder erklaerte Tabellen, und sie loesen seit dem 2026-08-21 zum
+-- ersten Mal wirklich auf -- vorher wurden sie gar nicht angesehen.
+--
+-- `gesperrt` gibt es, `gesperrtt` nicht.
+
+module gift229 {
+
+static mut gesperrt : bool = false;
+
+extern fn freigeben()
+    ensures !gesperrtt
+    effects { writes gesperrt }
+    costs   <= 8 ops;
+
+}

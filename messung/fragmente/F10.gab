@@ -18,7 +18,17 @@ format DtbKopf @version 17 endian big {
 const MAXTIEFE : u32 = 64;
 type Tiefe = u32 in 0 .. MAXTIEFE;
 
+-- **Die Pflicht des fremden Rumpfes, ausgesprochen** (K100, 2026-08-21). Ein FDT-Token ist
+-- kein beliebiges Wort: das Format kennt genau fuenf (`FDT_BEGIN_NODE` 1, `FDT_END_NODE` 2,
+-- `FDT_PROP` 3, `FDT_NOP` 4, `FDT_END` 9), und 9 ist das groesste. Die Schranke steht im
+-- FORMAT, nicht in diesem Treiber -- `@version 17` oben nennt die Fassung, die sie festlegt.
+--
+-- **Diese Zeile steht hier, weil sie GELESEN wird.** `m1::bereich_aus_ensures` macht daraus
+-- am Rufort `u32 in 0 .. 9`, und `gabbro zeugnis` fuehrt die Stelle unter Abschnitt F.
+-- *Ohne sie glaubt der Pruefer dem fremden Rumpf jede Zahl, die in ein `u32` passt* -- und
+-- der Vergleich `== 9` unten liest sich dann wie eine Pruefung, obwohl er keine ist.
 extern fn naechstes_token(k : ptr<normal, r> DtbKopf, pos : u32) -> u32
+    ensures result <= 9
     effects { reads k } costs <= 4 ops;
 
 impl fn kerne_zaehlen(k : ptr<normal, r> DtbKopf) -> u32

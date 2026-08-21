@@ -212,6 +212,56 @@ constructs that had been lowering for weeks, and `rustc` said so in the same min
 
 ---
 
+## Moved out of TODO.md on 2026-08-21 — Stufe 6, three items that closed
+
+> **`TODO.md` carries exclusively what is OPEN.** These three are done with no residue; what
+> is left over from the same run stands there, not here.
+
+### The certificate now separates the two CURRENCIES of an assumption
+
+*„An overriding assumption WITHOUT a `falsifier` is a refusal — not because the probe proves
+anything, but because it makes the claim refutable."* **Half of it was already closed:** the
+grammar forces either `falsifier <probe>` or `unfalsifiable "<reason>"`
+([`dokumente/SYNTAX.md`](dokumente/SYNTAX.md):1101), and the certificate's *list* has carried
+the distinction all along. Open was only the **verdict line**, which threw both currencies
+into one pot. Since 2026-08-21:
+
+```
+13 assumptions (5 of them NOT FALSIFIABLE), 0 templates (0 of them UNPROVED), …
+```
+
+Exactly the shape of its neighbours (`N of them UNPROVED`) — and the same class that was
+closed one day earlier at the foreign narrowings: *an assumption of a different currency,
+counted with the rest.*
+
+### The dividing line, argued at a case that EXISTS
+
+*„The first disputed case belongs in `dokumente/BEWEIS.md`, not in a footnote."* The case is
+the reclamation of a dying thread's kernel stack, read in `caprock` (read-only). By the
+criterion it is **plumbing** — **and it does not fall by construction.** Caprock does not
+discharge it either; it **counts the opportunity** and records *„0 thefts over 4295 windows"*
+— R15/W10 in real kernel code.
+
+> **The line holds, but the sentence riding along with it breaks.** *„Plumbing = falls by
+> construction"* is not true: there is a third kind, and that is the axiom layer.
+
+### `M120` — and `Self` was the SMALLER half
+
+`sammle_namen_pred` did not know `Self`. Measured while building it: **five of six probe
+units passed with 0 errors before.** Blind were the five `PredArt` connectives
+(`Klammer`/`Nicht`/`Und`/`Oder`/`Folgt`) and `ExprArt::Eingebaut` (`sizeof`/`lenof`/
+`aligned`) — **every compound postcondition was unchecked.**
+
+> *`M111` fell silent along with them, and that is the lesson:* its condition carries
+> `!namen.is_empty()` — **a blind branch collects no names, so the rule saw „nothing to say"
+> instead of „nothing seen".** A catch-all that stays quiet mutes the rule above it without
+> touching it.
+
+The `match` no longer carries a catch-all. Poison 223–225 / 227–229, six mutations, all
+caught.
+
+---
+
 ## Moved out of TODO.md on 2026-08-20 — three closure records
 
 > **`TODO.md` carries exclusively what is OPEN**, and these three sections said in their own

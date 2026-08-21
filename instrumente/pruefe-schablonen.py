@@ -42,7 +42,15 @@ FRIST = 60
 
 # **Die gebuchte Marke.** Eine Ratsche, keine Zielzahl: sie darf fallen, nicht steigen.
 # Das Ziel ist 0, und `gabbro schablonen --tor` sagt es jeden Tag.
-MARKE = 9
+#
+# 2026-08-21: 9 -> 8. Die Praemisse `gruppe.ops`/*„ein gehaltener Abdruck haelt einen
+# fremden Kern wirklich fern"* trug die Adresse *„braeuchte: die AXIOMSCHICHT"* und hat sie
+# jetzt bezogen: `sperrabdruck_haelt_fremde_kerne_fern` (manifest.rs), nicht falsifizierbar
+# mit Grund. **Kein Pass stellt sie her und keiner kann es** -- ein Speichermodell ist keine
+# Aussage ueber Zustaende; was sich geaendert hat, ist, dass sie in der Annahmenmenge steht
+# statt im Kopf des Lesers. *Dieselbe Art Adresse wie `accumulates.monoid`/`merge`, die
+# schon auf die Axiomschicht zeigt.*
+MARKE = 8
 
 
 def lauf(*args):

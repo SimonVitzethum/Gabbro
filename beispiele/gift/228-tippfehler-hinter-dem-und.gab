@@ -1,0 +1,23 @@
+-- erwartet: M109
+-- **Gift 228 -- die linke Haelfte stimmt, die rechte ist ein Tippfehler, und niemand las sie.**
+--
+-- `PredArt` kennt fuenf Verknuepfungen: `Klammer`, `Nicht`, `Und`, `Oder`, `Folgt`. Bis zum
+-- 2026-08-21 fielen alle fuenf in den Auffangzweig des Namenssammlers. **Damit war jede
+-- ZUSAMMENGESETZTE Nachbedingung ungeprueft** -- `M109` sah nur die atomare.
+--
+-- Diese Probe ist die gefaehrlichste der sechs, weil sie am unschuldigsten aussieht: die
+-- linke Haelfte ist richtig und traegt `result`. *Eine Zeile, deren erste Haelfte stimmt,
+-- liest sich geprueft.*
+--
+-- `bereit` gibt es, `bereitt` nicht.
+
+module gift228 {
+
+static mut bereit : u32 = 0;
+
+extern fn starten() -> u32
+    ensures result >= 1 && bereitt == 1
+    effects { writes bereit }
+    costs   <= 8 ops;
+
+}

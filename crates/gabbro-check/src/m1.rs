@@ -2276,6 +2276,36 @@ impl<'a> Pruefer<'a> {
                     }
                     continue;
                 }
+                // **`Self` nennt den TRAEGER -- und eine Funktion ist keiner.**
+                //
+                // `Self` steht im Korpus zwanzigmal, und jedes Mal an einem Traeger: in der
+                // `invariant` einer `table` (`forall s in slots of Self`) oder an einem
+                // `format` (`offset_into Self`, `lenof(Self)`). **An einer `fn` gibt es
+                // nichts, worauf es zeigen koennte** -- `ensures` sitzt an einer Funktion,
+                // und eine Funktion steht nie in einer `table`.
+                //
+                // *Deshalb ist das hier eine eigene Absage und nicht `M109`.* Bis zum
+                // 2026-08-21 fiel `ensures Self.slots[0].rest <= 4096` an `M109` mit dem Satz
+                // „is not declared here" -- und der schickt den Leser los, ein `Self` zu
+                // erklaeren, was die Sprache nicht zulaesst. **`M120` nennt stattdessen den
+                // Ort, an den die Zeile gehoert.** Die zweite Schreibweise, `lenof(Self)`,
+                // fiel dabei gar nicht: sie ist ein TYP und lief durch den blinden
+                // `Eingebaut`-Zweig.
+                if n == "Self" {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "M120",
+                            p.span,
+                            format!("`Self` in `ensures` of `{}` names no carrier", f.name.text),
+                        )
+                        .mit_notiz(
+                            "`Self` is the carrier of a `table` or `format`; a function is \
+                                not one -- a statement about the carrier belongs in its \
+                                `invariant`, not in a postcondition",
+                        ),
+                    );
+                    continue;
+                }
                 if geschrieben.iter().any(|g| g == n) {
                     nennt_geschriebenes = true;
                 }
@@ -2977,6 +3007,35 @@ fn sammle_namen_pred_geb(p: &Pred, gebunden: &mut Vec<String>, out: &mut Vec<Str
             // `old(x)` ist ein Geisterausdruck ueber den VORzustand -- sein Ort muss es
             // trotzdem geben. *Eine Nachbedingung ueber den alten Wert von nichts ist keine.*
             ExprArt::Alt(o) => aus_ort(o, gebunden, out),
+            // **`sizeof`/`lenof`/`aligned` tragen Namen, und bis heute sah sie niemand.**
+            //
+            // Gemessen 2026-08-21: `ensures result <= sizeof(tippfehler)` ging mit **0
+            // Fehlern** durch, ebenso `ensures aligned(tippfehler, 8)`. `ExprArt::Eingebaut`
+            // fiel in den Sammelzweig darunter -- *und was der Sammler nicht betritt, prueft
+            // `M109` nicht.* Dieselbe Bauart wie die vier blinden Walker: der Rumpf wurde
+            // betreten, ein Zweig davon nicht.
+            //
+            // `aligned(a, b)` ist der teuerste der drei: **zwei ganze Ausdruecke**, beliebig
+            // tief, und keiner davon war sichtbar.
+            ExprArt::Eingebaut(b) => match b.as_ref() {
+                Eingebaut::Sizeof(t) | Eingebaut::Lenof(t) => match t {
+                    TypOderOrt::Ort(o) => aus_ort(o, gebunden, out),
+                    // **`lenof(Self)` ist ein TYP, kein Ort** -- `typ_oder_ort` entscheidet
+                    // das am naechsten Zeichen: `Self` allein ist ein Typ, `Self.feld` ein
+                    // Ort. Beide Wege muessen bei `M120` ankommen, sonst faellt die eine
+                    // Schreibweise und die andere nicht.
+                    TypOderOrt::Typ(TypExpr::Pfad(p)) => {
+                        if p.teile.len() == 1 && p.teile[0].text == "Self" {
+                            out.push("Self".into());
+                        }
+                    }
+                    TypOderOrt::Typ(_) => {}
+                },
+                Eingebaut::Aligned(a, b) => {
+                    aus_expr(a, gebunden, out);
+                    aus_expr(b, gebunden, out);
+                }
+            },
             _ => {}
         }
     }
@@ -3006,7 +3065,25 @@ fn sammle_namen_pred_geb(p: &Pred, gebunden: &mut Vec<String>, out: &mut Vec<Str
             sammle_namen_pred_geb(&q.rumpf, gebunden, out);
             gebunden.pop();
         }
-        _ => {}
+        // **Die fuenf Verknuepfungen -- bis zum 2026-08-21 alle fuenf blind.**
+        //
+        // Gemessen: `ensures result > 0 && tippfehler > 0` gab **0 Fehler**, ebenso
+        // `ensures !(tippfehler > 0)`. Sie fielen in den Sammelzweig, und damit war jede
+        // ZUSAMMENGESETZTE Nachbedingung ungeprueft -- `M109` sah nur die atomare.
+        //
+        // > **Und `M111` schwieg mit.** Seine Bedingung traegt `&& !namen.is_empty()`; ein
+        // > blinder Zweig sammelt keine Namen, also sah die Regel „nichts zu sagen" statt
+        // > „nichts gesehen". *Eine Blindheit, die sich als Unbedenklichkeit liest, ist die
+        // > teuerste Sorte* -- genau die Bewegung, gegen die W16 steht.
+        //
+        // Der Korpus trug die Luecke nicht: keine `ensures`-Zeile ist zusammengesetzt.
+        // *Also war es hier kein Fehlalarm und morgen einer* -- dieselbe Begruendung, mit der
+        // der Posten fuer `Self` im TODO steht.
+        PredArt::Klammer(i) | PredArt::Nicht(i) => sammle_namen_pred_geb(i, gebunden, out),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) | PredArt::Folgt(a, b) => {
+            sammle_namen_pred_geb(a, gebunden, out);
+            sammle_namen_pred_geb(b, gebunden, out);
+        }
     }
 }
 

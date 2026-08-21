@@ -720,7 +720,16 @@ pub const SCHABLONEN: &[Schablone] = &[
         stand: Stand::Entworfen,
         voraussetzungen: &[
             Voraussetzung { was: "der Sperrabdruck steht ueber dem ganzen Zwischenzustand (`abdruck_innen`)", durch: Some("gruppe.sperrabdruck, und im Pass U001-U005"), braeuchte: None },
-            Voraussetzung { was: "ein gehaltener Abdruck haelt einen fremden Kern wirklich fern", durch: None, braeuchte: Some("die AXIOMSCHICHT -- eine Aussage ueber das Speichermodell, nicht ueber Zustaende") },
+            // **Eingeloest am 2026-08-21.** Die Adresse lautete *„braeuchte: die
+            // AXIOMSCHICHT"*, und sie ist jetzt bezogen: `manifest.rs::sperrabdruckannahme`
+            // erzeugt `sperrabdruck_haelt_fremde_kerne_fern`, sobald eine `group` im Baum
+            // steht -- NICHT FALSIFIZIERBAR mit Grund, wie `release_stellt_sichtbarkeit_her`.
+            //
+            // *Ein Pass stellt sie nicht her und kann es nicht: ein Speichermodell ist
+            // keine Aussage ueber Zustaende.* Was sich geaendert hat, ist, dass ein Leser
+            // des Beweises sie SIEHT, statt sie zu unterstellen -- `Gruppe_Erhaltung.thy`
+            // nennt sie beim Namen, und sie steht in der Annahmenmenge des Erzeugnisses.
+            Voraussetzung { was: "ein gehaltener Abdruck haelt einen fremden Kern wirklich fern", durch: Some("die AXIOMSCHICHT: `sperrabdruck_haelt_fremde_kerne_fern`, nicht falsifizierbar mit Grund (manifest.rs)"), braeuchte: None },
         ],
         fundstelle: "MESSUNGEN.md, Papiertest CapSpace/CDT, 2026-08-14",
     },

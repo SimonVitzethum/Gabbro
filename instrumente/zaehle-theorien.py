@@ -87,7 +87,14 @@ def klassifiziere(text):
     im_kommentar = False
     im_text = 0            # Schachtelung von \<open> … \<close> innerhalb eines `text`-Blocks
     block = None           # "modell" | "beweis" | None
-    for z in text.split("\n"):
+    # **`split("\n")` liefert bei abschliessendem Zeilenende ein leeres SCHLUSSELEMENT**,
+    # und das ging als Leerzeile ins Geruest -- eine Phantomzeile JE Theorie, dreizehn
+    # insgesamt. *Gefunden am 2026-08-21, weil zwei Waechter ueber dieselbe Zahl
+    # verschiedene Werte meldeten:* `pruefe-todo.py` zaehlte 2329 (wie `wc -l`), dieses
+    # Werkzeug 2342 -- die Differenz war genau die Zahl der Dateien. **Der Registerbefehl
+    # zeigte auf DIESES Werkzeug, also stand die falsche Zahl dreimal im TODO und einmal
+    # im README, bewacht und trotzdem falsch.** `splitlines()` kennt den Fall.
+    for z in text.splitlines():
         roh = z.rstrip()
         # (1) Blockkommentar `(* … *)`
         if im_kommentar:

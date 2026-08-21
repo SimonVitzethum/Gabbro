@@ -1,0 +1,60 @@
+-- erwartet: H015
+--
+-- **Die GNADENFRIST ist eine ANNAHME, und sie wird jetzt VERLANGT.**
+--
+-- `H011` und `H012` halten die zwei pruefbaren Haelften der Rueckgewinnung: nicht im eigenen
+-- Lesebereich zurueckgeben, nicht ohne die Schreibersperre. Die dritte Haelfte ist keine
+-- Pruefung -- dass kein Leser das alte Objekt mehr sieht, stellt kein statischer Pass her.
+--
+-- Diese Datei tut alles richtig, was ein Pass nachrechnen kann: sie gibt unter `SCHREIBER`
+-- zurueck und nicht aus einem `observes` heraus. **Und sie sagt trotzdem nirgends, wer
+-- garantiert, dass kein Leser mehr drin ist.**
+--
+-- Die richtige Fassung steht als `beispiele/31-rcu.gab` daneben; sie unterscheidet sich um
+-- die drei Zeilen `assume gnadenfrist_ist_abgelaufen … falsifier sonde_leser_noch_drin;`.
+
+module gift::gnadenfrist {
+
+table Konten count 256 {
+    slot {
+        zaehler : u32 in 0 .. 65535,
+    }
+}
+
+rcu BACCT protects { Konten } reclaims frei;
+
+static mut frei : option index into Konten = None;
+
+lock SCHREIBER protects { Konten, frei } rank 3 held <= 100 ops;
+
+impl fn lesen(i : index into Konten) -> u32
+    effects { reads Konten.slots }
+    costs   <= 4 ops
+{
+    observes BACCT {
+        return Konten.slots[i].zaehler;
+    }
+    return 0;
+}
+
+-- Die Rueckgewinnung. `H011` und `H012` sind zufrieden -- und niemand hat die Gnadenfrist
+-- aufgeschrieben.
+impl fn zurueckgeben(i : index into Konten)
+    effects { locks SCHREIBER, writes frei }
+    costs   <= 4 ops
+{
+    locks SCHREIBER {
+        frei = Some(i);
+    }
+}
+
+-- **Und eine Annahme steht sehr wohl da -- nur handelt sie von etwas anderem.**
+--
+-- Das ist der Fall, den die Regel treffen muss: nicht die Datei ganz ohne Annahmenschicht,
+-- sondern die, die eine hat und die Gnadenfrist trotzdem nicht nennt. *Eine Zaehlung, die
+-- bloss fragt „gibt es hier Annahmen?", waere hier zufrieden.*
+assume zeitgeber_tickt_hier
+    "Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund."
+    falsifier sonde_zeitgeber_gift230;
+
+}

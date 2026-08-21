@@ -73,7 +73,7 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Nennt die `requires`-Klausel einen `Held(…)`-Zeugen? — der Prädikatbaum, flach gelesen.
 /// Was über eine Sperre im Baum steht.
@@ -228,6 +228,28 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         }
     });
 
+    // **Welche RCU-Domaene traegt eine GNADENFRISTANNAHME?** (`H015`, 2026-08-21)
+    //
+    // Eine Annahme deckt eine Domaene, wenn ihr Satz die Domaene BEIM NAMEN nennt -- so, wie
+    // `beispiele/31-rcu.gab` es seit jeher schreibt: *„Nach der Ruecknahme des Zeigers ist
+    // kein Leser mehr in einem `observes BACCT`."*
+    //
+    // Der Abgleich laeuft ueber WORTGRENZEN und nicht ueber `contains`: ein Domaenenname ist
+    // ein Bezeichner, und ein Teilstring waere ein Treffer, den niemand gemeint hat.
+    let mut gnadenfrist: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Assume(a) = &item.art else { return };
+        for wort in a
+            .text
+            .text
+            .split(|c: char| !(c.is_alphanumeric() || c == '_'))
+        {
+            if rcu_domaenen.contains_key(wort) {
+                gnadenfrist.insert(wort.to_string());
+            }
+        }
+    });
+
     // **H007 -- K11.2.1: `protects` beisst.**
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Funktion(f) = &item.art else { return };
@@ -290,7 +312,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     }
                 }
             }
-            rcu_schutz(b, &[], &aussen, &domaenen, &rueckgaben, &sperren, &f.name.text, absagen);
+            rcu_schutz(b, &[], &aussen, &domaenen, &rueckgaben, &sperren, &gnadenfrist, &f.name.text, absagen);
         });
     }
 
@@ -1064,6 +1086,8 @@ fn rcu_schutz(
     domaenen: &BTreeMap<String, Vec<String>>,
     rueckgaben: &BTreeMap<String, String>,
     sperren: &BTreeMap<String, Sperre>,
+    // Die RCU-Domaenen, die eine Gnadenfristannahme beim Namen nennt (`H015`).
+    gnadenfrist: &BTreeSet<String>,
     wo: &str,
     absagen: &mut Absagen,
 ) {
@@ -1084,12 +1108,12 @@ fn rcu_schutz(
             StmtArt::Observiert(o) => {
                 let mut tiefer = beobachtet.to_vec();
                 tiefer.push(o.domaene.text.clone());
-                rcu_schutz(&o.rumpf, &tiefer, gehalten, domaenen, rueckgaben, sperren, wo, absagen);
+                rcu_schutz(&o.rumpf, &tiefer, gehalten, domaenen, rueckgaben, sperren, gnadenfrist, wo, absagen);
             }
             StmtArt::Sperrt(l) => {
                 let mut tiefer = gehalten.to_vec();
                 tiefer.push(l.sperre.text());
-                rcu_schutz(&l.rumpf, beobachtet, &tiefer, domaenen, rueckgaben, sperren, wo, absagen);
+                rcu_schutz(&l.rumpf, beobachtet, &tiefer, domaenen, rueckgaben, sperren, gnadenfrist, wo, absagen);
             }
             _ => {}
         }
@@ -1097,7 +1121,7 @@ fn rcu_schutz(
         // weil beide den mitgeführten Stand ändern. Vorher fehlte der `exchange`-Rumpf.
         if !matches!(&s.art, StmtArt::Observiert(_) | StmtArt::Sperrt(_)) {
             for k in crate::unterbloecke(s) {
-                rcu_schutz(k, beobachtet, gehalten, domaenen, rueckgaben, sperren, wo, absagen);
+                rcu_schutz(k, beobachtet, gehalten, domaenen, rueckgaben, sperren, gnadenfrist, wo, absagen);
             }
         }
         match &s.art {
@@ -1167,6 +1191,41 @@ fn rcu_schutz(
                         .mit_notiz(
                             "reclaiming is the write side -- and RCU serialises readers \
                                 against it, not writers against each other",
+                        ),
+                    );
+                }
+                // **`H015` -- die GNADENFRIST wird VERLANGT** (2026-08-21).
+                //
+                // `H011` und `H012` halten die zwei PRUEFBAREN Haelften. Die dritte ist
+                // keine Pruefung: dass kein Leser das alte Objekt mehr sieht, stellt kein
+                // statischer Pass her. **Also wird sie verlangt statt hergestellt** --
+                // dieselbe Regel wie `S003` an `progress`, an einem anderen Konstrukt.
+                //
+                // Gemessen am 2026-08-21, vor dem Bau: `beispiele/43-gegenprobe.gab`
+                // deklariert `rcu BACCT … reclaims frei` und nannte keine Gnadenfrist --
+                // *0 Fehler.* Der Posten im Ordner stimmte.
+                //
+                // **Was diese Regel NICHT prueft**, und es steht hier statt in einer
+                // Fussnote: dass die Annahme WAHR ist, und dass ihr Satz wirklich von der
+                // Gnadenfrist handelt. Sie prueft, dass eine benannte Annahme die Domaene
+                // nennt -- *ein Satz, den jemand aufgeschrieben hat und der im Zeugnis
+                // steht*, statt einer Unterstellung. Mehr kann eine Sprache hier nicht.
+                if !gnadenfrist.contains(d) {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "H015",
+                            o.span,
+                            format!("`{t}` reclaims, and no assumption names the grace period of `{d}`"),
+                        )
+                        .mit_notiz(
+                            "no pass establishes that the last reader is gone -- the \
+                                assumption names WHO GUARANTEES it, the way `progress` names \
+                                who ends the loop",
+                        )
+                        .mit_notiz(
+                            "write an `assume` whose sentence names the domain, e.g. \
+                                `assume gnadenfrist_ist_abgelaufen \"… no reader is in an \
+                                `observes <domain>` any more\" falsifier <probe>;`",
                         ),
                     );
                 }
