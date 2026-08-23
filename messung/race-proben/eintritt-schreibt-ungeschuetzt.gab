@@ -1,0 +1,23 @@
+-- Die Gegenprobe: derselbe Eintritt, aber der Verteiler EXISTIERT und schreibt einen
+-- ungeschuetzten `static mut`. Das ist die Form, fuer die `H013` gebaut wurde.
+module eintr2 {
+
+static mut zaehler : u32 = 0;
+
+impl fn verteiler()
+    effects { writes zaehler }
+    costs   <= 4 ops
+{
+    zaehler = 1;
+}
+
+entry syscall vector 0x80 arch x86_64 {
+    regs in  { nr : rax, }
+    regs out { ret : rax, }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rcx, r11 }
+    stack kernstapel per cpu nested never
+    dispatch eintr2::verteiler;
+}
+
+}

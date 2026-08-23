@@ -1,0 +1,43 @@
+-- **Der Aliasfall in seiner nacktesten Form -- und die Gegenprobe zum Werkzeug.**
+--
+-- `m3.rs` sagt es im eigenen Modulkopf: *„Er ist kein Alias-Analysator. Zwei
+-- `ptr<normal, rw>` auf dasselbe Objekt bleiben ununterscheidbar."* Diese Datei ist der
+-- Satz als Programm.
+--
+-- `verschraenken(r, r)` uebergibt ZWEIMAL denselben Zeiger. `a` und `b` sind damit
+-- dasselbe Objekt, und der Rumpf schreibt durch beide -- die zweite Zuweisung macht die
+-- erste zunichte, und die `ensures`-Aussage `a.x == 1 && b.y == 2` ist unter dem Alias
+-- nicht herstellbar, weil `a.x` und `b.x` dasselbe Feld sind.
+--
+-- **Erwartet: 0 Fehler.** Das ist der Befund, nicht ein Versehen -- die Datei steht hier,
+-- damit `gabbro alias` etwas zu finden hat, das `gabbro pruefe` durchlaesst.
+--
+--     ./target/debug/gabbro pruefe messung/race-proben/zwei-zeiger-ein-objekt.gab
+--     ./target/debug/gabbro alias  messung/race-proben/zwei-zeiger-ein-objekt.gab
+--
+-- `R004` beisst hier nicht: es sieht nur zwei `own`-Parameter an derselben syntaktischen
+-- Stelle, und `own` steht hier nicht.
+
+module alias::zwei {
+
+type Zelle = {
+    x : u32,
+    y : u32,
+};
+
+impl fn verschraenken(a : ptr<normal, rw> Zelle, b : ptr<normal, rw> Zelle)
+    effects { writes a, writes b }
+    costs   <= 8 ops
+{
+    a.x = 1;
+    b.y = 2;
+}
+
+impl fn ruft(r : ptr<normal, rw> Zelle)
+    effects { writes r }
+    costs   <= 16 ops
+{
+    verschraenken(r, r);
+}
+
+}

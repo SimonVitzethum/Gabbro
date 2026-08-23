@@ -1,0 +1,43 @@
+-- erwartet: H017
+-- **Die zweite und gefaehrlichere Gestalt: die Domaene GIBT es, der Name ist verschrieben.**
+--
+-- Hier laeuft `rcu_schutz` -- die Einheit deklariert `BACCT`. Der verschriebene Name wird
+-- auf den Stand der beobachteten Domaenen geschoben und dort gegen nichts abgeglichen.
+--
+-- **Der Leser sieht einen geschuetzten Zugriff, der Pass sieht einen ungeschuetzten**, und
+-- vor `H017` fiel die Zeile deshalb an `H009` -- mit einer Meldung ueber die falsche Sache:
+-- *„`Konten.slots` gehoert zur RCU-Domaene `BACCT`, und `lesen` steht nicht in `observes`"*,
+-- waehrend zwei Zeilen darueber `observes BACT` steht. **Ein Tippfehler, abgesagt als
+-- fehlender Lesebereich.**
+--
+-- Die richtige Fassung ist `beispiele/31-rcu.gab`; sie unterscheidet sich um einen
+-- Buchstaben.
+
+module gift::observes_tippfehler {
+
+table Konten count 256 { slot { zaehler : u32 in 0 .. 65535, } }
+
+rcu BACCT protects { Konten } reclaims frei;
+
+static mut frei : option index into Konten = None;
+
+lock SCHREIBER protects { Konten, frei } rank 3 held <= 100 ops;
+
+-- **Der Lesebereich steht in einem ZWEIG**, und das ist kein Zierat: so steht er im echten
+-- Kern, und eine Probe, die nur den obersten Anweisungsrand absucht, faende ihn nicht.
+impl fn lesen(i : index into Konten, schnell : bool) -> u32
+    effects { reads Konten.slots } costs <= 8 ops
+{
+    if schnell {
+        observes BACT {
+            return Konten.slots[i].zaehler;
+        }
+    }
+    return 0;
+}
+
+assume gnadenfrist_ist_abgelaufen
+    "Nach der Ruecknahme des Zeigers ist kein Leser mehr in einem `observes BACCT`."
+    falsifier sonde_leser_noch_drin;
+
+}

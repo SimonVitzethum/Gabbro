@@ -2663,6 +2663,32 @@ MUTATIONEN = [
         "`goals + refused = total` ist genau die Zeile, die das verhindern soll",
         flaeche="annotation",
     ),
+    # --- race ---
+    #
+    # **`H017` -- der Domaenenname ohne Deklaration.** Dieselbe Gestalt wie `H016` an der
+    # Sperre, und die Gefahr ist hier groesser: der RCU-Waechter laeuft ueberhaupt nur in
+    # einer Einheit, die eine Domaene deklariert. *Faellt `H017` aus, ist ein
+    # `observes NIEDADOM { … }` wieder unsichtbar -- der Leser sieht einen Lesebereich, der
+    # Pruefer sieht einen Block.*
+    Mutation(
+        "domaene-ohne-deklaration-geht-durch",
+        "geteilt.rs",
+        "            if domaenen.contains_key(&name) || !reported.insert(name.clone()) {",
+        "            if true || !reported.insert(name.clone()) {",
+        "H017 -- ein `observes` auf eine Domaene, die keine `rcu`-Deklaration erklaert, geht "
+        "wieder mit null Fehlern durch",
+    ),
+    Mutation(
+        # Die andere Richtung: die Regel laeuft, aber nur noch ueber den obersten
+        # Anweisungsrand. Ein `observes` in einem `if`-Zweig oder in einer Schleife wird
+        # unsichtbar -- **genau die Stelle, an der ein Leser im echten Kern steht.**
+        "domaenenprobe-steigt-nicht-ab",
+        "geteilt.rs",
+        "        for k in crate::unterbloecke(s) {\n            observes_blocks(k, f);",
+        "        for k in crate::unterbloecke(s).into_iter().take(0) {\n            observes_blocks(k, f);",
+        "H017 -- die Domaenenprobe sieht nur den obersten Anweisungsrand; ein `observes` in "
+        "einem Zweig oder einer Schleife nennt wieder, was es will",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
