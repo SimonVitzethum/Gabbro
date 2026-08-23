@@ -40,7 +40,7 @@ pub struct Pflicht {
     /// Hat Gabbro den Rumpf? *Ohne Rumpf ist die Pflicht eine ANNAHME ueber Fremdcode.*
     pub rumpf_da: bool,
     /// **The material a PROVER needs -- carried by the same walk that COUNTS** (P6,
-    /// 2026-08-23).
+    /// 2026-08-21).
     ///
     /// It sits in `Pflicht` and not in a second walk of its own, and that is the whole
     /// point: `refinement.rs` writes the Isabelle form of exactly the obligations this

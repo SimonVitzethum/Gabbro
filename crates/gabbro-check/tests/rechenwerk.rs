@@ -3551,7 +3551,7 @@ impl fn g(x : u32 in 0 .. 9) -> u32 in 0 .. 9 effects { pure } costs <= 2 ops \
 
 // --- p6 ---
 //
-// **P6 -- the GENERATED refinement obligation** (2026-08-23). `gabbro pflichten --isabelle`
+// **P6 -- the GENERATED refinement obligation** (2026-08-21). `gabbro pflichten --isabelle`
 // writes the very register `gabbro pflichten` counts, as an Isabelle theory.
 //
 // The condition this emitter was built under stands in `README.md` and in

@@ -45,7 +45,7 @@ CHECK = WURZEL / "crates" / "gabbro-check" / "src"
 # emittiert wird, kann nichts mutieren -- und eine Gesamtzahl liest sich dann wie Deckung.
 FLAECHEN = {
     "pruefer": "Der Pruefer (Absagen). Gebaut, mutierbar.",
-    # **Not zero any more since 2026-08-23** («P6»). `gabbro pflichten --isabelle` writes a
+    # **Not zero any more since 2026-08-21** («P6»). `gabbro pflichten --isabelle` writes a
     # unit's obligation register as an Isabelle theory, and `instrumente/pruefe-p6-beweis.sh`
     # lets Isabelle read it. The warning that stood here as the REASON for the zero is
     # therefore not discharged but has become APPLICABLE: it is the yardstick of the seven
@@ -57,7 +57,7 @@ FLAECHEN = {
     # stands closed today (`./instrumente/zaehle-p6.py`). What the emitter does not emit it
     # cannot weaken either -- these mutations cover the surface it HAS, not the one it ought
     # to have.
-    "annotation": "Die ANNOTATIONSEMISSION -- der Wunschform-Kanal. Gebaut seit 2026-08-23 "
+    "annotation": "Die ANNOTATIONSEMISSION -- der Wunschform-Kanal. Gebaut seit 2026-08-21 "
                   "(`gabbro pflichten --isabelle`, «P6»), also mutierbar: ein Erzeuger, der "
                   "stillschweigend abgeschwaechte Vertraege ausgibt, liefert einen gruenen "
                   "Beweis ueber eine schwaechere Aussage, und ohne diese Proben faengt ihn "
