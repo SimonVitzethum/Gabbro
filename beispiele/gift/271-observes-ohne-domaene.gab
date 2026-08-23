@@ -1,0 +1,29 @@
+-- erwartet: H017
+-- **Ein `observes` auf eine Domaene, die niemand deklariert -- und die Einheit deklariert
+-- ueberhaupt keine.**
+--
+-- Das ist die STILLERE der zwei Gestalten: `rcu_schutz`, der Traeger von `H009`, `H010`,
+-- `H011` und `H015`, laeuft nur, wenn die Einheit mindestens eine Domaene deklariert. Ohne
+-- sie betritt diese Datei den RCU-Waechter nie. *Der Leser sieht einen Lesebereich; der
+-- Pruefer sieht einen Block.*
+--
+-- Gemessen vor dem Bau an `messung/abi-proben/unbekannte-domaene.gab`, das seit dem
+-- 2026-08-21 im Ordner steht: 4 Items, **0 Fehler, 0 Hinweise**.
+--
+-- Dieselbe Gestalt wie `gift/251` (`H016`), ein Konstrukt weiter: **ein genommener Name,
+-- den keine Deklaration erklaert, ist fuer den zugehoerigen Pass unsichtbar.**
+
+module gift::observes_ohne_domaene {
+
+table Konten count 256 { slot { zaehler : u32 in 0 .. 65535, } }
+
+impl fn lesen(i : index into Konten) -> u32
+    effects { reads Konten.slots } costs <= 4 ops
+{
+    observes NIEDADOM {
+        return Konten.slots[i].zaehler;
+    }
+    return 0;
+}
+
+}

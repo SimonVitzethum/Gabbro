@@ -1,0 +1,12 @@
+-- Eine `group` ueber zwei Sperren, von denen eine niemand deklariert.
+module grp {
+
+const N : u32 = 4;
+table A count N { slot { x : u32, } }
+table B count N { slot { y : u32, } }
+
+lock LA protects { A } rank 1 held <= 10 ops;
+
+group G over { LA, LB } invariant "A und B haengen zusammen";
+
+}

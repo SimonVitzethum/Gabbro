@@ -1073,22 +1073,32 @@ pub const SPERREN: &[Satz] = &[
     },
     Satz {
         name: "sperren.schutz",
-        kennungen: &["H007", "H008", "H009", "H010", "H011"],
+        kennungen: &["H007", "H008", "H009", "H010", "H011", "H017"],
         aussage: "Every access to a place named in some lock's `protects` happens while that \
                   lock is held (`H007`), every declared `locks` effect is really redeemed by \
                   a take (`H011`), and for RCU-protected places a READ stands inside an \
                   `observes` block (`H009`) while a WRITE stands additionally under a real \
-                  lock (`H010`).",
+                  lock (`H010`). Since 2026-08-21 every DOMAIN NAME is explained by an `rcu` \
+                  declaration (`H017`) -- without it the two RCU halves speak about a domain \
+                  that has no `protects` list, and match nothing.",
         vorbehalt: "`H007` counts a DECLARED `locks` effect as held -- so a declaration \
                     covers an access without any take standing anywhere, which is why \
                     `H011` had to be added from the other direction in 2026-08-19. Before \
                     that a unit passed with zero errors while `H007` covered every access \
                     with a line that redeemed nothing. RCU has a grace period, and `H010` is \
                     the stricter of the two rules, so a write under the right lock passes \
-                    both while one without falls at `H010`.",
+                    both while one without falls at `H010`. **And the fourth, the RCU twin \
+                    of what `H016` did for locks:** until `H017` an undeclared domain name \
+                    was invisible to this whole half -- the RCU walker runs at all only when \
+                    the unit declares at least one domain, so `observes NIEDADOM { … }` in a \
+                    unit without `rcu` never entered it, and a MISSPELT domain in a unit \
+                    with one entered it and matched nothing. *The second is the worse case: \
+                    the reader looks protected and is not.*",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 2 probes on `H011`, probes on `H007`, `H009`, `H010`. \
-                      **`H008` has NO probe.**",
+        gemessen_an: "beispiele/gift: 2 probes on `H011`, probes on `H007`, `H009`, `H010`; \
+                      `gift/271` and `gift/272` are the two shapes of `H017`. **`H008` has \
+                      NO probe.** Hand probe before the `H017` build: \
+                      `messung/abi-proben/unbekannte-domaene.gab` passed with 0 errors.",
         fundstelle: "crates/gabbro-check/src/geteilt.rs; K11.2.1",
     },
     Satz {

@@ -230,6 +230,8 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         }
     });
 
+    undeclared_domains(baum, &rcu_domaenen, absagen);
+
     // **Welche RCU-Domaene traegt eine GNADENFRISTANNAHME?** (`H015`, 2026-08-21)
     //
     // Eine Annahme deckt eine Domaene, wenn ihr Satz die Domaene BEIM NAMEN nennt -- so, wie
@@ -706,6 +708,91 @@ fn lock_blocks(b: &Block, f: &mut impl FnMut(String, Span)) {
         }
         for k in crate::unterbloecke(s) {
             lock_blocks(k, f);
+        }
+    }
+}
+
+/// **`H017` -- an `observes` domain that no `rcu` declaration explains.** The RCU instance
+/// of the shape `H016` closed for locks, and it was named as open on the same day
+/// (`messung/ABI.md` §6.1: *"Dieselbe Stille steht noch bei der RCU-Domaene"*).
+///
+/// **Measured 2026-08-21 on `messung/abi-proben/unbekannte-domaene.gab`**, unchanged since
+/// it was written for the ABI report:
+///
+/// ```gabbro
+/// pub impl fn liest(i : index into T) -> u32 effects { reads T.slots } costs <= 30 ops
+/// { let mut v : u32 = 0; observes NIEDADOM { v = T.slots[i].a; } return v; }
+/// -> 4 Items, 0 Fehler, 0 Hinweise
+/// ```
+///
+/// **Why the silence is total and not partial**, and this is the part that makes it worse
+/// than the lock case: `rcu_schutz` -- the carrier of `H009`/`H010`/`H011`/`H012`/`H015` --
+/// is called at all only `if !domaenen.is_empty()`. A unit that declares NO domain and
+/// writes `observes X { … }` never enters the RCU walker; a unit that declares `BACCT` and
+/// writes `observes TIPPFEHLER { … }` enters it, pushes the misspelt name onto `beobachtet`
+/// and then matches it against nothing.
+///
+/// > **The second case is the dangerous one, because it INVERTS the rule it looks like it
+/// > satisfies.** `H009` demands that a read of an RCU place stand inside `observes` of its
+/// > domain. A misspelt domain name does not merely fail to help -- the reader looks
+/// > protected to the eye and is unprotected to the pass, and `H009` then refuses at the
+/// > read with a message about the wrong thing. *A name that no declaration explains is
+/// > invisible to the pass that would use it.*
+///
+/// **One refusal per NAME, not per site** -- the same decision as at `H016` and `H014`.
+/// Naming `NIEDADOM` at six places is one mistake.
+///
+/// *On the library boundary the rule costs nothing today and cannot: `abi.rs` carries no
+/// `rcu` item into a `.gabi` at all (`messung/ABI.md` §5 lists `rcu` among the 14 unmeasured
+/// item kinds). There is no way to import a domain, so there is no import to exempt.* **When
+/// `rcu` does cross the boundary, this rule is where the exemption has to be written, and
+/// `H016` shows the shape.**
+fn undeclared_domains(
+    baum: &Programm,
+    domaenen: &BTreeMap<String, Vec<String>>,
+    absagen: &mut Absagen,
+) {
+    let mut reported: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        // A `spec fn` touches nothing at run time -- the same exemption as at `H007` and
+        // `H016`, both issued in this file and made for the same reason.
+        if matches!(f.klasse, Some(FnKlasse::Spec)) {
+            return;
+        }
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        observes_blocks(b, &mut |name: String, span: Span| {
+            if domaenen.contains_key(&name) || !reported.insert(name.clone()) {
+                return;
+            }
+            absagen.schiebe(
+                Absage::fehler(
+                    "H017",
+                    span,
+                    format!("this `observes` names `{name}`, and no `rcu` declaration explains it"),
+                )
+                .mit_notiz(
+                    "`observes D` is the read side of the domain `D` -- without the \
+                     declaration there is no `protects` list, so the rules that would use \
+                     it match nothing and stay silent",
+                )
+                .mit_notiz(
+                    "worse than a missing rule: a misspelt domain looks protected and is \
+                     not, and `H009` then refuses at the READ instead of here",
+                ),
+            );
+        });
+    });
+}
+
+/// Every `observes` block of a body with its domain name and span -- for `H017`.
+fn observes_blocks(b: &Block, f: &mut impl FnMut(String, Span)) {
+    for s in &b.anweisungen {
+        if let StmtArt::Observiert(o) = &s.art {
+            f(o.domaene.text.clone(), o.domaene.span);
+        }
+        for k in crate::unterbloecke(s) {
+            observes_blocks(k, f);
         }
     }
 }

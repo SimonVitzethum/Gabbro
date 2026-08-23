@@ -404,7 +404,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 114 sind tragend, 2 verdächtig — und **47 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 115 sind tragend, 2 verdächtig — und **47 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       *Wer eine Absage liest und daraus nicht erkennt, worauf sie ruht, kann auch nicht
       prüfen, ob sie weit genug reicht.* Das ist der größere Posten, nicht die zwei.
@@ -469,7 +469,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **1483 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **1505 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -637,7 +637,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **281 von 281 Ankern** greifen (`--anker`, 2026-08-21) — die
+      fällt. Mutationskatalog: **283 von 283 Ankern** greifen (`--anker`, 2026-08-21) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -2725,6 +2725,68 @@ durch sieben Positionen still.*
 
 ---
 
+# DIE KLASSE «RENNEN», JE RENNFORM AUFGESCHLÜSSELT — und die Grenze läuft anders als gebucht
+
+**`README.md` sagt seit Wochen: *„race hängt an der Axiomschicht"*. Gemessen am 2026-08-21
+stimmt das nicht** ([`messung/RACE.md`](messung/RACE.md)):
+
+```
+Von 28 unterschiedenen Rennformen tragen
+  21  auf einer REGEL
+   2  auf der AXIOMSCHICHT
+   1  auf beidem
+   4  auf NICHTS
+```
+
+> **Die Klasse hängt nicht an der Axiomschicht — sie hängt an ihr an genau DREI Stellen**,
+> und an drei weiteren an etwas anderem: **dem Alias**, der im Ordner bis heute keine Zahl
+> hatte. *Ein Satz, der die Last an der falschen Stelle vermutet, lenkt die Suche weg* —
+> dieselbe Klasse wie die falsche Zyklusbehauptung bei der ABI, am selben Tag.
+
+- [ ] **Vier Rennformen tragen auf NICHTS** *(gemessen 2026-08-21)*. Sie stehen einzeln in
+      [`messung/RACE.md`](messung/RACE.md). *Das ist die eigentliche Lücke der Klasse, und sie
+      war bisher hinter dem Satz „hängt an der Axiomschicht" unsichtbar.*
+
+- [ ] **`H011` und `H012` tragen je ZWEI verschiedene Regeln — und vier Zeilen der
+      Renntafel stehen auf ihnen** *(2026-08-21)*. **Eine ausfallende Regel bleibt grün, weil
+      die andere denselben Code schreibt.** Dieselbe Klasse wie die fünf Parserkennungen, nur
+      an der Stelle, an der die Rennabdeckung ihre Belege holt.
+      *Erst auflösen, dann darf die Renntafel sich auf diese vier Zeilen berufen.*
+
+- [ ] **Die Aliasfläche hat seit dem 2026-08-21 eine Zahl, und die Analyse ist NICHT gebaut**
+      (`gabbro alias`, fünf Schichten über 53 Einheiten):
+
+      ```
+      S1 = 10   Signaturen mit >= 2 Zeigerparametern
+      S2 =  3   Rufstellen, die >= 2 Zeiger übergeben
+      S3 =  0   davon zwei Argumente EINER Wurzel
+      S4 =  2   Umsichten `fn(ptr A) -> ptr B`
+      S5 =  5   Rümpfe, die durch einen schreiben und aus einem anderen lesen
+      ```
+
+      **Und der ungeplante Fund ist der wertvollere:** was `R004` an zwei `own`-Parametern
+      erkennt, **IST S3** — der Unterschied ist eine Rechtebedingung, keine Aliasanalyse.
+      *Nicht gebaut, weil `S3 = 0` auf dem sauberen Korpus.* **Eine gemessene Null ist ein
+      Ergebnis.**
+
+- [ ] **`sonden/` gibt es, und darin läuft GENAU EINE Sonde** *(2026-08-21)*.
+      `sonde_release_sichtbarkeit.c` trägt einen **positiven Kontrollarm, der fallen MUSS**
+      (gemessen: 3 322 Verletzungen gegen 0 im ersten Arm). *Eine Sonde ohne Kontrollarm
+      misst ihre eigene Nachsicht.*
+
+      > **Der Zähler bleibt bei `0 von 27`:** die eine gebaute Sonde gehört zu **keiner** der
+      > 26 benannten. Und von den drei Annahmen, die die Rennklasse wirklich tragen, kann
+      > **keine** heute eine laufende Sonde bekommen.
+
+- [ ] **`release_stellt_sichtbarkeit_her` ist als „nicht falsifizierbar" gebucht — mit einer
+      Begründung, die die GRÜNE Richtung argumentiert** *(gefunden 2026-08-21 beim Bau der
+      Sonde)*. Der Grund sagt, eine erfolgreiche Probe zeige nichts; **Falsifizierbarkeit ist
+      aber die ROTE Richtung** — es geht darum, ob eine Probe die Annahme *widerlegen* könnte.
+      *Die Buchung beantwortet die falsche Frage, und niemand hat es bemerkt, weil die Antwort
+      für sich genommen richtig ist.*
+
+---
+
 # DIE SPRACHLINIE, NEU GEZOGEN AM 2026-08-21
 
 **Bis heute lief die Linie zwischen dem, was Gabbro SAGT, und dem, was der Ordner ÜBER Gabbro
@@ -2736,7 +2798,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7904 von 11927 Kommentarzeilen** im Pruefer sind deutsch
+**7906 von 12359 Kommentarzeilen** im Pruefer sind deutsch
  1043 von  1280 in den Instrumenten
   273 von   845 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -2842,7 +2904,7 @@ hat kein Feld dafür). **Ohne die Sätze ist „Gabbro formal verifiziert" nicht
 formulierbar** — man wüsste nicht, was zu beweisen wäre.
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (heute 209 Codes, null Sätze).
+sofort: *kein neuer Absagecode ohne seinen Satz* (heute 210 Codes, null Sätze).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 

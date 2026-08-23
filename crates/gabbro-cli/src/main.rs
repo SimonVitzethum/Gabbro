@@ -92,6 +92,49 @@ fn main() -> std::process::ExitCode {
         // Verus-Zeilen gemessen war. Was sie ersetzt, braucht eine Beweispflicht, die
         // ENTSTANDEN ist statt erfunden -- und dieses Register zaehlt sie. Der Pruefer laeuft
         // davor, aus demselben Grund wie bei `emit`.
+        // **`alias` counts an AREA and decides nothing.** It exists because `m3.rs` says of
+        // itself that it is no alias analyser, and that sentence is honest without being a
+        // number. *A measured area makes the later decision possible; an analysis built
+        // without a decision is trust surface.*
+        //
+        // Unlike `kontexte` it does NOT abort on a unit with errors: a count over a corpus
+        // must not shrink because one file in it is red -- that would make the figure depend
+        // on the state of an unrelated pass.
+        "alias" => {
+            if rest.is_empty() {
+                eprintln!("gabbro alias: no file named");
+                return std::process::ExitCode::from(2);
+            }
+            let leise = rest.iter().any(|a| a == "--summe");
+            let rest: Vec<&String> = rest.iter().filter(|a| a.as_str() != "--summe").collect();
+            let mut schlecht = false;
+            let mut summe = gabbro_check::alias::Flaeche::default();
+            let mehrere = rest.len() > 1;
+            for datei in &rest {
+                let datei = datei.as_str();
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} not readable");
+                    schlecht = true;
+                    continue;
+                };
+                let (baum, _) = gabbro_syntax::lies(datei, &quelle);
+                let f = gabbro_check::alias::erhebe(&baum);
+                if !leise {
+                    print!("{}", gabbro_check::alias::tafel_von(&f, datei));
+                }
+                summe.dazu(f);
+            }
+            if mehrere || leise {
+                print!(
+                    "{}",
+                    gabbro_check::alias::tafel(summe, &format!("TOTAL over {} units", rest.len()))
+                );
+            }
+            if schlecht {
+                return std::process::ExitCode::from(1);
+            }
+            std::process::ExitCode::SUCCESS
+        }
         "kontexte" => {
             if rest.is_empty() {
                 eprintln!("gabbro kontexte: no file named");
@@ -349,6 +392,9 @@ fn hilfe() {
                                     NAMED refusal, and the header carries `goals + refused
                                     = total`
   gabbro kontexte   <file.gab>…     execution contexts per place -- and the COUNT beside it
+  gabbro alias      <file.gab>…     the ALIAS SURFACE in five strata -- how much of a corpus
+                                    a missing alias analysis could be about. Two upper
+                                    bounds and two lower ones, printed together; no refusal
   gabbro emit [--with L.gabi]… <file.gab>…
                                     lower to C -- and REFUSE by name (`C001`) for every
                                     form this emitter does not know. A `.gabi` lowers to a

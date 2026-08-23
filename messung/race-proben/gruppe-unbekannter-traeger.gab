@@ -1,0 +1,14 @@
+-- Eine `group` ueber einen Traeger, den niemand deklariert. Faellt das?
+module grp {
+
+const N : u32 = 4;
+table A count N { slot { x : u32, } }
+
+lock LA protects { A } rank 1 held <= 10 ops;
+
+group G over { A, NIEDATAB } {
+    invariant haengt_zusammen cost O(1) runs offline :
+        forall i in slots of A : A.slots[i].x > 0;
+}
+
+}

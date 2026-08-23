@@ -17,6 +17,7 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::Absagen;
 
+pub mod alias;
 pub mod aufrufgraph;
 // **«B24» an EINER Stelle** -- der Namenspass sagt ab, der Erzeuger rechnet damit.
 pub mod bitlage;
@@ -226,7 +227,16 @@ pub fn passliste() -> Vec<Pass> {
                     (`H101`): naming `masks IRQ` in an effect list says that a function \
                     masks, not that it RUNS masked -- an entry that reaches such a carrier \
                     must declare `nested masked`. *Before that, one word in an effect list \
-                    bought the exemption from `H013`.*",
+                    bought the exemption from `H013`.* **And since 2026-08-21 every RCU \
+                    DOMAIN NAME is explained by a declaration** (`H017`) -- the twin of \
+                    `H016` one construct further: `observes NIEDADOM { … }` gave zero \
+                    errors, because the RCU walker runs at all only in a unit that declares \
+                    a domain. **What no rule of this pass carries, and it is the whole \
+                    remainder of the RACE class: the ALIAS.** Two pointers to one object \
+                    are indistinguishable here as they are in M3, so a lock that protects \
+                    `T` does not protect a second name for `T` -- `gabbro alias` counts how \
+                    large that surface is instead of guessing, and `messung/RACE.md` says \
+                    per race form what carries it and what it hangs on.",
             ),
             saetze: saetze::SPERREN,
         },

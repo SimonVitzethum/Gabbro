@@ -1,0 +1,17 @@
+-- Ein `entry`, dessen `dispatch` auf einen Namen zeigt, den niemand erklaert.
+-- `H013` schlaegt den Verteiler im Aufrufgraphen nach und `continue`t still, wenn er
+-- nicht aufloest. Faellt das? (Handprobe fuer messung/RACE.md.)
+module eintr {
+
+static mut zaehler : u32 = 0;
+
+entry syscall vector 0x80 arch x86_64 {
+    regs in  { nr : rax, }
+    regs out { ret : rax, }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rcx, r11 }
+    stack kernstapel per cpu nested never
+    dispatch eintr::nirgends;
+}
+
+}

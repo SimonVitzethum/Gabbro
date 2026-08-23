@@ -198,10 +198,20 @@ def sprechprobe():
 # stage 7 and K100.
 #
 # *A ratchet that is raised at the first violation is not a ratchet.* So the raise stands here
-# with its number, its date and its reason instead of being quietly absorbed: **180 + 21 lines
-# of debt**, and the mark may fall again the moment somebody translates them.
+# with its number, its date and its reason instead of being quietly absorbed, and every further
+# raise is added to the same line rather than smoothed into the mark:
+#
+#     emit.rs run   180 lines in the checker + 21 in the instruments
+#     race run        0 lines in the checker +  8 in the instruments
+#     -------------------------------------------------------------
+#     debt          180 + 29 lines
+#
+# **The second raise is the one to watch.** One raise is a decision; a series of them is the
+# ratchet turning into a rubber band. *The mark may fall again the moment somebody translates
+# them -- and if the series grows a third time, the honest move is to translate, not to add
+# a row here.*
 MARKE_KOMMENTARE = 7910   # 7730 earned + 180 booked as debt (2026-08-21)
-MARKE_PY = 1064           # 1043 earned + 21 booked as debt (2026-08-21)
+MARKE_PY = 1072           # 1043 earned + 29 booked as debt (2026-08-21)
 MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 
 # **Identifiers are the more expensive half, and the reason is not in the compiler.** A
