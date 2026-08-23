@@ -45,10 +45,23 @@ CHECK = WURZEL / "crates" / "gabbro-check" / "src"
 # emittiert wird, kann nichts mutieren -- und eine Gesamtzahl liest sich dann wie Deckung.
 FLAECHEN = {
     "pruefer": "Der Pruefer (Absagen). Gebaut, mutierbar.",
-    "annotation": "Die ANNOTATIONSEMISSION -- der Wunschform-Kanal. NICHT GEBAUT, also "
-                  "nicht mutierbar: ein Erzeuger, der stillschweigend abgeschwaechte "
-                  "Vertraege ausgibt, liefert einen gruenen Beweis ueber eine schwaechere "
-                  "Aussage, und keine Probe faengt ihn.",
+    # **Not zero any more since 2026-08-23** («P6»). `gabbro pflichten --isabelle` writes a
+    # unit's obligation register as an Isabelle theory, and `instrumente/pruefe-p6-beweis.sh`
+    # lets Isabelle read it. The warning that stood here as the REASON for the zero is
+    # therefore not discharged but has become APPLICABLE: it is the yardstick of the seven
+    # mutations below.
+    #
+    # > *A duty that vanishes is noticed; one that gets weaker is not.*
+    #
+    # **And the reference size stays small and named:** of 47 counted obligations exactly ONE
+    # stands closed today (`./instrumente/zaehle-p6.py`). What the emitter does not emit it
+    # cannot weaken either -- these mutations cover the surface it HAS, not the one it ought
+    # to have.
+    "annotation": "Die ANNOTATIONSEMISSION -- der Wunschform-Kanal. Gebaut seit 2026-08-23 "
+                  "(`gabbro pflichten --isabelle`, «P6»), also mutierbar: ein Erzeuger, der "
+                  "stillschweigend abgeschwaechte Vertraege ausgibt, liefert einen gruenen "
+                  "Beweis ueber eine schwaechere Aussage, und ohne diese Proben faengt ihn "
+                  "keine.",
     # **Seit 2026-08-17 nicht mehr null.** Ein Fragment ist durchgestochen -- .gab -> C ->
     # cc -Werror -> ausgefuehrt -> verglichen (`pruefe-emission.sh`). Die Flaeche ist damit
     # beschaedigbar geworden, und das ist der ganze Unterschied: was 0 Mutationen hat, ist
@@ -2571,6 +2584,84 @@ MUTATIONEN = [
         "C001 -- die Absage am `transition` ueber einem Index nennt wieder nur die FORM und "
         "nicht den Grund; die zweite Suffixform blieb darin ohnehin ungenannt",
         flaeche="code",
+    ),
+    # --- p6 ---
+    #
+    # **The annotation emission, and every mutation here is a WEAKENING.**
+    #
+    # Their brief stands in the surface description above: not a generator that stays
+    # silent, but one that SPEAKS and says less than the contract demands. Each mutation
+    # leaves the duty standing and makes it weaker -- the emitter's balance line stays
+    # unchanged in five of seven, and that is exactly why the probes must look at the TEXT
+    # and not at the number.
+    Mutation(
+        "p6-and-becomes-or",
+        "refinement.rs",
+        '        PredArt::Und(a, b) => Ok(format!(\n            "({}) \\\\<and> ({})",',
+        '        PredArt::Und(a, b) => Ok(format!(\n            "({}) \\\\<or> ({})",',
+        "P6 -- `requires k < 64 && n < 4096` wird als ODER erzeugt. Beide Konjunkten stehen "
+        "weiter da, die Pflicht ist um die Haelfte schwaecher, und das Ziel geht durch",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "p6-argument-without-stability",
+        "refinement.rs",
+        "            match caller.iter().find(|p| p.name == o.basis.text) {\n"
+        "                Some(p) if p.untouched => Ok(var(&p.name)),",
+        "            match caller.iter().find(|p| p.name == o.basis.text) {\n"
+        "                Some(p) => Ok(var(&p.name)),",
+        "P6 -- ein Parameter, den der Rumpf laengst ueberschrieben hat, wird wieder als "
+        "Argument eingesetzt; das Ziel redet dann ueber einen Wert, den das Programm an "
+        "dieser Stelle nicht mehr hat",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "p6-own-precondition-without-stability",
+        "refinement.rs",
+        "            Binding::Own(caller) => match caller.iter().find(|p| p.name == name) {\n"
+        "                Some(p) if p.untouched => Ok(var(&p.name)),",
+        "            Binding::Own(caller) => match caller.iter().find(|p| p.name == name) {\n"
+        "                Some(p) if true => Ok(var(&p.name)),",
+        "P6 -- das eigene `requires` des Rufers wird wieder zur Annahme, auch wenn der Rumpf "
+        "den Parameter geschrieben hat; bewiesen wird unter einer Voraussetzung, die am "
+        "Rufort niemand gewaehrt",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "p6-lock-witness-becomes-true",
+        "refinement.rs",
+        "        PredArt::Held { .. } => Err(Reason::LockWitness),",
+        '        PredArt::Held { .. } => Ok("True".to_string()),',
+        "P6 -- `requires Held(L)` wird ein triviales Ziel statt einer benannten Absage; eine "
+        "von den Sperrpaessen GETRAGENE Pflicht sieht danach aus wie eine bewiesene",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "p6-foreign-ensures-called-body-effect",
+        "refinement.rs",
+        "        Material::Foreign => Verdict::Refused(Reason::ForeignBody),",
+        "        Material::Foreign => Verdict::Refused(Reason::BodyEffect),",
+        "P6 -- eine ANNAHME ueber fremden Code wird als offene Pflicht gefuehrt; die Zahl "
+        "sieht gleich aus, und die Vertrauensflaeche verschwindet aus dem Bericht",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "p6-type-bound-pins-the-value",
+        "pflichten.rs",
+        "        crate::typen::Typ::Ganzzahl(b) => Some((b.min, b.max)),",
+        "        crate::typen::Typ::Ganzzahl(b) => Some((b.max, b.max)),",
+        "P6 -- die Typschranke wird ein Punkt statt eines Bereichs. Es steht MEHR da als "
+        "vorher, jedes Ziel geht durch, und keine Zahl faellt",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "p6-balance-lies",
+        "refinement.rs",
+        "    let refused = entries.len() - proved;",
+        "    let refused = 0;",
+        "P6 -- der Erzeuger meldet null Absagen. Die Theorie sieht vollstaendig aus, und "
+        "`goals + refused = total` ist genau die Zeile, die das verhindern soll",
+        flaeche="annotation",
     ),
 ]
 

@@ -39,6 +39,67 @@ pub struct Pflicht {
     pub gegenstand: String,
     /// Hat Gabbro den Rumpf? *Ohne Rumpf ist die Pflicht eine ANNAHME ueber Fremdcode.*
     pub rumpf_da: bool,
+    /// **The material a PROVER needs -- carried by the same walk that COUNTS** (P6,
+    /// 2026-08-23).
+    ///
+    /// It sits in `Pflicht` and not in a second walk of its own, and that is the whole
+    /// point: `refinement.rs` writes the Isabelle form of exactly the obligations this
+    /// register counts, so the two numbers cannot drift. *Two walks over the same thing are
+    /// two registers, and that is the class this folder writes against.*
+    pub material: Material,
+}
+
+/// **What each kind of obligation offers a prover -- exhaustively, no catch-all.**
+///
+/// A new obligation kind is a compile error at every site that turns one into a goal, not a
+/// silent omission. *An output that forgets one kind looks complete* (`messung/ABI.md`, the
+/// `lock` line that was missing from the ABI for a day).
+#[derive(Clone)]
+pub enum Material {
+    /// `E` and `N`: the obligation speaks about the world AFTER a body ran.
+    Body,
+    /// `F`: the `ensures` sits at a body Gabbro never sees.
+    Foreign,
+    /// `V`: everything the CALL SITE offers -- callee contract, actual arguments, and what
+    /// the caller may assume about its own parameters.
+    Call(Box<CallSite>),
+}
+
+/// The call site of a `V` obligation, with everything a goal needs and nothing more.
+#[derive(Clone)]
+pub struct CallSite {
+    /// The callee as it stood in the source.
+    pub callee: String,
+    /// The ONE `requires` of the callee this obligation is about.
+    pub condition: Pred,
+    /// The callee's parameter names, in order -- the left side of the substitution.
+    pub callee_params: Vec<String>,
+    /// The actual arguments at this call site -- the right side of the substitution.
+    pub arguments: Vec<Expr>,
+    /// What the CALLER may assume at entry: its own `requires`.
+    pub caller_requires: Vec<Pred>,
+    /// The caller's parameters, with the bounds their declared type gives and whether the
+    /// body leaves them alone.
+    pub caller_params: Vec<CallerParam>,
+}
+
+/// One parameter of the CALLING function.
+#[derive(Clone)]
+pub struct CallerParam {
+    pub name: String,
+    /// The closed integer bounds of the declared type, when it has any. **`None` is not
+    /// `unbounded`, it is `not known here`** -- and a goal that needs it is refused.
+    pub bounds: Option<(i128, i128)>,
+    /// **Does the body leave this name alone from entry to the call?**
+    ///
+    /// `requires k < 64` speaks about `k` AT ENTRY. If the body writes `k`, rebinds it or
+    /// shadows it, that sentence says nothing at the call site -- and using it anyway would
+    /// be a hypothesis nobody granted. *That is the quiet weakening this gate exists for:
+    /// an obligation proved under a false hypothesis is a green proof of nothing.*
+    ///
+    /// The answer is computed conservatively over the WHOLE body, not up to the call: a
+    /// write anywhere disqualifies the name.
+    pub untouched: bool,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -114,16 +175,144 @@ fn vorbedingungen(baum: &Programm, aus: &mut Vec<Pflicht>) {
         rufe_im_block(b, &mut rufe);
         for r in rufe {
             let Some(sig) = r.path().and_then(|p| u.funktion(modul, p)) else { continue };
-            for (n, _) in sig.requires.iter().enumerate() {
+            for (n, bed) in sig.requires.iter().enumerate() {
                 aus.push(Pflicht {
                     art: Art::Vorbedingung,
                     funktion: f.name.text.clone(),
                     gegenstand: format!("{} requires #{}", r.target_text(), n + 1),
                     rumpf_da: sig.rumpf_da,
+                    material: Material::Call(Box::new(CallSite {
+                        callee: r.target_text(),
+                        condition: bed.clone(),
+                        callee_params: sig.parameter.iter().map(|(n, _)| n.clone()).collect(),
+                        arguments: r.argumente.clone(),
+                        caller_requires: f.requires.clone(),
+                        caller_params: caller_params(f, b, &u, modul),
+                    })),
                 });
             }
         }
     });
+}
+
+/// **What the CALLER may assume about its own parameters at the call site.**
+///
+/// Two facts per parameter, and both are needed before a single hypothesis may be written
+/// down: the bounds its declared type gives, and whether the body leaves the name alone.
+///
+/// > *`requires k < 64` is a sentence about `k` AT ENTRY.* At a call site inside a body that
+/// > has since written `k`, that sentence is not available -- and a goal that assumes it
+/// > anyway is proved under a hypothesis nobody granted. **A weakened obligation is worse
+/// > than no obligation: the prover then says "proved" about something else.**
+fn caller_params(
+    f: &FnDecl,
+    rumpf: &Block,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
+) -> Vec<CallerParam> {
+    let mut touched = Vec::new();
+    for a in &rumpf.anweisungen {
+        bound_or_written(a, &mut touched);
+    }
+    let pfad = Pfad {
+        teile: vec![f.name.clone()],
+        span: f.name.span,
+    };
+    let sig = u.funktion(modul, &pfad);
+    f.parameter
+        .iter()
+        .enumerate()
+        .map(|(i, p)| CallerParam {
+            name: p.name.text.clone(),
+            bounds: sig
+                .and_then(|s| s.parameter.get(i))
+                .and_then(|(_, t)| integer_bounds(t)),
+            untouched: !touched.contains(&p.name.text),
+        })
+        .collect()
+}
+
+/// **The closed integer bounds a declared type gives -- or nothing.**
+///
+/// `None` is the safe answer and the frequent one. A missing bound drops a hypothesis, and
+/// a dropped hypothesis can only make a goal HARDER; a wrong bound would make a false goal
+/// provable. **That is why this direction may be conservative and the goal may not.**
+///
+/// Two decisions stand in the arms rather than in a comment somewhere else:
+///
+/// * **`u32 wrapping` gives nothing.** The declared overflow is the point of the type, and
+///   a bound on a value that is allowed to wrap is a sentence about a moment, not a value.
+/// * **An `opaque` new type gives nothing.** Its representation is not visible outside its
+///   module (D1), and reading the bound off it here would be exactly the implicit conversion
+///   the language refuses. *A transparent one does give its range* -- `type Klein = u32 in
+///   0 .. 9` is a range with a name, and the name is not a wall.
+fn integer_bounds(t: &crate::typen::Typ) -> Option<(i128, i128)> {
+    match t {
+        crate::typen::Typ::Ganzzahl(b) => Some((b.min, b.max)),
+        crate::typen::Typ::Benannt {
+            undurchsichtig: false,
+            unter,
+            ..
+        } => integer_bounds(unter),
+        // Everything else -- pointers, sums, records, tables, registers, `wrapping`,
+        // floats, `never` -- gives no integer bound here. **Fail-closed on purpose:** the
+        // cost is a refused or harder goal, never a false one.
+        _ => None,
+    }
+}
+
+/// **Every name a statement may BIND or WRITE -- and the `match` has no catch-all.**
+///
+/// This walk is the fifth of its kind in this folder, and the four before it were all found
+/// the same way: a walker entered a body and not one of its arms (`H007` in `geteilt.rs`,
+/// standing in an `observes`; the
+/// RCU walker in loops, `typ_von_ort` against `index_pruefen`, the `retry` body). *Every
+/// time the body was entered and one branch of it was not.* A `_ =>` arm here would hand
+/// the class back: a statement kind nobody listed writes a parameter, the parameter still
+/// counts as untouched, and the goal gets a hypothesis that does not hold.
+///
+/// **It over-approximates on purpose.** A `let` in a branch that never runs still
+/// disqualifies the name; the price is a refused goal, and the alternative price is a false
+/// one.
+fn bound_or_written(s: &Stmt, out: &mut Vec<String>) {
+    match &s.art {
+        StmtArt::Let(l) => out.push(l.name.text.clone()),
+        StmtArt::LetSonst(l) => {
+            out.push(l.name.text.clone());
+            out.push(l.fehlername.text.clone());
+        }
+        StmtArt::Zuweisung(z) => out.push(z.ziel.basis.text.clone()),
+        StmtArt::Narrow(n) => out.push(n.ort.basis.text.clone()),
+        StmtArt::Publish(p) => out.push(p.ziel.basis.text.clone()),
+        StmtArt::AwaitLoad(a) => out.push(a.name.text.clone()),
+        StmtArt::Exchange(x) => out.push(x.name.text.clone()),
+        StmtArt::Match(m) => {
+            for z in &m.zweige {
+                if let Some(b) = &z.binder {
+                    out.push(b.text.clone());
+                }
+            }
+        }
+        StmtArt::Schleife(l) => match l.as_ref() {
+            Schleife::Traverse(t) => out.push(t.variable.text.clone()),
+            // A `retry`/`forever` binds no name of its own -- its label is not a value.
+            Schleife::Retry(_) | Schleife::Forever(_) => {}
+        },
+        // These carry blocks and bind nothing themselves; the recursion below enters them.
+        StmtArt::Wenn(_)
+        | StmtArt::Bricht(_)
+        | StmtArt::Sperrt(_)
+        | StmtArt::Observiert(_)
+        | StmtArt::Leave(_)
+        | StmtArt::Next(_)
+        | StmtArt::Return(_)
+        | StmtArt::Ruf(_) => {}
+    }
+    for k in crate::unterbloecke(s) {
+        for a in &k.anweisungen {
+            bound_or_written(a, out);
+        }
+    }
 }
 
 /// Jeder Ruf eines Blocks, samt Unterbloecken und Unterausdruecken.
@@ -165,6 +354,7 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
                         funktion: f.name.text.clone(),
                         gegenstand: i.text.clone(),
                         rumpf_da,
+                        material: Material::Body,
                     });
                 }
                 for (n, _) in f.ensures.iter().enumerate() {
@@ -173,6 +363,11 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
                         funktion: f.name.text.clone(),
                         gegenstand: format!("ensures #{}", n + 1),
                         rumpf_da,
+                        // **An `ensures` at a body Gabbro never sees is not a goal**, and an
+                        // `ensures` at one it does see needs that body's effect. The two sit
+                        // in different arms because a prover treats them differently: the
+                        // first is an ASSUMPTION, the second an open obligation.
+                        material: if rumpf_da { Material::Body } else { Material::Foreign },
                     });
                 }
             }

@@ -3548,3 +3548,230 @@ impl fn g(x : u32 in 0 .. 9) -> u32 in 0 .. 9 effects { pure } costs <= 2 ops \
         "die Absage nennt den Grund und nicht nur die Form: {index:?}"
     );
 }
+
+// --- p6 ---
+//
+// **P6 -- the GENERATED refinement obligation** (2026-08-23). `gabbro pflichten --isabelle`
+// writes the very register `gabbro pflichten` counts, as an Isabelle theory.
+//
+// The condition this emitter was built under stands in `README.md` and in
+// `mutiere-pruefer.py` under the surface `annotation`:
+//
+// > *A generator that quietly emits weakened contracts delivers a green proof of a WEAKER
+// > statement, and no probe catches it.*
+//
+// **A duty that vanishes is noticed; one that gets weaker is not.** Every probe below aims
+// at a weakening rather than at a disappearance -- and beside each of them stands the
+// mutation in `mutiere-pruefer.py` that makes it fall.
+
+/// The theory of a source, exactly as `gabbro pflichten --isabelle` prints it.
+fn p6_theory(q: &str) -> String {
+    let (b, _a) = gabbro_syntax::lies("p6.gab", q);
+    gabbro_check::refinement::theory(&b, "p6.gab")
+}
+
+/// `total`, `goals`, `refused` off the header line -- the balance the emitter keeps about
+/// itself.
+fn p6_balance(t: &str) -> (usize, usize, usize) {
+    let line = t
+        .lines()
+        .find(|z| z.contains("@duty 1"))
+        .expect("the emitter keeps a header line about itself");
+    let number = |word: &str| -> usize {
+        let mut s = line.split_whitespace();
+        while let Some(w) = s.next() {
+            if w == word {
+                return s.next().and_then(|x| x.parse().ok()).unwrap_or(usize::MAX);
+            }
+        }
+        usize::MAX
+    };
+    (number("total"), number("goals"), number("refused"))
+}
+
+/// A caller that WRITES its own parameter, beside one that leaves it alone.
+const P6_WRITTEN: &str = "module t {
+type Klein = u32 in 0 .. 9;
+impl fn nimm(x : Klein) requires x < 9 effects { pure } costs <= 1 ops { }
+impl fn f(a : Klein, b : Klein)
+    requires a < 9, b < 9
+    effects  { writes a }
+    costs    <= 20 ops
+{
+    a = 5;
+    nimm(b);
+}
+}";
+
+/// **A generated goal carries EVERY conjunct of the precondition it discharges.**
+///
+/// `requires k < 64 && n < 4096` is one clause and two statements. An emitter that drops the
+/// second writes down a goal a prover closes without complaint -- *and the duty it has then
+/// proved is not the one in the contract.*
+///
+/// The mutation is `p6-and-becomes-or`; it turns the `\<and>` into a `\<or>`: one line,
+/// the same two conjuncts, **and the weaker statement.**
+#[test]
+fn a_generated_goal_carries_every_conjunct() {
+    let t = p6_theory(
+        "module t {
+impl fn zwei(k : u32, n : u32) requires k < 64 && n < 4096 effects { pure } costs <= 1 ops { }
+impl fn g(k : u32) requires k < 64 effects { pure } costs <= 20 ops { zwei(k, 7); }
+}",
+    );
+    let shows = t
+        .lines()
+        .find(|z| z.trim_start().starts_with("shows "))
+        .unwrap_or("<no shows>");
+    assert_eq!(
+        shows.trim(),
+        "shows \"((g_k) < ((64 :: int))) \\<and> (((7 :: int)) < ((4096 :: int)))\"",
+        "both conjuncts, joined by `\\<and>` -- the claim, word for word"
+    );
+    assert_eq!(p6_balance(&t), (1, 1, 0), "one duty, one goal, no refusal");
+}
+
+/// **A precondition the caller brings along holds AT ENTRY -- not later.**
+///
+/// `requires a < 9` is a sentence about `a` on entry. Once the body writes `a`, it says
+/// nothing at the call site. An emitter that writes it down as an assumption anyway proves
+/// under a hypothesis nobody granted -- **exactly the quiet weakening this surface exists
+/// for.**
+///
+/// Measured on the same source: `b` is never touched, so `r_2` stands; `a` is written, so
+/// neither `r_1` nor the type bound of `a` may appear.
+#[test]
+fn a_precondition_about_a_written_parameter_is_no_assumption() {
+    let t = p6_theory(P6_WRITTEN);
+    assert!(
+        t.contains("assumes r_2:"),
+        "`b` is untouched -- `requires b < 9` holds at the call site and stands there:\n{t}"
+    );
+    assert!(
+        !t.contains("assumes r_1:"),
+        "`a` is written -- `requires a < 9` must NOT stand at the call site:\n{t}"
+    );
+    assert!(
+        !t.contains("assumes t_a:"),
+        "and neither may the type bound of `a` -- it is the same sentence about entry:\n{t}"
+    );
+}
+
+/// **An argument the body has touched carries no goal at all.**
+///
+/// The counterpart to the previous probe: there the ARGUMENT was stable and an assumption
+/// inadmissible; here the argument is the written parameter itself. Without this gate a goal
+/// would arise about `g_a`, whose value in the program is long since another one.
+#[test]
+fn a_written_parameter_as_argument_yields_no_goal() {
+    let t = p6_theory(
+        "module t {
+type Klein = u32 in 0 .. 9;
+impl fn nimm(x : Klein) requires x < 9 effects { pure } costs <= 1 ops { }
+impl fn f(a : Klein)
+    requires a < 9
+    effects  { writes a }
+    costs    <= 20 ops
+{
+    a = 5;
+    nimm(a);
+}
+}",
+    );
+    assert_eq!(p6_balance(&t), (1, 0, 1), "one duty, NO goal, one refusal");
+    assert!(
+        t.contains("argument-not-stable (1)"),
+        "and the refusal names its reason:\n{t}"
+    );
+}
+
+/// **The bound of the declared type is the bound of the declared type.**
+///
+/// A bound that is too TIGHT is the quietest weakening of all: `9 \<le> g_b \<and> g_b \<le>
+/// 9` pins the value down, and after that every goal goes through. Nothing in the output
+/// looks smaller than before -- *there is even more standing there.*
+#[test]
+fn the_type_bound_is_the_declared_one() {
+    let t = p6_theory(P6_WRITTEN);
+    assert!(
+        t.contains("assumes t_b: \"0 \\<le> g_b \\<and> g_b \\<le> 9\""),
+        "`type Klein = u32 in 0 .. 9` gives exactly 0 .. 9 -- a range with a name is no wall:\n{t}"
+    );
+}
+
+/// **`Held(…)` is no prover obligation, and does not become one.**
+///
+/// The lock passes carry it (`H005`/`H006`/`H012`/`H016` in `geteilt.rs`). An emitter that
+/// turns it into `True` has not merely written a wrong line -- it has turned a CARRIED duty
+/// into a trivial goal, and the balance afterwards reports more coverage than before.
+#[test]
+fn a_lock_witness_does_not_become_a_goal() {
+    let t = p6_theory(
+        "module t {
+static mut w : u32 = 0;
+lock L protects { w } rank 0 held <= 10 ops;
+impl fn unter_sperre(z : u32) requires Held(L) effects { locks L } costs <= 4 ops { }
+impl fn h() effects { locks L } costs <= 20 ops { locks L { unter_sperre(1); } }
+}",
+    );
+    assert_eq!(p6_balance(&t), (1, 0, 1), "one duty, NO goal");
+    assert!(
+        t.contains("lock-witness (1)"),
+        "and it stands under the reason that says WHO carries it:\n{t}"
+    );
+}
+
+/// **An `ensures` at a foreign body stays an ASSUMPTION and is not filed as a goal.**
+///
+/// The most expensive mistake here would be an axiom: an assumption about foreign code
+/// standing as an Isabelle axiom proves everything that comes after it. Hence its own
+/// refusal reason, and not the one a body of our own gets.
+#[test]
+fn a_foreign_ensures_stays_an_assumption() {
+    let t = p6_theory(
+        "module t {
+extern fn fremd() -> u32 ensures result <= 100 effects { pure } costs <= 1 ops;
+}",
+    );
+    assert_eq!(p6_balance(&t), (1, 0, 1));
+    assert!(
+        t.contains("foreign-body (1)"),
+        "the reason names the foreign body, not the missing body semantics:\n{t}"
+    );
+}
+
+/// **The balance adds up, and it adds up over THE SAME register `gabbro pflichten` counts.**
+///
+/// *An output that forgets one kind looks complete* (`messung/ABI.md`, the `lock` line that
+/// was missing for a day). Against exactly that: `goals + refused == total`, and `total` is
+/// the length of the register -- not a second number from a second walk.
+#[test]
+fn the_balance_of_the_emitter_adds_up() {
+    let q = "module t {
+type Klein = u32 in 0 .. 9;
+static mut w : u32 = 0;
+lock L protects { w } rank 0 held <= 10 ops;
+extern fn fremd() -> u32 ensures result <= 100 effects { pure } costs <= 1 ops;
+spec fn ruhig() -> bool effects { pure } = w == 0;
+impl fn nimm(x : Klein) requires x < 9 effects { pure } costs <= 1 ops { }
+impl fn unter_sperre(z : u32) requires Held(L) effects { locks L } costs <= 4 ops { }
+impl fn f(b : Klein) requires b < 9 effects { pure } costs <= 20 ops { nimm(b); }
+impl fn h() maintains ruhig effects { locks L, reads w } costs <= 40 ops
+{ locks L { unter_sperre(1); } }
+}";
+    let (b, _a) = gabbro_syntax::lies("p6.gab", q);
+    let register = gabbro_check::pflichten::sammle(&b).len();
+    let judged = gabbro_check::refinement::verdicts(&b).len();
+    assert_eq!(
+        register, judged,
+        "the emitter judges every duty of the register and no second one"
+    );
+    let (total, goals, refused) = p6_balance(&p6_theory(q));
+    assert_eq!(total, register, "the header names the length of the register");
+    assert_eq!(
+        goals + refused,
+        total,
+        "goals + refused == total -- otherwise a duty got lost on the way"
+    );
+    assert!(goals >= 1, "and at least one of them stands closed:\n{q}");
+}
