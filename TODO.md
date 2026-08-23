@@ -637,7 +637,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **274 von 274 Ankern** greifen (`--anker`, 2026-08-21) — die
+      fällt. Mutationskatalog: **281 von 281 Ankern** greifen (`--anker`, 2026-08-21) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -1573,14 +1573,56 @@ NOTATIONSLUECKEN -- nicht eine ist ein Handbeweis.** Was daraus offen bleibt:
       Zuschnitt (c) faellt.* **Vorher zaehlen, welche Operationen der zweite Korpus
       braucht** -- der erste hat null.
 
-- [ ] **P6 ist EROEFFNET, nicht erledigt** *(2026-08-19)*. `maintains` hat einen Leser
-      (`M112`-`M114`), und `gabbro pflichten` zaehlt die erzeugten Pflichten: **18 ueber 33
-      Beispiele** (nachgemessen 2026-08-19; `gabbro pflichten` OHNE Datei druckt „no file
-      named" und keine Null -- *wer den Aufruf fuer die Messung haelt, liest 0 statt 18*). *Was fehlt, ist die zweite Haelfte:* die Pflicht muss in
-      einer Form dastehen, die ein Beweiser lesen kann -- heute ist sie eine Zeile im
-      Bericht. **Und die K/A/W-Einordnung bleibt Handarbeit**, ausdruecklich: ein Werkzeug,
-      das sie raet, waere die stille Antwort, gegen die dieser Ordner sonst schreibt.
+- [ ] ~~**P6 ist EROEFFNET, nicht erledigt**~~ — **ERLEDIGT am 2026-08-21, und er hat einen
+      ANDEREN Posten freigelegt** ([`messung/P6.md`](messung/P6.md)).
+      `gabbro pflichten --isabelle` schreibt denselben Bestand, den `gabbro pflichten` zählt,
+      als Isabelle-Theorie — **je Pflicht entweder ein geschlossenes Ziel oder eine BENANNTE
+      Absage**, und jede Kopfzeile trägt `goals + refused = total`.
 
+      ```
+      47 Pflichten · 1 Ziel · 46 benannte Absagen        ./instrumente/zaehle-p6.py
+      == P6-BEWEIS: 1 erzeugte Pflicht in 63 Theorien, ISABELLE GRUEN ==
+      ```
+
+      **Und die 46 sind keine Lücke von 46:** 12 tragen schon die Sperrdisziplin
+      (`Held(…)` → `H005`/`H006`/`H012`/`H016`), 11 sind **Annahmen und keine Pflichten**
+      (fremdes `ensures`), **23 bleiben wirklich offen.** *Aus einer schlechten Zahl wird eine
+      informative, weil jede Absage ihren Grund trägt.*
+
+      > **Die eine durchgehende Pflicht ist eine `K`-Pflicht, keine `W`** — über die Kennzahl
+      > sagt sie nichts, und sie wird ausdrücklich zurückgehalten. **Was sie belegt, ist die
+      > KETTE:** von der Zählung über die Erzeugung bis `isabelle build` grün, mit einem
+      > Wächter, der beim Mutieren fällt. *Eine Eins mit funktionierender Kette ist mehr wert
+      > als zehn ohne.*
+
+      **Nebenbei geschlossen: die Fläche `annotation` stand seit Wochen bei 0 Mutationen** und
+      steht bei 7. *Der Wunschform-Kanal war der Posten, der als „unbeschädigbar" dastand — er
+      hat jetzt Zähne.*
+
+      Ein eigener Fehler ist gemessen und dokumentiert: der erste Bau löste die Argumente auf,
+      **bevor** er das Prädikat las, und meldete zwölf getragene Pflichten als ungebaut.
+      *Dieselbe Klasse wie ein Werkzeug, das zu wenig liest — nur in der REIHENFOLGE statt in
+      der Tiefe, und in die pessimistische Richtung.*
+
+- [ ] **Was fehlt, heißt seit dem 2026-08-21 genauer: nicht „P6", sondern DIE
+      ISABELLE-SEMANTIK EINES GABBRO-RUMPFS** *(freigelegt beim Bau von P6)*.
+      **16 der 23 wirklich offenen Pflichten sitzen an genau dieser einen fehlenden Sache**
+      (Rumpfwirkung), 7 am Weltmodell.
+
+      > **Die Brücke ist nicht das Teure, das MODELL ist es.** Das war beim Lean-Plan
+      > (Stufe 9) eine Vermutung; seit heute ist es gemessen. *Ein Beweiser kann eine Pflicht
+      > nur angehen, wenn er weiß, was ein Rumpf BEDEUTET* — und das steht nirgends.
+
+      **Damit ist die Kennzahl `w` nicht durch P6 blockiert, sondern hierdurch.** Solange
+      dieser Posten steht, erzeugt P6 `K`-Pflichten und keine `W`-Pflichten, und die Zahl
+      bleibt zurückgezogen (`unbekannt, > 0,5`).
+      *Er gehört als Fund gebucht und nicht als Rückstand* — sonst liest er sich in zwei
+      Wochen als ein Posten, der liegen blieb, statt als der, den ein fertiger Bau sichtbar
+      gemacht hat.
+
+- [ ] **Die Kopfform von P6 hat NULL Fundstellen** *(gemessen 2026-08-21)*: **kein einziges
+      `spec fn`/`impl fn`-Paar im Korpus** (8 gegen 168). Die Verfeinerungspflicht aus einem
+      solchen Paar ist deshalb **nicht gebaut** — Regel A, gemessen statt vermutet.
 - [ ] **P6 ist die Grundlage der Kennzahl, nicht ihr Zubehoer** *(geschaerft 2026-08-19)*.
       Die Zahl ist zurueckgezogen (`unbekannt, > 0,5`), weil `w` an VERUS-Zeilen gemessen war.
       Ein Isabelle-verankertes `w` braucht **eine W-Pflicht, die ENTSTANDEN ist** -- und

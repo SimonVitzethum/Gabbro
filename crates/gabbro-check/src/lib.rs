@@ -53,6 +53,8 @@ pub mod manifest;
 // **P6, die Messsonde** -- was ein Mensch noch schuldet, gezaehlt statt eingeloest.
 pub mod pflichten;
 pub mod phasen;
+/// **P6** -- the same obligation register, in the form a prover reads. See `refinement.rs`.
+pub mod refinement;
 pub mod schablonen;
 // **Das PASSREGISTER, seit 2026-08-21** (PLAN.md PL.1). Je Pass die Saetze, die er SCHULDET
 // -- die Aussage, die gelten muss, wenn er schweigt. Ohne sie ist „formal verifiziert" nicht

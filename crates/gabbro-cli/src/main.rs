@@ -119,13 +119,20 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
+        // **P6, the second half.** `pflichten` prints what a human still owes; `--isabelle`
+        // prints the SAME register as an Isabelle theory. *Not a second subcommand, because
+        // it is not a second register* -- `refinement::verdicts` walks exactly the list
+        // `pflichten::sammle` counts, and the theory header carries the sum.
         "pflichten" => {
+            let isabelle = rest.iter().any(|a| a == "--isabelle");
+            let rest: Vec<&String> = rest.iter().filter(|a| a.as_str() != "--isabelle").collect();
             if rest.is_empty() {
                 eprintln!("gabbro pflichten: no file named");
                 return std::process::ExitCode::from(2);
             }
             let mut schlecht = false;
             for datei in rest {
+                let datei = datei.as_str();
                 let Ok(quelle) = std::fs::read_to_string(datei) else {
                     eprintln!("gabbro: {datei} not readable");
                     schlecht = true;
@@ -139,7 +146,11 @@ fn main() -> std::process::ExitCode {
                     schlecht = true;
                     continue;
                 }
-                print!("{}", gabbro_check::pflichten::zeige(&baum, datei));
+                if isabelle {
+                    print!("{}", gabbro_check::refinement::theory(&baum, datei));
+                } else {
+                    print!("{}", gabbro_check::pflichten::zeige(&baum, datei));
+                }
             }
             if schlecht {
                 return std::process::ExitCode::from(1);
@@ -331,7 +342,12 @@ fn hilfe() {
                                     `--tor` FALLS while a proved template has a premise
                                     no pass establishes (tooth 3)
   gabbro k-bedingung <file.gab>…    per carrier: are ALL write sites generated? (measurement 2)
-  gabbro pflichten  <file.gab>…     what a HUMAN still owes -- counted, not discharged
+  gabbro pflichten [--isabelle] <file.gab>…
+                                    what a HUMAN still owes -- counted, not discharged.
+                                    `--isabelle` writes the SAME register as an Isabelle
+                                    theory: every obligation appears, as a goal or as a
+                                    NAMED refusal, and the header carries `goals + refused
+                                    = total`
   gabbro kontexte   <file.gab>…     execution contexts per place -- and the COUNT beside it
   gabbro emit [--with L.gabi]… <file.gab>…
                                     lower to C -- and REFUSE by name (`C001`) for every
