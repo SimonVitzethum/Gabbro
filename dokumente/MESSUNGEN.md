@@ -7811,14 +7811,21 @@ gelesen 0,345 ergab.
 
 ## Was NICHT fehlt — eine Berichtigung meiner eigenen Zwischenantwort
 
-Ich hatte eine **Isabelle-Semantik von Gabbro** als Voraussetzung genannt. *Das ist falsch,
+~~Ich hatte eine **Isabelle-Semantik von Gabbro** als Voraussetzung genannt. *Das ist falsch,
 und der Einwand hat es benannt:* **die Absenkung nach C ist die Bedeutung.** `spec fn` und
 `impl fn` stehen in **einer** Sprache, die Absenkung ist syntaxgeleitet und durch Schablonen
 gedeckt — eine Wertaussage wird über dem Spezifikationsmodell bewiesen, genau wie es die zehn
 vorhandenen Theorien für Konstrukte tun. *Keine Sprachsemantik nötig; das ist das Gold-3-Argument
-des Plans, und ich hatte es gegen sich selbst gewendet.*
+des Plans, und ich hatte es gegen sich selbst gewendet.*~~
 
-**Was wirklich fehlt, ist P6** — die **erzeugte** Verfeinerungspflicht. Ohne sie gibt es keine
+> **Widerrufen am 2026-08-21 (`WK1`) — und zwar durch den BAU von P6, nicht durch ein
+> Argument.** `messung/P6.md` misst: **16 der 23 wirklich offenen Pflichten hängen an der
+> Rumpfwirkung**, 7 am Weltmodell. *Der Einwand von damals war richtig gegen die Brücke und
+> falsch gegen das Modell:* die Absenkung nach C ist eine Bedeutung für den **Übersetzer**,
+> keine für den **Beweiser**. **Der ursprüngliche Satz stand also näher an der Sache als seine
+> Korrektur** — und das ist der Grund, warum er hier steht statt gelöscht zu sein.
+
+~~**Was wirklich fehlt, ist P6**~~ — **gebaut am 2026-08-21.** Die **erzeugte** Verfeinerungspflicht. Ohne sie gibt es keine
 W-Pflicht, die *entstanden* wäre, sondern nur eine, die jemand erfinden müsste. *Und was man
 erfindet, bevor man es misst, ist die Bewegung, gegen die R7 und W3 stehen.*
 

@@ -72,12 +72,18 @@ construction, and the formula would return **0,30** — *below the seL4 anchor, 
 and false.* That is the error class this folder already booked once, when `p_B3` was read as a
 kernel-side `w` and produced 0,345.
 
-**What is missing is not an Isabelle semantics of Gabbro** — the lowering to C is that, and
+~~**What is missing is not an Isabelle semantics of Gabbro** — the lowering to C is that, and
 `spec fn`/`impl fn` stand in one language, so a value statement is proved over the
 specification model like every existing theory. **What is missing is P6:** the *generated*
-refinement obligation. Until it exists there is no W obligation that arose; there is only one
-somebody would have to invent, and inventing the thing you then measure is the move R7 and W3
-exist to prevent.
+refinement obligation.~~ — **revoked 2026-08-21 (`WK1`), by the build of P6 itself.**
+
+**P6 exists since 2026-08-21** ([`messung/P6.md`](messung/P6.md)): `gabbro pflichten
+--isabelle` writes the generated refinement obligation, and Isabelle checks it green — for
+**one** of 47 obligations, and that one is a `K`, not a `W`. What the build laid bare is the
+item underneath it: **16 of the 23 genuinely open obligations hang on the Isabelle semantics of
+a Gabbro BODY**, 7 on the world model. *The lowering to C is a meaning for the COMPILER, not
+one for the PROVER* — and until a body has the second kind, P6 produces `K` obligations and no
+`W`. The metric stays withdrawn, and it is no longer P6 that holds it.
 
 ## What IS anchored on Isabelle today, and it is the carried side
 
@@ -134,7 +140,7 @@ denominator that shines instead of the one that costs.*
 | **Grammar** | **149 EBNF rules**, closed and reachable | vocabulary covers every terminal, 216 / 216 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Pass register** | **53 statements over 12 passes — 47 measured, 6 conjectured, 0 PROVED.** 45 of 210 diagnostics still owe one, and that number is a **ratchet**: it may fall, not rise. *A written statement is not a proved one — the third column is the whole rest* | `gabbro paesse --je-satz` · `./instrumente/pruefe-saetze.py` |
-| **Guardians** | 23, and **39 of 39 instruments carry all four requirements** — three read statically (deadline · two-way speech test · red on abort), the fourth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./instrumente/pruefe-waechter.py`. *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **283 of 283 mutations caught** *(run 2026-08-21)* |
+| **Guardians** | 23, and **40 of 40 instruments carry all four requirements** — three read statically (deadline · two-way speech test · red on abort), the fourth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./instrumente/pruefe-waechter.py`. *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **283 of 283 mutations caught** *(run 2026-08-21)* |
 | **Corpus** | 49 clean examples, 252 poison files, 186 tests *(run 2026-08-21)* | `cargo test` |
 | **Emission** | **49 of 49 examples emit C, and all 49 compile** under `cc -std=c11 -Wall -Wextra -Werror`, at **`-O0` and `-O2`**, with the same result — **19 of them are also run and compared against a handwriting**, and under `-fsanitize=undefined` | `./instrumente/pruefe-emission.sh` *(run 2026-08-21)* |
 | **Usability** | **5.8 % of the teaching corpus and 12.8 % of REAL code may fall** — 912 and 109 clause sites, split derivable / redundant / load-bearing. The calibration travels with the tool (`--tafel`, per rule a may-fall AND a reason), because an uncalibrated usability number makes `effects` and `costs` the cheapest thing to drop | `gabbro zeremonie` · `./instrumente/zaehle-zeremonie.py` |

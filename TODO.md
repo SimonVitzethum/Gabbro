@@ -40,18 +40,19 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 
 # Die Reihenfolge
 
-| Stufe | | warum hier |
-|---|---|---|
-| **0** | die Messschicht | vier Instrumente wurden am 2026-08-20 dabei erwischt, dass sie nicht mehr messen. **Alle vier Ziele werden an Zahlen gesteuert** |
-| **1** | der Maßstab | `H` misst zu sieben Zwölfteln die Vollständigkeit des Korpus, nicht die Deckung von Gabbro |
-| **2** | Nutzbarkeit messen | das einzige Ziel ohne Instrument |
-| **3** | die offenen Lesarten entscheiden | keine Grammatik, keine Schablone — **kostenlos für Ziel 2** |
-| **4** | Programme schreiben, nicht Konstrukte | jedes echte Programm hat sofort Befunde geliefert; der Korpus ist von der Sprache nach außen geschrieben |
-| **5** | die Beweise tragend machen | **läuft PARALLEL zu 4** — ein Beweis ohne Hersteller seiner Prämisse ist gefährlicher als eine ungeprüfte Zusage |
-| **6** | die fremden Rümpfe sprechen lassen | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
-| **7** | was Programme groß macht | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
-| **8** | PL — die Logik des Prüfers | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — heute 194 Kennungen und null Sätze. Ein Beweisprojekt vor dem Passregister müsste sich seinen Gegenstand ausdenken |
+| Stufe | | Block | warum hier |
+|---|---|---|---|
+| **0** | die Messschicht | **Q** | vier Instrumente wurden am 2026-08-20 dabei erwischt, dass sie nicht mehr messen. **Alle vier Ziele werden an Zahlen gesteuert** |
+| **1** | der Maßstab | **C** | `H` misst zu sieben Zwölfteln die Vollständigkeit des Korpus, nicht die Deckung von Gabbro |
+| **2** | Nutzbarkeit messen | **E** | das einzige Ziel ohne Instrument |
+| **3** | die offenen Lesarten entscheiden | **A** | keine Grammatik, keine Schablone — **kostenlos für Ziel 2** |
+| **4** | Programme schreiben, nicht Konstrukte | **A** | jedes echte Programm hat sofort Befunde geliefert; der Korpus ist von der Sprache nach außen geschrieben |
+| **5** | die Beweise tragend machen | **D** | **läuft PARALLEL zu 4** — ein Beweis ohne Hersteller seiner Prämisse ist gefährlicher als eine ungeprüfte Zusage |
+| **—** | die Kennzahl: eine W-Pflicht, die entsteht | **B** | **hatte bis zum 2026-08-23 keinen eigenen Posten** — die drei Punkte lagen am Ende von Stufe 4. *Der Block mit dem größten Gewicht und dem geringsten Stand; er entscheidet, ob die anderen sich gelohnt haben* |
+| **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
+| **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
+| **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen 51 Sätze über 12 von 12 Pässen, keiner bewiesen.** Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
 
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
@@ -80,7 +81,7 @@ man sich schützt, und er ist der Grund, warum die Regel oben eine Regel ist und
 
 ---
 
-# STUFE 0 — DIE MESSSCHICHT
+# STUFE 0 — DIE MESSSCHICHT  ⟨Q⟩
 
 **Warum zuerst:** am 2026-08-20 wurden vier Instrumente dabei erwischt, dass sie nicht mehr
 messen — `pruefe-emission.sh` hing stundenlang (21 Läufe nebeneinander über einem Baum),
@@ -123,7 +124,7 @@ Diagnose — keine Beschönigung, sondern **Fortschreibung**:
 | Absagen mit tragendem Grund | 96 | 98 | `TODO.md` |
 | gelesene Item-Arten | 21 von 23 | 23 von 23 | `TODO.md` |
 | Schablonen im Register | 20, 15 unbewiesen | 21, 11 unbewiesen | `TODO.md` |
-| Widerrufe | 7 | 9 | `TODO.md` |
+| Widerrufe | 7 | 10 | `TODO.md` |
 | direkte Blicke auf die Karten | 13 | 35 | `TODO.md` |
 | ZUSAGE ohne Leser | 13 | 0 | `PLAN.md`, «NL» — *das Tor von «NL» ist ERREICHT* |
 | Fremdpflichten | 8 | 10 | `PLAN.md`, «NL» |
@@ -332,7 +333,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **9 Widerrufe** über 63 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **10 Widerrufe** über 63 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *Woran es hängt: eine Teilmengenbuchung bräuchte je Zahlenpaar den Satz „A ist Teil von
       B", und den schreibt niemand hin, solange er nicht wehtut.*
 
@@ -348,7 +349,7 @@ darunter.
       `format`-Deklaration — dieselbe Lücke, die die Mutationsprobe unter „Wertetafeln für die
       Bereichsarithmetik" nennt. **Bleibt offen, außerhalb der Messschicht.**
 
-- [ ] **The line shares of the GABBRO side — that is what still closes the metric.**
+- [ ] **The line shares of the GABBRO side — that is what still closes the metric.** ⟨B⟩
       B3 has been run and did **not** supply them; it measures the code form, the formula
       weights proof obligations (`dokumente/MESSUNGEN.md`, *EINSETZUNG*). What is missing: what a
       proof **in Gabbro** costs for the same 73 obligations. **That is no longer a measurement on
@@ -593,7 +594,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Messschicht.**
 
 - [ ] **`pruefe-widerruf.py` ist ein GEDAECHTNIS und kein URTEIL** *(gebaut 2026-08-19)*.
-      Heute neun Widerrufe gebucht, acht Fundstellen geschlossen. **Er findet nur, was jemand
+      Heute zehn Widerrufe gebucht, elf Fundstellen geschlossen. **Er findet nur, was jemand
       als widerrufen aufgeschrieben hat** -- und dass zwei der acht in der SPEZIFIKATION
       standen (`SYNTAX.md`:165, `SPRACHE.md`:614) und von Hand nicht gefunden wurden, sagt,
       dass es weitere gibt.
@@ -746,7 +747,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 ---
 
-# STUFE 1 — DER MASSSTAB
+# STUFE 1 — DER MASSSTAB  ⟨C⟩
 
 **Der Befund:** `H = 12` wird gelesen als *„so viel Klempnerei ist in Gabbro noch übrig"*.
 Sieben Zwölftel davon sind die **Vollständigkeit des Korpus**: 41 Stellen nennen 20 Namen, die
@@ -859,7 +860,7 @@ gelesen. Was zwei saubere Fragmente noch aufhält, sind **zwei benannte Weigerun
 
 ---
 
-# STUFE 2 — NUTZBARKEIT BEKOMMT IHR ERSTES INSTRUMENT
+# STUFE 2 — NUTZBARKEIT BEKOMMT IHR ERSTES INSTRUMENT  ⟨E⟩
 
 **Ziel 3 hat als einziges keine Zahl gehabt.** Ohne sie ist „möglichst gut nutzbar" eine
 Meinung — und „keine Klempnerei beim Endnutzer" ist eine Nutzbarkeitsaussage.
@@ -999,7 +1000,7 @@ Wirklichkeit berührt; kehrte er zurück, wäre sie eine Zahl ohne Folge. Der Fe
 
 ---
 
-# STUFE 3 — DIE OFFENEN LESARTEN ENTSCHEIDEN
+# STUFE 3 — DIE OFFENEN LESARTEN ENTSCHEIDEN  ⟨A⟩
 
 **Der billigste Posten des Plans — und er hat trotzdem etwas gekostet.** Drei Konstrukte
 standen in der Grammatik und wurden in **zwei Lesarten** benutzt. **AUSGEFÜHRT am 2026-08-20**,
@@ -1075,7 +1076,7 @@ liest sich wie Deckung.* Beide sind umgezogen, 236 von 236 greifen.
 
 ---
 
-# STUFE 4 — PROGRAMME SCHREIBEN, NICHT KONSTRUKTE
+# STUFE 4 — PROGRAMME SCHREIBEN, NICHT KONSTRUKTE  ⟨A⟩
 
 **Das Herz des Plans.** Der Korpus ist von der Sprache nach außen geschrieben — eine Datei je
 Konstrukt — und **die Fehler sitzen an den Kombinationen**: 79 blinde Zellen von 285. Jedes echte
@@ -1604,33 +1605,6 @@ NOTATIONSLUECKEN -- nicht eine ist ein Handbeweis.** Was daraus offen bleibt:
       *Dieselbe Klasse wie ein Werkzeug, das zu wenig liest — nur in der REIHENFOLGE statt in
       der Tiefe, und in die pessimistische Richtung.*
 
-- [ ] **Was fehlt, heißt seit dem 2026-08-21 genauer: nicht „P6", sondern DIE
-      ISABELLE-SEMANTIK EINES GABBRO-RUMPFS** *(freigelegt beim Bau von P6)*.
-      **16 der 23 wirklich offenen Pflichten sitzen an genau dieser einen fehlenden Sache**
-      (Rumpfwirkung), 7 am Weltmodell.
-
-      > **Die Brücke ist nicht das Teure, das MODELL ist es.** Das war beim Lean-Plan
-      > (Stufe 9) eine Vermutung; seit heute ist es gemessen. *Ein Beweiser kann eine Pflicht
-      > nur angehen, wenn er weiß, was ein Rumpf BEDEUTET* — und das steht nirgends.
-
-      **Damit ist die Kennzahl `w` nicht durch P6 blockiert, sondern hierdurch.** Solange
-      dieser Posten steht, erzeugt P6 `K`-Pflichten und keine `W`-Pflichten, und die Zahl
-      bleibt zurückgezogen (`unbekannt, > 0,5`).
-      *Er gehört als Fund gebucht und nicht als Rückstand* — sonst liest er sich in zwei
-      Wochen als ein Posten, der liegen blieb, statt als der, den ein fertiger Bau sichtbar
-      gemacht hat.
-
-- [ ] **Die Kopfform von P6 hat NULL Fundstellen** *(gemessen 2026-08-21)*: **kein einziges
-      `spec fn`/`impl fn`-Paar im Korpus** (8 gegen 168). Die Verfeinerungspflicht aus einem
-      solchen Paar ist deshalb **nicht gebaut** — Regel A, gemessen statt vermutet.
-- [ ] **P6 ist die Grundlage der Kennzahl, nicht ihr Zubehoer** *(geschaerft 2026-08-19)*.
-      Die Zahl ist zurueckgezogen (`unbekannt, > 0,5`), weil `w` an VERUS-Zeilen gemessen war.
-      Ein Isabelle-verankertes `w` braucht **eine W-Pflicht, die ENTSTANDEN ist** -- und
-      erzeugt wird sie von P6, der Verfeinerungspflicht aus `spec fn`/`impl fn`. **Keine
-      Sprachsemantik noetig:** die Absenkung nach C ist die Bedeutung, und beide Seiten stehen
-      in einer Sprache. *Solange P6 fehlt, muesste man die Pflicht erfinden, die man dann
-      misst -- genau die Bewegung, gegen die R7 und W3 stehen.*
-
 - [ ] **Die Kachelungsluecke (`N009`) ist NICHT gebaut, und der Grund ist der Korpus**
       *(gemessen 2026-08-19)*. `format Elf64Ph` laesst mit `p_flags : u32 @[2:0]`
       neunundzwanzig Bits unbenannt; die Regel im Pruefer haette den eigenen Korpus zerlegt.
@@ -1669,7 +1643,7 @@ NOTATIONSLUECKEN -- nicht eine ist ein Handbeweis.** Was daraus offen bleibt:
 
 ---
 
-# STUFE 5 — DIE BEWEISE TRAGEND MACHEN *(parallel zu Stufe 4)*
+# STUFE 5 — DIE BEWEISE TRAGEND MACHEN *(parallel zu Stufe 4)*  ⟨D⟩
 
 **`L = 1` sieht gut aus und heißt wenig.** Daneben stehen **8 Prämissen ohne Pass** — ein Beweis,
 den nichts einlöst.
@@ -2241,7 +2215,53 @@ und ist eine Doppelung.*
 
 ---
 
-# STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN
+# DIE KENNZAHL — EINE W-PFLICHT, DIE ENTSTEHT  ⟨B⟩
+
+**Dieser Abschnitt ist am 2026-08-23 entstanden, und zwar durch eine ZUORDNUNG, nicht durch
+einen Fund.** Die drei Punkte darunter standen am Ende von Stufe 4 („Programme schreiben") —
+zwischen 56 Punkten über die Sprache. *Dort gehören sie nicht hin.* Stufe 4 arbeitet an dem
+Block, der am weitesten ist; diese drei tragen die **einzige Zahl, an der das Vorhaben
+scheitern kann**.
+
+> **Ein Block ohne Überschrift wird nicht abgearbeitet, er wird gestreift.**
+
+**Was hier steht und sonst nirgends:** `0,5 : 1` ist zurückgezogen (`unbekannt, > 0,5`), und
+zurückgeholt wird sie nur über eine **W**-Pflicht, die in Isabelle durchgeht. P6 hat den Kanal
+gebaut; die eine Pflicht, die hindurchgeht, ist eine `K`
+([`messung/P6.md`](messung/P6.md) §7). *Solange das so bleibt, misst dieser Ordner seine
+Infrastruktur und nicht seine These.*
+
+
+- [ ] **Was fehlt, heißt seit dem 2026-08-21 genauer: nicht „P6", sondern DIE
+      ISABELLE-SEMANTIK EINES GABBRO-RUMPFS** *(freigelegt beim Bau von P6)*.
+      **16 der 23 wirklich offenen Pflichten sitzen an genau dieser einen fehlenden Sache**
+      (Rumpfwirkung), 7 am Weltmodell.
+
+      > **Die Brücke ist nicht das Teure, das MODELL ist es.** Das war beim Lean-Plan
+      > (Stufe 9) eine Vermutung; seit heute ist es gemessen. *Ein Beweiser kann eine Pflicht
+      > nur angehen, wenn er weiß, was ein Rumpf BEDEUTET* — und das steht nirgends.
+
+      **Damit ist die Kennzahl `w` nicht durch P6 blockiert, sondern hierdurch.** Solange
+      dieser Posten steht, erzeugt P6 `K`-Pflichten und keine `W`-Pflichten, und die Zahl
+      bleibt zurückgezogen (`unbekannt, > 0,5`).
+      *Er gehört als Fund gebucht und nicht als Rückstand* — sonst liest er sich in zwei
+      Wochen als ein Posten, der liegen blieb, statt als der, den ein fertiger Bau sichtbar
+      gemacht hat.
+
+- [ ] **Die Kopfform von P6 hat NULL Fundstellen** *(gemessen 2026-08-21)*: **kein einziges
+      `spec fn`/`impl fn`-Paar im Korpus** (8 gegen 168). Die Verfeinerungspflicht aus einem
+      solchen Paar ist deshalb **nicht gebaut** — Regel A, gemessen statt vermutet.
+- [ ] **P6 ist die Grundlage der Kennzahl, nicht ihr Zubehoer** *(geschaerft 2026-08-19)*.
+      Die Zahl ist zurueckgezogen (`unbekannt, > 0,5`), weil `w` an VERUS-Zeilen gemessen war.
+      Ein Isabelle-verankertes `w` braucht **eine W-Pflicht, die ENTSTANDEN ist** -- und
+      erzeugt wird sie von P6, der Verfeinerungspflicht aus `spec fn`/`impl fn`. ~~**Keine
+      Sprachsemantik noetig:** die Absenkung nach C ist die Bedeutung, und beide Seiten stehen
+      in einer Sprache.~~ **— widerrufen am 2026-08-21 (`WK1`), durch den Bau von P6 selbst:**
+      16 der 23 offenen Pflichten sitzen an der Rumpfwirkung. *Die Absenkung nach C ist eine
+      Bedeutung fuer den UEBERSETZER, keine fuer den BEWEISER.* *Solange P6 fehlt, muesste man die Pflicht erfinden, die man dann
+      misst -- genau die Bewegung, gegen die R7 und W3 stehen.*
+
+# STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
 **82 fremde Rümpfe im Korpus, 10 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
@@ -2300,7 +2320,7 @@ und die Sätze, die ihr noch fehlen.
       Zeilen hinschreiben (kostet nichts) und den Pruefer sie in die Beweispflicht des Rufers
       tragen lassen (PL-Arbeit).
 
-- [ ] **`ensures` ist wohlgeformt geprueft -- die EINLOESUNG fehlt** *(nachgemessen
+- [ ] **`ensures` ist wohlgeformt geprueft -- die EINLOESUNG fehlt** ⟨B⟩ *(nachgemessen
       2026-08-19)*. ~~Ein Tippfehler in einem `ensures` faellt nicht.~~ Er faellt seit dem
       2026-08-18 an `M109` und `M111`, an einem `impl fn` wie an einem rumpflosen
       `extern fn`; die Grundnamen loesen auf (Parameter, Globale, Konstanten, `result`).
@@ -2462,7 +2482,7 @@ und die Sätze, die ihr noch fehlen.
 
 ---
 
-# STUFE 7 — WAS PROGRAMME GROSS MACHT
+# STUFE 7 — WAS PROGRAMME GROSS MACHT  ⟨A⟩
 
 **`fnptr` — erst der Erzeuger, dann der Vertrag.** Ein Funktionszeiger entsperrt jede
 Dispatch-Tabelle, jede Treiber-ops-Struktur, jede Scheduler-Politik — Caprocks
@@ -2678,9 +2698,58 @@ what remains is four, and **one of them is not solved but grazed**.
       undecided: 64 closures** (`dyn FnMut`/`Fn`) — Gabbro has none, and what becomes of them
       (embedding, pointer plus context, prohibition) stands nowhere.
 
+- [ ] **Ein Gabbro-Programm ist heute GENAU EINE Übersetzungseinheit — und vor der Wahl eines
+      Bausystems stehen drei Sprachfragen** *(gemessen 2026-08-24, aufgeworfen durch den
+      Vorschlag „Meson")*.
+
+      ```
+      moduledecl = [ "pub" ] "module" path "{" { item } "}" ;   # SYNTAX.md:258 -- ein BLOCK
+      usedecl    = [ "pub" ] "use" path ";" ;                   # ein Pfad, KEINE Datei
+      ```
+
+      **Es gibt keinen dateiübergreifenden Import**, `gabbro` hat kein Bau-Verb (15 Befehle,
+      keiner davon baut), und `emit` arbeitet je Datei. *Damit gibt es nichts zu bauen*: 49
+      Beispiele, 10 Fragmente, drei echte Stücke — jedes eine Datei, ein `cc`, ein
+      Binärprogramm.
+
+      **Die drei Fragen, alle sprachlich, keine davon Werkzeugwahl:**
+
+      | | |
+      |---|---|
+      | **(a)** | sieht eine `.gab` die Deklarationen einer anderen — und mit welcher Regel über `pub`? |
+      | **(b)** | **komponiert das Zeugnis?** A nimmt an, B verengt — was nimmt das PROGRAMM an? *Davon hängt ab, ob „speichersicher unter A1…An" für ein mehrteiliges Programm überhaupt formulierbar ist* |
+      | **(c)** | wer besitzt den `#include`-Graphen des erzeugten C? |
+
+      **(b) ist die teure.** Die anderen zwei sind Konvention; diese entscheidet, ob die
+      Annahmemenge eine Eigenschaft der Datei oder des Programms ist.
+
+      > **Der Auslöser, gemessen statt terminiert:** das erste Gabbro-Programm, das über mehr
+      > als eine Übersetzungseinheit geht und einen Linkschritt braucht. **Bis dahin IST
+      > `pruefe-emission.sh` das Bausystem** — und es prüft mehr, als ein voreingestelltes
+      > prüfen würde: zweimal emittieren und bitgleich, Lizenzhinweis, `cc -Werror` bei `-O0`
+      > und `-O2`, UBSan, das `zeugnis`, seit P6 die erzeugten Theorien.
+
+      **Und was die Werkzeugwahl dann NICHT ist: frei.** Im Strangler (P8) liegt genau eine
+      Linkerzeile, und `cargo` besitzt sie: Caprock baut mit `Cargo.toml` + `kernel/build.rs`
+      + `rustup nightly` (`-Z build-std`), das Linkerskript über `cargo:rustc-link-arg`.
+      *`kernel/build.rs` beginnt mit vierzig Zeilen über eine BEZAHLTE Falle* — Cargo mischt
+      `.cargo/config.toml` aus jedem Vorfahrenverzeichnis, `-T` stand zweimal auf der
+      Linkerzeile, `lld` wertete `SECTIONS` zweimal aus, **der Bau lief durch und das Abbild
+      bootete nie.** Wer diesen Treiber ersetzt, trägt die Falle an einen Ort, an dem noch
+      niemand für sie bezahlt hat.
+
+      | Ziel | Treiber |
+      |---|---|
+      | **Caprock, im Strangler** | `cargo` bleibt, `build.rs` ruft `gabbro emit` |
+      | **eigenständige Programme** (Treiber, Userspace) | **Meson** — `custom_target` und Cross-Dateien passen genau |
+
+      > **Ein `custom_target`, das `gabbro emit` ruft und das `.c` an `cc` weiterreicht, ist
+      > gegenüber heute ein RÜCKSCHRITT im Prüfen — und er sieht grün aus.** Das ist die
+      > Klasse, gegen die dieser Ordner steht, und sie gilt für jedes Bausystem gleich.
+
 ---
 
-# D2 AUF DEN PRÜFER ANGEWANDT — was der `CallTarget`-Griff verallgemeinert
+# D2 AUF DEN PRÜFER ANGEWANDT — was der `CallTarget`-Griff verallgemeinert  ⟨A⟩
 
 **Beim Bau von `fnptr` wurde `Ruf.pfad: Pfad` zu `Ruf.ziel: CallTarget` — ein Summentyp ohne
 Auffangzweig.** Der Übersetzer zählte daraufhin **72 Passstellen in 14 Dateien** auf, an denen
@@ -2725,7 +2794,7 @@ durch sieben Positionen still.*
 
 ---
 
-# DIE KLASSE «RENNEN», JE RENNFORM AUFGESCHLÜSSELT — und die Grenze läuft anders als gebucht
+# DIE KLASSE «RENNEN», JE RENNFORM AUFGESCHLÜSSELT — und die Grenze läuft anders als gebucht  ⟨C⟩
 
 **`README.md` sagt seit Wochen: *„race hängt an der Axiomschicht"*. Gemessen am 2026-08-21
 stimmt das nicht** ([`messung/RACE.md`](messung/RACE.md)):
@@ -2787,7 +2856,7 @@ Von 28 unterschiedenen Rennformen tragen
 
 ---
 
-# DIE SPRACHLINIE, NEU GEZOGEN AM 2026-08-21
+# DIE SPRACHLINIE, NEU GEZOGEN AM 2026-08-21  ⟨A⟩
 
 **Bis heute lief die Linie zwischen dem, was Gabbro SAGT, und dem, was der Ordner ÜBER Gabbro
 sagt** — Absagetexte englisch, Quellkommentare deutsch. *Sie läuft jetzt zwischen QUELLE und
@@ -2845,7 +2914,7 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
 
 ---
 
-# ZWISCHEN 7 UND 8 — was der `M120`-Fund aufgedeckt hat
+# ZWISCHEN 7 UND 8 — was der `M120`-Fund aufgedeckt hat  ⟨A⟩
 
 - [ ] **Der Kennungswächter löst auf DATEIEBENE auf, und das ist eine Näherung**
       *(gefunden 2026-08-21 an `M120`)*. Seine Regel lautet *„eine Kennung darf in beliebig
@@ -2897,14 +2966,14 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
 
 ---
 
-# STUFE 8 — PL: DIE LOGIK DES PRÜFERS
+# STUFE 8 — PL: DIE LOGIK DES PRÜFERS  ⟨D⟩
 
 **Zwölf Pässe entscheiden über jedes Programm, und keiner schuldet einen Satz** (`struct Pass`
 hat kein Feld dafür). **Ohne die Sätze ist „Gabbro formal verifiziert" nicht einmal
 formulierbar** — man wüsste nicht, was zu beweisen wäre.
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (heute 210 Codes, null Sätze).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut: 51 Sätze über 210 Codes, 45 Codes noch ohne).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
@@ -3033,7 +3102,7 @@ was building work is done; what is not has an ADDRESS.*
 
 ---
 
-# STUFE 9 — DER PRÜFER ALS MATHEMATIK, in Lean 4 und unabhängig vom Code
+# STUFE 9 — DER PRÜFER ALS MATHEMATIK, in Lean 4 und unabhängig vom Code  ⟨D⟩
 
 **Die Frage, gestellt am 2026-08-21: früher oder später soll die Mathematik des Prüfers und
 des Erzeugers vollständig bewiesen werden, unabhängig vom Code — und wäre das JETZT
@@ -3047,7 +3116,7 @@ $ grep -n -A6 "^pub struct Pass" crates/gabbro-check/src/lib.rs
     pub nummer: u32,  pub name: …,  pub quelle: …,  pub zustand: Zustand,
 ```
 
-**`struct Pass` hat kein Feld für einen Satz. 194 Absagekennungen, null Sätze.** Einen
+~~**`struct Pass` hat kein Feld für einen Satz. 194 Absagekennungen, null Sätze.**~~ — **überholt am 2026-08-21 durch PL.1:** das Feld steht, 51 Sätze über 12 von 12 Pässen, 210 Kennungen, davon 45 ohne Satz. *Der Satz bleibt stehen, weil er die Begründung dieses Abschnitts TRUG; was ihn ersetzt, steht darunter.* Einen
 Algorithmus zu beweisen setzt voraus, dass aufgeschrieben ist, *was er entscheiden soll* —
 und genau das ist Stufe 8 (PL.1), die noch nicht angefangen hat.
 
@@ -3060,7 +3129,7 @@ und genau das ist Stufe 8 (PL.1), die noch nicht angefangen hat.
 
 | | |
 |---|---|
-| **`struct Pass` schuldet keinen Satz** | 194 Kennungen, 0 Sätze — *es gibt nichts zu beweisen, es gibt nur etwas aufzuschreiben* |
+| ~~**`struct Pass` schuldet keinen Satz**~~ **— eingelöst 2026-08-21** | 210 Kennungen, **51 Sätze**, 0 `PROVED` — *aufgeschrieben ist es; **dieser** Auslöser hält nicht mehr* |
 | **Zahn 3 steht auf 8** | acht Prämissen **bewiesener** Schablonen hängen an keinem Pass. *Die vorhandene Beweisschicht ist nicht zu Ende gebunden;* eine zweite danebenzustellen vervielfacht die ungebundene Fläche, statt sie zu schließen |
 | **27 Sonden, keine existiert** | jeder Beweis „unabhängig vom Code" ruht auf der Annahmenmenge (33, davon 6 nicht falsifizierbar). *Solange keine der 27 benannten Sonden ein Programm ist, kauft die Unabhängigkeit weniger, als sie aussieht* |
 
@@ -3112,7 +3181,7 @@ eingerichteten Export. *Das ist eine Aussage über diesen Aufbau, nicht über Is
       *(entschieden 2026-08-21)*. Das ist **der zweite Zahn von PL.1**, und er ist das einzige
       Stück, das teuer wird, wenn man es aufschiebt: *jede Kennung, die zwischen heute und
       Stufe 8 dazukommt, ist ein Satz mehr, den später jemand rückwärts rekonstruieren muss.*
-      Heute sind es 194 und null Sätze; an einem einzigen Arbeitstag sind drei dazugekommen.
+      Am 2026-08-21 gebaut: 51 Sätze über 210 Kennungen, 45 davon noch ohne — die Ratsche steht.
       **Eine Ratsche kostet nichts, solange sie früh steht** — genau wie Zahn 2 der
       Schablonenliste. *Der Rest von Stufe 9 wartet auf seinen Auslöser; dieser eine Posten
       wartet auf nichts.*
@@ -3131,7 +3200,7 @@ ist richtig* — nicht: *dieses Rust tut sie.* Die Lücke dazwischen ist genau d
 
 ---
 
-# NICHT JETZT — ausdrücklich zurückgestellt, mit Grund
+# NICHT JETZT — ausdrücklich zurückgestellt, mit Grund  ⟨Z⟩
 
 > *Eine stillschweigende Zurückstellung ist von einem Vergessen nicht zu unterscheiden.*
 
@@ -3459,7 +3528,7 @@ zuerst** -- sonst entwirft man fuer eine vorgestellte Verwendung.
 
 ---
 
-# Historie dieser Datei
+# Historie dieser Datei  ⟨Z⟩
 
 *Was hier stand, bevor der Schnitt nach dem Plan kam — die Datei hat sich dreimal über sich
 selbst geirrt, und jedes Mal hat die Korrektur mehr gebracht als die Zahl, die sie ersetzte.*
@@ -3563,7 +3632,7 @@ of items that are neither code nor a run — what remains is building and measur
 
 ---
 
-# BOOKKEEPING
+# BOOKKEEPING  ⟨Z⟩
 ### The order, cheapest first — three documents converge on ONE missing number
 
 1. ~~**The five scratchpad classes into the repo.**~~ **RUN 2026-08-15** as
@@ -3594,14 +3663,14 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 
 | | Finding | done |
 |---|---|---|
-| **1** | **Eight `[x]` entries** in a file whose closing sentence reads "exclusively what is open" | taken out; each is recorded elsewhere (see below) |
-| **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
-| **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
-| **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 149 / 216) | taken out along with the entry |
-| **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
-| **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
-| **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |
+| **1** | **Eight `[x]` entries** in a file whose closing sentence reads "exclusively what is open" | **C** | taken out; each is recorded elsewhere (see below) |
+| **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | **E** | corrected |
+| **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | **A** | struck through with a date, not deleted |
+| **4** | **"Six of the nine passes are missing"** — it is five whole and two half | **A** | corrected |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 149 / 216) | **D** | taken out along with the entry |
+| **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | **C** | drawn together |
+| **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | **A** | renamed |
+| **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | **D** | taken out |
 
 **And one that is mine:** the correction *"the mark ≤ 24 is missed, not open"*
 I reported as done on the same day — in `dokumente/MESSUNGEN.md` it was, **here it was not**.

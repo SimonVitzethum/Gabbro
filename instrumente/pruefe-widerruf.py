@@ -93,6 +93,19 @@ WIDERRUFE = [
                                    "Isabelle/HOL, und dessen zehn Theorien tragen NULL W",
          ersatz="unbekannt, > 0,5 -- die untere Schranke ist ein Argument (W > 0), "
                 "die obere hat heute niemand"),
+    # **WK1, 2026-08-23.** The sentence stood on 2026-08-19 and was right then. The BUILD of
+    # P6 refuted it two days later: `messung/P6.md` measures that 16 of the 23 genuinely open
+    # obligations hang on exactly the body effect it declares dispensable.
+    # *It is expensive because it makes the blocker look CHEAPER than it is* -- the class this
+    # guardian stands against: a sentence that prevents work instead of merely delaying it.
+    dict(kennung="WK1",
+         muster=r"[Kk]eine Sprachsemantik n[oö]etig"
+                r"|[Kk]eine Sprachsemantik n[oö]tig"
+                r"|not an Isabelle semantics of Gabbro",
+         datum="2026-08-21", grund="`messung/P6.md`: 16 der 23 offenen Pflichten sitzen "
+                                   "an der Rumpfwirkung, 7 am Weltmodell",
+         ersatz="die ISABELLE-SEMANTIK EINES GABBRO-RUMPFS ist der Blocker der Kennzahl, "
+                "nicht die Bruecke -- `TODO.md`, Abschnitt DIE KENNZAHL"),
     dict(kennung="WD2",
          muster=r"`opaque` zum Bei[sß]en bringen[^\n]{0,30}\*\*eingeschoben\*\*",
          datum="2026-08-18", grund="`m1.rs`:745, Gift 79 und vier Sprechproben",

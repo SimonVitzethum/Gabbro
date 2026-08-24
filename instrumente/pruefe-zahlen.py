@@ -290,7 +290,10 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r"heute (\d+) Codes, null Sätze",
+        # **Carried over 2026-08-23**: the sentence "heute N Codes, null Saetze" became false
+        # with PL.1 and was replaced. *The pattern moved with it* -- a pattern that loses its
+        # subject reports nothing and looks exactly like a pass.
+        r"Sätze über (\d+) Codes",
         ["./instrumente/pruefe-kennungen.py"],
         r"Kennungen: (\d+) vergeben",
         "Absagekennungen",
