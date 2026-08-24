@@ -23,13 +23,18 @@ that kernel cheaply** — Caprock in full, with a green acceptance run.
 > **Gabbro proves everything except functional correctness — on a multicore kernel with DMA.**
 
 All **plumbing** — index, overflow, **alias**, frame, lock, race, termination, phase, leafness,
-publication, refinement — is carried by the language. **Eight of the eleven classes are carried
-today**; the three that hang no longer hang on a missing pass, but each on something different:
+publication, refinement — is carried by the language. **Nine of the eleven classes are carried
+today** *(corrected 2026-08-24: `phase` had stood among the hanging ones with the reason
+«B37» — and `PFLICHTEN.md` records «B37» as **closed on 2026-08-17**, twice and with a date.
+`gabbro paesse` reports the pass as `CARRIED`, its residue as a **decision**, not a gap:
+the softer reading with a stage SET, deliberately not built. The README carried the older
+sentence for a week)*; the two that hang no longer hang on a missing pass, but each on
+something different:
 *race* at **exactly three of its 28 forms** (re-measured 2026-08-24, `messung/RACE.md`: 22 rest
 on a RULE, 2 on the axiom layer, 1 on both, **3 on nothing** — and those three are the ALIAS.
 **`A1` closed on 2026-08-24 with `R007`**: it was the only one of the four decidable without an
 alias analysis, and `gabbro alias` had counted the site for three days before a pass refused it),
-*phase* on «B37», *refinement* on the Isabelle semantics of a body, which P6 laid bare.
+*refinement* on the Isabelle semantics of a body, which P6 laid bare.
 
 > **Multicore and DMA are set, not optional.** That is a statement against the most convenient
 > of all simplifications: **seL4's verified configuration is single-core**, and its 239 458
@@ -142,8 +147,8 @@ denominator that shines instead of the one that costs.*
 | **Grammar** | **149 EBNF rules**, closed and reachable | vocabulary covers every terminal, 217 / 217 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
 | **Pass register** | **53 statements over 12 passes — 45 measured, **2 ARGUED**, 6 conjectured, 0 PROVED.** 45 of 214 diagnostics still owe one, and that number is a **ratchet**: it may fall, not rise. *A written statement is not a proved one — the third column is the whole rest* | `gabbro paesse --je-satz` · `./instrumente/pruefe-saetze.py` |
-| **Guardians** | 23, and **40 of 40 instruments carry all four requirements** — three read statically (deadline · two-way speech test · red on abort), the fourth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./instrumente/pruefe-waechter.py`. *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **289 of 289 mutations caught** *(run 2026-08-24, `ki-pc-fisch-101`)* |
-| **Corpus** | 50 clean examples, 257 poison files, 187 tests *(run 2026-08-21)* | `cargo test` |
+| **Guardians** | 23, and **40 of 40 instruments carry all four requirements** — three read statically (deadline · two-way speech test · red on abort), the fourth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./instrumente/pruefe-waechter.py`. *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **290 of 290 mutations caught** *(run 2026-08-24, `ki-pc-fisch-101`)* |
+| **Corpus** | 50 clean examples, 258 poison files, 187 tests *(run 2026-08-21)* | `cargo test` |
 | **Emission** | **50 of 50 examples emit C, and all 50 compile** under `cc -std=c11 -Wall -Wextra -Werror`, at **`-O0` and `-O2`**, with the same result — **19 of them are also run and compared against a handwriting**, and under `-fsanitize=undefined` | `./instrumente/pruefe-emission.sh` *(run 2026-08-21)* |
 | **Usability** | **5.8 % of the teaching corpus and 12.8 % of REAL code may fall** — 919 and 109 clause sites, split derivable / redundant / load-bearing. The calibration travels with the tool (`--tafel`, per rule a may-fall AND a reason), because an uncalibrated usability number makes `effects` and `costs` the cheapest thing to drop | `gabbro zeremonie` · `./instrumente/zaehle-zeremonie.py` |
 | **Blind spots** | **79 blind · 165 covered · 26 poison-only · 15 no cell** *(of 285 pairs)* — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |

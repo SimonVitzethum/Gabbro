@@ -238,6 +238,24 @@ fn fluss(
                     zuletzt = Some(neu);
                 }
             }
+            // **A step in a `return` was INVISIBLE** (2026-08-24). The walker handled `let`
+            // and the bare call and stopped there -- so
+            //
+            //     impl fn f(p) -> P advances roh -> bereit { return schritt(p); }
+            //
+            // where `schritt` advances `roh -> mmu` passed with **zero errors**, while the
+            // SAME lie written as `let q = schritt(p); return q;` fell at `O004`.
+            //
+            // > *Two bodies of identical meaning, one caught and one not, purely by where the
+            // > call sits.* The same shape as the `else if` under-count in `kosten.rs`, and
+            // > found the same way: by asking what the pass does NOT descend into (W16).
+            StmtArt::Return(Some(e)) => {
+                if let ExprArt::Ruf(r) = &e.art {
+                    if let Some(neu) = anwenden(r, u, modul, schritte, stand, absagen) {
+                        zuletzt = Some(neu);
+                    }
+                }
+            }
             // **Ein `locks`-Block ist kein Zweig.** Er wird durchlaufen wie gerader Code --
             // und mit ihm `breaking`, `observes` und der `update`-Rumpf eines `exchange`.
             // *Vier Formen, eine Aussage; bis 2026-08-19 stand nur die erste hier.*

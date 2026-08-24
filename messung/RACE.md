@@ -72,7 +72,7 @@ Legende: **Regel** = ein Pass sagt ab · **Axiom** = eine `assume`-Zeile trägt 
 | ~~**A1**~~ | **Zwei Zeiger auf dasselbe Objekt, syntaktisch derselbe Ort** — `zwei(r, r)` | **GESCHLOSSEN 2026-08-24: Regel `R007`** — zwei SCHREIBBARE Zeigerparameter, derselbe Ort am Rufort. `R004` trug schon die `own`-Hälfte. *Verglichen wird der ORT, nicht die Wurzel: `f(p->a, p->b)` geht durch, und das soll es* |
 | **A2** | **Zwei Zeiger auf dasselbe Objekt, verschiedene Namen** — `w = kopfworte_von(k)` | **nichts** |
 | **A3** | **Die EREIGNISHÄLFTE**: ein Schreiben durch den einen Namen entwertet den anderen nicht | **nichts** |
-| **A4** | Ein atomares RMW als eigene Wechselseitigkeit (`atomic_long_inc_not_zero`) | **nicht AUSSPRECHBAR** — `atomic` ist ein Item, kein Slotfeld (`FRAGMENTE.md`, K2-F2) |
+| **A4** | Ein atomares RMW als eigene Wechselseitigkeit (`atomic_long_inc_not_zero`) | **nicht AUSSPRECHBAR** — `atomic` ist ein Item, kein Slotfeld (`FRAGMENTE.md`, K2-F2). **Und die Nachfrage ist am 2026-08-24 gemessen: sie ist im ZIEL null** — s. §1.2 |
 
 **Das ist die eigentliche Korrektur an der Buchung.** *Rennen* hängt an der Axiomschicht bei
 **Nr. 17 und 22** und teilweise bei **23**. Bei **A2–A3** hängt es am Alias — und das ist
@@ -92,6 +92,45 @@ keine Aussage über das Speichermodell, sondern eine über Zeiger.
 ssh ki-pc-fisch-101 'cd gabbro-m && export PATH=$HOME/.cargo/bin:$PATH && ./target/debug/gabbro paesse --je-satz' | grep -A3 sperren
 head -1 beispiele/gift/*.gab | grep -oE 'erwartet: [HVR][0-9]+' | sort | uniq -c
 ```
+
+### 1.2 `A4`: die Nachfrage ist gemessen, und sie spricht GEGEN den Bau
+
+*Gemessen 2026-08-24 gegen `../caprock-messbasis`, Zweig `arch/x86_64`.*
+
+```bash
+cd ../caprock-messbasis
+# global -- genau die Form, die Gabbros `atomic`-Item schon hat
+grep -rn --include=*.rs -E '^\s*(pub(\([a-z]+\))? )?static [A-Z_0-9]+\s*:\s*Atomic' kernel crates | wc -l
+# je Objekt -- die Form, die A4 braeuchte
+grep -rn --include=*.rs -E '^\s*(pub(\([a-z]+\))? )?[a-z_]+\s*:\s*Atomic[A-Za-z0-9]+\s*,' kernel crates | wc -l
+```
+
+| | |
+|---:|---|
+| **575** | globale `static … : Atomic…` — **Gabbro trägt das heute** |
+| **20** | atomare Felder **je Objekt** — die Form, um die es bei `A4` geht |
+
+**Und die zwanzig, einzeln angesehen, sind es nicht:**
+
+| wo | Zahl | was es wirklich ist |
+|---|---:|---|
+| `caprock-sync/src/lib.rs` | **4** | `next_ticket`/`now_serving` einer Ticketsperre, `state`/`writers_waiting` einer Leser-Schreiber-Sperre — **Code, den Gabbro ERSETZT**, nicht ausdrückt. `lock … rank … held` ist das Konstrukt |
+| `caprock-hal` (`konsole.rs`, `hook.rs`, `exception.rs`) | **10** | `bloecke`, `besetzt`, `risse`, `notbremse`, `block_max` — **Statistikzähler einer EINEN Konsole.** `accumulates merge add\|max` ist dafür da |
+| `kernel/src/system.rs` | **6** | `strtab_phys`, `cmdq_phys`, `cmdq_prod`, `active` — Hochlaufzustand **einer** SMMU |
+
+> **Kein einziger ist ein Refcount je Objekt in der Gestalt von `atomic_long_inc_not_zero`.**
+> Der Fall, der `A4` aufgeworfen hat, stammt aus dem ZWEITEN Korpus (Linux, fremde
+> Autorenlinie) — und der liegt bis heute nicht dort, wo gerechnet wird.
+
+**Damit gilt die eigene Regel des Ordners, und sie sagt NICHT bauen:** *„no entry without a
+measured need (a site is obligatory)"* — und `PLAN.md` in der schärferen Fassung: *„If the
+count comes out small, the most honest result of this folder is not «it works» but «the trap
+is too rare for a language»."*
+
+**Der Auslöser, gemessen statt terminiert:** `A4` wird gebaut, wenn im **Ziel** eine Stelle
+steht, die ein atomares RMW je Objekt braucht — oder wenn der zweite Korpus auf
+`ki-pc-fisch-101` liegt und dort eine Zählung eine Klasse zeigt statt eines Falls. *Bis dahin
+bleibt die Rennform `A4` offen und unbearbeitet, und das ist eine Entscheidung mit einer Zahl.*
 
 ### 1.1 Vier Zeilen der Tafel stehen auf **zwei Kennungen, die je zwei Regeln tragen**
 

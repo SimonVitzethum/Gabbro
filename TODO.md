@@ -499,7 +499,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **1568 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **1579 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -667,7 +667,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **289 von 289 Ankern** greifen (`--anker`, 2026-08-24) — die
+      fällt. Mutationskatalog: **290 von 290 Ankern** greifen (`--anker`, 2026-08-24) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -2824,6 +2824,26 @@ durch sieben Positionen still.*
 ---
 
 # DIE KLASSE «RENNEN», JE RENNFORM AUFGESCHLÜSSELT — und die Grenze läuft anders als gebucht  ⟨C⟩
+
+- [ ] **`A4` ist gemessen und wird NICHT gebaut — der Auslöser steht** *(2026-08-24,
+      [`messung/RACE.md`](messung/RACE.md) §1.2)*. Ein atomares RMW je Objekt braucht ein
+      atomares SLOTFELD; `atomic` ist heute ein Item. Gemessen am Ziel:
+
+      ```
+      575  globale `static … : Atomic…`   -- Gabbro traegt das heute
+       20  atomare Felder JE OBJEKT       -- die Form, um die es geht
+      ```
+
+      **Und die zwanzig sind es nicht:** 4 sind eine Ticket- und eine Leser-Schreiber-Sperre
+      (**Code, den Gabbro ersetzt**), 10 sind Statistikzähler einer *einen* Konsole, 6 der
+      Hochlaufzustand *einer* SMMU. *Kein einziger ist ein Refcount je Objekt.*
+
+      > **Der Fall, der `A4` aufgeworfen hat, stammt aus dem ZWEITEN Korpus** — und der liegt
+      > bis heute nicht dort, wo gerechnet wird. **Ein Konstrukt für einen Fall aus einem
+      > Korpus, den niemand messen kann, ist die Bewegung, gegen die R7 steht.**
+
+      **Auslöser:** eine Stelle im Ziel, die es braucht — oder eine Zählung über dem zweiten
+      Korpus, die eine KLASSE zeigt statt eines Falls.
 
 **`README.md` sagt seit Wochen: *„race hängt an der Axiomschicht"*. Gemessen am 2026-08-21
 stimmt das nicht** ([`messung/RACE.md`](messung/RACE.md)):

@@ -1,0 +1,31 @@
+-- erwartet: O004
+-- **Ein Schritt im `return` war UNSICHTBAR** (2026-08-24). `fluss` in `phasen.rs` behandelte
+-- `let` und den blanken Ruf und hoerte dort auf -- also ging
+--
+--     impl fn f(p) -> P advances roh -> bereit { return schritt(p); }
+--
+-- mit NULL Fehlern durch, waehrend dieselbe Luege als `let q = schritt(p); return q;` an
+-- `O004` fiel. **Zwei Ruempfe gleicher Bedeutung, einer gefangen und einer nicht -- allein
+-- danach, wo der Ruf steht.**
+--
+-- Dieselbe Bauart wie die `else if`-Unterzaehlung in `kosten.rs`, und derselbe Weg dorthin:
+-- die Frage, wo ein Pass NICHT absteigt (W16).
+module gift::phase_schritt_im_return {
+
+linear ghost type BootPhase order { roh, mmu, caps, bereit };
+
+static mut welt : u32 = 0;
+
+extern fn schritt(p : BootPhase) -> BootPhase
+    advances roh -> mmu
+    effects  { consumes p, writes welt } costs <= 8 ops;
+
+impl fn falsch(p : BootPhase) -> BootPhase
+    advances roh -> bereit
+    effects  { consumes p, writes welt }
+    costs    <= 16 ops
+{
+    return schritt(p);
+}
+
+}

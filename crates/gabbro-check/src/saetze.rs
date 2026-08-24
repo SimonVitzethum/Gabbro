@@ -1067,21 +1067,32 @@ pub const PHASEN: &[Satz] = &[
                   *a step happens once, a loop often.* **A linear value forces a CHAIN but \
                   not WHICH one**: with six boot steps all 720 orders type-check, and M2 sees \
                   only that each token is passed on exactly once.",
-        vorbehalt: "**`O004` fires only if the body takes a step at all.** A function with \
-                    `advances roh -> mmu` and an EMPTY body gives zero errors -- „a stretch \
-                    that stops on the way is no stretch\", and one that never starts is \
-                    silent. The last-reached stage is also not propagated out of branches, so \
-                    if every step sits inside a branch the same silence follows. The \
-                    statement walker's `_` arm swallows `Zuweisung`, `Return`, `Publish`, \
-                    `Leave`, `Next` and `AwaitLoad`, so a step in `return schritt(p);` is \
-                    neither applied nor checked. Only a DIRECT call counts as a step. With an \
-                    unknown state the application returns blind success. **And the flag that \
-                    was meant to distinguish „a body without its own `advances` line does not \
-                    report\" is DEAD CODE** -- it is passed through six call sites and never \
-                    read. The softer reading with a stage SET is deliberately not built: from \
-                    the strict one can loosen, from the soft one never.",
+        vorbehalt: "~~The statement walker's `_` arm swallows `Return`, so a step in \
+                    `return schritt(p);` is neither applied nor checked.~~ **Closed \
+                    2026-08-24** -- and it was a PAIR: the same lie written as \
+                    `let q = schritt(p); return q;` fell at `O004` while `return schritt(p);` \
+                    passed with zero errors. *Two bodies of identical meaning, one caught and \
+                    one not, purely by where the call sits* (probe 258). \
+                    **`O004` still fires only if the body takes a step at all**, and an \
+                    attempt on 2026-08-24 to refuse the empty body was WITHDRAWN: the corpus \
+                    refuted it in one run. `stufe_anerkennen` in the virtio driver declares \
+                    `advances roh -> anerkannt`, does its work through a helper and hands the \
+                    token back -- **a leaf step IS the transition and needs no inner one.** \
+                    *The register's earlier framing was too strong; what is missing is not a \
+                    rule but a way to tell a leaf step from a body that does nothing.* \
+                    The last-reached stage is also not propagated out of branches, so if \
+                    every step sits inside a branch the same silence follows. `Zuweisung`, \
+                    `Publish`, `Leave`, `Next` and `AwaitLoad` are still swallowed, and only \
+                    a DIRECT call counts as a step. With an unknown state the application \
+                    returns blind success. **And the flag that was meant to distinguish „a \
+                    body without its own `advances` line does not report\" is DEAD CODE** -- \
+                    passed through six call sites and never read. The softer reading with a \
+                    stage SET is deliberately not built: from the strict one can loosen, from \
+                    the soft one never.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: probes on `O003`, `O004`, `O006`.",
+        gemessen_an: "beispiele/gift: probes on `O003`, `O004`, `O006`, and since \
+                      2026-08-24 probe 258 for the step in a `return` -- the shape that gave \
+                      zero errors until then. Anchor: `phasenschritt-im-return-unsichtbar`.",
         fundstelle: "crates/gabbro-check/src/phasen.rs; MESSUNGEN.md «B37»; K11.1",
     },
 ];

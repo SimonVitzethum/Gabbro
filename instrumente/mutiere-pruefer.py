@@ -122,6 +122,18 @@ MUTATIONEN = [
         "«B33» in der zweiten Schreibrichtung -- V2 macht aus einem Registervergleich "
         "wieder einen Beziehungsfakt",
     ),
+    # -- phasen.rs: the step in a `return` (2026-08-24) -----------------------------------
+    #
+    # `fluss` handled `let` and the bare call and stopped there. The SAME lie written two ways
+    # measured differently -- caught in a `let`, silent in a `return`.
+    Mutation(
+        "phasenschritt-im-return-unsichtbar",
+        "gabbro-check/src/phasen.rs",
+        "            StmtArt::Return(Some(e)) => {\n                if let ExprArt::Ruf(r) = &e.art {",
+        "            StmtArt::Return(Some(e)) => {\n                let _ = e;\n                if let ExprArt::Ruf(r) = &None::<Expr> {",
+        "`O004` -- ein Phasenschritt im `return` wird wieder uebersehen; dieselbe Zusage im "
+        "`let` faellt, im `return` nicht",
+    ),
     # -- m3.rs: the syntactic half of the alias question (2026-08-24) ----------------------
     #
     # `messung/RACE.md` listed form `A1` among the four that NOTHING carries, and
