@@ -191,14 +191,28 @@ impl Umgebung {
         let mut u = Umgebung::default();
         u.sammle_roh(&baum.items, "");
         // Konstanten zuerst: die Bereiche der Typen haengen an ihnen.
-        let namen: Vec<String> = u.roh_konst.keys().cloned().collect();
+        // **SORTED, and that is not cosmetics** (2026-08-24, `messung/DETERMINISMUS.md`).
+        //
+        // `HashMap::keys()` iterates in an order Rust randomises per map instance. Resolution
+        // order therefore varied from run to run -- and a declaration that depends on another
+        // resolved differently depending on which came first.
+        //
+        // > **Measured: the SAME program, twenty times in one process, gave `M104` on some
+        // > runs and nothing on others.** A checker whose verdict is a coin flip is worse than
+        // > one that is wrong: it is green in CI and red on the desk, for the same bytes.
+        //
+        // *`BTreeMap` would carry it at the type; sorting here is the one-line form and it is
+        // the one that also survives someone changing the map type back.*
+        let mut namen: Vec<String> = u.roh_konst.keys().cloned().collect();
+        namen.sort();
         for n in namen {
             let mut unterwegs = HashSet::new();
             if let Some(w) = u.konst_aufloesen(modul_von(&n), kurzname(&n), &mut unterwegs) {
                 u.konstanten.insert(n, w);
             }
         }
-        let namen: Vec<String> = u.roh_typen.keys().cloned().collect();
+        let mut namen: Vec<String> = u.roh_typen.keys().cloned().collect();
+        namen.sort();
         for n in namen {
             let mut unterwegs = HashSet::new();
             let t = u.typ_aufloesen(modul_von(&n), kurzname(&n), &mut unterwegs);

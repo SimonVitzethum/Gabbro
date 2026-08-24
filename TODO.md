@@ -83,6 +83,35 @@ man sich schützt, und er ist der Grund, warum die Regel oben eine Regel ist und
 
 # STUFE 0 — DIE MESSSCHICHT  ⟨Q⟩
 
+- [ ] **Der Prüfer hatte keinen Zweitlauf — und war nicht deterministisch** *(gefunden
+      2026-08-24, [`messung/DETERMINISMUS.md`](messung/DETERMINISMUS.md))*. Derselbe
+      Quelltext, zwanzigmal im selben Prozess: **mal `M104`, mal keine Absage.** Ursache
+      gemessen: `HashMap::keys()` in der Typauflösung, Reihenfolge je Kartenexemplar zufällig.
+
+      ```
+      ZEHNMAL DASSELBE PROGRAMM:  leer=13  mit-Absage=7
+      ```
+
+      **Sortiert ist es deterministisch** (beide Auflösungsschleifen), und der bestehende
+      Korpus war nicht betroffen — sechs Läufe auf `97b0574`, null Fehlschläge. *Der Defekt
+      war latent: die auslösende Form (ein Verbund über einem benannten Bereichstyp, hinter
+      einem Zeiger) stand in keiner Datei.*
+
+      **Zwei Posten bleiben, und der zweite ist der wichtigere:**
+
+      1. **WARUM die Reihenfolge durchschlägt.** `typ_aufloesen` steigt bei einem
+         unaufgelösten Namen in `roh_typen` ab, *sollte* also reihenfolgeunabhängig sein.
+         Die Sortierung beseitigt den Münzwurf; **ob sie die Ursache trifft oder nur
+         verdeckt, ist offen.**
+      2. **`pruefe-emission.sh` prüft die EMISSION im Zweitlauf auf Bitgleichheit
+         (`1b. zweitlauf: ok`). Der PRÜFER hat diese Probe nicht** — sie ist billig, und sie
+         hätte das hier am ersten Tag gefunden. *Ein Wächter, der einmal läuft, misst einen
+         Münzwurf.*
+
+      > **Und was das über die anderen Zahlen sagt:** „186 Tests bestehen" war eine Aussage
+      > über den Zufallswert EINES Laufs. Sie war nicht falsch — der Korpus trifft die Form
+      > nicht —, aber sie war schwächer, als sie klang, und niemand konnte das wissen.
+
 **Warum zuerst:** am 2026-08-20 wurden vier Instrumente dabei erwischt, dass sie nicht mehr
 messen — `pruefe-emission.sh` hing stundenlang (21 Läufe nebeneinander über einem Baum),
 `zaehle-pflichten.py` verweigerte seit Wochen die Ableitung, `gift/214` prüfte etwas anderes als
@@ -470,7 +499,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **1532 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **1544 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote

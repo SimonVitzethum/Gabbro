@@ -468,11 +468,16 @@ pub const M1: &[Satz] = &[
                     That is why it cannot be poisoned directly, and why it is the sentence \
                     in this register with the most weight and the least measurement.",
         stand: Satzstand::Vermutet,
-        gemessen_an: "**Neither a poison probe nor a mutation measures this sentence \
-                      directly.** A probe would have to show that a subtraction WITHOUT the \
-                      relational fact falls and WITH it passes -- a PAIR, and the harness \
-                      has no form for a pair today. This is the first sentence PL.3 should \
-                      buy.",
+        gemessen_an: "**Still nothing measures this sentence, and 2026-08-24 made that \
+                      SHARPER rather than better.** The attempt to build the pair by hand \
+                      uncovered a NON-DETERMINISM in the checker instead: the same bytes gave \
+                      `M104` on some runs and nothing on others \
+                      (`messung/DETERMINISMUS.md`). The measurement rested on one side of \
+                      that coin flip and is withdrawn; both corpus halves are removed. \
+                      **The argument for halves A and B stands** (`messung/V2.md` §3, §4) -- \
+                      but §4d, the alias rule that carries the whole sentence, is now \
+                      explicitly UNVERIFIED. *A sentence that looked unmeasured is now \
+                      measured as unmeasurable-by-today's-harness, and that is a step.*",
         fundstelle: "crates/gabbro-check/src/m1.rs (`beziehung`, line 1766); SPRACHE.md \
                      §3.2, V2; MESSUNGEN.md:370 (54 of 102)",
     },
@@ -1091,11 +1096,18 @@ pub const SPERREN: &[Satz] = &[
                     completeness gap, not a soundness one -- a rank function into the \
                     integers cannot produce a cycle -- and «ABI2» (order instead of rank) is \
                     where it is answered.*",
-        stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 2 probes on `H006`, probes on `H012` and `H014`; \
-                      `gift/250` is the rank ring across TWO libraries and `gift/251` the \
-                      undeclared lock name. The interprocedural half is measured by the \
-                      finding that produced it, the boundary half by `messung/ABI.md`.",
+        stand: Satzstand::Argumentiert,
+        gemessen_an: "**ARGUED 2026-08-24, `messung/H006.md`.** The classical argument: a \
+                      request for `L` under a held chain `C` needs `r(M) < r(L)` for every \
+                      `M in C`, so a wait cycle would give `r(L1) < … < r(Ln) < r(L1)`. \
+                      **And the gap I went looking for is closed by CONSTRUCTION:** an \
+                      indirect call cannot undercut the order, because `N036` refuses `locks` \
+                      at a function pointer type and `M128` refuses storing a lock-taking \
+                      function into such a slot. *Measured both ways.* The price stands with \
+                      it: **a function that takes a declared lock is not reachable through a \
+                      pointer at all** -- dispatch table and lock discipline exclude one \
+                      another today. Interprocedural continuation measured at `H012`; poison \
+                      probes on `H006`, `H012`, `H014`, `H016`.",
         fundstelle: "crates/gabbro-check/src/geteilt.rs (`rangprobe`, `unerklaerte_sperren`); \
                      crates/gabbro-check/src/abi.rs (`ItemArt::Lock`); SPRACHE.md §9; \
                      messung/ABI.md",
