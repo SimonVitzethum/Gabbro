@@ -735,11 +735,24 @@ fn aufrufwirkungen(
             .mit_notiz(
                 "the effect set is only a LOWER bound here -- no completeness follows from it",
             )
+            // **And since 2026-08-24 the check CONTINUES below** (the pass register booked
+            // the old behaviour on 2026-08-21: *at a cycle `E009` is set and the pass
+            // returns BEFORE any `E008` check -- one unresolvable edge deep down devalues
+            // `E008` for the whole call chain above it*).
+            //
+            // **The hull is a LOWER bound, and that is exactly what makes the rest sound:**
+            // everything IN it really happens, so demanding that it be declared holds
+            // regardless of what is missing. *What incompleteness costs is the other
+            // direction* -- no completeness, and in particular no `pure` promise beyond
+            // what the partial hull already refutes.
+            //
+            // > A hint that switches a check OFF is more expensive than the check is worth.
+            // > Ten corpus sites carried `E009` and had their frame unchecked entirely.
             .mit_notiz(
-                "in particular a `pure` promise is NOT checkable at this site",
+                "what still IS checked below: every effect the PARTIAL hull already \
+                 contains must be declared -- a lower bound refutes, it just cannot confirm",
             ),
         );
-        return;
     }
     let ist_rein = w.liste.iter().any(|e| matches!(e.art, WirkungArt::Rein));
     let eigene: Vec<String> = w.liste.iter().map(|e| e.art.benennung().to_string()).collect();

@@ -1,0 +1,39 @@
+-- erwartet: E008
+-- **Eine unaufloesbare Kante entwertete den Rahmen fuer die ganze Rufkette** (gefunden im
+-- Passregister 2026-08-21, behoben 2026-08-24). `wirkungen.rs` setzte am Zyklus `E009` --
+-- den ehrlichen dritten Zustand -- und kehrte **vor jeder `E008`-Pruefung zurueck**.
+--
+-- Damit war der Rahmen jeder rekursiven Funktion ungeprueft, und der Grund propagierte nach
+-- oben: eine unaufloesbare Kante tief unten schaltete `E008` fuer alle Rufer darueber ab.
+-- **Zehn Korpusstellen trugen `E009` und hatten ihren Rahmen gar nicht geprueft.**
+--
+-- **Die Huelle ist eine UNTERE Schranke, und genau das macht den Rest gueltig:** alles, was
+-- DRIN ist, passiert wirklich. Zu verlangen, dass es erklaert wird, haelt unabhaengig
+-- davon, was fehlt. *Was die Unvollstaendigkeit kostet, ist die andere Richtung.*
+--
+-- Hier schreibt `absteigen` NICHT selbst -- es ruft `schreibt()`. Damit sieht nur die
+-- HUELLE die Wirkung, und genau die war unter `E009` ungeprueft. Vor der Behebung: 0 Fehler.
+module gift::rahmen_unter_zyklus {
+
+const TIEFE : u32 = 16;
+
+static mut summe : u32 = 0;
+
+impl fn schreibt()
+    effects { writes summe }
+    costs   <= 4 ops
+{
+    summe = 1;
+}
+
+impl fn absteigen(n : u32 in 0 .. TIEFE) -> u32
+    effects { reads summe }
+    costs   <= 64 ops
+    decreases n
+{
+    schreibt();
+    if n == 0 { return 0; }
+    return absteigen(n - 1);
+}
+
+}

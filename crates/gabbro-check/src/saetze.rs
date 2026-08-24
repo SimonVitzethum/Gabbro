@@ -907,27 +907,38 @@ pub const WIRKUNGEN: &[Satz] = &[
     Satz {
         name: "wirkungen.abschluss",
         kennungen: &["E006", "E007", "E008", "E009"],
-        aussage: "Where the call hull is COMPLETE, the declared `effects` of a function are \
-                  closed over it: every effect a reachable callee has has a counterpart in \
-                  the caller's list, every `locks` in the body stands in an effect, and a \
-                  body taking a lock exclusively does not declare it `locks shared`.",
-        vorbehalt: "**„Where complete\" carries the whole sentence, and it is often not.** At \
-                    a CYCLE the hull is cut, `E009` is emitted as a HINT and the pass \
-                    `return`s before any `E008` check -- **recursive functions are not \
-                    checked for frame fidelity at all.** The same happens for a callee \
-                    without `effects`, an unknown name, more than 100 000 steps, or an \
-                    argument that is not a place; and the reason PROPAGATES UPWARDS, so one \
+        aussage: "The declared `effects` of a function are closed over its call hull: every \
+                  effect a reachable callee has has a counterpart in the caller's list, every \
+                  `locks` in the body stands in an effect, and a body taking a lock \
+                  exclusively does not declare it `locks shared`. **This holds whether the \
+                  hull is complete or not** -- the hull is a LOWER bound, so everything IN it \
+                  really happens and demanding that it be declared is sound regardless of \
+                  what is missing. Where the hull is INCOMPLETE, `E009` says so as a hint, \
+                  and what is then unavailable is the other direction: no completeness.",
+        vorbehalt: "~~At a CYCLE the hull is cut, `E009` is emitted as a HINT and the pass \
+                    `return`s before any `E008` check -- recursive functions are not checked \
+                    for frame fidelity at all; and the reason PROPAGATES UPWARDS, so one \
                     unresolvable edge deep down devalues `E008` for the entire call chain \
-                    above it. An `extern fn` gets NO body check whatsoever, yet counts as \
+                    above it.~~ **Closed 2026-08-24.** The hull is a lower bound, so the \
+                    check is sound under incompleteness and now CONTINUES; `E009` still \
+                    stands as the third state, for completeness only. *Ten corpus sites \
+                    carried `E009` and had their frame unchecked entirely; none of them turns \
+                    out to be wrong, and the probe that shows the recovered bite is 261.* \
+                    **A hint that switches a check OFF is more expensive than the check is \
+                    worth.** The hull is still cut at a cycle, at a callee without `effects`, \
+                    an unknown name, more than 100 000 steps, or an argument that is not a \
+                    place -- what is lost there is COMPLETENESS, not the refutation. An `extern fn` gets NO body check whatsoever, yet counts as \
                     complete, so its CLAIMED effects enter every caller as truth -- that is \
                     an assumption, not a finding. Closure is computed over SETS, not paths. \
                     And places are compared only for known world state: for everything else \
                     only the KIND is compared, so `writes a` covers `writes b`. `E010`'s \
                     reach is a drawn LINE -- known world state only.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 9 probes on `E008`, probes on `E006` and `E007`. \
-                      `E009` is a hint. **No probe measures the recursive case**, which is \
-                      the case the sentence excludes.",
+        gemessen_an: "beispiele/gift: 10 probes on `E008`, probes on `E006` and `E007`. \
+                      `E009` is a hint. **Probe 261 measures the recursive case since \
+                      2026-08-24** -- the case the sentence used to exclude, and it gave zero \
+                      errors before. Anchor: \
+                      `rahmen-faellt-unter-unvollstaendiger-huelle-aus`.",
         fundstelle: "crates/gabbro-check/src/wirkungen.rs, aufrufgraph.rs; SPRACHE.md §7; R16",
     },
 ];

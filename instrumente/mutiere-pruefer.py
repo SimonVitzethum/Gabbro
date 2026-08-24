@@ -122,6 +122,19 @@ MUTATIONEN = [
         "«B33» in der zweiten Schreibrichtung -- V2 macht aus einem Registervergleich "
         "wieder einen Beziehungsfakt",
     ),
+    # -- wirkungen.rs: the frame under an incomplete hull (2026-08-24) --------------------
+    #
+    # `E009` set the hint and RETURNED, so `E008` was switched off for the whole function --
+    # and the reason propagated upward: one unresolvable edge deep down left every caller's
+    # frame unchecked. Ten corpus sites carried it.
+    Mutation(
+        "rahmen-faellt-unter-unvollstaendiger-huelle-aus",
+        "gabbro-check/src/wirkungen.rs",
+        "                 contains must be declared -- a lower bound refutes, it just cannot confirm\",\n            ),\n        );\n    }",
+        "                 contains must be declared -- a lower bound refutes, it just cannot confirm\",\n            ),\n        );\n        return;\n    }",
+        "`E008` -- eine unaufloesbare Kante schaltet den Rahmen wieder fuer die ganze "
+        "Rufkette ab; die untere Schranke wird weggeworfen, obwohl sie widerlegt",
+    ),
     # -- schleifen.rs: `by consuming` without a `consumes` (2026-08-24) -------------------
     #
     # The pass register booked it on 2026-08-21 and nothing followed: for `unvisited` and
