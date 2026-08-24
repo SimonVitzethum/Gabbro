@@ -122,6 +122,18 @@ MUTATIONEN = [
         "«B33» in der zweiten Schreibrichtung -- V2 macht aus einem Registervergleich "
         "wieder einen Beziehungsfakt",
     ),
+    # -- m3.rs: the syntactic half of the alias question (2026-08-24) ----------------------
+    #
+    # `messung/RACE.md` listed form `A1` among the four that NOTHING carries, and
+    # `gabbro alias` had counted the site since 2026-08-21 without any pass refusing it.
+    Mutation(
+        "syntaktischer-alias-geht-wieder-durch",
+        "gabbro-check/src/m3.rs",
+        "                    if geschriebene.iter().any(|g| *g == ort) {",
+        "                    if false {",
+        "`R007` -- derselbe Zeiger darf wieder an zwei schreibbare Zeigerparameter gehen; "
+        "der Gerufene rechnet mit zwei Namen, die er fuer verschieden halten darf",
+    ),
     # -- pflichten.rs: the device promise (2026-08-24, «B26») -----------------------------
     #
     # **A clause that parses and is dropped is the folder's most-paid-for shape.** Until today

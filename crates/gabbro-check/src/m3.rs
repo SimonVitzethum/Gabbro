@@ -82,15 +82,38 @@ fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
     let u = crate::umgebung::Umgebung::sammle(baum);
     // Welche Parameter einer Funktion tragen `own`? Der Schlüssel ist qualifiziert.
     let mut eigen: BTreeMap<String, Vec<bool>> = BTreeMap::new();
+    // **`R007`, 2026-08-24 -- die zweite Markierung: SCHREIBBAR und nicht `own`.**
+    //
+    // `messung/RACE.md` lists four race forms nothing carries at all. `A1` is the one that
+    // needs no alias analysis: *two pointer arguments that are SYNTACTICALLY the same place*.
+    // `gabbro alias` has counted it since 2026-08-21 (`S3`, one site, writable) -- and no
+    // pass refused it. *A measurement without a rule is the state a rule grows out of.*
+    let mut schreibend: BTreeMap<String, Vec<bool>> = BTreeMap::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Funktion(f) = &item.art {
+            let voll = crate::umgebung::qualifiziere(modul, &f.name.text);
             eigen.insert(
-                crate::umgebung::qualifiziere(modul, &f.name.text),
+                voll.clone(),
                 f.parameter
                     .iter()
                     .map(|p| match &p.typ {
                         TypExpr::Zeiger(z) => {
                             z.rechte.iter().any(|r| matches!(r, Recht::Eigen(_)))
+                        }
+                        _ => false,
+                    })
+                    .collect(),
+            );
+            schreibend.insert(
+                voll,
+                f.parameter
+                    .iter()
+                    .map(|p| match &p.typ {
+                        // `own` stays out: `R004` covers it, and two rules over one site
+                        // would be two reports over one finding.
+                        TypExpr::Zeiger(z) => {
+                            !z.rechte.iter().any(|r| matches!(r, Recht::Eigen(_)))
+                                && z.rechte.iter().any(|r| matches!(r, Recht::Schreiben | Recht::LesenSchreiben))
                         }
                         _ => false,
                     })
@@ -107,6 +130,50 @@ fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
             return;
         };
         for (ziel, args) in &k.rufe {
+            // **`R007` -- two WRITABLE pointer arguments at the same place.**
+            //
+            // Compared is the PLACE, not the root: `f(p->a, p->b)` are two distinct fields
+            // and no aliasing hazard. *The stricter reading would be the root, and it would
+            // be too strong* -- it would fall at every call passing two fields of one
+            // record.
+            if let Some(smarken) = schreibend.get(ziel) {
+                // **A name of its own, and that is not taste:** were it named like `R004`'s,
+                // the anchor `zweimal-own-egal` would be AMBIGUOUS -- a mutation hitting two
+                // sites measures neither. *`--anker` said so at once.*
+                let mut geschriebene: Vec<&String> = Vec::new();
+                for (i, a) in args.iter().enumerate() {
+                    if !smarken.get(i).copied().unwrap_or(false) {
+                        continue;
+                    }
+                    let Some(ort) = a else { continue };
+                    if geschriebene.iter().any(|g| *g == ort) {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "R007",
+                                f.name.span,
+                                format!(
+                                    "`{}` passes `{ort}` to two writable pointer parameters \
+                                     of `{}`",
+                                    f.name.text,
+                                    crate::umgebung::kurzname(ziel)
+                                ),
+                            )
+                            .mit_notiz(
+                                "the callee computes with two names it may assume are \
+                                 distinct -- a write through one silently undoes the other",
+                            )
+                            .mit_notiz(
+                                "this is the SYNTACTIC half of the alias question, and the \
+                                 only half decidable without an alias analysis: two \
+                                 DIFFERENT names for one object stay indistinguishable \
+                                 (`messung/RACE.md`, A2/A3)",
+                            ),
+                        );
+                        break;
+                    }
+                    geschriebene.push(ort);
+                }
+            }
             let Some(marken) = eigen.get(ziel) else {
                 continue;
             };

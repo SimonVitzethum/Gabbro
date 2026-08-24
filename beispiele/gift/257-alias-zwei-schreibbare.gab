@@ -1,0 +1,30 @@
+-- erwartet: R007
+-- **Die syntaktische Haelfte der Aliasfrage** (2026-08-24, `messung/RACE.md` A1).
+--
+-- `verschraenken(r, r)` uebergibt ZWEIMAL denselben Zeiger. `a` und `b` sind damit dasselbe
+-- Objekt, der Rumpf schreibt durch beide, und die zweite Zuweisung macht die erste zunichte.
+-- **Bis heute gab das null Fehler** -- `gabbro alias` zaehlte die Stelle als `S3`, und kein
+-- Pass sagte ab.
+--
+-- `R004` beisst hier nicht: es sieht nur zwei `own`-Parameter, und `own` steht hier nicht.
+-- *Zwei Regeln, zwei Kennungen, eine Stelle je Fall.*
+module gift::alias_zwei_schreibbare {
+
+type Zelle = { x : u32, y : u32, };
+
+impl fn verschraenken(a : ptr<normal, rw> Zelle, b : ptr<normal, rw> Zelle)
+    effects { writes a, writes b }
+    costs   <= 8 ops
+{
+    a.x = 1;
+    b.y = 2;
+}
+
+impl fn ruft(r : ptr<normal, rw> Zelle)
+    effects { writes r }
+    costs   <= 16 ops
+{
+    verschraenken(r, r);
+}
+
+}

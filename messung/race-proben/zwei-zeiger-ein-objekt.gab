@@ -9,8 +9,14 @@
 -- erste zunichte, und die `ensures`-Aussage `a.x == 1 && b.y == 2` ist unter dem Alias
 -- nicht herstellbar, weil `a.x` und `b.x` dasselbe Feld sind.
 --
--- **Erwartet: 0 Fehler.** Das ist der Befund, nicht ein Versehen -- die Datei steht hier,
--- damit `gabbro alias` etwas zu finden hat, das `gabbro pruefe` durchlaesst.
+-- ~~**Erwartet: 0 Fehler.** Das ist der Befund, nicht ein Versehen -- die Datei steht hier,
+-- damit `gabbro alias` etwas zu finden hat, das `gabbro pruefe` durchlaesst.~~
+--
+-- **UEBERHOLT am 2026-08-24: die Datei faellt jetzt an `R007`.** `messung/RACE.md` fuehrte
+-- diese Form als `A1` unter den vieren, die GAR NICHTS traegt -- und sie war die einzige der
+-- vier, die ohne Aliasanalyse entscheidbar ist. *Die Datei hat ihren Zweck erfuellt: sie war
+-- der Befund, und jetzt ist sie sein Beleg.* Die Giftprobe daneben:
+-- `beispiele/gift/257-alias-zwei-schreibbare.gab`.
 --
 --     ./target/debug/gabbro pruefe messung/race-proben/zwei-zeiger-ein-objekt.gab
 --     ./target/debug/gabbro alias  messung/race-proben/zwei-zeiger-ein-objekt.gab

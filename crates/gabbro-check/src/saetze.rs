@@ -563,6 +563,34 @@ pub const M3: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m3.rs; SYNTAX.md §3",
     },
     Satz {
+        name: "m3.syntaktischer-alias",
+        kennungen: &["R004", "R007"],
+        aussage: "No call passes the SAME syntactic place to two pointer parameters that may \
+                  both be written -- neither to two `own` parameters (`R004`) nor to two \
+                  writable non-`own` ones (`R007`). A callee with two writable pointer \
+                  parameters may therefore assume that its two arguments are distinct places \
+                  WHENEVER they are written as distinct places at the call site.",
+        vorbehalt: "**This is the syntactic HALF of the alias question, and the only half \
+                    decidable without an alias analysis -- which this checker does not have.** \
+                    Two DIFFERENT names for one object stay indistinguishable: a re-view \
+                    (`fn(ptr A) -> ptr B`), a global reached twice, two indices that happen \
+                    to be equal. `messung/RACE.md` carries those as A2 and A3, and nothing \
+                    carries them. **Compared is the PLACE, not the root:** `f(p->a, p->b)` \
+                    passes, and it should -- two fields of one record are not one place. \
+                    *That also means `f(t[i], t[j])` passes with `i == j`.* And only \
+                    parameters: a pointer arriving through a `let`, a global or a return \
+                    value carries no declared right, so it is not marked writable here.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "**`R007` built 2026-08-24** -- `messung/RACE.md` listed form `A1` among \
+                      the four that NOTHING carries, and `gabbro alias` had counted the site \
+                      since 2026-08-21 (`S3`: one call, writable) without any pass refusing \
+                      it. *A measurement without a rule is the state a rule grows out of.* \
+                      Probe: `beispiele/gift/257-alias-zwei-schreibbare.gab`; anchor \
+                      `syntaktischer-alias-geht-wieder-durch`. `R004` carries the `own` half \
+                      and has its own probe.",
+        fundstelle: "crates/gabbro-check/src/m3.rs::eigen_doppelt; messung/RACE.md A1",
+    },
+    Satz {
         name: "m3.registerklasse",
         kennungen: &["R005", "R006"],
         aussage: "A `device` register field is read only if its class permits reading and \

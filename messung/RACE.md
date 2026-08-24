@@ -11,8 +11,9 @@ ssh ki-pc-fisch-101 'cd gabbro-m && export PATH=$HOME/.cargo/bin:$PATH && cargo 
 
 > **Der Satz, der bis heute fehlte, und er ist der Ertrag dieses Laufs:**
 >
-> **Von 28 unterschiedenen Rennformen tragen 21 auf einer REGEL, 2 auf der AXIOMSCHICHT, 1
-> auf beidem — und 4 trägt gar nichts.** *Die Klasse hängt nicht an der Axiomschicht: sie
+> **Von 28 unterschiedenen Rennformen tragen 22 auf einer REGEL, 2 auf der AXIOMSCHICHT, 1
+> auf beidem — und 3 trägt gar nichts.** *(nachgezogen 2026-08-24: `A1` hat mit `R007` eine
+> Regel bekommen — siehe unten.)* *Die Klasse hängt nicht an der Axiomschicht: sie
 > hängt an ihr an genau drei Stellen, und an drei weiteren an etwas anderem — dem **Alias**,
 > der im Ordner bis heute keine Zahl hatte.*
 >
@@ -64,18 +65,27 @@ Legende: **Regel** = ein Pass sagt ab · **Axiom** = eine `assume`-Zeile trägt 
 | 23 | Ein `entry` schreibt Geteiltes, das nichts als geteilt erklärt | **Regel** `H013` + **Axiom** `ein_kern` | auf diesem Korpus **0 Bisse** |
 | 24 | Ein maskierender Träger, den ein Eintritt ohne `nested masked` erreicht | **Regel** `H101` | — |
 
-### Und die vier, die **nichts** trägt
+### Und die drei, die **nichts** trägt *(vier bis zum 2026-08-24)*
 
 | # | Rennform | Stand |
 |---:|---|---|
-| **A1** | **Zwei Zeiger auf dasselbe Objekt, syntaktisch derselbe Ort** — `zwei(r, r)` | **nichts**, ausser bei `own` (`R004`) |
+| ~~**A1**~~ | **Zwei Zeiger auf dasselbe Objekt, syntaktisch derselbe Ort** — `zwei(r, r)` | **GESCHLOSSEN 2026-08-24: Regel `R007`** — zwei SCHREIBBARE Zeigerparameter, derselbe Ort am Rufort. `R004` trug schon die `own`-Hälfte. *Verglichen wird der ORT, nicht die Wurzel: `f(p->a, p->b)` geht durch, und das soll es* |
 | **A2** | **Zwei Zeiger auf dasselbe Objekt, verschiedene Namen** — `w = kopfworte_von(k)` | **nichts** |
 | **A3** | **Die EREIGNISHÄLFTE**: ein Schreiben durch den einen Namen entwertet den anderen nicht | **nichts** |
 | **A4** | Ein atomares RMW als eigene Wechselseitigkeit (`atomic_long_inc_not_zero`) | **nicht AUSSPRECHBAR** — `atomic` ist ein Item, kein Slotfeld (`FRAGMENTE.md`, K2-F2) |
 
 **Das ist die eigentliche Korrektur an der Buchung.** *Rennen* hängt an der Axiomschicht bei
-**Nr. 17 und 22** und teilweise bei **23**. Bei **A1–A3** hängt es am Alias — und das ist
-keine Aussage über das Speichermodell, sondern eine über Zeiger. Die Zahlen dazu stehen in §3.
+**Nr. 17 und 22** und teilweise bei **23**. Bei **A2–A3** hängt es am Alias — und das ist
+keine Aussage über das Speichermodell, sondern eine über Zeiger.
+
+> **`A1` war die einzige der vier, die ohne Aliasanalyse entscheidbar ist**, und sie ist seit
+> dem 2026-08-24 zu. *Der Weg dorthin ist der, den dieser Ordner vorschreibt:* `gabbro alias`
+> zählte die Stelle seit dem 2026-08-21 als `S3` (ein Ruf, schreibend), und kein Pass sagte ab.
+> **Eine Messung ohne Regel ist der Zustand, aus dem eine Regel wächst** — nicht eine Lücke,
+> die jemand hätte erfinden müssen.
+>
+> **A2 und A3 bleiben, und sie sind die teure Hälfte:** zwei VERSCHIEDENE Namen für ein Objekt.
+> Dafür braucht es eine Aliasanalyse, und die hat dieser Prüfer nicht. Die Zahlen dazu stehen in §3.
 
 ```bash
 # Die Tafel ist von Hand geführt. Was sie mechanisch stützt:
