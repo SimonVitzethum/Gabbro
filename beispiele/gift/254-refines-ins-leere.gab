@@ -1,0 +1,20 @@
+-- erwartet: M131
+-- `refines` nennt eine Spezifikation, die es nicht gibt. Das ist teurer als gar keine
+-- Pflicht: der Beweiser nimmt die genannte Aussage an, und angenommen wird damit etwas,
+-- das nirgends steht.
+module gift::refines_ins_leere {
+
+lock BUCH protects { Buch } rank 0 held <= 100 ops;
+
+table Buch count 16 { slot { belegt : bool, } }
+
+impl fn freigeben(p : index into Buch)
+    refines  gibt_es_nicht
+    requires Held(BUCH)
+    effects  { reads Buch.slots, writes Buch.slots, locks BUCH }
+    costs    <= 8 ops
+{
+    Buch.slots[p].belegt = false;
+}
+
+}

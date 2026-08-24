@@ -52,11 +52,14 @@ FRIST = 180  # Sekunden je Befehl. Ein Waechter ohne Frist meldet einen Haenger 
 # **Die Pflichten summiert -- `gabbro pflichten` druckt sie JE DATEI.** Eine Zahl ueber dem
 # Korpus muss addiert werden, und diese Zeile ist der Suchweg dorthin.
 PFLICHTEN_SUMME = (
+    # **Carried over 2026-08-24**: since `refines` the header line carries a fifth column
+    # (`R`, refinement). The old pattern no longer matched it and reported that the search
+    # path was gone -- correctly, and that is exactly what the message is for.
     "cargo run -q --bin gabbro -- pflichten beispiele/*.gab 2>/dev/null | "
-    "grep -oE '== [0-9]+ obligations: [0-9]+ preservation, "
+    "grep -oE '== [0-9]+ obligations: [0-9]+ refinement, [0-9]+ preservation, "
     "[0-9]+ postcondition, [0-9]+ foreign, [0-9]+ precondition' | "
-    "awk '{o+=$2; p+=$4; q+=$6; f+=$8; v+=$10} END "
-    "{print \"obl\", o, \"erhaltung\", p, \"nachbed\", q, \"fremd\", f, \"vorbed\", v}'"
+    "awk '{o+=$2; r+=$4; p+=$6; q+=$8; f+=$10; v+=$12} END "
+    "{print \"obl\", o, \"verfeinerung\", r, \"erhaltung\", p, \"nachbed\", q, \"fremd\", f, \"vorbed\", v}'"
 )
 
 # Je Eintrag: (Datei, Muster mit EINER Gruppe = die Zahl im Text, Befehl, Auszug mit EINER

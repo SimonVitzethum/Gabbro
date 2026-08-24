@@ -1,0 +1,18 @@
+-- erwartet: M130
+-- Eine `spec fn` verfeinert nichts -- sie IST die Aussage. `refines` an ihr ist eine
+-- Verfeinerungspflicht ohne Rumpf, der sie schuldet. Dieselbe Linie wie `M113` bei
+-- `maintains`.
+module gift::refines_an_spec {
+
+table Buch count 16 { slot { belegt : bool, } }
+
+spec fn ist_frei(p : index into Buch) -> bool
+    effects { pure }
+    = !Buch.slots[p].belegt;
+
+spec fn auch_frei(p : index into Buch) -> bool
+    refines ist_frei
+    effects { pure }
+    = !Buch.slots[p].belegt;
+
+}

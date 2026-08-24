@@ -1,0 +1,56 @@
+-- 50 -- **Die KOPFFORM von P6: ein Rumpf sagt, welche Spezifikation er verfeinert.**
+--
+-- Bis zum 2026-08-24 gab es diese Form nicht. `spec` und `impl` waren Qualifizierer an
+-- `fndecl`, kein Wort verband sie -- und deshalb hatte die Kopfform von P6 **null
+-- Fundstellen**. Das war keine Korpusluecke, sondern eine fehlende Produktion
+-- (`messung/VERFEINERUNG.md`).
+--
+-- **Warum das die einzige Datei mit `refines` ist:** sie ist die erste. Was hier gemessen
+-- wird, ist nicht der Inhalt, sondern die KETTE -- ob aus einer geschriebenen Paarung eine
+-- Pflicht ENTSTEHT, die `gabbro pflichten --isabelle` schreiben kann. Die eine Pflicht, die
+-- P6 heute schliesst, ist eine `K`; diese hier ist der Versuch, eine `W` entstehen zu lassen.
+--
+-- *Der Rumpf ist mit Absicht klein und seine Form durch eine bewiesene Schablone gedeckt.*
+-- Ein grosser Rumpf haette gemessen, wie weit eine fehlende Rumpfsemantik traegt -- und das
+-- ist die naechste Frage, nicht diese.
+
+module beispiel::verfeinerung {
+
+const NPLAETZE : u32 = 256;
+
+type Zaehler = u32 in 0 .. 65535;
+
+lock BUCH protects { Buch } rank 0 held <= 100 ops;
+
+table Buch count NPLAETZE {
+    slot { belegt : bool, wert : Zaehler, }
+}
+
+-- **Die Spezifikation.** Sie sagt, WAS gelten soll, und rechnet nicht.
+spec fn ist_frei(p : index into Buch) -> bool
+    effects { pure }
+    = !Buch.slots[p].belegt;
+
+-- **Der Rumpf, und er nennt seine Spezifikation.** `refines ist_frei` ist die Aussage
+-- *„was dieser Rumpf herstellt, ist genau das, was `ist_frei` beschreibt"* -- und sie ist
+-- eine Beweispflicht, keine Zusicherung. Der Pruefer prueft hier drei Dinge und keins
+-- davon ist der Beweis: dass `refines` an einem `impl fn` steht (`M130`), dass `ist_frei`
+-- eine erklaerte `spec fn` ist (`M131`), und dass beide Seiten gleich viele Parameter
+-- tragen (`M132`).
+--
+-- **Und hier steht KEIN `ensures ist_frei(p)`, mit Absicht.** `refines` sagt schon, dass
+-- der Rumpf `ist_frei` herstellt; ein `ensures` daneben waere ein zweites Register ueber
+-- derselben Aussage (W7). *Der erste Entwurf trug beides -- und fiel an `M111`, weil ein
+-- `spec fn`-Aufruf im `ensures` weder `result` noch einen geschriebenen Ort nennt. Der
+-- Befund ist gebucht; die Doppelung war ohnehin falsch.*
+impl fn freigeben(p : index into Buch)
+    refines  ist_frei
+    requires Held(BUCH), Buch.slots[p].belegt
+    effects  { reads Buch.slots, writes Buch.slots, locks BUCH }
+    costs    <= 8 ops
+{
+    Buch.slots[p].belegt = false;
+    Buch.slots[p].wert   = 0;
+}
+
+}

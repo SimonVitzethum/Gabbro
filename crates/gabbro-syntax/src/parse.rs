@@ -2196,6 +2196,16 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // **`refines <path>` -- the head form of the refinement obligation.** See
+        // `FnDecl::verfeinert`. The parser accepts it at ANY `fn`; that it may stand only at
+        // an `impl fn` is a statement about the program and belongs in a pass (`M130`), not
+        // in the syntax. *A parser that refuses it here issues a diagnostic without a
+        // sentence -- and this folder has 45 of those.*
+        let verfeinert = if self.friss_kw(Kw::Refines) {
+            Some(self.pfad()?)
+        } else {
+            None
+        };
         // E4: the clauses stand in a FIXED order -- a tool that has to sort cannot say
         // "`effects` is missing here".
         let requires = if self.friss_kw(Kw::Requires) {
@@ -2290,6 +2300,7 @@ impl<'a> Parser<'a> {
             parameter,
             ergebnis,
             fehler,
+            verfeinert,
             requires,
             ensures,
             maintains,

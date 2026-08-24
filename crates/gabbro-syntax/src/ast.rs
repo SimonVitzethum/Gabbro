@@ -821,6 +821,16 @@ pub struct FnDecl {
     ///
     /// *Es kostet kein Wort:* `or` steht schon im Wortschatz (`merge or`).
     pub fehler: Option<Ident>,
+    /// **`refines <path>` -- the HEAD FORM of the refinement obligation** (2026-08-24).
+    ///
+    /// Only at an `impl fn` (`M130`), and the path must name a declared `spec fn` (`M131`).
+    /// *Until today this form did NOT exist* -- `spec` and `impl` were qualifiers and
+    /// nothing more, which is why the head form of P6 had zero sites. **That was not a
+    /// corpus gap but a missing production** (`messung/VERFEINERUNG.md`).
+    ///
+    /// *It costs a word, deliberately:* pairing by name would have turned a rename into a
+    /// proof obligation, silently.
+    pub verfeinert: Option<Pfad>,
     pub requires: Vec<Pred>,
     pub ensures: Vec<Pred>,
     pub maintains: Vec<Ident>,

@@ -122,6 +122,36 @@ MUTATIONEN = [
         "«B33» in der zweiten Schreibrichtung -- V2 macht aus einem Registervergleich "
         "wieder einen Beziehungsfakt",
     ),
+    # -- m1.rs: `refines`, the head form of P6 (2026-08-24) -------------------------------
+    #
+    # **Three anchors for three rules, and the reason stands in `messung/VERFEINERUNG.md`:**
+    # the refinement obligation is the strongest statement this language makes about a body.
+    # A rule about it with nothing mutating against it would not be covered -- it would be
+    # UNDAMAGEABLE, and that is the state the surface `annotation` sat in for weeks.
+    Mutation(
+        "refines-auch-an-spec-fn",
+        "m1.rs",
+        "        if f.klasse != Some(FnKlasse::Impl) {",
+        "        if false {",
+        "`M130` -- eine `spec fn` duerfte `refines` tragen; sie IST die Aussage, und die "
+        "Pflicht haette keinen Rumpf, der sie schuldet",
+    ),
+    Mutation(
+        "refines-nennt-ins-leere",
+        "m1.rs",
+        "        let Some(&stellen) = self.spec_fns.get(&genannt) else {",
+        "        let Some(&stellen) = self.spec_fns.get(&genannt).or(Some(&f.parameter.len())) else {",
+        "`M131` -- `refines` duerfte eine Spezifikation nennen, die es nicht gibt; der "
+        "Beweiser nimmt die genannte Aussage dann an",
+    ),
+    Mutation(
+        "refines-ungleiche-stelligkeit",
+        "m1.rs",
+        "        if stellen != f.parameter.len() {",
+        "        if false {",
+        "`M132` -- Spezifikation und Rumpf duerften verschiedene Stelligkeit tragen; die "
+        "erzeugte Pflicht truege ungebundene Variablen",
+    ),
     # -- m3.rs: die Registerklasse ------------------------------------------------------
     Mutation(
         "klasse-w-darf-gelesen-werden",

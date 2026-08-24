@@ -386,6 +386,32 @@ pub const M1: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m1.rs; SPRACHE.md §3.2",
     },
     Satz {
+        name: "m1.verfeinerung",
+        kennungen: &["M130", "M131", "M132"],
+        aussage: "Where a body carries `refines g`, the named `g` is a `spec fn` declared in \
+                  this unit, it takes the same number of parameters as the body, and the \
+                  clause stands at an `impl fn` -- a body Gabbro lowers itself. A unit that \
+                  passes therefore carries, for every `refines`, a WELL-FORMED refinement \
+                  obligation: one whose specification exists and whose two sides can be \
+                  quantified over the same variables.",
+        vorbehalt: "**It says nothing about whether the body redeems the specification.** \
+                    That is the generated obligation, and it is counted rather than \
+                    discharged (`gabbro pflichten`). Measured 2026-08-24: the obligation \
+                    arises, goes through `--isabelle`, and is REFUSED there by name -- \
+                    `body-effect`, because there is no Isabelle semantics of a Gabbro body. \
+                    *The pass makes the obligation well-formed; it does not make it \
+                    provable.* And the arity check is a NECESSARY condition, not a \
+                    sufficient one: two functions of equal arity may still take unrelated \
+                    parameter types, and nothing here compares them.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift 253/254/255, one probe per code; and three mutations \
+                      (`refines-auch-an-spec-fn`, `refines-nennt-ins-leere`, \
+                      `refines-ungleiche-stelligkeit`). Clean site: \
+                      `beispiele/50-verfeinerung.gab`",
+        fundstelle: "crates/gabbro-check/src/m1.rs::verfeinert_pruefen; \
+                     messung/VERFEINERUNG.md",
+    },
+    Satz {
         name: "v1.bereichsverengung",
         kennungen: &["M108", "M109"],
         aussage: "A checked range condition narrows the range of the checked place in the \

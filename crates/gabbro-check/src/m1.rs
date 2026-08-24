@@ -129,6 +129,8 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>) {
     let umgebung = Umgebung::sammle(baum);
     let mut spezifikationen = std::collections::HashMap::new();
     sammle_spezifikationen(&baum.items, &mut spezifikationen);
+    let mut spec_fns = std::collections::HashMap::new();
+    sammle_spec_fns(&baum.items, &mut spec_fns);
     let mut p = Pruefer {
         u: &umgebung,
         absagen,
@@ -137,6 +139,7 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>) {
         rufer: String::new(),
         fremd: Vec::new(),
         spezifikationen,
+        spec_fns,
         unveraenderlich: std::collections::HashSet::new(),
         unveraenderliche_statiken: std::collections::HashMap::new(),
         schon_gemeldet: std::collections::HashSet::new(),
@@ -156,6 +159,25 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>) {
 ///
 /// Unqualifiziert, weil `maintains` heute unqualifiziert schreibt; die Verschaerfung auf
 /// qualifizierte Namen steht im TODO.
+/// **Only `spec fn`, with arity** -- for `refines` (2026-08-24).
+///
+/// `sammle_spezifikationen` mixes `spec fn` with `table`/`walk`/`group` invariants, because
+/// `maintains` preserves both. **`refines` names a SPECIFICATION**, not an invariant: a table
+/// invariant has no body an `impl fn` could refine.
+/// *Two questions, two registers -- using one where the other is meant would be a diagnostic
+/// that reaches further than its sentence.*
+fn sammle_spec_fns(items: &[Item], aus: &mut std::collections::HashMap<String, usize>) {
+    for item in items {
+        match &item.art {
+            ItemArt::Funktion(f) if f.klasse == Some(FnKlasse::Spec) => {
+                aus.insert(f.name.text.clone(), f.parameter.len());
+            }
+            ItemArt::Modul(m) => sammle_spec_fns(&m.items, aus),
+            _ => {}
+        }
+    }
+}
+
 fn sammle_spezifikationen(items: &[Item], aus: &mut std::collections::HashMap<String, usize>) {
     for item in items {
         match &item.art {
@@ -196,6 +218,8 @@ struct Pruefer<'a> {
     /// `maintains I` nennt eine davon, und bis zum 2026-08-19 nannte es sie ins Leere:
     /// sieben Korpusstellen, kein Leser. *Dieselbe Bauart wie `ensures` vor `M109`.*
     spezifikationen: std::collections::HashMap<String, usize>,
+    /// Only `spec fn`, name -> arity. See `sammle_spec_fns`.
+    spec_fns: std::collections::HashMap<String, usize>,
     /// **Die unveraenderlichen Bindungen des laufenden Rumpfes -- «NL.2.1», 2026-08-19.**
     ///
     /// `let x = 1; x = 2;` ging bis dahin mit **0 Fehlern** durch. `pruefe-klauseln.py`
@@ -409,6 +433,7 @@ impl<'a> Pruefer<'a> {
                 self.modul = modul.to_string();
                 self.ensures_pruefen(f);
                 self.maintains_pruefen(f);
+                self.verfeinert_pruefen(f);
             }
             if let ItemArt::Funktion(f) = &item.art {
                 // Nur Ruempfe: Praedikate haben keine Laufzeitwirkung.
@@ -2919,6 +2944,77 @@ impl<'a> Pruefer<'a> {
     /// **Was hier NICHT geprueft wird: dass der Rumpf sie erhaelt.** Das ist die erzeugte
     /// Beweispflicht, und sie wird gezaehlt statt eingeloest -- `gabbro pflichten` druckt
     /// sie. *Zaehlen ist der Schritt, der die Kennzahl ueberhaupt sichtbar macht.*
+    /// **`refines` gets its reader -- the HEAD FORM of P6 (2026-08-24).**
+    ///
+    /// `messung/VERFEINERUNG.md` measures the starting state: the form did NOT exist. `spec`
+    /// and `impl` were qualifiers, no word joined them, and that is why the head form of P6
+    /// had zero sites. *That was not a corpus gap but a missing production* -- and while it
+    /// was missing, `refinement.rs` could produce no `W` obligation, only `K`.
+    ///
+    /// Three rules, and each is well-formedness, not proof:
+    ///
+    /// * **`M130`** -- `refines` stands only at an `impl fn`. A `spec fn` refines nothing, it
+    ///   IS the specification; a `raw`/`extern`/`prim` body has none Gabbro could lower.
+    /// * **`M131`** -- the named path is a declared `spec fn`. *A `refines` that names into
+    ///   the void creates a proof obligation over a statement that does not exist* -- and
+    ///   that is worse than no obligation, because the prover assumes it.
+    /// * **`M132`** -- both sides carry the same arity. A refinement between functions of
+    ///   different arity is none; the generated obligation would carry unbound variables.
+    ///
+    /// **What is NOT checked here: that the body REDEEMS the specification.** That is the
+    /// generated refinement obligation, and it is counted rather than discharged --
+    /// `gabbro pflichten` prints it, `gabbro pflichten --isabelle` writes it.
+    /// *Whether the goal then CLOSES is decided by `refinement.rs`, and exactly there it
+    /// shows whether a body semantics is missing.*
+    fn verfeinert_pruefen(&mut self, f: &FnDecl) {
+        let Some(pfad) = &f.verfeinert else {
+            return;
+        };
+        if f.klasse != Some(FnKlasse::Impl) {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "M130",
+                    pfad.span,
+                    format!("`{}` carries `refines` but is not an `impl fn`", f.name.text),
+                )
+                .mit_notiz(
+                    "a specification refines nothing -- it IS the statement; and a body                         Gabbro never lowers has no refinement to state",
+                ),
+            );
+            return;
+        }
+        let genannt = pfad.teile.last().map(|i| i.text.clone()).unwrap_or_default();
+        let Some(&stellen) = self.spec_fns.get(&genannt) else {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "M131",
+                    pfad.span,
+                    format!("`{genannt}` in `refines` is not a declared `spec fn`"),
+                )
+                .mit_notiz(
+                    "a refinement obligation over a statement that does not exist is worse                         than none -- the prover assumes it",
+                ),
+            );
+            return;
+        };
+        if stellen != f.parameter.len() {
+            self.absagen.schiebe(
+                Absage::fehler(
+                    "M132",
+                    pfad.span,
+                    format!(
+                        "`{}` takes {} parameter(s), the specification `{genannt}` takes {stellen}",
+                        f.name.text,
+                        f.parameter.len()
+                    ),
+                )
+                .mit_notiz(
+                    "a refinement between functions of different arity is none -- the                         generated obligation would carry unbound variables",
+                ),
+            );
+        }
+    }
+
     fn maintains_pruefen(&mut self, f: &FnDecl) {
         if f.maintains.is_empty() {
             return;

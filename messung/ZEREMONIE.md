@@ -10,7 +10,7 @@ $ ./instrumente/zaehle-zeremonie.py
   redundant        0
   tragend        836        T1 390 · T2 165 · T6 62 · T10 57 · T3 47 · T11 31 · T12 25 ·
                             T7 24 · T9 19 · T8 7 · T5 6 · T4 3
-57 von 912 Stellen dürfen sinken
+57 von 919 Stellen dürfen sinken
 ```
 
 ## Die zwei Achsen, und warum sie getrennt bleiben
@@ -41,7 +41,7 @@ vorführt. Also getrennt (W11: jede Quote nennt ihr N):
 
 | | dürfen sinken | Stellen / Zeilen | Dichte |
 |---|---|---|---|
-| **Lehrkorpus** *(47 Beispiele + 6 Fragmente)* | 57 von 912 — **6,3 %** | 912 / 5725 | 15,5 je 100 Z. |
+| **Lehrkorpus** *(47 Beispiele + 6 Fragmente)* | 57 von 919 — **6,3 %** | 919 / 5725 | 15,5 je 100 Z. |
 | **echter Code** *(virtio-net · kapraum · planer)* | 14 von 109 — **12,8 %** | 109 / 519 | 21,0 je 100 Z. |
 
 > **Im echten Code ist der ableitbare Anteil mehr als doppelt so hoch — und er besteht
@@ -54,7 +54,7 @@ Zeile. *Beides zusammen heißt: die Beispiele unterschätzen, was ein Nutzer sch
 
 ## Was die Zahl sagt
 
-**Der Korpus ist mager: 57 von 912 Stellen (6,3 %) dürfen sinken.** Die Klempnerei liegt
+**Der Korpus ist mager: 57 von 919 Stellen (6,3 %) dürfen sinken.** Die Klempnerei liegt
 *nicht* in den Klauseln — 831 Stellen tragen eine Aussage, die nirgends sonst steht.
 
 Und der größte Einzelposten ist `A4` mit 47: **eine Wirkungszeile, die ein Gerufener dieses

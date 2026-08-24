@@ -1,7 +1,7 @@
 # Gabbro
 
 **A language whose point is to make seL4-style proofs cheap.** One output: **C plus inline
-assembly** — **all 43 corpus examples emit it, and all 43 compile** under `cc -std=c11 -Wall
+assembly** — **all 50 corpus examples emit it, and all 50 compile** under `cc -std=c11 -Wall
 -Wextra -Werror -O2`. Compiler in **safe Rust** (`forbid(unsafe_code)`).
 
 > **Until 2026-08-20 that sentence carried no figure, and twelve of the 38 produced nothing.**
@@ -136,14 +136,14 @@ denominator that shines instead of the one that costs.*
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 210 diagnostics · `gabbro paesse` |
-| **Grammar** | **149 EBNF rules**, closed and reachable | vocabulary covers every terminal, 216 / 216 |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 213 diagnostics · `gabbro paesse` |
+| **Grammar** | **149 EBNF rules**, closed and reachable | vocabulary covers every terminal, 217 / 217 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
-| **Pass register** | **53 statements over 12 passes — 47 measured, 6 conjectured, 0 PROVED.** 45 of 210 diagnostics still owe one, and that number is a **ratchet**: it may fall, not rise. *A written statement is not a proved one — the third column is the whole rest* | `gabbro paesse --je-satz` · `./instrumente/pruefe-saetze.py` |
-| **Guardians** | 23, and **40 of 40 instruments carry all four requirements** — three read statically (deadline · two-way speech test · red on abort), the fourth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./instrumente/pruefe-waechter.py`. *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **283 of 283 mutations caught** *(run 2026-08-21)* |
-| **Corpus** | 49 clean examples, 252 poison files, 186 tests *(run 2026-08-21)* | `cargo test` |
-| **Emission** | **49 of 49 examples emit C, and all 49 compile** under `cc -std=c11 -Wall -Wextra -Werror`, at **`-O0` and `-O2`**, with the same result — **19 of them are also run and compared against a handwriting**, and under `-fsanitize=undefined` | `./instrumente/pruefe-emission.sh` *(run 2026-08-21)* |
-| **Usability** | **5.8 % of the teaching corpus and 12.8 % of REAL code may fall** — 912 and 109 clause sites, split derivable / redundant / load-bearing. The calibration travels with the tool (`--tafel`, per rule a may-fall AND a reason), because an uncalibrated usability number makes `effects` and `costs` the cheapest thing to drop | `gabbro zeremonie` · `./instrumente/zaehle-zeremonie.py` |
+| **Pass register** | **52 statements over 12 passes — 46 measured, 6 conjectured, 0 PROVED.** 45 of 213 diagnostics still owe one, and that number is a **ratchet**: it may fall, not rise. *A written statement is not a proved one — the third column is the whole rest* | `gabbro paesse --je-satz` · `./instrumente/pruefe-saetze.py` |
+| **Guardians** | 23, and **40 of 40 instruments carry all four requirements** — three read statically (deadline · two-way speech test · red on abort), the fourth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./instrumente/pruefe-waechter.py`. *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **286 of 286 mutations caught** *(run 2026-08-21)* |
+| **Corpus** | 50 clean examples, 255 poison files, 186 tests *(run 2026-08-21)* | `cargo test` |
+| **Emission** | **50 of 50 examples emit C, and all 50 compile** under `cc -std=c11 -Wall -Wextra -Werror`, at **`-O0` and `-O2`**, with the same result — **19 of them are also run and compared against a handwriting**, and under `-fsanitize=undefined` | `./instrumente/pruefe-emission.sh` *(run 2026-08-21)* |
+| **Usability** | **5.8 % of the teaching corpus and 12.8 % of REAL code may fall** — 919 and 109 clause sites, split derivable / redundant / load-bearing. The calibration travels with the tool (`--tafel`, per rule a may-fall AND a reason), because an uncalibrated usability number makes `effects` and `costs` the cheapest thing to drop | `gabbro zeremonie` · `./instrumente/zaehle-zeremonie.py` |
 | **Blind spots** | **79 blind · 165 covered · 26 poison-only · 15 no cell** *(of 285 pairs)* — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
@@ -184,8 +184,8 @@ cargo run --bin gabbro -- pruefe beispiele/*.gab     # check files
 cargo run --bin gabbro -- paesse                     # what each pass does and does NOT do
 cargo run --bin gabbro -- schablonen                 # the proof-template register
 cargo run --bin gabbro -- pflichten beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
-cargo test                                           # 175 tests
-./instrumente/mutiere-pruefer.py                                 # damage one rule at a time: 236 of 236
+cargo test                                           # 186 tests
+./instrumente/mutiere-pruefer.py                                 # damage one rule at a time: 283 of 283
 ./instrumente/pruefe-syntax.sh                                   # grammar against the corpus, zero build warnings
 ./instrumente/pruefe-klauseln.py                                 # declared, exported, never read
 ./instrumente/pruefe-widerruf.py                                 # sentences the folder has revoked, still standing

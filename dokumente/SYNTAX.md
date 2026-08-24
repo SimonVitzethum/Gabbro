@@ -83,7 +83,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
 ```
   Struktur   module pub use type opaque linear ghost tagged const static fn
              spec impl raw divergent prim extern section arch when
-  Vertraege  requires ensures maintains breaking effects costs where in
+  Vertraege  requires ensures maintains refines breaking effects costs where in
              exhaustive old narrow to induction order advances
   Wirkungen  reads writes locks masks allocs consumes publishes diverges pure
   Ablauf     if else match traverse over by touches retry forever until
@@ -670,6 +670,24 @@ fndecl   = [ "pub" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" 
 
               `N028` und `N029` halten sie in beide Richtungen; die Absenkung steht in
               SPRACHE.md 8.1. **Kein neues Wort:** `or` steht schon im Wortschatz. *)
+           [ "refines"   path ]
+           (* **«P6a»: die KOPFFORM der Verfeinerungspflicht** (2026-08-24,
+              `messung/VERFEINERUNG.md`). Nur an einem `impl fn`, und der Pfad muss eine
+              erklaerte `spec fn` nennen -- `M130` und `M131` halten beide Haelften.
+
+              *Gemessen vor der Entscheidung:* 8 `spec fn` in 4 Namen gegen 236 `impl fn` in
+              178, und **null** Namen, die beides sind. `spec fn` ist heute ueberall ein
+              Praedikathelfer in `requires`/`ensures`; eine Paarung ueber den NAMEN haette
+              aus einer Umbenennung eine Beweispflicht gemacht, still.
+
+              **Ein neues Wort, mit Absicht** -- anders als bei «C3a» (`or`). Die
+              Verfeinerungspflicht ist die staerkste Aussage dieser Sprache ueber einen
+              Rumpf; sie darf weder aus zusammenfallenden Namen entstehen noch aus einem
+              Wort, das nebenher etwas anderes tut. *Der Preis des geschlossenen
+              Wortschatzes ist hier der Zweck, nicht das Hindernis.*
+
+              Vor `requires`, weil die Spezifikation ihre Vorbedingungen mitbringt und ein
+              Leser sie kennen muss, bevor er die eigenen liest. *)
            [ "requires"  predlist ]
            [ "ensures"   predlist ]
            [ "maintains" identlist ]

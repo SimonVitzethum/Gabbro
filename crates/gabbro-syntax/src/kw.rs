@@ -68,6 +68,12 @@ wortschatz! {
     Requires      => "requires",      res;
     Ensures       => "ensures",       res;
     Maintains     => "maintains",     res;
+    // **`refines <path>` -- the head form of P6** (2026-08-24, `messung/VERFEINERUNG.md`).
+    // A NEW word, deliberately: a refinement obligation is the strongest statement this
+    // language makes about a body, and it must not arise from two names coinciding
+    // (pairing by name) nor from a word doing double duty (`spec` as a clause).
+    // *One word, one job -- and the closed vocabulary makes the change countable.*
+    Refines       => "refines",       res;
     Breaking      => "breaking",      res;
     Effects       => "effects",       res;
     Costs         => "costs",         res;

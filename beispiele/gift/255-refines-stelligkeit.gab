@@ -1,0 +1,24 @@
+-- erwartet: M132
+-- Beide Seiten muessen dieselbe Stelligkeit tragen. Eine Verfeinerung zwischen Funktionen
+-- verschiedener Stellenzahl ist keine -- die erzeugte Pflicht truege ungebundene Variablen.
+module gift::refines_stelligkeit {
+
+lock BUCH protects { Buch } rank 0 held <= 100 ops;
+
+table Buch count 16 { slot { belegt : bool, } }
+
+spec fn ist_frei(p : index into Buch) -> bool
+    effects { pure }
+    = !Buch.slots[p].belegt;
+
+impl fn freigeben(p : index into Buch, q : index into Buch)
+    refines  ist_frei
+    requires Held(BUCH)
+    effects  { reads Buch.slots, writes Buch.slots, locks BUCH }
+    costs    <= 8 ops
+{
+    Buch.slots[p].belegt = false;
+    Buch.slots[q].belegt = false;
+}
+
+}

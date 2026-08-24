@@ -52,7 +52,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen 51 Sätze über 12 von 12 Pässen, keiner bewiesen.** Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen 52 Sätze über 12 von 12 Pässen, keiner bewiesen.** Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
 
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
@@ -333,7 +333,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **10 Widerrufe** über 63 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **10 Widerrufe** über 64 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *Woran es hängt: eine Teilmengenbuchung bräuchte je Zahlenpaar den Satz „A ist Teil von
       B", und den schreibt niemand hin, solange er nicht wehtut.*
 
@@ -401,11 +401,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **47 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
+- [ ] **49 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 115 sind tragend, 2 verdächtig — und **47 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 116 sind tragend, 2 verdächtig — und **49 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       *Wer eine Absage liest und daraus nicht erkennt, worauf sie ruht, kann auch nicht
       prüfen, ob sie weit genug reicht.* Das ist der größere Posten, nicht die zwei.
@@ -470,7 +470,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **1505 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **1522 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -638,7 +638,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **283 von 283 Ankern** greifen (`--anker`, 2026-08-21) — die
+      fällt. Mutationskatalog: **286 von 286 Ankern** greifen (`--anker`, 2026-08-24) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -663,7 +663,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       rules for the same thing**; now one: separating comma obligatory, trailing comma
       optional.
       **Und die Messschicht sagt, warum die drei stehenbleiben:** `./instrumente/pruefe-syntax.sh` hält
-      149 EBNF-Regeln und 216 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
+      149 EBNF-Regeln und 217 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
       gegen sich selbst, nie den Parser gegen die Grammatik.* Ein Wächter für die Differenz
       bräuchte je Stelle eine Giftdatei, die der Parser **annehmen** und die EBNF **verbieten**
       muss — **drei Dateien, und der Prüfer müsste dafür rot werden, wo er heute grün ist.**
@@ -679,7 +679,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       claims) or renaming (then every user carries the list in their head).
       **The compiler today admits words as names only after `.`/`->` and before `:`.**
       *Kein Messposten: die Zahlen (neun Wörter, elf Stellen) stehen, und `pruefe-wortschatz.py`
-      hält 216 Terminale gegen die Tabelle. **Was fehlt, ist ein Urteil**, und der Preis steht
+      hält 217 Terminale gegen die Tabelle. **Was fehlt, ist ein Urteil**, und der Preis steht
       in beiden Richtungen daneben.* Bleibt offen.
 
 - [ ] **Per template at least one mutation that falls ONLY if the once-obligation is really
@@ -2263,7 +2263,7 @@ Infrastruktur und nicht seine These.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
-**82 fremde Rümpfe im Korpus, 10 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**83 fremde Rümpfe im Korpus, 10 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
 
 > **Berichtigt am 2026-08-21, und die Überschrift war in BEIDE Richtungen falsch.** Hier stand
@@ -2973,7 +2973,7 @@ hat kein Feld dafür). **Ohne die Sätze ist „Gabbro formal verifiziert" nicht
 formulierbar** — man wüsste nicht, was zu beweisen wäre.
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut: 51 Sätze über 210 Codes, 45 Codes noch ohne).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut: 52 Sätze über 213 Codes, 45 Codes noch ohne).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
@@ -3116,7 +3116,7 @@ $ grep -n -A6 "^pub struct Pass" crates/gabbro-check/src/lib.rs
     pub nummer: u32,  pub name: …,  pub quelle: …,  pub zustand: Zustand,
 ```
 
-~~**`struct Pass` hat kein Feld für einen Satz. 194 Absagekennungen, null Sätze.**~~ — **überholt am 2026-08-21 durch PL.1:** das Feld steht, 51 Sätze über 12 von 12 Pässen, 210 Kennungen, davon 45 ohne Satz. *Der Satz bleibt stehen, weil er die Begründung dieses Abschnitts TRUG; was ihn ersetzt, steht darunter.* Einen
+~~**`struct Pass` hat kein Feld für einen Satz. 194 Absagekennungen, null Sätze.**~~ — **überholt am 2026-08-21 durch PL.1:** das Feld steht, 52 Sätze über 12 von 12 Pässen, 210 Kennungen, davon 45 ohne Satz. *Der Satz bleibt stehen, weil er die Begründung dieses Abschnitts TRUG; was ihn ersetzt, steht darunter.* Einen
 Algorithmus zu beweisen setzt voraus, dass aufgeschrieben ist, *was er entscheiden soll* —
 und genau das ist Stufe 8 (PL.1), die noch nicht angefangen hat.
 
@@ -3129,7 +3129,7 @@ und genau das ist Stufe 8 (PL.1), die noch nicht angefangen hat.
 
 | | |
 |---|---|
-| ~~**`struct Pass` schuldet keinen Satz**~~ **— eingelöst 2026-08-21** | 210 Kennungen, **51 Sätze**, 0 `PROVED` — *aufgeschrieben ist es; **dieser** Auslöser hält nicht mehr* |
+| ~~**`struct Pass` schuldet keinen Satz**~~ **— eingelöst 2026-08-21** | 213 Kennungen, **52 Sätze**, 0 `PROVED` — *aufgeschrieben ist es; **dieser** Auslöser hält nicht mehr* |
 | **Zahn 3 steht auf 8** | acht Prämissen **bewiesener** Schablonen hängen an keinem Pass. *Die vorhandene Beweisschicht ist nicht zu Ende gebunden;* eine zweite danebenzustellen vervielfacht die ungebundene Fläche, statt sie zu schließen |
 | **27 Sonden, keine existiert** | jeder Beweis „unabhängig vom Code" ruht auf der Annahmenmenge (33, davon 6 nicht falsifizierbar). *Solange keine der 27 benannten Sonden ein Programm ist, kauft die Unabhängigkeit weniger, als sie aussieht* |
 
@@ -3663,14 +3663,14 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 
 | | Finding | done |
 |---|---|---|
-| **1** | **Eight `[x]` entries** in a file whose closing sentence reads "exclusively what is open" | **C** | taken out; each is recorded elsewhere (see below) |
-| **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | **E** | corrected |
-| **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | **A** | struck through with a date, not deleted |
-| **4** | **"Six of the nine passes are missing"** — it is five whole and two half | **A** | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 149 / 216) | **D** | taken out along with the entry |
-| **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | **C** | drawn together |
-| **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | **A** | renamed |
-| **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | **D** | taken out |
+| **1** | **Eight `[x]` entries** in a file whose closing sentence reads "exclusively what is open" | taken out; each is recorded elsewhere (see below) |
+| **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
+| **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
+| **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 149 / 217) | taken out along with the entry |
+| **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
+| **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
+| **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |
 
 **And one that is mine:** the correction *"the mark ≤ 24 is missed, not open"*
 I reported as done on the same day — in `dokumente/MESSUNGEN.md` it was, **here it was not**.

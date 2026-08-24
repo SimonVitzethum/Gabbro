@@ -124,6 +124,18 @@ pub enum Art {
     /// die eine Deklaration ERZEUGT, diese eine, die ein Ruf VERERBT. Die Zahl waechst mit
     /// den Rufstellen, nicht mit den Deklarationen.
     Vorbedingung,
+    /// **`R` -- the REFINEMENT obligation, and it is the head form of P6** (2026-08-24).
+    ///
+    /// `impl fn f … refines g` says: *what this body establishes is exactly what `g`
+    /// describes.* **Until today this obligation could not arise at all** -- there was no
+    /// form in which a body names its specification (`messung/VERFEINERUNG.md`), and so P6
+    /// produced `K` obligations exclusively.
+    ///
+    /// *It stands beside `N` and not inside it:* an `ensures` names a SINGLE statement about
+    /// the post-state, a `refines` names the WHOLE specification. Both need the same missing
+    /// thing -- the meaning of the body -- but they are not the same obligation, and a
+    /// register that merges them cannot separate the metric.
+    Verfeinerung,
 }
 
 impl Art {
@@ -133,6 +145,7 @@ impl Art {
             Art::Nachbedingung => "N",
             Art::Fremdpflicht => "F",
             Art::Vorbedingung => "V",
+            Art::Verfeinerung => "R",
         }
     }
     pub fn name(self) -> &'static str {
@@ -141,6 +154,7 @@ impl Art {
             Art::Nachbedingung => "Postcondition",
             Art::Fremdpflicht => "Foreign duty",
             Art::Vorbedingung => "Precondition at the call site",
+            Art::Verfeinerung => "Refinement of a specification",
         }
     }
 }
@@ -357,6 +371,23 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
                         material: Material::Body,
                     });
                 }
+                // **`refines g` -- the head form of P6.** It stands BEFORE the `ensures`, as
+                // in the grammar: the specification brings its statement along, the `ensures`
+                // adds to it. *Only at a body Gabbro sees* -- a `refines` at a foreign body
+                // would be an assumption and not an obligation, and `M130` lets it stand at
+                // an `impl fn` only anyway.
+                if let Some(g) = &f.verfeinert {
+                    aus.push(Pflicht {
+                        art: Art::Verfeinerung,
+                        funktion: f.name.text.clone(),
+                        gegenstand: format!(
+                            "refines {}",
+                            g.teile.last().map(|i| i.text.as_str()).unwrap_or("?")
+                        ),
+                        rumpf_da,
+                        material: if rumpf_da { Material::Body } else { Material::Foreign },
+                    });
+                }
                 for (n, _) in f.ensures.iter().enumerate() {
                     aus.push(Pflicht {
                         art: if rumpf_da { Art::Nachbedingung } else { Art::Fremdpflicht },
@@ -384,7 +415,8 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     if p.is_empty() {
         s.push_str("   no generated proof obligation in this unit\n\n");
     }
-    for art in [Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht, Art::Vorbedingung] {
+    for art in [Art::Verfeinerung, Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht,
+               Art::Vorbedingung] {
         let eigene: Vec<&Pflicht> = p.iter().filter(|x| x.art == art).collect();
         if eigene.is_empty() {
             continue;
@@ -399,9 +431,15 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     let n = p.iter().filter(|x| x.art == Art::Nachbedingung).count();
     let f = p.iter().filter(|x| x.art == Art::Fremdpflicht).count();
     let v = p.iter().filter(|x| x.art == Art::Vorbedingung).count();
+    let r = p.iter().filter(|x| x.art == Art::Verfeinerung).count();
+    // **The header line MUST add up** -- `r + e + n + f + v == p.len()`. The first version of
+    // this line did not carry the refinement and reported `1 obligations: 0, 0, 0, 0`.
+    // *A balance that does not add up is the class `zaehle-p6.py` is built against* -- and it
+    // arose here on exactly the day a new kind was added.
+    debug_assert_eq!(r + e + n + f + v, p.len(), "Pflichtenbilanz geht nicht auf");
     s.push_str(&format!(
-        "== {} obligations: {e} preservation, {n} postcondition, {f} foreign, \
-         {v} precondition ==\n",
+        "== {} obligations: {r} refinement, {e} preservation, {n} postcondition, \
+         {f} foreign, {v} precondition ==\n",
         p.len()
     ));
     s.push_str("   And what that does NOT mean: a counted obligation is not a proved one.\n");
