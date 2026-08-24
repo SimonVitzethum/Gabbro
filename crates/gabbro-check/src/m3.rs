@@ -89,6 +89,8 @@ fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
     // `gabbro alias` has counted it since 2026-08-21 (`S3`, one site, writable) -- and no
     // pass refused it. *A measurement without a rule is the state a rule grows out of.*
     let mut schreibend: BTreeMap<String, Vec<bool>> = BTreeMap::new();
+    let mut raeume: BTreeMap<String, Vec<Option<Raum>>> = BTreeMap::new();
+    let mut parameternamen: BTreeMap<String, Vec<String>> = BTreeMap::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Funktion(f) = &item.art {
             let voll = crate::umgebung::qualifiziere(modul, &f.name.text);
@@ -103,6 +105,26 @@ fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
                         _ => false,
                     })
                     .collect(),
+            );
+            // **`R008`, 2026-08-24 -- der ADRESSRAUM je Zeigerparameter.**
+            //
+            // `Typ::Zeiger(Box<Typ>)` carries no space at all: the semantic type drops
+            // `Raum` at construction, and that is why nothing could ever check it. The
+            // DECLARATION still has it (`TypExpr::Zeiger(z).raum`), so the comparison
+            // happens here, where R004 and R007 already read declarations.
+            raeume.insert(
+                voll.clone(),
+                f.parameter
+                    .iter()
+                    .map(|p| match &p.typ {
+                        TypExpr::Zeiger(z) => Some(z.raum.clone()),
+                        _ => None,
+                    })
+                    .collect(),
+            );
+            parameternamen.insert(
+                voll.clone(),
+                f.parameter.iter().map(|p| p.name.text.clone()).collect(),
             );
             schreibend.insert(
                 voll,
@@ -129,7 +151,62 @@ fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
         let Some(k) = g.knoten.get(&crate::umgebung::qualifiziere(modul, &f.name.text)) else {
             return;
         };
+        let eigene = crate::umgebung::qualifiziere(modul, &f.name.text);
         for (ziel, args) in &k.rufe {
+            // **`R008` -- the address space must MATCH.**
+            //
+            // `ptr<mmio, rw> T` and `ptr<normal, rw> T` are different memories: one is
+            // volatile and device-mapped, the other is not. Until today they were
+            // interchangeable at a call, with zero errors -- and «B33» rests on knowing that
+            // a place IS volatile, so laundering the space through a call undermines that
+            // reasoning too.
+            //
+            // **Only a bare parameter name counts as an argument here**, and that is an
+            // UNDER-approximation stated as one: a field, a local, a return value carries no
+            // declared space that this pass could read. *`Typ` drops `Raum`; the declaration
+            // is the only place it survives.*
+            if let (Some(zraeume), Some(eigene_raeume), Some(eigene_namen)) = (
+                raeume.get(ziel),
+                raeume.get(&eigene),
+                parameternamen.get(&eigene),
+            ) {
+                for (i, a) in args.iter().enumerate() {
+                    let (Some(ort), Some(Some(soll))) = (a, zraeume.get(i)) else {
+                        continue;
+                    };
+                    let Some(j) = eigene_namen.iter().position(|n| n == ort) else {
+                        continue;
+                    };
+                    let Some(Some(ist)) = eigene_raeume.get(j) else {
+                        continue;
+                    };
+                    if ist != soll {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "R008",
+                                f.name.span,
+                                format!(
+                                    "`{}` passes `{ort}` in space `{}` to a parameter of \
+                                     `{}` declared `{}`",
+                                    f.name.text,
+                                    raumname(ist),
+                                    crate::umgebung::kurzname(ziel),
+                                    raumname(soll)
+                                ),
+                            )
+                            .mit_notiz(
+                                "the address space is part of what a pointer IS -- `mmio` is \
+                                 volatile and device-mapped, `normal` is not, and the \
+                                 emitter lowers them differently",
+                            )
+                            .mit_notiz(
+                                "only a bare parameter name is compared: a field, a local or \
+                                 a return value carries no declared space this pass can read",
+                            ),
+                        );
+                    }
+                }
+            }
             // **`R007` -- two WRITABLE pointer arguments at the same place.**
             //
             // Compared is the PLACE, not the root: `f(p->a, p->b)` are two distinct fields

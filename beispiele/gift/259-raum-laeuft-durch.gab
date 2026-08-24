@@ -1,0 +1,31 @@
+-- erwartet: R008
+-- **Der Adressraum wurde von KEINER Zeile geprueft** (gefunden im Passregister, gebaut
+-- 2026-08-24). `Typ::Zeiger(Box<Typ>)` traegt den Raum gar nicht -- er geht bei der
+-- Typbildung verloren, und deshalb konnte ihn nichts vergleichen. Ausser `R001`
+-- (`raum == Dma`) gab es keinen Test auf einen Raum ueberhaupt.
+--
+-- `mmio` heisst: fluechtig und geraeteabgebildet. `normal` heisst das Gegenteil, und der
+-- Erzeuger senkt beide verschieden ab. **Ein `ptr<normal, rw>` an einen `ptr<mmio, rw>`
+-- zu reichen gab null Fehler.**
+--
+-- *Und «B33» haengt mit dran:* die Regel, dass eine Verengung ueber einem fluechtigen Ort
+-- nicht traegt, setzt voraus, dass man WEISS, ob ein Ort fluechtig ist.
+module gift::raum_laeuft_durch {
+
+type Zelle = { x : u32, };
+
+impl fn schreibt_geraet(g : ptr<mmio, rw> Zelle)
+    effects { writes g }
+    costs   <= 4 ops
+{
+    g.x = 1;
+}
+
+impl fn ruft(n : ptr<normal, rw> Zelle)
+    effects { writes n }
+    costs   <= 8 ops
+{
+    schreibt_geraet(n);
+}
+
+}

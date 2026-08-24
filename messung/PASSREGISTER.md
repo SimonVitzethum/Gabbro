@@ -1,4 +1,4 @@
-# Das Passregister — 53 Sätze über zwölf Pässe
+# Das Passregister — 54 Sätze über zwölf Pässe
 
 *Angelegt 2026-08-21 (PL.1 + PL.2). Jede Zahl unten nennt den Befehl, der sie nachrechnet.*
 
@@ -16,8 +16,8 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # das Regis
 
 | | | Befehl |
 |---|---:|---|
-| Sätze im Register | **53** | `gabbro paesse` |
-| davon `measured` | **45** | ein Giftprobenfall oder eine gefangene Mutation |
+| Sätze im Register | **54** | `gabbro paesse` |
+| davon `measured` | **46** | ein Giftprobenfall oder eine gefangene Mutation |
 | davon **`ARGUED`** | **2** | ein Korrektheitsargument ist aufgeschrieben — [`K001`](K001.md), [`H006`](H006.md). *Das erste fand eine Unterzählung um Faktor 3; der dritte Versuch ([`V2`](V2.md)) fand statt einer Messung den [Nichtdeterminismus](DETERMINISMUS.md) und blieb `CONJECTURED`* |
 | davon `CONJECTURED` | **6** | nichts misst sie |
 | davon `PROVED` | **0** | **das ist die Zahl, um die es in PL.2 geht** |
@@ -50,7 +50,7 @@ Parsers behauptet genauso etwas über ein Programm wie einer des Kostenpasses.
 > **Ein aufgeschriebener Satz ist kein bewiesener.** Das ist der ganze Vorbehalt, und er ist
 > größer als die Leistung.
 
-1. **`PROVED` ist leer.** Keiner der 53 Sätze war je in Isabelle. Was das Register liefert,
+1. **`PROVED` ist leer.** Keiner der 54 Sätze war je in Isabelle. Was das Register liefert,
    ist die **Liste der zu beweisenden Aussagen** — der Gegenstand von PL.2, nicht sein
    Ergebnis.
 2. **`measured` misst die UMSETZUNG, nicht die REGEL.** Eine fallende Giftprobe zeigt, dass
@@ -67,7 +67,7 @@ Parsers behauptet genauso etwas über ein Programm wie einer des Kostenpasses.
    gemessen sind. Das ist die Vergröberung dieses Registers, und sie steht hier statt in
    einer Fußnote.*
 
-## Die Vorbedingung über allen 53 Sätzen: ein Hinweis ist keine Absage
+## Die Vorbedingung über allen 54 Sätzen: ein Hinweis ist keine Absage
 
 `Stufe::Hinweis` zählt nicht als Fehler, und nur `Stufe::Fehler` lässt den Übersetzer
 scheitern. **Fünf Kennungen sind Hinweise: `E003`, `E009`, `V003`, `S007`, `N026`.**
@@ -130,7 +130,7 @@ behauptet als sein Code einlöst** — fünfmal, in fünf Dateien, zweimal schli
 | **die K-Bedingung wird nicht durchgesetzt** | `kbedingung.rs` | `k_haelt()` verlangt `breaking.is_empty()`; der Pass meldet nur Handschrift. **`breaking` wird gesammelt, gezählt, gedruckt — und nie abgesagt.** Ein Programm, das Pass 2 passiert, erfüllt die K-Bedingung **nicht notwendig** |
 | **`N028`/`N029` schlüsseln verschieden** | `namen.rs` | Karte unter dem **Kurznamen**, Nachschlag unter dem **vollen Pfad**. `m::f()` trifft nie: `N029` schweigt, `N028` schlägt **falsch** an |
 | **die Paarung ist global, nicht transitiv** | `paarung.rs` | Der Kopf sagt „transitive Menge", der Code vereinigt über **alle** Funktionen des Baums. Ein `publishes` in Modul A paart mit einem `awaits` in Modul B **ohne jede Aufrufbeziehung** |
-| **der Adressraum wird nirgends geprüft** | `m3.rs` | Außer `R001` (`raum == Dma`) gibt es **keinen** Test auf einen Raum. `Raum::Mmio` kommt nur in der Namenstabelle und im Erzeuger vor. Der zweite Anspruch des Modulkopfs wird von **keiner Zeile** eingelöst |
+| ~~**der Adressraum wird nirgends geprüft**~~ **— gebaut 2026-08-24 (`R008`)** | `m3.rs` | Außer `R001` gab es **keinen** Test auf einen Raum; ein `ptr<normal, rw>` erreichte einen `ptr<mmio, rw>`-Parameter mit null Fehlern. *Jetzt muss der Raum am Rufort ÜBEREINSTIMMEN* — für Argumente, die ein blanker Parameter sind. **`code`, `boot`, `port` prüft weiter nichts, und `Typ` verliert `Raum` bei der Typbildung** |
 | **`melden` ist toter Code** | `phasen.rs` | Der Schalter, der „ein Rumpf ohne eigene `advances`-Zeile meldet nicht" unterscheiden sollte, wird durch sechs Rufstellen gereicht und **nie gelesen** |
 | **`O004` schweigt bei leerem Rumpf** | `phasen.rs` | Eine Funktion mit `advances roh -> mmu` und leerem Rumpf gibt **null Fehler**. *„Eine Strecke, die unterwegs aufhört, ist keine Strecke" — eine, die nie anfängt, ist stumm* |
 | **rekursive Funktionen: keine Rahmenprüfung** | `wirkungen.rs` | Am Zyklus wird `E009` (ein **Hinweis**) gesetzt und **vor jeder `E008`-Prüfung zurückgekehrt**. Und der Grund propagiert nach oben: **eine** unauflösbare Kante tief unten entwertet `E008` für die ganze Rufkette darüber |

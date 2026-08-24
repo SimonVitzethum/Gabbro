@@ -122,6 +122,20 @@ MUTATIONEN = [
         "«B33» in der zweiten Schreibrichtung -- V2 macht aus einem Registervergleich "
         "wieder einen Beziehungsfakt",
     ),
+    # -- m3.rs: the address space (2026-08-24) -------------------------------------------
+    #
+    # **The pass register booked it: the address space is checked nowhere.** `Typ` drops
+    # `Raum` at construction, so only the DECLARATION still carries it -- and until today
+    # nothing compared it. A `ptr<normal, rw>` reached a `ptr<mmio, rw>` parameter with zero
+    # errors.
+    Mutation(
+        "adressraum-egal-am-rufort",
+        "gabbro-check/src/m3.rs",
+        "                    if ist != soll {",
+        "                    if false {",
+        "`R008` -- der Adressraum darf wieder wechseln; ein `normal`-Zeiger geht an einen "
+        "`mmio`-Parameter, und der Erzeuger senkt beide verschieden ab",
+    ),
     # -- phasen.rs: the step in a `return` (2026-08-24) -----------------------------------
     #
     # `fluss` handled `let` and the bare call and stopped there. The SAME lie written two ways

@@ -430,7 +430,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **50 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
+- [ ] **51 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
@@ -499,7 +499,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **1579 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **1604 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -667,7 +667,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **290 von 290 Ankern** greifen (`--anker`, 2026-08-24) — die
+      fällt. Mutationskatalog: **291 von 291 Ankern** greifen (`--anker`, 2026-08-24) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -2916,7 +2916,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7906 von 12359 Kommentarzeilen** im Pruefer sind deutsch
+**7907 von 12359 Kommentarzeilen** im Pruefer sind deutsch
  1043 von  1280 in den Instrumenten
   273 von   845 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -3023,7 +3023,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut: 53 Sätze über 214 Codes, 45 Codes noch ohne).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut: 54 Sätze über 215 Codes, 45 Codes noch ohne).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
@@ -3211,7 +3211,7 @@ und genau das ist Stufe 8 (PL.1), die noch nicht angefangen hat.
 
 | | |
 |---|---|
-| ~~**`struct Pass` schuldet keinen Satz**~~ **— eingelöst 2026-08-21** | 214 Kennungen, **53 Sätze**, 0 `PROVED` — *aufgeschrieben ist es; **dieser** Auslöser hält nicht mehr* |
+| ~~**`struct Pass` schuldet keinen Satz**~~ **— eingelöst 2026-08-21** | 215 Kennungen, **54 Sätze**, 0 `PROVED` — *aufgeschrieben ist es; **dieser** Auslöser hält nicht mehr* |
 | **Zahn 3 steht auf 8** | acht Prämissen **bewiesener** Schablonen hängen an keinem Pass. *Die vorhandene Beweisschicht ist nicht zu Ende gebunden;* eine zweite danebenzustellen vervielfacht die ungebundene Fläche, statt sie zu schließen |
 | **27 Sonden, keine existiert** | jeder Beweis „unabhängig vom Code" ruht auf der Annahmenmenge (33, davon 6 nicht falsifizierbar). *Solange keine der 27 benannten Sonden ein Programm ist, kauft die Unabhängigkeit weniger, als sie aussieht* |
 

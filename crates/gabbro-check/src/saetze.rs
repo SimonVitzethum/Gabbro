@@ -563,6 +563,34 @@ pub const M3: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m3.rs; SYNTAX.md §3",
     },
     Satz {
+        name: "m3.adressraum",
+        kennungen: &["R008"],
+        aussage: "A pointer argument that is a bare PARAMETER of the caller reaches a \
+                  parameter declared in the SAME address space. `mmio` is volatile and \
+                  device-mapped, `normal` is not, and the emitter lowers them differently -- \
+                  a program that passes therefore does not launder one space into the other \
+                  across a call.",
+        vorbehalt: "**Only a bare parameter name is compared, and that is an \
+                    UNDER-approximation stated as one.** A field, a local, a `let`, a return \
+                    value or a global carries no declared space this pass can read -- because \
+                    `Typ::Zeiger(Box<Typ>)` DROPS `Raum` at construction and only the \
+                    declaration still has it. *Carrying the space in the semantic type is the \
+                    bigger fix and is not built.* And it compares two spaces for equality: \
+                    there is no lattice, so nothing says whether any conversion would ever be \
+                    legitimate. **`R001` remains the only other space test** (`raum == Dma` \
+                    at an `ops` carrier); `code`, `boot` and `port` are still checked by \
+                    nothing at all.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "**Built 2026-08-24 from the pass register's own finding** -- *the address \
+                      space is checked NOWHERE: apart from `R001` there is no test on a space \
+                      at all* (2026-08-21, written down and not acted on). \
+                      Reproduced first: a `ptr<normal, rw>` reaching a `ptr<mmio, rw>` \
+                      parameter gave zero errors. Probe \
+                      `beispiele/gift/259-raum-laeuft-durch.gab`, anchor \
+                      `adressraum-egal-am-rufort`; zero sites in the corpus.",
+        fundstelle: "crates/gabbro-check/src/m3.rs::eigen_doppelt; messung/PASSREGISTER.md",
+    },
+    Satz {
         name: "m3.syntaktischer-alias",
         kennungen: &["R004", "R007"],
         aussage: "No call passes the SAME syntactic place to two pointer parameters that may \
@@ -613,11 +641,13 @@ pub const M3: &[Satz] = &[
         aussage: "No carrier declaring `ops` hangs on a `ptr<dma, …>` parameter, and the \
                   same syntactic place does not stand at two `own` positions of ONE call.",
         vorbehalt: "**`R004` is not an alias analysis and says so**: it compares place TEXT, \
-                    so `zwei(q, q.f)` passes, and it reports once per call. **And the \
-                    ADDRESS SPACE itself is checked nowhere else**: `Raum` is stored, named \
-                    and printed in a message, but the only real test on a space in the whole \
-                    checker is `R001`'s `raum == Dma`. `Raum::Mmio` occurs only in the \
-                    name table and in the emitter. The module header's second claim -- *„a \
+                    so `zwei(q, q.f)` passes, and it reports once per call. ~~**And the \
+                    ADDRESS SPACE itself is checked nowhere else**: the only real test on a \
+                    space in the whole checker is `R001`'s `raum == Dma`.~~ **Half closed \
+                    2026-08-24 by `R008`** (`m3.adressraum`): the space must MATCH at a call, \
+                    for arguments that are bare parameters. *`code`, `boot` and `port` are \
+                    still checked by nothing, and `Typ` still drops `Raum` -- so a field, a \
+                    local or a return value carries no space this pass can read.* The module header's second claim -- *„a \
                     `dma` pointer reaches memory a DEVICE writes; reading it like `normal` \
                     means taking a snapshot for a fact\"* -- **is redeemed by no line in \
                     this file.**",
