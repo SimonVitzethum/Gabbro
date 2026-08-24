@@ -129,8 +129,8 @@ MUTATIONEN = [
     Mutation(
         "phasenschritt-im-return-unsichtbar",
         "gabbro-check/src/phasen.rs",
-        "            StmtArt::Return(Some(e)) => {\n                if let ExprArt::Ruf(r) = &e.art {",
-        "            StmtArt::Return(Some(e)) => {\n                let _ = e;\n                if let ExprArt::Ruf(r) = &None::<Expr> {",
+        "            StmtArt::Return(Some(e)) => {",
+        "            StmtArt::Return(Some(e)) if false => {",
         "`O004` -- ein Phasenschritt im `return` wird wieder uebersehen; dieselbe Zusage im "
         "`let` faellt, im `return` nicht",
     ),
