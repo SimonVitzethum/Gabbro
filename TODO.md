@@ -667,7 +667,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **287 von 287 Ankern** greifen (`--anker`, 2026-08-24) — die
+      fällt. Mutationskatalog: **288 von 288 Ankern** greifen (`--anker`, 2026-08-24) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht

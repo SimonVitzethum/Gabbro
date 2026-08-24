@@ -338,6 +338,27 @@ fn zeugnis_von(name: &str) -> String {
 /// > **Das ist eine ANNAHME ueber fremden Code mit Wirkung im Erzeugnis** -- ein engerer
 /// > Bereich besteht Pruefungen, die ein weiterer nicht bestuende. Sie wird nicht
 /// > abgeschaltet; ein Vertrag SOLL wirken. Sie wird gebucht.
+/// **«B26»: a `requires` at a register is COUNTED, since 2026-08-24.**
+///
+/// Until then no pass read `RegDecl::requires` -- the clause parsed and vanished.
+/// `PFLICHTEN.md` carried that as a hanging plumbing duty, and the note named the cure
+/// itself: *"the same shape as `ensures` on an `extern fn`."* That one became a counted
+/// foreign duty; this one becomes a counted **device promise**.
+///
+/// > **It is not checked, and that is the statement.** The register is volatile, a hostile
+/// > device may report whatever it likes («B33»). *The promise is booked, not its holding*
+/// > -- and with that it stands in the register instead of in nothing.
+#[test]
+fn ein_requires_am_register_wird_gezaehlt() {
+    let p = wurzel().join("..").join("messung").join("fragmente").join("F04.gab");
+    let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
+    let (baum, _) = gabbro_syntax::lies("F04.gab", &q);
+    let bericht = gabbro_check::pflichten::zeige(&baum, "F04.gab");
+    for stueck in ["Device promise at a register", "reg QUEUE_SIZE requires", "1 device"] {
+        assert!(bericht.contains(stueck), "fehlt: {stueck}\n{bericht}");
+    }
+}
+
 #[test]
 fn eine_fremdverengung_steht_mit_namen_im_zeugnis() {
     let z = zeugnis_von("39-auftragsdienst.gab");

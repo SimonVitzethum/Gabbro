@@ -122,6 +122,19 @@ MUTATIONEN = [
         "«B33» in der zweiten Schreibrichtung -- V2 macht aus einem Registervergleich "
         "wieder einen Beziehungsfakt",
     ),
+    # -- pflichten.rs: the device promise (2026-08-24, «B26») -----------------------------
+    #
+    # **A clause that parses and is dropped is the folder's most-paid-for shape.** Until today
+    # `RegDecl::requires` was read by no pass at all. Counting it is the whole fix -- and
+    # without an anchor the counting could be removed again in silence.
+    Mutation(
+        "geraetezusage-wird-nicht-gezaehlt",
+        "gabbro-check/src/pflichten.rs",
+        "                    if r.requires.is_some() {",
+        "                    if false {",
+        "«B26» -- ein `requires` am Register verschwindet wieder still; die Klausel parst "
+        "und niemand zaehlt sie",
+    ),
     # -- kosten.rs: the branch prefix (2026-08-24) ---------------------------------------
     #
     # **Found while WRITING the soundness argument, not by a tool** (`messung/K001.md`).

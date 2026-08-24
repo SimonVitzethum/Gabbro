@@ -136,6 +136,22 @@ pub enum Art {
     /// thing -- the meaning of the body -- but they are not the same obligation, and a
     /// register that merges them cannot separate the metric.
     Verfeinerung,
+    /// **`D` -- the DEVICE PROMISE, and until today it was a silent drop** (2026-08-24).
+    ///
+    /// `reg QUEUE_SIZE : u16 @0x18 class rw requires QUEUE_SIZE <= QMAX` -- the clause has
+    /// always parsed and was read by **no pass at all**. `RegDecl::requires` stood in the
+    /// tree and nobody descended into it. *The same shape as `ensures` on an `extern fn`,
+    /// and the same answer: do not refuse it, do not pretend to check it -- COUNT it.*
+    ///
+    /// **It is neither a postcondition nor a foreign duty.** A foreign duty sits at CODE
+    /// Gabbro does not see; this one sits at HARDWARE Gabbro does not see. *Both are
+    /// assumptions, but their falsifiers are different things* -- one a foreign body, the
+    /// other a probe at the device.
+    ///
+    /// > **And it will never become a fact.** The register is volatile, and a hostile device
+    /// > may report whatever it likes («B33»). *What is booked here is the promise -- not
+    /// > that it holds.*
+    Geraetezusage,
 }
 
 impl Art {
@@ -146,6 +162,7 @@ impl Art {
             Art::Fremdpflicht => "F",
             Art::Vorbedingung => "V",
             Art::Verfeinerung => "R",
+            Art::Geraetezusage => "D",
         }
     }
     pub fn name(self) -> &'static str {
@@ -155,6 +172,7 @@ impl Art {
             Art::Fremdpflicht => "Foreign duty",
             Art::Vorbedingung => "Precondition at the call site",
             Art::Verfeinerung => "Refinement of a specification",
+            Art::Geraetezusage => "Device promise at a register",
         }
     }
 }
@@ -402,6 +420,35 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
                     });
                 }
             }
+            // **`requires` at a `reg` -- the device promise** (2026-08-24, «B26»).
+            //
+            // Until today nobody read this clause: `PFLICHTEN.md` carried it as a hanging
+            // plumbing duty with the note *"no pass reads `RegDecl::requires` at all. The
+            // clause parses and is then dropped -- the same shape as `ensures` on an
+            // `extern fn`."* **The comparison was the pointer to the cure:** that one became
+            // a counted foreign duty, this one becomes a counted device promise.
+            ItemArt::Device(d) => {
+                let nimm = |r: &RegDecl, aus: &mut Vec<Pflicht>| {
+                    if r.requires.is_some() {
+                        aus.push(Pflicht {
+                            art: Art::Geraetezusage,
+                            funktion: d.name.text.clone(),
+                            gegenstand: format!("reg {} requires", r.name.text),
+                            // Gabbro never sees the device -- as with a foreign body.
+                            rumpf_da: false,
+                            material: Material::Foreign,
+                        });
+                    }
+                };
+                for r in &d.register {
+                    nimm(r, aus);
+                }
+                for b in &d.baenke {
+                    for r in &b.register {
+                        nimm(r, aus);
+                    }
+                }
+            }
             _ => {}
         }
     }
@@ -416,7 +463,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
         s.push_str("   no generated proof obligation in this unit\n\n");
     }
     for art in [Art::Verfeinerung, Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht,
-               Art::Vorbedingung] {
+               Art::Vorbedingung, Art::Geraetezusage] {
         let eigene: Vec<&Pflicht> = p.iter().filter(|x| x.art == art).collect();
         if eigene.is_empty() {
             continue;
@@ -432,14 +479,15 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     let f = p.iter().filter(|x| x.art == Art::Fremdpflicht).count();
     let v = p.iter().filter(|x| x.art == Art::Vorbedingung).count();
     let r = p.iter().filter(|x| x.art == Art::Verfeinerung).count();
+    let dz = p.iter().filter(|x| x.art == Art::Geraetezusage).count();
     // **The header line MUST add up** -- `r + e + n + f + v == p.len()`. The first version of
     // this line did not carry the refinement and reported `1 obligations: 0, 0, 0, 0`.
     // *A balance that does not add up is the class `zaehle-p6.py` is built against* -- and it
     // arose here on exactly the day a new kind was added.
-    debug_assert_eq!(r + e + n + f + v, p.len(), "Pflichtenbilanz geht nicht auf");
+    debug_assert_eq!(r + e + n + f + v + dz, p.len(), "Pflichtenbilanz geht nicht auf");
     s.push_str(&format!(
         "== {} obligations: {r} refinement, {e} preservation, {n} postcondition, \
-         {f} foreign, {v} precondition ==\n",
+         {f} foreign, {v} precondition, {dz} device ==\n",
         p.len()
     ));
     s.push_str("   And what that does NOT mean: a counted obligation is not a proved one.\n");
