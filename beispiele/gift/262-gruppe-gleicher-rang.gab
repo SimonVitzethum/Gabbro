@@ -1,0 +1,26 @@
+-- erwartet: U005
+-- **Die erste Giftprobe fuer `U005` ueberhaupt** (2026-08-24). Die Regel stand seit ihrem
+-- Bau ohne Probe da -- und sie fiel FALSCH: `sperren_je_traeger` loeste den Rang mit
+-- `konst_wert("", …)` auf, also von der WURZEL statt aus dem Modul, und machte aus dem
+-- Fehlschlag eine `0`. Zwei Sperren mit verschiedenen, wohldefinierten Raengen lasen damit
+-- beide `0` und galten als gleich.
+--
+-- Hier ist der Fall ECHT: beide Raenge sind wirklich `1`.
+--
+-- **Zwei Sperren gleichen Rangs stehen in keiner Ordnung**, und eine Gruppenoperation
+-- koennte sie in zwei Richtungen nehmen -- genau daher kommt eine Verklemmung.
+module gift::gruppe_gleicher_rang {
+
+const RANG : u32 = 1;
+
+table T count 8 { slot { v : u32, } }
+table U count 8 { slot { v : u32, } }
+
+lock A protects { T } rank RANG held <= 50 ops;
+lock B protects { U } rank RANG held <= 50 ops;
+
+group G over { T, U } {
+    invariant beide cost O(1) runs offline : T.slots[0].v == U.slots[0].v;
+}
+
+}

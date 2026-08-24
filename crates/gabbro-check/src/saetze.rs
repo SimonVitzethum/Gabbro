@@ -1040,16 +1040,28 @@ pub const GRUPPE: &[Satz] = &[
                   under some lock, no two of its carriers hang under different locks of the \
                   SAME rank, and every `invariant` of the group names at least two of its \
                   carriers.",
-        vorbehalt: "The rank lookup falls back to 0 for anything the environment cannot \
+        vorbehalt: "~~The rank lookup falls back to 0 for anything the environment cannot \
                     evaluate, and the module context is hard-coded empty -- so two \
-                    non-evaluable ranks count as EQUAL and `U005` fires falsely. `U007` can \
+                    non-evaluable ranks count as EQUAL and `U005` fires falsely.~~ **Fixed \
+                    2026-08-24, and it was WORSE than the entry said:** the empty module path \
+                    meant a rank written as a module constant did not resolve AT ALL, so two \
+                    locks with different, well-defined ranks both read `0` and a CORRECT \
+                    program was refused with a number that stands nowhere in its source. \
+                    `H014` stayed silent, because `geteilt.rs` passes the module -- *the only \
+                    message the program got was the wrong one.* The rank now resolves in the \
+                    declaring module and stays an `Option`; an unknown rank is not a rank, \
+                    and two of them are not equal. `U007` can \
                     also fire falsely: its name walker does not know built-ins, so `invariant \
                     : lenof(A) == lenof(B)` names zero carriers. `U001` stays silent about \
                     unknown names -- that is the name pass, not this one.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: one probe on `U007`. **`U001`, `U002`, `U004` and \
-                      `U005` have NO probe at all** -- four of the five codes of this \
-                      sentence are refused by lines nothing measures.",
+        gemessen_an: "beispiele/gift: one probe on `U007`, and since 2026-08-24 probe 262 \
+                      on `U005` -- **the first ever, and writing it is what exposed the false \
+                      refusal.** The other half is the test \
+                      `ein_modulweiter_rang_loest_auf`, which holds the direction a poison \
+                      probe cannot: that a correct program passes. Anchor \
+                      `gruppenrang-aus-der-wurzel`. **`U001`, `U002` and `U004` still have NO \
+                      probe at all.**",
         fundstelle: "crates/gabbro-check/src/gruppe.rs; MESSUNGEN.md, SWEEP der \
                      Verbindungs-Invarianten (2026-08-16), V4",
     },

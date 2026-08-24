@@ -29,11 +29,30 @@ use gabbro_syntax::span::Span;
 use std::collections::BTreeMap;
 
 /// Welche Sperre schuetzt welchen Traeger, und mit welchem Rang.
-fn sperren_je_traeger(baum: &Programm, u: &crate::umgebung::Umgebung) -> BTreeMap<String, (String, i128)> {
+/// **The rank is resolved in the DECLARING module, and it stays an `Option`** (2026-08-24).
+///
+/// Both halves were wrong and both in one line: `u.konst_wert("", &l.rang).unwrap_or(0)`.
+///
+/// * the module path was **empty**, so a rank written as a module constant --
+///   `const RANG_A : u32 = 1; lock A … rank RANG_A` -- did not resolve from the root;
+/// * and the failure became **`0`**, a number that stands nowhere in the source.
+///
+/// > Two locks with DIFFERENT, perfectly well-defined ranks then both read `0`, and `U005`
+/// > refused a correct program with *„`group G` spans `A` and `B` -- both `rank 0`"*.
+/// > **`H014` stayed silent**, because there the rank resolves fine -- so the only message
+/// > the program got was the wrong one.
+///
+/// *`geteilt.rs`:148 had it right all along:* `u.konst_wert(modul, &l.rang)`, no `unwrap_or`.
+/// **A wrong refusal is more expensive than a missing one:** it makes someone rewrite a
+/// program that was correct.
+fn sperren_je_traeger(
+    baum: &Programm,
+    u: &crate::umgebung::Umgebung,
+) -> BTreeMap<String, (String, Option<i128>)> {
     let mut aus = BTreeMap::new();
-    crate::fuer_jedes_item(baum, &mut |item| {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Lock(l) = &item.art {
-            let rang = u.konst_wert("", &l.rang).unwrap_or(0);
+            let rang = u.konst_wert(modul, &l.rang);
             for o in &l.schuetzt {
                 aus.insert(o.basis.text.clone(), (l.name.text.clone(), rang));
             }
@@ -89,7 +108,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 ),
             );
         }
-        let mut raenge: Vec<(String, String, i128)> = Vec::new();
+        let mut raenge: Vec<(String, String, Option<i128>)> = Vec::new();
         for t in &g.traeger {
             if !alle_namen.iter().any(|n| n == &t.text) {
                 continue; // unbekannt -- das ist der Namenspass, nicht dieser
@@ -134,14 +153,20 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         // Gruppenoperation koennte sie in zwei Richtungen nehmen.
         for (i, a) in raenge.iter().enumerate() {
             for b in raenge.iter().skip(i + 1) {
-                if a.1 != b.1 && a.2 == b.2 {
+                // **An unknown rank is not a rank, and two of them are not „equal".**
+                // `H014` refuses a rank that cannot be evaluated; adding a second, WRONG
+                // reason on top of it helps nobody.
+                let (Some(ra), Some(rb)) = (a.2, b.2) else {
+                    continue;
+                };
+                if a.1 != b.1 && ra == rb {
                     absagen.schiebe(
                         Absage::fehler(
                             "U005",
                             g.span,
                             format!(
                                 "`group {}` spans `{}` and `{}` -- both `rank {}`",
-                                g.name.text, a.1, b.1, a.2
+                                g.name.text, a.1, b.1, ra
                             ),
                         )
                         .mit_notiz(

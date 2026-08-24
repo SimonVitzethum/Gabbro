@@ -338,6 +338,53 @@ fn zeugnis_von(name: &str) -> String {
 /// > **Das ist eine ANNAHME ueber fremden Code mit Wirkung im Erzeugnis** -- ein engerer
 /// > Bereich besteht Pruefungen, die ein weiterer nicht bestuende. Sie wird nicht
 /// > abgeschaltet; ein Vertrag SOLL wirken. Sie wird gebucht.
+/// **`U005` fired FALSELY on a correct program until 2026-08-24.**
+///
+/// `sperren_je_traeger` resolved the rank with `konst_wert("", …)` -- from the ROOT, not from
+/// the declaring module -- and turned the failure into `0`. Two locks with DIFFERENT,
+/// perfectly well-defined ranks then both read `0` and counted as equal:
+///
+/// ```text
+/// Fehler: [U005] `group G` spans `A` and `B` -- both `rank 0`
+/// ```
+///
+/// **`H014` stayed silent**, because there the rank resolves fine (`geteilt.rs` passes the
+/// module) -- so the only message the program got was the wrong one. *A wrong refusal is more
+/// expensive than a missing one: it makes someone rewrite a program that was correct.*
+///
+/// The poison side is `beispiele/gift/262-gruppe-gleicher-rang.gab`, where the ranks really
+/// are equal. This test is the other half of the pair.
+#[test]
+fn ein_modulweiter_rang_loest_auf() {
+    let quelle = "\
+module probe::rang {
+const RANG_A : u32 = 1;
+const RANG_B : u32 = 2;
+table T count 8 { slot { v : u32, } }
+table U count 8 { slot { v : u32, } }
+lock A protects { T } rank RANG_A held <= 50 ops;
+lock B protects { U } rank RANG_B held <= 50 ops;
+group G over { T, U } {
+    invariant beide cost O(1) runs offline : T.slots[0].v == U.slots[0].v;
+}
+}
+";
+    let (baum, mut absagen) = gabbro_syntax::lies("rang.gab", quelle);
+    let _ = gabbro_check::pruefe(&baum, &mut absagen);
+    let fehler: Vec<&str> = absagen
+        .absagen
+        .iter()
+        .filter(|a| a.stufe == Stufe::Fehler)
+        .map(|a| a.code)
+        .collect();
+    assert!(
+        fehler.is_empty(),
+        "zwei VERSCHIEDENE Raenge als Modulkonstante duerfen nicht als gleich gelten, \
+         gefallen ist {fehler:?}:\n{}",
+        absagen.zeige(quelle)
+    );
+}
+
 /// **«B26»: a `requires` at a register is COUNTED, since 2026-08-24.**
 ///
 /// Until then no pass read `RegDecl::requires` -- the clause parsed and vanished.

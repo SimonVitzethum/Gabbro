@@ -122,6 +122,18 @@ MUTATIONEN = [
         "«B33» in der zweiten Schreibrichtung -- V2 macht aus einem Registervergleich "
         "wieder einen Beziehungsfakt",
     ),
+    # -- gruppe.rs: the rank resolved in the wrong module (2026-08-24) --------------------
+    #
+    # `konst_wert("", …).unwrap_or(0)` -- empty module path, and the failure became a `0`
+    # that stands nowhere in the source. Two locks with different ranks both read `0`.
+    Mutation(
+        "gruppenrang-aus-der-wurzel",
+        "gabbro-check/src/gruppe.rs",
+        "            let rang = u.konst_wert(modul, &l.rang);",
+        "            let rang = Some(u.konst_wert(\"\", &l.rang).unwrap_or(0));",
+        "`U005` -- der Rang wird wieder von der WURZEL aufgeloest und faellt auf 0 zurueck; "
+        "zwei verschiedene Raenge gelten dann als gleich und ein richtiges Programm faellt",
+    ),
     # -- wirkungen.rs: the frame under an incomplete hull (2026-08-24) --------------------
     #
     # `E009` set the hint and RETURNED, so `E008` was switched off for the whole function --
