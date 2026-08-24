@@ -122,6 +122,18 @@ MUTATIONEN = [
         "«B33» in der zweiten Schreibrichtung -- V2 macht aus einem Registervergleich "
         "wieder einen Beziehungsfakt",
     ),
+    # -- schleifen.rs: `by consuming` without a `consumes` (2026-08-24) -------------------
+    #
+    # The pass register booked it on 2026-08-21 and nothing followed: for `unvisited` and
+    # `consuming`, pass 6 says nothing about termination at all.
+    Mutation(
+        "consuming-ohne-consumes-geht-durch",
+        "gabbro-check/src/schleifen.rs",
+        "        if !verbraucht {",
+        "        if false {",
+        "`S008` -- `by consuming` darf wieder ohne `consumes` stehen; die Zusage, dass die "
+        "Domaene schrumpft, haette dann keinen Traeger",
+    ),
     # -- m3.rs: the address space (2026-08-24) -------------------------------------------
     #
     # **The pass register booked it: the address space is checked nowhere.** `Typ` drops

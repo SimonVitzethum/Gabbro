@@ -273,6 +273,46 @@ fn fortschritt_pruefen(zeuge: Option<&Ident>, lg: &Lage, absagen: &mut Absagen) 
 /// > hier statt beim Beweiser. *Eine notwendige Bedingung, die ein Pass halten kann, ist mehr
 /// > wert als eine hinreichende, die niemand haelt.*
 fn abstieg_pruefen(t: &Traverse, absagen: &mut Absagen) {
+    // **`S008` -- `by consuming` without a `consumes`** (2026-08-24).
+    //
+    // The pass register booked it on 2026-08-21: *„`by unvisited`/`by consuming`: keine
+    // Abstiegspruefung. Fuer diese zwei Formen sagt Pass 6 ueber Terminierung NICHTS."*
+    // Written down, not acted on -- and this function said so itself: its first line returns
+    // for everything that is not `Fallend`.
+    //
+    // **`by consuming` claims the domain SHRINKS.** Termination and leaf-first order both
+    // rest on that. If the `touches` list names no `consumes`, the claim has no carrier --
+    // and the loop's termination rests on nothing.
+    //
+    // > This is the exact analogue of `S005`, and it is the same KIND of condition:
+    // > **necessary, not sufficient.** *That* something is consumed is checkable here; that
+    // > it is consumed on every pass is the prover's business (`consuming.ordnung`).
+    //
+    // **`by unvisited` needs nothing here** and that is not an omission: it visits each
+    // element of a FINITE domain at most once, so it terminates by construction. The
+    // domain bound is `K003`'s business, not this one's.
+    if matches!(t.abstieg, Abstieg::Verbrauchend) {
+        let verbraucht = t.touches.as_ref().is_some_and(|w| {
+            w.liste
+                .iter()
+                .any(|x| matches!(x.art, WirkungArt::Verbraucht(_)))
+        });
+        if !verbraucht {
+            absagen.schiebe(
+                Absage::fehler(
+                    "S008",
+                    t.span,
+                    "`by consuming` names no `consumes` in its `touches`".to_string(),
+                )
+                .mit_notiz(
+                    "`by consuming` says the domain SHRINKS -- termination and the leaf-first                         order both rest on that, and without a `consumes` the claim has no                         carrier",
+                )
+                .mit_notiz(
+                    "checked is the NECESSARY condition, not the sufficient one: THAT it                         shrinks on every pass is the prover's business, as at `S005`",
+                ),
+            );
+        }
+    }
     let Abstieg::Fallend(e) = &t.abstieg else { return };
     let mut namen = Vec::new();
     namen_im_ausdruck(e, &mut namen);

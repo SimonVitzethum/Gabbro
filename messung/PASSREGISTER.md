@@ -135,7 +135,7 @@ behauptet als sein Code einlöst** — fünfmal, in fünf Dateien, zweimal schli
 | **`O004` schweigt bei leerem Rumpf** | `phasen.rs` | Eine Funktion mit `advances roh -> mmu` und leerem Rumpf gibt **null Fehler**. *„Eine Strecke, die unterwegs aufhört, ist keine Strecke" — eine, die nie anfängt, ist stumm* |
 | **rekursive Funktionen: keine Rahmenprüfung** | `wirkungen.rs` | Am Zyklus wird `E009` (ein **Hinweis**) gesetzt und **vor jeder `E008`-Prüfung zurückgekehrt**. Und der Grund propagiert nach oben: **eine** unauflösbare Kante tief unten entwertet `E008` für die ganze Rufkette darüber |
 | **`U005` fällt falsch** | `gruppe.rs` | Ein nicht auswertbarer Rang wird **0**; zwei davon sind damit „gleich" |
-| **`by unvisited`/`by consuming`: keine Abstiegsprüfung** | `schleifen.rs` | Für diese zwei Formen sagt Pass 6 über Terminierung **nichts** |
+| ~~**`by unvisited`/`by consuming`: keine Abstiegsprüfung**~~ **— halb zu, 2026-08-24 (`S008`)** | `schleifen.rs` | `by consuming` muss jetzt ein `consumes` in seinem `touches` nennen: *die Zusage, dass die Domäne schrumpft, braucht einen Träger.* **`by unvisited` braucht nichts** — es besucht jedes Element einer endlichen Domäne höchstens einmal |
 
 > **Keiner dieser neun Funde ist von einem Werkzeug gemeldet worden.** Sie sind aufgefallen,
 > weil jemand den Satz aufschreiben musste und dafür nachsehen, was der Pass wirklich tut.

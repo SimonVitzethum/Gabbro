@@ -761,22 +761,31 @@ pub const SCHLEIFEN: &[Satz] = &[
     },
     Satz {
         name: "schleifen.fortschritt",
-        kennungen: &["S003", "S004", "S005", "S006", "S007"],
+        kennungen: &["S003", "S004", "S005", "S006", "S007", "S008"],
         aussage: "A `progress X` names a declared and FALSIFIABLE assumption, a `by \
                   decreasing` measure names the traversal variable or a name the body writes, \
+                  a `by consuming` names at least one `consumes` in its `touches` (`S008`), \
                   and an `on_exceeded` names a function that returns.",
         vorbehalt: "**Necessary, not sufficient, and the pass says so: it is NOT checked \
                     that the measure FALLS.** Those are two different statements and the \
                     folder confused them until 2026-08-20 -- `consuming.ordnung` booked \
                     `abstieg` as having a reader since `S005` exists, and `S005` establishes \
-                    neither the fall nor the minimality of the choice. **`by unvisited` and \
-                    `by consuming` are not checked for descent AT ALL** -- for those two \
-                    forms this pass says nothing about termination. The written-names test \
+                    neither the fall nor the minimality of the choice. ~~**`by unvisited` and `by consuming` are not \
+                    checked for descent AT ALL**~~ -- **half closed 2026-08-24 by `S008`:** \
+                    `by consuming` claims the domain SHRINKS, and without a `consumes` in its \
+                    `touches` the claim has no carrier. *Necessary, not sufficient, as at \
+                    `S005`: THAT it shrinks on every pass stays the prover's business.* \
+                    **`by unvisited` needs nothing here and that is not an omission** -- it \
+                    visits each element of a FINITE domain at most once, so it terminates by \
+                    construction; the domain bound is `K003`'s business. The written-names test \
                     counts only direct writes, so a name changed by a CALLEE counts as \
                     unmoved and `S005` can fire falsely. And `S007` is a HINT: an \
                     `on_exceeded` that names nothing still passes with zero errors.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: one probe each on `S003`, `S004`, `S005`, `S006`. \
+        gemessen_an: "beispiele/gift: one probe each on `S003`, `S004`, `S005`, `S006`, and \
+                      since 2026-08-24 probe 260 on `S008` -- built from the pass register's \
+                      own finding of 2026-08-21, which was written down and not acted on. \
+                      Anchor `consuming-ohne-consumes-geht-durch`; zero sites in the corpus. \
                       `S007` is a hint and has none.",
         fundstelle: "crates/gabbro-check/src/schleifen.rs; SYNTAX.md §8; schablonen.rs \
                      `consuming.ordnung`",

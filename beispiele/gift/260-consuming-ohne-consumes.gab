@@ -1,0 +1,40 @@
+-- erwartet: S008
+-- **`by consuming` ohne ein `consumes`** (2026-08-24). Das Passregister buchte am
+-- 2026-08-21: *„`by unvisited`/`by consuming`: keine Abstiegspruefung. Fuer diese zwei
+-- Formen sagt Pass 6 ueber Terminierung NICHTS."* Aufgeschrieben, nicht gehandelt --
+-- und `abstieg_pruefen` sagte es in seiner ersten Zeile selbst: sie kehrte fuer alles
+-- zurueck, was nicht `Fallend` ist.
+--
+-- **`by consuming` sagt: die Domaene SCHRUMPFT.** Terminierung und die blattzuerst-Ordnung
+-- ruhen beide darauf. Nennt `touches` kein `consumes`, hat die Zusage keinen Traeger.
+--
+-- Geprueft ist die NOTWENDIGE Bedingung, nicht die hinreichende -- genau wie bei `S005`.
+-- *`by unvisited` braucht hier nichts: es besucht jedes Element einer ENDLICHEN Domaene
+-- hoechstens einmal und terminiert damit von selbst.*
+module gift::consuming_ohne_consumes {
+
+table Kappen count 64 {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+    slot {
+        benutzt     : bool,
+        elter       : option index into Kappen,
+        erstes_kind : option index into Kappen,
+        naechstes   : option index into Kappen,
+    }
+}
+
+lock K protects { Kappen } rank 0 held <= 400 ops;
+
+impl fn ohne_verbrauch(c : ptr<normal, rw> Kappen, s : index into Kappen)
+    requires Held(K)
+    effects  { reads c.slots, writes c.slots, locks K }
+    costs    <= 100000 ops
+{
+    traverse opfer over descendants of c.slots[s] by consuming
+        touches reads c.slots, writes c.slots
+    {
+        c.slots[opfer].benutzt = false;
+    }
+}
+
+}
