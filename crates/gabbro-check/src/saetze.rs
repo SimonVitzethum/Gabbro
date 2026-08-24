@@ -73,6 +73,21 @@ pub enum Satzstand {
     /// **Eine Giftprobe faellt, oder eine Mutation wird gefangen.** Das misst die UMSETZUNG
     /// an gepruefte Faelle -- nicht die Regel, und nicht alle Faelle (PLAN.md PL.3, Weg (c)).
     Gemessen,
+    /// **A soundness ARGUMENT is written down for it** -- mathematically, human-reviewed,
+    /// not machine-checked (PL.1b, 2026-08-24).
+    ///
+    /// *„If this pass accepts, then P"* -- written out, with the piece of model it needs.
+    /// **Between `Gemessen` and `Bewiesen`, and the gap upwards is the larger one:** a paper
+    /// argument can be wrong.
+    ///
+    /// **What it buys is not certainty but the obligation to LOOK.** The first sentence to
+    /// reach this state uncovered, in the writing, an UNDER-count in its own pass -- the
+    /// `else if` chain counted only its own arm's condition, not the preceding ones
+    /// (`messung/K001.md`). *Two bodies of identical meaning measured 2 and 6.*
+    ///
+    /// > **An `ARGUED` read as `PROVED` is more expensive than an empty field.** That is why
+    /// > it stands as a state of its own and not as a footnote on `Gemessen`.
+    Argumentiert,
     /// **Einmal nach Isabelle gebracht, ohne `sorry`.** Der einzige Stand, der die
     /// Vertrauensbasis verkleinert.
     ///
@@ -88,6 +103,7 @@ impl Satzstand {
         match self {
             Satzstand::Vermutet => "CONJECTURED",
             Satzstand::Gemessen => "measured",
+            Satzstand::Argumentiert => "ARGUED",
             Satzstand::Bewiesen => "PROVED",
         }
     }
@@ -867,9 +883,17 @@ pub const KOSTEN: &[Satz] = &[
                     Non-negativity of every symbol is a PREMISE and is checked (`K005`); \
                     without it there would be no smallest assignment. A product of two \
                     symbols is not readable, and that stands as a refusal rather than as \
-                    silence.",
-        stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 2 probes on `K001`, 2 on `K005`. The class is measured \
+                    silence. **And the weakest link of the argument is not recursion:** \
+                    `cost(compile-time constant) = 0` is a statement about the EMITTER, and \
+                    nothing in this pass checks it -- `emit.rs` carries one code and no \
+                    sentence (`messung/K001.md` §5).",
+        stand: Satzstand::Argumentiert,
+        gemessen_an: "**ARGUED 2026-08-24, `messung/K001.md`** -- and writing it found an \
+                      UNDER-count: an `else if` chain counted only its own condition per arm, \
+                      so two bodies of identical meaning measured 2 and 6, and `costs <= 2 \
+                      ops` passed on the first with zero errors. Corrected, with probe 256 \
+                      and the anchor `zweigkette-verliert-praefix`. \
+                      beispiele/gift: 3 probes on `K001`, 2 on `K005`. The class is measured \
                       twice in the corpus itself: F1 `revoke` promised 200 ops and cost 16 \
                       452 480, A4 promised 4 096 and cost 831 488 -- both times a HUMAN wrote \
                       the typical case instead of the bound, and this pass caught it.",
@@ -1322,12 +1346,13 @@ pub fn zeige(je_satz: bool) -> String {
     use std::fmt::Write;
     let mut s = String::new();
     let saetze = alle();
-    let (mut verm, mut gem, mut bew) = (0usize, 0usize, 0usize);
+    let (mut verm, mut gem, mut arg, mut bew) = (0usize, 0usize, 0usize, 0usize);
     let mut mit_kennung = 0usize;
     for (_, z) in &saetze {
         match z.stand {
             Satzstand::Vermutet => verm += 1,
             Satzstand::Gemessen => gem += 1,
+            Satzstand::Argumentiert => arg += 1,
             Satzstand::Bewiesen => bew += 1,
         }
         mit_kennung += z.kennungen.len();
@@ -1379,9 +1404,11 @@ pub fn zeige(je_satz: bool) -> String {
     }
     let _ = writeln!(
         s,
-        "\n--   SENTENCES: {} over {} passes -- {gem} measured, {verm} CONJECTURED, \
-         {bew} proved.\n\
-         --   They claim {mit_kennung} diagnostic codes between them.",
+        "\n--   SENTENCES: {} over {} passes -- {gem} measured, {arg} ARGUED, \
+         {verm} CONJECTURED, {bew} proved.\n\
+         --   They claim {mit_kennung} diagnostic codes between them.\n\
+         --   ARGUED means a soundness argument is WRITTEN DOWN (`messung/K001.md`),\n\
+         --   human-reviewed and not machine-checked. It is not a proof.",
         saetze.len(),
         crate::passliste().len()
     );

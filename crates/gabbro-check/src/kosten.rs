@@ -382,6 +382,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
 }
 
 /// Kosten eines Rumpfteils -- oder der Grund, warum sie nicht feststehen.
+#[derive(Clone)]
 enum Kosten {
     Zahl(i128),
     Unbekannt(String, Option<Span>),
@@ -522,18 +523,39 @@ impl<'a> Rechner<'a> {
             // Ein Ruecksprung ist keine der vier Primitiven; sein Ausdruck kostet.
             StmtArt::Return(Some(e)) => self.ausdruck(e),
             StmtArt::Return(None) | StmtArt::Leave(_) | StmtArt::Next(_) => Kosten::Zahl(0),
-            // **Zweige zaehlen das Maximum** -- und der Zweig selbst kostet nichts: die
-            // vier Primitiven des Modells sind Zuweisung, Rechenoperation, Laden, Speichern.
-            // Ein `if` ist keine davon; seine BEDINGUNG schon.
+            // **Branches count the MAXIMUM** -- and the branch itself costs nothing: the
+            // four primitives of the model are assignment, arithmetic, load, store. An `if`
+            // is none of them; its CONDITION is.
+            //
+            // **And the conditions ACCUMULATE along the chain** (found 2026-08-24, while
+            // writing the soundness argument for `kosten.summation`, `messung/K001.md`).
+            // `WennStmt::zweige` is FLAT -- an `else if` is a further entry, not a nested
+            // statement. A run that takes arm `i` has therefore evaluated conditions
+            // `0..=i`, and a run that reaches `sonst` has evaluated all of them.
+            //
+            // > Until today each arm was counted as `condition_i + body_i`. Two functions of
+            // > IDENTICAL meaning then measured differently: written as an `else if` chain
+            // > over three conditions the body computed **2**, written as three sequential
+            // > `if`s it computed **6** -- and `costs <= 2 ops` passed on the first with zero
+            // > errors. *An UNDER-count, and the only kind that matters: `K001` is a bound.*
+            //
+            // *The sequential form was right all along* -- `block` walks it statement by
+            // statement and sums. Only the flattened chain lost its prefix.
             StmtArt::Wenn(w) => {
                 let mut hoechste = Kosten::Zahl(0);
+                // The conditions every run reaching THIS arm has already paid for.
+                let mut praefix = Kosten::Zahl(0);
                 for (bed, rumpf) in &w.zweige {
-                    let z = self.ausdruck(bed).plus(self.block(rumpf));
+                    praefix = praefix.plus(self.ausdruck(bed));
+                    let z = praefix.clone().plus(self.block(rumpf));
                     hoechste = groesser(hoechste, z);
                 }
                 if let Some(sonst) = &w.sonst {
-                    hoechste = groesser(hoechste, self.block(sonst));
+                    // Reaching `else` means every condition was evaluated and none held.
+                    hoechste = groesser(hoechste, praefix.plus(self.block(sonst)));
                 }
+                // **Without `sonst` the fall-through path needs no arm of its own:** it costs
+                // the full prefix, and the LAST arm already counts that prefix plus its body.
                 hoechste
             }
             StmtArt::Match(m) => {

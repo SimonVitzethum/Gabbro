@@ -122,6 +122,21 @@ MUTATIONEN = [
         "«B33» in der zweiten Schreibrichtung -- V2 macht aus einem Registervergleich "
         "wieder einen Beziehungsfakt",
     ),
+    # -- kosten.rs: the branch prefix (2026-08-24) ---------------------------------------
+    #
+    # **Found while WRITING the soundness argument, not by a tool** (`messung/K001.md`).
+    # `WennStmt::zweige` is flat, so a run taking arm `i` has evaluated conditions `0..=i`.
+    # Dropping the prefix makes an `else if` chain measure less than the same body written as
+    # sequential `if`s -- an UNDER-count, and on an upper bound that is the only direction
+    # that matters.
+    Mutation(
+        "zweigkette-verliert-praefix",
+        "gabbro-check/src/kosten.rs",
+        "                    praefix = praefix.plus(self.ausdruck(bed));",
+        "                    praefix = Kosten::Zahl(0).plus(self.ausdruck(bed));",
+        "`K001` -- die `else if`-Kette zaehlt wieder nur die eigene Bedingung je Zweig; "
+        "dieselbe Bedeutung sequentiell geschrieben misst dann mehr",
+    ),
     # -- m1.rs: `refines`, the head form of P6 (2026-08-24) -------------------------------
     #
     # **Three anchors for three rules, and the reason stands in `messung/VERFEINERUNG.md`:**
