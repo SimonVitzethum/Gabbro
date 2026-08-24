@@ -139,17 +139,29 @@ EINTRAEGE = [
     # **Eine Null, die einen Bau verhindert, muss nachrechenbar sein.** Sie ist die
     # leichteste Zahl, die spaeter jemand stillschweigend anders liest -- und drei Posten
     # dieses Ordners sind heute mit „nicht bauen" entschieden worden.
+    # **`--exclude-dir=.claude` -- found 2026-08-24, and it was a GUARDIAN fault.**
+    #
+    # The registered command greps `-r ... .` from the repo root. Locally that root also holds
+    # `.claude/worktrees/` -- agent worktrees, **4 369 further `.gab` files**, copies of the
+    # corpus. The count read 46 where the corpus has 3, and 99 where it has 8.
+    #
+    # > *The number was right and the SEARCH PATH was wrong* -- and it showed as a guardian
+    # > that went red locally and green on the server, over a byte-identical tree (`rsync`
+    # > excludes the worktrees). **A guardian with two verdicts over one subject is W16.**
+    #
+    # `target/` excluded for the same reason, pre-emptively: it holds no `.gab` today, and a
+    # search path that only happens to be right is one nobody notices going wrong.
     (
         "messung/TRAEGER-UND-HARDWARE.md",
         r"\| `walk`-Deklarationen im ganzen Korpus \| \*\*(\d+)\*\*",
-        ["sh", "-c", r"grep -rh '^walk \|^ *walk ' --include=*.gab . | wc -l"],
+        ["sh", "-c", r"grep -rh '^walk \|^ *walk ' --include=*.gab --exclude-dir=.claude --exclude-dir=target . | wc -l"],
         r"^\s*(\d+)\s*$",
         "walk-Deklarationen im Korpus",
     ),
     (
         "messung/TRAEGER-UND-HARDWARE.md",
         r"\| `group`-Deklarationen \| \*\*(\d+)\*\*",
-        ["sh", "-c", r"grep -rh '^group \|^ *group ' --include=*.gab . | wc -l"],
+        ["sh", "-c", r"grep -rh '^group \|^ *group ' --include=*.gab --exclude-dir=.claude --exclude-dir=target . | wc -l"],
         r"^\s*(\d+)\s*$",
         "group-Deklarationen im Korpus",
     ),

@@ -2968,14 +2968,47 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
 
 # STUFE 8 — PL: DIE LOGIK DES PRÜFERS  ⟨D⟩
 
-**Zwölf Pässe entscheiden über jedes Programm, und keiner schuldet einen Satz** (`struct Pass`
-hat kein Feld dafür). **Ohne die Sätze ist „Gabbro formal verifiziert" nicht einmal
-formulierbar** — man wüsste nicht, was zu beweisen wäre.
+~~**Zwölf Pässe entscheiden über jedes Programm, und keiner schuldet einen Satz** (`struct Pass`
+hat kein Feld dafür).~~ — **eingelöst am 2026-08-21 (PL.1).** **Ohne die Sätze ist „Gabbro
+formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu beweisen wäre; seit
+PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
 sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut: 52 Sätze über 213 Codes, 45 Codes noch ohne).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
+
+- [ ] **PL.1b — die Spalte `ARGUED`, und sie steht VOR PL.2** *(entschieden 2026-08-24)*.
+      Zwischen `measured` und `PROVED` fehlt der Zustand, der am meisten kauft und am
+      wenigsten kostet: **ein Satz, für den ein Korrektheitsargument aufgeschrieben ist** —
+      mathematisch, von Menschen geprüft, nicht maschinell.
+
+      | | was es heißt |
+      |---|---|
+      | `measured` | eine Giftprobe fällt, eine Mutation wird gefangen. **Misst die UMSETZUNG an geprüften Fällen** |
+      | **`ARGUED`** | *wenn dieser Pass annimmt, dann gilt P* — hingeschrieben, mit dem Modellstück, das es braucht. **Kann falsch sein; ist durch die Bewegung des Prüfens gegangen** |
+      | `PROVED` | maschinengeprüft. Heute **0 von 52** |
+
+      **Der Beleg, dass es trägt, steht im eigenen Register.** `kosten.domaenenschranke` las
+      für `mappings of` **2 048**, wo die Domäne **512⁴ = 68 719 476 736** ist — *sieben
+      Größenordnungen, drei Tage getragen*, und gefunden, weil der ERZEUGER hineinlief.
+      **Wer den Satz „die gelesene Zahl IST die Mächtigkeit der Domäne" hinschreiben muss,
+      sieht in einer Stunde nach, ob das stimmt.** *Das ist der ganze Ertrag: nicht Gewissheit,
+      sondern der Zwang hinzusehen.*
+
+      **Aufwand, geschätzt (Eingangszahlen gemessen, Gewichte geschätzt):** je Satz 1–3 Tage
+      samt dem Modellstück, das er braucht → **3–6 Personenmonate für alle 52.** Die
+      maschinelle Fassung derselben Sache: **2–5 Personenjahre** (Aufschlüsselung siehe den
+      Kettenabschnitt unter NICHT JETZT). *Faktor fünf bis zehn, und die Antwort auf „ist die
+      Idee richtig" liegt fast ganz im billigen Teil.*
+
+      **Reihenfolge: `K001` zuerst** — der mit dem gemessenen Fehler, also der, bei dem sich
+      sofort zeigt, ob die Übung trägt. Dann `H006`, dann `V2`.
+
+      > **Und was `ARGUED` NICHT ist: ein Beweis.** Ein Papierargument ist nicht
+      > maschinengeprüft. *Es steht in dieser Spalte, damit niemand es für den anderen Zustand
+      > hält* — dieselbe Trennung, die `measured` von `PROVED` trennt, eine Stufe tiefer.
+      > **Ein `ARGUED`, das als `PROVED` gelesen wird, ist teurer als ein leeres Feld.**
 
 - [ ] **PL.2 — die drei Sätze BEWEISEN.** Aufgeschrieben sind sie seit dem 2026-08-21, **keine
       Zeile Isabelle.** `K001` ist dabei **geteilt** in `kosten.summation` (*gemessen*) und
@@ -3197,6 +3230,118 @@ ist richtig* — nicht: *dieses Rust tut sie.* Die Lücke dazwischen ist genau d
 > *Ohne ihn entsteht eine zweite Beweisschicht, die niemanden bindet — und diese Form hat
 > dieser Ordner schon einmal gebucht* («B33»: ein Satz, der beschreibt, was gelten sollte, und
 > ein Pass, der das Gegenteil tut).
+
+---
+
+# DIE BOOTSTRAP-KETTE — ausgeplant und ZURÜCKGESTELLT, mit gemessenem Grund  ⟨Z⟩
+
+*Aufgeworfen und ausgeplant am 2026-08-24. Der Plan steht hier ganz, damit die
+Zurückstellung eine Entscheidung ist und kein Vergessen.*
+
+**Die Idee:** eine winzige Stufe 0, klein genug, dass ein Mensch sie liest; darauf eine Stufe 1,
+die deutlich mehr kann und formal verifiziert wird; darauf der volle Gabbro-Übersetzer.
+**Vertrauensbasis: ein bis drei Kilozeilen statt einer Werkzeugkette.**
+
+**Die Form ist richtig und erprobt** — sie ist nicht exotisch:
+
+| Vorbild | was es zeigt |
+|---|---|
+| **CakeML** | ein verifizierter ML-Übersetzer mit **verifiziertem Bootstrap**, in HOL4 |
+| **stage0 / live-bootstrap** | eine Kette von einem wenige hundert Byte großen Hex-Monitor bis zur vollen Werkzeugkette |
+| **CompCert** | der verifizierte C-Übersetzer, in Coq — **ohne** Bootstrap |
+
+## Zwei Prämissen der ursprünglichen Fassung, beide korrigiert
+
+**(1) „Stufe 0 übersetzt Lean 4 in Binärprogramme, unter 1k Zeilen C."** Das liegt um drei bis
+vier Größenordnungen daneben. Lean 4 ist abhängig getypt: Elaboration mit Unifikation,
+implizite Argumente, Typklassenauflösung, Metavariablen, Kernprüfer, Makro- und Taktiksystem,
+Codeerzeuger — dazu eine Laufzeit mit Referenzzählung, geboxten Werten, Closures und
+GMP-gestütztem `Nat`. Leans eigener Bootstrap liefert vorerzeugtes C in der Größenordnung von
+Hunderttausenden bis Millionen Zeilen. *Aus dem Gedächtnis, und es gehört nachgerechnet — aber
+nicht um Faktor 3, sondern um Faktor 1000.*
+
+> **Der Umbau, der die Idee rettet: Stufe 0 muss Lean gar nicht übersetzen.** **Lean ist der
+> BEWEISER, nicht die Implementierungssprache.** Stufe 0 muss die Sprache übersetzen, in der
+> Stufe 1 geschrieben ist — und die wählt man klein.
+
+**(2) „Es gibt keinen formal verifizierten C-Übersetzer."** Doch: **CompCert**, in Coq bewiesen,
+Semantikerhaltung maschinengeprüft. *Mit drei Einschränkungen, die zur Sache gehören:*
+Präprozessor, Assemblierer und Binder liegen **außerhalb** des Beweises; die freie Lizenz ist
+**nicht-kommerziell**, was zu einem AGPL-Ordner mit eigenem Lizenzzusatz nicht spannungsfrei
+passt; und der Beweis gilt für **CompCert C**, eine große Teilmenge, nicht für jedes C.
+
+**Damit ändert sich die Begründung für Assembler, aber nicht unbedingt die Wahl:**
+
+| Stufe 0 in | dafür | dagegen |
+|---|---|---|
+| **Assembler** | **gar kein Übersetzer in der Vertrauensbasis** — nur ein Assemblierer, und der kann selbst winzig oder handassembliert sein (stage0: 357-Byte-Hex-Monitor) | je Architektur einmal; schwerer zu LESEN, und Lesbarkeit ist der ganze Zweck |
+| **C + CompCert** | 1–3k Zeilen C sind für einen Menschen ungleich besser prüfbar | die Vertrauensbasis wird CompCert samt Coq-Kern **plus** unverifiziertem Assemblierer/Binder — *groß, aber maschinengeprüft* statt *klein, aber gelesen* |
+| **C, mit ZWEI Übersetzern gebaut** | **Diverse Double-Compiling** (Wheeler): denselben Quelltext durch CompCert *und* gcc/clang, Erzeugnisse vergleichen. Man muss dann keinem der beiden allein trauen | zwei Werkzeugketten, und der Vergleich ist Arbeit |
+
+**Die dritte Zeile ist die stärkste**, und sie ist dieselbe Bauart wie `pruefe-emission.sh`
+(zweimal erzeugen, bitgleich) — nur über dem Übersetzer statt über der Emission.
+
+## Die Kette, ausgeplant
+
+| Stufe | was | geschrieben in | Größe | Prüfform |
+|---|---|---|---|---|
+| **0** | nicht-optimierender Übersetzer einer Minimalsprache `L0` → Maschinencode, **eine** Architektur (x86_64; `aarch64` bleibt versiegelt) | C-Teilmenge oder Assembler | **1–3k Zeilen** | **gelesen**, plus DDC gegen zwei Übersetzer |
+| **1** | Übersetzer einer Gabbro-Teilmenge | in `L0` | größer | **formal** — und der Beweis ist genau PL.1b/PL.2, über dem ALGORITHMUS |
+| **2** | der volle Gabbro-Übersetzer | in der Gabbro-Teilmenge | wie heute | übersetzt von Stufe 1 |
+
+## Der Einwand, der aus diesem Ordner selbst kommt — und er ist der schwerste
+
+```
+dokumente/SYNTAX.md:1381   "What deliberately does not exist: … self-hosting …"
+crates/gabbro-syntax/tests/verfassung.rs::kein_selbst_hosting
+   "Ein Erzeuger, der sich selbst uebersetzt, verliert seinen unabhaengigen
+    Pruefer -- die Kisten bleiben Rust."
+```
+
+**Stufe 2 IST Selbst-Hosting**, und das Verbot ist kein Formfehler. Es ist der Grund, aus dem
+heute **zwei unabhängige Instanzen** über jeder Emission stehen: der Rust-Prüfer und
+`cc -Werror` bei `-O0` *und* `-O2`, dazu UBSan. Ein selbstgehosteter Übersetzer verliert die
+Unabhängigkeit — ein Fehler kann sich in seinem eigenen Erzeugnis verstecken (Thompsons
+*Trusting Trust*).
+
+> **Der Ausweg ist bekannt und er ist derselbe wie in Zeile drei der Tabelle oben: DDC.**
+> Aber er *kostet* den zweiten Übersetzer — und **den hat dieser Ordner heute geschenkt,
+> solange die Kisten Rust bleiben.** Wer Stufe 2 baut, kauft eine Eigenschaft, die er heute
+> umsonst hat, und muss sie danach bezahlen.
+
+## Warum NICHT jetzt, und der Grund ist eine Zahl, keine Neigung
+
+**Die Kette schrumpft die Vertrauensbasis der WERKZEUGKETTE. Gabbros Vertrauensbasis wird heute
+nicht von der Werkzeugkette dominiert:**
+
+```
+52 Sätze über zwölf Pässe          0 bewiesen          45 Kennungen ohne Satz
+33 Annahmen                        26 Sondennamen OHNE PROGRAMM
+emit.rs 6 976 Zeilen               1 Kennung           0 Sätze
+die Aliasfläche                    der ganze Rest der Klasse RENNEN
+```
+
+**Eine perfekt gebootstrappte Kette über einem falschen Algorithmus erzeugt zuverlässig
+falschen Code** — und `kosten.domaenenschranke` zeigt, dass das kein hypothetischer Fall ist:
+sieben Größenordnungen, drei Tage getragen.
+
+> *Die Kette härtet eine Sache, die noch nicht als richtig erwiesen ist.* **Erst wissen, ob die
+> Idee stimmt (PL.1b, 3–6 Personenmonate) — dann die Kette bauen, die sie unfälschbar macht.**
+
+## Der AUSLÖSER, gemessen statt terminiert
+
+Die Kette beginnt, wenn **beide** gelten:
+
+1. **`ARGUED` steht bei allen 52** — oder jeder Rest hat einen benannten Grund. *Vorher gibt es
+   keine Aussage, deren Unfälschbarkeit sich zu kaufen lohnt.*
+2. **Die Selbst-Hosting-Entscheidung ist umgekehrt, mit Datum** — oder Stufe 2 entfällt und die
+   Kette endet bei Stufe 1. **Beides ist zulässig; stillschweigend gegen die eigene Verfassung
+   zu bauen ist es nicht.**
+
+- [ ] **Die Zahlen dieses Abschnitts sind SCHÄTZUNGEN und tragen keinen Befehl** *(gebucht
+      2026-08-24)*. „1–3k Zeilen", „Faktor 1000 bei Lean", die CompCert- und CakeML-Anker:
+      alle aus dem Gedächtnis, keiner nachgerechnet. **Wer die Kette beginnt, rechnet sie
+      zuerst nach** — dieselbe Auflage, die `PLAN.md` über der seL4-Aufschlüsselung trägt.
 
 ---
 
