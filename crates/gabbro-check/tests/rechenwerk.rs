@@ -2998,6 +2998,86 @@ fn m2_zaehlt_genau_einmal_auf_allen_vier_wegen() {
     );
     assert!(!t4b.contains("L109"), "im Zweig verbraucht ist in Ordnung:\n{t4b}");
 }
+/// **Der fünfte Weg: ein Zweig, der `return`t, hat trotzdem verbraucht** (2026-08-25).
+///
+/// ```gabbro
+/// impl fn f(p : Parked, b : bool) -> u32 effects { consumes p } {
+///     if b { wecken(p); return 1; } else { wecken(p); return 2; }
+/// }
+/// ```
+///
+/// gab **`L101` — „`p` is listed under `consumes` but is consumed on no path"**. Auf
+/// *beiden* Wegen verbraucht, und der Prüfer sagte: auf keinem. **Eine falsche Ablehnung
+/// eines korrekten Programms** — dieselbe Klasse wie «U005»: der Programmierer kann nichts
+/// reparieren, denn es ist nichts kaputt.
+///
+/// Zwei Fehler steckten übereinander, und der zweite wurde erst sichtbar, als der erste
+/// weg war:
+///
+/// 1. `abgleich` stieg bei *„alle Zweige enden"* vorzeitig aus und ließ `zust` auf dem
+///    Stand von vorher — der Verbrauch war fort.
+/// 2. `endet()` fragte nur nach der **Art der letzten Anweisung**. Ein Block, dessen
+///    letzte Anweisung ein `if` ist, in dem jeder Zweig zurückkehrt, galt als
+///    weiterlaufend — und ging mit verbrauchtem Wert gegen den impliziten Sonst-Weg in den
+///    Abgleich. *Solange (1) den Verbrauch wegwarf, stimmten die Wege zufällig überein.*
+///
+/// **Und die Gegenrichtung steht darunter:** ein Zweig, der ohne Verbrauch zurückkehrt,
+/// ist weiterhin ein Leck. Die Reparatur übernimmt nur, worin **alle** endenden Wege
+/// übereinstimmen — sonst wäre aus der falschen Ablehnung ein falsches Durchwinken
+/// geworden.
+#[test]
+fn ein_zweig_der_zurueckkehrt_hat_trotzdem_verbraucht() {
+    let kopf = "module m {\n\
+        linear type Parked;\n\
+        extern fn wecken(p : Parked) -> u32 in 0 .. 3 effects { consumes p } costs <= 2 ops;\n";
+    let melden = |rumpf: &str| -> String {
+        let q = format!("{kopf}{rumpf}}}\n");
+        let (b, mut a) = gabbro_syntax::lies("m2-pfad.gab", &q);
+        gabbro_check::pruefe(&b, &mut a);
+        a.zeige(&q)
+    };
+
+    // 1. Beide Zweige kehren zurueck, beide verbrauchen. **Muss durchgehen.**
+    let t1 = melden(
+        "impl fn f(p : Parked, b : bool) -> u32 in 0 .. 3 effects { consumes p } \
+         costs <= 16 ops { if b { return wecken(p); } else { return wecken(p); } }\n",
+    );
+    assert!(
+        !t1.contains("L101") && !t1.contains("L103") && !t1.contains("L104"),
+        "auf beiden Wegen genau einmal:\n{t1}"
+    );
+
+    // 2. **Geschachtelt** -- der aeussere Zweig endet auf jedem INNEREN Weg. Muss durchgehen.
+    let t2 = melden(
+        "impl fn f(p : Parked, b : bool, c : bool) -> u32 in 0 .. 3 effects { consumes p } \
+         costs <= 24 ops { if b { if c { return wecken(p); } else { return wecken(p); } } \
+         return wecken(p); }\n",
+    );
+    assert!(
+        !t2.contains("L101") && !t2.contains("L103") && !t2.contains("L104"),
+        "der aeussere Zweig verlaesst die Funktion auf jedem Weg:\n{t2}"
+    );
+
+    // 3. **Die Gegenrichtung: ein endender Zweig OHNE Verbrauch bleibt ein Leck.**
+    let t3 = melden(
+        "impl fn f(p : Parked, b : bool) -> u32 in 0 .. 3 effects { consumes p } \
+         costs <= 16 ops { if b { return wecken(p); } else { return 2; } }\n",
+    );
+    assert!(
+        t3.contains("L101"),
+        "der Sonst-Weg verlaesst die Funktion mit lebendigem `p`:\n{t3}"
+    );
+
+    // 4. Und ein DOPPELTER Verbrauch im Zweig faellt weiterhin an `L104` -- und nur daran.
+    let t4 = melden(
+        "impl fn f(p : Parked, b : bool) -> u32 in 0 .. 3 effects { consumes p } \
+         costs <= 24 ops { if b { return wecken(p); } \
+         else { let x = wecken(p); return wecken(p); } }\n",
+    );
+    assert!(t4.contains("L104"), "zweimal im selben Zweig:\n{t4}");
+    assert!(!t4.contains("L101"), "das falsche `L101` daneben ist weg:\n{t4}");
+}
+
 
 /// **`decreases` war eine Namensprobe** («K009» geschärft, Rezension 2026-08-20).
 ///

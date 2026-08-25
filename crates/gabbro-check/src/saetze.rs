@@ -698,10 +698,13 @@ pub const M2: &[Satz] = &[
                     heads, so a consumption in `retry … until wecken(p)` is invisible; the \
                     `match` object is never checked; and consumption matches on the BASE \
                     NAME, so `wecken(p.feld)` counts as consuming `p`. The internal \
-                    „does this branch end\" test is a weaker copy of the shared one and \
-                    **knows nothing about divergence**, although the header promises that a \
-                    `-> never` branch does not count. Alias and ghost erasure are explicitly \
-                    out of scope.",
+                    „does this branch end\" test descends through `if` and `match` since \
+                    2026-08-25 -- a block whose last statement is a branch in which EVERY \
+                    path returns now counts as ending, and the consumption on those paths is \
+                    carried over instead of dropped. **It still knows nothing about \
+                    divergence**: a call to a `-> never` function, or a `forever` without an \
+                    exit, counts as continuing, although the header promises such a branch \
+                    does not count. Alias and ghost erasure are explicitly out of scope.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 2 probes on `L104`, probes on `L101`, `L102`, `L103`, \
                       `L107`, `L108`, `L109`.",

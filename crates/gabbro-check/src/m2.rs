@@ -421,11 +421,41 @@ fn gehe(
 }
 
 /// Endet der Block auf jedem Weg? Dann traegt er nichts zum Abgleich bei.
-fn endet(b: &Block, _v: &Vertraege) -> bool {
-    matches!(
-        b.anweisungen.last().map(|s| &s.art),
-        Some(StmtArt::Return(_)) | Some(StmtArt::Leave(_)) | Some(StmtArt::Next(_))
-    )
+///
+/// **Die Frage ist rekursiv, und sie war es nicht** (2026-08-25). Hier stand ein
+/// `matches!` ueber der ART der letzten Anweisung -- ein Block, dessen letzte Anweisung ein
+/// `if` ist, in dem JEDER Zweig zurueckkehrt, galt damit als weiterlaufend:
+///
+/// ```gabbro
+/// if b {
+///     if c { nimm(m); return 1; } else { nimm(m); return 2; }
+/// }
+/// nimm(m);
+/// ```
+///
+/// Der aeussere Zweig verlaesst die Funktion auf jedem Weg, wurde aber als lebendig in den
+/// Abgleich genommen -- mit `m` verbraucht, gegen den impliziten Sonst-Weg mit `m`
+/// lebendig. Ergebnis: `L103` *und* `L104` an einem korrekten Programm.
+///
+/// > Solange der vorzeitige Ausstieg in `abgleich` den Verbrauch wegwarf, war das
+/// > **verdeckt**: der innere `if` gab nichts weiter, also stimmten die Wege zufaellig
+/// > ueberein. *Zwei Fehler, die einander maskierten -- und der zweite wurde erst sichtbar,
+/// > als der erste behoben war.*
+///
+/// Ein `if` OHNE `sonst` endet nie: an ihm fuehrt immer ein Weg vorbei.
+fn endet(b: &Block, v: &Vertraege) -> bool {
+    let Some(s) = b.anweisungen.last() else {
+        return false;
+    };
+    match &s.art {
+        StmtArt::Return(_) | StmtArt::Leave(_) | StmtArt::Next(_) => true,
+        StmtArt::Wenn(w) => {
+            w.sonst.as_ref().is_some_and(|r| endet(r, v))
+                && w.zweige.iter().all(|(_, r)| endet(r, v))
+        }
+        StmtArt::Match(m) => !m.zweige.is_empty() && m.zweige.iter().all(|zw| endet(&zw.rumpf, v)),
+        _ => false,
+    }
 }
 
 /// **L103 — die Zweige müssen dasselbe tun.** Ein Wert, der nur auf einem Weg verbraucht
@@ -438,7 +468,41 @@ fn abgleich(
 ) {
     let lebendige: Vec<_> = ergebnisse.iter().filter(|(_, endet)| !endet).collect();
     let Some((erste, _)) = lebendige.first() else {
-        return; // alle Zweige enden -- nichts abzugleichen
+        // **Hier stand `return`, und damit ging der Verbrauch VERLOREN** (2026-08-25).
+        //
+        // ```gabbro
+        // impl fn f(m : Marke, b : bool) -> u64 effects { consumes m } {
+        //     if b { nimm(m); return 1; } else { nimm(m); return 2; }
+        // }
+        // ```
+        //
+        // gab **`L101` -- „`m` is listed under `consumes` but is consumed on no path"**.
+        // Auf BEIDEN Pfaden verbraucht, und der Pruefer sagte: auf keinem.
+        //
+        // Die alte Notiz *„alle Zweige enden -- nichts abzugleichen"* war ueber den
+        // NACHFOLGEZUSTAND richtig -- der Code danach ist unerreichbar -- und ueber die
+        // PFLICHT falsch. `zust` blieb auf dem Stand von vorher stehen, und die Pruefung am
+        // Rumpfende las daraus, dass nie etwas verbraucht wurde.
+        //
+        // > **Eine falsche Ablehnung eines korrekten Programms** -- dieselbe Klasse wie
+        // > `U005`. Ein Programmierer, der das trifft, kann nichts daran reparieren, denn
+        // > es ist nichts kaputt.
+        //
+        // Uebernommen wird nur, worin ALLE endenden Zweige uebereinstimmen: verbraucht ein
+        // Zweig und ein anderer nicht, bleibt der Wert lebendig und `L101` faellt weiter --
+        // *dann ist es ein Leck auf dem einen Weg und keine falsche Ablehnung.*
+        for name in zust.keys().cloned().collect::<Vec<_>>() {
+            let auf_jedem_weg_verbraucht = !ergebnisse.is_empty()
+                && ergebnisse
+                    .iter()
+                    .all(|(z, _)| z.get(&name).map(|e| e.0) == Some(Zustand::Verbraucht));
+            if auf_jedem_weg_verbraucht {
+                if let Some(e) = zust.get_mut(&name) {
+                    e.0 = Zustand::Verbraucht;
+                }
+            }
+        }
+        return;
     };
     for name in zust.keys().cloned().collect::<Vec<_>>() {
         let z0 = erste.get(&name).map(|e| e.0);
