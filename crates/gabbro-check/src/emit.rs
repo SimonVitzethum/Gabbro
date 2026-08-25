@@ -2910,8 +2910,8 @@ fn pred_c_format(p: &Pred, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Optio
         //     grund : u64 @[39:32] where f_bit == 0 || (grund >= 1 && grund <= 12),
         //
         // The form was writable all along -- `pred = orpred` (SYNTAX.md:614) -- and parsed,
-        // and name-checked by `N032`. **Only this arm was missing**, so the emitter refused
-        // with `C001` and the two answers stayed one.
+        // and name-checked by `N032` (issued in `namen.rs`). **Only this arm was missing**, so
+        // the emitter refused with `C001` and the two answers stayed one.
         //
         // **The parentheses are load-bearing, and NOT for looks.** In C `&&` binds tighter
         // than `||`, so an `Und` may sit unparenthesised above (its operands cannot be
@@ -2937,7 +2937,7 @@ fn pred_c_format(p: &Pred, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Optio
 ///
 /// **And the expensive half is not the missing check, it is that M1 BELIEVES the pinning.**
 /// `umgebung.rs::typexpr` hands a format field its declared range like any other type, so
-/// `M103` waives the index bound on `let i : index into T = k.nr;` when `nr` says
+/// `M103` (issued in `m1.rs`) waives the index bound on `let i : index into T = k.nr;` when `nr` says
 /// `u32 in 0 .. 7`. Nobody established it. Measured under the same sanitizer
 /// `pruefe-emission.sh` runs: `runtime error: load of address … with insufficient space`.
 ///

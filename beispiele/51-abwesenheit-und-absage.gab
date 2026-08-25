@@ -1,0 +1,35 @@
+-- **Ein Satz kann FEHLEN, und das ist kein Fehler** («B22-nah», 2026-08-25).
+--
+-- Ein VT-d Fault Record hat drei Zustaende, und ein Leser muss sie unterscheiden koennen:
+-- der Ring ist LEER (das F-Bit steht auf 0 -- kein Fehler, nichts zu tun), der Satz ist
+-- UNLESBAR (zu kurz, oder er behauptet einen Grund, den es nicht gibt), oder er traegt
+-- einen Fault.
+--
+-- **Vorher war das nicht schreibbar, und der Grund war eine Zeile im Erzeuger.** Wer
+-- `f_bit : u64 in 1 .. 1` schreibt, WEIST das leere Register ab, statt „leer" zu melden --
+-- so steht es im eingefrorenen Ausschnitt (`FRAGMENTE.md`:505) und so hat es der Mensch
+-- geschrieben, dem die Sprache nichts anderes anbot. *Absage und Abwesenheit fielen
+-- zusammen.*
+--
+-- Die Notation fehlte dabei NIE: `pred = orpred` steht seit jeher in der Grammatik. Was
+-- fehlte, war ein `match`-Arm -- `PredArt::Oder` fiel in `pred_c_format` durch, und der
+-- Erzeuger sagte `C001`. Diese Datei ist der Nachweis, dass er es nicht mehr tut.
+module vtd {
+
+format FaultRecordHi @version 1 endian little {
+    sid    : u64 @[15:0],
+    res_a  : u64 @[27:16] reserved,
+    typ    : u64 @[29:28],
+    res_b  : u64 @[31:30] reserved,
+    -- **Die Disjunktion, und sie ist der ganze Punkt dieser Datei.** *Entweder der Satz
+    -- traegt nichts -- oder sein Grundcode liegt im Bereich.* Damit sagt das Format beide
+    -- Dinge mit EINER Funktion, und `FaultRecordHi_gueltig` heisst wieder „ich konnte
+    -- diesen Satz lesen" statt „hier steht ein Fehler".
+    grund  : u64 @[39:32] where f_bit == 0 || (grund >= 1 && grund <= 12),
+    res_c  : u64 @[59:40] reserved,
+    at     : u64 @[61:60],
+    res_d  : u64 @62 reserved,
+    f_bit  : u64 @63,
+}
+
+}

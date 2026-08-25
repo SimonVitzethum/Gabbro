@@ -462,6 +462,53 @@ lauf "fragment10" "$ARB/f10.gab" "$TREIBER10" "1 0 0 0 0 65" \
      's/(uint32_t)p\[0\] << 24/(uint32_t)p[3] << 24/' \
      "1 assumptions (0 of them NOT FALSIFIABLE), 2 templates (0 of them UNPROVED), 7 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 4b. «B22-nah»: ABWESENHEIT und ABSAGE sind zwei Antworten ---------------------------
+#
+# **Der Nachweis, dass die Luecke zu ist -- und er ist AUSGEFUEHRT, nicht behauptet.**
+#
+# Ein VT-d Fault Record hat drei Zustaende. Bis zum 2026-08-25 konnte ein `format` nur zwei
+# davon sagen: `f_bit : u64 in 1 .. 1` WEIST das leere Register ab, statt „leer" zu melden --
+# *„kein Fehler" und „Satz unlesbar" wurden dieselbe Antwort.* So steht es im eingefrorenen
+# Ausschnitt (`FRAGMENTE.md`:505), und so hat es der Mensch geschrieben, dem die Sprache
+# nichts anderes anbot.
+#
+# **Die Notation fehlte dabei nie** -- `pred = orpred` steht seit jeher in der Grammatik.
+# Es fehlte ein `match`-Arm: `PredArt::Oder` fiel in `pred_c_format` durch das
+# `_ => return None`, und der Erzeuger sagte `C001`.
+#
+# Die drei Zahlen unten sind die drei Zustaende, und dass sie sich UNTERSCHEIDEN ist der
+# ganze Posten:
+#
+#      1  -- der Ring ist LEER (F-Bit 0): lesbar, kein Fehler
+#      0  -- der Satz ist zu KURZ (4 Bytes): unlesbar
+#      1  -- ein Fault mit Grund 6: lesbar, ein Fehler
+#      0  -- F-Bit 1 mit Grund 0: der Satz behauptet einen Grund, den es nicht gibt
+#
+# *Zwei verschiedene Antworten auf „leer" und „unlesbar" -- vorher waren beide `0`.*
+TREIBER22='#include <stdio.h>
+#include "@ERZEUGT@"
+static uint8_t puffer[8];
+static void le64(uint8_t *p, uint64_t v) { for (int i = 0; i < 8; i++) p[i] = (uint8_t)(v >> (8 * i)); }
+static int pruefe(uint64_t wort, uint32_t laenge) {
+    le64(puffer, wort);
+    FaultRecordHi r = { puffer, laenge };
+    return FaultRecordHi_gueltig(&r) ? 1 : 0;
+}
+int main(void) {
+    printf("%d ", pruefe(0, 8));                                             /* leer     */
+    printf("%d ", pruefe((uint64_t)6 << 32 | (uint64_t)1 << 63, 4));         /* zu kurz  */
+    printf("%d ", pruefe((uint64_t)6 << 32 | (uint64_t)1 << 63, 8));         /* Fault    */
+    printf("%d\n", pruefe((uint64_t)1 << 63, 8));                            /* Grund 0  */
+    return 0;
+}'
+# **Die Giftprobe nimmt genau die Disjunktion weg** und laesst die rechte Haelfte stehen.
+# Danach ist „leer" wieder `0` -- also dieselbe Antwort wie „unlesbar", und der Vergleich
+# faellt. *Ohne diese Sprechprobe wuerde der Lauf nicht messen, ob das `||` etwas tut.*
+lauf "b22-abwesenheit" "$W/beispiele/51-abwesenheit-und-absage.gab" "$TREIBER22" \
+     "1 0 1 0" \
+     's/FaultRecordHi_f_bit(v) == 0 || //' \
+     "0 assumptions (0 of them NOT FALSIFIABLE), 1 templates (0 of them UNPROVED), 0 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
 #
 # **Der Unterschied zu `retry` steht jetzt im C nebeneinander:**
