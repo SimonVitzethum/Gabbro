@@ -2281,12 +2281,21 @@ fn uebergang(d: &Device, x: &Uebergang, aus: &mut String, u: &Namen, absagen: &m
     };
     let leer = HashMap::new();
     let felder = g.felder.get(&reg).unwrap_or(&leer);
+    // **Die Wortbreite in BITS** -- sie entscheidet, was ein Ganzwort-Zug SAGT. Siehe
+    // `schrittbits`: bis zum 2026-08-25 sagte er „diese Bits" statt „das ganze Wort", und
+    // bei `-> 0` waren das keine.
+    let wortbits: u32 = match breite.as_str() {
+        "uint8_t" => 8,
+        "uint16_t" => 16,
+        "uint32_t" => 32,
+        _ => 64,
+    };
 
     // Welche Bits aendert dieser Zug, und auf welchen Wert? Ueber ALLE Schritte veroderrt.
     let mut geaendert: u128 = 0;
     let mut neu: u128 = 0;
     for s in &x.schritte {
-        let (g2, n2) = match schrittbits(s, felder, absagen) {
+        let (g2, n2) = match schrittbits(s, felder, wortbits, absagen) {
             Some(v) => v,
             None => return,
         };
@@ -2327,6 +2336,7 @@ fn uebergang(d: &Device, x: &Uebergang, aus: &mut String, u: &Namen, absagen: &m
 fn schrittbits(
     s: &OrtSchritt,
     felder: &HashMap<String, (u32, u32, u32)>,
+    wortbits: u32,
     absagen: &mut Absagen,
 ) -> Option<(u128, u128)> {
     match s.ort.suffixe.first() {
@@ -2345,8 +2355,33 @@ fn schrittbits(
             Some((maske, if an { maske } else { 0 }))
         }
         // `DEVICE_STATUS: ACK -> ACK | DRIVER` -- eine Veroderung von Feldnamen.
+        //
+        // **Ein Ganzwort-Zug sagt das GANZE WORT, nicht die gesetzten Bits** (2026-08-25).
+        // Bis heute stand hier `Some((n, n))`: „geaendert" war der neue Wert selbst -- und
+        // damit bei `-> 0` **leer**. An einem `mirrors`-Geraet erzeugte das
+        //
+        //     (_s & ~0) | 0     ==     _s
+        //
+        // *ein „Reset", der den Spiegel zurueckschreibt und nichts zuruecksetzt* -- 0 Fehler,
+        // 0 Absagen, ein Zeugnis, das nichts sagt. **Eine stille falsche Absenkung ist
+        // schlimmer als eine Absage**, denn sie sieht aus wie ein Ergebnis.
+        //
+        // Der Fehler haengt NICHT an einem Platzhalter fuer den Vorzustand: `{ GCMD: 0 -> 0 }`
+        // erzeugte byteidentisch dasselbe. Er ist heute unerreichbar, weil kein Korpusprogramm
+        // einen Ganzwort-Zug auf einem `mirrors`-Geraet schreibt -- *und genau darum gehoert er
+        // berichtigt, BEVOR eine Notation ihn erreichbar macht.*
+        //
+        // Mit der Vollmaske ist `mirrors` fuer einen Ganzwort-Zug folgerichtig wirkungslos:
+        // wer das ganze Wort nennt, uebernimmt nichts aus dem Spiegel.
         None => match bitwort(&s.nach, felder) {
-            Some(n) => Some((n, n)),
+            Some(n) => {
+                let vollmaske: u128 = if wortbits >= 128 {
+                    u128::MAX
+                } else {
+                    (1u128 << wortbits) - 1
+                };
+                Some((vollmaske, n))
+            }
             None => {
                 weigere(absagen, s.span, "`transition` target that is not a set of field names");
                 None

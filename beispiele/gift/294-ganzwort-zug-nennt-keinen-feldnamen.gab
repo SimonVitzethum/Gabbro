@@ -1,0 +1,31 @@
+-- erwartet: C001
+-- **Ein Ganzwort-Zug sagt das GANZE Wort -- und dieser nennt einen Namen, den es nicht gibt.**
+--
+-- Die Datei steht hier wegen dessen, was BEIM Bauen dieser Absage gefunden wurde, und der
+-- Fund war kein Fehler, sondern ein falsches Ergebnis: bis zum 2026-08-25 gab
+-- `emit.rs::schrittbits` fuer einen Ganzwort-Zug `Some((n, n))` zurueck -- „geaendert" war
+-- der neue Wert SELBST. Bei `-> 0` waren das keine Bits, und an einem `mirrors`-Geraet
+-- erzeugte der Erzeuger
+--
+--     (_s & ~0) | 0     ==     _s
+--
+-- *ein „Reset", der den Spiegel zurueckschreibt und nichts zuruecksetzt.* 0 Fehler, 0
+-- Absagen. **Eine stille falsche Absenkung ist schlimmer als eine Absage** -- sie sieht aus
+-- wie ein Ergebnis.
+--
+-- > Die Stelle war UNERREICHBAR, weil kein Korpusprogramm einen Ganzwort-Zug auf einem
+-- > `mirrors`-Geraet schreibt. *Genau darum gehoert sie berichtigt, bevor eine Notation sie
+-- > erreichbar macht* -- eine Blindstelle ist keine Deckung.
+--
+-- Was diese Datei prueft, ist die Absage darum herum: ein Ganzwort-Zug muss eine Menge von
+-- FELDNAMEN nennen, und `NICHTDA` ist keiner.
+module p {
+
+device E(basis : Pa) at mmio {
+    mirrors GCMD from GSTS;
+    reg GCMD : u32 @0x18 class w fields { SRTP @30, TE @31, }
+    reg GSTS : u32 @0x1c class r fields { RTPS @30, TES @31, }
+    transition kaputt { GCMD: 0 -> NICHTDA } effects { writes GCMD }
+}
+
+}
