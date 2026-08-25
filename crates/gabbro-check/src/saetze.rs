@@ -1411,7 +1411,20 @@ pub const SPERREN: &[Satz] = &[
                     **And `M124` is deliberately STRUCTURAL, not type-wise:** a reason value \
                     slipped silently through seven positions, because 53 `match`es over \
                     `ExprArt` carry a `_` arm while the compiler forced only five. *A rule \
-                    that trusted the type checker would have caught five of the seven.*",
+                    that trusted the type checker would have caught five of the seven.*\n\
+                    **A FOURTH door since 2026-08-25, and it stayed structural** -- an \
+                    argument at a parameter whose DECLARED type is exactly this reason. It \
+                    was measured as a FALSE REJECTION of a correct program (W22): \
+                    `melde(Status::Ok)` at `melde(st : Status)` fell, and that is the very \
+                    position the number in a `reason` line exists for -- *so that a REPORT \
+                    can name it.* The door consults the CALLEE's signature, not the type \
+                    checker, so no `_` arm can slip past it; `nimm(R::F)` at `nimm(x : u32)` \
+                    still falls (`beispiele/gift/293`).\n\
+                    **And underneath sat the reason the rule could not be type-wise:** \
+                    `reason` was not a `Traegerart`, so `st : Status` resolved to \
+                    `Typ::Unbekannt` and every rule looking at such a parameter's type was \
+                    silent -- *not by choice, but because its surface was withheld.* Sixth \
+                    blind-spot class, third instance.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/48-grund-mit-erzeuger.gab through `pruefe`/`emit`/`cc \
                       -Werror` at -O0 and -O2 and under UBSan; beispiele/gift/232-239; \

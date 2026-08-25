@@ -1,0 +1,29 @@
+-- erwartet: M124
+-- **Die vierte Tuer, und ihre Gegenprobe.**
+--
+-- Seit dem 2026-08-25 darf ein Grundwert als ARGUMENT stehen -- aber nur an einem Parameter,
+-- dessen DEKLARIERTER Typ genau dieser `reason` ist. Das ist die Stellung, fuer die die Zahl
+-- in einer `reason`-Zeile ueberhaupt da ist: *damit ein BERICHT sie nennen kann.*
+--
+-- Hier nimmt der Gerufene ein `u32`. **Das faellt weiter**, und es muss fallen: es ist eine
+-- der sieben Stellungen, die die Messung vom 2026-08-21 als still durchgehend fand, und die
+-- Zahl eines Grundes ist nicht dazu da, mit ihr zu rechnen.
+--
+-- > **Die vierte Tuer ist strukturell wie die drei davor.** Sie fragt nicht den Typpruefer,
+-- > sondern schlaegt die Signatur des Gerufenen nach. *Ein `_`-Arm ueber `ExprArt` kann
+-- > daran nichts vorbeilassen -- die Antwort haengt an der Deklaration, nicht am Wert.*
+module p {
+
+reason Status {
+    Ok  = 0 "alles gut"
+    Bad = 1 "etwas ging schief"
+    exhaustive
+}
+
+extern fn nimm(x : u32) effects { writes x } costs <= 1 ops;
+
+impl fn f() effects { writes nimm } costs <= 4 ops {
+    nimm(Status::Ok);
+}
+
+}

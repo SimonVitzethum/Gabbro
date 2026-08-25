@@ -535,8 +535,14 @@ impl<'a> Pruefer<'a> {
     /// | `return R::F;` | die Fehlerrueckgabe -- `M122` haelt den Kanal dazu |
     /// | `match e { … }` | die Fallunterscheidung -- `M123`/`M125` halten sie geschlossen |
     /// | `a == b` / `a != b` | der Vergleich -- `M124` (Typhaelfte) haelt die Deklaration |
+    /// | `f(R::F)` an `f(x : R)` | **der BERICHT, seit 2026-08-25** -- und genau dafuer ist die Zahl in einer `reason`-Zeile da |
     ///
     /// Klammern zaehlen nicht mit: `return (R::F);` ist dieselbe Stellung.
+    ///
+    /// **Die vierte Tuer ist strukturell wie die drei davor.** Sie fragt nicht den
+    /// Typpruefer, sondern schlaegt die Signatur des Gerufenen nach und verlangt dort
+    /// `Typ::Grund(n)` mit demselben `n`. *`nimm(R::F)` an `nimm(x : u32)` faellt weiter* --
+    /// eine der sieben Stellungen der Messung von 2026-08-21.
     fn grundstellung(&mut self, s: &Stmt, lage: &Lage) {
         // **Ein Grund steht in ZWEI Gestalten da**, und beide muessen erfasst sein:
         // geschrieben als `R::F`, und gebunden als das `e` eines `let … else`. *Die zweite
@@ -552,8 +558,15 @@ impl<'a> Pruefer<'a> {
         };
         /// Steigt in einen Ausdruck ab. `erlaubt` sagt, ob an DIESER Stelle ein Grund
         /// stehen darf; ein Vergleich macht seine beiden Seiten erlaubt, alles andere
-        /// nicht.
-        fn steige(e: &Expr, erlaubt: bool, ist_grund: &dyn Fn(&Expr) -> bool, aus: &mut Vec<Span>) {
+        /// nicht -- **ausser einem Argument, dessen Parameter GENAU diesen Grund erklaert**
+        /// (die vierte Tuer, `argument_erlaubt`).
+        fn steige(
+            e: &Expr,
+            erlaubt: bool,
+            ist_grund: &dyn Fn(&Expr) -> bool,
+            argument_erlaubt: &dyn Fn(&Ruf, usize, &Expr) -> bool,
+            aus: &mut Vec<Span>,
+        ) {
             if ist_grund(e) {
                 if !erlaubt {
                     aus.push(e.span);
@@ -561,18 +574,64 @@ impl<'a> Pruefer<'a> {
                 return;
             }
             match &e.art {
-                ExprArt::Klammer(x) => steige(x, erlaubt, ist_grund, aus),
+                ExprArt::Klammer(x) => steige(x, erlaubt, ist_grund, argument_erlaubt, aus),
                 ExprArt::Binaer(op, a, b) if op.ist_vergleich() => {
-                    steige(a, true, ist_grund, aus);
-                    steige(b, true, ist_grund, aus);
+                    steige(a, true, ist_grund, argument_erlaubt, aus);
+                    steige(b, true, ist_grund, argument_erlaubt, aus);
+                }
+                // **Ein Ruf MITTEN in einem Ausdruck** -- `let x = melde(S::Ok) + 1;`. Ohne
+                // diesen Arm faende die vierte Tuer nur die Anweisungsform, und ein Ruf an
+                // einer Ausdrucksstelle bliebe eine falsche Ablehnung. *Genau die Haelfte,
+                // die man uebersieht, weil die Messung an Anweisungen anfaengt.*
+                ExprArt::Ruf(r) => {
+                    for (i, a) in r.argumente.iter().enumerate() {
+                        steige(a, argument_erlaubt(r, i, a), ist_grund, argument_erlaubt, aus);
+                    }
                 }
                 _ => {
                     for k in crate::unterausdruecke(e) {
-                        steige(k, false, ist_grund, aus);
+                        steige(k, false, ist_grund, argument_erlaubt, aus);
                     }
                 }
             }
         }
+        // **Die VIERTE Tuer, und sie ist STRUKTURELL geblieben** (2026-08-25, W22).
+        //
+        // Gemessen als falsche Ablehnung eines KORREKTEN Programms: `melde(Status::Ok)` an
+        // `extern fn melde(st : Status)` fiel als `M124`, obwohl der Parameter genau der
+        // `reason` ist, dessen Wert uebergeben wird. **Sechs Stellen in F3 und F5** -- und
+        // das ist die Stellung, fuer die die Zahl in einer `reason`-Zeile ueberhaupt da ist:
+        // *damit ein BERICHT sie nennen kann.* Ein Melder ist der Bericht.
+        //
+        // **Und die Regel bleibt trotzdem strukturell** -- das ist der Punkt, an dem diese
+        // Tuer sich von der typweisen Fassung unterscheidet, die der Satz `v1.grundwert`
+        // ausdruecklich verworfen hat (*„eine Regel, die dem Typpruefer vertraut, haette
+        // fuenf von sieben gefangen"*). Sie fragt **nicht**, ob irgendein Pass den Ausdruck
+        // fuer vertraeglich haelt; sie schlaegt die DEKLARATION des Gerufenen nach und
+        // verlangt dort `Typ::Grund(n)` mit demselben `n`. Ein `_`-Arm ueber `ExprArt` kann
+        // daran nichts vorbeilassen: die Antwort haengt an der Signatur, nicht am Wert.
+        //
+        // *`nimm(HolFehler::Leer)` an `nimm(x : u32)` faellt weiter* -- und das war eine der
+        // sieben Stellungen, die die Messung vom 2026-08-21 als still durchgehend fand.
+        let argument_erlaubt = |r: &Ruf, i: usize, a: &Expr| -> bool {
+            let Some(gesucht) = grundname_von(a, lage) else { return false };
+            let CallTarget::Path(pf) = &r.ziel else {
+                // Ein Ruf ueber einen `fn`-Zeiger: die Signatur steht am TYP des Ortes,
+                // und `N036` fuehrt dort die Wirkungswoerter. **Hier wird nicht geraten.**
+                return false;
+            };
+            let Some(sig) = self.u.funktion(&self.modul, pf) else { return false };
+            // **Beide Namen VOLL QUALIFIZIEREN, bevor sie verglichen werden.** `R::F`
+            // nennt den Grund kurz, `Typ::Grund` fuehrt ihn lang -- *dieselbe Falle, die in
+            // diesem Ordner schon dreimal zugeschlagen hat: eine qualifizierte Karte, mit
+            // einem blossen Namen befragt, antwortet immer nein.*
+            let voll = self
+                .u
+                .grund(&self.modul, &gesucht)
+                .map(|(k, _)| k)
+                .unwrap_or(gesucht);
+            matches!(sig.parameter.get(i), Some((_, Typ::Grund(n))) if *n == voll)
+        };
         let mut schlecht = Vec::new();
         for e in crate::eigene_ausdruecke(s) {
             // **Nur der DIREKTE Gegenstand ist erlaubt.** `return f(R::F);` ist es
@@ -582,7 +641,7 @@ impl<'a> Pruefer<'a> {
                 StmtArt::Match(m) => std::ptr::eq(&m.gegenstand, e),
                 _ => false,
             };
-            steige(e, erlaubt, &ist_grund, &mut schlecht);
+            steige(e, erlaubt, &ist_grund, &argument_erlaubt, &mut schlecht);
         }
         // **Die Argumente einer ANWEISUNGSform** -- `eigene_ausdruecke` fuehrt sie nicht,
         // weil `StmtArt::Ruf` und `StmtArt::LetSonst` ihren Ruf nicht in einem `Expr`
@@ -595,8 +654,8 @@ impl<'a> Pruefer<'a> {
             _ => Vec::new(),
         };
         for r in rufe {
-            for a in &r.argumente {
-                steige(a, false, &ist_grund, &mut schlecht);
+            for (i, a) in r.argumente.iter().enumerate() {
+                steige(a, argument_erlaubt(r, i, a), &ist_grund, &argument_erlaubt, &mut schlecht);
             }
         }
         for span in schlecht {
@@ -607,9 +666,10 @@ impl<'a> Pruefer<'a> {
                     "a reason value cannot stand here",
                 )
                 .mit_notiz(
-                    "a reason goes through three doors: `return` in a function that \
-                     declares `or <reason>`, the subject of a `match`, and a comparison \
-                     against a reason of the SAME declaration",
+                    "a reason goes through four doors: `return` in a function that \
+                     declares `or <reason>`, the subject of a `match`, a comparison \
+                     against a reason of the SAME declaration, and an argument at a \
+                     parameter whose DECLARED type is exactly this reason",
                 )
                 .mit_notiz(
                     "the number in a `reason` line is there so that a REPORT can name it, \
@@ -3938,4 +3998,18 @@ fn breite_wort(n: &str) -> bool {
         n,
         "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" | "bool" | "f32" | "f64"
     )
+}
+
+/// Der `reason`, den ein Ausdruck NENNT -- als geschriebener `R::F` oder als eine Bindung,
+/// die auf einen Grund zeigt. **Beide Gestalten, denn `let … else` bindet die zweite.**
+fn grundname_von(e: &Expr, lage: &Lage) -> Option<String> {
+    match &e.art {
+        ExprArt::Grund { grund, .. } => Some(grund.text.clone()),
+        ExprArt::Klammer(x) => grundname_von(x, lage),
+        ExprArt::Ort(o) if o.suffixe.is_empty() => match lage.lokal.get(&o.basis.text) {
+            Some(Typ::Grund(n)) => Some(n.clone()),
+            _ => None,
+        },
+        _ => None,
+    }
 }

@@ -56,17 +56,36 @@ pub enum Traegerart {
     Format,
     Geraet,
     Walk,
+    /// **`reason R` als TYP eines Parameters -- und bis zum 2026-08-25 fehlte er hier.**
+    ///
+    /// Der Kommentar an der Aufloesungsstelle sagt, der `match` habe *„keinen `_`-Zweig:
+    /// eine neue Traegerart ist ein UEBERSETZUNGSFEHLER an jeder Aufloesungsstelle"*. Er
+    /// hat auch keinen -- aber das `find_map` DAVOR faellt auf `Typ::Unbekannt` zurueck,
+    /// wenn KEINE Traegerart passt, und ein `reason` passte auf keine.
+    ///
+    /// > *Damit war `st : Status` an einem `extern fn` `Unbekannt`* -- und jede Regel, die
+    /// > auf den Typ eines solchen Parameters sieht, schwieg. **Nicht weil sie nichts
+    /// > sagen wollte, sondern weil ihr die Flaeche entzogen war.**
+    ///
+    /// Gefunden auf dem Weg zu `M124`s vierter Tuer: die Stellungsregel ist ABSICHTLICH
+    /// strukturell, *„weil eine Regel, die dem Typpruefer vertraut, fuenf von sieben
+    /// gefangen haette"* -- und der Grund dafuer stand hier. Sechste Blindstellenklasse,
+    /// dritte Instanz.
+    Grund,
 }
 
 impl Traegerart {
     /// **Die Reihenfolge ist die Aufloesungsreihenfolge** — ein Neutyp verdeckt eine
     /// gleichnamige Tabelle, so wie bisher.
-    pub const ALLE: [Traegerart; 5] = [
+    pub const ALLE: [Traegerart; 6] = [
         Traegerart::Neutyp,
         Traegerart::Tabelle,
         Traegerart::Format,
         Traegerart::Geraet,
         Traegerart::Walk,
+        // **Zuletzt, damit die Aufloesung sich sonst nicht bewegt.** Ein `reason` verdeckt
+        // damit keinen gleichnamigen Traeger, den es heute schon gibt.
+        Traegerart::Grund,
     ];
 }
 
@@ -1039,6 +1058,7 @@ impl Umgebung {
                             Traegerart::Format => self.formate.contains_key(*k),
                             Traegerart::Geraet => self.geraete.contains_key(*k),
                             Traegerart::Walk => self.walkschranken.contains_key(*k),
+                            Traegerart::Grund => self.gruende.contains_key(*k),
                         })?;
                         Some((*art, treffer.clone()))
                     })
@@ -1050,6 +1070,11 @@ impl Umgebung {
                         Traegerart::Format | Traegerart::Geraet | Traegerart::Walk => {
                             Typ::Verbundname(k)
                         }
+                        // **Der Name ist VOLL QUALIFIZIERT** -- `kandidaten` liefert den
+                        // Schluessel, unter dem `gruende` ihn fuehrt, und `m1.rs`:1474 baut
+                        // `Typ::Grund` aus derselben Quelle. *Zwei Wege zum selben Typ
+                        // muessen denselben Namen tragen, sonst vergleicht `==` nie gleich.*
+                        Traegerart::Grund => Typ::Grund(k),
                     })
             }
             TypExpr::Feld(a) => Typ::Feld {
