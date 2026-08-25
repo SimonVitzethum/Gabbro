@@ -3077,6 +3077,66 @@ fn ein_zweig_der_zurueckkehrt_hat_trotzdem_verbraucht() {
     assert!(t4.contains("L104"), "zweimal im selben Zweig:\n{t4}");
     assert!(!t4.contains("L101"), "das falsche `L101` daneben ist weg:\n{t4}");
 }
+/// **Der `can_fail`-Rumpf war ein Rumpf ohne Leser** (2026-08-25).
+///
+/// Der Wirkungspass lief über `ItemArt::Funktion` und sonst nichts. Derselbe Ruf gab damit
+/// zwei verschiedene Antworten — im `impl fn` «E008» und «K001», im Probenrumpf **null
+/// Fehler**. Und weil `consumes` eine Wirkung ist, stand dort auch ein *Double-Free* mit
+/// grünem Haken: `nimm(m); nimm(m);` — M2 sieht diesen Block ebenfalls nicht.
+///
+/// «N027» verbot schon die Anweisungsformen (Zuweisung, `locks`, `publishes`, `exchange`)
+/// und sprach dabei den Grundsatz aus, der hier weitergeht: *„Ein Rumpf ohne Vertrag darf
+/// nichts tun, wofür es einen Vertrag braucht."* **Ein RUF war davon nicht erfasst.**
+///
+/// > Keine neue Kennung — derselbe Satz wie im `impl fn`, nur mit einem Vertrag, der nicht
+/// > dasteht, sondern gilt: **eine Probe ist `pure` von Bauart wegen.**
+#[test]
+fn ein_can_fail_rumpf_ist_pure_von_bauart_wegen() {
+    let melden = |rumpf: &str, zusatz: &str| -> String {
+        let q = format!(
+            "module m {{\n\
+             static mut zaehler : u32 in 0 .. 100 = 0;\n\
+             linear type Marke;\n\
+             extern fn teuer() -> u32 in 0 .. 100 effects {{ writes zaehler }} \
+             costs <= 5000 ops;\n\
+             extern fn liest() -> u32 in 0 .. 100 effects {{ reads zaehler }} costs <= 2 ops;\n\
+             extern fn hol() -> Marke effects {{ pure }} costs <= 2 ops;\n\
+             extern fn nimm(m : Marke) effects {{ consumes m }} costs <= 2 ops;\n\
+             impl fn tor()  effects {{ pure }} costs <= 4 ops {{ return; }}\n\
+             impl fn frei() effects {{ pure }} costs <= 4 ops {{ return; }}\n\
+             {zusatz}\
+             check probe {{\n\
+               claim \"eine Behauptung\"\n\
+               measures zaehler\n\
+               gates tor, frei\n\
+               can_fail {{ {rumpf} }}\n\
+               floor zaehler >= 0\n\
+               counterprobe \"eine Gegenprobe\" expects sonde\n\
+             }}\n}}\n"
+        );
+        let (b, mut a) = gabbro_syntax::lies("check.gab", &q);
+        gabbro_check::pruefe(&b, &mut a);
+        a.zeige(&q)
+    };
+
+    // 1. Ein Ruf, der SCHREIBT -- im `impl fn` faellt er, hier fiel er nicht.
+    let t1 = melden("let g = teuer(); if g > 3 { return false; } return true;", "");
+    assert!(t1.contains("E008"), "ein Ruf mit `writes` im Probenrumpf:\n{t1}");
+
+    // 2. **Und damit ist der Double-Free unschreibbar geworden.** `consumes` ist eine
+    //    Wirkung; der Ruf faellt, bevor M2 ihn haette sehen muessen.
+    let t2 = melden("let m = hol(); nimm(m); nimm(m); return true;", "");
+    assert!(t2.contains("E008"), "`consumes` im Probenrumpf:\n{t2}");
+
+    // 3. **Die Gegenrichtung, und sie ist die wichtigere:** lesen, rechnen, vergleichen,
+    //    zurueckgeben -- genau das, was der Korpus tut -- bleibt erlaubt.
+    let t3 = melden("if liest() > 3 { return false; } return true;", "");
+    assert!(
+        !t3.contains("E008"),
+        "eine Probe DARF lesen, sonst pruefte sie nichts:\n{t3}"
+    );
+}
+
 
 
 /// **`decreases` war eine Namensprobe** («K009» geschärft, Rezension 2026-08-20).

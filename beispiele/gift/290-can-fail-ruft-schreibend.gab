@@ -1,0 +1,35 @@
+-- erwartet: E008
+-- **Ein Probenrumpf ruft etwas, das SCHREIBT.**
+--
+-- Ein `check` traegt keine `effects`, keine `costs` und keine `locks` -- also traegt es den
+-- strengsten Vertrag, den es gibt: `pure`. `N027` verbietet dort schon die Anweisungsformen
+-- und spricht dabei den Grundsatz aus, der hier weitergeht: *ein Rumpf ohne Vertrag darf
+-- nichts tun, wofuer es einen Vertrag braucht.* **Ein RUF war davon nicht erfasst**, und
+-- damit stand hinter der Absage der ganze Wirkungsraum wieder offen.
+--
+-- Bis zum 2026-08-25 gab derselbe Ruf zwei Antworten: im `impl fn` `E008` und `K001`, hier
+-- **null Fehler**. Zwoelf Paesse, und diesen Rumpf las kaum einer.
+module gift::can_fail_ruft_schreibend {
+
+static mut zaehler : u32 in 0 .. 100 = 0;
+
+extern fn teuer() -> u32 in 0 .. 100 effects { writes zaehler } costs <= 5000 ops;
+
+impl fn tor()  effects { pure } costs <= 4 ops { return; }
+impl fn frei() effects { pure } costs <= 4 ops { return; }
+
+check probe {
+    claim    "Der Zaehler bleibt unter vier."
+    measures zaehler
+    gates    tor, frei
+    can_fail {
+        let g = teuer();
+        if g > 3 { return false; }
+        return true;
+    }
+    floor    zaehler >= 0
+    counterprobe "Ein kuenstlich hochgezaehlter Zaehler muss die Pflicht fallen lassen."
+        expects sonde_zaehler_hoch
+}
+
+}

@@ -917,7 +917,13 @@ pub const WIRKUNGEN: &[Satz] = &[
                   hull is complete or not** -- the hull is a LOWER bound, so everything IN it \
                   really happens and demanding that it be declared is sound regardless of \
                   what is missing. Where the hull is INCOMPLETE, `E009` says so as a hint, \
-                  and what is then unavailable is the other direction: no completeness.",
+                  and what is then unavailable is the other direction: no completeness. \
+                  **Since 2026-08-25 this also covers the `can_fail` body of a `check`**, \
+                  which carries no clause and is therefore `pure` by construction: a call \
+                  with any effect other than `reads` is refused there. *That closes a second \
+                  hole with it -- `consumes` is an effect, so no linear value can be consumed \
+                  in a probe body, and the double free that M2 does not see there has become \
+                  unwritable.*",
         vorbehalt: "~~At a CYCLE the hull is cut, `E009` is emitted as a HINT and the pass \
                     `return`s before any `E008` check -- recursive functions are not checked \
                     for frame fidelity at all; and the reason PROPAGATES UPWARDS, so one \
@@ -943,6 +949,32 @@ pub const WIRKUNGEN: &[Satz] = &[
                       errors before. Anchor: \
                       `rahmen-faellt-unter-unvollstaendiger-huelle-aus`.",
         fundstelle: "crates/gabbro-check/src/wirkungen.rs, aufrufgraph.rs; SPRACHE.md §7; R16",
+    },
+    Satz {
+        name: "wirkungen.probenrumpf",
+        kennungen: &["E008"],
+        aussage: "The `can_fail` body of a `check` carries no `effects`, no `costs` and no \
+                  `locks` clause -- and therefore the strictest contract there is: **`pure` \
+                  by construction**. A call whose callee declares any effect other than \
+                  `reads` is refused there. What remains is what a counterprobe does: read, \
+                  compute, compare, return -- and that is what the corpus does.",
+        vorbehalt: "**What closes this is a REFUSAL, not a check of the body -- and a hole \
+                    closed by refusal is closed only as far as the refusal reaches.** Most \
+                    passes still walk `ItemArt::Funktion` and never enter this block. M2 does \
+                    not see a consumption here at all; what makes `nimm(m); nimm(m);` \
+                    unwritable is that `consumes` IS an effect, so the call falls one pass \
+                    earlier -- the same construction as `N036`. The cost pass has nothing to \
+                    compare against, because a `check` promises no bound, and **a `forever` \
+                    inside the body is accepted** although a probe that never returns answers \
+                    neither `true` nor `false`. M1 reads the block since 2026-08-20, the \
+                    effect pass since 2026-08-25; the others do not.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/290 on `E008`. The anchor \
+                      `ein_can_fail_rumpf_ist_pure_von_bauart_wegen` measures all THREE \
+                      directions -- a writing call falls, a consuming call falls, and a \
+                      reading call must still pass. *Without the third the rule would be a \
+                      ban on calls, not a contract.*",
+        fundstelle: "crates/gabbro-check/src/wirkungen.rs (`probenrumpf`); `N027` in namen.rs",
     },
 ];
 

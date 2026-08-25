@@ -50,8 +50,92 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
         ItemArt::Funktion(f) => funktion(f, modul, &g, &konstanten, &weltnamen, absagen),
         ItemArt::Axiom(a) => rein_allein(&a.effects, absagen),
+        ItemArt::Check(c) => probenrumpf(c, modul, &g, absagen),
         _ => {}
     });
+}
+
+/// **Der `can_fail`-Rumpf traegt einen impliziten Vertrag, und der heisst `pure`**
+/// (2026-08-25).
+///
+/// Dieser Pass lief ueber `ItemArt::Funktion` und sonst nichts. Derselbe Ruf gab darum
+/// zwei verschiedene Antworten:
+///
+/// ```gabbro
+/// extern fn teuer() -> u32 in 0 .. 100 effects { writes zaehler } costs <= 5000 ops;
+///
+/// impl fn f() -> bool …  { let g = teuer(); … }   -- E008 + K001
+/// check probe { … can_fail { let g = teuer(); … } … }   -- 0 Fehler
+/// ```
+///
+/// `N027` verbietet im Probenrumpf schon die Anweisungsformen -- Zuweisung, `locks`,
+/// `publishes`, `exchange` -- und nennt dabei den Grundsatz, der hier weitergeht:
+/// *„Ein Rumpf ohne Vertrag darf nichts tun, wofuer es einen Vertrag braucht."*
+/// **Ein RUF war davon nicht erfasst**, und damit stand der ganze Wirkungsraum wieder offen.
+///
+/// > **Und es schliesst mehr als die Wirkungen.** `consumes` ist eine Wirkung; ein Ruf, der
+/// > sie traegt, faellt hier. Damit kann im Probenrumpf kein linearer Wert mehr verbraucht
+/// > werden -- und das `nimm(m); nimm(m);`, das M2 dort nicht sah, ist unschreibbar
+/// > geworden. *Dieselbe Bauart wie `N036`: ein Pass, der sich auf eine Absage einen Pass
+/// > weiter vorn verlaesst.*
+///
+/// Keine neue Kennung: es ist derselbe Satz wie im `impl fn`, nur mit einem Vertrag, der
+/// nicht dasteht, sondern gilt. Was erlaubt bleibt, ist genau das, was der Korpus tut --
+/// `pure` und `reads`.
+fn probenrumpf(c: &Check, modul: &str, g: &crate::aufrufgraph::Graph, absagen: &mut Absagen) {
+    let mut rufe: Vec<&Ruf> = Vec::new();
+    sammle_rufe_im_block(&c.can_fail, &mut rufe);
+    for r in rufe {
+        let Some(pfad) = r.path() else { continue };
+        let Some(name) = pfad.teile.last() else { continue };
+        let h = g.huelle(&g.schluessel_von(modul, &name.text));
+        let unrein: Vec<&str> = h
+            .wirkungen
+            .iter()
+            .filter(|w| !w.starts_with("reads ") && w.as_str() != "pure")
+            .map(|w| w.as_str())
+            .collect();
+        if unrein.is_empty() {
+            continue;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "E008",
+                name.span,
+                format!(
+                    "`check {}` is `pure` by construction but calls something with `{}`",
+                    c.name.text,
+                    unrein.join("`, `")
+                ),
+            )
+            .mit_notiz(
+                "a `check` carries no `effects`, no `costs` and no `locks` -- so its body                  may read, compute, compare and return, and nothing else",
+            )
+            .mit_notiz(
+                "`N027` says the same about statements: a body without a contract may not                  do what needs one",
+            ),
+        );
+    }
+}
+
+/// Jeder Ruf im Block, ueber die erschoepfenden Laeufer aus `lib.rs` -- ein Ruf in
+/// Indexposition ist auch ein Ruf.
+fn sammle_rufe_im_block<'a>(b: &'a Block, aus: &mut Vec<&'a Ruf>) {
+    for s in &b.anweisungen {
+        if let StmtArt::Ruf(r) = &s.art {
+            aus.push(r);
+        }
+        for e in crate::eigene_ausdruecke(s) {
+            for x in crate::alle_ausdruecke(e) {
+                if let ExprArt::Ruf(r) = &x.art {
+                    aus.push(r);
+                }
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_rufe_im_block(k, aus);
+        }
+    }
 }
 
 /// Was ein Rumpf tut -- Ort und Fundstelle je Tat.

@@ -1394,8 +1394,9 @@ fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
         // 2026-08-20).
         //
         // Ein `check`-Item traegt keine `effects`-Liste, keine `costs`-Zusage und keine
-        // `locks`-Deklaration -- es ist kein Vertrag. Zehn der zwoelf Paesse laufen ueber
-        // `ItemArt::Funktion` und sahen diesen Block darum nie:
+        // `locks`-Deklaration -- es ist kein Vertrag. Die Paesse laufen ueber
+        // `ItemArt::Funktion` und sahen diesen Block darum nie -- **M1 seit dem 2026-08-20
+        // und der Wirkungspass seit dem 2026-08-25 nicht mehr**, der Rest weiterhin:
         //
         // ```gabbro
         // check c { … can_fail { a = 1; schreibt(); } … }   -- ohne H007/E005/E008
@@ -1430,8 +1431,8 @@ fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
                         )
                         .mit_notiz(
                             "a `check` carries no `effects`, no `costs` and no `locks` -- \
-                             ten of the twelve passes walk functions and never see this \
-                             block, so what stands here is unchecked",
+                             most passes walk functions and never see this block, so what \
+                             stands here is unchecked",
                         )
                         .mit_notiz(
                             "a counterprobe reads, computes, compares and returns -- \
