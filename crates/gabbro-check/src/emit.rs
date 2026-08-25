@@ -2505,6 +2505,36 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                     sw = schreibwort(breite, gross)
                 ));
             }
+            // **The pinning of a byte-wise field.** *A `reserved` one has no reader, so
+            // there is nothing to hold the bound against* -- refusing beats emitting a check
+            // over a function that does not exist.
+            if i.bereich.is_some() {
+                if feld.reserviert {
+                    weigere(
+                        absagen,
+                        feld.span,
+                        "`in a .. b` at a `reserved` field -- a reserved field has no reader, \
+                         so there is no place at which the bound could be established",
+                    );
+                    return;
+                }
+                let vz = matches!(
+                    i.wort,
+                    gabbro_syntax::kw::Kw::U8
+                        | gabbro_syntax::kw::Kw::U16
+                        | gabbro_syntax::kw::Kw::U32
+                        | gabbro_syntax::kw::Kw::U64
+                );
+                pruefungen.extend(bereichspruefung(
+                    i,
+                    n,
+                    &feld.name.text,
+                    breite * 8,
+                    vz,
+                    u,
+                    absagen,
+                ));
+            }
             if let Some(b) = &feld.bedingung {
                 match pred_c_format(b, n, u, absagen) {
                     Some(x) => pruefungen.push(x),
@@ -2646,6 +2676,15 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         }
         for (g, hi, lo) in gruppe {
             if g.reserviert {
+                if matches!(&g.typ.typ, TypExpr::Int(gi) if gi.bereich.is_some()) {
+                    weigere(
+                        absagen,
+                        g.span,
+                        "`in a .. b` at a `reserved` field -- a reserved field has no reader, \
+                         so there is no place at which the bound could be established",
+                    );
+                    return;
+                }
                 continue;
             }
             let maske: u128 = if hi - lo + 1 >= 64 {
@@ -2695,6 +2734,44 @@ fn format_(f: &Format, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                     f2 = g.name.text,
                     sw = schreibwort(breite, gross)
                 ));
+            }
+            // **The pinning of a BIT field, and its width is the group's, not the carrier's.**
+            // `grund : u64 @[39:32] in 1 .. 12` hands out eight bits; against `u64` the bound
+            // would look like a real constraint everywhere and the tautology test would never
+            // bite.
+            if let TypExpr::Int(gi) = &g.typ.typ {
+                if gi.bereich.is_some() {
+                    // **`scale K` plus `in` is refused, not guessed.** The reader hands out
+                    // `raw * K`; whether the declared bound means the raw value or the scaled
+                    // one is not written anywhere, and *a generator that guesses undoes every
+                    // pass in front of it*. Zero corpus sites ask for it.
+                    if g.typ.scale.is_some() {
+                        weigere(
+                            absagen,
+                            g.span,
+                            "`in a .. b` together with `scale` -- the reader hands out the \
+                             SCALED value, and which of the two the bound speaks about is \
+                             not said",
+                        );
+                        return;
+                    }
+                    let vz = matches!(
+                        gi.wort,
+                        gabbro_syntax::kw::Kw::U8
+                            | gabbro_syntax::kw::Kw::U16
+                            | gabbro_syntax::kw::Kw::U32
+                            | gabbro_syntax::kw::Kw::U64
+                    );
+                    pruefungen.extend(bereichspruefung(
+                        gi,
+                        n,
+                        &g.name.text,
+                        (hi - lo + 1) as u32,
+                        vz,
+                        u,
+                        absagen,
+                    ));
+                }
             }
             if let Some(b) = &g.bedingung {
                 match pred_c_format(b, n, u, absagen) {
@@ -2826,8 +2903,96 @@ fn pred_c_format(p: &Pred, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Optio
             pred_c_format(a, fmt, u, absagen)?,
             pred_c_format(b, fmt, u, absagen)?
         ),
+        // **The disjunction -- «B22-near», 2026-08-25.** A format says "absence" and
+        // "unreadable" with ONE function, `X_gueltig`; without `||` it cannot say that a
+        // constraint holds only of a record that CARRIES something:
+        //
+        //     grund : u64 @[39:32] where f_bit == 0 || (grund >= 1 && grund <= 12),
+        //
+        // The form was writable all along -- `pred = orpred` (SYNTAX.md:614) -- and parsed,
+        // and name-checked by `N032`. **Only this arm was missing**, so the emitter refused
+        // with `C001` and the two answers stayed one.
+        //
+        // **The parentheses are load-bearing, and NOT for looks.** In C `&&` binds tighter
+        // than `||`, so an `Und` may sit unparenthesised above (its operands cannot be
+        // reassociated wrongly) -- a bare `||` may NOT: `where (a || b) && c` would lower to
+        // `a || b && c`, which is `a || (b && c)`. *A precedence slip here is a check that
+        // silently passes a record it should refuse.*
+        PredArt::Oder(a, b) => format!(
+            "({} || {})",
+            pred_c_format(a, fmt, u, absagen)?,
+            pred_c_format(b, fmt, u, absagen)?
+        ),
         _ => return None,
     })
+}
+
+/// **The pinning `in a .. b` at a format field -- and until 2026-08-25 it fell SILENTLY.**
+///
+/// `format_` read exactly two things out of a field type, `breite_von` and `intty`;
+/// `IntTy::bereich` was read nowhere in this function. **Sixteen declarations of the corpus
+/// therefore lowered to nothing** -- `EthArp` pins six fields and `EthArp_gueltig` checked
+/// only the length, so any 42 bytes were a valid ARP record; `Elf64Kopf` pins the magic and
+/// 46 arbitrary bytes were a valid ELF header.
+///
+/// **And the expensive half is not the missing check, it is that M1 BELIEVES the pinning.**
+/// `umgebung.rs::typexpr` hands a format field its declared range like any other type, so
+/// `M103` waives the index bound on `let i : index into T = k.nr;` when `nr` says
+/// `u32 in 0 .. 7`. Nobody established it. Measured under the same sanitizer
+/// `pruefe-emission.sh` runs: `runtime error: load of address … with insufficient space`.
+///
+/// > *That is «B33» one storey up.* At a `device` register the answer was to REFUSE the
+/// > fact, because the hardware may set the word freely. At a format field the fact is
+/// > DECLARED, and `X_gueltig` is exactly the place it belongs -- every reader passes it.
+///
+/// Returns the comparisons, 0 to 2 of them. **A bound that coincides with the carrier's own
+/// range yields none**, and that is not tidiness: `e_phnum : u16 in 0 .. 65535` would lower
+/// to a tautology, and `pruefe-emission.sh` compiles with `-Werror=type-limits`.
+fn bereichspruefung(
+    i: &IntTy,
+    fmt: &str,
+    feld: &str,
+    bits: u32,
+    vorzeichenlos: bool,
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> Vec<String> {
+    let Some(b) = &i.bereich else {
+        return Vec::new();
+    };
+    let zugriff = format!("{fmt}_{feld}(v)");
+    // A bound may be a literal or a named constant; `scale` resolves them the same way.
+    let wert = |e: &Expr| -> Option<i128> {
+        konst_zahl(e).or_else(|| match &e.art {
+            ExprArt::Ort(o) => u.konstwert.get(&o.text()).copied(),
+            _ => None,
+        })
+    };
+    // **The range the READER can hand out** -- for a byte-wise field the carrier's width,
+    // for a bit field the width of its OWN bit group. *A `u64 @[39:32]` yields 0 .. 255, so
+    // `in 1 .. 12` is a real constraint there and `in 0 .. 255` is not.*
+    let (min, max): (i128, i128) = if vorzeichenlos {
+        (0, (1i128 << bits) - 1)
+    } else {
+        (-(1i128 << (bits - 1)), (1i128 << (bits - 1)) - 1)
+    };
+    // The `u` suffix keeps `-Wsign-compare` quiet: the reader hands out an unsigned type,
+    // and a bare decimal literal is `int`.
+    let zahl = |v: i128| if vorzeichenlos { format!("{v}u") } else { format!("{v}") };
+    let mut aus = Vec::new();
+    match wert(&b.von) {
+        Some(v) if v <= min => {}
+        Some(v) => aus.push(format!("{zugriff} >= {}", zahl(v))),
+        None => aus.push(format!("{zugriff} >= {}", ausdruck_format(&b.von, fmt, u, absagen))),
+    }
+    let op = if b.exklusiv { "<" } else { "<=" };
+    match wert(&b.bis) {
+        // `..<` excludes the top: only `bis > max` is vacuous, `bis == max` still bites.
+        Some(v) if (b.exklusiv && v > max) || (!b.exklusiv && v >= max) => {}
+        Some(v) => aus.push(format!("{zugriff} {op} {}", zahl(v))),
+        None => aus.push(format!("{zugriff} {op} {}", ausdruck_format(&b.bis, fmt, u, absagen))),
+    }
+    aus
 }
 
 /// Wie `ausdruck`, aber ein blanker Name ist ein FELD dieses Formats.

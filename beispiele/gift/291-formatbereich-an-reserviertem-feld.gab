@@ -1,0 +1,17 @@
+-- erwartet: C001
+-- **`in a .. b` an einem `reserved`-Feld -- eine Schranke ohne Ort, an dem sie gilt.**
+--
+-- Ein reserviertes Feld bekommt KEINEN Leser (`emit.rs`, `format_`: `if !feld.reserviert`).
+-- Die Schranke koennte also nirgends hergestellt werden: `X_gueltig` haette nichts zu
+-- rufen. *Sie stillschweigend fallenzulassen waere genau der Fehler, den «B22-nah» am
+-- 2026-08-25 aufgedeckt hat* -- sechzehn Festnagelungen des Korpus senkten zu nichts ab,
+-- und M1 glaubte sie trotzdem.
+--
+-- **Die Absage ist die engere Antwort**, und sie erfindet nichts: ein Feld, das der Leser
+-- nicht liest, kann keine Aussage tragen.
+module p {
+format Kopf endian big {
+    marke : u16,
+    rest  : u16 in 0 .. 7 reserved,
+}
+}

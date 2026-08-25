@@ -1,0 +1,17 @@
+-- erwartet: C001
+-- **`in a .. b` zusammen mit `scale K` -- zwei Werte, eine Schranke, keine Angabe welcher.**
+--
+-- Der erzeugte Leser gibt `rohwert * K` heraus (`emit.rs`, Bitgruppenzweig: *„`scale K`
+-- gehoert IN den Leser"*). Ob die deklarierte Schranke vom ROHWERT oder vom skalierten
+-- spricht, sagt die Deklaration nicht -- und der Unterschied ist bei `scale 4096` der
+-- Faktor 4096.
+--
+-- **Geraten wird hier nicht.** *Ein Erzeuger, der raet, hebt jeden Pass vor sich auf* --
+-- und Regel A traegt die Form ohnehin nicht: null Korpusstellen verlangen sie.
+module p {
+format Pte endian little {
+    frei    : u64 @[11:0],
+    rahmen  : u64 in 0 .. 7 embeds [51:12] scale 4096,
+    rest    : u64 @[63:52],
+}
+}
