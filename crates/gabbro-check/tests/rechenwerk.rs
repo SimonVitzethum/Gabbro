@@ -3136,6 +3136,79 @@ fn ein_can_fail_rumpf_ist_pure_von_bauart_wegen() {
         "eine Probe DARF lesen, sonst pruefte sie nichts:\n{t3}"
     );
 }
+/// **Ein Ruf tötete jede Tatsache — auch ein `pure`** (2026-08-25).
+///
+/// `aufruf_toetet_fakten` löschte an JEDEM Ruf jeden Fakt über eine nichtlokale Stelle.
+/// Über einer Tabelle mit `backed` heißt das:
+///
+/// ```gabbro
+/// narrow i to 0 ..< hinterlegt else { return 0; }
+/// rein();                        -- effects { pure }
+/// return h.slots[i].kopf;        -- M108: „nothing shows it is BACKED"
+/// ```
+///
+/// **Drei von vier Fällen waren falsche Ablehnungen** — `pure`, ein fremdes `writes`, und
+/// nur der vierte, der wirklich `hinterlegt` schreibt, fiel zu Recht. *Wer nach jedem Ruf
+/// neu verengen muss, schreibt die Verengung so oft, bis sie Zeremonie ist.*
+///
+/// Die obere Schranke stand schon da: die `effects` des Gerufenen, die «E008» gegen dessen
+/// Hülle abgleicht. **Zwei Auflösungsfallen lagen auf dem Weg**, und beide sahen aus wie
+/// „kein Befund": `funktionen` und `globale` sind **qualifiziert** verschlüsselt, ein
+/// `get(name)` mit dem bloßen Namen trifft in einem `module`-Block nie und fällt still auf
+/// die grobe Regel zurück. *Die Verfeinerung wäre dagewesen und hätte nichts getan.*
+///
+/// > Verfeinert wird **nur**, wenn jede geschriebene Stelle ein bekannter Weltname und
+/// > kein Parametername des Gerufenen ist; sonst gilt die grobe Regel. Unvollständigkeit
+/// > kostet hier Genauigkeit, nicht Gültigkeit.
+#[test]
+fn ein_reiner_ruf_toetet_keine_tatsache() {
+    let melden = |rumpf: &str| -> String {
+        let q = format!(
+            "module m {{\n\
+             const N : u32 = 256;\n\
+             static mut hinterlegt : u32 in 0 .. N = 0;\n\
+             static mut fremd : u32 in 0 .. 100 = 0;\n\
+             table H count N backed hinterlegt {{ slot {{ kopf : u64, }} }}\n\
+             extern fn rein() effects {{ pure }} costs <= 2 ops;\n\
+             extern fn schreibt_fremd() effects {{ writes fremd }} costs <= 2 ops;\n\
+             extern fn schrumpft() effects {{ writes hinterlegt }} costs <= 2 ops;\n\
+             {rumpf}}}\n"
+        );
+        let (b, mut a) = gabbro_syntax::lies("narrow.gab", &q);
+        gabbro_check::pruefe(&b, &mut a);
+        a.zeige(&q)
+    };
+    let fn_mit = |wirkung: &str, zwischen: &str| -> String {
+        format!(
+            "impl fn f(h : ptr<normal, r> H, i : index into H) -> u64\n\
+             effects {{ reads h.slots, reads hinterlegt{wirkung} }} costs <= 8 ops\n\
+             {{ narrow i to 0 ..< hinterlegt else {{ return 0; }} {zwischen} \
+             return h.slots[i].kopf; }}\n"
+        )
+    };
+
+    // 1. Ohne Ruf -- die Grundlage, sie ging immer.
+    let t1 = melden(&fn_mit("", ""));
+    assert!(!t1.contains("M108"), "die Verengung traegt:\n{t1}");
+
+    // 2. **Ein `pure`-Ruf dazwischen.** Er kann nichts anfassen, also faellt nichts.
+    let t2 = melden(&fn_mit("", "rein();"));
+    assert!(!t2.contains("M108"), "`pure` faellt keine Tatsache:\n{t2}");
+
+    // 3. Ein Ruf, der etwas ANDERES schreibt.
+    let t3 = melden(&fn_mit(", writes fremd", "schreibt_fremd();"));
+    assert!(!t3.contains("M108"), "`writes fremd` trifft `hinterlegt` nicht:\n{t3}");
+
+    // 4. **Die Gegenrichtung, und sie ist die, auf die es ankommt:** ein Ruf, der die
+    //    Hinterlegung schreibt, faellt die Tatsache -- sonst waere aus einer falschen
+    //    Ablehnung ein Fehlzugriff geworden.
+    let t4 = melden(&fn_mit(", writes hinterlegt", "schrumpft();"));
+    assert!(
+        t4.contains("M108"),
+        "wer die Hinterlegung schreibt, nimmt die Verengung mit:\n{t4}"
+    );
+}
+
 
 
 

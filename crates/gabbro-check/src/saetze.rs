@@ -432,7 +432,11 @@ pub const M1: &[Satz] = &[
         kennungen: &["M108", "M109"],
         aussage: "A checked range condition narrows the range of the checked place in the \
                   branch after it: after `if x >= 1 { … }` the place `x` has range `1 .. \
-                  max` inside the branch, and the `else` branch carries the negated fact.",
+                  max` inside the branch, and the `else` branch carries the negated fact. \
+                  **Since 2026-08-25 such a fact SURVIVES a call** unless the callee's \
+                  declared `effects` -- which `E008` reconciles against its hull -- can write \
+                  the place. Before that every call dropped every non-local fact, and three \
+                  of four measured cases were false rejections, a `pure` call among them.",
         vorbehalt: "TWO preconditions, both found the hard way. (1) The place must stay the \
                     SAME between check and use -- a place leading through a `device` \
                     register carries NO fact in either direction, because it lowers to a \
@@ -442,7 +446,12 @@ pub const M1: &[Satz] = &[
                     the hardware may set freely. (2) The `else` fact presupposes \
                     TRICHOTOMY -- that the negation of a comparison is itself a comparison. \
                     That holds over integers and breaks for any partially ordered carrier: \
-                    with a NaN operand all comparisons are false and `else` yields nothing.",
+                    with a NaN operand all comparisons are false and `else` yields nothing. \
+                    (3) **The survival across a call is refined only where it is safe:** \
+                    every written place must be KNOWN world state and must not be a parameter \
+                    name of the callee -- otherwise the coarse rule applies and everything \
+                    dies. So the precision rests on `E010`, whose reach is a drawn line; \
+                    incompleteness there costs precision, not soundness.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 2 probes on `M108`, 2 on `M109`; the «B33» half is \
                       measured by `gift/213` and `gift/214`.",

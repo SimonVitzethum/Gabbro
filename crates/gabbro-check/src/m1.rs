@@ -687,7 +687,8 @@ impl<'a> Pruefer<'a> {
                 };
                 lage.fakten.retain(|f| !nennt_namen(f, &l.name.text));
                 lage.lokal.insert(l.name.text.clone(), t);
-                self.aufruf_toetet_fakten(lage);
+                let pfade = l.als_ruf().map(rufnamen_im_ruf).unwrap_or_default();
+                self.rufe_toeten_fakten(&pfade, lage);
                 // **`e` bekommt einen TYP** (Stufe 7, 2026-08-21).
                 //
                 // Bis heute stand `fehlername` in genau EINER Datei des Pruefers -- in
@@ -1197,7 +1198,7 @@ impl<'a> Pruefer<'a> {
             }
             StmtArt::Ruf(r) => {
                 let _ = self.ruf(r, lage);
-                self.aufruf_toetet_fakten(lage);
+                self.rufe_toeten_fakten(&rufnamen_im_ruf(r), lage);
             }
             StmtArt::AwaitLoad(a) => {
                 let t = self.u.typ_von_ort(&self.modul, &a.quelle, &lage.lokal);
@@ -2389,8 +2390,115 @@ impl<'a> Pruefer<'a> {
     /// entschied ueber die Zusage.
     fn rufe_im_ausdruck(&self, e: &Expr, lage: &mut Lage) {
         if enthaelt_ruf(e) {
-            self.aufruf_toetet_fakten(lage);
+            let mut pfade = Vec::new();
+            for x in crate::alle_ausdruecke(e) {
+                if let ExprArt::Ruf(r) = &x.art {
+                    pfade.extend(rufnamen_im_ruf(r));
+                }
+            }
+            self.rufe_toeten_fakten(&pfade, lage);
         }
+    }
+
+    /// **Ein Ruf toetet nur, was der Gerufene ANFASSEN kann** (2026-08-25).
+    ///
+    /// `aufruf_toetet_fakten` darunter loescht jede nichtlokale Tatsache an JEDEM Ruf --
+    /// auch an einem `pure`. Gemessen an einer Tabelle mit `backed`:
+    ///
+    /// ```gabbro
+    /// narrow i to 0 ..< hinterlegt else { return 0; }
+    /// rein();                        -- effects { pure }
+    /// return h.slots[i].kopf;        -- M108: „nothing shows it is BACKED"
+    /// ```
+    ///
+    /// **Drei von vier Faellen waren falsche Ablehnungen** -- `pure`, ein fremdes `writes`,
+    /// und nur der vierte, der wirklich `hinterlegt` schreibt, fiel zu Recht. *Wer nach
+    /// jedem Ruf neu verengen muss, schreibt die Verengung so oft, bis sie Zeremonie ist.*
+    ///
+    /// **Die obere Schranke steht schon da:** `effects` des Gerufenen, und `E008` gleicht
+    /// sie gegen dessen Huelle ab. Was dort nicht als Schreibung steht, kann der Gerufene
+    /// nicht schreiben.
+    ///
+    /// > **Und diese Genauigkeit ruht auf `E010`.** Dessen Reichweite ist eine GEZOGENE
+    /// > Linie -- bekannter Weltzustand, und Lesungen ueber Parameter fehlen. Darum wird
+    /// > verfeinert **nur**, wenn jede geschriebene Stelle ein bekannter Weltname ist;
+    /// > sonst faellt die Regel auf die grobe zurueck. *Unvollstaendigkeit kostet hier
+    /// > Genauigkeit, nicht Gueltigkeit.*
+    fn rufe_toeten_fakten(&self, pfade: &[&Pfad], lage: &mut Lage) {
+        let Some(geschrieben) = self.geschriebene_orte(pfade) else {
+            return self.aufruf_toetet_fakten(lage);
+        };
+        let beruehrt = |k: &str| {
+            geschrieben.iter().any(|w| {
+                k == w
+                    || k.starts_with(&format!("{w}."))
+                    || k.starts_with(&format!("{w}["))
+                    || w.starts_with(&format!("{k}."))
+                    || w.starts_with(&format!("{k}["))
+            })
+        };
+        lage.fakten.retain(|f| {
+            let schluessel: Vec<&String> = match f {
+                Fakt::Endlich { schluessel, .. }
+                | Fakt::FIntervall { schluessel, .. }
+                | Fakt::Bereich { schluessel, .. } => vec![schluessel],
+                Fakt::Beziehung { links, rechts, .. } => vec![links, rechts],
+            };
+            schluessel
+                .iter()
+                .all(|k| self.ist_lokal(k) || !beruehrt(k))
+        });
+    }
+
+    /// Die Stellen, die diese Gerufenen schreiben koennen -- oder `None`, wenn die Frage
+    /// nicht sicher beantwortbar ist und die grobe Regel gelten muss.
+    fn geschriebene_orte(&self, pfade: &[&Pfad]) -> Option<Vec<String>> {
+        if pfade.is_empty() {
+            return None;
+        }
+        let mut aus: Vec<String> = Vec::new();
+        for pf in pfade {
+            // **Die Schluessel sind QUALIFIZIERT** (`a::b::f`), der Rufname ist es nicht --
+            // `u.funktion` loest modulbewusst auf. Ein `funktionen.get(name)` mit dem
+            // blossen Namen trifft in einem `module`-Block NIE und faellt still auf die
+            // grobe Regel zurueck: die Verfeinerung waere dagewesen und haette **nichts**
+            // getan. *Genau die Sorte Fehler, die wie „kein Befund" aussieht -- dieselbe,
+            // die `M103` schon einmal an `globale.get` hatte.*
+            let sig = self.u.funktion(&self.modul, pf)?;
+            if sig.effect_list.is_empty() {
+                return None;
+            }
+            for e in &sig.effect_list {
+                if let Some(o) = ["writes ", "allocs ", "consumes ", "publishes ", "masks "]
+                    .iter()
+                    .find_map(|pfx| e.strip_prefix(pfx))
+                {
+                    // Nur ein BEKANNTER Weltname darf fein behandelt werden -- fuer alles
+                    // andere vergleicht `E008` bloss die ART, und `writes a` deckt dort
+                    // `writes b`.
+                    let basis = o.split(['.', '[']).next().unwrap_or(o);
+                    // **Die Wirkungsliste nennt die Parameternamen des GERUFENEN.** Ein
+                    // `writes h.slots` spricht ueber dessen `h`, nicht ueber ein `h`, das
+                    // hier draussen steht -- und traefe ein Parametername zufaellig einen
+                    // Weltnamen, wuerde diese Regel ueber die falsche Stelle urteilen.
+                    // *Dann gilt die grobe.*
+                    if sig.parameter.iter().any(|(n, _)| n == basis) {
+                        return None;
+                    }
+                    if !self.u.ist_weltname(&self.modul, basis) {
+                        return None;
+                    }
+                    aus.push(o.to_string());
+                } else if !e.starts_with("reads ")
+                    && !e.starts_with("locks ")
+                    && e != "diverges"
+                    && e != "pure"
+                {
+                    return None; // eine Wirkungsart, die diese Regel nicht kennt
+                }
+            }
+        }
+        Some(aus)
     }
 
     fn aufruf_toetet_fakten(&self, lage: &mut Lage) {
@@ -3479,6 +3587,13 @@ fn trennt(c: Option<u8>) -> bool {
 }
 
 /// Steht irgendwo in diesem Ausdruck ein Aufruf?
+/// Der Name eines Rufes -- leer, wenn er indirekt ist. **Ein leerer Rueckgabewert fuehrt
+/// auf die grobe Regel**, denn ein `fn(…)`-Zeiger nennt keine Wirkungsliste, die man lesen
+/// koennte.
+fn rufnamen_im_ruf(r: &Ruf) -> Vec<&Pfad> {
+    r.path().map(|p| vec![p]).unwrap_or_default()
+}
+
 fn enthaelt_ruf(e: &Expr) -> bool {
     match &e.art {
         ExprArt::Ruf(_) => true,

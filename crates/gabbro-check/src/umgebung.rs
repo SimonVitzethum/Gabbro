@@ -360,6 +360,18 @@ impl Umgebung {
         self.suche(&self.funktionen, von, &pfad.text())
     }
 
+    /// **Bekannter Weltzustand** -- `static`, `atomic`, `table`, `device`, `state`.
+    ///
+    /// Dieselbe gezogene Linie wie `E010`, und **modulbewusst**: die Schluessel sind
+    /// qualifiziert, ein `globale.contains_key("fremd")` trifft in einem `module`-Block
+    /// nie. *Dieselbe Falle wie bei `M103` und bei `funktionen` -- eine Karte direkt zu
+    /// befragen sieht richtig aus und antwortet immer nein.*
+    pub fn ist_weltname(&self, von: &str, name: &str) -> bool {
+        self.suche(&self.globale, von, name).is_some()
+            || self.suche(&self.tabellen, von, name).is_some()
+            || self.suche(&self.geraete, von, name).is_some()
+    }
+
     /// **Nennt dieser Pfad einen Verbundtyp?** («B7»)
     ///
     /// Die Frage steht neben `funktion` und nicht in ihr, weil beide Antworten gebraucht
