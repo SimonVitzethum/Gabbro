@@ -350,9 +350,31 @@ int main(void) {
     return 0;
 }
 '
-lauf "fragment7" "$ARB/f7.gab" "$TREIBER7" "123456" \
+# **F7 faehrt seit dem 2026-08-25 aus der VERVOLLSTAENDIGTEN Fassung.** Der Ausschnitt nennt
+# `Text` als Zeigerziel und erklaert es nirgends; `N040` sagt es seit heute. *Bis dahin lief
+# dieser Durchstich darueber hinweg* -- der Erzeuger schrieb eine C-Vorwaertsdeklaration,
+# `cc -Werror` war zufrieden, und `123456` stimmte. **Ein Durchstich misst, was er sieht.**
+#
+# Der Riegel dagegen, dass die Arbeitsfassung eine Ausschnittzeile VERLIERT -- und die
+# Sprechprobe darunter, damit der Vergleich nicht bloss dasteht. *Ergaenzen ist erlaubt,
+# weglassen nicht.*
+fehlende_f7() { diff "$1" "$2" | grep "^<" || true; }
+if [ -n "$(fehlende_f7 "$ARB/f7.gab" "$W/messung/fragmente/F07.gab")" ]; then
+    echo "== EMISSION: F07.gab hat eine Zeile des eingefrorenen Ausschnitts VERLOREN =="
+    fehlende_f7 "$ARB/f7.gab" "$W/messung/fragmente/F07.gab" | head -10
+    exit 1
+fi
+grep -v "linear ghost type BootPhase" "$W/messung/fragmente/F07.gab" > "$ARB/f7-kurz.gab"
+if [ -z "$(fehlende_f7 "$ARB/f7.gab" "$ARB/f7-kurz.gab")" ]; then
+    echo "== EMISSION: Sprechprobe F7 haelt nicht -- eine entfernte Ausschnittzeile faellt"
+    echo "             nicht auf. Dieser Vergleich misst NICHTS. =="
+    exit 1
+fi
+echo "  (F7: der eingefrorene Ausschnitt steht vollstaendig in der Arbeitsfassung"
+echo "       -- und eine fehlende Zeile faellt auf, Sprechprobe ok)"
+lauf "fragment7" "$W/messung/fragmente/F07.gab" "$TREIBER7" "123456" \
      's/    ipc_tabellen();/    \/* geloescht *\//' \
-     "0 assumptions (0 of them NOT FALSIFIABLE), 0 templates (0 of them UNPROVED), 3 direct forms, 7 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+     "0 assumptions (0 of them NOT FALSIFIABLE), 0 templates (0 of them UNPROVED), 4 direct forms, 7 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 3. Das Fragment F8: die Sperre wird auf JEDEM Pfad gegeben --------------------------
 #
@@ -676,11 +698,15 @@ lauf "beispiel21" "$W/beispiele/21-verbundwert.gab" "$TREIBER21" "5 300 7 9 1" \
 #
 # *Was er zeigt, ist die STRUKTURELLE Zusage: im C steht die Ordnung, die die Quelle sagte,
 # und nicht das Vorgabemodell von `_Atomic`.* Das Gift unten ersetzt sie durch `relaxed`.
+# **Der Treiber deklarierte `struct Bericht` SELBST, und das war der Befund** (2026-08-25).
+# Das Gabbro-Programm nannte den Typ an drei Stellen und erklaerte ihn nirgends; `N040` hat
+# es gefunden. Der Durchstich lief trotzdem gruen -- *weil dieser Treiber nachlieferte, was
+# der Erzeuger nicht bekommen hatte.* Jetzt erklaert die `.gab` ihn, der Erzeuger schreibt
+# ihn, und der Treiber nimmt ihn wie jeden anderen erzeugten Typ entgegen.
 TREIBER14='#include <stdio.h>
-struct Bericht { unsigned daten; };
 #include "@ERZEUGT@"
 int main(void) {
-    struct Bericht b = { 0 };
+    Bericht b = { 0 };
     printf("%d ", abholen(&b) ? 1 : 0);
     anstossen(&b);
     printf("%d\n", abholen(&b) ? 1 : 0);
@@ -702,7 +728,7 @@ int main(void) {
 #    > Mutationen. *Hier faellt der Wert; die Ordnung faellt dort.*
 lauf "beispiel14" "$W/beispiele/14-paarung-ueber-zwischenfunktion.gab" "$TREIBER14" "0 1" \
      's/atomic_store_explicit(&FERTIG, true,/atomic_store_explicit(\&FERTIG, false,/' \
-     "0 assumptions (0 of them NOT FALSIFIABLE), 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+     "0 assumptions (0 of them NOT FALSIFIABLE), 1 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 
 # -- 12. «F»: Gleitkomma -- und der Test misst, dass das C WIRKLICH RECHNET -----------------

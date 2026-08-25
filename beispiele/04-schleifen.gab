@@ -96,6 +96,19 @@ divergent fn dienstschleife(q : ptr<normal, rw> Warteschlange, marke : Angemelde
     }
 }
 
+-- **ERGAENZT 2026-08-25: `Manifest` war ein Zeigerziel OHNE Deklaration.** Die Datei nannte
+-- den Namen an zwei Stellen und erklaerte ihn nirgends; `gabbro pruefe` sagte 0 Fehler.
+-- `N040` hat es an dem Tag gefunden, an dem ein Typname zum ersten Mal aufgeloest werden
+-- musste -- *dieselbe Gestalt wie die drei Zeugen weiter unten, die `S003` 2026-08-18 fand.*
+--
+-- Was es IST, sagt die Datei selbst an `eingabe_endet`: *„Ein Manifest traegt endlich viele
+-- Saetze, und `lenof` nennt ihre Zahl."* Ein `format` also -- `lenof` ueber einem
+-- Formatzeiger ist die Pufferlaenge, genau wie in `beispiele/03-format.gab`:85.
+format Manifest @version 1 endian little {
+    saetze : u32,
+    laenge : u32,
+}
+
 -- Die Schranke eines Durchgangs DARF von seinen Eingaben abhaengen -- damit ist eine
 -- Signatur ueber ein Manifest ehrlich beschreibbar statt falsch beschraenkt.
 impl fn manifest_pruefen(m : ptr<normal, r> Manifest) -> u32

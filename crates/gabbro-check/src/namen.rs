@@ -319,6 +319,9 @@ fn sammle_rufe(b: &Block, aus: &mut Vec<(String, Span)>) {
 ///   Zeile ueber ein Programm, das es nicht gibt.*
 fn pro_kern_und_gegenprobe(baum: &Programm, absagen: &mut Absagen) {
     let u = crate::umgebung::Umgebung::sammle(baum);
+    // **`N040` hangs here because the `Umgebung` already stands here.** Collecting it once
+    // costs a walk over the whole tree; collecting it twice would cost two.
+    typname_bekannt(baum, &u, absagen);
     let mut sonden = Vec::new();
     crate::fuer_jedes_item(baum, &mut |i| {
         if let ItemArt::Assume(a) = &i.art {
@@ -336,6 +339,85 @@ fn pro_kern_und_gegenprobe(baum: &Programm, absagen: &mut Absagen) {
 /// `beispiel::akkumulatoren::NKERNE` gebucht ist -- und meldete `N014` an einer richtigen
 /// Zeile. *Dieselbe Klasse wie der `typ_von_ort`-Fund vom 2026-08-17: ein Blick in die Karte,
 /// der den Modulweg wegliesz.*
+/// **`N040` -- a type name that does not exist, and the checker CONFIRMED it.**
+///
+/// Measured 2026-08-25 on `messung/fragmente/F01.gab`: `Allok` (:311) and `PhysAllocator`
+/// (:200, :265) stand there as pointer targets and are **declared nowhere**.
+///
+/// ```text
+/// extern fn nimm(a : ptr<normal, rw> Allok) …
+/// impl fn f(a : ptr<normal, rw+own> PhysAllocator) … { nimm(a); }
+///
+/// $ gabbro pruefe ptr.gab      ->  3 Items, 0 Fehler, 0 Hinweise
+/// $ gabbro emit  ptr.gab       ->  struct Allok;  struct PhysAllocator;  (kein C001)
+/// $ cc -Werror -c ptr.c        ->  incompatible pointer type
+/// ```
+///
+/// **This is not a false rejection but its counterpart: a false CONFIRMATION.** The checker
+/// says "fine", the emitter writes C, and only the foreign compiler finds the mistake. *A
+/// pass that holds two DIFFERENT undeclared names to be compatible has looked at neither.*
+///
+/// The cause sits in `umgebung::typexpr`: the `find_map` over `Traegerart::ALLE` falls back
+/// to `Typ::Unbekannt` when no kind matches -- and **`Unbekannt` fell nowhere, it rode along
+/// as an empty entry.** The comment at that site says it itself about an earlier case: *"a
+/// filled map is no evidence of a complete map."*
+///
+/// **Reported at the MENTION, not at the declaration** -- there is none there.
+fn typname_bekannt(baum: &Programm, u: &crate::umgebung::Umgebung, absagen: &mut Absagen) {
+    fn im_typ(
+        t: &TypExpr,
+        modul: &str,
+        u: &crate::umgebung::Umgebung,
+        absagen: &mut Absagen,
+    ) {
+        match t {
+            TypExpr::Pfad(p) => {
+                if !matches!(u.typ_von_ausdruck_decl(modul, t), crate::typen::Typ::Unbekannt) {
+                    return;
+                }
+                let Some(letzt) = p.teile.last() else { return };
+                absagen.schiebe(
+                    Absage::fehler(
+                        "N040",
+                        letzt.span,
+                        format!("`{}` names no type", p.text()),
+                    )
+                    .mit_notiz(
+                        "a type name resolves to a `type`, a `table`, a `format`, a \
+                         `device`, a `walk` bound or a `reason` -- and this one to none of \
+                         them",
+                    )
+                    .mit_notiz(
+                        "without this the emitter writes a C forward declaration and the \
+                         mistake surfaces at the foreign compiler, as an incompatible \
+                         pointer -- a checker that CONFIRMS is worse than one that refuses",
+                    ),
+                );
+            }
+            TypExpr::Feld(a) => im_typ(&a.element, modul, u, absagen),
+            TypExpr::Zeiger(z) => im_typ(&z.ziel, modul, u, absagen),
+            TypExpr::Verbund(fs, _) => {
+                for f in fs {
+                    im_typ(&f.typ.typ, modul, u, absagen);
+                }
+            }
+            _ => {}
+        }
+    }
+    crate::fuer_jedes_item_im_modul(baum, &mut |i, modul| match &i.art {
+        ItemArt::Funktion(f) => {
+            for pa in &f.parameter {
+                im_typ(&pa.typ, modul, u, absagen);
+            }
+            if let Some(e) = &f.ergebnis {
+                im_typ(e, modul, u, absagen);
+            }
+        }
+        ItemArt::Statisch(x) => im_typ(&x.typ, modul, u, absagen),
+        _ => {}
+    });
+}
+
 fn lauf_pro_kern(
     items: &[Item],
     pfad: &str,

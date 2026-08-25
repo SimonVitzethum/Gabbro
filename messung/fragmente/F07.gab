@@ -5,6 +5,19 @@ module caprock::bringup {
 -- der sie verdoppelt, sind zwei Kerne, die beide glauben, sie booten allein.
 linear ghost type BootPhase;
 
+-- **ERGAENZT 2026-08-25, und damit faellt eine Behauptung dieses Ordners.** `README.md`
+-- fuehrte F7 als *„war schon ein Programm"* -- ergaenzt: nichts. Das stimmte nicht: `Text`
+-- steht als Zeigerziel da und ist nirgends erklaert. **`N040` hat es gefunden, und der
+-- Durchstich lief die ganze Zeit darueber hinweg** -- der Erzeuger schrieb eine
+-- C-Vorwaertsdeklaration, `cc -Werror` war zufrieden, und die Zahl `123456` stimmte.
+--
+-- > *Ein Durchstich misst, was er sieht.* Er sah einen Typ, den er nie bekommen hatte --
+-- > dieselbe Gestalt wie `beispiele/14`, wo der C-TREIBER `struct Bericht` selbst hinschrieb.
+--
+-- Ein `opaque type` ueber `u8` ist die ehrliche Form: die Konsole bekommt Bytes, und was sie
+-- BEDEUTEN, entscheidet der Gerufene -- dessen Rumpf Gabbro nie sieht.
+opaque type Text = u8;
+
 -- `roh` heisst: vor der MMU. Atomics sind hier nicht wohldefiniert, also ist die Konsole
 -- sperrfrei -- und das ist eine EIGENSCHAFT DER PHASE, nicht des Geraets.
 extern fn melde_roh(text : ptr<code, r> Text) -> u32

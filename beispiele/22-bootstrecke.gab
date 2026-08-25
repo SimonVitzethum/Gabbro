@@ -66,6 +66,13 @@ static mut faeden       : u32 = 0;
 -- HERSTELLEN muss -- nicht, was er anfassen darf. *Der Unterschied ist der ganze Punkt:
 -- `effects { writes mmu }` erlaubt einen leeren Rumpf, `ensures mmu_an_zahl == 1` nicht.*
 
+-- **ERGAENZT 2026-08-25: `Text` war ein Zeigerziel OHNE Deklaration**, gefunden von `N040`.
+-- Ein `opaque type` ueber `u8` ist die ehrliche Form: die Konsole bekommt Bytes, und was sie
+-- BEDEUTEN, entscheidet der Gerufene -- dessen Rumpf Gabbro nie sieht. *Der Zeiger traegt den
+-- Raum (`code`) und das Recht (`r`); mehr sagt diese Deklaration nicht, und mehr weiss sie
+-- auch nicht.*
+opaque type Text = u8;
+
 -- `roh` heisst: vor der MMU. Atomics sind hier nicht wohldefiniert, also ist die Konsole
 -- sperrfrei -- und das ist eine EIGENSCHAFT DER PHASE, nicht des Geraets. Sie macht keinen
 -- Schritt: melden veraendert die Strecke nicht.

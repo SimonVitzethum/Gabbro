@@ -535,14 +535,14 @@ impl<'a> Pruefer<'a> {
     /// | `return R::F;` | die Fehlerrueckgabe -- `M122` haelt den Kanal dazu |
     /// | `match e { … }` | die Fallunterscheidung -- `M123`/`M125` halten sie geschlossen |
     /// | `a == b` / `a != b` | der Vergleich -- `M124` (Typhaelfte) haelt die Deklaration |
-    /// | `f(R::F)` an `f(x : R)` | **der BERICHT, seit 2026-08-25** -- und genau dafuer ist die Zahl in einer `reason`-Zeile da |
+    /// | `f(R::F)` at `f(x : R)` | **the REPORT, since 2026-08-25** -- and that is exactly what the number in a `reason` line is for |
     ///
     /// Klammern zaehlen nicht mit: `return (R::F);` ist dieselbe Stellung.
     ///
-    /// **Die vierte Tuer ist strukturell wie die drei davor.** Sie fragt nicht den
-    /// Typpruefer, sondern schlaegt die Signatur des Gerufenen nach und verlangt dort
-    /// `Typ::Grund(n)` mit demselben `n`. *`nimm(R::F)` an `nimm(x : u32)` faellt weiter* --
-    /// eine der sieben Stellungen der Messung von 2026-08-21.
+    /// **The fourth door is structural like the three before it.** It does not ask the type
+    /// checker; it looks up the callee's signature and requires `Typ::Grund(n)` there with
+    /// the same `n`. *`nimm(R::F)` at `nimm(x : u32)` still falls* -- one of the seven
+    /// positions of the 2026-08-21 measurement.
     fn grundstellung(&mut self, s: &Stmt, lage: &Lage) {
         // **Ein Grund steht in ZWEI Gestalten da**, und beide muessen erfasst sein:
         // geschrieben als `R::F`, und gebunden als das `e` eines `let … else`. *Die zweite
@@ -558,8 +558,8 @@ impl<'a> Pruefer<'a> {
         };
         /// Steigt in einen Ausdruck ab. `erlaubt` sagt, ob an DIESER Stelle ein Grund
         /// stehen darf; ein Vergleich macht seine beiden Seiten erlaubt, alles andere
-        /// nicht -- **ausser einem Argument, dessen Parameter GENAU diesen Grund erklaert**
-        /// (die vierte Tuer, `argument_erlaubt`).
+        /// not -- **except an argument whose parameter declares EXACTLY this reason**
+        /// (the fourth door, `argument_erlaubt`).
         fn steige(
             e: &Expr,
             erlaubt: bool,
@@ -580,9 +580,9 @@ impl<'a> Pruefer<'a> {
                     steige(b, true, ist_grund, argument_erlaubt, aus);
                 }
                 // **Ein Ruf MITTEN in einem Ausdruck** -- `let x = melde(S::Ok) + 1;`. Ohne
-                // diesen Arm faende die vierte Tuer nur die Anweisungsform, und ein Ruf an
-                // einer Ausdrucksstelle bliebe eine falsche Ablehnung. *Genau die Haelfte,
-                // die man uebersieht, weil die Messung an Anweisungen anfaengt.*
+                // this arm the fourth door would find only the statement form, and a call
+                // at an expression site would stay a false rejection. *Exactly the half one
+                // overlooks, because the measurement starts at statements.*
                 ExprArt::Ruf(r) => {
                     for (i, a) in r.argumente.iter().enumerate() {
                         steige(a, argument_erlaubt(r, i, a), ist_grund, argument_erlaubt, aus);
@@ -595,36 +595,36 @@ impl<'a> Pruefer<'a> {
                 }
             }
         }
-        // **Die VIERTE Tuer, und sie ist STRUKTURELL geblieben** (2026-08-25, W22).
+        // **The FOURTH door, and it stayed STRUCTURAL** (2026-08-25, W22).
         //
         // Gemessen als falsche Ablehnung eines KORREKTEN Programms: `melde(Status::Ok)` an
-        // `extern fn melde(st : Status)` fiel als `M124`, obwohl der Parameter genau der
-        // `reason` ist, dessen Wert uebergeben wird. **Sechs Stellen in F3 und F5** -- und
-        // das ist die Stellung, fuer die die Zahl in einer `reason`-Zeile ueberhaupt da ist:
-        // *damit ein BERICHT sie nennen kann.* Ein Melder ist der Bericht.
+        // `extern fn melde(st : Status)` fell as `M124`, although the parameter is exactly
+        // the `reason` whose value is passed. **Six sites in F3 and F5** -- and this is the
+        // position the number in a `reason` line exists for at all: *so that a REPORT can
+        // name it.* A reporter IS the report.
         //
-        // **Und die Regel bleibt trotzdem strukturell** -- das ist der Punkt, an dem diese
-        // Tuer sich von der typweisen Fassung unterscheidet, die der Satz `v1.grundwert`
-        // ausdruecklich verworfen hat (*„eine Regel, die dem Typpruefer vertraut, haette
-        // fuenf von sieben gefangen"*). Sie fragt **nicht**, ob irgendein Pass den Ausdruck
-        // fuer vertraeglich haelt; sie schlaegt die DEKLARATION des Gerufenen nach und
-        // verlangt dort `Typ::Grund(n)` mit demselben `n`. Ein `_`-Arm ueber `ExprArt` kann
-        // daran nichts vorbeilassen: die Antwort haengt an der Signatur, nicht am Wert.
+        // **And the rule stays structural nonetheless** -- that is where this door differs
+        // from the type-wise version the statement `v1.grundwert` expressly rejected (*"a
+        // rule that trusted the type checker would have caught five of seven"*). It does
+        // **not** ask whether some pass considers the expression compatible; it looks up the
+        // callee's DECLARATION and requires `Typ::Grund(n)` there with the same `n`. No `_`
+        // arm over `ExprArt` can let anything past it: the answer hangs on the signature,
+        // not on the value.
         //
-        // *`nimm(HolFehler::Leer)` an `nimm(x : u32)` faellt weiter* -- und das war eine der
-        // sieben Stellungen, die die Messung vom 2026-08-21 als still durchgehend fand.
+        // *`nimm(HolFehler::Leer)` at `nimm(x : u32)` still falls* -- and that was one of
+        // the seven positions the 2026-08-21 measurement found slipping through silently.
         let argument_erlaubt = |r: &Ruf, i: usize, a: &Expr| -> bool {
             let Some(gesucht) = grundname_von(a, lage) else { return false };
             let CallTarget::Path(pf) = &r.ziel else {
-                // Ein Ruf ueber einen `fn`-Zeiger: die Signatur steht am TYP des Ortes,
-                // und `N036` fuehrt dort die Wirkungswoerter. **Hier wird nicht geraten.**
+                // A call through a `fn` pointer: the signature stands at the place's TYPE,
+                // and `N036` carries the effect words there. **Nothing is guessed here.**
                 return false;
             };
             let Some(sig) = self.u.funktion(&self.modul, pf) else { return false };
-            // **Beide Namen VOLL QUALIFIZIEREN, bevor sie verglichen werden.** `R::F`
-            // nennt den Grund kurz, `Typ::Grund` fuehrt ihn lang -- *dieselbe Falle, die in
-            // diesem Ordner schon dreimal zugeschlagen hat: eine qualifizierte Karte, mit
-            // einem blossen Namen befragt, antwortet immer nein.*
+            // **Fully qualify BOTH names before comparing them.** `R::F` names the reason
+            // short, `Typ::Grund` carries it long -- *the same trap that has struck three
+            // times in this folder: a qualified map, queried with a bare name, always
+            // answers no.*
             let voll = self
                 .u
                 .grund(&self.modul, &gesucht)
@@ -4000,8 +4000,8 @@ fn breite_wort(n: &str) -> bool {
     )
 }
 
-/// Der `reason`, den ein Ausdruck NENNT -- als geschriebener `R::F` oder als eine Bindung,
-/// die auf einen Grund zeigt. **Beide Gestalten, denn `let … else` bindet die zweite.**
+/// The `reason` an expression NAMES -- written as `R::F`, or as a binding that points at a
+/// reason. **Both shapes, because `let … else` binds the second one.**
 fn grundname_von(e: &Expr, lage: &Lage) -> Option<String> {
     match &e.art {
         ExprArt::Grund { grund, .. } => Some(grund.text.clone()),

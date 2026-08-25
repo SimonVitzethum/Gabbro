@@ -56,21 +56,21 @@ pub enum Traegerart {
     Format,
     Geraet,
     Walk,
-    /// **`reason R` als TYP eines Parameters -- und bis zum 2026-08-25 fehlte er hier.**
+    /// **`reason R` as the TYPE of a parameter -- and until 2026-08-25 it was missing here.**
     ///
-    /// Der Kommentar an der Aufloesungsstelle sagt, der `match` habe *„keinen `_`-Zweig:
-    /// eine neue Traegerart ist ein UEBERSETZUNGSFEHLER an jeder Aufloesungsstelle"*. Er
-    /// hat auch keinen -- aber das `find_map` DAVOR faellt auf `Typ::Unbekannt` zurueck,
-    /// wenn KEINE Traegerart passt, und ein `reason` passte auf keine.
+    /// The comment at the resolution site says the `match` has *"no `_` arm: a new carrier
+    /// kind is a COMPILE ERROR at every resolution site"*. It has none -- but the `find_map`
+    /// BEFORE it falls back to `Typ::Unbekannt` when NO carrier kind matches, and a `reason`
+    /// matched none.
     ///
-    /// > *Damit war `st : Status` an einem `extern fn` `Unbekannt`* -- und jede Regel, die
-    /// > auf den Typ eines solchen Parameters sieht, schwieg. **Nicht weil sie nichts
-    /// > sagen wollte, sondern weil ihr die Flaeche entzogen war.**
+    /// > *So `st : Status` at an `extern fn` was `Unbekannt`* -- and every rule that looks at
+    /// > such a parameter's type stayed silent. **Not because it had nothing to say, but
+    /// > because its surface had been withheld.**
     ///
-    /// Gefunden auf dem Weg zu `M124`s vierter Tuer: die Stellungsregel ist ABSICHTLICH
-    /// strukturell, *„weil eine Regel, die dem Typpruefer vertraut, fuenf von sieben
-    /// gefangen haette"* -- und der Grund dafuer stand hier. Sechste Blindstellenklasse,
-    /// dritte Instanz.
+    /// Found on the way to `M124`'s fourth door: the position rule is DELIBERATELY
+    /// structural, *"because a rule that trusted the type checker would have caught five of
+    /// seven"* -- and the reason for that stood here. Sixth blind-spot class, third
+    /// instance.
     Grund,
 }
 
@@ -83,8 +83,8 @@ impl Traegerart {
         Traegerart::Format,
         Traegerart::Geraet,
         Traegerart::Walk,
-        // **Zuletzt, damit die Aufloesung sich sonst nicht bewegt.** Ein `reason` verdeckt
-        // damit keinen gleichnamigen Traeger, den es heute schon gibt.
+        // **Last, so that resolution does not move otherwise.** A `reason` thereby shadows
+        // no same-named carrier that already exists today.
         Traegerart::Grund,
     ];
 }
@@ -1070,10 +1070,10 @@ impl Umgebung {
                         Traegerart::Format | Traegerart::Geraet | Traegerart::Walk => {
                             Typ::Verbundname(k)
                         }
-                        // **Der Name ist VOLL QUALIFIZIERT** -- `kandidaten` liefert den
-                        // Schluessel, unter dem `gruende` ihn fuehrt, und `m1.rs`:1474 baut
-                        // `Typ::Grund` aus derselben Quelle. *Zwei Wege zum selben Typ
-                        // muessen denselben Namen tragen, sonst vergleicht `==` nie gleich.*
+                        // **The name is FULLY QUALIFIED** -- `kandidaten` yields the key
+                        // `gruende` carries it under, and `m1.rs` builds `Typ::Grund` from
+                        // the same source. *Two roads to the same type must carry the same
+                        // name, or `==` never compares equal.*
                         Traegerart::Grund => Typ::Grund(k),
                     })
             }

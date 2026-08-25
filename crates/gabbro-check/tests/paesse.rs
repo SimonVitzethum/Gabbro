@@ -229,19 +229,19 @@ fn fehlende_wirkungen_fallen() {
     faellt_mit("impl fn f() { }", "E001");
     faellt_nicht("impl fn f() effects { pure } { }");
     // `spec fn` hat keine Laufzeitwirkung -- fuer sie ist die Klausel freigestellt.
-    faellt_nicht("spec fn p(c : T) -> bool = c.x;");
+    faellt_nicht("type T = { x : bool, }; spec fn p(c : T) -> bool = c.x;");
 }
 
 #[test]
 fn pure_neben_anderen_wirkungen_faellt() {
-    faellt_mit("impl fn f(c : T) effects { pure, writes c } { }", "E002");
-    faellt_nicht("impl fn f(c : T) effects { writes c } { }");
+    faellt_mit("type T = { x : bool, }; impl fn f(c : T) effects { pure, writes c } { }", "E002");
+    faellt_nicht("type T = { x : bool, }; impl fn f(c : T) effects { writes c } { }");
 }
 
 #[test]
 fn praedikatsrumpf_nur_fuer_spec() {
-    faellt_mit("impl fn p(c : T) -> bool effects { pure } = c.x;", "E004");
-    faellt_nicht("spec fn p(c : T) -> bool effects { pure } = c.x;");
+    faellt_mit("type T = { x : bool, }; impl fn p(c : T) -> bool effects { pure } = c.x;", "E004");
+    faellt_nicht("type T = { x : bool, }; spec fn p(c : T) -> bool effects { pure } = c.x;");
 }
 
 // -- Ueber die Liste selbst -------------------------------------------------------------

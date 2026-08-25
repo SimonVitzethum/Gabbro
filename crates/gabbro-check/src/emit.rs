@@ -2281,9 +2281,9 @@ fn uebergang(d: &Device, x: &Uebergang, aus: &mut String, u: &Namen, absagen: &m
     };
     let leer = HashMap::new();
     let felder = g.felder.get(&reg).unwrap_or(&leer);
-    // **Die Wortbreite in BITS** -- sie entscheidet, was ein Ganzwort-Zug SAGT. Siehe
-    // `schrittbits`: bis zum 2026-08-25 sagte er „diese Bits" statt „das ganze Wort", und
-    // bei `-> 0` waren das keine.
+    // **The word width in BITS** -- it decides what a whole-word step SAYS. See
+    // `schrittbits`: until 2026-08-25 it said "these bits" instead of "the whole word", and
+    // at `-> 0` those were none.
     let wortbits: u32 = match breite.as_str() {
         "uint8_t" => 8,
         "uint16_t" => 16,
@@ -2356,23 +2356,23 @@ fn schrittbits(
         }
         // `DEVICE_STATUS: ACK -> ACK | DRIVER` -- eine Veroderung von Feldnamen.
         //
-        // **Ein Ganzwort-Zug sagt das GANZE WORT, nicht die gesetzten Bits** (2026-08-25).
-        // Bis heute stand hier `Some((n, n))`: „geaendert" war der neue Wert selbst -- und
-        // damit bei `-> 0` **leer**. An einem `mirrors`-Geraet erzeugte das
+        // **A whole-word step says the WHOLE WORD, not the bits it sets** (2026-08-25).
+        // Until today this read `Some((n, n))`: "changed" was the new value itself -- and so
+        // at `-> 0` it was **empty**. On a `mirrors` device that produced
         //
         //     (_s & ~0) | 0     ==     _s
         //
-        // *ein „Reset", der den Spiegel zurueckschreibt und nichts zuruecksetzt* -- 0 Fehler,
-        // 0 Absagen, ein Zeugnis, das nichts sagt. **Eine stille falsche Absenkung ist
-        // schlimmer als eine Absage**, denn sie sieht aus wie ein Ergebnis.
+        // *a "reset" that writes the mirror back and resets nothing* -- 0 errors, 0
+        // refusals, a certificate that says nothing. **A silent wrong lowering is worse than
+        // a refusal**, because it looks like a result.
         //
-        // Der Fehler haengt NICHT an einem Platzhalter fuer den Vorzustand: `{ GCMD: 0 -> 0 }`
-        // erzeugte byteidentisch dasselbe. Er ist heute unerreichbar, weil kein Korpusprogramm
-        // einen Ganzwort-Zug auf einem `mirrors`-Geraet schreibt -- *und genau darum gehoert er
-        // berichtigt, BEVOR eine Notation ihn erreichbar macht.*
+        // The defect does NOT hang on a placeholder for the pre-state: `{ GCMD: 0 -> 0 }`
+        // produced byte-identically the same. It is unreachable today because no corpus
+        // program writes a whole-word step on a `mirrors` device -- *and that is exactly why
+        // it belongs corrected BEFORE a notation makes it reachable.*
         //
-        // Mit der Vollmaske ist `mirrors` fuer einen Ganzwort-Zug folgerichtig wirkungslos:
-        // wer das ganze Wort nennt, uebernimmt nichts aus dem Spiegel.
+        // With the full mask `mirrors` is consistently without effect for a whole-word
+        // step: whoever names the whole word carries nothing over from the mirror.
         None => match bitwort(&s.nach, felder) {
             Some(n) => {
                 let vollmaske: u128 = if wortbits >= 128 {

@@ -1,0 +1,24 @@
+-- erwartet: N040
+-- **Ein Zeigerziel, das es nicht gibt -- und der Pruefer BESTAETIGTE es.**
+--
+-- Das ist die andere Richtung als die meisten Dateien in diesem Ordner: keine falsche
+-- Ablehnung, sondern eine falsche BESTAETIGUNG. Gemessen am 2026-08-25 an
+-- `messung/fragmente/F01.gab`: `Allok` und `PhysAllocator` stehen dort als Zeigerziele und
+-- sind nirgends deklariert.
+--
+--     $ gabbro pruefe ptr.gab      ->  3 Items, 0 Fehler, 0 Hinweise
+--     $ gabbro emit  ptr.gab       ->  struct Allok;  struct PhysAllocator;   (kein C001)
+--     $ cc -Werror -c ptr.c        ->  incompatible pointer type
+--
+-- **Der Pruefer sagte „in Ordnung", der Erzeuger schrieb C, und erst der fremde Uebersetzer
+-- fand den Fehler.** Ein Pass, der zwei verschiedene undeklarierte Namen fuer vertraeglich
+-- haelt, hat sie beide gar nicht angesehen.
+--
+-- > Die Ursache sass in `umgebung::typexpr`: das `find_map` ueber die Traegerarten faellt
+-- > auf `Typ::Unbekannt` zurueck, wenn keine passt -- *und `Unbekannt` fiel nirgends auf, es
+-- > lief als leerer Eintrag mit.*
+module p {
+
+extern fn nimm(a : ptr<normal, rw> Allok) effects { writes a } costs <= 1 ops;
+
+}

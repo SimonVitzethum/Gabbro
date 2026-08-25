@@ -1433,6 +1433,35 @@ pub const SPERREN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m1.rs; SYNTAX.md (`reasonval`)",
     },
     Satz {
+        name: "namen.typname",
+        kennungen: &["N040"],
+        aussage: "A type name in a declaration resolves to a declared carrier -- a `type`, \
+                  a `table`, a `format`, a `device`, a `walk` bound or a `reason`. A name \
+                  that resolves to none of them is refused where it is USED.",
+        vorbehalt: "**This is the opposite direction from most of this register: a false \
+                    CONFIRMATION.** Measured 2026-08-25 at `messung/fragmente/F01.gab`: \
+                    `ptr<normal, rw> Allok` and `ptr<normal, rw+own> PhysAllocator` name \
+                    types that exist nowhere; `gabbro pruefe` said *0 errors*, the emitter \
+                    wrote `struct Allok;` without a `C001`, and the mistake surfaced at the \
+                    FOREIGN compiler as an incompatible pointer. *A checker that confirms \
+                    is worse than one that refuses.*\n\
+                    **And the first run of the rule paid for itself three times over the \
+                    CLEAN corpus** -- `Manifest` (`beispiele/04`), `Bericht` \
+                    (`beispiele/14`), `Text` (`beispiele/22`), plus one in `SYNTAX.md`'s own \
+                    grammar example. The sharpest is `beispiele/14`: it is DURCHGESTOCHEN, \
+                    and it ran green because the C DRIVER wrote `struct Bericht { unsigned \
+                    daten; };` itself. *The test program supplied what the Gabbro program \
+                    failed to declare.*\n\
+                    **What it does NOT do** (W10): it looks at parameters, results and \
+                    `static` types. A type named only inside a body -- in a `let` \
+                    annotation -- is not yet reached, and the rule says so instead of \
+                    looking complete.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/295-zeigerziel-ohne-typ.gab; four real defects found \
+                      on the first run over the clean corpus and one in SYNTAX.md:1387.",
+        fundstelle: "crates/gabbro-check/src/namen.rs::typname_bekannt",
+    },
+    Satz {
         name: "namen.kanal_ohne_einloeser",
         kennungen: &["N034"],
         aussage: "A function that declares `or R` has a body that can actually produce a \

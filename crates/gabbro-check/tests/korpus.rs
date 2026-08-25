@@ -185,6 +185,16 @@ const BENANNT: &[&str] = &[
     // > Sprache hat ihn nicht.** Ihn hier stillschweigend zuzulassen hiesse, die
     // > Stellungsregel fuer den einen Fall aufzugeben, fuer den sie am wenigsten gilt.
     "M124",
+    // **`N040` -- and over the FROZEN excerpt it is the EXPECTED answer.**
+    //
+    // An excerpt names types it does not declare; that is its nature, and it has stood
+    // counted out since 2026-08-20 in `messung/fragmente/README.md`: *"41 sites name 20
+    // names nobody declares."* Until 2026-08-25 nothing but that tally SAID so -- the
+    // checker walked over them with 0 errors and the emitter wrote C forward declarations.
+    //
+    // > *The number was known and the checker was silent* -- the same shape as a clause that
+    // > parses and is dropped. **Now it speaks, and the tally has a reader.**
+    "N040",
 ];
 
 #[test]

@@ -21,6 +21,18 @@ module beispiel::paarung {
 -- und weil sie freiwillig ist, steht hier keine.
 atomic FERTIG : bool release;
 
+-- **ERGAENZT 2026-08-25: `Bericht` war ein Zeigerziel OHNE Deklaration** -- gefunden von
+-- `N040`, und der Fund ist schaerfer als er aussieht: **diese Datei ist DURCHGESTOCHEN.**
+-- `lauf "beispiel14"` erzeugt, uebersetzt unter `-Werror` bei `-O0` und `-O2`, fuehrt aus
+-- und vergleicht `0 1` -- und lief die ganze Zeit, weil der C-TREIBER
+-- `struct Bericht { unsigned daten; };` selbst hinschrieb.
+--
+-- > *Das Testprogramm lieferte nach, was das Gabbro-Programm nicht erklaerte.* Der Erzeuger
+-- > schrieb eine Vorwaertsdeklaration, der Uebersetzer war zufrieden, und die Zahl stimmte.
+-- > **Ein Durchstich misst, was er sieht** -- und er sah einen Typ, den er nicht bekommen
+-- > hatte. Derselbe Zug wie bei den drei Zeugen in `04-schleifen.gab`, nur eine Ebene tiefer.
+type Bericht = { daten : u32, };
+
 -- Die veroeffentlichende Haelfte.
 impl fn melden(b : ptr<normal, rw> Bericht)
     effects { writes b, writes FERTIG }

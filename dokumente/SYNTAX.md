@@ -1360,6 +1360,14 @@ formatting existing in the language core.
 ## 14. Boot phase, machine state, assembler
 
 ```gabbro
+-- The three names this block SPEAKS ABOUT, so that it is a translation unit and not a
+-- sketch. **Added 2026-08-25:** `N040` refuses a type name that resolves to nothing, and
+-- this block named three -- *a grammar document whose examples break the grammar is the
+-- most expensive kind of prose: it looks like evidence.*
+opaque type Pa = u64;
+linear ghost type BootPhase;
+type Context = { sp : u64, };
+
 raw fn phys_write(p: Pa, w: u64) requires BootPhase effects { writes phys };
 fn boot_end(t: BootPhase) effects { consumes t, writes code_map };
 
