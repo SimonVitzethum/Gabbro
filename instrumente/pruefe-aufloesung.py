@@ -1,34 +1,34 @@
 #!/usr/bin/env python3
-"""**Die qualifizierte Karte, direkt befragt -- dieselbe Falle zum dritten Mal.**
+"""**A qualified map queried directly -- the same trap for the third time.**
 
-Die Karten der `Umgebung` sind QUALIFIZIERT verschluesselt: `a::b::f`, nicht `f`. Wer eine
-davon mit einem BLOSSEN Namen befragt, bekommt in einem `module`-Block **immer `None`** --
-und das sieht nicht wie ein Fehler aus, sondern wie eine Regel, die eben nicht greift.
+The maps of `Umgebung` are keyed QUALIFIED: `a::b::f`, not `f`. Whoever queries one of them
+with a BARE name gets **`None` every time** inside a `module` block -- and that does not look
+like an error, it looks like a rule that simply does not bite.
 
-    self.u.funktionen.get(name)            -> None, immer
-    self.u.globale.contains_key(basis)     -> false, immer
+    self.u.funktionen.get(name)            -> None, always
+    self.u.globale.contains_key(basis)     -> false, always
 
-DREIMAL DIESELBE FALLE, UND JEDES MAL ANDERS ENTDECKT
-------------------------------------------------------
-    2026-08-?? `M103`      `globale.get("Kappenraum")` traf nie; die Indexschranke sagte nichts.
-    2026-08-25 `M108`      die Verfeinerung von `aufruf_toetet_fakten` war da und tat NICHTS.
-    2026-08-25 dieselbe    `ist_weltname` ueber `globale.contains_key` -- im selben Zug nochmal.
+THREE TIMES THE SAME TRAP, EACH TIME DISCOVERED DIFFERENTLY
+-----------------------------------------------------------
+    2026-08-??  `M103`     `globale.get("Kappenraum")` never hit; the index bound said nothing.
+    2026-08-25  `M108`     the refinement of `aufruf_toetet_fakten` was there and did NOTHING.
+    2026-08-25  the same   `ist_weltname` over `globale.contains_key` -- again in the same run.
 
-> **Ein Fehler, der sich als „kein Befund" tarnt, wird nicht durch eine Notiz gefunden.**
-> Beim zweiten Mal reicht ein Kommentar; beim dritten gehoert eine Pruefung her.
+> **An error disguised as „no finding" is not caught by a note.** The second time a comment
+> is enough; the third time a check belongs here.
 
-WAS DIESES INSTRUMENT NICHT TUT
---------------------------------
-Es sagt **nicht**, dass eine Stelle falsch ist. Ob ein bloss uebergebener Name falsch ist,
-haengt daran, ob der Aufrufer schon qualifiziert hat -- das steht nicht in der Zeile. Es
-sortiert in drei Faecher und fuehrt eine RATSCHE ueber dem ersten:
+WHAT THIS INSTRUMENT DOES NOT DO
+---------------------------------
+It does **not** say a site is wrong. Whether a bare name is wrong depends on whether the
+caller already qualified -- that is not in the line. It sorts into three trays and carries a
+RATCHET over the first:
 
-    Fach 1  ein bloss uebergebener Name auf einer qualifizierten Karte   <- die Ratsche
-    Fach 2  ein berechneter Schluessel -- nicht aus der Zeile zu entscheiden
-    Fach 3  ein modulbewusster Aufloeser (`u.funktion`, `suche_global`, `ist_weltname`)
+    Tray 1  a bare name on a qualified map            <- the ratchet
+    Tray 2  a computed key -- not decidable from the line
+    Tray 3  a module-aware resolver (`u.funktion`, `suche_global`, `ist_weltname`)
 
-*Die Zahl in Fach 1 darf fallen, nicht steigen.* Wer eine Stelle nach Fach 3 zieht, senkt
-sie; wer eine neue schreibt, hebt sie und faellt hier.
+*The number in tray 1 may fall, not rise.* Moving a site to tray 3 lowers it; writing a new
+one raises it and falls here.
 """
 import collections
 import pathlib
@@ -39,25 +39,25 @@ W = pathlib.Path(__file__).resolve().parent.parent
 QUELLEN = sorted((W / "crates" / "gabbro-check" / "src").glob("*.rs"))
 UMGEBUNG = W / "crates" / "gabbro-check" / "src" / "umgebung.rs"
 
-# **Die Ratsche.** Gemessen am 2026-08-25, nach der `M108`-Reparatur: 27 Stellen, davon
-# **25 im Erzeuger**. Das ist kein Zufall und auch keine Entwarnung -- `emit.rs` laeuft nach
-# allen Pruefungen und arbeitet stellenweise auf schon aufgeloesten Namen. *Die zwei in
-# `m1.rs` sind die, die ein Pruefer sind.*
+# **The ratchet.** Measured 2026-08-25, after the `M108` repair: 27 sites, **25 of them in
+# the emitter**. That is neither an accident nor an all-clear -- `emit.rs` runs after every
+# check and works in places on already resolved names. *The two in `m1.rs` are the ones that
+# are a CHECKER.*
 RATSCHE = 27
 
-# Ein berechneter Schluessel: eine Variable, der man ansieht, dass sie gebaut wurde.
+# A computed key: a variable one can see was built.
 BERECHNET = re.compile(r"^&?(schluessel|schl|k|q|key|pfad|voll|qual)\b")
-# Ein Aufloeser statt einer Karte.
+# A resolver instead of a map.
 AUFLOESER = re.compile(r"\bu\.(funktion|suche_global|verbundfelder|ist_weltname|typ_von_ort)\(")
 
 
 def qualifizierte_karten(text):
-    """Welche Karten werden mit `q(...)`/`qualifiziere(...)` gefuellt?"""
+    """Which maps are filled with `q(...)`/`qualifiziere(...)`?"""
     return sorted(set(re.findall(r"(?:self\.)?([a-z_]+)\.insert\((?:q|qualifiziere)\(", text)))
 
 
 def stellen(karten, quellen):
-    """(fach1, fach2, fach3) -- je eine Liste von (datei, zeile, text)."""
+    """(tray1, tray2, tray3) -- one list of (file, line, text) each."""
     muster = re.compile(
         r"\bu\.(" + "|".join(karten) + r")\.(?:get|contains_key)\(([^)]*)\)"
     )
@@ -80,8 +80,8 @@ def stellen(karten, quellen):
 
 
 def sprechprobe():
-    """**In beide Richtungen, an erfundenen Quellen.** Ein Instrument, das nur die eigenen
-    Dateien liest, misst, wie gut sie zu ihm passen."""
+    """**In both directions, on invented sources.** An instrument that reads only its own
+    files measures how well they fit it."""
     import tempfile
 
     umg = 'fn s(&mut self) { self.funktionen.insert(q(&f.name.text), sig); }\n'

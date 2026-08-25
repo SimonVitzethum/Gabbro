@@ -2400,10 +2400,10 @@ impl<'a> Pruefer<'a> {
         }
     }
 
-    /// **Ein Ruf toetet nur, was der Gerufene ANFASSEN kann** (2026-08-25).
+    /// **A call kills only what the callee can TOUCH** (2026-08-25).
     ///
-    /// `aufruf_toetet_fakten` darunter loescht jede nichtlokale Tatsache an JEDEM Ruf --
-    /// auch an einem `pure`. Gemessen an einer Tabelle mit `backed`:
+    /// `aufruf_toetet_fakten` below deletes every non-local fact at EVERY call -- even at a
+    /// `pure` one. Measured over a table with `backed`:
     ///
     /// ```gabbro
     /// narrow i to 0 ..< hinterlegt else { return 0; }
@@ -2411,24 +2411,22 @@ impl<'a> Pruefer<'a> {
     /// return h.slots[i].kopf;        -- M108: „nothing shows it is BACKED"
     /// ```
     ///
-    /// **Drei von vier Faellen waren falsche Ablehnungen** -- `pure`, ein fremdes `writes`,
-    /// und nur der vierte, der wirklich `hinterlegt` schreibt, fiel zu Recht. *Wer nach
-    /// jedem Ruf neu verengen muss, schreibt die Verengung so oft, bis sie Zeremonie ist.*
+    /// **Three of four cases were false rejections** -- `pure`, a foreign `writes`, and only
+    /// the fourth, which really writes `hinterlegt`, fired rightly. *Whoever has to narrow
+    /// again after every call writes the narrowing until it is ceremony.*
     ///
-    /// **Die obere Schranke steht schon da:** `effects` des Gerufenen, und `E008` gleicht
-    /// sie gegen dessen Huelle ab. Was dort nicht als Schreibung steht, kann der Gerufene
-    /// nicht schreiben.
+    /// **The upper bound already stands there:** the callee's `effects`, which `E008`
+    /// reconciles against its hull. What is not declared as a write cannot be written.
     ///
-    /// > **Und diese Genauigkeit ruht auf `E010`.** Dessen Reichweite ist eine GEZOGENE
-    /// > Linie -- bekannter Weltzustand, und Lesungen ueber Parameter fehlen. Darum wird
-    /// > verfeinert **nur**, wenn jede geschriebene Stelle ein bekannter Weltname ist;
-    /// > sonst faellt die Regel auf die grobe zurueck. *Unvollstaendigkeit kostet hier
-    /// > Genauigkeit, nicht Gueltigkeit.*
+    /// > **And this precision rests on `E010`.** Its reach is a DRAWN line -- known world
+    /// > state, and reads over parameters are missing. So the refinement applies **only**
+    /// > when every written place is a known world name; otherwise the rule falls back to
+    /// > the coarse one. *Incompleteness costs precision here, not soundness.*
     fn rufe_toeten_fakten(&self, pfade: &[&Pfad], lage: &mut Lage) {
         let Some(geschrieben) = self.geschriebene_orte(pfade) else {
             return self.aufruf_toetet_fakten(lage);
         };
-        let beruehrt = |k: &str| {
+        let touches = |k: &str| {
             geschrieben.iter().any(|w| {
                 k == w
                     || k.starts_with(&format!("{w}."))
@@ -2446,24 +2444,24 @@ impl<'a> Pruefer<'a> {
             };
             schluessel
                 .iter()
-                .all(|k| self.ist_lokal(k) || !beruehrt(k))
+                .all(|k| self.ist_lokal(k) || !touches(k))
         });
     }
 
-    /// Die Stellen, die diese Gerufenen schreiben koennen -- oder `None`, wenn die Frage
-    /// nicht sicher beantwortbar ist und die grobe Regel gelten muss.
+    /// The places these callees can write -- or `None` when the question cannot be
+    /// answered safely and the coarse rule has to apply.
     fn geschriebene_orte(&self, pfade: &[&Pfad]) -> Option<Vec<String>> {
         if pfade.is_empty() {
             return None;
         }
         let mut aus: Vec<String> = Vec::new();
         for pf in pfade {
-            // **Die Schluessel sind QUALIFIZIERT** (`a::b::f`), der Rufname ist es nicht --
-            // `u.funktion` loest modulbewusst auf. Ein `funktionen.get(name)` mit dem
-            // blossen Namen trifft in einem `module`-Block NIE und faellt still auf die
-            // grobe Regel zurueck: die Verfeinerung waere dagewesen und haette **nichts**
-            // getan. *Genau die Sorte Fehler, die wie „kein Befund" aussieht -- dieselbe,
-            // die `M103` schon einmal an `globale.get` hatte.*
+            // **The keys are QUALIFIED** (`a::b::f`), the call name is not --
+            // `u.funktion` resolves module-aware. A `funktionen.get(name)` with the bare
+            // name NEVER hits inside a `module` block and falls back silently to the coarse
+            // rule: the refinement would have been there and done **nothing**. *Exactly the
+            // kind of error that looks like „no finding" -- the same one `M103` already had
+            // at `globale.get`.*
             let sig = self.u.funktion(&self.modul, pf)?;
             if sig.effect_list.is_empty() {
                 return None;
@@ -2473,15 +2471,14 @@ impl<'a> Pruefer<'a> {
                     .iter()
                     .find_map(|pfx| e.strip_prefix(pfx))
                 {
-                    // Nur ein BEKANNTER Weltname darf fein behandelt werden -- fuer alles
-                    // andere vergleicht `E008` bloss die ART, und `writes a` deckt dort
+                    // Only a KNOWN world name may be treated finely -- for everything
+                    // else `E008` compares only the KIND, and there `writes a` covers
                     // `writes b`.
                     let basis = o.split(['.', '[']).next().unwrap_or(o);
-                    // **Die Wirkungsliste nennt die Parameternamen des GERUFENEN.** Ein
-                    // `writes h.slots` spricht ueber dessen `h`, nicht ueber ein `h`, das
-                    // hier draussen steht -- und traefe ein Parametername zufaellig einen
-                    // Weltnamen, wuerde diese Regel ueber die falsche Stelle urteilen.
-                    // *Dann gilt die grobe.*
+                    // **The effect list names the CALLEE's parameter names.** A
+                    // `writes h.slots` speaks about ITS `h`, not about an `h` out here --
+                    // and if a parameter name happened to match a world name, this rule
+                    // would judge the wrong place. *Then the coarse one applies.*
                     if sig.parameter.iter().any(|(n, _)| n == basis) {
                         return None;
                     }
@@ -2494,7 +2491,7 @@ impl<'a> Pruefer<'a> {
                     && e != "diverges"
                     && e != "pure"
                 {
-                    return None; // eine Wirkungsart, die diese Regel nicht kennt
+                    return None; // an effect kind this rule does not know
                 }
             }
         }
@@ -3587,9 +3584,8 @@ fn trennt(c: Option<u8>) -> bool {
 }
 
 /// Steht irgendwo in diesem Ausdruck ein Aufruf?
-/// Der Name eines Rufes -- leer, wenn er indirekt ist. **Ein leerer Rueckgabewert fuehrt
-/// auf die grobe Regel**, denn ein `fn(…)`-Zeiger nennt keine Wirkungsliste, die man lesen
-/// koennte.
+/// The name of a call -- empty when it is indirect. **An empty return leads to the coarse
+/// rule**, because a `fn(…)` pointer names no effect list one could read.
 fn rufnamen_im_ruf(r: &Ruf) -> Vec<&Pfad> {
     r.path().map(|p| vec![p]).unwrap_or_default()
 }

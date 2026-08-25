@@ -2998,7 +2998,8 @@ fn m2_zaehlt_genau_einmal_auf_allen_vier_wegen() {
     );
     assert!(!t4b.contains("L109"), "im Zweig verbraucht ist in Ordnung:\n{t4b}");
 }
-/// **Der fünfte Weg: ein Zweig, der `return`t, hat trotzdem verbraucht** (2026-08-25).
+
+/// **The fifth way: a branch that `return`s HAS consumed** (2026-08-25).
 ///
 /// ```gabbro
 /// impl fn f(p : Parked, b : bool) -> u32 effects { consumes p } {
@@ -3006,25 +3007,24 @@ fn m2_zaehlt_genau_einmal_auf_allen_vier_wegen() {
 /// }
 /// ```
 ///
-/// gab **`L101` — „`p` is listed under `consumes` but is consumed on no path"**. Auf
-/// *beiden* Wegen verbraucht, und der Prüfer sagte: auf keinem. **Eine falsche Ablehnung
-/// eines korrekten Programms** — dieselbe Klasse wie «U005»: der Programmierer kann nichts
-/// reparieren, denn es ist nichts kaputt.
+/// gave **`L101` -- „`p` is listed under `consumes` but is consumed on no path"**. Consumed
+/// on *both* ways, and the checker said: on none. **A false rejection of a correct
+/// program** -- the same class as «U005»: the programmer can repair nothing, because
+/// nothing is broken.
 ///
-/// Zwei Fehler steckten übereinander, und der zweite wurde erst sichtbar, als der erste
-/// weg war:
+/// Two errors sat on top of each other, and the second became visible only once the first
+/// was gone:
 ///
-/// 1. `abgleich` stieg bei *„alle Zweige enden"* vorzeitig aus und ließ `zust` auf dem
-///    Stand von vorher — der Verbrauch war fort.
-/// 2. `endet()` fragte nur nach der **Art der letzten Anweisung**. Ein Block, dessen
-///    letzte Anweisung ein `if` ist, in dem jeder Zweig zurückkehrt, galt als
-///    weiterlaufend — und ging mit verbrauchtem Wert gegen den impliziten Sonst-Weg in den
-///    Abgleich. *Solange (1) den Verbrauch wegwarf, stimmten die Wege zufällig überein.*
+/// 1. `abgleich` exited early at *„every branch ends"* and left `zust` at the state from
+///    before -- the consumption was gone.
+/// 2. `endet()` asked only for the **kind of the last statement**. A block whose last
+///    statement is a branch in which every path returns counted as running on -- and
+///    entered the reconciliation with a consumed value against the implicit else path.
+///    *As long as (1) threw the consumption away, the paths agreed by accident.*
 ///
-/// **Und die Gegenrichtung steht darunter:** ein Zweig, der ohne Verbrauch zurückkehrt,
-/// ist weiterhin ein Leck. Die Reparatur übernimmt nur, worin **alle** endenden Wege
-/// übereinstimmen — sonst wäre aus der falschen Ablehnung ein falsches Durchwinken
-/// geworden.
+/// **And the counter-direction stands below it:** a branch that returns without consuming
+/// is still a leak. The repair adopts only what **all** ending paths agree on -- otherwise
+/// the false rejection would have become a false pass.
 #[test]
 fn ein_zweig_der_zurueckkehrt_hat_trotzdem_verbraucht() {
     let kopf = "module m {\n\
@@ -3037,17 +3037,17 @@ fn ein_zweig_der_zurueckkehrt_hat_trotzdem_verbraucht() {
         a.zeige(&q)
     };
 
-    // 1. Beide Zweige kehren zurueck, beide verbrauchen. **Muss durchgehen.**
+    // 1. Both branches return, both consume. **Must pass.**
     let t1 = melden(
         "impl fn f(p : Parked, b : bool) -> u32 in 0 .. 3 effects { consumes p } \
          costs <= 16 ops { if b { return wecken(p); } else { return wecken(p); } }\n",
     );
     assert!(
         !t1.contains("L101") && !t1.contains("L103") && !t1.contains("L104"),
-        "auf beiden Wegen genau einmal:\n{t1}"
+        "exactly once on both ways:\n{t1}"
     );
 
-    // 2. **Geschachtelt** -- der aeussere Zweig endet auf jedem INNEREN Weg. Muss durchgehen.
+    // 2. **Nested** -- the outer branch ends on every INNER way. Must pass.
     let t2 = melden(
         "impl fn f(p : Parked, b : bool, c : bool) -> u32 in 0 .. 3 effects { consumes p } \
          costs <= 24 ops { if b { if c { return wecken(p); } else { return wecken(p); } } \
@@ -3055,41 +3055,42 @@ fn ein_zweig_der_zurueckkehrt_hat_trotzdem_verbraucht() {
     );
     assert!(
         !t2.contains("L101") && !t2.contains("L103") && !t2.contains("L104"),
-        "der aeussere Zweig verlaesst die Funktion auf jedem Weg:\n{t2}"
+        "the outer branch leaves the function on every way:\n{t2}"
     );
 
-    // 3. **Die Gegenrichtung: ein endender Zweig OHNE Verbrauch bleibt ein Leck.**
+    // 3. **The counter-direction: an ending branch WITHOUT a consumption is still a leak.**
     let t3 = melden(
         "impl fn f(p : Parked, b : bool) -> u32 in 0 .. 3 effects { consumes p } \
          costs <= 16 ops { if b { return wecken(p); } else { return 2; } }\n",
     );
     assert!(
         t3.contains("L101"),
-        "der Sonst-Weg verlaesst die Funktion mit lebendigem `p`:\n{t3}"
+        "the else path leaves the function with `p` still alive:\n{t3}"
     );
 
-    // 4. Und ein DOPPELTER Verbrauch im Zweig faellt weiterhin an `L104` -- und nur daran.
+    // 4. And a DOUBLE consumption in a branch still falls at `L104` -- and only there.
     let t4 = melden(
         "impl fn f(p : Parked, b : bool) -> u32 in 0 .. 3 effects { consumes p } \
          costs <= 24 ops { if b { return wecken(p); } \
          else { let x = wecken(p); return wecken(p); } }\n",
     );
-    assert!(t4.contains("L104"), "zweimal im selben Zweig:\n{t4}");
-    assert!(!t4.contains("L101"), "das falsche `L101` daneben ist weg:\n{t4}");
+    assert!(t4.contains("L104"), "twice in the same branch:\n{t4}");
+    assert!(!t4.contains("L101"), "the false `L101` beside it is gone:\n{t4}");
 }
-/// **Der `can_fail`-Rumpf war ein Rumpf ohne Leser** (2026-08-25).
+
+/// **The `can_fail` body was a body without a reader** (2026-08-25).
 ///
-/// Der Wirkungspass lief über `ItemArt::Funktion` und sonst nichts. Derselbe Ruf gab damit
-/// zwei verschiedene Antworten — im `impl fn` «E008» und «K001», im Probenrumpf **null
-/// Fehler**. Und weil `consumes` eine Wirkung ist, stand dort auch ein *Double-Free* mit
-/// grünem Haken: `nimm(m); nimm(m);` — M2 sieht diesen Block ebenfalls nicht.
+/// The effect pass walked `ItemArt::Funktion` and nothing else. The same call therefore
+/// gave two different answers -- «E008» and «K001» in an `impl fn`, and **zero errors** in
+/// the probe body. And because `consumes` is an effect, a *double free* stood there with a
+/// green tick: `nimm(m); nimm(m);` -- M2 does not see this block either.
 ///
-/// «N027» verbot schon die Anweisungsformen (Zuweisung, `locks`, `publishes`, `exchange`)
-/// und sprach dabei den Grundsatz aus, der hier weitergeht: *„Ein Rumpf ohne Vertrag darf
-/// nichts tun, wofür es einen Vertrag braucht."* **Ein RUF war davon nicht erfasst.**
+/// «N027» already forbade the statement forms (assignment, `locks`, `publishes`,
+/// `exchange`) and stated the principle this continues: *„a body without a contract may not
+/// do what needs one."* **A CALL was not covered by it.**
 ///
-/// > Keine neue Kennung — derselbe Satz wie im `impl fn`, nur mit einem Vertrag, der nicht
-/// > dasteht, sondern gilt: **eine Probe ist `pure` von Bauart wegen.**
+/// > No new code -- the same sentence as in an `impl fn`, only with a contract that is not
+/// > written down but holds: **a probe is `pure` by construction.**
 #[test]
 fn ein_can_fail_rumpf_ist_pure_von_bauart_wegen() {
     let melden = |rumpf: &str, zusatz: &str| -> String {
@@ -3119,27 +3120,28 @@ fn ein_can_fail_rumpf_ist_pure_von_bauart_wegen() {
         a.zeige(&q)
     };
 
-    // 1. Ein Ruf, der SCHREIBT -- im `impl fn` faellt er, hier fiel er nicht.
+    // 1. A call that WRITES -- in an `impl fn` it falls; here it did not.
     let t1 = melden("let g = teuer(); if g > 3 { return false; } return true;", "");
-    assert!(t1.contains("E008"), "ein Ruf mit `writes` im Probenrumpf:\n{t1}");
+    assert!(t1.contains("E008"), "a call with `writes` in a probe body:\n{t1}");
 
-    // 2. **Und damit ist der Double-Free unschreibbar geworden.** `consumes` ist eine
-    //    Wirkung; der Ruf faellt, bevor M2 ihn haette sehen muessen.
+    // 2. **And with that the double free has become unwritable.** `consumes` is an
+    //    effect; the call falls before M2 would have had to see it.
     let t2 = melden("let m = hol(); nimm(m); nimm(m); return true;", "");
-    assert!(t2.contains("E008"), "`consumes` im Probenrumpf:\n{t2}");
+    assert!(t2.contains("E008"), "`consumes` in a probe body:\n{t2}");
 
-    // 3. **Die Gegenrichtung, und sie ist die wichtigere:** lesen, rechnen, vergleichen,
-    //    zurueckgeben -- genau das, was der Korpus tut -- bleibt erlaubt.
+    // 3. **The counter-direction, and it is the more important one:** read, compute,
+    //    compare, return -- exactly what the corpus does -- stays allowed.
     let t3 = melden("if liest() > 3 { return false; } return true;", "");
     assert!(
         !t3.contains("E008"),
-        "eine Probe DARF lesen, sonst pruefte sie nichts:\n{t3}"
+        "a probe MAY read, otherwise it would check nothing:\n{t3}"
     );
 }
-/// **Ein Ruf tötete jede Tatsache — auch ein `pure`** (2026-08-25).
+
+/// **A call killed every fact -- even a `pure` one** (2026-08-25).
 ///
-/// `aufruf_toetet_fakten` löschte an JEDEM Ruf jeden Fakt über eine nichtlokale Stelle.
-/// Über einer Tabelle mit `backed` heißt das:
+/// `aufruf_toetet_fakten` deleted every fact about a non-local place at EVERY call. Over a
+/// table with `backed` that means:
 ///
 /// ```gabbro
 /// narrow i to 0 ..< hinterlegt else { return 0; }
@@ -3147,19 +3149,19 @@ fn ein_can_fail_rumpf_ist_pure_von_bauart_wegen() {
 /// return h.slots[i].kopf;        -- M108: „nothing shows it is BACKED"
 /// ```
 ///
-/// **Drei von vier Fällen waren falsche Ablehnungen** — `pure`, ein fremdes `writes`, und
-/// nur der vierte, der wirklich `hinterlegt` schreibt, fiel zu Recht. *Wer nach jedem Ruf
-/// neu verengen muss, schreibt die Verengung so oft, bis sie Zeremonie ist.*
+/// **Three of four cases were false rejections** -- `pure`, a foreign `writes`, and only
+/// the fourth, which really writes `hinterlegt`, fired rightly. *Whoever has to narrow again
+/// after every call writes the narrowing until it is ceremony.*
 ///
-/// Die obere Schranke stand schon da: die `effects` des Gerufenen, die «E008» gegen dessen
-/// Hülle abgleicht. **Zwei Auflösungsfallen lagen auf dem Weg**, und beide sahen aus wie
-/// „kein Befund": `funktionen` und `globale` sind **qualifiziert** verschlüsselt, ein
-/// `get(name)` mit dem bloßen Namen trifft in einem `module`-Block nie und fällt still auf
-/// die grobe Regel zurück. *Die Verfeinerung wäre dagewesen und hätte nichts getan.*
+/// The upper bound already stood there: the callee's `effects`, which «E008» reconciles
+/// against its hull. **Two resolution traps lay on the way**, and both looked like „no
+/// finding": `funktionen` and `globale` are keyed **qualified**, so a `get(name)` with the
+/// bare name never hits inside a `module` block and falls back silently to the coarse rule.
+/// *The refinement would have been there and done nothing.*
 ///
-/// > Verfeinert wird **nur**, wenn jede geschriebene Stelle ein bekannter Weltname und
-/// > kein Parametername des Gerufenen ist; sonst gilt die grobe Regel. Unvollständigkeit
-/// > kostet hier Genauigkeit, nicht Gültigkeit.
+/// > Refined **only** when every written place is a known world name and not a parameter
+/// > name of the callee; otherwise the coarse rule applies. Incompleteness costs precision
+/// > here, not soundness.
 #[test]
 fn ein_reiner_ruf_toetet_keine_tatsache() {
     let melden = |rumpf: &str| -> String {
@@ -3187,30 +3189,27 @@ fn ein_reiner_ruf_toetet_keine_tatsache() {
         )
     };
 
-    // 1. Ohne Ruf -- die Grundlage, sie ging immer.
+    // 1. Without a call -- the baseline, it always passed.
     let t1 = melden(&fn_mit("", ""));
-    assert!(!t1.contains("M108"), "die Verengung traegt:\n{t1}");
+    assert!(!t1.contains("M108"), "the narrowing carries:\n{t1}");
 
-    // 2. **Ein `pure`-Ruf dazwischen.** Er kann nichts anfassen, also faellt nichts.
+    // 2. **A `pure` call in between.** It can touch nothing, so nothing falls.
     let t2 = melden(&fn_mit("", "rein();"));
-    assert!(!t2.contains("M108"), "`pure` faellt keine Tatsache:\n{t2}");
+    assert!(!t2.contains("M108"), "`pure` kills no fact:\n{t2}");
 
-    // 3. Ein Ruf, der etwas ANDERES schreibt.
+    // 3. A call that writes something ELSE.
     let t3 = melden(&fn_mit(", writes fremd", "schreibt_fremd();"));
-    assert!(!t3.contains("M108"), "`writes fremd` trifft `hinterlegt` nicht:\n{t3}");
+    assert!(!t3.contains("M108"), "`writes fremd` does not touch `hinterlegt`:\n{t3}");
 
-    // 4. **Die Gegenrichtung, und sie ist die, auf die es ankommt:** ein Ruf, der die
-    //    Hinterlegung schreibt, faellt die Tatsache -- sonst waere aus einer falschen
-    //    Ablehnung ein Fehlzugriff geworden.
+    // 4. **The counter-direction, and it is the one that matters:** a call that writes
+    //    the backing kills the fact -- otherwise a false rejection would have turned into
+    //    a faulty access.
     let t4 = melden(&fn_mit(", writes hinterlegt", "schrumpft();"));
     assert!(
         t4.contains("M108"),
-        "wer die Hinterlegung schreibt, nimmt die Verengung mit:\n{t4}"
+        "whoever writes the backing takes the narrowing with it:\n{t4}"
     );
 }
-
-
-
 
 /// **`decreases` war eine Namensprobe** («K009» geschärft, Rezension 2026-08-20).
 ///

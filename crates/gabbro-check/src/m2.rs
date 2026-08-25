@@ -420,11 +420,11 @@ fn gehe(
     }
 }
 
-/// Endet der Block auf jedem Weg? Dann traegt er nichts zum Abgleich bei.
+/// Does the block end on every path? Then it contributes nothing to the reconciliation.
 ///
-/// **Die Frage ist rekursiv, und sie war es nicht** (2026-08-25). Hier stand ein
-/// `matches!` ueber der ART der letzten Anweisung -- ein Block, dessen letzte Anweisung ein
-/// `if` ist, in dem JEDER Zweig zurueckkehrt, galt damit als weiterlaufend:
+/// **The question is recursive, and it was not** (2026-08-25). A `matches!` over the KIND
+/// of the last statement stood here -- so a block whose last statement is an `if` in which
+/// EVERY branch returns counted as running on:
 ///
 /// ```gabbro
 /// if b {
@@ -433,16 +433,16 @@ fn gehe(
 /// nimm(m);
 /// ```
 ///
-/// Der aeussere Zweig verlaesst die Funktion auf jedem Weg, wurde aber als lebendig in den
-/// Abgleich genommen -- mit `m` verbraucht, gegen den impliziten Sonst-Weg mit `m`
-/// lebendig. Ergebnis: `L103` *und* `L104` an einem korrekten Programm.
+/// The outer branch leaves the function on every path, yet it entered the reconciliation as
+/// live -- with `m` consumed, against the implicit else path with `m` alive. Result: `L103`
+/// *and* `L104` on a correct program.
 ///
-/// > Solange der vorzeitige Ausstieg in `abgleich` den Verbrauch wegwarf, war das
-/// > **verdeckt**: der innere `if` gab nichts weiter, also stimmten die Wege zufaellig
-/// > ueberein. *Zwei Fehler, die einander maskierten -- und der zweite wurde erst sichtbar,
-/// > als der erste behoben war.*
+/// > As long as the early exit in `abgleich` threw the consumption away, this was
+/// > **masked**: the inner `if` passed nothing on, so the paths agreed by accident. *Two
+/// > errors that hid each other -- and the second became visible only once the first was
+/// > repaired.*
 ///
-/// Ein `if` OHNE `sonst` endet nie: an ihm fuehrt immer ein Weg vorbei.
+/// An `if` WITHOUT an else never ends: there is always a way past it.
 fn endet(b: &Block, v: &Vertraege) -> bool {
     let Some(s) = b.anweisungen.last() else {
         return false;
@@ -468,7 +468,7 @@ fn abgleich(
 ) {
     let lebendige: Vec<_> = ergebnisse.iter().filter(|(_, endet)| !endet).collect();
     let Some((erste, _)) = lebendige.first() else {
-        // **Hier stand `return`, und damit ging der Verbrauch VERLOREN** (2026-08-25).
+        // **A `return` stood here, and with it the consumption was LOST** (2026-08-25).
         //
         // ```gabbro
         // impl fn f(m : Marke, b : bool) -> u64 effects { consumes m } {
@@ -476,27 +476,26 @@ fn abgleich(
         // }
         // ```
         //
-        // gab **`L101` -- „`m` is listed under `consumes` but is consumed on no path"**.
-        // Auf BEIDEN Pfaden verbraucht, und der Pruefer sagte: auf keinem.
+        // gave **`L101` -- „`m` is listed under `consumes` but is consumed on no path"**.
+        // Consumed on BOTH paths, and the checker said: on none.
         //
-        // Die alte Notiz *„alle Zweige enden -- nichts abzugleichen"* war ueber den
-        // NACHFOLGEZUSTAND richtig -- der Code danach ist unerreichbar -- und ueber die
-        // PFLICHT falsch. `zust` blieb auf dem Stand von vorher stehen, und die Pruefung am
-        // Rumpfende las daraus, dass nie etwas verbraucht wurde.
+        // The old note *„every branch ends -- nothing to reconcile"* was right about the
+        // SUCCESSOR STATE -- the code after it is unreachable -- and wrong about the
+        // OBLIGATION. `zust` stayed at the state from before, and the check at the end of
+        // the body read from it that nothing was ever consumed.
         //
-        // > **Eine falsche Ablehnung eines korrekten Programms** -- dieselbe Klasse wie
-        // > `U005`. Ein Programmierer, der das trifft, kann nichts daran reparieren, denn
-        // > es ist nichts kaputt.
+        // > **A false rejection of a correct program** -- the same class as `U005`. A
+        // > programmer who hits this can repair nothing, because nothing is broken.
         //
-        // Uebernommen wird nur, worin ALLE endenden Zweige uebereinstimmen: verbraucht ein
-        // Zweig und ein anderer nicht, bleibt der Wert lebendig und `L101` faellt weiter --
-        // *dann ist es ein Leck auf dem einen Weg und keine falsche Ablehnung.*
+        // Adopted is only what ALL ending branches agree on: if one branch consumes and
+        // another does not, the value stays alive and `L101` still fires -- *then it is a
+        // leak on one path and not a false rejection.*
         for name in zust.keys().cloned().collect::<Vec<_>>() {
-            let auf_jedem_weg_verbraucht = !ergebnisse.is_empty()
+            let consumed_on_every_path = !ergebnisse.is_empty()
                 && ergebnisse
                     .iter()
                     .all(|(z, _)| z.get(&name).map(|e| e.0) == Some(Zustand::Verbraucht));
-            if auf_jedem_weg_verbraucht {
+            if consumed_on_every_path {
                 if let Some(e) = zust.get_mut(&name) {
                     e.0 = Zustand::Verbraucht;
                 }

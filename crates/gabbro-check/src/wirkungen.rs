@@ -55,33 +55,31 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     });
 }
 
-/// **Der `can_fail`-Rumpf traegt einen impliziten Vertrag, und der heisst `pure`**
-/// (2026-08-25).
+/// **The `can_fail` body carries an implicit contract, and it is `pure`** (2026-08-25).
 ///
-/// Dieser Pass lief ueber `ItemArt::Funktion` und sonst nichts. Derselbe Ruf gab darum
-/// zwei verschiedene Antworten:
+/// This pass walked `ItemArt::Funktion` and nothing else. The same call therefore gave two
+/// different answers:
 ///
 /// ```gabbro
 /// extern fn teuer() -> u32 in 0 .. 100 effects { writes zaehler } costs <= 5000 ops;
 ///
-/// impl fn f() -> bool …  { let g = teuer(); … }   -- E008 + K001
-/// check probe { … can_fail { let g = teuer(); … } … }   -- 0 Fehler
+/// impl fn f() -> bool …  { let g = teuer(); … }         -- E008 + K001
+/// check probe { … can_fail { let g = teuer(); … } … }   -- 0 errors
 /// ```
 ///
-/// `N027` verbietet im Probenrumpf schon die Anweisungsformen -- Zuweisung, `locks`,
-/// `publishes`, `exchange` -- und nennt dabei den Grundsatz, der hier weitergeht:
-/// *„Ein Rumpf ohne Vertrag darf nichts tun, wofuer es einen Vertrag braucht."*
-/// **Ein RUF war davon nicht erfasst**, und damit stand der ganze Wirkungsraum wieder offen.
+/// `N027` already forbids the STATEMENT forms in a probe body -- assignment, `locks`,
+/// `publishes`, `exchange` -- and states the principle this continues:
+/// *„a body without a contract may not do what needs one."*
+/// **A CALL was not covered by it**, and so the whole effect space stood open again.
 ///
-/// > **Und es schliesst mehr als die Wirkungen.** `consumes` ist eine Wirkung; ein Ruf, der
-/// > sie traegt, faellt hier. Damit kann im Probenrumpf kein linearer Wert mehr verbraucht
-/// > werden -- und das `nimm(m); nimm(m);`, das M2 dort nicht sah, ist unschreibbar
-/// > geworden. *Dieselbe Bauart wie `N036`: ein Pass, der sich auf eine Absage einen Pass
-/// > weiter vorn verlaesst.*
+/// > **And it closes more than the effects.** `consumes` is an effect; a call carrying it
+/// > falls here. No linear value can be consumed in a probe body any more -- the
+/// > `nimm(m); nimm(m);` that M2 does not see there has become unwritable. *The same
+/// > construction as `N036`: a pass relying on a refusal one pass earlier.*
 ///
-/// Keine neue Kennung: es ist derselbe Satz wie im `impl fn`, nur mit einem Vertrag, der
-/// nicht dasteht, sondern gilt. Was erlaubt bleibt, ist genau das, was der Korpus tut --
-/// `pure` und `reads`.
+/// No new code: it is the same sentence as in an `impl fn`, only with a contract that is
+/// not written down but holds. What stays allowed is exactly what the corpus does --
+/// `pure` and `reads`.
 fn probenrumpf(c: &Check, modul: &str, g: &crate::aufrufgraph::Graph, absagen: &mut Absagen) {
     let mut rufe: Vec<&Ruf> = Vec::new();
     sammle_rufe_im_block(&c.can_fail, &mut rufe);
@@ -118,8 +116,8 @@ fn probenrumpf(c: &Check, modul: &str, g: &crate::aufrufgraph::Graph, absagen: &
     }
 }
 
-/// Jeder Ruf im Block, ueber die erschoepfenden Laeufer aus `lib.rs` -- ein Ruf in
-/// Indexposition ist auch ein Ruf.
+/// Every call in the block, over the exhaustive walkers from `lib.rs` -- a call in index
+/// position is a call too.
 fn sammle_rufe_im_block<'a>(b: &'a Block, aus: &mut Vec<&'a Ruf>) {
     for s in &b.anweisungen {
         if let StmtArt::Ruf(r) = &s.art {

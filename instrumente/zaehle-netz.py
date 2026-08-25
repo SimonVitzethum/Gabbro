@@ -89,11 +89,11 @@ def bytes_c(h):
     return ", ".join(f"0x{h[i:i+2]}" for i in range(0, len(h), 2))
 
 
-# **`LC_ALL=C` an JEDEM Aufruf, nicht nur am `cc`.** Ein fremdes Werkzeug meldet im
-# Gebietsschema des Benutzers: unter `de_DE.UTF-8` sagt der Binder `Mehrfachdefinition von`
-# statt `multiple definition`. Hier entscheidet zwar der Ruecklaufwert und nicht der Text --
-# aber die `stderr`-Ausgabe daneben ist die Begruendung, die ein Mensch liest, und eine
-# Begruendung in wechselnder Sprache ist keine. Fuenfte Forderung in `pruefe-waechter.py`.
+# **`LC_ALL=C` at EVERY call, not only at the `cc`.** A foreign tool reports in the user's
+# locale: under a German locale the linker translates `multiple definition`, and a
+# `grep` for the English words then misses it. Here the return code decides and not the text -- but the `stderr`
+# output beside it is the reason a human reads, and a reason in a changing language is none.
+# Fifth requirement in `pruefe-waechter.py`.
 UMGEBUNG = {**os.environ, "LC_ALL": "C"}
 
 

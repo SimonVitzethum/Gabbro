@@ -29,12 +29,12 @@ Drei Forderungen, und sie stehen hier, weil keine von ihnen sich selbst durchset
    endete.
 4. **ARBEITSMENGE** -- neben dem Urteil steht, WIE VIEL angesehen wurde. *Ohne sie ist ein
    gruener Lauf von einem leeren nicht zu unterscheiden.*
-5. **GEBIETSSCHEMA** -- wer ein fremdes Werkzeug ruft und dessen MELDUNG liest, pinnt
-   `LC_ALL=C`. Am 2026-08-25 gemessen: unter `de_DE.UTF-8` sagt der Binder
-   `Mehrfachdefinition von`, nicht `multiple definition`. `pruefe-emission.sh` suchte das
-   englische Wort, fand es nicht und meldete *„der Binder faellt aus anderem Grund"* --
-   **einen Fehler, den es nicht gab.** Dieselbe Klasse wie `W16`: ein Werkzeug, das sein
-   eigenes Gebietsschema misst und dabei plausibel aussieht.
+5. **GEBIETSSCHEMA** -- whoever calls a foreign tool and reads its MESSAGE pins
+   `LC_ALL=C`. Measured 2026-08-25: under `de_DE.UTF-8` the linker says
+   `Mehrfachdefinition von`, not `multiple definition`. `pruefe-emission.sh` searched for
+   the English words, did not find them and reported *„der Binder faellt aus anderem
+   Grund"* -- **an error that did not exist.** The same class as `W16`: a tool that measures
+   its own locale and looks plausible doing it.
 
 **Zu (4) gehoert eine eigene Klasse, und sie hat am 2026-08-20 dreimal zugeschlagen:**
 
@@ -164,18 +164,18 @@ HAT_ROT = re.compile(r"sys\.exit\(\s*[1-9]|SystemExit\(\s*[1-9]|exit\s+1\b|retur
 # **Eine ARBEITSMENGE in der Ausgabe**: `N von M`, `N Dateien`, `N Stellen`. Statisch ist das
 # nur ein Hinweis; `--lauf` liest die wirkliche Ausgabe, und das ist die Haelfte, die zaehlt.
 ARBEIT = re.compile(r"\b\d+\s+(?:von|of)\s+\d+\b|\b\d+\s+[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß-]{3,}")
-# **Fuenfte Forderung: das GEBIETSSCHEMA.** Diese Werkzeuge melden uebersetzt -- wer sie
-# ruft, muss `LC_ALL=C` setzen, sonst misst er die Sprache des Benutzers.
+# **Fifth requirement: the LOCALE.** These tools report translated -- whoever calls them
+# must set `LC_ALL=C`, or they measure the user's language.
 #
-# **Der Name allein reicht als Erkennung NICHT.** `mutiere-pruefer.py` nennt `cc` neunmal in
-# Mutationsbeschreibungen und fuehrt nur `cargo test` aus -- ein Wortmuster meldet es rot,
-# und ein Waechter mit Fehlalarmen wird abgewoehnt. Gesucht wird darum die AUFRUFSTELLE:
-# in Python der Werkzeugname als Zeichenkette in einer Argumentliste, in der Schale am
-# Befehlsanfang und ohne Kommentarzeilen.
+# **The name alone is NOT enough as detection.** `mutiere-pruefer.py` mentions `cc` nine
+# times in mutation descriptions and runs only `cargo test` -- a word pattern reports it red,
+# and a guardian with false alarms gets ignored. So what is searched for is the CALL SITE:
+# in Python the tool name as a string in an argument list, in the shell at the start of a
+# command and without comment lines.
 UEBERSETZTE = "cc|gcc|clang|ld|nm|objdump|readelf"
 RUFT_UEBERSETZT_PY = re.compile(rf"""["'](?:{UEBERSETZTE})["']""")
-# `sort` ordnet und `date` formatiert nach Gebietsschema -- aber nur in der SCHALE. Pythons
-# `sorted` ordnet nach Kodepunkt und ist davon unberuehrt; die Forderung gilt dort nicht.
+# `sort` orders and `date` formats by locale -- but only in the SHELL. Python's `sorted`
+# orders by code point and is untouched by it; the requirement does not apply there.
 RUFT_UEBERSETZT_SH = re.compile(rf"(?m)^\s*(?:[!(]\s*)*(?:{UEBERSETZTE}|sort|date)\b")
 KOMMENTARZEILE = re.compile(r"(?m)^\s*#.*$")
 HAT_GEBIETSSCHEMA = re.compile(r"\bLC_ALL\b")
@@ -217,11 +217,12 @@ def sprechprobe():
            '# Sprechprobe: eine kaputte Eingabe MUSS fallen\n'
            'subprocess.run(["true"], timeout=5)\n'
            'sys.exit(1)\n')
-    # **`cc` statt `cargo`** -- damit die kaputte Quelle auch die FUENFTE verletzt: sie ruft
-    # ein Werkzeug, das uebersetzt meldet, und pinnt das Gebietsschema nicht.
+    # **`cc` instead of `cargo`** -- so the broken source violates the FIFTH one too: it
+    # calls a tool that reports translated and does not pin the locale.
     schlecht = 'import subprocess\nsubprocess.run(["cc", "-o", "a", "a.c"])\nprint("ok")\n'
-    # **Und die Gegenrichtung der fuenften:** dieselbe Quelle MIT `LC_ALL` darf sie nicht
-    # verletzen. Ohne diese Haelfte waere die Forderung ein Verbot von `cc`, keine Forderung.
+    # **And the counter-direction of the fifth:** the same source WITH `LC_ALL` must not
+    # violate it. Without this half the requirement would be a ban on `cc`, not a
+    # requirement.
     gut_lc = ('import subprocess, sys\n'
               '# Sprechprobe: eine kaputte Eingabe MUSS fallen\n'
               'subprocess.run(["cc", "-o", "a", "a.c"], timeout=5,\n'
@@ -234,8 +235,8 @@ def sprechprobe():
         a.write_text(gut, encoding="utf-8")
         b.write_text(schlecht, encoding="utf-8")
         c.write_text(gut_lc, encoding="utf-8")
-        # **Dritte Richtung: Prosa ueber `cc` ist kein Aufruf.** Genau der Fehlalarm, den
-        # `mutiere-pruefer.py` ausgeloest hat, bevor die Erkennung die Aufrufstelle suchte.
+        # **Third direction: prose about `cc` is not a call.** Exactly the false alarm
+        # `mutiere-pruefer.py` triggered before the detection looked for the call site.
         e = pathlib.Path(d) / "pruefe-prosa.py"
         e.write_text('import subprocess, sys\n'
                      '# Sprechprobe: `cc` und `ld` stehen hier nur im Text.\n'

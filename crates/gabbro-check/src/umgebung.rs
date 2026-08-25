@@ -360,12 +360,12 @@ impl Umgebung {
         self.suche(&self.funktionen, von, &pfad.text())
     }
 
-    /// **Bekannter Weltzustand** -- `static`, `atomic`, `table`, `device`, `state`.
+    /// **Known world state** -- `static`, `atomic`, `table`, `device`, `state`.
     ///
-    /// Dieselbe gezogene Linie wie `E010`, und **modulbewusst**: die Schluessel sind
-    /// qualifiziert, ein `globale.contains_key("fremd")` trifft in einem `module`-Block
-    /// nie. *Dieselbe Falle wie bei `M103` und bei `funktionen` -- eine Karte direkt zu
-    /// befragen sieht richtig aus und antwortet immer nein.*
+    /// The same drawn line as `E010`, and **module-aware**: the keys are qualified, so a
+    /// `globale.contains_key("fremd")` never hits inside a `module` block. *The same trap as
+    /// in `M103` and in `funktionen` -- querying a map directly looks right and always
+    /// answers no.*
     pub fn ist_weltname(&self, von: &str, name: &str) -> bool {
         self.suche(&self.globale, von, name).is_some()
             || self.suche(&self.tabellen, von, name).is_some()

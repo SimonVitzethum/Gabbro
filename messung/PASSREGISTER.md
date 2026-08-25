@@ -16,7 +16,7 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # das Regis
 
 | | | Befehl |
 |---|---:|---|
-| Sätze im Register | **54** | `gabbro paesse` |
+| Sätze im Register | **55** | `gabbro paesse` |
 | davon `measured` | **46** | ein Giftprobenfall oder eine gefangene Mutation |
 | davon **`ARGUED`** | **2** | ein Korrektheitsargument ist aufgeschrieben — [`K001`](K001.md), [`H006`](H006.md). *Das erste fand eine Unterzählung um Faktor 3; der dritte Versuch ([`V2`](V2.md)) fand statt einer Messung den [Nichtdeterminismus](DETERMINISMUS.md) und blieb `CONJECTURED`* |
 | davon `CONJECTURED` | **6** | nichts misst sie |

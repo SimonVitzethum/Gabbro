@@ -807,3 +807,59 @@ ist keiner.
 offensteht, hat **keinen** fachlichen Grund. Sie ist **ortsgebunden**, und der erste Schritt
 ist eine Übertragung und kein Werkzeug. *Das stand nirgends, weil niemand den Ort aufgeschrieben
 hatte.*
+
+## W22 — Eine **falsche Ablehnung** meldet niemand, und darum misst man sie an der Asymmetrie des Korpus
+
+Die Fehlerklassen dieses Ordners gingen fast alle in eine Richtung: eine Regel schwieg, eine
+Notiz behauptete, eine Klausel hatte keinen Leser. **Die Gegenrichtung — der Prüfer lehnt ein
+KORREKTES Programm ab — ist bis zum 2026-08-24 in 492 Commits genau nullmal aufgetreten**, und
+seither dreimal in zwei Tagen:
+
+```text
+2026-08-24  U005   der Rang loeste im leeren Modulpfad nicht auf -> `rank 0`, nirgends in der Quelle
+2026-08-25  M2     auf BEIDEN Wegen verbraucht, gemeldet als „auf keinem"
+2026-08-25  M108   ein `pure`-Ruf toetete die Verengung; 3 von 4 Faellen falsch
+```
+
+**Zu streng zu sein ist harmlos für die Zusage und teuer für die Benutzbarkeit** — und es ist
+die Fehlerart, die niemand meldet, *weil der Programmierer sein Programm umschreibt statt den
+Prüfer zu verdächtigen.* Genau das ist an der Halde passiert: die `narrow`-Fassung wurde durch
+ein `if` ersetzt, und der Fehler wäre in die Sprachbeschreibung eingegangen.
+
+**Die Ursache ist strukturell und messbar** (2026-08-25):
+
+```text
+Giftproben (muessen FALLEN)      275 Dateien, 6937 Zeilen
+Beispiele  (muessen DURCHGEHEN)   50 Dateien, 4564 Zeilen
+                                  --------------------------
+                                  5,5 zu 1
+```
+
+```bash
+# W7: die Zahlen kommen von hier, nicht aus dem Gedaechtnis.
+ls beispiele/gift/*.gab | wc -l ; cat beispiele/gift/*.gab | wc -l
+ls beispiele/*.gab      | wc -l ; cat beispiele/*.gab      | wc -l
+# und die Historie:
+git log --format=%h | while read h; do git log -1 --format=%B $h \
+  | grep -qiE 'falsche Ablehnung|KORREKTES Programm|falsche Absage' && echo $h; done
+```
+
+*Der Ordner misst „fällt es" fünfeinhalbmal so oft wie „geht es durch".* Eine Giftprobe kann
+eine falsche Ablehnung **prinzipiell nicht** finden — sie prüft, dass etwas fällt.
+
+**Was daraus folgt, in dieser Reihenfolge:**
+
+1. **Ziel 3 bekommt eine zweite Achse.** `gabbro zeremonie` misst, *wie viel man schreiben
+   muss*; das sagt nichts darüber, *wie oft Richtiges abgelehnt wird*. **Eine falsche
+   Ablehnung ist Zeremonie in ihrer teuersten Form:** sie kostet nicht eine Zeile, sondern
+   einen Umbau — und hinterlässt eine Sprachbeschreibung, die eine Umgehung als Idiom führt.
+2. **Der Positivkorpus ist die einzige Sonde dieser Klasse.** Jede Reparatur, die eine falsche
+   Ablehnung behebt, bringt ihre Probe als *korrektes* Programm mit — nicht als Gift. Die drei
+   oben tun das.
+3. **Wer eine Regel umschreibt, statt sie zu befragen, hat den Befund verworfen.** Der Reflex,
+   ein abgelehntes Programm anders zu formulieren, ist genau der Moment, in dem diese Klasse
+   verschwindet. *Vor dem Umschreiben steht die Frage, warum die Regel greift.*
+
+> **Und die Zahl 0-von-492 ist selbst ein Befund über das Messwerkzeug, nicht über den
+> Prüfer.** Drei Fälle an zwei Tagen sind nicht plötzlich entstanden; sie sind sichtbar
+> geworden, als jemand anfing, *richtige* Programme zu schreiben und laufen zu lassen.
