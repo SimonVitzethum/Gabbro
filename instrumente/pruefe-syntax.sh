@@ -2,6 +2,13 @@
 # Haelt die Beispiele gegen dokumente/SYNTAX.md. Mit Sprechprobe in BEIDE Richtungen --
 # ein Pruefer, der nicht fehlschlagen kann, ist kein Pruefer.
 set -uo pipefail
+
+# **`LC_ALL=C` -- und das ist kein Schoenheitsfehler.** Fremde Werkzeuge melden im
+# Gebietsschema des Benutzers: unter `de_DE.UTF-8` sagt der Binder `Mehrfachdefinition von`
+# statt `multiple definition`, und ein `grep -q` darauf trifft nicht. Dieselbe Klasse wie
+# `W16` -- ein Werkzeug, das sein eigenes Gebietsschema misst und dabei plausibel aussieht.
+export LC_ALL=C
+
 cd "$(dirname "$0")/.."
 
 # Woerter, die es laut dokumente/SYNTAX.md ABSICHTLICH nicht gibt.

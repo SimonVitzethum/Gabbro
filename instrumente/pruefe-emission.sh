@@ -26,6 +26,13 @@
 #      `linear ghost type`, und die Frage, die dieser Lauf beantwortet, lautet **was kostet
 #      die Phasendisziplin zur Laufzeit** -- Antwort: nichts.
 set -euo pipefail
+
+# **`LC_ALL=C` -- und das ist kein Schoenheitsfehler.** Fremde Werkzeuge melden im
+# Gebietsschema des Benutzers: unter `de_DE.UTF-8` sagt der Binder `Mehrfachdefinition von`
+# statt `multiple definition`, und ein `grep -q` darauf trifft nicht. Dieselbe Klasse wie
+# `W16` -- ein Werkzeug, das sein eigenes Gebietsschema misst und dabei plausibel aussieht.
+export LC_ALL=C
+
 W="$(cd "$(dirname "$0")/.." && pwd)"
 ARB="$(mktemp -d)"
 trap 'rm -rf "$ARB"' EXIT

@@ -27,6 +27,7 @@ DIE DRITTE PROBE IST DIE WICHTIGSTE
 die Eigenschaft, auf der der ganze Empfangsweg ruht -- und die einzige der drei, die eine
 falsche Faltung nicht ueberlebt.
 """
+import os
 import pathlib
 import re
 import subprocess
@@ -88,9 +89,18 @@ def bytes_c(h):
     return ", ".join(f"0x{h[i:i+2]}" for i in range(0, len(h), 2))
 
 
+# **`LC_ALL=C` an JEDEM Aufruf, nicht nur am `cc`.** Ein fremdes Werkzeug meldet im
+# Gebietsschema des Benutzers: unter `de_DE.UTF-8` sagt der Binder `Mehrfachdefinition von`
+# statt `multiple definition`. Hier entscheidet zwar der Ruecklaufwert und nicht der Text --
+# aber die `stderr`-Ausgabe daneben ist die Begruendung, die ein Mensch liest, und eine
+# Begruendung in wechselnder Sprache ist keine. Fuenfte Forderung in `pruefe-waechter.py`.
+UMGEBUNG = {**os.environ, "LC_ALL": "C"}
+
+
 def lauf(befehl, **kw):
     try:
-        return subprocess.run(befehl, cwd=W, capture_output=True, text=True, timeout=FRIST, **kw)
+        return subprocess.run(befehl, cwd=W, capture_output=True, text=True, timeout=FRIST,
+                              env=UMGEBUNG, **kw)
     except subprocess.TimeoutExpired:
         print(f"ABBRUCH: `{' '.join(map(str, befehl))}` ueberschritt {FRIST} s -- "
               "es wurde NICHTS gemessen.", file=sys.stderr)

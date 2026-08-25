@@ -29,6 +29,12 @@ Drei Forderungen, und sie stehen hier, weil keine von ihnen sich selbst durchset
    endete.
 4. **ARBEITSMENGE** -- neben dem Urteil steht, WIE VIEL angesehen wurde. *Ohne sie ist ein
    gruener Lauf von einem leeren nicht zu unterscheiden.*
+5. **GEBIETSSCHEMA** -- wer ein fremdes Werkzeug ruft und dessen MELDUNG liest, pinnt
+   `LC_ALL=C`. Am 2026-08-25 gemessen: unter `de_DE.UTF-8` sagt der Binder
+   `Mehrfachdefinition von`, nicht `multiple definition`. `pruefe-emission.sh` suchte das
+   englische Wort, fand es nicht und meldete *„der Binder faellt aus anderem Grund"* --
+   **einen Fehler, den es nicht gab.** Dieselbe Klasse wie `W16`: ein Werkzeug, das sein
+   eigenes Gebietsschema misst und dabei plausibel aussieht.
 
 **Zu (4) gehoert eine eigene Klasse, und sie hat am 2026-08-20 dreimal zugeschlagen:**
 
@@ -158,6 +164,21 @@ HAT_ROT = re.compile(r"sys\.exit\(\s*[1-9]|SystemExit\(\s*[1-9]|exit\s+1\b|retur
 # **Eine ARBEITSMENGE in der Ausgabe**: `N von M`, `N Dateien`, `N Stellen`. Statisch ist das
 # nur ein Hinweis; `--lauf` liest die wirkliche Ausgabe, und das ist die Haelfte, die zaehlt.
 ARBEIT = re.compile(r"\b\d+\s+(?:von|of)\s+\d+\b|\b\d+\s+[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß-]{3,}")
+# **Fuenfte Forderung: das GEBIETSSCHEMA.** Diese Werkzeuge melden uebersetzt -- wer sie
+# ruft, muss `LC_ALL=C` setzen, sonst misst er die Sprache des Benutzers.
+#
+# **Der Name allein reicht als Erkennung NICHT.** `mutiere-pruefer.py` nennt `cc` neunmal in
+# Mutationsbeschreibungen und fuehrt nur `cargo test` aus -- ein Wortmuster meldet es rot,
+# und ein Waechter mit Fehlalarmen wird abgewoehnt. Gesucht wird darum die AUFRUFSTELLE:
+# in Python der Werkzeugname als Zeichenkette in einer Argumentliste, in der Schale am
+# Befehlsanfang und ohne Kommentarzeilen.
+UEBERSETZTE = "cc|gcc|clang|ld|nm|objdump|readelf"
+RUFT_UEBERSETZT_PY = re.compile(rf"""["'](?:{UEBERSETZTE})["']""")
+# `sort` ordnet und `date` formatiert nach Gebietsschema -- aber nur in der SCHALE. Pythons
+# `sorted` ordnet nach Kodepunkt und ist davon unberuehrt; die Forderung gilt dort nicht.
+RUFT_UEBERSETZT_SH = re.compile(rf"(?m)^\s*(?:[!(]\s*)*(?:{UEBERSETZTE}|sort|date)\b")
+KOMMENTARZEILE = re.compile(r"(?m)^\s*#.*$")
+HAT_GEBIETSSCHEMA = re.compile(r"\bLC_ALL\b")
 
 
 def waechter():
@@ -179,6 +200,12 @@ def statisch(p):
         fehlt.append("SPRECHPROBE")
     if not HAT_ROT.search(t):
         fehlt.append("ROT-BEI-ABBRUCH")
+    if p.suffix == ".sh":
+        ruft_uebersetzt = RUFT_UEBERSETZT_SH.search(KOMMENTARZEILE.sub("", t))
+    else:
+        ruft_uebersetzt = RUFT_UEBERSETZT_PY.search(t)
+    if ruft_uebersetzt and not HAT_GEBIETSSCHEMA.search(t):
+        fehlt.append("GEBIETSSCHEMA")
     return fehlt
 
 
@@ -190,36 +217,62 @@ def sprechprobe():
            '# Sprechprobe: eine kaputte Eingabe MUSS fallen\n'
            'subprocess.run(["true"], timeout=5)\n'
            'sys.exit(1)\n')
-    schlecht = 'import subprocess\nsubprocess.run(["cargo", "build"])\nprint("ok")\n'
+    # **`cc` statt `cargo`** -- damit die kaputte Quelle auch die FUENFTE verletzt: sie ruft
+    # ein Werkzeug, das uebersetzt meldet, und pinnt das Gebietsschema nicht.
+    schlecht = 'import subprocess\nsubprocess.run(["cc", "-o", "a", "a.c"])\nprint("ok")\n'
+    # **Und die Gegenrichtung der fuenften:** dieselbe Quelle MIT `LC_ALL` darf sie nicht
+    # verletzen. Ohne diese Haelfte waere die Forderung ein Verbot von `cc`, keine Forderung.
+    gut_lc = ('import subprocess, sys\n'
+              '# Sprechprobe: eine kaputte Eingabe MUSS fallen\n'
+              'subprocess.run(["cc", "-o", "a", "a.c"], timeout=5,\n'
+              '               env={"LC_ALL": "C"})\n'
+              'sys.exit(1)\n')
     with tempfile.TemporaryDirectory() as d:
         a = pathlib.Path(d) / "pruefe-gut.py"
         b = pathlib.Path(d) / "pruefe-schlecht.py"
+        c = pathlib.Path(d) / "pruefe-gut-lc.py"
         a.write_text(gut, encoding="utf-8")
         b.write_text(schlecht, encoding="utf-8")
-        f_gut, f_schlecht = statisch(a), statisch(b)
+        c.write_text(gut_lc, encoding="utf-8")
+        # **Dritte Richtung: Prosa ueber `cc` ist kein Aufruf.** Genau der Fehlalarm, den
+        # `mutiere-pruefer.py` ausgeloest hat, bevor die Erkennung die Aufrufstelle suchte.
+        e = pathlib.Path(d) / "pruefe-prosa.py"
+        e.write_text('import subprocess, sys\n'
+                     '# Sprechprobe: `cc` und `ld` stehen hier nur im Text.\n'
+                     'subprocess.run(["cargo", "test"], timeout=5)\n'
+                     'sys.exit(1)\n', encoding="utf-8")
+        f_gut, f_schlecht, f_gut_lc = statisch(a), statisch(b), statisch(c)
+        f_prosa = statisch(e)
     # **Und die vierte Forderung, an ihrer eigenen Regex.** Ein gruener Lauf ohne Zahl
     # daneben MUSS auffallen; einer mit Zahl NICHT.
     leer_faellt = not ARBEIT.search("== ALL PASS ==\nok\n")
     voll_faellt = bool(ARBEIT.search("== 23 von 23 tragen alle drei ==\n"))
-    ok = (not f_gut and set(f_schlecht) == {"FRIST", "SPRECHPROBE", "ROT-BEI-ABBRUCH"}
+    ok = (not f_gut and not f_gut_lc and not f_prosa
+          and set(f_schlecht) == {"FRIST", "SPRECHPROBE", "ROT-BEI-ABBRUCH", "GEBIETSSCHEMA"}
           and leer_faellt and voll_faellt)
-    return ok, f_gut, f_schlecht, leer_faellt, voll_faellt
+    return ok, f_gut, f_schlecht, f_gut_lc, f_prosa, leer_faellt, voll_faellt
 
 
 def main():
-    ok, f_gut, f_schlecht, leer_faellt, voll_faellt = sprechprobe()
+    ok, f_gut, f_schlecht, f_gut_lc, f_prosa, leer_faellt, voll_faellt = sprechprobe()
     print("== Sprechprobe des Waechters ==")
     print(f"  saubere Quelle: {len(f_gut)} Verletzungen -- "
           + ("ok" if not f_gut else f"GESCHEITERT (falsches Rot: {f_gut})"))
     print(f"  kaputte Quelle: {len(f_schlecht)} Verletzungen -- "
-          + ("ok" if len(f_schlecht) == 3 else f"GESCHEITERT (der Waechter ist stumm: {f_schlecht})"))
+          + ("ok" if len(f_schlecht) == 4 else f"GESCHEITERT (der Waechter ist stumm: {f_schlecht})"))
+    print(f"  cc mit LC_ALL:  {len(f_gut_lc)} Verletzungen -- "
+          + ("ok (die fuenfte verbietet nicht `cc`, sie fordert das Gebietsschema)"
+             if not f_gut_lc else f"GESCHEITERT (falsches Rot: {f_gut_lc})"))
+    print(f"  cc nur als Prosa: {len(f_prosa)} Verletzungen -- "
+          + ("ok (der Name im Text ist keine Aufrufstelle)"
+             if not f_prosa else f"GESCHEITERT (Fehlalarm: {f_prosa})"))
     print("  Arbeitsmenge:   " + ("ok (eine Ausgabe ohne Zahl faellt, eine mit Zahl nicht)"
                                   if leer_faellt and voll_faellt else "GESCHEITERT"))
     if not ok:
         return 1
 
     print()
-    print("== Die drei Forderungen, am Quelltext ==")
+    print("== Die vier STATISCHEN Forderungen, am Quelltext ==")
     befunde = []
     alle = waechter()
     for p in alle:
@@ -231,8 +284,8 @@ def main():
             befunde.append((p.name, fehlt))
 
     print()
-    print(f"== {len(alle) - len(befunde)} von {len(alle)} tragen die drei STATISCHEN ==")
-    print("   Die vierte -- die ARBEITSMENGE neben dem Urteil (W17) -- steht in der Ausgabe")
+    print(f"== {len(alle) - len(befunde)} von {len(alle)} tragen die vier STATISCHEN ==")
+    print("   Die ARBEITSMENGE neben dem Urteil (W17) -- steht in der Ausgabe")
     print("   und nicht im Quelltext. Sie wird in `--lauf` gemessen, sonst gar nicht.")
 
     if "--lauf" in sys.argv:

@@ -44,6 +44,13 @@
 # Sonde und wird von einem Menschen gelesen -- genau die Grobheit, die `H015` an der
 # Gnadenfrist auch hat.
 set -u
+
+# **`LC_ALL=C` -- und das ist kein Schoenheitsfehler.** Fremde Werkzeuge melden im
+# Gebietsschema des Benutzers: unter `de_DE.UTF-8` sagt der Binder `Mehrfachdefinition von`
+# statt `multiple definition`, und ein `grep -q` darauf trifft nicht. Dieselbe Klasse wie
+# `W16` -- ein Werkzeug, das sein eigenes Gebietsschema misst und dabei plausibel aussieht.
+export LC_ALL=C
+
 FRIST=120
 RUNDEN=2000000
 W="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

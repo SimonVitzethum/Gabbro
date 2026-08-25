@@ -15,6 +15,13 @@
 # Der Wachhund haelt an, statt die Maschine anzuhalten. *Ein Ordner, der beim Beweisen den
 # Rechner umbringt, misst danach gar nichts mehr.*
 set -uo pipefail
+
+# **`LC_ALL=C` -- und das ist kein Schoenheitsfehler.** Fremde Werkzeuge melden im
+# Gebietsschema des Benutzers: unter `de_DE.UTF-8` sagt der Binder `Mehrfachdefinition von`
+# statt `multiple definition`, und ein `grep -q` darauf trifft nicht. Dieselbe Klasse wie
+# `W16` -- ein Werkzeug, das sein eigenes Gebietsschema misst und dabei plausibel aussieht.
+export LC_ALL=C
+
 W="$(cd "$(dirname "$0")/.." && pwd)"
 GRENZE_GB="${GRENZE_GB:-3}"
 ZEIT="${ZEIT:-600}"
