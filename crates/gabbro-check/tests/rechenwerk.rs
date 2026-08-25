@@ -813,15 +813,39 @@ impl fn vor(r : ptr<mmio, rw> R) effects { writes r.IDX } costs <= 2 ops { r.IDX
         "Zugriff an basis + 0x102, volatil, und `+=` traegt sich von selbst:\n{c}"
     );
 
-    // **`at dma` wird abgelehnt, und der Grund ist der Pruefer selbst:** welche Barriere ein
-    // `dma`-Zugriff braucht, ist eine Aussage ueber das Speichermodell, und M3 baut sie
-    // ausdruecklich nicht. *Der Erzeuger darf nicht entscheiden, was der Pruefer offenlaesst.*
+    // **`at dma` WITHOUT the named assumption is refused** -- and the refusal names it
+    // (2026-08-26). Which barrier a DMA access needs is a statement about the memory model,
+    // and the generator does not build it. *It carries it by NAME instead of inventing it --
+    // or of leaving the obligation unpayable.*
     let (_, f) = c_von(
         "module t { device Q(basis : u64) at dma { reg I : u16 @0x0 class rw } }",
     );
     assert!(
-        f.iter().any(|s| s.contains("memory model")),
-        "`at dma` darf nicht abgesenkt werden: {f:?}"
+        f.iter().any(|s| s.contains("MEMORY MODEL") && s.contains("dma_kohaerent")),
+        "`at dma` ohne Annahme faellt, und die Absage nennt die fehlende Annahme: {f:?}"
+    );
+
+    // **And WITH it the access lowers, exactly as `at mmio` does.** That is the other
+    // half: a refusal without a door is a ban; one with a door is a condition.
+    let (c2, f2) = c_von(
+        "module t { assume dma_kohaerent \"kohaerent und in Reihenfolge sichtbar.\" falsifier sonde_dma; \
+         device Q(basis : u64) at dma { reg I : u16 @0x0 class rw } }",
+    );
+    assert!(f2.is_empty(), "mit `assume dma_kohaerent` senkt `at dma` ab: {f2:?}");
+    assert!(
+        c2.contains("dma_kohaerent"),
+        "die Annahme reist in den Kopf des erzeugten C -- ihr Leser sieht, worauf es ruht:\n{c2}"
+    );
+
+    // **And `at normal` still falls, with a reason OF ITS OWN.** Until 2026-08-26 both
+    // carried the same text -- a refusal whose stated ground was untrue for one of its two
+    // halves: a `normal` access needs no barrier at all.
+    let (_, f3) = c_von(
+        "module t { device Q(basis : u64) at normal { reg I : u16 @0x0 class rw } }",
+    );
+    assert!(
+        f3.iter().any(|s| s.contains("not a device access")),
+        "`at normal` hat seinen eigenen Grund: {f3:?}"
     );
 }
 
@@ -2445,21 +2469,44 @@ impl fn setze(p : Pa) effects { writes v.R } costs <= 8 ops
     assert_eq!(a.fehler_zahl(), 0, "{}", a.zeige(q));
     let c = gabbro_check::emit::emittiere(&b, &mut a);
     assert_eq!(a.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a.zeige(q));
-    assert!(c.contains("V v = (V){ (volatile uint8_t *)(uintptr_t)p };"), "{c}");
+    assert!(c.contains("V v = (V){ .basis = (volatile uint8_t *)(uintptr_t)p };"), "{c}");
+
+    // **And every FURTHER declared parameter travels in the handle** (2026-08-26). Until
+    // then the emitter read only the first entry of the parameter list, although
+    // `beispiele/09` already said the sentence: *"the declaration's parameter list IS the
+    // constructor."* `device Virtq(base : Iova, n : u16 …)` handed the emitter an `n` it
+    // never saw.
+    let q2 = "module t {
+opaque type Pa = u64;
+device V(basis : Pa, n : u16) at mmio { reg R : u32 @0x10 class rw }
+impl fn setze(p : Pa) effects { writes v.R } costs <= 8 ops
+{ let v = V(p, 8); v.R = v.n; } }";
+    let (b2, mut a2) = gabbro_syntax::lies("p.gab", q2);
+    assert_eq!(a2.fehler_zahl(), 0, "{}", a2.zeige(q2));
+    let c2 = gabbro_check::emit::emittiere(&b2, &mut a2);
+    assert_eq!(a2.fehler_zahl(), 0, "die Absenkung traegt:\n{}", a2.zeige(q2));
+    assert!(c2.contains("volatile uint8_t *basis; uint16_t n;"), "der Griff traegt ihn:\n{c2}");
+    assert!(c2.contains(".basis = (volatile uint8_t *)(uintptr_t)p, .n = 8"), "{c2}");
+    // **A parameter is NOT a volatile access.** It has been fixed since the handle was
+    // built; reading it volatile would claim the device could change it.
+    assert!(c2.contains("= v.n;"), "gewoehnlicher Feldzugriff, nicht volatil:\n{c2}");
 }
 
-/// **Eine Schnittstelle ist ein FIXPUNKT, und sie nennt keinen Namen, den sie nicht erklärt**
-/// («ABI1», nachgezogen 2026-08-20 beim Merge zweier paralleler Bäume).
+/// **Eine Schnittstelle nennt keinen Namen, den sie nicht erklärt — und sie ist seit dem
+/// 2026-08-25 GESCHRIEBEN statt gerechnet** («ABI1», nachgezogen).
 ///
-/// `table` und `atomic` haben kein `pub` — die Grammatik kennt keins — und standen darum als
-/// einzige Item-Arten **unbedingt** im `.gabi`. Gemessen an `beispiele/34-markierter-wert.gab`,
-/// wo *nichts* öffentlich ist: die Schnittstelle trug die Tabelle samt `count NANFRAGEN` und
-/// `was : Nachricht` hinaus — zwei Namen, die sie selbst nicht erklärt.
+/// Bis dahin war sie ein **Fixpunkt**: `T` kam mit, weil ein `index into T` es nennt, dann
+/// `N`, weil `count N` es nennt, und so weiter bis zum Stillstand. Der Grund war eine
+/// fehlende Produktion — `table`, `lock`, `device` und `format` konnten gar kein `pub`
+/// tragen, also *musste* jemand die Ausfuhrmenge ausrechnen.
 ///
-/// > *Eine Schnittstelle, die einen Namen nennt und nicht erklärt, ist keine.*
+/// > **Der Fixpunkt war die ehrliche Folge einer Lücke, nicht die Entscheidung, die er zu
+/// > sein schien.** Er machte die Ausfuhrmenge implizit: sie stand nirgends geschrieben, sie
+/// > ergab sich — und *„nichts ist implizit"* ist D2.
 ///
-/// Und ein Durchgang reicht nicht: `T` kommt mit, weil ein `index into T` es nennt — dann
-/// nennt `T` seinerseits `count N`, und `N` muss ebenfalls mit.
+/// Jetzt trägt der Träger das Wort, und die Frage, die der Fixpunkt beantwortete, ist eine
+/// **Absage**: `N038`. Beide Richtungen stehen hier, denn eine ohne die andere misst nichts
+/// (R14/W17).
 ///
 /// **Warum das hier steht und nicht nur in einer Wächterschleife:** `mutiere-pruefer.py`
 /// fährt `cargo test`. Eine Regel, deren einzige Probe eine Shell-Schleife ist, kann keine

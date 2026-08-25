@@ -531,6 +531,80 @@ lauf "b22-abwesenheit" "$W/beispiele/51-abwesenheit-und-absage.gab" "$TREIBER22"
      's/FaultRecordHi_f_bit(v) == 0 || //' \
      "0 assumptions (0 of them NOT FALSIFIABLE), 1 templates (0 of them UNPROVED), 0 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- 4c. Das Fragment F4: der virtio-Treiber, und er senkt seit dem 2026-08-26 ab -----------
+#
+# **Die letzte der sieben Absenkungen, die als UNERREICHBAR galt.** Die `at dma`-Absage war
+# Axiomschicht: *„welche Barriere ein DMA-Zugriff verlangt, ist eine Aussage ueber das
+# Speichermodell, und der Pruefer baut sie ausdruecklich nicht."* Richtig -- und damit war die
+# Pflicht nicht durch Arbeit einloesbar, sondern nur durch eine Entscheidung.
+#
+# **Die Entscheidung ist dieselbe wie bei «B19»/«B38»/«B39» in K100.2: nicht erledigen,
+# sondern beim NAMEN mit einer Sonde fuehren.** `at dma` senkt jetzt ab, wenn die Einheit
+# `assume dma_kohaerent … falsifier …` erklaert -- und weigert sich sonst, mit einer Absage,
+# die die fehlende Annahme NENNT. *Aus einer Wand wird eine Tuer.*
+#
+# Zwei Erzeugerluecken lagen darunter, und beide waren still:
+#
+#   * `Device::parameter` wurde geparst und von `emit.rs` NIE gelesen. `q.n` hatte keinen Typ,
+#     und die Absage nannte den `let` statt `q.n`.
+#   * **Ein Bankzugriff senkte zu einem Strukturfeld ab, das es nicht gibt** --
+#     `q->USED_RING[s].id`. Die erzeugten Zugriffsfunktionen rief kein erzeugter Code.
+#     *Kein Durchstich hat es gefangen, weil die einzige durchgestochene Einheit mit einer
+#     Bank (F02) sie aus dem C-TREIBER liest.* Eine erzeugte Schnittstelle, die nur ein
+#     handgeschriebener Rufer benutzt, wird von ihrem eigenen Korpus nicht gemessen.
+#
+# Die vier Zahlen unten pruefen genau das, was hier neu ist:
+#
+#     42  -- `AVAIL_RING[0].e` nach dem ersten `publish` -- der Bank-SETZER traegt
+#      1  -- `AVAIL_IDX` danach: der umlaufende Zaehler ist gestiegen
+#      7  -- `AVAIL_RING[1].e` nach dem zweiten -- `platz = AVAIL_IDX % q.n` benutzt den
+#            GERAETEPARAMETER, und der faehrt im Griff mit
+#     99  -- `poll_used` liest `USED_RING[3].id` durch die Zugriffsfunktion
+schneide "$W/dokumente/FRAGMENTE.md" "device Virtq" > "$ARB/f4.gab"
+if ! grep -q "device Virtq" "$ARB/f4.gab"; then
+    echo "== EMISSION: F4 NICHT GESCHNITTEN =="; exit 1
+fi
+fehlende_f4() { diff "$1" "$2" | grep "^<" || true; }
+if [ -n "$(fehlende_f4 "$ARB/f4.gab" "$W/messung/fragmente/F04.gab")" ]; then
+    echo "== EMISSION: F04.gab hat eine Zeile des eingefrorenen Ausschnitts VERLOREN =="
+    fehlende_f4 "$ARB/f4.gab" "$W/messung/fragmente/F04.gab" | head -10
+    exit 1
+fi
+grep -v "reg USED_FLAGS  : u16 @0x200 class rw" "$W/messung/fragmente/F04.gab" > "$ARB/f4-kurz.gab"
+if [ -z "$(fehlende_f4 "$ARB/f4.gab" "$ARB/f4-kurz.gab")" ]; then
+    echo "== EMISSION: Sprechprobe F4 haelt nicht -- eine entfernte Ausschnittzeile faellt"
+    echo "             nicht auf. Dieser Vergleich misst NICHTS. =="
+    exit 1
+fi
+echo "  (F4: der eingefrorene Ausschnitt steht vollstaendig in der Arbeitsfassung"
+echo "       -- und eine fehlende Zeile faellt auf, Sprechprobe ok)"
+TREIBER4='#include <stdio.h>
+#include "@ERZEUGT@"
+_Alignas(16) static uint8_t ring[4096];
+/* Der Ausgang des `retry`. Er steht als `extern fn … -> never` in der Einheit, also
+ * schuldet ihn der Rufer -- und hier ist der Rufer der Treiber. Er wird NICHT genommen:
+ * die Probe setzt `USED_IDX` so, dass die Schleife sofort austritt. */
+_Noreturn void DeviceSilent(void) { for (;;) { } }
+int main(void) {
+    Virtq q = { .basis = ring, .n = 8 };
+    publish(&q, 42);
+    printf("%u ", (unsigned)Virtq_AVAIL_RING_e(&q, 0));
+    printf("%u ", (unsigned)(*(volatile uint16_t *)(ring + 0x102)));
+    publish(&q, 7);
+    printf("%u ", (unsigned)Virtq_AVAIL_RING_e(&q, 1));
+    Virtq_USED_RING_setz_id(&q, 3, 99);
+    *(volatile uint16_t *)(ring + 0x202) = 5;
+    printf("%u\n", poll_used(&q, 3));
+    return 0;
+}'
+# **Das Gift nimmt dem Griff seinen Parameter.** `% q->n` wird `% 1`; danach ist `platz`
+# immer 0, der zweite `publish` ueberschreibt den ersten Platz, und `s` zeigt auf 0 statt 3.
+# *Ohne diese Sprechprobe wuerde der Lauf nicht messen, ob der Geraeteparameter etwas tut.*
+lauf "fragment4" "$W/messung/fragmente/F04.gab" "$TREIBER4" \
+     "42 1 7 99" \
+     's/% q->n/% 1/g' \
+     "2 assumptions (0 of them NOT FALSIFIABLE), 2 templates (0 of them UNPROVED), 7 direct forms, 3 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
 # -- 5. Die Traversierung: die Schleife OHNE Laufzeitzaehler ----------------------------
 #
 # **Der Unterschied zu `retry` steht jetzt im C nebeneinander:**

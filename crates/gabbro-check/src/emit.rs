@@ -50,6 +50,13 @@ struct Namen {
     formate: BTreeSet<String>,
     /// Je Geraet: der Raum und seine Register. **Ein Registerzugriff ist KEIN Feldzugriff**
     /// -- siehe `geraet`.
+    /// **The assumption names this unit DECLARES** (2026-08-26).
+    ///
+    /// The emitter already prints them into the C header; until now nothing READ them.
+    /// `at dma` does: which barrier a DMA access needs is a statement about the memory
+    /// model, and rather than guessing it the generator DEMANDS that the unit name it.
+    /// *A wall becomes a door: the refusal says which assumption is missing.*
+    annahmen: BTreeSet<String>,
     geraete: HashMap<String, Geraet>,
     /// Name -> Geraetetyp, **global und konservativ**: wird derselbe Name irgendwo mit einem
     /// anderen Typ erklaert, faellt er heraus. Dieselbe Bauart wie `vorzeichenlos` -- Unwissen
@@ -320,6 +327,31 @@ struct Geraet {
     /// und ein `class w` gibt keine her -- das ist Falle 4, und ihre Antwort heisst
     /// `transition` mit `mirrors`.
     klassen: HashMap<String, RegKlasse>,
+    /// **The declared parameters BEYOND the base address -- name and C type** (2026-08-25).
+    ///
+    /// `Device::parameter` was parsed (`ast.rs`:1488) and read by `emit.rs` NOWHERE. So
+    /// `device Virtq(base : Iova, n : u16 in 1 .. QMAX) at dma` handed the generator a `n`
+    /// it never saw, and `let platz = q.AVAIL_IDX % q.n;` refused with *`let` without a
+    /// resolvable type* -- a refusal whose stated reason (`let`) was not the real one
+    /// (`q.n`).
+    ///
+    /// > *A clause that parses and is dropped* -- the same shape as `RegDecl::requires`
+    /// > before 2026-08-24, and as `OrtSchritt::von`, which no line reads to this day.
+    ///
+    /// The FIRST parameter is the address and becomes `basis`; it is not in this list.
+    parameter: Vec<(String, String)>,
+    /// **Bank name -> its register names** (2026-08-26).
+    ///
+    /// A bank lowers to ACCESSOR FUNCTIONS, because its base may only be known at run time
+    /// (`bank FRR at CAP.FRO * 16`). They were emitted and **nothing generated ever called
+    /// them**: `q.USED_RING[s].id` lowered to `q->USED_RING[s].id`, a struct field that does
+    /// not exist. *`pruefe` 0 errors, `emit` 0 refusals, and `cc` finds it.*
+    ///
+    /// > No differential test caught this, and the reason is exact: the only pierced unit
+    /// > with a bank (`F02`) reads it from the **C driver**, which calls the accessors. **A
+    /// > generated interface that only a hand-written caller uses is not measured by its
+    /// > own corpus.**
+    baenke: HashMap<String, BTreeSet<String>>,
 }
 
 /// **Is this type a ghost — i.e. does it vanish in the C?**
@@ -467,6 +499,28 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                             felder: HashMap::new(),
                             umlaeufer: HashMap::new(),
                             klassen: HashMap::new(),
+                            // The first parameter is the base address -- `skip(1)`. A
+                            // parameter whose type this unit cannot lower is DROPPED here
+                            // and the constructor refuses by name below, rather than
+                            // emitting a struct field of a type nobody wrote.
+                            baenke: d
+                                .baenke
+                                .iter()
+                                .map(|b| {
+                                    (
+                                        b.name.text.clone(),
+                                        b.register.iter().map(|r| r.name.text.clone()).collect(),
+                                    )
+                                })
+                                .collect(),
+                            parameter: d
+                                .parameter
+                                .iter()
+                                .skip(1)
+                                .filter_map(|pa| {
+                                    Some((pa.name.text.clone(), ctyp(&pa.typ, &namen)?))
+                                })
+                                .collect(),
                         },
             );
             for x in &d.uebergaenge {
@@ -1034,6 +1088,7 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         aus.push_str(KOPF_GLEITKOMMA);
     }
     let annahmen = crate::manifest::sammle(baum);
+    namen.annahmen = annahmen.iter().map(|a| a.name.clone()).collect();
     if !annahmen.is_empty() {
         let (menge, _) = crate::manifest::vereinige(annahmen);
         aus.push_str("\n/* Proved under the following assumptions (SYNTAX.md 12).\n");
@@ -2003,15 +2058,53 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
 /// `dma`-Zugriff braucht, ist eine Aussage ueber das Speichermodell -- dieselbe Axiomschicht
 /// wie bei der Paarung, und der Pruefer baut sie ausdruecklich nicht (M3, `SPRACHE.md`).
 /// `at normal` waere gar kein Geraetezugriff.
+/// **The one name `at dma` demands.** It stands here and nowhere else: a magic string in two
+/// places is two registers over one thing (W7).
+///
+/// *It is deliberately not a new grammar word.* Regel A does not carry one: the corpus has a
+/// single `at dma` site, and `assume … falsifier …` already exists and already travels into
+/// the certificate. **A fixed name costs no notation; a clause would.**
+const ANNAHME_DMA: &str = "dma_kohaerent";
+
 fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
-    let _ = u;
-    if !matches!(d.raum, Raum::Mmio) {
+    // **`at dma` lowers under a NAMED assumption since 2026-08-26 -- and refuses without it.**
+    //
+    // Which barrier a DMA access needs is a statement about the memory model, and the
+    // generator does not build it. *But refusing outright made the obligation unpayable:*
+    // `H = 0` over the fragment corpus was unreachable for F4, and not because of missing
+    // work -- because of a decision.
+    //
+    // The move is the one K100.2 made for «B19»/«B38»/«B39»: **not discharge it, but carry
+    // it by NAME with a probe.** The unit must declare
+    //
+    //     assume dma_kohaerent "…" falsifier <probe>;
+    //
+    // and then the access lowers exactly like `at mmio` -- a `volatile` access at
+    // `basis + offset`. What the assumption buys is written out in `SPRACHE.md` and printed
+    // into the C header by `manifest::sammle`, so the reader of the C sees what it rests on.
+    //
+    // > **`at normal` stays refused, and NOT for the same reason.** A `normal` access needs
+    // > no barrier at all -- there the refusal is about whether it is a device access in the
+    // > first place. *Two refusals under one text was the older mistake; they are two now.*
+    if matches!(d.raum, Raum::Normal) {
         weigere(
             absagen,
             d.span,
-            "`device … at dma`/`at normal` -- which barrier a `dma` access needs is a \
-             statement about the memory model (the same axiom layer as pairing), and the \
-             checker does not build it either",
+            "`device … at normal` -- an access into the ordinary space is not a device \
+             access, and what a `device` block would mean there is not decided",
+        );
+        return;
+    }
+    if matches!(d.raum, Raum::Dma) && !u.annahmen.contains(ANNAHME_DMA) {
+        weigere(
+            absagen,
+            d.span,
+            &format!(
+                "`device … at dma` without `assume {ANNAHME_DMA}` -- which barrier a DMA \
+                 access needs is a statement about the MEMORY MODEL, and this generator \
+                 does not build it. It carries it by name instead: declare the assumption \
+                 with a falsifier, and the access lowers like an `mmio` one"
+            ),
         );
         return;
     }
@@ -2037,8 +2130,21 @@ fn geraet(d: &Device, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
         }
     }
 
+    // **The declared parameters travel IN the handle** (2026-08-25). `device Virtq(base :
+    // Iova, n : u16 in 1 .. QMAX)` says the ring carries its length; without it `q.n` had no
+    // lowering and no type. *The declaration named it, the emitter dropped it.*
+    let felder: String = u
+        .geraete
+        .get(&d.name.text)
+        .map(|g| {
+            g.parameter
+                .iter()
+                .map(|(n, c)| format!(" {c} {n};"))
+                .collect::<String>()
+        })
+        .unwrap_or_default();
     aus.push_str(&format!(
-        "\ntypedef struct {{ volatile uint8_t *basis; }} {};\n",
+        "\ntypedef struct {{ volatile uint8_t *basis;{felder} }} {};\n",
         d.name.text
     ));
     for b in &d.baenke {
@@ -2086,6 +2192,17 @@ fn bank(d: &Device, b: &Bank, aus: &mut String, u: &Namen, absagen: &mut Absagen
             "\nstatic inline {breite} {}_{}_{}(const {} *d, uint32_t i) {{\n\
              \x20   /* count {anzahl}: the index bound falls out of the declaration */\n\
              \x20   return *(volatile {breite} *)(d->basis + ({lage}) + i * {schritt}u + {off}u);\n}}\n",
+            d.name.text, b.name.text, r.name.text, d.name.text
+        ));
+        // **The SETTER, and until 2026-08-26 there was none** -- so a bank could be read
+        // from C and written from nowhere. *Half a lowering looks like a whole one until
+        // somebody writes.*
+        //
+        // The class rule stays with the checker (`R002`/`R003`, issued in `m3.rs`), as
+        // everywhere: what the pass decided, the machine does not check a second time (W6).
+        aus.push_str(&format!(
+            "\nstatic inline void {}_{}_setz_{}({} *d, uint32_t i, {breite} x) {{\n\
+             \x20   *(volatile {breite} *)(d->basis + ({lage}) + i * {schritt}u + {off}u) = x;\n}}\n",
             d.name.text, b.name.text, r.name.text, d.name.text
         ));
     }
@@ -4289,6 +4406,48 @@ fn anweisung(
                 .map(|g| (g, "->"))
                 .or_else(|| u.geraetewerte.get(&z.ziel.basis.text).map(|g| (g, ".")))
             {
+                // **A BANK is written through its setter** (2026-08-26). Same reason as the
+                // read: the base may only be known at run time, so the address arithmetic
+                // lives in the generated accessor and not at the call site.
+                //
+                // *A compound assignment is refused by name*, and for the same reason a
+                // register bit field refuses one: it would be two accesses to a place the
+                // device also writes, and which one wins is not a question with an answer.
+                if z.ziel.suffixe.len() == 3 {
+                    if let (Some(OrtSuffix::Feld(b)), Some(OrtSuffix::Index(i)), Some(OrtSuffix::Feld(r))) =
+                        (z.ziel.suffixe.first(), z.ziel.suffixe.get(1), z.ziel.suffixe.get(2))
+                    {
+                        if u
+                            .geraete
+                            .get(g)
+                            .and_then(|dev| dev.baenke.get(&b.text))
+                            .is_some_and(|s| s.contains(&r.text))
+                        {
+                            if !matches!(z.op, ZuwOp::Setzt) {
+                                weigere(
+                                    absagen,
+                                    s.span,
+                                    "a compound assignment to a bank register -- it would be \
+                                     two accesses to a place the device also writes",
+                                );
+                                return;
+                            }
+                            let adr = if pfeil == "->" {
+                                z.ziel.basis.text.clone()
+                            } else {
+                                format!("&{}", z.ziel.basis.text)
+                            };
+                            aus.push_str(&format!(
+                                "{e}{g}_{}_setz_{}({adr}, {}, {});\n",
+                                b.text,
+                                r.text,
+                                ausdruck(i, u, absagen),
+                                ausdruck(&z.wert, u, absagen)
+                            ));
+                            return;
+                        }
+                    }
+                }
                 if z.ziel.suffixe.len() == 2 {
                     if let (Some(OrtSuffix::Feld(r)), Some(OrtSuffix::Feld(f))) =
                         (z.ziel.suffixe.first(), z.ziel.suffixe.get(1))
@@ -6098,7 +6257,22 @@ fn register_ctyp(o: &Ort, u: &Namen) -> Option<String> {
     if o.suffixe.len() > 2 {
         return None;
     }
-    u.geraete.get(g)?.reg.get(&r.text).map(|(_, b)| b.clone())
+    let dev = u.geraete.get(g)?;
+    if let Some((_, b)) = dev.reg.get(&r.text) {
+        return Some(b.clone());
+    }
+    // **A declared device PARAMETER is not a register, and it has a type all the same.**
+    // Without this `let platz = q.AVAIL_IDX % q.n;` had no type and the emitter refused with
+    // `C001 let without a resolvable type` -- *a refusal whose named reason was the `let`,
+    // while the unresolvable half was `q.n`.*
+    if o.suffixe.len() == 1 {
+        return dev
+            .parameter
+            .iter()
+            .find(|(n, _)| *n == r.text)
+            .map(|(_, c)| c.clone());
+    }
+    None
 }
 
 /// Ist dieser Ort ein `option index into T`? Dann die Zieltabelle.
@@ -6296,12 +6470,27 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
     // eine Adresse zu einem Zeiger macht* -- sie steht hier, weil die Deklaration sie sagt
     // (`at mmio`), und nicht, weil sie bequem waere.
     if u.geraete.contains_key(&name) {
-        if r.argumente.len() != 1 {
-            weigere(absagen, r.span, "a device handle takes exactly its declared base");
+        // **The handle takes EVERY declared parameter, not just the base** (2026-08-25).
+        // Until then this refused anything but one argument -- and `Virtq(base, n)` has two.
+        // *`beispiele/09` says the sentence: „the declaration's parameter list IS the
+        // constructor"; the emitter had read only its first entry.*
+        let weitere = u.geraete.get(&name).map(|g| g.parameter.clone()).unwrap_or_default();
+        if r.argumente.len() != 1 + weitere.len() {
+            weigere(
+                absagen,
+                r.span,
+                "a device handle takes exactly its declared parameters -- the base and every \
+                 further one the declaration names",
+            );
             return String::new();
         }
+        let rest: String = weitere
+            .iter()
+            .zip(r.argumente.iter().skip(1))
+            .map(|((n, _), a)| format!(", .{n} = {}", ausdruck(a, u, absagen)))
+            .collect();
         return format!(
-            "({name}){{ (volatile uint8_t *)(uintptr_t){} }}",
+            "({name}){{ .basis = (volatile uint8_t *)(uintptr_t){}{rest} }}",
             ausdruck(&r.argumente[0], u, absagen)
         );
     }
@@ -6367,7 +6556,43 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
         .map(|g| (g, "->"))
         .or_else(|| u.geraetewerte.get(&o.basis.text).map(|g| (g, ".")));
     if let (Some((g, pfeil)), Some(OrtSuffix::Feld(f))) = (griff, o.suffixe.first()) {
-        if let Some((versatz, breite)) = u.geraete.get(g).and_then(|d| d.reg.get(&f.text)) {
+        // **A declared parameter is an ordinary struct field, NOT a volatile access.**
+        // It travels in the handle and was fixed when the handle was built; reading it twice
+        // gives the same answer, and `volatile` would say the opposite. *`q.n` is what the
+        // driver KNOWS about the ring, not what the device reports.*
+        // **One lookup for all three questions below.** `u.geraete` is keyed by plain name
+        // here (this is the emitter's own map, not `Umgebung`'s), and asking it three times
+        // in one block is three chances to ask it differently.
+        let dev = u.geraete.get(g);
+        if o.suffixe.len() == 1
+            && dev.is_some_and(|d| {
+                !d.reg.contains_key(&f.text) && d.parameter.iter().any(|(n, _)| *n == f.text)
+            })
+        {
+            return format!("{}{pfeil}{}", o.basis.text, f.text);
+        }
+        // **A BANK is read through its accessor, not as a struct field** (2026-08-26).
+        // `q.USED_RING[s].id` -> `Virtq_USED_RING_id(q, s)`. The address arithmetic lives in
+        // the accessor because a bank base may only be known at run time.
+        if o.suffixe.len() == 3 {
+            if let (Some(OrtSuffix::Index(i)), Some(OrtSuffix::Feld(r))) =
+                (o.suffixe.get(1), o.suffixe.get(2))
+            {
+                if dev
+                    .and_then(|d| d.baenke.get(&f.text))
+                    .is_some_and(|s| s.contains(&r.text))
+                {
+                    let adr = if pfeil == "->" { o.basis.text.clone() } else { format!("&{}", o.basis.text) };
+                    return format!(
+                        "{g}_{}_{}({adr}, {})",
+                        f.text,
+                        r.text,
+                        ausdruck(i, u, absagen)
+                    );
+                }
+            }
+        }
+        if let Some((versatz, breite)) = dev.and_then(|d| d.reg.get(&f.text)) {
             let wort = format!(
                 "(*(volatile {breite} *)({}{pfeil}basis + {versatz}))",
                 o.basis.text
@@ -6387,7 +6612,7 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
             if let Some(OrtSuffix::Feld(feld)) = o.suffixe.get(1) {
                 if o.suffixe.len() == 2 {
                     if let Some((hi, lo, breite_bit)) =
-                        u.geraete.get(g).and_then(|d| d.felder.get(&f.text)).and_then(|m| m.get(&feld.text))
+                        dev.and_then(|d| d.felder.get(&f.text)).and_then(|m| m.get(&feld.text))
                     {
                         let maske: u128 = if *hi - *lo + 1 >= *breite_bit {
                             u128::MAX >> (128 - breite_bit)

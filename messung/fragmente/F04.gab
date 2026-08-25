@@ -25,6 +25,25 @@ assume device_completes_or_faults
     "Ein Geraet, das einen Deskriptor genommen hat, meldet ihn innerhalb der zugesagten Leseoperationen zurueck oder faultet."
     falsifier sonde_geraet_meldet_zurueck;
 
+-- **ERGAENZT 2026-08-26 -- und sie ist die Deklaration, die `at dma` RUFT.**
+--
+-- Bis heute wies der Erzeuger `device … at dma` rundweg ab: *„welche Barriere ein
+-- DMA-Zugriff verlangt, ist eine Aussage ueber das Speichermodell, und der Pruefer baut sie
+-- ausdruecklich nicht."* Das war richtig und machte die Pflicht UNBEZAHLBAR -- F4s
+-- Absenkung war nicht durch Arbeit erreichbar, sondern nur durch eine Entscheidung.
+--
+-- **Die Entscheidung ist dieselbe wie bei «B19»/«B38»/«B39» in K100.2: nicht erledigen,
+-- sondern BEIM NAMEN MIT EINER SONDE fuehren.** Der Erzeuger verlangt jetzt diese Zeile und
+-- senkt danach ab wie bei `at mmio`; die Annahme reist ins Zeugnis und in den Kopf des
+-- erzeugten C, damit ihr Leser sieht, worauf es ruht.
+--
+-- > *Was sie NICHT sagt:* dass eine Barriere erzeugt wird. Es wird keine erzeugt. Sie sagt,
+-- > was gelten muss, DAMIT keine noetig ist -- und genau das ist auf einem nicht-kohaerenten
+-- > Traeger falsch. Die Sonde ist dort der Befund, nicht die Ausrede.
+assume dma_kohaerent
+    "Ein Traeger im dma-Raum ist kohaerent: Geraet und Kern sehen dieselben Zellen ohne Cache-Pflege, und zwei volatile Zugriffe in Programmreihenfolge werden dem Geraet in dieser Reihenfolge sichtbar."
+    falsifier sonde_dma_reihenfolge;
+
 extern fn DeviceSilent() -> never effects { diverges } costs <= 1 ops;
 
 device VirtioPci(base : Pa) at mmio {
