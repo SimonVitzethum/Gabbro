@@ -65,6 +65,32 @@ opaque type PdId    = u16;
 opaque type Pa      = u64;
 opaque type ByteLen = u64;
 
+-- **ERGAENZT 2026-08-26: zehn Namen, die der Ausschnitt NENNT und nicht erklaert.**
+--
+-- Sechs davon hat `N040` am 2026-08-25 gemeldet, als ein Typname zum ersten Mal aufgeloest
+-- werden musste; vier weitere stehen als Feldtypen und fielen dem Erzeuger als
+-- `C001 field type` auf. **Bis dahin ging der Ausschnitt mit 0 Fehlern durch** -- der Pruefer
+-- BESTAETIGTE `ptr<normal, rw+own> PhysAllocator`, und der Fehler starb erst am fremden
+-- Uebersetzer.
+--
+-- `opaque` ist die ehrliche Form: was ein `MemObj` ist, entscheidet der Gerufene, und dessen
+-- Rumpf sieht Gabbro nie. *Der Zeiger traegt den Raum und das Recht; mehr sagt diese
+-- Deklaration nicht, und mehr weiss sie auch nicht.*
+opaque type ThreadId      = u32;
+opaque type DmaDir        = u8;
+opaque type DmaCoherence  = u8;
+opaque type Region        = u64;
+opaque type MemObj        = u64;
+opaque type DmaObj        = u64;
+opaque type ReplyObj      = u64;
+opaque type PhysAllocator = u64;
+opaque type Finalized     = u64;
+opaque type Allok         = u64;
+-- `Rights` steht als FELDTYP und faellt darum nicht unter `N040` -- die Regel sieht
+-- Parameter, Ergebnisse und `static`, nicht die Felder eines Verbunds. *Sie sagt diese
+-- Grenze selbst aus, statt vollstaendig auszusehen* -- hier ist der Beleg dafuer.
+opaque type Rights        = u32;
+
 reason CapError {
     NoSlot      = 1 "kein freier Capability-Slot mehr"
     NoObject    = 2 "kein freier Objekt-Eintrag mehr"
@@ -116,6 +142,12 @@ table CapObjects count NOBJECTS {
 }
 
 table CapSpace count NSLOTS {
+    -- **ERGAENZT 2026-08-26: die Baumkanten.** `revoke` schreibt `traverse victim over
+    -- descendants of c.slots[s]`, und «B41b» sagt: die Kante steht an der TABELLE, nicht am
+    -- Durchlauf -- *der Erzeuger raet nicht, welches Feld der Elter ist.* Die drei Felder
+    -- stehen im Ausschnitt (`parent`, `first_child`, `next_sibling`); was fehlte, war die Zeile,
+    -- sie zu einem Baum ERKLAERT. Eine ZUSAETZLICHE Zeile, keine geaenderte.
+    tree { parent parent, child first_child, sibling next_sibling }
     slot {
         used         : bool,
         gen          : u32 wrapping,
@@ -200,6 +232,25 @@ impl fn delete_leaf(c  : ptr<normal, rw> CapSpace,
                     a  : ptr<normal, rw+own> PhysAllocator,
                     rf : ptr<normal, rw+own> Finalized,
                     s  : SlotIdx)
+    -- **ERGAENZT 2026-08-26: der Fehlerkanal, und er ist eine ZUSAETZLICHE Zeile.**
+    --
+    -- Der Rumpf schreibt `return Fehler::Buchfuehrung;` (Ausschnitt), die Signatur nannte
+    -- keinen Kanal, und `M122` sagte es. **Der Kopf dieser Datei fuehrte das als offen mit
+    -- dem Zusatz, danach falle `N029` an einer Ausschnittzeile** -- nachgemessen am
+    -- 2026-08-26: `or R` steht in `fndecl` OHNE Rueckgabetyp und prueft mit 0 Fehlern.
+    -- *Die Zeile kommt hinzu; keine Ausschnittzeile aendert sich.*
+    --
+    -- > **Und die Warnung des Kopfes trifft trotzdem zu, nur schaerfer:** `N029` faellt jetzt
+    -- > an `FRAGMENTE.md`:337 -- `revoke` ruft `delete_leaf` und faengt das Scheitern nicht.
+    -- > *Das ist kein Mangel an Gabbro, sondern ein Befund IM Bericht:* der Rumpf kann
+    -- > `Fehler::Buchfuehrung` zurueckgeben, und der einzige Rufer sieht nicht hin.
+    -- > Ihn zu schliessen hiesse eine eingefrorene Zeile zu aendern -- **dieselbe Lage wie
+    -- > F9s `costs <= 4096 ops`, das nachrechenbar falsch ist und stehen bleibt.**
+    -- >
+    -- > Die Form dafuer GIBT es (`let ok = f(x) else (e) { … }` prueft mit 0 Fehlern,
+    -- > nachgemessen 2026-08-26); was fehlt, ist die Entscheidung des Ordners, ob der
+    -- > Bericht sie bekommt.
+    or Fehler
     requires  Held(CAPS), Held(MEM), c.slots[s].used, ist_blatt(c, s)
     -- «B31» Die zweite Zeile ist NICHT ABLEITBAR, und zwar keine Fassung von ihr. `oldexpr`
     -- haengt unter `atompred` (:235-236), nicht unter `primary` (:200): `old(x)` kann als

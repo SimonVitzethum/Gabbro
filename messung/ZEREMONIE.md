@@ -10,7 +10,7 @@ $ ./instrumente/zaehle-zeremonie.py
   redundant        0
   tragend        836        T1 390 · T2 165 · T6 62 · T10 57 · T3 47 · T11 31 · T12 25 ·
                             T7 24 · T9 19 · T8 7 · T5 6 · T4 3
-57 von 951 Stellen dürfen sinken
+57 von 957 Stellen dürfen sinken
 ```
 
 ## Die zwei Achsen, und warum sie getrennt bleiben

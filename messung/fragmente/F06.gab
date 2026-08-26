@@ -104,6 +104,13 @@ atomic erschoepft   : u32 publishes nothing relaxed;
 atomic groesse      : u64 publishes nothing relaxed;
 atomic tiefster     : u32 publishes nothing relaxed;
 
+-- **ERGAENZT 2026-08-26: drei Namen, die der `can_fail`-Rumpf RUFT und nicht erklaert.**
+-- Sie werden ehrlich deklariert, auch die beiden schreibenden -- *eine Eichung, die nichts
+-- schreibt, eicht nichts.* Was danach faellt, gehoert Gabbro.
+extern fn eichfeld() -> ptr<normal, rw+own> Stack effects { pure } costs <= 1 ops;
+extern fn muster_schreiben(s : ptr<normal, rw+own> Stack) effects { writes s } costs <= 4096 ops;
+extern fn beruehre(s : ptr<normal, rw+own> Stack, tiefe : u64) effects { writes s } costs <= 4096 ops;
+
 impl fn unberuehrt(s : ptr<normal, r+own> Stack) -> u64
     -- **Berichtigt 2026-08-18, gefunden von `M109`.** Hier stand `unberuehrt <= s.len` --
     -- der FUNKTIONSNAME an der Stelle, an der `result` hingehoert. Gabbro hat das Wort;

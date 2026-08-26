@@ -448,6 +448,33 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
                         nimm(r, aus);
                     }
                 }
+                // **And the SAME silent drop stood at `transition`, thirteenfold**
+                // (2026-08-26). `RegDecl::requires` was counted from 2026-08-24; the clause
+                // at an `Uebergang` was not, and it is the one the corpus actually writes:
+                //
+                //     reg … requires            1 site   (`messung/fragmente/F04.gab`:41)
+                //     transition … requires    13 sites  (beispiele/02, 09, 20, 45,
+                //                                         F02 five times, virtio-net)
+                //
+                // *A clause that parses and is dropped* -- the same shape, at thirteen times
+                // the surface, and `gabbro pflichten` printed `0 device` over files full of
+                // them. **The guard could not see it either:** `pruefe-klauseln.py` matches
+                // `\.<field>\b` textually, and five different structures carry a `requires`.
+                //
+                // > It stays `Material::Foreign` and `rumpf_da: false` for the same reason
+                // > the register clause does: **Gabbro never sees the device.** Booking is
+                // > not discharging -- it is giving the duty a name and a number (W10).
+                for ue in &d.uebergaenge {
+                    if ue.requires.is_some() {
+                        aus.push(Pflicht {
+                            art: Art::Geraetezusage,
+                            funktion: d.name.text.clone(),
+                            gegenstand: format!("transition {} requires", ue.name.text),
+                            rumpf_da: false,
+                            material: Material::Foreign,
+                        });
+                    }
+                }
             }
             _ => {}
         }

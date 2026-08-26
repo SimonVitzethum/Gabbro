@@ -1418,7 +1418,7 @@ A = 19       Annahmen, jede mit Sonde oder mit Grund
 
 | | Ziel | heute | |
 |---|---|---|---|
-| `H` | 0 | **8** | 4 verankert + 6 Absenkungen; Start war 31. *F2 am 2026-08-25 an der Ausfuehrung gemessen — ohne ein Konstrukt und ohne eine Schablone: `L` steht unveraendert bei 1.* **Und der Schritt von 11 auf 10 am selben Tag ist KEINE Arbeit, sondern eine Berichtigung:** «B9» stand als Luecke, obwohl der Vertrag am `fn(…)`-Typ seit dem 2026-08-21 Pflicht ist (`N035`/`N036`/`N037`) — *ein falscher Eintrag entfernt, keine Pflicht geschlossen* |
+| `H` | 0 | **9** | 4 verankert + 6 Absenkungen; Start war 31. *F2 am 2026-08-25 an der Ausfuehrung gemessen — ohne ein Konstrukt und ohne eine Schablone: `L` steht unveraendert bei 1.* **Und der Schritt von 11 auf 10 am selben Tag ist KEINE Arbeit, sondern eine Berichtigung:** «B9» stand als Luecke, obwohl der Vertrag am `fn(…)`-Typ seit dem 2026-08-21 Pflicht ist (`N035`/`N036`/`N037`) — *ein falscher Eintrag entfernt, keine Pflicht geschlossen* |
 | `L` | ≤ 4 | **1** | getragen und unbewiesen; daneben aber **8 Prämissen ohne Pass** |
 | `A` | 19 | **33** | jede mit Sonde oder mit ausgeschriebenem Grund |
 | zweiter Korpus | vorhanden | **«K2», fünf Fragmente** | fremde Autorenlinie; drei sind ganze Module, alle drei prüfen sauber und senken ab |
@@ -3297,7 +3297,7 @@ der zweite Korpus.
 ## Wo wir stehen, gemessen und nicht behauptet
 
 ```
-H = 8        ueber den zehn Fragmenten kein Handbeweis mehr  (abgelesen, s. u.)
+H = 9        ueber den zehn Fragmenten kein Handbeweis mehr  (abgelesen, s. u.)
 ```
 
 **Und `H` beantwortet die Frage nicht.** Es misst die *Fragmente*, nicht die *Sprache*. Was der

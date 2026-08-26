@@ -308,6 +308,15 @@ impl Graph {
     /// Zyklus, an einem Gerufenen ohne `effects`, an einem Namen, den der Graph nicht kennt
     /// (extern über Modulgrenzen hinweg, Konstruktoren, `Some`/`None`), und an einem Graphen,
     /// der größer ist als `SCHRITTE_MAX`.
+    /// **The parameter names of a node** -- empty when this unit does not know it.
+    ///
+    /// Needed since 2026-08-26 by `wirkungen::probenrumpf`: to decide whether a `writes X`
+    /// goes through a PARAMETER or through the world, the site has to know which names are
+    /// parameters. *They stood in the node and had no reader.*
+    pub fn parameter(&self, start: &str) -> Vec<String> {
+        self.knoten.get(start).map(|k| k.parameter.clone()).unwrap_or_default()
+    }
+
     pub fn huelle(&self, start: &str) -> Huelle {
         let mut lauf = Lauf::default();
         let (menge, offen, _) = self.gehe(start, &mut lauf);

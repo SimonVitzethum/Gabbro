@@ -81,16 +81,45 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 /// not written down but holds. What stays allowed is exactly what the corpus does --
 /// `pure` and `reads`.
 fn probenrumpf(c: &Check, modul: &str, g: &crate::aufrufgraph::Graph, absagen: &mut Absagen) {
+    // **What the probe body MADE ITSELF** (2026-08-26, narrowed).
+    //
+    // The rule as first written refused every effect that was not `reads` or `pure` -- and
+    // it was **wider than its ground**. Measured at `messung/fragmente/F06.gab`: a
+    // calibration probe writes a pattern into a stack it obtained inside its own body and
+    // then measures how deep the touch went. *A calibration that writes nothing calibrates
+    // nothing.*
+    //
+    // The ground of the rule is **not** „a probe may not write" but *„a probe may not change
+    // what it OBSERVES"* -- that is what makes `consumes` in a probe body a double free with
+    // a green tick, and it is why `N027` bars assignment and `locks` there.
+    //
+    // > A value bound by `let` inside the probe body is not observed by anything outside it.
+    // > **Writing through it changes nothing the claim speaks about.**
+    //
+    // So: an effect `writes X` is tolerated when `X` is a PARAMETER NAME of the callee and
+    // the argument in that position is a name the probe body bound itself. Everything else
+    // -- a world name, a parameter of the enclosing unit, `consumes` in any position --
+    // still falls. *The narrowing is the smallest one the measured case needs.*
+    let mut eigene: std::collections::BTreeSet<String> = Default::default();
+    sammle_lets_im_block(&c.can_fail, &mut eigene);
     let mut rufe: Vec<&Ruf> = Vec::new();
     sammle_rufe_im_block(&c.can_fail, &mut rufe);
     for r in rufe {
         let Some(pfad) = r.path() else { continue };
         let Some(name) = pfad.teile.last() else { continue };
         let h = g.huelle(&g.schluessel_von(modul, &name.text));
+        let params = g.parameter(&g.schluessel_von(modul, &name.text));
+        // Is this `writes X` about something the body made itself?
+        let auf_eigenem = |w: &str| -> bool {
+            let Some(ort) = w.strip_prefix("writes ") else { return false };
+            let Some(i) = params.iter().position(|p| p == ort) else { return false };
+            matches!(r.argumente.get(i).map(|a| &a.art),
+                     Some(ExprArt::Ort(o)) if o.suffixe.is_empty() && eigene.contains(&o.basis.text))
+        };
         let unrein: Vec<&str> = h
             .wirkungen
             .iter()
-            .filter(|w| !w.starts_with("reads ") && w.as_str() != "pure")
+            .filter(|w| !w.starts_with("reads ") && w.as_str() != "pure" && !auf_eigenem(w))
             .map(|w| w.as_str())
             .collect();
         if unrein.is_empty() {
@@ -113,6 +142,26 @@ fn probenrumpf(c: &Check, modul: &str, g: &crate::aufrufgraph::Graph, absagen: &
                 "`N027` says the same about statements: a body without a contract may not                  do what needs one",
             ),
         );
+    }
+}
+
+/// **Every name the block BINDS ITSELF** -- and only those, not the parameters of the unit
+/// around it. *That is the whole distinction the narrowed `E008` rests on: what a probe made
+/// itself is not what a probe observes.*
+fn sammle_lets_im_block(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Let(l) => {
+                aus.insert(l.name.text.clone());
+            }
+            StmtArt::LetSonst(l) => {
+                aus.insert(l.name.text.clone());
+            }
+            _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_lets_im_block(k, aus);
+        }
     }
 }
 
