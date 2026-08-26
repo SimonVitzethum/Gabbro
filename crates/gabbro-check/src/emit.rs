@@ -193,6 +193,16 @@ struct Namen {
     /// name bound twice in one body is dropped rather than decided -- **unknown falls loud**,
     /// the same rule `geraetezeiger` follows.
     lokaltyp: HashMap<String, String>,
+    /// **`let`-bound local -> its DECLARED type expression** (2026-08-26).
+    ///
+    /// `lokaltyp` above answers with a C type, and a C type has forgotten what the
+    /// declaration said: `uint64_t *` no longer knows it points at a `Stack`. `ort_typ`
+    /// needs the declaration, not its C image -- *`lenof(f.worte)` asks for the length of an
+    /// array field, and that length stands in `[u64; STACK_WORTE]`, nowhere else.*
+    lokaltypexpr: HashMap<String, TypExpr>,
+    /// Function name -> its DECLARED result type expression. The one source from which a
+    /// `let f = eichfeld();` can learn what `f` is without anyone guessing.
+    ergebnistyp: HashMap<String, TypExpr>,
     /// (Verbund, Feld) -> erklaerter Feldtyp. Dieselbe Rolle wie `slotfeld`, eine Ebene
     /// daneben: **ohne ihn weiss der Erzeuger von `s.len` nur, dass es ein Feld ist.**
     verbundfeld: HashMap<(String, String), TypExpr>,
@@ -726,6 +736,9 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
                     _ => None,
                 },
             };
+            if let Some(e) = &f.ergebnis {
+                namen.ergebnistyp.insert(f.name.text.clone(), e.clone());
+            }
             namen.funktionen.insert(f.name.text.clone(), sig);
         }
     });
@@ -2454,8 +2467,20 @@ fn pruefkoerper(
     }
     rumpf_aus.push_str(" */\n");
     rumpf_aus.push_str(&format!("bool pruefe_{}(void) {{\n", c.name.text));
+    // **A probe body gets its own view, exactly as a function body does** (2026-08-26).
+    //
+    // Until today `pruefkoerper` handed the GLOBAL `u` straight to `anweisung`, so every
+    // name a probe bound with `let` had no type at all. Measured at
+    // `messung/fragmente/F06.gab`: `let f = eichfeld(); … lenof(f.worte)` refused, while the
+    // byte-identical code in a function body lowers to `8u`.
+    //
+    // > *A rule that works in one body and not in another is not a rule about the language,
+    // > it is a gap in one caller* -- and this one had no name, because the refusal it
+    // > produced spoke about `lenof` instead of about the missing view.
+    let mut sicht = u.clone();
+    lokale_lets(&c.can_fail, &mut sicht);
     for s in &c.can_fail.anweisungen {
-        anweisung(s, rumpf_aus, u, absagen, 1, &Austritt::default());
+        anweisung(s, rumpf_aus, &sicht, absagen, 1, &Austritt::default());
     }
     rumpf_aus.push_str("}\n");
 }
@@ -3961,11 +3986,12 @@ fn lokale_lets(b: &Block, lokal: &mut Namen) {
     sammle(b, &mut lets, &mut wieoft);
     loop {
         let mut neu: Vec<(String, String)> = Vec::new();
+        let mut neu_tx: Vec<(String, TypExpr)> = Vec::new();
         for l in &lets {
             let name = &l.name.text;
             if wieoft.get(name) != Some(&1)
                 || lokal.parametertyp.contains_key(name)
-                || lokal.lokaltyp.contains_key(name)
+                || (lokal.lokaltyp.contains_key(name) && lokal.lokaltypexpr.contains_key(name))
                 || geist_wert(&l.wert, lokal)
             {
                 continue;
@@ -3978,12 +4004,39 @@ fn lokale_lets(b: &Block, lokal: &mut Namen) {
                 None if l.typ.is_none() => wert_ctyp(&l.wert, lokal),
                 None => None,
             };
+            // **The declaration alongside the C type** (2026-08-26). Two sources, and both
+            // are declarations: the annotation on the `let` itself, or the declared result
+            // of the callee. *Nothing is inferred from a value here* -- an unknown falls
+            // out, and then `ort_typ` answers `None` and the emitter refuses by name.
+            let tx = match &l.typ {
+                Some(t) => Some(t.clone()),
+                None => match &l.wert.art {
+                    ExprArt::Ruf(r) => r
+                        .path()
+                        .and_then(|p| p.teile.last())
+                        .and_then(|i| lokal.ergebnistyp.get(&i.text).cloned()),
+                    _ => None,
+                },
+            };
+            // **Je Karte nur, was ihr noch fehlt** -- sonst traegt der Fixpunkt denselben
+            // Eintrag in jedem Durchgang nach und die Schleife endet nie. *Gemessen: sie
+            // endete nicht.*
+            if let Some(t) = tx {
+                if !lokal.lokaltypexpr.contains_key(name) {
+                    neu_tx.push((name.clone(), t));
+                }
+            }
             if let Some(c) = c {
-                neu.push((name.clone(), c));
+                if !lokal.lokaltyp.contains_key(name) {
+                    neu.push((name.clone(), c));
+                }
             }
         }
-        if neu.is_empty() {
+        if neu.is_empty() && neu_tx.is_empty() {
             return;
+        }
+        for (n, t) in neu_tx {
+            lokal.lokaltypexpr.insert(n, t);
         }
         for (n, c) in neu {
             lokal.lokaltyp.insert(n, c);
@@ -6317,6 +6370,25 @@ fn match_option(
 /// > **Jede andere Gestalt liefert `None`, und dann weigert sich der Erzeuger.** Ein
 /// > geratener Typ waere hier besonders teuer: an ihm haengt der Sonderwert, und ein
 /// > falscher Sonderwert macht aus `None` einen gueltigen Index.
+/// **The declared length of a fixed-length array type** -- or `None`.
+///
+/// It is a CONSTANT of the declaration, not a computed quantity: `[u64; STACK_WORTE]` says
+/// it, and `umgebung.rs` has already folded `STACK_WORTE`. *A length the emitter had to work
+/// out would be a second register over the same thing* (W7) -- this one reads.
+fn feldlaenge_von(t: &TypExpr, u: &Namen) -> Option<u128> {
+    let TypExpr::Feld(a) = t else { return None };
+    // **A named constant is a length too.** `[u64; STACK_WORTE]` is the ordinary case, and
+    // `konst_zahl` knows only literals -- *the same trap `scale` hit, and it is resolved the
+    // same way: `umgebung.rs` has already folded the constant, and this reads its answer
+    // instead of computing a second one* (W7).
+    konst_zahl(&a.laenge)
+        .or_else(|| match &a.laenge.art {
+            ExprArt::Ort(o) => u.konstwert.get(&o.text()).copied(),
+            _ => None,
+        })
+        .and_then(|n| u128::try_from(n).ok())
+}
+
 fn ort_typ(o: &Ort, u: &Namen) -> Option<TypExpr> {
     let tabelle = u
         .tabellenzeiger
@@ -6348,7 +6420,10 @@ fn ort_typ(o: &Ort, u: &Namen) -> Option<TypExpr> {
     // `s.len` -- ein Feld eines VERBUNDES, ueber einen Zeiger oder als Wert.
     if o.suffixe.len() == 1 {
         let OrtSuffix::Feld(f) = &o.suffixe[0] else { return None };
-        let basis = u.parametertyp.get(&o.basis.text)?;
+        let basis = u
+            .parametertyp
+            .get(&o.basis.text)
+            .or_else(|| u.lokaltypexpr.get(&o.basis.text))?;
         let ziel = match basis {
             TypExpr::Zeiger(z) => &z.ziel,
             andere => andere,
@@ -6894,6 +6969,20 @@ fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
         t = format!("{}_speicher", o.basis.text);
         zeiger = false;
     }
+    // **And a `static` of a RECORD is a value too** (2026-08-26). `static irq : IrqMarke`
+    // lowers to `static IrqMarke irq = { … };` -- an object, not a pointer to one -- and the
+    // access lowered to `irq->tiefe_max`. *`cc` says `invalid type argument of '->'`, and
+    // relying on that would be delegating a refusal whose answer stands right here.*
+    //
+    // Found by compiling `messung/fragmente/F06.gab` for the first time. **The `static` of a
+    // record was built on 2026-08-25 and nothing ever read one back** -- an emitted form
+    // whose only reader is its own writer is not measured by its own corpus, the same shape
+    // as the bank accessors.
+    if matches!(u.statiken.get(&o.basis.text),
+                Some(TypExpr::Pfad(p)) if p.teile.last().is_some_and(|i| u.verbunde.contains(&i.text)))
+    {
+        zeiger = false;
+    }
     for suf in &o.suffixe {
         match suf {
             OrtSuffix::Feld(f) => {
@@ -7043,17 +7132,49 @@ fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
         // offene Liste.** Die Absage nannte keine von ihnen, und ein Leser des Zeugnisses
         // konnte daraus nicht ablesen, WAS fehlt -- bei einer Sprache, deren ganzer Wert an
         // der Nachvollziehbarkeit ihrer Weigerungen haengt.
-        ExprArt::Eingebaut(_) => {
-            weigere(
-                absagen,
-                e.span,
-                "`sizeof` / `lenof` / `aligned` outside a `format` predicate -- inside one \
-                 they lower against the buffer (`v->len`), and outside one there is no \
-                 object to measure: `sizeof(T)` would have to agree with the layout the \
-                 checker computed, and that agreement is not established anywhere",
-            );
-            String::new()
-        }
+        // **THREE forms stood under one refusal, and its reason held for only two**
+        // (2026-08-26). The text speaks about `sizeof(T)`: *"it would have to agree with the
+        // layout the checker computed, and that agreement is not established anywhere."*
+        // True -- **and it says nothing about `lenof` over a place whose type is a
+        // fixed-length array.** There the length is not computed by anyone: it stands in the
+        // declaration, `[u64; STACK_WORTE]`, and `M103` already bounds every index by it.
+        //
+        // > *The same shape this folder has now found five times:* a refusal whose SCOPE and
+        // > whose GROUND come apart -- `static` of a record, `at dma` beside `at normal`,
+        // > `E008` at a probe body. **The cure is the same each time: give each half its own
+        // > sentence.**
+        //
+        // `lenof` was never unlowerable, only unreachable outside a `format`: it lowers today
+        // as a DESCENT MEASURE (`by decreasing (lenof(s.worte) - i)`), over the same
+        // declaration.
+        ExprArt::Eingebaut(b) => match &**b {
+            Eingebaut::Lenof(TypOderOrt::Ort(o)) => {
+                match ort_typ(o, u).as_ref().and_then(|t| feldlaenge_von(t, u)) {
+                    Some(n) => format!("{n}u"),
+                    None => {
+                        weigere(
+                            absagen,
+                            e.span,
+                            "`lenof` over a place whose type is not a fixed-length array -- \
+                             the length would have to come from somewhere other than the \
+                             declaration, and there is no such place",
+                        );
+                        String::new()
+                    }
+                }
+            }
+            _ => {
+                weigere(
+                    absagen,
+                    e.span,
+                    "`sizeof` / `aligned` outside a `format` predicate -- inside one they \
+                     lower against the buffer (`v->len`), and outside one there is no object \
+                     to measure: `sizeof(T)` would have to agree with the layout the checker \
+                     computed, and that agreement is not established anywhere",
+                );
+                String::new()
+            }
+        },
         ExprArt::Alt(_) => {
             weigere(
                 absagen,

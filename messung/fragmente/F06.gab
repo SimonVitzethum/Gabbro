@@ -104,6 +104,26 @@ atomic erschoepft   : u32 publishes nothing relaxed;
 atomic groesse      : u64 publishes nothing relaxed;
 atomic tiefster     : u32 publishes nothing relaxed;
 
+-- **NACHGEMESSEN 2026-08-26: F6 SENKT AB und uebersetzt trotzdem nicht -- und der Grund
+-- steht im eingefrorenen Ausschnitt.**
+--
+--     traverse w of s over elems of s.worte …
+--         if w != MUSTER { return i * 8; }        (FRAGMENTE.md:1121, :1124)
+--
+-- **«B12» ist am 2026-08-20 entschieden: `elems of` bindet einen INDEX**, nicht ein Element.
+-- Der Ausschnitt vom 2026-08-14 benutzt die Elementlesart. Gabbro nimmt die Zeile an -- ein
+-- Index und `MUSTER` sind beide `u64` --, und erst `cc -Werror=type-limits` sagt
+-- *„comparison is always true due to limited range"*: der Index laeuft bis 8192, `MUSTER`
+-- ist `0xdead_beef_dead_beef`.
+--
+-- > **Und darin steckt ein eigener Befund:** M1 traegt Bereichstypen und haette den
+-- > Vergleich als konstant-wahr erkennen koennen. *Der fremde Uebersetzer hat gesagt, was
+-- > der Pruefer wusste und nicht aussprach.*
+--
+-- Die Zeile zu berichtigen hiesse, einen eingefrorenen Bericht zu aendern -- dieselbe Lage
+-- wie F1s `N029` und F9s `costs <= 4096 ops`. **Der Durchstich bleibt darum offen; die
+-- Absenkung selbst ist erreicht.**
+--
 -- **ERGAENZT 2026-08-26: drei Namen, die der `can_fail`-Rumpf RUFT und nicht erklaert.**
 -- Sie werden ehrlich deklariert, auch die beiden schreibenden -- *eine Eichung, die nichts
 -- schreibt, eicht nichts.* Was danach faellt, gehoert Gabbro.
