@@ -1,14 +1,18 @@
 -- Bibliothek B -- das Geraet. Ihr Sperrrang ist ebenfalls FUER SICH vergeben,
 -- und sie hat nie von `speicher` gehoert.
+-- **`pub` an Tabelle und Sperre, seit dem 2026-08-25.** Bis dahin trugen die Traeger kein
+-- Sichtbarkeitswort, und `gabbro abi` zog sie ueber ERREICHBARKEIT hinaus -- weil die
+-- exportierte Signatur sie nennt. *Das ist eine implizite Ausfuhrmenge, und D2 verbietet
+-- sie.* `N038` weist die Signatur jetzt ab, solange der Traeger nicht selbst hinaus soll.
 module geraet {
 
-const NREGISTER : u32 = 16;
+pub const NREGISTER : u32 = 16;
 
-table Register count NREGISTER {
+pub table Register count NREGISTER {
     slot { wert : u32, bereit : bool, }
 }
 
-lock GERAET protects { Register } rank 0 held <= 40 ops;
+pub lock GERAET protects { Register } rank 0 held <= 40 ops;
 
 pub impl fn geraet_setze(i : index into Register, w : u32) -> bool
     effects { writes Register.slots, locks GERAET }

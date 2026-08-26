@@ -9,12 +9,26 @@ Zahl und Grund. Die Zahl stimmt weiter (die Messung darunter rechnet sie nach); 
 **Entscheidung ist überholt**, und der Grund dafür steht in §6: die Sperre war nicht der
 Bedarf, sondern die Reihenfolge — und die Reihenfolge lässt sich in einem Lauf einhalten.
 
+<!-- widerruf:aus -->
+*Die Spalte **vorher** ZITIERT den Zustand vor dem Bau — sie ist ein Register und keine
+Behauptung. Deshalb steht die Tafel in einem `widerruf:aus`-Block: `WB2` in
+[`../instrumente/pruefe-widerruf.py`](../instrumente/pruefe-widerruf.py) sucht genau diesen
+Wortlaut, und ein Register, das seinen Gegenstand nicht nennen darf, ist keins.*
+
 | # | Hälfte | vorher | heute |
 |---|---|---|---|
 | 1 | der **Erzeuger** — die Sprache kennt kein `&f` | `P011` / `M119` | `ExprArt::FnWert`, geprüft von `M127`/`M128` |
 | 2 | der **Ruf über einen ORT** («B8») | `P017` / `P001` | `CallTarget::Place`, geprüft von `M129` |
 | 3 | die **Absenkung** | `C001` | `bool (*bereit)(void);` und `t->senden(b)` |
 | 4 | der **Vertrag am Zeigertyp** | — | `effects` + `costs` am `fn(…)`, `N035`–`N037` |
+<!-- widerruf:an -->
+
+**Und eine fünfte Zeile kam am 2026-08-25 dazu**
+([`../TODO.md`](../TODO.md), Stufe 7): der **unbenannte Parameter** im Zeigertyp. `fn(u8)`
+fiel bis dahin an `P002`, obwohl **alle 11** gemessenen Zeigertypstellen in
+`caprock-messbasis` genau so geschrieben sind und **null von elf** einen Namen nennen.
+*Der Bau vom 21. hatte `typelist` durch `params` ersetzt und damit eine Form hinzugefügt
+und eine weggenommen* — und die weggenommene war die gemessene.
 
 ---
 

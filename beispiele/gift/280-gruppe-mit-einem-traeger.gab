@@ -1,0 +1,18 @@
+-- erwartet: U004
+-- **Eine Gruppe mit EINEM Traeger ist eine Tabelle.**
+--
+-- Die Gruppe existiert fuer eine Aussage ZWISCHEN Traegern. Nennt sie nur einen, gehoert
+-- die Aussage an dessen `table … invariant` -- und die Gruppe waere blosse Zeremonie.
+-- `U007` faellt hier mit, an der Invariante; `U004` faellt an der DEKLARATION, und das ist
+-- der frueher erkannte Fehler: die Gruppe ist schon falsch, bevor jemand sie fuellt.
+module gift::gruppe_mit_einem_traeger {
+
+table A count 16 { slot { x : u32, } }
+lock LA protects { A } rank 1 held <= 40 ops;
+
+group Eins over { A } {
+    invariant nur_a cost O(n) runs offline :
+        forall a in slots of A : A.slots[a].x > 0;
+}
+
+}

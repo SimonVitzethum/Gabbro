@@ -1,0 +1,13 @@
+-- erwartet: M106
+-- **Der Konstruktor nennt ein Feld, das der Verbund nicht hat.**
+--
+-- `Punkt` traegt `x` und `y`; der Ruf markiert `x` und `z`. Ein geschweiftes Verbundliteral
+-- gibt es nicht (`P037`) -- der markierte Ruf IST der Konstruktor, und damit ist die
+-- Feldpruefung eine Rufpruefung.
+module gift::konstruktor_nennt_fremdes_feld {
+
+type Punkt = { x : u32, y : u32, };
+
+impl fn bauen() -> Punkt effects { pure } costs <= 2 ops { return Punkt(x: 1, z: 2); }
+
+}

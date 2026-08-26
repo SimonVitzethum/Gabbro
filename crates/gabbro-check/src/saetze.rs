@@ -202,9 +202,10 @@ pub const NAMEN: &[Satz] = &[
         kennungen: &["N025"],
         aussage: "No reference across a module boundary reaches an item that is not `pub`.",
         vorbehalt: "**This is the weakest of the large rules, and it is weak in three \
-                    directions.** (1) Only 5 of 7 `pub`-carrying declaration kinds are \
+                    directions.** (1) Only 9 of 11 `pub`-carrying declaration kinds are \
                     collected -- `Modul` and `use` are MISSING, so module privacy itself is \
-                    not enforced, although the doc comment says „seven declaration kinds\". \
+                    not enforced. *It was 5 of 7 until 2026-08-25, when `table`, `device`, \
+                    `format` and `lock` got the word and this map got them.* \
                     (2) An unknown target counts as VISIBLE (`unwrap_or(true)`). (3) Only \
                     `use` lines and qualified CALLS are checked -- qualified type, constant \
                     and `static` references are silent.",
@@ -292,6 +293,57 @@ pub const NAMEN: &[Satz] = &[
         gemessen_an: "beispiele/gift: one probe each on `N035` (240), `N036` (243) and \
                       `N037` (247); the positive side is beispiele/49.",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md fnptr",
+    },
+    Satz {
+        name: "namen.ausfuhrhuelle",
+        kennungen: &["N038"],
+        aussage: "The EXPORT SET of a unit is closed: no `pub` declaration names, in the part \
+                  of it that travels into the `.gabi`, an item that this unit declares \
+                  without `pub`. The interface `gabbro abi` writes therefore explains every \
+                  name it mentions.",
+        vorbehalt: "**Two limits, and the first is deliberate.** (1) A name this unit does \
+                    NOT declare counts as fine -- the same reticence as `N025`, and for the \
+                    same reason: a FRAGMENT names things from outside the cut, and treating \
+                    those as private would refuse every excerpt. (2) What travels is measured \
+                    on the AST -- declared types, effect places, contract predicates, the \
+                    `count` of a table, a lock's `protects`/`rank`/`masks` -- while \
+                    `abi::schreibe` cuts the SOURCE TEXT. Both answers agree on this corpus, \
+                    and nothing holds them together: a clause that grows a name shape the AST \
+                    walk does not know is a hole here and a name in the `.gabi`. *The two \
+                    registers over one question are booked, not denied* (W7). And the rule \
+                    speaks about NAMES, not about types: an exported signature may still \
+                    name a `pub opaque type` whose body the importer cannot use -- that is \
+                    `D004`'s business and not this one's.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/273 (a `pub fn` over a private `table`), and the \
+                      counter-direction in `rechenwerk.rs` \
+                      `eine_schnittstelle_erklaert_jeden_namen_den_sie_nennt`: the closed \
+                      hull passes and its `.gabi` checks itself.",
+        fundstelle: "crates/gabbro-check/src/bindung.rs; SYNTAX.md section 1, D2",
+    },
+    Satz {
+        name: "namen.bindungsflaeche",
+        kennungen: &["N039"],
+        aussage: "Within ONE build no two exported declarations carry the same C binding \
+                  name. A build is the translation units of one command line together with \
+                  every interface loaded by `--with`. Since the emitter does not mangle, a \
+                  program that passes this rule has, for each of its exported names, exactly \
+                  one definition to link.",
+        vorbehalt: "**The reach is the run, and the linker's reach is larger.** Two SEPARATE \
+                    invocations whose objects are linked afterwards are invisible here -- \
+                    measured 2026-08-25: two units emitted one after the other still give \
+                    `ld: multiple definition of 'lesen'`. Closing that needs a manifest \
+                    (`manifest.rs`), not a pass. And the rule counts only what carries \
+                    `pub`: a private name binds internally since the same day, so it cannot \
+                    collide -- **that half rests on the EMITTER writing `static`, not on \
+                    this pass.** Nor does it see the names the emitter INVENTS: a lock \
+                    writes `L_nimm`/`L_gib`, a table writes `T_speicher`, and a hand-written \
+                    `pub fn L_nimm` beside them collides with neither.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/274 (two modules, one name), plus the three directions \
+                      measured by hand on 2026-08-25: two units of one run, a `.gabi` \
+                      against a unit, and the clean library pair that must stay silent.",
+        fundstelle: "crates/gabbro-check/src/bindung.rs; abi.rs, on the C side",
     },
 ];
 

@@ -53,9 +53,6 @@
 
 use gabbro_syntax::ast::*;
 
-/// Ein Item ohne eigenen Namen (ein `use`) -- es wird nie ueber seinen Namen geholt.
-static LEER: String = String::new();
-
 /// Die Kopfzeile, an der ein `.gabi` erkennbar ist.
 pub const MARKE: &str = "-- @gabi 1";
 
@@ -73,120 +70,51 @@ pub fn schreibe(baum: &Programm, quelle: &str) -> String {
     aus.push_str("\n-- Written by `gabbro abi`. Do not edit: the source is the `.gab`, and a\n");
     aus.push_str("-- second register over the same thing is the very class this folder is\n");
     aus.push_str("-- written against.\n");
-    // **Die Schnittstelle ist ein FIXPUNKT, kein Durchgang** (2026-08-20).
+    // **The interface is a WRITTEN set, not a fixpoint** (2026-08-25).
     //
-    // `table` und `atomic` haben kein `pub` -- die Grammatik kennt keins -- und standen
-    // darum als einzige Item-Arten UNBEDINGT im `.gabi`. Gemessen an
-    // `beispiele/34-markierter-wert.gab`, wo nichts oeffentlich ist: die Schnittstelle trug
-    // die Tabelle samt `count NANFRAGEN` und `was : Nachricht` hinaus -- **zwei Namen, die
-    // sie selbst nicht erklaert.**
+    // Until that day a loop stood here that collected to a standstill: `T` came along
+    // because an `index into T` names it, then `N` because `count N` names it, and so on.
+    // The reason was that `table`, `lock`, `device` and `format` **could carry no `pub`** --
+    // the grammar had the word at seven item kinds and not at them.
     //
-    // > *Eine Schnittstelle, die einen Namen nennt und nicht erklaert, ist keine.*
+    // > *The fixpoint was the honest consequence of a missing production, not the decision
+    // > it looked like.* It made the export set **implicit**: it stood written nowhere, it
+    // > simply resulted. **D2 says "nothing is implicit".**
     //
-    // Und ein Durchgang reicht nicht: `T` kommt mit, weil ein `index into T` es nennt --
-    // dann nennt `T` seinerseits `count N`, und `N` muss ebenfalls mit. Darum wird bis zum
-    // Stillstand gesammelt statt einmal gefiltert.
-    //
-    // **Was das NICHT heisst:** dass eine oeffentliche Signatur einen privaten Namen nennen
-    // DARF. Sie tut es heute, und diese Schleife macht die Folge nur ehrlich; die Frage, ob
-    // die Sprache es abweisen sollte, steht in `TODO.md` und ist eine Sprachentscheidung.
-    struct Anwaerter {
-        modul: String,
-        name: String,
-        text: String,
-        von_anfang: bool,
-    }
-    let mut alle: Vec<Anwaerter> = Vec::new();
+    // Since the four carriers carry `pub`, it stands written -- and the question the
+    // fixpoint answered has become a REFUSAL: `N038` in `bindung.rs` rejects an exported
+    // declaration that names something private. **The same class, from the other side:**
+    // there the consequence was made honest, here the cause falls.
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
-        let (name, text, von_anfang) = match &item.art {
-            ItemArt::Funktion(f) => {
-                if matches!(f.klasse, Some(FnKlasse::Spec)) {
-                    return;
-                }
-                (&f.name.text, kopf_von(f, quelle), f.oeffentlich)
+        // **A `use` is part of the interface, not of the body.** Without it the head names
+        // `Pa`, and `Pa` is no name in THIS module. *Found at the example with two modules:
+        // the parser error covered up the missing name.*
+        //
+        // It carries a `pub` of its own and is taken unconditionally anyway: a `use` binds
+        // nothing and declares nothing -- it makes a name findable inside the module, and
+        // that is exactly what the head naming it needs.
+        let text = if matches!(item.art, ItemArt::Use(_)) {
+            text_von(item, quelle)
+        } else {
+            // Everything else goes out BECAUSE it carries `pub` -- and only then. The
+            // question which name that is has exactly one reader (W7).
+            if crate::bindung::ausgefuehrter_name(item).is_none() {
+                return;
             }
-            // **Die Welt, die eine `effects`-Liste nennen darf.** Ohne sie zeigt `writes z`
-            // beim Importeur auf nichts, und `E010` haette recht.
-            ItemArt::Statisch(x) => (&x.name.text, text_von(item, quelle), x.oeffentlich),
-            ItemArt::Konst(k) => (&k.name.text, text_von(item, quelle), k.oeffentlich),
-            ItemArt::Typ(y) => (&y.name.text, text_von(item, quelle), y.oeffentlich),
-            ItemArt::Tabelle(y) => (&y.name.text, text_von(item, quelle), false),
-            ItemArt::Atomic(y) => (&y.name.text, text_von(item, quelle), y.oeffentlich),
-            // **The LOCK, since 2026-08-21 -- and its absence was the most expensive item in
-            // this file.**
-            //
-            // `lock` has no `pub` (the grammar has none), but unlike `table` and `atomic` it
-            // was not in this list at all. A `pub` signature with `effects { locks SPEICHER }`
-            // carried the NAME out and not the declaration -- exactly the shape the fixpoint
-            // above is written against: *an interface that names something and does not
-            // explain it.*
-            //
-            // > **The rank IS the lock order.** Without the `lock` line the importer's rank
-            // > rules (`H006`/`H012`, both issued in `geteilt.rs`) find no rank and stay
-            // > silent -- and a ring across two libraries passed with **0 errors, 0 hints**
-            // > (`messung/ABI.md`). Since `H016`, see `geteilt.rs`, that same case falls
-            // > loudly; this line is what makes the HONEST case possible again.
-            //
-            // `von_anfang: false` -- the lock travels because an exported signature names it,
-            // not on its own. A purely internal lock stays inside.
-            ItemArt::Lock(l) => (&l.name.text, text_von(item, quelle), false),
-            // **Ein `use` ist Teil der Schnittstelle, nicht des Rumpfs.** Ohne es nennt der
-            // Kopf `Pa`, und `Pa` ist in DIESEM Modul kein Name. *Gefunden am selben
-            // Beispiel: der Parserfehler hat den fehlenden Namen zugedeckt.*
-            ItemArt::Use(_) => (&LEER, text_von(item, quelle), true),
-            _ => return,
+            match &item.art {
+                ItemArt::Funktion(f) => kopf_von(f, quelle),
+                _ => text_von(item, quelle),
+            }
         };
-        alle.push(Anwaerter {
-            modul: modul.to_string(),
-            name: name.clone(),
-            text,
-            von_anfang,
-        });
+        nach_modul.entry(modul.to_string()).or_default().push(text);
     });
-    let mut drin: Vec<bool> = alle.iter().map(|a| a.von_anfang).collect();
-    loop {
-        let flaeche: String = alle
-            .iter()
-            .zip(&drin)
-            .filter(|(_, d)| **d)
-            .map(|(a, _)| a.text.as_str())
-            .collect::<Vec<_>>()
-            .join("\n");
-        let mut gewachsen = false;
-        for i in 0..alle.len() {
-            if !drin[i] && nennt(&flaeche, &alle[i].name) {
-                drin[i] = true;
-                gewachsen = true;
-            }
-        }
-        if !gewachsen {
-            break;
-        }
-    }
-    for (a, _) in alle.iter().zip(&drin).filter(|(_, d)| **d) {
-        nach_modul
-            .entry(a.modul.clone())
-            .or_default()
-            .push(a.text.clone());
-    }
-    // **EIN Block je Modul.** Die erste Fassung schrieb je ITEM einen -- und `N001` (*„`bib`
-    // is declared twice in this scope"*) hatte recht. *Gefunden vom eigenen Namenspass, an
-    // der eigenen Schnittstelle.*
+    // **ONE block per module.** The first version wrote one per ITEM -- and `N001` (*"`bib`
+    // is declared twice in this scope"*) was right. *Found by this compiler's own name pass,
+    // on this compiler's own interface.*
     for (modul, zeilen) in &nach_modul {
         aus.push_str(&format!("\nmodule {modul} {{\n{}\n}}\n", zeilen.join("\n")));
     }
     aus
-}
-
-/// **Nennt die exportierte Flaeche diesen Namen?** Als WORT, nicht als Teilzeichenkette --
-/// sonst zoege ein `Anfragen` auch ein `Anfragenzaehler` mit herein.
-fn nennt(flaeche: &str, name: &str) -> bool {
-    let grenze = |c: char| !(c.is_alphanumeric() || c == '_');
-    flaeche.match_indices(name).any(|(i, _)| {
-        let davor = flaeche[..i].chars().next_back().is_none_or(grenze);
-        let danach = flaeche[i + name.len()..].chars().next().is_none_or(grenze);
-        davor && danach
-    })
 }
 
 /// Der Quelltext eines Items, wörtlich — der Parser hat ihn schon gelesen, also gibt es
@@ -227,4 +155,240 @@ fn kopf_von(f: &FnDecl, quelle: &str) -> String {
     // Sichtbarkeit zu nehmen hiesse, `N025` gegen den Importeur zu wenden, der alles richtig
     // gemacht hat. *Gemessen am ersten Import, den die eigene Schnittstelle abwies.*
     format!("pub extern {};", ohne_klasse.trim_end_matches(';').trim_end())
+}
+
+// =======================================================================================
+// «A4» -- DIE BERECHNETE HUELLE
+// =======================================================================================
+
+/// **The verdict over ONE function: does the computed effect list agree with the written
+/// one?**
+///
+/// The largest single item of the usability measure reads *"COMPUTE the caller's effect
+/// list instead of demanding it"*. The call graph computes one half already
+/// (`huelle_der_gerufenen`), `wirkungen::rumpfwirkungen_mit` the other -- **nothing is
+/// built here; what is measured is whether it would be worth building.**
+///
+/// > **And the directions are NOT equivalent.** *Narrower* means: the declaration promises
+/// > more than the body does -- a loss of sharpness, not a hole. *Broader* means: the body
+/// > does more than the declaration names -- **and by `E005`, `E008` and `E010` that must
+/// > not occur at all.** Should this column move off zero, the finding is not one about the
+/// > elaborator but one about those three passes.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Urteil {
+    /// Every computed effect is covered, and every declared one carries something.
+    Identisch,
+    /// Declared, but demanded neither by the body nor by the callees.
+    Enger(Vec<String>),
+    /// Performed, but not declared. **This column belongs empty** -- as far as the places
+    /// are known world names at all. The `bool` says whether at least ONE of them is.
+    ///
+    /// > `E008` and `E010` compare the place only *"where the place is comparable at all:
+    /// > at known world state"*. A `writes halde` out of an `extern fn` whose `halde`
+    /// > nothing in this unit declares falls at NEITHER of the two -- **with a reason**,
+    /// > not by oversight. Whoever writes those cases into the same column as a real frame
+    /// > breach reports a gap that does not exist.
+    Breiter(Vec<String>, bool),
+    /// The hull tears, and the edge is named (R16).
+    Unvollstaendig(String),
+    /// No `effects` clause or no body -- there is nothing to compare.
+    Nichts,
+}
+
+#[derive(Debug, Clone)]
+pub struct Vergleich {
+    pub modul: String,
+    pub name: String,
+    pub klasse: Option<FnKlasse>,
+    pub deklariert: Vec<String>,
+    pub berechnet: Vec<String>,
+    pub urteil: Urteil,
+}
+
+/// **Does a DECLARED effect cover a COMPUTED one?** -- and by the same rules with which
+/// `E005`/`E010`/`H007` hold the written list against the body.
+///
+/// * `consumes`, `publishes`, `allocs`, `masks` are write rights (`schreibrechte` there),
+/// * `publishes` additionally grants a read right (*"the same place under two names"*),
+/// * `locks X` also covers `locks shared X` -- exclusive is stronger; **not the reverse.**
+///
+/// *Every one of those three lines stands over there just so. Whoever writes them
+/// differently here measures the difference between two filters, not between two lists.*
+fn deckt_a4(erklaert: &str, berechnet: &str) -> bool {
+    fn schreibt(s: &str) -> Option<&str> {
+        ["writes ", "consumes ", "publishes ", "allocs ", "masks "]
+            .iter()
+            .find_map(|v| s.strip_prefix(v))
+    }
+    if let Some(getan) = berechnet.strip_prefix("writes ") {
+        if let Some(erlaubt) = schreibt(erklaert) {
+            return crate::wirkungen::deckt_wirkung(
+                &format!("writes {erlaubt}"),
+                &format!("writes {getan}"),
+            );
+        }
+        return false;
+    }
+    if let Some(getan) = berechnet.strip_prefix("reads ") {
+        for v in ["reads ", "publishes "] {
+            if let Some(erlaubt) = erklaert.strip_prefix(v) {
+                return crate::wirkungen::deckt_wirkung(
+                    &format!("reads {erlaubt}"),
+                    &format!("reads {getan}"),
+                );
+            }
+        }
+        return false;
+    }
+    if let Some(getan) = berechnet.strip_prefix("locks shared ") {
+        for v in ["locks shared ", "locks "] {
+            if let Some(erlaubt) = erklaert.strip_prefix(v) {
+                return erlaubt == getan;
+            }
+        }
+        return false;
+    }
+    crate::wirkungen::deckt_wirkung(erklaert, berechnet)
+}
+
+/// Effects without a place -- they say nothing about a place of the world and stand in
+/// neither direction. `pure` thereby falls to "the empty set", and that is exactly what it
+/// is.
+fn ortlos(w: &str) -> bool {
+    w == "pure" || w == "diverges"
+}
+
+/// **The computed hull of ONE function:** what the body itself does, united with what
+/// comes from the callees.
+pub fn berechne(
+    f: &FnDecl,
+    modul: &str,
+    g: &crate::aufrufgraph::Graph,
+    konstanten: &[String],
+    weltnamen: &[String],
+) -> (std::collections::BTreeSet<String>, Option<String>) {
+    berechne_mit(f, modul, g, konstanten, weltnamen, false)
+}
+
+/// `weit = true` also computes the reads over parameters and over undeclared names -- see
+/// `wirkungen::rumpfwirkungen_mit`.
+pub fn berechne_mit(
+    f: &FnDecl,
+    modul: &str,
+    g: &crate::aufrufgraph::Graph,
+    konstanten: &[String],
+    weltnamen: &[String],
+    weit: bool,
+) -> (std::collections::BTreeSet<String>, Option<String>) {
+    let FnRumpf::Block(b) = &f.rumpf else {
+        return (Default::default(), Some("no body".into()));
+    };
+    let mut menge = crate::wirkungen::rumpfwirkungen_mit(f, b, konstanten, weltnamen, weit);
+    let h = g.huelle_der_gerufenen(&g.schluessel_von(modul, &f.name.text));
+    menge.extend(h.wirkungen.iter().cloned());
+    (menge, h.unvollstaendig)
+}
+
+/// **The comparison over a whole unit.** One row per function with `effects` and a body.
+pub fn vergleiche(baum: &Programm) -> Vec<Vergleich> {
+    vergleiche_mit(baum, false)
+}
+
+pub fn vergleiche_mit(baum: &Programm, weit: bool) -> Vec<Vergleich> {
+    let g = crate::aufrufgraph::erhebe(baum);
+    let (konstanten, weltnamen) = crate::wirkungen::welt_und_konstanten(baum);
+    let mut aus = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let (Some(w), FnRumpf::Block(_)) = (&f.effects, &f.rumpf) else {
+            return;
+        };
+        let deklariert: Vec<String> = w.liste.iter().map(|e| e.art.text()).collect();
+        let (berechnet_menge, offen) =
+            berechne_mit(f, modul, &g, &konstanten, &weltnamen, weit);
+        let berechnet: Vec<String> = berechnet_menge.iter().cloned().collect();
+        let urteil = if let Some(grund) = offen {
+            Urteil::Unvollstaendig(grund)
+        } else {
+            let ungedeckt: Vec<String> = berechnet
+                .iter()
+                .filter(|b| !ortlos(b) && !deklariert.iter().any(|d| deckt_a4(d, b)))
+                .cloned()
+                .collect();
+            let bekannt = ungedeckt.iter().any(|b| {
+                b.rsplit_once(' ').is_some_and(|(_, o)| {
+                    let gr = o.split(['.', '[']).next().unwrap_or(o);
+                    weltnamen.iter().any(|k| k == gr)
+                })
+            });
+            let unbegruendet: Vec<String> = deklariert
+                .iter()
+                .filter(|d| !ortlos(d) && !berechnet.iter().any(|b| deckt_a4(d, b)))
+                .cloned()
+                .collect();
+            // **Broader beats narrower.** A list that promises too little is a finding;
+            // one that promises too much is merely blunt.
+            if !ungedeckt.is_empty() {
+                Urteil::Breiter(ungedeckt, bekannt)
+            } else if !unbegruendet.is_empty() {
+                Urteil::Enger(unbegruendet)
+            } else {
+                Urteil::Identisch
+            }
+        };
+        aus.push(Vergleich {
+            modul: modul.to_string(),
+            name: f.name.text.clone(),
+            klasse: f.klasse,
+            deklariert,
+            berechnet,
+            urteil,
+        });
+    });
+    aus
+}
+
+/// **The interface with the COMPUTED effect list instead of the written one.**
+///
+/// The same `.gabi` as `schreibe`, only that in every function head the `effects` clause is
+/// replaced by the computed one. *If the hull is incomplete the written line stays and the
+/// reason stands beside it* -- issuing a lower bound as an interface would be exactly the
+/// lowering from checked to claimed that the head of this file rules out.
+pub fn schreibe_berechnet(baum: &Programm, quelle: &str) -> String {
+    let g = crate::aufrufgraph::erhebe(baum);
+    let (konstanten, weltnamen) = crate::wirkungen::welt_und_konstanten(baum);
+    let mut ersatz: std::collections::BTreeMap<(u32, u32), String> = Default::default();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let Some(w) = &f.effects else { return };
+        let (menge, offen) = berechne(f, modul, &g, &konstanten, &weltnamen);
+        let text = match offen {
+            Some(grund) => format!(
+                "effects {{ {} }} -- HULL INCOMPLETE, written line kept: {grund}",
+                w.liste.iter().map(|e| e.art.text()).collect::<Vec<_>>().join(", ")
+            ),
+            None if menge.is_empty() => "effects { pure }".to_string(),
+            None => format!(
+                "effects {{ {} }}",
+                menge.iter().cloned().collect::<Vec<_>>().join(", ")
+            ),
+        };
+        ersatz.insert((w.span.von, w.span.bis), text);
+    });
+    let roh = schreibe(baum, quelle);
+    // The replacement runs over the TEXT of the clause, not over the span: `schreibe` has
+    // already cut the head out of the source, and a span of the source points somewhere
+    // else in the result.
+    let mut aus = roh;
+    for ((von, bis), neu) in &ersatz {
+        let alt = &quelle[*von as usize..*bis as usize];
+        if aus.contains(alt) {
+            aus = aus.replacen(alt, neu, 1);
+        }
+    }
+    aus
 }

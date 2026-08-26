@@ -226,7 +226,7 @@ $ ssh ki-pc-fisch-101 'cd gabbro-e && python3 mutiere-pruefer.py'
 | Frage | Zahl | Befehl / Fundstelle |
 |---|---:|---|
 | `walk`-Deklarationen im ganzen Korpus | **3** | `grep -rn "^walk \|^ *walk " --include=*.gab .` |
-| `group`-Deklarationen | **9** | `grep -rn "^group \|^ *group " --include=*.gab .` |
+| `group`-Deklarationen | **12** | `grep -rn "^group \|^ *group " --include=*.gab .` |
 | `group`, die einen `walk`-Träger nennt | **0** | alle sechs sind `over { Endpunkte, Faeden }` |
 | `ops`-Klausel an einer `group` **in der Grammatik** | **gibt es nicht** | `SYNTAX.md`:1055 `gruppedecl` |
 | `by ops` an einem `walk`-Feld **in der Grammatik** | **gibt es nicht** | `SYNTAX.md`:857 `walkdecl` — `node`/`down`/`leaf`/`invariant`, kein `slot` |

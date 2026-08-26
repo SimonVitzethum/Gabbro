@@ -1,0 +1,15 @@
+-- erwartet: E004
+-- **Ein Praedikatrumpf an einer `impl fn`.**
+--
+-- `= <praedikat>;` ist die Form einer SPEZIFIKATION -- sie sagt, was gilt, und wird vor der
+-- Erzeugung geloescht. Eine `impl fn` wird abgesenkt; ein Praedikat als Rumpf haette dort
+-- keinen Code. Die Form ist der Spezifikation vorbehalten, und das ist keine Zeremonie,
+-- sondern die Grenze zwischen dem, was rechnet, und dem, was behauptet.
+module gift::praedikatrumpf_an_impl_fn {
+
+impl fn positiv(a : u32) -> bool
+    effects { pure }
+    costs   <= 1 ops
+    = a > 0;
+
+}

@@ -1106,7 +1106,12 @@ impl Umgebung {
                 parameters: f
                     .parameter
                     .iter()
-                    .map(|p| (p.name.text.clone(), self.typexpr(von, &p.typ, unterwegs)))
+                    .map(|p| {
+                        (
+                            p.name.as_ref().map(|n| n.text.clone()),
+                            self.typexpr(von, &p.typ, unterwegs),
+                        )
+                    })
                     .collect(),
                 result: f
                     .ergebnis

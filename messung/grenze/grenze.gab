@@ -1,0 +1,87 @@
+-- **Der Grenzdurchstich -- eine Gabbro-Einheit, die von Rust ueber `extern "C"` gerufen wird.**
+--
+-- Sie ist absichtlich klein. Sie soll nichts koennen, sondern vier Fragen beantwortbar
+-- machen, und die vierte ist die, auf die es ankommt:
+--
+--   1. Reist ein Verbund unveraendert ueber die Grenze? (`Fach_slot` gegen `#[repr(C)]`)
+--   2. Wem gehoert die Struktur, wenn Rust sie haelt und Gabbro einen `ptr<normal, rw>` nimmt?
+--   3. Was tut ein Rust-`panic!` durch einen C-Rahmen hindurch?
+--   4. **Die Rangordnung.** Diese Einheit nimmt `A` (rank 1) vor `B` (rank 2) -- rangtreu,
+--      und `H001`-`H017` sind darueber gruen. Der Rust-Teil daneben nimmt DIESELBEN beiden
+--      Sperren in der anderen Reihenfolge. Gabbro sieht ihn nicht.
+--
+-- **Was der Erzeuger fuer eine Sperre schreibt, ist eine DEKLARATION, keine Definition:**
+--
+--     void A_nimm(void);
+--     void A_gib(void);
+--
+-- Der Rumpf kommt von aussen. Damit ist jede Aussage ueber die Rangordnung eine Aussage
+-- ueber die Rufe, die IN DIESER DATEI stehen -- und ueber keinen anderen Faden.
+
+module grenze {
+
+pub const NFAECHER : u32 = 8;
+
+-- **Der Verbund fuer Frage 1.** Absichtlich mit Loechern: `u32`, `bool`, `u64`, `u8` --
+-- wer Groesse und Ausrichtung falsch rechnet, faellt hier und nicht erst an einem Feld.
+pub table Fach count NFAECHER {
+    slot {
+        marke   : u32,
+        gueltig : bool,
+        breit   : u64,
+        schmal  : u8,
+    }
+}
+
+pub table Plan count NFAECHER {
+    slot { wert : u32, }
+}
+
+-- **Zwei Sperren, eine Ordnung.** `A` unter `B`: wer `B` will, muss `A` schon halten.
+pub lock A protects { Fach } rank 1 held <= 40 ops;
+pub lock B protects { Plan } rank 2 held <= 40 ops;
+
+-- **Frage 4, die Gabbro-Seite.** Rangtreu: erst `A` (1), dann `B` (2).
+pub impl fn rangtreu(i : index into Fach, w : u32)
+    effects { writes Fach.slots, writes Plan.slots, locks A, locks B }
+    costs   <= 40 ops
+{
+    locks A {
+      locks B {
+        Fach.slots[i].marke = w;
+        Plan.slots[i].wert  = w;
+      }
+    }
+}
+
+-- **Frage 2.** Gabbro nimmt einen `ptr<normal, rw>`; die Struktur haelt der Rufer.
+pub impl fn fremd_schreiben(f : ptr<normal, rw> Fach, i : index into Fach, w : u32) -> u32
+    effects { reads f.slots, writes f.slots }
+    costs   <= 8 ops
+{
+    f.slots[i].marke = w;
+    return f.slots[i].marke;
+}
+
+-- **Frage 1.** Ein Wert, der ueber die Grenze zurueckkommt -- damit die Feldlagen nicht nur
+-- gerechnet, sondern GELESEN werden.
+pub impl fn lies_marke(f : ptr<normal, r> Fach, i : index into Fach) -> u32
+    effects { reads f.slots }
+    costs   <= 4 ops
+{
+    return f.slots[i].marke;
+}
+
+-- **Frage 2, die scharfe Fassung.** Zwei Zeiger auf denselben Typ. Der Erzeuger schreibt
+-- `Fach *restrict a, Fach *restrict b` -- eine ALIASFREIHEITS-ZUSAGE an den Uebersetzer.
+-- Gabbro loest sie fuer jeden Rufer ein, den es SIEHT. Rust ist keiner davon.
+pub impl fn misch(a : ptr<normal, rw> Fach, b : ptr<normal, rw> Fach, i : index into Fach) -> u32
+    effects { reads a.slots, writes a.slots, reads b.slots, writes b.slots }
+    costs   <= 12 ops
+{
+    a.slots[i].marke = 1;
+    b.slots[i].marke = 2;
+    return a.slots[i].marke;
+}
+
+}

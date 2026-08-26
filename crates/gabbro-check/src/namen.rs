@@ -1778,7 +1778,9 @@ fn spiegel_und_sonde(baum: &Programm, absagen: &mut Absagen) {
 /// module b { use a::heimlich; … }          -- 0 Fehler
 /// ```
 ///
-/// Sieben Deklarationsarten tragen `oeffentlich`, und **keine einzige Stelle las es**. Das
+/// Sieben Deklarationsarten trugen `oeffentlich` — **seit dem 2026-08-25 sind es elf**, denn
+/// `table`, `device`, `format` und `lock` haben das Wort dazubekommen (siehe
+/// [`crate::bindung`]) —, und **keine einzige Stelle las es**. Das
 /// ist nicht nur eine tote Klausel: `D004` — die Wand um einen `opaque type` — begründet sich
 /// ausdrücklich mit *„die Tür ist die MODULGRENZE"*. **Eine Grenze, die niemand prüft, ist
 /// keine**, und die Regel darüber stand auf einem Wort, das nichts hielt.
@@ -1797,6 +1799,14 @@ fn sichtbarkeit(baum: &Programm, absagen: &mut Absagen) {
             ItemArt::Statisch(x) => (&x.name, x.oeffentlich),
             ItemArt::Typ(t) => (&t.name, t.oeffentlich),
             ItemArt::Atomic(a) => (&a.name, a.oeffentlich),
+            // **The four carriers, since 2026-08-25.** Until then they carried no `pub`,
+            // so this map could not hold them -- a `use a::T;` on a foreign table was
+            // unobjectionable because `T` COULD not be private at all. *Now it can, and the
+            // map holds it.*
+            ItemArt::Tabelle(x) => (&x.name, x.oeffentlich),
+            ItemArt::Lock(x) => (&x.name, x.oeffentlich),
+            ItemArt::Format(x) => (&x.name, x.oeffentlich),
+            ItemArt::Device(x) => (&x.name, x.oeffentlich),
             _ => return,
         };
         offen.insert(crate::umgebung::qualifiziere(modul, &name.text), oeff);

@@ -89,6 +89,18 @@ struct Namen {
     /// union { … } }` -- und die Marke ist ein `enum`, damit `-Wswitch` ein **zweiter
     /// Leser von `D005`** wird.
     markierte: HashMap<String, Vec<Variante>>,
+    /// **The `reason` names -- a TYPE, and the emitter already writes it** (2026-08-25).
+    ///
+    /// `ItemArt::Reason` emits `typedef enum { … } R;` some hundred lines below, so `R` is a C
+    /// type name of this unit's own making. `ctyp` did not know it, and the collection branch
+    /// below listed `reason` among the items that *"declare no name a lowering would look
+    /// up"* -- **a sentence that its own emitter refutes.**
+    ///
+    /// *Found by `messung/fragmente/F06.gab`:* `impl fn messen_benutzt(…, art : Stackart)`
+    /// checks with zero errors and fell at `C001 parameter type`. The catch-all branch is
+    /// exactly the shape the comment beside it warns about -- **a map that is not missing
+    /// loudly, but silently.**
+    gruende: BTreeSet<String>,
     /// Name -> markierter Typ, fuer Parameter und `let`. Konservativ wie `tabellenzeiger`:
     /// wer irgendwo anders erklaert ist, faellt heraus. **Ohne das weiss ein `match m`
     /// nicht, WELCHE Variantenmenge erschoepfend sein muss.**
@@ -168,6 +180,19 @@ struct Namen {
     /// Name -> erklaerter Parametertyp, konservativ ueber alle Funktionen. **Nur damit
     /// bekommt ein `let d = a - b;` seinen Typ**, ohne dass ihn jemand raet.
     parametertyp: HashMap<String, TypExpr>,
+    /// **`let`-bound local -> its C type, read from a declaration and not guessed**
+    /// (2026-08-25).
+    ///
+    /// `parametertyp` above answers for anything a SIGNATURE names. A local bound by `let`
+    /// had no answer at all: `let frei = unberuehrt(s); let benutzt = s.len - frei;` refused
+    /// at `C001 let without a resolvable type` -- **and the type stood in the callee's
+    /// declaration the whole time**, exactly as the comment above says about parameters.
+    ///
+    /// *The chain is why this is a map and not a lookup:* `benutzt` needs `frei`, and `frei`
+    /// needs the signature of `unberuehrt`. `lokale_lets` therefore runs to a FIXPOINT, and a
+    /// name bound twice in one body is dropped rather than decided -- **unknown falls loud**,
+    /// the same rule `geraetezeiger` follows.
+    lokaltyp: HashMap<String, String>,
     /// (Verbund, Feld) -> erklaerter Feldtyp. Dieselbe Rolle wie `slotfeld`, eine Ebene
     /// daneben: **ohne ihn weiss der Erzeuger von `s.len` nur, dass es ein Feld ist.**
     verbundfeld: HashMap<(String, String), TypExpr>,
@@ -273,6 +298,49 @@ fn verbundwert(e: &Expr, u: &Namen) -> bool {
         }
         _ => false,
     }
+}
+
+/// **The brace initialiser of a LABELLED CALL, for a `static` of that record** (2026-08-25).
+///
+/// `Some("{ .a = 1, .b = 2 }")` exactly when `e` is the labelled call of the record `verbund`
+/// itself. Everything else is `None` -- **including a call that returns such a record**: a
+/// function call is not a constant expression, and C11 6.7.9p4 requires one at file scope.
+/// *The distinction is the same one `verbundwert` draws, and it is drawn here again because
+/// the answer differs: an expression position takes the call, an initialiser does not.*
+///
+/// The template is `S19 verbund.konstruktor` (proved 2026-08-17) -- the same one `emit::ruf`
+/// already rests on. **No new register entry, and `L` does not move.**
+fn verbundmarken(e: &Expr, verbund: &str, u: &Namen, absagen: &mut Absagen) -> Option<String> {
+    match &e.art {
+        ExprArt::Klammer(x) => verbundmarken(x, verbund, u, absagen),
+        ExprArt::Ruf(r) if r.ist_verbundwert() => {
+            // The record it constructs must be the record that was declared. `static mut x : A
+            // = B(f: 1)` is not a lowering question -- it is a type error, and M1 owns it.
+            if r.path().and_then(|p| p.teile.last()).map(|n| n.text.as_str()) != Some(verbund) {
+                return None;
+            }
+            let felder: Vec<String> = r
+                .marken
+                .iter()
+                .zip(r.argumente.iter())
+                .map(|(m, a)| format!(".{} = {}", m.text, ausdruck(a, u, absagen)))
+                .collect();
+            Some(format!("{{ {} }}", felder.join(", ")))
+        }
+        _ => None,
+    }
+}
+
+/// The `const` prefix and the `section` attribute of a `static` -- **the record case only**,
+/// where the C type can never end in `*` and the pointer/target distinction below does not
+/// arise.
+fn statischer_kopf(st: &StatischDecl) -> (&'static str, String) {
+    let konst = if st.veraenderlich { "" } else { "const " };
+    let abschnitt = match &st.section {
+        Some(t) => format!(" __attribute__((section(\"{}\")))", t.text),
+        None => String::new(),
+    };
+    (konst, abschnitt)
 }
 
 /// Ist `t` ein Zeiger auf einen Pfad, den diese Einheit nicht aufloest? Dann traegt sie
@@ -615,11 +683,20 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
         // > darauf laeuft ueber den gewoehnlichen Ortspfad. *Ob das reicht, hat vor dem
         // > Ausschreiben nie jemand gefragt, weil der Sammelzweig die Frage gar nicht
         // > stellte.* Das Verhalten bleibt; die Frage steht jetzt da.
+        //
+        // > **And on 2026-08-25 `reason` LEFT this list, because the sentence above was wrong
+        // > about it.** It does declare a name a lowering looks up: `ItemArt::Reason` writes
+        // > `typedef enum { … } R;`, and a parameter of type `R` is a parameter of a C type
+        // > this unit itself defines. *The catch-all had the same answer for it as for `use`
+        // > and `module` -- and gave no reason, which is precisely what this comment stands
+        // > against.* Found at `F06`:134, `impl fn messen_benutzt(…, art : Stackart)`.
+        ItemArt::Reason(r) => {
+            namen.gruende.insert(r.name.text.clone());
+        }
         ItemArt::Modul(_)
         | ItemArt::Use(_)
         | ItemArt::Funktion(_)
         | ItemArt::Statisch(_)
-        | ItemArt::Reason(_)
         | ItemArt::State(_)
         | ItemArt::Assume(_)
         | ItemArt::Axiom(_)
@@ -1327,13 +1404,48 @@ pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
             // Leervariante zu nennen: **welche Variante die Null ist, sagt die Deklaration
             // nicht** -- `enum` beginnt bei der ersten, aber dass die erste die gemeinte ist,
             // steht nirgends. Gefunden beim Abarbeiten der Blindstellen.
+            //
+            // **NARROWED on 2026-08-25, and the reason is that the refusal was WIDER than its
+            // own grounds.** The text above argues one case -- *initialised with a plain
+            // number* -- and the code refused **every** `static` whose type is a `tagged` or a
+            // record, including the one form for which the question it asks is already
+            // answered in the source: the LABELLED CALL. `static mut irq : IrqMarke =
+            // IrqMarke(tiefe_max: 0, n: 1);` does not leave open which field carries what; it
+            // says so, field by field, and in the checker `M106`/`M107` have already held the
+            // label list against the field list (`m1.rs::marken_pruefen`).
+            //
+            // *That is the shape `messung/fragmente/` has now found five times:* a rule whose
+            // extent and whose justification have drifted apart. **The justification was
+            // right; the extent was not.**
+            //
+            // > **No new template.** The lowering is `S19 verbund.konstruktor`, PROVED on
+            // > 2026-08-17 (`beweise/Verbund_Konstruktor.thy`) and already carried by
+            // > `emit::ruf` for the expression position. This branch reaches the same
+            // > designators at file scope -- `L` does not move, and that is the whole point of
+            // > K100's second gate.
+            //
+            // A `tagged` keeps its refusal: which variant the zero is, the declaration still
+            // does not say, and a labelled call cannot name one.
             if let TypExpr::Pfad(p) = &st.typ {
                 if let Some(n) = p.teile.last() {
                     if namen.markierte.contains_key(&n.text) || namen.verbunde.contains(&n.text) {
+                        // **A brace initialiser, not a compound literal.** `ruf` writes
+                        // `(P){ .a = 1 }` -- an lvalue with static storage duration, which C11
+                        // 6.7.9p4 does not admit as an initialiser for a static object. At file
+                        // scope the same designators go in braces, and `cc -Werror` is the
+                        // second reader of the completeness (`-Wmissing-field-initializers`).
+                        if let Some(felder) = verbundmarken(&st.wert, &n.text, &namen, absagen) {
+                            let (konst, abschnitt) = statischer_kopf(st);
+                            aus.push_str(&format!(
+                                "\nstatic {konst}{} {}{abschnitt} __attribute__((unused)) = {felder};\n",
+                                n.text, st.name.text
+                            ));
+                            return;
+                        }
                         weigere(
                             absagen,
                             st.name.span,
-                            "`static` of a `tagged` type or a record initialised with a plain                              number -- which variant the zero is, the declaration does not                              say, and a record has no scalar value",
+                            "`static` of a `tagged` type or a record initialised with a plain                              number -- which variant the zero is, the declaration does not                              say, and a record has no scalar value. **A record initialised by                              its LABELLED CALL lowers since 2026-08-25** -- write                              `T(f: …, g: …)`, which says field by field what the number does                              not",
                         );
                         return;
                     }
@@ -3325,6 +3437,15 @@ fn ctyp(t: &TypExpr, u: &Namen) -> Option<String> {
                 // Verbund darueber: `u.typen` enthaelt ihn auch, und dort waere sein Rumpf
                 // ein `TypExpr::Varianten`, an dem `ctyp` scheitert.
                 _ if u.markierte.contains_key(&n) => n,
+                // **A path naming a `reason` IS its enum** (2026-08-25). `ItemArt::Reason`
+                // writes `typedef enum { R_A = 0, … } R;`, so the name carries itself -- and
+                // the CONTRACT of the reason (which values exist, that it is `exhaustive`) is
+                // a checker fact and stays there, exactly as a range type's bounds do (W6).
+                //
+                // *It stands before the range-type line below for the same reason the two
+                // above do:* `u.typen` does not hold it, but a future carrier line would, and
+                // an order that is right by accident is not an order.
+                _ if u.gruende.contains(&n) => n,
                 // **A named range type lowers to its carrier.** `type Zaehler = u32 in
                 // 0 .. 65535` becomes `uint32_t`; the range itself is an M1 fact and stays in
                 // the checker -- W6: what is left out of the C is left out because M1 carries
@@ -3796,8 +3917,78 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
         let mut gefunden = lokal.clone();
         im_block(b, u, &mut gefunden);
         lokal = gefunden;
+        lokale_lets(b, &mut lokal);
     }
     lokal
+}
+
+/// **The C type of every `let`-bound local this body declares -- to a FIXPOINT** (2026-08-25).
+///
+/// `eigene_sicht` above answers for parameters, for device handles and for record values. A
+/// name bound by `let` had no answer, and the emitter said `C001 let without a resolvable
+/// type` at a site where the type stood in a declaration two lines up:
+///
+/// ```gabbro
+/// let frei    = unberuehrt(s);      -- `-> u64` in the callee's signature
+/// let benutzt = s.len - frei;       -- refused: `frei` was unknown
+/// ```
+///
+/// **The fixpoint is not a flourish, it is the chain.** `benutzt` is resolvable only once
+/// `frei` is, so one pass answers half the question and looks as though it answered all of it.
+/// The loop is bounded by the number of `let`s: each round either adds one name or stops.
+///
+/// > **A name bound TWICE in one body is dropped, not decided.** Two `let`s of the same name
+/// > in sibling branches may carry different types, and this map has no scopes -- *unknown
+/// > falls loud*, which is the rule `geraetezeiger` and `vorzeichenlos` already follow. The
+/// > cost is a refusal where an answer existed; the alternative is a wrong C type, and W9 does
+/// > not license a coarsening where the exact answer is unavailable.
+///
+/// A ghost `let` is skipped: its binding does not reach the C at all, and an entry here would
+/// claim a type for a name the product never spells.
+fn lokale_lets(b: &Block, lokal: &mut Namen) {
+    fn sammle<'a>(b: &'a Block, aus: &mut Vec<&'a LetStmt>, wieoft: &mut HashMap<String, u32>) {
+        for s in &b.anweisungen {
+            if let StmtArt::Let(l) = &s.art {
+                *wieoft.entry(l.name.text.clone()).or_insert(0) += 1;
+                aus.push(l);
+            }
+            for k in crate::unterbloecke(s) {
+                sammle(k, aus, wieoft);
+            }
+        }
+    }
+    let (mut lets, mut wieoft) = (Vec::new(), HashMap::new());
+    sammle(b, &mut lets, &mut wieoft);
+    loop {
+        let mut neu: Vec<(String, String)> = Vec::new();
+        for l in &lets {
+            let name = &l.name.text;
+            if wieoft.get(name) != Some(&1)
+                || lokal.parametertyp.contains_key(name)
+                || lokal.lokaltyp.contains_key(name)
+                || geist_wert(&l.wert, lokal)
+            {
+                continue;
+            }
+            // Exactly the two sources `StmtArt::Let` itself reads, and in the same order --
+            // **two registers over one thing would be W7**, and the one that decides here must
+            // be the one that emits there.
+            let c = match l.typ.as_ref().and_then(|t| ctyp(t, lokal)) {
+                Some(c) => Some(c),
+                None if l.typ.is_none() => wert_ctyp(&l.wert, lokal),
+                None => None,
+            };
+            if let Some(c) = c {
+                neu.push((name.clone(), c));
+            }
+        }
+        if neu.is_empty() {
+            return;
+        }
+        for (n, c) in neu {
+            lokal.lokaltyp.insert(n, c);
+        }
+    }
 }
 
 fn funktion(
@@ -3886,9 +4077,39 @@ fn funktion(
     } else {
         params.join(", ")
     };
+    // **Without `pub` the binding is INTERNAL -- since 2026-08-25** (the ABI work).
+    //
+    // Until then this file knew the word `pub` nowhere: **zero occurrences in 6 976 lines.**
+    // An `impl fn byte_senden` without a visibility word appeared in the C as
+    // `void byte_senden(...)` -- a symbol with EXTERNAL binding, and with it the whole
+    // private interior of a library lay on the linker's table.
+    //
+    // > *The module boundary was a statement of the checker and none of the product.*
+    // > `N025`, which is caught by `namen.rs`, rejected a call from outside; whoever instead
+    // > put a C program beside it and declared `byte_senden` got the function -- and no line
+    // > of Gabbro knew about it.
+    //
+    // **`static` applies only where this unit also DEFINES.** A prototype without a body
+    // points at a foreign body; giving it internal binding would send the linker to a
+    // definition that is not here -- `cc` says *"used but never defined"* to that, and it
+    // would be right.
+    let definiert = matches!(f.rumpf, FnRumpf::Block(_) | FnRumpf::Asm(_));
+    let intern = if !f.oeffentlich && definiert { "static " } else { "" };
+    // **`unused` -- the same treatment as at the `static` of a world state and at the
+    // `(void)k;` of an unread parameter, and for the same reason.**
+    //
+    // A `static` function nobody calls in THIS unit falls at `-Wunused-function`, and
+    // `pruefe-emission.sh` compiles with `-Werror`. *The finding would be about the product
+    // and not about the user:* whether a private function goes uncalled is a Gabbro
+    // question, and the emitter is not the place that asks it.
+    let ungenutzt = if intern.is_empty() {
+        ""
+    } else {
+        " __attribute__((unused))"
+    };
     // Der Prototyp steht IMMER oben -- auch fuer eine Funktion mit Rumpf.
     aus.push_str(&format!(
-        "\n{rueck} {}({liste}){};\n",
+        "\n{intern}{rueck} {}({liste}){}{ungenutzt};\n",
         f.name.text,
         wirkungsattribut(f, u)
     ));
@@ -3910,7 +4131,7 @@ fn funktion(
             return;
         }
         let a2 = rumpf_aus;
-        a2.push_str(&format!("\n{rueck} {}({liste}) {{\n", f.name.text));
+        a2.push_str(&format!("\n{intern}{rueck} {}({liste}) {{\n", f.name.text));
         if hat_ergebnis {
             a2.push_str(&format!("    {rueck} result;\n"));
         }
@@ -3940,7 +4161,7 @@ fn funktion(
     }
     let FnRumpf::Block(b) = &f.rumpf else { return };
     let aus = rumpf_aus;
-    aus.push_str(&format!("\n{rueck} {}({liste}) {{\n", f.name.text));
+    aus.push_str(&format!("\n{intern}{rueck} {}({liste}) {{\n", f.name.text));
     // **`(void)k;` fuer jeden Parameter, den der Rumpf nicht liest -- und das ist ein Befund,
     // kein Kunstgriff.**
     //
@@ -6190,9 +6411,16 @@ fn umlaeufer_typ(e: &Expr, u: &Namen) -> Option<IntTy> {
 
 fn wert_ctyp(e: &Expr, u: &Namen) -> Option<String> {
     match &e.art {
+        // **The signature first, the body second** (2026-08-25). A name a declaration knows is
+        // answered from the declaration; only a `let`-bound local falls through to
+        // `lokaltyp`, which `lokale_lets` filled from declarations as well. *The order is the
+        // one `eigene_sicht` states: what a function binds itself comes from its own
+        // declaration and from no other.*
         ExprArt::Ort(o) if o.suffixe.is_empty() => match u.parametertyp.get(&o.basis.text) {
             Some(t) => ctyp(t, u),
-            None => ort_typ(o, u).and_then(|t| ctyp(&t, u)),
+            None => ort_typ(o, u)
+                .and_then(|t| ctyp(&t, u))
+                .or_else(|| u.lokaltyp.get(&o.basis.text).cloned()),
         },
         ExprArt::Ort(o) => ort_typ(o, u)
             .and_then(|t| ctyp(&t, u))

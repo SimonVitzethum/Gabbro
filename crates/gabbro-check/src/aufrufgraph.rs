@@ -77,7 +77,14 @@ pub struct IndirectCall {
     /// The effects from the pointer type's contract.
     pub effects: BTreeSet<String>,
     /// The parameter names **of the pointer type** — the bridge across the call boundary.
-    pub parameters: Vec<String>,
+    ///
+    /// **`None` where the pointer type named no parameter** (`fn(u8)`, the ordinary form
+    /// since 2026-08-25). Such a slot can never be the target of a substitution, because no
+    /// effect line can name it -- but it **keeps its position**, and that is the whole
+    /// reason it is a `None` and not a gap in the list: `ersetze` indexes `arguments` by the
+    /// parameter's position. *Dropping the unnamed ones would shift every later argument by
+    /// one and translate `writes b.slots` into the wrong place.*
+    pub parameters: Vec<Option<String>>,
     /// The place expressions of the arguments at the call site.
     pub arguments: Vec<Option<String>>,
     /// Does the type of the place carry an `effects` clause?
@@ -385,10 +392,16 @@ impl Graph {
             // *Ersetzt wird nur der GRUNDname:* `writes p.slots` beim Gerufenen wird
             // `writes q.slots` beim Rufer, wenn `q` das Argument war. Bleibt kein Argument
             // uebrig, bleibt der Name stehen -- **grob, und in die sichere Richtung grob.**
-            let leer: Vec<String> = Vec::new();
-            let ziel_par = self.knoten.get(ziel).map(|z| &z.parameter).unwrap_or(&leer);
+            // A DECLARATION always names its parameters, so every entry is `Some`; the
+            // `None` case exists only for a pointer type (`fn(u8)`). One allocation per call
+            // edge, and the alternative was two readers for one substitution rule.
+            let ziel_par: Vec<Option<String>> = self
+                .knoten
+                .get(ziel)
+                .map(|z| z.parameter.iter().cloned().map(Some).collect())
+                .unwrap_or_default();
             for w in tiefer {
-                let (neu, unklar) = ersetze(&w, ziel_par, args);
+                let (neu, unklar) = ersetze(&w, &ziel_par, args);
                 if unklar {
                     aufnehmen(
                         &mut offen,
@@ -565,7 +578,11 @@ impl Graph {
 /// des Gerufenen, und das Argument an dieser Stelle ist kein Ort (`f(g(x))`, ein Literal).
 /// *Dann erbt der Rufer einen Namen, den es bei ihm nicht gibt* — und statt ihn
 /// stillschweigend stehen zu lassen, macht das die Hülle unvollständig (`E009`).
-fn ersetze(wirkung: &str, parameter: &[String], argumente: &[Option<String>]) -> (String, bool) {
+fn ersetze(
+    wirkung: &str,
+    parameter: &[Option<String>],
+    argumente: &[Option<String>],
+) -> (String, bool) {
     // `locks shared X` ist zweiwortig; der Ort ist immer das LETZTE Wort.
     let Some((kopf, ort)) = wirkung.rsplit_once(' ') else {
         return (wirkung.to_string(), false);
@@ -574,7 +591,9 @@ fn ersetze(wirkung: &str, parameter: &[String], argumente: &[Option<String>]) ->
         Some(i) => (&ort[..i], &ort[i..]),
         None => (ort, ""),
     };
-    match parameter.iter().position(|p| p == grund) {
+    // An UNNAMED slot of a pointer type (`fn(u8)`) matches nothing -- no effect line can
+    // have named it. It still occupies its position; see `IndirectCall::parameters`.
+    match parameter.iter().position(|p| p.as_deref() == Some(grund)) {
         Some(i) if i < argumente.len() => match &argumente[i] {
             Some(a) => (format!("{kopf} {a}{rest}"), false),
             None => (wirkung.to_string(), true),
@@ -687,7 +706,7 @@ fn nimm_ruf(
                     .unwrap_or_default(),
                 parameters: v
                     .as_ref()
-                    .map(|v| v.parameters.iter().map(|(n, _)| n.clone()).collect())
+                    .map(|v| v.parameters.iter().map(|(n, _)| n.clone()).collect::<Vec<_>>())
                     .unwrap_or_default(),
                 arguments: args,
                 has_contract: v.as_ref().is_some_and(|v| v.has_effects),

@@ -1,0 +1,22 @@
+-- erwartet: L105
+-- **Ein linearer Wert wird nach dem Verbrauch noch BENUTZT.**
+--
+-- Nicht dieselbe Absage wie `L104` (zweimal verbraucht): hier nimmt der zweite Ruf den Wert
+-- gar nicht, er liest ihn nur. Das sieht harmloser aus und ist es nicht -- der Zeuge ist
+-- fort, und was `schau` bekommt, hat keinen Traeger mehr.
+module gift::benutzt_nach_verbrauch {
+
+linear ghost type Marke;
+
+extern fn nimm(m : Marke)  effects { consumes m } costs <= 1 ops;
+extern fn schau(m : Marke) effects { pure }       costs <= 1 ops;
+
+impl fn zweimal(m : Marke)
+    effects { consumes m }
+    costs   <= 4 ops
+{
+    nimm(m);
+    schau(m);
+}
+
+}

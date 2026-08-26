@@ -459,6 +459,13 @@ impl<'a> Parser<'a> {
         // (`moduledecl usedecl constdecl staticdecl typedecl fndecl atomicdecl`). A
         // visibility word the parser accepts and throws away is worse than one it rejects:
         // the reader sees a promise nobody keeps.
+        //
+        // **Since 2026-08-25 it is ELEVEN, and the four that came are the CARRIERS**:
+        // `table`, `device`, `format`, `lock`. Until then `gabbro abi` decided the export
+        // set by REACHABILITY -- it collected to a fixpoint, because a carrier had no word
+        // to say so with. *An implicit export set is exactly what D2 forbids.* The word
+        // now stands at the carrier, and the closure is caught by `N038` in
+        // `gabbro-check/src/bindung.rs`.
         let pub_span = self.blick().span;
         let oeffentlich = self.friss_kw(Kw::Pub);
         let t = self.blick();
@@ -482,6 +489,10 @@ impl<'a> Parser<'a> {
                         | Kw::Prim
                         | Kw::Extern
                         | Kw::Atomic
+                        | Kw::Table
+                        | Kw::Device
+                        | Kw::Format
+                        | Kw::Lock
                 )
             )
         {
@@ -495,8 +506,9 @@ impl<'a> Parser<'a> {
                     ),
                 )
                 .mit_notiz(
-                    "`[ \"pub\" ]` steht an sieben Item-Arten: module use const static type \
-                     fn atomic -- der Parser nahm es ueberall an und warf es weg",
+                    "`[ \"pub\" ]` steht an elf Item-Arten: module use const static type \
+                     fn atomic table device format lock -- der Parser nahm es ueberall an \
+                     und warf es weg",
                 ),
             );
         }
@@ -518,15 +530,15 @@ impl<'a> Parser<'a> {
                 Kw::Fn | Kw::Spec | Kw::Impl | Kw::Raw | Kw::Divergent | Kw::Prim | Kw::Extern,
             ) => ItemArt::Funktion(self.fndecl(oeffentlich)?),
             Art::Wort(Kw::Atomic) => ItemArt::Atomic(self.atomicdecl(oeffentlich)?),
-            Art::Wort(Kw::Format) => ItemArt::Format(self.format()?),
-            Art::Wort(Kw::Table) => ItemArt::Tabelle(self.table()?),
+            Art::Wort(Kw::Format) => ItemArt::Format(self.format(oeffentlich)?),
+            Art::Wort(Kw::Table) => ItemArt::Tabelle(self.table(oeffentlich)?),
             Art::Wort(Kw::Reason) => ItemArt::Reason(self.reason()?),
             Art::Wort(Kw::State) => ItemArt::State(self.statedecl()?),
-            Art::Wort(Kw::Device) => ItemArt::Device(self.device()?),
+            Art::Wort(Kw::Device) => ItemArt::Device(self.device(oeffentlich)?),
             Art::Wort(Kw::Assume) => ItemArt::Assume(self.assume()?),
             Art::Wort(Kw::Axiom) => ItemArt::Axiom(self.axiom()?),
             Art::Wort(Kw::Check) => ItemArt::Check(self.check()?),
-            Art::Wort(Kw::Lock) => ItemArt::Lock(self.lockdecl()?),
+            Art::Wort(Kw::Lock) => ItemArt::Lock(self.lockdecl(oeffentlich)?),
             Art::Wort(Kw::Rcu) => ItemArt::Rcu(self.rcudecl()?),
             Art::Wort(Kw::Group) => ItemArt::Gruppe(self.gruppedecl()?),
             Art::Wort(Kw::Accumulates) => ItemArt::Accumulates(self.accdecl()?),
@@ -945,7 +957,9 @@ impl<'a> Parser<'a> {
     /// **The function pointer type -- with NAMED parameters and with its contract.**
     ///
     /// ```text
-    /// fnptr    = "fn" "(" [ params ] ")" [ "->" typeexpr ] fncontract ;
+    /// fnptr    = "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] fncontract ;
+    /// fnptrparams = fnptrparam { "," fnptrparam } ;
+    /// fnptrparam  = [ ident ":" ] typeexpr ;
     /// fncontract = [ "requires" predlist ] [ "ensures" predlist ]
     ///              "effects" "{" efflist "}" "costs" "<=" expr "ops" ;
     /// ```
@@ -963,7 +977,7 @@ impl<'a> Parser<'a> {
         let parameter = if self.ist_z(Z::RundZu) {
             Vec::new()
         } else {
-            self.params()?
+            self.fnptr_params()?
         };
         self.erwarte_z(Z::RundZu)?;
         let ergebnis = if self.friss_z(Z::Pfeil) {
@@ -1165,6 +1179,43 @@ impl<'a> Parser<'a> {
             self.erwarte_z(Z::Kolon)?;
             let typ = self.typeexpr()?;
             liste.push(Parameter { name, typ });
+            if !self.friss_z(Z::Komma) {
+                break;
+            }
+        }
+        Ok(liste)
+    }
+
+    /// **The parameter list of a function POINTER type -- the name is optional.**
+    ///
+    /// ```text
+    /// fnptrparam = [ ident ":" ] typeexpr ;
+    /// ```
+    ///
+    /// **The two forms are told apart at the SECOND token**, and there is no other way: a
+    /// `typeexpr` may itself begin with an identifier (`path`), so `fn(Treiber)` and
+    /// `fn(t : Treiber)` are distinguishable only by the `:` behind the first word. *One
+    /// token of lookahead, no backtracking -- `versuch` would swallow a real refusal inside
+    /// the type.*
+    ///
+    /// **Why not `params`.** `params` demands a name, and that demand cost the form the
+    /// measurement asked for: all 11 function-pointer type sites in `caprock-messbasis`
+    /// write `fn(u8)`, none writes `fn(b : u8)` (measured 2026-08-25). The named form stays
+    /// because an effect line at the pointer type names a place; see `ast::FnZeigerParam`.
+    fn fnptr_params(&mut self) -> Erg<Vec<FnZeigerParam>> {
+        let mut liste = Vec::new();
+        loop {
+            let benannt = self.blick().art == Art::Ident
+                && self.blick_n(1).art == Art::Zeichen(Z::Kolon);
+            let name = if benannt {
+                let n = self.erwarte_ident()?;
+                self.erwarte_z(Z::Kolon)?;
+                Some(n)
+            } else {
+                None
+            };
+            let typ = self.typeexpr()?;
+            liste.push(FnZeigerParam { name, typ });
             if !self.friss_z(Z::Komma) {
                 break;
             }
@@ -3024,7 +3075,7 @@ impl<'a> Parser<'a> {
 
     // -- 9. Tables, formats -------------------------------------------------------------
 
-    fn table(&mut self) -> Erg<Tabelle> {
+    fn table(&mut self, oeffentlich: bool) -> Erg<Tabelle> {
         let anfang = self.erwarte_kw(Kw::Table)?;
         let name = self.erwarte_ident()?;
         let kapazitaet = if self.friss_kw(Kw::Count) {
@@ -3122,6 +3173,7 @@ impl<'a> Parser<'a> {
         let ende = self.erwarte_z(Z::GeschweiftZu)?;
         Ok(Tabelle {
             name,
+            oeffentlich,
             kapazitaet,
             hinterlegt,
             konstanten,
@@ -3325,7 +3377,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn format(&mut self) -> Erg<Format> {
+    fn format(&mut self, oeffentlich: bool) -> Erg<Format> {
         let anfang = self.erwarte_kw(Kw::Format)?;
         let name = self.erwarte_ident()?;
         let mut version = None;
@@ -3360,6 +3412,7 @@ impl<'a> Parser<'a> {
         let ende = self.erwarte_z(Z::GeschweiftZu)?;
         Ok(Format {
             name,
+            oeffentlich,
             version,
             endian,
             felder,
@@ -3417,7 +3470,7 @@ impl<'a> Parser<'a> {
 
     // -- 10. Devices ----------------------------------------------------------------------
 
-    fn device(&mut self) -> Erg<Device> {
+    fn device(&mut self, oeffentlich: bool) -> Erg<Device> {
         let anfang = self.erwarte_kw(Kw::Device)?;
         let name = self.erwarte_ident()?;
         let parameter = if self.friss_z(Z::RundAuf) {
@@ -3484,6 +3537,7 @@ impl<'a> Parser<'a> {
         let ende = self.erwarte_z(Z::GeschweiftZu)?;
         Ok(Device {
             name,
+            oeffentlich,
             parameter,
             raum,
             mirrors,
@@ -3771,7 +3825,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn lockdecl(&mut self) -> Erg<LockDecl> {
+    fn lockdecl(&mut self, oeffentlich: bool) -> Erg<LockDecl> {
         let anfang = self.erwarte_kw(Kw::Lock)?;
         let name = self.erwarte_ident()?;
         self.erwarte_kw(Kw::Protects)?;
@@ -3806,6 +3860,7 @@ impl<'a> Parser<'a> {
         self.erwarte_z(Z::Semi)?;
         Ok(LockDecl {
             name,
+            oeffentlich,
             schuetzt,
             rang,
             haltezeit,

@@ -203,7 +203,48 @@ def main():
         print("hier sorgt dafuer, dass er nichts uebersieht.")
 
 
-def haengend(probe=None, still=False):
+def abgesenkt(quelle=None):
+    """**Which fragments have MEASURED their lowering obligation -- read out of the guard.**
+
+    The obligation of the ten reads *"the generated C computes what the fragment says"*, and
+    it is discharged by one thing: `pruefe-emission.sh` emits, compiles, **runs** and compares
+    against a handwritten expectation. Whoever does that for a fragment writes a
+    `lauf "fragmentN"` line into the guard.
+
+    Until 2026-08-25 the answer sat beside it as a hand-kept list in this file's own source --
+    `["F1", "F2", ...]`. **That made `H` a number somebody has to update**, and this file says
+    in three other places where that leads: *a metric somebody has to keep is wrong sooner or
+    later.*
+
+    > Now it is derived: **whoever builds a differential test lowers `H`; whoever removes one
+    > raises it.** An entry without a run is no longer writable.
+    """
+    import re
+    if quelle is None:
+        quelle = (Path(__file__).resolve().parent.parent
+                  / "instrumente" / "pruefe-emission.sh").read_text(encoding="utf-8")
+    return {f"F{m}" for m in re.findall(r'^lauf "fragment(\d+)"', quelle, re.M)}
+
+
+# **What MAKES a hanging obligation: the FOURTH COLUMN, not the line.**
+#
+# Until 2026-08-25 this read `"gap:" in z` over the WHOLE table row -- so every row of class
+# `K` counted in which the string occurred anywhere, prose included. **The docstring below
+# had described the narrow rule all along** (*"whose fourth column starts with `gap:`"*);
+# only the code did not keep to it.
+#
+# > *On 2026-08-25 a CORRECTION wrote the words `gap:`-column into its own prose, and `H`
+# > rose from 10 to 11.* **A number that can be shifted by mentioning its own keyword is no
+# > measure.**
+#
+# The markers `**`, `*`, `_` may stand in front -- the table sets every gap in bold. **`~~`
+# expressly NOT:** a struck-through gap is a WITHDRAWN one, and that is exactly the shape
+# the «B9» row was left in on 2026-08-25. *Whoever counts it counts a retraction as an
+# obligation.*
+GAP_SPALTE = re.compile(r"^(?:\*\*|\*|_)*gap:")
+
+
+def haengend(probe=None, still=False, locker=False):
     """**Die haengenden Klempnereipflichten, aus dem Handgang ABGELESEN statt fortgeschrieben.**
 
     Der Handgang steht in `PFLICHTEN.md` als Tabelle: je Zeile eine Pflicht, Spalte 3 die
@@ -232,7 +273,10 @@ def haengend(probe=None, still=False):
             frag = m.group(1)
         if z.startswith("|") and "gap:" in z:
             sp = [c.strip() for c in z.strip("|").split("|")]
-            if len(sp) >= 4 and sp[2] == "K":
+            # `locker` is the OLD, wide rule. It survives only so the backward probe below
+            # can show that the narrowing does any work at all.
+            eng = len(sp) >= 4 and bool(GAP_SPALTE.match(sp[3]))
+            if len(sp) >= 4 and sp[2] == "K" and (locker or eng):
                 offen.setdefault(frag, []).append((nr, sp[0]))
     n_roh = sum(len(v) for v in offen.values())
     if still:
@@ -251,18 +295,21 @@ def haengend(probe=None, still=False):
     # *Die Absenkungspflicht ist je Fragment bekannt und steht nur als eine Zeile in der
     # Tabelle:* F1-F6 und F9 sind offen, F7/F8/F10 gemessen. Damit ist die Spalte hier
     # ableitbar, und die Tabelle drueben braucht sie nicht mehr von Hand.
-    ABSENKUNG_OFFEN = ["F1", "F2", "F3", "F4", "F5", "F6", "F9"]
+    ABSENKUNG_OFFEN = [f for f in [f"F{i}" for i in range(1, 11)]
+                       if f not in abgesenkt()]
     print("\n  je Fragment (verankert + Absenkung):")
     for f in [f"F{i}" for i in range(1, 11)]:
         v = len(offen.get(f, []))
         a = 1 if f in ABSENKUNG_OFFEN else 0
         if v or a:
             print(f"    {f:<4} {v} + {a} = {v + a}")
+    a = len(ABSENKUNG_OFFEN)
+    gemessen = ", ".join(sorted(abgesenkt(), key=lambda x: int(x[1:])))
     print(f"\n  verankert       {n:>3}")
-    print( "  Absenkung         7   F1-F6 und F9 -- eine Zeile fuer neun, in")
-    print( "                        `The tenth event`; F7/F8/F10 sind gemessen")
+    print(f"  Absenkung       {a:>3}   eine Zeile je Fragment, in `The tenth event`;")
+    print(f"                        GEMESSEN sind {gemessen}")
     print(f"  ---------------------")
-    print(f"  H               {n + 7:>3}")
+    print(f"  H               {n + a:>3}")
     print()
     print("**Und was diese Zahl NICHT ist:** eine Aussage ueber Gabbro. Die zehn Fragmente")
     print("sind nach ihrer SCHWIERIGKEIT gewaehlt; `H = 0` ueber ihnen bliebe Falle 80,")
@@ -287,7 +334,64 @@ if __name__ == "__main__":
                   file=sys.stderr)
             sys.exit(1)
         print(f"== Sprechprobe: ok (eine erfundene `gap:`-Zeile hebt H von {vorher} auf "
-              f"{nachher}) ==\n")
+              f"{nachher}) ==")
+        # **And the same probe BACKWARDS** (2026-08-25).
+        #
+        # The probe above shows that a REAL gap RAISES `H`. It does NOT show that a mere
+        # MENTION fails to -- and that is exactly where the number slipped that day: a
+        # CORRECTION wrote the words `gap:`-column into its own prose, and `H` rose from 10
+        # to 11. *Nothing had been built and nothing had torn; the number had reacted to its
+        # own keyword.*
+        #
+        # > **A number that can be shifted by mentioning its keyword is no measure** -- and
+        # > `pruefe-waechter.py` demands the speaking probe expressly *"in both directions:
+        # > what should fall, falls; what should not, does not."*
+        #
+        # **It is TWO-SIDED, or it measures nothing itself.** A backward probe that only
+        # checks "H stays equal" also passes when the invented row never reaches the counter
+        # at all -- the same class as a guard that selects nothing and ends green. So BOTH
+        # are demanded: under the old, wide rule the row MUST count (only that makes the
+        # narrowing work), under the narrow one it must NOT.
+        RUECKWAERTS = [
+            ("Erwaehnung im Fliesstext",
+             "| 998 | die `gap:`-Spalte wird hier nur ERWAEHNT | K | closed by «B99» |\n"),
+            ("zurueckgezogene Luecke, durchgestrichen",
+             "| 997 | BERICHTIGT | K | **eine Richtigstellung, keine Buchung.** "
+             "~~*gap: «B99» -- war falsch*~~ |\n"),
+        ]
+        weit_vorher = haengend(still=True, locker=True)
+        for was, zeile in RUECKWAERTS:
+            p_gift = ("**F2: 24 obligations", zeile + "**F2: 24 obligations")
+            weit = haengend(probe=p_gift, still=True, locker=True)
+            eng = haengend(probe=p_gift, still=True)
+            if weit != weit_vorher + 1:
+                print(f"RUECKWAERTSPROBE UNTAUGLICH ({was}): die erfundene Zeile erreicht "
+                      f"den Zaehler gar nicht -- schon die WEITE Regel sieht sie nicht "
+                      f"({weit_vorher} -> {weit}). **Dann belegt ein Gleichstand unter der "
+                      f"engen Regel nichts.**", file=sys.stderr)
+                sys.exit(1)
+            if eng != vorher:
+                print(f"RUECKWAERTSPROBE GESCHEITERT ({was}): eine blosse ERWAEHNUNG von "
+                      f"`gap:` verstellt H ({vorher} -> {eng}). **Eine Zahl, die sich durch "
+                      f"ihr eigenes Schluesselwort heben laesst, ist kein Mass.**",
+                      file=sys.stderr)
+                sys.exit(1)
+            print(f"== Rueckwaertsprobe: ok ({was}: weit {weit_vorher} -> {weit}, "
+                  f"eng {vorher} -> {eng}) ==")
+        # **The same probe for the SECOND half of `H`** (2026-08-25). Since the lowering
+        # column is derived from `pruefe-emission.sh`, the number rests on a second guard --
+        # and *a derivation nobody has seen fail is a claim about a script.*
+        gemessen = abgesenkt()
+        quelle = (Path(__file__).resolve().parent.parent
+                  / "instrumente" / "pruefe-emission.sh").read_text(encoding="utf-8")
+        ohne = abgesenkt(quelle.replace('lauf "fragment', 'lauf "GENOMMEN'))
+        if not gemessen or ohne:
+            print(f"SPRECHPROBE GESCHEITERT: die Absenkungsspalte antwortet auf einen "
+                  f"herausgenommenen Differenztest nicht ({sorted(gemessen)} -> "
+                  f"{sorted(ohne)}). **Diese Haelfte von H misst nichts.**", file=sys.stderr)
+            sys.exit(1)
+        print(f"== Sprechprobe: ok (ohne die Differenztests faellt die Absenkungsspalte "
+              f"von {len(gemessen)} auf 0 gemessene) ==\n")
         haengend()
     else:
         main()

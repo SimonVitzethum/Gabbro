@@ -3,6 +3,17 @@
 -- fallen. Die EBNF fuehrt `[ "pub" ]` an genau sieben. **Ein Sichtbarkeitswort, das
 -- angenommen und weggeworfen wird, ist schlimmer als eines, das abgelehnt wird**: der
 -- Leser sieht eine Zusage, die niemand haelt.
+--
+-- **Seit dem 2026-08-25 sind es elf**, und diese Probe stand vorher auf `pub lock` --
+-- einem der vier Traeger, die das Wort dazubekommen haben. *Eine Giftprobe, die durch
+-- eine Grammatikerweiterung legal wird, misst ab dem Tag nichts mehr*, und sie faellt
+-- nicht auf: sie wird gruen, weil das Programm richtig ist.
+--
+-- Sie steht jetzt auf `reason`, das kein `pub` traegt und keins bekommen soll: eine
+-- benannte Zahlenmenge senkt zu einem `enum` ab, und ein `enum` bindet kein Symbol.
 module gift {
-pub lock L protects { a } rank 0 held <= 1 ops;
+pub reason Grund {
+    Keiner = 1 "kein Grund"
+    exhaustive
+}
 }

@@ -1,0 +1,46 @@
+-- **Bibliothek A einer DURCHGESTOCHENEN Probe** (2026-08-25).
+--
+-- Sie haelt Zustand: eine Tabelle, die sie bei ihrem Namen anspricht, also ihr eigener
+-- Speicher. Nach aussen gehen zwei Funktionen und der Traeger, den ihre Signaturen nennen --
+-- **und sonst nichts.** Der Rechenhelfer darunter traegt kein `pub` und wird im C `static`:
+-- was privat heisst, bindet privat.
+module fach {
+
+pub const NKAESTEN : u32 = 8;
+
+-- **`pub`, weil `index into Kaesten` in einer ausgefuehrten Signatur steht.** Ohne das Wort
+-- faellt die Signatur an `N038` -- die Schnittstelle naehme sonst einen Namen mit hinaus,
+-- den sie nicht erklaert.
+pub table Kaesten count NKAESTEN {
+    slot { wert : u32, }
+}
+
+-- **Privat, und das ist die Aussage dieser Zeile.** Im erzeugten C steht
+-- `static uint32_t begrenze(uint32_t)` -- ein Symbol, das der Binder ausserhalb dieser
+-- Uebersetzungseinheit nicht sieht.
+impl fn begrenze(w : u32) -> u32 in 0 .. 65535
+    effects { pure }
+    costs   <= 4 ops
+{
+    if w > 65535 {
+        return 65535;
+    }
+    return w;
+}
+
+pub impl fn lege_ab(i : index into Kaesten, w : u32) -> bool
+    effects { writes Kaesten.slots }
+    costs   <= 20 ops
+{
+    Kaesten.slots[i].wert = begrenze(w);
+    return true;
+}
+
+pub impl fn lies(i : index into Kaesten) -> u32
+    effects { reads Kaesten.slots }
+    costs   <= 10 ops
+{
+    return Kaesten.slots[i].wert;
+}
+
+}

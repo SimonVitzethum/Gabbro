@@ -1,9 +1,13 @@
 -- EINE Einheit, ein Sperrname, den niemand deklariert. Faellt das?
+-- **`pub` an Tabelle und Sperre, seit dem 2026-08-25.** Bis dahin trugen die Traeger kein
+-- Sichtbarkeitswort, und `gabbro abi` zog sie ueber ERREICHBARKEIT hinaus -- weil die
+-- exportierte Signatur sie nennt. *Das ist eine implizite Ausfuhrmenge, und D2 verbietet
+-- sie.* `N038` weist die Signatur jetzt ab, solange der Traeger nicht selbst hinaus soll.
 module unbek {
 
-const N : u32 = 8;
+pub const N : u32 = 8;
 
-table T count N {
+pub table T count N {
     slot { a : u32, }
 }
 

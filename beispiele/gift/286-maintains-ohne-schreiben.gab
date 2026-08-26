@@ -1,0 +1,20 @@
+-- erwartet: Hinweis M114
+-- **`maintains` an einer Funktion, die nichts schreibt.**
+--
+-- Was nichts schreibt, erhaelt jede Invariante -- vom Rahmen geschenkt. Die Zusage ist damit
+-- leer, und sie steht trotzdem im Zeugnis und in der ABI. Ein HINWEIS und kein Fehler: das
+-- Programm ist richtig, die Zeile ist bloss unbezahlt.
+module gift::maintains_ohne_schreiben {
+
+table T count 16 {
+    slot { a : u32 in 0 .. 10, }
+    invariant klein cost O(n) runs offline : forall i in slots of T : T.slots[i].a < 10;
+}
+
+impl fn nur_lesen(t : ptr<normal, r> T) -> u32
+    maintains klein
+    effects { reads t.slots }
+    costs   <= 2 ops
+{ return t.slots[0].a; }
+
+}

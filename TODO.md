@@ -153,7 +153,7 @@ Diagnose — keine Beschönigung, sondern **Fortschreibung**:
 | Absagen mit tragendem Grund | 96 | 98 | `TODO.md` |
 | gelesene Item-Arten | 21 von 23 | 23 von 23 | `TODO.md` |
 | Schablonen im Register | 20, 15 unbewiesen | 21, 11 unbewiesen | `TODO.md` |
-| Widerrufe | 7 | 10 | `TODO.md` |
+| Widerrufe | 7 | 11 | `TODO.md` |
 | direkte Blicke auf die Karten | 13 | 35 | `TODO.md` |
 | ZUSAGE ohne Leser | 13 | 0 | `PLAN.md`, «NL» — *das Tor von «NL» ist ERREICHT* |
 | Fremdpflichten | 8 | 10 | `PLAN.md`, «NL» |
@@ -362,7 +362,10 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **10 Widerrufe** über 64 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 85 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *Die Reichweite sprang am 2026-08-25 von 64 auf 85, weil der Wächter seither die
+      BERICHTE unter `messung/` liest* — und der Sprung fand sofort drei lebende Vorkommen,
+      alle drei zu `fnptr` (`WB2`).
       *Woran es hängt: eine Teilmengenbuchung bräuchte je Zahlenpaar den Satz „A ist Teil von
       B", und den schreibt niemand hin, solange er nicht wehtut.*
 
@@ -421,7 +424,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Absage fällt nachweislich"*; eine gedeckte sagt nur *„sie kommt vor, und irgendein Pass
       sieht sie"* — und Maß 2 hat gerade gezeigt, dass **Sehen keine Prüfung ist**.
       **Seit dem 2026-08-20 stehen beide Zahlen im Register und nicht mehr nur im Bericht:**
-      **165 besetzte Zellen** stehen daneben, **26 nur im Gift** — und `gabbro blindstellen`
+      **166 besetzte Zellen** stehen daneben, **26 nur im Gift** — und `gabbro blindstellen`
       druckt die vier Zahlen getrennt, *auf Ausdruck*, weil ein Einzelwert zwei Wochen später
       wie Fortschritt aussieht.
       *Die schärfere Frage bleibt dieselbe wie beim Schablonenregister: fällt an dieser Zelle je
@@ -430,7 +433,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **51 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
+- [ ] **54 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
@@ -499,7 +502,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **1672 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **1759 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -577,7 +580,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 - [ ] **~~Die Zeilenanteile der eigenen Theorien sind gezaehlt, aber nicht KLASSIFIZIERT~~ —
       GEBAUT 2026-08-20** (`./instrumente/zaehle-theorien.py`). Die alte Buchung sagte *„zehn Theorien,
       1 639 Zeilen, 48 Sätze, 86 Beweisschritte"* und ließ die Frage offen, was davon Prosa
-      ist. Heute: **2 329 Zeilen** in dreizehn Theorien, **70 Sätze** darin — und klassifiziert:
+      ist. Heute: **2329 Zeilen** in dreizehn Theorien, **70 Sätze** darin — und klassifiziert:
 
       | | | |
       |---|---:|---|
@@ -667,7 +670,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **294 von 294 Ankern** greifen (`--anker`, 2026-08-24) — die
+      fällt. Mutationskatalog: **292 von 294 Ankern** greifen (`--anker`, 2026-08-24) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -692,7 +695,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       rules for the same thing**; now one: separating comma obligatory, trailing comma
       optional.
       **Und die Messschicht sagt, warum die drei stehenbleiben:** `./instrumente/pruefe-syntax.sh` hält
-      149 EBNF-Regeln und 217 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
+      151 EBNF-Regeln und 217 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
       gegen sich selbst, nie den Parser gegen die Grammatik.* Ein Wächter für die Differenz
       bräuchte je Stelle eine Giftdatei, die der Parser **annehmen** und die EBNF **verbieten**
       muss — **drei Dateien, und der Prüfer müsste dafür rot werden, wo er heute grün ist.**
@@ -938,6 +941,48 @@ Wirklichkeit berührt; kehrte er zurück, wäre sie eine Zahl ohne Folge. Der Fe
 
 ### Was diese Stufe offen lässt
 
+#### Der Ordner hat vierzig Instrumente, um SICH zu prüfen, und null, um jemandem beim Schreiben zu helfen *(gezählt 2026-08-25)*
+
+*Jeder Posten hier ist ein Werkzeug, das aus einer Tabelle ERZEUGT wird, die es schon gibt —
+keine zweite Quelle, kein Register, das auseinanderlaufen kann. Der erste ist gebaut, die drei
+darunter sind gebucht, mit Abnahmebefehl.*
+
+- [ ] ~~**`gabbro pruefe` erschlägt seinen eigenen Befund**~~ — **GEBAUT am 2026-08-25.**
+      Gemessen an [`beispiele/16-by-ops-am-feld.gab`](beispiele/16-by-ops-am-feld.gab), einer
+      **sauberen Datei von 39 Zeilen**: der Lauf gab **1 142 Wörter, davon 1 122 (98,2 %) das
+      Register „Not checked in this run"** — und **zwanzig** das Ergebnis.
+      **Und der Text kann sich zwischen zwei Läufen gar nicht unterscheiden:** `ungeprueft()`
+      liest `passliste()`, eine statische Liste im Binärprogramm; er hängt weder an der
+      geprüften Datei noch am Ergebnis. *Eine Offenlegung, die den Befund um den Faktor 56
+      übertönt und beim zwanzigsten Mal denselben Wortlaut hat, ist garantiert ungelesen.*
+      **Das Prinzip bleibt, die Vorgabe dreht sich um:** die Zahl steht weiter da, **jeder
+      Pass wird beim NAMEN genannt**, jeder Zustand gezählt, und ein Fingerabdruck macht eine
+      Änderung des Wortlauts sichtbar, ohne ihn abzudrucken. Der volle Text steht hinter
+      `gabbro pruefe --paesse` und hinter `gabbro paesse`, wo er ohnehin schon stand.
+      **1 142 → 91 Wörter.** Abnahme: `cargo test -p gabbro-cli` — vier Proben, und es sind
+      **die ersten dieses Ordners, die die Kommandozeile laufen.**
+
+- [ ] **Syntaxhervorhebung, ERZEUGT aus `crates/gabbro-syntax/src/kw.rs`.** Der Wortschatz ist
+      **schon** eine maschinenlesbare geschlossene Tabelle — **220 Einträge**, jeder mit seiner
+      Klasse (`ctx`/`res`), und `pruefe-wortschatz.py` hält sie gegen die EBNF. *Null Dateien
+      im Ordner helfen beim Lesen einer `.gab`:* kein tree-sitter, kein TextMate, kein
+      `.vim`. **Erzeugen, nicht pflegen** — eine gepflegte zweite Wortliste ist die Form, gegen
+      die `pruefe-wortschatz.py` überhaupt gebaut wurde.
+      Abnahme: `gabbro hervorhebung > x.tmLanguage.json && git diff --exit-code` — **neu
+      erzeugen, null Diff erwarten**, als eigener Wächter in der Kette.
+
+- [ ] **`gabbro neu --geraet` / `--tabelle` / `--modul` — Gerüst aus derselben Tabelle.** Eine
+      neue `device`-Datei besteht heute daraus, dass jemand eine bestehende kopiert; welche
+      Klauseln Pflicht sind, sagt der Prüfer erst hinterher und je Klausel einzeln.
+      Abnahme: `gabbro neu --geraet D | gabbro pruefe /dev/stdin` gibt **0 Fehler** — *ein
+      Gerüst, das nicht durchgeht, ist keins.*
+
+- [ ] **Formatierer.** Der Korpus hat schon eine kanonische Ausrichtung (die `effects`/`costs`
+      -Spalten stehen in allen 50 Dateien untereinander), und sie wird **von Hand** gehalten.
+      Abnahme schreibt sich selbst: `gabbro formatiere beispiele/*.gab && git diff
+      --exit-code` — **formatiere den Korpus, erwarte null Diff.** *Der Korpus ist damit die
+      Probe des Formatierers und nicht umgekehrt.*
+
 - [ ] **Das Zeremonieregister misst eine ABGEGRENZTE Grundgesamtheit, und die Grenze ist eine
       Entscheidung** *(2026-08-20)*. Draußen bleiben `module`/`use`/`pub`, `section`/`arch`/
       `when`, die Fälle eines `reason`, `entrust`/`boot`/`entry`, die `by`-Beweishinweise und
@@ -1108,7 +1153,7 @@ liest sich wie Deckung.* Beide sind umgezogen, 236 von 236 greifen.
 # STUFE 4 — PROGRAMME SCHREIBEN, NICHT KONSTRUKTE  ⟨A⟩
 
 **Das Herz des Plans.** Der Korpus ist von der Sprache nach außen geschrieben — eine Datei je
-Konstrukt — und **die Fehler sitzen an den Kombinationen**: 79 blinde Zellen von 285. Jedes echte
+Konstrukt — und **die Fehler sitzen an den Kombinationen**: 78 blinde Zellen von 285. Jedes echte
 Programm hat sofort geliefert: der virtio-net-Treiber fünf Befunde, «K2» drei, die ein eigener
 Korpus nicht gegeben hätte, das Registerbeispiel vom 2026-08-20 vier.
 
@@ -1198,24 +1243,49 @@ Loch, das ein Programm oder ein Messwerkzeug gefunden hat, nicht ein Entwurf.
       andersherum:** dort hatte die Sprache recht und der Erzeuger fehlte, hier hat der
       Erzeuger recht und der Prüfer fehlt.
 
-- [ ] **Der Fehlerkanal ist gebaut, der Erzeuger eines Grundes nicht — und jetzt steht es im
-      erzeugten C** *(2026-08-20)*. `*_grund` bleibt ungeschrieben, weil `primary` keine
-      Produktion für einen `reason`-Wert kennt; ohne eine `(void)_grund;`-Zeile scheitert die
-      Übersetzung unter `-Werror=unused-parameter`. **Der Erzeuger schreibt die Zeile mit dem
-      Befund darin**, statt sie zu verschweigen. *Der Posten selbst steht in Stufe 7 — hier
-      steht, dass das erzeugte Artefakt ihn seit heute mitträgt.*
+- [ ] ~~**Der Fehlerkanal ist gebaut, der Erzeuger eines Grundes nicht — und jetzt steht es im
+      erzeugten C**~~ *(2026-08-20)* — **ÜBERHOLT am 2026-08-21, nachgezogen am 2026-08-25.**
+      Der Satz lautete: *„`*_grund` bleibt ungeschrieben, weil `primary` keine Produktion für
+      einen `reason`-Wert kennt."* **Gemessen heute schreibt der Erzeuger sie:**
+
+      ```c
+      static bool hol(uint32_t x, uint32_t *_wert, HolFehler *_grund) {
+              *_grund = HolFehler_Leer;
+              return false;
+      ```
+
+      *Die `(void)`-Absicherung ist damit kein Ersatz mehr, sondern nur noch der Fall, in dem
+      ein Rumpf den Kanal wirklich nicht benutzt.* **Der Posten in Stufe 7, auf den diese
+      Zeile verwies, ist derselbe und ebenfalls zu.**
 
 ### Vom vervollständigten Fragmentkorpus, 2026-08-20 *(siehe [`messung/fragmente/`](messung/fragmente/))*
 
-- [ ] **`A::B` parst und wird NIE aufgelöst** *(gemessen 2026-08-20)*.
+- [ ] **`A::B` parst und wird NIE aufgelöst** *(gemessen 2026-08-20)* — **von den DREI
+      Lesarten ist eine zu, zwei sind offen** *(nachgemessen 2026-08-25)*.
       `path = ident { "::" ident }` steht in der Grammatik; der Namenspass liest die **erste
-      Silbe** und schlägt sie als Wert nach. `IpcResult::Ok` fällt als `M119` — gleichgültig
-      ob `IpcResult` ein `module`, ein `reason` oder ein Variantentyp ist; **alle drei
-      geprüft.** *Null Korpusstellen benutzen einen qualifizierten Namen als Wert;* die
-      `::`-Treffer im Korpus sind samt und sonders `module a::b`-Köpfe.
-      **Die Form ist schreibbar und hat keinen Leser** — dieselbe Gestalt wie `ensures` am
-      rumpflosen `extern fn` und wie `RegDecl::requires`. Gefunden an drei der zehn
-      vervollständigten Fragmente, an keiner einzigen Korpusdatei.
+      Silbe** und schlägt sie als Wert nach. Der Eintrag sagte *„gleichgültig ob `IpcResult`
+      ein `module`, ein `reason` oder ein Variantentyp ist"* — **das gilt so nicht mehr:**
+
+      | Lesart | heute | Absage |
+      |---|---|---|
+      | `reason` | **aufgelöst** seit 2026-08-21 | `M126`, wenn `R` kein erklärter `reason` ist |
+      | `module`-qualifizierter Wert | offen | `M119` *„`probe` is declared nowhere"* |
+      | Variantenkonstruktor eines `tagged` | offen | `E009` + `K003` *„`Kurz` is not declared here"* |
+
+      **Und der Rest ist nicht „kein Leser", sondern ein FALSCHER GRUND.** Beide offenen
+      Lesarten melden über eine **Silbe** eines Pfades, den der Schreiber ganz hingeschrieben
+      hat: `probe::qual::inner::MM` fällt als *„`probe` is declared nowhere"*, und
+      `Nachricht::Kurz(7)` als *„`Kurz` is not declared here"*. Wer das liest, sucht einen
+      Tippfehler in einem Namen, der stimmt — **die Sprache kennt die FORM nicht, und keine
+      Absage sagt es.** *Dieselbe Klasse wie „die Absage nennt das Konstrukt nicht" bei
+      `breaking` und wie der falsche Grund bei `leave` auf eine `retry`-Marke.*
+
+      *Null Korpusstellen benutzen einen qualifizierten Namen als Wert;* die `::`-Treffer im
+      Korpus sind samt und sonders `module a::b`-Köpfe und seit 2026-08-21 die Grundwerte in
+      [`beispiele/48-grund-mit-erzeuger.gab`](beispiele/48-grund-mit-erzeuger.gab).
+      **Auflösen ist deshalb ohne gemessenen Bedarf; den Grund richtigstellen ist es nicht.**
+      Abnahme: eine Absage, die den PFAD zitiert und die Form benennt, nicht seine erste
+      oder letzte Silbe.
 - [ ] **«B11» schrumpft: `forever` HAT einen Ausgang, aber der Ausgang trägt keinen GRUND**
       *(nachgerechnet 2026-08-20)*. `leave <marke>` steht in der Grammatik
       ([`dokumente/SYNTAX.md`](dokumente/SYNTAX.md):658), prüft mit **0 Fehlern** und senkt zu
@@ -2513,11 +2583,43 @@ und die Sätze, die ihr noch fehlen.
 
 # STUFE 7 — WAS PROGRAMME GROSS MACHT  ⟨A⟩
 
-**`fnptr` — erst der Erzeuger, dann der Vertrag.** Ein Funktionszeiger entsperrt jede
+**`fnptr` — erst der Erzeuger, dann der Vertrag: GEBAUT am 2026-08-21**
+([`messung/FNPTR.md`](messung/FNPTR.md)). Ein Funktionszeiger entsperrt jede
 Dispatch-Tabelle, jede Treiber-ops-Struktur, jede Scheduler-Politik — Caprocks
-`&mut dyn SchedOps` ist genau das. Heute hat `fnptr` **null Korpusstellen und keinen Erzeuger**:
-die Sprache kennt kein `&f`. *In der anderen Reihenfolge wäre der Vertrag eine Zusage ohne
-Einlöser — die Bewegung, gegen die K100s zweites Tor steht.*
+`&mut dyn SchedOps` ist genau das. ~~Heute hat `fnptr` null Korpusstellen und keinen
+Erzeuger: die Sprache kennt kein `&f`.~~ *(überholt am 2026-08-21, nachgezogen am
+2026-08-25)* **Alle vier Hälften stehen:** der Erzeuger
+`&f` (`ExprArt::FnWert`, `M127`/`M128`), der Ruf über einen ORT (`CallTarget::Place`,
+`M129`), die Absenkung (`bool (*bereit)(void);` und `t->senden(b)`) und der Vertrag am
+Zeigertyp (`N035`–`N037`). [`beispiele/49-dispatch-tabelle.gab`](beispiele/49-dispatch-tabelle.gab)
+prüft mit **0 Fehlern** und senkt ab.
+
+> **Und der Satz stand vier Tage länger, als er wahr war** *(nachgezogen 2026-08-25)*.
+> Er sagte nicht *„hier ist noch etwas offen"*, sondern *„die Sprache kennt es nicht"* —
+> **er verhindert Arbeit, statt sie zu verzögern**, und das ist genau die Klasse von
+> [`instrumente/pruefe-widerruf.py`](instrumente/pruefe-widerruf.py). *Der Wächter konnte
+> ihn nicht fangen, und das ist kein Mangel des Wächters:* sein eigener Kopf sagt
+> *„er ist ein Gedächtnis, kein Urteil"* — er findet, was jemand als widerrufen
+> aufgeschrieben hat, und niemand hatte. **Seit heute steht er als `WB2` drin.**
+
+*In der anderen Reihenfolge wäre der Vertrag eine Zusage ohne Einlöser gewesen — die
+Bewegung, gegen die K100s zweites Tor steht.*
+
+- [ ] ~~**Ein unbenannter Parameter im Zeigertyp ist nicht schreibbar**~~ — **GESCHLOSSEN
+      am 2026-08-25**, und der Befund geht über die Reparatur hinaus. `fn(u8)` fiel an `P002` (*„`u8` is a word of the vocabulary, not an
+      identifier"*), `fn(b : u8)` parste. **Alle 11 Zeigertypstellen in
+      `../caprock-messbasis` schreiben ohne Namen, null von elf mit** — die Vorlage nach
+      Regel B kannte nur die Form, die die Grammatik nicht hatte. *Am 2026-08-21 trat
+      `params` an die Stelle von `typelist`, damit eine Wirkungszeile am Zeigertyp einen ORT
+      nennen kann; das war richtig und hat nebenbei die vorige Form weggenommen.*
+      **Der teure Teil ist der zweite:** `N035` (*„kein Vertrag am Zeigertyp"*, gebaut
+      2026-08-21) hatte in den Fragmentkorpus **null Reichweite**, weil der Leser die Form
+      vorher abwies. `messung/fragmente/F03.gab`, dieselben fünf Zeilen:
+      **23 Items / 5 Leserabsagen** vorher, **24 Items / 5 `N035`** nachher — und die
+      Fehlerzahl blieb bei 11, in beiden Läufen. *Eine Regel kann durch eine Form, die der
+      Leser ablehnt, nicht beissen, und von aussen sieht der Lauf gleich aus.*
+      Abnahme: `cargo run --bin gabbro -- pruefe messung/fragmente/F03.gab` nennt fünf
+      `N035` und keine `P002`/`P003`.
 
 Dazu die **ABI** (Bibliotheken, die sich mischen lassen) und die **Generizität** — ohne sie
 braucht jede Tabelle ihr eigenes `traverse`.
@@ -2535,13 +2637,22 @@ braucht jede Tabelle ihr eigenes `traverse`.
       neue Wirkung stillschweigend nach oben durch, und das ist die verbotene Richtung.**
 
 - [ ] **Ein `reason`-Wert hat KEINEN ERZEUGER — und das ist «B9» ein zweites Mal**
-      *(gemessen 2026-08-20 am vervollständigten Fragmentkorpus)*. `primary`
-      ([`dokumente/SYNTAX.md`](dokumente/SYNTAX.md):405) kennt keine Produktion für einen
-      Grundwert. **Jede `-> T or R`-Signatur im Korpus steht an einem `extern fn`** — an einem
-      Rumpf, den Gabbro nie sieht; *keine einzige Gabbro-Funktion erzeugt je einen Grund.*
-      Der Fehlerkanal existiert damit an der **Deklaration** und hat keine **Schreibform**.
-      **Dieselbe Reihenfolge wie bei `fnptr`: erst der Erzeuger, dann der Vertrag** — ein
-      Kanal ohne Einlöser ist die Bewegung, gegen die K100s zweites Tor steht.
+      *(gemessen 2026-08-20 am vervollständigten Fragmentkorpus)* — ~~offen~~ **GEBAUT am
+      2026-08-21** ([`messung/ERZEUGER.md`](messung/ERZEUGER.md) Posten 1: sieben Absagen,
+      acht eigene Giftproben, zehn Mutationen, ein Beispiel), **nachgezogen am 2026-08-25**.
+      `R::F` ist seither die Schreibform (`reasonval`,
+      [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md):517), `Typ::Grund` trägt sie im Typmodell,
+      `M126` sagt ab, wenn `R` kein erklärter `reason` ist, und `M124` hält die drei
+      Stellungen auseinander, durch die ein Grund gehen darf.
+      [`beispiele/48-grund-mit-erzeuger.gab`](beispiele/48-grund-mit-erzeuger.gab) ist das
+      Beispiel dazu, und der Erzeuger schreibt `*_grund = HolFehler_Leer;` ins C.
+
+      > **Und dieser Posten ist der ZWEITE stehengebliebene Satz derselben Klasse an einem
+      > Tag** — der erste ist der Kopf dieser Stufe, `WB2`. *Beide sagten nicht „offen",
+      > sondern „die Sprache hat es nicht", beide waren am 2026-08-21 gebaut, und beide
+      > standen vier Tage.* Der Widerrufswächter kannte keinen von beiden und las die
+      > Berichtsdatei nicht, in der die Wahrheit stand; **seit heute liest er `messung/`.**
+
       *Gefunden an F1, F3 und F5, sobald die fehlenden Deklarationen dastanden — der
       eingefrorene Korpus konnte es nicht zeigen.*
 
@@ -2664,12 +2775,52 @@ Zusagen ungeprüft weiterreicht, macht aus elf geprüften Klassen elf behauptete
       (die Schnittstelle sammelt bis zum Fixpunkt), die Regel fehlt. **Vor ABI3**, denn die
       Vereinigung zweier Zeugnisse ruht darauf, dass beide Seiten dieselben Namen meinen.
 
-- [ ] **Darf eine `pub`-Signatur einen privaten Namen nennen?** Heute ja — und `gabbro abi`
-      zieht den privaten Typ dann in die Schnittstelle nach, weil die Alternative eine
-      Schnittstelle mit toten Namen wäre. **Das ist die ehrliche Folge einer Entscheidung,
-      die niemand getroffen hat.** Die andere Lesart wäre eine Absage im Namenspass (wie
-      Rusts `private_interfaces`). *Eine Sprachentscheidung, keine Bauarbeit* — sie steht
-      hier, damit die Nachziehschleife nicht als Absicht durchgeht.
+- [ ] ~~**Darf eine `pub`-Signatur einen privaten Namen nennen?**~~ — **ENTSCHIEDEN und
+      gebaut am 2026-08-25: NEIN, und sie fällt an `N038`** (`crates/gabbro-check/src/bindung.rs`).
+      Der Eintrag stand hier als *„eine Sprachentscheidung, keine Bauarbeit"*, und das war
+      richtig; die Entscheidung ist die zweite Lesart geworden. **Möglich wurde sie erst,
+      als `table`, `device`, `format` und `lock` ihr `pub` bekamen** — vorher KONNTE ein
+      Träger gar nicht privat sein, und die Nachziehschleife war nicht Bequemlichkeit,
+      sondern die einzige Form, in der eine Schnittstelle überhaupt geschlossen sein konnte.
+      *Der Fixpunkt in `abi.rs` ist damit ersatzlos weg: die Ausfuhrmenge steht geschrieben.*
+
+- [ ] **Ein `pub static` überlebt die Bibliotheksgrenze NICHT — und nichts sagt es**
+      *(gemessen 2026-08-25, beim Bau von `N038`)*. Der Erzeuger senkt **jeden** Weltzustand
+      zu einem C-`static` ab, also zu INTERNER Bindung. Eine `.gabi` trägt ein
+      `pub static mut zaehler` mitsamt Anfangswert hinaus — und die Einheit des Importeurs
+      erzeugt daraus **ihre eigene zweite Kopie**:
+
+      ```
+      w1.o: 0000000000000000 b zaehler      -- die Bibliothek
+      w3.o: 0000000000000000 b zaehler      -- der Nutzer, ein ANDERES Objekt
+      Nutzer sieht 0, die Bibliothek sieht 2
+      ```
+
+      Der Prüfer sagt **0 Fehler, 0 Hinweise**, `cc -Werror` übersetzt, der Binder bindet,
+      und die beiden Seiten schreiben in verschiedene Variablen. *Das ist genau die Klasse,
+      die `abi.rs` in seinem eigenen Kopf ausschliesst* — **„was eine ABI ausdrücklich nicht
+      darf: eine Klasse von geprüft auf behauptet absenken"** —, nur eine Stufe tiefer: hier
+      wird nicht abgesenkt, sondern **verdoppelt**.
+
+      **Dieselbe Klasse, zweite Instanz: eine `pub table`, die der IMPORTEUR bei ihrem Namen
+      anspricht.** `Kaesten.slots[i].wert` beim Nutzer ergibt ein zweites
+      `static Kaesten Kaesten_speicher;` in seiner Einheit — er liest seine eigene leere
+      Tabelle. Die durchgestochene Probe (`pruefe-emission.sh`, Stufe 10) geht nur deshalb
+      durch, weil ihr Nutzer den Träger **ausschliesslich über Funktionen** anfasst.
+
+      > **Und `N038` treibt in genau diese Ecke.** Wer `effects { writes z }` exportiert,
+      > MUSS `z` seit heute `pub` schreiben — die Regel ist richtig und macht diesen Weg
+      > zum normalen.
+
+      Der Grund, warum es hier steht und nicht gebaut ist: **der Erzeuger kann nicht
+      unterscheiden, welche Items aus dem `--with`-Vorspann kommen.** Der Vorspann wird
+      textlich vorangestellt, und `emittiere` sieht einen Baum. Zwei Formen sind denkbar,
+      und beide sind eine Entscheidung und keine Reparatur:
+      *(a)* die `.gabi` schreibt Weltzustand **ohne Anfangswert** in einer eigenen Form, und
+      der Erzeuger macht daraus ein C-`extern`;
+      *(b)* `emittiere` bekommt die Vorspanngrenze und senkt Importiertes als `extern` ab.
+      *Bis dahin ist die Zahl der betroffenen Stellen im Korpus **null** — `pub static` und
+      `pub atomic` kommen in keiner einzigen Datei vor.*
 
 - [ ] **Ein `static`, den niemand nennt, fällt nirgends auf** *(2026-08-20)*. Der Erzeuger
       setzt seit heute `__attribute__((unused))` an jeden — richtig, weil `36-asm.gab` sein
@@ -2916,10 +3067,16 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7909 von 12359 Kommentarzeilen** im Pruefer sind deutsch
- 1043 von  1280 in den Instrumenten
-  273 von   845 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
+**7907 von 12954 Kommentarzeilen** im Pruefer sind deutsch
+ 1072 von  1515 in den Instrumenten
+  286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
+
+*Der Block stand am 2026-08-25 auf `7904 / 12359 / 1043 / 1280 / 273 / 845` und ist gegen den
+Lauf nachgezogen — **die Abweichung war nicht die deutsche Hälfte, sondern die
+Grundgesamtheit**: der Prüfer ist seither um 595 Kommentarzeilen gewachsen, die Instrumente um
+235. `pruefe-zahlen.py` sah nur die erste Zahl und hat sie gemeldet; die fünf daneben standen
+im selben Block und in keinem Register.*
 
 Die schwersten: `emit.rs` 1489, `rechenwerk.rs` 802, `m1.rs` 771, `namen.rs` 387.
 
@@ -3004,7 +3161,7 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       Deckungsaussage aller Proben, die darauf zeigen.
 
       ```
-      43 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 237, die
+      44 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 237, die
       ueberhaupt eine Kennung erwarten)
       ```
 
@@ -3023,7 +3180,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut: 54 Sätze über 216 Codes, 45 Codes noch ohne).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut: 56 Sätze über 219 Codes, 45 Codes noch ohne).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
@@ -3460,8 +3617,8 @@ Die Kette beginnt, wenn **beide** gelten:
       ABSAGE**, und sie ist gemessen statt abgewogen.
 
       ```
-      14 `@version`-Textstellen in Korpus + FRAGMENTE:  12 × „1", 2 × „17"
-       7 VERSCHIEDENE Deklarationen — `messung/fragmente/` ist byteidentisch mit FRAGMENTE.md
+      16 `@version`-Textstellen in Korpus + FRAGMENTE:  12 × „1", 2 × „17"
+       8 VERSCHIEDENE Deklarationen — `messung/fragmente/` ist byteidentisch mit FRAGMENTE.md
        1 weitere in `dokumente/SPRACHE.md`: die einzige `@version 3` des Ordners
        0 Formate mit einer zweiten Fassung        — `./instrumente/zaehle-formate.py`
       ```
@@ -3861,7 +4018,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 149 / 217) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 151 / 217) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |

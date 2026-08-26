@@ -948,7 +948,7 @@ Read against this goal, the greater part drops out:
 | **«B12»** no numeric-range domain | postconditions over message words | **out** — frame statements run over `slots of` |
 | **«B15»** no genericity | — | **cost, not impossibility** (duplication per table) |
 | **«B7»** no composite literal · **«B27»** no `abi` block | — | **they block the WRITING, not the PROVING** — additive constructs |
-| **«B9»** `fnptr` without a contract | — | **in and load-bearing** — see A2 |
+| ~~**«B9»** `fnptr` without a contract~~ **zu, 2026-08-21** | — | ~~**in and load-bearing** — see A2~~ — **BUILT.** `N035` makes `effects` **and** `costs` mandatory at a `fn(…)` type, `N036` carries the effect words through an indirect call, `N037` refuses `requires`/`ensures` **with a measured justification**; `messung/FNPTR.md` runs all four halves. *Struck on 2026-08-25 while correcting the same sentence in `PFLICHTEN.md`:175 — it is the SEVENTH stale sentence of this class in two weeks, and this one said `load-bearing` about an item that had been finished for four days* |
 
 **Four items remain.** Three are designed and unbuilt; **one is not solved but merely grazed**,
 and it therefore stands first.
@@ -1418,7 +1418,7 @@ A = 19       Annahmen, jede mit Sonde oder mit Grund
 
 | | Ziel | heute | |
 |---|---|---|---|
-| `H` | 0 | **12** | 5 verankert + 7 Absenkungen; Start war 31 |
+| `H` | 0 | **8** | 4 verankert + 6 Absenkungen; Start war 31. *F2 am 2026-08-25 an der Ausfuehrung gemessen — ohne ein Konstrukt und ohne eine Schablone: `L` steht unveraendert bei 1.* **Und der Schritt von 11 auf 10 am selben Tag ist KEINE Arbeit, sondern eine Berichtigung:** «B9» stand als Luecke, obwohl der Vertrag am `fn(…)`-Typ seit dem 2026-08-21 Pflicht ist (`N035`/`N036`/`N037`) — *ein falscher Eintrag entfernt, keine Pflicht geschlossen* |
 | `L` | ≤ 4 | **1** | getragen und unbewiesen; daneben aber **8 Prämissen ohne Pass** |
 | `A` | 19 | **33** | jede mit Sonde oder mit ausgeschriebenem Grund |
 | zweiter Korpus | vorhanden | **«K2», fünf Fragmente** | fremde Autorenlinie; drei sind ganze Module, alle drei prüfen sauber und senken ab |
@@ -3297,7 +3297,7 @@ der zweite Korpus.
 ## Wo wir stehen, gemessen und nicht behauptet
 
 ```
-H = 12        ueber den zehn Fragmenten kein Handbeweis mehr  (abgelesen, s. u.)
+H = 8        ueber den zehn Fragmenten kein Handbeweis mehr  (abgelesen, s. u.)
 ```
 
 **Und `H` beantwortet die Frage nicht.** Es misst die *Fragmente*, nicht die *Sprache*. Was der
@@ -3313,7 +3313,7 @@ irgendwann, eine fehlende nie.
 | **Fremdpflichten** | **10** | `gabbro pflichten` | *stand als 8.* Annahmen über Rümpfe, die Gabbro nie sieht — **die Zahl ist GESTIEGEN**, mit dem Korpus |
 | **Vorbedingungen am Rufort** | **12** | `gabbro pflichten` | *neu am 2026-08-20, und sie stand vorher NIRGENDS.* `M115` weist ab, wo der Bereich des Arguments die Bedingung ausschliesst, und **schweigt sonst** — das ist der Preis dieses Schweigens, je Rufstelle gezählt |
 | **Prämissen ohne Pass** | **8** | `gabbro schablonen` | *stand als 7.* Ein Beweis, den nichts herstellt |
-| **Absenkungspflichten** | **7** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten |
+| **Absenkungspflichten** | **5** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten |
 
 > **Drei von fünf, und in beide Richtungen** — eine gefallen, eine gestiegen, eine
 > fortgeschrieben. *Eine Buchführung, die in beide Richtungen abweicht, veraltet; sie lügt

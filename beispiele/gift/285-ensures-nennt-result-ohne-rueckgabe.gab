@@ -1,0 +1,15 @@
+-- erwartet: M110
+-- **`ensures` nennt `result`, die Funktion gibt nichts zurueck.**
+--
+-- `result` ist der Name des Rueckgabewerts. Ohne Rueckgabetyp benennt die Nachbedingung
+-- nichts -- sie steht im Zeugnis und in der Bibliotheks-ABI und sagt dort nichts. Dieselbe
+-- Linie wie `M111`: eine Nachbedingung, die nichts herstellt, ist an der falschen Stelle.
+module gift::ensures_nennt_result_ohne_rueckgabe {
+
+impl fn tut_nichts()
+    ensures result == 1
+    effects { pure }
+    costs   <= 1 ops
+{ }
+
+}

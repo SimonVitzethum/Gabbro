@@ -20,6 +20,33 @@
 -- > und schlaegt sie als Wert nach. **Ein `reason`-Wert hat keinen Erzeuger** -- und jede
 -- > `or R`-Signatur im Korpus steht an einem `extern fn`, also an einem Rumpf, den Gabbro
 -- > nie sieht. *Der Fehlerkanal existiert an der Deklaration und hat keine Schreibform.*
+--
+-- **NACHGEMESSEN 2026-08-25: der Befund ist UEBERHOLT, die drei Fehler sind es nicht.**
+--
+-- ~~`Status::Ok` faellt als **`M124`**~~ -- **GEFALLEN am 2026-08-25, und der letzte Satz
+-- dieses Absatzes war der Befund.** Er lautete: *„`reply4` ist eine ERGAENZTE Zeile -- an ihr
+-- liegt es nicht: `M124` ist strukturell und fragt den Parametertyp gar nicht."*
+--
+-- **Beide Haelften waren wahr und die Folgerung falsch.** `M124` fragte den Parametertyp
+-- nicht -- und genau das war die falsche Ablehnung (W22): der Ruf `reply4(EP, Status::Ok, …)`
+-- ist typrichtig, wenn der Parameter dieser `reason` IST. Die Regel hat seit dem 2026-08-25
+-- eine VIERTE Tuer, und sie ist strukturell geblieben: sie schlaegt die Signatur des
+-- Gerufenen nach, statt dem Typpruefer zu vertrauen.
+--
+-- > **Und darunter lag der eigentliche Grund, dass sie es nicht konnte:** `reason` war keine
+-- > Traegerart. `st : Status` loeste zu `Typ::Unbekannt` auf, und *jede* Regel, die auf den
+-- > Typ eines solchen Parameters sieht, schwieg -- nicht aus Absicht, sondern weil ihr die
+-- > Flaeche entzogen war. Sechste Blindstellenklasse, dritte Instanz.
+--
+-- Geaendert wurde hier EINE ergaenzte Zeile: `st : u64` -> `st : Status`. Die Deklaration von
+-- `reply4` steht nicht im eingefrorenen Ausschnitt (nur ihre drei Rufstellen,
+-- `FRAGMENTE.md`:1004/1010/1014), und `Status` ist die TREUERE Ergaenzung -- der Ausschnitt
+-- uebergibt dort einen `Status`. *`u64` war die Vermutung.*
+--
+-- > **Was das NICHT heisst:** die ZAHLPROJEKTION eines Grundes gibt es weiter nicht. Das
+-- > Rust-Original legt den Statuscode als Zahl in die Antwort; `Status` traegt seine Zahlen
+-- > in der Deklaration und hat keine Form, sie zu lesen. Hier faellt sie nicht auf, weil
+-- > `reply4` ein `extern fn` ist -- der Uebergang zur Zahl liegt jenseits der Grenze.
 -- =======================================================================================
 
 module programs::virtio_blk {

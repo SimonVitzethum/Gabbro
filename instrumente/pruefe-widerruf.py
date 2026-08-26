@@ -110,6 +110,60 @@ WIDERRUFE = [
          muster=r"`opaque` zum Bei[sß]en bringen[^\n]{0,30}\*\*eingeschoben\*\*",
          datum="2026-08-18", grund="`m1.rs`:745, Gift 79 und vier Sprechproben",
          ersatz="gebaut; Punkt 3 der Reihenfolge ist zu"),
+    # **WB2, entered 2026-08-25.** The sentence stood in the HEAD of stage 7 -- the place a
+    # builder looks to see what is next -- and it did not say *"open"*, it said *"the
+    # language does not have it"*. All four halves were built on 2026-08-21
+    # (`messung/FNPTR.md`); the sentence stood four days longer than it was true.
+    #
+    # *This guardian could not catch it, and its own head says why:* it is a memory, not a
+    # judgement -- it finds what somebody wrote down as revoked. **That is exactly why the
+    # entry stands here now and not in a report.**
+    dict(kennung="WB2",
+         muster=r"`fnptr`[^\n]{0,60}(?:null Korpusstellen|keinen Erzeuger)"
+                r"|null Korpusstellen und keinen Erzeuger"
+                r"|[Dd]ie Sprache kennt kein `&f`"
+                r"|`fnptr`[^\n]{0,40}\bNICHT gebaut\b"
+                r"|no corpus sites and no producer",
+         datum="2026-08-21", grund="`messung/FNPTR.md`: Erzeuger `ExprArt::FnWert` "
+                                   "(`M127`/`M128`), Ruf ueber einen Ort (`M129`), die "
+                                   "Absenkung und der Vertrag am Typ (`N035`-`N037`); "
+                                   "`beispiele/49-dispatch-tabelle.gab` mit 0 Fehlern",
+         ersatz="`fnptr` ist in allen vier Haelften gebaut -- offen ist nur, wie zwei "
+                "unabhaengige Rangskalen zueinander stehen (ABI2), nicht der Zeiger"),
+    # **WB3, entered 2026-08-25 -- and the reason it exists is that `WB2` did NOT catch this
+    # sentence.**
+    #
+    # `WB2` remembers the claim about the CONSTRUCT: *"the language has no `&f`"*, *"no corpus
+    # sites and no producer"*. The sentence that was still standing one day later in
+    # `PFLICHTEN.md`:175 is a DIFFERENT claim about the same item -- the one about the
+    # CONTRACT: *"`fnptr` carries no `requires`, no `ensures`, no `effects`"*. It stood there
+    # as an open gap and therefore carried one point of `H`.
+    #
+    # **Two claims about one item, and the memory held only the first.** That is exactly what
+    # the head above means by *"a memory, not a judgement"* -- and exactly why one entry per
+    # ITEM is not enough. *One per revoked SENTENCE.*
+    #
+    # Re-measured, and it reproduces:
+    #
+    #     $ printf 'type T = { f : fn(u8), };' > /tmp/b9.gab
+    #     $ gabbro pruefe /tmp/b9.gab
+    #     Fehler: [N035] /tmp/b9.gab:1:16: `fn(#1)` declares no `effects` and no `costs`
+    #
+    # **And the limit of this entry, so it does not promise more than it measures:** it looks
+    # for the THREE-PART ENUMERATION, not for every way of saying the same thing. `PLAN.md`:951
+    # (*"`fnptr` without a contract"*) and `MESSUNGEN.md`:6721 say it in other words; the first
+    # was struck by hand on 2026-08-25, the second stands in a dated measurement table.
+    # *A wording is a pattern, a claim is not.*
+    dict(kennung="WB3",
+         muster=r"(?:carries|tr[aä]e?gt) no `requires`, no `ensures`, no `effects`"
+                r"|kein `requires`, kein `ensures`, kein `effects`"
+                r"|no `requires`, no `ensures`, (?:and )?no `effects`",
+         datum="2026-08-21", grund="`N035` macht `effects` UND `costs` am `fn(...)`-Typ zur "
+                                   "Pflicht, `N036` traegt die Wirkungswoerter durch den "
+                                   "indirekten Ruf, `N037` weist `requires`/`ensures` mit "
+                                   "GEMESSENER Begruendung ab; `messung/FNPTR.md`",
+         ersatz="der Vertrag steht am Zeigertyp und ist PFLICHT -- `effects` und `costs`; "
+                "abgewiesen sind nur `requires`/`ensures`, und das begruendet `N037`"),
 ]
 
 # Welche Dateien der Waechter liest. TODO.md und DONE.md stehen mit drin: ein widerrufener
@@ -119,7 +173,41 @@ DATEIEN = (sorted(W.glob("dokumente/*.md"))
            # **Und die Beispiele.** Ihre Kommentare sind Prosa, die gelesen wird wie ein
            # Dokument -- `22-bootstrecke.gab` traegt fuenf Zeilen Befundtext ueber `ensures`.
            # *Ein widerrufener Satz ist dort genauso teuer und faellt sonst niemandem auf.*
-           + sorted(W.glob("beispiele/*.gab")))
+           + sorted(W.glob("beispiele/*.gab"))
+           # **And the REPORTS under `messung/`, since 2026-08-25.**
+           #
+           # They were outside the whole time, and that was the biggest gap in the reach: a
+           # report is the kind of text that looks most like a result -- it carries numbers,
+           # a date and a command to recompute it.
+           #
+           # *Measured while entering `WB2`: THREE live hits, all three about `fnptr`.*
+           # `ERZEUGER.md`:15 and :266 booked as not built an item that was built **on the
+           # same day** (`FNPTR.md`); `FNPTR.md`:14 quotes the sentence in a before/after
+           # table and is therefore wrapped in the exempting marker pair now.
+           #
+           # > **A guardian that does not read the file the sentence stands in is no
+           # > guardian against it** -- and the head above promises a memory, not a
+           # > selection of files.
+           + sorted(W.glob("messung/*.md"))
+           + sorted(W.glob("messung/*/*.md")))
+
+# **FROZEN, and therefore exempt -- entered 2026-08-25 while building `WB3`.**
+#
+# `dokumente/FRAGMENTE.md` is a report from 2026-08-14 and carries its freeze sentence;
+# `messung/fragmente/README.md` says why, right beside it: *"an excerpt cannot be executed"*,
+# and overwriting it would move the yardstick instead of discharging an obligation.
+#
+# **The reason for the exemption is not convenience, it is consistency:** `WB3` finds its
+# three-part enumeration in TWO places -- in `PFLICHTEN.md` (live, and struck there now) and in
+# `FRAGMENTE.md`:628, the source it was copied from. **The second cannot be struck without
+# breaking the freeze sentence.** A guardian that only turns green by breaking another rule is
+# no longer measuring.
+#
+# > *A frozen report is dated by its construction.* It does not say "this can never work", it
+# > says "on 14.8. it did not" -- and that is precisely the distinction the head above stands
+# > on. **The exemption is PRINTED**, so the file count does not promise more than it measures.
+AUSGENOMMEN = [W / "dokumente" / "FRAGMENTE.md"]
+DATEIEN = [d for d in DATEIEN if d not in AUSGENOMMEN]
 
 AUS = re.compile(r"<!--\s*widerruf:aus\s*-->.*?<!--\s*widerruf:an\s*-->", re.S)
 
@@ -177,6 +265,12 @@ def main():
     befunde = lauf(DATEIEN, WIDERRUFE)
 
     print("== Widerrufene Saetze: %d Eintraege, %d Dateien ==" % (len(WIDERRUFE), len(DATEIEN)))
+    # **The exemption belongs beside the number, not in the source alone** (2026-08-25).
+    # A reach that leaves a file out and says so only in a comment promises more than it
+    # measures -- the same class as W7.
+    for d in AUSGENOMMEN:
+        print("   ausgenommen: %s -- eingefroren, ein Bericht mit Datum; siehe Kopf"
+              % d.relative_to(W))
     for e in WIDERRUFE:
         eigene = [b for b in befunde if b[0] == e["kennung"]]
         marke = "%d LEBENDE" % len(eigene) if eigene else "zu"

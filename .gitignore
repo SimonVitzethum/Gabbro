@@ -1,4 +1,9 @@
 target/
+# **Und JEDES Bauverzeichnis, nicht nur das mit dem Standardnamen** (2026-08-26).
+# `messung/grenze/rust/` baut mit `--target-dir target-abort`, und `target/` traf es nicht:
+# 26 Dateien, 1,2 MB kompilierte Binaerdateien standen vor dem Commit.
+# *Ein Muster, das den haeufigsten Fall trifft, sieht aus wie eine Regel.*
+target-*/
 *.o
 *.a
 

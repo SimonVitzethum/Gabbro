@@ -56,11 +56,22 @@ const AUS_BEREIT : u32 = 1;
 -- Both fields carry the same contract they carry in the measured code: `bereit` asks the
 -- port and touches nothing, `senden` writes a byte out. *The split is the point of the
 -- shape:* `bereit` may wait arbitrarily long, `senden` is short.
+--
+-- **And `senden` is written the way the measured code writes it: `fn(u8)`, no parameter
+-- name.** All 11 pointer-type sites in `caprock-messbasis` leave the parameter unnamed
+-- (measured 2026-08-25); none names one. Until that day the name was OBLIGATORY here and
+-- `fn(u8)` died at `P002` -- so the form the measurement asked for was the one form the
+-- grammar did not have. *The named form stays available and is meant for exactly one thing:*
+-- an effect line at the pointer type that names a place (`fn(t : ptr<…> T) effects
+-- { writes t }`), which is why `params` replaced `typelist` on 2026-08-21 in the first place.
+--
+-- > **This line is the regression guard.** Make the name obligatory again and this file stops
+-- > parsing, and `beispiele/*.gab must be clean` says so at once.
 type Treiber = {
     bereit : fn() -> bool
         effects { reads ZUSTAND }
         costs   <= 4 ops,
-    senden : fn(b : u8)
+    senden : fn(u8)
         effects { writes ZUSTAND }
         costs   <= 4 ops,
 };

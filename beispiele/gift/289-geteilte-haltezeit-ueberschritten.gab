@@ -1,0 +1,28 @@
+-- erwartet: K004
+-- **Ein `locks shared`-Block ueberschreitet die GETEILTE Haltezeit.**
+--
+-- Der Zwilling von `K002`, und er braucht eine eigene Kennung: eine Sperre darf geteilt
+-- anders lange gehalten werden als ausschliesslich, und zwei verschiedene Absagen unter
+-- einer Kennung machten jede Zaehlung nach Codes falsch. Hier: `shared held <= 2 ops`,
+-- der Block liest viermal und kostet damit mehr.
+module gift::geteilte_haltezeit_ueberschritten {
+
+table K count 16 { slot { a : u32 in 0 .. 50, } }
+
+lock KAPPEN protects { K } rank 0 held <= 40 ops shared held <= 2 ops;
+
+impl fn zu_lang(k : ptr<normal, r> K) -> u32
+    effects { reads k.slots, locks shared KAPPEN }
+    costs   <= 40 ops
+{
+    let s : u32 in 0 .. 50 = 0;
+    locks shared KAPPEN {
+        let a = k.slots[0].a;
+        let b = k.slots[1].a;
+        let c = k.slots[2].a;
+        let d = k.slots[3].a;
+    }
+    return s;
+}
+
+}

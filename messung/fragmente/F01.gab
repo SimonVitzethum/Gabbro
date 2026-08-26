@@ -24,6 +24,27 @@
 -- Die Zeile bleibt hier stehen, wie der Ausschnitt sie schrieb. Der verbleibende Fehler
 -- gehoert Gabbro, nicht dem Korpus -- und genau dafuer steht dieser Ordner neben dem
 -- eingefrorenen Bericht.
+--
+-- **NACHGEMESSEN 2026-08-25: der Befund oben ist UEBERHOLT, und die Absage sagt es selbst.**
+--
+-- > *Ein `reason`-Wert hat sehr wohl einen Erzeuger.* Seit Stufe 7 (2026-08-21) steht
+-- > `return R::F;` als eine von drei erlaubten Stellungen fest (`M124`, `m1.rs`:513-537).
+-- > `Fehler::Buchfuehrung` faellt heute nicht mehr als `M119`, sondern als **`M122`**: *„this
+-- > returns a `reason … Fehler`, but the signature declares no `or <reason>`"*. **Aus einem
+-- > fehlenden ERZEUGER ist ein fehlender KANAL geworden** -- dieselbe Bewegung wie bei «B11».
+--
+-- **Und hier endet, was eine Deklaration leisten kann.** Der Kanal LAESST sich hinschreiben:
+-- eine zusaetzliche Zeile `or Fehler` unter der Parameterliste, ohne dass eine Zeile des
+-- Ausschnitts verlorenginge. Gemessen 2026-08-25 -- danach steht da
+--
+--     [N029] :284:9: `delete_leaf` can fail with `Fehler`, and this call does not stand in
+--                    a `let … else`
+--
+-- und :284 ist `delete_leaf(c, o, a, rf, victim);` -- eine Zeile, die der AUSSCHNITT
+-- geschrieben hat, im Rumpf eines `traverse … by consuming` («B10»). Sie in ein
+-- `let … else` zu drehen hiesse, den Ausschnitt umzuschreiben, und der naechste Zweig traefe
+-- `revoke` genauso. *Die Zeile ist darum NICHT ergaenzt worden: eine Deklaration mehr, ein
+-- Fehler an derselben Stelle, und ein Ausschnitt weniger.*
 -- =======================================================================================
 
 module caprock::cap::space {

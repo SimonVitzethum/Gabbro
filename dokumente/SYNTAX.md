@@ -328,7 +328,7 @@ fieldty    = typeexpr
            | typeexpr "embeds" "[" int ":" int "]" [ "scale" constexpr ] ;
 bitpos     = int | "[" int ":" int "]" ;
 variants   = "{" ident [ "(" typeexpr ")" ] { "," ident [ "(" typeexpr ")" ] } "}" ;
-fnptr      = "fn" "(" [ params ] ")" [ "->" typeexpr ] fncontract ;
+fnptr      = "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] fncontract ;
 
              (* «B8», 2026-08-21: bis dahin stand hier `typelist` und KEIN Vertrag -- eine
                 Form mit null Korpusstellen, weil die Sprache keinen Wert kannte, den man
@@ -351,6 +351,30 @@ fncontract = [ "requires" predlist ] [ "ensures" predlist ]
              "effects" "{" efflist "}" "costs" "<=" expr "ops" ;
 typelist   = typeexpr { "," typeexpr } ;
 params     = ident ":" typeexpr { "," ident ":" typeexpr } ;
+
+             (* **2026-08-25: der Name im ZEIGERTYP ist wahlfrei.** Am 2026-08-21 trat
+                `params` an die Stelle von `typelist`, damit eine Wirkungszeile am Zeigertyp
+                einen ORT nennen kann (`writes r.slots`) -- das war richtig und hat
+                nebenbei die vorige Form WEGGENOMMEN: `params` verlangt den Namen.
+
+                **Und weggenommen wurde genau die gemessene.** Alle 11 Zeigertypstellen in
+                `caprock-messbasis` (Zweig `arch/x86_64`, nachgemessen 2026-08-25) schreiben
+                ihre Parameter OHNE Namen -- `fn()`, `fn(u8)`, `fn(CapPtr) -> bool`,
+                `fn(u32, usize, &[(usize, CapPtr)], usize, usize) -> LadeUebergabe`. **Null
+                von elf nennen einen.** Die eigene Handprobe des Ordners schreibt es ebenso
+                (`messung/fnptr-proben/p1.gab`:3, `senden : fn(u8)`) und starb an `P002` --
+                einer Leserabsage am Wort, bevor eine Regel sprechen konnte.
+
+                *In einem TYP hat ein Parametername keinen Referenten*, solange ihn keine
+                Wirkungszeile aufgreift. Deshalb steht er in eckigen Klammern und nicht in
+                der Regel: beide Formen sind gemeint, die namenlose ist die gewoehnliche.
+
+                Unterschieden werden sie am ZWEITEN Wort und nur dort -- ein `typeexpr` darf
+                selbst mit einem Bezeichner anfangen (`path`), also trennt `fn(Treiber)` von
+                `fn(t : Treiber)` allein der Doppelpunkt. *)
+
+fnptrparams = fnptrparam { "," fnptrparam } ;
+fnptrparam  = [ ident ":" ] typeexpr ;
 ```
 
 ```gabbro
@@ -925,7 +949,7 @@ forever
 ## 9. Tables, traversals, formats
 
 ```ebnf
-table      = "table" ident [ "count" constexpr ] [ "backed" ident ] "{"
+table      = [ "pub" ] "table" ident [ "count" constexpr ] [ "backed" ident ] "{"
                { constdecl | slotdecl | invariant | opdecl | treedecl } "}" ;
 treedecl   = "tree" "{" kante { "," kante } [ "," ] "}" ;
 kante      = ( "parent" | "child" | "sibling" ) ident ;
@@ -1015,7 +1039,7 @@ invariant  = "invariant" ident "cost" costexpr "runs" ( "online" | "offline" )
              [ "by" inductlist ] ":" pred ";" ;
 costexpr   = "O" "(" expr ")" ;
 
-format     = "format" ident [ "@version" int ] [ "endian" ( "little" | "big" ) ]
+format     = [ "pub" ] "format" ident [ "@version" int ] [ "endian" ( "little" | "big" ) ]
              "{" { field } "}" ;
 ```
 
@@ -1098,7 +1122,7 @@ over the machine state.
 ## 10. Devices — and trap 4
 
 ```ebnf
-device  = "device" ident [ "(" params ")" ] "at" space
+device  = [ "pub" ] "device" ident [ "(" params ")" ] "at" space
           "{" [ mirrors ] { regdecl | bank | transition } "}" ;
 mirrors = "mirrors" place "from" place ";" ;       (* EINMAL je Geraet, nicht je Uebergang *)
 bank    = "bank" ident "at" expr "stride" expr "count" expr "{" { regdecl } "}" ;
@@ -1212,7 +1236,7 @@ nutzlast   = "{" placelist "}" | "nothing" ;
                 Klammerform, 2-mal klammerlos. Die Grammatik folgt den 33 und nicht den 2 --
                 die beiden Ausnahmen in beispiele/05 sind nachgezogen. Klammern trennen die
                 Nutzlast sichtbar von dem, was folgt (`release`, `;`). *)
-lockdecl   = "lock" ident "protects" "{" placelist "}"
+lockdecl   = [ "pub" ] "lock" ident "protects" "{" placelist "}"
              "rank" constexpr [ "held" "<=" constexpr "ops" ]
              [ "shared" "held" "<=" constexpr "ops" ] [ "masks" ident ] ";" ;
 lockstmt   = "locks" [ "shared" ] place block ;

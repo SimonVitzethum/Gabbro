@@ -1,4 +1,4 @@
-# Das Passregister — 54 Sätze über zwölf Pässe
+# Das Passregister — 56 Sätze über zwölf Pässe
 
 *Angelegt 2026-08-21 (PL.1 + PL.2). Jede Zahl unten nennt den Befehl, der sie nachrechnet.*
 
@@ -16,8 +16,8 @@ cargo build -q --bin gabbro && ./target/debug/gabbro paesse          # das Regis
 
 | | | Befehl |
 |---|---:|---|
-| Sätze im Register | **55** | `gabbro paesse` |
-| davon `measured` | **46** | ein Giftprobenfall oder eine gefangene Mutation |
+| Sätze im Register | **58** | `gabbro paesse` |
+| davon `measured` | **48** | ein Giftprobenfall oder eine gefangene Mutation |
 | davon **`ARGUED`** | **2** | ein Korrektheitsargument ist aufgeschrieben — [`K001`](K001.md), [`H006`](H006.md). *Das erste fand eine Unterzählung um Faktor 3; der dritte Versuch ([`V2`](V2.md)) fand statt einer Messung den [Nichtdeterminismus](DETERMINISMUS.md) und blieb `CONJECTURED`* |
 | davon `CONJECTURED` | **6** | nichts misst sie |
 | davon `PROVED` | **0** | **das ist die Zahl, um die es in PL.2 geht** |
@@ -50,7 +50,7 @@ Parsers behauptet genauso etwas über ein Programm wie einer des Kostenpasses.
 > **Ein aufgeschriebener Satz ist kein bewiesener.** Das ist der ganze Vorbehalt, und er ist
 > größer als die Leistung.
 
-1. **`PROVED` ist leer.** Keiner der 54 Sätze war je in Isabelle. Was das Register liefert,
+1. **`PROVED` ist leer.** Keiner der 56 Sätze war je in Isabelle. Was das Register liefert,
    ist die **Liste der zu beweisenden Aussagen** — der Gegenstand von PL.2, nicht sein
    Ergebnis.
 2. **`measured` misst die UMSETZUNG, nicht die REGEL.** Eine fallende Giftprobe zeigt, dass
@@ -67,7 +67,7 @@ Parsers behauptet genauso etwas über ein Programm wie einer des Kostenpasses.
    gemessen sind. Das ist die Vergröberung dieses Registers, und sie steht hier statt in
    einer Fußnote.*
 
-## Die Vorbedingung über allen 54 Sätzen: ein Hinweis ist keine Absage
+## Die Vorbedingung über allen 56 Sätzen: ein Hinweis ist keine Absage
 
 `Stufe::Hinweis` zählt nicht als Fehler, und nur `Stufe::Fehler` lässt den Übersetzer
 scheitern. **Fünf Kennungen sind Hinweise: `E003`, `E009`, `V003`, `S007`, `N026`.**

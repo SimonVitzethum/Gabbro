@@ -103,8 +103,22 @@ def main():
         for n, f, s, a, _e in zeilen:
             print(f"  {n:<5} {f:>7} {'senkt ab' if s else f'{a} Absagen':>12}")
         print()
+    # **The FOURTH number, and it is the one K100's first gate stands on** (2026-08-25).
+    #
+    # The paragraph below has always said *"one that lowers has not been run"* -- and then did
+    # not count the ones that were. The lowering obligation reads *"the generated C computes
+    # what the fragment says"*, **measured by execution**; stopping at `senkt ab` stops one
+    # step short of the statement.
+    #
+    # It is read where it arises: the `lauf "fragmentN"` lines of `pruefe-emission.sh`. Same
+    # method as `zaehle-pflichten.py --haengend`, for the same reason.
+    waechter = (W / "instrumente" / "pruefe-emission.sh").read_text(encoding="utf-8")
+    gestochen = {f"F{int(m):02d}" for m in re.findall(r'^lauf "fragment(\d+)"', waechter, re.M)}
     print(f"  {sauber} von {len(dateien)} pruefen sauber")
     print(f"  {senken} von {len(dateien)} senken ab")
+    print(f"  {len(gestochen)} von {len(dateien)} sind DURCHGESTOCHEN -- "
+          f"{', '.join(sorted(gestochen))}")
+    print("     erzeugt, uebersetzt, AUSGEFUEHRT und gegen eine Handschrift verglichen.")
     print()
     print("  Vor der Vervollstaendigung (2026-08-20, ueber den Ausschnitten):")
     print("  5 von 10 sauber, 3 von 10 senkten ab -- und JEDES der sieben offenen trug")
@@ -112,7 +126,9 @@ def main():
     print()
     print("== Und was das NICHT heisst ==")
     print("  Eine Datei, die sauber prueft, ist nicht abgesenkt; eine, die absenkt, ist")
-    print("  nicht ausgefuehrt. **Drei verschiedene Aussagen, drei Zahlen** (W11).")
+    print("  nicht ausgefuehrt. **Vier verschiedene Aussagen, vier Zahlen** (W11) -- die")
+    print("  vierte kam am 2026-08-25 dazu, weil dieser Absatz sie seit jeher NANNTE und")
+    print("  nicht zaehlte.")
     print("  Und dieser Korpus ist NACHGEBILDET: je Datei steht im Kopf, was ergaenzt wurde.")
     print("  `dokumente/FRAGMENTE.md` bleibt der eingefrorene Bericht -- was hier gemessen")
     print("  wird, ist Gabbro an einem Programm, nicht Gabbro an einem Ausschnitt.")

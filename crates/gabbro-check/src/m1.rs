@@ -1388,7 +1388,13 @@ impl<'a> Pruefer<'a> {
                     return Typ::Unbekannt;
                 };
                 Typ::FnPtr(Box::new(crate::typen::FnPtrContract {
-                    parameters: sig.parameter.clone(),
+                    // A DECLARATION always names its parameters -- so `Some`, always. The
+                    // `None` case comes only from a pointer TYPE (`fn(u8)`).
+                    parameters: sig
+                        .parameter
+                        .iter()
+                        .map(|(n, t)| (Some(n.clone()), t.clone()))
+                        .collect(),
                     result: sig.ergebnis.clone().map(Box::new),
                     effects: sig.effect_list.clone(),
                     has_effects: !sig.effect_list.is_empty(),
@@ -1785,8 +1791,17 @@ impl<'a> Pruefer<'a> {
                 );
                 return Typ::Unbekannt;
             };
-            for ((t, span), (pname, pt)) in argtypen.iter().zip(v.parameters.iter()) {
-                self.passt(t, pt, *span, &format!("das Argument `{pname}`"));
+            for (i, ((t, span), (pname, pt))) in
+                argtypen.iter().zip(v.parameters.iter()).enumerate()
+            {
+                // **A pointer type need not name its parameters** (`fn(u8)`), and then the
+                // message says the POSITION. *Naming a slot the author left unnamed would
+                // put a word in their mouth.*
+                let was = match pname {
+                    Some(n) => format!("das Argument `{n}`"),
+                    None => format!("das Argument Nr. {}", i + 1),
+                };
+                self.passt(t, pt, *span, &was);
             }
             // **A call with no result stays untyped -- exactly as a direct one does.**
             // The line below is `sig.ergebnis.clone().unwrap_or(Typ::Unbekannt)` with the

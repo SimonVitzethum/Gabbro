@@ -128,7 +128,6 @@ ERWARTET = {
     "blatt":        ("TOT", "siehe `ab` -- `WalkDecl`."),
     "kosten":       ("TOT", "Feld der `invariant`; ungelesen."),
     "laeuft":       ("TOT", "Feld der `invariant`; ungelesen."),
-    "maskiert":     ("TOT", "`masks` an einer Sperre. Ungelesen -- und es traegt die UNTERBRECHBARKEIT (`SPRACHE.md`:275), eine Sorge, die in keiner der elf Klempnereiklassen steht."),
     # **`erschoepfend` und `fehlername` sind am 2026-08-21 GESTIEGEN** (Stufe 7) -- und
     # dieser Waechter hat es gemeldet, bevor jemand daran gedacht hat, die Tabelle
     # nachzufuehren. *Das ist genau die Richtung, fuer die er gebaut wurde.*

@@ -419,6 +419,123 @@ fn pruefe_touches(
     }
 }
 
+/// **What the BODY does, written as an effect list -- and not as a refusal.**
+///
+/// «A4» asks: can the compiler COMPUTE the caller's `effects` line instead of demanding
+/// it? This function is one half of the answer -- the body's direct deeds. The other is
+/// `aufrufgraph::huelle_der_gerufenen`.
+///
+/// **It filters by exactly the same rules as `rumpf_gegen_wirkungen`**, and that is not
+/// convenience but the condition under which the measurement means anything: a computed
+/// list that filters differently from the pass checking the written one measures the
+/// difference between two filters, not between two lists. *W7 -- two registers over the
+/// same thing.*
+///
+/// Local names drop (stack, not world), parameters drop when READ (they belong to the
+/// caller), constants drop, and only a known world name counts as read. **When WRITING
+/// only the local drops** -- exactly the asymmetry `E005` has against `E010`.
+/// **The same computation, but WITH the reads over parameters and over names this unit
+/// does not declare.**
+///
+/// `E010` leaves both out, and with a reason: *"a parameter is no world state"* (what the
+/// caller hands in, HIS `effects` cover), and *"no known world state -- the pass says
+/// nothing"* (an excerpt does not declare everything).
+///
+/// **For «A4» that is precisely the question.** An elaborator that WRITES the line must
+/// write `reads p.slots` -- the caller wants to know what happens to his pointer. *The
+/// difference between the two sets is therefore not an imprecision but the measurement: it
+/// says how much work still lies between the pass that CHECKS it and the elaborator that
+/// would WRITE it.*
+pub fn rumpfwirkungen_mit(
+    f: &FnDecl,
+    b: &Block,
+    konstanten: &[String],
+    weltnamen: &[String],
+    weit: bool,
+) -> std::collections::BTreeSet<String> {
+    let mut taten = Taten::default();
+    sammle_taten(b, &mut taten);
+    let mut lok = Vec::new();
+    lokale(b, &mut lok);
+    let mut aus = std::collections::BTreeSet::new();
+    let grund = |o: &str| o.split(['.', '[', '-']).next().unwrap_or(o).to_string();
+
+    for (ort, _) in &taten.schreibt {
+        if lok.iter().any(|l| l == &grund(ort)) {
+            continue;
+        }
+        aus.insert(format!("writes {ort}"));
+    }
+    for (ort, _) in &taten.liest {
+        let gr = grund(ort);
+        if lok.iter().any(|l| l == &gr) || konstanten.iter().any(|k| k == &gr) {
+            continue;
+        }
+        let ist_parameter = f.parameter.iter().any(|p| p.name.text == gr);
+        if !weit && (ist_parameter || !weltnamen.iter().any(|k| k == &gr)) {
+            continue;
+        }
+        // **Even `weit` keeps ONE boundary: reading the VALUE of a parameter is no
+        // effect.** `f(n : u32) { return n + 1; }` touches nothing -- `n` sits in a
+        // register. Only a suffix makes it a memory access: `p.slots[i]` goes through the
+        // pointer the caller handed over, and THAT is what he wants to see in the line.
+        //
+        // *Without this line `reads n` stood in the computed list of every function with a
+        // numeric parameter* -- and the comparison measured register allocation instead of
+        // the frame.
+        if weit && ist_parameter && ort == &gr {
+            continue;
+        }
+        aus.insert(format!("reads {ort}"));
+    }
+    for (ort, _, geteilt) in &taten.sperrt {
+        aus.insert(if *geteilt {
+            format!("locks shared {ort}")
+        } else {
+            format!("locks {ort}")
+        });
+    }
+    aus
+}
+
+/// The world names and constants of a unit -- **read off at the same place as in `pass`**,
+/// so that no two lists arise that can drift apart.
+pub fn welt_und_konstanten(baum: &Programm) -> (Vec<String>, Vec<String>) {
+    let mut konstanten: Vec<String> = Vec::new();
+    let mut weltnamen: Vec<String> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Konst(k) => konstanten.push(k.name.text.clone()),
+        ItemArt::Statisch(x) => weltnamen.push(x.name.text.clone()),
+        ItemArt::Atomic(x) => weltnamen.push(x.name.text.clone()),
+        ItemArt::Tabelle(x) => weltnamen.push(x.name.text.clone()),
+        ItemArt::Device(x) => weltnamen.push(x.name.text.clone()),
+        ItemArt::State(x) => weltnamen.push(x.name.text.clone()),
+        _ => {}
+    });
+    (konstanten, weltnamen)
+}
+
+/// **Does a declared effect cover a performed one?** Public because «A4» asks the same
+/// question as `E005`/`E010` -- and it must get the same answer.
+pub fn deckt_wirkung(erklaert: &str, getan: &str) -> bool {
+    // The verbs must agree, the place may be a prefix.
+    let (ve, oe) = trenne(erklaert);
+    let (vg, og) = trenne(getan);
+    ve == vg && deckt(oe, og)
+}
+
+/// `writes a.b` -> (`writes`, `a.b`). `locks shared X` -> (`locks shared`, `X`).
+/// `pure`/`diverges` have no place.
+fn trenne(w: &str) -> (&str, &str) {
+    for v in ["locks shared ", "reads ", "writes ", "locks ", "masks ", "allocs ",
+              "consumes ", "publishes "] {
+        if let Some(r) = w.strip_prefix(v) {
+            return (v.trim_end(), r);
+        }
+    }
+    (w, "")
+}
+
 fn rumpf_gegen_wirkungen(
     f: &FnDecl,
     w: &Wirkungen,

@@ -1,0 +1,33 @@
+-- erwartet: N038
+-- **Die Huelle der Ausfuhr war bis zum 2026-08-25 nicht geschlossen, und sie konnte es
+-- nicht sein.**
+--
+-- `table`, `device`, `format` und `lock` trugen kein `pub` -- die Grammatik hatte das Wort
+-- an sieben Item-Arten und nicht an ihnen. `gabbro abi` entschied die Ausfuhrmenge deshalb
+-- nach ERREICHBARKEIT: es sammelte bis zum Stillstand, weil eine exportierte Signatur den
+-- Traeger nannte.
+--
+-- > *Das ist eine implizite Ausfuhrmenge, und D2 sagt „nichts ist implizit".* Der Autor der
+-- > Bibliothek hat sie nirgends aufgeschrieben; sie hat sich ergeben.
+--
+-- Der Fixpunkt machte die FOLGE ehrlich. Diese Regel weist die URSACHE ab: `hole` geht
+-- hinaus und nennt `Kaesten`, das daheim bleibt -- die `.gabi` zeigte auf etwas, das nicht
+-- mitfaehrt.
+module gift::huelle {
+
+pub const NKAESTEN : u32 = 8;
+
+-- Kein `pub`: dieser Traeger bleibt privat.
+table Kaesten count NKAESTEN {
+    slot { wert : u32, }
+}
+
+-- **Und hier faellt es.** `index into Kaesten` steht in einer ausgefuehrten Signatur.
+pub impl fn hole(i : index into Kaesten) -> u32
+    effects { reads Kaesten.slots }
+    costs   <= 10 ops
+{
+    return Kaesten.slots[i].wert;
+}
+
+}

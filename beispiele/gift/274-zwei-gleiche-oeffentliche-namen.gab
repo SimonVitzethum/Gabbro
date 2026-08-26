@@ -1,0 +1,40 @@
+-- erwartet: N039
+-- **Der C-Name IST der Gabbro-Name -- dieser Erzeuger mangelt nicht.**
+--
+-- Zwei Bibliotheken, die beide ein `pub fn lesen` fuehren, geben deshalb zweimal dasselbe
+-- Symbol. Gemessen am 2026-08-25, mit zwei getrennt uebersetzten Einheiten:
+--
+--     /usr/bin/ld: e2.o: in function `lesen':
+--     multiple definition of `lesen'; e1.o: first defined here
+--
+-- > **Eine Absage, die erst der Binder gibt, ist keine Absage dieses Uebersetzers.** Sie
+-- > nennt keine Gabbro-Zeile, sie kennt die Modulpfade nicht, und sie kommt nach dem
+-- > letzten Pass.
+--
+-- **Gemangelt wird trotzdem nicht**, und das ist die Entscheidung, deren Preis diese Probe
+-- ist: das erzeugte C soll lesbar bleiben. Der Uebersetzer weigert sich benannt, statt zu
+-- raten, welcher der beiden `lesen` gemeint war -- *refuse, never interpret.*
+--
+-- `N001` faengt das NICHT: die beiden stehen in verschiedenen Modulen, und der
+-- Sichtbarkeitsbereich ist nicht die Bindungsflaeche. Die kennt keine Module.
+module gift::bindung {
+
+module eins {
+
+pub impl fn lesen() -> u32
+    effects { pure }
+    costs   <= 2 ops
+{ return 1; }
+
+}
+
+module zwei {
+
+pub impl fn lesen() -> u32
+    effects { pure }
+    costs   <= 2 ops
+{ return 2; }
+
+}
+
+}

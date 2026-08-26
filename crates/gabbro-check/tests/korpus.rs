@@ -185,6 +185,27 @@ const BENANNT: &[&str] = &[
     // > Sprache hat ihn nicht.** Ihn hier stillschweigend zuzulassen hiesse, die
     // > Stellungsregel fuer den einen Fall aufzugeben, fuer den sie am wenigsten gilt.
     "M124",
+    // **`N035` -- `FRAGMENTE.md`:633-637 declares five function pointers and NO contract.**
+    //
+    // ```gabbro
+    // type SchedOps = {
+    //     current_id    : fn(u32) -> u32,
+    //     block_current : fn(u32, u64) -> u64,
+    //     …
+    // };
+    // ```
+    //
+    // **The refusal is exactly what the comment three lines above it asks for**, in the
+    // fragment's own words: *"«B9» Der Ersatz fuer `&mut dyn SchedOps`: `fnptr` traegt
+    // KEINEN Vertrag"*. `N035` was built on 2026-08-21 for this sentence.
+    //
+    // > **And until 2026-08-25 it never reached the fragment.** A parameter name was
+    // > obligatory in a pointer type, so `fn(u32)` died at `P002`/`P003` -- a reader refusal
+    // > at a token, before any pass could look. Measured on `messung/fragmente/F03.gab`, the
+    // > same five lines as a `.gab` file: **23 items, 5 reader refusals** before, **24 items,
+    // > 5 `N035`** after. *A rule cannot bite through a form the parser rejects, and the
+    // > count looked the same from outside -- 11 errors either way.*
+    "N035",
     // **`N040` -- and over the FROZEN excerpt it is the EXPECTED answer.**
     //
     // An excerpt names types it does not declare; that is its nature, and it has stood

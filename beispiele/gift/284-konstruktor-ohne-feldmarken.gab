@@ -1,0 +1,13 @@
+-- erwartet: M107
+-- **Ein Verbundkonstruktor ohne Feldmarken.**
+--
+-- *Entweder ALLE Argumente sind markiert oder keines* -- und bei einem Verbund ist "keines"
+-- keine Wahl: die Reihenfolge waere die einzige Zusage, und `beweise/Verbund_Konstruktor.thy`
+-- ruht auf den Marken. Zwei `u32` in der falschen Reihenfolge saehen sonst richtig aus.
+module gift::konstruktor_ohne_feldmarken {
+
+type Punkt = { x : u32, y : u32, };
+
+impl fn bauen() -> Punkt effects { pure } costs <= 2 ops { return Punkt(1, 2); }
+
+}

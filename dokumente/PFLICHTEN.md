@@ -150,14 +150,14 @@ carries and the Rust original did not — because it does not write them down.*
 | 471–482 | every failure path names one of the nine reasons | K | `exhaustive` |
 | 489–491 | the fault address is page-aligned | K | `format` `where` |
 | 493–499 | the reason code lies in 0x01..0x0c | K | `M101` — **and only because the codes happen to be contiguous: «B25», `intty` carries an interval, not a value set** |
-| 498 | an empty fault register is REFUSED, not reported empty | K | **gap: «B22-near» — `format` knows only refusal. In the original that is the difference between "no fault" and "record unreadable"** |
+| 498 | an empty fault register is REFUSED, not reported empty | K | `format` `where` with a DISJUNCTION — **closed 2026-08-25, and the notation was never missing.** ~~*gap: «B22-near» — `format` knows only refusal*~~. `pred = orpred` has stood in the grammar all along (`SYNTAX.md`:614) and `N032` name-checks it; what was missing was a `match` arm — `PredArt::Oder` fell through `_ => return None` in `emit.rs::pred_c_format`, so the emitter refused with `C001`. **The discharge is EXECUTED, not booked:** `beispiele/51-abwesenheit-und-absage.gab` writes `where f_bit == 0 \|\| (grund >= 1 && grund <= 12)` and `instrumente/pruefe-emission.sh` runs it — `lauf "b22-abwesenheit"`, expected `1 0 1 0`: *empty* and *too short* are now two different answers, and the poison probe that cuts the `\|\|` out makes them one again. `EMISSION: ALL PASS — 22 durchgestochen` (was 21). **The frozen excerpt keeps its wording** — `f_bit : u64 in 1 .. 1` (`FRAGMENTE.md`:505) is what the human wrote when the language offered nothing else, and it stays; what changed is that Gabbro can now say the other thing |
 | 505–510 | the second-level PTE layout | K | `format` |
 | 512–518 | the context entry layout, `AW @[66:64]` crosses the word | K | **«B24» decided 2026-08-18 — and the decision REFUSES this notation.** A position lies inside the field's own word; `u64` has bits 0…63, so `@[66:64]` names nothing. *The layout stays writable — as a second `u64` field with `@[2:0]`.* **The programmer names the second word instead of the emitter guessing it**, and that is the point: a 128-bit entry is two words, and saying so is cheaper than a rule about crossing |
 | 520–522 | TE arms translation; DMA without a context entry faults | K | `assume` **with a falsifier** |
 | 524–526 | GCMD is written whole | K | `assume` — **expressly `unfalsifiable`, with the reason: a probe would have to open the very window the mechanism is built against** |
 | 528–530 | after FSTS.PFO further faults are dropped | K | `assume` **with a falsifier** |
 
-**F2: 24 obligations — 19 K, 5 L. Hanging: 2, all K** *(«B26»'s second half and «B23» closed 2026-08-20; and one cell that read as closed was NOT — see 403–419)*.
+**F2: 24 obligations — 19 K, 5 L. Hanging: ~~2~~ **1**, and it is the lowering** *(«B26»'s second half and «B23» closed 2026-08-20; **«B22-near» closed 2026-08-25, and the discharge is a differential test that RUNS**; and one cell that read as closed was NOT — see 403–419)*. **F2 therefore carries no anchored gap any more** — read off with `./instrumente/zaehle-pflichten.py --haengend`, which now prints no line for F2.
 
 ---
 
@@ -172,7 +172,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 592–603 | the two places are written in **one** step | L | **gap: «B17» — `transition` writes exactly ONE `place`. The whole statement of the fragment, and it is not writable** |
 | 609–611 | the message arrived — `msg_kopiert` | L | **gap: «B12» — no numeric-range domain; the substitute `elems of` has two readings and the grammar fixes neither** |
 | 610 | `msg_kopiert` is pure | K | `E009` |
-| 613–624 | the callback's contract stands at the pointer type | K | **gap: «B9» — `fnptr` carries no `requires`, no `ensures`, no `effects`** |
+| 613–624 | the callback's contract stands at the pointer type | ~~K~~ **zu** | **«B9» BERICHTIGT am 2026-08-25 — eine Richtigstellung, keine Buchung.** ~~*gap: «B9» — `fnptr` carries no `requires`, no `ensures`, no `effects`*~~ — the row was wrong on all three of its points, and it had been wrong for four days. **`effects` and `costs` are MANDATORY at a `fn(…)` type since 2026-08-21** (`N035`); `N036` says which effect words carry through an indirect call; `requires`/`ensures` are refused **with a measured justification** (`N037`) — not forgotten. Measured, and it reproduces: `printf 'type T = { f : fn(u8), };' > /tmp/b9.gab && gabbro pruefe /tmp/b9.gab` → ``Fehler: [N035] /tmp/b9.gab:1:16: `fn(#1)` declares no `effects` and no `costs```. **The work is from 2026-08-21** (`messung/FNPTR.md`, all four halves; `beispiele/49-dispatch-tabelle.gab` with 0 errors) — *this row only failed to be carried along.* `H` falls from 11 to **10**, and it falls because an entry was FALSE, not because anything was built today. **A number lowered by rewording would be repotting; a false entry corrected is not** — and that difference is the whole reason this sentence stands here |
 | 630–631 | postconditions may speak about the return value | L | **gap: «B6» — `fndecl` binds no name for it; `old(place)` exists, a `result` does not** |
 | 632 | EPS is held | K | `H001` |
 | 632 | the endpoint slot is occupied | K | declared |
@@ -385,9 +385,16 @@ carries and the Rust original did not — because it does not write them down.*
 |---|---|---|---|
 | **F7** | **the generated C computes what the fragment says** | K | **carried, measured by execution.** `pruefe-emission.sh` cuts F7 out of the frozen corpus, emits, compiles with `cc -std=c11 -Wall -Wextra -Werror`, runs it and compares: **`123456`** — six boot steps, in order, each exactly once. The `linear ghost type` leaves **no trace** in the C |
 | **F8**, **F10** | same | K | **carried, measured by execution** — booked in `pruefe-emission.sh` beside F7 |
-| F1–F6, F9 | same | K | **gap, for seven** *(re-measured 2026-08-20; the row said "nine" long after F8 and F10 were measured)*. And the seven are not one class. **Three are open DECISIONS** — «B10» (`by consuming` drains the whole queue), «B12» (`elems of` binds an element or an index; `SYNTAX.md` uses both readings), `mappings of` (a path or the leaf set — seven orders of magnitude apart). **Two are the axiom layer** — which barrier a `dma` access needs. **And ALL SEVEN carry a corpus-side blocker** *(counted 2026-08-20, one hour after the line below first said "two")*: 41 sites name 20 constants and types nobody declares (`MAX_POLL`, `EP_BADGE`, `SYSNO_RESULT`, `Fehler`, `NTFN`, …), nine `let … else` call bodies this unit does not declare, six bit positions left unnamed, one `table` with no `tree`, one callee with no `or <reason>`. *An EXCERPT is not a program, and `FRAGMENTE.md` carries a freeze sentence* — see the note below |
+| **F2** | same | K | **carried, measured by execution** *(2026-08-25)*. The first one that was NOT already a program: five `reserved` fields were missing, and without them no `format` says which bits exist. `pruefe-emission.sh` runs it against `messung/fragmente/F02.gab` and compares **`4096 153 7 3 256 1 6 2 1 1 0 9`** — the record bank's address computed from a READ register field (`CAP.FRO * 16`), the stride, the same computation with `ECAP.IRO`, **trap 4** (`mirrors GCMD from GSTS` carries `RTPS` into the `TE` write; the poison probe reads `2` there), five bit positions out of the fault record, the `where` clause in both directions, and the DECLARED number of a `reason`. **And the completion itself is now checked, not asserted:** the guard cuts the frozen block and refuses if a single excerpt line is missing — *adding is allowed, leaving out is not.* Without it the yardstick could be moved instead of the obligation discharged |
+| F1, F3–F6, F9 | same | K | **gap, for six** *(F2 left this row on 2026-08-25 — measured, not rebooked)* *(re-measured 2026-08-20; the row said "nine" long after F8 and F10 were measured)*. And the seven are not one class. ~~**Three are open DECISIONS** — «B10» (`by consuming` drains the whole queue), «B12» (`elems of` binds an element or an index; `SYNTAX.md` uses both readings), `mappings of` (a path or the leaf set — seven orders of magnitude apart).~~ **BERICHTIGT am 2026-08-25 — alle drei sind seit dem 2026-08-20 ENTSCHIEDEN, und diese Zeile stand fünf Tage länger als sie wahr war.** `TODO.md` Stufe 3 trägt die Überschrift *„AUSGEFÜHRT am 2026-08-20, ohne ein neues Terminal und ohne eine neue Schablone“* und führt Entscheid **und** Begründung für alle drei; `dokumente/SYNTAX.md`:635 trägt «B12» in der Grammatik. Nachzurechnen mit `grep -n 'decided 2026-08-20' dokumente/SYNTAX.md` (→ ``"elems" "of" place  (* «B12», decided 2026-08-20: binds an INDEX into the array *)``) und `grep -n 'AUSGEFÜHRT am 2026-08-20' TODO.md`. Die Entscheide: **«B12» `elems of`** bindet einen **INDEX** — *aus dem Index bekommt man das Element, aus dem Element den Index nicht*; **`mappings of`** ist die **Blattmenge** — *W^X ist eine Aussage über die Menge; über einen Pfad ist sie sinnlos*; **«B10» `by consuming`** leert die **ganze** Schlange, *und das ist die Bedeutung*. **Damit ist «B10» kein Lesartenposten mehr, sondern ein KONSTRUKTposten** — *„das ist eine andere SCHLEIFENFORM, keine andere Lesart dieser“* — eine Schleifenform, die einen Wert liefert und verlassen werden kann. Er fällt unter Regel A (kein Konstrukt ohne gemessenen Bedarf) und unter Tor 2: **gebucht, nicht gebaut.** *Diese Richtigstellung senkt keine Zahl — `H` liest die vierte Spalte der Fragmenttabellen, nicht diesen Satz; sie nimmt nur einer Zeile den falschen Grund weg.* **Two are the axiom layer** — which barrier a `dma` access needs. **And ALL SEVEN carried a corpus-side blocker** *(counted 2026-08-20, one hour after the line below first said "two"; **F2's is closed since 2026-08-25** — the five `reserved` fields stand in `messung/fragmente/F02.gab`, and the file emits, compiles under `-Werror -O2`, runs and compares)*: 41 sites name 20 constants and types nobody declares (`MAX_POLL`, `EP_BADGE`, `SYSNO_RESULT`, `Fehler`, `NTFN`, …), nine `let … else` call bodies this unit does not declare, six bit positions left unnamed, one `table` with no `tree`, one callee with no `or <reason>`. *An EXCERPT is not a program, and `FRAGMENTE.md` carries a freeze sentence* — see the note below |
 
-**+10 obligations, 10 K, 7 hanging** *(re-measured 2026-08-20: 5 of the ten check clean, 3 lower and run)*.
+**+10 obligations, 10 K, 6 hanging** *(re-measured 2026-08-25: 6 of the ten check clean, **4 lower and run**)*.
+
+> **And the column is no longer kept by hand.** `instrumente/zaehle-pflichten.py` used to carry
+> `ABSENKUNG_OFFEN = ["F1", "F2", …]` in its source; it now reads the `lauf "fragmentN"` lines out of
+> `pruefe-emission.sh`. **Whoever builds a differential test lowers `H`; whoever removes one raises it**, and
+> a speaking probe holds both directions. *An entry without a run is no longer writable* — which is the
+> same sentence this file already carries about the anchored half.
 
 > ### The gate `H = 0` has a floor, and it is not made of work
 >
@@ -417,12 +424,12 @@ carries and the Rust original did not — because it does not write them down.*
 > | | Gabbro's half | the corpus's half |
 > |---|---|---|
 > | F1 | field / parameter / `tagged` payload type (9 sites) | `Fehler` is declared nowhere; the `table` names no `tree` |
-> | F2 | — | five bit positions unnamed |
-> | F3 | field / parameter type (6), «B10» to decide | five names; one callee with no `or <reason>` |
+> | ~~F2~~ | — | ~~five bit positions unnamed~~ — **closed 2026-08-25**, and it was the only blocker: F2's Gabbro half was empty, which is why it is the first of the seven to fall |
+> | F3 | field / parameter type (6), ~~«B10» to decide~~ **«B10» decided 2026-08-20** *(and what follows is a CONSTRUCT, not a reading — booked, not built)* | five names; one callee with no `or <reason>` |
 > | F4 | `let` type (2), the `dma` barrier (axiom layer), `bounded … ops` with no fixed per-pass cost | `MAX_POLL` |
 > | F5 | `match` over something other than `option index into T` | ten names, seven call bodies |
-> | F6 | parameter type, `let` type, expression form, «B12» to decide | three names, two call bodies |
-> | F9 | `walk … levels` that is not a number, `mappings of` to decide, the `dma` barrier | one bit position |
+> | F6 | ~~parameter type, `let` type, expression form, «B12» to decide~~ **2026-08-25: `lenof` outside a `format` — and nothing else.** The parameter type (a `reason` IS a C type), the `let` type (read from the callee's signature) and the `static` of a record (`S19`, proved) lower since 2026-08-25; «B12» was decided on 2026-08-20 | three names, two call bodies — **and no pass reports them:** a `check … can_fail` is not entered by the name, effect and cost passes |
+> | F9 | `walk … levels` that is not a number, ~~`mappings of` to decide~~ **`mappings of` decided 2026-08-20 (the leaf set)**, the `dma` barrier | one bit position |
 >
 > **Therefore: the floor of `H` from Gabbro's side alone is `7`, not `2`.** The five anchored
 > obligations can be closed by building; **the lowering column cannot fall by a single
@@ -485,7 +492,7 @@ carries and the Rust original did not — because it does not write them down.*
 | **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
 | **Plumbing (K)** | **171** | 72 % |
 | **Logic (L)** | **67** | 28 % |
-| **hanging** | **31** | of which **`H = 12` are K** — **5 anchored at a line, 7 lowerings** *(«B21», «H2.1», «H2.2» closed 2026-08-19; «B26»'s second half, «B33» and «B23» 2026-08-20)*. **All five remaining are NOTATION gaps: not one is a hand-written proof.** Every one a breach of the thesis at its site. *Read off with `./instrumente/zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
+| **hanging** | **31** | of which **`H = 8` are K** — **3 anchored at a line, 5 lowerings** *(«B9» corrected 2026-08-25 — a FALSE entry removed, not a discharge: the work is from 2026-08-21, `N035`/`N036`/`N037`)* *(F2's lowering measured 2026-08-25)* *(«B21», «H2.1», «H2.2» closed 2026-08-19; «B26»'s second half, «B33» and «B23» 2026-08-20)*. **All three remaining are NOTATION gaps: not one is a hand-written proof.** *(«B22-near» closed 2026-08-25 — and NOT by prose: `lauf "b22-abwesenheit"` in `pruefe-emission.sh` emits, compiles under `-Werror` at `-O0` and `-O2`, RUNS and compares `1 0 1 0`.)* Every one a breach of the thesis at its site. *Read off with `./instrumente/zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
 **L : K = 0,38 : 1.**
@@ -555,7 +562,7 @@ ausdrücklich verlangt hatte.
 | **«B26» — der Vorzustand einer `transition`** | *„ob `mirrors` auch den Vorzustand einer `transition` an `GCMD.TE` aus `GSTS.TES` bezieht, sagt `SYNTAX.md` nicht"* — **der Erzeuger beantwortet es mit ja und misst es**: `1 1 1 1`, und die zweite und vierte Zahl sind die Falle. *Die Antwort gehört jetzt in `SYNTAX.md`, nicht in den Erzeuger* |
 | **«B33» — die V-Regeln verengen keinen Registerort** | Der Ordner schrieb: *„Ob das Absicht ist (ein Register kann sich zwischen Prüfung und Rechnung ändern!) oder eine Lücke, entscheidet der Ordner. **Wenn es Absicht ist, gehört die Begründung aufgeschrieben** — sie wäre ein starkes Argument."* **Sie ist es, und sie steht jetzt im erzeugten C:** ein Registerzugriff wird `volatile`, und `volatile` IST die Aussage *„dieser Ort kann sich zwischen zwei Lesungen ändern"*. Eine Verengung wäre an dieser Stelle falsch, nicht bloß fehlend |
 
-### Offen — **`H = 12`**, abgelesen mit `./instrumente/zaehle-pflichten.py --haengend` — und die Zahlenspalte ist am 2026-08-20 GESTRICHEN
+### Offen — **`H = 8`** *(~~10~~ ~~9~~ — 2026-08-25 zweimal, 2026-08-26 durch F4s Absenkung)*, abgelesen mit `./instrumente/zaehle-pflichten.py --haengend` — und die Zahlenspalte ist am 2026-08-20 GESTRICHEN
 
 **Dieselbe Auflösung wie einen Abschnitt weiter oben, und aus demselben Grund.** Die Spalte
 `#`, die hier stand, war ein **viertes** Register neben dem Handgang, der Summenzeile und dem
@@ -576,13 +583,13 @@ hält. **Die Ursache ist nicht Nachlässigkeit, sondern Fortschreibung:** «B21�
 Axiomschicht umgebucht — und jede Schließung wurde in der Summenzeile eingetragen und in dieser
 Liste nicht.
 
-**Die zwölf stehen jetzt nur noch an einer Stelle: im Befehl.** Er druckt sie je Fragment und
+**Die ~~zwölf~~ *(2026-08-25: elf, dann zehn)* stehen jetzt nur noch an einer Stelle: im Befehl.** Er druckt sie je Fragment und
 mit der Zeile, an der sie hängen. Was hier bleibt, ist, **wem** sie gehören:
 
-| verankert — fünf | wem |
+| verankert — ~~fünf~~ ~~vier~~ **drei** *(2026-08-25, zweimal an einem Tag)* | wem |
 |---|---|
-| `F2`:498 | **«B22-nah»** — `format` kennt nur die Absage; *„kein Fehler"* und *„Satz unlesbar"* sind dasselbe |
-| `F3`:613–624 | **«B9»** — `fnptr` trägt kein `requires`, kein `ensures`, kein `effects` |
+| ~~`F2`:498~~ **zu** | ~~**«B22-nah»** — `format` kennt nur die Absage~~ — **GESCHLOSSEN am 2026-08-25.** Die Notation fehlte nie (`pred = orpred`, `SYNTAX.md`:614); es fehlte ein `match`-Arm in `emit.rs::pred_c_format`. *Und die Entlastung ist AUSGEFÜHRT*: `beispiele/51-abwesenheit-und-absage.gab` unter `lauf "b22-abwesenheit"`, erwartet `1 0 1 0` — „leer" und „unlesbar" sind zwei Antworten, und die Giftprobe, die das `\|\|` herausschneidet, macht wieder eine daraus |
+| ~~`F3`:613–624~~ **zu** | ~~**«B9»** — `fnptr` trägt kein `requires`, kein `ensures`, kein `effects`~~ — **BERICHTIGT am 2026-08-25.** `N035` macht `effects` **und** `costs` am `fn(…)`-Typ zur Pflicht (seit 2026-08-21), `N036` trägt die Wirkungswörter durch den indirekten Ruf, `N037` weist `requires`/`ensures` **mit gemessener Begründung** ab. Nachgerechnet: ``printf 'type T = { f : fn(u8), };' > /tmp/b9.gab && gabbro pruefe /tmp/b9.gab`` → ``[N035] … `fn(#1)` declares no `effects` and no `costs```. *Die Zeile fiel durch eine Richtigstellung, nicht durch Arbeit von heute — die Arbeit ist vom 2026-08-21 (`messung/FNPTR.md`)* |
 | `F4`:764 | **«B26»** — `RegDecl::requires` wird von KEINEM Pass gelesen; die Klausel zerfällt nach dem Parsen |
 | `F4`:785–792 | **«B18»** — `device` kennt keine Phasen |
 | `F5`:938–949 | **«B27»** — `arch ident` gibt es, die Registerbelegung nicht |
@@ -591,7 +598,7 @@ mit der Zeile, an der sie hängen. Was hier bleibt, ist, **wem** sie gehören:
 F7/F8/F10 sind an der Ausführung gemessen (`123456`, `1 1 1 0 0 1 1 1`, `1 0 0 0 0 65`).
 *Sie ist keine Sprachfrage, sondern Arbeit.*
 
-> **Alle fünf verankerten sind NOTATION, keine einzige ist ein handgeschriebener Beweis.** Und
+> **Alle ~~fünf~~ **vier** verankerten sind NOTATION, keine einzige ist ein handgeschriebener Beweis.** Und
 > die alte Liste führte daneben noch «B21», «B38», «B39», das handgeschriebene `narrow` und
 > *„V-Regeln rechnen nicht"* — **fünf Zeilen für Posten, die schon zu waren.** Eine Liste, die
 > nur wächst, ist kein Register.
@@ -599,5 +606,5 @@ F7/F8/F10 sind an der Ausführung gemessen (`123456`, `1 1 1 0 0 1 1 1`, `1 0 0 
 > **Und der Satz, der hier ein Jahr lang stand, gilt nicht mehr:** *„die Klempnerei hängt
 > nicht daran, dass ein Pass fehlt — sie hängt daran, dass sich sieben Dinge nicht sagen
 > lassen."* **Sie lassen sich jetzt alle sagen.** Was hängt, sind zwei Gerätestellen («B18»,
-> «B26»), drei einzelne Notationslücken («B9», «B22-nah», «B27») und die Absenkung — *und die
+> «B26»), ~~drei~~ ~~zwei~~ **eine** einzelne Notationslücke (~~«B9»~~, ~~«B22-nah»~~, «B27») und die Absenkung — *und die
 > Absenkung ist keine Sprachfrage, sondern Arbeit.*

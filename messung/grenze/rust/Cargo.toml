@@ -1,0 +1,21 @@
+# **Eigener Arbeitsbereich.** Der Wurzelbaum verbietet `unsafe` fuer den ganzen
+# Arbeitsbereich (`[workspace.lints.rust] unsafe_code = "forbid"`) -- und dieser Pruefstand
+# besteht aus nichts anderem als der Grenze, ueber die `unsafe` fuehrt. Er gehoert nicht in
+# denselben Arbeitsbereich, und `cargo test` im Wurzelbaum sieht ihn nicht.
+[workspace]
+
+[package]
+name = "grenze-pruefstand"
+version = "0.0.1"
+edition = "2021"
+build = "build.rs"
+
+# **Keine Abhaengigkeit.** Dieselbe Regel wie der Erzeuger: std und sonst nichts.
+[dependencies]
+
+[profile.release]
+opt-level = 3
+
+[[bin]]
+name = "pruefstand"
+path = "src/main.rs"

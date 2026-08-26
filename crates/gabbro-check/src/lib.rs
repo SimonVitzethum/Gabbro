@@ -21,6 +21,11 @@ pub mod alias;
 pub mod aufrufgraph;
 // **«B24» an EINER Stelle** -- der Namenspass sagt ab, der Erzeuger rechnet damit.
 pub mod bitlage;
+// **The BINDING SURFACE, since 2026-08-25** -- what binds across the library boundary and
+// under which name. Both rules of `bindung.rs` (`N038`, `N039`) are issued there. It gets no
+// pass number of its own: the pass list is the specification, and these are rules of the
+// "Names" column, not a new one.
+pub mod bindung;
 // Die Domaenenschranke -- kosten.rs und m1.rs lesen dieselbe.
 pub mod domaene;
 pub mod m2;
@@ -343,6 +348,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     if std::env::var("GABBRO_ZEIT").is_ok() {
         macro_rules! z { ($n:expr, $e:expr) => {{ let t = std::time::Instant::now(); $e; eprintln!("{:>10} {:?}", $n, t.elapsed()); }} }
         z!("namen", namen::pass(baum, absagen));
+        z!("bindung", bindung::pass(baum, absagen));
         z!("kbed", kbedingung::pass(baum, absagen));
         let m1 = { let t = std::time::Instant::now(); let r = m1::pass(baum, absagen); eprintln!("{:>10} {:?}", "m1", t.elapsed()); r };
         z!("schleifen", schleifen::pass(baum, absagen));
@@ -358,6 +364,10 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         return Bericht { m1, kosten };
     }
     namen::pass(baum, absagen);
+    // **Directly behind the names** -- the same question one level up: `N001` in `namen.rs`
+    // holds a name against its scope, `bindung.rs` against the surface that binds out of the
+    // unit. That one knows no modules.
+    bindung::pass(baum, absagen);
     kbedingung::pass(baum, absagen);
     let m1 = m1::pass(baum, absagen);
     schleifen::pass(baum, absagen);

@@ -1,0 +1,18 @@
+-- erwartet: U001
+-- **Eine Gruppe nennt eine SPERRE statt eines Traegers.**
+--
+-- Traeger sind `table`, `static` und `state` -- Dinge, die Zustand halten. Eine Sperre
+-- haelt keinen; sie schuetzt einen. Der Namenspass laesst `LA` durch, weil der Name
+-- existiert; dass er die falsche ART benennt, sieht erst dieser Pass.
+module gift::gruppe_nennt_keinen_traeger {
+
+table A count 16 { slot { x : u32, } }
+table B count 16 { slot { y : u32, } }
+lock LA protects { A, B } rank 1 held <= 40 ops;
+
+group Falsch over { A, LA } {
+    invariant beides cost O(n) runs offline :
+        forall a in slots of A : B.slots[A.slots[a].x].y > 0;
+}
+
+}

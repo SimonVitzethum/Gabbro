@@ -1,0 +1,38 @@
+-- Eine Halde mit Deckel: 30 GiB Adressraum, hinterlegt wird, was da ist.
+module app::halde {
+
+const DECKE : u32 = 7864320;          -- 30 GiB / 4 KiB
+const BODEN : u32 = 25600;            -- 100 MiB immer
+
+static mut hinterlegt : u32 in 25600 .. 7864320 = 25600;
+
+table Arena count 7864320 backed hinterlegt {
+    slot { belegt : bool, wert : u64, }
+}
+
+-- **Der Zeuge.** Eine Vergabe erzeugt ihn, eine Freigabe verbraucht ihn.
+-- `ghost` heisst: im Erzeugnis steht davon keine Zeile.
+linear ghost type Griff;
+
+extern fn griff_fuer(i : index into Arena) -> Griff effects { pure } costs <= 0 ops;
+extern fn griff_weg(g : Griff)                     effects { consumes g } costs <= 0 ops;
+
+impl fn vergeben(a : ptr<normal, rw> Arena, i : index into Arena) -> Griff
+    effects { reads hinterlegt, writes a.slots }
+    costs   <= 8 ops
+{
+    narrow i to 0 ..< hinterlegt else { return griff_fuer(i); }
+    a.slots[i].belegt = true;
+    return griff_fuer(i);
+}
+
+impl fn freigeben(a : ptr<normal, rw> Arena, i : index into Arena, g : Griff)
+    effects { reads hinterlegt, writes a.slots, consumes g }
+    costs   <= 8 ops
+{
+    narrow i to 0 ..< hinterlegt else { griff_weg(g); return; }
+    a.slots[i].belegt = false;
+    griff_weg(g);
+}
+
+}

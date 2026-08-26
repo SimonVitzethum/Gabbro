@@ -328,6 +328,11 @@ lauf "beispiel16" "$W/beispiele/16-by-ops-am-feld.gab" "$TREIBER16" "42 1 8 0" \
 # verschwindet --, uebersetzt das C und der Bootschritt findet **nicht statt**.
 #
 # Genau das misst die Erwartung: **sechs Schritte, in dieser Reihenfolge, je genau einmal.**
+verlorene_zeilen() {   # $1 Ausschnitt  $2 Arbeitsfassung -- druckt, was FEHLT
+    diff "$1" "$2" > "$ARB/f2-diff" || true
+    grep '^<' "$ARB/f2-diff" || true
+}
+
 schneide "$W/dokumente/FRAGMENTE.md" "module caprock::bringup" > "$ARB/f7.gab"
 if ! grep -q "linear ghost type BootPhase" "$ARB/f7.gab"; then
     echo "== EMISSION: F7 NICHT GESCHNITTEN -- der Waechter misst seine eigene Ablage =="
@@ -350,22 +355,21 @@ int main(void) {
     return 0;
 }
 '
-# **F7 faehrt seit dem 2026-08-25 aus der VERVOLLSTAENDIGTEN Fassung.** Der Ausschnitt nennt
-# `Text` als Zeigerziel und erklaert es nirgends; `N040` sagt es seit heute. *Bis dahin lief
-# dieser Durchstich darueber hinweg* -- der Erzeuger schrieb eine C-Vorwaertsdeklaration,
-# `cc -Werror` war zufrieden, und `123456` stimmte. **Ein Durchstich misst, was er sieht.**
+# **F7 faehrt seit dem 2026-08-25 aus der VERVOLLSTAENDIGTEN Fassung**, und zwar aus dem
+# Grund, aus dem es diesen Ordner ueberhaupt gibt: der Ausschnitt nennt `Text` als Zeigerziel
+# und erklaert es nirgends. *`N040` sagt es seit heute; bis dahin lief dieser Durchstich
+# darueber hinweg* -- der Erzeuger schrieb eine C-Vorwaertsdeklaration, `cc -Werror` war
+# zufrieden, und `123456` stimmte. **Ein Durchstich misst, was er sieht.**
 #
-# Der Riegel dagegen, dass die Arbeitsfassung eine Ausschnittzeile VERLIERT -- und die
-# Sprechprobe darunter, damit der Vergleich nicht bloss dasteht. *Ergaenzen ist erlaubt,
-# weglassen nicht.*
-fehlende_f7() { diff "$1" "$2" | grep "^<" || true; }
-if [ -n "$(fehlende_f7 "$ARB/f7.gab" "$W/messung/fragmente/F07.gab")" ]; then
+# Derselbe Riegel wie bei F2: fehlt der Arbeitsfassung auch nur EINE Zeile des Ausschnitts,
+# faellt der Lauf. *Ergaenzen ist erlaubt, weglassen nicht.*
+if [ -n "$(verlorene_zeilen "$ARB/f7.gab" "$W/messung/fragmente/F07.gab")" ]; then
     echo "== EMISSION: F07.gab hat eine Zeile des eingefrorenen Ausschnitts VERLOREN =="
-    fehlende_f7 "$ARB/f7.gab" "$W/messung/fragmente/F07.gab" | head -10
+    verlorene_zeilen "$ARB/f7.gab" "$W/messung/fragmente/F07.gab" | head -10
     exit 1
 fi
 grep -v "linear ghost type BootPhase" "$W/messung/fragmente/F07.gab" > "$ARB/f7-kurz.gab"
-if [ -z "$(fehlende_f7 "$ARB/f7.gab" "$ARB/f7-kurz.gab")" ]; then
+if [ -z "$(verlorene_zeilen "$ARB/f7.gab" "$ARB/f7-kurz.gab")" ]; then
     echo "== EMISSION: Sprechprobe F7 haelt nicht -- eine entfernte Ausschnittzeile faellt"
     echo "             nicht auf. Dieser Vergleich misst NICHTS. =="
     exit 1
@@ -483,6 +487,124 @@ int main(void) {
 lauf "fragment10" "$ARB/f10.gab" "$TREIBER10" "1 0 0 0 0 65" \
      's/(uint32_t)p\[0\] << 24/(uint32_t)p[3] << 24/' \
      "1 assumptions (0 of them NOT FALSIFIABLE), 2 templates (0 of them UNPROVED), 7 direct forms, 2 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# -- 4b. Das Fragment F2: die VT-d-Einheit, und sie kommt aus dem VERVOLLSTAENDIGTEN Korpus --
+#
+# **Das ist die erste Absenkungspflicht, die nicht mehr `gap` ist.** F7, F8 und F10 waren
+# schon Programme und liessen sich aus dem eingefrorenen Korpus schneiden. F2 nicht: fuenf
+# `reserved`-Felder fehlten, und ohne sie sagt kein `format`, welche Bits ueberhaupt
+# EXISTIEREN. *Ein Ausschnitt ist kein Programm* -- die fehlenden Zeilen stehen jetzt in
+# `messung/fragmente/F02.gab`, und nichts sonst steht dort anders.
+#
+# **Und genau das wird hier GEPRUEFT, nicht behauptet.** Der eingefrorene Block wird
+# geschnitten und gegen die Arbeitsfassung gehalten: *keine Zeile darf fehlen.* Wer eine
+# Absage wegdefiniert, statt eine Deklaration zu ergaenzen, faellt an dieser Stelle -- sonst
+# waere die Vervollstaendigung ein Verschieben des Massstabs und keine Messung.
+schneide "$W/dokumente/FRAGMENTE.md" "device Vtd" > "$ARB/f2-ausschnitt.gab"
+if ! grep -q "device Vtd(base : Pa) at mmio" "$ARB/f2-ausschnitt.gab"; then
+    echo "== EMISSION: F2 NICHT GESCHNITTEN -- der Waechter misst seine eigene Ablage =="
+    exit 1
+fi
+#
+# **Und die Vergleichsfunktion steht als FUNKTION da, weil sie zweimal gebraucht wird:**
+# einmal fuer F02 und einmal fuer die Sprechprobe darunter. *Ein Waechter, den niemand hat
+# fallen sehen, ist eine Verzierung* (R11) -- und dieser hier WAR eine: der erste Anlauf
+# schrieb `if diff … | grep -q '^<'`, und `set -o pipefail` (Zeile 28) gibt dann den
+# Rueckgabewert von `diff` weiter. **`diff` meldet 1, sobald sich irgendetwas unterscheidet
+# -- und ergaenzt wurde ja etwas.** Damit war die Bedingung immer falsch, und eine
+# entfernte Registerzeile ging glatt durch. *Gefunden, indem eine entfernt wurde.*
+if [ -n "$(verlorene_zeilen "$ARB/f2-ausschnitt.gab" "$W/messung/fragmente/F02.gab")" ]; then
+    echo "== EMISSION: F02.gab hat eine Zeile des eingefrorenen Ausschnitts VERLOREN =="
+    echo "  Ergaenzen ist erlaubt, weglassen nicht. Was hier fehlt:"
+    verlorene_zeilen "$ARB/f2-ausschnitt.gab" "$W/messung/fragmente/F02.gab" | head -10
+    exit 1
+fi
+# Die Sprechprobe: eine Fassung, der eine Zeile FEHLT, muss auffallen.
+grep -v "reg IQH  : u64 @0x080 class r" "$W/messung/fragmente/F02.gab" > "$ARB/f2-kurz.gab"
+if [ -z "$(verlorene_zeilen "$ARB/f2-ausschnitt.gab" "$ARB/f2-kurz.gab")" ]; then
+    echo "== EMISSION: Sprechprobe F2 haelt nicht -- eine entfernte Ausschnittzeile faellt"
+    echo "             nicht auf. Dieser Vergleich misst NICHTS. =="
+    exit 1
+fi
+echo "  (F2: der eingefrorene Ausschnitt steht vollstaendig in der Arbeitsfassung"
+echo "       -- und eine fehlende Zeile faellt auf, Sprechprobe ok)"
+#
+# **Die Frage, die dieser Lauf beantwortet:** die VT-d-Einheit hat kein einziges
+# `fn` -- sie ist eine Registerkarte, ein Bankenrechenwerk und fuenf Formate. Rechnet das
+# erzeugte C dieselben ADRESSEN aus, die `vtd.rs` von Hand rechnet, und liest es dieselben
+# BITS?
+TREIBER2='#include <stdio.h>
+#include "@ERZEUGT@"
+_Alignas(16) static uint8_t mmio[4096];
+static void le64(uint8_t *p, uint64_t v) { for (int i = 0; i < 8; i++) p[i] = (uint8_t)(v >> (8 * i)); }
+int main(void) {
+    Vtd d = { mmio };
+    /* CAP.FRO @[33:24] = 32 -> die Aufzeichnungsbank liegt bei 32 * 16 = 512.
+     * ECAP.IRO @[17:8] = 16 -> der IOTLB-Satz liegt bei 16 * 16 = 256. */
+    *(volatile uint64_t *)(mmio + 0x008) = (uint64_t)32 << 24;
+    *(volatile uint64_t *)(mmio + 0x010) = (uint64_t)16 << 8;
+    *(volatile uint64_t *)(mmio + 560) = 0x1000000u;   /* FRR[3].FR_LO -- 512 + 3 * 16 */
+    *(volatile uint64_t *)(mmio + 568) = (uint64_t)0x0100 | ((uint64_t)1 << 28)
+                                       | ((uint64_t)6 << 32) | ((uint64_t)2 << 60)
+                                       | ((uint64_t)1 << 63);
+    *(volatile uint64_t *)(mmio + 576) = 0x99000u;     /* FRR[4].FR_LO -- eine Schrittweite weiter */
+    *(volatile uint64_t *)(mmio + 264) = (uint64_t)7 << 32;  /* IOTLB[0].CMD.DID = 7 */
+    /* Falle 4: GSTS traegt RTPS. `mirrors GCMD from GSTS` traegt es in den GCMD-Schreibvorgang. */
+    *(volatile uint32_t *)(mmio + 0x01c) = 1u << 30;
+    Vtd_scharf_te(&d);
+    uint32_t gcmd = *(volatile uint32_t *)(mmio + 0x018);
+    /* Die GELESENEN Woerter gehen in die Formate -- die Kette Bank -> Wort -> Bitlage. */
+    uint8_t lo[8], hi[8], schief[8];
+    le64(lo, Vtd_FRR_FR_LO(&d, 3));
+    le64(hi, Vtd_FRR_FR_HI(&d, 3));
+    le64(schief, 0x12000u);
+    FaultRecordLo flo = { lo, 8 };
+    FaultRecordHi fhi = { hi, 8 };
+    FaultRecordLo fs  = { schief, 8 };
+    printf("%u %u %u %u %u %u %u %u %u %d %d %d\n",
+        (unsigned)FaultRecordLo_input_addr(&flo),
+        (unsigned)(Vtd_FRR_FR_LO(&d, 4) >> 12),
+        (unsigned)(Vtd_IOTLB_CMD(&d, 0) >> 32),
+        (unsigned)((gcmd >> 30) & 3u),
+        (unsigned)FaultRecordHi_sid(&fhi),
+        (unsigned)FaultRecordHi_typ(&fhi),
+        (unsigned)FaultRecordHi_grund(&fhi),
+        (unsigned)FaultRecordHi_at(&fhi),
+        (unsigned)FaultRecordHi_f_bit(&fhi),
+        (int)FaultRecordLo_gueltig(&flo),
+        (int)FaultRecordLo_gueltig(&fs),
+        (int)VtdFehler_AufzeichnungVoll);
+    return 0;
+}
+'
+#    Erwartet:
+#   4096  -- **die Registerlage kommt aus einem GELESENEN Feld.** `bank FRR at CAP.FRO * 16`
+#            rechnet 32 * 16 + 3 * 16 = 560; dort steht das Wort, und `input_addr @[63:12]`
+#            liest daraus 0x1000. *`frr_off` (vtd.rs:442) rechnet dieselbe Adresse von Hand.*
+#    153  -- `stride 16`: der naechste Satz liegt 16 Bytes weiter und nicht dort, wo eine
+#            `struct`-Fuellung ihn haette. Ein Bankeintrag ist kein C-Verbund
+#      7  -- dieselbe Rechnung mit dem ZWEITEN gelesenen Feld: ECAP.IRO * 16 + 8 = 264
+#      3  -- **FALLE 4, und sie ist hier bezahlt.** GCMD ist kein Read-Modify-Write; ein
+#            blosses `TE = 1` loeschte RTPS. `mirrors GCMD from GSTS` traegt Bit 30 mit --
+#            beide Bits stehen, nicht nur das geschriebene. *Genau das misst das Gift: ohne
+#            den Spiegel steht da 2.*
+#    256  -- SID aus @[15:0]
+#      1  -- TYPE aus @[29:28], und das ist die am 2026-08-19 KORRIGIERTE Lage: `@[13:12]`
+#            haette mit `sid` ueberlappt
+#      6  -- GRUND aus @[39:32]
+#      2  -- AT aus @[61:60]
+#      1  -- das F-Bit aus @63, also aus dem OBEREN Wort («B24»)
+#      1  -- `FaultRecordLo_gueltig`: die `where`-Klausel haelt
+#      0  -- und sie kann fallen. **Und was dabei auffiel, steht hier statt in einer Notiz:**
+#            die Klausel `(input_addr & 0xfff) == 0` (FRAGMENTE.md:497) prueft das FELD,
+#            nicht die Adresse -- @[63:12] ist bereits geschoben, die unteren zwoelf Bits
+#            sind also gar nicht mehr da. *Der Ausschnitt sagt weniger, als er zu sagen
+#            scheint; die Zeile bleibt trotzdem stehen, denn sie ist die des Menschen.*
+#      9  -- `reason` traegt die DEKLARIERTE Zahl, nicht die Reihenfolge der Aufzaehlung
+lauf "fragment2" "$W/messung/fragmente/F02.gab" "$TREIBER2" \
+     "4096 153 7 3 256 1 6 2 1 1 0 9" \
+     's/uint32_t _s = (\*(volatile uint32_t \*)(d->basis + 28));/uint32_t _s = 0;/' \
+     "3 assumptions (1 of them NOT FALSIFIABLE), 3 templates (0 of them UNPROVED), 1 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
 # -- 4b. «B22-nah»: ABWESENHEIT und ABSAGE sind zwei Antworten ---------------------------
 #
@@ -1327,6 +1449,144 @@ if cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/sprech9.c" 2>/dev/nul
     exit 1
 fi
 echo "  Sprechprobe:  ok (ein fehlender Prototyp faellt an cc -Werror)"
+
+# =======================================================================================
+# **Stufe 10: die BIBLIOTHEKSKETTE, und sie ist die einzige Stufe mit einem BINDER.**
+#
+# Jede Stufe darueber uebersetzt EINE Uebersetzungseinheit und schliesst das Erzeugnis mit
+# `#include` in ihren Treiber ein. Damit ist eine ganze Klasse von Aussagen unmessbar:
+# **welcher Name bindet nach aussen und welcher nicht.** Ein `static`, das fehlt, faellt in
+# einer einzelnen Einheit ueberhaupt nicht auf -- es faellt beim Binden, und gebunden hat
+# dieser Waechter bis zum 2026-08-25 nie.
+#
+#     bib-fach.gab  ---abi--->  fach.gabi    ---.
+#     bib-mischen.gab -abi--->  mischen.gabi ---+--> emit --with --> nutzer.o
+#            |                                             |
+#            +--- emit --> fach.o, mischen.o --------------+--> ld --> AUSFUEHREN
+#
+# Drei Aussagen haengen daran, und keine davon kann eine einzelne Einheit treffen:
+#
+#   (a) die `.gabi` reicht dem Nutzer, um zu PRUEFEN und zu UEBERSETZEN;
+#   (b) was `pub` traegt, bindet nach aussen -- und was es NICHT traegt, bindet NICHT
+#       (`nm` fragt den Binder und nicht den Erzeuger);
+#   (c) das gebundene Programm rechnet, was die Handschrift sagt.
+#
+# > **(b) ist die Stufe, um derentwillen es diese gibt.** Vor dem 2026-08-25 kannte `emit.rs`
+# > das Wort `pub` an keiner Stelle: ein privater Rechenhelfer erschien im C als Symbol mit
+# > aeusserer Bindung, und der ganze Innenraum einer Bibliothek lag auf dem Tisch des Binders.
+echo
+echo "== Stufe 10: die Bibliothekskette, mit Binder =="
+N_DURCHGESTOCHEN=$((N_DURCHGESTOCHEN + 1))
+BIB="$ARB/bib"; mkdir -p "$BIB"
+G() { cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- "$@"; }
+
+for b in fach mischen; do
+    if ! G abi "$W/messung/abi-proben/bib-$b.gab" > "$BIB/$b.gabi" 2> "$BIB/err"; then
+        echo "  1. abi:        GESCHEITERT ($b)"; cat "$BIB/err"; exit 1
+    fi
+    grep -q '^-- @gabi 1' "$BIB/$b.gabi" || { echo "  1. abi: $b.gabi traegt die Marke nicht"; exit 1; }
+done
+echo "  1. abi:        ok (zwei .gabi, je mit Marke)"
+
+# **Die Schnittstelle traegt nur, was `pub` traegt.** Der private Helfer darf in KEINER
+# der beiden stehen -- sonst zeigt sie auf einen Namen, den der Binder nicht hergibt.
+if grep -q 'begrenze\|verdopple' "$BIB/fach.gabi" "$BIB/mischen.gabi"; then
+    echo "  1b. Ausfuhr:   ein PRIVATER Name steht in der Schnittstelle"; exit 1
+fi
+grep -q 'pub table Kaesten' "$BIB/fach.gabi" || { echo "  1b. Ausfuhr: der ausgefuehrte Traeger fehlt"; exit 1; }
+echo "  1b. Ausfuhr:   ok (Traeger drin, die beiden privaten Helfer nicht)"
+
+if ! G pruefe --with "$BIB/fach.gabi" --with "$BIB/mischen.gabi" \
+        "$W/messung/abi-proben/nutzt-beide.gab" > "$BIB/pruef" 2>&1; then
+    echo "  2. pruefe:     GESCHEITERT"; head -20 "$BIB/pruef"; exit 1
+fi
+grep -q ', 0 Fehler, 0 Hinweise' "$BIB/pruef" || { echo "  2. pruefe: nicht sauber"; head -20 "$BIB/pruef"; exit 1; }
+echo "  2. pruefe:     ok (0 Fehler, 0 Hinweise ueber die Grenze)"
+
+G emit "$W/messung/abi-proben/bib-fach.gab"    > "$BIB/fach.c"    || exit 1
+G emit "$W/messung/abi-proben/bib-mischen.gab" > "$BIB/mischen.c" || exit 1
+G emit --with "$BIB/fach.gabi" --with "$BIB/mischen.gabi" \
+       "$W/messung/abi-proben/nutzt-beide.gab" > "$BIB/nutzer.c"  || exit 1
+for o in fach mischen nutzer; do
+    if ! cc -std=c11 -O0 -Wall -Wextra -Werror -c -o "$BIB/$o.o" "$BIB/$o.c" 2> "$BIB/ccerr"; then
+        echo "  3. cc -Werror: GESCHEITERT ($o)"; head -10 "$BIB/ccerr"; exit 1
+    fi
+done
+echo "  3. cc -Werror: ok (drei Einheiten, getrennt uebersetzt)"
+
+# **`nm` fragt den BINDER.** Was hier steht, ist keine Absicht des Erzeugers, sondern das,
+# was die Objektdatei hergibt.
+aussen="$(nm -g --defined-only "$BIB/fach.o" "$BIB/mischen.o" | awk '$2=="T"{print $3}' | sort | tr '\n' ' ')"
+if [ "$aussen" != "lege_ab lies mische " ]; then
+    echo "  4. Bindung:    FALSCH -- aussen sichtbar ist: $aussen"
+    echo "                 erwartet: lege_ab lies mische"
+    exit 1
+fi
+echo '  4. Bindung:    ok (drei pub-Namen aussen, begrenze/verdopple nicht)'
+
+cat > "$BIB/treiber.c" <<'BIBTREIBER'
+#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+bool eintragen(uint32_t i, uint32_t a, uint32_t b);
+uint32_t nachsehen(uint32_t i);
+int main(void) {
+    eintragen(3, 1000, 7);        /* mische = 2*1000+7 = 2007, unter der Schranke */
+    eintragen(0, 40000, 40000);   /* mische = 120000, `begrenze` deckelt auf 65535 */
+    printf("%u %u\n", nachsehen(3), nachsehen(0));
+    return 0;
+}
+BIBTREIBER
+BIBERWARTET="2007 65535"
+for opt in -O0 -O2; do
+    if ! cc -std=c11 $opt -Wall -Wextra -Werror -o "$BIB/probe$opt" \
+            "$BIB/treiber.c" "$BIB/fach.o" "$BIB/mischen.o" "$BIB/nutzer.o" 2> "$BIB/lderr"; then
+        echo "  5. binden:     GESCHEITERT ($opt)"; head -10 "$BIB/lderr"; exit 1
+    fi
+    ist="$("$BIB/probe$opt")"
+    if [ "$ist" != "$BIBERWARTET" ]; then
+        echo "  6. Ergebnis:   FALSCH bei $opt -- erwartet '$BIBERWARTET', bekommen '$ist'"; exit 1
+    fi
+done
+echo "  5. binden:     ok (-O0 und -O2, ein Programm aus drei Objekten)"
+echo "  6. Ergebnis:   ok ($BIBERWARTET -- der private Helfer hat gedeckelt)"
+
+# **Sprechprobe A: der PRIVATE Helfer rechnet wirklich mit.** Ohne sie sagt „6. Ergebnis"
+# nichts ueber ihn -- er koennte tot sein und die Zahl trotzdem stimmen.
+sed 's/return x + x;/return x + 0;/' "$BIB/mischen.c" > "$BIB/mischen-gift.c"
+cmp -s "$BIB/mischen.c" "$BIB/mischen-gift.c" && { echo "  7. Sprechprobe A: das Gift greift nicht"; exit 1; }
+cc -std=c11 -O0 -w -c -o "$BIB/mischen-gift.o" "$BIB/mischen-gift.c" || exit 1
+cc -std=c11 -O0 -w -o "$BIB/probe-gift" "$BIB/treiber.c" "$BIB/fach.o" "$BIB/mischen-gift.o" "$BIB/nutzer.o" || exit 1
+if [ "$("$BIB/probe-gift")" = "$BIBERWARTET" ]; then
+    echo '  7. Sprechprobe A: GESCHEITERT -- verfaelschtes verdopple rechnet dasselbe'; exit 1
+fi
+echo "  7. Sprechprobe A: ok (verfaelschter privater Helfer aendert das Ergebnis)"
+
+# **Sprechprobe B: die GEGENRICHTUNG, und sie ist der Grund fuer `N039`.**
+#
+# Zwei Bibliotheken mit demselben oeffentlichen Namen muessen an einer GABBRO-Kennung
+# fallen, nicht am Binder. Gemessen wird beides: dass der Uebersetzer absagt -- und dass
+# der Binder es sonst getan haette, damit die Absage nicht auf eine Kollision zeigt, die
+# es gar nicht gibt.
+cat > "$BIB/eins.gab" <<'BIBEINS'
+module eins {
+pub impl fn lesen() -> u32 effects { pure } costs <= 2 ops { return 1; }
+}
+BIBEINS
+sed 's/module eins/module zwei/; s/return 1;/return 2;/' "$BIB/eins.gab" > "$BIB/zwei.gab"
+if G pruefe "$BIB/eins.gab" "$BIB/zwei.gab" > "$BIB/koll" 2>&1; then
+    echo "  8. Sprechprobe B: GESCHEITERT -- zwei gleiche oeffentliche Namen gehen durch"; exit 1
+fi
+grep -q 'N039' "$BIB/koll" || { echo "  8. Sprechprobe B: es faellt, aber nicht an N039:"; head -5 "$BIB/koll"; exit 1; }
+# und die Gegenprobe der Gegenprobe: EINZELN erzeugt kollidiert es wirklich beim Binder.
+G emit "$BIB/eins.gab" > "$BIB/e1.c" && G emit "$BIB/zwei.gab" > "$BIB/e2.c" || exit 1
+cc -std=c11 -w -c -o "$BIB/e1.o" "$BIB/e1.c" && cc -std=c11 -w -c -o "$BIB/e2.o" "$BIB/e2.c" || exit 1
+printf 'int main(void){return 0;}\n' > "$BIB/leer.c"
+if cc -w -o "$BIB/zusammen" "$BIB/leer.c" "$BIB/e1.o" "$BIB/e2.o" 2> "$BIB/ld2"; then
+    echo '  8. Sprechprobe B: GESCHEITERT -- der Binder nimmt zwei lesen an, N039 zeigt ins Leere'; exit 1
+fi
+grep -q 'multiple definition' "$BIB/ld2" || { echo "  8. Sprechprobe B: der Binder faellt aus anderem Grund:"; head -3 "$BIB/ld2"; exit 1; }
+echo "  8. Sprechprobe B: ok (N039 sagt ab, und der Binder haette es sonst getan)"
 
 echo "== EMISSION: ALL PASS -- $N_DURCHGESTOCHEN durchgestochen, $n_ok von $n_emit uebersetzen =="
 echo "  Und was das NICHT heisst: DURCHGESTOCHEN sind $N_DURCHGESTOCHEN -- erzeugt, uebersetzt,"

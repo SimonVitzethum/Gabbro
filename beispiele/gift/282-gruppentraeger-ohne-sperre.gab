@@ -1,0 +1,18 @@
+-- erwartet: U002
+-- **Ein Traeger der Gruppe steht unter keiner Sperre.**
+--
+-- Eine Verbindungs-Invariante ueber einem ungeschuetzten Traeger sagt auf einer
+-- Mehrkernmaschine nichts: waehrend sie geprueft wird, darf ein anderer Kern schreiben.
+-- `B` traegt hier keine `protects`-Zeile, und genau das faellt.
+module gift::gruppentraeger_ohne_sperre {
+
+table A count 16 { slot { x : u32, } }
+table B count 16 { slot { y : u32, } }
+lock LA protects { A } rank 1 held <= 40 ops;
+
+group Ungeschuetzt over { A, B } {
+    invariant verbindet cost O(n) runs offline :
+        forall a in slots of A : B.slots[A.slots[a].x].y > 0;
+}
+
+}

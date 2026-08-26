@@ -1,0 +1,24 @@
+-- **Bibliothek B derselben Probe** -- zustandslos, damit die beiden Bibliotheken sich in
+-- nichts als ihren Namen ueberschneiden.
+--
+-- Auch sie fuehrt einen privaten Helfer: `verdopple` traegt kein `pub` und ist im C
+-- `static`. **Zwei Bibliotheken, zwei private Helfer, und der Binder sieht keinen von
+-- beiden** -- das ist die Aussage, die vor dem 2026-08-25 nicht galt.
+module mischen {
+
+impl fn verdopple(x : u32 in 0 .. 65535) -> u32 in 0 .. 131070
+    effects { pure }
+    costs   <= 4 ops
+{
+    return x + x;
+}
+
+pub impl fn mische(a : u32 in 0 .. 65535, b : u32 in 0 .. 65535) -> u32 in 0 .. 196605
+    effects { pure }
+    costs   <= 10 ops
+{
+    let d : u32 in 0 .. 131070 = verdopple(a);
+    return d + b;
+}
+
+}

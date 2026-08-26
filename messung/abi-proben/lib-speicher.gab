@@ -1,13 +1,17 @@
 -- Bibliothek A -- der Zwischenspeicher. Ihr Sperrrang ist FUER SICH vergeben.
+-- **`pub` an Tabelle und Sperre, seit dem 2026-08-25.** Bis dahin trugen die Traeger kein
+-- Sichtbarkeitswort, und `gabbro abi` zog sie ueber ERREICHBARKEIT hinaus -- weil die
+-- exportierte Signatur sie nennt. *Das ist eine implizite Ausfuhrmenge, und D2 verbietet
+-- sie.* `N038` weist die Signatur jetzt ab, solange der Traeger nicht selbst hinaus soll.
 module speicher {
 
-const NEINTRAEGE : u32 = 64;
+pub const NEINTRAEGE : u32 = 64;
 
-table Eintraege count NEINTRAEGE {
+pub table Eintraege count NEINTRAEGE {
     slot { marke : u32, gueltig : bool, }
 }
 
-lock SPEICHER protects { Eintraege } rank 0 held <= 40 ops;
+pub lock SPEICHER protects { Eintraege } rank 0 held <= 40 ops;
 
 pub impl fn speicher_setze(i : index into Eintraege, m : u32) -> bool
     effects { writes Eintraege.slots, locks SPEICHER }

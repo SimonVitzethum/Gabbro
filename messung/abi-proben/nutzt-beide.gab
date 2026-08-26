@@ -1,0 +1,29 @@
+-- **Der Nutzer: EINE Einheit, ZWEI Bibliotheken.**
+--
+-- Er sieht von `fach` genau die drei Namen, die deren `.gabi` erklaert, und von `mischen`
+-- genau einen. `begrenze` und `verdopple` stehen in keiner der beiden Schnittstellen --
+-- **und ein Ruf darauf faellt hier an `E009`/`K003`, nicht erst beim Binder.**
+module nutzer {
+
+use fach::lege_ab;
+use fach::lies;
+use fach::Kaesten;
+use mischen::mische;
+
+pub impl fn eintragen(i : index into Kaesten, a : u32 in 0 .. 65535, b : u32 in 0 .. 65535) -> bool
+    effects { writes Kaesten.slots }
+    costs   <= 40 ops
+{
+    let w : u32 in 0 .. 196605 = mische(a, b);
+    lege_ab(i, w);
+    return true;
+}
+
+pub impl fn nachsehen(i : index into Kaesten) -> u32
+    effects { reads Kaesten.slots }
+    costs   <= 20 ops
+{
+    return lies(i);
+}
+
+}

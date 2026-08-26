@@ -9,10 +9,24 @@ Zwei Posten, dieselbe Gestalt: ein Kanal, der an der **Deklaration** existiert u
 keine Bedarfsnull, sondern eine **Konstruierbarkeitsnull**: das Programm, das Regel A
 verlangt, lässt sich heute nicht schreiben.
 
+> **NACHTRAG 2026-08-25 — Posten 2 ist ÜBERHOLT, und zwar am selben Tag.**
+> Dieser Bericht buchte den zweiten Posten als **nicht gebaut**; **noch am 2026-08-21**
+> wurden alle vier Hälften gebaut ([`FNPTR.md`](FNPTR.md)). *Die ZAHLEN unten stimmen
+> weiter — `FNPTR.md` §1 rechnet sie nach und sie reproduzieren exakt; überholt ist die
+> ENTSCHEIDUNG, nicht die Messung.* Der Wortlaut bleibt stehen, die Korrektur steht mit
+> Datum daneben.
+>
+> **Warum das hier steht und nicht nur in `FNPTR.md`:** vier Tage lang trug der Kopf von
+> Stufe 7 in `TODO.md` dieselbe überholte Zusage weiter — ein Satz, der wie ein Ergebnis
+> aussieht und Arbeit verhindert, statt sie zu verzögern. *Er stand in zwei Dateien, und der
+> Widerrufswächter las keine davon.* Seit heute liest er auch `messung/` (`WB2`).
+
+<!-- widerruf:aus -->
 | | Posten | Ergebnis |
 |---|---|---|
 | 1 | Ein `reason`-Wert hat keinen Erzeuger — «B9» ein zweites Mal | **gebaut**, 7 Absagen, 8 Giftproben, 10 Mutationen, 1 Beispiel |
-| 2 | `fnptr` — die Sprache kennt kein `&f` | **NICHT gebaut**, mit Zahl und Grund |
+| 2 | `fnptr` — die Sprache kennt kein `&f` | ~~**NICHT gebaut**, mit Zahl und Grund~~ — **gebaut am 2026-08-21**, siehe Nachtrag |
+<!-- widerruf:an -->
 
 ---
 
@@ -263,7 +277,15 @@ python3 mutiere-pruefer.py --anker
 
 ---
 
+<!-- widerruf:aus -->
 ## Posten 2 — `fnptr`: NICHT gebaut, und die Zahl steht daneben
+<!-- widerruf:an -->
+
+> **Überholt am 2026-08-21, dem Tag dieses Berichts** ([`FNPTR.md`](FNPTR.md)). Die Messung
+> in 2.1 gilt und rechnet nach; die drei Löcher in 2.2 sind alle drei zu. *Was diesen Posten
+> gestoppt hat, war nicht der Bedarf, sondern die Reihenfolge* — und die liess sich in einem
+> Lauf einhalten. Der Abschnitt bleibt im Wortlaut, weil eine Messung, die man nachträglich
+> umschreibt, keine Messung mehr ist.
 
 ### 2.1 Die Messung
 

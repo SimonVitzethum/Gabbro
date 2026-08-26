@@ -1,0 +1,12 @@
+name = "passlogik"
+version = "0.1.0"
+defaultTargets = ["Passlogik", "Abnahme"]
+
+# KEIN mathlib -- ausdrueckliche Entscheidung, siehe README.md.
+# `TODO.md`: "Der Prueferalgorithmus [...] ist endliche Mathematik ohne `mathlib`-Tiefe."
+
+[[lean_lib]]
+name = "Passlogik"
+
+[[lean_lib]]
+name = "Abnahme"

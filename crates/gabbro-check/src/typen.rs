@@ -465,7 +465,10 @@ pub enum Typ {
 /// > `E008` would again end at the first call boundary -- the way it did before 2026-08-15.*
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnPtrContract {
-    pub parameters: Vec<(String, Typ)>,
+    /// **The name is `None` where the pointer type did not give one** (`fn(u8)`), which is
+    /// the ordinary form -- see `ast::FnZeigerParam`. From a real function (`&f`) it is
+    /// always `Some`, because a declaration always names its parameters.
+    pub parameters: Vec<(Option<String>, Typ)>,
     pub result: Option<Box<Typ>>,
     /// The effects, **normalised the way the call graph writes them** (`writes r.slots`), so
     /// that `aufrufgraph::ersetze` can carry them across the call boundary.
@@ -480,11 +483,17 @@ pub struct FnPtrContract {
 
 impl FnPtrContract {
     /// The shape without the contract -- for refusal texts.
+    ///
+    /// **An unnamed parameter prints as its type alone**, the way it was written. *Printing
+    /// an invented name back at the author is how a message stops being about their file.*
     pub fn shape(&self) -> String {
         let p = self
             .parameters
             .iter()
-            .map(|(n, t)| format!("{n} : {}", t.text()))
+            .map(|(n, t)| match n {
+                Some(n) => format!("{n} : {}", t.text()),
+                None => t.text(),
+            })
             .collect::<Vec<_>>()
             .join(", ");
         match &self.result {

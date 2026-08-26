@@ -368,17 +368,26 @@ pub struct Variante {
 /// promise the producer (`&f`) is checked against, and the one the call reads its effects
 /// and costs from.
 ///
-/// **The parameters are NAMED** (`fn(b : u8)`, not `fn(u8)`). An effect line names a place
-/// (`writes r.slots`), and a place needs a name. *The absence of names is exactly what makes
-/// an effect list untranslatable across a call boundary* -- see `aufrufgraph::ersetze`. The
-/// grammar said `typelist` until today; that was the line of a form nobody read.
+/// **A parameter MAY be named, and both forms are meant** (`fn(u8)` and `fn(b : u8)`).
+/// An effect line names a place (`writes r.slots`), and a place needs a name -- that is why
+/// the grammar stopped saying `typelist` on 2026-08-21. *But making the name obligatory took
+/// away the form the measurement had asked for*: all **11** function-pointer type sites in
+/// `caprock-messbasis` (`arch/x86_64`, measured 2026-08-25) write their parameters WITHOUT
+/// names -- `fn()`, `fn(u8)`, `fn(CapPtr) -> bool`, `fn(u32, usize, &[(usize, CapPtr)],
+/// usize, usize) -> LadeUebergabe`. **Zero of eleven name one.** The folder's own probe
+/// `messung/fnptr-proben/p1.gab`:3 writes `senden : fn(u8)` and died at
+/// `P002` -- see `parse.rs`, a reader refusal at a token, before any rule could speak.
+///
+/// > **In a TYPE a parameter name has no referent** unless an effect line picks it up. So
+/// > the name is optional and `None` is the ordinary case; `Some` is what an effect line
+/// > needs. *A widening that took a form away is not a widening.*
 ///
 /// **It costs no new word.** `requires`, `ensures`, `effects` and `costs` are already in the
 /// vocabulary; the contract at the pointer type uses them in the same order and with the
 /// same meaning as at an `fn` declaration (E4: the clauses stand in a fixed order).
 #[derive(Debug, Clone)]
 pub struct FnZeiger {
-    pub parameter: Vec<Parameter>,
+    pub parameter: Vec<FnZeigerParam>,
     pub ergebnis: Option<TypExpr>,
     pub requires: Vec<Pred>,
     pub ensures: Vec<Pred>,
@@ -392,14 +401,35 @@ pub struct FnZeiger {
     pub span: Span,
 }
 
+/// **One parameter of a function pointer type -- the name is OPTIONAL.**
+///
+/// It is deliberately NOT `Parameter`: at an `fn` declaration the name binds an object a
+/// body can read, here it binds nothing unless an effect line names it. *Two shapes that
+/// mean different things do not share a struct.*
+#[derive(Debug, Clone)]
+pub struct FnZeigerParam {
+    /// `None` -- the type stands alone (`fn(u8)`), the ordinary and measured case.
+    /// `Some` -- the name is there so an effect line can name a place (`writes r.slots`).
+    pub name: Option<Ident>,
+    pub typ: TypExpr,
+}
+
 impl FnZeiger {
     /// The shape without the contract -- for refusal texts and for comparing two pointer
-    /// types. `fn(b) -> …`.
+    /// types. `fn(b) -> …`, and `fn(#1) -> …` where the parameter has no name.
+    ///
+    /// **The placeholder is a POSITION and not an invented name.** A refusal text that said
+    /// `fn(b)` for a parameter nobody named would put a word in the author's mouth; `#1`
+    /// says which slot is meant and claims nothing else.
     pub fn shape(&self) -> String {
         let p = self
             .parameter
             .iter()
-            .map(|p| p.name.text.clone())
+            .enumerate()
+            .map(|(i, p)| match &p.name {
+                Some(n) => n.text.clone(),
+                None => format!("#{}", i + 1),
+            })
             .collect::<Vec<_>>()
             .join(", ");
         match &self.ergebnis {
@@ -1309,6 +1339,13 @@ pub struct Forever {
 #[derive(Debug, Clone)]
 pub struct Tabelle {
     pub name: Ident,
+    /// **`pub` -- seit 2026-08-25, und bis dahin entschied ERREICHBARKEIT ueber die Ausfuhr.**
+    ///
+    /// Ein Traeger ohne dieses Wort stand nie im `.gabi` und wurde trotzdem hinausgetragen,
+    /// sobald eine exportierte Signatur ihn nannte -- `gabbro abi` sammelte bis zum
+    /// Stillstand. **Das ist eine implizite Ausfuhrmenge**, und D2 sagt *„nichts ist
+    /// implizit"*. Siehe `crates/gabbro-check/src/bindung.rs`.
+    pub oeffentlich: bool,
     /// `count N` -- the number of slots. **Without it `index into T` has no upper bound from
     /// the declaration**, and "no unchecked indexing" rests on the convention that someone
     /// picked a fitting index type by hand (finding G8).
@@ -1402,6 +1439,8 @@ pub struct WalkDecl {
 #[derive(Debug, Clone)]
 pub struct Format {
     pub name: Ident,
+    /// `pub` -- siehe [`Tabelle::oeffentlich`].
+    pub oeffentlich: bool,
     pub version: Option<u128>,
     pub endian: Option<Endian>,
     pub felder: Vec<FeldDecl>,
@@ -1444,6 +1483,8 @@ pub struct StateDecl {
 #[derive(Debug, Clone)]
 pub struct Device {
     pub name: Ident,
+    /// `pub` -- siehe [`Tabelle::oeffentlich`].
+    pub oeffentlich: bool,
     pub parameter: Vec<Parameter>,
     pub raum: Raum,
     pub mirrors: Option<Mirrors>,
@@ -1575,6 +1616,9 @@ pub struct GruppeDecl {
 #[derive(Debug, Clone)]
 pub struct LockDecl {
     pub name: Ident,
+    /// `pub` -- siehe [`Tabelle::oeffentlich`]. **Der Rang reist mit der Sperre**, und ohne
+    /// dieses Wort reiste er, weil eine `effects`-Zeile den Namen nannte.
+    pub oeffentlich: bool,
     pub schuetzt: Vec<Ort>,
     pub rang: Expr,
     /// `held <= constexpr ops` -- without it the lock cannot be taken in service loops.

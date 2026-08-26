@@ -13,10 +13,22 @@
 -- **7 Fehler auf 0.** Nach der Vervollstaendigung prueft F6 sauber -- und was jetzt noch
 -- blockiert, ist ausschliesslich Gabbros:
 --
---   * «B12» `elems of` -- Element oder Index? Die Spezifikation benutzt beide Lesarten.
---   * `let` ohne ablesbaren Typ, `parameter type`, `expression form` -- Erzeugerluecken.
---   * `static` eines Verbunds mit gewoehnlichem Anfangswert -- die Zeile, die ICH hier
---     ergaenzt habe, senkt selbst nicht ab. *Das ist ehrlicher als sie wegzulassen.*
+--   * ~~«B12» `elems of` -- Element oder Index? Die Spezifikation benutzt beide Lesarten.~~
+--     **ENTSCHIEDEN am 2026-08-20: ein INDEX** (`SYNTAX.md`:635, `TODO.md` Stufe 3).
+--   * ~~`let` ohne ablesbaren Typ, `parameter type`, `expression form` -- Erzeugerluecken.~~
+--     **Zwei davon sind am 2026-08-25 zu** (`emit.rs`): ein `reason` ist ein C-Typ und heisst
+--     in `ctyp` jetzt so; ein `let`-gebundener Name traegt den Typ, den die Signatur des
+--     Gerufenen erklaert (`lokale_lets`, zum Fixpunkt).
+--   * ~~`static` eines Verbunds mit gewoehnlichem Anfangswert -- die Zeile, die ICH hier
+--     ergaenzt habe, senkt selbst nicht ab.~~ **ZU am 2026-08-25**: der markierte Ruf wird
+--     ein geklammerter Anfangswert mit benannten Bestimmern. Schablone `S19
+--     verbund.konstruktor`, **bewiesen** -- kein neuer Registereintrag, `L` unveraendert.
+--
+-- **Was hier NOCH steht, und zwar korpusseitig:** `eichfeld`, `muster_schreiben` und
+-- `beruehre` (:155-159) deklariert niemand. Der Ausschnitt ruft sie, diese Datei nennt sie
+-- nicht, und **kein Pass sagt es** -- ein `check … can_fail` wird von den Namens-, Wirkungs-
+-- und Kostenpaessen nicht betreten. Derselbe Ruf in einem `impl fn` faellt an `E009`/`K003`.
+-- *Der einzige Leser ist der Erzeuger, und er sagt `C001`.* Siehe Befund 7 im README.
 -- =======================================================================================
 
 module kernel::kstackmark {

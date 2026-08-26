@@ -1933,11 +1933,22 @@ impl fn ruft() -> u32 effects { reads z } costs <= 4 ops { return fremd(); }
         "ein reiner Leser bekommt `pure`: {}",
         zeile("liest")
     );
-    assert!(
-        !zeile("ruft").contains("__attribute__"),
-        "wer RUFT, bekommt KEINS -- unter dem Ruf kann ein fremder Rumpf liegen: {}",
-        zeile("ruft")
-    );
+    // **Gefragt wird nach den WIRKUNGSATTRIBUTEN, nicht nach jedem `__attribute__`.**
+    //
+    // Seit dem 2026-08-25 traegt jede Funktion ohne `pub` im C ein `static` und dazu ein
+    // `__attribute__((unused))` -- sonst faellt eine private Funktion, die in DIESER Einheit
+    // niemand ruft, an `-Wunused-function`. *Das ist eine Aussage ueber die BINDUNG und
+    // keine ueber die Wirkung*, und dieser Test fragt nach der Wirkung.
+    //
+    // > Die erste Fassung stand auf `!contains("__attribute__")` und hat damit zwei Fragen
+    // > zu einer gemacht. Sie fiel an der richtigen Antwort.
+    for verboten in ["__attribute__((const))", "__attribute__((pure))"] {
+        assert!(
+            !zeile("ruft").contains(verboten),
+            "wer RUFT, bekommt KEINS -- unter dem Ruf kann ein fremder Rumpf liegen: {}",
+            zeile("ruft")
+        );
+    }
 }
 
 /// **Ein `asm`-Block wird `__volatile__` abgesenkt** («OPT3», 2026-08-19).
@@ -2515,24 +2526,29 @@ impl fn setze(p : Pa) effects { writes v.R } costs <= 8 ops
 fn eine_schnittstelle_erklaert_jeden_namen_den_sie_nennt() {
     let q = r#"
 module bib {
-const N : u32 = 8;
-table T count N { slot { a : u32, } }
-atomic zaehler : u32;
+pub const N : u32 = 8;
+pub table T count N { slot { a : u32, } }
+pub atomic zaehler : u32;
 table Ungenannt count N { slot { b : u32, } }
 pub impl fn tu(i : index into T) -> u32 effects { reads T, writes zaehler } costs <= 3 ops { return 1; }
 }
 "#;
-    let (baum, _) = gabbro_syntax::lies("bib.gab", q);
+    let (baum, mut absagen) = gabbro_syntax::lies("bib.gab", q);
+    gabbro_check::pruefe(&baum, &mut absagen);
+    assert_eq!(
+        absagen.fehler_zahl(),
+        0,
+        "die geschlossene Hülle geht durch:\n{}",
+        absagen.zeige(q)
+    );
     let gabi = gabbro_check::abi::schreibe(&baum, q);
 
-    assert!(gabi.contains("table T count N"), "der genannte Traeger kommt mit:\n{gabi}");
-    assert!(gabi.contains("atomic zaehler"), "das genannte Atomic kommt mit:\n{gabi}");
-    // Der Fixpunkt: `N` nennt niemand direkt -- es steht im `count` des Traegers, der
-    // mitkommt. Ein einzelner Durchgang laesst es zurueck.
+    assert!(gabi.contains("table T count N"), "der ausgeführte Traeger kommt mit:\n{gabi}");
+    assert!(gabi.contains("atomic zaehler"), "das ausgeführte Atomic kommt mit:\n{gabi}");
     assert!(gabi.contains("const N"), "und die Konstante, die der Traeger braucht:\n{gabi}");
     assert!(
         !gabi.contains("Ungenannt"),
-        "was die exportierte Flaeche NICHT nennt, bleibt daheim:\n{gabi}"
+        "was kein `pub` traegt, bleibt daheim -- auch wenn es dieselbe Konstante nennt:\n{gabi}"
     );
 
     // **Und die Schnittstelle liest sich selbst.** Das ist die Aussage, auf der alles ruht:
@@ -2540,6 +2556,19 @@ pub impl fn tu(i : index into T) -> u32 effects { reads T, writes zaehler } cost
     let (b2, mut a2) = gabbro_syntax::lies("bib.gabi", &gabi);
     gabbro_check::pruefe(&b2, &mut a2);
     assert_eq!(a2.fehler_zahl(), 0, "das eigene .gabi prueft sich:\n{}", a2.zeige(&gabi));
+
+    // -- die Gegenrichtung: ohne `pub` am Traeger faellt die SIGNATUR, nicht die Ausfuhr ---
+    //
+    // *Das ist der ganze Unterschied zum Fixpunkt.* Er hat den Traeger stillschweigend
+    // mitgenommen; hier steht eine Absage mit einer Zeilennummer darauf.
+    let offen = q.replace("pub table T count N", "table T count N");
+    let (b3, mut a3) = gabbro_syntax::lies("offen.gab", &offen);
+    gabbro_check::pruefe(&b3, &mut a3);
+    let codes: Vec<&str> = a3.absagen.iter().map(|x| x.code).collect();
+    assert!(
+        codes.contains(&"N038"),
+        "eine `pub fn` ueber einer privaten Tabelle faellt benannt, gefallen ist {codes:?}"
+    );
 }
 
 /// **Ein `extern fn` bekommt kein zweites `extern`, und ein `use` gehört in die Schnittstelle**

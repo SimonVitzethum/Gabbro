@@ -25,6 +25,25 @@
 -- Sonderwert der Erzeuger kennt und M1 nicht; `H011` -- `call` erklaert `locks SCHEDS` und
 -- nimmt die Sperre nie. *Der zweite ist ein echter Befund AM AUSSCHNITT und bleibt darum
 -- stehen: die Wirkungsklausel verspricht mehr, als der Rumpf tut.*
+--
+-- **NACHGEMESSEN 2026-08-25: es sind 10, nicht 5 -- und die Bewegung geht in beide
+-- Richtungen.**
+--
+--   * **Drei sind gewandert, nicht verschwunden.** `IpcResult::Ok` faellt nicht mehr als
+--     `M119` (*„der Name ist nirgends deklariert"*), sondern als **`M124`** (*„a reason value
+--     cannot stand here"*). Seit Stufe 7 (2026-08-21) darf ein Grundwert an GENAU DREI
+--     Stellungen stehen -- `return R::F;`, der Gegenstand eines `match`, und `==`/`!=`. Ein
+--     ARGUMENT ist keine davon. *Der Befund von damals -- „kein Erzeuger" -- ist ueberholt;
+--     was heute fehlt, ist die Zahlprojektion eines Grundes.*
+--   * **Fuenf sind DAZUGEKOMMEN, und «B9» darunter ist ueberholt.** `N035` (2026-08-21)
+--     verlangt `effects` UND `costs` an jedem `fn(…)`-Typ -- der Kommentar bei `type SchedOps`
+--     sagt noch, `fnptr` trage KEINEN Vertrag. Er traegt seit dem 21. genau zwei Drittel
+--     davon; `requires`/`ensures` sind mit einer GEMESSENEN Begruendung abgewiesen (`N037`:
+--     null der vier indirekten Rufstellen in `caprock-messbasis` nimmt eine Sperre). *Die
+--     fuenf Zeilen von `type SchedOps` stehen im Ausschnitt und sind hier NICHT ergaenzt
+--     worden: der Vertrag muss VOR das Komma, also in die Zeile selbst -- das waere ein
+--     Umschreiben und keine Ergaenzung, und `M124`/`M101`/`H011` blieben ohnehin stehen.*
+--   * **Einer ist geschlossen:** `H016`, siehe die `lock SCHEDS`-Zeile unten.
 -- =======================================================================================
 
 module caprock::ipc {
@@ -48,6 +67,24 @@ reason IpcResult {
     ErrEpFull    = 9 "Warteschlange voll, D11: benannt statt still"
     exhaustive
 }
+
+-- ERGAENZT (2026-08-25): `SCHEDS` wird in der Wirkungsliste von `call` (:124) genannt und
+-- nirgends erklaert -- `H016`. **Ohne Deklaration gibt es keinen `rank`, und ohne `rank`
+-- rechnen die Ordnungsregeln nichts**; die Absage sagt es woertlich.
+--
+-- **Die Zahlen sind ZITIERT, nicht gewaehlt.** Dieselbe Sperre steht im eingefrorenen
+-- Korpus selbst, in F8 (`FRAGMENTE.md`:1471-1473): `rank 2`, `held <= 300 ops`. Und die
+-- Ordnung dahinter ist gemessen, nicht angenommen -- `dokumente/AN-CAPROCK.md`:31 zitiert
+-- den Kernel: *CAPS < {EPS[i], NTFNS[i]} < SCHEDS[*] < FP_STATES < MEM*.
+--
+-- Was NICHT zitiert ist: `protects { sched }`. F8 schuetzt `{ belegt, kern, prio }` -- Orte
+-- seiner eigenen Tabelle, die es hier nicht gibt. `sched` ist der Name, den DIESER
+-- Ausschnitt fuer denselben Gegenstand fuehrt (`touches … reads sched`, :140).
+--
+-- **`H011` bleibt danach stehen, und das ist der Ertrag:** die Wirkungsliste verspricht
+-- `locks SCHEDS`, der Rumpf nimmt die Sperre nie. *Solange die Sperre unerklaert war,
+-- verdeckte ein Korpusmangel einen echten Befund am Ausschnitt.*
+lock SCHEDS protects { sched } rank 2 held <= 300 ops;
 
 -- «B15» Monomorph ausgeschrieben. `Queue(T, const N)` ist nicht schreibbar: `typeexpr`
 -- (:137) hat keine Anwendungsform, und `params` (:150) nimmt Werte, keine Typen.
