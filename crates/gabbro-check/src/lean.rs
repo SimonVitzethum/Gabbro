@@ -1,22 +1,22 @@
 //! **The BODY channel: a Gabbro body as a Lean 4 term, and its obligation as a theorem.**
 //!
-//! `refinement.rs` writes the same register as Isabelle text and refuses seventeen of its
+//! `refinement.rs` writes the same register as Isabelle quoted and refuses seventeen of its
 //! obligations with one word: `body-effect` -- *"speaks about the world AFTER a body ran,
 //! and there is no semantics of a Gabbro body"*. **This module is that semantics' other
-//! half.** The meaning itself lives in `passlogik/Passlogik/Rumpf.lean`, written once by
+//! half.** The meaning itself lives in `programmlogik/Gabbro/Body.lean`, written once by
 //! hand; what stands here only translates a body into a datum of it.
 //!
 //! ## Why the meaning is not in this file
 //!
 //! A translator that both *defines* what a body means and *decides* whether the obligation
-//! holds has no independent reader. `Rumpf.lean` is readable Lean with its own theorems, and
+//! holds has no independent reader. `Body.lean` is readable Lean with its own theorems, and
 //! this file emits data against it. *That split is the whole reason a prover is worth
 //! anything here* -- the same relation `lean4export` has to the Lean kernel.
 //!
 //! ## What the plumbing pays for, and it is the reason this file is short
 //!
 //! Nine of eleven classes are carried by the language, so the model underneath needs no
-//! heap, no separation logic, no pointers and no concurrency (`Rumpf.lean`, header). The
+//! heap, no separation logic, no pointers and no concurrency (`Body.lean`, header). The
 //! places a body touches are the declared `effects` list, and that this covers the
 //! transitive effect is proved -- `Passlogik.Wirkung.huelle_deckt`.
 //!
@@ -125,24 +125,24 @@ impl LeanReason {
 pub struct LeanGoal {
     /// `duty_7` -- the position in the register `gabbro pflichten` prints.
     pub name: String,
-    /// The body, as a `Rumpf.Anweisung` list term.
-    pub rumpf: String,
+    /// The body, as a `Gabbro.Body.Stmt` list term.
+    pub body: String,
     /// `(label, term, where it came from)` -- every hypothesis, read from a declaration.
-    pub hypothesen: Vec<(String, String, String)>,
-    /// The postcondition, as a `Rumpf.Ausdruck` that must evaluate to `true`.
-    pub schluss: String,
-    /// **The `obtain` lines the proof opens with.** A hypothesis `\exists n, l.lokal "p" =
+    pub hypotheses: Vec<(String, String, String)>,
+    /// The postcondition, as a `Gabbro.Body.Expr` that must evaluate to `true`.
+    pub conclusion: String,
+    /// **The `obtain` lines the proof opens with.** A hypothesis `\exists n, l.locals "p" =
     /// .z n` tells `simp` nothing until the witness is named; without these the goal stalls
-    /// on an unreduced `match` over `l.lokal "p"`. *Measured on the first run of this
+    /// on an unreduced `match` over `l.locals "p"`. *Measured on the first run of this
     /// emitter, and it is why the tactic is generated rather than fixed.*
-    pub zerlegung: Vec<String>,
+    pub opening: Vec<String>,
     /// The equation names those `obtain`s bind, for the `simp` set.
-    pub gleichungen: Vec<String>,
-    /// **The `rcases` fragments, and they are kept apart from `zerlegung` because they must
+    pub equations: Vec<String>,
+    /// **The `rcases` fragments, and they are kept apart from `opening` because they must
     /// be CHAINED.** An `rcases` splits the goal, and a plain next line applies only to the
     /// first half -- measured: the second split reported its own witness as an unknown
     /// identifier in every branch the first split had left behind.
-    pub verzweigung: Vec<String>,
+    pub splits: Vec<String>,
 }
 
 pub enum LeanVerdict {
@@ -152,18 +152,18 @@ pub enum LeanVerdict {
 
 /// **What a table declares.** Field name to the shape its declaration gives it.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Form {
-    Zahl,
-    Wahrheit,
-    Wahl,
+enum Shape {
+    Int,
+    Bool,
+    Opt,
 }
 
-impl Form {
-    fn praedikat(self) -> &'static str {
+impl Shape {
+    fn predicate(self) -> &'static str {
         match self {
-            Form::Zahl => "istZahl",
-            Form::Wahrheit => "istWahrheit",
-            Form::Wahl => "istWahl",
+            Shape::Int => "isInt",
+            Shape::Bool => "isBool",
+            Shape::Opt => "isOption",
         }
     }
 }
@@ -177,19 +177,19 @@ impl Form {
 /// resolved type cannot tell them apart. *Asking the resolved type here would silently make
 /// every option field a number, and a `match` over it would then be unreachable rather than
 /// refused.*
-fn form_von(t: &TypExpr, u: &crate::umgebung::Umgebung, modul: &str) -> Option<Form> {
+fn shape_of(t: &TypExpr, u: &crate::umgebung::Umgebung, module: &str) -> Option<Shape> {
     if let TypExpr::Index { optional, .. } = t {
-        return Some(if *optional { Form::Wahl } else { Form::Zahl });
+        return Some(if *optional { Shape::Opt } else { Shape::Int });
     }
-    form_von_typ(&u.typ_von_ausdruck_decl(modul, t))
+    shape_of_typ(&u.typ_von_ausdruck_decl(module, t))
 }
 
-fn form_von_typ(t: &crate::typen::Typ) -> Option<Form> {
+fn shape_of_typ(t: &crate::typen::Typ) -> Option<Shape> {
     use crate::typen::Typ;
     match t {
-        Typ::Ganzzahl(_) => Some(Form::Zahl),
-        Typ::Wahrheit => Some(Form::Wahrheit),
-        Typ::Tabelle(_) => Some(Form::Zahl),
+        Typ::Ganzzahl(_) => Some(Shape::Int),
+        Typ::Wahrheit => Some(Shape::Bool),
+        Typ::Tabelle(_) => Some(Shape::Int),
         // **An OPAQUE new type stops here and a transparent one does not.** Reading the
         // representation of an `opaque` is exactly the implicit conversion `D1` forbids;
         // a transparent one is a range with a name, and a name is not a wall.
@@ -197,7 +197,7 @@ fn form_von_typ(t: &crate::typen::Typ) -> Option<Form> {
             undurchsichtig: false,
             unter,
             ..
-        } => form_von_typ(unter),
+        } => shape_of_typ(unter),
         // `wrapping` gives no shape: overflow is the POINT of the type, so unbounded `Int`
         // arithmetic over it would compute something Gabbro does not.
         Typ::Umlaufend(_)
@@ -219,33 +219,33 @@ fn form_von_typ(t: &crate::typen::Typ) -> Option<Form> {
 /// Everything the translation of one body may look at.
 struct Ctx<'a> {
     /// Table name to its slot fields, as declared.
-    tabellen: &'a HashMap<String, Vec<(String, Option<Form>)>>,
+    tables: &'a HashMap<String, Vec<(String, Option<Shape>)>>,
     /// The declaring function's parameters: name to the table its type points at, if any.
-    traeger: HashMap<String, String>,
-    /// Parameter and `let` names -- these read from `lokal`, not from the world.
-    lokal: Vec<String>,
+    carrier: HashMap<String, String>,
+    /// Parameter and `let` names -- these read from `locals`, not from the world.
+    locals: Vec<String>,
     /// Collected while translating: `(carrier, field, form, origin)`, deduplicated.
-    gesehen: Vec<(String, String, Form, String)>,
+    seen: Vec<(String, String, Shape, String)>,
     /// **Every `(carrier, field, index-parameter)` read at an option-shaped field.**
     ///
     /// `istWahl` is a DISJUNCTION, and `simp` cannot open one: without the case split the
     /// goal stalls on an unreduced `match` over the field. *Measured on the first corpus
     /// run of this channel -- `aushaengen` was the one red module of sixty-eight, and the
     /// reason was this and nothing else.*
-    wahlstellen: Vec<(String, String, String)>,
+    option_reads: Vec<(String, String, String)>,
 }
 
 impl Ctx<'_> {
     /// **Which table does this base name stand for?** A bare table name stands for itself;
     /// a parameter stands for the table its pointer type names.
-    fn tabelle_von(&self, basis: &str) -> Option<&String> {
-        self.traeger.get(basis)
+    fn table_of(&self, base: &str) -> Option<&String> {
+        self.carrier.get(base)
     }
 
     /// A place whose index is a bare parameter, at an option-shaped field: the proof will
     /// have to split on it.
-    fn merke_wahl(&mut self, traeger: &str, feld: &str, form: Form, index: &Expr) {
-        if form != Form::Wahl {
+    fn note_option(&mut self, carrier: &str, feld: &str, form: Shape, index: &Expr) {
+        if form != Shape::Opt {
             return;
         }
         let ExprArt::Ort(o) = &index.art else { return };
@@ -254,32 +254,32 @@ impl Ctx<'_> {
         }
         let p = o.basis.text.clone();
         if !self
-            .wahlstellen
+            .option_reads
             .iter()
-            .any(|(t, f, i)| t == traeger && f == feld && *i == p)
+            .any(|(t, f, i)| t == carrier && f == feld && *i == p)
         {
-            self.wahlstellen
-                .push((traeger.to_string(), feld.to_string(), p));
+            self.option_reads
+                .push((carrier.to_string(), feld.to_string(), p));
         }
     }
 
-    fn merke(&mut self, traeger: &str, feld: &str, f: Form, herkunft: &str) {
+    fn note(&mut self, carrier: &str, feld: &str, f: Shape, origin: &str) {
         if !self
-            .gesehen
+            .seen
             .iter()
-            .any(|(t, n, _, _)| t == traeger && n == feld)
+            .any(|(t, n, _, _)| t == carrier && n == feld)
         {
-            self.gesehen.push((
-                traeger.to_string(),
+            self.seen.push((
+                carrier.to_string(),
                 feld.to_string(),
                 f,
-                herkunft.to_string(),
+                origin.to_string(),
             ));
         }
     }
 }
 
-fn text(s: &str) -> String {
+fn quoted(s: &str) -> String {
     // Gabbro identifiers are ASCII words; this fires on nothing in today's corpus, and that
     // is exactly why it stands here instead of being assumed.
     format!("\"{}\"", s.replace('\\', "").replace('"', ""))
@@ -291,26 +291,26 @@ fn text(s: &str) -> String {
 /// this channel has no shape for is `FieldShape`. *The first says a declaration is missing,
 /// the second says a translation is.* Folding them would report `Buch.slots[p].wert` as an
 /// unknown carrier, and `Buch` is right there in the file.
-fn feldform(basis: &str, feld: &str, c: &Ctx) -> Result<(String, Form, String), LeanReason> {
-    let tab = c.tabelle_von(basis).ok_or(LeanReason::Carrier)?.clone();
-    let felder = c.tabellen.get(&tab).ok_or(LeanReason::Carrier)?;
-    let (_, form) = felder
+fn field_shape(base: &str, feld: &str, c: &Ctx) -> Result<(String, Shape, String), LeanReason> {
+    let tab = c.table_of(base).ok_or(LeanReason::Carrier)?.clone();
+    let fields = c.tables.get(&tab).ok_or(LeanReason::Carrier)?;
+    let (_, form) = fields
         .iter()
         .find(|(n, _)| n == feld)
         .ok_or(LeanReason::Carrier)?;
     let form = form.ok_or(LeanReason::FieldShape)?;
-    Ok((basis.to_string(), form, tab))
+    Ok((base.to_string(), form, tab))
 }
 
-/// A place, as a `Rumpf.Ausdruck`. **Two forms and nothing else:** a bare name, and
+/// A place, as a `Gabbro.Body.Expr`. **Two forms and nothing else:** a bare name, and
 /// `carrier.slots[i].field`.
-fn ort_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
+fn place_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
     if o.suffixe.is_empty() {
         let n = &o.basis.text;
-        return Ok(if c.lokal.iter().any(|l| l == n) {
-            format!("(.name {})", text(n))
+        return Ok(if c.locals.iter().any(|l| l == n) {
+            format!("(.name {})", quoted(n))
         } else {
-            format!("(.stat {})", text(n))
+            format!("(.global {})", quoted(n))
         });
     }
     let [OrtSuffix::Feld(slots), OrtSuffix::Index(i), OrtSuffix::Feld(f)] = &o.suffixe[..] else {
@@ -319,44 +319,44 @@ fn ort_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
     if slots.text != "slots" {
         return Err(LeanReason::Carrier);
     }
-    let (basis, form, tab) = feldform(&o.basis.text, &f.text, c)?;
+    let (base, shape, tab) = field_shape(&o.basis.text, &f.text, c)?;
     let idx = expr_term(i, c)?;
-    c.merke(&basis, &f.text, form, &format!("`{}` in `{}`", f.text, tab));
-    c.merke_wahl(&basis, &f.text, form, i);
+    c.note(&base, &f.text, shape, &format!("`{}` in `{}`", f.text, tab));
+    c.note_option(&base, &f.text, shape, i);
     Ok(format!(
-        "(.platz {} {} {})",
-        text(&basis),
+        "(.place {} {} {})",
+        quoted(&base),
         idx,
-        text(&f.text)
+        quoted(&f.text)
     ))
 }
 
-/// An expression as a `Rumpf.Ausdruck`.
+/// An expression as a `Gabbro.Body.Expr`.
 ///
 /// **The `match` has no catch-all**, and that is deliberate even though every unlisted arm
 /// would refuse: a new expression form must be DECIDED here, not defaulted.
 fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
     match &e.art {
-        ExprArt::Zahl(n) => Ok(format!("(.lit (.z {n}))")),
-        ExprArt::Wahr => Ok("(.lit (.b true))".into()),
-        ExprArt::Falsch => Ok("(.lit (.b false))".into()),
+        ExprArt::Zahl(n) => Ok(format!("(.lit (.int {n}))")),
+        ExprArt::Wahr => Ok("(.lit (.bool true))".into()),
+        ExprArt::Falsch => Ok("(.lit (.bool false))".into()),
         ExprArt::Klammer(x) => expr_term(x, c),
-        ExprArt::Ort(o) => ort_term(o, c),
-        ExprArt::Unaer(UnOp::Nicht, x) => Ok(format!("(.un .nicht {})", expr_term(x, c)?)),
-        ExprArt::Unaer(UnOp::Negativ, x) => Ok(format!("(.un .negativ {})", expr_term(x, c)?)),
+        ExprArt::Ort(o) => place_term(o, c),
+        ExprArt::Unaer(UnOp::Nicht, x) => Ok(format!("(.un .not {})", expr_term(x, c)?)),
+        ExprArt::Unaer(UnOp::Negativ, x) => Ok(format!("(.un .neg {})", expr_term(x, c)?)),
         ExprArt::Binaer(op, a, b) => {
             let z = match op {
-                BinOp::Plus => "plus",
-                BinOp::Minus => "minus",
-                BinOp::Mal => "mal",
-                BinOp::Gleich => "gleich",
-                BinOp::Ungleich => "ungleich",
-                BinOp::Kleiner => "kleiner",
-                BinOp::KleinerGleich => "kleinergleich",
-                BinOp::Groesser => "groesser",
-                BinOp::GroesserGleich => "groessergleich",
-                BinOp::Und => "und",
-                BinOp::Oder => "oder",
+                BinOp::Plus => "add",
+                BinOp::Minus => "sub",
+                BinOp::Mal => "mul",
+                BinOp::Gleich => "eq",
+                BinOp::Ungleich => "ne",
+                BinOp::Kleiner => "lt",
+                BinOp::KleinerGleich => "le",
+                BinOp::Groesser => "gt",
+                BinOp::GroesserGleich => "ge",
+                BinOp::Und => "and",
+                BinOp::Oder => "or",
                 // Division and the bit operations are refused for the reason
                 // `refinement.rs` already books: Lean's `Int` division rounds toward minus
                 // infinity, C's truncates toward zero. A goal that mixed the two would be
@@ -379,7 +379,7 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
         // corpus. `Some(e)` is refused: it would need a second value constructor, and no
         // obligation in today's corpus asks for one.
         ExprArt::Ruf(r) => match r.path().and_then(|p| p.teile.last()).map(|i| &i.text) {
-            Some(n) if n == "None" && r.argumente.is_empty() => Ok("(.lit .nichts)".into()),
+            Some(n) if n == "None" && r.argumente.is_empty() => Ok("(.lit .absent)".into()),
             _ => Err(LeanReason::Expression),
         },
         ExprArt::Gleitkomma { .. }
@@ -391,27 +391,27 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
     }
 }
 
-/// A predicate as a `Rumpf.Ausdruck` that must evaluate to `true`.
+/// A predicate as a `Gabbro.Body.Expr` that must evaluate to `true`.
 fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
     match &p.art {
         PredArt::Vergleich(e) => expr_term(e, c),
         PredArt::Klammer(q) => pred_term(q, c),
-        PredArt::Nicht(q) => Ok(format!("(.un .nicht {})", pred_term(q, c)?)),
+        PredArt::Nicht(q) => Ok(format!("(.un .not {})", pred_term(q, c)?)),
         PredArt::Und(a, b) => Ok(format!(
-            "(.bin .und {} {})",
+            "(.bin .and {} {})",
             pred_term(a, c)?,
             pred_term(b, c)?
         )),
         PredArt::Oder(a, b) => Ok(format!(
-            "(.bin .oder {} {})",
+            "(.bin .or {} {})",
             pred_term(a, c)?,
             pred_term(b, c)?
         )),
-        // `a -> b` is `!a || b`. **Not a shortcut:** `Wert` has no implication, and adding
+        // `a -> b` is `!a || b`. **Not a shortcut:** `Value` has no implication, and adding
         // one to the model for a form that desugars exactly would be a second way to say
         // one thing.
         PredArt::Folgt(a, b) => Ok(format!(
-            "(.bin .oder (.un .nicht {}) {})",
+            "(.bin .or (.un .not {}) {})",
             pred_term(a, c)?,
             pred_term(b, c)?
         )),
@@ -420,16 +420,16 @@ fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
     }
 }
 
-/// A block as a `Rumpf.Anweisung` list term.
+/// A block as a `Gabbro.Body.Stmt` list term.
 fn block_term(b: &Block, c: &mut Ctx) -> Result<String, LeanReason> {
-    let tiefe = c.lokal.len();
+    let depth = c.locals.len();
     let mut teile = Vec::new();
     for s in &b.anweisungen {
         teile.push(stmt_term(s, c)?);
     }
     // A `let` name leaves scope with its block -- the model binds by name, so a name that
     // outlived its block would silently shadow one further out.
-    c.lokal.truncate(tiefe);
+    c.locals.truncate(depth);
     Ok(format!("[{}]", teile.join(", ")))
 }
 
@@ -437,8 +437,8 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
     match &s.art {
         StmtArt::Let(l) => {
             let w = expr_term(&l.wert, c)?;
-            c.lokal.push(l.name.text.clone());
-            Ok(format!("(.binde {} {})", text(&l.name.text), w))
+            c.locals.push(l.name.text.clone());
+            Ok(format!("(.bindName {} {})", quoted(&l.name.text), w))
         }
         StmtArt::Zuweisung(z) => {
             if z.op != ZuwOp::Setzt {
@@ -449,7 +449,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             }
             let w = expr_term(&z.wert, c)?;
             if z.ziel.suffixe.is_empty() {
-                return Ok(format!("(.zuwStat {} {})", text(&z.ziel.basis.text), w));
+                return Ok(format!("(.assignGlobal {} {})", quoted(&z.ziel.basis.text), w));
             }
             let [OrtSuffix::Feld(slots), OrtSuffix::Index(i), OrtSuffix::Feld(f)] =
                 &z.ziel.suffixe[..]
@@ -459,33 +459,33 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             if slots.text != "slots" {
                 return Err(LeanReason::Carrier);
             }
-            let (basis, form, tab) = feldform(&z.ziel.basis.text, &f.text, c)?;
+            let (base, shape, tab) = field_shape(&z.ziel.basis.text, &f.text, c)?;
             let idx = expr_term(i, c)?;
-            c.merke(&basis, &f.text, form, &format!("`{}` in `{}`", f.text, tab));
+            c.note(&base, &f.text, shape, &format!("`{}` in `{}`", f.text, tab));
             Ok(format!(
-                "(.zuw {} {} {} {})",
-                text(&basis),
+                "(.assign {} {} {} {})",
+                quoted(&base),
                 idx,
-                text(&f.text),
+                quoted(&f.text),
                 w
             ))
         }
         StmtArt::Wenn(w) => {
             // An `else if` chain folds from the back: one conditional statement per branch.
-            let mut sonst = match &w.sonst {
+            let mut otherwise = match &w.sonst {
                 Some(b) => block_term(b, c)?,
                 None => "[]".to_string(),
             };
             for (bed, blk) in w.zweige.iter().rev() {
                 let b = expr_term(bed, c)?;
                 let d = block_term(blk, c)?;
-                sonst = format!("[(.wenn {b} {d} {sonst})]");
+                otherwise = format!("[(.ite {b} {d} {otherwise})]");
             }
             // The fold produced a one-element list; a statement is wanted, so unwrap it.
-            Ok(sonst
+            Ok(otherwise
                 .strip_prefix('[')
                 .and_then(|s| s.strip_suffix(']'))
-                .unwrap_or(&sonst)
+                .unwrap_or(&otherwise)
                 .to_string())
         }
         StmtArt::Match(m) => {
@@ -493,30 +493,30 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             // type would need a value constructor per variant; refusing here is a number,
             // guessing would be a meaning.
             let g = expr_term(&m.gegenstand, c)?;
-            let mut etwas = None;
-            let mut nichts = None;
+            let mut onp = None;
+            let mut ona = None;
             for z in &m.zweige {
                 match (z.variante.text.as_str(), &z.binder) {
                     ("Some", Some(b)) => {
-                        let tiefe = c.lokal.len();
-                        c.lokal.push(b.text.clone());
+                        let depth = c.locals.len();
+                        c.locals.push(b.text.clone());
                         let blk = block_term(&z.rumpf, c)?;
-                        c.lokal.truncate(tiefe);
-                        etwas = Some((b.text.clone(), blk));
+                        c.locals.truncate(depth);
+                        onp = Some((b.text.clone(), blk));
                     }
-                    ("None", None) => nichts = Some(block_term(&z.rumpf, c)?),
+                    ("None", None) => ona = Some(block_term(&z.rumpf, c)?),
                     _ => return Err(LeanReason::Statement),
                 }
             }
-            match (etwas, nichts) {
-                (Some((b, be)), Some(bk)) => {
-                    Ok(format!("(.aufOption {g} {} {be} {bk})", text(&b)))
+            match (onp, ona) {
+                (Some((b, present)), Some(absent)) => {
+                    Ok(format!("(.onOption {g} {} {present} {absent})", quoted(&b)))
                 }
                 _ => Err(LeanReason::Statement),
             }
         }
-        StmtArt::Return(None) => Ok("(.rueckgabe none)".into()),
-        StmtArt::Return(Some(e)) => Ok(format!("(.rueckgabe (some {}))", expr_term(e, c)?)),
+        StmtArt::Return(None) => Ok("(.ret none)".into()),
+        StmtArt::Return(Some(e)) => Ok(format!("(.ret (some {}))", expr_term(e, c)?)),
         // Everything else is refused BY NAME. `Ruf` and `LetSonst` belong to the sequential
         // core and are the next two to build: a call is compositional over the CONTRACT of
         // the callee, never over its body, and that gate is not built.
@@ -539,115 +539,115 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
 ///
 /// A field whose type has no shape is kept with `None` and NOT dropped -- a dropped field
 /// looks like an undeclared one, and the refusal would then name the wrong thing.
-fn tabellen(
+fn tables(
     baum: &Programm,
     u: &crate::umgebung::Umgebung,
-) -> HashMap<String, Vec<(String, Option<Form>)>> {
-    let mut aus = HashMap::new();
-    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+) -> HashMap<String, Vec<(String, Option<Shape>)>> {
+    let mut out = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
         let ItemArt::Tabelle(tb) = &item.art else { return };
-        let mut felder = Vec::new();
+        let mut fields = Vec::new();
         if let Some(s) = &tb.slot {
             for f in &s.felder {
                 let form = match &f.typ {
-                    SlotTyp::Typ(te) => form_von(te, u, modul),
+                    SlotTyp::Typ(te) => shape_of(te, u, module),
                     SlotTyp::Wrapping(_) => None,
                 };
-                felder.push((f.name.text.clone(), form));
+                fields.push((f.name.text.clone(), form));
             }
         }
-        aus.insert(tb.name.text.clone(), felder);
+        out.insert(tb.name.text.clone(), fields);
     });
-    aus
+    out
 }
 
 /// **Which base name stands for which table**, for one function.
-fn traeger_von(
+fn carriers_of(
     f: &FnDecl,
-    tab: &HashMap<String, Vec<(String, Option<Form>)>>,
+    tab: &HashMap<String, Vec<(String, Option<Shape>)>>,
 ) -> HashMap<String, String> {
-    let mut aus = HashMap::new();
+    let mut out = HashMap::new();
     // A table name stands for itself.
     for name in tab.keys() {
-        aus.insert(name.clone(), name.clone());
+        out.insert(name.clone(), name.clone());
     }
     // A parameter stands for the table its pointer type names.
     for p in &f.parameter {
-        let ziel = match &p.typ {
+        let target = match &p.typ {
             TypExpr::Zeiger(z) => &z.ziel,
             t => t,
         };
-        if let TypExpr::Pfad(pf) = ziel {
+        if let TypExpr::Pfad(pf) = target {
             if let Some(last) = pf.teile.last() {
                 if tab.contains_key(&last.text) {
-                    aus.insert(p.name.text.clone(), last.text.clone());
+                    out.insert(p.name.text.clone(), last.text.clone());
                 }
             }
         }
     }
-    aus
+    out
 }
 
 /// **The one function this module exists for**: a body obligation as a Lean goal, or a
 /// named refusal.
-fn urteil(
+fn judge(
     f: &FnDecl,
-    nachher: &Pred,
+    post: &Pred,
     u: &crate::umgebung::Umgebung,
-    modul: &str,
-    tab: &HashMap<String, Vec<(String, Option<Form>)>>,
-    nummer: usize,
+    module: &str,
+    tab: &HashMap<String, Vec<(String, Option<Shape>)>>,
+    number: usize,
 ) -> LeanVerdict {
     let FnRumpf::Block(b) = &f.rumpf else {
         return LeanVerdict::Refused(LeanReason::ForeignBody);
     };
     let mut c = Ctx {
-        tabellen: tab,
-        traeger: traeger_von(f, tab),
-        lokal: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
-        gesehen: Vec::new(),
-        wahlstellen: Vec::new(),
+        tables: tab,
+        carrier: carriers_of(f, tab),
+        locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
+        seen: Vec::new(),
+        option_reads: Vec::new(),
     };
-    let rumpf = match block_term(b, &mut c) {
+    let body = match block_term(b, &mut c) {
         Ok(t) => t,
         Err(r) => return LeanVerdict::Refused(r),
     };
-    let schluss = match pred_term(nachher, &mut c) {
+    let conclusion = match pred_term(post, &mut c) {
         Ok(t) => t,
         Err(r) => return LeanVerdict::Refused(r),
     };
     // **The hypotheses, and every one of them read from a declaration.**
-    let mut hypothesen = Vec::new();
-    let mut zerlegung = Vec::new();
-    let mut verzweigung: Vec<String> = Vec::new();
-    let mut gleichungen = Vec::new();
+    let mut hypotheses = Vec::new();
+    let mut opening = Vec::new();
+    let mut splits: Vec<String> = Vec::new();
+    let mut equations = Vec::new();
     for p in &f.parameter {
-        if let Some(form) = form_von(&p.typ, u, modul) {
+        if let Some(form) = shape_of(&p.typ, u, module) {
             let n = &p.name.text;
-            hypothesen.push((
+            hypotheses.push((
                 format!("p_{n}"),
-                format!("{} (l.lokal {})", form.praedikat(), text(n)),
+                format!("{} (s.local' {})", form.predicate(), quoted(n)),
                 format!("the declared type of `{n}`"),
             ));
             // `istWahl` is a DISJUNCTION, not an existential -- there is no single witness
             // to name, so it stays whole and the goal that needs it is refused rather than
             // half-opened.
-            if form != Form::Wahl {
-                zerlegung.push(format!("  obtain \\<langle>w_{n}, e_{n}\\<rangle> := p_{n}"));
-                gleichungen.push(format!("e_{n}"));
+            if form != Shape::Opt {
+                opening.push(format!("  obtain \\<langle>w_{n}, e_{n}\\<rangle> := p_{n}"));
+                equations.push(format!("e_{n}"));
             }
         }
     }
-    for (traeger, feld, form, herkunft) in &c.gesehen {
-        hypothesen.push((
-            format!("f_{traeger}_{feld}"),
+    for (carrier, feld, form, origin) in &c.seen {
+        hypotheses.push((
+            format!("f_{carrier}_{feld}"),
             format!(
-                "\\<forall> k, {} (l.welt (.slot {} k {}))",
-                form.praedikat(),
-                text(traeger),
-                text(feld)
+                "\\<forall> k, {} (s.world (.slot {} k {}))",
+                form.predicate(),
+                quoted(carrier),
+                quoted(feld)
             ),
-            herkunft.clone(),
+            origin.clone(),
         ));
     }
     // **The case split, one per option-shaped field read at a parameter index.**
@@ -655,24 +655,24 @@ fn urteil(
     // The split is emitted only where the WITNESS exists -- a parameter whose declared type
     // gave a shape and was therefore opened above. Without the witness there is no `w_p` to
     // apply the hypothesis to, and a split written anyway would not elaborate.
-    for (traeger, feld, index) in &c.wahlstellen {
-        if !gleichungen.iter().any(|g| *g == format!("e_{index}")) {
+    for (carrier, field, index) in &c.option_reads {
+        if !equations.iter().any(|g| *g == format!("e_{index}")) {
             continue;
         }
-        let h = format!("h_{traeger}_{feld}_{index}");
-        verzweigung.push(format!(
-            "rcases f_{traeger}_{feld} w_{index} with {h} | \\<langle>m_{traeger}_{feld}_{index}, {h}\\<rangle>"
+        let h = format!("h_{carrier}_{field}_{index}");
+        splits.push(format!(
+            "rcases f_{carrier}_{field} w_{index} with {h} | \\<langle>m_{carrier}_{field}_{index}, {h}\\<rangle>"
         ));
-        gleichungen.push(h);
+        equations.push(h);
     }
     LeanVerdict::Proved(Box::new(LeanGoal {
-        name: format!("duty_{nummer}"),
-        rumpf,
-        hypothesen,
-        schluss,
-        zerlegung,
-        gleichungen,
-        verzweigung,
+        name: format!("duty_{number}"),
+        body,
+        hypotheses,
+        conclusion,
+        opening,
+        equations,
+        splits,
     }))
 }
 
@@ -681,13 +681,13 @@ fn urteil(
 /// other, obligation by obligation.
 pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)> {
     let u = crate::umgebung::Umgebung::sammle(baum);
-    let tab = tabellen(baum, &u);
+    let tab = tables(baum, &u);
     // The module a function is declared in travels with it: `typ_von_ausdruck_decl` is
     // module-aware, and asking it from the wrong module answers about the wrong type.
     let mut fns: HashMap<String, (String, FnDecl)> = HashMap::new();
-    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
         if let ItemArt::Funktion(f) = &item.art {
-            fns.insert(f.name.text.clone(), (modul.to_string(), f.clone()));
+            fns.insert(f.name.text.clone(), (module.to_string(), f.clone()));
         }
     });
 
@@ -706,7 +706,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                 }
                 crate::pflichten::Art::Erhaltung => LeanVerdict::Refused(LeanReason::Invariant),
                 crate::pflichten::Art::Nachbedingung => match fns.get(&p.funktion) {
-                    Some((modul, f)) => {
+                    Some((module, f)) => {
                         // `ensures #k` -- the index is in the register's own wording.
                         let k = p
                             .gegenstand
@@ -715,15 +715,15 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                             .and_then(|s| s.parse::<usize>().ok())
                             .unwrap_or(0);
                         match f.ensures.get(k.wrapping_sub(1)) {
-                            Some(q) => urteil(f, q, &u, modul, &tab, n),
+                            Some(q) => judge(f, q, &u, module, &tab, n),
                             None => LeanVerdict::Refused(LeanReason::Expression),
                         }
                     }
                     None => LeanVerdict::Refused(LeanReason::Expression),
                 },
                 crate::pflichten::Art::Verfeinerung => match fns.get(&p.funktion) {
-                    Some((modul, f)) => match spezifikation(f, &fns) {
-                        Ok(q) => urteil(f, &q, &u, modul, &tab, n),
+                    Some((module, f)) => match specification(f, &fns) {
+                        Ok(q) => judge(f, &q, &u, module, &tab, n),
                         Err(r) => LeanVerdict::Refused(r),
                     },
                     None => LeanVerdict::Refused(LeanReason::SpecShape),
@@ -738,67 +738,67 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
 /// `g` describes*, so the postcondition IS the `spec fn`'s expression body, with its own
 /// parameter names replaced by the implementation's. `M132` has already checked that both
 /// carry the same number of parameters.
-fn spezifikation(
+fn specification(
     f: &FnDecl,
     fns: &HashMap<String, (String, FnDecl)>,
 ) -> Result<Pred, LeanReason> {
-    let pfad = f.verfeinert.as_ref().ok_or(LeanReason::SpecShape)?;
-    let name = pfad.teile.last().ok_or(LeanReason::SpecShape)?;
+    let path = f.verfeinert.as_ref().ok_or(LeanReason::SpecShape)?;
+    let name = path.teile.last().ok_or(LeanReason::SpecShape)?;
     let (_, spec) = fns.get(&name.text).ok_or(LeanReason::SpecShape)?;
     let FnRumpf::Pred(p) = &spec.rumpf else {
         return Err(LeanReason::SpecShape);
     };
-    let paare: Vec<(String, String)> = spec
+    let pairs: Vec<(String, String)> = spec
         .parameter
         .iter()
         .zip(f.parameter.iter())
         .map(|(s, i)| (s.name.text.clone(), i.name.text.clone()))
         .collect();
-    Ok(umbenannt_pred(p, &paare))
+    Ok(renamed_pred(p, &pairs))
 }
 
-fn umbenannt_pred(p: &Pred, paare: &[(String, String)]) -> Pred {
+fn renamed_pred(p: &Pred, pairs: &[(String, String)]) -> Pred {
     let art = match &p.art {
-        PredArt::Vergleich(e) => PredArt::Vergleich(umbenannt_expr(e, paare)),
-        PredArt::Klammer(q) => PredArt::Klammer(Box::new(umbenannt_pred(q, paare))),
-        PredArt::Nicht(q) => PredArt::Nicht(Box::new(umbenannt_pred(q, paare))),
+        PredArt::Vergleich(e) => PredArt::Vergleich(renamed_expr(e, pairs)),
+        PredArt::Klammer(q) => PredArt::Klammer(Box::new(renamed_pred(q, pairs))),
+        PredArt::Nicht(q) => PredArt::Nicht(Box::new(renamed_pred(q, pairs))),
         PredArt::Und(a, b) => PredArt::Und(
-            Box::new(umbenannt_pred(a, paare)),
-            Box::new(umbenannt_pred(b, paare)),
+            Box::new(renamed_pred(a, pairs)),
+            Box::new(renamed_pred(b, pairs)),
         ),
         PredArt::Oder(a, b) => PredArt::Oder(
-            Box::new(umbenannt_pred(a, paare)),
-            Box::new(umbenannt_pred(b, paare)),
+            Box::new(renamed_pred(a, pairs)),
+            Box::new(renamed_pred(b, pairs)),
         ),
         PredArt::Folgt(a, b) => PredArt::Folgt(
-            Box::new(umbenannt_pred(a, paare)),
-            Box::new(umbenannt_pred(b, paare)),
+            Box::new(renamed_pred(a, pairs)),
+            Box::new(renamed_pred(b, pairs)),
         ),
         other => other.clone(),
     };
     Pred { art, ..p.clone() }
 }
 
-fn umbenannt_expr(e: &Expr, paare: &[(String, String)]) -> Expr {
+fn renamed_expr(e: &Expr, pairs: &[(String, String)]) -> Expr {
     let art = match &e.art {
         ExprArt::Ort(o) => {
             let mut o = o.clone();
-            if let Some((_, neu)) = paare.iter().find(|(alt, _)| *alt == o.basis.text) {
-                o.basis.text = neu.clone();
+            if let Some((_, fresh)) = pairs.iter().find(|(old, _)| *old == o.basis.text) {
+                o.basis.text = fresh.clone();
             }
             for s in &mut o.suffixe {
                 if let OrtSuffix::Index(i) = s {
-                    *i = umbenannt_expr(i, paare);
+                    *i = renamed_expr(i, pairs);
                 }
             }
             ExprArt::Ort(o)
         }
-        ExprArt::Klammer(x) => ExprArt::Klammer(Box::new(umbenannt_expr(x, paare))),
-        ExprArt::Unaer(op, x) => ExprArt::Unaer(*op, Box::new(umbenannt_expr(x, paare))),
+        ExprArt::Klammer(x) => ExprArt::Klammer(Box::new(renamed_expr(x, pairs))),
+        ExprArt::Unaer(op, x) => ExprArt::Unaer(*op, Box::new(renamed_expr(x, pairs))),
         ExprArt::Binaer(op, a, b) => ExprArt::Binaer(
             *op,
-            Box::new(umbenannt_expr(a, paare)),
-            Box::new(umbenannt_expr(b, paare)),
+            Box::new(renamed_expr(a, pairs)),
+            Box::new(renamed_expr(b, pairs)),
         ),
         other => other.clone(),
     };
@@ -807,13 +807,13 @@ fn umbenannt_expr(e: &Expr, paare: &[(String, String)]) -> Expr {
 
 /// **The module name of a unit.** Lean demands that it match the file, so the stem is what
 /// this derives from.
-pub fn modul_name(datei: &str) -> String {
+pub fn module_name(datei: &str) -> String {
     let stem = datei
         .rsplit('/')
         .next()
         .unwrap_or(datei)
         .trim_end_matches(".gab");
-    let mut s = String::from("Pflicht");
+    let mut s = String::from("Duty");
     let mut gross = true;
     for ch in stem.chars() {
         if ch.is_ascii_alphanumeric() {
@@ -827,14 +827,14 @@ pub fn modul_name(datei: &str) -> String {
 }
 
 /// **The unit's obligation register, as a Lean 4 module.**
-pub fn modul(baum: &Programm, datei: &str) -> String {
+pub fn module(baum: &Programm, datei: &str) -> String {
     let entries = verdicts(baum);
     let proved = entries
         .iter()
         .filter(|(_, v)| matches!(v, LeanVerdict::Proved(_)))
         .count();
     let refused = entries.len() - proved;
-    let name = modul_name(datei);
+    let name = module_name(datei);
     let mut s = String::new();
     s.push_str("/-  Written by `gabbro pflichten --lean`. Do not edit -- the source is the\n");
     s.push_str("    `.gab`, and a second register over the same thing is the very class this\n");
@@ -845,20 +845,20 @@ pub fn modul(baum: &Programm, datei: &str) -> String {
         "        @duty 1  {datei}  total {}  goals {proved}  refused {refused}\n",
         entries.len()
     ));
-    s.push_str("\n    The meaning of a body is `Passlogik.Rumpf`, written by hand and read by a\n");
+    s.push_str("\n    The meaning of a body is `Gabbro.Body`, written by hand and read by a\n");
     s.push_str("    person. What stands here is a DATUM of it -- this file defines nothing.\n\n");
     s.push_str("    ASSUMED, and visible because it is written down: two different carrier\n");
     s.push_str("    names are two different objects. That is the alias statement, and the\n");
     s.push_str("    alias passes carry it -- no line of this file does.\n-/\n\n");
-    s.push_str("import Passlogik.Rumpf\n\n");
+    s.push_str("import Gabbro.Body\n\n");
     // **`autoImplicit` off, and it is a GUARD, not tidiness.** With it on, a name Lean does
     // not know becomes an implicitly bound variable of unknown type -- measured on the very
-    // first run of this emitter: a hypothesis `istZahl (l.lokal "p")` whose predicate was
+    // first run of this emitter: a hypothesis `istZahl (l.locals "p")` whose predicate was
     // not in scope elaborated to a BINDER instead of failing. *A misspelt hypothesis that
     // silently turns into an unconstrained variable is a theorem about nothing, and it
     // reads exactly like a proved one.*
-    s.push_str("set_option autoImplicit false\n\nopen Passlogik.Rumpf\n\n");
-    s.push_str(&format!("namespace GabbroPflicht.{name}\n\n"));
+    s.push_str("set_option autoImplicit false\n\nopen Gabbro.Body\n\n");
+    s.push_str(&format!("namespace GabbroDuty.{name}\n\n"));
 
     s.push_str("/-! ## What is NOT here, and why -/\n\n");
     if refused == 0 {
@@ -903,50 +903,50 @@ pub fn modul(baum: &Programm, datei: &str) -> String {
             p.funktion,
             p.gegenstand
         ));
-        s.push_str(&format!("def rumpf_{} : List Anweisung :=\n  {}\n\n", g.name, g.rumpf));
-        s.push_str(&format!("def nach_{} : Ausdruck :=\n  {}\n\n", g.name, g.schluss));
-        s.push_str(&format!("theorem {} (l : Lage)\n", g.name));
-        for (label, term, herkunft) in &g.hypothesen {
-            s.push_str(&format!("    -- {herkunft}\n"));
+        s.push_str(&format!("def body_{} : List Stmt :=\n  {}\n\n", g.name, g.body));
+        s.push_str(&format!("def post_{} : Expr :=\n  {}\n\n", g.name, g.conclusion));
+        s.push_str(&format!("theorem {} (s : State)\n", g.name));
+        for (label, term, origin) in &g.hypotheses {
+            s.push_str(&format!("    -- {origin}\n"));
             s.push_str(&format!("    ({label} : {term})\n"));
         }
         s.push_str(&format!(
-            "    : \\<exists> l', endLage (fuehre rumpf_{} l) = some l'\n",
+            "    : \\<exists> s', finalState (exec body_{} s) = some s'\n",
             g.name
         ));
         s.push_str(&format!(
-            "        \\<and> werte l' nach_{} = some (.b true) := by\n",
+            "        \\<and> eval s' post_{} = some (.bool true) := by\n",
             g.name
         ));
-        for z in &g.zerlegung {
+        for z in &g.opening {
             s.push_str(z);
             s.push('\n');
         }
-        let mut menge = vec![
-            format!("rumpf_{}", g.name),
-            format!("nach_{}", g.name),
-            "fuehre".into(),
-            "schritt".into(),
-            "werte".into(),
-            "unwert".into(),
-            "binwert".into(),
-            "endLage".into(),
-            "setze".into(),
-            "binde".into(),
+        let mut set = vec![
+            format!("body_{}", g.name),
+            format!("post_{}", g.name),
+            "exec".into(),
+            "step".into(),
+            "eval".into(),
+            "unop".into(),
+            "binop".into(),
+            "finalState".into(),
+            "store".into(),
+            "bindLocal".into(),
         ];
-        menge.extend(g.gleichungen.iter().cloned());
+        set.extend(g.equations.iter().cloned());
         // **Every `rcases` splits the goal, so the whole chain is joined with `<;>`.** A
         // line standing on its own would serve only the first half -- and the other half,
         // in a file nobody builds, looks exactly like a proved one.
-        let tat = format!("simp [{}]", menge.join(", "));
-        if g.verzweigung.is_empty() {
-            s.push_str(&format!("  {tat}\n\n"));
+        let tactic = format!("simp [{}]", set.join(", "));
+        if g.splits.is_empty() {
+            s.push_str(&format!("  {tactic}\n\n"));
         } else {
-            s.push_str(&format!("  {}\n", g.verzweigung.join(" <;>\n    ")));
-            s.push_str(&format!("    <;> {tat}\n\n"));
+            s.push_str(&format!("  {}\n", g.splits.join(" <;>\n    ")));
+            s.push_str(&format!("    <;> {tactic}\n\n"));
         }
     }
-    s.push_str(&format!("end GabbroPflicht.{name}\n"));
+    s.push_str(&format!("end GabbroDuty.{name}\n"));
     s.replace("\\<forall>", "∀")
         .replace("\\<exists>", "∃")
         .replace("\\<and>", "∧")

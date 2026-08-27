@@ -4078,7 +4078,7 @@ impl fn h() maintains ruhig effects { locks L, reads w } costs <= 40 ops
 
 fn lean_modul(q: &str) -> String {
     let (b, _a) = gabbro_syntax::lies("lean.gab", q);
-    gabbro_check::lean::modul(&b, "lean.gab")
+    gabbro_check::lean::module(&b, "lean.gab")
 }
 
 /// A unit in the shape the channel was built for: a `refines` at a straight-line body.
@@ -4142,15 +4142,15 @@ fn lean_verfeinerung_wird_ein_ziel() {
     let t = lean_modul(LEAN_VERFEINERUNG);
     let (_, goals, _) = p6_balance(&t);
     assert_eq!(goals, 1, "the `refines` is the one goal of this unit:\n{t}");
-    assert!(t.contains("def rumpf_duty_1"), "the body stands as a datum:\n{t}");
+    assert!(t.contains("def body_duty_1"), "the body stands as a datum:\n{t}");
     assert!(
-        t.contains("def nach_duty_1"),
+        t.contains("def post_duty_1"),
         "and the specification as the postcondition:\n{t}"
     );
     // The `spec fn` names `p`; the implementation names `p` too, and the emitter substitutes
     // positionally rather than by luck.
     assert!(
-        t.contains(r#".platz "B" (.name "p") "belegt""#),
+        t.contains(r#".place "B" (.name "p") "belegt""#),
         "the place carries carrier, index and field:\n{t}"
     );
 }
@@ -4161,11 +4161,11 @@ fn lean_verfeinerung_wird_ein_ziel() {
 fn lean_ziel_ist_die_starke_form() {
     let t = lean_modul(LEAN_VERFEINERUNG);
     assert!(
-        t.contains("∃ l', endLage"),
+        t.contains("∃ s', finalState"),
         "the body must be shown to REACH an end state:\n{t}"
     );
     assert!(
-        !t.contains("∀ l', endLage"),
+        !t.contains("∀ s', finalState"),
         "and not merely to satisfy the postcondition IF it reaches one:\n{t}"
     );
 }
@@ -4188,11 +4188,11 @@ fn lean_autoimplicit_bleibt_aus() {
 fn lean_feldform_kommt_aus_der_deklaration() {
     let t = lean_modul(LEAN_VERFEINERUNG);
     assert!(
-        t.contains(r#"istWahrheit (l.welt (.slot "B" k "belegt"))"#),
+        t.contains(r#"isBool (s.world (.slot "B" k "belegt"))"#),
         "a `bool` field carries the truth shape:\n{t}"
     );
     assert!(
-        t.contains(r#"istZahl (l.welt (.slot "B" k "wert"))"#),
+        t.contains(r#"isInt (s.world (.slot "B" k "wert"))"#),
         "and an integer field the number shape:\n{t}"
     );
 }
@@ -4234,11 +4234,11 @@ impl fn raeume(p : index into B)
 ";
     let t = lean_modul(q);
     assert!(
-        t.contains(".bin .und"),
+        t.contains(".bin .and"),
         "the conjunction of the postcondition survives translation:\n{t}"
     );
     assert!(
-        !t.contains(".bin .oder"),
+        !t.contains(".bin .or"),
         "and does not quietly become a disjunction:\n{t}"
     );
 }

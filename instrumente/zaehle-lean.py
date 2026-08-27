@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
-"""**Der RUMPFKANAL -- wie viele der gezaehlten Pflichten kann ein Beweiser ueber dem RUMPF lesen?**
+"""**The BODY CHANNEL -- how many of the counted obligations can a prover read over a BODY?**
 
-`gabbro pflichten --isabelle` schreibt das Register als Isabelle-Theorie und sagt siebzehn
-Pflichten mit `body-effect` ab: *„redet ueber die Welt NACH einem Rumpf, und es gibt keine
-Semantik eines Gabbro-Rumpfs."* `gabbro pflichten --lean` schreibt dasselbe Register gegen
-`Passlogik.Rumpf` -- die Bedeutung, die dort fehlte.
+`gabbro pflichten --isabelle` writes the register as an Isabelle theory and refuses seventeen
+obligations with one word: *"speaks about the world AFTER a body ran, and there is no
+semantics of a Gabbro body."* `gabbro pflichten --lean` writes the same register against
+`Gabbro.Body` -- the meaning that was missing there.
 
-**Dieses Werkzeug zaehlt beide Spalten ueber dem Korpus.** Und die zweite ist die, auf die es
-ankommt: ein Erzeuger, der neunundfuenfzig Pflichten verschluckt und drei ausgibt, sieht in
-der ersten Spalte genauso aus wie einer, der neunundfuenfzig ABSAGT und drei ausgibt -- *und
-nur der zweite hat etwas gemessen.* Der Lauf FAELLT deshalb, wenn `Ziele + Absagen` nicht auf
-die Gesamtzahl kommt, und er faellt noch einmal, wenn die Gruende nicht auf die Absagen kommen.
+**The model lives in `programmlogik/` and not in `passlogik/`.** The latter formalises the
+CHECKER; what is counted here is a statement about a PROGRAM.
 
-    ./instrumente/zaehle-lean.py                 ueber `beispiele/` und `messung/`
-    ./instrumente/zaehle-lean.py --je-datei      mit der Tafel, Datei fuer Datei
+**This tool adds up both columns over the corpus.** And the second is the one that matters: an
+emitter that swallows fifty-eight obligations and emits four looks, in the first column,
+exactly like one that REFUSES fifty-eight and emits four -- *and only the second has measured
+anything.* Hence this run FAILS when `goals + refused` does not come to the total, and it
+fails again when the reasons do not add up to the refusals.
 
-Das Binaerprogramm wird auf `ki-pc-fisch-101` gebaut (CLAUDE.md); dieses Werkzeug ruft ein
-vorhandenes `target/debug/gabbro` und baut nicht.
+    ./instrumente/zaehle-lean.py                 over `beispiele/` and `messung/`
+    ./instrumente/zaehle-lean.py --je-datei      with the table, file by file
+
+The binary is built on `ki-pc-fisch-101` (CLAUDE.md); this tool only calls an existing
+`target/debug/gabbro` and builds nothing.
 """
 import collections
 import glob
@@ -36,15 +39,15 @@ FRIST = 120
 # reason the emitter knows and this tool does not shows up below as `UNBEKANNT` instead of
 # quietly landing in no column at all.
 GRUENDE = [
-    ("foreign-body", "ein `ensures` an einem fremden Rumpf -- eine ANNAHME, kein Ziel"),
-    ("table-invariant", "`maintains` nennt eine Tabelleninvariante: quantifiziert ueber jeden Slot"),
-    ("call-site", "eine Vorbedingung am Rufort -- die traegt der Isabelle-Kanal"),
-    ("device-promise", "eine Zusage an Hardware, die Gabbro nicht sieht"),
-    ("statement-outside-core", "eine Anweisungsart ausserhalb des sequentiellen Kerns"),
-    ("no-term", "eine Form, fuer die dieser Kanal keinen Lean-Term hat"),
-    ("carrier-not-a-table", "der Traeger eines Ortes ist keine erklaerte `table`"),
-    ("no-shape-for-field", "die erklaerte Art eines Slotfeldes hat hier keine Form"),
-    ("spec-not-an-expression", "die genannte `spec fn` ist kein blosser Ausdrucksrumpf"),
+    ("foreign-body", "an `ensures` at a foreign body -- an ASSUMPTION, not a goal"),
+    ("table-invariant", "`maintains` names a table invariant: quantified over every slot"),
+    ("call-site", "a precondition at a call site -- the Isabelle channel carries those"),
+    ("device-promise", "a promise at hardware Gabbro does not see"),
+    ("statement-outside-core", "a statement kind outside the sequential core"),
+    ("no-term", "a form this channel has no Lean term for"),
+    ("carrier-not-a-table", "the carrier of a place is not a declared `table`"),
+    ("no-shape-for-field", "the declared type of a slot field has no shape here"),
+    ("spec-not-an-expression", "the named `spec fn` is not a plain expression body"),
 ]
 
 KOPF = re.compile(r"@duty 1  (\S+)  total (\d+)  goals (\d+)  refused (\d+)")
@@ -52,16 +55,16 @@ ZEILE = re.compile(r"^  (\S+) \((\d+)\): ")
 
 
 def lies_kopf(text):
-    """`(gesamt, ziele, abgesagt)` aus dem Kopf, oder `None`, wenn keiner dasteht."""
+    """`(total, goals, refused)` off the header, or `None` when there is none."""
     m = KOPF.search(text)
     return (int(m.group(2)), int(m.group(3)), int(m.group(4))) if m else None
 
 
 def sprechprobe():
-    """**In beide Richtungen: eine luegende Bilanz muss fallen, eine ehrliche nicht.**
+    """**In both directions: a lying balance must fall, an honest one must not.**
 
-    Das ganze Urteil dieses Werkzeugs haengt an einer Rechenprobe, und *eine Probe, die
-    niemand hat fallen sehen, ist eine Verzierung* (R11).
+    The whole verdict of this tool rests on one arithmetic check, and *a check nobody
+    has seen fail is a decoration* (R11).
     """
     gut = "        @duty 1  x.gab  total 4  goals 1  refused 3\n"
     gift = "        @duty 1  x.gab  total 4  goals 1  refused 1\n"
@@ -70,20 +73,20 @@ def sprechprobe():
     ok_gut = a is not None and a[1] + a[2] == a[0]
     ok_gift = b is not None and b[1] + b[2] != b[0]
     ok_stumm = c is None
-    print("== Sprechprobe ==")
-    print("  ehrliche Bilanz geht durch:  %s" % ("ja" if ok_gut else "NEIN"))
-    print("  luegende Bilanz faellt:      %s" % ("ja" if ok_gift else "NEIN"))
-    print("  fehlender Kopf faellt:       %s" % ("ja" if ok_stumm else "NEIN"))
+    print("== Speech test ==")
+    print("  an honest balance passes:  %s" % ("yes" if ok_gut else "NO"))
+    print("  a lying balance falls:     %s" % ("yes" if ok_gift else "NO"))
+    print("  a missing header falls:    %s" % ("yes" if ok_stumm else "NO"))
     return ok_gut and ok_gift and ok_stumm
 
 
 def main() -> int:
     je_datei = "--je-datei" in sys.argv
     if not sprechprobe():
-        print("== RUMPFKANAL: der Waechter misst nicht ==")
+        print("== BODY CHANNEL: this guardian measures nothing ==")
         return 2
     if not GABBRO.exists():
-        print(f"ABBRUCH: {GABBRO} fehlt -- gebaut wird auf ki-pc-fisch-101 (CLAUDE.md).")
+        print(f"ABORT: {GABBRO} is missing -- it is built on ki-pc-fisch-101 (CLAUDE.md).")
         return 1
     dateien = sorted(glob.glob(str(W / "beispiele" / "*.gab"))) + sorted(
         glob.glob(str(W / "messung" / "*" / "*.gab"))
@@ -103,7 +106,7 @@ def main() -> int:
                 timeout=FRIST,
             )
         except subprocess.TimeoutExpired:
-            print(f"ABBRUCH: {rel} -- Frist {FRIST} s ueberschritten. Ein Haenger ist kein Befund.")
+            print(f"ABORT: {rel} -- deadline {FRIST} s exceeded. A hang is not a finding.")
             return 1
         # **A unit with errors carries no register**, and that is the same rule
         # `gabbro pflichten` follows -- not a skipped file but one without an answer yet.
@@ -112,11 +115,11 @@ def main() -> int:
             continue
         kopf = lies_kopf(lauf.stdout)
         if kopf is None:
-            print(f"ABBRUCH: {rel} -- kein `@duty`-Kopf. Der Erzeuger schweigt ueber sich selbst.")
+            print(f"ABORT: {rel} -- no `@duty` header. The emitter is silent about itself.")
             return 1
         g, z, a = kopf
         if z + a != g:
-            print(f"ABBRUCH: {rel} -- {z} + {a} != {g}. Die Bilanz des Erzeugers geht nicht auf.")
+            print(f"ABORT: {rel} -- {z} + {a} != {g}. The balance of the emitter does not add up.")
             return 1
         gesamt += g
         ziele += z
@@ -128,7 +131,7 @@ def main() -> int:
                 hier[m.group(1)] += int(m.group(2))
         summe = sum(hier.values())
         if summe != a:
-            print(f"ABBRUCH: {rel} -- die Gruende zaehlen {summe}, abgesagt sind {a}.")
+            print(f"ABORT: {rel} -- the reasons count {summe}, refused are {a}.")
             return 1
         je_grund.update(hier)
         if z or a:
@@ -137,29 +140,29 @@ def main() -> int:
     bekannt = {t for t, _ in GRUENDE}
     for t in je_grund:
         if t not in bekannt:
-            print(f"ABBRUCH: UNBEKANNTER Absagegrund `{t}` -- dieses Werkzeug ist veraltet.")
+            print(f"ABORT: UNKNOWN refusal reason `{t}` -- this tool is out of date.")
             return 1
 
     if je_datei:
         print()
-        print("-- je Einheit --")
-        print(f"   {'Einheit':<42} {'ges':>4} {'Ziel':>5} {'abges':>6}")
+        print("-- per unit --")
+        print(f"   {'unit':<42} {'all':>4} {'goal':>5} {'refus':>6}")
         for rel, g, z, a in tafel:
             print(f"   {rel:<42} {g:>4} {z:>5} {a:>6}")
 
     print()
-    print("-- Der Bestand, wie der RUMPFKANAL ihn sieht --")
+    print("-- The register, as the BODY CHANNEL sees it --")
     print()
     for tag, satz in GRUENDE:
         print(f"   {tag:<24}{je_grund[tag]:>4}   {satz}")
     print()
     print(
-        f"== RUMPFKANAL: {gesamt} Pflichten, {ziele} Ziele, {abgesagt} abgesagt "
-        f"({ohne_register} Einheiten mit Fehlern, ohne Register) =="
+        f"== BODY CHANNEL: {gesamt} obligations, {ziele} goals, {abgesagt} refused "
+        f"({ohne_register} units with errors, no register) =="
     )
-    print("   Und was das NICHT heisst: ein Ziel ist keine bewiesene Pflicht. Es heisst,")
-    print("   dass die Pflicht GESCHLOSSEN dasteht. Ob sie durchgeht, sagt `lean`, und der")
-    print("   Weg dorthin ist `./instrumente/pruefe-lean-beweis.sh`.")
+    print("   And what that does NOT mean: a goal is not a proved obligation. It means")
+    print("   the obligation stands CLOSED. Whether it goes through is what `lean` says,")
+    print("   and the way there is `./instrumente/pruefe-lean-beweis.sh`.")
     return 0
 
 

@@ -19,7 +19,6 @@
   | `Terminierung.lean`| M4 -- die Schleifenformen und ihre Masse        |
   | `Linear.lean`      | M2 -- genau einmal je Pfad                      |
   | `Phasen.lean`      | `O001`-`O006` -- `advances` laeuft vorwaerts    |
-  | `Rumpf.lean`       | der ANWEISUNGSABSTIEG -- was ein Rumpf BEDEUTET |
 -/
 import Passlogik.Bereich
 import Passlogik.Wirkung
@@ -28,4 +27,3 @@ import Passlogik.Rang
 import Passlogik.Terminierung
 import Passlogik.Linear
 import Passlogik.Phasen
-import Passlogik.Rumpf

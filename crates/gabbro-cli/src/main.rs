@@ -225,7 +225,7 @@ fn main() -> std::process::ExitCode {
                 if isabelle {
                     print!("{}", gabbro_check::refinement::theory(&baum, datei));
                 } else if lean {
-                    print!("{}", gabbro_check::lean::modul(&baum, datei));
+                    print!("{}", gabbro_check::lean::module(&baum, datei));
                 } else {
                     print!("{}", gabbro_check::pflichten::zeige(&baum, datei));
                 }

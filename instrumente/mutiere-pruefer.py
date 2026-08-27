@@ -2795,49 +2795,50 @@ MUTATIONEN = [
     Mutation(
         "lean-goal-becomes-weak",
         "lean.rs",
-        '            "    : \\\\<exists> l\', endLage (fuehre rumpf_{} l) = some l\'\\n",',
-        '            "    : \\\\<forall> l\', endLage (fuehre rumpf_{} l) = some l\'\\n",',
-        "Der Rumpfkanal -- das Ziel wird die SCHWACHE Form. `fuer alle l', endet er in l', "
-        "dann gilt P` ist fuer einen Rumpf, der steckenbleibt, leer wahr, und ein leerer "
-        "Satz liest sich genau wie ein bewiesener",
+        '            "    : \\\\<exists> s\', finalState (exec body_{} s) = some s\'\\n",',
+        '            "    : \\\\<forall> s\', finalState (exec body_{} s) = some s\'\\n",',
+        "The body channel -- the goal becomes the WEAK form. `for all s\', if it ends in "
+        "s\', then P` is vacuously true for a body that gets stuck, and a vacuous theorem "
+        "reads exactly like a proved one",
         flaeche="annotation",
     ),
     Mutation(
         "lean-autoimplicit-back-on",
         "lean.rs",
-        's.push_str("set_option autoImplicit false\\n\\nopen Passlogik.Rumpf\\n\\n");',
-        's.push_str("open Passlogik.Rumpf\\n\\n");',
-        "Der Rumpfkanal -- `autoImplicit` bleibt an. Eine Voraussetzung, deren Praedikat "
-        "Lean nicht kennt, wird dann eine gebundene Variable statt ein Fehler; der Satz "
-        "steht ueber nichts und sieht bewiesen aus",
+        's.push_str("set_option autoImplicit false\\n\\nopen Gabbro.Body\\n\\n");',
+        's.push_str("open Gabbro.Body\\n\\n");',
+        "The body channel -- `autoImplicit` stays on. A hypothesis whose predicate Lean does "
+        "not know then becomes a bound variable instead of an error; the theorem stands over "
+        "nothing and looks proved",
         flaeche="annotation",
     ),
     Mutation(
         "lean-call-silently-dropped",
         "lean.rs",
         "        StmtArt::LetSonst(_)\n        | StmtArt::Ruf(_)\n        | StmtArt::Schleife(_)",
-        "        StmtArt::Ruf(_) => Ok(\"(.rueckgabe none)\".into()),\n"
+        "        StmtArt::Ruf(_) => Ok(\"(.ret none)\".into()),\n"
         "        StmtArt::LetSonst(_)\n        | StmtArt::Schleife(_)",
-        "Der Rumpfkanal -- ein Ruf verschwindet still aus dem Datum, statt die Pflicht "
-        "abzusagen. Das Ziel steht dann ueber einem Rumpf, den niemand geschrieben hat",
+        "The body channel -- a call vanishes quietly from the datum instead of refusing the "
+        "obligation. The goal then stands over a body nobody wrote",
         flaeche="annotation",
     ),
     Mutation(
         "lean-and-becomes-or",
         "lean.rs",
-        '        PredArt::Und(a, b) => Ok(format!(\n            "(.bin .und {} {})",',
-        '        PredArt::Und(a, b) => Ok(format!(\n            "(.bin .oder {} {})",',
-        "Der Rumpfkanal -- die Nachbedingung `a && b` wird ein ODER. Beide Konjunkten "
-        "stehen weiter da, die Pflicht ist um die Haelfte schwaecher",
+        '        PredArt::Und(a, b) => Ok(format!(\n            "(.bin .and {} {})",',
+        '        PredArt::Und(a, b) => Ok(format!(\n            "(.bin .or {} {})",',
+        "The body channel -- the postcondition `a && b` becomes an OR. Both conjuncts are "
+        "still there, and the duty is half as strong",
         flaeche="annotation",
     ),
     Mutation(
         "lean-field-shape-guessed",
         "lean.rs",
-        "        Typ::Wahrheit => Some(Form::Wahrheit),",
-        "        Typ::Wahrheit => Some(Form::Zahl),",
-        "Der Rumpfkanal -- ein `bool`-Feld bekommt die Zahlform. Die Voraussetzung steht "
-        "dann ueber etwas anderem als der Deklaration, und genau dafuer ist das Tor da",
+        "        Typ::Wahrheit => Some(Shape::Bool),",
+        "        Typ::Wahrheit => Some(Shape::Int),",
+        "The body channel -- a `bool` field gets the number shape. The hypothesis then "
+        "stands over something other than the declaration, and that gate exists for exactly "
+        "this",
         flaeche="annotation",
     ),
     Mutation(
@@ -2845,8 +2846,8 @@ MUTATIONEN = [
         "lean.rs",
         "        entries.len()\n    ));\n    s.push_str(\"\\n    The meaning of a body",
         "        proved\n    ));\n    s.push_str(\"\\n    The meaning of a body",
-        "Der Rumpfkanal -- der Kopf meldet als Gesamtzahl die Zahl der Ziele. Die Bilanz "
-        "geht scheinbar auf, und das Modul sieht vollstaendig aus",
+        "The body channel -- the header reports the number of goals as the total. The "
+        "balance seems to add up, and the module looks complete",
         flaeche="annotation",
     ),
     Mutation(
