@@ -4063,3 +4063,198 @@ impl fn h() maintains ruhig effects { locks L, reads w } costs <= 40 ops
     );
     assert!(goals >= 1, "and at least one of them stands closed:\n{q}");
 }
+
+// ===========================================================================================
+// THE BODY CHANNEL -- `gabbro pflichten --lean`
+//
+// `refinement.rs` refuses every obligation about a body with one word: `body-effect`. The
+// Lean channel is the other half -- `passlogik/Passlogik/Rumpf.lean` says what a body MEANS,
+// and `lean.rs` writes a body as a datum of it.
+//
+// **Each probe below stands against one WEAKENING**, and each weakening has a mutation. *A
+// duty that disappears is noticed; one that gets weaker is not* -- so these probes read the
+// TEXT and not only the balance line: five of the weakenings leave the balance untouched.
+// ===========================================================================================
+
+fn lean_modul(q: &str) -> String {
+    let (b, _a) = gabbro_syntax::lies("lean.gab", q);
+    gabbro_check::lean::modul(&b, "lean.gab")
+}
+
+/// A unit in the shape the channel was built for: a `refines` at a straight-line body.
+const LEAN_VERFEINERUNG: &str = "module t {
+const N : u32 = 8;
+type Zahl = u32 in 0 .. 99;
+lock L protects { B } rank 0 held <= 10 ops;
+table B count N { slot { belegt : bool, wert : Zahl, } }
+spec fn frei(p : index into B) -> bool effects { pure } = !B.slots[p].belegt;
+impl fn gib_frei(p : index into B)
+    refines  frei
+    requires Held(L), B.slots[p].belegt
+    effects  { reads B.slots, writes B.slots, locks L }
+    costs    <= 8 ops
+{
+    B.slots[p].belegt = false;
+    B.slots[p].wert   = 0;
+}
+}
+";
+
+/// A body that CALLS. The call is outside the sequential core, and the whole obligation has
+/// to be refused -- **not the call silently dropped.**
+const LEAN_MIT_RUF: &str = "module t {
+const N : u32 = 8;
+lock L protects { B } rank 0 held <= 10 ops;
+table B count N { slot { belegt : bool, } }
+impl fn helfer(p : index into B)
+    requires Held(L)
+    effects  { writes B.slots, locks L }
+    costs    <= 4 ops
+{ B.slots[p].belegt = false; }
+impl fn ruft(p : index into B)
+    requires Held(L)
+    ensures  B.slots[p].belegt == false
+    effects  { writes B.slots, locks L }
+    costs    <= 9 ops
+{ helfer(p); }
+}
+";
+
+/// **The balance the emitter keeps about itself, and it must add up.** Same reading as the
+/// Isabelle channel keeps, so the two can be held against each other.
+#[test]
+fn lean_bilanz_geht_auf() {
+    for q in [LEAN_VERFEINERUNG, LEAN_MIT_RUF] {
+        let t = lean_modul(q);
+        let (total, goals, refused) = p6_balance(&t);
+        assert_eq!(
+            goals + refused,
+            total,
+            "goals + refused == total -- otherwise a duty got lost on the way:\n{t}"
+        );
+    }
+}
+
+/// **The head form goes through the channel and comes out as a THEOREM.** Both halves have
+/// to be there: the body as a datum, and the postcondition the `spec fn` gives.
+#[test]
+fn lean_verfeinerung_wird_ein_ziel() {
+    let t = lean_modul(LEAN_VERFEINERUNG);
+    let (_, goals, _) = p6_balance(&t);
+    assert_eq!(goals, 1, "the `refines` is the one goal of this unit:\n{t}");
+    assert!(t.contains("def rumpf_duty_1"), "the body stands as a datum:\n{t}");
+    assert!(
+        t.contains("def nach_duty_1"),
+        "and the specification as the postcondition:\n{t}"
+    );
+    // The `spec fn` names `p`; the implementation names `p` too, and the emitter substitutes
+    // positionally rather than by luck.
+    assert!(
+        t.contains(r#".platz "B" (.name "p") "belegt""#),
+        "the place carries carrier, index and field:\n{t}"
+    );
+}
+
+/// **The goal is the STRONG form.** `\forall l', end = some l' -> P l'` is vacuously true
+/// for a body that gets stuck, and a vacuous theorem reads exactly like a proved one.
+#[test]
+fn lean_ziel_ist_die_starke_form() {
+    let t = lean_modul(LEAN_VERFEINERUNG);
+    assert!(
+        t.contains("∃ l', endLage"),
+        "the body must be shown to REACH an end state:\n{t}"
+    );
+    assert!(
+        !t.contains("∀ l', endLage"),
+        "and not merely to satisfy the postcondition IF it reaches one:\n{t}"
+    );
+}
+
+/// **`autoImplicit` off, and it is a guard.** With it on, a predicate name Lean does not know
+/// becomes an implicitly bound variable -- measured on the first run of this emitter, where
+/// a hypothesis whose predicate was out of scope elaborated to a BINDER instead of failing.
+#[test]
+fn lean_autoimplicit_bleibt_aus() {
+    let t = lean_modul(LEAN_VERFEINERUNG);
+    assert!(
+        t.contains("set_option autoImplicit false"),
+        "a misspelt hypothesis must FAIL, not turn into a free variable:\n{t}"
+    );
+}
+
+/// **The field shape is read from the DECLARATION.** `belegt : bool` gives `istWahrheit`;
+/// guessing it from the use would make the goal easier, not harder.
+#[test]
+fn lean_feldform_kommt_aus_der_deklaration() {
+    let t = lean_modul(LEAN_VERFEINERUNG);
+    assert!(
+        t.contains(r#"istWahrheit (l.welt (.slot "B" k "belegt"))"#),
+        "a `bool` field carries the truth shape:\n{t}"
+    );
+    assert!(
+        t.contains(r#"istZahl (l.welt (.slot "B" k "wert"))"#),
+        "and an integer field the number shape:\n{t}"
+    );
+}
+
+/// **A statement outside the core is REFUSED, not dropped.** A call that vanished from the
+/// datum would leave a body that does less than the real one -- and the goal would then be
+/// about a program nobody wrote.
+#[test]
+fn lean_ruf_wird_abgesagt_nicht_verschluckt() {
+    let t = lean_modul(LEAN_MIT_RUF);
+    let (_, goals, refused) = p6_balance(&t);
+    assert_eq!(goals, 0, "a body with a call carries no goal here:\n{t}");
+    assert!(refused >= 1, "and the obligation is refused:\n{t}");
+    assert!(
+        t.contains("statement-outside-core"),
+        "BY NAME, so the price is visible:\n{t}"
+    );
+}
+
+/// **A conjunction stays a conjunction.** `ensures a, b` and `p && q` are the strongest form
+/// the postcondition has; an OR leaves both operands standing and halves the duty -- the
+/// weakening that a balance line cannot see.
+#[test]
+fn lean_und_bleibt_und() {
+    let q = "module t {
+const N : u32 = 8;
+lock L protects { B } rank 0 held <= 10 ops;
+table B count N { slot { belegt : bool, frisch : bool, } }
+impl fn raeume(p : index into B)
+    requires Held(L)
+    ensures  B.slots[p].belegt == false && B.slots[p].frisch == true
+    effects  { writes B.slots, locks L }
+    costs    <= 9 ops
+{
+    B.slots[p].belegt = false;
+    B.slots[p].frisch = true;
+}
+}
+";
+    let t = lean_modul(q);
+    assert!(
+        t.contains(".bin .und"),
+        "the conjunction of the postcondition survives translation:\n{t}"
+    );
+    assert!(
+        !t.contains(".bin .oder"),
+        "and does not quietly become a disjunction:\n{t}"
+    );
+}
+
+/// **Every refusal reason has a tag and a sentence, and `ALL` names all of them.** A reason
+/// missing from `ALL` would be counted by nobody -- the register would look smaller than it
+/// is, and smaller is the direction that flatters.
+#[test]
+fn lean_absagegruende_sind_vollzaehlig() {
+    use gabbro_check::lean::LeanReason;
+    let mut tags: Vec<&str> = LeanReason::ALL.iter().map(|r| r.tag()).collect();
+    let n = tags.len();
+    tags.sort_unstable();
+    tags.dedup();
+    assert_eq!(n, tags.len(), "two reasons share a tag: {tags:?}");
+    for r in LeanReason::ALL {
+        assert!(!r.tag().is_empty() && !r.sentence().is_empty(), "{r:?} is mute");
+    }
+}

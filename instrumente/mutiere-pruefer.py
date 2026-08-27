@@ -2787,6 +2787,68 @@ MUTATIONEN = [
         "vorher, jedes Ziel geht durch, und keine Zahl faellt",
         flaeche="annotation",
     ),
+    # ---------------------------------------------------------------------------------
+    # THE BODY CHANNEL (`lean.rs`) -- six weakenings, and FOUR of them leave the balance
+    # line untouched. That is why the probes read the emitted TEXT and not only the count:
+    # a duty that vanishes is noticed, one that gets weaker is not.
+    # ---------------------------------------------------------------------------------
+    Mutation(
+        "lean-goal-becomes-weak",
+        "lean.rs",
+        '            "    : \\\\<exists> l\', endLage (fuehre rumpf_{} l) = some l\'\\n",',
+        '            "    : \\\\<forall> l\', endLage (fuehre rumpf_{} l) = some l\'\\n",',
+        "Der Rumpfkanal -- das Ziel wird die SCHWACHE Form. `fuer alle l', endet er in l', "
+        "dann gilt P` ist fuer einen Rumpf, der steckenbleibt, leer wahr, und ein leerer "
+        "Satz liest sich genau wie ein bewiesener",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-autoimplicit-back-on",
+        "lean.rs",
+        's.push_str("set_option autoImplicit false\\n\\nopen Passlogik.Rumpf\\n\\n");',
+        's.push_str("open Passlogik.Rumpf\\n\\n");',
+        "Der Rumpfkanal -- `autoImplicit` bleibt an. Eine Voraussetzung, deren Praedikat "
+        "Lean nicht kennt, wird dann eine gebundene Variable statt ein Fehler; der Satz "
+        "steht ueber nichts und sieht bewiesen aus",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-call-silently-dropped",
+        "lean.rs",
+        "        StmtArt::LetSonst(_)\n        | StmtArt::Ruf(_)\n        | StmtArt::Schleife(_)",
+        "        StmtArt::Ruf(_) => Ok(\"(.rueckgabe none)\".into()),\n"
+        "        StmtArt::LetSonst(_)\n        | StmtArt::Schleife(_)",
+        "Der Rumpfkanal -- ein Ruf verschwindet still aus dem Datum, statt die Pflicht "
+        "abzusagen. Das Ziel steht dann ueber einem Rumpf, den niemand geschrieben hat",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-and-becomes-or",
+        "lean.rs",
+        '        PredArt::Und(a, b) => Ok(format!(\n            "(.bin .und {} {})",',
+        '        PredArt::Und(a, b) => Ok(format!(\n            "(.bin .oder {} {})",',
+        "Der Rumpfkanal -- die Nachbedingung `a && b` wird ein ODER. Beide Konjunkten "
+        "stehen weiter da, die Pflicht ist um die Haelfte schwaecher",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-field-shape-guessed",
+        "lean.rs",
+        "        Typ::Wahrheit => Some(Form::Wahrheit),",
+        "        Typ::Wahrheit => Some(Form::Zahl),",
+        "Der Rumpfkanal -- ein `bool`-Feld bekommt die Zahlform. Die Voraussetzung steht "
+        "dann ueber etwas anderem als der Deklaration, und genau dafuer ist das Tor da",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-balance-lies",
+        "lean.rs",
+        "        entries.len()\n    ));\n    s.push_str(\"\\n    The meaning of a body",
+        "        proved\n    ));\n    s.push_str(\"\\n    The meaning of a body",
+        "Der Rumpfkanal -- der Kopf meldet als Gesamtzahl die Zahl der Ziele. Die Bilanz "
+        "geht scheinbar auf, und das Modul sieht vollstaendig aus",
+        flaeche="annotation",
+    ),
     Mutation(
         "p6-balance-lies",
         "refinement.rs",

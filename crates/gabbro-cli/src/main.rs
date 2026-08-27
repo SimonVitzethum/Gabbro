@@ -189,7 +189,19 @@ fn main() -> std::process::ExitCode {
         // `pflichten::sammle` counts, and the theory header carries the sum.
         "pflichten" => {
             let isabelle = rest.iter().any(|a| a == "--isabelle");
-            let rest: Vec<&String> = rest.iter().filter(|a| a.as_str() != "--isabelle").collect();
+            // **`--lean` is the SAME register again, through the body channel.** Not a
+            // second subcommand and not a second register: `lean::verdicts` walks exactly
+            // the list `pflichten::sammle` counts, in the same order, and the two channels
+            // can therefore be held against each other obligation by obligation.
+            let lean = rest.iter().any(|a| a == "--lean");
+            let rest: Vec<&String> = rest
+                .iter()
+                .filter(|a| a.as_str() != "--isabelle" && a.as_str() != "--lean")
+                .collect();
+            if isabelle && lean {
+                eprintln!("gabbro pflichten: `--isabelle` and `--lean` name two provers -- pick one");
+                return std::process::ExitCode::from(2);
+            }
             if rest.is_empty() {
                 eprintln!("gabbro pflichten: no file named");
                 return std::process::ExitCode::from(2);
@@ -212,6 +224,8 @@ fn main() -> std::process::ExitCode {
                 }
                 if isabelle {
                     print!("{}", gabbro_check::refinement::theory(&baum, datei));
+                } else if lean {
+                    print!("{}", gabbro_check::lean::modul(&baum, datei));
                 } else {
                     print!("{}", gabbro_check::pflichten::zeige(&baum, datei));
                 }
@@ -411,7 +425,7 @@ fn hilfe() {
                                     `--tor` FALLS while a proved template has a premise
                                     no pass establishes (tooth 3)
   gabbro k-bedingung <file.gab>…    per carrier: are ALL write sites generated? (measurement 2)
-  gabbro pflichten [--isabelle] <file.gab>…
+  gabbro pflichten [--isabelle | --lean] <file.gab>…
                                     what a HUMAN still owes -- counted, not discharged.
                                     `--isabelle` writes the SAME register as an Isabelle
                                     theory: every obligation appears, as a goal or as a
