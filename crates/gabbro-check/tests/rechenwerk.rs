@@ -4246,6 +4246,44 @@ impl fn raeume(p : index into B)
     );
 }
 
+/// **A compound assignment takes its operator from the field's declared SHAPE.**
+///
+/// `x += e` is `x = x + e` -- `M104` says the result fits, and both forms have the same
+/// result. But `&=` on an INTEGER field is a bit operation, and those are refused for the
+/// same reason division is: the model would compute something Gabbro does not.
+#[test]
+fn lean_mischzuweisung_folgt_der_form() {
+    let mit = |op: &str, feld: &str| {
+        format!(
+            "module t {{
+const N : u32 = 8;
+type Kleines = u32 in 0 .. 99;
+table B count N {{ slot {{ zahl : Kleines, ja : bool, }} }}
+impl fn f(p : index into B)
+    effects  {{ reads B.slots, writes B.slots }}
+    costs    <= 8 ops
+{{ B.slots[p].{feld} {op} {}; }}
+}}
+",
+            if feld == "ja" { "true" } else { "1" }
+        )
+    };
+    let plus = lean_programm(&mit("+=", "zahl"));
+    assert!(
+        plus.contains("(.bin .add (.place \"B\" (.name \"p\") \"zahl\")"),
+        "`+=` on an integer field unfolds to `x + e`:\n{plus}"
+    );
+    let bitund = lean_programm(&mit("&=", "zahl"));
+    assert!(
+        bitund.contains("(compound-assignment)"),
+        "`&=` on an INTEGER field is a bit operation and is refused:\n{bitund}"
+    );
+    assert!(
+        !bitund.contains(".bin .and"),
+        "and it is not taken as a truth value:\n{bitund}"
+    );
+}
+
 /// **Every refusal reason has a tag and a sentence, and `ALL` names all of them.** A reason
 /// missing from `ALL` would be counted by nobody -- the register would look smaller than it
 /// is, and smaller is the direction that flatters.

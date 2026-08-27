@@ -764,6 +764,7 @@ fn judge(
     module: &str,
     tab: &HashMap<String, Vec<(String, Option<Shape>)>>,
     statics: &HashMap<String, String>,
+    callees: &HashMap<String, Vec<String>>,
     number: usize,
 ) -> LeanVerdict {
     let FnRumpf::Block(b) = &f.rumpf else {
@@ -774,8 +775,13 @@ fn judge(
         carrier: carriers_of(f, tab, statics),
         // **The obligation channel writes a GOAL, so it may not translate a call**: without
         // the callee's contract as a hypothesis the goal states something no proof closes.
+        //
+        // *And the gate is `allow_calls` ALONE.* It used to be doubled by an empty callee
+        // table, and a mutation that removed the flag then changed nothing -- two guards
+        // saying one thing, so neither carried. The real table travels here now; the flag is
+        // the only thing that refuses.
         allow_calls: false,
-        callees: &HashMap::new(),
+        callees,
         locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
         seen: Vec::new(),
         option_reads: Vec::new(),
@@ -855,6 +861,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
     let u = crate::umgebung::Umgebung::sammle(baum);
     let tab = tables(baum, &u);
     let statics = static_carriers(baum, &tab);
+    let callees = callee_params(baum);
     // The module a function is declared in travels with it: `typ_von_ausdruck_decl` is
     // module-aware, and asking it from the wrong module answers about the wrong type.
     let mut fns: HashMap<String, (String, FnDecl)> = HashMap::new();
@@ -888,7 +895,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                             .and_then(|s| s.parse::<usize>().ok())
                             .unwrap_or(0);
                         match f.ensures.get(k.wrapping_sub(1)) {
-                            Some(q) => judge(f, q, &u, module, &tab, &statics, n),
+                            Some(q) => judge(f, q, &u, module, &tab, &statics, &callees, n),
                             None => LeanVerdict::Refused(LeanReason::Expression),
                         }
                     }
@@ -896,7 +903,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                 },
                 crate::pflichten::Art::Verfeinerung => match fns.get(&p.funktion) {
                     Some((module, f)) => match specification(f, &fns) {
-                        Ok(q) => judge(f, &q, &u, module, &tab, &statics, n),
+                        Ok(q) => judge(f, &q, &u, module, &tab, &statics, &callees, n),
                         Err(r) => LeanVerdict::Refused(r),
                     },
                     None => LeanVerdict::Refused(LeanReason::SpecShape),
