@@ -47,8 +47,33 @@ pub enum LeanReason {
     CallSite,
     /// A promise at a device register -- hardware Gabbro does not see.
     DevicePromise,
-    /// A statement kind outside the sequential core this channel covers.
-    Statement,
+    /// A CALL. **The biggest single item of the register, and it is not an oversight**: a
+    /// call is to be taken compositionally over the callee's CONTRACT, never over its body.
+    /// Inlining the body would make the goal a statement about a program nobody wrote.
+    CallStatement,
+    /// A loop -- `traverse`, `retry`, `forever`. The measure is carried by the language
+    /// (`K008`/`K009`); what is missing is the INVARIANT, and Gabbro has no word for one at
+    /// a loop (`Traverse`/`Retry`/`Forever` have no such field, `Tabelle` does).
+    Loop,
+    /// `locks`, `publishes`, `awaits`, `exchange`, `observes`. **Here one state and one
+    /// transition stop carrying** -- it would take a memory model with visibility.
+    Concurrent,
+    /// `let … else` -- the one error propagation, two exits out of a call. It waits on the
+    /// call gate and on nothing else.
+    ErrorPropagation,
+    /// `narrow … to … else` -- and the range lattice underneath is already proved
+    /// (`Passlogik.Bereich`, 46 theorems). This one is close.
+    Narrowing,
+    /// `leave`, `next`, `breaking` -- a non-local exit out of a named loop. Meaningless
+    /// without the loop gate.
+    NonLocalExit,
+    /// `+=` and its kin. It desugars to `x = x + e` -- **but the two are not the same
+    /// statement in Gabbro's overflow accounting, and this channel does not get to decide
+    /// that.**
+    CompoundAssign,
+    /// A `match` over something other than an `option`. A declared sum type would need one
+    /// value constructor per variant.
+    MatchNotOption,
     /// An expression or predicate form with no Lean term here.
     Expression,
     /// A place whose carrier cannot be resolved to a declared `table`. **Without the
@@ -75,7 +100,14 @@ impl LeanReason {
             LeanReason::Invariant => "table-invariant",
             LeanReason::CallSite => "call-site",
             LeanReason::DevicePromise => "device-promise",
-            LeanReason::Statement => "statement-outside-core",
+            LeanReason::CallStatement => "call-not-compositional",
+            LeanReason::Loop => "loop",
+            LeanReason::Concurrent => "concurrent-statement",
+            LeanReason::ErrorPropagation => "let-else",
+            LeanReason::Narrowing => "narrow",
+            LeanReason::NonLocalExit => "non-local-exit",
+            LeanReason::CompoundAssign => "compound-assignment",
+            LeanReason::MatchNotOption => "match-not-option",
             LeanReason::Expression => "no-term",
             LeanReason::Carrier => "carrier-not-a-table",
             LeanReason::FieldShape => "no-shape-for-field",
@@ -94,9 +126,18 @@ impl LeanReason {
                 "a precondition at a call site -- the Isabelle channel carries these"
             }
             LeanReason::DevicePromise => "a promise at hardware Gabbro does not see",
-            LeanReason::Statement => {
-                "the body uses a statement kind outside the sequential core"
+            LeanReason::CallStatement => {
+                "a call -- compositional over the CONTRACT, and that gate is not built"
             }
+            LeanReason::Loop => "a loop -- the measure is carried, the INVARIANT has no word",
+            LeanReason::Concurrent => {
+                "a concurrent statement -- one state and one transition stop carrying here"
+            }
+            LeanReason::ErrorPropagation => "`let … else` -- two exits out of a call",
+            LeanReason::Narrowing => "`narrow` -- the range lattice under it is proved",
+            LeanReason::NonLocalExit => "a non-local exit out of a named loop",
+            LeanReason::CompoundAssign => "`+=` and its kin -- a different overflow accounting",
+            LeanReason::MatchNotOption => "a `match` over something other than an `option`",
             LeanReason::Expression => "a form this channel has no Lean term for",
             LeanReason::Carrier => {
                 "the carrier of a place is not a declared `table`, so no field shape is known"
@@ -108,12 +149,19 @@ impl LeanReason {
         }
     }
     /// **All of them, so a report cannot omit one by forgetting to ask.**
-    pub const ALL: [LeanReason; 9] = [
+    pub const ALL: [LeanReason; 16] = [
         LeanReason::ForeignBody,
         LeanReason::Invariant,
         LeanReason::CallSite,
         LeanReason::DevicePromise,
-        LeanReason::Statement,
+        LeanReason::CallStatement,
+        LeanReason::Loop,
+        LeanReason::Concurrent,
+        LeanReason::ErrorPropagation,
+        LeanReason::Narrowing,
+        LeanReason::NonLocalExit,
+        LeanReason::CompoundAssign,
+        LeanReason::MatchNotOption,
         LeanReason::Expression,
         LeanReason::Carrier,
         LeanReason::FieldShape,
@@ -380,6 +428,9 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
         // obligation in today's corpus asks for one.
         ExprArt::Ruf(r) => match r.path().and_then(|p| p.teile.last()).map(|i| &i.text) {
             Some(n) if n == "None" && r.argumente.is_empty() => Ok("(.lit .absent)".into()),
+            Some(n) if n == "Some" && r.argumente.len() == 1 => {
+                Ok(format!("(.someOf {})", expr_term(&r.argumente[0], c)?))
+            }
             _ => Err(LeanReason::Expression),
         },
         ExprArt::Gleitkomma { .. }
@@ -442,10 +493,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
         }
         StmtArt::Zuweisung(z) => {
             if z.op != ZuwOp::Setzt {
-                // `+=` is `x = x + e` and would translate -- but the two are not the same
-                // statement in Gabbro's overflow accounting, and this channel does not get
-                // to decide that. Refused by name.
-                return Err(LeanReason::Statement);
+                return Err(LeanReason::CompoundAssign);
             }
             let w = expr_term(&z.wert, c)?;
             if z.ziel.suffixe.is_empty() {
@@ -505,14 +553,14 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                         onp = Some((b.text.clone(), blk));
                     }
                     ("None", None) => ona = Some(block_term(&z.rumpf, c)?),
-                    _ => return Err(LeanReason::Statement),
+                    _ => return Err(LeanReason::MatchNotOption),
                 }
             }
             match (onp, ona) {
                 (Some((b, present)), Some(absent)) => {
                     Ok(format!("(.onOption {g} {} {present} {absent})", quoted(&b)))
                 }
-                _ => Err(LeanReason::Statement),
+                _ => Err(LeanReason::MatchNotOption),
             }
         }
         StmtArt::Return(None) => Ok("(.ret none)".into()),
@@ -520,18 +568,18 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
         // Everything else is refused BY NAME. `Ruf` and `LetSonst` belong to the sequential
         // core and are the next two to build: a call is compositional over the CONTRACT of
         // the callee, never over its body, and that gate is not built.
-        StmtArt::LetSonst(_)
-        | StmtArt::Ruf(_)
-        | StmtArt::Schleife(_)
-        | StmtArt::Bricht(_)
-        | StmtArt::Narrow(_)
-        | StmtArt::Sperrt(_)
+        StmtArt::Ruf(_) => Err(LeanReason::CallStatement),
+        StmtArt::LetSonst(_) => Err(LeanReason::ErrorPropagation),
+        StmtArt::Schleife(_) => Err(LeanReason::Loop),
+        StmtArt::Narrow(_) => Err(LeanReason::Narrowing),
+        StmtArt::Bricht(_) | StmtArt::Leave(_) | StmtArt::Next(_) => {
+            Err(LeanReason::NonLocalExit)
+        }
+        StmtArt::Sperrt(_)
         | StmtArt::Observiert(_)
-        | StmtArt::Leave(_)
-        | StmtArt::Next(_)
         | StmtArt::Publish(_)
         | StmtArt::AwaitLoad(_)
-        | StmtArt::Exchange(_) => Err(LeanReason::Statement),
+        | StmtArt::Exchange(_) => Err(LeanReason::Concurrent),
     }
 }
 
@@ -565,26 +613,58 @@ fn tables(
 fn carriers_of(
     f: &FnDecl,
     tab: &HashMap<String, Vec<(String, Option<Shape>)>>,
+    statics: &HashMap<String, String>,
 ) -> HashMap<String, String> {
     let mut out = HashMap::new();
     // A table name stands for itself.
     for name in tab.keys() {
         out.insert(name.clone(), name.clone());
     }
+    // A `static` that points at a table stands for it, in every function.
+    for (n, table) in statics {
+        out.insert(n.clone(), table.clone());
+    }
     // A parameter stands for the table its pointer type names.
     for p in &f.parameter {
-        let target = match &p.typ {
-            TypExpr::Zeiger(z) => &z.ziel,
-            t => t,
-        };
-        if let TypExpr::Pfad(pf) = target {
-            if let Some(last) = pf.teile.last() {
-                if tab.contains_key(&last.text) {
-                    out.insert(p.name.text.clone(), last.text.clone());
-                }
-            }
+        if let Some(table) = points_at_table(&p.typ, tab) {
+            out.insert(p.name.text.clone(), table);
         }
     }
+    out
+}
+
+/// Does this declared type point at a declared table? **Through a pointer or directly.**
+fn points_at_table(
+    typ: &TypExpr,
+    tab: &HashMap<String, Vec<(String, Option<Shape>)>>,
+) -> Option<String> {
+    let target = match typ {
+        TypExpr::Zeiger(z) => &z.ziel,
+        t => t,
+    };
+    let TypExpr::Pfad(pf) = target else { return None };
+    let last = pf.teile.last()?;
+    tab.contains_key(&last.text).then(|| last.text.clone())
+}
+
+/// **Every `static` that points at a table.** Read once per program, not per function.
+///
+/// *Measured, and the refusal had been naming the wrong thing:* `beispiele/38` writes
+/// `tz.slots[i].a` where `tz` is a `static ptr<normal, rw> Platz`. `carriers_of` looked only
+/// at parameters, so the place was refused as `carrier-not-a-table` -- and `Platz` is
+/// declared four lines above. **A static is not a parameter, and it is a carrier all the
+/// same.**
+fn static_carriers(
+    baum: &Programm,
+    tab: &HashMap<String, Vec<(String, Option<Shape>)>>,
+) -> HashMap<String, String> {
+    let mut out = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, _| {
+        let ItemArt::Statisch(st) = &item.art else { return };
+        if let Some(table) = points_at_table(&st.typ, tab) {
+            out.insert(st.name.text.clone(), table);
+        }
+    });
     out
 }
 
@@ -596,6 +676,7 @@ fn judge(
     u: &crate::umgebung::Umgebung,
     module: &str,
     tab: &HashMap<String, Vec<(String, Option<Shape>)>>,
+    statics: &HashMap<String, String>,
     number: usize,
 ) -> LeanVerdict {
     let FnRumpf::Block(b) = &f.rumpf else {
@@ -603,7 +684,7 @@ fn judge(
     };
     let mut c = Ctx {
         tables: tab,
-        carrier: carriers_of(f, tab),
+        carrier: carriers_of(f, tab, statics),
         locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
         seen: Vec::new(),
         option_reads: Vec::new(),
@@ -682,6 +763,7 @@ fn judge(
 pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)> {
     let u = crate::umgebung::Umgebung::sammle(baum);
     let tab = tables(baum, &u);
+    let statics = static_carriers(baum, &tab);
     // The module a function is declared in travels with it: `typ_von_ausdruck_decl` is
     // module-aware, and asking it from the wrong module answers about the wrong type.
     let mut fns: HashMap<String, (String, FnDecl)> = HashMap::new();
@@ -715,7 +797,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                             .and_then(|s| s.parse::<usize>().ok())
                             .unwrap_or(0);
                         match f.ensures.get(k.wrapping_sub(1)) {
-                            Some(q) => judge(f, q, &u, module, &tab, n),
+                            Some(q) => judge(f, q, &u, module, &tab, &statics, n),
                             None => LeanVerdict::Refused(LeanReason::Expression),
                         }
                     }
@@ -723,7 +805,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                 },
                 crate::pflichten::Art::Verfeinerung => match fns.get(&p.funktion) {
                     Some((module, f)) => match specification(f, &fns) {
-                        Ok(q) => judge(f, &q, &u, module, &tab, n),
+                        Ok(q) => judge(f, &q, &u, module, &tab, &statics, n),
                         Err(r) => LeanVerdict::Refused(r),
                     },
                     None => LeanVerdict::Refused(LeanReason::SpecShape),
@@ -1024,6 +1106,7 @@ fn dictionary(tab: &HashMap<String, Vec<(String, Option<Shape>)>>) -> Vec<(Strin
 pub fn routines(baum: &Programm) -> Vec<Routine> {
     let u = crate::umgebung::Umgebung::sammle(baum);
     let tab = tables(baum, &u);
+    let statics = static_carriers(baum, &tab);
     let mut out = Vec::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
         let ItemArt::Funktion(f) = &item.art else { return };
@@ -1048,7 +1131,7 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
         };
         let mut c = Ctx {
             tables: &tab,
-            carrier: carriers_of(f, &tab),
+            carrier: carriers_of(f, &tab, &statics),
             locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
             seen: Vec::new(),
             option_reads: Vec::new(),

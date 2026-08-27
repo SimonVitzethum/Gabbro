@@ -4206,9 +4206,12 @@ fn lean_ruf_wird_abgesagt_nicht_verschluckt() {
     let (_, goals, refused) = p6_balance(&t);
     assert_eq!(goals, 0, "a body with a call carries no goal here:\n{t}");
     assert!(refused >= 1, "and the obligation is refused:\n{t}");
+    // **The reason names the CALL, not "a statement kind".** Eight reasons stand where one
+    // stood: the coarse one hid that a call, a loop and a `publishes` cost three different
+    // things, and a work order over a single bucket is not one.
     assert!(
-        t.contains("statement-outside-core"),
-        "BY NAME, so the price is visible:\n{t}"
+        t.contains("call-not-compositional"),
+        "BY NAME, and the name is the call:\n{t}"
     );
 }
 
@@ -4334,7 +4337,7 @@ fn lean_programm_bilanz_geht_auf() {
 fn lean_programm_sagt_ab_statt_zu_verschlucken() {
     let t = lean_programm(PROG);
     assert!(
-        t.contains("-- REFUSED  ruft  (statement-outside-core)"),
+        t.contains("-- REFUSED  ruft  (call-not-compositional)"),
         "the routine outside the fragment stands with its reason:\n{t}"
     );
     assert!(

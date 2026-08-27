@@ -148,6 +148,10 @@ inductive Expr where
   | global (name : String)
   | un (op : UnOp) (a : Expr)
   | bin (op : BinOp) (a b : Expr)
+  /-- `Some(e)` -- the one value CONSTRUCTOR the corpus writes. `None` needs none: it is a
+      literal. **A body that writes an option and could not say `Some` would have to be
+      refused whole**, and `27-freiliste` is exactly that shape. -/
+  | someOf (a : Expr)
   deriving Repr
 
 /-- **An evaluation may GET STUCK.** `none` means the value did not have the shape the
@@ -194,6 +198,10 @@ def eval (s : State) : Expr → Option Value
       match eval s a, eval s b with
       | some x, some y => binop op x y
       | _, _ => none
+  | .someOf a =>
+      match eval s a with
+      | some (.int n) => some (.present n)
+      | _ => none
 
 /-! ### 3.1 The WELL-FORMEDNESS of a place
 

@@ -2821,9 +2821,8 @@ MUTATIONEN = [
     Mutation(
         "lean-call-silently-dropped",
         "lean.rs",
-        "        StmtArt::LetSonst(_)\n        | StmtArt::Ruf(_)\n        | StmtArt::Schleife(_)",
-        "        StmtArt::Ruf(_) => Ok(\"(.ret none)\".into()),\n"
-        "        StmtArt::LetSonst(_)\n        | StmtArt::Schleife(_)",
+        "        StmtArt::Ruf(_) => Err(LeanReason::CallStatement),",
+        "        StmtArt::Ruf(_) => Ok(\"(.ret none)\".into()),",
         "The body channel -- a call vanishes quietly from the datum instead of refusing the "
         "obligation. The goal then stands over a body nobody wrote",
         flaeche="annotation",
