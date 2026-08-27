@@ -1,0 +1,27 @@
+-- Datei 2 -- die Ruempfe. Sie schreiben in eine Tabelle, die in Datei 1 steht.
+module betrieb {
+
+use lager::Faecher;
+use lager::Menge;
+use lager::HALLE;
+
+pub impl fn raeumen(f : index into Faecher)
+    requires Held(HALLE), Faecher.slots[f].belegt
+    effects  { reads Faecher.slots, writes Faecher.slots, locks HALLE }
+    costs    <= 12 ops
+{
+    Faecher.slots[f].belegt  = false;
+    Faecher.slots[f].menge   = 0;
+    Faecher.slots[f].sperrig = false;
+}
+
+pub impl fn einlagern(f : index into Faecher, m : Menge)
+    requires Held(HALLE)
+    effects  { reads Faecher.slots, writes Faecher.slots, locks HALLE }
+    costs    <= 12 ops
+{
+    Faecher.slots[f].belegt = true;
+    Faecher.slots[f].menge  = m;
+}
+
+}

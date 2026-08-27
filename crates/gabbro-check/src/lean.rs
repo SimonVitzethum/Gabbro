@@ -953,3 +953,271 @@ pub fn module(baum: &Programm, datei: &str) -> String {
         .replace("\\<langle>", "⟨")
         .replace("\\<rangle>", "⟩")
 }
+
+// ===========================================================================================
+// THE PROGRAM EXPORT -- a whole Gabbro program as a Lean 4 datum, so that a HAND-WRITTEN
+// specification can be held against it.
+//
+// **This is a different artefact from `module` above, and the difference is the direction.**
+// `gabbro pflichten --lean` takes the obligations Gabbro's own `spec fn`/`refines` pair
+// states and writes them as theorems. This one takes NO specification at all: it writes the
+// program -- bodies, contracts, the shape of every declared place -- and stops. *What is to
+// be proved about it is then said in Lean, by a person, in a file this emitter never sees.*
+//
+// ## Why the specification is not in Gabbro
+//
+// A `spec fn` is a Gabbro expression, so it has Gabbro's expressiveness: no quantifier, no
+// recursion, no induction. That is exactly the ceiling `maintains` runs into -- a table
+// invariant is quantified over every slot, and this channel refuses all six of them. **A
+// specification written in Lean has none of those limits.**
+//
+// And it costs no second register, which is the objection that would otherwise stand
+// (`W7`): the program is stated once, here; the specification is stated once, in the user's
+// file. *Nothing is said twice, and that is the whole difference from naming a Lean identifier
+// inside the Gabbro source.*
+//
+// ## The one hazard, and it gets a guard
+//
+// A hand-written specification names places by STRING -- `.slot "Konten" k "offen"`. A typo
+// there is a specification about a place that does not exist, and a theorem about a place
+// that does not exist is vacuous rather than false. **Hence the export carries the place
+// dictionary**, and `instrumente/pruefe-lean-programm.sh` holds every place a specification
+// mentions against it.
+// ===========================================================================================
+
+/// One routine of the program, as a datum -- or a named refusal.
+pub struct Routine {
+    pub name: String,
+    /// The body as a `Stmt` list term. `None` where the body is outside the fragment.
+    pub body: Option<String>,
+    pub refused: Option<LeanReason>,
+    /// `(parameter, shape)` -- the shape is what the declaration gives, `None` where this
+    /// channel has none.
+    pub params: Vec<(String, Option<Shape>)>,
+    /// The `requires` this channel can express, as `Expr` terms.
+    pub pre: Vec<String>,
+    /// The `requires` it cannot -- **dropped, not refused.**
+    ///
+    /// A precondition is a HYPOTHESIS. Dropping one can only make the theorem harder to
+    /// prove, never wrong -- the same direction `refinement.rs` argues for its caller
+    /// `requires`. *Refusing the whole routine over a `Held(L)` it cannot say would cost a
+    /// body for a clause that carries nothing here.* They are listed by name.
+    pub dropped: Vec<String>,
+}
+
+/// Every place the program declares, with the shape its declaration gives it.
+fn dictionary(tab: &HashMap<String, Vec<(String, Option<Shape>)>>) -> Vec<(String, String, Shape)> {
+    let mut out: Vec<(String, String, Shape)> = Vec::new();
+    let mut names: Vec<&String> = tab.keys().collect();
+    names.sort();
+    for t in names {
+        for (f, shape) in &tab[t] {
+            if let Some(shape) = shape {
+                out.push((t.clone(), f.clone(), *shape));
+            }
+        }
+    }
+    out
+}
+
+/// Every routine of the program, in declaration order.
+pub fn routines(baum: &Programm) -> Vec<Routine> {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let tab = tables(baum, &u);
+    let mut out = Vec::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        if f.klasse == Some(FnKlasse::Spec) {
+            return;
+        }
+        let params: Vec<(String, Option<Shape>)> = f
+            .parameter
+            .iter()
+            .map(|p| (p.name.text.clone(), shape_of(&p.typ, &u, module)))
+            .collect();
+        let FnRumpf::Block(b) = &f.rumpf else {
+            out.push(Routine {
+                name: f.name.text.clone(),
+                body: None,
+                refused: Some(LeanReason::ForeignBody),
+                params,
+                pre: Vec::new(),
+                dropped: Vec::new(),
+            });
+            return;
+        };
+        let mut c = Ctx {
+            tables: &tab,
+            carrier: carriers_of(f, &tab),
+            locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
+            seen: Vec::new(),
+            option_reads: Vec::new(),
+        };
+        let body = block_term(b, &mut c);
+        let mut pre = Vec::new();
+        let mut dropped = Vec::new();
+        for (i, q) in f.requires.iter().enumerate() {
+            match pred_term(q, &mut c) {
+                Ok(t) => pre.push(t),
+                Err(r) => dropped.push(format!("requires #{} ({})", i + 1, r.tag())),
+            }
+        }
+        match body {
+            Ok(t) => out.push(Routine {
+                name: f.name.text.clone(),
+                body: Some(t),
+                refused: None,
+                params,
+                pre,
+                dropped,
+            }),
+            Err(r) => out.push(Routine {
+                name: f.name.text.clone(),
+                body: None,
+                refused: Some(r),
+                params,
+                pre,
+                dropped,
+            }),
+        }
+    });
+    out
+}
+
+/// **The whole program, as a Lean 4 module.**
+pub fn program(baum: &Programm, quellen: &[String]) -> String {
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    let tab = tables(baum, &u);
+    let dict = dictionary(&tab);
+    let rs = routines(baum);
+    let carried = rs.iter().filter(|r| r.body.is_some()).count();
+    let refused = rs.len() - carried;
+
+    let mut s = String::new();
+    s.push_str("/-  Written by `gabbro lean`. Do not edit -- the source is the `.gab` files,\n");
+    s.push_str("    and a second register over the same thing is the very class this folder\n");
+    s.push_str("    is written against.\n\n");
+    s.push_str("    THIS FILE CARRIES NO SPECIFICATION. It carries the PROGRAM: every body\n");
+    s.push_str("    this channel can express, every precondition it can say, and the shape of\n");
+    s.push_str("    every declared place. What is to hold about it is said in Lean, by a\n");
+    s.push_str("    person, in a file this emitter never sees.\n\n");
+    s.push_str("    The line that has to add up:\n\n");
+    s.push_str(&format!(
+        "        @program 1  units {}  routines {}  bodies {carried}  refused {refused}  places {}\n",
+        quellen.len(),
+        rs.len(),
+        dict.len()
+    ));
+    s.push_str("\n    Sources:\n");
+    for q in quellen {
+        s.push_str(&format!("        {q}\n"));
+    }
+    s.push_str("\n    ASSUMED, and visible because it is written down: two different carrier\n");
+    s.push_str("    names are two different objects. That is the alias statement, and the\n");
+    s.push_str("    alias passes carry it -- no line of this file does.\n-/\n\n");
+    s.push_str("import Gabbro.Body\n\n");
+    s.push_str("set_option autoImplicit false\n\nopen Gabbro.Body\n\n");
+    s.push_str("namespace GabbroProgram\n\n");
+
+    // ---- the place dictionary -----------------------------------------------------------
+    s.push_str("/-! ## The declared places\n\n");
+    s.push_str("    **A specification names a place by STRING, and a typo in that string is a\n");
+    s.push_str("    specification about a place that does not exist** -- vacuous rather than\n");
+    s.push_str("    false, and vacuous reads like proved. This list is what a specification is\n");
+    s.push_str("    held against; `instrumente/pruefe-lean-programm.sh` does the holding.\n-/\n\n");
+    s.push_str("/-- `(carrier, field, shape)` for every declared slot field. -/\n");
+    s.push_str("def places : List (String \\<times> String \\<times> String) :=\n");
+    if dict.is_empty() {
+        s.push_str("  []\n\n");
+    } else {
+        s.push_str("  [ ");
+        let items: Vec<String> = dict
+            .iter()
+            .map(|(t, f, sh)| format!("({}, {}, {})", quoted(t), quoted(f), quoted(sh.predicate())))
+            .collect();
+        s.push_str(&items.join("\n  , "));
+        s.push_str("\n  ]\n\n");
+    }
+
+    // ---- the well-formed state ----------------------------------------------------------
+    s.push_str("/-- **The well-formed state** -- that a slot field carries a value of its\n");
+    s.push_str("    declared shape. It is a HYPOTHESIS and not a consequence (`Body.lean`, U2);\n");
+    s.push_str("    it stands here once for the whole program instead of once per theorem. -/\n");
+    s.push_str("def wellFormed (s : State) : Prop :=\n");
+    if dict.is_empty() {
+        s.push_str("  True\n\n");
+    } else {
+        let parts: Vec<String> = dict
+            .iter()
+            .map(|(t, f, sh)| {
+                format!(
+                    "(\\<forall> k, {} (s.world (.slot {} k {})))",
+                    sh.predicate(),
+                    quoted(t),
+                    quoted(f)
+                )
+            })
+            .collect();
+        s.push_str(&format!("  {}\n\n", parts.join("\n  \\<and> ")));
+    }
+
+    // ---- the routines -------------------------------------------------------------------
+    s.push_str("/-! ## The routines -/\n\n");
+    for r in &rs {
+        if let Some(reason) = r.refused {
+            s.push_str(&format!(
+                "-- REFUSED  {}  ({}): {}\n\n",
+                r.name,
+                reason.tag(),
+                reason.sentence()
+            ));
+            continue;
+        }
+        let Some(body) = &r.body else { continue };
+        s.push_str(&format!("/-- `{}` -- the body, statement by statement.", r.name));
+        if !r.dropped.is_empty() {
+            s.push_str(&format!(
+                "\n\n    DROPPED from the precondition (a hypothesis fewer makes the goal harder,\n    never the proof wrong): {}",
+                r.dropped.join(", ")
+            ));
+        }
+        s.push_str(" -/\n");
+        s.push_str(&format!("def {}_body : List Stmt :=\n  {}\n\n", r.name, body));
+        s.push_str(&format!(
+            "/-- `{}` -- what the caller grants: the declared parameter shapes and the\n    `requires` this channel can say. -/\n",
+            r.name
+        ));
+        s.push_str(&format!("def {}_pre (s : State) : Prop :=\n", r.name));
+        let mut parts: Vec<String> = r
+            .params
+            .iter()
+            .filter_map(|(n, sh)| {
+                sh.map(|sh| format!("{} (s.local' {})", sh.predicate(), quoted(n)))
+            })
+            .collect();
+        for t in &r.pre {
+            parts.push(format!("eval s {t} = some (.bool true)"));
+        }
+        if parts.is_empty() {
+            s.push_str("  True\n\n");
+        } else {
+            s.push_str(&format!("  {}\n\n", parts.join("\n  \\<and> ")));
+        }
+    }
+
+    s.push_str("/-! ## Proving something about this program\n\n");
+    s.push_str("    A specification is a Lean predicate over `State`; the obligation is that a\n");
+    s.push_str("    body establishes it. The tactic that unfolds the model is `gabbro_simp`,\n");
+    s.push_str("    and it lives in `Gabbro.Body` -- not here, so that a change to the model\n");
+    s.push_str("    reaches every proof through one place.\n\n");
+    s.push_str("        theorem meets_spec (s : State) (k : Int)\n");
+    s.push_str("            (wf : wellFormed s) (hk : s.local\' \"k\" = .int k)\n");
+    s.push_str("            : \\<exists> s\', finalState (exec f_body s) = some s\'\n");
+    s.push_str("                \\<and> mySpec k s\' := by\n");
+    s.push_str("          gabbro_simp [mySpec, hk]\n-/\n\n");
+    s.push_str("end GabbroProgram\n");
+    s.replace("\\<forall>", "∀")
+        .replace("\\<exists>", "∃")
+        .replace("\\<and>", "∧")
+        .replace("\\<times>", "×")
+}

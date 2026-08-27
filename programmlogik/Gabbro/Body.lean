@@ -332,3 +332,30 @@ theorem assign_leaves_others (c : String) (i e : Expr) (f : String) (s s' : Stat
   · exact absurd h (by simp)
 
 end Gabbro.Body
+
+/-! ## 6. The proof bundle
+
+    **`gabbro_simp` unfolds the model, and it stands OUTSIDE the namespace on purpose.**
+    A tactic declared inside `Gabbro.Body` is not in scope for a specification that merely
+    `open`s it -- measured: every use reported *"unknown tactic"*, and the goal then stood
+    open beside an error that looked like a typo. The names inside are fully qualified for
+    the same reason.
+
+    It lives here and not in the generated file so that a specification need not know the
+    model's internals, and so a change to the model reaches every proof through one place.
+    *A tactic copied into every generated module is one statement in as many places as there
+    are files.*
+-/
+
+open Lean.Parser.Tactic in
+macro "gabbro_simp" : tactic =>
+  `(tactic| simp [Gabbro.Body.exec, Gabbro.Body.step, Gabbro.Body.eval, Gabbro.Body.unop,
+                  Gabbro.Body.binop, Gabbro.Body.finalState, Gabbro.Body.finalValue,
+                  Gabbro.Body.store, Gabbro.Body.bindLocal])
+
+-- The same, with the caller's own facts: `gabbro_simp [hf, mySpec]`.
+open Lean.Parser.Tactic in
+macro "gabbro_simp" "[" ts:simpLemma,* "]" : tactic =>
+  `(tactic| simp [Gabbro.Body.exec, Gabbro.Body.step, Gabbro.Body.eval, Gabbro.Body.unop,
+                  Gabbro.Body.binop, Gabbro.Body.finalState, Gabbro.Body.finalValue,
+                  Gabbro.Body.store, Gabbro.Body.bindLocal, $ts,*])

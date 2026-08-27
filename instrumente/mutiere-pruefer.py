@@ -2805,8 +2805,14 @@ MUTATIONEN = [
     Mutation(
         "lean-autoimplicit-back-on",
         "lean.rs",
-        's.push_str("set_option autoImplicit false\\n\\nopen Gabbro.Body\\n\\n");',
-        's.push_str("open Gabbro.Body\\n\\n");',
+        # **The anchor carries the NEXT line too.** Since the program export was built, the
+        # same `push_str` stands in two places -- and `--anker` reported it AMBIGUOUS, which
+        # is the tool doing its job: an anchor that matches twice mutates whichever comes
+        # first, and the report then names the wrong artefact.
+        's.push_str("set_option autoImplicit false\\n\\nopen Gabbro.Body\\n\\n");\n'
+        '    s.push_str(&format!("namespace GabbroDuty.{name}\\n\\n"));',
+        's.push_str("open Gabbro.Body\\n\\n");\n'
+        '    s.push_str(&format!("namespace GabbroDuty.{name}\\n\\n"));',
         "The body channel -- `autoImplicit` stays on. A hypothesis whose predicate Lean does "
         "not know then becomes a bound variable instead of an error; the theorem stands over "
         "nothing and looks proved",
@@ -2848,6 +2854,54 @@ MUTATIONEN = [
         "        proved\n    ));\n    s.push_str(\"\\n    The meaning of a body",
         "The body channel -- the header reports the number of goals as the total. The "
         "balance seems to add up, and the module looks complete",
+        flaeche="annotation",
+    ),
+    # ---------------------------------------------------------------------------------
+    # THE PROGRAM EXPORT (`gabbro lean`) -- four weakenings. This artefact carries no
+    # specification, so what it can lose is the PROGRAM: a routine, a place, a dropped
+    # precondition, or the balance that would have shown the loss.
+    # ---------------------------------------------------------------------------------
+    Mutation(
+        "lean-program-loses-a-routine",
+        "lean.rs",
+        '                "-- REFUSED  {}  ({}): {}\\n\\n",',
+        '                "-- {}  {}  {}\\n\\n",',
+        "The program export -- a routine outside the fragment no longer says REFUSED. It is "
+        "still listed, but nothing marks it as absent, and a specification then stands over "
+        "a program that is not there",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-program-balance-lies",
+        "lean.rs",
+        '        "        @program 1  units {}  routines {}  bodies {carried}  refused {refused}  places {}\\n",',
+        '        "        @program 1  units {}  routines {}  bodies {carried}  refused 0  places {}\\n",',
+        "The program export -- the header reports no refusals. The balance seems to add up, "
+        "and the export looks complete",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-program-drops-in-silence",
+        "lean.rs",
+        '                "\\n\\n    DROPPED from the precondition (a hypothesis fewer makes the goal harder,\\n    never the proof wrong): {}",',
+        '                "{}",',
+        "The program export -- a precondition this channel cannot say is dropped WITHOUT a "
+        "word. Dropping is the safe direction; dropping in silence takes the trust surface "
+        "out of the file",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-program-autoimplicit-back-on",
+        "lean.rs",
+        # **The anchor carries the NEXT line too**, because the same `push_str` stands in the
+        # obligation channel: an anchor that matched both would mutate whichever came first
+        # and the report would name the wrong artefact.
+        's.push_str("set_option autoImplicit false\\n\\nopen Gabbro.Body\\n\\n");\n'
+        '    s.push_str("namespace GabbroProgram\\n\\n");',
+        's.push_str("open Gabbro.Body\\n\\n");\n'
+        '    s.push_str("namespace GabbroProgram\\n\\n");',
+        "The program export -- `autoImplicit` stays on. A place name a specification "
+        "misspells then becomes a bound variable instead of an error",
         flaeche="annotation",
     ),
     Mutation(

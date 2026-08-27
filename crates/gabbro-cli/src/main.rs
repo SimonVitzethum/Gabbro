@@ -235,6 +235,60 @@ fn main() -> std::process::ExitCode {
             }
             std::process::ExitCode::SUCCESS
         }
+        // **`gabbro lean` -- the whole PROGRAM as a Lean 4 datum, and it carries no
+        // specification.** `pflichten --lean` writes the obligations Gabbro's own
+        // `spec fn`/`refines` pair states; this one writes the program and stops, so that a
+        // HAND-WRITTEN Lean specification can be held against it.
+        //
+        // *Several files become ONE program*, because a specification is about a program and
+        // not about a file: a body in one unit and the table it writes in another are one
+        // statement, and two modules could not say it.
+        "lean" => {
+            if rest.is_empty() {
+                eprintln!("gabbro lean: no file named");
+                return std::process::ExitCode::from(2);
+            }
+            // **The files are joined into ONE source and parsed ONCE**, and that is the whole
+            // point of the subcommand. Checking each file on its own is what `pruefe` does,
+            // and it is right there: a unit is a compilation unit. *But a specification is
+            // about a PROGRAM* -- a body in one file and the table it writes in another are
+            // one statement, and two separately checked units could not make it.
+            //
+            // The price is named rather than hidden: an error renders against the JOINED
+            // text, so its line number is not the line number in the file it came from. A
+            // per-file offset map would fix that and is not built -- `gabbro pruefe` is the
+            // command for finding errors, and this one refuses rather than reports.
+            let mut ganz = String::new();
+            let mut quellen = Vec::new();
+            for datei in rest {
+                let datei = datei.as_str();
+                let Ok(quelle) = std::fs::read_to_string(datei) else {
+                    eprintln!("gabbro: {datei} not readable");
+                    return std::process::ExitCode::from(1);
+                };
+                ganz.push_str(&format!("-- >>> {datei}\n"));
+                ganz.push_str(&quelle);
+                ganz.push('\n');
+                quellen.push(datei.to_string());
+            }
+            let (baum, mut absagen) = gabbro_syntax::lies("<program>", &ganz);
+            gabbro_check::pruefe(&baum, &mut absagen);
+            // **A program with errors carries no export.** Stricter than `pflichten` on
+            // purpose: one broken file leaves a program that is missing a table, and a
+            // specification about a missing table is VACUOUS rather than false -- and
+            // vacuous reads exactly like proved.
+            if absagen.fehler_zahl() > 0 {
+                eprint!("{}", absagen.zeige(&ganz));
+                eprintln!(
+                    "gabbro lean: the program has errors -- no export ({} files joined, in order: {})",
+                    quellen.len(),
+                    quellen.join(", ")
+                );
+                return std::process::ExitCode::from(1);
+            }
+            print!("{}", gabbro_check::lean::program(&baum, &quellen));
+            std::process::ExitCode::SUCCESS
+        }
         // **Blindstellen: eine Form, die der Korpus nicht ausloest.** Siehe
         // `gabbro_check::blindstellen` -- die Bauart von `mutiere-pruefer.py`, eine Ebene
         // hoeher. *Was 0 Fundstellen hat, ist nicht geprueft, sondern unerreichbar.*
@@ -439,6 +493,10 @@ fn hilfe() {
                                     lower to C -- and REFUSE by name (`C001`) for every
                                     form this emitter does not know. A `.gabi` lowers to a
                                     C HEADER: typedefs and prototypes, no objects
+  gabbro lean       <file.gab>…     the whole PROGRAM as a Lean 4 module: every body, every
+                                    precondition, and the shape of every declared place --
+                                    and NO specification. What is to hold is said in Lean,
+                                    by a person. Several files become ONE program
   gabbro blindstellen <clean>… [-- <poison>…]
                                     FORM x POSITION over a corpus -- and the EMPTY cells.
                                     What has 0 sites is not checked but UNREACHABLE

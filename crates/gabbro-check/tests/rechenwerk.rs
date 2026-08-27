@@ -4258,3 +4258,140 @@ fn lean_absagegruende_sind_vollzaehlig() {
         assert!(!r.tag().is_empty() && !r.sentence().is_empty(), "{r:?} is mute");
     }
 }
+
+// ===========================================================================================
+// THE PROGRAM EXPORT -- `gabbro lean`
+//
+// A different artefact from the obligation channel above, and the difference is the
+// direction: this one carries NO specification. It carries the program, so that a
+// hand-written Lean specification can be held against it.
+// ===========================================================================================
+
+fn lean_programm(q: &str) -> String {
+    let (b, _a) = gabbro_syntax::lies("prog.gab", q);
+    gabbro_check::lean::program(&b, &["prog.gab".to_string()])
+}
+
+/// `routines`, `bodies`, `refused`, `places` off the export's header line.
+fn lean_programm_kopf(t: &str) -> (usize, usize, usize, usize) {
+    let line = t
+        .lines()
+        .find(|z| z.contains("@program 1"))
+        .expect("the export keeps a header line about itself");
+    let n = |w: &str| -> usize {
+        let mut s = line.split_whitespace();
+        while let Some(x) = s.next() {
+            if x == w {
+                return s.next().and_then(|y| y.parse().ok()).unwrap_or(usize::MAX);
+            }
+        }
+        usize::MAX
+    };
+    (n("routines"), n("bodies"), n("refused"), n("places"))
+}
+
+/// A program with one body inside the fragment and one outside it.
+const PROG: &str = "module t {
+const N : u32 = 8;
+type Kleines = u32 in 0 .. 99;
+lock L protects { B } rank 0 held <= 10 ops;
+table B count N { slot { belegt : bool, wert : Kleines, } }
+impl fn leeren(p : index into B)
+    requires Held(L), B.slots[p].belegt
+    effects  { reads B.slots, writes B.slots, locks L }
+    costs    <= 8 ops
+{
+    B.slots[p].belegt = false;
+    B.slots[p].wert   = 0;
+}
+impl fn ruft(p : index into B)
+    requires Held(L)
+    effects  { reads B.slots, writes B.slots, locks L }
+    costs    <= 20 ops
+{ leeren(p); }
+}
+";
+
+/// **The balance the export keeps about itself, and it must add up.** A routine that vanishes
+/// looks exactly like one that was refused, and only the second has measured anything.
+#[test]
+fn lean_programm_bilanz_geht_auf() {
+    let t = lean_programm(PROG);
+    let (routines, bodies, refused, places) = lean_programm_kopf(&t);
+    assert_eq!(
+        bodies + refused,
+        routines,
+        "bodies + refused == routines -- otherwise a routine got lost:\n{t}"
+    );
+    assert_eq!(bodies, 1, "one body is inside the fragment:\n{t}");
+    assert_eq!(refused, 1, "and one is outside it:\n{t}");
+    assert_eq!(places, 2, "the table declares two fields with a shape:\n{t}");
+}
+
+/// **A routine outside the fragment is REFUSED BY NAME, not dropped.** A body that vanished
+/// from the export would leave a specification standing over a program that is not there.
+#[test]
+fn lean_programm_sagt_ab_statt_zu_verschlucken() {
+    let t = lean_programm(PROG);
+    assert!(
+        t.contains("-- REFUSED  ruft  (statement-outside-core)"),
+        "the routine outside the fragment stands with its reason:\n{t}"
+    );
+    assert!(
+        !t.contains("def ruft_body"),
+        "and carries no body:\n{t}"
+    );
+    assert!(t.contains("def leeren_body"), "the other one does:\n{t}");
+}
+
+/// **The place dictionary and `wellFormed` come from ONE source and must agree.** The
+/// dictionary is what a specification is held against; a field in one and not the other
+/// would let a typo through in exactly the direction that flatters.
+#[test]
+fn lean_programm_woerterbuch_deckt_wohlgeformtheit() {
+    let t = lean_programm(PROG);
+    for feld in ["belegt", "wert"] {
+        assert!(
+            t.contains(&format!("\"B\", \"{feld}\"")),
+            "`{feld}` stands in the dictionary:\n{t}"
+        );
+        assert!(
+            t.contains(&format!("(.slot \"B\" k \"{feld}\")")),
+            "and in `wellFormed`:\n{t}"
+        );
+    }
+}
+
+/// **A precondition this channel cannot say is DROPPED and LISTED.** Dropping is the safe
+/// direction -- a hypothesis fewer makes the goal harder, never the proof wrong. *Dropping
+/// it in SILENCE is not*: the trust surface would leave the file without a word.
+#[test]
+fn lean_programm_nennt_die_fallengelassene_vorbedingung() {
+    let t = lean_programm(PROG);
+    assert!(
+        t.contains("DROPPED from the precondition"),
+        "a `Held(L)` this channel has no term for is named:\n{t}"
+    );
+    assert!(
+        t.contains("no-term"),
+        "and the reason travels with it:\n{t}"
+    );
+}
+
+/// **`autoImplicit` off in the export too.** The same guard as in the obligation channel: a
+/// name Lean does not know must FAIL, not become a free variable.
+#[test]
+fn lean_programm_autoimplicit_bleibt_aus() {
+    let t = lean_programm(PROG);
+    assert!(
+        t.contains("set_option autoImplicit false"),
+        "a misspelt name must fail, not turn into a binder:\n{t}"
+    );
+    // And it carries no specification of its own -- that is the whole point of the artefact.
+    // **The check looks at line STARTS**, not at the word: the closing comment shows a
+    // specification as an example, and a `contains` found that and called it a theorem.
+    assert!(
+        !t.lines().any(|z| z.starts_with("theorem ")),
+        "the export states nothing; a specification is written elsewhere:\n{t}"
+    );
+}

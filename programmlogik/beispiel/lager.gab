@@ -1,0 +1,14 @@
+-- Datei 1 -- die Tabelle. Kein Rumpf steht hier.
+module lager {
+
+pub const NFAECHER : u32 = 128;
+
+pub type Menge = u32 in 0 .. 9999;
+
+pub lock HALLE protects { Faecher } rank 0 held <= 60 ops;
+
+pub table Faecher count NFAECHER {
+    slot { belegt : bool, menge : Menge, sperrig : bool, }
+}
+
+}
