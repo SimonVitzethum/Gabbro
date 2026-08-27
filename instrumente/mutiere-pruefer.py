@@ -2937,6 +2937,25 @@ MUTATIONEN = [
         flaeche="annotation",
     ),
     Mutation(
+        "lean-record-field-becomes-a-slot",
+        "lean.rs",
+        'return Ok(format!("(.fieldOf {} {})", quoted(&base), quoted(&f.text)));',
+        'return Ok(format!("(.slot {} 0 {})", quoted(&base), quoted(&f.text)));',
+        "The body channel -- a RECORD field is read as a slot at index zero. A record is one "
+        "object and a table a row of them; as one `Place` a slot could alias a record field",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-reserved-field-gets-a-shape",
+        "lean.rs",
+        "if f.reserviert { None } else { shape_of(&f.typ.typ, u, module) },",
+        "shape_of(&f.typ.typ, u, module),",
+        "The program export -- a `reserved` field of a `format` gets a shape. It is not "
+        "readable, and a hypothesis about its value is one about something the wire never "
+        "promised",
+        flaeche="annotation",
+    ),
+    Mutation(
         "p6-balance-lies",
         "refinement.rs",
         "    let refused = entries.len() - proved;",

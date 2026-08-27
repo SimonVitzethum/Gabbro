@@ -97,13 +97,19 @@ echo "   GabbroProgram compiled"
 # ---- the place dictionary ----------------------------------------------------------------
 # Every `.slot "carrier" … "field"` a specification names, held against what the program
 # declares.
+# **Both tables carry places, and a specification may name either.** `places` holds the slot
+# fields of the tables, `fields` the fields of records and `format`s -- and a check that
+# looked at only one would let a typo in the other through in silence.
 places_of() {
-    sed -n '/^def places/,/^  \]/p' "$TMP/GabbroProgram.lean" \
+    sed -n '/^def places/,/^  \]/p;/^def fields/,/^  \]/p' "$TMP/GabbroProgram.lean" \
         | grep -oE '\("[^"]+", "[^"]+"' | tr -d '(",' | awk '{print $1"."$2}' | sort -u
 }
 spec_places() {
-    grep -oE '\.slot "[^"]+" [A-Za-z_0-9]+ "[^"]+"' "$1" \
-        | sed -E 's/\.slot "([^"]+)" [A-Za-z_0-9]+ "([^"]+)"/\1.\2/' | sort -u
+    { grep -oE '\.slot "[^"]+" [A-Za-z_0-9]+ "[^"]+"' "$1" \
+        | sed -E 's/\.slot "([^"]+)" [A-Za-z_0-9]+ "([^"]+)"/\1.\2/'
+      grep -oE '\.field "[^"]+" "[^"]+"' "$1" \
+        | sed -E 's/\.field "([^"]+)" "([^"]+)"/\1.\2/'
+    } | sort -u
 }
 DICT="$TMP/dict"; places_of > "$DICT"
 echo "   $(wc -l < "$DICT") declared places"

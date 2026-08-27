@@ -86,6 +86,10 @@ inductive Value where
 
 inductive Place where
   | slot (carrier : String) (index : Int) (field : String)
+  /-- A field of a RECORD or a `format` -- `s.len`, `header.e_entry`. **No index**: a record
+      is one object, not a table of them, and giving it a dummy index would make two
+      different things one `Place` and let a slot alias a record field. -/
+  | field (carrier : String) (name : String)
   | global (name : String)
   deriving DecidableEq
 
@@ -152,6 +156,8 @@ inductive Expr where
       literal. **A body that writes an option and could not say `Some` would have to be
       refused whole**, and `27-freiliste` is exactly that shape. -/
   | someOf (a : Expr)
+  /-- `s.len` -- a field of a record or a `format`. -/
+  | fieldOf (carrier : String) (name : String)
   deriving Repr
 
 /-- **An evaluation may GET STUCK.** `none` means the value did not have the shape the
@@ -202,6 +208,7 @@ def eval (s : State) : Expr → Option Value
       match eval s a with
       | some (.int n) => some (.present n)
       | _ => none
+  | .fieldOf c f => some (s.world (.field c f))
 
 /-! ### 3.1 The WELL-FORMEDNESS of a place
 
@@ -235,6 +242,8 @@ def isOption (v : Value) : Prop := v = .absent ∨ ∃ n, v = .present n
 inductive Stmt where
   /-- `carrier.slots[index].field = value;` -/
   | assign (carrier : String) (index : Expr) (field : String) (value : Expr)
+  /-- `carrier.field = value;` at a record or a `format`. -/
+  | assignField (carrier : String) (field : String) (value : Expr)
   /-- `name = value;` at a `static`. -/
   | assignGlobal (name : String) (value : Expr)
   /-- `let name = value;` -/
@@ -289,6 +298,10 @@ def step (ρ : Env) : Stmt → State → Outcome
       match eval s i, eval s e with
       | some (.int k), some v => .running { s with world := store s.world (.slot c k f) v }
       | _, _ => .stuck
+  | .assignField c f e, s =>
+      match eval s e with
+      | some v => .running { s with world := store s.world (.field c f) v }
+      | none => .stuck
   | .assignGlobal n e, s =>
       match eval s e with
       | some v => .running { s with world := store s.world (.global n) v }

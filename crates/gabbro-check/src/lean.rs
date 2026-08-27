@@ -268,6 +268,12 @@ fn shape_of_typ(t: &crate::typen::Typ) -> Option<Shape> {
 struct Ctx<'a> {
     /// Table name to its slot fields, as declared.
     tables: &'a HashMap<String, Vec<(String, Option<Shape>)>>,
+    /// Record and `format` declarations: name to its fields, with the shape each declares.
+    /// **Beside the tables and not among them** -- a record is ONE object, a table is a row
+    /// of them, and one map would let a slot field alias a record field.
+    records: &'a HashMap<String, Vec<(String, Option<Shape>)>>,
+    /// Base name to the record or `format` it stands for.
+    record_carrier: HashMap<String, String>,
     /// The declaring function's parameters: name to the table its type points at, if any.
     carrier: HashMap<String, String>,
     /// Parameter and `let` names -- these read from `locals`, not from the world.
@@ -282,6 +288,8 @@ struct Ctx<'a> {
     callees: &'a HashMap<String, Vec<String>>,
     /// Collected while translating: `(carrier, field, form, origin)`, deduplicated.
     seen: Vec<(String, String, Shape, String)>,
+    /// `(carrier, field, shape)` for every RECORD field touched.
+    seen_records: Vec<(String, String, Shape)>,
     /// **Every `(carrier, field, index-parameter)` read at an option-shaped field.**
     ///
     /// `istWahl` is a DISJUNCTION, and `simp` cannot open one: without the case split the
@@ -316,6 +324,18 @@ impl Ctx<'_> {
         {
             self.option_reads
                 .push((carrier.to_string(), feld.to_string(), p));
+        }
+    }
+
+    /// A record field that was read or written, for the well-formedness hypothesis.
+    fn note_record(&mut self, carrier: &str, feld: &str, shape: Shape) {
+        if !self
+            .seen_records
+            .iter()
+            .any(|(t, n, _)| t == carrier && n == feld)
+        {
+            self.seen_records
+                .push((carrier.to_string(), feld.to_string(), shape));
         }
     }
 
@@ -358,8 +378,21 @@ fn field_shape(base: &str, feld: &str, c: &Ctx) -> Result<(String, Shape, String
     Ok((base.to_string(), form, tab))
 }
 
-/// A place, as a `Gabbro.Body.Expr`. **Two forms and nothing else:** a bare name, and
-/// `carrier.slots[i].field`.
+/// **Carrier and shape of a RECORD field.** The two refusals stay apart for the same reason
+/// they do at a table: a base that names no declaration is `Carrier`, a field whose declared
+/// type has no shape here is `FieldShape`.
+fn record_field(base: &str, field: &str, c: &Ctx) -> Result<(String, Shape), LeanReason> {
+    let rec = c.record_carrier.get(base).ok_or(LeanReason::Carrier)?;
+    let fields = c.records.get(rec).ok_or(LeanReason::Carrier)?;
+    let (_, shape) = fields
+        .iter()
+        .find(|(n, _)| n == field)
+        .ok_or(LeanReason::Carrier)?;
+    Ok((base.to_string(), shape.ok_or(LeanReason::FieldShape)?))
+}
+
+/// A place, as a `Gabbro.Body.Expr`. **Three forms and nothing else:** a bare name,
+/// `carrier.slots[i].field`, and `carrier.field`.
 fn place_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
     if o.suffixe.is_empty() {
         let n = &o.basis.text;
@@ -368,6 +401,13 @@ fn place_term(o: &Ort, c: &mut Ctx) -> Result<String, LeanReason> {
         } else {
             format!("(.global {})", quoted(n))
         });
+    }
+    // **One field and no index is a RECORD field.** `s.len`, `header.e_entry` -- one object,
+    // not a row of them.
+    if let [OrtSuffix::Feld(f)] = &o.suffixe[..] {
+        let (base, shape) = record_field(&o.basis.text, &f.text, c)?;
+        c.note_record(&base, &f.text, shape);
+        return Ok(format!("(.fieldOf {} {})", quoted(&base), quoted(&f.text)));
     }
     let [OrtSuffix::Feld(slots), OrtSuffix::Index(i), OrtSuffix::Feld(f)] = &o.suffixe[..] else {
         return Err(LeanReason::Carrier);
@@ -529,6 +569,29 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
                     return Err(LeanReason::CompoundAssign);
                 }
                 return Ok(format!("(.assignGlobal {} {})", quoted(&z.ziel.basis.text), w));
+            }
+            if let [OrtSuffix::Feld(f)] = &z.ziel.suffixe[..] {
+                let (base, shape) = record_field(&z.ziel.basis.text, &f.text, c)?;
+                c.note_record(&base, &f.text, shape);
+                if z.op != ZuwOp::Setzt {
+                    let Some(op) = mischung(z.op, shape) else {
+                        return Err(LeanReason::CompoundAssign);
+                    };
+                    return Ok(format!(
+                        "(.assignField {} {} (.bin .{op} (.fieldOf {} {}) {}))",
+                        quoted(&base),
+                        quoted(&f.text),
+                        quoted(&base),
+                        quoted(&f.text),
+                        w
+                    ));
+                }
+                return Ok(format!(
+                    "(.assignField {} {} {})",
+                    quoted(&base),
+                    quoted(&f.text),
+                    w
+                ));
             }
             let [OrtSuffix::Feld(slots), OrtSuffix::Index(i), OrtSuffix::Feld(f)] =
                 &z.ziel.suffixe[..]
@@ -698,17 +761,19 @@ fn carriers_of(
     }
     // A parameter stands for the table its pointer type names.
     for p in &f.parameter {
-        if let Some(table) = points_at_table(&p.typ, tab) {
+        if let Some(table) = points_at(&p.typ, tab) {
             out.insert(p.name.text.clone(), table);
         }
     }
     out
 }
 
-/// Does this declared type point at a declared table? **Through a pointer or directly.**
-fn points_at_table(
+/// Does this declared type point at one of these declarations? **Through a pointer or
+/// directly.** Used for tables and for records alike -- the lookup is the same, the map is
+/// not.
+fn points_at(
     typ: &TypExpr,
-    tab: &HashMap<String, Vec<(String, Option<Shape>)>>,
+    decls: &HashMap<String, Vec<(String, Option<Shape>)>>,
 ) -> Option<String> {
     let target = match typ {
         TypExpr::Zeiger(z) => &z.ziel,
@@ -716,7 +781,70 @@ fn points_at_table(
     };
     let TypExpr::Pfad(pf) = target else { return None };
     let last = pf.teile.last()?;
-    tab.contains_key(&last.text).then(|| last.text.clone())
+    decls.contains_key(&last.text).then(|| last.text.clone())
+}
+
+/// **Every record and `format` of the unit, with the shape its declaration gives each
+/// field.** Two declarations carry fields without being a table: `format T { … }` and
+/// `type T = { … }`.
+fn records(
+    baum: &Programm,
+    u: &crate::umgebung::Umgebung,
+) -> HashMap<String, Vec<(String, Option<Shape>)>> {
+    let mut out = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
+        match &item.art {
+            ItemArt::Format(fo) => {
+                let fields = fo
+                    .felder
+                    .iter()
+                    // **A `reserved` field is not readable**, so it gets no shape and any
+                    // place naming it is refused rather than given one.
+                    .map(|f| {
+                        (
+                            f.name.text.clone(),
+                            if f.reserviert { None } else { shape_of(&f.typ.typ, u, module) },
+                        )
+                    })
+                    .collect();
+                out.insert(fo.name.text.clone(), fields);
+            }
+            ItemArt::Typ(td) => {
+                if let Some(TypExpr::Verbund(fs, _)) = &td.rumpf {
+                    // An `opaque` new type's representation may not be read (`D1`), and a
+                    // record behind one is exactly that.
+                    if td.opaque {
+                        return;
+                    }
+                    let fields = fs
+                        .iter()
+                        .map(|f| (f.name.text.clone(), shape_of(&f.typ.typ, u, module)))
+                        .collect();
+                    out.insert(td.name.text.clone(), fields);
+                }
+            }
+            _ => {}
+        }
+    });
+    out
+}
+
+/// Which base name stands for which record: parameters and statics whose type points at one.
+fn record_carriers(
+    f: &FnDecl,
+    recs: &HashMap<String, Vec<(String, Option<Shape>)>>,
+    statics: &HashMap<String, String>,
+) -> HashMap<String, String> {
+    let mut out = HashMap::new();
+    for (n, r) in statics {
+        out.insert(n.clone(), r.clone());
+    }
+    for p in &f.parameter {
+        if let Some(r) = points_at(&p.typ, recs) {
+            out.insert(p.name.text.clone(), r);
+        }
+    }
+    out
 }
 
 /// **Every routine of the program with its parameter NAMES.** A call binds them, so the
@@ -748,7 +876,7 @@ fn static_carriers(
     let mut out = HashMap::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, _| {
         let ItemArt::Statisch(st) = &item.art else { return };
-        if let Some(table) = points_at_table(&st.typ, tab) {
+        if let Some(table) = points_at(&st.typ, tab) {
             out.insert(st.name.text.clone(), table);
         }
     });
@@ -763,6 +891,7 @@ fn judge(
     u: &crate::umgebung::Umgebung,
     module: &str,
     tab: &HashMap<String, Vec<(String, Option<Shape>)>>,
+    recs: &HashMap<String, Vec<(String, Option<Shape>)>>,
     statics: &HashMap<String, String>,
     callees: &HashMap<String, Vec<String>>,
     number: usize,
@@ -772,6 +901,8 @@ fn judge(
     };
     let mut c = Ctx {
         tables: tab,
+        records: recs,
+        record_carrier: record_carriers(f, recs, &HashMap::new()),
         carrier: carriers_of(f, tab, statics),
         // **The obligation channel writes a GOAL, so it may not translate a call**: without
         // the callee's contract as a hypothesis the goal states something no proof closes.
@@ -784,6 +915,7 @@ fn judge(
         callees,
         locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
         seen: Vec::new(),
+        seen_records: Vec::new(),
         option_reads: Vec::new(),
     };
     let body = match block_term(b, &mut c) {
@@ -860,6 +992,7 @@ fn judge(
 pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)> {
     let u = crate::umgebung::Umgebung::sammle(baum);
     let tab = tables(baum, &u);
+    let recs = records(baum, &u);
     let statics = static_carriers(baum, &tab);
     let callees = callee_params(baum);
     // The module a function is declared in travels with it: `typ_von_ausdruck_decl` is
@@ -895,7 +1028,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                             .and_then(|s| s.parse::<usize>().ok())
                             .unwrap_or(0);
                         match f.ensures.get(k.wrapping_sub(1)) {
-                            Some(q) => judge(f, q, &u, module, &tab, &statics, &callees, n),
+                            Some(q) => judge(f, q, &u, module, &tab, &recs, &statics, &callees, n),
                             None => LeanVerdict::Refused(LeanReason::Expression),
                         }
                     }
@@ -903,7 +1036,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                 },
                 crate::pflichten::Art::Verfeinerung => match fns.get(&p.funktion) {
                     Some((module, f)) => match specification(f, &fns) {
-                        Ok(q) => judge(f, &q, &u, module, &tab, &statics, &callees, n),
+                        Ok(q) => judge(f, &q, &u, module, &tab, &recs, &statics, &callees, n),
                         Err(r) => LeanVerdict::Refused(r),
                     },
                     None => LeanVerdict::Refused(LeanReason::SpecShape),
@@ -1210,6 +1343,7 @@ fn dictionary(tab: &HashMap<String, Vec<(String, Option<Shape>)>>) -> Vec<(Strin
 pub fn routines(baum: &Programm) -> Vec<Routine> {
     let u = crate::umgebung::Umgebung::sammle(baum);
     let tab = tables(baum, &u);
+    let recs = records(baum, &u);
     let statics = static_carriers(baum, &tab);
     let callees = callee_params(baum);
     let mut out = Vec::new();
@@ -1238,6 +1372,8 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
         };
         let mut c = Ctx {
             tables: &tab,
+            records: &recs,
+            record_carrier: record_carriers(f, &recs, &HashMap::new()),
             carrier: carriers_of(f, &tab, &statics),
             // **The export writes a DATUM, so a call is honest here**: the callee is named,
             // never inlined, and what it does is looked up in an environment the reader's
@@ -1246,6 +1382,7 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
             callees: &callees,
             locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
             seen: Vec::new(),
+            seen_records: Vec::new(),
             option_reads: Vec::new(),
         };
         let body = block_term(b, &mut c);
@@ -1297,7 +1434,9 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
 pub fn program(baum: &Programm, quellen: &[String]) -> String {
     let u = crate::umgebung::Umgebung::sammle(baum);
     let tab = tables(baum, &u);
+    let recs = records(baum, &u);
     let dict = dictionary(&tab);
+    let rdict = dictionary(&recs);
     let rs = routines(baum);
     let carried = rs.iter().filter(|r| r.body.is_some()).count();
     let refused = rs.len() - carried;
@@ -1315,7 +1454,7 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
         "        @program 1  units {}  routines {}  bodies {carried}  refused {refused}  places {}\n",
         quellen.len(),
         rs.len(),
-        dict.len()
+        dict.len() + rdict.len()
     ));
     s.push_str("\n    Sources:\n");
     for q in quellen {
@@ -1349,24 +1488,47 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
     }
 
     // ---- the well-formed state ----------------------------------------------------------
+    s.push_str("/-- `(carrier, field, shape)` for every declared RECORD or `format` field. -/\n");
+    s.push_str("def fields : List (String \\<times> String \\<times> String) :=\n");
+    if rdict.is_empty() {
+        s.push_str("  []\n\n");
+    } else {
+        s.push_str("  [ ");
+        let items: Vec<String> = rdict
+            .iter()
+            .map(|(t, f, sh)| format!("({}, {}, {})", quoted(t), quoted(f), quoted(sh.predicate())))
+            .collect();
+        s.push_str(&items.join("\n  , "));
+        s.push_str("\n  ]\n\n");
+    }
+
     s.push_str("/-- **The well-formed state** -- that a slot field carries a value of its\n");
     s.push_str("    declared shape. It is a HYPOTHESIS and not a consequence (`Body.lean`, U2);\n");
     s.push_str("    it stands here once for the whole program instead of once per theorem. -/\n");
     s.push_str("def wellFormed (s : State) : Prop :=\n");
-    if dict.is_empty() {
+    let mut parts: Vec<String> = dict
+        .iter()
+        .map(|(t, f, sh)| {
+            format!(
+                "(\\<forall> k, {} (s.world (.slot {} k {})))",
+                sh.predicate(),
+                quoted(t),
+                quoted(f)
+            )
+        })
+        .collect();
+    // A record field carries no index: one object, not a row of them.
+    parts.extend(rdict.iter().map(|(t, f, sh)| {
+        format!(
+            "({} (s.world (.field {} {})))",
+            sh.predicate(),
+            quoted(t),
+            quoted(f)
+        )
+    }));
+    if parts.is_empty() {
         s.push_str("  True\n\n");
     } else {
-        let parts: Vec<String> = dict
-            .iter()
-            .map(|(t, f, sh)| {
-                format!(
-                    "(\\<forall> k, {} (s.world (.slot {} k {})))",
-                    sh.predicate(),
-                    quoted(t),
-                    quoted(f)
-                )
-            })
-            .collect();
         s.push_str(&format!("  {}\n\n", parts.join("\n  \\<and> ")));
     }
 

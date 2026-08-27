@@ -4284,6 +4284,77 @@ impl fn f(p : index into B)
     );
 }
 
+/// **A record or `format` field is a place too -- and it carries NO index.**
+///
+/// A record is one object, a table is a row of them. Giving a record field a dummy index
+/// would make two different things one `Place`, and a slot could then alias a record field.
+#[test]
+fn lean_verbundfeld_traegt_keinen_index() {
+    let q = "module t {
+const KAP : u32 = 8;
+type Text = { laenge : u32 in 0 .. KAP, offen : bool, };
+impl fn schliessen(s : ptr<normal, rw> Text)
+    effects  { writes s }
+    costs    <= 4 ops
+{ s.offen = false; }
+impl fn ist_offen(s : ptr<normal, r> Text) -> bool
+    effects  { reads s }
+    costs    <= 4 ops
+{ return s.offen; }
+}
+";
+    let t = lean_programm(q);
+    assert!(
+        t.contains(r#"(.assignField "s" "offen""#),
+        "the write goes to a FIELD, not to a slot:\n{t}"
+    );
+    // **The READ path is a separate arm and needs its own probe.** A mutation that turned a
+    // record read into a slot at index zero slipped past a test that only ever wrote.
+    assert!(
+        t.contains(r#"(.fieldOf "s" "offen")"#),
+        "and so does the read:\n{t}"
+    );
+    assert!(
+        !t.contains(r#"(.slot "s" 0"#),
+        "neither of them becomes a slot at a made-up index:\n{t}"
+    );
+    assert!(
+        t.contains(r#"("Text", "offen", "isBool")"#),
+        "and the field stands in the dictionary with its declared shape:\n{t}"
+    );
+    assert!(
+        t.contains(r#"(isBool (s.world (.field "Text" "offen")))"#),
+        "and in `wellFormed`, without an index:\n{t}"
+    );
+}
+
+/// **A `reserved` field of a `format` carries NO shape.** It is not readable -- the wire
+/// never promised anything about it -- so a hypothesis about its value would be one about
+/// something nobody said.
+#[test]
+fn lean_reserviertes_feld_bekommt_keine_form() {
+    let q = "module t {
+format Kopf endian little {
+    marke  : u32,
+    luecke : u32 reserved,
+}
+impl fn lies(k : ptr<normal, r> Kopf) -> u32
+    effects  { reads k }
+    costs    <= 4 ops
+{ return k.marke; }
+}
+";
+    let t = lean_programm(q);
+    assert!(
+        t.contains(r#"("Kopf", "marke", "isInt")"#),
+        "the readable field stands in the dictionary:\n{t}"
+    );
+    assert!(
+        !t.contains(r#""luecke""#),
+        "the `reserved` one does not, in any table:\n{t}"
+    );
+}
+
 /// **Every refusal reason has a tag and a sentence, and `ALL` names all of them.** A reason
 /// missing from `ALL` would be counted by nobody -- the register would look smaller than it
 /// is, and smaller is the direction that flatters.
