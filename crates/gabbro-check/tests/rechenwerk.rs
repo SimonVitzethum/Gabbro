@@ -4355,6 +4355,50 @@ impl fn lies(k : ptr<normal, r> Kopf) -> u32
     );
 }
 
+/// **`let n = f(a);` and `return f(a);` are CALLS, and they stay statements.**
+///
+/// A callee may write, so an expression carrying a call would no longer be pure -- `eval`
+/// would have to take the environment, and the whole model would move one level up. Keeping
+/// them as statements is what lets `eval` stay a function of the state alone.
+#[test]
+fn lean_ruf_im_let_und_im_return_bleibt_anweisung() {
+    let q = "module t {
+const N : u32 = 8;
+table B count N { slot { belegt : bool, } }
+impl fn frag(p : index into B) -> bool
+    effects  { reads B.slots }
+    costs    <= 4 ops
+{ return B.slots[p].belegt; }
+impl fn merkt(p : index into B) -> bool
+    effects  { reads B.slots }
+    costs    <= 12 ops
+{
+    let w = frag(p);
+    return w;
+}
+impl fn reicht_durch(p : index into B) -> bool
+    effects  { reads B.slots }
+    costs    <= 12 ops
+{ return frag(p); }
+}
+";
+    let t = lean_programm(q);
+    assert!(
+        t.contains(r#"(.bindCall "w" "frag" ["p"] [(.name "p")])"#),
+        "`let w = frag(p);` binds the RESULT of a call:\n{t}"
+    );
+    assert!(
+        t.contains(r#"(.retCall "frag" ["p"] [(.name "p")])"#),
+        "`return frag(p);` returns it straight on:\n{t}"
+    );
+    // **Neither becomes a plain binding.** A call folded into `bindName` would lose the
+    // callee entirely, and the body would then say `let w = <nothing>`.
+    assert!(
+        !t.contains(r#"(.bindName "w""#),
+        "and neither is taken as an ordinary expression:\n{t}"
+    );
+}
+
 /// **Every refusal reason has a tag and a sentence, and `ALL` names all of them.** A reason
 /// missing from `ALL` would be counted by nobody -- the register would look smaller than it
 /// is, and smaller is the direction that flatters.
@@ -4498,9 +4542,12 @@ fn lean_programm_nennt_die_fallengelassene_vorbedingung() {
         t.contains("DROPPED from the precondition"),
         "a `Held(L)` this channel has no term for is named:\n{t}"
     );
+    // **And the reason is `lock-witness`, not "no term".** `Held(L)` is not a missing
+    // translation -- the lock passes discharge it (H005/H006/H012/H016). Reporting it as a
+    // gap counted a carried obligation as an open one, which is the direction that flatters.
     assert!(
-        t.contains("no-term"),
-        "and the reason travels with it:\n{t}"
+        t.contains("lock-witness"),
+        "and the reason names what it really is:\n{t}"
     );
 }
 

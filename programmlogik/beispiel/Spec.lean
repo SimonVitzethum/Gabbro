@@ -51,13 +51,17 @@ theorem einlagern_erfuellt_eingelagert (ρ : Env) (s : State) (f m : Int)
     *Genau darum ist die Umgebung `ρ` ein Parameter des Satzes und keine Definition:* eine
     festgelegte Umgebung waere der Erzeuger, der entscheidet, was ein Gerufener tut -- und
     das ist die Entscheidung, fuer die ein Beweis da ist.
+
+    `Env` liefert ein PAAR: den Zustand danach und das Ergebnis. Ein Gerufener kann beides,
+    schreiben und zurueckgeben, und eine Umgebung, die nur den Zustand gaebe, machte
+    `let n = f(a);` unaussprechbar -- 22 Rufstellen des Korpus.
 -/
 
 /-- Der Vertrag von `raeumen`, in der Form, die der RUF erzeugt. Wer ihn einloest, beweist
     ihn aus `raeumen_erfuellt_geraeumt` -- er ist keine Annahme ueber fremden Code. -/
 def raeumen_haelt (ρ : Env) : Prop :=
   ∀ (w : World) (k : Int),
-    (ρ "raeumen" { world := w, local' := bindAll ["f"] [.int k] (fun _ => .absent) }).world
+    (ρ "raeumen" { world := w, local' := bindAll ["f"] [.int k] (fun _ => .absent) }).1.world
       (.slot "Faecher" k "belegt") = .bool false
 
 theorem rufer_erfuellt_aus_dem_vertrag (ρ : Env) (s : State) (f : Int)

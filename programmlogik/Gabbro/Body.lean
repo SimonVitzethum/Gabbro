@@ -259,15 +259,25 @@ inductive Stmt where
       the difference between compositional reasoning and an axiom about foreign code, which
       `refinement.rs` refuses for the reason that an axiom proves everything after it. -/
   | call (callee : String) (params : List String) (args : List Expr)
+  /-- `let n = f(a, b);` -- **a call whose RESULT is bound.** The commonest call shape in the
+      corpus, and it stays a STATEMENT: a callee may write, so an expression that contained
+      it would no longer be pure and `eval` would have to carry the environment. -/
+  | bindCall (name : String) (callee : String) (params : List String) (args : List Expr)
+  /-- `return f(a, b);` -- a call whose result is returned straight on. -/
+  | retCall (callee : String) (params : List String) (args : List Expr)
   | ret (value : Option Expr)
   deriving Repr
 
 /-- **What every routine of the program does, as a map from name to state transformer.**
 
+    **The pair is the state AND the result.** A callee can both write and return, and an
+    environment that gave only the state would make `let x = f(a);` unstatable -- which is
+    22 of the corpus's call sites.
+
     A theorem about a body that calls does not fix `Env`: it QUANTIFIES over it and assumes
     only what the callee's contract says. *An environment fixed by the emitter would be the
     emitter deciding what a callee does, and that is exactly the decision a proof is for.* -/
-abbrev Env := String → State → State
+abbrev Env := String → State → State × Option Value
 
 /-- Bind a list of names to a list of values, left to right. -/
 def bindAll : List String → List Value → Binding → Binding
@@ -327,7 +337,23 @@ def step (ρ : Env) : Stmt → State → Outcome
       match evalAll s as with
       | some vs =>
           .running { s with
-            world := (ρ f { world := s.world, local' := bindAll ps vs (fun _ => .absent) }).world }
+            world := (ρ f { world := s.world, local' := bindAll ps vs (fun _ => .absent) }).1.world }
+      | none => .stuck
+  | .bindCall n f ps as, s =>
+      match evalAll s as with
+      | some vs =>
+          match ρ f { world := s.world, local' := bindAll ps vs (fun _ => .absent) } with
+          -- **A callee that returns nothing cannot fill a binding.** Getting stuck is the
+          -- right answer: `M1` refuses the program, and a model that invented a value here
+          -- would prove things about a program the checker rejects.
+          | (t, some v) => .running { world := t.world, local' := bindLocal s.local' n v }
+          | (_, none) => .stuck
+      | none => .stuck
+  | .retCall f ps as, s =>
+      match evalAll s as with
+      | some vs =>
+          match ρ f { world := s.world, local' := bindAll ps vs (fun _ => .absent) } with
+          | (t, v) => .returned { s with world := t.world } v
       | none => .stuck
   | .ret none, s => .returned s none
   | .ret (some e), s =>

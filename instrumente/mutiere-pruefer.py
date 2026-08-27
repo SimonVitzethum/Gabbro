@@ -2825,8 +2825,8 @@ MUTATIONEN = [
         # on the arm that refused every call, and that arm is gone. **The weakening it
         # measured is still real, one line further on** -- two callees that collapse into
         # one name make a contract hypothesis about the first cover the second.
-        '                quoted(&name),\n                names.join(", "),',
-        '                quoted("f"),\n                names.join(", "),',
+        'Ok((quoted(&name), names.join(", "), args.join(", ")))',
+        'Ok((quoted("f"), names.join(", "), args.join(", ")))',
         "The program export -- every call names the same callee. A caller's proof would then "
         "take a contract that belongs to a different routine",
         flaeche="annotation",
@@ -2910,8 +2910,10 @@ MUTATIONEN = [
     Mutation(
         "lean-call-becomes-an-inlining",
         "lean.rs",
-        '            if !c.allow_calls {\n                return Err(LeanReason::CallStatement);\n            }',
-        '            if false {\n                return Err(LeanReason::CallStatement);\n            }',
+        # **One gate for all three call forms since `call_parts` was factored out** -- and
+        # that is the point of the factoring: three lookups would be three chances to drift.
+        '    if !c.allow_calls {\n        return Err(LeanReason::CallStatement);\n    }',
+        '    if false {\n        return Err(LeanReason::CallStatement);\n    }',
         "The body channel -- the OBLIGATION channel translates a call too. It writes a goal, "
         "and a goal over a body that calls needs the callee's contract as a hypothesis; "
         "without it the emitter states something no proof can close",
@@ -2920,8 +2922,8 @@ MUTATIONEN = [
     Mutation(
         "lean-call-loses-its-arguments",
         "lean.rs",
-        '                "(.call {} [{}] [{}])",\n                quoted(&name),\n                names.join(", "),\n                args.join(", ")',
-        '                "(.call {} [{}] [{}])",\n                quoted(&name),\n                names.join(", "),\n                String::new()',
+        'Ok((quoted(&name), names.join(", "), args.join(", ")))',
+        'Ok((quoted(&name), names.join(", "), String::new()))',
         "The program export -- a call carries no arguments. The callee then runs on an empty "
         "binding, and a caller's proof would hold over a call nobody made",
         flaeche="annotation",
@@ -2953,6 +2955,28 @@ MUTATIONEN = [
         "The program export -- a `reserved` field of a `format` gets a shape. It is not "
         "readable, and a hypothesis about its value is one about something the wire never "
         "promised",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-let-call-becomes-a-binding",
+        "lean.rs",
+        # **The mutation has to COMPILE.** The first version cut the `if let` and left `r`
+        # unbound, so `cargo` refused it -- caught, but by the compiler and not by a probe.
+        # *A weakening that only the build notices is caught by luck: change one line
+        # elsewhere and it slips through in silence.*
+        '"(.bindCall {} {n} [{ps}] [{args}])",',
+        '"(.bindName {} {n} [{ps}] [{args}])",',
+        "The body channel -- `let n = f(a);` is taken as an ordinary expression again. The "
+        "callee vanishes from the datum, and the binding is left standing over nothing",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-return-call-becomes-a-value",
+        "lean.rs",
+        'return Ok(format!("(.retCall {n} [{ps}] [{args}])"));',
+        'return Ok(format!("(.ret {n} [{ps}] [{args}])"));',
+        "The body channel -- `return f(a);` is taken as a value expression. The call is lost "
+        "and the return stands over a term nobody produced",
         flaeche="annotation",
     ),
     Mutation(

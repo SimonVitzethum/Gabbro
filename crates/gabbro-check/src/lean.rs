@@ -74,6 +74,34 @@ pub enum LeanReason {
     /// A `match` over something other than an `option`. A declared sum type would need one
     /// value constructor per variant.
     MatchNotOption,
+    /// Division, remainder, or a bit operation. **Not an oversight**: Lean's `Int` division
+    /// rounds toward minus infinity and C's truncates toward zero, so a goal that mixed the
+    /// two would be provable for a reason the machine does not have.
+    DivOrBits,
+    /// A floating-point value. The model has no float, and one that rounded differently from
+    /// the hardware would prove the wrong thing quietly.
+    Float,
+    /// `old(x)` -- a predicate over TWO states. Everything here speaks about one.
+    OldState,
+    /// A QUANTIFIER, `reaches`, or a set membership. This is where a `spec fn` runs out and
+    /// a hand-written Lean specification does not -- `gabbro lean` exists for it.
+    Quantified,
+    /// A call inside an expression: a `spec fn` or a pure function. **It waits on the same
+    /// gate as a call statement** -- over the CONTRACT, never over the body.
+    CallInExpression,
+    /// A built-in: `lenof`, `sizeof`, `aligned`, `offset_into`. Each names something about
+    /// the LAYOUT, and this model has none.
+    Builtin,
+    /// `Held(L)`. **Not a gap at all** -- the lock passes discharge it (`H005`, `H006`,
+    /// `H012`, `H016`). Reporting it as "no term" counted a carried obligation as a missing
+    /// translation; the Isabelle channel has said the true thing about it since day one.
+    LockWitness,
+    /// `result` in an `ensures`. **The model already HAS this** -- `finalValue` -- but the
+    /// postcondition is stated over a `State`, and a result is not part of one. *A form that
+    /// is one gate away is more useful in the report than a form that is nowhere near it.*
+    Result,
+    /// An error reason value (`R::F`) or a function pointer.
+    OtherValue,
     /// An expression or predicate form with no Lean term here.
     Expression,
     /// A place whose carrier cannot be resolved to a declared `table`. **Without the
@@ -108,6 +136,15 @@ impl LeanReason {
             LeanReason::NonLocalExit => "non-local-exit",
             LeanReason::CompoundAssign => "compound-assignment",
             LeanReason::MatchNotOption => "match-not-option",
+            LeanReason::DivOrBits => "division-or-bits",
+            LeanReason::Float => "float",
+            LeanReason::OldState => "old-state",
+            LeanReason::Quantified => "quantified",
+            LeanReason::CallInExpression => "call-in-expression",
+            LeanReason::Builtin => "builtin",
+            LeanReason::LockWitness => "lock-witness",
+            LeanReason::Result => "result-in-ensures",
+            LeanReason::OtherValue => "other-value",
             LeanReason::Expression => "no-term",
             LeanReason::Carrier => "carrier-not-a-table",
             LeanReason::FieldShape => "no-shape-for-field",
@@ -138,6 +175,21 @@ impl LeanReason {
             LeanReason::NonLocalExit => "a non-local exit out of a named loop",
             LeanReason::CompoundAssign => "`+=` and its kin -- a different overflow accounting",
             LeanReason::MatchNotOption => "a `match` over something other than an `option`",
+            LeanReason::DivOrBits => {
+                "division or a bit operation -- Lean rounds down where C truncates"
+            }
+            LeanReason::Float => "a floating-point value -- this model has no float",
+            LeanReason::OldState => "`old(x)` -- a predicate over TWO states",
+            LeanReason::Quantified => {
+                "a quantifier, `reaches` or a membership -- where a `spec fn` runs out"
+            }
+            LeanReason::CallInExpression => "a call inside an expression -- same gate as a call",
+            LeanReason::Builtin => "a built-in about the LAYOUT, and this model has none",
+            LeanReason::LockWitness => {
+                "`Held(…)` -- carried by the lock passes (H005/H006/H012/H016), not by a prover"
+            }
+            LeanReason::Result => "`result` in an `ensures` -- one gate away, not far",
+            LeanReason::OtherValue => "an error reason value or a function pointer",
             LeanReason::Expression => "a form this channel has no Lean term for",
             LeanReason::Carrier => {
                 "the carrier of a place is not a declared `table`, so no field shape is known"
@@ -149,7 +201,7 @@ impl LeanReason {
         }
     }
     /// **All of them, so a report cannot omit one by forgetting to ask.**
-    pub const ALL: [LeanReason; 16] = [
+    pub const ALL: [LeanReason; 25] = [
         LeanReason::ForeignBody,
         LeanReason::Invariant,
         LeanReason::CallSite,
@@ -162,6 +214,15 @@ impl LeanReason {
         LeanReason::NonLocalExit,
         LeanReason::CompoundAssign,
         LeanReason::MatchNotOption,
+        LeanReason::DivOrBits,
+        LeanReason::Float,
+        LeanReason::OldState,
+        LeanReason::Quantified,
+        LeanReason::CallInExpression,
+        LeanReason::Builtin,
+        LeanReason::LockWitness,
+        LeanReason::Result,
+        LeanReason::OtherValue,
         LeanReason::Expression,
         LeanReason::Carrier,
         LeanReason::FieldShape,
@@ -463,7 +524,7 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
                 | BinOp::SchiebLinks
                 | BinOp::SchiebRechts
                 | BinOp::Geteilt
-                | BinOp::Rest => return Err(LeanReason::Expression),
+                | BinOp::Rest => return Err(LeanReason::DivOrBits),
             };
             Ok(format!(
                 "(.bin .{z} {} {})",
@@ -479,14 +540,13 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
             Some(n) if n == "Some" && r.argumente.len() == 1 => {
                 Ok(format!("(.someOf {})", expr_term(&r.argumente[0], c)?))
             }
-            _ => Err(LeanReason::Expression),
+            _ => Err(LeanReason::CallInExpression),
         },
-        ExprArt::Gleitkomma { .. }
-        | ExprArt::FnWert(_)
-        | ExprArt::Eingebaut(_)
-        | ExprArt::Alt(_)
-        | ExprArt::Ergebnis
-        | ExprArt::Grund { .. } => Err(LeanReason::Expression),
+        ExprArt::Gleitkomma { .. } => Err(LeanReason::Float),
+        ExprArt::Eingebaut(_) => Err(LeanReason::Builtin),
+        ExprArt::Alt(_) => Err(LeanReason::OldState),
+        ExprArt::Ergebnis => Err(LeanReason::Result),
+        ExprArt::FnWert(_) | ExprArt::Grund { .. } => Err(LeanReason::OtherValue),
     }
 }
 
@@ -514,9 +574,37 @@ fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
             pred_term(a, c)?,
             pred_term(b, c)?
         )),
-        PredArt::Held { .. } | PredArt::Quantor(_) | PredArt::Element(_, _)
-        | PredArt::Erreicht { .. } => Err(LeanReason::Expression),
+        PredArt::Held { .. } => Err(LeanReason::LockWitness),
+        PredArt::Quantor(_) | PredArt::Element(_, _) | PredArt::Erreicht { .. } => {
+            Err(LeanReason::Quantified)
+        }
     }
+}
+
+/// **Callee, parameter names and argument terms of a call.** One place, because three
+/// statement forms carry a call and each one writing its own lookup is three chances for
+/// them to drift apart.
+fn call_parts(r: &Ruf, c: &mut Ctx) -> Result<(String, String, String), LeanReason> {
+    if !c.allow_calls {
+        return Err(LeanReason::CallStatement);
+    }
+    let Some(name) = r.path().and_then(|p| p.teile.last()).map(|i| i.text.clone()) else {
+        return Err(LeanReason::CallStatement);
+    };
+    // **The callee has to be DECLARED here.** A call into a unit this run never read would
+    // bind arguments to parameters nobody counted.
+    let Some(ps) = c.callees.get(&name).cloned() else {
+        return Err(LeanReason::CallStatement);
+    };
+    if ps.len() != r.argumente.len() {
+        return Err(LeanReason::CallStatement);
+    }
+    let mut args = Vec::new();
+    for a in &r.argumente {
+        args.push(expr_term(a, c)?);
+    }
+    let names: Vec<String> = ps.iter().map(|n| quoted(n)).collect();
+    Ok((quoted(&name), names.join(", "), args.join(", ")))
 }
 
 /// A block as a `Gabbro.Body.Stmt` list term.
@@ -535,6 +623,17 @@ fn block_term(b: &Block, c: &mut Ctx) -> Result<String, LeanReason> {
 fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
     match &s.art {
         StmtArt::Let(l) => {
+            // **`let n = f(a);` is a CALL, not an expression.** A callee may write, so an
+            // expression carrying one would no longer be pure -- and `eval` would have to
+            // take the environment, which would put the whole model one level up.
+            if let ExprArt::Ruf(r) = &l.wert.art {
+                let (n, ps, args) = call_parts(r, c)?;
+                c.locals.push(l.name.text.clone());
+                return Ok(format!(
+                    "(.bindCall {} {n} [{ps}] [{args}])",
+                    quoted(&l.name.text)
+                ));
+            }
             let w = expr_term(&l.wert, c)?;
             c.locals.push(l.name.text.clone());
             Ok(format!("(.bindName {} {})", quoted(&l.name.text), w))
@@ -672,37 +771,19 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             }
         }
         StmtArt::Return(None) => Ok("(.ret none)".into()),
-        StmtArt::Return(Some(e)) => Ok(format!("(.ret (some {}))", expr_term(e, c)?)),
+        StmtArt::Return(Some(e)) => {
+            if let ExprArt::Ruf(r) = &e.art {
+                let (n, ps, args) = call_parts(r, c)?;
+                return Ok(format!("(.retCall {n} [{ps}] [{args}])"));
+            }
+            Ok(format!("(.ret (some {}))", expr_term(e, c)?))
+        }
         // Everything else is refused BY NAME. `Ruf` and `LetSonst` belong to the sequential
         // core and are the next two to build: a call is compositional over the CONTRACT of
         // the callee, never over its body, and that gate is not built.
         StmtArt::Ruf(r) => {
-            if !c.allow_calls {
-                return Err(LeanReason::CallStatement);
-            }
-            let Some(name) = r.path().and_then(|p| p.teile.last()).map(|i| i.text.clone()) else {
-                return Err(LeanReason::CallStatement);
-            };
-            // **The callee has to be DECLARED here.** A call into a unit this run never read
-            // would bind arguments to parameters nobody counted, and the datum would then
-            // describe a call that is not the one in the source.
-            let Some(ps) = c.callees.get(&name).cloned() else {
-                return Err(LeanReason::CallStatement);
-            };
-            if ps.len() != r.argumente.len() {
-                return Err(LeanReason::CallStatement);
-            }
-            let mut args = Vec::new();
-            for a in &r.argumente {
-                args.push(expr_term(a, c)?);
-            }
-            let names: Vec<String> = ps.iter().map(|n| quoted(n)).collect();
-            Ok(format!(
-                "(.call {} [{}] [{}])",
-                quoted(&name),
-                names.join(", "),
-                args.join(", ")
-            ))
+            let (n, ps, args) = call_parts(r, c)?;
+            Ok(format!("(.call {n} [{ps}] [{args}])"))
         }
         StmtArt::LetSonst(_) => Err(LeanReason::ErrorPropagation),
         StmtArt::Schleife(_) => Err(LeanReason::Loop),
