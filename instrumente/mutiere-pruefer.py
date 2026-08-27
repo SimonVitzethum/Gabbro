@@ -2795,8 +2795,8 @@ MUTATIONEN = [
     Mutation(
         "lean-goal-becomes-weak",
         "lean.rs",
-        '            "    : \\\\<exists> s\', finalState (exec body_{} s) = some s\'\\n",',
-        '            "    : \\\\<forall> s\', finalState (exec body_{} s) = some s\'\\n",',
+        '            "    : \\\\<exists> s\', finalState (exec \\\\<rho> body_{} s) = some s\'\\n",',
+        '            "    : \\\\<forall> s\', finalState (exec \\\\<rho> body_{} s) = some s\'\\n",',
         "The body channel -- the goal becomes the WEAK form. `for all s\', if it ends in "
         "s\', then P` is vacuously true for a body that gets stuck, and a vacuous theorem "
         "reads exactly like a proved one",
@@ -2819,12 +2819,16 @@ MUTATIONEN = [
         flaeche="annotation",
     ),
     Mutation(
-        "lean-call-silently-dropped",
+        "lean-call-loses-its-callee",
         "lean.rs",
-        "        StmtArt::Ruf(_) => Err(LeanReason::CallStatement),",
-        "        StmtArt::Ruf(_) => Ok(\"(.ret none)\".into()),",
-        "The body channel -- a call vanishes quietly from the datum instead of refusing the "
-        "obligation. The goal then stands over a body nobody wrote",
+        # Was `lean-call-silently-dropped` until the call gate was built: the old anchor sat
+        # on the arm that refused every call, and that arm is gone. **The weakening it
+        # measured is still real, one line further on** -- two callees that collapse into
+        # one name make a contract hypothesis about the first cover the second.
+        '                quoted(&name),\n                names.join(", "),',
+        '                quoted("f"),\n                names.join(", "),',
+        "The program export -- every call names the same callee. A caller's proof would then "
+        "take a contract that belongs to a different routine",
         flaeche="annotation",
     ),
     Mutation(
@@ -2901,6 +2905,35 @@ MUTATIONEN = [
         '    s.push_str("namespace GabbroProgram\\n\\n");',
         "The program export -- `autoImplicit` stays on. A place name a specification "
         "misspells then becomes a bound variable instead of an error",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-call-becomes-an-inlining",
+        "lean.rs",
+        '            if !c.allow_calls {\n                return Err(LeanReason::CallStatement);\n            }',
+        '            if false {\n                return Err(LeanReason::CallStatement);\n            }',
+        "The body channel -- the OBLIGATION channel translates a call too. It writes a goal, "
+        "and a goal over a body that calls needs the callee's contract as a hypothesis; "
+        "without it the emitter states something no proof can close",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-call-loses-its-arguments",
+        "lean.rs",
+        '                "(.call {} [{}] [{}])",\n                quoted(&name),\n                names.join(", "),\n                args.join(", ")',
+        '                "(.call {} [{}] [{}])",\n                quoted(&name),\n                names.join(", "),\n                String::new()',
+        "The program export -- a call carries no arguments. The callee then runs on an empty "
+        "binding, and a caller's proof would hold over a call nobody made",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-compound-ignores-the-shape",
+        "lean.rs",
+        "                    (ZuwOp::Und, Shape::Bool) => Some(\"and\"),",
+        "                    (ZuwOp::Und, _) => Some(\"and\"),",
+        "The body channel -- `&=` on an INTEGER field becomes a logical and. A bit operation "
+        "is refused for the division reason; taken as a truth value it computes something "
+        "Gabbro does not",
         flaeche="annotation",
     ),
     Mutation(

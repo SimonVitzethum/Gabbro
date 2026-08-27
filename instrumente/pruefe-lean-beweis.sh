@@ -97,8 +97,8 @@ set_option autoImplicit false
 open Gabbro.Body
 def body : List Stmt := [(.assign "T" (.lit (.int 0)) "f" (.lit (.bool false)))]
 def post : Expr := $post
-theorem probe (s : State)
-    : ∃ s', finalState (exec body s) = some s' ∧ eval s' post = some (.bool true) := by
+theorem probe (ρ : Env) (s : State)
+    : ∃ s', finalState (exec ρ body s) = some s' ∧ eval s' post = some (.bool true) := by
   simp [body, post, exec, step, eval, unop, binop, finalState, store, bindLocal]
 LEAN
         if run_lean "$d"; then

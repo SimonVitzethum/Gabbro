@@ -4312,6 +4312,10 @@ impl fn ruft(p : index into B)
     effects  { reads B.slots, writes B.slots, locks L }
     costs    <= 20 ops
 { leeren(p); }
+impl fn sperrt(p : index into B)
+    effects  { reads B.slots, writes B.slots, locks L }
+    costs    <= 30 ops
+{ locks L { B.slots[p].belegt = false; } }
 }
 ";
 
@@ -4326,8 +4330,10 @@ fn lean_programm_bilanz_geht_auf() {
         routines,
         "bodies + refused == routines -- otherwise a routine got lost:\n{t}"
     );
-    assert_eq!(bodies, 1, "one body is inside the fragment:\n{t}");
-    assert_eq!(refused, 1, "and one is outside it:\n{t}");
+    // **The caller is INSIDE the fragment now**: a call is taken over the contract, so the
+    // export writes it as a datum. What stands outside is the concurrent statement.
+    assert_eq!(bodies, 2, "the leaf and the CALLER are both data:\n{t}");
+    assert_eq!(refused, 1, "the concurrent one is outside:\n{t}");
     assert_eq!(places, 2, "the table declares two fields with a shape:\n{t}");
 }
 
@@ -4337,14 +4343,22 @@ fn lean_programm_bilanz_geht_auf() {
 fn lean_programm_sagt_ab_statt_zu_verschlucken() {
     let t = lean_programm(PROG);
     assert!(
-        t.contains("-- REFUSED  ruft  (call-not-compositional)"),
+        t.contains("-- REFUSED  sperrt  (concurrent-statement)"),
         "the routine outside the fragment stands with its reason:\n{t}"
     );
+    assert!(!t.contains("def sperrt_body"), "and carries no body:\n{t}");
+    assert!(t.contains("def leeren_body"), "the leaf does:\n{t}");
+    // **A call is a DATUM, never an inlining.** The callee is named and its parameters are
+    // bound; what it does is looked up in an environment the reader's theorem quantifies
+    // over. *An inlined body would make the goal a statement about a program nobody wrote.*
     assert!(
-        !t.contains("def ruft_body"),
-        "and carries no body:\n{t}"
+        t.contains(r#"(.call "leeren" ["p"] [(.name "p")])"#),
+        "the call names the callee and binds its parameters:\n{t}"
     );
-    assert!(t.contains("def leeren_body"), "the other one does:\n{t}");
+    assert!(
+        t.contains("def leeren_post"),
+        "and the contract a caller takes it over stands in the export:\n{t}"
+    );
 }
 
 /// **The place dictionary and `wellFormed` come from ONE source and must agree.** The

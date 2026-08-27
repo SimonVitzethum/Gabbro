@@ -15,6 +15,17 @@ pub impl fn raeumen(f : index into Faecher)
     Faecher.slots[f].sperrig = false;
 }
 
+-- **Ein Rumpf, der RUFT.** Er steht hier, damit der Kanal einen Ruf zu uebersetzen hat --
+-- und der Ruf wird ueber den VERTRAG von `raeumen` genommen, nie ueber dessen Rumpf.
+pub impl fn raeumen_und_merken(f : index into Faecher)
+    requires Held(HALLE), Faecher.slots[f].belegt
+    ensures  Faecher.slots[f].belegt == false
+    effects  { reads Faecher.slots, writes Faecher.slots, locks HALLE }
+    costs    <= 20 ops
+{
+    raeumen(f);
+}
+
 pub impl fn einlagern(f : index into Faecher, m : Menge)
     requires Held(HALLE)
     effects  { reads Faecher.slots, writes Faecher.slots, locks HALLE }

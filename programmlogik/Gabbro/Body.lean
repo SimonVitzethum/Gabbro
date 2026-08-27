@@ -242,8 +242,37 @@ inductive Stmt where
   | ite (cond : Expr) (thenB elseB : List Stmt)
   /-- `match e { Some(b) => …, None => … }` -- the only `match` form of the core. -/
   | onOption (subject : Expr) (binder : String) (onPresent onAbsent : List Stmt)
+  /-- `f(a, b);` -- **a call, and it is taken over the callee's CONTRACT.**
+
+      The callee is named, not inlined. What it does is looked up in an ENVIRONMENT that
+      the theorem quantifies over, and the caller's theorem then carries the callee's
+      contract as a HYPOTHESIS. *Nothing about the callee is assumed here* -- and that is
+      the difference between compositional reasoning and an axiom about foreign code, which
+      `refinement.rs` refuses for the reason that an axiom proves everything after it. -/
+  | call (callee : String) (params : List String) (args : List Expr)
   | ret (value : Option Expr)
   deriving Repr
+
+/-- **What every routine of the program does, as a map from name to state transformer.**
+
+    A theorem about a body that calls does not fix `Env`: it QUANTIFIES over it and assumes
+    only what the callee's contract says. *An environment fixed by the emitter would be the
+    emitter deciding what a callee does, and that is exactly the decision a proof is for.* -/
+abbrev Env := String → State → State
+
+/-- Bind a list of names to a list of values, left to right. -/
+def bindAll : List String → List Value → Binding → Binding
+  | [], _, β => β
+  | _, [], β => β
+  | n :: ns, v :: vs, β => bindAll ns vs (bindLocal β n v)
+
+/-- Evaluate a list of expressions, or get stuck on the first that does. -/
+def evalAll (s : State) : List Expr → Option (List Value)
+  | [] => some []
+  | e :: es =>
+      match eval s e, evalAll s es with
+      | some v, some vs => some (v :: vs)
+      | _, _ => none
 
 /-- How a descent ends. **`stuck` is an outcome of its own and not a `running`** -- a model
     that conflated getting stuck with carrying on would prove things about a body that never
@@ -255,7 +284,7 @@ inductive Outcome where
 
 mutual
 
-def step : Stmt → State → Outcome
+def step (ρ : Env) : Stmt → State → Outcome
   | .assign c i f e, s =>
       match eval s i, eval s e with
       | some (.int k), some v => .running { s with world := store s.world (.slot c k f) v }
@@ -270,25 +299,34 @@ def step : Stmt → State → Outcome
       | none => .stuck
   | .ite c t e, s =>
       match eval s c with
-      | some (.bool true) => exec t s
-      | some (.bool false) => exec e s
+      | some (.bool true) => exec ρ t s
+      | some (.bool false) => exec ρ e s
       | _ => .stuck
   | .onOption g bn onP onA, s =>
       match eval s g with
-      | some (.present k) => exec onP { s with local' := bindLocal s.local' bn (.int k) }
-      | some .absent => exec onA s
+      | some (.present k) => exec ρ onP { s with local' := bindLocal s.local' bn (.int k) }
+      | some .absent => exec ρ onA s
       | _ => .stuck
+  -- **A call changes the WORLD and nothing else.** Gabbro is call by value, so a callee
+  -- cannot touch the caller's local names -- the caller's `local'` survives by construction
+  -- rather than by a frame argument.
+  | .call f ps as, s =>
+      match evalAll s as with
+      | some vs =>
+          .running { s with
+            world := (ρ f { world := s.world, local' := bindAll ps vs (fun _ => .absent) }).world }
+      | none => .stuck
   | .ret none, s => .returned s none
   | .ret (some e), s =>
       match eval s e with
       | some v => .returned s (some v)
       | none => .stuck
 
-def exec : List Stmt → State → Outcome
+def exec (ρ : Env) : List Stmt → State → Outcome
   | [], s => .running s
   | a :: rest, s =>
-      match step a s with
-      | .running s' => exec rest s'
+      match step ρ a s with
+      | .running s' => exec ρ rest s'
       | o => o
 
 end
@@ -312,14 +350,14 @@ def finalValue : Outcome → Option Value
 -/
 
 /-- **An empty sequence changes nothing.** -/
-@[simp] theorem exec_nil (s : State) : exec [] s = .running s := by
+@[simp] theorem exec_nil (ρ : Env) (s : State) : exec ρ [] s = .running s := by
   simp [exec]
 
 /-- **The descent is deterministic** -- it is a function, so this holds by construction. The
     theorem stands here anyway, because it is the statement a RELATIONAL model would have to
     prove at this point. -/
-theorem exec_deterministic (as : List Stmt) (s : State) (o₁ o₂ : Outcome)
-    (h₁ : exec as s = o₁) (h₂ : exec as s = o₂) : o₁ = o₂ := by
+theorem exec_deterministic (ρ : Env) (as : List Stmt) (s : State) (o₁ o₂ : Outcome)
+    (h₁ : exec ρ as s = o₁) (h₂ : exec ρ as s = o₂) : o₁ = o₂ := by
   subst h₁; exact h₂
 
 /-- **A place no assignment names survives a single step.**
@@ -327,8 +365,8 @@ theorem exec_deterministic (as : List Stmt) (s : State) (o₁ o₂ : Outcome)
     This is the frame statement in its smallest form. It stands here for assignment, because
     that is where the frame arises; over a whole sequence it is carried by
     `Passlogik.Wirkung.huelle_deckt` out of the `effects` list, and the two meet at the pass. -/
-theorem assign_leaves_others (c : String) (i e : Expr) (f : String) (s s' : State)
-    (p : Place) (h : step (.assign c i f e) s = .running s')
+theorem assign_leaves_others (ρ : Env) (c : String) (i e : Expr) (f : String) (s s' : State)
+    (p : Place) (h : step ρ (.assign c i f e) s = .running s')
     (hne : ∀ k, p ≠ .slot c k f) : s'.world p = s.world p := by
   simp only [step] at h
   split at h
@@ -359,11 +397,13 @@ open Lean.Parser.Tactic in
 macro "gabbro_simp" : tactic =>
   `(tactic| simp [Gabbro.Body.exec, Gabbro.Body.step, Gabbro.Body.eval, Gabbro.Body.unop,
                   Gabbro.Body.binop, Gabbro.Body.finalState, Gabbro.Body.finalValue,
-                  Gabbro.Body.store, Gabbro.Body.bindLocal])
+                  Gabbro.Body.store, Gabbro.Body.bindLocal, Gabbro.Body.bindAll,
+                  Gabbro.Body.evalAll])
 
 -- The same, with the caller's own facts: `gabbro_simp [hf, mySpec]`.
 open Lean.Parser.Tactic in
 macro "gabbro_simp" "[" ts:simpLemma,* "]" : tactic =>
   `(tactic| simp [Gabbro.Body.exec, Gabbro.Body.step, Gabbro.Body.eval, Gabbro.Body.unop,
                   Gabbro.Body.binop, Gabbro.Body.finalState, Gabbro.Body.finalValue,
-                  Gabbro.Body.store, Gabbro.Body.bindLocal, $ts,*])
+                  Gabbro.Body.store, Gabbro.Body.bindLocal, Gabbro.Body.bindAll,
+                  Gabbro.Body.evalAll, $ts,*])

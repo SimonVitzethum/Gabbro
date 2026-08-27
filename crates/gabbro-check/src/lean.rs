@@ -272,6 +272,14 @@ struct Ctx<'a> {
     carrier: HashMap<String, String>,
     /// Parameter and `let` names -- these read from `locals`, not from the world.
     locals: Vec<String>,
+    /// **Whether a CALL may be translated.** The program export says yes: it writes a datum,
+    /// and a datum of a call is honest -- the callee is named, not inlined. The obligation
+    /// channel says no: it writes a GOAL, and a goal over a body that calls needs the
+    /// callee's contract as a hypothesis. *Emitting the goal without it would state
+    /// something no proof can close, and a red guard is not a measurement.*
+    allow_calls: bool,
+    /// Callee name to its parameter names, so a call can bind them.
+    callees: &'a HashMap<String, Vec<String>>,
     /// Collected while translating: `(carrier, field, form, origin)`, deduplicated.
     seen: Vec<(String, String, Shape, String)>,
     /// **Every `(carrier, field, index-parameter)` read at an option-shaped field.**
@@ -492,11 +500,34 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             Ok(format!("(.bindName {} {})", quoted(&l.name.text), w))
         }
         StmtArt::Zuweisung(z) => {
-            if z.op != ZuwOp::Setzt {
-                return Err(LeanReason::CompoundAssign);
-            }
+            // **`x += e` is `x = x + e`, and my own refusal of it did not hold.**
+            //
+            // It stood here with the reason *"the two are not the same statement in Gabbro's
+            // overflow accounting"*. They are: `M104` says the RESULT fits the declared
+            // range, and both forms have the same result. Plain `+` was already being
+            // translated under exactly that assumption -- so the refusal was inconsistent
+            // with the arm three lines below it. *Four routines of the corpus paid for a
+            // sentence that was never checked.*
+            //
+            // The operator is chosen by the field's declared SHAPE, not guessed: `&=` on an
+            // integer field is a bit operation, and those are refused for the division
+            // reason.
+            let mischung = |op: ZuwOp, shape: Shape| -> Option<&'static str> {
+                match (op, shape) {
+                    (ZuwOp::Plus, Shape::Int) => Some("add"),
+                    (ZuwOp::Minus, Shape::Int) => Some("sub"),
+                    (ZuwOp::Und, Shape::Bool) => Some("and"),
+                    (ZuwOp::Oder, Shape::Bool) => Some("or"),
+                    _ => None,
+                }
+            };
             let w = expr_term(&z.wert, c)?;
             if z.ziel.suffixe.is_empty() {
+                // A `static` target carries no shape here, so a compound form has no
+                // operator to choose -- refused rather than guessed.
+                if z.op != ZuwOp::Setzt {
+                    return Err(LeanReason::CompoundAssign);
+                }
                 return Ok(format!("(.assignGlobal {} {})", quoted(&z.ziel.basis.text), w));
             }
             let [OrtSuffix::Feld(slots), OrtSuffix::Index(i), OrtSuffix::Feld(f)] =
@@ -509,6 +540,20 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             }
             let (base, shape, tab) = field_shape(&z.ziel.basis.text, &f.text, c)?;
             let idx = expr_term(i, c)?;
+            let w = if z.op == ZuwOp::Setzt {
+                w
+            } else {
+                let Some(op) = mischung(z.op, shape) else {
+                    return Err(LeanReason::CompoundAssign);
+                };
+                format!(
+                    "(.bin .{op} (.place {} {} {}) {})",
+                    quoted(&base),
+                    idx,
+                    quoted(&f.text),
+                    w
+                )
+            };
             c.note(&base, &f.text, shape, &format!("`{}` in `{}`", f.text, tab));
             Ok(format!(
                 "(.assign {} {} {} {})",
@@ -568,7 +613,34 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
         // Everything else is refused BY NAME. `Ruf` and `LetSonst` belong to the sequential
         // core and are the next two to build: a call is compositional over the CONTRACT of
         // the callee, never over its body, and that gate is not built.
-        StmtArt::Ruf(_) => Err(LeanReason::CallStatement),
+        StmtArt::Ruf(r) => {
+            if !c.allow_calls {
+                return Err(LeanReason::CallStatement);
+            }
+            let Some(name) = r.path().and_then(|p| p.teile.last()).map(|i| i.text.clone()) else {
+                return Err(LeanReason::CallStatement);
+            };
+            // **The callee has to be DECLARED here.** A call into a unit this run never read
+            // would bind arguments to parameters nobody counted, and the datum would then
+            // describe a call that is not the one in the source.
+            let Some(ps) = c.callees.get(&name).cloned() else {
+                return Err(LeanReason::CallStatement);
+            };
+            if ps.len() != r.argumente.len() {
+                return Err(LeanReason::CallStatement);
+            }
+            let mut args = Vec::new();
+            for a in &r.argumente {
+                args.push(expr_term(a, c)?);
+            }
+            let names: Vec<String> = ps.iter().map(|n| quoted(n)).collect();
+            Ok(format!(
+                "(.call {} [{}] [{}])",
+                quoted(&name),
+                names.join(", "),
+                args.join(", ")
+            ))
+        }
         StmtArt::LetSonst(_) => Err(LeanReason::ErrorPropagation),
         StmtArt::Schleife(_) => Err(LeanReason::Loop),
         StmtArt::Narrow(_) => Err(LeanReason::Narrowing),
@@ -647,6 +719,21 @@ fn points_at_table(
     tab.contains_key(&last.text).then(|| last.text.clone())
 }
 
+/// **Every routine of the program with its parameter NAMES.** A call binds them, so the
+/// datum of a call cannot be written without them.
+fn callee_params(baum: &Programm) -> HashMap<String, Vec<String>> {
+    let mut out = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, _| {
+        if let ItemArt::Funktion(f) = &item.art {
+            out.insert(
+                f.name.text.clone(),
+                f.parameter.iter().map(|p| p.name.text.clone()).collect(),
+            );
+        }
+    });
+    out
+}
+
 /// **Every `static` that points at a table.** Read once per program, not per function.
 ///
 /// *Measured, and the refusal had been naming the wrong thing:* `beispiele/38` writes
@@ -685,6 +772,10 @@ fn judge(
     let mut c = Ctx {
         tables: tab,
         carrier: carriers_of(f, tab, statics),
+        // **The obligation channel writes a GOAL, so it may not translate a call**: without
+        // the callee's contract as a hypothesis the goal states something no proof closes.
+        allow_calls: false,
+        callees: &HashMap::new(),
         locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
         seen: Vec::new(),
         option_reads: Vec::new(),
@@ -987,13 +1078,13 @@ pub fn module(baum: &Programm, datei: &str) -> String {
         ));
         s.push_str(&format!("def body_{} : List Stmt :=\n  {}\n\n", g.name, g.body));
         s.push_str(&format!("def post_{} : Expr :=\n  {}\n\n", g.name, g.conclusion));
-        s.push_str(&format!("theorem {} (s : State)\n", g.name));
+        s.push_str(&format!("theorem {} (\\<rho> : Env) (s : State)\n", g.name));
         for (label, term, origin) in &g.hypotheses {
             s.push_str(&format!("    -- {origin}\n"));
             s.push_str(&format!("    ({label} : {term})\n"));
         }
         s.push_str(&format!(
-            "    : \\<exists> s', finalState (exec body_{} s) = some s'\n",
+            "    : \\<exists> s', finalState (exec \\<rho> body_{} s) = some s'\n",
             g.name
         ));
         s.push_str(&format!(
@@ -1032,6 +1123,7 @@ pub fn module(baum: &Programm, datei: &str) -> String {
     s.replace("\\<forall>", "∀")
         .replace("\\<exists>", "∃")
         .replace("\\<and>", "∧")
+        .replace("\\<rho>", "ρ")
         .replace("\\<langle>", "⟨")
         .replace("\\<rangle>", "⟩")
 }
@@ -1085,6 +1177,11 @@ pub struct Routine {
     /// `requires`. *Refusing the whole routine over a `Held(L)` it cannot say would cost a
     /// body for a clause that carries nothing here.* They are listed by name.
     pub dropped: Vec<String>,
+    /// The `ensures` this channel can express -- what a CALLER may assume.
+    pub post: Vec<String>,
+    /// The ones it cannot. **Not said, not refused**: a promise fewer makes a caller's
+    /// goal harder, never wrong -- the same direction as a dropped precondition, mirrored.
+    pub post_dropped: Vec<String>,
 }
 
 /// Every place the program declares, with the shape its declaration gives it.
@@ -1107,6 +1204,7 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
     let u = crate::umgebung::Umgebung::sammle(baum);
     let tab = tables(baum, &u);
     let statics = static_carriers(baum, &tab);
+    let callees = callee_params(baum);
     let mut out = Vec::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
         let ItemArt::Funktion(f) = &item.art else { return };
@@ -1126,12 +1224,19 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
                 params,
                 pre: Vec::new(),
                 dropped: Vec::new(),
+                post: Vec::new(),
+                post_dropped: Vec::new(),
             });
             return;
         };
         let mut c = Ctx {
             tables: &tab,
             carrier: carriers_of(f, &tab, &statics),
+            // **The export writes a DATUM, so a call is honest here**: the callee is named,
+            // never inlined, and what it does is looked up in an environment the reader's
+            // theorem quantifies over.
+            allow_calls: true,
+            callees: &callees,
             locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
             seen: Vec::new(),
             option_reads: Vec::new(),
@@ -1145,6 +1250,16 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
                 Err(r) => dropped.push(format!("requires #{} ({})", i + 1, r.tag())),
             }
         }
+        // **The postcondition, so a CALLER has something to assume.** A call is taken over
+        // the contract; without the contract written down there is no contract to take.
+        let mut post = Vec::new();
+        let mut post_dropped = Vec::new();
+        for (i, q) in f.ensures.iter().enumerate() {
+            match pred_term(q, &mut c) {
+                Ok(t) => post.push(t),
+                Err(r) => post_dropped.push(format!("ensures #{} ({})", i + 1, r.tag())),
+            }
+        }
         match body {
             Ok(t) => out.push(Routine {
                 name: f.name.text.clone(),
@@ -1153,6 +1268,8 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
                 params,
                 pre,
                 dropped,
+                post,
+                post_dropped,
             }),
             Err(r) => out.push(Routine {
                 name: f.name.text.clone(),
@@ -1161,6 +1278,8 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
                 params,
                 pre,
                 dropped,
+                post,
+                post_dropped,
             }),
         }
     });
@@ -1286,6 +1405,28 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
         } else {
             s.push_str(&format!("  {}\n\n", parts.join("\n  \\<and> ")));
         }
+        s.push_str(&format!(
+            "/-- `{}` -- what it PROMISES: the `ensures` this channel can say. A caller takes\n    a call over this and never over the body.",
+            r.name
+        ));
+        if !r.post_dropped.is_empty() {
+            s.push_str(&format!(
+                "\n\n    NOT SAID here (a promise fewer makes a caller's goal harder, never\n    wrong): {}",
+                r.post_dropped.join(", ")
+            ));
+        }
+        s.push_str(" -/\n");
+        s.push_str(&format!("def {}_post (s : State) : Prop :=\n", r.name));
+        if r.post.is_empty() {
+            s.push_str("  True\n\n");
+        } else {
+            let ps: Vec<String> = r
+                .post
+                .iter()
+                .map(|x| format!("eval s {x} = some (.bool true)"))
+                .collect();
+            s.push_str(&format!("  {}\n\n", ps.join("\n  \\<and> ")));
+        }
     }
 
     s.push_str("/-! ## Proving something about this program\n\n");
@@ -1293,9 +1434,9 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
     s.push_str("    body establishes it. The tactic that unfolds the model is `gabbro_simp`,\n");
     s.push_str("    and it lives in `Gabbro.Body` -- not here, so that a change to the model\n");
     s.push_str("    reaches every proof through one place.\n\n");
-    s.push_str("        theorem meets_spec (s : State) (k : Int)\n");
+    s.push_str("        theorem meets_spec (\\<rho> : Env) (s : State) (k : Int)\n");
     s.push_str("            (wf : wellFormed s) (hk : s.local\' \"k\" = .int k)\n");
-    s.push_str("            : \\<exists> s\', finalState (exec f_body s) = some s\'\n");
+    s.push_str("            : \\<exists> s\', finalState (exec \\<rho> f_body s) = some s\'\n");
     s.push_str("                \\<and> mySpec k s\' := by\n");
     s.push_str("          gabbro_simp [mySpec, hk]\n-/\n\n");
     s.push_str("end GabbroProgram\n");
@@ -1303,4 +1444,5 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
         .replace("\\<exists>", "∃")
         .replace("\\<and>", "∧")
         .replace("\\<times>", "×")
+        .replace("\\<rho>", "ρ")
 }
