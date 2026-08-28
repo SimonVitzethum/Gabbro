@@ -326,6 +326,35 @@ pass reads at all.
 
 ---
 
+## Moved out of TODO.md on 2026-08-28 — `ops insert, remove, relabel` is built
+
+> **Found by `./instrumente/pruefe-todo.py`, a day late, and the delay is the more useful
+> half of the record.** The entry stood as `- [x]` in a file that claims to carry exclusively
+> what is OPEN — and the guardian built to catch exactly that had been aborting inside its own
+> speech test, because the speech test measured the README instead of itself. *A guardian that
+> stops before reaching its object produces silence, not a pass.*
+
+The three words stood in the lexer, in the EBNF and in the vocabulary table; what was missing
+was the **generator** — and with `relabel` a condition that `insert` and `remove` do not need.
+Built on 2026-08-28: `insert`/`remove` in the morning
+([`messung/OPS-ERZEUGER.md`](messung/OPS-ERZEUGER.md)), the call form in the afternoon
+([`messung/OPS-RUFFORM.md`](messung/OPS-RUFFORM.md)), `relabel` with its condition in the
+evening ([`messung/OPS-RELABEL.md`](messung/OPS-RELABEL.md)).
+
+**And the condition is the message, not the generator.** `beweise/Table_Ops_Erhaltung.thy`
+carried only the counterexample (`umhaengen_faellt`), so the generator refused `relabel` — a
+word of a closed set that generates nothing and that nobody can call, at 127 measured corpus
+sites. The proof came first (K100's second gate): `umhaengen_erhaelt` (U-3) now says WHAT the
+relinking falls on, `G-1`/`G-2` show that the old counterexample fails at exactly that
+premise, and `D012` holds it at the call site — in a form that costs no new word
+(`!(t.slots[p] reaches t.slots[s] via elter)`).
+
+*The residue is named and stayed in [`TODO.md`](TODO.md):* the proof that the emitted C
+bodies ARE the three model functions — the same gap `beweise/Table_Absenkung.thy` names in
+its own words.
+
+---
+
 ## Moved out of TODO.md on 2026-08-21 — Stufe 6, three items that closed
 
 > **`TODO.md` carries exclusively what is OPEN.** These three are done with no residue; what

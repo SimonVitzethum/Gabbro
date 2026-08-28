@@ -101,8 +101,13 @@ def plan_etiketten():
     return befunde
 
 
-def pruefe(text, zahlen):
-    """Gibt die Liste der Befunde. Leer heisst: die Liste stimmt ueber sich selbst."""
+def pruefe(text, zahlen, vollstaendig=False):
+    """Gibt die Liste der Befunde. Leer heisst: die Liste stimmt ueber sich selbst.
+
+    `vollstaendig` heisst: der Text ist die ECHTE `TODO.md` und traegt darum jede bewachte
+    Zahl. Nur dann ist ein Muster ohne Treffer ein Befund -- die zwei Vorlagen der
+    Sprechprobe sind kurz und sollen es nicht sein.
+    """
     befunde = []
 
     # 1. Behauptet die Datei „ausschliesslich Offenes" und fuehrt Erledigtes?
@@ -129,11 +134,30 @@ def pruefe(text, zahlen):
             )
 
     # 3. Zahlen, die der Ordner ueberholt hat.
+    #
+    # **Since 2026-08-28 a pattern without a hit is a FINDING here too.** The README half of
+    # this tool has said so in its own words since 2026-08-20 -- *„a pattern that loses its
+    # object is no guardian any more, it is a comment"* -- and the TODO half did not. **Two
+    # halves of one tool that answer differently, and the quieter one had been right:** the
+    # pattern for the unwatched bold numbers and the one for the rule count both hit nothing
+    # any more, and both numbers had stood unwatched in `TODO.md` ever since. *An unwatched
+    # number never draws attention.*
+    #
+    # The speech test must not be caught by this: its two templates are short and do not carry
+    # most of the patterns at all. So the rule applies only to the REAL text -- `pruefe` takes
+    # `vollstaendig` for that.
     for muster, heute, was in zahlen:
-        for treffer in re.findall(muster, text):
-            if treffer != heute:
+        treffer = re.findall(muster, text)
+        if not treffer and vollstaendig:
+            befunde.append(
+                f"das Muster fuer {was} trifft nichts mehr -- die Zahl ist umformuliert "
+                f"und damit UNBEWACHT"
+            )
+            continue
+        for t in treffer:
+            if t != heute:
                 befunde.append(
-                    f"stehengebliebene Zahl: {was} steht als {treffer}, heute {heute}"
+                    f"stehengebliebene Zahl: {was} steht als {t}, heute {heute}"
                 )
 
     # 4. Themen, die mehrfach als eigener Punkt gefuehrt werden.
@@ -291,14 +315,22 @@ def heutige_zahlen():
         (r"heute (\d+)\s*\n?\s*Kennzahlen mit Befehl", k_heute, "Kennzahlen mit Befehl (Prosa)"),
         (r"\*\*(\d+) fettgedruckte Zahlen in Tabellenzellen ohne einen\*\*", f_heute,
          "unbewachte fettgedruckte Zahlen"),
-        (r"\*\*(\d+) (?:Regeln, 0 offen|rules, 0 open)", r_heute, "EBNF-Regeln"),
+        # **The rule count stands in `TODO.md` today as „153 EBNF-Regeln"**, no longer as
+        # „**N Regeln, 0 offen**" -- the old wording has been gone for weeks. *So this pattern
+        # hit nothing, and the TODO half did not say so until 2026-08-28.* Here the pattern is
+        # pulled onto the wording that stands there, not the text onto a pattern: a number
+        # that stands elsewhere is not reworded, it has moved.
+        (r"(\d+) (?:EBNF-Regeln|Regeln, 0 offen|rules, 0 open)", r_heute, "EBNF-Regeln"),
         (r"(\d+) (?:Terminale gegen|terminals against)", t_heute, "EBNF-Terminale"),
         (r"\((?:heute|today) (\d+) / \d+\)", r_heute, "EBNF-Regeln (heute-Klammer)"),
         (r"\((?:heute|today) \d+ / (\d+)\)", t_heute, "EBNF-Terminale (heute-Klammer)"),
     ]
 
 
-def pruefe_readme(text=None):
+_MUSTER = None
+
+
+def readme_muster():
     """**Der README traegt eine Kennzahlentafel, und niemand hielt sie nach.**
 
     Gefunden 2026-08-19: acht Zahlen standen falsch da -- *90 Absagen* (124), *130 Regeln*
@@ -311,13 +343,16 @@ def pruefe_readme(text=None):
 
     Geprueft wird nur, was sich ohne Uebersetzerlauf zaehlen laesst. Testzahl und
     Mutationsquote kommen aus einem Lauf und tragen darum ihr Messdatum im Text.
+
+    **Diese Funktion MISST nur** -- sie gibt je bewachter Zahl `(Muster, heutiger Wert,
+    Bedeutung)`. Getrennt wurde das am 2026-08-28: die Sprechprobe braucht dieselbe Messung,
+    um sich eine SAUBERE Vorlage zu bauen, und sie darf sie nicht aus dem README nehmen, den
+    sie prueft. *Und die Messung kostet drei Uebersetzerlaeufe; sie dreimal zu fahren war
+    schon vorher nur Gewohnheit.*
     """
-    r = WURZEL / "README.md"
-    if text is None:
-        if not r.is_file():
-            return []
-        text = r.read_text()
-    befunde = []
+    global _MUSTER
+    if _MUSTER is not None:
+        return _MUSTER
 
     n_bsp = len(list((WURZEL / "beispiele").glob("*.gab")))
     n_gift = len(list((WURZEL / "beispiele/gift").glob("*.gab")))
@@ -415,18 +450,31 @@ def pruefe_readme(text=None):
         (r"\((\d[\d\s]*) across all \d+ theories\)",
          str(n_isar), "Isar-Zeilen"),
     ]
-    # **Tausenderpunkte zaehlen nicht mit.** `2 304` und `2304` sind dieselbe Zahl, und ein
-    # Waechter, der daran scheitert, zwingt den Text in seine Schreibweise statt umgekehrt.
-    def blank(s):
-        return str(s).replace(" ", "").replace("\u00a0", "").replace(".", "")
+    _MUSTER = fuer
+    return fuer
 
-    for muster, heute, was in fuer:
+
+# **Tausenderpunkte zaehlen nicht mit.** `2 304` und `2304` sind dieselbe Zahl, und ein
+# Waechter, der daran scheitert, zwingt den Text in seine Schreibweise statt umgekehrt.
+def blank(s):
+    return str(s).replace(" ", "").replace("\u00a0", "").replace(".", "")
+
+
+def pruefe_readme(text=None):
+    """Die Kennzahlentafel gegen ihren Gegenstand. Ohne `text`: der echte README."""
+    if text is None:
+        r = WURZEL / "README.md"
+        if not r.is_file():
+            return []
+        text = r.read_text()
+    befunde = []
+    for muster, heute, was in readme_muster():
         treffer = list(re.finditer(muster, text))
         # **Ein Muster ohne Treffer ist ein BEFUND, kein Bestehen** (2026-08-20, an der
         # Waechterzahl selbst gefunden: sie stand als `| **Guardians** | (\d+),` mit Komma,
-        # wurde auf `| 17, and …` umformuliert und war damit unbewacht -- der Waechter meldete
-        # „sauber" ueber einer falschen Zahl). *Dieselbe Richtung wie ein Haenger: nichts wird
-        # rot.*
+        # wurde auf `| 17, and ...` umformuliert und war damit unbewacht -- der Waechter
+        # meldete "sauber" ueber einer falschen Zahl). *Dieselbe Richtung wie ein Haenger:
+        # nichts wird rot.*
         if not treffer:
             befunde.append(f"README: das Muster fuer {was} trifft nichts mehr -- "
                            f"die Zahl ist umformuliert und damit UNBEWACHT")
@@ -435,6 +483,32 @@ def pruefe_readme(text=None):
             if blank(t.group(1)) != blank(heute):
                 befunde.append(f"README: '{t.group(1)}' als {was} -- es sind {heute}")
     return befunde
+
+
+def readme_vorlage(text):
+    """**Der README mit JEDER bewachten Zahl auf ihrem heutigen Wert** -- die saubere
+    Vorlage der Sprechprobe.
+
+    *Gebaut am 2026-08-28, und der Grund ist der Waechter selbst.* Die Sprechprobe hielt
+    ihre "saubere" Haelfte gegen den ECHTEN README -- also gegen eine Datei, die
+    stehengebliebene Zahlen tragen DARF, denn genau die zu finden ist ihr Zweck. Elf davon
+    standen darin, und die Probe meldete **"falsches Rot"**: sie sprach ueber das Werkzeug
+    und meinte den Gegenstand. **Schlimmer noch:** `main()` bricht nach einer gefallenen
+    Sprechprobe ab -- die elf Zahlen wurden nie gedruckt.
+
+    > *Ein Waechter, der auf einen echten Befund mit "ich bin kaputt" antwortet und dabei
+    > den Befund verschluckt, misst etwas anderes als seinen Gegenstand* (W16/W21).
+
+    Die Vorlage hier ist mechanisch sauber statt hoffentlich sauber. Was an ihr NICHT zu
+    heilen ist, bleibt ein Befund: ein Muster, das gar nichts trifft, laesst sich nicht
+    korrigieren -- und DAS ist dann wirklich ein Fehler des Waechters.
+    """
+    for muster, heute, _was in readme_muster():
+        def ersetze(t, heute=str(heute)):
+            a, b = t.start(1) - t.start(0), t.end(1) - t.start(0)
+            return t.group(0)[:a] + heute + t.group(0)[b:]
+        text = re.sub(muster, ersetze, text)
+    return text
 
 
 def sprechprobe(zahlen):
@@ -473,21 +547,41 @@ Stehengebliebene Zahlen aus P1: 117 Regeln, 187 Terminale (heute 1 / 1)
 
     # **Und die README-Haelfte, in beide Richtungen.** Eine Kennzahlentafel, die keiner
     # nachhaelt, faellt sonst genauso lautlos aus wie die acht Zahlen, die sie ersetzt hat.
+    #
+    # **Since 2026-08-28 both halves run on the TEMPLATE and not on the real README**
+    # (`readme_vorlage`). The reason is a double finding at this very spot:
+    #
+    # * the *clean* half ran against the real README, and that one carried eleven stale
+    #   numbers -- it reported „false red" over a RIGHT red and swallowed the eleven findings
+    #   in doing so, because `main()` aborts after a failed speech test;
+    # * the *poison* half had gone blunt at the same time: it misstated `51 clean examples`,
+    #   the README said `51` and today there are 53 -- the replacement hit nothing, and the
+    #   eleven real findings still let it report „ok". **A probe that passes for the wrong
+    #   reason is none.**
+    #
+    # *The same cause both times: the probe took its yardstick from its object.*
     echt = (WURZEL / "README.md").read_text()
+    vorlage = readme_vorlage(echt)
     # **Die Sprechprobe muss die HEUTIGE Zahl verstellen, nicht eine von gestern.**
     # *Gefunden 2026-08-19: der Korpus wuchs auf 32, und die Probe verstellte weiter „31" --
     # sie fand nichts und meldete damit, sie koenne nicht messen.* Der Waechter faengt seinen
     # eigenen Fall, weil er in BEIDE Richtungen prueft.
     n_bsp_heute = len(list((WURZEL / "beispiele").glob("*.gab")))
-    verstellt = echt.replace("%d clean examples" % n_bsp_heute, "17 clean examples")
+    verstellt = vorlage.replace("%d clean examples" % n_bsp_heute, "17 clean examples")
     r_gift = pruefe_readme(verstellt)
-    r_sauber = pruefe_readme(echt)
+    r_sauber = pruefe_readme(vorlage)
+    # **And it is not enough that ANYTHING falls** -- the misstated number is what is asked.
+    getroffen = [b for b in r_gift if "saubere Beispiele" in b]
     print(f"  README-Gift:   {len(r_gift)} Befunde", end="")
-    print(" -- ok" if r_gift else " -- GESCHEITERT (verstellte Zahl kam durch)")
+    print(" -- ok" if getroffen else " -- GESCHEITERT (verstellte Zahl kam durch)")
+    for b in r_gift:
+        print(f"     {b}")
     print(f"  README sauber: {len(r_sauber)} Befunde", end="")
-    print(" -- ok" if not r_sauber else " -- GESCHEITERT (falsches Rot)")
+    print(" -- ok" if not r_sauber else " -- GESCHEITERT (der Waechter ist der Befund)")
+    for b in r_sauber:
+        print(f"     {b}")
 
-    return len(b_gift) >= 5 and not b_sauber and bool(r_gift) and not r_sauber
+    return len(b_gift) >= 5 and not b_sauber and bool(getroffen) and not r_sauber
 
 
 def main():
@@ -518,7 +612,7 @@ def main():
         print("  Kennzahlentafel deckt sich mit dem Gegenstand.")
 
     text = (WURZEL / "TODO.md").read_text()
-    befunde = pruefe(text, zahlen)
+    befunde = pruefe(text, zahlen, vollstaendig=True)
     print("\n== TODO.md ==")
     if not befunde and not r_befunde:
         offen = len(re.findall(r"^- \[ \]", text, re.M))

@@ -258,8 +258,8 @@ darunter.
       und ihre Quelle ist eine Tabelle in `PFLICHTEN.md`, deren Zeilen ein Mensch geschrieben
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
-      **`pruefe-zahlen.py` führt heute 64 Kennzahlen mit Befehl und zählt 144 fettgedruckte
-      Zahlen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
+      **`pruefe-zahlen.py` führt heute 64 Kennzahlen mit Befehl** und zählt daneben
+      **149 fettgedruckte Zahlen in Tabellenzellen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
 
@@ -286,9 +286,15 @@ darunter.
       4,8 GB). **Eine Regel, die man kennt und trotzdem bricht, braucht keinen weiteren Satz
       -- sie braucht ein Werkzeug.** `./instrumente/pruefe-beweise.sh` haelt jetzt bei 3 GB an.
       **Die andere Hälfte ist seit dem 2026-08-20 gebaut, und sie ist eine Zählung, kein
-      Wachhund:** `./instrumente/zaehle-theorien.py` zählt **31 eingefrorene Suchergebnisse**
-      (`metis` 3, `blast` 28) gegen eine Ratsche und verbietet `sledgehammer`, `try0`,
+      Wachhund:** `./instrumente/zaehle-theorien.py` zählt **40 eingefrorene Suchergebnisse**
+      (`metis` 3, `blast` 37) gegen eine Ratsche und verbietet `sledgehammer`, `try0`,
       `nitpick` und `quickcheck` ganz — **heute null, über dreizehn Theorien.**
+      **Und diese Ratsche ist GEBROCHEN, gemessen am 2026-08-28: sie steht bei 31.** Die neun
+      dazugekommenen liegen vollständig in `beweise/Table_Ops_Erhaltung.thy` (6 → 15), also im
+      `relabel`-Beweis desselben Tages; jede andere Theorie steht auf ihrer alten Zahl.
+      **`MARKE_EINGEFROREN` bleibt bei 31** — *eine Ratsche, deren Marke man hochzieht, wenn
+      sie klemmt, ist keine.* Die Heilung sind neun ausgeschriebene Beweisschritte an Stelle
+      von neun eingefrorenen Suchergebnissen: Isabelle-Arbeit am Beweis, keine Buchung.
       *Ein Suchbefehl in einer eingecheckten Theorie ist keine Absicht, sondern ein
       vergessener Versuch; ein `metis` ist eine Suche, die einmal lief und deren Ergebnis
       jetzt dasteht.* **Was der Wachhund NICHT verhindert, bleibt: er greift erst, wenn die
@@ -362,7 +368,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 85 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 100 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *Die Reichweite sprang am 2026-08-25 von 64 auf 85, weil der Wächter seither die
       BERICHTE unter `messung/` liest* — und der Sprung fand sofort drei lebende Vorkommen,
       alle drei zu `fnptr` (`WB2`).
@@ -424,7 +430,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Absage fällt nachweislich"*; eine gedeckte sagt nur *„sie kommt vor, und irgendein Pass
       sieht sie"* — und Maß 2 hat gerade gezeigt, dass **Sehen keine Prüfung ist**.
       **Seit dem 2026-08-20 stehen beide Zahlen im Register und nicht mehr nur im Bericht:**
-      **166 besetzte Zellen** stehen daneben, **26 nur im Gift** — und `gabbro blindstellen`
+      **167 besetzte Zellen** stehen daneben, **25 nur im Gift** — und `gabbro blindstellen`
       druckt die vier Zahlen getrennt, *auf Ausdruck*, weil ein Einzelwert zwei Wochen später
       wie Fortschritt aussieht.
       *Die schärfere Frage bleibt dieselbe wie beim Schablonenregister: fällt an dieser Zelle je
@@ -433,11 +439,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **54 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
+- [ ] **57 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 117 sind tragend, 2 verdächtig — und **49 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 129 sind tragend, 2 verdächtig — und **57 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       *Wer eine Absage liest und daraus nicht erkennt, worauf sie ruht, kann auch nicht
       prüfen, ob sie weit genug reicht.* Das ist der größere Posten, nicht die zwei.
@@ -502,7 +508,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **1761 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2009 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -580,19 +586,19 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 - [ ] **~~Die Zeilenanteile der eigenen Theorien sind gezaehlt, aber nicht KLASSIFIZIERT~~ —
       GEBAUT 2026-08-20** (`./instrumente/zaehle-theorien.py`). Die alte Buchung sagte *„zehn Theorien,
       1 639 Zeilen, 48 Sätze, 86 Beweisschritte"* und ließ die Frage offen, was davon Prosa
-      ist. Heute: **2329 Zeilen** in dreizehn Theorien, **70 Sätze** darin — und klassifiziert:
+      ist. Heute: **2570 Zeilen** in dreizehn Theorien, **76 Sätze** darin — und klassifiziert:
 
       | | | |
       |---|---:|---|
-      | Gerüst | 418 | 18,0 % — `theory`/`imports`/`begin`/`end` und Leerzeilen |
-      | Prosa | 1 062 | **45,8 %** — Kommentare, `text`-Blöcke, Überschriften |
-      | Modell | 166 | 7,2 % — Definitionen, Datentypen |
-      | Beweis | 671 | 29,0 % — Sätze samt ihren Beweisen |
+      | Gerüst | 422 | 16,4 % — `theory`/`imports`/`begin`/`end` und Leerzeilen |
+      | Prosa | 1 192 | **46,4 %** — Kommentare, `text`-Blöcke, Überschriften |
+      | Modell | 169 | 6,6 % — Definitionen, Datentypen |
+      | Beweis | 787 | 30,6 % — Sätze samt ihren Beweisen |
 
       **Fast die Hälfte ist Fließtext, und damit ist die Verwechslung beziffert:**
-      **837 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
-      **36,1 % statt 100 %.** *Wer 2 329 gegen eine Verus-Zahl hält, überschätzt die eigene
-      Seite um den Faktor 2,8.* Dieselbe Verwechslung, an der `1,90` am 2026-08-19
+      **956 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
+      **37,2 % statt 100 %.** *Wer 2 570 gegen eine Verus-Zahl hält, überschätzt die eigene
+      Seite um den Faktor 2,7.* Dieselbe Verwechslung, an der `1,90` am 2026-08-19
       zurückgezogen wurde, eine Ebene tiefer.
       *Und was das NICHT heißt:* die Einteilung liest Zeilenanfänge; ein `text`-Block über ein
       Modell zählt als Prosa. **Eine Näherung mit benannter Kante, kein Parser** (W10).
@@ -670,7 +676,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **291 von 294 Ankern** greifen (`--anker`, 2026-08-24) — die
+      fällt. Mutationskatalog: **323 von 326 Ankern** greifen (`--anker`, 2026-08-28) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
@@ -695,7 +701,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       rules for the same thing**; now one: separating comma obligatory, trailing comma
       optional.
       **Und die Messschicht sagt, warum die drei stehenbleiben:** `./instrumente/pruefe-syntax.sh` hält
-      151 EBNF-Regeln und 217 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
+      153 EBNF-Regeln und 219 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
       gegen sich selbst, nie den Parser gegen die Grammatik.* Ein Wächter für die Differenz
       bräuchte je Stelle eine Giftdatei, die der Parser **annehmen** und die EBNF **verbieten**
       muss — **drei Dateien, und der Prüfer müsste dafür rot werden, wo er heute grün ist.**
@@ -711,7 +717,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       claims) or renaming (then every user carries the list in their head).
       **The compiler today admits words as names only after `.`/`->` and before `:`.**
       *Kein Messposten: die Zahlen (neun Wörter, elf Stellen) stehen, und `pruefe-wortschatz.py`
-      hält 217 Terminale gegen die Tabelle. **Was fehlt, ist ein Urteil**, und der Preis steht
+      hält 219 Terminale gegen die Tabelle. **Was fehlt, ist ein Urteil**, und der Preis steht
       in beiden Richtungen daneben.* Bleibt offen.
 
 - [ ] **Per template at least one mutation that falls ONLY if the once-obligation is really
@@ -1607,22 +1613,14 @@ jede ist eine Linie mit einem Satz Begründung".***
       Zeile stand als TOT mit *„ungelesen"*. **Eine zwoelfte Sorge in einer TOT-Zeile.**
       *Entweder sie wird eine Klasse, oder es steht dabei, warum nicht.*
 
-- [x] **`ops insert, remove, relabel` ist ENTSCHIEDEN und nicht gebaut** *(2026-08-19)*.
-      ~~Die drei Woerter stehen im Lexer, in der EBNF und in der Wortschatztabelle. **Was
-      fehlt, ist der Erzeuger** -- und mit `relabel` schuldet er eine Bedingung, die `insert`
-      und `remove` nicht brauchen.~~ **GEBAUT am 2026-08-28**: `insert`/`remove` am Vormittag
-      (`messung/OPS-ERZEUGER.md`), die Rufform am Nachmittag (`messung/OPS-RUFFORM.md`), und
-      `relabel` mit seiner Bedingung am Abend (`messung/OPS-RELABEL.md`).
-      **Und die Bedingung ist die Nachricht, nicht der Erzeuger.** `Table_Ops_Erhaltung.thy`
-      fuehrte nur das Gegenbeispiel (`umhaengen_faellt`), also sagte der Erzeuger `relabel`
-      ab -- ein Wort einer geschlossenen Menge, das nichts erzeugt und niemand rufen kann,
-      bei 127 gemessenen Korpusstellen. Der Beweis kam zuerst (K100s zweites Tor):
-      `umhaengen_erhaelt` (U-3) sagt jetzt, WORAN das Umhaengen faellt, `G-1`/`G-2` zeigen,
-      dass das alte Gegenbeispiel genau an dieser Voraussetzung scheitert, und `D012` haelt
-      sie an der Aufrufstelle -- in einer Form, die kein neues Wort kostet
-      (`!(t.slots[p] reaches t.slots[s] via elter)`).
-      *Was NICHT gebaut ist: der Beweis, dass die emittierten C-Ruempfe die drei Modell-
-      funktionen SIND -- dieselbe Luecke, die `Table_Absenkung.thy` mit eigenen Worten nennt.*
+- [ ] **Die drei `ops`-Ruempfe sind gebaut, und der Beweis DARUEBER fehlt**
+      *(2026-08-28)*. `insert`/`remove`/`relabel` erzeugen C, `D012` haelt die
+      Umhaenge-Bedingung an der Aufrufstelle, und `Table_Ops_Erhaltung.thy` traegt
+      `umhaengen_erhaelt` (U-3). **Was fehlt, ist die Bruecke:** dass die emittierten
+      C-Ruempfe die drei MODELLFUNKTIONEN *sind* -- dieselbe Luecke, die
+      `Table_Absenkung.thy` mit eigenen Worten nennt.
+      *Der Bau selbst steht seit dem 2026-08-28 in [`DONE.md`](DONE.md); er stand bis dahin
+      als `- [x]` hier, in einer Datei, die ausschliesslich Offenes fuehrt.*
 
 ### «NL» — der Weg zu „nur noch eigene Logik" ([`dokumente/PLAN.md`](dokumente/PLAN.md)) — **PUNKT 1**
 
@@ -1801,7 +1799,7 @@ tragende, ohne eine Zeile Isabelle.*
 $ gabbro schablonen --tor
 9 premises of PROVED templates have no pass -- a proof nothing establishes    → 1
 $ ./instrumente/pruefe-schablonen.py
-Marke 8 — eine Ratsche, keine Zielzahl · 0 ohne Adresse
+Marke 6 — eine Ratsche, keine Zielzahl · 0 ohne Adresse
 ```
 
 **Zwei verschiedene Dinge, und sie bleiben getrennt:** `--tor` trägt das *Ziel* und fällt,
@@ -2396,7 +2394,7 @@ Infrastruktur und nicht seine These.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
-**83 fremde Rümpfe im Korpus, 10 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**84 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
 
 > **Berichtigt am 2026-08-21, und die Überschrift war in BEIDE Richtungen falsch.** Hier stand
@@ -3174,6 +3172,31 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       **Gebaut als [`./instrumente/pruefe-vergabe.py`](instrumente/pruefe-vergabe.py)** —
       Kandidatenliste, kein Urteil, mit allen drei Fehlerrichtungen benannt.
 
+- [ ] **67 Kommentare im Prüfer nennen eine fremde Kennung, ohne zu sagen wo sie lebt**
+      *(gemessen 2026-08-28, `./instrumente/pruefe-zitate.py`)*. **Die Marke steht seit heute
+      auf 274 und ist damit eine SCHULD, keine Buchung** — das Ziel ist **207**, der Stand,
+      den derselbe Wächter am 2026-08-21 hatte, als seine Marke gesetzt wurde.
+
+      | Stand | zeilenweise | absatzweise |
+      |---|---:|---:|
+      | `62b997b` — hier wurde 226 gesetzt | 226 | **207** |
+      | `927c1a5` — vor den Zusammenführungen des 2026-08-28 | 256 | 233 |
+      | heute | 309 | **274** |
+
+      **Zwei getrennte Befunde, und nur einer ist bezahlt.** Der erste: der Wächter las
+      *zeilenweise*, seine eigene Regel sagt aber „the comment" — ein Satz über zwei Zeilen
+      verlor damit seinen Ortshinweis. Das ist geheilt (Absatz statt Zeile, getrennt an
+      leeren Kommentarzeilen, damit ein Modulkopf nicht durch ein einziges `siehe`
+      freigesprochen wird), und es nimmt 35 der 309 heraus.
+      **Der zweite ist nicht bezahlt:** 207 → 274 sind echte Kommentare, und der Nenner
+      erklärt davon nichts — von den 233 des Standes `927c1a5` ist **keiner** weggefallen und
+      **keiner** entstand dadurch, dass eine Kennung die Datei wechselte. *Der Gegenstand
+      wächst, nicht die Leseweite.*
+      Warum hier nicht bezahlt: es sind 67 Kommentare in zwanzig Prüfer-Dateien, `emit.rs`
+      mit 40 voran — und **`emit.rs` ist die Datei, deren wörtliche Zeilen der
+      Mutationskatalog als Anker führt.** Wer dort schreibt, während die Anker umgezeigt
+      werden, misst eine Mischung.
+
 - [ ] **`M120` war NICHT der einzige Fall — im Parser stehen vier weitere** *(gemessen
       2026-08-21)*. Je zwei unverwandte Regeln unter einer Kennung:
 
@@ -3195,14 +3218,19 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       Deckungsaussage aller Proben, die darauf zeigen.
 
       ```
-      44 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 237, die
+      58 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 302, die
       ueberhaupt eine Kennung erwarten)
       ```
 
       **Bei `P034` steht der Fall konkret:** `gift/05-auffangzweig` prüft die eine Regel,
       `gift/45-pub-wo-es-nicht-steht` die andere — *jede der beiden bliebe grün, wenn die
       Regel der anderen ausfiele.* Was fehlt, ist je Fall die Entscheidung: **zweite Kennung
-      vergeben, oder begründen, dass es eine Regel ist.** Die 39 sind eine Ratsche.
+      vergeben, oder begründen, dass es eine Regel ist.** Die 58 sind eine Ratsche.
+      **Nachgerechnet 2026-08-28: 18 Kandidaten, 58 Proben** — und die Erhöhung kam zu zwei
+      Dritteln aus dem Werkzeug, nicht aus dem Prüfer. `botschaft()` konnte eine mit `\`
+      umgebrochene Rust-Meldung nicht lesen und verglich statt ihrer Klammern; zwei so
+      verstümmelte Stellen sahen einander ähnlich und fielen aus der Liste. *`F002` und
+      `K009` waren dadurch verdeckt, und verdeckt ist hier die gefährliche Richtung.*
 
 ---
 
@@ -3214,7 +3242,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut: 56 Sätze über 219 Codes, 45 Codes noch ohne).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 68 Sätze über 235 Codes, 45 Codes noch ohne).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 
@@ -3408,7 +3436,7 @@ und genau das ist Stufe 8 (PL.1), die noch nicht angefangen hat.
 
 **Und die vierte, die kein Argument gegen Lean ist, sondern eine Auflage:** eine zweite
 Beweisschicht neben Isabelle ist **W7** — zwei Register über derselben Sache. Heute stehen
-13 Theorien, 2 329 Zeilen, 70 Sätze, 10 von 21 Schablonen maschinell geprüft. *Wer Lean
+13 Theorien, 2 570 Zeilen, 76 Sätze, 10 von 21 Schablonen maschinell geprüft. *Wer Lean
 danebenstellt, muss sagen, welche Aussage wo lebt, sonst wandert dieselbe Aussage in beide und
 niemand weiß, welche gilt.*
 
@@ -4052,7 +4080,7 @@ the **bookkeeping** no. Eight classes of finding, all mechanically demonstrable:
 | **2** | **"there is no compiler (P2–P7)"** — there is one up to P3 | corrected |
 | **3** | **Two ordering rules stood there as being in force although they are violated** ("no checker line before 2", "not a line of Rust") | struck through with a date, not deleted |
 | **4** | **"Six of the nine passes are missing"** — it is five whole and two half | corrected |
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 151 / 217) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 153 / 219) | taken out along with the entry |
 | **6** | **Three topics twice** — `narrow` three times, *variable lengths* and *version evolution* twice each | drawn together |
 | **7** | **Two label systems with the same names**: the headings "P0"/"P1" against the checker plan P0…P7, where P1 is the grammar unification | renamed |
 | **8** | **Four done items carried as open**: `by consuming` (has stood in the grammar since `dokumente/SYNTAX.md`:416), `vtd.rs` and `space.rs` (both run, see `dokumente/MESSUNGEN.md` P0.2/P0.3), P0.4 (run, `dokumente/MESSUNGEN.md`) | taken out |
