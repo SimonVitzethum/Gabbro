@@ -366,7 +366,13 @@ pub const NAMEN: &[Satz] = &[
                     intended pair, in the check build it is a duplicate C definition**, and \
                     the one who says so is `cc`, not this pass. (4) The rule says nothing \
                     about whether the gated code is REACHED in the check build: a `check` \
-                    that nobody runs gates just as well as one that runs.",
+                    that nobody runs gates just as well as one that runs. \
+                    **And on the interface side there is one build, not two:** `abi::schreibe` \
+                    drops gated items unconditionally, because a `.gabi` names no build -- so \
+                    a consumer's harness cannot reach a library's gated helper across the \
+                    interface at all. *Measured on 2026-08-28 before that line existed: the \
+                    gate was LOST in the `.gabi` and `emit --with` lowered it to a C \
+                    prototype.*",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/311 (`G001`, an ungated `fn` calls a gated one), \
                       /312 (`G002`, `when EINE_KONSTANTE`), /313 (`G003`, `const TESTBUILD`); \

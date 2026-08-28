@@ -86,6 +86,26 @@ pub fn schreibe(baum: &Programm, quelle: &str) -> String {
     // declaration that names something private. **The same class, from the other side:**
     // there the consequence was made honest, here the cause falls.
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        // **A gated item is not in the interface, and the interface is the SHIPPING one**
+        // («TB», 2026-08-28).
+        //
+        // *Measured before this line stood here:* a `when TESTBUILD pub fn geruest_melden`
+        // came out of `gabbro abi` as a plain `pub extern fn` -- the gate was **lost**,
+        // because a function's text is cut from the `FnDecl` span and the `when` stands in
+        // front of it. The consumer then loaded a `.gabi` that promises a symbol the
+        // shipping build does not define, and `emit --with` lowers exactly that to a **C
+        // prototype**. *The gate would have held in the unit and leaked through its
+        // interface.*
+        //
+        // **A `.gabi` names no build**, and that is why the answer here is a filter and not
+        // a flag: an interface promises what BINDS, a gated item binds only in a build the
+        // interface cannot name. So there is one interface, and it is the one that ships.
+        // *What this does not offer is an interface for the CHECK build* -- a consumer's
+        // harness cannot call a library's gated helper across the `.gabi`. Booked in
+        // `saetze::namen.baugatter`, not silently absent.
+        if crate::gatter::ist_gegattert(item) {
+            return;
+        }
         // **A `use` is part of the interface, not of the body.** Without it the head names
         // `Pa`, and `Pa` is no name in THIS module. *Found at the example with two modules:
         // the parser error covered up the missing name.*

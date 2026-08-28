@@ -243,6 +243,25 @@ Pass.** *Es ist laut, nicht still — aber es ist nicht geprüft, und darum steh
 ruft, gattert genauso gut wie einer, den jemand ruft. Das Gatter ist eine Aussage über das
 **Erzeugnis**, nicht über den Prüflauf.
 
+**(f) Es gibt EINE Schnittstelle, und es ist die des Auslieferungsbaus.** Das ist die eine
+Stelle, an der das Gatter beim Bauen selbst noch geleckt hat, und sie ist gemessen:
+
+```bash
+$ gabbro abi /tmp/abi-probe.gab        # vor der Korrektur
+pub extern fn geruest_melden(v : u32) -> u32   -- das `when TESTBUILD` ist WEG
+```
+
+Der Grund war eine Spanne: der Kopf einer Funktion wird aus der `FnDecl` geschnitten, und das
+`when` steht davor. Der Verbraucher hätte ein `.gabi` geladen, das ein Symbol verspricht, das
+der Auslieferungsbau nicht definiert — und `emit --with` senkt genau das zu einem
+**C-Prototypen** ab. *Das Gatter hätte in der Einheit gehalten und durch ihre Schnittstelle
+geleckt.*
+
+**Die Antwort ist ein Filter und keine Fahne:** ein `.gabi` nennt keinen Bau. Eine
+Schnittstelle verspricht, was BINDET; ein gegattertes Item bindet nur in einem Bau, den die
+Schnittstelle nicht nennen kann. *Was das nicht kauft:* eine Schnittstelle für den Prüfbau.
+Das Prüfgerüst eines Verbrauchers kann einen gegatterten Helfer einer Bibliothek nicht rufen.
+
 ---
 
 ## 8. Der Preis in Zahlen
