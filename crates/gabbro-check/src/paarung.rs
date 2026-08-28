@@ -231,23 +231,19 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             }
         }
     }
-    crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
-        let ItemArt::Funktion(f) = &item.art else {
-            return;
-        };
-        let FnRumpf::Block(b) = &f.rumpf else {
-            return;
-        };
-        let mut z: Vec<Ort> = Vec::new();
-        for s in &b.anweisungen {
-            crate::schreibziele(s, &mut z);
+    // **And the `can_fail` body of a probe, for the same reason V001 got it in 2026-08-20:**
+    // a falsifiable statement about the machine IS a probe, and a body no pass reads is a
+    // body without a reader.
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Funktion(f) => {
+            if let FnRumpf::Block(b) = &f.rumpf {
+                tore_im_rumpf(b, &f.name.text, &lastfrei, &geteilte, absagen);
+            }
         }
-        let lage = Torlage {
-            lastfrei: &lastfrei,
-            geteilte: &geteilte,
-            eigene: z.iter().map(|o| grundname(&o.text())).collect(),
-        };
-        tore(b, &lage, &mut Vec::new(), &f.name.text, absagen);
+        ItemArt::Check(c) => {
+            tore_im_rumpf(&c.can_fail, &c.name.text, &lastfrei, &geteilte, absagen)
+        }
+        _ => {}
     });
 
     for (name, h, unvollstaendig, schluessel) in &je_funktion {
@@ -694,6 +690,27 @@ fn ruf_huelle(g: &crate::aufrufgraph::Graph, start: &str) -> BTreeSet<String> {
         }
     }
     aus
+}
+
+/// One body's share of `V009` -- what this body writes is gathered here, because a place it
+/// writes itself is this core's value and not a foreign payload.
+fn tore_im_rumpf(
+    b: &Block,
+    name: &str,
+    lastfrei: &BTreeSet<String>,
+    geteilte: &BTreeSet<String>,
+    absagen: &mut Absagen,
+) {
+    let mut z: Vec<Ort> = Vec::new();
+    for s in &b.anweisungen {
+        crate::schreibziele(s, &mut z);
+    }
+    let lage = Torlage {
+        lastfrei,
+        geteilte,
+        eigene: z.iter().map(|o| grundname(&o.text())).collect(),
+    };
+    tore(b, &lage, &mut Vec::new(), name, absagen);
 }
 
 /// **`V009` -- the gate whose pairing nobody wrote.**

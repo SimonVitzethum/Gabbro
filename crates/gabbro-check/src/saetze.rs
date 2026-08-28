@@ -952,8 +952,10 @@ pub const PAARUNG: &[Satz] = &[
                     nowhere. Three exemptions are unchecked assumptions in the safe \
                     direction: a read under `locks`/`observes`, a place this body writes \
                     itself, and the gating atomic read behind its own gate (the one-shot \
-                    latch of the finding's §5.2). And the corpus does not measure this rule \
-                    AT ALL: `messung/ordnung/tore.py` counts 26 bindings out of an atomic in \
+                    latch of the finding's §5.2). It runs over function bodies and over the \
+                    `can_fail` body of a probe, and over NOTHING ELSE -- an `axiom` or an \
+                    `entry` is invisible to it. And the corpus does not measure this rule AT \
+                    ALL: `messung/ordnung/tore.py` counts 26 bindings out of an atomic in \
                     the whole corpus and NOT ONE of them is a plain load -- the rule hangs \
                     on its poison probe and on nothing else.",
         stand: Satzstand::Gemessen,
