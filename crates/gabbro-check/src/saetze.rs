@@ -405,6 +405,32 @@ pub const D1D2: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/kbedingung.rs; messung/OPS-ERZEUGER.md",
     },
     Satz {
+        name: "d.opsruf",
+        kennungen: &["D012"],
+        aussage: "Wherever a generated operation is called, the premises \
+                  `beweise/Table_Ops_Erhaltung.thy` charges to the caller STAND above the \
+                  call, about the very slot the call names -- the slot is FRESH for \
+                  `insert`, the parent is REACHABLE where the table has a `parent` edge, and \
+                  `s` is a LEAF for `remove` on such a table. They stand in the routine's own \
+                  `requires`, in an enclosing `if`, or in an enclosing loop `invariant`.",
+        vorbehalt: "**It does not PROVE a premise, and it cannot.** A standing `requires` is \
+                    the duty pushed one frame outwards, exactly as `blatt_loeschen`'s \
+                    `ist_blatt(c, s)` has been since beispiele/01; what changes is that the \
+                    duty exists at all, where until 2026-08-28 it was a comment in the \
+                    emitted C. Three further edges: the negation of a previous `if` arm is a \
+                    fact this rule does not read; a premise under `||` or behind `=>` is not \
+                    taken as standing; and an argument that is not a place-shaped expression \
+                    is refused rather than skipped. **`M115` is silent on all of these** -- \
+                    they are not range statements, which is why the rule is here and not \
+                    there.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: 4 probes on `D012` (321 missing premise, 322 premise \
+                      about a DIFFERENT slot, 323 the second half of `einfuegen_erhaelt` \
+                      missing, 324 the weaker leaf clause). The clean side is `beispiele/47`, \
+                      which calls all four generated operations.",
+        fundstelle: "crates/gabbro-check/src/opsruf.rs; messung/OPS-RUFFORM.md",
+    },
+    Satz {
         name: "d.baumkante",
         kennungen: &["D006", "D007", "D008"],
         aussage: "A `table … tree` names its parent/child/sibling edges as real slot fields, \

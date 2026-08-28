@@ -58,7 +58,14 @@ FRIST = 60
 # `relabel` mit `umhaengen_faellt` ab. *Der emittierte Satz und der bewiesene Satz sind
 # dieselbe Menge.* Was das NICHT ist: der Schritt vom Isabelle-Modell zum erzeugten C --
 # dieselbe Luecke, die `Table_Absenkung.thy` in eigenen Worten nennt.
-MARKE = 7
+# 2026-08-28, afternoon: 7 -> 6. The two premises of `einfuegen_erhaelt` and the one of
+# `blatt_loeschen_erhaelt` had the address *"two `requires` lines at the generated head"* and
+# now have a reader: `D012` (`crates/gabbro-check/src/opsruf.rs`) holds them against every
+# call site. What that is NOT: a proof of a premise -- a standing `requires` is the duty one
+# frame further out, exactly as `blatt_loeschen` has carried `ist_blatt(c, s)` since
+# beispiele/01. What changed is that the duty exists at all: until that morning it stood in a
+# COMMENT in the emitted C. `messung/OPS-RUFFORM.md`.
+MARKE = 6
 
 
 def lauf(*args):

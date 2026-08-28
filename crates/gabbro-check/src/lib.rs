@@ -35,6 +35,7 @@ pub mod gruppe;
 pub mod emit;
 pub mod geteilt;
 pub mod kbedingung;
+pub mod opsruf;
 pub mod abi;
 pub mod kontexte;
 pub mod kosten;

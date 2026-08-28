@@ -167,6 +167,11 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     erschoepfendes_match(baum, absagen);
     baumkanten(baum, absagen);
     belegtfeld(baum, absagen);
+    // **The other half of `D001`** (2026-08-28): this pass forbids the hand mutation, and
+    // `crate::opsruf` holds the generated operation that takes its place -- `D012` demands
+    // that the proof's premises stand where it is called. *A prohibition whose replacement
+    // owes nothing would have moved the work, not removed it.*
+    crate::opsruf::pass(baum, absagen);
     // **D002 -- `by ops` am Feld.** Schärfer als `D001`: es trifft auch dort, wo die Tabelle
     // als Ganzes Handmutationen duldet, das EINE Feld aber nicht.
     let geschuetzt = nur_ops_felder(baum);

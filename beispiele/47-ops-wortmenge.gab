@@ -28,7 +28,20 @@
 -- > haengt die Invariante unten: `marke_null_wenn_frei` bricht, wenn `marke` das Entfernen
 -- > ueberlebt. *Das ist der Posten, den eine Handmutation vergisst.*
 --
--- Die Gegenprobe steht in `beispiele/gift/221-ops-erfundenes-wort.gab`.
+-- > **UND SEIT DEM 2026-08-28 NACHMITTAG WIRD GERUFEN** (`messung/OPS-RUFFORM.md`).
+-- > Am Vormittag trugen die erzeugten Funktionen `__attribute__((unused))`: in ihrer
+-- > Uebersetzungseinheit rief sie niemand, **weil die Sprache keine Form dafuer hatte.**
+-- > *Ein Verbot (`D001`) mit einem Ersatz, den niemand erreicht.*
+-- >
+-- > Die Form kostet **kein Wort und keine Produktion**: `Verzeichnis::insert(v, i)` parste
+-- > schon, weil `pfad` ein Wortschatzwort als Segment zulaesst. Gefehlt hat nicht die
+-- > Rufform, sondern der GERUFENE -- gemessen als `K003`/`E009`, bevor entschieden wurde.
+-- >
+-- > **Und die Voraussetzungen des Beweises sind hier Pflichten**: `D012` haelt sie gegen
+-- > die Aufrufstelle. Was unten an `requires` steht, steht dort nicht zur Zierde.
+--
+-- Die Gegenprobe steht in `beispiele/gift/221-ops-erfundenes-wort.gab`; die Gegenproben zur
+-- Rufform in `beispiele/gift/321`-`324`.
 
 module beispiel::opswortmenge {
 
@@ -67,6 +80,98 @@ impl fn marke_von(v : ptr<normal, r> Verzeichnis, i : index into Verzeichnis) ->
     costs   <= 2 ops
 {
     return v.slots[i].marke;
+}
+
+-- ==========================================================================================
+-- **Die Rufform** (2026-08-28). Ab hier steht im erzeugten C ein `Verzeichnis_insert(v, i);`
+-- statt eines Prototyps, den nie jemand ruft.
+-- ==========================================================================================
+
+-- **Die Voraussetzung steht im `requires` und wird von `D012` gehalten.** Sie ist woertlich
+-- `sigma n = None` aus `einfuegen_erhaelt` -- und `occupied benutzt` ist der Grund, warum
+-- der Pruefer weiss, WELCHES Feld sie meint.
+impl fn belegen(v : ptr<normal, rw> Verzeichnis, i : index into Verzeichnis)
+    requires !v.slots[i].benutzt
+    effects  { writes v.slots }
+    costs    <= 4 ops
+{
+    Verzeichnis::insert(v, i);
+}
+
+-- Dieselbe Pflicht, an der zweiten der drei Stellen, an denen eine Tatsache ueber einem Ruf
+-- stehen kann: die Bedingung des umgebenden `if`. *Wer sie nicht hat, bekommt sie nicht
+-- geschenkt* -- `beispiele/gift/321` schreibt genau diesen Rumpf ohne die Wache.
+impl fn belegen_wenn_frei(v : ptr<normal, rw> Verzeichnis, i : index into Verzeichnis)
+    effects { writes v.slots, reads v.slots }
+    costs   <= 6 ops
+{
+    if !v.slots[i].benutzt {
+        Verzeichnis::insert(v, i);
+    }
+}
+
+-- **`remove` schuldet hier NICHTS, und das ist eine Aussage.** `blatt sigma s` heisst
+-- *„niemand nennt `s` als Elter"*; diese Tabelle hat keine `tree`-Kante, also kann kein Feld
+-- einen Elter nennen, und die Voraussetzung gilt fuer jedes `s`. Eine erfundene Pflicht haette
+-- strenger ausgesehen und weniger bedeutet. Der Fall MIT Kante steht unten an `Ordner`.
+impl fn raeumen(v : ptr<normal, rw> Verzeichnis, i : index into Verzeichnis)
+    effects { writes v.slots }
+    costs   <= 4 ops
+{
+    Verzeichnis::remove(v, i);
+}
+
+-- ==========================================================================================
+-- **Die zweite Tabelle traegt eine Baumkante -- und damit BEIDE uebrigen Voraussetzungen.**
+--
+-- `einfuegen_erhaelt` verlangt neben `sigma n = None` auch `erreicht sigma p`, und
+-- `blatt_loeschen_erhaelt` verlangt `blatt sigma s`. Ohne `tree { parent … }` ist die erste
+-- gegenstandslos (es gibt keinen Elter) und die zweite trivial. Mit ihr sind es Pflichten.
+--
+-- **Die WURZEL waehlt der Rufer, nicht die Deklaration.** `erreicht` im Beweis ist die
+-- Erreichbarkeit *einer* Wurzel; welcher Platz sie spielt, steht in der Erreichbarkeits-
+-- invariante der Tabelle und nicht in der `tree`-Zeile. Eine bestimmte Wurzel hier zu
+-- verlangen waere eine Behauptung, die der Satz nicht macht.
+-- ==========================================================================================
+
+table Ordner count N {
+    const WURZEL : u32 = 0;
+
+    tree { parent elter }
+
+    slot {
+        benutzt : bool,
+        elter   : option index into Ordner,
+    }
+
+    ops insert, remove;
+
+    occupied benutzt;
+
+    invariant jeder_erreicht_die_wurzel cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s] reaches WURZEL via elter;
+}
+
+impl fn einhaengen(o : ptr<normal, rw> Ordner,
+                   n : index into Ordner,
+                   p : index into Ordner)
+    requires !o.slots[n].benutzt, o.slots[p] reaches WURZEL via elter
+    effects  { writes o.slots }
+    costs    <= 6 ops
+{
+    Ordner::insert(o, n, p);
+}
+
+-- **`blatt sigma s`, woertlich.** Nicht `o.slots[s].erstes_kind == None` -- das schreibt
+-- `beispiele/01` von Hand und es ist SCHWAECHER: es gilt auch von einem Platz, dessen
+-- Kindliste von den Elternzeigern abgewandert ist. Eine schwaechere Voraussetzung als die des
+-- Satzes ist genau dort fail-open, wo der Satz der ganze Ertrag ist.
+impl fn aushaengen(o : ptr<normal, rw> Ordner, s : index into Ordner)
+    requires forall x in slots of o : o.slots[x].elter != Some(s)
+    effects  { writes o.slots }
+    costs    <= 6 ops
+{
+    Ordner::remove(o, s);
 }
 
 }

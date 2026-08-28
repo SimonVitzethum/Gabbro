@@ -115,6 +115,17 @@ struct Namen {
     /// Die `accumulates`-Namen. **Ein Lesen wird ein Ruf, ein Schreiben auch** -- sonst
     /// stuende im C ein Zugriff auf eine Zelle, die es nicht gibt.
     akkus: BTreeSet<String>,
+    /// **The generated operations of this unit, as a caller writes them** (`Verzeichnis::insert`).
+    ///
+    /// A path call is lowered by its LAST segment everywhere else in this emitter; a
+    /// generated operation is the one callee whose C name is built from two of them
+    /// (`Verzeichnis_insert`). *The relation stands in the `table` declaration, not in the
+    /// call -- so the emitter establishes it instead of copying the name and letting `cc`
+    /// find an implicit declaration.* Same move as the `transition` twenty lines further on.
+    opsnamen: BTreeSet<String>,
+    /// Which of them this unit actually calls -- the one thing `__attribute__((unused))`
+    /// hangs on (`crate::opsruf::gerufene`).
+    opsgerufen: BTreeSet<String>,
     /// Atomicname -> (C-Typ, `memory_order`-Wort). **K11.2.3** -- ohne den Typ hat ein
     /// `let x = A awaits { … }` keinen, und ohne die Ordnung stuende im C das Vorgabemodell
     /// von `_Atomic` statt dessen, was die Quelle sagte.
@@ -562,6 +573,14 @@ fn rechnet_mit_gleitkomma(baum: &Programm) -> bool {
 /// Emits C for a tree, or refuses by name.
 pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
     let mut namen = Namen::default();
+    namen.opsgerufen = crate::opsruf::gerufene(baum);
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Tabelle(t) = &item.art {
+            for k in crate::opsruf::koepfe(t) {
+                namen.opsnamen.insert(k.pfad());
+            }
+        }
+    });
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         ItemArt::Konst(k) => {
             namen.konstanten.insert(k.name.text.clone());
@@ -2192,33 +2211,69 @@ fn ops(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
     let Some(belegt) = &t.belegt else { return };
     let tn = &t.name.text;
     let elter = t.baum.as_ref().and_then(|b| b.elter.as_ref());
+    // **`__attribute__((unused))` is a MEASUREMENT from today on, not a habit** (2026-08-28).
+    //
+    // Until this morning every generated operation carried it, because nothing in this
+    // language could call one -- *a prohibition (`D001`) with a replacement nobody could
+    // reach.* The call form exists since `messung/OPS-RUFFORM.md`; the attribute therefore
+    // has to say whether THIS unit calls THIS operation, and where it does, it must go. An
+    // attribute claiming a function is unused while a line below calls it is a false
+    // statement about the unit, and `pruefe-emission.sh` would never see it fall.
+    let koepfe = crate::opsruf::koepfe(t);
+    let leise = |wort: &str| {
+        if u.opsgerufen.contains(&format!("{tn}::{wort}")) {
+            String::new()
+        } else {
+            " __attribute__((unused))".to_string()
+        }
+    };
+    // The premises, with the parameter names of the emitted head. **They are the same
+    // objects `D012` holds against the call site** -- one producer, so the C states what the
+    // checker demands instead of paraphrasing it.
+    let pflicht = |wort: &str| -> String {
+        let zeilen: Vec<String> = koepfe
+            .iter()
+            .filter(|k| k.wort == wort)
+            .flat_map(|k| k.kopfform())
+            .map(|z| format!("\x20     requires {z}\n"))
+            .collect();
+        if zeilen.is_empty() {
+            "\x20  This table has no `parent` edge, so no slot can name another as parent:\n\
+             \x20  `blatt sigma s` holds of every `s`, and the caller owes NOTHING here.\n"
+                .to_string()
+        } else {
+            format!(
+                "\x20  What the caller owes, held against the call site by `D012`:\n{}",
+                zeilen.concat()
+            )
+        }
+    };
     for w in &t.ops {
         match w.text.as_str() {
             "insert" => {
                 aus.push_str(&format!(
                     "\n/* `ops insert` -- beweise/Table_Ops_Erhaltung.thy, `einfuegen_erhaelt`.\n\
-                     \x20  The caller owes the theorem's two premises, and M1 holds them at the\n\
-                     \x20  call site: the slot is FRESH (`sigma n = None`) and the parent is\n\
-                     \x20  REACHABLE (`erreicht sigma p`). What this function buys is Teil I:\n\
-                     \x20  the proof falls ONCE per operation, not once per call site. */\n"
+                     \x20  The premises are the theorem's: the slot is FRESH (`sigma n = None`)\n\
+                     \x20  and the parent is REACHABLE (`erreicht sigma p`). What this function\n\
+                     \x20  buys is Teil I: the proof falls ONCE per operation, not per call site.\n\
+                     {} */\n",
+                    pflicht("insert")
                 ));
-                // **The same prototype line every emitted routine gets** -- a generated
-                // operation is the table's INTERFACE, and cut (c) says the kernel calls into
-                // it. Within its own unit nothing calls it, and `-Werror=unused-function`
-                // is right to say so.
                 match elter {
                     Some(e) => aus.push_str(&format!(
-                        "static void {tn}_insert({tn} *t, uint32_t n, uint32_t p) \
-                         __attribute__((unused));\n\
+                        "static void {tn}_insert({tn} *t, uint32_t n, uint32_t p){};\n\
                          static void {tn}_insert({tn} *t, uint32_t n, uint32_t p) {{\n\
                          \x20   t->slots[n].{} = p;\n\
                          \x20   t->slots[n].{} = 1;\n}}\n",
-                        e.text, belegt.text
+                        leise("insert"),
+                        e.text,
+                        belegt.text
                     )),
                     None => aus.push_str(&format!(
-                        "static void {tn}_insert({tn} *t, uint32_t n) __attribute__((unused));\n\
+                        "static void {tn}_insert({tn} *t, uint32_t n){};\n\
                          static void {tn}_insert({tn} *t, uint32_t n) {{\n\
                          \x20   t->slots[n].{} = 1;\n}}\n",
+                        leise("insert"),
                         belegt.text
                     )),
                 }
@@ -2226,12 +2281,15 @@ fn ops(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             "remove" => {
                 aus.push_str(&format!(
                     "\n/* `ops remove` -- beweise/Table_Ops_Erhaltung.thy, `blatt_loeschen_erhaelt`.\n\
-                     \x20  Premise the caller owes: `blatt sigma s` -- nobody names `s` as parent.\n\
-                     \x20  `sigma(s := None)` is a slot that carries NO value any more, so EVERY\n\
-                     \x20  field is reset. beispiele/47 shows why that is not zeal: its invariant\n\
-                     \x20  `marke_null_wenn_frei` breaks if a field survives the removal. */\n\
-                     static void {tn}_remove({tn} *t, uint32_t s) __attribute__((unused));\n\
-                     static void {tn}_remove({tn} *t, uint32_t s) {{\n"
+                     \x20  Premise the theorem charges: `blatt sigma s` -- nobody names `s` as\n\
+                     \x20  parent. `sigma(s := None)` is a slot that carries NO value any more, so\n\
+                     \x20  EVERY field is reset. beispiele/47 shows why that is not zeal: its\n\
+                     \x20  invariant `marke_null_wenn_frei` breaks if a field survives removal.\n\
+                     {} */\n\
+                     static void {tn}_remove({tn} *t, uint32_t s){};\n\
+                     static void {tn}_remove({tn} *t, uint32_t s) {{\n",
+                    pflicht("remove"),
+                    leise("remove")
                 ));
                 for f in t.slot.iter().flat_map(|sd| sd.felder.iter()) {
                     let wert = match &f.typ {
@@ -2262,7 +2320,6 @@ fn ops(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
             ),
         }
     }
-    let _ = u;
 }
 
 /// **Ein Geraeteregister wird ein volatiler Zugriff an `basis + Versatz` -- und KEIN Feld.**
@@ -6925,6 +6982,22 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
             "`transition` call whose argument is not a handle of THAT device -- the              transition belongs to a declaration, and which one is not a guess",
         );
         return String::new();
+    }
+    // **A generated operation is called by its TWO segments** (2026-08-28,
+    // `messung/OPS-RUFFORM.md`). `Verzeichnis::insert(v, i)` is `Verzeichnis_insert(v, i)`
+    // -- the same lowering the `transition` gets above, and for the same reason: the C name
+    // is built from a relation the DECLARATION carries. Without this branch the tail below
+    // would emit `insert(v, i)`, an implicit declaration that `-Werror` happens to catch.
+    // *Happening to fail is not refusing.*
+    if let Some(pf) = r.path() {
+        if u.opsnamen.contains(&pf.text()) {
+            let args: Vec<String> = r
+                .argumente
+                .iter()
+                .map(|a| ausdruck(a, u, absagen))
+                .collect();
+            return format!("{}({})", pf.text().replace("::", "_"), args.join(", "));
+        }
     }
     let geist = u.funktionen.get(&name).map(|s| s.geist_param.clone());
     let args: Vec<String> = r
