@@ -127,7 +127,11 @@ raw fn phys_schreiben(p : Pa, w : u64) requires BootPhase effects { writes phys 
 -- Die Nachbedingung darueber sagt, WAS verschwindet (`O012`); sie ist die formulierbare
 -- Haelfte. Die andere -- eine Adresse ohne Abbildung ist nicht mehr erreichbar -- ist eine
 -- Aussage ueber MMU und TLB und steht in `gabbro annahmen`, mit der Sonde daneben.
-fn boot_ende(t : BootPhase, kern_wurzel : Seitentabelle)
+-- **Die Wurzel steht als ZEIGER da, und das ist keine Bequemlichkeit.** Eine
+-- Seitentabellenwurzel als Wert zu uebergeben hiesse, sie zu kopieren -- und `writes
+-- kern_wurzel` redete dann ueber die Kopie. Der Erzeuger sagt die Wertform mit `C001` ab
+-- (`parameter type`), und die Absage hat recht: es gibt kein C fuer einen `walk` als Wert.
+fn boot_ende(t : BootPhase, kern_wurzel : ptr<normal, rw> Seitentabelle)
     ensures !exists m in mappings of kern_wurzel :
         m.rahmen >= BOOT_RAHMEN_UNTEN && m.rahmen < BOOT_RAHMEN_OBEN
     retires t from boot falsifier sonde_boot_unerreichbar
