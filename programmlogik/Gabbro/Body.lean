@@ -281,6 +281,17 @@ inductive Stmt where
       -- and that hypothesis is discharged by a separate theorem over `body`. The body is
       carried too, so that theorem has something to talk about. -/
   | loop (id : String) (inv : Expr) (body : List Stmt)
+  /-- `locks S { … }` -- **a critical section, and it costs no memory model.**
+
+      Its meaning is the body's. That looks naive read alone and is not: the whole model is
+      SEQUENTIAL, and what makes a sequential reading sound is exactly that the lock is held
+      -- `H005`/`H006`/`H012`/`H016` carry it, and the header books it as `races`. *A lock
+      that added state here would be the second register over a statement a pass already
+      discharges.*
+
+      **The lock's NAME stays in the datum** all the same. Inlining the body would erase the
+      critical section from the record, and a reader could no longer see where one was. -/
+  | locked (lock : String) (body : List Stmt)
   | ret (value : Option Expr)
   deriving Repr
 
@@ -375,6 +386,7 @@ def step (ρ : Env) : Stmt → State → Outcome
   -- about that state is what the loop rule -- carried as a hypothesis, never as an axiom --
   -- says about the invariant.
   | .loop id _ _, s => .running { s with world := (ρ id s).1.world }
+  | .locked _ b, s => exec ρ b s
   | .ret none, s => .returned s none
   | .ret (some e), s =>
       match eval s e with

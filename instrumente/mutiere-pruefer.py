@@ -3016,6 +3016,16 @@ MUTATIONEN = [
         "traegt danach eine GEZAEHLTE Pflicht, an der kein Beweiser scheitern kann",
     ),
     Mutation(
+        "lean-lock-loses-its-name",
+        "lean.rs",
+        '        StmtArt::Sperrt(l) => Ok(format!(\n            "(.locked {} {})",',
+        '        StmtArt::Sperrt(l) => Ok(format!(\n            "(.locked \\"\\" {}{})",',
+        "The body channel -- a critical section loses its lock name. Its meaning is the "
+        "body's, but the record then no longer says WHERE a lock was held, and two different "
+        "sections become one",
+        flaeche="annotation",
+    ),
+    Mutation(
         "p6-balance-lies",
         "refinement.rs",
         "    let refused = entries.len() - proved;",

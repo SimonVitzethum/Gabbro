@@ -4459,6 +4459,40 @@ impl fn leeren(h : ptr<normal, rw> B, s : index into B)
     );
 }
 
+/// **A critical section keeps its NAME in the datum.**
+///
+/// `locks S { … }` means what its body means -- the whole model is sequential, and what makes
+/// that sound is exactly that the lock is held (`H005`/`H006`/`H012`/`H016`). *But inlining
+/// the body would erase the critical section from the record*, and a reader could no longer
+/// see where one was.
+#[test]
+fn lean_kritischer_abschnitt_behaelt_seinen_namen() {
+    let q = "module t {
+const N : u32 = 8;
+lock L protects { B } rank 0 held <= 10 ops;
+table B count N { slot { belegt : bool, } }
+impl fn leeren(p : index into B)
+    effects  { writes B.slots, locks L }
+    costs    <= 20 ops
+{
+    locks L { B.slots[p].belegt = false; }
+}
+}
+";
+    let t = lean_programm(q);
+    assert!(
+        t.contains(r#"(.locked "L" ["#),
+        "the lock names itself in the datum:\n{t}"
+    );
+    assert!(
+        t.contains(r#"(.assign "B" (.name "p") "belegt""#),
+        "and the body is inside it:\n{t}"
+    );
+    let (_, bodies, refused, _) = lean_programm_kopf(&t);
+    assert_eq!(bodies, 1, "the routine carries a body:\n{t}");
+    assert_eq!(refused, 0, "and nothing is refused:\n{t}");
+}
+
 /// **Every refusal reason has a tag and a sentence, and `ALL` names all of them.** A reason
 /// missing from `ALL` would be counted by nobody -- the register would look smaller than it
 /// is, and smaller is the direction that flatters.
@@ -4525,10 +4559,15 @@ impl fn ruft(p : index into B)
     effects  { reads B.slots, writes B.slots, locks L }
     costs    <= 20 ops
 { leeren(p); }
-impl fn sperrt(p : index into B)
-    effects  { reads B.slots, writes B.slots, locks L }
+atomic FERTIG : bool release;
+static mut bericht : u64 = 0;
+impl fn meldet(p : index into B)
+    effects  { writes bericht, publishes FERTIG }
     costs    <= 30 ops
-{ locks L { B.slots[p].belegt = false; } }
+{
+    bericht = 1;
+    FERTIG = true publishes { bericht };
+}
 }
 ";
 
@@ -4543,10 +4582,12 @@ fn lean_programm_bilanz_geht_auf() {
         routines,
         "bodies + refused == routines -- otherwise a routine got lost:\n{t}"
     );
-    // **The caller is INSIDE the fragment now**: a call is taken over the contract, so the
-    // export writes it as a datum. What stands outside is the concurrent statement.
+    // **The caller is INSIDE the fragment**: a call is taken over the contract, so the export
+    // writes it as a datum. **So is a `locks` block** since 2026-08-28 -- it costs no memory
+    // model. What stands outside is `publishes`, and that one really does: it takes
+    // VISIBILITY, and visibility is a memory model.
     assert_eq!(bodies, 2, "the leaf and the CALLER are both data:\n{t}");
-    assert_eq!(refused, 1, "the concurrent one is outside:\n{t}");
+    assert_eq!(refused, 1, "the one that needs visibility is outside:\n{t}");
     assert_eq!(places, 2, "the table declares two fields with a shape:\n{t}");
 }
 
@@ -4556,10 +4597,10 @@ fn lean_programm_bilanz_geht_auf() {
 fn lean_programm_sagt_ab_statt_zu_verschlucken() {
     let t = lean_programm(PROG);
     assert!(
-        t.contains("-- REFUSED  sperrt  (concurrent-statement)"),
+        t.contains("-- REFUSED  meldet  (publish)"),
         "the routine outside the fragment stands with its reason:\n{t}"
     );
-    assert!(!t.contains("def sperrt_body"), "and carries no body:\n{t}");
+    assert!(!t.contains("def meldet_body"), "and carries no body:\n{t}");
     assert!(t.contains("def leeren_body"), "the leaf does:\n{t}");
     // **A call is a DATUM, never an inlining.** The callee is named and its parameters are
     // bound; what it does is looked up in an environment the reader's theorem quantifies

@@ -55,9 +55,19 @@ pub enum LeanReason {
     /// (`K008`/`K009`); what is missing is the INVARIANT, and Gabbro has no word for one at
     /// a loop (`Traverse`/`Retry`/`Forever` have no such field, `Tabelle` does).
     Loop,
-    /// `locks`, `publishes`, `awaits`, `exchange`, `observes`. **Here one state and one
-    /// transition stop carrying** -- it would take a memory model with visibility.
+    /// `locks S { … }`. **The one concurrent statement that costs no memory model** -- see
+    /// `LockStatement` for why it is now carried and this arm is only the fallback.
     Concurrent,
+    /// `publishes` -- a release store with a payload. **Here one state stops carrying**: it
+    /// takes VISIBILITY, and that is a memory model.
+    Publish,
+    /// `awaits` -- the other half of the pairing.
+    Await,
+    /// `exchange` -- an atomic swap. Visibility plus atomicity as a notion.
+    Exchange,
+    /// `observes D { … }` -- the RCU read side: a view that MAY be stale. Semantically the
+    /// dearest of the five; it needs "valid but not current" as a notion.
+    Observe,
     /// `let … else` -- the one error propagation, two exits out of a call. It waits on the
     /// call gate and on nothing else.
     ErrorPropagation,
@@ -131,6 +141,10 @@ impl LeanReason {
             LeanReason::CallStatement => "call-not-compositional",
             LeanReason::Loop => "loop",
             LeanReason::Concurrent => "concurrent-statement",
+            LeanReason::Publish => "publish",
+            LeanReason::Await => "await",
+            LeanReason::Exchange => "exchange",
+            LeanReason::Observe => "observe",
             LeanReason::ErrorPropagation => "let-else",
             LeanReason::Narrowing => "narrow",
             LeanReason::NonLocalExit => "non-local-exit",
@@ -170,6 +184,10 @@ impl LeanReason {
             LeanReason::Concurrent => {
                 "a concurrent statement -- one state and one transition stop carrying here"
             }
+            LeanReason::Publish => "`publishes` -- a release store; it takes VISIBILITY",
+            LeanReason::Await => "`awaits` -- the other half of the pairing",
+            LeanReason::Exchange => "`exchange` -- visibility plus atomicity as a notion",
+            LeanReason::Observe => "`observes` -- a view that MAY be stale",
             LeanReason::ErrorPropagation => "`let … else` -- two exits out of a call",
             LeanReason::Narrowing => "`narrow` -- the range lattice under it is proved",
             LeanReason::NonLocalExit => "a non-local exit out of a named loop",
@@ -201,7 +219,7 @@ impl LeanReason {
         }
     }
     /// **All of them, so a report cannot omit one by forgetting to ask.**
-    pub const ALL: [LeanReason; 25] = [
+    pub const ALL: [LeanReason; 29] = [
         LeanReason::ForeignBody,
         LeanReason::Invariant,
         LeanReason::CallSite,
@@ -209,6 +227,10 @@ impl LeanReason {
         LeanReason::CallStatement,
         LeanReason::Loop,
         LeanReason::Concurrent,
+        LeanReason::Publish,
+        LeanReason::Await,
+        LeanReason::Exchange,
+        LeanReason::Observe,
         LeanReason::ErrorPropagation,
         LeanReason::Narrowing,
         LeanReason::NonLocalExit,
@@ -826,11 +848,19 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
         StmtArt::Bricht(_) | StmtArt::Leave(_) | StmtArt::Next(_) => {
             Err(LeanReason::NonLocalExit)
         }
-        StmtArt::Sperrt(_)
-        | StmtArt::Observiert(_)
-        | StmtArt::Publish(_)
-        | StmtArt::AwaitLoad(_)
-        | StmtArt::Exchange(_) => Err(LeanReason::Concurrent),
+        StmtArt::Publish(_) => Err(LeanReason::Publish),
+        StmtArt::AwaitLoad(_) => Err(LeanReason::Await),
+        StmtArt::Exchange(_) => Err(LeanReason::Exchange),
+        StmtArt::Observiert(_) => Err(LeanReason::Observe),
+        // **`locks S { … }` -- the one concurrent statement that costs no memory model.**
+        // The plumbing already carries what it says: `Held(S)` inside is what makes the
+        // sequential reading of this whole model sound, and H005/H006/H012/H016 discharge
+        // it. The name travels into the datum so the critical section stays visible.
+        StmtArt::Sperrt(l) => Ok(format!(
+            "(.locked {} {})",
+            quoted(&l.sperre.basis.text),
+            block_term(&l.rumpf, c)?
+        )),
     }
 }
 
