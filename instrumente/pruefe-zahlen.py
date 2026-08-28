@@ -519,7 +519,11 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r"\*\*([0-9  ]+) Zeilen\*\* in dreizehn Theorien",
+        # **Die Zahl der Theorien stand hier als WORT und war damit selbst eine stehen-
+        # gebliebene Zahl** (gefunden 2026-08-28, als die vierzehnte Theorie kam): der
+        # Sucher fand seinen Satz nicht mehr und der Eintrag wurde STUMM statt rot.
+        # *Ein Register, dessen Fundstelle veraltet, spricht frei.* Darum `\w+`.
+        r"\*\*([0-9  ]+) Zeilen\*\* in \w+ Theorien",
         ["./instrumente/zaehle-theorien.py"],
         r"== \d+ Theorien, (\d+) Zeilen",
         "Zeilen der eigenen Isabelle-Theorien",

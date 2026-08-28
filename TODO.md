@@ -586,18 +586,23 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 - [ ] **~~Die Zeilenanteile der eigenen Theorien sind gezaehlt, aber nicht KLASSIFIZIERT~~ —
       GEBAUT 2026-08-20** (`./instrumente/zaehle-theorien.py`). Die alte Buchung sagte *„zehn Theorien,
       1 639 Zeilen, 48 Sätze, 86 Beweisschritte"* und ließ die Frage offen, was davon Prosa
-      ist. Heute: **2570 Zeilen** in dreizehn Theorien, **76 Sätze** darin — und klassifiziert:
+      ist. Heute: **3170 Zeilen** in vierzehn Theorien, **89 Sätze** darin — und klassifiziert:
 
       | | | |
       |---|---:|---|
-      | Gerüst | 422 | 16,4 % — `theory`/`imports`/`begin`/`end` und Leerzeilen |
-      | Prosa | 1 192 | **46,4 %** — Kommentare, `text`-Blöcke, Überschriften |
-      | Modell | 169 | 6,6 % — Definitionen, Datentypen |
-      | Beweis | 787 | 30,6 % — Sätze samt ihren Beweisen |
+      | Gerüst | 521 | 16,4 % — `theory`/`imports`/`begin`/`end` und Leerzeilen |
+      | Prosa | 1 457 | **46,0 %** — Kommentare, `text`-Blöcke, Überschriften |
+      | Modell | 217 | 6,8 % — Definitionen, Datentypen |
+      | Beweis | 975 | 30,8 % — Sätze samt ihren Beweisen |
+
+      *~~2570 Zeilen, dreizehn Theorien, 76 Sätze, 956 Modell+Beweis~~ — nachgezogen
+      2026-08-28 durch `beweise/Absenkung_Parametrisch.thy`. **Die Anteile
+      haben sich dabei um weniger als einen halben Punkt bewegt**, und das ist der
+      eigentliche Befund: eine vierzehnte Theorie ändert die Verwechslung nicht.*
 
       **Fast die Hälfte ist Fließtext, und damit ist die Verwechslung beziffert:**
-      **956 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
-      **37,2 % statt 100 %.** *Wer 2 570 gegen eine Verus-Zahl hält, überschätzt die eigene
+      **1192 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
+      **37,6 % statt 100 %.** *Wer 3 170 gegen eine Verus-Zahl hält, überschätzt die eigene
       Seite um den Faktor 2,7.* Dieselbe Verwechslung, an der `1,90` am 2026-08-19
       zurückgezogen wurde, eine Ebene tiefer.
       *Und was das NICHT heißt:* die Einteilung liest Zeilenanfänge; ein `text`-Block über ein
@@ -3446,7 +3451,7 @@ und genau das ist Stufe 8 (PL.1), die noch nicht angefangen hat.
 
 **Und die vierte, die kein Argument gegen Lean ist, sondern eine Auflage:** eine zweite
 Beweisschicht neben Isabelle ist **W7** — zwei Register über derselben Sache. Heute stehen
-13 Theorien, 2 570 Zeilen, 76 Sätze, 10 von 21 Schablonen maschinell geprüft. *Wer Lean
+14 Theorien, 3 170 Zeilen, 89 Sätze, 10 von 21 Schablonen maschinell geprüft. *Wer Lean
 danebenstellt, muss sagen, welche Aussage wo lebt, sonst wandert dieselbe Aussage in beide und
 niemand weiß, welche gilt.*
 

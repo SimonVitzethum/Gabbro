@@ -367,6 +367,27 @@ pub const SCHABLONEN: &[Schablone] = &[
         // that the shift gets COUNTED. What is still not proved is the step from the Isabelle
         // model to the emitted C -- the same gap `Table_Absenkung.thy` names in its own words
         // ("die Sprachdefinition von C und keine Annahme dieses Beweises").
+        //
+        // **AND THAT STEP HAS SINCE BEEN CUT DOWN TO ONE LINE, WITH A CORRECTION ATTACHED**
+        // (2026-08-28, `beweise/Absenkung_Parametrisch.thy`). That theory states the lowering
+        // of `relabel` PARAMETRICALLY over the target semantics -- six named properties
+        // `E1`..`E6`, none of them naming C or a machine -- and proves three things:
+        //
+        //   * `absenkung_am_belegten_platz`   the emitted body computes `umhaengen` -- but
+        //                                     ONLY on an OCCUPIED slot;
+        //   * `absenkung_geht_am_freien_platz_auseinander`
+        //                                     on a FREE slot the two differ: the model makes
+        //                                     the slot occupied, the emitted C leaves it free;
+        //   * `relabel_erhaelt_wohlgeformt`   the INVARIANT lowers unconditionally all the
+        //                                     same, and its two branches hold for DIFFERENT
+        //                                     reasons.
+        //
+        // **The first premise line below therefore overstates by one word, and this is where the
+        // word is corrected instead of overwritten:** `relabel` = `umhaengen` holds on an
+        // occupied slot and NOT in general. The honest equation has two branches
+        // (`absenkung_relabel`). Nothing about the emitted set changes, and the state stays
+        // `Getragen` -- what changes is that the gap now has a shape and a counterexample
+        // instead of a sentence.
         stand: Stand::Getragen,
         voraussetzungen: &[
             Voraussetzung { was: "jede ERZEUGTE Operation erhaelt die Invariante -- Teil I ist parametrisch", durch: Some("`emit.rs::ops` (2026-08-28): the generator emits exactly the THREE operations Teil II proves -- `insert` = `einfuegen`, `remove` = `blatt_loeschen`, `relabel` = `umhaengen` -- and refuses an invented word. The emitted set and the proved set are the same set. *`relabel` joined on the evening of that day, and the theorem came first (`umhaengen_erhaelt`, U-3); until then the word emitted nothing and nobody could call it*"), braeuchte: None },
