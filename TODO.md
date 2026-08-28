@@ -4169,15 +4169,28 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       `K4` aus `messung/ABSENKUNG.md`: findet ein Durchstich die Abweichung am freien Platz von
       selbst, oder nur, weil ein Satz sagt, wo man hinsehen muss?
 
-- [ ] **`A8` („18 claims open") ist eine Mischung und hat keinen Wächter.** Die achtzehn sind
-      die Zeilen von `dokumente/SPRACHE.md`:2621–2638; die Zahl ist eine Handzählung vom
-      2026-08-14 und seither nie nachgerechnet. Gemessen: **Nr. 4 ist eingelöst** (`emit.rs::ops`
-      erzeugt `relabel`), **Nr. 18 ist WIDERLEGT** — behauptet wird `#if`, gebaut ist ein Filter
-      vor dem Erzeuger (`gatter.rs::ohne_gatter`), und `pruefe-emission.sh` sagt selbst, warum
-      ein `#if` falsch wäre. *Eine widerlegte Behauptung ist teurer als eine offene, und `A8`
-      zählt beide als dieselbe Einheit.* Die übrigen sechzehn sind nicht nachgerechnet.
-      **`pruefe-zahlen.py` kann die Zelle nicht einmal als unbewacht melden** — sein
-      Reichweitenzähler verlangt eine fett gesetzte Zahl, und `18 claims open` ist nicht fett.
+- [ ] **`A8` („18 claims open") ist nachgerechnet: 12 eingelöst, 2 offen, 4 WIDERLEGT** —
+      und die vier Widerlegungen brauchen eine Heilung in `dokumente/SPRACHE.md`:2621–2638.
+      **Nr. 5** behauptet für `linear Uninstalled(Object)` „disappears"; `emit.rs`:1355–1366
+      erzeugt für `linear type T;` **ein Byte**, und `SPRACHE.md`:750 sagt vier Seiten früher
+      selbst *„echte Ressource: Bytes im Erzeugnis"* — **der Tabellenzeile fehlt das Wort
+      `ghost`.** **Nr. 8** behauptet „generated `printf`"; `grep -c printf
+      crates/gabbro-check/src/emit.rs` → **0**, und `measures` erreicht keine erzeugte Zeile.
+      **Nr. 12** behauptet „none" für `breaking`; `emit.rs`:5614 **weigert sich** — 53 Dateien
+      in `beispiele/` gegen `MARKE_EMIT=52`, und die eine ist `beispiele/53-zwei-orte.gab`.
+      **Nr. 18** behauptet `#if`; gebaut ist ein Filter vor dem Erzeuger (`gatter.rs`:111).
+      Offen bleiben **Nr. 3** (`chain` + Generationsstempel — null Zeilen Code im ganzen Baum)
+      und **Nr. 6** (`Duty` wird nirgends erzeugt, `namen.rs`:1445 sagt es selbst).
+      *Eine widerlegte Behauptung ist teurer als eine offene, und `A8` zählte zwölf Erledigte,
+      zwei Offene und vier Irrtümer als achtzehn gleiche Einheiten.*
+      **Und drei der vier Widerlegungen sind Widerlegungen durch den ERZEUGER, nicht durch C.**
+
+- [ ] **Die achtzehn brauchen einen Wächter, und heute kann keiner sie sehen.**
+      `pruefe-zahlen.py`s Reichweitenzähler verlangt eine **fett** gesetzte Zahl in einer
+      Tabellenzelle; `A8` schreibt `18 claims open` ohne Fettung, also meldet er sie nicht
+      einmal als unbewacht (`sed -n '859p' dokumente/PLAN.md | grep -c '|\s*\*\*[0-9]'` → 0).
+      *Vier Widerlegungen in einer einzigen Auszählung sind der Beleg dafür, dass eine Tabelle
+      ohne Wächter kein Register ist.*
 
 - [ ] **Der parametrische Absenkungssatz für `insert` und `remove`.**
       `beweise/Absenkung_Parametrisch.thy` hat ihn für `relabel` — sechs benannte Eigenschaften

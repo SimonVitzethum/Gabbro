@@ -206,30 +206,56 @@ ihn nicht.* Dieselbe Klasse wie `W16`.
 > **`K100.4` schwach ist heute nicht die Aufzählung, für die es gehalten wird.** Es zählt auf,
 > was die Zweitlesung kennt — und die Zweitlesung ist elf Tage jünger als ihr Gegenstand.
 
-### 1.6 Die achtzehn heute — und mindestens eine ist nicht offen, sondern **widerlegt**
+### 1.6 Die achtzehn heute — nachgerechnet, und es sind nicht achtzehn offene
 
-Nachgerechnet an Erzeuger und Korpus (§1.2 nennt die Fundstelle der Tabelle):
+Jede der achtzehn Zeilen einzeln gegen den Erzeuger, den Korpus und `pruefe-emission.sh`
+gehalten. Drei Fragen je Zeile: existiert die Form, senkt `emit.rs` sie ab, **stimmt die
+behauptete Absenkung mit der gebauten überein**.
 
-* **Nr. 4** *„`move_cap` — node relabelling"*, behauptete Absenkung **„pointer rehanging"**:
-  **eingelöst.** `emit.rs::ops` erzeugt seit dem 2026-08-28 abends
-  `T_relabel(T *t, uint32_t s, uint32_t p) { t->slots[s].elter = p; }` — und das ist wörtlich
-  das Umhängen eines Zeigers. *Der Posten stand vierzehn Tage als Behauptung und ist gebaut,
-  ohne dass `A8` es erfahren hat.*
-* **Nr. 18** *„conditional compilation (335 `cfg` sites)"*, behauptete Absenkung **`#if`**:
-  **widerlegt.** Gebaut ist ein Filter **vor** dem Erzeuger (`gatter.rs::ohne_gatter`), und
-  `pruefe-emission.sh` sagt in seinem Kommentar aus, warum das kein Schönheitsfehler ist:
-  *„Ein Gatter, das im C landet, ist kein Gatter — ein `#if` hätte den ganzen Block
-  mitgeliefert und nur den Präprozessor darüber entscheiden lassen."* Gemessen:
-  0 Gerüstnamen im Auslieferungs-C, 16 im Prüfbau-C, 39 Zeilen gegen 77.
-
-```bash
-ssh ki-pc-fisch-101 'cd gabbro-L && ./instrumente/pruefe-emission.sh 2>&1 | grep -A3 "Baugatter"'
+```
+12 eingelöst   1, 2, 4, 7, 9, 10, 11, 13, 14, 15, 16, 17
+                 davon 10 DURCHGESTOCHEN   1, 2, 7, 9, 10, 13, 14, 15, 16, 17
+                 davon 2 nur übersetzt     4 (`relabel`), 11 (`old` in der behaupteten Gestalt)
+ 2 offen       3 (`chain` + Generationsstempel), 6 (`Duty`)
+ 4 WIDERLEGT   5, 8, 12, 18
 ```
 
+> **`A8` bucht seit dem 2026-08-14 „18 claims open". Gemessen sind zwei.** Zwölf sind
+> eingelöst, zehn davon an der Ausführung. *Die Zelle ist keine Arbeitsmenge — sie ist eine
+> vierzehn Tage alte Handzählung, die drei verschiedene Zustände in einer Zahl führt.*
+
+**Die vier Widerlegungen, jede mit ihrem Befehl:**
+
+| # | behauptet | gebaut |
+|---|---|---|
+| **5** | `linear Uninstalled(Object)` → **„disappears"** | `emit.rs`:1355–1366 erzeugt für `linear type T;` **`typedef struct { uint8_t nichts; } T;` — ein Byte.** *`SPRACHE.md`:750 widerspricht `SPRACHE.md`:2625 vier Seiten früher:* „`linear type Parked;` — **echte Ressource: Bytes im Erzeugnis**" gegen „`linear ghost type Held(Lock);` — vor der Codeerzeugung gelöscht". **Der Tabellenzeile fehlt das Wort `ghost`** — und mit Parameterliste löst `ctyp` ohnehin nichts auf (`C001`) |
+| **8** | `measures` IST die Berichtszeile → **„generated `printf`"** | `grep -c printf crates/gabbro-check/src/emit.rs` → **`0`**, im ganzen Crate null. `emit.rs`:2703 erzeugt `bool pruefe_X(void)` mit einem Kommentar, in dem `claim`, `gates` und `counterprobe` stehen — **`measures` und `floor` in keiner erzeugten Zeile**, obwohl `emit.rs`:1795 sie mit aufzählt. *Ein Kommentar über eine Absenkung, die die Funktion darunter nicht macht* |
+| **12** | `breaking I { … }` → **„none"** | `emit.rs`:5614: `StmtArt::Bricht(_) => weigere(…)`. Der Erzeuger gibt der Lesart recht (*„At run time it is nothing but its statements"*) **und senkt trotzdem nicht ab.** „none" liest sich als *kostet nichts, der Rest übersetzt*; gebaut ist *die ganze Einheit übersetzt nicht*. **Gemessen:** `ls beispiele/*.gab \| wc -l` → 53, `MARKE_EMIT=52`, und der Lauf über alle nennt die eine: `beispiele/53-zwei-orte.gab` |
+| **18** | `when <const>` → **`#if`** | Filter **vor** dem Erzeuger (`gatter.rs`:111 `ohne_gatter`), und `pruefe-emission.sh` begründet es selbst: *„ein Gatter, das im C landet, ist kein Gatter — ein `#if` hätte den ganzen Block mitgeliefert."* Gemessen: 0 Gerüstnamen im Auslieferungs-C, 16 im Prüfbau-C, 39 Zeilen gegen 77 |
+
+```bash
+grep -c printf crates/gabbro-check/src/emit.rs                 # 0
+sed -n '5614,5616p' crates/gabbro-check/src/emit.rs            # weigere bei `breaking`
+ls beispiele/*.gab | wc -l ; grep -n 'MARKE_EMIT=' instrumente/pruefe-emission.sh   # 53 / 52
+ssh ki-pc-fisch-101 'cd gabbro-L && for f in beispiele/*.gab; do \
+  ./target/debug/gabbro emit "$f" >/dev/null 2>&1 || echo "EMITTIERT NICHT: $f"; done'
+# EMITTIERT NICHT: beispiele/53-zwei-orte.gab
+```
+
+**Die zwei echten offenen:**
+
+* **Nr. 3** (`traverse over chain(fat, cluster)` → *„loop + generation stamp"*): der Erzeuger
+  **sagt namentlich ab** (`emit.rs`:6402, `C001`), der Korpus hat **null** `chain(`-Stellen,
+  und *„Generationsstempel"* kommt im ganzen Baum nicht vor. **Der behauptete Mechanismus hat
+  null Zeilen Code.**
+* **Nr. 6** (`Finalized<'a>` → `own` + `Duty`): die `own`-Hälfte ist trivial eingelöst
+  (`emit.rs`:4014 sagt ausdrücklich, was dabei **nicht** behauptet wird), die `Duty`-Hälfte
+  existiert als Erzeugnis nicht — `namen.rs`:1445 sagt es selbst: *„die `linear ghost
+  Duty(check)` wird **nirgends erzeugt**"*.
+
 > **Eine widerlegte Behauptung ist teurer als eine offene.** Eine offene sagt „das ist noch
-> nicht gemacht"; eine widerlegte sagt etwas Falsches über etwas Fertiges — und `A8`s Zelle
-> zählt beide als dieselbe Einheit. *Die achtzehn sind keine Arbeitsmenge, sie sind eine
-> Mischung aus Arbeitsmenge, Erledigtem und Irrtum, und niemand hat sie getrennt.*
+> nicht gemacht"; eine widerlegte sagt etwas Falsches über etwas Fertiges. **`A8`s Zelle
+> zählte zwölf Erledigte, zwei Offene und vier Irrtümer als achtzehn gleiche Einheiten.**
 
 ### 1.7 Und die drei jüngsten erzeugten Formen sind **nicht durchgestochen**
 
@@ -424,9 +450,13 @@ der gepflegt wird, sondern ein Beleg je Lauf.
   heute im Baum.** Form 3 ist keine neue Maschine, sie ist die Verallgemeinerung einer
   vorhandenen von *je Übersetzungseinheit* auf *je Absenkungsbehauptung*.
 * **Die achtzehn hören auf, Behauptungen zu sein, ohne dass die Richtungsentscheidung fällt.**
-  Und das ist keine Vermutung: **Nr. 18 ist heute schon widerlegt** (§1.6), und die
-  Widerlegung hat keine Semantik gekostet — sie hat einen Blick in `gatter.rs` gekostet. Ein
-  Zeugenpaar hätte sie am ersten Tag gefunden.
+  Und das ist keine Vermutung: **vier von achtzehn sind heute widerlegt** (§1.6), und keine
+  der vier Widerlegungen hat eine Semantik gekostet — sie haben einen Blick in `gatter.rs`,
+  ein `grep -c printf` und einen Lauf über 53 Dateien gekostet. **Drei davon hätte ein
+  Zeugenpaar am ersten Tag gefunden**, und die vierte (Nr. 5, `linear` gegen `linear ghost`)
+  hätte ein Zeugenpaar über die Größe des erzeugten Verbunds gefunden. *Vierzehn Tage lang hat
+  sie niemand gefunden, weil niemand hingesehen hat — und das ist genau die Lücke, die diese
+  Form füllt.*
 * **Es ist der einzige der drei Wege, der die Gabel STEHEN LÄSST.** Wer ihn geht, hat nichts
   entschieden — und das ist hier ein Vorzug und kein Mangel, weil die Entscheidung heute nicht
   informiert getroffen werden kann.
@@ -540,20 +570,26 @@ eine dritte Form ist oder eine Ergänzung zu den ersten beiden.
 
 ### K5 — Wie viele der achtzehn sind heute noch Behauptungen?
 
-**Heute unvollständig beantwortet:** mindestens eine ist **eingelöst** (Nr. 4), mindestens eine
-ist **widerlegt** (Nr. 18). Die übrigen sechzehn sind nicht nachgerechnet.
+**Heute beantwortet, und die Antwort ist: zwei.** 12 eingelöst (10 davon durchgestochen),
+**2 offen**, **4 widerlegt** (§1.6). `A8` bucht achtzehn.
 
-**Was das Kriterium entscheidet:** ist die Zahl seit dem 2026-08-14 stark gefallen, dann ist
-`A8` nicht die Größe, die §7 unterstellt, und die Entscheidung ist kleiner als sie aussieht.
-Stehen noch fünfzehn, dann ist sie es.
+**Was das Kriterium entscheidet:** `A8` ist nicht die Größe, die §7 unterstellt. **Die
+Absenkungsbehauptungen sind zu 2 von 18 offen** — was übrig bleibt, ist nicht eine
+Arbeitsmenge, sondern **vier Irrtümer und eine fehlende Buchführung.** *Damit ist die
+Entscheidung aus §7 an dieser Flanke kleiner als das Dokument sie führt — und an einer
+anderen größer, weil ein Ordner, der vier eigene Behauptungen vierzehn Tage lang nicht
+widerlegt hat, keinen Wächter dafür hat.*
 
-**Die Messung:** die achtzehn Zeilen einzeln gegen `emit.rs` halten — je Zeile drei Fragen:
-existiert die Form, senkt der Erzeuger sie ab, **stimmt die behauptete Absenkung mit der
-gebauten überein**. Nr. 18 zeigt, dass die dritte Frage die tragende ist.
+**Der Riegel, der aus dieser Messung fällt, unabhängig vom Ausgang:** die achtzehn brauchen
+einen Wächter. Heute zählt sie niemand, und `pruefe-zahlen.py` kann sie nicht einmal als
+unbewacht melden (§1.2). *Vier Widerlegungen in einer einzigen Auszählung sind der Beleg
+dafür, dass eine Tabelle ohne Wächter kein Register ist.*
 
-**Und ein Riegel, der aus dieser Messung fällt, unabhängig vom Ausgang:** die achtzehn
-brauchen einen Wächter. Heute zählt sie niemand, und `pruefe-zahlen.py` kann sie nicht einmal
-als unbewacht melden (§1.2).
+**Und ein Befund über die Wege selbst, der hier zuerst sichtbar wird:** **drei der vier
+Widerlegungen sind Widerlegungen durch den ERZEUGER, nicht durch C.** Nr. 5, Nr. 12 und
+Nr. 18 sagen nicht, dass C etwas anderes tut als behauptet — sie sagen, dass `emit.rs` etwas
+anderes tut. *Das ist §1.4 noch einmal, von der anderen Seite: die Brücke ist die Stelle, an
+der die Behauptungen brechen, und die Gabel entscheidet sie nicht.*
 
 ### K6 — Wie viele Architekturen hat Form 2 wirklich zu bezahlen?
 
@@ -623,6 +659,12 @@ Stelle, an der Form 2 eine zweite Entscheidung enthält, die niemand gestellt ha
 * **Kein `insert`, kein `remove`.** Der parametrische Satz steht für `relabel` und für sonst
   nichts. `insert` verlangt eine siebte Eigenschaft (die Hintereinanderausführung), und die ist
   der nächste Ort, an dem Naht 2 zieht.
-* **Die achtzehn sind nicht einzeln nachgerechnet.** Zwei sind es (Nr. 4, Nr. 18), und sie
-  reichen, um zu zeigen, dass die Zahl eine Mischung ist. *Sechzehn stehen offen, und das ist
-  K5.*
+* **Die achtzehn sind nachgerechnet, aber nicht geheilt.** Die vier Widerlegungen (Nr. 5, 8,
+  12, 18) stehen als Befund da; **kein Satz in `SPRACHE.md` ist umgeschrieben worden**, und
+  `A8`s Zelle ist berichtigt, nicht ersetzt. *Die Tabelle bleibt ohne Wächter, und das ist ein
+  Posten im TODO und kein Bau in diesem Lauf.*
+* **Nr. 12 ist eine Lesartentscheidung und steht als solche da.** „lowering: none" liest sich
+  als *kostet nichts, der Rest übersetzt*; gebaut ist *die Einheit übersetzt gar nicht*. Hier
+  ist WIDERLEGT gebucht, weil ein Leser aus „none" das Erste schließt. **Wer enger liest, hat
+  drei Widerlegungen und drei Offene** — die Zahlen 53 gegen `MARKE_EMIT=52` und
+  `beispiele/53-zwei-orte.gab` stehen so oder so.
