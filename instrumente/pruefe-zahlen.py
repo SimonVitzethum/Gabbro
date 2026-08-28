@@ -519,7 +519,7 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r"\*\*([0-9  ]+) Zeilen\*\* in dreizehn Theorien",
+        r"\*\*([0-9  ]+) Zeilen\*\* in vierzehn Theorien",
         ["./instrumente/zaehle-theorien.py"],
         r"== \d+ Theorien, (\d+) Zeilen",
         "Zeilen der eigenen Isabelle-Theorien",

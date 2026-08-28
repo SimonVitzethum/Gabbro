@@ -73,7 +73,7 @@ folder.*
 
 ## Why no Isabelle-anchored number replaces it yet
 
-The 13 theories in [`beweise/`](beweise/) are **entirely the (1 − w) side** — eight K,
+The 14 theories in [`beweise/`](beweise/) are **entirely the (1 − w) side** — eight K,
 three A, one about the checker, **zero W**. An Isabelle-anchored `w` would have numerator **0** by
 construction, and the formula would return **0,30** — *below the seL4 anchor, hence a triumph,
 and false.* That is the error class this folder already booked once, when `p_B3` was read as a
@@ -96,7 +96,7 @@ one for the PROVER* — and until a body has the second kind, P6 produces `K` ob
 
 ```
 2 007 lines of Isar  ·  9 proved generator templates  ·  142 corpus sites
-                        → 14,1 lines per site (2 570 across all 13 theories)
+                        → 14,1 lines per site (2 896 across all 14 theories)
 ```
 
 > **It ROSE on 2026-08-19, from 10,4** — `Table_Ops_Erhaltung.thy` (311 lines) and

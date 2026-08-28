@@ -589,18 +589,22 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 - [ ] **~~Die Zeilenanteile der eigenen Theorien sind gezaehlt, aber nicht KLASSIFIZIERT~~ —
       GEBAUT 2026-08-20** (`./instrumente/zaehle-theorien.py`). Die alte Buchung sagte *„zehn Theorien,
       1 639 Zeilen, 48 Sätze, 86 Beweisschritte"* und ließ die Frage offen, was davon Prosa
-      ist. Heute: **2570 Zeilen** in dreizehn Theorien, **76 Sätze** darin — und klassifiziert:
+      ist. Heute: **2896 Zeilen** in vierzehn Theorien, **88 Sätze** darin — und klassifiziert:
 
       | | | |
       |---|---:|---|
-      | Gerüst | 422 | 16,4 % — `theory`/`imports`/`begin`/`end` und Leerzeilen |
-      | Prosa | 1 192 | **46,4 %** — Kommentare, `text`-Blöcke, Überschriften |
-      | Modell | 169 | 6,6 % — Definitionen, Datentypen |
-      | Beweis | 787 | 30,6 % — Sätze samt ihren Beweisen |
+      | Gerüst | 465 | 16,1 % — `theory`/`imports`/`begin`/`end` und Leerzeilen |
+      | Prosa | 1 347 | **46,5 %** — Kommentare, `text`-Blöcke, Überschriften |
+      | Modell | 178 | 6,1 % — Definitionen, Datentypen |
+      | Beweis | 906 | 31,3 % — Sätze samt ihren Beweisen |
+
+      *Nachgezogen am 2026-08-28 (`B4`): die vierzehnte Theorie ist
+      `beweise/Table_Zaehlung.thy` — «B13»s Zählung, ihre Erhaltungsfrage und zwei Grenzen
+      als Gegenbeispiel. Die alte Buchung stand bei dreizehn Theorien und 2 570 Zeilen.*
 
       **Fast die Hälfte ist Fließtext, und damit ist die Verwechslung beziffert:**
-      **956 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
-      **37,2 % statt 100 %.** *Wer 2 570 gegen eine Verus-Zahl hält, überschätzt die eigene
+      **1084 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
+      **37,4 % statt 100 %.** *Wer 2 896 gegen eine Verus-Zahl hält, überschätzt die eigene
       Seite um den Faktor 2,7.* Dieselbe Verwechslung, an der `1,90` am 2026-08-19
       zurückgezogen wurde, eine Ebene tiefer.
       *Und was das NICHT heißt:* die Einteilung liest Zeilenanfänge; ein `text`-Block über ein
