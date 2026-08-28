@@ -4493,6 +4493,58 @@ impl fn leeren(p : index into B)
     assert_eq!(refused, 0, "and nothing is refused:\n{t}");
 }
 
+/// **The pairing carries, and the PAYLOAD stays in the datum.**
+///
+/// `release_stellt_sichtbarkeit_her` is an assumption of the axiom layer -- `unfalsifiable`,
+/// with its reason written out, rebooked there by `K100.2`. So a release store is a store and
+/// an acquire load is a load. *The payload is the surface that rests on the assumption rather
+/// than on the transition*, and a record that dropped it would hide which places those are.
+#[test]
+fn lean_paarung_traegt_die_nutzlast() {
+    let q = "module t {
+atomic FERTIG : bool release;
+atomic ZAHL   : u64 relaxed;
+static mut bericht : u64 = 0;
+impl fn meldet()
+    effects { writes bericht, publishes FERTIG }
+    costs   <= 8 ops
+{
+    bericht = 1;
+    FERTIG = true publishes { bericht };
+}
+impl fn zaehlt(w : u64)
+    effects { writes ZAHL }
+    costs   <= 8 ops
+{ ZAHL = w publishes nothing; }
+impl fn liest() -> u64
+    effects { reads FERTIG, reads bericht }
+    costs   <= 8 ops
+{
+    let fertig = FERTIG awaits { bericht };
+    return bericht;
+}
+}
+";
+    let t = lean_programm(q);
+    assert!(
+        t.contains(r#"(.publish "FERTIG" (.lit (.bool true)) ["bericht"])"#),
+        "the release store names its payload:\n{t}"
+    );
+    // **`publishes nothing` is a WORD, not an empty hole**, and the datum keeps the
+    // distinction: an empty payload is a promise about nothing, and it says so.
+    assert!(
+        t.contains(r#"(.publish "ZAHL" (.name "w") [])"#),
+        "`publishes nothing` is the empty payload, not a missing one:\n{t}"
+    );
+    assert!(
+        t.contains(r#"(.awaitLoad "fertig" "FERTIG" ["bericht"])"#),
+        "and the acquire load names the same payload:\n{t}"
+    );
+    let (_, bodies, refused, _) = lean_programm_kopf(&t);
+    assert_eq!(bodies, 3, "all three routines carry a body:\n{t}");
+    assert_eq!(refused, 0, "and none is refused:\n{t}");
+}
+
 /// **Every refusal reason has a tag and a sentence, and `ALL` names all of them.** A reason
 /// missing from `ALL` would be counted by nobody -- the register would look smaller than it
 /// is, and smaller is the direction that flatters.
@@ -4559,14 +4611,13 @@ impl fn ruft(p : index into B)
     effects  { reads B.slots, writes B.slots, locks L }
     costs    <= 20 ops
 { leeren(p); }
-atomic FERTIG : bool release;
-static mut bericht : u64 = 0;
-impl fn meldet(p : index into B)
-    effects  { writes bericht, publishes FERTIG }
-    costs    <= 30 ops
+impl fn schleift(p : index into B)
+    effects  { reads B.slots, writes B.slots }
+    costs    <= 300 ops
 {
-    bericht = 1;
-    FERTIG = true publishes { bericht };
+    traverse k over descendants of B.slots[p] by consuming
+        touches consumes B.slots
+    { B.slots[k].belegt = false; }
 }
 }
 ";
@@ -4582,12 +4633,13 @@ fn lean_programm_bilanz_geht_auf() {
         routines,
         "bodies + refused == routines -- otherwise a routine got lost:\n{t}"
     );
-    // **The caller is INSIDE the fragment**: a call is taken over the contract, so the export
-    // writes it as a datum. **So is a `locks` block** since 2026-08-28 -- it costs no memory
-    // model. What stands outside is `publishes`, and that one really does: it takes
-    // VISIBILITY, and visibility is a memory model.
+    // **The routine that stands OUTSIDE is a loop WITHOUT an `invariant`**, and it is chosen
+    // for durability: three earlier versions of this probe named a `locks` block and then a
+    // `publishes`, and both were carried within the day. *A probe whose negative example
+    // keeps being overtaken measures the calendar, not the fragment.* A loop without an
+    // invariant is refused BY DESIGN -- that is what the word is for.
     assert_eq!(bodies, 2, "the leaf and the CALLER are both data:\n{t}");
-    assert_eq!(refused, 1, "the one that needs visibility is outside:\n{t}");
+    assert_eq!(refused, 1, "the loop without a statement about it is outside:\n{t}");
     assert_eq!(places, 2, "the table declares two fields with a shape:\n{t}");
 }
 
@@ -4597,10 +4649,10 @@ fn lean_programm_bilanz_geht_auf() {
 fn lean_programm_sagt_ab_statt_zu_verschlucken() {
     let t = lean_programm(PROG);
     assert!(
-        t.contains("-- REFUSED  meldet  (publish)"),
+        t.contains("-- REFUSED  schleift  (loop)"),
         "the routine outside the fragment stands with its reason:\n{t}"
     );
-    assert!(!t.contains("def meldet_body"), "and carries no body:\n{t}");
+    assert!(!t.contains("def schleift_body"), "and carries no body:\n{t}");
     assert!(t.contains("def leeren_body"), "the leaf does:\n{t}");
     // **A call is a DATUM, never an inlining.** The callee is named and its parameters are
     // bound; what it does is looked up in an environment the reader's theorem quantifies

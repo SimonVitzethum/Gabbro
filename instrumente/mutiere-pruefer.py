@@ -3026,6 +3026,16 @@ MUTATIONEN = [
         flaeche="annotation",
     ),
     Mutation(
+        "lean-publish-loses-its-payload",
+        "lean.rs",
+        '                nutzlast(&pb.nutzlast)',
+        '                String::new()',
+        "The body channel -- a release store no longer names its payload. The datum then "
+        "hides exactly which places rest on `release_stellt_sichtbarkeit_her` and not on the "
+        "transition, and `publishes nothing` becomes indistinguishable from a real payload",
+        flaeche="annotation",
+    ),
+    Mutation(
         "p6-balance-lies",
         "refinement.rs",
         "    let refused = entries.len() - proved;",

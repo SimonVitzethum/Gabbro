@@ -634,6 +634,19 @@ fn call_parts(r: &Ruf, c: &mut Ctx) -> Result<(String, String, String), LeanReas
     Ok((quoted(&name), names.join(", "), args.join(", ")))
 }
 
+/// The payload of a `publishes`, as a list of place names. `publishes nothing` is the empty
+/// list -- **a word, not an empty hole**, and the datum keeps the distinction.
+fn nutzlast(n: &Nutzlast) -> String {
+    match n {
+        Nutzlast::Orte(os) => os
+            .iter()
+            .map(|o| quoted(&o.text()))
+            .collect::<Vec<_>>()
+            .join(", "),
+        Nutzlast::Nichts(_) => String::new(),
+    }
+}
+
 /// A block as a `Gabbro.Body.Stmt` list term.
 fn block_term(b: &Block, c: &mut Ctx) -> Result<String, LeanReason> {
     let depth = c.locals.len();
@@ -848,8 +861,43 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
         StmtArt::Bricht(_) | StmtArt::Leave(_) | StmtArt::Next(_) => {
             Err(LeanReason::NonLocalExit)
         }
-        StmtArt::Publish(_) => Err(LeanReason::Publish),
-        StmtArt::AwaitLoad(_) => Err(LeanReason::Await),
+        // **The pairing costs no memory model either, and the ground is the same as at a
+        // lock**: `release_stellt_sichtbarkeit_her` is an ASSUMPTION of the axiom layer
+        // (`beispiele/06-annahmen.gab`, `unfalsifiable` with its reason written out, rebooked
+        // there by `K100.2`) -- not a proof obligation. In a single world the visibility is
+        // automatic; the assumption is what licenses reading it that way.
+        //
+        // The payload travels into the datum: it is the surface that rests on the assumption
+        // rather than on the transition, and a record that dropped it would hide which places
+        // those are.
+        StmtArt::Publish(pb) => {
+            if !pb.ziel.suffixe.is_empty() {
+                return Err(LeanReason::Publish);
+            }
+            let w = expr_term(&pb.wert, c)?;
+            Ok(format!(
+                "(.publish {} {w} [{}])",
+                quoted(&pb.ziel.basis.text),
+                nutzlast(&pb.nutzlast)
+            ))
+        }
+        StmtArt::AwaitLoad(a) => {
+            if !a.quelle.suffixe.is_empty() {
+                return Err(LeanReason::Await);
+            }
+            let payload: Vec<String> = a.erwartet.iter().map(|o| quoted(&o.text())).collect();
+            c.locals.push(a.name.text.clone());
+            Ok(format!(
+                "(.awaitLoad {} {} [{}])",
+                quoted(&a.name.text),
+                quoted(&a.quelle.basis.text),
+                payload.join(", ")
+            ))
+        }
+        // **`exchange` stays refused, and the reason is the FORM and not the visibility.**
+        // Both of its shapes are conditional: `update` carries a whole body (a CAS loop) and
+        // `compare` stores only if a predicate holds. *A plain swap would store something the
+        // program does not* -- the same class as taking `&=` for a truth value.
         StmtArt::Exchange(_) => Err(LeanReason::Exchange),
         StmtArt::Observiert(_) => Err(LeanReason::Observe),
         // **`locks S { … }` -- the one concurrent statement that costs no memory model.**

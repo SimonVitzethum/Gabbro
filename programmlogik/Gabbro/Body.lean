@@ -292,6 +292,22 @@ inductive Stmt where
       **The lock's NAME stays in the datum** all the same. Inlining the body would erase the
       critical section from the record, and a reader could no longer see where one was. -/
   | locked (lock : String) (body : List Stmt)
+  /-- `A = v publishes { p, q };` -- **a release store, and it costs no memory model either.**
+
+      The store itself is a store. What makes the PAYLOAD visible to the reader is
+      `release_stellt_sichtbarkeit_her` -- an assumption of the axiom layer since
+      `beispiele/06-annahmen.gab`, `unfalsifiable` with its reason written out, and rebooked
+      there by `K100.2`. *In a single world the visibility is automatic; the assumption is
+      what licenses reading it that way.*
+
+      **The payload travels in the datum all the same.** It is the surface that rests on the
+      assumption rather than on the transition -- and a record that dropped it would hide
+      exactly which places those are. -/
+  | publish (atomic : String) (value : Expr) (payload : List String)
+  /-- `let n = A awaits { p, q };` -- the other half of the pairing. -/
+  | awaitLoad (name : String) (atomic : String) (payload : List String)
+  /-- `let n = A exchange …;` -- an atomic swap: the old value is bound, the new one stored. -/
+  | exchangeWith (name : String) (atomic : String) (value : Expr)
   | ret (value : Option Expr)
   deriving Repr
 
@@ -387,6 +403,18 @@ def step (ρ : Env) : Stmt → State → Outcome
   -- says about the invariant.
   | .loop id _ _, s => .running { s with world := (ρ id s).1.world }
   | .locked _ b, s => exec ρ b s
+  | .publish a e _, s =>
+      match eval s e with
+      | some v => .running { s with world := store s.world (.global a) v }
+      | none => .stuck
+  | .awaitLoad n a _, s =>
+      .running { s with local' := bindLocal s.local' n (s.world (.global a)) }
+  | .exchangeWith n a e, s =>
+      match eval s e with
+      | some v =>
+          .running { world := store s.world (.global a) v,
+                     local' := bindLocal s.local' n (s.world (.global a)) }
+      | none => .stuck
   | .ret none, s => .returned s none
   | .ret (some e), s =>
       match eval s e with
