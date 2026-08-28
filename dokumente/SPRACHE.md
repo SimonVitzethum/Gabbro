@@ -1746,13 +1746,22 @@ class — because "static only means: no caller" (trap 47) and one layer alone w
 > `Impl`, `Divergent` or `Konst`: `raw` parsed, was stored, and no rule attached to it. *A word
 > that promises a discipline and is read by nobody reads like protection* — the same class as
 > `@version`. **S1 and S2 are built since then** (`O008`/`O009` in `phasen.rs`, probes
-> `beispiele/gift/299` and `/300`); **S3 is not**, and the column below says so.
+> `beispiele/gift/299` and `/300`); **S3 followed the same evening** (`O010`–`O012`, probes
+> `/341`–`/344`, decision in `messung/BOOT-S3.md`).
+>
+> **And W24 turned the S3 question around before it was answered.** The obvious form was
+> written down and run through the **unchanged** checker: `!exists m in mappings of root : …`
+> parses and types today, and `ensures` carries it with **0 errors** as soon as `effects`
+> writes the walk. *What was missing was never the postcondition and never the parser* — it
+> was the BINDING: `beispiele/07`'s old `boot_ende` passed with 0 errors because nothing said
+> this function was the boot end. The literal sentence below fell on **one word**: `boot` is
+> a vocabulary word and cannot stand in an expression.
 
 | Layer | Rule | covers | trust class | **built** |
 |---|---|---|---|---|
 | **S1 — types** | every `raw fn` demands `&BootPhase`; `BootPhase` is linear, arises exactly once in the boot `entry`, is consumed by `boot_end`. After that **no call types** | every static call chain | checker (M2) | **`O008`** — the clause is demanded; *the token's phase order is `O001`–`O007`* |
 | **S2 — references** | `raw fn` lies forcibly in `section ".boot"`; **taking the address of a `raw fn` is not writable** (no `fnptr` to `raw`, no jump table with `.boot` targets, no `ptr<code>` literal pointing there). Non-`raw` code in `.boot` is a compile error | every dynamic reachability via pointers | checker (M3/D2) | **`O009` for the half that bites**: `&f` on a `raw fn` is refused. *The `section ".boot"` placement is NOT enforced* — and `O009` sees only a name it can resolve in the same program |
-| **S3 — hardware** | `boot_end` consumes the token **and** removes the mapping of `.boot`, **one event**; the postcondition is formulable as a `walk` fact: `!exists m in mappings of kernel_root: m.section == boot`. Probe: access to a `.boot` address after `boot_end` **must fault** | jumps S1/S2 does not see (misspeculation excepted, ROP onto dead but mapped bytes) | axiom layer + falsifier | **NO.** `beispiele/07` writes `boot_ende` as an ordinary `fn` with `writes code_abbildung` — *an effect name, not a mechanism*. This is the layer that needs the axiom layer |
+| **S3 — hardware** | `boot_end` consumes the token **and** retires the address space, **one event**: `retires t from boot falsifier <probe>` — one clause carrying token, space and probe, none of the three writable alone. `O011` holds it against `consumes t`, `O012` demands the `walk` fact that says what is gone, `O010` refuses a token nobody retires. Probe: access to a `.boot` address after `boot_end` **must fault** | jumps S1/S2 does not see (misspeculation excepted, ROP onto dead but mapped bytes) | axiom layer + falsifier | **`O010`–`O012`** — for the half that is *formulable*. The other half (no mapping ⟹ unreachable) leaves the checker: `manifest.rs` books it as an assumption out of this clause, with the probe it names. *The section is `boot`, not `code<boot>`: that spelling is not a Gabbro space. And `m.section == boot` is unwritable twice over* — `boot` is a vocabulary word, and a page table entry **has no section field**; `.boot` is a link-time range, so the postcondition names the frame bounds |
 
 **With that the theorem is not "proven in the checker" but cleanly decomposed:** S1+S2 are type
 rules of the unverified checker, S3 is a hardware assumption with a drivable probe. The manifest

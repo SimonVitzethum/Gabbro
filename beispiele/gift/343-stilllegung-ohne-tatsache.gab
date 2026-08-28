@@ -1,0 +1,32 @@
+-- erwartet: O012
+--
+-- **Stillgelegt -- und keine Zeile sagt, WAS verschwindet.**
+--
+-- Die Klausel steht, die Marke wird verbraucht, der Raum ist genannt, die Sonde auch. Und
+-- trotzdem ist das hier wieder ein NAME: `retires t from boot` behauptet eine Ausblendung,
+-- ohne eine einzige pruefbare Aussage darueber zu hinterlassen. Man koennte sie an eine
+-- Funktion schreiben, die gar nichts tut.
+--
+-- Die eine Haelfte von S3 ist formulierbar, und `SPRACHE.md` §12 schreibt sie hin:
+--
+--     ensures !exists m in mappings of <wurzel> : <m liegt im stillgelegten Raum>
+--
+-- Das ist eine `walk`-Tatsache -- eine Aussage ueber eine Datenstruktur, die der Pruefer
+-- kennt, und die einzige Haelfte von S3, die ueberhaupt jemand beweisen kann. **Die andere
+-- -- eine Adresse ohne Abbildung ist nicht mehr erreichbar -- gehoert der Sonde**, und die
+-- Klausel traegt sie in `gabbro annahmen`. *`O012` haelt die erste Haelfte fest, damit die
+-- Buchung in die Axiomschicht nicht die GANZE Schicht verschluckt.*
+
+module gift::stilllegungohnetatsache {
+
+type Pa = u64;
+
+linear ghost type BootPhase;
+
+raw fn phys_schreiben(p : Pa, w : u64) requires BootPhase effects { writes phys };
+
+fn boot_ende(t : BootPhase)
+    retires t from boot falsifier sonde_boot_unerreichbar
+    effects { consumes t };
+
+}

@@ -1,0 +1,44 @@
+-- erwartet: O011
+--
+-- **Die Klausel legt `t` still, und verbraucht wird `u` -- und damit sind es wieder ZWEI.**
+--
+-- Das ist die Bewegung, gegen die die ganze Klausel gebaut ist. Der Bootsatz verlangt EIN
+-- Ereignis; wer den Raum ueber der einen Marke ausblendet und die andere verbraucht, hat
+-- zwei Zusagen nebeneinandergestellt, die einzeln erfuellbar sind. **`BootPhase` lebt hier
+-- weiter** -- `phys_schreiben` bleibt rufbar -- und trotzdem steht daneben, `boot` sei
+-- stillgelegt.
+--
+-- *Ein Ereignis, dessen zwei Haelften an zwei verschiedenen Gegenstaenden haengen, ist kein
+-- Ereignis, sondern eine Nachbarschaft.*
+
+module gift::stilllegunganderemarke {
+
+type Pa = u64;
+
+linear ghost type BootPhase;
+linear ghost type Cr3Gesetzt;
+
+walk Seitentabelle levels 4 {
+    node : [Pte; 512],
+    down : rahmen when it.praesent && !it.gross,
+    leaf : it.praesent && it.gross,
+}
+
+format Pte endian little {
+    praesent   : bool @0,
+    schreibbar : bool @1,
+    gross      : bool @2,
+    pte_frei   : u64 @[11:3]  reserved,
+    rahmen     : u64 embeds [51:12] scale 4096,
+    pte_hoch   : u64 @[62:52] reserved,
+    nx         : bool @63,
+}
+
+raw fn phys_schreiben(p : Pa, w : u64) requires BootPhase effects { writes phys };
+
+fn boot_ende(t : BootPhase, u : Cr3Gesetzt, kern_wurzel : Seitentabelle)
+    ensures !exists m in mappings of kern_wurzel : m.rahmen == 1
+    retires t from boot falsifier sonde_boot_unerreichbar
+    effects { consumes u, writes kern_wurzel };
+
+}

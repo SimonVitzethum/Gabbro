@@ -1383,16 +1383,44 @@ pub const PHASEN: &[Satz] = &[
                   whoever consumes it ends the boot phase), and no function pointer is made to \
                   a `raw fn` (`O009`, layer S2 -- a pointer into boot code survives the token, \
                   and the jump stands where the call no longer types).",
-        vorbehalt: "**Layer S3 is NOT built, and this sentence claims nothing about it.** \
-                    `boot_end` consuming the token AND unmapping `code<boot>` as ONE event, \
-                    with the probe at a `.boot` address as its falsifier, has no construct -- \
-                    `beispiele/07` writes it as an ordinary `fn` with `writes code_abbildung`, \
-                    which is an effect name and not a mechanism. `O009` also sees only `&f` on \
-                    a name it can resolve to a `raw fn` in the same program; a pointer that \
-                    arrives through a foreign module is not covered.",
+        vorbehalt: "`O009` sees only `&f` on a name it can resolve to a `raw fn` in the same \
+                    program; a pointer that arrives through a foreign module is not covered. \
+                    Layer S3 is a sentence of its own (`bootsatz.stilllegung`) and neither of \
+                    these two codes says anything about it.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes on `O008` and `O009`.",
         fundstelle: "crates/gabbro-check/src/phasen.rs; SPRACHE.md §12",
+    },
+    Satz {
+        name: "bootsatz.stilllegung",
+        kennungen: &["O010", "O011", "O012"],
+        aussage: "The boot theorem's third layer as ONE event. A token a `raw fn` demands is \
+                  retired by some function (`O010`); the retiring clause and the `effects` \
+                  block name the SAME token (`O011`); and a postcondition over `mappings of` \
+                  says, negatively, what is gone (`O012`). Consuming the token and unmapping \
+                  the space are therefore not two promises one can keep separately.",
+        vorbehalt: "**The larger half of layer S3 is NOT proved here and is not provable \
+                    here.** `O012` demands a NEGATIVE quantification over `mappings of` and \
+                    reads the domain and the negation -- it does not read whether the \
+                    predicate really covers the retired space, the same coarseness `maintains` \
+                    has. And that an address without a mapping is UNREACHABLE is a statement \
+                    about MMU, TLB and speculation which no pass will ever see: it leaves the \
+                    checker at `manifest.rs::stilllegungsannahmen`, is booked in `gabbro \
+                    annahmen` out of this clause, and carries the probe the clause names. \
+                    *A booking into the axiom layer is not a discharge -- it names the duty.* \
+                    `O010` also only demands that SOME function retire the token; that exactly \
+                    one function consumes it is a statement over bodies, and `beispiele/07` \
+                    consumes `BootPhase` twice to this day. And it is program-wide over what \
+                    the checker is GIVEN -- `gabbro pruefe` checks per file, so a `raw fn` \
+                    whose boot end lives in another module raises a false alarm when checked \
+                    alone (`beispiele/gift/300` falls with two codes for that reason). Same \
+                    class as `O009`, which also sees only names it can resolve in the same \
+                    program.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probes on `O010`, `O011` and `O012`; \
+                      messung/BOOT-S3.md.",
+        fundstelle: "crates/gabbro-check/src/phasen.rs; crates/gabbro-check/src/manifest.rs; \
+                     SPRACHE.md §12",
     },
     Satz {
         name: "phasen.ordnung",

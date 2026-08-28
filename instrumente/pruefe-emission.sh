@@ -1495,6 +1495,33 @@ for q in "$W"/beispiele/*.gab; do
     fi
 done
 echo "  $n_ok von $n_emit emittierenden Dateien uebersetzen; $n_aus benannte Ausnahmen"
+
+# **Die Zahl `n_emit` ist SELBSTGEWAEHLT, und das ist eine Luecke gewesen** (2026-08-28).
+#
+# Der Waechter zaehlt nur Dateien, die ueberhaupt emittieren. Faellt eine aus der Menge --
+# weil eine neue Form dazukam, die der Erzeuger mit `C001` absagt --, schrumpft der NENNER,
+# und `n_ok von n_emit` bleibt gruen. **Genau so ist es an diesem Tag passiert:** `beispiele/07`
+# bekam fuer S3 einen Parameter vom Typ eines `walk`, den `emit.rs` nicht absenkt, und die
+# Zeile las sich unveraendert als ALL PASS -- bei 52 -> 51.
+#
+# *Dieselbe Klasse wie die Bilanzregel des Rumpfkanals, eine Ebene hoeher:* ein Erzeuger, der
+# eine Form verschluckt, sieht aus wie einer, der sie absagt -- und ein WAECHTER, dessen
+# Nenner das ist, was das Werkzeug selbst liefert, misst seine eigene Reichweite.
+#
+# **Die Marke ist eine Ratsche: sie darf STEIGEN, nicht fallen.** Wer eine Form baut, die
+# eine Datei aus der Emission wirft, sagt es hier -- mit Grund, nicht durch Absenken.
+MARKE_EMIT=52
+if [ "$n_emit" -lt "$MARKE_EMIT" ]; then
+    echo "  RATSCHE GEBROCHEN: $n_emit emittierende Dateien, gebucht sind $MARKE_EMIT."
+    echo "                     Eine Datei hat die Emission VERLASSEN -- das ist kein gruener"
+    echo "                     Lauf, sondern ein kleinerer Nenner. Nachsehen mit:"
+    echo "                     for f in beispiele/*.gab; do ./target/debug/gabbro emit \$f >/dev/null || echo \$f; done"
+    schlecht=1
+elif [ "$n_emit" -gt "$MARKE_EMIT" ]; then
+    echo "  FUND: $n_emit statt $MARKE_EMIT emittierende Dateien -- die Marke gehoert"
+    echo "        nachgezogen (der gute Fall, und trotzdem ein Befund)."
+    schlecht=1
+fi
 if [ "$schlecht" != "0" ]; then
     echo "== EMISSION: die REGEL haelt nicht -- eine neue Form ist am C-Uebersetzer vorbei =="
     exit 1

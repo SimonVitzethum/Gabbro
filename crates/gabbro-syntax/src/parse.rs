@@ -2285,6 +2285,31 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // **Layer S3 of the boot theorem: `retires t from boot falsifier <probe>`.**
+        //
+        // It stands directly behind `advances` because both speak about the same mark:
+        // `advances` moves it on, `retires` ends it. And it stands BEFORE `effects` for the
+        // same reason `advances` does -- what the event touches is said by `effects`, WHICH
+        // event it is is said here.
+        //
+        // The three parts are one clause and none is writable alone. The `AnnahmeKlasse`
+        // tail is mandatory: `beispiele/06` names three classes and says of the third
+        // ("not run") that it is *"the absence of both statements and a compile error"*.
+        let retires = if self.ist_kw(Kw::Retires) {
+            let anfang = self.erwarte_kw(Kw::Retires)?;
+            let marke = self.erwarte_ident()?;
+            self.erwarte_kw(Kw::From)?;
+            let raum = self.space()?;
+            let klasse = self.annahmeklasse()?;
+            Some(Stilllegung {
+                marke,
+                raum,
+                klasse,
+                span: anfang.bis_zu(self.vorheriger_span()),
+            })
+        } else {
+            None
+        };
         let effects = if self.ist_kw(Kw::Effects) {
             Some(self.effects_block()?)
         } else {
@@ -2356,6 +2381,7 @@ impl<'a> Parser<'a> {
             ensures,
             maintains,
             advances,
+            retires,
             effects,
             costs,
             decreases,
