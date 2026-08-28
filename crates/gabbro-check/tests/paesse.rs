@@ -494,9 +494,14 @@ fn schablonen_abhaengigkeiten_zeigen_auf_vorhandene_eintraege() {
 #[test]
 fn die_lebende_vertrauensflaeche_ist_gebucht() {
     use gabbro_check::schablonen::{bewiesen, lebend_ungedeckt, ungedeckt, SCHABLONEN, Stand};
+    // **1 -> 2 am 2026-08-28, und der Anstieg ist der Preis von Zuschnitt (c).**
+    // `table.ops.erhaltung` ist von ENTWORFEN auf GETRAGEN gegangen, weil `emit.rs::ops` die
+    // Operationen jetzt ausliefert. *Genau diese Bewegung soll diese Zahl sichtbar machen:*
+    // eine Klempnereipflicht wurde geschlossen, und sie wurde nicht erledigt, sondern in die
+    // Erzeugerflaeche verschoben. K100s zweites Tor (`L <= 4`) haelt weiter.
     assert_eq!(
         lebend_ungedeckt(),
-        1,
+        2,
         "getragen und unbewiesen: wer eine Schablone in den Erzeuger einbaut, vergroessert \
          die LEBENDE Vertrauensbasis -- und das gehoert hierher UND in BEWEIS.md"
     );
