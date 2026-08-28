@@ -3070,6 +3070,38 @@ MUTATIONEN = [
         "H017 -- die Domaenenprobe sieht nur den obersten Anweisungsrand; ein `observes` in "
         "einem Zweig oder einer Schleife nennt wieder, was es will",
     ),
+    # --- build gate («TB», 2026-08-28) ---
+    #
+    # The gate is the one surface where a silent failure ships the check harness instead of
+    # dropping it. All three mutations are shapes the rule could plausibly have had on the
+    # first try -- the wrong direction, a name test that is not one, and a reserved name
+    # guarded at one item kind out of twenty-three.
+    Mutation(
+        "gatter-haelt-die-falsche-richtung",
+        "gatter.rs",
+        "        if ist_gegattert(item) {\n            return;\n        }\n        let ItemArt::Funktion(f) = &item.art else { return };",
+        "        if !ist_gegattert(item) {\n            return;\n        }\n        let ItemArt::Funktion(f) = &item.art else { return };",
+        "G001 -- die Rufregel prueft die GEGENrichtung: ein gegatterter Rufer waere verboten "
+        "und ein ungegatterter erlaubt. Der Auslieferungsbau bindet wieder nicht, und die "
+        "Regel steht laut daneben",
+    ),
+    Mutation(
+        "jeder-name-ist-ein-bau",
+        "gatter.rs",
+        "            if !ist_testbuild(w) {",
+        "            if !matches!(&w.art, ExprArt::Ort(_)) {",
+        "G002 -- jeder blosse Name gilt wieder als Bau. `when DEBUG` geht durch, und der "
+        "Erzeuger laesst das Item stehen -- also gattert eine Klausel, die aussieht, als "
+        "gattere sie",
+    ),
+    Mutation(
+        "reservierter-name-nur-an-funktionen",
+        "gatter.rs",
+        "        if let Some(n) = item.art.name() {",
+        "        if let Some(n) = item.art.name().filter(|_| matches!(item.art, ItemArt::Funktion(_))) {",
+        "G003 -- der reservierte Name wird nur noch an Funktionen gehalten; ein "
+        "`const TESTBUILD` steht wieder daneben und schaltet nichts",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

@@ -345,6 +345,35 @@ pub const NAMEN: &[Satz] = &[
                       against a unit, and the clean library pair that must stay silent.",
         fundstelle: "crates/gabbro-check/src/bindung.rs; abi.rs, on the C side",
     },
+    Satz {
+        name: "namen.baugatter",
+        kennungen: &["G001", "G002", "G003"],
+        aussage: "Every `when` of the unit gates on the BUILD and on nothing else: it names \
+                  `TESTBUILD`, that name is declared nowhere in the unit, and no ungated \
+                  function calls a gated one by name. A unit that passes therefore has, for \
+                  the shipping build, a call graph that is closed WITHOUT the gated items -- \
+                  which is the precondition for `emit::emittiere` dropping them and the \
+                  result still linking.",
+        vorbehalt: "**Four limits, and the first two are the reach of the rule.** (1) `G001` \
+                    follows CALLS BY NAME. An indirect call through a function pointer \
+                    (`t->senden()`) reaches a gated body without anyone seeing it -- the \
+                    `&f` that put it there is not a call and is not checked either. (2) It \
+                    follows calls only; an ungated signature that NAMES a gated `type`, \
+                    `table` or `const` is not caught, and in the shipping build that is a C \
+                    compile error rather than a link error. (3) `N001` does not see a gated \
+                    item at all (booked in `namen.doppelung`), so a gated and an ungated \
+                    function may carry the same name -- **in the shipping build that is the \
+                    intended pair, in the check build it is a duplicate C definition**, and \
+                    the one who says so is `cc`, not this pass. (4) The rule says nothing \
+                    about whether the gated code is REACHED in the check build: a `check` \
+                    that nobody runs gates just as well as one that runs.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/311 (`G001`, an ungated `fn` calls a gated one), \
+                      /312 (`G002`, `when EINE_KONSTANTE`), /313 (`G003`, `const TESTBUILD`); \
+                      the positive side is beispiele/52 plus its emission run, which \
+                      compares the shipping C against the check C.",
+        fundstelle: "crates/gabbro-check/src/gatter.rs; SYNTAX.md section 1, «TB»",
+    },
 ];
 
 // ===================================================================================

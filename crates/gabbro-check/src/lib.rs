@@ -26,6 +26,11 @@ pub mod bitlage;
 // pass number of its own: the pass list is the specification, and these are rules of the
 // "Names" column, not a new one.
 pub mod bindung;
+// **The BUILD GATE, since 2026-08-28** -- `when TESTBUILD`, and the filter that keeps a
+// gated item out of the shipping C. `G001`-`G003` are issued there. Like `bindung` it gets
+// no pass number of its own, but it DOES owe sentences: `saetze::GATTER` hangs on pass 1,
+// because the question "does this name exist in this build?" is a name question.
+pub mod gatter;
 // Die Domaenenschranke -- kosten.rs und m1.rs lesen dieselbe.
 pub mod domaene;
 pub mod m2;
@@ -350,6 +355,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         macro_rules! z { ($n:expr, $e:expr) => {{ let t = std::time::Instant::now(); $e; eprintln!("{:>10} {:?}", $n, t.elapsed()); }} }
         z!("namen", namen::pass(baum, absagen));
         z!("bindung", bindung::pass(baum, absagen));
+        z!("gatter", gatter::pass(baum, absagen));
         z!("kbed", kbedingung::pass(baum, absagen));
         let m1 = { let t = std::time::Instant::now(); let r = m1::pass(baum, absagen); eprintln!("{:>10} {:?}", "m1", t.elapsed()); r };
         z!("schleifen", schleifen::pass(baum, absagen));
@@ -369,6 +375,11 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     // holds a name against its scope, `bindung.rs` against the surface that binds out of the
     // unit. That one knows no modules.
     bindung::pass(baum, absagen);
+    // **Directly behind it again, and one question further out.** `bindung` asks which name
+    // leaves the unit; `gatter` asks whether a name exists in THIS BUILD at all. It stands
+    // before every pass that reads bodies, because a refusal about a call across the gate is
+    // about the artefact, not about the semantics of the call.
+    gatter::pass(baum, absagen);
     kbedingung::pass(baum, absagen);
     let m1 = m1::pass(baum, absagen);
     schleifen::pass(baum, absagen);

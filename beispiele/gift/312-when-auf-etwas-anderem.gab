@@ -1,0 +1,30 @@
+-- erwartet: G002
+--
+-- **Ein `when`, das der Erzeuger nicht entscheiden kann -- und bis zum 2026-08-28 hat er es
+-- auch nicht versucht.**
+--
+-- `Item::when` steht seit jeher im Baum, `SYNTAX.md` sagte *„es senkt zu `#if` ab"*, und
+-- `emit.rs` las das Feld **nie**. Ein Item mit `when` erzeugte genau dasselbe C wie eines
+-- ohne -- also war die Klausel nicht halb eingeloest, sondern gar nicht, und sah dabei
+-- eingeloest aus.
+--
+-- **Darum steht hier eine Weigerung und kein Schweigen.** Der Uebersetzer kennt genau EINEN
+-- Bau, auf den er gattern kann. Dass `DEBUG` sauber deklariert ist und als Konstante sogar
+-- ausgewertet werden koennte, aendert daran nichts: es gibt keinen Bau dieses Namens.
+-- *Eine Zusage soll so breit sein wie ihre Einloesung* -- `messung/BAUGATTER.md` §4.
+
+module gift::whenanders {
+
+const DEBUG : bool = true;
+
+static mut SPUR : u32 = 0;
+
+when DEBUG
+impl fn spur_schreiben(v : u32)
+    effects { writes SPUR }
+    costs   <= 2 ops
+{
+    SPUR = v;
+}
+
+}

@@ -1054,7 +1054,7 @@ does **not** name.
 | **Range checks** | Rust checks **every** indexing, unless LLVM can optimise it away. **Caprock bypasses that nowhere** — recounted: **0** `get_unchecked`, **0** `unreachable_unchecked`, **0** `assert_unchecked`. Gabbro **proves** and emits **none** | **1 398** variable indexings in the tree |
 | **`accumulates`** | one cell per core plus a merge at read time instead of a CAS loop | measured on `sync:572–592` **strictly better than the original**, which additionally has an accepted race site there |
 | **`transition`/`mirrors`** | **one** store with a constant mask instead of read-modify-write | per device transition |
-| **Ghosts, contracts, `check`** | disappear before code generation; `check` compiles only under `when TESTBUILD` | **0 bytes** |
+| **Ghosts, contracts, `check`** | disappear before code generation; `check` compiles only under `when TESTBUILD` — **built 2026-08-28 («TB»), and until then the second half of this line was a plan**: the emitter did not read `Item::when`, so a gated `check` reached the C like any other item. Measured now at `beispiele/52`: **39 lines of shipping C against 77** | **0 bytes** |
 
 ## Where it should be the same
 

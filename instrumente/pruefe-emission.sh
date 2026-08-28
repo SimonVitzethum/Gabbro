@@ -1366,6 +1366,65 @@ lauf "baum41" "$ARB/b41.gab" "$TREIBER41" "7 0 0 1" \
      's/\.erstes_kind; _h1 = false/.elter; _h1 = false/' \
      "0 assumptions (0 of them NOT FALSIFIABLE), 2 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 
+# -- Das BAUGATTER: `when TESTBUILD` -----------------------------------------------------
+#
+# **Die Frage, die dieser Lauf beantwortet:** was kostet das Mess- und Selbsttestgeruest im
+# ausgelieferten Erzeugnis? Antwort: nichts, und zwar nachgezaehlt.
+#
+# `messung/GEGENRECHNUNG.md` §8 ist der eine Posten der Caprock-Messung, den die Nachrechnung
+# ohne Abzug bestaetigt -- und er wurde dabei GROESSER: **29,8 % des Baumes sind Geruest**,
+# 19 849 Zeilen, davon 15 154 Code. *Rust sagt dazu nichts, Verus sagt dazu nichts, Loom sagt
+# dazu nichts.* Bis zum 2026-08-28 sagte Gabbro auch nichts dazu: `when` war geparst und
+# wurde von `emit.rs` nie gelesen.
+#
+# Der `lauf` unten misst den AUSLIEFERUNGSBAU -- er ist der Standard, `emit` ohne Fahne.
+# Die Stufe danach ist die eigentliche Aussage: **derselbe Quelltext, zwei Bauten, und der
+# Name des Geruests kommt in genau einem davon vor.**
+TREIBER52='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    Puffer p = {0};
+    ablegen(&p, 3, 42);
+    printf("%u %u\n", stand(&p, 3), stand(&p, 0));
+    return 0;
+}
+'
+lauf "beispiel52" "$W/beispiele/52-baugatter.gab" "$TREIBER52" "42 0" \
+     's/p->slots\[i\].fuellstand = v;/(void)v;/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE), 1 templates (0 of them UNPROVED), 9 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+
+# **Und die Aussage, auf die es bei einem Gatter ankommt: es steht NICHT im C.**
+#
+# *Ein Gatter, das im C landet, ist kein Gatter* -- ein `#if` haette den ganzen Block
+# mitgeliefert und nur den Praeprozessor darueber entscheiden lassen. Hier wird der Baum vor
+# dem Erzeuger gefiltert (`gatter::ohne_gatter`), und was das heisst, wird hier gezaehlt.
+echo '== Baugatter: `when TESTBUILD` erzeugt im Auslieferungsbau nichts =='
+cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- emit \
+    "$W/beispiele/52-baugatter.gab" > "$ARB/g52-aus.c"
+cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- emit --testbuild \
+    "$W/beispiele/52-baugatter.gab" > "$ARB/g52-pruef.c"
+GERUEST='hoechstmarke\|kerne_gemessen\|abnahme\|freigabe\|puffer_haelt'
+n_aus_g="$(grep -c "$GERUEST" "$ARB/g52-aus.c" || true)"
+n_pr_g="$(grep -c "$GERUEST" "$ARB/g52-pruef.c" || true)"
+if [ "$n_aus_g" != "0" ]; then
+    echo "  Auslieferung:  GESCHEITERT -- $n_aus_g Zeilen nennen das Geruest"
+    grep -n "$GERUEST" "$ARB/g52-aus.c" | head -10; exit 1
+fi
+# **Die Sprechprobe der Zaehlung selbst.** Waere das Geruest auch im Pruefbau abwesend, waere
+# die Null oben keine Aussage ueber das Gatter, sondern ueber einen leeren Zaehler.
+if [ "$n_pr_g" = "0" ]; then
+    echo "  Pruefbau:      GESCHEITERT -- auch --testbuild nennt das Geruest nicht."
+    echo "                 Diese Zaehlung misst NICHTS."; exit 1
+fi
+echo "  Geruestnamen:  ok (0 im Auslieferungs-C, $n_pr_g im Pruefbau-C)"
+echo "  Zeilen:        $(grep -c '' "$ARB/g52-aus.c") gegen $(grep -c '' "$ARB/g52-pruef.c")"
+# **Und der Pruefbau muss auch UEBERSETZEN.** Ein Gatter, das nur den kleineren Bau richtig
+# macht, verlegt den Fehler in den Bau, in dem die Pruefungen laufen.
+if ! cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/g52-pruef.c" 2> "$ARB/g52err"; then
+    echo "  Pruefbau cc:   GESCHEITERT"; head -10 "$ARB/g52err"; exit 1
+fi
+echo "  Pruefbau cc:   ok (-Werror, und die Probe pruefe_puffer_haelt steht darin)"
+
 # =======================================================================================
 # **Stufe 9: die REGEL, nicht die Liste** (2026-08-20).
 #

@@ -1,0 +1,111 @@
+-- 52 -- **Das Baugatter: `when TESTBUILD`, und im Auslieferungs-C steht keine Zeile davon.**
+--
+-- `messung/GEGENRECHNUNG.md` §8 fuehrt den einen Posten der Caprock-Messung, der die
+-- Nachrechnung ohne Abzug uebersteht -- und er wurde dabei GROESSER: **29,8 % des Baumes
+-- sind Mess- und Selbsttestgeruest**, 19 849 Zeilen, davon 15 154 Code. So gross wie der
+-- nebenlaeufige Kern und die Tabellen zusammen, fast zehnmal so gross wie aller Beweis im
+-- Baum. *Rust sagt dazu nichts, Verus sagt dazu nichts, Loom sagt dazu nichts.*
+--
+-- Gabbro sagte bis zum 2026-08-28 auch nichts dazu. `when` stand seit jeher in der
+-- Grammatik, `SYNTAX.md` sagte *„es senkt zu `#if` ab"* -- und der Erzeuger las das Feld
+-- **nie**. Ein Item mit `when` erzeugte genau dasselbe C wie eines ohne.
+--
+-- **Diese Datei ist die erste Korpusstelle, die die Form schreibt.** Sie enthaelt beides:
+-- den Auslieferungsteil (`ablegen`, `stand`) und das Geruest darueber (`hoechstmarke`,
+-- `hoechstmarke_melden`, `abnahme`, `freigabe`, `puffer_haelt`).
+--
+-- Was `instrumente/pruefe-emission.sh` daran misst, ist die eine Aussage, auf die es
+-- ankommt: **im Auslieferungs-C kommt `hoechstmarke` NICHT vor, im Pruefbau-C schon** --
+-- und beide uebersetzen.
+
+module beispiel::baugatter {
+
+const N        : u32 = 16;
+const VOLL     : u32 = 65534;
+const SCHWELLE : u32 = 49150;
+
+type Fuellstand = u32 in 0 .. VOLL;
+
+table Puffer count N {
+    slot {
+        fuellstand : Fuellstand,
+    }
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Der Auslieferungsteil. Er steht ohne Gatter da und senkt ganz gewoehnlich ab.
+-- ---------------------------------------------------------------------------------------
+
+impl fn stand(p : ptr<normal, r> Puffer, i : index into Puffer) -> Fuellstand
+    effects { reads p.slots }
+    costs   <= 2 ops
+{
+    return p.slots[i].fuellstand;
+}
+
+impl fn ablegen(p : ptr<normal, rw> Puffer, i : index into Puffer, v : Fuellstand)
+    effects { writes p.slots }
+    costs   <= 2 ops
+{
+    p.slots[i].fuellstand = v;
+}
+
+-- ---------------------------------------------------------------------------------------
+-- Das Geruest. **Jedes Item hier traegt `when TESTBUILD` und existiert im Auslieferungsbau
+-- nicht** -- kein `static`, kein Prototyp, kein Rumpf.
+-- ---------------------------------------------------------------------------------------
+
+-- Die gemessene Groesse. Sie ist der sichtbare Beleg: ein `static mut` senkt sonst IMMER
+-- ab, und im Auslieferungs-C steht dieser Name nirgends.
+when TESTBUILD
+static mut hoechstmarke : Fuellstand = 0;
+
+when TESTBUILD
+static mut kerne_gemessen : u32 = 0;
+
+-- Der Messpfad. **Er ruft `stand`, und das ist erlaubt** -- ein gegattertes Item darf in den
+-- Auslieferungsteil hineinrufen, denn den gibt es in beiden Bauten. `G001` verbietet nur die
+-- Gegenrichtung.
+when TESTBUILD
+impl fn hoechstmarke_melden(p : ptr<normal, r> Puffer, i : index into Puffer)
+    effects { reads p.slots, writes hoechstmarke }
+    costs   <= 7 ops
+{
+    let v = stand(p, i);
+    hoechstmarke = v;
+}
+
+-- Die beiden Torfunktionen. Ohne sie wird die erzeugte `linear ghost Duty(puffer_haelt)`
+-- von niemandem verbraucht, und `N020` sagt das.
+when TESTBUILD
+impl fn abnahme()
+    effects { reads kerne_gemessen }
+    costs   <= 4 ops
+{ return; }
+
+when TESTBUILD
+impl fn freigabe()
+    effects { reads hoechstmarke }
+    costs   <= 4 ops
+{ return; }
+
+-- Und die Pflicht selbst. `SPRACHE.md` buchte `check … when TESTBUILD` zweimal als Plan;
+-- **hier steht sie zum ersten Mal.**
+when TESTBUILD
+check puffer_haelt {
+    claim        "Kein Puffer war je ueber drei Vierteln seiner Schranke."
+    measures     hoechstmarke, kerne_gemessen
+    gates        abnahme, freigabe
+
+    can_fail {
+        let schwelle : Fuellstand = SCHWELLE;
+        -- Eine Hoechstmarke von null heisst: es ist nichts gemessen worden. **Eine Probe,
+        -- die dann haelt, haelt ueber nichts** -- also faellt sie.
+        narrow hoechstmarke to 1 .. VOLL else { return false; }
+        return hoechstmarke <= schwelle;
+    }
+
+    floor        kerne_gemessen >= 2, hoechstmarke >= 1
+}
+
+}

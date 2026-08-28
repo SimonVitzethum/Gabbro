@@ -1,0 +1,33 @@
+-- erwartet: G001
+--
+-- **Der Auslieferungsbau bindet nicht.**
+--
+-- `melden` traegt kein Gatter, steht also im ausgelieferten C -- und ruft `spur_schreiben`,
+-- das `when TESTBUILD` traegt und dort **gar nicht existiert**. Der C-Uebersetzer sieht eine
+-- fehlende Deklaration, der Binder ein undefiniertes Symbol; in beiden Faellen faellt der
+-- Bau, den dieses Gatter kleiner machen sollte, ueberhaupt nicht mehr an.
+--
+-- **Die Gegenrichtung ist erlaubt und steht in `beispiele/52`:** ein gegattertes Item darf in
+-- den Auslieferungsteil hineinrufen, denn den gibt es in beiden Bauten. Das Gatter ist eine
+-- Aussage darueber, wo etwas VERSCHWINDET, und Verschwinden hat genau eine Richtung.
+
+module gift::rufuebergatter {
+
+static mut SPUR : u32 = 0;
+
+when TESTBUILD
+impl fn spur_schreiben(v : u32)
+    effects { writes SPUR }
+    costs   <= 2 ops
+{
+    SPUR = v;
+}
+
+impl fn melden(v : u32)
+    effects { writes SPUR }
+    costs   <= 4 ops
+{
+    spur_schreiben(v);
+}
+
+}

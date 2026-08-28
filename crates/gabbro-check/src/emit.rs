@@ -560,7 +560,38 @@ fn rechnet_mit_gleitkomma(baum: &Programm) -> bool {
 }
 
 /// Emits C for a tree, or refuses by name.
+/// **The shipping build.** A `when TESTBUILD` item produces no line of C.
+///
+/// This is the signature every caller had before the gate existed, and it keeps the SAFE
+/// value: whoever forgets the build loses check code out of a check build, which is loud.
+/// The other default would ship it, which is silent.
 pub fn emittiere(baum: &Programm, absagen: &mut Absagen) -> String {
+    emittiere_mit(baum, absagen, crate::gatter::Bau::Auslieferung)
+}
+
+/// **The generator, with the build named.**
+///
+/// The gate is a FILTER IN FRONT of the emitter, not a branch inside it: `ohne_gatter`
+/// hands over a tree the gated items are not in, and the twenty walks below cannot forget
+/// them one at a time. *Same reason the ghost erasure lives in `ist_geist` and not at the
+/// three sites that would each have had to remember it.*
+///
+/// **And it means a gated item is never held against `C001`.** It produces no C, so whether
+/// the emitter could lower it is not a question about the artefact. In the CHECK build it
+/// is one again, and there the refusal comes.
+pub fn emittiere_mit(
+    baum: &Programm,
+    absagen: &mut Absagen,
+    bau: crate::gatter::Bau,
+) -> String {
+    let gefiltert;
+    let baum = match bau {
+        crate::gatter::Bau::Auslieferung => {
+            gefiltert = crate::gatter::ohne_gatter(baum);
+            &gefiltert
+        }
+        crate::gatter::Bau::Pruefbau => baum,
+    };
     let mut namen = Namen::default();
     crate::fuer_jedes_item(baum, &mut |item| match &item.art {
         ItemArt::Konst(k) => {
