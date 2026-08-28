@@ -1,0 +1,32 @@
+-- erwartet: M133
+-- **Gift 256 -- eine Schleifeninvariante, die nichts nennt.**
+--
+-- `invariant true` ist ein Versprechen ueber nichts und sieht aus wie eines ueber etwas.
+-- Die Schleife traegt danach eine GEZAEHLTE Pflicht (`S`), an der kein Beweiser scheitern
+-- kann -- und eine Pflicht, die niemand verfehlen kann, senkt die Zahl der offenen
+-- Pflichten, ohne dass jemand etwas gezeigt haette.
+--
+-- *Eine Klausel, die niemand einhaelt, ist schlimmer als keine* -- woertlich der Befund,
+-- mit dem `beispiele/05` seine `protects`-Klausel verloren hat (`H007`/`H008`).
+
+module gift::schleifeninvariante_nennt_nichts {
+
+const NPLAETZE : u32 = 16;
+
+table Halde count NPLAETZE {
+    slot { belegt : bool, }
+}
+
+impl fn leeren(h : ptr<normal, rw> Halde, s : index into Halde)
+    effects { writes h.slots }
+    costs   <= 200 ops
+{
+    traverse k over descendants of h.slots[s] by consuming
+        touches consumes h.slots
+        invariant true
+    {
+        h.slots[k].belegt = false;
+    }
+}
+
+}

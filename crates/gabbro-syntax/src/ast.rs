@@ -1297,6 +1297,9 @@ pub struct Traverse {
     pub domaene: Domaene,
     pub abstieg: Abstieg,
     pub touches: Option<Wirkungen>,
+    /// `invariant P` -- what holds ACROSS the passes. The measure is carried by the
+    /// language already; this is the statement (`messung/SCHLEIFENINVARIANTE.md`).
+    pub invariante: Option<Pred>,
     pub rumpf: Block,
     pub span: Span,
 }
@@ -1316,6 +1319,9 @@ pub struct Retry {
     pub fortschritt: Option<Ident>,
     pub bei_ueberschreitung: Ident,
     pub effects: Option<Wirkungen>,
+    /// `invariant P` -- what holds ACROSS the passes. The measure is carried by the
+    /// language already; this is the statement (`messung/SCHLEIFENINVARIANTE.md`).
+    pub invariante: Option<Pred>,
     pub rumpf: Block,
     pub span: Span,
 }
@@ -1328,6 +1334,9 @@ pub struct Forever {
     pub effects: Wirkungen,
     pub fortschritt: Option<Ident>,
     pub verlaesst: Vec<Ident>,
+    /// `invariant P` -- what holds ACROSS the passes. The measure is carried by the
+    /// language already; this is the statement (`messung/SCHLEIFENINVARIANTE.md`).
+    pub invariante: Option<Pred>,
     pub rumpf: Block,
     pub span: Span,
 }

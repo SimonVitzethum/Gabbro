@@ -894,6 +894,7 @@ retry      = "retry" [ ident ] [ "until" pred ]
              [ "progress"  ident ]
              "on_exceeded" ident
              [ "effects" "{" efflist "}" ]
+             [ "invariant" pred ]
              block ;
 
 forever    = "forever" [ ident ]
@@ -901,9 +902,16 @@ forever    = "forever" [ ident ]
              "on_exceeded" ident
              "effects"   "{" efflist "}"
              [ "progress" ident ]
-             [ "leaves"   identlist ]
+             [ "leaves"    identlist ]
+             [ "invariant" pred ]
              block ;
 ```
+
+**`invariant pred` stands at all three, immediately before the block** (2026-08-28,
+`messung/SCHLEIFENINVARIANTE.md`). It is **not a new word**: `invariant` already stands at a
+`table` for the same thing -- a predicate that holds throughout. There over the table's
+lifetime, here over the loop's passes. *The measure was carried by the language from the
+start; this is the statement.* `M133` refuses one that names nothing.
 
 | Form | ends? | what discharges the plumbing |
 |---|---|---|

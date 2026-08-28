@@ -2980,6 +2980,42 @@ MUTATIONEN = [
         flaeche="annotation",
     ),
     Mutation(
+        "lean-loop-without-invariant-passes",
+        "lean.rs",
+        '            let Some(inv) = inv else {\n                return Err(LeanReason::Loop);\n            };',
+        '            let Some(inv) = inv else {\n                return Ok("(.ret none)".into());\n            };',
+        "The body channel -- a loop with NO `invariant` becomes a datum anyway. A proof over "
+        "it would then conclude from a loop exactly nothing while looking like it concluded "
+        "something -- and the word exists to stop that",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-loops-share-one-id",
+        "lean.rs",
+        'let id = format!("{}#{}", c.routine, c.loops);',
+        'let id = format!("{}#1", c.routine);',
+        "The body channel -- two loops of one routine share an environment entry. A "
+        "hypothesis about the first would then silently cover the second",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-loop-variable-becomes-global",
+        "lean.rs",
+        '            if let Schleife::Traverse(x) = sch.as_ref() {\n                c.locals.push(x.variable.text.clone());\n            }',
+        '            if false {\n                c.locals.push(String::new());\n            }',
+        "The body channel -- the bound variable of a `traverse` is read as a world name. The "
+        "datum then says the body touches a global nobody declared",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "m133-invariante-darf-nichts-nennen",
+        "m1.rs",
+        "                    if namen.is_empty() {",
+        "                    if false {",
+        "`M133` -- eine Schleifeninvariante darf wieder nichts nennen. `invariant true` "
+        "traegt danach eine GEZAEHLTE Pflicht, an der kein Beweiser scheitern kann",
+    ),
+    Mutation(
         "p6-balance-lies",
         "refinement.rs",
         "    let refused = entries.len() - proved;",

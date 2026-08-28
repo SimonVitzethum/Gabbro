@@ -265,6 +265,22 @@ inductive Stmt where
   | bindCall (name : String) (callee : String) (params : List String) (args : List Expr)
   /-- `return f(a, b);` -- a call whose result is returned straight on. -/
   | retCall (callee : String) (params : List String) (args : List Expr)
+  /-- `traverse … invariant P { … }` -- **a loop is an anonymous routine.**
+
+      Its meaning is looked up in the same `Env` a call uses, under an id of its own. *That
+      is not a shortcut: it is what a loop IS to a prover* -- something that runs an unknown
+      number of times and leaves a state, and the only thing anyone knows about it is what
+      the invariant says.
+
+      **The invariant is DATA and not decoration.** The theorem over a body that loops carries
+      the loop rule as a hypothesis --
+
+          \forall t, eval t inv = some (.bool true)
+                 \to eval (\rho id t).1 inv = some (.bool true)
+
+      -- and that hypothesis is discharged by a separate theorem over `body`. The body is
+      carried too, so that theorem has something to talk about. -/
+  | loop (id : String) (inv : Expr) (body : List Stmt)
   | ret (value : Option Expr)
   deriving Repr
 
@@ -355,6 +371,10 @@ def step (ρ : Env) : Stmt → State → Outcome
           match ρ f { world := s.world, local' := bindAll ps vs (fun _ => .absent) } with
           | (t, v) => .returned { s with world := t.world } v
       | none => .stuck
+  -- **A loop leaves a state the environment gives**, exactly as a call does. What is known
+  -- about that state is what the loop rule -- carried as a hypothesis, never as an axiom --
+  -- says about the invariant.
+  | .loop id _ _, s => .running { s with world := (ρ id s).1.world }
   | .ret none, s => .returned s none
   | .ret (some e), s =>
       match eval s e with

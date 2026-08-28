@@ -2984,6 +2984,7 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        let invariante = self.schleifeninvariante()?;
         let rumpf = self.block()?;
         Ok(Traverse {
             variable,
@@ -2991,9 +2992,28 @@ impl<'a> Parser<'a> {
             domaene,
             abstieg,
             touches,
+            invariante,
             rumpf,
             span: anfang.bis_zu(self.vorheriger_span()),
         })
+    }
+
+    /// **`invariant P` at a loop -- one clause, three forms.**
+    ///
+    /// It stands at all three immediately before the block, and that is a decision
+    /// (`messung/SCHLEIFENINVARIANTE.md` §3): one fixed position across three forms is
+    /// cheaper than three positions, and it is the last thing a reader needs before the
+    /// body.
+    ///
+    /// **No new word.** `invariant` is in the vocabulary already and keeps ONE job -- a
+    /// predicate that holds throughout. At a `table` over its lifetime, at a loop over its
+    /// passes.
+    fn schleifeninvariante(&mut self) -> Erg<Option<Pred>> {
+        if self.friss_kw(Kw::Invariant) {
+            Ok(Some(self.pred()?))
+        } else {
+            Ok(None)
+        }
     }
 
     fn retry(&mut self) -> Erg<Retry> {
@@ -3023,6 +3043,7 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        let invariante = self.schleifeninvariante()?;
         let rumpf = self.block()?;
         Ok(Retry {
             marke,
@@ -3031,6 +3052,7 @@ impl<'a> Parser<'a> {
             fortschritt,
             bei_ueberschreitung,
             effects,
+            invariante,
             rumpf,
             span: anfang.bis_zu(self.vorheriger_span()),
         })
@@ -3060,6 +3082,7 @@ impl<'a> Parser<'a> {
         } else {
             Vec::new()
         };
+        let invariante = self.schleifeninvariante()?;
         let rumpf = self.block()?;
         Ok(Forever {
             marke,
@@ -3068,6 +3091,7 @@ impl<'a> Parser<'a> {
             effects,
             fortschritt,
             verlaesst,
+            invariante,
             rumpf,
             span: anfang.bis_zu(self.vorheriger_span()),
         })

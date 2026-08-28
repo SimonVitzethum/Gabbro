@@ -152,6 +152,18 @@ pub enum Art {
     /// > may report whatever it likes («B33»). *What is booked here is the promise -- not
     /// > that it holds.*
     Geraetezusage,
+    /// **`S` -- the LOOP INVARIANT** (2026-08-28).
+    ///
+    /// `traverse … invariant P { … }` says: *P holds across the passes.* Until today the
+    /// clause did not exist, and the body channel refused 23 routines with `loop` for the
+    /// reason that the measure was carried and the STATEMENT was not
+    /// (`messung/SCHLEIFENINVARIANTE.md`).
+    ///
+    /// *It stands beside `E` and not inside it:* a table invariant is declared once at the
+    /// table and quantified over its slots; a loop invariant is declared at ONE loop and
+    /// quantified over its passes. Both need the meaning of a body -- they are not the same
+    /// duty, and a register that merged them could not separate the two prices.
+    Schleifeninvariante,
 }
 
 impl Art {
@@ -163,6 +175,7 @@ impl Art {
             Art::Vorbedingung => "V",
             Art::Verfeinerung => "R",
             Art::Geraetezusage => "D",
+            Art::Schleifeninvariante => "S",
         }
     }
     pub fn name(self) -> &'static str {
@@ -173,6 +186,7 @@ impl Art {
             Art::Vorbedingung => "Precondition at the call site",
             Art::Verfeinerung => "Refinement of a specification",
             Art::Geraetezusage => "Device promise at a register",
+            Art::Schleifeninvariante => "Invariant across the passes of a loop",
         }
     }
 }
@@ -370,6 +384,62 @@ fn rufe_im_block<'a>(b: &'a Block, aus: &mut Vec<&'a Ruf>) {
     }
 }
 
+/// Every loop of a body that carries an `invariant`, in source order.
+fn schleifeninvarianten(b: &Block, n: &mut usize, funktion: &str, aus: &mut Vec<Pflicht>) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Schleife(sch) => {
+                let (inv, rumpf) = match sch.as_ref() {
+                    Schleife::Traverse(x) => (&x.invariante, &x.rumpf),
+                    Schleife::Retry(x) => (&x.invariante, &x.rumpf),
+                    Schleife::Forever(x) => (&x.invariante, &x.rumpf),
+                };
+                if inv.is_some() {
+                    *n += 1;
+                    aus.push(Pflicht {
+                        art: Art::Schleifeninvariante,
+                        funktion: funktion.to_string(),
+                        gegenstand: format!("loop invariant #{n}"),
+                        rumpf_da: true,
+                        material: Material::Body,
+                    });
+                }
+                schleifeninvarianten(rumpf, n, funktion, aus);
+            }
+            StmtArt::Wenn(w) => {
+                for (_, blk) in &w.zweige {
+                    schleifeninvarianten(blk, n, funktion, aus);
+                }
+                if let Some(blk) = &w.sonst {
+                    schleifeninvarianten(blk, n, funktion, aus);
+                }
+            }
+            StmtArt::Match(m) => {
+                for z in &m.zweige {
+                    schleifeninvarianten(&z.rumpf, n, funktion, aus);
+                }
+            }
+            StmtArt::Sperrt(x) => schleifeninvarianten(&x.rumpf, n, funktion, aus),
+            StmtArt::Observiert(x) => schleifeninvarianten(&x.rumpf, n, funktion, aus),
+            StmtArt::Bricht(x) => schleifeninvarianten(&x.rumpf, n, funktion, aus),
+            StmtArt::LetSonst(x) => schleifeninvarianten(&x.sonst, n, funktion, aus),
+            // **No catch-all.** A statement kind that carries a block and is not listed here
+            // would hide every loop inside it, and the register would be short by a duty
+            // nobody could see was missing.
+            StmtArt::Let(_)
+            | StmtArt::Zuweisung(_)
+            | StmtArt::Narrow(_)
+            | StmtArt::Leave(_)
+            | StmtArt::Next(_)
+            | StmtArt::Publish(_)
+            | StmtArt::AwaitLoad(_)
+            | StmtArt::Exchange(_)
+            | StmtArt::Return(_)
+            | StmtArt::Ruf(_) => {}
+        }
+    }
+}
+
 fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
     for item in items {
         match &item.art {
@@ -405,6 +475,13 @@ fn lauf(items: &[Item], aus: &mut Vec<Pflicht>) {
                         rumpf_da,
                         material: if rumpf_da { Material::Body } else { Material::Foreign },
                     });
+                }
+                // **Every loop that carries an `invariant` owes one.** A promise that
+                // stands in no register is not a debt but a claim -- the same reason
+                // `refines` was given the art `R` when it got its word.
+                if let FnRumpf::Block(b) = &f.rumpf {
+                    let mut n = 0usize;
+                    schleifeninvarianten(b, &mut n, &f.name.text, aus);
                 }
                 for (n, _) in f.ensures.iter().enumerate() {
                     aus.push(Pflicht {
@@ -490,7 +567,7 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
         s.push_str("   no generated proof obligation in this unit\n\n");
     }
     for art in [Art::Verfeinerung, Art::Erhaltung, Art::Nachbedingung, Art::Fremdpflicht,
-               Art::Vorbedingung, Art::Geraetezusage] {
+               Art::Vorbedingung, Art::Geraetezusage, Art::Schleifeninvariante] {
         let eigene: Vec<&Pflicht> = p.iter().filter(|x| x.art == art).collect();
         if eigene.is_empty() {
             continue;
@@ -507,14 +584,19 @@ pub fn zeige(baum: &Programm, datei: &str) -> String {
     let v = p.iter().filter(|x| x.art == Art::Vorbedingung).count();
     let r = p.iter().filter(|x| x.art == Art::Verfeinerung).count();
     let dz = p.iter().filter(|x| x.art == Art::Geraetezusage).count();
+    let si = p.iter().filter(|x| x.art == Art::Schleifeninvariante).count();
     // **The header line MUST add up** -- `r + e + n + f + v == p.len()`. The first version of
     // this line did not carry the refinement and reported `1 obligations: 0, 0, 0, 0`.
     // *A balance that does not add up is the class `zaehle-p6.py` is built against* -- and it
     // arose here on exactly the day a new kind was added.
-    debug_assert_eq!(r + e + n + f + v + dz, p.len(), "Pflichtenbilanz geht nicht auf");
+    //
+    // **And it arose a SECOND time, on 2026-08-28, when `S` came.** The same assertion caught
+    // it before any report was read. *That is what a balance is for: a new kind does not get
+    // to be quietly uncounted, and the check does not depend on anyone noticing.*
+    debug_assert_eq!(r + e + n + f + v + dz + si, p.len(), "Pflichtenbilanz geht nicht auf");
     s.push_str(&format!(
         "== {} obligations: {r} refinement, {e} preservation, {n} postcondition, \
-         {f} foreign, {v} precondition, {dz} device ==\n",
+         {f} foreign, {v} precondition, {dz} device, {si} loop invariant ==\n",
         p.len()
     ));
     s.push_str("   And what that does NOT mean: a counted obligation is not a proved one.\n");

@@ -261,7 +261,7 @@ pub enum LeanVerdict {
 
 /// **What a table declares.** Field name to the shape its declaration gives it.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Shape {
+pub enum Shape {
     Int,
     Bool,
     Opt,
@@ -351,6 +351,11 @@ struct Ctx<'a> {
     seen: Vec<(String, String, Shape, String)>,
     /// `(carrier, field, shape)` for every RECORD field touched.
     seen_records: Vec<(String, String, Shape)>,
+    /// The routine's name and how many loops have been numbered in it. **Every loop needs an
+    /// id of its own** -- two loops under one name would share an environment entry, and a
+    /// hypothesis about the first would silently cover the second.
+    routine: String,
+    loops: usize,
     /// **Every `(carrier, field, index-parameter)` read at an option-shaped field.**
     ///
     /// `istWahl` is a DISJUNCTION, and `simp` cannot open one: without the case split the
@@ -786,7 +791,37 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             Ok(format!("(.call {n} [{ps}] [{args}])"))
         }
         StmtArt::LetSonst(_) => Err(LeanReason::ErrorPropagation),
-        StmtArt::Schleife(_) => Err(LeanReason::Loop),
+        StmtArt::Schleife(sch) => {
+            let (inv, rumpf) = match sch.as_ref() {
+                Schleife::Traverse(x) => (&x.invariante, &x.rumpf),
+                Schleife::Retry(x) => (&x.invariante, &x.rumpf),
+                Schleife::Forever(x) => (&x.invariante, &x.rumpf),
+            };
+            // **A loop without an `invariant` is refused, and that is the whole point of the
+            // word.** The measure is carried by the language; what is missing without the
+            // clause is the STATEMENT, and a loop datum with no statement about it would let
+            // a proof conclude from a loop exactly nothing while looking like it concluded
+            // something.
+            let Some(inv) = inv else {
+                return Err(LeanReason::Loop);
+            };
+            let p = pred_term(inv, c)?;
+            c.loops += 1;
+            let id = format!("{}#{}", c.routine, c.loops);
+            // **A `traverse` BINDS its variable, and the body reads it as a local.**
+            //
+            // Without this it fell through to `.global "opfer"` -- a bound name read as a
+            // world name. *That is not a refusal but a wrong translation:* the datum would
+            // say the body reads a global nobody declared, and a proof over it would be
+            // about a program that does not exist. Found by reading the first emitted loop.
+            let depth = c.locals.len();
+            if let Schleife::Traverse(x) = sch.as_ref() {
+                c.locals.push(x.variable.text.clone());
+            }
+            let body = block_term(rumpf, c)?;
+            c.locals.truncate(depth);
+            Ok(format!("(.loop {} {p} {body})", quoted(&id)))
+        }
         StmtArt::Narrow(_) => Err(LeanReason::Narrowing),
         StmtArt::Bricht(_) | StmtArt::Leave(_) | StmtArt::Next(_) => {
             Err(LeanReason::NonLocalExit)
@@ -998,6 +1033,8 @@ fn judge(
         seen: Vec::new(),
         seen_records: Vec::new(),
         option_reads: Vec::new(),
+        routine: f.name.text.clone(),
+        loops: 0,
     };
     let body = match block_term(b, &mut c) {
         Ok(t) => t,
@@ -1099,6 +1136,14 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                     LeanVerdict::Refused(LeanReason::ForeignBody)
                 }
                 crate::pflichten::Art::Erhaltung => LeanVerdict::Refused(LeanReason::Invariant),
+                // **The obligation channel writes a GOAL over a whole body**, and a loop's
+                // goal is the loop RULE -- the body preserves the invariant. That is a
+                // theorem over the loop's own body and not over the routine's, so it does
+                // not fit the shape this channel emits. Refused by name; the export carries
+                // the datum a person needs to state it.
+                crate::pflichten::Art::Schleifeninvariante => {
+                    LeanVerdict::Refused(LeanReason::Loop)
+                }
                 crate::pflichten::Art::Nachbedingung => match fns.get(&p.funktion) {
                     Some((module, f)) => {
                         // `ensures #k` -- the index is in the register's own wording.
@@ -1465,6 +1510,8 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
             seen: Vec::new(),
             seen_records: Vec::new(),
             option_reads: Vec::new(),
+            routine: f.name.text.clone(),
+            loops: 0,
         };
         let body = block_term(b, &mut c);
         let mut pre = Vec::new();

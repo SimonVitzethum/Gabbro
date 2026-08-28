@@ -1170,6 +1170,35 @@ impl<'a> Pruefer<'a> {
             StmtArt::Sperrt(l) => self.unterblock(&l.rumpf, lage, ergebnis),
             StmtArt::Observiert(o) => self.unterblock(&o.rumpf, lage, ergebnis),
             StmtArt::Schleife(sch) => {
+                // **`M133`: a loop `invariant` has to name something.**
+                //
+                // `invariant true` is a promise about nothing and looks exactly like a
+                // promise about something. *A clause nobody honours is worse than none* --
+                // literally the finding that cost `beispiele/05` its `protects` clause
+                // (`H007`/`H008`).
+                let inv = match sch.as_ref() {
+                    Schleife::Traverse(x) => (&x.invariante, x.span),
+                    Schleife::Retry(x) => (&x.invariante, x.span),
+                    Schleife::Forever(x) => (&x.invariante, x.span),
+                };
+                if let (Some(pred), span) = (inv.0.as_ref(), inv.1) {
+                    let mut namen = Vec::new();
+                    sammle_namen_pred(pred, &mut namen);
+                    if namen.is_empty() {
+                        self.absagen.schiebe(
+                            Absage::fehler(
+                                "M133",
+                                span,
+                                "this loop `invariant` names nothing".to_string(),
+                            )
+                            .mit_notiz(
+                                "a promise about nothing looks exactly like a promise about \
+                                 something -- and the loop then carries a counted duty that \
+                                 no prover can fail",
+                            ),
+                        );
+                    }
+                }
                 // Schleifen tragen keine Fakten hinein -- die Invariante der Traversierung
                 // tut das, und die gehoert dem Beweiser.
                 let mut innen = Lage {

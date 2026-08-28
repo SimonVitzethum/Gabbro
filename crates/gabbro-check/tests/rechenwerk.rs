@@ -4399,6 +4399,56 @@ impl fn reicht_durch(p : index into B) -> bool
     );
 }
 
+/// **A loop is an anonymous routine, and its `invariant` is DATA.**
+///
+/// The measure was carried by the language from the start; the statement had no word until
+/// 2026-08-28 (`messung/SCHLEIFENINVARIANTE.md`). A loop WITHOUT one is still refused --
+/// that is the point of the word, not a gap in it.
+#[test]
+fn lean_schleife_traegt_ihre_invariante() {
+    let mit = |inv: &str| {
+        format!(
+            "module t {{
+const N : u32 = 8;
+table B count N {{ slot {{ belegt : bool, }} tree {{ parent elter }} }}
+impl fn leeren(h : ptr<normal, rw> B, s : index into B)
+    effects {{ writes h.slots }}
+    costs   <= 200 ops
+{{
+    traverse k over descendants of h.slots[s] by consuming
+        touches consumes h.slots{inv}
+    {{ h.slots[k].belegt = false; }}
+}}
+}}
+"
+        )
+    };
+    let ohne = lean_programm(&mit(""));
+    assert!(
+        ohne.contains("(loop)"),
+        "a loop with no `invariant` is refused BY NAME:\n{ohne}"
+    );
+    let t = lean_programm(&mit("\n        invariant h.slots[s].belegt"));
+    assert!(
+        t.contains(r#"(.loop "leeren#1""#),
+        "one with an invariant becomes a datum, under an id of its own:\n{t}"
+    );
+    assert!(
+        t.contains(r#"(.place "h" (.name "s") "belegt")"#),
+        "and the invariant travels with it -- it is what the loop rule quantifies over:\n{t}"
+    );
+    // **The loop VARIABLE is a local.** Read as a world name it would make the datum say the
+    // body touches a global nobody declared.
+    assert!(
+        t.contains(r#"(.name "k")"#),
+        "the bound variable is a local, not a global:\n{t}"
+    );
+    assert!(
+        !t.contains(r#"(.global "k")"#),
+        "and never a global:\n{t}"
+    );
+}
+
 /// **Every refusal reason has a tag and a sentence, and `ALL` names all of them.** A reason
 /// missing from `ALL` would be counted by nobody -- the register would look smaller than it
 /// is, and smaller is the direction that flatters.
