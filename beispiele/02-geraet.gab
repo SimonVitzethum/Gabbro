@@ -73,4 +73,81 @@ impl fn scharfschalten(v : ptr<mmio, rw> Vtd, wurzel : Pa)
 
 extern fn geraet_haengt() -> never effects { diverges };
 
+-- ## «B18», 2026-08-28: die Registerklasse JE PHASE
+--
+-- Dieselbe Datei, ein zweites Geraet -- und die Klasse, die sich mit der Phase aendert. Bis
+-- heute trug `regdecl` EINE Klasse fuer alle Zeit, und `F4` schrieb die gewuenschte Form als
+-- **Kommentar** hin, weil sie nicht schreibbar war:
+--
+--     reg USED_IDX : u16 wrapping @0x202 class rw in setup, r in live
+--
+-- **`class r` allein waere hier falsch gewesen** -- es verboete genau das Nullen, mit dem der
+-- Treiber die bezahlte Falle einer wiederbenutzten Region entschaerft: in einem
+-- weiterverwendeten Bereich haelt der `used`-Ring den Endstand des VORIGEN Treibers.
+--
+-- Der Traeger der Phase ist die Ordnung, die es seit «B37» gibt (`phasen.rs`, `O001`-`O012`)
+-- -- **kein zweiter Mechanismus.** Und die Haelfte, die die Fundstelle schliesst, ist die
+-- schwaechere: *wo die Stufe nicht bestimmt ist, gilt, was JEDE Stufe erlaubt.* Eine lineare
+-- Marke bleibt damit eine Erlaubnis, die niemand halten muss -- gesagt ist nur, was ohne sie
+-- folgt. Die Entscheidung mit beiden abgelehnten Formen steht in `messung/PHASENKLASSE.md`.
+
+-- Ein `device … at dma` senkt nur ab, wenn die Kohaerenz AUSGESPROCHEN ist: welche Barriere
+-- ein DMA-Zugriff braucht, ist eine Aussage ueber das Speichermodell, und der Erzeuger baut
+-- sie nicht -- er traegt sie unter ihrem Namen (`C001`). *Die Sonde ist auf einem nicht
+-- kohaerenten Traeger der Befund und nicht die Ausrede.*
+assume dma_kohaerent
+    "Ein Traeger im dma-Raum ist kohaerent: Geraet und Kern sehen dieselben Zellen ohne Cache-Pflege, und zwei volatile Zugriffe in Programmreihenfolge werden dem Geraet in dieser Reihenfolge sichtbar."
+    falsifier sonde_dma_reihenfolge;
+
+linear ghost type QueuePhase order { setup, live };
+
+device Virtq(kopf : Pa) at dma {
+    -- Der Zaehler laeuft modulo 2^16 um («B32»), und seine Klasse haengt an der Phase: in
+    -- `setup` gehoert er dem Treiber, in `live` dem Geraet.
+    reg USED_IDX : u16 wrapping @0x202 class rw in setup, r in live
+    reg AVAIL_IDX : u16 wrapping @0x102 class rw
+}
+
+assume virtq_geraet_schreibt_used
+    "Nach dem Scharfschalten schreibt das Geraet USED_IDX; der Treiber liest nur noch."
+    falsifier sonde_virtq_used;
+
+extern fn queue_arm(p : QueuePhase) -> QueuePhase
+    advances setup -> live
+    effects  { consumes p }
+    costs    <= 8 ops;
+
+-- Das Nullen steht VOR dem Schritt und ist erlaubt; nach `queue_arm` steht die Marke auf
+-- `live`, und dieselbe Zuweisung waere dort ein `R006`. Die Gegenprobe dazu ist
+-- `beispiele/gift/402-registerklasse-nach-dem-schritt.gab`.
+--
+-- **Und hier steht ein BEFUND daneben, der nicht «B18» gehoert** (2026-08-28): die Marke
+-- geht durch `return queue_arm(p);` und nicht durch `let nach = queue_arm(p); return nach;`.
+-- Die zweite Form uebersetzt nicht -- der Erzeuger loescht den Geist, laesst aber das
+-- `return nach;` stehen, und `cc` meldet `'nach' undeclared`. `emit.rs::geist_wert` erkennt
+-- einen blanken Namen nur als PARAMETER (Zeile 6897, gebaut 2026-08-20); eine
+-- `let`-Bindung sieht es nicht. *Genau die Klasse, die der Kommentar dort selbst benennt --
+-- „eine Loeschung, die den Wert nur an seiner Herkunft erkennt, uebersieht ihn ueberall
+-- dort, wo er schon gebunden ist" -- und die vierte Stelle war bis heute unausgeloest, weil
+-- keine `impl fn` im Korpus einen Geist zurueckgab.* Nicht hier repariert: das ist der
+-- Erzeuger und nicht die Phasenklasse.
+impl fn warteschlange_scharf(q : ptr<dma, rw> Virtq, p : QueuePhase) -> QueuePhase
+    advances setup -> live
+    effects  { writes q, consumes p }
+    costs    <= 16 ops
+{
+    q.USED_IDX = 0;
+    q.AVAIL_IDX = 0;
+    return queue_arm(p);
+}
+
+-- Und die Gegenrichtung: LESEN geht in beiden Stufen, auch ohne jede Marke. Der Schnitt
+-- ueber `setup` und `live` ist `r`, und `r` traegt diese Funktion.
+impl fn used_lesen(q : ptr<dma, r> Virtq) -> u16
+    effects { reads q }
+    costs   <= 4 ops
+{
+    return q.USED_IDX;
+}
+
 }

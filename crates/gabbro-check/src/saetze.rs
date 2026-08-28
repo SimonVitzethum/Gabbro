@@ -1803,6 +1803,43 @@ pub const SPERREN: &[Satz] = &[
                       beispiele/53-zwei-orte.gab.",
         fundstelle: "crates/gabbro-check/src/kbedingung.rs; messung/ZWEI-ORTE.md",
     },
+    // --- «B18»: die Registerklasse je Phase (2026-08-28, Bahn A) ----------------------
+    Satz {
+        name: "m3.phasenklasse",
+        kennungen: &["R009"],
+        aussage: "A `device` register may carry a class PER PHASE -- `class rw in setup, r \
+                  in live` -- where the stages are those of a declared `linear ghost type \
+                  … order { … }`. The list names every stage of that order exactly once, \
+                  and the order it belongs to is unambiguous. At an access the class of the \
+                  stage the mark stands on decides (`R005`/`R006`); **where no mark of that \
+                  order is in scope, what holds is what EVERY stage permits.**",
+        vorbehalt: "**It says nothing about the phase of the HARDWARE.** The stage is the \
+                    DRIVER's; a hostile or crashed device leaves `live` on its own and no \
+                    line here holds it -- making a fact out of the mark would be the «B33» \
+                    error again. **It checks no access that goes past the device handle:** \
+                    an `asm` block or a raw pointer on the same address is invisible, as it \
+                    already is for `R005`/`R006` (W9). **The stage is only as precise as \
+                    the body walk:** a function without `advances` that carries a mark has \
+                    an UNDETERMINED stage and falls under the intersection, not under a \
+                    guessed stage -- and across a call only the signature carries. **A loop \
+                    body that also holds a phase step is not checked for register classes** \
+                    -- it is already refused whole (`O006`), and a second message at the \
+                    same line would be noise. **And it lowers nothing:** `class` was never \
+                    a lowering, and the phase is not visible to the emitter. Fields of a \
+                    phase-classed register may not carry their own class: «B23» stands per \
+                    field, «B18» per phase, and the two do not compose today.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/401-registerklasse-ohne-marke.gab (`R006`, no mark in \
+                      scope -- the load-bearing site, measured at 0 errors on 2026-08-26), \
+                      402-registerklasse-nach-dem-schritt.gab (`R006`, stage `live` after \
+                      the step), 403-phasenklasse-schweigt-ueber-stufe.gab and \
+                      404-phasenstufe-gibt-es-nicht.gab (`R009`). The clean side is \
+                      beispiele/02-geraet.gab, which writes the form for the first time -- \
+                      so it is a SITE and not demand (W23).",
+        fundstelle: "crates/gabbro-check/src/m3.rs::phasendeklarationen, ::phasenzugriff; \
+                     crates/gabbro-check/src/phasen.rs::registerzugriffe; \
+                     messung/PHASENKLASSE.md",
+    },
 ];
 
 // ===================================================================================

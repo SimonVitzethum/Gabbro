@@ -1,0 +1,17 @@
+-- erwartet: R009
+-- **«B18»: eine Stufe, die keine Ordnung kennt.** `bereit` steht in keiner `order` dieser
+-- Einheit -- und eine Phase am Register ist eine Stufe VON ETWAS. Der Traeger ist dieselbe
+-- lineare Geistmarke, die `advances` weiterschiebt; ohne sie ist die Klausel ein Wort ohne
+-- Gegenstand.
+
+module gift::phasenstufe_gibt_es_nicht {
+
+opaque type Pa = u64;
+
+linear ghost type QueuePhase order { setup, live };
+
+device Virtq(basis : Pa) at dma {
+    reg USED_IDX : u16 wrapping @0x202 class rw in setup, r in bereit
+}
+
+}

@@ -1,0 +1,35 @@
+-- erwartet: R006
+-- **«B18», die Zeile aus dem Fragment:** *„nach `queue_arm` kann kein Pfad `USED_IDX`
+-- schreiben"* (`FRAGMENTE.md`:833-834).
+--
+-- Hier haelt die Funktion die Marke, macht den Schritt und schreibt **danach** weiter. Das
+-- erste Nullen steht VOR dem Schritt und ist richtig -- *`class r` allein waere hier falsch
+-- gewesen, es verboete genau das Nullen, das die bezahlte Falle einer wiederbenutzten
+-- Region entschaerft.* Was faellt, ist die zweite Zuweisung, und nur sie.
+
+module gift::registerklasse_nach_dem_schritt {
+
+opaque type Pa = u64;
+
+linear ghost type QueuePhase order { setup, live };
+
+device Virtq(basis : Pa) at dma {
+    reg USED_IDX : u16 wrapping @0x202 class rw in setup, r in live
+}
+
+extern fn queue_arm(p : QueuePhase) -> QueuePhase
+    advances setup -> live
+    effects  { consumes p } costs <= 8 ops;
+
+impl fn scharf(q : ptr<dma, rw> Virtq, p : QueuePhase) -> QueuePhase
+    advances setup -> live
+    effects  { writes q, consumes p }
+    costs    <= 16 ops
+{
+    q.USED_IDX = 0;
+    let r = queue_arm(p);
+    q.USED_IDX = 1;
+    return r;
+}
+
+}

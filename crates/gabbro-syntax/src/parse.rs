@@ -3655,6 +3655,21 @@ impl<'a> Parser<'a> {
         let versatz = self.expr()?;
         self.erwarte_kw(Kw::Class)?;
         let klasse = self.regklasse()?;
+        // «B18», 2026-08-28: `class rw in setup, r in live` -- one class per stage of an
+        // `order`. **No new word:** `in` is reserved since ever, `class` already stands in
+        // `regdecl`. A comma cannot mean anything else here -- register declarations in a
+        // `device` or `bank` body are NOT comma-separated.
+        let mut phasen = Vec::new();
+        if self.friss_kw(Kw::In) {
+            let stufe = self.erwarte_ident()?;
+            phasen.push((klasse, stufe));
+            while self.friss_z(Z::Komma) {
+                let k = self.regklasse()?;
+                self.erwarte_kw(Kw::In)?;
+                let s = self.erwarte_ident()?;
+                phasen.push((k, s));
+            }
+        }
         let mut felder = Vec::new();
         if self.friss_kw(Kw::Fields) {
             self.erwarte_z(Z::GeschweiftAuf)?;
@@ -3688,6 +3703,7 @@ impl<'a> Parser<'a> {
             versatz,
             klasse,
             felder,
+            phasen,
             requires,
             span: anfang.bis_zu(self.vorheriger_span()),
         })

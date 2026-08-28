@@ -1572,6 +1572,15 @@ pub struct RegDecl {
     /// Eintrag ueberhaupt findet. Bis 2026-08-20 trug `regdecl` EINE Klasse, und FRI war
     /// damit untypisierbar. Ein Feld ohne eigenes Wort erbt die Klasse seines Registers.
     pub felder: Vec<(Ident, BitPos, Option<RegKlasse>)>,
+    /// **«B18», 2026-08-28: the class PER PHASE.** `class rw in setup, r in live` --
+    /// the stages are those of a declared `linear ghost type … order { … }`, and the
+    /// list must name every one of them exactly once (`R009`, issued in `m3.rs` --
+    /// nothing in this crate reads the field).
+    ///
+    /// Empty means the register carries ONE class for all time, the form that stood here
+    /// until today. *`class r` alone would have been wrong at the measured site: it would
+    /// forbid the very zeroing that disarms a reused ring.*
+    pub phasen: Vec<(RegKlasse, Ident)>,
     pub requires: Option<Pred>,
     pub span: Span,
 }

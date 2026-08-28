@@ -296,18 +296,18 @@ fn eigen_doppelt(baum: &Programm, absagen: &mut Absagen) {
 /// Nebenwirkung hat, nicht ein Verbot: ein RW1C-Register liest man gewoehnlich und loescht
 /// ein Bit, indem man eine Eins hineinschreibt; ein RC-Register loescht sich beim Lesen und
 /// nimmt kein Schreiben an. *Beide sind damit lesbar; nur `w` ist es nicht.*
-fn darf_lesen_reg(k: RegKlasse) -> bool {
+pub(crate) fn darf_lesen_reg(k: RegKlasse) -> bool {
     !matches!(k, RegKlasse::Schreiben)
 }
 
-fn darf_schreiben_reg(k: RegKlasse) -> bool {
+pub(crate) fn darf_schreiben_reg(k: RegKlasse) -> bool {
     matches!(
         k,
         RegKlasse::Schreiben | RegKlasse::LesenSchreiben | RegKlasse::W1c
     )
 }
 
-fn klassenwort(k: RegKlasse) -> &'static str {
+pub(crate) fn klassenwort(k: RegKlasse) -> &'static str {
     match k {
         RegKlasse::Lesen => "r",
         RegKlasse::Schreiben => "w",
@@ -318,12 +318,86 @@ fn klassenwort(k: RegKlasse) -> &'static str {
 }
 
 #[derive(Clone)]
-struct RegInfo {
-    klasse: RegKlasse,
+pub(crate) struct RegInfo {
+    pub(crate) klasse: RegKlasse,
     /// **«B23»: die Klasse JE FELD.** `FSTS` ist gemischt -- 7:0 sind RW1C, 15:8 (FRI) sind
     /// nur lesbar, und FRI ist die Stelle, an der der Treiber den Eintrag ueberhaupt findet.
     /// Ein Feld ohne eigenes Wort erbt die Klasse seines Registers.
-    felder: BTreeMap<String, RegKlasse>,
+    pub(crate) felder: BTreeMap<String, RegKlasse>,
+    /// **«B18»: die Klasse JE PHASE**, `class rw in setup, r in live`. Empty means the
+    /// register carries one class for all time -- then `registerklassen` below decides it.
+    /// **Non-empty means this pass says NOTHING about the register**: the stage is what
+    /// decides, and the stage lives in `phasen.rs`. *Two registers over one site would be
+    /// W7; the reading happens where the stage is known.*
+    pub(crate) phasen: Vec<(RegKlasse, Ident)>,
+}
+
+/// **The register table per device** -- register name to class, fields and phase list.
+///
+/// It stands here and not in `phasen.rs` because `m3.rs` is the ONE register over register
+/// classes. `phasen.rs` calls it for «B18»; **a second table would be W7.**
+pub(crate) fn geraetetabelle(baum: &Programm) -> BTreeMap<String, BTreeMap<String, RegInfo>> {
+    let mut geraete: BTreeMap<String, BTreeMap<String, RegInfo>> = BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Device(d) = &item.art else {
+            return;
+        };
+        let mut regs: BTreeMap<String, RegInfo> = BTreeMap::new();
+        let nimm = |r: &RegDecl, regs: &mut BTreeMap<String, RegInfo>| {
+            let felder = r
+                .felder
+                .iter()
+                .map(|(n, _, k)| (n.text.clone(), k.unwrap_or(r.klasse)))
+                .collect();
+            regs.insert(
+                r.name.text.clone(),
+                RegInfo {
+                    klasse: r.klasse,
+                    felder,
+                    phasen: r.phasen.clone(),
+                },
+            );
+        };
+        for r in &d.register {
+            nimm(r, &mut regs);
+        }
+        // Ein `bank`-Register wird ueber `d.BANK[i].REG` erreicht und traegt dieselbe Klasse.
+        for b in &d.baenke {
+            for r in &b.register {
+                nimm(r, &mut regs);
+            }
+        }
+        geraete.insert(d.name.text.clone(), regs);
+    });
+    geraete
+}
+
+/// **Welcher lokale Name traegt welches Geraet?** Parameter -- als Zeiger wie als Wert --
+/// und die `let`-gebundenen Griffe (`let v = Vtd(basis);`, `beispiele/09`).
+pub(crate) fn griffe_von(
+    f: &FnDecl,
+    geraete: &BTreeMap<String, BTreeMap<String, RegInfo>>,
+) -> BTreeMap<String, String> {
+    let mut griffe: BTreeMap<String, String> = BTreeMap::new();
+    for p in &f.parameter {
+        let ziel = match &p.typ {
+            TypExpr::Pfad(pf) => pf.teile.last(),
+            TypExpr::Zeiger(z) => match &z.ziel {
+                TypExpr::Pfad(pf) => pf.teile.last(),
+                _ => None,
+            },
+            _ => None,
+        };
+        if let Some(n) = ziel {
+            if geraete.contains_key(&n.text) {
+                griffe.insert(p.name.text.clone(), n.text.clone());
+            }
+        }
+    }
+    if let FnRumpf::Block(b) = &f.rumpf {
+        sammle_griffe(b, geraete, &mut griffe);
+    }
+    griffe
 }
 
 /// **`class` an einem Register war eine Zusage, die kein Pass eingeloest hat** (2026-08-20).
@@ -342,34 +416,7 @@ struct RegInfo {
 /// tat sie nicht.* **Eine Buchung, die auf eine Regel zeigt, die anderswohin sieht, ist
 /// schlimmer als eine offene Zeile -- sie sieht geschlossen aus.**
 fn registerklassen(baum: &Programm, absagen: &mut Absagen) {
-    let mut geraete: BTreeMap<String, BTreeMap<String, RegInfo>> = BTreeMap::new();
-    crate::fuer_jedes_item(baum, &mut |item| {
-        let ItemArt::Device(d) = &item.art else {
-            return;
-        };
-        let mut regs: BTreeMap<String, RegInfo> = BTreeMap::new();
-        let nimm = |r: &RegDecl, regs: &mut BTreeMap<String, RegInfo>| {
-            let felder = r
-                .felder
-                .iter()
-                .map(|(n, _, k)| (n.text.clone(), k.unwrap_or(r.klasse)))
-                .collect();
-            regs.insert(
-                r.name.text.clone(),
-                RegInfo { klasse: r.klasse, felder },
-            );
-        };
-        for r in &d.register {
-            nimm(r, &mut regs);
-        }
-        // Ein `bank`-Register wird ueber `d.BANK[i].REG` erreicht und traegt dieselbe Klasse.
-        for b in &d.baenke {
-            for r in &b.register {
-                nimm(r, &mut regs);
-            }
-        }
-        geraete.insert(d.name.text.clone(), regs);
-    });
+    let geraete = geraetetabelle(baum);
     if geraete.is_empty() {
         return;
     }
@@ -378,28 +425,10 @@ fn registerklassen(baum: &Programm, absagen: &mut Absagen) {
         let ItemArt::Funktion(f) = &item.art else {
             return;
         };
-        // Welcher lokale Name traegt welches Geraet? Parameter -- als Zeiger wie als Wert --
-        // und die `let`-gebundenen Griffe (`let v = Vtd(basis);`, `beispiele/09`).
-        let mut griffe: BTreeMap<String, String> = BTreeMap::new();
-        for p in &f.parameter {
-            let ziel = match &p.typ {
-                TypExpr::Pfad(pf) => pf.teile.last(),
-                TypExpr::Zeiger(z) => match &z.ziel {
-                    TypExpr::Pfad(pf) => pf.teile.last(),
-                    _ => None,
-                },
-                _ => None,
-            };
-            if let Some(n) = ziel {
-                if geraete.contains_key(&n.text) {
-                    griffe.insert(p.name.text.clone(), n.text.clone());
-                }
-            }
-        }
         let FnRumpf::Block(b) = &f.rumpf else {
             return;
         };
-        sammle_griffe(b, &geraete, &mut griffe);
+        let griffe = griffe_von(f, &geraete);
         if griffe.is_empty() {
             return;
         }
@@ -459,19 +488,25 @@ fn klassenblock(
     }
 }
 
-/// Ein Zugriff auf `d.REG`, `d.REG.FELD` oder `d.BANK[i].REG[.FELD]` -- gegen die Klasse.
-fn klassenpruefung(
-    o: &Ort,
-    span: Span,
-    lesend: bool,
-    geraete: &BTreeMap<String, BTreeMap<String, RegInfo>>,
+/// **Which register does this place address?** `d.REG`, `d.REG.FELD` or
+/// `d.BANK[i].REG[.FELD]`.
+///
+/// It stands here because `m3.rs` is the ONE register over register accesses; `phasen.rs`
+/// calls it for «B18». *A second resolution would be W7 -- and the two could drift apart
+/// without anybody noticing.*
+pub(crate) struct Treffer<'a> {
+    pub(crate) reg: &'a Ident,
+    pub(crate) feld: Option<&'a Ident>,
+    pub(crate) info: &'a RegInfo,
+}
+
+pub(crate) fn ort_register<'a>(
+    o: &'a Ort,
+    geraete: &'a BTreeMap<String, BTreeMap<String, RegInfo>>,
     griffe: &BTreeMap<String, String>,
-    absagen: &mut Absagen,
-) {
-    let Some(dev) = griffe.get(&o.basis.text) else {
-        return; // kein Geraetegriff -- der Pass sagt nichts (W9)
-    };
-    let Some(regs) = geraete.get(dev) else { return };
+) -> Option<Treffer<'a>> {
+    let dev = griffe.get(&o.basis.text)?; // kein Geraetegriff -- der Pass sagt nichts (W9)
+    let regs = geraete.get(dev)?;
     // Die Namensfolge ohne Indizes: `[BANK, REG, FELD]` oder `[REG, FELD]` oder `[REG]`.
     let namen: Vec<&Ident> = o
         .suffixe
@@ -483,12 +518,32 @@ fn klassenpruefung(
         .collect();
     // Der erste Name, den dieses Geraet als Register kennt -- so faellt ein Bankname weg,
     // ohne dass der Pass die Bankliste ein zweites Mal fuehren muss (W7).
-    let Some(k) = namen.iter().position(|n| regs.contains_key(&n.text)) else {
+    let k = namen.iter().position(|n| regs.contains_key(&n.text))?;
+    let reg = namen[k];
+    let info = &regs[&reg.text];
+    let feld = namen.get(k + 1).copied();
+    Some(Treffer { reg, feld, info })
+}
+
+/// Ein Zugriff auf `d.REG`, `d.REG.FELD` oder `d.BANK[i].REG[.FELD]` -- gegen die Klasse.
+fn klassenpruefung(
+    o: &Ort,
+    span: Span,
+    lesend: bool,
+    geraete: &BTreeMap<String, BTreeMap<String, RegInfo>>,
+    griffe: &BTreeMap<String, String>,
+    absagen: &mut Absagen,
+) {
+    let Some(t) = ort_register(o, geraete, griffe) else {
         return;
     };
-    let reg = &namen[k];
-    let info = &regs[&reg.text];
-    let feld = namen.get(k + 1);
+    let (reg, info, feld) = (t.reg, t.info, t.feld);
+    // **«B18»: a phase-classed register is NOT decided by this walk.** Which class holds
+    // depends on the stage of the mark, and the stage is walked in `phasen.rs`, which calls
+    // `phasenzugriff` below. *To guess here would be to take the first stage for all time.*
+    if !info.phasen.is_empty() {
+        return;
+    }
     let (klasse, wo) = match feld.and_then(|f| info.felder.get(&f.text).map(|k| (*k, Some(f)))) {
         Some((k, f)) => (k, f),
         None => (info.klasse, None),
@@ -668,4 +723,299 @@ fn liest_expr(e: &Expr, span: Span, zeiger: &BTreeMap<String, Zeiger>, absagen: 
     for o in crate::alle_orte(e) {
         liest(o, span, zeiger, absagen);
     }
+}
+
+// =======================================================================================
+// «B18» -- the register class PER PHASE. 2026-08-28.
+//
+// `dokumente/PFLICHTEN.md` carried two corpus sites, and the second one is load-bearing:
+//
+//     impl fn heimlich(q : ptr<dma, rw> Virtq) effects { writes q } costs <= 4 ops
+//         { q.USED_IDX = 7; }        ->  0 errors, measured 2026-08-26
+//
+// **A linear mark is a permission nobody is obliged to hold.** `L101` (issued in `m2.rs`,
+// which is where linearity lives) holds that whoever
+// HAS the mark passes it on; it does not hold that whoever WRITES must have it. The
+// fragment writes the closing form itself, as a comment, because it could not be written:
+//
+//     reg USED_IDX : u16 wrapping @0x202 class rw in setup, r in live
+//
+// And the line under it says why a fixed class would be wrong: **`class r` alone would
+// forbid the very zeroing that disarms the paid-for trap of a reused ring.**
+//
+// The decision and both rejected forms stand in `messung/PHASENKLASSE.md`. The half that
+// closes the measured site is this one:
+//
+// > **Where the stage is not determined, what holds is what EVERY stage permits.**
+//
+// That forces nobody to carry the mark -- it only says what follows without it. For
+// `class rw in setup, r in live` the intersection is `r`, and `heimlich` falls at `R006` --
+// issued in `phasenzugriff` at the foot of this same `m3.rs`.
+// =======================================================================================
+
+/// Which order do these stage names belong to? **Exactly one, or the declaration is wrong.**
+pub(crate) fn ordnung_der_phasen<'a>(
+    phasen: &[(RegKlasse, Ident)],
+    ordnungen: &'a BTreeMap<String, Vec<String>>,
+) -> Vec<&'a String> {
+    ordnungen
+        .iter()
+        .filter(|(_, stufen)| phasen.iter().all(|(_, s)| stufen.contains(&s.text)))
+        .map(|(n, _)| n)
+        .collect()
+}
+
+/// The class that holds in one stage -- `None` if the list does not name that stage.
+fn klasse_in_stufe(phasen: &[(RegKlasse, Ident)], stufe: &str) -> Option<RegKlasse> {
+    phasen.iter().find(|(_, s)| s.text == stufe).map(|(k, _)| *k)
+}
+
+/// **`R009` -- the phase list at a register declaration.**
+///
+/// Four ways to get it wrong, one identifier: the stages belong to no declared `order`, or
+/// to more than one, or one is named twice, or one of the order's stages is missing.
+/// **Completeness is a duty and not pedantry:** an unnamed stage would be a silent hole in
+/// a rule whose whole purpose is to close one. *From strict one can loosen, never the other
+/// way* (K11.1).
+///
+/// The fifth is a shape and not an omission: a phase-classed register whose FIELDS carry
+/// their own `class` would mean two class systems over one word. «B23» stands per field,
+/// «B18» stands per phase, and the two do not compose today.
+pub(crate) fn phasendeklarationen(
+    baum: &Programm,
+    ordnungen: &BTreeMap<String, Vec<String>>,
+    absagen: &mut Absagen,
+) {
+    let pruefe = |r: &RegDecl, absagen: &mut Absagen| {
+        if r.phasen.is_empty() {
+            return;
+        }
+        for (n, _, k) in &r.felder {
+            if k.is_some() {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "R009",
+                        n.span,
+                        format!(
+                            "`{}` carries a class per phase, and the field `{}` carries one \
+                             of its own",
+                            r.name.text, n.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "«B23» stands per field, «B18» stands per phase -- one word cannot \
+                         carry both class systems at once",
+                    ),
+                );
+            }
+        }
+        let kandidaten = ordnung_der_phasen(&r.phasen, ordnungen);
+        match kandidaten.len() {
+            0 => {
+                let bekannt = if ordnungen.is_empty() {
+                    "no `linear ghost type … order { … }` is declared in this unit".to_string()
+                } else {
+                    format!(
+                        "the declared orders are: {}",
+                        ordnungen
+                            .iter()
+                            .map(|(n, s)| format!("{n} ({})", s.join(", ")))
+                            .collect::<Vec<_>>()
+                            .join("; ")
+                    )
+                };
+                absagen.schiebe(
+                    Absage::fehler(
+                        "R009",
+                        r.span,
+                        format!(
+                            "`{}` names the stages {} -- no declared `order` has them all",
+                            r.name.text,
+                            r.phasen
+                                .iter()
+                                .map(|(_, s)| s.text.clone())
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        ),
+                    )
+                    .mit_notiz(bekannt)
+                    .mit_notiz(
+                        "a phase at a register is a stage OF SOMETHING -- the carrier is the \
+                         same linear ghost mark that `advances` steps",
+                    ),
+                );
+            }
+            1 => {
+                let ordnung = kandidaten[0];
+                let stufen = &ordnungen[ordnung];
+                for (i, (_, s)) in r.phasen.iter().enumerate() {
+                    if r.phasen[..i].iter().any(|(_, t)| t.text == s.text) {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "R009",
+                                s.span,
+                                format!("`{}` names the stage `{}` twice", r.name.text, s.text),
+                            )
+                            .mit_notiz("one stage, one class -- otherwise the order decides"),
+                        );
+                    }
+                }
+                let fehlend: Vec<&String> = stufen
+                    .iter()
+                    .filter(|s| !r.phasen.iter().any(|(_, t)| t.text == **s))
+                    .collect();
+                if !fehlend.is_empty() {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "R009",
+                            r.span,
+                            format!(
+                                "`{}` says nothing about the stage(s) {} of `{}`",
+                                r.name.text,
+                                fehlend
+                                    .iter()
+                                    .map(|s| format!("`{s}`"))
+                                    .collect::<Vec<_>>()
+                                    .join(", "),
+                                ordnung
+                            ),
+                        )
+                        .mit_notiz(format!("the order is: {}", stufen.join(", ")))
+                        .mit_notiz(
+                            "every stage must be named -- an unnamed one would be a silent \
+                             hole in the rule that exists to close it",
+                        ),
+                    );
+                }
+            }
+            _ => {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "R009",
+                        r.span,
+                        format!(
+                            "the stages of `{}` fit more than one `order`: {}",
+                            r.name.text,
+                            kandidaten
+                                .iter()
+                                .map(|o| format!("`{o}`"))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        ),
+                    )
+                    .mit_notiz(
+                        "which mark decides the class would then depend on which order the \
+                         reader looked at first",
+                    ),
+                );
+            }
+        }
+    };
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Device(d) = &item.art else {
+            return;
+        };
+        for r in &d.register {
+            pruefe(r, absagen);
+        }
+        for b in &d.baenke {
+            for r in &b.register {
+                pruefe(r, absagen);
+            }
+        }
+    });
+}
+
+/// **The access to a phase-classed register, against the stage that holds here.**
+///
+/// Called from `phasen.rs`, which walks the stage of every mark through a body (`O003`,
+/// `O004`, `O006`). The identifiers stay HERE, where `R005`/`R006` already live -- one
+/// identifier belongs to one file (`pruefe-kennungen.py`), and the rule is the same rule
+/// with a class looked up differently. *That is «B23»'s precedent, word for word.*
+///
+/// `stand` is what `phasen.rs` knows: local mark name -> stage. `markenordnung` says which
+/// order each local mark belongs to. **Where the register's order has no mark in `stand`,
+/// every stage is possible, and only what all of them permit is allowed.**
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn phasenzugriff(
+    o: &Ort,
+    span: Span,
+    lesend: bool,
+    geraete: &BTreeMap<String, BTreeMap<String, RegInfo>>,
+    griffe: &BTreeMap<String, String>,
+    ordnungen: &BTreeMap<String, Vec<String>>,
+    markenordnung: &BTreeMap<String, String>,
+    stand: &BTreeMap<String, String>,
+    absagen: &mut Absagen,
+) {
+    let Some(t) = ort_register(o, geraete, griffe) else {
+        return;
+    };
+    let info = t.info;
+    if info.phasen.is_empty() {
+        return;
+    }
+    let kandidaten = ordnung_der_phasen(&info.phasen, ordnungen);
+    if kandidaten.len() != 1 {
+        return; // `R009` has already spoken -- a second message would be noise
+    }
+    let ordnung = kandidaten[0];
+    // Which stages are possible here? The stages of every mark of this order whose stage
+    // `phasen.rs` knows -- and if there is none, all of them.
+    let mut moeglich: Vec<String> = markenordnung
+        .iter()
+        .filter(|(_, ord)| *ord == ordnung)
+        .filter_map(|(name, _)| stand.get(name).cloned())
+        .collect();
+    moeglich.sort();
+    moeglich.dedup();
+    let bestimmt = !moeglich.is_empty();
+    if !bestimmt {
+        moeglich = ordnungen[ordnung].clone();
+    }
+    let schuldig = moeglich.iter().find(|s| match klasse_in_stufe(&info.phasen, s) {
+        Some(k) if lesend => !darf_lesen_reg(k),
+        Some(k) => !darf_schreiben_reg(k),
+        None => false, // `R009` names the missing stage
+    });
+    let Some(stufe) = schuldig else { return };
+    let klasse = klasse_in_stufe(&info.phasen, stufe).unwrap();
+    let stelle = match t.feld {
+        Some(f) => format!("{}.{}", t.reg.text, f.text),
+        None => t.reg.text.clone(),
+    };
+    let (code, wort, tat) = if lesend {
+        ("R005", "read", "readable")
+    } else {
+        ("R006", "written", "writable")
+    };
+    let mut a = Absage::fehler(
+        code,
+        span,
+        format!(
+            "`{}` is {wort}, but `{stelle}` is `class {}` in stage `{stufe}`",
+            o.text(),
+            klassenwort(klasse)
+        ),
+    )
+    .mit_notiz(format!(
+        "a `class {}` register is not {tat} -- that is a statement about the HARDWARE, and \
+         the compiler is the only place it can be held",
+        klassenwort(klasse)
+    ));
+    a = if bestimmt {
+        a.mit_notiz(format!(
+            "the mark of `{ordnung}` stands on `{stufe}` here (\u{ab}B18\u{bb})"
+        ))
+    } else {
+        a.mit_notiz(format!(
+            "no mark of `{ordnung}` is in scope, so the stage is NOT determined here -- what \
+             holds is what EVERY stage permits, and `{stufe}` does not (\u{ab}B18\u{bb})"
+        ))
+        .mit_notiz(
+            "a linear mark is a permission nobody is obliged to hold; this is what follows \
+             without it, not a duty to carry it",
+        )
+    };
+    absagen.schiebe(a);
 }

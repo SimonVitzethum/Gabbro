@@ -1,0 +1,19 @@
+-- erwartet: R009
+-- **«B18»: eine Phasenliste, die eine Stufe verschweigt.** `QueuePhase` hat drei Stufen,
+-- die Zeile nennt zwei -- und ueber `tot` sagt sie nichts.
+--
+-- **Vollstaendigkeit ist Pflicht und keine Pedanterie:** eine ungenannte Stufe waere ein
+-- stilles Loch in genau der Regel, die gebaut wurde, um ein Loch zu schliessen. *Von streng
+-- laesst sich lockern, umgekehrt nie.*
+
+module gift::phasenklasse_schweigt_ueber_stufe {
+
+opaque type Pa = u64;
+
+linear ghost type QueuePhase order { setup, live, tot };
+
+device Virtq(basis : Pa) at dma {
+    reg USED_IDX : u16 wrapping @0x202 class rw in setup, r in live
+}
+
+}

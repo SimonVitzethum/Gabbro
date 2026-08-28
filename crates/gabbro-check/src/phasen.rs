@@ -71,6 +71,117 @@ struct Schritt {
     nach: String,
 }
 
+/// **«B18»: what this body needs in order to read a phase-classed register.**
+///
+/// The class tables and the identifiers stay in `m3.rs` -- `pruefe-kennungen.py` allows one
+/// identifier in one file, and `R005`/`R006` have lived there since «B23». What lives HERE
+/// is the stage, because the stage is what this pass walks. *One register over classes, one
+/// over stages, and the rule at the seam calls both.*
+struct Regumfeld<'a> {
+    geraete: &'a BTreeMap<String, BTreeMap<String, crate::m3::RegInfo>>,
+    ordnungen: &'a BTreeMap<String, Vec<String>>,
+    griffe: BTreeMap<String, String>,
+    /// Local mark name -> the order it belongs to.
+    marken: BTreeMap<String, String>,
+}
+
+/// Which local name carries a mark of which order? Parameters and the `let`-bound results of
+/// steps. **Collected once per body and not per statement:** a name does not change the
+/// order it belongs to, only the stage it stands on -- and that is what `stand` carries.
+fn markenordnung(
+    f: &FnDecl,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
+    schritte: &BTreeMap<String, Schritt>,
+    ordnungen: &BTreeMap<String, Vec<String>>,
+) -> BTreeMap<String, String> {
+    let mut m = BTreeMap::new();
+    for p in &f.parameter {
+        if let TypExpr::Pfad(pf) = &p.typ {
+            if let Some(n) = pf.teile.last() {
+                if ordnungen.contains_key(&n.text) {
+                    m.insert(p.name.text.clone(), n.text.clone());
+                }
+            }
+        }
+    }
+    if let FnRumpf::Block(b) = &f.rumpf {
+        sammle_markenordnung(b, u, modul, schritte, &mut m);
+    }
+    m
+}
+
+fn sammle_markenordnung(
+    b: &Block,
+    u: &crate::umgebung::Umgebung,
+    modul: &str,
+    schritte: &BTreeMap<String, Schritt>,
+    m: &mut BTreeMap<String, String>,
+) {
+    for s in &b.anweisungen {
+        if let StmtArt::Let(l) = &s.art {
+            if let ExprArt::Ruf(r) = &l.wert.art {
+                if let Some(pf) = r.path() {
+                    if let Some(sch) = u
+                        .kandidaten_aufloesbar(modul, &pf.text())
+                        .into_iter()
+                        .find_map(|k| schritte.get(&k))
+                    {
+                        m.insert(l.name.text.clone(), sch.marke.clone());
+                    }
+                }
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_markenordnung(k, u, modul, schritte, m);
+        }
+    }
+}
+
+/// **The register accesses of ONE statement, against the stage that holds before it.**
+///
+/// Only this statement's own places -- the descent into sub-blocks is `fluss`'s, and it
+/// carries the stage that belongs to each branch.
+fn registerzugriffe(
+    s: &Stmt,
+    umfeld: &Regumfeld<'_>,
+    stand: &BTreeMap<String, String>,
+    absagen: &mut Absagen,
+) {
+    if umfeld.griffe.is_empty() {
+        return;
+    }
+    let pruefe = |o: &Ort, lesend: bool, absagen: &mut Absagen| {
+        crate::m3::phasenzugriff(
+            o,
+            s.span,
+            lesend,
+            umfeld.geraete,
+            &umfeld.griffe,
+            umfeld.ordnungen,
+            &umfeld.marken,
+            stand,
+            absagen,
+        );
+    };
+    match &s.art {
+        StmtArt::Zuweisung(z) => {
+            pruefe(&z.ziel, false, absagen);
+            // `X |= 1` is a read AND a write; a `class w` does not carry it.
+            if !matches!(z.op, ZuwOp::Setzt) {
+                pruefe(&z.ziel, true, absagen);
+            }
+        }
+        StmtArt::Publish(pb) => pruefe(&pb.ziel, false, absagen),
+        _ => {}
+    }
+    for e in crate::eigene_ausdruecke(s) {
+        for o in crate::alle_orte(e) {
+            pruefe(o, true, absagen);
+        }
+    }
+}
+
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // **Der Bootsatz haengt an derselben Marke** -- `O008`/`O009` reden ueber die lineare
     // Geistmarke, ueber die `O001`-`O007` schon reden. Ein eigener Pass waere W7: zwei
@@ -170,7 +281,19 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         );
     });
 
-    if schritte.is_empty() {
+    // **«B18», 2026-08-28: the class per phase.** The declaration first -- a stage that does
+    // not exist makes every statement about an access to it worthless.
+    crate::m3::phasendeklarationen(baum, &ordnungen, absagen);
+    let geraete = crate::m3::geraetetabelle(baum);
+    let phasenregister = geraete
+        .values()
+        .any(|regs| regs.values().any(|i| !i.phasen.is_empty()));
+
+    // **Without a step AND without a phase-classed register there is nothing to say.** Until
+    // today only the first half stood here -- and a unit with a phase-classed register but no
+    // `advances` would have run through unchecked, though that is exactly where the
+    // intersection over all stages bites.
+    if schritte.is_empty() && !phasenregister {
         return;
     }
 
@@ -178,11 +301,20 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item_im_modul(baum, &mut |i, modul| {
         let ItemArt::Funktion(f) = &i.art else { return };
         let FnRumpf::Block(rumpf) = &f.rumpf else { return };
+        let umfeld = Regumfeld {
+            geraete: &geraete,
+            ordnungen: &ordnungen,
+            griffe: crate::m3::griffe_von(f, &geraete),
+            marken: markenordnung(f, &u, modul, &schritte, &ordnungen),
+        };
         let Some(eigen) = schritte.get(&crate::umgebung::qualifiziere(modul, &f.name.text)) else {
             // Ein Rumpf ohne eigene `advances`-Zeile darf trotzdem Schritte tun -- dann ist
             // nur nichts zugesagt, was am Ende zu erreichen waere.
+            //
+            // **«B18»: and its marks stand on an UNDETERMINED stage.** `stand` stays empty,
+            // so what holds at the register is what every stage permits -- not a guessed one.
             let mut stand = BTreeMap::new();
-            fluss(rumpf, &u, modul, &schritte, &mut stand, absagen, false);
+            fluss(rumpf, &u, modul, &schritte, &mut stand, absagen, false, &umfeld);
             return;
         };
         let mut stand: BTreeMap<String, String> = BTreeMap::new();
@@ -193,7 +325,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 }
             }
         }
-        let erreicht = fluss(rumpf, &u, modul, &schritte, &mut stand, absagen, true);
+        let erreicht = fluss(rumpf, &u, modul, &schritte, &mut stand, absagen, true, &umfeld);
         // **`O004`.** Eine Strecke, die unterwegs aufhoert, ist keine Strecke.
         if let Some(letzte) = erreicht {
             if letzte != eigen.nach {
@@ -217,6 +349,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 }
 
 /// Verfolgt die Stufe je Marke durch einen Block. Gibt die zuletzt erreichte Stufe zurueck.
+#[allow(clippy::too_many_arguments)]
 fn fluss(
     b: &Block,
     u: &crate::umgebung::Umgebung,
@@ -225,9 +358,13 @@ fn fluss(
     stand: &mut BTreeMap<String, String>,
     absagen: &mut Absagen,
     melden: bool,
+    umfeld: &Regumfeld<'_>,
 ) -> Option<String> {
     let mut zuletzt = None;
     for s in &b.anweisungen {
+        // **«B18»: BEFORE the statement takes effect.** A read in the initializer of
+        // `let r = schritt(p);` happens while the mark still stands on the old stage.
+        registerzugriffe(s, umfeld, stand, absagen);
         match &s.art {
             StmtArt::Let(l) => {
                 if let ExprArt::Ruf(r) = &l.wert.art {
@@ -268,7 +405,7 @@ fn fluss(
             | StmtArt::Observiert(_)
             | StmtArt::Exchange(_) => {
                 for k in crate::unterbloecke(s) {
-                    if let Some(n) = fluss(k, u, modul, schritte, stand, absagen, melden) {
+                    if let Some(n) = fluss(k, u, modul, schritte, stand, absagen, melden, umfeld) {
                         zuletzt = Some(n);
                     }
                 }
@@ -279,7 +416,7 @@ fn fluss(
             StmtArt::Narrow(_) | StmtArt::LetSonst(_) => {
                 for k in crate::unterbloecke(s) {
                     let mut ausweg = stand.clone();
-                    fluss(k, u, modul, schritte, &mut ausweg, absagen, melden);
+                    fluss(k, u, modul, schritte, &mut ausweg, absagen, melden, umfeld);
                 }
             }
             // **K11.1: die Zweige muessen sich EINIGEN** (`O006`).
@@ -299,7 +436,7 @@ fn fluss(
                 let mut zweige: Vec<(BTreeMap<String, String>, Span)> = Vec::new();
                 for (_, r) in &w.zweige {
                     let mut k = stand.clone();
-                    fluss(r, u, modul, schritte, &mut k, absagen, melden);
+                    fluss(r, u, modul, schritte, &mut k, absagen, melden, umfeld);
                     if !crate::endet_immer(r, &[]) {
                         zweige.push((k, r.span));
                     }
@@ -309,7 +446,7 @@ fn fluss(
                 match &w.sonst {
                     Some(r) => {
                         let mut k = stand.clone();
-                        fluss(r, u, modul, schritte, &mut k, absagen, melden);
+                        fluss(r, u, modul, schritte, &mut k, absagen, melden, umfeld);
                         if !crate::endet_immer(r, &[]) {
                             zweige.push((k, r.span));
                         }
@@ -327,7 +464,7 @@ fn fluss(
                 let mut zweige: Vec<(BTreeMap<String, String>, Span)> = Vec::new();
                 for z in &m.zweige {
                     let mut k = stand.clone();
-                    fluss(&z.rumpf, u, modul, schritte, &mut k, absagen, melden);
+                    fluss(&z.rumpf, u, modul, schritte, &mut k, absagen, melden, umfeld);
                     if !crate::endet_immer(&z.rumpf, &[]) {
                         zweige.push((k, z.rumpf.span));
                     }
@@ -359,7 +496,7 @@ fn fluss(
                     );
                 } else {
                     let mut k = stand.clone();
-                    fluss(rumpf, u, modul, schritte, &mut k, absagen, melden);
+                    fluss(rumpf, u, modul, schritte, &mut k, absagen, melden, umfeld);
                 }
             }
             _ => {}

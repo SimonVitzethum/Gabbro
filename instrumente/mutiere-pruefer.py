@@ -3213,6 +3213,28 @@ MUTATIONEN = [
         "D012 -- nur noch die ERSTE Voraussetzung wird gehalten; `erreicht sigma p` faellt "
         "unter den Tisch, und beispiele/gift/323 geht durch",
     ),
+    # --- m3, «B18»: the register class per phase (2026-08-28) ---
+    #
+    # **Both surfaces can fail SILENTLY**, and the first is the load-bearing one: without the
+    # intersection over all stages `heimlich` passes again, and the line from F4 (*"after
+    # `queue_arm` no path can write `USED_IDX`"*) is back in the state of 2026-08-26 --
+    # 0 errors, while the register still booked it as carried.
+    Mutation(
+        "phasenklasse-ohne-marke-schweigt",
+        "m3.rs",
+        "    if !bestimmt {",
+        "    if false {",
+        "R006 -- wo KEINE Marke der Ordnung im Sichtbereich ist, wird gar nichts geprueft; "
+        "beispiele/gift/401 geht wieder durch, und mit ihm die tragende «B18»-Fundstelle",
+    ),
+    Mutation(
+        "phasenklasse-darf-eine-stufe-verschweigen",
+        "m3.rs",
+        "                if !fehlend.is_empty() {",
+        "                if false {",
+        "R009 -- eine Phasenliste darf eine Stufe der Ordnung auslassen; das stille Loch, "
+        "gegen das die Vollstaendigkeitspflicht steht, ist wieder da",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

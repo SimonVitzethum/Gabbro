@@ -1,0 +1,35 @@
+-- erwartet: R006
+-- **«B18», die TRAGENDE Fundstelle.** `PFLICHTEN.md` buchte `L101` fuer die Zeile
+-- *„nach `queue_arm` kann kein Pfad `USED_IDX` schreiben"* -- und `L101` traegt sie nicht.
+-- Am 2026-08-26 gemessen, mit genau diesem Rumpf: **8 Items, 0 Fehler, 0 Hinweise.**
+--
+-- **Eine lineare Marke ist eine Erlaubnis, die niemand halten MUSS.** `L101` haelt, dass wer
+-- sie hat, sie weitergibt -- nicht, dass wer schreibt, sie haben muss. Diese Funktion nennt
+-- `QueuePhase` in ihrer Signatur mit keinem Wort und schreibt das Register trotzdem.
+--
+-- Was sie faengt, ist nicht eine neue Pflicht, die Marke zu fuehren, sondern die Folge
+-- ihres Fehlens: **wo die Stufe nicht bestimmt ist, gilt, was JEDE Stufe erlaubt** -- und in
+-- `live` ist `USED_IDX` nur lesbar.
+
+module gift::registerklasse_ohne_marke {
+
+opaque type Pa = u64;
+
+linear ghost type QueuePhase order { setup, live };
+
+device Virtq(basis : Pa) at dma {
+    reg USED_IDX : u16 wrapping @0x202 class rw in setup, r in live
+}
+
+extern fn queue_arm(p : QueuePhase) -> QueuePhase
+    advances setup -> live
+    effects  { consumes p } costs <= 8 ops;
+
+impl fn heimlich(q : ptr<dma, rw> Virtq)
+    effects { writes q }
+    costs   <= 4 ops
+{
+    q.USED_IDX = 7;
+}
+
+}

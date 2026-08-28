@@ -100,7 +100,23 @@ NICHT = {"saetze.rs"}
 # *And what that does NOT mean:* a probe on `D012` or `O011` still falls green without showing
 # WHICH half fell. **Whoever splits one of the eighteen may lower both marks** -- the same
 # standing invitation as at `E008` and `H012`.
-MARKE = 18
+#
+# 2026-08-28, «B18»: **18 -> 19, and the raise is booked with its reason.**
+#
+# * `R009` (`m3.rs`, four sites, similarity 0.26) -- ONE duty: *the phase list at a register
+#   declaration is well-formed.* The four sites are its four ways of failing: a field of a
+#   phase-classed register carries its own class; the named stages belong to no declared
+#   `order`; they fit more than one; a stage of the order is named twice or not at all.
+#   **They are sub-cases of one declaration rule, not two rules under one identifier** --
+#   the same shape `O001` has carried since «B37», and it stands three lines above on this
+#   very list.
+#
+# *Why it is raised and not healed:* healing would mean four identifiers for four ways of
+# writing one clause wrong, and `messung/PHASENKLASSE.md` decided the opposite for a reason
+# -- the access violation reuses `R005`/`R006` rather than inventing a code, because the rule
+# is the same rule with a class looked up differently. **The standing invitation holds: who
+# splits `R009` may lower both marks again.**
+MARKE = 19
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
 # 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
 # `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
@@ -135,7 +151,12 @@ MARKE = 18
 #
 # *In all three items the number rises because correct probes were added or because the tool
 # sees more sharply -- in none because a rule was issued twice.*
-MARKE_PROBEN = 58
+#
+# 2026-08-28, «B18»: **58 -> 60 -- two probes on `R009`** (`403`, `404`). They are correct and
+# belong there; they inherit the ambiguity of their identifier, which is the four-sub-case
+# shape written out at `MARKE` above. *The number rises because two correct probes were
+# added, not because a rule was issued twice.*
+MARKE_PROBEN = 60
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

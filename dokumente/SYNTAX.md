@@ -1271,10 +1271,24 @@ regdecl = "reg" ident ":" intty [ "wrapping" ] "@" expr
              2^16 und nimmt den Rest gegen `q.n`). Ohne das Wort stand die Absicht nirgends,
              und die Zaehlerregel faellt zu Recht -- am falschen Programm. Gemessen am
              Fragmentkorpus, nicht entworfen. *)
-          "class" regklasse
+          "class" regklasse [ regphasen ]
           [ "fields" "{" [ regfeld { "," regfeld } [ "," ] ] "}" ]
           [ "requires" pred ] ;
 regklasse = "r" | "w" | "rw" | "w1c" | "rc" ;
+regphasen = "in" ident { "," regklasse "in" ident } ;
+          (* «B18», 2026-08-28: bis dahin trug ein Register EINE Klasse fuer alle Zeit, und
+             F4 schrieb die gewollte Form als KOMMENTAR hin, weil sie nicht schreibbar war:
+             `reg USED_IDX : u16 wrapping @0x202 class rw in setup, r in live`. `class r`
+             allein waere dort falsch -- es verboete genau das Nullen, mit dem der Treiber
+             die bezahlte Falle einer wiederbenutzten Region entschaerft.
+             KEIN neues Terminal: `in` ist seit jeher reserviert, `class` steht schon hier.
+             Die Stufen sind die einer deklarierten `order` («B37»), und die Liste muss JEDE
+             ihrer Stufen genau einmal nennen (`R009`) -- eine ungenannte waere ein stilles
+             Loch in der Regel, die das Loch schliessen soll.
+             Am Zugriff entscheidet die Stufe, auf der die Marke steht (`R005`/`R006`); wo
+             KEINE Marke dieser Ordnung im Sichtbereich ist, gilt, was JEDE Stufe erlaubt.
+             Damit bleibt die lineare Marke eine Erlaubnis, die niemand halten muss --
+             gesagt ist nur, was ohne sie folgt. s. `messung/PHASENKLASSE.md`. *)
 regfeld = ident "@" bitpos [ "class" regklasse ] ;
           (* «B23», 2026-08-20: bis dahin trug `regdecl` EINE Klasse fuer das ganze Wort.
              FSTS ist gemischt -- 7:0 sind RW1C, 15:8 (FRI) sind nur lesbar, und FRI ist die
