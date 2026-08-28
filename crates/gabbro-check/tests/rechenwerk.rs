@@ -4275,13 +4275,75 @@ impl fn f(p : index into B)
     );
     let bitund = lean_programm(&mit("&=", "zahl"));
     assert!(
-        bitund.contains("(compound-assignment)"),
-        "`&=` on an INTEGER field is a bit operation and is refused:\n{bitund}"
+        bitund.contains("(.bin .band (.place \"B\" (.name \"p\") \"zahl\")"),
+        "`&=` on an INTEGER field is the bit MASK:\n{bitund}"
     );
     assert!(
         !bitund.contains(".bin .and"),
         "and it is not taken as a truth value:\n{bitund}"
     );
+    let jaund = lean_programm(&mit("&=", "ja"));
+    assert!(
+        jaund.contains("(.bin .and (.place \"B\" (.name \"p\") \"ja\")"),
+        "and on a BOOL field the same token is the truth value:\n{jaund}"
+    );
+}
+
+/// **The seven operators the model gained, and each one by NAME.**
+///
+/// A single probe over "some bit operation goes through" would pass with all seven mapped to
+/// the same constructor -- and `a % b` written as `a / b` is a body that computes something
+/// else while the balance line still adds up. *That is the class this whole file reads text
+/// for.*
+#[test]
+fn lean_division_und_bits_werden_beim_namen_genannt() {
+    let mit = |ausdruck: &str| {
+        format!(
+            "module t {{
+const N : u32 = 8;
+type Zahl = u32 in 0 .. 99;
+table B count N {{ slot {{ zahl : Zahl, }} }}
+impl fn f(p : index into B, a : Zahl, b : u32 in 1 .. 99)
+    effects  {{ reads B.slots, writes B.slots }}
+    costs    <= 16 ops
+{{ B.slots[p].zahl = {ausdruck}; }}
+}}
+"
+        )
+    };
+    for (ausdruck, konstruktor) in [
+        ("a / b", ".bin .div"),
+        ("a % b", ".bin .rem"),
+        ("a & b", ".bin .band"),
+        ("a | b", ".bin .bor"),
+        ("a ^ b", ".bin .bxor"),
+        ("a >> 1", ".bin .shr"),
+    ] {
+        let t = lean_programm(&mit(ausdruck));
+        assert!(
+            t.contains(konstruktor),
+            "`{ausdruck}` becomes `{konstruktor}`:\n{t}"
+        );
+        assert!(
+            !t.contains("REFUSED"),
+            "and the body is carried, not refused:\n{t}"
+        );
+    }
+    // `<<` on its own, because a shift LEFT out of `0 .. 99` is an `M104` overflow and the
+    // unit would carry no register at all -- the bound is what makes the model's booking
+    // true, so the probe has to respect it.
+    let t = lean_programm(
+        "module t {
+const N : u32 = 8;
+table B count N { slot { zahl : u32, } }
+impl fn f(p : index into B, a : u32 in 0 .. 255)
+    effects  { reads B.slots, writes B.slots }
+    costs    <= 16 ops
+{ B.slots[p].zahl = a << 4; }
+}
+",
+    );
+    assert!(t.contains(".bin .shl"), "`a << 4` becomes `.bin .shl`:\n{t}");
 }
 
 /// **A record or `format` field is a place too -- and it carries NO index.**

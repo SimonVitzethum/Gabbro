@@ -2933,9 +2933,22 @@ MUTATIONEN = [
         "lean.rs",
         "                    (ZuwOp::Und, Shape::Bool) => Some(\"and\"),",
         "                    (ZuwOp::Und, _) => Some(\"and\"),",
-        "The body channel -- `&=` on an INTEGER field becomes a logical and. A bit operation "
-        "is refused for the division reason; taken as a truth value it computes something "
-        "Gabbro does not",
+        "The body channel -- `&=` on an INTEGER field becomes a logical and. The model has "
+        "the bit MASK for it (`.band`); taken as a truth value it computes something Gabbro "
+        "does not, and on a number `binop .and` is not even defined -- the body would get "
+        "stuck where it runs",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-remainder-becomes-a-division",
+        "lean.rs",
+        # **The sharpest confusion the seven new operators allow.** Both are carried now, so
+        # a swap changes no balance and no refusal -- only the number the body computes.
+        'BinOp::Rest => "rem",',
+        'BinOp::Rest => "div",',
+        "The body channel -- `a % b` is written as a division. Nothing is refused and the "
+        "balance still adds up; the datum simply says the body computes a quotient where it "
+        "computes a remainder",
         flaeche="annotation",
     ),
     Mutation(

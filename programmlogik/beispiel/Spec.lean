@@ -42,7 +42,28 @@ theorem einlagern_erfuellt_eingelagert (ρ : Env) (s : State) (f m : Int)
     ∃ s', finalState (exec ρ einlagern_body s) = some s' ∧ eingelagert f m s' := by
   gabbro_simp [einlagern_body, eingelagert, hf, hm]
 
-/-! ## Spezifikation 4 -- ein RUFER, bewiesen aus dem VERTRAG des Gerufenen
+/-! ## Spezifikation 4 -- die BITRECHNUNG, und sie steht hier mit ihrer Gegenprobe
+
+    `kennzeichnen` schreibt `(roh >> 4) & 3` und halbiert die Menge. Der Satz unten rechnet
+    beides nach: `27 >> 4` ist `1`, `1 & 3` ist `1`, und `7 / 2` ist `3`.
+
+    **Die `3` ist der Punkt.** `Int.tdiv` schneidet ab wie C; Leans eigenes `/` rundet. Bei
+    `7 / 2` fallen die beiden noch zusammen -- bei `-7 / 2` nicht mehr, und genau das ist
+    `gift4` in `SpecGift.lean`. *Ein Waechter, den nie jemand nein hat sagen sehen, ist eine
+    Zierde* (R11), und darum steht die Bitrechnung in BEIDEN Dateien.
+-/
+
+def gekennzeichnet (f : Int) (s : State) : Prop :=
+  s.world (.slot "Faecher" f "marken") = .int 1
+  ∧ s.world (.slot "Faecher" f "menge") = .int 3
+
+theorem kennzeichnen_maskiert_und_halbiert (ρ : Env) (s : State) (f : Int)
+    (hf : s.local' "f" = .int f) (hroh : s.local' "roh" = .int 27)
+    (hm : s.world (.slot "Faecher" f "menge") = .int 7) :
+    ∃ s', finalState (exec ρ kennzeichnen_body s) = some s' ∧ gekennzeichnet f s' := by
+  gabbro_simp [kennzeichnen_body, gekennzeichnet, hf, hroh, hm]
+
+/-! ## Spezifikation 5 -- ein RUFER, bewiesen aus dem VERTRAG des Gerufenen
 
     `raeumen_und_merken` ruft `raeumen`. Der Beweis unten sieht den Rumpf von `raeumen`
     **nie an**: er nimmt an, was `raeumen` VERSPRICHT, und der Erzeuger hat dieses

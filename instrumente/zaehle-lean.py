@@ -38,6 +38,11 @@ FRIST = 120
 # The refusal reasons exactly as `lean.rs` writes them. **The list stands here in FULL** -- a
 # reason the emitter knows and this tool does not shows up below as `UNBEKANNT` instead of
 # quietly landing in no column at all.
+#
+# **`division-or-bits` is gone from this list because it is gone from the emitter.** The
+# model took `Int.tdiv`/`Int.tmod` -- the C operators -- and the cases it cannot state are
+# refused inside `binop` by getting STUCK, not by a refusal here. A row that always read `0`
+# would say the channel still owes something it does not.
 GRUENDE = [
     ("foreign-body", "an `ensures` at a foreign body -- an ASSUMPTION, not a goal"),
     ("table-invariant", "`maintains` names a table invariant: quantified over every slot"),
@@ -55,7 +60,6 @@ GRUENDE = [
     ("non-local-exit", "a non-local exit out of a named loop"),
     ("compound-assignment", "`+=` and its kin -- a different overflow accounting"),
     ("match-not-option", "a `match` over something other than an `option`"),
-    ("division-or-bits", "division or a bit operation -- Lean rounds down where C truncates"),
     ("float", "a floating-point value -- this model has no float"),
     ("old-state", "`old(x)` -- a predicate over TWO states"),
     ("quantified", "a quantifier, `reaches` or a membership -- where a `spec fn` runs out"),

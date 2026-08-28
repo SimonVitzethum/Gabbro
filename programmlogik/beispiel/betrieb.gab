@@ -3,6 +3,7 @@ module betrieb {
 
 use lager::Faecher;
 use lager::Menge;
+use lager::Marken;
 use lager::HALLE;
 
 pub impl fn raeumen(f : index into Faecher)
@@ -24,6 +25,21 @@ pub impl fn raeumen_und_merken(f : index into Faecher)
     costs    <= 20 ops
 {
     raeumen(f);
+}
+
+-- **Ein Rumpf, der RECHNET** -- eine Schiebung, eine Maske und eine Division. Er steht hier,
+-- damit die Bitrechnung des Modells einmal uebersetzt und einmal bewiesen wird, und damit
+-- ein Satz ueber ihr auch einmal FAELLT: `SpecGift.lean` rundet ab, wo C abschneidet.
+--
+-- `/ 2` ist schreibbar, weil der Nenner eine Konstante ohne Null ist (M102); `>> 4` und
+-- `& 3` bleiben in `0 .. 255`, also greift auch M104 nicht.
+pub impl fn kennzeichnen(f : index into Faecher, roh : Marken)
+    requires Held(HALLE)
+    effects  { reads Faecher.slots, writes Faecher.slots, locks HALLE }
+    costs    <= 24 ops
+{
+    Faecher.slots[f].marken = (roh >> 4) & 3;
+    Faecher.slots[f].menge  = Faecher.slots[f].menge / 2;
 }
 
 pub impl fn einlagern(f : index into Faecher, m : Menge)
