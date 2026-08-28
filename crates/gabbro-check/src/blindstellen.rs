@@ -478,7 +478,11 @@ pub fn zeige(baeume: &[Programm], gifte: &[Programm]) -> String {
     );
     zeige_tafel(
         "B2 -- the PAIRED places, and only they",
-        "`atomic` and `accumulates` are neither read nor written -- that is the whole point\n   of the two words, and it is why they need a table of their own.",
+        "`publishes`/`awaits`/`exchange` stand at no other place, and that -- not an absence\n   \
+         of reads -- is why these two rows need a table of their own. Corrected 2026-08-28:\n   \
+         the caption used to claim both are NEITHER read nor written, and its own row refuted\n   \
+         it twice over (`accumulates` folds on the read; the plain load of an atomic is the\n   \
+         shape `V009` hunts).",
         &["atomic", "accumulates"],
         &["publishes", "awaits", "exchange", "read", "written"],
         &b,
@@ -580,10 +584,31 @@ fn keine_zelle(form: &str, stellung: &str) -> Option<&'static str> {
     if !matches!(form, "atomic") && matches!(stellung, "publishes" | "awaits" | "exchange") {
         return Some("the three paired forms exist only at an `atomic` -- a pairing without an ordering is none");
     }
-    // Und umgekehrt: ein `atomic` wird nicht gelesen und nicht geschrieben.
-    if matches!(form, "atomic") && matches!(stellung, "read" | "written" | "+= etc.") {
-        return Some("an atomic is neither read nor written -- it is awaited, published or exchanged, and that is the point of the word");
-    }
+    // **CORRECTED on 2026-08-28 -- and the instrument itself is what refuted it.**
+    //
+    // Here stood, from 2026-08-20 until that day:
+    //
+    // > ~~`atomic` x `read` | `written` | `+= etc.` -- "an atomic is neither read nor
+    // > written -- it is awaited, published or exchanged, and that is the point of the
+    // > word"~~
+    //
+    // The cross-check flagged it as a CONTRADICTION: `beispiele/gift/301-tor-ohne-paarung.gab`
+    // writes `let versiegelt = VERSIEGELT;` -- a plain load of an atomic -- and it is the
+    // only site of that shape in the whole tree. Measured the same day against the
+    // UNCHANGED checker: a plain load passes with 0 errors, a plain store passes with 0
+    // errors, and `+=` on an atomic falls at `M104`/`M101` -- both issued in `m1.rs` -- on
+    // the RANGE, exactly as on any `static mut`. **No rule refuses any of the three.**
+    //
+    // > It was a sentence about the DISCIPLINE wearing the clothes of a sentence about the
+    // > language. And `V009`, which lives in `paarung.rs`, is the proof: that rule exists
+    // > BECAUSE the plain load can be written, and it hunts one shape of it. *A cell no
+    // > probe can reach cannot be the cell that carries a rule's own probe.*
+    //
+    // The doctrine above says how it ends -- where a pair is allowed and merely unwritten,
+    // it does not stand here but stays BLIND. So `atomic x written` turns blind and the
+    // blind count RISES by one. **That is the honest direction**, and it is the price of an
+    // exclusion that took two cells out of the denominator without being true.
+    //
     // Ein `accumulates` meldet und liest gefaltet; es ist kein Paarungsplatz.
     if matches!(form, "accumulates") && matches!(stellung, "publishes" | "awaits" | "exchange") {
         return Some("`accumulates` folds on reading and reports on writing -- it needs no pairing, and that is why it exists");

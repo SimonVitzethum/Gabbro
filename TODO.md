@@ -433,7 +433,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Absage fällt nachweislich"*; eine gedeckte sagt nur *„sie kommt vor, und irgendein Pass
       sieht sie"* — und Maß 2 hat gerade gezeigt, dass **Sehen keine Prüfung ist**.
       **Seit dem 2026-08-20 stehen beide Zahlen im Register und nicht mehr nur im Bericht:**
-      **168 besetzte Zellen** stehen daneben, **24 nur im Gift** — und `gabbro blindstellen`
+      **168 besetzte Zellen** stehen daneben, **25 nur im Gift** — und `gabbro blindstellen`
       druckt die vier Zahlen getrennt, *auf Ausdruck*, weil ein Einzelwert zwei Wochen später
       wie Fortschritt aussieht.
       *Die schärfere Frage bleibt dieselbe wie beim Schablonenregister: fällt an dieser Zelle je
@@ -511,7 +511,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2074 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2078 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -1191,7 +1191,7 @@ liest sich wie Deckung.* Beide sind umgezogen, 236 von 236 greifen.
 # STUFE 4 — PROGRAMME SCHREIBEN, NICHT KONSTRUKTE  ⟨A⟩
 
 **Das Herz des Plans.** Der Korpus ist von der Sprache nach außen geschrieben — eine Datei je
-Konstrukt — und **die Fehler sitzen an den Kombinationen**: 78 blinde Zellen von 285. Jedes echte
+Konstrukt — und **die Fehler sitzen an den Kombinationen**: 79 blinde Zellen von 285. Jedes echte
 Programm hat sofort geliefert: der virtio-net-Treiber fünf Befunde, «K2» drei, die ein eigener
 Korpus nicht gegeben hätte, das Registerbeispiel vom 2026-08-20 vier.
 

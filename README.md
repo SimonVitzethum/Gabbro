@@ -151,7 +151,7 @@ denominator that shines instead of the one that costs.*
 | **Corpus** | 53 clean examples, 310 poison files, 216 tests *(run 2026-08-28, `ki-pc-fisch-101`)* | `cargo test` |
 | **Emission** | **52 of 52 examples emit C, and all 52 compile** under `cc -std=c11 -Wall -Wextra -Werror`, at **`-O0` and `-O2`**, with the same result — **24 of them are also run and compared against a handwriting**, and one of those is a LIBRARY CHAIN across three separately compiled units and a linker, and under `-fsanitize=undefined` | `./instrumente/pruefe-emission.sh` *(run 2026-08-28)* |
 | **Usability** | **5.8 % of the teaching corpus and 12.8 % of REAL code may fall** — 1021 and 109 clause sites, split derivable / redundant / load-bearing. The calibration travels with the tool (`--tafel`, per rule a may-fall AND a reason), because an uncalibrated usability number makes `effects` and `costs` the cheapest thing to drop | `gabbro zeremonie` · `./instrumente/zaehle-zeremonie.py` |
-| **Blind spots** | **78 blind · 168 covered · 24 poison-only · 14 no cell** *(of 285 pairs)* — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |
+| **Blind spots** | **79 blind · 168 covered · 25 poison-only · 13 no cell** *(of 285 pairs)* — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds
 > them was extended on the day it found them. *The number was maintained, the source was
