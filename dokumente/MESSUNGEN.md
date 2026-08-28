@@ -1830,7 +1830,7 @@ All absolute verdicts of the folder have accordingly been gone through and, wher
 * **«B23»/«B20» granularity.** One class per *register* instead of per *field*; `wrapping` at the
   slot type instead of at the register type. That is **missing fineness of the notation**, not a
   generatable form. Honestly open.
-* **«B27»** `prim fn` without an `abi` block: a missing construct, not a misjudgement.
+* ~~**«B27»** `prim fn` without an `abi` block: a missing construct, not a misjudgement.~~ — **berichtigt am 2026-08-28 (Bahn A, A3): der Träger EXISTIERT** und steht seit dem 2026-08-20 in `beispiele/36-asm.gab`. Ein `asm`-RUMPF trägt `in { p : "a" }`, `out { result : "=a" }` und `clobbers { … }` neben `arch`; F5s eigene `invoke`-Zeile, so geschrieben, prüft mit **0 Fehlern** und senkt zu korrektem Inline-Assembler ab. *Das Fragment griff zum falschen Konstrukt — `prim` heißt „anderswo erklärt“, und eine Vorwärtsdeklaration ohne Inhalt ist seine Bedeutung, nicht sein Mangel.* **Was als benannte Delegation bleibt und KEINE Lücke ist:** die Belegung steht in C-Zwangsbuchstaben und wird an `cc` gereicht, nicht geprüft. Messung: `messung/EINTRITTSBELEGUNG.md`
 
 ## And two stale verdicts
 
@@ -5464,10 +5464,10 @@ plumbing obligations of [`PFLICHTEN.md`](PFLICHTEN.md) are sorted onto the class
 | **Lock** | `lock … rank … held` · `H001`–`H006` · `K002`/`K004` | carried | **0** — confirmed |
 | **Race** | *(hangs on the axiom layer)* | hanging | **2** — «B21», «B38» |
 | **Termination** | three loop forms · `bounded`/`progress`/`on_exceeded` · `S001`/`S002` | carried | **0** — confirmed |
-| **Phase** | `linear ghost type` · `L101` | hanging | **3** — «B37» ×2, «B18» |
+| **Phase** | `linear ghost type` · `L101` | hanging | ~~**3** — «B37» ×2, «B18»~~ **2** — «B37» ×2. *«B18» geschlossen am 2026-08-28: die Registerklasse je Phase (`R009`), getragen von derselben `order`, ohne zweiten Mechanismus* |
 | **Leafness** | `descendants of` + `by consuming` · `kosten.rs` | carried | **0** — confirmed |
 | **Publication** | `publishstmt` · pairing pass · `V001`–`V004` | carried | **1 — «B19»** |
-| **Refinement** | *(the emission)* | hanging | **11** — ten lowerings + «B27» |
+| **Refinement** | *(the emission)* | hanging | ~~**11** — ten lowerings + «B27»~~ **10** — ten lowerings. *«B27» am 2026-08-28 als FALSCHER Eintrag berichtigt, nicht gebaut: der `asm`-Rumpf trägt die Registerbelegung seit dem 2026-08-20* |
 | **— no class —** | | | **13** — device, `format` and expression notation |
 
 ## Two classes booked as carried are refuted by name
@@ -8407,8 +8407,11 @@ return irq.tiefe_max + g / MIND_RESERVE_NENNER <= f;
 H = 15   (8 verankert + 7 Absenkungen)     F6 hat keine Zeile mehr
 ```
 
-**Alle acht verbleibenden sind Notationslücken** — `«B23»`, `«B26»`, `«B22-nah»`, `«B9»`,
-`«B18»`, `«B33»`, `«B27»`. **Nicht eine davon ist ein Handbeweis.**
+~~**Alle acht verbleibenden sind Notationslücken** — `«B23»`, `«B26»`, `«B22-nah»`, `«B9»`,
+`«B18»`, `«B33»`, `«B27»`.~~ **Am 2026-08-28 fallen die letzten drei dieser Aufzählung:**
+`«B18»` und `«B26»` durch Bau (Bahn A, A1 und A2), `«B27»` durch **Berichtigung** — der
+Träger stand seit acht Tagen da. *Eine Zahl, die durch eine Berichtigung fällt, ist keine
+Arbeit und wird so gebucht.* **Nicht eine davon ist ein Handbeweis.**
 
 > **Über den zehn Fragmenten beweist kein Mensch mehr Klempnerei von Hand.** Das ist ein
 > Boden, und er ist echt: die zehn sind nach ihrer *Schwierigkeit* gewählt.
