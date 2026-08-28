@@ -4801,3 +4801,143 @@ fn lean_programm_autoimplicit_bleibt_aus() {
         "the export states nothing; a specification is written elsewhere:\n{t}"
     );
 }
+
+// ===========================================================================================
+// THE COLLECTING BUCKET -- what `call-not-compositional` really held (2026-08-28, `B1`)
+//
+// Seventeen refusals of the program channel stood under one word, and **not one of them was
+// a call over a contract**: six generated operations, six constructors, four `transition`s,
+// and one `return Some(i);` the model could carry all along. `messung/RUF-TOR.md` measures
+// it and decides the split; the probes below are what keeps the four apart.
+//
+// *A refusal filed under the wrong reason names a missing gate where a missing value form
+// stands* -- the same lesson the `Carrier` / `FieldShape` split books in `lean.rs`.
+// ===========================================================================================
+
+/// A table with `ops`, a device with a `transition`, a record, and an option-valued return.
+const LEAN_VIER_DINGE: &str = "module t {
+const N : u32 = 8;
+table V count N {
+    slot { benutzt : bool, naechst : option index into V, }
+    ops insert, remove;
+    occupied benutzt;
+}
+type Paar = { a : u32, b : u32, };
+device Dv(basis : u64) at mmio {
+    reg ST : u32 @0x00 class rw fields { AN @0, }
+    transition anschalten { ST.AN: 0 -> 1 } effects { writes ST }
+}
+impl fn nimm(v : ptr<normal, rw> V, i : index into V)
+    requires !v.slots[i].benutzt
+    effects  { writes v.slots }
+    costs    <= 4 ops
+{
+    V::insert(v, i);
+}
+impl fn schalte(d : ptr<mmio, rw> Dv)
+    effects { writes d.ST }
+    costs   <= 4 ops
+{
+    anschalten(d);
+}
+impl fn paare(x : u32, y : u32) -> Paar
+    effects { pure }
+    costs   <= 4 ops
+{
+    return Paar(a: x, b: y);
+}
+impl fn griff() -> Dv
+    effects { pure }
+    costs   <= 4 ops
+{
+    let g : Dv = Dv(4096);
+    return g;
+}
+impl fn hol(v : ptr<normal, rw> V, i : index into V) -> option index into V
+    effects { reads v.slots }
+    costs   <= 4 ops
+{
+    return Some(i);
+}
+}";
+
+/// **Four things parse as a call, and only one of them is one.** Each stands under its own
+/// name now, because each waits on something different: a schema, a piece of hardware, a
+/// value form the model does not have.
+#[test]
+fn lean_ruf_sammeltopf_ist_aufgeteilt() {
+    let t = lean_programm(LEAN_VIER_DINGE);
+    for (routine, grund) in [
+        ("nimm", "generated-op"),
+        ("schalte", "device-transition"),
+        ("paare", "constructed-value"),
+        ("griff", "constructed-value"),
+    ] {
+        let z = t
+            .lines()
+            .find(|z| z.contains("REFUSED") && z.contains(routine))
+            .unwrap_or_else(|| panic!("`{routine}` stands in the report:\n{t}"));
+        assert!(
+            z.contains(grund),
+            "`{routine}` is refused as `{grund}` and not as a call:\n{z}"
+        );
+    }
+    // **And the word `call-not-compositional` is spent on none of them.** It is reserved for
+    // a call over a CONTRACT, and a bucket that also held hardware said the register was
+    // waiting on a gate that would have taken nothing.
+    assert!(
+        !t.contains("(call-not-compositional)"),
+        "not one of these four is a call over a contract:\n{t}"
+    );
+}
+
+/// **`return Some(i);` is a VALUE, and the model has carried `.someOf` since its first day.**
+///
+/// The `let` and `return` arms sent every `ExprArt::Ruf` to `call_parts` before `expr_term`
+/// could see it, so a body whose only sin was an option value was refused whole. *Measured
+/// at `beispiele/27-freiliste.gab :: belegen`, which gains a body by this line alone.*
+#[test]
+fn lean_optionswert_ist_kein_ruf() {
+    let t = lean_programm(LEAN_VIER_DINGE);
+    assert!(
+        t.contains("(.ret (some (.someOf (.name \"i\"))))"),
+        "`return Some(i);` descends to `.someOf`, not to a call:\n{t}"
+    );
+    assert!(
+        !t.lines().any(|z| z.contains("REFUSED") && z.contains("hol")),
+        "and the routine that writes it carries a body:\n{t}"
+    );
+}
+
+/// **The obligation channel keeps its own refusal, and it is the honest one.**
+///
+/// A call over a contract is still not carried there -- `allow_calls` is `false` in `judge`
+/// on purpose, because a goal under an unconstrained environment states something no proof
+/// closes. *The split changes what the word MEANS, not what the gate does.*
+#[test]
+fn lean_vertragstor_bleibt_zu() {
+    let t = lean_modul(
+        "module t {
+const N : u32 = 8;
+type Zahl = u32 in 0 .. 99;
+table B count N { slot { belegt : bool, wert : Zahl, } }
+impl fn setz(p : index into B, w : Zahl)
+    effects { writes B.slots }
+    costs   <= 4 ops
+{
+    B.slots[p].wert = w;
+}
+impl fn ruf(p : index into B, w : Zahl)
+    ensures  B.slots[p].wert == w
+    effects  { writes B.slots }
+    costs    <= 9 ops
+{
+    setz(p, w);
+}
+}",
+    );
+    assert!(
+        t.contains("call-not-compositional"),
+        "a call at a DECLARED routine still has no gate in the goal channel:\n{t}"
+    );
+}

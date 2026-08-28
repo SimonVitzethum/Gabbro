@@ -3213,6 +3213,45 @@ MUTATIONEN = [
         "D012 -- nur noch die ERSTE Voraussetzung wird gehalten; `erreicht sigma p` faellt "
         "unter den Tisch, und beispiele/gift/323 geht durch",
     ),
+    # --- lean.rs, the collecting bucket (2026-08-28, `B1`) ---
+    #
+    # **Seventeen refusals stood under one word, and not one was a call over a contract**
+    # (`messung/RUF-TOR.md`). The three mutations below hit the three surfaces that can fall
+    # back silently -- and two of them leave the balance line untouched, which is why the
+    # probes read the emitted TEXT and not only the count.
+    Mutation(
+        "lean-optionswert-ist-wieder-ein-ruf",
+        "lean.rs",
+        "            if let ExprArt::Ruf(r) = &l.wert.art {\n"
+        "                if !is_option_value(r) {",
+        "            if let ExprArt::Ruf(r) = &l.wert.art {\n"
+        "                if true {",
+        "Der Rumpfkanal -- `let n = Some(i);` laeuft wieder in `call_parts` statt in "
+        "`expr_term`. Das Modell traegt `.someOf` seit dem ersten Tag, und der Rumpf wird "
+        "trotzdem ganz abgesagt: eine Fehluebersetzung, die wie eine Luecke aussieht",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-sammeltopf-schliesst-sich-wieder",
+        "lean.rs",
+        "    let kind = foreign_kind(r, c);",
+        "    let kind: Option<LeanReason> = None;",
+        "Der Rumpfkanal -- erzeugte Operation, `transition` und Konstruktor fallen wieder "
+        "unter `call-not-compositional`. Die Zahl bleibt dieselbe, der Bericht sagt "
+        "wieder, der Kanal warte auf ein Tor, das keine dieser Stellen naehme",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-konstruktor-heisst-wieder-ruf",
+        "lean.rs",
+        "    if r.ist_verbundwert() {\n"
+        "        return Some(LeanReason::ConstructedValue);",
+        "    if false {\n"
+        "        return Some(LeanReason::ConstructedValue);",
+        "Der Rumpfkanal -- ein Verbundkonstruktor gilt wieder als Ruf. `Value` hat keine "
+        "Verbundform, und das ist ein Modellpreis; ein fehlendes Tor ist ein anderer",
+        flaeche="annotation",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

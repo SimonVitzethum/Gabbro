@@ -125,6 +125,29 @@ pub enum LeanReason {
     FieldShape,
     /// A `refines` whose named `spec fn` is not a plain expression body.
     SpecShape,
+    /// A call to a GENERATED table operation -- `Verzeichnis::insert(v, i)`.
+    ///
+    /// **It stands apart from `CallStatement`, and the split was measured** (2026-08-28,
+    /// `messung/RUF-TOR.md`): six of the seventeen refusals filed as "a call, and that gate
+    /// is not built" are these, and no gate over a CONTRACT would take one of them. *An
+    /// operation has no `ensures` to carry.* What it has is a SCHEMA -- `opsruf::koepfe`
+    /// cuts the premises, `schablonen.rs` registers them -- and a schema is a different
+    /// thing to assume than a callee's promise.
+    GeneratedOp,
+    /// A `transition` of a `device` -- `anerkennen(g)`, `wurzel_setzen(v)`.
+    ///
+    /// It looks exactly like a call and is a REGISTER WRITE. Five of the seventeen. It waits
+    /// on hardware this model does not have, which is the same place `DevicePromise` waits
+    /// -- but that arm is about an obligation AT a register, and this one is a statement in
+    /// a body. *Two different things under one name is how seventeen came about.*
+    Transition,
+    /// A constructor whose VALUE this model has no form for -- a record, a `tagged`, or a
+    /// device handle: `Completion(id: k, len: n)`, `Dma(GERAETEBASIS)`.
+    ///
+    /// `Value` is four forms and the list is closed (`Body.lean` §1). A record is not among
+    /// them, and neither is a handle. **The price is a model extension**, and it is a
+    /// different price from a missing gate.
+    ConstructedValue,
 }
 
 impl LeanReason {
@@ -158,6 +181,9 @@ impl LeanReason {
             LeanReason::Carrier => "carrier-not-a-table",
             LeanReason::FieldShape => "no-shape-for-field",
             LeanReason::SpecShape => "spec-not-an-expression",
+            LeanReason::GeneratedOp => "generated-op",
+            LeanReason::Transition => "device-transition",
+            LeanReason::ConstructedValue => "constructed-value",
         }
     }
     pub fn sentence(self) -> &'static str {
@@ -208,10 +234,17 @@ impl LeanReason {
                 "the declared type of a slot field has no shape in this channel"
             }
             LeanReason::SpecShape => "the named `spec fn` is not a plain expression body",
+            LeanReason::GeneratedOp => {
+                "a generated table operation -- its contract is a SCHEMA, not an `ensures`"
+            }
+            LeanReason::Transition => "a `transition` of a `device` -- a register write",
+            LeanReason::ConstructedValue => {
+                "a record, a `tagged` or a device handle -- this model has no value for one"
+            }
         }
     }
     /// **All of them, so a report cannot omit one by forgetting to ask.**
-    pub const ALL: [LeanReason; 28] = [
+    pub const ALL: [LeanReason; 31] = [
         LeanReason::ForeignBody,
         LeanReason::Invariant,
         LeanReason::CallSite,
@@ -240,6 +273,9 @@ impl LeanReason {
         LeanReason::Carrier,
         LeanReason::FieldShape,
         LeanReason::SpecShape,
+        LeanReason::GeneratedOp,
+        LeanReason::Transition,
+        LeanReason::ConstructedValue,
     ];
 }
 
@@ -360,6 +396,9 @@ struct Ctx<'a> {
     allow_calls: bool,
     /// Callee name to its parameter names, so a call can bind them.
     callees: &'a HashMap<String, Vec<String>>,
+    /// **What a call path names when it is NOT a routine call.** Empty means "a routine
+    /// call, or nothing this unit declares" -- see `foreign_calls`.
+    foreign: &'a HashMap<String, LeanReason>,
     /// Collected while translating: `(carrier, field, form, origin)`, deduplicated.
     seen: Vec<(String, String, Shape, String)>,
     /// `(carrier, field, shape)` for every RECORD field touched.
@@ -610,16 +649,91 @@ fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
     }
 }
 
+/// **`Some(e)` and `None` are VALUES, not calls.**
+///
+/// The model has carried `.someOf` and `.absent` since its first day (`Body.lean` §3), and
+/// `expr_term` translates both. The `let` and `return` arms of `stmt_term` never reached
+/// that arm: they saw an `ExprArt::Ruf` and sent it to `call_parts`, which looked up a
+/// callee named `Some` in a table that has none and refused the WHOLE body as
+/// `call-not-compositional`.
+///
+/// *Measured on 2026-08-28: `beispiele/27-freiliste.gab :: belegen` was refused as a call
+/// although it contains none* (`messung/RUF-TOR.md`). A refusal filed under the wrong reason
+/// names a missing gate where a missing route stands -- the same lesson the `Carrier` /
+/// `FieldShape` split books above.
+fn is_option_value(r: &Ruf) -> bool {
+    match r.path().and_then(|p| p.teile.last()).map(|i| i.text.as_str()) {
+        Some("None") => r.argumente.is_empty(),
+        Some("Some") => r.argumente.len() == 1,
+        _ => false,
+    }
+}
+
+/// **What a call path names when it is not a routine call** -- or `None` where it is one.
+///
+/// Four different things parse as a call in Gabbro, and until 2026-08-28 all four were
+/// refused with the single word `call-not-compositional`. **They have four different
+/// prices**, and one number over all of them said the register was waiting on a gate that
+/// would have taken none of them (`messung/RUF-TOR.md` §1.1).
+fn foreign_kind(r: &Ruf, c: &Ctx) -> Option<LeanReason> {
+    // A record or a `tagged` constructor carries FIELD LABELS, and nothing else does --
+    // `Ruf::marken` is built at one place and checked at one place (`ast.rs`).
+    if r.ist_verbundwert() {
+        return Some(LeanReason::ConstructedValue);
+    }
+    let p = r.path()?;
+    // The written path first (`Verzeichnis::insert`), then the bare name -- an operation is
+    // only ever an operation under its table's name.
+    let full: Vec<String> = p.teile.iter().map(|i| i.text.clone()).collect();
+    if let Some(k) = c.foreign.get(&full.join("::")) {
+        return Some(*k);
+    }
+    c.foreign.get(full.last()?).copied()
+}
+
+/// **Every call path of the program that is NOT a routine call, with what it is instead.**
+///
+/// Read once per program out of the DECLARATIONS, never out of the use -- gate 1 of this
+/// file. Three sources, and each names a different price:
+///
+/// * `opsruf::koepfe` -- the generated operations, whose contract is a schema;
+/// * a `device`'s name -- the handle constructor, whose value this model has no form for;
+/// * a `device`'s `transition`s -- register writes, which take hardware.
+fn foreign_calls(baum: &Programm) -> HashMap<String, LeanReason> {
+    let mut out = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, _| match &item.art {
+        ItemArt::Tabelle(t) => {
+            for k in crate::opsruf::koepfe(t) {
+                out.insert(k.pfad(), LeanReason::GeneratedOp);
+            }
+        }
+        ItemArt::Device(d) => {
+            out.insert(d.name.text.clone(), LeanReason::ConstructedValue);
+            for u in &d.uebergaenge {
+                out.insert(u.name.text.clone(), LeanReason::Transition);
+            }
+        }
+        _ => {}
+    });
+    out
+}
+
 /// **Callee, parameter names and argument terms of a call.** One place, because three
 /// statement forms carry a call and each one writing its own lookup is three chances for
 /// them to drift apart.
 fn call_parts(r: &Ruf, c: &mut Ctx) -> Result<(String, String, String), LeanReason> {
+    // **What this path really names, asked BEFORE the gate.** A `transition` refused as
+    // "the call gate is not built" would go on waiting for a gate that cannot help it.
+    let kind = foreign_kind(r, c);
+    let Some(name) = r.path().and_then(|p| p.teile.last()).map(|i| i.text.clone()) else {
+        return Err(kind.unwrap_or(LeanReason::CallStatement));
+    };
+    if let Some(k) = kind {
+        return Err(k);
+    }
     if !c.allow_calls {
         return Err(LeanReason::CallStatement);
     }
-    let Some(name) = r.path().and_then(|p| p.teile.last()).map(|i| i.text.clone()) else {
-        return Err(LeanReason::CallStatement);
-    };
     // **The callee has to be DECLARED here.** A call into a unit this run never read would
     // bind arguments to parameters nobody counted.
     let Some(ps) = c.callees.get(&name).cloned() else {
@@ -668,13 +782,17 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             // **`let n = f(a);` is a CALL, not an expression.** A callee may write, so an
             // expression carrying one would no longer be pure -- and `eval` would have to
             // take the environment, which would put the whole model one level up.
+            // **`Some(e)` is a VALUE and not a call**, and the test comes first -- see
+            // `is_option_value`.
             if let ExprArt::Ruf(r) = &l.wert.art {
-                let (n, ps, args) = call_parts(r, c)?;
-                c.locals.push(l.name.text.clone());
-                return Ok(format!(
-                    "(.bindCall {} {n} [{ps}] [{args}])",
-                    quoted(&l.name.text)
-                ));
+                if !is_option_value(r) {
+                    let (n, ps, args) = call_parts(r, c)?;
+                    c.locals.push(l.name.text.clone());
+                    return Ok(format!(
+                        "(.bindCall {} {n} [{ps}] [{args}])",
+                        quoted(&l.name.text)
+                    ));
+                }
             }
             let w = expr_term(&l.wert, c)?;
             c.locals.push(l.name.text.clone());
@@ -823,9 +941,13 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
         }
         StmtArt::Return(None) => Ok("(.ret none)".into()),
         StmtArt::Return(Some(e)) => {
+            // **`return Some(i);` is a VALUE and not a call**, and the test comes first --
+            // see `is_option_value`.
             if let ExprArt::Ruf(r) = &e.art {
-                let (n, ps, args) = call_parts(r, c)?;
-                return Ok(format!("(.retCall {n} [{ps}] [{args}])"));
+                if !is_option_value(r) {
+                    let (n, ps, args) = call_parts(r, c)?;
+                    return Ok(format!("(.retCall {n} [{ps}] [{args}])"));
+                }
             }
             Ok(format!("(.ret (some {}))", expr_term(e, c)?))
         }
@@ -1099,6 +1221,7 @@ fn judge(
     recs: &HashMap<String, Vec<(String, Option<Shape>)>>,
     statics: &HashMap<String, String>,
     callees: &HashMap<String, Vec<String>>,
+    foreign: &HashMap<String, LeanReason>,
     number: usize,
 ) -> LeanVerdict {
     let FnRumpf::Block(b) = &f.rumpf else {
@@ -1118,6 +1241,7 @@ fn judge(
         // the only thing that refuses.
         allow_calls: false,
         callees,
+        foreign,
         locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
         seen: Vec::new(),
         seen_records: Vec::new(),
@@ -1202,6 +1326,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
     let recs = records(baum, &u);
     let statics = static_carriers(baum, &tab);
     let callees = callee_params(baum);
+    let foreign = foreign_calls(baum);
     // The module a function is declared in travels with it: `typ_von_ausdruck_decl` is
     // module-aware, and asking it from the wrong module answers about the wrong type.
     let mut fns: HashMap<String, (String, FnDecl)> = HashMap::new();
@@ -1243,7 +1368,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                             .and_then(|s| s.parse::<usize>().ok())
                             .unwrap_or(0);
                         match f.ensures.get(k.wrapping_sub(1)) {
-                            Some(q) => judge(f, q, &u, module, &tab, &recs, &statics, &callees, n),
+                            Some(q) => judge(f, q, &u, module, &tab, &recs, &statics, &callees, &foreign, n),
                             None => LeanVerdict::Refused(LeanReason::Expression),
                         }
                     }
@@ -1251,7 +1376,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                 },
                 crate::pflichten::Art::Verfeinerung => match fns.get(&p.funktion) {
                     Some((module, f)) => match specification(f, &fns) {
-                        Ok(q) => judge(f, &q, &u, module, &tab, &recs, &statics, &callees, n),
+                        Ok(q) => judge(f, &q, &u, module, &tab, &recs, &statics, &callees, &foreign, n),
                         Err(r) => LeanVerdict::Refused(r),
                     },
                     None => LeanVerdict::Refused(LeanReason::SpecShape),
@@ -1561,6 +1686,7 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
     let recs = records(baum, &u);
     let statics = static_carriers(baum, &tab);
     let callees = callee_params(baum);
+    let foreign = foreign_calls(baum);
     let mut out = Vec::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
         let ItemArt::Funktion(f) = &item.art else { return };
@@ -1595,6 +1721,7 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
             // theorem quantifies over.
             allow_calls: true,
             callees: &callees,
+            foreign: &foreign,
             locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
             seen: Vec::new(),
             seen_records: Vec::new(),

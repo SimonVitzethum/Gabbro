@@ -72,6 +72,13 @@ GRUENDE = [
     ("carrier-not-a-table", "the carrier of a place is not a declared `table`"),
     ("no-shape-for-field", "the declared type of a slot field has no shape here"),
     ("spec-not-an-expression", "the named `spec fn` is not a plain expression body"),
+    # **The three cut out of `call-not-compositional` on 2026-08-28** (`messung/RUF-TOR.md`).
+    # Seventeen refusals stood under one word and not one was a call over a contract: six
+    # generated operations, six constructors, four `transition`s. *Three different prices
+    # under one number, and a number that said the channel waited on a gate.*
+    ("generated-op", "a generated table operation -- its contract is a SCHEMA"),
+    ("device-transition", "a `transition` of a `device` -- a register write"),
+    ("constructed-value", "a record, a `tagged` or a device handle -- no value form"),
 ]
 
 KOPF = re.compile(r"@duty 1  (\S+)  total (\d+)  goals (\d+)  refused (\d+)")
