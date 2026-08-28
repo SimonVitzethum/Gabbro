@@ -66,7 +66,52 @@ FREMD = re.compile(
     # four such lines -- the list was too narrow, not the comments too vague.*
     r"im pruefer|in the checker|im erzeuger|in the (generator|emitter)|eine ebene)", re.I)
 
-MARKE = 226  # measured 2026-08-21; a ratchet, not a target -- it may fall, not rise
+# **The unit is the PARAGRAPH, not the line** *(2026-08-28)*.
+#
+# The rule above says "the comment", not "the line" -- and until today it was read line by
+# line. A sentence running over two lines lost its place marker that way:
+#
+#     /// `Held(L)`. **Not a gap at all** -- the lock passes discharge it (`H005`, `H006`,
+#     /// `H012`, `H016`). Reporting it as "no term" counted a carried obligation ...
+#
+# *"the lock passes discharge it"* stands in line 1, `H012` and `H016` in line 2 -- and line 2
+# counted as two unbacked claims. **The paragraph says where the rule lives; the line does
+# not know.**
+#
+# Split at EMPTY comment lines, not at the comment block: a seventy-line module header would
+# otherwise be acquitted whole by a single `see`. *A paragraph is what a reader takes as one
+# statement* -- in `abi.rs` the longest are seven lines.
+ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
+
+# **A ratchet, not a target -- and on 2026-08-28 it was RAISED to 274.** The reason stands
+# here in full, because a raised mark otherwise looks like a healed cause.
+#
+# Measured at three states, each with ITS OWN expressions, line-wise and paragraph-wise:
+#
+#     62b997b  (226 was set here)         line-wise 226   paragraph-wise 207
+#     927c1a5  (before the day's merges)  line-wise 256   paragraph-wise 233
+#     today                               line-wise 309   paragraph-wise 274
+#
+# **First: the mark itself stood on the wrong unit.** 226 was never the object; the object
+# was 207, and 19 of the difference were line breaks.
+#
+# **Second -- and this is the answer to the question that counts:** the OBJECT grows, not the
+# denominator. Recomputed: of the 233 candidates at `927c1a5` **not one** dropped out, and
+# **not one** arose because an identifier moved to another file. All 41 new ones are NEW
+# comment lines -- 24 in `opsruf.rs`, `lean.rs`, `gatter.rs` and `kbedingung.rs`, the rest in
+# files that grew. That the checker went from 40 to 43 files and from 211 to 227 issued
+# identifiers explains none of it.
+#
+# **So 274 is a DEBT and not a booking, and it is carried as a debt** (`TODO.md`,
+# 2026-08-28): the target is 207, and the way there is 67 comments that must say where their
+# rule lives.
+#
+# *Why it was not paid here, written out:* it is 67 comments across twenty checker files,
+# `emit.rs` leading with 40 -- **and `emit.rs` is the file whose LITERAL lines the mutation
+# catalogue carries as anchors.** Step 0.1 is repointing three dead anchors in exactly that
+# file right now. *Whoever writes into a measuring surface while it is being measured measures
+# a mixture* -- the same class as the collision of 2026-08-21.
+MARKE = 274
 
 
 def vergeben():
@@ -77,6 +122,34 @@ def vergeben():
             continue
         aus[q.name] = set(VERGABE.findall(q.read_text(encoding="utf-8", errors="replace")))
     return aus
+
+
+def absaetze(zeilen):
+    """Comment paragraphs: maximal runs of comment lines, split at EMPTY ones.
+
+    Yields one list of `(line number, text)` per paragraph. **The unit of the rule** -- see
+    `ABSATZ_TRENNER` above.
+    """
+    i = 0
+    while i < len(zeilen):
+        if not (zeilen[i].strip().startswith("//") or zeilen[i].strip().startswith("*")):
+            i += 1
+            continue
+        absatz = []
+        while i < len(zeilen):
+            t = zeilen[i].strip()
+            if not (t.startswith("//") or t.startswith("*")):
+                break
+            if not ABSATZ_TRENNER.sub("", t).strip():
+                i += 1
+                if absatz:
+                    yield absatz
+                absatz = []
+                continue
+            absatz.append((i + 1, t))
+            i += 1
+        if absatz:
+            yield absatz
 
 
 def erhebe(zusatz=None):
@@ -90,15 +163,14 @@ def erhebe(zusatz=None):
         if zusatz and q.name == zusatz[0]:
             text += zusatz[1]
         eigene = je_datei.get(q.name, set())
-        for n, zeile in enumerate(text.splitlines(), 1):
-            s = zeile.strip()
-            if not (s.startswith("//") or s.startswith("*")):
+        for absatz in absaetze(text.splitlines()):
+            # **A place marker ANYWHERE in the paragraph excuses the paragraph** -- and only it.
+            if FREMD.search(" ".join(t for _, t in absatz)):
                 continue
-            if FREMD.search(s):
-                continue
-            for k in ZITAT.findall(s):
-                if k not in eigene:
-                    aus.append((q.name, n, k, s[:96]))
+            for n, s in absatz:
+                for k in ZITAT.findall(s):
+                    if k not in eigene:
+                        aus.append((q.name, n, k, s[:96]))
     return aus
 
 

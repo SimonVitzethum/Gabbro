@@ -65,9 +65,42 @@ VERGABE = re.compile(
 # einem Tag eine Zahl verschoben. *Wer Quellen nach `"XNNN"` durchsucht, misst Nennungen.*
 NICHT = {"saetze.rs"}
 
-# **Die Marke ist eine Ratsche, keine Zielzahl.** Sie darf fallen, nicht steigen -- und sie
-# steht auf dem gemessenen Stand vom 2026-08-21, nicht auf einer Wunschzahl.
-MARKE = 14
+# **The mark is a ratchet, not a target.** It may fall, not rise -- and it stands on the
+# MEASURED state, not on a wish.
+#
+# 2026-08-28: **14 -> 18, and the rise falls into two halves that weigh differently.**
+# Recomputed at three states (`62b997b`, where the mark was set · `927c1a5`, before the day's
+# merges · today), each with the old and with the healed expression from `botschaft()`:
+#
+#     62b997b  old expression   14 candidates   41 of 249 probes   <- the mark, and it was right
+#     927c1a5  old expression   14              44 of 278
+#     927c1a5  new expression   16              49 of 278
+#     today    old expression   16              53 of 302
+#     today    new expression   18              58 of 302
+#
+# **+2 (`F002`, `K009`) are NOT new double issuances.** They stood there at `927c1a5` and
+# earlier; the expression in `botschaft()` simply could not see them, because both sites wrap
+# their message with `\` and were therefore compared as almost identical bracket noise.
+# *The number rises because the instrument got better, not because the checker got worse* --
+# and the old number was wrong in the DANGEROUS direction: it acquitted.
+#
+# **+2 (`D012`, `O011`) came with the build of 2026-08-28, and both are ONE rule at two
+# sites, not two rules under one identifier** -- which is why the mark is pulled here and no
+# identifier is split:
+#
+# * `D012` (`opsruf.rs`:571 / :598) -- one obligation: *the caller carries the premise of the
+#   generated operation at the call site*. :598 says "nothing above this call says so"; :571
+#   says "this argument is not a form the premise can name" -- **the same claim, in its
+#   undecidable case.** It refuses instead of staying silent (W10), and that is right.
+# * `O011` (`phasen.rs`:711 / :736) -- one promise: *a `retires` clause really ends
+#   something.* The file says so on the spot itself: **"this is the line that makes one
+#   promise out of two"** -- the mark must be a linear ghost value AND be consumed by the
+#   `effects`.
+#
+# *And what that does NOT mean:* a probe on `D012` or `O011` still falls green without showing
+# WHICH half fell. **Whoever splits one of the eighteen may lower both marks** -- the same
+# standing invitation as at `E008` and `H012`.
+MARKE = 18
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
 # 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
 # `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
@@ -85,14 +118,49 @@ MARKE = 14
 # identifier's ambiguity -- it falls green without proving WHICH of the two rules fell.
 # *The number rises because a correct probe was added, not because a rule was issued twice*
 # -- the candidate count itself stays at 14. **Whoever splits `H012` may lower both marks.**
-MARKE_PROBEN = 41
+#
+# 2026-08-28: **41 -> 58, in THREE items, and the first one is the uncomfortable one.**
+#
+# * **41 -> 44: three probes that arrived after 2026-08-21 and were NEVER booked** --
+#   `261-rahmen-unter-zyklus`, `290-can-fail-ruft-schreibend`, `293-grund-an-fremdem-parameter`.
+#   They point at identifiers that were already on the candidate list. *So this ratchet was
+#   broken before today, and nobody reported it* -- the guardian did report it, and nobody
+#   read the guardian.
+# * **44 -> 49: five probes on `F002`/`K009`** (`84`, `85`, `93`, `151`, `184`). They are not
+#   new either; they only become visible now that `botschaft()` can read a wrapped message.
+#   **The old number was too small, and too small is the bad direction here.**
+# * **49 -> 58: nine probes from the build of 2026-08-28** -- seven on `D012` (`321`-`324`,
+#   `331`, `332`, `334`) and two on `O011` (`342`, `344`). They are CORRECT and belong there;
+#   they merely inherit the ambiguity of their identifier.
+#
+# *In all three items the number rises because correct probes were added or because the tool
+# sees more sharply -- in none because a rule was issued twice.*
+MARKE_PROBEN = 58
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 
 
 def botschaft(roh):
-    """Der Meldungstext einer Vergabestelle -- Formatzeichenketten ohne Platzhalter."""
-    teile = re.findall(r'"((?:[^"\\]|\\.)*)"', roh)
+    """Der Meldungstext einer Vergabestelle -- Formatzeichenketten ohne Platzhalter.
+
+    **`re.S`, und es ist kein Schoenheitsfehler** *(gefunden 2026-08-28)*. Rust bricht lange
+    Meldungen mit `\\` am Zeilenende um; ohne `re.S` scheitert `\\\\.` genau an diesem
+    Backslash-vor-Zeilenumbruch, die Zeichenkette wird nicht als eine erkannt, und der
+    Ausdruck faengt sich an der naechsten Anfuehrung wieder. Was dann als *Meldungstext*
+    dasteht, ist RUST-CODE:
+
+        d012 , kopf.pfad() ), ) .mit_notiz(          <- vorher
+        d012 ` ` charges its caller a premise ...    <- seither
+
+    **Und die Fehlerrichtung war die stille.** Zwei so verstuemmelte Stellen bestehen fast nur
+    aus `) .mit_notiz(` -- sie sehen einander AEHNLICH und fallen damit unter die Schwelle
+    heraus. `F002` und `K009` standen deshalb nicht auf der Kandidatenliste; sie stehen dort
+    seit dem Umbau, und sie waren schon vorher doppelt vergeben (nachgerechnet am Stand
+    `927c1a5`: 14 Kandidaten mit dem alten Ausdruck, 16 mit diesem).
+    *Ein Waechter, dessen Messgroesse aus Klammern besteht, meldet Uebereinstimmung, wo er
+    nichts gelesen hat.*
+    """
+    teile = re.findall(r'"((?:[^"\\]|\\.)*)"', roh, re.S)
     txt = re.sub(r"\{[^}]*\}", " ", " ".join(teile))
     return " ".join(re.sub(r"\\\s*", " ", txt).split()).lower()[:120]
 

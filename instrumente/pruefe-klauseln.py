@@ -48,6 +48,24 @@ Struktur: heisst ein Feld in zwei Strukturen gleich und liest ein Pass nur das e
 der Name als gelesen. Der Bericht ist damit eine UNTERE Schranke der Klasse -- was er nennt,
 ist echt; was er nicht nennt, kann trotzdem da sein (W10). *Er darf darum verpflichten und
 nicht freisprechen.*
+
+**Und dieses Argument deckte einen Fall NICHT ab -- gefunden 2026-08-28 an `kosten`.** Es
+spricht von zwei Strukturen in `ast.rs`. Der teure Fall ist ein Feldname, den eine
+PRUEFERINTERNE Struktur traegt, die in `ast.rs` gar nicht vorkommt: `opsruf::Kopf.kosten`
+ist die gezaehlte Kostenzahl einer erzeugten Ops-Operation (`i128`), `Invariante.kosten` ein
+`Expr`. `felder()` liest nur `ast.rs` und weiss von `Kopf` nichts -- der Textzugriff
+`.kosten` in `opsruf.rs` und `umgebung.rs` galt darum als Pass, der die INVARIANTENKLAUSEL
+liest, und die Ratsche meldete sie als GESTIEGEN. **Sie war es nicht.**
+
+> *Die Vergroeberung geht in die sichere Richtung, solange sie nur BUCHT. Die Ratsche
+> ent-bucht* -- und in dieser Richtung ist derselbe Fehler nicht sicher, sondern still: eine
+> Klausel, die kein Pass liest, faellt aus der Buchhaltung, weil anderswo ein Feld gleich
+> heisst. Genau die Bewegung, gegen die dieses Werkzeug gebaut ist (W16).
+
+Darum zaehlt es seit heute die **Homonyme** -- Feldnamen, die auch eine prueferinterne
+Struktur traegt -- und fuehrt die entschiedenen davon in `HOMONYME`, je Eintrag mit dem
+Grund. Was dort nicht steht, wird weiter grob gemessen; die Zahl sagt, wie gross diese
+Flaeche ist.
 """
 import re
 import subprocess
@@ -101,7 +119,13 @@ ERWARTET = {
     # -- ABSENKUNG: der Erzeuger ist ihr richtiger und einziger Leser ---------------------
     "endian":       ("ABSENKUNG", "Die Byteordnung ist eine Absenkungsaussage; emit ist ihr richtiger Leser."),
     "section":      ("ABSENKUNG", "Platzierung -- eine Aussage an den Binder, nicht an den Pruefer."),
-    "reserviert":   ("ABSENKUNG", "Reservierte Bits; «B24» laesst den Erzeuger die Kachelung pruefen."),
+    # **`reserviert` ROSE on 2026-08-28 and is therefore deleted here.** Its sentence booked
+    # it as ABSENKUNG -- reserved bits, «B24» leaves the tiling to the generator -- and that
+    # held as long as only `emit.rs` and `zeremonie.rs` touched the field. `lean.rs`:1011 reads
+    # the clause LOAD-BEARINGLY: a reserved field gets NO shape (`None` instead of
+    # `shape_of`), and every place naming it is refused rather than served. *That is not a
+    # report any more, it is a refusal* -- and it stands on the pass surface, not at the
+    # generator.
     "merge":        ("ABSENKUNG", "Die Verknuepfung ist durch den geschlossenen Wortschatz eingegrenzt; `Accumulates_Monoid.thy` deckt die Menge."),
     # **`bei_ueberschreitung` ist am 2026-08-19 AUFGESTIEGEN, und der Satz war FALSCH.**
     # Er lautete *„der Zweig ist Code, keine Zusage"* -- es IST eine Zusage: `on_exceeded`
@@ -126,7 +150,8 @@ ERWARTET = {
     "ab":           ("TOT", "`walk` ist gelesen und sonst nichts: kein Pass, kein Erzeuger kennt `WalkDecl`."),
     "ab_wenn":      ("TOT", "siehe `ab` -- `WalkDecl`."),
     "blatt":        ("TOT", "siehe `ab` -- `WalkDecl`."),
-    "kosten":       ("TOT", "Feld der `invariant`; ungelesen."),
+    # **`kosten` LOOKED risen on 2026-08-28 and was not** -- see `HOMONYME`.
+    "kosten":       ("TOT", "Feld der `invariant`; ungelesen. (Nicht zu verwechseln mit `opsruf::Kopf.kosten` -- siehe HOMONYME.)"),
     "laeuft":       ("TOT", "Feld der `invariant`; ungelesen."),
     # **`erschoepfend` und `fehlername` sind am 2026-08-21 GESTIEGEN** (Stufe 7) -- und
     # dieser Waechter hat es gemeldet, bevor jemand daran gedacht hat, die Tabelle
@@ -144,6 +169,54 @@ ERWARTET = {
     "scale":        ("TOT", "`scale` an `embeds`; ungelesen."),
     "version":      ("TOT", "Die Formatversion; ungelesen."),
 }
+
+# **The DECIDED homonyms: a field name from `ast.rs` that a CHECKER-INTERNAL struct carries
+# as well -- and the files in which the textual access belongs to the INTERNAL one.**
+#
+# Per entry: the files whose `.field` does NOT mean the AST clause · the internal struct · the
+# reason. **Decided by hand, like the classes above** -- an attribution by type cannot be read
+# off the text, and a tool that guessed it would be worse than one that lets it be booked.
+#
+# *The booking goes in the dangerous direction* -- it takes a reader away -- and therefore
+# carries a ratchet of its own: the self-test below falls as soon as a booked file has no such
+# access left. **An exception nobody needs any more looks exactly like one that reaches too
+# far.**
+HOMONYME = {
+    "kosten": (
+        {"opsruf.rs", "umgebung.rs"},
+        "opsruf::Kopf",
+        "`Kopf.kosten` ist die GEZAEHLTE Kostenzahl einer erzeugten Ops-Operation (`i128`, "
+        "eine Op je Speicherung, die der Erzeuger schreibt); `Invariante.kosten` ist der "
+        "`Expr` der `invariant`-Klausel. `opsruf.rs`:382 baut daraus die `deklariert`-Karte "
+        "fuer `kosten.rs`, `umgebung.rs`:549 setzt `cost_bound` einer Signatur -- beide auf "
+        "`opsruf::koepfe(t)`, keiner auf einer `Invariante`. **Keine der beiden Dateien nennt "
+        "`Invariante` ueberhaupt.**",
+    ),
+}
+
+
+def interne_felder():
+    """**Feldnamen, die eine Struktur des PRUEFERS traegt** -- Name -> `datei::Struktur`.
+
+    Der Textzugriff `.feld` kann sie nicht von einer Klausel unterscheiden. Gezaehlt werden
+    sie, damit die Flaeche dieser Unschaerfe eine Zahl hat und nicht bloss einen Satz.
+    """
+    aus = {}
+    dateien = sorted(PRUEFER.glob("*.rs")) + sorted((W / "crates/gabbro-cli/src").glob("*.rs"))
+    for p in dateien:
+        struktur = None
+        for zeile in p.read_text(encoding="utf-8").splitlines():
+            m = re.match(r"(?:pub(?:\([^)]*\))? )?struct (\w+)", zeile.strip())
+            if m:
+                struktur = m.group(1)
+                continue
+            if zeile.startswith("}"):
+                struktur = None
+                continue
+            m = re.match(r"    (?:pub(?:\([^)]*\))? )?(\w+):", zeile)
+            if m and struktur:
+                aus.setdefault(m.group(1), set()).add(f"{p.name}::{struktur}")
+    return aus
 
 
 def stripp(zeile: str) -> str:
@@ -196,10 +269,16 @@ def zugriffe(feld: str, quellen):
     return aus
 
 
+def ohne_homonyme(feld, z):
+    """Die Zugriffe des Feldes, ohne die, die einer gleichnamigen INTERNEN Struktur gelten."""
+    fremd = HOMONYME.get(feld, (frozenset(),))[0]
+    return {d: s for d, s in z.items() if d not in fremd}
+
+
 def selbsttest(quellen):
     """**R14: ein Messwerkzeug weist nach, dass es messen kann.**
 
-    Zwei Proben mit bekannter Antwort. Faellt eine, misst das Werkzeug nicht mehr, was es
+    Drei Proben mit bekannter Antwort. Faellt eine, misst das Werkzeug nicht mehr, was es
     zu messen behauptet -- und dann ist Schweigen die falsche Ausgabe.
     """
     fehler = []
@@ -209,6 +288,25 @@ def selbsttest(quellen):
     sect = zugriffe("section", quellen)
     if any(not ist_tragend(d) for d in sect):
         fehler.append("`section` gilt als von einem Pass gelesen -- die Probe ist stumpf.")
+    # **And the third, since 2026-08-28: the homonym booking must BITE.**
+    #
+    # An exception that takes nothing away any more is indistinguishable from a missing one --
+    # and it takes a reader away, hence the dangerous direction. So it is checked per booked
+    # file that the access exists at all: once it is gone, the booking is blunt and belongs
+    # deleted, not forgotten.
+    for feld, (dateien, struktur, _grund) in sorted(HOMONYME.items()):
+        z = zugriffe(feld, quellen)
+        for d in sorted(dateien):
+            if d not in z:
+                fehler.append(
+                    f"HOMONYM `{feld}` bucht `{d}` gegen `{struktur}` -- dort steht heute "
+                    f"kein `.{feld}` mehr. Die Ausnahme ist stumpf und gehoert geloescht."
+                )
+        if not any(not ist_tragend(d) for d in dateien):
+            fehler.append(
+                f"HOMONYM `{feld}`: keine der gebuchten Dateien ist ein Pass -- die "
+                f"Ausnahme aendert nichts und verschleiert nur."
+            )
     return fehler
 
 
@@ -223,14 +321,23 @@ def main():
     alle = felder()
     getragen, ungelesen = {}, {}
     for feld, strukturen in sorted(alle.items()):
-        z = zugriffe(feld, quellen)
+        z = ohne_homonyme(feld, zugriffe(feld, quellen))
         if any(not ist_tragend(d) for d in z):
             continue
         (getragen if z else ungelesen)[feld] = (strukturen, z)
 
+    intern = interne_felder()
+    doppelt = sorted(set(alle) & set(intern))
+
     print("== Klauselwaechter ==")
     print(f"   Quelle: {len(alle)} Feldnamen aus {AST.name}")
-    print(f"   Leser:  {len(quellen)} Dateien, davon {sum(ist_tragend(d) for d in quellen)} tragend\n")
+    print(f"   Leser:  {len(quellen)} Dateien, davon {sum(ist_tragend(d) for d in quellen)} tragend")
+    print(f"   Davon MEHRDEUTIG: {len(doppelt)} Namen traegt auch eine prueferinterne")
+    print(f"   Struktur -- ein `.feld` im Text ist dort nicht zuzuordnen. {len(HOMONYME)} "
+          f"entschieden:")
+    for feld, (dateien, struktur, _grund) in sorted(HOMONYME.items()):
+        print(f"   {feld:<18} {struktur:<24} {', '.join(sorted(dateien))}")
+    print()
 
     def zeige(titel, satz, menge):
         print(f"-- {titel}: {len(menge)} --")
@@ -278,6 +385,14 @@ def main():
     print(f"== KLAUSELN: {len(gefunden)} gebucht, keine neue ==")
     print("   Und was das NICHT heisst: gebucht ist nicht geprueft. Jede ZUSAGE-Zeile ist")
     print("   etwas, das die Grammatik zu sagen erlaubt und heute niemand nachhaelt.")
+    # **The remaining blur, counted instead of claimed.** It only becomes expensive once the
+    # REAL reader of an ambiguous clause disappears: the homonym would stay, and the case
+    # would look like „read". *A sentence nobody counts is none.*
+    unentschieden = sorted(set(doppelt) - set(HOMONYME))
+    gilt_gelesen = [f for f in unentschieden if f not in gefunden]
+    print(f"   **Und {len(unentschieden)} mehrdeutige Namen sind NICHT entschieden**, davon")
+    print(f"   gelten {len(gilt_gelesen)} als von einem Pass gelesen. OB ZU RECHT, sagt dieses")
+    print("   Werkzeug nicht (W10) -- es sieht den Text, nicht den Typ des Empfaengers.")
     return 0
 
 

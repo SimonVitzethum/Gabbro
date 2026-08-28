@@ -1419,8 +1419,8 @@ A = 19       Annahmen, jede mit Sonde oder mit Grund
 | | Ziel | heute | |
 |---|---|---|---|
 | `H` | 0 | **9** | 4 verankert + 6 Absenkungen; Start war 31. *F2 am 2026-08-25 an der Ausfuehrung gemessen — ohne ein Konstrukt und ohne eine Schablone: `L` steht unveraendert bei 1.* **Und der Schritt von 11 auf 10 am selben Tag ist KEINE Arbeit, sondern eine Berichtigung:** «B9» stand als Luecke, obwohl der Vertrag am `fn(…)`-Typ seit dem 2026-08-21 Pflicht ist (`N035`/`N036`/`N037`) — *ein falscher Eintrag entfernt, keine Pflicht geschlossen* |
-| `L` | ≤ 4 | **2** | getragen und unbewiesen; daneben **7 Prämissen ohne Pass**. *Der Anstieg 1 → 2 am 2026-08-28 ist der PREIS von Zuschnitt (c):* `table.ops.erhaltung` ging von ENTWORFEN auf GETRAGEN, weil `emit.rs::ops` `insert`/`remove` jetzt ausliefert und `relabel` mit `umhaengen_faellt` absagt. **Genau diese Bewegung soll die Zahl sichtbar machen** — eine Klempnereipflicht wurde nicht erledigt, sondern in die Erzeugerfläche verschoben |
-| `A` | 19 | **33** | jede mit Sonde oder mit ausgeschriebenem Grund |
+| `L` | ≤ 4 | **2** | getragen und unbewiesen; daneben aber **6 Prämissen ohne Pass**. *Der Anstieg 1 → 2 am 2026-08-28 ist der PREIS von Zuschnitt (c):* `table.ops.erhaltung` ging von ENTWORFEN auf GETRAGEN, weil `emit.rs::ops` `insert`/`remove` jetzt ausliefert und `relabel` mit `umhaengen_faellt` absagt. **Genau diese Bewegung soll die Zahl sichtbar machen** — eine Klempnereipflicht wurde nicht erledigt, sondern in die Erzeugerfläche verschoben |
+| `A` | 19 | **34** | jede mit Sonde oder mit ausgeschriebenem Grund |
 | zweiter Korpus | vorhanden | **«K2», fünf Fragmente** | fremde Autorenlinie; drei sind ganze Module, alle drei prüfen sauber und senken ab |
 
 **`H = 0` über diesem Korpus ist nicht erreichbar, und der Grund ist kein Arbeitsrest.**
@@ -3308,11 +3308,11 @@ irgendwann, eine fehlende nie.
 
 | | Zahl | Befehl | was es heißt |
 |---|---:|---|---|
-| **Erhaltungspflichten** | **3** | `gabbro pflichten` | `maintains I` ist auf Wohlgeformtheit geprüft; dass der Rumpf sie **einlöst**, prüft niemand |
+| **Erhaltungspflichten** | **5** | `gabbro pflichten` | `maintains I` ist auf Wohlgeformtheit geprüft; dass der Rumpf sie **einlöst**, prüft niemand |
 | **ZUSAGE ohne Leser** | **0** | `./instrumente/pruefe-klauseln.py` | *stand als 13.* **Das ist das Tor von «NL» selbst, und es ist erreicht** — die Zahl fiel auf null, und die Tafel schrieb es nicht mit |
-| **Fremdpflichten** | **10** | `gabbro pflichten` | *stand als 8.* Annahmen über Rümpfe, die Gabbro nie sieht — **die Zahl ist GESTIEGEN**, mit dem Korpus |
+| **Fremdpflichten** | **11** | `gabbro pflichten` | *stand als 8.* Annahmen über Rümpfe, die Gabbro nie sieht — **die Zahl ist GESTIEGEN**, mit dem Korpus |
 | **Vorbedingungen am Rufort** | **12** | `gabbro pflichten` | *neu am 2026-08-20, und sie stand vorher NIRGENDS.* `M115` weist ab, wo der Bereich des Arguments die Bedingung ausschliesst, und **schweigt sonst** — das ist der Preis dieses Schweigens, je Rufstelle gezählt |
-| **Prämissen ohne Pass** | **8** | `gabbro schablonen` | *stand als 7.* Ein Beweis, den nichts herstellt |
+| **Prämissen ohne Pass** | **6** | `gabbro schablonen` | *stand als 7.* Ein Beweis, den nichts herstellt |
 | **Absenkungspflichten** | **5** | `zaehle-pflichten.py --haengend` | in `H` enthalten, nicht in den Fragmenten |
 
 > **Drei von fünf, und in beide Richtungen** — eine gefallen, eine gestiegen, eine
@@ -3412,7 +3412,7 @@ unterstellt der Rufer.
 
 ## NL.4 und NL.5 — die Prämissen und die Absenkungen
 
-**Sieben Prämissen ohne Pass**, und seit dem 2026-08-19 sagt jede, *womit* man sie füllt. **Drei
+**Sechs Prämissen ohne Pass**, und seit dem 2026-08-19 sagt jede, *womit* man sie füllt. **Drei
 der sieben brauchen keine Prüfarbeit, sondern eine Sprachform** — eine Wortmenge (NL.1), eine
 Grammatikzeile, die Ausführungskontexte. *Sie fallen mit NL.1 und K11.2.2, nicht einzeln.*
 
