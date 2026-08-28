@@ -1583,12 +1583,22 @@ jede ist eine Linie mit einem Satz Begründung".***
       Zeile stand als TOT mit *„ungelesen"*. **Eine zwoelfte Sorge in einer TOT-Zeile.**
       *Entweder sie wird eine Klasse, oder es steht dabei, warum nicht.*
 
-- [ ] **`ops insert, remove, relabel` ist ENTSCHIEDEN und nicht gebaut** *(2026-08-19)*. Die
-      drei Woerter stehen im Lexer, in der EBNF und in der Wortschatztabelle. **Was fehlt, ist
-      der Erzeuger** -- und mit `relabel` schuldet er eine Bedingung, die `insert` und `remove`
-      nicht brauchen: `Table_Ops_Erhaltung.thy` fuehrt das Gegenbeispiel (`umhaengen_faellt`).
-      *Genau deshalb ist es aufgenommen: eine Sprache, die nur die leichten Operationen deckt,
-      verschiebt die Arbeit.*
+- [x] **`ops insert, remove, relabel` ist ENTSCHIEDEN und nicht gebaut** *(2026-08-19)*.
+      ~~Die drei Woerter stehen im Lexer, in der EBNF und in der Wortschatztabelle. **Was
+      fehlt, ist der Erzeuger** -- und mit `relabel` schuldet er eine Bedingung, die `insert`
+      und `remove` nicht brauchen.~~ **GEBAUT am 2026-08-28**: `insert`/`remove` am Vormittag
+      (`messung/OPS-ERZEUGER.md`), die Rufform am Nachmittag (`messung/OPS-RUFFORM.md`), und
+      `relabel` mit seiner Bedingung am Abend (`messung/OPS-RELABEL.md`).
+      **Und die Bedingung ist die Nachricht, nicht der Erzeuger.** `Table_Ops_Erhaltung.thy`
+      fuehrte nur das Gegenbeispiel (`umhaengen_faellt`), also sagte der Erzeuger `relabel`
+      ab -- ein Wort einer geschlossenen Menge, das nichts erzeugt und niemand rufen kann,
+      bei 127 gemessenen Korpusstellen. Der Beweis kam zuerst (K100s zweites Tor):
+      `umhaengen_erhaelt` (U-3) sagt jetzt, WORAN das Umhaengen faellt, `G-1`/`G-2` zeigen,
+      dass das alte Gegenbeispiel genau an dieser Voraussetzung scheitert, und `D012` haelt
+      sie an der Aufrufstelle -- in einer Form, die kein neues Wort kostet
+      (`!(t.slots[p] reaches t.slots[s] via elter)`).
+      *Was NICHT gebaut ist: der Beweis, dass die emittierten C-Ruempfe die drei Modell-
+      funktionen SIND -- dieselbe Luecke, die `Table_Absenkung.thy` mit eigenen Worten nennt.*
 
 ### «NL» — der Weg zu „nur noch eigene Logik" ([`dokumente/PLAN.md`](dokumente/PLAN.md)) — **PUNKT 1**
 

@@ -2222,11 +2222,18 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
 /// |---|---|---|
 /// | `einfuegen_erhaelt` | `insert` | preserves, under *fresh* and *parent reachable* |
 /// | `blatt_loeschen_erhaelt` | `remove` | preserves, under *`s` is a leaf* |
-/// | `umhaengen_faellt` | `relabel` | **COUNTEREXAMPLE** -- `\<not> wohlgeformt (umhaengen zwei 0 1)` |
+/// | `umhaengen_erhaelt` | `relabel` | preserves, under *new parent reachable* and *`s` not on its chain* |
 ///
-/// > **`relabel` stands in the vocabulary and is not emitted.** Shipping an operation whose
-/// > own proof says it breaks the invariant would be exactly the move K100's second gate
-/// > exists to prevent. *The refusal names the theorem.*
+/// > **`relabel` was refused until 2026-08-28, evening, and the refusal was not wrong -- it
+/// > was incomplete.** It said the re-hanging breaks `wohlgeformt` (`umhaengen_faellt`), and
+/// > never what it breaks ON. What stood there was the third word of a CLOSED vocabulary
+/// > that emitted nothing and nobody could call -- *a clause with no redeemer*, at 127
+/// > measured corpus sites.
+/// >
+/// > **The theorem came first, as K100's second gate demands** (`verbund.konstruktor` is the
+/// > booked precedent). `umhaengen_erhaelt` (U-3) names the condition; `umhaengen_faellt`
+/// > stays, and `G-1`/`G-2` show the old counterexample fails at THAT premise and no other.
+/// > *`messung/OPS-RELABEL.md` weighs the three forms the condition could take.*
 ///
 /// **And `remove` resets the WHOLE slot, not just the flag.** `sigma(s := None)` is a slot
 /// that carries no value any more -- `beispiele/47` shows why that is not zeal: its invariant
@@ -2333,17 +2340,45 @@ fn ops(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
                 }
                 aus.push_str("}\n");
             }
-            // **The corpus needs it at 127 sites, and the proof carries the
-            // counterexample.** The refusal therefore stands ONCE here instead of 127 times
-            // at the call sites -- and it names the theorem it hangs on.
-            "relabel" => weigere(
-                absagen,
-                w.span,
-                "`ops relabel` -- beweise/Table_Ops_Erhaltung.thy proves `umhaengen_faellt`: \
-                 re-hanging a slot under a new parent does NOT preserve `wohlgeformt` (the \
-                 witness is a two-slot cycle). A generated `relabel` would owe a condition \
-                 nobody has written down",
-            ),
+            // **And ONLY the parent edge is written -- that is the whole body, and the
+            // reason it may be the whole body is a proof and not an intuition.**
+            //
+            // The model's `umhaengen` replaces the slot; on a slot with further fields the C
+            // here keeps them. Where that differs is a FREE `s`: the model makes it
+            // occupied, the C leaves it free. **The C state then has FEWER occupied slots
+            // than the model state, and `wohlgeformt` is a `forall` over the occupied ones**
+            // -- an all-statement over a smaller set does not fall. *That is why no
+            // occupancy premise is charged: `umhaengen_erhaelt` does not ask for one, and an
+            // invented duty would have looked stricter and meant less.*
+            "relabel" => match elter {
+                Some(e) => aus.push_str(&format!(
+                    "\n/* `ops relabel` -- beweise/Table_Ops_Erhaltung.thy, `umhaengen_erhaelt` (U-3).\n\
+                     \x20  The premises are the theorem's: the NEW parent is REACHABLE\n\
+                     \x20  (`erreicht sigma p`) and the re-hung slot does NOT lie on that\n\
+                     \x20  parent's chain, that parent itself included -- U-3's second. That\n\
+                     \x20  one is why this operation was refused until 2026-08-28: the folder\n\
+                     \x20  had the counterexample (`umhaengen_faellt`) and not the condition.\n\
+                     \x20  `G-1`/`G-2` show that counterexample fails at THIS premise and no\n\
+                     \x20  other -- it is a witness that the condition is needed, not a bar.\n\
+                     {} */\n\
+                     static void {tn}_relabel({tn} *t, uint32_t s, uint32_t p){};\n\
+                     static void {tn}_relabel({tn} *t, uint32_t s, uint32_t p) {{\n\
+                     \x20   t->slots[s].{} = p;\n}}\n",
+                    pflicht("relabel"),
+                    leise("relabel"),
+                    e.text
+                )),
+                // **«B41b», word for word: a missing edge is an ANSWER, not a gap.** A table
+                // whose `tree` names no `parent` has no field to re-hang, and the emitter
+                // does not guess one -- the same move `ancestors of` makes one file over.
+                None => weigere(
+                    absagen,
+                    w.span,
+                    "`ops relabel` on a table whose `tree` names no `parent` edge -- there is \
+                     no field to re-hang. `umhaengen_erhaelt` is a statement about the parent \
+                     chain, and without that chain the operation has no subject",
+                ),
+            },
             other => weigere(
                 absagen,
                 w.span,

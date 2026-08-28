@@ -445,9 +445,11 @@ pub const D1D2: &[Satz] = &[
         aussage: "Wherever a generated operation is called, the premises \
                   `beweise/Table_Ops_Erhaltung.thy` charges to the caller STAND above the \
                   call, about the very slot the call names -- the slot is FRESH for \
-                  `insert`, the parent is REACHABLE where the table has a `parent` edge, and \
-                  `s` is a LEAF for `remove` on such a table. They stand in the routine's own \
-                  `requires`, in an enclosing `if`, or in an enclosing loop `invariant`.",
+                  `insert`, the parent is REACHABLE where the table has a `parent` edge, \
+                  `s` is a LEAF for `remove` on such a table, and for `relabel` the new \
+                  parent is REACHABLE and `s` does NOT lie on its parent chain, that parent \
+                  itself included. They stand in the routine's own `requires`, in an \
+                  enclosing `if`, or in an enclosing loop `invariant`.",
         vorbehalt: "**It does not PROVE a premise, and it cannot.** A standing `requires` is \
                     the duty pushed one frame outwards, exactly as `blatt_loeschen`'s \
                     `ist_blatt(c, s)` has been since beispiele/01; what changes is that the \
@@ -457,13 +459,20 @@ pub const D1D2: &[Satz] = &[
                     taken as standing; and an argument that is not a place-shaped expression \
                     is refused rather than skipped. **`M115` is silent on all of these** -- \
                     they are not range statements, which is why the rule is here and not \
-                    there.",
+                    there. **And `relabel`'s chain premise is read only in the theorem's own \
+                    shape** (`!(t.slots[p] reaches t.slots[s] via <parent>)`): the STRICT \
+                    form over `ancestors of` is weaker -- `ancestors of` starts the chain at \
+                    the parent, so it says nothing about `p == s` -- and it does not \
+                    discharge, which is what beispiele/gift/332 measures.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 4 probes on `D012` (321 missing premise, 322 premise \
+        gemessen_an: "beispiele/gift: 7 probes on `D012` (321 missing premise, 322 premise \
                       about a DIFFERENT slot, 323 the second half of `einfuegen_erhaelt` \
-                      missing, 324 the weaker leaf clause). The clean side is `beispiele/47`, \
-                      which calls all four generated operations.",
-        fundstelle: "crates/gabbro-check/src/opsruf.rs; messung/OPS-RUFFORM.md",
+                      missing, 324 the weaker leaf clause, 331 `umhaengen_erhaelt`'s chain \
+                      premise missing, 332 the weaker STRICT-ancestors form of it, 334 that \
+                      premise about a different TARGET). The clean side is `beispiele/47`, \
+                      which calls all five generated operations.",
+        fundstelle: "crates/gabbro-check/src/opsruf.rs; messung/OPS-RUFFORM.md; \
+                     messung/OPS-RELABEL.md",
     },
     Satz {
         name: "d.baumkante",

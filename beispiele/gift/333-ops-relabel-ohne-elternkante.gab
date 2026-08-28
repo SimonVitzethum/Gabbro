@@ -1,0 +1,42 @@
+-- erwartet: C001
+--
+-- **`ops relabel` an einer Tabelle ohne `parent`-Kante -- es gibt nichts umzuhaengen.**
+--
+-- `umhaengen_erhaelt` ist eine Aussage ueber die ELTERNKETTE. Ohne ein Feld, das einen Elter
+-- nennt, hat die Operation kein Subjekt: der Erzeuger muesste raten, WELCHES Feld er
+-- schreibt, und ein Erzeuger, der raet, hebt jeden Pass vor ihm auf.
+--
+-- **«B41b», woertlich:** *eine fehlende Kante ist eine ANTWORT, keine Luecke.* Dieselbe
+-- Bewegung, die `ancestors of` ueber einer Tabelle ohne `parent` macht (Gift 196) -- und
+-- dieselbe, die `beispiele/47` an `Verzeichnis` zeigt: dort steht `ops insert, remove;`
+-- ohne `tree`, und `remove` schuldet dem Rufer deshalb NICHTS.
+--
+-- `insert` und `remove` bleiben an so einer Tabelle erzeugbar. **Nur `relabel` nicht** --
+-- und der Unterschied ist genau der, den die drei Saetze machen.
+
+module gift::relabelohneelternkante {
+
+const N : u32 = 8;
+
+table Verzeichnis count N {
+    slot {
+        benutzt : bool,
+        marke   : u32,
+    }
+
+    ops insert, remove, relabel;
+
+    occupied benutzt;
+
+    invariant marke_null_wenn_frei cost O(1) runs online :
+        forall s in slots of Self : Self.slots[s].benutzt || Self.slots[s].marke == 0;
+}
+
+impl fn ist_belegt(v : ptr<normal, r> Verzeichnis, i : index into Verzeichnis) -> bool
+    effects { reads v.slots }
+    costs   <= 2 ops
+{
+    return v.slots[i].benutzt;
+}
+
+}
