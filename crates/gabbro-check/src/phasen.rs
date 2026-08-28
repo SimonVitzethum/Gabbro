@@ -61,7 +61,7 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Was eine Funktion auf einer Marke tut.
 #[derive(Clone)]
@@ -72,6 +72,10 @@ struct Schritt {
 }
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
+    // **Der Bootsatz haengt an derselben Marke** -- `O008`/`O009` reden ueber die lineare
+    // Geistmarke, ueber die `O001`-`O007` schon reden. Ein eigener Pass waere W7: zwei
+    // Register ueber einer Sache.
+    bootsatz(baum, absagen);
     // **Modulbewusst seit 2026-08-19.** Zwei `oeffnen` in zwei Modulen waren EIN Schritt,
     // und welcher galt, entschied die Reihenfolge im Quelltext -- derselbe Fehler wie im
     // Aufrufgraphen, in einem siebten Pass.
@@ -551,4 +555,129 @@ fn enthaelt_schritt(
     crate::unterbloecke(s)
         .into_iter()
         .any(|b| im_block(b, u, modul, schritte))
+}
+
+/// **The boot theorem, layer S1 and half of S2 -- and `raw fn` had NO reader at all.**
+///
+/// `SPRACHE.md` §12 states the theorem in three layers: *"after `boot_end` no `raw` code is
+/// reachable."* Measured on 2026-08-28: `FnKlasse::Raw` is matched by **zero** passes. `raw fn`
+/// parsed, was stored, and no rule attached to it -- **the same class as `@version` and as
+/// `obermenge`/`gates`/`mirrors` before «K5».** A word that promises a discipline and is read by
+/// nobody is worse than no word: it reads like protection.
+///
+/// * **`O008` (layer S1, types)** -- a `raw fn` carries `requires T` with `T` a declared
+///   `linear ghost type`. The token is what makes the code unreachable later: it is linear, so
+///   it cannot be copied and cannot be restored, and whoever consumes it ends the boot phase.
+///   *Without the clause a `raw fn` is callable forever, and the theorem is about nothing.*
+/// * **`O009` (layer S2, references)** -- `&f` on a `raw fn` is refused. A function pointer to
+///   boot code survives the token: the call would no longer type, but the JUMP would still
+///   stand. **S1 alone catches the static call chain and not the dynamic one** -- that is why
+///   `SPRACHE.md` gives it its own layer, and why it costs a second rule and not a note.
+///
+/// > **What is still NOT built, and it is named rather than hidden:** layer S3. `boot_end`
+/// > consuming the token **and** unmapping `code<boot>` as ONE event, with the probe at a
+/// > `.boot` address as its falsifier, has no construct -- `beispiele/07` writes `boot_ende` as
+/// > an ordinary `fn` with `writes code_abbildung`, which is an effect name and not a
+/// > mechanism. *Two of three layers stand; the third is the one that needs the axiom layer.*
+pub fn bootsatz(baum: &Programm, absagen: &mut Absagen) {
+    // Die linearen Geistmarken -- Modul-uebergreifend, wie `ordnungen` oben.
+    let mut marken: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        if let ItemArt::Typ(t) = &i.art {
+            if t.linear && t.ghost {
+                marken.insert(t.name.text.clone());
+            }
+        }
+    });
+    // Welche Funktionen sind `raw`? Fuer `O009` -- der Name genuegt, ein Zeiger auf einen
+    // fremden `raw`-Rumpf ist derselbe Sprung.
+    let mut rohe: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |i| {
+        if let ItemArt::Funktion(f) = &i.art {
+            if f.klasse == Some(FnKlasse::Raw) {
+                rohe.insert(f.name.text.clone());
+            }
+        }
+    });
+
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        if f.klasse != Some(FnKlasse::Raw) {
+            return;
+        }
+        let hat_marke = f.requires.iter().any(|p| nennt_marke(p, &marken));
+        if !hat_marke {
+            absagen.schiebe(
+                Absage::fehler(
+                    "O008",
+                    f.name.span,
+                    format!(
+                        "`raw fn {}` demands no `linear ghost` token",
+                        f.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "the boot theorem (SPRACHE.md §12, layer S1) rests on it: the token is \
+                     linear, so it cannot be copied and cannot be restored, and whoever \
+                     consumes it ends the boot phase. Without `requires <token>` this \
+                     function stays callable forever -- write `requires BootPhase` or \
+                     whatever the module's token is called",
+                ),
+            );
+        }
+    });
+
+    // `O009`: `&f` auf eine `raw fn`.
+    if rohe.is_empty() {
+        return;
+    }
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        let FnRumpf::Block(b) = &f.rumpf else { return };
+        im_block_fnwert(b, &rohe, absagen);
+    });
+}
+
+fn im_block_fnwert(b: &Block, rohe: &BTreeSet<String>, absagen: &mut Absagen) {
+    for s in &b.anweisungen {
+        for e in crate::eigene_ausdruecke(s) {
+            for sub in crate::alle_ausdruecke(e) {
+                let ExprArt::FnWert(pf) = &sub.art else { continue };
+                let Some(n) = pf.teile.last() else { continue };
+                if !rohe.contains(&n.text) {
+                    continue;
+                }
+                absagen.schiebe(
+                    Absage::fehler(
+                        "O009",
+                        sub.span,
+                        format!("`&{}` makes a pointer to a `raw fn`", n.text),
+                    )
+                    .mit_notiz(
+                        "the boot theorem's layer S2: a function pointer into boot code \
+                         SURVIVES the token. After `boot_end` the call would no longer type, \
+                         and the jump would still stand -- that is the reachability S1 cannot \
+                         see",
+                    ),
+                );
+            }
+        }
+        for ub in crate::unterbloecke(s) {
+            im_block_fnwert(ub, rohe, absagen);
+        }
+    }
+}
+
+/// `requires BootPhase` steht als blosser Ort in einem Vergleich -- ein Praedikat ohne
+/// Operator. Klammer/Und werden mitgelesen, damit `requires (BootPhase) && p` nicht durchfaellt.
+fn nennt_marke(p: &Pred, marken: &BTreeSet<String>) -> bool {
+    match &p.art {
+        PredArt::Vergleich(e) => match &e.art {
+            ExprArt::Ort(o) => o.suffixe.is_empty() && marken.contains(&o.basis.text),
+            _ => false,
+        },
+        PredArt::Klammer(inner) => nennt_marke(inner, marken),
+        PredArt::Und(a, b) => nennt_marke(a, marken) || nennt_marke(b, marken),
+        _ => false,
+    }
 }

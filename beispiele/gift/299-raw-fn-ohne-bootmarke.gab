@@ -1,0 +1,22 @@
+-- erwartet: O008
+--
+-- **Eine `raw fn` ohne lineare Geistmarke -- und bis zum 2026-08-28 ging sie durch.**
+--
+-- `FnKlasse::Raw` wurde von NULL Paessen gelesen: `raw` parste, wurde gespeichert, und keine
+-- Regel hing daran. Dieselbe Klasse wie `@version` und wie `obermenge`/`gates`/`mirrors` vor
+-- «K5» -- nur schlimmer, weil das Wort eine Disziplin verspricht.
+--
+-- Der Bootsatz (SPRACHE.md §12, Schicht S1) ruht auf der Marke: sie ist linear, also nicht
+-- kopierbar und nicht wiederherstellbar, und wer sie verbraucht, beendet die Bootphase.
+-- **Ohne `requires <Marke>` bleibt diese Funktion fuer immer rufbar** -- und der Satz „nach
+-- `boot_end` ist kein `raw`-Code erreichbar" redet dann ueber nichts.
+
+module gift::rawohnemarke {
+
+type Pa = u64;
+
+linear ghost type BootPhase;
+
+raw fn phys_schreiben(p : Pa, w : u64) effects { writes phys };
+
+}

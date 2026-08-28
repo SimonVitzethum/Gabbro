@@ -1217,7 +1217,26 @@ pub const GRUPPE: &[Satz] = &[
 
 pub const PHASEN: &[Satz] = &[
     Satz {
-        name: "phasen.deklaration",
+        name: "bootsatz.schichten",
+        kennungen: &["O008", "O009"],
+        aussage: "The boot theorem's first two layers: a `raw fn` demands a `linear ghost` \
+                  token (`O008`, layer S1 -- it cannot be copied and cannot be restored, so \
+                  whoever consumes it ends the boot phase), and no function pointer is made to \
+                  a `raw fn` (`O009`, layer S2 -- a pointer into boot code survives the token, \
+                  and the jump stands where the call no longer types).",
+        vorbehalt: "**Layer S3 is NOT built, and this sentence claims nothing about it.** \
+                    `boot_end` consuming the token AND unmapping `code<boot>` as ONE event, \
+                    with the probe at a `.boot` address as its falsifier, has no construct -- \
+                    `beispiele/07` writes it as an ordinary `fn` with `writes code_abbildung`, \
+                    which is an effect name and not a mechanism. `O009` also sees only `&f` on \
+                    a name it can resolve to a `raw fn` in the same program; a pointer that \
+                    arrives through a foreign module is not covered.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probes on `O008` and `O009`.",
+        fundstelle: "crates/gabbro-check/src/phasen.rs; SPRACHE.md §12",
+    },
+    Satz {
+        name: "phasen.ordnung",
         kennungen: &["O001", "O002"],
         aussage: "Every `advances a -> b` names stages the declared order really has, and it \
                   goes FORWARD: the index of the target stage is strictly greater than that \

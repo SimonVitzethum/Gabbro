@@ -50,7 +50,15 @@ FRIST = 60
 # Aussage ueber Zustaende; was sich geaendert hat, ist, dass sie in der Annahmenmenge steht
 # statt im Kopf des Lesers. *Dieselbe Art Adresse wie `accumulates.monoid`/`merge`, die
 # schon auf die Axiomschicht zeigt.*
-MARKE = 8
+#
+# 2026-08-28: 8 -> 7. `table.ops.erhaltung`/*„jede ERZEUGTE Operation erhaelt die Invariante"*
+# trug die Adresse *„braeuchte: einen ERZEUGER fuer die drei Woerter"* und hat ihn jetzt:
+# `emit.rs::ops` (Zuschnitt (c)). **Und der Erzeuger ist an den Beweis geschnitten, nicht
+# umgekehrt** -- er liefert genau `insert` und `remove`, die Teil II beweist, und sagt
+# `relabel` mit `umhaengen_faellt` ab. *Der emittierte Satz und der bewiesene Satz sind
+# dieselbe Menge.* Was das NICHT ist: der Schritt vom Isabelle-Modell zum erzeugten C --
+# dieselbe Luecke, die `Table_Absenkung.thy` in eigenen Worten nennt.
+MARKE = 7
 
 
 def lauf(*args):
