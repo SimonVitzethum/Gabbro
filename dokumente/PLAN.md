@@ -856,7 +856,7 @@ An autonomous run without a named finish line is the same pattern with more thro
 | **A5** | A **driver** is completely written out | `FRAGMENTE.md` | **satisfied, with a finding** |
 | **A6** | A **userspace program** is completely written out | `FRAGMENTE.md` | **does NOT fit** — `forever` had no exit; since today `leaves`/`leave` |
 | **A7** | The **test scaffolding** is written out | `FRAGMENTE.md` | **satisfied, with a finding** |
-| **A8** | **Every construct has its C lowering written down**, not claimed | per rule | 18 claims open |
+| **A8** | **Every construct has its C lowering written down**, not claimed | per rule | ~~18 claims open~~ — **BERICHTIGT 2026-08-28: the eighteen are a MIXTURE, not a workload.** They are the rows of `SPRACHE.md`:2621–2638, hand-counted once on 2026-08-14 and never recounted; no instrument counts them. Measured today: **no. 4 is discharged** (`emit.rs::ops` emits `relabel`), **no. 18 is REFUTED** — it claims `#if`, and what was built is a filter *before* the generator (`gatter.rs::ohne_gatter`), which `pruefe-emission.sh` argues for by name. *A refuted claim costs more than an open one, and this cell counted both as one unit.* **16 unchecked.** `messung/ABSENKUNG.md` §1.2, §1.6 |
 
 #### The areas for A3
 
@@ -4303,3 +4303,32 @@ nicht gebaut.** Lieber elf geprüfte Klassen in einer Einheit als elf behauptete
 Bibliotheksgrenze hinweg. *Der Gewinn einer ABI ist, dass eine Bibliothek die
 Vertrauensfläche VERKLEINERT — schafft sie das nicht, ist ein `extern fn` mit Vertrag die
 ehrlichere Form, und die gibt es längst.*
+
+---
+
+# Die Absenkung — was am 2026-08-28 daran gemessen wurde
+
+*Angefügt am Ende, additiv. Der ganze Befund steht in
+[`messung/ABSENKUNG.md`](../messung/ABSENKUNG.md); hier stehen die vier Zeilen, die den Plan
+selbst betreffen.*
+
+`PLAN-AUTONOM.md` §7 hält diesen Posten ausdrücklich aus dem autonomen Plan heraus und nennt
+zwei Wege hindurch. **Gemessen wurde der Bestand, nicht die Entscheidung** — die gehört dem
+Menschen, und ein Agent, der eine Zielsemantik hinschreibt, hat sie getroffen, ohne sie zu
+stellen.
+
+| | |
+|---|---|
+| **`H = 5` ist vollständig die Absenkung** | `./instrumente/zaehle-pflichten.py --haengend`: verankert **0**, Absenkung **5**. Das erste Tor von `K100` steht damit auf einem einzigen Posten |
+| **Die Bewegung aus `Table_Absenkung.thy`:36 ist NICHT die häufigste** | über alle vierzehn Theorien ausgezählt: **4** Delegationen an C, **21** an den Erzeuger, 7 an die Maschine, 9 an den Prüfer, 5 an eine Nachbarschablone. **Die Gabel aus §7 entscheidet vier davon; die Brücke steht auf jedem Weg und ist der fünffach größere Posten** |
+| **`K100.4`s Aufzählung ist an einer Stelle blind** | `gabbro zeugnis` nennt `table.ops.erhaltung` nicht, obwohl drei erzeugte Operationen darauf ruhen — zwei Dateien mit einem Zeilenunterschied ergeben 26 gegen 73 C-Zeilen und **byteidentische Zeugnisse**. `UNZUGEORDNET` greift auf Item-Ebene und sieht das Wachstum innerhalb eines eingeordneten Items nicht |
+| **Der Absenkungssatz steht — und er ist FALSCH** | `beweise/Absenkung_Parametrisch.thy` formuliert ihn parametrisch über der Zielsemantik (sechs benannte Eigenschaften, keine nennt C oder eine Maschine) und beweist: `relabel` berechnet `umhaengen` **nur am belegten Platz**. Am freien gehen die beiden auseinander. *Der Satz „das Erzeugte berechnet die Modellfunktion" ist nicht bloß unbewiesen — er ist falsch, und jetzt steht daneben, woran* |
+
+> **Und §7s Name für den zweiten Weg wird dabei berichtigt.** *„C streichen"* streicht C nicht;
+> es **ersetzt C durch eine Maschinensemantik je Architektur**, ohne fremde Vorlage. *„Man erbt
+> nichts"* stimmt für die Herkunft und nicht für den Aufwand. **Und es gibt eine dritte Form:**
+> Zeugenpaare je Absenkung, wegwerfbar — die achtzehn Behauptungen werden prüfbar, ohne dass
+> eine Semantik hingeschrieben wird. `pruefe-emission.sh::lauf` nimmt heute schon genau ein
+> solches Paar entgegen (`$4 Erwartet`, `$5 Gift-sed`), 24 davon stehen im Baum. *Die dritte
+> Form ist keine neue Maschine, sie ist die Verallgemeinerung einer vorhandenen — von je
+> Übersetzungseinheit auf je Absenkungsbehauptung.*

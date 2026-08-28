@@ -368,7 +368,8 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 103 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 104 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *~~103~~ nachgezogen 2026-08-28 — `messung/ABSENKUNG.md` kam dazu.*
       *Die Reichweite sprang am 2026-08-25 von 64 auf 85, weil der Wächter seither die
       BERICHTE unter `messung/` liest* — und der Sprung fand sofort drei lebende Vorkommen,
       alle drei zu `fnptr` (`WB2`).
@@ -4143,3 +4144,51 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
 It has **grown chronologically** — every day appended at the bottom, and nobody went back.
 Exactly the prehistory out of which the folder drew its 24 files together to 9 on 2026-08-14.
 **The next question is therefore not a tidying question but a question of role:**
+
+---
+
+## Aus der Absenkungsmessung (2026-08-28) — [`messung/ABSENKUNG.md`](messung/ABSENKUNG.md)
+
+*Angefügt am Ende, additiv. Alle fünf sind gemessen, keiner ist geschätzt.*
+
+- [ ] **`gabbro zeugnis` ist blind für `ops`** — und das ist genau der Fall, gegen den `K100.4`s
+      Kreuzprobe gebaut wurde. Zwei Dateien mit einem Zeilenunterschied (`ops insert, remove,
+      relabel;`): das erzeugte C wächst von 26 auf 73 Zeilen und bekommt drei Funktionen,
+      **das Zeugnis ist byteidentisch** und meldet weiter `1 templates (0 of them UNPROVED)`.
+      `grep -c 'table.ops.erhaltung' crates/gabbro-check/src/zeugnis.rs` → `0`.
+      **`UNZUGEORDNET` fällt nicht**, weil `ops` eine Klausel INNERHALB eines schon
+      eingeordneten `table`-Items ist und der Auffangzweig auf Item-Ebene sitzt.
+      *Der Erzeuger ist innerhalb eines eingeordneten Items gewachsen, und der Wächter, der
+      genau diesen Fall fangen sollte, sieht ihn nicht.* Dieselbe Klasse wie `W16`.
+
+- [ ] **`ops` ist an NULL Stellen durchgestochen.** `grep -c relabel instrumente/pruefe-emission.sh`
+      → `0`; `ops` steht an genau einer Korpusstelle (`beispiele/47-ops-wortmenge.gab`), und die
+      ist unter den 24 Durchstichen nicht dabei. Die drei jüngsten erzeugten Formen werden
+      erzeugt und übersetzt, aber **nie ausgeführt und nie mit einer Handschrift verglichen**.
+      *Der billigste offene Posten der ganzen Absenkungsmessung.* Und er beantwortet nebenbei
+      `K4` aus `messung/ABSENKUNG.md`: findet ein Durchstich die Abweichung am freien Platz von
+      selbst, oder nur, weil ein Satz sagt, wo man hinsehen muss?
+
+- [ ] **`A8` („18 claims open") ist eine Mischung und hat keinen Wächter.** Die achtzehn sind
+      die Zeilen von `dokumente/SPRACHE.md`:2621–2638; die Zahl ist eine Handzählung vom
+      2026-08-14 und seither nie nachgerechnet. Gemessen: **Nr. 4 ist eingelöst** (`emit.rs::ops`
+      erzeugt `relabel`), **Nr. 18 ist WIDERLEGT** — behauptet wird `#if`, gebaut ist ein Filter
+      vor dem Erzeuger (`gatter.rs::ohne_gatter`), und `pruefe-emission.sh` sagt selbst, warum
+      ein `#if` falsch wäre. *Eine widerlegte Behauptung ist teurer als eine offene, und `A8`
+      zählt beide als dieselbe Einheit.* Die übrigen sechzehn sind nicht nachgerechnet.
+      **`pruefe-zahlen.py` kann die Zelle nicht einmal als unbewacht melden** — sein
+      Reichweitenzähler verlangt eine fett gesetzte Zahl, und `18 claims open` ist nicht fett.
+
+- [ ] **Der parametrische Absenkungssatz für `insert` und `remove`.**
+      `beweise/Absenkung_Parametrisch.thy` hat ihn für `relabel` — sechs benannte Eigenschaften
+      der Zielsemantik, keine davon nennt C oder eine Maschine. `insert` schreibt **zwei**
+      Anweisungen und verlangt damit eine **siebte**: die Hintereinanderausführung. *Ob die sich
+      parametrisch hinschreiben lässt, ohne eine Auswertungsreihenfolge festzulegen, ist die
+      Frage, an der die zweite Naht ein zweites Mal zieht* (`messung/ABSENKUNG.md` §2.3, `K2`).
+
+- [ ] **Die S-Nummern in den Theorieköpfen sind sämtlich veraltet.** `gabbro schablonen` vergibt
+      `S{n+1}` **positionsabhängig** über `SCHABLONEN.iter().enumerate()`; die Kopfkommentare der
+      Theorien zitieren Stände von vor mehreren Umsortierungen — `table.ops.erhaltung` steht als
+      `S5` und ist `S6`, `table.absenkung` als `S15` und ist `S16`, `consuming.ordnung` als `S1`
+      und ist `S3`. **Kein einziger Kopf trifft die heutige Position, und kein Wächter prüft es.**
+      Der Name ist stabil, die Nummer ist es nicht — *wer nach S-Nummern quer liest, liest falsch.*
