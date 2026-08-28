@@ -519,7 +519,11 @@ EINTRAEGE = [
     ),
     (
         "TODO.md",
-        r"\*\*([0-9  ]+) Zeilen\*\* in dreizehn Theorien",
+        # **The theory count stood here as a WORD, and was therefore itself a stale
+        # number** (found 2026-08-28, when the fourteenth theory arrived): the locator no
+        # longer matched its sentence, and the entry went SILENT instead of red.
+        # *A register whose locator goes stale absolves.* Hence `\w+`.
+        r"\*\*([0-9  ]+) Zeilen\*\* in \w+ Theorien",
         ["./instrumente/zaehle-theorien.py"],
         r"== \d+ Theorien, (\d+) Zeilen",
         "Zeilen der eigenen Isabelle-Theorien",

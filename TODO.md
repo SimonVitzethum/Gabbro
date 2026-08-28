@@ -368,7 +368,10 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 104 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 105 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *~~103~~ zweimal nachgezogen am 2026-08-28 — `messung/ABSENKUNG.md` und
+      `dokumente/PLAN-VERIFIKATION.md` kamen dazu, aus zwei Bahnen, und der
+      Zusammenführung fiel genau diese Zeile als Konflikt auf.*
       *Die Reichweite sprang am 2026-08-25 von 64 auf 85, weil der Wächter seither die
       BERICHTE unter `messung/` liest* — und der Sprung fand sofort drei lebende Vorkommen,
       alle drei zu `fnptr` (`WB2`).
@@ -586,18 +589,23 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 - [ ] **~~Die Zeilenanteile der eigenen Theorien sind gezaehlt, aber nicht KLASSIFIZIERT~~ —
       GEBAUT 2026-08-20** (`./instrumente/zaehle-theorien.py`). Die alte Buchung sagte *„zehn Theorien,
       1 639 Zeilen, 48 Sätze, 86 Beweisschritte"* und ließ die Frage offen, was davon Prosa
-      ist. Heute: **2570 Zeilen** in dreizehn Theorien, **76 Sätze** darin — und klassifiziert:
+      ist. Heute: **3170 Zeilen** in vierzehn Theorien, **89 Sätze** darin — und klassifiziert:
 
       | | | |
       |---|---:|---|
-      | Gerüst | 422 | 16,4 % — `theory`/`imports`/`begin`/`end` und Leerzeilen |
-      | Prosa | 1 192 | **46,4 %** — Kommentare, `text`-Blöcke, Überschriften |
-      | Modell | 169 | 6,6 % — Definitionen, Datentypen |
-      | Beweis | 787 | 30,6 % — Sätze samt ihren Beweisen |
+      | Gerüst | 521 | 16,4 % — `theory`/`imports`/`begin`/`end` und Leerzeilen |
+      | Prosa | 1 457 | **46,0 %** — Kommentare, `text`-Blöcke, Überschriften |
+      | Modell | 217 | 6,8 % — Definitionen, Datentypen |
+      | Beweis | 975 | 30,8 % — Sätze samt ihren Beweisen |
+
+      *~~2570 Zeilen, dreizehn Theorien, 76 Sätze, 956 Modell+Beweis~~ — nachgezogen
+      2026-08-28 durch `beweise/Absenkung_Parametrisch.thy`. **Die Anteile
+      haben sich dabei um weniger als einen halben Punkt bewegt**, und das ist der
+      eigentliche Befund: eine vierzehnte Theorie ändert die Verwechslung nicht.*
 
       **Fast die Hälfte ist Fließtext, und damit ist die Verwechslung beziffert:**
-      **956 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
-      **37,2 % statt 100 %.** *Wer 2 570 gegen eine Verus-Zahl hält, überschätzt die eigene
+      **1192 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
+      **37,6 % statt 100 %.** *Wer 3 170 gegen eine Verus-Zahl hält, überschätzt die eigene
       Seite um den Faktor 2,7.* Dieselbe Verwechslung, an der `1,90` am 2026-08-19
       zurückgezogen wurde, eine Ebene tiefer.
       *Und was das NICHT heißt:* die Einteilung liest Zeilenanfänge; ein `text`-Block über ein
@@ -3446,7 +3454,7 @@ und genau das ist Stufe 8 (PL.1), die noch nicht angefangen hat.
 
 **Und die vierte, die kein Argument gegen Lean ist, sondern eine Auflage:** eine zweite
 Beweisschicht neben Isabelle ist **W7** — zwei Register über derselben Sache. Heute stehen
-13 Theorien, 2 570 Zeilen, 76 Sätze, 10 von 21 Schablonen maschinell geprüft. *Wer Lean
+14 Theorien, 3 170 Zeilen, 89 Sätze, 10 von 21 Schablonen maschinell geprüft. *Wer Lean
 danebenstellt, muss sagen, welche Aussage wo lebt, sonst wandert dieselbe Aussage in beide und
 niemand weiß, welche gilt.*
 
@@ -4138,3 +4146,64 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
 It has **grown chronologically** — every day appended at the bottom, and nobody went back.
 Exactly the prehistory out of which the folder drew its 24 files together to 9 on 2026-08-14.
 **The next question is therefore not a tidying question but a question of role:**
+
+---
+
+## Aus der Absenkungsmessung (2026-08-28) — [`messung/ABSENKUNG.md`](messung/ABSENKUNG.md)
+
+*Angefügt am Ende, additiv. Alle fünf sind gemessen, keiner ist geschätzt.*
+
+- [ ] **`gabbro zeugnis` ist blind für `ops`** — und das ist genau der Fall, gegen den `K100.4`s
+      Kreuzprobe gebaut wurde. Zwei Dateien mit einem Zeilenunterschied (`ops insert, remove,
+      relabel;`): das erzeugte C wächst von 26 auf 73 Zeilen und bekommt drei Funktionen,
+      **das Zeugnis ist byteidentisch** und meldet weiter `1 templates (0 of them UNPROVED)`.
+      `grep -c 'table.ops.erhaltung' crates/gabbro-check/src/zeugnis.rs` → `0`.
+      **`UNZUGEORDNET` fällt nicht**, weil `ops` eine Klausel INNERHALB eines schon
+      eingeordneten `table`-Items ist und der Auffangzweig auf Item-Ebene sitzt.
+      *Der Erzeuger ist innerhalb eines eingeordneten Items gewachsen, und der Wächter, der
+      genau diesen Fall fangen sollte, sieht ihn nicht.* Dieselbe Klasse wie `W16`.
+
+- [ ] **`ops` ist an NULL Stellen durchgestochen.** `grep -c relabel instrumente/pruefe-emission.sh`
+      → `0`; `ops` steht an genau einer Korpusstelle (`beispiele/47-ops-wortmenge.gab`), und die
+      ist unter den 24 Durchstichen nicht dabei. Die drei jüngsten erzeugten Formen werden
+      erzeugt und übersetzt, aber **nie ausgeführt und nie mit einer Handschrift verglichen**.
+      *Der billigste offene Posten der ganzen Absenkungsmessung.* Und er beantwortet nebenbei
+      `K4` aus `messung/ABSENKUNG.md`: findet ein Durchstich die Abweichung am freien Platz von
+      selbst, oder nur, weil ein Satz sagt, wo man hinsehen muss?
+
+- [ ] **`A8` („18 claims open") ist nachgerechnet: 12 eingelöst, 2 offen, 4 WIDERLEGT** —
+      und die vier Widerlegungen brauchen eine Heilung in `dokumente/SPRACHE.md`:2621–2638.
+      **Nr. 5** behauptet für `linear Uninstalled(Object)` „disappears"; `emit.rs`:1355–1366
+      erzeugt für `linear type T;` **ein Byte**, und `SPRACHE.md`:750 sagt vier Seiten früher
+      selbst *„echte Ressource: Bytes im Erzeugnis"* — **der Tabellenzeile fehlt das Wort
+      `ghost`.** **Nr. 8** behauptet „generated `printf`"; `grep -c printf
+      crates/gabbro-check/src/emit.rs` → **0**, und `measures` erreicht keine erzeugte Zeile.
+      **Nr. 12** behauptet „none" für `breaking`; `emit.rs`:5614 **weigert sich** — 53 Dateien
+      in `beispiele/` gegen `MARKE_EMIT=52`, und die eine ist `beispiele/53-zwei-orte.gab`.
+      **Nr. 18** behauptet `#if`; gebaut ist ein Filter vor dem Erzeuger (`gatter.rs`:111).
+      Offen bleiben **Nr. 3** (`chain` + Generationsstempel — null Zeilen Code im ganzen Baum)
+      und **Nr. 6** (`Duty` wird nirgends erzeugt, `namen.rs`:1445 sagt es selbst).
+      *Eine widerlegte Behauptung ist teurer als eine offene, und `A8` zählte zwölf Erledigte,
+      zwei Offene und vier Irrtümer als achtzehn gleiche Einheiten.*
+      **Und drei der vier Widerlegungen sind Widerlegungen durch den ERZEUGER, nicht durch C.**
+
+- [ ] **Die achtzehn brauchen einen Wächter, und heute kann keiner sie sehen.**
+      `pruefe-zahlen.py`s Reichweitenzähler verlangt eine **fett** gesetzte Zahl in einer
+      Tabellenzelle; `A8` schreibt `18 claims open` ohne Fettung, also meldet er sie nicht
+      einmal als unbewacht (`sed -n '859p' dokumente/PLAN.md | grep -c '|\s*\*\*[0-9]'` → 0).
+      *Vier Widerlegungen in einer einzigen Auszählung sind der Beleg dafür, dass eine Tabelle
+      ohne Wächter kein Register ist.*
+
+- [ ] **Der parametrische Absenkungssatz für `insert` und `remove`.**
+      `beweise/Absenkung_Parametrisch.thy` hat ihn für `relabel` — sechs benannte Eigenschaften
+      der Zielsemantik, keine davon nennt C oder eine Maschine. `insert` schreibt **zwei**
+      Anweisungen und verlangt damit eine **siebte**: die Hintereinanderausführung. *Ob die sich
+      parametrisch hinschreiben lässt, ohne eine Auswertungsreihenfolge festzulegen, ist die
+      Frage, an der die zweite Naht ein zweites Mal zieht* (`messung/ABSENKUNG.md` §2.3, `K2`).
+
+- [ ] **Die S-Nummern in den Theorieköpfen sind sämtlich veraltet.** `gabbro schablonen` vergibt
+      `S{n+1}` **positionsabhängig** über `SCHABLONEN.iter().enumerate()`; die Kopfkommentare der
+      Theorien zitieren Stände von vor mehreren Umsortierungen — `table.ops.erhaltung` steht als
+      `S5` und ist `S6`, `table.absenkung` als `S15` und ist `S16`, `consuming.ordnung` als `S1`
+      und ist `S3`. **Kein einziger Kopf trifft die heutige Position, und kein Wächter prüft es.**
+      Der Name ist stabil, die Nummer ist es nicht — *wer nach S-Nummern quer liest, liest falsch.*
