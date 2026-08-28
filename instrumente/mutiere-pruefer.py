@@ -3278,6 +3278,32 @@ MUTATIONEN = [
         "lag, ist aus dem Zeugnis verschwunden und kein Leser findet sie wieder",
         flaeche="annotation",
     ),
+    # --- lean.rs, the result (2026-08-28, `B3` / «B6») ---
+    #
+    # **`result` is a name, and the goal that uses it must demand that a value AROSE.**
+    # A body that runs off the end has none; a goal without the `finalValue` conjunct would
+    # prove the promise of a routine that never makes one (`messung/VIER-LUECKEN.md`).
+    Mutation(
+        "lean-ergebnis-ohne-wert",
+        "lean.rs",
+        '                "        \\\\<and> finalValue (exec \\\\<rho> body_{} s) = some v\\n",',
+        '                "        \\\\<and> True \\<and> finalValue (exec \\\\<rho> body_{} s) = some v\\n",',
+        "Der Rumpfkanal -- das Glied, das einen ERZEUGTEN Wert verlangt, wird verwaessert. "
+        "Ein Rumpf, der hinten hinauslaeuft, hat kein Ergebnis, und die Zusage ueber "
+        "`result` ginge trotzdem durch",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-ergebnis-auch-im-rumpf",
+        "lean.rs",
+        "            if !c.allow_result {\n"
+        "                return Err(LeanReason::Result);",
+        "            if false {\n"
+        "                return Err(LeanReason::Result);",
+        "Der Rumpfkanal -- `result` wird auch im RUMPF uebersetzt, wo es keinen Wert nennt. "
+        "Das Datum sagt danach, der Rumpf lese einen lokalen Namen, den niemand bindet",
+        flaeche="annotation",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

@@ -300,6 +300,11 @@ pub struct LeanGoal {
     pub hypotheses: Vec<(String, String, String)>,
     /// The postcondition, as a `Gabbro.Body.Expr` that must evaluate to `true`.
     pub conclusion: String,
+    /// **Whether the postcondition names `result`** -- and with it, whether the goal also
+    /// demands that the body PRODUCED a value. A body that runs off the end has no result,
+    /// and a goal that let such a body pass would prove the promise of a routine that never
+    /// makes one.
+    pub names_result: bool,
     /// **The `obtain` lines the proof opens with.** A hypothesis `\exists n, l.locals "p" =
     /// .z n` tells `simp` nothing until the witness is named; without these the goal stalls
     /// on an unreduced `match` over `l.locals "p"`. *Measured on the first run of this
@@ -407,6 +412,16 @@ struct Ctx<'a> {
     allow_calls: bool,
     /// Callee name to its parameter names, so a call can bind them.
     callees: &'a HashMap<String, Vec<String>>,
+    /// **Whether `result` may be translated, and it is true only over the POSTCONDITION.**
+    ///
+    /// A `result` in a body would be a name nothing binds. The flag is raised after the body
+    /// is translated and before the conclusion is, so the two cannot be confused -- and
+    /// `block_term` has already run by then, which is the guarantee rather than a comment.
+    allow_result: bool,
+    /// Set while translating the conclusion, where `result` really occurred. **The goal
+    /// shape depends on it**: only a postcondition that names the returned value has to
+    /// demand that the body produced one.
+    uses_result: bool,
     /// **What a call path names when it is NOT a routine call.** Empty means "a routine
     /// call, or nothing this unit declares" -- see `foreign_calls`.
     foreign: &'a HashMap<String, LeanReason>,
@@ -624,7 +639,23 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
         ExprArt::Gleitkomma { .. } => Err(LeanReason::Float),
         ExprArt::Eingebaut(_) => Err(LeanReason::Builtin),
         ExprArt::Alt(_) => Err(LeanReason::OldState),
-        ExprArt::Ergebnis => Err(LeanReason::Result),
+        // **`result` is a NAME bound to the returned value, and that is the whole gate.**
+        //
+        // The model has carried `finalValue` since its first day -- its own doc line says
+        // *"For an `ensures` that names `result`"* -- and what was missing was not a form
+        // but the binding: a postcondition is evaluated over a `State`, and a result is not
+        // part of one. So the goal binds it as a local before evaluating, exactly as a
+        // parameter is read from `local'`. *No arm of the model changed for this.*
+        //
+        // `result` is a RESERVED word, so no `let` and no parameter can carry the name --
+        // the binding cannot shadow anything a body wrote.
+        ExprArt::Ergebnis => {
+            if !c.allow_result {
+                return Err(LeanReason::Result);
+            }
+            c.uses_result = true;
+            Ok("(.name \"result\")".into())
+        }
         ExprArt::FnWert(_) | ExprArt::Grund { .. } => Err(LeanReason::OtherValue),
     }
 }
@@ -1270,6 +1301,8 @@ fn judge(
         // saying one thing, so neither carried. The real table travels here now; the flag is
         // the only thing that refuses.
         allow_calls: false,
+        allow_result: false,
+        uses_result: false,
         callees,
         foreign,
         locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
@@ -1283,6 +1316,9 @@ fn judge(
         Ok(t) => t,
         Err(r) => return LeanVerdict::Refused(r),
     };
+    // **The flag goes up here and nowhere earlier.** The body is translated above; a
+    // `result` inside one is still refused, because there it names nothing.
+    c.allow_result = true;
     let conclusion = match pred_term(post, &mut c) {
         Ok(t) => t,
         Err(r) => return LeanVerdict::Refused(r),
@@ -1341,6 +1377,7 @@ fn judge(
         body,
         hypotheses,
         conclusion,
+        names_result: c.uses_result,
         opening,
         equations,
         splits,
@@ -1593,14 +1630,37 @@ pub fn module(baum: &Programm, datei: &str) -> String {
             s.push_str(&format!("    -- {origin}\n"));
             s.push_str(&format!("    ({label} : {term})\n"));
         }
-        s.push_str(&format!(
-            "    : \\<exists> s', finalState (exec \\<rho> body_{} s) = some s'\n",
-            g.name
-        ));
-        s.push_str(&format!(
-            "        \\<and> eval s' post_{} = some (.bool true) := by\n",
-            g.name
-        ));
+        if g.names_result {
+            // **The goal over a postcondition that names `result` demands THREE things**, and
+            // the middle one is the new half: the body ends, it PRODUCED a value, and the
+            // promise holds with that value bound. *A body that runs off the end has no
+            // result, and `finalValue` is `none` there* -- so this form is strictly stronger
+            // than the two-part one, which is the direction a goal may move.
+            s.push_str(&format!(
+                "    : \\<exists> s' v, finalState (exec \\<rho> body_{} s) = some s'\n",
+                g.name
+            ));
+            s.push_str(&format!(
+                "        \\<and> finalValue (exec \\<rho> body_{} s) = some v\n",
+                g.name
+            ));
+            // `result` is bound as a LOCAL, exactly as a parameter is read -- see
+            // `expr_term`. The model needed no arm for it.
+            s.push_str(&format!(
+                "        \\<and> eval {{ s' with local' := bindLocal s'.local' \"result\" v }} \
+                 post_{} = some (.bool true) := by\n",
+                g.name
+            ));
+        } else {
+            s.push_str(&format!(
+                "    : \\<exists> s', finalState (exec \\<rho> body_{} s) = some s'\n",
+                g.name
+            ));
+            s.push_str(&format!(
+                "        \\<and> eval s' post_{} = some (.bool true) := by\n",
+                g.name
+            ));
+        }
         for z in &g.opening {
             s.push_str(z);
             s.push('\n');
@@ -1617,6 +1677,12 @@ pub fn module(baum: &Programm, datei: &str) -> String {
             "store".into(),
             "bindLocal".into(),
         ];
+        // **`finalValue` joins the set only where the goal is about one.** Lean's linter
+        // reports an unused simp argument, and a tactic that carries lemmas it never needs
+        // teaches a reader the wrong thing about what the proof rests on.
+        if g.names_result {
+            set.push("finalValue".into());
+        }
         set.extend(g.equations.iter().cloned());
         // **Every `rcases` splits the goal, so the whole chain is joined with `<;>`.** A
         // line standing on its own would serve only the first half -- and the other half,
@@ -1750,6 +1816,13 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
             // never inlined, and what it does is looked up in an environment the reader's
             // theorem quantifies over.
             allow_calls: true,
+            // **The export does NOT say `result`, and that is the conservative direction.**
+            // Its `post` list is what a CALLER may assume, and a caller reads the callee's
+            // result at its own call site -- not out of a name this datum binds. A promise
+            // fewer makes a caller's goal harder, never wrong, and it is listed by name in
+            // `post_dropped`. *The same direction as a dropped precondition, mirrored.*
+            allow_result: false,
+            uses_result: false,
             callees: &callees,
             foreign: &foreign,
             locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),

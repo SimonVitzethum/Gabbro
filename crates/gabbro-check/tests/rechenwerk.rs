@@ -5049,3 +5049,112 @@ impl fn dienst(b : ptr<normal, rw> B, i : index into B)
         "a `leave` is a real exit and still has no form here:\n{z}"
     );
 }
+
+// ===========================================================================================
+// `result` IS A NAME (2026-08-28, `B3` / «B6»)
+//
+// `result` stood in `primary` and in eight corpus sites; what was missing was never the
+// spelling but the BINDING -- a postcondition is evaluated over a `State`, and a result is
+// not part of one. The goal binds it, and no arm of the model changed for it: `finalValue`
+// has carried it since day one (`messung/VIER-LUECKEN.md`).
+// ===========================================================================================
+
+const LEAN_ERGEBNIS: &str = "module t {
+type Klein = u32 in 0 .. 100;
+format Kopf { eintritt : u64, laenge : u32, }
+impl fn lies(k : ptr<normal, r> Kopf) -> u64
+    ensures  result == k.eintritt
+    effects  { reads k }
+    costs    <= 8 ops
+{
+    return k.eintritt;
+}
+}";
+
+/// **The goal over an `ensures result` demands three things, and the middle one is the point.**
+///
+/// A body that runs off the end has no result -- `finalValue` is `none` there -- so a goal
+/// without that conjunct would prove the promise of a routine that never makes one. *The
+/// form is strictly stronger than the two-part one, which is the direction a goal may move.*
+#[test]
+fn lean_ergebnis_verlangt_dass_ein_wert_entstand() {
+    let t = lean_modul(LEAN_ERGEBNIS);
+    assert!(
+        t.contains("theorem duty_1"),
+        "an `ensures result` becomes a goal:\n{t}"
+    );
+    assert!(
+        t.contains("finalValue (exec ρ body_duty_1 s) = some v"),
+        "and the goal demands that the body PRODUCED a value:\n{t}"
+    );
+    assert!(
+        t.contains("bindLocal s'.local' \"result\" v"),
+        "`result` is bound as a name, exactly as a parameter is read:\n{t}"
+    );
+    assert!(
+        !t.contains("result-in-ensures"),
+        "and it is not refused any more:\n{t}"
+    );
+}
+
+/// **`result` stays refused inside a BODY**, where it names nothing.
+///
+/// The flag goes up after `block_term` has run and before the conclusion is translated, so
+/// the two cannot be confused -- that ordering is the guarantee, not a comment.
+#[test]
+fn lean_ergebnis_bleibt_im_rumpf_abgesagt() {
+    // A postcondition without `result` keeps the two-part goal -- the shape may not change
+    // for bodies that never mention it.
+    let t = lean_modul(
+        "module t {
+const N : u32 = 8;
+type Zahl = u32 in 0 .. 99;
+table B count N { slot { belegt : bool, wert : Zahl, } }
+impl fn setz(p : index into B, w : Zahl)
+    ensures  B.slots[p].wert == w
+    effects  { writes B.slots }
+    costs    <= 4 ops
+{
+    B.slots[p].wert = w;
+}
+}",
+    );
+    assert!(
+        t.contains("theorem duty_1"),
+        "the plain postcondition still becomes a goal:\n{t}"
+    );
+    assert!(
+        !t.contains("finalValue"),
+        "and its goal does not demand a value nobody promised:\n{t}"
+    );
+}
+
+/// **«B14» -- an `option index into T` at a parameter, a `let` and a return.**
+///
+/// The entry said `option` stands only in `slottype`. It stands in `typeexpr`, the checker
+/// takes all three positions, and the body channel carries every one of the bodies.
+#[test]
+fn lean_option_steht_auch_ausserhalb_des_slottyps() {
+    let t = lean_programm(
+        "module t {
+const N : u32 = 8;
+table B count N { slot { elter : option index into B, } }
+impl fn setze(b : ptr<normal, rw> B, i : index into B, p : option index into B)
+    effects { writes b.slots }
+    costs   <= 4 ops
+{
+    b.slots[i].elter = p;
+}
+impl fn lies(b : ptr<normal, rw> B, i : index into B) -> option index into B
+    effects { reads b.slots }
+    costs   <= 4 ops
+{
+    let e : option index into B = b.slots[i].elter;
+    return e;
+}
+}",
+    );
+    let (_, bodies, refused, _) = lean_programm_kopf(&t);
+    assert_eq!(bodies, 2, "both bodies are carried:\n{t}");
+    assert_eq!(refused, 0, "and neither is refused:\n{t}");
+}
