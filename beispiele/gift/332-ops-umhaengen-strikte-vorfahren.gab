@@ -1,0 +1,57 @@
+-- erwartet: D012
+--
+-- **Die SCHWAECHERE Fassung der Kettenbedingung, und sie laesst die Schlinge durch.**
+--
+-- Hier steht eine Bedingung, und sie sieht der richtigen zum Verwechseln aehnlich:
+--
+--     forall a in ancestors of o.slots[p] : a != s
+--
+-- **`ancestors of` ist STRIKT.** Der Erzeuger schreibt es woertlich ins C: *„A node is not
+-- its own ancestor, so the chain starts at the PARENT."* Damit sagt diese Zeile nichts ueber
+-- den Fall `p == s` -- und `Ordner::relabel(o, s, s)` haengt einen Platz unter sich selbst.
+-- Eine Schlinge erreicht keine Wurzel, genauso wenig wie der Zweislotzyklus aus
+-- `umhaengen_faellt`.
+--
+-- `umhaengen_erhaelt` verlangt `¬ ueber σ p s`, und `ueber` ist REFLEXIV-transitiv: `s`
+-- liegt auf `p`s Kette, **`p` selbst eingeschlossen**. Die Gabbro-Form dafuer ist
+-- `!(o.slots[p] reaches o.slots[s] via elter)` -- eine Klausel statt zweier, und genau
+-- deshalb hat `messung/OPS-RELABEL.md` §4 so entschieden.
+--
+-- *Dieselbe Klasse wie Gift 324:* dort das schwaechere `ist_blatt`, hier die strikte
+-- Vorfahrenmenge. **Eine Voraussetzung, die schwaecher ist als die des Satzes, ist genau
+-- dort fail-open, wo der Satz der ganze Ertrag ist.**
+
+module gift::striktevorfahren {
+
+const N : u32 = 8;
+
+table Ordner count N {
+    const WURZEL : u32 = 0;
+
+    tree { parent elter }
+
+    slot {
+        benutzt : bool,
+        elter   : option index into Ordner,
+    }
+
+    ops insert, remove, relabel;
+
+    occupied benutzt;
+
+    invariant jeder_erreicht_die_wurzel cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s] reaches WURZEL via elter;
+}
+
+impl fn umhaengen(o : ptr<normal, rw> Ordner,
+                  s : index into Ordner,
+                  p : index into Ordner)
+    requires o.slots[p] reaches WURZEL via elter,
+             forall a in ancestors of o.slots[p] : a != s
+    effects  { writes o.slots }
+    costs    <= 6 ops
+{
+    Ordner::relabel(o, s, p);
+}
+
+}

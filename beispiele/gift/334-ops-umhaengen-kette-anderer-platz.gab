@@ -1,0 +1,52 @@
+-- erwartet: D012
+--
+-- **Die Kettenbedingung steht da -- ueber einem ANDEREN Platz.**
+--
+-- `!(o.slots[p] reaches o.slots[q] via elter)` sagt: `q` liegt nicht auf `p`s Elternkette.
+-- Umgehaengt wird aber `s`, und ueber `s` sagt diese Zeile nichts. **Der Ruf haengt `s` unter
+-- `p`, und ob `s` ueber `p` steht, weiss niemand** -- genau der Zyklus, den
+-- `umhaengen_faellt` vorfuehrt.
+--
+-- *Dieselbe Bauart wie Gift 322, eine Voraussetzung weiter:* dort war es der falsche Platz in
+-- der Frischheit, hier der falsche im ZIEL des `reaches`. **Und dieses Ziel ist der ganze
+-- Unterschied zur ersten Voraussetzung:** bei `erreicht sigma p` waehlt der Rufer die Wurzel,
+-- weil der Satz *eine* Wurzel meint; bei `¬ ueber σ p s` ist das Ziel genau `s` und sonst
+-- nichts. Ein Vergleich, der es lose liest, macht aus der Voraussetzung eine andere Aussage.
+--
+-- Die saubere Seite steht in `beispiele/47` an `umhaengen`.
+
+module gift::ketteanderplatz {
+
+const N : u32 = 8;
+
+table Ordner count N {
+    const WURZEL : u32 = 0;
+
+    tree { parent elter }
+
+    slot {
+        benutzt : bool,
+        elter   : option index into Ordner,
+    }
+
+    ops insert, remove, relabel;
+
+    occupied benutzt;
+
+    invariant jeder_erreicht_die_wurzel cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s] reaches WURZEL via elter;
+}
+
+impl fn umhaengen(o : ptr<normal, rw> Ordner,
+                  s : index into Ordner,
+                  p : index into Ordner,
+                  q : index into Ordner)
+    requires o.slots[p] reaches WURZEL via elter,
+             !(o.slots[p] reaches o.slots[q] via elter)
+    effects  { writes o.slots }
+    costs    <= 6 ops
+{
+    Ordner::relabel(o, s, p);
+}
+
+}

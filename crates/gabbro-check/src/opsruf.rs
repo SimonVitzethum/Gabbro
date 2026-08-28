@@ -80,6 +80,27 @@ pub enum Forderung {
         index: usize,
         via: String,
     },
+    /// `\<not> ueber sigma p s` -- **the new parent does not lie under the slot being
+    /// re-hung, that slot itself included.** In Gabbro:
+    /// `!(<t>.slots[<p>] reaches <t>.slots[<s>] via <parent>)`.
+    ///
+    /// > **The TARGET is named here, and that is the difference to [`Forderung::Erreichbar`].**
+    /// > There the root is the caller's choice, because `erreicht` is reachability of *a*
+    /// > root. This one is reachability of ONE named slot, and reading the target loosely
+    /// > would turn the premise into a different statement.
+    ///
+    /// **And it is REFLEXIVE-transitive, as the theory's relation is.** The strict reading --
+    /// Gabbro's `ancestors of`, which starts the chain at the PARENT -- lets
+    /// `relabel(t, s, s)` through, and that self-loop breaks `wohlgeformt` exactly like the
+    /// two-slot cycle. *`messung/OPS-RELABEL.md` §3 weighs the two forms; this one won.*
+    NichtUeber {
+        traeger: usize,
+        /// argument position of `p` -- the NEW parent
+        elter: usize,
+        /// argument position of `s` -- the slot being re-hung
+        platz: usize,
+        via: String,
+    },
 }
 
 /// A premise **rendered against real places** -- either demanded at a call, or standing
@@ -90,6 +111,7 @@ pub enum Steht {
     Frei(String),
     Erreichbar { von: String, via: String },
     Blatt { traeger: String, via: String, s: String },
+    NichtUeber { von: String, nach: String, via: String },
 }
 
 impl Steht {
@@ -101,6 +123,9 @@ impl Steht {
             Steht::Blatt { traeger, via, s } => format!(
                 "forall x in slots of {traeger} : {traeger}.slots[x].{via} != Some({s})"
             ),
+            Steht::NichtUeber { von, nach, via } => {
+                format!("!({von} reaches {nach} via {via})")
+            }
         }
     }
 }
@@ -134,6 +159,16 @@ impl Forderung {
                 traeger: args.get(*traeger)?.clone(),
                 via: via.clone(),
                 s: args.get(*index)?.clone(),
+            }),
+            Forderung::NichtUeber {
+                traeger,
+                elter,
+                platz,
+                via,
+            } => Some(Steht::NichtUeber {
+                von: format!("{}.slots[{}]", args.get(*traeger)?, args.get(*elter)?),
+                nach: format!("{}.slots[{}]", args.get(*traeger)?, args.get(*platz)?),
+                via: via.clone(),
             }),
         }
     }
@@ -184,7 +219,15 @@ impl Kopf {
 /// |---|---|---|
 /// | `einfuegen_erhaelt` | `insert` | slot FRESH; and, where a `parent` edge exists, parent REACHABLE |
 /// | `blatt_loeschen_erhaelt` | `remove` | where a `parent` edge exists, `s` is a LEAF |
-/// | `umhaengen_faellt` | `relabel` | **not a callee** -- the generator refuses the word |
+/// | `umhaengen_erhaelt` | `relabel` | the new parent REACHABLE, and `s` NOT on its chain |
+///
+/// **`relabel` became a callee on 2026-08-28, evening, and the order was the rule**
+/// (`messung/OPS-RELABEL.md`). Until then the third word of a CLOSED vocabulary emitted
+/// nothing and could be called by nobody -- *a clause with no redeemer*, the shape `N037`
+/// and `H007`/`H008` were paid for. What was missing was not the form but the condition:
+/// `umhaengen_faellt` said the re-hanging breaks `wohlgeformt`, never what it breaks on.
+/// **A table without a `parent` edge has no `relabel` callee at all** -- there is nothing
+/// to re-hang, and `emit.rs` refuses it by name.
 ///
 /// **Where the table has no `parent` edge, `remove` owes NOTHING, and that is a
 /// statement.** `blatt sigma s` says *"no slot names `s` as parent"*; with no field that can
@@ -273,10 +316,47 @@ pub fn koepfe(t: &Tabelle) -> Vec<Kopf> {
                     span: w.span,
                 });
             }
-            // `relabel` is refused by the generator (`umhaengen_faellt`), and an invented
-            // word by `P039`. **Neither becomes a callee** -- a call form for an operation
-            // that is never emitted would be the prohibition-without-replacement again, one
-            // level up.
+            // **`relabel` since 2026-08-28, evening, and it took a THEOREM to get here.**
+            //
+            // Until then the generator refused the word by naming `umhaengen_faellt`, and
+            // the refusal was not wrong -- it was incomplete. It said that re-hanging
+            // breaks `wohlgeformt`, and not WHAT it breaks on.
+            // `beweise/Table_Ops_Erhaltung.thy` now says: `umhaengen_erhaelt` (U-3), under
+            // *"the new parent is reachable"* and *"the re-hung slot does not lie on its
+            // chain"*. `G-1`/`G-2` show the old counterexample fails at the second premise
+            // and at no other.
+            //
+            // > **No `parent` edge, no callee.** There is no field to re-hang, `emit.rs`
+            // > refuses such a table by name (`C001`), and a callee whose body is never
+            // > emitted would be the prohibition-without-replacement again, one level up.
+            "relabel" => {
+                let Some(e) = elter else { continue };
+                aus.push(Kopf {
+                    tabelle: t.name.text.clone(),
+                    wort: "relabel",
+                    // ONE store: the parent edge, and nothing else. `remove` resets every
+                    // field because `sigma(s := None)` is a slot without a value; a re-hung
+                    // slot keeps its value and changes where it hangs.
+                    kosten: 1,
+                    parameter: vec![traeger(), idx("s"), idx("p")],
+                    forderungen: vec![
+                        Forderung::Erreichbar {
+                            traeger: 0,
+                            index: 2,
+                            via: e.text.clone(),
+                        },
+                        Forderung::NichtUeber {
+                            traeger: 0,
+                            elter: 2,
+                            platz: 1,
+                            via: e.text.clone(),
+                        },
+                    ],
+                    wirkungen: vec!["writes t.slots".to_string()],
+                    span: w.span,
+                });
+            }
+            // An invented word is the business of `P039`, not of this module.
             _ => {}
         }
     }
@@ -552,13 +632,23 @@ fn aus_pred(p: &Pred, aus: &mut Vec<Steht>) {
             aus_pred(a, aus);
             aus_pred(b, aus);
         }
-        PredArt::Nicht(i) => {
-            if let PredArt::Vergleich(e) = &i.art {
+        // **A negated atom -- and since 2026-08-28 there are two of them.** `!<place>` is
+        // the FRESH premise; `!(<a> reaches <b> via <f>)` is the one `relabel` charges.
+        // The parentheses are stripped first: `!(x)` and `!x` say the same thing, and a
+        // reader that only knew one of them would refuse the form its own head prints.
+        PredArt::Nicht(i) => match &entklammere(i).art {
+            PredArt::Vergleich(e) => {
                 if let Some(o) = ortstext(e) {
                     aus.push(Steht::Frei(o));
                 }
             }
-        }
+            PredArt::Erreicht { von, nach, via } => aus.push(Steht::NichtUeber {
+                von: ort_voll(von),
+                nach: ort_voll(nach),
+                via: via.text.clone(),
+            }),
+            _ => {}
+        },
         PredArt::Vergleich(e) => aus_expr(e, aus),
         PredArt::Erreicht { von, via, .. } => aus.push(Steht::Erreichbar {
             von: ort_voll(von),
@@ -634,6 +724,15 @@ fn blattform(q: &Quantor) -> Option<Steht> {
         via: feld.text.clone(),
         s: ausdruckstext(&some.argumente[0])?,
     })
+}
+
+/// `((p))` and `p` state the same fact. Only parentheses are stripped -- nothing else,
+/// because every other wrapper (`!`, `=>`, `||`) changes what is being said.
+fn entklammere(p: &Pred) -> &Pred {
+    match &p.art {
+        PredArt::Klammer(i) => entklammere(i),
+        _ => p,
+    }
 }
 
 fn ortstext(e: &Expr) -> Option<String> {

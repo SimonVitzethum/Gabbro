@@ -1101,6 +1101,18 @@ opname     = "insert" | "remove" | "relabel" ;
                 remove it. *`init` is deliberately NOT a word: `table … count N` constructs,
                 and `table.absenkung` proves it.*
 
+                **AND THE CONDITION ARRIVED ON 2026-08-28, EVENING** — `umhaengen_erhaelt`
+                (U-3): the new parent is REACHABLE, and the re-hung slot does NOT lie on its
+                parent chain, that parent itself included. Until then `relabel` was the one
+                word of a closed set that emitted nothing and nobody could call — *a clause
+                with no redeemer*, at 127 measured sites. The proof came first (K100's second
+                gate); `umhaengen_faellt` stays and now carries `G-1`/`G-2`, which show it
+                fails at THAT premise and no other. In Gabbro the premise is written
+                `!(t.slots[p] reaches t.slots[s] via <parent>)` — **one clause, no new word,
+                and deliberately not the strict `ancestors of` form**, which says nothing
+                about `p == s` and would let the self-loop through
+                (`messung/OPS-RELABEL.md`).
+
                 **AND SINCE 2026-08-28 AN OPERATION IS CALLED** -- `T::insert(t, n [, p])`,
                 `T::remove(t, s)`, an ordinary `call` whose `path` is the table and the word
                 (`pathseg`, and `messung/OPS-RUFFORM.md` weighs three forms). The morning of

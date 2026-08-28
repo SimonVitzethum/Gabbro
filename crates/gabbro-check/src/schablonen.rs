@@ -252,6 +252,13 @@ pub const SCHABLONEN: &[Schablone] = &[
         // **Und es ist kein Randfall.** Der Bestand tut beides in EINEM Zug: `delete_leaf`
         // ruft `unlink`, und `unlink` schreibt die Geschwisterzeiger der NACHBARN um --
         // B3 hat das als Marke Nb2 gezaehlt (`space.rs:1044`).
+        //
+        // **2026-08-28: ONE such mutation has been shown individually since, and this entry
+        // stays `Entworfen` all the same.** `umhaengen_erhaelt` (Table_Ops_Erhaltung, U-3)
+        // gives the condition for re-hanging along the PARENT edge, outside any traversal.
+        // What this entry is about is the re-hanging of sibling and child pointers DURING a
+        // `by consuming` -- a different edge and a different state. *A theorem about the one
+        // edge is not a theorem about the other.*
         pflicht: "Eine erzeugte Mutation, die Kanten HINZUFUEGT (Umhaengen von \
                   Geschwister-/Kindzeigern), erhaelt die Wohlfundiertheit -- und das ist \
                   NICHT durch `wf_subset` gedeckt, sondern je Mutation einzeln zu zeigen. \
@@ -304,12 +311,21 @@ pub const SCHABLONEN: &[Schablone] = &[
         // geholt statt erfunden: `beispiele/01-tabelle.gab` schreibt `blatt_loeschen` mit
         // `maintains baum_wohlgeformt`, und `aushaengen` daneben.
         //
-        // Zuordnung Satz -> Zeile:
-        //   Amortisation ("einmal je Operation")  -> `folge_erhaelt`, `erreichbares_erhaelt`
-        //   einfuegen erhaelt                     -> `einfuegen_erhaelt` (zwei Bedingungen)
-        //   blatt_loeschen erhaelt                -> `blatt_loeschen_erhaelt`
-        //   Umhaengen faellt                      -> `umhaengen_faellt` (GEGENBEISPIEL)
-        //   Verbindungsinvariante nicht gedeckt   -> `verbindung_nicht_gedeckt`
+        // **Theorem -> line. Redrawn 2026-08-28, evening: Teil II has THREE mutations now,
+        // and the counterexample changed its job** (the five-line German map that stood here
+        // is a subset of this one):
+        //   amortisation ("once per operation")   -> `folge_erhaelt`, `erreichbares_erhaelt`
+        //   insert preserves                      -> `einfuegen_erhaelt` (two premises)
+        //   remove preserves                      -> `blatt_loeschen_erhaelt`
+        //   the parent chain, reflexive           -> `ueber` (inductive: `hier`, `hoeher`)
+        //   a chain clear of `s` survives         -> `umhaengen_ausserhalb` (U-1)
+        //   a chain THROUGH `s` follows on        -> `umhaengen_durch_s` (U-2)
+        //   relabel preserves                     -> `umhaengen_erhaelt` (U-3, two premises)
+        //     the same on an occupied slot        -> `umhaengen_erhaelt_am_belegten_platz`
+        //   relabel falls WITHOUT the condition   -> `umhaengen_faellt` (COUNTEREXAMPLE)
+        //     and it meets the other two premises -> `gegenbeispiel_erfuellt_die_alten` (G-1)
+        //     and violates EXACTLY the new one    -> `gegenbeispiel_verletzt_die_neue` (G-2)
+        //   connecting invariant not covered      -> `verbindung_nicht_gedeckt`
         //
         // **ENTWORFEN -> GETRAGEN am 2026-08-28, and the first of the three reasons has
         // fallen.** They stood as:
@@ -322,10 +338,29 @@ pub const SCHABLONEN: &[Schablone] = &[
         // 3. **An entry leaves this list only proved or together with its construct.**
         //
         // > **And the generator was cut to the proof, not the other way round:** it emits
-        // > exactly `insert` (`einfuegen_erhaelt`) and `remove` (`blatt_loeschen_erhaelt`),
-        // > and it REFUSES `relabel` by naming `umhaengen_faellt`. *The corpus needs that
-        // > operation at 127 sites; the refusal therefore stands once here instead of 127
-        // > times at the call sites.*
+        // > exactly `insert` (`einfuegen_erhaelt`) and `remove` (`blatt_loeschen_erhaelt`).
+        //
+        // **UPDATED 2026-08-28, evening: `relabel` is the THIRD generated operation, and
+        // the state stays `Getragen`.** What stood here was *"and it REFUSES `relabel` by
+        // naming `umhaengen_faellt`"* -- and the refusal was not wrong, it was incomplete.
+        // It said THAT the re-hanging falls, never what it falls ON.
+        //
+        // > What stood there was the third word of a CLOSED vocabulary that emitted nothing
+        // > and nobody could call -- *a clause with no redeemer* (`N037`, `H007`/`H008`), at
+        // > 127 measured corpus sites.
+        //
+        // **The proof came first, as K100's second gate demands** (booked precedent
+        // `verbund.konstruktor`: *"the proof came first"*). `umhaengen_erhaelt` (U-3) names
+        // the condition -- the re-hung slot is off the new parent's chain, that parent
+        // included; `umhaengen_faellt` stays, and `G-1`/`G-2` show it fails at EXACTLY that
+        // premise and no other. *The emitted set and the proved set are the same set again
+        // -- with three elements now.*
+        // `messung/OPS-RELABEL.md` weighs the three forms the condition could have taken in
+        // Gabbro.
+        //
+        // **Why NOT `Bewiesen`:** reason 2 below stands unchanged. Teil II now discharges
+        // the hypothesis for THREE operations by hand instead of two -- by hand and on the
+        // model it remains.
         //
         // **`L` rises from 1 to 2, and that is the second gate working, not a regression.**
         // A construct that closes plumbing costs trust surface, and K100's whole point is
@@ -334,9 +369,10 @@ pub const SCHABLONEN: &[Schablone] = &[
         // ("die Sprachdefinition von C und keine Annahme dieses Beweises").
         stand: Stand::Getragen,
         voraussetzungen: &[
-            Voraussetzung { was: "jede ERZEUGTE Operation erhaelt die Invariante -- Teil I ist parametrisch", durch: Some("`emit.rs::ops` (2026-08-28): the generator emits exactly the two operations Teil II proves -- `insert` = `einfuegen`, `remove` = `blatt_loeschen` -- and REFUSES `relabel` by naming `umhaengen_faellt`. The emitted set and the proved set are the same set"), braeuchte: None },
+            Voraussetzung { was: "jede ERZEUGTE Operation erhaelt die Invariante -- Teil I ist parametrisch", durch: Some("`emit.rs::ops` (2026-08-28): the generator emits exactly the THREE operations Teil II proves -- `insert` = `einfuegen`, `remove` = `blatt_loeschen`, `relabel` = `umhaengen` -- and refuses an invented word. The emitted set and the proved set are the same set. *`relabel` joined on the evening of that day, and the theorem came first (`umhaengen_erhaelt`, U-3); until then the word emitted nothing and nobody could call it*"), braeuchte: None },
             Voraussetzung { was: "beim Einfuegen ist der Platz FRISCH und der Elter erreichbar", durch: Some("`D012` (2026-08-28, `messung/OPS-RUFFORM.md`): both premises stand at the emitted head and are held against every call site -- `!t.slots[n].<occupied>` and `t.slots[p] reaches <root> via <parent>`. What is NOT established is their TRUTH: a standing `requires` pushes the duty one frame outwards, where `gabbro pflichten` counts it"), braeuchte: None },
             Voraussetzung { was: "beim Loeschen ist der Platz ein BLATT", durch: Some("`D012` demands the theorem's own `blatt sigma s` -- `forall x in slots of t : t.slots[x].<parent> != Some(s)` -- and deliberately NOT the weaker `ist_blatt(c, s)` of beispiele/01, which holds of a slot whose child list has drifted from its parent pointers"), braeuchte: None },
+            Voraussetzung { was: "beim Umhaengen ist der NEUE Elter erreichbar und der umgehaengte Platz liegt NICHT auf dessen Elternkette", durch: Some("`D012` (2026-08-28, abends): both premises of `umhaengen_erhaelt` stand at the emitted head and are held against every call site -- `t.slots[p] reaches <root> via <parent>` and `!(t.slots[p] reaches t.slots[s] via <parent>)`. **The second is read in the theorem's REFLEXIVE-transitive shape and in no other**: `ancestors of` is strict, says nothing about `p == s`, and would let the self-loop through (beispiele/gift/332). **And the TARGET of that `reaches` is read strictly**, unlike the root of the first premise: gift/334 writes it about a different slot and falls. A table without a `parent` edge has no `relabel` at all -- `C001`, and gift/333 measures it"), braeuchte: None },
         ],
         fundstelle: "SPRACHE.md §10.2",
     },

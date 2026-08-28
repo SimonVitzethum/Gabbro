@@ -22,7 +22,8 @@
 -- > ~~**Und diese Datei ist noch keine Auslieferung.**~~ **AUSGELIEFERT am 2026-08-28.**
 -- > `gabbro emit` schreibt `Verzeichnis_insert` und `Verzeichnis_remove`, und der Beweis
 -- > schreibt sie: `einfuegen_erhaelt` gibt die zwei Voraussetzungen, `blatt_loeschen_erhaelt`
--- > die eine -- **und `umhaengen_faellt` sorgt dafuer, dass `relabel` NICHT emittiert wird.**
+-- > die eine. ~~*Und `umhaengen_faellt` sorgt dafuer, dass `relabel` NICHT emittiert wird.*~~
+-- > **Bis zum Abend desselben Tages -- siehe unten.**
 -- >
 -- > **Und `remove` setzt den ganzen Slot zurueck, nicht nur die Belegung.** Genau daran
 -- > haengt die Invariante unten: `marke_null_wenn_frei` bricht, wenn `marke` das Entfernen
@@ -40,8 +41,14 @@
 -- > **Und die Voraussetzungen des Beweises sind hier Pflichten**: `D012` haelt sie gegen
 -- > die Aufrufstelle. Was unten an `requires` steht, steht dort nicht zur Zierde.
 --
+-- > **UND SEIT DEM 2026-08-28 ABENDS SIND ES DREI WOERTER.** `relabel` erzeugte bis dahin
+-- > nichts -- ein Wort einer GESCHLOSSENEN Menge, das niemand rufen konnte, bei 127
+-- > gemessenen Korpusstellen. Der Beweis kam zuerst (K100s zweites Tor, Praezedenzfall
+-- > `verbund.konstruktor`): `umhaengen_erhaelt` (U-3) nennt die Bedingung, `umhaengen_faellt`
+-- > bleibt als Beleg stehen, dass sie noetig ist. `messung/OPS-RELABEL.md`.
+--
 -- Die Gegenprobe steht in `beispiele/gift/221-ops-erfundenes-wort.gab`; die Gegenproben zur
--- Rufform in `beispiele/gift/321`-`324`.
+-- Rufform in `beispiele/gift/321`-`324` und `331`-`334`.
 
 module beispiel::opswortmenge {
 
@@ -144,7 +151,11 @@ table Ordner count N {
         elter   : option index into Ordner,
     }
 
-    ops insert, remove;
+    -- **Drei Woerter, und seit dem 2026-08-28 abends sind es wirklich drei.** `relabel`
+    -- stand bis dahin im Wortschatz und erzeugte nichts: der Erzeuger sagte es ab und nannte
+    -- `umhaengen_faellt`. Das war nicht falsch, sondern unvollstaendig -- es sagte, DASS das
+    -- Umhaengen faellt, und nicht, WORAN. `umhaengen_erhaelt` (U-3) sagt es jetzt.
+    ops insert, remove, relabel;
 
     occupied benutzt;
 
@@ -172,6 +183,27 @@ impl fn aushaengen(o : ptr<normal, rw> Ordner, s : index into Ordner)
     costs    <= 6 ops
 {
     Ordner::remove(o, s);
+}
+
+-- **`relabel`, und die zweite Voraussetzung ist die, die es sieben Wochen gekostet hat.**
+--
+-- `umhaengen_erhaelt` verlangt zweierlei: der NEUE Elter erreicht eine Wurzel (dieselbe
+-- Zeile wie bei `einhaengen`), und `s` liegt NICHT auf `p`s Elternkette -- **`p` selbst
+-- eingeschlossen.** Ohne das Zweite entsteht der Zyklus, den `umhaengen_faellt` vorfuehrt.
+--
+-- Und genau darum steht hier `!(… reaches …)` und nicht `forall a in ancestors of … : a != s`:
+-- `ancestors of` ist STRIKT (*„a node is not its own ancestor"*), liesse also `relabel(o, s, s)`
+-- durch -- die Schlinge, und die bricht die Invariante wie der Zweislotzyklus.
+-- `messung/OPS-RELABEL.md` §3 waegt beide Seiten beider Formen.
+impl fn umhaengen(o : ptr<normal, rw> Ordner,
+                  s : index into Ordner,
+                  p : index into Ordner)
+    requires o.slots[p] reaches WURZEL via elter,
+             !(o.slots[p] reaches o.slots[s] via elter)
+    effects  { writes o.slots }
+    costs    <= 6 ops
+{
+    Ordner::relabel(o, s, p);
 }
 
 }
