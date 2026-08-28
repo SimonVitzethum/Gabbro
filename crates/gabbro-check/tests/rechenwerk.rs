@@ -4418,6 +4418,9 @@ impl fn leeren(h : ptr<normal, rw> B, s : index into B)
     traverse k over descendants of h.slots[s] by consuming
         touches consumes h.slots{inv}
     {{ h.slots[k].belegt = false; }}
+    traverse m over descendants of h.slots[s] by consuming
+        touches consumes h.slots{inv}
+    {{ h.slots[m].belegt = true; }}
 }}
 }}
 "
@@ -4446,6 +4449,13 @@ impl fn leeren(h : ptr<normal, rw> B, s : index into B)
     assert!(
         !t.contains(r#"(.global "k")"#),
         "and never a global:\n{t}"
+    );
+    // **Two loops in one routine need two ids.** Sharing one environment entry would let a
+    // hypothesis about the first silently cover the second -- and the second is a different
+    // loop with a different body.
+    assert!(
+        t.contains(r#"(.loop "leeren#2""#),
+        "the second loop gets an id of its own:\n{t}"
     );
 }
 
