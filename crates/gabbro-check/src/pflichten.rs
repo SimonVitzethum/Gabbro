@@ -183,7 +183,7 @@ impl Art {
             Art::Erhaltung => "Preservation",
             Art::Nachbedingung => "Postcondition",
             Art::Fremdpflicht => "Foreign duty",
-            Art::Vorbedingung => "Precondition at the call site",
+            Art::Vorbedingung => "Precondition at the call site (undercounts: see `vorbedingungen`)",
             Art::Verfeinerung => "Refinement of a specification",
             Art::Geraetezusage => "Device promise at a register",
             Art::Schleifeninvariante => "Invariant across the passes of a loop",
@@ -209,6 +209,23 @@ pub fn sammle(baum: &Programm) -> Vec<Pflicht> {
 /// 0 .. 7`) -- das entscheidet heute nichts, also zaehlt es mit. Untere, weil ein Ruf, dessen
 /// Pfad sich nicht aufloest, gar nicht erst gefunden wird. *Beide Richtungen benannt, sonst
 /// waere sie ein Urteil im Gewand einer Messung (W19).*
+/// **`V` UNDERSTATES since 2026-08-28, and it understates by a growing amount.**
+///
+/// This walk resolves a call through `Umgebung::funktion`, and that map is built from the
+/// `FnDecl`s of the tree. **A GENERATED operation is not one.** Since `ops` ships bodies
+/// (`emit.rs::ops`, cut (c)) and `D012` holds their premises at the call site
+/// (`opsruf.rs`), every such call carries real preconditions that this register does not
+/// count -- one per `insert` with a `tree`, two without, one per `remove`.
+///
+/// > **The gap grows with every generated operation**, so it is not a rounding error but a
+/// > number drifting parallel to the truth. *That is the shape a booked figure takes right
+/// > before it stops being one* -- the same class the `@version` finding named.
+///
+/// It is booked here rather than repaired here because the repair is a decision, not a
+/// patch: either `Umgebung` learns the generated heads (then `E008`, `K003` and this walk
+/// all see them, and the cost is one map with two producers), or `pflichten` grows a second
+/// source (and then two registers stand over one thing, which is `W7`). **Until that is
+/// decided, the number carries this note and `gabbro pflichten` is read with it.**
 fn vorbedingungen(baum: &Programm, aus: &mut Vec<Pflicht>) {
     let u = crate::umgebung::Umgebung::sammle(baum);
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {

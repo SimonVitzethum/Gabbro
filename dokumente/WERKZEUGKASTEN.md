@@ -617,6 +617,41 @@ ersetzte Zahl ist eine Behauptung über eine Korrektur.**
 
 ---
 
+## W24 — Bevor ein neues Wort erwogen wird: **parst die naheliegende Form heute schon?**
+
+**Drei Fälle, und beim dritten war die Bauart nicht mehr zu übersehen.**
+
+| Fall | erwogen wurde | gemessen wurde |
+|---|---|---|
+| `transition` | eine fehlende Form | *„eine Lücke im GRAPHEN, nicht im Programm"* |
+| «B35» | dasselbe | dasselbe |
+| **`ops`-Rufform**, 2026-08-28 | eine eigene Anweisungsart (`insert v.slots[n] under p;`) mit dem neuen Wort `under` | **`Verzeichnis::insert(v, i)` parst seit jeher.** `parse.rs::erwarte_feldname` nimmt hinter `::` jedes Wortschatzwort an; die EBNF sagte es nur nicht |
+
+Was der Prüfer **wirklich** meldete, mit einer Probedatei durch den **unveränderten** Prüfer:
+
+```
+Hinweis: [E009] `Verzeichnis::insert` is unknown to the graph
+Fehler:  [K003] `belegen` promises costs, but `insert` is not declared here
+```
+
+**Kein einziges `P00x`.** Gefehlt hat nicht die Rufform, sondern **der Gerufene**.
+
+> **Die Regel ist eine Frage, und sie wird vor der Abwägung gestellt:**
+> *Schreib die naheliegende Form hin und lass sie durch den unveränderten Prüfer laufen —
+> parst sie? Und wenn nein: fällt sie am Parser, oder an etwas dahinter?*
+
+**Der Preis, den sie spart, ist nicht klein.** Die verworfene Anweisungsart hätte an
+**dreißig** Fundstellen (`grep -c 'StmtArt::Ruf'`) die Wirkungs-, Kosten-, Sperr- und
+Phasenfrage einzeln neu beantworten müssen — für eine Lücke, die im Aufrufgraphen lag und
+dort mit einem Erzeuger für Signaturen zu schließen war.
+
+*Und sie ist die Schwester von W22:* dort misst man die **falsche Ablehnung** an der
+Asymmetrie des Korpus, hier misst man die **vermeintliche Unschreibbarkeit** an einem
+einzigen Lauf. Beide Male ist die billige Messung die, die niemand macht, weil das Urteil
+schon feststeht.
+
+---
+
 ## W17 — Erfolg ohne Arbeit: ein positives Urteil über nichts
 
 **Am 2026-08-20 hat dieselbe Form dreimal zugeschlagen, in drei ganz verschiedenen
