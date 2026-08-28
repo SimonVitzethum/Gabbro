@@ -888,7 +888,37 @@ pub struct FnDecl {
     /// es ist; wer ruft, soll es nicht wiederholen muessen.* Der Pruefer haelt sie gegen die
     /// `order` der Marke und gegen den Zustand am Rufort.
     pub advances: Option<(Ident, Ident)>,
+    /// **Layer S3 of the boot theorem: `retires t from boot falsifier <probe>`.**
+    ///
+    /// `SPRACHE.md` §12 demands that `boot_end` consume the token **and** remove the mapping
+    /// of `.boot` as **ONE event**. Two clauses standing next to each other are not one --
+    /// each of them is satisfiable alone, and whoever writes only the first has written a
+    /// function that ends the boot phase for the TYPE CHECKER and leaves the bytes mapped.
+    ///
+    /// So the clause carries all three parts and none of them is writable on its own:
+    ///
+    /// * the **token** -- it must be the one the `effects` block consumes (`O011`),
+    /// * the **address space** that goes with it,
+    /// * and the **falsifier**, because "the mapping is gone, therefore the bytes are
+    ///   unreachable" is a statement about the MMU and not about the program. That half is an
+    ///   assumption, it is booked in `gabbro annahmen`, and a named probe is what keeps it
+    ///   from being prose.
+    pub retires: Option<Stilllegung>,
     pub rumpf: FnRumpf,
+    pub span: Span,
+}
+
+/// **`retires <token> from <space> falsifier <probe>` -- the one event of layer S3.**
+///
+/// See `FnDecl::retires`. The `AnnahmeKlasse` is the SAME tail `assume` and `axiom` carry,
+/// deliberately: this clause declares an entry of the axiom layer, and it should be spelled
+/// like every other one. *A third spelling for the same thing would be a second register over
+/// one matter.*
+#[derive(Debug, Clone)]
+pub struct Stilllegung {
+    pub marke: Ident,
+    pub raum: Raum,
+    pub klasse: AnnahmeKlasse,
     pub span: Span,
 }
 

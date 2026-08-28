@@ -110,12 +110,33 @@ axiom wrmsr_efer(bits : u64) effects { writes efer } falsifier sonde_efer;
 axiom write_cr0(bits : u64) effects { writes cr0, writes paging } falsifier sonde_cr0;
 axiom write_cr3(wurzel : Pa) effects { writes tlb, writes aktive_tabelle } falsifier sonde_cr3;
 
--- `raw fn` verlangt die Bootphase geliehen; `boot_end` VERBRAUCHT sie und bildet
--- `code<boot>` im selben Zug ab. Danach ist der Bootcode nicht mehr aufrufbar --
--- nicht durch Vereinbarung, sondern weil die Marke weg ist.
+-- `raw fn` verlangt die Bootphase geliehen; `boot_ende` VERBRAUCHT sie und blendet den
+-- Bootraum im selben Zug aus. Danach ist der Bootcode nicht mehr aufrufbar -- nicht durch
+-- Vereinbarung, sondern weil die Marke weg ist.
 raw fn phys_schreiben(p : Pa, w : u64) requires BootPhase effects { writes phys };
 
-fn boot_ende(t : BootPhase) effects { consumes t, writes code_abbildung };
+-- **Bis zum 2026-08-28 stand hier `effects { consumes t, writes code_abbildung }`** --
+-- ein WIRKUNGSNAME neben der Verbrauchszeile, von keinem Pass gelesen und von allem
+-- erfuellbar. `SPRACHE.md` §12 verlangt an dieser Stelle EIN Ereignis, und zwei Zusagen,
+-- die man einzeln erfuellen kann, sind keine eine: wer nur die erste haelt, hat eine
+-- Funktion geschrieben, die die Bootphase fuer den TYPPRUEFER beendet und die Bytes
+-- abgebildet stehen laesst.
+--
+-- `retires` traegt darum drei Teile in einer Klausel, und keiner ist allein schreibbar:
+-- die Marke (dieselbe, die `effects` verbraucht -- `O011`), den Adressraum, und die Sonde.
+-- Die Nachbedingung darueber sagt, WAS verschwindet (`O012`); sie ist die formulierbare
+-- Haelfte. Die andere -- eine Adresse ohne Abbildung ist nicht mehr erreichbar -- ist eine
+-- Aussage ueber MMU und TLB und steht in `gabbro annahmen`, mit der Sonde daneben.
+fn boot_ende(t : BootPhase, kern_wurzel : Seitentabelle)
+    ensures !exists m in mappings of kern_wurzel :
+        m.rahmen >= BOOT_RAHMEN_UNTEN && m.rahmen < BOOT_RAHMEN_OBEN
+    retires t from boot falsifier sonde_boot_unerreichbar
+    effects { consumes t, writes kern_wurzel };
+
+-- Die Bootrahmen kommen vom Binder und stehen hier als Schranken, weil ein Seiteneintrag
+-- KEIN Abschnittsfeld hat: `.boot` ist eine Bindezeitstrecke und kein Bit in der Tabelle.
+const BOOT_RAHMEN_UNTEN : u64 = 0x1000;
+const BOOT_RAHMEN_OBEN  : u64 = 0x2000;
 
 -- Der Stapelwechsel ist in keiner strukturierten Sprache ausdrueckbar; deshalb `prim`.
 -- `effects` bleibt Pflicht -- auch hier, und gerade hier: SYNTAX.md §14 laesst es in

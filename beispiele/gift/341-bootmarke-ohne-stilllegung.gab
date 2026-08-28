@@ -1,0 +1,28 @@
+-- erwartet: O010
+--
+-- **Der Bestand von `beispiele/07` bis zum 2026-08-28, Zeile fuer Zeile.**
+--
+-- `effects { consumes t, writes code_abbildung }` -- und `code_abbildung` ist ein
+-- WIRKUNGSNAME. Kein Pass las ihn, keine Regel hing daran, und die Datei ging mit null
+-- Fehlern durch. Schicht S1 des Bootsatzes trug hier alles: nach dem Verbrauch der Marke
+-- typprueft der Ruf auf `phys_schreiben` nicht mehr.
+--
+-- **Das ist eine Aussage ueber den Aufrufgraphen und keine ueber die Maschine.** Die Bytes
+-- liegen weiter abgebildet in `.boot`; ein Sprung dorthin -- ein fehlgeleiteter Zeiger, ein
+-- ROP-Gadget auf totem, aber abgebildetem Speicher -- geht am ganzen Typsystem vorbei.
+-- Genau dafuer gibt `SPRACHE.md` §12 der Hardware eine EIGENE Schicht.
+--
+-- `O010` verlangt das Ereignis: irgendeine Funktion muss die Marke STILLLEGEN, und die
+-- Klausel dazu nennt im selben Zug den Raum und die Sonde.
+
+module gift::markeohnestilllegung {
+
+type Pa = u64;
+
+linear ghost type BootPhase;
+
+raw fn phys_schreiben(p : Pa, w : u64) requires BootPhase effects { writes phys };
+
+fn boot_ende(t : BootPhase) effects { consumes t, writes code_abbildung };
+
+}

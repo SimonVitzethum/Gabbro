@@ -198,6 +198,11 @@ wortschatz! {
     // ZWEI, nicht zwei je Bootschritt: die Stufen sind Bezeichner in EINER Deklaration.
     Order         => "order",         res;
     Advances      => "advances",      res;
+    // **Layer S3 of the boot theorem -- the ONE event.** `advances` moves the token on,
+    // `retires` ends it -- and names, in the same clause, the address space that goes with
+    // it and the probe that could refute that. *Three parts, one clause: two promises one
+    // can keep separately are not one.*
+    Retires       => "retires",       res;
     Check         => "check",         res;
     Claim         => "claim",         res;
     Measures      => "measures",      res;

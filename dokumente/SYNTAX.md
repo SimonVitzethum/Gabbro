@@ -84,7 +84,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
   Struktur   module pub use type opaque linear ghost tagged const static fn
              spec impl raw divergent prim extern section arch when
   Vertraege  requires ensures maintains refines breaking effects costs where in
-             exhaustive old narrow to induction order advances
+             exhaustive old narrow to induction order advances retires
   Wirkungen  reads writes locks masks allocs consumes publishes diverges pure
   Ablauf     if else match traverse over by touches retry forever until
              bounded progress on_exceeded per_pass return let mut
@@ -772,6 +772,8 @@ fndecl   = [ "pub" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" 
            [ "ensures"   predlist ]
            [ "maintains" identlist ]
            [ "advances"  ident "->" ident ]
+           [ "retires"   ident "from" space
+             ( "falsifier" ident | "unfalsifiable" string ) ]    (* S3, 2026-08-28 *)
            [ "effects"   "{" efflist "}" ]
            [ "costs"     "<=" expr "ops" ]
            [ "decreases" expr ]                                 (* «K5.4» *)
@@ -822,6 +824,33 @@ asmop    = ( ident | "result" ) ":" string ;
    zusammen (`O004`), und alle Zweige erreichen dieselbe Stufe (`O006`, K11.1) -- ein Zweig,
    der mit `return` endet, schliesst sich nicht an; ein Schritt in einer Schleife wird
    abgelehnt. *)
+
+(* **`retires t from boot falsifier sonde_x` -- Schicht S3 des Bootsatzes, 2026-08-28.**
+
+   `SPRACHE.md` §12 verlangt, dass `boot_end` die Marke verbraucht UND die Abbildung von
+   `.boot` entfernt, **EIN Ereignis**. Der naheliegende Bau waere zwei Klauseln -- und der ist
+   falsch, und zwar mechanisch und nicht geschmacklich: *zwei Zusagen, die man einzeln
+   erfuellen kann, sind keine eine.* Wer nur die erste haelt, hat eine Funktion geschrieben,
+   die die Bootphase fuer den TYPPRUEFER beendet und die Bytes abgebildet stehen laesst --
+   genau der Zustand, in dem `beispiele/07` bis heute war (`effects { consumes t, writes
+   code_abbildung }`, ein Wirkungsname neben der Verbrauchszeile, von keinem Pass gelesen).
+
+   Deshalb traegt EINE Klausel drei Teile, und keiner ist allein schreibbar:
+
+     die Marke      -- dieselbe, die `effects` verbraucht                        (`O011`)
+     der Raum       -- `space`, wie am Zeigertyp: normal mmio dma code boot port
+     die Klasse     -- `falsifier <sonde>` oder `unfalsifiable "<grund>"`
+
+   Der Schwanz ist derselbe wie an `assume` und `axiom`, und mit Absicht: die Klausel ERKLAERT
+   eine Annahme der Axiomschicht, und eine dritte Schreibweise fuer dieselbe Sache waere ein
+   zweites Register ueber einer Sache. Er ist PFLICHT -- die dritte Klasse, *nicht gefahren*,
+   ist die Abwesenheit beider Angaben und ein Uebersetzungsfehler (`P029`).
+
+   Dazu `O010`: eine Marke, die eine `raw fn` verlangt, muss jemand stilllegen -- sonst hat
+   S3 gar kein Ereignis. Und `O012`: eine Nachbedingung ueber `mappings of` muss VERNEINEND
+   sagen, was verschwindet. *Das ist die formulierbare Haelfte von S3;* die andere -- eine
+   Adresse ohne Abbildung ist nicht mehr erreichbar -- ist eine Aussage ueber MMU und TLB,
+   faellt unter keinen Pass und steht in `gabbro annahmen`, mit der Sonde der Klausel. *)
 inductlist = induct { "," induct } ;
 induct     = "induction" "over" domain ;      (* nennt das SCHEMA -- kein Lemma, kein Beweisschritt *)
 efflist  = eff { "," eff } ;
@@ -1508,8 +1537,35 @@ opaque type Pa = u64;
 linear ghost type BootPhase;
 type Context = { sp : u64, };
 
+-- The page table, so that the postcondition below has a domain to speak about.
+walk PageTable levels 4 {
+    node : [Pte; 512],
+    down : frame when it.present && !it.large,
+    leaf : it.present && it.large,
+}
+
+format Pte endian little {
+    present : bool @0,
+    large   : bool @1,
+    pte_low : u64 @[11:2]  reserved,
+    frame   : u64 embeds [51:12] scale 4096,
+    pte_hi  : u64 @[62:52] reserved,
+    nx      : bool @63,
+}
+
+const BOOT_FRAME_LOW  : u64 = 0x1000;
+const BOOT_FRAME_HIGH : u64 = 0x2000;
+
 raw fn phys_write(p: Pa, w: u64) requires BootPhase effects { writes phys };
-fn boot_end(t: BootPhase) effects { consumes t, writes code_map };
+
+-- **Until 2026-08-28 this line read `effects { consumes t, writes code_map }`** — and the
+-- sentence below it claimed an event. `code_map` was an effect NAME: no pass read it, and
+-- the block passed with 0 errors while the prose promised a mechanism.
+fn boot_end(t: BootPhase, root: PageTable)
+    ensures !exists m in mappings of root :
+        m.frame >= BOOT_FRAME_LOW && m.frame < BOOT_FRAME_HIGH
+    retires t from boot falsifier probe_boot_unreachable
+    effects { consumes t, writes root };
 
 prim fn switch_to(von: ptr<normal,rw> Context, zu: ptr<normal,r> Context) -> never
     effects { writes kontext };
@@ -1517,8 +1573,17 @@ prim fn resume(k: ptr<normal,r> Context) -> never effects { reads k };
 divergent fn idle() effects { diverges };
 ```
 
-`boot_end` consumes the **linear** token **and** unmaps `code<boot>` — an event. A
-probe there must fault afterwards; that is the falsifier.
+`boot_end` consumes the **linear** token **and** retires the boot space — **one clause**, so
+that the two are not two promises one can keep separately (`O011`). What disappears is said
+as a `walk` fact and demanded (`O012`); that an address without a mapping is **unreachable**
+is a statement about the MMU, stands in `gabbro annahmen`, and the probe the clause names is
+the falsifier: an access to a `.boot` address afterwards must fault.
+
+> **`code<boot>` is not a Gabbro space, and `m.section` is not a field.** The spelling in
+> `SPRACHE.md` §12 was written before either had to parse: `boot` is a space of its own
+> (`space`, §5), and a page table entry has **no section bit** — `.boot` is a link-time
+> range, so the postcondition names frame bounds. *The construct followed the machine, not
+> the sentence.*
 
 ---
 
