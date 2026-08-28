@@ -84,10 +84,6 @@ pub enum LeanReason {
     /// A `match` over something other than an `option`. A declared sum type would need one
     /// value constructor per variant.
     MatchNotOption,
-    /// Division, remainder, or a bit operation. **Not an oversight**: Lean's `Int` division
-    /// rounds toward minus infinity and C's truncates toward zero, so a goal that mixed the
-    /// two would be provable for a reason the machine does not have.
-    DivOrBits,
     /// A floating-point value. The model has no float, and one that rounded differently from
     /// the hardware would prove the wrong thing quietly.
     Float,
@@ -150,7 +146,6 @@ impl LeanReason {
             LeanReason::NonLocalExit => "non-local-exit",
             LeanReason::CompoundAssign => "compound-assignment",
             LeanReason::MatchNotOption => "match-not-option",
-            LeanReason::DivOrBits => "division-or-bits",
             LeanReason::Float => "float",
             LeanReason::OldState => "old-state",
             LeanReason::Quantified => "quantified",
@@ -193,9 +188,6 @@ impl LeanReason {
             LeanReason::NonLocalExit => "a non-local exit out of a named loop",
             LeanReason::CompoundAssign => "`+=` and its kin -- a different overflow accounting",
             LeanReason::MatchNotOption => "a `match` over something other than an `option`",
-            LeanReason::DivOrBits => {
-                "division or a bit operation -- Lean rounds down where C truncates"
-            }
             LeanReason::Float => "a floating-point value -- this model has no float",
             LeanReason::OldState => "`old(x)` -- a predicate over TWO states",
             LeanReason::Quantified => {
@@ -219,7 +211,7 @@ impl LeanReason {
         }
     }
     /// **All of them, so a report cannot omit one by forgetting to ask.**
-    pub const ALL: [LeanReason; 29] = [
+    pub const ALL: [LeanReason; 28] = [
         LeanReason::ForeignBody,
         LeanReason::Invariant,
         LeanReason::CallSite,
@@ -236,7 +228,6 @@ impl LeanReason {
         LeanReason::NonLocalExit,
         LeanReason::CompoundAssign,
         LeanReason::MatchNotOption,
-        LeanReason::DivOrBits,
         LeanReason::Float,
         LeanReason::OldState,
         LeanReason::Quantified,
@@ -541,17 +532,28 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
                 BinOp::GroesserGleich => "ge",
                 BinOp::Und => "and",
                 BinOp::Oder => "or",
-                // Division and the bit operations are refused for the reason
-                // `refinement.rs` already books: Lean's `Int` division rounds toward minus
-                // infinity, C's truncates toward zero. A goal that mixed the two would be
-                // provable for a reason the machine does not have.
-                BinOp::BitUnd
-                | BinOp::BitOder
-                | BinOp::BitXor
-                | BinOp::SchiebLinks
-                | BinOp::SchiebRechts
-                | BinOp::Geteilt
-                | BinOp::Rest => return Err(LeanReason::DivOrBits),
+                // **Division and the bit operations, and the honesty is in the MODEL and
+                // not in a refusal here.**
+                //
+                // They stood refused as `division-or-bits` with the sentence *"Lean rounds
+                // down where C truncates"*. That sentence was true and the conclusion was
+                // not: `Gabbro.Body` now takes `Int.tdiv`/`Int.tmod`, which are the C
+                // operators, and §3.2 of the model holds them against Lean's own `/` in a
+                // theorem. **What the sentence really named was a case the model could not
+                // state, and a case is refused by GETTING STUCK, not by refusing the whole
+                // form.** `binop` is `none` at a zero denominator and at a negative operand
+                // of a mask or a shift -- so a proof that goes through one of these has to
+                // establish the premise, and the goal gets harder rather than easier.
+                //
+                // *Refusing the form here would have cost five bodies of the corpus for a
+                // hazard that lives in two of their operands.*
+                BinOp::Geteilt => "div",
+                BinOp::Rest => "rem",
+                BinOp::BitUnd => "band",
+                BinOp::BitOder => "bor",
+                BinOp::BitXor => "bxor",
+                BinOp::SchiebLinks => "shl",
+                BinOp::SchiebRechts => "shr",
             };
             Ok(format!(
                 "(.bin .{z} {} {})",
@@ -688,15 +690,24 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             // with the arm three lines below it. *Four routines of the corpus paid for a
             // sentence that was never checked.*
             //
-            // The operator is chosen by the field's declared SHAPE, not guessed: `&=` on an
-            // integer field is a bit operation, and those are refused for the division
-            // reason.
+            // The operator is chosen by the field's declared SHAPE, not guessed: `&=` on a
+            // BOOL field is a truth value and on an INTEGER field a bit mask, and the two
+            // compute different things.
+            //
+            // **The integer arms were missing while the comment claimed they were refused
+            // "for the division reason".** They were not -- they fell out as
+            // `compound-assignment`, a reason that names something else entirely. *A
+            // refusal filed under the wrong reason names a missing form where a missing
+            // translation stands*, the same lesson the `FieldShape` split books. Now that
+            // the model has the masks, the arms say what the comment always said.
             let mischung = |op: ZuwOp, shape: Shape| -> Option<&'static str> {
                 match (op, shape) {
                     (ZuwOp::Plus, Shape::Int) => Some("add"),
                     (ZuwOp::Minus, Shape::Int) => Some("sub"),
                     (ZuwOp::Und, Shape::Bool) => Some("and"),
                     (ZuwOp::Oder, Shape::Bool) => Some("or"),
+                    (ZuwOp::Und, Shape::Int) => Some("band"),
+                    (ZuwOp::Oder, Shape::Int) => Some("bor"),
                     _ => None,
                 }
             };

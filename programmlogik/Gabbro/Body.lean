@@ -28,6 +28,14 @@
 
       overflow      Integers are `Int`, unbounded.
                     -> `Passlogik.Bereich.passt_dann_kein_ueberlauf` (`M104`)
+      shift width   A shift COUNT at or above the operand's width is undefined in C, and
+                    there is no width here. It is booked as an overflow like every other:
+                    `typen::schiebe_links`/`schiebe_rechts` mark `b.max >= a.breite`.
+                    -> `M104`.  **This booking is void for a `wrapping` operand** -- see
+                    §3.2 and DOES NOT COVER below.
+      zero divisor  A denominator whose range does not exclude zero is refused.
+                    -> `M102`.  The model does NOT lean on it: it gets stuck at zero, so
+                    the premise stays visible in every proof that goes through a `/`.
       frame         The frame IS the declared `effects` list; a place outside it survives.
                     -> `Passlogik.Wirkung.huelle_deckt` (`E005`/`E008`)
       alias         Two distinct `Place`s are distinct places, full stop.
@@ -56,6 +64,22 @@
   DOES NOT PROVE
     That a body terminates (the core has no loop -- there is nothing to show), that it is
     overflow-free (`M104`), or that it respects its frame (`E005`).
+
+  DOES NOT COVER, and the names are here rather than in a commit message
+    (N1) A bit operation or a shift with a NEGATIVE operand. The C answer is read off a
+         two's complement of a width this file does not have -- and for `>>` it is
+         *implementation-defined* even then, so `M104` never fires on it either. `binop`
+         gets stuck; §3.2 says so as a theorem.
+    (N2) A shift whose left operand has a `wrapping` type. `M1` suppresses the overflow
+         there, so the shift-width booking above does not apply -- and a count at or above
+         the width is undefined in C even on an unsigned operand. A `wrapping` FIELD is
+         already refused by the emitter (`no-shape-for-field`); a `wrapping` LOCAL is not,
+         and that hole is older than the shifts: `+` on one stands here unbooked too.
+    (N3) That a DECLARED range is a hypothesis. `u32` says `0 ≤ x` and `u16 in 1 .. Q` says
+         `x ≠ 0`, and neither reaches this model: the emitter writes shapes (`isInt`), not
+         ranges. So a proof through a mask or a division must get the guard from the body
+         or from a `requires` -- which is where `raeumen`-style bodies get it, and where
+         `falte(s : u32)` does not.
 -/
 
 namespace Gabbro.Body
@@ -141,6 +165,12 @@ inductive UnOp where
 
 inductive BinOp where
   | add | sub | mul
+  /-- `/` and `%` -- **the C operators and not Lean's.** See `binop` and §3.2. -/
+  | div | rem
+  /-- `&`, `|`, `^` -- the bit MASKS, over non-negative operands and nowhere else. -/
+  | band | bor | bxor
+  /-- `<<`, `>>` -- likewise. -/
+  | shl | shr
   | eq | ne | lt | le | gt | ge
   | and | or
   deriving DecidableEq, Repr
@@ -172,10 +202,59 @@ def unop : UnOp → Value → Option Value
   | .neg, .int n => some (.int (-n))
   | _, _ => none
 
+/-- **A bit mask, over the NON-NEGATIVE integers and nowhere else.**
+
+    For `0 ≤ a` and `0 ≤ b` the C operators `&`, `|`, `^` are the plain binary operations on
+    the binary digits, and that answer does not depend on a WIDTH: neither operand has a sign
+    bit, and none of the three can carry a digit out of the operands' own range. **That is
+    the whole reason the guard is here.** With a negative operand the C answer is read off a
+    two's complement of a width this model does not have -- and worse, the usual arithmetic
+    conversions may first turn the negative operand into a large unsigned one, so that even
+    the width would not settle it. *Getting stuck is the honest answer; a width-independent
+    formula would compute something the machine does not.*
+
+    The detour through `Nat` is the same statement in the type: `Int.toNat` is faithful
+    exactly where the guard holds. -/
+def bits (f : Nat → Nat → Nat) (a b : Int) : Option Value :=
+  if 0 ≤ a ∧ 0 ≤ b then some (.int ((f a.toNat b.toNat : Nat) : Int)) else none
+
 def binop : BinOp → Value → Value → Option Value
   | .add, .int a, .int b => some (.int (a + b))
   | .sub, .int a, .int b => some (.int (a - b))
   | .mul, .int a, .int b => some (.int (a * b))
+  -- **`Int.tdiv` and `Int.tmod`, and NOT `/` and `%`.** Lean's own `/` on `Int` is the
+  -- Euclidean one -- `(-7) / 2` is `-4` -- and C truncates toward zero -- `-3`. The two are
+  -- different functions, and §3.2 writes that difference down as a theorem so that a later
+  -- tidying to `/` fails there first.
+  --
+  -- **A zero denominator gets the model STUCK.** Lean answers -- `a.tdiv 0` is `0` and
+  -- `a.tmod 0` is `a`; C says nothing at all.
+  -- `M102` already refuses a denominator whose range does not exclude zero, so no accepted
+  -- program is turned away by this -- but a model that *defined* the case would let a goal
+  -- close on a value the machine never produces, and that is the one thing this file is
+  -- against. The premise is now visible: whoever proves through a division proves the
+  -- denominator non-zero, out of a guard or out of a `requires`.
+  | .div, .int a, .int b => if b = 0 then none else some (.int (a.tdiv b))
+  | .rem, .int a, .int b => if b = 0 then none else some (.int (a.tmod b))
+  | .band, .int a, .int b => bits (· &&& ·) a b
+  | .bor, .int a, .int b => bits (· ||| ·) a b
+  | .bxor, .int a, .int b => bits (· ^^^ ·) a b
+  -- **The shifts, and they carry the same guard for the same reason plus one more.** A shift
+  -- COUNT at or above the operand's width is undefined in C, and this model has no width --
+  -- so that bound is booked where the header books every other one: `typen::schiebe_links`
+  -- and `typen::schiebe_rechts` mark `b.max >= a.breite` as an overflow, and `M104` refuses
+  -- it. *Under that booking `a << b` IS `a * 2^b` and `a >> b` IS `a / 2^b`*, written out
+  -- here rather than hidden in a `ShiftLeft Int` instance, because the reader of this file
+  -- has to be able to check the claim.
+  --
+  -- **The negative left operand is NOT booked, it is refused.** `>>` on a negative signed
+  -- value is *implementation-defined* in C (C99 6.5.7p5), not undefined -- so `M104` never
+  -- fires on it, and `typen::schiebe_rechts` lets `a.min < 0` through with the full range.
+  -- A model that picked the arithmetic shift here would pick one compiler's answer and call
+  -- it the language's.
+  | .shl, .int a, .int b => if 0 ≤ a ∧ 0 ≤ b then some (.int (a * 2 ^ b.toNat)) else none
+  | .shr, .int a, .int b =>
+      if 0 ≤ a ∧ 0 ≤ b then some (.int (a.tdiv (2 ^ b.toNat))) else none
   | .lt, .int a, .int b => some (.bool (decide (a < b)))
   | .le, .int a, .int b => some (.bool (decide (a ≤ b)))
   | .gt, .int a, .int b => some (.bool (decide (a > b)))
@@ -226,6 +305,59 @@ def eval (s : State) : Expr → Option Value
 def isInt (v : Value) : Prop := ∃ n, v = .int n
 def isBool (v : Value) : Prop := ∃ t, v = .bool t
 def isOption (v : Value) : Prop := v = .absent ∨ ∃ n, v = .present n
+
+/-! ### 3.2 The division and the bits, held against C
+
+    **These theorems are the reason the arms above may be believed.** Each one names a case
+    where the convenient reading and the machine's reading come apart, and pins the model to
+    the machine's. *A model whose choice is only stated in a comment is a choice nobody can
+    fail.*
+-/
+
+/-- **C truncates toward zero; Lean's own `/` on `Int` does not.** Both halves stand in one
+    statement on purpose: the second is what a later "simplification" of the model would
+    silently install, and this theorem is where that fails first. -/
+theorem div_truncates_where_lean_rounds_down :
+    binop .div (.int (-7)) (.int 2) = some (.int (-3)) ∧ ((-7 : Int) / 2) = -4 := by
+  decide
+
+/-- **`%` carries the sign of the DIVIDEND**, as C says and as `Int.tmod` does. Lean's `%`
+    is non-negative here, which is the same disagreement one operator further on. -/
+theorem rem_follows_the_dividend :
+    binop .rem (.int (-7)) (.int 2) = some (.int (-1))
+    ∧ binop .rem (.int 7) (.int (-2)) = some (.int 1)
+    ∧ ((-7 : Int) % 2) = 1 := by
+  decide
+
+/-- **A zero denominator gets the model stuck, in both operators.** Lean would answer `0`
+    and `a`; C answers nothing. -/
+theorem division_by_zero_is_stuck (a : Int) :
+    binop .div (.int a) (.int 0) = none ∧ binop .rem (.int a) (.int 0) = none := by
+  simp [binop]
+
+/-- **A negative operand gets a bit operation stuck** -- all five of them, on either side.
+    This is the refusal the model makes instead of guessing a width. -/
+theorem a_negative_operand_stops_the_bits (a : Int) (h : a < 0) :
+    binop .band (.int a) (.int 1) = none ∧ binop .band (.int 1) (.int a) = none
+    ∧ binop .bor (.int a) (.int 1) = none ∧ binop .bxor (.int a) (.int 1) = none
+    ∧ binop .shl (.int a) (.int 1) = none ∧ binop .shr (.int a) (.int 1) = none
+    ∧ binop .shl (.int 1) (.int a) = none ∧ binop .shr (.int 1) (.int a) = none := by
+  simp [binop, bits, Int.not_le.mpr h]
+
+/-- **The shifts are a multiplication and a division**, under the guard and under the `M104`
+    booking the arm names. Stated in general and not on an example, because it is the claim
+    the booking rests on. -/
+theorem a_shift_is_arithmetic (a b : Int) (ha : 0 ≤ a) (hb : 0 ≤ b) :
+    binop .shl (.int a) (.int b) = some (.int (a * 2 ^ b.toNat))
+    ∧ binop .shr (.int a) (.int b) = some (.int (a.tdiv (2 ^ b.toNat))) := by
+  simp [binop, ha, hb]
+
+/-- **Where a mask answers at all, it answers with a non-negative number.** That is the
+    half of the width-independence claim this file can state on its own; that the result
+    also fits the DECLARED range is `M104`'s half, and `typen::bitweise` computes it. -/
+theorem a_mask_stays_non_negative (a b : Int) (ha : 0 ≤ a) (hb : 0 ≤ b) :
+    ∃ n : Nat, binop .band (.int a) (.int b) = some (.int (n : Int)) := by
+  exact ⟨a.toNat &&& b.toNat, by simp [binop, bits, ha, hb]⟩
 
 /-! ## 4. Statements -- the SEQUENTIAL CORE
 
@@ -495,7 +627,8 @@ end Gabbro.Body
 open Lean.Parser.Tactic in
 macro "gabbro_simp" : tactic =>
   `(tactic| simp [Gabbro.Body.exec, Gabbro.Body.step, Gabbro.Body.eval, Gabbro.Body.unop,
-                  Gabbro.Body.binop, Gabbro.Body.finalState, Gabbro.Body.finalValue,
+                  Gabbro.Body.binop, Gabbro.Body.bits,
+                  Gabbro.Body.finalState, Gabbro.Body.finalValue,
                   Gabbro.Body.store, Gabbro.Body.bindLocal, Gabbro.Body.bindAll,
                   Gabbro.Body.evalAll])
 
@@ -503,6 +636,7 @@ macro "gabbro_simp" : tactic =>
 open Lean.Parser.Tactic in
 macro "gabbro_simp" "[" ts:simpLemma,* "]" : tactic =>
   `(tactic| simp [Gabbro.Body.exec, Gabbro.Body.step, Gabbro.Body.eval, Gabbro.Body.unop,
-                  Gabbro.Body.binop, Gabbro.Body.finalState, Gabbro.Body.finalValue,
+                  Gabbro.Body.binop, Gabbro.Body.bits,
+                  Gabbro.Body.finalState, Gabbro.Body.finalValue,
                   Gabbro.Body.store, Gabbro.Body.bindLocal, Gabbro.Body.bindAll,
                   Gabbro.Body.evalAll, $ts,*])

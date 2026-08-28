@@ -5,10 +5,14 @@ pub const NFAECHER : u32 = 128;
 
 pub type Menge = u32 in 0 .. 9999;
 
+-- Eine Bitmaske. Sie steht hier, damit ein Rumpf im zweiten Modul RECHNEN kann -- mit `&`,
+-- `>>` und `/` -- und ein Satz darueber einmal gruen und einmal rot gesehen wird.
+pub type Marken = u32 in 0 .. 255;
+
 pub lock HALLE protects { Faecher } rank 0 held <= 60 ops;
 
 pub table Faecher count NFAECHER {
-    slot { belegt : bool, menge : Menge, sperrig : bool, }
+    slot { belegt : bool, menge : Menge, sperrig : bool, marken : Marken, }
 }
 
 }
