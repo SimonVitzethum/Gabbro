@@ -59,14 +59,23 @@ Zwei Zahlen, und die zweite ist die, die einen ganzen Zuschnitt umbringt.
 ### 2.1 Wie kommt im Korpus ein Wert aus einem Atomic heraus?
 
 ```bash
-$ python3 messung/ordnung/tore.py | tail -3
-Bindungen aus einem atomic: {'awaits': 14, 'exchange': 12, 'schlicht': 0}
-davon gattern einen Zweig:  {'awaits': 12, 'exchange':  4, 'schlicht': 0}
+$ python3 messung/ordnung/tore.py | tail -4
+korpus  Bindungen aus einem atomic: {'awaits': 10, 'exchange': 10, 'schlicht': 0}
+korpus  davon gattern einen Zweig:  {'awaits':  9, 'exchange':  4, 'schlicht': 0}
+gift    Bindungen aus einem atomic: {'awaits':  5, 'exchange':  2, 'schlicht': 1}
+gift    davon gattern einen Zweig:  {'awaits':  4, 'exchange':  0, 'schlicht': 1}
 ```
 
-**26 Bindungen im ganzen Korpus, und NULL davon ist eine schlichte Lesung.** Jede geht
-entweder über `awaits` (die Paarung steht) oder über `exchange` (die dritte Form der
-Paarung, mit eigenem `publishes`/`awaits`-Platz).
+**20 Bindungen im Korpus, und NULL davon ist eine schlichte Lesung.** Jede geht entweder über
+`awaits` (die Paarung steht) oder über `exchange` (die dritte Form der Paarung, mit eigenem
+`publishes`/`awaits`-Platz).
+
+> **Die Trennung Korpus/Gift ist keine Kosmetik, und die erste Fassung dieser Zahl hatte sie
+> nicht.** Sie warf beide Töpfe zusammen und las sich als *„26 Bindungen, 0 schlichte"* —
+> richtig in dem Augenblick, in dem sie genommen wurde, und **falsch, sobald die Giftprobe
+> dieser Entscheidung im Baum stand**: die eine schlichte Lesung, die der Baum heute trägt,
+> ist `beispiele/gift/301`. *Eine Messung, die die eigene Gegenprobe mitzählt, misst sich
+> selbst.* Die Zahl, die die Entscheidung trägt, ist die des Korpus.
 
 > **Das ist ein Befund für sich, und er schneidet in beide Richtungen.** Er sagt: die Gestalt
 > aus §1.1 kommt im eigenen Korpus **nicht vor** — eine Regel darauf kann dort keinen
@@ -175,6 +184,12 @@ if alt >= VOLL { return gesehen; }        -- `gesehen` ist ein static mut
 oben geschrieben, keine fremde Nutzlast. *Die Bedingung kam aus dem Korpus, nicht aus dem
 Entwurf* — derselbe Weg wie bei «B41b».
 
+> **Und die Aufzählung der Rümpfe hat einen Tag später einen Nachtrag bekommen:** `V009` lief
+> zuerst nur über `ItemArt::Funktion`, und damit war der `can_fail`-Rumpf einer Probe für ihn
+> nicht da. **Wörtlich die Lücke, die `V001` am 2026-08-20 bezahlt hat** und die im Modulkopf
+> von `paarung.rs` seither steht. Ein `check` ist der eine Ort, an dem eine falsifizierbare
+> Zusage über die MASCHINE steht — und eine Ordnungsaussage ist genau das.
+
 ---
 
 ## 5. Der zweite Befund: der Namensvergleich kennt den Schreiber nicht
@@ -205,10 +220,16 @@ Das ist eine eigene Entscheidung und darum ein eigener Abschnitt.
 sein — `b.daten` in `beispiele/14` ist der Fall, und ein Grundnamenvergleich über Parameter
 würde zwei fremde `b` für eines halten.
 
-**Gegenprobe über dem Korpus:** jede der sieben Veröffentlichungen mit Nutzlast schreibt sie
-im eigenen Rumpf (`05`:50, `39`:166, `41`:227/240, `42`:181/258/364, `43`:66), und die drei
-Treiberstellen (`14`:41, `virtio-net`:237) haben im Programm gar keinen Schreiber. **Null
-Absagen.**
+**Gegenprobe über dem Korpus:** jede der acht Veröffentlichungen mit Nutzlast schreibt sie im
+**eigenen Rumpf** — die Schreibzeile steht jedes Mal wenige Zeilen über dem `publishes`:
+
+```
+05:50 farbbericht · 39:166 bericht · 41:213 deskring_gesehen · 41:240 arbeitsmenge
+42:182 stand · 42:258 stand · 42:363 stand · 43:66 hoechststand
+```
+
+Die beiden Treiberstellen (`14`:41 `b.daten`, `virtio-net`:237 `deskring_gesehen`) haben im
+Programm **gar keinen** Schreiber und fallen darum aus der Regel heraus. **Null Absagen.**
 
 ---
 
@@ -274,10 +295,22 @@ Sprache ändert sich nicht** — `publishes nothing` heisst weiter `publishes no
 ## 8. Nachziehen
 
 ```bash
-python3 messung/ordnung/tore.py          # 26 Bindungen: 14 awaits, 12 exchange, 0 schlicht
+python3 messung/ordnung/tore.py          # Korpus: 20 Bindungen, 0 schlichte Lesungen
 python3 messung/ordnung/ungeordnet.py    # 71 Lesungen geteilter Plaetze, 43 roh ungeordnet
 
-# die beiden Giftproben
-cargo run -q -p gabbro-cli -- pruefe beispiele/gift/301-tor-ohne-paarung.gab   # V009
-cargo run -q -p gabbro-cli -- pruefe beispiele/gift/302-fremder-schreiber.gab  # V010
+# die beiden Giftproben -- je EIN Fehler, und sonst nichts
+./target/debug/gabbro pruefe beispiele/gift/301-tor-ohne-paarung.gab    # V009
+./target/debug/gabbro pruefe beispiele/gift/302-fremder-schreiber.gab   # V010
+
+# und die Gegenrichtung: der ganze Korpus, 93 Dateien
+for f in $(find beispiele messung passlogik programmlogik sonden -name '*.gab' \
+           | grep -v /gift/); do ./target/debug/gabbro pruefe "$f"; done \
+  | grep -cE 'V009|V010'                 # 0
 ```
+
+**Gemessen am 2026-08-28 mit dem gebauten Prüfer:** 93 Korpusdateien, **0 `V009`, 0 `V010`**;
+in den 287 Giftproben feuern die beiden neuen Kennungen ausschliesslich in `301` und `302`.
+`cargo test`: 215 grün. Die beiden Mutationen (`kein-tor-wird-gebunden`,
+`fremder-schreiber-egal`) werden von genau ihrer Giftprobe gefangen — von Hand nachgefahren,
+weil der volle Mutationslauf an drei **vorgefundenen** toten Ankern in `emit.rs` gar nicht
+erst anläuft.
