@@ -1,0 +1,37 @@
+-- erwartet: V009
+-- **Das Tor ohne Paarung** -- `ORDNUNGSSTICHPROBE-BEFUND.md` Nr. 34, in Gabbro geschrieben.
+--
+-- `VERSIEGELT` ist als Fall OHNE NUTZLAST hingeschrieben: nichts veroeffentlicht darauf,
+-- nichts erwartet es. Und hinter seinem Tor wird `granulat` gelesen -- ein Platz, den ein
+-- ANDERER Kern schreibt. Die drei Regeln von `SPRACHE.md` Teil II §1 pruefen eine
+-- hingeschriebene Paarung; diese hier fehlt, und bis `V009` sagte niemand etwas dazu.
+module gift {
+
+const ARCH_MAX : u64 = 128;
+
+static mut granulat : u64 = 0;
+
+atomic VERSIEGELT : bool acquire;
+
+-- Der Schreiber der Nutzlast. Jeder Kern ruft ihn.
+impl fn granulat_melden(g : u64)
+    effects { writes granulat }
+    costs   <= 4 ops
+{
+    granulat = g;
+}
+
+-- Und der Leser: das Tor entscheidet, ob `granulat` gelesen werden darf. Genau das ist
+-- eine Nutzlast -- und sie steht nirgends.
+impl fn granulat_lesen() -> u64
+    effects { reads VERSIEGELT, reads granulat }
+    costs   <= 8 ops
+{
+    let versiegelt = VERSIEGELT;
+    if versiegelt {
+        return granulat;
+    }
+    return ARCH_MAX;
+}
+
+}

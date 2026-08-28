@@ -969,6 +969,60 @@ pub const PAARUNG: &[Satz] = &[
         gemessen_an: "beispiele/gift: 2 probes on `V006`, one on `V007`.",
         fundstelle: "crates/gabbro-check/src/paarung.rs; SPRACHE.md part II §1",
     },
+    Satz {
+        name: "paarung.fehlende-paarung",
+        kennungen: &["V009"],
+        aussage: "No atomic that carries no payload anywhere -- nothing publishes on it, \
+                  nothing awaits it, no superset, no `observed by` -- gates a branch behind \
+                  which a foreign shared mutable place is read. Where that shape stands, a \
+                  pairing is MISSING: the value decides whether another core's place may be \
+                  read, and that is a payload nobody named.",
+        vorbehalt: "**This is the only rule of the pass that looks for an ABSENT clause, and \
+                    it finds ONE shape of absence.** A missing pairing without a branch is \
+                    invisible to it, and so is one whose payload is read by a CALLEE: only \
+                    places named syntactically inside the gated statements count, and \
+                    `eigene_ausdruecke` gives a call no arguments. The gate must be a PLAIN \
+                    load -- an `exchange` result is not one (the RMW is the third form of \
+                    the pairing and has its own slot), so a payload behind a CAS gate falls \
+                    nowhere. Three exemptions are unchecked assumptions in the safe \
+                    direction: a read under `locks`/`observes`, a place this body writes \
+                    itself, and the gating atomic read behind its own gate (the one-shot \
+                    latch of the finding's §5.2). It runs over function bodies and over the \
+                    `can_fail` body of a probe, and over NOTHING ELSE -- an `axiom` or an \
+                    `entry` is invisible to it. And the corpus does not measure this rule AT \
+                    ALL: `messung/ordnung/tore.py` counts 20 bindings out of an atomic \
+                    over the corpus and NOT ONE of them is a plain load -- the only plain \
+                    load in the tree is this rule's own poison probe, so the rule hangs on \
+                    that probe and on nothing else.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/301-tor-ohne-paarung.gab -- one probe, and the corpus \
+                      contributes nothing (0 plain atomic loads, measured).",
+        fundstelle: "crates/gabbro-check/src/paarung.rs; messung/ORDNUNGSFINDER.md §4",
+    },
+    Satz {
+        name: "paarung.schreiber",
+        kennungen: &["V010"],
+        aussage: "A published payload whose base name is a module-level shared name is \
+                  written by the publishing function itself or by one of the functions it \
+                  reaches -- never only by a writer outside that hull. A release store \
+                  publishes the writes of its OWN thread, so a pairing whose payload comes \
+                  from elsewhere type-checks and does not carry.",
+        vorbehalt: "**It catches the foreign NAME, not the foreign CORE.** Two cores running \
+                    the same function are one writer to the call graph, and nothing in the \
+                    language says otherwise -- the finding's case (`seal_cache_granule` \
+                    against `record_cache_granule`) is one where the two coincide. It is \
+                    silent when the payload has no writer in this unit at all (`beispiele/14`, \
+                    `virtio-net`) -- an outside writer is what `observed by` and the \
+                    assumption layer are for. Payloads whose base name is a PARAMETER are \
+                    excluded on purpose: `b.daten` in two functions is two `b`. And it \
+                    inherits `V003`'s `continue`: for a function with an incomplete call \
+                    hull it never runs.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/302-fremder-schreiber.gab -- one probe. Over the corpus \
+                      it is silent: all 7 payload publications write their payload in their \
+                      own body.",
+        fundstelle: "crates/gabbro-check/src/paarung.rs; messung/ORDNUNGSFINDER.md §5",
+    },
 ];
 
 // ===================================================================================

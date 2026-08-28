@@ -973,6 +973,22 @@ MUTATIONEN = [
         "V004 -- `relaxed` darf eine Nutzlast tragen, die es nicht ordnet",
     ),
     Mutation(
+        "kein-tor-wird-gebunden",
+        "paarung.rs",
+        '                if o.suffixe.is_empty() && l.lastfrei.contains(&o.basis.text) {',
+        '                if false && l.lastfrei.contains(&o.basis.text) {',
+        "V009 -- keine schlichte Atomlesung gilt mehr als Tor, also findet der Finder "
+        "keine fehlende Paarung mehr",
+    ),
+    Mutation(
+        "fremder-schreiber-egal",
+        "paarung.rs",
+        '            if wer.iter().any(|w| erreichbar.contains(w)) {',
+        '            if true {',
+        "V010 -- die Nutzlast darf von einem Schreiber kommen, den der Veroeffentlicher "
+        "nie erreicht",
+    ),
+    Mutation(
         "linear-darf-fallen",
         "m2.rs",
         "                (Zustand::Lebt, true) => absagen.schiebe(",
