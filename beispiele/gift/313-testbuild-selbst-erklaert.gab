@@ -1,0 +1,32 @@
+-- erwartet: G003
+--
+-- **Der reservierte Name mit zwei Bedeutungen.**
+--
+-- `TESTBUILD` ist keine Konstante der Einheit, sondern die Frage *welcher Bau laeuft gerade*
+-- -- und die beantwortet die Befehlszeile (`gabbro emit --testbuild`), nicht der Quelltext.
+-- Eine Deklaration desselben Namens sieht aus, als schaltete sie das Gatter; sie schaltet
+-- gar nichts, denn niemand liest sie.
+--
+-- **Und zwei Einheiten koennten sich darueber uneins sein und trotzdem binden.** Genau die
+-- Klasse, gegen die `N039` steht -- nur dass es hier nicht um zwei Definitionen EINES Namens
+-- ginge, sondern um zwei Bedeutungen: eine im Quelltext, eine im Bau.
+--
+-- `TESTBUILD` steht deshalb in `SYNTAX.md` auf der `Sonderform`-Zeile: ein Terminal der
+-- Grammatik, das ausdruecklich **kein Wortschatzwort** ist -- dieselbe Klasse wie `O` in
+-- einem `costexpr` und `Held` in einem `heldpred` («G6»).
+
+module gift::testbuildselbst {
+
+const TESTBUILD : bool = false;
+
+static mut SPUR : u32 = 0;
+
+when TESTBUILD
+impl fn spur_schreiben(v : u32)
+    effects { writes SPUR }
+    costs   <= 2 ops
+{
+    SPUR = v;
+}
+
+}

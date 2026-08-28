@@ -106,7 +106,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
              reaches via tree parent child sibling observed occupied
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 rounded finite bool never w1c rc
   Eingebaut  sizeof lenof aligned forall exists true false Self Some None
-  Sonderform O @version Held    (KEINE Wortschatzwoerter -- s. Fussnote G6)
+  Sonderform O @version Held TESTBUILD    (KEINE Wortschatzwoerter -- s. Fussnote G6)
 ```
 
 **Everything else is an identifier.** A new word is a language change and needs an
@@ -199,11 +199,34 @@ Strings only in `claim`, `reason`, `assume` and `section`.
 
 ```ebnf
 program    = { item } ;
-item       = [ "when" constexpr ]
+item       = [ buildgate ]
              ( moduledecl | usedecl | typedecl | constdecl | staticdecl | fndecl
              | format | table | reason | state | device | assume | axiom | check
              | atomicdecl | lockdecl | rcudecl | gruppedecl | accdecl | walkdecl | entrydecl | entrustdecl
              | bootdecl ) ;
+buildgate  = "when" "TESTBUILD" ;                              (* «TB», 2026-08-28 *)
+(* **Das Baugatter -- kein neues Wort, ein zweiter Ort fuer ein vorhandenes.**
+
+   `when` stand seit jeher an jedem `item`, und dieses Dokument sagte dazu „es senkt zu
+   `#if` ab". **Der Erzeuger hat das Feld nie gelesen**: ein Item mit `when` erzeugte
+   genau dasselbe C wie eines ohne, und `TESTBUILD` stand am 2026-08-28 in null Zeilen
+   von `crates/`. Die Klausel war nicht halb eingeloest, sondern gar nicht -- und sah
+   dabei eingeloest aus.
+
+   Der Leser nimmt weiterhin jedes `constexpr` an dieser Stelle; **`G002` laesst genau
+   diesen einen Namen durch.** Die Grammatik schreibt hier die engere Menge, weil sie
+   sagen soll, was der Uebersetzer TUT: er kennt einen Bau, auf den er gattern kann.
+
+   `TESTBUILD` ist ein Bezeichner in fester Stellung und **kein Wortschatzwort** -- die
+   G6-Klasse, dieselbe wie `O` in einem `costexpr` und `Held` in einem `heldpred`. Der
+   Grund steht in `messung/SCHLEIFENINVARIANTE.md` §3: *ein zweites Wort fuer einen
+   vorhandenen Begriff ist teurer als eine zweite Fundstelle fuer ein vorhandenes Wort.*
+
+   **Es ist eine Frage des BAUS, nicht der Einheit.** `gabbro emit --testbuild` oeffnet
+   das Gatter, seine Abwesenheit ist der Auslieferungsbau; wer den Namen selbst erklaert,
+   faellt an `G003`. Und `G001` haelt die eine Richtung, die bricht: ein ungegattertes
+   Item darf ein gegattertes nicht rufen -- im Auslieferungsbau gibt es den Gerufenen
+   nicht. *Die Gegenrichtung ist erlaubt und steht in `beispiele/52`.* *)
 bootdecl   = "boot" ident "arch" ident "{"
                { bootstep }
                "dispatch" path ";"
@@ -267,7 +290,25 @@ staticdecl = [ "pub" ] "static" [ "mut" ] ident ":" typeexpr "=" expr
 **`when`** stands at every `item` (above in the production) and replaces conditional compilation
 (335 `cfg` sites in Caprock).
 
-It lowers to `#if` and is **constant-evaluable** — no preprocessor, no text substitution.
+~~It lowers to `#if` and is **constant-evaluable** — no preprocessor, no text substitution.~~
+**Revoked 2026-08-28 by «TB», and the sentence was never true.** The emitter did not read
+`Item::when` at all; a `when` item produced exactly the same C as one without, `#if` included.
+
+> **A gate that lowers to `#if` is not a build gate.** The item still stands in the shipped C,
+> and *the whole point of gating the check harness is that it is not there* —
+> `messung/GEGENRECHNUNG.md` §8 measures that harness at **29,8 % of Caprock, 19 849 lines**,
+> and no language says anything about it.
+
+**What `when` does since «TB»:** it names the BUILD, and there is exactly one build to name —
+`TESTBUILD`. `gabbro emit --testbuild` opens the gate; **its absence is the shipping build**,
+and a gated item then produces **no line of C**. The gate is a filter in front of the
+generator, not a branch inside it (`gatter::ohne_gatter`), so the generator cannot forget it
+at one of its twenty walks.
+
+Three refusals hold it: `G001` (ungated code calls a gated function — the shipping build would
+not link), `G002` (a `when` condition other than `TESTBUILD` — refused rather than silently
+ignored), `G003` (`TESTBUILD` declared as a name). The decision, with both sides of three
+forms, is `messung/BAUGATTER.md`; the corpus site is `beispiele/52`.
 
 ---
 
@@ -720,8 +761,12 @@ fndecl   = [ "pub" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" 
            [ "costs"     "<=" expr "ops" ]
            [ "decreases" expr ]                                 (* «K5.4» *)
            [ "by"        inductlist ]
-           [ "section" string ] [ "arch" ident ] [ "when" constexpr ]
+           [ "section" string ] [ "arch" ident ] [ buildgate ]
            ( block | "=" pred ";" | "=" asmrumpf ";" | ";" ) ;
+           (* Das Gatter steht an der Funktion ZWEIMAL: hier und vor dem `item`. Beide
+              Stellen sind aelter als «TB» und beide werden gelesen -- eine davon zu
+              uebersehen waere genau das Loch, gegen das «TB» gebaut ist. Der Korpus
+              schreibt die Item-Form, weil sie bei allen 23 Item-Arten dieselbe ist. *)
                                                  (* "=" pred: nur fuer spec fn *)
 asmrumpf = "asm" "{" { string }
              [ "in"  "{" asmops "}" ]
@@ -1401,6 +1446,13 @@ freigabe` named two functions that stood nowhere in the file.*
 
 **The `measures` list IS the report line** — the formatting arises out of it, without
 formatting existing in the language core.
+
+**And since «TB» a `check` can say that it is not in the shipping build:** `when TESTBUILD`
+in front of the declaration, like in front of any other item. Until 2026-08-28 that stood
+twice in `SPRACHE.md` as a plan and nowhere in the compiler — and it is the form the whole
+construct was for. *An obligation that measures the shipped artefact by standing inside it
+has measured the wrong artefact.* Whatever the `check` gates and measures is gated with it;
+`G001` holds the production code away from those names.
 
 ---
 

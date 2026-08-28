@@ -1401,6 +1401,18 @@ Unchanged: `claim`, `measures` (the list **is** the report line), `gates`, `can_
 errors fall out of M1/M2/M3. `check` bodies and `offline` invariants compile only under
 `when TESTBUILD` — in the shipped C they do not exist.
 
+> **Built on 2026-08-28 («TB»), and until that day this line was a plan booked as stock.**
+> `TESTBUILD` stood in zero lines of `crates/`; `Item::when` was parsed and read by nobody but
+> the duplicate check, and `SYNTAX.md` claimed it lowered to `#if` — which the emitter never
+> did either. **A gated item now produces no line of C in the shipping build**, and three
+> refusals hold the form: `G001` (ungated code calls a gated function), `G002` (a `when`
+> condition other than `TESTBUILD`), `G003` (`TESTBUILD` declared as a name).
+> `gabbro emit --testbuild` opens the gate; its absence is the shipping build. Decision:
+> `messung/BAUGATTER.md`. Corpus: `beispiele/52`, measured at **39 lines of C against 77**.
+>
+> *`offline` invariants are NOT gated* — they carry `cost … runs offline` at a `table`, which
+> is a different clause with a different reader, and nothing in this build gates on it.
+
 ---
 
 ### 14. Lowering to C — high-performance because it proves instead of checking
@@ -1484,9 +1496,9 @@ names; exchange is visible.
 | Scheduler/SMP (locks, phases, FP ownership) | `lock rank held` + `linear ghost` (Held, Parked→admit, MayWrite) + V2 | §11.2, §4, §3.2 |
 | Service loops (virtio-blk, server) | `forever` with `on_exceeded`, input-dependent `per_pass`, `held` obligation | §9.3 |
 | Boot, entry, context switch | `BootPhase`, `prim`, `iasm`, axiom layer | §12 |
-| Check harness (15,7 %) | `check` under `when TESTBUILD` | §13 |
+| Check harness (**29,8 %**, not 15,7 — `messung/GEGENRECHNUNG.md` §8) | `check` under `when TESTBUILD` — **built 2026-08-28, «TB»** | §13 |
 | Edge (memcpy, crypto kernels) | `extern fn` with contract as assumption | §14.4 |
-| Conditional compilation (335 `cfg`) | `when` | stock |
+| Conditional compilation (335 `cfg`) | `when` — **and since «TB» only on `TESTBUILD`.** The other 334 shapes are refused by `G002`, not carried. *The word was never carried at all: the emitter ignored it until 2026-08-28* | stock (narrowed) |
 
 **What remains is logic** — `ensures` of the algorithmic bodies (IPC fastpath, scheduler choice,
 revoke functionality), visible in the manifest. That is the promise from §0, literally.

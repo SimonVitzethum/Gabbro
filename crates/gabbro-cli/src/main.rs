@@ -489,10 +489,12 @@ fn hilfe() {
   gabbro alias      <file.gab>…     the ALIAS SURFACE in five strata -- how much of a corpus
                                     a missing alias analysis could be about. Two upper
                                     bounds and two lower ones, printed together; no refusal
-  gabbro emit [--with L.gabi]… <file.gab>…
+  gabbro emit [--with L.gabi]… [--testbuild] <file.gab>…
                                     lower to C -- and REFUSE by name (`C001`) for every
                                     form this emitter does not know. A `.gabi` lowers to a
-                                    C HEADER: typedefs and prototypes, no objects
+                                    C HEADER: typedefs and prototypes, no objects.
+                                    WITHOUT `--testbuild` this is the SHIPPING build: an
+                                    item marked `when TESTBUILD` produces no line of C
   gabbro lean       <file.gab>…     the whole PROGRAM as a Lean 4 module: every body, every
                                     precondition, and the shape of every declared place --
                                     and NO specification. What is to hold is said in Lean,
@@ -617,9 +619,22 @@ fn read_preamble(befehl: &str, mit: &[String]) -> Result<String, std::process::E
 /// and prototypes, **not a single object**. So the preamble in the output is what it would be
 /// in C anyway, and two units link without a duplicate symbol.
 fn command_emit(argumente: &[String]) -> std::process::ExitCode {
-    let (dateien, mit) = match split_with("emit", argumente) {
+    // **`--testbuild` opens the build gate, and its ABSENCE is the shipping build.**
+    //
+    // *The default is the closed gate on purpose.* Whoever forgets the flag loses check code
+    // out of a check build -- a missing symbol, and loud. The other default would put the
+    // check harness into the shipped artefact, and nothing would say so.
+    let pruefbau = argumente.iter().any(|a| a == "--testbuild");
+    let argumente: Vec<String> =
+        argumente.iter().filter(|a| a.as_str() != "--testbuild").cloned().collect();
+    let (dateien, mit) = match split_with("emit", &argumente) {
         Ok(x) => x,
         Err(c) => return c,
+    };
+    let bau = if pruefbau {
+        gabbro_check::gatter::Bau::Pruefbau
+    } else {
+        gabbro_check::gatter::Bau::Auslieferung
     };
     let vorspann = match read_preamble("emit", &mit) {
         Ok(v) => v,
@@ -651,7 +666,7 @@ fn command_emit(argumente: &[String]) -> std::process::ExitCode {
         // passes have not accepted would produce C for a program Gabbro rejects.
         gabbro_check::pruefe(&baum, &mut absagen);
         register.nimm_auf(datei, &baum, versatz, &mut absagen);
-        let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+        let c = gabbro_check::emit::emittiere_mit(&baum, &mut absagen, bau);
         if absagen.fehler_zahl() > 0 {
             eprint!("{}", absagen.zeige(&ganz));
             eprintln!("gabbro emit: {datei} has errors -- no C written");
