@@ -1,0 +1,22 @@
+-- erwartet: R010
+-- **«B26»: ein `else`, das keinen Fall nennt.** `Geraetelug` gibt es, `TippFehler` nicht --
+-- und ohne einen Fall haette `e` einen Wert aus dem Nichts, den der Erzeuger als
+-- C-Bezeichner ausgaebe, den keine Zeile erklaert.
+--
+-- *Der Falsifikator ist die Stelle, an der die Luege des Geraets einen NAMEN bekommt. Ein
+-- Name, der nichts nennt, ist keiner.*
+
+module gift::falsifikator_nennt_nichts {
+
+const QMAX : u16 = 64;
+
+reason Geraetelug {
+    ZuGross = 1 "das Geraet meldet eine Warteschlange ueber QMAX"
+    exhaustive
+}
+
+device Virtio(basis : u64) at mmio {
+    reg QUEUE_SIZE : u16 @0x0c class r requires QUEUE_SIZE <= QMAX else Geraetelug::TippFehler
+}
+
+}

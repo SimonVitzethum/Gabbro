@@ -1273,7 +1273,18 @@ regdecl = "reg" ident ":" intty [ "wrapping" ] "@" expr
              Fragmentkorpus, nicht entworfen. *)
           "class" regklasse [ regphasen ]
           [ "fields" "{" [ regfeld { "," regfeld } [ "," ] ] "}" ]
-          [ "requires" pred ] ;
+          [ "requires" pred [ "else" ident "::" ident ] ] ;
+          (* «B26», 2026-08-28: das `else` ist der FALSIFIKATOR, und ohne ihn ist `requires`
+             am Register bis heute eine GEZAEHLTE Pflicht (`gabbro pflichten` fuehrt sie als
+             `D`) und sonst nichts. Mit ihm wird die LESUNG fehlbar: sie muss dann in einem
+             `let … else` stehen (`R011`), und der Erzeuger senkt sie zu EINER volatilen
+             Lesung ab, deren Bedingung auf der BINDUNG geprueft wird.
+             Warum keine Tatsache daraus wird: das Register ist fluechtig, und ein
+             feindliches Geraet darf alles melden -- eine angenommene Zusage waere der
+             «B33»-Fehler noch einmal, nur eine Ebene hoeher.
+             KEIN neues Terminal: `else` traegt diese Bedeutung an `let … else` und
+             `narrow … else` schon, und es ist dieselbe -- die Stelle, an der die Verletzung
+             sichtbar wird, statt still umzulaufen. s. `messung/GERAETEVERSPRECHEN.md`. *)
 regklasse = "r" | "w" | "rw" | "w1c" | "rc" ;
 regphasen = "in" ident { "," regklasse "in" ident } ;
           (* «B18», 2026-08-28: bis dahin trug ein Register EINE Klasse fuer alle Zeit, und

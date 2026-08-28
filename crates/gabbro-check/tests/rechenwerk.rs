@@ -4801,3 +4801,39 @@ fn lean_programm_autoimplicit_bleibt_aus() {
         "the export states nothing; a specification is written elsewhere:\n{t}"
     );
 }
+
+/// **«B26» — die fehlbare Registerlesung liest GENAU EINMAL** (2026-08-28).
+///
+/// The whole point of `requires … else` is the lowering, and the whole point of the lowering
+/// is that the condition stands on the BINDING. Lower it on the access instead and the C
+/// still compiles, still looks careful, and asks a volatile register two questions -- *two
+/// reads of a volatile register are two values.* That is «B33» in the generator, and this is
+/// the only test that would see it.
+#[test]
+fn emittiert_fehlbare_lesung_einmal() {
+    let q = "module t {\n\
+             const QMAX : u16 = 64;\n\
+             reason Lug { ZuGross = 1 \"zu gross\" exhaustive }\n\
+             device V(basis : u64) at mmio {\n\
+             reg QS : u16 @0x0c class r requires QS <= QMAX else Lug::ZuGross\n\
+             }\n\
+             impl fn g(d : ptr<mmio, r> V) -> u16 or Lug\n\
+             effects { reads d } costs <= 8 ops\n\
+             { let x = d.QS else (e) { return Lug::ZuGross; } return x; }\n\
+             }";
+    let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "die Probe selbst parst nicht:\n{}", a.zeige(q));
+    let c = gabbro_check::emit::emittiere(&baum, &mut a);
+    let absagen: Vec<String> = a.absagen.iter().map(|x| x.text.clone()).collect();
+    assert!(absagen.is_empty(), "die fehlbare Lesung senkt ab: {absagen:?}");
+    let n = c.matches("volatile uint16_t").count();
+    assert_eq!(n, 1, "GENAU EINE volatile Lesung, gezaehlt {n}:\n{c}");
+    assert!(
+        c.contains("if (!(x <= QMAX))"),
+        "die Bedingung steht auf der BINDUNG und nicht auf dem Zugriff:\n{c}"
+    );
+    assert!(
+        c.contains("Lug_ZuGross"),
+        "und der Ausgang traegt den erklaerten Grund:\n{c}"
+    );
+}

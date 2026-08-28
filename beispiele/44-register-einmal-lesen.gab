@@ -64,4 +64,44 @@ impl fn gewicht_bei(n : Platznummer) -> u32
     return Auftrag.slots[n].gewicht;
 }
 
+-- ## «B26», 2026-08-28: das Geraeteversprechen, das ABSENKT
+--
+-- «B33» sagt: *eine Registerstelle ist fluechtig, ein Vergleich darauf gibt keine Tatsache.*
+-- «B26» ist seine Schwester und stellt die Frage von der anderen Seite: **das Geraet SAGT
+-- etwas ueber sein Register zu -- was ist diese Zusage wert?**
+--
+-- Seit dem 2026-08-24 wurde `requires` am Register GEZAEHLT (`gabbro pflichten` fuehrt es
+-- als `D`) und sonst nichts. **Aus der Zusage eine Tatsache zu machen waere der
+-- «B33»-Fehler noch einmal:** das Register ist fluechtig, und ein feindliches Geraet darf
+-- alles melden. Also macht `else` die LESUNG fehlbar, statt dem Pruefer etwas zu schenken:
+--
+--     reg TIEFE : u32 @0x08 class r requires TIEFE <= 8 else Geraetelug::ZuTief
+--
+-- Wer sie dann blank liest, faellt an `R011`; wer sie in ein `let … else` stellt, bekommt
+-- **genau eine** volatile Lesung, und die Bedingung wird auf der BINDUNG geprueft -- nicht
+-- auf einer zweiten Lesung, die etwas anderes ergeben koennte.
+reason Geraetelug {
+    ZuTief = 1 "das Geraet meldet eine Tiefe ueber der Tabellenlaenge"
+    exhaustive
+}
+
+device Tiefengeraet(basis : u64) at mmio {
+    reg TIEFE : u32 @0x08 class r requires TIEFE <= 8 else Geraetelug::ZuTief
+}
+
+-- Das erzeugte C dieser Funktion ist die ganze Aussage von «B26»:
+--
+--     uint32_t t;
+--     { t = (*(volatile uint32_t *)(d->basis + 8));
+--       if (!(t <= 8)) { *_grund = Geraetelug_ZuTief; return false; } }
+--
+-- **Eine Lesung, eine Pruefung, ein benannter Ausgang.**
+impl fn tiefe_lesen(d : ptr<mmio, r> Tiefengeraet) -> u32 or Geraetelug
+    effects { reads d }
+    costs   <= 8 ops
+{
+    let t = d.TIEFE else (e) { return Geraetelug::ZuTief; }
+    return t;
+}
+
 }

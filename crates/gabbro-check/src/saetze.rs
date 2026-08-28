@@ -1840,6 +1840,41 @@ pub const SPERREN: &[Satz] = &[
                      crates/gabbro-check/src/phasen.rs::registerzugriffe; \
                      messung/PHASENKLASSE.md",
     },
+    // --- «B26»: the device promise that lowers (2026-08-28, lane A) ------------------
+    Satz {
+        name: "m3.geraeteversprechen",
+        kennungen: &["R010", "R011"],
+        aussage: "`requires <pred> else <R>::<case>` at a device register makes the READ of \
+                  that register FALLIBLE. The `else` names a reason case this unit declares \
+                  (`R010`), and a plain read of such a register is refused -- it must stand \
+                  in a `let … else` (`R011`). The emitter lowers it to exactly ONE volatile \
+                  read whose condition is checked on the BINDING, not on a second access.",
+        vorbehalt: "**It does not check that the DEVICE keeps its word -- it checks that the \
+                    program looks.** Assuming the condition instead would be the «B33» error \
+                    one level up: the register is volatile and a hostile device may report \
+                    anything. **`e` carries no type here:** in the `else` branch of a \
+                    fallible register read `return e;` falls at `M119` -- the type binding \
+                    for `fehlername` hangs on the callee's signature and lives in `m1.rs`, \
+                    which this lane does not touch. *The loss is small and named: a register \
+                    declares exactly ONE reason, so `return R::C;` says the same.* **The \
+                    read sites are those of `R005`/`R006` plus the arguments of a bare call** \
+                    -- a predicate in the caller's own `requires`, a `narrow` place and a \
+                    loop bound are not among them. **And `requires` WITHOUT `else` is \
+                    untouched:** it stays a counted obligation, and `gabbro pflichten` keeps \
+                    printing it as `D`. The third `let … else` source, an option-valued \
+                    place, keeps its `C001` refusal -- `None` carries no reason, which is a \
+                    different question with a different answer.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/405-geraeteversprechen-blank-gelesen.gab (`R011` -- the \
+                      load-bearing site, measured at 0 errors before the build) and \
+                      406-falsifikator-nennt-nichts.gab (`R010`). The clean side is \
+                      beispiele/44-register-einmal-lesen.gab, «B33»'s own file, and it goes \
+                      through the C compiler -- so the LOWERING is measured and not only the \
+                      refusal. Two mutations.",
+        fundstelle: "crates/gabbro-check/src/m3.rs::geraeteversprechen, ::fehlbare_lesungen; \
+                     crates/gabbro-check/src/emit.rs::fehlbare_lesung; \
+                     messung/GERAETEVERSPRECHEN.md",
+    },
 ];
 
 // ===================================================================================

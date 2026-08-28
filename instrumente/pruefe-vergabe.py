@@ -116,7 +116,17 @@ NICHT = {"saetze.rs"}
 # -- the access violation reuses `R005`/`R006` rather than inventing a code, because the rule
 # is the same rule with a class looked up differently. **The standing invitation holds: who
 # splits `R009` may lower both marks again.**
-MARKE = 19
+#
+# 2026-08-28, «B26»: **19 -> 20, same shape, same booking.**
+#
+# * `R010` (`m3.rs`, two sites) -- ONE duty: *the falsifier at a register declaration names a
+#   reason this unit declares.* The two sites are its two ways of failing: the `reason` type
+#   is not declared here, or it is and has no such case. **The second is not a second rule --
+#   it is the same question one segment further along the path.**
+#
+# *`R011` is NOT on this list*, and that is the check on the reasoning: it has one issuance
+# site, because it is one refusal. Where a rule really is one, the tool sees it.
+MARKE = 20
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
 # 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
 # `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
@@ -156,7 +166,10 @@ MARKE = 19
 # belong there; they inherit the ambiguity of their identifier, which is the four-sub-case
 # shape written out at `MARKE` above. *The number rises because two correct probes were
 # added, not because a rule was issued twice.*
-MARKE_PROBEN = 60
+# 2026-08-28, «B26»: **60 -> 61 -- one probe on `R010`** (`406`). Same booking, same reason.
+# *`beispiele/gift/405` points at `R011`, which has ONE issuance site and is therefore not on
+# the list at all* -- so of the two probes this build added, exactly one costs anything.
+MARKE_PROBEN = 61
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

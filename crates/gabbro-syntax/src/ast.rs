@@ -1582,6 +1582,15 @@ pub struct RegDecl {
     /// forbid the very zeroing that disarms a reused ring.*
     pub phasen: Vec<(RegKlasse, Ident)>,
     pub requires: Option<Pred>,
+    /// **«B26», 2026-08-28: the FALSIFIER of the device promise.** `requires … else R::C`
+    /// makes the READ of this register fallible -- it must then stand in a `let … else`,
+    /// and `e` holds the named reason (`R010`, `R011`, both issued in `m3.rs`).
+    ///
+    /// `None` is the form that stood here until today: the clause is counted as an
+    /// obligation (`gabbro pflichten` prints `D`) and nothing else. *A promise without a
+    /// falsifier is a fact, and a fact about a volatile register a hostile device may
+    /// contradict at will -- that would be the «B33» error again.*
+    pub requires_grund: Option<(Ident, Ident)>,
     pub span: Span,
 }
 

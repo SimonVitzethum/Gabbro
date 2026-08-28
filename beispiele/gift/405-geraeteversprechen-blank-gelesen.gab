@@ -1,0 +1,29 @@
+-- erwartet: R011
+-- **«B26», die tragende Haelfte.** Das Register sagt `requires … else` zu -- und diese
+-- Funktion liest es blank. Damit waere die Zusage eine TATSACHE, und eine Tatsache ueber ein
+-- fluechtiges Register ist genau das, was ein feindliches Geraet entscheidet.
+--
+-- *Bis zum 2026-08-28 ging diese Datei mit 0 Fehlern durch: `requires` war GEZAEHLT und
+-- sonst nichts.* Eine Buchung ist keine Erledigung.
+
+module gift::geraeteversprechen_blank_gelesen {
+
+const QMAX : u16 = 64;
+
+reason Geraetelug {
+    ZuGross = 1 "das Geraet meldet eine Warteschlange ueber QMAX"
+    exhaustive
+}
+
+device Virtio(basis : u64) at mmio {
+    reg QUEUE_SIZE : u16 @0x0c class r requires QUEUE_SIZE <= QMAX else Geraetelug::ZuGross
+}
+
+impl fn groesse(d : ptr<mmio, r> Virtio) -> u16
+    effects { reads d }
+    costs   <= 4 ops
+{
+    return d.QUEUE_SIZE;
+}
+
+}

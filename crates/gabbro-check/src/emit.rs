@@ -112,6 +112,16 @@ struct Namen {
     /// seines `else`-Zweiges. *`e` lebt nur dort, und eine Karte, die laenger lebt als ihr
     /// Name, ist der Fehler, den `eigene_sicht` weiter unten beschreibt.*
     gruendewerte: HashMap<String, String>,
+    /// **Name -> C expression, for the span of ONE condition** («B26», 2026-08-28).
+    ///
+    /// The `requires` at a register names the register by its bare name
+    /// (`QUEUE_SIZE <= QMAX`). Lowering that name back into a volatile access would read the
+    /// device a SECOND time -- and two reads of a volatile register are two values. *That is
+    /// «B33» exactly:* the check would then not be about the value that was bound. So the
+    /// name is bound to the local that holds the ONE read, and only while that condition is
+    /// being lowered. Like `gruendewerte`, and for the same reason: a map that outlives its
+    /// name is the mistake `eigene_sicht` describes.
+    ersetzungen: HashMap<String, String>,
     /// Die `accumulates`-Namen. **Ein Lesen wird ein Ruf, ein Schreiben auch** -- sonst
     /// stuende im C ein Zugriff auf eine Zelle, die es nicht gibt.
     akkus: BTreeSet<String>,
@@ -416,6 +426,13 @@ struct Geraet {
     /// und ein `class w` gibt keine her -- das ist Falle 4, und ihre Antwort heisst
     /// `transition` mit `mirrors`.
     klassen: HashMap<String, RegKlasse>,
+    /// **Register name -> the FALSIFIER of its `requires`** («B26», 2026-08-28).
+    ///
+    /// `(condition, reason type, reason value)`. Present exactly when the declaration carries
+    /// `requires <pred> else <R>::<case>` -- and then the READ of that register is fallible
+    /// and lowers through `fehlbare_lesung`. Absent means the clause is a counted obligation
+    /// and nothing else, which is the state «B26» stood in until today.
+    fehlbar: HashMap<String, (Pred, String, String)>,
     /// **The declared parameters BEYOND the base address -- name and C type** (2026-08-25).
     ///
     /// `Device::parameter` was parsed (`ast.rs`:1488) and read by `emit.rs` NOWHERE. So
@@ -627,6 +644,23 @@ pub fn emittiere_mit(
                             felder: HashMap::new(),
                             umlaeufer: HashMap::new(),
                             klassen: HashMap::new(),
+                            fehlbar: d
+                                .register
+                                .iter()
+                                .chain(d.baenke.iter().flat_map(|b| b.register.iter()))
+                                .filter_map(|r| {
+                                    let pred = r.requires.clone()?;
+                                    let (g, f) = r.requires_grund.clone()?;
+                                    Some((
+                                        r.name.text.clone(),
+                                        (
+                                            pred,
+                                            g.text.clone(),
+                                            format!("{}_{}", g.text, f.text),
+                                        ),
+                                    ))
+                                })
+                                .collect(),
                             // The first parameter is the base address -- `skip(1)`. A
                             // parameter whose type this unit cannot lower is DROPPED here
                             // and the constructor refuses by name below, rather than
@@ -5454,6 +5488,17 @@ fn anweisung(
         // deshalb ist `x` danach belegt, ohne dass hier eine Zeile darauf achten muesste.
         // *W6, an einer Stelle, an der man es leicht nicht bemerkt.*
         StmtArt::LetSonst(l) => {
+            // **«B26», 2026-08-28: the one PLACE source that carries a reason.**
+            //
+            // A register with `requires <pred> else R::C` is read ONCE into the binding, and
+            // the condition is then checked ON THE BINDING. *A promise that does not lower is
+            // a fact, and a fact about a volatile register is what a hostile device gets to
+            // decide* -- the «B33» error, and «B26»'s own row names it.
+            if let LetQuelle::Ort(o) = &l.quelle {
+                if fehlbare_lesung(l, o, aus, u, absagen, tiefe, austritt) {
+                    return;
+                }
+            }
             let Some(r) = l.als_ruf() else {
                 weigere(
                     absagen,
@@ -7079,6 +7124,14 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
 }
 
 fn ort(o: &Ort, u: &Namen, absagen: &mut Absagen) -> String {
+    // **«B26»: a name that means something else for the span of this condition.**
+    // See `Namen::ersetzungen` -- it is empty everywhere except inside the condition of a
+    // fallible register read, and it is the line that keeps the volatile read at ONE.
+    if o.suffixe.is_empty() {
+        if let Some(x) = u.ersetzungen.get(&o.basis.text) {
+            return x.clone();
+        }
+    }
     // **Ein blankes `None` an einer Stelle, die keine Option ist, wird ABGELEHNT.**
     //
     // Bis zum 2026-08-19 fiel es hier durch und wurde der C-Bezeichner `None` -- ein Name,
@@ -7991,4 +8044,109 @@ fn bootstrecke(
             kommentartext(&b.dispatch.text())
         ));
     }
+}
+
+/// **«B26» -- the fallible register access, and the LOWERING is the whole point.**
+///
+/// `reg QUEUE_SIZE : u16 @0x0c class r requires QUEUE_SIZE <= QMAX else Geraetelug::ZuGross`
+/// makes the READ fallible. The lowering:
+///
+/// ```c
+/// uint16_t q;
+/// {
+///     Geraetelug e;
+///     q = (*(volatile uint16_t *)(d->basis + 0xc));   /* ONE read */
+///     if (!(q <= QMAX)) { e = Geraetelug_ZuGross; <else block> }
+/// }
+/// ```
+///
+/// **The register is read exactly ONCE, and the condition is checked on the BINDING.** A
+/// second volatile read would be a second value -- *`d.REG > 0` and `d.REG` are two
+/// questions to a device that may answer differently*, and that is «B33» word for word.
+/// `Namen::ersetzungen` is what buys it: inside the condition the register's own name means
+/// the local, not the access.
+///
+/// Returns `false` when this place is not a fallible register -- then the caller carries on
+/// with the call form and its refusals.
+#[allow(clippy::too_many_arguments)]
+fn fehlbare_lesung(
+    l: &LetSonst,
+    o: &Ort,
+    aus: &mut String,
+    u: &Namen,
+    absagen: &mut Absagen,
+    tiefe: usize,
+    austritt: &Austritt,
+) -> bool {
+    let Some(g) = u
+        .geraetezeiger
+        .get(&o.basis.text)
+        .or_else(|| u.geraetewerte.get(&o.basis.text))
+    else {
+        return false;
+    };
+    let Some(dev) = u.geraete.get(g) else {
+        return false;
+    };
+    // Only the register itself, not a bit field of it: a `requires` speaks about the WORD.
+    let [OrtSuffix::Feld(r)] = o.suffixe.as_slice() else {
+        return false;
+    };
+    let Some((pred, grundtyp, grundwert)) = dev.fehlbar.get(&r.text) else {
+        return false;
+    };
+    let e = einzug(tiefe);
+    let Some(ctyp) = register_ctyp(o, u) else {
+        weigere(
+            absagen,
+            l.name.span,
+            "a fallible register read whose width the emitter cannot resolve",
+        );
+        return true;
+    };
+    // **The condition reads the BINDING, not the register.** Without this line the
+    // volatile access would stand in the condition as well, and the check would be about a
+    // different read than the one that was bound.
+    let mut innen = u.clone();
+    innen
+        .ersetzungen
+        .insert(r.text.clone(), l.name.text.clone());
+    let Some(bedingung) = pred_c(pred, &innen, absagen) else {
+        weigere(
+            absagen,
+            l.name.span,
+            "a `requires … else` at a register whose condition is not a RUN TIME condition -- \
+             a quantifier, `reaches`, `Held` or an implication is proved, not evaluated (W6)",
+        );
+        return true;
+    };
+    let zugriff = ort(o, u, absagen);
+    // **`e` is DECLARED only where the branch reads it** -- unlike the call form, where it
+    // travels as `&e` and is used for that reason alone. A name set here and never read is
+    // `-Wunused-but-set-variable`, and the emission rule compiles with `-Werror`. *A
+    // silencing next to an assignment also claims something false about the code below it.*
+    let mut gelesen = BTreeSet::new();
+    benutzte_namen(&l.sonst, &mut gelesen);
+    let (erklaerung, zuweisung) = if gelesen.contains(&l.fehlername.text) {
+        (
+            format!("{e}    {grundtyp} {};\n", l.fehlername.text),
+            format!("{e}        {} = {grundwert};\n", l.fehlername.text),
+        )
+    } else {
+        (String::new(), String::new())
+    };
+    aus.push_str(&format!("{e}{ctyp} {};\n", l.name.text));
+    aus.push_str(&format!("{e}{{\n{erklaerung}"));
+    aus.push_str(&format!("{e}    {} = {zugriff};\n", l.name.text));
+    aus.push_str(&format!("{e}    if (!({bedingung})) {{\n{zuweisung}"));
+    // `e` carries its `reason` into the view of the `else` branch -- and nowhere else.
+    let mut sicht = u.clone();
+    sicht
+        .gruendewerte
+        .insert(l.fehlername.text.clone(), grundtyp.clone());
+    for k in &l.sonst.anweisungen {
+        anweisung(k, aus, &sicht, absagen, tiefe + 2, austritt);
+    }
+    aus.push_str(&format!("{e}    }}\n{e}}}\n"));
+    true
 }

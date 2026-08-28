@@ -330,6 +330,9 @@ pub(crate) struct RegInfo {
     /// decides, and the stage lives in `phasen.rs`. *Two registers over one site would be
     /// W7; the reading happens where the stage is known.*
     pub(crate) phasen: Vec<(RegKlasse, Ident)>,
+    /// **«B26»: the FALSIFIER of the `requires`** -- `(reason, case)`, present exactly where
+    /// the declaration carries `requires … else R::C`. Then the READ is fallible (`R011`).
+    pub(crate) fehlbar: Option<(String, String)>,
 }
 
 /// **The register table per device** -- register name to class, fields and phase list.
@@ -355,6 +358,10 @@ pub(crate) fn geraetetabelle(baum: &Programm) -> BTreeMap<String, BTreeMap<Strin
                     klasse: r.klasse,
                     felder,
                     phasen: r.phasen.clone(),
+                    fehlbar: r
+                        .requires_grund
+                        .as_ref()
+                        .map(|(g, f)| (g.text.clone(), f.text.clone())),
                 },
             );
         };
@@ -591,6 +598,10 @@ fn klassenpruefung(
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     registerklassen(baum, absagen);
+    // «B26»: the declaration first, then the read -- an `else` that names nothing makes
+    // every statement about an access to it worthless.
+    geraeteversprechen(baum, absagen);
+    fehlbare_lesungen(baum, absagen);
     eigen_doppelt(baum, absagen);
 
     // **Die Platzierungsregel zuerst** -- sie betrifft Deklarationen, nicht Rümpfe.
@@ -1018,4 +1029,176 @@ pub(crate) fn phasenzugriff(
         )
     };
     absagen.schiebe(a);
+}
+
+// =======================================================================================
+// «B26» -- the device promise that LOWERS. 2026-08-28.
+//
+// Half closed on 2026-08-24: `requires` at a register became a COUNTED obligation
+// (`gabbro pflichten` prints `D  Device promise at a register`). *A clause nobody read
+// became a duty with a name and a number* -- and there it stopped. The row said which half
+// was still open, in its own words: the promise carries **no falsifier** and does not LOWER.
+//
+// **Why a FACT out of it would be wrong:** the register is volatile, and a hostile or broken
+// device may report anything. Turning `requires` into something the checker may ASSUME would
+// be the «B33» error again -- and «B33» is the entry directly above it in the register.
+//
+// So the closing form makes the READ fallible instead:
+//
+//     reg QUEUE_SIZE : u16 @0x0c class r requires QUEUE_SIZE <= QMAX else Geraetelug::ZuGross
+//     let q = d.QUEUE_SIZE else (e) { return Geraetelug::ZuGross; }
+//
+// `R010` holds the declaration, `R011` holds the read, and `emit.rs::fehlbare_lesung` does
+// the lowering -- ONE volatile read, and the condition checked on the binding.
+//
+// **W24 measured this before the build, and it turned the plan's own sentence around**
+// (`messung/GERAETEVERSPRECHEN.md`): the plan said the emitter ALREADY carried that form.
+// It did not. `gabbro emit` refused `let … else` over a PLACE, by name.
+// =======================================================================================
+
+/// **`R010` -- the falsifier at the declaration names a reason this unit declares.**
+///
+/// One identifier, two ways to be wrong: the `reason` type is not declared here, or it is
+/// and has no such case. *An `else` that names nothing would hand `e` a value out of
+/// nowhere, and the emitter would build a C identifier for it that no line declares.*
+pub(crate) fn geraeteversprechen(baum: &Programm, absagen: &mut Absagen) {
+    let mut gruende: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Reason(r) = &item.art {
+            gruende.insert(
+                r.name.text.clone(),
+                r.faelle.iter().map(|f| f.name.text.clone()).collect(),
+            );
+        }
+    });
+    let pruefe = |r: &RegDecl, absagen: &mut Absagen| {
+        let Some((g, f)) = &r.requires_grund else {
+            return;
+        };
+        let Some(faelle) = gruende.get(&g.text) else {
+            absagen.schiebe(
+                Absage::fehler(
+                    "R010",
+                    g.span,
+                    format!(
+                        "`{}` falls back on `{}::{}`, and `{}` is no `reason` of this unit",
+                        r.name.text, g.text, f.text, g.text
+                    ),
+                )
+                .mit_notiz(
+                    "the `else` of a device promise names the reason `e` holds -- it is the \
+                     one place the failure of a volatile read gets a name",
+                ),
+            );
+            return;
+        };
+        if !faelle.iter().any(|c| c == &f.text) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "R010",
+                    f.span,
+                    format!("`{}` has no case `{}`", g.text, f.text),
+                )
+                .mit_notiz(format!("the cases are: {}", faelle.join(", "))),
+            );
+        }
+    };
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Device(d) = &item.art else {
+            return;
+        };
+        for r in &d.register {
+            pruefe(r, absagen);
+        }
+        for b in &d.baenke {
+            for r in &b.register {
+                pruefe(r, absagen);
+            }
+        }
+    });
+}
+
+/// **`R011` -- a fallible register read outside a `let … else`. THIS is the falsifier.**
+///
+/// Without this line `requires … else` would be one more counted clause: the read would go
+/// through unchecked and the promise would be a fact after all. *A booking is not a
+/// discharge, and buying a decrement with bookkeeping is exactly what K100's second gate
+/// exists to prevent.*
+///
+/// The place of a `let … else` is NOT in `eigene_ausdruecke` (it lives in `LetQuelle`), so
+/// the allowed site steps aside on its own -- no exception list, and nothing to keep in sync.
+fn fehlbare_lesungen(baum: &Programm, absagen: &mut Absagen) {
+    let geraete = geraetetabelle(baum);
+    if geraete.is_empty() {
+        return;
+    }
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Block(b) = &f.rumpf else {
+            return;
+        };
+        let griffe = griffe_von(f, &geraete);
+        if griffe.is_empty() {
+            return;
+        }
+        fehlbarer_block(b, &geraete, &griffe, absagen);
+    });
+}
+
+fn fehlbarer_block(
+    b: &Block,
+    geraete: &BTreeMap<String, BTreeMap<String, RegInfo>>,
+    griffe: &BTreeMap<String, String>,
+    absagen: &mut Absagen,
+) {
+    for s in &b.anweisungen {
+        // **This statement's own expressions AND a bare call's arguments.** `eigene_ausdruecke` gives nothing
+        // for a bare call, so `benutze(d.REG)` would slip past -- and a rule with a hole in
+        // the commonest shape is not a rule.
+        let mut orte: Vec<&Ort> = Vec::new();
+        for e in crate::eigene_ausdruecke(s) {
+            orte.extend(crate::alle_orte(e));
+        }
+        if let StmtArt::Ruf(r) = &s.art {
+            for a in &r.argumente {
+                orte.extend(crate::alle_orte(a));
+            }
+        }
+        for o in orte {
+            let Some(t) = ort_register(o, geraete, griffe) else {
+                continue;
+            };
+            let Some((g, fall)) = &t.info.fehlbar else {
+                continue;
+            };
+            absagen.schiebe(
+                Absage::fehler(
+                    "R011",
+                    s.span,
+                    format!(
+                        "`{}` is read plainly, and `{}` promises `requires … else {}::{}`",
+                        o.text(),
+                        t.reg.text,
+                        g,
+                        fall
+                    ),
+                )
+                .mit_notiz(format!(
+                    "write `let <name> = {} else (e) {{ … }}` -- the read is FALLIBLE, and \
+                     the `else` branch is where the device's lie becomes visible",
+                    o.text()
+                ))
+                .mit_notiz(
+                    "the register is volatile and a hostile device may report anything -- a \
+                     promise the checker simply ASSUMED would be a fact it does not have \
+                     («B33»)",
+                ),
+            );
+        }
+        for k in crate::unterbloecke(s) {
+            fehlbarer_block(k, geraete, griffe, absagen);
+        }
+    }
 }

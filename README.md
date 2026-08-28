@@ -143,14 +143,14 @@ denominator that shines instead of the one that costs.*
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 236 diagnostics · `gabbro paesse` |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 238 diagnostics · `gabbro paesse` |
 | **Grammar** | **154 EBNF rules**, closed and reachable | vocabulary covers every terminal, 219 / 219 |
 | **Proof templates** | **21, of which 10 are machine-checked** | Isabelle2025-2, `beweise/` |
-| **Pass register** | **68 statements over 12 passes — 60 measured, **2 ARGUED**, 6 conjectured, 0 PROVED.** 45 of 236 diagnostics still owe one, and that number is a **ratchet**: it may fall, not rise. *A written statement is not a proved one — the third column is the whole rest* | `gabbro paesse --je-satz` · `./instrumente/pruefe-saetze.py` |
+| **Pass register** | **68 statements over 12 passes — 60 measured, **2 ARGUED**, 6 conjectured, 0 PROVED.** 45 of 238 diagnostics still owe one, and that number is a **ratchet**: it may fall, not rise. *A written statement is not a proved one — the third column is the whole rest* | `gabbro paesse --je-satz` · `./instrumente/pruefe-saetze.py` |
 | **Guardians** | 26, and **44 of 44 instruments carry all five requirements** — four read statically (deadline · two-way speech test · red on abort · **pinned locale**), the fifth (**work quantity beside the verdict**, W17) measured only by `--lauf`, held by `./instrumente/pruefe-waechter.py`. *The locale demand joined on 2026-08-25: under `de_DE.UTF-8` the linker says `Mehrfachdefinition von`, and `pruefe-emission.sh` reported an error that did not exist.* *The static half reads SOURCE; `--lauf` runs the light ones under a deadline* | **294 of 294 mutations caught** *(run 2026-08-24, `ki-pc-fisch-101`)* |
-| **Corpus** | 53 clean examples, 308 poison files, 216 tests *(run 2026-08-28, `ki-pc-fisch-101`)* | `cargo test` |
+| **Corpus** | 53 clean examples, 310 poison files, 216 tests *(run 2026-08-28, `ki-pc-fisch-101`)* | `cargo test` |
 | **Emission** | **52 of 52 examples emit C, and all 52 compile** under `cc -std=c11 -Wall -Wextra -Werror`, at **`-O0` and `-O2`**, with the same result — **24 of them are also run and compared against a handwriting**, and one of those is a LIBRARY CHAIN across three separately compiled units and a linker, and under `-fsanitize=undefined` | `./instrumente/pruefe-emission.sh` *(run 2026-08-28)* |
-| **Usability** | **5.8 % of the teaching corpus and 12.8 % of REAL code may fall** — 1017 and 109 clause sites, split derivable / redundant / load-bearing. The calibration travels with the tool (`--tafel`, per rule a may-fall AND a reason), because an uncalibrated usability number makes `effects` and `costs` the cheapest thing to drop | `gabbro zeremonie` · `./instrumente/zaehle-zeremonie.py` |
+| **Usability** | **5.8 % of the teaching corpus and 12.8 % of REAL code may fall** — 1021 and 109 clause sites, split derivable / redundant / load-bearing. The calibration travels with the tool (`--tafel`, per rule a may-fall AND a reason), because an uncalibrated usability number makes `effects` and `costs` the cheapest thing to drop | `gabbro zeremonie` · `./instrumente/zaehle-zeremonie.py` |
 | **Blind spots** | **78 blind · 168 covered · 24 poison-only · 14 no cell** *(of 285 pairs)* — four parts on purpose: a removal leaves numerator *and* denominator, and `poison-only` is a hint, not a proof | `gabbro blindstellen` |
 
 > **Eight of these numbers stood wrong until 2026-08-19**, and the guardian that now holds

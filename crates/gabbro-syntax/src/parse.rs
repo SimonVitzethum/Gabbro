@@ -3696,6 +3696,20 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        // «B26», 2026-08-28: `requires <pred> else <R>::<case>` -- the FALSIFIER. Without it
+        // the clause is counted and nothing more; with it the READ becomes fallible and must
+        // stand in a `let … else` (`R011`, issued in `m3.rs` -- nothing in this crate reads
+        // the clause). **No new word:** `else` carries this meaning at
+        // `let … else` and `narrow … else` already, and it is the same meaning -- *the place
+        // where the failure becomes visible instead of passing silently.*
+        let requires_grund = if requires.is_some() && self.friss_kw(Kw::Else) {
+            let g = self.erwarte_ident()?;
+            self.erwarte_z(Z::Kolon2)?;
+            let f = self.erwarte_feldname()?;
+            Some((g, f))
+        } else {
+            None
+        };
         Ok(RegDecl {
             name,
             typ,
@@ -3705,6 +3719,7 @@ impl<'a> Parser<'a> {
             felder,
             phasen,
             requires,
+            requires_grund,
             span: anfang.bis_zu(self.vorheriger_span()),
         })
     }

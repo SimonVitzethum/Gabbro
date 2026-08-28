@@ -3235,6 +3235,43 @@ MUTATIONEN = [
         "R009 -- eine Phasenliste darf eine Stufe der Ordnung auslassen; das stille Loch, "
         "gegen das die Vollstaendigkeitspflicht steht, ist wieder da",
     ),
+    # --- m3 and emit, «B26»: the device promise that LOWERS (2026-08-28) ---
+    #
+    # **The first is the falsifier itself.** Without `R011` the clause is a counted duty
+    # again, and that is the state «B26» stood in from 2026-08-24 until today -- a booking
+    # that reads as a discharge.
+    #
+    # **The third damages the LOWERING and not the refusal**, and it is the sharper one:
+    # substituting the binding into the condition is what keeps the volatile read at ONE.
+    # Drop it and the condition reads the device a SECOND time -- *two reads of a volatile
+    # register are two values*, and the check is then about neither of them. **That is «B33»
+    # word for word, in the generator instead of the checker**, and no probe on the checker
+    # side sees it. `emittiert_fehlbare_lesung_einmal` is what catches it.
+    Mutation(
+        "geraeteversprechen-darf-blank-gelesen-werden",
+        "m3.rs",
+        "        for o in orte {",
+        "        for o in orte.into_iter().take(0) {",
+        "R011 -- eine fehlbare Registerlesung darf wieder blank stehen; beispiele/gift/405 "
+        "geht durch, und `requires … else` ist zurueck bei der blossen Zaehlung",
+    ),
+    Mutation(
+        "falsifikator-darf-ins-leere-nennen",
+        "m3.rs",
+        "        if !faelle.iter().any(|c| c == &f.text) {",
+        "        if false {",
+        "R010 -- das `else` am Register darf einen Fall nennen, den der `reason` nicht hat; "
+        "der Erzeuger schriebe einen C-Bezeichner, den keine Zeile erklaert",
+    ),
+    Mutation(
+        "fehlbare-lesung-liest-zweimal",
+        "gabbro-check/src/emit.rs",
+        "        .insert(r.text.clone(), l.name.text.clone());",
+        "        .insert(String::new(), l.name.text.clone());",
+        "«B26»-Absenkung -- die Bedingung liest das fluechtige Register ein ZWEITES Mal statt "
+        "die Bindung; zwei Lesungen sind zwei Werte, und genau das ist «B33»",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
