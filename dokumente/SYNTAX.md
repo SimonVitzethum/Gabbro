@@ -103,7 +103,7 @@ The load-bearing gaps of the first version — `expr`, `pred`, `block`, `place`,
              entry entrust vector regs out preserves clobbers stack dispatch asm
              per cpu ist nested masked awaits port step via
   Domaenen   slots of chain descendants ancestors queue elems fields threads
-             reaches via tree parent child sibling observed
+             reaches via tree parent child sibling observed occupied
   Typen      u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 rounded finite bool never w1c rc
   Eingebaut  sizeof lenof aligned forall exists true false Self Some None
   Sonderform O @version Held    (KEINE Wortschatzwoerter -- s. Fussnote G6)
@@ -958,7 +958,7 @@ forever
 
 ```ebnf
 table      = [ "pub" ] "table" ident [ "count" constexpr ] [ "backed" ident ] "{"
-               { constdecl | slotdecl | invariant | opdecl | treedecl } "}" ;
+               { constdecl | slotdecl | invariant | opdecl | treedecl | occdecl } "}" ;
 treedecl   = "tree" "{" kante { "," kante } [ "," ] "}" ;
 kante      = ( "parent" | "child" | "sibling" ) ident ;
 (* **«B41b»: die Kante, an der `descendants of` und `ancestors of` laufen** (2026-08-20).
@@ -996,6 +996,21 @@ kante      = ( "parent" | "child" | "sibling" ) ident ;
    Ein Schreiben auf `k` loescht jede Tatsache, die auf ihm ruht -- damit ist ein
    SCHRUMPFEN sicher, ohne dass eine Monotonieregel noetig waere. *Die Gefahr war nie das
    Wachsen.* *)
+occdecl    = "occupied" ident ";" ;
+(* **Das Feld, an dem ein Slot BELEGT ist** (2026-08-28, Zuschnitt (c)).
+
+   Der Erzeuger fuer `ops` braucht `sigma s = Some sl` aus
+   `beweise/Table_Ops_Erhaltung.thy` als PROGRAMM. Der Korpus nennt dieses Feld unter ELF
+   Namen -- `belegt` 8, `benutzt` 6, `used` 3, `aktiv` 3, dazu sieben Einzelfaelle --, also
+   ist eine Namensheuristik widerlegt und nicht bezweifelt. **Wortgleich zu «B41b»**, wo der
+   Slot vier Kandidaten fuer die Baumkante fuehrte und die Domaene keinen nannte.
+
+   Dieselbe FORM wie `treedecl` und aus demselben Grund: eine Aussage ueber die STRUKTUR
+   steht einmal an der `table`, wird dort einmal geprueft (`D010`: ein `bool`-Feld des
+   eigenen Slots; `D011`: eine `table` mit `ops` traegt es) und gilt danach ueberall.
+
+   `occupied` ist KONTEXTUELL wie `tree` -- ueberall sonst, auch als Slotfeldname, bleibt es
+   ein Bezeichner. Die Entscheidung mit beiden Seiten je Form: `messung/OPS-ERZEUGER.md`. *)
 opdecl     = "ops" opname { "," opname } ";" ;
 opname     = "insert" | "remove" | "relabel" ;
              (* «NL.1», decided 2026-08-19: the operation set is CLOSED, and the words are

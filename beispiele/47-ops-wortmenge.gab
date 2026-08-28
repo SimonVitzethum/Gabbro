@@ -19,9 +19,14 @@
 -- nichts zu emittieren, und die Schablone `table.ops.erhaltung` ist damit in dem einzigen
 -- Sinn unbeweisbar, auf den es ankommt.
 --
--- > **Und diese Datei ist noch keine Auslieferung.** Der Erzeuger für die drei Wörter fehlt
--- > weiter; `gabbro schablonen` führt ihn als hängende Prämisse. *Geschlossen ist die FORM,
--- > nicht der Erzeuger* -- und der Unterschied steht hier, statt in einer Fußnote.
+-- > ~~**Und diese Datei ist noch keine Auslieferung.**~~ **AUSGELIEFERT am 2026-08-28.**
+-- > `gabbro emit` schreibt `Verzeichnis_insert` und `Verzeichnis_remove`, und der Beweis
+-- > schreibt sie: `einfuegen_erhaelt` gibt die zwei Voraussetzungen, `blatt_loeschen_erhaelt`
+-- > die eine -- **und `umhaengen_faellt` sorgt dafuer, dass `relabel` NICHT emittiert wird.**
+-- >
+-- > **Und `remove` setzt den ganzen Slot zurueck, nicht nur die Belegung.** Genau daran
+-- > haengt die Invariante unten: `marke_null_wenn_frei` bricht, wenn `marke` das Entfernen
+-- > ueberlebt. *Das ist der Posten, den eine Handmutation vergisst.*
 --
 -- Die Gegenprobe steht in `beispiele/gift/221-ops-erfundenes-wort.gab`.
 
@@ -38,6 +43,12 @@ table Verzeichnis count N {
     }
 
     ops insert, remove;
+
+    -- **`occupied` sagt, WELCHES Feld die Belegung traegt** (2026-08-28, Zuschnitt (c)).
+    -- Ohne es hat `sigma n = None` aus `Table_Ops_Erhaltung.thy` kein Subjekt, und `D011`
+    -- weist die Tabelle ab. *Der Korpus nennt dieses Feld unter elf Namen -- eine
+    -- Namensheuristik ist widerlegt, nicht bezweifelt (`messung/OPS-ERZEUGER.md`).*
+    occupied benutzt;
 
     invariant marke_null_wenn_frei cost O(1) runs online :
         forall s in slots of Self : Self.slots[s].benutzt || Self.slots[s].marke == 0;

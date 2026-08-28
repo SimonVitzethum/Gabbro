@@ -2160,6 +2160,109 @@ fn tabelle(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
              checked against the index word",
         ),
     }
+    ops(t, aus, u, absagen);
+}
+
+/// **Cut (c): the generated mutations -- and the PROOF writes them, not I.**
+///
+/// `beweise/Table_Ops_Erhaltung.thy` has three parts, and the third decides what comes out
+/// here:
+///
+/// | Theorem | word | what it says |
+/// |---|---|---|
+/// | `einfuegen_erhaelt` | `insert` | preserves, under *fresh* and *parent reachable* |
+/// | `blatt_loeschen_erhaelt` | `remove` | preserves, under *`s` is a leaf* |
+/// | `umhaengen_faellt` | `relabel` | **COUNTEREXAMPLE** -- `\<not> wohlgeformt (umhaengen zwei 0 1)` |
+///
+/// > **`relabel` stands in the vocabulary and is not emitted.** Shipping an operation whose
+/// > own proof says it breaks the invariant would be exactly the move K100's second gate
+/// > exists to prevent. *The refusal names the theorem.*
+///
+/// **And `remove` resets the WHOLE slot, not just the flag.** `sigma(s := None)` is a slot
+/// that carries no value any more -- `beispiele/47` shows why that is not zeal: its invariant
+/// `marke_null_wenn_frei` breaks if `marke` survives the removal. *That is the item a hand
+/// mutation forgets and a generator cannot forget.*
+fn ops(t: &Tabelle, aus: &mut String, u: &Namen, absagen: &mut Absagen) {
+    if t.ops.is_empty() {
+        return;
+    }
+    // `D011` holds this in the checker; it stands here because a generator without that map
+    // would silently zero a different field -- and a generator that guesses cancels every
+    // pass in front of it.
+    let Some(belegt) = &t.belegt else { return };
+    let tn = &t.name.text;
+    let elter = t.baum.as_ref().and_then(|b| b.elter.as_ref());
+    for w in &t.ops {
+        match w.text.as_str() {
+            "insert" => {
+                aus.push_str(&format!(
+                    "\n/* `ops insert` -- beweise/Table_Ops_Erhaltung.thy, `einfuegen_erhaelt`.\n\
+                     \x20  The caller owes the theorem's two premises, and M1 holds them at the\n\
+                     \x20  call site: the slot is FRESH (`sigma n = None`) and the parent is\n\
+                     \x20  REACHABLE (`erreicht sigma p`). What this function buys is Teil I:\n\
+                     \x20  the proof falls ONCE per operation, not once per call site. */\n"
+                ));
+                // **The same prototype line every emitted routine gets** -- a generated
+                // operation is the table's INTERFACE, and cut (c) says the kernel calls into
+                // it. Within its own unit nothing calls it, and `-Werror=unused-function`
+                // is right to say so.
+                match elter {
+                    Some(e) => aus.push_str(&format!(
+                        "static void {tn}_insert({tn} *t, uint32_t n, uint32_t p) \
+                         __attribute__((unused));\n\
+                         static void {tn}_insert({tn} *t, uint32_t n, uint32_t p) {{\n\
+                         \x20   t->slots[n].{} = p;\n\
+                         \x20   t->slots[n].{} = 1;\n}}\n",
+                        e.text, belegt.text
+                    )),
+                    None => aus.push_str(&format!(
+                        "static void {tn}_insert({tn} *t, uint32_t n) __attribute__((unused));\n\
+                         static void {tn}_insert({tn} *t, uint32_t n) {{\n\
+                         \x20   t->slots[n].{} = 1;\n}}\n",
+                        belegt.text
+                    )),
+                }
+            }
+            "remove" => {
+                aus.push_str(&format!(
+                    "\n/* `ops remove` -- beweise/Table_Ops_Erhaltung.thy, `blatt_loeschen_erhaelt`.\n\
+                     \x20  Premise the caller owes: `blatt sigma s` -- nobody names `s` as parent.\n\
+                     \x20  `sigma(s := None)` is a slot that carries NO value any more, so EVERY\n\
+                     \x20  field is reset. beispiele/47 shows why that is not zeal: its invariant\n\
+                     \x20  `marke_null_wenn_frei` breaks if a field survives the removal. */\n\
+                     static void {tn}_remove({tn} *t, uint32_t s) __attribute__((unused));\n\
+                     static void {tn}_remove({tn} *t, uint32_t s) {{\n"
+                ));
+                for f in t.slot.iter().flat_map(|sd| sd.felder.iter()) {
+                    let wert = match &f.typ {
+                        SlotTyp::Typ(TypExpr::Index { optional: true, .. }) => {
+                            format!("{tn}_NONE")
+                        }
+                        _ => "0".to_string(),
+                    };
+                    aus.push_str(&format!("    t->slots[s].{} = {wert};\n", f.name.text));
+                }
+                aus.push_str("}\n");
+            }
+            // **The corpus needs it at 127 sites, and the proof carries the
+            // counterexample.** The refusal therefore stands ONCE here instead of 127 times
+            // at the call sites -- and it names the theorem it hangs on.
+            "relabel" => weigere(
+                absagen,
+                w.span,
+                "`ops relabel` -- beweise/Table_Ops_Erhaltung.thy proves `umhaengen_faellt`: \
+                 re-hanging a slot under a new parent does NOT preserve `wohlgeformt` (the \
+                 witness is a two-slot cycle). A generated `relabel` would owe a condition \
+                 nobody has written down",
+            ),
+            other => weigere(
+                absagen,
+                w.span,
+                &format!("`ops {other}` -- no generated meaning for this word"),
+            ),
+        }
+    }
+    let _ = u;
 }
 
 /// **Ein Geraeteregister wird ein volatiler Zugriff an `basis + Versatz` -- und KEIN Feld.**

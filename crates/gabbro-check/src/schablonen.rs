@@ -311,24 +311,30 @@ pub const SCHABLONEN: &[Schablone] = &[
         //   Umhaengen faellt                      -> `umhaengen_faellt` (GEGENBEISPIEL)
         //   Verbindungsinvariante nicht gedeckt   -> `verbindung_nicht_gedeckt`
         //
-        // **Und der Stand bleibt ENTWORFEN, obwohl eine Theorie danebensteht.** Drei Gruende,
-        // und der dritte ist der bindende:
+        // **ENTWORFEN -> GETRAGEN am 2026-08-28, and the first of the three reasons has
+        // fallen.** They stood as:
         //
-        // 1. `Getragen` hiesse *„der Uebersetzer stuetzt sich heute darauf"* -- er tut es
-        //    nicht: `ops` steht an null Korpusstellen und hat keinen Erzeuger.
-        // 2. `Bewiesen` hiesse, die Pflicht sei eingeloest. Teil I traegt die Amortisation
-        //    nur unter der Hypothese *„jede erzeugte Operation erhaelt I"*, und die stellt
-        //    kein Pass her. Teil II loest sie fuer ZWEI Operationen VON HAND ein.
-        // 3. **Ein Eintrag verlaesst die Liste nur bewiesen oder mitsamt seinem Konstrukt.**
-        //    Ihn jetzt hochzubuchen, weil eine Theorie danebenliegt, waere das Verkleinern
-        //    durch Umschreiben, das die Ratsche verbietet.
+        // 1. ~~`Getragen` would mean *"the compiler rests on it today"* -- it does not: `ops`
+        //    has no generator.~~ **It has one since 2026-08-28** (`emit.rs::ops`, cut (c)).
+        // 2. `Bewiesen` would mean the duty is discharged. Part I carries the amortisation
+        //    only under the hypothesis *"every generated operation preserves I"*, and no pass
+        //    establishes it. Part II discharges it for TWO operations BY HAND.
+        // 3. **An entry leaves this list only proved or together with its construct.**
         //
-        // *Bewiesen ist die Mathematik der Schablone, nicht ihre Auslieferung -- derselbe
-        // Satz wie bei `table.induktion`, nur schaerfer, weil hier nicht einmal das
-        // Konstrukt benutzt wird.*
-        stand: Stand::Entworfen,
+        // > **And the generator was cut to the proof, not the other way round:** it emits
+        // > exactly `insert` (`einfuegen_erhaelt`) and `remove` (`blatt_loeschen_erhaelt`),
+        // > and it REFUSES `relabel` by naming `umhaengen_faellt`. *The corpus needs that
+        // > operation at 127 sites; the refusal therefore stands once here instead of 127
+        // > times at the call sites.*
+        //
+        // **`L` rises from 1 to 2, and that is the second gate working, not a regression.**
+        // A construct that closes plumbing costs trust surface, and K100's whole point is
+        // that the shift gets COUNTED. What is still not proved is the step from the Isabelle
+        // model to the emitted C -- the same gap `Table_Absenkung.thy` names in its own words
+        // ("die Sprachdefinition von C und keine Annahme dieses Beweises").
+        stand: Stand::Getragen,
         voraussetzungen: &[
-            Voraussetzung { was: "jede ERZEUGTE Operation erhaelt die Invariante -- Teil I ist parametrisch, und es gibt keinen Erzeuger", durch: None, braeuchte: Some("einen ERZEUGER fuer die drei Woerter. *Die WORTMENGE ist seit dem 2026-08-20 nicht mehr das Fehlende: sie war am 2026-08-19 entschieden und stand nur in der EBNF -- der Parser nahm beliebige Bezeichner UND wies die drei gueltigen ab (`P002`), weil sie im Lexer reserviert sind. `P039` haelt sie jetzt, `beispiele/47` schreibt sie zum ersten Mal.* Was fehlt, ist die Auslieferung: aus `insert` faellt eine Wirkung, aber niemand emittiert sie") },
+            Voraussetzung { was: "jede ERZEUGTE Operation erhaelt die Invariante -- Teil I ist parametrisch", durch: Some("`emit.rs::ops` (2026-08-28): the generator emits exactly the two operations Teil II proves -- `insert` = `einfuegen`, `remove` = `blatt_loeschen` -- and REFUSES `relabel` by naming `umhaengen_faellt`. The emitted set and the proved set are the same set"), braeuchte: None },
             Voraussetzung { was: "beim Einfuegen ist der Platz FRISCH und der Elter erreichbar", durch: None, braeuchte: Some("zwei `requires`-Zeilen am erzeugten `einfuegen`, wie sie `blatt_loeschen` mit `ist_blatt(c, s)` schon hat") },
             Voraussetzung { was: "beim Loeschen ist der Platz ein BLATT", durch: Some("das `requires ist_blatt(c, s)` des Rufers, gehalten von M1"), braeuchte: None },
         ],

@@ -1375,6 +1375,13 @@ pub struct Tabelle {
     ///
     /// Siehe `Baumkanten` -- und `kw.rs`, wo der Befund steht, aus dem das Wort kam.
     pub baum: Option<Baumkanten>,
+    /// **`occupied f` -- the field at which a slot is OCCUPIED.**
+    ///
+    /// It carries `sigma s = Some sl` from `beweise/Table_Ops_Erhaltung.thy`: without it the
+    /// premise *"the slot is fresh"* has no subject, and the generator would emit an
+    /// operation whose proof is about something else. `D011` demands it at every `table`
+    /// that declares `ops`.
+    pub belegt: Option<Ident>,
     pub span: Span,
 }
 

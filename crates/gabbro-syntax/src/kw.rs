@@ -309,6 +309,16 @@ wortschatz! {
     Parent        => "parent",        ctx;
     Child         => "child",         ctx;
     Sibling       => "sibling",       ctx;
+    // **`occupied f` -- the field at which a slot is OCCUPIED** (2026-08-28, cut (c)).
+    //
+    // The generator for `ops` needs `sigma n = None` as a PROGRAM, and the corpus names that
+    // field under **eleven** names (`belegt` 8, `benutzt` 6, `used` 3, `aktiv` 3, plus seven
+    // singletons). *A name heuristic is thereby refuted, not doubted* -- word for word the
+    // «B41b» finding, where the slot carried four candidates for the tree edge.
+    //
+    // CONTEXTUAL like `tree`: everywhere else, a slot field name included, it stays an
+    // identifier. The decision, both sides per form: `messung/OPS-ERZEUGER.md`.
+    Occupied      => "occupied",      ctx;
     Queue         => "queue",         res;
     Elems         => "elems",         res;
     Threads       => "threads",       res;

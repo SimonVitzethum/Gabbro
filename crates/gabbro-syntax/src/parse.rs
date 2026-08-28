@@ -3121,6 +3121,7 @@ impl<'a> Parser<'a> {
         let mut invarianten = Vec::new();
         let mut ops = Vec::new();
         let mut baum = None;
+        let mut belegt = None;
         while !self.ist_z(Z::GeschweiftZu) && !self.ende() {
             match self.blick().art {
                 // **Too strict, closed (2026-08-15).** The `table` body carries `constdecl`,
@@ -3180,6 +3181,24 @@ impl<'a> Parser<'a> {
                     ops.extend(self.opnamen()?);
                     self.erwarte_z(Z::Semi)?;
                 }
+                // **`occupied f` -- the same form as `tree`, and for the same reason:** a
+                // statement about the STRUCTURE stands once at the `table`, is checked once
+                // there and holds everywhere after. See `messung/OPS-ERZEUGER.md`.
+                Art::Wort(Kw::Occupied) => {
+                    let anfang = self.blick().span;
+                    self.pos += 1;
+                    let f = self.erwarte_ident()?;
+                    let ende = self.erwarte_z(Z::Semi)?;
+                    if belegt.is_some() {
+                        self.absage(Absage::fehler(
+                            "P040",
+                            anfang.bis_zu(ende),
+                            "`table` kennt genau ein `occupied`-Wort",
+                        ));
+                        return Err(Abbruch);
+                    }
+                    belegt = Some(f);
+                }
                 _ => {
                     let t = self.blick();
                     let gefunden = t.benennung(self.quelle);
@@ -3187,7 +3206,7 @@ impl<'a> Parser<'a> {
                         Absage::fehler(
                             "P021",
                             t.span,
-                            format!("im `table`-Rumpf erwartet: const, slot, invariant, ops -- {gefunden} gefunden"),
+                            format!("im `table`-Rumpf erwartet: const, slot, invariant, ops, tree, occupied -- {gefunden} gefunden"),
                         ),
                     );
                     return Err(Abbruch);
@@ -3205,6 +3224,7 @@ impl<'a> Parser<'a> {
             invarianten,
             ops,
             baum,
+            belegt,
             span: anfang.bis_zu(ende),
         })
     }

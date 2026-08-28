@@ -392,6 +392,19 @@ pub const D1D2: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/kbedingung.rs; SPRACHE.md §3",
     },
     Satz {
+        name: "d.belegtfeld",
+        kennungen: &["D010", "D011"],
+        aussage: "A `table` that declares `ops` names the field that carries occupancy, and \
+                  that field is a `bool` of its own slot -- so the generated `insert`/`remove` \
+                  write the thing `beweise/Table_Ops_Erhaltung.thy` proves about.",
+        vorbehalt: "It checks that a field is NAMED and two-valued, not that the program keeps \
+                    it truthful. A hand-written body may still set it, unless `D001`/`D002` \
+                    forbid that -- and they do exactly where `ops` stands.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probes on `D010` and `D011`.",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs; messung/OPS-ERZEUGER.md",
+    },
+    Satz {
         name: "d.baumkante",
         kennungen: &["D006", "D007", "D008"],
         aussage: "A `table … tree` names its parent/child/sibling edges as real slot fields, \

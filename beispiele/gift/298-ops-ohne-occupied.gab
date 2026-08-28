@@ -1,0 +1,23 @@
+-- erwartet: D011
+--
+-- **`ops` ohne `occupied` -- ein Verbot ohne Ersatz.**
+--
+-- `D001` macht ab hier jede Handmutation an dieser Tabelle zum Fehler. Ohne ein benanntes
+-- Belegtfeld kann der Erzeuger nichts an ihre Stelle setzen: `sigma n = None` aus
+-- `Table_Ops_Erhaltung.thy` hat kein Subjekt. *Das ist die eine Stellung, in der ein
+-- Konstrukt schlechter ist als keines.*
+
+module gift::opsohneoccupied {
+
+const N : u32 = 8;
+
+table Verzeichnis count N {
+    slot {
+        belegt : bool,
+        marke  : u32,
+    }
+
+    ops insert, remove;
+}
+
+}

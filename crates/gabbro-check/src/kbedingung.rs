@@ -166,6 +166,7 @@ fn nur_ops_felder(baum: &Programm) -> Vec<(String, String)> {
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     erschoepfendes_match(baum, absagen);
     baumkanten(baum, absagen);
+    belegtfeld(baum, absagen);
     // **D002 -- `by ops` am Feld.** Schärfer als `D001`: es trifft auch dort, wo die Tabelle
     // als Ganzes Handmutationen duldet, das EINE Feld aber nicht.
     let geschuetzt = nur_ops_felder(baum);
@@ -439,6 +440,79 @@ fn matchpruefen(
 /// > *eine Regel, die nur auf der Erzeugerflaeche steht, beruehren die meisten Programme
 /// > nie.* Wer `tree { parent nichtsda }` schreibt, soll es von `gabbro pruefe` hoeren und
 /// > nicht erst von `gabbro emit`.
+/// **`occupied f` -- the field at which a slot is OCCUPIED, and two rules hold it.**
+///
+/// The generator for `ops` (cut (c)) needs `sigma s = Some sl` from
+/// `beweise/Table_Ops_Erhaltung.thy` as a PROGRAM: `einfuegen_erhaelt` assumes the slot is
+/// FRESH, `blatt_loeschen_erhaelt` that it is free afterwards. **Without a named field
+/// neither has a subject.**
+///
+/// * **`D010`** -- `occupied f` names a `bool` field of its own slot. Word for word `D006`/
+///   `D007` at the tree edge, and in the CHECKER rather than the generator for the same
+///   reason: a rule that lives only on the generator surface, most programs never touch.
+/// * **`D011`** -- a `table` with `ops` carries an `occupied`. *Otherwise `D001` forbids hand
+///   mutation and the generator puts nothing in its place -- the one position in which a
+///   construct is worse than none.*
+///
+/// > Why not the name heuristic: the corpus names that field under **eleven** names
+/// > (`belegt` 8, `benutzt` 6, `used` 3, `aktiv` 3, plus seven singletons). *A rule that knows
+/// > `belegt` and not `quiescing` zeroes the wrong field in `beispiele/31`* -- and a generator
+/// > that zeroes the wrong field is worse than no generator.
+/// > The decision stands in `messung/OPS-ERZEUGER.md`.
+fn belegtfeld(baum: &Programm, absagen: &mut Absagen) {
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Tabelle(t) = &item.art else { return };
+        match &t.belegt {
+            Some(f) => {
+                let treffer = t
+                    .slot
+                    .iter()
+                    .flat_map(|s| s.felder.iter())
+                    .find(|sf| sf.name.text == f.text);
+                let ist_bool = matches!(
+                    treffer.map(|sf| &sf.typ),
+                    Some(SlotTyp::Typ(TypExpr::Bool(_)))
+                );
+                if !ist_bool {
+                    absagen.schiebe(
+                        Absage::fehler(
+                            "D010",
+                            f.span,
+                            format!(
+                                "`occupied {}` is not a `bool` field of `{}`'s slot",
+                                f.text, t.name.text
+                            ),
+                        )
+                        .mit_notiz(
+                            "occupancy is two-valued: `Some sl` or `None` in \
+                             beweise/Table_Ops_Erhaltung.thy. A field with more values would \
+                             make the generated `remove` say something the proof does not",
+                        ),
+                    );
+                }
+            }
+            None if !t.ops.is_empty() => {
+                absagen.schiebe(
+                    Absage::fehler(
+                        "D011",
+                        t.name.span,
+                        format!(
+                            "`table {}` declares `ops` but no `occupied` field",
+                            t.name.text
+                        ),
+                    )
+                    .mit_notiz(
+                        "`D001` already forbids hand mutation here -- without `occupied` the \
+                         generator has nothing to put in its place, and \"the slot is fresh\" \
+                         has no subject",
+                    ),
+                );
+            }
+            None => {}
+        }
+    });
+}
+
 fn baumkanten(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Tabelle(t) = &item.art else { return };
