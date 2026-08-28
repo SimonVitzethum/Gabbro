@@ -1850,12 +1850,25 @@ MUTATIONEN = [
         "C-Absenkung -- ein Registerzugriff darf wegoptimiert werden",
         "code",
     ),
+    # **Repointed 2026-08-28 -- the gate moved, the mutation stayed behind.** The anchor read
+    #
+    #     ~~`    if !matches!(d.raum, Raum::Mmio) {`~~
+    #
+    # back when ONE refusal covered `at normal` and `at dma` together. That sentence was
+    # split in two on 2026-08-26 (`emit.rs`: *"two refusals under one text was the older
+    # mistake; they are two now"*), and `at dma` LOWERS since then -- under the named
+    # assumption `dma_kohaerent`, and refused without one. **The gate this mutation wants is
+    # therefore the ASSUMPTION gate**, not the address-space test: `if false && ...` lets
+    # `at dma` lower with no assumption named anywhere, and that is the barrier-free
+    # lowering M3 does not build.
     Mutation(
         "dma-wird-abgesenkt",
         "emit.rs",
-        "    if !matches!(d.raum, Raum::Mmio) {",
-        "    if false && !matches!(d.raum, Raum::Mmio) {",
-        "C-Absenkung -- `at dma` wird ohne Barriere abgesenkt, die M3 ausdruecklich nicht baut",
+        "    if matches!(d.raum, Raum::Dma) && !u.annahmen.contains(ANNAHME_DMA) {",
+        "    if false && matches!(d.raum, Raum::Dma) && !u.annahmen.contains(ANNAHME_DMA) {",
+        "C-Absenkung -- `at dma` wird ohne die benannte Annahme `dma_kohaerent` abgesenkt; "
+        "welche Barriere ein DMA-Zugriff braucht, ist eine Aussage ueber das Speichermodell, "
+        "und M3 baut sie ausdruecklich nicht",
         "code",
     ),
     Mutation(
@@ -1972,11 +1985,19 @@ MUTATIONEN = [
         "C-Absenkung -- die Laenge eines Feldtyps wird geraten statt abgelesen",
         "code",
     ),
+    # **Repointed 2026-08-28 -- a pure repoint, the same sabotage.** The anchor read
+    #
+    #     ~~`            "({name}){{ (volatile uint8_t *)(uintptr_t){} }}",`~~
+    #
+    # until the handle learned to carry EVERY declared parameter (2026-08-25, `Virtq(base,
+    # n)`): the base became a NAMED member and the further parameters follow it. `0*` on the
+    # base expression still points the handle at null instead of at its declared base, and
+    # `rechenwerk.rs` asserts that whole line.
     Mutation(
         "geraetegriff-ohne-basis",
         "emit.rs",
-        '            "({name}){{ (volatile uint8_t *)(uintptr_t){} }}",',
-        '            "({name}){{ (volatile uint8_t *)(uintptr_t)0*{} }}",',
+        '            "({name}){{ .basis = (volatile uint8_t *)(uintptr_t){}{rest} }}",',
+        '            "({name}){{ .basis = (volatile uint8_t *)(uintptr_t)0*{}{rest} }}",',
         "C-Absenkung -- der Geraetegriff zeigt auf null statt auf seine erklaerte Basis",
         "code",
     ),
@@ -2719,13 +2740,23 @@ MUTATIONEN = [
         "ein Leser des Zeugnisses kann nicht ablesen, WAS fehlt",
         flaeche="code",
     ),
+    # **Berichtigung 2026-08-28 -- it said THREE forms, and there are two.** The anchor read
+    #
+    #     ~~`                "`sizeof` / `lenof` / `aligned` outside a `format` predicate ...`~~
+    #
+    # On 2026-08-26 `lenof` was given its own sentence AND its own lowering (a descent
+    # measure over a fixed-length array), so the collective refusal covers two forms today,
+    # not three. **The mutation keeps its whole point**: the refusal stops naming the form,
+    # and a reader of the certificate cannot tell WHAT is missing. Only the count in the
+    # rule text was wrong -- corrected here, not painted over.
     Mutation(
         "ausdrucksform-heisst-wieder-ausdrucksform",
         "emit.rs",
-        '                "`sizeof` / `lenof` / `aligned` outside a `format` predicate -- inside one \\',
-        '                "expression form -- inside one \\',
-        "C001 -- die drei Ausdrucksformen ohne Absenkung fallen wieder unter EINEN Satz "
-        "zusammen, und keiner von ihnen nennt die Form",
+        '                    "`sizeof` / `aligned` outside a `format` predicate -- inside one they \\',
+        '                    "expression form -- inside one they \\',
+        "C001 -- die zwei Ausdrucksformen ohne Absenkung fallen wieder unter EINEN Satz "
+        "zusammen, und keine von ihnen wird beim Namen genannt (bis zum 2026-08-26 waren es "
+        "drei; `lenof` hat seither einen eigenen Satz und eine eigene Absenkung)",
         flaeche="code",
     ),
     Mutation(
