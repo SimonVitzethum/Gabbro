@@ -676,9 +676,19 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **323 von 326 Ankern** greifen (`--anker`, 2026-08-28) — die
+      fällt. Mutationskatalog: **327 von 327 Ankern** greifen (`--anker`, 2026-08-28) — die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
+      **Der erste volle Lauf seit mehreren Tagen, 2026-08-28** (`ki-pc-fisch-101`, 6 min 32 s):
+      **325 von 326 gültigen Mutationen gefangen (99 %)** — Prüfer 209 · Code 84 · Annotation
+      30 · Schablone 3, Nullmutation ÜBERLEBT, Giftmutation gefangen, `ungueltig: 0`.
+      Die *eine* Überlebende war ein Wächterfehler und keiner des Erzeugers: die Zusicherung
+      zum Schritt einer `bank` stand über der GANZEN Ausgabe, und seit dem 2026-08-26 trägt
+      der emittierte Schreiber dieselbe Adressrechnung — er erfüllte sie allein. Geheilt an
+      `rechenwerk.rs` (Zusicherung je BLOCK), danach die zweite Mutation für den Schritt des
+      Schreibers, der bis dahin überhaupt keine Probe hatte. **Beide von Hand nachgemessen:
+      vorher ÜBERLEBT, nachher GEFANGEN.** *Der volle Lauf über alle 327 steht noch aus und
+      gehört in die Zusammenführung — zwei Handmessungen sind keine Quote.*
       Was weiterhin fehlt, ist dieselbe Probe auf der **Annotationsemission**: dort entsteht
       der Wunschform-Beweis, und dort ist bis heute nichts zu beschädigen, weil nichts
       emittiert wird.
