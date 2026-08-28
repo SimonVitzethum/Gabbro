@@ -1,0 +1,24 @@
+-- erwartet: P040
+--
+-- **Zwei `occupied` an einer Tabelle -- und welches gilt, entschiede die Reihenfolge.**
+--
+-- Dieselbe Form, die `P022` fuer `tree` und `P020` fuer `slot` haelt. Der Erzeuger fuer `ops`
+-- liest genau ein Feld; stuenden zwei da, nullte `remove` das eine und liesse das andere
+-- stehen -- und die Invariante, die an der Belegung haengt, braeche still.
+
+module gift::occupiedzweimal {
+
+const N : u32 = 8;
+
+table Verzeichnis count N {
+    slot {
+        belegt  : bool,
+        benutzt : bool,
+    }
+
+    ops insert, remove;
+    occupied belegt;
+    occupied benutzt;
+}
+
+}

@@ -977,7 +977,17 @@ pub const PAARUNG: &[Satz] = &[
                   which a foreign shared mutable place is read. Where that shape stands, a \
                   pairing is MISSING: the value decides whether another core's place may be \
                   read, and that is a payload nobody named.",
-        vorbehalt: "**This is the only rule of the pass that looks for an ABSENT clause, and \
+        vorbehalt: "**The corpus triggers this rule ZERO times, and that is the first thing \
+                    to know about it.** `messung/ordnung/tore.py` counts 20 bindings out of an \
+                    atomic and **0 plain loads** -- the only plain load in the tree is `V009`'s \
+                    own poison probe (W23). By the rule that killed `locks ordered` -- no \
+                    construct without a measured need -- this would be a candidate for \
+                    removal. It stands because its target surface is not the Gabbro corpus but \
+                    a real kernel's ordering sites, and THERE nothing is measured yet; the \
+                    ordering sample (`messung/ORDNUNGSSTICHPROBE.md`) is the run that decides \
+                    it. **Until it has run, the need for `V009` is conjectured at one place \
+                    and refuted at the only place available** -- so it is not to be extended. \
+                    \n\n**This is the only rule of the pass that looks for an ABSENT clause, and \
                     it finds ONE shape of absence.** A missing pairing without a branch is \
                     invisible to it, and so is one whose payload is read by a CALLEE: only \
                     places named syntactically inside the gated statements count, and \
@@ -1305,6 +1315,31 @@ pub const GRUPPE: &[Satz] = &[
 // ===================================================================================
 
 pub const PHASEN: &[Satz] = &[
+    Satz {
+        name: "m1.schleifeninvariante",
+        kennungen: &["M133"],
+        aussage: "A loop `invariant` names at least one thing -- a place, a variable, a \
+                  declared predicate. `invariant true` is a promise about nothing that reads \
+                  like one about something.",
+        vorbehalt: "It checks that a NAME is mentioned, not that the invariant is true, not \
+                    that it is preserved, and not that it says anything about the loop it \
+                    stands at. `invariant x == x` names `x` and passes.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probe on `M133`.",
+        fundstelle: "crates/gabbro-check/src/m1.rs; messung/SCHLEIFENINVARIANTE.md §4",
+    },
+    Satz {
+        name: "parser.occupied-einmal",
+        kennungen: &["P040"],
+        aussage: "A `table` carries at most one `occupied` clause -- the same shape `P022` \
+                  holds for `tree` and `P020` for `slot`.",
+        vorbehalt: "Purely a shape rule of the parser. That the named field EXISTS and is a \
+                    `bool` is `D010`; that a `table` with `ops` carries the clause at all is \
+                    `D011`. A second clause in a SECOND table is of course fine.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probe on `P040`.",
+        fundstelle: "crates/gabbro-syntax/src/parse.rs; messung/OPS-ERZEUGER.md",
+    },
     Satz {
         name: "bootsatz.schichten",
         kennungen: &["O008", "O009"],

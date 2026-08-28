@@ -586,6 +586,37 @@ nennt, kostet jedes Mal dieselbe halbe Stunde.**
 
 ---
 
+## W23 — Eine Messung, deren Grundgesamtheit die eigenen Proben enthält, misst sich selbst
+
+**Der Fall, 2026-08-28.** `messung/ordnung/tore.py` sollte den Bedarf für `V009` belegen: wie
+oft steht im Baum eine schlichte Lesung aus einem `atomic`, die einen Zweig gattert? Der erste
+Lauf meldete **26 Bindungen, 0 schlichte** über `beispiele/` **und** `beispiele/gift/` in einer
+Summe. Der zweite trennte die Töpfe — und die **einzige** schlichte Atomlesung im ganzen Baum
+war die Giftprobe, die für `V009` geschrieben worden war.
+
+> **Die Probe war Teil der Grundgesamtheit, die ihren eigenen Bedarf belegen sollte.**
+
+**Das ist W18 in der Messrichtung.** Dort enthält ein *Register* seine eigene Ausgabe und hat
+einen Fixpunkt statt einer Messung; hier enthält eine *Grundgesamtheit* die Proben, die zu der
+Regel gehören, deren Bedarf sie belegen soll. Die Bewegung ist dieselbe, der Schaden ist
+schlimmer: ein Fixpunkt fällt auf, weil die Zahl sich nicht bewegt — eine Selbstmessung liefert
+eine **plausible, nicht triviale Zahl**, und niemand sieht ihr an, woher sie kommt.
+
+**Die Regel ist eine Frage, und sie wird vor dem ersten Lauf gestellt:**
+
+> *Enthält die Menge, über die ich zähle, Dateien, die für den Gegenstand dieser Zählung
+> geschrieben wurden?*
+
+`beispiele/gift/` gehört in **keine** Bedarfsmessung. Es gehört in Trefferzählungen (*„fällt die
+Regel?"*) und dort ausschließlich. Wo beide Töpfe in einem Lauf gebraucht werden, werden sie
+**getrennt ausgewiesen**, nicht summiert.
+
+*Und die Behandlung des Falls gehört dazu:* der Commit hat die falsche erste Zahl mit der
+richtigen daneben stehen lassen, statt sie zu ersetzen. **Eine korrigierte Messung ohne die
+ersetzte Zahl ist eine Behauptung über eine Korrektur.**
+
+---
+
 ## W17 — Erfolg ohne Arbeit: ein positives Urteil über nichts
 
 **Am 2026-08-20 hat dieselbe Form dreimal zugeschlagen, in drei ganz verschiedenen
