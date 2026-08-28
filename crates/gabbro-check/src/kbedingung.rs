@@ -49,6 +49,7 @@ impl Traeger {
 
 /// Erhebt je Tabelle, ob alle Schreibstellen erzeugt sind.
 pub fn erhebe(baum: &Programm) -> Vec<Traeger> {
+    let traeger_der_invariante = invariantentraeger(baum);
     let mut traeger: BTreeMap<String, Traeger> = BTreeMap::new();
     crate::fuer_jedes_item(baum, &mut |item| {
         if let ItemArt::Tabelle(t) = &item.art {
@@ -91,14 +92,184 @@ pub fn erhebe(baum: &Programm) -> Vec<Traeger> {
             }
         }
         for (inv, span) in brueche {
-            for t in traeger.values_mut() {
-                if t.hat_ops {
-                    t.breaking.push((format!("{} in {}", inv, f.name.text), span));
+            // **Which carrier does the resting statement belong to?** Until 2026-08-28 this
+            // loop ran over ALL carriers with `ops`, and the invariant name was never looked
+            // up. Measured: a `breaking` on an invariant of `Endpoint` produced
+            //
+            //     [D009] `breaking` lets `paarig in oeffnen` rest, and `Objekte` declares `ops`
+            //
+            // -- `paarig` is not an invariant of `Objekte`, and the block never touched it.
+            // **The refusal named the wrong carrier**, and it read like a finding while
+            // doing so. Same class as `W16`: a plausible, wrong measurement.
+            //
+            // *The narrowing was only possible once `D013` made the name resolve* -- the
+            // missing rule and the wrong one had one cause.
+            for name in traeger_der_invariante.get(&inv).into_iter().flatten() {
+                if let Some(t) = traeger.get_mut(name) {
+                    if t.hat_ops {
+                        t.breaking
+                            .push((format!("{} in {}", inv, f.name.text), span));
+                    }
                 }
             }
         }
     });
     traeger.into_values().collect()
+}
+
+/// **Invariant name -> the carriers it stands over.**
+///
+/// `breaking I { … }` names an invariant, and until 2026-08-28 nothing resolved `I`. Four
+/// declaration sites can supply one, and they are **exactly the four `maintains` accepts**
+/// (`m1.rs::sammle_spezifikationen`) -- a second list would let the two clauses drift:
+///
+/// * a `table` invariant -- the carrier is that table;
+/// * a `group` invariant -- the carriers are all its members;
+/// * a `spec fn` -- the carriers are the tables its parameters point at;
+/// * a `walk` invariant -- it stands over a traversal, not over a table, so the list is
+///   EMPTY. *An empty list is not an unknown name:* the key is present, so `D013` stays
+///   silent and `D009` has nothing to attribute. The difference matters, which is why the
+///   entry is created rather than skipped.
+pub fn invariantentraeger(baum: &Programm) -> BTreeMap<String, Vec<String>> {
+    let mut tabellen: Vec<String> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Tabelle(t) = &item.art {
+            tabellen.push(t.name.text.clone());
+        }
+    });
+    let mut aus: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Tabelle(t) => {
+            for i in &t.invarianten {
+                let e = aus.entry(i.name.text.clone()).or_default();
+                if !e.contains(&t.name.text) {
+                    e.push(t.name.text.clone());
+                }
+            }
+        }
+        ItemArt::Walk(w) => {
+            for i in &w.invarianten {
+                aus.entry(i.name.text.clone()).or_default();
+            }
+        }
+        // A `group` invariant names at least two carriers (`U007`) and is exactly the
+        // statement that sits on none of them alone -- `maintains` accepts it, so
+        // `breaking` must too, and the break belongs to **every** carrier it spans.
+        ItemArt::Gruppe(g) => {
+            let mitglieder: Vec<String> = g.traeger.iter().map(|t| t.text.clone()).collect();
+            for i in &g.invarianten {
+                let e = aus.entry(i.name.text.clone()).or_default();
+                for m in &mitglieder {
+                    if !e.contains(m) {
+                        e.push(m.clone());
+                    }
+                }
+            }
+        }
+        ItemArt::Funktion(f) if f.klasse == Some(FnKlasse::Spec) => {
+            let e = aus.entry(f.name.text.clone()).or_default();
+            for p in &f.parameter {
+                if let Some(n) = zeigt_auf_tabelle(&p.typ, &tabellen) {
+                    if !e.contains(&n) {
+                        e.push(n);
+                    }
+                }
+            }
+        }
+        _ => {}
+    });
+    aus
+}
+
+/// Names this parameter type one of the declared tables -- directly or through a pointer?
+fn zeigt_auf_tabelle(t: &TypExpr, tabellen: &[String]) -> Option<String> {
+    let pfad = match t {
+        TypExpr::Zeiger(z) => match &z.ziel {
+            TypExpr::Pfad(p) => p,
+            _ => return None,
+        },
+        TypExpr::Pfad(p) => p,
+        _ => return None,
+    };
+    let n = pfad.teile.last()?.text.clone();
+    tabellen.contains(&n).then_some(n)
+}
+
+/// **`D013` -- `breaking I { … }` where `I` names nothing.**
+///
+/// `SPRACHE.md` §8.3 hangs three promises on that name: inside the block `I` is not
+/// available as a premise, functions with `requires I`/`maintains I` are not callable, and
+/// at the end `I` is restored or booked. **All three are promises about a name that was
+/// never looked up.** Measured through the unchanged checker (W24), 2026-08-28:
+///
+/// ```text
+/// breaking gibt_es_gar_nicht { e.slots[kern].caller = 1; }
+///     ->  0 Fehler, 0 Hinweise
+/// ```
+///
+/// This is the fifth member of a class this folder already names: a clause whose subject
+/// stands nowhere -- `M133` (a loop `invariant` naming nothing), `N033` (`step`), `S007`
+/// (`on_exceeded`), `N020` (`gates`). *`breaking` was the one that had the class and not
+/// the rule.*
+///
+/// > **And it is the base of the other half.** `D009` attributed a break to every carrier
+/// > with `ops`, because with no resolution there was no better candidate. One resolution
+/// > closes both.
+fn breaking_nennt_eine_invariante(baum: &Programm, absagen: &mut Absagen) {
+    let bekannt = invariantentraeger(baum);
+    crate::fuer_jedes_item(baum, &mut |item| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Block(b) = &f.rumpf else {
+            return;
+        };
+        let mut offen = Vec::new();
+        sammle_brueche(b, &mut offen);
+        for i in offen {
+            if bekannt.contains_key(&i.text) {
+                continue;
+            }
+            absagen.schiebe(
+                Absage::fehler(
+                    "D013",
+                    i.span,
+                    format!(
+                        "`breaking {}` names nothing this unit declares as an invariant",
+                        i.text
+                    ),
+                )
+                .mit_notiz(
+                    "SPRACHE.md §8.3 hangs three promises on this name -- the invariant is \
+                     blocked as a premise, `requires I`/`maintains I` are not callable, and \
+                     at the end it is restored or booked",
+                )
+                .mit_notiz(
+                    "the same class as `on_exceeded` without a name (`S007`), `step` \
+                     (`N033`) and a loop `invariant` naming nothing (`M133`) -- a clause \
+                     whose subject stands nowhere",
+                )
+                .mit_notiz(
+                    "an invariant of a `table`, of a `group`, of a `walk`, or a `spec fn` \
+                     -- the four `maintains` accepts",
+                ),
+            );
+        }
+    });
+}
+
+/// The `breaking` names of a body, **with the span of the NAME** -- `sammle` keeps only the
+/// span of the whole statement, which is what `D009` points at and the wrong place for a
+/// refusal about one word.
+fn sammle_brueche(b: &Block, aus: &mut Vec<Ident>) {
+    for s in &b.anweisungen {
+        if let StmtArt::Bricht(x) = &s.art {
+            aus.extend(x.invarianten.iter().cloned());
+        }
+        for k in crate::unterbloecke(s) {
+            sammle_brueche(k, aus);
+        }
+    }
 }
 
 /// Zeigt der Parameter `basis` von `f` auf die Tabelle `tabelle`?
@@ -213,6 +384,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             }
         });
     }
+    breaking_nennt_eine_invariante(baum, absagen);
     for t in erhebe(baum) {
         if !t.hat_ops {
             continue;

@@ -2680,6 +2680,18 @@ MUTATIONEN = [
         "D009 -- the K condition no longer refuses a `breaking` block on an `ops` carrier; "
         "a program passes pass 2 without satisfying the condition the K/A/W count rests on",
     ),
+    # **And the ground underneath it** (2026-08-28). `D009` attributed the break to EVERY
+    # carrier with `ops`, because the invariant's name was never looked up -- and without
+    # that lookup a `breaking` clause may also name into the void. *A clause whose subject
+    # stands nowhere* -- the same class as `S007`, `N033`, `M133`, `N020`.
+    Mutation(
+        "breaking-darf-ins-leere-nennen",
+        "kbedingung.rs",
+        "            if bekannt.contains_key(&i.text) {",
+        "            if true {",
+        "D013 -- `breaking` may name an invariant that does not exist; the three promises of "
+        "SPRACHE.md 8.3 then hang on a name with no subject",
+    ),
     # --- emit ---
     #
     # **Die aufgeloesten Auffangzweige der Emission** (2026-08-21). Jede dieser Mutationen

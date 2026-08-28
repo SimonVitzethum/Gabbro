@@ -1,0 +1,48 @@
+-- erwartet: D013
+-- **Gift 351 -- `breaking` laesst etwas ruhen, das es nicht gibt.**
+--
+-- `SPRACHE.md` §8.3 haengt DREI Zusagen an diesen Namen: im Block ist die Invariante als
+-- Praemisse gesperrt, Funktionen mit `requires I`/`maintains I` sind nicht rufbar, und am
+-- Ende ist sie wiederhergestellt oder als `obligation` gebucht. **Alle drei sind Zusagen
+-- ueber einen Namen, den bis zum 2026-08-28 niemand nachgeschlagen hat.**
+--
+-- Gemessen durch den UNVERAENDERTEN Pruefer (W24), 2026-08-28:
+--
+--     breaking gibt_es_gar_nicht { e.slots[kern].caller = 1; }
+--         ->  0 Fehler, 0 Hinweise
+--
+-- Das ist das fuenfte Glied einer Klasse, die dieser Ordner schon benennt -- *eine Klausel,
+-- deren Gegenstand nirgends steht*: `M133` (eine Schleifeninvariante, die nichts nennt),
+-- `N033` (`step`), `S007` (`on_exceeded`), `N020` (`gates`). **`breaking` war das eine, das
+-- die Klasse hatte und die Regel nicht.**
+--
+-- *Und es ist die Grundlage der anderen Haelfte:* `D009` schrieb den Bruch JEDEM Traeger mit
+-- `ops` zu, weil es ohne Aufloesung keinen besseren Kandidaten gab. Eine Aufloesung
+-- schliesst beides.
+
+module gift::breaking_nennt_nichts {
+
+const N : u32 = 8;
+
+table Endpunkt count N {
+    slot {
+        benutzt : bool,
+        anrufer : u32,
+    }
+
+    invariant anrufer_im_bereich cost O(1) runs online :
+        forall e in slots of Self : Self.slots[e].anrufer >= 0;
+}
+
+impl fn oeffnen(e : ptr<normal, rw> Endpunkt, kern : index into Endpunkt)
+    effects { writes e.slots }
+    costs   <= 4 ops
+{
+    -- Ein Tippfehler genuegt: die Invariante darueber heisst `anrufer_im_bereich`.
+    -- Ohne diese Regel ist das eine schweigende Datei.
+    breaking anrufer_im_berreich {
+        e.slots[kern].anrufer = 1;
+    }
+}
+
+}

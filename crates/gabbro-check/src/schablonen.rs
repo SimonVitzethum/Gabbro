@@ -426,6 +426,22 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Beobachtbar **von wem**? Auf einem Mehrkerner sieht ein fremder Kern ihn, sofern
         // nicht eine Sperre oder Atomaritaet ihn deckt. Der Satz war absolut und liess
         // seinen Beobachter weg -- dieselbe Luecke wie N-2 bei `table.induktion`.
+        //
+        // **The form is not what is missing here** (measured 2026-08-28, W24). `transset`
+        // has carried several places since the first day (`SYNTAX.md`:1256), the parser has
+        // the comma loop, and `beispiele/02-geraet.gab`:42 uses it. `PFLICHTEN.md` read the
+        // opposite twice («B17», *"`transition` writes exactly ONE `place`"*) and was wrong
+        // on that for eleven days.
+        //
+        // > **And this template is the reason the row could not simply be built shut.** The
+        // > promise above needs an OBSERVER, and at two slot fields of a table there is
+        // > none: the lowering would be two `store`. So the site went to the form that
+        // > promises the opposite and can keep it -- `breaking I { … }` names the region
+        // > instead of denying it, and the held lock names who does not see it.
+        // > *This template therefore stays `Entworfen`, deliberately* (K100's second gate),
+        // > and it carries no `Voraussetzung`: a premise entry counts in tooth 3, which
+        // > measures proofs nothing establishes -- this one establishes nothing and proves
+        // > nothing either. The weighing: `messung/ZWEI-ORTE.md`.
         pflicht: "Mehrere Orte in EINEM Zug: kein Zwischenzustand ist beobachtbar **fuer \
                   einen benannten Beobachter** -- auf einem Kern der Kontrollfluss, auf \
                   mehreren jeder Kern, der die Sperre des Zuges nicht haelt. **Ohne \

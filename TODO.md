@@ -738,6 +738,20 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 ### Checker and generator
 
+- [ ] **Ein Ruf ins Leere in einem PRÄDIKAT ist still — gemessen 2026-08-28 bei «B13».**
+      Dieselbe erfundene Funktion an drei Stellen, eine Probe durch den unveränderten Prüfer:
+      | Stelle | gemessen |
+      |---|---|
+      | `table … invariant : forall o … : … == gibt_es_nicht(o)` | **0 Fehler, 0 Hinweise** |
+      | `spec fn … = … == gibt_es_nicht(i);` | **0 Fehler, 0 Hinweise** |
+      | `requires gibt_es_nicht(i) == 0` an einer `impl fn` | `E009` — und der kommt aus dem AUFRUFGRAPHEN, nicht aus einer Namensregel |
+      **Nur wo die Wirkungshülle hinsieht, fällt etwas.** Ein Prädikat, das eine Funktion
+      nennt, die es nicht gibt, behauptet nichts und sieht aus wie eine Behauptung — *dieselbe
+      Klasse wie `M133`, `N033`, `S007`, `N020` und `D013` (2026-08-28), eine Fläche weiter.*
+      Woran es hängt: die Namensauflösung über `pred` gibt es nicht; `maintains` hat sie seit
+      `M131` für den KOPF, nicht für den Rumpf. *Probe und Zahlen:
+      [`messung/AGGREGATION.md`](messung/AGGREGATION.md) §1.*
+
 - [ ] **Mutation probe on the ANNOTATION EMISSION**, not only on the code emission. The coherently
       weakened case (code **and** contract) is caught by **no** proof — only by the
       differential test against the handwriting. That is its named task.
@@ -1423,6 +1437,16 @@ Loch, das ein Programm oder ein Messwerkzeug gefunden hat, nicht ein Entwurf.
 
 - [ ] **`breaking I { … }` legalises an invariant violation.** The price is visibility
       instead of hiding; whether that is enough is undecided.
+      **Gewogen am 2026-08-28 gegen die andere Form** («B17», `messung/ZWEI-ORTE.md`): an der
+      Stelle, an der zwei Orte EINEN Zustand bilden, ist `breaking` die haltbare der beiden
+      Zusagen. Ein atomarer `transition` verspricht, dass es keinen Zwischenzustand GIBT, und
+      braucht dafür einen benannten Beobachter, den er auf einem Mehrkerner nicht hat
+      (`schablonen.rs::transition.transset`, `Stand::Entworfen`). `breaking` verspricht das
+      Gegenteil und kann es halten. **Die Grundsatzfrage bleibt trotzdem offen** — dies ist
+      eine Entscheidung über EINE Stelle, keine über das Konstrukt.
+      *Was daran gebaut wurde:* `D013` — `I` muss etwas nennen; und `D009` schreibt den Bruch
+      seither dem Träger zu, dessen Invariante er nennt, statt jedem mit `ops`. Erste saubere
+      Korpusstelle überhaupt: `beispiele/53-zwei-orte.gab`.
 
 ### Vom ersten echten Treiber, 2026-08-20 *(siehe [`messung/BEFUNDE.md`](messung/BEFUNDE.md))* *(Teil)*
 

@@ -1773,6 +1773,36 @@ pub const SPERREN: &[Satz] = &[
                       so (W10).",
         fundstelle: "crates/gabbro-check/src/kbedingung.rs; PL.1, finding 1 of 9",
     },
+    // --- The subject of `breaking`, resolved at last (2026-08-28) ----------------------
+    Satz {
+        name: "kbedingung.breaking-nennt-etwas",
+        kennungen: &["D013"],
+        aussage: "`breaking I { … }` names an invariant this unit really declares -- an \
+                  invariant of a `table`, of a `group`, of a `walk`, or a `spec fn`, which \
+                  are exactly the four `maintains` accepts. On a name that stands nowhere \
+                  the three promises of SPRACHE.md §8.3 have no subject, and the statement \
+                  is refused.",
+        vorbehalt: "**The rule checks the NAME, not the region.** That the invariant really \
+                    rests here, that the block restores it, and that a function with \
+                    `requires I` is not callable inside it -- §8.3 promises all three and \
+                    NONE of them is checked; `D013` only makes sure they have a subject. \
+                    *A `breaking` on the wrong-but-existing invariant still passes.* \
+                    **And the deeper gap stays open and is not this rule's:** no pass looks \
+                    at an `invariant … runs online` at a statement boundary at all. Measured \
+                    through the unchanged checker (W24, 2026-08-28): the two assignments of \
+                    `FRAGMENTE.md`:690-691 pass with ZERO errors, with `breaking` and \
+                    without it. So nothing forces the region to be named -- what this rule \
+                    buys is that a named region names something. \
+                    **The measured base is thin and it says so** (W10/W23): before this run \
+                    the clean corpus had ZERO `breaking` sites and the poison corpus one. \
+                    `beispiele/53-zwei-orte.gab` is the first clean one, written for this \
+                    rule -- so it does not count as demand, only as a site.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/351-breaking-nennt-nichts.gab; one mutation \
+                      (`breaking-darf-ins-leere-nennen`). The clean side is \
+                      beispiele/53-zwei-orte.gab.",
+        fundstelle: "crates/gabbro-check/src/kbedingung.rs; messung/ZWEI-ORTE.md",
+    },
 ];
 
 // ===================================================================================

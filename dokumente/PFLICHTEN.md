@@ -47,7 +47,7 @@
 | 154 | the wraparound at `CapSpace.gen` is intended | K | `wrapping` |
 | 167–169 | a root has no predecessor | L | `D001` schedules it, the human proves it |
 | 171–173 | `slots[s.next].prev == s` — the sibling chain is mutual | L | **gap: «B14» — `pred` cannot resolve an `option index into`** |
-| 174–177 | `refcount == count(s in slots : s.object == o)` | L | **gap: «B13» — `pred` knows no aggregation and no cross-table domain.** *The core of the capability system's bookkeeping.* |
+| 174–177 | `refcount == count(s in slots : s.object == o)` | L | **gap: «B13» — `pred` knows no aggregation.** *The core of the capability system's bookkeeping.* ~~*and no cross-table domain*~~ — **the second half was BERICHTIGT on 2026-08-28 and it never carried.** A predicate names places, a foreign table name is a place, and `pred` never restricted that: measured through the unchanged checker, the connecting statement passes at a `group` invariant **and at a plain `table … invariant`** with 0 errors. *What `group` brought on 2026-08-16 is not the form but its checked home* (`U002`, `U003`, `U005`–`U007`). **The gap is ONE thing, and its cause is narrower still: `count` is a reserved word** (`kw.rs`:168) with no production in `pred`/`expr` — `anzahl(o)` parses at the same site, `count(o)` does not. *It would therefore cost no new word.* Demand, measured and separated (W23): 2 clean corpus sites, F1, and Caprock's K2, which `cap_space.rs` carries by hand in Verus. **Not built, and not for lack of demand** — the tail is a cost rule, a generator template and an Isabelle counterpart, and `PLAN.md`:946 sorted «B13» *out* on the K/L line. Measurement, both forms and the refusal: `messung/AGGREGATION.md` |
 | 184–186 | `ist_blatt` is pure | K | `E009` |
 | 188–190 | `cdt_wohlgeformt` — every slot reaches the root via `parent` | L | the formulation is the human's |
 
@@ -169,7 +169,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 570–575 | every queue index lies in range | K | `M101` |
 | 577–585 | every `index into Endpoint` lies below 64 | K | `M103` |
 | 587–589 | `caller` and `reply_owner` are set together or not at all | L | the human |
-| 592–603 | the two places are written in **one** step | L | **gap: «B17» — `transition` writes exactly ONE `place`. The whole statement of the fragment, and it is not writable** |
+| 592–603 | the two places are written in **one** step | L | the human — **«B17» BERICHTIGT am 2026-08-28, a correction and not a booking.** ~~*gap: «B17» — `transition` writes exactly ONE `place` … not writable*~~ — the row was wrong on its own reason, and it had been wrong since 2026-08-14. **`transset = placeshift { "," placeshift }` stands in `SYNTAX.md`:1256** with the comment *„MEHRERE Orte in EINEM Zug"*, `parse.rs::transition` carries the comma loop, and **`beispiele/02-geraet.gab`:42 uses the form**: `transition irq_umlenken { GCMD.IRE: 0 -> 1, GCMD.SRTP: 1 -> 1 }`. Measured, and it reproduces (W24, unchanged checker): `state Rendezvous { transition open { caller : None -> Some(cl), reply_owner : None -> Some(sv) } }` → **0 Fehler, 0 Hinweise**; the ONE token that fails is `over` (`P001`). *And the folder contradicted itself:* `MESSUNGEN.md`:6198 has carried `transset` correctly all along — this row flattened it. **What is really carried today is not atomicity but the named REGION**: `breaking antwortpflicht_paarig { … }` (`SPRACHE.md` §8.3), whose subject `D013` now resolves and whose site drops out of the K count (`D009`). *Atomicity itself is NOT delivered and cannot be honestly promised* — `schablonen.rs::transition.transset` stands at `Entworfen` and says why: without a named observer the promise is empty on a multicore. **Same booking as the neighbouring row 587–589**, which has read *the human* from the first day. Work and weighing: `messung/ZWEI-ORTE.md`, `beispiele/53-zwei-orte.gab` |
 | 609–611 | the message arrived — `msg_kopiert` | L | **gap: «B12» — no numeric-range domain; the substitute `elems of` has two readings and the grammar fixes neither** |
 | 610 | `msg_kopiert` is pure | K | `E009` |
 | 613–624 | the callback's contract stands at the pointer type | ~~K~~ **zu** | **«B9» BERICHTIGT am 2026-08-25 — eine Richtigstellung, keine Buchung.** ~~*gap: «B9» — `fnptr` carries no `requires`, no `ensures`, no `effects`*~~ — the row was wrong on all three of its points, and it had been wrong for four days. **`effects` and `costs` are MANDATORY at a `fn(…)` type since 2026-08-21** (`N035`); `N036` says which effect words carry through an indirect call; `requires`/`ensures` are refused **with a measured justification** (`N037`) — not forgotten. Measured, and it reproduces: `printf 'type T = { f : fn(u8), };' > /tmp/b9.gab && gabbro pruefe /tmp/b9.gab` → ``Fehler: [N035] /tmp/b9.gab:1:16: `fn(#1)` declares no `effects` and no `costs```. **The work is from 2026-08-21** (`messung/FNPTR.md`, all four halves; `beispiele/49-dispatch-tabelle.gab` with 0 errors) — *this row only failed to be carried along.* `H` falls from 11 to **10**, and it falls because an entry was FALSE, not because anything was built today. **A number lowered by rewording would be repotting; a false entry corrected is not** — and that difference is the whole reason this sentence stands here |
@@ -188,11 +188,18 @@ carries and the Rust original did not — because it does not write them down.*
 | 662–667 | a full queue is REFUSED by name, not blocked | L | D11 literally — **carried, and the best move in F3** |
 | 668 | the caller is blocked | L | the human |
 | 671 | the message arrives at the right thread | L | the human |
-| 676–677 | the invariant does not hold between the two assignments | L | **gap: «B17» at its site** |
+| 676–677 | the invariant does not hold between the two assignments | L | the human — and since 2026-08-28 the region is **named**: `breaking antwortpflicht_paarig { … }`. ~~*gap: «B17» at its site*~~. The statement was writable all along (`breakstmt`, `SYNTAX.md`:882, `SPRACHE.md` §8.3); what it lacked was its SUBJECT — `breaking gibt_es_gar_nicht { … }` passed with **0 Fehler, 0 Hinweise** until `D013`. *The break now falls out of the count „K holds" at the carrier whose invariant it names* (`D009`, narrowed the same day: it used to name every `ops` table, including ones the block never touched). **What stays open is NOT «B17» and is not a language gap:** no pass looks at an `invariant … runs online` at a statement boundary — the two assignments pass with zero errors, with `breaking` and without it. *A rule for it would fire on 2 clean corpus files and is refused by name in `messung/ZWEI-ORTE.md` §4 (Regel A).* |
 | 678 | a same-core rendezvous switches directly | L | the human |
 | 687–703 | every callee names its effects and its bound | K | `K003` |
 
-**F3: 26 obligations — 13 K, 13 L. Hanging: 6** (five L, one K).
+**F3: 26 obligations — 13 K, 13 L. Hanging: ~~6~~ **4** (three L, one K)** — *«B17»'s two rows fell on
+2026-08-28, and the arithmetic is spelled out because a number that moves without one is
+repotting.* **Row 592–603 fell because its reason was FALSE** (`transset` has carried several
+places since the first day, corpus site `beispiele/02`:42) — that is the «B9» move of
+2026-08-25, not a build. **Row 676–677 fell because the form it needed already existed and
+only its subject was missing** (`D013`). Nothing about the two hanging counts of
+`zaehle-pflichten.py --haengend` moves: both rows are **L**, and that tool counts K.
+*The remaining three L are «B12», «B6» and «B10»; the one K is the lowering.*
 
 ---
 
