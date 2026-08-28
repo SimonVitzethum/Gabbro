@@ -1,0 +1,45 @@
+-- erwartet: V010
+-- **Eine Paarung, die typprueft und trotzdem nicht traegt** -- `ORDNUNGSSTICHPROBE-BEFUND.md`
+-- Nr. 34, die zweite Haelfte.
+--
+-- `VERSIEGELT = true publishes { granulat }` besteht den statischen Namensvergleich: es gibt
+-- ein `awaits { granulat }` auf demselben Atomic, also fallen weder `V001` noch `V002`.
+-- **Es ist trotzdem falsch.** Ein `release`-Speichern veroeffentlicht die Schreibzugriffe
+-- SEINES Fadens; `granulat` schreibt `granulat_melden`, und `versiegeln` ruft sie nicht.
+module gift {
+
+const ARCH_MAX : u64 = 128;
+
+static mut granulat : u64 = 0;
+
+atomic VERSIEGELT : bool release;
+
+-- Der Schreiber der Nutzlast -- jeder Kern ruft ihn.
+impl fn granulat_melden(g : u64)
+    effects { writes granulat }
+    costs   <= 4 ops
+{
+    granulat = g;
+}
+
+-- Der Veroeffentlicher -- nur Kern 0 ruft ihn, und er schreibt `granulat` nicht.
+impl fn versiegeln()
+    effects { publishes VERSIEGELT }
+    costs   <= 4 ops
+{
+    VERSIEGELT = true publishes { granulat };
+}
+
+-- Die Gegenseite. Ohne sie faenge `V001` und die Datei waere mehrdeutig.
+impl fn granulat_lesen() -> u64
+    effects { reads VERSIEGELT, reads granulat }
+    costs   <= 8 ops
+{
+    let f = VERSIEGELT awaits { granulat };
+    if f {
+        return granulat;
+    }
+    return ARCH_MAX;
+}
+
+}

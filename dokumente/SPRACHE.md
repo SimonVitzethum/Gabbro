@@ -1356,8 +1356,10 @@ publishstmt = place "=" expr "publishes" ( placelist | "nothing" ) ";" ;
 is named where it arises, with the indices visible there
 (`FP_OWNER[core] = tid publishes { FP_STATES[tid] };` — the self-referential case is writable). A
 **statement** as payload is reified as `ghost static` and published like a place
-(`STALE_STEP = 2 publishes { ghost dead_in_senders };`). Pure counters write `publishes nothing`,
-and that is a word, not an empty list hole. Device publication (virtio `avail`) stands at the
+(`STALE_STEP = 2 publishes { ghost dead_in_senders };`). **Payload-free** accesses write
+`publishes nothing`, and that is a word, not an empty list hole. *Payload-free, not "counter":
+a one-shot latch carries no payload either, and the ordering sample drew two of them
+(`messung/ORDNUNGSFINDER.md` §6).* Device publication (virtio `avail`) stands at the
 `transition` of the device — the most safety-critical publication in the tree is thereby in the
 model for the first time.
 
@@ -1590,8 +1592,29 @@ if owner == my_tid {
 3. **Order follows from the pairing, not the other way round.** `publishes { … }` forces at least
    `release` at the store, `awaits` at least `acquire` at the load — the ordering words at the
    declaration are **derived and checked** instead of chosen. `relaxed` is writable only with
-   `publishes nothing`/without `awaits` (counters). `seq` stays for algorithms that need a
-   **global** order — and exactly those do not fall under the pairing:
+   `publishes nothing`/without `awaits` — the **payload-free** case. `seq` stays for algorithms
+   that need a **global** order — and exactly those do not fall under the pairing:
+
+> **The class is called PAYLOAD-FREE and not "counter", and the sample decided it**
+> (2026-08-28, `messung/ORDNUNGSFINDER.md` §6). Two of the eleven sites it drew into that class
+> are not counters at all but **one-shot latches** — `AGG_COHERENT` (`vtd.rs`:686) and
+> `ECAM_BASE` (`pcie.rs`:81): a value determined once, stored, read, with no separate payload
+> hanging off it. Under the literal reading of "counter" they are a fourth outcome, and a fourth
+> outcome **refutes** this section; under its own test question (*"does it carry NO payload?"*)
+> they are exactly this class. **A noun decided over two refutations, so the name now follows the
+> question instead of one of its examples.** *No new word: `publishes nothing` already says it.*
+
+**Nothing here notices that a pairing is MISSING, and that is the fourth rule** (`V009`, built
+2026-08-28). The three above check a pairing somebody wrote down; whoever declares an ordering
+case as payload-free gets silence instead of an error — *and a form that keeps silent says yes
+for years.* `V009` refuses the one shape the sample found twice: an atomic that carries no
+payload anywhere, whose value **gates a branch** behind which a foreign shared place is read.
+What it does not find, and what the stronger cut would have cost (18 false alarms over the clean
+corpus), is counted out in `messung/ORDNUNGSFINDER.md` §2.
+
+**And the name comparison alone does not carry** (`V010`, same day). *A `release` of core 0
+publishes the writes of core 0*, not the `fetch_max` of core 5 — so a payload whose writer lies
+outside the publisher's call hull passes the static name comparison and orders nothing.
 
 > **Boundary, named:** the pairing covers message passing (producer→consumer, ownership transfer,
 > flags with payload) — by the site structure of the tree the dominant form. Algorithms whose
@@ -1733,8 +1756,11 @@ of these two documents changes that, and it stands here so that it is not read a
 ### 5. Acceptance of this supplement
 
 1. **Extend the repeat measurement to 12 classes:** the 74 obligations plus an ordering sample
-   (≥ 30 of the 2 231 sites, stratified by file) against §1 — every site is a pairing, a counter
-   or a named seq case; a fourth outcome refutes §1.
+   (≥ 30 of the 2 231 sites, stratified by file) against §1 — every site is a pairing, a
+   **payload-free** access or a named seq case; a fourth outcome refutes §1.
+   **RUN 2026-08-28** (`messung/ORDNUNGSSTICHPROBE-BEFUND.md`): 39 sites, **0 fourth
+   outcomes** — 6 pairings, 11 payload-free, 1 seq, 21 dropped as test scaffolding. *And the
+   run found the hole this section did not have: nothing here FINDS a missing pairing.*
 2. **One `entry` per architecture as a fragment** into the folder, held against the real
    syscall/sysret resp. SVC convention (the `clobbers` line is the touchstone).
 3. **The boot theorem as three check lines** in the acceptance series: S1/S2 as a checker speech

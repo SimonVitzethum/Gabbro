@@ -242,6 +242,13 @@ auf beiden plus einer `obligation` („nach dem Versiegeln enthält `CWG_MAX` da
 Kerne") ist es schreibbar und die Erklärung ist wahr. **Genau die Sorte, die §1 als
 „einstellig" vermutet — hier ist eine davon, gezählt.**
 
+> **NACHGETRAGEN 2026-08-28: der Finder ist gebaut, und er hätte Nr. 34 gefunden.** `V009`
+> (`paarung.rs`) sagt genau diese Gestalt ab — ein Atomic ohne Nutzlast, dessen Wert einen
+> Zweig gattert, hinter dem ein fremder geteilter Platz gelesen wird. Und `V010` fängt die
+> Paarung aus dem Absatz darüber, die typprüft und nicht trägt. **Was er NICHT findet und was
+> der vollständige Zuschnitt gekostet hätte (18 Fehlalarme über dem sauberen Korpus), steht
+> in [`ORDNUNGSFINDER.md`](ORDNUNGSFINDER.md) §2.**
+
 > **Zwei Dinge, die dabei mit auffallen und nicht zum Fach gehören:**
 > 1. §1 verspricht *„Lowering: exactly the C11 atomics that stand there today — extra cost 0."*
 >    An dieser Stelle stimmt das **nicht**: heute steht `relaxed`, richtig wäre `seq`. Die
@@ -280,6 +287,12 @@ stehen oben.** Die Sache selbst ist unstrittig; strittig ist ein Wort, und dann 
 *Folgerung für die Sprache, nicht für die Messung:* das Fach heisst falsch. „Zähler" beschreibt
 9 von 11 Fällen; die anderen zwei sind Latches. Ein Name wie **„ohne Nutzlast"** träfe alle elf
 und nähme der Gabelung den Boden.
+
+> **NACHGETRAGEN 2026-08-28: die Folgerung ist gezogen.** `SPRACHE.md` Teil II §1 sagt
+> **„payload-free"** statt „(counters)", und die Begründung mit beiden Formen steht in
+> [`ORDNUNGSFINDER.md`](ORDNUNGSFINDER.md) §6. **Kein neues Sprachwort** — `publishes nothing`
+> sagte es schon; es fehlte nur der Name für das Fach. *Die Zahlen dieses Berichts ändern sich
+> dadurch nicht; die Tabelle oben führt beide Lesarten weiter.*
 
 ---
 

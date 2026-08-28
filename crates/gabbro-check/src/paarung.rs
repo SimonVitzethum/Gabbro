@@ -63,6 +63,29 @@ struct Haelften {
     /// Ein `relaxed`-Store mit Nutzlast: die Ordnung trägt sie nicht. Das `bool` sagt, ob
     /// `relaxed` **dastand** -- die schweigende Fassung ist die gefährlichere.
     relaxed_mit_last: Vec<(String, Span, bool)>,
+    /// **Every atomic that carries a payload ANYWHERE** -- published, awaited or exchanged,
+    /// no matter which ordering word stands at it.
+    ///
+    /// This is not `publiziert` with the sites dropped: a `relaxed` store with a payload
+    /// goes into `relaxed_mit_last` and never reaches `publiziert`, and for the question
+    /// *"is this atomic declared payload-free?"* it must count all the same. Without that
+    /// line `V009` would treat exactly the atomics `V004` already complains about as
+    /// payload-free and complain a second time.
+    traegt_last: BTreeSet<String>,
+}
+
+/// **What `V009` needs to know about the program** -- gathered once, read per function.
+struct Torlage<'a> {
+    /// Atomics that carry no payload anywhere: nothing publishes on them, nothing awaits
+    /// them, no superset is declared, and no `observed by` puts the counterpart in silicon.
+    lastfrei: &'a BTreeSet<String>,
+    /// **Module-level shared and MUTABLE names** -- `static mut`, `atomic`, `accumulates`,
+    /// and the tables. A parameter is deliberately not one: two functions name their
+    /// pointer `b` without meaning the same memory (`beispiele/14`).
+    geteilte: &'a BTreeSet<String>,
+    /// What THIS function writes itself. A place this body writes is this core's own value,
+    /// not a foreign payload -- `beispiele/42`:310 is that case and must not fall.
+    eigene: BTreeSet<String>,
 }
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
@@ -85,8 +108,50 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         }
     });
 
+    // **The module-level shared and mutable names, and who writes them.**
+    //
+    // Both sets exist for the two rules the ordering sample forced (`ORDNUNGSFINDER.md`):
+    // `V009` needs to know what counts as a foreign place, `V010` needs to know which
+    // function wrote the payload.
+    let mut geteilte: BTreeSet<String> = BTreeSet::new();
+    crate::fuer_jedes_item(baum, &mut |item| match &item.art {
+        ItemArt::Statisch(s) if s.veraenderlich => {
+            geteilte.insert(s.name.text.clone());
+        }
+        ItemArt::Atomic(a) => {
+            geteilte.insert(a.name.text.clone());
+        }
+        ItemArt::Accumulates(a) => {
+            geteilte.insert(a.name.text.clone());
+        }
+        ItemArt::Tabelle(t) => {
+            geteilte.insert(t.name.text.clone());
+        }
+        _ => {}
+    });
+    let mut schreiber: std::collections::BTreeMap<String, BTreeSet<String>> = Default::default();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Block(b) = &f.rumpf else {
+            return;
+        };
+        let k = g.schluessel_von(modul, &f.name.text);
+        let mut z: Vec<Ort> = Vec::new();
+        for s in &b.anweisungen {
+            crate::schreibziele(s, &mut z);
+        }
+        for o in &z {
+            schreiber
+                .entry(grundname(&o.text()))
+                .or_default()
+                .insert(k.clone());
+        }
+    });
+
     // **Erst die eigenen Hälften je Funktion, dann die transitive Vereinigung.**
-    let mut je_funktion: Vec<(String, Haelften, bool)> = Vec::new();
+    let mut je_funktion: Vec<(String, Haelften, bool, Option<String>)> = Vec::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else {
             return;
@@ -98,11 +163,9 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         sammle(b, &ordnungen, &mut h);
         // «K5.1» -- die Reihenfolge INNERHALB des Rumpfes.
         reihenfolge(b, &[], &[], &[], &f.name.text, absagen);
-        let unvollstaendig = g
-            .huelle(&g.schluessel_von(modul, &f.name.text))
-            .unvollstaendig
-            .is_some();
-        je_funktion.push((f.name.text.clone(), h, unvollstaendig));
+        let schluessel = g.schluessel_von(modul, &f.name.text);
+        let unvollstaendig = g.huelle(&schluessel).unvollstaendig.is_some();
+        je_funktion.push((f.name.text.clone(), h, unvollstaendig, Some(schluessel)));
     });
     // **Und der `can_fail`-Rumpf einer Probe** (2026-08-20).
     //
@@ -124,7 +187,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
         let mut h = Haelften::default();
         sammle(&c.can_fail, &ordnungen, &mut h);
         reihenfolge(&c.can_fail, &[], &[], &[], &c.name.text, absagen);
-        je_funktion.push((c.name.text.clone(), h, false));
+        je_funktion.push((c.name.text.clone(), h, false, None));
     });
 
     // Die vereinigte Menge über den ganzen Baum -- die Paarung ist eine Aussage über das
@@ -141,14 +204,53 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     });
     let alle_publiziert: BTreeSet<(String, String)> = je_funktion
         .iter()
-        .flat_map(|(_, h, _)| h.publiziert.iter().map(|(a, o, _)| (a.clone(), o.clone())))
+        .flat_map(|(_, h, _, _)| h.publiziert.iter().map(|(a, o, _)| (a.clone(), o.clone())))
         .collect();
     let alle_erwartet: BTreeSet<(String, String)> = je_funktion
         .iter()
-        .flat_map(|(_, h, _)| h.erwartet.iter().map(|(a, o, _)| (a.clone(), o.clone())))
+        .flat_map(|(_, h, _, _)| h.erwartet.iter().map(|(a, o, _)| (a.clone(), o.clone())))
         .collect();
 
-    for (name, h, unvollstaendig) in &je_funktion {
+    // **`V009`: which atomics are declared PAYLOAD-FREE over the whole program?**
+    //
+    // Not "which say `publishes nothing` here" -- that is a statement about one store. The
+    // question is the categorial one from `SPRACHE.md` part II §1: an atomic on which
+    // nothing publishes, which nothing awaits, which declares no superset and whose
+    // counterpart is not in silicon (`observed by`) is the "payload-free" case of the three.
+    let mut lastfrei: BTreeSet<String> = BTreeSet::new();
+    {
+        let mut traegt: BTreeSet<String> = je_funktion
+            .iter()
+            .flat_map(|(_, h, _, _)| h.traegt_last.iter().cloned())
+            .collect();
+        traegt.extend(obermengen.iter().map(|(n, _)| n.clone()));
+        traegt.extend(beobachtet.iter().cloned());
+        for (n, _) in &ordnungen {
+            if !traegt.contains(n) {
+                lastfrei.insert(n.clone());
+            }
+        }
+    }
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
+        let ItemArt::Funktion(f) = &item.art else {
+            return;
+        };
+        let FnRumpf::Block(b) = &f.rumpf else {
+            return;
+        };
+        let mut z: Vec<Ort> = Vec::new();
+        for s in &b.anweisungen {
+            crate::schreibziele(s, &mut z);
+        }
+        let lage = Torlage {
+            lastfrei: &lastfrei,
+            geteilte: &geteilte,
+            eigene: z.iter().map(|o| grundname(&o.text())).collect(),
+        };
+        tore(b, &lage, &mut Vec::new(), &f.name.text, absagen);
+    });
+
+    for (name, h, unvollstaendig, schluessel) in &je_funktion {
         // **W10:** aus einer unteren Schranke wird weder abgesagt noch bestätigt.
         if *unvollstaendig && !h.publiziert.is_empty() {
             absagen.schiebe(
@@ -192,6 +294,63 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                     ),
                 );
             }
+        }
+        // **`V010` -- the publication comes from a DIFFERENT writer than the payload.**
+        //
+        // `ORDNUNGSSTICHPROBE-BEFUND.md` no. 34 writes the case out: one could put
+        // `CWG_SEALED = true publishes { CWG_MAX }` there, and the static name comparison of
+        // §1 would let it through. *It would be wrong all the same: the `release` of core 0
+        // publishes THE WRITES OF CORE 0, not the `fetch_max` of core 5.*
+        //
+        // > **A pairing that type-checks and does not carry is worse than none** -- it looks
+        // > like a promise and is a claim, the same class as the `protects` clause of
+        // > `beispiele/05` that `H007` took away.
+        //
+        // The reachable hull is the right question and not the body: `V006` already drew
+        // that line (*"a payload that is not written in the body at all is no error -- it
+        // can come from a callee"*), and two rules with two answers to one question are one
+        // answer too many.
+        for (at, o, span) in &h.publiziert {
+            let Some(k) = schluessel else { continue };
+            let basis = grundname(o);
+            // A parameter is not a shared name: `b.daten` in two functions is two `b`.
+            if !geteilte.contains(&basis) {
+                continue;
+            }
+            let Some(wer) = schreiber.get(&basis) else {
+                continue;
+            };
+            // Nobody writes it in this unit -- then the writer is outside, and an outside
+            // writer is what `observed by` and the assumption layer are for, not this rule.
+            if wer.is_empty() {
+                continue;
+            }
+            let erreichbar = ruf_huelle(&g, k);
+            if wer.iter().any(|w| erreichbar.contains(w)) {
+                continue;
+            }
+            absagen.schiebe(
+                Absage::fehler(
+                    "V010",
+                    *span,
+                    format!(
+                        "`{at}` publishes `{basis}` in `{name}`, and `{basis}` is written by \
+                         a writer this one never reaches"
+                    ),
+                )
+                .mit_notiz(format!(
+                    "written in: {}",
+                    wer.iter().cloned().collect::<Vec<_>>().join(", ")
+                ))
+                .mit_notiz(
+                    "a release store publishes THE WRITES OF ITS OWN THREAD -- a write by \
+                     another core is not made visible by it",
+                )
+                .mit_notiz(
+                    "the pairing compares names; this compares the writer -- and a pairing \
+                     that type-checks and does not carry is worse than none",
+                ),
+            );
         }
         for (at, o, span) in &h.publiziert {
             // **«V9»: die Gegenseite steht in SILIZIUM, und das sagt die Deklaration.**
@@ -317,6 +476,9 @@ fn sammle(b: &Block, ordnungen: &[(String, Option<Ordnung>)], h: &mut Haelften) 
                     .then_some(o.is_some())
                 });
                 if let Nutzlast::Orte(liste) = &p.nutzlast {
+                    if !liste.is_empty() {
+                        h.traegt_last.insert(grundname(&ziel));
+                    }
                     for o in liste {
                         match stille {
                             Some(erklaert) => {
@@ -329,6 +491,9 @@ fn sammle(b: &Block, ordnungen: &[(String, Option<Ordnung>)], h: &mut Haelften) 
             }
             StmtArt::AwaitLoad(a) => {
                 let quelle = a.quelle.text();
+                if !a.erwartet.is_empty() {
+                    h.traegt_last.insert(grundname(&quelle));
+                }
                 for o in &a.erwartet {
                     h.erwartet.push((quelle.clone(), form(&o.text()), s.span));
                 }
@@ -336,11 +501,15 @@ fn sammle(b: &Block, ordnungen: &[(String, Option<Ordnung>)], h: &mut Haelften) 
             StmtArt::Exchange(e) => {
                 let ort = e.ort.text();
                 if let Some(Nutzlast::Orte(liste)) = &e.nutzlast {
+                    if !liste.is_empty() {
+                        h.traegt_last.insert(grundname(&ort));
+                    }
                     for o in liste {
                         h.publiziert.push((ort.clone(), form(&o.text()), s.span));
                     }
                 }
                 for o in e.erwartet.iter().flatten() {
+                    h.traegt_last.insert(grundname(&ort));
                     h.erwartet.push((ort.clone(), form(&o.text()), s.span));
                 }
             }
@@ -507,4 +676,196 @@ fn grundname(k: &str) -> String {
 /// einen `OrtSuffix::Index` ab (2026-08-20).
 fn orte_gelesen(e: &Expr, aus: &mut Vec<String>) {
     aus.extend(crate::alle_orte(e).into_iter().map(|o| grundname(&o.text())));
+}
+
+/// **The functions reachable from `start`, itself included.**
+///
+/// `Graph::huelle` answers with EFFECTS; the question `V010` asks is *which function*, and
+/// an effect name cannot answer it. The walk is the same one, over `Knoten::ruft`.
+fn ruf_huelle(g: &crate::aufrufgraph::Graph, start: &str) -> BTreeSet<String> {
+    let mut aus: BTreeSet<String> = BTreeSet::new();
+    let mut offen = vec![start.to_string()];
+    while let Some(n) = offen.pop() {
+        if !aus.insert(n.clone()) {
+            continue;
+        }
+        if let Some(k) = g.knoten.get(&n) {
+            offen.extend(k.ruft.iter().cloned());
+        }
+    }
+    aus
+}
+
+/// **`V009` -- the gate whose pairing nobody wrote.**
+///
+/// `SPRACHE.md` part II §1 has three type rules, and all three CHECK a pairing that somebody
+/// wrote down. None of them notices that one is MISSING -- `ORDNUNGSSTICHPROBE-BEFUND.md`
+/// §5.1 states it as the gap:
+///
+/// > *"They check pairings; a site that declares `publishes nothing`/`relaxed` passes.
+/// > Whoever declares this field payload-free gets no error -- he gets a compiler that keeps
+/// > silent."*
+///
+/// **A form that keeps silent says yes for years.** The shape this rule looks for is the one
+/// the finding wrote out twice (`aarch64/mmu.rs`:800 and `loader.rs`:682):
+///
+/// ```gabbro
+/// let sealed = SEALED;             -- a plain load of a payload-free atomic
+/// if sealed { return granule; }    -- its value gates, and behind the gate a FOREIGN
+/// ```                              --   shared place is read
+///
+/// ## What it deliberately does not take
+///
+/// * an `exchange` result is not a gate. An RMW is the THIRD form of the pairing and carries
+///   its own `publishes`/`awaits` slot; §1's rules already reach it. Counting it would make
+///   `beispiele/42`:310 fall, and that one is right.
+/// * a place this body writes itself is not a foreign payload -- it is this core's value.
+/// * a read under `locks`/`observes` is ordered by the lock (K1 of the sampling protocol).
+///
+/// **The way out is never silence.** Name the payload (`publishes { P }` + `awaits { P }`),
+/// take the lock, or declare `observed by` -- three sentences, and each of them is checked.
+fn tore(
+    b: &Block,
+    l: &Torlage,
+    gebunden: &mut Vec<(String, String)>,
+    wo: &str,
+    absagen: &mut Absagen,
+) {
+    for (i, s) in b.anweisungen.iter().enumerate() {
+        // **A plain load, and nothing else counts as one.** `awaits` and `exchange` are
+        // their own statement kinds, so a `Let` can never be either.
+        if let StmtArt::Let(le) = &s.art {
+            if let ExprArt::Ort(o) = &le.wert.art {
+                if o.suffixe.is_empty() && l.lastfrei.contains(&o.basis.text) {
+                    gebunden.push((le.name.text.clone(), o.basis.text.clone()));
+                }
+            }
+        }
+        let mut melde = |at: &str, hinter: &[Stmt]| {
+            let Some((platz, _)) = fremde_lesung(hinter, at, l) else {
+                return false;
+            };
+            absagen.schiebe(
+                Absage::fehler(
+                    "V009",
+                    s.span,
+                    format!(
+                        "`{at}` carries no payload and gates a branch in `{wo}` behind which \
+                         `{platz}` is read"
+                    ),
+                )
+                .mit_notiz(format!(
+                    "nothing publishes on `{at}` and nothing awaits it -- so it is the \
+                     payload-free case of SPRACHE.md part II §1, and `{platz}` says it is not"
+                ))
+                .mit_notiz(
+                    "a value that decides whether a foreign place may be read IS a payload \
+                     -- name it, take a lock, or declare `observed by`",
+                )
+                .mit_notiz(
+                    "the three rules of §1 check a pairing that is written down; this one \
+                     asks whether one is MISSING",
+                ),
+            );
+            true
+        };
+        match &s.art {
+            StmtArt::Wenn(w) => {
+                let mut gesagt = false;
+                for (bed, zweig) in &w.zweige {
+                    if gesagt {
+                        break;
+                    }
+                    let Some(at) = tor(bed, gebunden, l) else {
+                        continue;
+                    };
+                    gesagt = melde(&at, &zweig.anweisungen);
+                    if !gesagt {
+                        if let Some(sonst) = &w.sonst {
+                            gesagt = melde(&at, &sonst.anweisungen);
+                        }
+                    }
+                    // **And what stands AFTER the `if`, when the branch ends the flow.**
+                    // `if !sealed { return default; }` puts the payload behind the gate
+                    // without a block around it -- the literal shape of finding no. 34.
+                    // `&[]` for the divergent names is the safe direction: fewer ends
+                    // recognised means fewer refusals.
+                    if !gesagt && crate::endet_immer(zweig, &[]) {
+                        gesagt = melde(&at, &b.anweisungen[i + 1..]);
+                    }
+                }
+            }
+            StmtArt::Match(m) => {
+                if let Some(at) = tor(&m.gegenstand, gebunden, l) {
+                    for z in &m.zweige {
+                        if melde(&at, &z.rumpf.anweisungen) {
+                            break;
+                        }
+                    }
+                }
+            }
+            StmtArt::Narrow(n) => {
+                let name = n.ort.basis.text.clone();
+                let at = gebunden
+                    .iter()
+                    .find(|(lok, _)| *lok == name)
+                    .map(|(_, a)| a.clone())
+                    .or_else(|| {
+                        (n.ort.suffixe.is_empty() && l.lastfrei.contains(&name)).then_some(name)
+                    });
+                if let Some(at) = at {
+                    if !melde(&at, &n.sonst.anweisungen) {
+                        melde(&at, &b.anweisungen[i + 1..]);
+                    }
+                }
+            }
+            _ => {}
+        }
+        for k in crate::unterbloecke(s) {
+            tore(k, l, &mut gebunden.clone(), wo, absagen);
+        }
+    }
+}
+
+/// **Does this expression gate on a payload-free atomic?** -- the name of that atomic.
+fn tor(e: &Expr, gebunden: &[(String, String)], l: &Torlage) -> Option<String> {
+    for o in crate::alle_orte(e) {
+        let n = &o.basis.text;
+        if let Some((_, at)) = gebunden.iter().find(|(lok, _)| lok == n) {
+            return Some(at.clone());
+        }
+        if o.suffixe.is_empty() && l.lastfrei.contains(n) {
+            return Some(n.clone());
+        }
+    }
+    None
+}
+
+/// **The first read of a FOREIGN shared place behind the gate.**
+///
+/// Foreign means three things at once, and all three are needed: module-level shared and
+/// mutable, not the gating atomic itself, and not written by this body.
+fn fremde_lesung(stmts: &[Stmt], at: &str, l: &Torlage) -> Option<(String, Span)> {
+    for s in stmts {
+        // **A lock orders what stands under it** -- K1 of the sampling protocol. In Gabbro
+        // the atomic would fall away entirely there.
+        if matches!(s.art, StmtArt::Sperrt(_) | StmtArt::Observiert(_)) {
+            continue;
+        }
+        for e in crate::eigene_ausdruecke(s) {
+            for o in crate::alle_orte(e) {
+                let basis = grundname(&o.text());
+                if basis == at || !l.geteilte.contains(&basis) || l.eigene.contains(&basis) {
+                    continue;
+                }
+                return Some((o.text(), o.span));
+            }
+        }
+        for k in crate::unterbloecke(s) {
+            if let Some(t) = fremde_lesung(&k.anweisungen, at, l) {
+                return Some(t);
+            }
+        }
+    }
+    None
 }
