@@ -619,13 +619,16 @@ ersetzte Zahl ist eine Behauptung über eine Korrektur.**
 
 ## W24 — Bevor ein neues Wort erwogen wird: **parst die naheliegende Form heute schon?**
 
-**Drei Fälle, und beim dritten war die Bauart nicht mehr zu übersehen.**
+**Vier Fälle, und beim dritten war die Bauart nicht mehr zu übersehen. Der vierte ist der
+teuerste: dort hat eine falsche Zeile die Frage seit dem 2026-08-17 beantwortet — elf Tage,
+zwei Fundstellen, und `MESSUNGEN.md`:6198 stand die ganze Zeit richtig daneben.**
 
 | Fall | erwogen wurde | gemessen wurde |
 |---|---|---|
 | `transition` | eine fehlende Form | *„eine Lücke im GRAPHEN, nicht im Programm"* |
 | «B35» | dasselbe | dasselbe |
 | **`ops`-Rufform**, 2026-08-28 | eine eigene Anweisungsart (`insert v.slots[n] under p;`) mit dem neuen Wort `under` | **`Verzeichnis::insert(v, i)` parst seit jeher.** `parse.rs::erwarte_feldname` nimmt hinter `::` jedes Wortschatzwort an; die EBNF sagte es nur nicht |
+| **«B17»**, 2026-08-28 abends | eine Mehrfachform für `transition` — *„`transition` schreibt genau EINEN `place` … nicht schreibbar"* (`PFLICHTEN.md`, zweimal) | **`transset = placeshift { "," placeshift }` steht in `SYNTAX.md`:1256 und wird in `beispiele/02-geraet.gab`:42 BENUTZT.** Von sieben Proben fiel genau eine am Parser, an EINEM Token (`over`). Was wirklich fehlte, stand woanders: `breaking I { … }` gab es seit jeher und **löste seinen Namen nie auf** — `breaking gibt_es_gar_nicht { … }` ging mit 0 Fehlern durch |
 
 Was der Prüfer **wirklich** meldete, mit einer Probedatei durch den **unveränderten** Prüfer:
 

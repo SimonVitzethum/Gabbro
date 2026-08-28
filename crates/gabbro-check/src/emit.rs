@@ -5572,10 +5572,12 @@ fn anweisung(
             "`breaking I { … }` -- the block is a PROOF region: inside it the invariant is \
              not available as a premise, and at its end it is either restored by \
              construction or booked as an obligation in the manifest. At run time it is \
-             nothing but its statements, so the lowering would be a plain block -- and it is \
-             not built because no program asks for it: the single corpus site is a poison \
-             probe. Emitting the block and dropping the region would make the C look like a \
-             program whose obligation nobody carries",
+             nothing but its statements, so the lowering would be a plain block -- and \
+             emitting it would drop the region and make the C look like a program whose \
+             obligation nobody carries. **The second reason expired on 2026-08-28** and is \
+             not repeated here: it read `no program asks for it: the single corpus site is a \
+             poison probe`, and `beispiele/53-zwei-orte.gab` is now a clean one. The refusal \
+             stands on the first reason alone, which was always the load-bearing one",
         ),
     }
 }

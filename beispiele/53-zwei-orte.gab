@@ -1,0 +1,86 @@
+-- 53 -- **Zwei Orte, ein Zustand: der Bereich, in dem die Invariante NICHT gilt.**
+--
+-- Die Stelle ist «B17» aus `FRAGMENTE.md` F3 (:676-691): `anrufer` und `antwortende` bilden
+-- zusammen EINEN Zustand, und die Invariante darueber sagt, dass beide gemeinsam gesetzt
+-- oder gemeinsam leer sind. Zwischen den zwei Zuweisungen gilt sie nicht -- das ist keine
+-- Nachlaessigkeit, sondern die Aussage der Stelle.
+--
+-- **Das Fragment hielt das fuer unschreibbar und nannte den Grund falsch.** Es las:
+-- *„`transition` schreibt GENAU EIN `place`"*. Gemessen 2026-08-28 durch den unveraenderten
+-- Pruefer (W24): `transset = placeshift { "," placeshift }` steht seit jeher in der EBNF
+-- (`SYNTAX.md`:1256), der Parser traegt die Schleife, und `beispiele/02-geraet.gab:42`
+-- benutzt die Form. *Es fehlte nie die Mehrfachform.*
+--
+-- **Was wirklich fehlte, war das Wort fuer den BEREICH** -- und auch das gibt es seit jeher:
+-- `breaking I { … }` (`SPRACHE.md` §8.3). Bis zum 2026-08-28 hatte es NULL saubere
+-- Korpusstellen; die einzige Stelle im Ordner war eine Giftprobe. Diese Datei ist die erste.
+--
+-- **Warum `breaking` und nicht ein atomarer `transition`:** die Zusage „kein Zwischenzustand
+-- ist beobachtbar" braucht einen BEOBACHTER (`schablonen.rs::transition.transset`), und auf
+-- einem Mehrkerner ist sie ohne ihn leer. `breaking` verspricht das Gegenteil und ist damit
+-- haltbar: der Zwischenzustand IST da, er steht benannt in der Quelle, und die Sperre `EPS`
+-- sagt, wer ihn nicht sieht. *Sichtbarkeit statt Verstecken* -- die Abwaegung steht in
+-- `messung/ZWEI-ORTE.md`.
+
+module beispiel::zwei_orte {
+
+const NKERNE  : u32 = 4;
+const NFAEDEN : u32 = 64;
+
+lock EPS protects { endpunkte } rank 0 held <= 200 ops masks irqs;
+
+table Faden count NFAEDEN {
+    slot {
+        benutzt : bool,
+    }
+}
+
+table Endpunkt count NKERNE {
+    slot {
+        benutzt     : bool,
+        anrufer     : option index into Faden,
+        antwortende : option index into Faden,
+    }
+
+    -- **Die ganze Aussage der Stelle, in einer Zeile.** In Caprock steht sie als Kommentar
+    -- (*„stets gemeinsam gesetzt/geloescht"*); hier ist sie eine Ableitung.
+    invariant antwortpflicht_paarig cost O(1) runs online :
+        forall e in slots of Self :
+            (Self.slots[e].anrufer == None) == (Self.slots[e].antwortende == None);
+}
+
+-- Das Rendezvous wird eroeffnet: der Anrufer wartet, der Antwortende schuldet die Antwort.
+-- **Der `breaking`-Block ist der Bereich, in dem `antwortpflicht_paarig` ruht** -- eine
+-- Anweisung lang, unter gehaltener `EPS`.
+impl fn treffen_oeffnen(e : ptr<normal, rw> Endpunkt, kern : index into Endpunkt,
+                        ruft : index into Faden, dient : index into Faden)
+    requires  Held(EPS), e.slots[kern].benutzt
+    ensures   e.slots[kern].anrufer == Some(ruft),
+              e.slots[kern].antwortende == Some(dient)
+    maintains antwortpflicht_paarig
+    effects   { writes e.slots, locks EPS }
+    costs     <= 8 ops
+{
+    breaking antwortpflicht_paarig {
+        e.slots[kern].anrufer     = Some(ruft);
+        e.slots[kern].antwortende = Some(dient);
+    }
+}
+
+-- Und die Gegenrichtung, dieselbe Bauart: die Antwort ist geleistet, beide Orte fallen
+-- gemeinsam zurueck. *Ohne den Block stuende hier zweimal dasselbe Schweigen.*
+impl fn treffen_schliessen(e : ptr<normal, rw> Endpunkt, kern : index into Endpunkt)
+    requires  Held(EPS), e.slots[kern].benutzt
+    ensures   e.slots[kern].anrufer == None,
+              e.slots[kern].antwortende == None
+    maintains antwortpflicht_paarig
+    effects   { writes e.slots, locks EPS }
+    costs     <= 8 ops
+{
+    breaking antwortpflicht_paarig {
+        e.slots[kern].anrufer     = None;
+        e.slots[kern].antwortende = None;
+    }
+}
+
+}

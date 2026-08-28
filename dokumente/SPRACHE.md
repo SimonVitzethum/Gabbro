@@ -1087,6 +1087,35 @@ otherwise the restoration is an **`obligation`** in the manifest. That is the th
 invariant, it is booked as logic.* Without this rule "falls by construction" becomes the
 convenient booking — the `depleted_count` dispute is thereby decided.
 
+##### 8.3.1 `I` has to BE something — `D013`, 2026-08-28
+
+**Three promises hang on that name, and until 2026-08-28 none of them had a subject.** The
+name was parsed, collected by `kbedingung.rs`, printed in its report and refused by `D009` —
+and never looked up. Measured through the unchanged checker (W24):
+
+```gabbro
+breaking gibt_es_gar_nicht { e.slots[kern].caller = 1; }
+-- 4 Items, 0 Fehler, 0 Hinweise
+```
+
+`D013` requires `I` to name an invariant this unit really declares — of a `table`, of a
+`group`, of a `walk`, or a `spec fn`. **That is exactly the list `maintains` accepts**
+(`m1.rs::sammle_spezifikationen`); a second list for the same notion is where the two clauses
+would drift apart. *This is the fifth member of a class the folder already names — a clause
+whose subject stands nowhere: `M133`, `N033`, `S007`, `N020`.*
+
+> **And the missing rule and a WRONG one had one cause.** With no resolution `D009` attributed
+> a break to *every* carrier declaring `ops`: a `breaking` on an invariant of `Endpoint`
+> printed ``[D009] `breaking` lets `paarig in oeffnen` rest, and `Objekte` declares `ops` `` —
+> about a table the block never touched. Narrowed the same day, and it was only possible once
+> the name resolved.
+
+**What `D013` does NOT check** is everything else §8.3 promises: that the invariant really
+rests here, that the block restores it, that `requires I`/`maintains I` are blocked inside it.
+*A `breaking` on the wrong-but-existing invariant still passes.* First clean corpus site:
+`beispiele/53-zwei-orte.gab` — until that file `breaking` had **zero** clean sites and one
+poison one. The weighing against the other candidate form stands in `messung/ZWEI-ORTE.md`.
+
 ---
 
 ### 9. Loops — three forms, all repaired
