@@ -3131,6 +3131,32 @@ MUTATIONEN = [
         "G003 -- der reservierte Name wird nur noch an Funktionen gehalten; ein "
         "`const TESTBUILD` steht wieder daneben und schaltet nichts",
     ),
+    # --- opsruf (2026-08-28) ---
+    #
+    # **`D012` -- the premises of `beweise/Table_Ops_Erhaltung.thy` at the call site.** The
+    # generator shipped that morning with them in a C COMMENT; if this rule goes silent, that
+    # is exactly the state it returns to -- and a comment claiming a pass checks something is
+    # the class `H007`/`H008` stand against.
+    Mutation(
+        "ops-ruf-braucht-keine-voraussetzung",
+        "opsruf.rs",
+        "        if steht.contains(&verlangt) {",
+        "        if true || steht.contains(&verlangt) {",
+        "D012 -- eine erzeugte Operation darf wieder gerufen werden, ohne dass ihre "
+        "Voraussetzung irgendwo ueber dem Ruf steht",
+    ),
+    Mutation(
+        # The other direction, and the sharper one: the rule RUNS and holds only the first
+        # premise. `einfuegen_erhaelt` has two, and the second (`erreicht sigma p`) is the one
+        # that keeps a fresh slot from being hung under an unreachable parent -- **a call site
+        # that satisfies half a theorem looks careful.**
+        "ops-ruf-haelt-nur-die-erste-voraussetzung",
+        "opsruf.rs",
+        "    for f in &kopf.forderungen {",
+        "    for f in kopf.forderungen.iter().take(1) {",
+        "D012 -- nur noch die ERSTE Voraussetzung wird gehalten; `erreicht sigma p` faellt "
+        "unter den Tisch, und beispiele/gift/323 geht durch",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

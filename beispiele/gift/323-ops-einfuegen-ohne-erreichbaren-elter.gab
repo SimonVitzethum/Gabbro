@@ -1,0 +1,47 @@
+-- erwartet: D012
+--
+-- **Die ZWEITE Voraussetzung von `einfuegen_erhaelt` fehlt: `erreicht sigma p`.**
+--
+-- Der Platz ist frisch -- das steht da. Der Elter ist erreichbar -- das steht nicht da, und
+-- ohne es faellt der Satz: `einfuegen_erhaelt` haengt `n` unter `p`, und wenn `p` selbst keine
+-- Wurzel erreicht, erreicht `n` sie auch nicht. **Die Invariante `jeder_erreicht_die_wurzel`
+-- unten ist dann gebrochen, und zwar durch eine ERZEUGTE Operation** -- also genau dort, wo
+-- Zuschnitt (c) verspricht, dass so etwas nicht passieren kann.
+--
+-- *Eine halbe Voraussetzung ist die gefaehrlichste Sorte:* die Datei sieht sorgfaeltig aus.
+--
+-- Die saubere Seite steht in `beispiele/47` an `einhaengen`.
+
+module gift::ohneerreichbarenelter {
+
+const N : u32 = 8;
+
+table Ordner count N {
+    const WURZEL : u32 = 0;
+
+    tree { parent elter }
+
+    slot {
+        benutzt : bool,
+        elter   : option index into Ordner,
+    }
+
+    ops insert, remove;
+
+    occupied benutzt;
+
+    invariant jeder_erreicht_die_wurzel cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s] reaches WURZEL via elter;
+}
+
+impl fn einhaengen(o : ptr<normal, rw> Ordner,
+                   n : index into Ordner,
+                   p : index into Ordner)
+    requires !o.slots[n].benutzt
+    effects  { writes o.slots }
+    costs    <= 6 ops
+{
+    Ordner::insert(o, n, p);
+}
+
+}

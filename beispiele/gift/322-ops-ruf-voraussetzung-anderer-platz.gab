@@ -1,0 +1,39 @@
+-- erwartet: D012
+--
+-- **Die Voraussetzung steht -- ueber einem ANDEREN Platz.**
+--
+-- `requires !v.slots[j].benutzt` und `Verzeichnis::insert(v, i)`: die Klausel ist da, sie ist
+-- richtig geschrieben, und sie redet von einem anderen Slot. *Genau die Bewegung, gegen die
+-- `D012` die Stelle vergleicht und nicht die Form.*
+--
+-- Der Beweis sagt `sigma n = None` fuer DAS `n`, das eingefuegt wird. Eine Voraussetzung ueber
+-- einem beliebigen anderen Index laesst `einfuegen_erhaelt` nicht anwenden -- und sie sieht
+-- beim Lesen aus wie eine, die es taete. **Das ist der teurere Fehler von beiden**, weil er
+-- eine Pruefung passiert, die nur die Anwesenheit einer Klausel zaehlt.
+
+module gift::andererplatz {
+
+const N : u32 = 16;
+
+table Verzeichnis count N {
+    slot {
+        benutzt : bool,
+        marke   : u32,
+    }
+
+    ops insert, remove;
+
+    occupied benutzt;
+}
+
+impl fn belegen(v : ptr<normal, rw> Verzeichnis,
+                i : index into Verzeichnis,
+                j : index into Verzeichnis)
+    requires !v.slots[j].benutzt
+    effects  { writes v.slots }
+    costs    <= 4 ops
+{
+    Verzeichnis::insert(v, i);
+}
+
+}

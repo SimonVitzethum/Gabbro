@@ -217,7 +217,11 @@ fn haltezeit_ist_keine_zahl(l: &LockDecl, wort: &str, span: Span) -> Absage {
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
     let u = Umgebung::sammle(baum);
-    let mut deklariert: HashMap<String, i128> = HashMap::new();
+    // **A generated operation declares its cost by COUNTING its own stores** (2026-08-28).
+    // Without this line a call to `T::insert` is `K003` -- *"a cost promise over an unknown
+    // quantity"* -- and `D001` would forbid the hand-written mutation while making the
+    // generated one uncostable. `messung/OPS-RUFFORM.md`.
+    let mut deklariert: HashMap<String, i128> = crate::opsruf::kosten(baum);
     let mut haltezeiten: HashMap<String, i128> = HashMap::new();
     let mut geteilte_haltezeiten: HashMap<String, i128> = HashMap::new();
 
@@ -976,7 +980,11 @@ fn groesser(a: Kosten, b: Kosten) -> Kosten {
 /// mit der Rechnung).
 pub fn bericht(baum: &Programm) -> String {
     let u = Umgebung::sammle(baum);
-    let mut deklariert: HashMap<String, i128> = HashMap::new();
+    // **A generated operation declares its cost by COUNTING its own stores** (2026-08-28).
+    // Without this line a call to `T::insert` is `K003` -- *"a cost promise over an unknown
+    // quantity"* -- and `D001` would forbid the hand-written mutation while making the
+    // generated one uncostable. `messung/OPS-RUFFORM.md`.
+    let mut deklariert: HashMap<String, i128> = crate::opsruf::kosten(baum);
     let mut haltezeiten: HashMap<String, i128> = HashMap::new();
     let mut geteilte_haltezeiten: HashMap<String, i128> = HashMap::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| match &item.art {
@@ -1108,7 +1116,11 @@ pub fn durchgangskosten(
     lokal: HashMap<String, crate::typen::Typ>,
 ) -> Option<i128> {
     let u = Umgebung::sammle(baum);
-    let mut deklariert: HashMap<String, i128> = HashMap::new();
+    // **A generated operation declares its cost by COUNTING its own stores** (2026-08-28).
+    // Without this line a call to `T::insert` is `K003` -- *"a cost promise over an unknown
+    // quantity"* -- and `D001` would forbid the hand-written mutation while making the
+    // generated one uncostable. `messung/OPS-RUFFORM.md`.
+    let mut deklariert: HashMap<String, i128> = crate::opsruf::kosten(baum);
     crate::fuer_jedes_item_im_modul(baum, &mut |item, m| {
         if let ItemArt::Funktion(f) = &item.art {
             if let Some(c) = &f.costs {

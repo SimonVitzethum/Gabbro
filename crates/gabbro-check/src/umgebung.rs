@@ -537,6 +537,40 @@ impl Umgebung {
                     self.globale
                         .insert(q(&t.name.text), Typ::Tabelle(q(&t.name.text)));
                     self.tabellen.insert(q(&t.name.text), felder);
+                    // **`ops` makes CALLEES, and until 2026-08-28 they were in no map**
+                    // (`messung/OPS-RUFFORM.md`). `Verzeichnis::insert(v, i)` parsed, and
+                    // every pass that looks up a callee found nothing: `K003` at the cost
+                    // pass, `E009` at the effects. *The call form was never missing -- the
+                    // callee was.*
+                    //
+                    // The head comes from `opsruf::koepfe`, the ONE producer; a second one
+                    // here would be the second reader of a promise, which this folder has
+                    // paid for twice.
+                    for k in crate::opsruf::koepfe(t) {
+                        let sig = Signatur {
+                            parameter: k
+                                .parameter
+                                .iter()
+                                .map(|(n, te)| {
+                                    (n.clone(), self.typ_von_ausdruck_decl(pfad, te))
+                                })
+                                .collect(),
+                            ergebnis: None,
+                            ensures: Vec::new(),
+                            // **Empty, and that is not an omission.** The premises of
+                            // `Table_Ops_Erhaltung.thy` are not range statements, so `M115`
+                            // -- which refuses where an argument's RANGE excludes the clause
+                            // -- would be silent about every one of them. They are held by
+                            // `D012` instead, against the site. *Writing them here as well
+                            // would put a clause in a map whose reader cannot read it.*
+                            requires: Vec::new(),
+                            rumpf_da: true,
+                            effect_list: k.wirkungen.clone(),
+                            cost_bound: Some(k.kosten),
+                            span: k.span,
+                        };
+                        self.funktionen.insert(q(&k.pfad()), sig);
+                    }
                 }
                 ItemArt::Format(f) => {
                     let felder = f

@@ -138,10 +138,25 @@ quote      = ? das Zeichen U+0022 ? ;
 newline    = ? Zeilenende ? ;
 comment    = "--" { char } newline ;
 path       = pathseg { "::" pathseg } ;                        (* G5 *)
-pathseg    = ident | "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64" ;
+pathseg    = ident | "u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64"
+           | opname ;
              (* `u64::max` -- beide Segmente sind Wortschatzwoerter. `primtype` als
                 Pfadsegment zuzulassen ist die kleinere Aenderung; die Alternative waere,
-                die Grenzwerte umzubenennen. *)
+                die Grenzwerte umzubenennen.
+
+                **`opname` steht hier seit dem 2026-08-28, und die Zeile ist eine
+                RICHTIGSTELLUNG, keine Erweiterung** (`messung/OPS-RUFFORM.md`).
+                `parse.rs::erwarte_feldname` liest hinter einem `::` jedes Wortschatzwort --
+                das tut es seit jeher, und die EBNF sagte es nicht. Damit parste
+                `Verzeichnis::insert(v, i)` schon, bevor irgendjemand es entschieden hatte:
+                gemessen fiel die Datei an `K003`/`E009`, *„`insert` is not declared here"*.
+
+                **Die Rufform einer erzeugten Operation kostet darum kein Wort und keine
+                Produktion.** Was fehlte, war nicht die Form, sondern der GERUFENE -- und der
+                steht in `opdecl`, nicht in der Grammatik des Rufs. Genannt wird hier
+                `opname` und nicht „jedes Wort", weil das die eine Stelle ist, an der ein
+                Wortsegment etwas BEDEUTET; alles Uebrige bleibt, was es war: eine
+                Aufloesung, die niemanden findet. *)
 identlist  = ident { "," ident } ;
 regbind    = ident ":" ident ;                                 (* G4 *)
 ```
@@ -1084,7 +1099,21 @@ opname     = "insert" | "remove" | "relabel" ;
                 **It is taken in, and the condition comes with it** — that is the decision:
                 a language that only covers the easy operations moves the work, it does not
                 remove it. *`init` is deliberately NOT a word: `table … count N` constructs,
-                and `table.absenkung` proves it.* *)
+                and `table.absenkung` proves it.*
+
+                **AND SINCE 2026-08-28 AN OPERATION IS CALLED** -- `T::insert(t, n [, p])`,
+                `T::remove(t, s)`, an ordinary `call` whose `path` is the table and the word
+                (`pathseg`, and `messung/OPS-RUFFORM.md` weighs three forms). The morning of
+                that day shipped the generator and no way to reach it: the emitted functions
+                carried `__attribute__((unused))`, *a prohibition (`D001`) with a replacement
+                nobody could call.*
+
+                **`D012` is the point of the form, and not the calling.** The premises of
+                `beweise/Table_Ops_Erhaltung.thy` stood in a C COMMENT; now they stand at the
+                head and are held against every call site -- the slot is FRESH, the parent is
+                REACHABLE where a `parent` edge exists, and `s` is a LEAF for `remove` on such
+                a table. **`relabel` gets no call form**, because it gets no body: a call form
+                for an operation that is never emitted would be the same hole one level up. *)
 walkdecl   = "walk" ident "levels" constexpr "{"
                "node" ":" array ","
                "down" ":" ident "when" pred ","

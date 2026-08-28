@@ -1,0 +1,38 @@
+-- erwartet: D012
+--
+-- **Ein Ruf auf eine erzeugte Operation, dessen Voraussetzung NIRGENDS steht.**
+--
+-- `einfuegen_erhaelt` in `beweise/Table_Ops_Erhaltung.thy` verlangt `sigma n = None` -- der
+-- Platz ist FRISCH. Der Erzeuger loest den Erhaltungsbeweis einmal je Operation ein; das ist
+-- Teil I, und die andere Haelfte des Handels ist genau diese Voraussetzung.
+--
+-- Bis zum 2026-08-28 stand sie als KOMMENTAR im erzeugten C. Ein Kommentar ist keine Pflicht:
+-- dieser Rumpf haette null Fehler gegeben, und der Beweis darueber haette von etwas anderem
+-- geredet als das Programm darunter.
+--
+-- > Die saubere Seite steht in `beispiele/47`: dasselbe `insert`, einmal unter einem
+-- > `requires` und einmal unter einem `if`.
+
+module gift::rufohnevoraussetzung {
+
+const N : u32 = 16;
+
+table Verzeichnis count N {
+    slot {
+        benutzt : bool,
+        marke   : u32,
+    }
+
+    ops insert, remove;
+
+    occupied benutzt;
+}
+
+impl fn belegen(v : ptr<normal, rw> Verzeichnis, i : index into Verzeichnis)
+    effects { writes v.slots }
+    costs   <= 4 ops
+{
+    Verzeichnis::insert(v, i);
+}
+
+}

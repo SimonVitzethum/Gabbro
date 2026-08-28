@@ -335,8 +335,8 @@ pub const SCHABLONEN: &[Schablone] = &[
         stand: Stand::Getragen,
         voraussetzungen: &[
             Voraussetzung { was: "jede ERZEUGTE Operation erhaelt die Invariante -- Teil I ist parametrisch", durch: Some("`emit.rs::ops` (2026-08-28): the generator emits exactly the two operations Teil II proves -- `insert` = `einfuegen`, `remove` = `blatt_loeschen` -- and REFUSES `relabel` by naming `umhaengen_faellt`. The emitted set and the proved set are the same set"), braeuchte: None },
-            Voraussetzung { was: "beim Einfuegen ist der Platz FRISCH und der Elter erreichbar", durch: None, braeuchte: Some("zwei `requires`-Zeilen am erzeugten `einfuegen`, wie sie `blatt_loeschen` mit `ist_blatt(c, s)` schon hat") },
-            Voraussetzung { was: "beim Loeschen ist der Platz ein BLATT", durch: Some("das `requires ist_blatt(c, s)` des Rufers, gehalten von M1"), braeuchte: None },
+            Voraussetzung { was: "beim Einfuegen ist der Platz FRISCH und der Elter erreichbar", durch: Some("`D012` (2026-08-28, `messung/OPS-RUFFORM.md`): both premises stand at the emitted head and are held against every call site -- `!t.slots[n].<occupied>` and `t.slots[p] reaches <root> via <parent>`. What is NOT established is their TRUTH: a standing `requires` pushes the duty one frame outwards, where `gabbro pflichten` counts it"), braeuchte: None },
+            Voraussetzung { was: "beim Loeschen ist der Platz ein BLATT", durch: Some("`D012` demands the theorem's own `blatt sigma s` -- `forall x in slots of t : t.slots[x].<parent> != Some(s)` -- and deliberately NOT the weaker `ist_blatt(c, s)` of beispiele/01, which holds of a slot whose child list has drifted from its parent pointers"), braeuchte: None },
         ],
         fundstelle: "SPRACHE.md §10.2",
     },

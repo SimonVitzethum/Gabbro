@@ -1,0 +1,49 @@
+-- erwartet: D012
+--
+-- **`remove` auf einem Platz, von dem niemand gesagt hat, dass er ein BLATT ist.**
+--
+-- `blatt_loeschen_erhaelt` verlangt `blatt sigma s`: *niemand nennt `s` als Elter.* Was hier
+-- stattdessen steht, ist die Fassung, die `beispiele/01` von Hand schreibt --
+-- `o.slots[s].erstes_kind == None`, hier als `benutzt`-Klausel angedeutet -- und sie ist
+-- SCHWAECHER als der Satz. Ein Platz, dessen Kindliste von den Elternzeigern abgewandert ist,
+-- erfuellt sie und ist trotzdem kein Blatt; `remove` haengt dann die Kinder ins Leere, und
+-- `jeder_erreicht_die_wurzel` faellt.
+--
+-- > **`D012` vergleicht gegen die Voraussetzung des SATZES und nicht gegen eine, die ihr
+-- > aehnlich sieht.** Das ist der Grund, warum die geforderte Form ein `forall` ist und nicht
+-- > ein Feldvergleich: eine schwaechere Voraussetzung ist fail-open genau dort, wo der Satz
+-- > der ganze Ertrag ist.
+--
+-- Die saubere Seite steht in `beispiele/47` an `aushaengen`.
+
+module gift::ohneblattheit {
+
+const N : u32 = 8;
+
+table Ordner count N {
+    const WURZEL : u32 = 0;
+
+    tree { parent elter }
+
+    slot {
+        benutzt : bool,
+        elter   : option index into Ordner,
+    }
+
+    ops insert, remove;
+
+    occupied benutzt;
+
+    invariant jeder_erreicht_die_wurzel cost O(n) runs offline :
+        forall s in slots of Self : Self.slots[s] reaches WURZEL via elter;
+}
+
+impl fn aushaengen(o : ptr<normal, rw> Ordner, s : index into Ordner)
+    requires o.slots[s].benutzt
+    effects  { writes o.slots }
+    costs    <= 6 ops
+{
+    Ordner::remove(o, s);
+}
+
+}

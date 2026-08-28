@@ -176,6 +176,32 @@ pub fn erhebe_mit(baum: &Programm, u: &crate::umgebung::Umgebung) -> Graph {
             g.knoten.insert(schluessel(modul, &d.name.text), k);
         }
     });
+    // **A generated operation is a callee with declared effects** (2026-08-28,
+    // `messung/OPS-RUFFORM.md`). Without a node here `E009` declares the effects of every
+    // routine that calls `T::insert` undecidable -- **a gap in the GRAPH, not in the
+    // program**, and word for word the one the transitions and the device handles left
+    // above. *Third instance, same place, same fix.*
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Tabelle(t) = &item.art else {
+            return;
+        };
+        for kopf in crate::opsruf::koepfe(t) {
+            // The parameter names are what `ersetze` needs: `writes t.slots` at the head
+            // becomes `writes v.slots` at a caller that wrote `T::insert(v, i)`.
+            let k = Knoten {
+                eigen: kopf.wirkungen.iter().cloned().collect(),
+                ruft: BTreeSet::new(),
+                verlangt: Vec::new(),
+                hat_effects: true,
+                parameter: kopf.parameter.iter().map(|(n, _)| n.clone()).collect(),
+                rufe: Vec::new(),
+                indirect: Vec::new(),
+                modul: modul.to_string(),
+                span: kopf.span,
+            };
+            g.knoten.insert(schluessel(modul, &kopf.pfad()), k);
+        }
+    });
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else {
             return;
