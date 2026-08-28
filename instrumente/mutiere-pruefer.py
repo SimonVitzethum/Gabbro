@@ -2141,6 +2141,19 @@ MUTATIONEN = [
         "C-Absenkung -- jeder Eintrag einer `bank` liegt an derselben Adresse",
         "code",
     ),
+    # **The SETTER, and until 2026-08-28 it had no mutation.** That day's full run let the
+    # reader mutation directly above survive: its assertion stood over the whole output, and since
+    # 2026-08-26 the setter carries the same address arithmetic -- it satisfied the assertion
+    # alone. The probe is healed first (`rechenwerk.rs`, stride per BLOCK), and only then comes
+    # this line: *a mutation added before its probe raises nothing but the denominator.*
+    Mutation(
+        "bank-schreiber-ohne-schritt",
+        "emit.rs",
+        "i * {schritt}u + {off}u) = x;",
+        "i * 0u + {off}u) = x;",
+        "C-Absenkung -- jeder Schreibzug in eine `bank` trifft denselben Eintrag",
+        "code",
+    ),
     Mutation(
         "transset-nimmt-nur-den-ersten",
         "emit.rs",

@@ -976,7 +976,25 @@ impl fn loesche(b : ptr<normal, rw> B, i : index into B)
     );
     assert!(f.is_empty(), "{f:?}");
     assert!(c.contains("V_FRR_LO(const V *d, uint32_t i)"), "Zugriff mit Index:\n{c}");
-    assert!(c.contains("i * 16u"), "der Schritt:\n{c}");
+    // **The stride belongs to the BLOCK, not to the file** -- W16, found on 2026-08-28 by the
+    // first full mutation run in days: the `bank` stride mutation SURVIVED. Since 2026-08-26 `bank`
+    // emits a SETTER next to the reader, with the same address arithmetic (`emit.rs`,
+    // `..._setz_...`). An assertion over the WHOLE output is therefore already satisfied when
+    // the reader's stride falls to zero -- the setter carries it alone.
+    // *A probe that folds two sites into one measures the weaker of them.*
+    //
+    // And the second half is no bonus: the setter's stride had no probe at all until today.
+    // A half-covered emitter reads exactly like a whole one.
+    let block = |kopf: &str| -> &str {
+        c.split("static inline")
+            .find(|b| b.contains(kopf))
+            .unwrap_or_else(|| panic!("kein Block mit `{kopf}`:\n{c}"))
+    };
+    assert!(block("V_FRR_LO(const V *d, uint32_t i)").contains("i * 16u"), "der Schritt des Lesers:\n{c}");
+    assert!(
+        block("V_FRR_setz_LO(V *d, uint32_t i,").contains("i * 16u"),
+        "der Schritt des Schreibers:\n{c}"
+    );
     assert!(
         c.contains(">> 24) & 1023u"),
         "die Lage kommt aus dem gelesenen Feld, nicht aus einer Konstanten:\n{c}"
