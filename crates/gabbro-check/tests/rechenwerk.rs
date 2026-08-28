@@ -5158,3 +5158,95 @@ impl fn lies(b : ptr<normal, rw> B, i : index into B) -> option index into B
     assert_eq!(bodies, 2, "both bodies are carried:\n{t}");
     assert_eq!(refused, 0, "and neither is refused:\n{t}");
 }
+
+// ===========================================================================================
+// A LOCAL IS NOT A GLOBAL, ON THE WRITE SIDE TOO (2026-08-28, `B5`)
+//
+// `place_term` has always distinguished a local from a world name when READING one. The
+// assignment arm did not: every suffix-less target became `.assignGlobal`. **That is not a
+// refusal but a wrong program** -- the datum bound the local, stored into a world place
+// nothing declares, and read the local back.
+//
+// Measured at `messung/abi-proben/zaehlwerk.gab :: hole_stand`, whose datum said the routine
+// always returns zero while it returns the slot's value. The export is what a hand-written
+// Lean specification is held against, so a person could have proved a true theorem about a
+// program nobody wrote.
+// ===========================================================================================
+
+const LEAN_LOKALE: &str = "module t {
+const N : u32 = 8;
+static G : u32 = 0;
+table B count N { slot { belegt : bool, wert : u32, } }
+impl fn zwei(b : ptr<normal, r> B, i : index into B) -> u32
+    effects { reads b.slots }
+    costs   <= 8 ops
+{
+    let mut n : u32 in 0 .. 4 = 0;
+    if b.slots[i].belegt {
+        n = 2;
+    }
+    return n;
+}
+impl fn setz_global(w : u32)
+    effects { writes G }
+    costs   <= 4 ops
+{
+    G = w;
+}
+}";
+
+/// **A write to a `let mut` rebinds the NAME; it does not store into the world.**
+#[test]
+fn lean_lokale_zuweisung_bindet_neu() {
+    let t = lean_programm(LEAN_LOKALE);
+    assert!(
+        t.contains("(.bindName \"n\" (.lit (.int 2)))"),
+        "`n = 2;` at a local rebinds it:\n{t}"
+    );
+    assert!(
+        !t.contains("(.assignGlobal \"n\""),
+        "and it never becomes a store to a world place nothing declares:\n{t}"
+    );
+    // **The other direction, and it is what keeps this from being a blanket rule**: a real
+    // `static` still goes to the world. Without this half the fix would have moved every
+    // global write into the local environment, which is the same fault mirrored.
+    assert!(
+        t.contains("(.assignGlobal \"G\""),
+        "a `static` is still a world place:\n{t}"
+    );
+}
+
+/// **`+=` at a local is an addition, and the model is safe where a shape would be guessed.**
+///
+/// The ambiguity the compound arm refuses lives in `&=`/`|=` -- conjunction on a truth value,
+/// a bit mask on an integer. `+=` has no second reading, and `binop .add` is `none` on
+/// anything but two integers, so a body that added to a non-number gets STUCK.
+#[test]
+fn lean_lokales_plusgleich_ist_eine_addition() {
+    let t = lean_programm(
+        "module t {
+const N : u32 = 8;
+table B count N { slot { aktiv : bool, } }
+impl fn zaehle(b : ptr<normal, r> B) -> u32
+    effects { reads b.slots }
+    costs   <= 64 ops
+{
+    let mut n : u32 in 0 .. N = 0;
+    traverse i over slots of b by unvisited
+        touches reads b.slots
+        invariant n <= N
+    {
+        if b.slots[i].aktiv { n += 1; }
+    }
+    return n;
+}
+}",
+    );
+    assert!(
+        t.contains("(.bindName \"n\" (.bin .add (.name \"n\") (.lit (.int 1))))"),
+        "`n += 1;` at a local is `n = n + 1` over the local:\n{t}"
+    );
+    let (_, bodies, refused, _) = lean_programm_kopf(&t);
+    assert_eq!(bodies, 1, "and the counting loop carries a body:\n{t}");
+    assert_eq!(refused, 0, "with nothing refused:\n{t}");
+}

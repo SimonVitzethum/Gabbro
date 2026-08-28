@@ -88,6 +88,11 @@ impl fn summe_1071(k : ptr<normal, r> Kopfworte) -> u32
     let mut s : u32 = 0;
     traverse i over elems of k.wort by unvisited
         touches reads k
+        -- **Die Aussage, die die Nachbedingung braucht, steht jetzt auch ueber der
+        -- Schleife.** `s` bleibt im Bereich seines Typs -- das ist genau `ensures result <=
+        -- 4294967295`, eine Zeile weiter oben, und ohne die Invariante haette der Beweiser
+        -- ueber der Schleife gar nichts.
+        invariant s <= 4294967295
     {
         s += k.wort[i];
     }

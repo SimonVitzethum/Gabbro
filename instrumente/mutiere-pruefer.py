@@ -3304,6 +3304,23 @@ MUTATIONEN = [
         "Das Datum sagt danach, der Rumpf lese einen lokalen Namen, den niemand bindet",
         flaeche="annotation",
     ),
+    # --- lean.rs, the local (2026-08-28, `B5`) ---
+    #
+    # **A local written as a world place is a WRONG PROGRAM, not a refusal** -- and nothing
+    # was red while it stood. The mutation below restores exactly that state, and its point is
+    # that the balance line does not move: the body is still carried, the datum is still valid
+    # Lean, and it describes a routine nobody wrote.
+    Mutation(
+        "lean-lokale-wird-wieder-global",
+        "lean.rs",
+        "                let ist_lokal = c.locals.iter().any(|l| *l == z.ziel.basis.text);",
+        "                let ist_lokal = false;",
+        "Der Rumpfkanal -- eine Zuweisung an ein `let mut` wird wieder als Weltspeicher "
+        "uebersetzt. Der Rumpf bindet den Namen, schreibt an einen Ort, den niemand "
+        "deklariert, und liest den Namen zurueck: das Datum sagt, die Routine gebe ihren "
+        "Anfangswert zurueck",
+        flaeche="annotation",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

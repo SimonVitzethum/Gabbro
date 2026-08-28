@@ -45,6 +45,12 @@ impl fn zaehle_freie(p : ptr<normal, r> Plaetze) -> u32
     let mut n : u32 = 0;
     traverse i over slots of p by unvisited
         touches reads p.slots
+        -- **Was ueber der Schleife gilt, und mehr ist heute nicht schreibbar.** Der Zaehler
+        -- waechst hoechstens einmal je Durchgang und die Domaene hat acht Plaetze, also
+        -- bleibt `n` in der Kapazitaet. *Die Aussage, die man eigentlich haben will --
+        -- `n == count(s in slots of p : !p.slots[s].belegt)` -- ist «B13» und abgesagt
+        -- (`messung/AGGREGATION.md`).*
+        invariant n <= 8
     {
         if !p.slots[i].belegt {
             n += 1;

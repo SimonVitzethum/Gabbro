@@ -873,12 +873,56 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             };
             let w = expr_term(&z.wert, c)?;
             if z.ziel.suffixe.is_empty() {
+                // **`n = e;` at a LOCAL rebinds the name; it does not store into the world.**
+                //
+                // Until 2026-08-28 this arm wrote `.assignGlobal` for every suffix-less
+                // target, local or not -- and that is not a refusal but a WRONG PROGRAM.
+                // Measured at `messung/abi-proben/zaehlwerk.gab :: hole_stand`, whose datum
+                // read: bind `s` to 0, store to a world place called "s" that nothing
+                // declares, return the LOCAL `s`. *The datum said the routine always returns
+                // zero, and it returns the slot's value.*
+                //
+                // The export is what a hand-written Lean specification is held against
+                // (`programmlogik/beispiel/`), so a person could have proved a true theorem
+                // about a program nobody wrote. **`place_term` has always made this
+                // distinction when READING a name** -- only the write side did not, which is
+                // why nothing was refused and nothing looked wrong.
+                //
+                // Same class as the `traverse` variable that once fell through to
+                // `.global "opfer"`, and the reason that comment stands three arms below.
+                let ist_lokal = c.locals.iter().any(|l| *l == z.ziel.basis.text);
+                let ziel = quoted(&z.ziel.basis.text);
+                if z.op == ZuwOp::Setzt {
+                    return Ok(if ist_lokal {
+                        format!("(.bindName {ziel} {w})")
+                    } else {
+                        format!("(.assignGlobal {ziel} {w})")
+                    });
+                }
                 // A `static` target carries no shape here, so a compound form has no
                 // operator to choose -- refused rather than guessed.
-                if z.op != ZuwOp::Setzt {
+                if !ist_lokal {
                     return Err(LeanReason::CompoundAssign);
                 }
-                return Ok(format!("(.assignGlobal {} {})", quoted(&z.ziel.basis.text), w));
+                // **At a LOCAL, `+=` and `-=` name their operation and nothing is guessed.**
+                //
+                // The ambiguity this arm was refusing lives in `&=` and `|=`: on a truth
+                // value they are conjunction and disjunction, on an integer they are bit
+                // masks, and without a declared shape there is no way to choose. `+=` has no
+                // second reading.
+                //
+                // **And the model is safe by construction where a shape would have been
+                // guessed**: `binop .add` is `none` on anything but two integers, so a body
+                // that somehow added to a non-number gets STUCK rather than computing
+                // something the machine does not. *That is why reading the OPERATOR here is
+                // not the quiet weakening gate 1 stands against -- there is no premise being
+                // made easier, only a form being translated.*
+                let op = match z.op {
+                    ZuwOp::Plus => "add",
+                    ZuwOp::Minus => "sub",
+                    _ => return Err(LeanReason::CompoundAssign),
+                };
+                return Ok(format!("(.bindName {ziel} (.bin .{op} (.name {ziel}) {w}))"));
             }
             if let [OrtSuffix::Feld(f)] = &z.ziel.suffixe[..] {
                 let (base, shape) = record_field(&z.ziel.basis.text, &f.text, c)?;

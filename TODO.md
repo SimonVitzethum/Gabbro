@@ -368,10 +368,11 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 103 Dateien, und keiner davon ist eine Teilmengenbeziehung.
-      *Die drei neuen sind `messung/RUF-TOR.md`, `messung/AUSSETZUNG.md` und
-      `messung/VIER-LUECKEN.md` vom 2026-08-28* — die Reichweite steigt mit jedem Bericht
-      unter `messung/`, und das ist die Richtung, in der eine Ratsche fallen darf.
+      heute **12 Widerrufe** über 104 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *Die vier neuen sind `messung/RUF-TOR.md`, `messung/AUSSETZUNG.md`,
+      `messung/VIER-LUECKEN.md` und `messung/SCHLEIFENZUSAGEN.md` vom 2026-08-28* — die
+      Reichweite steigt mit jedem Bericht unter `messung/`, und das ist die Richtung, in der
+      eine Ratsche fallen darf.
       *Die Reichweite sprang am 2026-08-25 von 64 auf 85, weil der Wächter seither die
       BERICHTE unter `messung/` liest* — und der Sprung fand sofort drei lebende Vorkommen,
       alle drei zu `fnptr` (`WB2`).
@@ -683,15 +684,18 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **334 von 334 Ankern** greifen (`--anker`, 2026-08-28) — die
-      sieben über 327 hinaus kamen abends dazu und bewachen den Rumpfkanal. Drei den
+      fällt. Mutationskatalog: **335 von 335 Ankern** greifen (`--anker`, 2026-08-28) — die
+      acht über 327 hinaus kamen abends dazu und bewachen den Rumpfkanal. Drei den
       Rufsammeltopf (`B1`, `messung/RUF-TOR.md`): der Optionswert, der wieder als Ruf gelesen
       wird, der Sammeltopf, der sich wieder schließt, und der Verbundkonstruktor, der wieder
       Ruf heißt. Zwei die Aussetzung (`B2`, `messung/AUSSETZUNG.md`): `breaking`, das wieder
       Ausgang heißt, und die ausgesetzte Invariante, die ihren Namen im Datum verliert.
       Zwei das Ergebnis (`B3`, `messung/VIER-LUECKEN.md`): das Glied, das einen ERZEUGTEN Wert
-      verlangt, und `result`, das wieder im Rumpf übersetzt wird.
-      *Sechs der sieben lassen die Bilanzzeile unberührt* — genau der Grund, warum die Proben
+      verlangt, und `result`, das wieder im Rumpf übersetzt wird. Und eine die LOKALE
+      (`B5`, `messung/SCHLEIFENZUSAGEN.md` §1): eine Zuweisung an ein `let mut`, die wieder
+      als Weltspeicher übersetzt wird — **die einzige der acht, die kein Register verkleinert,
+      sondern das Programm im Datum austauscht.**
+      *Sieben der acht lassen die Bilanzzeile unberührt* — genau der Grund, warum die Proben
       den emittierten Text lesen und nicht die Zahl. Die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*

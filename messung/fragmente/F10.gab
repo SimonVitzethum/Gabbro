@@ -43,6 +43,11 @@ impl fn kerne_zaehlen(k : ptr<normal, r> DtbKopf) -> u32
         progress token_verbraucht
         on_exceeded baum_unlesbar
         effects { reads k }
+        -- **Der `narrow` im Rumpf IST der Beweis dieser Invariante.** Er stellt vor dem
+        -- Zuwachs `tiefe < MAXTIEFE` her oder verlaesst die Routine; danach ist
+        -- `tiefe <= MAXTIEFE`. *Die Schranke stand bisher nur im Rumpf und nirgends ueber
+        -- der Schleife -- ein Leser musste sie sich aus dem `else`-Zweig zusammensuchen.*
+        invariant tiefe <= MAXTIEFE
     {
         narrow tiefe to 0 ..< MAXTIEFE else { return zahl; }
         tiefe += 1;
