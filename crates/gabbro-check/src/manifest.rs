@@ -138,11 +138,61 @@ fn sperrabdruckannahme(baum: &Programm, out: &mut Vec<Eintrag>) {
     });
 }
 
+/// **Layer S3 of the boot theorem -- the half that LEAVES the checker.**
+///
+/// `retires t from boot falsifier <probe>` carries two statements, and only one of them is a
+/// statement about the program:
+///
+/// | | who carries it |
+/// |---|---|
+/// | after the event the mapping is no longer in the table | **`O012`** -- a `walk` fact over `mappings of`, formulable and demanded |
+/// | an address without a mapping is no longer reachable | **here** -- the MMU, the TLB, speculation |
+///
+/// *No pass sees the second one, not today and not with any proof project.* It is exactly the
+/// case the axiom layer exists for, and it comes OUT OF THE CLAUSE instead of out of a second
+/// `assume` line beside it: an assumption one can forget to write is an assumption that gets
+/// forgotten. **Hence generated, like the two floating-point assumptions and the lock
+/// imprint -- and for the same reason: it is a machine question.**
+///
+/// The probe stands in the clause and not here, and that is the difference to the three
+/// generated assumptions above: *which address must fault after the boot end is known to the
+/// program and not to the compiler.*
+fn stilllegungsannahmen(baum: &Programm, out: &mut Vec<Eintrag>) {
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        let Some(st) = &f.retires else { return };
+        let raum = match &st.raum {
+            Raum::Normal => "normal",
+            Raum::Mmio => "mmio",
+            Raum::Dma => "dma",
+            Raum::Code => "code",
+            Raum::Boot => "boot",
+            Raum::Port => "port",
+            Raum::Benannt(n) => n.text.as_str(),
+        };
+        out.push(Eintrag {
+            name: format!("stilllegung_{}_ist_unerreichbar", f.name.text),
+            art: "assume",
+            klasse: klasse(&st.klasse),
+            aussage: format!(
+                "Nach `{}` ist keine Adresse des Raumes `{raum}` mehr erreichbar. Dass die \
+                 ABBILDUNG verschwindet, ist die Nachbedingung ueber `mappings of` und wird \
+                 verlangt (`O012`); dass eine Adresse ohne Abbildung nicht mehr erreichbar \
+                 ist, ist eine Aussage ueber MMU und TLB und faellt unter keinen Pass. Die \
+                 Sonde greift nach dem Ereignis auf eine Adresse des Raumes zu und muss \
+                 faulten.",
+                f.name.text
+            ),
+        });
+    });
+}
+
 /// Sammelt die Annahmenmenge eines Baums.
 pub fn sammle(baum: &Programm) -> Vec<Eintrag> {
     let mut out = Vec::new();
     gleitkommaannahmen(baum, &mut out);
     sperrabdruckannahme(baum, &mut out);
+    stilllegungsannahmen(baum, &mut out);
     sammle_items(&baum.items, &mut out);
     out.sort_by(|a, b| a.name.cmp(&b.name));
     out

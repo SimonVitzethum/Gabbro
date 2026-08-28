@@ -574,11 +574,20 @@ fn enthaelt_schritt(
 ///   stand. **S1 alone catches the static call chain and not the dynamic one** -- that is why
 ///   `SPRACHE.md` gives it its own layer, and why it costs a second rule and not a note.
 ///
-/// > **What is still NOT built, and it is named rather than hidden:** layer S3. `boot_end`
-/// > consuming the token **and** unmapping `code<boot>` as ONE event, with the probe at a
-/// > `.boot` address as its falsifier, has no construct -- `beispiele/07` writes `boot_ende` as
-/// > an ordinary `fn` with `writes code_abbildung`, which is an effect name and not a
-/// > mechanism. *Two of three layers stand; the third is the one that needs the axiom layer.*
+/// * **`O010`–`O012` (layer S3, hardware)** -- the `retires` clause, built 2026-08-28. It is
+///   ONE clause with three parts, and that is the whole point: `SPRACHE.md` §12 demands that
+///   `boot_end` consume the token **and** remove the mapping of `.boot` as **one event**, and
+///   *two promises one can keep separately are not one*. So the clause names the token, the
+///   address space and the falsifier together, `O011` holds it against the `effects` block, and
+///   `O012` demands the `walk` fact that says what is gone.
+///
+/// > **Which half is a proof duty and which an assumption, and the line runs through the
+/// > middle of the clause.** The postcondition `!exists m in mappings of root : …` is a
+/// > statement about a DATA STRUCTURE the checker knows -- it is formulable, it is demanded
+/// > (`O012`), and it is owed. That the absence of a mapping makes the bytes UNREACHABLE is a
+/// > statement about the MMU and the TLB; no pass will ever see it. That half is booked in
+/// > `gabbro annahmen` out of this clause, with the probe the clause names -- an access to a
+/// > `.boot` address after `boot_end` must fault.
 pub fn bootsatz(baum: &Programm, absagen: &mut Absagen) {
     // Die linearen Geistmarken -- Modul-uebergreifend, wie `ordnungen` oben.
     let mut marken: BTreeSet<String> = BTreeSet::new();
@@ -627,6 +636,8 @@ pub fn bootsatz(baum: &Programm, absagen: &mut Absagen) {
         }
     });
 
+    schicht_s3(baum, &marken, absagen);
+
     // `O009`: `&f` auf eine `raw fn`.
     if rohe.is_empty() {
         return;
@@ -636,6 +647,255 @@ pub fn bootsatz(baum: &Programm, absagen: &mut Absagen) {
         let FnRumpf::Block(b) = &f.rumpf else { return };
         im_block_fnwert(b, &rohe, absagen);
     });
+}
+
+/// **Layer S3 -- the `retires` clause, and why it is ONE clause and not three.**
+///
+/// `SPRACHE.md` §12 states the demand in five words: `boot_end` consumes the token **and**
+/// removes the mapping of `.boot`, **one event**. The tempting build is two clauses --
+/// `effects { consumes t }` plus something that says "and unmap". **That build is wrong, and
+/// the reason is mechanical rather than aesthetic:** each of the two is satisfiable alone, so
+/// a function that keeps only the first is a well-typed function that ends the boot phase for
+/// the type checker and leaves the bytes mapped. *That is exactly the state `beispiele/07`
+/// was in until today* -- `effects { consumes t, writes code_abbildung }`, an effect NAME
+/// beside the consumption, checked by nobody, satisfiable by anything.
+///
+/// So the event is one clause with three parts, and the three rules hold it together:
+///
+/// | | |
+/// |---|---|
+/// | **`O010`** | a token a `raw fn` demands is retired by **no** function -- layer S3 has no event at all |
+/// | **`O011`** | the clause and the `effects` block name **different** tokens -- then they are two promises again |
+/// | **`O012`** | no postcondition over `mappings of` says WHAT disappeared -- `retires` would be a name and not a mechanism |
+///
+/// **What this pass does NOT do, and it is the larger half.** It does not check that the
+/// mapping really goes away, and it cannot: `boot_end` has no body, and even with one the
+/// statement "no mapping, therefore not reachable" is about the MMU and the TLB. That half
+/// leaves the checker and enters the axiom layer -- `manifest.rs::stilllegungsannahme` books
+/// it out of this very clause, with the probe the clause names. *`O012` demands the
+/// formulable half; the probe carries the rest, and the manifest says which is which.*
+fn schicht_s3(baum: &Programm, marken: &BTreeSet<String>, absagen: &mut Absagen) {
+    // Which token does a `raw fn` demand? The site is carried along so that `O010` refuses
+    // where the unprotected code stands -- not at a module boundary.
+    let mut verlangt: BTreeMap<String, (String, Span)> = BTreeMap::new();
+    // Which token does somebody retire? The type name of the parameter the clause names.
+    let mut stillgelegt: BTreeSet<String> = BTreeSet::new();
+
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        if f.klasse == Some(FnKlasse::Raw) {
+            for p in &f.requires {
+                sammle_marken(p, marken, &mut |m| {
+                    verlangt
+                        .entry(m)
+                        .or_insert_with(|| (f.name.text.clone(), f.name.span));
+                });
+            }
+        }
+        if let Some(st) = &f.retires {
+            if let Some(t) = markentyp(f, &st.marke.text, marken) {
+                stillgelegt.insert(t);
+            }
+        }
+    });
+
+    // **`O011` and `O012` -- at the clause itself.**
+    crate::fuer_jedes_item(baum, &mut |i| {
+        let ItemArt::Funktion(f) = &i.art else { return };
+        let Some(st) = &f.retires else { return };
+        let name = &st.marke.text;
+
+        // The clause names a parameter of a declared `linear ghost type` ...
+        if markentyp(f, name, marken).is_none() {
+            absagen.schiebe(
+                Absage::fehler(
+                    "O011",
+                    st.marke.span,
+                    format!("`retires {name}` names no parameter of a `linear ghost type`"),
+                )
+                .mit_notiz(
+                    "the retirement ends a TOKEN, and the token is what makes the boot code \
+                     unreachable afterwards: it is linear, so it cannot be copied and cannot \
+                     be restored. A retirement of something else ends nothing",
+                ),
+            );
+            return;
+        }
+        // ... and the SAME token stands as `consumes` in the effects. **This is the line that
+        // makes one promise out of two:** without it the clause may retire a token the
+        // function does not consume at all -- and then the unmapping stands beside a token
+        // that lives on.
+        let verbraucht = f.effects.as_ref().is_some_and(|w| {
+            w.liste.iter().any(|e| match &e.art {
+                WirkungArt::Verbraucht(o) => o.suffixe.is_empty() && o.basis.text == *name,
+                _ => false,
+            })
+        });
+        if !verbraucht {
+            absagen.schiebe(
+                Absage::fehler(
+                    "O011",
+                    st.span,
+                    format!(
+                        "`{}` retires `{name}`, and its `effects` do not consume `{name}`",
+                        f.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "consuming the token and unmapping the space are ONE event (SPRACHE.md \
+                     §12, layer S3) -- two promises one can keep separately are not one",
+                )
+                .mit_notiz(format!(
+                    "the effects list must carry `consumes {name}` -- the same name the \
+                     clause names, not another one"
+                )),
+            );
+        }
+
+        // **`O012` -- the event must say WHAT disappears.**
+        if !f.ensures.iter().any(nennt_abbildungen_verneinend) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "O012",
+                    st.span,
+                    format!(
+                        "`{}` retires an address space and no postcondition says what is gone",
+                        f.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "SPRACHE.md §12 gives the shape: `ensures !exists m in mappings of \
+                     <root> : <m lies in the retired space>` -- a `walk` fact, and the one \
+                     half of layer S3 that is FORMULABLE at all",
+                )
+                .mit_notiz(
+                    "without it `retires` is an effect name beside a consumption, which is \
+                     the state this rule was built against",
+                ),
+            );
+        }
+    });
+
+    // **`O010` -- the token without an event.**
+    for (marke, (wo, span)) in &verlangt {
+        if stillgelegt.contains(marke) {
+            continue;
+        }
+        absagen.schiebe(
+            Absage::fehler(
+                "O010",
+                *span,
+                format!("`raw fn {wo}` demands `{marke}`, and no function retires it"),
+            )
+            .mit_notiz(
+                "layer S1 makes the boot code untypable after the token is consumed. That \
+                 the BYTES also stop being reachable is layer S3, and it needs an event: \
+                 `retires <token> from boot falsifier <probe>` at the function that ends the \
+                 boot phase",
+            )
+            .mit_notiz(
+                "a token that is consumed somewhere and retires nothing leaves `.boot` \
+                 mapped -- and the theorem of SPRACHE.md §12 then talks about the call graph \
+                 and not about the machine",
+            ),
+        );
+    }
+}
+
+/// The type name of the parameter `name`, if it is a declared `linear ghost type`.
+fn markentyp(f: &FnDecl, name: &str, marken: &BTreeSet<String>) -> Option<String> {
+    f.parameter.iter().find_map(|p| {
+        if p.name.text != name {
+            return None;
+        }
+        match &p.typ {
+            TypExpr::Pfad(pf) => pf
+                .teile
+                .last()
+                .map(|n| n.text.clone())
+                .filter(|n| marken.contains(n)),
+            _ => None,
+        }
+    })
+}
+
+/// Does this `requires` predicate name a declared token? Like `nennt_marke`, but collecting.
+fn sammle_marken(p: &Pred, marken: &BTreeSet<String>, aus: &mut impl FnMut(String)) {
+    match &p.art {
+        PredArt::Vergleich(e) => {
+            if let ExprArt::Ort(o) = &e.art {
+                if o.suffixe.is_empty() && marken.contains(&o.basis.text) {
+                    aus(o.basis.text.clone());
+                }
+            }
+        }
+        PredArt::Klammer(inner) => sammle_marken(inner, marken, aus),
+        PredArt::Und(a, b) => {
+            sammle_marken(a, marken, aus);
+            sammle_marken(b, marken, aus);
+        }
+        _ => {}
+    }
+}
+
+/// **A NEGATIVE statement over `mappings of`** -- and the negation is half the rule.
+///
+/// `SPRACHE.md` §12 writes the postcondition as `!exists m in mappings of kernel_root :
+/// m.section == boot`. Both usual spellings count -- `!exists … : p` and `forall … : ¬p` are
+/// the same thing, and a rule that admits only one of them refuses a correct form (W22).
+///
+/// > **What is NOT checked here, and it stands in `saetze.rs` as the reservation:** whether
+/// > the statement really covers the retired space. The pass sees the DOMAIN and the
+/// > negation; that `m.rahmen >= BOOT_UNTEN && m.rahmen < BOOT_OBEN` means the boot frames it
+/// > does not see. *That is the same coarseness `maintains` has -- the clause must name
+/// > something, and whether it names the right thing is read by a human.*
+fn nennt_abbildungen_verneinend(p: &Pred) -> bool {
+    match &p.art {
+        // `!exists m in mappings of w : …`
+        PredArt::Nicht(inner) => ueber_abbildungen(inner),
+        PredArt::Klammer(inner) => nennt_abbildungen_verneinend(inner),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) => {
+            nennt_abbildungen_verneinend(a) || nennt_abbildungen_verneinend(b)
+        }
+        // `forall m in mappings of w : <etwas Verneinendes>`
+        PredArt::Quantor(q) => {
+            q.art == QuantorArt::Alle
+                && matches!(q.domaene, Domaene::AbbildungenVon(_))
+                && verneinend(&q.rumpf)
+        }
+        _ => false,
+    }
+}
+
+/// Does this predicate quantify over `mappings of`?
+fn ueber_abbildungen(p: &Pred) -> bool {
+    match &p.art {
+        PredArt::Quantor(q) => matches!(q.domaene, Domaene::AbbildungenVon(_)),
+        PredArt::Klammer(inner) => ueber_abbildungen(inner),
+        _ => false,
+    }
+}
+
+/// Does this predicate DENY something? `!p`, `a != b`, and the connectives above them.
+fn verneinend(p: &Pred) -> bool {
+    match &p.art {
+        PredArt::Nicht(_) => true,
+        PredArt::Vergleich(e) => ungleich(e),
+        PredArt::Klammer(inner) => verneinend(inner),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) => verneinend(a) || verneinend(b),
+        // `p => !q` -- the restricted case, and it is the commonest one in a real table:
+        // *over the boot frames no mapping holds.*
+        PredArt::Folgt(_, b) => verneinend(b),
+        _ => false,
+    }
+}
+
+fn ungleich(e: &Expr) -> bool {
+    match &e.art {
+        ExprArt::Binaer(op, _, _) => *op == BinOp::Ungleich,
+        ExprArt::Klammer(inner) => ungleich(inner),
+        _ => false,
+    }
 }
 
 fn im_block_fnwert(b: &Block, rohe: &BTreeSet<String>, absagen: &mut Absagen) {

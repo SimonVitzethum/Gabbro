@@ -1,0 +1,21 @@
+-- erwartet: O011
+--
+-- **`retires n` -- und `n` ist eine Zahl.**
+--
+-- Die Stilllegung beendet eine MARKE, und die Marke ist der ganze Ertrag: sie ist linear,
+-- also nicht kopierbar und nicht wiederherstellbar, und deshalb ist „danach gibt es sie
+-- nicht mehr" eine Aussage und keine Bitte. Eine `u64` legt nichts still -- sie kann
+-- kopiert, zurueckgeschrieben und zweimal uebergeben werden.
+--
+-- *Die Absage steht an derselben Kennung wie die vertauschte Marke, und mit Absicht: beide
+-- Male ist der Gegenstand der Klausel nicht der, den die Funktion wirklich verbraucht.*
+
+module gift::stilllegungohnemarke {
+
+linear ghost type BootPhase;
+
+fn boot_ende(t : BootPhase, n : u64)
+    retires n from boot falsifier sonde_boot_unerreichbar
+    effects { consumes t };
+
+}
