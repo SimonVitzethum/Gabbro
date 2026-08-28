@@ -4941,3 +4941,111 @@ impl fn ruf(p : index into B, w : Zahl)
         "a call at a DECLARED routine still has no gate in the goal channel:\n{t}"
     );
 }
+
+// ===========================================================================================
+// A SUSPENSION IS NOT AN EXIT (2026-08-28, `B2`)
+//
+// `breaking I { … }` stood in one arm with `leave` and `next` under the sentence *"a
+// non-local exit out of a named loop"*. It is neither non-local nor an exit: what it changes
+// is which DUTY holds inside the block, not which statements run. **All four obligations
+// behind `non-local-exit` were `breaking`** -- `messung/AUSSETZUNG.md` measures
+// it, and the four go through Lean since the split.
+// ===========================================================================================
+
+const LEAN_AUSSETZUNG: &str = "module t {
+const N : u32 = 8;
+table B count N {
+    slot { a : option index into B, b : option index into B, }
+    invariant paarig cost O(n) runs offline :
+        forall s in slots of Self : (Self.slots[s].a == None) == (Self.slots[s].b == None);
+}
+impl fn setze(p : index into B, x : index into B)
+    ensures   B.slots[p].a == Some(x)
+    maintains paarig
+    effects   { writes B.slots }
+    costs     <= 8 ops
+{
+    breaking paarig {
+        B.slots[p].a = Some(x);
+        B.slots[p].b = Some(x);
+    }
+}
+}";
+
+/// **The suspension travels into the datum, and its NAME with it.**
+///
+/// The name is the load-bearing half: this reading is sound exactly as far as the channel
+/// cannot state a table invariant, and a record that inlined the body would have erased
+/// where the suspension lay.
+#[test]
+fn lean_aussetzung_traegt_ihren_namen() {
+    let t = lean_programm(LEAN_AUSSETZUNG);
+    assert!(
+        t.contains("(.breaking [\"paarig\"] ["),
+        "`breaking paarig` descends to `.breaking`, with the name kept:\n{t}"
+    );
+    assert!(
+        !t.contains("non-local-exit"),
+        "and it is not filed as an exit -- it is neither non-local nor one:\n{t}"
+    );
+    let (_, bodies, refused, _) = lean_programm_kopf(&t);
+    assert_eq!(bodies, 1, "the routine carries a body:\n{t}");
+    assert_eq!(refused, 0, "and nothing is refused:\n{t}");
+}
+
+/// **The obligation channel writes the GOAL, and the `maintains` duty stays beside it.**
+///
+/// That is what makes the reading sound rather than convenient: the `ensures` becomes a
+/// theorem, the table invariant is refused by name, and the two never merge.
+#[test]
+fn lean_aussetzung_gibt_ein_ziel_und_behaelt_die_invariante() {
+    let t = lean_modul(LEAN_AUSSETZUNG);
+    assert!(
+        t.contains("theorem duty_"),
+        "the `ensures` over a suspended block becomes a goal:\n{t}"
+    );
+    assert!(
+        t.contains("table-invariant"),
+        "and the `maintains` duty is still refused by name, not swallowed:\n{t}"
+    );
+}
+
+/// **What is LEFT under `non-local-exit` is a real exit, and it stays refused.**
+///
+/// `Outcome` has `running`, `returned` and `stuck`; a `leave` leaves a block without
+/// returning, and no arm of the three says that. *The refusal now names one thing, and the
+/// thing it names is buildable -- a fourth `Outcome`.*
+#[test]
+fn lean_echter_ausgang_bleibt_abgesagt() {
+    let t = lean_programm(
+        "module t {
+const N : u32 = 8;
+table B count N { slot { aktiv : bool, fertig : bool, } }
+extern fn watchdog() -> never effects { diverges } costs <= 1 ops;
+assume tick \"Der Zeitgeber tickt.\" falsifier sonde_tick;
+impl fn dienst(b : ptr<normal, rw> B, i : index into B)
+    ensures !b.slots[i].aktiv
+    effects { diverges, writes b.slots, reads b.slots }
+{
+    forever runde
+        per_pass bounded 64 ops
+        on_exceeded watchdog
+        effects  { writes b.slots, reads b.slots }
+        progress tick
+        invariant !b.slots[i].aktiv
+    {
+        b.slots[i].aktiv = false;
+        if b.slots[i].fertig { leave runde; }
+    }
+}
+}",
+    );
+    let z = t
+        .lines()
+        .find(|z| z.contains("REFUSED") && z.contains("dienst"))
+        .unwrap_or_else(|| panic!("the routine stands in the report:\n{t}"));
+    assert!(
+        z.contains("non-local-exit"),
+        "a `leave` is a real exit and still has no form here:\n{z}"
+    );
+}

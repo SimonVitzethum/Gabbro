@@ -74,8 +74,17 @@ pub enum LeanReason {
     /// `narrow … to … else` -- and the range lattice underneath is already proved
     /// (`Passlogik.Bereich`, 46 theorems). This one is close.
     Narrowing,
-    /// `leave`, `next`, `breaking` -- a non-local exit out of a named loop. Meaningless
-    /// without the loop gate.
+    /// `leave` and `next` -- a non-local exit out of a named loop.
+    ///
+    /// **`breaking` left this arm on 2026-08-28 and it never belonged in it**
+    /// (`messung/AUSSETZUNG.md`): a suspension changes which DUTY holds, not
+    /// which statements run, so it is carried like a `locks`. All four obligations this
+    /// reason held were `breaking`, and the number therefore said the channel was waiting on
+    /// a loop gate that would have taken none of them.
+    ///
+    /// What is left is a real exit, and what it needs is now nameable: **a fourth
+    /// `Outcome`.** `Outcome` has `running`, `returned` and `stuck`; a `leave` leaves a block
+    /// without returning, and no arm of the three says that.
     NonLocalExit,
     /// `+=` and its kin. It desugars to `x = x + e` -- **but the two are not the same
     /// statement in Gabbro's overflow accounting, and this channel does not get to decide
@@ -211,7 +220,9 @@ impl LeanReason {
             LeanReason::Observe => "`observes` -- a view that MAY be stale",
             LeanReason::ErrorPropagation => "`let … else` -- two exits out of a call",
             LeanReason::Narrowing => "`narrow` -- the range lattice under it is proved",
-            LeanReason::NonLocalExit => "a non-local exit out of a named loop",
+            LeanReason::NonLocalExit => {
+                "`leave`/`next` -- a real exit, and `Outcome` has no fourth form for one"
+            }
             LeanReason::CompoundAssign => "`+=` and its kin -- a different overflow accounting",
             LeanReason::MatchNotOption => "a `match` over something other than an `option`",
             LeanReason::Float => "a floating-point value -- this model has no float",
@@ -991,9 +1002,28 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             Ok(format!("(.loop {} {p} {body})", quoted(&id)))
         }
         StmtArt::Narrow(_) => Err(LeanReason::Narrowing),
-        StmtArt::Bricht(_) | StmtArt::Leave(_) | StmtArt::Next(_) => {
-            Err(LeanReason::NonLocalExit)
+        // **`breaking I { … }` is a SUSPENSION and not an exit**, and it stood in one arm
+        // with `leave` and `next` under the sentence "a non-local exit out of a named loop".
+        // It is neither: what it changes is which DUTY holds inside the block, not which
+        // statements run -- so its meaning is its body's, exactly as at a `locks`.
+        //
+        // *Measured on 2026-08-28: all four obligations behind `non-local-exit` were
+        // `breaking`, and not one was an exit* (`messung/AUSSETZUNG.md`). The
+        // reading holds exactly as far as this channel cannot state a table invariant --
+        // and it cannot; the `maintains` duty stands beside it and is refused by name.
+        //
+        // **The suspended names travel into the datum.** That is the half a later invariant
+        // channel has to read: a record that dropped them would hide where the suspension
+        // lay, the same reason the lock's name stays.
+        StmtArt::Bricht(b) => {
+            let namen: Vec<String> = b.invarianten.iter().map(|i| quoted(&i.text)).collect();
+            Ok(format!(
+                "(.breaking [{}] {})",
+                namen.join(", "),
+                block_term(&b.rumpf, c)?
+            ))
         }
+        StmtArt::Leave(_) | StmtArt::Next(_) => Err(LeanReason::NonLocalExit),
         // **The pairing costs no memory model either, and the ground is the same as at a
         // lock**: `release_stellt_sichtbarkeit_her` is an ASSUMPTION of the axiom layer
         // (`beispiele/06-annahmen.gab`, `unfalsifiable` with its reason written out, rebooked

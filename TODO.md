@@ -368,9 +368,10 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 101 Dateien, und keiner davon ist eine Teilmengenbeziehung.
-      *Die 101. ist `messung/RUF-TOR.md` vom 2026-08-28* — die Reichweite steigt mit jedem
-      Bericht unter `messung/`, und das ist die Richtung, in der eine Ratsche fallen darf.
+      heute **12 Widerrufe** über 102 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *Die 101. und die 102. sind `messung/RUF-TOR.md` und `messung/AUSSETZUNG.md` vom
+      2026-08-28* — die Reichweite steigt mit jedem Bericht unter `messung/`, und das ist die
+      Richtung, in der eine Ratsche fallen darf.
       *Die Reichweite sprang am 2026-08-25 von 64 auf 85, weil der Wächter seither die
       BERICHTE unter `messung/` liest* — und der Sprung fand sofort drei lebende Vorkommen,
       alle drei zu `fnptr` (`WB2`).
@@ -678,11 +679,13 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **330 von 330 Ankern** greifen (`--anker`, 2026-08-28) — die
-      drei über 327 hinaus kamen abends dazu und bewachen den Rufsammeltopf des Rumpfkanals
-      (`B1`, `messung/RUF-TOR.md`): der Optionswert, der wieder als Ruf gelesen wird, der
-      Sammeltopf, der sich wieder schließt, und der Verbundkonstruktor, der wieder Ruf heißt.
-      *Zwei der drei lassen die Bilanzzeile unberührt* — genau der Grund, warum die Proben
+      fällt. Mutationskatalog: **332 von 332 Ankern** greifen (`--anker`, 2026-08-28) — die
+      fünf über 327 hinaus kamen abends dazu und bewachen den Rumpfkanal. Drei den
+      Rufsammeltopf (`B1`, `messung/RUF-TOR.md`): der Optionswert, der wieder als Ruf gelesen
+      wird, der Sammeltopf, der sich wieder schließt, und der Verbundkonstruktor, der wieder
+      Ruf heißt. Zwei die Aussetzung (`B2`, `messung/AUSSETZUNG.md`): `breaking`, das wieder
+      Ausgang heißt, und die ausgesetzte Invariante, die ihren Namen im Datum verliert.
+      *Vier der fünf lassen die Bilanzzeile unberührt* — genau der Grund, warum die Proben
       den emittierten Text lesen und nicht die Zahl. Die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*

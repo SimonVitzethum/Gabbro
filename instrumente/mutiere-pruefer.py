@@ -3252,6 +3252,32 @@ MUTATIONEN = [
         "Verbundform, und das ist ein Modellpreis; ein fehlendes Tor ist ein anderer",
         flaeche="annotation",
     ),
+    # --- lean.rs, the suspension (2026-08-28, `B2`) ---
+    #
+    # **A suspension is not an exit** (`messung/AUSSETZUNG.md`). Four obligations
+    # went through Lean the moment `breaking` stopped being filed as one. The two mutations
+    # below hold both halves: the reading itself, and the NAME that makes it sound.
+    Mutation(
+        "lean-aussetzung-heisst-wieder-ausgang",
+        "lean.rs",
+        "        StmtArt::Bricht(b) => {",
+        "        StmtArt::Bricht(_) if true => Err(LeanReason::NonLocalExit),\n"
+        "        StmtArt::Bricht(b) => {",
+        "Der Rumpfkanal -- `breaking` faellt wieder unter `non-local-exit`. Vier Pflichten "
+        "verlieren ihr Ziel, und der Bericht sagt wieder, der Kanal warte auf ein "
+        "Schleifentor, obwohl keine der vier in einer Schleife steht",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-aussetzung-verliert-ihren-namen",
+        "lean.rs",
+        '            let namen: Vec<String> = b.invarianten.iter().map(|i| quoted(&i.text)).collect();',
+        '            let namen: Vec<String> = Vec::new();',
+        "Der Rumpfkanal -- die ausgesetzte Invariante reist nicht mehr im Datum. Das Ziel "
+        "geht weiter durch, und genau das ist die Gefahr: die Stelle, an der die Aussetzung "
+        "lag, ist aus dem Zeugnis verschwunden und kein Leser findet sie wieder",
+        flaeche="annotation",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

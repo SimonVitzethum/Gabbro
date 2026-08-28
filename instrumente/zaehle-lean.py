@@ -57,7 +57,7 @@ GRUENDE = [
     ("observe", "`observes` -- a view that MAY be stale"),
     ("let-else", "`let … else` -- two exits out of a call"),
     ("narrow", "`narrow` -- the range lattice under it is proved"),
-    ("non-local-exit", "a non-local exit out of a named loop"),
+    ("non-local-exit", "`leave`/`next` -- a real exit; `Outcome` has no fourth form"),
     ("compound-assignment", "`+=` and its kin -- a different overflow accounting"),
     ("match-not-option", "a `match` over something other than an `option`"),
     ("float", "a floating-point value -- this model has no float"),

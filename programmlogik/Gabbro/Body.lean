@@ -424,6 +424,24 @@ inductive Stmt where
       **The lock's NAME stays in the datum** all the same. Inlining the body would erase the
       critical section from the record, and a reader could no longer see where one was. -/
   | locked (lock : String) (body : List Stmt)
+  /-- `breaking I { … }` -- **the SUSPENSION of a table invariant, and it is not an exit.**
+
+      Its meaning is the body's, and the ground is the same as at a lock: what `breaking`
+      changes is not which statements run but which DUTY holds in between. The transition is
+      the body's; the duty stands beside it as an obligation of its own -- `maintains I`
+      appears in the register as its own line and is refused there (`table-invariant`,
+      quantified over every slot).
+
+      **The names travel in the datum, and that is the load-bearing half.** This reading is
+      sound exactly as far as this channel cannot state a table invariant, and it cannot.
+      *Should it ever get a quantifier, this name is where an invariant channel has to read
+      off where the suspension lay* -- a record that inlined the body would have erased it.
+
+      It stood refused as `non-local-exit` until 2026-08-28, in one arm with `leave` and
+      `next`, under the sentence *"a non-local exit out of a named loop"*. It is neither
+      non-local nor an exit: four obligations of the register paid for one word covering
+      three things (`messung/AUSSETZUNG.md`). -/
+  | breaking (invariants : List String) (body : List Stmt)
   /-- `A = v publishes { p, q };` -- **a release store, and it costs no memory model either.**
 
       The store itself is a store. What makes the PAYLOAD visible to the reader is
@@ -535,6 +553,9 @@ def step (ρ : Env) : Stmt → State → Outcome
   -- says about the invariant.
   | .loop id _ _, s => .running { s with world := (ρ id s).1.world }
   | .locked _ b, s => exec ρ b s
+  -- **A suspension changes no state.** See the constructor: the transition is the body's,
+  -- the duty stands beside it.
+  | .breaking _ b, s => exec ρ b s
   | .publish a e _, s =>
       match eval s e with
       | some v => .running { s with world := store s.world (.global a) v }

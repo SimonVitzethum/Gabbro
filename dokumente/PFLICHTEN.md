@@ -253,7 +253,7 @@ only its subject was missing** (`D013`). Nothing about the two hanging counts of
 | 951–952 | `run` diverges and touches only the named world | K | `E005`/`E010`; `-> never` lets the passes see the error branches do not fall through |
 | 954–960 | every startup failure is named and leaves the program | L | the human — six `let … else` |
 | 964–967 | "never read yet" is distinguishable from zero | L | **gap: «B14» — `option` stands only in `slottype`, not in `typeexpr`. Exactly the reading the fragment was written against** |
-| 969–976 | the service loop has a NAMED exit | L | **gap: «B11» — no `leave`, no `break`, no `continue`. The difference between "D0 falls by construction" and "the service loop is not writable". F5 breaks here** |
+| 969–976 | the service loop has a NAMED exit | L | ~~**gap: «B11» — no `leave`, no `break`, no `continue`. The difference between "D0 falls by construction" and "the service loop is not writable". F5 breaks here**~~ — **BERICHTIGT am 2026-08-28: «B11» ist GESCHLOSSEN, und diese Zeile stand länger als sie wahr war.** `leave` und `leaves` stehen im Wortschatz (`kw.rs`:121/122), `forever … leaves identlist` in der Grammatik (`SYNTAX.md`:994), und der Ausgang hat **sieben Leser**: `schleifen.rs`:61 hält `leave <marke>` gegen die Marken der umgebenden Schleifen, `gruppe.rs`:401 bucht ihn als `Ereignis::Austritt`, `kosten.rs`:529 gibt ihm Kosten 0, `m2.rs`:451 und `lib.rs`:875 zählen ihn zu den Anweisungen, die immer enden, dazu `pflichten.rs` und `phasen.rs`. **Der Korpus schreibt genau diese Dienstschleife zweimal** — `beispiele/04-schleifen.gab`:80/94 (`leaves marke` + `leave dienst;`) und `beispiele/39-auftragsdienst.gab`:156/174. Die naheliegende Form durch den UNVERÄNDERTEN Prüfer: **0 Fehler, 0 Hinweise** (W24-Vorlauf, `messung/AUSSETZUNG.md` §1.1). *Diese Berichtigung ist keine Arbeit und wird so gebucht* (§1.8) |
 | 977–980 | each pass is bounded and the overflow is named | K | `S001`/`S002` |
 | 981 | it makes progress because a client calls or the endpoint is revoked | L | the human |
 | 983 | a revoked endpoint ends the service | L | the human |
@@ -263,7 +263,7 @@ only its subject was missing** (`D013`). Nothing about the two hanging counts of
 | 992–993 | `Read`/`Write` — the request lies inside the client's range | L | the human |
 | 994–997 | `Flush` — the flush completed before the reply | L | the human |
 | 998 | `Scan` — the partition table is read or refused | L | the human |
-| 999–1006 | `Stop` — the reply still goes out before the service ends | L | **gap: «B11» — without `leave` only `exit()`, so the cleanup promise moves to two places. Literally the class C8 paid for** |
+| 999–1006 | `Stop` — the reply still goes out before the service ends | L | ~~**gap: «B11» — without `leave` only `exit()`, so the cleanup promise moves to two places. Literally the class C8 paid for**~~ — **BERICHTIGT am 2026-08-28, dieselbe Ursache wie 969–976:** `leave` gibt es, und die Aufräumzusage bleibt an einer Stelle. Nachzurechnen an `beispiele/04-schleifen.gab`:94 |
 | 1014–1016 | `exit`/`signal`/`watchdog` name their effects | K | `E008` — **without `-> never` six `S002` arose from this alone** |
 
 **F5: 18 obligations — 8 K, 10 L. Hanging: 5** (three L, two K).

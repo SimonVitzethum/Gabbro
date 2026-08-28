@@ -82,35 +82,52 @@ run_lean() {
 # And it stands over THE SAME MODEL as the product, not over `2 + 2 = 4`: the same body writes
 # `false` into a field, and once the theorem afterwards claims `not f` and once `f`. **Only
 # that way does the test measure the channel rather than Lean.**
+#
+# **And it runs over TWO bodies, not one** (2026-08-28): the bare store, and the same store
+# inside a `breaking`. The second is a claim of its own -- *a suspension changes which DUTY
+# holds, not which statements run*, so a `breaking` body must reduce exactly like its body
+# (`messung/AUSSETZUNG.md`). **Four generated obligations rest on that reading**,
+# and a reading that is only ever seen to say yes is an ornament (R11). The poison direction
+# is what makes it falsifiable: it must fall, and it must fall on the CLAIM.
 speech_test() {
-    local good=0 poison=0 case_ d post
-    for case_ in good poison; do
-        d="$TMP/probe-$case_.lean"
-        if [ "$case_" = good ]; then
-            post='(.un .not (.place "T" (.lit (.int 0)) "f"))'
+    local good=0 poison=0 case_ d post shape body ok=1
+    for shape in bare breaking; do
+        good=0
+        poison=0
+        if [ "$shape" = bare ]; then
+            body='[(.assign "T" (.lit (.int 0)) "f" (.lit (.bool false)))]'
         else
-            post='(.place "T" (.lit (.int 0)) "f")'
+            body='[(.breaking ["I"] [(.assign "T" (.lit (.int 0)) "f" (.lit (.bool false)))])]'
         fi
-        cat > "$d" <<LEAN
+        for case_ in good poison; do
+            d="$TMP/probe-$shape-$case_.lean"
+            if [ "$case_" = good ]; then
+                post='(.un .not (.place "T" (.lit (.int 0)) "f"))'
+            else
+                post='(.place "T" (.lit (.int 0)) "f")'
+            fi
+            cat > "$d" <<LEAN
 import Gabbro.Body
 set_option autoImplicit false
 open Gabbro.Body
-def body : List Stmt := [(.assign "T" (.lit (.int 0)) "f" (.lit (.bool false)))]
+def body : List Stmt := $body
 def post : Expr := $post
 theorem probe (ρ : Env) (s : State)
     : ∃ s', finalState (exec ρ body s) = some s' ∧ eval s' post = some (.bool true) := by
   simp [body, post, exec, step, eval, unop, binop, finalState, store, bindLocal]
 LEAN
-        if run_lean "$d"; then
-            [ "$case_" = good ] && good=1
-        else
-            [ "$case_" = poison ] && poison=1
-        fi
+            if run_lean "$d"; then
+                [ "$case_" = good ] && good=1
+            else
+                [ "$case_" = poison ] && poison=1
+            fi
+        done
+        echo "== Speech test -- $shape =="
+        echo "  a true theorem goes through: $([ $good   -eq 1 ] && echo yes || echo NO)"
+        echo "  a false theorem falls:       $([ $poison -eq 1 ] && echo yes || echo NO)"
+        { [ $good -eq 1 ] && [ $poison -eq 1 ]; } || ok=0
     done
-    echo "== Speech test =="
-    echo "  a true theorem goes through: $([ $good   -eq 1 ] && echo yes || echo NO)"
-    echo "  a false theorem falls:       $([ $poison -eq 1 ] && echo yes || echo NO)"
-    [ $good -eq 1 ] && [ $poison -eq 1 ]
+    [ $ok -eq 1 ]
 }
 
 if ! speech_test; then
