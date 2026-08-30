@@ -66,14 +66,28 @@ die Sprache sah. *Das ist Falle 80, und sie gilt hier genauso wie bei `H`.*
 Und das ist **endlich prüfbar**, ohne einen einzigen weiteren Korpus:
 
 ```
-crates/gabbro-check/src/emit.rs   22 Stellen, an denen `C001` entsteht
+crates/gabbro-check/src/emit.rs   136 Aufrufe von `weigere(…)`, 127 VERSCHIEDENE Formen
 ```
 
-**Zweiundzwanzig Fragen, mehr nicht.** Für jede: *welche Form sagt sie ab, und weist der
-PRÜFER dieselbe Form schon vorher ab?* Fällt die Antwort für alle 22 auf „ja", dann ist
-`V` **nicht gezählt, sondern gezeigt** — und zwar über der Sprache statt über einem Korpus.
+> *~~22 Stellen~~ — **berichtigt am 2026-08-30, noch vor dem ersten Schritt.** Die 22 waren
+> `grep C001`, und das zählt die Kommentare mit. `C001` entsteht an genau EINER Stelle
+> (`fn weigere`); was zählt, sind ihre **Aufrufer**. Die erste Zahl dieses Plans war um den
+> Faktor sechs zu klein, und sie ist gefallen, weil jemand sie nachgerechnet hat, statt sie
+> zu benutzen.*
+
+**Hundertsiebenundzwanzig Fragen statt zweiundzwanzig.** Für jede: *welche Form sagt sie ab,
+und weist der PRÜFER dieselbe Form schon vorher ab?* Fällt die Antwort für alle auf „ja",
+dann ist `V` **nicht gezählt, sondern gezeigt** — über der Sprache statt über einem Korpus.
 
 Fällt sie für eine auf „nein", ist genau das die Lücke, und sie hat eine Adresse.
+
+**Und die Frage ist eine Spur schärfer, als sie eben noch war.** Am 2026-08-30 wurde gemessen:
+**`messung/fragmente/F06.gab` emittiert 161 Zeilen, und `cc -Werror` weist sie zurück.** Die
+Eigenschaft heißt deshalb nicht *„der Erzeuger kennt jede Form"*, sondern:
+
+> **Für jedes Programm, das der Prüfer annimmt, erzeugt der Erzeuger C — und dieses C
+> übersetzt.** *Ein Erzeugnis, das kein C ist, ist keine Absenkung, es ist eine stille
+> Absage.*
 
 **Das Werkzeug dafür steht schon zur Hälfte da.** `gabbro blindstellen` rechnet FORM × POSITION
 über einen Korpus und benennt die leeren Zellen — *„was 0 Fundstellen hat, ist nicht geprüft,
@@ -210,9 +224,9 @@ seiner Bedingung.
   K2  H = 0 buchen -- mit dem Satz aus 5 daneben
 ```
 
-**Der erste Schritt kostet einen Nachmittag und ist reine Messung.** *Zweiundzwanzig Fragen an
-eine Datei, die schon geschrieben ist* — und wenn die Antwort für alle 22 „der Prüfer weist es
-vorher ab" lautet, ist `V` heute schon erfüllt und niemand wusste es.
+**Der erste Schritt ist reine Messung und kein Bau.** *Hundertsiebenundzwanzig Fragen an eine
+Datei, die schon geschrieben ist* — und wo die Antwort „der Prüfer weist es vorher ab" lautet,
+ist die Zelle heute schon zu und niemand wusste es. **Die interessante Menge ist der Rest.**
 
 ---
 
@@ -224,7 +238,7 @@ gemeinsame Boden ist `TODO.md`, und dort sind Konflikte additiv.*
 
 ## Schritt 0 — V1, seriell, vor beiden Bahnen
 
-Die **22 `C001`-Stellen** in `emit.rs` aufschlüsseln. Je Stelle drei Spalten:
+Die **127 Absageformen** in `emit.rs` aufschlüsseln (136 Aufrufe von `weigere`). Je Stelle drei Spalten:
 
 ```
 Form            was die Stelle absagt, in der Sprache der Grammatik
@@ -233,7 +247,7 @@ Zustand         gesenkt | abgesagt (Pruefer auch) | UNGEDECKT
 ```
 
 **Diese Tafel ist die Arbeitsliste beider Bahnen.** Ohne sie arbeiten beide gegen eine
-Vermutung. *Sie kostet einen Nachmittag und keinen Bau.*
+Vermutung. *Sie kostet mehr als einen Nachmittag — 127 Formen — und keinen Bau.*
 
 ## Bahn V — der Erzeuger kennt jede Form
 
