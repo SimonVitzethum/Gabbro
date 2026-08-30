@@ -161,6 +161,11 @@ not READ is present in the corpus all the same.
 
 ## Emission is COMPLETE — 38 of 38, and all 38 compile *(2026-08-20)*
 
+> **The record below is of 2026-08-20 and stays as one.** Re-measured 2026-08-30:
+> `EMISSION: ALL PASS -- 24 durchgestochen, 52 von 52 uebersetzen`. *A dated record is
+> not made wrong by growth — but a heading that says COMPLETE about a moving
+> denominator needs the date beside it, and this one has it.*
+
 ```
 ./instrumente/pruefe-emission.sh     ->  19 durchgestochen, 38 von 38 uebersetzen, 0 benannte Ausnahmen
 ```
@@ -504,9 +509,9 @@ is why the corpus contained none.** *That looked like a style choice and was a l
 nobody had marked as one.* With a `decreases`, `costs` is the promise of ONE pass.
 
 
-## The compiler — **ten** passes, none open (plus two more: «B37» and the lock discipline)
+## The compiler — ~~**ten**~~ **twelve** passes, none open (plus two more: «B37» and the lock discipline)
 
-`cargo run --bin gabbro -- paesse` · **3 fully built, 7 partial, 0 open**
+`cargo run --bin gabbro -- paesse` · ~~**3 fully built, 7 partial, 0 open**~~ — **2026-08-30: `SENTENCES: 71 over 12 passes -- 63 measured, 2 ARGUED, 6 CONJECTURED, 0 proved`**. *Die Zahl der Pässe ist gewachsen, und die Zeile darunter nannte noch die alte Aufteilung; die neue liest man am Befehl ab, nicht hier.*
 
 > **The tenth is NEW, and that is a change to the specification.** `SPRACHE.md`
 > part III §6 fixes nine and says *"the specification is the pass list"* — a tenth therefore
@@ -648,7 +653,14 @@ nobody checks against each other.*
 `table` body, and **`dokumente/SYNTAX.md` now holds its own grammar** (test
 `die_beispiele_der_grammatik_gehen_selbst_durch`).
 
-## The guardian chain — nine, each with a speech test in both directions
+## The guardian chain — ~~nine~~ **44**, each with a speech test in both directions
+
+> **Counted 2026-08-30 with `./instrumente/pruefe-waechter.py`: `44 von 44 tragen die
+> vier STATISCHEN`.** The block below was written when there were nine, and it was still
+> saying nine after the chain had grown to forty-four. *A hand-kept list of tools is the
+> one list nobody rereads, because it looks like documentation and behaves like a
+> measurement.* The nine below are therefore a SAMPLE, not the chain; the chain is what
+> the command prints.
 
 ```
 ./instrumente/pruefe-syntax.sh        forbidden forms, prose drift, closure, reachability,
@@ -656,10 +668,11 @@ nobody checks against each other.*
 ./instrumente/pruefe-wortschatz.py    terminals against the table, Sonderform counter (3 of 5)
 ./instrumente/pruefe-todo.py          holds the task list against itself, eight classes
 ./instrumente/pruefe-kennungen.py     no refusal code in two files
-./instrumente/mutiere-pruefer.py      damages one rule at a time:  132 of 132
-./instrumente/erzeuge-mutationen.py   twists systematically:         7 of 39
-./instrumente/pruefe-luecken.py       the named gaps one by one:    13 of 15
-./instrumente/pruefe-emission.sh      .gab → C → cc -Werror → run → compare, SEVEN units
+./instrumente/mutiere-pruefer.py      damages one rule at a time:  345 anchors (2026-08-30)
+./instrumente/erzeuge-mutationen.py   twists systematically:         7 of 39   NOT re-measured
+./instrumente/pruefe-luecken.py       the named gaps one by one:    13 of 15   NOT re-measured
+./instrumente/pruefe-emission.sh      .gab -> C -> cc -Werror -> run -> compare, 52 units,
+                          24 of them run and compared (2026-08-30)
 ./commit.sh               R19 — commit messages only via file
 ```
 
@@ -693,12 +706,33 @@ nobody checks against each other.*
 `dokumente/SYNTAX.md` against its own grammar · corpus test anchored at the content instead of at
 the line number.
 
-## The working rules — W1 to W12
+## The working rules — ~~W1 to W12~~ **W1 to W24**
 
 Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each comes from a
 **paid-for error in this folder**, each names the damage.
 
 ## Probes
 
-**25 clean examples, 78 poison probes, 123 tests · 11 translation units** —
-`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab`
+**53 clean examples, 310 poison probes, 233 tests · 52 translation units** —
+`cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`
+
+> **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean
+> examples, 78 poison probes, 123 tests · 11 translation units*~~ — a line that had not
+> been touched while the corpus grew to four times its size.
+>
+> | | booked | measured | by what |
+> |---|---:|---:|---|
+> | clean examples | 25 | **53** | `ls beispiele/*.gab` |
+> | poison probes | 78 | **310** | `ls beispiele/gift/*.gab` |
+> | tests | 123 | **233** | `cargo test` — 15 suites, 0 red |
+> | translation units | 11 | **52** | `./instrumente/pruefe-emission.sh`, of which **24 run and compare** |
+>
+> **And the cause is not carelessness, it is that nobody was counting.**
+> `pruefe-todo.py` has held *`N` clean examples* and *`N` poison probes* against the file
+> system since 2026-08-16 — **but only in `TODO.md`**. The same words in `DONE.md` went
+> past the same guardian untouched. *A rule that names one file guards one file.* Since
+> 2026-08-30 rule 8 runs the two counts over `DONE.md` as well, which is why this line
+> can no longer age quietly.
+>
+> *All four moved in the same direction: the register understated what is here.* That is
+> the harmless direction — and it is still an unmeasured number.

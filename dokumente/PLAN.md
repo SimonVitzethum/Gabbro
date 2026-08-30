@@ -1232,7 +1232,21 @@ this one — and may therefore appear in no metric of this folder.
 im Vertrauen auf Gabbro und seine Hardwareannahmen.*
 
 **Ausgangslage, gemessen 2026-08-17** ([`PFLICHTEN.md`](PFLICHTEN.md)): 173 Klempnereipflichten
-über den zehn Fragmenten, **137 getragen**, **31 hängend**.
+über den zehn Fragmenten, **137 getragen**, ~~**31 hängend**~~ **36 hängend**.
+
+> **Die Zeile ging nicht auf, und das ist am 2026-08-30 gefunden worden:** 137 + 31 = 168,
+> nicht 173. **Die falsche Zahl war die letzte**, und das Protokoll desselben Tages sagt es:
+> `MESSUNGEN.md`, *RESULT — NEUZUWEISUNG*, führt `K, carried by construction 137` und
+> `K, hanging — H 36`, dazu die Torzeile *„Gate: MISSED. `H = 36` against a bar of 0"*.
+> **137 + 36 = 173.**
+>
+> *Die Zeile mischte zwei Messtage.* 173 und 137 sind vom 2026-08-17; die 31 ist ein
+> späterer Stand von `H`, hereingeschrieben in einen Satz, der „gemessen 2026-08-17" sagt.
+> **Eine Zahl, die in einen datierten Satz nachgezogen wird, macht das Datum zur Lüge** —
+> und weil zwei der drei Zahlen richtig blieben, sah der Satz vollständig aus.
+>
+> Zum Vergleich der heutige Stand derselben Aufteilung: **173 = 168 getragen + 5 hängend**
+> (`./instrumente/zaehle-pflichten.py --spalten` und `--haengend`).
 
 ---
 
@@ -1241,9 +1255,16 @@ im Vertrauen auf Gabbro und seine Hardwareannahmen.*
 **Klempnereiabdeckung und Vertrauensfläche sind kommunizierende Röhren.**
 
 Jedes Konstrukt, das eine Pflicht schließt, ist eine **Schablone** — eine Beweispflicht des
-Erzeugers, die *einmal* fällt, aber heute unbewiesen dasteht. Das Register führt **20 Einträge,
-16 unbewiesen, 4 davon lebend.** Die 24 Notationslücken zu schließen kostet nach heutiger
-Schätzung **sieben weitere Einträge**.
+Erzeugers, die *einmal* fällt, aber heute unbewiesen dasteht. Das Register führt ~~20 Einträge,
+16 unbewiesen, 4 davon lebend~~ **21 Einträge, 11 unbewiesen, 2 davon lebend** *(nachgemessen
+2026-08-30 mit `cargo run -q --bin gabbro -- schablonen`)*. Die 24 Notationslücken zu schließen
+kostet nach heutiger Schätzung **sieben weitere Einträge**.
+
+> **Alle drei Zahlen hatten sich bewegt, und zwei davon in die gute Richtung.** Von 16
+> unbewiesenen sind 11 geblieben, von 4 lebenden 2 — *die Vertrauensfläche ist gefallen,
+> während das Register wuchs.* Genau das ist die Bewegung, die das zweite Tor sehen soll,
+> und sie stand nirgends, weil die Zahl von Hand geführt wurde. Seit dem 2026-08-30 hat
+> sie einen Befehl daneben.
 
 > **Ein Plan, der nur `H` verfolgt, erreicht 100 % und ist danach schlechter dran.** Er hätte
 > die Klempnerei vom Menschen in eine unbewiesene Fläche verschoben und die Verschiebung nicht
@@ -1257,6 +1278,48 @@ Schätzung **sieben weitere Einträge**.
 | **`L ≤ 4`** | die **lebend unbewiesene** Schablonenfläche wächst nicht — jeder neue getragene Eintrag kostet vorher einen Isabelle-Lauf |
 
 *Wer nur die erste erreicht, hat die These nicht eingelöst, sondern umgetopft.*
+
+### Das zweite Tor, an der Historie nachgeprüft — **2026-08-30, und es hält**
+
+**Die Frage war nicht, ob `L ≤ 4` gilt, sondern ob je eine Schablone von `Entworfen` auf
+`Getragen` gewandert ist, ohne dass der Beweis vorher stand.** Nachgefahren über **alle 504
+Commits, in denen `schablonen.rs` existiert** (Merge-Zweige eingeschlossen, nicht nur
+`--follow`), das Feld `stand:` je Eintrag gegen jeden Elternteil verglichen.
+
+**Antwort: seit der Torstellung kein einziges Mal.**
+
+| | |
+|---|---|
+| einzige `Entworfen → Getragen`-Bewegung seit dem 2026-08-17 | `table.ops.erhaltung` am 2026-08-28 — der Beweis (`einfuegen_erhaelt`) lag **neun Tage** vorher |
+| `restrict.alleinzugriff` | trat als `Getragen` ein, mit seinem Beweis **im selben Commit** |
+| die zehn `Bewiesen`-Einträge | jeder hat seine Theorie, und jede steht in `beweise/ROOT` — **keine Lücke** |
+| neun Einträge | standen nie anders als `Entworfen` |
+
+> **Und der Präzedenzfall hält bei genauem Hinsehen.** `verbund.konstruktor` trägt Beweis und
+> Registerfeld im selben Commit `085c8b8` — *das Tor misst aber gegen das KONSTRUKT*, und «B7»
+> wurde 56 Minuten später gebaut. Bei `accumulates.monoid` sind es 38 Minuten. **Der Satz „so
+> kam der Beweis zuerst" ist damit gemessen und nicht behauptet.**
+
+**Drei Bewegungen VOR der Torstellung, und sie sind der Grund, warum es das Tor gibt.** Am
+2026-08-17 zwischen 16:41 und 17:21 trat `option.sonderwert` direkt als `Getragen` ein (Beweis
+44 Minuten später), und `table.absenkung` und `format.roundtrip` wanderten ohne jede Theorie
+(Beweise 5½ bzw. 5¾ Stunden später). `lebend_ungedeckt()` wurde in genau dem Commit eingeführt,
+der die letzten beiden buchte, und die Wendung *„das zweite Tor"* steht erstmals vier Stunden
+danach. *Das Tor ist die Antwort auf diese drei, keine Regel, die sie gebrochen haben* — und der
+Doc-Kommentar über `lebend_ungedeckt()` protokolliert den Tag wörtlich.
+
+**Zwei Altlasten aus der Gründung, und sie sind keine Wanderung:** `table.indexschranke` und
+`device.konstruktor` wurden am 2026-08-14 direkt als `Getragen` angelegt — `beweise/` gab es da
+noch nicht, die erste Theorie stammt vom 2026-08-16 abends. Sie sind der Ausgangsbestand.
+
+> **Eine benannte Absage ist ein Ergebnis, und ein NICHT gefundener Verstoss auch.** Diese
+> Zeilen senken keine Zahl. Was sie ändern, ist der Stand von *„das Tor gilt"* zu *„das Tor ist
+> über 504 Commits einzeln nachgefahren"* — und das ist der Unterschied zwischen einer Regel
+> und einer Messung.
+>
+> *Was sie NICHT sagen:* geprüft wurde die REIHENFOLGE von Beweis und Standwechsel, nicht die
+> Güte des Beweises. Ein Beweis, der vorher steht und die falsche Sache sagt, fällt hier nicht
+> auf (W10) — dafür steht Zahn 3, und der zählt heute **6 Prämissen ohne Pass**.
 
 ---
 
@@ -1277,9 +1340,17 @@ der 31 sind Aussagen über die Maschine, nicht über das Programm:
 bewegen heißt **nicht**, sie zu erledigen — es heißt, sie **beim Namen mit einer Sonde** zu
 führen, und genau das ist die Vertrauensform, die der Auftrag gewährt.
 
-> **Die Umbuchung ist nur dann ehrlich, wenn sie gezählt wird.** `gabbro annahmen` steht heute
-> bei **14**; nach K100 muss dort **19** stehen, und die fünf neuen müssen ihre Sonde nennen
-> oder ihren Grund, warum es keine gibt.
+> **Die Umbuchung ist nur dann ehrlich, wenn sie gezählt wird.** `gabbro annahmen` stand beim
+> Schreiben dieses Absatzes bei ~~**14**~~; nach K100 muss dort **19** stehen, und die fünf
+> neuen müssen ihre Sonde nennen oder ihren Grund, warum es keine gibt.
+>
+> **Heute steht dort 36** *(2026-08-30, `cargo run -q --bin gabbro -- annahmen beispiele/*.gab`;
+> die Statustafel unten führt die Zahl mit Befehl)* — das Tor ist also nicht knapp erreicht,
+> sondern weit überschritten, und *das ist keine gute Nachricht, sondern eine Frage:* die
+> Zielzahl 19 war die Ausgangslage plus die fünf Umbuchungen. Was die übrigen siebzehn sind,
+> beantwortet nicht diese Zeile, sondern der Befehl — **29 der 36 tragen einen gestrichenen
+> Sondennamen: kein Programm steht für sie**, und das steht seit dem 2026-08-30 im Manifest
+> als Lücke mit einer Zahl statt als Deckung.
 
 ---
 
@@ -1414,7 +1485,25 @@ A = 19       Annahmen, jede mit Sonde oder mit Grund
 
 ---
 
-## Stand am 2026-08-20 — und das erste Tor hat einen BODEN
+## Stand am ~~2026-08-20~~ **2026-08-30** — und das erste Tor hat einen BODEN
+
+> **Die vier Zeilen der Tafel sind am 2026-08-30 einzeln nachgefahren worden, und alle vier
+> halten.** `H`, `L`, `A` und die Prämissenzahl stehen im Register von
+> `./instrumente/pruefe-zahlen.py` und werden dort gegen ihren Befehl gehalten — *das ist der
+> Grund, warum diese Tafel als einzige des Ordners heute nichts zu berichtigen hatte.* Was
+> falsch dastand, stand DANEBEN: die Ausgangslage, die Registerzeile und die
+> Annahmenzahl, alle drei ohne Befehl.
+>
+> **Und zwei Theorien sind seit dem 2026-08-28 dazugekommen, ohne dass `L` sich bewegt hat**
+> — `beweise/Absenkung_Parametrisch.thy` und `beweise/Table_Zaehlung.thy`. Die zweite hat
+> ihren Registereintrag **ausdrücklich zurückgezogen**: Zahn 3 verlangt, dass eine bewiesene
+> Schablone jede Prämisse an einen Pass bindet, und von den dreien von
+> `buchfuehrung_erhaelt` ist eine bindbar (`M103` über `table.indexschranke`); die anderen
+> zwei löste ein Erzeuger ein, den es nicht gibt. *Ein Eintrag mit ihnen hätte Zahn 3 von 6
+> auf 8 gehoben — und eine Ratsche, deren Marke steigt, wenn man sie bindet, ist keine.*
+> **Ein Beweis, den das Register nicht nennt, vergrößert die Vertrauensfläche ungesehen**;
+> deshalb steht der Verzicht als Notiz IM Register (`schablonen.rs`, nach `SCHABLONEN`) und
+> nicht nur in `beweise/`.
 
 | | Ziel | heute | |
 |---|---|---|---|

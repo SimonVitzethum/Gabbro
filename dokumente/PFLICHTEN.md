@@ -124,7 +124,7 @@ carries and the Rust original did not — because it does not write them down.*
 |---|---|---|---|
 | 344–346 | every callee names its effects and its bound | K | `K003` refuses otherwise — *it says so instead of silently estimating* |
 
-**F1: 59 obligations — 42 K, 17 L. Hanging: 4** (three L, one K).
+**F1: 59 obligations — 42 K, 17 L. Hanging: ~~4~~ 3** (~~three~~ two L, one K) *(nachgezählt 2026-08-30 an der vierten Spalte: «B31» ist seit dem 2026-08-28 durchgestrichen, und ein durchgestrichener `gap:` zählt nicht mit — so liest ihn auch `zaehle-pflichten.py`)*.
 
 ---
 
@@ -157,7 +157,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 524–526 | GCMD is written whole | K | `assume` — **expressly `unfalsifiable`, with the reason: a probe would have to open the very window the mechanism is built against** |
 | 528–530 | after FSTS.PFO further faults are dropped | K | `assume` **with a falsifier** |
 
-**F2: 24 obligations — 19 K, 5 L. Hanging: ~~2~~ **1**, and it is the lowering** *(«B26»'s second half and «B23» closed 2026-08-20; **«B22-near» closed 2026-08-25, and the discharge is a differential test that RUNS**; and one cell that read as closed was NOT — see 403–419)*. **F2 therefore carries no anchored gap any more** — read off with `./instrumente/zaehle-pflichten.py --haengend`, which now prints no line for F2.
+**F2: 24 obligations — 19 K, 5 L. Hanging: ~~2~~ ~~1~~ **0**** — *und die alte Fassung widersprach dieser Datei selbst.* Sie sagte «1, and it is the lowering», während die Absenkungstafel eine Seite weiter unten für F2 **carried, measured by execution (2026-08-25)** führt und `pruefe-emission.sh` ein `lauf "fragment2"` trägt. *Zwei Stellen, eine Pflicht, zwei Aussagen — berichtigt 2026-08-30* *(«B26»'s second half and «B23» closed 2026-08-20; **«B22-near» closed 2026-08-25, and the discharge is a differential test that RUNS**; and one cell that read as closed was NOT — see 403–419)*. **F2 therefore carries no anchored gap any more** — read off with `./instrumente/zaehle-pflichten.py --haengend`, which now prints no line for F2.
 
 ---
 
@@ -192,7 +192,7 @@ carries and the Rust original did not — because it does not write them down.*
 | 678 | a same-core rendezvous switches directly | L | the human |
 | 687–703 | every callee names its effects and its bound | K | `K003` |
 
-**F3: 26 obligations — 13 K, 13 L. Hanging: ~~6~~ **4** (three L, one K)** — *«B17»'s two rows fell on
+**F3: 26 obligations — 13 K, 13 L. Hanging: ~~6~~ ~~4~~ **3** (~~three~~ two L, one K)** — *«B17»'s two rows fell on
 2026-08-28, and the arithmetic is spelled out because a number that moves without one is
 repotting.* **Row 592–603 fell because its reason was FALSE** (`transset` has carried several
 places since the first day, corpus site `beispiele/02`:42) — that is the «B9» move of
@@ -239,7 +239,9 @@ only its subject was missing** (`D013`). Nothing about the two hanging counts of
 | 892–894 | a function may PRODUCE a compound | K | `P(a: …, b: …)` — **«B7» closed 2026-08-17.** No braced literal: it would have been the first expression form continuing with `{`, and 76 corpus sites have a `{` right after an expression. The marks are mandatory (`M106`/`M107`), because two same-typed fields in a positional list are swappable with no type objecting |
 | 895 | `q.USED_RING[s].id` in range | K | `M103` |
 
-**F4: 30 obligations — 24 K, 6 L. Hanging: 6** (five K, one L) *(«B33» decided and built 2026-08-20)*.
+**F4: ~~30~~ 31 obligations — 24 K, ~~6~~ 7 L. Hanging: ~~6~~ 1** (one L, ~~five~~ **no** K) *(«B33» decided and built 2026-08-20)*.
+
+> **Zwei Berichtigungen an einer Zeile, 2026-08-30.** Die Tabelle darüber hat **31** Zeilen, nicht 30: 24 mit `K`, **sieben** mit `L` (773, 774, 775–776, 777–779, 780–782, 836, 886). Die Kopfzeile führte sechs. *Die Gesamtzahl stimmte trotzdem — 24 + 6 = 30 —, und genau deshalb fiel sie nicht auf: eine Summe, die zu ihren Summanden passt, sieht richtig aus, auch wenn beide falsch sind.* Und die hängende Zahl: von F4s sechs steht heute **eine** da, «B26» an 780–782; «B18» ×2 und «B26» an 764 sind seit dem 2026-08-28 durchgestrichen, und die Absenkung ist seit dem 2026-08-26 **gemessen** (`lauf "fragment4"`).
 
 ---
 
@@ -266,7 +268,7 @@ only its subject was missing** (`D013`). Nothing about the two hanging counts of
 | 999–1006 | `Stop` — the reply still goes out before the service ends | L | ~~**gap: «B11» — without `leave` only `exit()`, so the cleanup promise moves to two places. Literally the class C8 paid for**~~ — **BERICHTIGT am 2026-08-28, dieselbe Ursache wie 969–976:** `leave` gibt es, und die Aufräumzusage bleibt an einer Stelle. Nachzurechnen an `beispiele/04-schleifen.gab`:94 |
 | 1014–1016 | `exit`/`signal`/`watchdog` name their effects | K | `E008` — **without `-> never` six `S002` arose from this alone** |
 
-**F5: 18 obligations — 8 K, 10 L. Hanging: 5** (three L, two K).
+**F5: 18 obligations — 8 K, 10 L. Hanging: ~~5~~ 1** (~~three L, two K~~ — **nur noch die Absenkung, K**) *(nachgezählt 2026-08-30: «B14», «B11» ×2 und «B27» sind seit dem 2026-08-28 durchgestrichen; F5 trägt keine verankerte Lücke mehr)*.
 
 ---
 
@@ -301,7 +303,7 @@ only its subject was missing** (`D013`). Nothing about the two hanging counts of
 | 1159 | the measurement has a floor | K | `floor` |
 | 1160 | the check can go RED | L | `counterprobe` — **the speech test as a language construct** |
 
-**F6: 26 obligations — 21 K, 5 L. Hanging: 8** (seven K, one L).
+**F6: 26 obligations — 21 K, 5 L. Hanging: ~~8~~ 2** (one L — «B14» an 1070–1072 —, one K — die Absenkung) *(nachgezählt 2026-08-30)*.
 
 ---
 
@@ -319,7 +321,7 @@ only its subject was missing** (`D013`). Nothing about the two hanging counts of
 | 1325–1330 | every step happens exactly once | K | `L101` |
 | 1325–1330 | the steps happen **in this sequence** | K | `advances` at the site — **«B37» closed 2026-08-17**; `beispiele/22-bootstrecke.gab` carries F7's shape with the order *and* the seven stated obligations. *`FRAGMENTE.md` stays untouched — a report of 2026-08-14 is not made right afterwards* |
 
-**F7: 9 obligations — 8 K, 1 L. Hanging: 2, both K** — *and they are the same gap.*
+**F7: 9 obligations — 8 K, 1 L. Hanging: ~~2, both K~~ 0** — *and the gap they were is measured:* `lauf "fragment7"` in `pruefe-emission.sh` emits, compiles, RUNS and compares `123456` *(berichtigt 2026-08-30)*.
 
 ---
 
@@ -342,7 +344,7 @@ only its subject was missing** (`D013`). Nothing about the two hanging counts of
 | 1452–1455 | `beenden` holds SCHEDS, masks IRQ, `<= 16 ops` | K | `H001`/`E006`/`K001` |
 | 1457 | `l.slots[k]` in range | K | `M103` |
 
-**F8: 14 obligations — 12 K, 2 L. Hanging: 1, K.**
+**F8: 14 obligations — 12 K, 2 L. Hanging: ~~1, K~~ 0** — the lowering is measured, `lauf "fragment8"`, `1 1 1 0 0 1 1 1` *(berichtigt 2026-08-30)*.
 
 ---
 
@@ -362,7 +364,7 @@ only its subject was missing** (`D013`). Nothing about the two hanging counts of
 | 1558–1567 | **the MMU itself writes `A` and `D`** | K | **AXIOM LAYER, rebooked K100.2 (2026-08-17)** — the honest form was named in the row itself: `assume … falsifier …`. *The hardware is a participant, and the frame statement is false here, not incomplete* |
 | — | **W^X over the page table** | L | **gap: not in the fragment at all.** The 2026-08-14 report named it *"a real property falls out of all seven domains"*; F9's verdict is *"the finding is what did NOT show up"*. **Per R3 it is counted as an attempt, not as evidence** |
 
-**F9: 11 obligations — 7 K, 4 L. Hanging: 2** (one K, one L).
+**F9: 11 obligations — 7 K, 4 L. Hanging: 2** (one K — die Absenkung —, one L) *(2026-08-30 nachgezählt und **unverändert richtig** — die einzige Fragmentzeile, die es war)*.
 
 ---
 
@@ -382,7 +384,7 @@ only its subject was missing** (`D013`). Nothing about the two hanging counts of
 | 1660 | the depth stays below 64 | K | **LOGIC, rebooked K100.1 (2026-08-17)** — the row said it itself: *the else branch is REACHABLE (a hostile DTB), a real check and not a ritual.* A reachable branch is the human's business |
 | 1666 | `baum_unlesbar` diverges | K | `S002` |
 
-**F10: 11 obligations — 9 K, 2 L. Hanging: 1, K.**
+**F10: 11 obligations — 9 K, 2 L. Hanging: ~~1, K~~ 0** — the lowering is measured, `lauf "fragment10"`, `1 0 0 0 0 65` *(berichtigt 2026-08-30)*.
 
 ---
 
@@ -393,9 +395,9 @@ only its subject was missing** (`D013`). Nothing about the two hanging counts of
 | **F7** | **the generated C computes what the fragment says** | K | **carried, measured by execution.** `pruefe-emission.sh` cuts F7 out of the frozen corpus, emits, compiles with `cc -std=c11 -Wall -Wextra -Werror`, runs it and compares: **`123456`** — six boot steps, in order, each exactly once. The `linear ghost type` leaves **no trace** in the C |
 | **F8**, **F10** | same | K | **carried, measured by execution** — booked in `pruefe-emission.sh` beside F7 |
 | **F2** | same | K | **carried, measured by execution** *(2026-08-25)*. The first one that was NOT already a program: five `reserved` fields were missing, and without them no `format` says which bits exist. `pruefe-emission.sh` runs it against `messung/fragmente/F02.gab` and compares **`4096 153 7 3 256 1 6 2 1 1 0 9`** — the record bank's address computed from a READ register field (`CAP.FRO * 16`), the stride, the same computation with `ECAP.IRO`, **trap 4** (`mirrors GCMD from GSTS` carries `RTPS` into the `TE` write; the poison probe reads `2` there), five bit positions out of the fault record, the `where` clause in both directions, and the DECLARED number of a `reason`. **And the completion itself is now checked, not asserted:** the guard cuts the frozen block and refuses if a single excerpt line is missing — *adding is allowed, leaving out is not.* Without it the yardstick could be moved instead of the obligation discharged |
-| F1, F3–F6, F9 | same | K | **gap, for six** *(F2 left this row on 2026-08-25 — measured, not rebooked)* *(re-measured 2026-08-20; the row said "nine" long after F8 and F10 were measured)*. And the seven are not one class. ~~**Three are open DECISIONS** — «B10» (`by consuming` drains the whole queue), «B12» (`elems of` binds an element or an index; `SYNTAX.md` uses both readings), `mappings of` (a path or the leaf set — seven orders of magnitude apart).~~ **BERICHTIGT am 2026-08-25 — alle drei sind seit dem 2026-08-20 ENTSCHIEDEN, und diese Zeile stand fünf Tage länger als sie wahr war.** `TODO.md` Stufe 3 trägt die Überschrift *„AUSGEFÜHRT am 2026-08-20, ohne ein neues Terminal und ohne eine neue Schablone“* und führt Entscheid **und** Begründung für alle drei; `dokumente/SYNTAX.md`:635 trägt «B12» in der Grammatik. Nachzurechnen mit `grep -n 'decided 2026-08-20' dokumente/SYNTAX.md` (→ ``"elems" "of" place  (* «B12», decided 2026-08-20: binds an INDEX into the array *)``) und `grep -n 'AUSGEFÜHRT am 2026-08-20' TODO.md`. Die Entscheide: **«B12» `elems of`** bindet einen **INDEX** — *aus dem Index bekommt man das Element, aus dem Element den Index nicht*; **`mappings of`** ist die **Blattmenge** — *W^X ist eine Aussage über die Menge; über einen Pfad ist sie sinnlos*; **«B10» `by consuming`** leert die **ganze** Schlange, *und das ist die Bedeutung*. **Damit ist «B10» kein Lesartenposten mehr, sondern ein KONSTRUKTposten** — *„das ist eine andere SCHLEIFENFORM, keine andere Lesart dieser“* — eine Schleifenform, die einen Wert liefert und verlassen werden kann. Er fällt unter Regel A (kein Konstrukt ohne gemessenen Bedarf) und unter Tor 2: **gebucht, nicht gebaut.** *Diese Richtigstellung senkt keine Zahl — `H` liest die vierte Spalte der Fragmenttabellen, nicht diesen Satz; sie nimmt nur einer Zeile den falschen Grund weg.* **Two are the axiom layer** — which barrier a `dma` access needs. **And ALL SEVEN carried a corpus-side blocker** *(counted 2026-08-20, one hour after the line below first said "two"; **F2's is closed since 2026-08-25** — the five `reserved` fields stand in `messung/fragmente/F02.gab`, and the file emits, compiles under `-Werror -O2`, runs and compares)*: 41 sites name 20 constants and types nobody declares (`MAX_POLL`, `EP_BADGE`, `SYSNO_RESULT`, `Fehler`, `NTFN`, …), nine `let … else` call bodies this unit does not declare, six bit positions left unnamed, one `table` with no `tree`, one callee with no `or <reason>`. *An EXCERPT is not a program, and `FRAGMENTE.md` carries a freeze sentence* — see the note below |
+| ~~F1, F3–F6, F9~~ **F1, F3, F5, F6, F9** | same | K | ~~**gap, for six**~~ **gap, for five** *(F2 left this row on 2026-08-25, **F4 on 2026-08-26** — measured, not rebooked; the row still named F4 on 2026-08-30, four days after `lauf "fragment4"` stood in `pruefe-emission.sh`)* *(re-measured 2026-08-20; the row said "nine" long after F8 and F10 were measured)*. And the seven are not one class. ~~**Three are open DECISIONS** — «B10» (`by consuming` drains the whole queue), «B12» (`elems of` binds an element or an index; `SYNTAX.md` uses both readings), `mappings of` (a path or the leaf set — seven orders of magnitude apart).~~ **BERICHTIGT am 2026-08-25 — alle drei sind seit dem 2026-08-20 ENTSCHIEDEN, und diese Zeile stand fünf Tage länger als sie wahr war.** `TODO.md` Stufe 3 trägt die Überschrift *„AUSGEFÜHRT am 2026-08-20, ohne ein neues Terminal und ohne eine neue Schablone“* und führt Entscheid **und** Begründung für alle drei; `dokumente/SYNTAX.md`:635 trägt «B12» in der Grammatik. Nachzurechnen mit `grep -n 'decided 2026-08-20' dokumente/SYNTAX.md` (→ ``"elems" "of" place  (* «B12», decided 2026-08-20: binds an INDEX into the array *)``) und `grep -n 'AUSGEFÜHRT am 2026-08-20' TODO.md`. Die Entscheide: **«B12» `elems of`** bindet einen **INDEX** — *aus dem Index bekommt man das Element, aus dem Element den Index nicht*; **`mappings of`** ist die **Blattmenge** — *W^X ist eine Aussage über die Menge; über einen Pfad ist sie sinnlos*; **«B10» `by consuming`** leert die **ganze** Schlange, *und das ist die Bedeutung*. **Damit ist «B10» kein Lesartenposten mehr, sondern ein KONSTRUKTposten** — *„das ist eine andere SCHLEIFENFORM, keine andere Lesart dieser“* — eine Schleifenform, die einen Wert liefert und verlassen werden kann. Er fällt unter Regel A (kein Konstrukt ohne gemessenen Bedarf) und unter Tor 2: **gebucht, nicht gebaut.** *Diese Richtigstellung senkt keine Zahl — `H` liest die vierte Spalte der Fragmenttabellen, nicht diesen Satz; sie nimmt nur einer Zeile den falschen Grund weg.* **Two are the axiom layer** — which barrier a `dma` access needs. **And ALL SEVEN carried a corpus-side blocker** *(counted 2026-08-20, one hour after the line below first said "two"; **F2's is closed since 2026-08-25** — the five `reserved` fields stand in `messung/fragmente/F02.gab`, and the file emits, compiles under `-Werror -O2`, runs and compares)*: 41 sites name 20 constants and types nobody declares (`MAX_POLL`, `EP_BADGE`, `SYSNO_RESULT`, `Fehler`, `NTFN`, …), nine `let … else` call bodies this unit does not declare, six bit positions left unnamed, one `table` with no `tree`, one callee with no `or <reason>`. *An EXCERPT is not a program, and `FRAGMENTE.md` carries a freeze sentence* — see the note below |
 
-**+10 obligations, 10 K, 6 hanging** *(re-measured 2026-08-25: 6 of the ten check clean, **4 lower and run**)*.
+**+10 obligations, 10 K, ~~6~~ 5 hanging** *(re-measured **2026-08-30** with `./instrumente/zaehle-fragmente.py`: ~~6~~ **7** of the ten check clean, ~~**4 lower and run**~~ **6 lower and 5 run** — F02, F04, F07, F08, F10)*. **Alle drei Zahlen dieses Klammersatzes waren falsch, und alle drei in dieselbe Richtung: zu pessimistisch.** *Eine Buchführung, die nur in eine Richtung altert, ist nicht vorsichtig — sie ist ungemessen.*
 
 > **And the column is no longer kept by hand.** `instrumente/zaehle-pflichten.py` used to carry
 > `ABSENKUNG_OFFEN = ["F1", "F2", …]` in its source; it now reads the `lauf "fragmentN"` lines out of
@@ -496,13 +498,13 @@ only its subject was missing** (`D013`). Nothing about the two hanging counts of
 
 | | | |
 |---|---:|---|
-| **Obligations in total** | **238** | 228 anchored at a line + 10 lowering (one per fragment) |
-| **Plumbing (K)** | **171** | 72 % |
-| **Logic (L)** | **67** | 28 % |
-| **hanging** | **31** | of which **`H = 5` are K** — **0 anchored at a line, 5 lowerings** *(«B9» corrected 2026-08-25 — a FALSE entry removed, not a discharge: the work is from 2026-08-21, `N035`/`N036`/`N037`)* *(F2's lowering measured 2026-08-25)* *(«B21», «H2.1», «H2.2» closed 2026-08-19; «B26»'s second half, «B33» and «B23» 2026-08-20)*. **All three remaining are NOTATION gaps: not one is a hand-written proof.** *(«B22-near» closed 2026-08-25 — and NOT by prose: `lauf "b22-abwesenheit"` in `pruefe-emission.sh` emits, compiles under `-Werror` at `-O0` and `-O2`, RUNS and compares `1 0 1 0`.)* Every one a breach of the thesis at its site. *Read off with `./instrumente/zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
+| **Obligations in total** | ~~238~~ **239** | ~~228~~ **229** anchored at a line + 10 lowering (one per fragment) |
+| **Plumbing (K)** | ~~171~~ **173** | 72 % |
+| **Logic (L)** | ~~67~~ **66** | 28 % |
+| **hanging** | ~~31~~ **12** | of which **`H = 5` are K** — **0 anchored at a line, 5 lowerings** *(«B9» corrected 2026-08-25 — a FALSE entry removed, not a discharge: the work is from 2026-08-21, `N035`/`N036`/`N037`)* *(F2's lowering measured 2026-08-25)* *(«B21», «H2.1», «H2.2» closed 2026-08-19; «B26»'s second half, «B33» and «B23» 2026-08-20)*. ~~**All three remaining are NOTATION gaps: not one is a hand-written proof.**~~ **BERICHTIGT 2026-08-30 — dieser Halbsatz widersprach seiner eigenen Zelle.** Sie sagt zwei Zellenhälften weiter vorn **`0 anchored at a line`**; „die drei verbleibenden" gab es beim Schreiben dieses Satzes schon nicht mehr. Was verbleibt, sind **sieben verankerte `L`-Zeilen** (F1 ×2, F3 ×2, F4, F6, F9) und **fünf Absenkungen** — und keine einzige davon ist Klempnerei. *(«B22-near» closed 2026-08-25 — and NOT by prose: `lauf "b22-abwesenheit"` in `pruefe-emission.sh` emits, compiles under `-Werror` at `-O0` and `-O2`, RUNS and compares `1 0 1 0`.)* Every one a breach of the thesis at its site. *Read off with `./instrumente/zaehle-pflichten.py --haengend`, not carried forward — see the note below.* |
 | **disputed** | **1** | `unlink`:194–196, argued in the row (the gate allows up to 10 %) |
 
-**L : K = 0,38 : 1.**
+**L : K = 0,38 : 1.** *(2026-08-30 nachgerechnet — und hier liegt der Fall genau andersherum: **die Verhältniszahl war richtig, beide Operanden waren es nicht.** 66 / 173 = 0,381; die gebuchten 67 / 171 ergeben 0,392, also 0,39. Der Quotient stand seit jeher auf dem Wert der WAHREN Spalten. Ein Verhältnis ist keine Probe auf seine Operanden — aber ein Verhältnis, das nicht zu ihnen passt, ist eine Frage.)*
 
 ## Die Zahl war nicht mehr aus ihrer Quelle ableitbar — nachgezogen 2026-08-17
 
@@ -542,7 +544,7 @@ Absenkungszeile (F1–F6 und F9 offen, F7/F8/F10 gemessen). *Was bleibt, ist der
 | F1 Cap space | 59 | 42 | 17 |
 | F2 VT-d | 24 | 19 | 5 |
 | F3 IPC | 26 | 13 | 13 |
-| F4 Driver | 30 | 24 | 6 |
+| F4 Driver | ~~30~~ **31** | 24 | ~~6~~ **7** |
 | F5 Userspace | 18 | 8 | 10 |
 | F6 Test scaffold | 26 | 21 | 5 |
 | F7 Loader | 9 | 8 | 1 |
@@ -550,7 +552,21 @@ Absenkungszeile (F1–F6 und F9 offen, F7/F8/F10 gemessen). *Was bleibt, ist der
 | F9 MMU | 11 | 7 | 4 |
 | F10 Parser | 11 | 9 | 2 |
 | Lowering | 10 | 10 | 0 |
-| | **238** | **171** | **67** |
+| | ~~238~~ **239** | ~~171~~ **173** | ~~67~~ **66** |
+
+> **Die Summenzeile widersprach ihrer eigenen Spalte — gefunden 2026-08-30.** Die elf
+> Zeilen darüber addieren sich zu **173 K** und **65 L**; die Zeile darunter führte
+> **171 / 67**. Beide Fassungen ergeben 238, und *deshalb* stand es sechzehn Tage da:
+> **eine Aufteilung, deren Summe stimmt, wird nicht nachgerechnet.**
+>
+> Und die Nachzählung fand einen zweiten Fehler eine Ebene tiefer: **F4 hat 31 Zeilen,
+> nicht 30** — 24 `K` und **sieben** `L`. Damit ist die wahre Aufteilung **173 / 66**,
+> und keine der beiden bis heute gebuchten Zahlenpaare war es. *Die Spaltensumme ist
+> nicht die Wahrheit, sie ist nur der nächste Zeuge; der letzte sind die Zeilen.*
+>
+> Nachzurechnen ohne Werkzeug: `grep -c` geht nicht, weil eine Zeile mit `\|` in der
+> Zelle beim naiven Zerlegen zerfällt (F2:498 tut das). Der Suchweg steht seit heute im
+> Register von `./instrumente/pruefe-zahlen.py` — `./instrumente/zaehle-pflichten.py --spalten`.
 
 *Die hängenden Zahlen je Fragment stehen nicht mehr hier, sondern im Befehl:*
 `./instrumente/zaehle-pflichten.py --haengend`.
@@ -593,19 +609,25 @@ Liste nicht.
 **Die ~~zwölf~~ *(2026-08-25: elf, dann zehn)* stehen jetzt nur noch an einer Stelle: im Befehl.** Er druckt sie je Fragment und
 mit der Zeile, an der sie hängen. Was hier bleibt, ist, **wem** sie gehören:
 
-| verankert — ~~fünf~~ ~~vier~~ **drei** *(2026-08-25, zweimal an einem Tag)* | wem |
+| verankert — ~~fünf~~ ~~vier~~ ~~drei~~ **null** *(2026-08-25 zweimal, 2026-08-28 dreimal — die Überschrift blieb bei drei stehen)* | wem |
 |---|---|
 | ~~`F2`:498~~ **zu** | ~~**«B22-nah»** — `format` kennt nur die Absage~~ — **GESCHLOSSEN am 2026-08-25.** Die Notation fehlte nie (`pred = orpred`, `SYNTAX.md`:614); es fehlte ein `match`-Arm in `emit.rs::pred_c_format`. *Und die Entlastung ist AUSGEFÜHRT*: `beispiele/51-abwesenheit-und-absage.gab` unter `lauf "b22-abwesenheit"`, erwartet `1 0 1 0` — „leer" und „unlesbar" sind zwei Antworten, und die Giftprobe, die das `\|\|` herausschneidet, macht wieder eine daraus |
 | ~~`F3`:613–624~~ **zu** | ~~**«B9»** — `fnptr` trägt kein `requires`, kein `ensures`, kein `effects`~~ — **BERICHTIGT am 2026-08-25.** `N035` macht `effects` **und** `costs` am `fn(…)`-Typ zur Pflicht (seit 2026-08-21), `N036` trägt die Wirkungswörter durch den indirekten Ruf, `N037` weist `requires`/`ensures` **mit gemessener Begründung** ab. Nachgerechnet: ``printf 'type T = { f : fn(u8), };' > /tmp/b9.gab && gabbro pruefe /tmp/b9.gab`` → ``[N035] … `fn(#1)` declares no `effects` and no `costs```. *Die Zeile fiel durch eine Richtigstellung, nicht durch Arbeit von heute — die Arbeit ist vom 2026-08-21 (`messung/FNPTR.md`)* |
-| `F4`:764 | **«B26»** — `RegDecl::requires` wird von KEINEM Pass gelesen; die Klausel zerfällt nach dem Parsen |
-| `F4`:785–792 | **«B18»** — `device` kennt keine Phasen |
-| `F5`:938–949 | **«B27»** — `arch ident` gibt es, die Registerbelegung nicht |
+| ~~`F4`:764~~ **zu** | ~~**«B26»** — `RegDecl::requires` wird von KEINEM Pass gelesen; die Klausel zerfällt nach dem Parsen~~ — **GEBAUT am 2026-08-28**: `requires … else <grund>` macht die Lesung fehlbar (`R010`/`R011`), und die Zeile in F4 sagt es selbst |
+| ~~`F4`:785–792~~ **zu** | ~~**«B18»** — `device` kennt keine Phasen~~ — **GEBAUT am 2026-08-28**: `class rw in setup, r in live` steht in der Grammatik, `R009` hält die Erklärung |
+| ~~`F5`:938–949~~ **zu** | ~~**«B27»** — `arch ident` gibt es, die Registerbelegung nicht~~ — **BERICHTIGT am 2026-08-28**: die Belegung gibt es seit dem 2026-08-20 (`asm`-Rumpf mit `in`/`out`/`clobbers`), der Eintrag war falsch |
 
-**Und die anderen sieben sind die Absenkung** — eine Zeile je Fragment für F1–F6 und F9;
-F7/F8/F10 sind an der Ausführung gemessen (`123456`, `1 1 1 0 0 1 1 1`, `1 0 0 0 0 65`).
-*Sie ist keine Sprachfrage, sondern Arbeit.*
+> **Diese Tafel war am 2026-08-30 GANZ leer, und ihre Überschrift führte drei.** Alle drei Zeilen tragen in ihrem eigenen Fragmentabschnitt seit dem 2026-08-28 ein `~~gap:~~ … closed`/`CORRECTED`; `./instrumente/zaehle-pflichten.py --haengend` druckt `verankert 0` und tut das seither. **Und die Datei sagte es selbst** — zwei Absätze weiter unten steht *„seit dem 2026-08-28 hängt davon NICHTS mehr"*. *Dieselbe Sache, zwei Stellen, zwei Aussagen: die Schlussfolgerung wurde nachgezogen, die Tafel darüber nicht.*
 
-> **Alle ~~fünf~~ **vier** verankerten sind NOTATION, keine einzige ist ein handgeschriebener Beweis.** Und
+
+**Und die anderen ~~sieben~~ fünf sind die Absenkung** — eine Zeile je Fragment für
+~~F1–F6~~ **F1, F3, F5, F6** und F9; ~~F7/F8/F10~~ **F2/F4/F7/F8/F10** sind an der
+Ausführung gemessen (`4096 153 7 3 256 1 6 2 1 1 0 9`, F4s Reihe, `123456`,
+`1 1 1 0 0 1 1 1`, `1 0 0 0 0 65`). *Sie ist keine Sprachfrage, sondern Arbeit.*
+*(Nachgezogen 2026-08-30; F2 ist seit dem 2026-08-25 gemessen, F4 seit dem 2026-08-26 —
+abzulesen an den fünf `lauf "fragmentN"`-Zeilen in `instrumente/pruefe-emission.sh`.)*
+
+> **Alle ~~fünf~~ ~~vier~~ verankerten waren NOTATION, keine einzige war ein handgeschriebener Beweis** — *und seit dem 2026-08-28 gibt es keine mehr.* Und
 > die alte Liste führte daneben noch «B21», «B38», «B39», das handgeschriebene `narrow` und
 > *„V-Regeln rechnen nicht"* — **fünf Zeilen für Posten, die schon zu waren.** Eine Liste, die
 > nur wächst, ist kein Register.
