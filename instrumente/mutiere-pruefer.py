@@ -1367,15 +1367,16 @@ MUTATIONEN = [
     # HIDING the third: `M119` refused the program before the emitter ever saw it, so the
     # miscompile below stood behind a guard nobody had asked for. *An accident that holds is
     # indistinguishable from a rule until it stops.*
-    # **Die erste Fassung dieser Mutation war UNGUELTIG**, und zwar auf dieselbe stille Art
-    # wie `lean-ergebnis-ohne-wert` heute frueh: sie setzte `if false` an den `match`-Arm,
-    # womit der `match` nicht mehr vollstaendig war (`E0004`). Der Baum uebersetzte nicht,
-    # der Lauf zaehlte die Mutation aus dem NENNER heraus, und 344 von 344 las sich wie
-    # Vollstaendigkeit. *Eine ungueltige Mutation ist eine geschrumpfte Grundgesamtheit.*
+    # **The first version of this mutation was INVALID**, in the same silent way as the
+    # body-channel mutation named in `messung/RUMPFKANAL-LUECKEN.md` earlier the same day
+    # (its name carries a German particle and therefore stays out of this file): it put
+    # `if false` on the `match` arm,
+    # which left the `match` no longer exhaustive (`E0004`). The tree did not compile, the
+    # run counted the mutation OUT OF THE DENOMINATOR, and 344 of 344 read like completeness.
+    # *An invalid mutation is a shrunken population.*
     #
-    # Der Arm bleibt jetzt stehen und gibt `None` -- das ist genau der Zustand vor der
-    # Reparatur: `e` am fehlbaren Register ungebunden, `M119` sagt es, und `return e;`
-    # erreicht den Erzeuger nie.
+    # The arm now stays and yields `None` -- exactly the state before the repair: `e` unbound
+    # at the fallible register, `M119` says so, and `return e;` never reaches the emitter.
     Mutation(
         "grundbindung-am-register-faellt-weg",
         "m1.rs",
