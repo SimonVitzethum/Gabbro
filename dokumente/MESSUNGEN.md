@@ -5283,11 +5283,29 @@ findings; the list is the source list W7 demands.*
 
 | | | |
 |---|---:|---|
-| Obligations in total | **238** | 228 anchored at a line + 10 lowering |
+| Obligations in total | ~~238~~ **239** | ~~228~~ **229** anchored at a line + 10 lowering |
 | **Plumbing (K)** | **173** | 73 % |
-| **Logic (L)** | **65** | 27 % |
+| **Logic (L)** | ~~65~~ **66** | 27 % |
 | **hanging** | **50** | of which **36 K** |
 | disputed | **1** | 0,4 % — the gate allowed up to 10 % |
+
+> **BERICHTIGT 2026-08-30, und der Fehler ist so alt wie die Zuweisung.** Die Zählung fand am
+> 2026-08-30 in `PFLICHTEN.md`, dass **F4 einunddreißig Zeilen hat und nicht dreißig** — 24 mit
+> `K`, **sieben** mit `L`. Nachgerechnet an der eingefrorenen Fassung dieses Protokolls
+> (`git show c09f78d:dokumente/PFLICHTEN.md`, derselbe Commit, der diesen Abschnitt anlegte):
+> **F4 trug die sieben `L` schon dort**, und die verankerte Summe war 229, nicht 228.
+>
+> *Das ist keine Drift.* Die Zeile `| 886 | it ends because the device completes or faults | L |`
+> steht seit `c09f78d` (2026-08-17) unverändert da; `git log -S` findet keinen späteren Commit.
+> **Die Fehlzählung war am Tag der Zuweisung schon drin und hat dreizehn Tage überlebt** — weil
+> die Gesamtsumme zu ihrer eigenen falschen Aufteilung passte.
+>
+> **Die Klempnereispalte hält, und das ist der Grund, warum das Tor unberührt bleibt:**
+> `K = 173` war und ist richtig, verschoben war allein die Logikspalte. `H`, das Maß dieses
+> Protokolls, rührt die Berichtigung nicht an.
+>
+> Nachzurechnen mit `./instrumente/zaehle-pflichten.py --spalten` (seit dem 2026-08-30), das
+> die Spalten aus den ZEILEN liest statt sie fortzuschreiben.
 
 ## Gate: **MISSED.** `H = 36` against a bar of 0
 

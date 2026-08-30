@@ -126,7 +126,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ **70 Kennzahlen mit Befehl** *(Stand 2026-08-30; 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ ~~70~~ **74 Kennzahlen mit Befehl** *(Stand 2026-08-30; 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -264,8 +264,8 @@ darunter.
       ergaben 238 — *eine Aufteilung, deren Summe stimmt, wird nicht nachgerechnet.* Eine
       Ebene tiefer lag die Ursache: **F4 hat 31 Zeilen, nicht 30.** Alle sechs Zellen der
       beiden Tafeln stehen jetzt im Register.
-      **`pruefe-zahlen.py` führt heute 70 Kennzahlen mit Befehl** und zählt daneben
-      **148 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
+      **`pruefe-zahlen.py` führt heute 74 Kennzahlen mit Befehl** und zählt daneben
+      **146 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
 

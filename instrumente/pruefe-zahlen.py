@@ -643,6 +643,41 @@ EINTRAEGE = [
         r"^  insgesamt\s+\d+ =\s+\d+ K \+\s+(\d+) L",
         "Logikpflichten (L) -- die Spaltentafel je Fragment",
     ),
+    # **The register line from K100's trap section** -- new on 2026-08-30. It stood as
+    # `20 Eintraege, 16 unbewiesen, 4 davon lebend` while the command said 21 / 11 / 2.
+    # *Two of the three had moved in the GOOD direction* -- the trust surface fell while the
+    # register grew -- **and that is exactly the movement K100's second gate exists to make
+    # visible.** A hand-kept number shows it in neither direction.
+    (
+        "dokumente/PLAN.md",
+        r"\*\*(\d+) Einträge, \d+ unbewiesen, \d+ davon lebend\*\*",
+        ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
+        r"^-- (\d+) templates, \d+ of them unproved",
+        "Schablonen im Register",
+    ),
+    (
+        "dokumente/PLAN.md",
+        r"\*\*\d+ Einträge, (\d+) unbewiesen, \d+ davon lebend\*\*",
+        ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
+        r"^-- \d+ templates, (\d+) of them unproved",
+        "unbewiesene Schablonen",
+    ),
+    (
+        "dokumente/PLAN.md",
+        r"\*\*\d+ Einträge, \d+ unbewiesen, (\d+) davon lebend\*\*",
+        ["cargo", "run", "-q", "--bin", "gabbro", "--", "schablonen"],
+        r"CARRIED unproved \(the compiler rests on them\): (\d+)",
+        "lebend unbewiesene Schablonen (die Registerzeile, nicht die Statustafel)",
+    ),
+    # **The assumption count in the prose, beside the one in the status table.** Two places
+    # over one number are W7 -- while both stand, each gets its own command.
+    (
+        "dokumente/PLAN.md",
+        r"\*\*Heute steht dort (\d+)\*\*",
+        ["sh", "-c", "cargo run -q --bin gabbro -- annahmen beispiele/*.gab"],
+        r"^-- (\d+) Annahmen",
+        "Annahmen -- die Zahl im Fliesstext von K100",
+    ),
 ]
 
 # **Die Reichweite.** Eine fettgedruckte Zahl in einer Tabellenzelle ist die Form, in der
