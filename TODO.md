@@ -744,6 +744,32 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       schreibt es, der Fall stammt aus einer erfundenen Probe. **Regel A: erst zählen, dann
       bauen** — die Frage ist, ob ein Pass eine Form zurückweisen soll, die niemand schreibt.
 
+- [ ] **Zwei Wächter hängen am ÜBERTRAGUNGSWEG, und der erste `--voll`-Lauf hat beide gefunden.**
+      Gemessen 2026-08-30 auf `ki-pc-fisch-101`, `abnahme.py --voll`:
+      * **`pruefe-beweise.sh` ROT nach `rsync -rlpgoD`** — und der Wächter sagt die Ursache
+        selbst: *„Häufigste Ursache ist NICHT eine Änderung an den Beweisen, sondern der Sync.
+        `rsync -rlpgoD` gibt jeder übertragenen `.thy` die AKTUELLE Zeit. Isabelle rechnet nach
+        INHALT und baut nichts; dieser Nachweis rechnet nach ZEIT und findet keinen."* Nach
+        `rsync -a beweise/ …`: **`ALL PASS — 15 Theorien`**. `CLAUDE.md` sagt das, aber die
+        **eine** `rsync`-Zeile, die ein Agent im Auftrag bekommt, ist die für `cargo`.
+        *Zwei Werkzeuge im selben Baum verlangen entgegengesetzte Zeitstempel-Semantik, und
+        wer nur eine Zeile kopiert, bekommt einen roten Wächter, der nichts über den
+        Gegenstand sagt.* **Was fehlt, ist EIN Übertragungsbefehl**, der beides richtig macht
+        (`--exclude beweise/` plus ein zweiter `-a`-Lauf) — ein Skript, nicht ein Merksatz.
+      * **`pruefe-zahlen.py` bricht ohne `cargo` im `PATH` mit `FileNotFoundError` ab** —
+        Rücklaufwert 1 und ein Fenster voll Rückverfolgung, das aussieht wie ein Befund. Für
+        `ssh` ist `~/.cargo/bin` nicht im `PATH`, und das steht in keinem `FREMDER_KORPUS`.
+        *Ein Wächter, dessen Urteil am `PATH` hängt, misst die Anmeldung.*
+
+- [ ] **`pruefe-lean-beweis.sh` liegt zu dicht an seiner Frist.**
+      Gemessen 2026-08-30: **194 s und 205 s** auf leerem `fisch`, **über 300 s** im
+      `--voll`-Lauf direkt nach dem Mutationslauf — dort als `HAENGT` gemeldet, obwohl es nur
+      langsam war. `abnahme.py` hat seine Frist deshalb auf `2 × FRIST` gesetzt (mit Grund im
+      Quelltext), aber *das ist die Kompensation und nicht die Messung*: **niemand weiß, wie
+      lange der Wächter unter Last wirklich braucht.** Eine Frist bei 1,5× der gemessenen
+      Laufzeit macht LAST zu einem Befund — dieselbe Klasse wie ein falsches Grün, nur
+      andersherum. *Was fehlt, ist eine Messung unter Last, keine größere Zahl.*
+
 - [ ] **Die zwei Überlebenden von Fach 1 sind beide die echte Form — und eine ist die STILLE Richtung.**
       Sichtbar geworden, als `pruefe-aufloesung.py` am 2026-08-30 die 26 Stellen des
       Erzeugers nach Fach 0 sortierte (`messung/AUFLOESUNG-BEZUGSGROESSE.md`); vorher waren

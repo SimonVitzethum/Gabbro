@@ -86,6 +86,16 @@ korpus_fehlt = _pw.korpus_fehlt
 # takes 10 min 25 s, well past `FRIST`. *A deadline that fires mid-write is worse than none.*
 FRIST_VOLL = 1800
 
+# **And the light ones get twice `pruefe-waechter.py`'s deadline, measured on 2026-08-30.**
+# That tool uses 300 s to ask whether a guardian HANGS; this one runs the same guardians for
+# their VERDICT, and the two questions do not share a budget. `pruefe-lean-beweis.sh` took
+# 194 s and 205 s on an idle `fisch` and blew past 300 s in the `--voll` run, immediately
+# after the mutation probe had loaded the machine -- reported as `HAENGT` when it was merely
+# slow. *A deadline set at 1.5x the measured runtime turns LOAD into a finding*, and a false
+# hang is the same class as a false green: it says something about the machine and prints it
+# as a statement about the tree.
+FRIST_ABNAHME = 2 * FRIST
+
 # **The cheap half of an expensive guardian, so the quick run is not blind to it.**
 # `--anker` counts text and builds nothing (`CLAUDE.md`), and it is the half that catches a
 # dead anchor -- a mutation whose source line moved away silently shrinks the denominator and
@@ -124,7 +134,7 @@ def fahre_einen(p, voll, arbeitsverzeichnis):
     if fehlt:
         ort, was = fehlt
         return "NICHT FAHRBAR", None, 0.0, f"fremder Korpus fehlt: {was} ({ort})"
-    frist = FRIST_VOLL if teuer else FRIST
+    frist = FRIST_VOLL if teuer else FRIST_ABNAHME
     t0 = time.monotonic()
     try:
         r = subprocess.run([str(p)] + args, cwd=arbeitsverzeichnis, capture_output=True,
