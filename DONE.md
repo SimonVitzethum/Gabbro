@@ -713,7 +713,7 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 
 ## Probes
 
-**53 clean examples, 310 poison probes, 233 tests · 52 translation units** —
+**54 clean examples, 311 poison probes, 233 tests · 53 translation units** —
 `cargo test` · `cargo run --bin gabbro -- pruefe beispiele/*.gab` · `./instrumente/pruefe-emission.sh`
 
 > **Measured 2026-08-30, and every one of the four was wrong.** It read ~~*25 clean
@@ -722,10 +722,10 @@ Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each com
 >
 > | | booked | measured | by what |
 > |---|---:|---:|---|
-> | clean examples | 25 | **53** | `ls beispiele/*.gab` |
-> | poison probes | 78 | **310** | `ls beispiele/gift/*.gab` |
+> | clean examples | 25 | **54** | `ls beispiele/*.gab` |
+> | poison probes | 78 | **311** | `ls beispiele/gift/*.gab` |
 > | tests | 123 | **233** | `cargo test` — 15 suites, 0 red |
-> | translation units | 11 | **52** | `./instrumente/pruefe-emission.sh`, of which **24 run and compare** |
+> | translation units | 11 | **53** | `./instrumente/pruefe-emission.sh`, of which **24 run and compare** |
 >
 > **And the cause is not carelessness, it is that nobody was counting.**
 > `pruefe-todo.py` has held *`N` clean examples* and *`N` poison probes* against the file

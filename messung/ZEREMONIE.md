@@ -5,12 +5,11 @@ es eine Meinung — und *„keine Klempnerei beim Endnutzer"* ist eine Nutzbarke
 
 ```
 $ ./instrumente/zaehle-zeremonie.py
-60 Dateien gemessen, 3 abgelehnt
-  ableitbar       58        A1  4 · A4 54
+61 Dateien gemessen, 3 abgelehnt
+  ableitbar       60        A1  4 · A4 56
   redundant        0
-  tragend        948        T1 439 · T2 195 · T3 66 · T6 65 · T10 57 · T11 33 · T12 25 ·
-                            T7 24 · T9 23 · T5 8 · T8 8 · T4 5
-59 von 1021 Stellen dürfen sinken
+  tragend        975
+60 von 1035 Stellen dürfen sinken
 ```
 
 ## Die zwei Achsen, und warum sie getrennt bleiben

@@ -66,9 +66,20 @@ FLAECHEN = {
     # cc -Werror -> ausgefuehrt -> verglichen (`pruefe-emission.sh`). Die Flaeche ist damit
     # beschaedigbar geworden, und das ist der ganze Unterschied: was 0 Mutationen hat, ist
     # nicht gedeckt, sondern unbeschaedigbar.
-    "code": "Die C-Emission. ZWEI Uebersetzungseinheiten gebaut und mutierbar (ein Beispiel "
-            "und Fragment F7, die Geistloeschung); acht Fragmente ungeprueft, und `C001` "
-            "weigert sich fuer jede Form, die diese beiden nicht brauchen.",
+    # **This number is NOT maintained here either** -- and until 2026-08-30 it was.
+    #
+    # The sentence read *"TWO translation units built and mutable (one example and fragment
+    # F7, the ghost erasure); eight fragments unchecked"*. It was written on 2026-08-17 and
+    # never followed the thing it described: on 2026-08-30 `pruefe-emission.sh` builds and
+    # runs **23** units, five of them fragments, and **five** fragments are the ones nobody
+    # runs -- of which exactly ONE still emits at all (`messung/W24-FRAGMENTE.md`).
+    #
+    # > **A second register over the same thing** (W7), and the `schablone` row three lines
+    # > down already carries the cure in words -- it refuses to hold a number at all. A stale
+    # > number beside a live catalogue does not read as stale: it reads as a measurement.
+    #
+    # So this row asks the harness instead of remembering it.
+    "code": lambda: emissionsflaeche_satz(),
     # **Diese Zahl wird NICHT hier gepflegt.** Sie stand hier als "16, keine bewiesen",
     # waehrend `gabbro schablonen` 19 mit 4 bewiesenen meldete -- zwei Register ueber
     # derselben Sache, und das ist die Fehlerklasse, gegen die W7 steht. Wer sie hier
@@ -3568,6 +3579,43 @@ def anker_stand():
     return tot
 
 
+def emissionseinheiten():
+    """**How many translation units does `pruefe-emission.sh` actually build and run?**
+
+    Read, not remembered. The guard names most units in one `lauf "<name>" …` line -- but
+    **not all of them**, and that difference cost this function a first version: it counted
+    23 while the harness printed *"24 durchgestochen"*. The library chain (stage 10) is a
+    unit without a `lauf` call, and it raises the same counter one more time.
+
+    > *A guard that reproduces a number by a DIFFERENT arithmetic is the second register it
+    > was built to remove* (W7). So this counts the way the shell counts: every `lauf` call,
+    > plus every raise of `N_DURCHGESTOCHEN` that does not stand inside `lauf()`. The one
+    > inside the function is indented; the ones outside are not.
+
+    Returns `(units, fragment units, fragments nobody runs)`. A fragment unit is one whose
+    name reads `fragmentN`; the file it is cut from may be `messung/fragmente/F0N.gab` or a
+    slice of `dokumente/FRAGMENTE.md`, and for this count that difference does not matter --
+    what matters is that a fragment reached `cc` at all.
+    """
+    import re
+    text = (WURZEL / "instrumente" / "pruefe-emission.sh").read_text()
+    namen = re.findall(r'^lauf "([^"]+)"', text, re.M)
+    ausserhalb = len(re.findall(r"^N_DURCHGESTOCHEN=\$\(\(N_DURCHGESTOCHEN \+ 1\)\)", text, re.M))
+    zahlen = {int(m.group(1)) for n in namen if (m := re.fullmatch(r"fragment(\d+)", n))}
+    alle = sorted(p.stem for p in (WURZEL / "messung" / "fragmente").glob("F*.gab"))
+    ohne = [s for s in alle if int(s[1:]) not in zahlen]
+    return len(namen) + ausserhalb, len(zahlen), ohne
+
+
+def emissionsflaeche_satz():
+    """The `code` row -- with the two numbers read off the harness (see `FLAECHEN`)."""
+    einheiten, fragmente, ohne = emissionseinheiten()
+    return (f"Die C-Emission. {einheiten} Uebersetzungseinheiten gebaut und mutierbar, "
+            f"{fragmente} davon Fragmente; {len(ohne)} Fragmente laeuft niemand "
+            f"({', '.join(ohne) if ohne else 'keins'}), und `C001` weigert sich fuer jede "
+            f"Form, die diese Einheiten nicht brauchen.")
+
+
 def flaechen_stand():
     """**Traegt jede Mutation eine Flaeche, die es GIBT?**
 
@@ -3578,6 +3626,32 @@ def flaechen_stand():
     Bezugsgroesse gehalten.*
     """
     return [m for m in MUTATIONEN if m.flaeche not in FLAECHEN]
+
+
+def emissionsflaeche_sprechprobe():
+    """**Does the `code` row FALL when the harness loses a unit?**
+
+    R11: a row that reads a number is only worth more than a remembered one if it is seen
+    moving. The probe counts over the real file, then over a copy with one `lauf` line
+    struck out -- and the second count has to be smaller.
+    """
+    import re
+    einheiten, fragmente, ohne = emissionseinheiten()
+    text = (WURZEL / "instrumente" / "pruefe-emission.sh").read_text()
+    ohne_eine = re.subn(r'^lauf "fragment2"', '# lauf "weg"', text, count=1, flags=re.M)
+    if ohne_eine[1] != 1:
+        return False, "die Sprechprobe findet `lauf \"fragment2\"` nicht mehr"
+    gekuerzt = re.findall(r'^lauf "([^"]+)"', ohne_eine[0], re.M)
+    if len(gekuerzt) + 1 != len(re.findall(r'^lauf "([^"]+)"', text, re.M)):
+        return False, "eine entfernte Einheit senkt die Zahl NICHT"
+    # **The other half of the arithmetic -- the half missing from the first version:**
+    # exactly ONE raise is indented inside `lauf()`; every other one counts on its own.
+    drin = len(re.findall(r"^\s+N_DURCHGESTOCHEN=\$\(\(N_DURCHGESTOCHEN \+ 1\)\)", text, re.M))
+    if drin != 1:
+        return False, f"{drin} Erhoehungen stehen IN `lauf()` -- die Arithmetik stimmt nicht"
+    if fragmente + len(ohne) != 10:
+        return False, f"{fragmente} gelaufen + {len(ohne)} ungelaufen ist nicht 10"
+    return True, f"{einheiten} Einheiten, {fragmente}/10 Fragmenten, {len(ohne)} ohne Lauf"
 
 
 def anker_sprechprobe():
@@ -3624,6 +3698,13 @@ def main():
             print("  SPRECHPROBE GESCHEITERT: `keine-flaeche` steht in FLAECHEN")
             return 1
         print("  erfundene Flaeche faellt:  ok")
+        # **R14 for the area row that READS its number** (2026-08-30). It replaces a number
+        # that had stood wrong since 2026-08-17 -- and without this probe it would only be
+        # another place where the same thing can happen.
+        ok, wort = emissionsflaeche_sprechprobe()
+        print(f"  Emissionsflaeche liest:    {'ok -- ' + wort if ok else 'GESCHEITERT: ' + wort}")
+        if not ok:
+            return 1
         tot = anker_stand()
         print(f"\n== {len(MUTATIONEN) - len(tot)} von {len(MUTATIONEN)} Ankern greifen ==")
         for m, warum in tot:
@@ -3695,7 +3776,8 @@ def main():
     for name, satz in FLAECHEN.items():
         n = sum(1 for m in MUTATIONEN if m.flaeche == name)
         marke = "  " if n else "!!"
-        print(f"  {marke} {name:<12} {n:>3} Mutationen  -- {satz}")
+        # A row may be a CALLABLE -- then it reads its numbers instead of stating them.
+        print(f"  {marke} {name:<12} {n:>3} Mutationen  -- {satz() if callable(satz) else satz}")
     print("\n  Eine Flaeche mit 0 Mutationen ist nicht gedeckt, sondern unbeschaedigbar.")
     print(f"  `{gefangen} von {gueltig}` misst den PRUEFER; ueber Annotation und Code sagt es nichts.")
     if ungueltig:

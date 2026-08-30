@@ -132,9 +132,51 @@ def je_funktion(ganz, arten):
     return doppelte, luecken, entschuldigt
 
 
+# **The booked backlog -- and this guard had none until 2026-08-30.**
+#
+# From at least 2026-08-28 it ended with `rc=1` at every run, over a single entry that had
+# stood for days: `m2::endet` without a descent in seven kinds. **A guard whose red exit is
+# the normal state cannot tell a new finding from the old one.** It is then not a guard any
+# more but a display -- and a collective run over 26 of them reads it as noise.
+#
+# The form is the one `pruefe-konstrukte.py` carries, the twin this file names in its own
+# first paragraph: a table of what is booked, WITH A WRITTEN REASON per entry, and three
+# answers instead of two.
+#
+#   * an entry that is NOT in the table   -> red. A new backlog.
+#   * an entry in the table that is GONE  -> red. The table has aged; delete the line.
+#   * only booked entries                 -> green, and the count is printed.
+#
+# > **The reason is half the booking.** An entry without one is a backlog that nobody has to
+# > defend again -- and that is the shape this guard was built against, one level up.
+#
+# The table stands EMPTY today, and that is a measurement and not an oversight: the one
+# entry it would have carried was a real defect, and it was repaired the same day
+# (`messung/ABSTIEG.md`). *An empty booking is the only honest starting state -- what goes in
+# has to be argued for.*
+GEBUCHT = {}
+
+# **A DOUBLE descent is never bookable.** It is not a gap in coverage but a run time of
+# 2^depth -- measured at 1,88 s for 26 nested `if`, and longer than ninety seconds at 50.
+# There is no state of the world in which that is a backlog somebody accepts, so it does not
+# get a row in `GEBUCHT` and it does not get a green exit.
+
+
+def einordne(luecken, tisch):
+    """**Three answers over one list of gaps** -- and this is the whole of the decision.
+
+    It stands alone so that the speaking test can run THIS function instead of a copy of it.
+    *A guard whose probe re-implements the rule proves that the copy works.*
+    """
+    neu = [k for k in luecken if k not in tisch]
+    gebucht = [k for k in luecken if k in tisch]
+    veraltet = [k for k in tisch if k not in luecken]
+    return neu, gebucht, veraltet
+
+
 def messe():
     arten = mit_block()
-    zeilen, offen = [], 0
+    zeilen, alle_luecken, doppelte_gesamt = [], [], []
     for p in PAESSE:
         d = QUELLE / f"{p}.rs"
         if not d.exists():
@@ -144,20 +186,62 @@ def messe():
             continue
         doppelte, luecken, entschuldigt = je_funktion(ganz, arten)
         for name, arm in doppelte:
-            offen += 1
+            doppelte_gesamt.append(f"{p}::{name}")
             zeilen.append(f"  {p}::{name:<20} DOPPELTER ABSTIEG in: {arm}")
         if not luecken and not entschuldigt and not doppelte:
             zeilen.append(f"  {p:<14} gedeckt")
         for name, fehlt in entschuldigt:
             zeilen.append(f"  {p}::{name:<20} weigert sich benannt ({len(fehlt)} Arten)")
-        offen += len(luecken)
         for name, fehlt in luecken:
-            zeilen.append(f"  {p}::{name:<20} OHNE ABSTIEG in: {', '.join(fehlt)}")
-    return arten, zeilen, offen
+            schluessel = f"{p}::{name}"
+            alle_luecken.append(schluessel)
+            marke = "GEBUCHT, ohne Abstieg" if schluessel in GEBUCHT else "OHNE ABSTIEG"
+            zeilen.append(f"  {schluessel:<22} {marke} in: {', '.join(fehlt)}")
+    neu, gebucht, veraltet = einordne(alle_luecken, GEBUCHT)
+    return arten, zeilen, neu, gebucht, veraltet, doppelte_gesamt
+
+
+def buchungs_sprechprobe(arten):
+    """**Does the booking tell the three states apart?** (R14, 2026-08-30)
+
+    The table is the risky half of this change. A booking that swallows everything is a green
+    display, and that is the same failure as the red one it replaces -- only quieter. So the
+    probe runs `einordne`, the function that actually decides, over synthetic input, once for
+    each answer it owes.
+
+    It also plants a real gap through `je_funktion`, so the two halves stay connected: a
+    decision function that classified nothing would still pass a test made only of literals.
+    """
+    gift = """
+fn sammler(b: &Block) {
+    for s in &b.anweisungen {
+        match &s.art {
+            StmtArt::Wenn(w) => sammler(w),
+            _ => {}
+        }
+    }
+}"""
+    _, luecken, _ = je_funktion(gift, arten)
+    if not any(n == "sammler" for n, _ in luecken):
+        return "die Probe erzeugt gar keine Luecke -- dann misst der Rest nichts"
+    schluessel = ["probe::sammler"]
+
+    neu, gebucht, veraltet = einordne(schluessel, {})
+    if neu != schluessel or gebucht or veraltet:
+        return "eine UNGEBUCHTE Luecke faellt nicht als neu auf"
+
+    neu, gebucht, veraltet = einordne(schluessel, {"probe::sammler": "Grund"})
+    if neu or gebucht != schluessel or veraltet:
+        return "eine GEBUCHTE Luecke wird nicht als gebucht erkannt"
+
+    neu, gebucht, veraltet = einordne([], {"probe::sammler": "Grund"})
+    if neu or gebucht or veraltet != ["probe::sammler"]:
+        return "eine Buchung OHNE Luecke faellt nicht als veraltet auf"
+    return None
 
 
 def main():
-    arten, zeilen, offen = messe()
+    arten, zeilen, neu, gebucht, veraltet, doppelte_gesamt = messe()
     print(f"== Abstieg: {len(arten)} blocktragende Anweisungsarten ==")
     print("   " + ", ".join(arten))
     for z in zeilen:
@@ -211,9 +295,36 @@ fn sammler(b: &Block) {
         sys.exit("SPRECHPROBE GESCHEITERT: eine benannte Weigerung wird nicht mehr entschuldigt")
     print("  (Sprechprobe: fehlender UND doppelter Abstieg werden gemeldet -- ok)")
     print("  (Sprechprobe: die Weigerung entschuldigt NUR ihre eigene Funktion -- ok)")
-    if offen:
-        print(f"== ABSTIEG: {offen} Paesse mit Luecke ==")
+    # **And the fourth direction, since 2026-08-30: the BOOKING itself.**
+    if fehler := buchungs_sprechprobe(arten):
+        sys.exit(f"SPRECHPROBE GESCHEITERT: {fehler}")
+    print("  (Sprechprobe: neu, gebucht und veraltet werden unterschieden -- ok)")
+
+    # **A double descent is never booked.** It is not a hole in the coverage but a run
+    # time of 2^depth.
+    if doppelte_gesamt:
+        print(f"== ABSTIEG: {len(doppelte_gesamt)} DOPPELTE ABSTIEGE ==")
+        print("   " + ", ".join(doppelte_gesamt))
+        print("   Das ist keine Deckungsluecke, sondern 2^Tiefe -- nichts davon ist buchbar.")
         return 1
+    if neu:
+        print(f"== ABSTIEG: {len(neu)} NEUE Paesse mit Luecke ==")
+        print("   " + ", ".join(neu))
+        print("   Wer sie buchen will, traegt sie MIT GRUND in `GEBUCHT` ein --")
+        print("   ein Rueckstand ohne geschriebenen Grund ist einer, den niemand mehr")
+        print("   verteidigen muss.")
+        return 1
+    if veraltet:
+        print("== ABSTIEG: DIE BUCHUNG IST VERALTET ==")
+        print("   Diese steigen jetzt ab. Eintrag loeschen: " + ", ".join(veraltet))
+        print("   *Eine Buchung, die niemand zurueckzieht, waechst zur Erlaubnis.*")
+        return 1
+    if gebucht:
+        print(f"== ABSTIEG: {len(gebucht)} gebucht, KEINE neue ==")
+        print("   " + "\n   ".join(f"{k}: {GEBUCHT[k]}" for k in gebucht))
+        print("   Und was das NICHT heisst: gebucht ist nicht geprueft. Der Waechter")
+        print("   unterscheidet den alten Rueckstand vom neuen, er spricht ihn nicht frei (W10).")
+        return 0
     print("== ABSTIEG: ALL PASS -- jeder Pass erreicht jeden Unterblock ==")
     return 0
 

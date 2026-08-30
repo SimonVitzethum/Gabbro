@@ -213,3 +213,53 @@ seiner Bedingung.
 **Der erste Schritt kostet einen Nachmittag und ist reine Messung.** *Zweiundzwanzig Fragen an
 eine Datei, die schon geschrieben ist* — und wenn die Antwort für alle 22 „der Prüfer weist es
 vorher ab" lautet, ist `V` heute schon erfüllt und niemand wusste es.
+
+---
+
+# 7. Der Durchlauf — zwei Bahnen, und die Reihenfolge ist die Aussage
+
+*Aufgesetzt am 2026-08-30. **Die Bahnen sind so geschnitten, dass sie sich nicht berühren:**
+Bahn V arbeitet am ERZEUGER und an der Grammatiktafel, Bahn P am PRÜFER. Der einzige
+gemeinsame Boden ist `TODO.md`, und dort sind Konflikte additiv.*
+
+## Schritt 0 — V1, seriell, vor beiden Bahnen
+
+Die **22 `C001`-Stellen** in `emit.rs` aufschlüsseln. Je Stelle drei Spalten:
+
+```
+Form            was die Stelle absagt, in der Sprache der Grammatik
+Pruefer         die Kennung, die dieselbe Form schon vorher abweist -- oder ein KREUZ
+Zustand         gesenkt | abgesagt (Pruefer auch) | UNGEDECKT
+```
+
+**Diese Tafel ist die Arbeitsliste beider Bahnen.** Ohne sie arbeiten beide gegen eine
+Vermutung. *Sie kostet einen Nachmittag und keinen Bau.*
+
+## Bahn V — der Erzeuger kennt jede Form
+
+| | |
+|---|---|
+| **V-a** | `gabbro blindstellen` bekommt die **Grammatik** als zweite Quelle (§3, V2). Vier Zustände je Zelle, `UNGEDECKT` muss leer sein |
+| **V-b** | Die zwei bekannten Absagen entscheiden: `breaking I { … }` (Beweisregion) und `match` über etwas anderem als `option index into T`. **W24-Vorlauf zuerst** |
+| **V-c** | Je weitere `UNGEDECKT`-Zelle eine Entscheidung: absenken (bei gemessenem Bedarf) oder **im PRÜFER absagen** — beides ist ein voller Ausgang |
+| **V-d** | Der Wächter (§3, V4): `UNGEDECKT > 0` ist rot, mit Sprechprobe in beide Richtungen |
+
+## Bahn P — der Prüfer nimmt jedes Programm an, das er annehmen soll
+
+| | |
+|---|---|
+| **P-a** | **`K001`, die Kostendomänenschranke.** `F09` verspricht 4096 ops, der Kalkül rechnet 137 438 953 472. *Sieben Größenordnungen, und die Schranke steht als `VERMUTET` gebucht.* Der teuerste Posten und der einzige, der ein echtes Programm blockiert |
+| **P-b** | **`N035`, der Funktionszeigervertrag.** `fn(#1) -> …` ohne `effects`/`costs`; Stufe 7 |
+| **P-c** | **`M124`** — *ein Grundwert kann hier nicht stehen*. Drei Fundstellen in `F03`. **Erst messen, ob es ein Loch ist oder eine richtige Absage** |
+| **P-d** | `F01`s `N029` benennen: **kein Loch, sondern der Preis der Entscheidung „kein `?`"** — und `F01` entsprechend schreiben oder die Buchung berichtigen |
+
+## Schritt 6 — seriell, nach beiden Bahnen
+
+`K1`: die fünf offenen Absenkungspflichten ausführen und vergleichen. **Erst hier, weil drei
+von fünf an V und P hängen** — F3 und F9 sind heute für den Prüfer keine gültigen Programme,
+F5 senkt nicht ab. Dann `H = 0` buchen, **mit dem Satz aus §5 daneben.**
+
+> **Und was in diesem Durchlauf ausdrücklich NICHT steckt:** die Absenkungsentscheidung
+> (`messung/ABSENKUNG.md`, drei Formen). `H = 0` ist über den AUSFÜHRUNGSweg erreichbar, den
+> dieser Ordner fünfmal gegangen ist; welcher der drei Wege zum BEWEIS gegangen wird, ist eine
+> Entscheidung des Ordners und keine Aufgabe einer Bahn.

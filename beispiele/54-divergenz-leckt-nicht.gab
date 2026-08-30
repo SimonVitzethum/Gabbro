@@ -1,0 +1,46 @@
+-- **Ein Zweig, der DIVERGIERT, muss keinen linearen Wert verbrauchen.**
+--
+-- Die Notiz unter `L103` sagt es seit jeher -- *„a branch that diverges or returns does not
+-- count -- not every path has to consume, only every path that ends normally"* -- und der
+-- Praedikat darunter kannte bis zum 2026-08-30 nur die zurueckkehrende Haelfte. Ein
+-- `forever` ohne Ausgang faellt nicht durch; wer trotzdem verlangt, dass er verbraucht,
+-- lehnt ein richtiges Programm ab.
+--
+-- Gemessen an genau dieser Datei: vorher `L103` + `L101`, heute 0 Fehler. **Die
+-- Gegenrichtung steht in `beispiele/gift/407-forever-mit-ausgang-faellt-durch.gab`** --
+-- dieselbe Schleife MIT `leave dienst`, und dort faellt `L103` weiter.
+
+module beispiel::divergenz {
+
+linear type Marke;
+
+extern fn nimm(m : Marke) effects { consumes m } costs <= 2 ops;
+extern fn tue() effects { pure } costs <= 1 ops;
+extern fn watchdog_schlug_an() -> never effects { diverges };
+extern fn sonde_zeitgeber_tickt() -> bool effects { pure } costs <= 1 ops;
+
+impl fn abschluss(m : Marke, ist_dienst : bool) -> u64
+    effects { consumes m, diverges }
+{
+    if ist_dienst {
+        -- Dieser Weg kehrt NIE zurueck. `m` kann ihn nicht ueberleben, weil ihn nichts
+        -- ueberlebt -- die Zusage `consumes m` gilt fuer jeden Weg, der normal endet.
+        forever dienst
+            per_pass bounded 16 ops
+            on_exceeded watchdog_schlug_an
+            effects  { pure }
+            progress zeitgeber_tickt
+        {
+            tue();
+        }
+    } else {
+        nimm(m);
+    }
+    return 0;
+}
+
+assume zeitgeber_tickt
+    "Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund."
+    falsifier sonde_zeitgeber_tickt;
+
+}

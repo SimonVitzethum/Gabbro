@@ -1510,7 +1510,10 @@ echo "  $n_ok von $n_emit emittierenden Dateien uebersetzen; $n_aus benannte Aus
 #
 # **Die Marke ist eine Ratsche: sie darf STEIGEN, nicht fallen.** Wer eine Form baut, die
 # eine Datei aus der Emission wirft, sagt es hier -- mit Grund, nicht durch Absenken.
-MARKE_EMIT=52
+# **52 -> 53 am 2026-08-30**: `beispiele/54-divergenz-leckt-nicht.gab` kam dazu -- die
+# Datei, an der `m2::endet` einen divergierenden Zweig nicht mehr als Leck ablehnt
+# (`messung/ABSTIEG.md`). Sie emittiert und uebersetzt, also gehoert sie in den NENNER.
+MARKE_EMIT=53
 if [ "$n_emit" -lt "$MARKE_EMIT" ]; then
     echo "  RATSCHE GEBROCHEN: $n_emit emittierende Dateien, gebucht sind $MARKE_EMIT."
     echo "                     Eine Datei hat die Emission VERLASSEN -- das ist kein gruener"
