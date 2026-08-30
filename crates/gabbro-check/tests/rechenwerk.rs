@@ -5358,3 +5358,146 @@ impl fn zaehle(b : ptr<normal, r> B) -> u32
     assert_eq!(bodies, 1, "and the counting loop carries a body:\n{t}");
     assert_eq!(refused, 0, "with nothing refused:\n{t}");
 }
+
+// -- A ghost bound by `let` ------------------------------------------------------------
+
+/// The body of one C function, brace-matched -- **assertions belong to a BLOCK**.
+///
+/// A `contains` over the whole emission passes as soon as ANY line satisfies it, and the
+/// prototype line alone already carries the name. That shape hid a producer fault on
+/// 2026-08-28 (class `W16`), so the probe below reads one body at a time.
+fn c_rumpf(c: &str, signatur: &str) -> String {
+    let auf = c
+        .find(&format!("{signatur} {{"))
+        .unwrap_or_else(|| panic!("`{signatur}` steht nicht im Erzeugnis:\n{c}"));
+    let rest = &c[auf..];
+    let start = rest.find('{').expect("brace");
+    let mut tiefe = 0usize;
+    for (i, z) in rest[start..].char_indices() {
+        match z {
+            '{' => tiefe += 1,
+            '}' => {
+                tiefe -= 1;
+                if tiefe == 0 {
+                    return rest[start..start + i + 1].to_string();
+                }
+            }
+            _ => {}
+        }
+    }
+    panic!("`{signatur}` bleibt offen:\n{c}");
+}
+
+/// **A `let`-bound ghost, returned** (2026-08-30).
+///
+/// The erasure was built at three sites of four: the parameter goes, the result type goes,
+/// the binding goes -- the `return` stayed. `geist_wert` recognised a bare name as a ghost
+/// only through `parametertyp`, so a name bound by `let` read as an ordinary value.
+///
+/// **No example ever reached the fourth site.** `beispiele/22` runs the whole boot chain as
+/// `extern fn`, so it carries prototypes and no bodies at all. Measured on the unchanged
+/// emitter, the C read `return p1;` inside a `void` function, `p1` deleted one line above --
+/// two errors at `cc`: *undeclared identifier*, plus *return with a value in a void
+/// function*.
+#[test]
+fn ein_let_gebundener_geist_wird_auch_im_return_geloescht() {
+    let quelle = "
+module probe::geistlet {
+
+linear ghost type BootPhase order { roh, mmu };
+
+static mut mmu_an_zahl : u32 = 0;
+
+extern fn mmu_an(p : BootPhase) -> BootPhase
+    ensures  mmu_an_zahl == 1
+    advances roh -> mmu
+    effects  { consumes p, writes mmu_an_zahl } costs <= 4096 ops;
+
+impl fn stufe_eins(p : BootPhase) -> BootPhase
+    advances roh -> mmu
+    effects { consumes p, writes mmu_an_zahl }
+    costs   <= 8192 ops
+{
+    let p1 = mmu_an(p);
+    return p1;
+}
+
+}
+";
+    let mut absagen = gabbro_syntax::Absagen::neu("probe.gab");
+    let (baum, _) = gabbro_syntax::lies("probe.gab", quelle);
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
+
+    let rumpf = c_rumpf(&c, "static void stufe_eins(void)");
+
+    // The CALL survives -- erasing the binding must never erase the boot step itself.
+    assert!(
+        rumpf.contains("mmu_an();"),
+        "der Ruf selbst bleibt stehen:\n{rumpf}"
+    );
+    // **The line that was wrong.** `return p1;` named a local the emitter had just deleted.
+    assert!(
+        !rumpf.contains("p1"),
+        "`p1` bezeichnet einen Namen, den das Erzeugnis nie schreibt:\n{rumpf}"
+    );
+    // A ghost `return` yields nothing, so the bare form stands.
+    assert!(
+        rumpf.contains("return;"),
+        "ein Geist-`return` gibt nichts zurueck:\n{rumpf}"
+    );
+}
+
+// -- `let … else` over a place -----------------------------------------------------------
+
+/// **The source of a `let … else` must not decide whether M1 can see the type** (2026-08-30).
+///
+/// «B14b» (2026-08-17) let the statement unpack a `place` as well as a call. The type
+/// binding stayed behind: the call half asked the callee's signature, the place half wrote
+/// `Typ::Unbekannt` and gave up, though the type stood in the register declaration the whole
+/// time.
+///
+/// **Both functions below carry the same body**, one line apart in what they read from.
+/// Measured on the unchanged checker: 3 expressions and 0 untyped with the call alone, 5
+/// expressions and **1 untyped** once the place twin joins -- and that one untyped name is
+/// what silences `M104` over any arithmetic that follows it.
+///
+/// *The probe reads M1's own instrument.* The pass counts every expression it fails to type,
+/// so an uncovered name shows up as a number and as nothing else -- no refusal ever names it,
+/// which is exactly how the gap survived thirteen days.
+#[test]
+fn ein_let_else_ueber_einem_place_bindet_den_erklaerten_typ() {
+    let quelle = "
+module probe::letsonst {
+
+reason Geraetelug { ZuTief = 1 \"zu tief\" exhaustive }
+
+device Tiefengeraet(basis : u64) at mmio {
+    reg TIEFE : u32 @0x08 class r requires TIEFE <= 8 else Geraetelug::ZuTief
+}
+
+extern fn hol_tiefe() -> u32 or Geraetelug effects { pure } costs <= 1 ops;
+
+impl fn via_ruf() -> u32 or Geraetelug effects { pure } costs <= 8 ops {
+    let t = hol_tiefe() else (e) { return Geraetelug::ZuTief; }
+    return t;
+}
+
+impl fn via_ort(d : ptr<mmio, r> Tiefengeraet) -> u32 or Geraetelug
+    effects { reads d } costs <= 8 ops
+{
+    let t = d.TIEFE else (e) { return Geraetelug::ZuTief; }
+    return t;
+}
+
+}
+";
+    let mut absagen = gabbro_syntax::Absagen::neu("probe.gab");
+    let bericht = gabbro_check::pruefe(&baum(quelle), &mut absagen);
+
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
+    assert_eq!(
+        bericht.m1.unbekannt, 0,
+        "beide Quellen tragen einen erklaerten Typ; ungetypt bleibt keiner"
+    );
+}

@@ -277,8 +277,13 @@ proof (induct rule: erreicht.induct)
   case (wurzel y yl)
   show ?case
   proof
-    assume "\<not> ueber \<sigma> y s"
-    then have ne: "y \<noteq> s" using ueber.hier by blast
+    assume nu: "\<not> ueber \<sigma> y s"
+    have ne: "y \<noteq> s"
+    proof
+      assume "y = s"
+      then have "ueber \<sigma> y s" by (simp add: ueber.hier)
+      with nu show False ..
+    qed
     then have "umhaengen \<sigma> s p y = Some yl"
       using wurzel unfolding umhaengen_def by simp
     then show "erreicht (umhaengen \<sigma> s p) y"
@@ -289,9 +294,19 @@ next
   show ?case
   proof
     assume nu: "\<not> ueber \<sigma> y s"
-    then have ne: "y \<noteq> s" using ueber.hier by blast
-    have "\<not> ueber \<sigma> q s" using nu aufstieg ueber.hoeher by blast
-    then have q_da: "erreicht (umhaengen \<sigma> s p) q" using aufstieg by blast
+    have ne: "y \<noteq> s"
+    proof
+      assume "y = s"
+      then have "ueber \<sigma> y s" by (simp add: ueber.hier)
+      with nu show False ..
+    qed
+    have "\<not> ueber \<sigma> q s"
+    proof
+      assume "ueber \<sigma> q s"
+      from ueber.hoeher[OF aufstieg(1) aufstieg(2) this] have "ueber \<sigma> y s" .
+      with nu show False ..
+    qed
+    then have q_da: "erreicht (umhaengen \<sigma> s p) q" by (rule mp[OF aufstieg(4)])
     have "umhaengen \<sigma> s p y = Some yl"
       using ne aufstieg unfolding umhaengen_def by simp
     then show "erreicht (umhaengen \<sigma> s p) y"
@@ -345,7 +360,7 @@ next
       case False
       then have wert: "umhaengen \<sigma> s p y = Some yl"
         using aufstieg unfolding umhaengen_def by simp
-      have "erreicht (umhaengen \<sigma> s p) q" using s_da aufstieg by blast
+      have "erreicht (umhaengen \<sigma> s p) q" by (rule mp[OF aufstieg(4) s_da])
       then show ?thesis using wert aufstieg by (auto intro: erreicht.aufstieg)
     qed
   qed
@@ -374,7 +389,7 @@ theorem umhaengen_erhaelt:
   shows "wohlgeformt (umhaengen \<sigma> s p)"
 proof -
   have p_neu: "erreicht (umhaengen \<sigma> s p) p"
-    using elter_da nicht_drunter umhaengen_ausserhalb by blast
+    by (rule mp[OF umhaengen_ausserhalb[OF elter_da] nicht_drunter])
   have s_wert: "umhaengen \<sigma> s p s = Some \<lparr> elter = Some p \<rparr>"
     unfolding umhaengen_def by simp
   have s_elter: "elter \<lparr> elter = Some p \<rparr> = Some p" by simp
@@ -390,8 +405,9 @@ proof -
     next
       case False
       then have "\<sigma> x = Some xl" using x unfolding umhaengen_def by simp
-      then have "erreicht \<sigma> x" using wf unfolding wohlgeformt_def by blast
-      then show ?thesis using s_neu umhaengen_durch_s by blast
+      then have "erreicht \<sigma> x"
+        using wf[unfolded wohlgeformt_def, rule_format] by simp
+      then show ?thesis by (rule mp[OF umhaengen_durch_s s_neu])
     qed
   qed
 qed
@@ -408,7 +424,7 @@ corollary umhaengen_erhaelt_am_belegten_platz:
   assumes "wohlgeformt \<sigma>" and "\<sigma> s = Some sl"
       and "erreicht \<sigma> p" and "\<not> ueber \<sigma> p s"
   shows "wohlgeformt (umhaengen \<sigma> s p)"
-  using assms umhaengen_erhaelt by blast
+  using umhaengen_erhaelt[OF assms(1) assms(3) assms(4)] .
 
 section \<open>Teil III -- zwei Grenzen, als Gegenbeispiel statt als Behauptung\<close>
 
