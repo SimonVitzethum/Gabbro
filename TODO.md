@@ -286,15 +286,21 @@ darunter.
       4,8 GB). **Eine Regel, die man kennt und trotzdem bricht, braucht keinen weiteren Satz
       -- sie braucht ein Werkzeug.** `./instrumente/pruefe-beweise.sh` haelt jetzt bei 3 GB an.
       **Die andere Hälfte ist seit dem 2026-08-20 gebaut, und sie ist eine Zählung, kein
-      Wachhund:** `./instrumente/zaehle-theorien.py` zählt **40 eingefrorene Suchergebnisse**
-      (`metis` 3, `blast` 37) gegen eine Ratsche und verbietet `sledgehammer`, `try0`,
-      `nitpick` und `quickcheck` ganz — **heute null, über dreizehn Theorien.**
-      **Und diese Ratsche ist GEBROCHEN, gemessen am 2026-08-28: sie steht bei 31.** Die neun
-      dazugekommenen liegen vollständig in `beweise/Table_Ops_Erhaltung.thy` (6 → 15), also im
-      `relabel`-Beweis desselben Tages; jede andere Theorie steht auf ihrer alten Zahl.
-      **`MARKE_EINGEFROREN` bleibt bei 31** — *eine Ratsche, deren Marke man hochzieht, wenn
-      sie klemmt, ist keine.* Die Heilung sind neun ausgeschriebene Beweisschritte an Stelle
+      Wachhund:** `./instrumente/zaehle-theorien.py` zählt **31 eingefrorene Suchergebnisse**
+      (`metis` 3, `blast` 28) gegen eine Ratsche und verbietet `sledgehammer`, `try0`,
+      `nitpick` und `quickcheck` ganz — **heute null, über fünfzehn Theorien.**
+      **Die Ratsche war GEBROCHEN, gemessen am 2026-08-28: 40 gegen 31.** Die neun
+      dazugekommenen lagen vollständig in `beweise/Table_Ops_Erhaltung.thy` (6 → 15), also im
+      `relabel`-Beweis desselben Tages; jede andere Theorie stand auf ihrer alten Zahl.
+      **`MARKE_EINGEFROREN` blieb bei 31** — *eine Ratsche, deren Marke man hochzieht, wenn
+      sie klemmt, ist keine.* Die Heilung waren neun ausgeschriebene Beweisschritte an Stelle
       von neun eingefrorenen Suchergebnissen: Isabelle-Arbeit am Beweis, keine Buchung.
+      **BEZAHLT am 2026-08-30 abends** (`messung/NEUN-SUCHSCHRITTE.md`): alle neun ersetzt,
+      **jede Stelle einzeln gebaut**, `zaehle-theorien.py` wieder grün bei genau 31.
+      *Die Marke wurde nicht bewegt — sie wurde eingeholt.* Sieben der neun sind `OF`/`mp`
+      mit benannter Instanz oder ein ausgeschriebener Widerspruch; **kein einziger `auto`-
+      Rückfall war nötig**, auch nicht an der Stelle, die das Vorschlagsdokument selbst mit
+      der niedrigsten Zuversicht geführt hat.
       *Ein Suchbefehl in einer eingecheckten Theorie ist keine Absicht, sondern ein
       vergessener Versuch; ein `metis` ist eine Suche, die einmal lief und deren Ergebnis
       jetzt dasteht.* **Was der Wachhund NICHT verhindert, bleibt: er greift erst, wenn die
@@ -592,14 +598,14 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 - [ ] **~~Die Zeilenanteile der eigenen Theorien sind gezaehlt, aber nicht KLASSIFIZIERT~~ —
       GEBAUT 2026-08-20** (`./instrumente/zaehle-theorien.py`). Die alte Buchung sagte *„zehn Theorien,
       1 639 Zeilen, 48 Sätze, 86 Beweisschritte"* und ließ die Frage offen, was davon Prosa
-      ist. Heute: **3496 Zeilen** in fünfzehn Theorien, **101 Sätze** darin — und klassifiziert:
+      ist. Heute: **3512 Zeilen** in fünfzehn Theorien, **101 Sätze** darin — und klassifiziert:
 
       | | | |
       |---|---:|---|
       | Gerüst | 564 | 16,1 % — `theory`/`imports`/`begin`/`end` und Leerzeilen |
-      | Prosa | 1 612 | **46,1 %** — Kommentare, `text`-Blöcke, Überschriften |
+      | Prosa | 1 612 | **45,9 %** — Kommentare, `text`-Blöcke, Überschriften |
       | Modell | 226 | 6,5 % — Definitionen, Datentypen |
-      | Beweis | 1 094 | 31,3 % — Sätze samt ihren Beweisen |
+      | Beweis | 1 110 | 31,6 % — Sätze samt ihren Beweisen |
 
       **Und die fünfzehn sind ZUSAMMEN gebaut, nicht nur einzeln:** `isabelle build -D .`
       über den vereinigten Stand, 2026-08-30, **LOKAL** (`threads=4`, 12 s Wanduhr, 28 s CPU,
@@ -619,9 +625,12 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Verwechslung nicht.*
 
       **Fast die Hälfte ist Fließtext, und damit ist die Verwechslung beziffert:**
-      **1320 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
-      **37,8 % statt 100 %.** *Wer 3496 gegen eine Verus-Zahl hält, überschätzt die eigene
-      Seite um den Faktor 2,7.* Dieselbe Verwechslung, an der `1,90` am 2026-08-19
+      **1336 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
+      **38,0 % statt 100 %.** *Wer 3512 gegen eine Verus-Zahl hält, überschätzt die eigene
+      Seite um den Faktor 2,6.*
+      *Die sechzehn Zeilen vom 2026-08-30 abends sind die neun ausgeschriebenen
+      Beweisschritte: **Suche durch Rechnung ersetzt kostet Zeilen**, und zwar genau im
+      Anteil `Beweis`.* Dieselbe Verwechslung, an der `1,90` am 2026-08-19
       zurückgezogen wurde, eine Ebene tiefer.
       *Und was das NICHT heißt:* die Einteilung liest Zeilenanfänge; ein `text`-Block über ein
       Modell zählt als Prosa. **Eine Näherung mit benannter Kante, kein Parser** (W10).

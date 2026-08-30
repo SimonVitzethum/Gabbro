@@ -96,7 +96,7 @@ one for the PROVER* — and until a body has the second kind, P6 produces `K` ob
 
 ```
 2 007 lines of Isar  ·  9 proved generator templates  ·  142 corpus sites
-                        → 14,1 lines per site (3 496 across all 15 theories)
+                        → 14,1 lines per site (3 512 across all 15 theories)
 ```
 
 > **It ROSE on 2026-08-19, from 10,4** — `Table_Ops_Erhaltung.thy` (311 lines) and

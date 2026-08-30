@@ -1,5 +1,48 @@
 # Die neun Suchschritte in `Table_Ops_Erhaltung.thy` — benannt, mit Vorschlag je Stelle
 
+> ## EINGESETZT und GEBAUT, 2026-08-30 abends — alle neun
+>
+> **Der Satz darunter („kein Schritt hiervon steht in der Theorie") galt bis zu diesem
+> Kasten und gilt nicht mehr.** Er bleibt stehen, weil er der Grund war: das Dokument
+> wurde als Vorschlag geschrieben, weil `isabelle build` fehlte. *Ein Bericht wird nicht
+> nachträglich richtig gemacht; was sich geändert hat, gehört daneben.*
+>
+> **Isabelle läuft lokal** — der 3-GB-Wachhund greift auf diesem Rechner nicht (31 GB,
+> 20 Kerne). Fünfzehn Theorien in 12–20 s, Rücklauf 0.
+>
+> **Jede der neun Stellen wurde EINZELN gebaut**, in einer Kopie
+> (`cp -r beweise $S/b`, `isabelle build -D . -o threads=4`), in dieser Reihenfolge:
+>
+> | # | Zeile | Vorschlag | Bau |
+> |---|---|---|---|
+> | 9 | 411 | `umhaengen_erhaelt[OF assms(1) assms(3) assms(4)] .` | grün |
+> | 6 | 377 | `mp[OF umhaengen_ausserhalb[OF elter_da] nicht_drunter]` | grün |
+> | 8 | 394 | `mp[OF umhaengen_durch_s s_neu]` | grün |
+> | 1 | 281 | ausgeschriebener Widerspruch, Annahme auf `nu` benannt | grün |
+> | 2 | 292 | derselbe Block | grün |
+> | 3 | 293 | Kontraposition über `ueber.hoeher[OF aufstieg(1) aufstieg(2) this]` | grün |
+> | 4 | 294 | `mp[OF aufstieg(4)]` | grün |
+> | 5 | 348 | `mp[OF aufstieg(4) s_da]` | grün |
+> | 7 | 393 | `wf[unfolded wohlgeformt_def, rule_format]` + `simp` | grün |
+>
+> **Neun von neun beim ersten Versuch, kein Rückfall gebraucht.** Auch die beiden
+> Stellen, die dieses Dokument selbst als unsicher ausgewiesen hat, hielten:
+>
+> * **Die `aufstieg(n)`-Indizes waren richtig geraten** — das Dokument nannte sie
+>   ausdrücklich als „der einzige Teil, der ohne Isabelle geraten ist" und stellte sie
+>   unter Vorbehalt. Sie stimmten. *Der Vorbehalt war trotzdem richtig: er hat das
+>   Raten als Raten ausgewiesen, statt es als Wissen zu verkaufen.*
+> * **Stelle 7 brauchte den `auto`-Rückfall NICHT.** Sie trug die niedrigste
+>   Zuversicht der Tabelle, und `rule_format` traf die Form.
+>
+> **Ergebnis:** `./instrumente/zaehle-theorien.py` meldet **31 eingefrorene
+> Suchergebnisse gegen die Marke 31** — `metis 3, blast 28, smt 0`, ALL PASS.
+> `MARKE_EINGEFROREN = 31` steht unverändert, und `pruefe-beweise.sh` ist grün
+> (15 Theorien, 15 Dateien).
+>
+> Die sechs älteren `blast` der Datei (174, 187, 189, 214, 226, 228) sind unangetastet,
+> wie unten vorgesehen.
+
 **Stand 2026-08-30. Kein Schritt hiervon steht in der Theorie.** `isabelle build` war
 an diesem Tag nicht erreichbar (`ki-pc-fisch-101` antwortet nicht, Sprunghost
 `172.30.0.4` tot), und ein Isar-Schritt, den niemand gebaut hat, macht aus einer roten
