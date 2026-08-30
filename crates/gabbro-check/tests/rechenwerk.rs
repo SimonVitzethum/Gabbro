@@ -4944,6 +4944,41 @@ fn lean_optionswert_ist_kein_ruf() {
     );
 }
 
+/// **The SAME rule stands at two arms, and only one of them had a probe** (2026-08-30).
+///
+/// The full mutation run over the merged state -- the first one that exercised these rules
+/// rather than only counting their anchors -- let the option-value mutation of the `Let` arm
+/// SURVIVE. The reason is exact: the probe above reads `return Some(i);`, which is the
+/// `Return` arm, while the mutation damages the `Let` arm. *Two arms, one rule, one probe --
+/// and a rule that can fall at one arm while every test stays green.* The mutation carries
+/// its name in `messung/RUMPFKANAL-LUECKEN.md`, where the German side of this run is booked.
+#[test]
+fn lean_optionswert_im_let_ist_kein_ruf() {
+    let t = lean_programm(
+        "module t {
+const N : u32 = 8;
+table V count N {
+    slot { benutzt : bool, naechst : option index into V, }
+    occupied benutzt;
+}
+impl fn merke(v : ptr<normal, rw> V, i : index into V)
+    effects  { writes v.slots }
+    costs    <= 8 ops
+{
+    let n = Some(i);
+    v.slots[i].naechst = n;
+}
+}",
+    );
+    assert!(
+        t.contains("(.bindName \"n\" (.someOf (.name \"i\")))"),
+        "`let n = Some(i);` binds a VALUE, it does not call `Some`:\n{t}"
+    );
+    let (_, bodies, refused, _) = lean_programm_kopf(&t);
+    assert_eq!(bodies, 1, "the routine carries a body:\n{t}");
+    assert_eq!(refused, 0, "and nothing is refused:\n{t}");
+}
+
 /// **The obligation channel keeps its own refusal, and it is the honest one.**
 ///
 /// A call over a contract is still not carried there -- `allow_calls` is `false` in `judge`
@@ -5136,8 +5171,46 @@ fn lean_ergebnis_verlangt_dass_ein_wert_entstand() {
 ///
 /// The flag goes up after `block_term` has run and before the conclusion is translated, so
 /// the two cannot be confused -- that ordering is the guarantee, not a comment.
+///
+/// **This probe carried its name and not its object until 2026-08-30**: it read a program
+/// whose body never wrote `result` at all, so the rule it is named after could be deleted
+/// while it stayed green. The body-side `result` mutation SURVIVED the first full mutation
+/// run over the merged state, and that is what it survived on. *A probe named after a rule
+/// it does not touch reads as coverage* -- the same class as the `bank` stride assertion of
+/// 2026-08-28, which stood over the whole output rather than over one block.
+///
+/// The first half below is the one that was missing; the second is the original, kept
+/// because it does say something -- a postcondition that never names `result` may not
+/// silently acquire the stronger goal shape.
 #[test]
 fn lean_ergebnis_bleibt_im_rumpf_abgesagt() {
+    // A body that WRITES `result` is refused by name, and no goal comes out of it.
+    let im_rumpf = lean_modul(
+        "module t {
+type Kopf = { eintritt : u64, };
+impl fn lies(k : ptr<normal, r> Kopf) -> u64
+    ensures  result == k.eintritt
+    effects  { reads k }
+    costs    <= 8 ops
+{
+    let x = result;
+    return k.eintritt;
+}
+}",
+    );
+    assert!(
+        im_rumpf.contains("result-in-ensures"),
+        "`result` inside a body is refused by name:\n{im_rumpf}"
+    );
+    assert!(
+        !im_rumpf.contains("theorem duty_1"),
+        "and no goal is written over it:\n{im_rumpf}"
+    );
+    assert!(
+        im_rumpf.contains("goals 0  refused 1"),
+        "the balance line says the same thing:\n{im_rumpf}"
+    );
+
     // A postcondition without `result` keeps the two-part goal -- the shape may not change
     // for bodies that never mention it.
     let t = lean_modul(

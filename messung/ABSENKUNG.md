@@ -127,9 +127,17 @@ zum erzeugten C.
 > Sprachdefinition von C und keine Annahme dieses Beweises.*
 
 Das ist eine **Bewegung**: eine Voraussetzung wird aus dem Beweis geschoben, indem sie zur
-Definition von etwas anderem erklärt wird. Ausgezählt über alle vierzehn Theorien
-(`beweise/*.thy`, jede ganz gelesen; gezählt werden Fundstellen im **Fließtext**, nicht
-`assumes`-Zeilen):
+Definition von etwas anderem erklärt wird. Ausgezählt über alle ~~vierzehn~~ **fünfzehn**
+Theorien (`beweise/*.thy`, jede ganz gelesen; gezählt werden Fundstellen im **Fließtext**,
+nicht `assumes`-Zeilen):
+
+> **Nachgezählt am 2026-08-30, bei der Zusammenführung.** Die Zählung entstand über die
+> vierzehn Theorien dieser Bahn; aus der Nebenbahn kam `beweise/Table_Zaehlung.thy` dazu.
+> **Sie trägt zu keiner der sechs Gestalten eine Fundstelle bei** — nachgesehen Zeile für
+> Zeile, und der Grund ist der Gegenstand: die Theorie beantwortet eine Erhaltungsfrage und
+> *schiebt* nichts weg; wo sie eine Grenze nennt, nennt sie sie als offen (`:248` — *„sie zu
+> einem PASS zu machen bleibt Arbeit"*), nicht als fremde Zuständigkeit. **Eine fünfzehnte
+> Theorie, die die Bilanz nicht bewegt, ist ein Datenpunkt und kein Nullbefund.**
 
 | Gestalt | Zahl | Adressat |
 |---|---:|---|
@@ -145,7 +153,7 @@ Definition von etwas anderem erklärt wird. Ausgezählt über alle vierzehn Theo
 ```bash
 grep -n "Sprachdefinition\|SPRACHENTSCHEIDUNG\|schliesst die SPRACHE aus\|C11 6.7.3.1" beweise/*.thy
 grep -n "faellt in die Bruecke\|Dieselbe Bruecke" beweise/*.thy
-grep -c "assumes" beweise/*.thy | awk -F: '{s+=$2} END {print s}'   # 94 (84 vor der neuen Theorie)
+grep -c "assumes" beweise/*.thy | awk -F: '{s+=$2} END {print s}'   # 101 (94 vor Table_Zaehlung, 84 davor)
 ```
 
 > **Das ist der Befund, um dessentwillen diese Zählung überhaupt gemacht wurde: an C wird
@@ -276,7 +284,9 @@ die `pruefe-emission.sh` in seiner eigenen Schlusszeile von der stärkeren trenn
 ## 2. Der Satz, den alle drei Wege brauchen — und was er gefunden hat
 
 **Gebaut: `beweise/Absenkung_Parametrisch.thy`** (600 Zeilen, maschinell geprüft
-2026-08-28 auf `ki-pc-fisch-101:gabbro-L-beweise`, 14 Theorien, 14 s Wanduhr).
+2026-08-28 auf `ki-pc-fisch-101:gabbro-L-beweise`, 14 Theorien, 14 s Wanduhr). *Dieser Lauf
+war über die vierzehn dieser Bahn; die Vereinigung mit `Table_Zaehlung` ist erst am
+2026-08-30 gebaut worden, und zwar LOKAL — siehe die Buchung in `TODO.md`.*
 
 §7 nennt die Lücke wörtlich: *„Dass `t->slots[s].elter = p;` die Funktion `umhaengen` IST,
 steht in keinem Satz."* Der Satz steht jetzt — **parametrisch über der Zielsemantik**, also in

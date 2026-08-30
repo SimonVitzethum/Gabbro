@@ -181,6 +181,11 @@ und eine davon trägt nicht. Sie ist berichtigt — *dieselbe Bewegung wie bei �
 
 ### 6.1 `beweise/Table_Zaehlung.thy`, vierzehn Theorien bauen
 
+> *Vierzehn waren es in DIESER Bahn.* Nebenan entstand gleichzeitig
+> `Absenkung_Parametrisch.thy`; **in der Vereinigung sind es fünfzehn**, und der Lauf über
+> alle fünfzehn steht in `TODO.md` gebucht — nicht hier, weil der Lauf unten der ist, der
+> wirklich gefahren wurde.
+
 ```bash
 rsync -a beweise/ ki-pc-fisch-101:gabbro-B-beweise/
 ssh ki-pc-fisch-101 'cd gabbro-B-beweise && ~/Isabelle2025-2/bin/isabelle build -D . -o threads=12'

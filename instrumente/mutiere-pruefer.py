@@ -3346,7 +3346,24 @@ MUTATIONEN = [
         "lean-ergebnis-ohne-wert",
         "lean.rs",
         '                "        \\\\<and> finalValue (exec \\\\<rho> body_{} s) = some v\\n",',
-        '                "        \\\\<and> True \\<and> finalValue (exec \\\\<rho> body_{} s) = some v\\n",',
+        # **Twice wrong, and the second time was the instructive one** (2026-08-30, the first
+        # full run over the merged state).
+        #
+        # It first injected `True \<and>` -- with ONE backslash, which is not a Rust escape,
+        # so the mutated tree did not compile and the run booked `ungueltig`. *An invalid
+        # mutation shrinks the denominator without saying so*: 337 of 339 read better than
+        # 337 of 340, and the difference was a typo.
+        #
+        # With the escape repaired it compiled and SURVIVED -- correctly, because
+        # `True \<and> X` is `X`. **A mutation that injects a tautology damages nothing**, and
+        # a survivor over it is a statement about the mutation, not about the checker.
+        #
+        # What damages: restating the FIRST conjunct in place of the second. `v` is then
+        # unbound under the existential, and the goal says *"there is SOME value for which the
+        # promise holds"* instead of *"the body produced one, and it holds for that one"* --
+        # exactly the weakening the entry describes. `lean_ergebnis_verlangt_dass_ein_wert_entstand`
+        # catches it.
+        '                "        \\\\<and> finalState (exec \\\\<rho> body_{} s) = some s\'\\n",',
         "Der Rumpfkanal -- das Glied, das einen ERZEUGTEN Wert verlangt, wird verwaessert. "
         "Ein Rumpf, der hinten hinauslaeuft, hat kein Ergebnis, und die Zusage ueber "
         "`result` ginge trotzdem durch",

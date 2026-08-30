@@ -368,7 +368,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 109 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 110 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *~~103~~ dreimal nachgezogen am 2026-08-28 — aus drei Bahnen kamen sechs Berichte dazu:
       `messung/ABSENKUNG.md`, `dokumente/PLAN-VERIFIKATION.md` und die vier des Rumpfkanals
       (`messung/RUF-TOR.md`, `messung/AUSSETZUNG.md`, `messung/VIER-LUECKEN.md`,
@@ -601,6 +601,15 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       | Modell | 226 | 6,5 % — Definitionen, Datentypen |
       | Beweis | 1 094 | 31,3 % — Sätze samt ihren Beweisen |
 
+      **Und die fünfzehn sind ZUSAMMEN gebaut, nicht nur einzeln:** `isabelle build -D .`
+      über den vereinigten Stand, 2026-08-30, **LOKAL** (`threads=4`, 12 s Wanduhr, 28 s CPU,
+      Faktor 2,23, Rückgabewert 0). *Beide Bahnen hatten je vierzehn gebaut, und keine hatte
+      die fünfzehn* — genau die Lücke, für die Schritt 6 im Plan steht. Lokal deshalb, weil
+      `ki-pc-fisch-101` seit 19:42 nicht erreichbar ist und der Wachhund, vor dem `CLAUDE.md`
+      warnt, auf diesem Rechner heute nicht greift (31 GB gesamt, 13 GB frei, 20 Kerne).
+      *Die Regel bleibt trotzdem stehen: sie ist eine Aussage über den Speicher, nicht über
+      die Gewohnheit — und der Speicher war heute ein anderer.*
+
       *~~2570 Zeilen, dreizehn Theorien, 76 Sätze, 956 Modell+Beweis~~ — nachgezogen
       2026-08-28 durch ZWEI Theorien aus zwei Bahnen: `beweise/Absenkung_Parametrisch.thy`
       (der Absenkungssatz, parametrisch über sechs Eigenschaften der Zielsemantik) und
@@ -688,6 +697,14 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Parameternamen gesehen. Grob in die sichere Richtung (W9), *und die Abbildung braucht
       eine Aliasanalyse, die es nicht gibt.* **Das ist der ganze Rest dieses Punktes.**
 
+- [ ] **Die Absage `result-in-ensures` nennt den häufigen Fall, nicht den vorliegenden.**
+      Steht `result` im **Rumpf**, wo es nichts benennt, sagt der Kanal trotzdem
+      *„`result` in an `ensures`"*. Gemessen 2026-08-30 am unveränderten Prüfer
+      (`gabbro pflichten --lean`, `let x = result;` im Rumpf): `goals 0  refused 1`, und die
+      Zeile daneben zeigt auf eine Nachbedingung, in der nichts fehlt. *Wer das Zeugnis liest,
+      sucht an der falschen Stelle.* Eine Zeile, kein Bau — `LeanReason::Result` trägt zwei
+      Fälle unter einem Namen, und die Trennung kostet einen zweiten Grund.
+
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
       fällt. Mutationskatalog: **340 von 340 Ankern** greifen (`--anker`, 2026-08-28) — die
@@ -702,7 +719,22 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       als Weltspeicher übersetzt wird — **die einzige der acht, die kein Register verkleinert,
       sondern das Programm im Datum austauscht.**
       *Sieben der acht lassen die Bilanzzeile unberührt* — genau der Grund, warum die Proben
-      den emittierten Text lesen und nicht die Zahl. Die
+      den emittierten Text lesen und nicht die Zahl.
+
+      **Der erste volle Lauf über die VEREINIGUNG, 2026-08-30** (lokal, 10 min 10 s Wanduhr,
+      29 min CPU): **337 von 339 gültigen Mutationen gefangen (99 %)** — und die drei
+      Auffälligkeiten stammen alle aus denselben acht.
+      `messung/RUMPFKANAL-LUECKEN.md` misst sie einzeln:
+      **zwei ÜBERLEBENDE** (eine Regel an zwei Armen mit einer Probe nur am zweiten; und eine
+      Probe, die ihren Namen trug und nicht ihren Gegenstand — `W16`, zum zweiten Mal in drei
+      Tagen) und **eine UNGÜLTIGE**, die nach der Reparatur ihres Escapes zu Recht überlebte,
+      weil sie eine Tautologie einfügte. Alle drei geheilt, jede von Hand nachgemessen:
+      vorher ÜBERLEBT, nachher GEFANGEN.
+      > **`--anker` fährt keine Mutation.** Bahn B meldete „335 von 335 Ankern" — das ist
+      > wahr und es ist keine Quote. Ein Anker, der greift, sagt *diese Zeile gibt es noch*,
+      > nicht *und eine Probe fällt, wenn sie sich ändert*. **Dazwischen liegen zehn Minuten,
+      > und genau dafür steht der volle Lauf in Schritt 6.**
+      Die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       **Der erste volle Lauf seit mehreren Tagen, 2026-08-28** (`ki-pc-fisch-101`, 6 min 32 s):
