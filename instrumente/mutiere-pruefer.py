@@ -3380,6 +3380,23 @@ MUTATIONEN = [
         "Anfangswert zurueck",
         flaeche="annotation",
     ),
+    Mutation(
+        "let-gebundener-geist-wird-nicht-erkannt",
+        "emit.rs",
+        "            u.parametertyp\n"
+        "                .get(&o.basis.text)\n"
+        "                .is_some_and(|t| ist_geist(t, u))\n"
+        "                || u.geistlokal.contains(&o.basis.text)",
+        "            u.parametertyp\n"
+        "                .get(&o.basis.text)\n"
+        "                .is_some_and(|t| ist_geist(t, u))",
+        "Ein blanker Name gilt wieder nur als Geist, wenn ein PARAMETER ihn traegt. Ein "
+        "`let p1 = mmu_an(p); return p1;` verliert seine Bindung an der einen Stelle und "
+        "behaelt den Namen an der anderen: das Erzeugnis schreibt `return p1;` in eine "
+        "`void`-Funktion, auf einen Bezeichner, den es selbst geloescht hat -- zwei Fehler "
+        "am `cc`, und keiner davon im Pruefer sichtbar",
+        "code",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

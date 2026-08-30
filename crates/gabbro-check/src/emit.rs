@@ -221,6 +221,18 @@ struct Namen {
     /// needs the declaration, not its C image -- *`lenof(f.worte)` asks for the length of an
     /// array field, and that length stands in `[u64; STACK_WORTE]`, nowhere else.*
     lokaltypexpr: HashMap<String, TypExpr>,
+    /// **`let`-bound local whose value IS a ghost** (2026-08-30).
+    ///
+    /// `parametertyp` above answers the same question for anything a SIGNATURE names, and
+    /// `geist_wert` asked it alone. A ghost bound by `let` therefore went unrecognised at
+    /// every LATER mention of the name: the binding was erased, the mention was kept, and
+    /// the C named a variable the emitter had just deleted.
+    ///
+    /// *This map exists because the other two cannot hold the answer.* `lokaltyp` and
+    /// `lokaltypexpr` skip a ghost `let` on purpose -- an entry there would claim a C type
+    /// for a name the product never spells. The question "was this name a ghost?" survives
+    /// that skip, so it needs a register of its own.
+    geistlokal: BTreeSet<String>,
     /// Function name -> its DECLARED result type expression. The one source from which a
     /// `let f = eichfeld();` can learn what `f` is without anyone guessing.
     ergebnistyp: HashMap<String, TypExpr>,
@@ -4229,7 +4241,9 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
 /// > not license a coarsening where the exact answer is unavailable.
 ///
 /// A ghost `let` is skipped: its binding does not reach the C at all, and an entry here would
-/// claim a type for a name the product never spells.
+/// claim a type for a name the product never spells. **Its NAME still goes on record**, into
+/// `geistlokal` -- the skip loses the type, and the question `geist_wert` asks later survives
+/// it (2026-08-30).
 fn lokale_lets(b: &Block, lokal: &mut Namen) {
     fn sammle<'a>(b: &'a Block, aus: &mut Vec<&'a LetStmt>, wieoft: &mut HashMap<String, u32>) {
         for s in &b.anweisungen {
@@ -4247,8 +4261,23 @@ fn lokale_lets(b: &Block, lokal: &mut Namen) {
     loop {
         let mut neu: Vec<(String, String)> = Vec::new();
         let mut neu_tx: Vec<(String, TypExpr)> = Vec::new();
+        let mut neu_geist: Vec<String> = Vec::new();
         for l in &lets {
             let name = &l.name.text;
+            // **A ghost `let` puts its NAME on record and nothing else** (2026-08-30). Both
+            // maps below skip it on purpose; the question *was this name a ghost?* outlives
+            // that skip, and `geist_wert` asks it at every later mention.
+            //
+            // *Inside the fixpoint, so that a CHAIN resolves.* `let a = f(); let b = a;`
+            // makes `b` a ghost once `a` stands here, so one round per link. The entry rule
+            // matches the one below: a name bound twice in a body gets dropped, never
+            // decided.
+            if wieoft.get(name) == Some(&1)
+                && !lokal.geistlokal.contains(name)
+                && geist_wert(&l.wert, lokal)
+            {
+                neu_geist.push(name.clone());
+            }
             if wieoft.get(name) != Some(&1)
                 || lokal.parametertyp.contains_key(name)
                 || (lokal.lokaltyp.contains_key(name) && lokal.lokaltypexpr.contains_key(name))
@@ -4292,8 +4321,13 @@ fn lokale_lets(b: &Block, lokal: &mut Namen) {
                 }
             }
         }
-        if neu.is_empty() && neu_tx.is_empty() {
+        // **The third collection counts toward the end of the loop too.** Leaving it out
+        // would stop the fixpoint one round early whenever a round found a ghost name alone.
+        if neu.is_empty() && neu_tx.is_empty() && neu_geist.is_empty() {
             return;
+        }
+        for n in neu_geist {
+            lokal.geistlokal.insert(n);
         }
         for (n, t) in neu_tx {
             lokal.lokaltypexpr.insert(n, t);
@@ -6940,10 +6974,21 @@ fn geist_wert(e: &Expr, u: &Namen) -> bool {
         // diese Funktion nur Rufe -- `let p = mmu_an(p);` war gedeckt, `return p;` nicht.
         // *Eine Loeschung, die den Wert nur an seiner Herkunft erkennt, uebersieht ihn
         // ueberall dort, wo er schon gebunden ist.*
-        ExprArt::Ort(o) if o.suffixe.is_empty() => u
-            .parametertyp
-            .get(&o.basis.text)
-            .is_some_and(|t| ist_geist(t, u)),
+        // **A bare name, as a PARAMETER or as a `let` binding** (2026-08-30). The
+        // parameter half landed 2026-08-20; the `let` half stayed open, and the comment
+        // three lines down said the erasure was built at three sites of four.
+        //
+        // *The fourth site was `return`*, and no example ever reached it: `beispiele/22`
+        // runs the whole boot chain as `extern fn`, so the chain has prototypes and no
+        // bodies. A body that returns a `let`-bound ghost emitted `return p1;` into a
+        // `void` function, `p1` already deleted -- two errors at `cc`, measured before
+        // this line was written.
+        ExprArt::Ort(o) if o.suffixe.is_empty() => {
+            u.parametertyp
+                .get(&o.basis.text)
+                .is_some_and(|t| ist_geist(t, u))
+                || u.geistlokal.contains(&o.basis.text)
+        }
         // **Hier ist der Sammelzweig die richtige Antwort, und zwar aus einem Satz, der
         // ausserhalb dieser Datei steht: ein Geist ist LINEAR.**
         //

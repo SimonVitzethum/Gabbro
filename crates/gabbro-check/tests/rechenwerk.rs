@@ -5285,3 +5285,92 @@ impl fn zaehle(b : ptr<normal, r> B) -> u32
     assert_eq!(bodies, 1, "and the counting loop carries a body:\n{t}");
     assert_eq!(refused, 0, "with nothing refused:\n{t}");
 }
+
+// -- A ghost bound by `let` ------------------------------------------------------------
+
+/// The body of one C function, brace-matched -- **assertions belong to a BLOCK**.
+///
+/// A `contains` over the whole emission passes as soon as ANY line satisfies it, and the
+/// prototype line alone already carries the name. That shape hid a producer fault on
+/// 2026-08-28 (class `W16`), so the probe below reads one body at a time.
+fn c_rumpf(c: &str, signatur: &str) -> String {
+    let auf = c
+        .find(&format!("{signatur} {{"))
+        .unwrap_or_else(|| panic!("`{signatur}` steht nicht im Erzeugnis:\n{c}"));
+    let rest = &c[auf..];
+    let start = rest.find('{').expect("brace");
+    let mut tiefe = 0usize;
+    for (i, z) in rest[start..].char_indices() {
+        match z {
+            '{' => tiefe += 1,
+            '}' => {
+                tiefe -= 1;
+                if tiefe == 0 {
+                    return rest[start..start + i + 1].to_string();
+                }
+            }
+            _ => {}
+        }
+    }
+    panic!("`{signatur}` bleibt offen:\n{c}");
+}
+
+/// **A `let`-bound ghost, returned** (2026-08-30).
+///
+/// The erasure was built at three sites of four: the parameter goes, the result type goes,
+/// the binding goes -- the `return` stayed. `geist_wert` recognised a bare name as a ghost
+/// only through `parametertyp`, so a name bound by `let` read as an ordinary value.
+///
+/// **No example ever reached the fourth site.** `beispiele/22` runs the whole boot chain as
+/// `extern fn`, so it carries prototypes and no bodies at all. Measured on the unchanged
+/// emitter, the C read `return p1;` inside a `void` function, `p1` deleted one line above --
+/// two errors at `cc`: *undeclared identifier*, plus *return with a value in a void
+/// function*.
+#[test]
+fn ein_let_gebundener_geist_wird_auch_im_return_geloescht() {
+    let quelle = "
+module probe::geistlet {
+
+linear ghost type BootPhase order { roh, mmu };
+
+static mut mmu_an_zahl : u32 = 0;
+
+extern fn mmu_an(p : BootPhase) -> BootPhase
+    ensures  mmu_an_zahl == 1
+    advances roh -> mmu
+    effects  { consumes p, writes mmu_an_zahl } costs <= 4096 ops;
+
+impl fn stufe_eins(p : BootPhase) -> BootPhase
+    advances roh -> mmu
+    effects { consumes p, writes mmu_an_zahl }
+    costs   <= 8192 ops
+{
+    let p1 = mmu_an(p);
+    return p1;
+}
+
+}
+";
+    let mut absagen = gabbro_syntax::Absagen::neu("probe.gab");
+    let (baum, _) = gabbro_syntax::lies("probe.gab", quelle);
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
+
+    let rumpf = c_rumpf(&c, "static void stufe_eins(void)");
+
+    // The CALL survives -- erasing the binding must never erase the boot step itself.
+    assert!(
+        rumpf.contains("mmu_an();"),
+        "der Ruf selbst bleibt stehen:\n{rumpf}"
+    );
+    // **The line that was wrong.** `return p1;` named a local the emitter had just deleted.
+    assert!(
+        !rumpf.contains("p1"),
+        "`p1` bezeichnet einen Namen, den das Erzeugnis nie schreibt:\n{rumpf}"
+    );
+    // A ghost `return` yields nothing, so the bare form stands.
+    assert!(
+        rumpf.contains("return;"),
+        "ein Geist-`return` gibt nichts zurueck:\n{rumpf}"
+    );
+}
