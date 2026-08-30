@@ -111,10 +111,26 @@ pub enum LeanReason {
     /// `H012`, `H016`). Reporting it as "no term" counted a carried obligation as a missing
     /// translation; the Isabelle channel has said the true thing about it since day one.
     LockWitness,
-    /// `result` in an `ensures`. **The model already HAS this** -- `finalValue` -- but the
-    /// postcondition is stated over a `State`, and a result is not part of one. *A form that
-    /// is one gate away is more useful in the report than a form that is nowhere near it.*
+    /// `result` in a clause of the EXPORT datum. **Not a gap and not a gate**: the datum's
+    /// `post` list is what a CALLER may assume, and a caller reads the callee's result at its
+    /// own call site rather than out of a name this datum binds. *A promise fewer makes a
+    /// caller's goal harder, never wrong.*
+    ///
+    /// **The obligation channel does NOT refuse this** -- it binds `result` and writes the
+    /// goal. Until 2026-08-30 this variant carried the sentence *"one gate away, not far"*
+    /// and BOTH cases below, and the sentence had outlived the gate: the gate is built.
     Result,
+    /// `result` in a BODY -- a statement, or the invariant of a loop inside one.
+    ///
+    /// **This is a PROGRAM error and no gate of this channel will ever carry it.** `result`
+    /// names the returned value; inside a body nothing has returned yet, so the word names
+    /// nothing. It is a RESERVED word, so no `let` and no parameter can have bound it either.
+    ///
+    /// *It stands apart from `Result` because the two point opposite ways*: one is a promise
+    /// this channel declines to repeat, the other is a source that says something it cannot
+    /// mean. A reader who finds them under one name looks for a missing gate and reads a
+    /// gap where a refusal stands.
+    ResultInBody,
     /// An error reason value (`R::F`) or a function pointer.
     OtherValue,
     /// An expression or predicate form with no Lean term here.
@@ -185,6 +201,7 @@ impl LeanReason {
             LeanReason::Builtin => "builtin",
             LeanReason::LockWitness => "lock-witness",
             LeanReason::Result => "result-in-ensures",
+            LeanReason::ResultInBody => "result-in-body",
             LeanReason::OtherValue => "other-value",
             LeanReason::Expression => "no-term",
             LeanReason::Carrier => "carrier-not-a-table",
@@ -235,7 +252,12 @@ impl LeanReason {
             LeanReason::LockWitness => {
                 "`Held(…)` -- carried by the lock passes (H005/H006/H012/H016), not by a prover"
             }
-            LeanReason::Result => "`result` in an `ensures` -- one gate away, not far",
+            LeanReason::Result => {
+                "`result` in an `ensures` -- the export datum drops it; the goal channel CARRIES it"
+            }
+            LeanReason::ResultInBody => {
+                "`result` in a BODY, where it names nothing -- a program error, not a gap"
+            }
             LeanReason::OtherValue => "an error reason value or a function pointer",
             LeanReason::Expression => "a form this channel has no Lean term for",
             LeanReason::Carrier => {
@@ -255,7 +277,7 @@ impl LeanReason {
         }
     }
     /// **All of them, so a report cannot omit one by forgetting to ask.**
-    pub const ALL: [LeanReason; 31] = [
+    pub const ALL: [LeanReason; 32] = [
         LeanReason::ForeignBody,
         LeanReason::Invariant,
         LeanReason::CallSite,
@@ -279,6 +301,7 @@ impl LeanReason {
         LeanReason::Builtin,
         LeanReason::LockWitness,
         LeanReason::Result,
+        LeanReason::ResultInBody,
         LeanReason::OtherValue,
         LeanReason::Expression,
         LeanReason::Carrier,
@@ -390,6 +413,23 @@ fn shape_of_typ(t: &crate::typen::Typ) -> Option<Shape> {
     }
 }
 
+/// **Where the thing being translated stands, as far as the word `result` is concerned.**
+///
+/// The three cases are not three degrees of one permission -- they are three different
+/// answers, and two of them are refusals that mean opposite things. Keeping them in one
+/// `bool` made `result-in-ensures` name a body.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ResultSite {
+    /// A body: a statement, or the invariant of a loop inside one. `result` names nothing
+    /// here and never will.
+    Body,
+    /// A `requires` or `ensures` of the EXPORT datum, which does not bind `result` on purpose.
+    Contract,
+    /// The postcondition of an obligation. The goal binds `result` as a local before
+    /// evaluating, exactly as a parameter is read from `local'`.
+    Bound,
+}
+
 /// Everything the translation of one body may look at.
 struct Ctx<'a> {
     /// Table name to its slot fields, as declared.
@@ -412,12 +452,15 @@ struct Ctx<'a> {
     allow_calls: bool,
     /// Callee name to its parameter names, so a call can bind them.
     callees: &'a HashMap<String, Vec<String>>,
-    /// **Whether `result` may be translated, and it is true only over the POSTCONDITION.**
+    /// **WHERE the thing being translated stands**, which decides both whether `result` may
+    /// be translated and -- when it may not -- which refusal is honest.
     ///
-    /// A `result` in a body would be a name nothing binds. The flag is raised after the body
-    /// is translated and before the conclusion is, so the two cannot be confused -- and
-    /// `block_term` has already run by then, which is the guarantee rather than a comment.
-    allow_result: bool,
+    /// It was a `bool` until 2026-08-30, and a `bool` has two states where the channel has
+    /// three: a body, a clause of the export datum, and the postcondition of a goal. *The two
+    /// that refuse refuse for opposite reasons*, and under one flag they had to share one
+    /// name. The field is set at each call site rather than toggled globally, so the site is
+    /// a fact about what is being read and not about how far the run has got.
+    result_site: ResultSite,
     /// Set while translating the conclusion, where `result` really occurred. **The goal
     /// shape depends on it**: only a postcondition that names the returned value has to
     /// demand that the body produced one.
@@ -649,13 +692,16 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
         //
         // `result` is a RESERVED word, so no `let` and no parameter can carry the name --
         // the binding cannot shadow anything a body wrote.
-        ExprArt::Ergebnis => {
-            if !c.allow_result {
-                return Err(LeanReason::Result);
+        ExprArt::Ergebnis => match c.result_site {
+            // **Inside a body the word names nothing, and nothing will ever make it.**
+            ResultSite::Body => Err(LeanReason::ResultInBody),
+            // A clause of the export datum: sayable, deliberately not said.
+            ResultSite::Contract => Err(LeanReason::Result),
+            ResultSite::Bound => {
+                c.uses_result = true;
+                Ok("(.name \"result\")".into())
             }
-            c.uses_result = true;
-            Ok("(.name \"result\")".into())
-        }
+        },
         ExprArt::FnWert(_) | ExprArt::Grund { .. } => Err(LeanReason::OtherValue),
     }
 }
@@ -1345,7 +1391,8 @@ fn judge(
         // saying one thing, so neither carried. The real table travels here now; the flag is
         // the only thing that refuses.
         allow_calls: false,
-        allow_result: false,
+        // **The body is translated first, and there `result` names nothing.**
+        result_site: ResultSite::Body,
         uses_result: false,
         callees,
         foreign,
@@ -1360,9 +1407,10 @@ fn judge(
         Ok(t) => t,
         Err(r) => return LeanVerdict::Refused(r),
     };
-    // **The flag goes up here and nowhere earlier.** The body is translated above; a
-    // `result` inside one is still refused, because there it names nothing.
-    c.allow_result = true;
+    // **The site changes here and nowhere earlier.** The body is translated above; a
+    // `result` inside one is refused as `result-in-body`, because there it names nothing.
+    // What follows is the postcondition, and the goal binds `result` over it.
+    c.result_site = ResultSite::Bound;
     let conclusion = match pred_term(post, &mut c) {
         Ok(t) => t,
         Err(r) => return LeanVerdict::Refused(r),
@@ -1865,7 +1913,11 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
             // result at its own call site -- not out of a name this datum binds. A promise
             // fewer makes a caller's goal harder, never wrong, and it is listed by name in
             // `post_dropped`. *The same direction as a dropped precondition, mirrored.*
-            allow_result: false,
+            //
+            // **It opens on `Body` and not on `Contract`**: `block_term` runs first here too,
+            // and a `result` in a body is a program error in this channel just as much as in
+            // the other one. The site moves to `Contract` below, where the clauses are read.
+            result_site: ResultSite::Body,
             uses_result: false,
             callees: &callees,
             foreign: &foreign,
@@ -1877,6 +1929,10 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
             loops: 0,
         };
         let body = block_term(b, &mut c);
+        // **The body is done; what follows are the CLAUSES.** A `result` met from here on is
+        // a promise this datum declines to repeat, not a body saying something it cannot mean
+        // -- and the two are booked under different names.
+        c.result_site = ResultSite::Contract;
         let mut pre = Vec::new();
         let mut dropped = Vec::new();
         for (i, q) in f.requires.iter().enumerate() {

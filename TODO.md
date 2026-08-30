@@ -374,7 +374,10 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 114 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 115 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *~~114~~ am 2026-08-30 ein FÜNFTES Mal nachgezogen — `messung/ERGEBNIS-ZWEI-NAMEN.md`
+      kam dazu. Fünfmal an einem Tag, und jedes Mal, weil ein Bericht geschrieben wurde: die
+      Zahl misst den Ordner, nicht die Arbeit.*
       *~~109~~ am 2026-08-30 VIERMAL nachgezogen, und jedes Mal beim Zusammenführen: die
       Berichte kamen aus drei Ketten gleichzeitig, und keine Kette konnte die Summe kennen.
       **Nicht eine Seite genommen, sondern den Wächter gefragt** — das ist die einzige Zahl,
@@ -721,17 +724,22 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Parameternamen gesehen. Grob in die sichere Richtung (W9), *und die Abbildung braucht
       eine Aliasanalyse, die es nicht gibt.* **Das ist der ganze Rest dieses Punktes.**
 
-- [ ] **Die Absage `result-in-ensures` nennt den häufigen Fall, nicht den vorliegenden.**
-      Steht `result` im **Rumpf**, wo es nichts benennt, sagt der Kanal trotzdem
-      *„`result` in an `ensures`"*. Gemessen 2026-08-30 am unveränderten Prüfer
-      (`gabbro pflichten --lean`, `let x = result;` im Rumpf): `goals 0  refused 1`, und die
-      Zeile daneben zeigt auf eine Nachbedingung, in der nichts fehlt. *Wer das Zeugnis liest,
-      sucht an der falschen Stelle.* Eine Zeile, kein Bau — `LeanReason::Result` trägt zwei
-      Fälle unter einem Namen, und die Trennung kostet einen zweiten Grund.
+- [ ] **`result` im Rumpf ist heute kein Fehler des Prüfers.**
+      Gemessen 2026-08-30 (W24, unveränderter Prüfer): `gabbro pruefe` nimmt
+      `{ let x = result; return k.eintritt; }` mit **0 Fehlern, 0 Hinweisen** an. Der
+      Rumpfkanal sagt es ab (`result-in-body`, seit dem 30. unter eigenem Namen — siehe
+      `messung/ERGEBNIS-ZWEI-NAMEN.md`), **aber eine Absage des Beweiskanals ist keine
+      Zurückweisung des Programms**: wer nie `pflichten --lean` ruft, sieht nichts. `result`
+      ist ein reserviertes Wort und benennt im Rumpf nichts — die Form ist unrettbar, nicht
+      nur unübersetzbar. *Gemessener Bedarf im Korpus: null* — keine der 93 `.gab`-Dateien
+      schreibt es, der Fall stammt aus einer erfundenen Probe. **Regel A: erst zählen, dann
+      bauen** — die Frage ist, ob ein Pass eine Form zurückweisen soll, die niemand schreibt.
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **345 von 345 Ankern** greifen (`--anker`, 2026-08-30) — die
+      fällt. Mutationskatalog: **346 von 346 Ankern** greifen (`--anker`, 2026-08-30).
+      ~~345 von 345~~ nachgezogen am 2026-08-30: die 346. trennt die zwei Fälle von `result`
+      (`messung/ERGEBNIS-ZWEI-NAMEN.md`). Die
       acht des Rumpfkanals kamen am 28. abends dazu, und am 30. fünf weitere aus drei Ketten:
       der **vierte Ort der Geistlöschung** (ein `let`-gebundener Geist, blank genannt), das
       `let … else` über einem `place` (`m1.rs`), und die drei Hälften von `return e;` am

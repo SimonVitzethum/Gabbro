@@ -66,7 +66,17 @@ GRUENDE = [
     ("call-in-expression", "a call inside an expression -- same gate as a call"),
     ("builtin", "a built-in about the LAYOUT, and this model has none"),
     ("lock-witness", "`Held(…)` -- carried by the lock passes, not by a prover"),
-    ("result-in-ensures", "`result` in an `ensures` -- one gate away, not far"),
+    # **`result-in-ensures` is gone from this list because it cannot reach this channel.**
+    # It was measured on 2026-08-30 (W24, unchanged checker): `result` in an `ensures` of a
+    # routine this channel carries produces a GOAL -- `bindLocal s'.local' "result" v` -- and
+    # refuses nothing. The tag survives in `lean.rs` for the EXPORT datum, which drops such a
+    # promise on purpose; that datum is not what this tool counts.
+    #
+    # *What did reach this channel under that name was `result` in a BODY* -- and the row read
+    # "one gate away, not far" over a program error no gate will ever carry. Same move as
+    # `division-or-bits`: a row that can only ever read `0` says the channel owes something it
+    # does not.
+    ("result-in-body", "`result` in a BODY, where it names nothing -- a program error"),
     ("other-value", "an error reason value or a function pointer"),
     ("no-term", "a form this channel has no Lean term for"),
     ("carrier-not-a-table", "the carrier of a place is not a declared `table`"),

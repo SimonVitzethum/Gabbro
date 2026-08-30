@@ -326,6 +326,33 @@ pass reads at all.
 
 ---
 
+## Moved out of TODO.md on 2026-08-30 — `result-in-ensures` carried two cases, and named a third
+
+> **The W24 prelude turned the entry around.** It stood as *"`LeanReason::Result` carries two
+> cases under one name, one of them a gate away"*. Measured on the unchanged checker: the case
+> the NAME describes — `result` in an `ensures` — does not refuse in the obligation channel at
+> all. It became a goal on 2026-08-28, `bindLocal s'.local' "result" v`. *The sentence beside
+> the label had outlived its own gate.*
+
+What really stood under the label were two others, refusing for opposite reasons: `result` in a
+**BODY**, where the word names nothing and never will — a program error — and an `ensures`
+dropped **on purpose** by the export datum, the conservative direction. Split by making the
+`bool` a three-valued site (`ResultSite::{Body, Contract, Bound}`), so the distinction sits at
+the PLACE the word stands in and not at which tool is running — both channels translate a body
+first.
+
+**Evidence:** `messung/ERGEBNIS-ZWEI-NAMEN.md` · `crates/gabbro-check/src/lean.rs`
+(`LeanReason::ResultInBody`) · probes `lean_ergebnis_bleibt_im_rumpf_abgesagt` and
+`lean_export_sagt_die_zusage_unter_dem_klauselnamen_ab` · mutations
+`lean-ergebnis-auch-im-rumpf` (re-anchored) and `lean-ergebnis-rumpf-unter-klauselnamen` (new),
+each set by hand, built, and measured to kill exactly one probe of 234.
+
+**It buys no goal**: 75 · 9 · 66 before and after — no corpus file writes `result` into a body.
+*It heals a label, and the honest report says so.* What it uncovered instead is open in
+`TODO.md`: `gabbro pruefe` accepts `result` in a body with 0 errors.
+
+---
+
 ## Moved out of TODO.md on 2026-08-28 — `ops insert, remove, relabel` is built
 
 > **Found by `./instrumente/pruefe-todo.py`, a day late, and the delay is the more useful
