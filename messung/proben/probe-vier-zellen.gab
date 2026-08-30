@@ -1,0 +1,65 @@
+-- W24-Vorlauf: **nimmt der Pruefer die vier `UNGEDECKT`-Formen wirklich an?**
+--
+-- `pruefe-grammatiktafel.py` liest die Prueferfehlertexte und schliesst aus ihrem
+-- Schweigen, dass der Pruefer `chain`, `queue`, `state` und `threads` annimmt. **Ein
+-- Schluss aus einem Text ist keine Messung** (W16) -- diese Datei fragt den Pruefer.
+--
+-- GEMESSEN am 2026-08-31, und der Waechter hatte zur Haelfte unrecht:
+--
+--     mit Kostenzusage    `K003` faellt -- „die Domaene `queue` der Traversierung hat
+--                         keine Schranke aus der Deklaration"
+--     ohne Kostenzusage   0 Fehler, und erst der Erzeuger sagt ab
+--
+-- **Dieselbe Wurzel wie `U10`/`U11`** (`messung/ABSAGEFORMEN.md`): ein `divergent fn`
+-- traegt keine Kostenzusage, an der `K003` haengen koennte. Der Waechter las die
+-- Prueferfehlertexte und fand `queue` dort nicht -- die Meldung baut den Domaenennamen mit
+-- `format!` aus einer Variablen. *Eine Textlesung ueber einem `format!` ist eine untere
+-- Schranke, und sie geht in die sichere Richtung: sie meldet zu viel, nicht zu wenig.*
+--
+-- Diese Datei zeigt die Form OHNE Kostenzusage -- die, in der der Pruefer schweigt.
+
+module probe::vierzellen {
+
+const N : u32 = 8;
+
+extern fn nie() -> never effects { diverges } costs <= 0 ops;
+
+table Warteschlange count N {
+    slot { a : u32, naechst : option index into Warteschlange, }
+    tree { sibling naechst }
+}
+
+-- `state` -- ein Beweismittel ueber einem Traeger, der anderswo steht. Der Pruefer nimmt
+-- es an; der Erzeuger sagt `C001`.
+state Stufe {
+    transition an { s : 0 -> 1 }
+}
+
+divergent fn schlange_leeren(q : ptr<normal, rw> Warteschlange) -> never
+    effects { writes q.slots, diverges }
+{
+    traverse i over queue q by unvisited touches writes q.slots {
+        q.slots[i].a = 0;
+    }
+    nie();
+}
+
+divergent fn faeden_zaehlen(q : ptr<normal, rw> Warteschlange) -> never
+    effects { writes q.slots, diverges }
+{
+    traverse t over threads by unvisited touches writes q.slots {
+        q.slots[0].a = 1;
+    }
+    nie();
+}
+
+divergent fn kette_gehen(q : ptr<normal, rw> Warteschlange, s : index into Warteschlange) -> never
+    effects { writes q.slots, diverges }
+{
+    traverse i over chain(naechst, naechst) in q.slots[s] by unvisited touches writes q.slots {
+        q.slots[i].a = 0;
+    }
+    nie();
+}
+
+}

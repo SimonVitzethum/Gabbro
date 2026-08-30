@@ -277,8 +277,8 @@ darunter.
       Behoben und mit Gift 76 belegt.
       **Die allgemeine Frage hat seit dem 2026-08-20 einen Befehl** (`./instrumente/zaehle-karten.py`), und
       die alte Zahl war um den Faktor 2,7 zu klein: 16 Karten, 12 davon öffentlich,
-      **38 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
-      Kandidatenschleife und **34 davon unqualifiziert**.
+      **40 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
+      Kandidatenschleife und **36 davon unqualifiziert**.
       *Die alte Zählung sagte 13 — sie kannte `.contains_key(` nicht, und das ist derselbe
       Blick.* **Ein Werkzeug, das eine der beiden Formen nicht liest, misst seine eigene
       Leseweite** (W16).
@@ -380,7 +380,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 122 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 127 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *~~103~~ … ~~121~~ — am 2026-08-30/31 **zehnmal** nachgezogen, aus sieben Ketten, und
       jedes Mal, weil ein Bericht geschrieben wurde. **Die Zahl misst den Ordner, nicht die
       Arbeit**, und sie ist an einem einzigen Tag von 103 auf 122 gestiegen, ohne dass ein
@@ -3340,7 +3340,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7910 von 12954 Kommentarzeilen** im Pruefer sind deutsch
+**7906 von 12954 Kommentarzeilen** im Pruefer sind deutsch
  1072 von  1515 in den Instrumenten
   286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
@@ -4551,8 +4551,12 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       spurlos verschwindet.
 
 - [ ] **Vier Terminale sind `UNGEDECKT`: `chain`, `queue`, `state`, `threads`.**
-      `pruefe-grammatiktafel.py` meldet sie rot, mit Adresse. Der Prüfer nimmt jede der vier
-      Formen an, und erst der Erzeuger sagt ab — genau der Zustand, den
-      `PLAN-VOLLSTAENDIGKEIT.md` verbietet. Der Ausgang steht dort: *im PRÜFER absagen, dann
-      wandert die Zelle nach `vom Pruefer`.* **Das ist eine Entscheidung über die SPRACHE**
-      (vier Formen fallen aus Gabbro heraus) und gehört der Bahn, die am Prüfer arbeitet.
+      `pruefe-grammatiktafel.py` meldet sie rot, mit Adresse. **Nachgemessen am 2026-08-31**
+      (`messung/proben/probe-vier-zellen.gab`, nicht aus dem Schweigen der Texte
+      geschlossen): in einem `divergent fn` prüfen alle vier mit **0 Fehlern** und fallen an
+      vier `C001`. Mit einer Kostenzusage fängt `K003` zwei davon — und genau daran hängt
+      alles: **`K003` ist die einzige Regel zwischen den Absagen des Erzeugers und dem
+      Prüfer, und sie hängt an einer Zusage, die ein `divergent fn` nicht macht.**
+      Der Ausgang steht im Plan: *im PRÜFER absagen, dann wandert die Zelle nach
+      `vom Pruefer`.* **Das ist eine Entscheidung über die SPRACHE** (vier Formen fallen aus
+      Gabbro heraus) und gehört der Bahn, die am Prüfer arbeitet.

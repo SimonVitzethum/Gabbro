@@ -42,7 +42,7 @@ Daraus folgt das Urteil je Datei mechanisch:
 ```
 0 Pruefer-Fehler  +  mindestens ein C001   ->  UNGEDECKT, und es ist ein PROGRAMM, kein Argument
 n Pruefer-Fehler  +  mindestens ein C001   ->  gesehen, aber die Deckung ist NICHT gezeigt
-kein C001 in 414 Dateien                   ->  ungemessen -- und das ist keine Auskunft
+kein C001 in 418 Dateien                   ->  ungemessen -- und das ist keine Auskunft
 ```
 
 > **Die mittlere Zeile ist die, an der man sich betrügen kann.** Dass in derselben Datei ein
@@ -55,28 +55,32 @@ kein C001 in 414 Dateien                   ->  ungemessen -- und das ist keine A
 
 ---
 
-## 2. Das Ergebnis: 11 · 26 · 93
+## 2. Das Ergebnis: 15 · 24 · 91
 
 ```
-414 .gab-Dateien gefahren, 88 davon ohne einen Pruefer-Fehler
+418 .gab-Dateien gefahren, 92 davon ohne einen Pruefer-Fehler
 
- 11 FORMEN gemessen UNGEDECKT      der Pruefer nimmt an, der Erzeuger sagt ab
- 26 FORMEN nur neben einem Fehler  gesehen, Deckung nicht gezeigt
- 93 FORMEN vom Korpus nie erreicht ungemessen -- Falle 80, und sie gilt hier voll
+ 15 FORMEN gemessen UNGEDECKT      der Pruefer nimmt an, der Erzeuger sagt ab
+ 24 FORMEN nur neben einem Fehler  gesehen, Deckung nicht gezeigt
+ 91 FORMEN vom Korpus nie erreicht ungemessen -- Falle 80, und sie gilt hier voll
 ```
 
 **Ungemessen ist nicht gedeckt.** Der Korpus ist von der Sprache nach außen geschrieben; sein
 Schweigen über eine Form ist eine Aussage über den Korpus und keine über die Sprache. Die
-93 stehen darum als eigene Menge und nicht als grüner Rest.
+91 stehen darum als eigene Menge und nicht als grüner Rest.
 
-> **Die Zahl stand am Morgen des 2026-08-31 auf 11 und steht am Abend auf 11, und das ist
-> keine Nullbewegung.** Zwei Zellen sind geschlossen (`breaking`, `match` über einem
-> `tagged type`), eine ist **umbenannt** worden, weil ihr Text das Falsche sagte, und **eine
-> ist neu — sie wurde von einer W24-Probe dieses Tages überhaupt erst erreichbar gemacht**
-> (`let` ohne auflösbaren Typ, siehe U11). *Eine Menge, deren Größe stillsteht, während ihre
-> Elemente wechseln, ist der Grund, warum diese Tafel Adressen führt und nicht nur eine Zahl.*
+> **Die Zahl stand am Morgen des 2026-08-31 auf 11 und steht am Abend auf 15 — und der Baum
+> ist nicht schlechter geworden, die MESSUNG ist schärfer geworden.** Zwei Zellen sind
+> geschlossen (`breaking`, `match` über einem `tagged type`), eine ist **umbenannt** worden,
+> weil ihr Text das Falsche sagte, und **fünf sind neu, weil eine W24-Probe sie überhaupt
+> erst erreichbar gemacht hat**: `let` ohne auflösbaren Typ (U11) und die vier Formen, die
+> `pruefe-grammatiktafel.py` aus der Grammatik heraus benannt hat (U12–U15).
+>
+> *Eine Zahl, die steigt, weil jemand hingesehen hat, ist kein Rückschritt* — aber sie ist
+> auch kein Fortschritt, und beides zu unterscheiden ist der Grund, warum diese Tafel
+> Adressen führt und nicht nur eine Zahl.
 
-### 2.1 Die elf gemessenen `UNGEDECKT`-Zellen
+### 2.1 Die fünfzehn gemessenen `UNGEDECKT`-Zellen
 
 | # | Form | wo | Anmerkung |
 |---|---|---|---|
@@ -91,8 +95,31 @@ Schweigen über eine Form ist eine Aussage über den Korpus und keine über die 
 | U9 | `ops relabel` an einer Tabelle ohne `parent`-Kante | `beispiele/gift/333-…` | Probe erwartet `C001` |
 | U10 | `match` über einen Ruf, den diese Einheit nicht deklariert | `messung/fragmente/F05.gab` | **war U2 des Plans und ist NICHT dieselbe Form** — siehe `ZWEI-ABSAGEN.md` |
 | U11 | `let` ohne auflösbaren Typ | `messung/proben/probe-unbekannter-ruf.gab` | **neu gemessen am 2026-08-31** — sie stand vorher unter „nur neben einem Fehler" |
+| U12 | `state` | `messung/proben/probe-vier-zellen.gab` | aus der GRAMMATIK gefunden — siehe `GRAMMATIKTAFEL.md` |
+| U13 | `queue` | `messung/proben/probe-vier-zellen.gab` | dito |
+| U14 | `chain in` | `messung/proben/probe-vier-zellen.gab` | dito |
+| U15 | `threads` | `messung/proben/probe-vier-zellen.gab` | dito |
 
-> **Neun der elf sind Giftproben, die `C001` ERWARTEN** — der Ordner hat für sie schon
+**U12–U15 sind der Ertrag von V-2, und sie waren beinahe ein Werkzeugbefund.**
+`pruefe-grammatiktafel.py` schloss aus dem Schweigen der Prüferfehlertexte, dass der Prüfer
+sie annimmt — *ein Schluss aus einem Text ist keine Messung* (W16). Nachgemessen:
+
+```
+mit Kostenzusage    K003 faellt: „die Domaene `queue` … hat keine Schranke aus der Deklaration"
+ohne Kostenzusage   0 Fehler, und erst der Erzeuger sagt ab
+```
+
+Die Meldung baut den Domänennamen mit `format!` aus einer Variablen — darum stand `queue`
+in keinem Literal, und die Textlesung sah ihn nicht. **Die Vergröberung ging in die sichere
+Richtung** (sie meldete zu viel), und die Messung hat das Urteil bestätigt: in einem
+`divergent fn` ohne Kostenzusage prüfen alle vier mit **0 Fehlern** und fallen an vier
+`C001`.
+
+> **Damit haben U10 bis U15 dieselbe Wurzel wie U11.** `K003` ist die einzige Regel, die
+> zwischen den Absagen des Erzeugers und dem Prüfer steht — *und sie hängt an einer
+> Kostenzusage, die ein `divergent fn` nicht trägt.*
+
+> **Neun der ersten elf sind Giftproben, die `C001` ERWARTEN** — der Ordner hat für sie schon
 > entschieden, dass der Erzeuger der Absager ist. **Das macht sie nicht zu gedeckten Zellen.**
 > Der Plan kennt für eine `UNGEDECKT`-Zelle zwei volle Ausgänge, absenken oder *im Prüfer*
 > absagen, und „der Erzeuger sagt es benannt" ist keiner von beiden: die Eigenschaft, um die
@@ -114,7 +141,7 @@ Ein `divergent fn` trägt keine Kostenzusage, an der `K003` hängen könnte. **D
 genau eine Stelle, an der ein unbekannter Name durch den Prüfer kommt** — und beide Zellen
 fallen zusammen mit ihr. *Der Befund gehört dem Prüfer, nicht dem Erzeuger.*
 
-### 2.2 Die 26 nur neben einem Prüferfehler gesehenen
+### 2.2 Die 24 nur neben einem Prüferfehler gesehenen
 
 Je Form die Datei und ihre Prüferkennungen. **Wo die Kennung dieselbe Form trifft, ist die
 Zelle `vom Pruefer`; wo nicht, ist sie ungeklärt und keine der beiden.**
@@ -148,13 +175,14 @@ Zelle `vom Pruefer`; wo nicht, ist sie ungeklärt und keine der beiden.**
 | `queue` | `messung/fragmente/F03.gab` `H011,M101,M124,N035,N040` | **ungeklärt** |
 | unäres Minus | `219-unaeres-minus` `M101` | **ungeklärt** — `M101` ist die Bereichsregel |
 
-**Elf `ja`, fünfzehn ungeklärt.** Die fünfzehn sind keine `UNGEDECKT`-Zellen und keine
-gedeckten: sie sind **nicht gemessen**, weil kein Programm sie ohne einen fremden Fehler
+**Elf `ja`, dreizehn ungeklärt.** *`queue` und `chain in` standen bis heute Abend hier und
+sind heraus: die Messung von §2.1 hat sie als U13/U14 entschieden.* Die dreizehn sind keine
+`UNGEDECKT`-Zellen und keine gedeckten: sie sind **nicht gemessen**, weil kein Programm sie ohne einen fremden Fehler
 danebengestellt hat. *Jede einzelne braucht dasselbe wie U10 und U11: das kleinste Programm,
 das nur sie enthält, durch den unveränderten Prüfer.* Wie das aussieht, steht in
 `messung/proben/`.
 
-### 2.3 Die 93 vom Korpus nie erreichten
+### 2.3 Die 91 vom Korpus nie erreichten
 
 Sie stehen vollständig in §5. **Gruppiert nach dem, was sie absagen**, um zu zeigen, wo die
 Arbeit liegt:
@@ -195,7 +223,7 @@ Was an `F05` übrig bleibt, hat seit heute seinen eigenen Satz und ist U10.
    falsches C erzeugen; `messung/fragmente/F06.gab` emittierte 161 Zeilen, die `cc -Werror`
    zurückwies. Das ist eine `UNGEDECKT`-Zelle *der anderen Art*, und sie steht in
    `messung/UEBERSETZUNGSREICHWEITE.md`.
-2. **Sie ist über den Korpus gemessen, nicht über die Grammatik.** Die 93 ungemessenen sind
+2. **Sie ist über den Korpus gemessen, nicht über die Grammatik.** Die 91 ungemessenen sind
    der Beweis, dass ein Korpus die Frage nicht beantwortet. Die Tafel aus der Grammatik ist
    V-2 (`messung/GRAMMATIKTAFEL.md`).
 3. **Ein `ja` in §2.2 ist ein gelesener Zusammenhang und keine Messung.** Es steht in der
@@ -218,7 +246,7 @@ Was an `F05` übrig bleibt, hat seit heute seinen eigenen Satz und ist U10.
 | `1747` | `atomic` of an unresolvable type | ungemessen |  |
 | `1795` | `atomic` of an unresolvable type | ungemessen (wdh.) |  |
 | `1797` | `atomic` with a payload but no ordering -- a payload without an ordering is a publication nobody can pair | ungemessen |  |
-| `1940` | `state` -- the transitions are a proof device over a carrier that is declared ELSEWHERE; which C object holds the state, and whether a transition i… | mit Fehler | beispiele/gift/135-state-doppelte-transition.gab `N001` |
+| `1940` | `state` -- the transitions are a proof device over a carrier that is declared ELSEWHERE; which C object holds the state, and whether a transition i… | UNGEDECKT | messung/proben/probe-vier-zellen.gab |
 | `2077` | a `type` record carries no bit position and no `offset_into` -- those are statements about a layout, and a `format` makes them | ungemessen |  |
 | `2091` | array field type -- element or length | ungemessen |  |
 | `2106` | function pointer field type | ungemessen |  |
@@ -311,11 +339,11 @@ Was an `F05` übrig bleibt, hat seit heute seinen eigenen Satz und ist U10.
 | `6295` | `descendants of` over a table without `count` -- no sentinel | ungemessen |  |
 | `6371` | `by consuming` -- the run form is the same walk PLUS the removal, and the removal is a generated `ops` operation this emitter does not have | ungemessen |  |
 | `6437` | `elems of … by consuming` -- an array element is not removed; consumption needs a carrier with generated `ops` | ungemessen |  |
-| `6506` | `queue` -- «B10»: `traverse` yields no value and knows no `break`, so `by consuming` drains the WHOLE queue; that is a different program | mit Fehler | messung/fragmente/F03.gab `H011,M101,M124,N035,N040` |
+| `6506` | `queue` -- «B10»: `traverse` yields no value and knows no `break`, so `by consuming` drains the WHOLE queue; that is a different program | UNGEDECKT | messung/proben/probe-vier-zellen.gab |
 | `6532` | `mappings of` -- the reading is DECIDED (the leaf SET, because W^X is a statement about the set), and the cost bound now says so. What is missing i… | mit Fehler | messung/fragmente/F09.gab `K001` |
-| `6537` | `chain in` -- the sibling chain needs its own bound | ungemessen |  |
+| `6537` | `chain in` -- the sibling chain needs its own bound | UNGEDECKT | messung/proben/probe-vier-zellen.gab |
 | `6538` | `fields of` -- a register field list is not a runtime domain | ungemessen |  |
-| `6539` | `threads` -- the thread set is not declared in a translation unit | ungemessen |  |
+| `6539` | `threads` -- the thread set is not declared in a translation unit | UNGEDECKT | messung/proben/probe-vier-zellen.gab |
 | `6574` | `match` over a `tagged type` must name every variant exactly once -- there is no catch-all branch, and a `switch` with a missing case falls through… | mit Fehler | beispiele/gift/159-match-nicht-erschoepfend.gab `D005` |
 | `6622` | `tagged` variant payload type | ungemessen (wdh.) |  |
 | `6802` | `match` over a call this unit does not declare -- the type of the scrutinee stands in the callee's declaration, and there is none. A call whose ret… | UNGEDECKT | messung/fragmente/F05.gab |

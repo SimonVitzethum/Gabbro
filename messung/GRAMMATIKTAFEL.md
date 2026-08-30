@@ -143,6 +143,31 @@ der Zustand, den der Plan verbietet — und der Ausgang steht dort auch: *im PR�
 dann wandert die Zelle nach `vom Pruefer`.* **Eine Sprache, die eine Form nicht hat, ist
 vollständig, solange sie das sagt.**
 
+### Und das ist NACHGEMESSEN, nicht aus dem Schweigen der Texte geschlossen
+
+*Diese Tafel liest Prüferfehlertexte. Ein Schluss aus einem Text ist keine Messung* (W16) —
+also wurde gefragt: `messung/proben/probe-vier-zellen.gab`.
+
+```
+mit Kostenzusage    K003 faellt -- „die Domaene `queue` der Traversierung hat keine
+                    Schranke aus der Deklaration (fehlt der Tabelle ihr `count`?)"
+ohne Kostenzusage   8 Items, 0 Fehler, 0 Hinweise -- und VIER C001
+```
+
+**Der Wächter hatte zur Hälfte unrecht und in die sichere Richtung.** Die `K003`-Meldung baut
+den Domänennamen mit `format!` aus einer Variablen; `queue` und `chain in` stehen darum in
+keinem Literal, und die Textlesung sah sie nicht. *Eine Lesung über einem `format!` ist eine
+untere Schranke — sie meldet zu viel, nicht zu wenig, und das ist die Richtung, in der ein
+Wächter verpflichtet statt freizusprechen* (W10).
+
+**Und das Urteil steht:** in einem `divergent fn` — der keine Kostenzusage trägt, an der
+`K003` hängen könnte — prüfen alle vier mit **0 Fehlern** und fallen an vier `C001`.
+
+> **Damit hat die ganze offene Menge EINE Wurzel.** `messung/ABSAGEFORMEN.md` U10–U15 zeigen
+> dasselbe Bild: `K003` ist die einzige Regel zwischen den Absagen des Erzeugers und dem
+> Prüfer, und sie hängt an einer Zusage, die nicht jede Funktion macht. *Das ist eine
+> Adresse und keine Liste.*
+
 *Das ist eine Entscheidung über die SPRACHE und keine über den Erzeuger* — vier Formen fallen
 damit aus Gabbro heraus. Sie gehört dem Ordner und der Bahn, die am Prüfer arbeitet, und
 steht darum hier als Arbeitsmenge und nicht als erledigt.
