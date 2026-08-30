@@ -714,6 +714,20 @@ MUTATIONEN = [
         "the bound of `mappings of` is `levels x node length` again instead of "
         "`node length ^ levels` -- one descent path, handed out as the leaf set",
     ),
+    # **The walk's IDENTITY hangs on its cost number again** (2026-08-31).
+    #
+    # `walkschranken` answers "how large is the leaf set"; the resolver asks "does this
+    # `walk` exist". With the cost map back in that seat, `walk W levels 0`, `node : [Pte; 0]`
+    # and a leaf count past `u128` all say **`N040`: `W` names no type** at a declaration
+    # three lines above -- two of the three being ordinary typos, not corners.
+    Mutation(
+        "walkname-haengt-an-der-zahl",
+        "umgebung.rs",
+        "                            Traegerart::Walk => self.walknamen.contains(*k),",
+        "                            Traegerart::Walk => self.walkschranken.contains_key(*k),",
+        "W16 -- the existence of a `walk` TYPE is decided by the cost map again, so a "
+        "declaration whose leaf count is 0 or past `u128` is reported as an unknown name",
+    ),
     Mutation(
         "index-erbt-nicht",
         "umgebung.rs",

@@ -5840,3 +5840,95 @@ impl fn f(w : ptr<normal, r> W) -> bool
     assert!(k14.contains(&"K003"), "levels 14 must say `K003`, fallen: {k14:?}");
     assert!(!k14.contains(&"K001"), "an overflowing computation is no promise: {k14:?}");
 }
+
+/// **A `walk` is a TYPE because it was declared, not because its leaf count fits.**
+///
+/// Found on 2026-08-31 in the `W24` run-up to `K001`: the name resolver asked
+/// `walkschranken` -- the COST map -- whether a `walk` type exists. Three ordinary
+/// declarations have no entry there:
+///
+/// ```text
+///   walk W levels 0   { node : [Pte; 512], … }     0^… -- guarded away
+///   walk W levels 4   { node : [Pte; 0],   … }     same guard
+///   walk W levels 15  { node : [Pte; 512], … }     512^15 = 2^135, past `u128`
+/// ```
+///
+/// All three answered **`N040`: `W` names no type** at a declaration standing three lines
+/// above, and then sent the reader after *"is the table missing its `count`?"* -- a table
+/// that does not exist in the file. **Two of the three are ordinary typos**, not corners.
+///
+/// *Two questions, one map* (`W7`), and the wrong answer named the wrong thing (`W16`). The
+/// name lives in `walknamen`, the number in `walkschranken`, and this probe reads the two
+/// apart: **no `N040` at any of the three, and `K003` at all three** -- the bound really is
+/// missing, and that is what the refusal should say.
+#[test]
+fn ein_walk_ohne_brauchbare_blattzahl_bleibt_ein_typ() {
+    fn quelle(ebenen: &str, laenge: &str) -> String {
+        format!(
+            "module p {{
+format Pte @version 1 endian little {{
+    unten : u64 @[11:0] reserved,
+    roh : u64 embeds [51:12] scale 4096,
+    oben  : u64 @[63:52] reserved,
+}}
+device T(basis : u64) at normal {{
+    reg EINTRAG : u64 @0x0 class rw fields {{ P @0, PS @7, NX @63, }}
+}}
+walk W levels {ebenen} {{
+    node : [Pte; {laenge}],
+    down : roh when EINTRAG.PS == 0,
+    leaf : EINTRAG.PS == 1,
+}}
+impl fn f(w : ptr<normal, r> W) -> bool
+    effects {{ reads w }}
+    costs   <= 1 ops
+{{
+    traverse a over mappings of w by unvisited
+        touches reads w
+    {{
+        if a.level == 0 {{
+            return true;
+        }}
+    }}
+    return false;
+}}
+}}
+"
+        )
+    }
+    let urteil = |q: &str| -> (Vec<&'static str>, String) {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        let _ = gabbro_check::pruefe(&b, &mut a);
+        let codes = a.absagen.iter().map(|x| x.code).collect();
+        let texte = a.absagen.iter().map(|x| x.text.clone()).collect::<Vec<_>>().join(" | ");
+        (codes, texte)
+    };
+
+    for (was, ebenen, laenge) in [
+        ("levels 0", "0", "512"),
+        ("node length 0", "4", "0"),
+        ("512^15 past u128", "15", "512"),
+    ] {
+        let (codes, texte) = urteil(&quelle(ebenen, laenge));
+        assert!(
+            !codes.contains(&"N040"),
+            "{was}: the `walk` is DECLARED, so its name is a type -- got {codes:?} ({texte})"
+        );
+        assert!(
+            codes.contains(&"K003"),
+            "{was}: the bound really is missing, and `K003` is the refusal for that -- \
+             got {codes:?} ({texte})"
+        );
+        // **The text must name the declaration it wants.** Until 2026-08-31 it asked after a
+        // table's `count` for every domain, including this one.
+        assert!(
+            texte.contains("`walk` from `levels`"),
+            "{was}: the refusal has to name the `walk` declaration, not a table -- {texte}"
+        );
+    }
+
+    // And the ordinary case is untouched: a bound that exists is still a bound.
+    let (codes, _) = urteil(&quelle("4", "512"));
+    assert!(codes.contains(&"K001"), "levels 4 x node 512 still computes: {codes:?}");
+    assert!(!codes.contains(&"K003"), "a bound that exists is not a missing one: {codes:?}");
+}

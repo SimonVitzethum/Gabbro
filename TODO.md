@@ -796,7 +796,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **347 von 347 Ankern** greifen (`--anker`, 2026-08-31).
+      fällt. Mutationskatalog: **348 von 348 Ankern** greifen (`--anker`, 2026-08-31).
       ~~345 von 345~~ nachgezogen am 2026-08-30: die 346. trennt die zwei Fälle von `result`
       (`messung/ERGEBNIS-ZWEI-NAMEN.md`). Die
       acht des Rumpfkanals kamen am 28. abends dazu, und am 30. fünf weitere aus drei Ketten:
@@ -1362,17 +1362,42 @@ liest sich wie Deckung.* Beide sind umgezogen, 236 von 236 greifen.
       > Buchung* — `dokumente/PLAN-VOLLSTAENDIGKEIT.md` §1 führt `F9` unter „echte Programme,
       > die schon der PRÜFER abweist", und dort gehört es nicht hin.
 
-- [ ] **Ein `walk` IST ein Typ genau dann, wenn seine Blattzahl in `u128` passt** *(gefunden
-      2026-08-31 im W24-Vorlauf zu P-a)*. `umgebung.rs`:1094 löst den Typnamen eines `walk`
-      über `walkschranken.contains_key(k)` auf — also über die **Kostenkarte**. Bei
-      `levels 15, node 512` (`512¹⁵ = 2¹³⁵`, passt nicht) sagt der Prüfer an einer tadellosen
-      Deklaration **`N040`: `W` names no type**, und schickt den Leser danach mit `K003`
-      *„fehlt der Tabelle ihr `count`?"* nach einer Tabelle suchen, die es nicht gibt.
-      **Dieselbe Klasse wie `W16`: das Werkzeug misst etwas anderes als seinen Gegenstand.**
-      Die Karte beantwortet *„wie groß ist die Blattmenge"*, die Auflösung fragt *„gibt es
-      diesen `walk`"* — zwei Fragen, eine Karte (W7). *Die Reparatur ist eine eigene Menge
-      `walknamen`, unbedingt gefüllt; sie ist klein und nicht dringend, weil die Erreichbarkeit
-      an `512¹⁵` hängt — aber die Meldung ist irreführend, und das ist der Schaden.*
+- [ ] ~~**Ein `walk` IST ein Typ genau dann, wenn seine Blattzahl in `u128` passt**~~ —
+      **GESCHLOSSEN am 2026-08-31**, gefunden im `W24`-Vorlauf zu P-a. `umgebung.rs` löste den
+      Typnamen eines `walk` über `walkschranken.contains_key(k)` auf — also über die
+      **Kostenkarte**. Die Karte beantwortet *„wie groß ist die Blattmenge"*, die Auflösung
+      fragt *„gibt es diesen `walk`"* — zwei Fragen, eine Karte (W7), und die Antwort auf die
+      falsche war eine Absage, die den falschen Gegenstand nannte (W16).
+
+      **Und die Reichweite war größer als der Fund:** ich hatte `512¹⁵` gebucht und damit den
+      Korner. Nachgemessen sind es **drei** Wege, und zwei davon sind gewöhnliche Tippfehler —
+      `walk W levels 0`, `node : [Pte; 0]` und erst dann die Zahl jenseits `u128`. *Alle drei
+      sagten `N040`: `W` names no type* an einer Deklaration drei Zeilen darüber.
+
+      Repariert: `walknamen` wird beim Lesen der Deklaration **unbedingt** gefüllt, die
+      Auflösung fragt sie. Probe `ein_walk_ohne_brauchbare_blattzahl_bleibt_ein_typ` (kein
+      `N040`, dafür `K003` an allen dreien), Mutation `walkname-haengt-an-der-zahl` — von Hand
+      gesetzt, gebaut, **genau eine fallende Probe**.
+
+- [ ] **Zwei deutsche Meldungen erreichen den Nutzer, und `pruefe-englisch.py` sieht sie
+      nicht** *(gefunden 2026-08-31 nebenher; die beiden sind übersetzt, der Wächter nicht)*.
+      Der Sprachwächter misst die Zeichenketten in `Absage::fehler(…)`, `Absage::hinweis(…)`
+      und `.mit_notiz(…)`. **Ein Text, der über einen anderen Weg in eine Absage kommt, ist
+      ihm unsichtbar** — `Kosten::Unbekannt(…)` trägt seinen Grund in den `K003`-Text hinein,
+      und dort standen bis heute *„die Domaene `{}` der Traversierung hat keine Schranke aus
+      der Deklaration (fehlt der Tabelle ihr `count`?)"* und *„eine `forever`-Schleife hat
+      keine Gesamtkosten"*. **Beide gedruckt, beide deutsch, beide nicht gezählt.**
+
+      *Der Wächter sagt selbst, er verpflichte und spreche nicht frei (W10) — das stimmt und
+      deckt genau diesen Fall.* Was offen bleibt, ist die **Fläche**: 13 `Kosten::Unbekannt`
+      im Prüfer, und dieselbe Frage für jeden anderen Weg, auf dem ein Text in eine Absage
+      kommt. **Bis das gezählt ist, ist die Sprachfläche „1103 Meldungstexte" eine untere
+      Schranke ohne bekannten Abstand.**
+
+      > Und die eine, die ich übersetzt habe, war nicht nur deutsch, sondern **falsch**: sie
+      > fragte bei JEDER Domäne nach dem `count` einer Tabelle — auch bei `mappings of`, wo
+      > die Antwort drei Zeilen höher in der `walk`-Deklaration steht. *Eine Absage, die den
+      > falschen Gegenstand nennt, kostet mehr als eine, die keinen nennt.*
 
 - [ ] **`by consuming` senkt nicht ab, weil die ENTNAHME erzeugter Code ist** *(2026-08-20)*.
       Die Bedeutung steht fest; was fehlt, ist die `ops`-Operation, die den Eintrag entfernt.

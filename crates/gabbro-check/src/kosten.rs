@@ -592,10 +592,18 @@ impl<'a> Rechner<'a> {
             {
                 (Kosten::Zahl(rumpf), Some(n)) => Kosten::Zahl(rumpf).mal(n, Some(t.span)),
                 (Kosten::Unbekannt(g, s), _) => Kosten::Unbekannt(g, s),
+                // **The text names the DECLARATION it is missing, and it is one of three.**
+                //
+                // Until 2026-08-31 it asked *"is the table missing its `count`?"* for every
+                // domain -- and sent the reader of a `mappings of` after a table that does
+                // not exist. Measured at `walk W levels 0`: the reader was looking for a
+                // `count` while the real answer was three lines up. *A refusal that names
+                // the wrong declaration costs more than one that names none.*
                 (_, None) => Kosten::Unbekannt(
                     format!(
-                        "die Domaene `{}` der Traversierung hat keine Schranke aus der \
-                         Deklaration (fehlt der Tabelle ihr `count`?)",
+                        "the domain `{}` of the traversal has no bound from a declaration \
+                         -- a table gets it from `count`, a `queue` from the single field \
+                         array of its record, and a `walk` from `levels` and its node length",
                         t.domaene.benennung()
                     ),
                     Some(t.span),
@@ -612,8 +620,7 @@ impl<'a> Rechner<'a> {
             // `forever` endet nicht -- eine Kostenzusage darueber gibt es nicht. Geprueft
             // wird stattdessen der DURCHGANG gegen `per_pass`.
             Schleife::Forever(f) => Kosten::Unbekannt(
-                "eine `forever`-Schleife hat keine Gesamtkosten -- ihre Zusage ist \
-                 `per_pass`, nicht `costs`"
+                "a `forever` loop has no total cost -- its promise is `per_pass`, not `costs`"
                     .to_string(),
                 Some(f.span),
             ),
