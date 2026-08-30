@@ -690,8 +690,9 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **340 von 340 Ankern** greifen (`--anker`, 2026-08-28) — die
-      acht des Rumpfkanals kamen abends dazu. Drei bewachen den
+      fällt. Mutationskatalog: **341 von 341 Ankern** greifen (`--anker`, 2026-08-30) — die
+      acht des Rumpfkanals kamen am 28. abends dazu, und am 30. der **vierte Ort der
+      Geistlöschung**: ein `let`-gebundener Geist, blank genannt. Drei bewachen den
       Rufsammeltopf (`B1`, `messung/RUF-TOR.md`): der Optionswert, der wieder als Ruf gelesen
       wird, der Sammeltopf, der sich wieder schließt, und der Verbundkonstruktor, der wieder
       Ruf heißt. Zwei die Aussetzung (`B2`, `messung/AUSSETZUNG.md`): `breaking`, das wieder

@@ -243,6 +243,84 @@ impl fn hochlauf(p : BootPhase) effects { consumes p, writes mmu, writes faeden 
     assert!(vorwaerts < benutzung, "der Tag muss VOR seiner Benutzung stehen:\n{c}");
 }
 
+/// **The FOURTH site of the ghost erasure -- a `let`-bound ghost, named bare** (2026-08-30).
+///
+/// The probe above holds three sites: the type, the signature, the call. `emit.rs` itself
+/// wrote down that a fourth existed and that nothing exercised it -- *"the erasure was built
+/// at three of four sites, and no example has ever tripped the fourth"* -- and the reason it
+/// stayed open is the shape of `geist_wert`: a bare name was a ghost only when a SIGNATURE
+/// declared it. A `let` binding had no answer at all.
+///
+/// Measured against the unchanged emitter, on the F7 boot path written as a body:
+///
+/// ```c
+/// static void strecke(void) {
+///     mmu_an();
+///     return p1;      /* error: `p1` undeclared -- and `return` with a value in `void` */
+/// }
+/// ```
+///
+/// > **This one fails LOUD, and that is worth saying out loud too.** The three sites above
+/// > include two silent forms; this one hands `cc` an undeclared name and dies there. *The
+/// > direction is right and the erasure is still incomplete* -- a generator whose product
+/// > only compiles because no corpus file takes the path is not a generator that works.
+///
+/// The assertions are per BLOCK, not over the whole product: a claim about the entire text
+/// is satisfiable by the writer alone (W16, 2026-08-28).
+#[test]
+fn der_erzeuger_loescht_den_geist_auch_im_return() {
+    let quelle = "module t {
+linear ghost type BootPhase;
+extern fn mmu_an(p : BootPhase) -> BootPhase
+    effects { consumes p, writes mmu } costs <= 4096 ops;
+extern fn caps_an(p : BootPhase) -> BootPhase
+    effects { consumes p, writes caps } costs <= 2048 ops;
+impl fn strecke(p : BootPhase) -> BootPhase
+    effects { consumes p, writes mmu, writes caps } costs <= 8192 ops
+{
+    let p1 = mmu_an(p);
+    return p1;
+}
+impl fn zweig(p : BootPhase, w : u32) -> BootPhase
+    effects { consumes p, writes mmu, writes caps } costs <= 8192 ops
+{
+    let q = caps_an(p);
+    if w > 0 { return q; }
+    return q;
+}
+}";
+    let mut absagen = gabbro_syntax::Absagen::neu("g4.gab");
+    let (baum, _) = gabbro_syntax::lies("g4.gab", quelle);
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
+
+    // **The block of `strecke`, on its own.** The step happens, the binding is gone, and the
+    // `return` carries no value -- the signature has just made the function `void`.
+    let s = bloeck(&c, "static void strecke(void) {");
+    assert!(s.contains("    mmu_an();"), "der Bootschritt muss stattfinden:\n{s}");
+    assert!(!s.contains("p1"), "die Bindung an einen Geist hat keine Entsprechung:\n{s}");
+    assert!(s.contains("    return;"), "ein `return` eines Geistes gibt nichts zurueck:\n{s}");
+
+    // **And the same in a body with two exits**, because one erased `return` proves nothing
+    // about the other: `wert_ctyp` never sees the second, and a fix that only rewrites the
+    // last statement would pass the block above.
+    let z = bloeck(&c, "static void zweig(uint32_t w) {");
+    assert!(z.contains("    caps_an();"), "{z}");
+    assert!(!z.contains(" q"), "keine Bindung, kein Name:\n{z}");
+    assert_eq!(z.matches("return;").count(), 2, "BEIDE Ausgaenge, nicht einer:\n{z}");
+}
+
+/// The lines of one emitted function body, from its opening line to the closing brace at
+/// column zero. **A probe that reads the whole product reads the writer as well** -- and a
+/// generator satisfies a claim over its own entire output without ever emitting the block in
+/// question (W16, 2026-08-28).
+fn bloeck<'a>(c: &'a str, kopf: &str) -> String {
+    let von = c.find(kopf).unwrap_or_else(|| panic!("kein Rumpf `{kopf}` im Erzeugnis:\n{c}"));
+    let rest = &c[von..];
+    let bis = rest.find("\n}").map(|i| i + 2).unwrap_or(rest.len());
+    rest[..bis].to_string()
+}
+
 /// **Der Erzeuger fiel an drei Stellen OFFEN aus — gefunden 2026-08-17 am Korpus.**
 ///
 /// Sein ganzer Entwurf ist *„weigere dich beim Namen, statt etwas Plausibles auszugeben"*, und

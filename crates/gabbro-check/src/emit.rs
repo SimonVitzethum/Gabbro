@@ -230,6 +230,17 @@ struct Namen {
     /// Namen, deren Typ der Erzeuger als VORZEICHENLOS kennt. Nur fuer sie darf die untere
     /// Schranke eines `narrow` bei null wegfallen -- Unwissen faellt nach lautstark.
     vorzeichenlos: BTreeSet<String>,
+    /// **`let`-bound local whose value is a GHOST** (2026-08-30).
+    ///
+    /// `parametertyp` answers the same question for anything a SIGNATURE names, and until
+    /// today it was the only answer `geist_wert` had for a bare name. A ghost that a `let`
+    /// binds had none -- so `let p1 = mmu_an(p); return p1;` erased the BINDING and kept
+    /// `return p1;`, naming a local that no longer exists.
+    ///
+    /// *The map is separate from `lokaltyp` because the two are complements, not variants:*
+    /// `lokale_lets` skips a ghost `let` on purpose (its binding never reaches the C), so
+    /// the one map that knows every other local is precisely the one that cannot know this.
+    geistlokale: BTreeSet<String>,
 }
 
 /// Die lokal gebundenen Verbundwerte eines Rumpfes -- **auch in verschachtelten Bloecken**.
@@ -4202,9 +4213,72 @@ fn eigene_sicht(f: &FnDecl, u: &Namen) -> Namen {
         let mut gefunden = lokal.clone();
         im_block(b, u, &mut gefunden);
         lokal = gefunden;
+        // **Ghosts first, and the order is load-bearing.** `lokale_lets` asks `geist_wert`
+        // whether to skip a binding; if the ghost locals are not known by then, it enters a
+        // C type for a name the product never spells.
+        geistige_lets(b, &mut lokal);
         lokale_lets(b, &mut lokal);
     }
     lokal
+}
+
+/// **Every `let`-bound local of this body whose value is a ghost -- to a FIXPOINT**
+/// (2026-08-30).
+///
+/// The sibling of `lokale_lets` below, and the reason it has to be a separate pass is that
+/// `lokale_lets` skips exactly what this one collects. Measured before the fix, on the F7
+/// boot path with a body instead of a prototype:
+///
+/// ```c
+/// static void strecke(void) {
+///     mmu_an();
+///     return p1;      /* error: `p1` undeclared */
+/// }
+/// ```
+///
+/// **The chain is why this runs to a fixpoint**, the same chain `lokale_lets` describes:
+/// `let p2 = p1;` is a ghost only once `p1` is known to be one. The loop is bounded by the
+/// number of `let`s -- each round either adds a name or stops.
+///
+/// > **A name bound TWICE in one body is dropped, not decided**, and a name a parameter
+/// > already binds is left to `parametertyp`. Both are the rule `lokale_lets` states: this
+/// > map has no scopes, so *unknown falls loud* -- a missed ghost names an undeclared local
+/// > and dies at `cc`, while a wrong one would delete real code without a word.
+fn geistige_lets(b: &Block, lokal: &mut Namen) {
+    fn sammle<'a>(b: &'a Block, aus: &mut Vec<&'a LetStmt>, wieoft: &mut HashMap<String, u32>) {
+        for s in &b.anweisungen {
+            if let StmtArt::Let(l) = &s.art {
+                *wieoft.entry(l.name.text.clone()).or_insert(0) += 1;
+                aus.push(l);
+            }
+            for k in crate::unterbloecke(s) {
+                sammle(k, aus, wieoft);
+            }
+        }
+    }
+    let (mut lets, mut wieoft) = (Vec::new(), HashMap::new());
+    sammle(b, &mut lets, &mut wieoft);
+    loop {
+        let mut neu: Vec<String> = Vec::new();
+        for l in &lets {
+            let name = &l.name.text;
+            if wieoft.get(name) != Some(&1)
+                || lokal.parametertyp.contains_key(name)
+                || lokal.geistlokale.contains(name)
+            {
+                continue;
+            }
+            if geist_wert(&l.wert, lokal) {
+                neu.push(name.clone());
+            }
+        }
+        if neu.is_empty() {
+            return;
+        }
+        for n in neu {
+            lokal.geistlokale.insert(n);
+        }
+    }
 }
 
 /// **The C type of every `let`-bound local this body declares -- to a FIXPOINT** (2026-08-25).
@@ -6940,10 +7014,18 @@ fn geist_wert(e: &Expr, u: &Namen) -> bool {
         // diese Funktion nur Rufe -- `let p = mmu_an(p);` war gedeckt, `return p;` nicht.
         // *Eine Loeschung, die den Wert nur an seiner Herkunft erkennt, uebersieht ihn
         // ueberall dort, wo er schon gebunden ist.*
-        ExprArt::Ort(o) if o.suffixe.is_empty() => u
-            .parametertyp
-            .get(&o.basis.text)
-            .is_some_and(|t| ist_geist(t, u)),
+        // **And a `let` binding of one, which is the SAME name in the same position**
+        // (2026-08-30). The line above reads `parametertyp`, so it answered for a ghost a
+        // SIGNATURE names and for no other. Measured on the F7 boot path written as a body:
+        // `let p1 = mmu_an(p); return p1;` erased the binding, kept the `return`, and handed
+        // `cc` a name that no declaration spells. *An erasure that knows a value only where
+        // it enters the function misses it everywhere it is passed on.*
+        ExprArt::Ort(o) if o.suffixe.is_empty() => {
+            u.geistlokale.contains(&o.basis.text)
+                || u.parametertyp
+                    .get(&o.basis.text)
+                    .is_some_and(|t| ist_geist(t, u))
+        }
         // **Hier ist der Sammelzweig die richtige Antwort, und zwar aus einem Satz, der
         // ausserhalb dieser Datei steht: ein Geist ist LINEAR.**
         //

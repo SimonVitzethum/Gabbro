@@ -1361,6 +1361,25 @@ MUTATIONEN = [
         "C-Absenkung -- der Rufort uebergibt einen Geist, den es zur Laufzeit nicht gibt",
         "code",
     ),
+    # **Since 2026-08-30 there are FOUR sites.** The fourth stood as a comment inside
+    # `emit.rs` -- *"the erasure was built at three of four sites, and no example has ever
+    # tripped the fourth"* -- and the cause was the shape of `geist_wert`: a bare name counted
+    # as a ghost only where a SIGNATURE declared it. A `let` binding had no answer at all, so
+    # `return p1;` named a `p1` that no declaration writes. *This form fails LOUD, at `cc`,
+    # rather than silently -- and it was there all the same.*
+    Mutation(
+        "geist-let-wird-nur-am-parameter-erkannt",
+        "emit.rs",
+        "            u.geistlokale.contains(&o.basis.text)\n"
+        "                || u.parametertyp\n"
+        "                    .get(&o.basis.text)\n"
+        "                    .is_some_and(|t| ist_geist(t, u))",
+        "            u.parametertyp\n"
+        "                .get(&o.basis.text)\n"
+        "                .is_some_and(|t| ist_geist(t, u))",
+        "C-Absenkung -- ein `let`-gebundener Geist gilt blank nicht als Geist; `return p1;` nennt einen Namen, den keine Deklaration schreibt",
+        "code",
+    ),
     Mutation(
         "fremder-tag-ohne-vorwaertsdeklaration",
         "emit.rs",
