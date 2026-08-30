@@ -52,6 +52,21 @@ Absenkungspflicht.
 | **P2** | `N035`, `N040`, `M124`, `M101`, `H011` | `F03`: 19 Fehler. `N035` ist der **Funktionszeigervertrag** (Stufe 7), `M124` ist ein echtes Loch (*ein Grundwert kann hier nicht stehen*), der Rest sind Namen, die das Fragment als Auszug nicht deklariert |
 | **P3** | `K001` | `F09`: der Kostenkalkül explodiert — **137 438 953 472 ops gegen ein Versprechen von 4096.** Ein `walk … levels` multipliziert sich, und die Domänenschranke ist als `VERMUTET` gebucht |
 
+> **BERICHTIGT am 2026-08-31, Bahn P — und alle drei Zeilen darüber sind schiefer, als sie
+> aussehen.** Je Posten ein `W24`-Vorlauf gegen den unveränderten Prüfer; die Rechnungen
+> stehen in [`../messung/K001-DOMAENENSCHRANKE.md`](../messung/K001-DOMAENENSCHRANKE.md) und
+> [`../messung/DREI-FRAGMENTABSAGEN.md`](../messung/DREI-FRAGMENTABSAGEN.md).
+>
+> | | was hier stand | was gemessen ist |
+> |---|---|---|
+> | **P1** | *„der Preis der Entscheidung «kein `?`»"* | **schärfer:** mit `?` stünde dort `delete_leaf(…)?;` — auch eine geänderte Zeile, und die Kostenzahl bewegte sich genauso (`+80 256 ops` = eine op je Durchgang). *Keine Fehlerweitergabe lässt die Zeile stehen.* Und im Original ist `delete_leaf` **gar nicht fehlbar** — fehlbar macht sie «B29» bei `FRAGMENTE.md`:268. **Beide Hälften einer Entscheidung im selben eingefrorenen Bericht, im Widerspruch.** |
+> | **P2** | `N035` „Stufe 7" · `M124` „ein echtes Loch" | `N035` ist seit dem 2026-08-21 **gebaut, gelesen und bewacht** (drei Giftproben, drei Mutationen; der Zeigertyp gibt `K001` seine Zahl und `E008` seine Wirkung). `M124` ist **kein Loch, sondern eine richtige Absage:** die Vorlage in `caprock-messbasis` führt dort `pub const … : u64`, **null Projektionen im ganzen Baum** — und die zwei Zahlenräume weichen heute schon ab (`ErrBadCap = 2` gegen `ERR_BADCAP = 1`). |
+> | **P3** | *„der Kostenkalkül explodiert"* | die Zahl ist **richtig und scharf** (`Rumpf × Knotenlänge^Ebenen`, `512⁴ = 2³⁶` = die Seiten eines 256-TiB-Adressraums). Falsch ist die ZUSAGE — sie wurde mit der zurückgezogenen Lesart gerechnet. **Und `F09` blockiert nicht der Prüfer, sondern dreimal der ERZEUGER**; keine der drei `C001` hängt an `K001`. |
+>
+> **Damit gehört von den drei „echten Programmen, die schon der PRÜFER abweist" keines mehr
+> in diese Liste** — `F09` in die Erzeugerliste, `F01` und `F03` zu den Befunden IM Bericht.
+> *Die Menge, die dieser Plan sucht, war an dieser Stelle um drei zu groß.*
+
 ---
 
 # 2. Warum eine Korpuszahl die Frage **nicht** beantwortet
@@ -260,18 +275,50 @@ Vermutung. *Sie kostet mehr als einen Nachmittag — 127 Formen — und keinen B
 
 ## Bahn P — der Prüfer nimmt jedes Programm an, das er annehmen soll
 
-| | |
-|---|---|
-| **P-a** | **`K001`, die Kostendomänenschranke.** `F09` verspricht 4096 ops, der Kalkül rechnet 137 438 953 472. *Sieben Größenordnungen, und die Schranke steht als `VERMUTET` gebucht.* Der teuerste Posten und der einzige, der ein echtes Programm blockiert |
-| **P-b** | **`N035`, der Funktionszeigervertrag.** `fn(#1) -> …` ohne `effects`/`costs`; Stufe 7 |
-| **P-c** | **`M124`** — *ein Grundwert kann hier nicht stehen*. Drei Fundstellen in `F03`. **Erst messen, ob es ein Loch ist oder eine richtige Absage** |
-| **P-d** | `F01`s `N029` benennen: **kein Loch, sondern der Preis der Entscheidung „kein `?`"** — und `F01` entsprechend schreiben oder die Buchung berichtigen |
+| | | Stand 2026-08-31 |
+|---|---|---|
+| **P-a** | **`K001`, die Kostendomänenschranke.** `F09` verspricht 4096 ops, der Kalkül rechnet 137 438 953 472. *Sieben Größenordnungen, und die Schranke steht als `VERMUTET` gebucht.* Der teuerste Posten und der einzige, der ein echtes Programm blockiert | **gemessen.** Die Zahl ist richtig und scharf; die Zusage ist falsch. `F09` bleibt (der Erzeuger blockiert es dreimal). Zwei Proben + eine Mutation schließen die Lücke, die der Satz selbst nannte; Stand bleibt `VERMUTET` (1 von 5 Domänen gemessen) |
+| **P-b** | **`N035`, der Funktionszeigervertrag.** `fn(#1) -> …` ohne `effects`/`costs`; Stufe 7 | **war schon gebaut** (2026-08-21) — beide Vertragshälften haben einen LESER, drei Giftproben und drei Mutationen. Nichts gebaut, Buchung berichtigt |
+| **P-c** | **`M124`** — *ein Grundwert kann hier nicht stehen*. Drei Fundstellen in `F03`. **Erst messen, ob es ein Loch ist oder eine richtige Absage** | **richtige Absage**, außen belegt (Regel B). Eine Zahlprojektion hätte die falsche Zahl gefahren |
+| **P-d** | `F01`s `N029` benennen: **kein Loch, sondern der Preis der Entscheidung „kein `?`"** — und `F01` entsprechend schreiben oder die Buchung berichtigen | **Buchung berichtigt und geschärft.** `F01` bleibt: die Form gibt es, aber sie kostet ZWEI eingefrorene Zeilen |
+
+> **Und ein Nebenfund aus P-as Vorlauf ist repariert:** `umgebung.rs` entschied die Existenz
+> eines `walk`-TYPS über die **Kostenkarte**, also über die Frage, ob seine Blattzahl in
+> `u128` passt. `walk W levels 0`, `node : [Pte; 0]` und `512¹⁵` sagten alle drei
+> **`N040`: `W` names no type** — zwei davon gewöhnliche Tippfehler. *Zwei Fragen, eine
+> Karte* (W7); jetzt zwei Karten, mit Probe und Mutation.
 
 ## Schritt 6 — seriell, nach beiden Bahnen
 
 `K1`: die fünf offenen Absenkungspflichten ausführen und vergleichen. **Erst hier, weil drei
 von fünf an V und P hängen** — F3 und F9 sind heute für den Prüfer keine gültigen Programme,
 F5 senkt nicht ab. Dann `H = 0` buchen, **mit dem Satz aus §5 daneben.**
+
+> ## Und genau hier steht seit dem 2026-08-31 eine Wand, die keine Bahn einreißt
+>
+> **Bahn P hat gemessen, dass F1, F3 und F9 nicht deshalb fallen, weil dem Prüfer etwas
+> fehlt, sondern weil ihre eingefrorenen Zeilen falsch sind.** Damit ist der Satz *„erst
+> P2/P3, dann K1"* für diese drei nicht bloß unvollständig — er hat kein Ziel:
+>
+> | | was das Fragment bräuchte | wie viele EINGEFRORENE Zeilen |
+> |---|---|---|
+> | **F1** | `:337` in ein `let … else`, `:328` von `16452480` auf `16532736` | **2** |
+> | **F3** | Vertrag IN die fünf `fn(…)`-Zeilen, drei `set_reg`-Argumente auf `const` | **8** |
+> | **F9** | `:79` von `4096` auf die ehrliche Zahl — *und danach immer noch drei `C001`* | **1**, und es hilft nicht |
+>
+> Die Regel dieses Ordners lautet: *„Ergänzt werden **nur** Deklarationen, die der Ausschnitt
+> ruft und nicht nennt. Nichts wird umgeschrieben."* **Solange sie gilt, ist `H = 0` über den
+> AUSFÜHRUNGSweg für diese drei nicht erreichbar** — nicht schwer, sondern ausgeschlossen.
+>
+> *Das ist kein Grund, die Regel zu lockern.* Sie ist der Maßstab, und ein Maßstab, der
+> nachgibt, wo er drückt, misst nichts mehr. **Was folgt, ist eine Entscheidung des Ordners
+> und keine Aufgabe einer Bahn:** entweder `H` wird über sieben Fragmente statt über zehn
+> gebucht — *mit der Bezugsgröße daneben*, wie `W17` es verlangt — oder die drei wandern in
+> eine eigene Spalte: **„Pflicht an einem Programm, das der Bericht nicht hergibt."**
+>
+> *Was NICHT geht, ist sie als „offen" weiterzuführen.* Eine Pflicht, deren Erfüllung eine
+> Regel verbietet, ist keine offene Pflicht — sie ist eine falsch gebuchte, und das ist
+> dieselbe Klasse wie `F09` in der Prüferliste, eine Ebene höher.
 
 > **Und was in diesem Durchlauf ausdrücklich NICHT steckt:** die Absenkungsentscheidung
 > (`messung/ABSENKUNG.md`, drei Formen). `H = 0` ist über den AUSFÜHRUNGSweg erreichbar, den

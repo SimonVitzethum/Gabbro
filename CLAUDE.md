@@ -84,6 +84,20 @@ Commits zurückliegt, misst gegen einen Stand, den es nicht mehr gibt — am 202
 dreimal Zahlen erzeugt, die beim Zusammenführen einzeln nachgerechnet werden mussten. *Der
 `--ff-only`-Vorlauf ist kein Commit und kostet nichts; ihn zu vergessen kostet den Merge.*
 
+**In EIN Agentenverzeichnis gehören BEIDE Übertragungen, und zwar in dieser Reihenfolge:**
+
+```bash
+rsync -rlpgoD --delete --exclude 'target/' … ./ ki-pc-fisch-101:gabbro-p/   # fuer `cargo`
+rsync -a                                  beweise/ ki-pc-fisch-101:gabbro-p/beweise/
+```
+
+Oben stehen die zwei Übertragungen mit **verschiedenen Zielverzeichnissen** (`gabbro` und
+`gabbro-baum`), und darum kollidieren sie dort nicht. *Ein Agent hat nur eines* — und wer nur
+die erste fährt, bekommt `pruefe-beweise.sh` **`OHNE NACHWEIS`** über fünfzehn tadellose
+Theorien. **Am 2026-08-31 hat das eine volle Abnahme rot gemeldet, mit `[1]` und ohne einen
+Befund darin.** Der Wächter nennt die Ursache und die Heilung in seiner eigenen Absage — *aber
+er nennt sie erst, nachdem der Lauf zwölf Minuten gebraucht hat.*
+
 ## Was sonst gilt
 
 * **Commit-Nachrichten nur über `arbeitsprotokoll/.commitmsg` + `./commit.sh`** (R19).

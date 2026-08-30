@@ -380,7 +380,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 127 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 129 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *~~103~~ … ~~121~~ — am 2026-08-30/31 **zehnmal** nachgezogen, aus sieben Ketten, und
       jedes Mal, weil ein Bericht geschrieben wurde. **Die Zahl misst den Ordner, nicht die
       Arbeit**, und sie ist an einem einzigen Tag von 103 auf 122 gestiegen, ohne dass ein
@@ -546,7 +546,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2093 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2102 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -796,7 +796,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **346 von 346 Ankern** greifen (`--anker`, 2026-08-30).
+      fällt. Mutationskatalog: **348 von 348 Ankern** greifen (`--anker`, 2026-08-31).
       ~~345 von 345~~ nachgezogen am 2026-08-30: die 346. trennt die zwei Fälle von `result`
       (`messung/ERGEBNIS-ZWEI-NAMEN.md`). Die
       acht des Rumpfkanals kamen am 28. abends dazu, und am 30. fünf weitere aus drei Ketten:
@@ -1051,6 +1051,21 @@ gelesen. Was zwei saubere Fragmente noch aufhält, sind **zwei benannte Weigerun
 |---|---|---|
 | F2 · F9 | die Bitlücke in einem `format` | *ein Format sagt, welche Bits EXISTIEREN* — sie heisst `reserved` oder gar nicht. **Der Erzeuger zählt nicht mit.** |
 | F9 | `device … at dma` — welche Barriere | die **Axiomschicht**, seit jeher; M3 baut sie ausdrücklich nicht |
+
+**Und drei Prüferabsagen kamen am 2026-08-31 dazu — alle drei RICHTIG, keine ein Loch**
+(Bahn P, W24-Vorlauf je Posten; die Messungen in
+[`messung/DREI-FRAGMENTABSAGEN.md`](messung/DREI-FRAGMENTABSAGEN.md)):
+
+| Fragment | Absage | und warum sie richtig ist |
+|---|---|---|
+| F3 | **`N035`** ×5 — kein Vertrag am `fn(…)` | die Regel ist seit dem 2026-08-21 **gebaut, gelesen und bewacht**: der Zeigertyp gibt `K001` seine Zahl (`the body costs 3` aus `costs <= 3 ops`) und `E008` seine Wirkung, drei Giftproben (240/242/246) und drei Mutationen stehen darauf. *Der Vertrag müsste IN die fünf Zeilen — ein Umschreiben.* |
+| F3 | **`M124`** ×3 — ein Grundwert als `u64`-Argument | Regel B, außen gemessen: `caprock-abi` führt dort `pub const ERR_… : u64` und einen `Option<u64>`-Kanal, **null Projektionen im ganzen Baum**. Und die zwei Zahlenräume weichen heute schon ab — `ErrBadCap = 2` gegen `ERR_BADCAP = 1`. **Eine Zahlprojektion hätte die falsche gefahren.** |
+| F1 | **`N029`** — fehlbarer Ruf ohne `let … else` | die Form GIBT es: mit `let … else` + `or Fehler` am Rufer bleibt genau **eine** Absage, `K001` mit **+80 256 ops** (eine op je Durchgang, `NSLOTS`). Damit sind es **zwei** eingefrorene Zeilen (:337 und `costs` :328). *Und im Original kann `delete_leaf` gar nicht scheitern — fehlbar macht sie «B29» bei :268: **beide Hälften einer Entscheidung im selben Bericht, im Widerspruch.*** |
+
+> **Die Buchung *„der Preis der Entscheidung «kein `?`»"* fällt damit.** Mit `?` stünde dort
+> `delete_leaf(…)?;` — **auch eine geänderte Zeile**, und die Kostenzahl bewegte sich genauso.
+> *Es gibt keine Fehlerweitergabe, die diese Zeile unverändert lässt; die einzige Sprache, in
+> der sie stehen bleibt, ist eine, die den Grund fallen lässt.*
 
 
 
@@ -1335,6 +1350,54 @@ liest sich wie Deckung.* Beide sind umgezogen, 236 von 236 greifen.
       Frage** *(2026-08-20)*. Eine Traversierung über die Blattmenge braucht einen **erzeugten
       rekursiven Abstieg** entlang `down` und `leaf`. Der Erzeuger sagt es beim Namen ab
       (`C001`), und die Absage nennt seit heute den Bauposten statt der offenen Lesart.
+
+      > **Und damit ist `F9` nicht vom PRÜFER blockiert, sondern vom ERZEUGER** *(gemessen
+      > 2026-08-31, Bahn P)*. Eine Sonde mit derselben `walk`-Form und leerem
+      > Traversierungsrumpf geht mit **0 Fehlern** durch den Prüfer — und der Erzeuger weist
+      > sie **dreimal** ab (`device … at normal`, `walk … levels` als Konstantenname,
+      > `mappings of`). **Keine dieser drei hängt an `K001`.** Die Zusage in `F9`:79 zu heben
+      > kaufte eine Zahl in einer Bilanz und keine Absenkung, und sie kostete den einzigen
+      > Ort im Baum, an dem die zurückgezogene Lesart **im Wortlaut** steht und **täglich von
+      > einem Werkzeug ausgedruckt wird**. *`F9` bleibt, wie es ist; was fällt, ist die
+      > Buchung* — `dokumente/PLAN-VOLLSTAENDIGKEIT.md` §1 führt `F9` unter „echte Programme,
+      > die schon der PRÜFER abweist", und dort gehört es nicht hin.
+
+- [ ] ~~**Ein `walk` IST ein Typ genau dann, wenn seine Blattzahl in `u128` passt**~~ —
+      **GESCHLOSSEN am 2026-08-31**, gefunden im `W24`-Vorlauf zu P-a. `umgebung.rs` löste den
+      Typnamen eines `walk` über `walkschranken.contains_key(k)` auf — also über die
+      **Kostenkarte**. Die Karte beantwortet *„wie groß ist die Blattmenge"*, die Auflösung
+      fragt *„gibt es diesen `walk`"* — zwei Fragen, eine Karte (W7), und die Antwort auf die
+      falsche war eine Absage, die den falschen Gegenstand nannte (W16).
+
+      **Und die Reichweite war größer als der Fund:** ich hatte `512¹⁵` gebucht und damit den
+      Korner. Nachgemessen sind es **drei** Wege, und zwei davon sind gewöhnliche Tippfehler —
+      `walk W levels 0`, `node : [Pte; 0]` und erst dann die Zahl jenseits `u128`. *Alle drei
+      sagten `N040`: `W` names no type* an einer Deklaration drei Zeilen darüber.
+
+      Repariert: `walknamen` wird beim Lesen der Deklaration **unbedingt** gefüllt, die
+      Auflösung fragt sie. Probe `ein_walk_ohne_brauchbare_blattzahl_bleibt_ein_typ` (kein
+      `N040`, dafür `K003` an allen dreien), Mutation `walkname-haengt-an-der-zahl` — von Hand
+      gesetzt, gebaut, **genau eine fallende Probe**.
+
+- [ ] **Zwei deutsche Meldungen erreichen den Nutzer, und `pruefe-englisch.py` sieht sie
+      nicht** *(gefunden 2026-08-31 nebenher; die beiden sind übersetzt, der Wächter nicht)*.
+      Der Sprachwächter misst die Zeichenketten in `Absage::fehler(…)`, `Absage::hinweis(…)`
+      und `.mit_notiz(…)`. **Ein Text, der über einen anderen Weg in eine Absage kommt, ist
+      ihm unsichtbar** — `Kosten::Unbekannt(…)` trägt seinen Grund in den `K003`-Text hinein,
+      und dort standen bis heute *„die Domaene `{}` der Traversierung hat keine Schranke aus
+      der Deklaration (fehlt der Tabelle ihr `count`?)"* und *„eine `forever`-Schleife hat
+      keine Gesamtkosten"*. **Beide gedruckt, beide deutsch, beide nicht gezählt.**
+
+      *Der Wächter sagt selbst, er verpflichte und spreche nicht frei (W10) — das stimmt und
+      deckt genau diesen Fall.* Was offen bleibt, ist die **Fläche**: 13 `Kosten::Unbekannt`
+      im Prüfer, und dieselbe Frage für jeden anderen Weg, auf dem ein Text in eine Absage
+      kommt. **Bis das gezählt ist, ist die Sprachfläche „1103 Meldungstexte" eine untere
+      Schranke ohne bekannten Abstand.**
+
+      > Und die eine, die ich übersetzt habe, war nicht nur deutsch, sondern **falsch**: sie
+      > fragte bei JEDER Domäne nach dem `count` einer Tabelle — auch bei `mappings of`, wo
+      > die Antwort drei Zeilen höher in der `walk`-Deklaration steht. *Eine Absage, die den
+      > falschen Gegenstand nennt, kostet mehr als eine, die keinen nennt.*
 
 - [ ] **`by consuming` senkt nicht ab, weil die ENTNAHME erzeugter Code ist** *(2026-08-20)*.
       Die Bedeutung steht fest; was fehlt, ist die `ops`-Operation, die den Eintrag entfernt.
@@ -3581,6 +3644,18 @@ sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 71 S�
       `kosten.domaenenschranke` (**VERMUTET**) — damit der gemessene Fehler (2 048 gegen
       512⁴, **sieben Größenordnungen, drei Tage getragen**) im Satz *sichtbar* bleibt, statt
       von einer glatten Formulierung überschrieben zu werden.
+
+      > **Nachgezogen am 2026-08-31 (Bahn P, P-a), und der Stand bleibt `VERMUTET`.**
+      > Was fiel, ist der Satz *„keine Probe und keine Mutation misst die Schranke gegen die
+      > Domäne"*: für **`mappings of`** messen ihn seit heute zwei Proben in `rechenwerk.rs`
+      > (`e` von 1 bis 4 über `l ∈ {2, 8, 512}`, gelesen wird der **`K001`-Text** je Stelle;
+      > die zwei Lesarten trennen sich schon bei `e = 3, l = 2` — 16 gegen 12) und die
+      > Mutation `walkschranke-wieder-ein-pfad`, die das historische `e × l` zurücksetzt und
+      > gefangen wird.
+      >
+      > **Für `count`, `queue`, `elems of` und `index into T` ist der Satz so ungeprüft wie
+      > vorher** — eine von fünf Domänen ist gemessen, und deshalb steigt der Stand nicht.
+      > *Die Rechnung Faktor für Faktor steht in [`messung/K001-DOMAENENSCHRANKE.md`](messung/K001-DOMAENENSCHRANKE.md).*
       **V2 ist der teuerste, und der Grund ist ein Befund über das Geschirr:** die Regel hat
       **keine eigene Kennung** — sie erweitert, was durchgeht. Eine Giftprobe müsste ein
       **PAAR** zeigen (ohne Fakt fällt, mit Fakt geht durch), und dafür hat `beispiele/gift`
