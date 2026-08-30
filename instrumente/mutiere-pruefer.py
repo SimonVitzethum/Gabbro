@@ -1367,13 +1367,20 @@ MUTATIONEN = [
     # HIDING the third: `M119` refused the program before the emitter ever saw it, so the
     # miscompile below stood behind a guard nobody had asked for. *An accident that holds is
     # indistinguishable from a rule until it stops.*
+    # **Die erste Fassung dieser Mutation war UNGUELTIG**, und zwar auf dieselbe stille Art
+    # wie `lean-ergebnis-ohne-wert` heute frueh: sie setzte `if false` an den `match`-Arm,
+    # womit der `match` nicht mehr vollstaendig war (`E0004`). Der Baum uebersetzte nicht,
+    # der Lauf zaehlte die Mutation aus dem NENNER heraus, und 344 von 344 las sich wie
+    # Vollstaendigkeit. *Eine ungueltige Mutation ist eine geschrumpfte Grundgesamtheit.*
+    #
+    # Der Arm bleibt jetzt stehen und gibt `None` -- das ist genau der Zustand vor der
+    # Reparatur: `e` am fehlbaren Register ungebunden, `M119` sagt es, und `return e;`
+    # erreicht den Erzeuger nie.
     Mutation(
         "grundbindung-am-register-faellt-weg",
         "m1.rs",
-        "                    .or_else(|| match &l.quelle {\n"
-        "                        LetQuelle::Ort(o) => {",
-        "                    .or_else(|| match &l.quelle {\n"
-        "                        LetQuelle::Ort(o) if false => {",
+        "                            let t = crate::m3::ort_register(o, &self.geraete, &self.griffe)?;",
+        "                            let t = crate::m3::ort_register(o, &self.geraete, &self.griffe).filter(|_| false)?;",
         "M1 -- `e` am fehlbaren Register bleibt ungebunden; `M119` sagt es, und `return e;` erreicht den Erzeuger nie",
         "pruefer",
     ),
