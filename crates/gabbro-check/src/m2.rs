@@ -443,6 +443,47 @@ fn gehe(
 /// > repaired.*
 ///
 /// An `if` WITHOUT an else never ends: there is always a way past it.
+/// **Does any `leave <marke>` in this block target THAT loop?**
+///
+/// Conservative on purpose. A `leave` of the same name inside a NESTED loop that shadows the
+/// mark is counted here too, and the answer is then "yes, it falls through" -- the old
+/// answer. *A search that errs only towards falling through cannot create a false
+/// acceptance; it can only give up a refinement.*
+fn verlassen(b: &Block, marke: &str) -> bool {
+    b.anweisungen.iter().any(|s| {
+        matches!(&s.art, StmtArt::Leave(id) if id.text == marke)
+            || crate::unterbloecke(s).into_iter().any(|k| verlassen(k, marke))
+    })
+}
+
+/// **Does control leave this block for good?** Not a descent -- one question about ONE
+/// statement, the last one.
+///
+/// The reader who wants the difference: `crate::unterbloecke` asks *which blocks does this
+/// statement CONTAIN*, and a pass that has to visit every block owes an arm for each of the
+/// nine. **This function visits none of them.** The two branching forms stand here not
+/// because it descends into them but because their ending is compositional over their arms;
+/// the remaining seven do not end at all, or end only by containing a `return` that the
+/// branch bookkeeping already sees.
+///
+/// > **And that was true for six of the seven, not for all seven** (2026-08-30). A `forever`
+/// > without an exit does not fall through -- it DIVERGES -- and answering `false` for it was
+/// > not conservative, it was wrong in the direction that rejects a correct program:
+/// >
+/// > ```gabbro
+/// > impl fn a(m : Marke, b : bool) -> u64 effects { consumes m, diverges } {
+/// >     if b { forever dienst … { tue(); } } else { nimm(m); }
+/// >     return 0;
+/// > }
+/// > ```
+/// >
+/// > gave **`L103` -- „`m` is not treated the same on every path"** and `L101` behind it. The
+/// > diverging branch cannot leak `m`: it never returns. *The note printed under `L103` said
+/// > so all along* -- „a branch that diverges or returns does not count" -- **and the
+/// > predicate under it knew only the returning half.**
+///
+/// `traverse` ends through the set and `retry` through a number: both fall through, and
+/// `false` is the right answer for them, not a concession.
 fn endet(b: &Block, v: &Vertraege) -> bool {
     let Some(s) = b.anweisungen.last() else {
         return false;
@@ -454,7 +495,32 @@ fn endet(b: &Block, v: &Vertraege) -> bool {
                 && w.zweige.iter().all(|(_, r)| endet(r, v))
         }
         StmtArt::Match(m) => !m.zweige.is_empty() && m.zweige.iter().all(|zw| endet(&zw.rumpf, v)),
-        _ => false,
+        StmtArt::Schleife(sch) => match sch.as_ref() {
+            // An unnamed `forever` can be left by nothing: `StmtArt::Leave` always carries a
+            // mark, so there is no unlabelled exit to look for.
+            Schleife::Forever(f) => match &f.marke {
+                Some(m) => !verlassen(&f.rumpf, &m.text),
+                None => true,
+            },
+            Schleife::Traverse(_) | Schleife::Retry(_) => false,
+        },
+        // **The six that stay `false`, and they are not a backlog.** `narrow … else`,
+        // `let … else` and the `exchange` `update` body carry a block for the OTHER path --
+        // the main path walks on past them. `locks` and `observes` end only by containing a
+        // `return`, and a value left unconsumed in a returning branch is a leak whether this
+        // predicate sees the ending or not. `breaking <m>` can be left by a `leave m` from
+        // anywhere inside, so its ending is a question about labels and not about the arm.
+        StmtArt::Narrow(_)
+        | StmtArt::LetSonst(_)
+        | StmtArt::Exchange(_)
+        | StmtArt::Sperrt(_)
+        | StmtArt::Observiert(_)
+        | StmtArt::Bricht(_)
+        | StmtArt::Let(_)
+        | StmtArt::Zuweisung(_)
+        | StmtArt::Publish(_)
+        | StmtArt::AwaitLoad(_)
+        | StmtArt::Ruf(_) => false,
     }
 }
 

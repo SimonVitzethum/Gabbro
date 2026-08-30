@@ -606,15 +606,29 @@ Stehengebliebene Zahlen aus P1: 117 Regeln, 187 Terminale (heute 1 / 1)
     # only ever checked together with others is not checked.* The third line is the real one:
     # **a struck-through value must NOT count**, or no register can write down its own
     # correction without the guardian reporting the retracted number as a claim.
-    d_gift = "**7 clean examples, 3 poison probes** —\n"
-    d_sauber = "**53 clean examples, 310 poison probes** —\n"
-    d_zurueck = "~~*7 clean examples, 3 poison probes*~~ — berichtigt 2026-08-30\n"
+    #
+    # **And the clean half took its yardstick from yesterday** (found 2026-08-30). It stood
+    # here as the literal `**53 clean examples, 310 poison probes**`, and the corpus grew by
+    # one example and one poison file the same day: the probe reported
+    # *„GESCHEITERT (erwartet 0)"* -- a speech test failing over a RIGHT number -- and
+    # `main()` does not read its return value, so the line printed red and the guard exited
+    # green. **Exactly the fault the paragraph below this one describes for the README half,
+    # one probe further over.** Both literals are derived now.
     n_b = len(list((WURZEL / "beispiele").glob("*.gab")))
     n_g = len(list((WURZEL / "beispiele/gift").glob("*.gab")))
+    d_gift = f"**{n_b - 1} clean examples, {n_g - 1} poison probes** —\n"
+    d_sauber = f"**{n_b} clean examples, {n_g} poison probes** —\n"
+    d_zurueck = f"~~*{n_b - 1} clean examples, {n_g - 1} poison probes*~~ — berichtigt\n"
+    # **And the verdict counts them** (2026-08-30). The three lines below were PRINTED and
+    # left out of the `return` -- so the DONE half could report `GESCHEITERT` while the guard
+    # exited green. *A speech test whose failure changes nothing is a decoration* (R11), and
+    # this one had been one since the day it was written.
+    d_ok = True
     for was, txt, erwartet in (("veraltete Zahl faellt", d_gift, 2),
                                ("richtige bleibt frei", d_sauber, 0),
                                ("zurueckgezogene zaehlt nicht", d_zurueck, 0)):
         n = len(done_korpuszahlen(txt, n_b, n_g))
+        d_ok = d_ok and n == erwartet
         print(f"  DONE-Zahlen ({was}): {n}", end="")
         print(" -- ok" if n == erwartet else f" -- GESCHEITERT (erwartet {erwartet})")
 
@@ -654,7 +668,7 @@ Stehengebliebene Zahlen aus P1: 117 Regeln, 187 Terminale (heute 1 / 1)
     for b in r_sauber:
         print(f"     {b}")
 
-    return len(b_gift) >= 5 and not b_sauber and bool(getroffen) and not r_sauber
+    return len(b_gift) >= 5 and not b_sauber and bool(getroffen) and not r_sauber and d_ok
 
 
 def main():

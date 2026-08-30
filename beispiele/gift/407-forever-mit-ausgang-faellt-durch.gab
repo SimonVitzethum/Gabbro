@@ -1,0 +1,43 @@
+-- erwartet: L103
+-- **Die Gegenrichtung zu `beispiele/54-divergenz-leckt-nicht.gab`** (2026-08-30).
+--
+-- Byteweise dieselbe Schleife -- **plus `leave dienst`**. Damit faellt sie durch, `m` lebt
+-- auf diesem Weg weiter, und der andere Zweig verbraucht ihn: das ist ein Leck auf einem
+-- Weg, und `L103` gehoert hierher.
+--
+-- *Ohne diese Datei koennte `m2::endet` jeden `forever` fuer divergent halten und die
+-- Verfeinerung haette eine echte Absage mitgenommen* -- R11: eine Regel, die niemand hat
+-- fallen sehen, ist eine Verzierung.
+module gift {
+
+linear type Marke;
+
+extern fn nimm(m : Marke) effects { consumes m } costs <= 2 ops;
+extern fn tue() effects { pure } costs <= 1 ops;
+extern fn watchdog_schlug_an() -> never effects { diverges };
+extern fn sonde_zeitgeber_tickt() -> bool effects { pure } costs <= 1 ops;
+
+impl fn abschluss(m : Marke, ist_dienst : bool) -> u64
+    effects { consumes m, diverges }
+{
+    if ist_dienst {
+        forever dienst
+            per_pass bounded 16 ops
+            on_exceeded watchdog_schlug_an
+            effects  { pure }
+            progress zeitgeber_tickt
+        {
+            tue();
+            leave dienst;
+        }
+    } else {
+        nimm(m);
+    }
+    return 0;
+}
+
+assume zeitgeber_tickt
+    "Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund."
+    falsifier sonde_zeitgeber_tickt;
+
+}

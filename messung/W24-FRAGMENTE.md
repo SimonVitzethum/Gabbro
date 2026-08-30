@@ -120,10 +120,20 @@ Der Grund steht seit dem 2026-08-26 im Kopf von `messung/fragmente/F06.gab` und 
 korpusseitig: «B12» bindet `elems of` an einen **Index**, der Ausschnitt vom 2026-08-14
 benutzt die Elementlesart, `w` läuft bis 8192 und `MUSTER` ist `0xdead_beef_dead_beef`.
 
-**Was daran neu ist, ist nicht der Fehler, sondern dass ihn kein Werkzeug zeigt.**
-`pruefe-emission.sh` misst genau seine vierundzwanzig Einträge; `cargo test` ruft
-`emittiere` über `beispiele/`, prüft aber weder den erzeugten TEXT noch übersetzt es ihn.
-**Zwischen „emittiert" und „übersetzt" liegt für F06 niemand.**
+**Was daran neu ist, ist nicht der Fehler, sondern wo der Wächter aufhört.** Die Regel
+dafür gibt es seit dem 2026-08-20 und sie ist scharf formuliert — Stufe 9 von
+`pruefe-emission.sh`:
+
+> *JEDE Datei, die durch `emit` kommt, MUSS `cc -Werror` bestehen.*
+
+**Sie läuft über `beispiele/*.gab` und über nichts sonst.** Für die Fragmente gilt nur, was
+in den vierundzwanzig `lauf`-Einträgen einzeln benannt ist, und F06 steht dort nicht;
+`cargo test` ruft `emittiere` über `beispiele/`, prüft aber weder den erzeugten TEXT noch
+übersetzt es ihn. **Zwischen „emittiert" und „übersetzt" liegt für F06 niemand** — nicht,
+weil die Regel fehlt, sondern weil ihre REICHWEITE an `beispiele/` endet.
+
+*Das ist dieselbe Gestalt wie W16, eine Ebene höher: der Wächter misst seinen eigenen
+Ordner und sieht dabei vollständig aus.*
 
 > Und darin steckt der Befund, den F06s eigener Kopf bereits benennt und den niemand gebaut
 > hat: *M1 trägt Bereichstypen und hätte den Vergleich als konstant-wahr erkennen können.
@@ -240,8 +250,12 @@ wenig Arbeit öffnen, und für drei von ihnen wäre die Arbeit gar nicht Gabbros
   — und sie nähme F06 aus der Spalte *„prüft sauber"*, also aus einer Zahl, die niemand
   darum gebeten hat. **Das ist eine Entscheidung und keine Nachlässigkeit;** sie steht hier,
   damit sie jemand treffen kann.
-* **Ein Sammellauf oder ein Wächter „jedes emittierende Fragment übersetzt auch"**. Er wäre
-  heute rot wegen F06, und zwar dauerhaft und korpusseitig — **genau die Bauform, gegen die
-  Posten 2 dieses Auftrags steht.**
+* **Stufe 9 auf `messung/fragmente/` ausgedehnt.** Die Regel steht schon da (§3), nur ihre
+  Reichweite endet an `beispiele/`. Sie zu erweitern hieße heute: **dauerhaft rot wegen
+  F06**, und zwar aus einem Grund, der korpusseitig und eingefroren ist — *genau die
+  Bauform, gegen die der zweite Posten dieses Auftrags steht.* Wer sie erweitert, braucht
+  zuerst die Ausnahmeform, die Stufe 9 schon hat (`ausnahme_grund`, heute leer): **eine
+  benannte Ausnahme mit Grund, die auffällt, sobald sie abläuft.** Das ist eine Entscheidung
+  über den Umfang und keine Zeile Code — sie steht hier, damit sie jemand trifft.
 * **Kein neuer Eintrag in `mutiere-pruefer.py`s Katalog.** Eine Mutation gehört zu einem
   Konstrukt, das gebaut wurde; gebaut wurde ein Wächter, und der trägt seine Sprechprobe.
