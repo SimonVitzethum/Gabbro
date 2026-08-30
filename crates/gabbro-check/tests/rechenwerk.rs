@@ -5374,3 +5374,57 @@ impl fn stufe_eins(p : BootPhase) -> BootPhase
         "ein Geist-`return` gibt nichts zurueck:\n{rumpf}"
     );
 }
+
+// -- `let … else` over a place -----------------------------------------------------------
+
+/// **The source of a `let … else` must not decide whether M1 can see the type** (2026-08-30).
+///
+/// «B14b» (2026-08-17) let the statement unpack a `place` as well as a call. The type
+/// binding stayed behind: the call half asked the callee's signature, the place half wrote
+/// `Typ::Unbekannt` and gave up, though the type stood in the register declaration the whole
+/// time.
+///
+/// **Both functions below carry the same body**, one line apart in what they read from.
+/// Measured on the unchanged checker: 3 expressions and 0 untyped with the call alone, 5
+/// expressions and **1 untyped** once the place twin joins -- and that one untyped name is
+/// what silences `M104` over any arithmetic that follows it.
+///
+/// *The probe reads M1's own instrument.* The pass counts every expression it fails to type,
+/// so an uncovered name shows up as a number and as nothing else -- no refusal ever names it,
+/// which is exactly how the gap survived thirteen days.
+#[test]
+fn ein_let_else_ueber_einem_place_bindet_den_erklaerten_typ() {
+    let quelle = "
+module probe::letsonst {
+
+reason Geraetelug { ZuTief = 1 \"zu tief\" exhaustive }
+
+device Tiefengeraet(basis : u64) at mmio {
+    reg TIEFE : u32 @0x08 class r requires TIEFE <= 8 else Geraetelug::ZuTief
+}
+
+extern fn hol_tiefe() -> u32 or Geraetelug effects { pure } costs <= 1 ops;
+
+impl fn via_ruf() -> u32 or Geraetelug effects { pure } costs <= 8 ops {
+    let t = hol_tiefe() else (e) { return Geraetelug::ZuTief; }
+    return t;
+}
+
+impl fn via_ort(d : ptr<mmio, r> Tiefengeraet) -> u32 or Geraetelug
+    effects { reads d } costs <= 8 ops
+{
+    let t = d.TIEFE else (e) { return Geraetelug::ZuTief; }
+    return t;
+}
+
+}
+";
+    let mut absagen = gabbro_syntax::Absagen::neu("probe.gab");
+    let bericht = gabbro_check::pruefe(&baum(quelle), &mut absagen);
+
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
+    assert_eq!(
+        bericht.m1.unbekannt, 0,
+        "beide Quellen tragen einen erklaerten Typ; ungetypt bleibt keiner"
+    );
+}

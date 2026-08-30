@@ -741,9 +741,36 @@ impl<'a> Pruefer<'a> {
                     .insert(l.name.text.clone(), ziel.unwrap_or(wert));
             }
             StmtArt::LetSonst(l) => {
-                let t = match l.als_ruf() {
-                    Some(r) => self.ruf(r, lage),
-                    None => crate::typen::Typ::Unbekannt,
+                // **A `place` source carries a DECLARED type, and until 2026-08-30 nobody
+                // read it.**
+                //
+                // «B14b» (2026-08-17) let `let … else` unpack a `place` as well as a call.
+                // The type binding never followed: the call half asked the signature, the
+                // place half answered `Unbekannt` outright -- so the bound name had no type,
+                // every later mention of it counted as uncovered, and **`M104` went quiet
+                // exactly where it had a job**.
+                //
+                // > *Measured, same body twice.* `let t = hol_tiefe() else (e) { … }` with
+                // > `return t + 1;` refuses at `M104` (*`u32 + u8 in 1 .. 1` leaves the width
+                // > of the result type*). The same arithmetic over `let t = d.TIEFE else (e)
+                // > { … }` passed with 0 errors and booked one expression as untyped. **One
+                // > overflow caught, one waved through, and the source of the `let` decided
+                // > which.**
+                //
+                // The option gets unpacked, because that is what the statement DOES -- the
+                // same step `match … { Some(i) => … }` takes three hundred lines up. A place
+                // that carries no option (a device register behind `requires … else`) keeps
+                // its own type, and an unreadable place still answers `Unbekannt`: *unknown
+                // falls loud*, as everywhere else here.
+                let t = match &l.quelle {
+                    LetQuelle::Ruf(r) => self.ruf(r, lage),
+                    LetQuelle::Ort(o) => {
+                        let roh = self.u.typ_von_ort(&self.modul, o, &lage.lokal);
+                        match option_nutzlast(&roh) {
+                            Some(nutz) => nutz,
+                            None => roh,
+                        }
+                    }
                 };
                 lage.fakten.retain(|f| !nennt_namen(f, &l.name.text));
                 lage.lokal.insert(l.name.text.clone(), t);

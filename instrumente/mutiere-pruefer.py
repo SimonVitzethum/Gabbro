@@ -3397,6 +3397,22 @@ MUTATIONEN = [
         "am `cc`, und keiner davon im Pruefer sichtbar",
         "code",
     ),
+    Mutation(
+        "let-else-ueber-place-verliert-den-typ",
+        "m1.rs",
+        "                    LetQuelle::Ort(o) => {\n"
+        "                        let roh = self.u.typ_von_ort(&self.modul, o, &lage.lokal);\n"
+        "                        match option_nutzlast(&roh) {\n"
+        "                            Some(nutz) => nutz,\n"
+        "                            None => roh,\n"
+        "                        }\n"
+        "                    }",
+        "                    LetQuelle::Ort(_) => crate::typen::Typ::Unbekannt,",
+        "M104 (Deckung) -- ein `let … else` ueber einem `place` bindet seinen Namen wieder "
+        "ohne Typ. Derselbe Rumpf ueber einem RUF sagt `u32 + u8` ab, ueber einem Register "
+        "geht er durch: die Quelle des `let` entscheidet, ob der Ueberlauf auffaellt, "
+        "«B14b» band den Platz und niemand band seinen Typ",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.
