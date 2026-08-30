@@ -243,6 +243,84 @@ impl fn hochlauf(p : BootPhase) effects { consumes p, writes mmu, writes faeden 
     assert!(vorwaerts < benutzung, "der Tag muss VOR seiner Benutzung stehen:\n{c}");
 }
 
+/// **The FOURTH site of the ghost erasure -- a `let`-bound ghost, named bare** (2026-08-30).
+///
+/// The probe above holds three sites: the type, the signature, the call. `emit.rs` itself
+/// wrote down that a fourth existed and that nothing exercised it -- *"the erasure was built
+/// at three of four sites, and no example has ever tripped the fourth"* -- and the reason it
+/// stayed open is the shape of `geist_wert`: a bare name was a ghost only when a SIGNATURE
+/// declared it. A `let` binding had no answer at all.
+///
+/// Measured against the unchanged emitter, on the F7 boot path written as a body:
+///
+/// ```c
+/// static void strecke(void) {
+///     mmu_an();
+///     return p1;      /* error: `p1` undeclared -- and `return` with a value in `void` */
+/// }
+/// ```
+///
+/// > **This one fails LOUD, and that is worth saying out loud too.** The three sites above
+/// > include two silent forms; this one hands `cc` an undeclared name and dies there. *The
+/// > direction is right and the erasure is still incomplete* -- a generator whose product
+/// > only compiles because no corpus file takes the path is not a generator that works.
+///
+/// The assertions are per BLOCK, not over the whole product: a claim about the entire text
+/// is satisfiable by the writer alone (W16, 2026-08-28).
+#[test]
+fn der_erzeuger_loescht_den_geist_auch_im_return() {
+    let quelle = "module t {
+linear ghost type BootPhase;
+extern fn mmu_an(p : BootPhase) -> BootPhase
+    effects { consumes p, writes mmu } costs <= 4096 ops;
+extern fn caps_an(p : BootPhase) -> BootPhase
+    effects { consumes p, writes caps } costs <= 2048 ops;
+impl fn strecke(p : BootPhase) -> BootPhase
+    effects { consumes p, writes mmu, writes caps } costs <= 8192 ops
+{
+    let p1 = mmu_an(p);
+    return p1;
+}
+impl fn zweig(p : BootPhase, w : u32) -> BootPhase
+    effects { consumes p, writes mmu, writes caps } costs <= 8192 ops
+{
+    let q = caps_an(p);
+    if w > 0 { return q; }
+    return q;
+}
+}";
+    let mut absagen = gabbro_syntax::Absagen::neu("g4.gab");
+    let (baum, _) = gabbro_syntax::lies("g4.gab", quelle);
+    let c = gabbro_check::emit::emittiere(&baum, &mut absagen);
+    assert_eq!(absagen.fehler_zahl(), 0, "{}", absagen.zeige(quelle));
+
+    // **The block of `strecke`, on its own.** The step happens, the binding is gone, and the
+    // `return` carries no value -- the signature has just made the function `void`.
+    let s = bloeck(&c, "static void strecke(void) {");
+    assert!(s.contains("    mmu_an();"), "der Bootschritt muss stattfinden:\n{s}");
+    assert!(!s.contains("p1"), "die Bindung an einen Geist hat keine Entsprechung:\n{s}");
+    assert!(s.contains("    return;"), "ein `return` eines Geistes gibt nichts zurueck:\n{s}");
+
+    // **And the same in a body with two exits**, because one erased `return` proves nothing
+    // about the other: `wert_ctyp` never sees the second, and a fix that only rewrites the
+    // last statement would pass the block above.
+    let z = bloeck(&c, "static void zweig(uint32_t w) {");
+    assert!(z.contains("    caps_an();"), "{z}");
+    assert!(!z.contains(" q"), "keine Bindung, kein Name:\n{z}");
+    assert_eq!(z.matches("return;").count(), 2, "BEIDE Ausgaenge, nicht einer:\n{z}");
+}
+
+/// The lines of one emitted function body, from its opening line to the closing brace at
+/// column zero. **A probe that reads the whole product reads the writer as well** -- and a
+/// generator satisfies a claim over its own entire output without ever emitting the block in
+/// question (W16, 2026-08-28).
+fn bloeck<'a>(c: &'a str, kopf: &str) -> String {
+    let von = c.find(kopf).unwrap_or_else(|| panic!("kein Rumpf `{kopf}` im Erzeugnis:\n{c}"));
+    let rest = &c[von..];
+    let bis = rest.find("\n}").map(|i| i + 2).unwrap_or(rest.len());
+    rest[..bis].to_string()
+}
+
 /// **Der Erzeuger fiel an drei Stellen OFFEN aus — gefunden 2026-08-17 am Korpus.**
 ///
 /// Sein ganzer Entwurf ist *„weigere dich beim Namen, statt etwas Plausibles auszugeben"*, und
@@ -4837,6 +4915,72 @@ fn emittiert_fehlbare_lesung_einmal() {
         "und der Ausgang traegt den erklaerten Grund:\n{c}"
     );
 }
+/// **«B26», the other half: `return e;` -- and it went out the SUCCESS channel**
+/// (2026-08-30).
+///
+/// The probe above writes `return Lug::ZuGross;`, and `beispiele/44` writes it too. Nothing
+/// wrote the shape the `else` clause exists for -- *hand the caller the reason the branch
+/// just bound* -- and three passes were wrong about it at once:
+///
+/// | pass | before | why it was wrong |
+/// |---|---|---|
+/// | `m1.rs` | `M119` -- *"`e` is declared nowhere"* | the type stands in the register's `requires … else` |
+/// | `namen.rs` | `N034` -- *"body never returns a reason"* | it returns one; the binder stands above it |
+/// | `emit.rs` | `*_wert = e; return true;` | **the device lied, and the C reported success** |
+///
+/// > **The third is the one that matters, and the first two were hiding it.** `M119` refused
+/// > the program one pass before the emitter ever saw it, so the miscompile below had a guard
+/// > it never asked for. *An accident that holds is indistinguishable from a rule until it
+/// > stops* -- fixing the binding alone would have removed the guard and shipped the hole.
+///
+/// The C is checked per BLOCK, not over the whole product (W16, 2026-08-28): both enums lower
+/// to an integer type, so `*_wert = e;` compiles under `-Werror` and a claim over the whole
+/// text is satisfied by the writer alone.
+#[test]
+fn fehlbare_lesung_gibt_den_gebundenen_grund_durch_den_fehlerkanal() {
+    let q = "module t {\n\
+             const QMAX : u16 = 64;\n\
+             reason Lug { ZuGross = 1 \"zu gross\" exhaustive }\n\
+             device V(basis : u64) at mmio {\n\
+             reg QS : u16 @0x0c class r requires QS <= QMAX else Lug::ZuGross\n\
+             }\n\
+             impl fn g(d : ptr<mmio, r> V) -> u16 or Lug\n\
+             effects { reads d } costs <= 8 ops\n\
+             { let x = d.QS else (e) { return e; } return x; }\n\
+             }";
+    let (baum, mut a) = gabbro_syntax::lies("p.gab", q);
+    assert_eq!(a.fehler_zahl(), 0, "die Probe selbst parst nicht:\n{}", a.zeige(q));
+
+    // **First: the checker.** `M119` and `N034` both fired here, and each on its own is
+    // enough to keep the file away from the emitter.
+    let mut pa = gabbro_syntax::Absagen::neu("p.gab");
+    let (b2, _) = gabbro_syntax::lies("p.gab", q);
+    let _ = gabbro_check::pruefe(&b2, &mut pa);
+    let kennungen: Vec<&str> = pa.absagen.iter().map(|x| x.code).collect();
+    assert!(!kennungen.iter().any(|k| *k == "M119"), "`e` IST gebunden: {kennungen:?}");
+    assert!(!kennungen.iter().any(|k| *k == "N034"), "`return e;` IST ein Grund: {kennungen:?}");
+
+    // **Second, and this is the silent one: the block.** The reason goes out through
+    // `*_grund` with `false`, and the success channel is not touched on this path.
+    let c = gabbro_check::emit::emittiere(&baum, &mut a);
+    let absagen: Vec<String> = a.absagen.iter().map(|x| x.text.clone()).collect();
+    assert!(absagen.is_empty(), "die fehlbare Lesung senkt ab: {absagen:?}");
+    let g = bloeck(&c, "static bool g(const V *restrict d, uint16_t *_wert, Lug *_grund) {");
+    assert!(g.contains("*_grund = e;"), "der Grund geht durch `*_grund`:\n{g}");
+    assert!(
+        !g.contains("*_wert = e;"),
+        "und NICHT durch `*_wert` -- das meldet Erfolg mit dem Grundcode als Wert:\n{g}"
+    );
+    // The `false` has to sit after the assignment, not somewhere else in the body: `return
+    // true;` still stands below for the success path, and counting either alone proves
+    // nothing about the order.
+    let nach = g.split("*_grund = e;").nth(1).expect("kein Ausgang nach dem Grund");
+    assert!(
+        nach.trim_start().starts_with("return false;"),
+        "der Ausgang meldet MISSERFOLG, unmittelbar danach:\n{g}"
+    );
+}
+
 // ===========================================================================================
 // THE COLLECTING BUCKET -- what `call-not-compositional` really held (2026-08-28, `B1`)
 //

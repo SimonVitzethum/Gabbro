@@ -80,6 +80,25 @@ def texte():
         for m in re.finditer(r'"([A-Z][0-9]{3})"\s*,', q):
             code = m.group(1)
             fenster = q[m.end(): m.end() + 4000]
+            # **The window STOPS at the next refusal, and until 2026-08-30 it did not.**
+            #
+            # 4000 characters is a bound on how far a note can run, not a boundary between
+            # two rules. Where one refusal sat closer than that to the next, the reading ran
+            # straight through and took the neighbour's words as its own.
+            #
+            # > Found by a change that touched neither rule: **thirty-four lines of comment
+            # > inserted between `N029` and `N034` moved `N029` from `tragend` to `unklar`.**
+            # > It had never been classified by its own text -- the word that carried it was
+            # > `promise`, and `promise` stands in a NOTE OF `N034`.
+            #
+            # Measured across the checker: **27 of 131 `tragend` entries were borrowing**
+            # (131 -> 104, `unklar` 58 -> 85). The count did not get worse here; it stopped
+            # being about something else. *A guardian that measures a neighbour looks exactly
+            # as plausible as one that measures its subject* -- W16, and the same class as
+            # the `-a` timestamps in `CLAUDE.md`.
+            naechste = re.search(r'"[A-Z][0-9]{3}"\s*,', fenster)
+            if naechste:
+                fenster = fenster[: naechste.start()]
             # Nur die Zeichenkettenteile -- Bezeichner interessieren nicht.
             # **`re.S` -- und ohne das las die Zaehlung die halben Notizen nicht.**
             #
@@ -167,6 +186,28 @@ def haupt() -> int:
         print(f"   ok -- eine Zusageregel (L101) faellt NICHT ({', '.join(z[:2])})")
     else:
         print(f"   GESCHEITERT -- L101 wird als `{art}` gefuehrt; der Waechter sagt zu jedem ja")
+        fehler = 1
+    # **And the boundary itself, because it was wrong for as long as it was unmeasured.**
+    #
+    # Two refusals in one synthetic file, close together: the first says nothing that either
+    # word list knows, the second carries `promise`. Read without a boundary the first comes
+    # back `tragend` -- *classified by a word its own rule never says.*
+    probe = (
+        'Absage::fehler("X001", s, "this call does not stand in a `let … else`")\n'
+        'Absage::fehler("X002", s, "the channel is a promise with no redeemer")\n'
+    )
+    treffer = []
+    for m in re.finditer(r'"([A-Z][0-9]{3})"\s*,', probe):
+        fenster = probe[m.end(): m.end() + 4000]
+        n = re.search(r'"[A-Z][0-9]{3}"\s*,', fenster)
+        if n:
+            fenster = fenster[: n.start()]
+        stuecke = re.findall(r'"((?:[^"\\]|\\.)*)"', fenster, re.S)
+        treffer.append((m.group(1), einordnen(" ".join(stuecke[:30]).lower())[0]))
+    if treffer == [("X001", "unklar"), ("X002", "tragend")]:
+        print("   ok -- die Fenstergrenze haelt (ein Nachbarwort faerbt nicht nach vorn)")
+    else:
+        print(f"   GESCHEITERT -- die Fenstergrenze laeuft ueber: {treffer}")
         fehler = 1
     if fehler:
         return 1

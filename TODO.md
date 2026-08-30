@@ -455,12 +455,23 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **57 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
+- [ ] **85 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 132 sind tragend, 2 verdächtig — und **57 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 104 sind tragend, 2 verdächtig — und **85 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
+      **Die Zahl sprang am 2026-08-30 von 57 auf 85, und der Sprung ist kein Rückschritt am
+      Prüfer — er ist eine Reparatur am WÄCHTER.** Sein Lesefenster war 4000 Zeichen lang
+      und endete an keiner Regelgrenze; wo zwei Absagen näher beieinander standen, las die
+      erste die Wörter der zweiten als ihre eigenen. *Aufgefallen an einer Änderung, die
+      keine der beiden Regeln anfasste:* vierunddreißig eingefügte Kommentarzeilen zwischen
+      `N029` und `N034` schoben `N029` von „tragend" nach „unklar" — es war nie durch seinen
+      eigenen Text eingeordnet, sondern durch `promise` aus einer NOTIZ VON `N034`.
+      **27 der 131 „tragenden" hingen so** (131 → 104). Die Fenstergrenze steht jetzt an der
+      nächsten Kennung, und eine Sprechprobe hält sie. *Dieselbe Klasse wie W16: ein Wächter,
+      der den Nachbarn misst, sieht genauso plausibel aus wie einer, der seinen Gegenstand
+      misst.*
       *Wer eine Absage liest und daraus nicht erkennt, worauf sie ruht, kann auch nicht
       prüfen, ob sie weit genug reicht.* Das ist der größere Posten, nicht die zwei.
       **Berichtigt 2026-08-20: hier stand 96, der Befehl sagt 98** — die zwei kamen mit
@@ -720,10 +731,16 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **342 von 342 Ankern** greifen (`--anker`, 2026-08-30) — die
-      acht des Rumpfkanals kamen abends dazu, der `let`-gebundene Geist im Erzeuger
-      (`emit.rs::geist_wert`) als 341 und das `let … else` über einem `place`
-      (`m1.rs`) als 342, beide am 2026-08-30. Drei bewachen den
+      fällt. Mutationskatalog: **345 von 345 Ankern** greifen (`--anker`, 2026-08-30) — die
+      acht des Rumpfkanals kamen am 28. abends dazu, und am 30. fünf weitere aus drei Ketten:
+      der **vierte Ort der Geistlöschung** (ein `let`-gebundener Geist, blank genannt), das
+      `let … else` über einem `place` (`m1.rs`), und die drei Hälften von `return e;` am
+      fehlbaren Register — Bindung (`M1`), Anerkennung (`N034`) und der Kanal, durch den der
+      Grund hinausgeht (`emit.rs`).
+      *Zwei Ketten haben den vierten Ort UNABHÄNGIG gefunden und beide repariert; behalten ist
+      die gebaute und am `cc` in beide Richtungen nachgewiesene Fassung, die zweite samt ihrer
+      Mutation entfernt.* **Zwei Register über derselben Sache sind W7, auch wenn beide
+      stimmen.** Drei bewachen den
       Rufsammeltopf (`B1`, `messung/RUF-TOR.md`): der Optionswert, der wieder als Ruf gelesen
       wird, der Sammeltopf, der sich wieder schließt, und der Verbundkonstruktor, der wieder
       Ruf heißt. Zwei die Aussetzung (`B2`, `messung/AUSSETZUNG.md`): `breaking`, das wieder
