@@ -137,9 +137,9 @@ pub struct Umgebung {
     /// Until 2026-08-31 the name resolver asked `walkschranken` whether a `walk` type
     /// EXISTS, and `walkschranken` answers a different question: *how large is its leaf
     /// set.* Three ordinary declarations have no entry there -- `levels 0`, `node : [Pte; 0]`
-    /// and a leaf count past `u128` (`512^15`) -- and all three made the checker say
-    /// **`N040`: `W` names no type** at a declaration standing three lines above, then send
-    /// the reader after a `count` on a table that does not exist.
+    /// and a leaf count past `u128` (`512^15`) -- and all three made the rule that lives in
+    /// `namen.rs` say **`N040`: `W` names no type** at a declaration standing three lines
+    /// above, then send the reader after a `count` on a table that does not exist.
     ///
     /// *Two questions, one map* (W7), and the answer to the wrong one was a refusal that
     /// named the wrong thing -- the `W16` shape: an instrument measuring something other
