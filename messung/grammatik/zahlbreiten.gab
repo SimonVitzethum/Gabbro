@@ -1,0 +1,51 @@
+-- **Aus der GRAMMATIK geschrieben, nicht aus einer Absicht.**
+--
+-- `pruefe-grammatiktafel.py` nennt die Terminale, die `SYNTAX.md` erlaubt und die KEIN
+-- Programm des Baumes je geschrieben hat. Diese Datei schliesst die Zahlbreiten:
+-- `i8`, `i16`, `i32`, `i64`, `f32` und das `merge and` eines `accumulates`.
+--
+-- *Was 0 Fundstellen hat, ist nicht geprueft, sondern unerreichbar* -- und eine Absenkung,
+-- die nie gelaufen ist, ist eine Vermutung mit einem Namen.
+
+module grammatik::zahlbreiten {
+
+const NKERNE : u32 = 4;
+
+type Klein   = i8  in -128 .. 127;
+type Mittel  = i16 in -1000 .. 1000;
+type Gross   = i32 in -100000 .. 100000;
+type Riesig  = i64 in -1000000 .. 1000000;
+type Bruch   = f32 in 0.0 .. 1.0;
+
+-- `merge and` -- die fuenfte Faltung, und die einzige, die kein Programm je geschrieben hat.
+accumulates alle_gesund : u32 merge and per cpu NKERNE;
+
+impl fn summe(a : Klein, b : Mittel) -> Gross
+    effects { pure }
+    costs   <= 4 ops
+{
+    return a + b;
+}
+
+impl fn weiten(g : Gross) -> Riesig
+    effects { pure }
+    costs   <= 2 ops
+{
+    return g;
+}
+
+impl fn haelfte(x : Bruch) -> Bruch
+    effects { pure }
+    costs   <= 4 ops
+{
+    return x * 0.5;
+}
+
+impl fn melden(m : u32)
+    effects { writes alle_gesund }
+    costs   <= 2 ops
+{
+    alle_gesund = m;
+}
+
+}

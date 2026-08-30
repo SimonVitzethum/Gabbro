@@ -1542,12 +1542,18 @@ echo "  ($n_emit_b aus beispiele/, $n_emit_m aus messung/ -- ZWEI Ratschen, nich
 # senkt seit diesem Tag ab -- die Weigerung stand auf *„emitting it would drop the region"*,
 # und `gabbro pflichten` bucht die Erhaltungspflicht laengst (`messung/ZWEI-ABSAGEN.md`).
 MARKE_EMIT=54
-# **19 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
-# F10) plus drei W24-Proben dieses Tages (`messung/proben/`), 5 ABI-Proben, 2 Caprock,
-# Grenze, Netz, Treiber.
+# **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
+# F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
+# Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
 # `F06` ist die Datei, die die Ausdehnung ueberhaupt ausgeloest hat: sie emittierte und
 # uebersetzte NICHT, und keine Stufe hat sie je angesehen.
-MARKE_EMIT_M=19
+#
+# **19 -> 22 am selben Tag, und der Zuwachs ist der Ertrag von `pruefe-grammatiktafel.py`:**
+# die zwei `messung/grammatik/`-Dateien schliessen NEUN Terminale, die die Grammatik erlaubt
+# und die kein Programm des Baumes je geschrieben hatte -- `i8`, `i16`, `i32`, `i64`, `f32`,
+# `and`, `port`, `rc`, `seq`. *Was 0 Fundstellen hat, ist nicht geprueft, sondern
+# unerreichbar* -- und keine dieser neun Absenkungen war je gelaufen.
+MARKE_EMIT_M=22
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then

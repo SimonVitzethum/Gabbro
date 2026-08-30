@@ -61,6 +61,10 @@ W = pathlib.Path(__file__).resolve().parent.parent
 EMIT = W / "crates" / "gabbro-check" / "src" / "emit.rs"
 ZEICHEN = re.compile(r"'(?:\\.|[^\\'])'")
 KOPF = re.compile(r"^(Fehler|Warnung|error|warning):\s*\[([A-Z][0-9]{3})\]\s*(\S+?):(\d+):(\d+):\s*(.*)$")
+# **One deadline per file, and an expiry is an ABORT and not an empty result.**
+# A hang reads as "still running", never as a finding -- on 2026-08-20 twenty-one runs of
+# `pruefe-emission.sh` stood side by side for that reason (W17).
+FRIST = 120
 
 
 def ohne_kommentare(quelle):
@@ -330,16 +334,28 @@ def korpuslauf(wurzel=None, gabbro=None):
     yields both halves. Zero checker errors beside a `C001` is a measured `UNGEDECKT`.
     """
     wurzel = wurzel or W
-    gabbro = gabbro or (wurzel / "target" / "release" / "gabbro")
-    if not pathlib.Path(gabbro).exists():
-        gabbro = wurzel / "target" / "debug" / "gabbro"
-    if not pathlib.Path(gabbro).exists():
-        return None
+    befehl = None
+    for k in (gabbro, wurzel / "target" / "release" / "gabbro", wurzel / "target" / "debug" / "gabbro"):
+        if k is not None and pathlib.Path(k).exists():
+            befehl = [str(k)]
+            break
+    # **A missing binary is not a missing measurement.** `cargo run` builds it -- slower, and
+    # it never turns "nothing was measured" into a green run (W1). The same fallback
+    # `zaehle-fragmente.py` carries.
+    if befehl is None:
+        befehl = ["cargo", "run", "-q", "--bin", "gabbro", "--"]
     aus = {}
     for d in sorted(pathlib.Path(wurzel).rglob("*.gab")):
         if "/target/" in str(d):
             continue
-        r = subprocess.run([str(gabbro), "emit", str(d)], capture_output=True, text=True)
+        try:
+            r = subprocess.run(befehl + ["emit", str(d)], cwd=wurzel,
+                               capture_output=True, text=True, timeout=FRIST)
+        except subprocess.TimeoutExpired:
+            raise SystemExit(
+                f"ABBRUCH: `gabbro emit {d}` ueberschritt {FRIST} s -- es wurde NICHTS "
+                "gemessen, und eine halbe Tafel ist keine."
+            )
         codes, c001 = [], []
         for zeile in r.stderr.split("\n"):
             k = KOPF.match(zeile)
@@ -363,7 +379,50 @@ def zustaende(gemessen):
     return karte
 
 
+def sprechprobe():
+    """**Der Auszaehler an sich selbst -- in beide Richtungen.**
+
+    Er hat sich beim Bau dreimal geirrt, und jedes Mal sah die Zahl plausibel aus: ein
+    Anfuehrungszeichen in einem `//`-Kommentar, das Zeichenliteral `'"'`, und `match`-Zweige,
+    die absenken statt abzusagen. *Ein Zaehler ohne Probe ist eine Behauptung.*
+
+    Gemessen wird an einem ERFUNDENEN Quelltext, nicht am echten -- sonst wandert die Probe
+    mit ihrem Gegenstand.
+    """
+    gift = (
+        'fn f() {\n'
+        '    // ein Kommentar mit einem " darin, und SPRACHE.md sagt "so"\n'
+        '    let c = \'"\';\n'
+        '    weigere(absagen, s.span, "zzsprechprobe eine erfundene Form");\n'
+        '    let grund = match &x.d {\n'
+        '        D::A(o) => { senke(o); return; }\n'
+        '        D::B(_) => "zzzweig ein Textzweig",\n'
+        '    };\n'
+        '    weigere(absagen, s.span, grund);\n'
+        '}\n'
+    )
+    gefunden = {t for _, t, _ in formen(gift)}
+    proben = [
+        ("eine Absage wird gefunden", "zzsprechprobe eine erfundene Form" in gefunden),
+        ("ein TEXTZWEIG hinter einem `match` zaehlt einzeln", "zzzweig ein Textzweig" in gefunden),
+        ("ein Zweig, der ABSENKT, zaehlt NICHT", len(gefunden) == 2),
+        ("ein Quelltext ohne Weigerung ergibt null", not formen("fn f() { g(); }\n")),
+    ]
+    return proben
+
+
 def main():
+    # `--json` yields MACHINE-READABLE output; the probe then belongs on the error channel,
+    # or it stands in the middle of the document somebody is reading in.
+    kanal = sys.stderr if "--json" in sys.argv else sys.stdout
+    print("== Sprechprobe des Auszaehlers ==", file=kanal)
+    proben = sprechprobe()
+    for was, ok in proben:
+        print(f"  {'ok         ' if ok else 'GESCHEITERT'}  {was}", file=kanal)
+    if not all(ok for _, ok in proben):
+        print("\n! Der Auszaehler misst nicht, was er behauptet. ABBRUCH.", file=kanal)
+        return 1
+    print(file=kanal)
     alle = formen()
     texte = sorted({t for _, t, _ in alle})
     gemessen = korpuslauf() if "--korpus" in sys.argv else None

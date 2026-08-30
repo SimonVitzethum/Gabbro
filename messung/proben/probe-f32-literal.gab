@@ -1,0 +1,24 @@
+-- W24-Vorlauf: **welche BREITE hat ein Gleitkommaliteral im erzeugten C?**
+--
+-- `gleitkommatext` (emit.rs) schreibt `f64::from_bits(bits)` hin, ohne Suffix. In C ist ein
+-- Literal ohne `f` ein `double` -- und damit rechnet `x * 0.1` bei `x : f32` in DOUBLE und
+-- rundet erst bei der Rueckgabe.
+--
+-- Gemessen 2026-08-31 in reinem C, 200 000 Werte:
+--
+--     (float)(v * 0.1)  !=  v * 0.1f     in 39 974 von 200 000 Faellen
+--
+-- Diese Datei ist die Messung an der Gabbro-Seite: was steht im Erzeugnis?
+
+module probe::f32literal {
+
+type Bruch = f32 in 0.0 .. 10.0;
+
+impl fn zehntel(x : Bruch) -> Bruch
+    effects { pure }
+    costs   <= 4 ops
+{
+    return x * 0.1 rounded;
+}
+
+}

@@ -4528,3 +4528,31 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       gleichzeitig: `let` ohne auflösbaren Typ und `match` über einen Ruf, den diese Einheit
       nicht deklariert (`messung/ABSAGEFORMEN.md` U10/U11). *Zwei `UNGEDECKT`-Zellen mit
       einer Wurzel* — `messung/fragmente/F05.gab` ist die Fundstelle.
+
+- [ ] **Ein Gleitkommaliteral in einem `f32`-Ausdruck wird ein `double`, und das C rechnet
+      etwas anderes als das Programm.** `gleitkommatext` (`emit.rs`) schreibt
+      `f64::from_bits(bits)` ohne Suffix; in C ist ein Literal ohne `f` ein `double`, also
+      wird `x * 0.1` bei `x : f32` in doppelter Breite gerechnet und erst bei der Rückgabe
+      gerundet. **Gemessen 2026-08-31 in reinem C über 200 000 Werten:
+      `(float)(v * 0.1) != v * 0.1f` in 39 974 Fällen.** Der Prüfer nimmt das Programm mit
+      100 % Typdeckung an (`messung/proben/probe-f32-literal.gab`). *Welche Breite ein
+      Literal in einem `f32`-Ausdruck hat, ist eine Aussage über das Zahlmodell und keine
+      über den Erzeuger* — `dokumente/MEMO-GLEITKOMMA.md` führt die Doppelrundung schon als
+      Landmine. Gefunden von `pruefe-grammatiktafel.py`: `f32` stand in der Grammatik und in
+      keinem Programm.
+
+- [ ] **Der Adressraum eines Zeigers verschwindet in der Absenkung.** `ctyp` liest
+      `TypExpr::Zeiger(z).raum` überhaupt nicht: `ptr<port, r> T` und `ptr<normal, r> T`
+      werden beide `const T *`. Bei `mmio` fängt das der Geräteweg auf (`volatile` an
+      `basis + Versatz`); bei `port` fängt es nichts auf, und auf x86_64 ist Portraum kein
+      Speicher, sondern `in`/`out`. Gemessen an `messung/grammatik/geraeteworte.gab`, der
+      ersten Datei des Baumes mit einem `port`-Zeiger. **Entweder senkt der Raum ab, oder er
+      wird benannt abgesagt** — was nicht geht, ist ein Wort der Grammatik, das im Erzeugnis
+      spurlos verschwindet.
+
+- [ ] **Vier Terminale sind `UNGEDECKT`: `chain`, `queue`, `state`, `threads`.**
+      `pruefe-grammatiktafel.py` meldet sie rot, mit Adresse. Der Prüfer nimmt jede der vier
+      Formen an, und erst der Erzeuger sagt ab — genau der Zustand, den
+      `PLAN-VOLLSTAENDIGKEIT.md` verbietet. Der Ausgang steht dort: *im PRÜFER absagen, dann
+      wandert die Zelle nach `vom Pruefer`.* **Das ist eine Entscheidung über die SPRACHE**
+      (vier Formen fallen aus Gabbro heraus) und gehört der Bahn, die am Prüfer arbeitet.
