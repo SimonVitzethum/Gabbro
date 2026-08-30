@@ -374,9 +374,10 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 115 Dateien, und keiner davon ist eine Teilmengenbeziehung.
-      *~~114~~ am 2026-08-30 ein FÜNFTES Mal nachgezogen — `messung/ERGEBNIS-ZWEI-NAMEN.md`
-      kam dazu. Fünfmal an einem Tag, und jedes Mal, weil ein Bericht geschrieben wurde: die
+      heute **12 Widerrufe** über 116 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *~~114~~ ~~115~~ am 2026-08-30 ein FÜNFTES und SECHSTES Mal nachgezogen —
+      `messung/ERGEBNIS-ZWEI-NAMEN.md` und `messung/RUMPFKANAL-ABSAGEN.md` kamen dazu.
+      Sechsmal an einem Tag, und jedes Mal, weil ein Bericht geschrieben wurde: die
       Zahl misst den Ordner, nicht die Arbeit.*
       *~~109~~ am 2026-08-30 VIERMAL nachgezogen, und jedes Mal beim Zusammenführen: die
       Berichte kamen aus drei Ketten gleichzeitig, und keine Kette konnte die Summe kennen.

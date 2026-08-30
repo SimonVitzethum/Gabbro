@@ -91,8 +91,38 @@ GRUENDE = [
     ("constructed-value", "a record, a `tagged` or a device handle -- no value form"),
 ]
 
+# The kinds, as `pflichten.rs::kurz` writes them. **In FULL, for the same reason `GRUENDE`
+# stands in full**: a kind this tool does not know would land in no column.
+ARTEN = [
+    ("V", "a precondition at a CALL SITE"),
+    ("D", "a device promise at a register"),
+    ("F", "a foreign duty -- there is no body"),
+    ("E", "preservation of a table invariant"),
+    ("S", "an invariant across the passes of a loop"),
+    ("N", "a POSTCONDITION"),
+    ("R", "a REFINEMENT of a specification"),
+]
+
 KOPF = re.compile(r"@duty 1  (\S+)  total (\d+)  goals (\d+)  refused (\d+)")
 ZEILE = re.compile(r"^  (\S+) \((\d+)\): ")
+
+# **The KIND of each refused obligation, off the line the emitter already writes.**
+#
+#     duty_1  N  lies :: ensures #1
+#
+# `pflichten.rs` prints one letter per kind: `V` precondition at a call site, `D` device
+# promise, `F` foreign duty, `E` preservation, `S` loop invariant, `N` postcondition,
+# `R` refinement. **Only `N` and `R` are ever TRANSLATED** -- `lean.rs::verdicts` refuses the
+# other five by kind, in a `match p.art`, before an expression is looked at.
+#
+# *That distinction is the one the reason column cannot make.* A refusal booked as `loop` or
+# `table-invariant` names a Gabbro construct and reads like a missing form; five sixths of
+# them were never about a form at all, but about the one GOAL SHAPE this channel emits --
+# "the body runs, and the postcondition holds". Measured 2026-08-30: 60 of 66.
+DETAIL = re.compile(r"^    duty_\d+\s+([A-Z])\s")
+
+# The kinds this channel ATTEMPTS. Everything else is refused by kind.
+UEBERSETZT = {"N", "R"}
 
 
 def lies_kopf(text):
@@ -135,6 +165,7 @@ def main() -> int:
     gesamt = ziele = abgesagt = 0
     ohne_register = 0
     je_grund: collections.Counter = collections.Counter()
+    je_art: collections.Counter = collections.Counter()
     tafel = []
     for f in dateien:
         rel = str(pathlib.Path(f).relative_to(W))
@@ -175,6 +206,10 @@ def main() -> int:
             print(f"ABORT: {rel} -- the reasons count {summe}, refused are {a}.")
             return 1
         je_grund.update(hier)
+        for zeile in lauf.stdout.splitlines():
+            d = DETAIL.match(zeile)
+            if d:
+                je_art[d.group(1)] += 1
         if z or a:
             tafel.append((rel, g, z, a))
 
@@ -196,6 +231,29 @@ def main() -> int:
     print()
     for tag, satz in GRUENDE:
         print(f"   {tag:<24}{je_grund[tag]:>4}   {satz}")
+    # **The kind letters must add up to the refusals too.** Same rule as the reasons: a
+    # detail line this tool cannot parse would silently shrink a column, and a column that
+    # is short by three looks exactly like a channel that refuses three fewer.
+    if sum(je_art.values()) != abgesagt:
+        print(f"ABORT: the kinds count {sum(je_art.values())}, refused are {abgesagt}.")
+        return 1
+
+    print()
+    print("-- Refused BY KIND, before an expression is looked at --")
+    print()
+    nach_art = sum(je_art[k] for k in je_art if k not in UEBERSETZT)
+    for tag, satz in ARTEN:
+        marke = "translated" if tag in UEBERSETZT else "by kind"
+        print(f"   {tag}  {je_art[tag]:>4}   {satz:<44} {marke}")
+    print()
+    print(
+        f"   {nach_art} of {abgesagt} refusals never reached a translation. The reason beside"
+    )
+    print("   them names a Gabbro construct and reads like a missing form; what it really")
+    print("   names is the one GOAL SHAPE this channel emits -- the body runs, and the")
+    print("   postcondition holds. **The coverage over what it ATTEMPTS is the other**")
+    print(f"   number: {ziele} of {ziele + abgesagt - nach_art}.")
+
     print()
     print(
         f"== BODY CHANNEL: {gesamt} obligations, {ziele} goals, {abgesagt} refused "

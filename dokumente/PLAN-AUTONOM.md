@@ -367,7 +367,7 @@ dieser Sorte sich als Berichtigungen erwiesen haben.
 
 | | |
 |---|---|
-| **«B6»** | `result` in `ensures`. `old(place)` gibt es, ein `result` nicht. Der Rumpfkanal führt `result-in-ensures` als eigene Absage mit dem Vermerk *„ein Tor entfernt, nicht weit"* |
+| **«B6»** | ~~`result` in `ensures`. `old(place)` gibt es, ein `result` nicht. Der Rumpfkanal führt `result-in-ensures` als eigene Absage mit dem Vermerk *„ein Tor entfernt, nicht weit"*~~ — **GESCHLOSSEN.** Das Tor ist am 2026-08-28 gebaut (`bindLocal … "result" v`), und am 2026-08-30 ist der Name nachgezogen: was noch absagt, ist `result` im **Rumpf** und heißt `result-in-body` (`messung/ERGEBNIS-ZWEI-NAMEN.md`) |
 | **«B14»** | `option` steht nur im `slottype`, nicht im `typeexpr`. *„nie gelesen" von „null" zu unterscheiden* ist genau die Lesart, gegen die zwei Fragmente geschrieben sind |
 | **«B12»** | keine Zahlbereichsdomäne; der Ersatz `elems of` hat zwei Lesarten und die Grammatik entscheidet keine. **Achtung: als *entschieden* gebucht am 2026-08-20** — prüfe zuerst, ob die Zeile noch stimmt |
 | **«B31»** | `old` hängt unter `atompred`, nicht unter `primary`. Keine Differenzaussage schreibbar — *und das trifft jedes „nachher gegen vorher"* |

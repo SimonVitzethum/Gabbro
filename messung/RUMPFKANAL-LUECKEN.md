@@ -91,6 +91,12 @@ gabbro pflichten --lean r.gab
 häufigen Fall, nicht den vorliegenden* — ein Leser des Zeugnisses sucht an der falschen Stelle.
 Kein Bau, eine Zeile; steht in `TODO.md`.
 
+> **REPARIERT noch am selben Tag, und der Nebenbefund war größer als er aussah**
+> (`messung/ERGEBNIS-ZWEI-NAMEN.md`). Der Rumpffall heißt seit dem 2026-08-30
+> **`result-in-body`**; der Erklärtext oben — ~~*„one gate away, not far"*~~ — beschrieb
+> weder ihn noch den anderen Fall, sondern einen dritten, **dessen Tor seit dem 28. offen
+> steht**. Der Zeilenblock hier bleibt so stehen, wie er gemessen wurde.
+
 ---
 
 ## 4. Die dritte — **eine ungültige Mutation ist eine geschrumpfte Grundgesamtheit**

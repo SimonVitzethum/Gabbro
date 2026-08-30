@@ -69,7 +69,11 @@ hingeschrieben, was sie ist, und nicht als das, was fehlt.*
 
 > **Eine Invariante ist eine Beweispflicht, keine Verzierung** — und das misst sich: das
 > Pflichtenregister wächst von **70 auf 74**, weil jede geschriebene Invariante hergestellt
-> und erhalten werden muss. *Wer Invarianten schreibt, um eine Absage loszuwerden, hat sich
+> und erhalten werden muss.
+>
+> *~~74~~ nachgezogen am 2026-08-30: das Register steht bei **75**, und der Zuwachs dieses
+> Schritts ist darin unverändert enthalten — die fünf `S`-Pflichten sagen weiter mit
+> `loop` ab (`messung/RUMPFKANAL-ABSAGEN.md` §2).* *Wer Invarianten schreibt, um eine Absage loszuwerden, hat sich
 > vier neue Pflichten gekauft.*
 
 ---

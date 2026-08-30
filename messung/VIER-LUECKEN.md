@@ -82,6 +82,12 @@ ssh ki-pc-fisch-101 'cd gabbro-B && ./target/debug/gabbro pflichten --lean w24-b
 #   result-in-ensures (1): `result` in an `ensures` -- one gate away, not far
 ```
 
+> **Diese zweite Zeile gibt es seit dem 2026-08-30 nicht mehr**, und zwar in beide
+> Richtungen: `result` in einem `ensures` **erzeugt heute ein Ziel** (das Tor fiel am 28.),
+> und was danach noch unter dem Namen absagte, war `result` im **Rumpf** und heißt jetzt
+> `result-in-body`. ~~`result-in-ensures (1)`~~ — die Messung oben steht, wie sie am
+> 2026-08-28 gemacht wurde. *Siehe `messung/ERGEBNIS-ZWEI-NAMEN.md`.*
+
 **«B14» ist auch im Modell fertig** — vier Rümpfe, null Absagen. **«B6» und «B31» sind es
 nicht**, und die beiden haben verschiedene Preise.
 
