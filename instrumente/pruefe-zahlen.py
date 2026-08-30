@@ -593,6 +593,56 @@ EINTRAEGE = [
         r"^\s+H\s+(\d+)\s*$",
         "H im «NL»-Kasten",
     ),
+    # **The two summary tables of `PFLICHTEN.md`** -- new on 2026-08-30, and the occasion is
+    # written in the file itself: the column table added up to 173 K / 65 L, the row beneath
+    # it read 171 / 67, and BOTH make 238. *A split whose total matches is not recomputed* --
+    # it stood for sixteen days. The recount found the cause one level down: F4 has 31 rows,
+    # not 30, so the true split is 173 / 66 over 239.
+    #
+    # **Six entries for six numbers, not one for the table.** Two tables over the same thing
+    # are W7 -- while both stand, every cell gets its own command.
+    (
+        "dokumente/PFLICHTEN.md",
+        r"\| \*\*Obligations in total\*\* \|[^|]*?\*\*(\d+)\*\* \|",
+        ["./instrumente/zaehle-pflichten.py", "--spalten"],
+        r"^  insgesamt\s+(\d+) =",
+        "Pflichten insgesamt -- die Tafel `The totals`",
+    ),
+    (
+        "dokumente/PFLICHTEN.md",
+        r"\| \*\*Plumbing \(K\)\*\* \|[^|]*?\*\*(\d+)\*\* \|",
+        ["./instrumente/zaehle-pflichten.py", "--spalten"],
+        r"^  insgesamt\s+\d+ =\s+(\d+) K",
+        "Klempnereipflichten (K) -- die Tafel `The totals`",
+    ),
+    (
+        "dokumente/PFLICHTEN.md",
+        r"\| \*\*Logic \(L\)\*\* \|[^|]*?\*\*(\d+)\*\* \|",
+        ["./instrumente/zaehle-pflichten.py", "--spalten"],
+        r"^  insgesamt\s+\d+ =\s+\d+ K \+\s+(\d+) L",
+        "Logikpflichten (L) -- die Tafel `The totals`",
+    ),
+    (
+        "dokumente/PFLICHTEN.md",
+        r"(?m)^\| \|[^|]*?\*\*(\d+)\*\* \|[^|]*\|[^|]*\|$",
+        ["./instrumente/zaehle-pflichten.py", "--spalten"],
+        r"^  insgesamt\s+(\d+) =",
+        "Pflichten insgesamt -- die Spaltentafel je Fragment",
+    ),
+    (
+        "dokumente/PFLICHTEN.md",
+        r"(?m)^\| \|[^|]*\|[^|]*?\*\*(\d+)\*\* \|[^|]*\|$",
+        ["./instrumente/zaehle-pflichten.py", "--spalten"],
+        r"^  insgesamt\s+\d+ =\s+(\d+) K",
+        "Klempnereipflichten (K) -- die Spaltentafel je Fragment",
+    ),
+    (
+        "dokumente/PFLICHTEN.md",
+        r"(?m)^\| \|[^|]*\|[^|]*\|[^|]*?\*\*(\d+)\*\* \|$",
+        ["./instrumente/zaehle-pflichten.py", "--spalten"],
+        r"^  insgesamt\s+\d+ =\s+\d+ K \+\s+(\d+) L",
+        "Logikpflichten (L) -- die Spaltentafel je Fragment",
+    ),
 ]
 
 # **Die Reichweite.** Eine fettgedruckte Zahl in einer Tabellenzelle ist die Form, in der

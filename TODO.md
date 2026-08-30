@@ -126,7 +126,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. **64 Kennzahlen mit Befehl** *(Stand 2026-08-21; 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ **70 Kennzahlen mit Befehl** *(Stand 2026-08-30; 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -251,15 +251,21 @@ darunter.
       *(2026-08-20)*. **Beide Spalten sind gestrichen** — sie waren ein drittes Register neben
       dem Handgang und dem Befehl. ~~Und die Postenliste darunter war das VIERTE~~ *(gestrichen
       2026-08-20 nachmittags: Überschrift 15, Spaltensumme 17, Befehl 12).*
-      **Was offen bleibt, ist der Rest der Tafel:** `total`, `K` und `L` (238 / 171 / 67)
-      kommen aus dem Handgang, und der ist eine **Auszählung ohne Befehl** — `zaehle-pflichten.py`
-      leitet heute nur die *hängenden* ab, nicht die Grundgesamtheit.
-      **Woran es hängt, in einem Satz:** die drei Zahlen entstehen beim LESEN der Fragmente,
-      und ihre Quelle ist eine Tabelle in `PFLICHTEN.md`, deren Zeilen ein Mensch geschrieben
-      hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
-      und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
-      **`pruefe-zahlen.py` führt heute 64 Kennzahlen mit Befehl** und zählt daneben
-      **154 fettgedruckte Zahlen in Tabellenzellen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
+      ~~**Was offen bleibt, ist der Rest der Tafel:** `total`, `K` und `L` (238 / 171 / 67)
+      kommen aus dem Handgang, und der ist eine **Auszählung ohne Befehl**~~ — **GEBAUT am
+      2026-08-30, und der Bau hat die drei Zahlen gleich WIDERLEGT.** Der Vorschlag dieses
+      Punktes stand hier wörtlich: *„ein Befehl müsste die Klassenspalte `K`/`L` je Zeile
+      auszählen — das ginge, und es ist die nächste Erweiterung von `zaehle-pflichten.py`"*.
+      Er ist es geworden: **`./instrumente/zaehle-pflichten.py --spalten`** zählt sie, mit
+      zwei Sprechproben (eine erfundene `L`-Zeile hebt `L`; eine Zelle mit maskierter Pipe
+      zählt MIT — ohne diese zweite Probe misst der Zähler eine geschrumpfte Grundgesamtheit).
+      **Das Ergebnis ist 239 / 173 / 66, und nicht eine der drei gebuchten Zahlen stimmte.**
+      Die Spaltentafel summierte sich zu 173 / 65, die Zeile darunter las 171 / 67, und beide
+      ergaben 238 — *eine Aufteilung, deren Summe stimmt, wird nicht nachgerechnet.* Eine
+      Ebene tiefer lag die Ursache: **F4 hat 31 Zeilen, nicht 30.** Alle sechs Zellen der
+      beiden Tafeln stehen jetzt im Register.
+      **`pruefe-zahlen.py` führt heute 70 Kennzahlen mit Befehl** und zählt daneben
+      **148 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
 

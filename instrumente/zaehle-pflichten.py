@@ -226,6 +226,102 @@ def abgesenkt(quelle=None):
     return {f"F{m}" for m in re.findall(r'^lauf "fragment(\d+)"', quelle, re.M)}
 
 
+# **The K/L split, DERIVED instead of carried forward** (2026-08-30).
+#
+# `PFLICHTEN.md` closes with two summary tables, and on 2026-08-30 both were wrong about the
+# same thing. The column table listed eleven fragments; its own `K` column adds up to 173 and
+# its `L` column to 65, and the total row beneath it read **171 / 67**. *Both readings sum to
+# 238, and that is exactly why it stood: a split whose total matches is not recomputed.*
+#
+# One level deeper the count found the cause -- **F4 has 31 rows, not 30**: 24 `K` and seven
+# `L`, while its section header carried six. So neither pair booked so far was the object.
+#
+# > **The split is now read off the rows.** Whoever adds an obligation moves it; whoever
+# > reclassifies one moves it. *A number nobody has to keep cannot go stale.*
+#
+# The splitter is the load-bearing part. A markdown row may carry an ESCAPED pipe inside a
+# cell (`F2`:498 writes `\|\|` for a disjunction), and a naive `split("|")` turns that row
+# into nine cells and drops it. **A counter that silently skips a row reports a smaller
+# population, not an error** -- the same class as the invalid mutation of 2026-08-30.
+def _zellen(z):
+    """Split a markdown row on UNESCAPED pipes only."""
+    out, buf, i = [], "", 0
+    while i < len(z):
+        if z[i] == "\\" and i + 1 < len(z) and z[i + 1] == "|":
+            buf += "|"
+            i += 2
+            continue
+        if z[i] == "|":
+            out.append(buf)
+            buf = ""
+            i += 1
+            continue
+        buf += z[i]
+        i += 1
+    out.append(buf)
+    return [c.strip() for c in out]
+
+
+def spalten(probe=None, still=False):
+    """**Die Spalten des Handgangs -- je Fragment, aus den ZEILEN gezaehlt.**
+
+    A row counts when its third column is `K` or `L` after the markup is stripped. **A
+    struck-through class counts too** -- `~~K~~ **zu**` is a CLOSED obligation, not a
+    removed one, and the summary tables have always counted it. *That is the opposite rule
+    from `gap:`, and on purpose: a withdrawn gap is no obligation, a discharged obligation
+    still is one.*
+    """
+    import re
+    quelle = Path(__file__).resolve().parent.parent / "dokumente" / "PFLICHTEN.md"
+    text = quelle.read_text(encoding="utf-8")
+    if probe is not None:
+        text = text.replace(probe[0], probe[1], 1)
+    frag, je = None, {}
+    for z in text.splitlines():
+        # **The section must be RESET at every heading, not only set at a fragment one.**
+        # Without the `else` branch every row after `# F10` -- the lowering table and the two
+        # summary tables -- is still booked to F10, and the first run of this mode reported
+        # `F10 16 = 14 K + 2 L` for a section with eleven rows. *A counter that never leaves
+        # its last section counts the epilogue as part of it.*
+        if z.startswith("# "):
+            m = re.match(r"^# (F\d+)", z)
+            if m:
+                frag = m.group(1)
+                je.setdefault(frag, {"K": 0, "L": 0})
+            else:
+                frag = None
+        if frag is None or not z.startswith("|"):
+            continue
+        c = _zellen(z.strip())
+        if len(c) != 6 or c[0] != "" or c[-1] != "":
+            continue
+        blank = re.sub(r"[^A-Za-z]", "", c[3])
+        if blank.startswith("K"):
+            je[frag]["K"] += 1
+        elif blank.startswith("L"):
+            je[frag]["L"] += 1
+    k = sum(v["K"] for v in je.values())
+    l = sum(v["L"] for v in je.values())
+    if still:
+        return k, l
+    print("== Die Spalten des Handgangs, je Fragment ==")
+    for f in [f"F{i}" for i in range(1, 11)]:
+        v = je.get(f, {"K": 0, "L": 0})
+        print(f"  {f:<4} {v['K'] + v['L']:>3} = {v['K']:>3} K + {v['L']:>3} L")
+    a = len([f for f in je])
+    print(f"  ---------------------------------")
+    print(f"  verankert  {k + l:>3} = {k:>3} K + {l:>3} L")
+    print(f"  Absenkung  {a:>3} = {a:>3} K +   0 L   eine Zeile je Fragment,")
+    print(f"                                     in `The tenth event`")
+    print(f"  ---------------------------------")
+    print(f"  insgesamt  {k + l + a:>3} = {k + a:>3} K + {l:>3} L")
+    print()
+    print("**Und was das NICHT heisst:** die Klasse `K`/`L` ist ein URTEIL, das ein Mensch in")
+    print("die dritte Spalte geschrieben hat -- dieses Werkzeug zaehlt sie, es faellt sie")
+    print("nicht. Was es ausschliesst, ist nur das eine: dass die Summe von ihrer Spalte")
+    print("abweicht. *Genau das war am 2026-08-30 der Fall, sechzehn Tage lang* (W10).")
+
+
 # **What MAKES a hanging obligation: the FOURTH COLUMN, not the line.**
 #
 # Until 2026-08-25 this read `"gap:" in z` over the WHOLE table row -- so every row of class
@@ -317,7 +413,33 @@ def haengend(probe=None, still=False, locker=False):
 
 
 if __name__ == "__main__":
-    if "--haengend" in sys.argv:
+    if "--spalten" in sys.argv:
+        # **The speaking probe, both ways.** An invented `L` row must raise `L` by one and
+        # leave `K` alone -- otherwise the split answers something other than the rows.
+        k0, l0 = spalten(still=True)
+        gift = ("| 999 | Sprechprobe | L | erfunden |\n"
+                "**F2: 24 obligations")
+        k1, l1 = spalten(probe=("**F2: 24 obligations", gift), still=True)
+        if (k1, l1) != (k0, l0 + 1):
+            print(f"SPRECHPROBE GESCHEITERT: eine erfundene `L`-Zeile aendert die Spalten "
+                  f"nicht wie erwartet ({k0}/{l0} -> {k1}/{l1}).", file=sys.stderr)
+            sys.exit(1)
+        print(f"== Sprechprobe: ok (eine erfundene `L`-Zeile hebt L von {l0} auf {l1}, "
+              f"K bleibt {k1}) ==")
+        # **And the escaped pipe** -- the row shape that a naive splitter drops. Without this
+        # the counter would report a smaller population and look green doing it.
+        gift2 = ("| 998 | Sprechprobe mit `a \\| b` in der Zelle | K | erfunden |\n"
+                 "**F2: 24 obligations")
+        k2, l2 = spalten(probe=("**F2: 24 obligations", gift2), still=True)
+        if (k2, l2) != (k0 + 1, l0):
+            print(f"SPRECHPROBE GESCHEITERT: eine Zeile mit maskierter Pipe faellt aus dem "
+                  f"Zaehler ({k0}/{l0} -> {k2}/{l2}). **Dann misst er eine geschrumpfte "
+                  f"Grundgesamtheit.**", file=sys.stderr)
+            sys.exit(1)
+        print(f"== Sprechprobe: ok (eine Zeile mit maskierter Pipe zaehlt mit: "
+              f"K {k0} -> {k2}) ==\n")
+        spalten()
+    elif "--haengend" in sys.argv:
         # **Die Sprechprobe, in beide Richtungen** (2026-08-20, gefunden von
         # `pruefe-waechter.py`). `H` ist die Zahl, auf der K100s erstes Tor definiert ist --
         # und dieser Modus las sie aus einer handgepflegten Tabelle, ohne je zu zeigen, dass
