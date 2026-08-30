@@ -662,6 +662,43 @@ nobody checks against each other.*
 > measurement.* The nine below are therefore a SAMPLE, not the chain; the chain is what
 > the command prints.
 
+### `pruefe-aufloesung.py` — the ratchet fell from **27 to 2**, and not one line of the checker moved (2026-08-30)
+
+The ratchet stood red at **28 in tray 1, 27 allowed**. `TODO.md` held all three usual exits
+shut, and the third one expressly: *„the guardian measures something other than its subject —
+that does NOT apply here, it measures exactly what it says."*
+
+**That sentence was the error.** It had been checked against the guardian's output and never
+against its subject. Full record: [`messung/AUFLOESUNG-BEZUGSGROESSE.md`](messung/AUFLOESUNG-BEZUGSGROESSE.md).
+
+* `emit.rs` keeps its **own** namespace, `struct Namen`. **All 61 of its signatures take
+  `u: &Namen`; not one takes an `Umgebung`.** `Namen` carries three fields named like
+  `Umgebung`'s — `funktionen`, `geraete`, `formate` — and fills all three with a **bare** key
+  (`emit.rs:652`, `:649`, `:838`), while `umgebung.rs` fills its own **17 times** with
+  `q(…)` and never bare. *A bare name on a bare-keyed map is correct; it is the opposite of
+  the trap.* The old regex matched the FIELD NAME and could not see which struct `u` was.
+* **Measured over 38 commits:** raw tray 1 grew 2 → 28 between 08-14 and 08-30, and **every
+  step of that growth is in `emit.rs`**. The corrected number was **2 the whole time**, while
+  `emit.rs` grew from nothing to 8 239 lines.
+* **A ratio would have worked and been the wrong answer.** `tray 1 / lines of emit.rs` is
+  stable at 2.8–4.1 per 1 000 lines — stable precisely because `emit.rs` produces both
+  quantities. One would have got a clean figure while writing down that the generator is the
+  subject.
+* **All three cases where the trap actually bit are alive, and none is in `emit.rs`** —
+  `M103` (`umgebung.rs:402`), `M108` (`m1.rs:2599`), `ist_weltname` (`m1.rs:2657`). Three of
+  three in `Umgebung` code. *The surface where it ever bit is exactly the surface the
+  correction keeps.*
+* The fix is **tray 0**, and a site falls into it only when **both** criteria hold: the file
+  declares no `u: &Umgebung` **and** fills that very map itself with a bare key. Either alone
+  suffices for `emit.rs` and both agree across all 38 commits — but requiring both keeps a
+  doubtful site in tray 1. *An instrument that goes quiet is the failure it is here to catch.*
+* **63 sites before, 63 after.** Nothing vanished, everything was re-sorted, and tray 0 is
+  printed. Fifth speech test added in both directions.
+
+**The mark was not raised — it fell by 25.** And it stood five days beside its own refutation:
+*„27 sites, **25 of them in the emitter**"* (comment of 2026-08-25). That sentence was the
+finding. It was written, read, and booked as background.
+
 ### `instrumente/abnahme.py` — **one command that runs EVERY guardian** (2026-08-30)
 
 There were 26 `pruefe-*` guardians and **no run that drove all of them**. `PLAN-AUTONOM.md`
