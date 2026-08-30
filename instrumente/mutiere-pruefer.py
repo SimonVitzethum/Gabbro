@@ -1380,6 +1380,46 @@ MUTATIONEN = [
         "C-Absenkung -- ein `let`-gebundener Geist gilt blank nicht als Geist; `return p1;` nennt einen Namen, den keine Deklaration schreibt",
         "code",
     ),
+    # -- «B26»: `return e;` -- the bound reason, and the channel it goes out through -------
+    #
+    # Three passes were wrong about one shape at once (2026-08-30), and the first two were
+    # HIDING the third: `M119` refused the program before the emitter ever saw it, so the
+    # miscompile below stood behind a guard nobody had asked for. *An accident that holds is
+    # indistinguishable from a rule until it stops.*
+    Mutation(
+        "grundbindung-am-register-faellt-weg",
+        "m1.rs",
+        "                    .or_else(|| match &l.quelle {\n"
+        "                        LetQuelle::Ort(o) => {",
+        "                    .or_else(|| match &l.quelle {\n"
+        "                        LetQuelle::Ort(o) if false => {",
+        "M1 -- `e` am fehlbaren Register bleibt ungebunden; `M119` sagt es, und `return e;` erreicht den Erzeuger nie",
+        "pruefer",
+    ),
+    Mutation(
+        "n034-sieht-nur-den-geschriebenen-grund",
+        "namen.rs",
+        "                        if o.suffixe.is_empty() && gebunden.iter().any(|n| *n == o.basis.text) {",
+        "                        if false && o.suffixe.is_empty() && gebunden.iter().any(|n| *n == o.basis.text) {",
+        "N034 -- ein Rumpf, der seinen Grund ueber die Bindung zurueckgibt, gilt als einer, der nie scheitert",
+        "pruefer",
+    ),
+    Mutation(
+        "gebundener-grund-geht-durch-den-erfolgskanal",
+        "emit.rs",
+        "                        \"{e}*_grund = {};\\n{e}return false;\\n\",\n"
+        "                        ausdruck(x, u, absagen)\n"
+        "                    ));\n"
+        "                }\n"
+        "                // **`return None` / `return Some(i)`**",
+        "                        \"{e}*_wert = {};\\n{e}return true;\\n\",\n"
+        "                        ausdruck(x, u, absagen)\n"
+        "                    ));\n"
+        "                }\n"
+        "                // **`return None` / `return Some(i)`**",
+        "C-Absenkung -- der gebundene Grund geht durch `*_wert` mit `true`: das Geraet log, und das C meldet Erfolg",
+        "code",
+    ),
     Mutation(
         "fremder-tag-ohne-vorwaertsdeklaration",
         "emit.rs",

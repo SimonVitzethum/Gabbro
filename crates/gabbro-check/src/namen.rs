@@ -2122,14 +2122,46 @@ fn fehlerkanal(baum: &Programm, absagen: &mut Absagen) {
         let ItemArt::Funktion(f) = &item.art else { return };
         let Some(r) = &f.fehler else { return };
         let FnRumpf::Block(b) = &f.rumpf else { return };
+        // **Two shapes produce a reason, not one** (2026-08-30). `return R::C;` is the one
+        // this rule was written for; `return e;` inside the `else` branch of a `let … else`
+        // is the other, and `e` is the name that branch BINDS. Measured against the
+        // unchanged checker: `return e;` was counted as no reason at all, so a body that
+        // hands its caller the device's lie was told it never fails.
+        //
+        // *The test is syntactic on purpose:* which reason `e` carries is a question for M1,
+        // but WHETHER this `return` goes out the error channel is decided by the binder
+        // standing above it -- and that is right here in the tree.
         fn scheitert(b: &Block) -> bool {
+            scheitert_mit(b, &mut Vec::new())
+        }
+        fn scheitert_mit(b: &Block, gebunden: &mut Vec<String>) -> bool {
             b.anweisungen.iter().any(|s| {
                 if let StmtArt::Return(Some(e)) = &s.art {
                     if matches!(e.art, ExprArt::Grund { .. }) {
                         return true;
                     }
+                    if let ExprArt::Ort(o) = &e.art {
+                        if o.suffixe.is_empty() && gebunden.iter().any(|n| *n == o.basis.text) {
+                            return true;
+                        }
+                    }
                 }
-                crate::unterbloecke(s).into_iter().any(scheitert)
+                if let StmtArt::LetSonst(l) = &s.art {
+                    gebunden.push(l.fehlername.text.clone());
+                    let t = scheitert_mit(&l.sonst, gebunden);
+                    gebunden.pop();
+                    if t {
+                        return true;
+                    }
+                    // Every OTHER sub-block of this statement stands outside the binding.
+                    return crate::unterbloecke(s)
+                        .into_iter()
+                        .filter(|k| !std::ptr::eq(*k, &l.sonst))
+                        .any(|k| scheitert_mit(k, gebunden));
+                }
+                crate::unterbloecke(s)
+                    .into_iter()
+                    .any(|k| scheitert_mit(k, gebunden))
             })
         }
         if !scheitert(b) {

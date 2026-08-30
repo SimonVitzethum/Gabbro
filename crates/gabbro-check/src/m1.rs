@@ -144,6 +144,8 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>) {
         unveraenderliche_statiken: std::collections::HashMap::new(),
         schon_gemeldet: std::collections::HashSet::new(),
         fehlerkanal: None,
+        geraete: crate::m3::geraetetabelle(baum),
+        griffe: std::collections::BTreeMap::new(),
     };
     p.programm(baum);
     (p.zaehlung, p.fremd)
@@ -266,6 +268,17 @@ struct Pruefer<'a> {
     /// `anweisung` ihn nur an EINER Stelle brauchen (`return`) und die Kette sonst vier
     /// Signaturen breiter waere.
     fehlerkanal: Option<String>,
+    /// **The register table, and it is `m3.rs`'s -- not a second one** (2026-08-30).
+    ///
+    /// `«B26»` makes a register read FALLIBLE, and then the `else` branch binds a reason.
+    /// Which reason stands in the DECLARATION (`requires … else R::C`), so this pass has to
+    /// read the declaration to bind `e`. *The table it reads is `m3::geraetetabelle`; a
+    /// second one over the same registers would be W7, and the two could drift apart with
+    /// nobody the wiser.*
+    geraete: std::collections::BTreeMap<String, std::collections::BTreeMap<String, crate::m3::RegInfo>>,
+    /// Which local name carries which device, for the body this pass is inside -- again
+    /// `m3::griffe_von` and not a second resolution.
+    griffe: std::collections::BTreeMap<String, String>,
 }
 
 /// Die Bindungen und Fakten eines Blocks. Ein Block erbt beide und gibt keins zurueck.
@@ -455,7 +468,12 @@ impl<'a> Pruefer<'a> {
                         .fehler
                         .as_ref()
                         .and_then(|r| self.u.grund(modul, &r.text).map(|(q, _)| q));
+                    // **And which local name carries which device**, for the same reason the
+                    // error channel travels: a fallible register read binds its reason in the
+                    // `else` branch, and the reason stands in the register's declaration.
+                    self.griffe = crate::m3::griffe_von(f, &self.geraete);
                     self.block(b, &mut lage, ergebnis.as_ref());
+                    self.griffe.clear();
                     self.fehlerkanal = None;
                 }
             }
@@ -764,11 +782,34 @@ impl<'a> Pruefer<'a> {
                 // Rufers: wer scheitern kann, sagt woran (`SPRACHE.md` 8.1). Steht dort
                 // keiner, faellt schon `N028` -- hier bleibt der Name dann ungebunden, und
                 // `M119` sagt es ein zweites Mal, statt einen Typ zu erfinden.
+                //
+                // **And since 2026-08-30 from the REGISTER DECLARATION as well** («B26»).
+                //
+                // `let t = d.TIEFE else (e) { … }` is the second lowering of one form: the
+                // source is a place, not a call, so the line above answered `None` -- and
+                // `return e;` fell with `M119` (*"`e` is declared nowhere"*). Measured
+                // against the unchanged checker; `beispiele/44` sidesteps the site by
+                // writing `return Geraetelug::ZuTief;` instead.
+                //
+                // > *The clause was there, it bound nothing* -- literally the hole the
+                // > paragraph above describes for the call branch, one week later and at the
+                // > sister form.
+                //
+                // The reason comes from `m3::geraetetabelle` and from no second table:
+                // whoever can fail says what of, and at a register the declaration says it.
                 let grund_typ = l
                     .als_ruf()
                     .and_then(|r| {
                         self.u
                             .fehlerkanal(&self.modul, &r.path()?.teile.last()?.text)
+                    })
+                    .or_else(|| match &l.quelle {
+                        LetQuelle::Ort(o) => {
+                            let t = crate::m3::ort_register(o, &self.geraete, &self.griffe)?;
+                            let (g, _) = t.info.fehlbar.as_ref()?;
+                            self.u.grund(&self.modul, g).map(|(q, _)| q)
+                        }
+                        LetQuelle::Ruf(_) => None,
                     })
                     .map(Typ::Grund);
                 //

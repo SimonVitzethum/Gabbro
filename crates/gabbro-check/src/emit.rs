@@ -4894,6 +4894,48 @@ fn anweisung(
                         ausdruck(x, u, absagen)
                     ));
                 }
+                // **`return e;` -- the reason BINDING, and it went out the wrong channel**
+                // (2026-08-30).
+                //
+                // `fehlbare_lesung` puts `e` into `gruendewerte` for exactly the block below
+                // it, so the emitter has known what `e` is since «B26». **The `return` did
+                // not ask**, so a bare `e` fell through to the success branch underneath:
+                //
+                // ```c
+                // if (!(t <= 8)) {
+                //     e = Geraetelug_ZuTief;
+                //     *_wert = e;             /* the reason ORDINAL, as the value */
+                //     return true;            /* and the caller is told it worked */
+                // }
+                // ```
+                //
+                // > **The device lied, the check caught it, and the C reported success.**
+                // > `gabbro pruefe` said nothing, `cc -Werror` compiled it: both enums lower
+                // > to an integer type, so the assignment is well formed. *A silent wrong
+                // > lowering is worse than a refusal -- a refusal stands in the report.*
+                //
+                // Found by the W24 pre-run of the M1 binding for `e`, and only because that
+                // binding was built first: until then `M119` refused the program one pass
+                // earlier and nothing ever reached the emitter. **The guard was an accident,
+                // not a rule** -- and an accident that holds is indistinguishable from a rule
+                // until it stops.
+                Some(x)
+                    if matches!(&x.art, ExprArt::Ort(o)
+                        if o.suffixe.is_empty() && u.gruendewerte.contains_key(&o.basis.text)) =>
+                {
+                    if !austritt.fehlerkanal {
+                        weigere(
+                            absagen,
+                            x.span,
+                            "`return <reason>` in a function that declares no `or <reason>`",
+                        );
+                        return;
+                    }
+                    aus.push_str(&format!(
+                        "{e}*_grund = {};\n{e}return false;\n",
+                        ausdruck(x, u, absagen)
+                    ));
+                }
                 // **`return None` / `return Some(i)`** -- der Sonderwert kommt aus dem
                 // Rueckgabetyp der Funktion, nicht aus dem Ausdruck.
                 Some(x) => {
