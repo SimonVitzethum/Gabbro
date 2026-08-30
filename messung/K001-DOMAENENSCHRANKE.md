@@ -161,7 +161,31 @@ es nicht gibt. **Dieselbe Klasse wie `W16`: das Werkzeug misst etwas anderes als
 Gegenstand.** Der Schlüssel `walkschranken` beantwortet *„wie groß ist die Blattmenge"*; die
 Auflösung fragt *„gibt es diesen `walk`"*. Zwei Fragen, eine Karte.
 
-*Gebucht als Befund; die Reparatur ist eine eigene Karte `walknamen` und steht in `TODO.md`.*
+> **NACHGEMESSEN UND REPARIERT, noch am selben Tag — und die Reichweite war größer als der
+> Fund.** Hier stand *„nicht dringend, weil die Erreichbarkeit an `512¹⁵` hängt"*. **Es sind
+> drei Wege, und zwei davon sind gewöhnliche Tippfehler:**
+>
+> | Deklaration | warum kein Eintrag in `walkschranken` | vorher |
+> |---|---|---|
+> | `walk W levels 0 { node : [Pte; 512] … }` | die Wache `e > 0 && l > 0` | `N040` |
+> | `walk W levels 4 { node : [Pte; 0] … }` | dieselbe Wache | `N040` |
+> | `walk W levels 15 { node : [Pte; 512] … }` | `checked_pow` läuft über | `N040` |
+>
+> Repariert: `walknamen` wird beim Lesen der Deklaration **unbedingt** gefüllt, die Auflösung
+> fragt sie, `walkschranken` bleibt die Zahl. Probe
+> `ein_walk_ohne_brauchbare_blattzahl_bleibt_ein_typ` (kein `N040`, dafür `K003` an allen
+> dreien), Mutation `walkname-haengt-an-der-zahl` — von Hand gesetzt, gebaut, **genau eine
+> fallende Probe**.
+>
+> **Und die Absage war nicht nur deutsch, sondern falsch.** Sie fragte bei JEDER Domäne nach
+> dem `count` einer Tabelle. Jetzt nennt sie alle drei Quellen. *Eine Absage, die den falschen
+> Gegenstand nennt, kostet mehr als eine, die keinen nennt.*
+>
+> Nebenbei aufgefallen: **`pruefe-englisch.py` sieht diese Meldung gar nicht.** Er misst
+> `Absage::fehler`, `::hinweis` und `.mit_notiz`; ein Text, der über `Kosten::Unbekannt` in
+> den `K003`-Text kommt, ist ihm unsichtbar. Zwei deutsche Meldungen standen so da — gedruckt,
+> nicht gezählt. *Gebucht in `TODO.md`; die Fläche ist 13 `Kosten::Unbekannt` im Prüfer, und
+> dieselbe Frage gilt für jeden anderen Weg.*
 
 ---
 
