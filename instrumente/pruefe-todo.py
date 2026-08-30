@@ -101,6 +101,51 @@ def plan_etiketten():
     return befunde
 
 
+# **A struck-through number is a WITHDRAWN one, and rule 7 counted it anyway** (2026-08-30).
+#
+# The registers of this folder correct rather than overwrite: the old value stays visible in
+# `~~...~~` with the new one beside it. Rule 7 read the whole text, so **the moment a register
+# quoted its own outdated number, the guardian reported it as current** -- `DONE.md` was
+# corrected on 2026-08-30 and went red on the very sentence that recorded the correction.
+#
+# > *A guardian that cannot tell a correction from a claim forces the correction to be hidden*
+# > -- and hiding it is exactly what R14 and the strike-through convention exist against.
+#
+# `zaehle-pflichten.py` has drawn the same line since 2026-08-25 for `gap:` rows, in the same
+# words: **a struck-through entry is a retraction, and whoever counts it counts a retraction.**
+DURCHGESTRICHEN = re.compile(r"~~.+?~~", re.S)
+
+
+def ohne_durchgestrichenes(text):
+    """Der Text ohne die zurueckgezogenen Stellen -- fuer Zaehlungen, nicht fuer Regel 6."""
+    return DURCHGESTRICHEN.sub(" ", text)
+
+
+def done_korpuszahlen(dt, n_bsp, n_gift):
+    """**Die Korpuszahlen von `DONE.md` gegen das Dateisystem** (2026-08-30).
+
+    Regel 7 haelt *„N saubere Beispiele"* und *„N Giftproben"* seit dem 2026-08-16 gegen
+    `beispiele/` -- **aber nur in dem Text, mit dem `pruefe` gerufen wird, und das ist
+    `TODO.md`.** `DONE.md` trug dieselben zwei Wendungen in seiner Schlusszeile und ging an
+    demselben Waechter unbemerkt vorbei, waehrend der Korpus auf 53 und 310 wuchs.
+
+    > *Eine Regel, die eine Datei nennt, bewacht eine Datei.* Der zweite Leser ist die
+    > Stelle, an der die Zahl ungesehen altert.
+
+    Durchgestrichenes zaehlt nicht mit -- ein zurueckgezogener Wert ist keine Behauptung.
+    """
+    befunde = []
+    lebend = ohne_durchgestrichenes(dt)
+    for muster, n_ist, was in ((r"(\d+) clean examples", n_bsp, "saubere Beispiele"),
+                               (r"(\d+) saubere Beispiele", n_bsp, "saubere Beispiele"),
+                               (r"(\d+) poison probes", n_gift, "Giftproben"),
+                               (r"(\d+) Giftproben", n_gift, "Giftproben")):
+        for m in re.finditer(muster, lebend):
+            if int(m.group(1)) != n_ist:
+                befunde.append(f"DONE.md: '{m.group(1)} {was}' -- es sind {n_ist}")
+    return befunde
+
+
 def pruefe(text, zahlen, vollstaendig=False):
     """Gibt die Liste der Befunde. Leer heisst: die Liste stimmt ueber sich selbst.
 
@@ -208,12 +253,13 @@ def pruefe(text, zahlen, vollstaendig=False):
     # 7. **Beispielzahlen gegen das Dateisystem.**
     n_bsp = len(list((WURZEL / "beispiele").glob("*.gab")))
     n_gift = len(list((WURZEL / "beispiele/gift").glob("*.gab")))
+    lebend = ohne_durchgestrichenes(text)
     for muster in (r"(\d+) saubere Beispiele", r"(\d+) clean examples"):
-        for m in re.finditer(muster, text):
+        for m in re.finditer(muster, lebend):
             if int(m.group(1)) != n_bsp:
                 befunde.append(f"'{m.group(1)} saubere Beispiele' -- es sind {n_bsp}")
     for muster in (r"(\d+) Giftproben", r"(\d+) poison probes"):
-        for m in re.finditer(muster, text):
+        for m in re.finditer(muster, lebend):
             if int(m.group(1)) != n_gift:
                 befunde.append(f"'{m.group(1)} Giftproben' -- es sind {n_gift}")
 
@@ -224,6 +270,16 @@ def pruefe(text, zahlen, vollstaendig=False):
     d = WURZEL / "DONE.md"
     if d.is_file():
         dt = d.read_text()
+        # **Rule 7 named ONE file, and that is why the other one went stale** (2026-08-30).
+        #
+        # The counts above run over `TODO.md`, because that is the text this function is
+        # called with. `DONE.md` carried the SAME two phrases in its closing line -- *25
+        # clean examples, 78 poison probes* -- and went past this guardian untouched while
+        # the corpus grew to 53 and 310. **The rule was right and its reach was one file.**
+        #
+        # > *A guardian that names a file guards a file.* The counts are the same, the object
+        # > is the same, and the second reader is where the number ages unseen.
+        befunde += done_korpuszahlen(dt, n_bsp, n_gift)
         for offen in re.findall(r"^- \[ \][^\n]*", dt, re.M):
             befunde.append(
                 f"offener Eintrag in DONE.md, die 'exclusively what is done' "
@@ -544,6 +600,23 @@ Stehengebliebene Zahlen aus P1: 117 Regeln, 187 Terminale (heute 1 / 1)
         print(f"     {b}")
     print(f"  Saubere Liste: {len(b_sauber)} Befunde", end="")
     print(" -- ok" if not b_sauber else " -- GESCHEITERT (falsches Rot)")
+
+    # **The DONE count, both ways** (2026-08-30). It lives in the same function as the other
+    # rules and would otherwise be carried along by the two lists above -- *a rule that is
+    # only ever checked together with others is not checked.* The third line is the real one:
+    # **a struck-through value must NOT count**, or no register can write down its own
+    # correction without the guardian reporting the retracted number as a claim.
+    d_gift = "**7 clean examples, 3 poison probes** —\n"
+    d_sauber = "**53 clean examples, 310 poison probes** —\n"
+    d_zurueck = "~~*7 clean examples, 3 poison probes*~~ — berichtigt 2026-08-30\n"
+    n_b = len(list((WURZEL / "beispiele").glob("*.gab")))
+    n_g = len(list((WURZEL / "beispiele/gift").glob("*.gab")))
+    for was, txt, erwartet in (("veraltete Zahl faellt", d_gift, 2),
+                               ("richtige bleibt frei", d_sauber, 0),
+                               ("zurueckgezogene zaehlt nicht", d_zurueck, 0)):
+        n = len(done_korpuszahlen(txt, n_b, n_g))
+        print(f"  DONE-Zahlen ({was}): {n}", end="")
+        print(" -- ok" if n == erwartet else f" -- GESCHEITERT (erwartet {erwartet})")
 
     # **Und die README-Haelfte, in beide Richtungen.** Eine Kennzahlentafel, die keiner
     # nachhaelt, faellt sonst genauso lautlos aus wie die acht Zahlen, die sie ersetzt hat.
