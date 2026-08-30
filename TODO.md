@@ -743,6 +743,45 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       schreibt es, der Fall stammt aus einer erfundenen Probe. **Regel A: erst zählen, dann
       bauen** — die Frage ist, ob ein Pass eine Form zurückweisen soll, die niemand schreibt.
 
+- [ ] **Es gibt 26 Wächter und keine Abnahme, die alle fährt — und das hat heute zwei rote Ratschen zwei Tage lang verdeckt.**
+      `dokumente/PLAN-AUTONOM.md` §1.7 nennt **elf**; jede Sitzung stellt sich den Rest aus
+      dem Gedächtnis zusammen. Gemessen 2026-08-30: **sieben Wächter stehen in KEINER Liste
+      und in keinem Sammellauf** — `pruefe-abstieg.py`, `pruefe-aufloesung.py`,
+      `pruefe-reichweite.py`, `pruefe-widerruf.py`, `pruefe-lean-beweis.sh`,
+      `pruefe-lean-programm.sh`, `pruefe-p6-beweis.sh`.
+      > **Ein Wächter, den niemand fährt, ist von einem, den es nicht gibt, nicht zu
+      > unterscheiden.** Dieselbe Klasse wie `DONE.md`s Schlusszeile, wo die Regel seit dem
+      > 2026-08-16 stand und nur die falsche Datei las — dort war es die Reichweite EINES
+      > Wächters, hier die Reichweite der ABNAHME.
+      Was fehlt, ist ein Sammellauf, der alle 26 fährt und je Wächter sagt, ob er rot ist,
+      grün, oder ein Werkzeug mit Argument (wie `pruefe-wortschatz.py`, das ohne Datei
+      abstürzt und dabei aussieht wie ein Befund).
+
+- [ ] **`pruefe-aufloesung.py`: die Ratsche steht seit Bahn A ROT — 28 in Fach 1, erlaubt 27.**
+      Gefunden 2026-08-30, gebrochen zwischen `87b7f53` und `6438b28`, also am 2026-08-28.
+      Die neue Stelle ist `emit.rs:8175` (`u.geraete.get(g)`, `g` aus
+      `geraetezeiger`/`geraetewerte`) — **die FÜNFTE Instanz einer Form, die viermal
+      danebensteht** und dort gebucht ist.
+      **Die Entscheidung ist offen und keine Formalie.** Der Wächter sagt selbst, Fach 1 sei
+      *kein Fehlerbefund*, sondern eine **Fläche, auf der dieselbe Falle dreimal zuschlug*.
+      Damit stehen die drei Ausgänge so:
+      * **Heilen** hieße, an genau dieser einen Stelle einen modulbewussten Auflöser zu bauen,
+        den ihre vier Geschwister nicht haben — ein Konstrukt ohne gemessenen Bedarf (Regel A),
+        und eine Stelle, die sich von vier gleichen unterscheidet, damit ein Zähler stimmt.
+      * **Die Marke heben** ist verboten: *eine Marke, die man hebt, wenn sie klemmt, ist keine
+        Ratsche.*
+      * **Der Wächter misst etwas anderes als seinen Gegenstand** — das trifft hier NICHT zu,
+        er misst genau, was er sagt.
+      *Keiner der drei Ausgänge passt sauber, und genau das ist der Befund:* die Ratsche zählt
+      eine Fläche, die mit dem Erzeuger wächst, gegen eine Marke, die nur fallen darf. **Was
+      entschieden werden muss, ist, ob die Bezugsgröße stimmt** — eine Zahl, oder ein Anteil.
+
+- [ ] **`pruefe-abstieg.py` endet seit mindestens dem 2026-08-28 mit 1**, und der Inhalt ist
+      eine BENANNTE Weigerung (`emit::rumpf_als_wert`, 8 Arten) plus `m2::endet` ohne Abstieg
+      in sieben Arten. *Ein Wächter, dessen roter Ausgang ein gebuchter Dauerzustand ist,
+      unterscheidet einen neuen Befund nicht von dem alten* — er braucht entweder eine Marke
+      wie die anderen Ratschen oder einen zweiten Ausgangswert.
+
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
       fällt. Mutationskatalog: **346 von 346 Ankern** greifen (`--anker`, 2026-08-30).

@@ -4875,10 +4875,10 @@ fn anweisung(
                 // > lowering is worse than a refusal -- a refusal stands in the report.*
                 //
                 // Found by the W24 pre-run of the M1 binding for `e`, and only because that
-                // binding was built first: until then `M119` refused the program one pass
-                // earlier and nothing ever reached the emitter. **The guard was an accident,
-                // not a rule** -- and an accident that holds is indistinguishable from a rule
-                // until it stops.
+                // binding was built first: until then `M119` in the checker (`m1.rs`)
+                // refused the program one pass earlier, and nothing ever reached the
+                // emitter. **The guard was an accident, not a rule** -- and an accident that
+                // holds is indistinguishable from a rule until it stops.
                 Some(x)
                     if matches!(&x.art, ExprArt::Ort(o)
                         if o.suffixe.is_empty() && u.gruendewerte.contains_key(&o.basis.text)) =>
