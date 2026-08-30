@@ -21,7 +21,7 @@ verschiedene Gegenstände, verschiedene Zahlen und verschiedene Zukunft.
 | Befehl | `gabbro pflichten --lean` | `gabbro lean a.gab b.gab` |
 | Was gesagt wird | Gabbros **eigene** `ensures`/`requires` | eine **Lean-Spezifikation von Hand** |
 | Wer sagt es | die Sprache | ein Mensch, in Leans Mitteln |
-| Stand | 71 Pflichten, **4 Sätze**, 67 abgesagt | 4 Rümpfe, **5 Spezifikationen**, 5 Giftproben |
+| Stand | ~~71 Pflichten, **4 Sätze**, 67 abgesagt~~ **75 Pflichten, 9 Sätze, 66 abgesagt** (2026-08-30) | 4 Rümpfe, **5 Spezifikationen**, 5 Giftproben |
 | Wächter | `pruefe-lean-beweis.sh` | `pruefe-lean-programm.sh` |
 
 **Dieser Plan handelt ausschließlich von Kanal B.** Kanal A bleibt, was er ist — ein Maß dafür,
@@ -66,7 +66,9 @@ Drei Abhängigkeiten. Die erste ist die härteste, und sie ist keine Reichweiten
 `lean.rs` liegt in `crates/gabbro-check` (1834 Zeilen); der Unterbefehl steht in
 `crates/gabbro-cli/src/main.rs`:246. Und `zaehle-lean.py`:135 sagt die Regel:
 
-> *„A unit with errors carries no register."* — **23 von 70 Einheiten.**
+> *„A unit with errors carries no register."* — **23 von ~~70~~ 93 Einheiten**
+> (nachgezogen 2026-08-30: die **23** stimmt weiter, der Nenner war die Zahl der
+> Einheiten von damals).
 
 > **Ein Verifizierer, der nur verifiziert, was der Prüfer schon durchgelassen hat, verifiziert
 > das Falsche.** Der Prüfer ist damit eine *Vorbedingung* geworden, wo er eine *unabhängige

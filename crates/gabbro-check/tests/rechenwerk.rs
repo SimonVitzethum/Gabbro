@@ -5285,6 +5285,25 @@ impl fn lies(k : ptr<normal, r> Kopf) -> u64
 }
 }";
 
+/// **The export datum drops an `ensures result`, and it is booked under the CLAUSE name.**
+///
+/// This is the other half of the split of 2026-08-30. The two refusals point opposite ways:
+/// this one is a promise the datum declines to repeat -- sayable, deliberately unsaid, and
+/// the conservative direction -- while `result-in-body` is a source saying something it
+/// cannot mean. *Under one name a reader could not tell which had happened.*
+#[test]
+fn lean_export_sagt_die_zusage_unter_dem_klauselnamen_ab() {
+    let t = lean_programm(LEAN_ERGEBNIS);
+    assert!(
+        t.contains("ensures #1 (result-in-ensures)"),
+        "the dropped promise names the clause it came from:\n{t}"
+    );
+    assert!(
+        !t.contains("result-in-body"),
+        "and not the body case -- this body never writes `result`:\n{t}"
+    );
+}
+
 /// **The goal over an `ensures result` demands three things, and the middle one is the point.**
 ///
 /// A body that runs off the end has no result -- `finalValue` is `none` there -- so a goal
@@ -5343,8 +5362,20 @@ impl fn lies(k : ptr<normal, r> Kopf) -> u64
 }",
     );
     assert!(
-        im_rumpf.contains("result-in-ensures"),
+        im_rumpf.contains("result-in-body"),
         "`result` inside a body is refused by name:\n{im_rumpf}"
+    );
+    // **And by the name of its OWN case.** Until 2026-08-30 this refusal was booked as
+    // `result-in-ensures` with the sentence *"one gate away, not far"* -- both true of the
+    // other case and neither true of this one. A reader looked for a missing gate and found a
+    // program error wearing its label.
+    assert!(
+        !im_rumpf.contains("result-in-ensures"),
+        "and not under the name of the clause case:\n{im_rumpf}"
+    );
+    assert!(
+        im_rumpf.contains("a program error, not a gap"),
+        "the sentence says which of the two it is:\n{im_rumpf}"
     );
     assert!(
         !im_rumpf.contains("theorem duty_1"),

@@ -11533,6 +11533,8 @@ pruefe-englisch.py   7910 / 1072 -- beide Marken exakt gehalten
 zaehle-theorien.py   15 Theorien, 3496 Zeilen, 101 Saetze
                      ROT: 40 eingefrorene Suchergebnisse gegen die Marke 31
 zaehle-lean.py       75 Pflichten, 9 Ziele, 66 abgesagt
+                     davon 60 nach ART abgesagt, vor jeder Uebersetzung
+                     Deckung ueber das, was der Kanal VERSUCHT: 9 von 15
 ```
 
 **Die eine rote Ratsche steht mit Absicht offen:** die neun Suchschritte liegen sämtlich im

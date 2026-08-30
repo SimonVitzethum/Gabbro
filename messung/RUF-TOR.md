@@ -33,8 +33,10 @@ sitzt, das B1 bauen wollte:
 
 ```bash
 ssh ki-pc-fisch-101 'cd gabbro-B && ./instrumente/zaehle-lean.py'
-# == BODY CHANNEL: 70 obligations, 4 goals, 66 refused ==
+# == BODY CHANNEL: 70 obligations, 4 goals, 66 refused ==   <-- Stand 2026-08-28
 #    call-not-compositional     1
+# nachgemessen 2026-08-30: 75 obligations, 9 goals, 66 refused
+#    call-not-compositional     1   <-- unveraendert
 ```
 
 **Eine.** Nicht siebzehn. Die siebzehn stehen im Programmkanal, und dort ist das Tor
@@ -83,6 +85,7 @@ Probe, mit dem unveränderten Prüfer bis auf eine Zeile:
 # lean.rs:1119   allow_calls: false   ->   allow_calls: true
 ssh ki-pc-fisch-101 'cd gabbro-B && ./instrumente/zaehle-lean.py'
 # == BODY CHANNEL: 70 obligations, 4 goals, 66 refused ==     <-- unveraendert
+#    (Stand 2026-08-28; am 2026-08-30 sind es 75 / 9 / 66)
 #    call-not-compositional     0
 ```
 
@@ -191,6 +194,14 @@ ssh ki-pc-fisch-101 'cd gabbro-B && for f in beispiele/*.gab messung/*/*.gab; do
 | Rümpfe | 89 | **90** |
 | `call-not-compositional` (Pflichtenkanal) | 1 | **1** |
 | Ziele (Pflichtenkanal) | 4 | 4 |
+
+> **Nachgezogen am 2026-08-30:** die Bilanzzeile lautet heute **75 Pflichten, 9 Ziele,
+> 66 abgesagt** — ~~70 · 4 · 66~~. Die Absagen sind gleich geblieben, Register und
+> Ziele nicht: dazwischen liegen Bahn Bs vier Tore und drei geheilte Erzeugerfehler.
+> **Der Satz dieses Berichts steht unverändert** — `call-not-compositional` steht weiter
+> auf 1, und das Öffnen des Tores kauft weiter null Ziele
+> (`messung/RUMPFKANAL-ABSAGEN.md` §4.1). *Eine Zahl, die durch eine Berichtigung fällt,
+> ist keine Arbeit* (§1.8).
 
 **6 + 6 + 4 + 1 = 17.** Die Bilanz geht auf, und die einzige Zahl, die sich bewegt hat, ist
 die Rumpfdeckung um eins. *Alles andere war ein Name.*
