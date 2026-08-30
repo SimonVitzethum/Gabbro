@@ -695,6 +695,39 @@ MUTATIONEN = [
         "                        laenge: None,",
         "A3 -- eine Tabelle mit `count N` gibt ihrem Slotfeld keine Laenge",
     ),
+    # **The error that stood for three days, put back as a mutation** (2026-08-31).
+    #
+    # Until 2026-08-20 this site computed `levels x node length`: 2 048, where the leaf set
+    # of a four-level `walk` over 512-entry nodes holds 512^4 = 68 719 476 736. **Seven
+    # orders of magnitude**, and it was the EMITTER that found it, not a probe --
+    # `saetze.rs::kosten.domaenenschranke` wrote exactly that down as its own gap.
+    #
+    # *Since 2026-08-31 it falls:* the `mappings of` probe in `rechenwerk.rs` walks `e` from
+    # 1 to 4 over `l = 2`, and the two readings already part at `e = 3` (16 against 12). The
+    # second falling probe is a CONSEQUENCE of the same rule: without the power nothing
+    # overflows any more, so `K003` stays away.
+    Mutation(
+        "walkschranke-wieder-ein-pfad",
+        "umgebung.rs",
+        "                            if let Some(n) = (l as u128).checked_pow(e as u32) {",
+        "                            if let Some(n) = (l as u128).checked_mul(e as u128) {",
+        "the bound of `mappings of` is `levels x node length` again instead of "
+        "`node length ^ levels` -- one descent path, handed out as the leaf set",
+    ),
+    # **The walk's IDENTITY hangs on its cost number again** (2026-08-31).
+    #
+    # `walkschranken` answers "how large is the leaf set"; the resolver asks "does this
+    # `walk` exist". With the cost map back in that seat, `walk W levels 0`, `node : [Pte; 0]`
+    # and a leaf count past `u128` all say **`N040`: `W` names no type** at a declaration
+    # three lines above -- two of the three being ordinary typos, not corners.
+    Mutation(
+        "walkname-haengt-an-der-zahl",
+        "umgebung.rs",
+        "                            Traegerart::Walk => self.walknamen.contains(*k),",
+        "                            Traegerart::Walk => self.walkschranken.contains_key(*k),",
+        "W16 -- the existence of a `walk` TYPE is decided by the cost map again, so a "
+        "declaration whose leaf count is 0 or past `u128` is reported as an unknown name",
+    ),
     Mutation(
         "index-erbt-nicht",
         "umgebung.rs",

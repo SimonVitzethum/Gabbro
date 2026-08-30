@@ -1245,10 +1245,19 @@ pub const KOSTEN: &[Satz] = &[
                     `mappings of` can hold no cost promise at all. **Every other domain bound \
                     in this pass has exactly the same shape and exactly as little checking.**",
         stand: Satzstand::Vermutet,
-        gemessen_an: "**No probe and no mutation measures the bound against the domain.** \
-                      `K003` has 2 probes, but they measure that a MISSING bound is refused \
-                      -- not that a PRESENT one is right. That is the difference the \
-                      2 048/512^4 error lived in.",
+        gemessen_an: "**ONE of the domains is measured since 2026-08-31, the rest is not.** \
+                      For `mappings of`, the probe named after it in `rechenwerk.rs` walks \
+                      levels 1..4 across node lengths 2, 8 and \
+                      512 and reads the number out of the `K001` TEXT per site: the two \
+                      readings part at `e = 3, l = 2` (16 against 12), and the mutation \
+                      `walkschranke-wieder-ein-pfad` puts the historic `e * l` back and is \
+                      caught. A second probe pins the overflow edge -- `512^14` fits, \
+                      `2 x 512^14` does not, and the pass says `K003` instead of wrapping. \
+                      **For `count`, `queue`, `elems of` and `index into T` the statement \
+                      is still untested in exactly the way it was:** `K003` has 2 probes, \
+                      and they measure that a MISSING bound is refused -- not that a \
+                      PRESENT one is right. That is the difference the 2 048/512^4 error \
+                      lived in. See `messung/K001-DOMAENENSCHRANKE.md`.",
         fundstelle: "crates/gabbro-check/src/domaene.rs (line 82), umgebung.rs \
                      (`walkschranken`); MESSUNGEN.md:6307; SPRACHE.md:906",
     },

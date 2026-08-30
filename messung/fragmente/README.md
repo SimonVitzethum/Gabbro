@@ -32,7 +32,7 @@ Ergänzt werden **nur** Deklarationen, die der Ausschnitt ruft und nicht nennt. 
 $ ./instrumente/zaehle-fragmente.py
 7 von 10 prüfen sauber        (über den Ausschnitten: 5; am 2026-08-20 kurz 7)
 6 von 10 senken ab            (über den Ausschnitten: 3)
-4 von 10 sind DURCHGESTOCHEN  — F02, F07, F08, F10   (2026-08-25)
+5 von 10 sind DURCHGESTOCHEN  — F02, F04, F07, F08, F10   (nachgezogen 2026-08-31)
 ```
 
 **Die vierte Zahl kam am 2026-08-25 dazu, und sie ist die, auf der K100s erstes Tor steht.**
@@ -51,14 +51,14 @@ genau vor der Aussage auf.
 
 | | ergänzt | was danach noch fällt |
 |---|---|---|
-| **F1** | `reason Fehler` | `M122` — die Signatur nennt keinen `or <reason>`. *(2026-08-25: nicht mehr `M119`; der Kanal wäre eine ZUSÄTZLICHE Zeile, aber danach fällt `N029` an einer Zeile des Ausschnitts. Siehe Kopf der Datei.)* |
+| **F1** | `reason Fehler`, `or Fehler` an `delete_leaf` | **`N029`** — `revoke` ruft `delete_leaf` und fängt das Scheitern nicht. *(2026-08-31, P-d: die Form GIBT es und ist gemessen — mit `let … else` + `or Fehler` am Rufer bleibt genau **eine** Absage übrig, `K001` mit **+80 256 ops** = einer op je Durchgang. Es sind damit **ZWEI** eingefrorene Zeilen, :337 und die `costs`-Zeile :328 — also ein Umschreiben. Und der Grund liegt tiefer: im Original ist `delete_leaf` gar nicht fehlbar; fehlbar macht sie «B29» bei :268. Beide Hälften stehen im selben Bericht. Siehe [`../DREI-FRAGMENTABSAGEN.md`](../DREI-FRAGMENTABSAGEN.md).)* |
 | **F2** | fünf `reserved`-Felder | — *prüft sauber, senkt ab, übersetzt — und ist seit 2026-08-25 **durchgestochen***|
-| **F3** | vier Konstanten, `or EpVoll` an `enqueue`, `lock SCHEDS` *(2026-08-25)* | 3× `M124` (nicht mehr `M119`), `M101` Optionssonderwert, `H011` `locks SCHEDS` nie genommen, **5× `N035`** — der Vertrag am `fn(…)`-Typ, seit 2026-08-21 Pflicht |
+| **F3** | vier Konstanten, `or EpVoll` an `enqueue`, `lock SCHEDS` *(2026-08-25)* | 3× `M124`, `M101` Optionssonderwert, `H011` `locks SCHEDS` nie genommen, **5× `N035`** — der Vertrag am `fn(…)`-Typ, seit 2026-08-21 Pflicht. *(2026-08-31, P-c: die drei `M124` sind eine **richtige Absage**. Die Vorlage in `caprock-messbasis` führt an dieser Stelle `pub const ERR_… : u64`, keinen Aufzählungstyp — **null Projektionen im ganzen Baum** — und die zwei Zahlenräume weichen heute schon ab: `ErrBadCap = 2` gegen `ERR_BADCAP = 1`. Was fehlt, sind vier `const`-Zeilen, und die stünden in Ausschnittzeilen.)* |
 | **F4** | `MAX_POLL`, `assume`, `on_exceeded`-Ziel | — *prüft sauber*; Absenkung an der `dma`-Barriere. **Nachgeprüft 2026-08-25 und GEBUCHT, nicht gebaut:** die drei `C001` sind `device Virtq(…) at dma` (:79) und zwei `let` in `publish` — und die beiden `let` stehen HINTER der ersten Absage, das Gerät senkt gar nicht erst ab. *Die `at dma`-Absage ist die Axiomschicht selbst* (welche Barriere ein DMA-Zugriff verlangt, ist eine Aussage über das Speichermodell; M3 baut sie ausdrücklich nicht). **Sie zu verengen hieße raten**, und ein Erzeuger, der rät, hebt jeden Pass vor sich auf |
-| **F5** | neun Konstanten, fünf `extern fn` mit Kanal, ein `assume` | 3× `M124` — ein Grundwert steht als ARGUMENT. *(2026-08-25: nicht mehr `M119`; was fehlt, ist die Zahlprojektion.)* |
+| **F5** | neun Konstanten, fünf `extern fn` mit Kanal, ein `assume` | — *prüft sauber (nachgemessen 2026-08-31: 26 Items, 0 Fehler).* ~~3× `M124` — ein Grundwert steht als ARGUMENT~~ **geschlossen von der VIERTEN TÜR** (2026-08-25): ein Argument darf ein Grund sein, wenn der Parameter genau diesen `reason` deklariert. *Diese Zeile stand sechs Tage länger, als sie wahr war.* |
 | **F6** | zwei Konstanten, `IrqMarke`+`static irq`, zwei Kanäle, ein Tor | — *prüft sauber*; ~~Absenkung an «B12» `elems of`~~ *(«B12» ist seit 2026-08-20 entschieden)*. **2026-08-25: 4 × `C001` auf 2.** Was bleibt: drei Namen im `check`-Rumpf, die niemand deklariert — **korpusseitig**, und kein Pass sagt es (Befund 7) — und `lenof` außerhalb eines `format`, dessen einziger Korpusort genau dahinter liegt (Regel A) |
 | **F7 F8 F10** | nichts | — *waren schon Programme* |
-| **F9** | zwei `reserved`-Felder | **`K001`** — die Zusage `costs <= 4096 ops` ist seit Stufe 3 nachrechenbar **falsch** (137 438 953 472). Siehe Kopf der Datei |
+| **F9** | zwei `reserved`-Felder | **`K001`** — die Zusage `costs <= 4096 ops` ist seit Stufe 3 nachrechenbar **falsch** (137 438 953 472). Siehe Kopf der Datei. *(2026-08-31, P-a: die Zahl ist nachgerechnet und **scharf**, `Rumpf × Knotenlänge^Ebenen`; und `F9` ist nicht vom PRÜFER blockiert, sondern **dreimal vom Erzeuger** — keine der drei `C001` hängt an `K001`. [`../K001-DOMAENENSCHRANKE.md`](../K001-DOMAENENSCHRANKE.md).)* |
 
 ## Der Ertrag: drei Befunde, die der eingefrorene Korpus nicht zeigen konnte
 

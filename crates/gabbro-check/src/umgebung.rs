@@ -132,6 +132,19 @@ pub struct Umgebung {
     /// > dieser Ordner zweimal bezahlt hat -- nur war es zweimal ein Mensch, der den
     /// > typischen Fall statt der Schranke schrieb, und hier war es der Pass selbst.*
     pub walkschranken: HashMap<String, u128>,
+    /// **Every `walk` that was declared -- with or without a usable leaf count.**
+    ///
+    /// Until 2026-08-31 the name resolver asked `walkschranken` whether a `walk` type
+    /// EXISTS, and `walkschranken` answers a different question: *how large is its leaf
+    /// set.* Three ordinary declarations have no entry there -- `levels 0`, `node : [Pte; 0]`
+    /// and a leaf count past `u128` (`512^15`) -- and all three made the rule that lives in
+    /// `namen.rs` say **`N040`: `W` names no type** at a declaration standing three lines
+    /// above, then send the reader after a `count` on a table that does not exist.
+    ///
+    /// *Two questions, one map* (W7), and the answer to the wrong one was a refusal that
+    /// named the wrong thing -- the `W16` shape: an instrument measuring something other
+    /// than its subject. **The name lives here, the number lives there.**
+    pub walknamen: HashSet<String>,
     /// Uebergangsname -> seine festen Kosten (je `placeshift` ein Speichern).
     pub uebergangskosten: HashMap<String, i128>,
     pub formate: HashMap<String, Vec<(String, Typ)>>,
@@ -754,6 +767,11 @@ impl Umgebung {
                     // MMU-Fragment, nachdem die Schranke selbst schon dastand.
                     self.typen
                         .insert(q(&w.name.text), Typ::Verbundname(q(&w.name.text)));
+                    // **The NAME goes in unconditionally, the number only if there is one.**
+                    // A `walk` whose leaf count is 0 or past `u128` is still a declared type;
+                    // saying otherwise turns a bound problem into a name problem, and the
+                    // reader goes looking for a declaration that is right there.
+                    self.walknamen.insert(q(&w.name.text));
                     let ebenen = self.konst_wert(pfad, &w.ebenen);
                     let laenge = self.konst_wert(pfad, &w.knoten.laenge);
                     if let (Some(e), Some(l)) = (ebenen, laenge) {
@@ -1091,7 +1109,10 @@ impl Umgebung {
                             Traegerart::Tabelle => self.tabellen.contains_key(*k),
                             Traegerart::Format => self.formate.contains_key(*k),
                             Traegerart::Geraet => self.geraete.contains_key(*k),
-                            Traegerart::Walk => self.walkschranken.contains_key(*k),
+                            // **`walknamen`, not `walkschranken`** (2026-08-31): whether a
+                            // `walk` type exists is a question about the DECLARATION, not
+                            // about whether its leaf count fits in 128 bits.
+                            Traegerart::Walk => self.walknamen.contains(*k),
                             Traegerart::Grund => self.gruende.contains_key(*k),
                         })?;
                         Some((*art, treffer.clone()))
