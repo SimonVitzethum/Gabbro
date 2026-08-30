@@ -4837,3 +4837,451 @@ fn emittiert_fehlbare_lesung_einmal() {
         "und der Ausgang traegt den erklaerten Grund:\n{c}"
     );
 }
+// ===========================================================================================
+// THE COLLECTING BUCKET -- what `call-not-compositional` really held (2026-08-28, `B1`)
+//
+// Seventeen refusals of the program channel stood under one word, and **not one of them was
+// a call over a contract**: six generated operations, six constructors, four `transition`s,
+// and one `return Some(i);` the model could carry all along. `messung/RUF-TOR.md` measures
+// it and decides the split; the probes below are what keeps the four apart.
+//
+// *A refusal filed under the wrong reason names a missing gate where a missing value form
+// stands* -- the same lesson the `Carrier` / `FieldShape` split books in `lean.rs`.
+// ===========================================================================================
+
+/// A table with `ops`, a device with a `transition`, a record, and an option-valued return.
+const LEAN_VIER_DINGE: &str = "module t {
+const N : u32 = 8;
+table V count N {
+    slot { benutzt : bool, naechst : option index into V, }
+    ops insert, remove;
+    occupied benutzt;
+}
+type Paar = { a : u32, b : u32, };
+device Dv(basis : u64) at mmio {
+    reg ST : u32 @0x00 class rw fields { AN @0, }
+    transition anschalten { ST.AN: 0 -> 1 } effects { writes ST }
+}
+impl fn nimm(v : ptr<normal, rw> V, i : index into V)
+    requires !v.slots[i].benutzt
+    effects  { writes v.slots }
+    costs    <= 4 ops
+{
+    V::insert(v, i);
+}
+impl fn schalte(d : ptr<mmio, rw> Dv)
+    effects { writes d.ST }
+    costs   <= 4 ops
+{
+    anschalten(d);
+}
+impl fn paare(x : u32, y : u32) -> Paar
+    effects { pure }
+    costs   <= 4 ops
+{
+    return Paar(a: x, b: y);
+}
+impl fn griff() -> Dv
+    effects { pure }
+    costs   <= 4 ops
+{
+    let g : Dv = Dv(4096);
+    return g;
+}
+impl fn hol(v : ptr<normal, rw> V, i : index into V) -> option index into V
+    effects { reads v.slots }
+    costs   <= 4 ops
+{
+    return Some(i);
+}
+}";
+
+/// **Four things parse as a call, and only one of them is one.** Each stands under its own
+/// name now, because each waits on something different: a schema, a piece of hardware, a
+/// value form the model does not have.
+#[test]
+fn lean_ruf_sammeltopf_ist_aufgeteilt() {
+    let t = lean_programm(LEAN_VIER_DINGE);
+    for (routine, grund) in [
+        ("nimm", "generated-op"),
+        ("schalte", "device-transition"),
+        ("paare", "constructed-value"),
+        ("griff", "constructed-value"),
+    ] {
+        let z = t
+            .lines()
+            .find(|z| z.contains("REFUSED") && z.contains(routine))
+            .unwrap_or_else(|| panic!("`{routine}` stands in the report:\n{t}"));
+        assert!(
+            z.contains(grund),
+            "`{routine}` is refused as `{grund}` and not as a call:\n{z}"
+        );
+    }
+    // **And the word `call-not-compositional` is spent on none of them.** It is reserved for
+    // a call over a CONTRACT, and a bucket that also held hardware said the register was
+    // waiting on a gate that would have taken nothing.
+    assert!(
+        !t.contains("(call-not-compositional)"),
+        "not one of these four is a call over a contract:\n{t}"
+    );
+}
+
+/// **`return Some(i);` is a VALUE, and the model has carried `.someOf` since its first day.**
+///
+/// The `let` and `return` arms sent every `ExprArt::Ruf` to `call_parts` before `expr_term`
+/// could see it, so a body whose only sin was an option value was refused whole. *Measured
+/// at `beispiele/27-freiliste.gab :: belegen`, which gains a body by this line alone.*
+#[test]
+fn lean_optionswert_ist_kein_ruf() {
+    let t = lean_programm(LEAN_VIER_DINGE);
+    assert!(
+        t.contains("(.ret (some (.someOf (.name \"i\"))))"),
+        "`return Some(i);` descends to `.someOf`, not to a call:\n{t}"
+    );
+    assert!(
+        !t.lines().any(|z| z.contains("REFUSED") && z.contains("hol")),
+        "and the routine that writes it carries a body:\n{t}"
+    );
+}
+
+/// **The obligation channel keeps its own refusal, and it is the honest one.**
+///
+/// A call over a contract is still not carried there -- `allow_calls` is `false` in `judge`
+/// on purpose, because a goal under an unconstrained environment states something no proof
+/// closes. *The split changes what the word MEANS, not what the gate does.*
+#[test]
+fn lean_vertragstor_bleibt_zu() {
+    let t = lean_modul(
+        "module t {
+const N : u32 = 8;
+type Zahl = u32 in 0 .. 99;
+table B count N { slot { belegt : bool, wert : Zahl, } }
+impl fn setz(p : index into B, w : Zahl)
+    effects { writes B.slots }
+    costs   <= 4 ops
+{
+    B.slots[p].wert = w;
+}
+impl fn ruf(p : index into B, w : Zahl)
+    ensures  B.slots[p].wert == w
+    effects  { writes B.slots }
+    costs    <= 9 ops
+{
+    setz(p, w);
+}
+}",
+    );
+    assert!(
+        t.contains("call-not-compositional"),
+        "a call at a DECLARED routine still has no gate in the goal channel:\n{t}"
+    );
+}
+
+// ===========================================================================================
+// A SUSPENSION IS NOT AN EXIT (2026-08-28, `B2`)
+//
+// `breaking I { … }` stood in one arm with `leave` and `next` under the sentence *"a
+// non-local exit out of a named loop"*. It is neither non-local nor an exit: what it changes
+// is which DUTY holds inside the block, not which statements run. **All four obligations
+// behind `non-local-exit` were `breaking`** -- `messung/AUSSETZUNG.md` measures
+// it, and the four go through Lean since the split.
+// ===========================================================================================
+
+const LEAN_AUSSETZUNG: &str = "module t {
+const N : u32 = 8;
+table B count N {
+    slot { a : option index into B, b : option index into B, }
+    invariant paarig cost O(n) runs offline :
+        forall s in slots of Self : (Self.slots[s].a == None) == (Self.slots[s].b == None);
+}
+impl fn setze(p : index into B, x : index into B)
+    ensures   B.slots[p].a == Some(x)
+    maintains paarig
+    effects   { writes B.slots }
+    costs     <= 8 ops
+{
+    breaking paarig {
+        B.slots[p].a = Some(x);
+        B.slots[p].b = Some(x);
+    }
+}
+}";
+
+/// **The suspension travels into the datum, and its NAME with it.**
+///
+/// The name is the load-bearing half: this reading is sound exactly as far as the channel
+/// cannot state a table invariant, and a record that inlined the body would have erased
+/// where the suspension lay.
+#[test]
+fn lean_aussetzung_traegt_ihren_namen() {
+    let t = lean_programm(LEAN_AUSSETZUNG);
+    assert!(
+        t.contains("(.breaking [\"paarig\"] ["),
+        "`breaking paarig` descends to `.breaking`, with the name kept:\n{t}"
+    );
+    assert!(
+        !t.contains("non-local-exit"),
+        "and it is not filed as an exit -- it is neither non-local nor one:\n{t}"
+    );
+    let (_, bodies, refused, _) = lean_programm_kopf(&t);
+    assert_eq!(bodies, 1, "the routine carries a body:\n{t}");
+    assert_eq!(refused, 0, "and nothing is refused:\n{t}");
+}
+
+/// **The obligation channel writes the GOAL, and the `maintains` duty stays beside it.**
+///
+/// That is what makes the reading sound rather than convenient: the `ensures` becomes a
+/// theorem, the table invariant is refused by name, and the two never merge.
+#[test]
+fn lean_aussetzung_gibt_ein_ziel_und_behaelt_die_invariante() {
+    let t = lean_modul(LEAN_AUSSETZUNG);
+    assert!(
+        t.contains("theorem duty_"),
+        "the `ensures` over a suspended block becomes a goal:\n{t}"
+    );
+    assert!(
+        t.contains("table-invariant"),
+        "and the `maintains` duty is still refused by name, not swallowed:\n{t}"
+    );
+}
+
+/// **What is LEFT under `non-local-exit` is a real exit, and it stays refused.**
+///
+/// `Outcome` has `running`, `returned` and `stuck`; a `leave` leaves a block without
+/// returning, and no arm of the three says that. *The refusal now names one thing, and the
+/// thing it names is buildable -- a fourth `Outcome`.*
+#[test]
+fn lean_echter_ausgang_bleibt_abgesagt() {
+    let t = lean_programm(
+        "module t {
+const N : u32 = 8;
+table B count N { slot { aktiv : bool, fertig : bool, } }
+extern fn watchdog() -> never effects { diverges } costs <= 1 ops;
+assume tick \"Der Zeitgeber tickt.\" falsifier sonde_tick;
+impl fn dienst(b : ptr<normal, rw> B, i : index into B)
+    ensures !b.slots[i].aktiv
+    effects { diverges, writes b.slots, reads b.slots }
+{
+    forever runde
+        per_pass bounded 64 ops
+        on_exceeded watchdog
+        effects  { writes b.slots, reads b.slots }
+        progress tick
+        invariant !b.slots[i].aktiv
+    {
+        b.slots[i].aktiv = false;
+        if b.slots[i].fertig { leave runde; }
+    }
+}
+}",
+    );
+    let z = t
+        .lines()
+        .find(|z| z.contains("REFUSED") && z.contains("dienst"))
+        .unwrap_or_else(|| panic!("the routine stands in the report:\n{t}"));
+    assert!(
+        z.contains("non-local-exit"),
+        "a `leave` is a real exit and still has no form here:\n{z}"
+    );
+}
+
+// ===========================================================================================
+// `result` IS A NAME (2026-08-28, `B3` / «B6»)
+//
+// `result` stood in `primary` and in eight corpus sites; what was missing was never the
+// spelling but the BINDING -- a postcondition is evaluated over a `State`, and a result is
+// not part of one. The goal binds it, and no arm of the model changed for it: `finalValue`
+// has carried it since day one (`messung/VIER-LUECKEN.md`).
+// ===========================================================================================
+
+const LEAN_ERGEBNIS: &str = "module t {
+type Klein = u32 in 0 .. 100;
+format Kopf { eintritt : u64, laenge : u32, }
+impl fn lies(k : ptr<normal, r> Kopf) -> u64
+    ensures  result == k.eintritt
+    effects  { reads k }
+    costs    <= 8 ops
+{
+    return k.eintritt;
+}
+}";
+
+/// **The goal over an `ensures result` demands three things, and the middle one is the point.**
+///
+/// A body that runs off the end has no result -- `finalValue` is `none` there -- so a goal
+/// without that conjunct would prove the promise of a routine that never makes one. *The
+/// form is strictly stronger than the two-part one, which is the direction a goal may move.*
+#[test]
+fn lean_ergebnis_verlangt_dass_ein_wert_entstand() {
+    let t = lean_modul(LEAN_ERGEBNIS);
+    assert!(
+        t.contains("theorem duty_1"),
+        "an `ensures result` becomes a goal:\n{t}"
+    );
+    assert!(
+        t.contains("finalValue (exec ρ body_duty_1 s) = some v"),
+        "and the goal demands that the body PRODUCED a value:\n{t}"
+    );
+    assert!(
+        t.contains("bindLocal s'.local' \"result\" v"),
+        "`result` is bound as a name, exactly as a parameter is read:\n{t}"
+    );
+    assert!(
+        !t.contains("result-in-ensures"),
+        "and it is not refused any more:\n{t}"
+    );
+}
+
+/// **`result` stays refused inside a BODY**, where it names nothing.
+///
+/// The flag goes up after `block_term` has run and before the conclusion is translated, so
+/// the two cannot be confused -- that ordering is the guarantee, not a comment.
+#[test]
+fn lean_ergebnis_bleibt_im_rumpf_abgesagt() {
+    // A postcondition without `result` keeps the two-part goal -- the shape may not change
+    // for bodies that never mention it.
+    let t = lean_modul(
+        "module t {
+const N : u32 = 8;
+type Zahl = u32 in 0 .. 99;
+table B count N { slot { belegt : bool, wert : Zahl, } }
+impl fn setz(p : index into B, w : Zahl)
+    ensures  B.slots[p].wert == w
+    effects  { writes B.slots }
+    costs    <= 4 ops
+{
+    B.slots[p].wert = w;
+}
+}",
+    );
+    assert!(
+        t.contains("theorem duty_1"),
+        "the plain postcondition still becomes a goal:\n{t}"
+    );
+    assert!(
+        !t.contains("finalValue"),
+        "and its goal does not demand a value nobody promised:\n{t}"
+    );
+}
+
+/// **«B14» -- an `option index into T` at a parameter, a `let` and a return.**
+///
+/// The entry said `option` stands only in `slottype`. It stands in `typeexpr`, the checker
+/// takes all three positions, and the body channel carries every one of the bodies.
+#[test]
+fn lean_option_steht_auch_ausserhalb_des_slottyps() {
+    let t = lean_programm(
+        "module t {
+const N : u32 = 8;
+table B count N { slot { elter : option index into B, } }
+impl fn setze(b : ptr<normal, rw> B, i : index into B, p : option index into B)
+    effects { writes b.slots }
+    costs   <= 4 ops
+{
+    b.slots[i].elter = p;
+}
+impl fn lies(b : ptr<normal, rw> B, i : index into B) -> option index into B
+    effects { reads b.slots }
+    costs   <= 4 ops
+{
+    let e : option index into B = b.slots[i].elter;
+    return e;
+}
+}",
+    );
+    let (_, bodies, refused, _) = lean_programm_kopf(&t);
+    assert_eq!(bodies, 2, "both bodies are carried:\n{t}");
+    assert_eq!(refused, 0, "and neither is refused:\n{t}");
+}
+
+// ===========================================================================================
+// A LOCAL IS NOT A GLOBAL, ON THE WRITE SIDE TOO (2026-08-28, `B5`)
+//
+// `place_term` has always distinguished a local from a world name when READING one. The
+// assignment arm did not: every suffix-less target became `.assignGlobal`. **That is not a
+// refusal but a wrong program** -- the datum bound the local, stored into a world place
+// nothing declares, and read the local back.
+//
+// Measured at `messung/abi-proben/zaehlwerk.gab :: hole_stand`, whose datum said the routine
+// always returns zero while it returns the slot's value. The export is what a hand-written
+// Lean specification is held against, so a person could have proved a true theorem about a
+// program nobody wrote.
+// ===========================================================================================
+
+const LEAN_LOKALE: &str = "module t {
+const N : u32 = 8;
+static G : u32 = 0;
+table B count N { slot { belegt : bool, wert : u32, } }
+impl fn zwei(b : ptr<normal, r> B, i : index into B) -> u32
+    effects { reads b.slots }
+    costs   <= 8 ops
+{
+    let mut n : u32 in 0 .. 4 = 0;
+    if b.slots[i].belegt {
+        n = 2;
+    }
+    return n;
+}
+impl fn setz_global(w : u32)
+    effects { writes G }
+    costs   <= 4 ops
+{
+    G = w;
+}
+}";
+
+/// **A write to a `let mut` rebinds the NAME; it does not store into the world.**
+#[test]
+fn lean_lokale_zuweisung_bindet_neu() {
+    let t = lean_programm(LEAN_LOKALE);
+    assert!(
+        t.contains("(.bindName \"n\" (.lit (.int 2)))"),
+        "`n = 2;` at a local rebinds it:\n{t}"
+    );
+    assert!(
+        !t.contains("(.assignGlobal \"n\""),
+        "and it never becomes a store to a world place nothing declares:\n{t}"
+    );
+    // **The other direction, and it is what keeps this from being a blanket rule**: a real
+    // `static` still goes to the world. Without this half the fix would have moved every
+    // global write into the local environment, which is the same fault mirrored.
+    assert!(
+        t.contains("(.assignGlobal \"G\""),
+        "a `static` is still a world place:\n{t}"
+    );
+}
+
+/// **`+=` at a local is an addition, and the model is safe where a shape would be guessed.**
+///
+/// The ambiguity the compound arm refuses lives in `&=`/`|=` -- conjunction on a truth value,
+/// a bit mask on an integer. `+=` has no second reading, and `binop .add` is `none` on
+/// anything but two integers, so a body that added to a non-number gets STUCK.
+#[test]
+fn lean_lokales_plusgleich_ist_eine_addition() {
+    let t = lean_programm(
+        "module t {
+const N : u32 = 8;
+table B count N { slot { aktiv : bool, } }
+impl fn zaehle(b : ptr<normal, r> B) -> u32
+    effects { reads b.slots }
+    costs   <= 64 ops
+{
+    let mut n : u32 in 0 .. N = 0;
+    traverse i over slots of b by unvisited
+        touches reads b.slots
+        invariant n <= N
+    {
+        if b.slots[i].aktiv { n += 1; }
+    }
+    return n;
+}
+}",
+    );
+    assert!(
+        t.contains("(.bindName \"n\" (.bin .add (.name \"n\") (.lit (.int 1))))"),
+        "`n += 1;` at a local is `n = n + 1` over the local:\n{t}"
+    );
+    let (_, bodies, refused, _) = lean_programm_kopf(&t);
+    assert_eq!(bodies, 1, "and the counting loop carries a body:\n{t}");
+    assert_eq!(refused, 0, "with nothing refused:\n{t}");
+}

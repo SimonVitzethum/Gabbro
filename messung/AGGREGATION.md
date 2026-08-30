@@ -172,3 +172,89 @@ und eine davon trägt nicht. Sie ist berichtigt — *dieselbe Bewegung wie bei �
 3. **Dann die Grammatikzeile**, und sie kostet kein Wort.
 4. **Giftprobe zuerst, Beispiel danach** — nicht umgekehrt: eine `count`-Form ohne Regel wäre
    genau die stille Datei, die Probe M vorführt.
+
+---
+
+## 6. Nachtrag vom 2026-08-28, abends: **Punkt 1 der Reihenfolge ist eingelöst**
+
+*Schritt B4 der Bahn B. §5 sagt: „**Der Beweis zuerst**" — und der steht jetzt.*
+
+### 6.1 `beweise/Table_Zaehlung.thy`, vierzehn Theorien bauen
+
+```bash
+rsync -a beweise/ ki-pc-fisch-101:gabbro-B-beweise/
+ssh ki-pc-fisch-101 'cd gabbro-B-beweise && ~/Isabelle2025-2/bin/isabelle build -D . -o threads=12'
+# Finished Gabbro (0:00:11 elapsed time, 0:00:17 cpu time, factor 1.50)
+```
+
+**Was bewiesen ist**, und es ist genau das, was eine Erzeugerschablone schuldet:
+
+| | |
+|---|---|
+| `zaehle_ist_kardinalitaet` | die erzeugte **Schleife** (Akkumulator, kein `card`) liefert die Kardinalität der Treffermenge unterhalb der Schranke |
+| `zaehle_beschraenkt` | sie ist durch die Schranke beschränkt — *das braucht `M104` am Zählfeld, und ohne den Satz wäre es eine Annahme* |
+| `Z-3`/`Z-4`/`Z-5` | eine Punktänderung senkt die Zählung des alten Objekts um **genau eins**, hebt die des neuen um **genau eins**, und lässt **jede andere unberührt** |
+| `buchfuehrung_erhaelt` | daraus die **Erhaltungsfrage**: der Erzeuger darf ein Dekrement und ein Inkrement schreiben statt zweier Schleifen |
+| `doppelte_schleife_kostet_produkt` | die Doppelschleife kostet **`m · n`** — die Zahl statt der Behauptung |
+| `doppelt_ist_mehr_als_einfach` | und darum ist `cost O(n)` an so einer Invariante **falsch**, als Gegenbeispiel |
+
+**Und zwei Grenzen stehen als Gegenbeispiel, nicht als Behauptung:**
+
+* `erhaltung_faellt_ohne_schranke` — **ohne `s0 < n` fällt die Erhaltung**, und sie fällt genau
+  daran. Ein Platz außerhalb der Schranke ändert die Zählung nicht, während der erzeugte
+  Zähler dekrementierte und inkrementierte. *Die Buchführung wäre danach um eins daneben, und
+  kein Lauf sähe es* — die Invariante ist `runs offline`.
+* `belegung_ist_nicht_mitgezaehlt` — **die Zählung sagt nichts über die Belegung.** Ob
+  `count(s in slots of A : …)` über alle Plätze läuft oder nur über die belegten, müsste die
+  Form sagen, und §3 sagt es nicht. *Eine zweideutige Form ist genau das, was «B12» am
+  2026-08-20 entschieden bekommen hat, statt gebaut zu werden.*
+
+### 6.2 Punkt 2 ist NICHT eingelöst — und der Grund ist eine Ratsche, nicht Zeitmangel
+
+Der Versuch, die Schablone als `table.zaehlung` ins Register zu schreiben, wurde
+**zurückgenommen**, und der Befund ist schärfer als der Eintrag es gewesen wäre:
+
+```bash
+ssh ki-pc-fisch-101 'cd gabbro-B && ./instrumente/pruefe-schablonen.py'
+# FUND: 7 haengende Praemissen, gebucht sind 6 -- die Ratsche laeuft nur nach unten.
+```
+
+**Zwei Regeln dieses Ordners stehen gegeneinander, sobald ein Konstrukt keinen Erzeuger hat:**
+
+* **K100s zweites Tor** verlangt, dass der Beweis **vor** dem Tragen steht. Erfüllt.
+* **Zahn 3** verlangt, dass eine **bewiesene** Schablone jede ihrer Prämissen an einen Pass
+  bindet — `schablonen.rs`: *„ein Satz ist geführt — und wer stellt seine Prämissen her?"*
+
+`buchfuehrung_erhaelt` hat drei Prämissen, die ein Erzeuger einlösen müsste. **Eine ist
+bindbar** (`s0 < n` → `M103` über `table.indexschranke`). **Zwei sind es nicht:**
+
+1. `b ≠ a` — die Mutation schreibt wirklich ein *anderes* Objekt. Ein Erzeuger schriebe die
+   Wache; es gibt keinen.
+2. die **Kostenregel** — die Ableitung steht (§6.1), der **Pass** nicht.
+
+> **Ein Eintrag mit diesen beiden hätte die Ratsche von 6 auf 8 gehoben, und eine Ratsche,
+> deren Marke man hochzieht, wenn sie klemmt, ist keine** (`PLAN-AUTONOM.md` §1.5). Sie
+> ohne sie zu schreiben wäre die stille Abschwächung, gegen die Zahn 3 überhaupt dasteht:
+> *bei einer ungelesenen Klausel weiß niemand etwas, hier wüsste man etwas Falsches.*
+
+**Das ist kein Hindernis, sondern die Ratschen bei der Arbeit.** Sie sagen zusammen etwas,
+das vorher nirgends stand:
+
+> **Eine Schablone für ein Konstrukt ohne Erzeuger ist nicht als *bewiesen* registrierbar** —
+> nicht weil der Beweis fehlte, sondern weil die Prämissen, die ein Erzeuger einlöste, ohne
+> ihn niemandem gehören. *Der Beweis gehört trotzdem in den Ordner, und er steht dort.*
+
+### 6.3 Was sich damit an §4 ändert — und was nicht
+
+Die Absage bleibt. Von den drei Posten des Schwanzes ist einer erledigt und einer halb:
+
+| | Stand am 2026-08-28 abends |
+|---|---|
+| **Isabelle-Gegenstück** | **erledigt** — `beweise/Table_Zaehlung.thy`, im `ROOT`, baut mit |
+| **Kostenregel** | **halb** — die Ableitung ist maschinengeprüft (`m · n`), der Pass fehlt |
+| **Erzeugerschablone** | **offen, und jetzt mit Grund**: sie ist ohne Erzeuger nicht registrierbar (§6.2) |
+
+Und §4 Punkt 2 steht unberührt: **`PLAN.md`:946 hat «B13» auf der Planebene aussortiert**, und
+ein Posten, der dort draußen ist, wird nicht durch eine billige Grammatikzeile hereingeholt.
+*Was dieser Nachtrag ändert, ist nicht die Entscheidung, sondern ihr Preis:* wer «B13» morgen
+bauen will, fängt nicht mehr bei null an, sondern bei der Kostenregel.

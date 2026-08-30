@@ -368,10 +368,13 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 105 Dateien, und keiner davon ist eine Teilmengenbeziehung.
-      *~~103~~ zweimal nachgezogen am 2026-08-28 — `messung/ABSENKUNG.md` und
-      `dokumente/PLAN-VERIFIKATION.md` kamen dazu, aus zwei Bahnen, und der
-      Zusammenführung fiel genau diese Zeile als Konflikt auf.*
+      heute **12 Widerrufe** über 109 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *~~103~~ dreimal nachgezogen am 2026-08-28 — aus drei Bahnen kamen sechs Berichte dazu:
+      `messung/ABSENKUNG.md`, `dokumente/PLAN-VERIFIKATION.md` und die vier des Rumpfkanals
+      (`messung/RUF-TOR.md`, `messung/AUSSETZUNG.md`, `messung/VIER-LUECKEN.md`,
+      `messung/SCHLEIFENZUSAGEN.md`). Die Reichweite steigt mit jedem Bericht unter
+      `messung/`, und das ist die Richtung, in der eine Ratsche fallen darf — **und der
+      Zusammenführung fiel genau diese Zeile dreimal als Konflikt auf.**
       *Die Reichweite sprang am 2026-08-25 von 64 auf 85, weil der Wächter seither die
       BERICHTE unter `messung/` liest* — und der Sprung fand sofort drei lebende Vorkommen,
       alle drei zu `fnptr` (`WB2`).
@@ -511,7 +514,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2074 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2075 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -589,23 +592,26 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 - [ ] **~~Die Zeilenanteile der eigenen Theorien sind gezaehlt, aber nicht KLASSIFIZIERT~~ —
       GEBAUT 2026-08-20** (`./instrumente/zaehle-theorien.py`). Die alte Buchung sagte *„zehn Theorien,
       1 639 Zeilen, 48 Sätze, 86 Beweisschritte"* und ließ die Frage offen, was davon Prosa
-      ist. Heute: **3170 Zeilen** in vierzehn Theorien, **89 Sätze** darin — und klassifiziert:
+      ist. Heute: **3496 Zeilen** in fünfzehn Theorien, **101 Sätze** darin — und klassifiziert:
 
       | | | |
       |---|---:|---|
-      | Gerüst | 521 | 16,4 % — `theory`/`imports`/`begin`/`end` und Leerzeilen |
-      | Prosa | 1 457 | **46,0 %** — Kommentare, `text`-Blöcke, Überschriften |
-      | Modell | 217 | 6,8 % — Definitionen, Datentypen |
-      | Beweis | 975 | 30,8 % — Sätze samt ihren Beweisen |
+      | Gerüst | 564 | 16,1 % — `theory`/`imports`/`begin`/`end` und Leerzeilen |
+      | Prosa | 1 612 | **46,1 %** — Kommentare, `text`-Blöcke, Überschriften |
+      | Modell | 226 | 6,5 % — Definitionen, Datentypen |
+      | Beweis | 1 094 | 31,3 % — Sätze samt ihren Beweisen |
 
       *~~2570 Zeilen, dreizehn Theorien, 76 Sätze, 956 Modell+Beweis~~ — nachgezogen
-      2026-08-28 durch `beweise/Absenkung_Parametrisch.thy`. **Die Anteile
-      haben sich dabei um weniger als einen halben Punkt bewegt**, und das ist der
-      eigentliche Befund: eine vierzehnte Theorie ändert die Verwechslung nicht.*
+      2026-08-28 durch ZWEI Theorien aus zwei Bahnen: `beweise/Absenkung_Parametrisch.thy`
+      (der Absenkungssatz, parametrisch über sechs Eigenschaften der Zielsemantik) und
+      `beweise/Table_Zaehlung.thy` («B13»s Zählung, ihre Erhaltungsfrage und zwei Grenzen als
+      Gegenbeispiel). **Die Anteile haben sich dabei um weniger als einen halben Punkt
+      bewegt**, und das ist der eigentliche Befund: zwei weitere Theorien ändern die
+      Verwechslung nicht.*
 
       **Fast die Hälfte ist Fließtext, und damit ist die Verwechslung beziffert:**
-      **1192 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
-      **37,6 % statt 100 %.** *Wer 3 170 gegen eine Verus-Zahl hält, überschätzt die eigene
+      **1320 Zeilen Modell und Beweis** sind das, was einer Verus-Zeilenzahl gegenübersteht —
+      **37,8 % statt 100 %.** *Wer 3496 gegen eine Verus-Zahl hält, überschätzt die eigene
       Seite um den Faktor 2,7.* Dieselbe Verwechslung, an der `1,90` am 2026-08-19
       zurückgezogen wurde, eine Ebene tiefer.
       *Und was das NICHT heißt:* die Einteilung liest Zeilenanfänge; ein `text`-Block über ein
@@ -684,7 +690,19 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **332 von 332 Ankern** greifen (`--anker`, 2026-08-28) — die
+      fällt. Mutationskatalog: **340 von 340 Ankern** greifen (`--anker`, 2026-08-28) — die
+      acht des Rumpfkanals kamen abends dazu. Drei bewachen den
+      Rufsammeltopf (`B1`, `messung/RUF-TOR.md`): der Optionswert, der wieder als Ruf gelesen
+      wird, der Sammeltopf, der sich wieder schließt, und der Verbundkonstruktor, der wieder
+      Ruf heißt. Zwei die Aussetzung (`B2`, `messung/AUSSETZUNG.md`): `breaking`, das wieder
+      Ausgang heißt, und die ausgesetzte Invariante, die ihren Namen im Datum verliert.
+      Zwei das Ergebnis (`B3`, `messung/VIER-LUECKEN.md`): das Glied, das einen ERZEUGTEN Wert
+      verlangt, und `result`, das wieder im Rumpf übersetzt wird. Und eine die LOKALE
+      (`B5`, `messung/SCHLEIFENZUSAGEN.md` §1): eine Zuweisung an ein `let mut`, die wieder
+      als Weltspeicher übersetzt wird — **die einzige der acht, die kein Register verkleinert,
+      sondern das Programm im Datum austauscht.**
+      *Sieben der acht lassen die Bilanzzeile unberührt* — genau der Grund, warum die Proben
+      den emittierten Text lesen und nicht die Zahl. Die
       Zahl stand hier als *24 von 24* und in `CLAUDE.md` als *159*, beide aus früheren Läufen.
       *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
       **Der erste volle Lauf seit mehreren Tagen, 2026-08-28** (`ki-pc-fisch-101`, 6 min 32 s):
@@ -3454,7 +3472,7 @@ und genau das ist Stufe 8 (PL.1), die noch nicht angefangen hat.
 
 **Und die vierte, die kein Argument gegen Lean ist, sondern eine Auflage:** eine zweite
 Beweisschicht neben Isabelle ist **W7** — zwei Register über derselben Sache. Heute stehen
-14 Theorien, 3 170 Zeilen, 89 Sätze, 10 von 21 Schablonen maschinell geprüft. *Wer Lean
+15 Theorien, 3 496 Zeilen, 101 Sätze, 10 von 21 Schablonen maschinell geprüft. *Wer Lean
 danebenstellt, muss sagen, welche Aussage wo lebt, sonst wandert dieselbe Aussage in beide und
 niemand weiß, welche gilt.*
 

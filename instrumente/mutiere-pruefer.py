@@ -3272,6 +3272,114 @@ MUTATIONEN = [
         "die Bindung; zwei Lesungen sind zwei Werte, und genau das ist «B33»",
         "code",
     ),
+    # --- lean.rs, the collecting bucket (2026-08-28, `B1`) ---
+    #
+    # **Seventeen refusals stood under one word, and not one was a call over a contract**
+    # (`messung/RUF-TOR.md`). The three mutations below hit the three surfaces that can fall
+    # back silently -- and two of them leave the balance line untouched, which is why the
+    # probes read the emitted TEXT and not only the count.
+    Mutation(
+        "lean-optionswert-ist-wieder-ein-ruf",
+        "lean.rs",
+        "            if let ExprArt::Ruf(r) = &l.wert.art {\n"
+        "                if !is_option_value(r) {",
+        "            if let ExprArt::Ruf(r) = &l.wert.art {\n"
+        "                if true {",
+        "Der Rumpfkanal -- `let n = Some(i);` laeuft wieder in `call_parts` statt in "
+        "`expr_term`. Das Modell traegt `.someOf` seit dem ersten Tag, und der Rumpf wird "
+        "trotzdem ganz abgesagt: eine Fehluebersetzung, die wie eine Luecke aussieht",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-sammeltopf-schliesst-sich-wieder",
+        "lean.rs",
+        "    let kind = foreign_kind(r, c);",
+        "    let kind: Option<LeanReason> = None;",
+        "Der Rumpfkanal -- erzeugte Operation, `transition` und Konstruktor fallen wieder "
+        "unter `call-not-compositional`. Die Zahl bleibt dieselbe, der Bericht sagt "
+        "wieder, der Kanal warte auf ein Tor, das keine dieser Stellen naehme",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-konstruktor-heisst-wieder-ruf",
+        "lean.rs",
+        "    if r.ist_verbundwert() {\n"
+        "        return Some(LeanReason::ConstructedValue);",
+        "    if false {\n"
+        "        return Some(LeanReason::ConstructedValue);",
+        "Der Rumpfkanal -- ein Verbundkonstruktor gilt wieder als Ruf. `Value` hat keine "
+        "Verbundform, und das ist ein Modellpreis; ein fehlendes Tor ist ein anderer",
+        flaeche="annotation",
+    ),
+    # --- lean.rs, the suspension (2026-08-28, `B2`) ---
+    #
+    # **A suspension is not an exit** (`messung/AUSSETZUNG.md`). Four obligations
+    # went through Lean the moment `breaking` stopped being filed as one. The two mutations
+    # below hold both halves: the reading itself, and the NAME that makes it sound.
+    Mutation(
+        "lean-aussetzung-heisst-wieder-ausgang",
+        "lean.rs",
+        "        StmtArt::Bricht(b) => {",
+        "        StmtArt::Bricht(_) if true => Err(LeanReason::NonLocalExit),\n"
+        "        StmtArt::Bricht(b) => {",
+        "Der Rumpfkanal -- `breaking` faellt wieder unter `non-local-exit`. Vier Pflichten "
+        "verlieren ihr Ziel, und der Bericht sagt wieder, der Kanal warte auf ein "
+        "Schleifentor, obwohl keine der vier in einer Schleife steht",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-aussetzung-verliert-ihren-namen",
+        "lean.rs",
+        '            let namen: Vec<String> = b.invarianten.iter().map(|i| quoted(&i.text)).collect();',
+        '            let namen: Vec<String> = Vec::new();',
+        "Der Rumpfkanal -- die ausgesetzte Invariante reist nicht mehr im Datum. Das Ziel "
+        "geht weiter durch, und genau das ist die Gefahr: die Stelle, an der die Aussetzung "
+        "lag, ist aus dem Zeugnis verschwunden und kein Leser findet sie wieder",
+        flaeche="annotation",
+    ),
+    # --- lean.rs, the result (2026-08-28, `B3` / «B6») ---
+    #
+    # **`result` is a name, and the goal that uses it must demand that a value AROSE.**
+    # A body that runs off the end has none; a goal without the `finalValue` conjunct would
+    # prove the promise of a routine that never makes one (`messung/VIER-LUECKEN.md`).
+    Mutation(
+        "lean-ergebnis-ohne-wert",
+        "lean.rs",
+        '                "        \\\\<and> finalValue (exec \\\\<rho> body_{} s) = some v\\n",',
+        '                "        \\\\<and> True \\<and> finalValue (exec \\\\<rho> body_{} s) = some v\\n",',
+        "Der Rumpfkanal -- das Glied, das einen ERZEUGTEN Wert verlangt, wird verwaessert. "
+        "Ein Rumpf, der hinten hinauslaeuft, hat kein Ergebnis, und die Zusage ueber "
+        "`result` ginge trotzdem durch",
+        flaeche="annotation",
+    ),
+    Mutation(
+        "lean-ergebnis-auch-im-rumpf",
+        "lean.rs",
+        "            if !c.allow_result {\n"
+        "                return Err(LeanReason::Result);",
+        "            if false {\n"
+        "                return Err(LeanReason::Result);",
+        "Der Rumpfkanal -- `result` wird auch im RUMPF uebersetzt, wo es keinen Wert nennt. "
+        "Das Datum sagt danach, der Rumpf lese einen lokalen Namen, den niemand bindet",
+        flaeche="annotation",
+    ),
+    # --- lean.rs, the local (2026-08-28, `B5`) ---
+    #
+    # **A local written as a world place is a WRONG PROGRAM, not a refusal** -- and nothing
+    # was red while it stood. The mutation below restores exactly that state, and its point is
+    # that the balance line does not move: the body is still carried, the datum is still valid
+    # Lean, and it describes a routine nobody wrote.
+    Mutation(
+        "lean-lokale-wird-wieder-global",
+        "lean.rs",
+        "                let ist_lokal = c.locals.iter().any(|l| *l == z.ziel.basis.text);",
+        "                let ist_lokal = false;",
+        "Der Rumpfkanal -- eine Zuweisung an ein `let mut` wird wieder als Weltspeicher "
+        "uebersetzt. Der Rumpf bindet den Namen, schreibt an einen Ort, den niemand "
+        "deklariert, und liest den Namen zurueck: das Datum sagt, die Routine gebe ihren "
+        "Anfangswert zurueck",
+        flaeche="annotation",
+    ),
 ]
 
 # Die Sprechprobe des Geruests selbst -- in beide Richtungen.

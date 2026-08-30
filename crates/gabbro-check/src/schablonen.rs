@@ -869,6 +869,44 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
 ];
 
+// ===========================================================================================
+// A THEORY WITH NO ENTRY, AND WHY -- `beweise/Table_Zaehlung.thy` (2026-08-28)
+//
+// **It is recorded here rather than only in `beweise/`, because a proof this register does
+// not name grows the trust surface unseen** -- which is what `instrumente/zaehle-theorien.py`
+// counts. This note is not a template: it takes no seat, binds no premise, and nothing rests
+// on it.
+//
+// WHAT IT PROVES. That a generated counting loop delivers the cardinality of the hit set
+// below the bound (`zaehle_ist_kardinalitaet`), that it is bounded by it (`zaehle_beschraenkt`
+// -- what `M104` in the checker needs at a counter field), and the PRESERVATION question: a mutation
+// one slot from `a` to `b` lowers the count of `a` by exactly one, raises that of `b` by
+// exactly one, and leaves every other untouched -- so `buchfuehrung_erhaelt` lets a generator
+// write a decrement and an increment instead of two loops. Two boundaries stand as
+// counterexamples: without `s0 < n` the preservation FALLS, and the count says nothing about
+// occupancy.
+//
+// WHY IT HAS NO ENTRY, AND THE REASON IS THE RATCHETS AT WORK.
+//
+// K100's second gate wants the proof before a template is carried -- satisfied. **Tooth 3
+// wants a PROVED template to bind every premise to a pass**, and of the three premises of
+// `buchfuehrung_erhaelt` only one is bindable: `s0 < n`, see `M103` in the checker, through
+// `table.indexschranke`). The other two -- that the mutation really writes a different object
+// (`b != a`), and the cost rule -- would be redeemed by a GENERATOR, and `count(x in domain :
+// pred)` has none: `messung/AGGREGATION.md` §4 refuses the construct.
+//
+// An entry carrying those two would have raised tooth 3 from 6 to 8, and a ratchet whose mark
+// one lifts when it binds is none. Writing them out of the entry would have been the quiet
+// weakening tooth 3 exists against -- *with an unread clause nobody knows anything; there one
+// would know something false.*
+//
+// > **Hence the finding, and it stood nowhere before: a template for a construct with no
+// > generator is not registrable as PROVED** -- not because the proof is missing, but because
+// > the premises a generator would redeem belong to nobody without one.
+//
+// `messung/AGGREGATION.md` §6 measures it and carries the commands.
+// ===========================================================================================
+
 /// **DIE MARKE — der zweite Zahn der Ratsche, seit 2026-08-16.**
 ///
 /// Bis heute hatte dieses Register **einen Zaehler und sonst nichts**. Der Wortschatz hat

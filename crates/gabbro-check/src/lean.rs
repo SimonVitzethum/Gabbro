@@ -74,8 +74,17 @@ pub enum LeanReason {
     /// `narrow … to … else` -- and the range lattice underneath is already proved
     /// (`Passlogik.Bereich`, 46 theorems). This one is close.
     Narrowing,
-    /// `leave`, `next`, `breaking` -- a non-local exit out of a named loop. Meaningless
-    /// without the loop gate.
+    /// `leave` and `next` -- a non-local exit out of a named loop.
+    ///
+    /// **`breaking` left this arm on 2026-08-28 and it never belonged in it**
+    /// (`messung/AUSSETZUNG.md`): a suspension changes which DUTY holds, not
+    /// which statements run, so it is carried like a `locks`. All four obligations this
+    /// reason held were `breaking`, and the number therefore said the channel was waiting on
+    /// a loop gate that would have taken none of them.
+    ///
+    /// What is left is a real exit, and what it needs is now nameable: **a fourth
+    /// `Outcome`.** `Outcome` has `running`, `returned` and `stuck`; a `leave` leaves a block
+    /// without returning, and no arm of the three says that.
     NonLocalExit,
     /// `+=` and its kin. It desugars to `x = x + e` -- **but the two are not the same
     /// statement in Gabbro's overflow accounting, and this channel does not get to decide
@@ -125,6 +134,29 @@ pub enum LeanReason {
     FieldShape,
     /// A `refines` whose named `spec fn` is not a plain expression body.
     SpecShape,
+    /// A call to a GENERATED table operation -- `Verzeichnis::insert(v, i)`.
+    ///
+    /// **It stands apart from `CallStatement`, and the split was measured** (2026-08-28,
+    /// `messung/RUF-TOR.md`): six of the seventeen refusals filed as "a call, and that gate
+    /// is not built" are these, and no gate over a CONTRACT would take one of them. *An
+    /// operation has no `ensures` to carry.* What it has is a SCHEMA -- `opsruf::koepfe`
+    /// cuts the premises, `schablonen.rs` registers them -- and a schema is a different
+    /// thing to assume than a callee's promise.
+    GeneratedOp,
+    /// A `transition` of a `device` -- `anerkennen(g)`, `wurzel_setzen(v)`.
+    ///
+    /// It looks exactly like a call and is a REGISTER WRITE. Five of the seventeen. It waits
+    /// on hardware this model does not have, which is the same place `DevicePromise` waits
+    /// -- but that arm is about an obligation AT a register, and this one is a statement in
+    /// a body. *Two different things under one name is how seventeen came about.*
+    Transition,
+    /// A constructor whose VALUE this model has no form for -- a record, a `tagged`, or a
+    /// device handle: `Completion(id: k, len: n)`, `Dma(GERAETEBASIS)`.
+    ///
+    /// `Value` is four forms and the list is closed (`Body.lean` §1). A record is not among
+    /// them, and neither is a handle. **The price is a model extension**, and it is a
+    /// different price from a missing gate.
+    ConstructedValue,
 }
 
 impl LeanReason {
@@ -158,6 +190,9 @@ impl LeanReason {
             LeanReason::Carrier => "carrier-not-a-table",
             LeanReason::FieldShape => "no-shape-for-field",
             LeanReason::SpecShape => "spec-not-an-expression",
+            LeanReason::GeneratedOp => "generated-op",
+            LeanReason::Transition => "device-transition",
+            LeanReason::ConstructedValue => "constructed-value",
         }
     }
     pub fn sentence(self) -> &'static str {
@@ -185,7 +220,9 @@ impl LeanReason {
             LeanReason::Observe => "`observes` -- a view that MAY be stale",
             LeanReason::ErrorPropagation => "`let … else` -- two exits out of a call",
             LeanReason::Narrowing => "`narrow` -- the range lattice under it is proved",
-            LeanReason::NonLocalExit => "a non-local exit out of a named loop",
+            LeanReason::NonLocalExit => {
+                "`leave`/`next` -- a real exit, and `Outcome` has no fourth form for one"
+            }
             LeanReason::CompoundAssign => "`+=` and its kin -- a different overflow accounting",
             LeanReason::MatchNotOption => "a `match` over something other than an `option`",
             LeanReason::Float => "a floating-point value -- this model has no float",
@@ -208,10 +245,17 @@ impl LeanReason {
                 "the declared type of a slot field has no shape in this channel"
             }
             LeanReason::SpecShape => "the named `spec fn` is not a plain expression body",
+            LeanReason::GeneratedOp => {
+                "a generated table operation -- its contract is a SCHEMA, not an `ensures`"
+            }
+            LeanReason::Transition => "a `transition` of a `device` -- a register write",
+            LeanReason::ConstructedValue => {
+                "a record, a `tagged` or a device handle -- this model has no value for one"
+            }
         }
     }
     /// **All of them, so a report cannot omit one by forgetting to ask.**
-    pub const ALL: [LeanReason; 28] = [
+    pub const ALL: [LeanReason; 31] = [
         LeanReason::ForeignBody,
         LeanReason::Invariant,
         LeanReason::CallSite,
@@ -240,6 +284,9 @@ impl LeanReason {
         LeanReason::Carrier,
         LeanReason::FieldShape,
         LeanReason::SpecShape,
+        LeanReason::GeneratedOp,
+        LeanReason::Transition,
+        LeanReason::ConstructedValue,
     ];
 }
 
@@ -253,6 +300,11 @@ pub struct LeanGoal {
     pub hypotheses: Vec<(String, String, String)>,
     /// The postcondition, as a `Gabbro.Body.Expr` that must evaluate to `true`.
     pub conclusion: String,
+    /// **Whether the postcondition names `result`** -- and with it, whether the goal also
+    /// demands that the body PRODUCED a value. A body that runs off the end has no result,
+    /// and a goal that let such a body pass would prove the promise of a routine that never
+    /// makes one.
+    pub names_result: bool,
     /// **The `obtain` lines the proof opens with.** A hypothesis `\exists n, l.locals "p" =
     /// .z n` tells `simp` nothing until the witness is named; without these the goal stalls
     /// on an unreduced `match` over `l.locals "p"`. *Measured on the first run of this
@@ -360,6 +412,19 @@ struct Ctx<'a> {
     allow_calls: bool,
     /// Callee name to its parameter names, so a call can bind them.
     callees: &'a HashMap<String, Vec<String>>,
+    /// **Whether `result` may be translated, and it is true only over the POSTCONDITION.**
+    ///
+    /// A `result` in a body would be a name nothing binds. The flag is raised after the body
+    /// is translated and before the conclusion is, so the two cannot be confused -- and
+    /// `block_term` has already run by then, which is the guarantee rather than a comment.
+    allow_result: bool,
+    /// Set while translating the conclusion, where `result` really occurred. **The goal
+    /// shape depends on it**: only a postcondition that names the returned value has to
+    /// demand that the body produced one.
+    uses_result: bool,
+    /// **What a call path names when it is NOT a routine call.** Empty means "a routine
+    /// call, or nothing this unit declares" -- see `foreign_calls`.
+    foreign: &'a HashMap<String, LeanReason>,
     /// Collected while translating: `(carrier, field, form, origin)`, deduplicated.
     seen: Vec<(String, String, Shape, String)>,
     /// `(carrier, field, shape)` for every RECORD field touched.
@@ -574,7 +639,23 @@ fn expr_term(e: &Expr, c: &mut Ctx) -> Result<String, LeanReason> {
         ExprArt::Gleitkomma { .. } => Err(LeanReason::Float),
         ExprArt::Eingebaut(_) => Err(LeanReason::Builtin),
         ExprArt::Alt(_) => Err(LeanReason::OldState),
-        ExprArt::Ergebnis => Err(LeanReason::Result),
+        // **`result` is a NAME bound to the returned value, and that is the whole gate.**
+        //
+        // The model has carried `finalValue` since its first day -- its own doc line says
+        // *"For an `ensures` that names `result`"* -- and what was missing was not a form
+        // but the binding: a postcondition is evaluated over a `State`, and a result is not
+        // part of one. So the goal binds it as a local before evaluating, exactly as a
+        // parameter is read from `local'`. *No arm of the model changed for this.*
+        //
+        // `result` is a RESERVED word, so no `let` and no parameter can carry the name --
+        // the binding cannot shadow anything a body wrote.
+        ExprArt::Ergebnis => {
+            if !c.allow_result {
+                return Err(LeanReason::Result);
+            }
+            c.uses_result = true;
+            Ok("(.name \"result\")".into())
+        }
         ExprArt::FnWert(_) | ExprArt::Grund { .. } => Err(LeanReason::OtherValue),
     }
 }
@@ -610,16 +691,91 @@ fn pred_term(p: &Pred, c: &mut Ctx) -> Result<String, LeanReason> {
     }
 }
 
+/// **`Some(e)` and `None` are VALUES, not calls.**
+///
+/// The model has carried `.someOf` and `.absent` since its first day (`Body.lean` §3), and
+/// `expr_term` translates both. The `let` and `return` arms of `stmt_term` never reached
+/// that arm: they saw an `ExprArt::Ruf` and sent it to `call_parts`, which looked up a
+/// callee named `Some` in a table that has none and refused the WHOLE body as
+/// `call-not-compositional`.
+///
+/// *Measured on 2026-08-28: `beispiele/27-freiliste.gab :: belegen` was refused as a call
+/// although it contains none* (`messung/RUF-TOR.md`). A refusal filed under the wrong reason
+/// names a missing gate where a missing route stands -- the same lesson the `Carrier` /
+/// `FieldShape` split books above.
+fn is_option_value(r: &Ruf) -> bool {
+    match r.path().and_then(|p| p.teile.last()).map(|i| i.text.as_str()) {
+        Some("None") => r.argumente.is_empty(),
+        Some("Some") => r.argumente.len() == 1,
+        _ => false,
+    }
+}
+
+/// **What a call path names when it is not a routine call** -- or `None` where it is one.
+///
+/// Four different things parse as a call in Gabbro, and until 2026-08-28 all four were
+/// refused with the single word `call-not-compositional`. **They have four different
+/// prices**, and one number over all of them said the register was waiting on a gate that
+/// would have taken none of them (`messung/RUF-TOR.md` §1.1).
+fn foreign_kind(r: &Ruf, c: &Ctx) -> Option<LeanReason> {
+    // A record or a `tagged` constructor carries FIELD LABELS, and nothing else does --
+    // `Ruf::marken` is built at one place and checked at one place (`ast.rs`).
+    if r.ist_verbundwert() {
+        return Some(LeanReason::ConstructedValue);
+    }
+    let p = r.path()?;
+    // The written path first (`Verzeichnis::insert`), then the bare name -- an operation is
+    // only ever an operation under its table's name.
+    let full: Vec<String> = p.teile.iter().map(|i| i.text.clone()).collect();
+    if let Some(k) = c.foreign.get(&full.join("::")) {
+        return Some(*k);
+    }
+    c.foreign.get(full.last()?).copied()
+}
+
+/// **Every call path of the program that is NOT a routine call, with what it is instead.**
+///
+/// Read once per program out of the DECLARATIONS, never out of the use -- gate 1 of this
+/// file. Three sources, and each names a different price:
+///
+/// * `opsruf::koepfe` -- the generated operations, whose contract is a schema;
+/// * a `device`'s name -- the handle constructor, whose value this model has no form for;
+/// * a `device`'s `transition`s -- register writes, which take hardware.
+fn foreign_calls(baum: &Programm) -> HashMap<String, LeanReason> {
+    let mut out = HashMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, _| match &item.art {
+        ItemArt::Tabelle(t) => {
+            for k in crate::opsruf::koepfe(t) {
+                out.insert(k.pfad(), LeanReason::GeneratedOp);
+            }
+        }
+        ItemArt::Device(d) => {
+            out.insert(d.name.text.clone(), LeanReason::ConstructedValue);
+            for u in &d.uebergaenge {
+                out.insert(u.name.text.clone(), LeanReason::Transition);
+            }
+        }
+        _ => {}
+    });
+    out
+}
+
 /// **Callee, parameter names and argument terms of a call.** One place, because three
 /// statement forms carry a call and each one writing its own lookup is three chances for
 /// them to drift apart.
 fn call_parts(r: &Ruf, c: &mut Ctx) -> Result<(String, String, String), LeanReason> {
+    // **What this path really names, asked BEFORE the gate.** A `transition` refused as
+    // "the call gate is not built" would go on waiting for a gate that cannot help it.
+    let kind = foreign_kind(r, c);
+    let Some(name) = r.path().and_then(|p| p.teile.last()).map(|i| i.text.clone()) else {
+        return Err(kind.unwrap_or(LeanReason::CallStatement));
+    };
+    if let Some(k) = kind {
+        return Err(k);
+    }
     if !c.allow_calls {
         return Err(LeanReason::CallStatement);
     }
-    let Some(name) = r.path().and_then(|p| p.teile.last()).map(|i| i.text.clone()) else {
-        return Err(LeanReason::CallStatement);
-    };
     // **The callee has to be DECLARED here.** A call into a unit this run never read would
     // bind arguments to parameters nobody counted.
     let Some(ps) = c.callees.get(&name).cloned() else {
@@ -668,13 +824,17 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             // **`let n = f(a);` is a CALL, not an expression.** A callee may write, so an
             // expression carrying one would no longer be pure -- and `eval` would have to
             // take the environment, which would put the whole model one level up.
+            // **`Some(e)` is a VALUE and not a call**, and the test comes first -- see
+            // `is_option_value`.
             if let ExprArt::Ruf(r) = &l.wert.art {
-                let (n, ps, args) = call_parts(r, c)?;
-                c.locals.push(l.name.text.clone());
-                return Ok(format!(
-                    "(.bindCall {} {n} [{ps}] [{args}])",
-                    quoted(&l.name.text)
-                ));
+                if !is_option_value(r) {
+                    let (n, ps, args) = call_parts(r, c)?;
+                    c.locals.push(l.name.text.clone());
+                    return Ok(format!(
+                        "(.bindCall {} {n} [{ps}] [{args}])",
+                        quoted(&l.name.text)
+                    ));
+                }
             }
             let w = expr_term(&l.wert, c)?;
             c.locals.push(l.name.text.clone());
@@ -713,12 +873,56 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             };
             let w = expr_term(&z.wert, c)?;
             if z.ziel.suffixe.is_empty() {
+                // **`n = e;` at a LOCAL rebinds the name; it does not store into the world.**
+                //
+                // Until 2026-08-28 this arm wrote `.assignGlobal` for every suffix-less
+                // target, local or not -- and that is not a refusal but a WRONG PROGRAM.
+                // Measured at `messung/abi-proben/zaehlwerk.gab :: hole_stand`, whose datum
+                // read: bind `s` to 0, store to a world place called "s" that nothing
+                // declares, return the LOCAL `s`. *The datum said the routine always returns
+                // zero, and it returns the slot's value.*
+                //
+                // The export is what a hand-written Lean specification is held against
+                // (`programmlogik/beispiel/`), so a person could have proved a true theorem
+                // about a program nobody wrote. **`place_term` has always made this
+                // distinction when READING a name** -- only the write side did not, which is
+                // why nothing was refused and nothing looked wrong.
+                //
+                // Same class as the `traverse` variable that once fell through to
+                // `.global "opfer"`, and the reason that comment stands three arms below.
+                let ist_lokal = c.locals.iter().any(|l| *l == z.ziel.basis.text);
+                let ziel = quoted(&z.ziel.basis.text);
+                if z.op == ZuwOp::Setzt {
+                    return Ok(if ist_lokal {
+                        format!("(.bindName {ziel} {w})")
+                    } else {
+                        format!("(.assignGlobal {ziel} {w})")
+                    });
+                }
                 // A `static` target carries no shape here, so a compound form has no
                 // operator to choose -- refused rather than guessed.
-                if z.op != ZuwOp::Setzt {
+                if !ist_lokal {
                     return Err(LeanReason::CompoundAssign);
                 }
-                return Ok(format!("(.assignGlobal {} {})", quoted(&z.ziel.basis.text), w));
+                // **At a LOCAL, `+=` and `-=` name their operation and nothing is guessed.**
+                //
+                // The ambiguity this arm was refusing lives in `&=` and `|=`: on a truth
+                // value they are conjunction and disjunction, on an integer they are bit
+                // masks, and without a declared shape there is no way to choose. `+=` has no
+                // second reading.
+                //
+                // **And the model is safe by construction where a shape would have been
+                // guessed**: `binop .add` is `none` on anything but two integers, so a body
+                // that somehow added to a non-number gets STUCK rather than computing
+                // something the machine does not. *That is why reading the OPERATOR here is
+                // not the quiet weakening gate 1 stands against -- there is no premise being
+                // made easier, only a form being translated.*
+                let op = match z.op {
+                    ZuwOp::Plus => "add",
+                    ZuwOp::Minus => "sub",
+                    _ => return Err(LeanReason::CompoundAssign),
+                };
+                return Ok(format!("(.bindName {ziel} (.bin .{op} (.name {ziel}) {w}))"));
             }
             if let [OrtSuffix::Feld(f)] = &z.ziel.suffixe[..] {
                 let (base, shape) = record_field(&z.ziel.basis.text, &f.text, c)?;
@@ -823,9 +1027,13 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
         }
         StmtArt::Return(None) => Ok("(.ret none)".into()),
         StmtArt::Return(Some(e)) => {
+            // **`return Some(i);` is a VALUE and not a call**, and the test comes first --
+            // see `is_option_value`.
             if let ExprArt::Ruf(r) = &e.art {
-                let (n, ps, args) = call_parts(r, c)?;
-                return Ok(format!("(.retCall {n} [{ps}] [{args}])"));
+                if !is_option_value(r) {
+                    let (n, ps, args) = call_parts(r, c)?;
+                    return Ok(format!("(.retCall {n} [{ps}] [{args}])"));
+                }
             }
             Ok(format!("(.ret (some {}))", expr_term(e, c)?))
         }
@@ -869,9 +1077,28 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<String, LeanReason> {
             Ok(format!("(.loop {} {p} {body})", quoted(&id)))
         }
         StmtArt::Narrow(_) => Err(LeanReason::Narrowing),
-        StmtArt::Bricht(_) | StmtArt::Leave(_) | StmtArt::Next(_) => {
-            Err(LeanReason::NonLocalExit)
+        // **`breaking I { … }` is a SUSPENSION and not an exit**, and it stood in one arm
+        // with `leave` and `next` under the sentence "a non-local exit out of a named loop".
+        // It is neither: what it changes is which DUTY holds inside the block, not which
+        // statements run -- so its meaning is its body's, exactly as at a `locks`.
+        //
+        // *Measured on 2026-08-28: all four obligations behind `non-local-exit` were
+        // `breaking`, and not one was an exit* (`messung/AUSSETZUNG.md`). The
+        // reading holds exactly as far as this channel cannot state a table invariant --
+        // and it cannot; the `maintains` duty stands beside it and is refused by name.
+        //
+        // **The suspended names travel into the datum.** That is the half a later invariant
+        // channel has to read: a record that dropped them would hide where the suspension
+        // lay, the same reason the lock's name stays.
+        StmtArt::Bricht(b) => {
+            let namen: Vec<String> = b.invarianten.iter().map(|i| quoted(&i.text)).collect();
+            Ok(format!(
+                "(.breaking [{}] {})",
+                namen.join(", "),
+                block_term(&b.rumpf, c)?
+            ))
         }
+        StmtArt::Leave(_) | StmtArt::Next(_) => Err(LeanReason::NonLocalExit),
         // **The pairing costs no memory model either, and the ground is the same as at a
         // lock**: `release_stellt_sichtbarkeit_her` is an ASSUMPTION of the axiom layer
         // (`beispiele/06-annahmen.gab`, `unfalsifiable` with its reason written out, rebooked
@@ -1099,6 +1326,7 @@ fn judge(
     recs: &HashMap<String, Vec<(String, Option<Shape>)>>,
     statics: &HashMap<String, String>,
     callees: &HashMap<String, Vec<String>>,
+    foreign: &HashMap<String, LeanReason>,
     number: usize,
 ) -> LeanVerdict {
     let FnRumpf::Block(b) = &f.rumpf else {
@@ -1117,7 +1345,10 @@ fn judge(
         // saying one thing, so neither carried. The real table travels here now; the flag is
         // the only thing that refuses.
         allow_calls: false,
+        allow_result: false,
+        uses_result: false,
         callees,
+        foreign,
         locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
         seen: Vec::new(),
         seen_records: Vec::new(),
@@ -1129,6 +1360,9 @@ fn judge(
         Ok(t) => t,
         Err(r) => return LeanVerdict::Refused(r),
     };
+    // **The flag goes up here and nowhere earlier.** The body is translated above; a
+    // `result` inside one is still refused, because there it names nothing.
+    c.allow_result = true;
     let conclusion = match pred_term(post, &mut c) {
         Ok(t) => t,
         Err(r) => return LeanVerdict::Refused(r),
@@ -1187,6 +1421,7 @@ fn judge(
         body,
         hypotheses,
         conclusion,
+        names_result: c.uses_result,
         opening,
         equations,
         splits,
@@ -1202,6 +1437,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
     let recs = records(baum, &u);
     let statics = static_carriers(baum, &tab);
     let callees = callee_params(baum);
+    let foreign = foreign_calls(baum);
     // The module a function is declared in travels with it: `typ_von_ausdruck_decl` is
     // module-aware, and asking it from the wrong module answers about the wrong type.
     let mut fns: HashMap<String, (String, FnDecl)> = HashMap::new();
@@ -1243,7 +1479,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                             .and_then(|s| s.parse::<usize>().ok())
                             .unwrap_or(0);
                         match f.ensures.get(k.wrapping_sub(1)) {
-                            Some(q) => judge(f, q, &u, module, &tab, &recs, &statics, &callees, n),
+                            Some(q) => judge(f, q, &u, module, &tab, &recs, &statics, &callees, &foreign, n),
                             None => LeanVerdict::Refused(LeanReason::Expression),
                         }
                     }
@@ -1251,7 +1487,7 @@ pub fn verdicts(baum: &Programm) -> Vec<(crate::pflichten::Pflicht, LeanVerdict)
                 },
                 crate::pflichten::Art::Verfeinerung => match fns.get(&p.funktion) {
                     Some((module, f)) => match specification(f, &fns) {
-                        Ok(q) => judge(f, &q, &u, module, &tab, &recs, &statics, &callees, n),
+                        Ok(q) => judge(f, &q, &u, module, &tab, &recs, &statics, &callees, &foreign, n),
                         Err(r) => LeanVerdict::Refused(r),
                     },
                     None => LeanVerdict::Refused(LeanReason::SpecShape),
@@ -1438,14 +1674,37 @@ pub fn module(baum: &Programm, datei: &str) -> String {
             s.push_str(&format!("    -- {origin}\n"));
             s.push_str(&format!("    ({label} : {term})\n"));
         }
-        s.push_str(&format!(
-            "    : \\<exists> s', finalState (exec \\<rho> body_{} s) = some s'\n",
-            g.name
-        ));
-        s.push_str(&format!(
-            "        \\<and> eval s' post_{} = some (.bool true) := by\n",
-            g.name
-        ));
+        if g.names_result {
+            // **The goal over a postcondition that names `result` demands THREE things**, and
+            // the middle one is the new half: the body ends, it PRODUCED a value, and the
+            // promise holds with that value bound. *A body that runs off the end has no
+            // result, and `finalValue` is `none` there* -- so this form is strictly stronger
+            // than the two-part one, which is the direction a goal may move.
+            s.push_str(&format!(
+                "    : \\<exists> s' v, finalState (exec \\<rho> body_{} s) = some s'\n",
+                g.name
+            ));
+            s.push_str(&format!(
+                "        \\<and> finalValue (exec \\<rho> body_{} s) = some v\n",
+                g.name
+            ));
+            // `result` is bound as a LOCAL, exactly as a parameter is read -- see
+            // `expr_term`. The model needed no arm for it.
+            s.push_str(&format!(
+                "        \\<and> eval {{ s' with local' := bindLocal s'.local' \"result\" v }} \
+                 post_{} = some (.bool true) := by\n",
+                g.name
+            ));
+        } else {
+            s.push_str(&format!(
+                "    : \\<exists> s', finalState (exec \\<rho> body_{} s) = some s'\n",
+                g.name
+            ));
+            s.push_str(&format!(
+                "        \\<and> eval s' post_{} = some (.bool true) := by\n",
+                g.name
+            ));
+        }
         for z in &g.opening {
             s.push_str(z);
             s.push('\n');
@@ -1462,6 +1721,12 @@ pub fn module(baum: &Programm, datei: &str) -> String {
             "store".into(),
             "bindLocal".into(),
         ];
+        // **`finalValue` joins the set only where the goal is about one.** Lean's linter
+        // reports an unused simp argument, and a tactic that carries lemmas it never needs
+        // teaches a reader the wrong thing about what the proof rests on.
+        if g.names_result {
+            set.push("finalValue".into());
+        }
         set.extend(g.equations.iter().cloned());
         // **Every `rcases` splits the goal, so the whole chain is joined with `<;>`.** A
         // line standing on its own would serve only the first half -- and the other half,
@@ -1561,6 +1826,7 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
     let recs = records(baum, &u);
     let statics = static_carriers(baum, &tab);
     let callees = callee_params(baum);
+    let foreign = foreign_calls(baum);
     let mut out = Vec::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, module| {
         let ItemArt::Funktion(f) = &item.art else { return };
@@ -1594,7 +1860,15 @@ pub fn routines(baum: &Programm) -> Vec<Routine> {
             // never inlined, and what it does is looked up in an environment the reader's
             // theorem quantifies over.
             allow_calls: true,
+            // **The export does NOT say `result`, and that is the conservative direction.**
+            // Its `post` list is what a CALLER may assume, and a caller reads the callee's
+            // result at its own call site -- not out of a name this datum binds. A promise
+            // fewer makes a caller's goal harder, never wrong, and it is listed by name in
+            // `post_dropped`. *The same direction as a dropped precondition, mirrored.*
+            allow_result: false,
+            uses_result: false,
             callees: &callees,
+            foreign: &foreign,
             locals: f.parameter.iter().map(|p| p.name.text.clone()).collect(),
             seen: Vec::new(),
             seen_records: Vec::new(),

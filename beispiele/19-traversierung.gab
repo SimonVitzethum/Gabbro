@@ -57,6 +57,12 @@ impl fn aktive_zaehlen(w : ptr<normal, r> Werte) -> u32
     let mut n : u32 in 0 .. NSLOTS = 0;
     traverse i over slots of w by unvisited
         touches reads w.slots
+        -- **Was ueber der Schleife gilt.** Der Zaehler waechst hoechstens einmal je
+        -- Durchgang, und die Domaene hat NSLOTS Plaetze -- genau die Schranke, die «H2.1»
+        -- am 2026-08-19 von Hand bewiesen hat und die der `let` seither als Typ traegt.
+        -- *Mehr ist heute nicht schreibbar:* `n == count(s in slots of w : w.slots[s].aktiv)`
+        -- waere die Aussage, die man will, und sie ist «B13» (`messung/AGGREGATION.md`).
+        invariant n <= NSLOTS
     {
         if w.slots[i].aktiv {
             -- **Hier stand ein `narrow n to 0 ..< NSLOTS else { return n; }`, und sein
