@@ -5676,3 +5676,167 @@ impl fn via_ort(d : ptr<mmio, r> Tiefengeraet) -> u32 or Geraetelug
         "beide Quellen tragen einen erklaerten Typ; ungetypt bleibt keiner"
     );
 }
+
+/// **The domain bound of `mappings of` is `node length ^ levels` -- pinned by the TEXT.**
+///
+/// `saetze.rs::kosten.domaenenschranke` said the gap out loud, and it was true until here:
+///
+/// > *"No probe and no mutation measures the bound against the domain. `K003` has 2 probes,
+/// > but they measure that a MISSING bound is refused -- not that a PRESENT one is right.
+/// > That is the difference the 2 048/512^4 error lived in."*
+///
+/// **The error this closes is measured, not imagined.** Until 2026-08-20 `umgebung.rs`
+/// computed `levels x node length` -- 2 048 where the leaf set holds 512^4 = 68 719 476 736.
+/// Seven orders of magnitude, carried for three days, and found because the EMITTER walked
+/// into it. *No test fell. No mutation bit.*
+///
+/// The probe moves ONE dial at a time and reads the number out of the `K001` message per
+/// site, never out of a tally:
+///
+/// ```text
+///   levels 1..4 at node length 2   ->   4    8    16   32       (2 x l^e:  2  4   8  16)
+///                                       and NOT 4 8 12 16       (2 x e*l:  2  4   6   8)
+///   levels 4 at node length 512    ->   137 438 953 472         (= 2 x 512^4 -- F09)
+///   body 0 / 2 / 4 ops at l=8, e=2 ->   --   128  256           (the body is a FACTOR)
+/// ```
+///
+/// **`e = 3, l = 2` is the smallest place where the two readings part** -- 16 against 12. A
+/// probe that only sampled `e = 1`, or only `e = l`, would have stayed green through all
+/// three days. *That is why the exponent is walked and not sampled.*
+///
+/// See `messung/K001-DOMAENENSCHRANKE.md` for the whole chain, and for why `F09` keeps its
+/// wrong promise on purpose.
+#[test]
+fn die_schranke_von_mappings_of_ist_knotenlaenge_hoch_ebenen() {
+    // One `walk`, one `traverse`, three dials: levels, node length, body cost.
+    fn quelle(ebenen: u32, laenge: u32, rumpfzweige: u32) -> String {
+        let mut rumpf = String::new();
+        for i in 0..rumpfzweige {
+            rumpf.push_str(&format!(
+                "        if a.level == {i} {{\n            return true;\n        }}\n"
+            ));
+        }
+        format!(
+            "module p {{
+const EBENEN   : u32 = {ebenen};
+const EINTRAEGE: u32 = {laenge};
+format Pte @version 1 endian little {{
+    unten : u64 @[11:0] reserved,
+    roh : u64 embeds [51:12] scale 4096,
+    oben  : u64 @[63:52] reserved,
+}}
+device T(basis : u64) at normal {{
+    reg EINTRAG : u64 @0x0 class rw fields {{ P @0, PS @7, NX @63, }}
+}}
+walk W levels EBENEN {{
+    node : [Pte; EINTRAEGE],
+    down : roh when EINTRAG.PS == 0,
+    leaf : EINTRAG.PS == 1,
+}}
+impl fn f(w : ptr<normal, r> W) -> bool
+    effects {{ reads w }}
+    costs   <= 1 ops
+{{
+    traverse a over mappings of w by unvisited
+        touches reads w
+    {{
+{rumpf}    }}
+    return false;
+}}
+}}
+"
+        )
+    }
+
+    // The number `K001` PRINTS at this site -- the text, not a tally.
+    fn gedruckte_kosten(q: &str) -> Option<i128> {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        let _ = gabbro_check::pruefe(&b, &mut a);
+        let k = a.absagen.iter().find(|x| x.code == "K001")?;
+        // `f promises <= 1 ops, the body costs N`
+        let n = k.text.rsplit_once("the body costs ")?.1.trim().to_string();
+        Some(n.parse().unwrap_or_else(|e| panic!("{n:?}: {e} -- in {:?}", k.text)))
+    }
+
+    let mut gesehen = Vec::new();
+    for ebenen in 1..=4u32 {
+        for laenge in [2u32, 8, 512] {
+            let erwartet = 2 * (laenge as i128).pow(ebenen);
+            let gemessen = gedruckte_kosten(&quelle(ebenen, laenge, 1))
+                .unwrap_or_else(|| panic!("no K001 at levels {ebenen}, node {laenge}"));
+            assert_eq!(
+                gemessen, erwartet,
+                "levels {ebenen}, node {laenge}: the bound is `l^e`, not `e*l` -- the old \
+                 reading would have printed {}",
+                2 * (ebenen as i128) * (laenge as i128)
+            );
+            gesehen.push(gemessen);
+        }
+    }
+
+    // **`F09` in one line** -- the value the whole question turned on.
+    assert!(
+        gesehen.contains(&137_438_953_472),
+        "levels 4 x node 512 must be 2 x 512^4, seen: {gesehen:?}"
+    );
+
+    // **The body is a FACTOR, not a summand.** Two arms cost twice as much, and an empty
+    // body costs nothing -- then `K001` does not fall at all, because 0 <= 1.
+    assert_eq!(gedruckte_kosten(&quelle(2, 8, 1)), Some(128), "2 ops x 8^2");
+    assert_eq!(gedruckte_kosten(&quelle(2, 8, 2)), Some(256), "4 ops x 8^2");
+    assert_eq!(gedruckte_kosten(&quelle(2, 8, 0)), None, "0 ops x 8^2 = 0, and 0 <= 1");
+}
+
+/// **An overflowing bound promises NOTHING -- and that is the one direction that counts.**
+///
+/// `K001` is an UPPER bound: an over-count is coarse, a wrapped under-count is a lie. Both
+/// multiplications on the way refuse instead of wrapping -- `checked_pow` in `umgebung.rs`
+/// for `l^e`, `checked_mul` in `kosten.rs::mal` for `body x bound`. This probe reads that at
+/// the boundary: `512^14 = 2^126` still fits, and `2 x 2^126 = 2^127` no longer fits `i128`.
+#[test]
+fn eine_ueberlaufende_domaenenschranke_verspricht_nichts() {
+    let quelle = |ebenen: u32| {
+        format!(
+            "module p {{
+const EBENEN   : u32 = {ebenen};
+const EINTRAEGE: u32 = 512;
+format Pte @version 1 endian little {{
+    unten : u64 @[11:0] reserved,
+    roh : u64 embeds [51:12] scale 4096,
+    oben  : u64 @[63:52] reserved,
+}}
+device T(basis : u64) at normal {{
+    reg EINTRAG : u64 @0x0 class rw fields {{ P @0, PS @7, NX @63, }}
+}}
+walk W levels EBENEN {{
+    node : [Pte; EINTRAEGE],
+    down : roh when EINTRAG.PS == 0,
+    leaf : EINTRAG.PS == 1,
+}}
+impl fn f(w : ptr<normal, r> W) -> bool
+    effects {{ reads w }}
+    costs   <= 1 ops
+{{
+    traverse a over mappings of w by unvisited
+        touches reads w
+    {{
+        if a.level == 0 {{
+            return true;
+        }}
+    }}
+    return false;
+}}
+}}
+"
+        )
+    };
+    let codes = |q: &str| -> Vec<&'static str> {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        let _ = gabbro_check::pruefe(&b, &mut a);
+        a.absagen.iter().map(|x| x.code).collect()
+    };
+
+    let k14 = codes(&quelle(14));
+    assert!(k14.contains(&"K003"), "levels 14 must say `K003`, fallen: {k14:?}");
+    assert!(!k14.contains(&"K001"), "an overflowing computation is no promise: {k14:?}");
+}

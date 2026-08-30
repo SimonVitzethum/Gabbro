@@ -1,0 +1,186 @@
+# `K001` an `F09` — die Rechnung, Faktor für Faktor
+
+*Gemessen am 2026-08-31, Bahn P, Posten P-a. **Der W24-Vorlauf steht vor der Entscheidung, und
+er hat sie umgedreht.***
+
+> **Das Ergebnis zuerst.** `137 438 953 472` ist **richtig**, und `4096` ist **falsch**.
+> `F09` ist damit **kein Prüferfehler**, sondern eine korrekte Absage über einer Zusage, die
+> mit der *zurückgezogenen* Lesart gerechnet wurde. Die Buchung „drei echte Programme weist
+> der Prüfer ab" trägt `F09` zu Unrecht.
+>
+> **Und die Reparatur, die naheliegt, kauft nichts:** selbst mit der ehrlichen Zahl bleibt
+> `F09` unabgesenkt — der ERZEUGER weist dieselbe Datei **dreimal** ab (`C001`), und keine
+> dieser drei Absagen hängt an `K001`. *Gemessen, nicht vermutet; die Ausgabe steht in §5.*
+
+---
+
+## 1. Die Kette — drei Stellen, drei Faktoren
+
+`F09`:79 sagt `costs <= 4096 ops` zu. Der Pass rechnet `137 438 953 472`. Die Zahl entsteht an
+genau drei Stellen, und jede trägt genau einen Faktor:
+
+| # | Stelle | was sie beiträgt | Wert bei `F09` |
+|---|---|---|---|
+| **1** | `crates/gabbro-check/src/umgebung.rs`:757‑767 | `walkschranken[W] = Knotenlänge ^ Ebenen`, über `checked_pow` | `512^4 = 68 719 476 736` |
+| **2** | `crates/gabbro-check/src/domaene.rs`:88‑103 | `mappings of w` schlägt den Walknamen über den TYP von `w` nach und liefert die Zahl aus (1) durch | `68 719 476 736` |
+| **3** | `crates/gabbro-check/src/kosten.rs`:591‑593 | `Kosten::Zahl(Rumpf).mal(Schranke)`, über `checked_mul` | `2 × 68 719 476 736` |
+
+Der Rumpffaktor `2` kommt aus dem Rumpf der Traversierung:
+
+```gabbro
+if abbildung.level == 3 {   -- 1 op: die Bedingung
+    return true;            -- 1 op
+}
+```
+
+**Die ganze Rechnung in einer Zeile:**
+
+```
+  Rumpf x Knotenlaenge ^ Ebenen  =  2 x 512^4  =  2 x 68 719 476 736  =  137 438 953 472
+```
+
+## 2. Und das ist nicht hergeleitet, sondern gemessen
+
+Fünfzehn Läufe über vierzehn verschiedene Programme (die vorletzte Zeile wiederholt die
+sechste absichtlich als Anker), je ein Faktor allein bewegt, alle über denselben `walk`.
+Gelesen wird der **Text** der Absage (`the body costs N`), nicht eine Bilanzzahl:
+
+| `Ebenen` | `Knotenlänge` | Rumpf | gedruckt | `Rumpf × l^e` |
+|---|---|---|---|---|
+| 1 | 2 | 2 | `4` | `2 × 2` |
+| 2 | 2 | 2 | `8` | `2 × 4` |
+| 3 | 2 | 2 | `16` | `2 × 8` |
+| 4 | 2 | 2 | `32` | `2 × 16` |
+| 1 | 8 | 2 | `16` | `2 × 8` |
+| 2 | 8 | 2 | `128` | `2 × 64` |
+| 3 | 8 | 2 | `1 024` | `2 × 512` |
+| 4 | 8 | 2 | `8 192` | `2 × 4 096` |
+| 1 | 512 | 2 | `1 024` | `2 × 512` |
+| 2 | 512 | 2 | `524 288` | `2 × 262 144` |
+| 3 | 512 | 2 | `268 435 456` | `2 × 134 217 728` |
+| **4** | **512** | **2** | **`137 438 953 472`** | **`2 × 68 719 476 736`** |
+| 2 | 8 | 0 | *(keine Absage)* | `0 × 64 = 0` |
+| 2 | 8 | 2 | `128` | `2 × 64` |
+| 2 | 8 | 4 | `256` | `4 × 64` |
+
+**Der Exponent ist ein Exponent und kein Faktor** — `e` von 1 auf 4 bei `l = 2` verdoppelt
+viermal (`4 → 8 → 16 → 32`), nicht viermal *dasselbe*. Die alte Lesart `e × l` hätte
+`4 → 8 → 12 → 16` gedruckt.
+
+---
+
+## 3. Ist die Zahl richtig? — **ja, und sie ist scharf**
+
+`mappings of` quantifiziert über die **erreichbaren Blätter** eines `walk` (`SPRACHE.md` §6,
+Zeile 900). Die Frage ist also: *ist `l^e` die Mächtigkeit dieser Menge?*
+
+**Obere Schranke.** Ein `walk` mit `e` Ebenen und Knoten zu `l` Einträgen ist ein Baum, dessen
+Wurzel `l` Einträge hat, jeder davon höchstens einen Knoten der nächsten Ebene öffnet. Auf
+Ebene `k` gibt es also höchstens `l^k` Knoten und `l^(k+1)` Einträge. Ein Blatt ist ein
+Eintrag; die tiefsten Einträge sind `l^e` viele. Ein Eintrag auf einer *höheren* Ebene kann
+Blatt sein (`leaf : EINTRAG.PS == 1` — die Großseite), aber dann öffnet er keinen Unterbaum
+und ersetzt `l^(e-k)` mögliche Blätter durch **eines**. *Jede Großseite senkt die Zahl.*
+Also `|mappings| ≤ l^e`.
+
+**Sie wird angenommen.** Belegt man jeden Eintrag der tiefsten Ebene mit `PS == 1` und jeden
+darüber mit `PS == 0`, sind es genau `l^e`. **Die Schranke ist scharf, nicht großzügig.**
+
+**Gegenprobe an der Hardware.** `512^4 = 2^36`, und `2^36` 4‑KiB‑Seiten sind `2^48` Bytes —
+die 256 TiB, die vierstufiges x86‑64‑Paging adressiert. *Die Zahl ist die Adressraumgröße
+geteilt durch die Seitengröße, und das ist sie auch dann, wenn man sie von der anderen Seite
+her ausrechnet.*
+
+## 4. Ist der Kalkül zu grob? — **ja, und in der ungefährlichen Richtung**
+
+`rechte_pruefen` kehrt beim **ersten** Blatt mit `level == 3` zurück, und in einem
+vierstufigen `walk` liegt jedes Blatt auf `level == 3`. **Der wirkliche Lauf kostet 2 ops.**
+Der Pass rechnet `2 × 512^4`. Der Schlupf ist ein Faktor `6,9 × 10^10`.
+
+> **Das ist Grobheit und kein Fehler.** `K001` ist eine OBERE Schranke; ein `traverse`, das
+> vorzeitig zurückkehrt, kostet höchstens so viel wie eines, das durchläuft. Die einzige
+> Fehlerrichtung, die zählt, ist die **Unterzählung** — und die tritt hier an keiner Stelle
+> auf: beide Multiplikationen laufen über `checked_pow`/`checked_mul` und weichen bei
+> Überlauf nach `K003` aus statt still zu wickeln (§6).
+
+**Ein Frühausstieg im Kostenmodell wäre ein neues Konstrukt, und der Bedarf ist eine einzige
+Fundstelle.** Nach Regel A wird er nicht gebaut. *Er stünde auch nicht für sich: „das erste
+Element trifft die Bedingung" ist eine Aussage über die Belegung des Baums zur Laufzeit, und
+die kennt der Pass nicht — er müsste sie annehmen.*
+
+## 5. Warum die naheliegende Reparatur nichts kauft
+
+Der Plan (`dokumente/PLAN-VOLLSTAENDIGKEIT.md` §6) bucht `F09` als Sperre vor `K1`: *„F3 und
+F9 sind für den Prüfer gar keine gültigen Programme … Erst P2/P3, dann K1."*
+
+**Für `F09` ist das unvollständig.** Eine Sonde mit derselben `walk`-Form, aber leerem
+Traversierungsrumpf, geht durch den Prüfer (`0 Fehler`) — und der Erzeuger weist sie dreimal
+ab:
+
+```
+[C001] device … at normal -- an access into the ordinary space is not a device access …
+[C001] walk … levels that is not a number -- the descent's step count IS the declaration's
+       one statement about the run, and it cannot be guessed
+[C001] mappings of -- the reading is DECIDED (the leaf SET …). What is missing is the
+       lowering: it needs a generated recursive descent along down and leaf
+```
+
+*Keine dieser drei hängt an `K001`.* Sie stehen alle drei in `emit.rs` und gehören damit
+**Bahn V**. Würde man `F09`:79 auf `costs <= 137438953472 ops` heben, prüfte `F09` sauber und
+senkte trotzdem nicht ab. **Die Zusage zu heben, kauft eine Zahl in einer Bilanz und keine
+Absenkung.**
+
+Und sie **kostet** etwas: die Zeile `costs <= 4096 ops` samt ihrer Begründung
+(`-- Die Schranke faellt aus levels mal node-Laenge`) ist heute der einzige Ort im Baum, an
+dem die zurückgezogene Lesart **im Wortlaut** steht und **von einem Werkzeug angezeigt wird**.
+*Ein Marker, den ein Werkzeug jeden Tag ausdruckt, ist mehr wert als ein Satz in einem
+Dokument.*
+
+> **Entschieden: `F09` bleibt, wie es ist.** Das ist eine benannte Absage und ein voller
+> Ausgang. Was fällt, ist die BUCHUNG — `F09` gehört nicht in die Liste „echte Programme, die
+> der Prüfer abweist", sondern in die Liste „Programme, die der Erzeuger nicht kennt".
+
+## 6. Was der Vorlauf nebenbei gefunden hat — die Walkidentität hängt an der Zahl
+
+`umgebung.rs`:1094 löst den *Typnamen* eines `walk` so auf:
+
+```rust
+Traegerart::Walk => self.walkschranken.contains_key(*k),
+```
+
+**Ein `walk` IST ein Typ, genau dann, wenn seine Blattzahl in `u128` passt.** Gemessen an zwei
+Sonden mit identischer Deklaration bis auf `levels`:
+
+| `levels` | `512^levels` | was der Prüfer sagt |
+|---|---|---|
+| 14 | `2^126` — passt | `K003`: *the cost calculation overflows … so nothing is promised here* |
+| 15 | `2^135` — passt nicht | `N040`: **`W` names no type** ⟵ *und danach* `K003`: *die Domäne hat keine Schranke aus der Deklaration (fehlt der Tabelle ihr `count`?)* |
+
+Bei `levels 15` ist die Deklaration tadellos, der Name steht da, und der Prüfer sagt, es gebe
+ihn nicht — und schickt den Leser anschließend nach einem `count` an einer Tabelle suchen, die
+es nicht gibt. **Dieselbe Klasse wie `W16`: das Werkzeug misst etwas anderes als seinen
+Gegenstand.** Der Schlüssel `walkschranken` beantwortet *„wie groß ist die Blattmenge"*; die
+Auflösung fragt *„gibt es diesen `walk`"*. Zwei Fragen, eine Karte.
+
+*Gebucht als Befund; die Reparatur ist eine eigene Karte `walknamen` und steht in `TODO.md`.*
+
+---
+
+## 7. Was daraus für das Satzregister folgt
+
+`saetze.rs::kosten.domaenenschranke` steht auf `VERMUTET`, und sein `gemessen_an` sagte:
+
+> *„**No probe and no mutation measures the bound against the domain.** `K003` has 2 probes,
+> but they measure that a MISSING bound is refused — not that a PRESENT one is right. That is
+> the difference the 2 048/512^4 error lived in."*
+
+**Genau diese Lücke schließt §2.** Die Sonden messen eine ANWESENDE Schranke gegen die
+Deklaration, und zwar so, dass die historisch falsche Lesart auffällt: bei `l = 2, e = 3`
+sagt `e × l` die Schranke `6` und `l^e` die Schranke `8` — gedruckt `12` gegen die gemessenen
+`16`. Bei `l = 512, e = 4` trennen dieselben zwei Lesarten `4096` von `137 438 953 472`.
+
+**Der Stand bleibt `VERMUTET`, und das ist kein Versehen.** Der Satz spricht über *alle*
+Domänen — `count` einer Tabelle, das einzige Feldarray eines `queue`-Verbunds, `elems of`,
+`index into T`. Gemessen ist ab heute **eine** davon. *Der Vorbehalt im Satz sagt das selbst:
+„Every other domain bound in this pass has exactly the same shape and exactly as little
+checking."* Er wird um den Satz ergänzt, welche Domäne jetzt Proben hat — **eine Marke, die
+fällt, nicht eine, die steigt.**

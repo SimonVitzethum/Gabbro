@@ -1336,6 +1336,29 @@ liest sich wie Deckung.* Beide sind umgezogen, 236 von 236 greifen.
       rekursiven Abstieg** entlang `down` und `leaf`. Der Erzeuger sagt es beim Namen ab
       (`C001`), und die Absage nennt seit heute den Bauposten statt der offenen Lesart.
 
+      > **Und damit ist `F9` nicht vom PRÜFER blockiert, sondern vom ERZEUGER** *(gemessen
+      > 2026-08-31, Bahn P)*. Eine Sonde mit derselben `walk`-Form und leerem
+      > Traversierungsrumpf geht mit **0 Fehlern** durch den Prüfer — und der Erzeuger weist
+      > sie **dreimal** ab (`device … at normal`, `walk … levels` als Konstantenname,
+      > `mappings of`). **Keine dieser drei hängt an `K001`.** Die Zusage in `F9`:79 zu heben
+      > kaufte eine Zahl in einer Bilanz und keine Absenkung, und sie kostete den einzigen
+      > Ort im Baum, an dem die zurückgezogene Lesart **im Wortlaut** steht und **täglich von
+      > einem Werkzeug ausgedruckt wird**. *`F9` bleibt, wie es ist; was fällt, ist die
+      > Buchung* — `dokumente/PLAN-VOLLSTAENDIGKEIT.md` §1 führt `F9` unter „echte Programme,
+      > die schon der PRÜFER abweist", und dort gehört es nicht hin.
+
+- [ ] **Ein `walk` IST ein Typ genau dann, wenn seine Blattzahl in `u128` passt** *(gefunden
+      2026-08-31 im W24-Vorlauf zu P-a)*. `umgebung.rs`:1094 löst den Typnamen eines `walk`
+      über `walkschranken.contains_key(k)` auf — also über die **Kostenkarte**. Bei
+      `levels 15, node 512` (`512¹⁵ = 2¹³⁵`, passt nicht) sagt der Prüfer an einer tadellosen
+      Deklaration **`N040`: `W` names no type**, und schickt den Leser danach mit `K003`
+      *„fehlt der Tabelle ihr `count`?"* nach einer Tabelle suchen, die es nicht gibt.
+      **Dieselbe Klasse wie `W16`: das Werkzeug misst etwas anderes als seinen Gegenstand.**
+      Die Karte beantwortet *„wie groß ist die Blattmenge"*, die Auflösung fragt *„gibt es
+      diesen `walk`"* — zwei Fragen, eine Karte (W7). *Die Reparatur ist eine eigene Menge
+      `walknamen`, unbedingt gefüllt; sie ist klein und nicht dringend, weil die Erreichbarkeit
+      an `512¹⁵` hängt — aber die Meldung ist irreführend, und das ist der Schaden.*
+
 - [ ] **`by consuming` senkt nicht ab, weil die ENTNAHME erzeugter Code ist** *(2026-08-20)*.
       Die Bedeutung steht fest; was fehlt, ist die `ops`-Operation, die den Eintrag entfernt.
       *Zusammen mit dem Leser-Befund in Stufe 5 (`by consuming` liest kein Pass) ist das
@@ -3581,6 +3604,18 @@ sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 71 S�
       `kosten.domaenenschranke` (**VERMUTET**) — damit der gemessene Fehler (2 048 gegen
       512⁴, **sieben Größenordnungen, drei Tage getragen**) im Satz *sichtbar* bleibt, statt
       von einer glatten Formulierung überschrieben zu werden.
+
+      > **Nachgezogen am 2026-08-31 (Bahn P, P-a), und der Stand bleibt `VERMUTET`.**
+      > Was fiel, ist der Satz *„keine Probe und keine Mutation misst die Schranke gegen die
+      > Domäne"*: für **`mappings of`** messen ihn seit heute zwei Proben in `rechenwerk.rs`
+      > (`e` von 1 bis 4 über `l ∈ {2, 8, 512}`, gelesen wird der **`K001`-Text** je Stelle;
+      > die zwei Lesarten trennen sich schon bei `e = 3, l = 2` — 16 gegen 12) und die
+      > Mutation `walkschranke-wieder-ein-pfad`, die das historische `e × l` zurücksetzt und
+      > gefangen wird.
+      >
+      > **Für `count`, `queue`, `elems of` und `index into T` ist der Satz so ungeprüft wie
+      > vorher** — eine von fünf Domänen ist gemessen, und deshalb steigt der Stand nicht.
+      > *Die Rechnung Faktor für Faktor steht in [`messung/K001-DOMAENENSCHRANKE.md`](messung/K001-DOMAENENSCHRANKE.md).*
       **V2 ist der teuerste, und der Grund ist ein Befund über das Geschirr:** die Regel hat
       **keine eigene Kennung** — sie erweitert, was durchgeht. Eine Giftprobe müsste ein
       **PAAR** zeigen (ohne Fakt fällt, mit Fakt geht durch), und dafür hat `beispiele/gift`
