@@ -294,6 +294,32 @@ Vermutung. *Sie kostet mehr als einen Nachmittag — 127 Formen — und keinen B
 von fünf an V und P hängen** — F3 und F9 sind heute für den Prüfer keine gültigen Programme,
 F5 senkt nicht ab. Dann `H = 0` buchen, **mit dem Satz aus §5 daneben.**
 
+> ## Und genau hier steht seit dem 2026-08-31 eine Wand, die keine Bahn einreißt
+>
+> **Bahn P hat gemessen, dass F1, F3 und F9 nicht deshalb fallen, weil dem Prüfer etwas
+> fehlt, sondern weil ihre eingefrorenen Zeilen falsch sind.** Damit ist der Satz *„erst
+> P2/P3, dann K1"* für diese drei nicht bloß unvollständig — er hat kein Ziel:
+>
+> | | was das Fragment bräuchte | wie viele EINGEFRORENE Zeilen |
+> |---|---|---|
+> | **F1** | `:337` in ein `let … else`, `:328` von `16452480` auf `16532736` | **2** |
+> | **F3** | Vertrag IN die fünf `fn(…)`-Zeilen, drei `set_reg`-Argumente auf `const` | **8** |
+> | **F9** | `:79` von `4096` auf die ehrliche Zahl — *und danach immer noch drei `C001`* | **1**, und es hilft nicht |
+>
+> Die Regel dieses Ordners lautet: *„Ergänzt werden **nur** Deklarationen, die der Ausschnitt
+> ruft und nicht nennt. Nichts wird umgeschrieben."* **Solange sie gilt, ist `H = 0` über den
+> AUSFÜHRUNGSweg für diese drei nicht erreichbar** — nicht schwer, sondern ausgeschlossen.
+>
+> *Das ist kein Grund, die Regel zu lockern.* Sie ist der Maßstab, und ein Maßstab, der
+> nachgibt, wo er drückt, misst nichts mehr. **Was folgt, ist eine Entscheidung des Ordners
+> und keine Aufgabe einer Bahn:** entweder `H` wird über sieben Fragmente statt über zehn
+> gebucht — *mit der Bezugsgröße daneben*, wie `W17` es verlangt — oder die drei wandern in
+> eine eigene Spalte: **„Pflicht an einem Programm, das der Bericht nicht hergibt."**
+>
+> *Was NICHT geht, ist sie als „offen" weiterzuführen.* Eine Pflicht, deren Erfüllung eine
+> Regel verbietet, ist keine offene Pflicht — sie ist eine falsch gebuchte, und das ist
+> dieselbe Klasse wie `F09` in der Prüferliste, eine Ebene höher.
+
 > **Und was in diesem Durchlauf ausdrücklich NICHT steckt:** die Absenkungsentscheidung
 > (`messung/ABSENKUNG.md`, drei Formen). `H = 0` ist über den AUSFÜHRUNGSweg erreichbar, den
 > dieser Ordner fünfmal gegangen ist; welcher der drei Wege zum BEWEIS gegangen wird, ist eine
