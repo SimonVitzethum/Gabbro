@@ -52,7 +52,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen 52 Sätze über 12 von 12 Pässen, keiner bewiesen.** Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~52~~ 71 Sätze über 12 von 12 Pässen, keiner bewiesen** *(nachgemessen 2026-08-30 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 71 over 12 passes -- 63 measured, 2 ARGUED, 6 CONJECTURED, 0 proved`; die Zahl steht seit heute im Register von `pruefe-zahlen.py`).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
 
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
@@ -126,7 +126,7 @@ ab und fällt bei Abweichung. Und jeder Wächter braucht dreierlei: eine **Frist
 
 | | |
 |---|---|
-| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ ~~70~~ **74 Kennzahlen mit Befehl** *(Stand 2026-08-30; 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
+| **`./instrumente/pruefe-zahlen.py`** | das Register der Befehle. ~~64~~ ~~70~~ **76 Kennzahlen mit Befehl** *(Stand 2026-08-30; 64 am 2026-08-21, 12 am Vormittag des 2026-08-20)* — und es zählt daneben, was es *nicht* bewacht. Sprechprobe über alle, in beide Richtungen. **Seine EIGENE Reichweite kann es nicht bewachen** — der Fixpunktriegel verbietet es mechanisch (W18) —, also hält sie seit heute `pruefe-todo.py`: ein anderes Werkzeug, und das ist der ganze Ausweg |
 | **`./instrumente/pruefe-waechter.py`** | der Wächter über den Wächtern. Vier Forderungen, **29 von 29 Instrumenten** tragen die drei statischen. `--lauf` führt **25 von 29** wirklich aus, mit Frist; vier stehen mit gemessenem Grund daneben (Speicher, Ort, Schreibwirkung), zwei mit fehlendem fremdem Korpus |
 | **`./instrumente/zaehle-karten.py`** | neu — direkte Blicke auf die Karten der `Umgebung`, an `suche` vorbei |
 | **`./instrumente/zaehle-theorien.py`** | neu — die Zeilenanteile der eigenen Theorien, und wer den Beweisschritt gesucht hat |
@@ -264,7 +264,7 @@ darunter.
       ergaben 238 — *eine Aufteilung, deren Summe stimmt, wird nicht nachgerechnet.* Eine
       Ebene tiefer lag die Ursache: **F4 hat 31 Zeilen, nicht 30.** Alle sechs Zellen der
       beiden Tafeln stehen jetzt im Register.
-      **`pruefe-zahlen.py` führt heute 74 Kennzahlen mit Befehl** und zählt daneben
+      **`pruefe-zahlen.py` führt heute 76 Kennzahlen mit Befehl** und zählt daneben
       **146 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
@@ -380,7 +380,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 114 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 115 Dateien, und keiner davon ist eine Teilmengenbeziehung. *(~~114~~ bis zum 2026-08-30; die 115. ist `messung/REICHWEITE-GRUENDE.md`. Der Wächter zählt seinen Gegenstand und nicht seine Marke, und deshalb bewegt jede neue Datei die Zahl — der Suchweg steht daneben und hat es gesagt.)*
       *~~109~~ am 2026-08-30 VIERMAL nachgezogen, und jedes Mal beim Zusammenführen: die
       Berichte kamen aus drei Ketten gleichzeitig, und keine Kette konnte die Summe kennen.
       **Nicht eine Seite genommen, sondern den Wächter gefragt** — das ist die einzige Zahl,

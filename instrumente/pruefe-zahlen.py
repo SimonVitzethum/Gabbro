@@ -678,7 +678,157 @@ EINTRAEGE = [
         r"^-- (\d+) Annahmen",
         "Annahmen -- die Zahl im Fliesstext von K100",
     ),
+    # **The trigger for goal 9, and it stood 19 sentences short** (2026-08-30). `TODO.md` reads
+    # a sentence naming 52 sentences over 12 of 12 passes, none proved -- and calls that
+    # trigger 1 for taking the checker to Lean. The command said 71. **A trigger condition is
+    # the most expensive kind of unguarded number**: it is read once, at the moment somebody
+    # decides whether to start.
+    #
+    # *And the reach counter cannot see it* -- it looks for a bold number in a table cell, and
+    # this one stands in running text. **The reach figure is a lower bound on the debt, not a
+    # measure of it**, and that is the same W10 sentence the tool prints about its own
+    # classifier.
+    (
+        "TODO.md",
+        r"stehen ~~\d+~~ (\d+) Sätze über \d+ von \d+ Pässen",
+        ["cargo", "run", "-q", "--bin", "gabbro", "--", "paesse"],
+        r"SENTENCES: (\d+) over \d+ passes",
+        "Saetze ueber den Paessen -- Ausloeser 1 fuer Ziel 9",
+    ),
+    (
+        "TODO.md",
+        r"Sätze über (\d+) von \d+ Pässen",
+        ["cargo", "run", "-q", "--bin", "gabbro", "--", "paesse"],
+        r"SENTENCES: \d+ over (\d+) passes",
+        "Paesse, ueber denen die Saetze stehen",
+    ),
 ]
+
+# **THE REGISTER OF REASONS -- for the numbers that CANNOT get a command** (2026-08-30).
+#
+# `--reichweite` counted 38 load-bearing unguarded figures and read them as debt. Going
+# through them one by one showed that **most of them are not unmeasured -- they are
+# unguardable, and for three different reasons that must not be added up:**
+#
+# **The four classes and what each one means stand in `messung/REICHWEITE-GRUENDE.md`.**
+# They are named in the entries below and NOT spelled out here, and the reason is measurable:
+# two of the four class names carry a German particle, and a class name repeated in a comment
+# block lifts the language ratchet by one line per mention. *A name is a comment nobody can
+# translate* -- so it lives in the measurement document and the entries point at it.
+#
+# The shortest form of each: a dated RECORD (giving it a command would turn a record into a
+# claim about today, which `MESSUNGEN.md` forbids in its own preamble); a figure measured over
+# a FOREIGN tree or by a run this folder does not repeat; an ORDINAL that only looks like a
+# metric because a numbered list is written with the same markup; and a judgement argued in
+# its own row.
+#
+# > **Why this is a register and not a paragraph.** A written reason ages exactly like a
+# > written number. Every entry here carries the pattern it applies to, and an entry whose
+# > pattern hits nothing FALLS -- the same rule the guarded entries live under. *A reason that
+# > no longer points at anything is worse than none: it lowers a count and explains nothing.*
+#
+# And what it is NOT: an acquittal. A figure with a reason is still unguarded; what it is not
+# any more is unexplained. **The open bucket is the work list** (W10).
+UNBEWACHBAR = [
+    # ---- MESSUNGEN.md: the frozen protocol of the reassignment (2026-08-17) -------------
+    ("dokumente/MESSUNGEN.md", r"\| \*\*Plumbing \(K\)\*\* \| \*\*173\*\*", "PROTOKOLL",
+     "die Aufteilung vom 2026-08-17; die LEBENDE steht in `PFLICHTEN.md` und ist bewacht"),
+    ("dokumente/MESSUNGEN.md", r"\| \*\*hanging\*\* \| \*\*50\*\*", "PROTOKOLL",
+     "`H = 36` an dem Tag, an dem das Tor verfehlt wurde -- der Torbefund selbst"),
+    ("dokumente/MESSUNGEN.md", r"\| disputed \| \*\*1\*\* \| 0,4 %", "PROTOKOLL",
+     "dito, und daneben ein URTEIL: strittig ist keine Messung"),
+    ("dokumente/MESSUNGEN.md", r"\| K, carried by construction \| \*\*137\*\*", "PROTOKOLL",
+     "137 + 36 = 173, die Ausgangslage von K100 -- sie darf sich nicht bewegen"),
+    ("dokumente/MESSUNGEN.md", r"\| \*\*K, hanging — H\*\* \| \*\*36\*\*", "PROTOKOLL",
+     "dieselbe Zeile von der anderen Seite"),
+
+    # ---- MESSUNGEN.md: dated before/after tables ----------------------------------------
+    ("dokumente/MESSUNGEN.md", r"\| proved \| 1 \| \*\*4\*\*", "PROTOKOLL",
+     "Schablonenstand an EINEM Tag; der heutige steht in `PLAN.md` mit Befehl"),
+    ("dokumente/MESSUNGEN.md", r"\| \*\*unproved\*\* \| \*\*16\*\* \| \*\*15\*\*", "PROTOKOLL",
+     "dito -- eine Vorher/Nachher-Zeile ist ein Ereignis, kein Stand"),
+    ("dokumente/MESSUNGEN.md", r"\| mutations \| 67 \| \*\*87\*\*", "PROTOKOLL",
+     "der Mutationskatalog an dem Tag; heute 345, und der Weg dorthin ist der Inhalt"),
+    ("dokumente/MESSUNGEN.md", r"\| ZUSAGE \| \*\*17\*\*", "PROTOKOLL",
+     "der Klauselwaechterlauf; die LEBENDE `ZUSAGE ohne Leser` ist in `PLAN.md` bewacht"),
+    ("dokumente/MESSUNGEN.md", r"\| 19 templates, 4 machine-checked \|", "PROTOKOLL",
+     "eine Zeile aus der README-Berichtigung jenes Tages"),
+    ("dokumente/MESSUNGEN.md", r"\| Prämissen ohne Pass \| 7 \| \*\*9\*\*", "PROTOKOLL",
+     "dito; die lebende Zahl steht in `PLAN.md` mit `gabbro schablonen` daneben"),
+    ("dokumente/MESSUNGEN.md", r"\| Mutationsanker \| 332 \| 335 \| \*\*340\*\*", "PROTOKOLL",
+     "die Zusammenfuehrung vom 2026-08-30 -- genau die Zahl, die der Merge WIDERLEGTE"),
+    ("dokumente/MESSUNGEN.md", r"\| \*\*Prosa\*\* \| \*\*1 062\*\*", "PROTOKOLL",
+     "die Theorienaufteilung an ihrem Messtag; `zaehle-theorien.py` sagt den heutigen Stand"),
+
+    # ---- MESSUNGEN.md: the foreign corpora ----------------------------------------------
+    ("dokumente/MESSUNGEN.md", r"\| Proof obligations in total \| \*\*74\*\*", "KEIN INSTRUMENT",
+     "Caprocks Verus-Pflichten -- gemessen im fremden Baum `../caprock-messbasis`"),
+    ("dokumente/MESSUNGEN.md", r"\| the \*\*whole file\*\* \(1 448\)", "KEIN INSTRUMENT",
+     "Verhaeltnis ueber eine fremde Datei"),
+    ("dokumente/MESSUNGEN.md", r"`proof/[a-z-]+`", "KEIN INSTRUMENT",
+     "seL4-Beweiszeilen -- veroeffentlichte Zahlen, kein Baum in diesem Ordner"),
+    ("dokumente/MESSUNGEN.md", r"\| \*\*functional correctness, ARM\*\*", "KEIN INSTRUMENT",
+     "seL4 gesamt, dieselbe Quelle"),
+    ("dokumente/MESSUNGEN.md", r"\| `trusted/fs` \| 365 \| 3 \|", "KEIN INSTRUMENT",
+     "fremde Vertrauensflaeche, aus der Veroeffentlichung"),
+    ("dokumente/MESSUNGEN.md", r"`(?:capability-system|ipc|scheduler)/proofs?/", "KEIN INSTRUMENT",
+     "Caprocks Beweisdateien -- fremder Baum, schreibgeschuetzt"),
+    ("dokumente/MESSUNGEN.md", r"\| \*\*obligation side\*\* \(Verus bodies", "KEIN INSTRUMENT",
+     "Verus-Rumpfgewicht, ueber dem fremden Baum gerechnet"),
+    ("dokumente/MESSUNGEN.md", r"\| \*\*were the Index booking to fall\*\*", "KEIN INSTRUMENT",
+     "eine Gegenrechnung ueber denselben fremden Baum"),
+    ("dokumente/MESSUNGEN.md", r"\| \*\*caught\*\* \| \*\*7\*\* \|", "PROTOKOLL",
+     "ein Generatorlauf an seinem Tag; der heutige Stand ist `mutiere-pruefer.py`"),
+
+    # ---- TODO.md: ordinals, not metrics -------------------------------------------------
+    ("TODO.md", r"\| \*\*\d+\*\* \| keine Klempnerei beim Endnutzer", "KEINE KENNZAHL",
+     "Ziel Nummer vier aus der Zieltafel"),
+    ("TODO.md", r"\| \*\*\d+\*\* \| der Maßstab \|", "KEINE KENNZAHL", "Ziel Nummer eins"),
+    ("TODO.md", r"\| \*\*\d+\*\* \| die offenen Lesarten entscheiden", "KEINE KENNZAHL",
+     "Ziel Nummer drei"),
+    ("TODO.md", r"\| \*\*\d+\*\* \| die Beweise tragend machen", "KEINE KENNZAHL",
+     "Ziel Nummer fuenf"),
+    ("TODO.md", r"\| \*\*\d+\*\* \| der Prüfer als Mathematik, in Lean 4", "KEINE KENNZAHL",
+     "Ziel Nummer neun"),
+    ("TODO.md", r"\| \*\*\d+\*\* \| Übersetzer einer Gabbro-Teilmenge", "KEINE KENNZAHL",
+     "Stufe eins einer Baureihenfolge"),
+    ("TODO.md", r"\| \*\*\d+\*\* \| \*\*Two ordering rules stood there", "KEINE KENNZAHL",
+     "Befund Nummer drei einer nummerierten Liste"),
+
+    # ---- PLAN.md ------------------------------------------------------------------------
+    ("dokumente/PLAN.md", r"\| \*\*together, hard\*\* \| \*\*3 081\*\*", "KEIN INSTRUMENT",
+     "Caprock-Zeilen, gemessen 2026-08-13 im fremden Baum"),
+    ("dokumente/PLAN.md", r"\| \*\*\d+\*\* \| \*\*The preservation\*\* of the group invariant",
+     "KEINE KENNZAHL", "Posten Nummer drei einer nummerierten Aufzaehlung"),
+    ("dokumente/PLAN.md", r"117 ms \| 117 ms \|", "KEIN INSTRUMENT",
+     "Laufzeitverhaeltnis aus einem Messlauf, den dieser Ordner nicht wiederholt"),
+    ("dokumente/PLAN.md", r"156 ms \| 210 ms \|", "KEIN INSTRUMENT", "dieselbe Messreihe"),
+    ("dokumente/PLAN.md", r"23,0 ms \| 23,1 ms \|", "KEIN INSTRUMENT", "dieselbe Messreihe"),
+    ("dokumente/PLAN.md", r"66,0 ms \| 23,2 ms \|", "KEIN INSTRUMENT", "dieselbe Messreihe"),
+
+    # ---- PFLICHTEN.md -------------------------------------------------------------------
+    ("dokumente/PFLICHTEN.md", r"\| \*\*disputed\*\* \| \*\*1\*\*", "URTEIL",
+     "`unlink`:194-196 -- in der Zeile ARGUMENTIERT, und ein Argument zaehlt kein Werkzeug"),
+]
+
+
+def unbewachbar_grund(datei, zeile):
+    """Der geschriebene Grund zu einer Zeile -- oder `None`, wenn keiner gebucht ist."""
+    for d, muster, klasse, grund in UNBEWACHBAR:
+        if d == datei and re.search(muster, zeile):
+            return klasse, grund
+    return None
+
+
+def unbewachbar_tot():
+    """**Ein Grund, der auf nichts mehr zeigt, faellt** -- dieselbe Regel wie fuer die Zahlen."""
+    tot = []
+    for d, muster, klasse, grund in UNBEWACHBAR:
+        p = W / d
+        if not p.is_file() or not re.search(muster, p.read_text(encoding="utf-8")):
+            tot.append(f"{d}: der Grund „{grund[:44]}\" trifft keine Zeile mehr")
+    return tot
+
 
 # **Die Reichweite.** Eine fettgedruckte Zahl in einer Tabellenzelle ist die Form, in der
 # dieser Ordner seine Kennzahlen schreibt. Was davon keinen Befehl hat, ist unbewacht -- und
@@ -886,6 +1036,20 @@ def main():
                                   if tief_ok else "GESCHEITERT -- ein Ring ueber zwei Ecken kaeme durch"))
     if not tief_ok:
         return 1
+    # **And the register of reasons must be able to bite** (2026-08-30). A written reason ages
+    # exactly like a written number: the row it explains gets reworded, the reason keeps
+    # lowering the count and explains nothing. *That is worse than no reason at all -- it makes
+    # a shorter work list out of a stale pattern.* Both directions, as R14 demands.
+    UNBEWACHBAR.append(("TODO.md", r"diese Zeile steht nirgends 998", "PROBE", "Sprechprobe"))
+    tot_biss = any("Sprechprobe" in x for x in unbewachbar_tot())
+    UNBEWACHBAR.pop()
+    tot_still = not unbewachbar_tot()
+    print("  Gruenderegister: " + ("ok (ein Grund ohne Zeile faellt)" if tot_biss
+                                   else "GESCHEITERT -- ein toter Grund kaeme durch"))
+    print("  Gruende leben:   " + ("ok (jeder gebuchte Grund trifft eine Zeile)" if tot_still
+                                   else "es steht ein toter Grund im Register -- siehe unten"))
+    if not tot_biss:
+        return 1
     stumm = []
     for nr in range(len(EINTRAEGE)):
         b, _, _, _ = pruefe_eintraege(verstellen=nr)
@@ -921,14 +1085,32 @@ def main():
             for m in KENNZAHL.finditer(zeile):
                 z = m.group(1).replace(" ", "").replace(" ", "")
                 if z not in bewacht.get(datei, set()):
-                    offen.append((datei, z, zeile.strip()[:70], bool(TRAEGT.search(zeile))))
+                    g = unbewachbar_grund(datei, zeile)
+                    offen.append((datei, z, zeile.strip()[:70],
+                                  bool(TRAEGT.search(zeile)), g))
     print()
     print("== Reichweite: was dieses Register NICHT bewacht ==")
     traegt = [o for o in offen if o[3]]
+    mit_grund = [o for o in traegt if o[4]]
+    ohne_grund = [o for o in traegt if not o[4]]
     print(f"  {geprueft} Kennzahlen mit Befehl, {len(offen)} fettgedruckte Zahlen in "
           f"Tabellenzellen ohne einen")
     print(f"  davon TRAGEND (Zusage oder Vergleich): {len(traegt)}   "
           f"Zwischenstand: {len(offen) - len(traegt)}")
+    # **The load-bearing bucket, split once more** (2026-08-30). A load-bearing figure without
+    # a command is not debt by that fact alone: most of them are a dated record that must not
+    # get one. *What remains is the work list, and it is a great deal shorter.*
+    print(f"     davon mit geschriebenem GRUND: {len(mit_grund)}   "
+          f"OFFEN, also Arbeitsliste: {len(ohne_grund)}")
+    nach_klasse = {}
+    for o in mit_grund:
+        nach_klasse[o[4][0]] = nach_klasse.get(o[4][0], 0) + 1
+    if nach_klasse:
+        print("     " + ", ".join(f"{k} {v}" for k, v in sorted(nach_klasse.items())))
+    tot = unbewachbar_tot()
+    for x in tot:
+        befunde.append(f"UNBEWACHBAR-Register: {x}")
+        print(f"  BEFUND  {x}")
     print()
     print("  **Nicht alle unbewachten Zahlen sind gleich viel wert.** Eine, die in einer")
     print("  ZUSAGE oder einem VERGLEICH steht, traegt eine Behauptung nach aussen; eine, die")
@@ -938,8 +1120,13 @@ def main():
     print("  sortiert eine Arbeitsliste, sie spricht nichts frei (W10).")
     if "--reichweite" in sys.argv:
         print()
-        for d, z, zeile, t in sorted(offen, key=lambda o: (not o[3], o[0])):
-            print(f"     {'TRAEGT' if t else '  --  '}  {d}:{z}  {zeile}")
+        for d, z, zeile, tr, g in sorted(offen, key=lambda o: (o[4] is not None, not o[3], o[0])):
+            marke = "TRAEGT" if tr else "  --  "
+            if g:
+                print(f"     {marke}  {d}:{z}  {zeile}")
+                print(f"               GRUND ({g[0]}): {g[1]}")
+            else:
+                print(f"     {marke}  {d}:{z}  {zeile}")
     else:
         print("     (`--reichweite` listet sie einzeln, tragende zuerst)")
     print()
