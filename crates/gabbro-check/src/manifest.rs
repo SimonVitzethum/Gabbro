@@ -273,15 +273,54 @@ fn klasse(k: &AnnahmeKlasse) -> Klasse {
     }
 }
 
+/// **The probes that stand as a PROGRAM** -- kept against `sonden/sonde_*.c`, and
+/// `instrumente/pruefe-sonden.sh` runs exactly these.
+///
+/// *This list is the only route by which a probe name reaches the manifest.*
+pub const SONDEN_MIT_PROGRAMM: &[&str] = &["sonde_boot_unerreichbar", "sonde_release_sichtbarkeit"];
+
+/// **A name without a program is STRUCK -- 2026-08-30.**
+///
+/// `messung/AXIOMSCHICHT.md` measured it on 2026-08-21 and wrote it out: 27 assumptions named
+/// a probe, and NONE of them existed as a program. The runner calls it **the indictment**.
+///
+/// > A `falsifier sonde_xyz` whose probe exists nowhere is an **assurance about the ABSENCE
+/// > of a refutation** -- the same class as R15 and W10.
+///
+/// **"not run" is a translation error, never an intermediate state.** The name read as
+/// coverage inside the manifest and was none -- and the manifest is the artefact by which
+/// Gabbro carries its promise OUTWARD. So the name falls, and the assurance falls with it:
+/// the class then reads `ungedeckt`, and the probe column carries `--`.
+///
+/// *Whoever wants to keep a name writes the probe.* Entering it is one line in
+/// [`SONDEN_MIT_PROGRAMM`], and from then on the name stands again.
+///
+/// **And the count stays.** The closing line says how many names were struck -- otherwise a
+/// list that shrank would be indistinguishable from one that was never larger. Same logic as
+/// section E of the certificate: what is not covered is **carried by name** rather than
+/// omitted.
+pub fn gedeckt(sonde: &str) -> bool {
+    SONDEN_MIT_PROGRAMM.contains(&sonde)
+}
+
 /// Zeilenformat, stabil und ohne Werkzeug lesbar:
 /// `A<n>\t<name>\t<art>\t<klasse>\t<sonde|grund>\t<aussage>`
 pub fn zeige(eintraege: &[Eintrag]) -> String {
     let mut out = String::new();
+    let mut gestrichen = 0usize;
     out.push_str("-- The assumption set. The promise reads: proved under A1…An.\n");
     out.push_str("-- Nr\tName\tArt\tKlasse\tSonde/Grund\tAussage\n");
     for (n, e) in eintraege.iter().enumerate() {
         let (kl, wie) = match &e.klasse {
-            Klasse::Falsifizierbar { sonde } => ("falsifizierbar", sonde.as_str()),
+            // **The name stands only where the probe stands as a program** -- see [`gedeckt`].
+            // Otherwise it is struck, and the closing line says so.
+            Klasse::Falsifizierbar { sonde } if gedeckt(sonde) => {
+                ("falsifizierbar", sonde.as_str())
+            }
+            Klasse::Falsifizierbar { .. } => {
+                gestrichen += 1;
+                ("ungedeckt", "--")
+            }
             Klasse::NichtFalsifizierbar { grund } => ("nicht-falsifizierbar", grund.as_str()),
         };
         out.push_str(&format!(
@@ -295,5 +334,15 @@ pub fn zeige(eintraege: &[Eintrag]) -> String {
         ));
     }
     out.push_str(&format!("-- {} Annahmen\n", eintraege.len()));
+    // **The line that stays.** Without it a shrunken list would be indistinguishable from one
+    // that was never larger -- and the striking itself would hide the very gap it names.
+    if gestrichen > 0 {
+        out.push_str(&format!(
+            "-- {} probe name(s) STRUCK: no program stands for them. A name without a \
+             program asserts the absence of a refutation -- the assumption holds, its \
+             falsifiability does not.\n",
+            gestrichen
+        ));
+    }
     out
 }

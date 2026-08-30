@@ -72,6 +72,11 @@ Lager:**
 **27 Annahmen nennen eine Sonde, 26 verschiedene Namen — und NULL davon existieren als
 Programm.**
 
+> **Nachgemessen 2026-08-30: es sind 29, und EINE existiert.** Der Befund unten stimmt in
+> seiner Klasse und war in seiner Zahl zu klein. **Und er ist jetzt eingelöst, nicht nur
+> gebucht:** ein Name ohne Programm steht nicht mehr im Manifest — siehe die Tabelle in
+> Abschnitt 4 und die Zeile, die sagt, wie viele gestrichen wurden.
+
 ```bash
 ssh ki-pc-fisch-101 'cd gabbro-d && ./target/release/gabbro annahmen beispiele/*.gab' \
   > /tmp/annahmen.tsv
@@ -112,18 +117,43 @@ Sonde stünde, kein Verzeichnis, kein Läufer, keine Buchung über ihren Lauf.
 
 Drei Stufen, und die Sprache unterscheidet nur die ersten beiden:
 
-| | Bedeutung | Zahl heute |
-|---|---|---|
-| **unfalsifizierbar** | mit ausgeschriebenem Grund | **6** |
-| **falsifizierbar, Sonde benannt** | ein Name, der eine Sonde bezeichnen würde | **27** |
-| **falsifizierbar, Sonde LÄUFT** | ein Programm, das fallen kann | **0** |
+| | Bedeutung | Zahl am 2026-08-21 | **Zahl heute** |
+|---|---|---|---|
+| **unfalsifizierbar** | mit ausgeschriebenem Grund | **6** | 6 |
+| ~~falsifizierbar, Sonde benannt~~ **ungedeckt** | ~~ein Name, der eine Sonde bezeichnen würde~~ — der Name ist **gestrichen** | **27** | **29** |
+| **falsifizierbar, Sonde LÄUFT** | ein Programm, das fallen kann | **0** | **1** |
 
 **Die dritte Zeile existiert grammatisch nicht** — und `SYNTAX.md`:1211 nennt genau diese
 Unterscheidung: *„Three classes, and the third does not exist syntactically: falsified
 (probe ran and held), not falsifiable (with a reason), not run."* Die Sprache verbietet,
 dass „nicht gelaufen" wie „falsifiziert" **aussieht**; sie hat aber keine Form, in der
-„gelaufen" sich von „benannt" unterscheidet. *Heute sind alle 27 im Zustand „nicht
-gelaufen", und nichts im Erzeugnis sagt es.*
+„gelaufen" sich von „benannt" unterscheidet. ~~*Heute sind alle 27 im Zustand „nicht
+gelaufen", und nichts im Erzeugnis sagt es.*~~
+
+> **GEHEILT am 2026-08-30, im ERZEUGNIS statt in der Grammatik.** Der Satz *„nichts im
+> Erzeugnis sagt es"* stimmt nicht mehr. Manifest und Zeugnis tragen einen Sondennamen nur
+> noch, wenn die Sonde als **Programm** steht (`manifest::SONDEN_MIT_PROGRAMM`, gepflegt
+> gegen `sonden/sonde_*.c`); sonst ist der Name **gestrichen** und die Klasse heißt
+> `ungedeckt`.
+>
+> ```
+> A2  write_cr0    ungedeckt   --
+> -- 36 Annahmen
+> -- 29 Sondenname(n) GESTRICHEN: die Sonde steht nicht als Programm.
+> ```
+>
+> **„Nicht gefahren" war ein Übersetzungsfehler, kein Zwischenzustand.** Der Name las sich
+> als Deckung und war eine Zusicherung über das Ausbleiben einer Widerlegung. *Wer einen
+> Namen behalten will, schreibt die Sonde* — eine Zeile in `SONDEN_MIT_PROGRAMM`, und er
+> steht wieder da. **Genau so ist `sonde_boot_unerreichbar` von 0 auf 1 gekommen:** sie
+> existiert als `sonden/sonde_boot_unerreichbar.c` und läuft.
+>
+> **Und die Zahl bleibt stehen.** Die Schlusszeile sagt, wie viele Namen gestrichen wurden —
+> *sonst wäre eine Liste, die schrumpft, von einer, die nie größer war, nicht zu
+> unterscheiden.* Dieselbe Logik wie Abschnitt E im Zeugnis: was nicht gedeckt ist, wird
+> **benannt getragen** statt weggelassen. Das Zeugnis führt sie als dritte Währung mit
+> (`N assumptions (M of them NOT FALSIFIABLE, K UNCOVERED …)`), bewacht von
+> `die_befundzeile_trennt_die_nicht_falsifizierbaren_annahmen`.
 
 ### Nebenbefund: **eine Sonde trägt zwei Verpflichtungen — über die Dateigrenze**
 

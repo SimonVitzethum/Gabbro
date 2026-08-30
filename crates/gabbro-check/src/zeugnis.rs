@@ -795,8 +795,20 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
         aus.push_str("     none. This unit assumes nothing about the machine.\n");
     }
     for (n, a) in annahmen.iter().enumerate() {
+        // **A probe name stands here only where the probe stands as a PROGRAM** (2026-08-30).
+        // The certificate is the artefact by which Gabbro carries its promise outward --
+        // `Sonde <x>` for a name without a program read as coverage there, and was an
+        // assurance about the absence of a refutation. *The assumption still stands; its
+        // falsifiability does not.* See `crate::manifest::gedeckt`.
         let wie = match &a.klasse {
-            crate::manifest::Klasse::Falsifizierbar { sonde } => format!("Sonde {sonde}"),
+            crate::manifest::Klasse::Falsifizierbar { sonde }
+                if crate::manifest::gedeckt(sonde) =>
+            {
+                format!("Sonde {sonde}")
+            }
+            crate::manifest::Klasse::Falsifizierbar { .. } => {
+                "UNGEDECKT -- kein Programm zu dieser Sonde".to_string()
+            }
             crate::manifest::Klasse::NichtFalsifizierbar { grund } => {
                 format!("NICHT FALSIFIZIERBAR -- {grund}")
             }
@@ -968,12 +980,28 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
         .iter()
         .filter(|a| matches!(a.klasse, crate::manifest::Klasse::NichtFalsifizierbar { .. }))
         .count();
+    // **And the THIRD currency, since 2026-08-30: uncovered.**
+    //
+    // Until today the assumptions fell into two classes and this line carried both. But an
+    // assumption naming a probe that no program redeems is neither: something COULD refute
+    // it, only nobody does. *Counting it among the falsifiable ones was exactly the blend
+    // this line healed for the other two on 2026-08-21* -- a figure holding two currencies
+    // reads like one.
+    let ungedeckt = annahmen
+        .iter()
+        .filter(|a| match &a.klasse {
+            crate::manifest::Klasse::Falsifizierbar { sonde } => !crate::manifest::gedeckt(sonde),
+            _ => false,
+        })
+        .count();
     aus.push_str(&format!(
-        "     {} assumptions ({} of them NOT FALSIFIABLE), {} templates ({} of them UNPROVED), \
+        "     {} assumptions ({} of them NOT FALSIFIABLE, {} UNCOVERED -- named a probe that \
+         does not exist as a program), {} templates ({} of them UNPROVED), \
          {} direct forms, \
          {} foreign bodies ({} state their duty), {} narrowings from foreign contracts\n",
         annahmen.len(),
         ohne_sonde,
+        ungedeckt,
         benutzt.len(),
         offen.len(),
         e.posten

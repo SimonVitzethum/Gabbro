@@ -496,8 +496,8 @@ impl<'a> Parser<'a> {
                 )
             )
         {
-            // **`P041`, split off from `P034` on 2026-08-30 -- and the reason is a coverage
-            // claim that was none.**
+            // **`P041`, split off from `P034` on 2026-08-30 -- the reason is a coverage claim
+            // that was none.**
             //
             // Both rules stood under `P034`: the missing catch-all arm at :213, and the stray
             // `pub` here. Each had its own poison probe -- number 05 and number 45 under

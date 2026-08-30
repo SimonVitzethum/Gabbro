@@ -515,7 +515,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2085 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2088 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -3144,9 +3144,36 @@ Von 28 unterschiedenen Rennformen tragen
       (gemessen: 3 322 Verletzungen gegen 0 im ersten Arm). *Eine Sonde ohne Kontrollarm
       misst ihre eigene Nachsicht.*
 
-      > **Der Zähler bleibt bei `0 von 27`:** die eine gebaute Sonde gehört zu **keiner** der
-      > 26 benannten. Und von den drei Annahmen, die die Rennklasse wirklich tragen, kann
-      > **keine** heute eine laufende Sonde bekommen.
+      > ~~**Der Zähler bleibt bei `0 von 27`:** die eine gebaute Sonde gehört zu **keiner**
+      > der 26 benannten.~~ *(überholt 2026-08-30)* — **er steht auf `1 von 30`:**
+      > `sonde_boot_unerreichbar.c` ist dazugekommen und gehört zu einer benannten. Und von
+      > den drei Annahmen, die die Rennklasse wirklich tragen, kann **keine** heute eine
+      > laufende Sonde bekommen.
+
+      **Und die 29 übrigen Namen sind am 2026-08-30 GESTRICHEN.**
+      *Wer einen Namen behalten will, schreibt die Sonde; der Rest fällt, und mit ihm die
+      Zusicherung.* Manifest und Zeugnis tragen einen Sondennamen nur noch, wenn die Sonde
+      als **Programm** steht (`manifest::SONDEN_MIT_PROGRAMM`, gepflegt gegen
+      `sonden/sonde_*.c`); sonst heißt die Klasse **`ungedeckt`** und die Sondenspalte
+      trägt `--`.
+
+      ```
+      A2  write_cr0    ungedeckt   --
+      -- 36 Annahmen
+      -- 29 Sondenname(n) GESTRICHEN: die Sonde steht nicht als Programm.
+      ```
+
+      **„Nicht gefahren" war ein Übersetzungsfehler, kein Zwischenzustand** — ein Name ohne
+      Programm las sich im Manifest wie eine Deckung und war eine Zusicherung über das
+      Ausbleiben einer Widerlegung. *Das Manifest ist das Artefakt, mit dem Gabbro seine
+      Zusage nach AUSSEN trägt; dort wog der Name am schwersten.*
+
+      **Die Zahl bleibt stehen** — die Schlusszeile sagt, wie viele gestrichen wurden, *sonst
+      wäre eine Liste, die schrumpft, von einer, die nie größer war, nicht zu unterscheiden.*
+      Das Zeugnis führt sie als **dritte Währung** neben `NOT FALSIFIABLE`, und
+      `pruefe-sonden.sh` liest jetzt diese Zeile statt die Namensspalte — *sonst hätte der
+      Läufer ab sofort `1 benannt` gemeldet und ausgesehen, als sei die Anklage erledigt.*
+      Alles gebaut und getestet: `cargo test` grün.
 
 - [ ] **`release_stellt_sichtbarkeit_her` ist als „nicht falsifizierbar" gebucht — mit einer
       Begründung, die die GRÜNE Richtung argumentiert** *(gefunden 2026-08-21 beim Bau der
