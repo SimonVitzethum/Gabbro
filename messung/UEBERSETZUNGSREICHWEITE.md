@@ -48,7 +48,7 @@ traverse w of s over elems of s.worte by decreasing (lenof(s.worte) - i) touches
 
 ### Messung A — sagt der Prüfer etwas zu einem konstant wahren Vergleich?
 
-`messung/fragmente/probe-vergleich.gab`, eine lokale Variable mit Bereichstyp:
+`messung/proben/probe-vergleich.gab`, eine lokale Variable mit Bereichstyp:
 
 ```gabbro
 let a : u64 in 0 .. 10 = 5;
@@ -144,6 +144,12 @@ fünf ABI-Proben, zwei Caprock-Dateien, `grenze`, `netz`, `treiber`.
 
 Was `C001` sagt, fällt wie zuvor aus dem Nenner — **eine Weigerung ist eine ehrliche
 Antwort**, und sie steht in `messung/ABSAGEFORMEN.md`.
+
+> **Die zwei Zahlen sind am selben Tag noch zweimal gestiegen, und jedes Mal mit einem
+> Grund:** `54` durch `beispiele/53-zwei-orte.gab` (V-3, `breaking` senkt ab) und `22` durch
+> die zwei Dateien aus `messung/grammatik/` und zwei weitere W24-Proben (V-2). *Der Stand,
+> den der Wächter selbst nennt, ist `54 / 22` — und er nennt ihn bei jedem Lauf; die Zahlen
+> hier sind die des Augenblicks, in dem die Reichweite ausgedehnt wurde.*
 
 ---
 

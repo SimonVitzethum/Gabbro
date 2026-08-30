@@ -103,10 +103,10 @@ war es das dritte Mal.
 
 ### Die Messung
 
-`messung/fragmente/probe-match-ruf.gab` — derselbe Bau, aber der Gerufene ist deklariert:
+`messung/proben/probe-match-ruf.gab` — derselbe Bau, aber der Gerufene ist deklariert:
 
 ```
-$ gabbro pruefe messung/fragmente/probe-match-ruf.gab
+$ gabbro pruefe messung/proben/probe-match-ruf.gab
    5 Items, 0 Fehler
 $ gabbro emit  … | cc -std=c11 -Wall -Wextra -Werror
    UEBERSETZT
@@ -160,6 +160,14 @@ nachher  beispiele/  54                        messung/*/  19
          73 von 73 uebersetzen, 0 benannte Ausnahmen
 ```
 
-`beispiele/53-zwei-orte.gab` ist dazugekommen, `messung/fragmente/probe-match-ruf.gab`
-ebenfalls. **Zwei gemessene `UNGEDECKT`-Zellen weniger** — von elf auf neun, und die neun
-stehen mit ihrer Adresse in `messung/ABSAGEFORMEN.md`.
+`beispiele/53-zwei-orte.gab` ist dazugekommen, die Probe `probe-match-ruf.gab` ebenfalls.
+**Zwei gemessene `UNGEDECKT`-Zellen sind geschlossen** — die von elf auf neun.
+
+> *Und die Gesamtzahl steht am Abend desselben Tages trotzdem auf fünfzehn.* Nicht weil etwas
+> zurückgefallen wäre, sondern weil zwei weitere W24-Läufe sechs Formen erreichbar gemacht
+> haben, die vorher niemand gemessen hatte. **Der Stand mit allen Adressen steht in
+> `messung/ABSAGEFORMEN.md` §2**, und die Ratsche gehört dorthin und nicht hierher: dieses
+> Dokument sagt, was ENTSCHIEDEN wurde, nicht wie groß die Menge gerade ist.
+
+*Am Ende des Tages emittieren `54 + 22 = 76` Dateien, und alle 76 übersetzen* — die zwei
+weiteren Zuwächse in `messung/` kommen aus `messung/grammatik/` (V-2).
