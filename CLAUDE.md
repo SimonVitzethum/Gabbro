@@ -19,7 +19,18 @@ ssh ki-pc-fisch-101 'cd gabbro/beweise && ~/Isabelle2025-2/bin/isabelle build -D
 und ein Beweis, der daran stirbt, sieht aus wie ein Beweis, der nicht durchgeht. *Ein
 Abbruch aus Speichermangel ist kein Befund.*
 
-**Seit dem 2026-08-20 liegt die Grenze bei 1 GB, und damit fällt `rustc` darunter.** Auf den
+**Seit dem 2026-08-20 liegt die Grenze bei 1 GB, und damit fällt `rustc` darunter.**
+
+> **Am 2026-08-30 lag sie nicht dort, und das ist gemessen und nicht vermutet:** `free -g`
+> meldete 31 GB gesamt und 13 GB verfügbar, `ulimit -v` stand auf `unlimited`, 20 Kerne.
+> `cargo test` (15 Sammlungen), `pruefe-emission.sh` und `isabelle build` über alle fünfzehn
+> Theorien liefen lokal durch — der Isabelle-Lauf in 12 s. Gefahren wurde lokal, weil
+> `ki-pc-fisch-101` ab 19:42 nicht erreichbar war: **nicht der Zielrechner, der Sprunghost.**
+>
+> **Die Regel bleibt trotzdem stehen.** Sie ist eine Aussage über den Speicher, nicht über die
+> Gewohnheit, und wer sie fallen lässt, weil sie einmal nicht griff, hat die nächste
+> Speichergrenze nicht gemessen, sondern vergessen. *Vor einem lokalen Lauf gehört ein
+> `free -g` daneben — dann ist es eine Messung und keine Hoffnung.* Auf den
 Server gehören deshalb auch **`cargo build` und `cargo test`**, `./instrumente/pruefe-emission.sh` (ruft
 `cargo run` je Einheit) und `./instrumente/pruefe-luecken.py` (baut dreizehnmal neu).
 
@@ -48,8 +59,10 @@ schon gebautes Binärprogramm, ein `cc` auf einer Datei, und die Textwächter
 (`pruefe-todo.py`, `-englisch`, `-kennungen`, `-syntax`). *Die Grenze ist der Speicher, nicht
 die Gewohnheit.*
 
-**Der Mutationslauf misst sich selbst**: `./instrumente/mutiere-pruefer.py` über alle 159 Mutationen
-braucht **2 min 20 s** lokal (gemessen 2026-08-19) und bleibt damit diesseits der Grenze.
+**Der Mutationslauf misst sich selbst**: `./instrumente/mutiere-pruefer.py` über alle
+~~159~~ **340** Mutationen braucht ~~2 min 20 s~~ **10 min 25 s** lokal (nachgemessen
+2026-08-30; die alte Zahl stammt vom 2026-08-19, und der Katalog ist seither auf mehr als das
+Doppelte gewachsen). *Ein Katalog, der wächst, macht jede Zahl daneben zu einer Jahreszahl.*
 `--anker` kostet gar nichts — reines Textzählen, kein Bau. *Vor dem Lauf muss `crates/`
 sauber sein; die Probe schreibt in Quellen, und zwei Läufe auf denselben Dateien
 zerstören einander.*

@@ -11455,3 +11455,86 @@ pruefe-kennungen.py 190 Kennungen, jede in genau einer Datei
 zaehle-theorien.py  13 Theorien, 2317 Zeilen, 2 ohne Register
 gabbro pflichten    32 Pflichten ueber `beispiele/*.gab`
 ```
+
+---
+
+# Schritt 6 — die Zusammenführung, und sie hat vier Zahlen widerlegt
+
+**2026-08-30.** Zwei Bahnen und ein Absenkungsstrang liefen parallel; hier treffen sie
+aufeinander. **Der Befund dieses Laufs gehört keiner Bahn** — er war in keiner sichtbar, und
+das ist keine Nachlässigkeit, sondern die Reichweite der Werkzeuge, die sie benutzt haben.
+
+## Die vier Zahlen, die in ihrer Bahn stimmten
+
+|   | Absenkung | Bahn B | vereinigt |
+|---|---:|---:|---:|
+| Mutationsanker | 332 | 335 | **340** |
+| Theorien | 14 | 14 | **15** |
+| Widerrufdateien | 105 | 104 | **110** |
+| Zeilenfortsetzungen | 2074 | 2010 | **2079** |
+
+> **Beide Bahnen sagten „vierzehn Theorien", und beide hatten recht — jede hatte ihre eigene
+> vierzehnte.** *Eine Zahl über einen Baum ist eine Zahl über den Baum, in dem sie gemessen
+> wurde.* Sechs Konflikte beim Zusammenführen, **kein einziger davon ein Codekonflikt**: zwei
+> Ratschen, zwei Zählungen, ein `ROOT`-Eintrag und ein Wortlokator.
+
+## Der volle Mutationslauf — und was `--anker` NICHT ist
+
+```
+mutiere-pruefer.py   337 von 339 gueltigen Mutationen gefangen (99 %)   VOR den Reparaturen
+                     340 von 340 gueltigen Mutationen gefangen (100 %)  DANACH
+                     10 min 10 s bzw. 10 min 25 s Wanduhr, ~29 min CPU (lokal)
+```
+
+**Alle drei Auffälligkeiten des ersten Laufs stammen aus denselben acht Mutationen** — denen
+des Rumpfkanals aus Bahn B, geschrieben und nie gefahren. Die 213 des Prüfers, über Wochen
+gewachsen und wiederholt gefahren, haben keine einzige Überlebende.
+
+> **`--anker` prüft, ob der Ankertext im Prüfer steht. Er fährt keine Mutation.** Bahn B
+> meldete *„335 von 335 Ankern"*: wahr, und keine Quote. Ein Anker, der greift, sagt *diese
+> Zeile gibt es noch* — nicht *und eine Probe fällt, wenn sie sich ändert*.
+>
+> *Mutationen, die noch nie gefahren wurden, sind Vermutungen über Deckung.*
+
+Die drei einzeln in [`messung/RUMPFKANAL-LUECKEN.md`](../messung/RUMPFKANAL-LUECKEN.md):
+eine Regel an **zwei** Armen mit einer Probe nur am zweiten · eine Probe, die ihren **Namen**
+trug und nicht ihren **Gegenstand** (`W16`, zum zweiten Mal in drei Tagen) · und eine
+`ungueltig` gebuchte, deren Escape ein Backslash fehlte — *337 von 339 liest sich besser als
+337 von 340, und der Unterschied war ein Tippfehler.*
+
+## Und ein Ortsbefund, der die Grenze aus `CLAUDE.md` betrifft
+
+`ki-pc-fisch-101` war ab 19:42 nicht erreichbar (der Tunnel steht, der **Sprunghost**
+antwortet nicht). Gemessen wurde deshalb lokal — und es ging:
+
+```
+free -g            31 gesamt, 13 verfuegbar, ulimit -v unlimited, 20 Kerne
+cargo test         15 Sammlungen, 229 Proben, 0 rot
+pruefe-emission.sh ALL PASS -- 24 durchgestochen, 52 von 52 uebersetzen
+isabelle build     alle 15 Theorien, 12 s Wanduhr, 28 s CPU, rc=0
+```
+
+**Der Isabelle-Lauf schließt eine Lücke, die keine Bahn sehen konnte:** beide hatten je
+*vierzehn* Theorien gebaut, keine die fünfzehn.
+
+> *Die 1-GB-Grenze in `CLAUDE.md` ist eine Aussage über den Speicher, nicht über die
+> Gewohnheit — und der Speicher war heute ein anderer.* **Die Regel wird davon nicht
+> aufgehoben**; sie bekommt ein Datum daneben.
+
+## Der Stand
+
+```
+cargo test           15 Sammlungen, 229 Proben, 0 rot (lokal)
+mutiere-pruefer.py   340 von 340 gueltigen Mutationen gefangen (100 %, lokal)
+                     213 im Pruefer, 86 in der C-Emission, 38 in der Annotationsemission,
+                     3 an Schablonen -- eine Flaeche mit 0 waere unbeschaedigbar
+pruefe-zahlen.py     64 von 64 nachgerechnet
+pruefe-englisch.py   7910 / 1072 -- beide Marken exakt gehalten
+zaehle-theorien.py   15 Theorien, 3496 Zeilen, 101 Saetze
+                     ROT: 40 eingefrorene Suchergebnisse gegen die Marke 31
+zaehle-lean.py       75 Pflichten, 9 Ziele, 66 abgesagt
+```
+
+**Die eine rote Ratsche steht mit Absicht offen:** die neun Suchschritte liegen sämtlich im
+`umhaengen`-Beweis von `Table_Ops_Erhaltung.thy` (40 − 9 = 31). *Sie werden gezahlt, nicht
+nachgezogen* — die Marke existiert wegen 21 Minuten und 11 GB am 2026-08-17.

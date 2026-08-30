@@ -259,7 +259,7 @@ darunter.
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
       **`pruefe-zahlen.py` führt heute 64 Kennzahlen mit Befehl** und zählt daneben
-      **149 fettgedruckte Zahlen in Tabellenzellen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
+      **153 fettgedruckte Zahlen in Tabellenzellen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
 
@@ -730,6 +730,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Tagen) und **eine UNGÜLTIGE**, die nach der Reparatur ihres Escapes zu Recht überlebte,
       weil sie eine Tautologie einfügte. Alle drei geheilt, jede von Hand nachgemessen:
       vorher ÜBERLEBT, nachher GEFANGEN.
+      **Der Lauf DANACH, derselbe Katalog: `340 von 340 gültigen Mutationen gefangen
+      (100 %)`** (10 min 25 s Wanduhr, 29 min CPU) — keine Überlebende, keine ungültige.
+      *Die Quote ist zum ersten Mal voll, und sie misst weiterhin nur den Prüfer:*
+      Prüfer 213 · Code 86 · Annotation 38 · Schablone 3. **Eine Fläche mit 0 Mutationen ist
+      nicht gedeckt, sondern unbeschädigbar.**
       > **`--anker` fährt keine Mutation.** Bahn B meldete „335 von 335 Ankern" — das ist
       > wahr und es ist keine Quote. Ein Anker, der greift, sagt *diese Zeile gibt es noch*,
       > nicht *und eine Probe fällt, wenn sie sich ändert*. **Dazwischen liegen zehn Minuten,
