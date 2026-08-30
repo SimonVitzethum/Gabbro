@@ -126,7 +126,19 @@ NICHT = {"saetze.rs"}
 #
 # *`R011` is NOT on this list*, and that is the check on the reasoning: it has one issuance
 # site, because it is one refusal. Where a rule really is one, the tool sees it.
-MARKE = 20
+#
+# **2026-08-30: 20 -> 19, and this one FALLS -- `P034` was split.** The standing invitation
+# above was taken up, on the sharper criterion this day measured
+# (`messung/DECKUNGSLUECKE.md`): not "are these two rules?", but *do two poison probes under
+# this identifier COVER EACH OTHER?* `P034` carried the missing catch-all arm and the stray
+# `pub`, each with its own probe, and each probe would have stayed green while the other
+# rule was out. **That is a coverage claim that is none** -- the stray `pub` is now `P041`.
+#
+# *Nine of the twenty are of this kind; one is healed here.* The reason the other eight were
+# not is written in the report, and it is not a matter of effort: `E008` has four issuance
+# sites and `R009` five, so splitting them is not bookkeeping but a decision about what the
+# rule IS -- exactly what `messung/PHASENKLASSE.md` decided the other way for `R009`.
+MARKE = 19
 # Ebenso fuer die Proben, deren Kennung heute mehrdeutig ist.
 # 2026-08-21, «B8»: **39 -> 40, and the rise is booked, not looked away from.**
 # `beispiele/gift/242` points at `E008` -- the probe that the effect hull crosses an INDIRECT
@@ -169,7 +181,9 @@ MARKE = 20
 # 2026-08-28, «B26»: **60 -> 61 -- one probe on `R010`** (`406`). Same booking, same reason.
 # *`beispiele/gift/405` points at `R011`, which has ONE issuance site and is therefore not on
 # the list at all* -- so of the two probes this build added, exactly one costs anything.
-MARKE_PROBEN = 61
+# **2026-08-30: 61 -> 59.** The `P034` split took its two probes off the list -- `05` now
+# stands alone under `P034`, `45` alone under `P041`, and neither carries the other any more.
+MARKE_PROBEN = 59
 
 SCHWELLE = 0.45  # Textaehnlichkeit, unter der zwei Vergabestellen als verschieden gelten.
 

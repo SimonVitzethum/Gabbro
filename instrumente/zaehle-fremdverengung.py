@@ -47,8 +47,12 @@ MUSTER = ["beispiele/*.gab", "messung/*/*.gab"]
 GIFT = "beispiele/gift/*.gab"
 
 KOPF = re.compile(r"^== Uebersetzungszeugnis: (\S+) ==$")
+# **Carried over 2026-08-30:** the certificate's finding line took a THIRD currency, `N
+# UNCOVERED` -- an assumption naming a probe that no program redeems. *The old pattern lost
+# its subject that way and reported the search path as gone* -- correctly, and that is what
+# the message is for. The pattern moves onto the wording that stands there.
 BEFUND = re.compile(
-    r"^\s+\d+ assumptions \(\d+ of them NOT FALSIFIABLE\), "
+    r"^\s+\d+ assumptions \(\d+ of them NOT FALSIFIABLE, \d+ UNCOVERED[^)]*\), "
     r"\d+ templates \(\d+ of them UNPROVED\), \d+ direct forms, "
     r"(\d+) foreign bodies \((\d+) state their duty\), (\d+) narrowings from foreign "
     r"contracts$"

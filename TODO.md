@@ -259,7 +259,7 @@ darunter.
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
       **`pruefe-zahlen.py` führt heute 64 Kennzahlen mit Befehl** und zählt daneben
-      **153 fettgedruckte Zahlen in Tabellenzellen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
+      **154 fettgedruckte Zahlen in Tabellenzellen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
 
@@ -374,7 +374,11 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 112 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 114 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *~~109~~ am 2026-08-30 VIERMAL nachgezogen, und jedes Mal beim Zusammenführen: die
+      Berichte kamen aus drei Ketten gleichzeitig, und keine Kette konnte die Summe kennen.
+      **Nicht eine Seite genommen, sondern den Wächter gefragt** — das ist die einzige Zahl,
+      die stimmt, wenn drei Bäume sich treffen.*
       *~~103~~ dreimal nachgezogen am 2026-08-28 — aus drei Bahnen kamen sechs Berichte dazu:
       `messung/ABSENKUNG.md`, `dokumente/PLAN-VERIFIKATION.md` und die vier des Rumpfkanals
       (`messung/RUF-TOR.md`, `messung/AUSSETZUNG.md`, `messung/VIER-LUECKEN.md`,
@@ -520,7 +524,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2079 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2093 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -779,7 +783,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       checked 2026-08-16 — one `.gab` probe run per place)*:
       * Vocabulary words as names after `::`, in `reaches … via` and in `chain(a,b)` — three
         places that the file's own header does **not** exempt.
-      **Closed are:** `pub` at 13 item kinds (`P034`), `pub const` in the `table` body (was
+      **Closed are:** `pub` at 13 item kinds (`P041`, bis 2026-08-30 `P034`), `pub const` in the `table` body (was
       too strict), `type T = { };` as an empty sum type (`P035`, poison 61), and
       the comma rule — `entrydecl`, `slotdecl` and `reg … fields` carried **three different
       rules for the same thing**; now one: separating comma obligatory, trailing comma
@@ -1767,12 +1771,44 @@ NOTATIONSLUECKEN -- nicht eine ist ein Handbeweis.** Was daraus offen bleibt:
       Pflicht unsichtbar -- die zweite fiel hier sofort auf (`s.len - frei`, geschlossen mit
       der relationalen Nachbedingung). *Eine Zaehlung, und sie ist klein.*
 
-- [ ] **`group` steht an EINER Korpusstelle** *(2026-08-19)*. `beispiele/17` ist die einzige;
+- [ ] **`group` steht an EINER Korpusstelle** *(2026-08-19)*. ~~`beispiele/17` ist die
+      einzige;~~ **`beispiele/17` ist die einzige, SOWEIT GESUCHT** *(abgeschwächt
+      2026-08-30)*;
       die vier Verbindungsinvarianten des Sweeps vom 2026-08-16 (V1-V4) sind gemessen, aber
       nicht geschrieben. **Zwei bewiesene Schablonen ueber einem Konstrukt mit einer
       Fundstelle** -- das ist der Grund, warum die Amortisationszahl heute zweimal gestiegen
       ist. *Solange V1-V4 nicht als `group` dastehen, misst die Zahl den Beweisvorlauf und
       nicht die Amortisation.*
+
+      > **„Ist die einzige" war ein Allquantor über einen Korpus, den niemand abgeschritten
+      > hatte.** Er ist zu „soweit gesucht" abgeschwächt — und *das ist nur dann kein
+      > Nullbefund, wenn der Suchweg danebensteht.* Also steht er hier.
+
+      **Der Suchweg, 2026-08-30.** Durchsucht wurden **alle 408 `.gab`-Dateien** des Baums
+      (`find . -name '*.gab'`, ohne `target/` und `.git/`), Muster `^\s*group\b` — `group`
+      am Zeilenanfang, also das Konstrukt und nicht das Wort. Gegenprobe mit dem freien
+      Muster `group` über dieselbe Menge: 12 Dateien, dieselben 12. **Keine Fundstelle
+      steht nur in einem Kommentar.**
+
+      | wo | Dateien mit `group` | zählt als Korpus? |
+      |---|---:|---|
+      | `beispiele/*.gab` | 1 — `beispiele/17-gruppe-ueber-zwei-sperren.gab` | **ja** |
+      | `beispiele/gift/*.gab` | 9 — `63`, `64`, `65`, `66`, `185`, `262`, `280`, `281`, `282` | nein (W23: eigene Giftproben) |
+      | `messung/race-proben/*.gab` | 2 — `gruppe-unbekannter-traeger`, `gruppe-unbekannte-sperre` | nein (Messproben) |
+      | alles übrige (`messung/fragmente`, `fnptr-proben`, `abi-proben`, `caprock`, `netz`, `treiber`, `grenze`, `messungen`, `programmlogik/beispiel`) | 0 | — |
+
+      **Damit ist die Aussage schärfer als vorher, nicht schwächer:** es ist nicht nur
+      *behauptet*, dass `beispiele/17` allein steht — es ist über 408 Dateien nachgesehen,
+      und die elf anderen Fundstellen sind benannt statt verschwiegen. *Der zweite Korpus
+      (`messung/fragmente`) hat keine einzige.*
+
+      **Was ausdrücklich NICHT gebaut wurde: ein mechanisches Maß über
+      „Verbindungsinvariante".** Ein Werkzeug, das zählt, an wie vielen Stellen eine
+      Verbindungsinvariante *hingehörte*, müsste entscheiden, wann zwei Träger
+      zusammenhängen — und genau das ist das Urteil, um das es hier geht. **Ein Urteil in
+      Werkzeugform ist kein Maß, es ist dasselbe Urteil mit einer Zahl davor**, und die
+      Frage stünde unverändert eine Ebene tiefer. *Die vier V1-V4 sind von Hand gefunden;
+      dass es genau vier sind, ist eine Lesung und wird hier nicht als Zählung ausgegeben.*
 
 - [ ] **`N009` sieht nur ZAHLLITERALE** *(2026-08-19)*. Ein berechneter Registerversatz
       (`CAP.FRO * 16`) bleibt stumm, und `bank`-Register werden nicht gegen die Hauptebene
@@ -3159,9 +3195,36 @@ Von 28 unterschiedenen Rennformen tragen
       (gemessen: 3 322 Verletzungen gegen 0 im ersten Arm). *Eine Sonde ohne Kontrollarm
       misst ihre eigene Nachsicht.*
 
-      > **Der Zähler bleibt bei `0 von 27`:** die eine gebaute Sonde gehört zu **keiner** der
-      > 26 benannten. Und von den drei Annahmen, die die Rennklasse wirklich tragen, kann
-      > **keine** heute eine laufende Sonde bekommen.
+      > ~~**Der Zähler bleibt bei `0 von 27`:** die eine gebaute Sonde gehört zu **keiner**
+      > der 26 benannten.~~ *(überholt 2026-08-30)* — **er steht auf `1 von 30`:**
+      > `sonde_boot_unerreichbar.c` ist dazugekommen und gehört zu einer benannten. Und von
+      > den drei Annahmen, die die Rennklasse wirklich tragen, kann **keine** heute eine
+      > laufende Sonde bekommen.
+
+      **Und die 29 übrigen Namen sind am 2026-08-30 GESTRICHEN.**
+      *Wer einen Namen behalten will, schreibt die Sonde; der Rest fällt, und mit ihm die
+      Zusicherung.* Manifest und Zeugnis tragen einen Sondennamen nur noch, wenn die Sonde
+      als **Programm** steht (`manifest::SONDEN_MIT_PROGRAMM`, gepflegt gegen
+      `sonden/sonde_*.c`); sonst heißt die Klasse **`ungedeckt`** und die Sondenspalte
+      trägt `--`.
+
+      ```
+      A2  write_cr0    ungedeckt   --
+      -- 36 Annahmen
+      -- 29 Sondenname(n) GESTRICHEN: die Sonde steht nicht als Programm.
+      ```
+
+      **„Nicht gefahren" war ein Übersetzungsfehler, kein Zwischenzustand** — ein Name ohne
+      Programm las sich im Manifest wie eine Deckung und war eine Zusicherung über das
+      Ausbleiben einer Widerlegung. *Das Manifest ist das Artefakt, mit dem Gabbro seine
+      Zusage nach AUSSEN trägt; dort wog der Name am schwersten.*
+
+      **Die Zahl bleibt stehen** — die Schlusszeile sagt, wie viele gestrichen wurden, *sonst
+      wäre eine Liste, die schrumpft, von einer, die nie größer war, nicht zu unterscheiden.*
+      Das Zeugnis führt sie als **dritte Währung** neben `NOT FALSIFIABLE`, und
+      `pruefe-sonden.sh` liest jetzt diese Zeile statt die Namensspalte — *sonst hätte der
+      Läufer ab sofort `1 benannt` gemeldet und ausgesehen, als sei die Anklage erledigt.*
+      Alles gebaut und getestet: `cargo test` grün.
 
 - [ ] **`release_stellt_sichtbarkeit_her` ist als „nicht falsifizierbar" gebucht — mit einer
       Begründung, die die GRÜNE Richtung argumentiert** *(gefunden 2026-08-21 beim Bau der
@@ -3277,9 +3340,35 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       **keiner** entstand dadurch, dass eine Kennung die Datei wechselte. *Der Gegenstand
       wächst, nicht die Leseweite.*
       Warum hier nicht bezahlt: es sind 67 Kommentare in zwanzig Prüfer-Dateien, `emit.rs`
-      mit 40 voran — und **`emit.rs` ist die Datei, deren wörtliche Zeilen der
+      mit 40 voran — ~~und **`emit.rs` ist die Datei, deren wörtliche Zeilen der
       Mutationskatalog als Anker führt.** Wer dort schreibt, während die Anker umgezeigt
-      werden, misst eine Mischung.
+      werden, misst eine Mischung.~~
+
+      **Der Ankerhaken ist am 2026-08-30 nachgemessen worden, und er hält nicht**
+      ([`messung/ANKERHAKEN.md`](messung/ANKERHAKEN.md)). Angeordnet war, hier nicht das Ziel
+      zu erreichen, sondern die **Grundgesamtheit zu berichtigen** — ein Anker-Kommentar
+      zählt nicht als Kandidat. Gemessen:
+
+      | | Zahl |
+      |---|---:|
+      | Ankerzeilen im Katalog, verschieden | 499 |
+      | davon **Kommentarzeilen** | **4** |
+      | Anker mit einer Kennung in Rückstrichen | **0** |
+      | Kandidaten, die die Regel herausnimmt | **0** (274 → 274) |
+
+      **Die beiden Grundgesamtheiten sind bauartbedingt disjunkt:** ein Anker ist ein Lauf
+      wörtlichen Quelltextes, ein Kandidat braucht eine Kennung in Rückstrichen, und **kein
+      Anker trägt eine.** `emit.rs` führt 135 Ankerzeilen, davon ist genau **eine** ein
+      Kommentar, und sie zitiert nichts — **keiner der 40 genannten `emit.rs`-Kommentare ist
+      ein Anker.** Es gibt also nichts zu berichtigen; die Korrektur ist nicht strittig,
+      sie ist **leer**.
+
+      **Zähler und Nenner bleiben damit stehen: 274 gegen 207, die Schuld unvermindert.**
+      Eingebaut ist die Regel trotzdem — nicht um etwas herauszunehmen, sondern um die
+      Disjunktheit zu **prüfen statt sie anzunehmen**: `ankerprobe` rechnet beidseitig und
+      druckt die Differenz bei jedem Lauf, und ein unlesbarer Katalog ist `ABORT`, keine
+      stille Null. *Schreibt jemand eine Kennung in einen Anker, hört die Zahl auf, null zu
+      sein.*
 
 - [ ] **`M120` war NICHT der einzige Fall — im Parser stehen vier weitere** *(gemessen
       2026-08-21)*. Je zwei unverwandte Regeln unter einer Kennung:
@@ -3289,11 +3378,13 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       | `P022` | „`table` kennt genau ein `tree`-Wort" | „Kostenangabe fängt mit `O` an" |
       | `P023` | „im `tree`-Rumpf erwartet: parent, child, sibling" | „the `node` of a `walk` declaration is an array" |
       | `P024` | „diese Kante steht in `tree` zweimal" | „`@version` erwartet" |
-      | `P034` | „`_` on its own is not an identifier" | „`pub` is not in the grammar here" |
+      | ~~`P034`~~ **GETRENNT** | „`_` on its own is not an identifier" — bleibt `P034` | „`pub` is not in the grammar here" — jetzt **`P041`** |
       | `P035` | „is neither a record nor a sum type" | „gibt es in Gabbro nicht" |
 
       *Alle fünf im Parser, alle in einer Datei* — genau dort, wo der alte Wächter
-      bauartbedingt blind war.
+      bauartbedingt blind war. **`P034` ist am 2026-08-30 getrennt** (`P041` für das
+      verirrte `pub`), weil bei ihm zwei Giftproben einander deckten; die vier übrigen
+      stehen weiter — siehe den Posten darunter.
 
 - [ ] **Was eine Doppelvergabe RÜCKWIRKEND kostet, und das ist teurer als der Fund**
       *(gemessen 2026-08-21)*. Die Giftproben prüfen auf **Kennungen**. Eine doppelt
@@ -3302,7 +3393,7 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       Deckungsaussage aller Proben, die darauf zeigen.
 
       ```
-      61 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 302, die
+      59 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 302, die
       ueberhaupt eine Kennung erwarten)
       ```
 
@@ -3316,6 +3407,35 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       verstümmelte Stellen sahen einander ähnlich und fielen aus der Liste. *`F002` und
       `K009` waren dadurch verdeckt, und verdeckt ist hier die gefährliche Richtung.*
 
+      **Nachgemessen 2026-08-30** ([`messung/DECKUNGSLUECKE.md`](messung/DECKUNGSLUECKE.md)).
+      ~~18 Kandidaten, 58 Proben~~ *(überholt 2026-08-30)* — der heutige Stand vor dem
+      Eingriff war **20 und 61**;
+      die Auftragszahl war überholt, und das ist mitgebucht.
+
+      **Die entscheidende Frage ist nicht „sind das zwei Regeln?", sondern: decken zwei
+      Giftproben unter dieser Kennung EINANDER?** Das ist keine Urteilsfrage, sondern eine
+      nachprüfbare Eigenschaft der Probenmenge. Je Kennung wurde bestimmt, welche
+      Vergabestelle jede ihrer Proben auslöst:
+
+      | Gruppe | Kennungen | Befund |
+      |---|---:|---|
+      | **A — zwei Proben decken einander** | 9 | `E008` `M104` `P034` `F002` `H011` `M124` `N030` `O011` `R009` |
+      | B — alle Proben auf EINER Stelle | 3 | `D012` `H012` `K009` — die andere Stelle ist unbeprobt |
+      | C — weniger als zwei Proben | 8 | `P022` `P023` (null) · `O001` `O006` `N023` `P035` `R010` `F005` (eine) |
+
+      **Geheilt ist genau einer: `P034`** — das verirrte `pub` heißt jetzt `P041`. Beide
+      Ratschen sind daraufhin **gefallen: 20 → 19 Kandidaten, 61 → 59 Proben.**
+
+      **Warum die acht übrigen aus Gruppe A hier NICHT geheilt sind, und es ist keine
+      Aufwandsfrage:** `E008` hat vier Vergabestellen, `R009` fünf — sie zu trennen hieße zu
+      *entscheiden*, was hier eine Regel ist, und `messung/PHASENKLASSE.md` hat für `R009`
+      ausdrücklich die Gegenrichtung entschieden. **Das zu überschreiben wäre kein Heilen,
+      sondern ein zweites Urteil ohne neue Messung.** Dazu: es gab keinen Übersetzer
+      (`ki-pc-fisch-101` nicht erreichbar), und eine Trennung ist nur so lange durch Lesen
+      prüfbar, wie sie eine Quellzeile, eine Probenzeile und eine Testliste umfasst.
+      *Gruppe B und C gehören ausdrücklich nicht in diesen Posten — dort deckt keine Probe
+      eine andere; ihr Befund ist eine FEHLENDE Probe, nicht eine falsche Deckungsaussage.*
+
 ---
 
 # STUFE 8 — PL: DIE LOGIK DES PRÜFERS  ⟨D⟩
@@ -3326,7 +3446,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 70 Sätze über 238 Codes, 45 Codes noch ohne).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 71 Sätze über 239 Codes, 45 Codes noch ohne).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 

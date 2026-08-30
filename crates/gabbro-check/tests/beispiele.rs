@@ -513,22 +513,33 @@ fn auch_die_relationale_nachbedingung_wird_gebucht() {
 ///
 /// *Dieselbe Klasse wie bei den Fremdverengungen -- eine Zahl, in der zwei Waehrungen
 /// stecken, liest sich wie eine.*
+///
+/// **Since 2026-08-30 there are THREE currencies** -- `UNGEDECKT` joined: an assumption naming
+/// a probe that no program redeems. It is neither falsifiable (nobody does it) nor
+/// not-falsifiable (somebody could), and counting it in the first group was exactly the blend
+/// this test stands against.
 #[test]
 fn die_befundzeile_trennt_die_nicht_falsifizierbaren_annahmen() {
     let z = zeugnis_von("06-annahmen.gab");
     // Gezaehlt wird die LISTE, und die Befundzeile muss dieselbe Zahl tragen. *Ein Literal
     // hier waere ein Muster, das seine eigene Antwort enthaelt* -- die Klasse von W16.
     let nicht_falsifizierbar = z.matches("NICHT FALSIFIZIERBAR").count();
+    let ungedeckt = z.matches("UNGEDECKT --").count();
     assert!(
         nicht_falsifizierbar > 0,
         "diese Datei muss nicht falsifizierbare Annahmen fuehren, sonst misst der Test nichts:\n{z}"
     );
     assert!(
+        ungedeckt > 0,
+        "diese Datei muss ungedeckte Annahmen fuehren, sonst misst die zweite Haelfte \
+         nichts:\n{z}"
+    );
+    assert!(
         z.contains(&format!(
-            "assumptions ({nicht_falsifizierbar} of them NOT FALSIFIABLE)"
+            "assumptions ({nicht_falsifizierbar} of them NOT FALSIFIABLE, {ungedeckt} UNCOVERED"
         )),
-        "die Befundzeile muss die Klasse mitfuehren, und die Zahl muss die der Liste sein \
-         ({nicht_falsifizierbar}):\n{z}"
+        "die Befundzeile muss BEIDE Klassen mitfuehren, und beide Zahlen muessen die der \
+         Liste sein ({nicht_falsifizierbar} / {ungedeckt}):\n{z}"
     );
 }
 

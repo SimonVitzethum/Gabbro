@@ -99,6 +99,16 @@ extern fn reply4(ep : u64, st : Status, a : u64, b : u64, c : u64)
 -- kennt ihn nicht. Damit hat der einzige Ort, an dem 168 gemessene `asm!`-Stellen
 -- zusammenlaufen sollten, in der Grammatik keinen Traeger — die vertrauenswuerdige Flaeche
 -- schrumpft nicht, sie wandert in eine `prim`-Deklaration ohne Inhalt.
+--
+-- ENTSCHIEDEN am 2026-08-30 (messung/EINTRITTSBELEGUNG.md): kein `abi`-Block, keine
+-- Registertabelle je `arch`. Diese Zeile hier ist die EINZIGE `prim fn`-Stelle mit `arch`
+-- und ohne Belegung im ganzen sauberen Korpus — null gemessener Bedarf, und Regel A sagt:
+-- kein Konstrukt ohne den. Die Belegung geht an `cc`, in C-Zwangsbuchstaben und ungeprueft.
+-- Das steht seit heute im Zeugnis, Abschnitt E, neben den `ASSEMBLY`-Zeilen:
+-- `REGISTER ALLOCATION -- delegated to cc, NOT checked here («B27»)`.
+-- Eine benannte Delegation ist die ehrliche Buchung; eine stillschweigende ist keine.
+-- Und sie schrumpft die Flaeche NICHT: der obige Satz bleibt wahr, er hat jetzt nur eine
+-- Adresse statt eines Mangels.
 prim fn invoke(nr : u64, cap : u64, m0 : u64, m1 : u64, m2 : u64, m3 : u64, tag : u64) -> u64
     effects { writes machine_regs }
     arch x86_64;

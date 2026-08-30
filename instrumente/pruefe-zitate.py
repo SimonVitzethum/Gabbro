@@ -37,6 +37,7 @@ cheap half; the expensive half stays with the reader.
     ./instrumente/pruefe-zitate.py            checks
     ./instrumente/pruefe-zitate.py --liste    every candidate with its line
 """
+import importlib.util
 import pathlib
 import re
 import sys
@@ -107,11 +108,78 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # rule lives.
 #
 # *Why it was not paid here, written out:* it is 67 comments across twenty checker files,
-# `emit.rs` leading with 40 -- **and `emit.rs` is the file whose LITERAL lines the mutation
+# `emit.rs` leading with 40 -- ~~**and `emit.rs` is the file whose LITERAL lines the mutation
 # catalogue carries as anchors.** Step 0.1 is repointing three dead anchors in exactly that
 # file right now. *Whoever writes into a measuring surface while it is being measured measures
-# a mixture* -- the same class as the collision of 2026-08-21.
+# a mixture* -- the same class as the collision of 2026-08-21.~~
+#
+# **STRUCK THROUGH 2026-08-30, because it was measured and it is FALSE.** The anchor hook was
+# then the ground for calling the target 207 wrongly set, and for correcting the population
+# instead of paying the debt. The count says otherwise:
+#
+#     anchor lines in the catalogue, distinct          499
+#     of those, COMMENT lines                            4   phasen/typen/emit/aufrufgraph
+#     anchors carrying an identifier in backticks        0
+#     candidates the anchor rule removes                 0   274 -> 274
+#
+# `emit.rs` holds 135 anchor lines and exactly ONE of them is a comment, which cites nothing.
+# **So none of the 40 `emit.rs` comments this guardian names is an anchor, and rewriting them
+# cannot move `--anker` off 340 of 340.** The two populations are disjoint by construction:
+# an anchor is a run of source text, a candidate needs an identifier in backticks, and no
+# anchor has one.
+#
+# *The debt therefore stands, undiminished, at 274 with the target 207* -- there is no
+# population correction to be had here, and the mark is NOT re-booked. What went in instead is
+# the rule itself plus `ankerprobe`, which prints the zero on every run: the disjointness is
+# now CHECKED rather than assumed, and it will speak up on the day it stops holding.
 MARKE = 274
+
+
+# **An ANCHOR comment is not a candidate** *(2026-08-30)*.
+#
+# `instrumente/mutiere-pruefer.py` carries 340 mutations, and every one of them holds a
+# LITERAL run of source text as its anchor. An anchor the rewritten source no longer contains
+# falls to `ANKER FEHLT` -- and the catalogue keeps reporting coverage over a shrinking base
+# (W14). So a comment line that is part of an anchor is a MEASURING SURFACE of another tool,
+# and demanding its rewrite here would set one instrument against another.
+#
+# *Population correction, not a relaxation* -- the same class as W23: a tool's own poison
+# probes belong in hit counts, never in a demand count.
+#
+# > **And what the measurement said when the rule went in: it removes NOTHING.** Of 499
+# > distinct anchor lines exactly **4** are comments, and **not one of the 340 anchors carries
+# > an identifier in backticks at all**. The two populations are disjoint -- so the ground on
+# > which this correction was ordered ("reaching 207 can silence `--anker`") does not hold.
+# > *See `messung/ANKERHAKEN.md` for the full count.*
+#
+# The rule stays in anyway, and `ankerprobe` prints the number it removes on every run. That
+# turns an ASSUMPTION into a measured fact: the day somebody writes an identifier into an
+# anchor, the number stops being zero and says so.
+_ANKER = None
+
+
+def anker_kommentare():
+    """File name -> set of stripped comment lines the mutation catalogue holds as anchors.
+
+    **Raises rather than returning empty.** An exclusion that silently excludes nothing looks
+    exactly like one that worked -- `main` turns the failure into a red abort.
+    """
+    global _ANKER
+    if _ANKER is None:
+        pfad = W / "instrumente" / "mutiere-pruefer.py"
+        spec = importlib.util.spec_from_file_location("mutiere_pruefer", pfad)
+        mp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mp)
+        if not mp.MUTATIONEN:
+            raise RuntimeError("the mutation catalogue is empty")
+        aus = {}
+        for m in mp.MUTATIONEN:
+            for z in m.alt.splitlines():
+                t = z.strip()
+                if t.startswith("//") or t.startswith("*"):
+                    aus.setdefault(m.pfad.name, set()).add(t)
+        _ANKER = aus
+    return _ANKER
 
 
 def vergeben():
@@ -152,9 +220,14 @@ def absaetze(zeilen):
             yield absatz
 
 
-def erhebe(zusatz=None):
-    """Candidates: (file, line, identifier, comment text)."""
+def erhebe(zusatz=None, anker=True):
+    """Candidates: (file, line, identifier, comment text).
+
+    `anker=False` drops the anchor exclusion -- `ankerprobe` runs both ways to say what the
+    rule costs. Nothing else may call it that way.
+    """
     je_datei = vergeben()
+    aussen = anker_kommentare() if anker else {}
     aus = []
     for q in sorted(W.glob("crates/*/src/*.rs")):
         if q.name in NICHT:
@@ -163,11 +236,15 @@ def erhebe(zusatz=None):
         if zusatz and q.name == zusatz[0]:
             text += zusatz[1]
         eigene = je_datei.get(q.name, set())
+        gehalten = aussen.get(q.name, frozenset())
         for absatz in absaetze(text.splitlines()):
             # **A place marker ANYWHERE in the paragraph excuses the paragraph** -- and only it.
             if FREMD.search(" ".join(t for _, t in absatz)):
                 continue
             for n, s in absatz:
+                # **An anchor comment is a measuring surface, not a demand** -- see above.
+                if s in gehalten:
+                    continue
                 for k in ZITAT.findall(s):
                     if k not in eigene:
                         aus.append((q.name, n, k, s[:96]))
@@ -192,6 +269,26 @@ def sprechprobe():
     return a and b
 
 
+def ankerprobe():
+    """**What the anchor rule COSTS, printed on every run.**
+
+    A population correction that nobody counts is a claim. This one is counted both ways, and
+    the difference is the only honest statement about it. *Today it is zero* -- the anchors and
+    the citations do not overlap, and that is a measured fact rather than a hope.
+    """
+    anker = anker_kommentare()
+    zeilen = sum(len(v) for v in anker.values())
+    mit = len(erhebe())
+    ohne = len(erhebe(anker=False))
+    print("== Anchor rule (anchors of `mutiere-pruefer.py` are not candidates) ==")
+    print("   %d anchor comment lines across %d files; it removes %d candidates."
+          % (zeilen, len(anker), ohne - mit))
+    if ohne == mit:
+        print("   Zero today -- no anchor carries an identifier in backticks. The two")
+        print("   populations are disjoint, and this line is what keeps that CHECKED.")
+    return True
+
+
 def main():
     # **Red on abort, not a quiet zero.** If the source tree cannot be read at all, this tool
     # must fall -- a guardian that reports „0 candidates" over an empty set is
@@ -199,8 +296,17 @@ def main():
     if not list(W.glob("crates/*/src/*.rs")):
         print("ABORT: no checker sources found -- this is NOT a count of zero.")
         sys.exit(1)
+    # **Red on a catalogue that cannot be read.** The anchor rule can only exclude what it can
+    # see; if it sees nothing, its zero is not a measurement.
+    try:
+        anker_kommentare()
+    except Exception as e:
+        print("ABORT: the mutation catalogue is unreadable (%s) -- the anchor rule" % e)
+        print("       would then exclude nothing, and that is NOT a count of zero.")
+        sys.exit(1)
     if not sprechprobe():
         sys.exit(2)
+    ankerprobe()
     kand = erhebe()
     je_datei = {}
     for d, _, _, _ in kand:
@@ -229,7 +335,7 @@ def main():
     if MARKE is not None and len(kand) > MARKE:
         print("\n  RATCHET BROKEN: %d candidates, %d booked." % (len(kand), MARKE))
         schlecht = 1
-    print("\n== Work done: %d files, %d issued identifiers, %d candidates, 2 probes ==" % (
+    print("\n== Work done: %d files, %d issued identifiers, %d candidates, 3 probes ==" % (
         len(list(W.glob("crates/*/src/*.rs"))),
         sum(len(v) for v in vergeben().values()), len(kand)))
     return schlecht

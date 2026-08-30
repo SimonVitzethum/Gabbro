@@ -795,8 +795,20 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
         aus.push_str("     none. This unit assumes nothing about the machine.\n");
     }
     for (n, a) in annahmen.iter().enumerate() {
+        // **A probe name stands here only where the probe stands as a PROGRAM** (2026-08-30).
+        // The certificate is the artefact by which Gabbro carries its promise outward --
+        // `Sonde <x>` for a name without a program read as coverage there, and was an
+        // assurance about the absence of a refutation. *The assumption still stands; its
+        // falsifiability does not.* See `crate::manifest::gedeckt`.
         let wie = match &a.klasse {
-            crate::manifest::Klasse::Falsifizierbar { sonde } => format!("Sonde {sonde}"),
+            crate::manifest::Klasse::Falsifizierbar { sonde }
+                if crate::manifest::gedeckt(sonde) =>
+            {
+                format!("Sonde {sonde}")
+            }
+            crate::manifest::Klasse::Falsifizierbar { .. } => {
+                "UNGEDECKT -- kein Programm zu dieser Sonde".to_string()
+            }
             crate::manifest::Klasse::NichtFalsifizierbar { grund } => {
                 format!("NICHT FALSIFIZIERBAR -- {grund}")
             }
@@ -907,6 +919,29 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
             for (n, z) in &e.asm {
                 aus.push_str(&format!("       {n:<26} {z} lines\n"));
             }
+            // **«B27», the register allocation at entry -- a NAMED delegation** (2026-08-30).
+            //
+            // `messung/EINTRITTSBELEGUNG.md` decided it and left one thing undone: the name.
+            // A pass holding the constraint letters against a register table per `arch` is
+            // not wrong, but it has **zero measured demand** -- the whole clean corpus holds
+            // exactly ONE `prim fn` site with an `arch` and no allocation, and a table per
+            // architecture is upkeep. *Rule A: no construct without measured demand.*
+            //
+            // So the allocation goes to `cc`, and it stands HERE, beside the other edge
+            // items of section E -- not above them and not away. **A named delegation is the
+            // honest booking; a silent one is none**, and this line is the difference.
+            //
+            // It buys nothing it does not say: swapping two letters still gives a program
+            // that compiles and calls wrong. *That surface is moved, never checked* -- which
+            // is exactly what «B27» wanted to shrink and what this line refuses to hide.
+            aus.push_str(
+                "\n     REGISTER ALLOCATION -- delegated to `cc`, NOT checked here («B27»).\n\x20\
+                 \x20     The `in`/`out`/`clobbers` letters are C constraint letters and reach \
+                 the\n\x20      compiler unread. Swapping two of them yields a program that \
+                 compiles\n\x20      and calls wrong. A named delegation, not a missing form: \
+                 no pass holds\n\x20      them against a register table, because the corpus \
+                 shows no demand for\n\x20      one (messung/EINTRITTSBELEGUNG.md).\n",
+            );
         }
     }
 
@@ -968,12 +1003,28 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
         .iter()
         .filter(|a| matches!(a.klasse, crate::manifest::Klasse::NichtFalsifizierbar { .. }))
         .count();
+    // **And the THIRD currency, since 2026-08-30: uncovered.**
+    //
+    // Until today the assumptions fell into two classes and this line carried both. But an
+    // assumption naming a probe that no program redeems is neither: something COULD refute
+    // it, only nobody does. *Counting it among the falsifiable ones was exactly the blend
+    // this line healed for the other two on 2026-08-21* -- a figure holding two currencies
+    // reads like one.
+    let ungedeckt = annahmen
+        .iter()
+        .filter(|a| match &a.klasse {
+            crate::manifest::Klasse::Falsifizierbar { sonde } => !crate::manifest::gedeckt(sonde),
+            _ => false,
+        })
+        .count();
     aus.push_str(&format!(
-        "     {} assumptions ({} of them NOT FALSIFIABLE), {} templates ({} of them UNPROVED), \
+        "     {} assumptions ({} of them NOT FALSIFIABLE, {} UNCOVERED -- named a probe that \
+         does not exist as a program), {} templates ({} of them UNPROVED), \
          {} direct forms, \
          {} foreign bodies ({} state their duty), {} narrowings from foreign contracts\n",
         annahmen.len(),
         ohne_sonde,
+        ungedeckt,
         benutzt.len(),
         offen.len(),
         e.posten

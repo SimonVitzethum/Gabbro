@@ -687,6 +687,19 @@ def lauf(befehl):
                       "wieder auf. Ein Fixpunkt, der terminiert, stimmt IMMER (W18)")
     if "error[E" in r.stderr or "could not compile" in r.stderr:
         return None, "der Pruefer baut nicht -- es wurde NICHTS gemessen"
+    # **A command that says of ITSELF that it cannot measure is not a broken search path**
+    # *(2026-08-30)*.
+    #
+    # `pruefe-saetze.py` compares the claimed identifiers out of the BUILT `gabbro paesse`
+    # against the existing ones out of the sources. Where the binary is older, the two halves
+    # describe different trees, so it aborts rather than printing a mixture. *That is the
+    # right answer, and a different state from "the number is no longer there".*
+    #
+    # Such an entry is carried BY NAME here: suspended, with a reason and with a count --
+    # neither counted as a finding nor left out. **A suspended figure is UNGUARDED**, and the
+    # line below says how many there are.
+    if "MISCHUNG" in r.stderr:
+        return None, "AUSGESETZT: der Befehl kann ohne einen Bau nicht messen (Mischung)"
     return r.stdout, None
 
 
@@ -700,6 +713,7 @@ def pruefe_eintraege(verstellen=None):
     **Ein Waechter, der nicht rot werden kann, misst nichts** (R14).
     """
     befunde, geprueft, bewacht = [], 0, {}
+    ausgesetzt = []
     zwischenspeicher = ZWISCHEN
     for nr, (datei, muster, befehl, auszug, was) in enumerate(EINTRAEGE):
         p = W / datei
@@ -721,7 +735,10 @@ def pruefe_eintraege(verstellen=None):
             zwischenspeicher[schluessel] = lauf(befehl)
         ausgabe, fehler = zwischenspeicher[schluessel]
         if fehler:
-            befunde.append(f"{datei} / {was}: {fehler}")
+            if fehler.startswith("AUSGESETZT:"):
+                ausgesetzt.append(f"{datei} / {was}: {fehler[11:].strip()}")
+            else:
+                befunde.append(f"{datei} / {was}: {fehler}")
             continue
         m2 = re.search(auszug, ausgabe, re.M)
         if not m2:
@@ -734,7 +751,7 @@ def pruefe_eintraege(verstellen=None):
         bewacht.setdefault(datei, set()).add(im_text)
         if im_text != aus_lauf:
             befunde.append(f"{datei}: „{was}\" steht als {im_text}, der Lauf sagt {aus_lauf}")
-    return befunde, geprueft, bewacht
+    return befunde, geprueft, bewacht, ausgesetzt
 
 
 def main():
@@ -786,7 +803,7 @@ def main():
         return 1
     stumm = []
     for nr in range(len(EINTRAEGE)):
-        b, _, _ = pruefe_eintraege(verstellen=nr)
+        b, _, _, _ = pruefe_eintraege(verstellen=nr)
         if not any("der Lauf sagt" in x for x in b):
             stumm.append(EINTRAEGE[nr][4])
     if stumm:
@@ -797,11 +814,17 @@ def main():
     print(f"  ok -- alle {len(EINTRAEGE)} Eintraege fallen, wenn ihre Zahl verstellt wird")
     print()
 
-    befunde, geprueft, bewacht = pruefe_eintraege()
+    befunde, geprueft, bewacht, ausgesetzt = pruefe_eintraege()
     print("== Kennzahlen gegen ihren Befehl ==")
     print(f"  {geprueft} von {len(EINTRAEGE)} Eintraegen nachgerechnet")
     for b in befunde:
         print(f"  BEFUND  {b}")
+    # **Carried by name instead of left out.** A suspended figure is UNGUARDED, and it stands
+    # here with its count so that a suspension never reads like a check.
+    if ausgesetzt:
+        print(f"  {len(ausgesetzt)} Kennzahl(en) AUSGESETZT -- unbewacht, nicht geprueft:")
+        for a in ausgesetzt:
+            print(f"     {a}")
 
     # Die zweite Haelfte: wie weit reicht dieses Register?
     offen = []

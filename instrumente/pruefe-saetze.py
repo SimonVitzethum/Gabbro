@@ -103,6 +103,26 @@ def urteile(vorhanden, beansprucht):
     return ohne, erfunden
 
 
+def veraltet():
+    """**Sources newer than the binary -- the list of them, empty if the build is current.**
+
+    *This guard reads BOTH sides from different places*: the claimed identifiers come out of
+    the built `gabbro paesse`, the existing ones out of `crates/**/*.rs`. If the binary is
+    older than a source, the two halves describe DIFFERENT trees, and the difference between
+    them is a build lag rather than a finding.
+
+    **Measured on 2026-08-30, and that is why this exists:** a new identifier `P041` was
+    issued and its `Satz` written in the same minute; the guard went red with `46 instead of
+    45`, because the binary predated both. *The number was real and meant nothing* -- the
+    same class as `W16`, and the same class as the `rsync -a` timestamp trap in `CLAUDE.md`.
+    A ratchet that is raised on such a reading is raised on a mixture.
+    """
+    if not BIN.is_file():
+        return []
+    stand = BIN.stat().st_mtime
+    return sorted(q for q in W.glob("crates/*/src/*.rs") if q.stat().st_mtime > stand)
+
+
 def lauf(*args):
     if not BIN.is_file():
         print(f"ABBRUCH: {BIN} fehlt -- gebaut wird auf ki-pc-fisch-101 (CLAUDE.md).",
@@ -166,6 +186,19 @@ def main():
               file=sys.stderr)
         return 2
     print("ok (ohne Satz faellt auf, belegt geht durch, erfunden faellt auf) ==\n")
+
+    # **A mixture is not a measurement.** See `veraltet` -- red BEFORE the count, because a
+    # count over two different trees looks exactly like a count over one.
+    alt = veraltet()
+    if alt:
+        print("ABBRUCH: das Binaerprogramm ist AELTER als %d Quelldatei(en) -- "
+              "%s%s." % (len(alt), ", ".join(q.name for q in alt[:4]),
+                         " u.a." if len(alt) > 4 else ""), file=sys.stderr)
+        print("  Die beanspruchten Kennungen kaemen dann aus dem alten Baum und die "
+              "vorhandenen aus dem neuen.", file=sys.stderr)
+        print("  Das ist eine MISCHUNG und keine Zaehlung -- gebaut wird auf "
+              "ki-pc-fisch-101 (CLAUDE.md).", file=sys.stderr)
+        return 2
 
     r = lauf("paesse", "--je-satz")
     if r.returncode != 0 or "THE PASS REGISTER" not in r.stdout:

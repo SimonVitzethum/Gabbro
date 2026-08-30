@@ -176,6 +176,28 @@ in C-Zwangsbuchstaben geschrieben und wird an `cc` delegiert, nicht geprüft. *D
 benannte Delegation und keine fehlende Form* — dieselbe Art Eintrag wie „Gabbro liest den
 Befehlstext nicht", die `beispiele/36` in seiner ersten Zeile selbst ausspricht.
 
+> **Der Name steht seit dem 2026-08-30 im ZEUGNIS** — bis dahin war die Delegation
+> entschieden und nirgends ausgesprochen, und *eine stillschweigende Delegation ist keine.*
+> Sie steht in Abschnitt E **neben** den `ASSEMBLY`-Zeilen, nicht darüber und nicht weg:
+>
+> ```
+>      ASSEMBLY -- 2 bodies, 3 instruction lines. Gabbro does NOT read them:
+>        ausgeben                   1 lines
+>        schreiben                  2 lines
+>
+>      REGISTER ALLOCATION -- delegated to `cc`, NOT checked here («B27»).
+>        The `in`/`out`/`clobbers` letters are C constraint letters and reach the
+>        compiler unread. Swapping two of them yields a program that compiles
+>        and calls wrong. A named delegation, not a missing form: no pass holds
+>        them against a register table, because the corpus shows no demand for
+>        one (messung/EINTRITTSBELEGUNG.md).
+> ```
+>
+> **Sie kauft nichts, was sie nicht sagt.** Wer zwei Buchstaben vertauscht, bekommt weiter
+> ein übersetzbares, falsches Programm — die Zeile verschweigt genau das nicht, sondern ist
+> der Ort, an dem es steht. *Ein Pass gegen eine Registertabelle je `arch` wäre nicht falsch,
+> er hat nur null gemessenen Bedarf (Regel A), und eine Tabelle je Architektur ist Pflege.*
+
 ---
 
 ## 4. Was diese Entscheidung NICHT kauft

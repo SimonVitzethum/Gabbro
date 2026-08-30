@@ -97,12 +97,23 @@ echo
 # ---------------------------------------------------------------------------------------
 BIN="$W/target/debug/gabbro"
 BENANNT="nicht gezaehlt"
+GESTRICHEN="nicht gezaehlt"
 if [ -x "$BIN" ]; then
   # **Aus dem Manifest, nicht aus einem `grep`.** Drei der Sonden gehoeren zu Annahmen, die
   # `manifest.rs` ERZEUGT; im Quelltext steht ihre Zeile nirgends, und eine Textzaehlung
   # meldete deshalb 24 statt 26.
-  BENANNT="$(timeout "$FRIST" "$BIN" annahmen "$W"/beispiele/*.gab 2>/dev/null \
-             | grep -o 'sonde_[a-zA-Z0-9_]*' | sort -u | wc -l)"
+  MANIFEST="$(timeout "$FRIST" "$BIN" annahmen "$W"/beispiele/*.gab 2>/dev/null)"
+  BENANNT="$(printf '%s' "$MANIFEST" | grep -o 'sonde_[a-zA-Z0-9_]*' | sort -u | wc -l)"
+  # **Seit dem 2026-08-30 traegt das Manifest keinen Namen mehr, dessen Sonde nicht als
+  # Programm steht** -- es streicht ihn und sagt in einer Zeile, wie viele es waren.
+  #
+  # *Ohne diese zwei Zeilen haette der Laeufer ab da `1 Sondennamen benannt` gemeldet und
+  # damit ausgesehen, als sei die Anklage erledigt.* Sie ist es nicht: die Zahl ist nur
+  # umgezogen, aus der Namensspalte in die Schlusszeile. **Ein Waechter, dem sein Gegenstand
+  # unter der Hand wegzieht, misst still eine Null** -- dieselbe Klasse wie W16.
+  GESTRICHEN="$(printf '%s' "$MANIFEST" | grep -oE '^-- [0-9]+ probe name' \
+                | grep -oE '[0-9]+' | head -1)"
+  [ -n "$GESTRICHEN" ] || GESTRICHEN=0
 fi
 DA=0
 for f in "$W"/sonden/sonde_*.c; do [ -e "$f" ] && DA=$((DA+1)); done
@@ -139,9 +150,13 @@ for f in "$W"/sonden/sonde_*.c; do
   echo
 done
 
-echo "== $GELAUFEN von $DA Sonden gelaufen, $BENANNT Sondennamen im Manifest benannt =="
-echo "   Die zweite Zahl ist die wichtigere, und sie ist die ANKLAGE: jeder Name ohne"
-echo "   Programm ist eine Zusicherung ueber das Ausbleiben einer Widerlegung."
+echo "== $GELAUFEN von $DA Sonden gelaufen, $BENANNT Sondenname(n) im Manifest benannt =="
+echo "   $GESTRICHEN Sondenname(n) sind GESTRICHEN -- ihre Sonde steht nicht als Programm."
+echo "   Die dritte Zahl ist die wichtigere, und sie ist die ANKLAGE: jeder Name ohne"
+echo "   Programm war eine Zusicherung ueber das Ausbleiben einer Widerlegung. Seit dem"
+echo "   2026-08-30 traegt das Manifest ihn nicht mehr als Deckung, sondern als Luecke mit"
+echo "   einer Zahl -- benannt getragen statt weggelassen. Wer einen Namen zurueckhaben"
+echo "   will, schreibt die Sonde und traegt sie in SONDEN_MIT_PROGRAMM ein."
 if [ "$NICHT_LAUFFAEHIG" -gt 0 ]; then
   echo "   $NICHT_LAUFFAEHIG Sonde(n) sind hier NICHT lauffaehig -- das ist ein Loch mit einer Zahl,"
   echo "   kein gruener Haken."
