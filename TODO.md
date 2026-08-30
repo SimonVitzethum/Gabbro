@@ -380,12 +380,12 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 121 Dateien, und keiner davon ist eine Teilmengenbeziehung.
-      *~~103~~ … ~~118~~ — am 2026-08-30 **neunmal** nachgezogen, aus sechs Ketten, und jedes
-      Mal, weil ein Bericht geschrieben wurde. **Die Zahl misst den Ordner, nicht die Arbeit**,
-      und sie ist an genau einem Tag von 103 auf 121 gestiegen, ohne dass ein einziger
-      Widerruf dazukam: die Reichweite wächst mit jedem Dokument unter `messung/`, die Zahl
-      der Widerrufe steht seit Wochen bei zwölf.*
+      heute **12 Widerrufe** über 122 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *~~103~~ … ~~121~~ — am 2026-08-30/31 **zehnmal** nachgezogen, aus sieben Ketten, und
+      jedes Mal, weil ein Bericht geschrieben wurde. **Die Zahl misst den Ordner, nicht die
+      Arbeit**, und sie ist an einem einzigen Tag von 103 auf 122 gestiegen, ohne dass ein
+      einziger Widerruf dazukam: die Reichweite wächst mit jedem Dokument unter `messung/`,
+      die Zahl der Widerrufe steht seit Wochen bei zwölf.*
       *~~109~~ am 2026-08-30 VIERMAL nachgezogen, und jedes Mal beim Zusammenführen: die
       Berichte kamen aus drei Ketten gleichzeitig, und keine Kette konnte die Summe kennen.
       **Nicht eine Seite genommen, sondern den Wächter gefragt** — das ist die einzige Zahl,
@@ -743,38 +743,50 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       schreibt es, der Fall stammt aus einer erfundenen Probe. **Regel A: erst zählen, dann
       bauen** — die Frage ist, ob ein Pass eine Form zurückweisen soll, die niemand schreibt.
 
-- [ ] **Es gibt 26 Wächter und keine Abnahme, die alle fährt — und das hat heute zwei rote Ratschen zwei Tage lang verdeckt.**
-      `dokumente/PLAN-AUTONOM.md` §1.7 nennt **elf**; jede Sitzung stellt sich den Rest aus
-      dem Gedächtnis zusammen. Gemessen 2026-08-30: **sieben Wächter stehen in KEINER Liste
-      und in keinem Sammellauf** — `pruefe-abstieg.py`, `pruefe-aufloesung.py`,
-      `pruefe-reichweite.py`, `pruefe-widerruf.py`, `pruefe-lean-beweis.sh`,
-      `pruefe-lean-programm.sh`, `pruefe-p6-beweis.sh`.
-      > **Ein Wächter, den niemand fährt, ist von einem, den es nicht gibt, nicht zu
-      > unterscheiden.** Dieselbe Klasse wie `DONE.md`s Schlusszeile, wo die Regel seit dem
-      > 2026-08-16 stand und nur die falsche Datei las — dort war es die Reichweite EINES
-      > Wächters, hier die Reichweite der ABNAHME.
-      Was fehlt, ist ein Sammellauf, der alle 26 fährt und je Wächter sagt, ob er rot ist,
-      grün, oder ein Werkzeug mit Argument (wie `pruefe-wortschatz.py`, das ohne Datei
-      abstürzt und dabei aussieht wie ein Befund).
+- [ ] **Zwei Wächter hängen am ÜBERTRAGUNGSWEG, und der erste `--voll`-Lauf hat beide gefunden.**
+      Gemessen 2026-08-30 auf `ki-pc-fisch-101`, `abnahme.py --voll`:
+      * **`pruefe-beweise.sh` ROT nach `rsync -rlpgoD`** — und der Wächter sagt die Ursache
+        selbst: *„Häufigste Ursache ist NICHT eine Änderung an den Beweisen, sondern der Sync.
+        `rsync -rlpgoD` gibt jeder übertragenen `.thy` die AKTUELLE Zeit. Isabelle rechnet nach
+        INHALT und baut nichts; dieser Nachweis rechnet nach ZEIT und findet keinen."* Nach
+        `rsync -a beweise/ …`: **`ALL PASS — 15 Theorien`**. `CLAUDE.md` sagt das, aber die
+        **eine** `rsync`-Zeile, die ein Agent im Auftrag bekommt, ist die für `cargo`.
+        *Zwei Werkzeuge im selben Baum verlangen entgegengesetzte Zeitstempel-Semantik, und
+        wer nur eine Zeile kopiert, bekommt einen roten Wächter, der nichts über den
+        Gegenstand sagt.* **Was fehlt, ist EIN Übertragungsbefehl**, der beides richtig macht
+        (`--exclude beweise/` plus ein zweiter `-a`-Lauf) — ein Skript, nicht ein Merksatz.
+      * **`pruefe-zahlen.py` bricht ohne `cargo` im `PATH` mit `FileNotFoundError` ab** —
+        Rücklaufwert 1 und ein Fenster voll Rückverfolgung, das aussieht wie ein Befund. Für
+        `ssh` ist `~/.cargo/bin` nicht im `PATH`, und das steht in keinem `FREMDER_KORPUS`.
+        *Ein Wächter, dessen Urteil am `PATH` hängt, misst die Anmeldung.*
 
-- [ ] **`pruefe-aufloesung.py`: die Ratsche steht seit Bahn A ROT — 28 in Fach 1, erlaubt 27.**
-      Gefunden 2026-08-30, gebrochen zwischen `87b7f53` und `6438b28`, also am 2026-08-28.
-      Die neue Stelle ist `emit.rs:8175` (`u.geraete.get(g)`, `g` aus
-      `geraetezeiger`/`geraetewerte`) — **die FÜNFTE Instanz einer Form, die viermal
-      danebensteht** und dort gebucht ist.
-      **Die Entscheidung ist offen und keine Formalie.** Der Wächter sagt selbst, Fach 1 sei
-      *kein Fehlerbefund*, sondern eine **Fläche, auf der dieselbe Falle dreimal zuschlug*.
-      Damit stehen die drei Ausgänge so:
-      * **Heilen** hieße, an genau dieser einen Stelle einen modulbewussten Auflöser zu bauen,
-        den ihre vier Geschwister nicht haben — ein Konstrukt ohne gemessenen Bedarf (Regel A),
-        und eine Stelle, die sich von vier gleichen unterscheidet, damit ein Zähler stimmt.
-      * **Die Marke heben** ist verboten: *eine Marke, die man hebt, wenn sie klemmt, ist keine
-        Ratsche.*
-      * **Der Wächter misst etwas anderes als seinen Gegenstand** — das trifft hier NICHT zu,
-        er misst genau, was er sagt.
-      *Keiner der drei Ausgänge passt sauber, und genau das ist der Befund:* die Ratsche zählt
-      eine Fläche, die mit dem Erzeuger wächst, gegen eine Marke, die nur fallen darf. **Was
-      entschieden werden muss, ist, ob die Bezugsgröße stimmt** — eine Zahl, oder ein Anteil.
+- [ ] **`pruefe-lean-beweis.sh` liegt zu dicht an seiner Frist.**
+      Gemessen 2026-08-30: **194 s und 205 s** auf leerem `fisch`, **über 300 s** im
+      `--voll`-Lauf direkt nach dem Mutationslauf — dort als `HAENGT` gemeldet, obwohl es nur
+      langsam war. `abnahme.py` hat seine Frist deshalb auf `2 × FRIST` gesetzt (mit Grund im
+      Quelltext), aber *das ist die Kompensation und nicht die Messung*: **niemand weiß, wie
+      lange der Wächter unter Last wirklich braucht.** Eine Frist bei 1,5× der gemessenen
+      Laufzeit macht LAST zu einem Befund — dieselbe Klasse wie ein falsches Grün, nur
+      andersherum. *Was fehlt, ist eine Messung unter Last, keine größere Zahl.*
+
+- [ ] **Die zwei Überlebenden von Fach 1 sind beide die echte Form — und eine ist die STILLE Richtung.**
+      Sichtbar geworden, als `pruefe-aufloesung.py` am 2026-08-30 die 26 Stellen des
+      Erzeugers nach Fach 0 sortierte (`messung/AUFLOESUNG-BEZUGSGROESSE.md`); vorher waren
+      es zwei Nadeln in 28.
+      * **`m1.rs:1401`, `endet_immer`** — `p.teile.last()` nimmt von `a::b::f` das `f` und
+        fragt damit `u.funktionen`, das unter `a::b::f` geschlüsselt ist. **Im `module`
+        liefert das immer `None`**: ein Aufruf einer `-> never`-Funktion wird dort nie als
+        blockbeendend erkannt. Der Kommentar darüber nennt genau diese Antwort die sichere
+        Richtung — aber für den INDIREKTEN Aufruf; für den qualifizierten steht es nicht da.
+        *Konservativ, also nicht dringend — aber es ist die Form, die dreimal zuschlug.*
+      * **`m1.rs:3552`, `name_aufloesen`** — zwei Zeilen untereinander, zwei qualifizierte
+        Karten, **eine mit und eine ohne Entqualifizierung**: `funktionen.contains_key(n)`
+        neben `tabellen.keys().any(|k| … k.rsplit("::") …)`. Richtung laut (ein falsches
+        `M119` „is declared nowhere"), nicht still.
+      **Nicht angefasst, Regel A: gemessener Bedarf null.** Kein Korpusprogramm ruft heute
+      eine qualifizierte `-> never`-Funktion. Die Ratsche auf **2** hält beide fest — eine
+      dritte Stelle fällt sofort auf. *Was hier fehlt, ist eine Giftprobe, die die stille
+      Richtung sichtbar macht; ohne sie ist „konservativ" ein Argument und keine Messung.*
 
 - [ ] **`pruefe-abstieg.py` endet seit mindestens dem 2026-08-28 mit 1**, und der Inhalt ist
       eine BENANNTE Weigerung (`emit::rumpf_als_wert`, 8 Arten) plus `m2::endet` ohne Abstieg

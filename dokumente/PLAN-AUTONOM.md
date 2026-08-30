@@ -128,23 +128,35 @@ nie in die Mitte.** Dann sind die Konflikte additiv und in einer Minute aufzulö
 **Bahn A fasst nicht an:** `lean.rs`, `programmlogik/`, `m1.rs`.
 **Bahn B fasst nicht an:** `m3.rs`, `geraete*`, `abi.rs`, `phasen.rs`.
 
-### 1.7 Die Abnahme, am Ende JEDES Schritts
+### 1.7 Die Abnahme, am Ende JEDES Schritts — **EIN Befehl**
 
-Auf dem Server, außer den Textwächtern:
+```bash
+cargo test                     # alle Sammlungen gruen
+./instrumente/abnahme.py       # ALLE Waechter, je Waechter ein Urteil
+```
 
-```
-cargo test                        alle Sammlungen gruen
-./instrumente/pruefe-emission.sh  ALL PASS -- und MARKE_EMIT haelt
-./instrumente/pruefe-englisch.py  beide Marken unveraendert
-./instrumente/pruefe-syntax.sh
-./instrumente/pruefe-kennungen.py
-./instrumente/pruefe-saetze.py    Marke haelt
-./instrumente/pruefe-gruende.py
-./instrumente/pruefe-schablonen.py
-./instrumente/pruefe-konstrukte.py
-./instrumente/pruefe-sonden.sh
-./instrumente/mutiere-pruefer.py --anker     darf nicht fallen
-```
+`abnahme.py` liest das **Verzeichnis** (`instrumente/pruefe-*`, `mutiere-*`) und fährt jeden
+Wächter. Je Wächter steht da: **grün · ROT · NICHT FAHRBAR · ausgelassen**. Daneben steht die
+**Arbeitsmenge** — wie viele gefahren wurden —, und *ein Lauf, der null fährt, ist rot* (W17).
+`--voll` nimmt die vier teuren dazu (`mutiere-pruefer.py`, `pruefe-beweise.sh`,
+`pruefe-emission.sh`, `pruefe-luecken.py`); der Schnellauf **nennt sie, statt sie
+wegzulassen**, und fährt von `mutiere-pruefer.py` die kostenlose Hälfte `--anker` mit.
+
+> **Bis zum 2026-08-30 stand hier eine Liste mit elf Namen, und es gab 26 Wächter.** Sieben
+> standen in KEINER Liste und in keinem Sammellauf — `pruefe-abstieg.py`,
+> `pruefe-aufloesung.py`, `pruefe-reichweite.py`, `pruefe-widerruf.py`,
+> `pruefe-lean-beweis.sh`, `pruefe-lean-programm.sh`, `pruefe-p6-beweis.sh`. **Zwei rote
+> Ratschen liefen darunter zwei Tage lang durch vier Zusammenführungen.**
+>
+> *Ein Wächter, den niemand fährt, ist von einem, den es nicht gibt, nicht zu unterscheiden.*
+> **Darum steht hier kein Name mehr:** eine Liste veraltet lautlos, ein Verzeichnis nicht. Ein
+> neuer Wächter ist am Tag seiner Entstehung in der Abnahme, ohne dass jemand daran denkt.
+
+**Ein Absturz ist keine Absage.** `pruefe-wortschatz.py` stirbt ohne Dateiargument mit
+`IndexError` und sieht dabei aus wie ein Befund — `abnahme.py` stellt das Argument aus
+`pruefe-waechter.py:ARGUMENTE` und sagt, dass es das getan hat. Ein Wächter, der abstürzt und
+**nicht** dort angemeldet ist, ist ROT: *ein angemeldetes Loch hat einen Namen, ein
+unangemeldetes ist eine Behauptung.*
 
 **Und der Bericht nennt vier Dinge, immer:** was gebaut wurde · die Giftproben **mit ihrer
 gemessenen Ausgabe** · die Abnahmezahlen · **und ausdrücklich, was NICHT gebaut wurde und
