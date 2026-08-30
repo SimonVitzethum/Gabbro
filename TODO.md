@@ -4487,3 +4487,34 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       `S5` und ist `S6`, `table.absenkung` als `S15` und ist `S16`, `consuming.ordnung` als `S1`
       und ist `S3`. **Kein einziger Kopf trifft die heutige Position, und kein Wächter prüft es.**
       Der Name ist stabil, die Nummer ist es nicht — *wer nach S-Nummern quer liest, liest falsch.*
+
+---
+
+## Aus Bahn V des Vollständigkeitsdurchlaufs, 2026-08-31 (`dokumente/PLAN-VOLLSTAENDIGKEIT.md` §7)
+
+- [ ] **Acht `UNGEDECKT`-Zellen gehören dem PRÜFER, und alle acht sind Giftproben, die
+      `C001` erwarten.** `messung/ABSAGEFORMEN.md` §2.1: `retry` ohne `until` ·
+      `exchange update` ohne `bounded … ops` · ein Bitwort ohne Ganzzahlfeld · ein Bitfeld an
+      einem Register ohne `class rw` · `old(place)` außerhalb eines Vergleichstauschs ·
+      `in a .. b` an einem `reserved`-Feld · `in a .. b` mit `scale` · ein `transition`-Ziel
+      ohne Feldnamen · `ops relabel` ohne `parent`-Kante. **Der Prüfer nimmt jede dieser
+      Formen an** — gemessen, null Fehler —, und erst der Erzeuger sagt ab. *Eine benannte
+      Absage ist ein Ergebnis; sie ist nur nicht das Ergebnis „Prüfer nimmt an ⇒ es gibt C".*
+      Je Form: die Regel in einen Prüferpass, die Probe erwartet dessen Kennung statt `C001`.
+
+- [ ] **Sechzehn Formen sind weder gedeckt noch ungedeckt, sondern UNGEMESSEN.**
+      `messung/ABSAGEFORMEN.md` §2.2: sie wurden nur neben einem *fremden* Prüferfehler
+      gesehen, und dass in derselben Datei etwas anderes fällt, sagt nichts über sie. Jede
+      braucht das kleinste Programm, das nur sie enthält, durch den unveränderten Prüfer.
+
+- [ ] **92 der 130 Absageformen erreicht kein Programm des Korpus.** Das ist die Zahl, die
+      Falle 80 misst: *ungemessen ist nicht gedeckt*. Die Tafel aus der GRAMMATIK
+      (`gabbro blindstellen --grammatik`) ist die Antwort darauf und steht; was sie je Zelle
+      an Urteil braucht, steht in `messung/GRAMMATIKTAFEL.md`.
+
+- [ ] **Der Prüfer sagt nichts zu einem Vergleich, den sein eigener Bereich konstant macht.**
+      Gemessen am 2026-08-31 (`messung/UEBERSETZUNGSREICHWEITE.md` §2, Messung A):
+      `let a : u64 in 0 .. 10 = 5; if a != 0xdead_beef_dead_beef { … }` gibt **0 Fehler bei
+      100 % Typdeckung**. M1 trägt die Bereiche und spricht es nicht aus; `cc -Werror` hat es
+      gesagt, und nur dort, wo der Erzeuger vorher verengt hatte. *Der fremde Übersetzer sagte,
+      was der Prüfer wusste.*

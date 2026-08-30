@@ -1784,14 +1784,18 @@ MUTATIONEN = [
         # `let _ = 0;` an und war damit ein No-op -- sie ueberlebte den Lauf und las sich wie
         # eine unbewachte Regel. *Eine Mutation, die nichts aendert, ist die Umkehrung von
         # W17: Misserfolg ohne Arbeit, und sie beschuldigt eine Regel, die in Ordnung ist.*
+        # **`uint32_t` -> `uint64_t` am 2026-08-31**: der Index eines FELDES ist nicht das
+        # Indexwort einer TABELLE, und die Verengung liess `F06` an `cc -Werror=type-limits`
+        # scheitern. *Der Anker ist damit nebenbei eindeutig geworden -- `slots of` behaelt
+        # `uint32_t`, und die zwei Domaenen sehen jetzt verschieden aus.*
         "elems-laesst-den-letzten-aus",
         "emit.rs",
         "            let feld = ort(o, u, absagen);\n            let v = &x.variable.text;\n"
         "            aus.push_str(&format!(\n"
-        "                \"{e}for (uint32_t {v} = 0; {v} < (uint32_t)",
+        "                \"{e}for (uint64_t {v} = 0; {v} < (uint64_t)",
         "            let feld = ort(o, u, absagen);\n            let v = &x.variable.text;\n"
         "            aus.push_str(&format!(\n"
-        "                \"{e}for (uint32_t {v} = 0; {v} + 1 < (uint32_t)",
+        "                \"{e}for (uint64_t {v} = 0; {v} + 1 < (uint64_t)",
         "C-Absenkung -- die `elems of`-Schleife laesst den letzten Eintrag aus",
         "code",
     ),

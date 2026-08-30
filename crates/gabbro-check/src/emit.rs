@@ -6406,10 +6406,33 @@ fn traverse(
                 );
                 return;
             }
+            // **The index of an ARRAY is not the index word of a TABLE** (2026-08-31).
+            //
+            // Until today this line read `uint32_t`, copied from the `slots of` arm four
+            // hundred lines up. There the width is DECIDED: a table index fills an index
+            // word and the `option` sentinel sits at `2^32` (`beweise/Option_Sonderwert.thy`,
+            // and the refusal at `count {n} fills the index word` says so out loud). **An
+            // array carries no such decision** -- its length stands in the declaration as a
+            // `const … : u64`, and `sizeof(f)/sizeof(f[0])` is a `size_t`.
+            //
+            // The narrowing was not a matter of taste, and it was `cc` that said so:
+            // `messung/fragmente/F06.gab` emitted 161 lines and fell at
+            // `-Werror=type-limits` -- *"comparison is always true due to limited range"*
+            // for `if (w != MUSTER)` with `MUSTER = 0xdead_beef_dead_beef`. **The same C
+            // with `uint64_t w` compiles**, at `-O0` and at `-O2`; that is the whole
+            // measurement, and it puts the cause in the EMITTER and not in the program.
+            //
+            // > *A generator that narrows what the declaration widened writes a check that
+            // > checks nothing* -- and the cast in the bound truncates as well: an array of
+            // > more than `2^32` entries would loop against a bound that is not its length.
+            // > The warning was the cheap half of that finding.
+            //
+            // `slots of` keeps `uint32_t`, and that asymmetry is the point: the two indices
+            // are indices into different things.
             let feld = ort(o, u, absagen);
             let v = &x.variable.text;
             aus.push_str(&format!(
-                "{e}for (uint32_t {v} = 0; {v} < (uint32_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
+                "{e}for (uint64_t {v} = 0; {v} < (uint64_t)(sizeof({feld}) / sizeof({feld}[0])); {v}++) {{\n"
             ));
             for k in &x.rumpf.anweisungen {
                 anweisung(k, aus, u, absagen, tiefe + 1, austritt);

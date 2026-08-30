@@ -1,0 +1,31 @@
+-- W24-Vorlauf: **welchen TYP gibt der Pruefer der Laufvariablen von `elems of`?**
+--
+-- Der Erzeuger senkt sie unbedingt als `uint32_t` ab (`emit.rs`:6410). Wenn der Pruefer
+-- `u64` sagt, ist das eine VERENGUNG, die niemand erlaubt hat -- und dann ist `F06`s
+-- `cc -Werror=type-limits` ein Befund am Erzeuger und nicht am Programm.
+--
+-- Diese Datei ist eine MESSUNG und kein Beispiel. Sie wird gegen den unveraenderten
+-- Pruefer gefahren.
+
+module probe::elems {
+
+const WORTE : u64 = 8192;
+const MUSTER : u64 = 0xdead_beef_dead_beef;
+
+type Feld = { worte : [u64; WORTE], };
+
+-- (a) die Laufvariable als `u64` zurueckgeben
+impl fn als_u64(s : ptr<normal, r+own> Feld) -> u64
+    effects { reads s }
+{
+    let mut n : u64 in 0 .. WORTE = 0;
+    traverse w of s over elems of s.worte by decreasing (lenof(s.worte) - n)
+        touches reads s
+    {
+        if w != MUSTER { return n; }
+        n += 1;
+    }
+    return n;
+}
+
+}

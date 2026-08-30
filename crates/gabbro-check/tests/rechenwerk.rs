@@ -753,9 +753,15 @@ impl fn loesche(s : ptr<normal, rw> S) effects { writes s } costs <= 64 ops
     // den `sizeof`-Traeger -- und die Mutation `elems-laesst-den-letzten-aus` UEBERLEBTE:
     // `{v} + 1 <` enthaelt denselben Traeger. *Eine Zusicherung, die den Traeger prueft und
     // nicht die Schranke, faengt genau den Fehler nicht, um den es geht.*
+    // **Und die Breite ist `uint64_t`, nicht `uint32_t`** (2026-08-31). Bis dahin stand hier
+    // dieselbe Zusicherung wie vier Zeilen ueber `slots of` -- eine Kopie, und sie hat die
+    // Verengung festgeschrieben, die `messung/fragmente/F06.gab` an `cc -Werror=type-limits`
+    // scheitern liess. *Ein Test, der die Kopie festhaelt, macht aus einem Versehen eine
+    // Zusage.* Ein Tabellenindex fuellt ein Indexwort (`option`-Sonderwert bei `2^32`); die
+    // Laenge eines FELDES steht als `const … : u64` in der Deklaration.
     assert!(
-        c.contains("i < (uint32_t)(sizeof("),
-        "die Domaene ist vollstaendig -- `< n`, nicht `< n-1`:\n{c}"
+        c.contains("i < (uint64_t)(sizeof("),
+        "die Domaene ist vollstaendig -- `< n`, nicht `< n-1` -- und `uint64_t` breit:\n{c}"
     );
 
     // **3. `forever` senkt ab, und die Klausel wird ein GEPRUEFTER BEZUG** (2026-08-20).

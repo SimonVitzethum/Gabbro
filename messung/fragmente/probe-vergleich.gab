@@ -1,0 +1,23 @@
+-- W24-Vorlauf: **sagt der PRUEFER etwas zu einem Vergleich, den sein eigener Bereich
+-- konstant macht?**
+--
+-- `F06` faellt bei `cc -Werror=type-limits`, weil `w != MUSTER` immer wahr ist: `w` ist
+-- ein Index bis 8191, `MUSTER` ist `0xdead_beef_dead_beef`. Die Frage dieser Datei ist,
+-- ob Gabbro das seinerseits sieht -- ohne die Traversierung, an einer gewoehnlichen
+-- lokalen Variablen mit BEREICHSTYP.
+--
+-- Diese Datei ist eine MESSUNG und kein Beispiel.
+
+module probe::vergleich {
+
+const GROSS : u64 = 0xdead_beef_dead_beef;
+
+impl fn immer_wahr() -> u64
+    effects { pure }
+{
+    let a : u64 in 0 .. 10 = 5;
+    if a != GROSS { return 1; }
+    return 0;
+}
+
+}
