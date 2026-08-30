@@ -380,7 +380,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 123 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 124 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *~~103~~ … ~~121~~ — am 2026-08-30/31 **zehnmal** nachgezogen, aus sieben Ketten, und
       jedes Mal, weil ein Bericht geschrieben wurde. **Die Zahl misst den Ordner, nicht die
       Arbeit**, und sie ist an einem einzigen Tag von 103 auf 122 gestiegen, ohne dass ein
@@ -1051,6 +1051,21 @@ gelesen. Was zwei saubere Fragmente noch aufhält, sind **zwei benannte Weigerun
 |---|---|---|
 | F2 · F9 | die Bitlücke in einem `format` | *ein Format sagt, welche Bits EXISTIEREN* — sie heisst `reserved` oder gar nicht. **Der Erzeuger zählt nicht mit.** |
 | F9 | `device … at dma` — welche Barriere | die **Axiomschicht**, seit jeher; M3 baut sie ausdrücklich nicht |
+
+**Und drei Prüferabsagen kamen am 2026-08-31 dazu — alle drei RICHTIG, keine ein Loch**
+(Bahn P, W24-Vorlauf je Posten; die Messungen in
+[`messung/DREI-FRAGMENTABSAGEN.md`](messung/DREI-FRAGMENTABSAGEN.md)):
+
+| Fragment | Absage | und warum sie richtig ist |
+|---|---|---|
+| F3 | **`N035`** ×5 — kein Vertrag am `fn(…)` | die Regel ist seit dem 2026-08-21 **gebaut, gelesen und bewacht**: der Zeigertyp gibt `K001` seine Zahl (`the body costs 3` aus `costs <= 3 ops`) und `E008` seine Wirkung, drei Giftproben (240/242/246) und drei Mutationen stehen darauf. *Der Vertrag müsste IN die fünf Zeilen — ein Umschreiben.* |
+| F3 | **`M124`** ×3 — ein Grundwert als `u64`-Argument | Regel B, außen gemessen: `caprock-abi` führt dort `pub const ERR_… : u64` und einen `Option<u64>`-Kanal, **null Projektionen im ganzen Baum**. Und die zwei Zahlenräume weichen heute schon ab — `ErrBadCap = 2` gegen `ERR_BADCAP = 1`. **Eine Zahlprojektion hätte die falsche gefahren.** |
+| F1 | **`N029`** — fehlbarer Ruf ohne `let … else` | die Form GIBT es: mit `let … else` + `or Fehler` am Rufer bleibt genau **eine** Absage, `K001` mit **+80 256 ops** (eine op je Durchgang, `NSLOTS`). Damit sind es **zwei** eingefrorene Zeilen (:337 und `costs` :328). *Und im Original kann `delete_leaf` gar nicht scheitern — fehlbar macht sie «B29» bei :268: **beide Hälften einer Entscheidung im selben Bericht, im Widerspruch.*** |
+
+> **Die Buchung *„der Preis der Entscheidung «kein `?`»"* fällt damit.** Mit `?` stünde dort
+> `delete_leaf(…)?;` — **auch eine geänderte Zeile**, und die Kostenzahl bewegte sich genauso.
+> *Es gibt keine Fehlerweitergabe, die diese Zeile unverändert lässt; die einzige Sprache, in
+> der sie stehen bleibt, ist eine, die den Grund fallen lässt.*
 
 
 
