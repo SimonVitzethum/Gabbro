@@ -368,7 +368,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 110 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 112 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *~~103~~ dreimal nachgezogen am 2026-08-28 — aus drei Bahnen kamen sechs Berichte dazu:
       `messung/ABSENKUNG.md`, `dokumente/PLAN-VERIFIKATION.md` und die vier des Rumpfkanals
       (`messung/RUF-TOR.md`, `messung/AUSSETZUNG.md`, `messung/VIER-LUECKEN.md`,
@@ -707,8 +707,10 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **340 von 340 Ankern** greifen (`--anker`, 2026-08-28) — die
-      acht des Rumpfkanals kamen abends dazu. Drei bewachen den
+      fällt. Mutationskatalog: **342 von 342 Ankern** greifen (`--anker`, 2026-08-30) — die
+      acht des Rumpfkanals kamen abends dazu, der `let`-gebundene Geist im Erzeuger
+      (`emit.rs::geist_wert`) als 341 und das `let … else` über einem `place`
+      (`m1.rs`) als 342, beide am 2026-08-30. Drei bewachen den
       Rufsammeltopf (`B1`, `messung/RUF-TOR.md`): der Optionswert, der wieder als Ruf gelesen
       wird, der Sammeltopf, der sich wieder schließt, und der Verbundkonstruktor, der wieder
       Ruf heißt. Zwei die Aussetzung (`B2`, `messung/AUSSETZUNG.md`): `breaking`, das wieder
