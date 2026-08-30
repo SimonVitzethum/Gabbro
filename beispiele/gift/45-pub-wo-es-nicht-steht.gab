@@ -1,4 +1,4 @@
--- erwartet: P034
+-- erwartet: P041
 -- Der Parser fraß `pub` vor JEDEM Item und liess es bei dreizehn Arten stillschweigend
 -- fallen. Die EBNF fuehrt `[ "pub" ]` an genau sieben. **Ein Sichtbarkeitswort, das
 -- angenommen und weggeworfen wird, ist schlimmer als eines, das abgelehnt wird**: der

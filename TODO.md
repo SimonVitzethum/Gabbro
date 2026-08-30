@@ -368,7 +368,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 110 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 111 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *~~109~~ nachgezogen am 2026-08-30: `messung/ANKERHAKEN.md` ist die hundertzehnte.*
       *~~103~~ dreimal nachgezogen am 2026-08-28 — aus drei Bahnen kamen sechs Berichte dazu:
       `messung/ABSENKUNG.md`, `dokumente/PLAN-VERIFIKATION.md` und die vier des Rumpfkanals
@@ -515,7 +515,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2079 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2085 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
       hat sich damit fast verdoppelt, ohne dass ein Programm dazukam** — wer die Quote
@@ -732,7 +732,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       checked 2026-08-16 — one `.gab` probe run per place)*:
       * Vocabulary words as names after `::`, in `reaches … via` and in `chain(a,b)` — three
         places that the file's own header does **not** exempt.
-      **Closed are:** `pub` at 13 item kinds (`P034`), `pub const` in the `table` body (was
+      **Closed are:** `pub` at 13 item kinds (`P041`, bis 2026-08-30 `P034`), `pub const` in the `table` body (was
       too strict), `type T = { };` as an empty sum type (`P035`, poison 61), and
       the comma rule — `entrydecl`, `slotdecl` and `reg … fields` carried **three different
       rules for the same thing**; now one: separating comma obligatory, trailing comma
@@ -3300,11 +3300,13 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       | `P022` | „`table` kennt genau ein `tree`-Wort" | „Kostenangabe fängt mit `O` an" |
       | `P023` | „im `tree`-Rumpf erwartet: parent, child, sibling" | „the `node` of a `walk` declaration is an array" |
       | `P024` | „diese Kante steht in `tree` zweimal" | „`@version` erwartet" |
-      | `P034` | „`_` on its own is not an identifier" | „`pub` is not in the grammar here" |
+      | ~~`P034`~~ **GETRENNT** | „`_` on its own is not an identifier" — bleibt `P034` | „`pub` is not in the grammar here" — jetzt **`P041`** |
       | `P035` | „is neither a record nor a sum type" | „gibt es in Gabbro nicht" |
 
       *Alle fünf im Parser, alle in einer Datei* — genau dort, wo der alte Wächter
-      bauartbedingt blind war.
+      bauartbedingt blind war. **`P034` ist am 2026-08-30 getrennt** (`P041` für das
+      verirrte `pub`), weil bei ihm zwei Giftproben einander deckten; die vier übrigen
+      stehen weiter — siehe den Posten darunter.
 
 - [ ] **Was eine Doppelvergabe RÜCKWIRKEND kostet, und das ist teurer als der Fund**
       *(gemessen 2026-08-21)*. Die Giftproben prüfen auf **Kennungen**. Eine doppelt
@@ -3313,7 +3315,7 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       Deckungsaussage aller Proben, die darauf zeigen.
 
       ```
-      61 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 302, die
+      59 Proben zeigen auf eine Kennung mit unaehnlichen Vergabestellen (von 302, die
       ueberhaupt eine Kennung erwarten)
       ```
 
@@ -3327,6 +3329,35 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       verstümmelte Stellen sahen einander ähnlich und fielen aus der Liste. *`F002` und
       `K009` waren dadurch verdeckt, und verdeckt ist hier die gefährliche Richtung.*
 
+      **Nachgemessen 2026-08-30** ([`messung/DECKUNGSLUECKE.md`](messung/DECKUNGSLUECKE.md)).
+      ~~18 Kandidaten, 58 Proben~~ *(überholt 2026-08-30)* — der heutige Stand vor dem
+      Eingriff war **20 und 61**;
+      die Auftragszahl war überholt, und das ist mitgebucht.
+
+      **Die entscheidende Frage ist nicht „sind das zwei Regeln?", sondern: decken zwei
+      Giftproben unter dieser Kennung EINANDER?** Das ist keine Urteilsfrage, sondern eine
+      nachprüfbare Eigenschaft der Probenmenge. Je Kennung wurde bestimmt, welche
+      Vergabestelle jede ihrer Proben auslöst:
+
+      | Gruppe | Kennungen | Befund |
+      |---|---:|---|
+      | **A — zwei Proben decken einander** | 9 | `E008` `M104` `P034` `F002` `H011` `M124` `N030` `O011` `R009` |
+      | B — alle Proben auf EINER Stelle | 3 | `D012` `H012` `K009` — die andere Stelle ist unbeprobt |
+      | C — weniger als zwei Proben | 8 | `P022` `P023` (null) · `O001` `O006` `N023` `P035` `R010` `F005` (eine) |
+
+      **Geheilt ist genau einer: `P034`** — das verirrte `pub` heißt jetzt `P041`. Beide
+      Ratschen sind daraufhin **gefallen: 20 → 19 Kandidaten, 61 → 59 Proben.**
+
+      **Warum die acht übrigen aus Gruppe A hier NICHT geheilt sind, und es ist keine
+      Aufwandsfrage:** `E008` hat vier Vergabestellen, `R009` fünf — sie zu trennen hieße zu
+      *entscheiden*, was hier eine Regel ist, und `messung/PHASENKLASSE.md` hat für `R009`
+      ausdrücklich die Gegenrichtung entschieden. **Das zu überschreiben wäre kein Heilen,
+      sondern ein zweites Urteil ohne neue Messung.** Dazu: es gab keinen Übersetzer
+      (`ki-pc-fisch-101` nicht erreichbar), und eine Trennung ist nur so lange durch Lesen
+      prüfbar, wie sie eine Quellzeile, eine Probenzeile und eine Testliste umfasst.
+      *Gruppe B und C gehören ausdrücklich nicht in diesen Posten — dort deckt keine Probe
+      eine andere; ihr Befund ist eine FEHLENDE Probe, nicht eine falsche Deckungsaussage.*
+
 ---
 
 # STUFE 8 — PL: DIE LOGIK DES PRÜFERS  ⟨D⟩
@@ -3337,7 +3368,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 70 Sätze über 238 Codes, 45 Codes noch ohne).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 71 Sätze über 239 Codes, 45 Codes noch ohne).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 

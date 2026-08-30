@@ -617,7 +617,7 @@ grammar** · trailing comma · `u64::max` · `O`/`@version` as a named `Sonderfo
 nobody checks against each other.*
 
 **Plus:** the payload form decided from the existing code (22 × `nothing`, 11 × parentheses,
-2 × without — the grammar follows the 33), the `pub` laxity (`P034`), `pub const` in the
+2 × without — the grammar follows the 33), the `pub` laxity (`P041`, `P034` until 2026-08-30), `pub const` in the
 `table` body, and **`dokumente/SYNTAX.md` now holds its own grammar** (test
 `die_beispiele_der_grammatik_gehen_selbst_durch`).
 

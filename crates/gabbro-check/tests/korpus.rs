@@ -25,7 +25,10 @@ const BENANNT: &[&str] = &[
     "P001", "P002", "P003", "P004", "P005", "P006", "P007", "P008", "P009", "P010", "P011",
     "P012", "P013", "P014", "P015", "P016", "P017", "P018", "P019", "P020", "P021", "P022",
     "P023", "P024", "P025", "P026", "P027", "P028", "P029", "P030", "P031", "P033", "P034", "P035",
-    "P032", "P035", // Grammatik
+    // `P041` -- split off from `P034` on 2026-08-30. `P034` kept the missing catch-all arm,
+    // `P041` took the stray `pub`: two unrelated rules stood under one identifier, and each
+    // of their two poison probes would have stayed green while the OTHER rule was out.
+    "P032", "P035", "P041", // Grammatik
     "M101", "M102", "M103", "M104", "M105", // M1 + V1-V3
     "N001", "N002", "N003", // Namen
     "S001", "S002", // Schleifen und Kontrollfluss

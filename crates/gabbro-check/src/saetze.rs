@@ -1376,6 +1376,21 @@ pub const PHASEN: &[Satz] = &[
         fundstelle: "crates/gabbro-syntax/src/parse.rs; messung/OPS-ERZEUGER.md",
     },
     Satz {
+        name: "parser.pub-nur-wo-die-grammatik-es-fuehrt",
+        kennungen: &["P041"],
+        aussage: "A `pub` stands only at the item kinds whose grammar line carries \
+                  `[ \"pub\" ]` -- eleven of them. Where it does not belong it is REFUSED, \
+                  not silently dropped, and a program that passed carries no visibility \
+                  word the grammar never granted.",
+        vorbehalt: "A shape rule of the parser, and nothing else. It says nothing about \
+                    whether the visibility is the RIGHT one, nothing about what is actually \
+                    reachable from another module, and nothing about the eleven kinds that \
+                    do carry it -- there a `pub` is accepted unread.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probe 45 on `P041`.",
+        fundstelle: "crates/gabbro-syntax/src/parse.rs; messung/DECKUNGSLUECKE.md",
+    },
+    Satz {
         name: "bootsatz.schichten",
         kennungen: &["O008", "O009"],
         aussage: "The boot theorem's first two layers: a `raw fn` demands a `linear ghost` \

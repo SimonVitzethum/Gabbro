@@ -496,9 +496,18 @@ impl<'a> Parser<'a> {
                 )
             )
         {
+            // **`P041`, split off from `P034` on 2026-08-30 -- and the reason is a coverage
+            // claim that was none.**
+            //
+            // Both rules stood under `P034`: the missing catch-all arm at :213, and the stray
+            // `pub` here. Each had its own poison probe -- number 05 and number 45 under
+            // `beispiele/gift/` -- and BOTH probes assert only the identifier. So either rule
+            // could have fallen out entirely and its probe would still have gone green,
+            // carried by the other rule. *Two probes that cover each other cover nothing.*
+            // Measured in `messung/DECKUNGSLUECKE.md`.
             self.absage(
                 Absage::fehler(
-                    "P034",
+                    "P041",
                     pub_span,
                     format!(
                         "`pub` is not in the grammar here: {} carries no `[ \"pub\" ]`",
