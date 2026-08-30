@@ -259,7 +259,7 @@ darunter.
       hat. Ein Befehl dafür müsste die Klassenspalte `K`/`L` je Zeile auszählen — *das ginge*,
       und es ist die nächste Erweiterung von `zaehle-pflichten.py`, nicht dieses Registers.
       **`pruefe-zahlen.py` führt heute 64 Kennzahlen mit Befehl** und zählt daneben
-      **149 fettgedruckte Zahlen in Tabellenzellen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
+      **150 fettgedruckte Zahlen in Tabellenzellen ohne einen** — die drei hier sind darunter. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
 
@@ -368,7 +368,8 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 109 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 110 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *~~109~~ nachgezogen am 2026-08-30: `messung/ANKERHAKEN.md` ist die hundertzehnte.*
       *~~103~~ dreimal nachgezogen am 2026-08-28 — aus drei Bahnen kamen sechs Berichte dazu:
       `messung/ABSENKUNG.md`, `dokumente/PLAN-VERIFIKATION.md` und die vier des Rumpfkanals
       (`messung/RUF-TOR.md`, `messung/AUSSETZUNG.md`, `messung/VIER-LUECKEN.md`,
@@ -3229,9 +3230,35 @@ genau das unnötig: sie hält den Stand fest, ohne dass jemand ihn heute senken 
       **keiner** entstand dadurch, dass eine Kennung die Datei wechselte. *Der Gegenstand
       wächst, nicht die Leseweite.*
       Warum hier nicht bezahlt: es sind 67 Kommentare in zwanzig Prüfer-Dateien, `emit.rs`
-      mit 40 voran — und **`emit.rs` ist die Datei, deren wörtliche Zeilen der
+      mit 40 voran — ~~und **`emit.rs` ist die Datei, deren wörtliche Zeilen der
       Mutationskatalog als Anker führt.** Wer dort schreibt, während die Anker umgezeigt
-      werden, misst eine Mischung.
+      werden, misst eine Mischung.~~
+
+      **Der Ankerhaken ist am 2026-08-30 nachgemessen worden, und er hält nicht**
+      ([`messung/ANKERHAKEN.md`](messung/ANKERHAKEN.md)). Angeordnet war, hier nicht das Ziel
+      zu erreichen, sondern die **Grundgesamtheit zu berichtigen** — ein Anker-Kommentar
+      zählt nicht als Kandidat. Gemessen:
+
+      | | Zahl |
+      |---|---:|
+      | Ankerzeilen im Katalog, verschieden | 499 |
+      | davon **Kommentarzeilen** | **4** |
+      | Anker mit einer Kennung in Rückstrichen | **0** |
+      | Kandidaten, die die Regel herausnimmt | **0** (274 → 274) |
+
+      **Die beiden Grundgesamtheiten sind bauartbedingt disjunkt:** ein Anker ist ein Lauf
+      wörtlichen Quelltextes, ein Kandidat braucht eine Kennung in Rückstrichen, und **kein
+      Anker trägt eine.** `emit.rs` führt 135 Ankerzeilen, davon ist genau **eine** ein
+      Kommentar, und sie zitiert nichts — **keiner der 40 genannten `emit.rs`-Kommentare ist
+      ein Anker.** Es gibt also nichts zu berichtigen; die Korrektur ist nicht strittig,
+      sie ist **leer**.
+
+      **Zähler und Nenner bleiben damit stehen: 274 gegen 207, die Schuld unvermindert.**
+      Eingebaut ist die Regel trotzdem — nicht um etwas herauszunehmen, sondern um die
+      Disjunktheit zu **prüfen statt sie anzunehmen**: `ankerprobe` rechnet beidseitig und
+      druckt die Differenz bei jedem Lauf, und ein unlesbarer Katalog ist `ABORT`, keine
+      stille Null. *Schreibt jemand eine Kennung in einen Anker, hört die Zahl auf, null zu
+      sein.*
 
 - [ ] **`M120` war NICHT der einzige Fall — im Parser stehen vier weitere** *(gemessen
       2026-08-21)*. Je zwei unverwandte Regeln unter einer Kennung:
