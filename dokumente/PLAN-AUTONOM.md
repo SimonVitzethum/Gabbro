@@ -278,6 +278,24 @@ und `raw fn`: eine Form mit Produktion, Parser und AST, deren Klauseln kein Pass
 > **Wenn sich das bestätigt, ist A3 kein Bau, sondern die vierte Klausel ohne Leser** — und
 > das Schließen ist billiger als das Erfinden.
 
+**ERLEDIGT am 2026-08-30, und es war weder ein Bau noch die vierte Klausel**
+([`messung/EINTRITTSBELEGUNG.md`](../messung/EINTRITTSBELEGUNG.md)). Gemessen wurde, dass
+«B27» gar nicht von `entry` handelt — die `entry`-Klauseln haben Leser — sondern von der
+Gegenrichtung: dem `prim fn`-Systemaufruf. **Und der Korpus hat davon genau EINE Stelle**,
+im Fragment, das die Lücke meldet; er schreibt Systemaufrufe längst als `asm`-Rumpf.
+
+*Regel A: kein Konstrukt ohne gemessenen Bedarf.* Ein Pass gegen eine Registertabelle je
+`arch` wäre nicht falsch — er hat **null gemessenen Bedarf**, und eine Tabelle je
+Architektur ist Pflege. **Entscheidung: Delegation an `cc`, mit Namen im Zeugnis.**
+
+Die Belegung steht in C-Zwangsbuchstaben und erreicht den Übersetzer ungelesen. Das steht
+seit heute in Abschnitt E des Zeugnisses, **neben** den `ASSEMBLY`-Zeilen:
+`REGISTER ALLOCATION -- delegated to `cc`, NOT checked here («B27»)`.
+
+> **Eine benannte Delegation ist die ehrliche Buchung; eine stillschweigende ist keine.**
+> Sie schrumpft die vertrauenswürdige Fläche nicht, und die Zeile sagt genau das: wer zwei
+> Buchstaben vertauscht, bekommt ein übersetzbares, falsches Programm.
+
 ## A4 — Bahn A abschließen
 
 Register nachziehen (`PFLICHTEN.md`, `MESSUNGEN.md`), `H` neu ableiten mit

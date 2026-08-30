@@ -919,6 +919,29 @@ pub fn zeige(baum: &Programm, datei: &str, quelle: &str) -> String {
             for (n, z) in &e.asm {
                 aus.push_str(&format!("       {n:<26} {z} lines\n"));
             }
+            // **«B27», the register allocation at entry -- a NAMED delegation** (2026-08-30).
+            //
+            // `messung/EINTRITTSBELEGUNG.md` decided it and left one thing undone: the name.
+            // A pass holding the constraint letters against a register table per `arch` is
+            // not wrong, but it has **zero measured demand** -- the whole clean corpus holds
+            // exactly ONE `prim fn` site with an `arch` and no allocation, and a table per
+            // architecture is upkeep. *Rule A: no construct without measured demand.*
+            //
+            // So the allocation goes to `cc`, and it stands HERE, beside the other edge
+            // items of section E -- not above them and not away. **A named delegation is the
+            // honest booking; a silent one is none**, and this line is the difference.
+            //
+            // It buys nothing it does not say: swapping two letters still gives a program
+            // that compiles and calls wrong. *That surface is moved, never checked* -- which
+            // is exactly what «B27» wanted to shrink and what this line refuses to hide.
+            aus.push_str(
+                "\n     REGISTER ALLOCATION -- delegated to `cc`, NOT checked here («B27»).\n\x20\
+                 \x20     The `in`/`out`/`clobbers` letters are C constraint letters and reach \
+                 the\n\x20      compiler unread. Swapping two of them yields a program that \
+                 compiles\n\x20      and calls wrong. A named delegation, not a missing form: \
+                 no pass holds\n\x20      them against a register table, because the corpus \
+                 shows no demand for\n\x20      one (messung/EINTRITTSBELEGUNG.md).\n",
+            );
         }
     }
 
