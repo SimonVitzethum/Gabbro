@@ -1537,12 +1537,17 @@ echo "  ($n_emit_b aus beispiele/, $n_emit_m aus messung/ -- ZWEI Ratschen, nich
 # Verzeichnissen laesst sich ausgleichen: eine Datei verlaesst `beispiele/`, eine kommt in
 # `messung/` dazu, und die Zahl steht still. *Genau die Bewegung, gegen die diese Ratsche
 # gebaut ist* -- also steht sie je Wurzel da.
-MARKE_EMIT=53
-# **18 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 7 Fragmente (F02, F04, F06, F07, F08,
-# F10 und die zwei W24-Proben zaehlen mit), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.
+#
+# **53 -> 54 am 2026-08-31**: `beispiele/53-zwei-orte.gab` kam dazu. `breaking I { … }`
+# senkt seit diesem Tag ab -- die Weigerung stand auf *„emitting it would drop the region"*,
+# und `gabbro pflichten` bucht die Erhaltungspflicht laengst (`messung/ZWEI-ABSAGEN.md`).
+MARKE_EMIT=54
+# **19 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
+# F10) plus drei W24-Proben dieses Tages (`messung/proben/`), 5 ABI-Proben, 2 Caprock,
+# Grenze, Netz, Treiber.
 # `F06` ist die Datei, die die Ausdehnung ueberhaupt ausgeloest hat: sie emittierte und
 # uebersetzte NICHT, und keine Stufe hat sie je angesehen.
-MARKE_EMIT_M=18
+MARKE_EMIT_M=19
 ratsche() {
     local ist="$1" marke="$2" wo="$3"
     if [ "$ist" -lt "$marke" ]; then

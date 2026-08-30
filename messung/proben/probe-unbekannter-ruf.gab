@@ -1,0 +1,33 @@
+-- W24-Vorlauf: **nimmt der Pruefer einen Ruf an, den niemand deklariert hat?**
+--
+-- `messung/fragmente/F05.gab` ruft `decode_op(m.op)` und deklariert `decode_op` nirgends.
+-- `gabbro pruefe` meldet dazu 0 Fehler und einen HINWEIS (`E009`, die Wirkungshuelle sei
+-- nur eine untere Schranke). Erst der Erzeuger sagt ab -- er hat keinen Rueckgabetyp.
+--
+-- Gemessen 2026-08-31, an zwei Formen derselben Frage:
+--
+--   * mit KOSTENZUSAGE  -> `K003` faellt: *„`f` promises costs, but … is not declared here"*
+--   * OHNE Kostenzusage -> nur `E009`, ein HINWEIS, und der Pruefer nimmt an
+--
+-- Die zweite Form ist die von `F05`: der Ruf steht in einem `divergent fn`, und ein
+-- divergierender Rumpf traegt keine Kostenzusage, an der `K003` haengen koennte.
+-- **Damit gibt es genau eine Stelle, an der ein unbekannter Name durchkommt** -- und der
+-- Befund gehoert dem PRUEFER.
+--
+-- Diese Datei zeigt die zweite Form. Die erste steht im Kommentar, weil eine Datei mit
+-- einem Fehler darin von jeder Sammelmessung als „faellt" gebucht wuerde und dann nicht
+-- mehr sagt, WELCHE der zwei Formen gemeint ist.
+
+module probe::unbekannt {
+
+extern fn nichts() -> never effects { diverges } costs <= 0 ops;
+
+-- OHNE Kostenzusage: `E009` ist ein Hinweis, kein Fehler.
+divergent fn schleife(w : u64) -> never
+    effects { diverges }
+{
+    let x = niemand_hat_mich_erklaert(w);
+    nichts();
+}
+
+}

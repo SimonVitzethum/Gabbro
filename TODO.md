@@ -4518,3 +4518,13 @@ Exactly the prehistory out of which the folder drew its 24 files together to 9 o
       100 % Typdeckung**. M1 trägt die Bereiche und spricht es nicht aus; `cc -Werror` hat es
       gesagt, und nur dort, wo der Erzeuger vorher verengt hatte. *Der fremde Übersetzer sagte,
       was der Prüfer wusste.*
+
+- [ ] **Ein Ruf auf einen Namen, den niemand deklariert, kommt durch den Prüfer — wenn die
+      rufende Funktion keine Kostenzusage trägt.** Gemessen am 2026-08-31
+      (`messung/proben/probe-unbekannter-ruf.gab`): mit `costs <= n ops` fällt `K003`
+      (*„`f` promises costs, but X is not declared here"*); in einem `divergent fn` gibt es
+      keine Kostenzusage, an der die Regel hängen könnte, und übrig bleibt `E009` — ein
+      HINWEIS. **Der Prüfer nimmt an, der Erzeuger sagt ab**, und zwar an zwei Stellen
+      gleichzeitig: `let` ohne auflösbaren Typ und `match` über einen Ruf, den diese Einheit
+      nicht deklariert (`messung/ABSAGEFORMEN.md` U10/U11). *Zwei `UNGEDECKT`-Zellen mit
+      einer Wurzel* — `messung/fragmente/F05.gab` ist die Fundstelle.

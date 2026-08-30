@@ -4748,12 +4748,17 @@ fn benutzte_namen(b: &Block, aus: &mut std::collections::BTreeSet<String>) {
             // `let x = place awaits { … }` -- same as `publishes`, from the other side: the
             // source is an atomic global, and the `awaits { … }` list lands in a comment.
             StmtArt::AwaitLoad(_) => {}
-            // **`breaking l { … }` has NO lowering at all** -- `anweisung` refuses it by
-            // name. Descending into its block would count names that the C never reads, and
-            // that is the expensive direction: a parameter read only inside a `breaking`
-            // block would lose its `(void)k;` and `cc -Wextra -Werror` would reject the
-            // unit. *This catch-all arm was right, and it stays -- with its reason.*
-            StmtArt::Bricht(_) => {}
+            // **`breaking l { … }` LOWERS since 2026-08-31, so this arm descends.**
+            //
+            // What stood here was right for as long as its premise was: *"`anweisung`
+            // refuses it by name, so descending would count names the C never reads."* The
+            // moment the refusal fell, the arm became the OTHER error -- the emitted C names
+            // what the set does not, and `beispiele/53-zwei-orte.gab` showed it in one line:
+            // `(void)e;` above a body that writes `e->slots`. Harmless there, and the same
+            // omission over a table loses its `T_speicher` («B41b», 2026-08-20).
+            //
+            // *A lowering and its name set are one change, not two.*
+            StmtArt::Bricht(x) => benutzte_namen(&x.rumpf, aus),
             // `leave l;` / `next l;` lower to `goto`, `break` or `continue`. A label is not
             // a name of this set.
             StmtArt::Leave(_) | StmtArt::Next(_) => {}
@@ -5687,19 +5692,50 @@ fn anweisung(
         // > `pruefe-abstieg.py` die ganze Datei fuer entschuldigt (*"weigert sich benannt"*),
         // > und jede fehlende Anweisungsart in jedem Sammler dieser Datei fiel damit aus der
         // > Messung. **Ein Vorbehalt an einer Stelle deckte Luecken an fuenf anderen.**
-        StmtArt::Bricht(_) => weigere(
-            absagen,
-            s.span,
-            "`breaking I { … }` -- the block is a PROOF region: inside it the invariant is \
-             not available as a premise, and at its end it is either restored by \
-             construction or booked as an obligation in the manifest. At run time it is \
-             nothing but its statements, so the lowering would be a plain block -- and \
-             emitting it would drop the region and make the C look like a program whose \
-             obligation nobody carries. **The second reason expired on 2026-08-28** and is \
-             not repeated here: it read `no program asks for it: the single corpus site is a \
-             poison probe`, and `beispiele/53-zwei-orte.gab` is now a clean one. The refusal \
-             stands on the first reason alone, which was always the load-bearing one",
-        ),
+        // **`breaking I { … }` LOWERS since 2026-08-31, and the reason it did not is
+        // answered rather than dropped.**
+        //
+        // What stood here refused with one sentence: *"emitting it would drop the region and
+        // make the C look like a program whose obligation nobody carries."* The premise is
+        // right and the conclusion does not follow -- **the obligation is carried, and by a
+        // register that already exists.** Measured against the unchanged checker:
+        //
+        // ```
+        // $ gabbro pflichten beispiele/53-zwei-orte.gab
+        // E  Preservation (2)
+        //      treffen_oeffnen :: antwortpflicht_paarig
+        //      treffen_schliessen :: antwortpflicht_paarig
+        // ```
+        //
+        // *A region whose obligation is booked is not dropped by lowering it; it is dropped
+        // by lowering it SILENTLY.* So the block carries its own name into the C: which
+        // invariants are suspended, and where the duty is counted. At run time the region is
+        // nothing but its statements -- so a plain block is the FAITHFUL lowering, and any
+        // other would be the generator inventing a run-time meaning for a proof device.
+        //
+        // **Regel A is satisfied by measurement, not by taste**: `beispiele/53-zwei-orte.gab`
+        // is a clean corpus program -- 0 checker errors -- that produced no C. That is a
+        // measured need, and it is the whole of it.
+        //
+        // > The alternative outcome was open and was rejected on the same measurement:
+        // > refusing `breaking` in the CHECKER would make a clean example invalid, and the
+        // > example exists because two places must fall together. *A language that does not
+        // > have a form is complete as long as it says so -- but this one has it.*
+        StmtArt::Bricht(b) => {
+            let namen: Vec<&str> = b.invarianten.iter().map(|i| i.text.as_str()).collect();
+            aus.push_str(&format!(
+                "{e}/* breaking {} -- PROOF region: inside it the invariant is not a\n\
+                 {e} * premise. At run time this is its statements and nothing else; the\n\
+                 {e} * restoration is booked as a preservation obligation (`gabbro pflichten`).\n\
+                 {e} */\n",
+                kommentartext(&namen.join(", "))
+            ));
+            aus.push_str(&format!("{e}{{\n"));
+            for k in &b.rumpf.anweisungen {
+                anweisung(k, aus, u, absagen, tiefe + 1, austritt);
+            }
+            aus.push_str(&format!("{e}}}\n"));
+        }
     }
 }
 
@@ -6544,7 +6580,22 @@ fn match_markiert(
         );
         return;
     }
-    let gegenstand = ausdruck(&m.gegenstand, u, absagen);
+    // **A scrutinee that is not a PLACE is evaluated exactly once, and that needs a
+    // temporary** (2026-08-31, with `match decode_op(m.op)`).
+    //
+    // The arms read `{gegenstand}.marke` and `{gegenstand}.last.{v}` -- **two mentions and
+    // more**, one per arm with a payload. Written out with a call in place of the name, that
+    // is one call per mention: `decode_op` would run again inside the branch it selected.
+    // *A generator that duplicates a call has changed the program, not lowered it.*
+    //
+    // The option arm has bound `_o{tiefe}` for the same reason since it was written; this
+    // is the same move under the same name scheme.
+    let roh = ausdruck(&m.gegenstand, u, absagen);
+    let ort_gegenstand = matches!(&m.gegenstand.art, ExprArt::Ort(_));
+    let gegenstand = if ort_gegenstand { roh.clone() } else { format!("_m{tiefe}") };
+    if !ort_gegenstand {
+        aus.push_str(&format!("{e}{{\n{e}{typ} {gegenstand} = {roh};\n"));
+    }
     aus.push_str(&format!("{e}switch ({gegenstand}.marke) {{\n"));
     for v in &varianten {
         let Some(z) = m.zweige.iter().find(|z| z.variante.text == v.name.text) else {
@@ -6609,6 +6660,9 @@ fn match_markiert(
 "
         ));
     }
+    if !ort_gegenstand {
+        aus.push_str(&format!("{e}}}\n"));
+    }
 }
 
 /// **Der `switch` ueber einem `reason`** (Stufe 7, 2026-08-21).
@@ -6655,6 +6709,32 @@ fn match_grund(
 /// Welchen `tagged type` traegt dieser Ausdruck? **Ueber den erklaerten Typ, nicht ueber die
 /// Variantennamen** -- zwei Typen duerfen gleichnamige Varianten haben.
 fn marken_quelle(e: &Expr, u: &Namen) -> Option<String> {
+    // **A CALL carries a declared return type, and until 2026-08-31 nobody asked it here.**
+    //
+    // `messung/fragmente/F05.gab` writes `match decode_op(m.op) { Info => … }` over
+    // `tagged type Op`. The checker takes it -- **0 errors** -- and the emitter fell through
+    // to the option arm and refused with *"`match` over something other than an `option
+    // index into T`"*. The refusal named the wrong thing: the scrutinee is not an option,
+    // it is a `tagged type`, and the only reason it was invisible is that this function read
+    // PLACES and nothing else.
+    //
+    // *`wert_ctyp` learned the same lesson on 2026-08-20, in this file, four hundred lines
+    // down:* **the declared return type of a callee was the one of three sources nobody
+    // asked.** Here it was the third time.
+    if let ExprArt::Ruf(r) = &e.art {
+        let n = &r.path()?.teile.last()?.text;
+        // `Op(…)` would be a constructor, not a call -- a `tagged type` variant names itself.
+        if u.markierte.contains_key(n) {
+            return None;
+        }
+        return match u.funktionen.get(n)?.rueck.as_ref()? {
+            TypExpr::Pfad(p) => {
+                let t = p.teile.last()?.text.clone();
+                u.markierte.contains_key(&t).then_some(t)
+            }
+            _ => None,
+        };
+    }
     let ExprArt::Ort(o) = &e.art else { return None };
     if o.suffixe.is_empty() {
         if let Some(t) = u.markenwerte.get(&o.basis.text) {
@@ -6704,6 +6784,32 @@ fn match_option(
         }
     }
     let Some(tabelle) = option_quelle(&m.gegenstand, u) else {
+        // **Two forms stood under one refusal, and its ground held for only one**
+        // (2026-08-31 -- the same shape this folder has now found six times).
+        //
+        // `messung/fragmente/F05.gab` writes `match decode_op(m.op) { Info => … }` and got
+        // *"`match` over something other than an `option index into T`"*. **The scrutinee is
+        // not an option and the text says nothing true about it**: it is a call, and the
+        // reason the emitter cannot see its type is that `decode_op` is declared NOWHERE in
+        // that unit. `E009` says the same thing one level up, as a hint on the effect hull.
+        //
+        // *A refusal that names the wrong thing sends its reader to the wrong place* -- and
+        // in this case to a decision («B12», the option reading) that has nothing to do with
+        // it. So the two halves get one sentence each.
+        if let ExprArt::Ruf(r) = &m.gegenstand.art {
+            if let Some(n) = r.path().and_then(|p| p.teile.last()) {
+                if !u.funktionen.contains_key(&n.text) && !u.markierte.contains_key(&n.text) {
+                    weigere(
+                        absagen,
+                        s.span,
+                        "`match` over a call this unit does not declare -- the type of the \
+                         scrutinee stands in the callee's declaration, and there is none. A \
+                         call whose return type IS a `tagged type` lowers",
+                    );
+                    return;
+                }
+            }
+        }
         weigere(absagen, s.span, "`match` over something other than an `option index into T`");
         return;
     };

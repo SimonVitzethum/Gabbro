@@ -753,12 +753,12 @@ impl fn loesche(s : ptr<normal, rw> S) effects { writes s } costs <= 64 ops
     // den `sizeof`-Traeger -- und die Mutation `elems-laesst-den-letzten-aus` UEBERLEBTE:
     // `{v} + 1 <` enthaelt denselben Traeger. *Eine Zusicherung, die den Traeger prueft und
     // nicht die Schranke, faengt genau den Fehler nicht, um den es geht.*
-    // **Und die Breite ist `uint64_t`, nicht `uint32_t`** (2026-08-31). Bis dahin stand hier
-    // dieselbe Zusicherung wie vier Zeilen ueber `slots of` -- eine Kopie, und sie hat die
-    // Verengung festgeschrieben, die `messung/fragmente/F06.gab` an `cc -Werror=type-limits`
-    // scheitern liess. *Ein Test, der die Kopie festhaelt, macht aus einem Versehen eine
-    // Zusage.* Ein Tabellenindex fuellt ein Indexwort (`option`-Sonderwert bei `2^32`); die
-    // Laenge eines FELDES steht als `const … : u64` in der Deklaration.
+    // **And the width is `uint64_t`, not `uint32_t`** (2026-08-31). Until today this line
+    // carried the same assertion as the `slots of` one four lines up -- a COPY, and it
+    // froze the narrowing that made `messung/fragmente/F06.gab` fall at
+    // `cc -Werror=type-limits`. *A test that holds the copy in place turns an oversight
+    // into a promise.* A table index fills an index word (`option` sentinel at `2^32`); an
+    // ARRAY carries its length in the declaration, as a `const … : u64`.
     assert!(
         c.contains("i < (uint64_t)(sizeof("),
         "die Domaene ist vollstaendig -- `< n`, nicht `< n-1` -- und `uint64_t` breit:\n{c}"
@@ -3862,12 +3862,18 @@ impl fn f(c : bool) effects { pure } costs <= 4096 ops {
         "ein `retry` in einem `if` hat eine Schranke, und der Sammler muss sie finden: {im_zweig:?}"
     );
 
-    // **2. `breaking` wird beim NAMEN abgelehnt.**
+    // **2. `breaking` LOWERS since 2026-08-31 -- and it carries its region into the C.**
     //
-    // Hinter *„no lowering: statement kind"* stand nicht eine offene Liste, sondern genau
-    // EINE Anweisungsart. Sechzehn von siebzehn senken ab -- die Absage nannte trotzdem
-    // keine von ihnen.
-    let brechend = absagen_von(
+    // What stood here asserted the refusal by name: *"sixteen of seventeen statement kinds
+    // lower, and the refusal named none of them."* That was right for as long as the
+    // seventeenth was refused. **The refusal fell** -- its ground was *"emitting it would
+    // drop the region and make the C look like a program whose obligation nobody carries"*,
+    // and `gabbro pflichten` books that obligation (`E Preservation`).
+    //
+    // > *So the assertion turns around, and it stays sharp in the same place:* what must not
+    // > happen is a SILENT lowering. The comment naming the suspended invariant is the whole
+    // > difference between lowering the region and dropping it, so the test asks for it.
+    let brechend_c = c_ohne_absage(
         "module t {
 table O count 8 {
     slot { zaehler : u32 in 0 .. 9, }
@@ -3879,8 +3885,14 @@ impl fn f(o : ptr<normal, rw> O, i : index into O) effects { writes o.slots }
 }",
     );
     assert!(
-        brechend.iter().any(|s| s.contains("`breaking")),
-        "die Absage muss `breaking` beim Namen nennen: {brechend:?}"
+        brechend_c.contains("breaking zaehler_klein")
+            && brechend_c.contains("PROOF region")
+            && brechend_c.contains("gabbro pflichten"),
+        "die Region muss im C STEHEN -- Name, Art und wo die Pflicht gezaehlt wird:\n{brechend_c}"
+    );
+    assert!(
+        brechend_c.contains("o->slots[i].zaehler = 0;"),
+        "und der Rumpf ist ein gewoehnlicher Block:\n{brechend_c}"
     );
 
     // **3. Die drei Ausdrucksformen ohne Absenkung tragen DREI Gruende, nicht einen.**

@@ -210,7 +210,11 @@ def sprechprobe():
 # ratchet turning into a rubber band. *The mark may fall again the moment somebody translates
 # them -- and if the series grows a third time, the honest move is to translate, not to add
 # a row here.*
-MARKE_KOMMENTARE = 7910   # 7730 earned + 180 booked as debt (2026-08-21)
+# **7910 -> 7906 on 2026-08-31.** Four lines fell where a German comment was rewritten in
+# English on the way past: the `elems of` assertion in `rechenwerk.rs` and the counter-probe
+# in `beispiele.rs`, both touched for other reasons. *A ratchet that is only ever pulled at
+# the raise is a mark, not a ratchet* -- so the mark travels down with the measurement.
+MARKE_KOMMENTARE = 7906   # 7730 earned + 180 booked as debt (2026-08-21), 4 repaid 2026-08-31
 MARKE_PY = 1072           # 1043 earned + 29 booked as debt (2026-08-21)
 MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 

@@ -208,16 +208,31 @@ fn das_zeugnis_meldet_was_es_nicht_einordnen_kann() {
     // **Und eine Ebene tiefer, denn die Buchung hat zwei Ebenen.** Ein Item, das durchfaellt,
     // und eine ANWEISUNG, die durchfaellt, sind zwei verschiedene Auffangzweige — und die
     // Probe oben deckte nur den ersten.
+    //
+    // **`breaking` stood here until 2026-08-31 and is no such form any more** -- the emitter
+    // lowers it, so it has an `EINORDNUNG` entry, and the counter-probe died at its own
+    // subject. *For the second time in this very place: first `group` («C3c», 2026-08-19),
+    // now `breaking`.*
+    //
+    // Counted the same day: **there is no unbooked statement form left.** Every one that
+    // `zeugnis::block` names stands in the table. So this does not hunt a third form that
+    // lowers tomorrow -- it checks the PATH an unbooked statement would take: the statement
+    // reading reaches `zaehle` (it would not find `breaking` otherwise), and `zaehle`s
+    // `else` arm falls, which `zeugnis::proben::ein_name_ohne_einordnung_faellt_auf` holds.
     let mit_anweisung = "module t { table A count 4 { slot { a : u32, } invariant p : true; } \
                          impl fn f(x : ptr<normal, rw> A) -> bool effects { writes x } \
                          costs <= 4 ops { breaking p { return true; } } }";
     let (baum_a, _) = gabbro_syntax::lies("p.gab", mit_anweisung);
+    let e_a = gabbro_check::zeugnis::erhebe(&baum_a);
     assert!(
-        gabbro_check::zeugnis::erhebe(&baum_a)
-            .unzugeordnet
-            .iter()
-            .any(|u| u.contains("breaking")),
-        "auch eine ANWEISUNG ohne Einordnung muss auffallen"
+        e_a.posten.contains_key("breaking"),
+        "die Anweisungslesung muss `zaehle` erreichen: {:?}",
+        e_a.posten
+    );
+    assert!(
+        e_a.unzugeordnet.is_empty(),
+        "und eine gebuchte Anweisung darf NICHT als unzugeordnet gemeldet werden: {:?}",
+        e_a.unzugeordnet
     );
 
     // Und eine Datei, die vollstaendig gebucht ist, meldet NICHTS -- sonst waere die Probe

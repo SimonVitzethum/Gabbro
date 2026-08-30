@@ -282,6 +282,16 @@ pub const EINORDNUNG: &[Posten] = &[
         traegt: Traegt::Schablone("table.induktion"),
         grund: "eine beschraenkte `for`-Schleife; die Schranke kommt aus `count N`",
     },
+    // **`breaking` lowers since 2026-08-31, so it stands here** -- until that day the
+    // certificate booked it as `UNZUGEORDNET`, and rightly: the emitter refused it.
+    Posten {
+        konstrukt: "breaking",
+        traegt: Traegt::Direkt,
+        grund: "ein C-Block, und nichts sonst -- zur Laufzeit IST die Region ihre \
+                Anweisungen. Was erzeugt wird, ist der Kommentar mit den ausgesetzten \
+                Invarianten; die Wiederherstellung steht als Erhaltungspflicht in \
+                `gabbro pflichten` und nicht im C (W6)",
+    },
     Posten {
         konstrukt: "entrust",
         traegt: Traegt::Fremd,
@@ -754,7 +764,13 @@ fn block(b: &Block, e: &mut Erhebung, geister: &[String]) {
                 zaehle(e, "let … else");
                 block(&l.sonst, e, geister);
             }
-            StmtArt::Bricht(_) => e.unzugeordnet.push("breaking".into()),
+            // **`breaking` is a booked construct since 2026-08-31.** It used to be pushed
+            // straight onto `unzugeordnet` because the emitter refused it -- and the two
+            // halves moved together: the lowering and its entry in `EINORDNUNG`.
+            StmtArt::Bricht(b) => {
+                zaehle(e, "breaking");
+                block(&b.rumpf, e, geister);
+            }
             StmtArt::Publish(_) => zaehle(e, "publishes"),
             StmtArt::AwaitLoad(_) => zaehle(e, "awaits"),
             // **«C4», 2026-08-19.** Nur die VERGLEICHSform senkt ab; `update` bleibt eine

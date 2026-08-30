@@ -1784,10 +1784,10 @@ MUTATIONEN = [
         # `let _ = 0;` an und war damit ein No-op -- sie ueberlebte den Lauf und las sich wie
         # eine unbewachte Regel. *Eine Mutation, die nichts aendert, ist die Umkehrung von
         # W17: Misserfolg ohne Arbeit, und sie beschuldigt eine Regel, die in Ordnung ist.*
-        # **`uint32_t` -> `uint64_t` am 2026-08-31**: der Index eines FELDES ist nicht das
-        # Indexwort einer TABELLE, und die Verengung liess `F06` an `cc -Werror=type-limits`
-        # scheitern. *Der Anker ist damit nebenbei eindeutig geworden -- `slots of` behaelt
-        # `uint32_t`, und die zwei Domaenen sehen jetzt verschieden aus.*
+        # **`uint32_t` -> `uint64_t` on 2026-08-31**: the index of an ARRAY is not the index
+        # word of a TABLE, and the narrowing made `F06` fall at `cc -Werror=type-limits`.
+        # *The anchor became unambiguous on the way -- `slots of` keeps `uint32_t`, so the
+        # two domains no longer read alike.*
         "elems-laesst-den-letzten-aus",
         "emit.rs",
         "            let feld = ort(o, u, absagen);\n            let v = &x.variable.text;\n"
@@ -2471,10 +2471,14 @@ MUTATIONEN = [
         "die Vertrauensflaeche ist dann groesser als gebucht",
     ),
     Mutation(
+        # **Anchor moved on 2026-08-31, and the damage is the same one.** `breaking` lowers
+        # since that day, so the arm books it with `zaehle` instead of pushing it onto
+        # `unzugeordnet`. Dropping the `zaehle` call is the identical failure: a statement
+        # falls SILENTLY out of the certificate -- neither counted nor reported as unknown.
         "zeugnis-schluckt-unbekannte-anweisungen",
         "zeugnis.rs",
-        '            StmtArt::Bricht(_) => e.unzugeordnet.push("breaking".into()),',
-        "            StmtArt::Bricht(_) => {}",
+        '                zaehle(e, "breaking");\n                block(&b.rumpf, e, geister);',
+        "                block(&b.rumpf, e, geister);",
         "K100.4 -- dasselbe eine Ebene tiefer: eine Anweisung faellt still aus der Buchung",
     ),
     Mutation(
@@ -2811,12 +2815,22 @@ MUTATIONEN = [
         flaeche="code",
     ),
     Mutation(
-        "breaking-heisst-wieder-anweisungsart",
+        # **Turned around on 2026-08-31, when the refusal fell.** It used to check that the
+        # ONE unlowered statement kind was named -- `breaking` lowers now, so there is no
+        # such refusal to blunt. **The damage the mutation stands for survives the change
+        # and is worse than it was**: the region is lowered SILENTLY. What comes out is an
+        # ordinary C block, and nobody reading it can see which invariant was suspended or
+        # where the restoration is counted. *A dropped proof region looks exactly like a
+        # program that never had one* -- which was the whole ground of the old refusal.
+        "breaking-senkt-die-region-still-ab",
         "emit.rs",
-        '            "`breaking I { … }` -- the block is a PROOF region: inside it the invariant is \\',
-        '            "statement kind -- the block is a PROOF region: inside it the invariant is \\',
-        "C001 -- die eine Anweisungsart ohne Absenkung wird wieder nicht beim Namen genannt; "
-        "ein Leser des Zeugnisses kann nicht ablesen, WAS fehlt",
+        '                "{e}/* breaking {} -- PROOF region: inside it the invariant is not a\\n\\\n'
+        '                 {e} * premise. At run time this is its statements and nothing else; the\\n\\\n'
+        '                 {e} * restoration is booked as a preservation obligation (`gabbro pflichten`).\\n\\\n'
+        '                 {e} */\\n",',
+        '                "{e}/* {} */\\n",',
+        "C001 -- die Beweisregion verschwindet aus dem Erzeugnis; das C sieht aus wie ein "
+        "gewoehnlicher Block, und die ausgesetzte Invariante steht nirgends",
         flaeche="code",
     ),
     # **Berichtigung 2026-08-28 -- it said THREE forms, and there are two.** The anchor read
