@@ -764,6 +764,16 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       vorher ÜBERLEBT, nachher GEFANGEN.
       **Der Lauf DANACH, derselbe Katalog: `340 von 340 gültigen Mutationen gefangen
       (100 %)`** (10 min 25 s Wanduhr, 29 min CPU) — keine Überlebende, keine ungültige.
+
+      **Und dann noch zweimal, weil der Katalog weiterwuchs:** über 344 fiel eine als
+      `ungueltig` heraus (`if false` an einem `match`-Arm, der dadurch unvollständig wurde —
+      `E0004`), über **345 sind es 345 von 345 (100 %)**, keine ungültige, keine Überlebende
+      (10 min 8 s). *Zum zweiten Mal an einem Tag hat eine ungültige Mutation den Nenner
+      verkleinert*, und beide Male hat `--anker` sie durchgelassen:
+      > **`--anker` sagt, dass der Ankertext sitzt. Ob der mutierte Baum ÜBERSETZT, sagt erst
+      > der volle Lauf** — zehn Minuten später. Eine neu geschriebene Mutation ist erst fertig,
+      > wenn sie einmal von Hand gesetzt, gebaut und als *genau eine fallende Probe*
+      > nachgemessen wurde.
       *Die Quote ist zum ersten Mal voll, und sie misst weiterhin nur den Prüfer:*
       Prüfer 213 · Code 86 · Annotation 38 · Schablone 3. **Eine Fläche mit 0 Mutationen ist
       nicht gedeckt, sondern unbeschädigbar.**
