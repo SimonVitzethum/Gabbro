@@ -1720,12 +1720,44 @@ NOTATIONSLUECKEN -- nicht eine ist ein Handbeweis.** Was daraus offen bleibt:
       Pflicht unsichtbar -- die zweite fiel hier sofort auf (`s.len - frei`, geschlossen mit
       der relationalen Nachbedingung). *Eine Zaehlung, und sie ist klein.*
 
-- [ ] **`group` steht an EINER Korpusstelle** *(2026-08-19)*. `beispiele/17` ist die einzige;
+- [ ] **`group` steht an EINER Korpusstelle** *(2026-08-19)*. ~~`beispiele/17` ist die
+      einzige;~~ **`beispiele/17` ist die einzige, SOWEIT GESUCHT** *(abgeschwächt
+      2026-08-30)*;
       die vier Verbindungsinvarianten des Sweeps vom 2026-08-16 (V1-V4) sind gemessen, aber
       nicht geschrieben. **Zwei bewiesene Schablonen ueber einem Konstrukt mit einer
       Fundstelle** -- das ist der Grund, warum die Amortisationszahl heute zweimal gestiegen
       ist. *Solange V1-V4 nicht als `group` dastehen, misst die Zahl den Beweisvorlauf und
       nicht die Amortisation.*
+
+      > **„Ist die einzige" war ein Allquantor über einen Korpus, den niemand abgeschritten
+      > hatte.** Er ist zu „soweit gesucht" abgeschwächt — und *das ist nur dann kein
+      > Nullbefund, wenn der Suchweg danebensteht.* Also steht er hier.
+
+      **Der Suchweg, 2026-08-30.** Durchsucht wurden **alle 408 `.gab`-Dateien** des Baums
+      (`find . -name '*.gab'`, ohne `target/` und `.git/`), Muster `^\s*group\b` — `group`
+      am Zeilenanfang, also das Konstrukt und nicht das Wort. Gegenprobe mit dem freien
+      Muster `group` über dieselbe Menge: 12 Dateien, dieselben 12. **Keine Fundstelle
+      steht nur in einem Kommentar.**
+
+      | wo | Dateien mit `group` | zählt als Korpus? |
+      |---|---:|---|
+      | `beispiele/*.gab` | 1 — `beispiele/17-gruppe-ueber-zwei-sperren.gab` | **ja** |
+      | `beispiele/gift/*.gab` | 9 — `63`, `64`, `65`, `66`, `185`, `262`, `280`, `281`, `282` | nein (W23: eigene Giftproben) |
+      | `messung/race-proben/*.gab` | 2 — `gruppe-unbekannter-traeger`, `gruppe-unbekannte-sperre` | nein (Messproben) |
+      | alles übrige (`messung/fragmente`, `fnptr-proben`, `abi-proben`, `caprock`, `netz`, `treiber`, `grenze`, `messungen`, `programmlogik/beispiel`) | 0 | — |
+
+      **Damit ist die Aussage schärfer als vorher, nicht schwächer:** es ist nicht nur
+      *behauptet*, dass `beispiele/17` allein steht — es ist über 408 Dateien nachgesehen,
+      und die elf anderen Fundstellen sind benannt statt verschwiegen. *Der zweite Korpus
+      (`messung/fragmente`) hat keine einzige.*
+
+      **Was ausdrücklich NICHT gebaut wurde: ein mechanisches Maß über
+      „Verbindungsinvariante".** Ein Werkzeug, das zählt, an wie vielen Stellen eine
+      Verbindungsinvariante *hingehörte*, müsste entscheiden, wann zwei Träger
+      zusammenhängen — und genau das ist das Urteil, um das es hier geht. **Ein Urteil in
+      Werkzeugform ist kein Maß, es ist dasselbe Urteil mit einer Zahl davor**, und die
+      Frage stünde unverändert eine Ebene tiefer. *Die vier V1-V4 sind von Hand gefunden;
+      dass es genau vier sind, ist eine Lesung und wird hier nicht als Zählung ausgegeben.*
 
 - [ ] **`N009` sieht nur ZAHLLITERALE** *(2026-08-19)*. Ein berechneter Registerversatz
       (`CAP.FRO * 16`) bleibt stumm, und `bank`-Register werden nicht gegen die Hauptebene
