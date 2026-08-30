@@ -183,9 +183,13 @@ HAT_GEBIETSSCHEMA = re.compile(r"\bLC_ALL\b")
 
 def waechter():
     aus = []
+    # **`abnahme.py` joined on 2026-08-30, and it very nearly did not.** The collective run is
+    # not called `pruefe-*` and would have slipped through every mesh above -- a tool that
+    # establishes the reach of acceptance while standing outside acceptance itself. *Exactly
+    # what it was built against, one level up.*
     for p in sorted(W.glob("instrumente/pruefe-*.py")) + sorted(W.glob("instrumente/pruefe-*.sh")) \
             + sorted(W.glob("instrumente/zaehle-*.py")) + sorted(W.glob("instrumente/zaehle-*.sh")) \
-            + sorted(W.glob("instrumente/mutiere-*.py")):
+            + sorted(W.glob("instrumente/mutiere-*.py")) + sorted(W.glob("instrumente/abnahme.py")):
         aus.append(p)
     return aus
 
