@@ -368,3 +368,126 @@ F5 senkt nicht ab. Dann `H = 0` buchen, **mit dem Satz aus §5 daneben.**
 > (`messung/ABSENKUNG.md`, drei Formen). `H = 0` ist über den AUSFÜHRUNGSweg erreichbar, den
 > dieser Ordner fünfmal gegangen ist; welcher der drei Wege zum BEWEIS gegangen wird, ist eine
 > Entscheidung des Ordners und keine Aufgabe einer Bahn.
+
+---
+
+# 8. Berichtigung, 2026-08-31: es sind nicht vier Entscheidungen, sondern EINE
+
+**Die Tafel schrieb drei Wörtern eine Absage zu, die es nicht gibt.** Nachgemessen, je
+kleinstes Programm, durch den unveränderten Prüfer und Erzeuger:
+
+| | `pruefe` | `C001` | was es ist |
+|---|---|---|---|
+| `chain(a,b) in place` | 0 Fehler | **0** | Quantorendomäne |
+| `queue place` | 0 Fehler | **0** | Quantorendomäne |
+| `threads` | 0 Fehler | **0** | Quantorendomäne |
+| `state Ident { transition … }` | 0 Fehler | **1, mit Grund** | Deklaration |
+
+**Quantorendomänen stehen in `requires`/`ensures` — Annotationen senken nicht nach C ab.**
+Die drei sind `UNGEDECKT`, weil sie **niemand im Baum je geschrieben hat**, und das ist kein
+Sprachloch, sondern eine Korpuslücke. *Dieselbe Klasse wie die 25 einsamen Wörter: drei
+fehlende Programme.*
+
+## Und der Fehler steckt im Werkzeug
+
+```python
+if t in absage:
+    woher.append("der Erzeuger sagt ab, der Pruefer nicht")
+```
+
+`absage` ist die Menge der Wörter, **die in einem Absagetext VORKOMMEN** — nicht die Menge
+der Formen, deren Absage jemand gemessen hat. `queue` steht in fremden Absagetexten, also
+schrieb die Tafel ihm eine Absage zu.
+
+> **Ein Wächter, der eine Erwähnung für eine Messung nimmt.** Klasse W16, und diesmal ist der
+> Schaden nicht die Zahl — die Klassifikation `UNGEDECKT` war richtig —, sondern **der Satz
+> daneben.** Er hat drei Korpuslücken vier Tage lang wie eine Sprachentscheidung aussehen
+> lassen.
+
+## Die eine echte Absage sagt selbst, was ihr fehlt
+
+> `no lowering:` **`state`** — *the transitions are a proof device over a carrier that is
+> declared ELSEWHERE; **which C object holds the state, and whether a transition is a check
+> or an assignment, the declaration does not say***
+
+**Der Erzeuger kann sie nicht annehmen, weil die Deklaration die Information nicht enthält.**
+Was fehlte: ein benannter Träger (`state Lauf over p`) und je Transition die Angabe, ob sie
+prüft oder schreibt.
+
+**Was es brächte:** `state` ist *dieselbe Konstruktion wie `device`s `transition`, eine Ebene
+höher* — die untere ist gebaut und läuft. Die obere machte die Zustandsmaschine eines
+gewöhnlichen Wertes prüfbar, nicht nur die eines Registers.
+
+**Was dagegen steht: null gemessener Bedarf.** Kein Programm im Baum schreibt `state`.
+*Regel A sagt dann nein* — und der ehrliche Zwischenschritt ist, die Absage stehen zu lassen
+und die Deklaration zu ergänzen, sobald jemand sie braucht.
+
+---
+
+# 9. Der offene Rest — geplant am 2026-08-31
+
+*Nach der Berichtigung in §8 steht der Task auf **einer** Entscheidung und **drei** fehlenden
+Programmen. Alles Übrige ist Sediment, das dieser Task freigelegt hat — `TODO.md` ist an einem
+Tag von 242 auf 264 gewachsen, und fast jeder neue Punkt ist ein Befund und keine Absicht.*
+
+## A — Was den Task ABSCHLIESST *(klein, und es ist der Rest)*
+
+| | | Kosten |
+|---|---|---|
+| **A1** | **Drei Programme für `chain`, `queue`, `threads`** — Quantorendomänen, also in `requires`/`ensures` eines Programms, das einen Gegenstand hat. Danach ist `UNGEDECKT = 1`. | eine Bahn |
+| **A2** | **Den Satz der Tafel berichtigen** — sie darf eine Absage nur behaupten, wenn sie eine **gemessen** hat. Heute leitet sie ihn aus dem Vorkommen eines Wortes in einem fremden Absagetext ab. | eine halbe |
+| **A3** | **`state`: die Absage stehen lassen und im TODO ausschreiben**, was der Deklaration fehlt (Träger, Prüfen-oder-Schreiben). *Kein Bau — null gemessener Bedarf.* | eine Zeile |
+| **A4** | **`H` buchen.** Alle vier verbliebenen Absenkungspflichten hängen an Programmen, die Gabbro nicht annimmt, und jede Absage ist als richtig nachgemessen. **Entscheidung des Ordners.** | eine Entscheidung |
+
+> **Nach A1–A4 ist der Task zu**, und was dann dasteht, ist eine Sprache mit einer Grenze, die
+> man aufschreiben kann — nicht eine, deren Grenze man vermutet.
+
+## B — Was der Task freigelegt hat, nach Gewicht
+
+**B1 · Der Erzeuger bildet Namen, die sich treffen können.** Neun Kollisionsformen sind
+geheilt, **eine zehnte findet `cc` nicht** (`lock TOR` neben `extern fn TOR_nimm()` — zwei
+Deklarationen, ein Symbol, kein Wort). `N042` fängt sie; was offen bleibt, ist die
+Vollständigkeit der Aufzählung über die 21 Muster.
+
+**B2 · Fünf Adressräume verschwinden in der Absenkung.** `ctyp` liest `z.raum` für keinen.
+Einer davon (`port`) ist falsch und jetzt abgewiesen; die vier anderen sind einzeln
+nachgerechnet und kein Mangel. **Offen ist die Frage, ob ein Raum ohne Absenkung überhaupt im
+Typ stehen soll.**
+
+**B3 · Sieben verdeckte Giftproben**, benannt und mit Grund; fünf davon sind eine Aussage über
+die Sprache (`finite` nur hinter `narrow … to`, `N027` im `can_fail` untrennbar, …).
+
+**B4 · `N021` liest die Tore eines `check` nicht** — ungesucht gefunden, als eine Heilung eine
+Datei völlig stumm machte.
+
+**B5 · 180 unbewachte Zellen**, davon vier ohne Befehl und ohne Grund.
+
+**B6 · Der Rumpfkanal: 66 von 76 Pflichten abgesagt**, und 60 davon haben nie eine
+Übersetzung gesehen. *Die Deckungszahl ist 10 von 16 über das, was der Kanal versucht.*
+
+## C — Was ausdrücklich NICHT in diesem Plan steht
+
+* **Die Absenkungsentscheidung** (`messung/ABSENKUNG.md`, drei Formen) — sie gehört dem Ordner
+  und ist seit dem 2026-08-28 fällig.
+* **Der zweite Korpus** — gebucht als Teil des `caprock-part`-Laufs, mit seiner Bedingung.
+* **Die Bezeichnerhälfte der Übersetzung** — 328 von 1058 tragen einen deutschen Stamm, und
+  `mutiere-pruefer.py` trägt 360 Anker, die wörtliche Quellzeilen sind.
+
+## D — Die Reihenfolge, und woran sie hängt
+
+```
+  A2  den Satz der Tafel berichtigen        sofort, haengt an nichts
+  A1  drei Programme                        haengt an nichts
+  A3  `state` ausschreiben                  haengt an nichts
+  ------------------------------------------------------------
+  A4  `H` buchen                            ENTSCHEIDUNG des Ordners
+  ------------------------------------------------------------
+  B1  die Aufzaehlung vollstaendig machen   haengt an nichts
+  B2  Raum ohne Absenkung -- Entscheidung   haengt an B2s Messung
+  B4  `N021` und die Tore                   haengt an nichts
+  B5  vier Zellen ohne Grund                haengt an nichts
+  B6  der Rumpfkanal                        haengt an der Absenkungsentscheidung
+```
+
+**Drei Posten hängen an nichts und schließen den Task** (A1, A2, A3). *Die vierte ist eine
+Entscheidung, und sie ist die einzige, die eine Bahn nicht treffen kann.*
