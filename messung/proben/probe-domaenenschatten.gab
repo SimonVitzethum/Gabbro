@@ -1,8 +1,9 @@
--- **Der Geltungsbereich am `traverse` -- und was er NEBEN der Falschabsage kostet.**
+-- **Der Blockgeltungsbereich am `traverse` -- die Zusage, die das AUSGELIEFERTE Programm
+-- verletzt.**
 --
 -- `messung/proben/probe-traverse-grundname.gab` hat die eine Haelfte gemessen: `kosten.rs`
 -- traegt keinen Blockgeltungsbereich, und darum faellt `traverse i over slots of tafel`
--- mit `let tafel = w;` heute an `K003` -- ein richtiges Programm, abgewiesen ueber eine
+-- mit `let tafel = w;` an `K003` -- ein richtiges Programm, abgewiesen ueber eine
 -- SCHRANKE, die dasteht. *Diese Datei misst die andere Haelfte, und sie ist die
 -- schaerfere.*
 --
@@ -14,50 +15,73 @@
 -- Verdeckt ein `let` einen Parameter, gewinnt der PARAMETER -- und der Kostenpass rechnet
 -- die Schranke der Tabelle aus, ueber die die Schleife GAR NICHT laeuft.
 --
--- 1. GEGEN DEN UNVERAENDERTEN PRUEFER, 2026-08-31 (`f08e5ad`)
--- -----------------------------------------------------------
--- Derselbe Rumpf, einmal ueber den verdeckten Namen und einmal ueber den echten:
+-- 1. DER OBERSTE BLOCK IST SEIT `b6b0d81` ZU. DER VERSCHACHTELTE NICHT.
+-- --------------------------------------------------------------------
+-- `let t = g;` neben den Parametern faellt heute an `N001` (*„`t` is declared twice in
+-- this scope"*). **Ein `let` in einem INNEREN Block ist keine zweite Deklaration im selben
+-- Geltungsbereich, sondern eine gueltige Verdeckung** -- `beispiele/gift/19-let-verdeckt.gab`
+-- fuehrt die Form seit dem 2026-08-14 als Programm, das die Sprache erlaubt und `M102`
+-- abweist, weil es die Verengung nicht erbt. *Die Verdeckung abzusagen ist damit nicht der
+-- Ausgang; der Geltungsbereich ist es.*
 --
---     let t = g;  traverse i over slots of t     ->  K001: the body costs   16
---                 traverse i over slots of g     ->  K001: the body costs  196
+-- 2. GEGEN DEN UNVERAENDERTEN PRUEFER, 2026-08-31 (`823f599`)
+-- ------------------------------------------------------------
+-- Derselbe Rumpf im verschachtelten Block, einmal ueber den verdeckten Namen und einmal
+-- ueber den echten:
 --
--- **Dieselbe Schleife, zwei Zahlen.** `t` ist zur Laufzeit `g`; die 16 kommt aus
--- `Winzig count 4`, die 196 aus `Riesig count 64`. Der Pass hat den Parameter gelesen und
--- die Bindung uebersehen, die eine Zeile darueber steht.
+--     if f { let t = g;  traverse i over slots of t … }  ->  6 items, 0 errors, 0 hints
+--     if f {             traverse i over slots of g … }  ->  K001: the body costs 195
 --
--- **Und die 16 wird ANGENOMMEN:**
+-- **Dieselbe Schleife, zwei Zahlen.** `t` ist zur Laufzeit `g`; die 17 kommt aus
+-- `Winzig count 4`, die 195 aus `Riesig count 64`. Der Pass hat den Parameter gelesen und
+-- die Bindung uebersehen, die eine Zeile darueber steht -- und `costs <= 17 ops` geht
+-- damit **als eingeloest durch**.
 --
---     costs <= 16 ops   ->  …: 6 items, 0 errors, 0 hints
---
--- *Eine Kostenzusage, die um den Faktor 12 zu klein ist, geht als eingeloest durch.* Das
--- ist keine Falschabsage mehr, sondern eine Falschannahme -- die Richtung, die weh tut.
---
--- 2. UND DER ERZEUGER BAUT DARAUS KEIN C
--- ---------------------------------------
---     static uint32_t schatten(const Winzig *restrict t, const Riesig *restrict g) {
+-- 3. UND DAS AUSGELIEFERTE C LAEUFT 64 DURCHGAENGE
+-- -------------------------------------------------
+--     static uint32_t schatten(const Winzig *restrict t, const Riesig *restrict g, bool f) {
 --         uint32_t summe = 0;
---         const Riesig * t = g;          -- <<< derselbe Block wie der Parameter
+--         if (f) {
+--             const Riesig * t = g;                    -- C ERLAUBT die Verdeckung hier
+--             for (uint32_t i = 0; i < (uint32_t)(sizeof(t->slots)/sizeof(t->slots[0])); i++)
 --
---     $ cc -c c.c
---     error: »t« als andere Symbolart redeklariert
+--     $ cc -o n1 n1.c && ./n1
+--     64
 --
--- **Zwei Paesse irren ueber dieselbe Form**, und der zweite faellt hart: C erlaubt die
--- Verdeckung eines Parameters im Rumpfblock nicht, `emit.rs` schreibt sie trotzdem hin.
--- *Ein Programm, das der Pruefer annimmt und der Uebersetzer nicht baut.*
+-- **Der Erzeuger hat recht und der Pruefer nicht.** `sizeof(t->slots)` liest den INNEREN
+-- `t` -- 64 Plaetze. *Eine Kostenzusage von 17 ops ueber einem Programm, das mehr als
+-- 190 rechnet, und kein Pass sagt ein Wort.* Das ist keine Falschabsage mehr, sondern eine
+-- Falschannahme -- die Richtung, die weh tut.
 --
--- 3. DER KORPUS
+-- 4. UND DIE SCHRANKE HAT DREI LESER, NICHT EINEN
+-- -------------------------------------------------
+--     kosten.rs:633        -> `K001`, `K002`, `K006`, `K007`  -- ZUSAGEN (stiller Bruch)
+--     domaene.rs:280-344   -> `D014`-`D018`                   -- ABSAGEN (Falschabsage)
+--     m1.rs:3592           -> «H2.1», der Zaehler erbt        -- schon richtig (`Lage`)
+--
+-- Die zweite Richtung, gemessen an derselben Form mit `t : u32` als Parameter:
+--
+--     error: [D018] `slots of t` needs a table, and `t` is a scalar
+--     error: [K003] … the domain `slots of` of the traversal has no bound
+--
+-- **Zwei Absagen ueber ein richtiges Programm** -- `t` IST an dieser Stelle eine Tabelle.
+-- `m1.rs` ist der einzige der drei Leser, der einen Blockgeltungsbereich traegt (`Lage`),
+-- und genau er ist der einzige, der nicht irrt. *Das Vorbild steht im selben Ordner.*
+--
+-- 5. DER KORPUS
 -- --------------
--- **479 `.gab`-Dateien, 0 Verdeckungen** -- weder `let` ueber Parameter noch `let` ueber
--- `let`. Die Form kommt im Korpus nicht vor; sie ist deshalb nicht harmlos, sondern
--- ungemessen gewesen.
+-- **481 `.gab`-Dateien, 853 Funktionsruempfe, GENAU EINE Verdeckung** --
+-- `beispiele/gift/19-let-verdeckt.gab`:13, ein `let x` ueber dem Parameter `x : u8` im
+-- `if`-Rumpf. Keine Domaene steht darueber, also bewegt sich dort keine Zahl. **Null
+-- Korpusstellen sind betroffen** -- die Form ist nicht harmlos, sondern ungemessen gewesen.
 --
 -- WAS DARAUS FOLGT
 -- -----------------
--- Der Mangel ist gemessen und doppelt (Regel A), der Preis ist null. Gebaut wird die
--- kleinere Form: **die Verdeckung wird abgesagt**, nicht ein Blockgeltungsbereich in
--- `kosten.rs` nachgeruestet. Solange keine Verdeckung mehr moeglich ist, ist die Frage
--- „welche Bindung?" eindeutig -- und erst dann waere ein Geltungsbereich ein Zuwachs
--- statt einer zweiten Fehlerquelle.
+-- Der Mangel ist gemessen und dreifach (Regel A: stiller Bruch, Falschabsage, erzeugtes C),
+-- und die Sprache erlaubt die Form. Gebaut wird der **Blockgeltungsbereich in `kosten.rs`
+-- und `domaene.rs`**, nach dem Vorbild von `m1.rs::Lage`.
+--
+-- NACH DEM BAU faellt diese Datei an `K001` mit `the body costs 195`.
 
 module probe::domaenenschatten {
 
@@ -72,20 +96,21 @@ table Riesig count GROSS {
     slot { wert : u32, }
 }
 
--- **Der Parameter `t` zeigt auf die kleine Tabelle, das `let` auf die grosse.**
--- Vor dem Bau: `K001 … the body costs 16` -- die Schranke der KLEINEN. Nach dem Bau
--- faellt die Zeile `let t = g;` selbst.
-impl fn schatten(t : ptr<normal, r> Winzig, g : ptr<normal, r> Riesig) -> u32
+-- **Der Parameter `t` zeigt auf die kleine Tabelle, das `let` im `if`-Rumpf auf die
+-- grosse.** Vor dem Bau: 0 Fehler. Nach dem Bau: `K001 … the body costs 195`.
+impl fn schatten(t : ptr<normal, r> Winzig, g : ptr<normal, r> Riesig, f : bool) -> u32
     effects { reads t.slots, reads g.slots }
-    costs   <= 8 ops
+    costs   <= 17 ops
 {
     let mut summe : u32 in 0 .. 65535 = 0;
-    let t = g;
-    traverse i over slots of t by unvisited
-        touches reads t.slots
-    {
-        if summe < 60000 {
-            summe += 1;
+    if f {
+        let t = g;
+        traverse i over slots of t by unvisited
+            touches reads t.slots
+        {
+            if summe < 60000 {
+                summe += 1;
+            }
         }
     }
     return summe;

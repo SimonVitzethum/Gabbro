@@ -240,8 +240,8 @@ MUTATIONEN = [
     Mutation(
         "zweigkette-verliert-praefix",
         "gabbro-check/src/kosten.rs",
-        "                    praefix = praefix.plus(self.ausdruck(bed));",
-        "                    praefix = Kosten::Zahl(0).plus(self.ausdruck(bed));",
+        "                    praefix = praefix.plus(self.ausdruck(bed, lokal));",
+        "                    praefix = Kosten::Zahl(0).plus(self.ausdruck(bed, lokal));",
         "`K001` -- die `else if`-Kette zaehlt wieder nur die eigene Bedingung je Zweig; "
         "dieselbe Bedeutung sequentiell geschrieben misst dann mehr",
     ),
