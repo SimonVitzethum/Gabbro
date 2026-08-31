@@ -1,0 +1,26 @@
+module probe::extern2 {
+
+pub static mut nutz : u32 = 0;
+
+pub lock TOR protects { nutz } rank 0 held <= 8 ops;
+
+-- Der Nutzer meint eine EIGENE fremde Funktion, die zufaellig so heisst.
+extern fn TOR_nimm() effects { pure } costs <= 1 ops;
+
+pub impl fn arbeite()
+    effects { writes nutz, locks TOR }
+    costs   <= 8 ops
+{
+    locks TOR {
+        nutz = 1;
+    }
+}
+
+pub impl fn ruft_selbst()
+    effects { pure }
+    costs   <= 4 ops
+{
+    TOR_nimm();
+}
+
+}

@@ -1,0 +1,26 @@
+module probe::m3check {
+
+pub static mut stand : u32 = 0;
+
+check kontostand {
+    claim        "Der Stand ist niemals sieben."
+    measures     stand
+    gates        frage
+
+    can_fail {
+        return stand != 7;
+    }
+    counterprobe "setze stand auf 7" expects sonde_stand_sieben
+}
+
+-- Der Nutzer meint eine EIGENE fremde Funktion, die zufaellig so heisst.
+extern fn pruefe_kontostand() -> bool effects { pure } costs <= 1 ops;
+
+pub impl fn frage() -> bool
+    effects { pure }
+    costs   <= 4 ops
+{
+    return pruefe_kontostand();
+}
+
+}
