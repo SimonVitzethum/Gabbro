@@ -368,23 +368,61 @@ fn qualifiziert(modul: &str, name: &str) -> String {
 /// cost number in `kosten.rs`.**
 ///
 /// The value stands in the OLD scope, so the check runs first and the name is bound after.
+///
+/// ## Two more binders, measured 2026-08-31 and both a FALSE REFUSAL
+///
+/// The scope above was built for `let`, and two other statements declare a name that no
+/// `let` writes down: **the traversal variable** and **the binder of a `match` arm**. The
+/// first was pushed around the loop's own `invariant` and popped again before the body was
+/// walked; the second was never pushed at all. In both cases a domain deeper inside names
+/// something the enclosing line just introduced -- and `D017` says it *"is not declared
+/// here"*:
+///
+/// ```text
+/// traverse a of g over ancestors of g {
+///     traverse b of g over ancestors of g
+///         invariant forall k in descendants of a : …      -> [D017] `a` … not declared
+/// ```
+///
+/// ```text
+/// match x { Knoten(k) => {
+///     traverse a of g over ancestors of g
+///         invariant forall z in descendants of k : …      -> [D017] `k` … not declared
+/// ```
+///
+/// Both fall against the UNCHANGED checker; moving the same `invariant` up to the line that
+/// binds the name gives `0 errors`. *A refusal about a name the program declares is a
+/// refusal about the pass.*
+///
+/// **The name goes on `geb`, not into `karte`** -- the same treatment a quantifier variable
+/// gets, and for the same reason: the pass knows the name is bound and knows nothing about
+/// its type, so `ortsart` returns `None` and every rule here stays silent about it. Binding
+/// it to a TYPE would be a guess, and `m1.rs` writes `Typ::Unbekannt` at the same spot.
+///
+/// **And it is popped again.** A domain AFTER the loop that names the traversal variable
+/// still falls -- the scope ends with the block, and a version that merely stopped refusing
+/// would look exactly like this one from the inside.
 fn aus_block(b: &Block, aussen: &Sicht, geb: &mut Vec<String>, absagen: &mut Absagen) {
     let mut karte = aussen.lokal.clone();
     for st in &b.anweisungen {
         let s = &Sicht { u: aussen.u, modul: aussen.modul, lokal: &karte };
+        // How many names THIS statement declares for its own sub-blocks -- popped below.
+        let mut gebunden = 0usize;
         if let StmtArt::Schleife(sch) = &st.art {
             // **No `_` arm.** All three loop kinds carry an `invariant`, and a fourth one
             // should be a compile error here rather than a silent hole.
             match sch.as_ref() {
                 Schleife::Traverse(t) => {
+                    // The domain is read in the OUTER scope: `traverse i over slots of i`
+                    // must not resolve against the name the same line introduces.
                     domaene_pruefen(&t.domaene, s, Stellung::Durchlauf, geb, absagen);
                     // The traversal variable is DECLARED by the loop -- a domain in the
-                    // invariant that names it must not count as unresolved.
+                    // invariant OR IN THE BODY that names it must not count as unresolved.
                     geb.push(t.variable.text.clone());
+                    gebunden += 1;
                     if let Some(p) = &t.invariante {
                         aus_pred(p, s, Stellung::Invariante, geb, absagen);
                     }
-                    geb.pop();
                 }
                 Schleife::Retry(r) => {
                     if let Some(p) = &r.invariante {
@@ -401,8 +439,26 @@ fn aus_block(b: &Block, aussen: &Sicht, geb: &mut Vec<String>, absagen: &mut Abs
                 }
             }
         }
-        for k in crate::unterbloecke(st) {
-            aus_block(k, s, geb, absagen);
+        // **A `match` is walked HERE and not through `unterbloecke`**, because each arm
+        // carries its OWN binder and a shared walk cannot tell them apart. `Nichts` binds
+        // nothing, `Knoten(k)` binds `k`, and neither name reaches the other arm.
+        if let StmtArt::Match(m) = &st.art {
+            for z in &m.zweige {
+                if let Some(bi) = &z.binder {
+                    geb.push(bi.text.clone());
+                }
+                aus_block(&z.rumpf, s, geb, absagen);
+                if z.binder.is_some() {
+                    geb.pop();
+                }
+            }
+        } else {
+            for k in crate::unterbloecke(st) {
+                aus_block(k, s, geb, absagen);
+            }
+        }
+        for _ in 0..gebunden {
+            geb.pop();
         }
         binde(st, &mut karte, aussen.u, aussen.modul);
     }

@@ -12,6 +12,18 @@
 -- ist `const Riesig * t = g;` neben `const Winzig *restrict t` eine zweite Deklaration
 -- desselben Namens -- und `emit.rs` benennt nichts um (`cnamen.rs`, erste Zeile).
 --
+-- **Seit `9f88c2e` fallen ZWEI Absagen, und die zweite ist richtig.** Der
+-- Blockgeltungsbereich in `kosten.rs` liest `let t = g;` jetzt mit, also laeuft die
+-- Traversierung ueber `Riesig` (64) statt ueber `Winzig` (4) -- der Rumpf kostet **196**,
+-- die Zeile sagt **16** zu:
+--
+--     error: [N001] ... `t` is declared twice in this scope (local binding)
+--     error: [K001] ... `t_zweimal` promises <= 16 ops, the body costs 196
+--
+-- Die Kopfzeile nennt weiter `N001`, weil sie genau eine Kennung traegt und `N001` die
+-- ist, um derentwillen die Datei steht. *Die Giftprobe fragt nur, ob die erwartete Kennung
+-- UNTER den gefallenen ist* -- also steht die zweite hier und nicht nur im Lauf.
+--
 -- **Die Verdeckung im VERSCHACHTELTEN Block steht hier NICHT.** Sie ist erlaubt, sie
 -- uebersetzt, und `19-let-verdeckt.gab` fuehrt sie seit dem 2026-08-14 als gueltiges
 -- Programm. *Was dort offen bleibt, ist ein Mangel des Kostenpasses und keiner des
