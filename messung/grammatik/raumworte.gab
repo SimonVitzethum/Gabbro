@@ -1,0 +1,126 @@
+-- **Aus der GRAMMATIK geschrieben, nicht aus einer Absicht** -- die maschinennahen Woerter,
+-- zum zweiten Mal.
+--
+-- Sieben Woerter, die bis heute an je EINER Datei hingen (`messung/EINSAME-WOERTER.md` §1):
+--
+--     port    SYNTAX.md:463,  `space`     bisher nur `grammatik/geraeteworte.gab`
+--     rc      SYNTAX.md:1288, `regklasse` dito
+--     seq     SYNTAX.md:1375, `atomicdecl` dito
+--     boot    SYNTAX.md:463,  `space`     bisher nur `beispiele/07` -- siehe unten
+--     prim    SYNTAX.md:739,  `fndecl`    dito
+--     allocs  SYNTAX.md:858,  `eff`       bisher nur `beispiele/09`
+--     use     SYNTAX.md:297,  `usedecl`   bisher nur `beispiele/29`
+--
+-- **Der Gegenstand ist ein Zeitgeber am Altlastenbus**, und die sieben Woerter stehen darin,
+-- weil er sie braucht -- nicht weil sie zu decken waren. Ein Zeitgeber hat ein
+-- Ueberlaufregister, das beim Lesen loescht (`rc`); seine Teilerkette haengt am Portraum und
+-- nicht am Speicher (`port`); der Bootlader hinterlaesst die Grundfrequenz im
+-- `.boot`-Abschnitt (`boot`); die Wartezeit zwischen zwei Torschreibungen ist eine
+-- Maschinenfrage und in keiner strukturierten Sprache ausdrueckbar (`prim`); der Ringpuffer
+-- der Zeitstempel kommt von der Halde (`allocs`); die Freigabe an den Leser ist eine
+-- Veroeffentlichung mit der staerksten Ordnung (`seq`); und der Treiber steht in einem
+-- anderen Modul als die Adressen, die er benutzt (`use`).
+--
+-- **`boot` steht hier NUR als Adressraum, und das ist eine Aussage.** Die zweite
+-- Grammatikstelle -- `bootdecl`, die Modusleiter einer Maschine -- bleibt allein in
+-- `beispiele/07`, und zwar zu Recht: es gibt genau eine Leiter je Architektur, ein zweites
+-- `bootdecl` waere eine Abschrift, und `aarch64` ist versiegelt. *Das WORT ist damit an zwei
+-- Dateien gedeckt, die FORM weiter an einer.* Beides ist wahr, und beides steht in
+-- `messung/EINSAME-WOERTER.md` §4.
+
+module grammatik::raumworte::adressen {
+
+pub opaque type Pa = u64;
+
+pub impl fn pa_aus_zahl(z : u64) -> Pa
+    effects { pure }
+    costs   <= 2 ops
+{
+    return z;
+}
+
+}
+
+module grammatik::raumworte::zeitgeber {
+
+-- **`use`** -- der Treiber nennt den Adresstyp des Nachbarmoduls, statt ihn zu wiederholen.
+use grammatik::raumworte::adressen::Pa;
+
+-- Was der Bootlader im `.boot`-Abschnitt hinterlaesst.
+type Bootangabe = { grundtakt : u64, };
+
+-- Der Zustand hinter dem Teilertor. Portraum ist kein Speicher -- auf x86_64 sind das
+-- `in`/`out` und keine Ladebefehle.
+type Torstand = { bereit : bool, };
+
+-- Der Ringpuffer der Zeitstempel. Er kommt von der Halde und ist linear.
+linear type Ring;
+
+static mut takt : Bootangabe = Bootangabe(grundtakt: 0);
+
+-- **`seq`** -- die staerkste Ordnung. Ein Leser, der den Grundtakt sieht, sieht ihn ganz.
+atomic TAKT_STEHT : bool publishes { takt } seq;
+
+device Zeitgeber(basis : Pa) at mmio {
+    -- **`class rc`** -- das Ueberlaufbit LOESCHT beim Lesen. Ein zweites Lesen gibt etwas
+    -- anderes; genau die Klasse, wegen der «B33» eine Regel ist.
+    reg STATUS : u32 @0x00 class rc fields { UEBERLAUF @[0:0], }
+    reg TEILER : u32 @0x08 class rw
+}
+
+-- **`allocs`** -- die Herkunft des Ringpuffers steht in der Wirkung, nicht in einem Kommentar.
+extern fn ring_belegen(bytes : u64) -> ptr<normal, rw+own> Ring
+    effects { allocs halde }
+    costs   <= 200 ops;
+
+extern fn ring_freigeben(r : ptr<normal, rw+own> Ring)
+    effects { consumes r }
+    costs   <= 100 ops;
+
+-- **`prim`** -- die Wartezeit zwischen zwei Torschreibungen am Altlastenbus ist ein
+-- Schreibzugriff auf Port 0x80 und sonst nichts. Sie ist in keiner strukturierten Sprache
+-- ausdrueckbar, und `effects` bleibt trotzdem Pflicht (SYNTAX.md §7).
+prim fn torverzoegerung() effects { writes iotor };
+
+-- **`boot`** -- der Grundtakt kommt aus dem Abschnitt, den der Bootlader beschrieben hat.
+impl fn grundtakt_lesen(b : ptr<boot, r> Bootangabe) -> u64
+    effects { reads b }
+    costs   <= 2 ops
+{
+    return b.grundtakt;
+}
+
+-- **`port`** -- das Bereitbit des Teilertors.
+impl fn tor_bereit(p : ptr<port, r> Torstand) -> bool
+    effects { reads p }
+    costs   <= 2 ops
+{
+    return p.bereit;
+}
+
+-- **`rc`** -- ein Lesen, das loescht. Was der Erzeuger daraus macht, ist der Grund, warum
+-- die Zeile hier steht und nicht in einem Kommentar.
+impl fn ueberlauf_abholen(z : ptr<mmio, r> Zeitgeber) -> u32
+    effects { reads z.STATUS }
+    costs   <= 2 ops
+{
+    return z.STATUS.UEBERLAUF;
+}
+
+impl fn takt_freigeben(t : u64)
+    effects { writes takt, publishes TAKT_STEHT }
+    costs   <= 4 ops
+{
+    takt.grundtakt = t;
+    TAKT_STEHT = true publishes { takt };
+}
+
+impl fn takt_abwarten() -> bool
+    effects { reads TAKT_STEHT, reads takt }
+    costs   <= 4 ops
+{
+    let steht = TAKT_STEHT awaits { takt };
+    return steht;
+}
+
+}
