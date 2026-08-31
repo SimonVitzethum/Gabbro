@@ -6,6 +6,34 @@
 -- `emit.rs` (der dreizehnte, `breite_von`, fehlte in der ersten Zaehlung -- er hat genau
 -- dieselbe Form).
 --
+-- ## ZWEI Messungen, und sie widersprechen sich NICHT
+--
+-- Die zweite Bahn hat dieselben Zweige am selben Tag gezaehlt (`b4674db`) und meldet fuer
+-- `emit.rs:3488` **148 Treffer**, wo unten **0** steht. Beides ist richtig, weil es zwei
+-- verschiedene Fragen sind:
+--
+--     dort   wie oft wird der Wildcard-Arm ueberhaupt genommen?   148, Fall `(8, false)`
+--     hier   wird er je fuer etwas ANDERES als den gemeinten
+--            Fall genommen?                                         0
+--
+-- Unten sind die gemeinten Faelle **vor** dem Messen zu eigenen Armen gemacht worden
+-- (`(8, false) => …`, `Kw::I64 => …`); gezaehlt hat nur der Rest. *Dieselbe Antwort, von
+-- zwei Seiten:* ihre Spalte „1 Fall" sagt, dass jeder dieser Arme genau EINEN Konstruktor
+-- faengt -- und das ist der gemeinte. Ihre „6 prospektiven Loecher" und die vier
+-- „Haertung" unten sind dieselbe Aussage.
+--
+-- **Feiner ist ihre Messung bei `emit.rs:2410`:** dort steht `Typ(Bool)` fuer alle Treffer,
+-- hier nur `Discriminant(0)` = `SlotTyp::Typ(..)` -- `std::mem::discriminant` sieht die
+-- innere Form nicht. Ihre Zahl ist die genauere.
+--
+-- **Und genau daran haengt der Beitrag dieser Datei.** Ihre Buchung sagt zu `2410`:
+-- *„falsch wird erst der SIEBTE Fall, den noch niemand geschrieben hat."* Diese Datei ist
+-- der siebte Fall. Er ist heute schreibbar, geht mit `0 errors` durch, und der Erzeuger
+-- schreibt zwei falsche Werte. **Aus „prospektiv" wird damit „gemessen".**
+--
+-- (Die Dateizahlen unterscheiden sich -- 479 hier gegen 494 dort --, weil `master` seither
+-- Proben bekommen hat. Kein Befund, ein Datum.)
+--
 -- ## Gemessen, nicht gelesen
 --
 -- Jeder der sechs Arme bekam eine Marke, der Baum wurde neu gebaut und **479 Quellen**
