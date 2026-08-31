@@ -140,7 +140,14 @@ ABSATZ_TRENNER = re.compile(r"^\s*(?://+!?|///|\*)\s?")
 # not a claim that this file issues the code* -- which is exactly the judgement this tool
 # says it leaves to the reader. **The debt is carried, not discharged:** the target stays
 # 207, and these seven are in it.
-MARKE = 281
+#
+# **281 -> 279 later on 2026-08-31, and the mark FALLS.** `D017`/`D018` and `N044`/`N045`
+# added sixteen comment lines citing a foreign rule, and every one of them now names the file
+# the rule lives in -- `M109`/`M111`/`M120` in `m1.rs`, `K003` in `kosten.rs`, `D012` in
+# `opsruf.rs`, `D010` in `kbedingung.rs`. Two OLDER lines fell with the same pass. *A whole
+# rule family came in and the debt went DOWN by two* -- the target stays 207, and the mark
+# follows the measurement in the direction a ratchet is allowed to move.
+MARKE = 279
 
 
 # **An ANCHOR comment is not a candidate** *(2026-08-30)*.

@@ -70,11 +70,18 @@ ZUSAGE = "-- erwartet: "
 # `messung/STILLE-KOLLISIONEN.md`), and each of the four falls with its code and nothing
 # else. *A floor that lags behind the corpus is slack, not safety* -- it would take four
 # probes losing their subject without a word.
-MARKE_SAUBER = 262
+#
+# **262 -> 271 and 324 -> 333 later on 2026-08-31**, and again a growing SUBJECT: five
+# probes came in for `D017`/`D018` and `N044`/`N045` (`425`-`429`), and four had arrived
+# with the merges of that day while the mark stood still. **Every one of the nine falls
+# with its own code and nothing else** -- the clean count grew by exactly as much as the
+# population. *A floor that lags behind the corpus is slack, not safety*: at 262 it would
+# have taken nine probes losing their subject before anybody heard a word.
+MARKE_SAUBER = 271
 MARKE_VERDECKT = 7
 # The population is a floor of its own: a corpus that SHRINKS says the checker lost a probe,
 # and neither of the two marks above would notice.
-MARKE_PROBEN = 324
+MARKE_PROBEN = 333
 
 
 def binaer():
