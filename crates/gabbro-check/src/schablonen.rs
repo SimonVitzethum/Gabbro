@@ -53,9 +53,14 @@ pub enum Stand {
 impl Stand {
     pub const fn text(self) -> &'static str {
         match self {
-            Stand::Entworfen => "entworfen",
-            Stand::Getragen => "GETRAGEN",
-            Stand::Bewiesen => "bewiesen",
+            // **English, because this is a REPORT** -- the same reason `saetze.rs` gives
+            // for its own four words, and the same words the summary lines below already
+            // use (`unproved`, `CARRIED unproved`, `machine-checked`). *Until 2026-08-31
+            // every S line of `gabbro schablonen` carried a German status beside an English
+            // construct.*
+            Stand::Entworfen => "designed",
+            Stand::Getragen => "CARRIED",
+            Stand::Bewiesen => "proved",
         }
     }
 }
@@ -1124,7 +1129,7 @@ pub fn zeige() -> String {
             .find(|v| v.was == *was)
             .and_then(|v| v.braeuchte)
         {
-            out.push_str(&format!("--       braeuchte: {b}\n"));
+            out.push_str(&format!("--       would need: {b}\n"));
         }
     }
     out.push_str(&format!(

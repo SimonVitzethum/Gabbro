@@ -3512,7 +3512,7 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7892 von 16462 Kommentarzeilen** im Pruefer sind deutsch
+**7892 von 16467 Kommentarzeilen** im Pruefer sind deutsch
  1072 von  1515 in den Instrumenten
   286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```

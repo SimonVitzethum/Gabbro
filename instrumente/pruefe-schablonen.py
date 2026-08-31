@@ -83,7 +83,12 @@ def lauf(*args):
 
 
 def lies(text):
-    """(haengende Praemissen als (Schablone, was, braeuchte), gemeldete Zahl)."""
+    """(haengende Praemissen als (Schablone, was, braeuchte), gemeldete Zahl).
+
+    **Die gelesene Marke heisst seit dem 2026-08-31 `would need:`** -- sie war das letzte
+    deutsche Wort im Bericht von `gabbro schablonen`, und der Bericht war sonst englisch.
+    Das FELD heisst weiter `braeuchte`; ein Bezeichner ist keine Meldung.
+    """
     gemeldet = None
     m = re.search(r"PREMISES WITHOUT A PASS \(tooth 3\): (\d+)", text)
     if m:
@@ -96,7 +101,7 @@ def lies(text):
                 aus.append(offen)
             offen = (t.group(1), t.group(2), None)
             continue
-        b = re.match(r"^--       braeuchte: (.+)$", z)
+        b = re.match(r"^--       would need: (.+)$", z)
         if b and offen:
             offen = (offen[0], offen[1], b.group(1))
     if offen:
@@ -109,12 +114,12 @@ def lies(text):
 # Auswertung selbst gefuettert: ein Text mit einer adresslosen Praemisse MUSS auffallen.
 GIFT = """--   of those PREMISES WITHOUT A PASS (tooth 3): 2 -- a proof nothing establishes.
 --     probe.eins: eine Praemisse mit Adresse
---       braeuchte: irgendetwas
+--       would need: irgendetwas
 --     probe.zwei: eine Praemisse OHNE Adresse
 """
 SAUBER = """--   of those PREMISES WITHOUT A PASS (tooth 3): 1 -- a proof nothing establishes.
 --     probe.eins: eine Praemisse mit Adresse
---       braeuchte: irgendetwas
+--       would need: irgendetwas
 """
 
 
