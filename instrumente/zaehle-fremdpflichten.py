@@ -53,9 +53,29 @@ FRIST = 600
 MUSTER = ["beispiele/*.gab", "messung/*/*.gab"]
 GIFT = "beispiele/gift/*.gab"
 
-KOPF = re.compile(r"^== Uebersetzungszeugnis: (\S+) ==$")
+KOPF = re.compile(r"^== Translation certificate: (\S+) ==$")
+# **The pattern had lost its subject, and the tool said so EVERY TIME.**
+#
+# Measured 2026-08-31 on the state BEFORE any change of that day: the speech probe reported
+# `GESCHEITERT` four times over with `gemessen []`, and the run ended with 1. **Since
+# 2026-08-30 the finding line carries a third currency** -- `N assumptions (M of them NOT
+# FALSIFIABLE, K UNCOVERED -- …)` -- and this pattern still demanded a comma right after
+# `assumptions`. With no match `je_datei` stays empty, every probe measures `[]`, and the
+# cross-check agrees trivially against nothing.
+#
+# > *The sister file `zaehle-fremdverengung.py` carried the parenthesis over on 2026-08-30
+# > and wrote the reason beside it; here it did not.* **Two patterns over one line, and only
+# > one of them travelled** -- W7, at the place where it hurts.
+#
+# **The good part: it did not report a silent zero.** The speech probe named it and aborted
+# the run instead of printing `0 foreign duties`. *A tool that cross-checks its own reading
+# fails loudly.*
+#
+# (This note is English because `MARKE_PY` is a ratchet: a new German comment line in
+# `instrumente/` raises it, and a ratchet may only fall.)
 BEFUND = re.compile(
-    r"^\s+\d+ assumptions, \d+ templates \(\d+ of them UNPROVED\), \d+ direct forms, "
+    r"^\s+\d+ assumptions \(\d+ of them NOT FALSIFIABLE, \d+ UNCOVERED[^)]*\), "
+    r"\d+ templates \(\d+ of them UNPROVED\), \d+ direct forms, "
     r"(\d+) foreign bodies \((\d+) state their duty\), (\d+) narrowings from foreign "
     r"contracts$"
 )
@@ -100,7 +120,7 @@ def messe(wurzel, pfade):
         cwd=wurzel, capture_output=True, text=True, timeout=FRIST)
     # Ruecklaufwert 1 heisst nur: mindestens eine Einheit traegt Fehler -- ueber dem
     # Fragmentkorpus der Normalfall und kein Abbruch.
-    if r.returncode not in (0, 1) or "Uebersetzungszeugnis" not in r.stdout:
+    if r.returncode not in (0, 1) or "Translation certificate" not in r.stdout:
         print("!! ABBRUCH: `gabbro zeugnis` lief nicht -- das ist KEINE Zaehlung von null.")
         print((r.stderr or r.stdout)[-800:])
         sys.exit(2)

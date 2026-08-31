@@ -521,7 +521,7 @@ fn auch_die_relationale_nachbedingung_wird_gebucht() {
 
 /// **Die BEFUNDZEILE fuehrt die nicht falsifizierbaren Annahmen getrennt** (2026-08-21).
 ///
-/// Jede `A`-Zeile trug seit jeher ihre Klasse -- `Sonde <x>` oder `NICHT FALSIFIZIERBAR --
+/// Jede `A`-Zeile trug seit jeher ihre Klasse -- `Sonde <x>` oder `NOT FALSIFIABLE --
 /// <grund>`. **Die Buchung darunter warf beide in einen Topf.** Eine nicht falsifizierbare
 /// Annahme ist aber eine andere Waehrung: gegen sie kann keine Sonde je etwas ausrichten,
 /// und `S004` weist genau deshalb eine unfalsifizierbare Fortschrittsannahme ab.
@@ -529,7 +529,7 @@ fn auch_die_relationale_nachbedingung_wird_gebucht() {
 /// *Dieselbe Klasse wie bei den Fremdverengungen -- eine Zahl, in der zwei Waehrungen
 /// stecken, liest sich wie eine.*
 ///
-/// **Since 2026-08-30 there are THREE currencies** -- `UNGEDECKT` joined: an assumption naming
+/// **Since 2026-08-30 there are THREE currencies** -- `UNCOVERED` joined: an assumption naming
 /// a probe that no program redeems. It is neither falsifiable (nobody does it) nor
 /// not-falsifiable (somebody could), and counting it in the first group was exactly the blend
 /// this test stands against.
@@ -538,8 +538,13 @@ fn die_befundzeile_trennt_die_nicht_falsifizierbaren_annahmen() {
     let z = zeugnis_von("06-annahmen.gab");
     // Gezaehlt wird die LISTE, und die Befundzeile muss dieselbe Zahl tragen. *Ein Literal
     // hier waere ein Muster, das seine eigene Antwort enthaelt* -- die Klasse von W16.
-    let nicht_falsifizierbar = z.matches("NICHT FALSIFIZIERBAR").count();
-    let ungedeckt = z.matches("UNGEDECKT --").count();
+    // **Both patterns mean the A LINE and not the finding line below it** -- and since
+    // 2026-08-31, when the labels of the A line went English, that is a matter of two
+    // characters. `NOT FALSIFIABLE --` separates against the finding line's
+    // `NOT FALSIFIABLE,`; `UNCOVERED -- no program` against its `UNCOVERED -- named a
+    // probe`. *A pattern that counts the summary too reports one too many and looks right.*
+    let nicht_falsifizierbar = z.matches("NOT FALSIFIABLE --").count();
+    let ungedeckt = z.matches("UNCOVERED -- no program").count();
     assert!(
         nicht_falsifizierbar > 0,
         "diese Datei muss nicht falsifizierbare Annahmen fuehren, sonst misst der Test nichts:\n{z}"
@@ -604,7 +609,7 @@ fn eine_gruppe_bringt_ihre_sperrabdruckannahme_mit() {
     // bei `release_stellt_sichtbarkeit_her`.
     assert!(
         z.lines().any(|z| z.contains("sperrabdruck_haelt_fremde_kerne_fern")
-            && z.contains("NICHT FALSIFIZIERBAR")),
+            && z.contains("NOT FALSIFIABLE")),
         "sie ist nicht falsifizierbar, und der Grund steht in ihrer Zeile:\n{z}"
     );
     // Und die Gegenrichtung: eine Datei OHNE `group` bringt sie nicht mit. *Eine Annahme,

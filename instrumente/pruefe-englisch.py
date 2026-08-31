@@ -447,7 +447,75 @@ MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 # English on the way past. **That is the direction a ratchet is for** -- nobody translated a
 # register, the number simply cannot go back up without somebody writing German into a
 # report.
-MARKE_ZUBRINGER = 173     # 177 measured, then 173 -- see the last paragraph of the note
+#
+# **2026-08-31, ONE REGISTER TAKEN WHOLE: `schablonen.rs`, 79 -> 4.** The paragraph above
+# demanded exactly that. What is left of it is left ON PURPOSE, and all four are PROPER NAMES:
+#
+#     four remaining     what they are
+#     --------------------------------------------------------------------------------
+#     :186 :533 :745     four MUTATION KEYS, spelled out inside the sentences that cite
+#                        them. They are literal lookup keys of `mutiere-pruefer.py`;
+#                        rewriting one is a rename and not a translation, and it kills
+#                        an anchor.
+#     :875               a CITATION whose target really is a German heading
+#                        (`MESSUNGEN.md`:4100). *A translated citation points at
+#                        nothing.* Its sister citation DID travel on the same day --
+#                        `MESSUNGEN.md`:1699 has been English for a while, and the
+#                        German reference had been pointing nowhere.
+#
+# **A proper name is not prose, and this guardian cannot tell the two apart** -- it counts
+# function words, and a mutation key is spelled out of the same letters as a sentence. That
+# is the coarsening it declares (W10), and here it costs exactly four.
+#
+# *And it cost this note a rewrite:* the first draft quoted all four keys, whereupon
+# `MARKE_PY` broke by five. **The guardian measured its own commentary and was right to.**
+#
+# **THE SECOND REGISTER, THE SAME DAY: `zeugnis.rs`, 58 -> 0.** `gabbro zeugnis` prints
+# `EINORDNUNG` -- one reason per construct for where it stands -- plus the foreign-body
+# contracts and the assumption lines. Nothing German is left there, and the two labels of the
+# `A` lines travelled along with it: they now read `UNCOVERED` and `NOT FALSIFIABLE`, which is
+# what the summary line three rows beneath them had been saying all along. *Two languages over
+# one number, three lines apart.* Two tests in `tests/beispiele.rs` read those labels and were
+# carried along -- and the newer form has to separate the label from the summary, which says
+# the same words with a comma after them.
+# **THE THIRD REGISTER IS ALREADY ENGLISH, AND THAT IS THE FINDING: `saetze.rs`, 19 -> 18.**
+# The note above guessed `mostly German FILE NAMES`, and reading all nineteen turned the
+# guess into a count. **Eighteen are proper names and not one is prose:**
+#
+#     kind                              example shape                            how many
+#     ---------------------------------------------------------------------------------
+#     probe files under `beispiele/gift`  a numbered `.gab` file, German name           8
+#     mutation anchors                    a literal source key of `mutiere-pruefer.py`  6
+#     the `name:` of a sentence           the lookup key of the sentence itself         3
+#     one citation                        `MESSUNGEN.md`:4100, German heading           1
+#
+# **The one real piece of prose in the register was a MOTTO**, quoted from the German working
+# documents inside an English sentence -- the name of the stage that `namen.kanal_ohne_einloeser`
+# belongs to. It is a sentence, so it travelled; the eighteen are names, so they stay.
+#
+# > *A file name is not a translation problem, it is a rename* -- and a renamed probe file
+# > takes its corpus site, its anchor and every citation of it along.
+# **AND THE REST, THE SAME DAY: 39 -> 23. There is no fourth register.**
+# The remaining thirteen files held 16 pieces between them, and none of them was a table:
+#
+#     manifest.rs   5   the two floating-point assumptions, the lock-footprint assumption
+#                       and the decommission assumption. `gabbro annahmen` prints all four,
+#                       and they are the sentences the artefact carries in its own head.
+#     lib.rs        3   `quelle:` of a pass -- CITATIONS whose targets are English today
+#                       (`SYNTAX.md`:459, `SPRACHE.md`:747, `MESSUNGEN.md`:3507). The
+#                       German text pointed nowhere -- the same case as the citation
+#                       `schablonen.rs` had carried, and it travelled for the same reason.
+#     typen.rs      3   assertion texts in `mod tests`
+#     umgebung.rs   3   assertion texts in `mod tests`
+#     zeremonie.rs  2   two `.expect` texts -- a panic message is prose with a reader
+#
+# **WHAT IS LEFT IS 23, AND EVERY ONE OF THEM IS A NAME OR A CITATION:** 18 in `saetze.rs`,
+# 4 in `schablonen.rs`, 1 in `lib.rs`. Probe files, mutation anchors, sentence keys, and
+# three citations of `MESSUNGEN.md`:4100 -- a heading that really is German.
+#
+# > **The mark can fall further only by renaming things, and a rename is not a
+# > translation.** That is where this ratchet stops being about language.
+MARKE_ZUBRINGER = 23      # 173 -> 23 on 2026-08-31; what is left are names, not prose
 MARKE_MELDUNGEN = 0       # German at a sink -- 27 found on 2026-08-31, 27 translated
 
 

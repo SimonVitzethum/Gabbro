@@ -1781,8 +1781,8 @@ pub const SPERREN: &[Satz] = &[
         aussage: "A function that declares `or R` has a body that can actually produce a \
                   reason -- a declared error channel with no writing site in its own body is \
                   a promise nobody can keep.",
-        vorbehalt: "**This is the rule the whole stage is named after** -- *erst der \
-                    Erzeuger, dann der Vertrag.* It bites only where Gabbro SEES the body: \
+        vorbehalt: "**This is the rule the whole stage is named after** -- *the generator \
+                    first, the contract after.* It bites only where Gabbro SEES the body: \
                     at an `extern fn` the channel stays a pure assumption, and that is \
                     exactly where all six corpus sites stood before this run. *So the rule \
                     is silent on the majority of the surface, and it says so* (W10).",

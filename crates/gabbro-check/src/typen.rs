@@ -882,7 +882,7 @@ mod proben {
         let zwanzig = IntBereich::konstante(20);
         assert!(
             schiebe_links(&nur_unten, &zwanzig).laeuft_ueber,
-            "-3000 << 20 verlaesst i32 nach unten"
+            "-3000 << 20 leaves i32 at the bottom"
         );
     }
 
@@ -935,7 +935,7 @@ mod wertetabellen {
         let r = multipliziere(&i(32, -3, -1), &i(32, -5, -2));
         assert_eq!(b(&r), (2, 15), "beide negativ: min = -1*-2, max = -3*-5");
         let r = multipliziere(&u(32, 0, 0), &u(32, 5, 9));
-        assert_eq!(b(&r), (0, 0), "die Null frisst jede Ecke");
+        assert_eq!(b(&r), (0, 0), "zero eats every corner");
     }
 
     #[test]
@@ -990,7 +990,7 @@ mod wertetabellen {
         assert_eq!(maske(255), 255);
         assert_eq!(maske(256), 511);
         // Und die Ueberlaufkante bei 127 Bit: `1 << 127` waere ein Ueberlauf in i128.
-        assert_eq!(maske(i128::MAX), i128::MAX, "keine Verschiebung um 127 oder mehr");
+        assert_eq!(maske(i128::MAX), i128::MAX, "no shift by 127 or more");
     }
 
     #[test]

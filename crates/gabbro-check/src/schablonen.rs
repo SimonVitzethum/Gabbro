@@ -53,9 +53,14 @@ pub enum Stand {
 impl Stand {
     pub const fn text(self) -> &'static str {
         match self {
-            Stand::Entworfen => "entworfen",
-            Stand::Getragen => "GETRAGEN",
-            Stand::Bewiesen => "bewiesen",
+            // **English, because this is a REPORT** -- the same reason `saetze.rs` gives
+            // for its own four words, and the same words the summary lines below already
+            // use (`unproved`, `CARRIED unproved`, `machine-checked`). *Until 2026-08-31
+            // every S line of `gabbro schablonen` carried a German status beside an English
+            // construct.*
+            Stand::Entworfen => "designed",
+            Stand::Getragen => "CARRIED",
+            Stand::Bewiesen => "proved",
         }
     }
 }
@@ -160,7 +165,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     Schablone {
         name: "restrict.alleinzugriff",
         haengt_an: &[],
-        konstrukt: "ptr<…> T als Parameter (Absenkung mit `restrict`)",
+        konstrukt: "ptr<…> T as a parameter (lowering with `restrict`)",
         // **Eingetragen 2026-08-19, als der Erzeuger `restrict` schrieb.** Der Anlass war eine
         // MESSUNG: 2,85 dort, wo der C-Uebersetzer die Herkunft der Zeiger nicht sieht.
         //
@@ -170,20 +175,30 @@ pub const SCHABLONEN: &[Schablone] = &[
         // dessen Adresse nie genommen wird, von keinem Zeiger erreicht werden kann.
         // *Die Angabe, die C wirklich fehlt, ist die andere: ZWEI Zeiger desselben Typs, und
         // die verlangt die `own`-Entscheidung.*
-        pflicht: "UNTER DEN HYPOTHESEN H1 (der Rahmen ist vollstaendig -- `E008` ueber den                   ORT, `E010` fuer das Lesen) und H2 (keine andere Wurzel trifft denselben                   Ort): jeder Zugriff des Rumpfes auf das Objekt hinter `p` laeuft ueber `p`,                   also gilt die C11-6.7.3.1-Bedingung -- **maschinell geprueft**                   (`restrict_gerechtfertigt`). H2a weist der Pruefer syntaktisch nach                   (hoechstens EIN Zeigerparameter je Traegertyp); H2b haelt die SPRACHE: ohne                   `cast` (G9) und ohne Adressoperator laesst sich ein Zeiger auf eine globale                   Tabelle nicht bilden. **NICHT bewiesen ist, dass `own` Exklusivitaet                   bedeutet** -- das ist eine Sprachentscheidung, und sie ist genau die, die                   H2a fuer zwei Zeiger desselben Typs liefern wuerde.",
+        pflicht: "UNDER THE HYPOTHESES H1 (the frame is COMPLETE -- `E008` over the PLACE, \
+                  `E010` for reading) and H2 (no other root meets the same place): every \
+                  access of the body to the object behind `p` runs through `p`, so the \
+                  C11-6.7.3.1 condition holds -- **machine-checked** \
+                  (`restrict_gerechtfertigt`). H2a the checker establishes syntactically (at \
+                  most ONE pointer parameter per carrier type); H2b the LANGUAGE holds: \
+                  without `cast` (G9) and without an address operator no pointer to a global \
+                  table can be formed. **NOT proved is that `own` means exclusivity** -- that \
+                  is a language decision, and it is exactly the one H2a would supply for two \
+                  pointers of the same type.",
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "H1 -- der Rahmen ist VOLLSTAENDIG: jeder Zugriff des Rumpfes hat eine Wurzel aus der deklarierten Menge", durch: Some("`E008` (kompositional ueber die Huelle, seit 2026-08-19 ueber den ORT und nicht die ART) und `E010` fuer das Lesen"), braeuchte: None },
-            Voraussetzung { was: "H2a -- kein zweiter Zeigerparameter desselben Traegertyps", durch: Some("`emit::darf_restrict`, syntaktisch ueber die Signatur; Mutation `restrict-auch-bei-zwei-zeigern`"), braeuchte: None },
-            Voraussetzung { was: "H2b -- kein globaler Traeger desselben Typs ist erreichbar", durch: Some("die SPRACHE: kein `cast` (G9), kein Adressoperator -- ein Zeiger auf eine globale Tabelle laesst sich nicht bilden; `darf_restrict` prueft die Wirkungsliste zusaetzlich"), braeuchte: None },
-            Voraussetzung { was: "ZWEI `own`-Zeiger desselben Typs zeigen auf Verschiedenes -- das waere der Fall mit 2,85", durch: None, braeuchte: Some("ein PROGRAMM mit zwei besitzenden Zeigern desselben Traegers. *Die ENTSCHEIDUNG ist am 2026-08-20 gefallen -- `own` ist die Freigabeoperation (SPRACHE.md §5); damit koennten zwei `own`-Zeiger desselben Typs beide `restrict` tragen.* Gebaut ist sie NICHT, und der Grund ist gemessen: der ganze Korpus hat EINE Funktion mit zwei Zeigern desselben Traegers (`beispiele/07::wechseln`), und die traegt kein `own`. **Regel A** -- kein Konstrukt ohne ein Programm, das es gebraucht hat") },
+            Voraussetzung { was: "H1 -- the frame is COMPLETE: every access of the body has a root from the declared set", durch: Some("`E008` (compositional over the hull, since 2026-08-19 over the PLACE and not the KIND) and `E010` for reading"), braeuchte: None },
+            Voraussetzung { was: "H2a -- no second pointer parameter of the same carrier type", durch: Some("`emit::darf_restrict`, syntactically over the signature; mutation `restrict-auch-bei-zwei-zeigern`"), braeuchte: None },
+            Voraussetzung { was: "H2b -- no global carrier of the same type is reachable", durch: Some("the LANGUAGE: no `cast` (G9), no address operator -- a pointer to a global table cannot be formed; `darf_restrict` checks the effect list on top of that"), braeuchte: None },
+            Voraussetzung { was: "TWO `own` pointers of the same type point at different things -- that would be the case worth 2.85", durch: None, braeuchte: Some("a PROGRAM with two owning pointers to the same carrier. *The DECISION fell on 2026-08-20 -- `own` is the release operation (SPRACHE.md §5); two `own` pointers of the same type could therefore both carry `restrict`.* It is NOT built, and the reason is measured: the whole corpus has ONE function with two pointers to the same carrier (`beispiele/07::wechseln`), and it carries no `own`. **Rule A** -- no construct without a program that needed it") },
         ],
-        fundstelle: "beweise/Restrict_Alleinzugriff.thy; MESSUNGEN.md «OPT1» (2,85 gegen                      1,00); PLAN.md «OPT»",
+        fundstelle: "beweise/Restrict_Alleinzugriff.thy; MESSUNGEN.md «OPT1» (2.85 against \
+                     1.00); PLAN.md «OPT»",
     },
     Schablone {
         name: "option.sonderwert",
         haengt_an: &["table.indexschranke"],
-        konstrukt: "option index into T (Absenkung)",
+        konstrukt: "option index into T (lowering)",
         // **Eingetragen 2026-08-17, als der Erzeuger F8 absenkte.** Die Darstellung war bis
         // dahin offen, und der Erzeuger weigerte sich (`C001`) statt zu vergroebern -- eine
         // Absenkung zu blankem `uint32_t` haette das `None` still geloescht.
@@ -197,28 +212,28 @@ pub const SCHABLONEN: &[Schablone] = &[
         // sich nicht mehr** -- `T_NONE` steht wirklich im erzeugten C. *Damit war die
         // Begruendung verbraucht und die Luecke lebendig*, und sie wurde am selben Tag
         // gemessen: `h.slots[frei].kopf` ging mit null Fehlern durch.
-        pflicht: "UNTER DER PRAEMISSE `N < 2^w` (w = Breite des Indexworts, heute 32): der \
-                  Sonderwert `N` liegt ausserhalb der Indexdomaene `0 ..< N`, und die \
-                  Kodierung `None -> N`, `Some i -> i` ist injektiv -- **maschinell geprueft** \
-                  (`kodiere_wort_injektiv`). Bei `N = 2^w` faellt sie zusammen, und `None` ist \
-                  von `Some 0` nicht mehr zu unterscheiden \
-                  (`sonderwert_kollidiert_bei_vollem_wort`). **Die zweite Haelfte traegt seit \
-                  «C1» ein PASS statt einer Weigerung:** `option index into T` reicht bis `N`, \
-                  `index into T` bis `N-1` (umgebung.rs), also faellt jeder Gebrauch eines \
-                  Optionswertes als Index an `M103` und jedes `Some(N)` an `M101`. **OFFEN \
-                  bleibt die Arithmetik AUF einem Index** -- `i + 1` auf `index into T` \
-                  rechnet M1 im Indexbereich nach, aber dass keine erzeugte Rechnung den \
-                  Sonderwert TRIFFT, ist eine Aussage ueber `emit.rs` und keine ueber eine \
-                  Menge.",
+        pflicht: "UNDER THE PREMISE `N < 2^w` (w = width of the index word, today 32): the \
+                  special value `N` lies outside the index domain `0 ..< N`, and the encoding \
+                  `None -> N`, `Some i -> i` is injective -- **machine-checked** \
+                  (`kodiere_wort_injektiv`). At `N = 2^w` it collapses, and `None` can no \
+                  longer be told apart from `Some 0` \
+                  (`sonderwert_kollidiert_bei_vollem_wort`). **Since «C1» the second half is \
+                  carried by a PASS instead of a refusal:** `option index into T` reaches up \
+                  to `N`, `index into T` up to `N-1` (umgebung.rs), so every use of an option \
+                  value as an index falls at `M103` and every `Some(N)` at `M101`. **STILL \
+                  OPEN is the arithmetic ON an index** -- `i + 1` on `index into T` is \
+                  recomputed by M1 within the index range, but that no generated computation \
+                  HITS the special value is a statement about `emit.rs` and not one about a \
+                  set.",
         stand: Stand::Getragen,
         voraussetzungen: &[],
-        fundstelle: "FRAGMENTE.md F1 (vier CDT-Felder), F8 (`aufloesen`); MESSUNGEN.md B3, \
+        fundstelle: "FRAGMENTE.md F1 (four CDT fields), F8 (`aufloesen`); MESSUNGEN.md B3, \
                      `while i != NIL`; beweise/Option_Sonderwert.thy",
     },
     Schablone {
         name: "consuming.ordnung",
         haengt_an: &["table.induktion"],
-        konstrukt: "traverse … by consuming (ENTFERNEN)",
+        konstrukt: "traverse … by consuming (REMOVAL)",
         // **Berichtigt und maschinell geprueft am 2026-08-16** (`beweise/Consuming.thy`).
         // Die alte Fassung trug zwei Saetze, die beide zu gross waren:
         //
@@ -229,22 +244,22 @@ pub const SCHABLONEN: &[Schablone] = &[
         //        Elemente EXISTIEREN, nicht dass die Traversierung eines NIMMT. Die fehlende
         //        Bedingung heisst `waehlt_minimal` und ist eine zusaetzliche Pflicht an die
         //        Erzeugung der Zeugenreihenfolge, keine Folge.
-        pflicht: "Die Domaene liefert ihre Zeugen in der erzeugten wohlfundierten Ordnung. \
-                  Unter dem ENTFERNEN des besuchten Zeugen bleibt die Ordnung erhalten -- die \
-                  Kantenmenge wird kleiner, und eine Teilmenge einer wohlfundierten Relation \
-                  ist wohlfundiert. **Die Blattheit zum Verbrauchszeitpunkt folgt daraus \
-                  NICHT**; sie verlangt zusaetzlich, dass die Auswahl MINIMAL ist.",
+        pflicht: "The domain delivers its witnesses in the generated well-founded order. \
+                  Under the REMOVAL of the visited witness the order is preserved -- the edge \
+                  set shrinks, and a subset of a well-founded relation is well-founded. **Leaf \
+                  status at the moment of consumption does NOT follow from that**; it \
+                  additionally requires the choice to be MINIMAL.",
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "die erzeugte Mutation ist ein ENTFERNEN und kein Umhaengen", durch: None, braeuchte: Some("ein Erzeuger fuer `by consuming` -- heute gibt es keinen; `umhaengen_faellt` (Table_Ops_Erhaltung) zeigt das Gegenbeispiel") },
-            Voraussetzung { was: "die Auswahl des Zeugen ist MINIMAL (`waehlt_minimal`)", durch: None, braeuchte: Some("einen ERZEUGER der Zeugenreihenfolge -- an ihm haengt die Minimalitaet, und es gibt keinen. *Berichtigt 2026-08-20: hier stand `abstieg ist eine ZUSAGE ohne Leser`, und das war seit dem 2026-08-19 falsch -- `S005` liest ihn. S005 prueft aber, dass das MASS sich bewegen kann, nicht dass die AUSWAHL minimal ist; zwei verschiedene Aussagen*") },
+            Voraussetzung { was: "the generated mutation is a REMOVAL and not a re-hanging", durch: None, braeuchte: Some("a generator for `by consuming` -- today there is none; `umhaengen_faellt` (Table_Ops_Erhaltung) shows the counterexample") },
+            Voraussetzung { was: "the choice of witness is MINIMAL (`waehlt_minimal`)", durch: None, braeuchte: Some("a GENERATOR of the witness order -- minimality hangs on it, and there is none. *Corrected 2026-08-20: this said `abstieg is a PROMISE with no reader`, and that had been wrong since 2026-08-19 -- `S005` reads it. But S005 checks that the MEASURE can move, not that the CHOICE is minimal; two different statements*") },
         ],
         fundstelle: "SPRACHE.md §9.2",
     },
     Schablone {
         name: "consuming.umhaengen",
         haengt_an: &["consuming.ordnung"],
-        konstrukt: "traverse … by consuming (UMHAENGEN)",
+        konstrukt: "traverse … by consuming (RE-HANGING)",
         // **Abgespalten am 2026-08-16, und die naive Fassung ist WIDERLEGT.**
         // `umhaengen_kann_zyklus_erzeugen` in `beweise/Consuming.thy` konstruiert einen
         // wohlfundierten Zustand, aus dem EIN Umhaengen eine Schlinge macht.
@@ -259,13 +274,13 @@ pub const SCHABLONEN: &[Schablone] = &[
         // What this entry is about is the re-hanging of sibling and child pointers DURING a
         // `by consuming` -- a different edge and a different state. *A theorem about the one
         // edge is not a theorem about the other.*
-        pflicht: "Eine erzeugte Mutation, die Kanten HINZUFUEGT (Umhaengen von \
-                  Geschwister-/Kindzeigern), erhaelt die Wohlfundiertheit -- und das ist \
-                  NICHT durch `wf_subset` gedeckt, sondern je Mutation einzeln zu zeigen. \
-                  **Die pauschale Fassung ist widerlegt**, nicht offen.",
+        pflicht: "A generated mutation that ADDS edges (re-hanging of sibling/child \
+                  pointers) preserves well-foundedness -- and that is NOT covered by \
+                  `wf_subset`; it has to be shown per mutation. **The blanket version is \
+                  refuted**, not open.",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
-        fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), Befund K-2; B3, Marke Nb2",
+        fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), finding K-2; B3, mark Nb2",
     },
     Schablone {
         name: "consuming.leermenge",
@@ -279,14 +294,14 @@ pub const SCHABLONEN: &[Schablone] = &[
         //   VERBRAUCHENDEN Traversierung ist genau das die Frage: leer WANN? Vor dem Zug
         //   oder nach dem letzten Verbrauch? `leermenge_ist_zustandsabhaengig` zeigt, dass
         //   die zwei Zeitpunkte verschiedene Antworten geben.
-        pflicht: "Die erzeugte Zeugenmenge ist VOLLSTAENDIG **an einem genannten Zustand**: \
-                  ist sie dort leer, ist die Domaene dort leer. Ohne diese Richtung koennte \
-                  eine Traversierung Elemente auslassen und trotzdem terminieren -- sie waere \
-                  dann total, aber nicht erschoepfend. **Ohne den genannten Zustand ist der \
-                  Satz in einer verbrauchenden Traversierung mehrdeutig.**",
+        pflicht: "The generated witness set is COMPLETE **at a NAMED state**: if it is empty \
+                  there, the domain is empty there. Without that direction a traversal could \
+                  skip elements and still terminate -- it would then be total but not \
+                  exhaustive. **Without the named state the sentence is ambiguous in a \
+                  consuming traversal.**",
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "der Zustand, an dem die Leerheit behauptet wird, ist GENANNT -- leer WANN?", durch: None, braeuchte: Some("eine Grammatikzeile: `by consuming` nennt keinen Zeitpunkt. Erst die Form, dann der Pass") },
+            Voraussetzung { was: "the state at which emptiness is claimed is NAMED -- empty WHEN?", durch: None, braeuchte: Some("a grammar line: `by consuming` names no point in time. First the form, then the pass") },
         ],
         fundstelle: "SPRACHE.md §9.2",
     },
@@ -299,10 +314,9 @@ pub const SCHABLONEN: &[Schablone] = &[
         // VERBINDUNGS-Invariante ueber zwei Traegern wird von keiner Operation eines
         // einzelnen Traegers erhalten -- genau deshalb gibt es `gruppe.ops` («B13»). Der
         // Eintrag versprach, was S16 als offen fuehrt.
-        pflicht: "Je erzeugter Mutation bleibt jede `online`-Invariante DIESES TRAEGERS \
-                  erhalten -- einmal ueber der Deklaration, nicht je Aufrufstelle. \
-                  **Invarianten UEBER Traegern sind ausdruecklich nicht gedeckt**; sie sind \
-                  `gruppe.ops`.",
+        pflicht: "Per generated mutation every `online` invariant OF THIS CARRIER is \
+                  preserved -- once over the declaration, not per call site. **Invariants \
+                  ACROSS carriers are expressly not covered**; they are `gruppe.ops`.",
         // **Maschinell geprueft am 2026-08-19 -- und der Gegenstand fehlte.**
         //
         // Beim Ansetzen gemessen: `ops` steht an NULL Korpusstellen, und
@@ -390,10 +404,10 @@ pub const SCHABLONEN: &[Schablone] = &[
         // instead of a sentence.
         stand: Stand::Getragen,
         voraussetzungen: &[
-            Voraussetzung { was: "jede ERZEUGTE Operation erhaelt die Invariante -- Teil I ist parametrisch", durch: Some("`emit.rs::ops` (2026-08-28): the generator emits exactly the THREE operations Teil II proves -- `insert` = `einfuegen`, `remove` = `blatt_loeschen`, `relabel` = `umhaengen` -- and refuses an invented word. The emitted set and the proved set are the same set. *`relabel` joined on the evening of that day, and the theorem came first (`umhaengen_erhaelt`, U-3); until then the word emitted nothing and nobody could call it*"), braeuchte: None },
-            Voraussetzung { was: "beim Einfuegen ist der Platz FRISCH und der Elter erreichbar", durch: Some("`D012` (2026-08-28, `messung/OPS-RUFFORM.md`): both premises stand at the emitted head and are held against every call site -- `!t.slots[n].<occupied>` and `t.slots[p] reaches <root> via <parent>`. What is NOT established is their TRUTH: a standing `requires` pushes the duty one frame outwards, where `gabbro pflichten` counts it"), braeuchte: None },
-            Voraussetzung { was: "beim Loeschen ist der Platz ein BLATT", durch: Some("`D012` demands the theorem's own `blatt sigma s` -- `forall x in slots of t : t.slots[x].<parent> != Some(s)` -- and deliberately NOT the weaker `ist_blatt(c, s)` of beispiele/01, which holds of a slot whose child list has drifted from its parent pointers"), braeuchte: None },
-            Voraussetzung { was: "beim Umhaengen ist der NEUE Elter erreichbar und der umgehaengte Platz liegt NICHT auf dessen Elternkette", durch: Some("`D012` (2026-08-28, abends): both premises of `umhaengen_erhaelt` stand at the emitted head and are held against every call site -- `t.slots[p] reaches <root> via <parent>` and `!(t.slots[p] reaches t.slots[s] via <parent>)`. **The second is read in the theorem's REFLEXIVE-transitive shape and in no other**: `ancestors of` is strict, says nothing about `p == s`, and would let the self-loop through (beispiele/gift/332). **And the TARGET of that `reaches` is read strictly**, unlike the root of the first premise: gift/334 writes it about a different slot and falls. A table without a `parent` edge has no `relabel` at all -- `C001`, and gift/333 measures it"), braeuchte: None },
+            Voraussetzung { was: "every GENERATED operation preserves the invariant -- Teil I is parametric", durch: Some("`emit.rs::ops` (2026-08-28): the generator emits exactly the THREE operations Teil II proves -- `insert` = `einfuegen`, `remove` = `blatt_loeschen`, `relabel` = `umhaengen` -- and refuses an invented word. The emitted set and the proved set are the same set. *`relabel` joined on the evening of that day, and the theorem came first (`umhaengen_erhaelt`, U-3); until then the word emitted nothing and nobody could call it*"), braeuchte: None },
+            Voraussetzung { was: "on insertion the slot is FRESH and the parent is reachable", durch: Some("`D012` (2026-08-28, `messung/OPS-RUFFORM.md`): both premises stand at the emitted head and are held against every call site -- `!t.slots[n].<occupied>` and `t.slots[p] reaches <root> via <parent>`. What is NOT established is their TRUTH: a standing `requires` pushes the duty one frame outwards, where `gabbro pflichten` counts it"), braeuchte: None },
+            Voraussetzung { was: "on removal the slot is a LEAF", durch: Some("`D012` demands the theorem's own `blatt sigma s` -- `forall x in slots of t : t.slots[x].<parent> != Some(s)` -- and deliberately NOT the weaker `ist_blatt(c, s)` of beispiele/01, which holds of a slot whose child list has drifted from its parent pointers"), braeuchte: None },
+            Voraussetzung { was: "on re-hanging the NEW parent is reachable and the re-hung slot does NOT lie on its parent chain", durch: Some("`D012` (2026-08-28, abends): both premises of `umhaengen_erhaelt` stand at the emitted head and are held against every call site -- `t.slots[p] reaches <root> via <parent>` and `!(t.slots[p] reaches t.slots[s] via <parent>)`. **The second is read in the theorem's REFLEXIVE-transitive shape and in no other**: `ancestors of` is strict, says nothing about `p == s`, and would let the self-loop through (beispiele/gift/332). **And the TARGET of that `reaches` is read strictly**, unlike the root of the first premise: gift/334 writes it about a different slot and falls. A table without a `parent` edge has no `relabel` at all -- `C001`, and gift/333 measures it"), braeuchte: None },
         ],
         fundstelle: "SPRACHE.md §10.2",
     },
@@ -422,20 +436,20 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Eine Formalisierung, die nur aufschreibt, was ihr Verfasser ohnehin glaubte, kann
         // nicht mehr ausspuelen als er sah; das faende erst eine UNABHAENGIGE.
         konstrukt: "by induction over <domain>",
-        pflicht: "Das aus der `table`-Deklaration erzeugte Induktionsschema ist wohlfundiert \
-                  und vollstaendig. **In vier Teilen, die die alte Fassung stillschweigend \
-                  trug:** (N-1) die Traegermenge ist ENDLICH, und das faellt NICHT aus dieser \
-                  Deklaration, sondern aus `table.indexschranke`; (N-2) das Prinzip gilt fuer \
-                  EINEN Zustand -- ueber eine mutierende Traversierung sagt es NICHTS, das ist \
-                  `consuming.ordnung`; (N-3) eine eigene Leere-Menge-Klausel braucht es NICHT, \
-                  der Basisfall ist absorbiert; (N-4) fuer `chain(a,b) in` hat die Domaene \
-                  ZWEI Kantenarten und das Schema braucht ZWEI Praemissen. \
-                  **Wohlfundiertheit ist HYPOTHESE, nicht Ergebnis** -- die Deklaration muss \
-                  die tragende Invariante nennen (`invariant acyclic`).",
+        pflicht: "The induction scheme generated from the `table` declaration is well-founded \
+                  and complete. **In four parts, which the old version carried tacitly:** \
+                  (N-1) the carrier set is FINITE, and that does NOT fall out of this \
+                  declaration but out of `table.indexschranke`; (N-2) the principle holds for \
+                  ONE state -- about a mutating traversal it says NOTHING, that is \
+                  `consuming.ordnung`; (N-3) an empty-set clause of its own is NOT needed, the \
+                  base case is absorbed; (N-4) for `chain(a,b) in` the domain has TWO kinds of \
+                  edge and the scheme needs TWO premises. **Well-foundedness is a HYPOTHESIS, \
+                  not a result** -- the declaration has to name the carrying invariant \
+                  (`invariant acyclic`).",
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "die Traegermenge ist endlich: die Verkettungsfelder bleiben in der Tabelle", durch: Some("M103, ueber `table.indexschranke`"), braeuchte: None },
-            Voraussetzung { was: "je Verkettungsfeld eine Kantenpraemisse -- der Erzeuger schreibt ZWEI, nicht eine", durch: None, braeuchte: Some("ein Erzeuger fuer das Induktionsschema; ersatzweise eine Regel, die `chain(a,b)` gegen die Zahl der Kantenpraemissen haelt") },
+            Voraussetzung { was: "the carrier set is finite: the chaining fields stay inside the table", durch: Some("M103, via `table.indexschranke`"), braeuchte: None },
+            Voraussetzung { was: "one edge premise per chaining field -- the generator writes TWO, not one", durch: None, braeuchte: Some("a generator for the induction scheme; failing that, a rule that holds `chain(a,b)` against the number of edge premises") },
         ],
         fundstelle: "SYNTAX.md §5, SPRACHE.md Teil V",
     },
@@ -463,10 +477,10 @@ pub const SCHABLONEN: &[Schablone] = &[
         // > and it carries no `Voraussetzung`: a premise entry counts in tooth 3, which
         // > measures proofs nothing establishes -- this one establishes nothing and proves
         // > nothing either. The weighing: `messung/ZWEI-ORTE.md`.
-        pflicht: "Mehrere Orte in EINEM Zug: kein Zwischenzustand ist beobachtbar **fuer \
-                  einen benannten Beobachter** -- auf einem Kern der Kontrollfluss, auf \
-                  mehreren jeder Kern, der die Sperre des Zuges nicht haelt. **Ohne \
-                  benannten Beobachter ist die Zusage auf einem Mehrkerner leer.**",
+        pflicht: "Several places in ONE move: no intermediate state is observable **for a \
+                  NAMED observer** -- on one core the control flow, on several every core \
+                  that does not hold the move's lock. **Without a named observer the promise \
+                  is empty on a multicore.**",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
         fundstelle: "SYNTAX.md §10",
@@ -479,9 +493,9 @@ pub const SCHABLONEN: &[Schablone] = &[
         // verschiedenen Flaechen: die REINHEIT ist mechanisch pruefbar (Pass 8), die
         // ATOMARITAET ist eine Aussage ueber das Speichermodell und faellt in die
         // Axiomschicht -- `paarung.rs` sagt dasselbe ueber `release`/`acquire`.
-        pflicht: "Der Rumpf von `update(v)` ist rein (mechanisch, Pass 8). **Die \
-                  Atomaritaet der Lese-Aendere-Schreibe-Folge ist KEINE Schablonenpflicht, \
-                  sondern eine Annahme der Axiomschicht** -- sie steht dort und nicht hier.",
+        pflicht: "The body of `update(v)` is pure (mechanically, Pass 8). **The atomicity of \
+                  the read-modify-write sequence is NOT a template obligation but an \
+                  assumption of the axiom layer** -- it stands there and not here.",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
         fundstelle: "SPRACHE.md Teil III §1",
@@ -494,16 +508,15 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Absenkung: redet ueber die Emission, die es nicht gibt) -- und die zweite ist
         // falsch, wie sie dasteht: ein NEBENLAEUFIGES Lesen einer je-Kern-Zelle liefert
         // nicht denselben Wert wie ein atomares RMW, nur an einem Ruhepunkt.
-        pflicht: "Die Merge-Menge ist ein kommutatives Monoid (mechanisch pruefbar). \
-                  **Die Absenkung ergibt denselben Wert wie ein atomares RMW nur an einem \
-                  RUHEPUNKT** -- nebenlaeufig gelesen tut sie es nicht, und das ist keine \
-                  Ungenauigkeit, sondern der Preis der Absenkung. *Die Emissionshaelfte \
-                  wartet auf einen Erzeuger.* **Maschinell geprueft:** die Faltung ist \
-                  reihenfolgeunabhaengig (`faltung_ist_reihenfolgeunabhaengig`) und stimmt \
-                  am Ruhepunkt mit der atomaren RMW-Kette ueberein \
-                  (`am_ruhepunkt_gleich_dem_atomaren_rmw`); je Verknuepfung steht die \
-                  Instanz da -- **und `min` hat als Neutrales das MAXIMUM des Typs, nicht \
-                  die Null** (`min_ist_monoid_mit_top`).",
+        pflicht: "The merge set is a commutative monoid (mechanically checkable). **The \
+                  lowering yields the same value as an atomic RMW only at a QUIESCENT \
+                  POINT** -- read concurrently it does not, and that is no imprecision but \
+                  the price of the lowering. *The emission half is waiting for a generator.* \
+                  **Machine-checked:** the fold is order-independent \
+                  (`faltung_ist_reihenfolgeunabhaengig`) and agrees at the quiescent point \
+                  with the atomic RMW chain (`am_ruhepunkt_gleich_dem_atomaren_rmw`); per \
+                  operator the instance stands there -- **and the unit of `min` is the \
+                  MAXIMUM of the type, not zero** (`min_ist_monoid_mit_top`).",
         // **Maschinell geprueft am 2026-08-17** (`beweise/Accumulates_Monoid.thy`, K11.3.2)
         // -- und zwar VOR dem Konstrukt, wie das zweite Tor es verlangt.
         //
@@ -520,10 +533,10 @@ pub const SCHABLONEN: &[Schablone] = &[
             //
             // *Der Satz bliebe wahr und seine Praemisse wuerde falsch* -- genau die Bewegung,
             // gegen die Zahn 3 steht.
-            Voraussetzung { was: "die Verknuepfung stammt aus max/min/add/or/and", durch: Some("der geschlossene Wortschatz: `MergeOp` laesst nichts anderes zu"), braeuchte: None },
-            Voraussetzung { was: "und alle Zahlentypen sind GANZZAHLIG -- sonst ist `add` nicht assoziativ", durch: Some("es gibt keinen Gleitkommatyp (MEMO-GLEITKOMMA.md); mit einem muesste `merge` mechanisch einschraenken"), braeuchte: None },
-            Voraussetzung { was: "je Kern eine Zelle, mit dem richtigen Neutralen angelegt", durch: Some("Mutationsprobe `min-akkumulator-ohne-umkehr`, Einheit `beispiel23`"), braeuchte: None },
-            Voraussetzung { was: "der RUHEPUNKT -- kein Kern schreibt mehr, waehrend gefaltet wird", durch: None, braeuchte: Some("die AUSFUEHRUNGSKONTEXTE (K11.2.2) -- ohne sie sagt Gabbro nicht, wer nebenlaeufig laeuft, und keine Regel kann den Ruhepunkt feststellen") },
+            Voraussetzung { was: "the operator comes from max/min/add/or/and", durch: Some("the closed vocabulary: `MergeOp` admits nothing else"), braeuchte: None },
+            Voraussetzung { was: "and all number types are INTEGRAL -- otherwise `add` is not associative", durch: Some("there is no floating-point type (MEMO-GLEITKOMMA.md); with one, `merge` would have to restrict mechanically"), braeuchte: None },
+            Voraussetzung { was: "one cell per core, laid out with the right unit", durch: Some("mutation probe `min-akkumulator-ohne-umkehr`, unit `beispiel23`"), braeuchte: None },
+            Voraussetzung { was: "the QUIESCENT POINT -- no core writes any more while the fold runs", durch: None, braeuchte: Some("the EXECUTION CONTEXTS (K11.2.2) -- without them Gabbro does not say who runs concurrently, and no rule can establish the quiescent point") },
         ],
         fundstelle: "SPRACHE.md §11.4; beweise/Accumulates_Monoid.thy",
     },
@@ -535,10 +548,10 @@ pub const SCHABLONEN: &[Schablone] = &[
         // -- dieselbe Form wie das widerlegte *„deckt genau die belegten Slots"* bei S12,
         // und aus demselben Grund verdaechtig: eine grosse Seite ist ein Mapping an einem
         // Eintrag, der KEIN Blatt der vollen Tiefe ist.
-        pflicht: "Die erzeugte Domaene `mappings of` trifft jeden erreichbaren Eintrag, \
-                  der eine Abbildung TRAEGT -- samt va und level. **Das ist nicht dasselbe \
-                  wie `Blatteintrag`:** eine grosse Seite bildet oberhalb der vollen Tiefe \
-                  ab. *Ob die Domaene sie heute trifft, ist ungeprueft.*",
+        pflicht: "The generated domain `mappings of` meets every reachable entry that CARRIES \
+                  a mapping -- together with va and level. **That is not the same as `leaf \
+                  entry`:** a large page maps above the full depth. *Whether the domain meets \
+                  it today is unchecked.*",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
         fundstelle: "SPRACHE.md §5.4, §6",
@@ -550,11 +563,11 @@ pub const SCHABLONEN: &[Schablone] = &[
         // **F-1 UND F-4, Redaktion 2026-08-17.** *„genau einmal am Eintritt"* ist fuer
         // VARIABLE Laengen falsch -- und genau die sind ein offener Posten der Sprache. Dazu
         // zwei Pflichten in einem Satz.
-        pflicht: "(1) `lesen(schreiben(x)) == x` fuer jedes darstellbare x. (2) Der Leser \
-                  prueft die Pufferlaenge einmal am Eintritt -- **das gilt nur fuer FESTE \
-                  Laengen.** Bei variablen faellt die Schranke erst aus dem Inhalt, und dann \
-                  ist je Feld zu pruefen. *Solange variable Laengen offen sind, deckt diese \
-                  Schablone nur den festen Fall.*",
+        pflicht: "(1) `read(write(x)) == x` for every representable x. (2) The reader checks \
+                  the buffer length once at entry -- **that holds only for FIXED lengths.** \
+                  With variable ones the bound falls out of the content, and then it has to \
+                  be checked per field. *As long as variable lengths are open, this template \
+                  covers only the fixed case.*",
         // **Getragen seit 2026-08-17** fuer den byteweisen Fall: `emit.rs` erzeugt Zugriffe in
         // der erklaerten Bytereihenfolge plus eine Gueltigkeitsfunktion aus den
         // `where`-Klauseln. Bitlagen bleiben abgelehnt («B24»).
@@ -566,8 +579,8 @@ pub const SCHABLONEN: &[Schablone] = &[
         // genau das ist die Stelle, an der ein Erzeuger zwei Versaetze ueberlappen laesst.**
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "der geschriebene Wert passt in die deklarierte Breite", durch: Some("M101 (m1.rs)"), braeuchte: None },
-            Voraussetzung { was: "die Felder liegen GETRENNT (`trennt f g`)", durch: Some("die Lage selbst, `bitlage::lies` -- je Feld ohne Bitlage ein eigenes Wort, je Bitgruppe eines, und der Versatz waechst monoton. Zwei Felder koennen nur INNERHALB einer Gruppe kollidieren, und dort haelt `N008`"), braeuchte: None },
+            Voraussetzung { was: "the written value fits into the declared width", durch: Some("M101 (m1.rs)"), braeuchte: None },
+            Voraussetzung { was: "the fields lie SEPARATE (`trennt f g`)", durch: Some("the layout itself, `bitlage::lies` -- one word per field without a bit layout, one per bit group, and the offset grows monotonically. Two fields can only collide WITHIN a group, and there `N008` holds"), braeuchte: None },
         ],
         fundstelle: "SPRACHE.md §10.1; beweise/Format_Roundtrip.thy",
     },
@@ -578,12 +591,12 @@ pub const SCHABLONEN: &[Schablone] = &[
         // **F-4, Redaktion 2026-08-17.** Drei Pflichten in einem Satz, und die dritte ist
         // ein undefinierter Begriff: *„der Stapelwechsel ist KORREKT"* -- korrekt WOGEGEN?
         // Eine Beweispflicht mit unbestimmtem Praedikat ist keine.
-        pflicht: "(1) Der erzeugte Eintrittspfad erhaelt jedes Register aus `preserves`. \
-                  (2) Er schreibt kein Register ausserhalb von `clobbers`. (3) **Der \
-                  Stapelwechsel ist NOCH KEINE Pflicht, sondern ein unbestimmtes Wort** -- \
-                  `korrekt` ist nirgends definiert; die Pflicht ist erst formulierbar, wenn \
-                  eine Stapelinvariante dasteht. **Kein nachgelagerter Beweiser** -- das \
-                  Vertrauen schrumpft auf eine Stelle, es verschwindet nicht.",
+        pflicht: "(1) The generated entry path preserves every register from `preserves`. \
+                  (2) It writes no register outside `clobbers`. (3) **The stack switch is NOT \
+                  YET an obligation but an undefined word** -- `correct` is nowhere defined; \
+                  the obligation can only be stated once a stack invariant stands there. **No \
+                  downstream prover** -- the trust shrinks to one place, it does not \
+                  disappear.",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
         fundstelle: "SPRACHE.md Teil II §2",
@@ -596,14 +609,13 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Beweiser zeigbar: *„die Registerlagen treffen die Hardware-Lagen"* ist eine
         // Aussage ueber ein physisches Geraet. Eine Schablone, die eine Hardwareannahme
         // fuehrt, macht sie beweisbar aussehen.
-        pflicht: "Aus der Adresse entsteht ein typisierter Griff, und die erzeugten \
-                  Zugriffe treffen die im `device`-Block DEKLARIERTEN Lagen. **Dass die \
-                  deklarierten Lagen die des Geraets sind, ist eine ANNAHME der \
-                  Axiomschicht** und wird hier nicht gezeigt. **Was bleibt, ist die \
-                  RECHNUNG**, und sie ist maschinell geprueft: getrennte Register treffen \
-                  getrennte Zellen, und zwar FUER JEDE BASIS \
-                  (`trennung_haengt_nicht_an_der_basis` -- deshalb darf der Griff der \
-                  Konstruktor sein); Bankeintraege ueberlappen nicht \
+        pflicht: "Out of the address arises a typed handle, and the generated accesses meet \
+                  the layouts DECLARED in the `device` block. **That the declared layouts are \
+                  the device's is an ASSUMPTION of the axiom layer** and is not shown here. \
+                  **What remains is the ARITHMETIC**, and it is machine-checked: separate \
+                  registers meet separate cells, and that FOR EVERY BASE \
+                  (`trennung_haengt_nicht_an_der_basis` -- which is why the handle may be the \
+                  constructor); bank entries do not overlap \
                   (`bankeintraege_ueberlappen_nicht`).",
         // **Maschinell geprueft am 2026-08-17** (`beweise/Device_Konstruktor.thy`, K11.3.2).
         // Der Beweis darf kurz sein, und der Eintrag sagt warum: *„stimmt 0x18 fuer GCMD?"*
@@ -615,11 +627,11 @@ pub const SCHABLONEN: &[Schablone] = &[
         // leerlaufen zu lassen. *Richtig und nutzlos ist keine bestandene Pruefung.*
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "zwei `reg` haben getrennte Lagen (`getrennt r s`)", durch: Some("N009, seit 2026-08-19 -- die Byte-Bereiche zweier Register ueberlappen nicht"), braeuchte: None },
-            Voraussetzung { was: "`stride` ist nicht null -- sonst ist jede Bankzelle leer", durch: Some("N010, seit 2026-08-19 -- `stride 0` faellt am Pass statt im Kommentar"), braeuchte: None },
-            Voraussetzung { was: "die deklarierten Lagen sind die des Geraets", durch: Some("Axiomschicht: `assume` mit Falsifikator, `gabbro annahmen`"), braeuchte: None },
+            Voraussetzung { was: "two `reg` have separate layouts (`getrennt r s`)", durch: Some("N009, since 2026-08-19 -- the byte ranges of two registers do not overlap"), braeuchte: None },
+            Voraussetzung { was: "`stride` is not zero -- otherwise every bank cell is empty", durch: Some("N010, since 2026-08-19 -- `stride 0` falls at the pass instead of in a comment"), braeuchte: None },
+            Voraussetzung { was: "the declared layouts are the device's", durch: Some("axiom layer: `assume` with a falsifier, `gabbro annahmen`"), braeuchte: None },
         ],
-        fundstelle: "MESSUNGEN.md, Der Ursprung, 2026-08-14; beweise/Device_Konstruktor.thy",
+        fundstelle: "MESSUNGEN.md, The origin, 2026-08-14; beweise/Device_Konstruktor.thy",
     },
     Schablone {
         name: "table.indexschranke",
@@ -638,22 +650,22 @@ pub const SCHABLONEN: &[Schablone] = &[
         //        diese Haelfte braucht `table.induktion`, und sie stand nirgends.
         //   M-3  `die Absenkung legt N Slots an` ist eine Aussage ueber die EMISSION. Es gibt
         //        keinen Erzeuger -> eigener Eintrag `table.absenkung`.
-        pflicht: "Der erzeugte Indextyp ist `{i. i < N}` -- er ENTHAELT jeden belegten Slot \
-                  (`belegt_liegt_im_indextyp`) und deckt ihn NICHT genau: ein Index im Typ \
-                  muss nicht belegt sein. Und die tragende Haelfte ist die ueber den \
-                  SCHREIBSTELLEN: jedes erzeugte Verkettungsfeld eines belegten Slots zeigt \
-                  in den Typ (`schreibstellen_im_typ`, `kette_bleibt_im_typ`). Daraus faellt \
-                  `im_bereich` fuer `table.induktion` (`im_bereich_folgt_aus_indexschranke`).",
+        pflicht: "The generated index type is `{i. i < N}` -- it CONTAINS every occupied slot \
+                  (`belegt_liegt_im_indextyp`) and does NOT cover it exactly: an index in the \
+                  type need not be occupied. And the carrying half is the one about the WRITE \
+                  SITES: every generated chaining field of an occupied slot points into the \
+                  type (`schreibstellen_im_typ`, `kette_bleibt_im_typ`). Out of that falls \
+                  `im_bereich` for `table.induktion` (`im_bereich_folgt_aus_indexschranke`).",
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "jede erzeugte Schreibstelle bleibt im Typ (`schreibstellen_im_typ`)", durch: Some("M103 (m1.rs)"), braeuchte: None },
+            Voraussetzung { was: "every generated write site stays within the type (`schreibstellen_im_typ`)", durch: Some("M103 (m1.rs)"), braeuchte: None },
         ],
         fundstelle: "MESSUNGEN.md, A3, 2026-08-14",
     },
     Schablone {
         name: "table.absenkung",
         haengt_an: &["table.indexschranke"],
-        konstrukt: "table … count N (Emission)",
+        konstrukt: "table … count N (emission)",
         // **Abgespalten am 2026-08-16.** Der Satz stand in `table.indexschranke` und ist dort
         // nicht beweisbar: er redet ueber den ERZEUGTEN C-Code, und einen Erzeuger gibt es
         // nicht (`mutiere-pruefer.py`: 0 Mutationen auf der Emissionsflaeche).
@@ -661,17 +673,17 @@ pub const SCHABLONEN: &[Schablone] = &[
         // *Die Abspaltung VERGROESSERT das Register, und das ist der ehrliche Preis: eine
         // Zusage, die zur Haelfte beweisbar und zur Haelfte ueber einem Nichts ist, war als
         // EIN Eintrag zu klein gebucht.*
-        pflicht: "Die Absenkung legt genau N Slots an -- nicht weniger (dann waere ein \
-                  Index im Typ ohne Speicher, `zu_kurz_laesst_einen_index_ohne_speicher`) \
-                  und nicht mehr (dann waere Speicher ohne Index, \
-                  `zu_lang_laesst_speicher_ohne_index`). **Und der Gehalt liegt eine Stufe \
-                  weiter:** aus `m = N` und der Indexschranke faellt, dass KEIN Zugriff des \
-                  erzeugten Programms aus dem Feld laeuft \
-                  (`kein_zugriff_laeuft_aus_dem_feld`) -- erst das ist die Aussage, um \
-                  derentwillen die Absenkung ein festes Feld nimmt und keinen Zeiger mit \
-                  Laenge. **OFFEN bleibt, dass der ERZEUGER `m = N` herstellt** -- eine \
-                  Aussage ueber `emit.rs`, und sie faellt in die Bruecke (PL.3): eine \
-                  Mutation, die die Feldlaenge von der Kapazitaet loest, muss fallen.",
+        pflicht: "The lowering lays out exactly N slots -- not fewer (then there would be an \
+                  index in the type without storage, \
+                  `zu_kurz_laesst_einen_index_ohne_speicher`) and not more (then there would \
+                  be storage without an index, `zu_lang_laesst_speicher_ohne_index`). **And \
+                  the substance lies one step further:** out of `m = N` and the index bound \
+                  falls that NO access of the generated program runs out of the array \
+                  (`kein_zugriff_laeuft_aus_dem_feld`) -- only that is the statement for whose \
+                  sake the lowering takes a fixed array and not a pointer with a length. \
+                  **STILL OPEN is that the GENERATOR establishes `m = N`** -- a statement \
+                  about `emit.rs`, and it falls into the bridge (PL.3): a mutation that \
+                  detaches the array length from the capacity has to fall.",
         // **Getragen seit 2026-08-17**: `emit.rs` senkt eine `table … count N` zu einem festen
         // C-Feld ab, und `pruefe-emission.sh` misst es an der Ausfuehrung. *Damit ist dieser
         // Satz keine Zusage ueber einen kuenftigen Erzeuger mehr -- der Uebersetzer stuetzt
@@ -685,10 +697,10 @@ pub const SCHABLONEN: &[Schablone] = &[
         // > dieses Ordners, die kleiner zu werden ETWAS kostet.
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "jeder Index liegt im Typ (`i : indextyp N`)", durch: Some("M103 (m1.rs)"), braeuchte: None },
-            Voraussetzung { was: "`count N` steht da -- sonst haette das Feld keine Groesse", durch: Some("C001, emit.rs:938"), braeuchte: None },
+            Voraussetzung { was: "every index lies in the type (`i : indextyp N`)", durch: Some("M103 (m1.rs)"), braeuchte: None },
+            Voraussetzung { was: "`count N` is written there -- otherwise the array would have no size", durch: Some("C001, emit.rs:938"), braeuchte: None },
         ],
-        fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), Befund M-3; \
+        fundstelle: "MESSUNGEN.md, ERGEBNIS III (2026-08-16), finding M-3; \
                      beweise/Table_Absenkung.thy",
     },
     // ---- Kandidaten aus der Nachpruefung vom 2026-08-14. Noch kein Konstrukt, aber die
@@ -696,14 +708,14 @@ pub const SCHABLONEN: &[Schablone] = &[
     Schablone {
         name: "ops.suche",
         haengt_an: &[],
-        konstrukt: "ops finde … (Kandidat, aus «B10»)",
+        konstrukt: "ops finde … (candidate, from «B10»)",
         // **F-2, Redaktion 2026-08-17.** *„die Ordnung der Domaene"* -- Singular, und
         // fuer `chain(a,b) in` gibt es keine: die Domaene hat ZWEI Kantenarten (N-4 bei S4),
         // also keinen kanonischen ERSTEN Treffer ohne zusaetzliche Festlegung.
-        pflicht: "Die erzeugte Suche gibt den ersten Treffer in einer **erzeugten, \
-                  benannten Aufzaehlungsreihenfolge** und laesst die Menge unveraendert. \
-                  **Fuer Domaenen mit mehreren Kantenarten (`chain(a,b) in`) ist diese \
-                  Reihenfolge zusaetzlich festzulegen** -- sie faellt nicht aus der Domaene.",
+        pflicht: "The generated search returns the first hit in a **generated, named \
+                  enumeration order** and leaves the set unchanged. **For domains with \
+                  several kinds of edge (`chain(a,b) in`) that order has to be fixed on \
+                  top** -- it does not fall out of the domain.",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
         fundstelle: "MESSUNGEN.md, B13-Nachpruefung",
@@ -711,15 +723,15 @@ pub const SCHABLONEN: &[Schablone] = &[
     Schablone {
         name: "state.reset",
         haengt_an: &[],
-        konstrukt: "erzeugtes reset (Kandidat, aus «B26»)",
+        konstrukt: "generated reset (candidate, from «B26»)",
         // **F-1, Redaktion 2026-08-17.** *„gilt aus JEDEM Zustand"* -- falsch, sobald
         // lineare Werte im Spiel sind: ein `reset` aus einem Zustand, der einen linearen
         // Wert haelt, LECKT ihn, und M2 verbietet genau das. Der Eintrag versprach eine
         // Totalitaet, die die Sprache an anderer Stelle ausschliesst.
-        pflicht: "Der erzeugte Uebergang in den Anfangszustand gilt aus jedem Zustand, \
-                  **in dem kein linearer Wert gehalten wird**, und ist selbst ein \
-                  `transset`. *Aus einem Zustand mit gehaltenem linearem Wert ist er ein \
-                  Leck und muss abgelehnt werden -- M2, nicht diese Schablone.*",
+        pflicht: "The generated transition into the initial state holds from every state \
+                  **in which no linear value is held**, and is itself a `transset`. *From a \
+                  state with a held linear value it is a leak and has to be rejected -- M2, \
+                  not this template.*",
         stand: Stand::Entworfen,
         voraussetzungen: &[],
         fundstelle: "MESSUNGEN.md, B13-Nachpruefung",
@@ -727,7 +739,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     Schablone {
         name: "verbund.konstruktor",
         haengt_an: &[],
-        konstrukt: "P(a: …, b: …) -- der markierte Ruf (Absenkung)",
+        konstrukt: "P(a: …, b: …) -- the labelled call (lowering)",
         // **Maschinell geprueft 2026-08-17** (`beweise/Verbund_Konstruktor.thy`), und zwar
         // VOR dem Konstrukt: das Verbundliteral («B7») zu bauen haette diesen Eintrag von
         // `Entworfen` auf `Getragen` gehoben und damit `L` auf 5 -- das Tor aus K100.
@@ -735,25 +747,25 @@ pub const SCHABLONEN: &[Schablone] = &[
         // **Ausgespuelt (M-1):** die zwei Haelften des Satzes sind EINE, sobald die
         // Deklaration wohlgeformt ist. Und der Gehalt liegt eine Stufe weiter, als der
         // Eintrag sagte: nicht *„jedes Feld gesetzt"*, sondern **die Ablesung ist eindeutig**.
-        pflicht: "UNTER `distinct fs`: wenn die Zuordnungsliste des Konstruktors genau die \
-                  Feldliste als Schluesselfolge hat (`map fst zs = fs`), ist jedes Feld genau \
-                  einmal gesetzt UND keins uninitialisiert -- die beiden Haelften fallen \
-                  zusammen. **Und die Ablesung ist eindeutig**: `liest zs f = Some v` fuer \
-                  genau den Wert, den der Konstruktor dort hingeschrieben hat \
-                  (`ablesung_ist_eindeutig`, `jedes_feld_hat_einen_wert`). **OFFEN bleibt, \
-                  dass der ERZEUGER `deckt` herstellt** -- das ist eine Aussage ueber \
-                  `emit.rs`, und sie faellt in die Bruecke (PLAN.md, PL.3): eine Mutation, \
-                  die ein Feld doppelt oder gar nicht setzt, muss fallen. **Sie steht seit \
-                  dem 2026-08-17 da** (`verbundmarken-nur-als-menge`, \
-                  `verbund-ohne-marken-geht-durch`) -- die erste beschaedigt genau die \
-                  Reihenfolgefassung, die der Beweis gegen die Mengenfassung gewaehlt hat.",
+        pflicht: "UNDER `distinct fs`: if the constructor's assignment list has exactly the \
+                  field list as its key sequence (`map fst zs = fs`), then every field is set \
+                  exactly once AND none is uninitialised -- the two halves coincide. **And \
+                  the read-out is unambiguous**: `liest zs f = Some v` for exactly the value \
+                  the constructor wrote there (`ablesung_ist_eindeutig`, \
+                  `jedes_feld_hat_einen_wert`). **STILL OPEN is that the GENERATOR \
+                  establishes `deckt`** -- that is a statement about `emit.rs`, and it falls \
+                  into the bridge (PLAN.md, PL.3): a mutation that sets a field twice or not \
+                  at all has to fall. **It has stood there since 2026-08-17** \
+                  (`verbundmarken-nur-als-menge`, `verbund-ohne-marken-geht-durch`) -- the \
+                  first damages exactly the order-based version the proof chose over the \
+                  set-based one.",
         // **Getragen seit dem 2026-08-17**, seit «B7» gebaut ist: `m1::marken_pruefen`
         // stellt `deckt` her, und `emit::ruf` senkt es zu benannten Bestimmern ab. Der
         // Beweis lag VORHER -- so verlangt es das zweite Tor von K100, und deshalb bewegt
         // dieser Schritt `lebend_ungedeckt()` nicht.
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "`deckt`: die Zuordnung hat genau die Feldliste als Schluesselfolge", durch: Some("M106/M107"), braeuchte: None },
+            Voraussetzung { was: "`deckt`: the assignment has exactly the field list as its key sequence", durch: Some("M106/M107"), braeuchte: None },
         ],
         fundstelle: "MESSUNGEN.md, B13-Nachpruefung; beweise/Verbund_Konstruktor.thy; \
                      m1.rs::marken_pruefen; emit.rs::verbund",
@@ -761,7 +773,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     Schablone {
         name: "gruppe.ops",
         haengt_an: &["gruppe.sperrabdruck"],
-        konstrukt: "Gruppen-ops ueber mehreren Tabellen (Kandidat, aus «B13»)",
+        konstrukt: "group ops over several tables (candidate, from «B13»)",
         // **F-4, Redaktion 2026-08-17.** Der Eintrag fuehrt ZWEI Pflichten: die ERHALTUNG
         // der Invariante und den SPERRABDRUCK, unter dem sie gilt. Seit dem 2026-08-16 hat
         // der Abdruck einen eigenen Eintrag (`gruppe.sperrabdruck`, S17) mit drei benannten
@@ -769,20 +781,21 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Pflicht fuehren, sind dieselbe Fehlerklasse wie zwei Zahlen ueber verschiedenen
         // Grundgesamtheiten: keiner von beiden kann fallen, ohne dass der andere so aussieht,
         // als trage er weiter.*
-        pflicht: "Die Verbindungs-Invariante der Gruppe bleibt unter jeder Gruppenoperation \
-                  erhalten. **Der Sperrabdruck, unter dem das gilt, steht NICHT hier, \
-                  sondern in `gruppe.sperrabdruck`** -- diese Schablone setzt ihn voraus. Auf einem Mehrkerner ist das die eigentliche Pflicht. \
-                  **Diese Schablone hat als einzige eine VORLAGE statt eines leeren Blatts**: \
-                  Verification/capability-system/proofs/cap_space.rs fuehrt cap_inv als EINE \
-                  spec fn ueber den Klauseln 1-7 und beweist je Operation die Erhaltung ALLER \
-                  zugleich -- die Schablone haette das zu ERZEUGEN statt zu erfinden. \
-                  ABER: die Vorlage fuehrt refcount als `nat`. Sie beweist die Vorbedingung \
-                  `oldrc >= 1` (Zeile 792) aus der Invariante -- richtig, aber es ist EIN \
-                  Netz. Gabbros `u32 in 0 ..= NSLOTS` gibt ein zweites, das ohne die \
-                  Invariante haelt. Uebernommen wird die KLAUSELSTRUKTUR, nicht der TYP; \
-                  sonst sieht die Pflichtliste vollstaendig aus, waehrend das zweite Netz \
-                  fehlt -- und eine Emission koennte die Bereichspruefung weglassen, WEIL \
-                  der Beweis sagt, es koenne nicht negativ werden.",
+        pflicht: "The connecting invariant of the group is preserved under every group \
+                  operation. **The lock footprint under which that holds does NOT stand here \
+                  but in `gruppe.sperrabdruck`** -- this template presupposes it. On a \
+                  multicore that is the real obligation. **This template is the only one with \
+                  a MODEL instead of a blank sheet**: \
+                  Verification/capability-system/proofs/cap_space.rs carries cap_inv as ONE \
+                  spec fn over clauses 1-7 and proves per operation the preservation of ALL \
+                  of them at once -- the template would have to GENERATE that instead of \
+                  inventing it. BUT: the model carries refcount as `nat`. It proves the \
+                  precondition `oldrc >= 1` (line 792) out of the invariant -- correct, but \
+                  it is ONE net. Gabbro's `u32 in 0 ..= NSLOTS` gives a second one that holds \
+                  without the invariant. What is taken over is the CLAUSE STRUCTURE, not the \
+                  TYPE; otherwise the obligation list looks complete while the second net is \
+                  missing -- and an emission could drop the range check BECAUSE the proof \
+                  says it cannot go negative.",
         // **Maschinell geprueft am 2026-08-19** (`beweise/Gruppe_Erhaltung.thy`), und zwar
         // an dem Tag, an dem `Table_Ops_Erhaltung.thy` `verbindung_nicht_gedeckt` bewies:
         // eine Operation erhaelt jede Invariante IHRES Traegers und bricht die verbindende.
@@ -798,7 +811,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         // FORM, in der die Frage gestellt werden kann, nicht die Erhaltung.
         stand: Stand::Entworfen,
         voraussetzungen: &[
-            Voraussetzung { was: "der Sperrabdruck steht ueber dem ganzen Zwischenzustand (`abdruck_innen`)", durch: Some("gruppe.sperrabdruck, und im Pass U001-U005"), braeuchte: None },
+            Voraussetzung { was: "the lock footprint spans the whole intermediate state (`abdruck_innen`)", durch: Some("gruppe.sperrabdruck, and in the pass U001-U005"), braeuchte: None },
             // **Eingeloest am 2026-08-21.** Die Adresse lautete *„braeuchte: die
             // AXIOMSCHICHT"*, und sie ist jetzt bezogen: `manifest.rs::sperrabdruckannahme`
             // erzeugt `sperrabdruck_haelt_fremde_kerne_fern`, sobald eine `group` im Baum
@@ -808,14 +821,14 @@ pub const SCHABLONEN: &[Schablone] = &[
             // keine Aussage ueber Zustaende.* Was sich geaendert hat, ist, dass ein Leser
             // des Beweises sie SIEHT, statt sie zu unterstellen -- `Gruppe_Erhaltung.thy`
             // nennt sie beim Namen, und sie steht in der Annahmenmenge des Erzeugnisses.
-            Voraussetzung { was: "ein gehaltener Abdruck haelt einen fremden Kern wirklich fern", durch: Some("die AXIOMSCHICHT: `sperrabdruck_haelt_fremde_kerne_fern`, nicht falsifizierbar mit Grund (manifest.rs)"), braeuchte: None },
+            Voraussetzung { was: "a held footprint really does keep a foreign core out", durch: Some("the AXIOM LAYER: `sperrabdruck_haelt_fremde_kerne_fern`, not falsifiable with a reason (manifest.rs)"), braeuchte: None },
         ],
         fundstelle: "MESSUNGEN.md, Papiertest CapSpace/CDT, 2026-08-14",
     },
     Schablone {
         name: "gruppe.sperrabdruck",
         haengt_an: &[],
-        konstrukt: "Gruppen-ops ueber Traegern MIT VERSCHIEDENEN SPERREN (aus «B41»-Sweep)",
+        konstrukt: "group ops over carriers WITH DIFFERENT LOCKS (from the «B41» sweep)",
         // **Warum das eine ZWEITE Schablone ist und kein Zusatz zur ersten.**
         //
         // Der Sweep vom 2026-08-16 hat vier Verbindungs-Invarianten gefunden, und drei davon
@@ -828,19 +841,18 @@ pub const SCHABLONEN: &[Schablone] = &[
         // an dem sie scheitern kann: unter einer Sperre ist die Erhaltung ein sequenzielles
         // Argument, unter zweien haengt sie an der ORDNUNG und daran, dass zwischen den zwei
         // Nahmen kein fremder Schreiber dazwischenkommt.
-        pflicht: "Die Gruppenoperation nimmt ALLE Sperren ihrer Traeger, in aufsteigender \
-                  `rank`-Ordnung, und haelt sie ueber den ganzen Zug. Der Erzeuger beweist: \
-                  (a) die Reihenfolge ist die deklarierte -- sonst ist die Deadlockfreiheit \
-                  des Bestands verloren, nicht bloss die Invariante; (b) die \
-                  Verbindungs-Invariante gilt am ANFANG und am ENDE des Zuges, NICHT \
-                  zwischendrin -- der Zwischenzustand ist genau der Grund, warum es eine \
-                  Gruppenoperation gibt; (c) kein Zwischenaustritt (`return`, `leave`, \
-                  Fehlerpfad) verlaesst den Zug im Zwischenzustand. \
-                  **Der Bestand traegt (a) heute von Hand:** caprock-microkit/src/lib.rs:1303 \
-                  ist ein Kommentar, der erklaert, warum eine Funktion dort steht, wo sie \
-                  steht -- naehme sie `EPS` unter `SCHEDS`, drehte sie die Ordnung um. \
-                  *Eine Gruppe mit deklariertem Abdruck haette diesen Kommentar ueberfluessig \
-                  gemacht; das ist der gemessene Bedarf, nicht ein Entwurfswunsch.*",
+        pflicht: "The group operation takes ALL locks of its carriers, in ascending `rank` \
+                  order, and holds them across the whole move. The generator proves: (a) the \
+                  order is the declared one -- otherwise the deadlock freedom of the code base \
+                  is lost, not merely the invariant; (b) the connecting invariant holds at the \
+                  BEGINNING and at the END of the move, NOT in between -- the intermediate \
+                  state is exactly the reason a group operation exists at all; (c) no \
+                  intermediate exit (`return`, `leave`, error path) leaves the move in the \
+                  intermediate state. **The code base carries (a) by hand today:** \
+                  caprock-microkit/src/lib.rs:1303 is a comment explaining why a function \
+                  stands where it stands -- were it to take `EPS` under `SCHEDS`, it would \
+                  invert the order. *A group with a declared footprint would have made that \
+                  comment superfluous; that is the measured need, not a design wish.*",
         // **Maschinell geprueft am 2026-08-19** (`beweise/Gruppe_Erhaltung.thy`). Die drei
         // benannten Teile der Pflicht sind drei Saetze geworden:
         //
@@ -862,8 +874,8 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Stand bleibt ENTWORFEN: es gibt keine Gruppen-`ops`.
         stand: Stand::Entworfen,
         voraussetzungen: &[
-            Voraussetzung { was: "jeder Teilnehmer nimmt in aufsteigender `rank`-Ordnung -- sonst ist der Wartegraph nicht in `less_than`", durch: Some("U003/U005 im Gruppenpass, und H006 an der Sperrordnung"), braeuchte: None },
-            Voraussetzung { was: "kein Zwischenaustritt verlaesst den Zug im Zwischenzustand", durch: Some("U006 -- der Zug hat keinen Zwischenaustritt"), braeuchte: None },
+            Voraussetzung { was: "every participant takes in ascending `rank` order -- otherwise the wait graph is not in `less_than`", durch: Some("U003/U005 in the group pass, and H006 at the lock order"), braeuchte: None },
+            Voraussetzung { was: "no intermediate exit leaves the move in the intermediate state", durch: Some("U006 -- the move has no intermediate exit"), braeuchte: None },
         ],
         fundstelle: "MESSUNGEN.md, SWEEP der Verbindungs-Invarianten, 2026-08-16 (V4)",
     },
@@ -1117,7 +1129,7 @@ pub fn zeige() -> String {
             .find(|v| v.was == *was)
             .and_then(|v| v.braeuchte)
         {
-            out.push_str(&format!("--       braeuchte: {b}\n"));
+            out.push_str(&format!("--       would need: {b}\n"));
         }
     }
     out.push_str(&format!(

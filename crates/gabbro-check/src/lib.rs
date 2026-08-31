@@ -172,7 +172,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 4,
             name: "M3",
-            quelle: "SYNTAX.md §3: Adressraeume und Zugriffsrechte am Zeiger",
+            quelle: "SYNTAX.md §3: Pointers and address spaces",
             zustand: Zustand::Getragen(
                 "built: rights checking at reads and writes, the placement rule that an \
                     `ops` carrier is not in the `dma` space (`R001`-`R004`) -- **and since \
@@ -191,7 +191,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 5,
             name: "M2",
-            quelle: "SPRACHE.md §4: lineare und geisterhafte Werte",
+            quelle: "SPRACHE.md §4: Linear and ghost values",
             zustand: Zustand::Getragen(
                 "built: exactly-once per path, branch matching, `consumes` against \
                     borrowed (`L101`-`L105`). **And since K5 a value that arises in the BODY** (`L107`); the ghost erasure itself is built and sits in the EMITTER, verified 2026-08-19. The rest has an address -- a `ghost` \
@@ -255,7 +255,7 @@ pub fn passliste() -> Vec<Pass> {
         Pass {
             nummer: 11,
             name: "Phasen",
-            quelle: "MESSUNGEN.md, «B37»: Linearitaet ist keine Ordnung",
+            quelle: "MESSUNGEN.md, «B37»: linearity is not an order",
             zustand: Zustand::Getragen(
                 "built: the stages of an `order` exist and `advances` goes FORWARD \
                     (`O001`/`O002`), the mark stands at its source stage at the call \

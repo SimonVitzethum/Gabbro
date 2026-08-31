@@ -268,14 +268,14 @@ impl Stelle {
             .iter()
             .find(|r| r.kennung == self.regel)
             .map(|r| r.klasse)
-            .expect("jede Stelle traegt eine Regel aus der Tafel")
+            .expect("every site carries a rule from the table")
     }
     pub fn darf_sinken(&self) -> bool {
         REGELN
             .iter()
             .find(|r| r.kennung == self.regel)
             .map(|r| r.darf_sinken)
-            .expect("jede Stelle traegt eine Regel aus der Tafel")
+            .expect("every site carries a rule from the table")
     }
 }
 

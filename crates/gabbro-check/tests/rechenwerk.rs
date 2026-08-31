@@ -3927,9 +3927,15 @@ impl fn g(x : u32 in 0 .. 9) -> u32 in 0 .. 9 effects { pure } costs <= 2 ops \
         "an `f64` in a slot IS floating point, and the unit announces it:\n{mit_f64}"
     );
     // Die schweigende Richtung -- *ohne sie belegte die obere nur, dass irgendetwas steht.*
+    //
+    // **And until 2026-08-31 it established NOTHING**: it checked for the absence of
+    // `Diese Einheit rechnet mit Gleitkomma`, and since that announcement was translated it
+    // reads `This unit computes in floating point`. *The expectation could no longer fail*
+    // -- a probe that goes silently green after a translation is worse than one that goes
+    // red. It now reads the same text as the positive direction above it.
     let ohne_f64 = c_ohne_absage("module t { table T count 4 { slot { g : u64, } } }");
     assert!(
-        !ohne_f64.contains("Diese Einheit rechnet mit Gleitkomma"),
+        !ohne_f64.contains("computes in floating point"),
         "eine Ganzzahltabelle sagt nichts ueber Gleitkomma an:\n{ohne_f64}"
     );
 
