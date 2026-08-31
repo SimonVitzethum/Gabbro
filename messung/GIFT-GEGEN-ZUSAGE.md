@@ -1,9 +1,10 @@
-# Jede Giftprobe gegen ihre eigene Zusage: **230 sauber, 48 begleitet, 38 verdeckt**
+# Jede Giftprobe gegen ihre eigene Zusage: **230 sauber, 48 begleitet, 38 verdeckt** — und danach **7**
 
 *Gemessen am 2026-08-31 lokal (31 GB, 20 Kerne; `free -g`: 31 gesamt, 18 verfügbar), über
 alle **317** `beispiele/gift/*.gab`, mit `target/release/gabbro` aus dem Stand `5a7c8e2`.
-Kein Bau am Prüfer, keine Zeile am Korpus geändert — diese Tafel ist der Befund vor jedem
-Eingriff.*
+Kein Bau am Prüfer, keine Zeile am Korpus geändert — **§1 bis §8 sind der Befund vor jedem
+Eingriff.** Was danach geheilt und was benannt wurde, steht ab §9; die Zahlen oben bleiben
+stehen, weil sie der Vergleichspunkt sind.*
 
 `REICHWEITE-DER-REGEL.md` §10 hat den Posten offen gelassen:
 
@@ -266,3 +267,83 @@ Drei Suchen, alle ohne Fund:
   unsichtbar.
 * **Nichts über die Reihenfolge als Zusage.** Die Passreihenfolge ist eine Eigenschaft
   **dieses Binärprogramms**. Sie ist stabil genug, um sie zu messen, und nirgends versprochen.
+
+---
+
+# Der Eingriff: **38 → 7**, und **24 Regeln messen jetzt allein**
+
+*Alles unter dieser Linie ist nach der Tafel entstanden. Die Zahlen oben bleiben stehen — sie
+sind der Zustand am Morgen des 2026-08-31, und sie sind der Vergleichspunkt.*
+
+## 9. Was geheilt wurde
+
+| | vorher | nachher |
+|---|---:|---:|
+| **sauber** | 230 | **255** |
+| **begleitet** | 48 | **54** |
+| **verdeckt** | **38** | **7** |
+| `-- erwartet: cc` | 1 | 1 |
+
+**Einunddreißig Proben haben ihren Vorläufer verloren, und in 24 fällt jetzt genau ein
+Code.** Zwanzig verschiedene Regeln werden damit zum ersten Mal ohne Nachbarn gemessen:
+
+`E001` · `P001` · `M109` · `M112` · `M115` · `E011` · `S005` · `E008` · `L108` · `C001` ·
+`D009` · `S002` · `H016` · `M101` · `V002` · `V001` · `V004` · `R001` · `U006` · `D004`
+
+Die Heilungen, nach Familie — **jede ein Ergänzen, keine ein Weglassen des Gegenstands**:
+
+| Familie | Proben | was ergänzt wurde |
+|---|---|---|
+| `N040` | `04` `09` `13` `15` `17` `49` `50` `51` `52` | `type T` / `table T` / `type Bericht` — der Platzhalter, deklariert |
+| `N040` (`unit`) | `104` `108` `112` `117` `118` | `-> unit` gestrichen; **`unit` ist kein Typ dieser Sprache** |
+| `D011` | `37` `58` `60` `226` `249` | `occupied benutzt;` / `occupied belegt;` neben der `ops`-Zeile |
+| `N028` | `25` `47` `65` | `or <Grund>` an der Funktion, über die das `let … else` läuft |
+| `N025`/`N038` | `31` `98` `140` `250` `251` | `pub` an Typ, Tabelle, Konstante, Sperre und `static` |
+| `S008` | `195` `196` | `consumes t.slots` im `touches` der `by consuming`-Traversierung |
+| `S003`/`S007` | `182` `188` | `assume irgendwas … falsifier …` und `extern fn aufgeben() -> never` |
+| einzeln | `187` | ein `reason`, ein verengter Rückgabetyp, `static mut tiefe_max` |
+| einzeln | `219` | der Parameter auf `i32 in -100 .. 100` verengt, damit `M101` nicht mitfällt |
+| einzeln | `140` `188` | Kosten- und Sperrschranken angehoben, wo sie unbeabsichtigt rissen |
+
+### Zwei Heilungen haben eine dritte Regel freigelegt
+
+Wer den `or`-Grund ergänzt, bekommt `N034` — *„declares `or QuellFehler`, and its body never
+returns a reason"*. Wer `pub` setzt, bekommt `N038` — *„is exported and names `Eng`, which is
+not"*. **Beide sind richtig**, und beide standen hinter der ersten Absage.
+
+> *Eine Heilung, die eine neue Absage hervorholt, hat nichts kaputtgemacht — sie hat einen
+> Vorhang weggezogen.* Bei `251` waren es sogar zwei Lagen: `pub table T` holte
+> `T names N, which is not`, und erst `pub const N` machte `H016` allein sichtbar.
+
+### Und die Decke von `beispiele/gift/` hat sich nicht bewegt
+
+`REICHWEITE-DER-REGEL.md` §7 führt `beispiele/gift/` als **Decke bei 2 emittierenden
+Dateien** — eine mehr wäre ein Prüfer, der eine Probe durchlässt. Vor und nach dem Eingriff
+sind es dieselben drei Dateien mit Rücklaufwert `0` (`166`, `286`, `413`), davon zwei
+emittierende. **Jede geheilte Probe trägt ihren Fehler weiter und kommt am C-Tor nicht an.**
+`cargo test`: 15 Sammlungen, alle grün.
+
+## 10. Was BENANNT wurde statt geheilt — die sieben, die bleiben
+
+| Probe | erwartet | Kette | warum es nicht geht |
+|---|---|---|---|
+| `87-nan-ohne-verengung` | `F001` | M101@12 · **F001**@12 | |
+| `92-halbe-schranke` | `F001` | M101@13 · **F001**@13 | **Ein Bereichstyp trägt die Endlichkeit mit.** `finite` gibt es nur hinter `narrow … to` (`SYNTAX.md`:368), also kann kein Rückgabetyp „nicht-NaN, aber beliebig groß" sagen. `M101` und `F001` sind zwei Hälften **einer** Deklaration. |
+| `155-messung-schreibt-sich-selbst` | `N021` | N027@15 · **N021**@15 | **`N021` ist ohne `N027` nicht erreichbar.** Der gemessene Pfad steht im `can_fail`-Block, und jede Zuweisung dort ist `N027`. *Gemessen und nicht vermutet:* das Schreiben in die Torfunktion `gates tor` zu verlegen macht die Probe **völlig stumm** — `N021` sieht die Tore nicht. Der Versuch wurde zurückgenommen; **die Reichweite von `N021` ist damit ein eigener Befund.** |
+| `187-can-fail-schreibt` | `N027` | **N027**@72 · N021@72 | dasselbe Paar, andersherum — und damit `begleitet` statt `verdeckt`. Zusammen sind die beiden Proben der Beleg: **das Paar ist nicht trennbar, in keiner Richtung.** |
+| `56-geliehenes-verbraucht` | `L102` | E008@11 · **L102**@11 | **Der Vorläufer IST der Gegenstand.** `L102` heißt „geliehen und trotzdem verbraucht"; *geliehen* heißt genau, dass `consumes` in den `effects` fehlt — und dieselbe Auslassung ist `E008`. Wer `E008` heilt, löscht die Probe. |
+| `63-gruppe-halb-gesperrt` | `U003` | H007@54 · H008?@41 · **U003**@47 | **Eine Sperre, zwei Regeln.** `H007` sieht den einzelnen Ort ohne seine Sperre, `U003` die Gruppe. Es gibt keine Schreibstelle an einem `PLAN`-geschützten Träger ohne `PLAN`, die `H007` nicht sieht. |
+| `188-schritt-in-locks-in-schleife` | `O006` | L108@33 · L107@45 · **O006**@38 | **Ein Phasenschritt verbraucht eine lineare Marke.** Also ist jede Probe für *„Phasenschritt in einer Schleife"* zwangsläufig auch eine für *„lineare Marke in einer Schleife verbraucht"* (`L108`). Zwei unbeabsichtigte Nachbarn (`K002`, `K006`) sind weg; die zwei linearen bleiben. |
+| `300-zeiger-auf-raw-fn` | `O009` | O010@17 · **O009**@29 | **Beide Auswege sind Absagen.** Ohne Marke sagt `O008` *„`raw fn` demands no `linear ghost` token"*, mit Marke sagt `O010` *„no function retires it"* — gemessen, indem beides gefahren wurde. Der dritte Weg ist ein `retires t from boot falsifier …`, und der verlangt einen `boot`-Block **und** eine Nachbedingung über die Abbildungen (`O012`, ebenfalls gemessen). *Mehr Gerüst, als die Probe groß ist.* |
+
+> **Fünf der sieben sind keine Nachlässigkeit, sondern eine Aussage über die Sprache.**
+> `F001`/`M101`, `N021`/`N027`, `L102`/`E008`, `U003`/`H007`, `O006`/`L108` — das sind
+> Paare, bei denen der eine Fehler den anderen **mit sich bringt**. Eine Probe kann sie nicht
+> trennen, weil die Sprache sie nicht trennt.
+
+### Der Nebenbefund, den niemand gesucht hat
+
+`N021` liest die `gates`-Funktionen eines `check` nicht. Schreibt die Torfunktion die
+gemessene Größe, sagt **kein einziger Pass etwas** — die Datei geht mit null Absagen durch.
+*Ob das eine Lücke ist oder die richtige Grenze, ist eine Frage an `SYNTAX.md` §13 und
+nicht an diese Tafel;* hier steht nur, dass es gemessen wurde und dass keine Probe es hält.

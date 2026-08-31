@@ -14,7 +14,7 @@
 
 module gift {
 
-impl fn spiegeln(x : i32) -> i32
+impl fn spiegeln(x : i32 in -100 .. 100) -> i32
     effects { pure }
     costs   <= 4 ops
 {
