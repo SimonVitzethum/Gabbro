@@ -488,10 +488,12 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 140 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 144 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *135 → 140 am 2026-08-31: `erzeugernamen.rs`, `beispiele/gift/414` und
       `messung/proben/probe-erzeugernamen-frei.gab` kamen dazu. Die Ratsche steigt am
       Gegenstand, und die drei Namen stehen hier, damit man das nachzählen kann.*
+      *140 → 144 am selben Abend: `beispiele/55`–`57` und `messung/QUANTORENDOMAENEN.md` —
+      dieselbe Bewegung, vier Namen mehr.*
       *~~103~~ … ~~121~~ — am 2026-08-30/31 **zehnmal** nachgezogen, aus sieben Ketten, und
       jedes Mal, weil ein Bericht geschrieben wurde. **Die Zahl misst den Ordner, nicht die
       Arbeit**, und sie ist an einem einzigen Tag von 103 auf 122 gestiegen, ohne dass ein
@@ -2818,8 +2820,13 @@ Infrastruktur und nicht seine These.*
 
 # STUFE 6 — DIE FREMDEN RÜMPFE SPRECHEN LASSEN  ⟨C⟩
 
-**89 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
+**93 fremde Rümpfe im Korpus, 11 sprechen ihre Pflicht aus — und genau EINE verengt wirklich
 etwas.** `ensures` an einer rumpflosen Deklaration ist grammatisch seit jeher möglich.
+
+*89 → 93 am 2026-08-31: `beispiele/55`–`57` bringen vier mit — drei Sperrprimitive und den
+Verteiler eines `entry`. **Der Zähler „sprechen ihre Pflicht aus" bleibt bei 11**, und damit
+ist die Quote gefallen, ohne dass etwas schlechter geworden wäre. Eine Quote, deren Nenner
+sich bewegt, ist zweimal zu lesen.*
 
 > **Berichtigt am 2026-08-21, und die Überschrift war in BEIDE Richtungen falsch.** Hier stand
 > *„0 sprechen ihre Pflicht aus — und kein Pass liest es"*. Es sind **10**, und ein Pass liest
@@ -3187,11 +3194,13 @@ braucht jede Tabelle ihr eigenes `traverse`.
       > beginnt** — und damit dieselbe Bewegung, die `locks ordered` getötet hat.
 
       **GEZÄHLT am 2026-08-21, und die Zahl ist NULL**
-      ([`./instrumente/zaehle-traversierungen.py`](instrumente/zaehle-traversierungen.py)):
+      ([`./instrumente/zaehle-traversierungen.py`](instrumente/zaehle-traversierungen.py)).
+      *22 → 23 am 2026-08-31: `beispiele/57-faedenhalt.gab` bringt ein `traverse over slots
+      of Faden` mit; der Nenner wächst, die Duplikatzahl bleibt null.*
 
       ```
-      22 Traversierungsruempfe stehen heute im Korpus
-      22 blieben nach Monomorphisierung
+      23 Traversierungsruempfe stehen heute im Korpus
+      23 blieben nach Monomorphisierung
        0 duplizierte Ruempfe  — streng UND unter der weitesten Lesart, die zu verteidigen ist
       ```
 

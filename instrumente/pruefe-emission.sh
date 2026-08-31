@@ -1794,7 +1794,14 @@ echo "   $n_emit_n messungen/, $n_emit_p programmlogik/, $n_emit_x sonst -- SECH
 # **53 -> 54 am 2026-08-31**: `beispiele/53-zwei-orte.gab` kam dazu. `breaking I { … }`
 # senkt seit diesem Tag ab -- die Weigerung stand auf *„emitting it would drop the region"*,
 # und `gabbro pflichten` bucht die Erhaltungspflicht laengst (`messung/ZWEI-ABSAGEN.md`).
-MARKE_EMIT=54
+#
+# **54 -> 57 am selben Abend, und der Grund steht hier statt in einem Merge:** die drei
+# Programme fuer die Quantorendomaenen `chain`, `queue` und `threads` (`beispiele/55`-`57`,
+# `messung/QUANTORENDOMAENEN.md`). Der Waechter hat sie selbst gemeldet -- *„FUND: 57 statt 54
+# emittierende Dateien in beispiele/ -- die Marke gehoert nachgezogen (der gute Fall, und
+# trotzdem ein Befund)"* -- und genau so ist sie nachgezogen: **der Gegenstand ist gewachsen,
+# also darf die Zahl steigen, und der Grund steht an der Marke.**
+MARKE_EMIT=57
 # **22 aus `messung/*/*.gab`, gemessen 2026-08-31** -- 6 Fragmente (F02, F04, F06, F07, F08,
 # F10), 4 W24-Proben dieses Tages (`messung/proben/`), **2 aus der Grammatik geschriebene
 # Dateien** (`messung/grammatik/`), 5 ABI-Proben, 2 Caprock, Grenze, Netz, Treiber.

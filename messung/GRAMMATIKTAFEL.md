@@ -1,4 +1,4 @@
-# FORM × ZUSTÄNDIGKEIT aus der GRAMMATIK — und `UNGEDECKT` fiel von 13 auf 4
+# FORM × ZUSTÄNDIGKEIT aus der GRAMMATIK — und `UNGEDECKT` fiel von 13 auf 4 auf **1**
 
 *Bahn V, Schritte V-2 und V-5 des `dokumente/PLAN-VOLLSTAENDIGKEIT.md`. Gemessen und gebaut
 am 2026-08-31. Werkzeug: `./instrumente/pruefe-grammatiktafel.py`.*
@@ -139,6 +139,11 @@ Prüfertatsache und im C nicht sichtbar. Bei `mmio` fängt das der Geräteweg au
 ---
 
 ## 4. Was offen bleibt: vier Zellen, und alle vier dieselbe Bauart
+
+> **Überholt am Abend desselben Tages, in beide Richtungen — siehe [§10](#10-drei-zellen-zu-und-der-satz-daneben-berichtigt-w25).**
+> Die ZAHL fiel auf 1 (`chain`, `queue`, `threads` sind gedeckt), und der SATZ unten war
+> falsch: er stand neben jedem Wort, das irgendwo in irgendeinem Absagetext vorkam. *Der
+> Abschnitt bleibt stehen, weil er der Stand ist, aus dem §10 gerechnet hat.*
 
 ```
 ! GRAMMATIKTAFEL ROT: 4 von 219 Terminalen sind UNGEDECKT.
@@ -669,3 +674,99 @@ Schnellabnahme dieses Abends ausgelassen.
   zweites Mal und unabhängig, und `ptr<boot, r>` ebenso: `ctyp` liest `z.raum` für **jeden**
   Raum außer `mmio` nicht. *Die Adresse dieses Befundes ist breiter, als der Satz von gestern
   sagte.*
+
+---
+
+## 10. Drei Zellen zu, und der Satz daneben berichtigt (`W25`)
+
+*Gemessen am Abend des 2026-08-31, lokal (`free -g`: 31 GB gesamt, 15 verfügbar, 20 Kerne),
+über dem Stand `a86234f` + `c4d78a3`.*
+
+```
+vorher   219 Terminale · 88 Dateien emittieren UND uebersetzen
+         gesenkt 214 · abgesagt 0 · vom Pruefer 1 · UNGEDECKT 4
+nachher  219 Terminale · 91 Dateien emittieren UND uebersetzen
+         gesenkt 217 · abgesagt 0 · vom Pruefer 1 · UNGEDECKT 1
+```
+
+Die drei Programme stehen in [`QUANTORENDOMAENEN.md`](QUANTORENDOMAENEN.md), mit ihrem
+Gegenstand und mit dem, was ihre Domäne **nicht** trägt. Hier zählt nur, was sie an dieser
+Tafel verändert haben — und das ist mehr als eine Zahl.
+
+### 10.1 Der Satz war falsch, und die Zahl war richtig
+
+`if t in absage` — `absage` ist die Menge der Wörter, die in irgendeinem Absagetext des
+Erzeugers **vorkommen**. Ein Vorkommen ist keine Messung. Seit heute sagt `herkunft()` je
+Wort, **welcher Art seine Auskunft ist**:
+
+| | wann | was gedruckt wird |
+|---|---|---|
+| `GEMESSEN` | ein KORPUSPROGRAMM hat die Absage ausgelöst | Datei **und** Form |
+| `TEIL` | das Wort steht INNERHALB einer abgesagten Mehrwortform | die Form, die fällt |
+| `ABGELEITET` | das Wort steht in einem Absagetext, den nie ein Programm auslöste | die `emit.rs`-Zeilen |
+| `niemand nennt es` | nichts davon | — |
+
+```
+state   GEMESSEN an messung/proben/probe-vier-zellen.gab: der Erzeuger sagt `state` ab,
+        und der Pruefer nimmt dieselbe Datei mit 0 Fehlern an
+```
+
+**Drei Schnitte, und jeder war eine Behauptung ohne Deckung.** Kopfwort gegen Teilwort einer
+Form (`in` in `chain in` ist ein Mitglied, kein Gegenstand) · saubere Datei gegen eine mit
+Prüferfehler (nur die erste belegt *„der Prüfer nimmt an"*) · **Datei und Text als PAAR** —
+der dritte war im ersten Bau dieser Berichtigung selbst noch falsch, und `in` bekam
+`chain in` zugeschrieben statt seiner eigenen gemessenen Form `in a .. b`.
+
+### 10.2 Was die drei Programme fast verdeckt hätten
+
+`chain`, `queue` und `threads` sind **Quantorendomänen UND Traversierungsdomänen**. Als
+Quantorendomäne senken sie ab — eine Annotation erzeugt überhaupt kein C. Als
+Traversierungsdomäne sagt der Erzeuger sie namentlich ab, gemessen an
+`messung/proben/probe-vier-zellen.gab`. **Ihre Zelle sprang damit auf `gesenkt`, und vier
+gemessene Absagen wären hinter einer grünen Zelle verschwunden.**
+
+```
+== 21 Woerter sind `gesenkt` UND haben eine gemessene Absage ==
+   chain    senkt ab in beispiele/55-kindkette.gab
+            sagt `chain in` ab in messung/proben/probe-vier-zellen.gab
+   …
+   (10 weitere stehen nur INNERHALB einer abgesagten Mehrwortform)
+```
+
+> **`gesenkt` ist eine Aussage über das WORT, nicht über jede Stellung, die die Grammatik ihm
+> erlaubt.** §6.2 sagt das seit jeher über Formen; hier ist es zum ersten Mal *gedruckt*, mit
+> beiden Adressen. Eine Zelle je Terminal kann den Unterschied nicht tragen — also steht er
+> daneben statt in einer Fußnote.
+
+### 10.3 Die Sprechprobe: vier Richtungen → fünf
+
+```
+ok   nur erwaehntes `ANNAHME_DMA` bekommt KEINE Absage zugeschrieben (W25)
+ok   gemessenes `chain` bekommt seine Fundstelle (messung/proben/probe-vier-zellen.gab)
+ok   `a` steht nur INNERHALB einer Form und heisst darum `TEIL`
+ok   ein Wort, das in keinem Absagetext steht, heisst `niemand nennt es`
+```
+
+*Die erste dieser vier ist die Richtung, die vier Nachrichten lang gefehlt hat.*
+
+### 10.4 Die Marken
+
+| Marke | von → nach | Grund |
+|---|---:|---|
+| `MARKE_ALLEIN` | 0 → **3** | drei Wörter gingen von NULL Trägern auf einen; eine Zahl, die Einsen zählt, steigt dabei zwangsläufig. **Gegenstand gewachsen, nicht Schwäche.** [`EINSAME-WOERTER.md`](EINSAME-WOERTER.md) §5c |
+| `MARKE_ZU_ZWEIT` | 38 → **36** | zwei Wörter wanderten aus der Zweierspalte nach OBEN — keine Ratsche, die gute Richtung |
+| `MARKE_EMIT` (`pruefe-emission.sh`) | 54 → **57** | die drei neuen Beispiele emittieren; der Wächter hat es selbst gemeldet und nachzuziehen verlangt |
+
+### 10.5 Was §10 NICHT sagt
+
+* **Nichts darüber, ob `abgesagt` gemessen ist.** Der ZUSTAND `abgesagt` ruht weiterhin auf
+  der gelesenen Wortmenge (`t in absage and t in pruefer`). Heute ändert das nichts — er ist
+  an **0** Wörtern belegt —, und morgen könnte es etwas ändern. *Es steht im Kopf des
+  Werkzeugs, weil eine Ableitung, die sich selbst nennt, keine Falle mehr ist.*
+* **Nichts über `state`.** Die vierte Zelle bleibt offen, ihre Absage ist als richtig
+  nachgemessen, und die Entscheidung gehört dem Ordner (Plan §8, `A3`/`A4`).
+* **Nichts über die Güte der drei Absenkungen.** Eine Annotation erzeugt kein C; dass die
+  drei Wörter jetzt `gesenkt` heißen, heißt nur, dass eine Datei mit ihnen durch beide Tore
+  ging. **Was die Domänen tatsächlich tragen, steht in
+  [`QUANTORENDOMAENEN.md`](QUANTORENDOMAENEN.md) — und bei zweien von dreien ist die Antwort
+  nein.**
