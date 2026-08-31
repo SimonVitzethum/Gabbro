@@ -743,3 +743,408 @@ Der Eichpunkt ist seL4s **20:1**. SPARK gegen diese Zahl, Gabbro gegen dieselbe.
 
 - [ ] Struktur wählen, beide schreiben, zählen. **Vor dem Schreiben festlegen, was als
       „Spezifikationszeile" zählt** — sonst entscheidet die Definition das Ergebnis (W25).
+
+---
+
+# TEIL IV — Diktat gegen Zusage
+
+*Angefügt 2026-09-01, und dieser Teil **ersetzt §20**. Das Verhältnis Spezifikation zu
+Erzeugnis misst die Programmgröße mit — **Logik kann einfach sein und das Programm riesig,
+dann ist es 0,0:1; oder andersherum, dann ist es 2:1.** Beides sagt nichts. Die Marke
+darunter hängt an keiner Größe.*
+
+## §21 — Das Ziel, als Zahl
+
+> **Ein Nutzer muss nur noch seine eigene Logik beweisen, sonst nichts.**
+
+Der Baum misst schon etwas Ähnliches — `gabbro ceremony` teilt in **ableitbar / redundant /
+tragend**. Aber das ist eine andere Frage:
+
+| | |
+|---|---|
+| **die Tafel fragt** | *darf die Klausel wegfallen?* |
+| **das Ziel fragt** | *ist es die eigene Logik des Nutzers?* |
+
+**Ableitbar und weglassbar sind zwei verschiedene Dinge, und die Tafel kennt nur das
+zweite.** Dieselbe W16-Gestalt wie überall in diesem Baum: ein Messgerät, das etwas anderes
+misst als seinen Gegenstand — nur diesmal nicht als Fehler, sondern als **ungestellte
+Frage**.
+
+### Die zwanzig Regeln, neu sortiert nach WESSEN AUSSAGE
+
+*Gemessen 2026-09-01 über 64 Dateien, 1054 Stellen:*
+
+```
+  EIGENE LOGIK        188   18 %
+     T3     82   requires/ensures -- der Vertrag
+     T6     65   Terminierung: Schranke, on_exceeded, progress, decreases
+     T12    26   Bereich am Typ
+     T5      9   table invariant          T4   6   maintains
+
+  DIE HARDWARE         93    9 %
+     T10    35   Registerklasse           T11  35   assume + Falsifikator
+     T9     23   reserved-Feld
+
+  BUCHFUEHRUNG        705   67 %
+     T1    462   Wirkungseintrag
+     T2    211   costs
+     T7     25   touches                  T8    7   let-Annotation
+
+  ABLEITBAR, offen     68    6 %
+```
+
+> **Zwei Drittel von dem, was ein Gabbro-Programmierer schreibt, ist Buchführung.** Nicht
+> seine Logik, nicht das Handbuch — Bücher, die er dem Übersetzer führt.
+
+**Die Marke: `705 → 0` bei bleibenden `188`.** Sie hängt an keiner Programmgröße — *die
+Buchführung skaliert mit dem Code, die Logik mit dem Problem.*
+
+---
+
+## §22 — Und beide großen Posten rechnet der Übersetzer schon selbst
+
+```
+$ gabbro costs 19-traversierung.gab
+-- site           computed  promised  slack
+aktive_loeschen         48        64        16
+
+$ gabbro pruefe eff.gab
+error: [E005] `f` writes `t.slots[…].a` but declares `pure`
+```
+
+**Er weiß die Zahl. Er weiß den Ort.** Er verlangt sie trotzdem vom Nutzer und **prüft dann
+nur, ob dessen Abschrift stimmt.**
+
+> **Das ist keine Beweislast, das ist ein Diktat.**
+
+Und der Handel bei der Heilung ist bei beiden derselbe:
+
+* **`costs`** — der Übersetzer schreibt die gemessene Zahl. Der Nutzer schreibt eine Zusage
+  nur dort, wo er sie **enger** haben will als das Ergebnis.
+* **`effects`** — abgeleitet statt deklariert, mit derselben Ausnahme: wer eine Funktion
+  **auf** `pure` festnageln will, schreibt es hin.
+
+> **Beides ändert die Bedeutung der Klausel von „ich habe abgeschrieben" zu „ich
+> verspreche".** Das ist kein Verlust an Strenge, sondern das Gegenteil: **eine Zusage, die
+> jemand freiwillig schreibt, trägt etwas. Eine, die er schreiben MUSS, trägt nur seine
+> Sorgfalt beim Abschreiben.**
+
+---
+
+## §23 — Die Messung vor der Bahn, und sie ist eindeutig
+
+`gabbro costs` über den ganzen Korpus, die `slack`-Spalte histogrammiert:
+
+```
+  682 Zusagen mit gerechneter Zahl
+
+  slack == 0     67   (10 %)   exakt abgeschrieben ODER echtes Versprechen
+  slack  > 0    594   (87 %)   POLSTERUNG
+
+  Polsterung relativ zur Zusage:      bis 10 %    10
+                                      bis 25 %    57
+                                      bis 50 %   130
+                                      ueber 50 % 397
+```
+
+Die großzügigsten mit echtem Rumpf:
+
+```
+  ohne_verbrauch      gerechnet    64   zugesagt 100000   Polster 99,9 %
+  hoechster           gerechnet     1   zugesagt    512   Polster 99,8 %
+  zaehler_erhoehen    gerechnet     6   zugesagt   2048   Polster 99,7 %
+```
+
+> **87 % aller Kostenzusagen sind gepolstert, und zwei Drittel davon um mehr als die
+> Hälfte.** Eine Zusage mit 99,8 % Polster trägt nichts — sie ist eine gerundete Abschrift.
+
+**Damit steht die These als Zahl statt als Argument**, vor der ersten Zeile Bahn.
+
+---
+
+## §24 — Die Reihenfolge: `effects` zuerst, und der Grund ist der Erzeuger
+
+Der erste Reflex war `costs`, weil es die kleinere Zahl ist. **Das ist falsch:**
+
+> `costs` zählt Ops im **erzeugten** C. Die Ableitung hängt damit am Erzeuger — an denselben
+> sechs Verteilern und zwölf Wildcards aus §1, von denen einer Zugriffsbreiten entschied.
+> **Eine abgeleitete Kostenzahl erbt jede offene Stelle dort, und zwar UNSICHTBAR:** heute
+> fällt eine falsche Absenkung womöglich als Kostenabweichung auf, nach der Ableitung ist
+> sie einfach die neue Zahl.
+
+`effects` ist eine **Quellanalyse**. Sie kennt den Erzeuger nicht und kann von ihm nicht
+verdorben werden. **462 Stellen gegen 211 klingt nach der größeren Hälfte; technisch ist sie
+die kleinere.**
+
+### Eine Korrektur an der Begründung, gemessen
+
+Das Argument lautete: *Gabbro hat keine Rekursion, also ist der Aufrufgraph ein DAG, und
+Effektableitung ist ein topologischer Durchlauf statt eines Fixpunkts.*
+
+**Die Prämisse stimmt nicht mehr.** Seit dem 2026-08-19 gibt `decreases` der Rekursion ein
+Maß (`beispiele/33`, «K5.4»). Gemessen: **4 Dateien, 6 `decreases`-Stellen.**
+
+> *Bis dahin stand im ganzen Korpus keine einzige rekursive Funktion, und der Grund war kein
+> Stilentscheid: `K001` fiel an jeder.*
+
+**Der Schluss überlebt trotzdem, aber aus einem anderen Grund:** Wirkungen bilden einen
+endlichen Verband (Vereinigung über eine endliche Ortsmenge), also konvergiert der Fixpunkt
+über den Zyklen ohnehin — und bei sechs rekursiven Stellen im ganzen Korpus ist der
+Unterschied zwischen topologisch und Fixpunkt keine Kostenfrage. **`aufrufgraph.rs`
+existiert schon.**
+
+*Die Zahl `6` gehört in den Auftrag, damit niemand die DAG-Annahme als gegeben mitnimmt.*
+
+---
+
+## §25 — Was der Plan sonst nicht bepreist: die Diagnose wandert
+
+`[E005] f writes … but declares pure` **existiert nur, weil es eine Deklaration zu
+widersprechen gibt.** Ohne sie verschwindet die Fehlerklasse nicht — **sie zieht um**: an
+den Aufrufer, an eine Sperrrangprüfung, an eine `extern`-Grenze, an ein `pure` drei Ebenen
+höher.
+
+> **Der Fehler entsteht am Rumpf und wird woanders gemeldet.**
+
+Das ist dieselbe Form, die bei `op_zeichen` als Befund steht: *eine Absage, die die Zeile
+nicht zitieren kann, um die es geht.* Und `E4` sagt es im Entwurf selbst — Verträge stehen
+in fester Ordnung, **damit** ein Werkzeug „hier fehlt `effects`" sagen kann.
+
+**Die Ableitung handelt Lokalität gegen Schreibarbeit.** Das ist bezahlbar, aber es gehört
+bepreist:
+
+- [ ] Die abgeleitete Menge muss **abrufbar** sein (`gabbro effects <fn>`).
+- [ ] Ein Widerspruch muss den **Ursprung** nennen, nicht nur die Stelle, an der er
+      auffällt. *Der Pfad ist rückverfolgbar — das ist keine neue Analyse, nur eine Ausgabe.*
+
+---
+
+## §26 — Was nicht verloren gehen darf: die Ratsche
+
+Heute bricht eine Änderung, die eine Funktion teurer macht, **an der Deklaration**. Nach der
+Ableitung gelingt sie still und die Zahl ist eine andere. **Die Kostenschranke hört auf, ein
+Riegel zu sein.**
+
+Die Heilung ist die, die dieser Baum überall sonst benutzt: **nicht Quellannotation, sondern
+gemessene Zahl unter einem Wächter**, wie `377 von 377 Ankern`.
+
+- [ ] `gabbro costs` schreibt in eine Messdatei, ein Wächter vergleicht, **eine
+      Verschlechterung ist rot.**
+
+> **Damit ist die Ratsche STÄRKER als heute** — sie deckt dann alle Stellen statt nur die
+> 211 deklarierten — und der Nutzer schreibt `costs` nur noch, wo er enger sein will als die
+> Messung.
+
+Für `effects` gilt dasselbe in schwächerer Form: eine stille Verbreiterung einer
+Blattfunktion verbreitert vierzig Aufrufer, und heute merkt man es an vierzig Stellen.
+
+- [ ] **Ob das Firewall oder Lärm ist, ist messbar:** wie viele der 462 Einträge würden bei
+      stiller Verbreiterung etwas ändern, **das der Prüfer nicht ohnehin fängt?** *Falls
+      fast keine — Lärm, und der Fall ist gemacht.*
+
+---
+
+## §27 — Zwei Zweifel an der Einteilung selbst, beide berechtigt
+
+*Ein Durchgang über zwanzig Regeln ist in diesem Baum noch nie ohne zweiten Befund
+geblieben.*
+
+### `progress` steht unter T6 und hat die Bauart von T11
+
+```
+T6   a loop bound, `on_exceeded`, `progress` or `decreases`
+     because: termination is not readable from the body
+T11  `assume` with its falsifier
+     because: an assumption no probe can contradict is not a statement (`N031`)
+```
+
+`forever … progress timer_tick_arrives` **ist eine Umgebungsannahme mit Falsifikator — der
+Wachhund IST der Falsifikator.** Das ist T11s Bauart, nicht T6s.
+
+> **Eines von beiden ist falsch einsortiert**, und dann sind es nicht 188 gegen 93.
+
+Dasselbe steht schon in §15 als *„`progress` und `assume` sind dieselbe Sache in zwei
+Listen"* — hier trifft es die Zielmarke zum zweiten Mal, **was für den Posten spricht.**
+
+### T12, Bereich am Typ, 26 Stellen
+
+```gabbro
+type KernIdx = u32 in 0 ..< NKERNE;        table … count NKERNE
+type Tiefe   = u64 in 0 .. 1048576;        table Halde count 1048576
+```
+
+**Das ist keine Nutzerlogik, sondern eine zweite Abschrift derselben Zahl.** `index into T`
+leitet die Schranke schon aus `count` ab — für diese Aliase tut es niemand.
+
+- [ ] Zählen, wie viele der 26 aus einer Tabellendeklaration ableitbar sind. **Sie gehören
+      dann in die Buchführung**, und die Marke wird `188 → weniger`.
+
+> **Beides eher gut als schlecht: die Zielmarke wird SCHÄRFER, nicht schwächer.**
+
+---
+
+## §28 — Die Bahn, und was vor ihr steht
+
+| | |
+|---|---|
+| **steht schon** | §23, die Polsterungsmessung — **87 % gepolstert, 397 über 50 %** |
+| **1** | **`effects` ableiten** — Quellanalyse, 462 Stellen, `aufrufgraph.rs` existiert |
+| **2** | `gabbro effects <fn>` + Ursprungspfad im Widerspruch (§25) |
+| **3** | **`costs` unter einen Wächter** (§26) — *bevor* die Ableitung kommt, nicht danach |
+| **4** | `costs` ableiten — **nach** §1, weil die Zahl sonst die Wildcards erbt |
+| **5** | §27 klären: `progress`/T11, und wie viele der 26 T12 Abschriften sind |
+
+**Und die Marke steht, bevor gebaut wird: `705 → 0`, `188` bleiben.** Sie kann fallieren,
+und das ist der Punkt.
+
+---
+
+# TEIL V — Die Beweisseite, die Teil IV nicht misst
+
+*Angefügt 2026-09-01. **Teil IV misst SCHREIBLAST.** `705 → 0` heißt: der Nutzer *schreibt*
+nur noch seine Logik. **Ob er sie BEWEISEN kann, steht auf einem anderen Blatt** — und die
+Zahlen dort sind schlechter.*
+
+## §29 — „Nur noch seine eigene Logik beweisen" hat zwei Hälften
+
+Die Zeremoniemessung deckt die erste ab. Vier Posten stehen daneben, und **keiner davon
+taucht in den 1054 Stellen auf.**
+
+*Gemessen 2026-09-01 über die 159 Dateien ohne `gift/`:*
+
+```
+  Kanal A  Pflichten     112 Register ueber 159 Dateien     92 Pflichten
+                         47 Dateien tragen KEIN Register
+  Kanal B  Ruempfe       145 GETRAGEN, 236 ABGELEHNT        145/381 = 38 %
+  Absenkung              `Absenkung_Parametrisch.thy` deckt EINE erzeugte Form
+```
+
+> **Eine Einheit mit Fehlern trägt kein Register.** 47 von 159 — und das ist keine
+> Nachlässigkeit, sondern Bauart: **wo der Prüfer absagt, gibt es nichts zu beweisen.**
+> *Aber es heißt auch: die Beweisseite sieht nur, was die Prüfseite schon durchgelassen hat.*
+
+---
+
+## §30 — Ausdrückbarkeit: er muss sie sagen können
+
+Die schärfste Fundstelle steht im eigenen Baum: **Spezifikation 2 ist ein Quantor** —
+*„`raeumen` fasst kein anderes Fach an"* — **und eine `spec fn` kann das nicht.**
+
+> **Rahmenbedingungen sind der häufigste Inhalt einer Kernspezifikation, und für sie muss
+> der Nutzer heute die Sprache verlassen.**
+
+Dazu drei ausdrückliche Streichungen, jede einzeln begründet:
+
+```
+keine Rekursion in `spec fn`  ·  keine handgeschriebenen Lemmata
+keine benutzerdefinierten Quantorendomaenen
+```
+
+**Zusammen bilden sie eine Decke**, und das offene Item sagt selbst: *ein einziger Fall in
+der letzten Spalte setzt sie tiefer.*
+
+### Die härteste Form sieht man erst bei n > 1
+
+> **Wenn eine neue Datenstruktur ein neues Domänenwort braucht, braucht der Nutzer den
+> SPRACHAUTOR.**
+
+Das ist der äußerste Gegensatz zu „nur seine eigene Logik": **sein Problem ist dann nicht
+unbeweisbar, es gehört jemand anderem.**
+
+**Darum ist die deklarierte Erreichbarkeitsdomäne (§12) der Vorschlag mit dem größten Hebel
+auf genau dieses Ziel** — nicht wegen der siebzehn Wörter, sondern weil sie die Abhängigkeit
+vom Sprachautor auflöst.
+
+---
+
+## §31 — Vertrauen: er darf nicht glauben müssen, dass das C sein Programm ist
+
+> **Wenn er seine Logik über der Quelle beweist und die Maschine etwas anderes ausführt, hat
+> er nichts bewiesen.**
+
+Heute deckt der Absenkungssatz **eine** erzeugte Form — und *die Instanz, an der er geprüft
+wurde, war an einem Zweig falsch* (`ab32267`).
+
+Drei Teile, alle offen:
+
+- [ ] **Absenkungsabdeckung** — alle erzeugten Formen. Heute eine. *Der Nenner steht in §1
+      Teil I: 64 Formen im Erzeugnis.*
+- [ ] **Die Naht zwischen den Beweisern.** Der Satz *„das erzeugte C erfüllt die
+      Lean-Spezifikation"* **existiert in keiner Logik.** Er entsteht durch Nebeneinanderlegen
+      von Isabelle (3512 Z, 101 Sätze) und Lean (4068 Z, 155 Sätze) — **und das ist kein
+      Beweisschritt.**
+- [ ] **Unabhängigkeit.** `lean.rs` liegt im Prüfer-Crate, teilt also **auch ungetort den
+      Vorderbau**. *Der Fall, für den man einen Verifizierer will, ist der, in dem Prüfer und
+      Spezifikation uneins sind — und der kommt heute nicht bis zur Frage.*
+
+> **Das ist der Posten mit dem höchsten Rang in Teil V.** Er ist keine Zeremonie und taucht
+> in keiner der 1054 Stellen auf, **aber er entscheidet, ob der Beweis des Nutzers etwas
+> über seine Maschine sagt.**
+
+---
+
+## §32 — Die 93 Hardwarestellen skalieren falsch
+
+`assume` mit Falsifikator, Registerklasse, `reserved` — **das kommt aus dem Handbuch, nicht
+aus dem Kopf des Nutzers, und keine Ableitung nimmt es ab.**
+
+Aber: **es müsste EINMAL PRO GERÄT anfallen, nicht einmal pro Programm.**
+
+Heute gibt es **keinen Mechanismus, eine geprüfte Gerätebeschreibung samt ihrer Annahmen als
+wiederverwendbare Einheit auszuliefern.**
+
+> Solange es keinen gibt, **verlängert jeder neue Treiber die Vertrauensbasis** — und die
+> Marke aus §33 ist unerreichbar **aus strukturellen Gründen, nicht aus Sorgfaltsgründen.**
+
+- [ ] `arch` an `assume` (steht schon in §3 und §15 — **dritte Fundstelle**).
+- [ ] **Eine Importform, die die Annahmen MITTRÄGT statt sie zu kopieren.** *Hängt an der
+      Modulauflösung, die seit `ccf77f2` steht.*
+
+---
+
+## §33 — Die vierte Marke, die heute niemand misst
+
+> **Annahmen bei Programm n+1 gegenüber Programm n.**
+
+**Wenn die nicht null ist, ist „nur noch seine Logik" auch bei perfekter Schreib- und
+Beweisseite falsch.**
+
+- [ ] Messen. Es gibt heute kein Werkzeug dafür, und es ist billig: `assume`-Stellen je
+      Programm, gegen die Menge der schon im Baum stehenden.
+
+---
+
+## §34 — Was gar nichts trägt
+
+Aus den eigenen offenen Punkten, unverändert gültig:
+
+* Die Naht **CPU ↔ Gerät** hat kein mechanisiertes Modell.
+* Der **`iasm`-Eintrittspfad** hat keinen nachgelagerten Beweiser — *161 Stellen auf eine
+  geschrumpft, nicht verschwunden.*
+* **Lebendigkeit und Fortschritt** fallen unter keinen Mechanismus.
+* **Die Ghost-Theorie-Schablonen** sind die vertrauenskritischste Fläche und stehen noch
+  nicht in Isabelle.
+
+> **Die letzte ist stiller als die anderen: eine Schablone, die für alle Programme gilt, ist
+> ein Fehler, der für alle Programme gilt.**
+
+---
+
+## §35 — Die Zahlenreihe, vollständig
+
+Teil IV misst die Schreibseite. **Die Beweisseite braucht drei Marken daneben, und alle drei
+existieren schon als Messung:**
+
+| Seite | Marke | heute | Ziel |
+|---|---|---|---|
+| **schreiben** | Buchführung gegen eigene Logik | **705 / 188** | **0 / 188** |
+| **beweisen** | Pflichten mit Register | 112 Register, **47 ohne** | 159 / 159 |
+| **beweisen** | getragene Rümpfe (Kanal B) | **145 / 381 = 38 %** | 381 / 381 |
+| **beweisen** | erzeugte Formen mit Absenkungssatz | **1 von 64** | 64 / 64 |
+| **skalieren** | **Annahmen bei Programm n+1** | **ungemessen** | 0 |
+
+> **Und die vierte Zeile ist die, die die anderen drei entwertet, wenn sie nicht null wird.**
+
+*Alle Zahlen 2026-09-01 über die 159 Dateien ohne `gift/`. Der Nenner ist genannt, weil er
+das Ergebnis entscheidet (W25) — über den ganzen Korpus mit Giftproben sähen sie anders und
+schlechter aus, und das wäre keine Messung, sondern eine Verwechslung.*
