@@ -1,0 +1,35 @@
+-- erwartet: L104
+-- **Der Arm eines `narrow … else` wird noch GELESEN.**
+--
+-- Am 2026-08-31 wurde `narrow … else` in M2 vom geradlinigen Rumpf zum ZWEIG. Der
+-- naheliegende falsche Weg dorthin ist, den Arm einfach zu ueberspringen: der Zustand
+-- danach stimmt dann auch, und `L104` an der Fortsetzung verschwindet.
+--
+-- **Diese Probe steht gegen genau diesen Weg.** Beide Rufe stehen IM Arm; wer ihn nicht
+-- laeuft, sieht kein einziges davon.
+--
+-- > Die Gegenprobe ist `beispiele/58-freiliste-zwei-formen.gab`: dieselbe Form, sauber,
+-- > weil dort nur einmal verbraucht wird.
+
+module gift {
+
+static mut hinterlegt : u32 in 4 .. 16 = 4;
+
+table Arena count 16 backed hinterlegt {
+    slot { belegt : bool, }
+}
+
+linear ghost type Griff;
+
+extern fn griff_weg(g : Griff) effects { consumes g } costs <= 0 ops;
+
+impl fn freigeben(a : ptr<normal, rw> Arena, i : index into Arena, g : Griff)
+    effects { reads hinterlegt, writes a.slots, consumes g }
+    costs   <= 8 ops
+{
+    narrow i to 0 ..< hinterlegt else { griff_weg(g); griff_weg(g); return; }
+    a.slots[i].belegt = false;
+    griff_weg(g);
+}
+
+}

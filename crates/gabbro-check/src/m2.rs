@@ -64,6 +64,9 @@ struct Vertraege<'a> {
     reihenfolge: &'a BTreeMap<String, Vec<String>>,
     ergebnis: &'a BTreeMap<String, String>,
     linear: &'a BTreeSet<String>,
+    /// **The functions whose call does not come back**, for `endet`. Without them a branch
+    /// ending in `abort();` counts as falling through, and its state enters the join.
+    divergent: &'a [String],
     modul: &'a str,
 }
 
@@ -129,6 +132,25 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     // loest auf `Unbekannt` auf.
     let mut ergebnistyp: BTreeMap<String, String> = BTreeMap::new();
     let mut reihenfolge: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    // **All three ways a function can promise not to come back**, and all three count. A
+    // `-> never` result, the `divergent` class and `effects { diverges }` say the same
+    // thing to a caller, and a list that knows only one of them makes `endet` answer
+    // `false` for a branch that provably ends. *`schleifen.rs` reads all three for `S002`;
+    // `namen.rs` reads only the class for `N045` -- a third register, and it is narrower
+    // than the rule it serves.*
+    let mut divergent: Vec<String> = Vec::new();
+    crate::fuer_jedes_item(baum, &mut |item| {
+        if let ItemArt::Funktion(f) = &item.art {
+            let nie = matches!(&f.ergebnis, Some(TypExpr::Never(_)));
+            let div = f.klasse == Some(FnKlasse::Divergent)
+                || f.effects.as_ref().is_some_and(|w| {
+                    w.liste.iter().any(|e| matches!(e.art, WirkungArt::Divergiert))
+                });
+            if nie || div {
+                divergent.push(f.name.text.clone());
+            }
+        }
+    });
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         if let ItemArt::Funktion(f) = &item.art {
             let mut menge = BTreeSet::new();
@@ -166,6 +188,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
             reihenfolge: &reihenfolge,
             ergebnis: &ergebnistyp,
             linear: &linear,
+            divergent: &divergent,
             modul,
         };
         // Lineare Parameter, die die Funktion NICHT unter `consumes` nennt, sind geliehen --
@@ -310,7 +333,11 @@ fn gehe(
                 if let Some(r) = l.als_ruf() {
                     ruf(r, s.span, v, zust, absagen);
                 }
+                einseitig(&l.sonst, s.span, linear, v, zust, absagen);
             }
+            // **`narrow … else` is a BRANCH, and it was walked as a body** («L104»,
+            // 2026-08-31). See `einseitig` for the whole argument.
+            StmtArt::Narrow(n) => einseitig(&n.sonst, s.span, linear, v, zust, absagen),
             StmtArt::Return(Some(e)) => {
                 ausdruck(e, s.span, v, zust, absagen);
                 // **Wer zurueckgibt, verbraucht nicht -- er reicht WEITER.** Fuer diese
@@ -370,14 +397,17 @@ fn gehe(
             }
             _ => {}
         }
-        // **Die zustandsLINEAREN Rümpfe über `crate::unterbloecke`** — `locks`, `breaking`,
-        // `narrow … else`, `observes`, `let … else`, der `exchange`-`update`-Rumpf und jeder
-        // Schleifenrumpf laufen in der Reihenfolge des Rumpfs und nicht als Zweige.
-        // *`if` und `match` bleiben oben: dort wird abgeglichen, nicht fortgeschrieben.*
+        // **The straight-line bodies over `crate::unterbloecke`** — `locks`, `breaking`,
+        // `observes`, the `exchange` `update` body and every loop body run in the order of
+        // the body and not as branches. *`if`, `match`, `narrow … else` and `let … else`
+        // stay above: there the paths are RECONCILED, not written on.*
         //
-        // Vorher fehlte `exchange`: ein linearer Wert, der in einem `update(x) { … }`
-        // verbraucht wird, war für die Linearität nicht verbraucht.
-        if !matches!(&s.art, StmtArt::Wenn(_) | StmtArt::Match(_)) {
+        // `exchange` was missing once: a linear value consumed inside an `update(x) { … }`
+        // did not count as consumed at all.
+        if !matches!(
+            &s.art,
+            StmtArt::Wenn(_) | StmtArt::Match(_) | StmtArt::Narrow(_) | StmtArt::LetSonst(_)
+        ) {
             // **`L108` — ein Schleifenrumpf laeuft OFT, gezaehlt wird er einmal**
             // (Rezension 2026-08-20).
             //
@@ -420,102 +450,83 @@ fn gehe(
     }
 }
 
-/// Does the block end on every path? Then it contributes nothing to the reconciliation.
+/// **The one-armed branch — `narrow … else` and `let … else`.**
 ///
-/// **The question is recursive, and it was not** (2026-08-25). A `matches!` over the KIND
-/// of the last statement stood here -- so a block whose last statement is an `if` in which
-/// EVERY branch returns counted as running on:
+/// Both carry a block for the OTHER path, and until 2026-08-31 M2 walked that block as
+/// straight-line code: whatever the `else` did was written straight into the state of the
+/// path that never entered it. One consumption in the `else` arm therefore made the value
+/// consumed for the continuation as well, and the next consumption there was reported as a
+/// second one:
 ///
 /// ```gabbro
-/// if b {
-///     if c { nimm(m); return 1; } else { nimm(m); return 2; }
-/// }
-/// nimm(m);
+/// narrow i to 0 ..< backed else { drop_handle(g); return; }
+/// a.slots[i].taken = false;
+/// drop_handle(g);                    -- `[L104] `g` is consumed a second time`
 /// ```
 ///
-/// The outer branch leaves the function on every path, yet it entered the reconciliation as
-/// live -- with `m` consumed, against the implicit else path with `m` alive. Result: `L103`
-/// *and* `L104` on a correct program.
+/// > **The `if` spelling of the very same program was silent.** `emit.rs` lowers
+/// > `narrow p to a..b else { S }` to `if (!(a <= p && p < b)) { S }` — one construct, one
+/// > C form — so the two texts denote the same control flow, and a pass that answers them
+/// > differently is reading the source and not the language. *This is the fourth instance
+/// > of that class* (`D018`, `D017` twice, `K003`): **a pass that runs before the lowering
+/// > and re-interprets control flow per construct.**
 ///
-/// > As long as the early exit in `abgleich` threw the consumption away, this was
-/// > **masked**: the inner `if` passed nothing on, so the paths agreed by accident. *Two
-/// > errors that hid each other -- and the second became visible only once the first was
-/// > repaired.*
-///
-/// An `if` WITHOUT an else never ends: there is always a way past it.
-/// **Does any `leave <marke>` in this block target THAT loop?**
-///
-/// Conservative on purpose. A `leave` of the same name inside a NESTED loop that shadows the
-/// mark is counted here too, and the answer is then "yes, it falls through" -- the old
-/// answer. *A search that errs only towards falling through cannot create a false
-/// acceptance; it can only give up a refinement.*
+/// The arm is now what the lowering says it is: one branch that may end, plus the
+/// fall-through path that skipped it, reconciled by `abgleich` exactly as an `if` without an
+/// `else` is. For `let … else` the branch always ends (`S002` refuses one that falls
+/// through), so it contributes nothing — which is the same answer the old code gave only by
+/// accident, and only as long as nobody consumed anything in it.
+fn einseitig(
+    sonst: &Block,
+    span: Span,
+    linear: &BTreeSet<String>,
+    v: &Vertraege,
+    zust: &mut BTreeMap<String, (Zustand, Span, bool, bool)>,
+    absagen: &mut Absagen,
+) {
+    let vorher = zust.clone();
+    let mut z = vorher.clone();
+    gehe(sonst, linear, v, &mut z, absagen);
+    let endet_dort = endet(sonst, v);
+    zweig_geborene(&vorher, &z, endet_dort, absagen);
+    abgleich(&[(z, endet_dort), (vorher.clone(), false)], span, zust, absagen);
+}
 
-/// **Does control leave this block for good?** Not a descent -- one question about ONE
-/// statement, the last one.
+/// **Does the block end on every path?** Then it contributes nothing to the reconciliation.
 ///
-/// The reader who wants the difference: `crate::unterbloecke` asks *which blocks does this
-/// statement CONTAIN*, and a pass that has to visit every block owes an arm for each of the
-/// nine. **This function visits none of them.** The two branching forms stand here not
-/// because it descends into them but because their ending is compositional over their arms;
-/// the remaining seven do not end at all, or end only by containing a `return` that the
-/// branch bookkeeping already sees.
+/// This was a fourth copy of one question. `crate::endet_immer`, `m1`'s own method and this
+/// one each carried the terminator list `Return | Leave | Next` in their own words, and the
+/// three answers were not the same one:
 ///
-/// > **And that was true for six of the seven, not for all seven** (2026-08-30). A `forever`
-/// > without an exit does not fall through -- it DIVERGES -- and answering `false` for it was
-/// > not conservative, it was wrong in the direction that rejects a correct program:
-/// >
-/// > ```gabbro
-/// > impl fn a(m : Marke, b : bool) -> u64 effects { consumes m, diverges } {
-/// >     if b { forever dienst … { tue(); } } else { nimm(m); }
-/// >     return 0;
-/// > }
-/// > ```
-/// >
-/// > gave **`L103` -- „`m` is not treated the same on every path"** and `L101` behind it. The
-/// > diverging branch cannot leak `m`: it never returns. *The note printed under `L103` said
-/// > so all along* -- „a branch that diverges or returns does not count" -- **and the
-/// > predicate under it knew only the returning half.**
+/// | | diverging call | `locks`/`observes`/`breaking` arm | empty `match` |
+/// |---|---|---|---|
+/// | `crate::endet_immer` | ends | descends | **ends** (vacuous `all`) |
+/// | `m2::endet` (before) | **falls through** | **falls through** | falls through |
 ///
-/// `traverse` ends through the set and `retry` through a number: both fall through, and
-/// `false` is the right answer for them, not a concession.
+/// The left column is what it cost. A `let … else` whose arm ends in `abort();` — the shape
+/// every kernel writes its error handling in — was read as falling through, so its state
+/// entered the join and `L103`/`L104` fired on a correct program. *`S002` demands that the
+/// arm diverge or return, and M2 could see only the second half of the very rule that makes
+/// the construct safe.*
+///
+/// > **One predicate cannot serve two questions, but this is not two questions.** `endet`
+/// > asks *does control leave for good*, and both callers want the same answer; what
+/// > differed was only how much each copy knew. **A copy is not a specialisation** — it is
+/// > the same rule with less of the evidence.
+///
 fn endet(b: &Block, v: &Vertraege) -> bool {
-    let Some(s) = b.anweisungen.last() else {
-        return false;
-    };
-    match &s.art {
-        StmtArt::Return(_) | StmtArt::Leave(_) | StmtArt::Next(_) => true,
-        StmtArt::Wenn(w) => {
-            w.sonst.as_ref().is_some_and(|r| endet(r, v))
-                && w.zweige.iter().all(|(_, r)| endet(r, v))
+    // **The empty `match` is the one place the two registers disagree**, and it is
+    // reachable: `match x { }` parses and passes every pass today (measured 2026-08-31).
+    // `crate::endet_immer` answers `true` for it -- `all()` over no arms is vacuously true
+    // -- and that is the dangerous direction: a body ending in an empty `match` would count
+    // as leaving for good. *Kept here rather than repaired there because `lib.rs` is not
+    // this pass's file; the disagreement is reported, not papered over.*
+    if let Some(s) = b.anweisungen.last() {
+        if matches!(&s.art, StmtArt::Match(m) if m.zweige.is_empty()) {
+            return false;
         }
-        StmtArt::Match(m) => !m.zweige.is_empty() && m.zweige.iter().all(|zw| endet(&zw.rumpf, v)),
-        StmtArt::Schleife(sch) => match sch.as_ref() {
-            // An unnamed `forever` can be left by nothing: `StmtArt::Leave` always carries a
-            // mark, so there is no unlabelled exit to look for.
-            Schleife::Forever(f) => match &f.marke {
-                Some(m) => !crate::verlassen(&f.rumpf, &m.text),
-                None => true,
-            },
-            Schleife::Traverse(_) | Schleife::Retry(_) => false,
-        },
-        // **The six that stay `false`, and they are not a backlog.** `narrow … else`,
-        // `let … else` and the `exchange` `update` body carry a block for the OTHER path --
-        // the main path walks on past them. `locks` and `observes` end only by containing a
-        // `return`, and a value left unconsumed in a returning branch is a leak whether this
-        // predicate sees the ending or not. `breaking <m>` can be left by a `leave m` from
-        // anywhere inside, so its ending is a question about labels and not about the arm.
-        StmtArt::Narrow(_)
-        | StmtArt::LetSonst(_)
-        | StmtArt::Exchange(_)
-        | StmtArt::Sperrt(_)
-        | StmtArt::Observiert(_)
-        | StmtArt::Bricht(_)
-        | StmtArt::Let(_)
-        | StmtArt::Zuweisung(_)
-        | StmtArt::Publish(_)
-        | StmtArt::AwaitLoad(_)
-        | StmtArt::Ruf(_) => false,
     }
+    crate::endet_immer(b, v.divergent)
 }
 
 /// **L103 — die Zweige müssen dasselbe tun.** Ein Wert, der nur auf einem Weg verbraucht

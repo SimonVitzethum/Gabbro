@@ -1,0 +1,131 @@
+-- 58 -- **Eine Freiliste ueber einer schrumpfenden Tabelle, in BEIDEN Schreibweisen.**
+--
+-- `narrow p to a ..< b else { … }` senkt nach Gabbros eigener Regel auf `if (!(p < b)) { … }`
+-- ab (`emit.rs`, `StmtArt::Narrow`) -- ein Konstrukt, eine C-Form. Wer beide Fassungen
+-- hinschreibt, schreibt damit zweimal dasselbe Programm, und **jeder Pass, der sie
+-- verschieden beantwortet, liest die Quelle statt die Sprache.**
+--
+-- > Genau das tat M2 bis zum 2026-08-31. Der Arm des `narrow` lief als geradliniger Code:
+-- > sein `griff_weg(g)` wurde dem Hauptweg gutgeschrieben, der ihn nie betritt, und das
+-- > `griff_weg(g)` danach war dann *„consumed a second time"*. Die `if`-Fassung derselben
+-- > Funktion war still. **Vierte Instanz derselben Klasse** -- `D018`, `D017` zweimal,
+-- > `K003`: ein Pass laeuft vor der Absenkung und deutet Kontrollfluss je Konstrukt neu.
+--
+-- Diese Datei ist der Regressionsfall. Sie faellt, sobald die beiden Formen wieder
+-- auseinandergehen -- **und sie ist absichtlich zwei Funktionen und nicht eine**, damit der
+-- Unterschied hier steht und nicht in einem Testtext.
+--
+-- Die Giftseite dazu: `gift/438` (der Arm wird noch gelesen), `gift/440` (der Arm leckt
+-- nicht mehr in den Hauptweg).
+--
+-- **Und die Tabelle schrumpft.** `backed hinterlegt` heisst: gueltig sind die Plaetze unter
+-- `hinterlegt`, und diese Zahl faellt und steigt zur Laufzeit. Ohne die Schranke waere die
+-- Freiliste eine Kette in Speicher, den niemand hinterlegt hat.
+
+module beispiel::freiliste_zwei_formen {
+
+const DECKE : u32 = 1024;
+const BODEN : u32 = 64;
+
+static mut hinterlegt : u32 in 64 .. 1024 = 64;
+
+table Halde count 1024 backed hinterlegt {
+    slot {
+        wert    : u64,
+        naechst : option index into Halde,
+    }
+}
+
+static mut frei : option index into Halde = None;
+
+-- **Der Zeuge.** Eine Vergabe erzeugt ihn, eine Rueckgabe verbraucht ihn -- genau einmal.
+-- `ghost` heisst: im Erzeugnis steht davon keine Zeile.
+linear ghost type Griff;
+
+extern fn griff_fuer(i : index into Halde) -> Griff effects { pure }       costs <= 0 ops;
+extern fn griff_weg(g : Griff)                      effects { consumes g } costs <= 0 ops;
+
+reason Listenfehler {
+    Leer = 1 "die Freiliste ist leer"
+    exhaustive
+}
+
+extern fn kopf(h : ptr<normal, r> Halde) -> u64 or Listenfehler
+    effects { reads h.slots }
+    costs   <= 3 ops;
+
+extern fn abbruch() -> never effects { diverges } costs <= 0 ops;
+
+-- FORM A -- `narrow … else`. Der Arm kehrt zurueck (`M105` verlangt es) und verbraucht den
+-- Zeugen dabei: **auf beiden Wegen genau einmal.**
+impl fn freigeben_narrow(h : ptr<normal, rw> Halde, i : index into Halde, g : Griff)
+    effects { reads hinterlegt, reads frei, writes frei, writes h.slots, consumes g }
+    costs   <= 8 ops
+{
+    narrow i to 0 ..< hinterlegt else { griff_weg(g); return; }
+    h.slots[i].naechst = frei;
+    frei = Some(i);
+    griff_weg(g);
+}
+
+-- FORM B -- dasselbe Programm mit der Hand geschrieben. **Bis zum 2026-08-31 war nur diese
+-- Fassung sauber**, und der Unterschied zur Form A war kein Unterschied im Programm.
+--
+-- **Und eine Zeile darunter steht der zweite Unterschied, der keiner sein duerfte:** `9`
+-- gegen `8`. Beide Ruempfe senken auf denselben C-Rumpf ab -- `if (!(i < hinterlegt))`
+-- gegen `if (i >= hinterlegt)` --, aber `kosten.rs` bucht fuer ein `narrow` eine PAUSCHALE
+-- und fuer das `if` den Ausdruck. Am kleinsten Paar gemessen: **`narrow` 1 op, `if` 3 ops**
+-- bei byteweise gleichem C bis auf den Vergleichstext. Die Zahl steht hier so, wie sie
+-- gemessen ist -- *eine Zusage ist eine Messung, keine Schaetzung*, und die Ungleichheit
+-- gehoert sichtbar in den Korpus statt geglaettet.
+impl fn freigeben_if(h : ptr<normal, rw> Halde, i : index into Halde, g : Griff)
+    effects { reads hinterlegt, reads frei, writes frei, writes h.slots, consumes g }
+    costs   <= 9 ops
+{
+    if i >= hinterlegt { griff_weg(g); return; }
+    h.slots[i].naechst = frei;
+    frei = Some(i);
+    griff_weg(g);
+}
+
+-- FORM C -- **der dritte einarmige Zweig, und der, an dem der Anker fehlte.**
+--
+-- `S002` verlangt, dass der Arm eines `let … else` zurueckkehrt oder DIVERGIERT, und
+-- `abbruch();` ist die zweite Haelfte davon -- die Form, in der ein Kern seine
+-- Fehlerbehandlung schreibt. M2s eigenes `endet` kannte bis zum 2026-08-31 nur `return`,
+-- `leave` und `next`: der Arm galt als durchfallend, sein Zustand floss in den Join, und
+-- der Zeuge war danach *„auf keinem Weg verbraucht"* und *„ein zweites Mal verbraucht"*
+-- zugleich.
+--
+-- > **Gemessen am 2026-08-31:** eine Mutation, die `endet` die Divergenzliste wieder
+-- > wegnimmt, ueberlebte alle fuenfzehn Testsammlungen. Diese Funktion ist der Anker, der
+-- > gefehlt hat -- *eine Regel ohne Prueffall ist eine Absichtserklaerung.*
+impl fn kopf_lesen(h : ptr<normal, r> Halde, g : Griff) -> u64
+    effects { reads h.slots, consumes g }
+    costs   <= 9 ops
+{
+    let w = kopf(h) else (e) { griff_weg(g); abbruch(); }
+    griff_weg(g);
+    return w;
+}
+
+-- BELEGEN -- nimm den Kopf der Liste und gib den Zeugen dazu.
+impl fn belegen(h : ptr<normal, rw> Halde) -> option index into Halde
+    effects { reads hinterlegt, reads frei, writes frei, reads h.slots }
+    costs   <= 9 ops
+{
+    match frei {
+        None    => { return None; }
+        Some(i) => {
+            -- **Die Kette kennt die Hinterlegung nicht.** Ein Platz, der in der Freiliste
+            -- steht, war gueltig, als er hineinkam; schrumpft `hinterlegt` danach, ist er
+            -- es nicht mehr. `M108` verlangt den Nachweis an der LESESTELLE, und das ist
+            -- die richtige Stelle: die Kette traegt ihn nicht.
+            narrow i to 0 ..< hinterlegt else { return None; }
+            frei = h.slots[i].naechst;
+            return Some(i);
+        }
+    }
+}
+
+}

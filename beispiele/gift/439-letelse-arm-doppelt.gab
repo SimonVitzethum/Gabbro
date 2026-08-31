@@ -1,0 +1,35 @@
+-- erwartet: L104
+-- **Dieselbe Absicherung fuer den zweiten einarmigen Zweig.**
+--
+-- `let … else` bekam am 2026-08-31 dieselbe Behandlung wie `narrow … else`, und dazu die
+-- Divergenzkenntnis: `S002` verlangt, dass sein Arm zurueckkehrt oder divergiert, und M2
+-- konnte bis dahin nur die erste Haelfte dieser Regel sehen. Ein Arm, der auf `abbruch();`
+-- endet -- die Form, in der ein Kern seine Fehlerbehandlung schreibt --, galt als
+-- durchfallend.
+--
+-- **Wer die Divergenz zu weit fasst, ueberspringt den Arm.** Diese Probe verbraucht zweimal
+-- IN ihm; ein Pass, der ihn fuer unerreichbar haelt, sagt nichts.
+
+module gift {
+
+reason Holfehler {
+    Weg = 1 "nichts da"
+    exhaustive
+}
+
+linear ghost type Griff;
+
+extern fn griff_weg(g : Griff)              effects { consumes g } costs <= 0 ops;
+extern fn hol() -> u32 or Holfehler         effects { pure }       costs <= 1 ops;
+extern fn abbruch() -> never                effects { diverges }   costs <= 0 ops;
+
+impl fn zweimal_im_arm(g : Griff) -> u32
+    effects { consumes g }
+    costs   <= 16 ops
+{
+    let x = hol() else (e) { griff_weg(g); griff_weg(g); abbruch(); }
+    griff_weg(g);
+    return x;
+}
+
+}

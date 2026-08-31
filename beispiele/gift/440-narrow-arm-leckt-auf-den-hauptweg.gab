@@ -1,0 +1,38 @@
+-- erwartet: L101
+-- **Das Leck, das der alte Pass GESCHLUCKT hat -- und es ist die andere Richtung von `L104`.**
+--
+-- Bis zum 2026-08-31 lief der Arm eines `narrow … else` in M2 als geradliniger Code: sein
+-- Zustand wurde in den Hauptweg geschrieben, der ihn nie betritt. Das gab einen falschen
+-- `L104`, wo danach noch einmal verbraucht wurde -- *und hier gibt es das Gegenteil.*
+--
+-- `g` wird NUR im Arm verbraucht. Der Hauptweg laeuft an ihm vorbei und laesst `g` liegen:
+-- ein Leck gegen die eigene `consumes`-Zusage. Der alte Pass sah `g` als verbraucht, weil
+-- der Arm es fuer ihn miterledigt hatte, und schwieg.
+--
+-- > **Ein Fehlalarm und ein uebersehenes Leck aus derselben Zeile.** Wer nur den Alarm
+-- > wegnimmt, ohne den Zweig einzubauen, behaelt das Leck.
+--
+-- Gemessen: vorher `0 errors`, nachher `[L101] `g` is listed under `consumes` but is
+-- consumed on no path`.
+
+module gift {
+
+static mut hinterlegt : u32 in 4 .. 16 = 4;
+
+table Arena count 16 backed hinterlegt {
+    slot { belegt : bool, }
+}
+
+linear ghost type Griff;
+
+extern fn griff_weg(g : Griff) effects { consumes g } costs <= 0 ops;
+
+impl fn nur_im_arm(a : ptr<normal, rw> Arena, i : index into Arena, g : Griff)
+    effects { reads hinterlegt, writes a.slots, consumes g }
+    costs   <= 8 ops
+{
+    narrow i to 0 ..< hinterlegt else { griff_weg(g); return; }
+    a.slots[i].belegt = false;
+}
+
+}
