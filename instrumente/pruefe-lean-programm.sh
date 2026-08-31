@@ -26,11 +26,14 @@
 #
 # **W1: a skipped run is not a passed one.** With no Lean this guardian turns red.
 set -euo pipefail
+
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.sh`.
+. "$(dirname "$0")/abschnitt.sh"
 export LC_ALL=C
 
 W="$(cd "$(dirname "$0")/.." && pwd)"
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'abschnitt_ende; rm -rf "$TMP"' EXIT
 
 GABBRO="$W/target/debug/gabbro"
 LEANBIN="${LEANBIN:-$HOME/.elan/bin/lean}"
@@ -39,19 +42,19 @@ MODEL="${MODEL:-$W/programmlogik}"
 DEADLINE=180
 
 if [ ! -x "$GABBRO" ]; then
-    echo "== LEAN PROGRAM: NO GABBRO -- it is built on ki-pc-fisch-101 (CLAUDE.md) =="
+    stufe "LEAN PROGRAM: NO GABBRO -- it is built on ki-pc-fisch-101 (CLAUDE.md)"
     exit 2
 fi
 if [ ! -x "$LEANBIN" ] || [ ! -x "$LAKE" ]; then
-    echo "== LEAN PROGRAM: NO LEAN at $LEANBIN -- NOTHING measured =="
+    stufe "LEAN PROGRAM: NO LEAN at $LEANBIN -- NOTHING measured"
     echo "  A missing tool is not a passed test (W1)."
     exit 2
 fi
 
-echo "== Building the meaning of a body =="
+stufe "Building the meaning of a body"
 if ! (cd "$MODEL" && timeout "$DEADLINE" "$LAKE" build Gabbro.Body > "$TMP/lake.log" 2>&1); then
     cat "$TMP/lake.log"
-    echo "== LEAN PROGRAM: Gabbro.Body does not build -- the MODEL is red =="
+    stufe "LEAN PROGRAM: Gabbro.Body does not build -- the MODEL is red"
     exit 2
 fi
 LP="$MODEL/.lake/build/lib/lean"
@@ -60,11 +63,11 @@ echo "   Gabbro.Body built"
 # ---- the export ------------------------------------------------------------------------
 B="$MODEL/beispiel"
 echo
-echo "== Exporting the program =="
+stufe "Exporting the program"
 echo "   \$ gabbro lean beispiel/lager.gab beispiel/betrieb.gab"
 if ! "$GABBRO" lean "$B/lager.gab" "$B/betrieb.gab" > "$TMP/GabbroProgram.lean" 2> "$TMP/err"; then
     cat "$TMP/err"
-    echo "== LEAN PROGRAM: the export failed =="
+    stufe "LEAN PROGRAM: the export failed"
     exit 1
 fi
 KOPF="$(grep -m1 '@program 1' "$TMP/GabbroProgram.lean" | sed 's/^ *//')"
@@ -77,11 +80,11 @@ R=$(printf '%s' "$KOPF" | sed -n 's/.*routines \([0-9]*\).*/\1/p')
 BD=$(printf '%s' "$KOPF" | sed -n 's/.*bodies \([0-9]*\).*/\1/p')
 RF=$(printf '%s' "$KOPF" | sed -n 's/.*refused \([0-9]*\).*/\1/p')
 if [ "$((BD + RF))" -ne "$R" ]; then
-    echo "== LEAN PROGRAM: $BD + $RF != $R -- the balance of the export does not add up =="
+    stufe "LEAN PROGRAM: $BD + $RF != $R -- the balance of the export does not add up"
     exit 1
 fi
 if [ "$BD" -eq 0 ]; then
-    echo "== LEAN PROGRAM: not one body exported -- nothing measured =="
+    stufe "LEAN PROGRAM: not one body exported -- nothing measured"
     echo "  An export without a body builds green and says nothing (W1)."
     exit 2
 fi
@@ -89,7 +92,7 @@ fi
 if ! (cd "$TMP" && LEAN_PATH="$LP" timeout "$DEADLINE" "$LEANBIN" \
         -o GabbroProgram.olean GabbroProgram.lean > "$TMP/prog.log" 2>&1); then
     cat "$TMP/prog.log"
-    echo "== LEAN PROGRAM: the exported program is not valid Lean =="
+    stufe "LEAN PROGRAM: the exported program is not valid Lean"
     exit 1
 fi
 echo "   GabbroProgram compiled"
@@ -136,7 +139,7 @@ run_lean() {
 
 # ---- the speech test, in both directions ------------------------------------------------
 echo
-echo "== Speech test =="
+stufe "Speech test"
 cp "$B/Spec.lean" "$B/SpecGift.lean" "$TMP/"
 
 GOOD=0
@@ -161,12 +164,15 @@ echo "  a place that is not declared is named:     $([ $ORTE -eq 1 ] && echo yes
 
 if [ $GOOD -ne 1 ] || [ "$FALLEN" -lt "$GIFTE" ] || [ $ORTE -ne 1 ]; then
     echo
-    echo "== LEAN PROGRAM: this guardian measures nothing =="
+    stufe "LEAN PROGRAM: this guardian measures nothing"
     exit 2
 fi
 
 echo
-echo "== LEAN PROGRAM: $BD bodies from 2 files, $SAETZE hand-written specifications, LEAN GREEN =="
+# **From here on nothing more is measured** -- what follows is the verdict over what the
+# run above measured.
+abschnitt_fertig
+stufe "LEAN PROGRAM: $BD bodies from 2 files, $SAETZE hand-written specifications, LEAN GREEN"
 echo "   And what that does NOT mean: that the specification says what was meant. A typo"
 echo "   from one DECLARED field to another proves a true statement about the wrong place,"
 echo "   and no dictionary sees that. The check bounds the hazard; it does not remove it."

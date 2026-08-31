@@ -31,6 +31,12 @@ import pathlib
 import re
 import sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 W = pathlib.Path(__file__).resolve().parent.parent
 
 # Je Eintrag vier Felder, und ohne alle vier wird er nicht angenommen (ZAHN 1):
@@ -300,6 +306,7 @@ def main():
     print("\n== Sprechprobe (R14) ==")
     print("  eingesetzter Satz faellt:      %s" % ("ja" if faellt else "NEIN"))
     print("  durchgestrichener bleibt frei: %s" % ("ja" if haelt else "NEIN"))
+    abschnitt.fertig()
     if not (faellt and haelt):
         print("== WIDERRUF: der Waechter misst nicht ==")
         return 2
@@ -316,4 +323,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

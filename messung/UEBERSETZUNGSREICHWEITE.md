@@ -165,3 +165,75 @@ der Elementlesart geschrieben.
 *Die Zeile zu berichtigen hieße, einen eingefrorenen Bericht zu ändern* — dieselbe Lage wie
 `F01`s `N029` und `F09`s `costs <= 4096 ops`. **Der Posten gehört dem PRÜFER und ist damit
 Bahn P**; er steht in `TODO.md`.
+
+---
+
+## 7. Die Reichweite endete auch an einer ÜBERSETZERFAMILIE — gemessen 2026-08-31
+
+*Abgelesen mit `./instrumente/pruefe-uebersetzerfamilie.py`, 17 s lokal.*
+
+Die Regel heißt *„muss `cc -Werror` bestehen"*. Gemessen wurde sie mit **gcc 13.3.0** auf
+`ki-pc-fisch-101` und **gcc 16.2.1** lokal — beide gaben dieselbe Antwort, und genau das
+steht als Beleg gebucht. **`cc` ist auf beiden Rechnern ein `gcc`.**
+
+> *Zwei Übersetzer derselben Familie sind ein Übersetzer mit zwei Versionsnummern.* Die
+> Zusage „das erzeugte C übersetzt" hing damit an **einer** Familie, und keine Zeile sagte
+> das. Dieselbe Bauart wie die Liste vor der Regel und wie das Verzeichnis vor der
+> Ausdehnung — **nur ist die Grenze diesmal kein Pfad, sondern ein Werkzeug.**
+
+### Was `clang` sagt
+
+`clang` **gibt es**, und zwar auf beiden Rechnern: **22.1.8** lokal, **18.1.3** auf
+`ki-pc-fisch-101` (Ubuntu). Er ist nie gelaufen.
+
+Gemessen über 466 `.gab` des Baumes, dieselbe Reichweite wie Stufe 9:
+
+```
+100  emittieren            (1 davon eine umgekehrte Probe, `-- erwartet: cc`)
+ 81  von 99: beide Familien EINIG
+  6  davon einig im NEIN   -- die sechs `messung/tor-proben/`, die Stufe 9 schon meldet
+ 18  Dateien, an denen sie sich UNTERSCHEIDEN
+```
+
+**Alle 18 sind dieselbe Klasse, und `clang` ist der strengere:**
+
+```
+error: unused function 'Vtd_FRR_FR_LO' [-Werror,-Wunused-function]
+```
+
+Der Erzeuger schreibt zu jedem Feld eines Bitformats einen `static inline`-Zugriff. **`gcc`
+warnt in C nicht über eine ungenutzte `static inline`-Funktion, `clang` schon** — und unter
+`-Werror` ist die Warnung ein Fehler. Betroffen sind acht Dateien aus `beispiele/`, drei
+Fragmente, zwei aus `messung/grammatik/`, zwei aus `messung/proben/` sowie `caprock/planer`,
+`netz/udp-echo` und `treiber/virtio-net`.
+
+**Stufe 9s Grün hieß nie „das erzeugte C übersetzt".** Es hieß *„es übersetzt mit gcc"* —
+und der Unterschied ist 18 von 99 Dateien, also **18 %**.
+
+### Und die umgekehrte Probe misst dieselbe Grenze von der anderen Seite
+
+`beispiele/gift/414-tabellenspeicher-heisst-so.gab` trägt `-- erwartet: cc`: ihr C **soll**
+fallen. Beide Familien lehnen ab — sie beißt also unter beiden. *Eine Probe, die nur unter
+EINER Familie beißt, misst die Familie und nicht das Erzeugnis*; hier tut sie es nicht, und
+das ist gemessen statt angenommen.
+
+### Die Buchung
+
+`MARKE_FAMILIENUNTERSCHIED = 18` steht auf dem **gemessenen** Stand, nicht auf null — sie ist
+**gezogen, nicht geheilt**, und darf nur fallen. *Sie sind Schuld, kein Erfolg* (dieselbe
+Form wie `zaehle-karten.py`s 40/36). **Die Heilung gehört dem Erzeuger**
+(`crates/gabbro-check/src/emit.rs`) und damit einer anderen Bahn: die Zugriffe müssten
+entweder entfallen, wenn niemand sie ruft, oder eine Form tragen, die beide Familien
+schweigen lässt.
+
+Die sechs, die **beide** ablehnen, färben diesen Lauf nicht: Stufe 9 besitzt sie und meldet
+sie, und ein zweites Register über einer Sache ist `W7`. Sie stehen hier mit ihrer Zahl.
+
+### Was das NICHT sagt
+
+Eine Ablehnung durch `clang` ist nicht ohne weiteres ein Erzeugerfehler — sie kann eine
+Warnung sein, die `gcc` nicht kennt, und genau das ist sie hier. **Ob `-Wunused-function`
+über einer emittierten Kopfzeile eine sinnvolle Forderung ist, entscheidet der Ordner**; die
+Messung sagt nur, dass die Zusage bisher an einer Familie hing. Und gemessen sind **zwei**
+Familien, nicht alle: eine dritte kann eine dritte Antwort geben. *Sie verpflichtet, sie
+spricht nicht frei* (W10).

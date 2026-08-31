@@ -33,6 +33,12 @@ import re
 import subprocess
 import sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 W = pathlib.Path(__file__).resolve().parent.parent
 BIN = W / "target" / "debug" / "gabbro"
 QUELLE = W / "messung" / "netz" / "udp-echo.gab"
@@ -181,8 +187,9 @@ def main():
     print()
     zeilen = len(QUELLE.read_text(encoding="utf-8").splitlines())
     print(f"== Arbeitsmenge: {zeilen} Zeilen Gabbro, 1 Uebersetzung, 3 Vektoren, 1 Probe ==")
+    abschnitt.fertig()
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

@@ -136,6 +136,12 @@ import subprocess
 import sys
 import time
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 W = pathlib.Path(__file__).resolve().parent.parent
 SYNTAX = W / "dokumente" / "SYNTAX.md"
 CHECK = W / "crates" / "gabbro-check" / "src"
@@ -912,6 +918,7 @@ def main():
         print(f"  (an zwei Dateien: {n2} statt {MARKE_ZU_ZWEIT} -- KEIN Befund, siehe oben;")
         print("   die Zahl steht als Groessenordnung da und nicht als Riegel.)")
 
+    abschnitt.fertig()
     if offen:
         print()
         print(f"! GRAMMATIKTAFEL ROT: {len(offen)} von {len(term)} Terminalen sind UNGEDECKT.")
@@ -944,4 +951,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

@@ -41,6 +41,12 @@ import pathlib
 import re
 import sys
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 W = pathlib.Path(__file__).resolve().parent.parent
 BEWEISE = W / "beweise"
 
@@ -272,6 +278,7 @@ def main():
     print("   verboten     " + ", ".join("%s %d" % (w, v_alle[w]) for w in VERBOTEN))
     print("   eingefroren  " + ", ".join("%s %d" % (w, f_alle[w]) for w in EINGEFROREN)
           + "   (Marke %d)" % MARKE_EINGEFROREN)
+    abschnitt.fertig()
     if verb:
         print("== THEORIEN: %d Suchbefehl(e) in einer eingecheckten Theorie ==" % verb)
         print("   `sledgehammer`/`try0`/`nitpick` sind Suchbefehle und keine Beweise. Der")
@@ -292,4 +299,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

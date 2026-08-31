@@ -16,6 +16,10 @@
 # Rechner umbringt, misst danach gar nichts mehr.*
 set -uo pipefail
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.sh`.
+. "$(dirname "$0")/abschnitt.sh"
+trap abschnitt_ende EXIT
+
 # **`LC_ALL=C` -- und das ist kein Schoenheitsfehler.** Fremde Werkzeuge melden im
 # Gebietsschema des Benutzers: unter `de_DE.UTF-8` sagt der Binder `Mehrfachdefinition von`
 # statt `multiple definition`, und ein `grep -q` darauf trifft nicht. Dieselbe Klasse wie
@@ -62,7 +66,7 @@ if [ -n "$FEHLT" ]; then
     # fehlendes Isabelle, ein Wachhundabbruch, ein fehlender Nachweis sind Loecher in der
     # MESSAPPARATUR, und die enden hier mit 2. *Der Ruecklaufwert beantwortet: muss der
     # Baum sich aendern, oder die Umgebung?*
-    echo "== BEWEISE: THEORIEN OHNE ROOT-EINTRAG --$FEHLT =="
+    stufe "BEWEISE: THEORIEN OHNE ROOT-EINTRAG --$FEHLT"
     echo "  Sie liegen im Ordner und gehoeren keiner Sitzung an -- ungedeckt, und kein Lauf"
     echo "  wuerde sie je anfassen. Eintrag in beweise/ROOT nachtragen."
     exit 1
@@ -88,7 +92,7 @@ sprechprobe() {
 }
 sprechprobe || exit 2   # a fallen probe means the watchdog measures nothing -- ABORT, not a finding
 
-echo "== Beweise: Sitzung Gabbro, Wachhund bei ${GRENZE_GB} GB / ${ZEIT}s =="
+stufe "Beweise: Sitzung Gabbro, Wachhund bei ${GRENZE_GB} GB / ${ZEIT}s"
 ( cd "$W/beweise" && "$ISABELLE" build -o threads=1 -d . Gabbro ) > /tmp/gabbro-beweise.log 2>&1 &
 BAU=$!
 
@@ -132,14 +136,14 @@ done
 wait $BAU; ERG=$?
 
 if [ $ANGEHALTEN = 1 ]; then
-    echo "== BEWEISE: ABGEBROCHEN (Wachhund) =="
+    stufe "BEWEISE: ABGEBROCHEN (Wachhund)"
     echo '  Es wurde NICHTS bewiesen -- `CLAUDE.md`: *ein Abbruch aus Speichermangel ist'
     echo '  kein Befund.* Ein Beweis, der am Wachhund stirbt, sieht aus wie einer, der'
     echo '  nicht durchgeht, und er ist keiner.'
     exit 2
 fi
 if [ $ERG != 0 ]; then
-    echo "== BEWEISE: FEHLER =="
+    stufe "BEWEISE: FEHLER"
     grep -E "^\*\*\*" /tmp/gabbro-beweise.log | head -12
     exit 1
 fi
@@ -155,7 +159,7 @@ elif [ -n "$BUCH" ] && [ -z "$(find "$W/beweise" -name '*.thy' -newer "$BUCH" -p
                     && [ ! "$W/beweise/ROOT" -nt "$BUCH" ]; then
     NACHWEIS="unveraendert seit $(date -r "$BUCH" '+%d.%m. %H:%M') -- keine Quelle ist juenger"
 else
-    echo "== BEWEISE: OHNE NACHWEIS =="
+    stufe "BEWEISE: OHNE NACHWEIS"
     echo "  Der Lauf endete ohne Fehler und ohne Fertigmeldung, und kein Bauwerksbuch ist"
     echo "  juenger als die Quellen. **Das ist kein gruener Lauf, sondern gar keiner.**"
     echo
@@ -183,9 +187,11 @@ else
     exit 2
 fi
 
+# **From here on nothing more is measured** -- Isabelle has answered.
+abschnitt_fertig
 N=$(grep -c "^    [A-Z]" "$W/beweise/ROOT")
 D=$(ls "$W"/beweise/*.thy | wc -l)
-echo "== BEWEISE: ALL PASS -- $N Theorien ($D Dateien) =="
+stufe "BEWEISE: ALL PASS -- $N Theorien ($D Dateien)"
 echo "  Nachweis: $NACHWEIS"
 echo "  Und was das NICHT heisst: jede Theorie fuehrt ihren eigenen M-2-Abschnitt --"
 echo "  was sie zeigt, und was sie ausdruecklich nicht zeigt. Ein gruener Lauf ist die"

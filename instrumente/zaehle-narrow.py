@@ -21,6 +21,12 @@ import sys
 import pathlib
 from collections import Counter, defaultdict
 
+# **Whoever leaves mid-run says WHERE** -- the shared form, out of `abschnitt.py`.
+# `sys.path` gets the tool's own directory because this file is also LOADED by
+# `abnahme.py` (via `importlib`), and then `sys.path[0]` is the working directory.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import abschnitt  # noqa: E402
+
 # --- Die drei Sprechproben aus dem Protokoll. Findet der Zaehler sie nicht, ist die Zahl
 # --- ungueltig -- nicht ungenau, ungueltig.
 SPRECHPROBEN = [
@@ -651,8 +657,9 @@ def main():
             f"V3 {c['V3']:>3}  K {c['K']:>3}"
         )
     # Kein Urteil im Rueckgabewert: der Zaehler faellt nur, wenn seine Sprechprobe faellt.
+    abschnitt.fertig()
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(abschnitt.fahre(main))

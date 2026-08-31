@@ -877,6 +877,41 @@ offensteht, hat **keinen** fachlichen Grund. Sie ist **ortsgebunden**, und der e
 ist eine Übertragung und kein Werkzeug. *Das stand nirgends, weil niemand den Ort aufgeschrieben
 hatte.*
 
+### Der zweite Beleg, 2026-08-31 — und diesmal ließ sich der Gegenstand MITBRINGEN
+
+`mutiere-pruefer.py --anker` war hier grün und auf `ki-pc-fisch-101` rot, bei byteidentischen
+Quellen. Der übertragene Baum ist **kein git-Repository**; `git status` endet dort mit **128
+und leerer Ausgabe**, `baumstand()` meldet zu Recht `unbekannt` — und die Sprechprobe
+verlangte vom **umgebenden** Baum `sauber` oder `schmutzig`. Sie fiel, mit dem schärfsten
+Satz, den ein Lauf über sich selbst machen kann: **`SPRECHPROBE GESCHEITERT`.** Der Satz war
+falsch; das Werkzeug war in Ordnung, der Gegenstand fehlte.
+
+**Ein fremder Baum ließ sich nicht mitbringen — ein git-Repository schon.** `git init`, eine
+Datei, ein Commit, und alle drei Zustände sind in der eigenen Wegwerf-Ablage erreichbar, auf
+jedem Rechner. Der umgebende Baum steht seitdem als **Angabe** daneben und trägt nichts zum
+Urteil bei.
+
+> **Die Regel bekommt damit eine Vorstufe:** *bevor der Gegenstand deklariert wird, wird
+> gefragt, ob er sich mitbringen lässt.* Ein Register ist die Antwort für das, was
+> ortsgebunden ist; für alles andere ist es ein Umweg, der die Ortsbindung festschreibt.
+
+Was der Umgebung bleibt, ist `git` selbst — und fehlt das, fallen alle drei Zustände auf
+`unbekannt` zusammen. **Eine Probe mit einem einzigen erreichbaren Ausgang misst nichts**;
+das ist keine gefallene Probe, sondern eine fehlende Vorbedingung, und sie endet mit `2`.
+
+**Die Sippe war zu dritt, und das teuerste Glied war nicht das gemeldete.**
+`pruefe-luecken.py` stellte dieselbe Frage in einer eigenen Kopie und las **nur `stdout`** —
+leer heißt sauber. Also lief er weiter und **schrieb in Quellen**, ohne jeden Nachweis, dass
+der Baum sauber ist. Er steht in `SCHWER` mit dem Grund *„baut dreizehnmal neu — gehört auf
+den Server"*: **der Riegel gegen die Mischung lief genau auf dem Rechner leer, für den er
+geschrieben wurde.** `erzeuge-mutationen.py` las die 128 als *„crates/ ist nicht sauber"* —
+die Absage war sicher, der **Grund** falsch, und ein falscher Grund schickt den Leser einen
+sauberen Baum reparieren.
+
+*Geheilt mit einem Register statt drei Kopien (W7); gegen die vierte Kopie steht eine
+statische Prüfung: **wer `git` selbst aufruft, sieht auf den Rücklaufwert.** Eine leere
+Ausgabe aus einem Befehl, der GESCHEITERT ist, ist keine Antwort.*
+
 ## W22 — Eine **falsche Ablehnung** meldet niemand, und darum misst man sie an der Asymmetrie des Korpus
 
 Die Fehlerklassen dieses Ordners gingen fast alle in eine Richtung: eine Regel schwieg, eine
@@ -969,3 +1004,74 @@ und der Ordner hätte darüber entschieden.
 die Zahl daneben. Wo sie abgeleitet ist, sagt sie es (*„enthält das Wort"*), und wo sie
 gemessen ist, gibt es einen Lauf, der sie belegt. **Eine abgeleitete Beschriftung, die wie
 eine gemessene klingt, ist teurer als gar keine.**
+
+## W26 — **Eine abgeschnittene Grundgesamtheit sieht aus wie ein Urteil über alles**
+
+**Gemessen am 2026-08-31, an einem Fall mit Datum und einem Preis von zwei Wochen.**
+
+`pruefe-emission.sh` starb an `F06`s `N043` in der **vierten von zehn Stufen**, mit
+`exit 1`. Die Stufen 9 und 10 liefen nie, und **keine Zeile sagte das.** Hinter dem Schnitt
+standen zwei Befunde, die zwei Wochen niemand gesehen hat: sechs Dateien, deren erzeugtes C
+nicht übersetzt, und eine Marke, die sieben zu niedrig stand.
+
+> **W17 ist die leere Grundgesamtheit — ein grünes Urteil über nichts.** W26 ist die
+> ABGESCHNITTENE, und sie ist schlimmer: sie sieht aus wie ein Urteil über **alles**.
+
+**Der Rücklaufwert kann es nicht sagen, und das ist der Kern.** Die drei Klassen des Ordners
+sind `0` gemessen · `1` Befund · `2` nichts gemessen. Ein `1` **mitten** im Lauf heißt
+beides zugleich: *ein Befund hier, ein Abbruch für alles dahinter.* Die drei Klassen kennen
+„nichts gemessen"; sie kennen **„die Hälfte gemessen" nicht.**
+
+### Warum der leere Baum sie nicht findet
+
+Die Methode, die die früheren Löcher fand, war *jeder Wächter einmal über einem leeren Baum*.
+Sie fängt den Fall, dass die Vorbedingung **von Anfang an** fehlt. Sie fängt nicht, dass sie
+**mitten im Lauf** wegbricht. *Der leere Baum misst den Anfang; das hier misst die Mitte.*
+
+### Die Fläche, und das Sieb darunter
+
+Gemessen über 50 Instrumente (`messung/RUECKLAUFWERTE.md`):
+
+```
+251  Ausgangsstellen hinter dem jeweils ersten          (die FLAECHE)
+248  beenden den Lauf wirklich  -- 3 sind `return 1` in einem HELFER
+104  enden mit 1 -- ERREICHBAR, OHNE DASS ETWAS KAPUTT IST
+ 92  tragen Ausgabe auf BEIDEN Seiten                   (die GEFAHR)
+```
+
+**Die zwei Zahlen beantworten zwei Fragen, und die zweite ist die, die zählt.** Zu einem
+Ausgang mit `2` kommt nur, wer etwas kaputt hat; zu einem mit `1` kommt man, **ohne dass
+irgendetwas kaputt ist** — ein Befund ist eine Aussage über den Baum, und der Baum darf einen
+Fehler haben. **Eine Fläche, die niemand verkleinern kann, hört auf, gelesen zu werden**;
+darum das Sieb.
+
+### Die Vorkehrung, und sie ist keine Heilung
+
+**Wer vor seinem Ende aussteigt, sagt WO.** `instrumente/abschnitt.py` und
+`instrumente/abschnitt.sh` tragen die Form, `abnahme.py` liest sie und druckt eine eigene
+Marke:
+
+| | |
+|---|---|
+| `ABBRUCH` | nichts gemessen — zählt nicht zur Arbeitsmenge |
+| **`TEILMESSUNG`** | etwas, aber nicht alles — zählt mit, macht rot, **und die Zahl der Befunde daneben ist eine untere Schranke** |
+| `ROT` | alles gemessen, etwas gefunden |
+
+> **Eine gedeckte Stelle schneidet den Lauf genauso — sie sagt es nur.** Gemessen ist, ob der
+> Schnitt ANGESAGT wird, nie, ob er richtig ist (W10). Eine Sprechprobe am Dateianfang SOLL
+> alles dahinter beenden; das ist ihr Zweck.
+
+### Und das WO kommt aus der eigenen Ausgabe
+
+Eine Marke je Stufe wäre ein zweites Register über derselben Sache (`W7`) — und sie veraltet
+lautlos, genau wie die Liste, die Stufe 9 einmal war. Der Python-Teil merkt sich die letzte
+gedruckte `== … ==`-Zeile; **jeder Wächter dieses Ordners druckt seine Abschnitte ohnehin.**
+Die Schale kann das nicht sicher (ein `tee` ist beim Lauf der `EXIT`-Falle vielleicht noch
+nicht geleert), *und ein Mechanismus, der manchmal die falsche Stufe meldet, ist schlimmer
+als keiner* — dort steht die Marke deshalb ausdrücklich.
+
+**Die eine Zeile, die Urteilskraft braucht, ist `fertig()`:** ein Wächter, der an seinem
+LETZTEN Ausgang mit `1` endet, hat alles gemessen; einer, der am vorletzten mit `1` endet,
+nicht. **Von außen sieht beides gleich aus.** Der erste Versuch setzte sie vor die letzte
+Rückgabe und ließ `pruefe-grammatiktafel.py` seinen vollständigen Befund als abgeschnitten
+melden — sie gehört vor die **Urteilskette**.
