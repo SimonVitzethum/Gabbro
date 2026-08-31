@@ -353,6 +353,25 @@ def korpuslauf(wurzel=None, gabbro=None):
             continue
         befehl = [str(k)]
         break
+    # **When the CLOCK says stale, ask the CONTENT -- do not forge the timestamp.**
+    # `git merge` and the mutation run both rewrite unchanged sources, and every one of them
+    # is younger than the build afterwards; a pure time comparison then aborts over a tree
+    # that is current. *`cargo` reckons by CONTENT, this latch reckons by TIME, and neither
+    # is wrong* -- the same two notions of "current" that `pruefe-beweise.sh` books for
+    # Isabelle. So: let it build once, and leave the verdict to the tool that knows the
+    # content. **A `touch` on the binary would be the wrong cure** -- it hides exactly the
+    # mixture the latch stands against.
+    if befehl is None and veraltet:
+        gebaut = subprocess.run(["cargo", "build", "--offline", "-q"], cwd=wurzel,
+                                capture_output=True, text=True)
+        if gebaut.returncode == 0:
+            # `cargo` has just certified the build against the CONTENT. It may or may not
+            # have relinked -- both mean the same thing, so take the YOUNGEST candidate and
+            # do not ask the clock a second time.
+            frisch = [k for k in veraltet if pathlib.Path(k).exists()]
+            if frisch:
+                befehl = [max(frisch, key=lambda k: pathlib.Path(k).stat().st_mtime)]
+                veraltet = []
     if befehl is None and veraltet:
         raise SystemExit(
             "ABBRUCH: jedes gefundene Binaerprogramm ist AELTER als die Quellen -- "
@@ -375,9 +394,17 @@ def korpuslauf(wurzel=None, gabbro=None):
     # Same class as `zaehle-b3.py`, which followed a path pointing beside its own worktree.
     # *A tool whose verdict depends on which OTHER trees happen to lie around measures the
     # disk, not the language.*
+    #
+    # **And the exclusion is RELATIVE to the root, which cost a measurement the same night.**
+    # The first form matched the absolute path -- and the root of an agent IS
+    # `…/.claude/worktrees/agent-X`, so inside one every file matched and the corpus went to
+    # zero -- *418 found, 0 left after the filter.* `pruefe-grammatiktafel.py` then aborted with 2
+    # instead of naming its four cells, **and an abort inside an acceptance run looks like the
+    # finding it was supposed to report.** A filter that reads the absolute path measures where
+    # the tree LIES, not what is in it.
+    aus_bau = ("target", ".claude", ".lake")
     for d in sorted(pathlib.Path(wurzel).rglob("*.gab")):
-        t = str(d)
-        if "/target/" in t or "/.claude/" in t or "/.lake/" in t:
+        if any(teil in aus_bau for teil in d.relative_to(wurzel).parts[:-1]):
             continue
         try:
             r = subprocess.run(befehl + ["emit", str(d)], cwd=wurzel,

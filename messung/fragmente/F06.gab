@@ -121,8 +121,27 @@ atomic tiefster     : u32 publishes nothing relaxed;
 -- > der Pruefer wusste und nicht aussprach.*
 --
 -- Die Zeile zu berichtigen hiesse, einen eingefrorenen Bericht zu aendern -- dieselbe Lage
--- wie F1s `N029` und F9s `costs <= 4096 ops`. **Der Durchstich bleibt darum offen; die
--- Absenkung selbst ist erreicht.**
+-- wie F1s `N029` und F9s `costs <= 4096 ops`. ~~**Der Durchstich bleibt darum offen; die
+-- Absenkung selbst ist erreicht.**~~
+--
+-- > **DURCHGESTOCHEN am 2026-08-31, und der Satz darueber war zu vorsichtig.** Er verwechselte
+-- > *„der Ausschnitt meinte etwas anderes"* mit *„das erzeugte C rechnet nicht, was das
+-- > Fragment sagt"* -- und nur das zweite ist die Absenkungspflicht. Was den Weg bis heute
+-- > versperrt hat, war nicht die Lesart, sondern EINE Zeile im Erzeuger: der Feldindex von
+-- > `elems of` senkte als `uint32_t` ab, eine Kopie aus `slots of`, und `w != MUSTER` fiel
+-- > damit an `-Wextra`s *comparison is always true due to limited range*.
+-- > **Mit `uint64_t` uebersetzt dasselbe C.**
+-- >
+-- > `lauf "fragment6"` in `pruefe-emission.sh` erzeugt, uebersetzt (`-O0`, `-O2`, UBSan),
+-- > FUEHRT AUS und vergleicht achtzehn Zahlen gegen eine Handschrift, die aus dem Ausschnitt
+-- > ABGELEITET und COMMITTET wurde, bevor sie gemessen war. **`H` faellt von 5 auf 4.**
+-- >
+-- > Und die INDEXLESART steht in diesen achtzehn Zahlen drin, nicht daneben: `unberuehrt`
+-- > liefert 0, auch an einem Feld, das voll mit `MUSTER` beschrieben ist -- und damit schlaegt
+-- > `check kstack_eichung` an, die Eichung, die der Ausschnitt SELBST mitbringt, um sein
+-- > Messgeraet zu pruefen. *Ein Fragment, das seine eigene Falschheit meldet, ist der beste
+-- > Fall, den es hier gibt: das erzeugte C rechnet, was das Fragment SAGT -- und was es sagt,
+-- > ist nicht, was sein Schreiber meinte.*
 --
 -- **ERGAENZT 2026-08-26: drei Namen, die der `can_fail`-Rumpf RUFT und nicht erklaert.**
 -- Sie werden ehrlich deklariert, auch die beiden schreibenden -- *eine Eichung, die nichts

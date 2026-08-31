@@ -93,7 +93,7 @@ Schweigen über eine Form ist eine Aussage über den Korpus und keine über die 
 | U7 | `in a .. b` zusammen mit `scale` | `beispiele/gift/292-…` | Probe erwartet `C001` |
 | U8 | `transition`-Ziel, das keine Menge von Feldnamen ist | `beispiele/gift/294-…` | Probe erwartet `C001` |
 | U9 | `ops relabel` an einer Tabelle ohne `parent`-Kante | `beispiele/gift/333-…` | Probe erwartet `C001` |
-| U10 | `match` über einen Ruf, den diese Einheit nicht deklariert | `messung/fragmente/F05.gab` | **war U2 des Plans und ist NICHT dieselbe Form** — siehe `ZWEI-ABSAGEN.md` |
+| U10 | `match` über einen Ruf, den diese Einheit nicht deklariert | `messung/fragmente/F05.gab` | **war U2 des Plans und ist NICHT dieselbe Form** — siehe `ZWEI-ABSAGEN.md`. **2026-08-31 ausgemessen: die Absage ist EINE Ergänzung weit von zu** (fünf `extern fn`, gemessen: 0 Fehler, 0 Hinweise, 199 Zeilen C) — *sie wurde nicht angewandt, siehe den Kasten unten* |
 | U11 | `let` ohne auflösbaren Typ | `messung/proben/probe-unbekannter-ruf.gab` | **neu gemessen am 2026-08-31** — sie stand vorher unter „nur neben einem Fehler" |
 | U12 | `state` | `messung/proben/probe-vier-zellen.gab` | aus der GRAMMATIK gefunden — siehe `GRAMMATIKTAFEL.md` |
 | U13 | `queue` | `messung/proben/probe-vier-zellen.gab` | dito |
@@ -118,6 +118,12 @@ Richtung** (sie meldete zu viel), und die Messung hat das Urteil bestätigt: in 
 > **Damit haben U10 bis U15 dieselbe Wurzel wie U11.** `K003` ist die einzige Regel, die
 > zwischen den Absagen des Erzeugers und dem Prüfer steht — *und sie hängt an einer
 > Kostenzusage, die ein `divergent fn` nicht trägt.*
+>
+> **Die Wurzel ist am 2026-08-31 ausgerechnet: [`messung/K003-TOR.md`](K003-TOR.md).** Das Tor
+> ist EINE Zeile (`kosten.rs`:296), `K003` greift bei einem `divergent fn` MIT Zusage tadellos
+> (gemessen, in beide Richtungen), und drei Formen einer torlosen Regel kosten über die 418
+> Dateien **9 · 4 · 2** Programme, die heute durchgehen. *Keine einzelne schließt alle sechs;
+> `state` erreicht gar keine.*
 
 > **Neun der ersten elf sind Giftproben, die `C001` ERWARTEN** — der Ordner hat für sie schon
 > entschieden, dass der Erzeuger der Absager ist. **Das macht sie nicht zu gedeckten Zellen.**
@@ -129,6 +135,41 @@ Richtung** (sie meldete zu viel), und die Messung hat das Urteil bestätigt: in 
 > Der Weg für alle neun ist derselbe und billig: die Regel wandert in einen Prüferpass, die
 > Probe erwartet dessen Kennung statt `C001`, und die Zelle steht auf `vom Pruefer`. **Er
 > gehört Bahn P** und ist hier als Arbeitsmenge gebucht, nicht als erledigt.
+
+> ### U10 ist ausgemessen, und die Antwort ist eine Ergänzung — die trotzdem nicht dasteht
+>
+> **Gemessen am 2026-08-31.** `F05`s Dienstrumpf ruft fünf Namen, die die Datei nicht nennt:
+> `decode_op`, `request_flush`, `serve_rw`, `serve_scan`, `bump_served`. Fünf `extern fn`-Zeilen
+> — Name und Stelligkeit stehen an der Rufstelle, der Rückgabetyp folgt aus der Verwendung
+> (`capacity = r` bei `capacity : u32`), und `tagged type Op` steht schon im eingefrorenen
+> Ausschnitt (`FRAGMENTE.md`:950). **Das ist eine Ergänzung und keine Erfindung**, dieselbe
+> Runde wie die sieben, die die Datei am 2026-08-15 bekam. Ergebnis:
+>
+> ```
+> 31 Items, 0 Fehler, 0 Hinweise      und `gabbro emit` schreibt 199 Zeilen C
+> ```
+>
+> **Der `C001` verschwindet, und er hatte recht** — sein Satz seit dem 2026-08-31 nennt die
+> Heilung selbst: *„A call whose return type IS a `tagged type` lowers."*
+>
+> **Sie steht trotzdem nicht im Baum, und der Grund ist gemessen:** `cc -Werror` nimmt die 199
+> Zeilen nicht an, und der erste der drei Gründe ist eine Wand aus dem eingefrorenen Text:
+>
+> ```
+> error: conflicting types for built-in function 'exit'; expected 'void(int)'
+>    97 | _Noreturn void exit(void);
+> ```
+>
+> **`exit()` steht im Ausschnitt**, und C hat den Namen vergeben. Das ist weder eine Ergänzung
+> noch eine Erfindung — *es ist eine Namenskollision mit der Zielsprache, und Gabbro hat keine
+> Regel dagegen.* Die anderen zwei (`m->op` auf einem Skalar, eine ungenutzte `let`-Bindung)
+> stehen mit ihr im `TODO.md`.
+>
+> **Damit hätte die Ergänzung `pruefe-emission.sh` Stufe 9 rot gefärbt** — *jede Datei, die
+> emittiert, muss auch übersetzen* —, und die Ausnahmeliste dieser Stufe ist seit dem
+> 2026-08-20 LEER. *Eine Zelle zu schließen, indem man die erste Ausnahme seit elf Tagen
+> einträgt, ist kein Tausch, den eine Bahn allein macht.* Die Zeilen sind gemessen, der Preis
+> ist benannt, und beides steht hier statt im Diff.
 
 **U10 und U11 haben eine gemeinsame Wurzel, und sie ist gemessen** (`messung/proben/`):
 

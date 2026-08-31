@@ -265,9 +265,107 @@ darunter.
       Ebene tiefer lag die Ursache: **F4 hat 31 Zeilen, nicht 30.** Alle sechs Zellen der
       beiden Tafeln stehen jetzt im Register.
       **`pruefe-zahlen.py` führt heute 76 Kennzahlen mit Befehl** und zählt daneben
-      **146 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
+      **145 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
+      **Und der Schritt von ~~146~~ auf 145 am 2026-08-31 ist KEINE Verbesserung, sondern eine
+      Kollision** — der Befund darunter nennt sie beim Namen. *Eine Marke, die aus dem falschen
+      Grund fällt, ist schlimmer als eine, die steht.*
+
+- [ ] **`F05`s letzte Absage ist EINE Ergänzung weit von zu — und die Ergänzung steht
+      trotzdem nicht da, weil `exit` ein Name ist, den C vergeben hat** *(ausgemessen
+      2026-08-31)*. Fünf `extern fn`-Zeilen (`decode_op`, `request_flush`, `serve_rw`,
+      `serve_scan`, `bump_served`) sind die ganze fehlende Ergänzung: Namen, die der
+      eingefrorene Dienstrumpf ruft und nicht nennt. Danach **31 Items, 0 Fehler, 0 Hinweise,
+      199 Zeilen C** — der `C001` bei `match decode_op(m.op)` ist weg, und sein Satz hatte
+      recht: *„A call whose return type IS a `tagged type` lowers."*
+
+      **`cc -std=c11 -O0 -Wall -Wextra -Werror` nimmt das C nicht an, und die drei Gründe
+      sind Befunde und keine Nacharbeit:**
+
+      1. `_Noreturn void exit(void);` — *conflicting types for built-in function `exit`;
+         expected `void(int)`*. **Gabbro kennt die reservierten Namen von C nicht.** Ein
+         Nutzer, der seine Funktion `exit`, `abort`, `free` oder `read` nennt, erfährt es vom
+         fremden Übersetzer. Für `F05` ist es eine Wand: `exit()` steht im EINGEFRORENEN
+         Ausschnitt, und umbenennen wäre ein Umschreiben. *Die Heilung ist eine neue
+         Prüferabsage — „dieser Name ist in C vergeben" —, und die kostet eine Kennung, zwei
+         Giftproben und eine Mutation.*
+      2. `Op _m2 = decode_op(m->op);` — *invalid type argument of `->` (have `uint64_t`)*.
+         Der Ausschnitt liest `m.op`, `recv` ist als `-> u64` ergänzt, und **kein Pass sagt
+         etwas**: `M1` führt `m.op` unter den 20 % ohne Typ. *Wörtlich dieselbe Klasse wie
+         `F06`s `elems of` — der fremde Übersetzer sagt, was der Prüfer wusste und nicht
+         aussprach.* Ein Feldzugriff auf einen Skalar gehört in `M1` oder in den Namenspass.
+         (Korpusseitig heilbar: ein ergänzter Träger `type Nachricht = { op : u64, }` wie
+         `IrqMarke` in `F06`.)
+      3. `unused variable 'r2'` — `let r2 = request_flush(transport, pool);` steht so im
+         EINGEFRORENEN Ausschnitt und wird nie gelesen. Der Erzeuger schreibt für einen
+         ungenutzten Parameter schon `(void)art;`; für eine ungenutzte `let`-Bindung nicht.
+         **Eine Zeile im Erzeuger.**
+
+      > **Warum die fünf Zeilen nicht im Baum stehen.** `pruefe-emission.sh` Stufe 9 verlangt
+      > *„jede Datei, die emittiert, muss auch übersetzen"*, und ihre Ausnahmeliste ist seit
+      > dem 2026-08-20 LEER — der Ertrag jenes Tages, und der Wächter meldet abgelaufene
+      > Einträge selbst. **Die Ergänzung hätte diese Marke von 0 auf 1 gehoben.** *Eine Zelle
+      > zu schließen, indem man die erste benannte Ausnahme seit elf Tagen einträgt, ist kein
+      > Tausch, den eine Bahn allein macht.* Gemessen ist er, benannt ist er; entschieden
+      > nicht.
+
+      `H` bleibt darum bei 4.
+
+- [ ] **`zaehle-absagen.py` schließt im Arbeitsbaum eines AGENTEN den ganzen Korpus aus — und
+      `pruefe-grammatiktafel.py` bricht dann ab, statt zu messen** *(gemessen 2026-08-31)*.
+      Der Filter in `instrumente/zaehle-absagen.py`:379–381 überspringt jeden Pfad, der
+      `/.claude/` enthält, und der Kommentar darüber begründet ihn richtig: ein `rglob` von
+      der Wurzel läuft sonst in jeden fremden Arbeitsbaum. **Nur ist die Wurzel eines Agenten
+      selbst `…/.claude/worktrees/agent-…`** — der Filter trifft dann nicht die fremden Bäume,
+      sondern den eigenen:
+
+      ```
+      gefunden: 418   nach Filter: 0
+      ```
+
+      `korpus` ist leer, die erste Sprechprobe fällt (*„kein Wort ist NUR durch Absenkung
+      gedeckt — die Probe misst nichts"*), und der Wächter bricht mit Rücklaufwert 2 ab. **Er
+      verhält sich richtig** — er meldet nicht grün, sondern *nichts gemessen* —, aber die
+      Tafelzahlen sind aus einem Agentenbaum heraus nicht zu holen, und in einer Abnahme sieht
+      der Abbruch aus wie die vier `UNGEDECKT`-Zellen, die dort erwartet werden.
+
+      Die Heilung ist ein Satz und keine Zeile: der Filter müsste **relativ zur Wurzel**
+      wirken statt absolut, damit „unter mir" und „neben mir" unterscheidbar bleiben.
+      *Dieselbe Klasse wie `W16`, und diesmal hat die Heilung eines W16-Befunds den nächsten
+      erzeugt.*
+
+- [ ] **Die Reichweite von `pruefe-zahlen.py` zählt je WERT und nicht je ZELLE — und darum
+      ist sie heute aus dem falschen Grund gefallen** *(gefunden 2026-08-31 beim Buchen von
+      `H = 4`)*. Die Prüfung steht in `instrumente/pruefe-zahlen.py`:1084:
+
+      ```python
+      if z not in bewacht.get(datei, set()):
+      ```
+
+      `bewacht` ist eine Menge von ZAHLEN je Datei. Eine fettgedruckte Tabellenzelle gilt
+      damit als bewacht, sobald **irgendeine andere** Zelle derselben Datei denselben Wert
+      trägt und einen Befehl hat. Gemessen: `H` fiel heute von 5 auf 4, zwei
+      `PLAN.md`-Registerzellen wurden dadurch zur fettgedruckten Vier — und die Zeile, deren
+      erste Zelle eine fettgedruckte Vier ist und deren zweite `Genericity` heißt
+      (*„without it every table needs its own traverse"*), fiel aus der Liste, **ohne dass sie
+      einen Befehl bekommen hätte.** Die Marke sank von 146 auf 145.
+
+      > *Und dieser Posten hat es beim Schreiben gleich noch einmal vorgeführt:* die erste
+      > Fassung zitierte jene Zeile WÖRTLICH, mit ihren Strichen — und der Zähler las das
+      > Zitat als eigene Tabellenzelle und meldete wieder 146. **Ein Register, das seine
+      > eigene Arbeitsliste mitzählt.**
+
+      *Dieselbe Klasse wie `W16`: ein Werkzeug, das eine Kollision für eine Messung hält.*
+      Die Gegenrichtung ist genauso wahr und schlimmer — eine Zelle, die einen Befehl
+      BEKOMMT, senkt die Zahl nicht, wenn ihr Wert in derselben Datei noch einmal vorkommt.
+
+      Der Schlüssel müsste die ZELLE sein (Datei, Zeile, Fundstelle), und dazu müsste jeder
+      Registereintrag seinen Ort nennen statt nur sein Muster — **das ist ein Umbau des
+      Registers und keine Zeile**, darum steht er hier und nicht im Diff. Bis dahin ist
+      `145` eine untere Schranke: der ungeschminkte Bestand sind **189** fettgedruckte
+      Zahlen in Tabellenzellen über den fünf bewachten Dateien, gegen 76 Kennzahlen mit
+      Befehl.
 
 - [ ] **Zwei Blicke auf dieselbe Karte gingen auseinander, und nur einer hatte einen Test**
       *(gefunden 2026-08-17 beim Bauen von `const fn`, weil eine Giftprobe nicht fiel, die
@@ -380,7 +478,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 129 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 130 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *~~103~~ … ~~121~~ — am 2026-08-30/31 **zehnmal** nachgezogen, aus sieben Ketten, und
       jedes Mal, weil ein Bericht geschrieben wurde. **Die Zahl misst den Ordner, nicht die
       Arbeit**, und sie ist an einem einzigen Tag von 103 auf 122 gestiegen, ohne dass ein

@@ -167,6 +167,11 @@ Wächter verpflichtet statt freizusprechen* (W10).
 > dasselbe Bild: `K003` ist die einzige Regel zwischen den Absagen des Erzeugers und dem
 > Prüfer, und sie hängt an einer Zusage, die nicht jede Funktion macht. *Das ist eine
 > Adresse und keine Liste.*
+>
+> **Die Adresse ist am 2026-08-31 ausgerechnet: [`K003-TOR.md`](K003-TOR.md).** Drei Formen
+> einer torlosen Regel, ihr Preis über 418 Dateien gemessen — und der Befund, dass `state`
+> von KEINER erreicht wird: der Kostenpass läuft nur über Funktionsrümpfe
+> (`kosten.rs`:259–264), und ein `state`-Item ist keiner.
 
 *Das ist eine Entscheidung über die SPRACHE und keine über den Erzeuger* — vier Formen fallen
 damit aus Gabbro heraus. Sie gehört dem Ordner und der Bahn, die am Prüfer arbeitet, und
