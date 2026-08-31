@@ -513,7 +513,11 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 150 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 151 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      *149 → 151 am 2026-08-31, aus ZWEI Bahnen gleichzeitig: `messung/proben/PLAN-ENGLISCH.md`
+      und `messung/ABNAHME-VOLL.md` kamen dazu. **Jede Bahn schrieb 150, und beide hatten
+      recht — über ihrem eigenen Baum.** Beim Zusammenführen ist die Summe keine der beiden
+      Zahlen, und die einzige, die stimmt, kommt aus dem Wächter selbst.*
       *148 → 149 am 2026-08-31: `messung/DOMAENENSTELLUNGEN.md` kam dazu.*
       *149 → 150 am 2026-08-31: `messung/proben/PLAN-ENGLISCH.md` kam dazu — der
       Gegenstand ist gewachsen, nicht die Nachsicht.*
