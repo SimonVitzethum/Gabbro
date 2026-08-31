@@ -53,6 +53,20 @@ DREI REGISTER, GELESEN STATT KOPIERT (W7)
 *Ein zweites Register ueber derselben Sache laeuft weg* -- dieser Ordner hat das oft genug
 bezahlt, dass es keine dritte Kopie der Terminalliste gibt.
 
+WIE EMPFINDLICH DIE MESSUNG IST -- ALS ZAHL, NICHT ALS SATZ
+--------------------------------------------------------------
+125 der 219 Terminale sind **nur durch Absenkung** gedeckt; fuer sie ist das
+Uebersetzungstor die einzige Gegenprobe. Ein Wort, das in genau EINER uebersetzenden Datei
+steht, faellt mit dieser Datei -- *eine Deckung, die an einer Datei haengt, misst die Datei
+und nicht die Sprache.* Am Morgen des 2026-08-31 waren das **25 Woerter an neun Dateien**,
+neun davon allein in `beispiele/07-eintritt-und-boot.gab`.
+
+Der Lauf DRUCKT die Zahl mit ihrer Marke (`MARKE_ALLEIN`) und den Adressen, und die
+**Sprechprobe misst sie**: eine Datei wird weggenommen, und die Zahl muss steigen. *Eine
+Zahl, die man nur ablesen kann, ist keine Messung.* Warum daraus (noch) keine Ratsche wird,
+steht bei der Marke; die Einteilung der 25 nach Zufall, Buendel und Enge steht in
+`messung/EINSAME-WOERTER.md`.
+
 WAS DIESE TAFEL NICHT SAGT
 ----------------------------
 **Eine besetzte Zelle heisst, dass eine Absenkung LAEUFT und ihr Erzeugnis C IST -- nicht,
@@ -71,8 +85,13 @@ bzw. 4,0 s -- 166 `cc`-Aufrufe ueber 83 Erzeugnisse. `abnahme.py` gibt jedem lei
 
 *Die erste Fassung brauchte 9,8 s*, weil die Sprechprobe den ganzen Durchgang ein zweites Mal
 fuhr, um EINE vergiftete Datei zu pruefen. **Eine Probe, die so viel kostet wie die Messung,
-verdoppelt jede Abnahme** -- sie faehrt jetzt nur die eine Datei (`uebersetzende(nur=…)`) und
-zeigt dieselbe Kette.
+verdoppelt jede Abnahme** -- sie faehrt jetzt nur die betroffenen Dateien
+(`uebersetzende(nur=…)`) und zeigt dieselbe Kette.
+
+*Nachgemessen am Abend des 2026-08-31, nach fuenf neuen Programmen und der vierten
+Sprechproberichtung:* **6,2 s lokal** (6,20 · 6,26 · 6,15), bei 88 statt 83 emittierenden
+Dateien und einer Vergiftung ueber ZWEI Traeger statt einem. Die Empfindlichkeitsprobe
+selbst kostet nichts als Text -- sie liest die Traegerkarte, die ohnehin gerechnet wird.
 
 > Und der Grund ist nicht nur die Zahl: `pruefe-waechter.SCHWER` sagt ausdruecklich, dass
 > keiner seiner vier Eintraege wegen der ZEIT dort steht -- es ist der **Ort** (Speicher,
@@ -113,6 +132,38 @@ CC_STUFEN = ("-O0", "-O2")
 # ("limited range"), and a translated diagnostic turns a correct refusal into a failed probe.
 # *A guardian whose verdict hangs on the locale measures the environment.*
 CC_UMGEBUNG = dict(os.environ, LC_ALL="C", LANG="C", LANGUAGE="C")
+
+# **THE SENSITIVITY OF THIS MEASUREMENT, AS A NUMBER** (2026-08-31).
+#
+# 125 of the 219 terminals are covered by LOWERING ALONE -- no checker error text names them.
+# For those the translation gate is the only counter-check there is, and a word standing in
+# exactly ONE compiling file falls out with that file. *A coverage that hangs on one file
+# measures the file and not the language* -- and it has happened: `beispiele/gift/45` dropped
+# out of emission at a new checker pass, `gift/286` came in. The address of the hole moved,
+# the hole did not.
+#
+# The number was **25** on the morning of 2026-08-31, spread over nine files, and
+# `beispiele/07` alone carried nine of them. Five programs written FROM THE GRAMMAR
+# (`messung/grammatik/`) took it to 0: every one of the 125 now stands in at least two files.
+# The classification of the 25 -- by chance, by bundle, by narrowness -- is
+# `messung/EINSAME-WOERTER.md`.
+MARKE_ALLEIN = 0
+# **IT IS PRINTED, NOT RATCHETED, AND THAT IS A DECISION WITH A REASON.**
+#
+# A mark set on the run that first measured it is a conjecture: this number moved 25 -> 0 in
+# ONE night, and a mark on a number that just moved is a mark on a moment. It also grows from
+# TWO directions -- a new terminal in the grammar that exactly one program writes raises it
+# without anything having got worse (§ Ratschen: rising needs its reason at the mark).
+#
+# > *The proposal, written down so the next run does not have to invent it:* once the four
+# > `UNGEDECKT` cells are decided and this tool can go green, exceeding `MARKE_ALLEIN` should
+# > decide the return code. Until then it cannot -- a rise would be invisible inside a red
+# > that has a different reason, and an invisible ratchet is worse than a printed number.
+#
+# The second-order number (words at exactly TWO files) is printed beside it and carries NO
+# mark on purpose: it RISES when words move down out of the one-file bucket, which is the
+# improvement. *A ratchet on a number that grows when things get better punishes the fix.*
+MARKE_ZU_ZWEIT = 38
 
 # `Absage::fehler(code, span, text)` -- the message, and only the ERROR one. A `hinweis`
 # does not reject: `beispiele/gift/166` carries `S007` as a hint, checks with zero errors
@@ -206,11 +257,16 @@ def uebersetzende(korpus, wurzel=None, gabbro=None, verfaelsche=None, nur=None):
     resolution beside it is the one that forgets it -- and a stale emitter answers for a
     lowering nobody built.
 
-    `verfaelsche` is `(Datei, Ersatz-C)` and exists for the SPRECHPROBE: it puts an
+    `verfaelsche` is `(Dateien, Ersatz-C)` and exists for the SPRECHPROBE: it puts an
     artificially broken erzeugnis through the very same gate the real run uses, instead of
     asserting what the gate would have done. `nur` narrows the pass to a few files --
     *a probe that costs as much as the measurement doubles every acceptance run*, and the
-    probe needs one file, not eighty.
+    probe needs two files, not eighty.
+
+    **`Dateien` is a COLLECTION since 2026-08-31**, and that is not a generalisation for its
+    own sake: the probe poisons every carrier of one word, and since the grammar programs of
+    that night no word has fewer than two. *A probe that can only poison one file measures a
+    corpus with a weak spot.*
     """
     wurzel = pathlib.Path(wurzel or W)
     befehl = _lade("zaehle-absagen.py", ["x"]).binaer(wurzel, gabbro)
@@ -221,7 +277,7 @@ def uebersetzende(korpus, wurzel=None, gabbro=None, verfaelsche=None, nur=None):
         r = subprocess.run(befehl + ["emit", str(wurzel / d)], cwd=wurzel,
                            capture_output=True, text=True)
         c = r.stdout
-        if verfaelsche and d == verfaelsche[0]:
+        if verfaelsche and d in verfaelsche[0]:
             c = verfaelsche[1]
         if r.returncode != 0 or not c.strip():
             # **Zero checker errors, zero `C001`, and still no C** -- that is not coverage
@@ -275,6 +331,18 @@ def traeger(korpus, term, pruefer, wurzel=None, dateien=None):
     return karte
 
 
+def empfindlichkeit(karte):
+    """`Traegerkarte -> (an einer Datei, an zwei Dateien, Wort -> Traeger)`.
+
+    **The one number that says how much this table depends on single files.** It reads the
+    map `traeger` already built -- no second pass over the corpus, no second `cc`. *A second
+    register over the same thing runs away* (W7).
+    """
+    eins = {t: ds[0] for t, ds in karte.items() if len(ds) == 1}
+    zwei = sum(1 for ds in karte.values() if len(ds) == 2)
+    return len(eins), zwei, eins
+
+
 def tafel(term, gesenkt, absage, pruefer):
     """Terminal -> one of the four states."""
     aus = {}
@@ -318,12 +386,14 @@ GIFT_GRUND = "limited range"
 
 
 def sprechprobe(term, gesenkt, absage, pruefer, korpus=None, uebersetzt=None, wurzel=None):
-    """**In DREI Richtungen seit dem 2026-08-31, und alle drei sind im Auftrag genannt.**
+    """**In VIER Richtungen, und jede steht fuer eine Behauptung dieses Werkzeugs.**
 
     * eine kuenstlich ENTFERNTE Absenkung muss die Tafel rot machen,
     * eine kuenstlich ERFUNDENE Grammatikregel auch,
     * **eine Datei, die emittiert und deren C NICHT uebersetzt, darf ihre Woerter nicht
       mehr decken** -- die Richtung, die `F06` siebzehn Tage lang offen fand,
+    * **eine weggenommene Datei muss die Einsamkeitszahl STEIGEN lassen** -- sonst ist
+      `MARKE_ALLEIN` eine gelesene Zahl und keine gemessene (2026-08-31),
     * und ein unveraenderter Lauf darf keines der Woerter nennen.
 
     *Ein Werkzeug, das ueber die Sprache urteilt und selbst ungeprueft ist, ist die
@@ -377,26 +447,69 @@ def sprechprobe(term, gesenkt, absage, pruefer, korpus=None, uebersetzt=None, wu
         proben.append(("die FOLGE des Tors ist ungeprueft -- kein Korpus uebergeben", False))
         return proben
 
-    # A file that carries a word ALONE. In a fixed order, so the probe does not travel with
-    # the corpus -- the same caution as in (a).
+    # **The word with the FEWEST carriers -- and ALL of them are poisoned.**
+    #
+    # Until 2026-08-31 this took a word that stood in exactly ONE file. That worked because
+    # 25 words did, and it stopped working the moment they no longer did: five programs
+    # written from the grammar took the number to 0, and the probe said *"no file carries a
+    # word alone -- the probe measures nothing"* and aborted the whole run.
+    #
+    # > **The guardian was the finding, not the tree.** A probe whose subject is „does a
+    # > failing translation cost a cell" must not hang on the corpus having a WEAK spot; the
+    # > weak spot is what one works to remove. It now takes the word with the smallest carrier
+    # > set and poisons EVERY one of them -- with one carrier that is yesterday's probe, with
+    # > two it is one `cc` run more, and it keeps measuring after the next round as well.
     karte = traeger(korpus, term, pruefer, wurzel, dateien=uebersetzt)
-    allein = sorted((d[0], t) for t, d in karte.items() if len(d) == 1)
-    if not allein:
-        proben.append(("keine Datei traegt ein Wort allein -- die Probe misst nichts", False))
+    if not karte:
+        proben.append(("kein Wort ist NUR durch Absenkung gedeckt -- die Probe misst nichts",
+                       False))
         return proben
-    datei, wort = allein[0]
+    # In a fixed order, so the probe does not travel with the corpus -- same caution as (a):
+    # fewest carriers first, then alphabetically.
+    wort = min(sorted(karte), key=lambda t: len(karte[t]))
+    traeger_von = sorted(karte[wort])
     # **Through the SAME gate, not around it.** `verfaelsche` slips the broken C to exactly
-    # this file; everything else is the real run. *A probe that SETS the result instead of
+    # these files; everything else is the real run. *A probe that SETS the result instead of
     # measuring it checks its own assumption.*
-    _, schlecht2 = uebersetzende(korpus, wurzel, verfaelsche=(datei, GIFT_C), nur={datei})
-    proben.append((f"`{datei}` mit `F06`-C faellt aus der Deckung", datei in schlecht2))
+    _, schlecht2 = uebersetzende(korpus, wurzel, verfaelsche=(traeger_von, GIFT_C),
+                                 nur=set(traeger_von))
+    ort = ", ".join(traeger_von)
+    proben.append((f"die {len(traeger_von)} Traeger von `{wort}` mit `F06`-C fallen aus der "
+                   f"Deckung ({ort})",
+                   all(d in schlecht2 for d in traeger_von)))
     proben.append(("und aus dem richtigen Grund",
-                   GIFT_GRUND in schlecht2.get(datei, "")))
-    gift, _ = gesenkte_worte(korpus, wurzel, nur=set(uebersetzt) - {datei})
+                   all(GIFT_GRUND in schlecht2.get(d, "") for d in traeger_von)))
+    gift, _ = gesenkte_worte(korpus, wurzel, nur=set(uebersetzt) - set(traeger_von))
     t3 = tafel(term, gift, absage, pruefer)
-    proben.append((f"und das allein von ihr getragene `{wort}` faellt als UNGEDECKT",
-                   t3.get(wort) == "UNGEDECKT"))
+    proben.append((f"und `{wort}` faellt als UNGEDECKT", t3.get(wort) == "UNGEDECKT"))
     proben.append((f"im sauberen Lauf ist `{wort}` gesenkt", sauber.get(wort) == "gesenkt"))
+
+    # (e) **THE SENSITIVITY NUMBER -- measured, not asserted.**
+    #     `MARKE_ALLEIN` says how many words hang on a single file. A number that can only
+    #     be READ is not measured -- so ONE file is taken away and the number has to RISE.
+    #     Costs nothing beyond text: the corpus run and the compiler gate already happened,
+    #     and `traeger` only re-reads sources.
+    #
+    #     The file is chosen deterministically -- the alphabetically first among those that
+    #     are one of exactly TWO carriers of some word. *A probe that travels with the corpus
+    #     measures the corpus.* If no such file exists, the probe says so instead of passing.
+    n1, _, _ = empfindlichkeit(karte)
+    zu_zweit = sorted({d for ds in karte.values() if len(ds) == 2 for d in ds})
+    if not zu_zweit:
+        proben.append(("keine Datei ist EINE von zwei Traegern -- die Empfindlichkeitsprobe "
+                       "misst nichts", False))
+        return proben
+    weg = zu_zweit[0]
+    n1_ohne, _, eins_ohne = empfindlichkeit(
+        traeger(korpus, term, pruefer, wurzel, dateien=[d for d in uebersetzt if d != weg]))
+    proben.append((f"ohne `{weg}` steigt die Einsamkeitszahl ({n1} -> {n1_ohne})",
+                   n1_ohne > n1))
+    # **And the rise has to come from THAT file**, not from anywhere: every newly solitary
+    # word was one this file carried. *A number that goes up is not yet evidence that taking
+    # the file away is what pushed it.*
+    neu_einsam = set(eins_ohne) - {t for t, ds in karte.items() if len(ds) == 1}
+    proben.append(("und jedes neu einsame Wort stand in der entfernten Datei",
+                   bool(neu_einsam) and all(weg in karte[t] for t in neu_einsam)))
     return proben
 
 
@@ -467,7 +580,7 @@ def main():
     gesenkt_alt, _ = gesenkte_worte(korpus)
     gesenkt, sauber = gesenkte_worte(korpus, nur=set(uebersetzt))
 
-    print("== Sprechprobe -- in DREI Richtungen ==")
+    print("== Sprechprobe -- in VIER Richtungen ==")
     proben = sprechprobe(term, gesenkt, absage, pruefer,
                          korpus=korpus, uebersetzt=uebersetzt)
     for was, ok in proben:
@@ -535,8 +648,35 @@ def main():
     print("   `gesenkt` heisst: das Wort steht in einer Datei, die emittiert UND deren C")
     print("   `cc -Werror` annimmt -- nicht, dass die Absenkung das RICHTIGE tut. Ein")
     print("   `f32`-Ausdruck, der in `double` rechnet, uebersetzt tadellos (§3 der Tafel).")
-    print(f"   Und {len(allein)} Woerter haengen an je EINER Datei; faellt die aus der")
-    print("   Uebersetzung, fallen sie mit. Die Adressen stehen in `messung/GRAMMATIKTAFEL.md` §7.")
+    print()
+
+    # **THE SENSITIVITY -- printed, with its mark beside it, and WITHOUT a ratchet.**
+    # The reason stands at `MARKE_ALLEIN`. In short: the number moved 25 -> 0 in one night,
+    # and a mark set on the run that first measured it is a conjecture.
+    n1, n2, eins = empfindlichkeit(karte)
+    print(f"== EMPFINDLICHKEIT: {n1} Woerter haengen an je EINER Datei "
+          f"(Marke {MARKE_ALLEIN}) ==")
+    print(f"   {len(karte)} der {len(term)} Terminale sind NUR durch Absenkung gedeckt -- fuer")
+    print("   sie ist die Uebersetzungsprobe die einzige Gegenprobe. Faellt die eine Datei")
+    print("   aus der Uebersetzung, faellt das Wort mit.")
+    print(f"   an je ZWEI Dateien: {n2} (Marke {MARKE_ZU_ZWEIT}, ohne Ratsche -- diese Zahl")
+    print("   STEIGT, wenn Woerter aus der Einserspalte herunterwandern, also wenn es besser")
+    print("   wird). Die Einteilung der Woerter steht in `messung/EINSAME-WOERTER.md`.")
+    if n1 > MARKE_ALLEIN:
+        print()
+        print(f"  ! EMPFINDLICHKEIT GESTIEGEN: {n1} statt {MARKE_ALLEIN}. Jedes dieser Woerter")
+        print("    haengt an einer einzigen Datei, und die Adresse steht daneben:")
+        for t in sorted(eins):
+            print(f"      {t:<16} {eins[t]}")
+        print("    Das aendert den Ruecklaufwert NICHT -- der Grund steht bei `MARKE_ALLEIN`:")
+        print("    eine Marke, die beim ersten Lauf gesetzt wird, ist eine Vermutung, und in")
+        print("    einem Rot mit anderer Ursache waere ein Anstieg unsichtbar. **Der Vorschlag")
+        print("    steht dort: sobald die vier Zellen entschieden sind, entscheidet sie mit.**")
+    elif n1 < MARKE_ALLEIN:
+        print(f"  Die Marke ist ueberholt: {n1} < {MARKE_ALLEIN}. Sie gehoert nachgezogen.")
+    if n2 != MARKE_ZU_ZWEIT:
+        print(f"  (an zwei Dateien: {n2} statt {MARKE_ZU_ZWEIT} -- KEIN Befund, siehe oben;")
+        print("   die Zahl steht als Groessenordnung da und nicht als Riegel.)")
 
     if offen:
         print()
