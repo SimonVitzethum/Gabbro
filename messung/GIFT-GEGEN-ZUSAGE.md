@@ -328,6 +328,14 @@ sind es dieselben drei Dateien mit Rücklaufwert `0` (`166`, `286`, `413`), davo
 emittierende. **Jede geheilte Probe trägt ihren Fehler weiter und kommt am C-Tor nicht an.**
 `cargo test`: 15 Sammlungen, alle grün.
 
+`./instrumente/abnahme.py` nach dem Eingriff: **44 von 48 Wächtern haben gemessen, 43 grün,
+1 rot** — und der eine ist `pruefe-grammatiktafel.py` mit seinen **vier `UNGEDECKT`-Zellen**,
+die es vor diesem Zweig schon gab. *Kein Wächter ist an dieser Arbeit rot geworden, der es
+vorher nicht war.* Drei sind es unterwegs geworden und wurden geheilt, nicht gezogen:
+`pruefe-waechter.py` (das neue Werkzeug ohne `LC_ALL`), `pruefe-englisch.py` (eine deutsche
+Kommentarzeile in `instrumente/`) und `pruefe-zahlen.py` (die Instrumentenzahl im README, die
+**schon vorher** um eins danebenlag).
+
 ## 10. Was BENANNT wurde statt geheilt — die sieben, die bleiben
 
 | Probe | erwartet | Kette | warum es nicht geht |
