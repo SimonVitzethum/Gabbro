@@ -70,6 +70,29 @@ PROBE
 fi
 
 [ -s "$MSG" ] || { echo "R19: $MSG ist leer -- die Nachricht kommt aus der Datei."; exit 2; }
+
+# **Der Riegel gegen den gefressenen Merge** (2026-09-01, zweimal an EINEM Abend).
+#
+# `git stash` in einem offenen Merge nimmt die Dateien mit und laesst `MERGE_HEAD` fallen.
+# `git stash pop` bringt die Dateien zurueck -- den zweiten Elternteil nicht. Der Baum sieht
+# unveraendert aus, und der naechste Commit ist ein gewoehnlicher, mit der ganzen
+# Zweighistorie verloren.
+#
+# **Beide Male wusste ich die Regel und habe sie trotzdem gebrochen** -- einmal um Anker
+# gegen `master` zu messen, einmal um zu pruefen, ob ein Waechter vorher rot war. *Eine
+# Regel im Kopf ist ein Diktat; eine Regel im Werkzeug ist eine Struktur.*
+#
+# Der Riegel prueft das EINZIGE Merkmal, das beide Faelle teilen und das kein normaler
+# Commit hat: eine Nachricht, die mit `merge:` beginnt, ohne dass ein Merge laeuft.
+if head -1 "$MSG" | grep -q '^merge:' && [ ! -f "$W/.git/MERGE_HEAD" ]; then
+    echo "ABBRUCH: die Nachricht beginnt mit \`merge:\`, aber \`.git/MERGE_HEAD\` fehlt."
+    echo "  Dieser Commit haette EINEN Elternteil -- der Zweig waere nicht zusammengefuehrt,"
+    echo "  sondern seine Aenderungen als eigene Arbeit eingetragen."
+    echo "  Ursache in beiden bisherigen Faellen: \`git stash\` im offenen Merge."
+    echo "  Heilung: \`git reset --hard HEAD && git merge --no-ff --no-commit <zweig>\`,"
+    echo "  dann die Konfliktloesung neu -- der Zweig traegt alles."
+    exit 2
+fi
 grep -q "Co-Authored-By" "$MSG" || printf '\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n' >> "$MSG"
 git -C "$W" commit -q -F "$MSG" --cleanup=verbatim
 git -C "$W" log -1 --format='%h %s'
