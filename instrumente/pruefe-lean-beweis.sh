@@ -46,12 +46,12 @@ DEADLINE=120
 
 if [ ! -x "$GABBRO" ]; then
     echo "== LEAN PROOF: NO GABBRO -- it is built on ki-pc-fisch-101 (CLAUDE.md) =="
-    exit 1
+    exit 2
 fi
 if [ ! -x "$LEANBIN" ] || [ ! -x "$LAKE" ]; then
     echo "== LEAN PROOF: NO LEAN at $LEANBIN -- NOTHING measured =="
     echo "  A missing tool is not a passed test (W1)."
-    exit 1
+    exit 2
 fi
 
 # **The meaning of a body must be built before any goal can cite it.**
@@ -59,7 +59,8 @@ echo "== Building the meaning of a body =="
 if ! (cd "$MODEL" && timeout "$DEADLINE" "$LAKE" build Gabbro.Body > "$TMP/lake.log" 2>&1); then
     cat "$TMP/lake.log"
     echo "== LEAN PROOF: Gabbro.Body does not build -- the MODEL is red, not the product =="
-    exit 1
+    # The sentence says it: the model, not the product. NOTHING was measured about Gabbro.
+    exit 2
 fi
 LP="$MODEL/.lake/build/lib/lean"
 echo "   Gabbro.Body built"
@@ -132,7 +133,7 @@ LEAN
 
 if ! speech_test; then
     echo "== LEAN PROOF: this guardian measures nothing -- Lean does not answer as expected =="
-    exit 1
+    exit 2
 fi
 
 UNITS=0
@@ -168,18 +169,22 @@ done
 if [ "$GOALS" -eq 0 ]; then
     echo "== LEAN PROOF: $UNITS modules, NOT ONE theorem -- nothing measured =="
     echo "  Rule A demands that at least one GENERATED obligation really goes through."
-    exit 1
+    exit 2
 fi
 
 echo
 echo "   $UNITS units -> $UNITS modules, $GOALS theorem(s) ($NO_REGISTER without a register)"
 echo "   \$ LEAN_PATH=$LP lean <module>.lean   (per unit)"
+FRISTFAELLE=0
 for name in "${NAMES[@]}"; do
     RC=0
     run_lean "$TMP/$name.lean" || RC=$?
     if [ "$RC" -eq 2 ]; then
         echo "   DEADLINE  $name -- $DEADLINE s exceeded, NOTHING measured"
-        RED=$((RED + 1))
+        # **A deadline is not a red goal.** Counting it with `RED` said "this obligation does
+        # not go through", and the truth is that nobody asked it. It gets its own counter and
+        # its own return code below.
+        FRISTFAELLE=$((FRISTFAELLE + 1))
     elif [ "$RC" -ne 0 ]; then
         echo "   RED    $name"
         sed -n '1,12p' "$TMP/$name.lean.log" | sed 's/^/          /'
@@ -187,6 +192,13 @@ for name in "${NAMES[@]}"; do
     fi
 done
 
+if [ "$FRISTFAELLE" -ne 0 ]; then
+    echo
+    echo "== LEAN PROOF: ABBRUCH -- $FRISTFAELLE module(s) hit the $DEADLINE s deadline =="
+    echo "  For those, NOTHING was measured. A hang looks like \"still running\", not like a"
+    echo "  finding -- and a module nobody asked is not a module that answered no."
+    exit 2
+fi
 if [ "$RED" -ne 0 ]; then
     echo
     echo "== LEAN PROOF: RED -- $RED module(s) do not go through =="

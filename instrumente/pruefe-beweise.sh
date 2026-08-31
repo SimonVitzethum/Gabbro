@@ -27,7 +27,25 @@ GRENZE_GB="${GRENZE_GB:-3}"
 ZEIT="${ZEIT:-600}"
 ISABELLE="${ISABELLE:-$HOME/Isabelle2025-2/bin/isabelle}"
 
-[ -x "$ISABELLE" ] || { echo "ABBRUCH: $ISABELLE nicht ausfuehrbar -- es wurde NICHTS geprueft."; exit 1; }
+# **Three return codes since 2026-08-31, and the third one is why this line moved.**
+#   0  green -- measured, nothing found
+#   1  FINDING -- measured, and a proof does not go through
+#   2  ABORT -- NOTHING was measured (tool missing, no theories, watchdog, no evidence)
+# Every refusal in this file ended with 1 until today, so a missing Isabelle and a broken
+# proof were the same colour. `CLAUDE.md` says it for the watchdog in so many words:
+# *an abort out of memory is not a finding.*
+[ -x "$ISABELLE" ] || { echo "ABBRUCH: $ISABELLE nicht ausfuehrbar -- es wurde NICHTS geprueft."; exit 2; }
+
+# **And the population itself, measured 2026-08-31 over a tree with no `beweise/`.**
+# The glob then does not expand, `basename '*.thy'` yields the literal `*`, and this guardian
+# reported `Theorien ohne ROOT-Eintrag -- *` -- **a finding conjured out of nothing.** Zero
+# theories is a refusal, not a clean session (W1, W17).
+if [ ! -f "$W/beweise/ROOT" ] || ! ls "$W"/beweise/*.thy > /dev/null 2>&1; then
+    echo 'ABBRUCH: kein ROOT oder keine einzige `.thy` unter beweise/ -- NICHTS geprueft.'
+    echo '  Ueber einer leeren Auswahl meldet `isabelle build` Erfolg, und das ist der Fall,'
+    echo '  gegen den dieser Waechter gebaut ist.'
+    exit 2
+fi
 
 # **(c) Deckt ROOT jede Theoriedatei?** Eine `.thy`, die keiner Sitzung angehoert, wird nie
 # geprueft -- und die Theorienzahl unten haette sie trotzdem nicht gezaehlt. *Eine Datei, die
@@ -38,8 +56,15 @@ for T in "$W"/beweise/*.thy; do
     grep -qE "^    $N\\b" "$W/beweise/ROOT" || FEHLT="$FEHLT $N"
 done
 if [ -n "$FEHLT" ]; then
-    echo "ABBRUCH: Theorien ohne ROOT-Eintrag --$FEHLT"
-    echo "  Sie liegen im Ordner und gehoeren keiner Sitzung an. Es wurde NICHTS an ihnen geprueft."
+    # **Ruecklaufwert 1, und der Unterschied zu allem anderen hier ist die Frage, WER sich
+    # aendern muss** (2026-08-31). Ein fehlender ROOT-Eintrag ist ein Loch IM BAUM: die
+    # Theorie liegt da, keine Sitzung nennt sie, und jemand muss eine Zeile schreiben. Ein
+    # fehlendes Isabelle, ein Wachhundabbruch, ein fehlender Nachweis sind Loecher in der
+    # MESSAPPARATUR, und die enden hier mit 2. *Der Ruecklaufwert beantwortet: muss der
+    # Baum sich aendern, oder die Umgebung?*
+    echo "== BEWEISE: THEORIEN OHNE ROOT-EINTRAG --$FEHLT =="
+    echo "  Sie liegen im Ordner und gehoeren keiner Sitzung an -- ungedeckt, und kein Lauf"
+    echo "  wuerde sie je anfassen. Eintrag in beweise/ROOT nachtragen."
     exit 1
 fi
 
@@ -61,7 +86,7 @@ sprechprobe() {
     done
     echo "  Sprechprobe: ok (ein Schlaefer faellt, ein kurzer Lauf nicht)"
 }
-sprechprobe || exit 1
+sprechprobe || exit 2   # a fallen probe means the watchdog measures nothing -- ABORT, not a finding
 
 echo "== Beweise: Sitzung Gabbro, Wachhund bei ${GRENZE_GB} GB / ${ZEIT}s =="
 ( cd "$W/beweise" && "$ISABELLE" build -o threads=1 -d . Gabbro ) > /tmp/gabbro-beweise.log 2>&1 &
@@ -108,7 +133,10 @@ wait $BAU; ERG=$?
 
 if [ $ANGEHALTEN = 1 ]; then
     echo "== BEWEISE: ABGEBROCHEN (Wachhund) =="
-    exit 1
+    echo '  Es wurde NICHTS bewiesen -- `CLAUDE.md`: *ein Abbruch aus Speichermangel ist'
+    echo '  kein Befund.* Ein Beweis, der am Wachhund stirbt, sieht aus wie einer, der'
+    echo '  nicht durchgeht, und er ist keiner.'
+    exit 2
 fi
 if [ $ERG != 0 ]; then
     echo "== BEWEISE: FEHLER =="
@@ -149,7 +177,10 @@ else
     echo "  ZEIT und findet keinen. **CLAUDE.md uebertraegt \`beweise/\` deshalb mit \`-a\`.**"
     echo "  Heilung: \`rsync -a beweise/ …\` -- oder einmal \`isabelle build -f -d . Gabbro\`,"
     echo "  und das baut Pure und HOL mit."
-    exit 1
+    # **2, and `CLAUDE.md` wrote the reason down before this line existed:** on 2026-08-31
+    # this branch turned a full acceptance red *"mit `[1]` und ohne einen Befund darin"*,
+    # over fifteen flawless theories. **The run did not happen -- that is not a finding.**
+    exit 2
 fi
 
 N=$(grep -c "^    [A-Z]" "$W/beweise/ROOT")

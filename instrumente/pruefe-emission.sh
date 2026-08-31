@@ -40,11 +40,21 @@ trap 'rm -rf "$ARB"' EXIT
 # **W1: eine uebersprungene Probe senkt die Zahl, sie laesst sie nicht unberuehrt.**
 # Kein `cc` heisst NICHT „bestanden, uebersprungen" -- es heisst, dass dieser Waechter
 # nichts gemessen hat, und das ist ein Rot.
+# **Und der Gegenstand selbst, seit dem 2026-08-31.** Ueber einem Baum ohne `Cargo.toml`
+# lief dieser Waechter bis in die erste Stufe und starb dort mit `exit 1` an einer
+# `cargo`-Meldung -- also mit der Farbe eines gefundenen Emissionsfehlers. *Ein Erzeuger,
+# den es nicht gibt, erzeugt nichts Falsches.*
+if [ ! -f "$W/Cargo.toml" ] || ! command -v cargo > /dev/null; then
+    echo "== EMISSION: KEIN CARGO-BAUM -- der Differenztest hat NICHTS gemessen =="
+    echo "  Weder ein Erzeugnis noch ein Fehler: dieser Lauf hat gar nicht angefangen."
+    exit 2
+fi
+
 if ! command -v cc > /dev/null; then
     echo "== EMISSION: KEIN CC -- der Differenztest hat NICHTS gemessen =="
     echo "  Ein fehlendes Werkzeug ist kein bestandener Test. W1: der Ausfall senkt die"
     echo "  Zahl, er laesst sie nicht unberuehrt."
-    exit 1
+    exit 2
 fi
 
 # **Die Sprechprobe der zwei neuen Stufen** (OPT0, 2026-08-19). *Ein Waechter, der beim
@@ -92,7 +102,7 @@ PROBE_B
 echo "== Sprechprobe: koennen die neuen Stufen ueberhaupt fallen? =="
 if ! sprechprobe_ub; then
     echo "== EMISSION: die Sprechprobe haelt nicht -- ein Haken ohne Messung ist schlimmer als keiner =="
-    exit 1
+    exit 2
 fi
 echo
 
@@ -285,7 +295,7 @@ lauf() {          # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     if [ "$rc" = 124 ]; then
         echo "  8. Sprechprobe: ok (verfaelschtes C endet nicht -- Frist 10 s)"
     elif [ "$gausgabe" = "$erwartet" ]; then
-        echo "  8. Sprechprobe: UEBERSEHEN -- ein veraendertes Erzeugnis liefert dasselbe?"; exit 1
+        echo "  8. Sprechprobe: UEBERSEHEN -- ein veraendertes Erzeugnis liefert dasselbe?"; exit 2
     else
         echo "  8. Sprechprobe: ok (verfaelschtes C faellt)"
     fi
@@ -372,7 +382,7 @@ grep -v "linear ghost type BootPhase" "$W/messung/fragmente/F07.gab" > "$ARB/f7-
 if [ -z "$(verlorene_zeilen "$ARB/f7.gab" "$ARB/f7-kurz.gab")" ]; then
     echo "== EMISSION: Sprechprobe F7 haelt nicht -- eine entfernte Ausschnittzeile faellt"
     echo "             nicht auf. Dieser Vergleich misst NICHTS. =="
-    exit 1
+    exit 2
 fi
 echo "  (F7: der eingefrorene Ausschnitt steht vollstaendig in der Arbeitsfassung"
 echo "       -- und eine fehlende Zeile faellt auf, Sprechprobe ok)"
@@ -524,7 +534,7 @@ grep -v "reg IQH  : u64 @0x080 class r" "$W/messung/fragmente/F02.gab" > "$ARB/f
 if [ -z "$(verlorene_zeilen "$ARB/f2-ausschnitt.gab" "$ARB/f2-kurz.gab")" ]; then
     echo "== EMISSION: Sprechprobe F2 haelt nicht -- eine entfernte Ausschnittzeile faellt"
     echo "             nicht auf. Dieser Vergleich misst NICHTS. =="
-    exit 1
+    exit 2
 fi
 echo "  (F2: der eingefrorene Ausschnitt steht vollstaendig in der Arbeitsfassung"
 echo "       -- und eine fehlende Zeile faellt auf, Sprechprobe ok)"
@@ -696,7 +706,7 @@ grep -v "reg USED_FLAGS  : u16 @0x200 class rw" "$W/messung/fragmente/F04.gab" >
 if [ -z "$(fehlende_f4 "$ARB/f4.gab" "$ARB/f4-kurz.gab")" ]; then
     echo "== EMISSION: Sprechprobe F4 haelt nicht -- eine entfernte Ausschnittzeile faellt"
     echo "             nicht auf. Dieser Vergleich misst NICHTS. =="
-    exit 1
+    exit 2
 fi
 echo "  (F4: der eingefrorene Ausschnitt steht vollstaendig in der Arbeitsfassung"
 echo "       -- und eine fehlende Zeile faellt auf, Sprechprobe ok)"
@@ -794,7 +804,7 @@ grep -v "atomic tiefster" "$W/messung/fragmente/F06.gab" > "$ARB/f6-kurz.gab"
 if [ -z "$(verlorene_zeilen "$ARB/f6.gab" "$ARB/f6-kurz.gab")" ]; then
     echo "== EMISSION: Sprechprobe F6 haelt nicht -- eine entfernte Ausschnittzeile faellt"
     echo "             nicht auf. Dieser Vergleich misst NICHTS. =="
-    exit 1
+    exit 2
 fi
 echo "  (F6: der eingefrorene Ausschnitt steht vollstaendig in der Arbeitsfassung"
 echo "       -- und eine fehlende Zeile faellt auf, Sprechprobe ok)"
@@ -1576,7 +1586,7 @@ fi
 # die Null oben keine Aussage ueber das Gatter, sondern ueber einen leeren Zaehler.
 if [ "$n_pr_g" = "0" ]; then
     echo "  Pruefbau:      GESCHEITERT -- auch --testbuild nennt das Geruest nicht."
-    echo "                 Diese Zaehlung misst NICHTS."; exit 1
+    echo "                 Diese Zaehlung misst NICHTS."; exit 2
 fi
 echo "  Geruestnamen:  ok (0 im Auslieferungs-C, $n_pr_g im Pruefbau-C)"
 echo "  Zeilen:        $(grep -c '' "$ARB/g52-aus.c") gegen $(grep -c '' "$ARB/g52-pruef.c")"
@@ -1850,11 +1860,11 @@ echo "  6. Ergebnis:   ok ($BIBERWARTET -- der private Helfer hat gedeckelt)"
 # **Sprechprobe A: der PRIVATE Helfer rechnet wirklich mit.** Ohne sie sagt „6. Ergebnis"
 # nichts ueber ihn -- er koennte tot sein und die Zahl trotzdem stimmen.
 sed 's/return x + x;/return x + 0;/' "$BIB/mischen.c" > "$BIB/mischen-gift.c"
-cmp -s "$BIB/mischen.c" "$BIB/mischen-gift.c" && { echo "  7. Sprechprobe A: das Gift greift nicht"; exit 1; }
+cmp -s "$BIB/mischen.c" "$BIB/mischen-gift.c" && { echo "  7. Sprechprobe A: das Gift greift nicht"; exit 2; }
 cc -std=c11 -O0 -w -c -o "$BIB/mischen-gift.o" "$BIB/mischen-gift.c" || exit 1
 cc -std=c11 -O0 -w -o "$BIB/probe-gift" "$BIB/treiber.c" "$BIB/fach.o" "$BIB/mischen-gift.o" "$BIB/nutzer.o" || exit 1
 if [ "$("$BIB/probe-gift")" = "$BIBERWARTET" ]; then
-    echo '  7. Sprechprobe A: GESCHEITERT -- verfaelschtes verdopple rechnet dasselbe'; exit 1
+    echo '  7. Sprechprobe A: GESCHEITERT -- verfaelschtes verdopple rechnet dasselbe'; exit 2
 fi
 echo "  7. Sprechprobe A: ok (verfaelschter privater Helfer aendert das Ergebnis)"
 
@@ -1871,17 +1881,17 @@ pub impl fn lesen() -> u32 effects { pure } costs <= 2 ops { return 1; }
 BIBEINS
 sed 's/module eins/module zwei/; s/return 1;/return 2;/' "$BIB/eins.gab" > "$BIB/zwei.gab"
 if G pruefe "$BIB/eins.gab" "$BIB/zwei.gab" > "$BIB/koll" 2>&1; then
-    echo "  8. Sprechprobe B: GESCHEITERT -- zwei gleiche oeffentliche Namen gehen durch"; exit 1
+    echo "  8. Sprechprobe B: GESCHEITERT -- zwei gleiche oeffentliche Namen gehen durch"; exit 2
 fi
-grep -q 'N039' "$BIB/koll" || { echo "  8. Sprechprobe B: es faellt, aber nicht an N039:"; head -5 "$BIB/koll"; exit 1; }
+grep -q 'N039' "$BIB/koll" || { echo "  8. Sprechprobe B: es faellt, aber nicht an N039:"; head -5 "$BIB/koll"; exit 2; }
 # und die Gegenprobe der Gegenprobe: EINZELN erzeugt kollidiert es wirklich beim Binder.
 G emit "$BIB/eins.gab" > "$BIB/e1.c" && G emit "$BIB/zwei.gab" > "$BIB/e2.c" || exit 1
 cc -std=c11 -w -c -o "$BIB/e1.o" "$BIB/e1.c" && cc -std=c11 -w -c -o "$BIB/e2.o" "$BIB/e2.c" || exit 1
 printf 'int main(void){return 0;}\n' > "$BIB/leer.c"
 if cc -w -o "$BIB/zusammen" "$BIB/leer.c" "$BIB/e1.o" "$BIB/e2.o" 2> "$BIB/ld2"; then
-    echo '  8. Sprechprobe B: GESCHEITERT -- der Binder nimmt zwei lesen an, N039 zeigt ins Leere'; exit 1
+    echo '  8. Sprechprobe B: GESCHEITERT -- der Binder nimmt zwei lesen an, N039 zeigt ins Leere'; exit 2
 fi
-grep -q 'multiple definition' "$BIB/ld2" || { echo "  8. Sprechprobe B: der Binder faellt aus anderem Grund:"; head -3 "$BIB/ld2"; exit 1; }
+grep -q 'multiple definition' "$BIB/ld2" || { echo "  8. Sprechprobe B: der Binder faellt aus anderem Grund:"; head -3 "$BIB/ld2"; exit 2; }
 echo "  8. Sprechprobe B: ok (N039 sagt ab, und der Binder haette es sonst getan)"
 
 echo "== EMISSION: ALL PASS -- $N_DURCHGESTOCHEN durchgestochen, $n_ok von $n_emit uebersetzen =="

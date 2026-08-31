@@ -160,6 +160,88 @@ FUEHRT_AUS = re.compile(r"subprocess\.|os\.system|check_output|\bcargo\b|\bcc\b|
 # die Haelfte, die das misst. *Die statische Haelfte verpflichtet, sie spricht nicht frei.*
 HAT_FRIST = re.compile(r"timeout=|\btimeout\b|TimeoutExpired|\bFRIST\b|\bZEIT\b")
 HAT_PROBE = re.compile(r"[Ss]prechprobe|speech test|Gegenprobe|[Ss]elbsttest")
+
+# **DIE SECHSTE FORDERUNG: EINE ABSAGE ENDET MIT 2, NICHT MIT 1** (2026-08-31)
+# ---------------------------------------------------------------------------
+# Requirement three says *"an abort leaves with a return code other than zero"*, and that is
+# not enough: `1` is other than zero, and `1` is also what a FINDING looks like. On the night
+# of 2026-08-31 twelve guardians printed the word `ABBRUCH` and returned `1`, among them
+# `pruefe-grammatiktafel.py` with *"KEIN LAUF -- es wurde NICHTS gemessen"* -- indis-
+# tinguishable in the collective run from its four `UNGEDECKT` cells. **Twice that cost an
+# hour.**
+#
+# > **A tool that measured nothing must not look like one that found something.**
+#
+# The rule the whole workshop now follows, and it answers ONE question -- *who has to
+# change?*
+#
+#     1  the TREE has to change    -- a finding: a gap, a broken ratchet, a stale booking
+#     2  the SETUP has to change   -- a missing tool, an empty population, a fallen speech
+#                                     test, a deadline, an unreadable subject
+#
+# The detection reads a line that PRINTS a refusal and then the NEXT exit within six lines.
+# It looks at the call site, not at the word alone -- prose about an abort is not an abort,
+# the same lesson requirement five had to learn about `cc`.
+ABSAGEWORT = re.compile(
+    r"ABBRUCH|ABORT:|KEIN LAUF|NICHTS gemessen|NICHTS geprueft|NICHTS an ihnen|"
+    r"NOTHING measured|nothing measured|measures nothing|misst NICHTS|misst nicht\b|"
+    r"SPRECHPROBE GESCHEITERT|[Ss]prechprobe.*GESCHEITERT|OHNE NACHWEIS|"
+    r"KEIN CC|KEIN GABBRO|NO GABBRO|NO LEAN|KEIN ISABELLE|Zaehlung misst|UEBERSEHEN")
+# **Die AUFRUFSTELLE, nicht das Wort** -- `print(` muss die Anweisung BEGINNEN. Beim ersten
+# Lauf stand hier `\bprint\(`, und der Waechter meldete sich selbst: in der Erklaerung
+# darunter steht der Satz *„darin steht woertlich `print("ABBRUCH: …")` gefolgt von
+# `sys.exit(1)`"*, und das reichte. **Prosa ueber eine Absage ist keine Absage** -- dieselbe
+# Lehre, die die fuenfte Forderung an `cc` schon gezogen hat.
+DRUCKT = re.compile(r"^\s*print\(|^\s*echo\b|;\s*echo\b|\{\s*echo\b")
+AUSGANG = re.compile(r"sys\.exit\(\s*(\d+)\s*\)|SystemExit\(\s*(\d+)\s*\)|"
+                     r"^\s*return\s+(\d+)\b|(?:^|;|\|\||\{)\s*exit\s+(\d+)\b")
+
+
+def _fixtur(z):
+    """Eine Zeile, die mit einem Anfuehrungszeichen BEGINNT, ist Text und kein Code.
+
+    **Und sie wurde an genau EINER Datei gebraucht: dieser hier.** Die Sprechprobe unten
+    schreibt ihre erfundene Quelle als Zeichenkette, Zeile fuer Zeile -- darunter eine mit
+    dem Ausgang 1. Ohne diesen Riegel liest der Waechter seine eigene Probe als Verstoss.
+    *Ein Waechter, der seinen eigenen Text mitzaehlt, misst sich selbst* -- dieselbe Klasse
+    wie das `pgrep -f`, das sich in `CLAUDE.md` selbst gefunden hat.
+    """
+    return z.strip()[:1] in ("'", '"')
+
+
+def absage_mit_eins(text):
+    """Die Zeilen, die eine Absage DRUCKEN und deren naechster Ausgang eine `1` ist."""
+    zeilen = text.splitlines()
+    aus = []
+    for i, z in enumerate(zeilen):
+        if _fixtur(z) or not (ABSAGEWORT.search(z) and DRUCKT.search(z)):
+            continue
+        for j in range(i, min(i + 7, len(zeilen))):
+            if _fixtur(zeilen[j]):
+                continue
+            m = AUSGANG.search(zeilen[j])
+            if not m:
+                continue
+            if next(g for g in m.groups() if g is not None) == "1":
+                aus.append(i + 1)
+            break
+    return aus
+
+
+# **Wer diese Forderung traegt: wessen Ruecklaufwert als URTEIL gelesen wird.**
+# `abnahme.py` faehrt `pruefe-*` und `mutiere-*` und liest ihren Ruecklaufwert; die
+# `zaehle-*` stehen ausdruecklich daneben -- *„sie messen, sie bewachen nicht -- kein
+# Ruecklaufwert, der ein Urteil traegt"*. Eine Forderung an eine Zahl, die niemand liest,
+# waere eine Forderung an nichts. **Die Grenze wird unten mit ihrer Zahl GEDRUCKT**, damit
+# sie jemand verschieben kann.
+TRAEGT_URTEIL = ("pruefe-", "mutiere-", "abnahme.py")
+
+# **Gebucht statt geheilt** -- je Eintrag der Grund, wie ueberall in diesem Ordner.
+ABBRUCH_GEBUCHT = {
+    "pruefe-zahlen.py":
+        "eine zweite Bahn uebersetzt diese Datei in derselben Nacht; zwei Laeufe auf einer "
+        "Quelle zerstoeren einander (CLAUDE.md). Die Stelle ist benannt und gehoert ihr.",
+}
 # **`[1-9]` and not `1` -- and this guardian reported the flaw on itself** (2026-08-31).
 # Requirement three reads *"an abort leaves with a return code other than zero"*, and the
 # pattern recognised exactly one digit of that. The moment three guardians moved their fallen
@@ -203,9 +285,12 @@ def waechter():
 
 
 def statisch(p):
-    """Die drei Forderungen am Quelltext. Gibt die Liste der VERLETZUNGEN."""
+    """Die Forderungen am Quelltext. Gibt die Liste der VERLETZUNGEN."""
     t = p.read_text(encoding="utf-8", errors="replace")
     fehlt = []
+    if p.name.startswith(TRAEGT_URTEIL) and p.name not in ABBRUCH_GEBUCHT:
+        if stellen := absage_mit_eins(t):
+            fehlt.append("ABSAGE-MIT-1 (Zeile " + ", ".join(map(str, stellen)) + ")")
     if FUEHRT_AUS.search(t) and not HAT_FRIST.search(t):
         fehlt.append("FRIST")
     if p.name not in ZAEHLER and not HAT_PROBE.search(t):
@@ -263,21 +348,38 @@ def sprechprobe():
                      'subprocess.run(["cargo", "test"], timeout=5)\n'
                      'print("== 3 von 3 Stellen ==")\n'
                      'sys.exit(2)\n', encoding="utf-8")
+        # **Die sechste Forderung, in BEIDE Richtungen** -- und die zweite ist die
+        # wichtigere: ohne sie waere die Regel ein Verbot des Wortes `ABBRUCH`.
+        h = pathlib.Path(d) / "pruefe-absage-eins.py"
+        h.write_text('import subprocess, sys\n'
+                     '# Sprechprobe: eine kaputte Eingabe MUSS fallen\n'
+                     'subprocess.run(["cargo", "test"], timeout=5)\n'
+                     'print("== 3 von 3 Stellen ==")\n'
+                     'if not subprocess.run(["true"]).returncode:\n'
+                     '    print("ABBRUCH: der Korpus fehlt -- es wurde NICHTS gemessen.")\n'
+                     '    sys.exit(1)\n', encoding="utf-8")
+        i = pathlib.Path(d) / "pruefe-absage-zwei.py"
+        i.write_text(h.read_text(encoding="utf-8").replace("sys.exit(1)", "sys.exit(2)"),
+                     encoding="utf-8")
         f_gut, f_schlecht, f_gut_lc = statisch(a), statisch(b), statisch(c)
         f_prosa = statisch(e)
         f_zwei = statisch(g)
+        f_a1, f_a2 = statisch(h), statisch(i)
     # **Und die vierte Forderung, an ihrer eigenen Regex.** Ein gruener Lauf ohne Zahl
     # daneben MUSS auffallen; einer mit Zahl NICHT.
     leer_faellt = not ARBEIT.search("== ALL PASS ==\nok\n")
     voll_faellt = bool(ARBEIT.search("== 23 von 23 tragen alle drei ==\n"))
-    ok = (not f_gut and not f_gut_lc and not f_prosa and not f_zwei
+    a1 = len(f_a1) == 1 and f_a1[0].startswith("ABSAGE-MIT-1")
+    ok = (not f_gut and not f_gut_lc and not f_prosa and not f_zwei and a1 and not f_a2
           and set(f_schlecht) == {"FRIST", "SPRECHPROBE", "ROT-BEI-ABBRUCH", "GEBIETSSCHEMA"}
           and leer_faellt and voll_faellt)
-    return ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, leer_faellt, voll_faellt
+    return (ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, a1, f_a2,
+            leer_faellt, voll_faellt)
 
 
 def main():
-    ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, leer_faellt, voll_faellt = sprechprobe()
+    (ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, a1, f_a2,
+     leer_faellt, voll_faellt) = sprechprobe()
     print("== Sprechprobe des Waechters ==")
     print(f"  saubere Quelle: {len(f_gut)} Verletzungen -- "
           + ("ok" if not f_gut else f"GESCHEITERT (falsches Rot: {f_gut})"))
@@ -292,6 +394,11 @@ def main():
     print(f"  Abbruch mit 2:  {len(f_zwei)} Verletzungen -- "
           + ("ok (ein Ausgang mit 2 ist ROT -- die Forderung heisst `ungleich null`)"
              if not f_zwei else f"GESCHEITERT (falsches Rot: {f_zwei})"))
+    print("  Absage mit 1:   " + ("ok (eine gedruckte Absage, die mit 1 endet, FAELLT)"
+                                  if a1 else "GESCHEITERT -- sie kommt durch"))
+    print(f"  Absage mit 2:   {len(f_a2)} Verletzungen -- "
+          + ("ok (dieselbe Absage mit 2 kommt durch -- die Regel verbietet nicht das Wort)"
+             if not f_a2 else f"GESCHEITERT (falsches Rot: {f_a2})"))
     print("  Arbeitsmenge:   " + ("ok (eine Ausgabe ohne Zahl faellt, eine mit Zahl nicht)"
                                   if leer_faellt and voll_faellt else "GESCHEITERT"))
     if not ok:
@@ -314,9 +421,30 @@ def main():
             befunde.append((p.name, fehlt))
 
     print()
-    print(f"== {len(alle) - len(befunde)} von {len(alle)} tragen die vier STATISCHEN ==")
+    print(f"== {len(alle) - len(befunde)} von {len(alle)} tragen die STATISCHEN ==")
     print("   Die ARBEITSMENGE neben dem Urteil (W17) -- steht in der Ausgabe")
     print("   und nicht im Quelltext. Sie wird in `--lauf` gemessen, sonst gar nicht.")
+
+    # **Die Grenze der sechsten Forderung, mit ihrer Zahl statt als Schweigen.**
+    # Sie gilt fuer die, deren Ruecklaufwert `abnahme.py` als URTEIL liest. Ueber den
+    # `zaehle-*` liefe sie an so vielen Stellen an -- und **das ist eine gemessene Zahl und
+    # keine Behauptung**, damit jemand die Grenze verschieben KANN. Ein Werkzeug, das
+    # niemand nennt, verschiebt niemand.
+    ausserhalb = [(p.name, absage_mit_eins(p.read_text(encoding="utf-8", errors="replace")))
+                  for p in alle if not p.name.startswith(TRAEGT_URTEIL)]
+    n_stellen = sum(len(s) for _, s in ausserhalb)
+    print()
+    print(f"== Die sechste Forderung gilt fuer {sum(1 for p in alle if p.name.startswith(TRAEGT_URTEIL))} "
+          f"von {len(alle)}: die mit einem gelesenen URTEIL ==")
+    print(f"   Ueber den {len(ausserhalb)} `zaehle-*` liefe sie an {n_stellen} Stellen an. Sie stehen")
+    print("   ausserhalb, weil `abnahme.py` ihren Ruecklaufwert nicht liest -- *sie messen,")
+    print("   sie bewachen nicht.* Eine Forderung an eine Zahl, die niemand liest, ist eine")
+    print("   Forderung an nichts. **Die Zahl steht hier, damit jemand die Grenze")
+    print("   verschieben kann.**")
+    if ABBRUCH_GEBUCHT:
+        print(f"   Und {len(ABBRUCH_GEBUCHT)} GEBUCHT, mit Grund:")
+        for name, grund in sorted(ABBRUCH_GEBUCHT.items()):
+            print(f"     {name}: {grund}")
 
     if "--lauf" in sys.argv:
         print()

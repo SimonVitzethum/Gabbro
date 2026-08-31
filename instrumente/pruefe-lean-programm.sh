@@ -40,19 +40,19 @@ DEADLINE=180
 
 if [ ! -x "$GABBRO" ]; then
     echo "== LEAN PROGRAM: NO GABBRO -- it is built on ki-pc-fisch-101 (CLAUDE.md) =="
-    exit 1
+    exit 2
 fi
 if [ ! -x "$LEANBIN" ] || [ ! -x "$LAKE" ]; then
     echo "== LEAN PROGRAM: NO LEAN at $LEANBIN -- NOTHING measured =="
     echo "  A missing tool is not a passed test (W1)."
-    exit 1
+    exit 2
 fi
 
 echo "== Building the meaning of a body =="
 if ! (cd "$MODEL" && timeout "$DEADLINE" "$LAKE" build Gabbro.Body > "$TMP/lake.log" 2>&1); then
     cat "$TMP/lake.log"
     echo "== LEAN PROGRAM: Gabbro.Body does not build -- the MODEL is red =="
-    exit 1
+    exit 2
 fi
 LP="$MODEL/.lake/build/lib/lean"
 echo "   Gabbro.Body built"
@@ -83,7 +83,7 @@ fi
 if [ "$BD" -eq 0 ]; then
     echo "== LEAN PROGRAM: not one body exported -- nothing measured =="
     echo "  An export without a body builds green and says nothing (W1)."
-    exit 1
+    exit 2
 fi
 
 if ! (cd "$TMP" && LEAN_PATH="$LP" timeout "$DEADLINE" "$LEANBIN" \
@@ -162,7 +162,7 @@ echo "  a place that is not declared is named:     $([ $ORTE -eq 1 ] && echo yes
 if [ $GOOD -ne 1 ] || [ "$FALLEN" -lt "$GIFTE" ] || [ $ORTE -ne 1 ]; then
     echo
     echo "== LEAN PROGRAM: this guardian measures nothing =="
-    exit 1
+    exit 2
 fi
 
 echo

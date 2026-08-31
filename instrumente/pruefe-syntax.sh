@@ -37,6 +37,24 @@ pruefe_prosa() {
   return 0
 }
 
+# **Der Gegenstand zuerst, seit dem 2026-08-31.** Ueber einem Baum ohne `dokumente/` lief
+# dieses Werkzeug bis heute durch: `awk` und `grep` finden in nichts auch nichts, der erste
+# Abschnitt meldete *"keine verbotene Form"*, und dann starb die EBNF-Pruefung an einem
+# `FileNotFoundError` -- gedruckt als **"SYNTAX: FEHLER (Grammatik nicht geschlossen)"**,
+# also als Befund ueber eine Grammatik, die der Waechter nie gelesen hat. *Eine fehlende
+# Datei ist keine offene Regel.*
+DOKUMENTE="dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md TODO.md
+           dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md
+           dokumente/MEMO-GLEITKOMMA.md"
+FEHLEND=""
+for D in $DOKUMENTE; do [ -f "$D" ] || FEHLEND="$FEHLEND $D"; done
+if [ -n "$FEHLEND" ]; then
+  echo "ABBRUCH: diese Dateien fehlen --$FEHLEND"
+  echo "  Ohne sie sieht jeder Abschnitt hier sauber aus, weil er nichts liest."
+  echo "  Es wurde NICHTS gemessen (W1)."
+  exit 2
+fi
+
 echo "== Beispiele gegen dokumente/SYNTAX.md =="
 if pruefe dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md dokumente/MEMO-GLEITKOMMA.md && \
    pruefe_prosa dokumente/SPRACHE.md dokumente/SYNTAX.md dokumente/PLAN.md README.md TODO.md dokumente/BEWEIS.md dokumente/MESSUNGEN.md dokumente/FRAGMENTE.md dokumente/MEMO-GLEITKOMMA.md; then
@@ -70,23 +88,23 @@ n=0
 for gift in 'while (x) { }' 'let a = wirkung;' 'goto ende;' 'traverse t over s by decrement { }'; do
   printf '```gabbro\n%s\n```\n' "$gift" > "$tmp/g.md"
   if pruefe "$tmp/g.md" >/dev/null; then
-    echo "SPRECHPROBE GESCHEITERT: >>$gift<< kam durch"; exit 1
+    echo "SPRECHPROBE GESCHEITERT: >>$gift<< kam durch"; exit 2
   fi
   n=$((n+1))
 done
 # ... und bei einem sauberen Block NICHT fallen
 printf '```gabbro\ntraverse siblings of p over chain(a,b) in slots by unvisited { }\n```\n' > "$tmp/ok.md"
-pruefe "$tmp/ok.md" >/dev/null || { echo "SPRECHPROBE GESCHEITERT: sauberer Block fiel durch"; exit 1; }
+pruefe "$tmp/ok.md" >/dev/null || { echo "SPRECHPROBE GESCHEITERT: sauberer Block fiel durch"; exit 2; }
 # Sprechprobe fuer den PROSA-Zweig -- er ist neu und darf nicht stumm sein.
 printf 'Das Primitiv heisst `wechsle` und ist alt.\n' > "$tmp/p.md"
-pruefe_prosa "$tmp/p.md" >/dev/null && { echo "SPRECHPROBE GESCHEITERT: Prosa-Zweig ist stumm"; exit 1; }
+pruefe_prosa "$tmp/p.md" >/dev/null && { echo "SPRECHPROBE GESCHEITERT: Prosa-Zweig ist stumm"; exit 2; }
 printf 'Das Primitiv heisst `switch_to`.\n' > "$tmp/pok.md"
-pruefe_prosa "$tmp/pok.md" >/dev/null || { echo "SPRECHPROBE GESCHEITERT: saubere Prosa fiel durch"; exit 1; }
+pruefe_prosa "$tmp/pok.md" >/dev/null || { echo "SPRECHPROBE GESCHEITERT: saubere Prosa fiel durch"; exit 2; }
 # Sprechprobe fuer den EBNF-Zweig
 printf '```ebnf\na = b ;\n```\n' > "$tmp/e.md"
-ebnf_geschlossen "$tmp/e.md" >/dev/null && { echo "SPRECHPROBE GESCHEITERT: EBNF-Zweig ist stumm"; exit 1; }
+ebnf_geschlossen "$tmp/e.md" >/dev/null && { echo "SPRECHPROBE GESCHEITERT: EBNF-Zweig ist stumm"; exit 2; }
 printf '```ebnf\na = "x" ;\n```\n' > "$tmp/eok.md"
-ebnf_geschlossen "$tmp/eok.md" >/dev/null || { echo "SPRECHPROBE GESCHEITERT: geschlossene EBNF fiel durch"; exit 1; }
+ebnf_geschlossen "$tmp/eok.md" >/dev/null || { echo "SPRECHPROBE GESCHEITERT: geschlossene EBNF fiel durch"; exit 2; }
 echo "Sprechprobe: $n Gifte in Beispielen gefangen, Prosa-Zweig spricht, Sauberes durchgelassen."
 echo "== SYNTAX: ALL PASS =="
 
@@ -99,10 +117,29 @@ echo "== Warnungen =="
 # Waechterkette aus wie einer, der noch baut. Am selben Tag standen deswegen einundzwanzig
 # `pruefe-emission.sh` nebeneinander. *Eine ueberschrittene Frist ist ein BEFUND, kein Warten.*
 FRIST=${FRIST:-900}
-W=$(timeout "$FRIST" cargo build --tests 2>&1 | grep -cE "^warning: " || true)
+# **Und ein Bau, der gar nicht durchlaeuft, hat null Warnungen** (gemessen 2026-08-31).
+# Bis heute stand hier nur die Zaehlung: ein `cargo build`, der an der Frist stirbt oder gar
+# nicht erst anfaengt, liefert keine `warning:`-Zeile, `W` wird 0, und dieser Waechter druckt
+# **"keine"** und endet gruen. *Erfolg ohne Arbeit, dieselbe Klasse wie `isabelle build -D .`
+# ueber einer leeren Auswahl.* Also wird der Ruecklaufwert des Baus gelesen, nicht nur seine
+# Ausgabe -- und ein Bau, der nicht endete, ist ein ABBRUCH und kein sauberer Bau.
+BAULOG="$(mktemp)"; trap 'rm -rf "$tmp" "$BAULOG"' EXIT
+timeout "$FRIST" cargo build --tests > "$BAULOG" 2>&1
+BAURC=$?
+if [ "$BAURC" -ne 0 ]; then
+  echo "ABBRUCH: \`cargo build --tests\` endete mit $BAURC -- es wurde NICHTS gemessen."
+  [ "$BAURC" = 124 ] && echo "  Das ist die Frist von $FRIST s. Ein Haenger ist kein sauberer Bau."
+  grep -E "^(error|warning)" "$BAULOG" | head -10
+  echo "  Ein Bau, der nicht durchlaeuft, hat NULL Warnungen -- und null Warnungen sahen"
+  echo "  hier bis heute aus wie ein sauberer Endzustand."
+  exit 2
+fi
+W=$(grep -cE "^warning: " "$BAULOG" || true)
 if [ "$W" != "0" ]; then
   echo "  $W WARNUNG(EN) -- der Endzustand verlangt null:"
-  timeout "$FRIST" cargo build --tests 2>&1 | grep -E "^warning: " | head -5
+  # Aus dem Protokoll des EINEN Baus -- ein zweiter Lauf zeigte, was `cargo` beim
+  # zweiten Mal noch sagt, und das ist nach einem gecachten Bau schlicht nichts.
+  grep -E "^warning: " "$BAULOG" | head -5
   echo "== SYNTAX: FEHLER (Warnungen im Bau) =="
   exit 1
 fi
