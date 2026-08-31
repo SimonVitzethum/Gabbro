@@ -1,0 +1,51 @@
+-- erwartet: N001
+--
+-- Ein `let` verdeckt einen Parameter **im selben Geltungsbereich** -- und C kennt dafuer
+-- keine Lesart. Gemessen am 2026-08-31 gegen den unveraenderten Pruefer:
+--
+--     gabbro pruefe   ->  0 errors, 0 hints
+--     gabbro emit     ->  die Einheit, ohne ein einziges `C001`
+--     cc -c           ->  error: »t« als andere Symbolart redeklariert
+--
+-- **Genau die `N042`-Gestalt**: der Pruefer schweigt, der Erzeuger schweigt, und der
+-- Uebersetzer sagt ab. In C liegen die Parameter im Geltungsbereich des Rumpfblocks, also
+-- ist `const Riesig * t = g;` neben `const Winzig *restrict t` eine zweite Deklaration
+-- desselben Namens -- und `emit.rs` benennt nichts um (`cnamen.rs`, erste Zeile).
+--
+-- **Die Verdeckung im VERSCHACHTELTEN Block steht hier NICHT.** Sie ist erlaubt, sie
+-- uebersetzt, und `19-let-verdeckt.gab` fuehrt sie seit dem 2026-08-14 als gueltiges
+-- Programm. *Was dort offen bleibt, ist ein Mangel des Kostenpasses und keiner des
+-- Programms* -- `messung/proben/probe-domaenenschatten.gab` misst ihn.
+
+module gift {
+
+const KLEIN : u32 = 4;
+const GROSS : u32 = 64;
+
+table Winzig count KLEIN {
+    slot { wert : u32, }
+}
+
+table Riesig count GROSS {
+    slot { wert : u32, }
+}
+
+-- MUSS fallen (N001): `t` ist zweimal deklariert -- als Parameter und als `let`, beide im
+-- Geltungsbereich des Rumpfblocks.
+impl fn t_zweimal(t : ptr<normal, r> Winzig, g : ptr<normal, r> Riesig) -> u32
+    effects { reads t.slots, reads g.slots }
+    costs   <= 16 ops
+{
+    let mut summe : u32 in 0 .. 65535 = 0;
+    let t = g;
+    traverse i over slots of t by unvisited
+        touches reads t.slots
+    {
+        if summe < 60000 {
+            summe += 1;
+        }
+    }
+    return summe;
+}
+
+}

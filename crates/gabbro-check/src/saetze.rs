@@ -146,20 +146,30 @@ pub const NAMEN: &[Satz] = &[
     Satz {
         name: "namen.doppelung",
         kennungen: &["N001", "N002", "N003", "N009", "N010", "N017"],
-        aussage: "Within one scope no name is declared twice, no two `reason` cases carry \
-                  the same number, no two register fields sit on the same bits, no two `reg` \
-                  overlap in offset, and no register stands in `preserves` and `clobbers` at \
-                  once. The pass checks DUPLICATION, not resolution.",
-        vorbehalt: "**Three holes, and the first is a real one.** (1) A `when` item switches \
+        aussage: "Within one scope no name is declared twice -- items, the fixed set of \
+                  construct bodies, AND the scopes of a function: its parameter list and \
+                  every block of its body. No two `reason` cases carry the same number, no \
+                  two register fields sit on the same bits, no two `reg` overlap in offset, \
+                  and no register stands in `preserves` and `clobbers` at once. The pass \
+                  checks DUPLICATION, not resolution.",
+        vorbehalt: "**Two holes; the third fell on 2026-08-31.** (1) A `when` item switches \
                     the duplicate check off entirely -- two identically named items with \
                     `when` never fall (`arch` in contrast keys correctly per target). \
-                    (2) Duplicate FUNCTION PARAMETERS and shadowing `let` names are checked \
-                    NOWHERE: the scope walker sees items and a fixed set of construct \
-                    bodies. (3) `N009`/`N010` compare only what is a NUMBER LITERAL, and \
-                    `N009` only within one level -- bank against main level never.",
+                    (2) `N009`/`N010` compare only what is a NUMBER LITERAL, and `N009` only \
+                    within one level -- bank against main level never. \
+                    **What the function scopes deliberately do NOT refuse is a covering in a \
+                    NESTED block**: C accepts it, `19-let-verdeckt.gab` has held it as a \
+                    legal program since 2026-08-14, and `m1.rs` carries the block scope that \
+                    gives it meaning. That form carries a defect of a DIFFERENT pass -- \
+                    `kosten.rs` and `domaene.rs` build `lokal` from the parameters alone and \
+                    therefore read the covered binding, accepting a `costs` promise the \
+                    emitted loop violates. Measured and NOT built \
+                    (`messung/proben/probe-domaenenschatten.gab`).",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: 4 probes on `N001`, probes on `N002`-`N003` and \
-                      `N009`-`N010`.",
+        gemessen_an: "beispiele/gift: 5 probes on `N001` (`432` covers a parameter in the \
+                      body's own scope -- the form `cc` refuses), probes on `N002`-`N003` \
+                      and `N009`-`N010`. Counter-direction 2026-08-31: 480 `.gab` files, \
+                      118 error-free before and 118 after.",
         fundstelle: "crates/gabbro-check/src/namen.rs; SPRACHE.md part III E5",
     },
     Satz {
