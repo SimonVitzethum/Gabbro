@@ -195,6 +195,34 @@ ABSAGEWORT = re.compile(
 DRUCKT = re.compile(r"^\s*print\(|^\s*echo\b|;\s*echo\b|\{\s*echo\b")
 AUSGANG = re.compile(r"sys\.exit\(\s*(\d+)\s*\)|SystemExit\(\s*(\d+)\s*\)|"
                      r"^\s*return\s+(\d+)\b|(?:^|;|\|\||\{)\s*exit\s+(\d+)\b")
+# **THE OTHER HALF OF THE SIXTH, AND IT IS THE HALF THAT DOES NOT SHOUT** (2026-08-31)
+# ------------------------------------------------------------------------------------
+# The detection above needs a PRINTED refusal. A fallen speech test does not have to print
+# anything:
+#
+#     if not sprechprobe():
+#         return 1
+#
+# No abort word on the printing line -- because there is no printing line. **The rule was
+# never about the word**, it is about the question *who has to change?*, and a guardian
+# that cannot prove it measures says the SETUP has to change. Measured over `99e2145`, the
+# stand this requirement was written against: the printed half found **44 places in 15
+# files** and MISSED **nine** of exactly this form -- among them `pruefe-todo.py` and
+# `pruefe-vergabe.py` **whole**, two files in which the printed half found nothing at all.
+# The nine were then healed by hand, one at a time; *the tenth would not have come up.*
+#
+# What counts as a speech test is not decided a second time here (W7): it is the word set
+# of `HAT_PROBE`, one line up, read in a CONDITION instead of anywhere in the file. Beside
+# it stands the form that carries the result in a variable -- `if not tief_ok:` -- and only
+# under a negation, because `if ok:` is the good path. **The looser pattern was measured
+# and thrown out**: a bare `\bproben?\b` reports `$name-probe` and `abi-proben/` in
+# `pruefe-emission.sh` -- four stage findings that are RIGHTLY a `1`. *A rule with false
+# alarms gets ignored, and then it protects nothing.*
+PROBENZWEIG = re.compile(
+    r"^\s*(?:if|elif)\b(?:"
+    r".*(?:[Ss]prechprobe|[Ss]elbsttest|Gegenprobe|[Ss]peech[_ ]test)"
+    r"|.*\bnot\b.*\b\w+_ok\b"
+    r"|.*\bnot\b.*\ball\(.*\bok\b)")
 
 
 def _fixtur(z):
@@ -209,12 +237,12 @@ def _fixtur(z):
     return z.strip()[:1] in ("'", '"')
 
 
-def absage_mit_eins(text):
-    """Die Zeilen, die eine Absage DRUCKEN und deren naechster Ausgang eine `1` ist."""
+def _mit_eins(text, trifft):
+    """Die Zeilen, auf die `trifft` passt und deren NAECHSTER Ausgang eine `1` ist."""
     zeilen = text.splitlines()
     aus = []
     for i, z in enumerate(zeilen):
-        if _fixtur(z) or not (ABSAGEWORT.search(z) and DRUCKT.search(z)):
+        if _fixtur(z) or not trifft(z):
             continue
         for j in range(i, min(i + 7, len(zeilen))):
             if _fixtur(zeilen[j]):
@@ -228,6 +256,16 @@ def absage_mit_eins(text):
     return aus
 
 
+def absage_mit_eins(text):
+    """Die Zeilen, die eine Absage DRUCKEN und deren naechster Ausgang eine `1` ist."""
+    return _mit_eins(text, lambda z: bool(ABSAGEWORT.search(z) and DRUCKT.search(z)))
+
+
+def stumme_probe_mit_eins(text):
+    """Die Zweige, die eine SPRECHPROBE pruefen und mit `1` verlassen -- ohne ein Wort."""
+    return _mit_eins(text, lambda z: bool(PROBENZWEIG.search(z)))
+
+
 # **Who carries this requirement: whoever's return code is read as a VERDICT.**
 # `abnahme.py` drives `pruefe-*` and `mutiere-*` and reads their return code; the `zaehle-*`
 # stand beside it on purpose -- *they measure, they do not guard, and no return code of
@@ -239,7 +277,9 @@ TRAEGT_URTEIL = ("pruefe-", "mutiere-", "abnahme.py")
 ABBRUCH_GEBUCHT = {
     "pruefe-zahlen.py":
         "eine zweite Bahn uebersetzt diese Datei in derselben Nacht; zwei Laeufe auf einer "
-        "Quelle zerstoeren einander (CLAUDE.md). Die Stelle ist benannt und gehoert ihr.",
+        "Quelle zerstoeren einander (CLAUDE.md). ZWEI Stellen, seit die stumme Haelfte "
+        "misst: Zeile 1001 druckt ihre Absage, Zeile 1037 (`if not tief_ok: return 1`) "
+        "nicht. Beide sind benannt und gehoeren ihr.",
 }
 # **`[1-9]` and not `1` -- and this guardian reported the flaw on itself** (2026-08-31).
 # Requirement three reads *"an abort leaves with a return code other than zero"*, and the
@@ -290,6 +330,8 @@ def statisch(p):
     if p.name.startswith(TRAEGT_URTEIL) and p.name not in ABBRUCH_GEBUCHT:
         if stellen := absage_mit_eins(t):
             fehlt.append("ABSAGE-MIT-1 (Zeile " + ", ".join(map(str, stellen)) + ")")
+        if stellen := stumme_probe_mit_eins(t):
+            fehlt.append("STUMME-PROBE-MIT-1 (Zeile " + ", ".join(map(str, stellen)) + ")")
     if FUEHRT_AUS.search(t) and not HAT_FRIST.search(t):
         fehlt.append("FRIST")
     if p.name not in ZAEHLER and not HAT_PROBE.search(t):
@@ -360,25 +402,46 @@ def sprechprobe():
         i = pathlib.Path(d) / "pruefe-absage-zwei.py"
         i.write_text(h.read_text(encoding="utf-8").replace("sys.exit(1)", "sys.exit(2)"),
                      encoding="utf-8")
+        # **The OTHER half of the sixth, in both directions too** -- a fallen speech test
+        # that prints NOTHING. This source carries no abort word anywhere; the printed half
+        # comes back clean over it, and that is exactly the gap this probe is here for.
+        j = pathlib.Path(d) / "pruefe-stumm-eins.py"
+        j.write_text('import subprocess, sys\n'
+                     'subprocess.run(["cargo", "test"], timeout=5)\n'
+                     'print("== 3 von 3 Stellen ==")\n'
+                     'def sprechprobe():\n'
+                     '    return False\n'
+                     'if not sprechprobe():\n'
+                     '    sys.exit(1)\n', encoding="utf-8")
+        k = pathlib.Path(d) / "pruefe-stumm-zwei.py"
+        k.write_text(j.read_text(encoding="utf-8").replace("sys.exit(1)", "sys.exit(2)"),
+                     encoding="utf-8")
         f_gut, f_schlecht, f_gut_lc = statisch(a), statisch(b), statisch(c)
         f_prosa = statisch(e)
         f_zwei = statisch(g)
         f_a1, f_a2 = statisch(h), statisch(i)
+        f_s1, f_s2 = statisch(j), statisch(k)
+        # **And the printed half must NOT see it** -- otherwise the new half would be
+        # measuring something the old one already caught, and the nine missed places would
+        # have no explanation.
+        stumm_ist_stumm = not absage_mit_eins(j.read_text(encoding="utf-8"))
     # **Und die vierte Forderung, an ihrer eigenen Regex.** Ein gruener Lauf ohne Zahl
     # daneben MUSS auffallen; einer mit Zahl NICHT.
     leer_faellt = not ARBEIT.search("== ALL PASS ==\nok\n")
     voll_faellt = bool(ARBEIT.search("== 23 von 23 tragen alle drei ==\n"))
     a1 = len(f_a1) == 1 and f_a1[0].startswith("ABSAGE-MIT-1")
+    s1 = len(f_s1) == 1 and f_s1[0].startswith("STUMME-PROBE-MIT-1")
     ok = (not f_gut and not f_gut_lc and not f_prosa and not f_zwei and a1 and not f_a2
+          and s1 and not f_s2 and stumm_ist_stumm
           and set(f_schlecht) == {"FRIST", "SPRECHPROBE", "ROT-BEI-ABBRUCH", "GEBIETSSCHEMA"}
           and leer_faellt and voll_faellt)
     return (ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, a1, f_a2,
-            leer_faellt, voll_faellt)
+            s1, f_s2, stumm_ist_stumm, leer_faellt, voll_faellt)
 
 
 def main():
     (ok, f_gut, f_schlecht, f_gut_lc, f_prosa, f_zwei, a1, f_a2,
-     leer_faellt, voll_faellt) = sprechprobe()
+     s1, f_s2, stumm_ist_stumm, leer_faellt, voll_faellt) = sprechprobe()
     print("== Sprechprobe des Waechters ==")
     print(f"  saubere Quelle: {len(f_gut)} Verletzungen -- "
           + ("ok" if not f_gut else f"GESCHEITERT (falsches Rot: {f_gut})"))
@@ -398,6 +461,14 @@ def main():
     print(f"  Absage mit 2:   {len(f_a2)} Verletzungen -- "
           + ("ok (dieselbe Absage mit 2 kommt durch -- die Regel verbietet nicht das Wort)"
              if not f_a2 else f"GESCHEITERT (falsches Rot: {f_a2})"))
+    print("  stumme Probe 1: " + ("ok (`if not sprechprobe(): exit 1` FAELLT, ohne ein Wort)"
+                                  if s1 else "GESCHEITERT -- sie kommt durch"))
+    print(f"  stumme Probe 2: {len(f_s2)} Verletzungen -- "
+          + ("ok (dieselbe Stelle mit 2 kommt durch)"
+             if not f_s2 else f"GESCHEITERT (falsches Rot: {f_s2})"))
+    print("  und sie ist wirklich stumm: "
+          + ("ok (die GEDRUCKTE Haelfte sieht sie nicht -- darum die zweite)"
+             if stumm_ist_stumm else "GESCHEITERT -- die alte Haelfte faengt sie schon"))
     print("  Arbeitsmenge:   " + ("ok (eine Ausgabe ohne Zahl faellt, eine mit Zahl nicht)"
                                   if leer_faellt and voll_faellt else "GESCHEITERT"))
     if not ok:
@@ -438,13 +509,17 @@ def main():
     # `zaehle-*` it would fire in as many places as printed below -- and **that is a measured
     # number, not a claim**, so somebody CAN move the boundary. A tool nobody names is a tool
     # nobody moves.
-    ausserhalb = [(p.name, absage_mit_eins(p.read_text(encoding="utf-8", errors="replace")))
+    ausserhalb = [(p.name, absage_mit_eins(p.read_text(encoding="utf-8", errors="replace")),
+                   stumme_probe_mit_eins(p.read_text(encoding="utf-8", errors="replace")))
                   for p in alle if not p.name.startswith(TRAEGT_URTEIL)]
-    n_stellen = sum(len(s) for _, s in ausserhalb)
+    n_gedruckt = sum(len(s) for _, s, _ in ausserhalb)
+    n_stumm = sum(len(s) for _, _, s in ausserhalb)
+    n_stellen = n_gedruckt + n_stumm
     print()
     print(f"== Die sechste Forderung gilt fuer {sum(1 for p in alle if p.name.startswith(TRAEGT_URTEIL))} "
           f"von {len(alle)}: die mit einem gelesenen URTEIL ==")
-    print(f"   Ueber den {len(ausserhalb)} `zaehle-*` liefe sie an {n_stellen} Stellen an. Sie stehen")
+    print(f"   Ueber den {len(ausserhalb)} `zaehle-*` liefe sie an {n_stellen} Stellen an "
+          f"({n_gedruckt} gedruckt, {n_stumm} stumm). Sie stehen")
     print("   ausserhalb, weil `abnahme.py` ihren Ruecklaufwert nicht liest -- *sie messen,")
     print("   sie bewachen nicht.* Eine Forderung an eine Zahl, die niemand liest, ist eine")
     print("   Forderung an nichts. **Die Zahl steht hier, damit jemand die Grenze")
