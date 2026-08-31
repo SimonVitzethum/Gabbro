@@ -752,7 +752,7 @@ fn befehl_pruefe(argumente: &[String]) -> std::process::ExitCode {
         let h = absagen.absagen.len() - f;
         fehler += f;
         println!(
-            "{datei}: {} Items, {f} Fehler, {h} Hinweise",
+            "{datei}: {} items, {f} errors, {h} hints",
             zaehle_items(&baum)
         );
         // **Folgefehler: die Paesse laufen nach einer Absage des LESERS weiter** -- und

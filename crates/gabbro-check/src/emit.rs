@@ -514,16 +514,16 @@ pub const KOPF: &str = "\
 /// und nicht den Leser. *Ein `-ffast-math` macht jede Aussage dieses Prueferlaufs ungueltig:
 /// es erlaubt Umsortierungen, und Gleitkommaaddition ist nicht assoziativ.*
 pub const KOPF_GLEITKOMMA: &str = "\
-/* Diese Einheit rechnet mit Gleitkomma.
+/* This unit computes in floating point.
  *
- *   -ffast-math ist VERBOTEN. Es erlaubt Umsortierungen, und die Addition ist nicht
- *   assoziativ -- jede Schranke, die der Pruefer gerechnet hat, faellt damit.
+ *   -ffast-math is FORBIDDEN. It permits reassociation, and addition is not associative --
+ *   every bound the checker computed falls with it.
  *
- *   Auf x86 wird SSE2 vorausgesetzt (die x87-Register rechnen mit 80 Bit und runden
- *   doppelt). Das steht als Annahme mit Falsifikator im Zeugnis.
+ *   On x86, SSE2 is presupposed (the x87 registers compute at 80 bits and round twice).
+ *   That stands in the certificate as an assumption, with its falsifier.
  *
- *   Der Rundungsmodus ist round-to-nearest-even. Er ist globaler Zustand (MXCSR/FPCR);
- *   dass er gilt, ist eine Annahme und keine Zusage dieses Erzeugers.
+ *   The rounding mode is round-to-nearest-even. It is global state (MXCSR/FPCR); that it
+ *   holds is an assumption, never a promise of this generator.
  */
 ";
 

@@ -389,7 +389,7 @@ impl<'a> Pruefer<'a> {
                 let ziel = self.u.typ_von_ausdruck_decl(modul, &k.typ);
                 let mut lage = Lage::default();
                 let quelle = self.ausdruck(&k.wert, &mut lage);
-                self.passt(&quelle, &ziel, k.wert.span, "die Konstante");
+                self.passt(&quelle, &ziel, k.wert.span, "constant");
             }
             // **`F004` -- und der Bedarfsbeleg steht im Korpus, nicht in einer Vorsorge.**
             //
@@ -440,7 +440,7 @@ impl<'a> Pruefer<'a> {
                 let ziel = self.u.typ_von_ausdruck_decl(modul, &st.typ);
                 let mut lage = Lage::default();
                 let quelle = self.ausdruck(&st.wert, &mut lage);
-                self.passt(&quelle, &ziel, st.wert.span, "der statische Wert");
+                self.passt(&quelle, &ziel, st.wert.span, "static value");
             }
             if let ItemArt::Funktion(f) = &item.art {
                 self.modul = modul.to_string();
@@ -705,7 +705,7 @@ impl<'a> Pruefer<'a> {
                 self.rufe_im_ausdruck(&l.wert, lage);
                 let ziel = l.typ.as_ref().map(|t| self.u.typ_von_ausdruck_decl(&self.modul, t));
                 if let Some(z) = &ziel {
-                    self.passt(&wert, z, l.wert.span, "die Bindung");
+                    self.passt(&wert, z, l.wert.span, "binding");
                 }
                 // U2: die neue Bindung verdeckt die alte -- jeder Fakt ueber den Namen
                 // stirbt, sonst erbt die Verdeckung die Verengung ihres Vorgaengers.
@@ -945,7 +945,7 @@ impl<'a> Pruefer<'a> {
                 self.buche(&ziel);
                 let quelle = self.ausdruck(&p.wert, lage);
                 self.rufe_im_ausdruck(&p.wert, lage);
-                self.passt(&quelle, &ziel, p.wert.span, "die Veroeffentlichung");
+                self.passt(&quelle, &ziel, p.wert.span, "publication");
                 self.schreiben_toetet_fakten(&p.ziel, lage);
             }
             StmtArt::Wenn(w) => {
@@ -1895,8 +1895,8 @@ impl<'a> Pruefer<'a> {
                 // message says the POSITION. *Naming a slot the author left unnamed would
                 // put a word in their mouth.*
                 let was = match pname {
-                    Some(n) => format!("das Argument `{n}`"),
-                    None => format!("das Argument Nr. {}", i + 1),
+                    Some(n) => format!("argument `{n}`"),
+                    None => format!("argument no. {}", i + 1),
                 };
                 self.passt(t, pt, *span, &was);
             }
@@ -1938,7 +1938,7 @@ impl<'a> Pruefer<'a> {
         };
         // Die Stelligkeit gehoert dem Namenspass; hier faellt nur der Bereich.
         for ((t, span), (pname, pt)) in argtypen.iter().zip(sig.parameter.iter()) {
-            self.passt(t, pt, *span, &format!("das Argument `{pname}`"));
+            self.passt(t, pt, *span, &format!("argument `{pname}`"));
         }
         self.requires_pruefen(r, &sig, &argtypen);
         let roh = sig.ergebnis.clone().unwrap_or(Typ::Unbekannt);

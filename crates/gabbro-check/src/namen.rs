@@ -624,16 +624,16 @@ fn verweigerte_zahltypen(baum: &Programm, absagen: &mut Absagen) {
     fn grund(n: &str) -> Option<&'static str> {
         match n {
             "f16" | "float16" | "half" => Some(
-                "auf den meisten Zielen ist `f16` Speicherform plus Umwandlung und keine \
-                 native Rechnung. „Vollstaendig\" hiesse Emulation oder Rechnen in `f32` -- \
-                 und dann ist die DOPPELRUNDUNG f16 -> f32 -> f16 eine neue Falle, nicht eine \
-                 kleinere Ausgabe derselben. Als reine Speicherform gehoert es zu `format`",
+                "on most targets `f16` is a storage form plus a conversion, not native \
+                 arithmetic. „Fully\" would mean emulation or computing in `f32` -- and then \
+                 the DOUBLE ROUNDING f16 -> f32 -> f16 is a new trap, not a smaller edition \
+                 of the same one. As a pure storage form it belongs to `format`",
             ),
             "f80" | "f128" | "float128" | "longdouble" | "long_double" => Some(
-                "das ist kein Typ, sondern eine Plattformlotterie: 80 Bit x87 auf x86-Linux, \
-                 128 Bit anderswo, gleich `double` auf wieder anderen -- und der x87 rundet \
-                 DOPPELT. Wer mehr als `f64` braucht, nennt eine Genauigkeit; der Korpus \
-                 baut dafuer eine Leiter aus Softwaretypen (FRAGMENTE.md, «F0»/FF2)",
+                "that is not a type but a platform lottery: 80 bit x87 on x86-Linux, \
+                 128 bit elsewhere, equal to `double` on others again -- and the x87 rounds \
+                 TWICE. Whoever needs more than `f64` names a precision; the corpus builds \
+                 a ladder of software types for it (FRAGMENTE.md, «F0»/FF2)",
             ),
             _ => None,
         }

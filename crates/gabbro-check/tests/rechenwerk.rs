@@ -761,7 +761,7 @@ impl fn loesche(s : ptr<normal, rw> S) effects { writes s } costs <= 64 ops
     // ARRAY carries its length in the declaration, as a `const … : u64`.
     assert!(
         c.contains("i < (uint64_t)(sizeof("),
-        "die Domaene ist vollstaendig -- `< n`, nicht `< n-1` -- und `uint64_t` breit:\n{c}"
+        "the domain is complete -- `< n`, never `< n-1` -- at `uint64_t` width:\n{c}"
     );
 
     // **3. `forever` senkt ab, und die Klausel wird ein GEPRUEFTER BEZUG** (2026-08-20).
@@ -3888,11 +3888,11 @@ impl fn f(o : ptr<normal, rw> O, i : index into O) effects { writes o.slots }
         brechend_c.contains("breaking zaehler_klein")
             && brechend_c.contains("PROOF region")
             && brechend_c.contains("gabbro pflichten"),
-        "die Region muss im C STEHEN -- Name, Art und wo die Pflicht gezaehlt wird:\n{brechend_c}"
+        "the region has to STAND in the C -- name, kind, where the duty gets counted:\n{brechend_c}"
     );
     assert!(
         brechend_c.contains("o->slots[i].zaehler = 0;"),
-        "und der Rumpf ist ein gewoehnlicher Block:\n{brechend_c}"
+        "and the body stays an ordinary block:\n{brechend_c}"
     );
 
     // **3. Die drei Ausdrucksformen ohne Absenkung tragen DREI Gruende, nicht einen.**
@@ -3922,8 +3922,9 @@ impl fn g(x : u32 in 0 .. 9) -> u32 in 0 .. 9 effects { pure } costs <= 2 ops \
         "module t { table T count 4 { slot { g : f64, } } }",
     );
     assert!(
-        mit_f64.contains("Gleitkomma"),
-        "ein `f64` im Slot ist Gleitkomma, und die Einheit sagt es an:\n{mit_f64}"
+        mit_f64.contains("computes in floating point")
+            && mit_f64.contains("-ffast-math is FORBIDDEN"),
+        "an `f64` in a slot IS floating point, and the unit announces it:\n{mit_f64}"
     );
     // Die schweigende Richtung -- *ohne sie belegte die obere nur, dass irgendetwas steht.*
     let ohne_f64 = c_ohne_absage("module t { table T count 4 { slot { g : u64, } } }");
@@ -5949,4 +5950,187 @@ impl fn f(w : ptr<normal, r> W) -> bool
     let (codes, _) = urteil(&quelle("4", "512"));
     assert!(codes.contains(&"K001"), "levels 4 x node 512 still computes: {codes:?}");
     assert!(!codes.contains(&"K003"), "a bound that exists is not a missing one: {codes:?}");
+}
+
+/// **The four domain bounds nobody had ever measured -- `count`, `queue`, `elems of`,
+/// `index into T`.**
+///
+/// On 2026-08-31 lane P measured the fifth (`mappings of`) and deliberately left the state of
+/// `saetze.rs::kosten.domaenenschranke` at `CONJECTURED`, with the reason written out:
+///
+/// > *"For `count`, `queue`, `elems of` and `index into T` the statement is still untested in
+/// > exactly the way it was: `K003` has 2 probes, and they measure that a MISSING bound is
+/// > refused -- not that a PRESENT one is right. That is the difference the 2 048/512^4 error
+/// > lived in."*
+///
+/// **The difference matters because the historic error was a PRESENT bound, not a missing
+/// one.** `mappings of` handed out `levels x node length` = 2 048 where the leaf set holds
+/// `512^4` = 68 719 476 736 -- seven orders of magnitude, three days, no falling test. A
+/// probe that only checks "no declaration -> `K003`" is green through all of that.
+///
+/// So this probe turns the dial that IS the declaration and reads the number out of the
+/// `K001` text per site, never out of a tally:
+///
+/// ```text
+///   table T count n        slots of w              n in {3, 7, 13}   ->  1 x n
+///   type S = [u32; n]      elems of s.worte        n in {2, 9, 31}   ->  1 x n
+///   type Q = [u32; n]      queue q by consuming    n in {3, 5, 16}   ->  2 x n
+///   table T count n        descendants of g        n in {4, 6, 11}   ->  1 x n
+///                          with g : index into T
+/// ```
+///
+/// **The four are FOUR read paths and not one**, and that is why each gets its own dial:
+/// `slots of` resolves through `Typ::Tabelle`, `index into T` through the name prefix of
+/// `tabellenname`, `queue` through `arraylaenge_im_verbund`, and `elems of` returns before
+/// the table branch is ever reached. *A single probe over one of them says nothing about the
+/// other three -- which is exactly the state this replaces.*
+///
+/// Each path carries its own mutation in `mutiere-pruefer.py`
+/// (`count-schranke-um-eins-daneben`, `elems-schranke-um-eins-daneben`,
+/// `queue-schranke-um-eins-daneben`, `index-into-tabelle-verloren`), and each is an
+/// off-by-one rather than a removal: **a bound that is GONE is already refused by `K003`, a
+/// bound that is WRONG is the gap.**
+#[test]
+fn die_vier_uebrigen_domaenenschranken_kommen_aus_ihrer_deklaration() {
+    // The number `K001` PRINTS at this site -- the text, not a tally.
+    fn gedruckt(q: &str) -> Option<i128> {
+        let (b, mut a) = gabbro_syntax::lies("p.gab", q);
+        let _ = gabbro_check::pruefe(&b, &mut a);
+        let k = a.absagen.iter().find(|x| x.code == "K001")?;
+        let n = k.text.rsplit_once("the body costs ")?.1.trim().to_string();
+        Some(n.parse().unwrap_or_else(|e| panic!("{n:?}: {e} -- in {:?}", k.text)))
+    }
+
+    // 1. `slots of` -- the bound is the `count` of the table.
+    for n in [3i128, 7, 13] {
+        let q = format!(
+            "module p {{
+const N : u32 = {n};
+table T count N {{
+    slot {{
+        a : bool,
+    }}
+}}
+impl fn f(w : ptr<normal, rw> T)
+    effects {{ writes w.slots }}
+    costs   <= 1 ops
+{{
+    traverse i over slots of w by unvisited
+        touches writes w.slots
+    {{
+        w.slots[i].a = false;
+    }}
+}}
+}}
+"
+        );
+        assert_eq!(
+            gedruckt(&q),
+            Some(n),
+            "`slots of` at `count {n}`: the bound is the table's `count`, 1 op per pass"
+        );
+    }
+
+    // 2. `elems of` -- the bound is the length in the FIELD TYPE, and the table branch is
+    // never reached. Found 2026-08-19 building «H2.1»: `tabellenname` looks for a table and
+    // `s.worte` is a field, so the bound fell out silently.
+    for n in [2i128, 9, 31] {
+        let q = format!(
+            "module p {{
+type S = {{ worte : [u32; {n}], }};
+impl fn f(s : ptr<normal, rw> S)
+    effects {{ writes s }}
+    costs   <= 1 ops
+{{
+    traverse i over elems of s.worte by unvisited
+        touches writes s
+    {{
+        s.worte[i] = 0;
+    }}
+}}
+}}
+"
+        );
+        assert_eq!(
+            gedruckt(&q),
+            Some(n),
+            "`elems of` at `[u32; {n}]`: the bound is the array length, 1 op per pass"
+        );
+    }
+
+    // 3. `queue` -- the bound is the length of the record's SINGLE field array. Two arrays
+    // and it is not decidable, so the pass says `K003` instead of guessing; that half has a
+    // probe already. This half measures that the one it does read is the right one.
+    for n in [3i128, 5, 16] {
+        let q = format!(
+            "module p {{
+type Q = {{ buf : [u32; {n}], kopf : u32, }};
+impl fn f(q : ptr<normal, rw> Q)
+    effects {{ writes q, consumes q }}
+    costs   <= 1 ops
+{{
+    traverse c over queue q by consuming
+        touches consumes q
+    {{
+        q.kopf = c;
+    }}
+}}
+}}
+"
+        );
+        assert_eq!(
+            gedruckt(&q),
+            Some(2 * n),
+            "`queue` at `[u32; {n}]`: the bound is the single field array, 2 ops per pass"
+        );
+    }
+
+    // 4. `index into T` -- the bound comes from the table the TYPE NAME points at, not from
+    // the place. Found 2026-08-17 building `ancestors of`: no example had ever triggered the
+    // site, because the corpus carries `descendants of` only inside predicates, where no cost
+    // pass runs. *A bound never triggered is not covered, it is unbreakable.*
+    for n in [4i128, 6, 11] {
+        let q = format!(
+            "module p {{
+const N : u32 = {n};
+table T count N {{
+    slot {{
+        a      : bool,
+        eltern : option index into T,
+        kind   : option index into T,
+        gesch  : option index into T,
+    }}
+    tree {{
+        parent  eltern,
+        child   kind,
+        sibling gesch,
+    }}
+}}
+impl fn f(w : ptr<normal, rw> T, g : index into T)
+    effects {{ writes w.slots }}
+    costs   <= 1 ops
+{{
+    traverse v over descendants of g by unvisited
+        touches writes w.slots
+    {{
+        w.slots[v].a = false;
+    }}
+}}
+}}
+"
+        );
+        assert_eq!(
+            gedruckt(&q),
+            Some(n),
+            "`descendants of g` with `g : index into T` at `count {n}`: the bound is the \
+             table named by the TYPE"
+        );
+    }
+
+    // **And what this does NOT say.** It measures that the pass READS the declared number,
+    // not that the number IS the cardinality of the domain. For `slots of` and `elems of`
+    // the two coincide by construction. For `queue` and `descendants of` the declared number
+    // is an UPPER bound and coarse on purpose: a queue holds at most its array, a descendant
+    // chain visits at most every slot once. *Coarse upwards is a cost promise that holds;
+    // the 2 048 was coarse DOWNWARDS, and that is the direction that lies.*
 }

@@ -62,14 +62,14 @@ def messe(quelle):
         cwd=WURZEL,
         capture_output=True,
         text=True, timeout=FRIST)
-    if r.returncode not in (0, 1) or "Uebersetzungseinheiten" not in r.stdout:
+    if r.returncode not in (0, 1) or "Translation units" not in r.stdout:
         print("!! ABBRUCH: `gabbro fragmente` lief nicht -- das ist KEINE Zaehlung von null.")
         print((r.stderr or r.stdout)[-800:])
         sys.exit(2)
     stellen = set()
     for m in re.finditer(r"\[(M101|M104)\] \S+?:(\d+):(\d+):(\d+):", r.stdout):
         stellen.add((m.group(2), m.group(3)))   # Einheit + Zeile: EINE Pflicht
-    sauber = re.search(r"(\d+) von (\d+) ohne Fehler", r.stdout)
+    sauber = re.search(r"(\d+) of (\d+) with no errors", r.stdout)
     return stellen, int(sauber.group(1)), int(sauber.group(2)), r.stdout
 
 

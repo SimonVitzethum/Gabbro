@@ -456,7 +456,7 @@ fn fluss(
                     // uebersehen -- er faellt aber weg, wenn ALLE `if`-Zweige enden.
                     None => zweige.push((stand.clone(), s.span)),
                 }
-                if let Some(neu) = einigen(&zweige, s.span, absagen, "Zweige eines `if`") {
+                if let Some(neu) = einigen(&zweige, s.span, absagen, "branches of an `if`") {
                     *stand = neu;
                 }
             }
@@ -469,7 +469,7 @@ fn fluss(
                         zweige.push((k, z.rumpf.span));
                     }
                 }
-                if let Some(neu) = einigen(&zweige, s.span, absagen, "Zweige eines `match`") {
+                if let Some(neu) = einigen(&zweige, s.span, absagen, "branches of a `match`") {
                     *stand = neu;
                 }
             }
@@ -534,10 +534,10 @@ fn einigen(
         if k != erster {
             let zeig = |m: &BTreeMap<String, String>| {
                 if m.is_empty() {
-                    "keine Marke".to_string()
+                    "no mark".to_string()
                 } else {
                     m.iter()
-                        .map(|(n, st)| format!("{n} auf {st}"))
+                        .map(|(n, st)| format!("{n} at {st}"))
                         .collect::<Vec<_>>()
                         .join(", ")
                 }
@@ -549,7 +549,7 @@ fn einigen(
                     format!("the {was} bring the mark to different stages"),
                 )
                 .mit_notiz(format!("here: {}", zeig(k)))
-                .mit_notiz(format!("anderswo: {}", zeig(erster)))
+                .mit_notiz(format!("elsewhere: {}", zeig(erster)))
                 .mit_notiz(
                     "the strict reading is chosen: all branches reach the same stage. \
                         From strict one can loosen, never the other way",

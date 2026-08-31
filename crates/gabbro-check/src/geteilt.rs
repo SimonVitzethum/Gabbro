@@ -1292,11 +1292,11 @@ fn rangprobe(
                             strictly smaller rank is held",
                     )
                     .mit_notiz(if *alt == neu {
-                        "gleicher Rang ist keine Ordnung: zwei Halter koennen sie in zwei \
-                         Richtungen nehmen"
+                        "equal rank is no order: two holders can take them in two \
+                         directions"
                     } else {
-                        "die ehrliche Form ist, die aeussere Sperre vorher freizugeben und \
-                         die tragende Bedingung danach ERNEUT zu pruefen"
+                        "the honest form is to release the outer lock first and to check \
+                         the load-bearing condition AGAIN afterwards"
                     }),
                 );
             }

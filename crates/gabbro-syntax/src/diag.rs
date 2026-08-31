@@ -89,8 +89,8 @@ impl Absagen {
         for a in &self.absagen {
             let stelle = index.stelle(quelle, a.span.von);
             let wort = match a.stufe {
-                Stufe::Fehler => "Fehler",
-                Stufe::Hinweis => "Hinweis",
+                Stufe::Fehler => "error",
+                Stufe::Hinweis => "hint",
             };
             out.push_str(&format!(
                 "{}: [{}] {}:{}:{}: {}\n",

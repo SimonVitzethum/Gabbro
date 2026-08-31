@@ -6,7 +6,7 @@ use gabbro_check::korpus;
 
 pub fn befehl(dateien: &[String]) -> std::process::ExitCode {
     if dateien.is_empty() {
-        eprintln!("gabbro fragmente: keine Datei genannt");
+        eprintln!("gabbro fragmente: no file named");
         return std::process::ExitCode::from(2);
     }
     let mut voll_gesamt = 0usize;
@@ -42,11 +42,11 @@ pub fn befehl(dateien: &[String]) -> std::process::ExitCode {
                 }
             }
             println!(
-                "  {} ab Zeile {:<5} {:>3} Zeilen  {:>2} Fehler  {:>2} Hinweise",
+                "  {} from line {:<5} {:>3} lines  {:>2} errors  {:>2} hints",
                 if b.vollstaendig {
-                    "Einheit  "
+                    "unit      "
                 } else {
-                    "Ausschnitt"
+                    "excerpt   "
                 },
                 b.erste_zeile,
                 b.zeilen,
@@ -57,8 +57,8 @@ pub fn befehl(dateien: &[String]) -> std::process::ExitCode {
         }
     }
     println!(
-        "\nUebersetzungseinheiten: {voll_sauber} von {voll_gesamt} ohne Fehler ({:.0} %) \
-         -- das ist Tor P2, und es verlangt 100 %.",
+        "\nTranslation units:      {voll_sauber} of {voll_gesamt} with no errors ({:.0} %) \
+         -- that is gate P2, and it demands 100 %.",
         if voll_gesamt == 0 {
             0.0
         } else {
@@ -66,14 +66,14 @@ pub fn befehl(dateien: &[String]) -> std::process::ExitCode {
         }
     );
     println!(
-        "Ausschnitte:            {aus_sauber} von {aus_gesamt} ohne Fehler -- sie zaehlen \
-         NICHT gegen das Tor;"
+        "Excerpts:               {aus_sauber} of {aus_gesamt} with no errors -- they do \
+         NOT count against the gate;"
     );
     println!(
-        "                        ein Ausschnitt faengt mitten in einer Form an, und der \
-         Parser sagt das nur als Fehler."
+        "                        an excerpt starts in the middle of a form, and the \
+         parser can only say so as an error."
     );
-    println!("Zusammen {zeilen_gesamt} Zeilen Gabbro.");
+    println!("{zeilen_gesamt} lines of Gabbro in total.");
     if voll_sauber == voll_gesamt {
         std::process::ExitCode::SUCCESS
     } else {

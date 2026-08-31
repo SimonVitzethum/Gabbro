@@ -79,7 +79,7 @@ fn die_kuerzung_ruehrt_das_ergebnis_nicht_an() {
     // What stands at the top is the reason for the call. It reads the same in both forms.
     let kurz = lauf(&["pruefe", DATEI]);
     let voll = lauf(&["pruefe", "--paesse", DATEI]);
-    let kopf = "beispiele/16-by-ops-am-feld.gab: 6 Items, 0 Fehler, 0 Hinweise";
+    let kopf = "beispiele/16-by-ops-am-feld.gab: 6 items, 0 errors, 0 hints";
     assert!(kurz.contains(kopf), "short:\n{kurz}");
     assert!(voll.contains(kopf), "full:\n{voll}");
 }

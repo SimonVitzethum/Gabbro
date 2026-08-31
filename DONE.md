@@ -511,7 +511,7 @@ nobody had marked as one.* With a `decreases`, `costs` is the promise of ONE pas
 
 ## The compiler — ~~**ten**~~ **twelve** passes, none open (plus two more: «B37» and the lock discipline)
 
-`cargo run --bin gabbro -- paesse` · ~~**3 fully built, 7 partial, 0 open**~~ — **2026-08-30: `SENTENCES: 71 over 12 passes -- 63 measured, 2 ARGUED, 6 CONJECTURED, 0 proved`**. *Die Zahl der Pässe ist gewachsen, und die Zeile darunter nannte noch die alte Aufteilung; die neue liest man am Befehl ab, nicht hier.*
+`cargo run --bin gabbro -- paesse` · ~~**3 fully built, 7 partial, 0 open**~~ — **2026-08-31: `SENTENCES: 71 over 12 passes -- 64 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`**. *Die Zahl der Pässe ist gewachsen, und die Zeile darunter nannte noch die alte Aufteilung; die neue liest man am Befehl ab, nicht hier.*
 
 > **The tenth is NEW, and that is a change to the specification.** `SPRACHE.md`
 > part III §6 fixes nine and says *"the specification is the pass list"* — a tenth therefore

@@ -101,7 +101,7 @@ def lauf(pfad, quelle):
     if "error[E" in r.stderr or "could not compile" in r.stderr:
         print("ABBRUCH: der Pruefer baut nicht -- es wurde NICHTS gemessen.", file=sys.stderr)
         sys.exit(1)
-    return [z for z in r.stdout.splitlines() if z.startswith("Fehler")]
+    return [z for z in r.stdout.splitlines() if z.startswith("error")]
 
 
 def main():
