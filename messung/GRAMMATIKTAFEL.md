@@ -348,3 +348,82 @@ zweites Mal fuhr, um EINE vergiftete Datei zu prüfen; sie fährt jetzt nur dies
   Reichweite auf `messungen/` und `programmlogik/` ausdehnen soll, gehört zu
   `pruefe-emission.sh` — *und daran arbeitet in dieser Nacht eine andere Bahn.* Die Tafel
   misst sie ab heute selbst; das ersetzt die Frage nicht, es beantwortet sie nur für Wörter.
+
+---
+
+## 8. Was neu `UNGEDECKT` wurde: **nichts** — und was das Tor trotzdem gefunden hat
+
+Schritt 3 des Auftrags lautete: *je Wort, das seine Deckung verliert — liegt es am Erzeuger
+oder am Programm?* **Kein Wort verliert seine Deckung.** Das ist eine benannte Absage und
+damit ein Ergebnis: das Tor steht, und es hat heute nichts zu tragen.
+
+Also wurde die Gegenfrage gestellt — **wie viel Luft hat das Tor?** Die 80 Erzeugnisse noch
+einmal, `-Wall -Wextra -Werror -O2` plus *je einen* schärferen Schalter (`gcc 16.2.1`):
+
+```
+-Wpedantic  -Wsign-conversion  -Wshadow  -Wcast-qual  -Wstrict-prototypes
+-Wmissing-prototypes  -Wswitch-enum  -Wfloat-equal  -Wundef  -Wwrite-strings
+-Wold-style-definition  -Wvla                       0 von 80 fallen
+
+-Wconversion         3 von 80        -Wdouble-promotion   2 von 80
+-Wredundant-decls    1 von 80        -Wpadded            42 von 80
+```
+
+`-Wpadded` ist Rauschen — Ausrichtungslücken sind kein Fehler, und ein Wächter, der sie
+zählt, misst die Zielarchitektur. **Die anderen drei sind es nicht.**
+
+### Fund A — dieselbe Familie wie `F06`, eine Datei weiter
+
+`messung/treiber/virtio-net.gab`:236 schreibt
+
+```
+a.slots[i].kopf = i;        -- i : index into Deskring,  count QGROESSE = 8
+                            -- AvailRing.slot.kopf : u16,  AVAIL_IDX : u16
+```
+
+Das Erzeugnis: `uint32_t i` im Kopf von `armieren`, und `a->slots[i].kopf = i;` **ohne
+Umwandlung**. `cc -Wconversion` nennt es zweimal, `-Wall -Wextra` **nicht**.
+
+> **Das ist genau `F06`s Kopie aus `slots of`, nur mit einer anderen Diagnose.** Dort
+> erzwang der Bereich einen konstant wahren Vergleich (`-Wtype-limits`, in `-Wextra`); hier
+> erzwingt er eine stillschweigende Verengung (`-Wconversion`, **nicht** in `-Wextra`). *Der
+> Prüfer kennt die Schranke — drei Bit reichen —, und der Erzeuger senkt 32 Bit ab.*
+>
+> **Es liegt am ERZEUGER**, nicht am Programm: das Programm schreibt einen Index in ein Feld,
+> dessen Breite die Deklaration trägt. **Was daraus folgt, wird hier nicht entschieden** —
+> ob ein Indextyp auf die kleinste Breite seines `count` absenken soll oder ob der Erzeuger
+> eine Umwandlung hinschreibt, ist eine Aussage über die Absenkung. In `TODO.md` gebucht.
+
+### Fund B — zwei Deklarationen, zwei verschiedene Versprechen
+
+`beispiele/29-undurchsichtig.gab` nennt `pa_aus_zahl` zweimal — als `pub impl fn … effects
+{ pure }` (Z. 23) und als `extern fn … effects { pure }` in einem anderen Modul (Z. 46). Das
+Erzeugnis trägt beide Prototypen:
+
+```c
+uint64_t pa_aus_zahl(uint64_t z) __attribute__((const));   /* aus dem `impl fn`   */
+uint64_t pa_aus_zahl(uint64_t z);                          /* aus dem `extern fn` */
+```
+
+**Dieselbe `effects { pure }` senkt zweimal verschieden ab.** Gegengeprüft an
+`beispiele/40-werte-und-griffe.gab`:96: `extern fn halde() effects { pure }` wird
+`void halde(void);`, ohne Attribut. `-Wredundant-decls` nennt es, `-Wall -Wextra` nicht.
+
+*Die Doppelung kommt vom PROGRAMM* — es nennt den Namen zweimal, und das ist der Zweck der
+Datei. *Die auseinanderlaufenden Attribute kommen vom ERZEUGER.* Auch das ist gebucht und
+nicht entschieden.
+
+### Fund C — der `f32`-Posten hat jetzt einen maschinellen Zeugen
+
+`-Wfloat-conversion` (in `-Wconversion`) nennt Befund 1 aus §3 beim Namen:
+*„conversion from `double` to `float` may change value"* an `messung/grammatik/zahlbreiten.gab`
+und `messung/proben/probe-f32-literal.gab`. **Der Posten stand schon in `TODO.md`, gefunden
+durch Rechnen über 200 000 Werten** — er ist ab jetzt mit einem Schalter zu finden.
+
+### Und warum der Schalter trotzdem NICHT dazukommt
+
+`CC_SCHALTER` bleibt bei `-std=c11 -Wall -Wextra -Werror` — **dieselben Schalter wie Stufe 9
+von `pruefe-emission.sh`.** Zwei Wächter, die dasselbe Erzeugnis mit verschiedenen Schaltern
+übersetzen, geben zwei Antworten auf eine Frage; und `-Wconversion` dazuzunehmen würde
+`UNGEDECKT` durch eine **Entscheidung** heben statt durch eine Messung. *Die Verschärfung
+dieser Nacht ist eine Berichtigung; die nächste wäre eine Wahl, und die gehört dem Ordner.*
