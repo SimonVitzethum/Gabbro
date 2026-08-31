@@ -447,7 +447,29 @@ MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 # English on the way past. **That is the direction a ratchet is for** -- nobody translated a
 # register, the number simply cannot go back up without somebody writing German into a
 # report.
-MARKE_ZUBRINGER = 173     # 177 measured, then 173 -- see the last paragraph of the note
+#
+# **2026-08-31, ONE REGISTER TAKEN WHOLE: `schablonen.rs`, 79 -> 4.** The paragraph above
+# demanded exactly that. What is left of it is left ON PURPOSE, and all four are PROPER NAMES:
+#
+#     four remaining     what they are
+#     --------------------------------------------------------------------------------
+#     :186 :533 :745     four MUTATION KEYS, spelled out inside the sentences that cite
+#                        them. They are literal lookup keys of `mutiere-pruefer.py`;
+#                        rewriting one is a rename and not a translation, and it kills
+#                        an anchor.
+#     :875               a CITATION whose target really is a German heading
+#                        (`MESSUNGEN.md`:4100). *A translated citation points at
+#                        nothing.* Its sister citation DID travel on the same day --
+#                        `MESSUNGEN.md`:1699 has been English for a while, and the
+#                        German reference had been pointing nowhere.
+#
+# **A proper name is not prose, and this guardian cannot tell the two apart** -- it counts
+# function words, and a mutation key is spelled out of the same letters as a sentence. That
+# is the coarsening it declares (W10), and here it costs exactly four.
+#
+# *And it cost this note a rewrite:* the first draft quoted all four keys, whereupon
+# `MARKE_PY` broke by five. **The guardian measured its own commentary and was right to.**
+MARKE_ZUBRINGER = 98      # 173 -> 98 on 2026-08-31; `schablonen.rs` 79 -> 4
 MARKE_MELDUNGEN = 0       # German at a sink -- 27 found on 2026-08-31, 27 translated
 
 

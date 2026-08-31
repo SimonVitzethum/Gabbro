@@ -644,10 +644,12 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2120 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2127 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
-      Domänenproben fortgesetzte Quelltexte tragen. **Eine Fläche, die sich bewegt, ist
+      Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
+      das Schablonenregister übersetzt wurde und zwei Zeichenketten dabei aus einer einzigen
+      überlangen Zeile in fortgesetzte umgebrochen sind. **Eine Fläche, die sich bewegt, ist
       kein Fund; dass der Wächter beide Richtungen bemerkt hat, ist einer.**
       *Die Zahl sprang am 2026-08-21 von 839, und der Grund ist eine einzige Datei:*
       `saetze.rs` trägt 46 Sätze als fortgesetzte Zeichenketten. **Die Fläche der Probe
@@ -3506,10 +3508,17 @@ das Wort des Nutzers.
 **Der Rest, gemessen statt geschätzt** (`./instrumente/pruefe-englisch.py`):
 
 ```
-**7900 von 16456 Kommentarzeilen** im Pruefer sind deutsch
+**7891 von 16451 Kommentarzeilen** im Pruefer sind deutsch
  1072 von  1515 in den Instrumenten
   286 von   914 Bezeichnern tragen einen deutschen Stamm   (OBERE Schranke)
 ```
+
+*Am 2026-08-31 fiel die erste Zahl von 7900 auf 7891 und die zweite von 16456 auf 16451, und
+zwar OHNE dass ein Kommentar angefasst wurde:* die Zählung nimmt jede Zeile, die mit `//` oder
+mit `*` beginnt — **und eine fortgesetzte Zeichenkette, deren nächste Zeile mit `**fett**`
+anfängt, sieht genau so aus.** Das Schablonenregister wurde übersetzt, die Umbrüche fielen
+anders, und neun solcher Zeilen verschwanden. *Die Vergröberung steht im Wächter und geht in
+die sichere Richtung* (W10) — hier kostet sie neun Zeilen in der falschen Grundgesamtheit.
 
 *Der Block stand am 2026-08-25 auf `7904 / 12359 / 1043 / 1280 / 273 / 845` und ist gegen den
 Lauf nachgezogen — **die Abweichung war nicht die deutsche Hälfte, sondern die
