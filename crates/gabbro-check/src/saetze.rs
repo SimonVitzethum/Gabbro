@@ -523,10 +523,17 @@ pub const D1D2: &[Satz] = &[
                   (`N045`). A probe FALLS or it HOLDS -- `return false` and `return true` \
                   are the two things it can say.",
         vorbehalt: "**It says nothing about the TYPE of the value returned**, only that \
-                    there is one on every path: `return 3` in a `can_fail` block is not \
-                    refused here. And `N045` reads `crate::endet_immer`, which treats a \
-                    loop as falling through -- a probe whose only exit is inside a `forever` \
-                    would be refused, and the corpus carries no such shape to measure it on.",
+                    there is one on every path: `return 7` in a `can_fail` block is not \
+                    refused here -- MEASURED 2026-08-31, and all four stages pass it (`cc` \
+                    converts `7` to `true`, so there is no fourth stage that refuses). The \
+                    gap is not the `check`'s: `m1.rs::passt` compares RANGES, and \
+                    `Typ::Wahrheit` has none, so the `bool`/number boundary is unheld at \
+                    every `return`, assignment and argument. \
+                    messung/proben/probe-rueckgabetyp.gab falsifies four returns and one \
+                    falls. **The loop caveat is gone**: `crate::endet_immer` treated every \
+                    loop as falling through and refused a probe whose only exits stand \
+                    inside a `forever`; that was a FALSE refusal (`cc -Werror` accepts the \
+                    `for (;;)` it emits), and it is repaired.",
         stand: Satzstand::Gemessen,
         gemessen_an: "Measured 2026-08-31 against the UNCHANGED checker: six of the twelve \
                       files in messung/tor-proben/ emit C that `cc` refuses -- `bool \
@@ -537,7 +544,11 @@ pub const D1D2: &[Satz] = &[
                       poison is beispiele/gift/428 (`N044`) and 429 (`N045`). \
                       **beispiele/06-annahmen.gab has carried the finding as a COMMENT \
                       since 2026-08-20 with no rule behind it** -- and six files walked \
-                      back into it. messung/TORREICHWEITE.md.",
+                      back into it. messung/TORREICHWEITE.md. **The loop half was measured \
+                      2026-08-31** at messung/proben/probe-probenurteil-schleife.gab: \
+                      `N045` fell there and should not have. Over all 475 corpus files the \
+                      repair changes exactly that one file -- no other rule fell silent, \
+                      none newly spoke.",
         fundstelle: "crates/gabbro-check/src/namen.rs; dokumente/SYNTAX.md §13; \
                      beispiele/06-annahmen.gab",
     },

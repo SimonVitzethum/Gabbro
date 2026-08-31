@@ -876,6 +876,22 @@ pub fn alle_ausdruecke(e: &Expr) -> Vec<&Expr> {
 ///
 /// `divergent` nennt die Funktionen, deren Aufruf nicht zurückkehrt (`-> never`); ohne die
 /// Liste ist ein `zeitablauf();` als letzte Anweisung nur ein Ruf.
+///
+/// > **And the `forever` arm was wrong here a day longer than in `m2.rs`** (measured
+/// > 2026-08-31, `messung/proben/probe-probenurteil-schleife.gab`). `m2::endet` learned on
+/// > 2026-08-30 that a `forever` without an exit does not fall through -- it DIVERGES --
+/// > and that answering `false` for it *"was not conservative, it was wrong in the
+/// > direction that rejects a correct program"*. **This copy kept the old answer**, and
+/// > `N045` was the reader that paid for it: a probe whose only exits stand inside a
+/// > `forever` was refused for a path that does not exist. The emitted C is
+/// > `for (;;) { … }`, and `cc -O0 -Wall -Wextra -Werror` accepts it -- *a `for (;;)` has
+/// > no end for a function to fall out of.*
+/// >
+/// > `traverse` ends through the set and `retry` through a number: both fall through, and
+/// > `false` is the right answer for them, not a concession.
+///
+/// *Same class as the six `tor-proben` that walked back into the `N044` shape: a finding
+/// repaired at ONE of its sites reads as a finding repaired.*
 pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
     let Some(letzte) = b.anweisungen.last() else {
         return false;
@@ -904,15 +920,34 @@ pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
         // **Der `else`-Zweig ist der AUSWEG, nicht der Weiterweg** — der Hauptpfad läuft
         // weiter, gleichgültig was darin steht.
         StmtArt::Narrow(_) | StmtArt::LetSonst(_) => false,
-        // **Eine Schleife fällt durch.** `forever` tut das nicht, aber ob sie überhaupt
-        // beendet wird, entscheidet Pass 6 aus `leave`/`on_exceeded` — nicht diese Zeile.
-        StmtArt::Schleife(_) => false,
+        // **A `traverse` and a `retry` fall through; a `forever` without an exit does
+        // not.** The exit is `leave <mark>` and nothing else -- `StmtArt::Leave` always
+        // carries a mark, so an unnamed `forever` can be left by nothing at all.
+        StmtArt::Schleife(sch) => match sch.as_ref() {
+            Schleife::Forever(f) => match &f.marke {
+                Some(m) => !verlassen(&f.rumpf, &m.text),
+                None => true,
+            },
+            Schleife::Traverse(_) | Schleife::Retry(_) => false,
+        },
         StmtArt::Let(_)
         | StmtArt::Zuweisung(_)
         | StmtArt::Publish(_)
         | StmtArt::AwaitLoad(_)
         | StmtArt::Exchange(_) => false,
     }
+}
+
+/// **Does a `leave <marke>` stand anywhere inside this block?**
+///
+/// The one question that tells a diverging `forever` from one that falls through. It stood
+/// as `m2::verlassen` at one site and was needed at a second on 2026-08-31 -- *and a second
+/// copy is the shape that gave `endet_immer` three of itself.*
+pub fn verlassen(b: &Block, marke: &str) -> bool {
+    b.anweisungen.iter().any(|s| {
+        matches!(&s.art, StmtArt::Leave(id) if id.text == marke)
+            || unterbloecke(s).into_iter().any(|k| verlassen(k, marke))
+    })
 }
 
 /// **Wohin eine Anweisung schreibt — sie selbst und alles unter ihr.**

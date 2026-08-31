@@ -48,6 +48,28 @@
 --
 -- Die Gegenrichtung steht als `beispiele/gift/407` schon im Baum: derselbe `forever` MIT
 -- `leave dienst` faellt sehr wohl durch, und `L103` haengt daran.
+--
+-- REPARIERT am 2026-08-31, und die Reparatur stand schon einen Tag im Baum
+-- -------------------------------------------------------------------------
+-- `m2::endet` hat genau diesen Unterschied am 2026-08-30 gelernt
+-- (`beispiele/54-divergenz-leckt-nicht.gab` gegen `gift/407`), und `crate::endet_immer`
+-- nicht -- **ein Befund, an EINER seiner Stellen berichtigt, liest sich wie ein
+-- berichtigter Befund.** Dieselbe Klasse wie die sechs Torproben, die in die `N044`-Form
+-- zurueckgelaufen sind.
+--
+-- Seither steht die Frage einmal im Baum (`lib.rs::verlassen`), und `endet_immer` liest sie:
+--
+--     Schleife::Forever(f) => match &f.marke {
+--         Some(m) => !verlassen(&f.rumpf, &m.text),
+--         None    => true,
+--     },
+--     Schleife::Traverse(_) | Schleife::Retry(_) => false,
+--
+-- **Die Gegenrichtung, gemessen ueber alle 475 Korpusdateien:** genau EINE aendert sich --
+-- diese. Keine andere Regel ist still geworden, keine hat neu gesprochen.
+--
+--     $ gabbro pruefe messung/proben/probe-probenurteil-schleife.gab
+--     …: 7 items, 0 errors, 0 hints
 
 module probe::probenurteil::schleife {
 

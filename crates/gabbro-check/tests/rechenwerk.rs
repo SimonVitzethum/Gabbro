@@ -6864,4 +6864,52 @@ check c {
         !nie.iter().any(|c| c == "N045"),
         "ein Ruf, der nicht zurueckkehrt, beendet den Block: {nie:?}"
     );
+
+    // 5 -- **and a `forever` without an exit ends it too** (measured 2026-08-31,
+    // `messung/proben/probe-probenurteil-schleife.gab`). Until that day `N045` refused this
+    // shape: `endet_immer` answered `false` for every loop, `m2::endet` had learned the
+    // difference a day earlier and this copy had not. The emitted C is `for (;;) { … }`,
+    // and `cc -O0 -Wall -Wextra -Werror` accepts it -- *a `for (;;)` has no end for a
+    // function to fall out of, so the "path that reaches its closing brace" is a path that
+    // does not exist.*
+    let schleife = |rumpf: &str| {
+        absagen(&format!(
+            "module t {{
+static mut k : u32 = 0;
+extern fn wachhund() -> never effects {{ diverges }};
+extern fn sonde_tickt() -> bool effects {{ pure }} costs <= 1 ops;
+impl fn tor() effects {{ reads k }} costs <= 1 ops {{ return; }}
+check c {{
+    claim    \"unter drei\"
+    measures k
+    gates    tor
+    can_fail {{
+        forever runde
+            per_pass bounded 4 ops
+            on_exceeded wachhund
+            effects  {{ reads k }}
+            progress tickt
+        {{ {rumpf} }}
+    }}
+    floor    k >= 1
+}}
+assume tickt \"der Zeitgeber unterbricht\" falsifier sonde_tickt; }}"
+        ))
+    };
+    let ohne_ausgang = schleife("if k >= 3 { return false; } return true;");
+    assert!(
+        !ohne_ausgang.iter().any(|c| c == "N045"),
+        "ein `forever` ohne `leave` faellt nicht durch -- `N045` hat dort nichts zu sagen: \
+         {ohne_ausgang:?}"
+    );
+
+    // 6 -- **the counter-direction, and it is what keeps 5 from being a blanket amnesty.**
+    // The same loop WITH a `leave runde` does fall through, and then the closing brace is
+    // reachable again. `beispiele/gift/407` carries the same pair for `L103`.
+    let mit_ausgang = schleife("if k >= 3 { return false; } leave runde;");
+    assert!(
+        mit_ausgang.iter().any(|c| c == "N045"),
+        "mit `leave runde` faellt die Schleife durch, und der Weg an die Klammer ist \
+         wieder da: {mit_ausgang:?}"
+    );
 }
