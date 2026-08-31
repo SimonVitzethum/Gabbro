@@ -292,3 +292,29 @@ Erst danach steigt `Satzstand::Vermutet` auf `Satzstand::Gemessen`. Die Bilanz v
 > **Und was `measured` NICHT heißt.** Es misst die UMSETZUNG an geprüften Fällen, nicht die
 > Regel und nicht alle Fälle — das steht in `Satzstand::Gemessen` selbst. Die drei
 > Domänensätze aus §6 fehlen weiter; `PROVED` bleibt bei 0 von 71.
+
+---
+
+## 9. `F09`s Zusage — zum zweiten Mal geprüft, und sie bleibt bei `4096`
+
+**Die Frage war gestellt: liefert die Messung der vier übrigen Domänen einen Grund, `F09`:79
+auf `137 438 953 472` zu heben?** Sie liefert keinen — und das ist ein Ergebnis, kein
+Aufschub.
+
+Was §8 dazu beiträgt, geht in die andere Richtung: die vier Nachbarschranken lesen **genau so**
+aus ihrer Deklaration wie `mappings of`, und jede von ihnen ist jetzt an einem Regler gemessen.
+*Die `137 438 953 472` stehen damit nicht mehr allein, sondern als eine von fünf Zahlen
+desselben Baus.* Die Rechnung aus §1–§3 wird dadurch bestätigt, nicht erschüttert.
+
+Die drei Gründe aus §5 stehen unverändert:
+
+1. Der ERZEUGER weist `F09` **dreimal** ab (`C001`), und **keine der drei hängt an `K001`**.
+   Eine gehobene Zusage prüfte sauber und senkte trotzdem nicht ab.
+2. Die Zeile `costs <= 4096 ops` ist heute der **einzige Ort im Baum, an dem die
+   zurückgezogene Lesart im Wortlaut steht und von einem Werkzeug jeden Tag angezeigt wird**.
+3. Ein Frühausstieg im Kostenmodell wäre ein neues Konstrukt mit **einer** Fundstelle —
+   Regel A.
+
+**Eine Zahl zu heben, damit ein Zähler stimmt, ist genau das, was dieser Ordner nicht tut.**
+Die Buchung bleibt: `F09` ist kein Prüferfehler, sondern eine korrekte Absage über einer
+Zusage, die mit der zurückgezogenen Lesart gerechnet wurde.
