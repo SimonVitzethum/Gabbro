@@ -21,18 +21,30 @@ Dieser Lauf fragt das andere: **steht der Baum gruen?** Er liest genau den Rueck
 der andere ignoriert. *Zwei Fragen, ein Verzeichnis.*
 
 *Damit daraus nicht zwei Register ueber einer Sache werden* (W7), haelt diese Datei **keine
-eigene Liste**: `SCHWER`, `ARGUMENTE`, `FREMDER_KORPUS` und `FRIST` werden aus
+eigene Liste**: `SCHWER`, `ARGUMENTE`, `FREMDER_KORPUS`, `OHNE_URTEIL` und `FRIST` werden aus
 `pruefe-waechter.py` GELESEN. Wer dort einen Eintrag pflegt, pflegt ihn hier mit.
 
 DIE BESETZUNG KOMMT AUS DEM VERZEICHNIS, NICHT AUS DIESER DATEI
 ----------------------------------------------------------------
 Eine Liste im Skript haette dasselbe Problem eine Ebene tiefer: sie veraltet lautlos --
-genau so ist §1.7 bei elf von 26 stehengeblieben. Gelesen wird `instrumente/pruefe-*` und
-`instrumente/mutiere-*`. **Ein neuer Waechter ist damit am Tag seiner Entstehung dabei**, und
-einer, der ein Argument braucht, faellt BENANNT auf.
+genau so ist §1.7 bei elf von 26 stehengeblieben. Gelesen wird `instrumente/pruefe-*`,
+`instrumente/mutiere-*` und `instrumente/zaehle-*`. **Ein neuer Waechter ist damit am Tag
+seiner Entstehung dabei**, und einer, der ein Argument braucht, faellt BENANNT auf.
 
-Die `zaehle-*` sind NICHT in der Abnahme -- sie messen, sie bewachen nicht. *Diese Grenze
-wird gedruckt und nicht verschwiegen*, mit ihrer Zahl; wer sie verschieben will, sieht sie.
+**DIE `zaehle-*` KAMEN AM 2026-08-31 DAZU, UND DIE GRENZE HAT SICH BEWEGT, WEIL SIE
+GEDRUCKT WURDE.** Bis dahin stand hier *„die `zaehle-*` sind NICHT in der Abnahme -- sie
+messen, sie bewachen nicht"*, und daneben ihre Zahl, damit jemand die Grenze verschieben
+kann. Der Satz war eine Behauptung, und sie wurde gemessen:
+
+* Ueber einem LEEREN Baum gab **keiner der 18** ein gruenes Urteil. Sechs starben an einem
+  `FileNotFoundError` (Ruecklaufwert 1, ein Traceback), neun druckten eine Absage und
+  endeten ebenfalls mit 1. *Sie tragen alle ein Urteil -- sie hatten nur keins bekommen.*
+* `zaehle-karten.py` kam ueber einer gebrochenen Ratsche **rot bei `master` an**, und kein
+  Sammellauf las ihn. Genau der Satz, auf dem diese Datei steht -- diesmal gegen die
+  Grenze, die diese Datei selbst gezogen hat.
+
+Was draussen bleibt, steht in `pruefe-waechter.py:OHNE_URTEIL`, mit Namen und Grund, und
+wird hier mit seiner Zahl GEDRUCKT.
 
 FUENF URTEILE, UND DAS DRITTE IST DER GRUND FUER DIESE DATEI
 --------------------------------------------------------------
@@ -98,6 +110,7 @@ _spec.loader.exec_module(_pw)
 SCHWER = _pw.SCHWER
 ARGUMENTE = _pw.ARGUMENTE
 FRIST = _pw.FRIST
+OHNE_URTEIL = _pw.OHNE_URTEIL
 korpus_fehlt = _pw.korpus_fehlt
 
 # **The heavy ones get their own deadline, and it is not a comfort setting.**
@@ -129,9 +142,27 @@ ABSTURZ = "Traceback (most recent call last)"
 
 
 def besetzung(wurzel):
-    """Every guardian in `wurzel` -- from the DIRECTORY, never from a list in here."""
+    """Every guardian in `wurzel` -- from the DIRECTORY, never from a list in here.
+
+    **The `zaehle-*` came in on 2026-08-31, and the boundary moved because it was printed.**
+    Until then this run drove `pruefe-*` and `mutiere-*` only, and the 18 counters stood
+    outside with the sentence *"they measure, they do not guard -- no return code of theirs
+    carries a verdict"*. The sentence was a claim, and it was measured:
+
+    * Over an EMPTY tree not one of the 18 returned a green verdict. Six died of a
+      `FileNotFoundError` (return code 1, a traceback), nine printed a refusal and returned
+      1 as well. **Every one of them carries a verdict -- none of them had been GIVEN one.**
+    * `zaehle-karten.py` had been reaching `master` RED over a broken ratchet, and no
+      collective run read it. *A guardian nobody drives is indistinguishable from one that
+      does not exist* -- the sentence this file was built on, against a boundary this file
+      itself drew.
+
+    What stays out is named in `pruefe-waechter.py:OHNE_URTEIL` and PRINTED with its count,
+    exactly as the old boundary was.
+    """
     return sorted(
-        set(wurzel.glob("pruefe-*")) | set(wurzel.glob("mutiere-*")),
+        (set(wurzel.glob("pruefe-*")) | set(wurzel.glob("mutiere-*"))
+         | {p for p in wurzel.glob("zaehle-*") if p.name not in OHNE_URTEIL}),
         key=lambda p: p.name,
     )
 
@@ -297,7 +328,7 @@ def main():
 
     inst = W / "instrumente"
     alle = besetzung(inst)
-    zaehler = sorted(set(inst.glob("zaehle-*")))
+    zaehler = sorted(p for p in inst.glob("zaehle-*") if p.name not in OHNE_URTEIL)
     print()
     print(f"== Abnahme ueber {len(alle)} Waechter aus {inst.name}/ "
           f"{'(VOLL)' if voll else '(Schnellauf)'} ==")
@@ -337,10 +368,17 @@ def main():
         print("   Befund** -- ein Ruecklaufwert 1 aus einem `IndexError` ist kein Urteil.")
 
     print()
-    print(f"== Nicht in der Abnahme: {len(zaehler)} `zaehle-*` ==")
-    print("   Sie messen, sie bewachen nicht -- kein Ruecklaufwert, der ein Urteil traegt.")
-    print("   Die Grenze steht hier, damit sie jemand verschieben KANN. Ein Werkzeug,")
-    print("   das niemand nennt, verschiebt niemand.")
+    print(f"== Die {len(zaehler)} `zaehle-*` sind seit dem 2026-08-31 DRIN, "
+          f"{len(OHNE_URTEIL)} stehen mit Grund draussen ==")
+    for name, grund in sorted(OHNE_URTEIL.items()):
+        print(f"   {name:<28} {grund}")
+    print("   Bis dahin stand hier *sie messen, sie bewachen nicht* -- mit ihrer Zahl,")
+    print("   damit jemand die Grenze verschieben KANN. **Die Messung hat sie verschoben:**")
+    print("   ueber einem leeren Baum gab KEINER der 18 ein gruenes Urteil, sechs starben an")
+    print("   einem `FileNotFoundError` und neun druckten eine Absage mit Ruecklaufwert 1.")
+    print("   *Sie tragen alle ein Urteil -- sie hatten nur keins bekommen.* Und einer,")
+    print("   `zaehle-karten.py`, kam ueber einer gebrochenen Ratsche ROT bei `master` an,")
+    print("   ohne dass ein Sammellauf ihn las.")
 
     print()
     print("== Und was das NICHT heisst ==")

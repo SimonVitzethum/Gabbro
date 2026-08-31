@@ -69,12 +69,16 @@ def messe(p):
 def main():
     if not KORPUS.is_dir():
         print(f"ABBRUCH: {KORPUS} fehlt -- es wird NICHT null gezaehlt.", file=sys.stderr)
-        return 1
+        # **Every refusal in this file ends with 2, not 1** (2026-08-31). This counter joined
+        # `abnahme.py` that day, so its return code is now read as a VERDICT -- and the sixth
+        # requirement applies: `1` means the TREE has to change, `2` means the SETUP does.
+        # Every site below says NOTHING WAS MEASURED, so every one of them is a `2`.
+        return 2
     dateien = sorted(KORPUS.glob("F*.gab"))
     if len(dateien) != 10:
         print(f"ABBRUCH: {len(dateien)} Dateien statt 10 -- die Grundgesamtheit hat sich bewegt.",
               file=sys.stderr)
-        return 1
+        return 2
     # **Sprechprobe, in beide Richtungen.** Eine erfundene Datei mit einem Fehler MUSS als
     # Fehler gezaehlt werden, eine leere nicht als null Dateien durchgehen.
     probe = KORPUS / "_sprechprobe.gab"
@@ -86,7 +90,7 @@ def main():
     if f_probe <= 0:
         print("SPRECHPROBE GESCHEITERT: eine kaputte Datei zaehlt null Fehler -- "
               "dieser Zaehler misst nichts.", file=sys.stderr)
-        return 1
+        return 2
     print(f"== Sprechprobe: ok (eine erfundene kaputte Datei zaehlt {f_probe} Fehler) ==\n")
 
     sauber = senken = 0

@@ -351,13 +351,17 @@ def main():
         print(f"  {'ok ' if gut else 'ROT'}  {was}")
     if not all(g for _, g in proben):
         print("SPRECHPROBE GESCHEITERT -- es wurde NICHTS gemessen.", file=sys.stderr)
-        return 1
+        # **Every refusal in this file ends with 2, not 1** (2026-08-31). This counter joined
+        # `abnahme.py` that day, so its return code is now read as a VERDICT -- and the sixth
+        # requirement applies: `1` means the TREE has to change, `2` means the SETUP does.
+        # Every site below says NOTHING WAS MEASURED, so every one of them is a `2`.
+        return 2
     print()
 
     if not LEHRKORPUS:
         print("ABBRUCH: der Lehrkorpus fehlt -- es wird NICHT null gemessen.",
               file=sys.stderr)
-        return 1
+        return 2
 
     ausfuehrlich = "--ruempfe" in sys.argv
     l = bericht("Lehrkorpus (beispiele/ + messung/fragmente/)", LEHRKORPUS, ausfuehrlich)

@@ -470,6 +470,16 @@ def sprechprobe():
 
 
 def main():
+    # **TOOTH 0 -- THE SUBJECT HAS TO BE THERE** (2026-08-31). Over a tree without
+    # its subject this tool died of a `FileNotFoundError`: return code **1**, a
+    # traceback, and in a chain that reads like a finding. *A crash is not a refusal
+    # -- a NAMED refusal is*, and a missing subject says the SETUP has to change.
+    if not EMIT.is_file():
+        print(f"ABBRUCH: {EMIT.relative_to(W)} fehlt -- es wurde NICHTS gemessen.",
+              file=sys.stderr)
+        print("  Ohne den Erzeuger gibt es keine Absageform, und `0 Formen` waere ein"
+              " Urteil ueber nichts (W1, W17).", file=sys.stderr)
+        return 2
     # `--json` yields MACHINE-READABLE output; the probe then belongs on the error channel,
     # or it stands in the middle of the document somebody is reading in.
     kanal = sys.stderr if "--json" in sys.argv else sys.stdout
@@ -479,7 +489,11 @@ def main():
         print(f"  {'ok         ' if ok else 'GESCHEITERT'}  {was}", file=kanal)
     if not all(ok for _, ok in proben):
         print("\n! Der Auszaehler misst nicht, was er behauptet. ABBRUCH.", file=kanal)
-        return 1
+        # **Every refusal in this file ends with 2, not 1** (2026-08-31). This counter joined
+        # `abnahme.py` that day, so its return code is now read as a VERDICT -- and the sixth
+        # requirement applies: `1` means the TREE has to change, `2` means the SETUP does.
+        # Every site below says NOTHING WAS MEASURED, so every one of them is a `2`.
+        return 2
     print(file=kanal)
     alle = formen()
     texte = sorted({t for _, t, _ in alle})

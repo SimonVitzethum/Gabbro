@@ -205,6 +205,23 @@ def main():
     nur_probe = "--probe" in sys.argv
     volle_tafel = "--tafel" in sys.argv
 
+    # **TOOTH 0 -- THE SUBJECT HAS TO BE THERE** (2026-08-31). Over a tree without
+    # `dokumente/` this tool died INSIDE THE MODULE IT LOADS: `pruefe-wortschatz.py` read
+    # `SYNTAX.md` at import time and the `FileNotFoundError` came back through
+    # `exec_module` -- return code **1**, a traceback, and in a chain that reads like one
+    # more uncovered cell. *A crash is not a refusal -- a NAMED refusal is*, and a missing
+    # subject says the SETUP has to change, not the tree.
+    gegenstand = [SYNTAX, KW]
+    fehlend = [str(d.relative_to(W)) for d in gegenstand if not d.is_file()]
+    if not CHECK.is_dir():
+        fehlend.append(str(CHECK.relative_to(W)))
+    if fehlend:
+        print("ABBRUCH: es fehlen: %s -- es wurde NICHTS gemessen." % ", ".join(fehlend),
+              file=sys.stderr)
+        print("  Ohne Grammatik, Schluesselwoerter und Paesse hat die Tafel keine Achse;\n"
+              "  `0 ungedeckt` waere ein Urteil ueber nichts (W1, W17).", file=sys.stderr)
+        return 2
+
     term = terminale()
     absage, za = absageworte()
     pruefer, n_fehler = prueferworte()

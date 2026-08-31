@@ -256,7 +256,25 @@ fn sammler(b: &Block) {
 
 
 def main():
+    # **TOOTH 0 -- THE SUBJECT HAS TO BE THERE** (2026-08-31). Over a tree without
+    # `crates/` this tool died inside `mit_block()` of a `FileNotFoundError`: return code
+    # **1**, a traceback, and in a chain that reads exactly like a pass with a gap. *A
+    # crash is not a refusal -- a NAMED refusal is*, and a missing subject says the SETUP
+    # has to change, not the tree.
+    if not QUELLE.is_dir():
+        absage(f"{QUELLE.relative_to(WURZEL)} fehlt -- der Gegenstand dieses Waechters "
+               "ist nicht hier")
+    fehlend = [d.name for d in (QUELLE / "lib.rs", QUELLE / "m1.rs") if not d.is_file()]
+    if fehlend:
+        absage("der Gegenstand fehlt: " + ", ".join(fehlend)
+               + f" unter {QUELLE.relative_to(WURZEL)}")
     arten, zeilen, neu, gebucht, veraltet, doppelte_gesamt = messe()
+    # **And an empty population is a refusal too** (W17): every readable pass appends at
+    # least one line, so zero lines means no pass was read at all, and a clean verdict
+    # over nothing is a positive verdict about nothing.
+    if not arten or not zeilen:
+        absage(f"{len(arten)} blocktragende Arten, {len(zeilen)} gemessene Paesse -- "
+               "mindestens eine Menge ist LEER")
     print(f"== Abstieg: {len(arten)} blocktragende Anweisungsarten ==")
     print("   " + ", ".join(arten))
     for z in zeilen:

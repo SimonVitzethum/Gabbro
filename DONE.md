@@ -331,6 +331,40 @@ pass reads at all.
 
 ---
 
+## Moved out of TODO.md on 2026-08-31 — the reach counter counted per VALUE, not per CELL
+
+`pruefe-zahlen.py` asked whether a bold table cell is guarded by looking up its NUMBER in a
+set of guarded numbers per file. So a cell counted as guarded the moment **any other** cell
+of the same file happened to carry the same digits and have a command.
+
+> **Measured on 2026-08-31, and the occasion was a mark that fell for the wrong reason.**
+> `H` went from 5 to 4, two register cells in `dokumente/PLAN.md` became a bold four, and a
+> completely unrelated row dropped out of the unguarded list — **without ever having been
+> given a command.** The mark sank from 146 to 145 and read like progress.
+
+The key carries the PLACE now — line and column of the match, derived from the pattern's own
+position, so no register entry had to be rewritten (the entry in `TODO.md` predicted *"a
+rebuild of the register and not a line"*; it was a line). Two numbers came out of it:
+
+| what | before | after |
+|---|---:|---:|
+| bold cells without a command | 145 | **180** |
+| register entries that really point at such a cell | — | **9** of 76 |
+
+**35 cells had been hidden by a collision.** The counter-direction is the same defect and
+worse: a cell that DOES get a command failed to lower the count whenever its value stood once
+more in the same file.
+
+A second, smaller one came with it, and the entry had demonstrated it while being written: a
+**quotation** of a table row was read as a table cell of its own — *a register counting its
+own work list*. Block quotes are excluded now, with their count printed beside the figure.
+
+Evidence: `./instrumente/pruefe-zahlen.py` — three new directions in its speech test
+(`Ortsschluessel`, `Gegenprobe`, `Blockzitat`), and the second is the one that counts: the OLD
+key has to be blind at the very same spot, or the probe measures nothing.
+
+---
+
 ## Moved out of TODO.md on 2026-08-30 — `result-in-ensures` carried two cases, and named a third
 
 > **The W24 prelude turned the entry around.** It stood as *"`LeanReason::Result` carries two

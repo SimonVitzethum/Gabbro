@@ -171,6 +171,18 @@ def sprechprobe():
 
 
 def main():
+    # **TOOTH 0 -- THE SUBJECT HAS TO BE THERE** (2026-08-31). Over a tree without
+    # `crates/` this tool died at `UMGEBUNG.read_text()` with a `FileNotFoundError`:
+    # return code **1**, a traceback, and in a chain that reads like an unread call site.
+    # *A crash is not a refusal -- a NAMED refusal is*, and a missing subject says the
+    # SETUP has to change, not the tree.
+    if not UMGEBUNG.is_file() or not QUELLEN:
+        print(f"ABBRUCH: {UMGEBUNG.relative_to(W)} "
+              f"{'da' if UMGEBUNG.is_file() else 'FEHLT'}, {len(QUELLEN)} Quelldateien im "
+              "Zugriff -- es wurde NICHTS gemessen.", file=sys.stderr)
+        print("  Ohne die Umgebung gibt es keine qualifizierte Karte, und `keine Luecke`"
+              " waere\n  ein Urteil ueber nichts (W1, W17).", file=sys.stderr)
+        return 2
     k_ok, f1_ok, f2_ok, f3_ok, f0_ok = sprechprobe()
     print("== Sprechprobe ==")
     print(f"  qualifizierte Karte erkannt:  {'ok' if k_ok else 'GESCHEITERT'}")

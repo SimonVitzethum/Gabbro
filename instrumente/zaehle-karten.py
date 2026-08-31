@@ -49,8 +49,18 @@ SRC = W / "crates" / "gabbro-check" / "src"
 # dieselbe Karte genauso nach, und `emit::Namen` ist ueberhaupt nach dem KURZEN Namen
 # geschluesselt. **Der Erzeuger ist damit an dieser Karte durchgehend nicht modulbewusst**,
 # und das ist ein Posten dieses Zaehlers, kein Nebenbefund dieser einen Zeile.
-MARKE_DIREKT = 36
-MARKE_UNQUALIFIZIERT = 32
+#
+# **36/32 -> 40/36 on 2026-08-31, and nobody saw the step.** That is the finding,
+# not the four sites: this counter stood OUTSIDE `abnahme.py`, so its red exit reached
+# `master` and no collective run read it. *A guardian nobody drives is indistinguishable from
+# one that does not exist* -- the sentence `abnahme.py` was built on, here against the
+# boundary `abnahme.py` itself drew. The mark is pulled to the MEASURED state, because a mark
+# below the state is a permanently red guardian and tells nobody anything new.
+#
+# The four are in `emit.rs` and `m1.rs` and they belong to whoever owns `crates/`; they are
+# DEBT, not an achievement. `./instrumente/zaehle-karten.py --stellen` names every one.
+MARKE_DIREKT = 40
+MARKE_UNQUALIFIZIERT = 36
 
 # **Modulbewusst von Hand**: der Blick steht in einer Kandidatenschleife. Das ist der eine
 # Fall, in dem ein direkter `.get(` richtig ist, ohne durch `suche` zu gehen.
@@ -106,6 +116,14 @@ def sprechprobe():
 
 
 def main():
+    # **TOOTH 0 -- THE SUBJECT HAS TO BE THERE** (2026-08-31). Over a tree without
+    # its subject this tool died of a `FileNotFoundError`: return code **1**, a
+    # traceback, and in a chain that reads like a finding. *A crash is not a refusal
+    # -- a NAMED refusal is*, and a missing subject says the SETUP has to change.
+    if not (SRC / "umgebung.rs").is_file():
+        print("ABBRUCH: crates/gabbro-check/src/umgebung.rs fehlt -- es wurde NICHTS "
+              "gemessen.", file=sys.stderr)
+        return 2
     k_ok, g_ok, g2_ok, s_ok = sprechprobe()
     print("== Sprechprobe des Zaehlers ==")
     print("  Karte erkannt:            %s" % ("ja" if k_ok else "NEIN"))
@@ -114,7 +132,11 @@ def main():
     print("  Weg ueber `suche` frei:   %s" % ("ja" if s_ok else "NEIN"))
     if not (k_ok and g_ok and g2_ok and s_ok):
         print("== KARTEN: der Zaehler misst nicht ==")
-        return 1
+        # **Every refusal in this file ends with 2, not 1** (2026-08-31). This counter joined
+        # `abnahme.py` that day, so its return code is now read as a VERDICT -- and the sixth
+        # requirement applies: `1` means the TREE has to change, `2` means the SETUP does.
+        # Every site below says NOTHING WAS MEASURED, so every one of them is a `2`.
+        return 2
 
     alle, oeffentlich, dateien, stellen = messe()
     unqual = [s for s in stellen if not s[4]]

@@ -319,9 +319,20 @@ def ensures_text(wurzel, datei, name):
 
 
 def main():
+    # **TOOTH 0 -- THE SUBJECT HAS TO BE THERE** (2026-08-31). Over a tree without
+    # its subject this tool died of a `FileNotFoundError`: return code **1**, a
+    # traceback, and in a chain that reads like a finding. *A crash is not a refusal
+    # -- a NAMED refusal is*, and a missing subject says the SETUP has to change.
+    # Here the subject is the BUILD DIRECTORY: the speech test writes its invented units
+    # into `target/`, and without it `tempfile` raises before a single line is read.
+    if not (W / "target").is_dir():
+        print("ABBRUCH: target/ fehlt -- die Sprechprobe kann ihre erfundenen Einheiten "
+              "nicht anlegen; gebaut wird auf ki-pc-fisch-101 (CLAUDE.md).", file=sys.stderr)
+        return 2
     nur_probe = "--sprechprobe" in sys.argv
     if not sprechprobe():
-        return 1
+        # 2, not 1: a fallen speech test has measured NOTHING.
+        return 2
     if nur_probe:
         return 0
 

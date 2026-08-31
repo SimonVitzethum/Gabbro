@@ -82,7 +82,11 @@ def main() -> int:
         return 2
     if not GABBRO.exists():
         print(f"ABBRUCH: {GABBRO} fehlt -- gebaut wird auf ki-pc-fisch-101 (CLAUDE.md).")
-        return 1
+        # **Every refusal in this file ends with 2, not 1** (2026-08-31). This counter joined
+        # `abnahme.py` that day, so its return code is now read as a VERDICT -- and the sixth
+        # requirement applies: `1` means the TREE has to change, `2` means the SETUP does.
+        # Every site below says NOTHING WAS MEASURED, so every one of them is a `2`.
+        return 2
     files = sorted(glob.glob(str(W / "beispiele" / "*.gab"))) + sorted(
         glob.glob(str(W / "messung" / "*" / "*.gab"))
     )
@@ -102,7 +106,7 @@ def main() -> int:
             )
         except subprocess.TimeoutExpired:
             print(f"ABBRUCH: {rel} -- Frist {FRIST} s ueberschritten. Ein Haenger ist kein Befund.")
-            return 1
+            return 2
         # **A unit with errors carries no register**, and that is the same rule
         # `gabbro pflichten` follows -- not a skipped file but a file that has no answer yet.
         if run.returncode != 0:
@@ -111,11 +115,11 @@ def main() -> int:
         kopf = lies_kopf(run.stdout)
         if kopf is None:
             print(f"ABBRUCH: {rel} -- kein `@duty`-Kopf. Der Erzeuger schweigt ueber sich selbst.")
-            return 1
+            return 2
         t, g, a = kopf
         if g + a != t:
             print(f"ABBRUCH: {rel} -- {g} + {a} != {t}. Die Bilanz des Erzeugers geht nicht auf.")
-            return 1
+            return 2
         total += t
         goals += g
         refused += a
@@ -146,7 +150,7 @@ def main() -> int:
           f"{len(files)} Dateien angesehen) ==")
     if sum_reasons != refused:
         print(f"ABBRUCH: die Gruende summieren zu {sum_reasons}, abgesagt sind {refused}.")
-        return 1
+        return 2
     if unknown:
         return 1
     print("   Und was das NICHT heisst: ein Ziel ist keine bewiesene Pflicht. Es heisst,")

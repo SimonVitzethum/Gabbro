@@ -405,7 +405,8 @@ def flaechenprobe():
 MARKE_KOMMENTARE = 7892   # 7730 earned + 180 booked as debt (2026-08-21), 10 repaid 2026-08-31
 # **-> 7892 on 2026-08-31.** Eight more fell with the report translations; the mark follows the
 # MEASURED state, because a mark above it is slack and one below it is a permanently red guard.
-MARKE_PY = 1072           # 1043 earned + 29 booked as debt (2026-08-21)
+MARKE_PY = 1070           # 1072 -> 1070 on 2026-08-31: two German comment lines in
+                          # `pruefe-kennungen.py` went into an English docstring
 MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 
 # **THE FEEDER MARK -- IT CAME INTO BEING TODAY AND SO RISES FROM NOTHING TO 179.**

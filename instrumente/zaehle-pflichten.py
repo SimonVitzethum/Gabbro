@@ -90,7 +90,11 @@ def bloecke(text):
     if drin:
         print("ABBRUCH: ein ```gabbro-Block ist nicht geschlossen.", file=sys.stderr)
         print("  R16: die Zahl waere eine untere Schranke, keine Messung.", file=sys.stderr)
-        sys.exit(1)
+        # **Every refusal in this file ends with 2, not 1** (2026-08-31). This counter joined
+        # `abnahme.py` that day, so its return code is now read as a VERDICT -- and the sixth
+        # requirement applies: `1` means the TREE has to change, `2` means the SETUP does.
+        # Every site below says NOTHING WAS MEASURED, so every one of them is a `2`.
+        sys.exit(2)
     return aus
 
 
@@ -119,7 +123,7 @@ def treffer(zeile):
 def main():
     if not QUELLE.exists():
         print(f"ABBRUCH: {QUELLE} fehlt -- es wird NICHT null gezaehlt.", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(2)
 
     einzeln = "--zeilen" in sys.argv
     nur = None
@@ -148,13 +152,13 @@ def main():
     if grenze is None:
         print("ABBRUCH: die «F0»-Ueberschrift fehlt -- die Grenze zwischen dem eingefrorenen "
               "Korpus und dem zweiten ist nicht mehr ablesbar.", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(2)
     zweiter = [b for b in alle if b[1] > grenze]
     alle = [b for b in alle if b[1] < grenze]
     if len(alle) != 10:
         print(f"ABBRUCH: {len(alle)} Bloecke statt 10 VOR «F0» -- der eingefrorene Korpus "
               f"hat sich bewegt, und FRAGMENTE.md traegt einen Einfriersatz.", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(2)
 
     gesamt = {k: 0 for k, _, _ in EREIGNISSE}
     gesamtzeilen = 0
@@ -423,7 +427,7 @@ if __name__ == "__main__":
         if (k1, l1) != (k0, l0 + 1):
             print(f"SPRECHPROBE GESCHEITERT: eine erfundene `L`-Zeile aendert die Spalten "
                   f"nicht wie erwartet ({k0}/{l0} -> {k1}/{l1}).", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(2)
         print(f"== Sprechprobe: ok (eine erfundene `L`-Zeile hebt L von {l0} auf {l1}, "
               f"K bleibt {k1}) ==")
         # **And the escaped pipe** -- the row shape that a naive splitter drops. Without this
@@ -435,7 +439,7 @@ if __name__ == "__main__":
             print(f"SPRECHPROBE GESCHEITERT: eine Zeile mit maskierter Pipe faellt aus dem "
                   f"Zaehler ({k0}/{l0} -> {k2}/{l2}). **Dann misst er eine geschrumpfte "
                   f"Grundgesamtheit.**", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(2)
         print(f"== Sprechprobe: ok (eine Zeile mit maskierter Pipe zaehlt mit: "
               f"K {k0} -> {k2}) ==\n")
         spalten()
@@ -454,7 +458,7 @@ if __name__ == "__main__":
             print(f"SPRECHPROBE GESCHEITERT: eine zusaetzliche `gap:`-Zeile aendert die Zahl "
                   f"nicht ({vorher} -> {nachher}). **Diese Zahl misst nichts.**",
                   file=sys.stderr)
-            sys.exit(1)
+            sys.exit(2)
         print(f"== Sprechprobe: ok (eine erfundene `gap:`-Zeile hebt H von {vorher} auf "
               f"{nachher}) ==")
         # **And the same probe BACKWARDS** (2026-08-25).
@@ -511,7 +515,7 @@ if __name__ == "__main__":
             print(f"SPRECHPROBE GESCHEITERT: die Absenkungsspalte antwortet auf einen "
                   f"herausgenommenen Differenztest nicht ({sorted(gemessen)} -> "
                   f"{sorted(ohne)}). **Diese Haelfte von H misst nichts.**", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(2)
         print(f"== Sprechprobe: ok (ohne die Differenztests faellt die Absenkungsspalte "
               f"von {len(gemessen)} auf 0 gemessene) ==\n")
         haengend()

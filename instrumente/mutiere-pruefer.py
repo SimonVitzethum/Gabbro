@@ -3798,6 +3798,20 @@ def sauberer_baum():
 
 
 def main():
+    # **TOOTH 0 -- THE SUBJECT HAS TO BE THERE** (2026-08-31). Over a tree without
+    # `crates/` this tool died inside `anker_stand()` of a `FileNotFoundError`: return code
+    # **1**, a traceback, and in a chain that reads exactly like a dead anchor. *A crash is
+    # not a refusal -- a NAMED refusal is*, and a missing subject says the SETUP has to
+    # change, not the tree.
+    fehlend = sorted({str(m.pfad.relative_to(WURZEL)) for m in MUTATIONEN
+                      if not m.pfad.is_file()})
+    if fehlend:
+        print("ABBRUCH: %d Quelldatei(en) des Katalogs fehlen -- es wurde NICHTS gemessen."
+              % len(fehlend), file=sys.stderr)
+        print("  " + ", ".join(fehlend[:6])
+              + (" ..." if len(fehlend) > 6 else ""), file=sys.stderr)
+        return 2
+
     # **Der Ankerstand zuerst, und er kostet nichts.** Er braucht weder Bau noch sauberen
     # Baum -- und weil er der Teil ist, der still verwittert, laeuft er VOR allem anderen.
     # **Und die Flaechen zuerst, aus demselben Grund** (2026-08-21): eine Mutation mit einer

@@ -15,7 +15,8 @@ der ganze Ordner gebaut ist.*
 **Die Regel, mechanisch:** eine Kennung darf in beliebig vielen ZEILEN stehen (dieselbe Regel
 an mehreren Stellen ist normal), aber nur in **einer Datei**. Die Datei ist die Regel.
 
-Sprechprobe in beide Richtungen (`--sprechprobe`).
+Sprechprobe in beide Richtungen, und sie faehrt in JEDEM Lauf. `--sprechprobe`
+faehrt nur sie und sonst nichts.
 """
 import collections
 import pathlib
@@ -50,16 +51,42 @@ def befunde(karte):
     return sorted((k, sorted(v)) for k, v in karte.items() if len(v) > 1)
 
 
+def sprechprobe():
+    """**Both directions -- and the second one does NOT take its yardstick from the subject.**
+
+    The guardian has to SEE an artificial double issue and to LET THROUGH the same
+    identifier once the poison is gone.
+
+    Until 2026-08-31 the counter-direction read *"the real state reports nothing"*, and that
+    is exactly the trap `pruefe-todo.py` has already paid for once: a REAL double issue would
+    have made the probe fall, the guardian would have aborted with `2` -- **and swallowed the
+    finding while doing so.** *A probe that takes its yardstick from its subject does not
+    measure the subject.* So the question is only about `K001`: a double issue with the
+    poison, none without it -- whatever else stands in the tree.
+    """
+    gift = befunde(erhebe(("namen.rs", '\nlet _ = "K001";\n')))
+    sauber = befunde(erhebe())
+    gesehen = any(k == "K001" for k, _ in gift)
+    frei = not any(k == "K001" for k, _ in sauber)
+    print("== Sprechprobe ==")
+    print(f"  kuenstliche Doppelbelegung K001: {'gesehen' if gesehen else 'UEBERSEHEN'}")
+    print(f"  ohne das Gift ist K001 frei:     {'ja' if frei else 'FALSCHER ALARM'}")
+    return gesehen and frei
+
+
 def main():
+    # **THE SPEECH TEST RUNS EVERY TIME** (2026-08-31). Until today it sat behind a flag,
+    # and `abnahme.py` calls this tool with no arguments at all -- **so the regular run
+    # never once checked whether this guardian can go red.** Of all 28 guardians it was the
+    # only one whose probe had to be ordered; every other runs it unasked. *A speech test
+    # you have to request is indistinguishable from none* (R14).
+    if not sprechprobe():
+        # 2, not 1: a guardian that fails its own probe has measured NOTHING -- what it
+        # says about the identifiers afterwards is not a statement about them.
+        print("\n! Der Waechter misst nicht, was er behauptet. ABBRUCH.")
+        return 2
     if "--sprechprobe" in sys.argv:
-        # Der Waechter muss eine kuenstliche Doppelbelegung SEHEN und eine saubere Lage
-        # DURCHLASSEN. Ohne beide Richtungen misst er nichts.
-        gift = befunde(erhebe(("namen.rs", '\nlet _ = "K001";\n')))
-        sauber = befunde(erhebe())
-        print("== Sprechprobe ==")
-        print(f"  kuenstliche Doppelbelegung K001: {'gesehen' if any(k=='K001' for k,_ in gift) else 'UEBERSEHEN'}")
-        print(f"  saubere Lage:                    {'durchgelassen' if not sauber else 'FALSCHER ALARM'}")
-        return 0 if (any(k == "K001" for k, _ in gift) and not sauber) else 2
+        return 0
 
     karte = erhebe()
     # **`0 issued ... ALL PASS` was a GREEN run until 2026-08-31** (measured over an empty
