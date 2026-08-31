@@ -1,0 +1,125 @@
+-- **W24-Vorlauf: `schleifenzusagen` und `sperrbloecke` binden die Laufvariable nicht.**
+--
+-- Der dritte der drei Reste, die `9f88c2e` benannt und ungemessen gelassen hat. Er ist
+-- jetzt gemessen, und das Ergebnis ist ein BEFUND und kein Bauposten: **die Luecke ist
+-- da, sie druckt eine falsche Zahl, und kein uebersetzbares Programm erreicht sie.**
+--
+-- Diese Datei ist eine MESSUNG und kein Beispiel. Sie faellt mit Absicht.
+--
+-- ## 1. Die Luecke, woertlich am unveraenderten Pruefer
+--
+-- `kosten.rs::schleifenzusagen` steigt bei `Schleife::Traverse` in den Rumpf, ohne
+-- `t.variable` zu binden -- anders als `block()`, das sie seit `9f88c2e` auf
+-- `Typ::Unbekannt` setzt. `sperrbloecke` tut dasselbe. Damit rechnet der Durchgang der
+-- INNEREN Schleife gegen den verdeckten Parameter:
+--
+--     impl fn f(g : index into Topologie, v : index into Riesen) -> u32
+--     { traverse v of g over ancestors of g {
+--           retry warten until … bounded 40 ops {
+--               traverse d of v over descendants of v { … } } } }
+--
+--     error: [K006] one pass of this loop costs 1536 ops, the loop promises `bounded 40 ops`
+--
+-- `1536` = 512 x 3, und `512` ist `count` von **`Riesen`** -- der Tabelle des Parameters,
+-- nicht der, die die Schleife laeuft. Dieselbe Gestalt mit `locks TOPO { … }` statt des
+-- `retry` gibt `K002`:
+--
+--     error: [K002] the block holds `TOPO` for 1536 ops, the lock promises `held <= 40 ops`
+--
+-- Die Zahl ist falsch. **Der Ort, an dem sie steht, ist es nicht.**
+--
+-- ## 2. Warum kein uebersetzbares Programm sie erreicht
+--
+-- Der Kostenpass liest einen NAMEN aus `lokal` an genau zwei Sorten von Stellen, und
+-- beide sind nachgemessen:
+--
+-- **(a) Der Ort einer Domaene.** Seit `d649415` sagt `emit.rs` ueber JEDER Domaene ab,
+-- deren Ort eine umschliessende Laufvariable nennt -- `slots of` und `elems of` beim
+-- Namen, die drei Baumdomaenen ueber `baumsicht`, und `queue`/`mappings of`/`chain in`/
+-- `fields of`/`threads` senkt der Erzeuger ohnehin nicht ab. Dieselbe Datei, die `K006`
+-- ausloest, bekommt also:
+--
+--     error: [C001] no lowering: `descendants of` over a place that names no table
+--
+-- **Pruefer und Erzeuger sagen beide ab.** Es gibt kein Programm, das mit der falschen
+-- Zahl durchkommt -- und keines, das an ihr faelschlich scheitert, denn es waere ohnehin
+-- nicht baubar.
+--
+-- **(b) Der indirekte Ruf.** `kosten.rs::ruf` liest `typ_von_ort` fuer einen
+-- Funktionszeiger. Gemessen mit `v : fn() -> u32 costs <= 20 ops` als Parameter und `v`
+-- als Laufvariable darueber:
+--
+--     traverse v over slots of w { retry … bounded 8 ops { let x = v(); … } }
+--     ->  6 items, 0 errors, 1 hints        (E009, ueber die WIRKUNGEN)
+--
+-- Und die Kontrolle in derselben Messung -- die Laufvariable in `k` umbenannt, die
+-- Verdeckung weg:
+--
+--     ->  6 items, 0 errors, 1 hints
+--
+-- **Byteweise dieselbe Ausgabe.** An dieser Stelle unterscheidet die Luecke nichts, weil
+-- der Ruf hier ohnehin keine Zahl liefert.
+--
+-- ## 3. Was daraus folgt -- und was NICHT
+--
+-- Gebaut wird hier nichts. *Regel A: kein Bau ohne gemessenen Bedarf* -- und der Bedarf
+-- ist gemessen worden und nicht da. **Die Heilung waere auch nicht harmlos:** wuerde
+-- `schleifenzusagen` die Laufvariable binden, gaebe `block()` `Kosten::Unbekannt`, und
+-- `K006`/`K002` schwiegen. Aus einer falschen Zahl wuerde ein Schweigen -- an einer
+-- Stelle, an der der Erzeuger absagt, ist das kein Gewinn, sondern ein Waechter weniger.
+--
+-- **Was offen bleibt und hier steht, damit es nicht verschwindet:** die Zahl in der
+-- `K006`/`K002`-Absage nennt eine Tabelle, die die Schleife nicht laeuft. Ein Leser, der
+-- ihr folgt, sucht an der falschen Stelle. Das ist ein Mangel an der ABSAGE und keiner
+-- am Urteil -- und er ist es wert, benannt zu sein, solange ihn niemand misst.
+
+module probe::schleifenzusage {
+
+const NKLEIN : u32 = 8;
+const NGROSS : u32 = 512;
+
+table Topologie count NKLEIN {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+    slot {
+        elter       : option index into Topologie,
+        erstes_kind : option index into Topologie,
+        naechstes   : option index into Topologie,
+        wert        : u32,
+    }
+}
+
+table Riesen count NGROSS {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+    slot {
+        elter       : option index into Riesen,
+        erstes_kind : option index into Riesen,
+        naechstes   : option index into Riesen,
+        wert        : u32,
+    }
+}
+
+lock TOPO protects { Topologie } rank 1 held <= 40 ops;
+
+-- (a) `K002` aus `sperrbloecke`: 1536 ops gegen `held <= 40`, und die 1536 kommen aus
+--     `Riesen` (512), nicht aus `Topologie` (8).
+impl fn unter_der_sperre(g : index into Topologie, v : index into Riesen) -> u32
+    effects { reads Topologie.slots, reads Riesen.slots, locks TOPO }
+{
+    let mut summe : u32 in 0 .. 65535 = 0;
+    traverse v of g over ancestors of g by decreasing v
+        touches reads Topologie.slots
+    {
+        locks TOPO {
+            traverse d of v over descendants of v by unvisited
+                touches reads Topologie.slots
+            {
+                if summe < 60000 {
+                    summe += 1;
+                }
+            }
+        }
+    }
+    return summe;
+}
+
+}
