@@ -6799,6 +6799,149 @@ impl fn f(t : ptr<normal, rw> T, x : fnptr())
     );
 }
 
+/// **The two binders a `let` does not write down -- the traversal variable and a `match`
+/// arm.**
+///
+/// `domaene.rs::aus_block` got its block scope on 2026-08-31, and it carried `let`,
+/// `let ... else`, `await load` and `exchange`. Two statements that DECLARE a name were not
+/// among them, and both produce the same false refusal: a domain deeper inside names
+/// something the enclosing line just introduced, and `D017` says it *"is not declared
+/// here"*.
+///
+/// Measured against the unchanged checker, one program per gap:
+///
+/// ```text
+/// error: [D017] g3.gab:24:50: `a` in an `invariant` is not declared here
+/// error: [D017] g2.gab:28:54: `k` in an `invariant` is not declared here
+/// ```
+///
+/// The control in the same run is the whole argument: **the same `invariant` moved up to
+/// the line that binds the name gives `0 errors`.** The traversal variable was pushed
+/// around the loop's OWN invariant and popped again before the body was walked; the arm
+/// binder was never pushed at all.
+///
+/// ## Half two, and it is the one that kills the too-wide version
+///
+/// A rule that simply stopped refusing here would pass half one exactly like this one. So
+/// every gap has its mirror: **the same name one statement LATER**, where nothing binds it
+/// any more, still has to fall -- and the binder of one `match` arm must not reach the
+/// other. *A scope that never ends is not a scope.*
+#[test]
+fn die_laufvariable_und_der_matchbinder_gelten_im_rumpf() {
+    fn absagen(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    const WELT: &str = "const N : u32 = 8;
+table T count N {
+    tree { parent elter, child kind, sibling gesch }
+    slot { wert  : u32,
+           elter : option index into T,
+           kind  : option index into T,
+           gesch : option index into T, } }
+tagged type Fund = { Nichts, Knoten(index into T) };";
+
+    fn mit(rumpf: &str) -> String {
+        format!(
+            "module t {{ {WELT}
+impl fn f(x : Fund, g : index into T) -> u32
+    effects {{ reads T.slots }}
+{{ {rumpf} return 0; }} }}"
+        )
+    }
+
+    // 1 -- the traversal variable holds in the BODY, not only in its own `invariant`.
+    let a = absagen(&mit(
+        "traverse a of g over ancestors of g by decreasing a
+             touches reads T.slots
+         {
+             traverse b of g over ancestors of g by decreasing b
+                 touches reads T.slots
+                 invariant forall k in descendants of a : T.slots[k].wert == 0
+             { }
+         }",
+    ));
+    assert!(
+        !a.iter().any(|c| c == "D017"),
+        "`a` ist von der umschliessenden Traversierung gebunden: {a:?}"
+    );
+
+    // 2 -- the binder of a `match` arm holds in that arm.
+    let b = absagen(&mit(
+        "match x {
+             Nichts => { }
+             Knoten(k) => {
+                 traverse a of g over ancestors of g by decreasing a
+                     touches reads T.slots
+                     invariant forall z in descendants of k : T.slots[z].wert == 0
+                 { }
+             }
+         }",
+    ));
+    assert!(
+        !b.iter().any(|c| c == "D017"),
+        "`k` ist vom Zweig `Knoten(k)` gebunden: {b:?}"
+    );
+
+    // 3 -- **the scope ENDS.** Without these three the rule could bind every name forever
+    // and both halves above would still be green.
+    for (was, rumpf) in [
+        (
+            "nach der Traversierung",
+            "traverse a of g over ancestors of g by decreasing a
+                 touches reads T.slots
+             { }
+             traverse b of g over ancestors of g by decreasing b
+                 touches reads T.slots
+                 invariant forall k in descendants of a : T.slots[k].wert == 0
+             { }",
+        ),
+        (
+            "nach dem `match`",
+            "match x { Nichts => { } Knoten(k) => { } }
+             traverse a of g over ancestors of g by decreasing a
+                 touches reads T.slots
+                 invariant forall z in descendants of k : T.slots[z].wert == 0
+             { }",
+        ),
+        (
+            "im anderen Zweig",
+            "match x {
+                 Knoten(k) => { }
+                 Nichts => {
+                     traverse a of g over ancestors of g by decreasing a
+                         touches reads T.slots
+                         invariant forall z in descendants of k : T.slots[z].wert == 0
+                     { }
+                 }
+             }",
+        ),
+    ] {
+        let g = absagen(&mit(rumpf));
+        assert!(
+            g.iter().any(|c| c == "D017"),
+            "{was} bindet den Namen nicht mehr -- `D017` muss fallen: {g:?}"
+        );
+    }
+
+    // 4 -- and the loop does not bind its own domain: the place of `traverse i over
+    // slots of i` is read in the OUTER scope, where `i` stands nowhere.
+    let d = absagen(
+        "module t { table T count 8 { slot { wert : u32, } }
+impl fn f(t : ptr<normal, r> T) -> u32
+    effects { reads t.slots }
+{ traverse i over slots of t by unvisited touches reads t.slots
+      { traverse j over slots of t by unvisited touches reads t.slots
+            invariant forall k in slots of i : t.slots[k].wert == 0 { } }
+  return 0; } }",
+    );
+    assert!(
+        !d.iter().any(|c| c == "D017"),
+        "auch hier ist `i` gebunden -- `D018` mag schweigen, `D017` darf nicht sprechen: {d:?}"
+    );
+}
+
 /// **`D019`: the FIELD names in the suffix of a domain's place.**
 ///
 /// The third question at the same place -- `D017` reads its base name, `D018` its kind,
