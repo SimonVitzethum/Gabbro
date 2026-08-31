@@ -1000,6 +1000,53 @@ fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
                     doppelt(&mut gesehen, &i.name.text, i.name.span, "Invariante", absagen);
                 }
             }
+            // **The function BODY never got the check the `entry` body has** (2026-08-31).
+            //
+            // Every arm above holds `doppelt` against a construct's own scope -- a `table`'s
+            // fields, an `entry`'s register bindings, a `state`'s transitions. *The one
+            // scope nobody held it against is the one every program has*: the parameters of
+            // a function and the `let`s of its body.
+            //
+            // It is not a tidiness rule, and it is exactly the `N042` shape: **`gabbro
+            // pruefe` said 0 errors, `gabbro emit` wrote the unit without a refusal, and `cc`
+            // refused it.** Measured on 2026-08-31 against the unchanged checker
+            // (`messung/proben/probe-domaenenschatten.gab`):
+            //
+            // ```text
+            // impl fn schatten(t : ptr<normal, r> Winzig, g : ptr<normal, r> Riesig) …
+            //     let t = g;                       -- same scope as the parameter
+            // ->  static uint32_t schatten(const Winzig *restrict t, …) {
+            //         const Riesig * t = g;
+            //     $ cc -c   error: `t` redeclared as different kind of symbol
+            // ```
+            //
+            // **Two declarations of one name in one scope have no reading**, and the emitter
+            // writes them out unchanged -- there is no renaming in `emit.rs`, `cnamen.rs`
+            // says so in its first line. *Refuse, never interpret* (design rule 3).
+            //
+            // **What this rule deliberately does NOT touch is the covering in a NESTED
+            // block.** C accepts it, `beispiele/gift/19-let-verdeckt.gab` has held it as a
+            // legal program since 2026-08-14, and `m1.rs` carries the block scope that gives
+            // it its meaning. *That form has a second defect, and it belongs to a different
+            // pass:* `kosten.rs` and `domaene.rs` build their `lokal` from **the parameters
+            // alone**, so `let t = g;` in an `if` makes the cost pass read the covered
+            // binding -- `costs <= 17 ops` accepted while the emitted loop runs 64 times.
+            // Named in `messung/proben/probe-domaenenschatten.gab`, **not built here**: the
+            // cure is a block scope in those two passes, not a refusal of the program.
+            //
+            // Over the corpus this rule costs nothing: **480 `.gab` files, 118 error-free
+            // before and 118 after.**
+            ItemArt::Funktion(f) => {
+                if let FnRumpf::Block(b) = &f.rumpf {
+                    let mut aussen: HashMap<String, Span> = HashMap::new();
+                    for p in &f.parameter {
+                        // A parameter list that repeats a name is the same fault one step
+                        // earlier, and the same sentence says it.
+                        doppelt(&mut aussen, &p.name.text, p.name.span, "parameter", absagen);
+                    }
+                    rumpf_geltung(b, &mut aussen, absagen);
+                }
+            }
             ItemArt::Reason(r) => reason(r, absagen),
             ItemArt::Device(d) => device(d, absagen),
             ItemArt::Typ(t) => typdecl(t, absagen),
@@ -1038,6 +1085,51 @@ fn auswahl(item: &Item) -> Auswahl {
         }
     }
     Auswahl::Immer
+}
+
+/// **One block of a function body -- and only the names that share ITS scope.**
+///
+/// The scope map starts empty for every block; for the outermost one it starts with the
+/// parameters: **C puts a function's parameters in the scope of its body block**, which is
+/// why `cc` refuses a top-level `let` that repeats a parameter name and accepts a nested one.
+/// Sibling arms of an `if` never see each other, and a nested block may cover an outer name.
+///
+/// **The cut at the block boundary is the whole rule, and it is not a style choice.**
+/// `beispiele/gift/19-let-verdeckt.gab` has held the covering form as a legal program since
+/// 2026-08-14 -- `let x : u8 = 0;` inside an `if`, covering the parameter `x`, expected to
+/// fall over the division because the narrowing fact belongs to the covered binding. *The language
+/// permits covering, and `m1.rs` carries the block scope that makes it mean something.*
+/// A rule refusing it at any depth would refuse that probe over the wrong thing.
+///
+/// What is left is the form that has no reading at all: two declarations of one name in one
+/// scope, which the emitter writes out unchanged and `cc` then rejects.
+fn rumpf_geltung(b: &Block, scope: &mut HashMap<String, Span>, absagen: &mut Absagen) {
+    for st in &b.anweisungen {
+        // **One descent, and only one.** A sub-block opens a scope of its own, so it starts
+        // from an empty map -- seeded only where the construct declares a name FOR that
+        // block. A second explicit descent next to this loop would walk `let … else`'s
+        // `else` twice, and `pruefe-abstieg.py` calls that what it is: 2^depth.
+        let mut innen = HashMap::new();
+        if let StmtArt::LetSonst(l) = &st.art {
+            // The failure name lives in the `else` block alone -- `unterbloecke` hands us
+            // exactly that block, and the unpacked name is not visible inside it.
+            innen.insert(l.fehlername.text.clone(), l.fehlername.span);
+        }
+        for k in crate::unterbloecke(st) {
+            rumpf_geltung(k, &mut innen.clone(), absagen);
+        }
+        // The binding is added AFTER the sub-blocks, because it is visible to what follows
+        // the statement and not to its own right-hand side.
+        match &st.art {
+            StmtArt::Let(l) => {
+                doppelt(scope, &l.name.text, l.name.span, "local binding", absagen)
+            }
+            StmtArt::LetSonst(l) => {
+                doppelt(scope, &l.name.text, l.name.span, "local binding", absagen)
+            }
+            _ => {}
+        }
+    }
 }
 
 fn doppelt(

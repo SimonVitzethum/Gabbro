@@ -7176,3 +7176,78 @@ check c {
          umgebenden Funktion: {update:?}"
     );
 }
+
+/// **The block boundary of `N001` -- and the mutation that showed it had no anchor.**
+///
+/// `namen.rs::rumpf_geltung` refuses two declarations of one name in ONE scope, because the
+/// emitter writes them out unchanged and `cc` then answers *redeclared as different kind of
+/// symbol*. It deliberately stops at the block boundary: **C accepts a nested covering**, and
+/// `beispiele/gift/19-let-verdeckt.gab` has held that form as a legal program since
+/// 2026-08-14 -- `let x : u8 = 0;` inside an `if`, covering the parameter `x`, expected to
+/// fall at `M102` because the narrowing fact belongs to the covered binding.
+///
+/// The mutation `rumpf_geltung(k, &mut scope.clone(), …)` -- let the sub-block inherit the
+/// enclosing scope -- **survived the whole suite on 2026-08-31.** `19-let-verdeckt.gab` still
+/// falls, only now with an added `N001`, and `jedes_gift_faellt_mit_seinem_code` asks whether
+/// the expected code is AMONG the fallen, not whether it is alone. *A rule that is too broad
+/// looks exactly like a rule that is right, from a probe that only asks whether something
+/// fell.*
+///
+/// This is the anchor for the other direction, and it is the one the corpus could not give:
+/// the nested form must produce **no `N001` at all**.
+#[test]
+fn eine_verdeckung_im_unterblock_ist_kein_n001() {
+    fn absagen(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+
+    // The covering sits in the `if` body -- a scope of its own, and legal C.
+    let verschachtelt = absagen(
+        "module t {
+impl fn f(x : u8) -> u8 effects { pure } costs <= 8 ops {
+    if x >= 1 {
+        let x : u8 = 7;
+        return x;
+    }
+    return 0;
+} }",
+    );
+    assert!(
+        !verschachtelt.iter().any(|c| c == "N001"),
+        "eine Verdeckung im Unterblock ist erlaubt -- C nimmt sie an, und `19-let-verdeckt` \
+         fuehrt sie seit dem 2026-08-14 als gueltiges Programm: {verschachtelt:?}"
+    );
+
+    // Two sibling arms binding the same name never see each other either.
+    let geschwister = absagen(
+        "module t {
+impl fn f(b : bool) -> u8 effects { pure } costs <= 8 ops {
+    if b {
+        let n : u8 = 1;
+        return n;
+    }
+    let n : u8 = 2;
+    return n;
+} }",
+    );
+    assert!(
+        !geschwister.iter().any(|c| c == "N001"),
+        "zwei Geschwisterbloecke teilen keinen Geltungsbereich: {geschwister:?}"
+    );
+
+    // And the form that HAS no reading still falls: same scope as the parameter.
+    let selber = absagen(
+        "module t {
+impl fn f(x : u8) -> u8 effects { pure } costs <= 8 ops {
+    let x : u8 = 7;
+    return x;
+} }",
+    );
+    assert!(
+        selber.iter().any(|c| c == "N001"),
+        "im Geltungsbereich des Rumpfblocks liegt der Parameter -- `cc` weist die zweite \
+         Deklaration ab, also weist der Pruefer sie ab: {selber:?}"
+    );
+}
