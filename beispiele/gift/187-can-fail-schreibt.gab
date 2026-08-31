@@ -52,6 +52,12 @@ axiom wbinvd()          effects { writes cache }
 -- Uebersetzungsfehler* -- und er fiel nicht, weil `gates` keinen Leser hatte. `N020`, seit
 -- heute, hat ihn im eigenen Beispiel gefunden.
 static mut tiefe_max : u64 in 0 .. 1000 = 0;
+-- **Die zwei Kollegen sind am 2026-08-31 nachgetragen worden, und `N043` hat sie gefunden.**
+-- Beim Kuerzen aus `beispiele/06` fielen sie weg, `measures` und `floor` nannten sie weiter --
+-- *und `N022` schwieg darum ueber `kerne_gemessen >= 2`, ohne dass jemand es merkte.* Eine
+-- Giftprobe mit einem zweiten, ungewollten Mangel misst nicht den, wegen dem sie da ist.
+static mut tiefe_lebend   : u64 in 0 .. 1000 = 0;
+static mut kerne_gemessen : u32 in 0 .. 1000 = 0;
 
 impl fn abnahme()
     effects { reads kerne_gemessen }

@@ -1,0 +1,36 @@
+-- erwartet: N043
+-- **Die Berichtszeile nennt einen Namen, hinter dem nichts steht.**
+--
+-- `SYNTAX.md` §13: *„The `measures` list IS the report line."* Ein Name, den es nicht gibt,
+-- beschreibt darin einen Zustand, den es nicht gibt -- dieselbe Klasse wie `gates` ohne
+-- Torfunktion (`N020`), ein Typname ohne Typ (`N040`) und `on_exceeded` ohne Namen (`S007`).
+--
+-- **Und die Absage hat einen zweiten Gegenstand, der schwerer wiegt als der erste.**
+-- `N021` und `N022` finden ihre Groesse ueber einen Namensvergleich gegen `measures`. Steht
+-- dort ein Name, den es nicht gibt, vergleicht sich der Vergleich mit nichts, und *beide
+-- Regeln schweigen.* Gemessen am 2026-08-31 (`messung/TORREICHWEITE.md`):
+-- `messung/tor-proben/t11` ist byteweise `gift/155-messung-schreibt-sich-selbst.gab` mit
+-- `measures kk` statt `measures k` -- die Vorlage meldet `N027` UND `N021`, die Kopie nur
+-- `N027`. **Ein Buchstabe, und die Regel ist weg.**
+--
+-- *Die Absage fiel bei ihrem ersten Lauf zweimal im eigenen Korpus:*
+-- `gift/187-can-fail-schreibt.gab` nannte `tiefe_lebend` und `kerne_gemessen`, die beim
+-- Kuerzen aus `beispiele/06` weggefallen waren -- damit schwieg dort `N022` ueber
+-- `floor kerne_gemessen >= 2` --, und `messung/fragmente/F06.gab` misst vier Felder eines
+-- Traegers `eich`, den es in der Datei nicht gibt. Dieselbe Stelle, an der `N040` seinen
+-- ersten Fall fand (`messung/fragmente/F01.gab`).
+module gift::measures_nennt_nichts {
+
+static mut k : u32 = 0;
+
+impl fn tor() effects { reads k } costs <= 1 ops { return; }
+
+check c {
+    claim    "Gemessen wird etwas, das nirgends steht."
+    measures gibt_es_nicht
+    gates    tor
+    can_fail { if k >= 3 { return; } }
+    floor    k >= 1
+}
+
+}

@@ -1943,6 +1943,40 @@ pub const SPERREN: &[Satz] = &[
         gemessen_an: "beispiele/gift/237-kanal-ohne-einloeser.gab.",
         fundstelle: "crates/gabbro-check/src/namen.rs",
     },
+    // --- The report line of a `check`, resolved at last (2026-08-31) -------------------
+    Satz {
+        name: "namen.berichtszeile",
+        kennungen: &["N043"],
+        aussage: "Every base name under a `check`'s `measures` resolves to something the \
+                  unit declares -- the list IS the report line (`SYNTAX.md` §13), and a \
+                  name with nothing behind it describes a state that does not exist.",
+        vorbehalt: "**The second subject weighs more than the first, and it is an ABSENT \
+                    refusal, not a false one.** `N021` and `N022` find their quantity by \
+                    matching a name against `measures`; a name that resolves to nothing \
+                    matches nothing, so BOTH fall silent -- and the file looks exactly like \
+                    one with nothing to report. *Measured, not supposed:* \
+                    `messung/tor-proben/t11` is `beispiele/gift/155` byte for byte with \
+                    `measures kk` for `measures k`, and `N021` disappears.\n\
+                    **What it does NOT touch** (W10): the names inside `floor`. A predicate \
+                    carries binders (`forall i in …`) and built-in forms (`lenof`, `old`), \
+                    and resolving names without them would be a false refusal -- \
+                    `messung/tor-proben/t12` measures that gap and it stays open. And the \
+                    base is resolved against EVERY declared item, not only the places: a \
+                    `measures` naming a function is a different mistake, and this rule does \
+                    not claim it.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/421-measures-ins-leere.gab, exactly ONE refusal; \
+                      1 mutation, caught. **The first run found two cases in the folder's \
+                      own corpus:** `beispiele/gift/187-can-fail-schreibt.gab` named \
+                      `tiefe_lebend` and `kerne_gemessen`, dropped when it was cut down \
+                      from `beispiele/06` -- so `N022` was silent there about \
+                      `floor kerne_gemessen >= 2` -- and `messung/fragmente/F06.gab` \
+                      measures four fields of a carrier `eich` that the file does not \
+                      declare. *The same place `N040` found its first case* \
+                      (`messung/fragmente/F01.gab`). Zero hits over the clean corpus.",
+        fundstelle: "crates/gabbro-check/src/namen.rs (`check_traegt_seine_pflicht`); \
+                     messung/TORREICHWEITE.md; SYNTAX.md §13",
+    },
     // --- The K condition, enforced at last (2026-08-21) --------------------------------
     Satz {
         name: "kbedingung.breaking",
