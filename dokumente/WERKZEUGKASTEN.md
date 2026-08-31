@@ -932,3 +932,40 @@ eine falsche Ablehnung **prinzipiell nicht** finden — sie prüft, dass etwas f
 > **Und die Zahl 0-von-492 ist selbst ein Befund über das Messwerkzeug, nicht über den
 > Prüfer.** Drei Fälle an zwei Tagen sind nicht plötzlich entstanden; sie sind sichtbar
 > geworden, als jemand anfing, *richtige* Programme zu schreiben und laufen zu lassen.
+
+---
+
+## W25 — **Eine Zahl belegt ihren Nenner, nicht ihre Beschriftung**
+
+**Gefunden am 2026-08-31, und der Befund ist, wie lange er überlebt hat: vier Nachrichten,
+weil die Zahl stimmte.**
+
+`pruefe-grammatiktafel.py` meldete `UNGEDECKT = 4` und schrieb drei der vier Wörter den Satz
+*„der Erzeuger sagt ab, der Pruefer nicht"* daneben. **Die Zahl war richtig** — `chain`,
+`queue`, `threads` und `state` sind wirklich ungedeckt. **Der Satz war falsch:** drei davon
+sagt der Erzeuger gar nicht ab. Nachgemessen, je kleinstes Programm: `0 Fehler, 0 C001`.
+
+Die Ursache steht in einer Zeile:
+
+```python
+if t in absage:
+    woher.append("der Erzeuger sagt ab, der Pruefer nicht")
+```
+
+`absage` ist die Menge der Wörter, **die in einem Absagetext vorkommen** — nicht die Menge der
+Formen, deren Absage jemand gemessen hat. `queue` steht in fremden Absagetexten, also bekam es
+die Zuschreibung. **Der Wächter hat eine Erwähnung für eine Messung genommen.**
+
+> **Ein falscher Satz neben einer richtigen Zahl ist die haltbarste Form eines Irrtums, weil
+> jede Prüfung, die auf die Zahl zeigt, ihn bestätigt.**
+
+*Das ist der Unterschied zu W16: dort misst der Wächter etwas anderes als seinen Gegenstand,
+und die ZAHL ist falsch. Hier stimmt die Zahl, und die Beschriftung trägt eine zweite
+Behauptung, die niemand gemessen hat.* Die Folge war keine falsche Buchung, sondern eine
+falsche **Klasse**: drei Korpuslücken sahen vier Tage lang wie eine Sprachentscheidung aus,
+und der Ordner hätte darüber entschieden.
+
+**Die Vorkehrung:** eine Beschriftung, die einen Grund nennt, braucht dieselbe Messung wie
+die Zahl daneben. Wo sie abgeleitet ist, sagt sie es (*„enthält das Wort"*), und wo sie
+gemessen ist, gibt es einen Lauf, der sie belegt. **Eine abgeleitete Beschriftung, die wie
+eine gemessene klingt, ist teurer als gar keine.**

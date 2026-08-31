@@ -917,6 +917,25 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       unterscheidet einen neuen Befund nicht von dem alten* — er braucht entweder eine Marke
       wie die anderen Ratschen oder einen zweiten Ausgangswert.
 
+- [ ] **`state` ist ein Konstrukt der Grammatik, das NICHTS erzeugt — und das ist gebucht,
+      nicht offen** *(entschieden 2026-08-31)*. Gemessen: `state Ident { transition … }` prüft
+      mit **0 Fehlern** und fällt am Erzeuger mit einem `C001`, das seine eigene
+      Vervollständigung nennt — *„the transitions are a proof device over a carrier that is
+      declared ELSEWHERE; **which C object holds the state, and whether a transition is a
+      check or an assignment, the declaration does not say**"*.
+      **Nicht gebaut, und der Grund ist Regel A: null gemessener Bedarf**, kein Programm im
+      Baum schreibt `state`. Was es brächte, steht daneben: `state` ist dieselbe Konstruktion
+      wie `device`s `transition`, **eine Ebene höher** — die untere ist gebaut und läuft.
+      > **Und damit steht `state` in derselben Lage wie `relabel` und `ensures` am
+      > Zeigertyp: ein Wort der Grammatik ohne Erzeugnis.** Bei jenen beiden lautete die
+      > Konsequenz *„Rumpf bauen oder aus der Wortmenge nehmen"*. **Hier ist die dritte
+      > Möglichkeit legitim** — die Absage ist benannt, trägt ihren Grund und steht im
+      > Zeugnis. *Aber sie ist ausdrücklich SO gebucht, sonst ist sie beim nächsten Durchgang
+      > wieder ein Fund.*
+      Offen bleibt allein: die Absage um die zwei Zeilen ergänzen, die sie selbst nennt
+      (benannter Träger, und je Transition *prüft* oder *schreibt*), **damit der nächste, der
+      `state` braucht, die Analyse nicht wiederholt.**
+
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
       fällt. Mutationskatalog: **360 von 360 Ankern** greifen (`--anker`, 2026-08-31 —
