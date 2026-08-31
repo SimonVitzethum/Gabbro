@@ -121,6 +121,18 @@ def sprechprobe():
 
 
 def main():
+    # **TOOTH 0 -- THE SUBJECT HAS TO BE THERE** (2026-08-31). Over a tree without
+    # `crates/` this tool died inside its own speech test at `AST.read_text()`: return code
+    # **1**, a traceback, and in a chain that reads like a construct nobody reads. *A crash
+    # is not a refusal -- a NAMED refusal is*, and a missing subject says the SETUP has to
+    # change, not the tree.
+    if not AST.is_file() or not PRUEFER.is_dir():
+        print("ABBRUCH: %s %s, %s %s -- es wurde NICHTS gemessen." % (
+            AST.relative_to(W), "da" if AST.is_file() else "FEHLT",
+            PRUEFER.relative_to(W), "da" if PRUEFER.is_dir() else "FEHLT"), file=sys.stderr)
+        print("  Ohne `ast.rs` gibt es keine Item-Art und ohne die Paesse keinen Leser;"
+              " beide\n  Masse waeren dann Urteile ueber nichts (W1, W17).", file=sys.stderr)
+        return 2
     if fehler := sprechprobe():
         print("ABBRUCH: die Sprechprobe faellt -- es wurde NICHTS gemessen.")
         for f in fehler:

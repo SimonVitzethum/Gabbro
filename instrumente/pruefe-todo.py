@@ -672,6 +672,22 @@ Stehengebliebene Zahlen aus P1: 117 Regeln, 187 Terminale (heute 1 / 1)
 
 
 def main():
+    # **TOOTH 0 -- THE SUBJECT HAS TO BE THERE** (2026-08-31). Over a tree without
+    # `README.md` this tool died inside its own speech test with a `FileNotFoundError`:
+    # return code **1**, a traceback, and in a chain that reads like a stale number. *A
+    # crash is not a refusal -- a NAMED refusal is*, and a missing subject says the SETUP
+    # has to change, not the tree. `pruefe_readme` even answered `[]` for a missing README
+    # -- a GREEN verdict over a file that is not there (W17).
+    gegenstand = [WURZEL / "TODO.md", WURZEL / "README.md", WURZEL / "dokumente" / "PLAN.md"]
+    fehlend = [str(d.relative_to(WURZEL)) for d in gegenstand if not d.is_file()]
+    n_bsp_da = len(list((WURZEL / "beispiele").glob("*.gab")))
+    if fehlend or not n_bsp_da:
+        print("ABBRUCH: %s, %d Beispiele im Zugriff -- es wurde NICHTS gemessen."
+              % ("es fehlen: " + ", ".join(fehlend) if fehlend else "alle drei Texte da",
+                 n_bsp_da), file=sys.stderr)
+        print("  Die Kennzahlentafel misst Text gegen Gegenstand; fehlt einer von beiden,\n"
+              "  ist `ALL PASS` ein Urteil ueber nichts (W1, W17).", file=sys.stderr)
+        return 2
     zahlen = heutige_zahlen()
     print("== Sprechprobe des Waechters ==")
     if not sprechprobe(zahlen):

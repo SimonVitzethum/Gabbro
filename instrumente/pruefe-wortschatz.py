@@ -8,7 +8,27 @@ Schluesselwoerter standen in der EBNF und nicht in der Tabelle.
 """
 import re, sys, pathlib
 
-d = pathlib.Path(sys.argv[1]).read_text()
+# **TOOTH 0 -- THE SUBJECT HAS TO BE THERE** (2026-08-31). Until today the first statement
+# of this file was `pathlib.Path(sys.argv[1]).read_text()`: without an argument an
+# `IndexError`, over a tree without `dokumente/` a `FileNotFoundError` -- both with return
+# code **1**, both a traceback, and in a chain both look like a gap in the vocabulary.
+# *A crash is not a refusal -- a NAMED refusal is*, and a missing subject says the SETUP
+# has to change, not the tree.
+if len(sys.argv) < 2 or sys.argv[1].startswith("--"):
+    print("ABBRUCH: kein Dateiargument -- dieser Waechter liest `dokumente/SYNTAX.md`.",
+          file=sys.stderr)
+    print("  Ohne Gegenstand wurde NICHTS gemessen; sein Argument steht in"
+          " `pruefe-waechter.py:ARGUMENTE`.", file=sys.stderr)
+    sys.exit(2)
+_ziel = pathlib.Path(sys.argv[1])
+if not _ziel.is_file():
+    print(f"ABBRUCH: {_ziel} fehlt -- der Gegenstand dieses Waechters ist nicht hier.",
+          file=sys.stderr)
+    print("  Es wurde NICHTS gemessen: ohne Grammatik gibt es weder Terminal noch"
+          " Tabellenwort.", file=sys.stderr)
+    sys.exit(2)
+
+d = _ziel.read_text()
 m = re.search(r"```\n(  Struktur.*?)```", d, re.S)
 # Die Spaltenkoepfe stehen gross am Zeilenanfang -- ohne sie zu entfernen zaehlt der
 # Pruefer "blauf" (aus "Ablauf") als totes Wort. Erster Fund des Pruefers war er selbst.

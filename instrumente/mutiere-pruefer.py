@@ -3798,6 +3798,20 @@ def sauberer_baum():
 
 
 def main():
+    # **ZAHN 0 -- DER GEGENSTAND MUSS DA SEIN** (2026-08-31). Ueber einem Baum ohne
+    # `crates/` starb dieses Werkzeug in `anker_stand()` an einem `FileNotFoundError`:
+    # Ruecklaufwert **1**, ein Traceback, und in einer Kette liest sich das wie ein toter
+    # Anker. *Ein Absturz ist keine Absage -- eine BENANNTE Absage ist eine*, und ein
+    # fehlender Gegenstand sagt, dass sich die UMGEBUNG aendern muss, nicht der Baum.
+    fehlend = sorted({str(m.pfad.relative_to(WURZEL)) for m in MUTATIONEN
+                      if not m.pfad.is_file()})
+    if fehlend:
+        print("ABBRUCH: %d Quelldatei(en) des Katalogs fehlen -- es wurde NICHTS gemessen."
+              % len(fehlend), file=sys.stderr)
+        print("  " + ", ".join(fehlend[:6])
+              + (" ..." if len(fehlend) > 6 else ""), file=sys.stderr)
+        return 2
+
     # **Der Ankerstand zuerst, und er kostet nichts.** Er braucht weder Bau noch sauberen
     # Baum -- und weil er der Teil ist, der still verwittert, laeuft er VOR allem anderen.
     # **Und die Flaechen zuerst, aus demselben Grund** (2026-08-21): eine Mutation mit einer
