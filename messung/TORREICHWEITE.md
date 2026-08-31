@@ -164,3 +164,100 @@ zurückgestellt (`git status` leer).
 * Ob `N021` und `N027` nach `N043` **trennbar** werden — sie sind es nicht. `N043` macht die
   eine Umgehung unmöglich, mit der es jemand versucht hat; das Paar aus §10 steht
   unverändert.
+
+---
+
+# Nachtrag 2026-08-31: die zwölf Torproben erzeugten C, das nicht übersetzt
+
+*Gemessen am 2026-08-31, lokal (`free -g`: 31 GB gesamt, 17 GB verfügbar, 20 Kerne). Werkzeug:
+der **unveränderte** Prüfer und `cc` (gcc, `-std=c11`).*
+
+Die zwölf Dateien dieses Vorlaufs schreiben alle denselben Probenrumpf:
+
+```gabbro
+can_fail { if k >= 3 { return; } }
+```
+
+Und der Erzeuger macht daraus:
+
+```c
+bool pruefe_c(void) { if (k >= 3) { return; } }
+```
+
+**Ein `can_fail` liefert ein `bool`, und ein leeres `return` hat keinen Wert.** Gemessen je
+Datei, alle drei Stufen einzeln:
+
+| Stufe | Befund |
+|---|---|
+| `gabbro pruefe` | **0 Fehler** über die Zeile |
+| `gabbro emit` | **kein `C001`** |
+| `cc` | *»return« ohne Wert in nicht-void zurückgebender Funktion* — **6 von 12** |
+
+Die anderen sechs emittieren gar nicht erst: ein früherer Pass (`N020`, `N022`, `N043`,
+`M119`, `N027`) hält sie an. **Ihr Mangel ist derselbe und nur latent** — er tritt in dem
+Augenblick auf, in dem jemand den benannten Fehler repariert.
+
+> **Drei Stufen liefen durch, und die vierte gehört nicht zur Sprache.** Dieselbe Gestalt wie
+> die vier blinden Walker, einen Ring weiter außen: der Rumpf wurde betreten, ein Zweig davon
+> nicht — nur ist der Zweig hier eine ganze Konstruktion.
+
+## Und der Ordner wusste es
+
+`beispiele/06-annahmen.gab` trägt seit dem 2026-08-20 einen Kommentar an seinem eigenen
+`can_fail`, der genau diesen Mangel benennt — *der Rumpf gab keinen Wert zurück, und im
+Erzeugnis stand ein `return;` in einer `bool`-Funktion.* **Repariert wurde dieser eine
+Rumpf, und keine Zeile Prüfercode.**
+
+*Ein Kommentar, der einen Mangel benennt und hinter dem keine Regel steht, wird als Beleg
+gelesen* — und elf Tage später sind zwölf neue Dateien hineingelaufen.
+
+## Gebaut: `N044` und `N045`
+
+| Kennung | die Frage | im C |
+|---|---|---|
+| **`N044`** | trägt jedes `return` des Blocks einen Wert? | `return;` in einer `bool`-Funktion — **cc-Fehler** |
+| **`N045`** | endet der Block auf jedem Weg? | ein Weg erreicht die schließende Klammer — **nur eine Warnung** (`-Wreturn-type`) |
+
+**Zwei Kennungen, weil es zwei Reparaturen sind:** `N044` nennt das `return`, das einen Wert
+bekommen muss; `N045` den Weg, der ein `return` bekommen muss. Die Giftproben
+`beispiele/gift/428` und `429` treffen je **allein** — die beiden Fälle sind trennbar.
+
+> **Und der Unterschied zwischen ihnen ist gemessen:** `N044` ist ein harter `cc`-Fehler,
+> `N045` ohne Schalter nur eine Warnung — `gcc` übersetzt, und der Rückgabewert ist
+> unbestimmt. Erst `cc -Wall -Wextra -Werror`, wie `pruefe-emission.sh` es fährt, macht
+> daraus ein Rot. *Die gefährlichere Hälfte ist die, die nur bei scharfen Warnungen
+> auffällt.*
+
+## Die achtzehn Dateien sind repariert, nicht ausgenommen
+
+Sechs Giftproben (`154`, `155`, `156`, `158`, `187`, `421`) und die zwölf Torproben trugen
+die Gestalt. **Jede einzelne war ein Mangel und keine ein Fehlalarm** — deshalb steht die
+Regel und keine Ausnahmeliste. *Sechs Dateien in die seit dem 2026-08-20 leere Ausnahmeliste
+zu schreiben hätte aus einer Erzeugerlücke eine grüne Zeile gemacht*, und der Grund der
+Vorbahn steht damit unverändert.
+
+Nach der Reparatur: `pruefe-emission.sh` **ALL PASS**, 100 von 100 emittierenden Dateien
+übersetzen; `N044`/`N045` fallen im ganzen Korpus (462 Dateien) nur in ihren eigenen zwei
+Giftproben.
+
+## Die Mutationen, von Hand gesetzt und gebaut
+
+| Mutation | gefallene Proben |
+|---|---|
+| `probenurteil-return-darf-leer-sein` | **2** |
+| `probenurteil-darf-durchfallen` | **2** |
+
+Je die Giftprobe und der Einzeltest (`eine_probe_gibt_ein_urteil_zurueck`), gezählt mit
+`cargo test --no-fail-fast`; die Quelle danach byteweise zurückgestellt (`sha256` verglichen).
+
+## Was auch danach ungeprüft bleibt
+
+* **Der TYP des zurückgegebenen Werts.** `return 3` in einem `can_fail`-Block wird von
+  `N044`/`N045` nicht abgewiesen — sie fragen, *ob* ein Wert dasteht, nicht *welcher*. Der
+  Korpus trägt den Fall nicht, und M1 sieht den Block ohne Vertrag (`N027`s Grund).
+* **Eine Probe, deren einziger Ausgang in einer Schleife steht.** `endet_immer` behandelt
+  jede Schleife als durchfallend (`lib.rs` sagt das dort ausdrücklich), also fiele
+  `can_fail { forever { … return true; } }` an `N045`. **Das ist aus dem Quelltext GELESEN
+  und nicht am Korpus gemessen** — keine Datei trägt die Form, und ob die Absage dort ein
+  Fehlalarm wäre, hängt an Pass 6 und nicht an dieser Zeile. *Sie steht hier, damit die
+  nächste, die die Form schreibt, sie findet.*
