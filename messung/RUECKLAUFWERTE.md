@@ -563,6 +563,88 @@ zurücklegt. **Und sie ist nicht durch Nachdenken gefunden worden, sondern dadur
 jemand die Form auf ihren eigenen Träger angewandt hat.**
 
 
+## Was die Auslassung KOSTET — der Schnelllauf sieht 45 von 92, nicht 45 von 49
+
+*Gemessen 2026-08-31 abends, lokal (`free -g`: 31 GB gesamt, 13 GB verfügbar, 20 Kerne).
+Kein Bau: die vier teuren wurden **nicht** gefahren, ihr Gegenstand ist aus ihrem eigenen
+Quelltext und aus dem letzten protokollierten Auslauf gezählt.*
+
+Die Kopfzeile des Schnelllaufs sagt heute:
+
+```
+== Arbeitsmenge: 45 von 49 Waechtern haben GEMESSEN -- 44 gruen, 1 ROT, 0 TEILMESSUNG ==
+   0 ABBRUCH, 1 nicht fahrbar, 3 ausgelassen
+```
+
+**45 von 49 ist eine richtige Zahl über dem falschen Gegenstand.** Sie zählt Wächter. Wer sie
+liest, liest ein Urteil über den Baum — und der Baum ist nicht in Wächtern gemessen, sondern
+in dem, was sie ansehen. Also ist das nachgezählt worden, in zwei Einheiten.
+
+### Erstens: in der Einheit, die dieser Ordner ohnehin führt — die gefährlichen Stellen
+
+`pruefe-waechter.py:teilmessungen()` zählt sie schon, je Datei: **92 Stellen, an denen ein
+Lauf mit `1` aussteigt und dahinter noch Ausgabe stünde.** Dieselbe Zahl, dieselbe Messung,
+nur je Wächter aufgeteilt statt aufsummiert:
+
+| | gefährliche Stellen | im Schnelllauf besucht? |
+|---|---:|---|
+| `pruefe-emission.sh` | **45** | nein — ausgelassen |
+| `mutiere-pruefer.py` | 5 | nur die `--anker`-Hälfte |
+| `pruefe-beweise.sh` | 2 | nein — ausgelassen |
+| `pruefe-luecken.py` | 0 | nein — ausgelassen |
+| die übrigen 45 Wächter | 40 | ja |
+| **zusammen** | **92** | |
+
+**47 der 92 stehen in Wächtern, die der Schnelllauf gar nicht erst startet** — mehr als die
+Hälfte, und 45 davon in einem einzigen. Großzügig gerechnet (die fünf Stellen des
+Ankerlaufs mitgezählt, obwohl der Mutationslauf selbst nicht läuft) sieht der Schnelllauf
+**45 von 92**.
+
+> *Zwei Zahlen, beide 45, und sie messen Verschiedenes:* **45 von 49 Wächtern — 49 %** *von
+> 92 gefährlichen Stellen. Die erste steht in der Kopfzeile, die zweite stand nirgends* (W25:
+> eine Zahl belegt ihren Nenner, nicht ihre Beschriftung).
+
+### Zweitens: in der Einheit jedes einzelnen Wächters
+
+| ausgelassen | sein Gegenstand | der Schnelllauf sieht davon |
+|---|---|---|
+| `pruefe-emission.sh` | zehn Stufen, 25 Durchstiche, **101 von 101** Übersetzungseinheiten in Stufe 9, dazu Stufe 10 (Bibliothekskette) | **nichts** |
+| `mutiere-pruefer.py` | **372** Mutationen, je ein `cargo build` und ein `cargo test` | **372 Anker textlich**, null Mutationen gefahren |
+| `pruefe-luecken.py` | **15** Verdrehungen (13 mit eigenem Bau, 2 bewiesene Nullmutationen) und ein Nullauf | **nichts** |
+| `pruefe-beweise.sh` | **15** Isabelle-Theorien (`beweise/ROOT`) | **nichts** |
+
+**503 Messposten stehen hinter der Auslassung** — 101 Übersetzungseinheiten, 372 Mutationen,
+15 Verdrehungen, 15 Theorien. *Die Summe hat keinen eigenen Nenner:* es gibt keine gezählte
+Gesamtmenge, gegen die sich „503" als Anteil lesen ließe, und darum steht sie hier mit ihren
+vier Summanden daneben und nie allein. Die Zahl mit einem Nenner ist die andere: **45 von
+92.**
+
+### Und die Gegenprobe: wie oft war der VOLLE Lauf heute überhaupt grün?
+
+Nicht geschätzt, sondern in `git log` gesucht (2026-08-31, 00:00 bis 18:51; einige Belege
+können denselben Lauf meinen):
+
+| Zeit | Besetzung | Ergebnis |
+|---|---:|---|
+| 01:10 (`bc3812d`) | 27 | **grün** (auf `fisch`) |
+| 01:33 (`23bee0e`) | 27 | rot — `pruefe-beweise.sh [1]` |
+| 01:55 (`e33eedd`) | 28 | rot — 27 grün, 1 ROT |
+| 02:03 (`2755721`) | 27 | Fund über die **Messapparatur**, nicht über den Baum |
+| 02:20 (`531b2e6`) | 27 | **grün** (`EXIT=0`) |
+| 02:52 (`cd2c8db`) | 27 | **grün** — mit allen vier teuren |
+| 06:11 (`22d56a1`) | 28 | rot — 25 gemessen, 24 grün, 1 ROT |
+| 07:14 (`0ae9bea`) | 46 | **ungefahren** — der Mutationslauf hätte kollidiert |
+| 17:34 (`1264dad`) | 49 | rot — `TEILMESSUNG pruefe-emission.sh`, Stufe 9 |
+
+**Der letzte grüne volle Lauf war um 02:52 und ging über 27 Wächter.** Seither ist die
+Besetzung auf 49 gewachsen, und **über der heutigen Besetzung war der volle Lauf noch nie
+grün** — genau einmal gefahren (17:34), und da endete er in einer Teilmessung.
+
+> *Die Auslassung ist also keine Abkürzung eines Laufs, den man sonst hätte:* der volle Lauf
+> über die heutige Besetzung existiert als **ein** Datenpunkt. Was der Schnelllauf nicht
+> sieht, sieht heute niemand — und die Kopfzeile sagte es nicht.
+
+
 ## Der Wächter, dessen Urteil am RECHNER hing — und seine zwei Geschwister
 
 *Gemessen und geheilt 2026-08-31. Der Fall stand seit heute früh gefunden, aber ungeheilt da.*
