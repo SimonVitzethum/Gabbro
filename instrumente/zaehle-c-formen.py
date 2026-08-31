@@ -76,7 +76,7 @@ Erzeugnis stehen:
 * Was das Werkzeug ueberhaupt nicht sehen kann, steht in `UNGEMESSEN` unten -- mit Namen.
 
 **Menge B ist dagegen eine OBERE Schranke:** ein Eintrag gilt als tot, wenn diese 102
-Einheiten ihn nicht ausloesen. Ein 103. Programm kann ihn wiederbeleben. *Darum ist der
+Einheiten ihn nicht ausloesen (von 485 versionierten `.gab`, Stand 2026-08-31). Ein 103. Programm kann ihn wiederbeleben. *Darum ist der
 Nenner gedruckt, und darum ist die Zahl eine Ratsche und kein Beweis.*
 
 DIE RATSCHE

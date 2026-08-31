@@ -768,7 +768,7 @@ variadic functions; `longjmp`; VLA; bitfields (Gabbro does them itself with mask
 
 #### 1a. The list, MEASURED — 2026-08-31
 
-**Denominator:** 102 of 482 versioned `.gab` files emit; **8001 lines of C**, of which 1732
+**Denominator:** 102 of 485 versioned `.gab` files emit; **8001 lines of C**, of which 1732
 are comment (22 %). Not `grep` but a lexer: line splicing, comment removal, string and
 character literals as one token. *The generated C explains itself in English, and `for`,
 `if`, `while`, `case` are English WORDS too — `grep` finds `for` 73 times, a statement it is
