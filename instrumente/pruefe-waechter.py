@@ -565,12 +565,20 @@ def sprechprobe_schnitt():
 #
 # > *An abort names its reason (that is the third class of the table). A cut has to name its
 # > PLACE -- the reason is already printed, and it is a finding.*
-# Three shapes count as covered, and each one is the WIRING, never the mere presence of the
-# helper: the word itself (a guard carrying its own `trap`, as `pruefe-emission.sh` does),
-# `abschnitt.fahre(` (Python, the wrapper around `main`), or an `EXIT` trap that calls
-# `abschnitt_ende` (shell). **`import abschnitt` or `. abschnitt.sh` alone is NOT enough** --
-# a tool that loads the helper and never hands its run to it announces nothing, and would
-# otherwise read as covered. *A rule that counts the import counts the intention.*
+# Three shapes counted as covered, and each one was the WIRING, never the mere presence of
+# the helper: the word itself (a guard carrying its own `trap`, as `pruefe-emission.sh`
+# does), `abschnitt.fahre(` (Python, the wrapper around `main`), or an `EXIT` trap that
+# calls `abschnitt_ende` (shell). **`import abschnitt` or `. abschnitt.sh` alone was NOT
+# enough** -- a tool that loads the helper and never hands its run to it announces nothing.
+# *A rule that counts the import counts the intention.*
+#
+# **AND SINCE 2026-08-31 THIS IS NO LONGER THE COUNTER. IT IS THE COUNTER'S FOIL.**
+# `teilmessungen()` asks `stelle_gedeckt()` below, per PLACE. `SAGT_WO` reads the whole file
+# and therefore cannot tell one exit from another -- which is exactly the property the last
+# direction of `sprechprobe_deckung()` uses: the two fixtures that the per-place count
+# rejects both match this pattern. *It is kept because a sharper rule that never gets
+# compared to the blunt one is a claim, not a measurement* -- and it is kept OUT of the
+# verdict, so that nothing depends on it twice (W7).
 SAGT_WO = re.compile(r"ABGESCHNITTEN|abschnitt\.fahre\(|trap [^\n]*abschnitt_ende")
 
 # **AND COVERAGE IS COUNTED PER PLACE, NOT PER FILE** -- measured 2026-08-31.
