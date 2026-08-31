@@ -29,9 +29,11 @@ eingeschlossen — *und was dabei herauskam, ist C.*
 > **Die zweite Hälfte kam am 2026-08-31 dazu, und §7 sagt, was sie gekostet hat: nichts.**
 > Bis dahin hieß `gesenkt` nur „die Datei emittiert"; ob das Erzeugnis überhaupt C ist,
 > fragte niemand — §6.1 stand als Selbstauskunft da, und `F06` war der Beleg dafür. **Die
-> `UNGEDECKT`-Marke bleibt bei 4 und steigt nicht**; die Grundgesamtheit ist nicht gewachsen,
-> die Messung ist schärfer geworden. *Eine Marke, die bei einer Verschärfung stehen bleibt,
-> ist eine Aussage über den Baum und nicht über die Ratsche.*
+> `UNGEDECKT`-Marke bleibt bei 4 und steigt nicht**; **die 219 Terminale sind dieselben**, die
+> Messung ist nur schärfer geworden. *Eine Marke, die bei einer Verschärfung stehen bleibt,
+> ist eine Aussage über den Baum und nicht über die Ratsche.* (Der KORPUS ist in derselben
+> Nacht gewachsen — 418 → 426 `.gab`, 80 → 83 vollständig emittierend —, aber das war eine
+> andere Bahn und nicht diese Verschärfung; §7 misst beide Stände getrennt.)
 
 **Und das trägt, weil der Wortschatz geschlossen ist.** `kw.rs` führt 213 der 222 Wörter als
 `res` — reserviert, nirgends ein Bezeichner. *Ein Vorkommen IST damit ein Schlüsselwort.* Die
@@ -253,9 +255,11 @@ ein Wächter, der nichts gemessen hat, ist kein Befund.
 
 ---
 
-## 7. Die Verschärfung, erst gemessen: **80 von 80 übersetzen — und `UNGEDECKT` bleibt bei 4**
+## 7. Die Verschärfung, erst gemessen: **83 von 83 übersetzen — und `UNGEDECKT` bleibt bei 4**
 
-*Gemessen am 2026-08-31, `ki-pc-fisch-101` (`gabbro-g`), vor jeder Änderung am Werkzeug.*
+*Gemessen am 2026-08-31, `ki-pc-fisch-101` (`gabbro-g`), vor jeder Änderung am Werkzeug —
+und nach dem Einmischen von `master` (`652d117`) **noch einmal**, weil der Korpus in derselben
+Nacht um acht Dateien gewachsen ist. Beide Läufe stehen unten; die zweite Zahl ist die gültige.*
 
 §6.1 sagt, was diese Tafel nicht weiß: eine besetzte Zelle heißt, dass es eine Absenkung
 **gibt**. Der Auftrag war, `gesenkt` schärfer zu fassen — *das Wort steht in einer Datei, die
@@ -263,31 +267,43 @@ emittiert UND deren C `cc -Werror` annimmt*, bei `-O0` und `-O2`. Die Frage davo
 **wie viele Wörter kostet das?**
 
 ```
-418 `.gab` im Baum                    80 emittieren vollstaendig (0 Prueferfehler, 0 C001)
-cc -std=c11 -Wall -Wextra -Werror     -O0: 80 von 80      -O2: 80 von 80
+vor dem Merge     418 `.gab` im Baum    80 emittieren vollstaendig    -O0/-O2: 80 von 80
+nach dem Merge    426 `.gab` im Baum    83 emittieren vollstaendig    -O0/-O2: 83 von 83
 ```
 
-**Null.** Kein Wort verliert seine Deckung, `UNGEDECKT` bleibt bei 4, `gesenkt` bei 214.
-*Die Tafel sagte nicht mehr, als sie wusste — sie wusste es nur nicht.*
+**Null.** Kein Wort verliert seine Deckung, `UNGEDECKT` bleibt bei 4, `gesenkt` bei 214 —
+*in beiden Ständen.* Die Tafel sagte nicht mehr, als sie wusste — sie wusste es nur nicht.
+
+> **Zweimal gemessen, weil `master` sich unter der Messung bewegt hat.** Zwischen dem ersten
+> Lauf und dem Commit kamen sechs Commits einer anderen Bahn dazu: ein neuer Prüferpass
+> (`N041`, `cnamen.rs`), fünf Giftproben und drei `messung/proben/`-Dateien. Damit fiel
+> `beispiele/gift/45-pub-wo-es-nicht-steht.gab` aus der Emission (**`P041`**) und vier andere
+> kamen hinein. *Ein Zweig, der drei Commits zurückliegt, misst gegen einen Stand, den es
+> nicht mehr gibt* (`CLAUDE.md`) — also wurde nach dem Merge neu gemessen und nicht
+> hochgerechnet.
 
 > **Und die Zahl ist an ZWEI Übersetzern gemessen**, weil ein Wächter, dessen Urteil vom
 > Rechner abhängt, keines ist: `gcc 13.3.0` (Ubuntu 24.04, `ki-pc-fisch-101`) und
-> `gcc 16.2.1` (lokal, Arch) — **beide 80 von 80, beide Stufen.** Die 80 Erzeugnisse wurden
+> `gcc 16.2.1` (lokal, Arch) — **beide 83 von 83, beide Stufen.** Die 83 Erzeugnisse wurden
 > auf dem Server erzeugt und lokal ein zweites Mal übersetzt; die Diagnostik dreier
 > Hauptversionen Abstand fand nichts.
 
 ### Der Ertrag ist nicht die Null — es ist die REICHWEITE
 
-Stufe 9 von `pruefe-emission.sh` fährt `beispiele/*.gab` und `messung/*/*.gab`: **76**. Die
-Tafel urteilt über **80**. Die Differenz sind **vier Dateien, deren C noch nie ein Übersetzer
-gesehen hat**, und sie standen nicht auf einer Liste, sondern fielen aus dem Abgleich:
+Stufe 9 von `pruefe-emission.sh` fährt `beispiele/*.gab` und `messung/*/*.gab`: **79**
+(`MARKE_EMIT=54` + `MARKE_EMIT_M=25`). Die Tafel urteilt über **83**. Die Differenz sind
+**vier Dateien, deren C noch nie ein Übersetzer gesehen hat**, und sie standen nicht auf einer
+Liste, sondern fielen aus dem Abgleich:
 
 ```
-beispiele/gift/45-pub-wo-es-nicht-steht.gab       `beispiele/*.gab` trifft `gift/` nicht
+beispiele/gift/286-maintains-ohne-schreiben.gab   `beispiele/*.gab` trifft `gift/` nicht
 messungen/narrow.gab                              das Verzeichnis heisst `messungen`, nicht `messung`
 messungen/tabelle.gab                             dito
 programmlogik/beispiel/lager.gab                  eine dritte Wurzel, die keine Stufe kennt
 ```
+
+*Vor dem Merge stand an der ersten Stelle `beispiele/gift/45-pub-wo-es-nicht-steht.gab` —
+**die Adresse wechselt, die Lücke bleibt.** Genau darum ist sie eine Regel und keine Liste.*
 
 **Alle vier übersetzen.** Aber bis heute hätte keiner es gemerkt, und `beispiele/gift/` ist
 genau das Verzeichnis, in dem absichtlich schwierige Programme liegen. *Dieselbe Bauart wie
@@ -322,8 +338,8 @@ Adresse, an der die Messung dünn ist.*
 
 | | vorher | nachher |
 |---|---|---|
-| `ki-pc-fisch-101` | 0,85 s | **5,0 s** |
-| lokal (20 Kerne) | 1,0 s | **5,7 s** |
+| `ki-pc-fisch-101` | 0,85 s | **2,7 s** (2,73 · 2,66 · 2,72) |
+| lokal (20 Kerne) | 1,0 s | **5,9 s** (5,87 · 5,83) |
 | davon der Übersetzerdurchgang | — | 1,8 s / 4,0 s (160 `cc`-Aufrufe) |
 
 `abnahme.py` gibt jedem leichten Wächter **600 s** (`FRIST_ABNAHME`) — das sind knapp ein
@@ -357,16 +373,16 @@ Schritt 3 des Auftrags lautete: *je Wort, das seine Deckung verliert — liegt e
 oder am Programm?* **Kein Wort verliert seine Deckung.** Das ist eine benannte Absage und
 damit ein Ergebnis: das Tor steht, und es hat heute nichts zu tragen.
 
-Also wurde die Gegenfrage gestellt — **wie viel Luft hat das Tor?** Die 80 Erzeugnisse noch
+Also wurde die Gegenfrage gestellt — **wie viel Luft hat das Tor?** Die 83 Erzeugnisse noch
 einmal, `-Wall -Wextra -Werror -O2` plus *je einen* schärferen Schalter (`gcc 16.2.1`):
 
 ```
 -Wpedantic  -Wsign-conversion  -Wshadow  -Wcast-qual  -Wstrict-prototypes
 -Wmissing-prototypes  -Wswitch-enum  -Wfloat-equal  -Wundef  -Wwrite-strings
--Wold-style-definition  -Wvla                       0 von 80 fallen
+-Wold-style-definition  -Wvla                       0 von 83 fallen
 
--Wconversion         3 von 80        -Wdouble-promotion   2 von 80
--Wredundant-decls    1 von 80        -Wpadded            42 von 80
+-Wconversion         3 von 83        -Wdouble-promotion   2 von 83
+-Wredundant-decls    1 von 83        -Wpadded            42 von 83
 ```
 
 `-Wpadded` ist Rauschen — Ausrichtungslücken sind kein Fehler, und ein Wächter, der sie

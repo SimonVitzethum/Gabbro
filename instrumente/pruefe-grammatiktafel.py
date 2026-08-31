@@ -32,7 +32,7 @@ trotzdem als `gesenkt` gefuehrt -- siebzehn Tage lang. Die Gegenprobe gab es, ab
 Stufe 9 von `pruefe-emission.sh` ueber *Dateien*, und diese Tafel urteilt ueber *Woerter*;
 **niemand hatte die beiden je aneinandergehalten.**
 
-> *Gemessen beim Einbau: 80 von 80 uebersetzen, an zwei Uebersetzern (`gcc 13.3.0` und
+> *Gemessen beim Einbau: 83 von 83 uebersetzen, an zwei Uebersetzern (`gcc 13.3.0` und
 > `gcc 16.2.1`), beide Stufen.* Kein Wort verlor seine Deckung. Die Verschaerfung kostete
 > heute nichts -- **aber die Reichweite waechst um vier Dateien**, die Stufe 9 nie ansieht
 > (`beispiele/gift/`, `messungen/`, `programmlogik/`), und ab jetzt kostet der naechste `F06`
@@ -64,10 +64,10 @@ dem Korpus.*
 
 WARUM DAS TOR IM SCHNELLLAUF BLEIBT UND NICHT HINTER `--voll`
 ---------------------------------------------------------------
-**Gemessen am 2026-08-31, nicht geschaetzt:** 0,85 s -> 5,0 s auf `ki-pc-fisch-101`, 1,0 s ->
-5,7 s lokal. Der Uebersetzerdurchgang selbst kostet 1,8 s bzw. 4,0 s -- 160 `cc`-Aufrufe ueber
-80 Erzeugnisse. `abnahme.py` gibt jedem leichten Waechter **600 s** (`FRIST_ABNAHME`), also
-knapp ein Prozent davon.
+**Gemessen am 2026-08-31, nicht geschaetzt:** 0,85 s -> 2,7 s auf `ki-pc-fisch-101`, 1,0 s ->
+5,9 s lokal (je drei bzw. zwei Laeufe, +-0,05 s). Der Uebersetzerdurchgang selbst kostet 1,8 s
+bzw. 4,0 s -- 166 `cc`-Aufrufe ueber 83 Erzeugnisse. `abnahme.py` gibt jedem leichten Waechter
+**600 s** (`FRIST_ABNAHME`), also ein Prozent davon.
 
 *Die erste Fassung brauchte 9,8 s*, weil die Sprechprobe den ganzen Durchgang ein zweites Mal
 fuhr, um EINE vergiftete Datei zu pruefen. **Eine Probe, die so viel kostet wie die Messung,
