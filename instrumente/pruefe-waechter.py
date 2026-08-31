@@ -145,6 +145,14 @@ GEGENSTAND = {
     # units come apart* -- so it is named here and stays out of the fraction.
     "zaehle-b3.py":
         "105 Dateien / 2536 Ruempfe der Caprock-Messbasis -- ein FREMDER Baum",
+    # **Not expensive either -- but it is the only guardian whose object is the EMITTED C,
+    # and it needs a built binary to have one at all.** Without `target/debug/gabbro` it
+    # leaves with 2 and has measured nothing; then this line says what was lost. *A tool
+    # whose object only exists after a build is the case where "ran" and "measured" come
+    # apart.*
+    "zaehle-c-formen.py":
+        "102 emittierende Uebersetzungseinheiten / 8001 Zeilen erzeugtes C, "
+        "gegen 101 Formen aus `BEWEIS.md` Item 2 §1",
 }
 # **Waechter, deren Gegenstand ein FREMDER BAUM ist** -- einer, der nicht in diesem
 # Verzeichnis liegt und den `git` nicht mitbringt. Je Eintrag: der Pfad und was dort steht.
@@ -174,6 +182,11 @@ ARGUMENTE = {
     # **`zaehle-narrow.py` nahm bis zum 2026-08-20 den Standardbaum stillschweigend an** und
     # endete mit 2, wo er fehlt. Jetzt steht der Pfad hier, sichtbar neben dem von `b3`.
     "zaehle-narrow.py": ["~/Dokumente/SEL4Lake/SEL4Lake"],
+    # **`--uebersetzer` gehoert in den Sammellauf, weil die Marke damit genommen ist.**
+    # Ohne den Schalter bleiben drei Eintraege der Nie-Liste (implizite Umwandlung,
+    # `const`-Verwurf, VLA) ungemessen -- und ein Waechter, der seine eigene Marke nicht
+    # nachrechnen kann, bewacht die Haelfte. Er kostet 5 s ueber 102 Einheiten.
+    "zaehle-c-formen.py": ["--uebersetzer"],
 }
 
 
