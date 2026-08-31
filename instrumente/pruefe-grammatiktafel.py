@@ -16,6 +16,27 @@ Zustand:
 
 > **`UNGEDECKT` ist die ganze Frage.** Alles andere ist Buchhaltung.
 
+UND DER SATZ NEBEN DER ZAHL IST NICHT DIE ZAHL -- `W25`, berichtigt am 2026-08-31
+-----------------------------------------------------------------------------------
+Bis zu diesem Tag schrieb diese Tafel jedem ungedeckten Wort *„der Erzeuger sagt ab, der
+Pruefer nicht"* daneben, sobald das Wort **irgendwo in irgendeinem Absagetext vorkam**. Die
+Zahl war richtig; der Satz war es dreimal nicht. *Ein falscher Satz neben einer richtigen
+Zahl ist die haltbarste Form eines Irrtums, weil jede Pruefung, die auf die Zahl zeigt, ihn
+bestaetigt.*
+
+Seither sagt `herkunft()` je Wort, **welcher Art seine Auskunft ist**, und eine Absage
+behauptet sie nur mit Fundstelle:
+
+    GEMESSEN      ein KORPUSPROGRAMM hat die Absage ausgeloest -- Datei und Form dabei
+    TEIL          das Wort steht INNERHALB einer abgesagten Mehrwortform (`in` in
+                  `chain in`) -- eine Absage der FORM, nicht dieses Wortes
+    ABGELEITET    das Wort steht in einem Absagetext, und kein Programm hat ihn ausgeloest
+    niemand       nichts von alledem
+
+**Der Zustand `abgesagt` ruht weiterhin auf der gelesenen Wortmenge**, und das steht hier,
+weil es heute nichts aendert (er ist an 0 Woertern belegt) und morgen etwas aendern koennte.
+*Wo diese Tafel ableitet, sagt sie es -- auch ueber sich selbst.*
+
 WARUM `gesenkt` GEMESSEN IST UND NICHT GELESEN
 ------------------------------------------------
 Ein Wort gilt genau dann als abgesenkt, wenn es in einer `.gab`-Datei steht, die
@@ -147,7 +168,19 @@ CC_UMGEBUNG = dict(os.environ, LC_ALL="C", LANG="C", LANGUAGE="C")
 # (`messung/grammatik/`) took it to 0: every one of the 125 now stands in at least two files.
 # The classification of the 25 -- by chance, by bundle, by narrowness -- is
 # `messung/EINSAME-WOERTER.md`.
-MARKE_ALLEIN = 0
+#
+# **BY THE EVENING OF THE SAME DAY IT STANDS AT 3, AND THAT IS THE SECOND DIRECTION**
+# (2026-08-31). `beispiele/55-kindkette.gab`, `56-auftragsring.gab` and `57-faedenhalt.gab`
+# cover `chain`, `queue` and `threads` -- three words that hung on ZERO files before, because
+# they were `UNGEDECKT`. A number counting *"how many words hang on exactly one file"* rises
+# of necessity when a word goes from none to one. **The subject grew, the weakness did not**
+# -- and that is precisely the second growth direction `messung/EINSAME-WOERTER.md` §5 names
+# as the reason no ratchet stands here.
+#
+# *What stays open is written out there in §5c and is not talked away:* the three hang on one
+# file each, and a second carrier would have to be a second SUBJECT -- not a second program
+# written against a list (trap 80). **Named, not healed.**
+MARKE_ALLEIN = 3
 # **IT IS PRINTED, NOT RATCHETED, AND THAT IS A DECISION WITH A REASON.**
 #
 # A mark set on the run that first measured it is a conjecture: this number moved 25 -> 0 in
@@ -163,7 +196,11 @@ MARKE_ALLEIN = 0
 # The second-order number (words at exactly TWO files) is printed beside it and carries NO
 # mark on purpose: it RISES when words move down out of the one-file bucket, which is the
 # improvement. *A ratchet on a number that grows when things get better punishes the fix.*
-MARKE_ZU_ZWEIT = 38
+# *Pulled along on the evening of 2026-08-31: 38 -> 36.* The three programs of that evening
+# write many ordinary words along with their own, and two words thereby moved UPWARDS out of
+# the two-file column. The number falls here because things got better -- the same ambiguity
+# for which it is no ratchet.
+MARKE_ZU_ZWEIT = 36
 
 # `Absage::fehler(code, span, text)` -- the message, and only the ERROR one. A `hinweis`
 # does not reject: `beispiele/gift/166` carries `S007` as a hint, checks with zero errors
@@ -212,6 +249,110 @@ def absageworte():
     """The words the EMITTER names in a refusal."""
     za = _lade("zaehle-absagen.py", ["x"])
     return _in_ruecken(" ".join(t for _, t, _ in za.formen())), za
+
+
+def _form(text):
+    """The LEADING backtick group of a refusal text -- the FORM it refuses.
+
+    **This is the whole of `W25`, in one function.** `absageworte()` returns every word
+    inside every backtick of every refusal text, and that set answers a different question:
+    *which words does the emitter MENTION.* The refusal
+    `` `queue` -- «B10»: `traverse` yields no value … `` mentions `traverse`, `break` and
+    `consuming`; it is about `queue`, and `queue` stands first.
+    """
+    m = re.match(r"\s*`([^`]+)`", text)
+    return m.group(1) if m else ""
+
+
+def gemessene_absagen(korpus):
+    """Word -> the corpus files whose `C001` NAMED it, apart by three distinctions.
+
+    **A refusal is measured when a PROGRAM triggered it**, not when a word occurs in a
+    string in `emit.rs`. Three cuts, and each one is a claim this table would otherwise
+    make without cover:
+
+        Kopf vs. Teil    a form is often several words (`chain in`, `let … else`,
+                         `device … at dma`). The refusal is about the FORM; only its head
+                         word carries the claim *„dieses Wort wird abgesagt"*. `in` inside
+                         `chain in` is a member, not a subject -- **that is `W25` one level
+                         smaller**, and it is the residue the leading-group rule leaves.
+        sauber vs. mit_  the file has ZERO checker errors -- then it is measured that the
+        fehler           checker takes the form and only the emitter refuses it. Beside a
+                         checker error that is UNMEASURED, and saying "der Pruefer nicht"
+                         would be the same overreach again.
+        Datei UND Text   they are stored as a PAIR. A text picked from one file and printed
+                         beside another file's name is a sentence nobody measured.
+
+    *Sixteen of the corpus `C001` texts carry no leading backtick group at all* (a bit
+    position, a parameter type); they name no word and appear here for none.
+    """
+    aus = {}
+    for d, e in sorted(korpus.items()):
+        for t in e["c001"]:
+            form = _form(t)
+            worte = WORT.findall(form)
+            for i, w in enumerate(worte):
+                eintrag = aus.setdefault(w, {"kopf": [], "teil": []})
+                eintrag["kopf" if i == 0 else "teil"].append(
+                    {"datei": d, "form": form, "text": t, "mit_fehler": bool(e["codes"])})
+    return aus
+
+
+def _sauber(eintraege):
+    """Those refusals that a file with ZERO checker errors triggered."""
+    return [e for e in eintraege if not e["mit_fehler"]]
+
+
+def erwaehnungen(za):
+    """Word -> the `emit.rs` lines whose refusal text merely MENTIONS it."""
+    aus = {}
+    for zeile, text, _ in za.formen():
+        for w in _in_ruecken(text):
+            aus.setdefault(w, []).append(zeile)
+    return aus
+
+
+def herkunft(t, gemessen, erwaehnt):
+    """One sentence about `t` -- and it claims only what was MEASURED. **`W25`.**
+
+    Until 2026-08-31 this line read *„der Erzeuger sagt ab, der Pruefer nicht"* for every
+    word that occurred anywhere in any refusal text. **The number beside it was right and
+    the sentence was wrong**, and it survived four messages for exactly that reason.
+
+    Four sentences now, and each says which kind it is:
+
+        GEMESSEN     a corpus program triggered the refusal of a form THIS WORD HEADS --
+                     with the file and the form, so the attribution can be read off
+        TEIL         the word occurs INSIDE a refused multi-word form (`in` in
+                     `chain in`) -- that is a refusal of the form, not of the word
+        ABGELEITET   the word occurs in a refusal text and NO program has triggered it --
+                     said as a derivation, with the `emit.rs` lines
+        niemand      neither
+
+    *A mention is not a measurement, and a sentence that cannot tell them apart makes a
+    corpus gap look like a language decision.*
+    """
+    g = gemessen.get(t, {"kopf": [], "teil": []})
+    kopf_sauber = _sauber(g["kopf"])
+    if kopf_sauber:
+        e = kopf_sauber[0]
+        return (f"GEMESSEN an {e['datei']}: der Erzeuger sagt `{e['form']}` ab, "
+                "und der Pruefer nimmt dieselbe Datei mit 0 Fehlern an")
+    if g["kopf"]:
+        e = g["kopf"][0]
+        return (f"GEMESSEN an {e['datei']}: der Erzeuger sagt `{e['form']}` ab -- aber nur "
+                "NEBEN einem Prueferfehler; ob der Pruefer die Form annimmt, ist ungemessen")
+    if g["teil"]:
+        e = g["teil"][0]
+        return (f"TEIL einer abgesagten Form: `{e['form']}` faellt an {e['datei']}, und "
+                "dieses Wort steht darin -- eine Absage der FORM, nicht dieses Wortes")
+    if t in erwaehnt:
+        stellen = ", ".join(f"emit.rs:{z}" for z in sorted(set(erwaehnt[t]))[:3])
+        mehr = "" if len(set(erwaehnt[t])) <= 3 else ", …"
+        return (f"ABGELEITET und NICHT gemessen: das Wort steht in "
+                f"{len(set(erwaehnt[t]))} Absagetext(en) ({stellen}{mehr}), und kein "
+                "Korpusprogramm hat eine davon ausgeloest")
+    return "niemand nennt es"
 
 
 def prueferworte():
@@ -385,8 +526,9 @@ GUT_C = "unsigned zzprobe_gut(unsigned x) { return x + 1u; }\n"
 GIFT_GRUND = "limited range"
 
 
-def sprechprobe(term, gesenkt, absage, pruefer, korpus=None, uebersetzt=None, wurzel=None):
-    """**In VIER Richtungen, und jede steht fuer eine Behauptung dieses Werkzeugs.**
+def sprechprobe(term, gesenkt, absage, pruefer, korpus=None, uebersetzt=None, wurzel=None,
+                gemessen=None, erwaehnt=None):
+    """**In FUENF Richtungen, und jede steht fuer eine Behauptung dieses Werkzeugs.**
 
     * eine kuenstlich ENTFERNTE Absenkung muss die Tafel rot machen,
     * eine kuenstlich ERFUNDENE Grammatikregel auch,
@@ -394,6 +536,8 @@ def sprechprobe(term, gesenkt, absage, pruefer, korpus=None, uebersetzt=None, wu
       mehr decken** -- die Richtung, die `F06` siebzehn Tage lang offen fand,
     * **eine weggenommene Datei muss die Einsamkeitszahl STEIGEN lassen** -- sonst ist
       `MARKE_ALLEIN` eine gelesene Zahl und keine gemessene (2026-08-31),
+    * **ein nur ERWAEHNTES Wort darf keine Absage zugeschrieben bekommen** -- die
+      Richtung von `W25` (2026-08-31),
     * und ein unveraenderter Lauf darf keines der Woerter nennen.
 
     *Ein Werkzeug, das ueber die Sprache urteilt und selbst ungeprueft ist, ist die
@@ -510,6 +654,41 @@ def sprechprobe(term, gesenkt, absage, pruefer, korpus=None, uebersetzt=None, wu
     neu_einsam = set(eins_ohne) - {t for t, ds in karte.items() if len(ds) == 1}
     proben.append(("und jedes neu einsame Wort stand in der entfernten Datei",
                    bool(neu_einsam) and all(weg in karte[t] for t in neu_einsam)))
+
+    # (f) **`W25` -- THE DIRECTION THE SENTENCE LACKED FOR FOUR MESSAGES** (2026-08-31).
+    #
+    #     `herkunft` is the only place that claims an emitter refusal, and it may claim one
+    #     only where a PROGRAM triggered it. The probe drives all three sentences,
+    #     and the middle one is the one that was wrong: a word that merely OCCURS in a
+    #     refusal text must come back as a derivation and must not carry the claim.
+    #
+    #     *Both registers are handed in; a probe that recomputed them would check its own
+    #     copy* (`W7`).
+    if gemessen is None or erwaehnt is None:
+        proben.append(("die Herkunftssaetze sind ungeprueft -- keine Register uebergeben",
+                       False))
+        return proben
+    nur_erwaehnt = sorted(set(erwaehnt) - set(gemessen))
+    mit_messung = sorted(t for t in gemessen if _sauber(gemessen[t]["kopf"]))
+    nur_teil = sorted(t for t in gemessen
+                      if gemessen[t]["teil"] and not gemessen[t]["kopf"])
+    if not nur_erwaehnt or not mit_messung or not nur_teil:
+        proben.append(("es fehlt ein nur erwaehntes, ein gemessenes oder ein Teilwort -- "
+                       "die Herkunftsprobe misst nichts", False))
+        return proben
+    e1, m1w, t1 = nur_erwaehnt[0], mit_messung[0], nur_teil[0]
+    s_erw = herkunft(e1, gemessen, erwaehnt)
+    s_mess = herkunft(m1w, gemessen, erwaehnt)
+    s_teil = herkunft(t1, gemessen, erwaehnt)
+    proben.append((f"nur erwaehntes `{e1}` bekommt KEINE Absage zugeschrieben (W25)",
+                   "sagt ab" not in s_erw and s_erw.startswith("ABGELEITET")))
+    ort_m = _sauber(gemessen[m1w]["kopf"])[0]["datei"]
+    proben.append((f"gemessenes `{m1w}` bekommt seine Fundstelle ({ort_m})",
+                   s_mess.startswith("GEMESSEN") and ort_m in s_mess))
+    proben.append((f"`{t1}` steht nur INNERHALB einer Form und heisst darum `TEIL`",
+                   s_teil.startswith("TEIL")))
+    proben.append(("ein Wort, das in keinem Absagetext steht, heisst `niemand nennt es`",
+                   herkunft("zzniemand", gemessen, erwaehnt) == "niemand nennt es"))
     return proben
 
 
@@ -579,10 +758,16 @@ def main():
     # sharpening names its price. *A mark without its "before" is an assertion.*
     gesenkt_alt, _ = gesenkte_worte(korpus)
     gesenkt, sauber = gesenkte_worte(korpus, nur=set(uebersetzt))
+    # **The two registers behind every sentence about a refusal** -- one measured, one read.
+    # They are computed here, side by side and BEFORE the probe, so that no printing site
+    # can reach for the read one when it means the measured one (`W25`).
+    gemessen = gemessene_absagen(korpus)
+    erwaehnt = erwaehnungen(za)
 
-    print("== Sprechprobe -- in VIER Richtungen ==")
+    print("== Sprechprobe -- in FUENF Richtungen ==")
     proben = sprechprobe(term, gesenkt, absage, pruefer,
-                         korpus=korpus, uebersetzt=uebersetzt)
+                         korpus=korpus, uebersetzt=uebersetzt,
+                         gemessen=gemessen, erwaehnt=erwaehnt)
     for was, ok in proben:
         print(f"  {'ok         ' if ok else 'GESCHEITERT'}  {was}")
     if not all(ok for _, ok in proben):
@@ -640,9 +825,50 @@ def main():
         print("   Kein Wort haengt an einem Erzeugnis, das keins ist.")
         print()
 
+    # **A word can be LOWERED in one position and REFUSED in another, and until 2026-08-31
+    # this table went silent about the second half the moment the first appeared.**
+    #
+    # `chain`, `queue` and `threads` are quantifier domains AND traversal domains. In an
+    # annotation they lower (annotations produce no C at all); as the domain of a `traverse`
+    # the emitter refuses them by name, and `messung/proben/probe-vier-zellen.gab` measures
+    # it. The three programs of 2026-08-31 turned their cells from `UNGEDECKT` to `gesenkt`
+    # -- *and would have hidden four measured refusals behind a green cell.*
+    #
+    # > **`gesenkt` is a statement about the WORD, not about every position the grammar
+    # > allows it in.** The state has one line per terminal; the language does not. What
+    # > this block prints is the difference, with both addresses.
+    #
+    # `traeger` is asked ONCE, here, and the sensitivity block below reads the same map --
+    # a second walk over the corpus for the same question is the register that runs away
+    # (`W7`).
+    karte = traeger(korpus, term, pruefer, dateien=uebersetzt)
+    beides = sorted(t for t in term
+                    if z[t] == "gesenkt" and gemessen.get(t, {}).get("kopf"))
+    nur_teil = sorted(t for t in term if z[t] == "gesenkt"
+                      and not gemessen.get(t, {}).get("kopf")
+                      and gemessen.get(t, {}).get("teil"))
+    if beides:
+        # The lowering carrier is looked up HERE and for these few words only: `traeger`
+        # deliberately skips every word a checker error also names, so it is the wrong
+        # register for this question and would print "(none)" for half of them.
+        senkt = {t: [d for d in uebersetzt if t in
+                     set(WORT.findall(re.sub(r"--.*$", "", (W / d).read_text(), flags=re.M)))]
+                 for t in beides}
+        print(f"== {len(beides)} Woerter sind `gesenkt` UND haben eine gemessene Absage ==")
+        for t in beides:
+            e = (_sauber(gemessen[t]["kopf"]) or gemessen[t]["kopf"])[0]
+            print(f"   {t:<14} senkt ab in {', '.join(senkt[t][:2]) or '(keine Datei)'}")
+            print(f"   {'':<14} sagt `{e['form']}` ab in {e['datei']}")
+        print("   Eine Zelle je Wort kann das nicht trennen. **`gesenkt` heisst: EINE")
+        print("   Stellung dieses Wortes senkt ab** -- nicht, dass jede es tut.")
+        if nur_teil:
+            print(f"   ({len(nur_teil)} weitere stehen nur INNERHALB einer abgesagten")
+            print("    Mehrwortform -- `in` in `chain in`, `of` in `ancestors of`. Das ist")
+            print("    eine Absage der FORM und keine dieses Wortes, also nicht hier.)")
+        print()
+
     # What the sharpening cost today -- and where it would bite.
     verloren = sorted((gesenkt_alt - gesenkt) & set(term))
-    karte = traeger(korpus, term, pruefer, dateien=uebersetzt)
     allein = sorted(t for t, ds in karte.items() if len(ds) == 1)
     print("== Was diese Tafel NICHT sagt ==")
     print("   `gesenkt` heisst: das Wort steht in einer Datei, die emittiert UND deren C")
@@ -681,9 +907,10 @@ def main():
     if offen:
         print()
         print(f"! GRAMMATIKTAFEL ROT: {len(offen)} von {len(term)} Terminalen sind UNGEDECKT.")
-        print("  Die Grammatik erlaubt sie, kein Programm senkt sie ab, und keine Regel")
-        print("  weist sie ab. **Das ist die Arbeitsmenge, und sie steht hier statt in")
-        print("  einer Zahl:**")
+        print("  Die Grammatik erlaubt sie, kein Programm senkt sie ab, und KEIN")
+        print("  PRUEFERFEHLERTEXT nennt sie. **Das ist die Arbeitsmenge, und sie steht")
+        print("  hier statt in einer Zahl** -- je Zeile mit der Art ihrer Auskunft, und eine")
+        print("  Absage des Erzeugers steht nur da, wo ein Programm sie ausgeloest hat:")
         for t in offen:
             woher = []
             if t in verloren:
@@ -693,11 +920,14 @@ def main():
                 wo = [d for d in sorted(faellt_durch) if t in
                       set(WORT.findall(re.sub(r"--.*$", "", (W / d).read_text(), flags=re.M)))]
                 woher.append("steht in " + ", ".join(wo) + " -- deren C faellt bei `cc`")
-            if t in absage:
-                woher.append("der Erzeuger sagt ab, der Pruefer nicht")
+            # **`W25`: the sentence carries its evidence, or it says that it has none.**
+            # What stood here was `if t in absage` -- a word occurring anywhere in any
+            # refusal text. The classification was right, the sentence beside it was not.
+            woher.append(herkunft(t, gemessen, erwaehnt))
             if t in ctx:
                 woher.append("kontextuell")
-            print(f"    {t:<16} {'; '.join(woher) if woher else 'niemand nennt es'}")
+            for i, satz in enumerate(woher):
+                print(f"    {t if i == 0 else '':<16} {satz}")
         return 1
 
     print()

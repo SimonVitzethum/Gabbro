@@ -216,6 +216,45 @@ geheilt.
 
 ---
 
+## 5c. Und am selben Abend **0 → 3**, aus der ANDEREN Richtung
+
+§5 nennt sie und hier ist sie: *„eine Zahl, die auch steigt, wenn ein neues Wort in die
+Grammatik kommt und genau ein Programm es schreibt."* Drei Programme für die
+Quantorendomänen `chain`, `queue` und `threads` (`beispiele/55`–`57`,
+[`QUANTORENDOMAENEN.md`](QUANTORENDOMAENEN.md)) haben drei Zellen von `UNGEDECKT` auf
+`gesenkt` gedreht:
+
+```
+vorher    chain · queue · threads  an je NULL Dateien, weil UNGEDECKT
+nachher   chain · queue · threads  an je EINER Datei
+          0 an je einer Datei -> 3 · 38 an zwei -> 36 · Median 4
+```
+
+**Ein Wort, das von null auf eins geht, hebt eine Zahl, die Einsen zählt.** Der Gegenstand
+ist gewachsen, nicht die Schwäche — und `MARKE_ALLEIN` steht darum auf 3, mit diesem Grund an
+der Marke (`instrumente/pruefe-grammatiktafel.py`). *Die Zweierzahl ist im selben Zug von 38
+auf 36 gefallen, weil zwei Wörter nach OBEN gewandert sind; auch das ist die gute Richtung
+und darum keine Ratsche.*
+
+### Was damit offen ist, und es wird nicht weggeredet
+
+Die drei hängen an je einer Datei, und das ist genau der Zustand, den §3 als *„dieselbe
+Bauart wie die Lücke, gegen die es geschrieben wurde"* benennt. **Der Ausweg ist derselbe wie
+dort und nicht der billige:** ein zweiter Träger müsste ein zweiter **Gegenstand** sein.
+
+| Wort | zweiter Gegenstand, der sich anbietet | Zustand |
+|---|---|---|
+| `chain` | eine Freiliste (`beispiele/27`) — *„alles, was an der Kette hängt, ist unbelegt"* trägt die Domäne | **offen** |
+| `queue` | eine zweite Warteschlange sagt nichts Neues — die Domäne selbst ist der Befund (`QUANTORENDOMAENEN.md` §3) | **offen, und der Nutzen ist fraglich** |
+| `threads` | dasselbe: solange `t` an keiner Deklaration hängt, ist der zweite Beleg derselbe Satz | **offen, und der Nutzen ist fraglich** |
+
+> **Für zwei der drei wäre ein zweites Programm heute eine Abschrift.** `queue` und `threads`
+> tragen ihre Zusicherung nicht bzw. nur halb; ein zweiter Beleg dafür misst dieselbe Lücke
+> ein zweites Mal. *Das ist die `bootdecl`-Lage aus §4 in einer anderen Farbe: benannt, nicht
+> geheilt — und der Grund ist hier nicht die Maschine, sondern die Domäne.*
+
+---
+
 ## 6. Was dieses Dokument NICHT sagt
 
 1. **Nichts darüber, ob die Absenkung richtig ist.** Ein Wort an fünf Dateien kann fünfmal

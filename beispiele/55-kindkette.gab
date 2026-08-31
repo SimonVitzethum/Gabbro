@@ -1,0 +1,102 @@
+-- 55 -- `chain(a, b) in <ort>`: die DIREKTEN Kinder, und keine andere Menge sagt es.
+--
+-- **Der Gegenstand ist die Rueckwaertskante eines Ableitungsbaums.** Ein Kappenraum haengt
+-- jedes Kind in die Geschwisterkette seines Elters ein; die Zusage, an der das Loeschen
+-- haengt, lautet *„jeder Knoten in der Kindkette von `p` nennt `p` als seinen Elter"*.
+-- Ohne sie kann `loeschen` einen Elter freigeben, an dessen Kette noch Knoten haengen, die
+-- woandershin zeigen -- und der Baum hat zwei Wahrheiten ueber dieselbe Kante.
+--
+-- **Warum keine andere Domaene sie traegt, und das ist der Grund fuer diese Datei:**
+--
+--     slots of Kappraum          jeder Slot -- und die Aussage ist dort FALSCH,
+--                                denn ein fremdes Kind nennt einen fremden Elter
+--     descendants of c.slots[p]  der ganze Unterbaum -- und dort ist sie ebenfalls
+--                                FALSCH: ein Enkel nennt sein eigenes Kind-Elternteil,
+--                                nicht `p`
+--     chain(erstes_kind,         genau die direkten Kinder von `p`, und genau
+--       naechstes_geschwister)   ueber sie ist die Aussage wahr
+--       in c.slots[p]
+--
+-- *Die Domaene ist hier keine bequemere Schreibweise, sondern die einzige Menge, ueber der
+-- der Satz stimmt.* Er steht seit jeher im Entwurf (`SPRACHE.md`:383, `kind_zeigt_zurueck`)
+-- -- **geschrieben hatte ihn niemand.**
+--
+-- WAS DIE ZUSICHERUNG TUT, GEMESSEN (2026-08-31)
+-- ----------------------------------------------
+-- `gabbro pflichten` fuehrt das `ensures` als Nachbedingungspflicht. `M111` verlangt, dass
+-- ein `ensures` einen Ort nennt, den die Funktion laut `effects` SCHREIBT: schiebt man den
+-- Ort auf `Kappraum.slots` statt `c.slots`, faellt es. Ein unbekannter Grundname im Ort
+-- faellt an `M109`.
+--
+-- UND WAS SIE NICHT TUT -- DER FUND, DER OHNE DIESE DATEI UNSICHTBAR GEBLIEBEN WAERE
+-- ---------------------------------------------------------------------------------
+-- **Die beiden Feldnamen in `chain(a, b)` liest kein Pass.** Gemessen an genau dieser
+-- Datei, je 0 Prueferfehler und 0 `C001`:
+--
+--     chain(gibtsnicht, auchnicht)              -- Felder, die es nicht gibt
+--     chain(belegt, belegt)                     -- ein `bool`, also gar keine Kante
+--     chain(naechstes_geschwister, erstes_kind) -- die Kante verkehrt herum
+--     chain(elter, elter)                       -- die Kante des BAUMS statt der Kette
+--
+-- Zum Vergleich, an derselben Datei: `tree { child gibtsnicht }` faellt an **`D006`**
+-- (*„names no field of `Kappraum`"*).
+--
+-- > **Die eine Domaene, die ihre Kante AM DURCHLAUF nennt, ist die eine, deren Kante
+-- > niemand prueft.** `SYNTAX.md`:1060 begruendet den Umzug der Baumkante an die `table`
+-- > genau damit, dass zwei Stellen verschiedene Felder nennen koennten, *„ohne dass jemand
+-- > die beiden vergleicht"* -- und nennt `chain(a, b) in` dabei als das Vorbild, das es
+-- > laengst konnte. **Auf `chain` selbst ist das Argument nie zurueckgefallen.**
+--
+-- *Diese Datei deckt die Zelle und legt daneben, was die Deckung nicht heisst.*
+
+module beispiel::kindkette {
+
+const NKAPPEN : u32 = 512;
+
+table Kappraum count NKAPPEN {
+    -- Alle drei Kanten: der Abstieg laeuft an `erstes_kind`/`naechstes_geschwister`, der
+    -- Aufstieg an `elter`. **Diese drei Namen prueft `D006`** -- die gleichlautenden in
+    -- `chain(...)` weiter unten nicht.
+    tree { parent elter, child erstes_kind, sibling naechstes_geschwister }
+
+    slot {
+        belegt                : bool,
+        elter                 : option index into Kappraum,
+        erstes_kind           : option index into Kappraum,
+        naechstes_geschwister : option index into Kappraum,
+    }
+
+    -- **Der Satz aus `SPRACHE.md`:383, zum ersten Mal geschrieben.** Zwei Ebenen
+    -- Schachtelung -- die aeussere zaehlt die Elter, die innere ihre direkten Kinder. Mehr
+    -- als zwei erlaubt die Sprache nicht, und mehr braucht der Satz auch nicht.
+    invariant kind_zeigt_zurueck cost O(n * kette) runs offline :
+        forall s in slots of Self :
+            forall k in chain(erstes_kind, naechstes_geschwister) in Self.slots[s] :
+                Self.slots[k].elter == Some(s);
+}
+
+lock KAPPEN protects { Kappraum } rank 0 held <= 200 ops;
+
+-- Einhaengen vorn: drei Schreibzugriffe, und zwischen dem ersten und dem letzten stimmt die
+-- Invariante nicht. **`breaking` sagt genau das** -- der Bereich, in dem sie ruht, ist eine
+-- Anweisung lang und steht unter gehaltener `KAPPEN`.
+impl fn kind_einhaengen(c : ptr<normal, rw> Kappraum, p : index into Kappraum, k : index into Kappraum)
+    requires  Held(KAPPEN),
+              c.slots[p].belegt,
+              c.slots[k].belegt,
+              forall x in chain(erstes_kind, naechstes_geschwister) in c.slots[p] :
+                  c.slots[x].elter == Some(p)
+    ensures   forall x in chain(erstes_kind, naechstes_geschwister) in c.slots[p] :
+                  c.slots[x].elter == Some(p)
+    maintains kind_zeigt_zurueck
+    effects   { reads c.slots, writes c.slots, locks KAPPEN }
+    costs     <= 12 ops
+{
+    breaking kind_zeigt_zurueck {
+        c.slots[k].naechstes_geschwister = c.slots[p].erstes_kind;
+        c.slots[k].elter                 = Some(p);
+        c.slots[p].erstes_kind           = Some(k);
+    }
+}
+
+}

@@ -5,12 +5,18 @@ es eine Meinung — und *„keine Klempnerei beim Endnutzer"* ist eine Nutzbarke
 
 ```
 $ ./instrumente/zaehle-zeremonie.py
-60 Dateien gemessen, 4 abgelehnt
-  ableitbar       60        A1  4 · A4 56
+63 Dateien gemessen, 4 abgelehnt
+  ableitbar       64        A1  4 · A4 60
   redundant        0
-  tragend        948
-60 von 1008 Stellen dürfen sinken
+  tragend        986
+64 von 1050 Stellen dürfen sinken
 ```
+
+> **~~1008~~ 1050 am Abend des 2026-08-31, und diesmal ist der ZÄHLER mitgestiegen.**
+> `beispiele/55`–`57` sind drei neue Dateien (die Quantorendomänen `chain`, `queue`,
+> `threads`, `QUANTORENDOMAENEN.md`): +42 Stellen, davon +4 ableitbar. *Die Quote bleibt
+> damit fast stehen, und das ist die ehrliche Auskunft — drei annotationsschwere Programme
+> verschieben sie nicht.*
 
 > **~~1035~~ 1008 seit dem 2026-08-31, und der Nenner ist gefallen, nicht der Zähler.**
 > `messung/fragmente/F05.gab` ist die vierte abgelehnte Datei: `N041` weist `extern fn exit()`
