@@ -363,6 +363,14 @@ def main():
     print("       aus V1 und V5 heraus")
     print("     * V3 zaehlt Weigerungen, nicht ihre BERECHTIGUNG -- eine Weigerung, auf die")
     print("       man baut, ist eine Zusage, und keine dieser %d ist hier geprueft" % len(stellen))
+    print("     * **und der teuerste Blindfleck steht an einem Paar, das dieses Werkzeug")
+    print("       SELBST veranlasst hat:** `H102` verdrahtet seit dem 2026-08-31 `entry`")
+    print("       und `lock` in `kontexte.rs`, und `Entry / Lock` steht oben trotzdem")
+    print("       offen. Die Kopplung laeuft ueber die prueferinterne `Kontext`-Struktur,")
+    print("       nicht ueber `ItemArt::Entry` in derselben Funktion. *V1 sieht Syntax,")
+    print("       nicht Datenfluss* -- wer eine Zwischenstruktur baut, verschwindet aus")
+    print("       dieser Zaehlung, und das macht die 32 zu einer OBEREN Schranke fuer")
+    print("       V1 statt zu einer unteren.")
     abschnitt.fertig()
     return 0
 

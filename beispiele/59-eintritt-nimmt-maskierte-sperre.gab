@@ -1,0 +1,103 @@
+-- **Die Gegenprobe zu `beispiele/gift/460` -- ein Wort Unterschied, und es ist das richtige.**
+--
+-- Byte fuer Byte dieselbe Datei wie die Giftprobe, mit EINER Aenderung: `TAKT` traegt
+-- `masks irqs`. Damit maskiert das Nehmen der Sperre die Interrupts, der Zeitgeber kann
+-- zwischen `locks TAKT {` und dem Ende nicht ankommen, und der Verklemmungspfad ist zu.
+--
+-- **Warum die Gegenprobe hier steht und nicht als zweite Giftprobe:** eine Absage, die
+-- immer faellt, ist keine Regel, sondern ein Verbot. `H102` muss an genau der Stelle
+-- schweigen, an der die Sprache die Abhilfe ausspricht -- und das ist eine Aussage ueber
+-- den Pruefer, die nur eine SAUBERE Datei belegen kann.
+--
+-- > *Dieselbe Bauart wie `probe-schlupfloch` gegen `probe-ohne-masks` bei `H101`: zwei
+-- > Dateien, ein Wort, zwei Antworten.*
+--
+-- Und was diese Datei NICHT belegt: dass `masks irqs` irgendwo abgesenkt wird. Der
+-- Erzeuger schreibt heute kein `cli`/`sti` daraus; das Wort ist eine ZUSAGE ueber die
+-- Umgebung und steht seit dem 2026-08-31 unter einem Leser, nicht unter einer Absenkung.
+
+module beispiel {
+module takt {
+
+table Takte count 64 {
+    slot { stand : u64, }
+}
+
+-- **Das eine Wort.** In `beispiele/gift/460` fehlt es, und dort faellt `H102`.
+lock TAKT protects { Takte } rank 0 held <= 40 ops masks irqs;
+
+impl fn zaehle(i : index into Takte)
+    requires Held(TAKT)
+    effects  { reads Takte, reads Takte.slots, writes Takte.slots, locks TAKT }
+    costs    <= 8 ops
+{
+    Takte.slots[i].stand = 1;
+}
+
+impl fn takt_verteiler()
+    effects { reads Takte, reads Takte.slots, writes Takte.slots, locks TAKT }
+    costs   <= 40 ops
+{
+    locks TAKT {
+        zaehle(0);
+    }
+}
+
+entry zeitgeber vector 32 via idt arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 }
+    stack takt_stapel per cpu nested never
+    dispatch beispiel::takt::takt_verteiler;
+}
+
+}
+
+-- **Die ZWEITE Gegenprobe, und sie haelt die Regel schmal.**
+--
+-- Ein Systemruf traegt auch einen Vektor, aber er wird GERUFEN und nicht geworfen: er
+-- unterbricht niemanden, und die Sperre, die er nimmt, darf die Interrupts offen lassen.
+-- `RING` traegt darum kein `masks irqs`, und `H102` muss hier schweigen.
+--
+-- **Warum diese Haelfte gebaut wurde und nicht nur behauptet:** die Handmutation
+-- `if k.unterbricht` -> `if true` ging am 2026-08-31 durch ALLE 283 Proben. Der Riegel,
+-- der die Regel auf geworfene Eintritte beschraenkt, hatte keinen einzigen Zeugen -- *eine
+-- Einschraenkung ohne Probe ist eine Behauptung.* Diese Datei ist der Zeuge.
+module ruf {
+
+table Auftraege count 16 {
+    slot { stand : u64, }
+}
+
+lock RING protects { Auftraege } rank 0 held <= 40 ops;
+
+impl fn bearbeite(i : index into Auftraege)
+    requires Held(RING)
+    effects  { reads Auftraege, reads Auftraege.slots, writes Auftraege.slots, locks RING }
+    costs    <= 8 ops
+{
+    Auftraege.slots[i].stand = 1;
+}
+
+impl fn ruf_verteiler()
+    effects { reads Auftraege, reads Auftraege.slots, writes Auftraege.slots, locks RING }
+    costs   <= 40 ops
+{
+    locks RING {
+        bearbeite(0);
+    }
+}
+
+-- Kein `via idt`: der Weg wird betreten, nicht geworfen.
+entry systemruf vector 0x80 arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 }
+    stack kernstapel per cpu nested never
+    dispatch beispiel::ruf::ruf_verteiler;
+}
+
+}
+}

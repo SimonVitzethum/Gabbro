@@ -1898,6 +1898,44 @@ pub const SPERREN: &[Satz] = &[
                       file with and without `masks IRQ` gave 0 errors against `[H013]`.",
         fundstelle: "crates/gabbro-check/src/kontexte.rs; «B38»",
     },
+    // --- «B39», 2026-08-31: die Verdrahtung zwischen Rangpass und Eintritt ---------------
+    //
+    // **Nicht aus einem Fund geboren, sondern aus einer ZAEHLUNG.** `zaehle-verdrahtung.py`
+    // fuehrte `Entry / Lock` als eines von 32 Konstruktpaaren, die im Korpus zusammenstehen
+    // und die keine einzige Passfunktion zusammen liest. *Beide Haelften standen seit
+    // Monaten; es fehlte die Zeile, die sie aneinanderhaengt.*
+    Satz {
+        name: "kontexte.handlersperre",
+        kennungen: &["H102"],
+        aussage: "An entry that hardware THROWS (`via idt`) takes no lock that fails to \
+                  declare `masks irqs`: the path it interrupted may be holding that lock, \
+                  and the handler would wait for a holder that only resumes once the \
+                  handler returns.",
+        vorbehalt: "**The trigger is `via idt`, and that leaves a gap this rule does not \
+                    close.** `beispiele/57`'s `halt_ipi vector 0xF0` is thrown too, but it \
+                    writes no `via`, so `Kontext::unterbricht` is false and `H102` stays \
+                    silent over it. *That is a gap in the LANGUAGE -- `via` is the only \
+                    place Gabbro says the difference -- and it is named here rather than \
+                    papered over with a second answer to `what is an interrupt context` \
+                    (a fourth register over the same set is W7).* And the remedy this rule \
+                    demands is a PROMISE, not a lowering: the emitter writes no `cli`/`sti` \
+                    out of `masks irqs`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "Measured before the build: 39 lock declarations in the clean corpus, \
+                      7 of them `masks irqs`; exactly ONE corpus file carries an `entry` \
+                      AND a lock (`beispiele/57`), and that lock masks. **The clean corpus \
+                      therefore has zero sites -- the evidence is poison** (Falle 80). \
+                      `beispiele/gift/460` gave 0 errors before the rule and `[H102]` \
+                      after; `beispiele/59` differs by ONE word and stays clean. **3 hand \
+                      mutations, all BUILT: 1 caught at once, 2 went through all 283 \
+                      probes** -- the `via idt` gate and the `locks shared ` prefix had no \
+                      witness at all. Both now have one (`beispiele/59` module `ruf`, \
+                      `beispiele/gift/461`), and the second is the sharper: without the \
+                      prefix `locks shared TAKT` resolves to no lock and the rule falls \
+                      silent through the SAME `continue` that lets an unknown lock pass. \
+                      *A branch that stays quiet for two reasons and means only one.*",
+        fundstelle: "crates/gabbro-check/src/kontexte.rs; «B39»",
+    },
     Satz {
         name: "geteilt.gnadenfrist",
         kennungen: &["H015"],

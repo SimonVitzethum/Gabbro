@@ -1,0 +1,52 @@
+-- erwartet: H102
+-- **Dieselbe Verklemmung, geteilt genommen -- und `locks shared` ist keine Ausnahme.**
+--
+-- Ein Leser wartet auf einen Schreiber. Haelt der unterbrochene Weg `TAKT` exklusiv und
+-- kommt der Zeitgeber dazwischen, dann wartet `locks shared TAKT` auf genau denselben
+-- Halter wie eine exklusive Nahme -- **und der laeuft erst weiter, wenn der Handler
+-- zurueckkehrt.** Die geteilte Nahme macht die Wartezeit kuerzer, nicht endlich.
+--
+-- **Warum diese Datei existiert, und das ist der eigentliche Ertrag:** die Handmutation,
+-- die `.strip_prefix("locks shared ")` aus `H102` wegnahm, ging am 2026-08-31 durch ALLE
+-- 283 Proben. Ohne das Praefix laeuft `"locks shared TAKT"` durch `strip_prefix("locks ")`
+-- zu `"shared TAKT"`, und dieser Name loest gegen keine Sperre auf -- die Regel schweigt
+-- **still**, mit demselben `continue`, mit dem sie eine unbekannte Sperre durchlaesst.
+--
+-- > *Ein Zweig, der aus zwei Gruenden schweigt und nur einen davon meint.* Dieselbe Klasse
+-- > wie die Standardzweige aus `CLAUDE.md`: etwas verschwindet ohne Meldung.
+
+module gift {
+
+table Takte count 64 {
+    slot { stand : u64, }
+}
+
+lock TAKT protects { Takte } rank 0 held <= 40 ops shared held <= 8 ops;
+
+impl fn lies(i : index into Takte) -> u64
+    requires Held(TAKT, shared)
+    effects  { reads Takte, reads Takte.slots, locks shared TAKT }
+    costs    <= 8 ops
+{
+    return Takte.slots[i].stand;
+}
+
+impl fn takt_verteiler() -> u64
+    effects { reads Takte, reads Takte.slots, locks shared TAKT }
+    costs   <= 40 ops
+{
+    locks shared TAKT {
+        return lies(0);
+    }
+}
+
+entry zeitgeber vector 32 via idt arch x86_64 {
+    regs in  { }
+    regs out { }
+    preserves { rbx, rbp, r12, r13, r14, r15 }
+    clobbers  { rax, rcx, rdx, rsi, rdi, r8, r9, r10, r11 }
+    stack takt_stapel per cpu nested never
+    dispatch gift::takt_verteiler;
+}
+
+}

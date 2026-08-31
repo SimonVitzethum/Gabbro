@@ -1468,6 +1468,29 @@ existing code, three under one lock, one (V4) over two crates with two lock clas
 comment. **`rank`** gives the lock order; acquiring demands a strictly smaller rank. A `locks` block
 releases at the end; whoever wants copy-and-release does it **inside** and acquires afresh afterwards.
 
+### `masks irqs` — the clause that had no reader until 2026-08-31
+
+`lock … masks irqs` says that taking the lock masks interrupts, and it is the same statement
+Linux writes as `spin_lock_irqsave`. It has stood in the grammar since there has been a `lock`,
+and until this date **no pass read it**: `pruefe-klauseln.py` carried `maskiert / LockDecl`
+under **UNGELESEN** — *"the reader fills it, nobody looks."*
+
+**`H102` reads it now, and the rule needs both halves of a sentence that were never in one
+place:** an `entry` that hardware THROWS (`via idt`) must not reach a `locks L` whose `L`
+declares no masking. *The path it interrupted may be holding that lock, and the handler would
+then wait for a holder who only resumes once the handler returns.* On one core that is the
+standstill, and no loop is spinning in it.
+
+> **`nested never` is not this promise.** It says the vector does not re-enter *itself*; it
+> says nothing about the path underneath it. Three words that look alike and mean three
+> things: `never` is about re-entry, `nested masked` about the state at the entry (`H101`),
+> and `masks irqs` about the state the LOCK establishes.
+
+**And the trigger is `via idt`, which leaves a gap named rather than hidden:** an IPI is thrown
+too, but `beispiele/57`'s `halt_ipi vector 0xF0` writes no `via`, so `H102` stays silent over
+it. `via` is the only place the language says the difference — *the gap is in the grammar, not
+in the rule*, and inventing a second answer here would be a fourth register over the same set.
+
 ---
 
 ## 12. Hardware assumptions and axioms — **load-bearing, not trimming**
