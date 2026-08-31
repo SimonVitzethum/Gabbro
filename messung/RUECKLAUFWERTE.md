@@ -234,6 +234,21 @@ schon gesehen hat, misst die Wörter, die sie schon gesehen hat.*
   **Und am selben Abend GEHEILT**, soweit eine Form das kann: 92 gefährliche Stellen, alle
   gedeckt, `MARKE_TEILMESSUNG = 0`, und die Abnahme trennt eine `TEILMESSUNG` vom Befund.
   *Was bleibt, ist die Ansage — nicht das Ausbleiben des Schnitts.*
+  **Und die Deckung wird seit dem 2026-08-31 je STELLE gezählt und nicht je Datei** —
+  92 von 92, Differenz null. Die Marke ist nicht gestiegen, und das ist gemessen.
+* **Die Klasse „nur eine Stelle der Datei ist gedeckt" ist gemessen und leer** — aber zwei
+  Wächter gelten als gedeckt, **weil sie das Wort in ihrer eigenen Beschreibung tragen**:
+  `pruefe-waechter.py` und `abnahme.py`. Beide haben heute null gefährliche Stellen, also
+  kostet es nichts; der Zähler je Stelle nimmt ihnen die Ausnahme, weil er nach der
+  VERDRAHTUNG fragt. *Es war eine gelegte Falle und kein Schaden.*
+* **Ein Wächter ist für die Frage „wird heute abgeschnitten?" NICHT gemessen**, und er
+  steht mit Grund da: `zaehle-b3.py` (`NICHT FAHRBAR` — die Caprock-Messbasis fehlt im
+  Arbeitsbaum). **48 von 49 sind gemessen, null davon abgeschnitten** — die drei, die die
+  schlichte Abnahme auslässt, sind einzeln nachgefahren.
+* **Die Schalenregel ist großzügig, und das ist geprüft und nicht gehofft**: ein `exit` in
+  einem Funktionsrumpf gilt als gedeckt, weil der Rumpf aus dem Hauptlauf gerufen wird.
+  Nachgesehen wurde, ob eine solche Funktion **vor** der Falle gerufen wird — in keinem der
+  sieben Schalenwächter. *Wer die Reihenfolge ändert, muss diese Zeile neu messen.*
 * **`OHNE_URTEIL` steht leer, und das ist eine Zusage an die Zukunft, keine Messung über
   sie.** Wer einen Zähler wieder herausnimmt, schreibt den Grund dazu — die Zahl der
   Ausgenommenen druckt die Abnahme.
@@ -493,11 +508,12 @@ Bauart, gegen die dieser Abschnitt steht — also ist sie hier nicht stehen gebl
 | 45 aus der Abnahme | `abnahme.py`, ein Lauf | **0** |
 | `pruefe-emission.sh` | einzeln gefahren, `rc=0`, kein `ABGESCHNITTEN` in 282 Zeilen | **nein** |
 | `pruefe-beweise.sh` | einzeln nachgefahren | **nein** |
-| `pruefe-luecken.py` | **nicht gefahren** — baut dreizehnmal neu und schreibt in Quellen | *offen* |
-| `zaehle-b3.py` | `NICHT FAHRBAR` — der fremde Korpus fehlt | *offen* |
+| `pruefe-luecken.py` | einzeln nachgefahren: `ALL PASS`, *alle Quellen byteidentisch zurück* | **nein** |
+| `zaehle-b3.py` | `NICHT FAHRBAR` — die Caprock-Messbasis fehlt im Arbeitsbaum | *offen* |
 
-**Also: 47 von 49 gemessen, null davon abgeschnitten; zwei stehen offen und stehen mit
-Grund da.** Das ist keine Zusage für morgen — es ist der Stand von heute abend.
+**Also: 48 von 49 gemessen, null davon abgeschnitten.** Der eine Rest hat gar nichts
+gemessen und steht mit Grund da. Das ist keine Zusage für morgen — es ist der Stand von
+heute abend.
 
 **Die Zahl steht in der Kopfzeile, auch wenn sie null ist.** Das ist kein Schmuck: eine
 gedruckte Null sagt, dass gemessen wurde; eine fehlende Zahl sagt gar nichts (W17). Ist sie
