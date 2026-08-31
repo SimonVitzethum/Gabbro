@@ -2685,9 +2685,9 @@ fn ausdruck_geraet(e: &Expr, d: &Device, u: &Namen, absagen: &mut Absagen) -> Op
         ExprArt::Klammer(x) => format!("({})", ausdruck_geraet(x, d, u, absagen)?),
         ExprArt::Binaer(op, a, b) => format!(
             "{} {} {}",
-            ausdruck_geraet(a, d, u, absagen)?,
+            geklammert(op, a, ausdruck_geraet(a, d, u, absagen)?),
             op_text(op),
-            ausdruck_geraet(b, d, u, absagen)?
+            geklammert(op, b, ausdruck_geraet(b, d, u, absagen)?)
         ),
         // `CAP.FRO` -- ein Feld dieses Geraets, gelesen ueber `d`.
         ExprArt::Ort(o) if o.suffixe.len() == 1 => {
@@ -3624,9 +3624,9 @@ fn ausdruck_format(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Str
         ExprArt::Klammer(x) => format!("({})", ausdruck_format(x, fmt, u, absagen)),
         ExprArt::Binaer(op, a, b) => format!(
             "{} {} {}",
-            ausdruck_format(a, fmt, u, absagen),
+            geklammert(op, a, ausdruck_format(a, fmt, u, absagen)),
             op_text(op),
-            ausdruck_format(b, fmt, u, absagen)
+            geklammert(op, b, ausdruck_format(b, fmt, u, absagen))
         ),
         // `lenof(Self)` ist die Laenge des Puffers -- die Groesse, an der jede
         // `where`-Klausel dieses Formats haengt.
@@ -8087,9 +8087,9 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
             let schmal = schmal || ist_float(a, u) || ist_float(b, u);
             format!(
                 "{} {} {}",
-                ausdruck_breit(a, u, absagen, schmal),
+                geklammert(op, a, ausdruck_breit(a, u, absagen, schmal)),
                 op_text(op),
-                ausdruck_breit(b, u, absagen, schmal)
+                geklammert(op, b, ausdruck_breit(b, u, absagen, schmal))
             )
         }
         ExprArt::Ruf(r) => ruf(r, u, absagen),
@@ -8204,6 +8204,53 @@ fn zuw_op(op: &ZuwOp) -> &'static str {
         ZuwOp::Minus => "-=",
         ZuwOp::Und => "&=",
         ZuwOp::Oder => "|=",
+    }
+}
+
+/// **The five operators Gabbro holds in ONE level and C grades into FOUR.**
+///
+/// `parse.rs::bitexpr` is a single left-associative loop over `<< >> & ^ |`. C grades them
+/// `<< >>` above `&` above `^` above `|`. Printing a Gabbro tree as flat C text therefore
+/// lets C REGROUP it: `a & b << c` is `(a & b) << c` here and `a & (b << c)` there.
+///
+/// Measured over all 25 pairs on 2026-08-31, compiled and run: **nine compute a different
+/// value**, and `-Wparentheses` -- the only net -- catches three of the nine while warning
+/// on three that are correct. The table is in `messung/proben/VORRANG-BITSTUFEN.md`.
+fn ist_bitop(op: &BinOp) -> bool {
+    matches!(
+        op,
+        BinOp::BitUnd
+            | BinOp::BitOder
+            | BinOp::BitXor
+            | BinOp::SchiebLinks
+            | BinOp::SchiebRechts
+    )
+}
+
+/// One operand of a binary node, parenthesised where flat C text would not reproduce the
+/// tree the checker proved things about.
+///
+/// **The rule is deliberately wider than the minimum.** The minimum would be "parenthesise
+/// exactly where C regroups". That leaves `a & b ^ c` bare -- C and Gabbro agree on it --
+/// and `cc -Wall -Wextra -Werror` still refuses the file. `pruefe-emission.sh` stage 9
+/// requires every emitting file to pass exactly that command, so the narrow rule would ship
+/// C that this project's own guard rejects. Measured: three of the 25 pairs fail `-Werror`
+/// today while computing the right value.
+///
+/// Wrapping whenever EITHER side carries a bit operator reproduces the tree and silences
+/// that whole warning class. It leaves purely arithmetic and logical nodes untouched, and
+/// that is safe for a reason worth writing down: **strip the bit level out of Gabbro's
+/// grammar and the remaining hierarchy is C's, operator for operator** -- `||` below `&&`
+/// below the comparisons below `+ -` below `* / %`. Comparisons cannot chain, so no
+/// associativity question is left open there either.
+fn geklammert(eltern: &BinOp, kind: &Expr, text: String) -> String {
+    let ExprArt::Binaer(kind_op, _, _) = &kind.art else {
+        return text;
+    };
+    if ist_bitop(eltern) || ist_bitop(kind_op) {
+        format!("({text})")
+    } else {
+        text
     }
 }
 
@@ -8329,9 +8376,9 @@ fn ausdruck_eintrag(e: &Expr, fmt: &str, u: &Namen, absagen: &mut Absagen) -> Op
         }
         ExprArt::Binaer(op, a, b) => format!(
             "{} {} {}",
-            ausdruck_eintrag(a, fmt, u, absagen)?,
+            geklammert(op, a, ausdruck_eintrag(a, fmt, u, absagen)?),
             op_text(op),
-            ausdruck_eintrag(b, fmt, u, absagen)?
+            geklammert(op, b, ausdruck_eintrag(b, fmt, u, absagen)?)
         ),
         ExprArt::Zahl(_) | ExprArt::Wahr | ExprArt::Falsch => ausdruck(e, u, absagen),
         _ => return None,

@@ -1,0 +1,473 @@
+-- **Die Vorrangprobe: alle 25 Paare der fuenf Bitoperatoren, und die zwei Grenzen daneben.**
+--
+-- Gabbros `bitexpr` (`parse.rs`) ist EINE flache links-assoziative Stufe ueber
+-- `<< >> & ^ |`. C hat dort VIER: `<< >>` ueber `&` ueber `^` ueber `|`. Bis zum
+-- 2026-08-31 schrieb der Erzeuger den Ausdruck ohne Klammern durch -- **also bedeutete
+-- derselbe Text in Gabbro und im Erzeugnis Verschiedenes**, und zwar bei neun der
+-- fuenfundzwanzig Paare. Gemessen, uebersetzt und GELAUFEN; die Tafel steht in
+-- `VORRANG-BITSTUFEN.md` daneben.
+--
+-- **Diese Datei ist die Messapparatur, nicht das Urteil.** Je Form stehen zwei
+-- Funktionen:
+--
+--     flach_X      return a o1 b o2 c;        was der Erzeuger ausliefert
+--     klammer_X    return (a o1 b) o2 c;      was Gabbro MEINT
+--
+-- Die geklammerte Form ist keine Behauptung, sondern eine Messung: eine Klammer in der
+-- Quelle wird `ExprArt::Klammer` und emittiert als Klammer, also rechnet das C dort
+-- zwingend Gabbros Baum. `crates/gabbro-check/tests/vorrang.rs` uebersetzt beide mit
+-- `-Wall -Wextra -Werror`, LAESST SIE LAUFEN und verlangt, dass jedes Paar denselben Wert
+-- gibt. **Vor dem 2026-08-31 waren es neun Abweichungen; wenn es je wieder eine gibt,
+-- rechnet ein ausgeliefertes Programm etwas anderes als das Gepruefte.**
+--
+-- Gefahren wird mit `a=3 b=5 c=2`. Das ist GESUCHT und nicht geraten: das kleinste
+-- Tripel, bei dem jeder strukturelle Unterschied auch im WERT sichtbar wird. Ein Tripel,
+-- das einen Unterschied auf denselben Wert abbildet, misst ihn weg.
+
+module probe::vorrang {
+
+-- Der Bereich haelt jede Schiebeweite unter der Wortbreite -- sonst sagt `M104` ab,
+-- bevor die Vorrangfrage ueberhaupt gestellt ist.
+type Klein = u32 in 0 .. 7;
+
+-- ---- die 25 Paare, flach ---------------------------------------------------
+
+impl fn flach_schiebl_schiebl(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a << b << c;
+}
+
+impl fn flach_schiebl_schiebr(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a << b >> c;
+}
+
+impl fn flach_schiebl_und(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a << b & c;
+}
+
+impl fn flach_schiebl_xor(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a << b ^ c;
+}
+
+impl fn flach_schiebl_oder(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a << b | c;
+}
+
+impl fn flach_schiebr_schiebl(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a >> b << c;
+}
+
+impl fn flach_schiebr_schiebr(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a >> b >> c;
+}
+
+impl fn flach_schiebr_und(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a >> b & c;
+}
+
+impl fn flach_schiebr_xor(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a >> b ^ c;
+}
+
+impl fn flach_schiebr_oder(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a >> b | c;
+}
+
+impl fn flach_und_schiebl(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a & b << c;
+}
+
+impl fn flach_und_schiebr(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a & b >> c;
+}
+
+impl fn flach_und_und(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a & b & c;
+}
+
+impl fn flach_und_xor(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a & b ^ c;
+}
+
+impl fn flach_und_oder(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a & b | c;
+}
+
+impl fn flach_xor_schiebl(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a ^ b << c;
+}
+
+impl fn flach_xor_schiebr(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a ^ b >> c;
+}
+
+impl fn flach_xor_und(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a ^ b & c;
+}
+
+impl fn flach_xor_xor(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a ^ b ^ c;
+}
+
+impl fn flach_xor_oder(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a ^ b | c;
+}
+
+impl fn flach_oder_schiebl(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a | b << c;
+}
+
+impl fn flach_oder_schiebr(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a | b >> c;
+}
+
+impl fn flach_oder_und(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a | b & c;
+}
+
+impl fn flach_oder_xor(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a | b ^ c;
+}
+
+impl fn flach_oder_oder(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a | b | c;
+}
+
+-- ---- dieselben 25, geklammert: was Gabbro meint ---------------------------
+
+impl fn klammer_schiebl_schiebl(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a << b) << c;
+}
+
+impl fn klammer_schiebl_schiebr(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a << b) >> c;
+}
+
+impl fn klammer_schiebl_und(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a << b) & c;
+}
+
+impl fn klammer_schiebl_xor(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a << b) ^ c;
+}
+
+impl fn klammer_schiebl_oder(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a << b) | c;
+}
+
+impl fn klammer_schiebr_schiebl(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a >> b) << c;
+}
+
+impl fn klammer_schiebr_schiebr(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a >> b) >> c;
+}
+
+impl fn klammer_schiebr_und(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a >> b) & c;
+}
+
+impl fn klammer_schiebr_xor(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a >> b) ^ c;
+}
+
+impl fn klammer_schiebr_oder(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a >> b) | c;
+}
+
+impl fn klammer_und_schiebl(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a & b) << c;
+}
+
+impl fn klammer_und_schiebr(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a & b) >> c;
+}
+
+impl fn klammer_und_und(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a & b) & c;
+}
+
+impl fn klammer_und_xor(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a & b) ^ c;
+}
+
+impl fn klammer_und_oder(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a & b) | c;
+}
+
+impl fn klammer_xor_schiebl(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a ^ b) << c;
+}
+
+impl fn klammer_xor_schiebr(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a ^ b) >> c;
+}
+
+impl fn klammer_xor_und(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a ^ b) & c;
+}
+
+impl fn klammer_xor_xor(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a ^ b) ^ c;
+}
+
+impl fn klammer_xor_oder(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a ^ b) | c;
+}
+
+impl fn klammer_oder_schiebl(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a | b) << c;
+}
+
+impl fn klammer_oder_schiebr(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a | b) >> c;
+}
+
+impl fn klammer_oder_und(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a | b) & c;
+}
+
+impl fn klammer_oder_xor(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a | b) ^ c;
+}
+
+impl fn klammer_oder_oder(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a | b) | c;
+}
+
+-- ---- die zwei Grenzen daneben ---------------------------------------------
+
+impl fn flach_grenze_und_gleich(a : Klein, b : Klein, c : Klein) -> bool
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a & b == c;
+}
+
+impl fn klammer_grenze_und_gleich(a : Klein, b : Klein, c : Klein) -> bool
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a & b) == c;
+}
+
+impl fn flach_grenze_xor_gleich(a : Klein, b : Klein, c : Klein) -> bool
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a ^ b == c;
+}
+
+impl fn klammer_grenze_xor_gleich(a : Klein, b : Klein, c : Klein) -> bool
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a ^ b) == c;
+}
+
+impl fn flach_grenze_oder_gleich(a : Klein, b : Klein, c : Klein) -> bool
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a | b == c;
+}
+
+impl fn klammer_grenze_oder_gleich(a : Klein, b : Klein, c : Klein) -> bool
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a | b) == c;
+}
+
+impl fn flach_grenze_schiebl_klein(a : Klein, b : Klein, c : Klein) -> bool
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a << b < c;
+}
+
+impl fn klammer_grenze_schiebl_klein(a : Klein, b : Klein, c : Klein) -> bool
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a << b) < c;
+}
+
+impl fn flach_grenze_plus_schiebl(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a + b << c;
+}
+
+impl fn klammer_grenze_plus_schiebl(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return (a + b) << c;
+}
+
+impl fn flach_grenze_schiebl_plus(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a << b + c;
+}
+
+impl fn klammer_grenze_schiebl_plus(a : Klein, b : Klein, c : Klein) -> u32
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a << (b + c);
+}
+
+}

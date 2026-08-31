@@ -1,0 +1,32 @@
+-- erwartet: M136 allein
+-- **Die zweite Grenze, und sie ist die, an der Gabbro RECHT hat.**
+--
+-- `cmpexpr = bitexpr [ cmp bitexpr ]` legt die ganze Bitstufe UNTER den Vergleich, also
+-- liest Gabbro `a | b == c` als `(a | b) == c`. C legt `& ^ |` UEBER den Vergleich und liest
+-- dieselbe Zeile als `a | (b == c)`. Gemessen und gelaufen mit `a=3 b=5 c=2`: Gabbro sagt
+-- `false`, das C sagte `true`.
+--
+-- **Dass Cs Tafel hier falsch ist, gilt seit Jahrzehnten als anerkannt** -- Ritchie hat den
+-- Vorrang von `&` unterhalb von `==` selbst als Fehler bezeichnet, und er steht nur noch da,
+-- weil es zu spaet war, ihn zu aendern. Gabbro hat ihn nicht.
+--
+-- > **Und genau darum ist der Ausgang (b) -- „die Grammatik bekommt Stufen wie C" -- nicht
+-- > die Heilung, als die er aussieht.** Wer die Bitstufen an C angleicht, hat die Falle an
+-- > der Schiebestufe geschlossen und diese hier offen gelassen; wer die ganze Tafel
+-- > angleicht, hat Ritchies Fehler eingekauft, um eine Aehnlichkeit zu gewinnen.
+--
+-- Hier warnt gcc uebrigens (`suggest parentheses around comparison in operand of '|'`) -- das
+-- Loch liegt allein an der Schiebestufe, `436` traegt es.
+
+module gift::vorranggrenze {
+
+type Klein = u32 in 0 .. 7;
+
+impl fn passt(a : Klein, b : Klein, c : Klein) -> bool
+    effects { pure }
+    costs   <= 16 ops
+{
+    return a | b == c;
+}
+
+}
