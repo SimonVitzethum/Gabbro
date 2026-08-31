@@ -88,6 +88,9 @@ const BENANNT: &[&str] = &[
     // «B41b», 2026-08-20: die Baumkante an der `table`. `D006` das Feld, `D007` sein Typ,
     // `D008` seine Tabelle.
     "D006", "D007", "D008",
+    // 2026-08-31: the same three questions at the CHAIN edge, which `chain(a, b) in`
+    // names at the walk instead of at the declaration. `messung/DOMAENENNAMEN.md`.
+    "D014", "D015", "D016",
     // «B7»: der Verbundkonstruktor.
     "M106", "M107", "M108", "P036", "P037",
     // Punkt 3: `ensures` wird gelesen -- Wohlgeformtheit, nicht Beweis.

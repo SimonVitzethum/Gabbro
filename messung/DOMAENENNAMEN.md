@@ -43,7 +43,7 @@ nichts. Gemessen wird je Zelle die kleinste Verfälschung durch den unverändert
 | # | Domäne | die Namen, die sie nennt | Grundname des Orts | **Typ** des Orts | die zusätzliche Angabe |
 |---|---|---|---|---|---|
 | 1 | `slots of <ort>` | Ort | `M109` **nur in `ensures`** | **niemand** | — |
-| 2 | `chain(a, b) in <ort>` | Ort **+ zwei Feldnamen** | `M109` nur in `ensures` | **niemand** | **niemand** — Fund |
+| 2 | `chain(a, b) in <ort>` | Ort **+ zwei Feldnamen** | `M109` nur in `ensures` | **niemand** | **niemand** — der Fund, und §6 baut ihn: seit `D014`–`D016` in ALLEN Stellungen |
 | 3 | `descendants of <ort>` | Ort (+ die `tree`-Kante an der Tabelle) | `M109` nur in `ensures` | **niemand** | `D006`–`D008` an der `table`; *ob die Tabelle überhaupt eine hat*: niemand |
 | 4 | `ancestors of <ort>` | Ort (+ `tree { parent }`) | `M109` nur in `ensures` | **niemand** | wie 3 |
 | 5 | `queue <ort>` | Ort (+ das einzige Feldarray) | `M109` nur in `ensures` | **niemand** | nur der KOSTENPASS, und nur an einem `traverse` |
@@ -55,6 +55,9 @@ nichts. Gemessen wird je Zelle die kleinste Verfälschung durch den unverändert
 **Drei Spalten, drei Antworten:** der Grundname ist geprüft, aber nur in einer von fünf
 Stellungen; der Typ ist nirgends geprüft; die zusätzliche Angabe ist bei zweien von neun
 nirgends geprüft.
+
+*Die Tafel steht im Zustand VOR dem Bau — sie ist die Nullmessung. Was §6 daran ändert,
+ändert genau eine Zelle, und sie ist dort einzeln nachgemessen.*
 
 ---
 
@@ -200,7 +203,7 @@ der ganzen `requires`-Klausel und der ganzen `invariant`, nicht ihrer Quantorenh
 | Grundname von `fields of` | `M109` | `sammle_namen_pred_geb` hat für `FelderVon` einen leeren Zweig — ein `Pfad` ist kein `Ort` |
 | Typ des Orts, alle neun | ein Domänenpass, den es nicht gibt | `domaene.rs::domaenenschranke` rechnet die Zuordnung, wird aber nur vom Kostenpass und vom Zähler gerufen — beide nur am `traverse` |
 | `tree`-Kante fehlt ganz | `D006`–`D008` (`kbedingung.rs`) prüfen die DEKLARIERTE Kante | dass eine Tabelle eine braucht, weil eine Domäne an ihr läuft, sagt heute nur der Erzeuger mit `C001`, und der läuft an einer Annotation nicht |
-| Feldnamen von `chain(a, b)` | **niemand, an keiner Stelle** | die drei Leser (`wirkungen.rs`:1164, `m1.rs`:4048, `gruppe.rs`:527) mustern `KetteIn { ort: o, .. }` und werfen `a` und `b` weg |
+| Feldnamen von `chain(a, b)` | **niemand, an keiner Stelle** — bis §6 | die drei Leser (`wirkungen.rs`:1164, `m1.rs`:4048, `gruppe.rs`:527) mustern `KetteIn { ort: o, .. }` und werfen `a` und `b` weg. *Ein vierter Leser war die Antwort, kein vierter Blick derselben drei* |
 | Feldname im Suffix von `elems of` | `M109` | er steigt nur in `[index]`-Suffixe ab, nicht in `.feld` |
 | `threads` | keiner | die Domäne nennt nichts (Sprachentscheidung `Q3`) |
 
@@ -225,12 +228,101 @@ alle drei Stellungen laufen.
 | **S3** | `fields of` überhaupt: Pfad prüfen, Bindung erklären | null Korpusstellen, null Absagen, und der Erzeuger sagt sie namentlich ab. **Regel A** — es gibt keinen Gegenstand, der den Bedarf misst |
 | **S4** | `queue` mit sichtbarem Kopf, `threads over <tabelle>` | Sprachentscheidungen des Ordners, gebucht als `Q2`/`Q3` |
 
-*Diese Tafel steht, bevor eine Zeile Prüfercode fällt.* Sie ist die Nullmessung, gegen die
-der Bau in §6 sich messen lässt.
+*Diese Tafel stand, bevor eine Zeile Prüfercode fiel* (Commit `25db09e`). Sie ist die
+Nullmessung, gegen die §6 sich messen lässt.
 
 ---
 
-## 6. Was dieses Dokument NICHT sagt
+## 6. Was gebaut wurde — `D014`/`D015`/`D016`, und was sie NICHT fangen
+
+**Eigene Kennungen, nicht eine erweiterte.** Die Entscheidung ist gemessen und nicht
+gewählt: `D006`–`D008` sitzen an der **Deklaration** (`kbedingung.rs::baumkanten`, ein
+Durchlauf über `t.baum`), `chain(a, b)` sitzt an der **Fundstelle** und kommt je Tabelle
+beliebig oft mit verschiedenen Feldern vor. Ein gemeinsamer Code müsste die Spanne einer
+`table` tragen, an der die Kette gar nicht steht — *und die Meldung „`tree parent X`
+names no field“ schickt den Leser dann an eine Zeile, in der nichts steht.*
+
+Die drei Regeln sind `D006`–`D008` Wort für Wort, und der Pass steht in `domaene.rs`,
+gerufen aus `m1::lauf` — dort, wo die `Umgebung` schon steht:
+
+| Kennung | die Frage | das Vorbild |
+|---|---|---|
+| **`D014`** | das Feld steht im Slot der Tabelle, in der die Kette läuft | `D006` |
+| **`D015`** | es ist `option index into <Tabelle>` — eine Kette muss ENDEN können | `D007` |
+| **`D016`** | es zeigt in dieselbe Tabelle, nicht in eine fremde | `D008` |
+
+### 6a Die Giftproben — je Klasse eine, je genau eine Kennung
+
+| Datei | gemessen |
+|---|---|
+| `beispiele/gift/417-kettenkante-gibt-es-nicht.gab` | `D014`, sonst nichts, 0 `C001` |
+| `beispiele/gift/418-kettenkante-ohne-ende.gab` | `D015`, sonst nichts, 0 `C001` |
+| `beispiele/gift/419-kettenkante-in-fremde-tabelle.gab` | `D016`, sonst nichts, 0 `C001` |
+
+Und ein voller Korpuslauf über **434 Dateien**: `D014`/`D015`/`D016` fallen in **null**
+sauberen Dateien. *Eine neue Regel, die den eigenen Korpus zerlegt, ist keine Regel.*
+
+### 6b Die Gegenrichtung — und sie ist der Grund, dass zwei Verfälschungen stehen bleiben
+
+| bleibt grün | warum |
+|---|---|
+| `chain(erstes_kind, naechstes_geschwister)` | die erklärte Kette |
+| `chain(naechstes_geschwister, erstes_kind)` | **vertauscht — und strukturell trotzdem eine Kette** |
+| `chain(elter, elter)` | die Vorfahrenkette |
+| `chain(erstes_kind, erstes_kind)` | die linke Kante des Baums |
+
+> **Drei der fünf gemessenen Verfälschungen fallen jetzt, zwei nicht — und das ist Regel
+> A und keine Bequemlichkeit.** `chain(a, b)` heißt: *nimm `<ort>.a`, dann folge `.b`*.
+> Beide Namen sind wohlgeformte Kanten, in jeder Reihenfolge und auch zweimal derselbe;
+> `chain(x, x)` läuft eine Spindel und **steht so im Korpus**
+> (`messung/proben/probe-vier-zellen.gab`:59, `chain(naechst, naechst)`).
+> *Sie abzuweisen bräuchte eine Aussage darüber, was der Schreiber MEINTE — und keine
+> Messung dieser Bahn trägt eine.* Die naheliegende Regel („die beiden sind die
+> `tree`-Kanten in vertauschten Rollen“) hätte `chain(kind, kind)` mitgerissen, und das
+> ist die Spindel.
+
+### 6c Alle vier Stellungen, nicht die eine, die `M109` liest
+
+`chain(zzza, zzzb)` an vier Stellen, je **`D014`**: `ensures` · `requires` · `invariant`
+an der `table` (über `Self`) · `traverse`. Der Pass bindet `Self` selbst, weil die
+Umgebung den Namen nicht kennt (`m1.rs` sagt das an `M120`).
+
+### 6d Die Mutationsprobe — gebaut, nicht nur verankert
+
+Drei Mutationen von Hand gesetzt, **gebaut** und mit `cargo test --no-fail-fast`
+gemessen; die Quelle danach byteweise zurückgestellt und gegen `sha256` geprüft:
+
+| Mutation | Schaden | gefallene Proben |
+|---|---|---|
+| `kettenkante-nimmt-irgendein-feld` | ein Name, den es nicht gibt, nimmt das erste Slotfeld | **2** |
+| `kettenkante-braucht-kein-ende` | die Kante muss kein `option index into` mehr sein | **2** |
+| `kettenkante-darf-hinaus` | die Kante darf in eine fremde Tabelle zeigen | **2** |
+
+Es sind je dieselben zwei — die Giftprobe (`jedes_gift_faellt_mit_seinem_code`) und der
+Einzeltest (`die_kettenkante_wird_gegen_ihre_tabelle_gehalten`) —, und **keine dritte**:
+der Schaden bleibt bei der einen Regel.
+
+> **Und die erste Messung sagte „1 Probe“, dreimal.** `cargo test` ohne
+> `--no-fail-fast` hält beim ersten roten Ziel an, also war die zweite Probe nie
+> gelaufen. *Ein Messgerät, das nach dem ersten Treffer aufhört, meldet immer genau
+> einen* — dieselbe Klasse wie die stderr-Leitung in §0, und beide Male hat erst die
+> Gegenprobe es gezeigt.
+
+### 6e Was weiter ungeprüft bleibt, und mit welchem Grund
+
+| Stelle | Zustand | Grund |
+|---|---|---|
+| der **Typ** des Orts, bei allen neun Domänen | **weiter ungeprüft** | S2. Löst der Ort sich nicht zu einer Tabelle auf, **schweigt** der neue Pass — er rät den Träger nicht. `domaenenschranke` fällt für ihre Zwecke von der ganzen Kette auf die Basis zurück; für eine SCHRANKE ist eine zu große Zahl ein zu schwaches Urteil, für eine ABSAGE wäre ein falsch geratener Träger ein Fehlalarm über einen fremden Feldnamen |
+| die Rolle der beiden `chain`-Kanten | **weiter ungeprüft** | §6b — es gibt keine Messung, die eine Reihenfolge falsch nennt |
+| Grundnamen in `requires`/`invariant`/`spec fn` | **weiter ungeprüft** | S1, 53 von 60 Stellen. Der neue Pass liest zwar alle Stellungen, aber nur die `chain`-Kante; die Namensauflösung selbst bleibt bei `M109` und damit bei `ensures` |
+| der Pfad von `fields of` | **weiter ungeprüft** | S3, Regel A: null Korpusstellen |
+| der Feldname im Suffix von `elems of` | **weiter ungeprüft** | derselbe Bau wie S1: `M109` steigt nicht in `.feld` ab |
+| `threads` | **nichts zu prüfen** | die Domäne nennt keinen Namen — `Q3`, Sprachentscheidung |
+| eine Tabelle, an der `descendants of` läuft und die keine `tree` hat | **im Prüfer weiter ungeprüft** | der Erzeuger sagt `C001`, und an einer Annotation läuft er nicht |
+
+---
+
+## 7. Was dieses Dokument NICHT sagt
 
 1. **Nichts darüber, ob die geprüften Namen die richtigen Dinge benennen.** Eine Kante, die
    existiert und `option index into Self` ist, ist deshalb nicht die Kette, die das Programm

@@ -1837,7 +1837,18 @@ MARKE_EMIT=57
 # `tagged type`. *A word list would have refused all six*, and that is exactly why `N042`
 # enumerates the names the generator forms instead of forbidding words. The probe emits and
 # compiles -- the same good case as above.
-MARKE_EMIT_M=30
+# **30 -> 31 on 2026-08-31, and it is a GROWING SUBJECT again.**
+# `messung/proben/probe-neun-domaenen.gab` carries all NINE quantifier domains in one unit,
+# each in an `ensures` -- the carrier on which `messung/DOMAENENNAMEN.md` sets its 32
+# falsifications, and the one place where `fields of` stands in a program at all (it had
+# ZERO sites in the whole corpus). It emits and compiles.
+#
+# > *And it did not, in its first cut.* The `walk` descended through a `reserved` field, and
+# > the generator emitted a call to an accessor it does not generate -- `implicit declaration
+# > of function 'Wort_rest'`. **Stage 9 caught it, and no other stage would have**: `gabbro
+# > pruefe` said 0 errors and `gabbro emit` said 0 `C001` over exactly that text. A
+# > measurement carrier that does not compile measures the checker and nothing else.
+MARKE_EMIT_M=31
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).
 # Gemessen, nicht geschaetzt -- `messung/REICHWEITE-DER-REGEL.md`, Abschnitt 3.
 MARKE_EMIT_N=2      # `messungen/` -- narrow.gab, tabelle.gab; die Vergleichsmessung gegen C

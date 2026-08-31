@@ -31,7 +31,14 @@ table Knoten count NKNOTEN {
         elter                 : option index into Knoten,
         erstes_kind           : option index into Knoten,
         naechstes_geschwister : option index into Knoten,
+        fremd                 : option index into Nachbar,
     }
+}
+
+-- Eine zweite Tabelle, damit `D016` einen Gegenstand hat: `fremd` zeigt aus `Knoten`
+-- HINAUS, und eine Kette bleibt in ihrer eigenen Tabelle.
+table Nachbar count NKNOTEN {
+    slot { wert : u32, }
 }
 
 -- 5/7 -- ein Verbund mit genau EINEM Feldarray traegt `queue` und `elems of`.
@@ -45,13 +52,15 @@ type Ring = {
 format Wort endian little {
     gueltigkeit : bool @0,
     schreibbar  : bool @1,
-    rest        : u64 @[63:2] reserved,
+    frei        : u64 @[11:2]  reserved,
+    rahmen      : u64 embeds [51:12] scale 4096,
+    hoch        : u64 @[63:52] reserved,
 }
 
 -- 9 -- ein `walk` erklaert `mappings of`.
 walk Baum levels 2 {
     node : [Wort; 512],
-    down : rest when it.gueltigkeit && !it.schreibbar,
+    down : rahmen when it.gueltigkeit && !it.schreibbar,
     leaf : it.gueltigkeit && it.schreibbar,
 }
 

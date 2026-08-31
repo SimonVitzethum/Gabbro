@@ -52,7 +52,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~52~~ 74 Sätze über 12 von 12 Pässen, keiner bewiesen** *(nachgemessen 2026-08-31 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 74 over 12 passes -- 67 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`; die Zahl steht im Register von `pruefe-zahlen.py`. Der Zuwachs ist `N042`, `namen.erzeugter_name_zweimal` — die Ratsche steigt, weil der Gegenstand wuchs).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~52~~ 75 Sätze über 12 von 12 Pässen, keiner bewiesen** *(nachgemessen 2026-08-31 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 74 over 12 passes -- 67 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`; die Zahl steht im Register von `pruefe-zahlen.py`. Der Zuwachs ist `N042`, `namen.erzeugter_name_zweimal` — die Ratsche steigt, weil der Gegenstand wuchs).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
 
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
@@ -385,8 +385,8 @@ darunter.
       Behoben und mit Gift 76 belegt.
       **Die allgemeine Frage hat seit dem 2026-08-20 einen Befehl** (`./instrumente/zaehle-karten.py`), und
       die alte Zahl war um den Faktor 2,7 zu klein: 16 Karten, 12 davon öffentlich,
-      **40 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
-      Kandidatenschleife und **36 davon unqualifiziert**.
+      **41 direkte Blicke** auf die Karten aus 27 Passdateien, davon vier in einer
+      Kandidatenschleife und **37 davon unqualifiziert**.
       *Die alte Zählung sagte 13 — sie kannte `.contains_key(` nicht, und das ist derselbe
       Blick.* **Ein Werkzeug, das eine der beiden Formen nicht liest, misst seine eigene
       Leseweite** (W16).
@@ -488,7 +488,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 144 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 145 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *135 → 140 am 2026-08-31: `erzeugernamen.rs`, `beispiele/gift/414` und
       `messung/proben/probe-erzeugernamen-frei.gab` kamen dazu. Die Ratsche steigt am
       Gegenstand, und die drei Namen stehen hier, damit man das nachzählen kann.*
@@ -583,7 +583,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 104 sind tragend, 3 verdächtig — und **87 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 107 sind tragend, 3 verdächtig — und **87 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       *86 → 87 am 2026-08-31: `N042` kam dazu und steht wie sein Nachbar `N041` in der
       unklaren Spalte — der Gegenstand ist um einen Code gewachsen, nicht die Unklarheit.*
@@ -661,7 +661,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2239 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2263 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -940,7 +940,10 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **360 von 360 Ankern** greifen (`--anker`, 2026-08-31 —
+      fällt. Mutationskatalog: **363 von 363 Ankern** greifen (`--anker`, 2026-08-31 —
+      **360 → 363** durch `D014`–`D016`, die Kettenkante: eine Mutation je Regel, von Hand
+      gesetzt, GEBAUT und mit `--no-fail-fast` gemessen — je zwei fallende Proben und keine
+      dritte (`messung/DOMAENENNAMEN.md` §6d);
       **358 → 360** durch `N042`: die Doppelung erst ab drei melden, und kein gebildeter
       Name gilt mehr als gebildet (`messung/ERZEUGERNAMEN.md`);
       vier neue für die vier Domänenschranken, siehe `messung/K001-DOMAENENSCHRANKE.md` §8;
@@ -3766,7 +3769,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 74 Sätze über 242 Codes, 45 Codes noch ohne).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 74 Sätze über 245 Codes, 45 Codes noch ohne).
 **Und der zweite Zahn hat am 2026-08-31 gegriffen:** `N042` kam mit seinem Satz im selben Commit
 — 241 → 242 Codes, 73 → 74 Sätze, und die 45 blieben stehen. *Genau die Bewegung, für die der
 Zahn gebaut wurde: die Ratsche steigt am Gegenstand und nicht an der Schuld.*

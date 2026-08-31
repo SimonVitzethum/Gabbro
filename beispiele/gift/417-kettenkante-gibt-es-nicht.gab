@@ -1,0 +1,39 @@
+-- erwartet: D014
+-- **Die Kette nennt ihre Kante am DURCHLAUF -- und bis zum 2026-08-31 las sie niemand.**
+--
+-- `chain(gibtsnicht, auchnicht)` benennt zwei Felder, die es im Slot von `Kappraum` nicht
+-- gibt. Vor `D014` sagte der Pruefer zu genau diesem Text `0 Fehler, 0 Hinweise`, und der
+-- Erzeuger schwieg mit -- eine Annotation erzeugt kein C, also gibt es dort auch kein `C001`.
+--
+-- Zum Vergleich, an derselben Datei: `tree { child gibtsnicht }` faellt seit «B41b» an
+-- **`D006`**, und zwar mit demselben Satz. *Die eine Domaene, die ihre Kante an der
+-- Fundstelle nennt, war die eine, deren Kante niemand pruefte* -- und `SYNTAX.md`:1060
+-- begruendet den Umzug der Baumkante an die `table` mit genau diesem Argument, das auf
+-- `chain` nie zurueckgefallen ist.
+--
+-- Gemessen in `messung/DOMAENENNAMEN.md`.
+
+module gift {
+
+const N : u32 = 32;
+
+table Kappraum count N {
+    tree { parent elter, child erstes_kind, sibling naechstes_geschwister }
+
+    slot {
+        belegt                : bool,
+        elter                 : option index into Kappraum,
+        erstes_kind           : option index into Kappraum,
+        naechstes_geschwister : option index into Kappraum,
+    }
+}
+
+impl fn kette(c : ptr<normal, rw> Kappraum, p : index into Kappraum)
+    ensures forall x in chain(gibtsnicht, auchnicht) in c.slots[p] :
+                c.slots[x].elter == Some(p)
+    effects { reads c.slots, writes c.slots }
+    costs   <= 4 ops
+{
+}
+
+}
