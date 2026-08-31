@@ -7175,6 +7175,104 @@ impl fn f({kopf}) -> u32
             "{was}: der Abstieg darf nicht ueber `Riesen` laufen"
         );
     }
+
+    // 7 -- **the counting domains, and this half `cc` found rather than a pass.**
+    //
+    // Shadowing `parametertyp` does not close `slots of t`: the arrow comes from
+    // `tabellenglobal` and the name from `ort`, so the unchanged emitter wrote
+    // `sizeof(t->slots)` about a `uint32_t t` -- and `cc -Werror` said *"invalid type
+    // `uint32_t` for `->`"*. The emitter refuses by NAME now, the way it refuses every
+    // other domain it cannot lower.
+    for (was, kopf, aussen, innen) in [
+        (
+            "slots of ueber der Laufvariablen",
+            "t : ptr<normal, r> Riesig, w : ptr<normal, r> Winzig",
+            "traverse t over slots of w by unvisited touches reads w.slots",
+            "traverse i over slots of t by unvisited touches reads w.slots",
+        ),
+        (
+            "elems of ueber der Laufvariablen",
+            "a : ptr<normal, r> Aussen, w : ptr<normal, r> Gross",
+            "traverse w of a over elems of a.teile by unvisited touches reads a",
+            "traverse z of w over elems of w.zellen by unvisited touches reads a",
+        ),
+    ] {
+        let (c, codes) = erzeuge(&format!(
+            "module t {{ const KLEIN : u32 = 2; const GROSS : u32 = 64;
+const ZWEI : u64 = 2; const VSECHZIG : u64 = 64; const ACHT : u64 = 8;
+type Klein = {{ zellen : [u64; ZWEI], }};
+type Gross = {{ zellen : [u64; VSECHZIG], }};
+type Aussen = {{ teile : [Klein; ACHT], }};
+table Winzig count KLEIN {{ slot {{ wert : u32, }} }}
+table Riesig count GROSS {{ slot {{ wert : u32, }} }}
+impl fn f({kopf}) -> u32
+    effects {{ reads t.slots, reads w.slots, reads a }}
+{{ let mut summe : u32 in 0 .. 65535 = 0;
+   {aussen} {{ {innen} {{ if summe < 60000 {{ summe += 1; }} }} }}
+   return summe; }} }}"
+        ));
+        assert!(
+            codes.iter().any(|x| x == "C001"),
+            "{was}: der Erzeuger muss beim NAMEN absagen: {codes:?}"
+        );
+        assert!(
+            !c.contains("(t->slots)") && !c.contains("(w->zellen)"),
+            "{was}: kein Pfeil auf einem Indexwort:\n{c}"
+        );
+    }
+
+    // 8 -- **and the scope ENDS here too.** After the loop `t` is the parameter again, and
+    // `slots of t` lowers as it always did. Without this the refusal could fire forever and
+    // part 7 would look exactly the same.
+    let (c, codes) = erzeuge(
+        "module t { const KLEIN : u32 = 2; const GROSS : u32 = 64;
+table Winzig count KLEIN { slot { wert : u32, } }
+table Riesig count GROSS { slot { wert : u32, } }
+impl fn f(t : ptr<normal, r> Riesig, w : ptr<normal, r> Winzig) -> u32
+    effects { reads t.slots, reads w.slots }
+{ let mut summe : u32 in 0 .. 65535 = 0;
+  traverse t over slots of w by unvisited touches reads w.slots { }
+  traverse i over slots of t by unvisited touches reads t.slots
+    { if summe < 60000 { summe += 1; } }
+  return summe; } }",
+    );
+    assert!(codes.is_empty(), "nach der Schleife ist `t` wieder der Parameter: {codes:?}");
+    assert!(
+        c.contains("sizeof(t->slots)"),
+        "die zweite Schleife laeuft ueber den PARAMETER `t`:\n{c}"
+    );
+
+    // 9 -- **the SECOND map, and it is why the name is remembered instead of hidden.**
+    //
+    // `descendants of c.slots[0]` resolves through `tabellenzeiger`, not through
+    // `parametertyp` -- so shadowing the type map alone leaves it open. The unchanged
+    // emitter wrote three `c->slots[…]` accesses about a `uint32_t c`. Without this part,
+    // deleting the question from `baumsicht` killed no probe at all.
+    let (c, codes) = erzeuge(
+        "module t { const NKLEIN : u32 = 8; const NGROSS : u32 = 512;
+table Winzig count NKLEIN { slot { wert : u32, } }
+table Riesen count NGROSS {
+    tree { parent elter, child erstes_kind, sibling naechstes }
+    slot { elter : option index into Riesen,
+           erstes_kind : option index into Riesen,
+           naechstes : option index into Riesen,
+           wert : u32, } }
+impl fn f(w : ptr<normal, r> Winzig, c : ptr<normal, r> Riesen) -> u32
+    effects { reads w.slots, reads c.slots }
+{ let mut summe : u32 in 0 .. 65535 = 0;
+  traverse c over slots of w by unvisited touches reads w.slots
+    { traverse d of c over descendants of c.slots[0] by unvisited touches reads c.slots
+        { if summe < 60000 { summe += 1; } } }
+  return summe; } }",
+    );
+    assert!(
+        codes.iter().any(|x| x == "C001"),
+        "`descendants of c.slots[0]` unter `traverse c` nennt keine Tabelle: {codes:?}"
+    );
+    assert!(
+        !c.contains("c->slots[_"),
+        "kein Baumlauf durch ein Indexwort:\n{c}"
+    );
 }
 
 /// **`D019`: the FIELD names in the suffix of a domain's place.**

@@ -164,6 +164,12 @@ struct Namen {
     /// Namen, die einen Verbund als **Wert** tragen (Parameter oder `let`). Ihr Feldzugriff
     /// ist `.`, nicht `->` -- siehe `ort`.
     werte: BTreeSet<String>,
+    /// **The names an enclosing `traverse` bound** -- see `laufsicht` (2026-08-31).
+    ///
+    /// Every lowered loop variable is an index word: `uint32_t i` or `uint64_t i`. It names
+    /// no table, carries no fields and is not a pointer -- so a DOMAIN over it can be
+    /// lowered to nothing, and `ort` would write `i->slots` about an `unsigned int`.
+    laufvariablen: BTreeSet<String>,
     /// **Die Tabellen, die ueber ihren eigenen NAMEN adressiert werden** -- `beispiele/09`:
     /// *„die Tabelle ist der Speicher, ihr Name der Ort."* Sie bekommen ein Objekt
     /// (`T_speicher`); die anderen nicht, denn *eine ungenutzte Groesse im erzeugten C ist
@@ -6380,35 +6386,63 @@ fn pred_c(p: &Pred, u: &Namen, absagen: &mut Absagen) -> Option<String> {
 /// names no table`. *The shadow was the only thing standing between a refusal and wrong
 /// code.*
 ///
-/// So the loop variable shadows here the way a parameter shadows in `eigene_sicht`: **the
-/// emitter only catches up with the binding rule every pass in front of it already
-/// follows.** What it does NOT do is guess a type -- the name leaves `parametertyp` instead
-/// of entering it with something invented, and then `baumsicht` says `None` and the refusal
-/// above speaks.
+/// ## It REMEMBERS the name; it does not merely hide it -- and that is measured
 ///
-/// ## ONE map, and the other six are named instead of cleared -- Regel A
+/// `eigene_sicht` shadows a parameter by clearing seven maps, and the first version here
+/// mirrored that: `parametertyp.remove(name)`, so that `baumsicht` would find nothing and
+/// refuse. **It worked, and it was cut anyway**, because a second program showed it was
+/// only half the question:
 ///
-/// `eigene_sicht` clears seven maps for a parameter (`werte`, `markenwerte`,
-/// `tabellenzeiger`, `geraetezeiger`, `geraetewerte`, `formatwerte`, `parametertyp`), and
-/// the first version here mirrored all seven. **Six of them were then deleted one at a time
-/// and rebuilt, and not one probe went red** -- so they were cut.
+/// ```gabbro
+/// impl fn f(w : ptr<normal, r> Winzig, c : ptr<normal, r> Riesen) -> u32
+/// { traverse c over slots of w { traverse d of c over descendants of c.slots[0] { … } } }
+/// ```
 ///
-/// It is not a coverage gap, it is the shape of the thing: **`parametertyp` is the only one
-/// of the seven that answers about a BARE name.** The other six decide `.` against `->`, a
-/// register access, a tagged value -- every one of them a name with a SUFFIX. A loop
-/// variable is an index word and carries no fields, so `v.feld` under any of them is C that
-/// does not compile, with or without this line. *A shadow over a question nobody can ask is
-/// not a rule, it is a line.*
-///
-/// The day a loop variable can hold a record, this is where the other six go back in --
-/// with the program that measures them beside it.
+/// That place resolves through `tabellenzeiger`, not through `parametertyp` -- and the
+/// unchanged emitter wrote three `c->slots[…]` accesses about a `uint32_t c`. **Hiding one
+/// map does not answer a question the other maps also answer.** So the name is REMEMBERED,
+/// once, and every domain asks `ist_laufvariable` before it asks anything else. With that
+/// line in place, deleting `parametertyp.remove` killed no probe at all -- Regel A, and it
+/// went.
 fn laufsicht(u: &Namen, name: &str) -> Namen {
     let mut innen = u.clone();
-    innen.parametertyp.remove(name);
+    innen.laufvariablen.insert(name.to_string());
     innen
 }
 
+/// **Does this domain run over a name an enclosing loop bound?**
+///
+/// Measured 2026-08-31, and this half is the one `cc` found rather than a pass:
+///
+/// ```gabbro
+/// impl fn f(t : ptr<normal, r> Riesig, w : ptr<normal, r> Winzig) -> u32
+/// { traverse t over slots of w { traverse i over slots of t { … } } }
+/// ```
+///
+/// ```text
+/// gabbro pruefe -> 6 items, 0 errors, 0 hints
+/// gabbro emit   -> for (uint32_t i = 0; i < sizeof(t->slots)/sizeof(t->slots[0]); i++)
+/// cc            -> error: invalid type `uint32_t` for `->`
+/// ```
+///
+/// `parametertyp` is not what decided this one: the arrow comes from `tabellenglobal`, and
+/// the name from `ort`. **So the shadow alone does not close it** -- the emitter has to
+/// know that the place IS a loop variable and refuse, the way it refuses every other domain
+/// it cannot lower. *`N042` shape: the checker silent, the emitter silent, and `cc` saying
+/// what both should have said.*
+fn ist_laufvariable(o: &Ort, u: &Namen) -> bool {
+    u.laufvariablen.contains(&o.basis.text)
+}
+
 fn baumsicht(o: &Ort, u: &Namen, absagen: &mut Absagen) -> Option<(String, String, String)> {
+    // **A loop variable names no table, and NEITHER map may answer for it.** Both paths
+    // below were measured: `parametertyp` carries `descendants of v`, `tabellenzeiger`
+    // carries `descendants of c.slots[0]`, and the unchanged emitter walked the wrong
+    // table through the first and wrote `c->slots[…]` about a `uint32_t` through the
+    // second. One question in front of both.
+    if ist_laufvariable(o, u) {
+        return None;
+    }
     // `<zeiger>.slots[i]` oder `<Tabelle>.slots[i]`
     if o.suffixe.len() == 2 {
         if let (OrtSuffix::Feld(f), OrtSuffix::Index(i)) = (&o.suffixe[0], &o.suffixe[1]) {
@@ -6695,6 +6729,15 @@ fn traverse(
             // > (`04`, `19`); wer bei Namen adressiert (`09`, `18`, `31`), benutzt
             // > `descendants of`/`ancestors of` -- und die sind richtig. **Die Kombination
             // > gab es nicht**, und `gabbro blindstellen` hat sie als Zelle gefuehrt.
+            if ist_laufvariable(o, u) {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`slots of` over a name an enclosing `traverse` bound -- a loop variable \
+                     is an index word, and it names no table",
+                );
+                return;
+            }
             let feld = if u.tabellenglobal.contains(&o.basis.text) {
                 format!("{}.slots", ort(o, u, absagen))
             } else {
@@ -6768,6 +6811,15 @@ fn traverse(
             //
             // `slots of` keeps `uint32_t`, and that asymmetry is the point: the two indices
             // are indices into different things.
+            if ist_laufvariable(o, u) {
+                weigere(
+                    absagen,
+                    s.span,
+                    "`elems of` over a name an enclosing `traverse` bound -- a loop variable \
+                     is an index word, and it carries no array field",
+                );
+                return;
+            }
             let feld = ort(o, u, absagen);
             let v = &x.variable.text;
             aus.push_str(&format!(
