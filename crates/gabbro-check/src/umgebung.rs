@@ -1398,6 +1398,87 @@ impl Umgebung {
         }
     }
 
+    /// **Why a field access needs a verdict and not just a type** (2026-08-31).
+    ///
+    /// The refusal itself is `M134`, and it lives in `m1.rs`; what stands here is the
+    /// question it asks.
+    ///
+    /// [`Self::feld_von`] answers `Typ::Unbekannt` for three different situations, and one of
+    /// them is a defect:
+    ///
+    /// | situation | what it means |
+    /// |---|---|
+    /// | the carrier's type never resolved | *cannot say* -- and M1 counts it in its coverage |
+    /// | the carrier IS a record and has no such field | **a defect** |
+    /// | the carrier has no fields at all -- a number, a truth value, a reason | **a defect** |
+    ///
+    /// **Measured before the rule** (`W24`, `messung/ZWEI-BLINDSTELLEN.md`): both defects
+    /// passed with `0 errors, 0 hints`, and the emitter wrote `m->op` and
+    /// `m.gibt_es_nicht` into the C. *`cc` said what the checker had in its hands.*
+    ///
+    /// > The verdict runs in the SAFE direction (W10): where the carrier's type is not known,
+    /// > it says `Unklar` and nothing falls. **A rule that guesses at an unresolved type would
+    /// > refuse the very programs whose types M1 already reports as uncovered.**
+    pub fn feldurteil(&self, traeger: &Typ, name: &str) -> Feldurteil {
+        match traeger.durchgreifen() {
+            // These carry no fields at all, and that is not a matter of resolution.
+            Typ::Ganzzahl(_) | Typ::Umlaufend(_) | Typ::Gleitkomma(_) | Typ::Wahrheit => {
+                Feldurteil::KeineFelder
+            }
+            Typ::Grund(_) => Feldurteil::KeineFelder,
+            Typ::Verbund(felder) => {
+                if felder.iter().any(|(f, _)| f == name) {
+                    Feldurteil::Traegt
+                } else {
+                    Feldurteil::KeinFeld(felder.iter().map(|(f, _)| f.clone()).collect())
+                }
+            }
+            Typ::Register { felder, .. } => {
+                if felder.iter().any(|(f, _)| f == name) {
+                    Feldurteil::Traegt
+                } else {
+                    Feldurteil::KeinFeld(felder.iter().map(|(f, _)| f.clone()).collect())
+                }
+            }
+            Typ::Verbundname(n) => {
+                // **The parameter list of a `device` IS its constructor** -- and its names
+                // are readable places, not just arguments. `messung/fragmente/F04.gab`:146
+                // writes `q.AVAIL_IDX % q.n`, where `n : u16 in 1 .. QMAX` stands in
+                // `device Virtq(base : Iova, n : u16 in 1 .. QMAX)`.
+                //
+                // > **This half was MISSING in the first build, and F04 said so within the
+                // > minute.** F04 is DURCHGESTOCHEN -- it emits, compiles under `-Werror` and
+                // > runs -- so a refusal there could only be the rule's mistake. *A rule
+                // > measured against a corpus that already runs cannot quietly be wrong.*
+                let parameter: Vec<String> = self
+                    .funktionen
+                    .get(n)
+                    .map(|s| s.parameter.iter().map(|(p, _)| p.clone()).collect())
+                    .unwrap_or_default();
+                match self.formate.get(n).or_else(|| self.geraete.get(n)) {
+                    // A name that resolves to NOTHING is not this rule's business -- see
+                    // `N040` in `namen.rs`, which holds the undeclared type; saying it
+                    // twice would double-book it.
+                    None => Feldurteil::Unklar,
+                    Some(felder)
+                        if felder.iter().any(|(f, _)| f == name)
+                            || parameter.iter().any(|p| p == name) =>
+                    {
+                        Feldurteil::Traegt
+                    }
+                    Some(felder) => Feldurteil::KeinFeld(
+                        felder
+                            .iter()
+                            .map(|(f, _)| f.clone())
+                            .chain(parameter)
+                            .collect(),
+                    ),
+                }
+            }
+            _ => Feldurteil::Unklar,
+        }
+    }
+
     pub fn feld_von(&self, _von: &str, traeger: &Typ, name: &str) -> Typ {
         match traeger.durchgreifen() {
             Typ::Tabelle(t) => {
@@ -1440,6 +1521,21 @@ impl Umgebung {
             _ => Typ::Unbekannt,
         }
     }
+}
+
+/// What [`Umgebung::feldurteil`] can say about a `.field` access. **Three answers, because
+/// `Typ::Unbekannt` was one answer for three situations.**
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Feldurteil {
+    /// The carrier has this field.
+    Traegt,
+    /// The carrier is a record and does NOT have it. Carries the names it does have, so the
+    /// refusal can print them -- a reader who mistyped a field wants the list, not a verdict.
+    KeinFeld(Vec<String>),
+    /// The carrier has no fields at all: a number, a truth value, a reason.
+    KeineFelder,
+    /// The carrier's type did not resolve. **Nothing is claimed** (W10).
+    Unklar,
 }
 
 pub fn breite_von(k: Kw) -> (u8, bool) {

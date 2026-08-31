@@ -1,0 +1,27 @@
+-- erwartet: M134
+-- **Ein Feldzugriff auf etwas, das keine Felder hat.**
+--
+-- `recv` liefert `u64`, und `m.op` liest darauf ein Feld. Der Erzeuger schreibt `m->op`,
+-- und `cc` antwortet *invalid type argument of `->` (have `uint64_t`)*.
+--
+-- > **Der W24-Vorlauf ist der Grund, dass diese Datei nicht rot geraten ist** (2026-08-31,
+-- > `messung/ZWEI-BLINDSTELLEN.md`): vor der Regel sagte der Pruefer zu genau diesem Text
+-- > `3 items, 0 errors, 0 hints` -- und im selben Atemzug `M1 saw 3 expressions, 1 of them
+-- > without a type`. **Der Pruefer hat die Luecke GEZAEHLT und nicht benannt.** *Eine
+-- > Deckungszahl ist keine Absage.*
+--
+-- Dies ist die zweite von `F05`s drei `cc`-Absagen, und sie trifft nicht nur `F05`.
+
+module gift {
+
+extern fn recv(ep : u64) -> u64 effects { reads ep } costs <= 4 ops;
+
+impl fn dienst(ep : u64) -> u64
+    effects { reads ep }
+    costs <= 16 ops
+{
+    let m = recv(ep);
+    return m.op;
+}
+
+}

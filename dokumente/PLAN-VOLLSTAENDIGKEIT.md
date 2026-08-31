@@ -42,7 +42,7 @@ Absenkungspflicht.
 | | Form | wo |
 |---|---|---|
 | **V1** | `breaking I { … }` — *der Block ist eine BEWEISREGION: darin ist die Invariante keine Prämisse* | `beispiele/53-zwei-orte.gab`, 2× |
-| **V2** | `match` über etwas anderem als `option index into T` | `messung/fragmente/F05.gab` |
+| **V2** | ~~`match` über etwas anderem als `option index into T`~~ | ~~`messung/fragmente/F05.gab`~~ — **GEFALLEN am 2026-08-31:** fünf `extern fn`-Zeilen nehmen die Absage weg, und ihr eigener Satz nannte die Heilung. Die Datei fällt seither an `N041` — an einem NAMEN, nicht an einer Form (`messung/F05-UNERREICHBAR.md`) |
 
 **Und die drei echten Programme, die schon der PRÜFER abweist:**
 
@@ -185,10 +185,36 @@ gegangen.**
 * **F3 und F9 sind für den Prüfer gar keine gültigen Programme** (P2, P3 oben). *Eine
   Absenkungspflicht an einem Programm, das nicht übersetzt, ist keine offene Pflicht, sondern
   eine falsch gebuchte.* Erst P2/P3, dann K1.
-* **F5** senkt nicht ab (V2 oben). Erst V, dann K.
+* ~~**F5** senkt nicht ab (V2 oben). Erst V, dann K.~~ **BERICHTIGT am 2026-08-31, Bahn F5 —
+  und die Reihenfolge stimmte, das Hindernis nicht.** `V2` (`match` über etwas anderem als
+  `option index into T`) ist **nicht mehr die Ursache**: fünf `extern fn`-Zeilen nehmen den
+  `C001` weg, und danach stehen 31 Items, 0 Fehler, 199 Zeilen C. Das eigentliche Hindernis
+  ist ein NAME: `exit` gehört C, der eingefrorene Ausschnitt ruft ihn neunmal, und `cc`
+  weist die Einheit zurück. **Seit heute weist der PRÜFER sie zurück** (`N041`,
+  [`../messung/C-NAMEN.md`](../messung/C-NAMEN.md)) — *damit ist `F05` in derselben Klasse
+  wie F1 und F3: ein Programm, das Gabbro nicht annimmt.* Und es ist **unerreichbar**, nicht
+  bloß offen: umbenennen hieße neun eingefrorene Zeilen weglassen, und C führt
+  `void exit(int)` gegen ein `exit()` ohne Argument
+  ([`../messung/F05-UNERREICHBAR.md`](../messung/F05-UNERREICHBAR.md)).
 
 > **Damit ist `H = 0` nicht vor `V` erreichbar**, und das ist der Grund, warum dieser Plan
 > zwei Hälften hat und nicht zwei Pläne ist.
+>
+> **Und seit dem 2026-08-31 ist die Lage schärfer, als dieser Abschnitt sie beschreibt:
+> ALLE VIER offenen Absenkungspflichten hängen an Programmen, die Gabbro nicht annimmt.**
+>
+> | | weist wer ab | Kennung |
+> |---|---|---|
+> | **F1** | der PRÜFER | `N029` |
+> | **F3** | der PRÜFER | `N035`, `N040`, `M124`, `M101`, `H011` |
+> | **F5** | der PRÜFER — *seit heute* | `N041` |
+> | **F9** | der ERZEUGER, dreimal | `C001` |
+>
+> *Der eigene Satz dieses Abschnitts — „eine Absenkungspflicht an einem Programm, das nicht
+> übersetzt, ist keine offene Pflicht, sondern eine falsch gebuchte" — trifft damit nicht zwei
+> der vier, sondern alle.* **Die Umbuchung ist EINE Entscheidung über alle vier und gehört dem
+> Ordner;** eine Bahn, die `F5` allein umbucht, senkt `H` um eins und lässt drei gleichgelagerte
+> Zeilen stehen. *Das ist Umtopfen.*
 
 ### K2 — Und was „durch Ausführung eingelöst" nicht ist
 

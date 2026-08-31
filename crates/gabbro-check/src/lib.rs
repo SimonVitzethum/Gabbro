@@ -31,6 +31,10 @@ pub mod bindung;
 // no pass number of its own, but it DOES owe sentences: `saetze::GATTER` hangs on pass 1,
 // because the question "does this name exist in this build?" is a name question.
 pub mod gatter;
+// **The names C has already taken.** A table, not a pass -- `namen.rs` reads it and issues
+// `N041`. It sits next to `gatter` for the same reason: both answer a question about a NAME
+// before any pass asks what the thing behind it does.
+pub mod cnamen;
 // Die Domaenenschranke -- kosten.rs und m1.rs lesen dieselbe.
 pub mod domaene;
 pub mod m2;

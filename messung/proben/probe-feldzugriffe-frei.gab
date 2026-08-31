@@ -1,0 +1,49 @@
+-- **Die Gegenprobe zu `M134`: die drei Traeger, die ein Feld WIRKLICH tragen.**
+--
+-- Eine Regel, die einen Feldzugriff abweist, muss die richtigen durchlassen. Drei Lagen,
+-- und die dritte hat die Regel im ersten Bau widerlegt:
+--
+--   ein `type`-Verbund          `nachricht.op`
+--   ein Registerfeld            `d.ST.IDX`
+--   ein GERAETEPARAMETER        `d.tiefe` -- **die Parameterliste eines `device` IST sein
+--                               Konstruktor**, und ihre Namen sind lesbare Orte
+--
+-- > **Die dritte war im ersten Bau nicht drin, und `messung/fragmente/F04.gab` hat es
+-- > innerhalb einer Minute gesagt:** dort steht `q.AVAIL_IDX % q.n`, und `n` ist ein
+-- > Geraeteparameter. **F04 ist DURCHGESTOCHEN** -- es erzeugt, uebersetzt unter `-Werror`
+-- > und laeuft. *Eine Absage dort konnte nur der Fehler der Regel sein, und eine Regel, die
+-- > gegen einen laufenden Korpus gemessen wird, kann nicht still falsch bleiben.*
+--
+-- Diese Datei ist eine MESSUNG und kein Beispiel: sie muss 0 Fehler geben.
+
+module probe::feldzugriffe_frei {
+
+const TIEFE : u64 = 8;
+
+type Nachricht = { op : u64, };
+
+device Zaehlwerk(basis : u64, tiefe : u64 in 1 .. TIEFE) at mmio {
+    reg ST : u32 @0x00 class r fields { IDX @[7:0], }
+}
+
+impl fn aus_verbund(nachricht : Nachricht) -> u64
+    effects { pure }
+{
+    return nachricht.op;
+}
+
+impl fn aus_register(d : Zaehlwerk) -> u64
+    effects { reads d }
+    costs <= 8 ops
+{
+    return d.ST.IDX;
+}
+
+impl fn aus_geraeteparameter(d : Zaehlwerk) -> u64
+    effects { pure }
+    costs <= 8 ops
+{
+    return d.tiefe;
+}
+
+}

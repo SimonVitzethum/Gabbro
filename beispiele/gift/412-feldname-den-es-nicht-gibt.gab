@@ -1,0 +1,28 @@
+-- erwartet: M134
+-- **Der Traeger IST ein Verbund, und er hat dieses Feld nicht.**
+--
+-- Die zweite Haelfte derselben Blindstelle, und die ueberraschendere: **auch ein
+-- DEKLARIERTER Verbund wurde nicht befragt.** `Nachricht` fuehrt genau ein Feld, `op`, und
+-- `m.gibt_es_nicht` ging bis zum 2026-08-31 mit `0 errors, 0 hints` durch. `cc` sagte
+-- *`Nachricht` has no member named `gibt_es_nicht`*.
+--
+-- *`umgebung.rs::feld_von` gab fuer alle drei Lagen dieselbe Antwort -- `Typ::Unbekannt`:
+-- „der Traeger hat das Feld nicht", „der Traeger hat gar keine Felder" und „der Typ des
+-- Traegers hat sich nie aufgeloest".* **Zwei davon sind Befunde, eine ist ein ehrliches
+-- Nichtwissen** -- und solange eine Funktion sie zusammenwirft, kann kein Pass die zwei
+-- benennen, ohne die dritte falsch abzuweisen. `Feldurteil` trennt sie.
+--
+-- Die Meldung nennt, was der Traeger HAT: *„it has: op"*. Ein Leser, der sich vertippt hat,
+-- will die Liste und kein Urteil.
+
+module gift {
+
+type Nachricht = { op : u64, };
+
+impl fn dienst(m : Nachricht) -> u64
+    effects { pure }
+{
+    return m.gibt_es_nicht;
+}
+
+}

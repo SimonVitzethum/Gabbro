@@ -1,0 +1,27 @@
+-- erwartet: N041
+-- **Klasse `Header`: ein Name, den `<math.h>` stellt -- und jede erzeugte Einheit schliesst
+-- ihn ein.**
+--
+-- Der Erzeuger schreibt ueber JEDE Uebersetzungseinheit dieselben vier Zeilen:
+-- `<stdint.h> <stdbool.h> <stdatomic.h> <math.h>`. Was die stellen, ist vergeben, bevor die
+-- erste Zeile des Programms dasteht -- 370 Namen ohne fuehrenden Unterstrich, davon 200 aus
+-- `math.h` allein.
+--
+-- **`NAN` ist ein MAKRO**, und darum ist der Schaden hier anders als bei `exit`: aus
+-- `const NAN : u64 = 3;` wuerde `#define NAN 3u`, und der Vorverarbeiter setzt danach jede
+-- Nennung von `NAN` -- auch die aus `math.h` -- auf `3u`. *Ein Fehler, der nicht an der
+-- Zeile steht, die ihn erzeugt.*
+--
+-- Diese Datei fiele auch ohne die Regel, an `cc`. Sie faellt jetzt an der Deklaration.
+
+module gift {
+
+const NAN : u64 = 3;
+
+pub fn haupt() -> u64
+    effects { pure }
+{
+    return NAN;
+}
+
+}

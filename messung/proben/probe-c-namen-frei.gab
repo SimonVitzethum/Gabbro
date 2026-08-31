@@ -1,0 +1,40 @@
+-- **Die Gegenprobe zu `N041`: was NICHT vergeben ist, geht durch.**
+--
+-- Eine Regel, die 558 Namen abweist, ist nur dann eine Regel und keine Wand, wenn die
+-- Nachbarn durchgehen. Diese vier sehen aus wie C-Bibliotheksnamen und sind KEINE:
+--
+--   `read` `write`   POSIX, nicht C11 -- keine eingebaute Funktion von GCC
+--   `open` `close`   POSIX, und in keinem der vier Header
+--   `signal`         steht in `<signal.h>`, das der Erzeuger NICHT schreibt, und ist keine
+--                    eingebaute Funktion
+--
+-- **Gemessen am 2026-08-31** (`messung/C-NAMEN.md` §4): `uint64_t read(uint64_t);` uebersetzt
+-- unter `cc -std=c11 -O0 -Wall -Wextra -Werror` tadellos.
+--
+-- > **Und damit ist `TODO.md`:286 widerlegt.** Dort stand: *„Ein Nutzer, der seine Funktion
+-- > `exit`, `abort`, `free` oder `read` nennt, erfaehrt es vom fremden Uebersetzer."* Drei von
+-- > vier stimmten. Das vierte war danebengegriffen, und niemand hat es nachgerechnet, weil
+-- > die ersten drei trugen.
+--
+-- Diese Datei ist eine MESSUNG und kein Beispiel: sie muss 0 Fehler geben.
+
+module probe::c_namen_frei {
+
+extern fn read(fd : u64) -> u64 effects { reads fd } costs <= 4 ops;
+extern fn write(fd : u64, w : u64) effects { writes fd } costs <= 4 ops;
+extern fn open(a : u64) -> u64 effects { reads a } costs <= 4 ops;
+extern fn close(a : u64) effects { writes a } costs <= 4 ops;
+extern fn signal(n : u64, w : u64) effects { writes n } costs <= 4 ops;
+
+impl fn haupt(fd : u64) -> u64
+    effects { reads fd, writes fd }
+    costs <= 32 ops
+{
+    let a = read(fd);
+    write(fd, a);
+    signal(fd, a);
+    close(fd);
+    return open(a);
+}
+
+}

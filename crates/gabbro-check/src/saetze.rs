@@ -1392,6 +1392,37 @@ pub const PHASEN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/m1.rs; messung/SCHLEIFENINVARIANTE.md §4",
     },
     Satz {
+        name: "m1.feld_traegt_der_traeger",
+        kennungen: &["M134"],
+        aussage: "A `.field` access is refused where the carrier's type is KNOWN and cannot \
+                  carry it -- either the carrier is a record without that field, or it has no \
+                  fields at all.",
+        vorbehalt: "**It answers three situations that used to be one.** \
+                    `umgebung.rs::feld_von` returned `Typ::Unbekannt` for *the carrier lacks \
+                    this field*, *the carrier has no fields* and *the carrier's type never \
+                    resolved* alike; two of those are defects and the third is honest \
+                    ignorance. `Feldurteil` separates them, and where the type did not \
+                    resolve the rule says NOTHING (W10) -- refusing there would hit exactly \
+                    the programs M1 already reports as uncovered.\n\
+                    **What it therefore does not reach:** a field access whose carrier is a \
+                    `tagged type`, an array, a function pointer or `never`. Those return \
+                    `Unklar` and are unmeasured, not cleared.\n\
+                    **And the first build was WRONG, measured within the minute.** It did not \
+                    know that the parameter list of a `device` is readable -- \
+                    `messung/fragmente/F04.gab`:146 writes `q.AVAIL_IDX % q.n`, and F04 is \
+                    DURCHGESTOCHEN: it emits, compiles under `-Werror` and runs. *A refusal \
+                    there could only be the rule's own mistake.*",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift: probes 411 and 412 on `M134` -- a `u64` carrier, and \
+                      a declared record asked for a name it does not have. Counter-probe in \
+                      messung/proben: record field, register field and DEVICE PARAMETER, 0 \
+                      errors. Over the 418 `.gab` files it falls in ONE, \
+                      `messung/fragmente/F05.gab`.",
+        fundstelle: "crates/gabbro-check/src/m1.rs; \
+                     crates/gabbro-check/src/umgebung.rs::feldurteil; \
+                     messung/ZWEI-BLINDSTELLEN.md",
+    },
+    Satz {
         name: "parser.occupied-einmal",
         kennungen: &["P040"],
         aussage: "A `table` carries at most one `occupied` clause -- the same shape `P022` \
@@ -1774,6 +1805,38 @@ pub const SPERREN: &[Satz] = &[
         gemessen_an: "beispiele/gift/295-zeigerziel-ohne-typ.gab; four real defects found \
                       on the first run over the clean corpus and one in SYNTAX.md:1387.",
         fundstelle: "crates/gabbro-check/src/namen.rs::typname_bekannt",
+    },
+    Satz {
+        name: "namen.c_hat_den_namen",
+        kennungen: &["N041"],
+        aussage: "An item name that C has already taken is refused AT THE DECLARATION. The \
+                  generator writes the Gabbro name into C unchanged, so a name C owns is a \
+                  name no lowering can use -- and the refusal names which side of C owns it.",
+        vorbehalt: "**The population is measured, and it is a measurement of ONE toolchain.** \
+                    558 reachable names in three classes -- 37 C11 keywords (44 minus the \
+                    seven Gabbro's own vocabulary refuses at `P002`), 366 from the four \
+                    headers every generated unit includes, 155 built-in functions of the C \
+                    implementation. The third class was measured file by file WITHOUT any \
+                    `#include`; a different `cc` can know a different set, and then this \
+                    table is a lower bound. *`messung/C-NAMEN.md` carries the command for \
+                    every line of it.*\n\
+                    **What it deliberately does NOT carry** (W10): the reserved prefixes of \
+                    C11 §7.1.3. `__builtin_x`, `_Grosz` and `_klein` are reserved by the \
+                    standard and MEASURED not to break, and the corpus holds zero item names \
+                    with a leading underscore in 743. Rule A: no construct without a measured \
+                    need. Nor does it carry the 883 underscore names the four headers define \
+                    -- those are one libc's spelling, not C's.\n\
+                    **And it does not look inside bodies.** A `let` or a parameter named \
+                    `exit` lowers to a local, and a local shadowing a built-in is measured to \
+                    compile. The rule holds every named item except `module` and `use`.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/408-c-name-eingebaut.gab (built-in), 409 (`<math.h>`), \
+                      410 (C11 keyword); counter-probe messung/proben/probe-c-namen-frei.gab \
+                      -- `read` `write` `open` `close` `signal` are POSIX, not C, and pass \
+                      with 0 errors. Over the 418 `.gab` files the table has exactly ONE hit \
+                      outside its own probes: `exit` in `messung/fragmente/F05.gab`.",
+        fundstelle: "crates/gabbro-check/src/namen.rs::name_gehoert_schon_c; \
+                     crates/gabbro-check/src/cnamen.rs; messung/C-NAMEN.md",
     },
     Satz {
         name: "namen.kanal_ohne_einloeser",

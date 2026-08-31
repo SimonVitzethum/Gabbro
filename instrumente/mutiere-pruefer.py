@@ -1693,8 +1693,12 @@ MUTATIONEN = [
     Mutation(
         "parametersicht-bleibt-global",
         "emit.rs",
-        "    let mut lokal = u.clone();\n    for p in &f.parameter {",
-        "    let mut lokal = u.clone();\n    for p in f.parameter.iter().take(0) {",
+        # **The ANCHOR moved on 2026-08-31, the subject did not.** `eigene_sicht` gained
+        # the collection of unread `let` bindings, and it now sits between `let mut lokal`
+        # and the parameter loop. *A dead anchor measures nothing, and `--anker` said so in
+        # the same run.*
+        "    for p in &f.parameter {\n        let name = &p.name.text;",
+        "    for p in f.parameter.iter().take(0) {\n        let name = &p.name.text;",
         "C-Absenkung -- ein Parameter verdeckt die globale Ablesung seines Namens nicht mehr; ein Punkt steht, wo ein Pfeil hingehoert",
         "code",
     ),
@@ -1751,6 +1755,39 @@ MUTATIONEN = [
         "                if let Some(r) = k.get(&n) {",
         "                if let Some(r) = None::<&String> {",
         "N029 -- ein Ruf auf eine scheiternde Funktion ausserhalb eines `let … else`; der Grund faellt unbemerkt auf den Boden",
+    ),
+    Mutation(
+        "ungelesene-bindung-bekommt-kein-void",
+        "emit.rs",
+        "                    if u.ungelesene_lets.contains(&l.name.text) {",
+        "                    if false && u.ungelesene_lets.contains(&l.name.text) {",
+        "die `(void)r2;`-Zeile fuer eine `let`-Bindung ohne Leser faellt weg; das erzeugte C "
+        "traegt `unused variable` und `cc -Wall -Werror` weist die Einheit zurueck. "
+        "`pruefe-emission.sh` Stufe 9 faengt es an `messung/proben/probe-let-ohne-leser.gab`.",
+        "code",
+    ),
+    Mutation(
+        "skalar-traegt-wieder-jedes-feld",
+        "umgebung.rs",
+        "            Typ::Ganzzahl(_) | Typ::Umlaufend(_) | Typ::Gleitkomma(_) | Typ::Wahrheit => {\n"
+        "                Feldurteil::KeineFelder\n"
+        "            }",
+        "            Typ::Ganzzahl(_) | Typ::Umlaufend(_) | Typ::Gleitkomma(_) | Typ::Wahrheit => {\n"
+        "                Feldurteil::Unklar\n"
+        "            }",
+        "M134 -- ein Feldzugriff auf eine ZAHL geht wieder durch; der Erzeuger schreibt "
+        "`m->op` auf ein `uint64_t`, und `cc` bricht ab. Die zweite Haelfte (ein Feldname, "
+        "den der Verbund nicht hat) bleibt wach -- genau EINE Giftprobe faellt (411).",
+    ),
+    Mutation(
+        "c-vergibt-den-namen-nicht-mehr",
+        "cnamen.rs",
+        "    if EINGEBAUT.binary_search(&name).is_ok() {",
+        "    if false && EINGEBAUT.binary_search(&name).is_ok() {",
+        "N041 -- die Klasse `Eingebaut` faellt aus: `exit`, `abort`, `malloc` gehen wieder "
+        "durch, der Erzeuger schreibt `_Noreturn void exit(void);`, und `cc` weist die "
+        "Uebersetzungseinheit zurueck. Die beiden anderen Klassen bleiben wach -- genau EINE "
+        "Giftprobe faellt (408).",
     ),
     Mutation(
         "baumkante-braucht-ihr-feld-nicht",

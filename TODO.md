@@ -52,7 +52,7 @@ Meinung. Das ist der Grund, warum Stufe 2 vor allem Bauen steht.
 | **6** | die fremden Rümpfe sprechen lassen | **C** | die eine Klasse, die sich auch unter „ganz Gabbro verifiziert" nicht auflöst |
 | **7** | was Programme groß macht | **A** | `fnptr`-Erzeuger, dann sein Vertrag; ABI; Generizität |
 | **8** | PL — die Logik des Prüfers | **D** | ohne die Sätze ist „formal verifiziert" nicht formulierbar |
-| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~52~~ 71 Sätze über 12 von 12 Pässen, keiner bewiesen** *(nachgemessen 2026-08-30 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 71 over 12 passes -- 64 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`, nachgemessen 2026-08-31; die Zahl steht im Register von `pruefe-zahlen.py`).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
+| **9** | der Prüfer als Mathematik, in Lean 4 | **D** | **wartet auf einen gemessenen Auslöser, nicht auf einen Termin.** *Erst der Satz, dann der Beweis* — **seit PL.1 (2026-08-21) stehen ~~52~~ 73 Sätze über 12 von 12 Pässen, keiner bewiesen** *(nachgemessen 2026-08-30 mit `cargo run -q --bin gabbro -- paesse`: `SENTENCES: 71 over 12 passes -- 64 measured, 2 ARGUED, 5 CONJECTURED, 0 proved`, nachgemessen 2026-08-31; die Zahl steht im Register von `pruefe-zahlen.py`).* **Das ist die einzige LEBENDE Zahl, die der Reichweitendurchgang von heute falsch fand** — und der Reichweitenzähler sieht sie nicht, weil sie in einem Fließtext steht und nicht fettgedruckt in einer Tabellenzelle. Auslöser 1 ist damit erfüllt; es hält Auslöser 2 (Zahn 3 auf 8) |
 
 **Der kritische Pfad ist diese Spalte.** Er ersetzt den alten *(B3 → K/A/W → `effects` →
 closures → `table.induktion` → group `ops` → P5 → P6 → P7)* — der stand nach BAUSTEINEN, dieser
@@ -268,11 +268,14 @@ darunter.
       **180 fettgedruckte Zahlen in Tabellenzellen ohne einen**. *Und diese beiden Zahlen hält seit dem
       2026-08-20 `pruefe-todo.py`: das Register kann seine eigene Reichweite nicht bewachen
       (W18), also tut es ein anderes Werkzeug.*
-      **Die Zahl ist von ~~145~~ auf 180 GESTIEGEN, und das ist die Korrektur einer
-      Kollision und kein Rückschritt** *(2026-08-31)*: der Schlüssel zählte je WERT statt je ZELLE, und 35
-      Zellen galten als bewacht, weil irgendeine andere Zelle derselben Datei zufällig dieselbe
-      Ziffer trug. *Eine Marke, die aus dem falschen Grund fällt, ist schlimmer als eine, die
-      steht* — von 76 Registereinträgen zeigen **9** wirklich auf eine solche Zelle.
+      **Die Zahl ist von ~~145~~ auf 180 GESTIEGEN, und beide Schritte sind Korrekturen und
+      kein Rückschritt** *(2026-08-31, zwei Bahnen)*: der Schlüssel zählte je WERT statt je
+      ZELLE, und **35 Zellen galten als bewacht, weil irgendeine andere Zelle derselben Datei
+      zufällig dieselbe Ziffer trug** — von 76 Registereinträgen zeigen **9** wirklich auf eine
+      solche Zelle. Der letzte Zuwachs ist ein Zuwachs des GEGENSTANDS:
+      `messung/ZEREMONIE.md` bekam eine Zelle mit dem Grund, aus dem der Zeremoniennenner von
+      1035 auf 1008 fiel.
+      *Eine Marke, die aus dem falschen Grund fällt, ist schlimmer als eine, die steht.*
 
 - [ ] **`F05`s letzte Absage ist EINE Ergänzung weit von zu — und die Ergänzung steht
       trotzdem nicht da, weil `exit` ein Name ist, den C vergeben hat** *(ausgemessen
@@ -286,23 +289,60 @@ darunter.
       sind Befunde und keine Nacharbeit:**
 
       1. `_Noreturn void exit(void);` — *conflicting types for built-in function `exit`;
-         expected `void(int)`*. **Gabbro kennt die reservierten Namen von C nicht.** Ein
-         Nutzer, der seine Funktion `exit`, `abort`, `free` oder `read` nennt, erfährt es vom
-         fremden Übersetzer. Für `F05` ist es eine Wand: `exit()` steht im EINGEFRORENEN
-         Ausschnitt, und umbenennen wäre ein Umschreiben. *Die Heilung ist eine neue
-         Prüferabsage — „dieser Name ist in C vergeben" —, und die kostet eine Kennung, zwei
-         Giftproben und eine Mutation.*
+         expected `void(int)`*. ~~**Gabbro kennt die reservierten Namen von C nicht.**~~
+         **GEBAUT am 2026-08-31 als `N041`** (`crates/gabbro-check/src/cnamen.rs`,
+         `messung/C-NAMEN.md`): 558 Namen in drei gemessenen Klassen, drei Giftproben — eine
+         je Klasse —, eine Gegenprobe, eine Mutation. Über 418 Dateien trifft die Regel
+         **genau eine** Zeile, und es ist diese.
+
+         > **Und der Satz daneben war zu einem Viertel falsch.** Er lautete: *„Ein Nutzer, der
+         > seine Funktion `exit`, `abort`, `free` oder **`read`** nennt, erfährt es vom fremden
+         > Übersetzer."* **`read` erfährt nichts** — POSIX, keine eingebaute Funktion von GCC,
+         > in keinem der vier Header des Erzeugers; `uint64_t read(uint64_t);` übersetzt
+         > tadellos (gemessen, `messung/proben/probe-c-namen-frei.gab`). *Drei von vier
+         > Beispielen trugen, und darum hat das vierte niemand nachgerechnet.*
+
+         Für `F05` bleibt es eine Wand, und die Regel macht sie SICHTBAR statt sie
+         wegzunehmen: `exit()` steht im EINGEFRORENEN Ausschnitt (`FRAGMENTE.md`:1028 die
+         Deklaration, acht Rufstellen im Rumpf), umbenennen wäre ein Umschreiben, und der
+         `verlorene_zeilen`-Riegel in `pruefe-emission.sh` hält genau das auf. **`F05` fällt
+         jetzt am PRÜFER statt am fremden Übersetzer** — siehe `messung/F05-UNERREICHBAR.md`.
       2. `Op _m2 = decode_op(m->op);` — *invalid type argument of `->` (have `uint64_t`)*.
-         Der Ausschnitt liest `m.op`, `recv` ist als `-> u64` ergänzt, und **kein Pass sagt
-         etwas**: `M1` führt `m.op` unter den 20 % ohne Typ. *Wörtlich dieselbe Klasse wie
-         `F06`s `elems of` — der fremde Übersetzer sagt, was der Prüfer wusste und nicht
-         aussprach.* Ein Feldzugriff auf einen Skalar gehört in `M1` oder in den Namenspass.
-         (Korpusseitig heilbar: ein ergänzter Träger `type Nachricht = { op : u64, }` wie
-         `IrqMarke` in `F06`.)
+         Der Ausschnitt liest `m.op`, `recv` ist als `-> u64` ergänzt, und ~~**kein Pass sagt
+         etwas**~~ — **GEBAUT am 2026-08-31 als `M134`** in `M1`, genau wo dieser Punkt es
+         verlangt hat. Zwei Giftproben, eine Gegenprobe, eine Mutation; über 418 Dateien
+         fällt es in **einer**, und das ist `F05`.
+
+         > **Und der Nachbarfall war schlimmer als der gemeldete:** auch `m.gibt_es_nicht`
+         > auf einem DEKLARIERTEN Verbund ging mit `0 errors, 0 hints` durch.
+         > `umgebung.rs::feld_von` gab `Typ::Unbekannt` für drei verschiedene Lagen zurück —
+         > zwei Mängel und ein ehrliches Nichtwissen —, und solange eine Funktion sie
+         > zusammenwirft, kann kein Pass die zwei benennen, ohne die dritte falsch
+         > abzuweisen. `Feldurteil` trennt sie. *`M1` sagte im selben Atemzug
+         > `1 of them without a type` und `0 errors`: **es hat die Lücke gezählt und nicht
+         > benannt.*** `messung/ZWEI-BLINDSTELLEN.md`
       3. `unused variable 'r2'` — `let r2 = request_flush(transport, pool);` steht so im
          EINGEFRORENEN Ausschnitt und wird nie gelesen. Der Erzeuger schreibt für einen
          ungenutzten Parameter schon `(void)art;`; für eine ungenutzte `let`-Bindung nicht.
-         **Eine Zeile im Erzeuger.**
+         ~~**Eine Zeile im Erzeuger.**~~ **GEBAUT am 2026-08-31, und es ist wirklich eine
+         Zeile — aber erst, nachdem die naheliegende Antwort gemessen und WIDERLEGT war.**
+
+         > Die naheliegende Antwort war eine Absage, und sie hatte ein gutes Argument: bei
+         > einem Parameter hat der Anwender die erzeugte Zeile nicht geschrieben, bei einem
+         > `let` schon — und ein nackter Ruf täte es auch. **Gebaut, über die 418 Dateien
+         > gemessen, zurückgenommen: sie fiel in 17 von ihnen, und keine davon war ein
+         > Mangel.** Dreizehn Giftproben, vier `fnptr`-Proben, eine Messdatei. *Eine Bindung
+         > nicht zurückzulesen ist etwas, das dieser Korpus schreibt.*
+         >
+         > **Regel A schneidet hier andersherum:** kein Konstrukt ohne gemessenen Bedarf —
+         > und keine ABSAGE ohne gemessenen Mangel. Der Mangel hat null Instanzen, die
+         > überhaupt emittieren; die Absage hätte 17 gekostet.
+
+         Gebaut ist die Absenkung: `(void)r2;`, aus **demselben Läufer** wie beim Parameter
+         (`emit::benutzte_namen`, seit heute `pub(crate)`). Gegenprobe
+         `messung/proben/probe-let-ohne-leser.gab`, bewacht von Stufe 9; die Mutation, die
+         die Zeile wegnimmt, lässt genau diese Datei an `cc` fallen.
+         `messung/ZWEI-BLINDSTELLEN.md` §3
 
       > **Warum die fünf Zeilen nicht im Baum stehen.** `pruefe-emission.sh` Stufe 9 verlangt
       > *„jede Datei, die emittiert, muss auch übersetzen"*, und ihre Ausnahmeliste ist seit
@@ -448,7 +488,7 @@ darunter.
       **Berichtigt.** *Was offen bleibt, ist die allgemeine Form dieses Falls:* zwei Zahlen aus
       derselben Messung, die eine als Teilmenge der anderen, und in einem zweiten Dokument
       ohne den Zusatz zitiert. **`pruefe-widerruf.py` kennt Widerrufe, keine Teilmengen** —
-      heute **12 Widerrufe** über 131 Dateien, und keiner davon ist eine Teilmengenbeziehung.
+      heute **12 Widerrufe** über 134 Dateien, und keiner davon ist eine Teilmengenbeziehung.
       *~~103~~ … ~~121~~ — am 2026-08-30/31 **zehnmal** nachgezogen, aus sieben Ketten, und
       jedes Mal, weil ein Bericht geschrieben wurde. **Die Zahl misst den Ordner, nicht die
       Arbeit**, und sie ist an einem einzigen Tag von 103 auf 122 gestiegen, ohne dass ein
@@ -534,11 +574,11 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       Mutationskatalog trägt heute 240 Anker, also liegt die Größenordnung neben dem, was schon
       steht — *und das ist der Grund, warum es kein Nachmittag ist.*
 
-- [ ] **85 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
+- [ ] **86 Absagetexte sagen ihren Grund in KEINER der beiden Sprachen** (`./instrumente/pruefe-gruende.py`,
       2026-08-20). Die billige Näherung sortiert jede Regel danach, ob ihre Begründung eine
       Eigenschaft der **Absenkung** (*„hat keinen Speicher", „ist ein unbekannter Ruf", „die
       Breite läuft über"*) oder eine Eigenschaft der **Zusage** (*„genau einmal", „auf jedem
-      Pfad"*) nennt. 104 sind tragend, 2 verdächtig — und **85 Absagetexte sagen ihren Grund in
+      Pfad"*) nennt. 104 sind tragend, 3 verdächtig — und **86 Absagetexte sagen ihren Grund in
       KEINER der beiden Sprachen**.
       **Die Zahl sprang am 2026-08-30 von 57 auf 85, und der Sprung ist kein Rückschritt am
       Prüfer — er ist eine Reparatur am WÄCHTER.** Sein Lesefenster war 4000 Zeichen lang
@@ -614,7 +654,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
       `pruefe-englisch.py` prüfte die SPRACHE eines Textes, nicht seine Lesbarkeit.
       **Die Probe war billig und steht jetzt drin:** Rusts Zeilenfortsetzung frisst den Umbruch
       *und die Einrückung*, also hängt die Trennung an genau einem Zeichen — dem letzten davor.
-      Heute **2134 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
+      Heute **2186 Zeilenfortsetzungen** in den Quellen, **0 kleben**.
       *Am 2026-08-31 fiel die Zahl erst von 2102 auf 2101* — eine übersetzte Parsermeldung
       kam mit einer Fortsetzung weniger aus — *und stieg dann auf 2120*, weil die vier
       Domänenproben fortgesetzte Quelltexte tragen. **Und noch am selben Tag auf 2127**, weil
@@ -874,7 +914,7 @@ Emission trägt **38 von 38**, und alle 38 übersetzen unter `cc -Werror -O2`.*
 
 - [ ] **The mutation probe covers the checker today, not the emission.**
       `./instrumente/mutiere-pruefer.py` beschädigt eine Regel des Prüfers und sieht nach, ob eine Probe
-      fällt. Mutationskatalog: **352 von 352 Ankern** greifen (`--anker`, 2026-08-31 —
+      fällt. Mutationskatalog: **355 von 355 Ankern** greifen (`--anker`, 2026-08-31 —
       vier neue für die vier Domänenschranken, siehe `messung/K001-DOMAENENSCHRANKE.md` §8).
       ~~345 von 345~~ nachgezogen am 2026-08-30: die 346. trennt die zwei Fälle von `result`
       (`messung/ERGEBNIS-ZWEI-NAMEN.md`). Die
@@ -3689,7 +3729,7 @@ formal verifiziert" nicht einmal formulierbar** — man wüsste nicht, was zu be
 PL.1 wüsste man es. *Was daraus folgt, steht im nächsten Punkt und es ist nicht PL.2.*
 
 Dieselbe Bauart wie `schablonen.rs`, mit denselben zwei Zähnen; ~22 Sätze geschätzt. Zweiter Zahn
-sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 71 Sätze über 239 Codes, 45 Codes noch ohne).
+sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 73 Sätze über 241 Codes, 45 Codes noch ohne).
 
 ### K100 — der Weg auf 100 % Klempnereiabdeckung ([`dokumente/PLAN.md`](dokumente/PLAN.md)) *(Teil)*
 

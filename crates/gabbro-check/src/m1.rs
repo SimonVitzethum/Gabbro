@@ -3675,6 +3675,62 @@ impl<'a> Pruefer<'a> {
                     }
                 }
                 OrtSuffix::Feld(f) | OrtSuffix::Ueber(f) => {
+                    // **`M134` -- a field access on a carrier that cannot carry it.**
+                    //
+                    // Measured 2026-08-31 through the UNCHANGED checker
+                    // (`messung/ZWEI-BLINDSTELLEN.md`): `m.op` on a `u64` and
+                    // `m.gibt_es_nicht` on a declared record BOTH passed with
+                    // `0 errors, 0 hints`, and the emitter wrote `m->op` and
+                    // `m.gibt_es_nicht` into the C. `cc` refused each.
+                    //
+                    // *The checker had the answer in its hands the whole time:* the run
+                    // printed `M1 saw 3 expressions, 1 of them without a type` -- it COUNTED
+                    // the hole and did not name it. **A coverage figure is not a refusal.**
+                    match self.u.feldurteil(&traeger, &f.text) {
+                        crate::umgebung::Feldurteil::KeinFeld(hat) => {
+                            let mut a = Absage::fehler(
+                                "M134",
+                                f.span,
+                                format!("`{}` is not a field of this carrier", f.text),
+                            )
+                            .mit_notiz(format!(
+                                "the carrier is `{}`, and the lowering writes the name \
+                                 straight into C",
+                                traeger.text()
+                            ));
+                            a = if hat.is_empty() {
+                                a.mit_notiz("it declares no fields at all")
+                            } else {
+                                a.mit_notiz(format!("it has: {}", hat.join(", ")))
+                            };
+                            self.absagen.schiebe(a);
+                        }
+                        crate::umgebung::Feldurteil::KeineFelder => {
+                            self.absagen.schiebe(
+                                Absage::fehler(
+                                    "M134",
+                                    f.span,
+                                    format!(
+                                        "`.{}` reads a field on something that has none",
+                                        f.text
+                                    ),
+                                )
+                                .mit_notiz(format!(
+                                    "the carrier is `{}` -- a number, a truth value or a \
+                                     reason carries no fields",
+                                    traeger.text()
+                                ))
+                                .mit_notiz(
+                                    "the lowering writes `->` into C, and `cc` answers \
+                                     `invalid type argument of '->'`",
+                                ),
+                            );
+                        }
+                        // The carrying case is the ordinary one; `Unklar` is the honest
+                        // exit -- where
+                        // the carrier's type never resolved, this rule claims nothing (W10).
+                        _ => {}
+                    }
                     traeger = self.u.feld_von(&self.modul, &traeger, &f.text);
                 }
             }
