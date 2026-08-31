@@ -126,14 +126,18 @@ SAUBER = """--   of those PREMISES WITHOUT A PASS (tooth 3): 1 -- a proof nothin
 def main():
     g, _ = lies(GIFT)
     s, _ = lies(SAUBER)
+    # **2, not 1 -- and this file already knew it three lines further down.** Every other
+    # refusal here (`BIN` missing, deadline, tool did not run) ends with 2; only the two
+    # speech tests ended with 1, so the SAME file said two different things about the same
+    # class. *A guardian whose own logic falls has measured nothing.*
     if len(g) != 2 or g[1][2] is not None:
         print("SPRECHPROBE GESCHEITERT: eine adresslose Praemisse faellt nicht auf.",
               file=sys.stderr)
-        return 1
+        return 2
     if len(s) != 1 or s[0][2] is None:
         print("SPRECHPROBE GESCHEITERT: eine Praemisse MIT Adresse wird beanstandet.",
               file=sys.stderr)
-        return 1
+        return 2
     print("== Sprechprobe: ok (adresslos faellt auf, mit Adresse geht durch) ==\n")
 
     r = lauf("schablonen")

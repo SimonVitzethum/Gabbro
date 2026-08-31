@@ -125,7 +125,9 @@ def main():
         print("ABBRUCH: die Sprechprobe faellt -- es wurde NICHTS gemessen.")
         for f in fehler:
             print("  " + f)
-        return 1
+        # 2, not 1. One of the three reasons collected above is literally "`ast.rs` yields
+        # zero item kinds" -- an EMPTY population, and the most dangerous of them all.
+        return 2
     print("== Sprechprobe: ok (ein erfundenes Konstrukt hat 0 Proben, `module` hat welche) ==\n")
 
     vs = varianten()

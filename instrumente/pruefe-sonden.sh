@@ -87,7 +87,8 @@ echo "  eine WIDERLEGENDE    -> $S1   (erwartet 1)"
 echo "  eine nicht lauffaehige -> $S77  (erwartet 77)"
 if [ "$S0" != "0" ] || [ "$S1" != "1" ] || [ "$S77" != "77" ]; then
   echo "  GESCHEITERT -- der Laeufer unterscheidet die drei Zustaende nicht."
-  exit 1
+  # 2, not 1: if the runner cannot tell hold from refuted, nothing below is a measurement.
+  exit 2
 fi
 echo "  ok (alle drei Zustaende kommen an)"
 echo
@@ -117,6 +118,17 @@ if [ -x "$BIN" ]; then
 fi
 DA=0
 for f in "$W"/sonden/sonde_*.c; do [ -e "$f" ] && DA=$((DA+1)); done
+
+# **`0 von 0 Sonden gelaufen` was a GREEN run until 2026-08-31** (measured over a tree with
+# no `sonden/`). Not one assumption was put to the test, nothing was refuted, and this
+# guardian exited 0 -- *a positive verdict about nothing*, and over exactly the population
+# whose whole purpose is to be able to refute something (W1, W17).
+if [ "$DA" -eq 0 ]; then
+  echo "ABBRUCH: keine einzige Sonde unter sonden/ -- es wurde NICHTS gemessen."
+  echo '  Eine Sonde, die es nicht gibt, widerlegt nichts -- und `0 von 0 gelaufen` ist'
+  echo '  keine Deckung, sondern eine leere Grundgesamtheit.'
+  exit 2
+fi
 
 echo "== Die Sonden dieses Ordners =="
 GELAUFEN=0

@@ -126,7 +126,9 @@ def haupt() -> int:
         print(f"   ok -- ohne die zwei Stellen faellt `Check` von {len(heute)} auf {len(leser_ohne)} Leser")
     else:
         print("   GESCHEITERT -- der Waechter merkt den Unterschied nicht")
-        return 1
+        print("   Die Tafel darueber ist damit keine Messung. ABBRUCH.")
+        # 2, not 1: the table printed above says nothing once the probe has fallen.
+        return 2
 
     print()
     print("== Und was das NICHT heisst ==")

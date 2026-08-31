@@ -675,7 +675,10 @@ def main():
     zahlen = heutige_zahlen()
     print("== Sprechprobe des Waechters ==")
     if not sprechprobe(zahlen):
-        return 1
+        # **2, not 1: a guardian that fails its own speech test has measured NOTHING.**
+        # What it says about `TODO.md` afterwards is not a statement about `TODO.md`.
+        print("\n! Der Waechter misst nicht, was er behauptet. ABBRUCH.")
+        return 2
     if "--probe" in sys.argv:
         return 0
 

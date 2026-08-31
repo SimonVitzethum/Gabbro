@@ -402,7 +402,9 @@ def flaechenprobe():
 # English on the way past: the `elems of` assertion in `rechenwerk.rs` and the counter-probe
 # in `beispiele.rs`, both touched for other reasons. *A ratchet that is only ever pulled at
 # the raise is a mark, not a ratchet* -- so the mark travels down with the measurement.
-MARKE_KOMMENTARE = 7900   # 7730 earned + 180 booked as debt (2026-08-21), 10 repaid 2026-08-31
+MARKE_KOMMENTARE = 7892   # 7730 earned + 180 booked as debt (2026-08-21), 10 repaid 2026-08-31
+# **-> 7892 on 2026-08-31.** Eight more fell with the report translations; the mark follows the
+# MEASURED state, because a mark above it is slack and one below it is a permanently red guard.
 MARKE_PY = 1072           # 1043 earned + 29 booked as debt (2026-08-21)
 MARKE_NAMEN = 273         # identifiers with a German stem (upper bound)
 
@@ -574,6 +576,18 @@ def quellsprache():
 
 
 def main():
+    # **Zero sources is a REFUSAL, not a pass** (measured 2026-08-31 over an empty tree).
+    # Without this latch the tool printed `0 continuations in 0 sources`, `0 of 0 comment
+    # lines`, `ENGLISCH: ALL PASS` -- and returned 0. Every ratchet holds trivially when its
+    # population is empty, so the greenest run this guardian can produce is the one where it
+    # looked at nothing. *That is W17: not a wrong verdict, a positive verdict about
+    # nothing.*
+    if not QUELLEN:
+        print("ABBRUCH: keine Pruefer-Quelle unter `crates/*/src/*.rs` -- es wurde NICHTS "
+              "gemessen.")
+        print("  Ueber einer leeren Menge haelt jede Ratsche, und `ALL PASS` waere ein")
+        print("  Urteil ueber nichts.")
+        return 2
     if not sprechprobe():
         print("== ENGLISCH: der Waechter misst nicht ==")
         return 2

@@ -316,7 +316,9 @@ def main():
         print("ABBRUCH: der Selbsttest faellt -- es wurde NICHTS gemessen.")
         for f in fehler:
             print("  " + f)
-        return 1
+        # The line above says it, the return code has to say it too: 2, not 1. A caller
+        # reads the number, not the sentence.
+        return 2
 
     alle = felder()
     getragen, ungelesen = {}, {}

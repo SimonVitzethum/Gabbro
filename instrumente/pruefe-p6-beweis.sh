@@ -52,12 +52,12 @@ baue() {
 
 if [ ! -x "$GABBRO" ]; then
     echo "== P6-BEWEIS: KEIN GABBRO -- gebaut wird auf ki-pc-fisch-101 (CLAUDE.md) =="
-    exit 1
+    exit 2
 fi
 if [ ! -x "$ISABELLE" ]; then
     echo "== P6-BEWEIS: KEIN ISABELLE unter $ISABELLE -- NICHTS gemessen =="
     echo "  Ein fehlendes Werkzeug ist kein bestandener Test (W1)."
-    exit 1
+    exit 2
 fi
 
 # **Die Sprechprobe, in beide Richtungen** (R11). *Ein Waechter, der beim ersten Versuch
@@ -83,7 +83,7 @@ sprechprobe() {
 
 if ! sprechprobe; then
     echo "== P6-BEWEIS: der Waechter misst nicht -- Isabelle antwortet nicht wie erwartet =="
-    exit 1
+    exit 2
 fi
 
 BAU="$ARB/bau"; mkdir -p "$BAU"
@@ -119,7 +119,7 @@ done
 if [ "$ZIELE" -eq 0 ]; then
     echo "== P6-BEWEIS: $EINHEITEN Theorien, KEIN einziger Satz -- nichts gemessen =="
     echo "  Regel A verlangt, dass mindestens eine ERZEUGTE Pflicht wirklich durchgeht."
-    exit 1
+    exit 2
 fi
 
 {
@@ -139,7 +139,7 @@ if [ "$RC" -eq 2 ]; then
     echo
     echo "== P6-BEWEIS: FRIST $FRIST s UEBERSCHRITTEN -- NICHTS gemessen =="
     echo "  Ein Haenger sieht aus wie „laeuft noch\", nicht wie ein Befund."
-    exit 1
+    exit 2
 fi
 if [ "$RC" -ne 0 ]; then
     echo

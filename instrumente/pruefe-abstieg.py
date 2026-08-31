@@ -20,13 +20,28 @@ import re, pathlib, sys
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 QUELLE = WURZEL / "crates/gabbro-check/src"
 
+
+def absage(satz):
+    """**ABBRUCH: es wurde NICHTS gemessen -- und der Ruecklaufwert sagt es** (2026-08-31).
+
+    Bis heute stand hier ueberall `sys.exit("…")`, und das ist Ruecklaufwert **1** -- also
+    genau die Farbe eines neuen Passes mit Luecke. Dieser Waechter kannte damit nur zwei
+    Zustaende, wo es drei gibt: eine gefallene Sprechprobe und eine fehlende Liste in
+    `lib.rs` lasen sich wie ein Rueckstand in den Paessen. *Ein Werkzeug, das nichts
+    gemessen hat, darf nicht so aussehen wie eines, das etwas gefunden hat.*
+    """
+    print(f"ABBRUCH: {satz}", file=sys.stderr)
+    print("  Es wurde NICHTS gemessen -- die Tafel darueber ist keine Aussage ueber die"
+          " Paesse.", file=sys.stderr)
+    sys.exit(2)
+
 # Die Arten, die einen Unterblock tragen -- aus `lib.rs::unterbloecke`, und der Waechter
 # liest sie DORT, statt sie zweitzuschreiben.
 def mit_block():
     s = (QUELLE / "lib.rs").read_text()
     m = re.search(r"pub fn unterbloecke.*?\n}\n", s, re.S)
     if not m:
-        sys.exit("lib.rs::unterbloecke nicht gefunden -- der Waechter liest dort seine Liste")
+        absage("lib.rs::unterbloecke nicht gefunden -- der Waechter liest dort seine Liste")
     kopf = m.group(0).split("StmtArt::Let(_)")[0]
     return sorted(set(re.findall(r"StmtArt::([A-Za-z]+)", kopf)))
 
@@ -251,7 +266,7 @@ def main():
     probe = (QUELLE / "m1.rs").read_text().replace("StmtArt::Observiert", "StmtArt::XX_weg")
     fehlt_jetzt = [a for a in arten if not re.search(r"StmtArt::" + a + r"\b", probe)]
     if "Observiert" not in fehlt_jetzt:
-        sys.exit("SPRECHPROBE GESCHEITERT: der Waechter sieht ein entferntes `Observiert` nicht")
+        absage("SPRECHPROBE GESCHEITERT: der Waechter sieht ein entferntes `Observiert` nicht")
     # **Und die zweite Richtung**, weil genau sie am 2026-08-19 durchgerutscht ist: ein Arm,
     # der neben `unterbloecke` noch selbst rekursiert, laeuft jeden Unterblock zweimal.
     gift = """fn probe(b: &Block) {
@@ -264,10 +279,10 @@ def main():
     }
 }"""
     if "Sperrt" not in doppelt("probe", gift, arten):
-        sys.exit("SPRECHPROBE GESCHEITERT: der Waechter sieht einen doppelten Abstieg nicht")
+        absage("SPRECHPROBE GESCHEITERT: der Waechter sieht einen doppelten Abstieg nicht")
     sauber = gift.replace("StmtArt::Sperrt(x) => probe(&x.rumpf),", "StmtArt::Sperrt(_) => {}")
     if doppelt("probe", sauber, arten):
-        sys.exit("SPRECHPROBE GESCHEITERT: falsches Rot am einfachen Abstieg")
+        absage("SPRECHPROBE GESCHEITERT: falsches Rot am einfachen Abstieg")
     # **Und die dritte Richtung, seit dem 2026-08-21: die ENTSCHULDIGUNG darf nicht ueber
     # die Funktionsgrenze reichen.** Die Probe stellt genau die Lage her, die `emit.rs` bis
     # heute hatte: eine Funktion weigert sich benannt, die daneben hat eine Luecke.
@@ -290,14 +305,14 @@ fn sammler(b: &Block) {
 }"""
     _, l2, e2 = je_funktion(gift2, arten)
     if not any(n == "sammler" for n, _ in l2):
-        sys.exit("SPRECHPROBE GESCHEITERT: die Entschuldigung des Nachbarn deckt eine Luecke")
+        absage("SPRECHPROBE GESCHEITERT: die Entschuldigung des Nachbarn deckt eine Luecke")
     if not any(n == "weigerer" for n, _ in e2):
-        sys.exit("SPRECHPROBE GESCHEITERT: eine benannte Weigerung wird nicht mehr entschuldigt")
+        absage("SPRECHPROBE GESCHEITERT: eine benannte Weigerung wird nicht mehr entschuldigt")
     print("  (Sprechprobe: fehlender UND doppelter Abstieg werden gemeldet -- ok)")
     print("  (Sprechprobe: die Weigerung entschuldigt NUR ihre eigene Funktion -- ok)")
     # **And the fourth direction, since 2026-08-30: the BOOKING itself.**
     if fehler := buchungs_sprechprobe(arten):
-        sys.exit(f"SPRECHPROBE GESCHEITERT: {fehler}")
+        absage(f"SPRECHPROBE GESCHEITERT: {fehler}")
     print("  (Sprechprobe: neu, gebucht und veraltet werden unterschieden -- ok)")
 
     # **A double descent is never booked.** It is not a hole in the coverage but a run

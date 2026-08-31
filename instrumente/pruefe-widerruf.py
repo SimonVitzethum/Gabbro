@@ -255,6 +255,17 @@ def lauf(dateien, widerrufe):
 
 
 def main():
+    # **TOOTH 0 -- the subject has to be there** (2026-08-31). Over a tree without
+    # `dokumente/` this tool died of a `FileNotFoundError` inside its own speech test:
+    # return code 1, a traceback, and in a chain that reads like a live occurrence.
+    # *A crash is not a refusal -- a NAMED refusal is.*
+    probe = W / "dokumente" / "PLAN.md"
+    if not DATEIEN or not probe.is_file():
+        print("ABBRUCH: %d Dateien im Zugriff, Sprechprobendatei %s -- es wurde NICHTS "
+              "gemessen." % (len(DATEIEN), "da" if probe.is_file() else "FEHLT"))
+        print("   Ohne Text gibt es kein lebendes Vorkommen, und `ALL PASS` waere ein")
+        print("   Urteil ueber nichts (W17).")
+        return 2
     # ZAHN 1 -- kein Eintrag ohne alle vier Felder.
     for e in WIDERRUFE:
         for f in ("muster", "datum", "grund", "ersatz"):
