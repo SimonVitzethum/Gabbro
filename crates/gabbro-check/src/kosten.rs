@@ -69,6 +69,12 @@ use gabbro_syntax::diag::{Absage, Absagen};
 use gabbro_syntax::span::Span;
 use std::collections::HashMap;
 
+/// **Die Namen, die an EINER Stelle im Rumpf sichtbar sind** -- Parameter plus jedes `let`
+/// der umschliessenden Bloecke. Bis zum 2026-08-31 gab es nur die Parameter, und ein `let`
+/// in einem inneren Block war fuer diesen Pass unsichtbar. *Dasselbe, was `m1.rs::Lage`
+/// traegt, unter demselben Vorbild.*
+type Bindungen = HashMap<String, Typ>;
+
 /// **Eine Zusage als SUMME: eine Konstante plus Vielfache nichtnegativer Groessen.**
 ///
 /// `costs <= 4 + 12 * lenof(m)` ist `Term { fest: 4, glieder: {"lenof(m)": 12} }`.
@@ -287,9 +293,9 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         };
 
         // -- K002: jeder `locks`-Block gegen die `held`-Zusage seiner Sperre.
-        r.sperrbloecke(b, absagen);
+        r.sperrbloecke(b, &r.lokal.clone(), absagen);
         // -- K006/K007: jede Schleifenzusage gegen ihren eigenen Rumpf.
-        r.schleifenzusagen(b, absagen);
+        r.schleifenzusagen(b, &r.lokal.clone(), absagen);
         // -- K008/K009 («K5.4»): die Rekursion bekommt ein Mass.
         rekursionsmass(f, b, modul, &u, &g, absagen);
 
@@ -337,7 +343,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) -> Zaehlung {
         // null; ein Rumpf, der eine Operation kostet, verletzt sie.*
         let zusage_min = zusage.fest;
         let zusage = zusage_min;
-        match r.block(b) {
+        match r.block(b, &r.lokal.clone()) {
             Kosten::Zahl(n) => {
                 z.gerechnet += 1;
                 if n > zusage {
@@ -465,7 +471,13 @@ impl<'a> Rechner<'a> {
     /// `if x { return … }` steht, liegt auf dem ANDEREN Weg, nicht hinter beiden.
     /// Ohne diese Regel zahlt jeder fruehe Rueckstieg zweimal, und die Zahl misst einen
     /// Weg, den kein Durchlauf nimmt.
-    fn block(&self, b: &Block) -> Kosten {
+    fn block(&self, b: &Block, aussen: &Bindungen) -> Kosten {
+        // **Der Blockgeltungsbereich -- er ERBT und gibt nichts zurueck**, genau wie
+        // `m1.rs::Lage`. Ohne ihn schlaegt `typ_von_ort` den Parameter nach, den ein `let`
+        // eine Zeile darueber verdeckt hat, und die Domaenenschranke gehoert zur falschen
+        // Tabelle. *Gemessen 2026-08-31: 17 zugesagte ops ueber einem C-Programm, das 64
+        // Durchgaenge laeuft.*
+        let mut lokal = aussen.clone();
         let mut summe = Kosten::Zahl(0);
         for (i, s) in b.anweisungen.iter().enumerate() {
             if let StmtArt::Wenn(w) = &s.art {
@@ -473,59 +485,114 @@ impl<'a> Rechner<'a> {
                     let (bed, rumpf) = &w.zweige[0];
                     if crate::endet_immer(rumpf, &[]) {
                         // Zwei Wege: durch den Zweig, oder daran vorbei und weiter.
-                        let durch = self.ausdruck(bed).plus(self.block(rumpf));
-                        let vorbei = self.ausdruck(bed).plus(self.rest(&b.anweisungen[i + 1..]));
+                        let durch = self.ausdruck(bed, &lokal).plus(self.block(rumpf, &lokal));
+                        let vorbei = self.ausdruck(bed, &lokal).plus(self.rest(&b.anweisungen[i + 1..], &lokal));
                         return summe.plus(groesser(durch, vorbei));
                     }
                 }
             }
-            summe = summe.plus(self.anweisung(s));
+            summe = summe.plus(self.anweisung(s, &lokal));
+            self.binde(s, &mut lokal);
         }
         summe
     }
 
-    fn rest(&self, anweisungen: &[Stmt]) -> Kosten {
+    fn rest(&self, anweisungen: &[Stmt], aussen: &Bindungen) -> Kosten {
+        let mut lokal = aussen.clone();
         let mut summe = Kosten::Zahl(0);
         for (i, s) in anweisungen.iter().enumerate() {
             if let StmtArt::Wenn(w) = &s.art {
                 if w.sonst.is_none() && w.zweige.len() == 1 {
                     let (bed, rumpf) = &w.zweige[0];
                     if crate::endet_immer(rumpf, &[]) {
-                        let durch = self.ausdruck(bed).plus(self.block(rumpf));
-                        let vorbei = self.ausdruck(bed).plus(self.rest(&anweisungen[i + 1..]));
+                        let durch = self.ausdruck(bed, &lokal).plus(self.block(rumpf, &lokal));
+                        let vorbei = self.ausdruck(bed, &lokal).plus(self.rest(&anweisungen[i + 1..], &lokal));
                         return summe.plus(groesser(durch, vorbei));
                     }
                 }
             }
-            summe = summe.plus(self.anweisung(s));
+            summe = summe.plus(self.anweisung(s, &lokal));
+            self.binde(s, &mut lokal);
         }
         summe
     }
 
-    fn anweisung(&self, s: &Stmt) -> Kosten {
+    /// **Was eine Anweisung an NAMEN hinterlaesst** -- der eine Schritt, den dieser Pass bis
+    /// zum 2026-08-31 nicht tat.
+    ///
+    /// Der Wert steht im ALTEN Geltungsbereich (`let t = t;` liest das aeussere `t`), also
+    /// wird erst gerechnet und dann gebunden. **Und ein Name, dessen Typ hier nicht
+    /// abzulesen ist, wird `Unbekannt` und nicht durchgereicht:** `typ_von_ort` faellt sonst
+    /// auf den GLOBALEN Namen zurueck, und das waere dieselbe Verwechslung eine Ebene
+    /// hoeher. *Unbekannt faellt laut -- `K003` sagt „keine Schranke", statt eine falsche
+    /// zu nennen.*
+    fn binde(&self, s: &Stmt, lokal: &mut Bindungen) {
+        match &s.art {
+            StmtArt::Let(l) => {
+                let t = match &l.typ {
+                    Some(td) => self.u.typ_von_ausdruck_decl(self.modul, td),
+                    None => self.typ_des_wertes(&l.wert, lokal),
+                };
+                lokal.insert(l.name.text.clone(), t);
+            }
+            StmtArt::LetSonst(l) => {
+                let t = match &l.quelle {
+                    crate::LetQuelle::Ort(o) => self.u.typ_von_ort(self.modul, o, lokal),
+                    _ => crate::typen::Typ::Unbekannt,
+                };
+                lokal.insert(l.name.text.clone(), t);
+            }
+            StmtArt::AwaitLoad(a) => {
+                let t = self.u.typ_von_ort(self.modul, &a.quelle, lokal);
+                lokal.insert(a.name.text.clone(), t);
+            }
+            StmtArt::Exchange(e) => {
+                let t = match &e.form {
+                    XForm::Vergleich { .. } => crate::typen::Typ::Wahrheit,
+                    XForm::Update { .. } => self.u.typ_von_ort(self.modul, &e.ort, lokal),
+                };
+                lokal.insert(e.name.text.clone(), t);
+            }
+            _ => {}
+        }
+    }
+
+    /// Der Typ eines `let`-Wertes, soweit dieser Pass ihn ablesen kann. **Er braucht nur
+    /// die Traeger von Domaenen** -- Tabellen, Verbunde, `walk`-Koepfe, Feldarrays -- und
+    /// die stehen alle an einem ORT. Alles andere ist `Unbekannt`, und das ist die ehrliche
+    /// Antwort: eine Zahl waere hier geraten.
+    fn typ_des_wertes(&self, e: &Expr, lokal: &Bindungen) -> crate::typen::Typ {
+        match &e.art {
+            ExprArt::Ort(o) => self.u.typ_von_ort(self.modul, o, lokal),
+            ExprArt::Klammer(i) => self.typ_des_wertes(i, lokal),
+            _ => crate::typen::Typ::Unbekannt,
+        }
+    }
+
+    fn anweisung(&self, s: &Stmt, lokal: &Bindungen) -> Kosten {
         match &s.art {
             // Eine Zuweisung ist eine Primitive, dazu was der Ausdruck kostet.
-            StmtArt::Let(l) => Kosten::Zahl(1).plus(self.ausdruck(&l.wert)),
-            StmtArt::Zuweisung(z) => Kosten::Zahl(1).plus(self.ausdruck(&z.wert)),
-            StmtArt::Publish(p) => Kosten::Zahl(1).plus(self.ausdruck(&p.wert)),
+            StmtArt::Let(l) => Kosten::Zahl(1).plus(self.ausdruck(&l.wert, lokal)),
+            StmtArt::Zuweisung(z) => Kosten::Zahl(1).plus(self.ausdruck(&z.wert, lokal)),
+            StmtArt::Publish(p) => Kosten::Zahl(1).plus(self.ausdruck(&p.wert, lokal)),
             StmtArt::AwaitLoad(_) => Kosten::Zahl(1),
             // `narrow` senkt sich auf eine Bereichspruefung ab -- eine Rechenoperation.
             StmtArt::Exchange(e) => match &e.form {
-                XForm::Update { rumpf, .. } => Kosten::Zahl(1).plus(self.block(rumpf)),
-                XForm::Vergleich { wert, .. } => Kosten::Zahl(1).plus(self.ausdruck(wert)),
+                XForm::Update { rumpf, .. } => Kosten::Zahl(1).plus(self.block(rumpf, lokal)),
+                XForm::Vergleich { wert, .. } => Kosten::Zahl(1).plus(self.ausdruck(wert, lokal)),
             },
             StmtArt::LetSonst(l) => {
                 // **Ein `place` auszupacken kostet EINE Operation** -- die Ablesung. Ein
                 // Ruf kostet, was der Gerufene zusagt.
                 let quelle = match l.als_ruf() {
-                    Some(r) => self.ruf(r),
+                    Some(r) => self.ruf(r, lokal),
                     None => Kosten::Zahl(1),
                 };
-                Kosten::Zahl(1).plus(quelle).plus(self.block(&l.sonst))
+                Kosten::Zahl(1).plus(quelle).plus(self.block(&l.sonst, lokal))
             }
-            StmtArt::Ruf(r) => self.ruf(r),
+            StmtArt::Ruf(r) => self.ruf(r, lokal),
             // Ein Ruecksprung ist keine der vier Primitiven; sein Ausdruck kostet.
-            StmtArt::Return(Some(e)) => self.ausdruck(e),
+            StmtArt::Return(Some(e)) => self.ausdruck(e, lokal),
             StmtArt::Return(None) | StmtArt::Leave(_) | StmtArt::Next(_) => Kosten::Zahl(0),
             // **Branches count the MAXIMUM** -- and the branch itself costs nothing: the
             // four primitives of the model are assignment, arithmetic, load, store. An `if`
@@ -550,13 +617,13 @@ impl<'a> Rechner<'a> {
                 // The conditions every run reaching THIS arm has already paid for.
                 let mut praefix = Kosten::Zahl(0);
                 for (bed, rumpf) in &w.zweige {
-                    praefix = praefix.plus(self.ausdruck(bed));
-                    let z = praefix.clone().plus(self.block(rumpf));
+                    praefix = praefix.plus(self.ausdruck(bed, lokal));
+                    let z = praefix.clone().plus(self.block(rumpf, lokal));
                     hoechste = groesser(hoechste, z);
                 }
                 if let Some(sonst) = &w.sonst {
                     // Reaching `else` means every condition was evaluated and none held.
-                    hoechste = groesser(hoechste, praefix.plus(self.block(sonst)));
+                    hoechste = groesser(hoechste, praefix.plus(self.block(sonst, lokal)));
                 }
                 // **Without `sonst` the fall-through path needs no arm of its own:** it costs
                 // the full prefix, and the LAST arm already counts that prefix plus its body.
@@ -565,31 +632,41 @@ impl<'a> Rechner<'a> {
             StmtArt::Match(m) => {
                 let mut hoechste = Kosten::Zahl(0);
                 for z in &m.zweige {
-                    hoechste = groesser(hoechste, self.block(&z.rumpf));
+                    hoechste = groesser(hoechste, self.block(&z.rumpf, lokal));
                 }
-                self.ausdruck(&m.gegenstand).plus(hoechste)
+                self.ausdruck(&m.gegenstand, lokal).plus(hoechste)
             }
-            StmtArt::Bricht(b) => self.block(&b.rumpf),
-            StmtArt::Sperrt(l) => self.block(&l.rumpf),
+            StmtArt::Bricht(b) => self.block(&b.rumpf, lokal),
+            StmtArt::Sperrt(l) => self.block(&l.rumpf, lokal),
             // **`observes` kostet die NAHME nicht** -- RCU nimmt nichts. Was es kostet, ist
             // der Rumpf und die zwei Marken; die zaehlen als eine Primitive.
-            StmtArt::Observiert(o) => Kosten::Zahl(1).plus(self.block(&o.rumpf)),
+            StmtArt::Observiert(o) => Kosten::Zahl(1).plus(self.block(&o.rumpf, lokal)),
             StmtArt::Narrow(n) => Kosten::Zahl(1).plus(groesser(
                 Kosten::Zahl(0),
-                self.block(&n.sonst),
+                self.block(&n.sonst, lokal),
             )),
 
-            StmtArt::Schleife(sch) => self.schleife(sch),
+            StmtArt::Schleife(sch) => self.schleife(sch, lokal),
         }
     }
 
     /// **Die Schleifen -- und hier steckt die eigentliche Aussage des Modells.**
-    fn schleife(&self, sch: &Schleife) -> Kosten {
+    fn schleife(&self, sch: &Schleife, lokal: &Bindungen) -> Kosten {
         match sch {
             // Rumpfkosten x Domaenenschranke. Steht die Schranke nicht fest, steht auch
             // die Kostenzusage nicht fest -- und dann sagt der Pass das.
-            Schleife::Traverse(t) => match (self.block(&t.rumpf), self.domaenenschranke(&t.domaene))
-            {
+            // **Die Laufvariable ist im Rumpf GEBUNDEN**, und sie ist keine Tabelle -- sie
+            // ist ein Platzindex. Verdeckt sie einen Parameter, darf `slots of i` nicht die
+            // Schranke des Parameters bekommen. *`m1.rs` bindet sie an derselben Stelle
+            // ebenso auf `Unbekannt` (Zeile 1288).*
+            Schleife::Traverse(t) => match (
+                self.block(&t.rumpf, &{
+                    let mut innen = lokal.clone();
+                    innen.insert(t.variable.text.clone(), Typ::Unbekannt);
+                    innen
+                }),
+                self.domaenenschranke(&t.domaene, lokal),
+            ) {
                 (Kosten::Zahl(rumpf), Some(n)) => Kosten::Zahl(rumpf).mal(n, Some(t.span)),
                 (Kosten::Unbekannt(g, s), _) => Kosten::Unbekannt(g, s),
                 // **The text names the DECLARATION it is missing, and it is one of three.**
@@ -629,12 +706,12 @@ impl<'a> Rechner<'a> {
 
     /// Die Schranke einer Domaene -- **umgezogen nach `domaene.rs` am 2026-08-19**, weil M1
     /// sie fuer «H2.1» braucht. *Eine Stelle, zwei Leser.*
-    fn domaenenschranke(&self, d: &Domaene) -> Option<i128> {
-        crate::domaene::Sicht { u: self.u, modul: self.modul, lokal: &self.lokal }
+    fn domaenenschranke(&self, d: &Domaene, lokal: &Bindungen) -> Option<i128> {
+        crate::domaene::Sicht { u: self.u, modul: self.modul, lokal: lokal }
             .domaenenschranke(d)
     }
 
-    fn ausdruck(&self, e: &Expr) -> Kosten {
+    fn ausdruck(&self, e: &Expr, lokal: &Bindungen) -> Kosten {
         // **Was zur Uebersetzungszeit feststeht, kostet zur Laufzeit nichts.** `GRENZE`,
         // `4096`, `NSLOTS * 8` -- keine der vier Primitiven wird dafuer emittiert.
         if self.u.konst_wert(self.modul, e).is_some() {
@@ -666,17 +743,17 @@ impl<'a> Rechner<'a> {
                     .count() as i128,
             ),
             ExprArt::Alt(_) => Kosten::Zahl(0),
-            ExprArt::Klammer(i) => self.ausdruck(i),
-            ExprArt::Unaer(_, i) => Kosten::Zahl(1).plus(self.ausdruck(i)),
+            ExprArt::Klammer(i) => self.ausdruck(i, lokal),
+            ExprArt::Unaer(_, i) => Kosten::Zahl(1).plus(self.ausdruck(i, lokal)),
             ExprArt::Binaer(_, a, b) => {
-                Kosten::Zahl(1).plus(self.ausdruck(a)).plus(self.ausdruck(b))
+                Kosten::Zahl(1).plus(self.ausdruck(a, lokal)).plus(self.ausdruck(b, lokal))
             }
             ExprArt::Eingebaut(_) => Kosten::Zahl(1),
-            ExprArt::Ruf(r) => self.ruf(r),
+            ExprArt::Ruf(r) => self.ruf(r, lokal),
         }
     }
 
-    fn ruf(&self, r: &Ruf) -> Kosten {
+    fn ruf(&self, r: &Ruf, lokal: &Bindungen) -> Kosten {
         // **An indirect call costs what its POINTER TYPE promises** («B8», 2026-08-21).
         //
         // This is the second half of why the contract sits at the type. The effect half keeps
@@ -691,8 +768,8 @@ impl<'a> Rechner<'a> {
             let args = r
                 .argumente
                 .iter()
-                .fold(Kosten::Zahl(0), |a, e| a.plus(self.ausdruck(e)));
-            return match self.u.typ_von_ort(self.modul, o, &self.lokal) {
+                .fold(Kosten::Zahl(0), |a, e| a.plus(self.ausdruck(e, lokal)));
+            return match self.u.typ_von_ort(self.modul, o, lokal) {
                 crate::typen::Typ::FnPtr(v) => match v.costs {
                     Some(n) => args.plus(Kosten::Zahl(n)),
                     None => args.plus(Kosten::Unbekannt(
@@ -729,7 +806,7 @@ impl<'a> Rechner<'a> {
             return r
                 .argumente
                 .iter()
-                .fold(Kosten::Zahl(1), |a, e| a.plus(self.ausdruck(e)));
+                .fold(Kosten::Zahl(1), |a, e| a.plus(self.ausdruck(e, lokal)));
         }
         if name == "None" {
             return Kosten::Zahl(0);
@@ -749,7 +826,7 @@ impl<'a> Rechner<'a> {
                 .argumente
                 .iter()
                 .fold(Kosten::Zahl(r.marken.len() as i128), |a, e| {
-                    a.plus(self.ausdruck(e))
+                    a.plus(self.ausdruck(e, lokal))
                 });
         }
         let uebergang = self
@@ -773,7 +850,7 @@ impl<'a> Rechner<'a> {
                     return r
                         .argumente
                         .iter()
-                        .fold(Kosten::Zahl(0), |a, e| a.plus(self.ausdruck(e)));
+                        .fold(Kosten::Zahl(0), |a, e| a.plus(self.ausdruck(e, lokal)));
                 }
             }
         }
@@ -796,7 +873,7 @@ impl<'a> Rechner<'a> {
             }
         };
         for a in &r.argumente {
-            summe = summe.plus(self.ausdruck(a));
+            summe = summe.plus(self.ausdruck(a, lokal));
         }
         summe
     }
@@ -815,7 +892,8 @@ impl<'a> Rechner<'a> {
     /// viele es werden, entscheidet die Bedingung -- aber schon der erste, der nicht passt,
     /// macht die Zeile falsch. *Ist die Schranke eingabeabhaengig, schweigt der Pass; das ist
     /// dieselbe Stelle, an der `costs <= 4 + 12 * lenof(m)` symbolisch gelesen wird.*
-    fn schleifenzusagen(&self, b: &Block, absagen: &mut Absagen) {
+    fn schleifenzusagen(&self, b: &Block, aussen: &Bindungen, absagen: &mut Absagen) {
+        let mut lokal = aussen.clone();
         for s in &b.anweisungen {
             if let StmtArt::Schleife(sch) = &s.art {
                 let (rumpf, zusage_expr, wort, code, span) = match sch.as_ref() {
@@ -824,7 +902,7 @@ impl<'a> Rechner<'a> {
                         (&f.rumpf, &f.je_durchgang, "per_pass bounded", "K007", f.span)
                     }
                     Schleife::Traverse(t) => {
-                        self.schleifenzusagen(&t.rumpf, absagen);
+                        self.schleifenzusagen(&t.rumpf, &lokal, absagen);
                         continue;
                     }
                 };
@@ -836,9 +914,9 @@ impl<'a> Rechner<'a> {
                 // sie halten. *Dieselbe Lesart wie bei `costs` (`K001`/`K005`), und derselbe
                 // Grund: `per_pass bounded 12 * n` ist bei `n = 0` gleich null.*
                 let zahl = self.u.konst_wert(self.modul, zusage_expr).or_else(|| {
-                    symbolisch(self.u, self.modul, &self.lokal, zusage_expr).map(|t| t.fest)
+                    symbolisch(self.u, self.modul, &lokal, zusage_expr).map(|t| t.fest)
                 });
-                if let (Some(zusage), Kosten::Zahl(n)) = (zahl, self.block(rumpf)) {
+                if let (Some(zusage), Kosten::Zahl(n)) = (zahl, self.block(rumpf, &lokal)) {
                     if n > zusage {
                         absagen.schiebe(
                             Absage::fehler(
@@ -857,41 +935,43 @@ impl<'a> Rechner<'a> {
                         );
                     }
                 }
-                self.schleifenzusagen(rumpf, absagen);
+                self.schleifenzusagen(rumpf, &lokal, absagen);
             } else {
                 match &s.art {
-                    StmtArt::Sperrt(l) => self.schleifenzusagen(&l.rumpf, absagen),
-                    StmtArt::Bricht(x) => self.schleifenzusagen(&x.rumpf, absagen),
-                    StmtArt::Narrow(x) => self.schleifenzusagen(&x.sonst, absagen),
-                    StmtArt::LetSonst(x) => self.schleifenzusagen(&x.sonst, absagen),
+                    StmtArt::Sperrt(l) => self.schleifenzusagen(&l.rumpf, &lokal, absagen),
+                    StmtArt::Bricht(x) => self.schleifenzusagen(&x.rumpf, &lokal, absagen),
+                    StmtArt::Narrow(x) => self.schleifenzusagen(&x.sonst, &lokal, absagen),
+                    StmtArt::LetSonst(x) => self.schleifenzusagen(&x.sonst, &lokal, absagen),
                     StmtArt::Wenn(w) => {
                         for (_, r) in &w.zweige {
-                            self.schleifenzusagen(r, absagen);
+                            self.schleifenzusagen(r, &lokal, absagen);
                         }
                         if let Some(r) = &w.sonst {
-                            self.schleifenzusagen(r, absagen);
+                            self.schleifenzusagen(r, &lokal, absagen);
                         }
                     }
                     StmtArt::Match(m) => {
                         for z in &m.zweige {
-                            self.schleifenzusagen(&z.rumpf, absagen);
+                            self.schleifenzusagen(&z.rumpf, &lokal, absagen);
                         }
                     }
                     StmtArt::Exchange(e) => {
                         if let XForm::Update { rumpf, .. } = &e.form {
-                            self.schleifenzusagen(rumpf, absagen);
+                            self.schleifenzusagen(rumpf, &lokal, absagen);
                         }
                     }
                     _ => {}
                 }
             }
+            self.binde(s, &mut lokal);
         }
     }
 
     /// **K002.** Ein `locks`-Block, dessen Rumpfkosten die `held`-Zusage der Sperre
     /// uebersteigen, ist ein Uebersetzungsfehler (`SPRACHE.md` §9.3, Punkt 1). Daran haengt
     /// die Latenzaussage je Wartestelle -- ohne diese Pruefung ist sie eine Behauptung.
-    fn sperrbloecke(&self, b: &Block, absagen: &mut Absagen) {
+    fn sperrbloecke(&self, b: &Block, aussen: &Bindungen, absagen: &mut Absagen) {
+        let mut lokal = aussen.clone();
         for s in &b.anweisungen {
             match &s.art {
                 StmtArt::Sperrt(l) => {
@@ -909,7 +989,7 @@ impl<'a> Rechner<'a> {
                         .kandidaten_aufloesbar(self.modul, &l.sperre.text())
                         .into_iter()
                         .find_map(|k| topf.get(&k));
-                    if let (Some(zusage), Kosten::Zahl(n)) = (zeit, self.block(&l.rumpf)) {
+                    if let (Some(zusage), Kosten::Zahl(n)) = (zeit, self.block(&l.rumpf, &lokal)) {
                         if n > *zusage {
                             absagen.schiebe(
                                 Absage::fehler(
@@ -928,31 +1008,32 @@ impl<'a> Rechner<'a> {
                             );
                         }
                     }
-                    self.sperrbloecke(&l.rumpf, absagen);
+                    self.sperrbloecke(&l.rumpf, &lokal, absagen);
                 }
                 StmtArt::Wenn(w) => {
                     for (_, r) in &w.zweige {
-                        self.sperrbloecke(r, absagen);
+                        self.sperrbloecke(r, &lokal, absagen);
                     }
                     if let Some(r) = &w.sonst {
-                        self.sperrbloecke(r, absagen);
+                        self.sperrbloecke(r, &lokal, absagen);
                     }
                 }
                 StmtArt::Match(m) => {
                     for z in &m.zweige {
-                        self.sperrbloecke(&z.rumpf, absagen);
+                        self.sperrbloecke(&z.rumpf, &lokal, absagen);
                     }
                 }
-                StmtArt::Bricht(x) => self.sperrbloecke(&x.rumpf, absagen),
-                StmtArt::Narrow(x) => self.sperrbloecke(&x.sonst, absagen),
-                StmtArt::LetSonst(x) => self.sperrbloecke(&x.sonst, absagen),
+                StmtArt::Bricht(x) => self.sperrbloecke(&x.rumpf, &lokal, absagen),
+                StmtArt::Narrow(x) => self.sperrbloecke(&x.sonst, &lokal, absagen),
+                StmtArt::LetSonst(x) => self.sperrbloecke(&x.sonst, &lokal, absagen),
                 StmtArt::Schleife(sch) => match sch.as_ref() {
-                    Schleife::Traverse(x) => self.sperrbloecke(&x.rumpf, absagen),
-                    Schleife::Retry(x) => self.sperrbloecke(&x.rumpf, absagen),
-                    Schleife::Forever(x) => self.sperrbloecke(&x.rumpf, absagen),
+                    Schleife::Traverse(x) => self.sperrbloecke(&x.rumpf, &lokal, absagen),
+                    Schleife::Retry(x) => self.sperrbloecke(&x.rumpf, &lokal, absagen),
+                    Schleife::Forever(x) => self.sperrbloecke(&x.rumpf, &lokal, absagen),
                 },
                 _ => {}
             }
+            self.binde(s, &mut lokal);
         }
     }
 }
@@ -1050,7 +1131,7 @@ pub fn bericht(baum: &Programm) -> String {
         // richtig: es gibt dort keine einzelne Zahl zum Danebenstellen. *Entschieden wird sie
         // trotzdem* -- vom Tor oben, gegen die kleinste Belegung (`K001`/`K005`).
         let zugesagt = f.costs.as_ref().and_then(|c| u.konst_wert(modul, c));
-        match r.block(b) {
+        match r.block(b, &r.lokal.clone()) {
             Kosten::Zahl(n) => {
                 mit += 1;
                 out.push_str(&format!("{}\t{n}\t{}\n", f.name.text, spalte(zugesagt, n)));
@@ -1064,7 +1145,7 @@ pub fn bericht(baum: &Programm) -> String {
                 ));
             }
         }
-        r.bloecke_zeigen(b, &f.name.text, &mut out);
+        r.bloecke_zeigen(b, &r.lokal.clone(), &f.name.text, &mut out);
     });
     out.push_str(&format!(
         "-- {mit} bodies computed, {ohne} open.\n"
@@ -1081,7 +1162,8 @@ fn spalte(zugesagt: Option<i128>, gerechnet: i128) -> String {
 
 impl Rechner<'_> {
     /// Je `locks`-Block: was er haelt, gegen das, was die Sperre zusagt.
-    fn bloecke_zeigen(&self, b: &Block, wo: &str, out: &mut String) {
+    fn bloecke_zeigen(&self, b: &Block, aussen: &Bindungen, wo: &str, out: &mut String) {
+        let mut lokal = aussen.clone();
         for s in &b.anweisungen {
             if let StmtArt::Sperrt(l) = &s.art {
                 let name = l.sperre.text();
@@ -1095,14 +1177,15 @@ impl Rechner<'_> {
                     .kandidaten_aufloesbar(self.modul, &name)
                     .into_iter()
                     .find_map(|k| topf.get(&k).copied());
-                if let Kosten::Zahl(n) = self.block(&l.rumpf) {
+                if let Kosten::Zahl(n) = self.block(&l.rumpf, &lokal) {
                     out.push_str(&format!(
                         "  {wo} / {wort} {name}\t{n}\t{}\n",
                         spalte(zeit, n)
                     ));
                 }
-                self.bloecke_zeigen(&l.rumpf, wo, out);
+                self.bloecke_zeigen(&l.rumpf, &lokal, wo, out);
             }
+            self.binde(s, &mut lokal);
         }
     }
 }
@@ -1150,9 +1233,9 @@ pub fn durchgangskosten(
     // **Ein Durchgang ist Rumpf PLUS Bedingung.** Die `until`-Bedingung wird bei jedem
     // Durchgang ausgewertet und kann teurer sein als der Rumpf -- `FRAGMENTE.md` F4 pollt
     // mit leerem Rumpf. *Nur den Rumpf zu zaehlen hiesse, den teuersten Teil zu uebersehen.*
-    let rumpf = rechner.block(&r.rumpf);
+    let rumpf = rechner.block(&r.rumpf, &rechner.lokal.clone());
     let bedingung = match &r.bis {
-        Some(p) => pred_kosten(&rechner, p),
+        Some(p) => pred_kosten(&rechner, p, &rechner.lokal.clone()),
         None => Kosten::Zahl(0),
     };
     match rumpf.plus(bedingung) {
@@ -1162,11 +1245,11 @@ pub fn durchgangskosten(
 }
 
 /// Die Kosten eines Praedikats -- fuer den `until`-Test, der bei jedem Durchgang laeuft.
-fn pred_kosten(r: &Rechner, p: &Pred) -> Kosten {
+fn pred_kosten(r: &Rechner, p: &Pred, lokal: &Bindungen) -> Kosten {
     match &p.art {
-        PredArt::Vergleich(e) | PredArt::Element(e, _) => r.ausdruck(e),
-        PredArt::Klammer(x) | PredArt::Nicht(x) => pred_kosten(r, x),
-        PredArt::Und(a, b) | PredArt::Oder(a, b) => pred_kosten(r, a).plus(pred_kosten(r, b)),
+        PredArt::Vergleich(e) | PredArt::Element(e, _) => r.ausdruck(e, lokal),
+        PredArt::Klammer(x) | PredArt::Nicht(x) => pred_kosten(r, x, lokal),
+        PredArt::Und(a, b) | PredArt::Oder(a, b) => pred_kosten(r, a, lokal).plus(pred_kosten(r, b, lokal)),
         _ => Kosten::Zahl(1),
     }
 }

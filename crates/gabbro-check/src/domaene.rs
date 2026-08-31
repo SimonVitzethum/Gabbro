@@ -359,8 +359,19 @@ fn qualifiziert(modul: &str, name: &str) -> String {
     }
 }
 
-fn aus_block(b: &Block, s: &Sicht, geb: &mut Vec<String>, absagen: &mut Absagen) {
+/// **Der Blockgeltungsbereich -- die zweite Haelfte des Fundes vom 2026-08-31.**
+///
+/// Bis dahin trug dieser Lauf NUR die Parameter, und ein `let` in einem inneren Block war
+/// unsichtbar. Verdeckt es einen Parameter, fragt `ortsart` den Typ des PARAMETERS -- und
+/// `D018` sagt dann *„`slots of t` needs a table, and `t` is a scalar"* ueber ein Programm,
+/// in dem `t` an dieser Stelle eine Tabelle IST. **Eine Falschabsage aus derselben Wurzel
+/// wie die falsche Kostenzahl in `kosten.rs`.**
+///
+/// Der Wert steht im ALTEN Geltungsbereich, also wird erst geprueft und dann gebunden.
+fn aus_block(b: &Block, aussen: &Sicht, geb: &mut Vec<String>, absagen: &mut Absagen) {
+    let mut karte = aussen.lokal.clone();
     for st in &b.anweisungen {
+        let s = &Sicht { u: aussen.u, modul: aussen.modul, lokal: &karte };
         if let StmtArt::Schleife(sch) = &st.art {
             // **No `_` arm.** All three loop kinds carry an `invariant`, and a fourth one
             // should be a compile error here rather than a silent hole.
@@ -393,6 +404,35 @@ fn aus_block(b: &Block, s: &Sicht, geb: &mut Vec<String>, absagen: &mut Absagen)
         for k in crate::unterbloecke(st) {
             aus_block(k, s, geb, absagen);
         }
+        binde(st, &mut karte, aussen.u, aussen.modul);
+    }
+}
+
+/// Was eine Anweisung an NAMEN hinterlaesst -- dieselbe Frage, die `kosten.rs::binde`
+/// stellt, und dieselbe Antwort: was hier nicht abzulesen ist, wird `Unbekannt` und nicht
+/// durchgereicht. **`ortsart` schweigt ueber `Unbekannt`**, und Schweigen ist die Antwort,
+/// die `D018` an jeder Stelle gibt, an der es nichts weiss.
+fn binde(st: &gabbro_syntax::ast::Stmt, karte: &mut HashMap<String, Typ>, u: &Umgebung, modul: &str) {
+    match &st.art {
+        StmtArt::Let(l) => {
+            let t = match (&l.typ, &l.wert.art) {
+                (Some(td), _) => u.typ_von_ausdruck_decl(modul, td),
+                (None, gabbro_syntax::ast::ExprArt::Ort(o)) => u.typ_von_ort(modul, o, karte),
+                _ => Typ::Unbekannt,
+            };
+            karte.insert(l.name.text.clone(), t);
+        }
+        StmtArt::LetSonst(l) => {
+            karte.insert(l.name.text.clone(), Typ::Unbekannt);
+        }
+        StmtArt::AwaitLoad(a) => {
+            let t = u.typ_von_ort(modul, &a.quelle, karte);
+            karte.insert(a.name.text.clone(), t);
+        }
+        StmtArt::Exchange(e) => {
+            karte.insert(e.name.text.clone(), Typ::Unbekannt);
+        }
+        _ => {}
     }
 }
 
