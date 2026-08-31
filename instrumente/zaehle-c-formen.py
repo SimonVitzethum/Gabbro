@@ -112,10 +112,23 @@ W = pathlib.Path(__file__).resolve().parent.parent
 # dieses Werkzeug kann. Ein Lauf ohne die Schalter misst hoechstens dasselbe und nie mehr;
 # die Marke ist damit in beide Richtungen sicher.
 #
-#   64  Formen im Erzeugnis  =  35 erlaubt+benutzt  +  29 benutzt+nicht erlaubt
-#   29  davon nicht erlaubt  =   7 auf der Nie-Liste + 18 ungenannt + 4 weit gedeckt
+#   64  Formen im Erzeugnis  =  34 erlaubt+benutzt  +  30 benutzt+nicht erlaubt
+#   30  davon nicht erlaubt  =   7 auf der Nie-Liste + 19 ungenannt + 4 weit gedeckt
+#
+# > **`MARKE_UNERLAUBT` ist am 2026-08-31 von 29 auf 30 GESTIEGEN, und hier steht warum.**
+# > Nicht der Erzeuger hat sich bewegt, sondern die MESSUNG ist genauer geworden: `#if` war
+# > eine Zeile im Katalog und ist zwei. Die Erlaubtliste sagt *„preprocessor other than
+# > `#if` OUT OF `when`"* -- erlaubt ist also das `#if`, das aus einer `when`-Klausel des
+# > Gabbro-Programms kommt. Von den fuenf `#if` im ganzen Korpus kommt **keines** daher;
+# > alle fuenf sind `#if defined(__GNUC__)` um `__builtin_unreachable()`.
+# >
+# > *Der erlaubte Eintrag ist tot (Menge B), und der benutzte steht auf keiner Liste
+# > (Menge C).* Vorher buchte der Zaehler den einen als den anderen und sah gruen aus.
+# > **Ein Anstieg aus einer scharferen Messung ist kein Anstieg des Gegenstands** -- aber er
+# > gehoert genauso begruendet an die Marke, sonst ist die Ratsche ein Ort, an dem Zahlen
+# > stillschweigend groesser werden.
 MARKE_TABELLE = 64
-MARKE_UNERLAUBT = 29
+MARKE_UNERLAUBT = 30
 
 # **The same sieve `zaehle-absagen.korpuslauf` uses, and for its reason** (W7). `rglob` from
 # the repo root walks into every agent worktree; the exclusion is RELATIVE to the root,
@@ -302,7 +315,16 @@ def lies_tokens(text):
 E, N, U = "E", "N", "U"
 KATALOG = {
     # --- Praeprozessor ---------------------------------------------------------------
-    "#if": ("Praeprozessor", E, "lex", "preprocessor ... `#if` out of `when`", None),
+    # **`#if` ist ZWEI Formen, und die Erlaubtliste kennt nur eine.** Sie sagt „preprocessor
+    # other than `#if` OUT OF `when`" -- also ist erlaubt, was aus einer `when`-Klausel des
+    # Gabbro-Programms kommt. Gemessen 2026-08-31: von fuenf `#if` im ganzen Korpus kommt
+    # **keines** aus einem `when`; alle fuenf sind `#if defined(__GNUC__)` um
+    # `__builtin_unreachable()`. *Der erlaubte Eintrag ist tot, und der benutzte steht auf
+    # keiner Liste.* Ohne diese Trennung buchte der Zaehler die eine Form als die andere --
+    # dieselbe Klasse wie W25: eine Zahl belegt ihren Nenner, nicht ihre Beschriftung.
+    "#if aus `when`": ("Praeprozessor", E, "struk", "preprocessor ... `#if` out of `when`", None),
+    "#if auf __GNUC__": ("Praeprozessor", U, "struk",
+                         "auf keiner Liste -- die Erlaubtliste kennt NUR `#if` aus `when`", None),
     "#endif": ("Praeprozessor", E, "lex", "gehoert zu `#if`", None),
     "#else": ("Praeprozessor", E, "lex", "gehoert zu `#if`", None),
     "#elif": ("Praeprozessor", E, "lex", "gehoert zu `#if`", None),
@@ -554,7 +576,19 @@ def zaehle(tokens, typen=None):
         naechst = tokens[idx + 1] if idx + 1 < len(tokens) else ("op", "", 0)
 
         if art == "pp":
-            zaehl(t if t in KATALOG else "#?", tok)
+            if t == "#if":
+                rumpf = []
+                for x in tokens[idx + 1:]:
+                    if x[0] == "ppende":
+                        break
+                    rumpf.append(x[1])
+                # `__GNUC__`, `__clang__`, `_MSC_VER` -- eine Bedingung ueber den
+                # UEBERSETZER. Die kann aus keinem `when` kommen: Gabbro kennt den
+                # Uebersetzer nicht, der Erzeuger schreibt sie selbst.
+                zaehl("#if auf __GNUC__" if any(w.startswith("__") or w.endswith("__")
+                                                for w in rumpf) else "#if aus `when`", tok)
+            else:
+                zaehl(t if t in KATALOG else "#?", tok)
             if t == "#define":
                 zaehl("konstante-#define", tok)
             vor, satzanfang = tok, True
@@ -969,7 +1003,8 @@ ERWARTET_POSITIV = {
     "?:": 0, "bitfeld": 2, "enum": 1, "varargs ...": 1, "void*": 1, "typedef": 1,
     "geschachtelte zuweisung": 1, "zuweisung im ausdruck": 1, "komma-operator": 1,
     "zeigerarithmetik": 1, "index auf zeiger": 1, "while": 1, "default": 1,
-    "sizeof": 1, "__builtin_unreachable": 1, "#ifdef": 1, "#if": 1, "#endif": 2,
+    "sizeof": 1, "__builtin_unreachable": 1, "#ifdef": 1, "#endif": 2,
+    "#if auf __GNUC__": 1, "#if aus `when`": 0,
     "break": 1, "inkrement ++/--": 1, "ruf": 2,
 }
 
