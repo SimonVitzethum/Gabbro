@@ -1,0 +1,60 @@
+-- erwartet: N042 allein
+-- 419 -- **die dritte Sorte: ein INTERNER Name des Erzeugers, und die REIHENFOLGE
+-- entscheidet, ob `cc` etwas sagt.**
+--
+-- Ein `accumulates n` senkt zu drei `static`-Namen ab (`emit.rs`, `ItemArt::Accumulates`):
+--
+--     static _Atomic {c} n_zellen[N];
+--     static {c}   n_lies(void);
+--     static void  n_melde({c} roh);
+--
+-- Alle drei mit INNERER Bindung -- und man moechte glauben, dass `cc` deshalb sicher
+-- abweist, wenn ein `extern fn n_lies()` daneben steht. **Es weist nur manchmal ab, und was
+-- entscheidet, ist die Zeilennummer.**
+--
+-- C11 6.2.2p4: *eine nicht-statische Deklaration NACH einer statischen erbt die interne
+-- Bindung.* Andersherum ist es ein Fehler. Also:
+--
+--     accumulates hoechststand …;                  -- der `static` steht ZUERST
+--     extern fn hoechststand_lies() -> u64 …;      -- cc: exit 0, kein Wort
+--
+--     extern fn hoechststand_lies() -> u64 …;      -- der Prototyp steht ZUERST
+--     accumulates hoechststand …;                  -- cc: „Statische Deklaration folgt
+--                                                  --      nicht-statischer Deklaration"
+--
+-- **Beide Male dieselben zwei Deklarationen, byteidentisch, nur auf anderen Zeilen** --
+-- gemessen am 2026-08-31 an einer einzigen Datei in zwei Fassungen
+-- (`messung/STILLE-KOLLISIONEN.md` §4, `m7-akk` gegen `m7b-akk`). *Das ist der staerkste
+-- Grund dafuer, dass diese Regel dem PRUEFER gehoert, und er ist nicht, dass `cc` sie
+-- manchmal nicht findet -- sondern dass `cc` sie je nach Quelltextreihenfolge findet oder
+-- nicht.*
+--
+-- Hier steht die stille Reihenfolge. Dieselbe Sorte tragen alle `static inline`-Namen des
+-- Erzeugers: die Format-Leser und -Schreiber, `{Format}_gueltig`, die `ops` einer Tabelle,
+-- die Bankregister eines `device`, die Praedikate eines `walk`.
+--
+-- **Und `gabbro_kern` steht mit im Erzeugnis**, weil ein `accumulates` dasteht -- der einzige
+-- gebildete Name ohne Traeger. Auch er ist aufgezaehlt; er hat keine eigene Datei, weil er
+-- dieselbe Sorte traegt wie `417`.
+
+module gift::akkumulator {
+
+const NKERNE : u32 = 64;
+
+accumulates hoechststand : u64 merge max per cpu NKERNE;
+
+-- **Hier**, und zwar HINTER dem `accumulates`: genau die stille Reihenfolge.
+extern fn hoechststand_lies() -> u64 effects { pure } costs <= 1 ops;
+
+impl fn melde_hoch(t : u64)
+    effects { writes hoechststand } costs <= 8 ops
+{ hoechststand = t; }
+
+pub impl fn frag() -> u64
+    effects { pure }
+    costs   <= 4 ops
+{
+    return hoechststand_lies();
+}
+
+}

@@ -1855,11 +1855,34 @@ pub const SPERREN: &[Satz] = &[
                     Fehler { Leer … }` next to `const Fehler_Leer`, `format Eintrag { a … }` \
                     next to `extern fn Eintrag_a`. All nine check with 0 errors, emit without \
                     a `C001`, and are refused by `cc`.\n\
-                    **And a TENTH that `cc` does not catch** -- `lock TOR` next to `extern fn \
-                    TOR_nimm()`. `void TOR_nimm(void);` twice with the same type is a legal \
-                    repetition in C, so the two declarations quietly become ONE symbol and \
-                    the acquire call lands in the foreign function at link time. *That is why \
-                    this rule cannot be left to `cc`.*\n\
+                    **And the reason `cc` speaks at all is measured, and it is not the \
+                    collision** (2026-08-31, `messung/STILLE-KOLLISIONEN.md`). `cc` refuses \
+                    only where the two C types disagree, or where both sides define, or where \
+                    the INTERNAL declaration comes second -- C11 6.2.2p4 lets a non-static \
+                    declaration after a static one inherit the internal linkage, and the \
+                    reverse order is the error. *The same two Gabbro declarations, swapped \
+                    between two lines, give `cc` exit 0 and exit 1* (`m7-akk` against \
+                    `m7b-akk`, byte-identical declarations). **A tool whose answer hangs on a \
+                    line number is not an oracle for this question** -- that, and not the odd \
+                    case it misses, is why the rule belongs here.\n\
+                    So of the nine, **eight are structurally loud** (two definitions, two \
+                    anonymous struct typedefs, two macros with different replacement lists -- \
+                    C has no loophole there) and the ninth is loud only because the signature \
+                    happened to differ: `format Eintrag { a … }` next to `extern fn \
+                    Eintrag_a` with the MATCHING signature compiles clean, and the generated \
+                    reader answers the writer's call (measured: 42 instead of the 999 in the \
+                    writer's own archive).\n\
+                    **Three sorts are silent by construction, and all three were RUN, not \
+                    reasoned:** (A) external prototypes the generator never defines -- \
+                    `{Lock}_nimm`, `{Rcu}_lese_start`, `gabbro_eintritt_{e}`, \
+                    `gabbro_boot_{b}`, `gabbro_gast_{t}`, `gabbro_kern`; taking the lock ran \
+                    the writer's body and no lock was taken. (B) external names the generator \
+                    DEFINES -- `pruefe_{c}`; the writer's own archive member was never \
+                    linked. (C) internal `static` names, silent whenever the generated \
+                    declaration stands first. *Their probes carry the mirror contract \
+                    `-- erwartet: N042 allein`: the checker must refuse AND `cc` must \
+                    ACCEPT -- the day a second guard appears, the probe goes red and asks to \
+                    be re-classified.*\n\
                     **What it deliberately does NOT enumerate** (W10): `{T}_speicher`, \
                     because the generator writes it only where the source addresses the table \
                     BY NAME and that set lives in the generator's `Namen`, not in the tree -- \
@@ -1868,6 +1891,17 @@ pub const SPERREN: &[Satz] = &[
                     (`beispiele/gift/414`, contract `-- erwartet: cc`). Also left out: block \
                     labels (`{marke}_wachhund`) and everything inside a body, where a local \
                     shadowing a file-scope name is legal C.\n\
+                    **And THREE names it lists only under a condition, each after a measured \
+                    false positive** (2026-08-31): `{Atomic}_ORDER` -- the emitter writes the \
+                    `#define` only where the ordering is not `relaxed`-without-payload, and \
+                    `atomic Z : u32 relaxed` next to `const Z_ORDER` fell here while the unit \
+                    held exactly ONE such name and `cc` was happy; \
+                    `gabbro_eintritt_{e}_VEKTOR` -- written only for a LITERAL vector, so \
+                    `vector NR` with a named constant writes none; and \
+                    `gabbro_boot_{b}_s{i}` -- written only where the step calls a declared \
+                    function, and `beispiele/07` names an `axiom` at four of its nine steps. \
+                    *Same class as the `{T}_speicher` exclusion, with the difference that \
+                    decides it: these conditions stand IN THE TREE and can be answered here.*\n\
                     **And it fires only where at least one side carries a GENERATOR-BUILT \
                     name.** Two equal plain declared names are a Gabbro duplicate and belong \
                     to `geltungsbereich` -- W7, one register per thing. That cut was measured, \
@@ -1879,12 +1913,20 @@ pub const SPERREN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/413 (both forms: a `format` field spelled like the \
                       validity predicate, and one spelled like another field's writer; the \
-                      contract moved from `-- erwartet: cc` to `-- erwartet: N042`); \
-                      counter-probe messung/proben/probe-erzeugernamen-frei.gab -- six words that LOOK like \
-                      generator suffixes and are none, 0 errors and `cc` accepts. Over the 426 \
-                      `.gab` files the rule has exactly ONE hit, and it is 413.",
+                      contract moved from `-- erwartet: cc` to `-- erwartet: N042`); one probe \
+                      per SILENT sort, each on the mirror contract `-- erwartet: N042 allein` \
+                      -- 417 (`lock` beside `extern fn {L}_nimm`, sort A), 418 (`check` beside \
+                      `extern fn pruefe_{c}`, sort B), 419 (`accumulates` beside `extern fn \
+                      {n}_lies`, sort C, in the silent line order), 420 (`boot` beside `extern \
+                      fn gabbro_boot_{b}` -- the address the machine jumps to); counter-probe \
+                      messung/proben/probe-erzeugernamen-frei.gab -- six words that LOOK like \
+                      generator suffixes and are none, 0 errors and `cc` accepts. Over the 446 \
+                      `.gab` files of the tree the rule has hits in 413 and in those four \
+                      probes and in the seven measurement files under \
+                      messung/stille-proben/ -- and NOWHERE else.",
         fundstelle: "crates/gabbro-check/src/namen.rs::erzeugter_name_zweimal; \
-                     crates/gabbro-check/src/erzeugernamen.rs; messung/ERZEUGERNAMEN.md",
+                     crates/gabbro-check/src/erzeugernamen.rs; messung/ERZEUGERNAMEN.md; \
+                     messung/STILLE-KOLLISIONEN.md",
     },
     Satz {
         name: "namen.kanal_ohne_einloeser",

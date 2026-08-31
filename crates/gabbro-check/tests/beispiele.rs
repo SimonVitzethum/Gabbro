@@ -158,6 +158,74 @@ fn jedes_gift_faellt_mit_seinem_code() {
             let _ = std::fs::remove_file(&ziel);
             continue;
         }
+        // **A FIFTH state, and it is the MIRROR of `cc`** (2026-08-31).
+        //
+        // `-- erwartet: cc` carries a defect the checker does not see and `cc` does. There is
+        // a family where **neither** sees it: two Gabbro declarations become one C symbol,
+        // the types agree, at most one side defines, and C11 calls that a legal repetition.
+        // `lock TOR` beside `extern fn TOR_nimm()`; `boot b` beside
+        // `extern fn gabbro_boot_b()`; `check c` beside `extern fn pruefe_c()`. Measured and
+        // RUN in `messung/STILLE-KOLLISIONEN.md`: taking the lock executes the writer's body,
+        // and the writer's own archive member is never linked.
+        //
+        // For those, `-- erwartet: N042` alone would be one-sided. It says the checker
+        // speaks; it does not say **that the checker is the only thing that speaks**, and
+        // that is the whole claim. A rule with a backstop and a rule without one look
+        // identical from a one-sided probe.
+        //
+        // **`-- erwartet: CODE allein` says both halves:**
+        //
+        // 1. the checker MUST refuse with `CODE`, and
+        // 2. the emitted C must be **ACCEPTED** by `cc -Werror`.
+        //
+        // Half 2 is the one that carries it, and it falls in the useful direction: the day
+        // `cc` (or the emitter) starts catching this form, the probe goes red and asks to be
+        // re-classified to `-- erwartet: cc` -- *because then the rule is no longer the only
+        // line, and a file that says it is would be lying.*
+        //
+        // > The emitter runs on the PARSED tree and never consults the passes, so half 2
+        // > measures the product as it would ship if this one rule were dropped. That is
+        // > exactly the counterfactual the claim needs, and it costs no second build.
+        if let Some(code) = erwartet.strip_suffix(" allein") {
+            let code = code.trim();
+            let (codes, bericht, name) = absagen_von(&pfad);
+            let gefallen: Vec<&str> = codes
+                .iter()
+                .filter(|(_, s)| *s == Stufe::Fehler)
+                .map(|(c, _)| *c)
+                .collect();
+            assert!(
+                gefallen.contains(&code),
+                "{name} traegt `-- erwartet: {code} allein`, also muss der Pruefer mit \
+                 {code} fallen -- gefallen ist {gefallen:?}:\n{bericht}"
+            );
+            let (baum, mut a2) = gabbro_syntax::lies(&pfad.display().to_string(), &quelle);
+            let c = gabbro_check::emit::emittiere(&baum, &mut a2);
+            let ziel = std::env::temp_dir().join(format!(
+                "gabbro-allein-{}.c",
+                pfad.file_stem().unwrap().to_string_lossy()
+            ));
+            std::fs::write(&ziel, &c).expect("das erzeugte C liegt schreibbar");
+            let cc = std::process::Command::new("cc")
+                .args(["-std=c11", "-Wall", "-Wextra", "-Werror", "-fsyntax-only"])
+                .arg(&ziel)
+                .output();
+            match cc {
+                Ok(r) => assert!(
+                    r.status.success(),
+                    "{name} traegt `-- erwartet: {code} allein`, also muss `cc` das \
+                     Erzeugnis ANNEHMEN -- ohne {code} faellt hier nichts, und genau das ist \
+                     die Behauptung. `cc` hat abgewiesen, also gibt es jetzt einen zweiten \
+                     Waechter und die Datei gehoert auf `-- erwartet: cc` nachgezogen:\n{}\n{}",
+                    ziel.display(),
+                    String::from_utf8_lossy(&r.stderr)
+                ),
+                // **A missing `cc` is a missing measurement, never a green one** (W1).
+                Err(e) => panic!("`cc` laesst sich nicht starten ({e}) -- NICHTS gemessen"),
+            }
+            let _ = std::fs::remove_file(&ziel);
+            continue;
+        }
         let (stufe, erwartet) = match erwartet.strip_prefix("Hinweis ") {
             Some(c) => (Stufe::Hinweis, c.trim().to_string()),
             None => (Stufe::Fehler, erwartet),

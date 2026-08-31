@@ -1,0 +1,62 @@
+-- erwartet: N042 allein
+-- 420 -- **das Symbol, an das die Maschine springt.**
+--
+-- Eine `boot`-Strecke senkt zu einem Prototyp ab, den der Erzeuger nie definiert
+-- (`emit.rs`:8611):
+--
+--     void gabbro_boot_multiboot1(void);
+--
+-- Das ist **die Adresse, an der die Maschine anfaengt.** Ein `extern fn
+-- gabbro_boot_multiboot1()` daneben senkt zu derselben Zeile ab, und zwei gleiche
+-- Prototypen sind in C eine zulaessige Wiederholung: der Binder legt beide auf dasselbe
+-- Symbol, und was der Nutzer dort hingeschrieben hat, laeuft als erstes.
+--
+-- **Bis zum 2026-08-31 stand dieser Name nicht in der Aufzaehlung.** `erzeugernamen.rs`
+-- kannte `gabbro_boot_{b}_s{i}` und `gabbro_boot_{b}_{setzt}` und den blossen Namen nicht --
+-- gemessen (`messung/STILLE-KOLLISIONEN.md` §3, `m4-boot`): `0 errors, 0 hints`, `cc
+-- -Werror` uebersetzt. **Der Pruefer, der Erzeuger, der Uebersetzer und der Binder haben
+-- allesamt geschwiegen**, ueber der Einsprungadresse.
+--
+-- Dieselbe Sorte tragen `{Lock}_nimm` (`417`), `{Rcu}_lese_start`, `gabbro_eintritt_{e}`,
+-- `gabbro_gast_{t}` und `gabbro_kern`: aeussere Prototypen, die der Erzeuger nennt und nicht
+-- definiert.
+--
+-- > **Der Gegenzug in derselben Datei:** `gabbro_boot_{b}_s{i}` steht NUR dann im Erzeugnis,
+-- > wenn der Schritt eine erklaerte Funktion ruft. `write_cr3` unten ist ein `axiom`, also
+-- > schreibt der Erzeuger fuer Schritt 2 nichts -- und ein `const gabbro_boot_x_s2` daneben
+-- > waere kein Mangel. *Bis zum 2026-08-31 war es eine Absage* (gemessen, `m9-s4`); jetzt
+-- > steht die Bedingung in der Aufzaehlung, und `messung/stille-proben/` haelt die Messung.
+
+module gift::bootstrecke {
+
+const BOOT_IDENTITAET  : u64 = 0x1000;
+const boot_stapel_oben : u64 = 0x9000;
+
+pub static mut tlb : u64 = 0;
+
+axiom write_cr3(wurzel : u64) effects { writes tlb, writes aktive_tabelle } falsifier sonde_cr3;
+
+pub impl fn tabellen_laden(wurzel : u64)
+    effects { writes tlb }
+    costs   <= 8 ops
+{
+    tlb = wurzel;
+}
+
+pub impl fn rust_eintritt()
+    effects { pure }
+    costs   <= 1 ops
+{
+}
+
+boot multiboot1 arch x86_64 {
+    step stapelzeiger = boot_stapel_oben;
+    step write_cr3(BOOT_IDENTITAET);
+    step tabellen_laden(BOOT_IDENTITAET);
+    dispatch gift::bootstrecke::rust_eintritt;
+}
+
+-- **Hier.** Der Schreiber meint eine eigene fremde Funktion; er bekommt die Einsprungadresse.
+extern fn gabbro_boot_multiboot1() effects { pure } costs <= 1 ops;
+
+}
